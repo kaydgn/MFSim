@@ -2287,14 +2287,17 @@ function veBuildReportHTML(content, title) {
   var t = String(title || 'MFSim Rapor').replace(/[<>&"]/g, '');
   return '<!DOCTYPE html>\n<html lang="tr"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    // --rfs-*: bu da İNDİRİLEN bağımsız bir belge — arayüzün --fs-* jetonlarına
+    // erişimi YOK, kendi ölçeğini kendi :root'unda taşımak zorunda.
     '<title>' + t + '</title><style>' +
+    ':root{--rfs-md:12.5px;}' +
     'html,body{margin:0;background:#eceff3;}' +
     '.mf-wrap{padding:28px 12px;}' +
     '.mf-card{width:fit-content;max-width:100%;margin:0 auto;background:#fff;' +
     'border:1px solid #d8dce2;box-shadow:0 2px 14px rgba(0,0,0,.08);' +
     'padding:26px 34px;box-sizing:border-box;}' +
     '.mf-card pre{margin:0 auto;padding:0;width:fit-content;max-width:100%;' +
-    'white-space:pre;overflow-x:auto;line-height:1.5;font-size:var(--fs-md);color:#14171c;' +
+    'white-space:pre;overflow-x:auto;line-height:1.5;font-size:var(--rfs-md);color:#14171c;' +
     "font-family:'Consolas','Menlo','DejaVu Sans Mono','Courier New',monospace;}" +
     '@media(prefers-color-scheme:dark){html,body{background:#23201c;}' +
     '.mf-card{background:#2b2621;border-color:#3d352e;}.mf-card pre{color:#e6ddd0;}}' +
@@ -2624,7 +2627,9 @@ function veCloseDetailedReport() {
 // ============================================================================
 // "Takoz Çökme–Titreşim" raporunun estetiğini birebir izler: Source Serif 4 gövde,
 // Archivo başlıklar, IBM Plex Mono sayılar; Prusya mavisi vurgu; numaralı <h2>
-// bölümler + <p> prose + <caption>'lı tablolar + <figure>. Temadan bağımsız beyaz.
+// bölümler + <p> prose + <caption>'lı tablolar + <figure> + KaTeX denklemleri.
+// Temadan bağımsız beyaz. Fontlar ve KaTeX belgeye GÖMÜLÜ (window.MNT_REPORT_ASSETS,
+// Takoz raporuyla aynı paket) — indirilen dosya çevrimdışı, sıfır ağ isteğiyle açılır.
 //
 // SÖZLEŞME (bölüm üreticileri için) — her bölüm şu imzayı taşır:
 //   function _veRepSecX(R, sim, H, charts) -> { id, title, body }  (yoksa null)
@@ -2646,6 +2651,13 @@ function veCloseDetailedReport() {
 //                                    "Tablo N — {caption}" otomatik numaralanır.
 //   H.fig(imgHtml, captionHtml)   → <figure>…<figcaption><b>Şekil N —</b> …</figcaption></figure> (img boşsa '')
 //   H.st(kind, text)              → durum rozeti <span class="st-…">  (kind:'ok'|'warn'|'bad')
+//   H.eq(tex)                     → numaralı KaTeX blok denklemi: $$…$$ + sağda (N)
+//
+// MATEMATİK — KaTeX belgeye gömülüdür (Takoz raporuyla aynı varlık paketi):
+//   • Blok denklem  : H.eq('E = mc^2')       → ortalanmış, sağda otomatik numara
+//   • Satır içi     : prose içinde \\( … \\) → 'F_{ç}=\\\\dfrac{T i \\\\eta}{r}' gibi
+//   TeX kaynağı H.esc'ten GEÇMEZ (ters bölü ve süslü parantez korunmalı); bu
+//   yüzden H.eq'e YALNIZCA sabit metin verilir, kullanıcı verisi verilmez.
 
 function _veReportEsc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, function(c) {
@@ -2669,7 +2681,7 @@ function _veReportDownloadBlob(html, filename) {
 // ─── Yardımcı fabrikası (tablo/figür numaralayıcı closure) ───────────────────
 function _veMakeReportHelpers() {
   var esc = _veReportEsc;
-  var tblNo = 0, figNo = 0;
+  var tblNo = 0, figNo = 0, eqNo = 0;
   function f(n, d) { var v = Number(n); if(!isFinite(v)) return '—'; return v.toFixed(d == null ? 2 : d); }
   function cell(c, colA) {
     var v, a = colA || 'r', cls = '';
@@ -2723,6 +2735,13 @@ function _veMakeReportHelpers() {
     st: function(kind, text) {
       var k = kind === 'ok' ? 'st-ok' : kind === 'warn' ? 'st-warn' : 'st-bad';
       return '<span class="' + k + '">' + text + '</span>';
+    },
+    // Numaralı blok denklem. tex ham TeX'tir — KAÇIŞLANMAZ, bu yüzden yalnız
+    // sabit metin geçilir (yukarıdaki sözleşmeye bak). Numaralandırma tablo ve
+    // şekillerle aynı mantık: belge boyunca artan tek sayaç.
+    eq: function(tex) {
+      eqNo++;
+      return '<div class="eqno">$$ ' + tex + ' $$<span class="tag">(' + eqNo + ')</span></div>';
     }
   };
 }
@@ -2758,6 +2777,21 @@ function _veRepSecPlatform(R, sim, H, charts) {
   var revPerKm = (R.tireRadius > 0) ? (1000 / (2 * Math.PI * R.tireRadius)).toFixed(0) : '—';
   var body = '';
   body += H.p('Bu bölüm, aracın aerodinamik ve kütle parametreleri ile lastik özelliklerini özetler. Bu değerler yol yükü (yuvarlanma ve aerodinamik direnç), çekiş kuvveti ve devir–hız dönüşümü hesaplarının temel girdileridir.');
+
+  body += H.p('Araca hareket yönünün tersine etkiyen toplam yol yükü \\( F_{\\text{yol}} \\) üç bileşenin toplamıdır: yuvarlanma direnci \\( F_{r} \\), aerodinamik direnç \\( F_{a} \\) ve eğim bileşeni \\( F_{e} \\). Simülasyonun her adımında üçü de anlık hıza \\( v \\) ve yol eğimi açısına \\( \\alpha \\) göre yeniden hesaplanır:');
+  body += H.eq('F_{\\text{yol}}(v)=F_{r}+F_{a}+F_{e}');
+  body += H.eq('F_{r}=C_{rr}(v)\\,k_{y}\\,m\\,g\\cos\\alpha,\\qquad '
+             + 'F_{a}=\\tfrac{1}{2}\\,\\rho\\,C_{d}\\,A\\,v^{2},\\qquad '
+             + 'F_{e}=m\\,g\\sin\\alpha');
+  body += H.p('Burada \\( m \\) brüt araç ağırlığı, \\( g=9{,}81\\ \\mathrm{m/s^2} \\), \\( \\rho \\) hava yoğunluğu, '
+            + '\\( C_d \\) aerodinamik direnç katsayısı, \\( A \\) alın alanı ve \\( k_{y} \\) yüzey faktörüdür. '
+            + 'Yuvarlanma direnci katsayısı sabit değildir; hızla birlikte artan ikinci derece bir düzeltmeyle ölçeklenir:');
+  body += H.eq('C_{rr}(v)=C_{rr,0}\\left(1+K_{1}v+K_{2}v^{2}\\right),\\qquad '
+             + 'K_{1}=0{,}026909\\ \\mathrm{s/m},\\quad K_{2}=-1{,}8893\\times 10^{-4}\\ \\mathrm{s^{2}/m^{2}}');
+  body += H.p('Lastik yuvarlanma yarıçapı \\( r_{d} \\), hem devir–hız dönüşümünün hem de tekerlekteki çekiş kuvvetinin '
+            + 'paydasında yer alır; katalog değeri olan devir/km ile doğrudan ilişkilidir:');
+  body += H.eq('n_{\\text{km}}=\\frac{1000}{2\\pi r_{d}}');
+
   body += H.h3('Alan ve Ağırlık');
   body += H.kv([
     ['Alın Alanı', H.f(R.frontalArea, 3) + ' m²'],
@@ -2791,6 +2825,21 @@ function _veRepSecMotor(R, sim, H, charts) {
 
   var body = '';
   body += H.p('Bu bölüm, projede tanımlı motorun karakteristik parametrelerini ve tam devir aralığındaki tork/güç eğrisini özetler. Değerler, çekiş kuvveti ve motor freni hesaplarının kaynak girdisidir; net değerler fan ve diğer aksesuar kayıplarının governed devre göre ölçeklenmesiyle brüt eğriden türetilir.');
+
+  body += H.p('Tork ile güç arasındaki dönüşüm, devrin \\( n \\) [rpm], torkun \\( T \\) [N·m] ve gücün \\( P \\) [kW] '
+            + 'birimlerinde şu bağıntıyla yapılır:');
+  body += H.eq('P=\\frac{T\\,\\omega}{1000}=\\frac{\\pi\\,T\\,n}{30\\,000},\\qquad \\omega=\\frac{2\\pi n}{60}');
+  body += H.p('Aksesuar kayıpları governed devirdeki ölçüm değerinden devre göre ölçeklenir. Fan kaybı akışkanlar '
+            + 'mekaniğinden gelen <strong>küp yasasına</strong>, diğer aksesuarlar ise devirle doğrusal olarak değişir:');
+  body += H.eq('P_{\\text{fan}}(n)=P_{\\text{fan}}^{\\,\\text{gov}}\\left(\\frac{n}{n_{\\text{gov}}}\\right)^{\\!3},'
+             + '\\qquad P_{\\text{ek}}(n)=P_{\\text{ek}}^{\\,\\text{gov}}\\,\\frac{n}{n_{\\text{gov}}}');
+  body += H.p('Tablodaki brüt ve net güç sütunları bu iki kayıp üzerinden birbirine bağlanır; "fan açık" sütunu yalnız '
+            + 'fan kaybını, "fan kapalı" sütunu ise hiçbir kaybı düşmez:');
+  body += H.eq('P_{b}=P_{n}+P_{\\text{fan}}+P_{\\text{ek}}');
+  body += H.p('Governed devrin üzerinde regülatör devreye girer ve tork, yüksüz governed devirde \\( n_{\\text{nl}} \\) '
+            + 'sıfıra inecek biçimde doğrusal olarak düşürülür:');
+  body += H.eq('T(n)=T(n_{\\text{gov}})\\left(1-\\frac{n-n_{\\text{gov}}}{n_{\\text{nl}}-n_{\\text{gov}}}\\right),'
+             + '\\qquad n_{\\text{gov}}\\le n\\le n_{\\text{nl}}');
 
   // ── Motor özeti (kaynak 716-729) ──
   body += H.h3('Motor Özeti');
@@ -2893,6 +2942,16 @@ function _veRepSecTransmission(R, sim, H, charts) {
   var body = '';
   body += H.p('Bu bölüm, güç aktarma organının şanzıman tanımını ve tam gaz otomatik vites geçişlerini yöneten kontrol stratejisini özetler. Şanzıman verimi ve vites geçiş eşikleri, çekiş kuvveti ve devir–hız profilinin hesaplanmasında doğrudan rol oynar.');
 
+  body += H.p('Motor devri ile araç hızı arasındaki bağı toplam aktarma oranı kurar. Mekanik zincir, seçili vitesin '
+            + 'oranı \\( i_{v} \\), kardan mili \\( i_{k} \\), transfer kutusu \\( i_{t} \\) ve aks \\( i_{a} \\) '
+            + 'oranlarının çarpımıdır:');
+  body += H.eq('i_{\\text{top}}=i_{v}\\,i_{k}\\,i_{t}\\,i_{a}');
+  body += H.eq('n=\\frac{60\\,i_{\\text{top}}}{2\\pi r_{d}}\\;v');
+  body += H.p('Tork konvertörünün tork oranı \\( TR \\) bu mekanik zincire ait değildir; devir–hız ilişkisine girmez, '
+            + 'yalnızca türbin çıkışındaki torku çarpar (bkz. Konvertör Değerlendirmesi). Otomatik vites geçiş eşikleri '
+            + 'ise seçili shift profilinin katsayılarıyla referans devirden \\( n_{\\text{ref}} \\) türetilir:');
+  body += H.eq('n^{\\ast}=a\\,n_{\\text{ref}}+b');
+
   // ─── Şanzıman ───
   body += H.h3('Şanzıman');
   body += H.kv([
@@ -2949,6 +3008,21 @@ function _veRepSecConverter(R, sim, H, charts) {
 
   var body = '';
   body += H.p('Bu bölüm, motor tork eğrisi ile aday tork konvertörlerinin eşleştirmesini değerlendirir. Her aday için stall noktası, türbin torku ve governed devirdeki hız oranı (SR) hesaplanır; C5/C7/C8 uygunluk kriterleri ile şanzıman giriş güç/tork limitleri (C9/C10) denetlenir.');
+
+  body += H.p('Konvertörün çalışma noktası üç boyutsuz büyüklükle tanımlanır — pompa (motor tarafı) devri '
+            + '\\( n_{p} \\), türbin (şanzıman tarafı) devri \\( n_{t} \\) olmak üzere:');
+  body += H.eq('SR=\\frac{n_{t}}{n_{p}},\\qquad TR=\\frac{T_{t}}{T_{p}},\\qquad \\eta_{\\text{TK}}=SR\\cdot TR');
+  body += H.p('Konvertörün yutma kabiliyeti, katalogdan gelen ve hız oranının fonksiyonu olan '
+            + '<strong>kapasite faktörü</strong> \\( K_{p}(SR) \\) ile verilir. Bu tanım, pompa torkunun devrin karesiyle '
+            + 'değiştiğini söyler:');
+  body += H.eq('K_{p}(SR)=\\frac{n_{p}}{\\sqrt{T_{p}}}\\quad\\Longleftrightarrow\\quad T_{p}=\\frac{n_{p}^{2}}{K_{p}^{2}}');
+  body += H.p('<strong>Stall noktası</strong>, türbinin kilitli olduğu (\\( SR=0 \\)) durumda motorun verebildiği net torkun '
+            + 'konvertörün yutabildiği torka eşitlendiği devirdir. Motordan çekilen pompa düşümü \\( \\Delta T_{p} \\) '
+            + 'düşüldükten sonra, aranan kök şudur:');
+  body += H.eq('T_{\\text{mot}}(n)-\\Delta T_{p}=\\frac{n^{2}}{K_{p}(0)^{2}}\\;\\Longrightarrow\\;n=n_{\\text{stall}}');
+  body += H.p('Stall noktasındaki türbin torku, o noktadaki net pompa torkunun sıfır hız oranındaki tork çarpanı '
+            + '\\( \\tau_{0} \\) ile büyütülmüş hâlidir; C7 kriteri bu değeri şanzımanın türbin limitiyle karşılaştırır:');
+  body += H.eq('T_{t}^{\\,\\text{stall}}=\\bigl(T_{\\text{mot}}(n_{\\text{stall}})-\\Delta T_{p}\\bigr)\\,\\tau_{0}');
 
   // Veri koşulu — kaynaktaki gibi torque eğrisi ve TC preset'leri gerekli
   if(!(R.torqueData && R.torqueData.length > 2 && typeof VE_FT_TC_PRESETS !== 'undefined' && typeof veGetFamilyTCKeys === 'function')) {
@@ -3070,6 +3144,17 @@ function _veRepSecDriveline(R, sim, H, charts) {
   var body = '';
   body += H.p('Bu bölüm, şanzıman çıkışından tekerleklere kadar uzanan güç aktarma zincirini (kardan milleri, diferansiyel ve — varsa — transfer kutusu) oran ve verim değerleriyle özetler. Bu bileşenlerin oran çarpımı toplam aktarma oranını, verim çarpımı ise tekerleğe iletilen net gücü belirler.');
 
+  body += H.p('Zincirdeki her kademe kendi verimini toplam verime <strong>çarpan</strong> olarak taşır; kayıplar '
+            + 'toplanmaz, birbirinin üzerine biner:');
+  body += H.eq('\\eta_{\\text{top}}=\\eta_{s}\\,\\eta_{k}\\,\\eta_{t}\\,\\eta_{a}');
+  body += H.p('Tekerlek çevresinde ortaya çıkan çekiş kuvveti \\( F_{t} \\), motor torkunun toplam oran ve toplam verimle '
+            + 'büyütülüp yuvarlanma yarıçapına bölünmesiyle bulunur. Bu, simülasyonun hareket denkleminde yol yüküne '
+            + 'karşı koyan tek itici terimdir:');
+  body += H.eq('F_{t}=\\frac{T_{\\text{mot}}\\,i_{\\text{top}}\\,\\eta_{\\text{top}}}{r_{d}}');
+  body += H.p('Aşağıdaki tabloların N/V sütunu, şanzıman çıkışındaki oranın \\( i_{o}=i_{a}\\,i_{t} \\) doğrudan '
+            + 'sonucudur — 1 km/h araç hızına karşılık gelen çıkış devri:');
+  body += H.eq('\\frac{n}{v}=\\frac{1000\\,i_{o}}{60\\cdot 2\\pi r_{d}}\\quad[\\mathrm{rpm}\\,/\\,\\mathrm{km\\,h^{-1}}]');
+
   // ─── Bileşen tablosu ───────────────────────────────────────────────────────
   var cols = [
     { t: 'Bileşen',   a: 'l' },
@@ -3150,6 +3235,18 @@ function _veRepSecGrade(R, sim, H, charts) {
   var body = '';
   body += H.p('Bu bölüm, tam gaz otomatik vites geçişleriyle aracın çıkabildiği maksimum eğimleri özetler. Durma (stall) ve kalkış (launch) tırmanma kabiliyeti, düşük hız eğim performansı ve düz yolda ulaşılan maksimum hız ile birlikte, artan eğime karşılık gelen en yüksek araç hızı ve o noktadaki vites kademesi verilir.');
 
+  body += H.p('Tırmanma kabiliyetinin ölçütü <strong>çeki kancası kuvvetidir</strong> (drawbar pull, \\( DP \\)): '
+            + 'çekiş kuvvetinden düz yol dirençleri düşüldükten sonra <em>geriye kalan</em> kuvvet. Eğim bileşeni '
+            + 'bilerek dışarıda bırakılır — aranan zaten o kuvvetin kaldırabileceği eğimdir:');
+  body += H.eq('DP=F_{t}-F_{r}-F_{a}');
+  body += H.p('Denge hâlinde bu artık kuvvet, ağırlığın eğim yönündeki bileşenini tam olarak karşılar '
+            + '(\\( DP=m\\,g\\sin\\theta \\)). Eğim ise yüzde olarak <strong>tanjantla</strong> raporlanır — '
+            + 'Allison/iSCAAN standardı bunu şart koşar; sinüs ile tanjantı karıştırmak dik eğimlerde ciddi sapma verir:');
+  body += H.eq('\\sin\\theta=\\frac{DP}{m\\,g},\\qquad '
+             + 'G_{\\%}=100\\tan\\theta=\\frac{100\\,\\sin\\theta}{\\sqrt{1-\\sin^{2}\\theta}}');
+  body += H.p('Tablodaki her satır, ilgili vites kademesinde \\( DP \\) sıfıra düştüğü — yani aracın o eğimde daha fazla '
+            + 'hızlanamadığı — dengeleme noktasına karşılık gelir.');
+
   // Üst bilgi — analiz koşulları
   var trRatioHigh = G.high.transferRatio || 1.0;
   body += H.kv([
@@ -3205,6 +3302,17 @@ function _veRepSecAccel(R, sim, H, charts) {
 
   var body = '';
   body += H.p('Bu bölüm, durgun halden hedef hızlara ulaşmak için gereken süre ve mesafeyi tam gaz otomatik vites geçişleri altında özetler. Değerler, güç aktarma modelinden ve yol yükü hesabından türetilir; her hedef hız için ulaşılan süre ve kat edilen mesafe verilir.');
+
+  body += H.p('Hızlanma, Newton’un ikinci yasasının boyuna eksende çözülmesidir. Aracın öteleme kütlesine ek olarak '
+            + 'motor, şanzıman ve tekerleklerin <em>dönen</em> atalet momentleri de hızlanmaya direnir; bunlar '
+            + '<strong>eşdeğer kütle katsayısı</strong> \\( \\lambda \\) ile tek bir efektif kütlede toplanır:');
+  body += H.eq('m_{e}\\,\\frac{dv}{dt}=F_{t}(v)-F_{\\text{yol}}(v),\\qquad m_{e}=\\lambda\\,m');
+  body += H.p('Çekiş kuvveti ile yol yükünün ikisi de hıza bağlı olduğundan denklemin kapalı-form çözümü yoktur; '
+            + 'zaman ve mesafe sayısal olarak integre edilir. Süre ve mesafe sütunları bu iki integralin sonucudur:');
+  body += H.eq('t=\\int_{0}^{v_{h}}\\frac{m_{e}}{F_{t}(v)-F_{\\text{yol}}(v)}\\,dv,'
+             + '\\qquad s=\\int_{0}^{t_{h}}v\\,dt');
+  body += H.p('Payda bir hedef hıza ulaşmadan sıfıra düşerse araç o hızda dengelenmiş demektir; tabloda bu satırlar '
+            + '“Hıza ulaşılamıyor” olarak işaretlenir.');
 
   // ── Üst bilgi (gradeability ile aynı 6 alan) ─────────────────────────────
   var trRatioAccel = A.high.transferRatio || 1.0;
@@ -3307,6 +3415,13 @@ function _veRepSecUpshift(R, sim, H, charts) {
   var body = '';
   body += H.p('Bu bölüm, aracın duruştan azami hıza tam gaz hızlanması sırasında otomatik şanzımanın vites geçiş noktalarını adım adım listeler. Her satır, ilgili hız/devir noktasındaki çekiş kuvvetini, tekerlek gücünü, tırmanılabilen net eğimi ve soğutucuya reddedilen ısıyı özetler; simülasyon standart güç eğrisi ve standart araç parametreleri ile motor fanı açık koşulunda yürütülmüştür.');
 
+  body += H.p('Tablonun sütunları, önceki bölümlerde kurulan bağıntıların her vites geçiş noktasında değerlendirilmiş '
+            + 'hâlidir: çekiş kuvveti \\( F_{t} \\), net çekiş \\( DP \\) ve net eğim \\( G_{\\%} \\). Tekerlek gücü, '
+            + 'çekiş kuvvetinin o andaki araç hızıyla çarpımıdır:');
+  body += H.eq('P_{w}=F_{t}\\,v');
+  body += H.p('Net çekişin negatife düştüğü satırlar kırmızı gösterilir: o noktada araç düz yolda dahi hızlanamıyor, '
+            + 'yol yükü çekiş kuvvetini aşmış demektir.');
+
   // Üst bilgi — koşullar ve aktarma oranları
   body += H.kv([
     ['Motor Fanı', 'Açık'],
@@ -3382,58 +3497,97 @@ function _veReportAssemble(R, sim, charts) {
   return { toc: toc, body: body };
 }
 
-// ─── Stil (referans CSS uyarlaması; KaTeX yok, daima beyaz zemin) ─────────────
+// ─── Stil — Takoz raporunun kozmetiğiyle BİREBİR ──────────────────────────────
+//
+// BELGE KENDİ ÖLÇEĞİNİ TAŞIR (--rfs-*) — arayüzün --fs-* jetonlarını KULLANMAZ.
+//
+// Neden ayrı bir ad alanı: bu CSS, MFSim arayüzüne değil `a.download` ile inen
+// BAĞIMSIZ bir HTML dosyasına gidiyor. O belge `css/styles.css`'i yüklemez;
+// dolayısıyla --fs-* orada TANIMSIZDIR. Tanımsız custom property'li bir
+// `font-size` bildirimi "invalid at computed-value time" olur ve font-size
+// kalıtımlı olduğu için değer EBEVEYNDEN MİRAS ALINIR — yani <h1>'den <td>'ye
+// kadar her şey tarayıcı varsayılanı 16px'e düşer. Tipografik hiyerarşi
+// tamamen silinir. Bu tam olarak olan şeydi: proje --fs-* ölçeğine geçirilirken
+// cp-mount-report.js muaf tutulmuş (tests/unit/typography-scale.js MUAF listesi)
+// ama results.js içindeki bu rapor CSS'i gözden kaçmış; 21 font-size bildirimi
+// sessizce çökmüştü. Rapor "Takoz raporu kadar güzel değil"di çünkü tipografisi
+// hiç uygulanmıyordu.
+//
+// Ayrı ad alanı (--rfs-) bilerek seçildi: aynı adı taşısaydı bir gün biri iki
+// ölçeği "senkronlamak" isteyip arayüz değerlerini (11px gövde) buraya taşırdı.
+// Kapı: tests/unit/report-cosmetics.test.js — kullanılan her var() tanımlı mı.
 var _VE_REPORT_CSS = `
 :root{
-  --ink:#1b1e24; --paper:#ffffff; --line:#c9cdd3; --line-soft:#e4e6e9;
+  --ink:#1b1e24; --paper:#fdfdfb; --line:#c9cdd3; --line-soft:#e4e6e9;
   --prusya:#24425f; --prusya-soft:#eef2f6; --check:#2e7d4f; --check-soft:#eaf3ee;
   --warn:#8a5a1e; --warn-soft:#f7f1e6; --bad:#b23b3b;
   --mono:"IBM Plex Mono",ui-monospace,monospace;
+  /* Belge tipografi ölçeği — Takoz raporu şablonuyla aynı basamaklar. */
+  --rfs-tiny:10px;    /* antet alan etiketi */
+  --rfs-body:11.5px;  /* eyebrow, TOC numarası, rozet */
+  --rfs-md:12.5px;    /* tablo başlığı, caption, figcaption, denklem etiketi */
+  --rfs-lg:13.5px;    /* tablo gövdesi, TOC, antet değeri */
+  --rfs-xl:14.5px;    /* not kutusu */
+  --rfs-title:15.5px; /* gövde metni, h3 */
+  --rfs-h2:19px;      /* bölüm başlığı */
+  --rfs-h1:27px;      /* belge başlığı */
+  /* GÖRELİ basamaklar — bilerek em: satır içi matematik ve kod, içine
+     gömüldüğü metinle birlikte ölçeklenmeli; sabit px iç içe kullanımda
+     (örn. tablo hücresindeki satır içi formül) yanlış boyut verirdi. */
+  --rfs-math:1.02em;  /* satır içi KaTeX — Source Serif 4 ile optik denge */
+  --rfs-code:.92em;   /* satır içi <code> */
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--paper);color:var(--ink);
-  font-family:"Source Serif 4",Georgia,serif;font-size:var(--fs-title);line-height:1.68;
+  font-family:"Source Serif 4",Georgia,serif;font-size:var(--rfs-title);line-height:1.68;
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
 .page{max-width:880px;margin:0 auto;padding:48px 32px 96px}
 h1,h2,h3{font-family:"Archivo",system-ui,sans-serif;color:var(--prusya);line-height:1.25;font-stretch:87%}
-h1{font-size:var(--fs-h1);font-weight:700;letter-spacing:.2px;margin:0 0 6px}
-h2{font-size:var(--fs-h2);font-weight:700;margin:56px 0 14px;padding-top:14px;border-top:2px solid var(--prusya);
+h1{font-size:var(--rfs-h1);font-weight:700;letter-spacing:.2px;margin:0 0 6px}
+h2{font-size:var(--rfs-h2);font-weight:700;margin:44px 0 14px;padding-top:14px;border-top:2px solid var(--prusya);
   display:flex;gap:14px;align-items:baseline}
-h2 .no{font-family:var(--mono);font-size:var(--fs-lg);color:var(--paper);background:var(--prusya);
+h2 .no{font-family:var(--mono);font-size:var(--rfs-lg);color:var(--paper);background:var(--prusya);
   padding:2px 8px;border-radius:2px;transform:translateY(-2px)}
-h3{font-size:var(--fs-title);font-weight:600;margin:26px 0 8px;color:var(--ink)}
+h3{font-size:var(--rfs-title);font-weight:600;margin:26px 0 8px;color:var(--ink)}
 p{margin:0 0 13px;text-align:justify;hyphens:auto}
 strong{font-weight:600} em{font-style:italic}
 
 /* ── Antet ── */
 .antet{border:1.5px solid var(--ink);margin-bottom:36px}
 .antet .band{background:var(--prusya);color:#fff;padding:16px 20px}
-.antet .band .eyebrow{font-family:var(--mono);font-size:var(--fs-body);letter-spacing:2.5px;text-transform:uppercase;opacity:.85;margin-bottom:6px}
+.antet .band .eyebrow{font-family:var(--mono);font-size:var(--rfs-body);letter-spacing:2.5px;text-transform:uppercase;opacity:.85;margin-bottom:6px}
 .antet .band h1{color:#fff}
-.antet .band .sub{font-family:"Archivo",sans-serif;font-size:var(--fs-lg);font-weight:400;opacity:.92;margin-top:4px;line-height:1.4}
+.antet .band .sub{font-family:"Archivo",sans-serif;font-size:var(--rfs-lg);font-weight:400;opacity:.92;margin-top:4px;line-height:1.4}
 .antet .fields{display:grid;grid-template-columns:repeat(5,1fr);border-top:1.5px solid var(--ink)}
 .antet .f{padding:8px 12px;border-right:1px solid var(--line)}
 .antet .f:last-child{border-right:none}
-.antet .f .k{font-family:var(--mono);font-size:var(--fs-tiny);letter-spacing:1.5px;text-transform:uppercase;color:#5a6270}
-.antet .f .v{font-family:"Archivo",sans-serif;font-size:var(--fs-lg);font-weight:600;margin-top:2px;word-break:break-word}
+.antet .f .k{font-family:var(--mono);font-size:var(--rfs-tiny);letter-spacing:1.5px;text-transform:uppercase;color:#5a6270}
+.antet .f .v{font-family:"Archivo",sans-serif;font-size:var(--rfs-lg);font-weight:600;margin-top:2px;word-break:break-word}
+
+/* ── Denklem blokları (KaTeX) ── */
+.eqno{position:relative}
+.eqno .tag{position:absolute;right:0;top:50%;transform:translateY(-50%);
+  font-family:var(--mono);font-size:var(--rfs-md);color:#5a6270}
+.katex-display{margin:14px 0 18px}
+.katex{font-size:var(--rfs-math)}
 
 /* ── Notlar ── */
-.note{background:var(--prusya-soft);border-left:3px solid var(--prusya);padding:12px 16px;margin:16px 0;font-size:var(--fs-lg)}
+.note{background:var(--prusya-soft);border-left:3px solid var(--prusya);padding:12px 16px;margin:16px 0;font-size:var(--rfs-xl)}
 .note.warn{background:var(--warn-soft);border-left-color:var(--warn)}
 .note.check{background:var(--check-soft);border-left-color:var(--check)}
-.note .t{font-family:"Archivo",sans-serif;font-weight:700;font-size:var(--fs-md);letter-spacing:1.5px;
+.note .t{font-family:"Archivo",sans-serif;font-weight:700;font-size:var(--rfs-md);letter-spacing:1.5px;
   text-transform:uppercase;display:block;margin-bottom:4px;color:var(--prusya)}
 .note.warn .t{color:var(--warn)} .note.check .t{color:var(--check)}
 
 /* ── Tablolar ── */
-table{border-collapse:collapse;width:100%;margin:14px 0 20px;font-size:var(--fs-lg)}
-caption{caption-side:top;text-align:left;font-family:"Archivo",sans-serif;font-size:var(--fs-md);
+table{border-collapse:collapse;width:100%;margin:14px 0 20px;font-size:var(--rfs-lg)}
+caption{caption-side:top;text-align:left;font-family:"Archivo",sans-serif;font-size:var(--rfs-md);
   font-weight:600;color:var(--prusya);padding-bottom:6px;letter-spacing:.3px}
-th{font-family:"Archivo",sans-serif;font-size:var(--fs-md);font-weight:600;letter-spacing:.5px;
+th{font-family:"Archivo",sans-serif;font-size:var(--rfs-md);font-weight:600;letter-spacing:.5px;
   background:var(--prusya-soft);color:var(--prusya);padding:7px 10px;border:1px solid var(--line);text-align:center}
-td{padding:6px 10px;border:1px solid var(--line-soft);font-family:var(--mono);font-size:var(--fs-lg);text-align:right;white-space:nowrap}
-td.l{text-align:left;font-family:"Source Serif 4",Georgia,serif;font-size:var(--fs-lg);white-space:normal}
+td{padding:6px 10px;border:1px solid var(--line-soft);font-family:var(--mono);font-size:var(--rfs-md);text-align:right;white-space:nowrap}
+td.l{text-align:left;font-family:"Source Serif 4",Georgia,serif;font-size:var(--rfs-lg);white-space:normal}
 td.c{text-align:center}
 tr.sum td{border-top:1.5px solid var(--line);background:#f7f8f9;font-weight:600}
 table.kv td.l{width:46%;color:#3c4350}
@@ -3441,33 +3595,48 @@ table.kv td:not(.l){font-weight:600}
 .st-ok{color:var(--check);font-weight:600;white-space:nowrap}
 .st-warn{color:var(--warn);font-weight:600;white-space:nowrap}
 .st-bad{color:var(--bad);font-weight:600;white-space:nowrap}
-.chip{display:inline-block;font-family:var(--mono);font-size:var(--fs-body);background:var(--check-soft);
+.chip{display:inline-block;font-family:var(--mono);font-size:var(--rfs-body);background:var(--check-soft);
   color:var(--check);border:1px solid var(--check);border-radius:2px;padding:0 6px;margin-left:6px;vertical-align:1px}
 
 /* ── Şekiller ── */
 figure{margin:22px 0 26px;border:1px solid var(--line);padding:14px 14px 10px;background:#fff}
 figure img{width:100%;height:auto;display:block}
-figcaption{font-family:"Archivo",sans-serif;font-size:var(--fs-md);color:#3c4350;margin-top:10px;
+figcaption{font-family:"Archivo",sans-serif;font-size:var(--rfs-md);color:#3c4350;margin-top:10px;
   padding-top:8px;border-top:1px solid var(--line-soft)}
 figcaption b{color:var(--prusya)}
+svg{width:100%;height:auto;display:block}
+svg text{font-family:"IBM Plex Mono",monospace}
+
+/* ── Kod ── */
+pre{background:#f4f5f6;border:1px solid var(--line);padding:16px 18px;overflow-x:auto;
+  font-family:var(--mono);font-size:var(--rfs-md);line-height:1.55;margin:14px 0}
+code{font-family:var(--mono);font-size:var(--rfs-code);background:#f1f2f4;padding:1px 5px;border-radius:2px}
+pre code{background:none;padding:0}
 
 /* ── İçindekiler ── */
-.toc{font-family:"Archivo",sans-serif;font-size:var(--fs-lg);columns:2;column-gap:36px;margin:10px 0 4px}
+.toc{font-family:"Archivo",sans-serif;font-size:var(--rfs-lg);columns:2;column-gap:36px;margin:10px 0 4px}
 .toc a{color:var(--ink);text-decoration:none;display:block;padding:3px 0;border-bottom:1px dotted var(--line-soft);break-inside:avoid}
 .toc a:hover{color:var(--prusya)}
-.toc .n{font-family:var(--mono);font-size:var(--fs-body);color:var(--prusya);margin-right:8px;font-weight:600}
+.toc .n{font-family:var(--mono);font-size:var(--rfs-body);color:var(--prusya);margin-right:8px;font-weight:600}
 
-.foot{margin-top:40px;font-size:var(--fs-lg);color:#5a6270;border-top:1px solid var(--line);padding-top:12px;font-family:"Archivo",sans-serif}
+.foot{margin-top:40px;font-size:var(--rfs-lg);color:#5a6270;border-top:1px solid var(--line);padding-top:12px;font-family:"Archivo",sans-serif}
 
 @media print{
+  @page{margin:18mm 16mm}
   .page{max-width:100%;padding:0}
   body{font-size:11pt}
+  p{orphans:3;widows:3}
+  thead{display:table-header-group}
+  .antet,.toc{break-inside:avoid}
   h2,h3{break-after:avoid}
-  figure,table,.note{break-inside:avoid}
+  figure,table,pre,.note,.katex-display{break-inside:avoid}
   tr{break-inside:avoid}
   caption{break-after:avoid}
   a{color:inherit;text-decoration:none}
+  /* Arka planları (antet bandı, notlar, tablo başlıkları) kullanıcının
+     "Arka plan grafikleri" seçeneği KAPALI olsa bile bas. */
   *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+  /* Geniş tablolar sayfaya sığsın — sağdan kırpılmasın. */
   table{font-size:9pt} caption{font-size:9pt} th{padding:4px 6px} td{padding:3px 6px;white-space:normal}
 }
 @media (max-width:640px){
@@ -3514,15 +3683,26 @@ function veDownloadReportHTML() {
 
   if(typeof showToast === 'function') showToast('HTML rapor hazırlanıyor…', 'info');
 
-  function withFonts(cb) {
+  // Gömülü varlıklar — Takoz raporuyla AYNI kaynak (window.MNT_REPORT_ASSETS):
+  // Archivo + Source Serif 4 + IBM Plex Mono (woff2 data-URI) ve KaTeX (css+js).
+  // Hepsi belgeye gömülür; indirilen rapor çevrimdışı, sıfır ağ isteğiyle açılır.
+  // Varlık yüklenemezse rapor yine üretilir — yalnız yerel fontlara ve düz
+  // metin formüllere düşer (sessiz başarısızlık değil: belge eksiksiz kalır).
+  function withAssets(cb) {
+    function pick() {
+      var A = window.MNT_REPORT_ASSETS;
+      return A ? { fontsCss: A.fontsCss || '', katexCss: A.katexCss || '', katexJs: A.katexJs || '' }
+               : { fontsCss: '', katexCss: '', katexJs: '' };
+    }
     if(typeof _mntReportEnsureAssets === 'function') {
-      try { _mntReportEnsureAssets(function(ok) { cb((ok && window.MNT_REPORT_ASSETS) ? window.MNT_REPORT_ASSETS.fontsCss : ''); }); return; }
+      try { _mntReportEnsureAssets(function(ok) { cb(ok ? pick() : { fontsCss: '', katexCss: '', katexJs: '' }); }); return; }
       catch(e) {}
     }
-    cb((window.MNT_REPORT_ASSETS && window.MNT_REPORT_ASSETS.fontsCss) || '');
+    cb(pick());
   }
 
-  withFonts(function(fontsCss) {
+  withAssets(function(ASSETS) {
+    var fontsCss = ASSETS.fontsCss;
     setTimeout(function() {
       var restored = false;
       function restore() {
@@ -3558,17 +3738,25 @@ function veDownloadReportHTML() {
         var timeStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
 
         var asm = _veReportAssemble(R, sim, charts);
+        // KaTeX gövdesinde geçen "</script>" dizisi, gömüldüğü <script> etiketini
+        // ERKEN KAPATIR ve belgenin geri kalanı ham metin olarak dökülür. Takoz
+        // raporu da aynı kaçışı yapar (_mntBuildReportHTML).
+        var katexJs = ASSETS.katexJs ? ASSETS.katexJs.replace(/<\/script>/gi, '<\\/script>') : '';
         var doc = '<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8">'
           + '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
           + '<title>' + _veReportEsc(projectName) + ' — Araç Performans Raporu</title>'
           + (fontsCss ? '<style>' + fontsCss + '</style>' : '')
+          + (ASSETS.katexCss ? '<style>' + ASSETS.katexCss + '</style>' : '')
           + '<style>' + _VE_REPORT_CSS + '</style>'
           + '</head><body><div class="page">'
           + _veReportAntet(R, projectName, dateStr)
           + asm.toc
           + asm.body
           + '<p class="foot">Bu rapor, projede tanımlı güç aktarma modelinden <strong>otomatik üretilmiştir</strong>; girdi değerleri modeldeki bileşen tanımlarından alınır. Tasarım kararlarında güncel tedarikçi / test verisiyle teyit edilmelidir. · MFSim — Motor Freni Simülasyon Yazılımı · ' + dateStr + ' ' + timeStr + '</p>'
-          + '</div></body></html>';
+          + '</div>'
+          + (katexJs ? '<script>' + katexJs + '</script>'
+              + '<script>document.addEventListener("DOMContentLoaded",function(){try{renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"\\\\(",right:"\\\\)",display:false}],throwOnError:false});}catch(e){}});</script>' : '')
+          + '</body></html>';
 
         _veReportDownloadBlob(doc, _veReportSlug(projectName) + '_arac_performans_raporu.html');
         if(typeof showToast === 'function') showToast('HTML rapor indirildi (' + Math.round(doc.length / 1024) + ' KB)', 'success');
