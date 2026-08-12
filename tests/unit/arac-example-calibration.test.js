@@ -163,7 +163,15 @@ const GECIS = {
   bmc10ton_430_32t:  { aux: 1.536, gecis: [['1C','2C',5.4,6.4], ['2C','2L',10.3,11.3], ['2L','3L',14.8,16.1], ['3L','4L',21.4,22.5], ['4L','5L',32.7,33.8], ['5L','6L',42.8,43.5]] },
   bmc10ton_460:      { aux: 1.536, gecis: [['1C','2C',5.4,6.4], ['2C','2L',10.3,11.3], ['2L','3L',14.8,16.1], ['3L','4L',21.4,22.5], ['4L','5L',32.7,33.8], ['5L','6L',42.8,43.5]] },
   duramax:           { aux: 1.000, gecis: [['1C','2C',16.9,19.3], ['2C','2L',28.3,29.0], ['2L','3L',41.2,41.8], ['3L','4L',54.5,54.7], ['4L','5L',76.8,77.2], ['5L','6L',102.4,103.0]] },
-  ypa4x4:            { aux: 3.430, gecis: [['1C','1L',10.1,12.9], ['1L','2L',14.0,16.1], ['2L','3L',19.2,19.3], ['3L','4L',23.7,25.7], ['4L','5L',35.6,38.6], ['5L','6L',46.9,48.3], ['6L','7L',67.4,67.6], ['7L','8L',91.6,93.3], ['8L','9L',104.9,106.2]] },
+  // ypa4x4'te rapor 1. VİTESTE kilitleniyor (1C→1L→2L); MFSim'in durum makinesi
+  // 1L modunu tanımıyor, aynı hızlarda 1C→2C→2L yapıyor. Yani GEÇİŞ HIZLARI
+  // tutuyor ama 10-14 km/h arasında rapor 1. viteste kilitliyken MFSim 2. viteste.
+  // Etiketleri `mf` ile AÇIKÇA eşliyoruz — testin gevşek bir eşleşmeyle bu farkı
+  // örtmesini istemiyoruz; kimin neyle karşılaştırıldığı burada yazılı olsun.
+  ypa4x4:            { aux: 3.430, gecis: [['1C','1L',10.1,12.9,'1C','2C'], ['1L','2L',14.0,16.1,'2C','2L'],
+                                           ['2L','3L',19.2,19.3], ['3L','4L',23.7,25.7], ['4L','5L',35.6,38.6],
+                                           ['5L','6L',46.9,48.3], ['6L','7L',67.4,67.6], ['7L','8L',91.6,93.3],
+                                           ['8L','9L',104.9,106.2]] },
 };
 
 /** Örneği gerçek zincir çözümüyle koştur; kademe başına sonuç döndür. */
@@ -343,13 +351,24 @@ describe('vites geçiş noktaları — iSCAAN hızlanma tablosuyla', () => {
     const m = sonuc[id].find(r => Math.abs(r.ratio - g.aux) < 0.02);
     expect(m).toBeTruthy();
     const sapan = [];
-    g.gecis.forEach(([from, to, lo, hi]) => {
-      const s = m.gecis.find(x => x.to === to) || m.gecis.find(x => x.from === from);
-      if (!s) { sapan.push(`${from}→${to}: MFSim'de yok`); return; }
+    g.gecis.forEach(([from, to, lo, hi, mfFrom, mfTo]) => {
+      // Varsayılan: MFSim etiketi raporunkiyle AYNI olmalı. Farklıysa yukarıda
+      // açıkça bildirilir (yalnız ypa4x4) — gevşek eşleşmeye izin YOK.
+      const bekFrom = mfFrom || from, bekTo = mfTo || to;
+      const s = m.gecis.find(x => x.from === bekFrom && x.to === bekTo);
+      if (!s) { sapan.push(`${from}→${to}: MFSim'de ${bekFrom}→${bekTo} yok`); return; }
       // ±1.7 km/h: raporun satır adımı ~1.6, geçiş iki satır arasında bir yerde
       if (s.v < lo - 1.7 || s.v > hi + 1.7) sapan.push(`${from}→${to}: rapor ${lo}–${hi}, MFSim ${s.v.toFixed(1)}`);
     });
     expect(sapan).toEqual([]);
+  });
+
+  test('ypa4x4: MFSim 1. viteste kilitlenmeyi HÂLÂ temsil edemiyor', () => {
+    // Bu bilinen sınırlamanın çıpası. Durum makinesi 1L modunu kazanırsa bu test
+    // kırmızıya döner — o zaman yukarıdaki `mf` eşlemesi kaldırılmalı.
+    const m = sonuc.ypa4x4.find(r => Math.abs(r.ratio - 3.430) < 0.02);
+    expect(m.gecis.some(x => x.to === '1L')).toBe(false);
+    expect(m.gecis.some(x => x.from === '1C' && x.to === '2C')).toBe(true);
   });
 
   test('seksen bir geçişin tamamı kapsanıyor', () => {
