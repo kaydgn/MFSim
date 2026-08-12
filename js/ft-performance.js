@@ -2293,6 +2293,35 @@ function veScaleFTDataForTransfer(ftDataOrig, ratioOrig, ratioNew, etaOrig, etaN
   return scaled;
 }
 
+// ── Transfer kademelerinin YÜKSEK/DÜŞÜK rolünü ORANDAN çözer ────────────────
+// Eskiden rol DİZİ KONUMUNDAN alınıyordu (trGears[0] = yüksek, trGears[1] = düşük)
+// ve bu varsayım hiçbir yerde doğrulanmıyordu. Oysa iSCAAN raporlarında bile
+// High/Low ETİKETLERİ başvurudan başvuruya ters dönebiliyor — aynı BMC 10TON 6×6
+// aracının iki raporu buna örnek:
+//     497-A355435-1 : Low = 1.536, High = 0.874
+//     497-A355294-1 : Low = 0.874, High = 1.536
+// Rapordaki etiket sırasını kopyalayan kullanıcı diziyi ters girdiğinde fizik
+// doğru kalıyordu ama "Yüksek/Düşük Kademe" adlandırması sessizce ters dönüyor,
+// bu da sonuç paneline, eğim grafiğine, TXT ve HTML raporlarına yayılıyordu.
+//
+// Kural: KÜÇÜK oran = yüksek (hızlı) kademe. İkiden çok kademe verilirse uçlar
+// (en küçük / en büyük oran) esas alınır.
+// Dönüş: null (tek kademe) | { other, otherRatio, activeIsLow }
+function veResolveTransferRoles(trGears, activeRatio) {
+  if(!trGears || trGears.length < 2) return null;
+  var num = function(g) { return parseFloat(g.ratio != null ? g.ratio : g.oran) || 0; };
+  var fast = trGears[0], slow = trGears[0];
+  for(var i = 1; i < trGears.length; i++) {
+    if(num(trGears[i]) < num(fast)) fast = trGears[i];
+    if(num(trGears[i]) > num(slow)) slow = trGears[i];
+  }
+  if(num(fast) === num(slow)) return null;            // tüm oranlar aynı → rol yok
+  // Aktif kademe hangisine daha yakınsa o roldedir.
+  var activeIsLow = Math.abs(activeRatio - num(slow)) < Math.abs(activeRatio - num(fast));
+  var other = activeIsLow ? fast : slow;
+  return { other: other, otherRatio: num(other), activeIsLow: activeIsLow };
+}
+
 // Ana gradeability hesabı — transfer kademelerine göre high/low
 function veCalculateGradeability(simResult) {
   var speed = simResult.speed, DP = simResult.DP, gearMode = simResult.gearMode;
@@ -2330,28 +2359,32 @@ function veCalculateGradeability(simResult) {
   var activeRatio = ss.transferRange ? (parseFloat(ss.transferRange.ratio || ss.transferRange.oran) || 1.0) : (trGears.length > 0 ? trGears[0].ratio : 1.0);
   var activeEta = ss.transferRange ? (parseFloat(ss.transferRange.eff || ss.transferRange.verim) || 97) : (trGears.length > 0 ? trGears[0].eff : 97);
   
-  // High kademe (mevcut FT verisi)
+  // Rolleri ORANDAN çöz (dizi konumundan DEĞİL — bkz. veResolveTransferRoles).
+  var _roles = (rs.hasTransfer && trGears.length > 1) ? veResolveTransferRoles(trGears, activeRatio) : null;
+  var activeIsLow = !!(_roles && _roles.activeIsLow);
+
+  // Simüle edilmiş (aktif) kademe
   var result = {};
-  result.high = veCalcGradeForRatio(ftData, m_kg, activeRatio, false, rs.hasTC);
-  result.high.label = rs.hasTransfer && trGears.length > 1 ?
-    'Transfer Kutusu: Yüksek Kademe (' + activeRatio.toFixed(3) + ')' :
-    'Transfer Kutusu: Yüksek Kademe (' + activeRatio.toFixed(3) + ')';
+  var resActive = veCalcGradeForRatio(ftData, m_kg, activeRatio, activeIsLow, rs.hasTC);
+  resActive.label = 'Transfer Kutusu: ' + (activeIsLow ? 'Düşük' : 'Yüksek') +
+    ' Kademe (' + activeRatio.toFixed(3) + ')';
 
   // Düşük-hız eğimini quasi-statik (~10 km/h oturmuş) noktadan override et (Fix A §1.3.3) —
   // transient iz o hızda motoru tam oturmamış gösterip çekişi düşük okuyor.
+  // simResult.lowSpeedOp AKTİF kademeye aittir → aktif sonuca uygulanır.
   if(simResult.lowSpeedOp) {
     var _mgH = m_kg * 9.81 / 1000;
     var _dpL = simResult.lowSpeedOp.DP_kN;
-    result.high.lowSpeedGrade = (_dpL / _mgH >= 1.0) ? 999.0
+    resActive.lowSpeedGrade = (_dpL / _mgH >= 1.0) ? 999.0
       : Math.round(Math.tan(Math.asin(_dpL / _mgH)) * 100 * 10) / 10;
-    result.high.lowSpeedV = simResult.lowSpeedOp.v_kmh;
+    resActive.lowSpeedV = simResult.lowSpeedOp.v_kmh;
   }
 
-  // Düşük kademe (ikinci transfer oranı varsa)
-  result.low = null;
-  if(rs.hasTransfer && trGears.length > 1) {
-    var lowGear = trGears[1]; // İkinci kademe = düşük kademe (yüksek oran)
-    var lowRatio = lowGear.ratio;
+  // Diğer kademe (ikinci transfer oranı varsa)
+  var resOther = null;
+  if(_roles) {
+    var lowGear = _roles.other;
+    var lowRatio = _roles.otherRatio;
     var lowEta = lowGear.eff;
 
     // Gerçek Low range simülasyon sonuçları varsa onları kullan (ölçekleme yerine)
@@ -2396,12 +2429,20 @@ function veCalculateGradeability(simResult) {
     }
 
     if(ftDataLow.length >= 2) {
-      result.low = veCalcGradeForRatio(ftDataLow, m_kg, lowRatio, true, rs.hasTC);
-      result.low.label = 'Transfer Kutusu: Düşük Kademe (' + lowRatio.toFixed(3) + ')';
-      result.low.source = lowSimResult ? 'simulation' : 'scaling';
+      resOther = veCalcGradeForRatio(ftDataLow, m_kg, lowRatio, !activeIsLow, rs.hasTC);
+      resOther.label = 'Transfer Kutusu: ' + (activeIsLow ? 'Yüksek' : 'Düşük') +
+        ' Kademe (' + lowRatio.toFixed(3) + ')';
+      resOther.source = lowSimResult ? 'simulation' : 'scaling';
     }
   }
-  
+
+  // Rollere göre yerleştir: high = hızlı (küçük oran), low = yavaş (büyük oran).
+  if(activeIsLow) { result.high = resOther; result.low = resActive; }
+  else            { result.high = resActive; result.low = resOther; }
+  // Yalnız aktif kademe hesaplanabildiyse (diğeri veri yetersizliğinden düştü)
+  // high boş kalmasın — tüketiciler G.high'ı zorunlu sayıyor.
+  if(!result.high) { result.high = resActive; result.low = null; }
+
   return result;
 }
 
@@ -2449,19 +2490,24 @@ function veCalculateAcceleration(simResult) {
   var trGears = rs.transferGears || [];
   var activeRatio = ss.transferRange ? (parseFloat(ss.transferRange.ratio || ss.transferRange.oran) || 1.0) : (trGears.length > 0 ? trGears[0].ratio : 1.0);
   
+  // Rolleri ORANDAN çöz (dizi konumundan DEĞİL — bkz. veResolveTransferRoles).
+  var _rolesA = (rs.hasTransfer && trGears.length > 1) ? veResolveTransferRoles(trGears, activeRatio) : null;
+  var activeIsLowA = !!(_rolesA && _rolesA.activeIsLow);
+
   var result = {};
-  result.high = {
+  var accActive = {
     transferRatio: activeRatio,
-    label: 'Transfer Kutusu: Yüksek Kademe (' + activeRatio.toFixed(3) + ')',
+    label: 'Transfer Kutusu: ' + (activeIsLowA ? 'Düşük' : 'Yüksek') +
+      ' Kademe (' + activeRatio.toFixed(3) + ')',
     maxSpeed: Math.round(maxSpeed * 10) / 10,
     rows: veExtractAccelMilestones(speed, time, distance, maxSpeed)
   };
-  
-  // Düşük kademe (ikinci transfer oranı varsa)
-  result.low = null;
-  if(rs.hasTransfer && trGears.length > 1) {
-    var lowGear = trGears[1];
-    var lowRatio = lowGear.ratio;
+
+  // Diğer kademe (ikinci transfer oranı varsa)
+  var accOther = null;
+  if(_rolesA) {
+    var lowGear = _rolesA.other;
+    var lowRatio = _rolesA.otherRatio;
 
     // Gerçek düşük kademe simülasyon sonuçları varsa onları kullan
     var allRangeRes = typeof window !== 'undefined' ? window._veFTAllRangeResults : null;
@@ -2472,9 +2518,10 @@ function veCalculateAcceleration(simResult) {
       // Gerçek simülasyon verisi — doğru ivme, doğru eşdeğer kütle
       var lowSS = lowSimResult.solverStats || {};
       var lowMaxSpeed = lowSS.maxSpeed_kmh || Math.max.apply(null, lowSimResult.speed);
-      result.low = {
+      accOther = {
         transferRatio: lowRatio,
-        label: 'Transfer Kutusu: Düşük Kademe (' + lowRatio.toFixed(3) + ')',
+        label: 'Transfer Kutusu: ' + (activeIsLowA ? 'Yüksek' : 'Düşük') +
+          ' Kademe (' + lowRatio.toFixed(3) + ')',
         maxSpeed: Math.round(lowMaxSpeed * 10) / 10,
         rows: veExtractAccelMilestones(lowSimResult.speed, lowSimResult.time, lowSimResult.distance, lowMaxSpeed),
         source: 'simulation'
@@ -2490,15 +2537,21 @@ function veCalculateAcceleration(simResult) {
       var lowTime = time.map(function(t) { return t / rFactor; });
       var lowDist = distance.map(function(d) { return d / (rFactor * rFactor); });
       var lowMaxSpeedRound = Math.round(maxSpeedLow * 10) / 10;
-      result.low = {
+      accOther = {
         transferRatio: lowRatio,
-        label: 'Transfer Kutusu: Düşük Kademe (' + lowRatio.toFixed(3) + ')',
+        label: 'Transfer Kutusu: ' + (activeIsLowA ? 'Yüksek' : 'Düşük') +
+          ' Kademe (' + lowRatio.toFixed(3) + ')',
         maxSpeed: lowMaxSpeedRound,
         rows: veExtractAccelMilestones(lowSpeed, lowTime, lowDist, lowMaxSpeedRound),
         source: 'scaling'
       };
     }
   }
+
+  // Rollere göre yerleştir: high = hızlı (küçük oran), low = yavaş (büyük oran).
+  if(activeIsLowA) { result.high = accOther; result.low = accActive; }
+  else             { result.high = accActive; result.low = accOther; }
+  if(!result.high) { result.high = accActive; result.low = null; }
 
   return result;
 }
