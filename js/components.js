@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','arac-performans','mount-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','arac-performans','mount-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -368,6 +368,13 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-danger, #ef4444)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-danger, #ef4444)"/><circle cx="78" cy="22" r="6" fill="var(--accent-warning, #f59e0b)"/></svg>',
     inputs: 0, outputs: 0, isMountSolver: true
   },
+  // Araç Performans "Başlangıç ve Örnekler" — mnt-example'ın güç aktarma karşılığı.
+  // Kayıt defteri ve panel js/cp-arac-example.js içinde.
+  'ap-example': {
+    name: 'Başlangıç ve Örnekler',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M28 14 h32 l14 14 v58 h-46 z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><path d="M60 14 v14 h14" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="42" width="14" height="11" rx="2" fill="var(--text-muted, #aaa)"/><line x1="48" y1="47" x2="56" y2="47" stroke="var(--text-muted, #aaa)" stroke-width="3"/><circle cx="61" cy="47" r="5" fill="none" stroke="var(--text-muted, #aaa)" stroke-width="3"/><line x1="36" y1="66" x2="66" y2="66" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="76" x2="54" y2="76" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg>',
+    inputs: 0, outputs: 0, isApExample: true, defaultWidth: 56, defaultHeight: 56
+  },
   'mnt-example': {
     name: 'Başlangıç ve Örnekler',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M28 14 h32 l14 14 v58 h-46 z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><path d="M60 14 v14 h14" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><line x1="36" y1="44" x2="66" y2="44" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="56" x2="66" y2="56" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="68" x2="54" y2="68" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg>',
@@ -664,7 +671,7 @@ var COMPONENT_SIGNALS = {
 // Fiziksel güç zincirine bağlanmayan, "mantıksal" bileşenler. Doğrulama
 // bunları bağlantısız saymaz; canvas'ta da kesikli çerçeveyle ayrışırlar ki
 // kullanıcı "bunu bağlamayı mı unuttum?" diye tereddüt etmesin.
-var VE_STANDALONE_TYPES = ['vehicle','road','sensor','sensor-wizard','solver','scenario',
+var VE_STANDALONE_TYPES = ['ap-example','vehicle','road','sensor','sensor-wizard','solver','scenario',
                            'coast-down','parametric','terminator','obstacle-crossing',
                            'ec-matching','engine-gearbox-matching','shift-controller'];
 
