@@ -92,6 +92,9 @@ function updateCanvasTransform() {
   // Sonsuz ızgara deseni kameradan türetilir (js/canvas-space.js) — transform ile
   // AYNI karede tazelenmezse ızgara içerikten kayar.
   if(typeof veApplyGridPattern === 'function') veApplyGridPattern();
+  // Alt-topoloji çıkış çipi sınır çerçevesine tutunur; kamera her oynadığında
+  // aynı karede yeniden konumlanmazsa çerçeveden kopup kayar.
+  if(typeof veAnchorBoundaryChip === 'function') veAnchorBoundaryChip();
   // Alt durum çubuğundaki yakınlaştırma yüzdesini güncelle
   var _zoomStatus = document.getElementById('ve-status-zoom');
   if(_zoomStatus) _zoomStatus.textContent = '%' + Math.round(canvasZoom * 100);

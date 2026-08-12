@@ -1684,14 +1684,16 @@
 }
 
 /* Alt-topoloji çıkış çipi — bir alt topolojinin ("Araç Performans" / "Takoz")
-   içine inildiğinde CANVAS ALANININ ALT-ORTASINA iliştirilir.
+   içine inildiğinde TOPOLOJİ SINIR ÇERÇEVESİNİN (kesikli dikdörtgen) ALT
+   KENARINA tutunur.
 
    Konum geçmişi: önce ekran ortasında yüzen kırmızı bir banner, sonra sol-üst
-   köşeye dock'lu bir çipti. Sol-üst köşe iki şeyi birden bozuyordu: topoloji
-   oraya doğru açıldığı için diyagramın üstünü örtüyor, sol paneli açma rayıyla
-   da çakışıyordu — panel daraltılınca çipi sağa iten AYRI bir kural gerekmişti
-   (o kural bu düzenlemeyle gereksizleşti ve kaldırıldı). Alt-orta bandı boş
-   kalır: çip diyagramın ALTINDA durur, hiçbir şeyin üstünü örtmez. */
+   köşeye dock'lu bir çip, sonra görünümün alt-ortasına dock'lu bir çip. Dock'lu
+   sürüm çipi diyagramdan KOPARIYORDU: topoloji görünümün üst yarısındayken çip
+   çok aşağıda, ilgisiz bir boşlukta duruyordu (kullanıcının ekran görüntüsü).
+   Artık çerçeveye tutunur — konumu js/canvas-space.js veAnchorBoundaryChip
+   hesaplar (left/top inline yazılır), pan/zoom'da çerçeveyle birlikte gider.
+   Buradaki left/bottom yalnızca JS ölçemeden önceki İLK karenin yedeğidir. */
 .ve-arac-breadcrumb{
   position:absolute;
   bottom:18px;
@@ -1722,12 +1724,9 @@
   from{ opacity:0; transform:translate(-50%, 8px); }
   to{ opacity:1; transform:translate(-50%, 0); }
 }
-/* Dar ekranda genel görünüm penceresiyle (.ve-minimap — sağ alt, 196×134)
-   çakışmasın diye çip onun üstüne çıkar. Eşik, ortalanmış çipin sağ kenarının
-   minimap'in sol kenarını geçtiği genişlikten gelir. */
-@media (max-width:1080px){
-  .ve-arac-breadcrumb{ bottom:162px; }
-}
+/* Dar ekranda minimap ile çakışmaya karşı olan "bottom:162px" kuralı KALDIRILDI:
+   çip artık görünümün alt kenarına dock'lu değil, çerçeveye tutunuyor — sağ-alt
+   köşede sabit durmadığı için kaçınacağı sabit bir engel de yok. */
 .ve-arac-breadcrumb button{
   display:inline-flex;
   align-items:center;

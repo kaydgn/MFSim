@@ -158,3 +158,97 @@ describe('veCenterTopoState — yüklenen topolojiyi kanvas merkezine taşır', 
     expect(cs.veCenterTopoState({ nodes: [] }).nodes).toEqual([]);
   });
 });
+
+describe('veBoundaryBox — topoloji sınır çerçevesinin kutusu', () => {
+  const N = (x, y, extra) => Object.assign({ id: 'n' + x, type: 'engine', x, y }, extra || {});
+
+  test('varsayılan düğüm ölçüsü + ad etiketi + dolgu ile kutu kurar', () => {
+    const box = cs.veBoundaryBox([N(3000, 3000)], 50);
+    // 65×60 kutu + altında 20px ad etiketi, her yönde 50px dolgu
+    expect(box).toEqual({ x: 2950, y: 2950, w: 65 + 100, h: 60 + 20 + 100 });
+  });
+
+  test('birden çok düğümü sarar (en sol/üst ↔ en sağ/alt)', () => {
+    const box = cs.veBoundaryBox([N(3000, 3000), N(3400, 3200)], 50);
+    expect(box.x).toBe(2950);
+    expect(box.y).toBe(2950);
+    expect(box.x + box.w).toBe(3400 + 65 + 50);
+    expect(box.y + box.h).toBe(3200 + 60 + cs.VE_NODE_LABEL_H + 50);
+  });
+
+  test('düğümün kendi width/height değeri kullanılır', () => {
+    const box = cs.veBoundaryBox([N(3000, 3000, { width: 200, height: 120 })], 0);
+    expect(box.w).toBe(200);
+    expect(box.h).toBe(120 + cs.VE_NODE_LABEL_H);
+  });
+
+  test('sensörler çerçeveyi büyütmez', () => {
+    const withSensor = cs.veBoundaryBox([N(3000, 3000), { id: 's', type: 'sensor', x: 5000, y: 5000 }], 50);
+    expect(withSensor).toEqual(cs.veBoundaryBox([N(3000, 3000)], 50));
+  });
+
+  test('çizilecek düğüm yoksa null (boş alt-topoloji, yalnız sensör, koordinatsız)', () => {
+    expect(cs.veBoundaryBox([], 50)).toBeNull();
+    expect(cs.veBoundaryBox(null, 50)).toBeNull();
+    expect(cs.veBoundaryBox([{ id: 's', type: 'sensor', x: 1, y: 1 }], 50)).toBeNull();
+    expect(cs.veBoundaryBox([{ id: 'a', type: 'engine' }], 50)).toBeNull();
+  });
+});
+
+describe('veBoundaryChipPos — çıkış çipi çerçevenin ALT KENARINA tutunur', () => {
+  const BOX = { x: 2900, y: 2900, w: 400, h: 200 };   // yerel: alt kenar y=3100, merkez x=3100
+  const CHIP = { w: 260, h: 30 };
+  const VIEW = { w: 1200, h: 800 };
+  // Kamera sözleşmesi: ekran = (yerel - 3000) * zoom + offset
+  const scr = (local, z, o) => (local - cs.VE_CANVAS_CENTER) * z + o;
+
+  test('zoom 1: çerçevenin yatay merkezinde, alt kenarının GAP kadar altında', () => {
+    const off = { x: 600, y: 400 };
+    const p = cs.veBoundaryChipPos(BOX, 1, off, CHIP, VIEW);
+    expect(p.left).toBeCloseTo(scr(3100, 1, off.x), 9);
+    expect(p.top).toBeCloseTo(scr(3100, 1, off.y) + cs.VE_CHIP_GAP, 9);
+  });
+
+  test('pan: çip çerçeveyle birlikte gider (kaydırma kadar, birebir)', () => {
+    const a = cs.veBoundaryChipPos(BOX, 1, { x: 600, y: 400 }, CHIP, VIEW);
+    const b = cs.veBoundaryChipPos(BOX, 1, { x: 640, y: 430 }, CHIP, VIEW);
+    expect(b.left - a.left).toBeCloseTo(40, 9);
+    expect(b.top - a.top).toBeCloseTo(30, 9);
+  });
+
+  test('zoom: tutunma noktası ölçeklenir ama boşluk ekran px olarak sabit kalır', () => {
+    const off = { x: 600, y: 400 };
+    const p = cs.veBoundaryChipPos(BOX, 0.5, off, CHIP, VIEW);
+    expect(p.left).toBeCloseTo(scr(3100, 0.5, off.x), 9);
+    expect(p.top).toBeCloseTo(scr(3100, 0.5, off.y) + cs.VE_CHIP_GAP, 9);
+  });
+
+  test('çerçeve ekranın altına kayarsa çip görünümde kalır (çıkış yolu kilitlenmez)', () => {
+    // Alt kenar görünümün 5000px altında — kırpılmasa çip erişilemez olurdu
+    const p = cs.veBoundaryChipPos(BOX, 1, { x: 600, y: 5400 }, CHIP, VIEW);
+    expect(p.top).toBeCloseTo(VIEW.h - CHIP.h - cs.VE_CHIP_INSET, 9);
+    expect(p.top + CHIP.h).toBeLessThanOrEqual(VIEW.h);
+  });
+
+  test('çerçeve ekranın üstüne/yanına kayarsa da görünümde kalır', () => {
+    const up = cs.veBoundaryChipPos(BOX, 1, { x: 600, y: -4000 }, CHIP, VIEW);
+    expect(up.top).toBeCloseTo(cs.VE_CHIP_INSET, 9);
+    const left = cs.veBoundaryChipPos(BOX, 1, { x: -4000, y: 400 }, CHIP, VIEW);
+    expect(left.left).toBeCloseTo(CHIP.w / 2 + cs.VE_CHIP_INSET, 9);   // sol kenar taşmaz
+    const right = cs.veBoundaryChipPos(BOX, 1, { x: 5000, y: 400 }, CHIP, VIEW);
+    expect(right.left).toBeCloseTo(VIEW.w - CHIP.w / 2 - cs.VE_CHIP_INSET, 9);
+  });
+
+  test('görünüm ölçülemiyorsa (0×0) kırpma yapılmaz — çip sıfıra çökmez', () => {
+    const off = { x: 600, y: 400 };
+    const p = cs.veBoundaryChipPos(BOX, 1, off, CHIP, { w: 0, h: 0 });
+    expect(p.left).toBeCloseTo(scr(3100, 1, off.x), 9);
+    expect(p.top).toBeCloseTo(scr(3100, 1, off.y) + cs.VE_CHIP_GAP, 9);
+  });
+
+  test('çerçeve yokken (boş alt-topoloji) görünümün alt-ortasına düşer', () => {
+    const p = cs.veBoundaryChipPos(null, 1, { x: 600, y: 400 }, CHIP, VIEW);
+    expect(p.left).toBeCloseTo(VIEW.w / 2, 9);
+    expect(p.top).toBeCloseTo(VIEW.h - CHIP.h - cs.VE_CHIP_INSET, 9);
+  });
+});
