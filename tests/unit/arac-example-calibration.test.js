@@ -137,6 +137,35 @@ const HIZLANMA_ISCAAN = {
   ypa4x4:           { 3.430: [1.51, 4.95, 10.70, 20.01] },
 };
 
+/**
+ * VİTES GEÇİŞ NOKTALARI — iSCAAN hızlanma tablosundan, kademe eşleştirilmiş.
+ *
+ * Geçiş profilleri (VE_FT_SHIFT_PROFILES) şimdiye kadar yalnız YAPISAL
+ * kapılarla korunuyordu: eşik sırası, türbin oranı bandı. Gerçek geçiş
+ * hızlarının raporla tutup tutmadığı hiçbir yerde ölçülmüyordu — oysa
+ * 4500 SP'nin 2C→2L hatası (321 geçiş / 105 aşağı vites avlanma) tam
+ * buradan çıkmıştı.
+ *
+ * Referans, tablodaki "Gear Range" sütununun değiştiği satır çiftidir:
+ * geçiş [öncekiSatır, değişenSatır] aralığının içinde bir yerde olur.
+ * Tablo çözünürlüğü ~1.6 km/h olduğu için band buna göre gevşetildi.
+ */
+const GECIS = {
+  turan:             { aux: 2.337, gecis: [['1C','2C',8.7,9.7], ['2C','2L',14.6,16.1], ['2L','3L',21.2,22.5], ['3L','4L',28.1,29.0], ['4L','5L',39.5,40.2], ['5L','6L',52.7,53.1]] },
+  tta2:              { aux: 1.054, gecis: [['1C','2C',15.0,16.1], ['2C','2L',25.1,25.7], ['2L','3L',36.1,38.6], ['3L','4L',47.8,48.3], ['4L','5L',67.4,67.6], ['5L','6L',89.8,90.1]] },
+  isb340_tc411:      { aux: 1.090, gecis: [['1C','2C',18.6,19.3], ['2C','2L',31.1,32.2], ['2L','3L',45.2,48.3], ['3L','4L',59.9,61.2], ['4L','5L',84.3,86.9], ['5L','6L',112.5,112.7]] },
+  isb340_tc413:      { aux: 1.090, gecis: [['1C','2C',18.6,19.3], ['2C','2L',31.1,32.2], ['2L','3L',45.2,48.3], ['3L','4L',59.9,61.2], ['4L','5L',84.3,86.9], ['5L','6L',112.5,112.7]] },
+  isg430_4000sp:     { aux: 1.536, gecis: [['1C','2C',7.3,8.0], ['2C','2L',12.0,12.9], ['2L','3L',17.1,17.7], ['3L','4L',22.9,24.1], ['4L','5L',32.7,33.8], ['5L','6L',44.3,45.1]] },
+  bmc10ton_380_32t:  { aux: 1.536, gecis: [['1C','2C',5.4,6.4], ['2C','2L',10.3,11.3], ['2L','3L',14.8,16.1], ['3L','4L',21.4,22.5], ['4L','5L',32.7,33.8], ['5L','6L',42.8,43.5]] },
+  bmc10ton_380_30t:  { aux: 1.536, gecis: [['1C','2C',5.4,6.4], ['2C','2L',10.3,11.3], ['2L','3L',14.8,16.1], ['3L','4L',21.4,22.5], ['4L','5L',32.7,33.8], ['5L','6L',42.8,43.5]] },
+  bmc10ton_400:      { aux: 1.536, gecis: [['1C','2C',5.4,6.4], ['2C','2L',10.3,11.3], ['2L','3L',14.8,16.1], ['3L','4L',21.4,22.5], ['4L','5L',32.7,33.8], ['5L','6L',42.8,43.5]] },
+  bmc10ton_430_30t:  { aux: 1.536, gecis: [['1C','2C',5.4,6.4], ['2C','2L',10.3,11.3], ['2L','3L',14.8,16.1], ['3L','4L',21.4,22.5], ['4L','5L',32.7,33.8], ['5L','6L',42.8,43.5]] },
+  bmc10ton_430_32t:  { aux: 1.536, gecis: [['1C','2C',5.4,6.4], ['2C','2L',10.3,11.3], ['2L','3L',14.8,16.1], ['3L','4L',21.4,22.5], ['4L','5L',32.7,33.8], ['5L','6L',42.8,43.5]] },
+  bmc10ton_460:      { aux: 1.536, gecis: [['1C','2C',5.4,6.4], ['2C','2L',10.3,11.3], ['2L','3L',14.8,16.1], ['3L','4L',21.4,22.5], ['4L','5L',32.7,33.8], ['5L','6L',42.8,43.5]] },
+  duramax:           { aux: 1.000, gecis: [['1C','2C',16.9,19.3], ['2C','2L',28.3,29.0], ['2L','3L',41.2,41.8], ['3L','4L',54.5,54.7], ['4L','5L',76.8,77.2], ['5L','6L',102.4,103.0]] },
+  ypa4x4:            { aux: 3.430, gecis: [['1C','1L',10.1,12.9], ['1L','2L',14.0,16.1], ['2L','3L',19.2,19.3], ['3L','4L',23.7,25.7], ['4L','5L',35.6,38.6], ['5L','6L',46.9,48.3], ['6L','7L',67.4,67.6], ['7L','8L',91.6,93.3], ['8L','9L',104.9,106.2]] },
+};
+
 /** Örneği gerçek zincir çözümüyle koştur; kademe başına sonuç döndür. */
 function runExample(file) {
   const ctx = {
@@ -173,6 +202,9 @@ function runExample(file) {
         return null;
       };
       return { ratio: parseFloat(g.ratio),
+               gecis: (((R.solverStats || {}).shiftHistory) || []).map(function(x) {
+                 return { from: String(x.fromMode), to: String(x.toMode), v: x.v_kmh };
+               }),
                vmax: R.solverStats.maxSpeed_kmh,
                stall: R.settledStall && R.settledStall.N_engine,
                accel: [at(20), at(40), at(60), at(80)] };
@@ -299,6 +331,41 @@ describe('hızlanma — geçici rejim çıpaları', () => {
           const d = 100 * (m.accel[i] - s) / s;
           if (Math.abs(d) > 10) kotu.push(`${id} ${oranStr} ${NOKTA[i]}: ${d.toFixed(1)}%`);
         });
+      });
+    });
+    expect(kotu).toEqual([]);
+  });
+});
+
+describe('vites geçiş noktaları — iSCAAN hızlanma tablosuyla', () => {
+  test.each(Object.keys(GECIS))('%s — her geçiş rapordaki satır aralığında', id => {
+    const g = GECIS[id];
+    const m = sonuc[id].find(r => Math.abs(r.ratio - g.aux) < 0.02);
+    expect(m).toBeTruthy();
+    const sapan = [];
+    g.gecis.forEach(([from, to, lo, hi]) => {
+      const s = m.gecis.find(x => x.to === to) || m.gecis.find(x => x.from === from);
+      if (!s) { sapan.push(`${from}→${to}: MFSim'de yok`); return; }
+      // ±1.7 km/h: raporun satır adımı ~1.6, geçiş iki satır arasında bir yerde
+      if (s.v < lo - 1.7 || s.v > hi + 1.7) sapan.push(`${from}→${to}: rapor ${lo}–${hi}, MFSim ${s.v.toFixed(1)}`);
+    });
+    expect(sapan).toEqual([]);
+  });
+
+  test('seksen bir geçişin tamamı kapsanıyor', () => {
+    // Eşleşme sessizce düşerse yukarıdaki testler boş geçerdi.
+    expect(Object.values(GECIS).reduce((a, g) => a + g.gecis.length, 0)).toBe(81);
+  });
+
+  test('vites avlanması yok — geçiş sayısı vites sayısıyla sınırlı', () => {
+    // 4500 SP hatasının belirtisi 321 geçiş / 105 aşağı vitesti. Sağlıklı bir
+    // tam gaz hızlanmada geçiş sayısı vites sayısını ancak birkaç aşabilir.
+    const kotu = [];
+    Object.keys(GECIS).forEach(id => {
+      sonuc[id].forEach(r => {
+        if (r.gecis.length > GECIS[id].gecis.length + 3) {
+          kotu.push(`${id} aux ${r.ratio}: ${r.gecis.length} geçiş`);
+        }
       });
     });
     expect(kotu).toEqual([]);
