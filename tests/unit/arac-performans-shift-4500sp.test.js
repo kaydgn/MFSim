@@ -1,0 +1,233 @@
+/**
+ * arac-performans-shift-4500sp.test.js
+ * ────────────────────────────────────
+ * REGRESYON BEKÇİSİ: Allison 4500 SP — S1 Performance profilinin 2C→2L eşiği.
+ *
+ * SORUN (2026-08-12'de bulundu): profilin converterShifts['2C2L'] bloğu
+ *   { type:'segmented', linear:{a:0.0800, b:111.0, validFrom:1800}, lookup:[[1600,230],[1700,242]] }
+ * ESL = 1900'de 263 rpm eşik veriyordu. 1C→2C eşiği 303 rpm olduğundan lockup,
+ * 2C'ye geçilen ADIMDA devreye giriyor; 2L'de motor 1640 rpm'e düşünce '2to1'
+ * downshift eşiği (492) tetikleniyor ve 1C↔2C↔2L avlanması başlıyordu.
+ * Ölçüm (bu dosyadaki topoloji): 321 geçiş / 105 aşağı vites.
+ *
+ * KÖK NEDEN: eşik kalibre edilirken türbin devri şanzıman çıkış devrine
+ * çevrilirken vites oranına BİR KEZ FAZLA bölünmüş — 575.2 / 2.213 ≈ 260 ≈ 263.
+ *
+ * DOĞRU DEĞER — iSCAAN 497-A355435-1 (BMC 10TON 6×6 · Cummins ISG12 380HP ·
+ * Allison 4500 SP · TC551 · aks 8.337 · transfer 0.874/1.536 · ESL 1900):
+ * raporun "Vehicle Acceleration Performance" tablolarında her vitesin SON satırı
+ * geçiş noktasıdır. İKİ transfer kademesi bağımsız iki ölçüm verir ve ikisi de
+ * aynı şanzıman çıkış devrini üretir — modelin "geçiş N_out'a bağlı" varsayımı:
+ *
+ *   geçiş    Low tablosu (i_aux 1.536)   High tablosu (i_aux 0.874)   N_motor
+ *   1C→2C     5.4 km/h × 55.849 = 301.6    9.5 × 31.779 = 301.9        1797
+ *   2C→2L    10.3        ×      = 575.2   18.1        = 575.2          1762
+ *   2L→3L    14.8        ×      = 826.6   26.0        = 826.3          1826
+ *   3L→4L    21.4        ×      = 1195.2  37.6        = 1194.9         1826
+ *   4L→5L    32.7        ×      = 1826.3  57.4        = 1824.1         1825
+ *   5L→6L    42.8        ×      = 2390.3  75.1        = 2386.6         1827
+ *
+ * Bütün lockup geçişleri N_motor = ESL − 74 rpm'de → 3200SP S1'in kodda yazılı
+ * kuralının (ESL − 75) aynısı. Beş katsayı zaten ±2 rpm uyuşuyordu; yalnız
+ * 2C→2L 312 rpm sapıyordu.
+ */
+const stubs = stubGlobals({ veResetChartView: jest.fn() });
+global.veActiveModule = 'full-throttle';
+global.COMPONENT_SIGNALS = {};
+
+eval(loadSource('numerics.js'));
+eval(loadSource('cp-engine.js'));
+eval(loadSource('cp-gearbox.js'));
+eval(loadSource('cp-accessories.js'));
+eval(loadSource('ft-performance.js'));
+
+beforeEach(() => resetStubs(stubs));
+
+const ESL = 1900;
+
+// ── iSCAAN 497-A355435-1 geçiş noktaları (şanzıman çıkış devri, rpm) ────────
+// İki transfer kademesinin ortalaması; kademeler arası fark ≤ 3.7 rpm.
+const ISCAAN_SHIFT_NOUT = {
+  '1C2C': 301.8, '2C2L': 575.2, '2L3L': 826.5,
+  '3L4L': 1195.1, '4L5L': 1825.2, '5L6L': 2388.5
+};
+
+// ── Raporun güç aktarma organları ──────────────────────────────────────────
+// Motor eğrisi BRÜT (iSCAAN "Gross Torque"): aksesuar kaybını ft-performance
+// kendi modeliyle düşer; net girilirse kayıp iki kez sayılır.
+const ISG12_380 = [
+  { rpm: 1000, torque: 1995.8, power: 209.0 }, { rpm: 1100, torque: 1996.7, power: 230.0 },
+  { rpm: 1200, torque: 1997.4, power: 251.0 }, { rpm: 1300, torque: 1998.0, power: 272.0 },
+  { rpm: 1400, torque: 1930.3, power: 283.0 }, { rpm: 1500, torque: 1801.6, power: 283.0 },
+  { rpm: 1600, torque: 1689.0, power: 283.0 }, { rpm: 1700, torque: 1589.7, power: 283.0 },
+  { rpm: 1800, torque: 1501.4, power: 283.0 }, { rpm: 1900, torque: 1407.3, power: 280.0 },
+  { rpm: 2100, torque: 0, power: 0 }
+];
+// TC551 — raporun "Converter Mode" tablosundan türetildi:
+//   T_pompa = T_türbin / τ,  K = N_motor / √T_pompa
+const TC551 = [
+  { sr: 0.000, kpump: 38.26, tau: 1.794 }, { sr: 0.100, kpump: 39.24, tau: 1.686 },
+  { sr: 0.200, kpump: 39.81, tau: 1.600 }, { sr: 0.300, kpump: 41.10, tau: 1.540 },
+  { sr: 0.400, kpump: 42.41, tau: 1.485 }, { sr: 0.497, kpump: 44.16, tau: 1.409 },
+  { sr: 0.500, kpump: 44.21, tau: 1.406 }, { sr: 0.600, kpump: 46.01, tau: 1.300 },
+  { sr: 0.632, kpump: 46.66, tau: 1.267 }, { sr: 0.700, kpump: 48.07, tau: 1.199 },
+  { sr: 0.728, kpump: 48.69, tau: 1.168 }, { sr: 0.750, kpump: 49.19, tau: 1.144 },
+  { sr: 0.800, kpump: 50.45, tau: 1.088 }, { sr: 0.850, kpump: 52.17, tau: 1.028 },
+  { sr: 0.885, kpump: 54.58, tau: 0.983 }, { sr: 0.888, kpump: 55.09, tau: 0.985 },
+  { sr: 0.891, kpump: 55.70, tau: 0.986 }, { sr: 0.895, kpump: 56.57, tau: 0.988 },
+  { sr: 0.900, kpump: 57.64, tau: 0.990 }, { sr: 0.925, kpump: 66.20, tau: 0.992 },
+  { sr: 0.940, kpump: 74.05, tau: 0.991 }, { sr: 0.950, kpump: 81.58, tau: 0.992 },
+  { sr: 0.960, kpump: 93.71, tau: 0.989 }
+];
+const GEARS_4500SP = [
+  { name: '1C', ratio: 4.695, eff: 98.83 }, { name: '2C', ratio: 2.213, eff: 99.05 },
+  { name: '3L', ratio: 1.529, eff: 99.31 }, { name: '4L', ratio: 1.000, eff: 100.00 },
+  { name: '5L', ratio: 0.765, eff: 99.18 }, { name: '6L', ratio: 0.672, eff: 99.05 }
+];
+
+function buildBMC10Ton() {
+  const chain = [
+    { id: 'e1', type: 'engine', data: {
+      torqueData: ISG12_380,
+      motorSpecs: { idleRpm: 700, governedSpeed: ESL, noLoadGoverned: 2100, inertia: 2.7029 },
+      accessories: [
+        { name: 'Fan (Kavramalı Fan)', userLoss: 35.6 },
+        { name: 'Alternatör / Jeneratör', userLoss: 2.8 },
+        { name: 'Hava Kompresörü', userLoss: 1.6 },
+        { name: 'Direksiyon Pompası', userLoss: 1.6 }
+      ]
+    } },
+    { id: 'tc1', type: 'torque-converter', data: { tcData: TC551, pumpTorqueDrop: 32.2 } },
+    { id: 'g1', type: 'gearbox', data: { ftGearData: GEARS_4500SP, shiftProfile: 'allison4500sp_s1' } },
+    { id: 'p1', type: 'propshaft', data: { psEff: 98.6, psInertia: 0.5 } },
+    { id: 't1', type: 'transfer', data: { ftTrGears: [
+      { kademe: 'High', ratio: 0.874, eff: 97 }, { kademe: 'Low', ratio: 1.536, eff: 97 }
+    ] } },
+    { id: 'd1', type: 'differential', isMasterDiff: true, data: { diffRatio: 8.337, efficiency: 93, diffInertia: 1.0 } },
+    { id: 'w1', type: 'wheel', isMasterWheel: true, data: { ftTireRadius: 0.608, ftTireInertia: 293.8965, ftCrr: 0.0035, ftSurfaceFactor: 1.0 } }
+  ];
+  global.nodes = chain.concat([
+    { id: 's1', type: 'shift-controller', data: {} },
+    { id: 'v1', type: 'vehicle', data: { ftGVW: 32000, ftDrivenWeight: 100, ftHeight: 2.700, ftWidth: 2.600, ftCd: 0.750, ftRho: 1.225, ftGrade: 0 } },
+    { id: 'sv1', type: 'solver', data: { maxSimTime: 300, ftDt: 0.002, method: 'rk4' } }
+  ]);
+  global.connections = [];
+  global.veGetPowertrainChain = () => chain;
+}
+
+// shiftHistory'de bir geçişin İLK oluşumu (avlanma tekrarları elenir).
+function firstShifts(R) {
+  const out = {};
+  (R.solverStats.shiftHistory || []).forEach(s => {
+    const k = s.fromMode + s.toMode;
+    if(!(k in out)) out[k] = s;
+  });
+  return out;
+}
+
+describe('allison4500sp_s1 — eşik katsayıları iSCAAN raporuna oturuyor', () => {
+  const P = VE_FT_SHIFT_PROFILES.allison4500sp_s1;
+
+  test('2C→2L artık segmentli DEĞİL, düz lineer (hatalı blok geri gelmemiş)', () => {
+    const cs = P.converterShifts['2C2L'];
+    expect(cs.type).toBeUndefined();          // 'segmented' geri gelirse kırmızı
+    expect(cs.lookup).toBeUndefined();
+    expect(typeof cs.a).toBe('number');
+  });
+
+  test('2C→2L eşiği ESL=1900\'de 575 rpm (263 DEĞİL)', () => {
+    const cs = P.converterShifts['2C2L'];
+    const thr = cs.a * ESL + (cs.b || 0);
+    expect(thr).toBeGreaterThan(ISCAAN_SHIFT_NOUT['2C2L'] - 3);
+    expect(thr).toBeLessThan(ISCAAN_SHIFT_NOUT['2C2L'] + 3);
+  });
+
+  test('2C→2L eşiği 1C→2C eşiğinin ÜSTÜNDE — lockup aynı adımda kapanamaz', () => {
+    // Avlanmanın mekanik kaynağı buydu: 263 < 303 olduğu için 2C'ye geçilen adımda
+    // lockup koşulu da sağlanıyordu. Bu bekçi ESL'den bağımsız çalışır.
+    [1600, 1800, 1900, 2100].forEach(esl => {
+      const c1 = P.converterShifts['1C2C'], c2 = P.converterShifts['2C2L'];
+      const t1 = c1.a * esl + (c1.b || 0);
+      const t2 = c2.a * esl + (c2.b || 0);
+      expect(t2).toBeGreaterThan(t1);
+    });
+  });
+
+  test('türbin oranı S1 bandında (0.670) — diğer S1 profilleriyle aynı fizik', () => {
+    // N_türbin = N_out × i₂. S1 stratejisinde bu oran şanzımandan bağımsız:
+    // 3200SP 0.670 · 3500SP 0.673 · 4000SP 0.672 · 4700SP 0.673.
+    const cs = P.converterShifts['2C2L'];
+    const turbineRatio = (cs.a * ESL + (cs.b || 0)) * 2.213 / ESL;
+    expect(turbineRatio).toBeGreaterThan(0.660);
+    expect(turbineRatio).toBeLessThan(0.680);
+  });
+
+  test('lockup geçişleri motoru ESL − 75 civarında değiştiriyor', () => {
+    const I = { '2L3L': 2.213, '3L4L': 1.529, '4L5L': 1.000, '5L6L': 0.765 };
+    Object.keys(I).forEach(k => {
+      const ls = P.lockupShifts[k];
+      const nEngine = (ls.a * ESL + (ls.b || 0)) * I[k];
+      expect(nEngine).toBeGreaterThan(ESL - 85);
+      expect(nEngine).toBeLessThan(ESL - 65);
+    });
+  });
+});
+
+describe('BMC 10TON 6×6 — gerçek koşuda geçiş noktaları ve avlanma', () => {
+  let High, Low;
+  beforeAll(() => {
+    buildBMC10Ton();
+    High = veFTRunSimulationEngine('High');
+    Low = veFTRunSimulationEngine('Low');
+  }, 120000);
+
+  test('altı geçişin hepsi iSCAAN noktasında (±8 rpm)', () => {
+    const f = firstShifts(High);
+    Object.keys(ISCAAN_SHIFT_NOUT).forEach(k => {
+      expect(f[k]).toBeDefined();
+      expect(Math.abs(f[k].N_out - ISCAAN_SHIFT_NOUT[k])).toBeLessThan(8);
+    });
+  });
+
+  test('avlanma yok — eski kodda High 321 / Low 114 geçiş vardı', () => {
+    // 6 ileri kademe → sağlıklı tam gaz koşumunda tam 6 geçiş (1C→2C→2L→3L→4L→5L→6L).
+    expect(High.solverStats.shiftHistory.length).toBeLessThan(12);
+    expect(Low.solverStats.shiftHistory.length).toBeLessThan(12);
+  });
+
+  test('hiç aşağı vites yok — eski kodda High 105 / Low 36 vardı', () => {
+    [High, Low].forEach(R => {
+      const down = R.solverStats.shiftHistory.filter(s => s.isDownshift);
+      expect(down.length).toBe(0);
+    });
+  });
+
+  test('vites dizisi kalkıştan 6L\'ye kesintisiz ilerliyor', () => {
+    const seq = High.solverStats.shiftHistory.map(s => s.toMode);
+    expect(seq).toEqual(['2C', '2L', '3L', '4L', '5L', '6L']);
+  });
+
+  test('fizik korundu — stall devri ve eğim iSCAAN bandında', () => {
+    // iSCAAN: konvertör stall 1526 rpm, stall gradeability High 49.8 / Low 127.2.
+    expect(High.settledStall.N_engine).toBeGreaterThan(1490);
+    expect(High.settledStall.N_engine).toBeLessThan(1570);
+
+    global.window = global.window || {};
+    global.window._veFTAllRangeResults = { High, Low };
+    global.window._veFTTransferGears = [
+      { kademe: 'High', ratio: 0.874, eff: 97 }, { kademe: 'Low', ratio: 1.536, eff: 97 }
+    ];
+    const G = veCalculateGradeability(High);
+    expect(G.high.stallGrade).toBeGreaterThan(46);
+    expect(G.high.stallGrade).toBeLessThan(53);
+    expect(G.low.stallGrade).toBeGreaterThan(118);
+    expect(G.low.stallGrade).toBeLessThan(132);
+  });
+
+  test('sonuç tamamen sonlu', () => {
+    [High, Low].forEach(R => {
+      expect(R.speed.every(Number.isFinite)).toBe(true);
+      expect(R.rpm.every(Number.isFinite)).toBe(true);
+    });
+  });
+});

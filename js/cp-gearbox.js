@@ -1264,17 +1264,23 @@ var VE_FT_SHIFT_PROFILES = {
     family: '4000',
     lockupOffset: 75,    // Geriye uyumluluk
     shift1C2C_outRatio: 0.1592,   // Yaklaşık (converterShifts varsa o kullanılır)
-    shift2C2L_outRatio: null,     // Segmentli model — basit oran yok
+    shift2C2L_outRatio: 0.3027,   // 2C→2L: N_out ≥ 0.3027 × N_shift_ref
     shiftRefRPM: null,
-    // Converter-mod geçişleri: Lineer + segmentli model
-    // 3200SP'den farklı olarak basit oran yerine N_out = a × ESL + b kullanır
+    // Converter-mod geçişleri: Lineer model (N_out = a × ESL + b)
     converterShifts: {
       '1C2C': { a: 0.1592, b: 0.9 },              // N_out ≥ 0.1592 × ESL + 0.9, max hata ±0.5 rpm
-      '2C2L': {
-        type: 'segmented',
-        linear: { a: 0.0800, b: 111.0, validFrom: 1800 }, // ESL ≥ 1800: max hata ±0.0 rpm
-        lookup: [[1600, 230], [1700, 242]]                  // ESL < 1800: lookup tablosu
-      }
+      // 2C→2L ölçümü: iSCAAN 497-A355435-1 (BMC 10TON 6×6 · ISG12 380HP · TC551 · ESL 1900).
+      // Raporun İKİ transfer kademesindeki hızlanma tablosu da geçişi aynı şanzıman çıkış
+      // devrinde veriyor: N_out = 575.2 rpm → N_türbin = 0.670 × ESL. Bu türbin oranı
+      // 3200SP (0.670), 3500SP (0.673), 4000SP (0.672) ve 4700SP (0.673) S1 profillerinin
+      // ima ettiğiyle aynı — S1 stratejisi şanzımandan bağımsız, değişen yalnız i₂.
+      //
+      // ESKİ segmentli model 1900'de 263 rpm veriyordu (≈ i₂ = 2.213 katı düşük; kalibrasyonda
+      // çıkış devrine çevirirken vites oranına bir kez fazla bölünmüş). 1C→2C eşiği 303
+      // olduğundan lockup 2C'ye geçilen ADIMDA devreye giriyor, motor 1640'a düşüyor,
+      // '2to1' eşiği (492) tetikleniyor ve 1C↔2C↔2L avlanması başlıyordu:
+      // 321 geçiş / 105 aşağı vites → düzeltmeyle 6 geçiş / 0 aşağı vites.
+      '2C2L': { a: 0.3027, b: 0 }                 // N_out ≥ 0.3027 × ESL, max hata ±0.1 rpm
     },
     // Lockup-mod geçişleri: N_out = a × ESL + b
     // S1: N_engine = ESL - 75 (3200SP S1 ile birebir aynı kural)
