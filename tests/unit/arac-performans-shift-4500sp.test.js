@@ -85,7 +85,7 @@ const GEARS_4500SP = [
   { name: '5L', ratio: 0.765, eff: 99.18 }, { name: '6L', ratio: 0.672, eff: 99.05 }
 ];
 
-function buildBMC10Ton() {
+function buildBMC10Ton(shiftProfile) {
   const chain = [
     { id: 'e1', type: 'engine', data: {
       torqueData: ISG12_380,
@@ -98,7 +98,7 @@ function buildBMC10Ton() {
       ]
     } },
     { id: 'tc1', type: 'torque-converter', data: { tcData: TC551, pumpTorqueDrop: 32.2 } },
-    { id: 'g1', type: 'gearbox', data: { ftGearData: GEARS_4500SP, shiftProfile: 'allison4500sp_s1' } },
+    { id: 'g1', type: 'gearbox', data: { ftGearData: GEARS_4500SP, shiftProfile: shiftProfile || 'allison4500sp_s1' } },
     { id: 'p1', type: 'propshaft', data: { psEff: 98.6, psInertia: 0.5 } },
     { id: 't1', type: 'transfer', data: { ftTrGears: [
       { kademe: 'High', ratio: 0.874, eff: 97 }, { kademe: 'Low', ratio: 1.536, eff: 97 }
@@ -173,6 +173,111 @@ describe('allison4500sp_s1 — eşik katsayıları iSCAAN raporuna oturuyor', ()
   });
 });
 
+// ── Profil eşik yardımcıları (ft-performance.js'teki mantığın aynısı) ──────
+function converterThreshold(P, key, esl) {
+  const cs = P.converterShifts && P.converterShifts[key];
+  if(cs) {
+    if(cs.type === 'segmented') {
+      if(esl >= cs.linear.validFrom) return cs.linear.a * esl + cs.linear.b;
+      const lk = cs.lookup;
+      if(esl <= lk[0][0]) return lk[0][1];
+      if(esl >= lk[lk.length - 1][0]) return lk[lk.length - 1][1];
+      for(let i = 0; i < lk.length - 1; i++) {
+        if(esl >= lk[i][0] && esl <= lk[i + 1][0]) {
+          const f = (esl - lk[i][0]) / (lk[i + 1][0] - lk[i][0]);
+          return lk[i][1] + f * (lk[i + 1][1] - lk[i][1]);
+        }
+      }
+    }
+    return cs.a * esl + (cs.b || 0);
+  }
+  const ratio = (key === '1C2C') ? P.shift1C2C_outRatio : P.shift2C2L_outRatio;
+  return (ratio == null) ? null : ratio * esl;
+}
+
+// Profilin bağlı olduğu şanzımanın 2. vites oranı. 4700/4800/4900'de ilk satır
+// creeper (C) ve shift profilinin dışında → bir kaydır.
+function secondGearRatio(profileKey) {
+  const gbKey = veGetGearboxKeyFromShiftProfile(profileKey);
+  const gp = VE_GEARBOX_PRESETS[gbKey];
+  if(!gp) return null;
+  const fw = gp.gears.filter(g => g.gear !== 'R');
+  const off = (fw.length >= 7 && fw[0].ratio > 6) ? 1 : 0;
+  return fw[off + 1] ? fw[off + 1].ratio : null;
+}
+
+describe('YAPISAL KAPI — bütün shift profillerinde 2C→2L eşiği', () => {
+  // Bu iki kapı, 4500SP hatasını üç sabit sayıya bakmadan yakalar; aynı sınıf
+  // hata başka bir profile girerse de kırmızıya döner.
+  const KEYS = Object.keys(VE_FT_SHIFT_PROFILES);
+  const ESLS = [1600, 1800, 1900, 2100, 2500];
+
+  test('kayıt defteri boş değil (eval/yükleme sessizce bozulmasın)', () => {
+    expect(KEYS.length).toBeGreaterThan(15);
+  });
+
+  test('her profilde 2C→2L eşiği 1C→2C eşiğinin ÜSTÜNDE', () => {
+    // Altında kalırsa lockup, 2C'ye geçilen adımda kapanır → avlanma.
+    const ihlal = [];
+    KEYS.forEach(k => {
+      const P = VE_FT_SHIFT_PROFILES[k];
+      ESLS.forEach(esl => {
+        const t1 = converterThreshold(P, '1C2C', esl);
+        const t2 = converterThreshold(P, '2C2L', esl);
+        if(t1 == null || t2 == null) return;
+        if(t2 <= t1) ihlal.push(`${k} @ESL=${esl}: 2C2L ${t2.toFixed(1)} ≤ 1C2C ${t1.toFixed(1)}`);
+      });
+    });
+    expect(ihlal).toEqual([]);
+  });
+
+  test('Allison profillerinde 2C→2L türbin oranı 0.60–0.70 bandında', () => {
+    // N_türbin/ESL = (eşik × i₂) / ESL. Strateji sabiti; ölçülen aralık
+    // 0.619 (S4) – 0.683 (2500SP). Eski hatalı 4500SP değeri 0.306 idi.
+    // gm8l90_perf hariç: TK'siz profil, oranı tasarımı gereği 1.0.
+    const disari = [];
+    KEYS.filter(k => k.startsWith('allison')).forEach(k => {
+      const i2 = secondGearRatio(k);
+      if(i2 == null) return;
+      const r = converterThreshold(VE_FT_SHIFT_PROFILES[k], '2C2L', ESL) * i2 / ESL;
+      if(r < 0.60 || r > 0.70) disari.push(`${k}: ${r.toFixed(3)}`);
+    });
+    expect(disari).toEqual([]);
+  });
+});
+
+describe('allison4500sp S1–S4 — strateji ilerlemesi', () => {
+  // S1 ölçüldü (iSCAAN 497-A355435-1). S2/S3/S4 TÜRETİLDİ: 2C→2L türbin oranı
+  // stratejiye bağlı, şanzımandan bağımsız bir sabit (3200SP/3500SP/4700SP'de
+  // yayılım ±1.5e-3). Yöntem doğrulaması: aynı benzeşim S1 için 0.3035 öngörüyor,
+  // ölçülen 0.3027 → %0.3 hata.
+  const BEKLENEN = { s1: 0.3027, s2: 0.2975, s3: 0.2927, s4: 0.2810 };
+
+  test('katsayılar türetilen/ölçülen değerlerde', () => {
+    Object.keys(BEKLENEN).forEach(s => {
+      const cs = VE_FT_SHIFT_PROFILES['allison4500sp_' + s].converterShifts['2C2L'];
+      expect(cs.type).toBeUndefined();          // segmentli blok geri gelmemiş
+      expect(cs.a).toBeCloseTo(BEKLENEN[s], 4);
+    });
+  });
+
+  test('yedek alan (shift2C2L_outRatio) converterShifts ile tutarlı', () => {
+    // null kalırsa converterShifts devre dışı bırakıldığında 0.3594 fallback'ine
+    // düşer — 4500SP için yanlış şanzımanın değeri.
+    Object.keys(BEKLENEN).forEach(s => {
+      const P = VE_FT_SHIFT_PROFILES['allison4500sp_' + s];
+      expect(P.shift2C2L_outRatio).not.toBeNull();
+      expect(P.shift2C2L_outRatio).toBeCloseTo(P.converterShifts['2C2L'].a, 4);
+    });
+  });
+
+  test('eşik S1 > S2 > S3 > S4 (ekonomi stratejisi daha erken kilitler)', () => {
+    const v = ['s1', 's2', 's3', 's4'].map(s =>
+      VE_FT_SHIFT_PROFILES['allison4500sp_' + s].converterShifts['2C2L'].a);
+    for(let i = 1; i < v.length; i++) expect(v[i]).toBeLessThan(v[i - 1]);
+  });
+});
+
 describe('BMC 10TON 6×6 — gerçek koşuda geçiş noktaları ve avlanma', () => {
   let High, Low;
   beforeAll(() => {
@@ -229,5 +334,44 @@ describe('BMC 10TON 6×6 — gerçek koşuda geçiş noktaları ve avlanma', () 
       expect(R.speed.every(Number.isFinite)).toBe(true);
       expect(R.rpm.every(Number.isFinite)).toBe(true);
     });
+  });
+});
+
+describe('S2/S3/S4 profilleri — aynı topolojide avlanma yok', () => {
+  // S1'deki hatalı blok bu üçünde de vardı (birebir aynı katsayılar).
+  // Eşikler türetilmiş olduğu için iSCAAN noktası iddia EDİLMİYOR; iddia edilen
+  // tek şey davranış: lockup 2C'ye geçilen adımda kapanmıyor, avlanma yok.
+  const PROFILLER = ['allison4500sp_s2', 'allison4500sp_s3', 'allison4500sp_s4'];
+  const sonuc = {};
+
+  beforeAll(() => {
+    PROFILLER.forEach(p => { buildBMC10Ton(p); sonuc[p] = veFTRunSimulationEngine('High'); });
+  }, 120000);
+
+  test.each(PROFILLER)('%s — geçiş sayısı makul, aşağı vites yok', p => {
+    const sh = sonuc[p].solverStats.shiftHistory;
+    expect(sh.length).toBeGreaterThan(0);
+    expect(sh.length).toBeLessThan(12);
+    expect(sh.filter(s => s.isDownshift).length).toBe(0);
+  });
+
+  test.each(PROFILLER)('%s — dizi 2C→2L→3L→4L→5L→6L', p => {
+    expect(sonuc[p].solverStats.shiftHistory.map(s => s.toMode))
+      .toEqual(['2C', '2L', '3L', '4L', '5L', '6L']);
+  });
+
+  test.each(PROFILLER)('%s — 2C→2L geçişi 1C→2C\'den SONRA gerçekleşiyor', p => {
+    const sh = sonuc[p].solverStats.shiftHistory;
+    const i1 = sh.findIndex(s => s.toMode === '2C');
+    const i2 = sh.findIndex(s => s.toMode === '2L');
+    expect(i1).toBeGreaterThanOrEqual(0);
+    expect(i2).toBeGreaterThan(i1);
+    // Aynı ADIMDA olmamalı: araç hızı gözle görülür şekilde artmış olmalı.
+    expect(sh[i2].v_kmh - sh[i1].v_kmh).toBeGreaterThan(3);
+  });
+
+  test.each(PROFILLER)('%s — sonuç sonlu', p => {
+    expect(sonuc[p].speed.every(Number.isFinite)).toBe(true);
+    expect(sonuc[p].rpm.every(Number.isFinite)).toBe(true);
   });
 });

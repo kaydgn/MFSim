@@ -1310,15 +1310,22 @@ var VE_FT_SHIFT_PROFILES = {
     family: '4000',
     lockupOffset: 0,     // Geriye uyumluluk (b ≈ 0)
     shift1C2C_outRatio: 0.1592,
-    shift2C2L_outRatio: null,
+    shift2C2L_outRatio: 0.2975,   // 2C→2L: N_out ≥ 0.2975 × N_shift_ref
     shiftRefRPM: null,
+    // 2C→2L — S1 ile AYNI hatalı segmentli blok buradaydı (bkz. allison4500sp_s1).
+    // TÜRETİLDİ, ölçülmedi: elde yalnız S1 stratejili bir 4500SP raporu var.
+    // Dayanak — 2C→2L türbin oranı (N_türbin/ESL) stratejiye bağlı, şanzımandan
+    // bağımsız bir sabit; üç referans şanzımanda yayılım ±1.5e-3:
+    //     S1: 3200SP 0.6699 · 3500SP 0.6726 · 4700SP 0.6726  → ort. 0.6717
+    //     S2: 3200SP 0.6565 · 3500SP 0.6592 · 4700SP 0.6591  → ort. 0.6583
+    //     S3: 3200SP 0.6464 · 3500SP 0.6486 · 4700SP 0.6481  → ort. 0.6477
+    //     S4: 3200SP 0.6200 · 3500SP 0.6229 · 4700SP 0.6226  → ort. 0.6218
+    // Yöntem doğrulaması: aynı benzeşim S1 için a = 0.6717/2.213 = 0.3035 öngörüyor;
+    // iSCAAN 497-A355435-1'den ÖLÇÜLEN değer 0.3027 → %0.3 (1.5 rpm) hata.
+    // S2 için: a = 0.6583 / i₂ 2.213 = 0.2975.
     converterShifts: {
       '1C2C': { a: 0.1592, b: 0.9 },
-      '2C2L': {
-        type: 'segmented',
-        linear: { a: 0.0800, b: 111.0, validFrom: 1800 },
-        lookup: [[1600, 230], [1700, 242]]
-      }
+      '2C2L': { a: 0.2975, b: 0 }                 // türetildi (S2 türbin oranı 0.6583)
     },
     // Lockup-mod: N_engine = 0.9 × ESL (3200SP S2 ile birebir aynı kural)
     // Düşük ESL'de nonlineer davranış — 2L3L: minCap, 3L4L: piecewise model
@@ -1354,15 +1361,13 @@ var VE_FT_SHIFT_PROFILES = {
     family: '4000',
     lockupOffset: -100,  // Geriye uyumluluk (yaklaşık)
     shift1C2C_outRatio: 0.1592,
-    shift2C2L_outRatio: null,
+    shift2C2L_outRatio: 0.2927,   // 2C→2L: N_out ≥ 0.2927 × N_shift_ref
     shiftRefRPM: null,
+    // 2C→2L türetildi (ölçülmedi) — yöntem ve dayanak: allison4500sp_s2 yorumu.
+    // S3 için: a = 0.6477 / i₂ 2.213 = 0.2927.
     converterShifts: {
       '1C2C': { a: 0.1592, b: 0.9 },
-      '2C2L': {
-        type: 'segmented',
-        linear: { a: 0.0800, b: 111.0, validFrom: 1800 },
-        lookup: [[1600, 230], [1700, 242]]
-      }
+      '2C2L': { a: 0.2927, b: 0 }                 // türetildi (S3 türbin oranı 0.6477)
     },
     // Lockup-mod: Her viteste ayrı parametreler
     // Not: 2L→3L hafif nonlineerlik (2.8 rpm), 5L→6L önemli nonlineerlik (11.7 rpm)
@@ -1390,15 +1395,13 @@ var VE_FT_SHIFT_PROFILES = {
     family: '4000',
     lockupOffset: 50,    // Geriye uyumluluk (yaklaşık)
     shift1C2C_outRatio: 0.1592,
-    shift2C2L_outRatio: null,
+    shift2C2L_outRatio: 0.2810,   // 2C→2L: N_out ≥ 0.2810 × N_shift_ref
     shiftRefRPM: null,
+    // 2C→2L türetildi (ölçülmedi) — yöntem ve dayanak: allison4500sp_s2 yorumu.
+    // S4 için: a = 0.6218 / i₂ 2.213 = 0.2810.
     converterShifts: {
       '1C2C': { a: 0.1592, b: 0.9 },
-      '2C2L': {
-        type: 'segmented',
-        linear: { a: 0.0800, b: 111.0, validFrom: 1800 },
-        lookup: [[1600, 230], [1700, 242]]
-      }
+      '2C2L': { a: 0.2810, b: 0 }                 // türetildi (S4 türbin oranı 0.6218)
     },
     // Lockup-mod: minCap/piecewise destekli (düşük ESL koruması)
     lockupShifts: {
