@@ -55,9 +55,27 @@ const ISCAAN = {
   // ── BİLİNEN AYKIRILAR ──
   // Bantları GENİŞ ama SABİT: bugünkü sapmayı dondururlar, büyümesine izin
   // vermezler. Daralttıkça iyileşme ölçülebilir olsun diye ayrı tutuldular.
+  // duramax KÖK NEDENİ BULUNDU (düzeltme henüz YOK — aş. gerekçe):
+  //
+  // MFSim motor eğrisini PCHIP ile ara değerliyor, iSCAAN DOĞRUSAL ara
+  // değerliyor. Bu fark yalnız eğrinin dik olduğu yerde önem kazanır ve L5D
+  // Duramax'ın eğrisi tam stall bölgesinde neredeyse basamak:
+  //     1000 rpm → 271.0 N·m ,  1200 rpm → 583.0 N·m   (200 rpm'de +%115)
+  // 1023 rpm'de PCHIP 285.4, doğrusal 306.9 verir — %7.0 fark. Raporun
+  // eşleme tablosundaki net tork (249.8) doğrusal ara değerlemeyle birebir
+  // oturuyor (249.5), PCHIP'le oturmuyor. Düşük brüt tork → düşük net tork →
+  // denge daha düşük devirde kuruluyor: 960 vs 1023.
+  //
+  // NEDEN DÜZELTİLMEDİ: motor eğrisini doğrusala çevirmeyi ölçtüm. Stall
+  // düzeliyor (duramax 960→990, isb340_tc411 2750→2735 yani +%0.6→+%0.07)
+  // AMA tavan hız bütün filoda düşüyor ve birkaçı iSCAAN bandının ALTINA
+  // çıkıyor (tta2 111.9→109.9 vs bant 110.3; duramax 133.5→133.0 vs 133.3),
+  // duramax'ın 0-20'si de −%25'ten −%32'ye kötüleşiyor. Net etki NEGATİF,
+  // bu yüzden değiştirilmedi. Çözüm ara değerlemeyi değiştirmekse gerisinin
+  // yeniden kalibre edilmesi gerekiyor — ayrı ve büyük bir iş.
   duramax:          { rapor: '497-A425591-1', stall: 1023, stallTol: 0.07, kademe: { 1.000: [133.3, 141.9], 2.470: [57.1, 57.4] },
-                      not: 'Stall %6.2 düşük (960 vs 1023). Rapor konvertörü "Unacceptable" işaretliyor; ' +
-                           'motor eğrisi 900-1100 arasında çok dik ve stall tam orada. Kök neden açık iş.' },
+                      not: 'Stall %6.2 düşük (960 vs 1023) — kök neden: PCHIP↔doğrusal ara değerleme farkı, ' +
+                           'motor eğrisi 1000→1200 arasında %115 sıçrıyor ve stall tam orada.' },
   ypa4x4:           { rapor: '497-A336126-1', stall: 2036, stallTol: 0.04, kademe: { 3.430: [120.2, 136.8] }, vmaxTol: 0.6,
                       not: '9 vitesli 2957 SP. Stall %3.1 yüksek. Ayrıca durum makinesi raporun 1. viteste ' +
                            'kilitlenmesini (1C→1L→2L) temsil edemiyor.' },
