@@ -209,7 +209,7 @@ var AP_EXAMPLES = [
       id: 'ypa4x4', name: 'BMC YPA 4×4 — 2957 SP (9 vites)',
       vehicle: 'BMC YPA', subtitle: '4×4 · 7.65 t · 2957 SP Wide',
       description: 'Dokuz ileri vitesli 2957 SP Wide, TC221, tek kademeli 3.43 transfer. iSCAAN 497-A336126-1.',
-      warning: 'Bu şanzımanın vites geçiş profili programda YOK ("2400 rpm Variable" stratejisi); program allison3200sp_s1’e düşüyor ve geçiş noktaları yanlış oluyor. Topoloji ve bileşen değerleri doğru — geçiş programı kalibre edilene kadar hızlanma izine güvenme.',
+      warning: 'Vites geçiş profili ("2400 rpm Variable") artık kalibre — dokuz geçiş de rapordaki hızlara ±0.1 km/h oturuyor. Kalan tek fark: rapor 1. viteste kilitleniyor (1C→1L→2L), programın durum makinesi bunu temsil edemiyor ve 10–14 km/h arasında 2. viteste kilitli koşuyor. Bu aralık dışında hızlanma izi güvenilir.',
       specs: [
         ['Motor', '157 kW · 759 N·m · governed 2500 rpm'],
         ['Aksesuar kaybı', '19.3 kW'],

@@ -261,8 +261,9 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
     eta_prop *= (parseFloat(psd.psEff) || 98.60) / 100;
   });
 
-  // Vites verimi — evrensel formül (stall'da N_turbine=0)
-  var eta_gear = selectedGear ? FT_SOLVER.calcGearEfficiency(parseFloat(selectedGear.ratio) || 1.0, 0) : 0.98;
+  // Vites verimi (stall'da N_turbine=0) — şanzıman kalibreliyse ölçülmüş katsayılarla
+  var _gearEffCo = FT_SOLVER.resolveGearEff(gd);
+  var eta_gear = selectedGear ? FT_SOLVER.calcGearEfficiency(parseFloat(selectedGear.ratio) || 1.0, 0, _gearEffCo) : 0.98;
 
   // Tahrikli teker sayısı (transfer kilitli + diff kilitli = 4, değilse 2)
   var n_d = 4; // Askeri araç varsayımı: 4x4, transfer ve diff kilitli
@@ -483,6 +484,8 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
 // obsResult: veFTRunObstacleCrossingAnalysis() sonucu
 // dynOpts: { dt, rampTime, Cr, J_engine, J_tc, momentumCarry }
 function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
+  var _dynGbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
+  var _dynGearEffCo = FT_SOLVER.resolveGearEff(_dynGbNode ? (_dynGbNode.data || {}) : null);
   var opts = dynOpts || {};
   var dt = opts.dt || 0.001;                  // Zaman adımı (s) — varsayılan 1 ms
   var rampTime = opts.rampTime || 0.42;       // Gaz pedalı rampa süresi (s)
@@ -675,7 +678,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     var T_eng_final = motorTorqueLimitedFn(N_m);
     var T_pump_final = (N_m / K_m) * (N_m / K_m);
     var T_turbine_m = T_pump_final * TR_m;
-    var _eta_gear_m = FT_SOLVER.calcGearEfficiency(i_g, N_m * sr_m);
+    var _eta_gear_m = FT_SOLVER.calcGearEfficiency(i_g, N_m * sr_m, _dynGearEffCo);
     var T_gb_m = T_turbine_m * i_g * _eta_gear_m;
     var T_wheel_m = T_gb_m * i_tr * i_diff * eta_downstream_base / n_d;
 

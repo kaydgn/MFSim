@@ -1583,6 +1583,51 @@ var VE_FT_SHIFT_PROFILES = {
   // Evrensel S1: N_out = (ESL − 75) / i_gear, 5 aile × 44 VEPS ile ±1 rpm içinde doğrulandı
   // Effective ESL=2605 rpm (ters-mühendislikle teyit — "2500 rpm Limiting" ≠ gerçek ESL)
   // Converter shift'ler evrensel formül × i_F1 / i_F2 ile hesaplandı (TC-spesifik ufak sapma normal)
+  // ════════════════════════════════════════════════════════════════════════
+  // ALLISON 2957 SP WIDE — 9 ileri vites, DynActive (Index 0)
+  // ════════════════════════════════════════════════════════════════════════
+  // Kaynak: iSCAAN 497-A336126-1 (BMC YPA 4×4 · ISB4.5 210hp · TC221 · 7.65 t).
+  // Rapor "Shift Speed & Strategy: 2400 rpm Variable" + "DynActive: Yes, Bias 0"
+  // diyor. S1–S4 gibi sabit bir kademe DEĞİL; hızlanma tablosunun başlığı da
+  // "DynActive Automatic UpShift Sequence using DynActive Index 0".
+  //
+  // ÖLÇÜM — sekiz lockup üst-vites geçişinin HEPSİ tam N_motor = 2400 rpm'de:
+  //   1L→2L 498.2 · 2L→3L 683.2 · 3L→4L 843.3 · 4L→5L 1266.8
+  //   5L→6L 1668.8 · 6L→7L 2398.3 · 7L→8L 3259.4 · 8L→9L 3732.7   (N_out, rpm)
+  // Governed 2500 olduğu için kural ESL'e değil, stratejinin KENDİ referansına
+  // bağlı → shiftRefRPM: 2400, lockupOffset: 0, her viteste a = 1/i, b = 0.
+  // Bu haliyle sekiz geçiş de ±2 rpm içinde oturuyor.
+  //
+  // SINIR — bu şanzıman 1. viteste kilitleniyor (1C → 1L → 2L → …), MFSim'in
+  // durum makinesi ise 1C → 2C → 2L → … şeklinde. Bu yüzden raporun 1C→1L
+  // noktası (N_out 359.4) MFSim'de 1C→2C olarak, 1L→2L noktası (498.2) de
+  // 2C→2L olarak kuruluyor: 2L'ye GİRİŞ doğru N_out'ta oluyor, arada geçen
+  // pencerede rapor 1L'de (kilitli 1. vites) iken MFSim 2C'de (konvertör,
+  // 2. vites). Kalkış ivmesi bu pencerede bir miktar ayrışır.
+  allison2957sp_dyn0: {
+    name: 'Allison 2957 SP Wide — DynActive (Index 0)',
+    family: '',
+    gbPreset: '2957SP_WIDE',      // ad kalıbı '2957SP' verir; gerçek preset anahtarı bu
+    lockupOffset: 0,
+    shiftRefRPM: 2400,            // strateji referansı; motor governed'ı (2500) DEĞİL
+    shift1C2C_outRatio: 0.1498,   // rapordaki 1C→1L noktası (N_out 359.4)
+    shift2C2L_outRatio: 0.2076,   // rapordaki 1L→2L noktası (N_out 498.2)
+    lockupShifts: {
+      '1L2L': { a: 0.2074, b: 0 },   // i₁ = 4.822 · ölçüm 498.2  → 497.8  (Δ 0.4)
+      '2L3L': { a: 0.2847, b: 0 },   // i₂ = 3.512 · ölçüm 683.2  → 683.3  (Δ 0.1)
+      '3L4L': { a: 0.3506, b: 0 },   // i₃ = 2.852 · ölçüm 843.3  → 841.4  (Δ 1.9)
+      '4L5L': { a: 0.5274, b: 0 },   // i₄ = 1.896 · ölçüm 1266.8 → 1265.8 (Δ 1.0)
+      '5L6L': { a: 0.6949, b: 0 },   // i₅ = 1.439 · ölçüm 1668.8 → 1667.8 (Δ 1.0)
+      '6L7L': { a: 1.0000, b: 0 },   // i₆ = 1.000 · ölçüm 2398.3 → 2400.0 (Δ 1.7)
+      '7L8L': { a: 1.3587, b: 0 },   // i₇ = 0.736 · ölçüm 3259.4 → 3260.9 (Δ 1.5)
+      '8L9L': { a: 1.5552, b: 0 }    // i₈ = 0.643 · ölçüm 3732.7 → 3732.5 (Δ 0.2)
+    },
+    // downshiftThresholds YOK — rapor aşağı vites verisi vermiyor ve tam gaz
+    // hızlanma tek yönlü (gm8l90_perf ile aynı gerekçe). Uydurmak yerine boş.
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
   allison1000sp_s1: {
     name: 'Allison 1000 SP — S1 Performance',
     family: '1000_2000',
@@ -1761,6 +1806,9 @@ var VE_FT_SHIFT_PROFILES = {
 function veGetGearboxKeyFromShiftProfile(spKey) {
   var sp = VE_FT_SHIFT_PROFILES[spKey];
   if(!sp || !sp.name) return '';
+  // Açık bağ her zaman kazanır: preset anahtarı adın kalıbına uymayan şanzımanlar
+  // (ör. '2957SP_WIDE') yalnızca böyle çözülebilir.
+  if(sp.gbPreset) return sp.gbPreset;
   var m = sp.name.match(/Allison\s+(\d+)\s*SP/i);
   if(m) return m[1] + 'SP';
   if(/8L90/i.test(sp.name)) return '8L90';   // GM 8L90 profili → '8L90' preset anahtarı
@@ -2083,6 +2131,8 @@ var VE_GEARBOX_PRESETS = {
     grossInputTorque: 1424,
     netTurbineTorque: 2305,
     maxOutputSpeed: 3600,
+    // Dişli verimi (ölçüm: iSCAAN Lockup-mod vites tabloları) — 3000/3200 ortak dişli seti — 5 rapor, 516 nokta, RMS %0.35
+    gearEff: { a: 0.00869194, b: 5.9734e-6,  c: 3.68025e-9 },
     gears: [
       {gear: '1', ratio: 3.49, note: ''},
       {gear: '2', ratio: 1.86, note: ''},
@@ -2102,6 +2152,8 @@ var VE_GEARBOX_PRESETS = {
     grossInputTorque: 1695,
     netTurbineTorque: 2305,
     maxOutputSpeed: 3600,
+    // Dişli verimi (ölçüm: iSCAAN Lockup-mod vites tabloları) — 3000/3200 ortak dişli seti — 5 rapor, 516 nokta, RMS %0.34
+    gearEff: { a: 0.00869194, b: 5.9734e-6,  c: 3.68025e-9 },
     gears: [
       {gear: '1', ratio: 3.49, note: ''},
       {gear: '2', ratio: 1.86, note: ''},
@@ -2158,6 +2210,8 @@ var VE_GEARBOX_PRESETS = {
     grossInputTorque: 2544,
     netTurbineTorque: 3795,
     maxOutputSpeed: 3600,
+    // Dişli verimi (ölçüm: iSCAAN Lockup-mod vites tabloları) — 1 rapor, 90 nokta, RMS %0.23
+    gearEff: { a: 0.0111586,  b: 4.41233e-6, c: 6.81982e-9 },
     gears: [
       {gear: '1', ratio: 3.51, note: ''},
       {gear: '2', ratio: 1.91, note: ''},
@@ -2177,6 +2231,8 @@ var VE_GEARBOX_PRESETS = {
     grossInputTorque: 2400,
     netTurbineTorque: 3525,
     maxOutputSpeed: 3525,
+    // Dişli verimi (ölçüm: iSCAAN Lockup-mod vites tabloları) — 6 rapor, 498 nokta, RMS %0.21
+    gearEff: { a: 0.00926143, b: 5.26899e-6, c: 1.09823e-8 },
     gears: [
       {gear: '1', ratio: 4.70, note: ''},
       {gear: '2', ratio: 2.21, note: ''},
@@ -2253,6 +2309,20 @@ var VE_GEARBOX_PRESETS = {
     grossInputTorque: null,
     netTurbineTorque: null,
     maxOutputSpeed: null,
+    // Dişli verimi (ölçüm: iSCAAN Lockup-mod vites tabloları) — 1 rapor, 135 nokta, RMS %0.32.
+    // Bileşik planet yolu: kayıp ORANDAN çözülmüyor (1. vites i=4.822 → %7.24 kayıp ama
+    // 2. vites i=3.512 → %2.72), bu yüzden sabit terim vites başına ölçüldü. Orana göre
+    // düz model burada RMS %1.17'de kalıyor ve 2. viteste 1.9 puan sapıyordu.
+    gearEff: {
+      b: 9.39365e-8, c: 2.10499e-9,
+      perGear: [
+        { ratio: 4.822, a: 0.0721787 }, { ratio: 3.512, a: 0.0269906 },
+        { ratio: 2.852, a: 0.0502518 }, { ratio: 1.896, a: 0.0228607 },
+        { ratio: 1.439, a: 0.0207061 }, { ratio: 1.000, a: 0.0103477 },
+        { ratio: 0.736, a: 0.0251355 }, { ratio: 0.643, a: 0.0290310 },
+        { ratio: 0.568, a: 0.0372223 }
+      ]
+    },
     gears: [
       {gear: '1', ratio: 4.822, note: ''},
       {gear: '2', ratio: 3.512, note: ''},

@@ -404,14 +404,65 @@ var FT_SOLVER = (function() {
   // ═══════════════════════════════════════════════════════════════════════════
   // 8. EVRENSEL SANZIMAN DISLI VERIMI
   // ═══════════════════════════════════════════════════════════════════════════
-  // η_gear = 1 − |ln(i_gear)| × (0.0175 + 0.00000293 × N_turbine)
-  // i_gear = 1.000 (direct drive) → η = 1.000 (kayıpsız)
-  // iSCAAN doğrulaması: 7 vites, 2 mod, ≤0.1% hata.
-  function calcGearEfficiency(i_gear, N_turbine) {
-    if(!i_gear || i_gear === 1.0) return 1.0;
-    var absLnRatio = Math.abs(Math.log(i_gear));
-    var eta = 1 - absLnRatio * (0.0175 + 0.00000293 * (N_turbine || 0));
+  // Kayıp L = 1 − η üç terimden kurulur:
+  //   a  : devirden bağımsız sabit — çalkalama/yatak/mesh sayısı. Direkt viteste (i=1)
+  //        TEK çalışan terim; iSCAAN gerçekten ≈%0.6–1.0 kayıp gösteriyor (eski model 0).
+  //   b  : diş teması kaybı, türbin devriyle doğrusal artar → b·|ln i|·N_türbin
+  //   c  : yalnız overdrive'da — çıkış şaftı girişten hızlı döner → c·OD·N_çıkış²
+  //        (OD = max(0, −ln i))
+  //
+  // Sabit terim (a) İKİ ŞEKİLDE gelebilir:
+  //   • co.a          — orana göre düz model. Altı vitesli Allison ailelerinde yeterli.
+  //   • co.perGear[]  — VİTES BAŞINA ölçülmüş sabit. 9 vitesli 2957 SP gibi bileşik
+  //     planet yollu şanzımanlarda kayıp orandan çözülmüyor (i=4.822 → %7.24 ama
+  //     i=3.512 → %2.72); orada tek çare her vitesi ayrı ölçmek. Tabloda karşılığı
+  //     olmayan bir orana rastlanırsa evrensel formüle düşülür — ölçülmemiş vites
+  //     için ölçülmüş komşusunun sabiti UYDURULMAZ.
+  //
+  // Ölçüm: 13 iSCAAN raporunun Lockup-mod vites tabloları, η = T_çıkış/(T_türbin·i),
+  // governor düşüş bölgesi elenmiş (1239 nokta). Kalibresiz şanzımanlar evrensel
+  // formülle çalışır: L = |ln i| × (0.0175 + 2.93e-6 × N_türbin), i=1 → η=1.
+  // Ölçülen ailelerde evrensel formülün RMS'i %1.07–%2.38, kalibreli model %0.14–0.34.
+  //
+  // i_gear negatif olabilir (geri vites) — büyüklük alınır, yoksa Math.log NaN üretirdi.
+  function calcGearEfficiency(i_gear, N_turbine, co) {
+    if(!i_gear) return 1.0;
+    var absRatio = Math.abs(i_gear);
+    var lnRatio = Math.log(absRatio);
+    var N = N_turbine || 0;
+    var a = null;
+    if(co) {
+      if(co.perGear) {
+        for(var k = 0; k < co.perGear.length; k++) {
+          if(Math.abs(co.perGear[k].ratio - absRatio) <= 0.01 * absRatio) { a = co.perGear[k].a; break; }
+        }
+      } else if(co.a != null) {
+        a = co.a;
+      }
+    }
+    if(a != null) {
+      var N_out = N / absRatio;
+      var loss = a + (co.b || 0) * Math.abs(lnRatio) * N
+                   + (co.c || 0) * Math.max(0, -lnRatio) * N_out * N_out;
+      return Math.max(0.85, Math.min(1.0, 1 - loss));
+    }
+    if(absRatio === 1.0) return 1.0;
+    var eta = 1 - Math.abs(lnRatio) * (0.0175 + 0.00000293 * N);
     return Math.max(0.90, Math.min(1.0, eta));
+  }
+
+  // Şanzıman düğümünün verisinden dişli verim katsayılarını çöz.
+  // Öncelik: doğrudan seçilen preset → vites geçiş profilinin bağlı olduğu preset.
+  // (Örnek topolojilerde preset seçili değil, vites geçiş profili var — ikinci yol
+  // olmadan kalibrasyon o dosyalarda sessizce devre dışı kalırdı.)
+  function resolveGearEff(gbData) {
+    if(!gbData || typeof VE_GEARBOX_PRESETS === 'undefined') return null;
+    var key = gbData.ftGBPreset || '';
+    if(!key && gbData.shiftProfile && typeof veGetGearboxKeyFromShiftProfile === 'function') {
+      key = veGetGearboxKeyFromShiftProfile(gbData.shiftProfile) || '';
+    }
+    var preset = key ? VE_GEARBOX_PRESETS[key] : null;
+    return preset && preset.gearEff ? preset.gearEff : null;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -434,7 +485,7 @@ var FT_SOLVER = (function() {
     getCrrEffective: getCrrEffective,
     speedToTurbineRpm: speedToTurbineRpm, turbineRpmToSpeed: turbineRpmToSpeed,
     calcAccessoryTorque: calcAccessoryTorque,
-    calcGearEfficiency: calcGearEfficiency,
+    calcGearEfficiency: calcGearEfficiency, resolveGearEff: resolveGearEff,
     msToKmh: msToKmh, kmhToMs: kmhToMs
   };
 })();
@@ -572,6 +623,9 @@ function veFTRunSimulationEngine(transferRangeOverride) {
   var SHIFT_1C_2C_OUT_RATIO = spData.shift1C2C_outRatio || 0.2150;
   var SHIFT_2C_2L_OUT_RATIO = spData.shift2C2L_outRatio || 0.3594;
   var N_shift_lockup = shiftRefRPM - lockupOffset; // Lockup moddaki shift RPM'i (lockupShifts yoksa fallback)
+
+  // Dişli verim katsayıları — bu şanzıman ölçülmüşse; yoksa null (evrensel formül).
+  var _gearEffCo = FT_SOLVER.resolveGearEff(gbd);
 
   // Şanzıman iç ataleti (basitleştirilmiş — gearbox bileşeninde yok, sabit varsayım)
   var I_trans = 1.0;
@@ -1136,9 +1190,9 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       }
     }
 
-    // Evrensel dişli verimi: η = 1 − |ln(i)| × (0.0175 + 2.93e-6 × N_turbine)
+    // Dişli verimi — şanzıman kalibreliyse ölçülmüş katsayılarla, değilse evrensel formül.
     var _N_turb_for_eff = isLU ? N_engine : (N_engine * SR);
-    var eta_gear = FT_SOLVER.calcGearEfficiency(i_gear, _N_turb_for_eff);
+    var eta_gear = FT_SOLVER.calcGearEfficiency(i_gear, _N_turb_for_eff, _gearEffCo);
 
     // TK'li modlarda (converter + lockup) dişli mekanik kaybı BURADA bir kez uygulanır —
     // her iki dalın çıkış torku ham bırakıldı (converter: türbin torku; lockup: motor − klaç
@@ -1996,7 +2050,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       : _settledOp;
     var _iGear1 = parseFloat(forwardGears[0].ratio) || 1.0;
     // Dişli verimi sim converter dalıyla tutarlı (calcGearEfficiency; stall'da türbin=0 → SR=0).
-    var _etaG1 = FT_SOLVER.calcGearEfficiency(_iGear1, 0);
+    var _etaG1 = FT_SOLVER.calcGearEfficiency(_iGear1, 0, _gearEffCo);
     var _Tout = _ss.T_turbine * _etaG1;
     // GRİP-LİMİTSİZ çekiş (drivetrain KAPASİTESİ) — gradeability metriği bunu kullanır (iSCAAN
     // konvansiyonu: eğim kabiliyeti aktarma-organı kapasitesidir; tutunma AYRI "!" bayrağıyla).
@@ -2031,7 +2085,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     var _opTrace = traceMode ? {} : null;
     var _op = FT_SOLVER.solveTCOperatingPoint(_Nturb, motorTorqueFn, tcFns, pumpTorqueDrop,
                                               { N_min: idleRpm, N_max: noLoadGoverned + 100, traceSink: _opTrace });
-    var _etaG2 = FT_SOLVER.calcGearEfficiency(_iG1, _op.SR ? _op.N_engine * _op.SR : 0);
+    var _etaG2 = FT_SOLVER.calcGearEfficiency(_iG1, _op.SR ? _op.N_engine * _op.SR : 0, _gearEffCo);
     var _To2 = _op.T_turbine * _etaG2;
     // GRİP-LİMİTSİZ (drivetrain kapasitesi) — düşük-hız eğim metriği de kapasite raporlar.
     var _TE2 = FT_SOLVER.calcTractiveEffort(_To2, _iG1, 1.0, i_propshaft, psEff,
@@ -2078,6 +2132,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     netGrade: res_netGrade,
     heatRejection: res_heatRej,
     settledStall: settledStall,   // v=0 oturmuş stall (eğim metrikleri için)
+    gearEffCo: _gearEffCo,        // dişli verim katsayıları — rapor/diyagram çözücüyle aynı modeli kullansın
     lowSpeedOp: lowSpeedOp,       // ~10 km/h quasi-statik nokta (düşük-hız eğim metriği için)
     // ── Enerji Dengesi ──
     P_engine: res_P_engine,
