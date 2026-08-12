@@ -158,8 +158,9 @@ function veRunSimulationEngine() {
   // Evrensel dişli verimi — FT_SOLVER varsa dinamik, yoksa sabit fallback
   var _gbEffFallback = gbData ? (parseFloat(gbData.efficiency) || 97) / 100 : 0.97;
   var _gbUseUniversal = (typeof FT_SOLVER !== 'undefined' && typeof FT_SOLVER.calcGearEfficiency === 'function');
+  var _gbEffCo = (_gbUseUniversal && typeof FT_SOLVER.resolveGearEff === 'function') ? FT_SOLVER.resolveGearEff(gbData) : null;
   function gbEffFn(i_gear, N_turb) {
-    return _gbUseUniversal ? FT_SOLVER.calcGearEfficiency(i_gear, N_turb || 0) : _gbEffFallback;
+    return _gbUseUniversal ? FT_SOLVER.calcGearEfficiency(i_gear, N_turb || 0, _gbEffCo) : _gbEffFallback;
   }
   var gbEff = gbEffFn(gearRatio, 0); // Başlangıç değeri (stall)
   var autoShift = vehicleNode && vehicleNode.data ? (vehicleNode.data.autoShift || false) : false;

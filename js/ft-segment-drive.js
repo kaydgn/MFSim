@@ -87,6 +87,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
   if(forwardGears.length === 0) throw new Error('İleri vites verisi bulunamadı');
 
   var shiftProfile = gbd.shiftProfile || 'allison3200sp_s1';
+  var _gearEffCo = FT_SOLVER.resolveGearEff(gbd);
   var spData = VE_FT_SHIFT_PROFILES[shiftProfile] || { lockupOffset: 75, shift1C2C_outRatio: 0.2150, shift2C2L_outRatio: 0.3594 };
   var lockupOffset = spData.lockupOffset || 75;
   var shiftRefRPM = spData.shiftRefRPM || gbd.shiftRefRPM || governedSpeed;
@@ -421,9 +422,9 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       F_engine_drag = T_motoring * i_total_coast / r_tire;
     }
 
-    // Evrensel dişli verimi
+    // Dişli verimi — şanzıman kalibreliyse ölçülmüş katsayılarla
     var _N_turb_eff2 = isLU ? N_engine : (N_engine * SR);
-    var eta_gear = FT_SOLVER.calcGearEfficiency(i_gear, _N_turb_eff2);
+    var eta_gear = FT_SOLVER.calcGearEfficiency(i_gear, _N_turb_eff2, _gearEffCo);
 
     // (c) Negatif F_traction = motor freni → driving grip limiti uygulanmaz
     var F_traction_raw = isCoast ? 0 : FT_SOLVER.calcTractiveEffort(

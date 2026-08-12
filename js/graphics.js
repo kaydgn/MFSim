@@ -1840,8 +1840,8 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
         var _gear = _pgGears[_gi];
         var _gName = _gear.name || ('F' + (_gi + 1));
         var _gRatio = parseFloat(_gear.ratio) || 1.0;
-        var _effStall = FT_SOLVER.calcGearEfficiency(_gRatio, 0);
-        var _effGov = FT_SOLVER.calcGearEfficiency(_gRatio, _cmTable.length > 0 ? _cmTable[_cmTable.length - 1].N_turbine : 0);
+        var _effStall = FT_SOLVER.calcGearEfficiency(_gRatio, 0, R.gearEffCo);
+        var _effGov = FT_SOLVER.calcGearEfficiency(_gRatio, _cmTable.length > 0 ? _cmTable[_cmTable.length - 1].N_turbine : 0, R.gearEffCo);
 
         r += '  ▸ Vites ' + tr(_gName) + '  (Oran = ' + num(_gRatio, 3) + ')  —  Konvertör Modu\n';
         r += tRule(_pw, '┌', '┬', '┐', '─');
@@ -1852,7 +1852,7 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
         for (var _pri = 0; _pri < _cmTable.length; _pri++) {
           var _pr = _cmTable[_pri];
           var _N_turb_pg = _pr.N_turbine;
-          var _gEff = FT_SOLVER.calcGearEfficiency(_gRatio, _N_turb_pg);
+          var _gEff = FT_SOLVER.calcGearEfficiency(_gRatio, _N_turb_pg, R.gearEffCo);
           var _N_out = _N_turb_pg / _gRatio;
           var _T_out = _pr.T_turbine * _gRatio * _gEff;
           var _P_out = _T_out * (2 * Math.PI * _N_out / 60) / 1000;
@@ -2605,7 +2605,7 @@ function veFTTraceRenderStep(s, idx, H) {
     r += SUB('absLn', '|ln(i_gear)| = |ln(' + n(s.i_gear, 4) + ')| = ' + n(_absLn, 4));
     r += SUB('paren', '0.0175 + 2.93e-6*N_turb = 0.0175 + 2.93e-6*' + ni(s.N_turb_for_eff) + ' = ' + n(_paren, 6));
     r += SUB('ham', '1 - absLn*paren = ' + n(1 - _absLn * _paren, 4));
-    r += E('eta_gear', ['calcGearEfficiency(i_gear, N_turb)', n(s.eta_gear, 4) + '   (N_turb = ' + ni(s.N_turb_for_eff) + ' rpm; clamp [0.90,1.00])']);
+    r += E('eta_gear', ['calcGearEfficiency(i_gear, N_turb, gearEffCo)', n(s.eta_gear, 4) + '   (N_turb = ' + ni(s.N_turb_for_eff) + ' rpm)']);
     r += E('T_cikis', ['T_cikis(ham) * eta_gear', n(s.T_output_pre_gear, 1) + ' * ' + n(s.eta_gear, 4), n(s.T_output_geared, 1) + ' N.m']);
   }
 

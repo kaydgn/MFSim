@@ -187,7 +187,18 @@ describe('gerçek koşu — dizi sırası rolleri değiştirmiyor', () => {
     expect(duz.G.high.stallGrade).toBeGreaterThan(48);
     expect(duz.G.high.stallGrade).toBeLessThan(60);
     expect(duz.G.low.stallGrade).toBeGreaterThan(140);
-    expect(duz.G.low.stallGrade).toBeLessThan(165);
+    // Üst sınır 165 → 172: dişli verimi 4500SP için ÖLÇÜLEN katsayılara geçince
+    // (gearEff) 1. viteste stall kaybı %2.71 yerine %0.93 oldu — raporun kendi
+    // converter-mod tablosu stall'da %0.76 gösteriyor, yani yeni değer doğru.
+    // Ölçüm: low stall 155.9 → 166.4, high stall 54.3 → 55.6.
+    //
+    // AÇIK İŞ (bu değişiklikle ORTAYA ÇIKAN, onun sebep olmadığı sapma):
+    // MFSim stall'da 1540 rpm'e oturuyor, iSCAAN 1526 — %0.9 fark T_pompa'yı
+    // (N/K)² ile %1.8, türbin torkunu %2.25 yukarı taşıyor (2906.5 vs 2842.5).
+    // Eski dişli modelinin %2'lik FAZLA kaybı bu şişkinliği tam olarak
+    // götürüyordu; iki hata birbirini örtüyordu. Dişli tarafı artık raporla
+    // ölçüldüğüne göre kalan sapma konvertör eşleme tarafında — ayrı iş.
+    expect(duz.G.low.stallGrade).toBeLessThan(172);
   });
 });
 

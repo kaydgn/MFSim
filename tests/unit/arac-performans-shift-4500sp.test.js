@@ -175,6 +175,10 @@ describe('allison4500sp_s1 — eşik katsayıları iSCAAN raporuna oturuyor', ()
 
 // ── Profil eşik yardımcıları (ft-performance.js'teki mantığın aynısı) ──────
 function converterThreshold(P, key, esl) {
+  // Çözücü eşikleri shiftRefRPM ile çarpıyor (ft-performance.js:850, 863) — profil
+  // kendi referansını bildiriyorsa ESL değil O kullanılır. Bunu taklit etmezsek
+  // shiftRefRPM'i motor governed'ından FARKLI olan profiller yanlış ölçülür.
+  esl = P.shiftRefRPM || esl;
   const cs = P.converterShifts && P.converterShifts[key];
   if(cs) {
     if(cs.type === 'segmented') {
@@ -231,18 +235,42 @@ describe('YAPISAL KAPI — bütün shift profillerinde 2C→2L eşiği', () => {
     expect(ihlal).toEqual([]);
   });
 
+  // 2C2L yuvasının NEYİ kodladığı profile göre değişir. Altı vitesli Allison
+  // profillerinde gerçekten 2. viteste converter→lockup geçişidir. 9 vitesli
+  // 2957 SP DynActive'de ise raporun 1L→2L geçişi bu yuvaya oturtuldu (durum
+  // makinesi 1C/2C/2L etiketlerini konuma göre eşliyor), yani araç eşiğe
+  // gelirken hâlâ 1. VİTESTE. İkisini aynı çarpanla ölçmek yanlış olur.
+  const SLOT_IS_FIRST_GEAR = ['allison2957sp_dyn0'];
+
   test('Allison profillerinde 2C→2L türbin oranı 0.60–0.70 bandında', () => {
-    // N_türbin/ESL = (eşik × i₂) / ESL. Strateji sabiti; ölçülen aralık
+    // N_türbin/N_ref = (eşik × i₂) / N_ref. Strateji sabiti; ölçülen aralık
     // 0.619 (S4) – 0.683 (2500SP). Eski hatalı 4500SP değeri 0.306 idi.
     // gm8l90_perf hariç: TK'siz profil, oranı tasarımı gereği 1.0.
     const disari = [];
-    KEYS.filter(k => k.startsWith('allison')).forEach(k => {
+    KEYS.filter(k => k.startsWith('allison') && SLOT_IS_FIRST_GEAR.indexOf(k) < 0).forEach(k => {
+      const P = VE_FT_SHIFT_PROFILES[k];
       const i2 = secondGearRatio(k);
       if(i2 == null) return;
-      const r = converterThreshold(VE_FT_SHIFT_PROFILES[k], '2C2L', ESL) * i2 / ESL;
+      const ref = P.shiftRefRPM || ESL;
+      const r = converterThreshold(P, '2C2L', ESL) * i2 / ref;
       if(r < 0.60 || r > 0.70) disari.push(`${k}: ${r.toFixed(3)}`);
     });
     expect(disari).toEqual([]);
+  });
+
+  test('2957 SP: 2C→2L yuvası 1. viteste kilitlenmeyi kodluyor (N_türbin = N_ref)', () => {
+    // Bu profilde bant kuralı geçerli değil, ama yerine DAHA SIKI bir çıpa var:
+    // rapor (iSCAAN 497-A336126-1) bütün lockup geçişlerini N_motor = 2400'de
+    // gösteriyor, yani eşik × i₁ tam olarak shiftRefRPM'e oturmalı.
+    const P = VE_FT_SHIFT_PROFILES['allison2957sp_dyn0'];
+    const i1 = VE_GEARBOX_PRESETS[veGetGearboxKeyFromShiftProfile('allison2957sp_dyn0')]
+                 .gears.filter(g => g.gear !== 'R')[0].ratio;
+    const nTurb = converterThreshold(P, '2C2L', ESL) * i1;
+    expect(nTurb).toBeGreaterThan(P.shiftRefRPM - 15);
+    expect(nTurb).toBeLessThan(P.shiftRefRPM + 15);
+    // İkinci vitesle ölçseydik 0.729 çıkıyordu — bant kapısının neden atlandığının kanıtı.
+    expect(converterThreshold(P, '2C2L', ESL) * secondGearRatio('allison2957sp_dyn0') / P.shiftRefRPM)
+      .toBeGreaterThan(0.70);
   });
 });
 
