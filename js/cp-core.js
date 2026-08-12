@@ -258,6 +258,8 @@ function showNodeProperties(node) {
     html += getMnt2DViewPropertiesHTML(node);
   } else if(node.type === 'mnt-report') {
     html += getMntReportPropertiesHTML(node);
+  } else if(node.type === 'ap-example') {
+    html += getApExamplePropertiesHTML(node);
   } else if(node.type === 'arac-performans') {
     html += getAracPerformansPropertiesHTML(node);
   } else if(node.type === 'mount-analysis') {

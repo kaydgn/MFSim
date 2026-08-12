@@ -3748,7 +3748,7 @@ function veDownloadReportHTML() {
         var timeStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
 
         var asm = _veReportAssemble(R, sim, charts);
-        // KaTeX gövdesinde geçen "</script>" dizisi, gömüldüğü <script> etiketini
+        // KaTeX gövdesinde geçen kapanış-script dizisi, gömüldüğü <script> etiketini
         // ERKEN KAPATIR ve belgenin geri kalanı ham metin olarak dökülür. Takoz
         // raporu da aynı kaçışı yapar (_mntBuildReportHTML).
         var katexJs = ASSETS.katexJs ? ASSETS.katexJs.replace(/<\/script>/gi, '<\\/script>') : '';
@@ -3764,8 +3764,16 @@ function veDownloadReportHTML() {
           + asm.body
           + '<p class="foot">Bu rapor, projede tanımlı güç aktarma modelinden <strong>otomatik üretilmiştir</strong>; girdi değerleri modeldeki bileşen tanımlarından alınır. Tasarım kararlarında güncel tedarikçi / test verisiyle teyit edilmelidir. · MFSim — Motor Freni Simülasyon Yazılımı · ' + dateStr + ' ' + timeStr + '</p>'
           + '</div>'
-          + (katexJs ? '<script>' + katexJs + '</script>'
-              + '<script>document.addEventListener("DOMContentLoaded",function(){try{renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"\\\\(",right:"\\\\)",display:false}],throwOnError:false});}catch(e){}});</script>' : '')
+          // DİKKAT — kapanış etiketleri '<\/script>' diye YAZILMALI. Bu dosya
+          // build.js tarafından MFSim_Code.html'e SATIR İÇİ gömülüyor; kaynakta
+          // düz kapanış etiketi geçerse HTML ayrıştırıcısı gömüldüğü <script> bloğunu
+          // ORADA kapatır ve results.js'in geri kalanı ham metin olur (showToast
+          // dahil tüm dosya tanımsız kalır). '\/' kaçışı çalışma zamanında '/'
+          // üretir, kaynakta ise etiketi bozar → iki taraf da doğru.
+          // (Takoz raporu aynı sorunu <script> etiketlerini base64 şablonda
+          //  tutarak aşıyor — bkz. cp-mount-report.js MNT_REPORT_TEMPLATE_B64.)
+          + (katexJs ? '<script>' + katexJs + '<\/script>'
+              + '<script>document.addEventListener("DOMContentLoaded",function(){try{renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"\\\\(",right:"\\\\)",display:false}],throwOnError:false});}catch(e){}});<\/script>' : '')
           + '</body></html>';
 
         _veReportDownloadBlob(doc, _veReportSlug(projectName) + '_arac_performans_raporu.html');
