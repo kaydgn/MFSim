@@ -12774,10 +12774,17 @@ function veTrBindPopupDismiss(pop) {
   function onKey(ev) {
     if(ev.key === 'Escape') { ev.stopPropagation(); pop.remove(); done(); }
   }
-  // setTimeout: pencereyi AÇAN tıklamanın kendisi kapatıcıya düşmesin.
+  // Escape HEMEN bağlanır. Eskiden bu da setTimeout'un içindeydi: pencere DOM'a
+  // girdiği anda görünür oluyor ama dinleyici BİR SONRAKİ göreve kalıyordu, o
+  // aralıkta basılan ESC hiçbir dinleyiciye düşmeden kayboluyor ve pencere açık
+  // kalıyordu. Aralık bir olay döngüsü turu kadar; yüklü makinede (CI) test bunu
+  // yakaladı. Klavye için gecikmenin gerekçesi de yok — pencereyi açan şey bir
+  // TIKLAMA, ESC değil.
+  document.addEventListener('keydown', onKey, true);
+  // mousedown için gecikme KALIYOR: pencereyi AÇAN tıklamanın kendisi
+  // kapatıcıya düşmesin.
   setTimeout(function() {
     document.addEventListener('mousedown', onDown, true);
-    document.addEventListener('keydown', onKey, true);
   }, 0);
 }
 

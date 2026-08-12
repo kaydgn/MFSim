@@ -829,6 +829,27 @@ test.describe('Tema — işletim sistemini izler', () => {
 // çıkmanın tek yolu boşluğa tıklamaktı. Klavyeyle çalışan kullanıcı için
 // çıkışsız bir kutu demek bu.
 test.describe('Açılır pencereler ESC ile kapanır', () => {
+  // Dinleyici bağlanmadan ÖNCE basılan ESC de sayılmalı. Eskiden keydown
+  // dinleyicisi de setTimeout(...,0) içinde bağlanıyordu: pencere DOM'a girer
+  // girmez görünür oluyor ama dinleyici bir sonraki göreve kalıyordu; o
+  // aralıkta basılan ESC kayboluyor ve pencere AÇIK kalıyordu. Yüklü makinede
+  // (CI) yukarıdaki testler bu yüzden dönüşümlü kırmızıya dönüyordu. Burada
+  // aralığa BİLEREK basılıyor — yarış makine hızına bırakılmıyor.
+  test('pencere açılır açılmaz basılan ESC kaçmıyor', async ({ page }) => {
+    await openViewer(page);
+    const acikKaldi = await page.evaluate(() => {
+      const pop = document.createElement('div');
+      pop.id = 've-esc-yaris-testi';
+      document.body.appendChild(pop);
+      veTrBindPopupDismiss(pop);
+      // Aynı görev içinde, setTimeout sıraya girmişken:
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      return new Promise(res => setTimeout(
+        () => res(!!document.getElementById('ve-esc-yaris-testi')), 20));
+    });
+    expect(acikKaldi).toBe(false);
+  });
+
   test('birleştirme seçicisi', async ({ page }) => {
     await openViewer(page);
     await importFixture(page, canoeXlsx(120));
