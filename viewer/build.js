@@ -21,6 +21,7 @@
 var fs = require('fs');
 var path = require('path');
 var vm = require('vm');
+var SHIELD = require('../build-shield.js');
 
 var VIEWER = __dirname;
 var ROOT = path.join(VIEWER, '..');
@@ -67,7 +68,9 @@ html = html.replace(
     }
     var css = fs.readFileSync(fullPath, 'utf8');
     console.log('  CSS inline:', cssPath, '(' + css.length + ' karakter)');
-    return '<style>\n' + css + '\n</style>';
+    var sc = SHIELD.shieldStyleEnd(css);
+    if(sc.escaped) console.log('    ↳ kalkan: ' + cssPath + ' içinde ' + sc.escaped + ' adet ham "</style" kaçırıldı');
+    return '<style>\n' + sc.code + '\n</style>';
   }
 );
 
@@ -85,6 +88,17 @@ html = html.replace(
     var js = fs.readFileSync(fullPath, 'utf8');
     console.log('  JS inline:', jsPath, '(' + js.length + ' karakter)');
     inlined++;
+    // Gömme kalkanı — bkz. build-shield.js. Görüntüleyici git'e DAHİL ve
+    // kullanıcılar bu tek dosyayı indiriyor; erken kapanan bir script bloğu
+    // doğrudan indirilen üründe patlar.
+    try {
+      var r = SHIELD.shieldScriptEnd(js, 'viewer/' + jsPath);
+      if(r.escaped) console.log('    ↳ kalkan: ' + jsPath + ' içinde ' + r.escaped + ' adet ham "</script" kaçırıldı');
+      js = r.code;
+    } catch(e) {
+      console.error('\n✗ ' + e.message + '\n');
+      process.exit(1);
+    }
     return '<script>\n' + js + '\n</script>';
   }
 );
@@ -97,12 +111,37 @@ if(inlined !== jsFiles.length) {
 }
 
 // Gömülmemiş bir kaynak kaldıysa çıktı file:// üzerinde 404 verir ve program
-// sessizce yarım açılır. Kalan her src/href bir hatadır.
-var leftovers = html.match(/(?:src|href)="(?!data:|#|https?:)[^"]+\.(?:js|css)"/g);
-if(leftovers) {
-  console.error('\n✗ Gömülmemiş kaynak kaldı:', leftovers.join(', '), '\n');
+// sessizce yarım açılır. Görüntüleyici TEK dosya olarak dağıtıldığı için yanına
+// hiçbir şey kopyalanmaz: izinli dış kaynak YOK.
+//
+// Eski kapı yalnız .js/.css uzantısına ve ÇİFT tırnağa bakıyordu; .png, .ico,
+// .woff2, manifest, tek tırnaklı öznitelikler ve — en önemlisi — gömülen CSS
+// içindeki url(...) başvuruları hiç sorgulanmıyordu. Ortak denetleyici
+// (build-shield.js) hem etiketlere hem CSS'e bakar ve script gövdesindeki JS
+// dizgelerini sahte alarm saymaz.
+var kalan = SHIELD.leftoverRefs(html, []);
+if(kalan.attrs.length || kalan.cssUrls.length) {
+  console.error('\n✗ Gömülmemiş kaynak kaldı — indirilen dosyada 404 verir:');
+  kalan.attrs.forEach(function(v) { console.error('    öznitelik: ' + v); });
+  kalan.cssUrls.forEach(function(v) { console.error('    CSS url(): ' + v); });
+  console.error('');
   process.exit(1);
 }
+
+// Yapısal doğrulama: erken kapanan bir script bloğu, indirilen tek dosyayı
+// ham kod dökülen ve tıklanamayan bir sayfaya çevirir (bkz. build-shield.js).
+// Kalkan girdi tarafını koruyor; bu adım çıktıyı ölçüyor.
+var viewerDoc = SHIELD.scanDocument(fs.readFileSync(INDEX, 'utf8'));
+var intendedScripts = viewerDoc.scripts;
+var intendedStyles = viewerDoc.styles +
+  (fs.readFileSync(INDEX, 'utf8').match(/<link\s+rel="stylesheet"\s+href="\.\.\/css\//g) || []).length;
+var blockError = SHIELD.verifyScriptBlocks(html, intendedScripts, intendedStyles);
+if(blockError) {
+  console.error('\n✗ ' + blockError + '\n');
+  process.exit(1);
+}
+console.log('  Yapısal doğrulama: ' + intendedScripts + ' script + ' + intendedStyles +
+  ' style bloğu, hepsi kendi yerinde kapanıyor');
 
 // ── 3) Yaz ────────────────────────────────────────────────────────────────
 fs.writeFileSync(OUTPUT, html, 'utf8');

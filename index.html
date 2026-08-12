@@ -21,6 +21,13 @@
   <link rel="stylesheet" href="css/fonts.css" />
   <link rel="stylesheet" href="css/icons.css" />
   <link rel="stylesheet" href="css/styles.css" />
+  <!-- Manifest pwa/ altinda durur ama start_url ve scope ".." ile UYGULAMA
+       KOKUNE cozulur. Bunlar manifest'in KENDI URL'ine gore cozuldugu icin
+       "./" yazmak <site>/pwa/ demek oluyordu; o dizinde index yok (olculdu:
+       HTTP 404) ve kurulan kisayol her acilista 404 sayfasi gosteriyordu.
+       Ikonlar da manifest'e goredir: icon.svg dogru yerde. Olmayan
+       icon-192.png / icon-512.png referanslari kaldirildi — 404 veren bir
+       ikon, hic ikon vermemekten kotudur. Kapi: tests/unit/pwa.test.js -->
   <link rel="manifest" href="pwa/manifest.json" />
   <meta name="theme-color" content="#1a1a2e" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -1007,7 +1014,9 @@
 
 <script>
 if('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('pwa/sw.js').catch(function(){});
+  // Yol KOKTEN: bir SW'nin varsayilan kapsami kendi dizinidir. 'pwa/sw.js'
+  // kaydi kapsami <site>/pwa/ yapiyordu ve bu sayfayi hic kontrol etmiyordu.
+  navigator.serviceWorker.register('sw.js').catch(function(){});
 }
 </script>
 

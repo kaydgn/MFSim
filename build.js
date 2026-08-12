@@ -11,6 +11,7 @@
 var fs = require('fs');
 var path = require('path');
 var vm = require('vm');
+var SHIELD = require('./build-shield.js');
 
 var ROOT = __dirname;
 var INDEX = path.join(ROOT, 'index.html');
@@ -58,7 +59,12 @@ html = html.replace(
     }
     var css = fs.readFileSync(fullPath, 'utf8');
     console.log('  CSS inline:', cssPath, '(' + css.length + ' karakter)');
-    return '<style>\n' + css + '\n</style>';
+    // <style> bloğu da ham metin kipindedir: CSS içindeki "</style" bloğu erken
+    // kapatır ve stilin kalanı sayfaya METİN olarak dökülür (script'teki tuzağın
+    // aynısı). Bugün hiçbir CSS'te yok; kalkan yarınki için.
+    var sc = SHIELD.shieldStyleEnd(css);
+    if (sc.escaped) console.log('    ↳ kalkan: ' + cssPath + ' içinde ' + sc.escaped + ' adet ham "</style" kaçırıldı');
+    return '<style>\n' + sc.code + '\n</style>';
   }
 );
 
@@ -69,6 +75,23 @@ function extractAttrs(rawAttrs) {
   if (!rawAttrs) return '';
   var trimmed = rawAttrs.trim();
   return trimmed.length ? ' ' + trimmed : '';
+}
+
+// ── Gömme kalkanı ─────────────────────────────────────────────────────────
+// Mantık build-shield.js'te; viewer/build.js ve tests/unit/build-shield.test.js
+// AYNI modülü kullanır. Gerekçesi ve "neden güvenli" tartışması orada.
+function shield(js, label) {
+  try {
+    var r = SHIELD.shieldScriptEnd(js, label);
+    if (r.escaped) {
+      console.log('    ↳ kalkan: ' + label + ' içinde ' + r.escaped +
+        ' adet ham "</script" kaçırıldı');
+    }
+    return r.code;
+  } catch (e) {
+    console.error('\n✗ ' + e.message + '\n');
+    process.exit(1);
+  }
 }
 
 // ── 2a) Vendor JS: <script ... src="vendor/..." ...></script> → inline.
@@ -84,6 +107,7 @@ html = html.replace(
     }
     var js = fs.readFileSync(fullPath, 'utf8');
     console.log('  Vendor inline:', vendorPath, '(' + js.length + ' karakter)');
+    js = shield(js, vendorPath);
     var attrs = extractAttrs(beforeAttrs) + extractAttrs(afterAttrs);
     return '<script' + attrs + '>\n' + js + '\n</script>';
   }
@@ -104,6 +128,7 @@ html = html.replace(
       js = js.replace('__DEPLOY_RUN_ID__', process.env.GITHUB_RUN_ID);
     }
     console.log('  JS inline:', jsPath, '(' + js.length + ' karakter)');
+    js = shield(js, jsPath);
     var attrs = extractAttrs(beforeAttrs) + extractAttrs(afterAttrs);
     return '<script' + attrs + '>\n' + js + '\n</script>';
   }
@@ -129,7 +154,59 @@ if (fs.existsSync(examplesDir)) {
 }
 // '<' → <: JSON içindeki olası "</script>" script tag'ini kırmasın.
 var embedScript = '<script>window.__MNT_TOPOLOGIES = ' + JSON.stringify(embedded).replace(/</g, '\\u003c') + ';</script>';
-html = html.replace(/<body([^>]*)>/, '<body$1>\n' + embedScript);
+// FONKSİYON replacer ŞART: String.replace'in İKİNCİ argümanı dizge olursa
+// içindeki '$1'..'$9', '$&', "$'", '$`' ve '$$' ÖZEL DİZİ sayılıp genişletilir.
+// Örnek topolojilerinde '$' geçen herhangi bir metin (customName, not metni,
+// takoz adı) sessizce bozulurdu — ölçüldü: "Motor $1 Takoz" → "Motor  class=…
+// Takoz", "A$&B" → "A<body …>B", "C$$D" → "C$D". Fonksiyon replacer'da bu
+// genişletme HİÇ yapılmaz; dönen dizge olduğu gibi konur.
+html = html.replace(/<body([^>]*)>/, function (m, attrs) {
+  return '<body' + attrs + '>\n' + embedScript;
+});
+
+// ── 2d) YAPISAL DOĞRULAMA: üretilen dosyada script blokları erken kapanmasın
+//
+// Kalkan (shieldScriptEnd) girdi tarafını koruyor; bu adım ÇIKTI tarafını
+// ölçüyor — kaçış bir şekilde atlanırsa build burada durur, bozuk dosya
+// yayınlanmaz. Ölçüt: tarayıcının GÖRECEĞİ <script> eleman sayısı, bizim
+// KASTEN yazdığımız sayıya eşit olmalı. Erken kapanan tek bir blok bile bu
+// sayıyı kaydırır (index.html'in kendi script'leri + gömülen topoloji betiği).
+//
+// KASTEDİLEN sayı kaynağın kendisinden okunur: index.html'deki script elemanları
+// + gömülen topoloji betiği (1). Aynı sayaç iki tarafta da kullanılır, yoksa
+// kıyas elmayla armut olur.
+var indexDoc = SHIELD.scanDocument(fs.readFileSync(INDEX, 'utf8'));
+var intendedScripts = indexDoc.scripts + 1;   // + gömülen topoloji betiği
+// index.html'deki <style> blokları + inline edilen her stylesheet
+var intendedStyles = indexDoc.styles +
+  (fs.readFileSync(INDEX, 'utf8').match(/<link\s+rel="stylesheet"\s+href="(?:css|vendor)\//g) || []).length;
+var blockError = SHIELD.verifyScriptBlocks(html, intendedScripts, intendedStyles);
+if (blockError) {
+  console.error('\n✗ ' + blockError + '\n');
+  process.exit(1);
+}
+console.log('  Yapısal doğrulama: ' + intendedScripts + ' script + ' + intendedStyles +
+  ' style bloğu, hepsi kendi yerinde kapanıyor');
+
+// ── 2e) GÖMÜLMEMİŞ KAYNAK KALDI MI ────────────────────────────────────────
+// Deploy _site'a YALNIZCA index.html (=MFSim_Code.html), pwa/ ve assets/
+// kopyalar (bkz. .github/workflows/ci-deploy.yml). Bunların dışında kalan
+// göreli her başvuru Pages'te 404 verir ve program sessizce yarım açılır.
+var IZINLI_DIS_KAYNAK = [
+  'pwa/manifest.json',   // _site/pwa/manifest.json olarak kopyalanır
+  'pwa/icon.svg'         // _site/pwa/icon.svg
+];
+var kalan = SHIELD.leftoverRefs(html, IZINLI_DIS_KAYNAK);
+if (kalan.attrs.length || kalan.cssUrls.length) {
+  console.error('\n✗ Gömülmemiş kaynak kaldı — yayında 404 verir:');
+  kalan.attrs.forEach(function (v) { console.error('    öznitelik: ' + v); });
+  kalan.cssUrls.forEach(function (v) { console.error('    CSS url(): ' + v); });
+  console.error('  Ya tek dosyaya gömün ya da deploy adımında _site\'a kopyalayıp');
+  console.error('  build.js\'teki IZINLI_DIS_KAYNAK listesine ekleyin.\n');
+  process.exit(1);
+}
+console.log('  Kaynak bütünlüğü: gömülmemiş başvuru yok (izinli ' +
+  IZINLI_DIS_KAYNAK.length + ' dış dosya)');
 
 // ── 3) Yaz
 fs.writeFileSync(OUTPUT, html, 'utf8');

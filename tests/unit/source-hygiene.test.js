@@ -104,28 +104,3 @@ describe('kaynak dosyalarda kontrol karakteri yok', () => {
   });
 });
 
-// ── build.js js/ dosyalarını MFSim_Code.html'e SATIR İÇİ gömüyor. Kaynakta düz
-// bir kapanış-script etiketi geçerse (dize içinde ya da YORUMDA), HTML
-// ayrıştırıcısı gömüldüğü <script> bloğunu orada kapatır ve dosyanın geri kalanı
-// ham metin olur. 2026-08-12'de gerçekleşti: js/results.js'te KaTeX gömme kodunda
-// hem dize hem yorum düz etiket içeriyordu → results.js üretilen tek dosyada HİÇ
-// ayrıştırılamıyordu (showToast dahil tüm dosya tanımsız, sonuç paneli çalışmıyor).
-// Doğru yazım: '<\/script>' (çalışma zamanında '/' üretir, kaynakta etiketi bozar).
-describe('satır içi gömmeyi bozan kapanış-script etiketi yok', () => {
-  const targets = [...jsFiles(JS_DIR), ...jsFiles(VIEWER_JS_DIR)];
-
-  test.each(targets.map(t => [t.rel, t.abs]))('%s', (rel, abs) => {
-    const src = fs.readFileSync(abs, 'utf8');
-    const hits = [];
-    // '<' + '/script' — kaçışlı ('<\/script') biçimi ELEMEZ, o güvenli.
-    const rx = /<\/script/gi;
-    let m;
-    while ((m = rx.exec(src)) !== null) hits.push(src.slice(0, m.index).split('\n').length);
-    if (hits.length) {
-      throw new Error(
-        `${rel}: ${hits.length} yerde düz kapanış-script etiketi var (satır ${hits.join(', ')}).\n` +
-        `Gömülü tek dosyada bloğu erken kapatır. '<\\/script>' diye yaz.`);
-    }
-    expect(hits).toEqual([]);
-  });
-});

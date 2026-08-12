@@ -113,10 +113,18 @@ describe('KaTeX — Takoz raporuyla aynı gömme sözleşmesi', () => {
     expect(indirici).not.toMatch(/https?:\/\/[^"']*katex/i);
   });
 
-  test('gömülen JS içindeki </script> kaçışlanıyor (belge erken kapanmasın)', () => {
-    // Bu kaçış olmazsa indirilen rapor <script> ortasında biter ve
-    // belgenin geri kalanı ham metin olarak dökülür.
-    expect(indirici).toMatch(/katexJs[\s\S]{0,120}replace\(\/<\\\/script>\/gi/);
+  test('gömülen JS içindeki kapanış etiketi kaçışlanıyor (belge erken kapanmasın)', () => {
+    // Bu kaçış olmazsa indirilen rapor <script> ortasında biter ve belgenin
+    // geri kalanı ham metin olarak dökülür.
+    //
+    // Kaçış deseni ">" ZORUNLU TUTMAMALI: tarayıcı, kapanış dizisinden sonra
+    // boşluk, "/" ya da ">" gelirse bloğu bitirir (gerçek Chromium ile
+    // ölçüldü). Bu testin ilk hâli tam kapanışı sabitliyordu, yani eksik
+    // sözleşmeyi koruyordu — KaTeX gövdesi tools/report-assets/ ile
+    // upstream'den yeniden üretiliyor ve sürüm yükseltmesinde içerik değişir.
+    const m = /katexJs[\s\S]{0,400}?replace\((\/[^/]+\/[gi]*)/.exec(indirici);
+    expect(m).not.toBeNull();
+    expect(m[1]).not.toMatch(/script>/);
   });
 
   test('otomatik render $$…$$ ve \\(…\\) sınırlayıcılarıyla kuruluyor', () => {
@@ -133,6 +141,104 @@ describe('KaTeX — Takoz raporuyla aynı gömme sözleşmesi', () => {
   test('fontlar ve KaTeX Takoz raporuyla AYNI varlık paketinden geliyor', () => {
     expect(indirici).toMatch(/MNT_REPORT_ASSETS/);
     expect(indirici).toMatch(/_mntReportEnsureAssets/);
+  });
+});
+
+describe('Denklem kaynağı — yapışık TeX komutu yok', () => {
+  // H.eq(...) çağrıları çok satırlı dize BİRLEŞTİRMESİYLE yazılıyor. Bir parça
+  // çıplak bir komut sözcüğüyle biterse ('...\\qquad') ve sonraki parça harfle
+  // başlarsa komut YAPIŞIR: \qquad + g = \qquadg. KaTeX bunu bilinmeyen komut
+  // sayar, throwOnError:false olduğu için denklemi KIRMIZI ham metin olarak
+  // basar ve sessizce geçer — konsola hata düşmez, test kırılmaz, yalnız
+  // belgede bozuk bir satır kalır. Dört denklemde tam olarak bu olmuştu.
+  //
+  // Kapı: her denklemdeki her \komut, aşağıdaki listede OLMALI. Yapışık bir
+  // komut listede olmadığı için anında düşer. Yeni bir komut kullanmak
+  // bilinçli bir karar olsun diye liste elle güncellenir.
+  const IZINLI = new Set([
+    'Bigl','Bigr','Delta','Longleftrightarrow','Longrightarrow','Rightarrow',
+    'alpha','arctan','ast','begin','bigl','bigr','cdot','chi','cos','delta',
+    'dfrac','dot','end','eta','frac','ge','kappa','lambda','le','left',
+    'leftarrow','ln','lvert','mathrm','max','min','mu','omega','pi','qquad',
+    'quad','rho','right','rvert','sin','sqrt','sum','tan','tau','text',
+    'textstyle','tfrac','theta','times','underbrace','varepsilon','varphi',
+  ]);
+
+  // H.eq('...' + '...') çağrılarının argümanını birleştirip TeX'i geri kurar.
+  function denklemleriTopla() {
+    const bas = src.indexOf('function _veRepSecPlatform');
+    const son = src.indexOf('// ─── Assembler');
+    const bolge = src.slice(bas, son);
+    const out = [];
+    let i = 0;
+    while ((i = bolge.indexOf('H.eq(', i)) >= 0) {
+      let j = i + 5, d = 1, buf = '';
+      while (j < bolge.length && d > 0) {
+        const c = bolge[j];
+        if (c === '(') d++;
+        else if (c === ')') d--;
+        if (d > 0) buf += c;
+        j++;
+      }
+      out.push(buf.replace(/'\s*\+\s*'/g, '').replace(/^'|'$/g, '').replace(/\\\\/g, '\\'));
+      i = j;
+    }
+    return out;
+  }
+
+  const denklemler = denklemleriTopla();
+
+  test('denklemler bulunuyor (tarama sessizce boşalmasın)', () => {
+    expect(denklemler.length).toBeGreaterThanOrEqual(40);
+  });
+
+  test('hiçbir denklemde tanınmayan TeX komutu yok', () => {
+    const kotu = [];
+    denklemler.forEach((tex, n) => {
+      (tex.match(/\\[a-zA-Z]+/g) || []).forEach((k) => {
+        const ad = k.slice(1);
+        if (!IZINLI.has(ad)) kotu.push(`denklem #${n + 1}: ${k}`);
+      });
+    });
+    // Hata mesajı doğrudan hangi denklemde hangi komutun bozuk olduğunu verir.
+    expect(kotu).toEqual([]);
+  });
+
+  test('hiçbir dize parçası çıplak komut sözcüğüyle bitmiyor', () => {
+    // Kaynak düzeyinde ikinci kapı: '...\\qquad' + 'g...' kalıbını doğrudan yakalar.
+    const bolge = src.slice(src.indexOf('function _veRepSecPlatform'), src.indexOf('// ─── Assembler'));
+    const bulgular = [];
+    bolge.split('\n').forEach((satir, i) => {
+      if (/\\\\[a-zA-Z]+'\s*$/.test(satir) && !/\\\\text\{[^}]*\}'\s*$/.test(satir)) {
+        bulgular.push(`${i + 1}: ${satir.trim().slice(-48)}`);
+      }
+    });
+    expect(bulgular).toEqual([]);
+  });
+});
+
+describe('Rapor kapağı projenin TAM adını taşır', () => {
+  // veSetProjectNameButton (toolbar.js) 22 karakterden uzun adı "…" ile
+  // kısaltıp textContent'e öyle yazar; tam hâli title niteliğindedir.
+  // textContent'ten okumak kapağa ve dosya adına KESİK isim taşıyordu —
+  // "Taktik Tekerlekli Araç 8x8" → "Taktik Tekerlekli Ar". Sessiz ve
+  // makul görünen yanlış çıktı: kimse raporun adının kırpıldığını fark etmez.
+  const indirici = src.slice(src.indexOf('function veDownloadReportHTML('));
+  const okuma = indirici.slice(0, indirici.indexOf('var now = new Date()'));
+
+  test('ad title niteliğinden okunuyor', () => {
+    expect(okuma).toMatch(/pnBtn\.getAttribute\('title'\)/);
+  });
+
+  test('textContent yalnız yedek (title yoksa) olarak kalıyor', () => {
+    // '||' zinciri: önce title, sonra textContent.
+    expect(okuma).toMatch(/getAttribute\('title'\)\s*\|\|\s*pnBtn\.textContent/);
+  });
+
+  test('kısaltma gerçekten toolbar.js tarafında yapılıyor (gerekçe canlı)', () => {
+    const tb = fs.readFileSync(path.join(ROOT, 'js/toolbar.js'), 'utf8');
+    expect(tb).toMatch(/substring\(0,\s*20\)\s*\+\s*['"]…['"]/);
+    expect(tb).toMatch(/setAttribute\('title',\s*raw\)/);
   });
 });
 

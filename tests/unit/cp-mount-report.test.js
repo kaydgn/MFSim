@@ -507,3 +507,79 @@ describe('nonlineer sınıflandırması — rapor ile çekirdek AYNI cevabı ver
     expect(rep._mntRepAntet(Rs)).toContain('Newton-Raphson');
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VARLIK YÜKLEME YARIŞI — yalnız tek dosya build'inde görülen hata
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// _mntReportEnsureAssets iki yer tutucudan (şablon + varlıklar) ikisini de
+// yükleyip geri çağırımı ondan SONRA tetiklemeli. Sayaç döngünün İÇİNDE
+// artırıldığında, monolitik build'de (yer tutucular INLINE, dolayısıyla
+// appendChild ile SENKRON çalışır) ilk yineleme sayacı sıfırlayıp done()'u
+// erken ateşliyordu:
+//
+//   • Takoz raporu  → "Rapor varlıkları yüklenemedi." — her oturumun İLK
+//     denemesi düşüyor, ikincisi çalışıyordu (rastgele arıza gibi görünür).
+//   • Araç Performans "HTML İndir" → SESSİZ: rapor iniyor ama fontsuz ve
+//     formüller ham LaTeX olarak (js/results.js:withAssets boş varlıkla devam
+//     ediyor, hiçbir uyarı yok).
+//
+// index.html'de hata görünmüyordu — orada yer tutucular HARİCİ (ph.src dolu),
+// iki artış da herhangi bir onload'dan önce tamamlanıyor. Kırılan yalnız
+// yayınlanan MFSim_Code.html'di: açılış hatasıyla aynı asimetri.
+describe('rapor varlıkları — İLK çağrıda da başarılı (tek dosya build)', () => {
+  function kurYerTutucular(kodlar) {
+    document.body.innerHTML = '';
+    delete window.MNT_REPORT_TEMPLATE_B64;
+    delete window.MNT_REPORT_ASSETS;
+    kodlar.forEach((kod) => {
+      const s = document.createElement('script');
+      s.type = 'text/x-mfsim-report';   // bu tiple tarayıcı ÇALIŞTIRMAZ
+      s.textContent = kod;
+      document.body.appendChild(s);
+    });
+  }
+
+  const SABLON = 'window.MNT_REPORT_TEMPLATE_B64 = "QUJD";';
+  const VARLIK = 'window.MNT_REPORT_ASSETS = { fontsCss:"f", katexCss:"c", katexJs:"j" };';
+
+  test('inline yer tutucular: ilk çağrı true döner ve varlıklar hazırdır', () => {
+    kurYerTutucular([SABLON, VARLIK]);   // index.html'deki sıra: şablon, sonra varlıklar
+    let sonuc = null;
+    rep._mntReportEnsureAssets((ok) => { sonuc = ok; });
+    expect(sonuc).toBe(true);
+    expect(window.MNT_REPORT_ASSETS).toBeTruthy();
+    expect(window.MNT_REPORT_ASSETS.katexJs).toBe('j');
+  });
+
+  test('sıra ters olsa da ilk çağrı true döner', () => {
+    kurYerTutucular([VARLIK, SABLON]);
+    let sonuc = null;
+    rep._mntReportEnsureAssets((ok) => { sonuc = ok; });
+    expect(sonuc).toBe(true);
+  });
+
+  test('varlıklar gerçekten eksikse false döner (kalkan körelmemiş)', () => {
+    kurYerTutucular([SABLON]);           // yalnız şablon — varlık yok
+    let sonuc = null;
+    rep._mntReportEnsureAssets((ok) => { sonuc = ok; });
+    expect(sonuc).toBe(false);
+  });
+
+  test('geri çağırım TAM BİR KEZ çağrılır', () => {
+    kurYerTutucular([SABLON, VARLIK]);
+    let n = 0;
+    rep._mntReportEnsureAssets(() => { n++; });
+    expect(n).toBe(1);
+  });
+
+  test('zaten yüklüyse yer tutuculara hiç dokunulmaz (kısa devre)', () => {
+    kurYerTutucular([SABLON, VARLIK]);
+    rep._mntReportEnsureAssets(() => {});
+    const once = window.MNT_REPORT_ASSETS;
+    let sonuc = null;
+    rep._mntReportEnsureAssets((ok) => { sonuc = ok; });
+    expect(sonuc).toBe(true);
+    expect(window.MNT_REPORT_ASSETS).toBe(once);
+  });
+});
