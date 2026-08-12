@@ -172,4 +172,56 @@ test.describe('Araç Performans — alt-sistem düğümü', () => {
     await page.waitForFunction(() => window.nodes.length === 1, null, { timeout: 10000 });
     expect(await catVisible('Güç Kaynağı')).toBe(false);
   });
+
+  // Çıkış çipi eskiden GÖRÜNÜMÜN alt-ortasına dock'luydu: diyagramdan kopuk,
+  // ilgisiz bir boşlukta duruyordu ve pan ettikçe daha da uzaklaşıyordu.
+  // Bu test ESKİ kodda kırmızı: çerçevenin alt kenarına uzaklık 252.5px
+  // (beklenen < 20px) ölçüldü. Buradaki kapı wiring'i tutar — konum
+  // matematiği ayrıca birim testli (canvas-space.test.js → veBoundaryChipPos).
+  test('çıkış çipi sınır çerçevesinin alt kenarına tutunur; pan/zoom onu koparmaz', async ({ page }) => {
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await bootApp(page);
+    await page.evaluate(() => { createNode('arac-performans', 3200, 3200); });
+    await page.waitForFunction(() => window.nodes.length === 1, null, { timeout: 5000 });
+    await page.locator('#ve-canvas .ve-node[data-type="arac-performans"]').dblclick();
+    await page.waitForFunction(() => window.nodes.length === 16, null, { timeout: 10000 });
+    await expect(page.locator('.ve-arac-breadcrumb')).toBeVisible();
+
+    // Çipin üst kenarı ↔ çerçevenin alt kenarı ve yatay merkez sapması
+    const probe = () => page.evaluate(() => {
+      const chip = document.querySelector('.ve-arac-breadcrumb').getBoundingClientRect();
+      const frame = document.querySelector('.ve-boundary-rect').getBoundingClientRect();
+      return { gap: chip.top - frame.bottom, dx: (chip.left + chip.right) / 2 - (frame.left + frame.right) / 2 };
+    });
+
+    const atEntry = await probe();
+    expect(atEntry.gap).toBeLessThan(20);          // çerçeveye YAPIŞIK (eskiden 595)
+    expect(Math.abs(atEntry.dx)).toBeLessThan(2);  // çerçeveyle ortalı (eskiden 858)
+
+    // Pan: çip çerçeveyle birlikte gider — aradaki mesafe değişmez.
+    // Tolerans 1px: çerçeve bir SVG rect ve getBoundingClientRect'i çizgi
+    // kalınlığının yarısını da sayıyor; kesirli cihaz pikselinde ~0.5px oynar.
+    await page.evaluate(() => { canvasOffset.x += 260; canvasOffset.y -= 170; updateCanvasTransform(); });
+    const panned = await probe();
+    expect(Math.abs(panned.gap - atEntry.gap)).toBeLessThan(1);
+    expect(Math.abs(panned.dx - atEntry.dx)).toBeLessThan(1);
+
+    // Zoom: tutunma korunur, çipin KENDİ ölçüsü ölçekten etkilenmez.
+    // Burada tolerans 1.5px: çizgi kalınlığı da ölçekleniyor (1.5px → 0.75px),
+    // yani çerçevenin ölçülen alt kenarı zoom ile ~0.4px kayıyor.
+    const wBefore = await page.evaluate(() => document.querySelector('.ve-arac-breadcrumb').getBoundingClientRect().width);
+    await page.evaluate(() => { canvasZoom = 0.5; updateCanvasTransform(); });
+    const zoomed = await probe();
+    expect(Math.abs(zoomed.gap - atEntry.gap)).toBeLessThan(1.5);
+    expect(Math.abs(zoomed.dx)).toBeLessThan(2);
+    const wAfter = await page.evaluate(() => document.querySelector('.ve-arac-breadcrumb').getBoundingClientRect().width);
+    expect(Math.abs(wAfter - wBefore)).toBeLessThan(1);
+
+    // Çerçeve ekran dışına kaydırılsa BİLE çip görünümde kalmalı: alt
+    // topolojiden çıkmanın başka yolu yok, kırpma olmasa kullanıcı kilitlenirdi.
+    await page.evaluate(() => { canvasZoom = 1; canvasOffset.y += 3000; updateCanvasTransform(); });
+    await page.locator('.ve-arac-breadcrumb button').click({ timeout: 5000 });
+    await page.waitForFunction(() => window.nodes.length === 1, null, { timeout: 10000 });
+    expect(await page.evaluate(() => veAracStack.length)).toBe(0);
+  });
 });

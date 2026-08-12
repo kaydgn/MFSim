@@ -241,8 +241,10 @@ function veAracCollapseToRoot(){
   while(veAracStack.length && guard++ < 32){ veAracCloseEditor(true); }
 }
 
-// Alt-topoloji içindeyken canvas alanının ALT-ORTASINA (diyagramın altına)
-// iliştirilen çıkış çipi — "← Ana topolojiye dön" + kapsam etiketi.
+// Alt-topoloji içindeyken TOPOLOJİ SINIR ÇERÇEVESİNİN ALT KENARINA tutunan
+// çıkış çipi — "← Ana topolojiye dön" + kapsam etiketi. Konumu
+// veAnchorBoundaryChip (js/canvas-space.js) hesaplar; pan/zoom'da çerçeveyle
+// birlikte gider.
 function veAracUpdateBreadcrumb(){
   if(typeof document === 'undefined') return;
   var el = document.getElementById('ve-arac-breadcrumb');
@@ -251,10 +253,12 @@ function veAracUpdateBreadcrumb(){
     el = document.createElement('div');
     el.id = 've-arac-breadcrumb';
     el.className = 've-arac-breadcrumb';
-    // Canvas alanının alt-ortasına iliştir. #ve-split-container position:relative
-    // ve geçiş animasyonunun transform'u alt-seviye .ve-canvas-wrapper'a uygulandığı
-    // için çip konumunu şaşırmaz → pan/zoom'dan bağımsız, kanvasa sabit kalır.
-    var host = document.getElementById('ve-split-container')
+    // Görünümün (#ve-canvas-wrapper) İÇİNE, transform'lu #ve-canvas'ın DIŞINA
+    // konur — minimap ile aynı katman. Böylece konumu kamera koordinatından
+    // hesaplanabilir ama ölçüsü zoom'la büyüyüp küçülmez. Bölünmüş görünümde
+    // wrapper hangi bölmeye taşınırsa çip de onunla gider.
+    var host = document.getElementById('ve-canvas-wrapper')
+            || document.getElementById('ve-split-container')
             || document.querySelector('.ve-canvas-area')
             || document.body;
     host.appendChild(el);
@@ -264,6 +268,8 @@ function veAracUpdateBreadcrumb(){
     '<button onclick="veAracCloseEditor()" title="Ana (üst) topolojiye dön">← Ana topolojiye dön</button>'
     + '<span class="ve-arac-breadcrumb-label">Araç Performans · Alt Topoloji'
     + (depth > 1 ? ' <b>(derinlik ' + depth + ')</b>' : '') + '</span>';
+  // Etiket (ve dolayısıyla genişlik) değişti → yeri hemen tazelensin.
+  if(typeof veAnchorBoundaryChip === 'function') veAnchorBoundaryChip();
 }
 
 // Jest/Node köprüsü (tarayıcıda no-op)

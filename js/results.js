@@ -6209,40 +6209,21 @@ function veUpdateBoundary() {
   // Eski sınır elemanlarını temizle
   svg.querySelectorAll('.ve-boundary-rect').forEach(function(el) { el.remove(); });
 
-  if(!veBoundaryVisible || nodes.length === 0) return;
-  
-  // Bileşenlerin sınır kutusunu hesapla (sensör hariç)
-  var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  var realNodes = 0;
-  nodes.forEach(function(n) {
-    if(n.type === 'sensor' || n.type === 'sensor-wizard') return;
-    var nx = n.x;
-    var ny = n.y;
-    var nw = n.width || 65;
-    var nh = n.height || 60;
-    var labelH = 20;
-    if(nx < minX) minX = nx;
-    if(ny < minY) minY = ny;
-    if(nx + nw > maxX) maxX = nx + nw;
-    if(ny + nh + labelH > maxY) maxY = ny + nh + labelH;
-    realNodes++;
-  });
-  
-  if(realNodes === 0) return;
-  
-  var pad = veBoundaryPadding;
-  var bx = minX - pad;
-  var by = minY - pad;
-  var bw = (maxX - minX) + pad * 2;
-  var bh = (maxY - minY) + pad * 2;
-  
+  // Kutu js/canvas-space.js'ten gelir — alt-topoloji çıkış çipi de aynı kutunun
+  // alt kenarına tutunur. Çerçeve GİZLİYKEN de hesaplanır: çipin yeri sınır
+  // görünürlüğüne göre zıplamasın.
+  var box = (typeof veBoundaryBox === 'function') ? veBoundaryBox(nodes, veBoundaryPadding) : null;
+  if(typeof veAnchorBoundaryChip === 'function') veAnchorBoundaryChip();
+
+  if(!veBoundaryVisible || !box) return;
+
   // Sınır dikdörtgeni — sade kesikli çizgi
   var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
   rect.setAttribute('class', 've-boundary-rect');
-  rect.setAttribute('x', bx);
-  rect.setAttribute('y', by);
-  rect.setAttribute('width', bw);
-  rect.setAttribute('height', bh);
+  rect.setAttribute('x', box.x);
+  rect.setAttribute('y', box.y);
+  rect.setAttribute('width', box.w);
+  rect.setAttribute('height', box.h);
   rect.setAttribute('rx', '6');
   rect.setAttribute('ry', '6');
   // Tema rengi: koyu temalarda border-hover, açık temalarda koyu gri

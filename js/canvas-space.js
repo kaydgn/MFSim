@@ -132,6 +132,94 @@ function veTopoBBox(nodeList, annotList) {
   return { minX: minX, minY: minY, maxX: maxX, maxY: maxY };
 }
 
+// ── TOPOLOJİ SINIR ÇERÇEVESİ + ALT-TOPOLOJİ ÇIKIŞ ÇİPİ ──────────────────────
+// Kesikli çerçeveyi js/results.js veUpdateBoundary SVG'ye çizer; "← Ana
+// topolojiye dön" çipi de aynı çerçevenin ALT KENARINA tutunur. Kutu TEK
+// yerden (burası) gelir: iki taraf ayrı ayrı hesaplasaydı çip zamanla
+// çerçeveden kayardı ve kimse fark etmezdi.
+var VE_NODE_LABEL_H = 20;            // düğüm kutusunun ALTINDAKİ ad etiketi
+var VE_BOUNDARY_PAD = 50;            // çerçevenin bileşenlerden uzaklığı (varsayılan)
+var VE_CHIP_GAP = 12;                // çip ile çerçevenin alt kenarı arası (ekran px)
+var VE_CHIP_INSET = 10;              // görünüm kenarına en yakın duruş (ekran px)
+
+// SAF: sınır çerçevesinin YEREL kutusu — {x, y, w, h}; çizilecek düğüm yoksa null.
+// Sensörler sayılmaz: zincire asılı dururlar, çerçeveyi boş yere şişirirlerdi.
+function veBoundaryBox(nodeList, pad) {
+  var p = (typeof pad === 'number' && isFinite(pad)) ? pad : VE_BOUNDARY_PAD;
+  var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, seen = 0;
+  (nodeList || []).forEach(function(n) {
+    if(!n || n.type === 'sensor' || n.type === 'sensor-wizard') return;
+    if(!isFinite(n.x) || !isFinite(n.y)) return;
+    var w = isFinite(n.width) ? n.width : 65;
+    var h = isFinite(n.height) ? n.height : 60;
+    if(n.x < minX) minX = n.x;
+    if(n.y < minY) minY = n.y;
+    if(n.x + w > maxX) maxX = n.x + w;
+    if(n.y + h + VE_NODE_LABEL_H > maxY) maxY = n.y + h + VE_NODE_LABEL_H;
+    seen++;
+  });
+  if(!seen) return null;
+  return { x: minX - p, y: minY - p, w: (maxX - minX) + p * 2, h: (maxY - minY) + p * 2 };
+}
+
+// SAF: çıkış çipinin GÖRÜNÜM (#ve-canvas-wrapper) koordinatı — {left, top}.
+// left çipin YATAY MERKEZİDİR (CSS translateX(-50%) ile kullanılır).
+//   box   — veBoundaryBox() çıktısı (yerel px) ya da null
+//   chip  — {w, h} çipin ölçüsü; view — {w, h} görünüm ölçüsü
+// Çip kameranın parçası DEĞİL, ona tutunur: pan/zoom'da çerçeveyle birlikte
+// gider ama ölçüsü sabit kalır (zoom %20'de okunmaz olmaz).
+//
+// KIRPMA (yalnız görünüm ölçülebiliyorsa): doğal yer görünümün dışına düşerse
+// çip kenara yapışır. Alt-topolojiden çıkmanın BAŞKA yolu yok — kullanıcı
+// çerçeveyi ekran dışına kaydırınca çip de gitseydi topolojide kilitlenirdi.
+function veBoundaryChipPos(box, zoom, offset, chip, view) {
+  var z = (isFinite(zoom) && zoom > 0) ? zoom : 1;
+  var ox = (offset && isFinite(offset.x)) ? offset.x : 0;
+  var oy = (offset && isFinite(offset.y)) ? offset.y : 0;
+  var cw = (chip && isFinite(chip.w)) ? chip.w : 0;
+  var ch = (chip && isFinite(chip.h)) ? chip.h : 0;
+  var vw = (view && isFinite(view.w)) ? view.w : 0;
+  var vh = (view && isFinite(view.h)) ? view.h : 0;
+
+  var left, top;
+  if(box) {
+    left = (box.x + box.w / 2 - VE_CANVAS_CENTER) * z + ox;
+    top = (box.y + box.h - VE_CANVAS_CENTER) * z + oy + VE_CHIP_GAP;
+  } else {
+    // Çerçeve yok (boş alt-topoloji) → görünümün alt-ortası.
+    left = vw / 2;
+    top = vh - ch - VE_CHIP_INSET;
+  }
+
+  if(vw > 0 && vh > 0) {
+    var loL = cw / 2 + VE_CHIP_INSET, hiL = vw - cw / 2 - VE_CHIP_INSET;
+    left = (hiL < loL) ? vw / 2 : Math.min(hiL, Math.max(loL, left));
+    var hiT = vh - ch - VE_CHIP_INSET;
+    top = (hiT < VE_CHIP_INSET) ? VE_CHIP_INSET : Math.min(hiT, Math.max(VE_CHIP_INSET, top));
+  }
+  return { left: left, top: top };
+}
+
+// Çipi çerçeveye tuttur. Kamera değişince (updateCanvasTransform) ve çerçeve
+// yeniden hesaplanınca (veUpdateBoundary) çağrılır. Çip yoksa no-op.
+function veAnchorBoundaryChip() {
+  if(typeof document === 'undefined') return;
+  var chips = document.querySelectorAll('.ve-arac-breadcrumb');
+  if(!chips || !chips.length) return;
+  var wrap = document.getElementById('ve-canvas-wrapper');
+  var view = wrap ? { w: wrap.clientWidth, h: wrap.clientHeight } : { w: 0, h: 0 };
+  var pad = (typeof veBoundaryPadding === 'number') ? veBoundaryPadding : VE_BOUNDARY_PAD;
+  var box = (typeof nodes !== 'undefined') ? veBoundaryBox(nodes, pad) : null;
+  var zoom = (typeof canvasZoom !== 'undefined') ? canvasZoom : 1;
+  var off = (typeof canvasOffset !== 'undefined') ? canvasOffset : { x: 0, y: 0 };
+  Array.prototype.forEach.call(chips, function(el) {
+    var p = veBoundaryChipPos(box, zoom, off, { w: el.offsetWidth, h: el.offsetHeight }, view);
+    el.style.left = p.left + 'px';
+    el.style.top = p.top + 'px';
+    el.style.bottom = 'auto';
+  });
+}
+
 // SAF: yüklenecek topoloji durumunu kanvas merkezine taşı.
 // Düğümler/açıklamalar kopyalanarak kaydırılır (kaynak JSON — örneğin gömülü
 // window.__MNT_TOPOLOGIES kaydı — DEĞİŞMEZ). Kamera da aynı miktarda kaydırılır
@@ -173,12 +261,19 @@ if(typeof module !== 'undefined' && module.exports) {
     VE_CANVAS_SPAN: VE_CANVAS_SPAN,
     VE_CANVAS_CENTER: VE_CANVAS_CENTER,
     VE_GRID_MIN_PX: VE_GRID_MIN_PX,
+    VE_NODE_LABEL_H: VE_NODE_LABEL_H,
+    VE_BOUNDARY_PAD: VE_BOUNDARY_PAD,
+    VE_CHIP_GAP: VE_CHIP_GAP,
+    VE_CHIP_INSET: VE_CHIP_INSET,
     veGridPattern: veGridPattern,
     veApplyGridPattern: veApplyGridPattern,
     veCanvasViewportSize: veCanvasViewportSize,
     veHomeCameraOffset: veHomeCameraOffset,
     veCameraHome: veCameraHome,
     veTopoBBox: veTopoBBox,
+    veBoundaryBox: veBoundaryBox,
+    veBoundaryChipPos: veBoundaryChipPos,
+    veAnchorBoundaryChip: veAnchorBoundaryChip,
     veCenterTopoState: veCenterTopoState
   };
 }
