@@ -23,6 +23,15 @@
  *      değer basıyor — fan On (düşük) ve fan Off (yüksek); doğru sonuç bu
  *      bandın içindedir.
  *
+ * pumpTorqueDrop TÜRETME KURALI (ypa4x4 bu yüzden yanlıştı):
+ *   drop = [motor eğrisinin DOĞRUSAL net-fan-on değeri @stall] − T_pompa
+ *   T_pompa = T_türbin / τ   (eşleme tablosunun SR=0 satırından)
+ * MFSim net torku eğriden üretiyor (brüt − aksesuar modeli), bu yüzden drop da
+ * EĞRİ-net ile tutarlı olmalı. On iki örnekte raporun eşleme tablosundaki net
+ * tork ile eğri-net ÇAKIŞIYOR, o yüzden fark görünmüyordu; ypa4x4'te iSCAAN
+ * 48.4 N·m'yi eşleme tablosunun net torkuna gömmüş ve çıkarıcı 21.4 üretmişti.
+ * Doğrusu 69.8. Kural on üç örneğin hepsinde ±0.5 N·m içinde tutuyor.
+ *
  * Karşılaştırma R.solverStats.maxSpeed_kmh üzerinden yapılır; R.speed dizisinin
  * SONUNDA Allison rapor biçimi için eklenen "statik uzantı" satırları var
  * (v_max ötesi droop bölgesi) ve Math.max(R.speed) onları da görür.
@@ -52,10 +61,11 @@ const ISCAAN = {
   bmc10ton_430_30t: { rapor: '497-A355437-1', stall: 1581, kademe: { 0.874: [92.9, 96.2], 1.536: [54.1, 54.7] } },
   bmc10ton_430_32t: { rapor: '497-A355438-1', stall: 1581, kademe: { 0.874: [92.8, 96.2], 1.536: [54.1, 54.7] } },
   bmc10ton_460:     { rapor: '497-A355439-1', stall: 1621, kademe: { 0.874: [94.0, 96.9], 1.536: [54.6, 55.1] } },
-  // ── BİLİNEN AYKIRILAR ──
-  // Bantları GENİŞ ama SABİT: bugünkü sapmayı dondururlar, büyümesine izin
-  // vermezler. Daralttıkça iyileşme ölçülebilir olsun diye ayrı tutuldular.
-  // duramax KÖK NEDENİ BULUNDU (düzeltme henüz YOK — aş. gerekçe):
+  // ── TEK KALAN AYKIRI: duramax ──
+  // Bandı GENİŞ ama SABİT: bugünkü sapmayı dondurur, büyümesine izin vermez.
+  // (ypa4x4 buradaydı; pumpTorqueDrop düzeltilince standart banda geçti.)
+  //
+  // KÖK NEDENİ BULUNDU (düzeltme henüz YOK — aş. gerekçe):
   //
   // MFSim motor eğrisini PCHIP ile ara değerliyor, iSCAAN DOĞRUSAL ara
   // değerliyor. Bu fark yalnız eğrinin dik olduğu yerde önem kazanır ve L5D
@@ -76,9 +86,10 @@ const ISCAAN = {
   duramax:          { rapor: '497-A425591-1', stall: 1023, stallTol: 0.07, kademe: { 1.000: [133.3, 141.9], 2.470: [57.1, 57.4] },
                       not: 'Stall %6.2 düşük (960 vs 1023) — kök neden: PCHIP↔doğrusal ara değerleme farkı, ' +
                            'motor eğrisi 1000→1200 arasında %115 sıçrıyor ve stall tam orada.' },
-  ypa4x4:           { rapor: '497-A336126-1', stall: 2036, stallTol: 0.04, kademe: { 3.430: [120.2, 136.8] }, vmaxTol: 0.6,
-                      not: '9 vitesli 2957 SP. Stall %3.1 yüksek. Ayrıca durum makinesi raporun 1. viteste ' +
-                           'kilitlenmesini (1C→1L→2L) temsil edemiyor.' },
+  ypa4x4:           { rapor: '497-A336126-1', stall: 2036, kademe: { 3.430: [120.2, 136.8] }, vmaxTol: 0.6,
+                      not: 'Stall +%3.1 → +%0.2 düzeldi: pumpTorqueDrop 21.4 yerine 69.8 olmalıymış ' +
+                           '(bkz. aş. türetme kuralı). Kalan sınırlama: durum makinesi raporun ' +
+                           '1. viteste kilitlenmesini (1C→1L→2L) temsil edemiyor.' },
 };
 
 /**
@@ -106,7 +117,7 @@ const HIZLANMA = {
   bmc10ton_430_32t: { 0.874: [3.01, 10.20, 22.63, 42.52], 1.536: [2.71, 9.83, null, null] },
   bmc10ton_460:     { 0.874: [2.85, 9.47, 20.81, 38.63], 1.536: [2.55, 9.09, null, null] },
   duramax:          { 1.000: [1.70, 4.10, 8.01, 13.68], 2.470: [1.56, 4.20, 12.87, null] },
-  ypa4x4:           { 3.430: [1.56, 5.08, 10.99, 20.54] },
+  ypa4x4:           { 3.430: [1.61, 5.14, 11.05, 20.59] },
 };
 
 /** Aynı noktalarda iSCAAN'ın kendi hızlanma tablosu (kalibrasyon cetveli). */
@@ -188,14 +199,14 @@ describe('stall motor devri — duran araçtaki konvertör denge noktası', () =
     expect(Math.abs(got - ref.stall) / ref.stall).toBeLessThan(tol);
   });
 
-  test('aykırı olmayan on bir örnekte sapma %1’in altında', () => {
+  test('aykırı olmayan on iki örnekte sapma %1’in altında', () => {
     // Bu kapı toplu kaymayı yakalar: tek tek %1.5 bandını geçmeyen ama hepsi
     // birden aynı yöne kayan bir regresyon burada kırmızıya döner.
     const sapma = IDS.filter(id => !ISCAAN[id].stallTol).map(id => {
       const r = ISCAAN[id];
       return { id: id, e: 100 * (sonuc[id][0].stall - r.stall) / r.stall };
     });
-    expect(sapma.length).toBe(11);
+    expect(sapma.length).toBe(12);
     sapma.forEach(s => expect(Math.abs(s.e)).toBeLessThan(1.0));
     const ort = sapma.reduce((a, b) => a + b.e, 0) / sapma.length;
     expect(Math.abs(ort)).toBeLessThan(0.6);
@@ -235,10 +246,11 @@ describe('bilinen aykırılar dondurulmuş — sessizce büyümesinler', () => {
     expect(e).toBeGreaterThan(-7);
   });
 
-  test('ypa4x4 stall’ı %2–4 yüksek kalıyor (2100 / iSCAAN 2036)', () => {
+  test('ypa4x4 stall’ı DÜZELDİ — regresyona karşı sıkı bant', () => {
+    // Eskiden +%3.1 (2100) idi; pumpTorqueDrop düzeltilince +%0.2 (2040).
+    // Bant dar tutuldu ki eski yanlış değer geri gelirse anında kırmızı olsun.
     const e = 100 * (sonuc.ypa4x4[0].stall - 2036) / 2036;
-    expect(e).toBeGreaterThan(2);
-    expect(e).toBeLessThan(4);
+    expect(Math.abs(e)).toBeLessThan(0.5);
   });
 });
 
