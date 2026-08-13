@@ -749,7 +749,9 @@ function veInitResultSlots() {
   });
   document.addEventListener('mousemove', function(e) {
     if(!resizing) return;
-    bp.style.width = Math.max(160, Math.min(400, startW + (e.clientX - startX))) + 'px';
+    // Sınırlar index.html'deki min-width/max-width ile AYNI olmalı — ayrılırsa
+    // sürükleme kendi sınırına dayanır ama kutu CSS sınırında durur (takılma).
+    bp.style.width = Math.max(160, Math.min(520, startW + (e.clientX - startX))) + 'px';
   });
   document.addEventListener('mouseup', function() {
     if(!resizing) return;

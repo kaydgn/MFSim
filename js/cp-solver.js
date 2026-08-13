@@ -303,7 +303,9 @@ function getGearShiftPropertiesHTML(node) {
 
   // Vites oranları
   var ftGears = gbData.ftGearData || VE_FT_GB_DEFAULT_GEARS;
-  var fwdGears = ftGears.filter(function(g) { return g.name && g.name.charAt(0) === 'F'; });
+  // İleri vites ayrımı tek yerden (cp-gearbox.js veIsForwardGear) — Allison
+  // adlandırmalı ('1C','2C','3L') topolojilerde liste boş kalıyordu.
+  var fwdGears = ftGears.filter(function(g) { return veIsForwardGear(g); });
   fwdGears.sort(function(a, b) { return (parseInt(a.name.replace('F','')) || 0) - (parseInt(b.name.replace('F','')) || 0); });
 
   // Shift referans RPM

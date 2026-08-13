@@ -89,8 +89,9 @@ function getShiftControllerPropertiesHTML(node) {
   if(governed <= 0) {
     html += '<div class="sw-chain-bar fail">⚠ Governed speed tanımlı değil. Önce Motor veya Şanzıman bileşeninde Governed Speed giriniz.</div>';
   } else {
-    // Lockup destekli ileri vitesler (F2 ve üstü lockup shift yapabilir)
-    var lockupGears = ftGears.filter(function(g) { return g.lockup && g.name && g.name.charAt(0) === 'F'; });
+    // Lockup destekli ileri vitesler (F2 ve üstü lockup shift yapabilir).
+    // İleri vites ayrımı veIsForwardGear'dan — 'F' ön eki tek adlandırma değil.
+    var lockupGears = ftGears.filter(function(g) { return g.lockup && veIsForwardGear(g); });
     lockupGears.sort(function(a, b) {
       var na = parseInt(a.name.replace('F','')) || 0;
       var nb = parseInt(b.name.replace('F','')) || 0;
@@ -2414,14 +2415,37 @@ function veResolveGearboxPresetKey(node) {
   return hit;
 }
 
+// ── İLERİ / GERİ VİTES AYRIMI — tek gerçek kaynak ───────────────────────────
+// Vites adı için İKİ kural birden dolaşıyor:
+//   • uygulamanın varsayılan tablosu → 'F1'…'F6', 'R1'
+//   • örnekler ve iSCAAN raporları   → Allison adlandırması: '1C','2C','3L','R'
+//   • preset veritabanı              → 'gear' alanı: '1','2',…,'R'
+// Eskiden birkaç yer yalnız name.charAt(0)==='F' bakıyordu; Allison adlı her
+// topolojide "0 ileri vites" çıkıyordu. En ağır sonucu çözücüdeydi: bu sayıyı
+// KRİTİK HATA sayıp simülasyonu hiç başlatmıyordu — yani YÜKLENEN HER ÖRNEKTE
+// "Hesapla" çalışmıyordu.
+// nameKey YALNIZ string kabul eder: bu yardımcılar doğrudan Array.filter'a
+// verilebiliyor (filter geri çağrıya ikinci argüman olarak İNDİSİ geçer) ve
+// sayıyı alan sürüm adı g[1] diye arayıp sessizce yanlış cevap verirdi.
+function _veGearName(g, nameKey) {
+  if(!g) return '';
+  var key = (typeof nameKey === 'string' && nameKey) ? nameKey : null;
+  var v = key ? g[key] : (g.name !== undefined ? g.name : g.gear);
+  return String(v == null ? '' : v);
+}
+function veIsReverseGear(g, nameKey) {
+  if(!g) return false;
+  if(_veGearName(g, nameKey).charAt(0).toUpperCase() === 'R') return true;
+  return parseFloat(g.ratio) < 0;
+}
+function veIsForwardGear(g, nameKey) {
+  return !!g && !veIsReverseGear(g, nameKey) && parseFloat(g.ratio) > 0;
+}
+
 // SAF: ileri vites oranları (geri vites ve geçersiz kayıtlar dışarıda).
 function veGearRatioList(list, nameKey) {
   var out = [];
-  (list || []).forEach(function(g) {
-    if(!g || !(g.ratio > 0)) return;
-    if(String(g[nameKey] || '').toUpperCase().indexOf('R') === 0) return;
-    out.push(+g.ratio);
-  });
+  (list || []).forEach(function(g) { if(veIsForwardGear(g, nameKey)) out.push(+g.ratio); });
   return out;
 }
 

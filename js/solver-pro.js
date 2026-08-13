@@ -303,8 +303,12 @@ function veSolverRunProfessional() {
       log('[Şanzıman] ' + (gb.customName || 'Şanzıman'), 'info');
       if(veActiveModule === 'full-throttle') {
         var ftGears = gd.ftGearData || VE_FT_GB_DEFAULT_GEARS;
-        var fwd = ftGears.filter(function(g) { return g.name && g.name.charAt(0) === 'F'; });
-        var rev = ftGears.filter(function(g) { return g.name && g.name.charAt(0) === 'R'; });
+        // İleri/geri ayrımı TEK yerden (cp-gearbox.js veIsForwardGear): burada
+        // yalnız 'F' ile başlayan adlar sayılıyordu → Allison adlandırmalı
+        // ('1C','2C','3L'…) her topolojide 0 çıkıyor, aşağıdaki 'err' seviyesi
+        // KRİTİK HATA'ya dönüşüp simülasyonu hiç başlatmıyordu.
+        var fwd = ftGears.filter(function(g) { return veIsForwardGear(g); });
+        var rev = ftGears.filter(function(g) { return veIsReverseGear(g); });
         log('  İleri vites     : ' + fwd.length + ' adet', fwd.length > 0 ? 'ok' : 'err');
         log('  Geri vites      : ' + rev.length + ' adet', 'dim');
         log('  Shift profili   : ' + (gd.shiftProfile || 'allison3200sp_s1'), 'dim');

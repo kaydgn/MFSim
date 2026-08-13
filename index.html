@@ -821,7 +821,12 @@
   <div id="ve-page-sonuclar" class="ve-sub-page" role="tabpanel" aria-label="Sonuçlar" style="display:none; flex-direction:row;">
       
       <!-- Sol Panel: Veri Gezgini -->
-      <div id="ve-results-browser" style="width:250px; min-width:160px; max-width:400px; background:var(--bg-secondary); border-right:2px solid var(--border-color); display:flex; flex-direction:column; position:relative; flex-shrink:0;">
+      <!-- Genişlik 360px: ağaçtaki en uzun etiket ("Detay Matematik Hesapları —
+           Yüksek Kademe (TXT)") tek satıra ancak bu genişlikte sığıyor; 340'ta
+           hâlâ iki satıra sarıyordu (tarayıcıda ölçüldü). Kullanıcı sürükleyerek
+           daraltabilir; sınırlar aşağıdaki resizer ile aynı (bkz. results.js
+           veInitResultSlots). -->
+      <div id="ve-results-browser" style="width:360px; min-width:160px; max-width:520px; background:var(--bg-secondary); border-right:2px solid var(--border-color); display:flex; flex-direction:column; position:relative; flex-shrink:0;">
         <div id="ve-results-browser-resizer" style="position:absolute; top:0; right:-3px; width:6px; height:100%; cursor:ew-resize; z-index:10;"></div>
         
         <!-- Browser Header -->
