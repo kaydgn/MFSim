@@ -3106,13 +3106,17 @@
   border-color:var(--accent-primary);
 }
 
-.ve-node-port.input{
-  left:-5px;
-}
+/* Aynalanmış düğüm: yansıma yalnız SEMBOLE uygulanır, kutunun tamamına değil.
+   Eskiden .ve-node-box'ın kendisi scaleX(-1) taşıyordu; port kenarı zaten
+   aynalamayı hesaba katıyor (defaultPortSide) olduğu için portlar İKİ KEZ
+   yansıyor, DOM ile bağlantı ucu düğüm genişliği kadar ayrılıyordu. */
+.ve-node-box.ve-mirrored > svg{ transform:scaleX(-1); }
 
-.ve-node-port.output{
-  right:-5px;
-}
+/* KONUM BURADA DEĞİL: port dairesinin left/top'unu JS satır-içi yazar
+   (js/components.js vePortBoxStyle). Bağlantı eğrisinin ucu da (getPortPosition)
+   aynı geometriden okur — ikisi ayrı yerden hesaplanınca eğri porta değmiyordu.
+   Buradaki .input{left:-5px}/.output{right:-5px} kuralları o yüzden kaldırıldı;
+   üstelik yalnız sol/sağ kenarı biliyorlardı, üst/alt kenara taşınan portu değil. */
 
 .ve-node-port.connected{
   background:color-mix(in srgb, var(--text-secondary) 45%, var(--text-primary));
