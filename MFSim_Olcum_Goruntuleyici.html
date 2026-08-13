@@ -4791,18 +4791,18 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 }
 .vsig-tl-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 .vsig-tl-label{
-  font-size:var(--fs-micro);font-weight:600;letter-spacing:0.08em;text-transform:uppercase;
+  font-size:var(--fs-md);font-weight:600;letter-spacing:0.08em;text-transform:uppercase;
   color:var(--text-muted);flex-shrink:0;
 }
 .vsig-tl-count{
-  margin-left:auto;font-size:var(--fs-micro);color:var(--text-muted);
+  margin-left:auto;font-size:var(--fs-md);color:var(--text-muted);
   font-variant-numeric:tabular-nums;white-space:nowrap;
 }
 .vsig-seg{display:flex;border:1px solid var(--border-color);border-radius:var(--radius-sm);overflow:hidden;}
 .vsig-seg.wide{width:100%;}
 .vsig-seg button{
-  flex:1;height:17px;padding:0 8px;
-  font:inherit;font-size:var(--fs-micro);font-weight:600;
+  flex:1;height:20px;padding:0 8px;
+  font:inherit;font-size:var(--fs-md);font-weight:600;
   background:var(--bg-secondary);border:0;border-right:1px solid var(--border-color);
   color:var(--text-muted);cursor:pointer;white-space:nowrap;transition:background .12s,color .12s;
 }
@@ -4810,8 +4810,8 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .vsig-seg button:hover[aria-pressed="false"]{background:var(--bg-primary);color:var(--text-primary);}
 .vsig-seg button[aria-pressed="true"]{background:var(--accent-primary);color:var(--on-accent);}
 .vsig-mini{
-  margin-left:auto;height:17px;padding:0 7px;
-  font:inherit;font-size:var(--fs-micro);font-weight:600;
+  margin-left:auto;height:20px;padding:0 7px;
+  font:inherit;font-size:var(--fs-md);font-weight:600;
   background:transparent;border:1px solid var(--border-color);border-radius:var(--radius-sm);
   color:var(--text-muted);cursor:pointer;transition:border-color .12s,color .12s;
 }
@@ -5049,7 +5049,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   flex:1;
   min-width:0;
   padding:6px 4px;
-  font-size:var(--fs-tiny);
+  font-size:var(--fs-md);
   font-weight:500;
   color:var(--text-muted);
   background:transparent;
@@ -6097,7 +6097,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 /* Veri Gezgini başlığındaki "İçe Aktar" düğmesi */
 .ve-imp-tool{
   display:inline-flex; align-items:center; gap:4px;
-  padding:3px 8px; font-size:var(--fs-tiny); font-weight:600;
+  padding:3px 8px; font-size:var(--fs-md); font-weight:600;
   background:var(--bg-input); color:var(--text-secondary);
   border:1px solid var(--border-color); border-radius:var(--radius-sm);
   cursor:pointer; transition:background .12s, color .12s, border-color .12s;
@@ -6357,7 +6357,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
     <div id="ve-results-browser-resizer" style="position:absolute; top:0; right:-3px; width:6px; height:100%; cursor:ew-resize; z-index:10;"></div>
 
     <div style="padding:8px 12px; background:linear-gradient(180deg, var(--bg-tertiary), var(--bg-secondary)); border-bottom:1px solid var(--border-color); display:flex; align-items:center; gap:6px;">
-      <span style="font-size:var(--fs-lg); font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Veri Gezgini</span>
+      <span style="font-size:var(--fs-md); font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Veri Gezgini</span>
       <button type="button" id="ve-import-btn" class="ve-imp-tool" onclick="veImpOpenPicker()" style="margin-left:auto;"
               title="Excel/CSV ölçüm dosyasını içe aktar (Vector CANoe çıktısı)">
         <span class="mf-ico mf-ico-upload"></span> İçe Aktar

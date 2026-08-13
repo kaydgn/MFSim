@@ -756,7 +756,19 @@ function createNode(type, x, y, width, height) {
   nodeEl.classList.add('ve-node-dropin');
   nodeEl.addEventListener('animationend', function(){ nodeEl.classList.remove('ve-node-dropin'); }, { once:true });
   updateNodeCount();
-  
+
+  // Yeni düğüm topoloji sınır ÇERÇEVESİNİ de büyütmeli. Çerçeve tek yerden
+  // tazeleniyordu: updateAllConnections (connections.js). Bırakma (drop) yolu
+  // ve palet tıklaması onu ÇAĞIRMIYOR — dolayısıyla bir bileşen eklendiğinde
+  // çerçeve olduğu yerde kalıyordu. Bağlanan bileşenlerde fark edilmiyordu,
+  // çünkü ilk bağlantı zaten çerçeveyi tazeliyor; PORTU OLMAYAN bileşenler
+  // (Sensör Sihirbazı: 0 giriş / 0 çıkış) ise hiç bağlanmadığı için sonsuza
+  // kadar çerçevenin dışında kalıyordu (kullanıcı şikâyeti, 2026-08-13).
+  // Silme yolu (map.js) ve sürükleme zaten updateAllConnections çağırıyor.
+  if(typeof veUpdateBoundary === 'function') veUpdateBoundary();
+  if(typeof veMinimapUpdate === 'function') veMinimapUpdate();
+
+
   // Bileşeni hemen seç — setTimeout ile DOM render'ın tamamlanmasını garanti et
   var _newNode = node;
   setTimeout(function() {
