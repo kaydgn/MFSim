@@ -76,7 +76,10 @@ function runECMatchingAnalysis(nodeId) {
   var gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
   var gbLimits = { grossInputPower: null, grossInputTorque: null, maxOutputSpeed: null };
   if(gbNode && gbNode.data) {
-    var gbKey = gbNode.data.ftGBPreset || gbNode.data.selectedGearbox || '';
+    // Anahtar yazılı değilse veriden çöz (örnek topolojiler yalnız sayı taşır)
+    var gbKey = (typeof veResolveGearboxPresetKey === 'function')
+      ? veResolveGearboxPresetKey(gbNode)
+      : (gbNode.data.ftGBPreset || gbNode.data.selectedGearbox || '');
     if(gbKey && VE_GEARBOX_PRESETS[gbKey]) {
       var gbPreset = VE_GEARBOX_PRESETS[gbKey];
       gbLimits.grossInputPower = gbPreset.grossInputPower;
@@ -352,9 +355,13 @@ function runECMatchingAnalysis(nodeId) {
     h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);"></th>';
     h += '</tr></thead><tbody>';
 
-    // Kullanıcının TC bileşeninde seçtiği konvertörü belirle
+    // Kullanıcının TC bileşeninde seçtiği konvertörü belirle. Anahtar yazılı
+    // değilse K/τ eğrisinden çözülür — örnek topolojiler ve elle kurulmuş
+    // kayıtlar preset anahtarı taşımaz, eskiden hiçbir satır işaretlenmiyordu.
     var _tcNodeForSel = nodes.find(function(n) { return n.type === 'torque-converter'; });
-    var _selectedTCKey = (_tcNodeForSel && _tcNodeForSel.data && _tcNodeForSel.data.tcPresetKey) ? _tcNodeForSel.data.tcPresetKey : '';
+    var _selectedTCKey = (typeof veResolveTCPresetKey === 'function')
+      ? veResolveTCPresetKey(_tcNodeForSel)
+      : ((_tcNodeForSel && _tcNodeForSel.data && _tcNodeForSel.data.tcPresetKey) || '');
 
     results.forEach(function(r, idx) {
       var bgColor = r.status === 'recommended' ? 'rgba(22,163,74,0.06)' :
@@ -378,7 +385,12 @@ function runECMatchingAnalysis(nodeId) {
       
       h += '<tr style="background:' + bgColor + '; border-left:' + borderLeft + ';">';
       h += '<td style="padding:4px; border:1px solid var(--border-color); white-space:nowrap;"><span style="font-size:var(--fs-tiny); font-weight:600; color:' + statusColor + ';">' + statusIcon + ' ' + statusText + '</span></td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); font-weight:600; color:var(--text-heading);">' + r.name + '</td>';
+      // Seçili konvertör TİK ROZETİYLE işaretlenir (şanzıman tablosuyla aynı
+      // dil). Eskiden yalnız ince bir sol kenar çizgisi vardı — tablo zaten
+      // renkli olduğu için görünmüyordu.
+      h += '<td style="padding:4px; border:1px solid var(--border-color); font-weight:600; color:var(--text-heading);">' + r.name
+         + (isSelected ? ' <span style="font-size:var(--fs-micro); background:var(--accent-success); color:#fff; padding:0 4px; border-radius:var(--radius-sm);" title="Bu konvertör Tork Konvertörü bileşenine yüklü">✔</span>' : '')
+         + '</td>';
       h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + r.stallTau.toFixed(2) + '</td>';
       h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + r.stallSpeed.toFixed(0) + '</td>';
       h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:' + (r.c5ok ? 'var(--text-primary)' : 'var(--accent-danger)') + ';">' + r.minSpeed.toFixed(0) + '</td>';
@@ -388,7 +400,10 @@ function runECMatchingAnalysis(nodeId) {
       h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center;">' + (r.c7ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + '</td>';
       h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center;">' + (r.c8ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '⚠') + '</td>';
       h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center;">';
-      if(r.status !== 'unacceptable') {
+      if(isSelected) {
+        // Zaten yüklü → düğme pasif ve ✔; şanzıman tablosundaki davranışın aynısı
+        h += '<button class="sw-btn" style="padding:2px 8px; font-size:var(--fs-micro); opacity:0.5; cursor:default;" disabled title="Bu konvertör hâlihazırda yüklü">✔</button>';
+      } else if(r.status !== 'unacceptable') {
         h += '<button class="sw-btn sw-btn-primary" onclick="ecmSelectConverter(\'' + nodeId + '\',\'' + r.key + '\')" style="padding:2px 8px; font-size:var(--fs-micro);" title="Bu konvertörü TC bileşenine yükle">Seç</button>';
       }
       h += '</td>';
@@ -901,9 +916,13 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
   // Sıralama: score desc, sonra isim
   results.sort(function(a, b) { return b.score - a.score || a.name.localeCompare(b.name); });
 
-  // Seçili şanzıman
+  // Seçili şanzıman — anahtar yazılı değilse vites oranlarından çözülür
+  // (örnek topolojiler preset anahtarı taşımaz; eskiden hiçbir satır
+  // işaretlenmiyordu, kullanıcı hangi şanzımanın kurulu olduğunu göremiyordu).
   var gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
-  var selectedGB = (gbNode && gbNode.data) ? (gbNode.data.ftGBPreset || '') : '';
+  var selectedGB = (typeof veResolveGearboxPresetKey === 'function')
+    ? veResolveGearboxPresetKey(gbNode)
+    : ((gbNode && gbNode.data && gbNode.data.ftGBPreset) || '');
 
   // Tablo oluştur
   if(resultsEl) {
