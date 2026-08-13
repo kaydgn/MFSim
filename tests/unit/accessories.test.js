@@ -17,13 +17,20 @@ global.nodes = [];
 global.connections = [];
 
 // updateVENetChart cp-accessories tarafından çağrılabilir → zararsız stub.
-const stubs = stubGlobals({ updateVENetChart: jest.fn() });
+// confirm/prompt jsdom'da "not implemented" — eğri işleyicileri bunları
+// çağırdığı için gerçek karar veren stub'lar konuyor.
+const stubs = stubGlobals({
+  updateVENetChart: jest.fn(),
+  confirm: jest.fn(() => true),
+  prompt: jest.fn(() => ''),
+});
 eval(loadSource('cp-accessories.js'));
 
 beforeEach(() => {
   nodes = [];
   connections = [];
   resetStubs(stubs);
+  confirm.mockReturnValue(true);
 });
 
 // ── Yardımcılar ──
@@ -295,5 +302,397 @@ describe('veSyncEngineAccessories', () => {
     eng.data.accessories.forEach(function(a){ byName[a.name] = a; });
     expect(byName['Fan (Kavramalı Fan)'].userLoss).toBe(22.4);
     expect(byName['Direksiyon Pompası'].userLoss).toBe(1.4);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════
+// DÜZENLENEBİLİR EĞRİ — kullanıcı eğrisi doğruluk kaynağı
+// ─────────────────────────────────────────────────────────────────────
+// Regresyon: veAccGetNodeModel node.data.accCurve'ı HİÇ okumuyordu; eğri her
+// zaman preset kütüphanesinden geliyordu → tablodan yapılan düzenleme
+// çözücüye ULAŞMIYORDU. Bu blok o yolu bağlar.
+// ═════════════════════════════════════════════════════════════════════
+describe('veAccCurveOf / kullanıcı eğrisi', () => {
+  test('kullanıcı eğrisi preset kütüphanesinin ÖNÜNE geçer', () => {
+    var n = accNode('acc-ac', 'a1', {
+      accPreset: 'valeo_tm21',
+      accCurve: [{rpm:1000,kw:9},{rpm:2000,kw:9}],
+      accDriveRatio: 1.25
+    });
+    expect(veAccCurveOf(n)).toEqual([{rpm:1000,kw:9},{rpm:2000,kw:9}]);
+    var m = veAccGetNodeModel(n);
+    expect(m.curve[0].kw).toBe(9);
+    expect(m.curve).toHaveLength(2);
+    // Preset kütüphanesi 10 noktalı — kütüphaneden gelmediği kanıtlanır
+    expect(VE_AC_PRESETS['valeo_tm21'].curve).toHaveLength(10);
+  });
+
+  test('kullanıcı eğrisi yoksa preset kütüphanesine düşer', () => {
+    var n = accNode('acc-ac', 'a2', { accPreset:'valeo_tm21' });
+    expect(veAccCurveOf(n)).toBe(VE_AC_PRESETS['valeo_tm21'].curve);
+  });
+
+  test('henüz düzenlenmemiş boş accCurve preset\'i gölgelemez', () => {
+    var n = accNode('acc-ac', 'a3', { accPreset:'valeo_tm21', accCurve:[] });
+    expect(veAccCurveOf(n)).toHaveLength(10);
+  });
+
+  test('KULLANICI tabloyu boşalttıysa preset\'e geri düşmez', () => {
+    // Ekranda boş tablo görünürken çözücünün preset'i okumaya devam etmesi
+    // "makul ama yanlış" bir sonuç üretirdi — accCurveDirty bunu keser.
+    var n = accNode('acc-ac', 'a3b', { accPreset:'valeo_tm21', accCurve:[], accCurveDirty:true });
+    expect(veAccCurveOf(n)).toEqual([]);
+    expect(veAccGetNodeModel(n)).toBeNull();
+  });
+
+  test('preset yok + serbest eğri → "Özel eğri"; düzenlenmişse işaretlenir', () => {
+    var free = accNode('acc-aircomp', 'a4', { accPreset:'', accCurve:[{rpm:500,kw:1},{rpm:1000,kw:2}] });
+    expect(veAccGetNodeModel(free).label).toBe('Özel eğri');
+    var edited = accNode('acc-ac', 'a5', {
+      accPreset:'valeo_tm21', accCurve:[{rpm:1000,kw:3}], accCurveDirty:true
+    });
+    expect(veAccGetNodeModel(edited).label).toBe('Valeo TM21 (düzenlendi)');
+  });
+
+  test('model eğrisi kopya döner — düğüm verisi dışarıdan bozulamaz', () => {
+    var n = accNode('acc-ac', 'a6', { accPreset:'', accCurve:[{rpm:1000,kw:3},{rpm:2000,kw:5}] });
+    var m = veAccGetNodeModel(n);
+    m.curve.push({rpm:9999,kw:99});
+    expect(n.data.accCurve).toHaveLength(2);
+  });
+
+  test('DÜZENLENEN eğri Motor\'un net-tork modeline yazılır', () => {
+    // Bu, düzeltmenin asıl karşılığı: tablo → düğüm → Motor → çözücü.
+    var eng = engineNode('eng-1', { governedSpeed: 2000 });
+    var ac = accNode('acc-ac', 'ac-1', {
+      accPreset:'valeo_tm21', accDriveRatio:1.25,
+      accCurve:[{rpm:1000,kw:9},{rpm:5000,kw:9}], accCurveDirty:true
+    });
+    nodes = [eng, ac];
+    connections = [{ id:'c1', from:'ac-1', to:'eng-1', fromPort:'output', toPort:'input-0' }];
+    veSyncEngineAccessories(eng);
+    var row = eng.data.accessories.find(a => a.name === 'Klima');
+    expect(row.curve[0].kw).toBe(9);
+    // governed 2000 × 1.25 = 2500 → düz 9 kW eğrisi (preset olsaydı ≈5.05 kW)
+    expect(row.userLoss).toBeCloseTo(9, 6);
+    expect(veAccessoryLossKw(eng.data.accessories, 2000, 2000)).toBeCloseTo(9, 6);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════
+// veAccNormalizeCurve
+// ═════════════════════════════════════════════════════════════════════
+describe('veAccNormalizeCurve', () => {
+  test('sıralar, negatif kW\'ı sıfıra kırpar, aynı devri son yazılanla birleştirir', () => {
+    expect(veAccNormalizeCurve([
+      {rpm:2000,kw:4},{rpm:1000,kw:-2},{rpm:1000,kw:2}
+    ])).toEqual([{rpm:1000,kw:2},{rpm:2000,kw:4}]);
+  });
+
+  test('geçersiz / sıfır-altı devirler atılır', () => {
+    expect(veAccNormalizeCurve([
+      {rpm:'abc',kw:3},{rpm:0,kw:1},{rpm:-500,kw:2},{rpm:1200,kw:'2.5'}
+    ])).toEqual([{rpm:1200,kw:2.5}]);
+  });
+
+  test('metin girdiler sayıya çevrilir; kW\'ı boş olan nokta 0 alınır', () => {
+    expect(veAccNormalizeCurve([{rpm:'1500',kw:''}])).toEqual([{rpm:1500,kw:0}]);
+  });
+
+  test('boş / null girdi → boş dizi', () => {
+    expect(veAccNormalizeCurve([])).toEqual([]);
+    expect(veAccNormalizeCurve(null)).toEqual([]);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════
+// veAccGrossTorqueAt / veAccPanelCtx — panelin okuduğu bağlam
+// ═════════════════════════════════════════════════════════════════════
+describe('veAccGrossTorqueAt', () => {
+  var td = [{rpm:1000,torque:900},{rpm:1500,torque:1100},{rpm:2200,torque:1000}];
+
+  test('ara devirde lineer, uçlarda sabitlenir', () => {
+    var eng = { id:'e', type:'engine', data:{ torqueData: td } };
+    expect(veAccGrossTorqueAt(eng, 1000)).toBe(900);
+    expect(veAccGrossTorqueAt(eng, 1250)).toBeCloseTo(1000, 6);
+    expect(veAccGrossTorqueAt(eng, 600)).toBe(900);    // altta sabit
+    expect(veAccGrossTorqueAt(eng, 3000)).toBe(1000);  // üstte sabit
+  });
+
+  test('sırasız veri de doğru okunur', () => {
+    var eng = { id:'e', type:'engine', data:{ torqueData: td.slice().reverse() } };
+    expect(veAccGrossTorqueAt(eng, 1250)).toBeCloseTo(1000, 6);
+  });
+
+  test('motor / tork verisi yok → null (uydurma değer yok)', () => {
+    expect(veAccGrossTorqueAt(null, 1500)).toBeNull();
+    expect(veAccGrossTorqueAt({ id:'e', data:{} }, 1500)).toBeNull();
+    expect(veAccGrossTorqueAt({ id:'e', data:{torqueData:[]} }, 1500)).toBeNull();
+  });
+});
+
+describe('veAccPanelCtx', () => {
+  test('motor bağlı değil → varsayılan aralık, gross null', () => {
+    var n = accNode('acc-ac', 'a1', { accPreset:'valeo_tm21' });
+    nodes = [n]; connections = [];
+    var ctx = veAccPanelCtx(n);
+    expect(ctx.eng).toBeNull();
+    expect(ctx.idle).toBe(600);
+    expect(ctx.gov).toBe(2200);
+    expect(ctx.gross).toBeNull();
+    expect(ctx.ratio).toBe(1.25);
+  });
+
+  test('motor bağlı → aralık ve brüt tork motordan okunur', () => {
+    var eng = engineNode('eng-1', { idleRpm: 700, governedSpeed: 2100 });
+    eng.data.torqueData = [{rpm:700,torque:800},{rpm:2100,torque:1100}];
+    var n = accNode('acc-ac', 'a1', { accPreset:'valeo_tm21', accDriveRatio:1.25 });
+    nodes = [eng, n];
+    connections = [{ id:'c1', from:'a1', to:'eng-1', fromPort:'output', toPort:'input-0' }];
+    var ctx = veAccPanelCtx(n);
+    expect(ctx.eng.id).toBe('eng-1');
+    expect(ctx.idle).toBe(700);
+    expect(ctx.gov).toBe(2100);
+    expect(ctx.gross).toBeCloseTo(1100, 6);
+  });
+
+  test('bozuk aralık (gov <= idle) makul bir bant\'a düzeltilir', () => {
+    var eng = engineNode('eng-1', { idleRpm: 900, governedSpeed: 500 });
+    var n = accNode('acc-aircomp', 'a1', {});
+    nodes = [eng, n];
+    connections = [{ id:'c1', from:'a1', to:'eng-1', fromPort:'output', toPort:'input-2' }];
+    var ctx = veAccPanelCtx(n);
+    expect(ctx.gov).toBe(2500);   // 900 + 1600
+    expect(ctx.gov).toBeGreaterThan(ctx.idle);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════
+// veAccParseCurveText — pano yapıştırması
+// ═════════════════════════════════════════════════════════════════════
+describe('veAccParseCurveText', () => {
+  test('tab ayraç (Excel kopyası)', () => {
+    expect(veAccParseCurveText('850\t1.38\n1000\t2.0')).toEqual([
+      {rpm:850,kw:1.38},{rpm:1000,kw:2.0}
+    ]);
+  });
+  test('virgül/noktalı virgül ayraç + TR ondalık virgülü', () => {
+    expect(veAccParseCurveText('850;1,38\n1000, 2,5')).toEqual([
+      {rpm:850,kw:1.38},{rpm:1000,kw:2.5}
+    ]);
+  });
+  test('boşluk ayraç ve boş satırlar', () => {
+    expect(veAccParseCurveText('  850   1.38  \n\n1000 2\n')).toEqual([
+      {rpm:850,kw:1.38},{rpm:1000,kw:2}
+    ]);
+  });
+  test('saf virgüllü CSV: virgül TAM İKİ parça veriyorsa sütun ayracı', () => {
+    expect(veAccParseCurveText('850,1.38\n1000,2')).toEqual([
+      {rpm:850,kw:1.38},{rpm:1000,kw:2}
+    ]);
+  });
+  test('sayı olmayan / tek sütunlu satırlar sessizce atılır', () => {
+    expect(veAccParseCurveText('rpm\tkW\n850\t1.38\n1200\nabc\tdef')).toEqual([
+      {rpm:850,kw:1.38}
+    ]);
+  });
+  test('boş girdi → boş dizi', () => {
+    expect(veAccParseCurveText('')).toEqual([]);
+    expect(veAccParseCurveText(null)).toEqual([]);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════
+// Eğri tablosu işleyicileri — düzenleme → veri → Motor zinciri
+// ═════════════════════════════════════════════════════════════════════
+describe('eğri işleyicileri', () => {
+  function wired() {
+    var eng = engineNode('eng-1', { idleRpm: 600, governedSpeed: 2000 });
+    var ac = accNode('acc-ac', 'ac-1', {
+      accPreset:'valeo_tm21', accDriveRatio:1.25,
+      accCurve:[{rpm:1000,kw:2},{rpm:2000,kw:4}]
+    });
+    nodes = [eng, ac];
+    connections = [{ id:'c1', from:'ac-1', to:'eng-1', fromPort:'output', toPort:'input-0' }];
+    return { eng: eng, ac: ac };
+  }
+
+  test('hücre değişimi veriye yazılır, normalize edilir ve Motor\'a yayılır', () => {
+    var w = wired();
+    onVEAccCurveCellChange('ac-1', 0, 'kw', '3.5');
+    expect(w.ac.data.accCurve).toEqual([{rpm:1000,kw:3.5},{rpm:2000,kw:4}]);
+    expect(w.ac.data.accCurveDirty).toBe(true);
+    expect(w.eng.data.accessories.find(a => a.name==='Klima').curve[0].kw).toBe(3.5);
+    expect(saveState).toHaveBeenCalled();
+  });
+
+  test('devir düzenlemesi sıralamayı bozmaz (normalize sıralar)', () => {
+    var w = wired();
+    onVEAccCurveCellChange('ac-1', 1, 'rpm', '500');
+    expect(w.ac.data.accCurve).toEqual([{rpm:500,kw:4},{rpm:1000,kw:2}]);
+  });
+
+  test('negatif giriş sıfıra kırpılır', () => {
+    var w = wired();
+    onVEAccCurveCellChange('ac-1', 0, 'kw', '-7');
+    expect(w.ac.data.accCurve[0].kw).toBe(0);
+  });
+
+  test('satır ekleme: son devrin 500 üstüne 0 kW nokta', () => {
+    var w = wired();
+    onVEAccCurveAddRow('ac-1');
+    expect(w.ac.data.accCurve).toEqual([
+      {rpm:1000,kw:2},{rpm:2000,kw:4},{rpm:2500,kw:0}
+    ]);
+  });
+
+  test('satır silme', () => {
+    var w = wired();
+    onVEAccCurveDelRow('ac-1', 0);
+    expect(w.ac.data.accCurve).toEqual([{rpm:2000,kw:4}]);
+  });
+
+  test('temizle: eğri boşalır, Motor satırındaki hayalet kayıp da gider', () => {
+    var w = wired();
+    onVEAccCurveClear('ac-1');
+    expect(w.ac.data.accCurve).toEqual([]);
+    var row = w.eng.data.accessories.find(a => a.name==='Klima');
+    expect(row.sourceNodeId).toBeUndefined();
+    expect(row.userLoss).toBe(0);
+    expect(veAccessoryLossKw(w.eng.data.accessories, 1500, 2000)).toBe(0);
+  });
+
+  test('temizle onaylanmazsa veri korunur', () => {
+    var w = wired();
+    confirm.mockReturnValue(false);
+    onVEAccCurveClear('ac-1');
+    expect(w.ac.data.accCurve).toHaveLength(2);
+  });
+
+  test('preset\'ten doldur: kütüphane eğrisini geri yazar, "düzenlendi" işaretini siler', () => {
+    var w = wired();
+    w.ac.data.accCurveDirty = true;
+    onVEAccCurveFill('ac-1');
+    expect(w.ac.data.accCurve).toHaveLength(VE_AC_PRESETS['valeo_tm21'].curve.length);
+    expect(w.ac.data.accCurveDirty).toBe(false);
+    expect(veAccGetNodeModel(w.ac).label).toBe('Valeo TM21');
+  });
+
+  test('preset seçili değilken doldur → uyarı, veri değişmez', () => {
+    var w = wired();
+    w.ac.data.accPreset = '';
+    onVEAccCurveFill('ac-1');
+    expect(showToast).toHaveBeenCalled();
+    expect(w.ac.data.accCurve).toHaveLength(2);
+  });
+
+  test('model değişimi eğriyi sıfırdan yazar ve "düzenlendi" işaretini kaldırır', () => {
+    var w = wired();
+    w.ac.data.accCurveDirty = true;
+    onVEAccPresetSelect('ac-1', 'valeo_tm31');
+    expect(w.ac.data.accCurveDirty).toBe(false);
+    expect(w.ac.data.accCurve).toEqual(VE_AC_PRESETS['valeo_tm31'].curve);
+    expect(w.ac.data.accDriveRatio).toBe(1.25);
+  });
+
+  test('bilinmeyen düğüm id\'si sessizce yok sayılır (patlamaz)', () => {
+    wired();
+    expect(() => onVEAccCurveAddRow('yok')).not.toThrow();
+    expect(() => onVEAccCurveDelRow('yok', 0)).not.toThrow();
+    expect(() => onVEAccCurveCellChange('yok', 0, 'kw', '1')).not.toThrow();
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════
+// Panel üreticileri — smoke (bkz. CLAUDE.md test politikası: panel başına
+// TEK "üretiliyor mu / patlamıyor mu" testi, etiket başına assertion yok).
+// ═════════════════════════════════════════════════════════════════════
+describe('panel üreticileri (smoke)', () => {
+  test('üç aksesuar tipi de üç adımlı paneli üretir', () => {
+    ['acc-ac', 'acc-alternator', 'acc-aircomp'].forEach(function(type){
+      var n = accNode(type, 'n-' + type, {});
+      nodes = [n]; connections = [];
+      var html = getAccessoryPropertiesHTML(n);
+      expect(html).toContain('ve-cp-grid--steps');
+      expect((html.match(/ve-acc-step/g) || []).length).toBeGreaterThanOrEqual(3);
+      expect(html).toContain('ve-acc-chart-n-' + type);
+      // Varsayılanlar ilk render'da yazılır
+      expect(n.data.accDriveRatio).toBe(VE_ACC_TYPES[type].defRatio);
+      expect(n.data.accCurve).toEqual([]);
+    });
+  });
+
+  test('eğri tablosu: aralık dışı noktalar işaretlenir, türetilen sütunlar doğru', () => {
+    // ratio 1.25, motor 600–2200 (motor bağlı değil) → 9000 rpm aksesuar = 7200
+    // motor devri ⇒ aralık dışı; 2000 aksesuar = 1600 motor ⇒ içeride.
+    var n = accNode('acc-ac', 'ac-1', {
+      accDriveRatio: 1.25, accCurve: [{rpm:2000,kw:4},{rpm:9000,kw:10.4}]
+    });
+    nodes = [n]; connections = [];
+    var h = veAccCurveTableHTML(n);
+    expect(h).toContain('>1600<');                       // 2000 / 1.25
+    expect(h).toContain('>23.9<');                       // 4 × 9550 / 1600
+    expect(h).toContain('class="sw-chain-bar warn"');    // 1 nokta dışarıda
+    expect((h.match(/<tr class="out">/g) || []).length).toBe(1);
+  });
+
+  test('tek noktalı eğri "en az 2 nokta" uyarısı verir', () => {
+    var n = accNode('acc-ac', 'ac-1', { accDriveRatio:1.25, accCurve:[{rpm:1000,kw:2}] });
+    nodes = [n]; connections = [];
+    expect(veAccCurveTableHTML(n)).toContain('sw-chain-bar fail');
+  });
+
+  test('metrikler: motor bağlıyken pay yüzdesi, bağlı değilken YOK', () => {
+    // Bağlı: gross 1100 Nm, düz 5.58 kW @ 2200 ⇒ 24.2 Nm ⇒ %2.2
+    var eng = engineNode('eng-1', { idleRpm:600, governedSpeed:2200 });
+    eng.data.torqueData = [{rpm:600,torque:1100},{rpm:2200,torque:1100}];
+    var n = accNode('acc-ac', 'ac-1', {
+      accDriveRatio:1.25, accCurve:[{rpm:750,kw:5.58},{rpm:2750,kw:5.58}]
+    });
+    nodes = [eng, n];
+    connections = [{ id:'c1', from:'ac-1', to:'eng-1', fromPort:'output', toPort:'input-0' }];
+    var h = veAccMetricsHTML(n);
+    expect(h).toContain('5.58 kW');
+    expect(h).toContain('24.2 Nm');
+    expect(h).toContain('%2.2');
+
+    // Bağlantı yok → yüzde satırı hiç üretilmez (uydurma değer yok)
+    connections = [];
+    var h2 = veAccMetricsHTML(n);
+    expect(h2).not.toContain('ve-acc-share');
+    expect(h2).toContain('sw-chain-bar fail');
+  });
+
+  test('model yokken metrikler yönlendirme metni verir', () => {
+    var n = accNode('acc-ac', 'ac-1', { accPreset:'' });
+    nodes = [n]; connections = [];
+    expect(veAccMetricsHTML(n)).toContain('Metrikler için');
+  });
+
+  test('manuel modda eğri tablosu yerine "kullanılmıyor" açıklaması gelir', () => {
+    // Manuel sabit kW'da eğri hiç okunmaz; boş tablo + dört düğme ölü arayüzdü.
+    var n = accNode('acc-ac', 'ac-1', { accPreset:'__manual__', accManualKw:6 });
+    nodes = [n]; connections = [];
+    var h = veAccCurveTableHTML(n);
+    expect(h).toContain('eğri kullanılmaz');
+    expect(h).not.toContain('<table');
+    expect(h).not.toContain('onVEAccCurveAddRow');
+  });
+
+  test('adım rozetleri düğümün durumunu izler', () => {
+    var bare = accNode('acc-ac', 'a1', { accPreset:'' });
+    expect(veAccModelBadge(bare)).toEqual({ text:'seçilmedi', cls:'miss', step:'' });
+    expect(veAccPointBadge(bare)).toEqual({ text:'0 nokta', cls:'miss' });
+
+    var preset = accNode('acc-ac', 'a2', { accPreset:'valeo_tm21' });
+    expect(veAccModelBadge(preset).text).toBe('tamam');
+    expect(veAccPointBadge(preset)).toEqual({ text:'10 nokta', cls:'ok' });
+
+    var manual = accNode('acc-ac', 'a3', { accPreset:'__manual__', accManualKw:4 });
+    expect(veAccModelBadge(manual).text).toBe('manuel');
+    expect(veAccPointBadge(manual)).toEqual({ text:'kullanılmıyor', cls:'miss' });
+
+    var free = accNode('acc-ac', 'a4', { accPreset:'', accCurve:[{rpm:1000,kw:2}] });
+    expect(veAccModelBadge(free).text).toBe('özel eğri');
   });
 });
