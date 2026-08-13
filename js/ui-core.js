@@ -634,8 +634,7 @@ function createNode(type, x, y, width, height) {
   if(inCount > 0) {
     for(var pi = 0; pi < inCount; pi++) {
       var inputPortId = inCount === 1 ? 'input' : 'input-' + pi;
-      var inputTopPct = ((pi + 1) / (inCount + 1) * 100);
-      html += '<div class="ve-node-port input" data-node="' + nodeId + '" data-port="' + inputPortId + '" data-port-index="' + pi + '" title="Giriş ' + (pi+1) + '" style="top:' + inputTopPct + '%; margin-top:-5px;"></div>';
+      html += '<div class="ve-node-port input" data-node="' + nodeId + '" data-port="' + inputPortId + '" data-port-index="' + pi + '" title="Giriş ' + (pi+1) + '" style="' + vePortStyleAttr(node, inputPortId) + '"></div>';
     }
   }
 
@@ -647,8 +646,7 @@ function createNode(type, x, y, width, height) {
   if(outCount > 0) {
     for(var po = 0; po < outCount; po++) {
       var outputPortId = outCount === 1 ? 'output' : 'output-' + po;
-      var outputTopPct = ((po + 1) / (outCount + 1) * 100);
-      html += '<div class="ve-node-port output" data-node="' + nodeId + '" data-port="' + outputPortId + '" data-port-index="' + po + '" title="Çıkış ' + (po+1) + '" style="top:' + outputTopPct + '%; margin-top:-5px;"></div>';
+      html += '<div class="ve-node-port output" data-node="' + nodeId + '" data-port="' + outputPortId + '" data-port-index="' + po + '" title="Çıkış ' + (po+1) + '" style="' + vePortStyleAttr(node, outputPortId) + '"></div>';
     }
   }
   
@@ -868,7 +866,9 @@ function veCloneNodeFrom(src, x, y) {
     if(box) {
       if(src.width) box.style.width = n.width + 'px';
       if(src.height) box.style.height = n.height + 'px';
-      box.style.transform = n.mirrored ? 'scaleX(-1)' : '';
+      // Yansıma yalnız SEMBOLE (bkz. .ve-node-box.ve-mirrored > svg): kutunun
+      // tamamı çevrilseydi portlar bir kez daha yansır, bağlantı ucundan kopardı.
+      box.classList.toggle('ve-mirrored', !!n.mirrored);
     }
     if(src.width) el.style.width = n.width + 'px';
     if((src.width || src.height) && typeof updateNodeHandles === 'function') updateNodeHandles(el, n.width, n.height);

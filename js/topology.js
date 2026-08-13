@@ -977,14 +977,13 @@ function veRenderSnapshot(paneIdx) {
       nodeEl.style.pointerEvents = 'none';
       nodeEl.setAttribute('data-type', n.type);
       
-      var html = '<div class="ve-node-box" style="width:' + w + 'px; height:' + h + 'px;' + (n.mirrored ? 'transform:scaleX(-1);' : '') + '">';
+      var html = '<div class="ve-node-box' + (n.mirrored ? ' ve-mirrored' : '') + '" style="width:' + w + 'px; height:' + h + 'px;">';
       
       // Giriş portları
       if(def.inputs > 0) {
         for(var pi = 0; pi < def.inputs; pi++) {
           var inputPortId = def.inputs === 1 ? 'input' : 'input-' + pi;
-          var inputTopPct = ((pi + 1) / (def.inputs + 1) * 100);
-          html += '<div class="ve-node-port input" data-port="' + inputPortId + '" style="top:' + inputTopPct + '%; margin-top:-5px;"></div>';
+          html += '<div class="ve-node-port input" data-port="' + inputPortId + '" style="' + vePortStyleAttr(n, inputPortId) + '"></div>';
         }
       }
       
@@ -994,8 +993,7 @@ function veRenderSnapshot(paneIdx) {
       if(def.outputs > 0) {
         for(var po = 0; po < def.outputs; po++) {
           var outputPortId = def.outputs === 1 ? 'output' : 'output-' + po;
-          var outputTopPct = ((po + 1) / (def.outputs + 1) * 100);
-          html += '<div class="ve-node-port output" data-port="' + outputPortId + '" style="top:' + outputTopPct + '%; margin-top:-5px;"></div>';
+          html += '<div class="ve-node-port output" data-port="' + outputPortId + '" style="' + vePortStyleAttr(n, outputPortId) + '"></div>';
         }
       }
       
@@ -1051,28 +1049,30 @@ function veRenderSnapshot(paneIdx) {
   doRender();
 }
 
+// Anlık görüntü (snapshot) panosundaki bağlantı uçları — canlı kanvasla aynı
+// geometriden okur (components.js vePortOffset), yoksa aynı modelin elde
+// hesaplanmış hâline düşer. İki taraf ayrı hesaplasaydı pano ile kanvas
+// zamanla ayrışırdı ve kimse fark etmezdi.
 function veSnapPortPos(node, portType) {
+  if(typeof vePortOffset === 'function') {
+    var o = vePortOffset(node, portType);
+    return { x: node.x + o.dx, y: node.y + o.dy, side: o.side };
+  }
   var w = node.width || 65, h = node.height || 60;
   var isInput = portType.indexOf('input') === 0;
   var portIndex = 0;
   if(portType.indexOf('-') > -1) portIndex = parseInt(portType.split('-')[1]) || 0;
-  var totalPorts = (typeof nodePortCount === 'function') ? nodePortCount(node, isInput ? 'inputs' : 'outputs') : 1;
-  if(!totalPorts) totalPorts = 1;
-  // Kayıtlı taşıma (portPositions) → portLayout/klasik varsayılan (getPortPosition ile aynı)
   var pos = (node.data && node.data.portPositions && node.data.portPositions[portType]) || null;
-  var side = pos ? pos.side
-    : ((typeof defaultPortSide === 'function') ? defaultPortSide(node, portType)
-      : (node.mirrored ? (isInput ? 'right' : 'left') : (isInput ? 'left' : 'right')));
-  var frac = ((typeof portPerpPercent === 'function') ? portPerpPercent(node, portType)
-    : ((portIndex + 1) / (totalPorts + 1) * 100)) / 100;
-  var x, y;
+  var side = pos ? pos.side : (node.mirrored ? (isInput ? 'right' : 'left') : (isInput ? 'left' : 'right'));
+  var def = (typeof componentDefs !== 'undefined' && componentDefs[node.type]) || {};
+  var totalPorts = (isInput ? def.inputs : def.outputs) || 1;
+  var frac = (portIndex + 1) / (totalPorts + 1);
   switch(side) {
-    case 'top':    x = node.x + w * frac; y = node.y - 7; break;
-    case 'bottom': x = node.x + w * frac; y = node.y + h + 7; break;
-    case 'right':  x = node.x + w + 7;    y = node.y + h * frac; break;
-    default:       x = node.x - 7;        y = node.y + h * frac; break;
+    case 'top':    return { x: node.x + w * frac, y: node.y, side: side };
+    case 'bottom': return { x: node.x + w * frac, y: node.y + h, side: side };
+    case 'right':  return { x: node.x + w, y: node.y + h * frac, side: side };
+    default:       return { x: node.x, y: node.y + h * frac, side: 'left' };
   }
-  return {x: x, y: y, side: side};
 }
 
 function veSnapInteraction(wrapperEl, canvasEl) {
