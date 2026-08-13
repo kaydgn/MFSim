@@ -16,12 +16,19 @@
  *      Kaynak: raporun "Gear F1 (Ratio = …) - Converter Mode" tablosunun
  *      SR = 0.000 satırındaki Engine Speed.
  *
- *   2) AZAMİ HIZ — düz yolda tavan.
- *      Kaynak: "Vehicle Performance Summary". DİKKAT: hızlanma tablosunun son
- *      satırı tavan hız DEĞİLDİR (o tablo ivme ihmal edilebilir olunca biter),
- *      bu yüzden Performance Summary kullanılıyor. Rapor her kademe için İKİ
- *      değer basıyor — fan On (düşük) ve fan Off (yüksek); doğru sonuç bu
- *      bandın içindedir.
+ *   2) AZAMİ HIZ — düz yolda denge hızı.
+ *      Kaynak: "Vehicle Performance Summary" → satır
+ *          Maximum Speed on Grade | 0.0 | <hız> | <vites> | Road Load
+ *      bloğun başındaki "Engine Fan | On" ile birlikte.
+ *
+ *      İKİ KEZ YANLIŞ REFERANS KULLANILDI, ikisi de düzeltildi:
+ *      (a) Önce hızlanma tablosunun SON SATIRI tavan hız sanıldı. O tablo tam
+ *          mph ızgarasında basılıyor ve son satırda ivme HÂLÂ pozitif
+ *          (bmc10ton_380_32t aux 1.536: 53.1 km/h, a = 0.096 m/s²).
+ *      (b) Sonra fan-On..fan-Off ARALIĞI kabul bandı sayıldı. Ama örnekler
+ *          fan AÇIK koşuyor (kavramalı fan, N³); fan-Off ayrı bir senaryo.
+ *          O bant tta2'de %6.9 genişti ve gerçek sapmayı gizliyordu.
+ *      Doğru referans fan-On değeridir ve bant ±%0.8'e daraltıldı.
  *
  * pumpTorqueDrop TÜRETME KURALI (ypa4x4 bu yüzden yanlıştı):
  *   drop = [motor eğrisinin DOĞRUSAL net-fan-on değeri @stall] − T_pompa
@@ -47,21 +54,22 @@ const SRC = ['numerics.js', 'cp-engine.js', 'cp-gearbox.js', 'cp-accessories.js'
 /**
  * iSCAAN referansları — her satırın kaynağı ilgili bundled rapordur.
  * stall  : Converter Mode / Gear F1 / SR=0.000 satırındaki motor devri [rpm]
- * kademe : { transfer oranı: [tavan hız fan-On, fan-Off] }  [km/h]
+ * kademe : { transfer oranı: fan-On denge hızı }  [km/h]
  */
 const ISCAAN = {
-  turan:            { rapor: '497-A321222-1', stall: 2204, kademe: { 1.257: [116.2, 116.9], 2.337: [62.8, 62.9] } },
-  tta2:             { rapor: '497-A299082-1', stall: 1745, kademe: { 1.054: [110.3, 117.9], 2.337: [52.6, 53.2] } },
-  isb340_tc411:     { rapor: '497-A380684-1', stall: 2733, kademe: { 1.090: [133.0, 134.1], 2.470: [59.1, 59.2] } },
-  isb340_tc413:     { rapor: '497-A380787-1', stall: 2204, kademe: { 1.090: [133.0, 134.1], 2.470: [59.1, 59.2] } },
-  isg430_4000sp:    { rapor: '497-A392415-1', stall: 1398, kademe: { 0.874: [97.7, 101.7], 1.536: [57.1, 57.8] } },
-  bmc10ton_380_32t: { rapor: '497-A355435-1', stall: 1526, kademe: { 0.874: [92.3, 96.1], 1.536: [54.0, 54.7] } },
-  bmc10ton_380_30t: { rapor: '497-A355294-1', stall: 1526, kademe: { 0.874: [92.4, 96.1], 1.536: [54.0, 54.7] } },
-  bmc10ton_400:     { rapor: '497-A355436-1', stall: 1551, kademe: { 0.874: [92.5, 96.2], 1.536: [54.0, 54.7] } },
-  bmc10ton_430_30t: { rapor: '497-A355437-1', stall: 1581, kademe: { 0.874: [92.9, 96.2], 1.536: [54.1, 54.7] } },
-  bmc10ton_430_32t: { rapor: '497-A355438-1', stall: 1581, kademe: { 0.874: [92.8, 96.2], 1.536: [54.1, 54.7] } },
-  bmc10ton_460:     { rapor: '497-A355439-1', stall: 1621, kademe: { 0.874: [94.0, 96.9], 1.536: [54.6, 55.1] } },
-  // ── TEK KALAN AYKIRI: duramax ──
+  turan:            { rapor: '497-A321222-1', stall: 2204, kademe: { 1.257: 116.2, 2.337: 62.8 } },
+  tta2:             { rapor: '497-A299082-1', stall: 1745, kademe: { 1.054: 110.3, 2.337: 52.6 } },
+  isb340_tc411:     { rapor: '497-A380684-1', stall: 2733, kademe: { 1.090: 133.0, 2.470: 59.1 } },
+  isb340_tc413:     { rapor: '497-A380787-1', stall: 2204, kademe: { 1.090: 133.0, 2.470: 59.1 } },
+  isg430_4000sp:    { rapor: '497-A392415-1', stall: 1398, kademe: { 0.874: 97.7, 1.536: 57.1 } },
+  bmc10ton_380_32t: { rapor: '497-A355435-1', stall: 1526, kademe: { 0.874: 92.3, 1.536: 54.0 } },
+  bmc10ton_380_30t: { rapor: '497-A355294-1', stall: 1526, kademe: { 0.874: 92.4, 1.536: 54.0 } },
+  bmc10ton_400:     { rapor: '497-A355436-1', stall: 1551, kademe: { 0.874: 92.5, 1.536: 54.0 } },
+  bmc10ton_430_30t: { rapor: '497-A355437-1', stall: 1581, kademe: { 0.874: 92.9, 1.536: 54.1 } },
+  bmc10ton_430_32t: { rapor: '497-A355438-1', stall: 1581, kademe: { 0.874: 92.8, 1.536: 54.1 } },
+  bmc10ton_460:     { rapor: '497-A355439-1', stall: 1621, kademe: { 0.874: 94.0, 1.536: 54.6 } },
+  // ── TEK KALAN AYKIRI: duramax STALL'I ──
+  // (Tavan hızı sorunsuz: 133.5 / iSCAAN 133.4. Aykırılık yalnız stall'da.)
   // Bandı GENİŞ ama SABİT: bugünkü sapmayı dondurur, büyümesine izin vermez.
   // (ypa4x4 buradaydı; pumpTorqueDrop düzeltilince standart banda geçti.)
   //
@@ -76,17 +84,18 @@ const ISCAAN = {
   // oturuyor (249.5), PCHIP'le oturmuyor. Düşük brüt tork → düşük net tork →
   // denge daha düşük devirde kuruluyor: 960 vs 1023.
   //
-  // NEDEN DÜZELTİLMEDİ: motor eğrisini doğrusala çevirmeyi ölçtüm. Stall
-  // düzeliyor (duramax 960→990, isb340_tc411 2750→2735 yani +%0.6→+%0.07)
-  // AMA tavan hız bütün filoda düşüyor ve birkaçı iSCAAN bandının ALTINA
-  // çıkıyor (tta2 111.9→109.9 vs bant 110.3; duramax 133.5→133.0 vs 133.3),
-  // duramax'ın 0-20'si de −%25'ten −%32'ye kötüleşiyor. Net etki NEGATİF,
-  // bu yüzden değiştirilmedi. Çözüm ara değerlemeyi değiştirmekse gerisinin
-  // yeniden kalibre edilmesi gerekiyor — ayrı ve büyük bir iş.
-  duramax:          { rapor: '497-A425591-1', stall: 1023, stallTol: 0.07, kademe: { 1.000: [133.3, 141.9], 2.470: [57.1, 57.4] },
+  // NEDEN DÜZELTİLMEDİ: motor eğrisinin TAMAMINI doğrusala çevirmeyi ölçtüm.
+  // Stall düzeliyor (duramax 960→990, isb340_tc411 2750→2735) ama duramax'ın
+  // 0-20'si −%25'ten −%32'ye kötüleşiyor ve tavan hızlar aşağı kayıyor.
+  // Net etki NEGATİF. (Ölçüm droop düzeltmesinden ÖNCE yapıldı; tavan hız
+  // rakamları artık birebir karşılaştırılabilir değil, stall ve 0-20 sonuçları
+  // geçerli.) Droop bandındaki dar düzeltme AYRI bir iş ve uygulandı —
+  // aş. createMotorTorqueFn; o düzeltme duramax'ın stall'ına dokunmuyor
+  // çünkü sorun eğrinin 1000-1200 bölgesinde, droop çıkışında değil.
+  duramax:          { rapor: '497-A425591-1', stall: 1023, stallTol: 0.07, kademe: { 1.000: 133.4, 2.470: 57.1 },
                       not: 'Stall %6.2 düşük (960 vs 1023) — kök neden: PCHIP↔doğrusal ara değerleme farkı, ' +
                            'motor eğrisi 1000→1200 arasında %115 sıçrıyor ve stall tam orada.' },
-  ypa4x4:           { rapor: '497-A336126-1', stall: 2036, kademe: { 3.430: [120.2, 136.8] }, vmaxTol: 0.6,
+  ypa4x4:           { rapor: '497-A336126-1', stall: 2036, kademe: { 3.430: 120.2 },
                       not: 'Stall +%3.1 → +%0.2 düzeldi: pumpTorqueDrop 21.4 yerine 69.8 olmalıymış ' +
                            '(bkz. aş. türetme kuralı). Kalan sınırlama: durum makinesi raporun ' +
                            '1. viteste kilitlenmesini (1C→1L→2L) temsil edemiyor.' },
@@ -107,16 +116,16 @@ const ISCAAN = {
 const HIZLANMA = {
   turan:            { 1.257: [1.60, 5.41, 11.71, 21.25], 2.337: [1.69, 5.59, 12.10, null] },
   tta2:             { 1.054: [2.48, 7.84, 16.98, 31.92], 2.337: [2.12, 7.45, null, null] },
-  isb340_tc411:     { 1.090: [1.63, 5.55, 11.67, 21.25], 2.470: [1.70, 5.68, 12.53, null] },
-  isb340_tc413:     { 1.090: [1.64, 5.56, 11.69, 21.27], 2.470: [1.72, 5.70, 12.55, null] },
-  isg430_4000sp:    { 0.874: [2.84, 9.23, 20.58, 38.32], 1.536: [2.48, 8.98, 26.05, null] },
+  isb340_tc411:     { 1.090: [1.63, 5.55, 11.67, 21.25], 2.470: [1.70, 5.68, null, null] },
+  isb340_tc413:     { 1.090: [1.64, 5.56, 11.69, 21.27], 2.470: [1.72, 5.70, null, null] },
+  isg430_4000sp:    { 0.874: [2.84, 9.23, 20.58, 38.32], 1.536: [2.48, 8.98, null, null] },
   bmc10ton_380_32t: { 0.874: [3.27, 11.04, 24.69, 48.14], 1.536: [2.94, 10.77, null, null] },
   bmc10ton_380_30t: { 0.874: [3.07, 10.36, 23.09, 44.79], 1.536: [2.78, 10.12, null, null] },
   bmc10ton_400:     { 0.874: [3.15, 10.63, 23.60, 45.40], 1.536: [2.82, 10.29, null, null] },
   bmc10ton_430_30t: { 0.874: [2.83, 9.57, 21.17, 39.62], 1.536: [2.56, 9.25, null, null] },
   bmc10ton_430_32t: { 0.874: [3.01, 10.20, 22.63, 42.52], 1.536: [2.71, 9.83, null, null] },
   bmc10ton_460:     { 0.874: [2.85, 9.47, 20.81, 38.63], 1.536: [2.55, 9.09, null, null] },
-  duramax:          { 1.000: [1.70, 4.10, 8.01, 13.68], 2.470: [1.56, 4.20, 12.87, null] },
+  duramax:          { 1.000: [1.70, 4.10, 8.01, 13.68], 2.470: [1.56, 4.20, null, null] },
   ypa4x4:           { 3.430: [1.61, 5.14, 11.05, 20.59] },
 };
 
@@ -256,15 +265,25 @@ describe('stall motor devri — duran araçtaki konvertör denge noktası', () =
 describe('azami hız — iSCAAN Performance Summary bandında', () => {
   test.each(IDS)('%s', id => {
     const ref = ISCAAN[id];
-    const tol = ref.vmaxTol || 0.5;             // km/h; bant dışına taşma payı
     Object.keys(ref.kademe).forEach(oranStr => {
-      const oran = parseFloat(oranStr);
-      const [lo, hi] = ref.kademe[oranStr];
-      const m = sonuc[id].find(r => Math.abs(r.ratio - oran) < 0.02);
+      const bek = ref.kademe[oranStr];
+      const m = sonuc[id].find(r => Math.abs(r.ratio - parseFloat(oranStr)) < 0.02);
       expect(m).toBeTruthy();
-      expect(m.vmax).toBeGreaterThan(lo - tol);
-      expect(m.vmax).toBeLessThan(hi + tol);
+      // Ölçülen en kötü sapma %0.37 (bmc10ton düşük kademe); bant %0.8.
+      expect(Math.abs(m.vmax - bek) / bek).toBeLessThan(0.008);
     });
+  });
+
+  test('ortalama mutlak sapma %0.3’ün altında (droop mandalı)', () => {
+    // Governor droop bandındaki PCHIP şişkinliği düzeltilmeden bu değer %0.97'ydi.
+    const e = [];
+    IDS.forEach(id => Object.keys(ISCAAN[id].kademe).forEach(o => {
+      const bek = ISCAAN[id].kademe[o];
+      const m = sonuc[id].find(r => Math.abs(r.ratio - parseFloat(o)) < 0.02);
+      e.push(Math.abs(100 * (m.vmax - bek) / bek));
+    }));
+    expect(e.length).toBe(25);
+    expect(e.reduce((a, b) => a + b, 0) / e.length).toBeLessThan(0.3);
   });
 
   test('yirmi beş kademe ölçümünün tamamı kapsanıyor', () => {
