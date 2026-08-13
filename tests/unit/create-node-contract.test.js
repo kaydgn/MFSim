@@ -20,6 +20,10 @@ const stubs = stubGlobals({
   showLabelContextMenu: jest.fn(),
   applyNodeLabelPos: jest.fn(),
   updatePortPosition: jest.fn(),
+  // Port DOM'unun left/top'u components.js'ten gelir (vePortBoxStyle); burada
+  // yalnız ui-core.js eval ediliyor → stub. Geometrinin kendisi ayrı testli:
+  // tests/unit/port-geometry.test.js
+  vePortStyleAttr: jest.fn(() => ''),
   startResize: jest.fn(),
   updateNodeCount: jest.fn(),
   clearSelection: jest.fn(),

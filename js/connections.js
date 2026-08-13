@@ -231,47 +231,32 @@ var TopologyMath = {
 // BAĞLANTI ÇİZİM GÜNCELLEMESİ (Farklı çizgi tipleri desteği)
 // ============================================================================
 
+// Bir portun KANVAS koordinatındaki merkezi — bağlantı eğrisinin ucu buraya gider.
+// Geometri tek yerden gelir: components.js vePortOffset (port DOM'u da oradan
+// konumlanır → eğri ile daire aynı noktada buluşur). Eskiden burada kenardan
+// 7px DIŞARIYA çıkan ayrı bir hesap vardı; eğri porta değmiyordu.
 function getPortPosition(node, portType, portIndex) {
+  if(typeof vePortOffset === 'function') {
+    var o = vePortOffset(node, portType);
+    return { x: node.x + o.dx, y: node.y + o.dy, side: o.side };
+  }
+  // Yedek yol (vePortOffset yüklenmediyse): aynı model, elde hesaplanmış hâli.
   var nodeWidth = node.width || 65;
   var nodeHeight = node.height || 60;
-  
-
-  var def = componentDefs[node.type] || {};
+  var def = (typeof componentDefs !== 'undefined' && componentDefs[node.type]) || {};
   portIndex = portIndex || 0;
-  
-  var isInput = portType.startsWith('input');
-  var isOutput = portType.startsWith('output');
-  
-  if(portType.indexOf('-') > -1) {
-    portIndex = parseInt(portType.split('-')[1]) || 0;
-  }
-  
-  var totalPorts = (typeof nodePortCount === 'function') ? nodePortCount(node, isInput ? 'inputs' : 'outputs') : (isInput ? (def.inputs || 0) : (def.outputs || 0));
+  var isInput = String(portType || '').indexOf('input') === 0;
+  if(portType.indexOf('-') > -1) portIndex = parseInt(portType.split('-')[1]) || 0;
+  var totalPorts = isInput ? (def.inputs || 0) : (def.outputs || 0);
   var pos = (node.data && node.data.portPositions && node.data.portPositions[portType]) || null;
-  // Varsayılan kenar: portLayout → aynalama → klasik (defaultPortSide, components.js)
-  var side = pos ? pos.side
-    : ((typeof defaultPortSide === 'function') ? defaultPortSide(node, portType)
-      : (node.mirrored ? (isInput ? 'right' : 'left') : (isInput ? 'left' : 'right')));
-  
-  // Kenar üzerindeki konum: aynı kenardaki portların sırasına göre (portPerpPercent).
-  var frac = ((typeof portPerpPercent === 'function') ? portPerpPercent(node, portType)
-    : ((portIndex + 1) / (totalPorts + 1) * 100)) / 100;
-  var x, y;
+  var side = pos ? pos.side : (node.mirrored ? (isInput ? 'right' : 'left') : (isInput ? 'left' : 'right'));
+  var frac = (portIndex + 1) / (totalPorts + 1);
   switch(side) {
-    case 'top':
-      x = node.x + nodeWidth * frac; y = node.y - 7; break;
-    case 'right':
-      x = node.x + nodeWidth + 7; y = node.y + nodeHeight * frac; break;
-    case 'bottom':
-      x = node.x + nodeWidth * frac; y = node.y + nodeHeight + 7; break;
-    case 'left':
-      x = node.x - 7; y = node.y + nodeHeight * frac; break;
-    default:
-      if(isInput) { x = node.x - 7; y = node.y + nodeHeight * frac; }
-      else { x = node.x + nodeWidth + 7; y = node.y + nodeHeight * frac; }
+    case 'top':    return { x: node.x + nodeWidth * frac, y: node.y, side: side };
+    case 'bottom': return { x: node.x + nodeWidth * frac, y: node.y + nodeHeight, side: side };
+    case 'right':  return { x: node.x + nodeWidth, y: node.y + nodeHeight * frac, side: side };
+    default:       return { x: node.x, y: node.y + nodeHeight * frac, side: 'left' };
   }
-
-  return {x: x, y: y, side: side};
 }
 
 function updateAllConnections() {

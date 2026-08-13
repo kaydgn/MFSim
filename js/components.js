@@ -514,6 +514,53 @@ function portPerpPercent(node, portType){
   return ((rank + 1) / (onSide.length + 1)) * 100;
 }
 
+// ── PORT GEOMETRİSİ — TEK GERÇEK KAYNAK ─────────────────────────────────────
+// Bağlantı eğrisinin ucu ile port dairesi AYNI noktadan okunmak zorunda. Eskiden
+// üç ayrı yer üç ayrı sayı kullanıyordu:
+//   • SVG ucu (getPortPosition / veSnapPortPos) → kenardan 7px DIŞARIDA
+//   • ilk çizimdeki port DOM'u (CSS .input{left:-5px}/.output{right:-5px})
+//     → merkezi kenar çizgisinin ÜSTÜNDE
+//   • port yeniden kurulunca (updatePortPosition) → 4px daha dışarıda, 2px yukarıda
+// Sonuç: eğri porta değmiyor, "bağlanmamış" gibi duruyordu; port ekle/kaldır ya da
+// kenar değiştir sonrası daireler de yerinden oynuyordu. Artık ikisi de buradan.
+var VE_PORT_SIZE = 8;      // .ve-node-port width/height (CSS ile AYNI olmalı)
+var VE_NODE_BORDER = 1;    // .ve-node-box border kalınlığı (CSS ile AYNI olmalı)
+
+// SAF: portun MERKEZİNİN düğüm sol-üst köşesine göre yerel konumu → {dx, dy, side}.
+// Merkez, kutunun KENAR ÇİZGİSİNİN üstündedir (yarısı içeride, yarısı dışarıda) —
+// port dairesi bugün ekranda zaten böyle duruyor; eğri artık oraya gidiyor.
+function vePortOffset(node, portType){
+  var w = (node && node.width) || 65, h = (node && node.height) || 60;
+  var isInput = String(portType || '').indexOf('input') === 0;
+  var pos = (node && node.data && node.data.portPositions && node.data.portPositions[portType]) || null;
+  var side = pos ? pos.side
+    : ((typeof defaultPortSide === 'function') ? defaultPortSide(node, portType)
+      : ((node && node.mirrored) ? (isInput ? 'right' : 'left') : (isInput ? 'left' : 'right')));
+  var frac = ((typeof portPerpPercent === 'function') ? portPerpPercent(node, portType) : 50) / 100;
+  switch(side){
+    case 'top':    return { dx: w * frac, dy: 0,        side: 'top' };
+    case 'bottom': return { dx: w * frac, dy: h,        side: 'bottom' };
+    case 'right':  return { dx: w,        dy: h * frac, side: 'right' };
+    default:       return { dx: 0,        dy: h * frac, side: 'left' };
+  }
+}
+
+// SAF: port DOM'unun left/top değerleri (px). Konumlama kabı .ve-node-box'ın
+// PADDING kutusu → kenarlık kalınlığı kadar içeriden başlar; dairenin merkezini
+// vePortOffset'e oturtmak için yarıçap da düşülür.
+function vePortBoxStyle(node, portType){
+  var o = vePortOffset(node, portType);
+  var k = VE_NODE_BORDER + VE_PORT_SIZE / 2;
+  return { left: o.dx - k, top: o.dy - k, side: o.side };
+}
+
+// Yukarıdakinin HTML string üreticileri için hazır hâli (ilk çizim yolları:
+// topology.js, ui-core.js createNode, state.js geri-yükleme).
+function vePortStyleAttr(node, portType){
+  var s = vePortBoxStyle(node, portType);
+  return 'left:' + s.left + 'px; top:' + s.top + 'px;';
+}
+
 // Her bileşen tipi için sinyal tanımları (sensör okuyabilir)
 var COMPONENT_SIGNALS = {
   'engine': {

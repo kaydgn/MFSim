@@ -358,17 +358,13 @@ function removeNodePort(node, portKey){
   showToast('Port kaldırıldı');
 }
 
+// Port DOM'unu yerine oturt. Geometri TEK kaynaktan gelir (components.js
+// vePortBoxStyle) — bağlantı eğrisinin ucu da (getPortPosition) aynı yerden
+// okur. Eskiden burada ayrı sayılar (-9px / margin -7px) vardı: port ekle/
+// kaldır ya da kenar değiştir sonrası daireler ilk çizimdeki yerlerinden
+// 4px dışarı, 2px yukarı zıplıyordu.
 function updatePortPosition(portEl, node, portType) {
-  var pos = (node.data && node.data.portPositions && node.data.portPositions[portType]) || null;
-  var isInput = portType.indexOf('input') === 0;
-  var side = pos ? pos.side
-    : ((typeof defaultPortSide === 'function') ? defaultPortSide(node, portType) : (isInput ? 'left' : 'right'));
-
-  // Kenar üzerindeki konum: aynı kenardaki portların sırasına göre (getPortPosition
-  // ile birebir). Tek port → %50 (kenarın ortası); aynı kenarda çoklu → yan yana.
-  var perp = (typeof portPerpPercent === 'function') ? portPerpPercent(node, portType) : 50;
-
-  // Pozisyon stillerini tamamen sıfırla
+  // Pozisyon stillerini tamamen sıfırla (sınıftan gelen left/right dâhil)
   portEl.style.left = 'auto';
   portEl.style.right = 'auto';
   portEl.style.top = 'auto';
@@ -376,28 +372,10 @@ function updatePortPosition(portEl, node, portType) {
   portEl.style.marginLeft = '0';
   portEl.style.marginTop = '0';
 
-  switch(side) {
-    case 'top':
-      portEl.style.top = '-9px';
-      portEl.style.left = perp + '%';
-      portEl.style.marginLeft = '-7px';
-      break;
-    case 'right':
-      portEl.style.right = '-9px';
-      portEl.style.top = perp + '%';
-      portEl.style.marginTop = '-7px';
-      break;
-    case 'bottom':
-      portEl.style.bottom = '-9px';
-      portEl.style.left = perp + '%';
-      portEl.style.marginLeft = '-7px';
-      break;
-    case 'left':
-      portEl.style.left = '-9px';
-      portEl.style.top = perp + '%';
-      portEl.style.marginTop = '-7px';
-      break;
-  }
+  if(typeof vePortBoxStyle !== 'function') return;
+  var s = vePortBoxStyle(node, portType);
+  portEl.style.left = s.left + 'px';
+  portEl.style.top = s.top + 'px';
 }
 
 function enablePortContextMenu(portEl, node, portType) {
