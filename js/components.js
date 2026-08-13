@@ -49,6 +49,9 @@ function veSelectModuleFromOverlay(mode) {
   // Overlay'ı gizle
   var overlay = document.getElementById('ve-module-overlay');
   if(overlay) overlay.style.display = 'none';
+  // Panel/ray aynı turda gelsin — kanvası ölçen kod doğru genişliği görsün
+  // (bkz. veSyncModuleShell).
+  if(typeof veSyncModuleShell === 'function') veSyncModuleShell();
 
   veActiveModule = 'full-throttle';
   // Tek modül kaldı (Araç Performans). Üst bar sekmesini de senkronla.
@@ -69,6 +72,13 @@ function veSelectModuleFromOverlay(mode) {
 function veStartModule(type) {
   var overlay = document.getElementById('ve-module-overlay');
   if(overlay) overlay.style.display = 'none';
+
+  // Kabuğu (sol Bileşenler paneli + sayfa rayı) HEMEN yerine oturt. Bunu normalde
+  // bir MutationObserver yapar (veObserveModuleOverlay) — ama gözlemci bu senkron
+  // turun SONUNDA çalışır. Aşağıdaki kamera + blok konumu hesabı kanvası o andaki
+  // ölçüsüyle okuduğu için, panel/ray henüz gizliyken kanvas 284px FAZLA geniş
+  // görünür; blok da "ortaya" değil yarım-panel (142px) sağa düşerdi.
+  if(typeof veSyncModuleShell === 'function') veSyncModuleShell();
 
   veActiveModule = 'full-throttle';
   if(typeof veSubTabDegistir === 'function') {
@@ -675,26 +685,41 @@ var VE_STANDALONE_TYPES = ['ap-example','vehicle','road','sensor','sensor-wizard
                            'coast-down','parametric','terminator','obstacle-crossing',
                            'ec-matching','engine-gearbox-matching','shift-controller'];
 
+// Overlay'in görünürlüğünü kabuğa yaz: .ve-no-module sınıfı sol Bileşenler
+// panelini, açma rayını ve sayfa rayını gizler/gösterir.
+//
+// Bu iş bir MutationObserver'a bağlı (aşağıda) — ama gözlemci geri çağrısı
+// SENKRON turun sonunda çalışır. Overlay'ı gizleyip AYNI turda kanvası ölçen
+// kod (veStartModule) panel/ray hâlâ gizliyken ölçerdi: kanvas 284px fazla
+// geniş görünür, kamera ve bırakılan blok o kadar sağa kayardı. O yüzden
+// fonksiyon dışarıdan da çağrılabilir; idempotenttir.
+function veSyncModuleShell() {
+  if(typeof document === 'undefined') return;
+  var overlay = document.getElementById('ve-module-overlay');
+  var main = document.querySelector('.ve-main');
+  if(!overlay || !main) return;
+  var visible = (typeof getComputedStyle === 'function')
+    ? getComputedStyle(overlay).display !== 'none'
+    : overlay.style.display !== 'none';
+  main.classList.toggle('ve-no-module', visible);
+  // Sayfa rayı (.ve-nav-rail) .ve-main'in DIŞINDA — Sonuçlar'da da durması
+  // gerektiği için kabına taşındı. Aynı durumu oraya da yaz ki karşılama
+  // ekranında ray da gizlensin: proje yokken "Sonuçlar" gidilecek yer değil.
+  var shell = document.getElementById('sayfa2-content');
+  if(shell) shell.classList.toggle('ve-no-module', visible);
+  // Şerit de aynı duruma uysun: çalışma alanı yokken Kaydet/Doğrula/
+  // Çalıştır gibi komutlar pasif çizilir (sol panel zaten gizleniyordu,
+  // şeridin etkin görünmesi tutarsızdı).
+  if(typeof veRibbonRender === 'function') veRibbonRender();
+}
+
 (function veObserveModuleOverlay() {
   function attach() {
     var overlay = document.getElementById('ve-module-overlay');
     var main = document.querySelector('.ve-main');
     if(!overlay || !main) { setTimeout(attach, 50); return; }
-    function sync() {
-      var visible = getComputedStyle(overlay).display !== 'none';
-      main.classList.toggle('ve-no-module', visible);
-      // Sayfa rayı (.ve-nav-rail) .ve-main'in DIŞINDA — Sonuçlar'da da durması
-      // gerektiği için kabına taşındı. Aynı durumu oraya da yaz ki karşılama
-      // ekranında ray da gizlensin: proje yokken "Sonuçlar" gidilecek yer değil.
-      var shell = document.getElementById('sayfa2-content');
-      if(shell) shell.classList.toggle('ve-no-module', visible);
-      // Şerit de aynı duruma uysun: çalışma alanı yokken Kaydet/Doğrula/
-      // Çalıştır gibi komutlar pasif çizilir (sol panel zaten gizleniyordu,
-      // şeridin etkin görünmesi tutarsızdı).
-      if(typeof veRibbonRender === 'function') veRibbonRender();
-    }
-    sync();
-    new MutationObserver(sync).observe(overlay, { attributes: true, attributeFilter: ['style', 'class'] });
+    veSyncModuleShell();
+    new MutationObserver(veSyncModuleShell).observe(overlay, { attributes: true, attributeFilter: ['style', 'class'] });
   }
   attach();
 })();

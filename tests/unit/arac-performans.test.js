@@ -4,11 +4,11 @@
  * "Araç Performans" bir composite düğümdür; çift tıklanınca kendi iç topolojisi
  * açılır. Bu testte:
  *  1) componentDefs['arac-performans'] kaydı (subsystem düğümü, 0 port),
- *  2) veAracPopulateDrivetrain() — iç topolojiye kurulan hazır güç aktarma
- *     grafiği (16 düğüm + 11 bağlantı, port'lar, benzersiz id, master sırası),
+ *  2) veAracPopulateStarter() — iç topolojiye kurulan BAŞLANGIÇ: yalnız
+ *     "Başlangıç ve Örnekler" (ap-example) düğümü, bağlantı yok,
  *  3) getAracPerformansPropertiesHTML() — "Alt Topolojiyi Aç" butonu
- * doğrulanır. veAracPopulateDrivetrain gerçek DOM'a değil global createNode /
- * createConnection'a dayanır → bunlar mock'lanır.
+ * doğrulanır. veAracPopulateStarter gerçek DOM'a değil global createNode'a
+ * dayanır → mock'lanır.
  */
 
 // components.js sonundaki IIFE querySelector çağırır → minimal DOM
@@ -75,10 +75,9 @@ describe('Araç Performans — bileşen kaydı (subsystem düğümü)', () => {
   });
 });
 
-describe('Araç Performans — veri yapısı bütünlüğü', () => {
-  test('LAYOUT ve LINKS tanımlı', () => {
+describe('Araç Performans — referans yerleşim (koordinat çerçevesi)', () => {
+  test('LAYOUT tanımlı', () => {
     expect(VE_ARAC_PERFORMANS_LAYOUT.length).toBe(16);
-    expect(VE_ARAC_PERFORMANS_LINKS.length).toBe(11);
   });
 
   test('LAYOUT tipleri componentDefs içinde tanımlı', () => {
@@ -87,91 +86,70 @@ describe('Araç Performans — veri yapısı bütünlüğü', () => {
     });
   });
 
-  test('LINKS yalnızca LAYOUT içindeki key\'lere referans verir', () => {
-    var keys = {};
-    VE_ARAC_PERFORMANS_LAYOUT.forEach(function (it) { if (it.key) keys[it.key] = true; });
-    VE_ARAC_PERFORMANS_LINKS.forEach(function (l) {
-      expect(keys[l[0]]).toBe(true);
-      expect(keys[l[1]]).toBe(true);
-    });
+  // Yerleşim artık KURULMUYOR — yalnız "Örneği Aktar" sonrası ap-example
+  // düğümünün geri konduğu koordinat çerçevesi (cp-arac-example.js). Bağlantı
+  // tablosu (VE_ARAC_PERFORMANS_LINKS) bu yüzden kaldırıldı; geri sızmasın.
+  test('hazır zincir kurma yolu geride kalmadı', () => {
+    expect(typeof VE_ARAC_PERFORMANS_LINKS).toBe('undefined');
+    expect(typeof veAracPopulateDrivetrain).toBe('undefined');
   });
 });
 
-describe('Araç Performans — iç topoloji kurulumu (veAracPopulateDrivetrain)', () => {
+// KULLANICI ŞİKÂYETİ (2026-08-13): "alt topolojiye girince önceden tasarladığımız
+// örnek topoloji geliyor; kaldıralım, Takoz modülü gibi sadece Başlangıç ve
+// Örnekler gelsin." ESKİ kodda burası 16 düğüm + 11 bağlantı kuruyordu.
+describe('Araç Performans — iç topoloji başlangıcı (veAracPopulateStarter)', () => {
   let created;
+  // jsdom'da düzen motoru yok → getBoundingClientRect 0 döner. Kamera ile
+  // tutarlı sahte bir görünüm ver ki "ortaya konuyor mu" ölçülebilsin:
+  // 1600×900 görünüm + kamera merkezi ⇒ görünür alanın ortası yerel (3000,3000).
+  const VIEW = { w: 1600, h: 900 };
   beforeAll(() => {
     resetGlobals();
-    created = veAracPopulateDrivetrain();
+    const wrap = document.getElementById('ve-canvas-wrapper');
+    wrap.getBoundingClientRect = () => ({
+      width: VIEW.w, height: VIEW.h, left: 0, top: 0, right: VIEW.w, bottom: VIEW.h
+    });
+    global.canvasOffset = { x: VIEW.w / 2, y: VIEW.h / 2 };
+    global.canvasZoom = 1;
+    created = veAracPopulateStarter();
   });
 
-  test('16 düğüm + 11 bağlantı oluşturulur', () => {
-    expect(nodes.length).toBe(16);
-    expect(connections.length).toBe(11);
+  test('yalnız TEK düğüm kurulur, bağlantı kurulmaz', () => {
+    expect(nodes.length).toBe(1);
+    expect(connections.length).toBe(0);
     expect(Array.isArray(created)).toBe(true);
-    expect(created.length).toBe(16);
+    expect(created.length).toBe(1);
   });
 
-  test('doğru bileşen tipleri', () => {
-    var counts = {};
-    nodes.forEach(function (n) { counts[n.type] = (counts[n.type] || 0) + 1; });
-    expect(counts['engine']).toBe(1);
-    expect(counts['torque-converter']).toBe(1);
-    expect(counts['gearbox']).toBe(1);
-    expect(counts['propshaft']).toBe(1);
-    expect(counts['transfer']).toBe(1);
-    expect(counts['differential']).toBe(2);
-    expect(counts['wheel']).toBe(4);
-    expect(counts['ec-matching']).toBe(1);
-    expect(counts['solver']).toBe(1);
-    expect(counts['shift-controller']).toBe(1);
-    expect(counts['vehicle']).toBe(1);
-    expect(counts['obstacle-crossing']).toBe(1);
+  test('kurulan düğüm "Başlangıç ve Örnekler" (ap-example)', () => {
+    expect(nodes[0].type).toBe('ap-example');
+    expect(componentDefs['ap-example'].name).toBe('Başlangıç ve Örnekler');
+    expect(componentDefs['ap-example'].isApExample).toBe(true);
   });
 
-  test('bağlantı grafiği tip/port düzeyinde doğru', () => {
-    var actual = connections.map(function (c) {
-      return typeOf(c.from) + '>' + typeOf(c.to) + ':' + c.fromPort + '/' + c.toPort;
-    }).sort();
-    var expected = [
-      'engine>torque-converter:output/input',
-      'engine>ec-matching:output/input',
-      'torque-converter>gearbox:output/input',
-      'gearbox>propshaft:output/input',
-      'propshaft>transfer:output/input',
-      'transfer>differential:output-0/input',
-      'transfer>differential:output-1/input',
-      'differential>wheel:output-0/input',
-      'differential>wheel:output-1/input',
-      'differential>wheel:output-0/input',
-      'differential>wheel:output-1/input'
-    ].sort();
-    expect(actual).toEqual(expected);
+  test('hiçbir güç aktarma bileşeni gelmez (eski preset\'in kapısı)', () => {
+    var POWER = ['engine', 'torque-converter', 'gearbox', 'propshaft', 'transfer',
+                 'differential', 'wheel', 'vehicle', 'solver', 'shift-controller',
+                 'ec-matching', 'obstacle-crossing'];
+    var types = nodes.map(function (n) { return n.type; });
+    POWER.forEach(function (t) { expect(types).not.toContain(t); });
   });
 
-  test('Motor çıkışı iki girişe bağlanır (TC + Eşleştirme)', () => {
-    var engine = nodes.find(function (n) { return n.type === 'engine'; });
-    var fromEngine = connections.filter(function (c) { return c.from === engine.id; });
-    expect(fromEngine.length).toBe(2);
-    expect(fromEngine.map(function (c) { return typeOf(c.to); }).sort())
-      .toEqual(['ec-matching', 'torque-converter'].sort());
-  });
+  test('düğüm görünür alanın ORTASINA konur (16\'lık yerleşimin köşesine değil)', () => {
+    // Görünür alanın ortası, yukarıdaki sahte kamerada yerel (3000,3000).
+    var def = componentDefs['ap-example'];
+    var cx = nodes[0].x + def.defaultWidth / 2;
+    var cy = nodes[0].y + def.defaultHeight / 2;
+    // Tolerans: veArrangeModuleBase tabanı varsayılan 65×60 düğüme göre kurar,
+    // ap-example 56×56 → yarım fark kadar (≤5px) sapar; çalışma zamanında
+    // veAracOpenEditor'ün veFitViewToContent'i bunu da sıfırlar.
+    expect(Math.abs(cx - 3000)).toBeLessThanOrEqual(5);
+    expect(Math.abs(cy - 3000)).toBeLessThanOrEqual(5);
 
-  test('bağlantı id\'leri benzersiz (Date.now() çakışması düzeltildi)', () => {
-    var ids = connections.map(function (c) { return c.id; });
-    expect(new Set(ids).size).toBe(ids.length);
-    ids.forEach(function (id) { expect(id.indexOf('conn-')).toBe(0); });
-  });
-
-  test('ilk diferansiyel ve ilk tekerlek master (★) olur', () => {
-    var diffs = nodes.filter(function (n) { return n.type === 'differential'; });
-    var wheels = nodes.filter(function (n) { return n.type === 'wheel'; });
-    expect(diffs[0].isMasterDiff).toBe(true);
-    expect(diffs[1].isMasterDiff).toBeFalsy();
-    expect(wheels[0].isMasterWheel).toBe(true);
-    expect(wheels.slice(1).every(function (w) { return !w.isMasterWheel; })).toBe(true);
-    var transfer = nodes.find(function (n) { return n.type === 'transfer'; });
-    var topLink = connections.find(function (c) { return c.from === transfer.id && c.fromPort === 'output-0'; });
-    expect(topLink.to).toBe(diffs[0].id);
+    // ESKİ davranışın kapısı: 16'lık yerleşimin tabanı bambaşka bir yerdi.
+    var base16 = veArrangeModuleBase(VE_ARAC_PERFORMANS_LAYOUT);
+    expect(Math.abs(base16.x - nodes[0].x)).toBeGreaterThan(100);
   });
 });
 
@@ -182,8 +160,9 @@ describe('Araç Performans — özellik paneli', () => {
     expect(typeof html).toBe('string');
     expect(html).toContain("veAracOpenEditor('comp-7')");
     expect(html).toContain('Alt Topolojiyi Aç');
-    // Henüz açılmamış → "hazır güç aktarma topolojisi ile başlar" bilgisi
-    expect(html).toContain('hazır güç aktarma topolojisi');
+    // Henüz açılmamış → "Başlangıç ve Örnekler bileşeni ile başlar" bilgisi
+    expect(html).toContain('Başlangıç ve Örnekler');
+    expect(html).not.toContain('hazır güç aktarma topolojisi');
   });
 
   test('açılmış (subTopology dolu) düğümde bileşen/bağlantı sayısı gösterilir', () => {
