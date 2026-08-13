@@ -131,6 +131,29 @@ const ISCAAN = {
  *
  * Değerler MFSim'in BUGÜNKÜ ölçümü (altın çıpa), yanlarında iSCAAN referansı.
  * Amaç ikisini eşitlemek değil — farkın SESSİZCE büyümemesi.
+ *
+ * ── KALAN SAPMANIN GERÇEK BÜYÜKLÜĞÜ (yüzde yanıltıcı) ──
+ * 0-20 hatası yüzde olarak %5-9 görünüyor ve bu paniğe değer gibi duruyor.
+ * Raporun KENDİ satır hızlarında, interpolasyonsuz, MUTLAK saniye farkı
+ * ölçüldüğünde (13 örnek, 537 nokta) tablo şu:
+ *
+ *      hız bandı     0-10    10-20   20-40   40-60    60+
+ *      Δt [s]       −0.08   −0.14   −0.19   −0.18   +0.44
+ *
+ * Raporun baskı çözünürlüğü ±0.05 s. Yani 0-10 bandındaki "−%15.4" aslında
+ * −0.08 s — bir baskı kuantumundan biraz büyük. Yüzde küçük bir sayıya
+ * bölündüğü için şişiyor.
+ *
+ * Fark ilk ~2 saniyede doğuyor, sonra ÇOK YAVAŞ büyüyor ve 60 km/h üstünde
+ * işaret değiştiriyor. Vites geçişlerinde SIÇRAMIYOR (geçiş satırlarındaki
+ * adımlar −0.090/−0.048/+0.061/+0.021/−0.040 — işaretleri karışık ve geçiş
+ * dışı satırlarla aynı mertebede), yani tork kesintisi modellenmemesi DEĞİL.
+ *
+ * Ölçülen ama ATFEDİLEMEYEN kaynak: converter modunda eşdeğer kütle iSCAAN'ın
+ * altında (γ MFSim 1.113 / iSCAAN 1.229; lockup'ta 1.101 / 1.098 ile TUTUYOR).
+ * Eksiği tek bir atalet terimine yüklemek denendi ve TUTARSIZ çıktı — gereken
+ * ΔI örnekten örneğe 1.68 ile −0.03 arasında geziniyor, oysa gerçek bir atalet
+ * sabit olurdu. Uydurma katsayı konmadı; sapma ölçülü halde bırakıldı.
  */
 const HIZLANMA = {
   turan:            { 1.257: [1.60, 5.41, 11.71, 21.25], 2.337: [1.69, 5.59, 12.10, null] },
