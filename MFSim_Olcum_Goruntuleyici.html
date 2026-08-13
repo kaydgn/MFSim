@@ -6332,7 +6332,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 <div id="ve-page-sonuclar" class="ve-sub-page" role="tabpanel" aria-label="Ölçüm">
 
   <!-- Sol Panel: Veri Gezgini -->
-  <div id="ve-results-browser" style="width:250px; min-width:160px; max-width:400px; background:var(--bg-secondary); border-right:2px solid var(--border-color); display:flex; flex-direction:column; position:relative; flex-shrink:0;">
+  <div id="ve-results-browser" style="width:250px; min-width:160px; max-width:520px; background:var(--bg-secondary); border-right:2px solid var(--border-color); display:flex; flex-direction:column; position:relative; flex-shrink:0;">
     <div id="ve-results-browser-resizer" style="position:absolute; top:0; right:-3px; width:6px; height:100%; cursor:ew-resize; z-index:10;"></div>
 
     <div style="padding:8px 12px; background:linear-gradient(180deg, var(--bg-tertiary), var(--bg-secondary)); border-bottom:1px solid var(--border-color); display:flex; align-items:center; gap:6px;">
@@ -9792,7 +9792,9 @@ function veInitResultSlots() {
   });
   document.addEventListener('mousemove', function(e) {
     if(!resizing) return;
-    bp.style.width = Math.max(160, Math.min(400, startW + (e.clientX - startX))) + 'px';
+    // Sınırlar index.html'deki min-width/max-width ile AYNI olmalı — ayrılırsa
+    // sürükleme kendi sınırına dayanır ama kutu CSS sınırında durur (takılma).
+    bp.style.width = Math.max(160, Math.min(520, startW + (e.clientX - startX))) + 'px';
   });
   document.addEventListener('mouseup', function() {
     if(!resizing) return;
