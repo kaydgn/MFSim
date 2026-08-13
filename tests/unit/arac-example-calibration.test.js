@@ -70,31 +70,39 @@ const ISCAAN = {
   bmc10ton_460:     { rapor: '497-A355439-1', stall: 1621, kademe: { 0.874: 94.0, 1.536: 54.6 } },
   // ── TEK KALAN AYKIRI: duramax STALL'I ──
   // (Tavan hızı sorunsuz: 133.5 / iSCAAN 133.4. Aykırılık yalnız stall'da.)
-  // Bandı GENİŞ ama SABİT: bugünkü sapmayı dondurur, büyümesine izin vermez.
-  // (ypa4x4 buradaydı; pumpTorqueDrop düzeltilince standart banda geçti.)
   //
-  // KÖK NEDENİ BULUNDU (düzeltme henüz YOK — aş. gerekçe):
+  // KÖK NEDEN: ÇOK KÖKLÜ DENGE — MFSim ile iSCAAN AYRI DALLARDA.
   //
-  // MFSim motor eğrisini PCHIP ile ara değerliyor, iSCAAN DOĞRUSAL ara
-  // değerliyor. Bu fark yalnız eğrinin dik olduğu yerde önem kazanır ve L5D
-  // Duramax'ın eğrisi tam stall bölgesinde neredeyse basamak:
-  //     1000 rpm → 271.0 N·m ,  1200 rpm → 583.0 N·m   (200 rpm'de +%115)
-  // 1023 rpm'de PCHIP 285.4, doğrusal 306.9 verir — %7.0 fark. Raporun
-  // eşleme tablosundaki net tork (249.8) doğrusal ara değerlemeyle birebir
-  // oturuyor (249.5), PCHIP'le oturmuyor. Düşük brüt tork → düşük net tork →
-  // denge daha düşük devirde kuruluyor: 960 vs 1023.
+  // excess(N) = T_motor_net(N) − pompa_düşürme − (N/K₀)²  fonksiyonunun duramax'ta
+  // ÜÇ kökü var (çözücünün kendi taraması, 1 rpm çözünürlük):
+  //      956↓   excess + → −   KARARLI
+  //     1023↑   excess − → +   KARARSIZ (teğetlik / asılma noktası)
+  //     2296↓   excess + → −   KARARLI
+  // Filodaki DİĞER 14 örneğin hepsinde TEK kök var. Bu vakayı özel yapan da bu:
+  // konvertör araca göre çok büyük ve motor eğrisi 1000-1200 arasında %115
+  // sıçrıyor, ikisi birden excess'i sıfıra teğet hale getiriyor.
   //
-  // NEDEN DÜZELTİLMEDİ: motor eğrisinin TAMAMINI doğrusala çevirmeyi ölçtüm.
-  // Stall düzeliyor (duramax 960→990, isb340_tc411 2750→2735) ama duramax'ın
-  // 0-20'si −%25'ten −%32'ye kötüleşiyor ve tavan hızlar aşağı kayıyor.
-  // Net etki NEGATİF. (Ölçüm droop düzeltmesinden ÖNCE yapıldı; tavan hız
-  // rakamları artık birebir karşılaştırılabilir değil, stall ve 0-20 sonuçları
-  // geçerli.) Droop bandındaki dar düzeltme AYRI bir iş ve uygulandı —
-  // aş. createMotorTorqueFn; o düzeltme duramax'ın stall'ına dokunmuyor
-  // çünkü sorun eğrinin 1000-1200 bölgesinde, droop çıkışında değil.
+  // iSCAAN 1023'ü, yani KARARSIZ kökü raporluyor. Raporun kendi SR taraması bunu
+  // doğruluyor: SR 0→0.4 boyunca motor devri 1023→1002 diye AZALIYOR (üst dal
+  // imzası; alt dalda ARTARDI), sonra SR 0.42'de 2406'ya ATLIYOR.
+  //
+  // MFSim 956'yı, yani en düşük KARARLI kökü alıyor. Rölantiden tam gaza
+  // basıldığında motor 1023'ü GEÇEMEZ — 956 ile 1023 arasında excess negatif.
+  // Yani MFSim'in seçimi fiziksel olarak savunulabilir; iSCAAN'ınki quasi-statik
+  // bir kabul. Üstelik computeSettledStall'ın kuralı BİLİNÇLİ: kaynakta
+  // "[Rev1 düzeltmesi: eski 'teğetlik/asılma ~1025' kabulü kaldırıldı]" yazıyor.
+  // Yani ~1025 bir zamanlar kabul ediliyordu ve kasıtlı olarak terk edilmiş.
+  //
+  // BU YÜZDEN DEĞİŞTİRİLMEDİ: kural bilinçli, MFSim'in dalı fiziksel, ve rapor
+  // bu konvertörü zaten "Unacceptable" işaretliyor.
+  //
+  // ÖNCEKİ AÇIKLAMAM YANLIŞTI: bir süre bunun PCHIP↔doğrusal ara değerleme
+  // farkı olduğunu yazmıştım. Ölçüm o açıklamayı ikinci plana attı — motor
+  // eğrisi doğrusala çevrilince alt kök 956→988'e kayıyor ama DAL değişmiyor,
+  // yani 1023'e yaklaşmanın asıl engeli ara değerleme değil kök seçimi.
   duramax:          { rapor: '497-A425591-1', stall: 1023, stallTol: 0.07, kademe: { 1.000: 133.4, 2.470: 57.1 },
-                      not: 'Stall %6.2 düşük (960 vs 1023) — kök neden: PCHIP↔doğrusal ara değerleme farkı, ' +
-                           'motor eğrisi 1000→1200 arasında %115 sıçrıyor ve stall tam orada.' },
+                      not: 'Stall %6.2 düşük (960 vs 1023) — kök neden: çok köklü denge, iSCAAN kararsız ' +
+                           'kökü (1023) raporluyor, MFSim en düşük kararlı kökü (956) alıyor.' },
   // ypa4x4'ün STALL REFERANSI 2036 DEĞİL 2094'tür. Raporun vites başına
   // Converter-Mode tabloları şunu gösteriyor:
   //     F1 ve R1 : 2036 rpm / T_net 608.7
@@ -310,7 +318,8 @@ describe('azami hız — iSCAAN Performance Summary bandında', () => {
 describe('bilinen aykırılar dondurulmuş — sessizce büyümesinler', () => {
   // Bu iki örnek raporla tam oturmuyor; kök nedenleri AÇIK İŞ. Testin amacı
   // düzeltmek değil, bugünkü sapmayı ölçülü tutmak.
-  test('duramax stall’ı %5–7 düşük kalıyor (960 / iSCAAN 1023)', () => {
+  test('duramax en düşük KARARLI kökte kalıyor (960 / iSCAAN’ın kararsız kökü 1023)', () => {
+    // Bant dondurulmuş: kök seçimi kuralı bilinçli, değişirse haberimiz olsun.
     const e = 100 * (sonuc.duramax[0].stall - 1023) / 1023;
     expect(e).toBeLessThan(-5);
     expect(e).toBeGreaterThan(-7);
