@@ -144,23 +144,23 @@ var VE_CHIP_INSET = 10;              // görünüm kenarına en yakın duruş (e
 
 // SAF: sınır çerçevesinin YEREL kutusu — {x, y, w, h}; çizilecek düğüm yoksa null.
 //
-// Kural: kanvasa BIRAKILAN her bileşen çerçeveyi genişletir. Tek istisna
-// 'sensor': o bir bağlantının üstüne asılı durur (kendi yeri yoktur) ve
-// ekrandaki ölçüsü (33×33, CSS) modeldeki ölçüsünden (65×60) farklıdır —
-// saymak çerçeveyi sensörün sağında ~32px fazla açardı.
+// Kural (kullanıcı, 2026-08-13): kanvasa BIRAKILAN HER bileşen çerçeveyi
+// genişletir — istisna yok. Eskiden 'sensor' ve 'sensor-wizard' sayılmıyordu;
+// ikisi de kullanıcının koyduğu, kendi yeri olan bileşenler ve çerçevenin
+// DIŞINDA kalıyorlardı.
 //
-// 'sensor-wizard' ESKİDEN de bu istisnanın içindeydi ama oraya ait değil:
-// sıradan bir bileşen gibi bırakılıyor, kendi yeri var, normal ölçüde
-// çiziliyor. Sonuç: kullanıcı onu kanvasa koyduğunda çerçevenin DIŞINDA
-// kalıyordu (kullanıcı şikâyeti, 2026-08-13).
+// Ölçüsü kaydedilmemiş düğüm için varsayılan tipten okunur
+// (components.js veNodeDefaultSize): sensör 33×33, diğerleri 65×60. Sabit 65
+// yazılsaydı sensörün sağında 32px hayalet boşluk açılırdı.
 function veBoundaryBox(nodeList, pad) {
   var p = (typeof pad === 'number' && isFinite(pad)) ? pad : VE_BOUNDARY_PAD;
   var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, seen = 0;
   (nodeList || []).forEach(function(n) {
-    if(!n || n.type === 'sensor') return;
+    if(!n) return;
     if(!isFinite(n.x) || !isFinite(n.y)) return;
-    var w = isFinite(n.width) ? n.width : 65;
-    var h = isFinite(n.height) ? n.height : 60;
+    var ds = (typeof veNodeDefaultSize === 'function') ? veNodeDefaultSize(n.type) : { w: 65, h: 60 };
+    var w = isFinite(n.width) ? n.width : ds.w;
+    var h = isFinite(n.height) ? n.height : ds.h;
     if(n.x < minX) minX = n.x;
     if(n.y < minY) minY = n.y;
     if(n.x + w > maxX) maxX = n.x + w;

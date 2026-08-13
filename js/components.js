@@ -514,6 +514,21 @@ function portPerpPercent(node, portType){
   return ((rank + 1) / (onSide.length + 1)) * 100;
 }
 
+// ── DÜĞÜM VARSAYILAN ÖLÇÜSÜ — tek gerçek kaynak ─────────────────────────────
+// Sensör ve Sonlandırıcı küçük çizilir (33×33), geri kalan bileşenler 65×60;
+// tip kendi defaultWidth/Height'ını bildiriyorsa o kazanır. Kuralı hem
+// createNode (ui-core.js) hem de topoloji sınır çerçevesi (canvas-space.js
+// veBoundaryBox) okur — ikisi ayrı sayı tutsaydı, ölçüsü kaydedilmemiş bir
+// düğüm çerçeveyi olduğundan geniş/dar gösterirdi.
+function veNodeDefaultSize(type) {
+  var def = (typeof componentDefs !== 'undefined' && componentDefs[type]) || {};
+  var kucuk = !!(def.isSensor || def.isTerminator);
+  return {
+    w: def.defaultWidth || (kucuk ? 33 : 65),
+    h: def.defaultHeight || (kucuk ? 33 : 60)
+  };
+}
+
 // ── PORT GEOMETRİSİ — TEK GERÇEK KAYNAK ─────────────────────────────────────
 // Bağlantı eğrisinin ucu ile port dairesi AYNI noktadan okunmak zorunda. Eskiden
 // üç ayrı yer üç ayrı sayı kullanıyordu:

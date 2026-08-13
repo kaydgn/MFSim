@@ -124,6 +124,36 @@ describe('vePortBoxStyle — port DOM\'u da AYNI merkeze oturur', () => {
   });
 });
 
+// createNode ile sınır çerçevesi (canvas-space.js veBoundaryBox) AYNI kuralı
+// okumalı: ikisi ayrı sayı tutsaydı, ölçüsü kaydedilmemiş bir düğüm çerçeveyi
+// olduğundan geniş/dar gösterirdi.
+describe('veNodeDefaultSize — varsayılan kutu ölçüsü', () => {
+  test('sıradan bileşen 65×60', () => {
+    expect(veNodeDefaultSize('gearbox')).toEqual({ w: 65, h: 60 });
+  });
+
+  test('tipin kendi ölçüsü varsa o kazanır', () => {
+    expect(veNodeDefaultSize('engine')).toEqual({ w: 66, h: 76 });
+  });
+
+  test('sensör küçük çizilir (33×33)', () => {
+    componentDefs.sensor = { name: 'Sensör', inputs: 1, outputs: 0, isSensor: true };
+    expect(veNodeDefaultSize('sensor')).toEqual({ w: 33, h: 33 });
+    delete componentDefs.sensor;
+  });
+
+  test('sonlandırıcı da küçük', () => {
+    componentDefs.terminator = { name: 'Sonlandırıcı', inputs: 1, outputs: 0, isTerminator: true };
+    expect(veNodeDefaultSize('terminator')).toEqual({ w: 33, h: 33 });
+    delete componentDefs.terminator;
+  });
+
+  test('bilinmeyen tip sıradan ölçüye düşer', () => {
+    expect(veNodeDefaultSize('boyle-bir-tip-yok')).toEqual({ w: 65, h: 60 });
+    expect(veNodeDefaultSize(undefined)).toEqual({ w: 65, h: 60 });
+  });
+});
+
 describe('Bilinmeyen/eksik girdide çökmez', () => {
   test('ölçüsü olmayan düğüm varsayılan 65×60 sayılır', () => {
     const n = { id: 'x', type: 'gearbox', x: 0, y: 0, data: {} };
