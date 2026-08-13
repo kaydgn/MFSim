@@ -8,12 +8,21 @@
  * Crr, vites oranları, transfer kademeleri, governed devir, aksesuar kayıpları
  * ve pumpTorqueDrop.
  *
- * NEDEN AYRI BİR KAPI: pumpTorqueDrop hatası (ypa4x4'te 21.4 olması gerekirken
- * 69.8) hiçbir yapısal testi kırmıyordu ve simülasyon "makul ama yanlış" sonuç
- * üretiyordu. Ancak on üç örneğin HEPSİNE aynı türetmeyi uygulayınca ortaya
- * çıktı. Aşağıdaki değerler o sistematik denetimin çıktısıdır — 262 kontrol,
- * sıfır sapma. Elle bir örnek JSON'u düzenleyen biri artık sessizce
+ * NEDEN AYRI BİR KAPI: girdi hataları hiçbir YAPISAL testi kırmıyor —
+ * topoloji geçerli, zincir tam, JSON düzgün — ama simülasyon "makul ama
+ * yanlış" sonuç üretiyor. Aşağıdaki değerler on üç örneğin hepsine aynı
+ * türetmenin uygulandığı sistematik denetimin çıktısıdır (262 kontrol,
+ * sıfır sapma). Elle bir örnek JSON'u düzenleyen biri artık sessizce
  * kaydıramaz.
+ *
+ * pumpTorqueDrop'un TARİHÇESİ (aynı hataya düşülmesin diye):
+ * ypa4x4'ün stall'ı iSCAAN'ın başlık değerinden (%3.1) sapıyordu. Drop'u
+ * 21.4'ten 69.8'e çıkarınca sapma kapanıyordu ve bu bir süre "düzeltme"
+ * sanıldı. YANLIŞTI: raporun başlık stall'ı (2036) F1/R1'e uygulanan tork
+ * kısıtının sonucu; F2–F9'un hepsi 2094 gösteriyor ve stall'da çıkış devri
+ * sıfır olduğu için vites oranı denge noktasını etkileyemez. Drop, raporun
+ * kendi eşleme tablosundan 21.4 çıkıyor — HEM F1 HEM F2 satırından. 69.8,
+ * iSCAAN'ın 48.4 N·m'lik kısıtını fiziksel bir parametreye gömüyordu.
  *
  * Değerlerin kaynağı (rapor bölümü):
  *   gvw       Input Summary / "Gross Vehicle Weight"
@@ -28,7 +37,13 @@
  *   governed  Input Summary / "Governed Speed"
  *   acc       "Accessory Losses (Power @ Governed Speed)" — User Defined sütunu
  *             sıra: fan, alternatör, kompresör, direksiyon pompası
- *   drop      [motor eğrisinin doğrusal net-fan-on değeri @stall] − T_türbin/τ
+ *   drop      RAPORUN KENDİ eşleme tablosundan: T_net(SR=0) − T_türbin/τ
+ *             DİKKAT — bu kuralın "motor eğrisinin net-fan-on değeri @stall"
+ *             biçimindeki varyantı YANLIŞ. On iki örnekte iki türetme
+ *             çakıştığı için fark görünmüyor, ama ypa4x4'te iSCAAN 1. vitese
+ *             tork kısıtı uyguluyor (aş.) ve eğri-net ile eşleme-net 48.4 N·m
+ *             ayrışıyor. Eğri-net kullanılırsa drop 69.8 çıkar — o değer
+ *             kısıtı fiziksel bir parametrenin içine gömer. Doğrusu 21.4.
  */
 const fs = require('fs');
 const path = require('path');
@@ -74,7 +89,7 @@ const ISCAAN = {
                        aux: [1.000, 2.470], acc: [34.5, 3.5, 1.8, 1.8], drop: 14.4 },
   ypa4x4:            { gvw: 7650, alan: 5.750, cd: 0.75, aks: 1.706, crr: 0.00321, governed: 2500,
                        vites: [4.822, 3.512, 2.852, 1.896, 1.439, 1.000, 0.736, 0.643, 0.568],
-                       aux: [3.430], acc: [16.1, 1.6, 0.8, 0.8], drop: 69.8 },
+                       aux: [3.430], acc: [16.1, 1.6, 0.8, 0.8], drop: 21.4 },
 };
 
 /**
@@ -183,8 +198,10 @@ describe('konvertör pompa tork düşürmesi', () => {
       .toBeCloseTo(ISCAAN[id].drop, 1);
   });
 
-  test('ypa4x4 düzeltmesi geri alınmasın — 69.8, eski yanlış değer 21.4 değil', () => {
-    expect(parseFloat(bul('ypa4x4', 'torque-converter').data.pumpTorqueDrop)).toBeGreaterThan(60);
+  test('ypa4x4 drop 21.4 — 69.8 DEĞİL (o değer 1. vites tork kısıtını gömüyordu)', () => {
+    // Kısa bir süre 69.8 olarak değiştirilmişti; raporun kendi F2–F9 satırları
+    // (hepsi 2094 rpm / T_net 642.7) drop'un 21.4 olduğunu birebir söylüyor.
+    expect(parseFloat(bul('ypa4x4', 'torque-converter').data.pumpTorqueDrop)).toBeCloseTo(21.4, 1);
   });
 });
 

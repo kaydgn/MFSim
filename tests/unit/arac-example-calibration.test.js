@@ -95,10 +95,21 @@ const ISCAAN = {
   duramax:          { rapor: '497-A425591-1', stall: 1023, stallTol: 0.07, kademe: { 1.000: 133.4, 2.470: 57.1 },
                       not: 'Stall %6.2 düşük (960 vs 1023) — kök neden: PCHIP↔doğrusal ara değerleme farkı, ' +
                            'motor eğrisi 1000→1200 arasında %115 sıçrıyor ve stall tam orada.' },
-  ypa4x4:           { rapor: '497-A336126-1', stall: 2036, kademe: { 3.430: 120.2 },
-                      not: 'Stall +%3.1 → +%0.2 düzeldi: pumpTorqueDrop 21.4 yerine 69.8 olmalıymış ' +
-                           '(bkz. aş. türetme kuralı). Kalan sınırlama: durum makinesi raporun ' +
-                           '1. viteste kilitlenmesini (1C→1L→2L) temsil edemiyor.' },
+  // ypa4x4'ün STALL REFERANSI 2036 DEĞİL 2094'tür. Raporun vites başına
+  // Converter-Mode tabloları şunu gösteriyor:
+  //     F1 ve R1 : 2036 rpm / T_net 608.7
+  //     F2 … F9  : 2094 rpm / T_net 642.7      (hepsi aynı)
+  // Stall'da çıkış devri her viteste SIFIR, yani vites oranı denge noktasını
+  // FİZİKSEL OLARAK etkileyemez. Farkın tek açıklaması iSCAAN'ın yalnız en
+  // derin oranlara (F1/R1) uyguladığı türbin tork kısıtı — 48.4 N·m'lik kesinti.
+  // MFSim'de böyle bir kısıt YOK, dolayısıyla doğru karşılaştırma KISITSIZ
+  // değerledir. Raporun genel "Engine-Converter Match" tablosu F1'i bastığı
+  // için başlıktaki sayı 2036'dır; referans olarak onu almak yanıltıcı.
+  ypa4x4:           { rapor: '497-A336126-1', stall: 2094, kademe: { 3.430: 120.2 },
+                      not: 'Stall 2100 / kısıtsız iSCAAN 2094 → +%0.29 (bunun ~%0.24’ü ' +
+                           'computeSettledStall’ın 5 rpm tarama ızgarası). Sınırlamalar: ' +
+                           'iSCAAN’ın F1/R1 tork kısıtı modellenmiyor; durum makinesi de ' +
+                           'raporun 1. viteste kilitlenmesini (1C→1L→2L) temsil edemiyor.' },
 };
 
 /**
@@ -126,7 +137,7 @@ const HIZLANMA = {
   bmc10ton_430_32t: { 0.874: [3.01, 10.20, 22.63, 42.52], 1.536: [2.71, 9.83, null, null] },
   bmc10ton_460:     { 0.874: [2.85, 9.47, 20.81, 38.63], 1.536: [2.55, 9.09, null, null] },
   duramax:          { 1.000: [1.70, 4.10, 8.01, 13.68], 2.470: [1.56, 4.20, null, null] },
-  ypa4x4:           { 3.430: [1.61, 5.14, 11.05, 20.59] },
+  ypa4x4:           { 3.430: [1.56, 5.08, 10.99, 20.54] },
 };
 
 /** Aynı noktalarda iSCAAN'ın kendi hızlanma tablosu (kalibrasyon cetveli). */
@@ -305,11 +316,14 @@ describe('bilinen aykırılar dondurulmuş — sessizce büyümesinler', () => {
     expect(e).toBeGreaterThan(-7);
   });
 
-  test('ypa4x4 stall’ı DÜZELDİ — regresyona karşı sıkı bant', () => {
-    // Eskiden +%3.1 (2100) idi; pumpTorqueDrop düzeltilince +%0.2 (2040).
-    // Bant dar tutuldu ki eski yanlış değer geri gelirse anında kırmızı olsun.
-    const e = 100 * (sonuc.ypa4x4[0].stall - 2036) / 2036;
+  test('ypa4x4 stall’ı iSCAAN’ın KISITSIZ değerine oturuyor (2094)', () => {
+    // Raporun başlık değeri 2036'dır ama o, F1/R1'e uygulanan tork kısıtının
+    // sonucudur (F2–F9 hepsi 2094). MFSim kısıtı modellemediği için doğru
+    // karşılaştırma 2094'e karşıdır.
+    const e = 100 * (sonuc.ypa4x4[0].stall - 2094) / 2094;
     expect(Math.abs(e)).toBeLessThan(0.5);
+    // 2036'ya kilitlemek için pumpTorqueDrop'u şişirme girişimi geri gelmesin:
+    expect(sonuc.ypa4x4[0].stall).toBeGreaterThan(2060);
   });
 });
 
