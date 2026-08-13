@@ -182,9 +182,29 @@ describe('veBoundaryBox — topoloji sınır çerçevesinin kutusu', () => {
     expect(box.h).toBe(120 + cs.VE_NODE_LABEL_H);
   });
 
+  // 'sensor' bir bağlantının üstüne asılı durur ve ekranda 33×33 çizilir
+  // (modelde 65×60) → saymak çerçeveyi boş yere şişirirdi.
   test('sensörler çerçeveyi büyütmez', () => {
     const withSensor = cs.veBoundaryBox([N(3000, 3000), { id: 's', type: 'sensor', x: 5000, y: 5000 }], 50);
     expect(withSensor).toEqual(cs.veBoundaryBox([N(3000, 3000)], 50));
+  });
+
+  // KULLANICI ŞİKÂYETİ (2026-08-13): "Sensör Sihirbazı bileşeni topoloji
+  // çerçevesini genişletmiyor; normalde her bileşen genişletir."
+  // Sihirbaz sıradan bir bileşen gibi bırakılıyor, kendi yeri var, normal
+  // ölçüde çiziliyor — sensörün istisnasına ait değil.
+  test('Sensör Sihirbazı çerçeveyi GENİŞLETİR', () => {
+    const yalniz = cs.veBoundaryBox([N(3000, 3000)], 50);
+    const ile = cs.veBoundaryBox([N(3000, 3000), { id: 'w', type: 'sensor-wizard', x: 3600, y: 3400 }], 50);
+    expect(ile).not.toEqual(yalniz);
+    expect(ile.x + ile.w).toBe(3600 + 65 + 50);
+    expect(ile.y + ile.h).toBe(3400 + 60 + cs.VE_NODE_LABEL_H + 50);
+  });
+
+  test('yalnız Sensör Sihirbazı varsa bile çerçeve çizilir', () => {
+    const box = cs.veBoundaryBox([{ id: 'w', type: 'sensor-wizard', x: 3000, y: 3000 }], 50);
+    expect(box).not.toBeNull();
+    expect(box.x).toBe(2950);
   });
 
   test('çizilecek düğüm yoksa null (boş alt-topoloji, yalnız sensör, koordinatsız)', () => {

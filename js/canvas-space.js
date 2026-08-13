@@ -143,12 +143,21 @@ var VE_CHIP_GAP = 12;                // çip ile çerçevenin alt kenarı arası
 var VE_CHIP_INSET = 10;              // görünüm kenarına en yakın duruş (ekran px)
 
 // SAF: sınır çerçevesinin YEREL kutusu — {x, y, w, h}; çizilecek düğüm yoksa null.
-// Sensörler sayılmaz: zincire asılı dururlar, çerçeveyi boş yere şişirirlerdi.
+//
+// Kural: kanvasa BIRAKILAN her bileşen çerçeveyi genişletir. Tek istisna
+// 'sensor': o bir bağlantının üstüne asılı durur (kendi yeri yoktur) ve
+// ekrandaki ölçüsü (33×33, CSS) modeldeki ölçüsünden (65×60) farklıdır —
+// saymak çerçeveyi sensörün sağında ~32px fazla açardı.
+//
+// 'sensor-wizard' ESKİDEN de bu istisnanın içindeydi ama oraya ait değil:
+// sıradan bir bileşen gibi bırakılıyor, kendi yeri var, normal ölçüde
+// çiziliyor. Sonuç: kullanıcı onu kanvasa koyduğunda çerçevenin DIŞINDA
+// kalıyordu (kullanıcı şikâyeti, 2026-08-13).
 function veBoundaryBox(nodeList, pad) {
   var p = (typeof pad === 'number' && isFinite(pad)) ? pad : VE_BOUNDARY_PAD;
   var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, seen = 0;
   (nodeList || []).forEach(function(n) {
-    if(!n || n.type === 'sensor' || n.type === 'sensor-wizard') return;
+    if(!n || n.type === 'sensor') return;
     if(!isFinite(n.x) || !isFinite(n.y)) return;
     var w = isFinite(n.width) ? n.width : 65;
     var h = isFinite(n.height) ? n.height : 60;
