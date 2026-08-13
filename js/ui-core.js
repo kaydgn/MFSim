@@ -589,9 +589,11 @@ function createNode(type, x, y, width, height) {
   compCounter++;
   var nodeId = 'comp-' + compCounter;
   
-  // Sensör/Sonlandırıcı küçük, özel boyutlu bileşenler
-  var defaultW = def.defaultWidth || ((def.isSensor || def.isTerminator) ? 33 : 65);
-  var defaultH = def.defaultHeight || ((def.isSensor || def.isTerminator) ? 33 : 60);
+  // Varsayılan ölçü tek yerden (components.js veNodeDefaultSize) — sınır
+  // çerçevesi de aynı kuralı okur.
+  var _ds = veNodeDefaultSize(type);
+  var defaultW = _ds.w;
+  var defaultH = _ds.h;
   
   var node = {
     id: nodeId,

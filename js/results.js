@@ -473,7 +473,7 @@ function veUpdateResultsTree() {
           var diagIcon = canDrag ? (is3dDiag ? '<span class="mf-ico mf-ico-package"></span>' : '<span class="mf-ico mf-ico-trending-up"></span>') : '<span class="mf-ico mf-ico-lock"></span>';
           html += '<div class="ve-tree-signal" style="padding-left:32px; ' + diagStyle + '"' + dragAttr + ' title="' + diag.name + reason + '">';
           html += diagIcon + ' ' + diag.name;
-          if(diag.note) html += ' <span style="font-size:var(--fs-micro); color:var(--accent-warning);">⚠</span>';
+          if(diag.note) html += ' <span style="color:var(--accent-warning);">⚠</span>';
           html += '</div>';
         });
 

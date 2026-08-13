@@ -4747,10 +4747,11 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-tree-row .arrow{width:14px;text-align:center;color:var(--text-muted);flex-shrink:0;cursor:pointer;border-radius:var(--radius-xs);}
 .ve-tree-row .arrow:hover{background:var(--accent-tint-15);color:var(--text-primary);}
 .ve-tree-row .icon{width:16px;text-align:center;flex-shrink:0;font-size:var(--fs-md);display:inline-flex;align-items:center;justify-content:center;}
-/* Sağa yaslı sayaç rozeti — ağaçtaki TEK ikincil punto. Eskiden her satır
-   kendi satır-içi font-size'ını yazıyordu (--fs-micro / --fs-tiny karışık). */
+/* Sağa yaslı sayaç rozeti. Eskiden her satır kendi satır-içi font-size'ını
+   yazıyordu (--fs-micro / --fs-tiny karışık); tek sınıfa toplandı.
+   Punto YOK → satırdan miras alır (--fs-md): kullanıcı sayaçların da satır
+   ölçüsünde olmasını istedi, ikincil oluşu RENKTEN anlaşılıyor. */
 .ve-tree-count{
-  font-size:var(--fs-micro);
   color:var(--text-muted);
   margin-left:auto;
   flex-shrink:0;
@@ -4858,20 +4859,20 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .vsig-ghead:focus-visible{outline:2px solid var(--accent-primary);outline-offset:-2px;}
 .vsig-arrow{
   width:9px;flex:0 0 9px;text-align:center;
-  font-size:var(--fs-micro);color:var(--text-muted);
+  font-size:var(--fs-md);color:var(--text-muted);
   transition:transform .14s ease;display:inline-block;
 }
 .vsig-group.open .vsig-arrow{transform:rotate(90deg);}
 .vsig-gname{
   flex:1;min-width:0;display:flex;align-items:center;gap:5px;
-  font-size:var(--fs-body);font-weight:600;color:var(--text-heading);
+  font-size:var(--fs-md);font-weight:600;color:var(--text-heading);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .vsig-gname[data-act="grp-drag"]{cursor:grab;}
 .vsig-gname[data-act="grp-drag"]:active{cursor:grabbing;}
 .vsig-badge{
-  flex-shrink:0;font-size:var(--fs-micro);font-variant-numeric:tabular-nums;
-  line-height:13px;padding:0 4px;border-radius:var(--radius-sm);
+  flex-shrink:0;font-size:var(--fs-md);font-variant-numeric:tabular-nums;
+  line-height:15px;padding:0 4px;border-radius:var(--radius-sm);
   color:var(--text-muted);background:var(--bg-primary);border:1px solid var(--border-color);
 }
 .vsig-badge.on{color:var(--on-accent);background:var(--accent-primary);border-color:var(--accent-primary);}
@@ -4902,7 +4903,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
    flex kapsayıcıda ad sertçe kesiliyordu. */
 .vsig-name{
   min-width:0;
-  font-size:var(--fs-body);color:var(--text-primary);
+  font-size:var(--fs-md);color:var(--text-primary);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   cursor:grab;opacity:0.62;transition:opacity .1s;
 }
@@ -4910,10 +4911,10 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .vsig-name:active{cursor:grabbing;}
 .vsig-dir{
   display:inline-block;width:8px;margin-right:4px;text-align:center;
-  font-size:var(--fs-micro);color:var(--text-muted);
+  font-size:var(--fs-md);color:var(--text-muted);
 }
 .vsig-unit{
-  font-size:var(--fs-micro);color:var(--text-muted);
+  font-size:var(--fs-md);color:var(--text-muted);
   font-variant-numeric:tabular-nums;white-space:nowrap;
   text-align:right;opacity:0.72;
 }

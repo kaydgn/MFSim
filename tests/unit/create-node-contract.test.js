@@ -24,6 +24,9 @@ const stubs = stubGlobals({
   // yalnız ui-core.js eval ediliyor → stub. Geometrinin kendisi ayrı testli:
   // tests/unit/port-geometry.test.js
   vePortStyleAttr: jest.fn(() => ''),
+  // Varsayılan kutu ölçüsü de components.js'te (veNodeDefaultSize); bu testte
+  // sensör/sonlandırıcı yok, sıradan ölçü yeter.
+  veNodeDefaultSize: jest.fn(() => ({ w: 65, h: 60 })),
   startResize: jest.fn(),
   updateNodeCount: jest.fn(),
   clearSelection: jest.fn(),

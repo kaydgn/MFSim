@@ -182,11 +182,22 @@ describe('veBoundaryBox — topoloji sınır çerçevesinin kutusu', () => {
     expect(box.h).toBe(120 + cs.VE_NODE_LABEL_H);
   });
 
-  // 'sensor' bir bağlantının üstüne asılı durur ve ekranda 33×33 çizilir
-  // (modelde 65×60) → saymak çerçeveyi boş yere şişirirdi.
-  test('sensörler çerçeveyi büyütmez', () => {
-    const withSensor = cs.veBoundaryBox([N(3000, 3000), { id: 's', type: 'sensor', x: 5000, y: 5000 }], 50);
-    expect(withSensor).toEqual(cs.veBoundaryBox([N(3000, 3000)], 50));
+  // KULLANICI KURALI (2026-08-13): kanvasa bırakılan HER bileşen çerçeveyi
+  // genişletir — sensör dâhil, istisna yok. Sensör createNode'da 33×33
+  // kurulur (ui-core.js), o yüzden ölçüsü elle verilir.
+  test('sensör de çerçeveyi genişletir (istisna kalmadı)', () => {
+    const yalniz = cs.veBoundaryBox([N(3000, 3000)], 50);
+    const ile = cs.veBoundaryBox(
+      [N(3000, 3000), { id: 's', type: 'sensor', x: 3500, y: 3300, width: 33, height: 33 }], 50);
+    expect(ile).not.toEqual(yalniz);
+    expect(ile.x + ile.w).toBe(3500 + 33 + 50);
+    expect(ile.y + ile.h).toBe(3300 + 33 + cs.VE_NODE_LABEL_H + 50);
+  });
+
+  test('yalnız sensör varsa bile çerçeve çizilir', () => {
+    const box = cs.veBoundaryBox([{ id: 's', type: 'sensor', x: 3000, y: 3000, width: 33, height: 33 }], 50);
+    expect(box).not.toBeNull();
+    expect(box.x).toBe(2950);
   });
 
   // KULLANICI ŞİKÂYETİ (2026-08-13): "Sensör Sihirbazı bileşeni topoloji
@@ -207,11 +218,11 @@ describe('veBoundaryBox — topoloji sınır çerçevesinin kutusu', () => {
     expect(box.x).toBe(2950);
   });
 
-  test('çizilecek düğüm yoksa null (boş alt-topoloji, yalnız sensör, koordinatsız)', () => {
+  test('çizilecek düğüm yoksa null (boş alt-topoloji, koordinatsız düğüm)', () => {
     expect(cs.veBoundaryBox([], 50)).toBeNull();
     expect(cs.veBoundaryBox(null, 50)).toBeNull();
-    expect(cs.veBoundaryBox([{ id: 's', type: 'sensor', x: 1, y: 1 }], 50)).toBeNull();
     expect(cs.veBoundaryBox([{ id: 'a', type: 'engine' }], 50)).toBeNull();
+    expect(cs.veBoundaryBox([null, undefined], 50)).toBeNull();
   });
 });
 
