@@ -130,9 +130,36 @@ var FT_SOLVER = (function() {
     var spline = pchipCreate(rpms, torques, 'Motor tork tablosu');
     var tableMaxRpm = rpms[rpms.length - 1];   // tablo verisinin en yüksek devri
 
+    // ── GOVERNOR DROOP İNİŞİ: son aralıkta DOĞRUSAL git ──
+    // Allison eğrilerinde tablonun son noktası "No Load Governed" (tork = 0), bir
+    // önceki "Governed" ve İKİSİNİN ARASINDA çoğu motorda hiç veri yok. PCHIP'in
+    // şekil koruyan kübiği bu tek geniş aralıkta kirişin belirgin biçimde ÜSTÜNE
+    // şişiyor — ölçüm (aralık ortası, PCHIP − kiriş):
+    //     ISG12 380hp (1900→2100)  +239 N·m  (%17.0)
+    //     ISG12 460hp (1930→2100)  +311 N·m  (%18.5)
+    //     ISG12 430hp (1900→2100)  +269 N·m  (%16.9)
+    //     AZRA I4     (2100→2350)  +235 N·m  (%18.4)
+    // Sonuç: motor governed'ı aştığı droop bölgesinde tekerlek gücü fazla çıkıyor
+    // ve araç düz yolda dengeye OLMASI GEREKENDEN yüksek hızda oturuyor.
+    // iSCAAN bu bandı DOĞRUSAL geçiyor (raporun kendi motor eğrisi ile doğrulandı).
+    //
+    // Yalnız SON aralık düzeltiliyor. Bandın tamamını doğrusallaştırmak, droop
+    // bölgesinde GERÇEK veri noktası olan motorları (Duramax 3200/3400,
+    // ISB4.5 2530/2600) bozuyor — ölçüldü ve reddedildi.
+    var nLast = rpms.length - 1;
+    var tPeak = Math.max.apply(null, torques);
+    var droopRunout = nLast >= 1 && torques[nLast] <= 0.02 * tPeak
+                   && torques[nLast - 1] > 0.02 * tPeak;
+
     return function(rpm) {
       if(rpm <= 0) return 0;
-      var T_net = pchipEval(spline, rpm);
+      var T_net;
+      if(droopRunout && rpm > rpms[nLast - 1] && rpm < rpms[nLast]) {
+        var fd = (rpm - rpms[nLast - 1]) / (rpms[nLast] - rpms[nLast - 1]);
+        T_net = torques[nLast - 1] + fd * (torques[nLast] - torques[nLast - 1]);
+      } else {
+        T_net = pchipEval(spline, rpm);
+      }
       // Sentetik governor droop YALNIZCA tablo governor bölgesini KAPSAMIYORSA uygulanır.
       // L5D gibi tablo governed'ı aşıp no-load'da sıfıra iniyorsa (ör. 3600→0), droop
       // zaten veridedir → çift-droop olmaması için sentetik olanı UYGULAMA (PCHIP tabloyu izler).
