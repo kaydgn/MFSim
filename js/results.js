@@ -319,7 +319,7 @@ function veUpdateResultsTree() {
     html += '<span style="font-weight:' + (isActive ? '600' : '400') + ';' + (isActive ? 'color:var(--ink-accent);' : '') + '">' + tabLabel + '</span>';
     // Sayaç artık sensör değil SİNYAL sayar: listede görünen satır sayısıyla
     // birebir tutar. "17 sensör" yazıp 24 satır göstermek güven kırıyordu.
-    if(tabChannelCount > 0) html += ' <span style="font-size:var(--fs-tiny); color:var(--text-muted); margin-left:auto;">' + tabChannelCount + ' sinyal</span>';
+    if(tabChannelCount > 0) html += ' <span class="ve-tree-count">' + tabChannelCount + ' sinyal</span>';
     html += '</div>';
 
     if(totalSensorCount > 0) {
@@ -375,7 +375,7 @@ function veUpdateResultsTree() {
       html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span>';
       html += '<span class="icon"><span class="mf-ico mf-ico-upload"></span></span>';
       html += '<span style="font-weight:600;">İçe Aktarılan Ölçümler</span>';
-      html += ' <span style="font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;">' +
+      html += ' <span class="ve-tree-count">' +
               impChannels + ' sinyal</span>';
       html += '</div>';
       html += '<div class="ve-tree-children open">';
@@ -422,12 +422,15 @@ function veUpdateResultsTree() {
       html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
       html += '<div class="ve-tree-item">';
       html += '<div class="ve-tree-row" style="display:flex; align-items:center; gap:4px;">';
-      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span>';
+      // VARSAYILAN KAPALI: paket sayısı arttıkça (55 diyagram) ağaç açılışta
+      // ekranı dolduruyor, altındaki raporlar aşağı kayıyordu. Kullanıcı oku
+      // tıklayınca açılır; sayı zaten sağda görünüyor.
+      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
       html += '<span class="icon"><span class="mf-ico mf-ico-bar-chart"></span></span>';
       html += '<span style="font-weight:600;">Diyagramlar</span>';
-      html += ' <span style="font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;">' + totalDiags + '</span>';
+      html += ' <span class="ve-tree-count">' + totalDiags + '</span>';
       html += '</div>';
-      html += '<div class="ve-tree-children open">';
+      html += '<div class="ve-tree-children">';
 
       filteredPkgs.forEach(function(pkgId) {
         var pkg = SENSOR_PACKAGES.find(function(p) { return p.id === pkgId; });
@@ -437,7 +440,7 @@ function veUpdateResultsTree() {
         html += '<div class="ve-tree-row" style="padding-left:16px;">';
         html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
         html += '<span>' + pkg.name + '</span>';
-        html += ' <span style="font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;">' + pkg.diagrams.length + '</span>';
+        html += ' <span class="ve-tree-count">' + pkg.diagrams.length + '</span>';
         html += '</div>';
         html += '<div class="ve-tree-children">';
 
@@ -489,16 +492,16 @@ function veUpdateResultsTree() {
     if(_activeTab === 'performance') {
       html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
       html += '<div class="ve-tree-row" style="cursor:pointer; display:flex; align-items:center; gap:4px;">';
-      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:var(--fs-micro); width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
+      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
       html += '<span onclick="veRenderDetailedReport()" style="display:flex; align-items:center; gap:4px; flex:1;" title="Tüm raporu görüntüle">';
       html += '<span class="icon"><span class="mf-ico mf-ico-clipboard"></span></span><span style="font-weight:600; color:var(--accent-primary);">Detaylı Rapor</span></span>';
       html += '</div>';
       html += '<div class="ve-tree-children">';
       // Girdi Özeti group
       html += '<div class="ve-tree-row" style="cursor:pointer; padding-left:10px; display:flex; align-items:center; gap:4px;">';
-      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:var(--fs-micro); width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
+      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
       html += '<span onclick="veRenderDetailedReport(\'girdi\')" style="display:flex; align-items:center; gap:4px; flex:1;" title="Girdi Özeti">';
-      html += '<span class="icon" style="font-size:var(--fs-tiny);"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-size:var(--fs-body);">Girdi Özeti</span></span></div>';
+      html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span>Girdi Özeti</span></span></div>';
       html += '<div class="ve-tree-children">';
       var girdiSubs = [
         {id:'platform', icon:'<span class="mf-ico mf-ico-truck"></span>', label:'Platform'},
@@ -509,21 +512,21 @@ function veUpdateResultsTree() {
       ];
       girdiSubs.forEach(function(s) {
         html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'' + s.id + '\')" style="cursor:pointer; padding-left:24px;" title="' + s.label + '">';
-        html += '<span class="icon" style="font-size:var(--fs-micro);">' + s.icon + '</span><span style="font-size:var(--fs-body);">' + s.label + '</span></div>';
+        html += '<span class="icon">' + s.icon + '</span><span>' + s.label + '</span></div>';
       });
       html += '</div>';
       // Araç Performans Özeti group
       html += '<div class="ve-tree-row" style="cursor:pointer; padding-left:10px; display:flex; align-items:center; gap:4px;">';
-      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:var(--fs-micro); width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
+      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
       html += '<span onclick="veRenderDetailedReport(\'performans\')" style="display:flex; align-items:center; gap:4px; flex:1;" title="Araç Performans Özeti">';
-      html += '<span class="icon" style="font-size:var(--fs-tiny);"><span class="mf-ico mf-ico-bar-chart"></span></span><span style="font-size:var(--fs-body);">Araç Performans Özeti</span></span></div>';
+      html += '<span class="icon"><span class="mf-ico mf-ico-bar-chart"></span></span><span>Araç Performans Özeti</span></span></div>';
       html += '<div class="ve-tree-children">';
       html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'ft-grade\')" style="cursor:pointer; padding-left:24px;" title="Eğim Kabiliyeti">';
-      html += '<span class="icon" style="font-size:var(--fs-micro);"><span class="mf-ico mf-ico-mountain"></span></span><span style="font-size:var(--fs-body);">Eğim Kabiliyeti</span></div>';
+      html += '<span class="icon"><span class="mf-ico mf-ico-mountain"></span></span><span>Eğim Kabiliyeti</span></div>';
       html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'ft-accel\')" style="cursor:pointer; padding-left:24px;" title="Hızlanma">';
-      html += '<span class="icon" style="font-size:var(--fs-micro);"><span class="mf-ico mf-ico-gauge"></span></span><span style="font-size:var(--fs-body);">Hızlanma</span></div>';
+      html += '<span class="icon"><span class="mf-ico mf-ico-gauge"></span></span><span>Hızlanma</span></div>';
       html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'ft-upshifts\')" style="cursor:pointer; padding-left:24px;" title="Vites Geçişleri (Detaylı)">';
-      html += '<span class="icon" style="font-size:var(--fs-micro);"><span class="mf-ico mf-ico-bar-chart"></span></span><span style="font-size:var(--fs-body);">Vites Geçişleri (Detaylı)</span></div>';
+      html += '<span class="icon"><span class="mf-ico mf-ico-bar-chart"></span></span><span>Vites Geçişleri (Detaylı)</span></div>';
       html += '</div>';
       html += '</div></div>';
       // Topoloji detayı artık Tam Gaz Hızlanma raporunun içine dahil edildi —

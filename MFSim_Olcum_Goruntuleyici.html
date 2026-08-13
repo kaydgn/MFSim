@@ -1362,6 +1362,16 @@
       text-rendering: optimizeLegibility;
     }
 
+    /* Form kontrolleri gövdenin yazı tipini MİRAS ALMAZ — tarayıcı onlara
+       kendi varsayılanını (Chromium'da Arial) verir. Arayüzün geri kalanı
+       Inter olduğu için düğmeler ve girdiler her panelde bir tık farklı
+       görünüyordu (ör. Sonuçlar'daki "İçe Aktar" ve "Performans Analizi"
+       sekmesi Arial'dı). Tek yerden bağlanır; boyutu her bileşen kendi
+       belirlemeye devam eder. */
+    button, input, select, textarea, optgroup {
+      font-family: inherit;
+    }
+
     /* ===== ODAK & METİN SEÇİMİ (erişilebilir focus-visible + selection) ===== */
     ::selection {
       background: color-mix(in srgb, var(--accent-primary) 28%, transparent);
@@ -4734,20 +4744,30 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   margin:0 4px;
 }
 .ve-tree-row:hover{background:var(--accent-tint-8);}
-.ve-tree-row .arrow{width:14px;text-align:center;font-size:var(--fs-body);color:var(--text-muted);flex-shrink:0;cursor:pointer;border-radius:var(--radius-xs);}
+.ve-tree-row .arrow{width:14px;text-align:center;color:var(--text-muted);flex-shrink:0;cursor:pointer;border-radius:var(--radius-xs);}
 .ve-tree-row .arrow:hover{background:var(--accent-tint-15);color:var(--text-primary);}
 .ve-tree-row .icon{width:16px;text-align:center;flex-shrink:0;font-size:var(--fs-md);display:inline-flex;align-items:center;justify-content:center;}
+/* Sağa yaslı sayaç rozeti — ağaçtaki TEK ikincil punto. Eskiden her satır
+   kendi satır-içi font-size'ını yazıyordu (--fs-micro / --fs-tiny karışık). */
+.ve-tree-count{
+  font-size:var(--fs-micro);
+  color:var(--text-muted);
+  margin-left:auto;
+  flex-shrink:0;
+}
 .ve-tree-children{display:none;margin-left:10px;}
 .ve-tree-children.open{display:block;}
 
-/* Diyagram / rapor satırları — sinyal satırıyla aynı ritimde */
+/* Diyagram / rapor satırları — sinyal satırıyla aynı ritimde.
+   Ölçü .ve-tree-row ile AYNI (--fs-md): ağaçta iki farklı punto yan yana
+   duruyordu, kullanıcı "yazı tipleri arasında farklılıklar var" dedi. */
 .ve-tree-signal{
   display:flex;
   align-items:center;
   height:var(--vsig-row);
   padding:0 var(--vsig-pad);
   cursor:grab;
-  font-size:var(--fs-body);
+  font-size:var(--fs-md);
   gap:5px;
   border-radius:var(--radius-sm);
   margin:0 4px;
