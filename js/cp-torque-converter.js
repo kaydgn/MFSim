@@ -19,7 +19,9 @@ function getTorqueConverterPropertiesHTML(node) {
     var _gbFamily = '';
     var _gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
     if(_gbNode && _gbNode.data) {
-      var _gbKey = _gbNode.data.ftGBPreset || _gbNode.data.selectedGearbox || '';
+      // Anahtar yazılı değilse vites oranlarından çöz (veResolveGearboxPresetKey)
+      var _gbKey = (typeof veResolveGearboxPresetKey === 'function') ? veResolveGearboxPresetKey(_gbNode)
+        : (_gbNode.data.ftGBPreset || _gbNode.data.selectedGearbox || '');
       if(_gbKey && VE_GEARBOX_PRESETS[_gbKey]) {
         _gbFamily = VE_GEARBOX_PRESETS[_gbKey].family || '';
       }
@@ -662,6 +664,71 @@ var VE_FT_TC_PRESETS = {
   }
 };
 
+// ── HANGİ KONVERTÖR SEÇİLİ? — tek gerçek kaynak ─────────────────────────────
+// Bir TC düğümünün preset ANAHTARINI çözer. Neden ayrı bir işe ihtiyaç var:
+// düğüm anahtarı taşımak ZORUNDA değil. Örnek topolojiler (assets/examples/
+// ap_*.json) ve elle kurulmuş/eski kayıtlar yalnız SAYILARI (tcData eğrisi)
+// taşıyor. Anahtara bakan yerler — eşleştirme tablosundaki seçim işareti,
+// şanzıman ailesine göre süzme — o dosyalarda "hiçbiri seçili değil" görüyordu.
+//
+// Öncelik: açık anahtar → ad → K/τ eğrisinin eşleşmesi.
+// Eğri yolunda BİRDEN ÇOK aday çıkarsa boş döner: yanlış konvertöre "seçili"
+// işareti koymaktansa işaretsiz bırakmak yeğdir.
+function veResolveTCPresetKey(node) {
+  var db = (typeof VE_FT_TC_PRESETS !== 'undefined') ? VE_FT_TC_PRESETS : {};
+  var d = (node && node.data) || {};
+  var k = d.tcPresetKey || '';
+  if(k === 'manual') return '';
+  if(k) {
+    if(db[k]) return k;
+    var lk = String(k).toLowerCase();                       // 'TC413' → 'tc413'
+    for(var kk in db) if(kk.toLowerCase() === lk) return kk;
+  }
+  if(d.tcName) { for(var k2 in db) if(db[k2].name === d.tcName) return k2; }
+  var curve = d.tcData;
+  if(!curve || curve.length < 2) return '';
+  var hit = '';
+  for(var k3 in db) {
+    if(!veTCCurveMatches(curve, db[k3].data)) continue;
+    if(hit) return '';                                      // tekil değil → tahmin yok
+    hit = k3;
+  }
+  return hit;
+}
+
+// SAF: bir K/τ eğrisini SR ızgarasında yeniden örnekleyip karşılaştır.
+// Nokta-nokta karşılaştırma yetmez: örnekler iSCAAN raporlarından daha SIK
+// örneklenmiş (23 nokta ↔ preset 18) ve K eğrisi kalibrasyonla bir tık
+// kaydırılmış olabiliyor (duramax: τ birebir, K %2.2 farklı).
+var VE_TC_MATCH_SR = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
+var VE_TC_MATCH_TAU_TOL = 0.02;    // mutlak
+var VE_TC_MATCH_K_TOL = 0.03;      // bağıl
+function veTCCurveMatches(a, b) {
+  if(!a || !b || a.length < 2 || b.length < 2) return false;
+  for(var i = 0; i < VE_TC_MATCH_SR.length; i++) {
+    var sr = VE_TC_MATCH_SR[i];
+    if(Math.abs(_veTCAt(a, sr, 'tau') - _veTCAt(b, sr, 'tau')) > VE_TC_MATCH_TAU_TOL) return false;
+    var kb = _veTCAt(b, sr, 'kpump');
+    if(Math.abs(_veTCAt(a, sr, 'kpump') - kb) / Math.max(1e-9, Math.abs(kb)) > VE_TC_MATCH_K_TOL) return false;
+  }
+  return true;
+}
+
+// SAF: eğriden SR'de doğrusal ara değer (aralık dışında uçtaki değer).
+function _veTCAt(c, sr, key) {
+  if(!c || !c.length) return 0;
+  if(sr <= c[0].sr) return c[0][key] || 0;
+  if(sr >= c[c.length - 1].sr) return c[c.length - 1][key] || 0;
+  for(var i = 0; i < c.length - 1; i++) {
+    if(c[i].sr <= sr && sr <= c[i + 1].sr) {
+      var span = (c[i + 1].sr - c[i].sr) || 1;
+      var f = (sr - c[i].sr) / span;
+      return (c[i][key] || 0) + f * ((c[i + 1][key] || 0) - (c[i][key] || 0));
+    }
+  }
+  return c[c.length - 1][key] || 0;
+}
+
 // Şanzıman ailesi değiştiğinde TC dropdown'ını yenile
 function veRefreshTCDropdownForFamily() {
   var tcNode = nodes.find(function(n) { return n.type === 'torque-converter'; });
@@ -674,7 +741,8 @@ function veRefreshTCDropdownForFamily() {
     // Panel açık değilse — mevcut seçim uyumluluğunu kontrol et
     var _gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
     if(!_gbNode || !_gbNode.data) return;
-    var _gbKey = _gbNode.data.ftGBPreset || _gbNode.data.selectedGearbox || '';
+    var _gbKey = (typeof veResolveGearboxPresetKey === 'function') ? veResolveGearboxPresetKey(_gbNode)
+      : (_gbNode.data.ftGBPreset || _gbNode.data.selectedGearbox || '');
     if(!_gbKey || !VE_GEARBOX_PRESETS[_gbKey]) return;
     var newFamily = VE_GEARBOX_PRESETS[_gbKey].family || '';
     
@@ -693,7 +761,8 @@ function veGetFamilyTCKeys() {
   var gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
   var gbFamily = '';
   if(gbNode && gbNode.data) {
-    var gbKey = gbNode.data.ftGBPreset || gbNode.data.selectedGearbox || '';
+    var gbKey = (typeof veResolveGearboxPresetKey === 'function') ? veResolveGearboxPresetKey(gbNode)
+      : (gbNode.data.ftGBPreset || gbNode.data.selectedGearbox || '');
     if(gbKey && VE_GEARBOX_PRESETS[gbKey]) {
       gbFamily = VE_GEARBOX_PRESETS[gbKey].family || '';
     }

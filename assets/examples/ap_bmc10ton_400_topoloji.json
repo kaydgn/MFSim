@@ -177,7 +177,7 @@
    "data": {
     "tcData": [
      {
-      "sr": 0.0,
+      "sr": 0,
       "kpump": 38.26,
       "tau": 1.794
      },
@@ -292,7 +292,8 @@
       "tau": 0.989
      }
     ],
-    "pumpTorqueDrop": 32.3
+    "pumpTorqueDrop": 32.3,
+    "tcPresetKey": "tc551"
    }
   },
   {
@@ -340,7 +341,8 @@
       "eff": 99.05
      }
     ],
-    "efficiency": 99
+    "efficiency": 99,
+    "ftGBPreset": "4500SP"
    }
   },
   {

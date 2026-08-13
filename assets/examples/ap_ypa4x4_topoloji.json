@@ -342,7 +342,8 @@
       "tau": 0.971
      }
     ],
-    "pumpTorqueDrop": 21.4
+    "pumpTorqueDrop": 21.4,
+    "tcPresetKey": "tc221"
    }
   },
   {
@@ -404,7 +405,8 @@
       "ratio": 0.568,
       "eff": 104.51
      }
-    ]
+    ],
+    "ftGBPreset": "2957SP_WIDE"
    }
   },
   {

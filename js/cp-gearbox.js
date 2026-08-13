@@ -2381,6 +2381,62 @@ var VE_GEARBOX_PRESETS = {
   }
 };
 
+// ── HANGİ ŞANZIMAN SEÇİLİ? — tek gerçek kaynak ──────────────────────────────
+// Bir şanzıman düğümünün preset ANAHTARINI çözer. Düğüm anahtarı taşımak
+// zorunda değil: örnek topolojiler ve elle kurulmuş/eski kayıtlar yalnız
+// SAYILARI (ftGearData oranları) taşıyor. Anahtara bakan yerler — eşleştirme
+// tablosundaki seçim işareti, ECM'deki C9/C10 limitleri, konvertör ailesi
+// süzgeci — o dosyalarda "hiçbiri seçili değil" görüyordu.
+//
+// Öncelik: açık anahtar → ad → vites oranlarının eşleşmesi.
+// Oranlar birden çok presete uyarsa (3000SP ↔ 3200SP aynı oranlara sahip)
+// boş döner — yanlış şanzımana "seçili" demektense işaretsiz bırakılır.
+// shiftProfile BİLEREK kullanılmaz: 3000SP'nin kendi profili yok, o araçlar
+// 3200SP profiliyle koşuyor; profile bakmak 3000SP'yi 3200SP göstermiş olurdu.
+function veResolveGearboxPresetKey(node) {
+  var db = (typeof VE_GEARBOX_PRESETS !== 'undefined') ? VE_GEARBOX_PRESETS : {};
+  var d = (node && node.data) || {};
+  var k = d.ftGBPreset || d.selectedGearbox || '';
+  if(k) {
+    if(db[k]) return k;
+    var lk = String(k).toLowerCase();
+    for(var kk in db) if(kk.toLowerCase() === lk) return kk;
+  }
+  if(d.gbName) { for(var k2 in db) if(db[k2].name === d.gbName) return k2; }
+  var mine = veGearRatioList(d.ftGearData, 'name');
+  if(!mine.length) return '';
+  var hit = '';
+  for(var k3 in db) {
+    if(!veGearRatiosMatch(mine, veGearRatioList(db[k3].gears, 'gear'))) continue;
+    if(hit) return '';                                   // tekil değil → tahmin yok
+    hit = k3;
+  }
+  return hit;
+}
+
+// SAF: ileri vites oranları (geri vites ve geçersiz kayıtlar dışarıda).
+function veGearRatioList(list, nameKey) {
+  var out = [];
+  (list || []).forEach(function(g) {
+    if(!g || !(g.ratio > 0)) return;
+    if(String(g[nameKey] || '').toUpperCase().indexOf('R') === 0) return;
+    out.push(+g.ratio);
+  });
+  return out;
+}
+
+// SAF: iki oran listesi aynı şanzımanı mı anlatıyor (sayı + %1 bağıl tolerans).
+// Tolerans gerekli: örnekler raporlardan 3 haneli (3.487), presetler 2 haneli
+// (3.49) alınmış.
+var VE_GEAR_MATCH_TOL = 0.01;
+function veGearRatiosMatch(a, b) {
+  if(!a || !b || !a.length || a.length !== b.length) return false;
+  for(var i = 0; i < a.length; i++) {
+    if(Math.abs(a[i] - b[i]) / Math.max(1e-9, Math.abs(b[i])) > VE_GEAR_MATCH_TOL) return false;
+  }
+  return true;
+}
+
 // Şanzıman seçildiğinde
 function onVEGearboxSelectChange(nodeId, value) {
   var node = nodes.find(function(n) { return n.id === nodeId; });
