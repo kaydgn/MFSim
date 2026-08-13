@@ -27,6 +27,10 @@ const stubs = stubGlobals({
   // Varsayılan kutu ölçüsü de components.js'te (veNodeDefaultSize); bu testte
   // sensör/sonlandırıcı yok, sıradan ölçü yeter.
   veNodeDefaultSize: jest.fn(() => ({ w: 65, h: 60 })),
+  // Sınır çerçevesi tazeleme + minimap: createNode bunları ÇAĞIRMALI (aşağıdaki
+  // "sınır çerçevesi" testi). Gerçek gövdeleri DOM/SVG ister → stub.
+  veUpdateBoundary: jest.fn(),
+  veMinimapUpdate: jest.fn(),
   startResize: jest.fn(),
   updateNodeCount: jest.fn(),
   clearSelection: jest.fn(),
@@ -150,5 +154,41 @@ describe('veCloneNodeFrom veri güvenliği', () => {
 
     expect(victim.customName).toBe('Kurban Ad');
     expect(victim.width).toBe(65);
+  });
+});
+
+// BULUNAN ARIZA (kullanıcı, 2026-08-13): "Sensör Sihirbazı bileşeni topoloji
+// çerçevesini genişletmiyor."
+//
+// Çerçevenin MATEMATİĞİ ayrı bir turda düzeltilmişti (canvas-space.js
+// veBoundaryBox artık sihirbazı sayıyor) ama arıza sürdü: çerçeveyi tazeleyen
+// tek yol updateAllConnections'tı ve BIRAKMA (drop) yolu onu çağırmıyor.
+// Bağlanan bileşenlerde fark edilmiyor — ilk bağlantı zaten tazeliyor. Sensör
+// Sihirbazı'nın PORTU YOK (0 giriş / 0 çıkış), yani hiç bağlanmıyor: çerçeve
+// sonsuza kadar eski kalıyordu.
+describe('createNode sınır çerçevesini tazeler', () => {
+  test('düğüm eklenince veUpdateBoundary çağrılır', () => {
+    expect(stubs.veUpdateBoundary).not.toHaveBeenCalled();
+    createNode('engine', 100, 200);
+    expect(stubs.veUpdateBoundary).toHaveBeenCalledTimes(1);
+  });
+
+  test('portu OLMAYAN bileşende de çağrılır (Sensör Sihirbazı durumu)', () => {
+    componentDefs.wizard = { name: 'Sensör Sihirbazı', inputs: 0, outputs: 0 };
+    createNode('wizard', 300, 400);
+    expect(stubs.veUpdateBoundary).toHaveBeenCalledTimes(1);
+    delete componentDefs.wizard;
+  });
+
+  test('reddedilen eklemede (maxInstances dolu) çağrılmaz', () => {
+    createNode('solo', 0, 0);              // ilk kopya geçer
+    stubs.veUpdateBoundary.mockClear();
+    expect(createNode('solo', 10, 10)).toBeNull();   // ikincisi reddedilir
+    expect(stubs.veUpdateBoundary).not.toHaveBeenCalled();
+  });
+
+  test('minimap da tazelenir', () => {
+    createNode('engine', 500, 600);
+    expect(stubs.veMinimapUpdate).toHaveBeenCalledTimes(1);
   });
 });
