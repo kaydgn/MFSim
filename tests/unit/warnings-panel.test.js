@@ -1,8 +1,8 @@
 /**
  * Uyarı paneli aç/kapa durumu — js/component-extras.js › veSetWarningsOpen()
  * ─────────────────────────────────────────────────────────────────────────
- * Panel artık alt bandın ÜSTÜNE açılan yüzen bir katman ve durumunu ÜÇ ayrı
- * yüzey gösteriyor:
+ * Panel, belge bandına (tuvalin ÜSTÜNDEKİ şerit) göre açılan yüzen bir
+ * katman ve durumunu ÜÇ ayrı yüzey gösteriyor:
  *
  *   • panelin kendisi          → .ve-warnings-panel.open (görünürlük)
  *   • durum çubuğundaki düğme  → aria-expanded + ok yönü
@@ -14,7 +14,7 @@
  * bakan kimse "makul ama yanlış" durumu fark etmez. Kural bu yüzden sabitlenir.
  */
 document.body.innerHTML = `
-  <div class="ve-bottom-dock" id="ve-bottom-dock">
+  <div class="ve-doc-dock" id="ve-doc-dock">
     <div class="ve-warnings-panel" id="ve-warnings-panel">
       <div class="ve-warnings-body collapsed" id="ve-warnings-body"></div>
     </div>
@@ -45,21 +45,23 @@ beforeEach(() => {
 });
 
 describe('veSetWarningsOpen — üç yüzey tek gerçeği gösterir', () => {
-  test('açıkken: panel görünür, gövde kapalı DEĞİL, aria true, ok aşağı', () => {
+  // Ok, panelin AÇILIŞ yönünü gösterir. Bant tuvalin ÜSTÜNDE olduğu için panel
+  // aşağı açılıyor: kapalı ▼ (aşağı açılır), açık ▲ (yukarı kapanır).
+  test('açıkken: panel görünür, gövde kapalı DEĞİL, aria true, ok yukarı', () => {
     veSetWarningsOpen(true);
-    expect(durum()).toEqual({ panelAcik: true, govdeKapali: false, aria: 'true', ok: '▼' });
+    expect(durum()).toEqual({ panelAcik: true, govdeKapali: false, aria: 'true', ok: '▲' });
   });
 
   test('kapalıyken: panel gizli, gövde kapalı, aria false, ok yukarı', () => {
     veSetWarningsOpen(true);
     veSetWarningsOpen(false);
-    expect(durum()).toEqual({ panelAcik: false, govdeKapali: true, aria: 'false', ok: '▲' });
+    expect(durum()).toEqual({ panelAcik: false, govdeKapali: true, aria: 'false', ok: '▼' });
   });
 
   test('aynı durum iki kez yazılınca yüzeyler kaymaz (idempotent)', () => {
     veSetWarningsOpen(true);
     veSetWarningsOpen(true);
-    expect(durum()).toEqual({ panelAcik: true, govdeKapali: false, aria: 'true', ok: '▼' });
+    expect(durum()).toEqual({ panelAcik: true, govdeKapali: false, aria: 'true', ok: '▲' });
   });
 });
 

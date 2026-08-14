@@ -223,28 +223,26 @@
 
           <div class="ve-category" data-ve-scope="module">
             <div class="ve-category-title">Modüller</div>
+            <!-- Modül satırları, tuvaldeki MODÜL KARTININ paletteki karşılığı:
+                 kesikli kap çerçevesi + accent şerit + sembol + ad + "Alt
+                 topoloji" satırı. Sembol BURADA ÇİZİLMEZ — .ve-submodule-ico
+                 kutusuna componentDefs[type].svg enjekte edilir (js/components.js
+                 veSyncSidebarModuleIcons). Eskiden burada ikinci bir SVG kopyası
+                 vardı: tek renk çizilmişti ve geometrisi de ayrışmıştı, yani
+                 palette'teki sembol tuvale düşen sembolle aynı değildi. -->
             <div class="ve-component ve-submodule" draggable="true" data-type="arac-performans" title="Sürükleyip bırakın → ana canvas'ta tek 'Araç Performans' bloğu oluşur. Çift tıklayınca kendi ALT TOPOLOJİSİ (güç aktarma bileşenleri) açılır.">
-              <svg width="20" height="20" viewBox="0 0 100 100" style="flex-shrink:0;">
-                <rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="7 5"/>
-                <rect x="18" y="46" width="16" height="16" rx="2" fill="currentColor"/>
-                <line x1="34" y1="54" x2="47" y2="54" stroke="currentColor" stroke-width="4"/>
-                <circle cx="58" cy="54" r="10" fill="none" stroke="currentColor" stroke-width="4"/>
-                <line x1="68" y1="54" x2="77" y2="54" stroke="currentColor" stroke-width="4"/>
-                <circle cx="84" cy="54" r="6" fill="none" stroke="currentColor" stroke-width="3" opacity="0.7"/>
-                <path d="M64 22 h18 v18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
-              </svg>
-              <span class="ve-comp-label">Araç Performans</span>
+              <span class="ve-submodule-ico" aria-hidden="true"></span>
+              <span class="ve-submodule-text">
+                <span class="ve-comp-label">Araç Performans</span>
+                <span class="ve-submodule-sub">Alt topoloji</span>
+              </span>
             </div>
             <div class="ve-component ve-submodule" draggable="true" data-type="mount-analysis" title="Sürükleyip bırakın → ana canvas'ta tek 'Takoz Çökme-Titreşim' bloğu oluşur. Çift tıklayınca kendi ALT TOPOLOJİSİ (Motor / Takoz / Çözücü) açılır.">
-              <svg width="20" height="20" viewBox="0 0 100 100" style="flex-shrink:0;">
-                <rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="7 5"/>
-                <rect x="30" y="34" width="30" height="10" rx="2" fill="currentColor" opacity="0.55"/>
-                <path d="M38 44 Q32 50 42 54 Q32 58 42 62 Q32 66 38 70" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M52 44 Q46 50 56 54 Q46 58 56 62 Q46 66 52 70" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                <line x1="26" y1="72" x2="64" y2="72" stroke="currentColor" stroke-width="3"/>
-                <path d="M64 22 h18 v18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
-              </svg>
-              <span class="ve-comp-label">Takoz Çökme-Titreşim</span>
+              <span class="ve-submodule-ico" aria-hidden="true"></span>
+              <span class="ve-submodule-text">
+                <span class="ve-comp-label">Takoz Çökme-Titreşim</span>
+                <span class="ve-submodule-sub">Alt topoloji</span>
+              </span>
             </div>
           </div>
 
@@ -647,6 +645,45 @@
 
       <!-- Orta - Canvas -->
       <div class="ve-canvas-area">
+        <!-- ===== BELGE BANDI: sekmeler + durum, TEK şeritte =====
+             Burada eskiden ÜÇ ayrı bant üst üste dururdu: belge sekmeleri (30 px),
+             uyarı paneli başlığı (32 px) ve durum çubuğu (23 px) — boş bir
+             topolojide bile ~85 px tuval yüksekliği kalıcı olarak gidiyordu; oysa
+             sekme şeridinin sağı 1920 px ekranda tamamen boştu. Üçü tek 28 px'lik
+             banda indi: sekmeler solda ("hangi belgedeyim" yüzeyi), durum bilgisi
+             sağda.
+             Bant TUVALİN ÜSTÜNDE durur (kullanıcı isteği, 2026-08-13): şeridin
+             hemen altında, kanvas alanının ilk satırı. Sekmeler bu yüzden klasik
+             yönde — aşağıya, tuvale bağlanır.
+             Uyarılar bandın ALTINA açılan yüzen panelde — açmak tuvali
+             küçültmüyor, yalnızca geçici olarak üzerini örtüyor. -->
+        <div class="ve-doc-dock" id="ve-doc-dock">
+          <!-- Uyarı paneli — banda göre absolute, AŞAĞI doğru açılır -->
+          <div class="ve-warnings-panel" id="ve-warnings-panel">
+            <div class="ve-warnings-header">
+              <span><span class="mf-ico mf-ico-alert-triangle"></span> Uyarılar</span>
+              <button type="button" class="ve-warnings-close" onclick="veToggleWarnings()" title="Paneli kapat (Esc)" aria-label="Uyarı panelini kapat"><span class="mf-ico mf-ico-x"></span></button>
+            </div>
+            <div class="ve-warnings-body collapsed" id="ve-warnings-body">
+              <div style="padding:10px 14px;font-size:var(--fs-md);color:var(--text-muted);">Henüz doğrulanmadı. Giriş sekmesindeki <strong>Doğrula</strong>&#39;ya basın.</div>
+            </div>
+          </div>
+          <div class="ve-tab-bar ve-tab-bar--top" id="ve-tab-bar"></div>
+          <div id="ve-status-bar" class="ve-status-bar">
+            <button type="button" class="ve-status-warnings" id="ve-warnings-chip" data-severity="none" onclick="veToggleWarnings()" aria-expanded="false" aria-controls="ve-warnings-panel" title="Uyarılar panelini aç / kapa">
+              <span class="mf-ico mf-ico-alert-triangle"></span>
+              <span class="ve-status-warnings-label">Uyarılar</span>
+              <span id="ve-warnings-count">0</span>
+              <span id="ve-warnings-toggle">▲</span>
+            </button>
+            <span class="ve-status-sep"></span>
+            <span class="ve-toolbar-info" id="ve-status-counts">0 bileşen, 0 bağlantı</span>
+            <span class="ve-status-sep"></span>
+            <span class="ve-status-item ve-status-clickable" id="ve-status-zoom" onclick="veResetZoom()" title="Yakınlaştırma — tıkla: %100'e sıfırla">%100</span>
+            <span class="ve-status-sep"></span>
+            <span class="ve-status-item" id="ve-status-mode">Hazır</span>
+          </div>
+        </div>
         <div class="ve-split-container" id="ve-split-container">
           <div class="ve-split-pane focused" id="ve-pane-0">
             <div class="ve-canvas-wrapper grid-hidden" id="ve-canvas-wrapper">
@@ -724,42 +761,6 @@
                 <button class="ve-minimap-toggle" id="ve-minimap-toggle" type="button" title="Genel görünümü gizle"></button>
               </div>
             </div>
-          </div>
-        </div>
-        <!-- ===== ALT BANT: sekmeler + durum, TEK şeritte =====
-             Burada eskiden ÜÇ ayrı bant üst üste dururdu: belge sekmeleri (30 px),
-             uyarı paneli başlığı (32 px) ve durum çubuğu (23 px) — boş bir
-             topolojide bile ~85 px tuval yüksekliği kalıcı olarak gidiyordu; oysa
-             sekme şeridinin sağı 1920 px ekranda tamamen boştu. Üçü tek 28 px'lik
-             banda indi: sekmeler solda ("hangi belgedeyim" yüzeyi, CANoe'daki gibi
-             çalışma alanının ALTINDA), durum bilgisi sağda.
-             Uyarılar artık bandın ÜSTÜNE açılan yüzen panelde — açmak tuvali
-             küçültmüyor, yalnızca geçici olarak üzerini örtüyor. -->
-        <div class="ve-bottom-dock" id="ve-bottom-dock">
-          <!-- Alt Uyarı Paneli — banda göre absolute, yukarı doğru açılır -->
-          <div class="ve-warnings-panel" id="ve-warnings-panel">
-            <div class="ve-warnings-header">
-              <span><span class="mf-ico mf-ico-alert-triangle"></span> Uyarılar</span>
-              <button type="button" class="ve-warnings-close" onclick="veToggleWarnings()" title="Paneli kapat (Esc)" aria-label="Uyarı panelini kapat"><span class="mf-ico mf-ico-x"></span></button>
-            </div>
-            <div class="ve-warnings-body collapsed" id="ve-warnings-body">
-              <div style="padding:10px 14px;font-size:var(--fs-md);color:var(--text-muted);">Henüz doğrulanmadı. Giriş sekmesindeki <strong>Doğrula</strong>&#39;ya basın.</div>
-            </div>
-          </div>
-          <div class="ve-tab-bar ve-tab-bar--bottom" id="ve-tab-bar"></div>
-          <div id="ve-status-bar" class="ve-status-bar">
-            <button type="button" class="ve-status-warnings" id="ve-warnings-chip" data-severity="none" onclick="veToggleWarnings()" aria-expanded="false" aria-controls="ve-warnings-panel" title="Uyarılar panelini aç / kapa">
-              <span class="mf-ico mf-ico-alert-triangle"></span>
-              <span class="ve-status-warnings-label">Uyarılar</span>
-              <span id="ve-warnings-count">0</span>
-              <span id="ve-warnings-toggle">▲</span>
-            </button>
-            <span class="ve-status-sep"></span>
-            <span class="ve-toolbar-info" id="ve-status-counts">0 bileşen, 0 bağlantı</span>
-            <span class="ve-status-sep"></span>
-            <span class="ve-status-item ve-status-clickable" id="ve-status-zoom" onclick="veResetZoom()" title="Yakınlaştırma — tıkla: %100'e sıfırla">%100</span>
-            <span class="ve-status-sep"></span>
-            <span class="ve-status-item" id="ve-status-mode">Hazır</span>
           </div>
         </div>
       </div>

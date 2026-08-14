@@ -708,9 +708,14 @@ function createNode(type, x, y, width, height) {
     });
   }
 
+  // Alt-sistem (modül) düğümü → kutunun içi karta çevrilir. Etiket elemanı
+  // KOPYALANMAZ, kartın içine taşınır (bkz. components.js veApplyModuleCard) →
+  // yeniden adlandırma yolları aynen çalışmaya devam eder.
+  if(typeof veApplyModuleCard === 'function') veApplyModuleCard(nodeEl, node);
+
   // Handle ve border pozisyonlarını ayarla
   updateNodeHandles(nodeEl, node.width, node.height);
-  
+
   // Resize handle event'leri
   nodeEl.querySelectorAll('.ve-resize-handle').forEach(function(handle) {
     handle.addEventListener('mousedown', function(e) {
