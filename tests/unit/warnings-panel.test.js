@@ -45,21 +45,23 @@ beforeEach(() => {
 });
 
 describe('veSetWarningsOpen — üç yüzey tek gerçeği gösterir', () => {
-  test('açıkken: panel görünür, gövde kapalı DEĞİL, aria true, ok aşağı', () => {
+  // Ok, panelin AÇILIŞ yönünü gösterir. Bant tuvalin ÜSTÜNDE olduğu için panel
+  // aşağı açılıyor: kapalı ▼ (aşağı açılır), açık ▲ (yukarı kapanır).
+  test('açıkken: panel görünür, gövde kapalı DEĞİL, aria true, ok yukarı', () => {
     veSetWarningsOpen(true);
-    expect(durum()).toEqual({ panelAcik: true, govdeKapali: false, aria: 'true', ok: '▼' });
+    expect(durum()).toEqual({ panelAcik: true, govdeKapali: false, aria: 'true', ok: '▲' });
   });
 
   test('kapalıyken: panel gizli, gövde kapalı, aria false, ok yukarı', () => {
     veSetWarningsOpen(true);
     veSetWarningsOpen(false);
-    expect(durum()).toEqual({ panelAcik: false, govdeKapali: true, aria: 'false', ok: '▲' });
+    expect(durum()).toEqual({ panelAcik: false, govdeKapali: true, aria: 'false', ok: '▼' });
   });
 
   test('aynı durum iki kez yazılınca yüzeyler kaymaz (idempotent)', () => {
     veSetWarningsOpen(true);
     veSetWarningsOpen(true);
-    expect(durum()).toEqual({ panelAcik: true, govdeKapali: false, aria: 'true', ok: '▼' });
+    expect(durum()).toEqual({ panelAcik: true, govdeKapali: false, aria: 'true', ok: '▲' });
   });
 });
 

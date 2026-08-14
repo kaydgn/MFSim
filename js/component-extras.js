@@ -1135,9 +1135,10 @@ function veSetWarningsOpen(open) {
   var chip   = document.getElementById('ve-warnings-chip');
   if(body)   body.classList.toggle('collapsed', !open);
   if(panel)  panel.classList.toggle('open', open);
-  // Panel YUKARI açıldığı için ok da öyle okunur: kapalıyken "yukarı açılır" (▲),
-  // açıkken "aşağı kapanır" (▼).
-  if(toggle) toggle.textContent = open ? '▼' : '▲';
+  // Ok panelin AÇILIŞ yönünü gösterir. Bant tuvalin üstüne taşındığından panel
+  // artık AŞAĞI açılıyor: kapalıyken "aşağı açılır" (▼), açıkken "yukarı
+  // kapanır" (▲). Eskiden tersiydi ve bant alttaydı.
+  if(toggle) toggle.textContent = open ? '▲' : '▼';
   if(chip)   chip.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
