@@ -222,3 +222,85 @@ describe('veApplyModuleCard — ad elemanı TAŞINIR, kopyalanmaz', () => {
     expect(veApplyModuleCard(bosEl, modulDugum())).toBe(false);
   });
 });
+
+// ── SIDEBAR MODÜL SATIRI — kartın paletteki karşılığı ──────────────────────
+// Palette'teki sembol index.html içinde AYRICA çiziliyordu ve çoktan
+// ayrışmıştı: tek renk (currentColor) — tuvalde ise kesikli kap accent, takoz
+// yayları yeşil — üstelik geometri de farklıydı (Araç Performans sembolünde iç
+// nokta yok, takozda üst plaka yarı saydam). Yani sürüklediğiniz sembol,
+// tuvale düşen sembol değildi. Tek kaynak: componentDefs[type].svg.
+describe('veSyncSidebarModuleIcons — palet sembolü tuvalle TEK KAYNAK', () => {
+  const palet = (tipler) => {
+    const kap = document.createElement('div');
+    kap.innerHTML = tipler.map((t) =>
+      '<div class="ve-component ve-submodule" data-type="' + t + '">' +
+      '<span class="ve-submodule-ico"></span>' +
+      '<span class="ve-submodule-text"><span class="ve-comp-label">x</span>' +
+      '<span class="ve-submodule-sub">Alt topoloji</span></span></div>').join('');
+    document.body.appendChild(kap);
+    return kap;
+  };
+
+  afterEach(() => {
+    document.body.querySelectorAll('.ve-submodule').forEach((e) => e.parentNode.remove());
+  });
+
+  test('her modül satırına tipin KENDİ sembolü konur', () => {
+    palet(['arac-performans', 'mount-analysis']);
+    expect(veSyncSidebarModuleIcons()).toBe(2);
+
+    ['arac-performans', 'mount-analysis'].forEach((t) => {
+      const konan = document.querySelector('.ve-submodule[data-type="' + t + '"] .ve-submodule-ico svg');
+      const ref = document.createElement('div');
+      ref.innerHTML = componentDefs[t].svg;
+      // Geometri birebir aynı — yalnız ölçü niteliği palet için değiştirilir
+      expect(konan.innerHTML).toBe(ref.querySelector('svg').innerHTML);
+      expect(konan.getAttribute('viewBox')).toBe(ref.querySelector('svg').getAttribute('viewBox'));
+    });
+  });
+
+  test('palet sembolü sıradan palet ögesinden BÜYÜK çizilir (modül ayrışır)', () => {
+    palet(['arac-performans']);
+    veSyncSidebarModuleIcons();
+    const svg = document.querySelector('.ve-submodule-ico svg');
+    expect(svg.getAttribute('width')).toBe(String(VE_SIDEBAR_MODULE_ICON));
+    expect(svg.getAttribute('height')).toBe(String(VE_SIDEBAR_MODULE_ICON));
+    expect(VE_SIDEBAR_MODULE_ICON).toBeGreaterThan(18);   // sıradan palet ögesi 18px
+  });
+
+  test('iki kez çağrılınca sembol iç içe geçmez (idempotent)', () => {
+    palet(['arac-performans']);
+    veSyncSidebarModuleIcons();
+    veSyncSidebarModuleIcons();
+    expect(document.querySelectorAll('.ve-submodule-ico svg')).toHaveLength(1);
+  });
+
+  test('bilinmeyen tipte satır atlanır, sayıya girmez', () => {
+    palet(['arac-performans', 'boyle-bir-tip-yok']);
+    expect(veSyncSidebarModuleIcons()).toBe(1);
+    expect(document.querySelector('.ve-submodule[data-type="boyle-bir-tip-yok"] .ve-submodule-ico').innerHTML).toBe('');
+  });
+
+  test('hiç satır yokken 0 döner, patlamaz', () => {
+    expect(veSyncSidebarModuleIcons()).toBe(0);
+  });
+});
+
+// ANTİ-AYRIŞMA KAPISI: index.html modül satırında SVG tutmamalı. Tutsaydı
+// bugün eşitlediğimiz iki sembol yarın yine ayrışır ve kimse fark etmezdi —
+// zaten bir kez tam olarak böyle oldu.
+describe('index.html modül satırı sembolü kendi çizmez', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const html = fs.readFileSync(path.join(__dirname, '../../index.html'), 'utf8');
+
+  test('her .ve-submodule satırı sembol yuvası taşır ve içinde <svg> yoktur', () => {
+    // Satırın içinde iç içe <div> yok (yalnız span'ler) → ilk </div> satırı kapatır
+    const satirlar = html.match(/<div class="ve-component ve-submodule"[\s\S]*?<\/div>/g) || [];
+    expect(satirlar.length).toBe(2);
+    satirlar.forEach((s) => {
+      expect(s).toContain('ve-submodule-ico');
+      expect(s).not.toContain('<svg');
+    });
+  });
+});
