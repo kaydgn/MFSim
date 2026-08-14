@@ -293,6 +293,10 @@ function showNodeProperties(node) {
   // İçerik-yoğun paneller (VE_WIDE_PANEL_TYPES listesi): geniş pencere +
   // kompakt-sol kimlik + iki sütun düzeni. Liste dalga dalga büyür. Salt sunum.
   if(_propWin) _propWin.classList.toggle('ve-properties--wide', VE_WIDE_PANEL_TYPES.indexOf(node.type) >= 0);
+  // Aksesuar panelleri üç sütunlu adım akışı (model | eğri | doğrulama) → 1040px.
+  // --wide (980px) ile birlikte gelir; bu sınıf CSS'te sonra tanımlı → ezer.
+  if(_propWin) _propWin.classList.toggle('ve-properties--accwide',
+    node.type === 'acc-ac' || node.type === 'acc-alternator' || node.type === 'acc-aircomp');
   // Motor paneli, veri gelene kadar DAR açılır: geniş pencerede sağ (çıktı)
   // sütunu tamamen boş kalıyor, 980px'lik pencerenin yarısı boşluktu. Preset
   // seçilince onVEFTMotorSelect bu sınıfı kaldırıp --wide'a genişletir;

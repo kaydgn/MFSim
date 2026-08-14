@@ -3642,6 +3642,80 @@
   .ve-cp-grid{ grid-template-columns:1fr; }
 }
 
+/* ══ AKSESUAR PANELİ — ÜÇ ADIMLI AKIŞ (model | eğri | doğrulama) ══
+   Üç sütun tek ekranda: sol dar (girdi), orta geniş (eğri tablosu), sağ
+   (doğrulama). Yeni renk/ölçü YOK — hepsi mevcut jetonlar. */
+.ve-cp-grid--steps{ grid-template-columns:minmax(0,0.78fr) minmax(0,1.22fr) minmax(0,1.05fr); }
+@media (max-width:820px){ .ve-cp-grid--steps{ grid-template-columns:1fr; } }
+.ve-properties.ve-properties--accwide{ max-width:1040px; }
+
+.ve-acc-step{ height:100%; display:flex; flex-direction:column; margin-bottom:0; }
+.ve-acc-step.active{ border-color:var(--accent-primary); }
+.ve-acc-step.active > .sw-pkg-header{ background:var(--accent-tint-8); }
+.ve-acc-stepbody{ display:flex; flex-direction:column; gap:8px; flex:1; }
+.ve-acc-stepno{
+  width:16px;height:16px;border-radius:var(--radius-sm);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:var(--fs-micro);font-weight:700;flex-shrink:0;
+  background:var(--bg-tertiary);color:var(--text-muted);border:1px solid var(--border-color);
+}
+.ve-acc-stepno.done{
+  background:color-mix(in srgb, var(--accent-success) 15%, transparent);
+  color:var(--accent-success);border-color:color-mix(in srgb, var(--accent-success) 40%, transparent);
+}
+.ve-acc-stepno.active{ background:var(--accent-primary);color:var(--on-accent);border-color:var(--accent-primary); }
+
+.ve-acc-select{
+  width:100%;font-size:var(--fs-body);padding:5px 6px;
+  background:var(--bg-input);color:var(--text-primary);
+  border:1px solid var(--border-color);border-radius:var(--radius-sm);
+}
+.ve-acc-tbl{ width:100%;font-size:var(--fs-body);border-collapse:collapse;border:1px solid var(--border-color); }
+.ve-acc-tbl th{ text-align:left;background:var(--bg-tertiary);border-right:1px solid var(--border-color);font-weight:500;color:var(--text-secondary);width:58%; }
+.ve-acc-tbl td{ background:var(--bg-tertiary); }
+.ve-acc-tbl tr + tr th, .ve-acc-tbl tr + tr td{ border-top:1px solid var(--border-color); }
+.ve-acc-tbl .ve-acc-ro,
+.ve-acc-tbl.metrics td{ text-align:right;font-family:var(--font-mono);color:var(--text-primary); }
+
+/* Eğri tablosu: girilen sütunlar açık, türetilen (ƒ) sütunlar sessiz.
+   NOT: başlık kuralı panel kabuğuyla nitelendi — genel
+   `.ve-properties-content table th` kuralı hem daha özgül hem dosyada daha
+   sonra; niteleme olmadan sağ kenarlık + sola hizalama geri geliyordu. */
+.ve-acc-curve{ width:100%;font-size:var(--fs-body);border-collapse:collapse;border:1px solid var(--border-color); }
+.ve-properties-content .ve-acc-curve th{
+  background:var(--bg-tertiary);text-align:right;font-weight:500;color:var(--text-secondary);
+  border-bottom:1px solid var(--border-color);border-left:1px solid var(--border-color);border-right:none;
+}
+.ve-acc-curve th:first-child, .ve-acc-curve td:first-child{ border-left:none; }
+.ve-acc-curve td{ border-bottom:1px solid var(--border-color);border-left:1px solid var(--border-color); }
+.ve-acc-curve .num{ text-align:right; }
+.ve-acc-curve .idx{ color:var(--text-muted);font-family:var(--font-mono);width:26px; }
+.ve-acc-curve .der{ font-family:var(--font-mono);color:var(--text-muted);background:var(--bg-secondary); }
+.ve-acc-curve tr.out td{ color:var(--text-muted); }
+.ve-acc-curve tr.hint td{ color:var(--text-muted); }
+.ve-acc-curve .del{ width:24px;text-align:center; }
+
+.ve-acc-chart{ width:100%;height:220px;background:var(--bg-tertiary);border:1px solid var(--border-color); }
+.ve-acc-chart-empty{
+  height:100%;display:flex;align-items:center;justify-content:center;
+  padding:16px;text-align:center;color:var(--text-muted);font-size:var(--fs-body);
+}
+.ve-acc-legend{ font-size:var(--fs-micro);color:var(--text-muted);text-align:center; }
+
+.ve-acc-share{ border:1px solid var(--border-color);background:var(--bg-tertiary);padding:6px 8px; }
+.ve-acc-share .row{ display:flex;align-items:baseline;color:var(--text-secondary);font-size:var(--fs-body); }
+.ve-acc-share .val{ margin-left:auto;font-family:var(--font-mono);color:var(--text-primary); }
+.ve-acc-share .bar{ height:6px;background:var(--bg-input);border:1px solid var(--border-color);margin-top:5px;position:relative; }
+.ve-acc-share .bar > i{ position:absolute;left:0;top:0;bottom:0;background:var(--accent-warning); }
+.ve-acc-share .note{ font-size:var(--fs-micro);color:var(--text-muted);margin-top:4px;line-height:1.45; }
+
+/* Uyarı varyantı — .sw-chain-bar ok/fail ikilisinin amber kardeşi. */
+.sw-chain-bar.warn{
+  background:color-mix(in srgb, var(--accent-warning) 6%, transparent);
+  color:var(--accent-warning);
+  border:1px solid color-mix(in srgb, var(--accent-warning) 18%, transparent);
+}
+
 /* ══ TAKOZ 3D GÖRÜNTÜLEYİCİ / KOORDİNAT DÜZLEMİ — SOL RAY DENETİMLERİ ══
    Önceki hâl: tek bir flex-wrap satırında beş farklı genişlikte buton →
    dar sol rayda "4 + 1" diye kırılıyor, kapalı katman butonu opacity:0.45
