@@ -306,6 +306,12 @@ function showNodeProperties(node) {
       !(node.data && node.data.torqueData && node.data.torqueData.length);
     _propWin.classList.toggle('ve-properties--engine-empty', _engEmpty);
     if(_engEmpty) _propWin.classList.remove('ve-properties--wide');
+    // Motor paneli Tam Gaz'da üç sütunlu hesap tablosu → 1040px. Boş durumda
+    // VERİLMEZ: --engwide CSS'te --engine-empty'den sonra tanımlı, verilirse
+    // 560px'lik dar "seçim diyaloğu" halini ezerdi.
+    _propWin.classList.toggle('ve-properties--engwide',
+      node.type === 'engine' && !_engEmpty &&
+      typeof veActiveModule !== 'undefined' && veActiveModule === 'full-throttle');
   }
   // Yol / Ortam: harita hero → çok geniş+yüksek pencere (--wide boyutunu ezer).
   if(_propWin) _propWin.classList.toggle('ve-properties--road', node.type === 'road');

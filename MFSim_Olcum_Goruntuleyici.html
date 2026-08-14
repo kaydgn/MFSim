@@ -3782,6 +3782,73 @@
 .ve-cp-grid--cards{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
 /* İnce sol ray + geniş sağ — çıktı-ağırlıklı paneller (ör. eşleştirme analizi) */
 .ve-cp-grid--wideright{ grid-template-columns:minmax(190px,0.6fr) minmax(0,1.7fr); }
+
+/* ══ MOTOR PANELİ — HESAP TABLOSU (girdi | ızgara | doğrulama) ══
+   Üç sütun tek ekranda: sol dar (girdi rayı), orta esnek (veri ızgarası),
+   sağ (doğrulama). Yalnız Tam Gaz modülünde; Motor Freni iki sütunda kalır.
+   Boş durumda (--engine-empty, 560px) --engwide JS tarafından verilmez. */
+.ve-properties.ve-properties--engwide{ max-width:1040px; }
+.ve-cp-grid--sheet{ grid-template-columns:240px minmax(0,1fr) 290px; align-items:start; }
+@media (max-width:820px){ .ve-cp-grid--sheet{ grid-template-columns:1fr; } }
+/* Sütunlar kart yığını değil, başlık + tablo → dikey ritim tek yerden. */
+.ve-cp-grid--sheet > .ve-cp-col,
+.ve-cp-grid--sheet .ve-ft-extra{ display:flex; flex-direction:column; gap:8px; }
+/* Boş durumda (motor seçilmedi) 2. ve 3. sütun tamamen boş — ızgara satır
+   boşlukları diyalogda iki şeritlik boşluk bırakıyordu. */
+.ve-properties--engine-empty .ve-cp-grid--sheet > .ve-cp-col:not(:first-child){ display:none; }
+
+/* Izgara: girdi hücreleri (A–C) ve türetilen ƒ hücreleri (D–F).
+   NOT: hücre kuralları panel kabuğuyla NİTELENDİ — genel
+   `.ve-properties-content th,td{padding:5px 8px !important}` hem daha özgül
+   hem dosyada daha sonra; niteleme olmadan sütunlar 16px dolguyla taşıp
+   sayıları kırpıyordu ("1000" → "100").
+   Sütun genişlikleri YÜZDE: sabit px'te artan alan son sütuna yığılıyor,
+   tablo ortadan bölünmüş görünüyordu. */
+.ve-eng-sheet{ width:100%; table-layout:fixed; border-collapse:collapse;
+  font-family:var(--font-mono); }
+.ve-properties-content .ve-eng-sheet th{
+  position:sticky; top:0; z-index:1; padding:4px 5px !important;
+  background:var(--bg-tertiary); border-bottom:1px solid var(--border-color);
+  border-right:1px solid var(--border-color); border-left:none;
+  font-weight:500; text-align:right; white-space:nowrap; }
+.ve-properties-content .ve-eng-sheet td{ padding:3px 5px !important; text-align:right;
+  border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); }
+.ve-properties-content .ve-eng-sheet td.n,
+.ve-properties-content .ve-eng-sheet th.n{ padding:3px 2px !important; text-align:center;
+  background:var(--bg-tertiary); color:var(--text-muted); }
+.ve-properties-content .ve-eng-sheet td.in{ padding:1px 2px !important; background:var(--bg-input); }
+.ve-eng-sheet td.in input{ width:100%; box-sizing:border-box; padding:3px 4px;
+  font-family:var(--font-mono); text-align:right;
+  color:var(--text-primary); background:transparent;
+  border:1px solid transparent; border-radius:var(--radius-sm); }
+.ve-eng-sheet td.in input:focus{ border-color:var(--accent-primary); outline:none;
+  box-shadow:0 0 0 2px color-mix(in srgb, var(--accent-primary) 22%, transparent); }
+.ve-eng-sheet td.f{ background:var(--bg-secondary); }        /* türetilen, düzenlenemez */
+.ve-properties-content .ve-eng-sheet tfoot td{ background:var(--bg-input); color:var(--text-muted);
+  text-align:left; font-family:inherit; }
+.ve-properties-content .ve-eng-sheet tfoot td.n{ background:var(--bg-tertiary); text-align:center; }
+/* Sekiz sütun: no · A · B · C · D · E · F · sil = %100 */
+.ve-eng-sheet col.c-n{ width:5%; }
+.ve-eng-sheet col.c-a{ width:15%; }
+.ve-eng-sheet col.c-b{ width:16%; }
+.ve-eng-sheet col.c-c{ width:15%; }
+.ve-eng-sheet col.c-d{ width:14%; }
+.ve-eng-sheet col.c-e{ width:16%; }
+.ve-eng-sheet col.c-f{ width:14%; }
+.ve-eng-sheet col.c-x{ width:5%; }
+
+/* Aksesuar tablosu (girdi rayı): Std/Kul. sayıları 46px'te kırpılıyordu. */
+.ve-properties-content .ve-eng-acc th,
+.ve-properties-content .ve-eng-acc td{ padding:4px 5px !important; }
+.ve-properties-content .ve-eng-acc td.num{ padding:2px 3px !important; }
+/* Doğrulama sütunu metrik tablosu — etiket sol, değer sağ mono. */
+.ve-eng-metrics{ width:100%; font-size:var(--fs-body); border-collapse:collapse;
+  border:1px solid var(--border-color); }
+.ve-eng-metrics th{ text-align:left; background:var(--bg-tertiary); font-weight:500;
+  color:var(--text-secondary); border-right:1px solid var(--border-color);
+  border-bottom:1px solid var(--border-color); }
+.ve-eng-metrics td{ text-align:right; font-family:var(--font-mono);
+  color:var(--text-heading); border-bottom:1px solid var(--border-color); }
 .ve-cp-col{ min-width:0; }                 /* ızgara hücreleri taşmasın */
 @media (max-width:820px){
   .ve-cp-grid{ grid-template-columns:1fr; }
