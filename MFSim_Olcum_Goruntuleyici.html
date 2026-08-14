@@ -3063,6 +3063,134 @@
 @media (prefers-reduced-motion: reduce){
   .ve-node-label{ transition:none; }
 }
+/* ===== ALT-SİSTEM (MODÜL) KARTI =====
+   Ana topolojideki "Araç Performans" / "Takoz Çökme-Titreşim" blokları bir
+   BİLEŞEN değil, içinde kendi topolojisini taşıyan bir KAP. Bunu anlatan biçim
+   "çerçeve içinde çerçeve": dış kutu ince bir matla iç kartı sarar — CAE
+   araçlarında alt-sistem bloğunun standart imzası. Parıltı/gradyan yok;
+   dosyanın geri kalanıyla aynı ölçüm-yazılımı dili (bkz. .ve-node:hover).
+   Yapı: components.js veApplyModuleCard. */
+.ve-node--module .ve-node-box{
+  background:var(--bg-secondary);
+  /* Kesikli dış çerçeve = "topoloji sınırı". Bu, uygulamanın KENDİ dili:
+     tuvaldeki topoloji sınır çerçevesi de kesikli, iki modül sembolünün
+     içindeki kap da kesikli. Modül kutusu böylece "içinde bir topoloji var"
+     diyor; iç kart ise düz çerçeveyle sıradan bir blok gibi duruyor. */
+  border-style:dashed;
+  border-color:var(--border-color);
+  padding:3px;              /* mat: dış çerçeve ile iç kart arası */
+  overflow:hidden;
+  align-items:stretch;
+  justify-content:stretch;
+}
+/* Vurgu/seçimde çerçeve rengi accent'e döner (temel kural), kesikli kalır. */
+.ve-node--module:hover .ve-node-box,
+.ve-node--module.selected .ve-node-box{ border-color:var(--accent-primary); }
+.ve-mod-card{
+  flex:1;
+  min-width:0;
+  display:flex;
+  align-items:center;
+  background:var(--bg-tertiary);
+  border:1px solid var(--border-color);
+  padding-right:8px;
+  overflow:hidden;
+}
+/* Sol dikey şerit — "bu bir modül" işareti. Renk taşır ama bilgi de taşır:
+   kart doluyken accent, boşken nötr (aşağıdaki .is-filled kuralı). */
+.ve-mod-rail{
+  flex:0 0 4px;
+  align-self:stretch;
+  background:var(--text-muted);
+  transition:background var(--dur-fast);
+}
+.ve-mod-card.is-filled .ve-mod-rail{ background:var(--accent-primary); }
+.ve-mod-ico{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin:0 8px 0 7px;
+}
+.ve-mod-ico svg{ width:30px; height:30px; display:block; }
+.ve-mod-text{
+  flex:1;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  overflow:hidden;
+}
+/* Ad artık kutunun ALTINDA yüzen etiket değil, kartın İÇİNDE bir satır. Aynı
+   .ve-node-label elemanı taşınır (yeniden adlandırma yolları korunur), bu
+   yüzden yüzen-etiket kuralları burada tek tek geri alınır: konum sınıfları
+   (lbl-top/left/right) ve seçim kayması artık anlamsız. Seçici .ve-node ile
+   başlatıldı — .ve-node.selected .ve-node-label'ı yenebilmesi için. */
+.ve-node.ve-node--module .ve-node-label,
+.ve-node.ve-node--module .ve-node-label.lbl-top,
+.ve-node.ve-node--module .ve-node-label.lbl-left,
+.ve-node.ve-node--module .ve-node-label.lbl-right,
+.ve-node.ve-node--module.selected .ve-node-label,
+.ve-node.ve-node--module.selected .ve-node-label.lbl-top,
+.ve-node.ve-node--module.selected .ve-node-label.lbl-left,
+.ve-node.ve-node--module.selected .ve-node-label.lbl-right{
+  position:static;
+  transform:none;
+  margin:0;
+  font-size:var(--fs-md);
+  font-weight:600;
+  color:var(--text-heading);
+  text-align:left;
+  line-height:1.15;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+/* Canlı özet: alt topolojide kaç bileşen / kaç bağlantı var. Boş modül ile
+   dolu modül ekranda artık ayrışıyor (eskiden birebir aynıydılar). */
+.ve-mod-meta{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  font-size:var(--fs-tiny);
+  color:var(--text-muted);
+  line-height:1.1;
+  white-space:nowrap;
+  overflow:hidden;
+}
+.ve-mod-stat{ overflow:hidden; text-overflow:ellipsis; }
+.ve-mod-dot{
+  flex:0 0 5px;
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  background:transparent;
+  border:1px solid var(--text-muted);
+}
+.ve-mod-card.is-filled .ve-mod-dot{
+  background:var(--accent-success);
+  border-color:var(--accent-success);
+}
+/* Gir işareti — çift tıklayınca alt topolojiye girildiğini söyleyen tek
+   görsel ipucu (eskiden hiç yoktu). */
+.ve-mod-enter{
+  flex:0 0 auto;
+  margin-left:6px;
+  font-size:var(--fs-md);
+  line-height:1;
+  color:var(--text-muted);
+  transition:color var(--dur-fast), transform var(--dur-fast);
+}
+.ve-node--module:hover .ve-mod-enter{
+  color:var(--accent-primary);
+  transform:translateX(2px);
+}
+.ve-node--module:hover .ve-mod-card{ border-color:var(--accent-primary); }
+@media (prefers-reduced-motion: reduce){
+  .ve-mod-enter, .ve-mod-rail{ transition:none; }
+  .ve-node--module:hover .ve-mod-enter{ transform:none; }
+}
+
 /* Şasi metaforu: takoz modülü düğümlerinde port kareleri gizli — bağlantı, düğümden
    şasi çerçevesine giden yay ile temsil edilir (cp-mount.js veMntDecorateConnections). */
 .ve-node[data-type^="mnt-"] .ve-node-port{ display:none; }

@@ -428,9 +428,10 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-dasharray="7 5"/><rect x="18" y="46" width="16" height="16" rx="2" fill="var(--text-secondary, #666)"/><line x1="34" y1="54" x2="47" y2="54" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="58" cy="54" r="10" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="58" cy="54" r="3" fill="var(--text-secondary, #666)"/><line x1="68" y1="54" x2="77" y2="54" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="84" cy="54" r="6" fill="none" stroke="var(--text-muted, #888)" stroke-width="3"/><path d="M64 22 h18 v18" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     inputs: 0,
     outputs: 0,
-    isSubsystem: true,
-    defaultWidth: 80,
-    defaultHeight: 66
+    isSubsystem: true
+    // Ölçü BURADA YOK: alt-sistem kartının ölçüsü tek yerden gelir
+    // (VE_MODULE_CARD_W/H → aşağıdaki döngü). İki sayı iki yerde durursa
+    // biri sessizce eskir.
   },
   // Takoz Çökme-Titreşim ALT-SİSTEM MODÜLÜ — arac-performans ile aynı nested
   // topoloji kalıbı. Ana canvas'ta tek blok; çift tıkla → iç topolojisi (Motor/
@@ -441,9 +442,7 @@ var componentDefs = {
     inputs: 0,
     outputs: 0,
     isSubsystem: true,
-    isMountModule: true,
-    defaultWidth: 80,
-    defaultHeight: 66
+    isMountModule: true
   },
   // ── Aksesuarlar (Araç Performans) — Motor'un ön portlarına bağlanır ──────
   // Diğer bileşenlerden bir tık daha küçük kutular. Çıkış portu (sağ) Motor'un
@@ -527,6 +526,145 @@ function veNodeDefaultSize(type) {
     w: def.defaultWidth || (kucuk ? 33 : 65),
     h: def.defaultHeight || (kucuk ? 33 : 60)
   };
+}
+
+// ── ALT-SİSTEM (MODÜL) KARTI ────────────────────────────────────────────────
+// Ana topolojide duran "Araç Performans" ve "Takoz Çökme-Titreşim" blokları
+// sıradan bir bileşen DEĞİL: her biri kendi topolojisini İÇİNDE taşıyan bir
+// KAP. Eskiden ikisi de 80×66'lık sıradan kutuyla çiziliyordu ve bu üç somut
+// sorun üretiyordu:
+//   • Ad kutunun ALTINDA yüzen etiketti → yan yana iki modülde "Araç
+//     Performans" ile "Takoz Çökme-Titreşim" ÜST ÜSTE biniyordu.
+//   • İçeride ne olduğu hiç görünmüyordu — boş modül ile 16 bileşenlik modül
+//     ekranda birebir aynıydı.
+//   • Çift tıkla girildiğini söyleyen hiçbir işaret yoktu.
+// Kart üçünü de kapatır: ad kartın İÇİNDE (çarpışamaz), altında canlı özet
+// (kaç bileşen / kaç bağlantı), sağ altta gir oku. Kabı anlatan biçim ise dış
+// çerçeve + iç kart ("çerçeve içinde çerçeve") — CAE geleneğinde alt-sistem
+// bloğunun standart imzası. Parıltı/gradyan yok; bu dosyanın geri kalanıyla
+// aynı ölçüm-yazılımı dili.
+// Genişlik keyfî değil ÖLÇÜLDÜ: en uzun modül adı ("Takoz Çökme-Titreşim")
+// 12px/600'de 131px yer istiyor; kartın metin dışı payı (şerit + sembol +
+// boşluklar + gir oku) 79px. 214 → ad kesilmeden sığar. Ad kısalırsa kart
+// küçülmez; modülün bileşenden ayrışması ölçünün kendisiyle anlatılıyor.
+var VE_MODULE_CARD_W = 214;
+var VE_MODULE_CARD_H = 72;
+// Kart öncesi varsayılan. Eski kayıtlardaki modül düğümü BİREBİR bu ölçüdeyse
+// (yani kullanıcı hiç dokunmamışsa) kart ölçüsüne yükseltilir; bilerek
+// verilmiş her ölçü korunur. Bkz. veNormalizeModuleSize.
+var VE_MODULE_LEGACY_W = 80;
+var VE_MODULE_LEGACY_H = 66;
+
+// Kart ölçüsü tip tanımlarına BURADAN yazılır — defs içinde ayrıca sayı
+// tutulmaz. veNodeDefaultSize / createNode / veStartModule / veBoundaryBox
+// hepsi def.defaultWidth üzerinden okuduğu için tek atama yeter.
+if(typeof componentDefs !== 'undefined') {
+  Object.keys(componentDefs).forEach(function(t) {
+    if(componentDefs[t] && componentDefs[t].isSubsystem) {
+      componentDefs[t].defaultWidth = VE_MODULE_CARD_W;
+      componentDefs[t].defaultHeight = VE_MODULE_CARD_H;
+    }
+  });
+}
+
+// Bu düğüm bir alt-sistem (modül) mü? Tek ölçüt tip tanımındaki isSubsystem —
+// böylece ileride eklenecek üçüncü bir modül kartı kendiliğinden alır.
+function veIsModuleNode(node) {
+  if(!node || !node.type) return false;
+  var defs = (typeof componentDefs !== 'undefined') ? componentDefs : null;
+  var def = defs ? defs[node.type] : null;
+  return !!(def && def.isSubsystem);
+}
+
+// Kartın canlı özeti: alt topoloji node.data.subTopology içinde saklanıyor
+// (bkz. cp-arac-performans.js veAracCloseEditor / cp-mount.js).
+function veModuleSummary(node) {
+  var sub = node && node.data && node.data.subTopology;
+  var n = (sub && sub.nodes && sub.nodes.length) || 0;
+  var c = (sub && sub.connections && sub.connections.length) || 0;
+  return { nodes: n, connections: c, initialized: n > 0 };
+}
+
+function veModuleSummaryText(node) {
+  var s = veModuleSummary(node);
+  if(!s.initialized) return 'Boş — çift tıklayın';
+  return s.nodes + ' bileşen · ' + s.connections + ' bağlantı';
+}
+
+// Eski kayıt yükseltmesi — TEK KURAL, iki yüz. veModuleSizeFor saf (ölçüyü
+// döndürür), veNormalizeModuleSize onu düğüme yazar. Sekme önizlemesi
+// (topology.js) düğümü DEĞİŞTİRMEDEN ölçüye ihtiyaç duyduğu için ayrıldılar;
+// kural iki yerde ayrı yazılsaydı önizleme ile tuval farklı ölçü gösterirdi.
+function veModuleSizeFor(node) {
+  var w = (node && node.width) || 65, h = (node && node.height) || 60;
+  if(veIsModuleNode(node) && w === VE_MODULE_LEGACY_W && h === VE_MODULE_LEGACY_H) {
+    return { w: VE_MODULE_CARD_W, h: VE_MODULE_CARD_H, changed: true };
+  }
+  return { w: w, h: h, changed: false };
+}
+
+function veNormalizeModuleSize(node) {
+  var s = veModuleSizeFor(node);
+  if(!s.changed) return false;
+  node.width = s.w;
+  node.height = s.h;
+  return true;
+}
+
+// Düğüm DOM'u kurulduktan SONRA çağrılır: kutunun içini karta çevirir.
+// ÖNEMLİ — ad için YENİ bir eleman üretmez, mevcut .ve-node-label elemanını
+// kartın içine TAŞIR. Böylece adı yazan her yol (özellik panelindeki yeniden
+// adlandırma, sensör otomatik adlandırması, cp-mount takoz adı…) hiç
+// değişmeden çalışmaya devam eder; kart sessizce eski adı göstermez.
+function veApplyModuleCard(nodeEl, node) {
+  if(!nodeEl || !veIsModuleNode(node)) return false;
+  var box = nodeEl.querySelector('.ve-node-box');
+  if(!box) return false;
+  if(box.querySelector('.ve-mod-card')) return true;   // iki kez kurma
+
+  nodeEl.classList.add('ve-node--module');
+
+  var svg = box.querySelector('svg');
+  var label = nodeEl.querySelector('.ve-node-label');
+  var summary = veModuleSummary(node);
+
+  var card = document.createElement('div');
+  card.className = 've-mod-card' + (summary.initialized ? ' is-filled' : '');
+
+  var rail = document.createElement('span');
+  rail.className = 've-mod-rail';
+  card.appendChild(rail);
+
+  var ico = document.createElement('span');
+  ico.className = 've-mod-ico';
+  if(svg) ico.appendChild(svg);          // tipin kendi sembolü — kopya değil, taşınır
+  card.appendChild(ico);
+
+  var text = document.createElement('span');
+  text.className = 've-mod-text';
+  if(label) {
+    label.style.pointerEvents = 'none';  // ad artık kartın parçası, yüzen etiket değil
+    text.appendChild(label);
+  }
+  var meta = document.createElement('span');
+  meta.className = 've-mod-meta';
+  var dot = document.createElement('i');
+  dot.className = 've-mod-dot';
+  meta.appendChild(dot);
+  var metaText = document.createElement('span');
+  metaText.className = 've-mod-stat';
+  metaText.textContent = veModuleSummaryText(node);
+  meta.appendChild(metaText);
+  text.appendChild(meta);
+  card.appendChild(text);
+
+  var enter = document.createElement('span');
+  enter.className = 've-mod-enter';
+  enter.textContent = '▸';
+  card.appendChild(enter);
+
+  box.appendChild(card);
+  return true;
 }
 
 // ── PORT GEOMETRİSİ — TEK GERÇEK KAYNAK ─────────────────────────────────────

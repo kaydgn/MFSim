@@ -968,8 +968,11 @@ function veRenderSnapshot(paneIdx) {
     sNodes.forEach(function(n) {
       var def = componentDefs[n.type];
       if(!def) return;
-      var w = n.width || 65, h = n.height || 60;
-      
+      // Modül düğümünde kart ölçüsü kuralı da uygulanır (eski 80×66 kayıtlar) —
+      // önizleme ile tuval aynı ölçüyü göstersin diye ortak kaynaktan.
+      var _sz = (typeof veModuleSizeFor === 'function') ? veModuleSizeFor(n) : { w: n.width || 65, h: n.height || 60 };
+      var w = _sz.w, h = _sz.h;
+
       var nodeEl = document.createElement('div');
       nodeEl.className = 've-node' + (VE_STANDALONE_TYPES.indexOf(node.type) >= 0 ? ' ve-node--standalone' : '');
       nodeEl.style.left = n.x + 'px';
@@ -1008,6 +1011,9 @@ function veRenderSnapshot(paneIdx) {
       }
       
       nodeEl.innerHTML = html;
+      // Alt-sistem kartı önizlemede de kurulur; yoksa sekme küçük resmi ana
+      // tuvalden farklı bir şey gösterirdi (modül orada kart, burada kutu).
+      if(typeof veApplyModuleCard === 'function') veApplyModuleCard(nodeEl, n);
       canvasWrap.appendChild(nodeEl);
     });
     

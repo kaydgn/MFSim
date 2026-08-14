@@ -86,26 +86,47 @@ function veBuildTopologySVG() {
         if(s.borderTopColor) boxBd = s.borderTopColor;
       } catch(e) {}
     }
+    var name = n.customName || (def && def.name) || n.type;
+    // Alt-sistem (modül) düğümü ekranda KART olarak duruyor: ad ve içerik özeti
+    // kutunun İÇİNDE. Dışa aktarma bunu bilmezse aynı topoloji ekranda kart,
+    // PNG'de "içi boş geniş kutu + altında ad" çıkardı — aynı belgenin iki
+    // farklı hâli. Yerleşim tek kaynaktan: js/components.js modül kartı.
+    var _modul = (typeof veIsModuleNode === 'function') && veIsModuleNode(n);
     parts.push('<g>');
     parts.push('<rect x="' + n.x + '" y="' + n.y + '" width="' + w + '" height="' + h +
                '" rx="6" fill="' + boxBg + '" stroke="' + boxBd + '" stroke-width="1.5"/>');
-    // Sembol (nested svg, ortalanmış)
+    // Sembol (nested svg): modülde sola yaslı, diğerlerinde ortalanmış
+    var symSize = _modul ? 30 : Math.min(w, h) * 0.72;
     if(def.svg && parser) {
       try {
         var doc = parser.parseFromString(def.svg, 'image/svg+xml');
         var src = doc.documentElement;
         if(src && src.nodeName.toLowerCase() === 'svg') {
           var vb = src.getAttribute('viewBox') || '0 0 100 100';
-          var symSize = Math.min(w, h) * 0.72;
-          var sx = n.x + (w - symSize) / 2, sy = n.y + (h - symSize) / 2;
+          var sx = _modul ? (n.x + 15) : (n.x + (w - symSize) / 2);
+          var sy = n.y + (h - symSize) / 2;
           parts.push('<svg x="' + sx + '" y="' + sy + '" width="' + symSize + '" height="' + symSize +
                      '" viewBox="' + vb + '" overflow="visible">' + src.innerHTML + '</svg>');
         }
       } catch(e) {}
     }
+    if(_modul) {
+      // Sol şerit + ad + canlı özet — ekrandaki kartla aynı sıra
+      parts.push('<rect x="' + (n.x + 4) + '" y="' + (n.y + 4) + '" width="4" height="' + (h - 8) +
+                 '" fill="' + accent + '"/>');
+      var tx = n.x + 15 + symSize + 8;
+      parts.push('<text x="' + tx + '" y="' + (n.y + h / 2 - 2) + '" ' +
+                 'font-family="Inter, system-ui, -apple-system, Segoe UI, sans-serif" font-size="12" font-weight="600" ' +
+                 'fill="' + labelCol + '">' + _veExpEsc(name) + '</text>');
+      parts.push('<text x="' + tx + '" y="' + (n.y + h / 2 + 12) + '" ' +
+                 'font-family="Inter, system-ui, -apple-system, Segoe UI, sans-serif" font-size="10" ' +
+                 'fill="' + labelCol + '" opacity="0.7">' +
+                 _veExpEsc(typeof veModuleSummaryText === 'function' ? veModuleSummaryText(n) : '') + '</text>');
+      parts.push('</g>');
+      return;   // etiket kutunun İÇİNDE — altına ikinci kez yazılmaz
+    }
     parts.push('</g>');
     // Etiket (kutunun altında)
-    var name = n.customName || (def && def.name) || n.type;
     var cx = n.x + w / 2, ly = n.y + h + 14;
     parts.push('<text x="' + cx + '" y="' + ly + '" text-anchor="middle" ' +
                'font-family="Inter, system-ui, -apple-system, Segoe UI, sans-serif" font-size="11" font-weight="600" ' +
