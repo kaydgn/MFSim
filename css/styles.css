@@ -1815,15 +1815,17 @@
    toplam ~85 px. Boş bir topolojide bile bu yükseklik tuvalden kalıcı olarak
    düşüyordu; oysa sekme şeridinin sağı geniş ekranda tamamen boştu. Üçü tek
    ~28 px'lik banda indi. Bant konumlandırma bağlamıdır: uyarı paneli buna göre
-   YUKARI açılır, yani panel açmak tuvali yeniden boyutlandırmaz. */
-.ve-bottom-dock{
+   AŞAĞI açılır, yani panel açmak tuvali yeniden boyutlandırmaz.
+   Bant TUVALİN ÜSTÜNDE (kullanıcı isteği, 2026-08-13) — kenarlık bu yüzden
+   altta. */
+.ve-doc-dock{
   position:relative;
   display:flex;
   align-items:stretch;
   flex-shrink:0;
   min-width:0;
   background:var(--bg-secondary);
-  border-top:1px solid var(--border-color);
+  border-bottom:1px solid var(--border-color);
 }
 
 /* ===== ALT DURUM KÜMESİ (STATUS BAR) ===== */
@@ -1906,12 +1908,13 @@
   min-height:32px;
   overflow:hidden;
 }
-/* Alt konum: sekmeler YUKARIYA, canvas'a bağlanır. Kenarlık, yuvarlatma ve
-   aksan çubuğu bu yüzden dikeyde aynalanır.
-   Arka plan/üst kenarlık artık .ve-bottom-dock'ta — sekmeler o bandın sol
+/* Üst konum: sekmeler AŞAĞIYA, tuvale bağlanır — .ve-tab'ın taban biçimi
+   zaten bu yön (üstü yuvarlak, altı açık, aksan çubuğu üstte), o yüzden
+   burada yalnız YERLEŞİM ayarlanır, biçim aynalanmaz.
+   Arka plan ve alt kenarlık banttadır (.ve-doc-dock) — sekmeler o bandın sol
    yarısıdır, sağ yarısını durum kümesi doldurur. */
-.ve-tab-bar--bottom{
-  align-items:flex-start;
+.ve-tab-bar--top{
+  align-items:flex-end;
   flex:1 1 auto;
   min-width:0;
   background:transparent;
@@ -1921,16 +1924,6 @@
   overflow-x:auto;
   overflow-y:hidden;
   scrollbar-width:none;
-}
-.ve-tab-bar--bottom .ve-tab{
-  top:-1px;
-  border-top:none;
-  border-bottom:1px solid transparent;
-  border-radius:0 0 var(--radius-sm) var(--radius-sm);
-}
-.ve-tab-bar--bottom .ve-tab.active{ border-color:var(--border-color); border-top:none; }
-.ve-tab-bar--bottom .ve-tab.active::before{
-  top:auto; bottom:-1px; border-radius:0 0 2px 2px;
 }
 .ve-tab-bar::-webkit-scrollbar{display:none;}
 .ve-tab{
@@ -3339,16 +3332,17 @@
   opacity:0.85;
 }
 
-/* Uyarı paneli — alt bandın ÜSTÜNE açılan yüzen katman.
+/* Uyarı paneli — belge bandının ALTINA açılan yüzen katman.
    Önceden bandın yanında akışta duruyordu: başlığı kapalıyken bile 32 px,
-   açıkken 160 px tuval yüksekliği yiyordu. Artık .ve-bottom-dock'a göre
+   açıkken 160 px tuval yüksekliği yiyordu. Artık .ve-doc-dock'a göre
    absolute; açmak tuvali küçültmez, yalnızca geçici olarak üzerini örter —
-   yani panele bakmak topolojiyi yeniden ölçeklendirmez. */
+   yani panele bakmak topolojiyi yeniden ölçeklendirmez.
+   Bant tuvalin ÜSTÜNE taşındığı için panel de aşağı açılır. */
 .ve-warnings-panel{
   position:absolute;
   left:0;
   right:0;
-  bottom:100%;
+  top:100%;
   z-index:var(--z-canvas-ui);
   max-height:min(240px, 40vh);
   background:var(--bg-secondary);
@@ -3364,7 +3358,7 @@
    basılı durumu oradan okur; panelin .open sınıfı onunla birlikte yazılır. */
 .ve-warnings-panel:not(.open){display:none;}
 @keyframes veWarningsIn{
-  from{opacity:0; transform:translateY(6px);}
+  from{opacity:0; transform:translateY(-6px);}   /* aşağı açılıyor → yukarıdan iner */
   to{opacity:1; transform:translateY(0);}
 }
 .ve-warnings-header{
