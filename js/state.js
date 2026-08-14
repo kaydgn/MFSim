@@ -181,6 +181,14 @@ function _veRestoreStateNodes(state) {
       data: n.data || {}
     };
 
+    // Alt-sistem (modül) düğümü kart ölçüsüne yükseltilir — ama YALNIZ ölçüsü
+    // kart öncesi varsayılana (80×66) BİREBİR eşitse. Bu, şema sürümünden
+    // bağımsız yürümek zorunda: sürüm kapısı (veApplyLegacyMigrations) yalnız
+    // sürümsüz dosyaları geçirir, oysa 80×66 modül düğümü GÜNCEL sürümle
+    // kaydedilmiş dosyalarda da var. Kullanıcının bilerek verdiği her ölçü
+    // (yeniden boyutlandırılmış modül) olduğu gibi kalır.
+    if(typeof veNormalizeModuleSize === 'function') veNormalizeModuleSize(node);
+
     // NOT: Eski varsayılan → yeni varsayılan migrasyonu artık restoreState
     // başında veApplyLegacyMigrations(state) ile YALNIZCA legacy state'lere
     // uygulanır (bkz. yukarı). Burada tekrar uygulanmaz.
@@ -322,6 +330,12 @@ function _veRestoreStateNodes(state) {
         if(typeof showLabelContextMenu === 'function') showLabelContextMenu(e, node, _lbl);
       });
     }
+
+    // Alt-sistem (modül) kartı — createNode ile aynı (bkz. veApplyModuleCard).
+    // Alt topolojiden ÇIKIŞ da bu yoldan geçer (veAracCloseEditor →
+    // veLoadTabState → restoreState), dolayısıyla karttaki "N bileşen · M
+    // bağlantı" özeti kullanıcı dışarı çıkar çıkmaz kendiliğinden tazelenir.
+    if(typeof veApplyModuleCard === 'function') veApplyModuleCard(nodeEl, node);
 
     document.getElementById('ve-canvas').appendChild(nodeEl);
   });
