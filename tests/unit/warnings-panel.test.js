@@ -1,8 +1,8 @@
 /**
  * Uyarı paneli aç/kapa durumu — js/component-extras.js › veSetWarningsOpen()
  * ─────────────────────────────────────────────────────────────────────────
- * Panel artık alt bandın ÜSTÜNE açılan yüzen bir katman ve durumunu ÜÇ ayrı
- * yüzey gösteriyor:
+ * Panel, belge bandına (tuvalin ÜSTÜNDEKİ şerit) göre açılan yüzen bir
+ * katman ve durumunu ÜÇ ayrı yüzey gösteriyor:
  *
  *   • panelin kendisi          → .ve-warnings-panel.open (görünürlük)
  *   • durum çubuğundaki düğme  → aria-expanded + ok yönü
@@ -14,7 +14,7 @@
  * bakan kimse "makul ama yanlış" durumu fark etmez. Kural bu yüzden sabitlenir.
  */
 document.body.innerHTML = `
-  <div class="ve-bottom-dock" id="ve-bottom-dock">
+  <div class="ve-doc-dock" id="ve-doc-dock">
     <div class="ve-warnings-panel" id="ve-warnings-panel">
       <div class="ve-warnings-body collapsed" id="ve-warnings-body"></div>
     </div>
