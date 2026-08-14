@@ -611,6 +611,38 @@ function veNormalizeModuleSize(node) {
   return true;
 }
 
+// Sidebar'daki modül satırının sembol ölçüsü. Tuvaldeki kart 30px kullanıyor;
+// palette satırı daha dar olduğu için 26px — sıradan palet ögesinin 18px'inden
+// belirgin biçimde büyük, yani modül orada da ayrışıyor.
+var VE_SIDEBAR_MODULE_ICON = 26;
+
+// Sidebar modül satırlarının sembolü TUVALDEKİ DÜĞÜMLE AYNI KAYNAKTAN gelir.
+// Eskiden index.html içinde ikinci bir SVG kopyası duruyordu ve çoktan
+// ayrışmıştı: tek renk (currentColor) çiziliyordu — tuvalde ise kesikli kap
+// accent, takoz yayları yeşil — üstelik geometri de farklıydı (Araç Performans
+// sembolünde iç nokta yoktu, takozda üst plaka yarı saydamdı). Yani palette'ten
+// sürüklenen sembol, tuvale düşen sembol DEĞİLDİ. Tek kaynak bunu kapatır.
+// Döner değer: sembolü kurulan satır sayısı (test + çağıran için).
+function veSyncSidebarModuleIcons() {
+  if(typeof document === 'undefined' || typeof componentDefs === 'undefined') return 0;
+  var kurulan = 0;
+  var satirlar = document.querySelectorAll('.ve-submodule[data-type]');
+  for(var i = 0; i < satirlar.length; i++) {
+    var row = satirlar[i];
+    var def = componentDefs[row.getAttribute('data-type')];
+    var slot = row.querySelector('.ve-submodule-ico');
+    if(!def || !def.svg || !slot) continue;
+    slot.innerHTML = def.svg;
+    var svg = slot.querySelector('svg');
+    if(svg) {
+      svg.setAttribute('width', VE_SIDEBAR_MODULE_ICON);
+      svg.setAttribute('height', VE_SIDEBAR_MODULE_ICON);
+    }
+    kurulan++;
+  }
+  return kurulan;
+}
+
 // Düğüm DOM'u kurulduktan SONRA çağrılır: kutunun içini karta çevirir.
 // ÖNEMLİ — ad için YENİ bir eleman üretmez, mevcut .ve-node-label elemanını
 // kartın içine TAŞIR. Böylece adı yazan her yol (özellik panelindeki yeniden
@@ -922,5 +954,18 @@ function veSyncModuleShell() {
     new MutationObserver(veSyncModuleShell).observe(overlay, { attributes: true, attributeFilter: ['style', 'class'] });
   }
   attach();
+})();
+
+// Sidebar modül sembolleri — DOMContentLoaded'a güvenilemez: modüller giriş
+// sonrası loader ile yükleniyor, o sırada olay çoktan geçmiş olabilir. Bu
+// yüzden hem hemen denenir hem de satırlar henüz yoksa kısa aralıkla tekrar
+// denenir (veObserveModuleOverlay ile aynı kalıp).
+(function veInstallSidebarModuleIcons() {
+  var kalanDeneme = 100;                       // ~5 sn; sonra sessizce vazgeç
+  function dene() {
+    if(veSyncSidebarModuleIcons() > 0) return;
+    if(--kalanDeneme > 0) setTimeout(dene, 50);
+  }
+  dene();
 })();
 
