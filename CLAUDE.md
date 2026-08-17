@@ -116,7 +116,46 @@ koordinatlarından çizilir; düğümü sürüklemek şemayı değiştirmez. Par
 | Kasnak içi ok | dönüş yönü (sırttan temas edende ters döner) |
 | Yeşil artı + kesikli çizgi | gergi **pivotu** ve kolu — ters pivot burada gözle görünür |
 | Yön gülü (0/90/180/270) | açı konvansiyonu; "montaj açısı −3.18°" onsuz okunamıyor |
+| Soluk gri yollar | **diğer kol konumları** (TÜMÜ kipi) — kolun gezdiği aralık |
+| Üst künye | çizilen konumun adı · kol açısı · gerginlik |
 | Alt şerit | ✓/✗ · kasnak sayısı · L_eff · **Σsarım** (360° olmak ZORUNDA) |
+
+##### Gergi kol konumu seçicisi
+
+Gergi kolu yay dengesinde duruyor: kayış uzayıp kısaldıkça (tolerans + aşınma)
+kol dönüyor, gergi kasnağının merkezi kayıyor ve **kayış yolu her konumda başka
+bir eğri** oluyor. Kartın altındaki kutu konumu seçiyor; seçim
+`node.data.posMode` (varsayılan `mean`) ve **panel ile kart AYNI alanı okur** —
+iki ayrı ayar tutulsa panel bir konumu, kanvastaki kart başkasını gösterirdi.
+Şema, geometri tablosu ve durum şeridi hepsi seçili konumu anlatır.
+
+Konumlar `FEADCore.positionTable`'dan (`FreeArm · Replace · MaxBelt · Mean ·
+MinBelt · Load`); `TÜMÜ` kipi Mean'i önde, geri kalanları soluk çizer.
+İki tuzak testli: (a) **tolerans/aşınma 0 iken dört orta konum aynı açıya
+oturuyor** — tekilleştirilmezse dört özdeş eğri üst üste biner ve çizim hatası
+gibi görünür; (b) çözülemeyen bir konum (BMC'de `Replace`, kayış çözüm
+aralığının dışına çıkıyor) listede yok, seçiliyse şema boş kalmaz — Mean'e düşer
+ve sebep yazılır. Hayalet etiketleri **pivottan dışa doğru** yerleşir; sabit
+"solda" yerleşimde üç etiket üst üste biniyordu (gergi bu düzende ~25 px yol
+alıyor).
+
+##### Sarım yayının sweep bayrağı — bir kez yanlış yazıldı
+
+`ty(y) = offY + (maxY − y)·s` ölçeklemesi mm düzlemini **ekranda aynı yönde**
+gösterir (yönelim korunur). SVG'nin açı sistemi ise y-aşağı: pozitif açı yönü
+görsel olarak saat yönü. Dolayısıyla mm düzleminde CCW olan (`p.d > 0`) ekranda
+da CCW görünür ve SVG'de **negatif** yöndür → `sweep = 0`.
+
+Eskiden `sweep = (d > 0 ? 1 : 0)` yazıyordu. Yarıçap ve teğet uçları DOĞRU
+olduğu için yay yine iki uca değiyordu ama **aynalanmış çemberin** üzerinde
+kalıyor, yani kasnağın İÇİNDEN geçiyordu — ekranda "kaymış, bükülmüş kayış".
+Eski test yay SAYISINA baktığı için yeşil kalmıştı. ÖLÇÜLDÜ (BMC, 420×320): yay
+merkezleri kasnak merkezlerinden **6.7–42.7 px** sapıyordu; düzeltmeyle altı
+kasnakta da **0.008 px**. Dönüş oku aynı ters konvansiyondaydı (kasnağın gerçek
+dönüşünün tersini gösteriyordu), o da düzeltildi.
+
+Yeni kapı bu sınıfı kilitliyor: **her yayın örtük merkezi, o kasnağın merkezi
+olmak zorunda** (SVG uç→merkez dönüşümü, spec F.6.5) — hayalet yollar dahil.
 
 Çözülemeyen modelde kart boş kalmaz, **sebebi yazar** — kullanıcı "çizim gitti"
 değil "kayış yolu kapanmıyor, temas tarafına bak" mesajını görür.

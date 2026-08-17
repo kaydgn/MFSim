@@ -697,3 +697,259 @@ describe('Kayış Yolu düğümünün ölçüsü — tek kaynak', () => {
     expect(veFeadNormalizeLayoutSize(n)).toBe(false);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+//  SARIM YAYLARI KASNAĞIN ÜZERİNDE Mİ — bükülmüş kayışa karşı DEĞİŞMEZ
+// ════════════════════════════════════════════════════════════════════════════
+// Bu testin varlık nedeni ölçülmüş bir kusur: sweep bayrağı ters yazılmıştı.
+// Yarıçap ve teğet uçları DOĞRU olduğu için yay yine iki uca değiyordu, ama
+// AYNALANMIŞ çemberin üzerinde kalıyor — yani kasnağın İÇİNDEN geçiyordu.
+// Gözle "kaymış, bükülmüş" görünüyordu; eski testler ise yay SAYISINA baktığı
+// için yeşil kalmıştı.
+//
+// Değişmez: yayın örtük merkezi, o kasnağın merkezidir. SVG uç→merkez
+// dönüşümüyle ölçülür (spec: F.6.5), yani çizimin kendi sayılarından.
+describe('kayış yayları kasnakların ÜZERİNDE (bükülme kapısı)', () => {
+  const kurCozulur = () => {
+    const crk = kasnak('fead-crank', { od: 160, x: 0, y: 0, driver: true }, 'CRK');
+    const idr = kasnak('fead-idler', { od: 75, x: -72, y: 267 }, 'IDR');
+    const ac = kasnak('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
+    const ten = kasnak('fead-tensioner', {
+      od: 75, pivotX: -180, pivotY: 100, armLen: 90,
+      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1
+    }, 'TEN');
+    const belt = kasnak('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6 });
+    const sv = kasnak('fead-solver', { designTensionN: 765.7, driveRatio: 1, lengthOffsetMm: 3.5 });
+    global.nodes = [crk, idr, ac, ten, belt, sv];
+    global.connections = [[crk, idr], [idr, ac], [ac, ten], [ten, crk]]
+      .map(([a, b]) => ({ id: 'c' + a.id + b.id, from: a.id, to: b.id, fromPort: 'output', toPort: 'input' }));
+    return veFeadBuildFromCanvas();
+  };
+
+  // SVG yay parametrelerinden örtük merkez (W3C SVG 1.1 F.6.5.2/3).
+  const yayMerkezi = ({ p0, p1, r, fA, fS }) => {
+    const [x1, y1] = p0, [x2, y2] = p1;
+    const dx2 = (x1 - x2) / 2, dy2 = (y1 - y2) / 2;
+    const num = r * r * r * r - r * r * dy2 * dy2 - r * r * dx2 * dx2;
+    const den = r * r * dy2 * dy2 + r * r * dx2 * dx2;
+    let co = Math.sqrt(Math.max(0, num / den));
+    if (fA === fS) co = -co;
+    return [co * r * dy2 / r + (x1 + x2) / 2, -co * r * dx2 / r + (y1 + y2) / 2];
+  };
+
+  const yaylariCoz = (svg, secici) => {
+    const d = new RegExp('<path data-ve="' + secici + '" d="([^"]+)"').exec(svg)[1];
+    const parcalar = d.match(/[MLAZ][^MLAZ]*/g);
+    let cur = null; const yaylar = [];
+    parcalar.forEach((t) => {
+      const k = t[0];
+      const v = t.slice(1).trim().split(/[\s,]+/).filter((x) => x !== '').map(Number);
+      if (k === 'M' || k === 'L') cur = [v[0], v[1]];
+      else if (k === 'A') {
+        yaylar.push({ p0: cur.slice(), r: v[0], fA: v[3], fS: v[4], p1: [v[5], v[6]] });
+        cur = [v[5], v[6]];
+      }
+    });
+    return yaylar;
+  };
+
+  const daireler = (svg) => [...svg.matchAll(
+    /data-ve="pulley" cx="([-\d.]+)" cy="([-\d.]+)" r="([-\d.]+)"/g)]
+    .map((m) => ({ x: +m[1], y: +m[2], r: +m[3] }));
+
+  test('her yayın merkezi bir kasnağın merkezi (sapma < 0.5 px)', () => {
+    const svg = fead.veFeadLayoutSVG(kurCozulur(), 420, 320);
+    const yaylar = yaylariCoz(svg, 'belt');
+    const cs = daireler(svg);
+    expect(yaylar).toHaveLength(4);
+    expect(cs).toHaveLength(4);
+    yaylar.forEach((a) => {
+      const [cx, cy] = yayMerkezi(a);
+      const enYakin = Math.min(...cs.map((c) => Math.hypot(c.x - cx, c.y - cy)));
+      // 0.5 px: path sayıları 2 basamağa yuvarlanıyor (f()), gerçek sapma ~0.01.
+      expect(enYakin).toBeLessThan(0.5);
+    });
+  });
+
+  test('yay yarıçapı kasnak yarıçapıyla AYNI', () => {
+    const svg = fead.veFeadLayoutSVG(kurCozulur(), 420, 320);
+    const cs = daireler(svg);
+    yaylariCoz(svg, 'belt').forEach((a) => {
+      const [cx, cy] = yayMerkezi(a);
+      let en = null, bd = Infinity;
+      cs.forEach((c) => { const d = Math.hypot(c.x - cx, c.y - cy); if (d < bd) { bd = d; en = c; } });
+      expect(Math.abs(a.r - en.r)).toBeLessThan(0.5);
+    });
+  });
+
+  // Sweep bayrağı TERS olsaydı yay aynalanmış çemberde kalırdı: aşağıdaki
+  // ölçüm o hâlde 6.7–42.7 px sapma veriyordu. Kuralı doğrudan kilitliyoruz.
+  test('sweep kuralı: d > 0 → 0, d < 0 → 1', () => {
+    const build = kurCozulur();
+    const svg = fead.veFeadLayoutSVG(build, 420, 320);
+    const yaylar = yaylariCoz(svg, 'belt');
+    const geom = F.tensionerState(build.sys, F.meanRel(build.sys)).geom;
+    // Yaylar kayış sırasında: i. yay (i+1). kasnağın etrafında.
+    yaylar.forEach((a, i) => {
+      const p = geom.pulleys[(i + 1) % geom.pulleys.length];
+      expect(a.fS).toBe(p.d > 0 ? 0 : 1);
+    });
+  });
+
+  test('hayalet konumların yayları da kasnakların üzerinde', () => {
+    const build = kurCozulur();
+    const svg = fead.veFeadLayoutSVG(build, 420, 320, { posMode: 'all' });
+    expect(svg).toMatch(/data-ve="belt-ghost"/);
+    const hepsi = [...svg.matchAll(/<path data-ve="belt-ghost" d="([^"]+)"/g)];
+    expect(hepsi.length).toBeGreaterThan(0);
+    hepsi.forEach((m) => {
+      const parcalar = m[1].match(/[MLAZ][^MLAZ]*/g);
+      let cur = null; let sayi = 0;
+      parcalar.forEach((t) => {
+        const k = t[0];
+        const v = t.slice(1).trim().split(/[\s,]+/).filter((x) => x !== '').map(Number);
+        if (k === 'M' || k === 'L') cur = [v[0], v[1]];
+        else if (k === 'A') {
+          // Yayın merkezi ile uçlarının uzaklığı = yarıçap olmak zorunda.
+          const [cx, cy] = yayMerkezi({ p0: cur.slice(), r: v[0], fA: v[3], fS: v[4], p1: [v[5], v[6]] });
+          expect(Math.abs(Math.hypot(cur[0] - cx, cur[1] - cy) - v[0])).toBeLessThan(0.5);
+          expect(Math.abs(Math.hypot(v[5] - cx, v[6] - cy) - v[0])).toBeLessThan(0.5);
+          cur = [v[5], v[6]]; sayi++;
+        }
+      });
+      expect(sayi).toBe(4);
+    });
+  });
+
+  test('dönüş oku kasnağın GERÇEK yönünü gösterir (d < 0 → ekranda saat yönü)', () => {
+    const build = kurCozulur();
+    const svg = fead.veFeadLayoutSVG(build, 420, 320);
+    const geom = F.tensionerState(build.sys, F.meanRel(build.sys)).geom;
+    const oklar = [...svg.matchAll(/data-ve="spin" d="M[-\d. ]+A[\d. ]+0 1 (\d)/g)].map((m) => +m[1]);
+    expect(oklar.length).toBeGreaterThan(0);
+    // Yalnız R > 9 olan kasnaklarda ok çiziliyor; işaretlerin TAMAMI aynı
+    // kuraldan gelmeli: ekran saat yönü (sweep 1) ⇔ d < 0.
+    const beklenen = geom.pulleys.filter((p, k) => {
+      const svgR = daireler(svg)[k];
+      return svgR && svgR.r > 9;
+    }).map((p) => (p.d < 0 ? 1 : 0));
+    expect(oklar.sort()).toEqual(beklenen.sort());
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  GERGİ KOL KONUMU SEÇİCİSİ
+// ════════════════════════════════════════════════════════════════════════════
+describe('kol konumu seçimi', () => {
+  const kur = (beltData) => {
+    const crk = kasnak('fead-crank', { od: 160, x: 0, y: 0, driver: true }, 'CRK');
+    const idr = kasnak('fead-idler', { od: 75, x: -72, y: 267 }, 'IDR');
+    const ac = kasnak('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
+    const ten = kasnak('fead-tensioner', {
+      od: 75, pivotX: -180, pivotY: 100, armLen: 90,
+      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1
+    }, 'TEN');
+    const belt = kasnak('fead-belt', Object.assign(
+      { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6 }, beltData || {}));
+    const sv = kasnak('fead-solver', { designTensionN: 765.7, driveRatio: 1, lengthOffsetMm: 3.5 });
+    const lay = kasnak('fead-layout', {});
+    global.nodes = [crk, idr, ac, ten, belt, sv, lay];
+    global.connections = [[crk, idr], [idr, ac], [ac, ten], [ten, crk]]
+      .map(([a, b]) => ({ id: 'c' + a.id + b.id, from: a.id, to: b.id, fromPort: 'output', toPort: 'input' }));
+    return { lay, build: veFeadBuildFromCanvas() };
+  };
+
+  test('varsayılan ÇALIŞMA konumu', () => {
+    expect(veFeadPosMode({ data: {} })).toBe('mean');
+    expect(veFeadPosMode({ data: { posMode: 'saçma' } })).toBe('mean');
+    expect(veFeadPosMode({ data: { posMode: 'free' } })).toBe('free');
+    expect(veFeadPosMode({ data: { posMode: 'all' } })).toBe('all');
+  });
+
+  test('konum tablosu kol açılarını sıralı verir', () => {
+    const { build } = kur();
+    const rows = veFeadPositionRows(build);
+    const cozulen = rows.filter((r) => r.ok);
+    expect(cozulen.length).toBeGreaterThan(2);
+    // Serbest kol her zaman 0°; kayış kısaldıkça kol açısı BÜYÜR.
+    expect(cozulen.filter((r) => r.key === 'free')[0].relDeg).toBeCloseTo(0, 6);
+    const mean = cozulen.filter((r) => r.key === 'mean')[0];
+    const min = cozulen.filter((r) => r.key === 'min')[0];
+    const max = cozulen.filter((r) => r.key === 'max')[0];
+    expect(max.relDeg).toBeLessThan(mean.relDeg);
+    expect(min.relDeg).toBeGreaterThan(mean.relDeg);
+  });
+
+  test('TÜMÜ kipinde hayalet konumlar çıkar', () => {
+    const { build } = kur();
+    const sel = veFeadPosSelection(build, 'all');
+    expect(sel.primary.key).toBe('mean');
+    expect(sel.ghosts.length).toBeGreaterThan(1);
+    const svg = fead.veFeadLayoutSVG(build, 420, 320, { posMode: 'all' });
+    expect((svg.match(/data-ve="belt-ghost"/g) || []).length).toBe(sel.ghosts.length);
+    expect((svg.match(/data-ve="pulley-ghost"/g) || []).length).toBe(sel.ghosts.length);
+  });
+
+  // TOLERANS 0 → dört orta konum AYNI açıya oturuyor. Üst üste çizilseydi dört
+  // özdeş eğri binerdi ve çizim hatası gibi görünürdü.
+  test('tolerans 0 ise özdeş konumlar TEKİLLEŞİR ve sebep yazılır', () => {
+    const { build } = kur({ tolerance: 0, wearPct: 0 });
+    const sel = veFeadPosSelection(build, 'all');
+    // Serbest kol ayrı bir açı; Replace/Max/Mean/Min aynı → tek hayalet kalır.
+    expect(sel.ghosts.length).toBe(1);
+    expect(sel.ghosts[0].key).toBe('free');
+  });
+
+  test('tek konum kipinde hayalet YOK', () => {
+    const { build } = kur();
+    ['mean', 'free', 'min', 'max'].forEach((m) => {
+      expect(veFeadPosSelection(build, m).ghosts).toHaveLength(0);
+      expect(veFeadPosSelection(build, m).primary.key).toBe(m);
+    });
+  });
+
+  // Load stop girilmemişse listede yok; seçiliyse şema BOŞ KALMAZ, Mean'e düşer
+  // ve sebep note'a yazılır.
+  test('çözülemeyen konum seçilirse çalışma konumuna düşer + sebep', () => {
+    const { build } = kur();
+    const sel = veFeadPosSelection(build, 'load');
+    expect(sel.primary.key).toBe('mean');
+    expect(sel.note).toMatch(/Load stop|çözülemedi/i);
+  });
+
+  test('seçilen konum ŞEMAYI değiştirir', () => {
+    const { build } = kur();
+    const a = fead.veFeadLayoutSVG(build, 420, 320, { posMode: 'mean' });
+    const b = fead.veFeadLayoutSVG(build, 420, 320, { posMode: 'min' });
+    expect(a).not.toBe(b);
+    // Konum künyesi şemanın içinde yazılı
+    expect(a).toMatch(/data-ve="pos-label"/);
+    expect(a).toMatch(/Çalışma/);
+    expect(b).toMatch(/Min\. kayış/);
+  });
+
+  test('kartta seçici var ve düğüm sürüklemesini ENGELLER', () => {
+    const { lay, build } = kur();
+    const h = fead.veFeadPosPicker(lay, build, 'mean');
+    expect(h).toMatch(/veFeadSetChoice\('[^']+','posMode'/);
+    expect(h).toMatch(/event\.stopPropagation\(\)/);
+    // Sürükleme mousedown ile başlıyor; durdurulmazsa listeyi açmak düğümü taşır.
+    expect(h).toMatch(/onmousedown="event\.stopPropagation\(\);"/);
+    expect(h).toMatch(/TÜMÜ/);
+  });
+
+  test('kart seçili konumu çiziyor ve şeridi ona göre yazıyor', () => {
+    const { lay } = kur();
+    lay.data.posMode = 'min';
+    const html = fead.veFeadLayoutCardHTML(lay);
+    expect(html).toMatch(/Min\. kayış/);
+    expect(html).toMatch(/value="min" selected/);
+  });
+
+  test('çözülemeyen modelde seçici patlamaz', () => {
+    global.nodes = []; global.connections = [];
+    const lay = kasnak('fead-layout', {});
+    expect(typeof fead.veFeadPosPicker(lay, veFeadBuildFromCanvas(), 'mean')).toBe('string');
+    expect(typeof fead.veFeadLayoutCardHTML(lay)).toBe('string');
+  });
+});

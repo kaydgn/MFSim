@@ -195,6 +195,115 @@ function veFeadAngleMode(td){
   return 'mount';
 }
 
+// ─── GERGİ KOL KONUMLARI — kayış yolu her konumda BAŞKA ─────────────────────
+//
+// Gergi kolu bir yay dengesinde duruyor: kayış uzadıkça (tolerans, aşınma) kol
+// içe girer, kısaldıkça geri açılır. Her konumda gergi kasnağının MERKEZİ
+// değişir, dolayısıyla teğet noktaları, sarım açıları ve span boyları da
+// değişir — yani KAYIŞ YOLU her konumda başka bir eğri.
+//
+// Çekirdeğin konum tablosu (FEADCore.positionTable) bunları veriyor:
+//   FreeArm  kayış takılı değil (rel = 0, yay yalnız ön yükünde)
+//   Replace  L + tolerans + aşınma·L   → en uzun kayış, kol en açık
+//   MaxBelt  L + tolerans
+//   Mean     L                          → ÇALIŞMA konumu (varsayılan)
+//   MinBelt  L − tolerans               → en kısa kayış, kol en içte
+//   Load     mekanik durdurucu (verilmişse)
+//
+// ÖNEMLİ: tolerans ve aşınma SIFIRSA dört orta konum AYNI açıya oturur. Üst üste
+// çizilirse dört özdeş eğri üst üste biner ve çizim hatası gibi görünür; bu
+// yüzden aşağıda 0.05° içindeki konumlar TEKİLLEŞTİRİLİR.
+var VE_FEAD_POSITIONS = [
+  { key: 'free',    core: 'FreeArm', label: 'Serbest kol',   kisa: 'Serbest' },
+  { key: 'replace', core: 'Replace', label: 'Değiştirme',    kisa: 'Değişt.' },
+  { key: 'max',     core: 'MaxBelt', label: 'Maks. kayış',   kisa: 'Maks' },
+  { key: 'mean',    core: 'Mean',    label: 'Çalışma (Mean)', kisa: 'Mean' },
+  { key: 'min',     core: 'MinBelt', label: 'Min. kayış',    kisa: 'Min' },
+  { key: 'load',    core: 'Load',    label: 'Load stop',     kisa: 'Load' }
+];
+var VE_FEAD_POS_TOL_DEG = 0.05;      // bu kadar yakın iki konum AYNI sayılır
+
+// Çekirdeğin tablosunu UI biçimine çevir. Çözülemeyen konum DÜŞÜRÜLMEZ, hatası
+// taşınır — "Replace neden yok" sorusu cevapsız kalmasın (uzun kayış çözüm
+// aralığının dışına çıkabiliyor ve bu gerçek bir bulgudur).
+function veFeadPositionRows(build){
+  if(!build || !build.ok || typeof FEADCore === 'undefined') return [];
+  var raw;
+  try { raw = FEADCore.positionTable(build.sys); }
+  catch(e){ return []; }
+  var byCore = {};
+  raw.forEach(function(r){ byCore[r.position] = r; });
+  return VE_FEAD_POSITIONS.map(function(P){
+    var r = byCore[P.core];
+    if(!r) return null;                                  // Load tanımlı değilse
+    return {
+      key: P.key, core: P.core, label: P.label, kisa: P.kisa,
+      ok: !r.error && Number.isFinite(r.relDeg),
+      relDeg: r.relDeg, error: r.error || null,
+      cen: (r.idlerX != null) ? [r.idlerX, r.idlerY] : null,
+      tensionN: r.tensionN, wrapDeg: r.wrapDeg
+    };
+  }).filter(Boolean);
+}
+
+// Panelde/kartta seçili konum kipi. Varsayılan 'mean' — çalışma konumu.
+function veFeadPosMode(node){
+  var v = node && node.data && node.data.posMode;
+  if(v === 'all') return 'all';
+  for(var i=0;i<VE_FEAD_POSITIONS.length;i++)
+    if(VE_FEAD_POSITIONS[i].key === v) return v;
+  return 'mean';
+}
+
+// Kip → çizilecek konumlar. { primary, ghosts[], rows[], mode, note }
+//   'mean' (ve diğer tek konumlar) → primary o konum, ghosts boş
+//   'all'                          → primary Mean, ghosts geri kalan TEKİL konumlar
+//
+// primary her zaman DOLU döner (çözülebilen bir konum varsa): kip 'load' seçili
+// ama load çözülemiyorsa şema boş kalmaz, Mean'e düşer ve sebep note'a yazılır.
+function veFeadPosSelection(build, mode){
+  var out = { primary: null, ghosts: [], rows: [], mode: mode || 'mean', note: null };
+  var rows = veFeadPositionRows(build);
+  out.rows = rows;
+  if(!rows.length) return out;
+  var ok = rows.filter(function(r){ return r.ok; });
+  if(!ok.length){ out.note = 'Hiçbir kol konumu çözülemedi.'; return out; }
+
+  var mean = ok.filter(function(r){ return r.key === 'mean'; })[0] || ok[0];
+  var m = out.mode;
+
+  if(m !== 'all'){
+    var sec = ok.filter(function(r){ return r.key === m; })[0];
+    if(!sec){
+      var ist = rows.filter(function(r){ return r.key === m; })[0];
+      out.note = (ist && ist.error)
+        ? (ist.label + ' konumu çözülemedi (' + veFeadTranslateError(ist.error) + '); çalışma konumu gösteriliyor.')
+        : (m === 'load' ? 'Load stop girilmedi; çalışma konumu gösteriliyor.'
+                        : 'Seçili konum çözülemedi; çalışma konumu gösteriliyor.');
+      sec = mean;
+    }
+    out.primary = sec;
+    return out;
+  }
+
+  // TÜMÜ: Mean önde, diğerleri hayalet. Tekilleştirme burada — tolerans 0 iken
+  // dört konum aynı açıya oturuyor ve üst üste çizim hataya benziyor.
+  out.primary = mean;
+  var alinan = [mean.relDeg];
+  ok.forEach(function(r){
+    if(r.key === mean.key) return;
+    for(var i=0;i<alinan.length;i++)
+      if(Math.abs(r.relDeg - alinan[i]) <= VE_FEAD_POS_TOL_DEG) return;
+    alinan.push(r.relDeg);
+    out.ghosts.push(r);
+  });
+  if(!out.ghosts.length)
+    out.note = 'Bütün kol konumları aynı açıda — kayış toleransı ve aşınma payı 0 '
+             + 'girilmiş (Kayış Özellikleri panelinde). Tolerans girilince konum '
+             + 'zarfı burada görünür.';
+  return out;
+}
+
 // ─── Tahrik oranı: krank kasnağı → sürücü (fan) kasnağı ─────────────────────
 // Sayfa oranı iki ÇAPLA veriyor (krank 197.32 / fan 179.62 = 1.0985 ≈ 1.1),
 // çünkü FEAD kayışının sürücü kasnağı krank milinde DEĞİL: krank ayrı bir
@@ -878,6 +987,9 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadFreeAngleFrom: veFeadFreeAngleFrom, veFeadAngleMode: veFeadAngleMode,
     VE_FEAD_ARM_TOL_MM: VE_FEAD_ARM_TOL_MM, VE_FEAD_TENSION_TOL: VE_FEAD_TENSION_TOL,
     veFeadDriveRatio: veFeadDriveRatio,
+    VE_FEAD_POSITIONS: VE_FEAD_POSITIONS, VE_FEAD_POS_TOL_DEG: VE_FEAD_POS_TOL_DEG,
+    veFeadPositionRows: veFeadPositionRows, veFeadPosMode: veFeadPosMode,
+    veFeadPosSelection: veFeadPosSelection,
     veFeadPowerCurve: veFeadPowerCurve, veFeadHasPowerCurve: veFeadHasPowerCurve,
     veFeadInterpKw: veFeadInterpKw,
     VE_FEAD_EXAMPLES: VE_FEAD_EXAMPLES, veFeadExampleKeys: veFeadExampleKeys,
