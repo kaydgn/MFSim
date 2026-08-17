@@ -1019,7 +1019,11 @@ function veRenderSnapshot(paneIdx) {
       }
       
       html += '</div>';
-      html += '<div class="ve-node-label">' + escapeHTML(n.customName || def.name) + '</div>';
+      // Ad konumu (node.data.labelPos) şerit panelinde de geçerli — canlı
+      // kanvasta applyNodeLabelPos'un eklediği sınıfın aynısı.
+      var _lp = n.data && n.data.labelPos;
+      var _lpCls = (_lp === 'top' || _lp === 'left' || _lp === 'right') ? ' lbl-' + _lp : '';
+      html += '<div class="ve-node-label' + _lpCls + '">' + escapeHTML(n.customName || def.name) + '</div>';
       
       if(n.type === 'wheel' && n.isMasterWheel) {
         html += '<div class="ve-wheel-master-badge" title="Master Tekerlek">★</div>';

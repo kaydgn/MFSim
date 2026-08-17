@@ -175,7 +175,10 @@ function veTopoMiniSVG(nodeList, connList, opts) {
          ' viewBox="' + box.x + ' ' + box.y + ' ' + box.w + ' ' + box.h + '"' +
          ' preserveAspectRatio="xMidYMid meet" aria-hidden="true">');
 
-  // Bağlantılar — ana kanvasla AYNI bezier kuralı (topology.js).
+  // Bağlantılar — ana kanvasla AYNI kural (js/connections.js): conn.lineType
+  // 'straight' / 'stepped' / 'curve'. Burası eskiden lineType'ı HİÇ okumuyor,
+  // her teli bezier çiziyordu; dik açılı kurulmuş bir topoloji modül kartında
+  // ve dışa aktarılan PNG/SVG'de eğri görünüyordu (ekran ile çıktı ayrışması).
   p.push('<g fill="none" stroke="var(--text-muted, #75849d)" stroke-width="1.5" ' +
          'stroke-linecap="round" vector-effect="non-scaling-stroke">');
   (connList || []).forEach(function(c) {
@@ -188,11 +191,21 @@ function veTopoMiniSVG(nodeList, connList, opts) {
     if(!f || !t) return;
     var fp = _veMiniPortPos(f, c.fromPort || 'output');
     var tp = _veMiniPortPos(t, c.toPort || 'input');
-    var off = 40;
-    var c1 = (fp.side === 'left') ? fp.x - off : fp.x + off;
-    var c2 = (tp.side === 'left') ? tp.x - off : tp.x + off;
-    p.push('<path d="M ' + fp.x + ' ' + fp.y + ' C ' + c1 + ' ' + fp.y + ', ' +
-           c2 + ' ' + tp.y + ', ' + tp.x + ' ' + tp.y + '"/>');
+    var lt = c.lineType || 'curve', d;
+    if(lt === 'straight') {
+      d = 'M ' + fp.x + ' ' + fp.y + ' L ' + tp.x + ' ' + tp.y;
+    } else if(lt === 'stepped') {
+      var mx = (fp.x + tp.x) / 2;
+      d = 'M ' + fp.x + ' ' + fp.y + ' L ' + mx + ' ' + fp.y +
+          ' L ' + mx + ' ' + tp.y + ' L ' + tp.x + ' ' + tp.y;
+    } else {
+      var off = 40;
+      var c1 = (fp.side === 'left') ? fp.x - off : fp.x + off;
+      var c2 = (tp.side === 'left') ? tp.x - off : tp.x + off;
+      d = 'M ' + fp.x + ' ' + fp.y + ' C ' + c1 + ' ' + fp.y + ', ' +
+          c2 + ' ' + tp.y + ', ' + tp.x + ' ' + tp.y;
+    }
+    p.push('<path d="' + d + '"/>');
   });
   p.push('</g>');
 
@@ -215,7 +228,11 @@ function veTopoMiniSVG(nodeList, connList, opts) {
     if(opts.labels) {
       var nm = n.customName || def.name || n.type;
       if(nm.length > 18) nm = nm.slice(0, 17) + '…';
-      p.push('<text x="' + (n.x + w / 2) + '" y="' + (n.y + h + 13) + '" text-anchor="middle" ' +
+      // Ad konumu node.data.labelPos'tan (components.js veNodeLabelAnchor).
+      var la = (typeof veNodeLabelAnchor === 'function')
+        ? veNodeLabelAnchor(n, w, h, 13)
+        : { x: n.x + w / 2, y: n.y + h + 13, anchor: 'middle' };
+      p.push('<text x="' + la.x + '" y="' + la.y + '" text-anchor="' + la.anchor + '" ' +
              'font-family="Inter, system-ui, -apple-system, Segoe UI, sans-serif" font-size="10.5" ' +
              'font-weight="600" fill="var(--text-secondary, #98a0b0)">' + _veMiniEsc(nm) + '</text>');
     }

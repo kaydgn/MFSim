@@ -44,33 +44,48 @@
 //   • TEKERLEK ADIMI 100 px (60 kutu + 40 açıklık): tekerlek ADI kutunun
 //     altında çiziliyor, 6×6'daki eski 80 px adımda ad bir alttaki kutuya
 //     değiyordu. İki biçim de aynı adımı kullanır → örnekler birbirine uyar.
-//   • SÜTUN ADIMI 130 px (65 kutu + 65 açıklık). Dik açılı (stepped) bağlantı
-//     dikey bacağını iki sütunun ORTASINDAN geçirir; eşit adım o bacakların
-//     hepsini aynı temiz kanala oturtur.
+//   • SÜTUN ADIMI: zincirde 130 px (65 kutu + 65 açıklık), DALLARDA 200 px.
+//     Dik açılı (stepped) bağlantı dikey bacağını iki sütunun ORTASINDAN
+//     geçirir; 130 px'te o kanal düğüm ADININ İÇİNE düşüyordu. Adlar kutuda
+//     ORTALI ve kutudan geniş — gerçek tarayıcıda ölçüldü: en geniş
+//     6.77 px/karakter, "Transfer Kutusu (2 kademe)" 144.2 px,
+//     "Goodyear G275 MSA 335/80R20" 170.8 px. 135 px açıklık iki kanalı da
+//     (x=3212.5 ve 3412.5) adların dışına çıkarır.
+//   • SOL ÜST KÖŞE BOŞ: "Örneği Aktar" sonrası yükleyici "Başlangıç ve
+//     Örnekler" düğümünü yerleşim-yereli (30, −40)'a geri koyuyor
+//     (cp-arac-example.js). Çözücü orada dururken yeni düğümün ADI Çözücü
+//     kutusunun üstüne biniyordu — Çözücü bu yüzden ALT sırada.
 //
 // Örnek topolojileri (assets/examples/ap_*_topoloji.json) bu ızgaradan
 // üretilir; tests/unit/arac-example-layout.test.js ikisini birbirine bağlar.
 var VE_ARAC_PERFORMANS_LAYOUT = [
-  // Üst sıra — çalıştırma (motor sütunu; sol üst köşeyi doldurur)
-  { type:'solver',            lx:0,   ly:20,  w:90, h:55 },
   // Şaft ekseni (ly 150 → port 180); motor 76 px yüksek, ly 142 → çıkış 180
-  { type:'engine',            lx:0,   ly:142, w:66, h:76 },
-  { type:'torque-converter',  lx:130, ly:150 },
-  { type:'gearbox',           lx:260, ly:150 },
-  { type:'propshaft',         lx:390, ly:150 },
-  { type:'transfer',          lx:520, ly:150 },
-  // Fan — tekerlek adımı 100, diferansiyel beslediği çiftin ORTASINDA
-  { type:'differential',      lx:650, ly:50  },
-  { type:'differential',      lx:650, ly:250 },
-  { type:'wheel',             lx:780, ly:0   },
-  { type:'wheel',             lx:780, ly:100 },
-  { type:'wheel',             lx:780, ly:200 },
-  { type:'wheel',             lx:780, ly:300 },
-  // Alt sıra — kurulum ve analiz araçları, zincir sütunlarıyla hizalı
-  { type:'ec-matching',       lx:130, ly:300 },
-  { type:'shift-controller',  lx:260, ly:300 },
-  { type:'vehicle',           lx:390, ly:300 },
-  { type:'obstacle-crossing', lx:520, ly:300 }
+  { type:'engine',                  lx:0,   ly:142, w:66, h:76 },
+  { type:'torque-converter',        lx:130, ly:150 },
+  { type:'gearbox',                 lx:260, ly:150 },
+  { type:'propshaft',               lx:390, ly:150 },
+  { type:'transfer',                lx:520, ly:150 },
+  // Fan — dal sütunları 180 px (etiket kanalı), tekerlek adımı 100,
+  // diferansiyel beslediği ÇİFTİN tam ortasında
+  { type:'differential',            lx:720, ly:50  },
+  { type:'differential',            lx:720, ly:250 },
+  { type:'wheel',                   lx:920, ly:0   },
+  { type:'wheel',                   lx:920, ly:100 },
+  { type:'wheel',                   lx:920, ly:200 },
+  { type:'wheel',                   lx:920, ly:300 },
+  // ARAÇLAR. İki eşleştirme aracı da motorun AYNI çıkış portundan besleniyor
+  // ve ikisi de KONVERTÖR SÜTUNUNDA durmak zorunda: dik açılı telin İLK ayağı
+  // kaynak portun y'sinde, yani şaft ekseninde yatay ilerliyor; hedef daha
+  // sağda olsa o ayak Konvertör kutusunun içinden geçerdi (ölçüldü: Propşaft
+  // sütununda mid=2788, ilk ayak y=2980 · x 2626→2788, TC kutusu 2690–2755).
+  // Alt alta duruyorlar ve ADLARI SAĞDA (node.data.labelPos 'right'): ad
+  // ortada olsaydı ~180 px genişliğiyle alttakine inen dikey bacağı (x=2658)
+  // yutardı. Kurulum düğümleri o ad şeritlerinin sağında.
+  { type:'ec-matching',             lx:130, ly:300 },
+  { type:'engine-gearbox-matching', lx:130, ly:400 },
+  { type:'solver',                  lx:390, ly:300, w:90, h:55 },
+  { type:'vehicle',                 lx:520, ly:300 },
+  { type:'shift-controller',        lx:390, ly:400 }
 ];
 
 // Topolojiyi görünür alanın merkezine ortalayacak taban koordinatı hesapla.

@@ -1110,6 +1110,28 @@ function vePortBoxStyle(node, portType){
   return { left: o.dx - k, top: o.dy - k, side: o.side };
 }
 
+// ── DÜĞÜM ADININ ÇİZİM ÇIPASI — TEK GERÇEK KAYNAK ───────────────────────────
+// Ad, node.data.labelPos ile kutunun altına/üstüne/soluna/sağına konabiliyor
+// (sağ tık → Etiket Konumu; DOM tarafı context-menus.js applyNodeLabelPos +
+// css .lbl-*). Ama SVG çizicileri bu alanı HİÇ okumuyordu: ekranda ÜSTTE duran
+// ad, dışa aktarılan PNG/SVG'de ve şerit önizlemesinde ALTTA çiziliyordu —
+// yani adı tellerin şeridinden kaçırmak için taşınan düğümde çıktı hâlâ eski
+// kusuru gösteriyordu. Üç çizici (export-topology.js, topo-mini.js,
+// topology.js şerit paneli) artık buradan okuyor.
+// gap: 'bottom' için taban çizgisinin kutu altından uzaklığı (çiziciye göre
+// 13–14 px). Yanlar CSS ile aynı: 7 px; üst 5 px.
+function veNodeLabelAnchor(node, w, h, gap){
+  var pos = (node && node.data && node.data.labelPos) || 'bottom';
+  var g = (typeof gap === 'number' && isFinite(gap)) ? gap : 14;
+  var x = node.x, y = node.y;
+  switch(pos){
+    case 'top':   return { x: x + w / 2, y: y - 5,          anchor: 'middle', pos: 'top' };
+    case 'left':  return { x: x - 7,     y: y + h / 2 + 4,  anchor: 'end',    pos: 'left' };
+    case 'right': return { x: x + w + 7, y: y + h / 2 + 4,  anchor: 'start',  pos: 'right' };
+    default:      return { x: x + w / 2, y: y + h + g,      anchor: 'middle', pos: 'bottom' };
+  }
+}
+
 // Yukarıdakinin HTML string üreticileri için hazır hâli (ilk çizim yolları:
 // topology.js, ui-core.js createNode, state.js geri-yükleme).
 function vePortStyleAttr(node, portType){

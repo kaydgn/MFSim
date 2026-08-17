@@ -195,15 +195,49 @@ describe('kod ile veri ayrışmasın — VE_ARAC_PERFORMANS_LAYOUT tek kaynak', 
   const key = it => `${it.type}@${it.lx},${it.ly}`;
   const want = VE_ARAC_PERFORMANS_LAYOUT.map(key).sort();
 
+  const FAN = new Set(['differential', 'wheel']);
+  // Yerel çerçevenin çıpası MOTOR — dosyanın kendi min'i DEĞİL. 6×6'da fan iki
+  // tekerlek daha uzun, yani en üstteki düğüm 100 px yukarıda; min'e göre
+  // ölçseydik aynı ızgara iki dosyada iki farklı sayı verirdi.
+  const ENG = VE_ARAC_PERFORMANS_LAYOUT.find(it => it.type === 'engine');
+  const local = doc => {
+    const e = doc.nodes.find(n => n.type === 'engine');
+    return n => ({ type: n.type, lx: n.x - e.x + ENG.lx, ly: n.y - e.y + ENG.ly });
+  };
   const FOURBY = EXAMPLES.filter(([, d]) => d.nodes.filter(n => n.type === 'differential').length === 2);
+  const SIXBY = EXAMPLES.filter(([, d]) => d.nodes.filter(n => n.type === 'differential').length === 3);
 
   test('4×4 örnekleri yerleşimle BİREBİR aynı (taban kaydırması dışında)', () => {
     expect(FOURBY.length).toBeGreaterThan(5);
     FOURBY.forEach(([f, doc]) => {
-      const minX = Math.min(...doc.nodes.map(n => n.x));
-      const minY = Math.min(...doc.nodes.map(n => n.y));
-      const got = doc.nodes.map(n => key({ type: n.type, lx: n.x - minX, ly: n.y - minY })).sort();
+      const L = local(doc);
+      const got = doc.nodes.map(n => key(L(n))).sort();
       expect([f, got]).toEqual([f, want]);
+    });
+  });
+
+  // 6×6'da dif/tekerlek SAYISI projeye göre değişiyor (kullanıcı: "onda bir
+  // genellememiz yok"), ama fan DIŞINDAKİ her şey aynı ızgarada durmak
+  // zorunda — yoksa yedi dosya kapının dışında kalır ve sessizce kayabilir.
+  test('6×6 örneklerinde fan DIŞI düğümler yerleşimle birebir aynı', () => {
+    expect(SIXBY.length).toBeGreaterThan(5);
+    const wantFix = VE_ARAC_PERFORMANS_LAYOUT.filter(it => !FAN.has(it.type)).map(key).sort();
+    SIXBY.forEach(([f, doc]) => {
+      const L = local(doc);
+      const got = doc.nodes.filter(n => !FAN.has(n.type)).map(n => key(L(n))).sort();
+      expect([f, got]).toEqual([f, wantFix]);
+    });
+  });
+
+  test('6×6 fanı da aynı sütunlarda ve aynı 100 px tekerlek adımında', () => {
+    const col = t => VE_ARAC_PERFORMANS_LAYOUT.find(it => it.type === t).lx;
+    SIXBY.forEach(([f, doc]) => {
+      const L = local(doc);
+      doc.nodes.filter(n => FAN.has(n.type)).forEach(n => {
+        expect([f, n.type, L(n).lx]).toEqual([f, n.type, col(n.type)]);
+      });
+      const ys = doc.nodes.filter(n => n.type === 'wheel').map(n => n.y).sort((a, b) => a - b);
+      ys.slice(1).forEach((y, i) => expect([f, y - ys[i]]).toEqual([f, 100]));
     });
   });
 
@@ -214,6 +248,68 @@ describe('kod ile veri ayrışmasın — VE_ARAC_PERFORMANS_LAYOUT tek kaynak', 
       // Ölçü verilmemişse veArrangeModuleBase 65×60 sayar — o zaman tip de
       // 65×60 OLMALI, yoksa ortalama kayar (FEAD kartında tam bu olmuştu).
       else expect([it.type, d.w, d.h]).toEqual([it.type, 65, 60]);
+    });
+  });
+});
+
+describe('"Örneği Aktar" sonrası eklenen düğüm boş köşeye düşüyor', () => {
+  // js/cp-arac-example.js veApLoadExample: örnek kurulduktan sonra
+  // "Başlangıç ve Örnekler" (ap-example) düğümü yerleşimin taban çerçevesine
+  // GERİ konuyor → yerleşim-yereli (30, −40), 56×56.
+  //
+  // ÖLÇÜLDÜ: Çözücü bir ara yerleşimde sol ÜST köşedeydi (lx 0, ly 20) ve yeni
+  // düğümün ADI (kutunun 4 px altında, ~14 px yüksek) Çözücü kutusunun üstüne
+  // biniyordu — yani "örneği aktar"ın İLK gösterdiği şey bir çakışmaydı.
+  const AP = { x: 30, y: -40, w: 56, h: 56 };
+  const LABEL_H = 18;                     // 4 px boşluk + ~14 px satır
+
+  test('ap-example kutusu ve adı hiçbir yerleşim düğümüyle çakışmıyor', () => {
+    const box = { x: AP.x, y: AP.y, w: AP.w, h: AP.h + LABEL_H };
+    VE_ARAC_PERFORMANS_LAYOUT.forEach(it => {
+      const d = veNodeDefaultSize(it.type);
+      const w = it.w || d.w, h = it.h || d.h;
+      const hit = box.x < it.lx + w && it.lx < box.x + box.w &&
+                  box.y < it.ly + h && it.ly < box.y + box.h;
+      expect([it.type, hit]).toEqual([it.type, false]);
+    });
+  });
+});
+
+describe('düğüm ADI dik açılı telin kanalına girmiyor', () => {
+  // 'stepped' telin dikey bacağı iki sütunun TAM ORTASINDAN geçiyor
+  // (js/connections.js: midX = (x1+x2)/2). Ad kutuda ORTALI ve kutudan geniş;
+  // dar sütun adımında bacak adın İÇİNDEN geçiyordu (ölçüldü: 130 px adımda
+  // kanal x=3177.5, "Transfer Kutusu (2 kademe)" 144.2 px → sağ ucu 3184.6).
+  //
+  // Gerçek tarayıcıda ölçülen en geniş ad 6.77 px/karakter; kapı 7.0 ile,
+  // yani ölçümün ÜSTÜNDE bir üst sınırla bakıyor. Daha uzun bir ad girilirse
+  // (yeni lastik adı vb.) burası kırmızıya döner — doğrusu da bu.
+  const PX_PER_CHAR = 7.0;
+  const labelSpan = (doc, n) => {
+    const name = n.customName || (componentDefs[n.type] || {}).name || n.type;
+    const half = (name.length * PX_PER_CHAR) / 2;
+    const pos = (n.data && n.data.labelPos) || 'bottom';
+    if (pos === 'left' || pos === 'right') return null;   // yatay kanalı kesmez
+    const cx = n.x + n.width / 2;
+    return { x0: cx - half, x1: cx + half,
+             y0: pos === 'top' ? n.y - 20 : n.y + n.height,
+             y1: pos === 'top' ? n.y      : n.y + n.height + 20 };
+  };
+
+  test.each(EXAMPLES)('%s', (_f, doc) => {
+    const m = byId(doc);
+    doc.connections.filter(c => c.lineType === 'stepped').forEach(c => {
+      const a = m.get(c.from), b = m.get(c.to);
+      const p1 = P(a, c.fromPort || 'output'), p2 = P(b, c.toPort || 'input');
+      const mid = (p1.x + p2.x) / 2;
+      const yLo = Math.min(p1.y, p2.y), yHi = Math.max(p1.y, p2.y);
+      doc.nodes.forEach(n => {
+        const L = labelSpan(doc, n);
+        if (!L) return;
+        const hit = mid > L.x0 && mid < L.x1 && yHi > L.y0 && yLo < L.y1;
+        const tag = c.from + '→' + c.to + ' ⟂ "' + (n.customName || n.type) + '"';
+        expect([tag, hit]).toEqual([tag, false]);
+      });
     });
   });
 });

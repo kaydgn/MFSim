@@ -399,3 +399,70 @@ describe('veSyncModuleZoomLayout — eşik geçilmedikçe iş yapmaz', () => {
     expect(veSyncModuleZoomLayout()).toBe(false);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ÇİZİCİ SÖZLEŞMESİ — ekran ile ÇIKTI ayrışamaz
+// ════════════════════════════════════════════════════════════════════════════
+// Bu iki alan (conn.lineType, node.data.labelPos) canlı kanvasta OKUNUYORDU
+// ama mini haritada/dışa aktarmada OKUNMUYORDU. Sonuç sessizdi: dik açılı
+// kurulmuş bir topoloji modül kartında eğri, üste alınmış bir ad çıktıda
+// altta çıkıyordu. CLAUDE.md'nin "aynı çizici export-topology.js'e de hizmet
+// ettiği için ekran ile PNG/SVG çıktısı AYRIŞAMAZ" kuralının kapısı burası.
+describe('veTopoMiniSVG — bağlantı biçimi (lineType) ana kanvalla aynı', () => {
+  const two = (lineType) => veTopoMiniSVG(
+    [{ id: 'a', type: 'gearbox', x: 0,   y: 0,  width: 65, height: 60 },
+     { id: 'b', type: 'gearbox', x: 200, y: 90, width: 65, height: 60 }],
+    [{ from: 'a', to: 'b', fromPort: 'output', toPort: 'input', lineType: lineType }]
+  );
+
+  test('"stepped" → dik açılı dört nokta, orta x iki port arasının TAM ORTASI', () => {
+    // Portlar: a çıkış (65,30), b giriş (200,120) → mid 132.5
+    const d = /<path d="([^"]+)"/.exec(two('stepped'))[1];
+    expect(d).toBe('M 65 30 L 132.5 30 L 132.5 120 L 200 120');
+    expect(d).not.toContain('C');
+  });
+
+  test('"straight" → tek doğru parçası', () => {
+    expect(/<path d="([^"]+)"/.exec(two('straight'))[1]).toBe('M 65 30 L 200 120');
+  });
+
+  test('"curve" ve biçimsiz (eski kayıt) → bezier, davranış değişmedi', () => {
+    expect(/<path d="([^"]+)"/.exec(two('curve'))[1]).toContain(' C ');
+    const bicimsiz = veTopoMiniSVG(
+      [{ id: 'a', type: 'gearbox', x: 0, y: 0, width: 65, height: 60 },
+       { id: 'b', type: 'gearbox', x: 200, y: 90, width: 65, height: 60 }],
+      [{ from: 'a', to: 'b', fromPort: 'output', toPort: 'input' }]);
+    expect(/<path d="([^"]+)"/.exec(bicimsiz)[1]).toContain(' C ');
+  });
+
+  test('mini harita ile canlı kanvas AYNI dizgeyi üretiyor (stepped)', () => {
+    // js/connections.js: 'M x1 y1 L midX y1 L midX y2 L x2 y2'
+    const x1 = 65, y1 = 30, x2 = 200, y2 = 120, midX = (x1 + x2) / 2;
+    const canvasD = 'M ' + x1 + ' ' + y1 + ' L ' + midX + ' ' + y1 +
+                    ' L ' + midX + ' ' + y2 + ' L ' + x2 + ' ' + y2;
+    expect(/<path d="([^"]+)"/.exec(two('stepped'))[1]).toBe(canvasD);
+  });
+});
+
+describe('veNodeLabelAnchor — ad konumu tek kaynak', () => {
+  const n = (labelPos) => ({ x: 100, y: 200, data: labelPos ? { labelPos } : {} });
+
+  test('varsayılan alt; gap çiziciden geliyor', () => {
+    expect(veNodeLabelAnchor(n(), 65, 60, 14)).toEqual({ x: 132.5, y: 274, anchor: 'middle', pos: 'bottom' });
+    expect(veNodeLabelAnchor(n('bottom'), 65, 60, 13).y).toBe(273);
+  });
+
+  test('üst / sol / sağ — CSS .lbl-* ile aynı taraf ve hizalama', () => {
+    expect(veNodeLabelAnchor(n('top'), 65, 60, 14)).toEqual({ x: 132.5, y: 195, anchor: 'middle', pos: 'top' });
+    expect(veNodeLabelAnchor(n('left'), 65, 60, 14)).toEqual({ x: 93, y: 234, anchor: 'end', pos: 'left' });
+    expect(veNodeLabelAnchor(n('right'), 65, 60, 14)).toEqual({ x: 172, y: 234, anchor: 'start', pos: 'right' });
+  });
+
+  test('mini harita adı bu çıpaya koyuyor — üstteki ad ALTTA çizilmiyor', () => {
+    const svg = veTopoMiniSVG(
+      [{ id: 'a', type: 'gearbox', x: 100, y: 200, width: 65, height: 60, customName: 'ÜST',
+         data: { labelPos: 'top' } }], [], { labels: true });
+    const m = /<text x="([\d.]+)" y="([\d.]+)" text-anchor="(\w+)"/.exec(svg);
+    expect([Number(m[1]), Number(m[2]), m[3]]).toEqual([132.5, 195, 'middle']);
+  });
+});
