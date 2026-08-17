@@ -263,3 +263,158 @@ describe('topolojiye bakan paneller', () => {
     expect(html).toMatch(/çözüldü/);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+//  TEDARİKÇİ SAYFASININ BİÇİMİ (FEAD_INFORMATION)
+// ════════════════════════════════════════════════════════════════════════════
+// Panel testleri kasıtlı olarak SEYREK: her etiket için assertion açmak
+// kırılgan olurdu (bkz. CLAUDE.md test politikası). Burada test edilen şey
+// etiketler değil, panelin HANGİ ALANLARI SORDUĞU — çünkü yanlış alan setini
+// sormak sessiz bir hesap hatasına dönüşüyor (montaj merkezi ↔ serbest açı).
+describe('gergi paneli sayfanın biçimini soruyor', () => {
+  test('montaj yolunda montaj merkezi sorulur, serbest açı SORULMAZ', () => {
+    const ten = kasnak('fead-tensioner', {
+      angleMode: 'mount', pivotX: -259.94, pivotY: 104.15,
+      cenX: -170.08, cenY: 99.16, armLen: 90, preload: 8.6, kArm: 0.48, meanLoad: 22.07
+    });
+    const html = fead.getFeadTensionerPropertiesHTML(ten);
+    expect(html).toMatch(/veFeadSet\('[^']+','cenX'/);
+    expect(html).toMatch(/veFeadSet\('[^']+','meanLoad'/);
+    expect(html).not.toMatch(/veFeadSet\('[^']+','freeAngleDeg'/);
+  });
+
+  test('elle yolunda serbest açı sorulur, montaj merkezi SORULMAZ', () => {
+    const ten = kasnak('fead-tensioner', { angleMode: 'direct', freeAngleDeg: 42 });
+    const html = fead.getFeadTensionerPropertiesHTML(ten);
+    expect(html).toMatch(/veFeadSet\('[^']+','freeAngleDeg'/);
+    expect(html).not.toMatch(/veFeadSet\('[^']+','cenX'/);
+  });
+
+  // ESKİ KAYIT: yalnız freeAngleDeg taşıyan bir gergi 'direct' modda açılmalı.
+  // Panel 'mount' gösterirse kullanıcı boş bir montaj kutusu görür ve kendi
+  // çalışan modelinin bozulduğunu sanır.
+  test('yalnız serbest açı taşıyan ESKİ kayıt elle modda açılır', () => {
+    const ten = kasnak('fead-tensioner', { pivotX: 0, pivotY: 0, armLen: 90, freeAngleDeg: 42 });
+    const html = fead.getFeadTensionerPropertiesHTML(ten);
+    expect(html).toMatch(/value="direct" selected/);
+    expect(html).toMatch(/veFeadSet\('[^']+','freeAngleDeg'/);
+  });
+
+  test('montaj merkezi taşıyan kayıt montaj modunda açılır', () => {
+    const ten = kasnak('fead-tensioner', { pivotX: -259.94, pivotY: 104.15, cenX: -170.08, cenY: 99.16 });
+    expect(fead.getFeadTensionerPropertiesHTML(ten)).toMatch(/value="mount" selected/);
+  });
+
+  test('kol boyu çapraz kontrolü panelde GÖRÜNÜR', () => {
+    const tam = kasnak('fead-tensioner', {
+      angleMode: 'mount', pivotX: -259.94, pivotY: 104.15,
+      cenX: -170.08, cenY: 99.16, armLen: 90, preload: 8.6, kArm: 0.48, meanLoad: 22.07
+    });
+    expect(fead.getFeadTensionerPropertiesHTML(tam)).toMatch(/tutuyor/);
+    const bozuk = kasnak('fead-tensioner', {
+      angleMode: 'mount', pivotX: -259.94, pivotY: 104.15,
+      cenX: -170.08, cenY: 99.16, armLen: 70, preload: 8.6, kArm: 0.48, meanLoad: 22.07
+    });
+    expect(fead.getFeadTensionerPropertiesHTML(bozuk)).toMatch(/TUTMUYOR/);
+  });
+});
+
+describe('çözücü paneli: birinci kademe ve motor künyesi', () => {
+  test('türetme modunda iki çap sorulur, oran gösterilir', () => {
+    const sv = kasnak('fead-solver', { ratioMode: 'derive', crankOD: 197.32, fanOD: 179.62 });
+    const html = fead.veFeadDriveCard(sv);
+    expect(html).toMatch(/veFeadSet\('[^']+','crankOD'/);
+    expect(html).toMatch(/veFeadSet\('[^']+','fanOD'/);
+    expect(html).toMatch(/1\.0985/);                       // 197.32 / 179.62
+    expect(html).not.toMatch(/veFeadSet\('[^']+','driveRatio'/);
+  });
+
+  test('elle modda oran kutusu sorulur, çaplar SORULMAZ', () => {
+    const sv = kasnak('fead-solver', { ratioMode: 'direct', driveRatio: 1.1 });
+    const html = fead.veFeadDriveCard(sv);
+    expect(html).toMatch(/veFeadSet\('[^']+','driveRatio'/);
+    expect(html).not.toMatch(/veFeadSet\('[^']+','crankOD'/);
+  });
+
+  // Hesaba GİRMEYEN alanların girmediği yazılı olmalı: sessizce alan açmak
+  // "girdim, hesaba girdi" izlenimi verir.
+  test('motor künyesi kartı hangi alanın hesaba girmediğini SÖYLER', () => {
+    const html = fead.veFeadEngineCard(kasnak('fead-solver', {}));
+    expect(html).toMatch(/veFeadSet\('[^']+','cylinders'/);
+    expect(html).toMatch(/veFeadSet\('[^']+','crankInertia'/);
+    expect(html).toMatch(/veFeadSet\('[^']+','serviceFact'/);
+    expect(html).toMatch(/hesaba katmaz/);
+  });
+});
+
+describe('güç eğrisi kartı', () => {
+  test('aksesuarda görünür, AVARADA görünmez', () => {
+    const ac = kasnak('fead-ac', { od: 152, x: 0, y: 0 });
+    const idr = kasnak('fead-idler', { od: 75, x: 0, y: 0 });
+    expect(fead.getFeadPulleyPropertiesHTML(ac)).toMatch(/Güç Eğrisi/);
+    expect(fead.getFeadPulleyPropertiesHTML(idr)).not.toMatch(/Güç Eğrisi/);
+  });
+
+  test('boş eğride satır eklenebilir, dolu eğri satırları basılır', () => {
+    const bos = kasnak('fead-ac', { od: 152, x: 0, y: 0 });
+    expect(fead.veFeadPowerCurveCard(bos)).toMatch(/veFeadCurveAdd/);
+    const dolu = kasnak('fead-ac', { od: 152, x: 0, y: 0,
+      pwrCurve: [{ rpm: 1000, kw: 2 }, { rpm: 2000, kw: 6 }] });
+    const html = fead.veFeadPowerCurveCard(dolu);
+    expect((html.match(/veFeadCurveSet/g) || []).length).toBe(4);   // 2 satır × 2 alan
+    expect((html.match(/veFeadCurveRemove/g) || []).length).toBe(2);
+  });
+
+  test('tek noktalı eğri UYARIR (sabit güç gibi davranır)', () => {
+    const tek = kasnak('fead-ac', { od: 152, x: 0, y: 0, pwrCurve: [{ rpm: 1500, kw: 3 }] });
+    expect(fead.veFeadPowerCurveCard(tek)).toMatch(/Tek nokta/);
+  });
+});
+
+describe('örnek paneli: tedarikçi sayfası kurulabilir', () => {
+  test('kayıt defterindeki her örnek için kurma düğmesi var', () => {
+    const html = fead.getFeadExamplePropertiesHTML(kasnak('fead-example', {}));
+    veFeadExampleKeys().forEach((k) => {
+      expect(html).toMatch(new RegExp("veFeadLoadExample\\('" + k + "'\\)"));
+    });
+    expect(html).not.toMatch(/Hesap çekirdeği bekleniyor/);   // artık boş değil
+  });
+});
+
+describe('servis faktörü sonuç tablosunda hüküm veriyor', () => {
+  // Sahte bir sonuç nesnesi: gerçek çözüm bu dosyanın işi değil (fead-example
+  // orada), burada test edilen şey EŞİĞİN NEREDEN GELDİĞİ.
+  const sahteR = (sf, minSF) => ({
+    serviceFact: sf, pulleyNames: ['A', 'B'],
+    analysis: { duty: [{
+      engineRpm: 2000, dcPct: 50, vMs: 12, firingHz: 100,
+      perPulley: [{ exitTensionN: 600 }, { exitTensionN: 500 }],
+      hubloads: [{ FN: 1200, dirDeg: 90 }, { FN: 900, dirDeg: 180 }],
+      slip: [{ SF: minSF }, { SF: minSF + 1 }], warnings: []
+    }] }
+  });
+
+  test('min SF servis faktörünün üstündeyse GEÇTİ', () => {
+    const html = fead.veFeadDutyResultTable(sahteR(1.3, 1.8));
+    expect(html).toMatch(/GEÇTİ/);
+    expect(html).not.toMatch(/KALDI/);
+  });
+
+  test('min SF servis faktörünün altındaysa KALDI', () => {
+    const html = fead.veFeadDutyResultTable(sahteR(1.3, 1.15));
+    expect(html).toMatch(/KALDI/);
+  });
+
+  // Eşik ARTIK SABİT DEĞİL: 1.5 isteyen kullanıcıda 1.4 kalmalı, 1.2 isteyende
+  // aynı 1.4 geçmeli. Sabit 1.3 olsaydı ikisi de aynı sonucu verirdi.
+  test('eşik kullanıcının girdiği servis faktörü — sabit 1.3 DEĞİL', () => {
+    expect(fead.veFeadDutyResultTable(sahteR(1.5, 1.4))).toMatch(/KALDI/);
+    expect(fead.veFeadDutyResultTable(sahteR(1.2, 1.4))).toMatch(/GEÇTİ/);
+  });
+
+  test('servis faktörü girilmemişse hüküm satırı HİÇ çıkmaz (uydurma eşik yok)', () => {
+    const html = fead.veFeadDutyResultTable(sahteR(0, 1.1));
+    expect(html).not.toMatch(/GEÇTİ|KALDI/);
+    expect(html).not.toMatch(/Servis faktörü/);
+  });
+});

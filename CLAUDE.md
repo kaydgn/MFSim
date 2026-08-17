@@ -136,6 +136,41 @@ hubload `1911/557/1938/350 · 1939/571/1966/349 · 1949/576/1977/349` —
 **hepsi Gates raporuyla birebir.** Yorulma dağılımı `CRK 2.8 · IDR 43.5 ·
 A_C 10.2 · TEN 43.5` (rapor 2.6/43.3/10.8/43.3 → 0.6 yüzde puanı içinde).
 
+#### Tedarikçi sayfası (FEAD_INFORMATION) — panellerin girdi biçimi
+
+Paneller **tedarikçiye gönderilen sayfanın biçimini** soruyor: kasnak merkez
+koordinatları, çaplar, gergi konumu, aksesuar devir/güç tabloları, motor duty
+cycle, otomatik gergi künyesi. Sayfanın kendisi `js/fead-model.js` içinde
+`VE_FEAD_EXAMPLES['BMC_FEAD_2026']` olarak yaşıyor ve tek tıkla iç topolojiye
+kuruluyor (`veFeadLoadExample`). Bu aynı zamanda **ikinci, bağımsız doğrulama**:
+Gates raporlarıyla ortak hiçbir sayı yok, `tests/unit/fead-example.test.js`
+dört bağımsız çıpaya bakıyor — kayış boyu **1715 mm**, kol boyu **90.0 mm**,
+Spring Mean Load **22.07 Nm**, tahrik oranı **197.32/179.62 = 1.1** — ve dördü
+de tutuyor.
+
+**İKİ SESSİZ KANAL — ikisi de ölçüldü, ikisi de testli:**
+
+| Karışan şey | Sonuç | Neden sessiz |
+|-------------|-------|--------------|
+| Gergi **montaj merkezi** ↔ **serbest kol açısı** | gerginlik 650 N yerine **251 N** (2.6× düşük) | geometri kusursuz çözülür, hata verilmez |
+| **Tasarım gerginliği** ↔ **yay dengesi** | bütün gerilme ve hubloadlar 250 N kayar | kayma emniyeti bir ORAN, değişmiyor |
+
+Birincisi: sayfa serbest açıyı VERMİYOR, gergi kasnağının **montaj merkezini**
+veriyor. Serbest açı `veFeadFreeAngleFrom` ile türetilir
+(`montajAçı − sense × (Mean−Pre)/Rate`); `sense`i çekirdek bulduğu için
+`veFeadBuildSystem` **iki geçiş** yapıyor. `|montaj merkezi − pivot|` ile
+girilen kol boyu 0.5 mm'den fazla ayrılırsa çözüm DURUR — iki sayı da sayfada
+yazar, uyuşmazlık okuma hatasıdır. Panel varsayılanı VERİDEN çözülür
+(`veFeadAngleMode`): eski kayıtlar yalnız `freeAngleDeg` taşıdığı için koşulsuz
+`mount` varsayılanı onları açılışta çözülemez yapardı.
+
+İkincisi `veFeadBuildSystem` sonundaki uyarı: `designTensionN` gergi yay
+dengesinden %2'den fazla ayrılırsa kaymanın kaç newton olduğu yazılıyor.
+
+Servis faktörü (sayfada 1.3) kayma emniyetinin istenen alt sınırı olarak sonuç
+tablosunda hüküm veriyor — eşik eskiden 1.3'te SABİTTİ, artık kullanıcının
+girdiği değer.
+
 **Sırada:** Sonuçlar sayfasında FEAD çözüm sekmesi (kanal yayını) + Rapor.
 
 ### Ölçüm Görüntüleyici (`viewer/`)
@@ -266,7 +301,8 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/mount-results-publish.test.js` | `js/cp-mount.js` | Çözümün panoya yayını; alt-topoloji çökertme regresyonu |
 | `tests/unit/fead-core.test.js` | `js/fead-core.js` + `tests/fixtures/fead-validation.js` | **FEAD çekirdeğinin doğrulama kapısı**: 17 Gates raporu / 2095 değer (çalışma %0.5, Load dahil %1.5, kol açısı 0.2°), 8 koruma mekanizması, SPEC §9 yapısal özdeşlikleri (sarım değişmezi, `L_pitch−L_eff=2π·hb`, çevrim kapanışı, sürücü gücü), UMD tarayıcı köprüsü |
 | `tests/unit/fead-model.test.js` | `js/fead-model.js` | **Köprü kapısı**: AG00686 MFSim KANVAS DÜĞÜMÜ olarak kurulup Gates sayılarını üretiyor mu (span %0.5, sarım 0.2°, Mean kol açısı 0.2°); temas tarafı üç katmanlı çözümü, sürücü rolü, `dia→od` göçü, ad tekilleştirme, hata çevirisi. Ayrıca **ters temas tarafının hata VERMEDİĞİNİ** belgeler (rozetin varlık nedeni). **Duty kapısı**: AG00686 duty tablosunun çıkış gerilmeleri ve hubload'ları %0.5 içinde; kW'ın kimlikle anahtarlanması (yeniden adlandırmada kaybolmuyor), sürücü gücünün toplamdan hesaplanması, ateşleme frekansı, yorulma dağılımının çapa bağlı olması, katalog oranının ÇAPTAN hesaplanması |
-| `tests/unit/cp-fead.test.js` | `js/cp-fead.js` + `js/components.js` | FEAD sunum katmanı: kanvas rozeti, `feadContact` varsayılanları, panel smoke testleri, alt-sistem sözleşmesi, `fead-*` tip tanımlarının yapısal tutarlılığı |
+| `tests/unit/cp-fead.test.js` | `js/cp-fead.js` + `js/components.js` | FEAD sunum katmanı: kanvas rozeti, `feadContact` varsayılanları, panel smoke testleri, alt-sistem sözleşmesi, `fead-*` tip tanımları; panelin HANGİ ALANLARI sorduğu (montaj merkezi ↔ serbest açı), servis faktörü hükmü |
+| `tests/unit/fead-example.test.js` | `js/fead-model.js` örnekleri + FEAD_INFORMATION | **Tedarikçi sayfası çıpası** (Gates'ten bağımsız ikinci doğrulama): kayış boyu 1715 mm, kol boyu 90.0 mm, Spring Mean Load 22.07 Nm, tahrik oranı 1.1; sayfanın devir→kW tabloları; **iki sessiz kanalın** ölçülmüş belgesi (montaj merkezi ↔ serbest açı 2.6×, tasarım gerginliği ↔ yay dengesi 250 N) |
 | `tests/unit/canvas-space.test.js` | `js/canvas-space.js` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama |
 | `tests/unit/module-start-center.test.js` | `js/components.js` `veStartModule` | Karşılama kartından gelen modül bloğu görünümün TAM ortasına düşer (kabuk senkronu ölçümden önce) |
 | `tests/unit/port-geometry.test.js` | `js/components.js` port geometrisi + `js/connections.js` | Bağlantı ucu ile port dairesi aynı noktada — dört kenar, çok port, aynalama |
