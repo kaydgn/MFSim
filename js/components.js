@@ -498,43 +498,53 @@ var componentDefs = {
   // Renk dili: KAYIŞ her yerde amber (--accent-warning), kasnak kanalı mavi
   // (--accent-primary), gövdeler nötr gri. Böylece 38 px'lik sembolde bile
   // "hangisi kayış, hangisi kasnak" ayrımı okunur kalır.
+  //
+  // feadContact: TEMAS TARAFI VARSAYILANI. Kayış kasnağa kaburgalı yüzünden mi
+  // ('grooved') yoksa sırtından mı ('back') değiyor. Hesap için ZORUNLU ve
+  // spesifikasyona göre ÇIKARSANAMAZ: ters verilirse çekirdek başka bir
+  // GEÇERLİ güzergâh hesaplar (kapalı çevrim de sarım değişmezi de tutar) →
+  // sessizce yanlış tasarım. Buradaki değer yalnız VARSAYILAN; kullanıcı her
+  // kasnakta panelden değiştirebilir (node.data.contact) ve kanvasta rozet
+  // olarak görür. Tek okuma noktası: veFeadContactOf (js/fead-model.js).
+  // Aksesuarlar kayışı kaburgalı yüzden çeker; avara ve gergi tipik olarak
+  // kayışın sırtına bastırır — varsayılanlar bu yüzden böyle.
   'fead-crank': {
     name: 'Krank Kasnağı',
     // Torsiyonel damperli krank kasnağı: dış V-kanal halkası, kesikli amber
     // halka = damper kauçuğu (kasnağı sıradan bir kasnaktan ayıran işaret),
     // göbek flanşı + 4 cıvata.
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="50" cy="50" r="31" fill="none" stroke="var(--text-muted, #888)" stroke-width="2.5"/><circle cx="50" cy="50" r="25" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3" stroke-dasharray="5 4"/><circle cx="50" cy="50" r="17" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3.5"/><circle cx="50" cy="38.5" r="2.6" fill="var(--text-muted, #888)"/><circle cx="61.5" cy="50" r="2.6" fill="var(--text-muted, #888)"/><circle cx="50" cy="61.5" r="2.6" fill="var(--text-muted, #888)"/><circle cx="38.5" cy="50" r="2.6" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="6" fill="var(--text-secondary, #666)"/></svg>',
-    inputs: 1, outputs: 1, isFeadPulley: true, isFeadDriver: true,
+    inputs: 1, outputs: 1, isFeadPulley: true, isFeadDriver: true, feadContact: 'grooved',
     defaultWidth: 72, defaultHeight: 66
   },
   'fead-alternator': {
     name: 'Alternatör',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #3b82f6)"/><line x1="36" y1="50" x2="41" y2="50" stroke="var(--text-muted, #888)" stroke-width="5"/><circle cx="64" cy="50" r="24" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><path d="M66.6 32.4 L55 53.2 L62.7 53.2 L59.5 64.1 L71.7 46.2 L64 46.2 Z" fill="var(--text-muted, #888)"/></svg>',
-    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true,
+    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
     defaultWidth: 62, defaultHeight: 58
   },
   'fead-ac': {
     name: 'Klima Kompresörü',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #3b82f6)"/><line x1="36" y1="50" x2="41" y2="50" stroke="var(--text-muted, #888)" stroke-width="5"/><circle cx="64" cy="50" r="24" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><g stroke="var(--text-muted, #888)" stroke-width="4" stroke-linecap="round"><line x1="64" y1="32" x2="64" y2="68"/><line x1="48.4" y1="41" x2="79.6" y2="59"/><line x1="79.6" y1="41" x2="48.4" y2="59"/></g></svg>',
-    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true,
+    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
     defaultWidth: 62, defaultHeight: 58
   },
   'fead-waterpump': {
     name: 'Su Pompası',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #3b82f6)"/><line x1="36" y1="50" x2="40" y2="50" stroke="var(--text-muted, #888)" stroke-width="5"/><circle cx="63" cy="50" r="24" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><g stroke="var(--text-muted, #888)" stroke-width="3.5" stroke-linecap="round"><line x1="70" y1="50" x2="80" y2="50"/><line x1="66.5" y1="56.1" x2="71.5" y2="64.7"/><line x1="59.5" y1="56.1" x2="54.5" y2="64.7"/><line x1="56" y1="50" x2="46" y2="50"/><line x1="59.5" y1="43.9" x2="54.5" y2="35.3"/><line x1="66.5" y1="43.9" x2="71.5" y2="35.3"/></g><circle cx="63" cy="50" r="5" fill="var(--text-secondary, #666)"/><rect x="57" y="73" width="12" height="15" rx="2" fill="var(--text-muted, #888)"/></svg>',
-    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true,
+    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
     defaultWidth: 62, defaultHeight: 58
   },
   'fead-ps': {
     name: 'Direksiyon Pompası',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #3b82f6)"/><line x1="36" y1="50" x2="41" y2="50" stroke="var(--text-muted, #888)" stroke-width="5"/><circle cx="64" cy="50" r="24" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><circle cx="64" cy="50" r="14" fill="none" stroke="var(--text-muted, #888)" stroke-width="4"/><g stroke="var(--text-muted, #888)" stroke-width="3.5" stroke-linecap="round"><line x1="64" y1="45.5" x2="64" y2="36"/><line x1="60.2" y1="52.5" x2="52" y2="57"/><line x1="67.8" y1="52.5" x2="76" y2="57"/></g><circle cx="64" cy="50" r="4.5" fill="var(--text-muted, #888)"/></svg>',
-    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true,
+    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
     defaultWidth: 62, defaultHeight: 58
   },
   'fead-aircomp': {
     name: 'Hava Kompresörü',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="19" cy="52" r="13" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="19" cy="52" r="3.6" fill="var(--accent-primary, #3b82f6)"/><rect x="38" y="30" width="46" height="46" rx="7" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><circle cx="58" cy="53" r="12" fill="none" stroke="var(--text-muted, #888)" stroke-width="4"/><line x1="58" y1="53" x2="66" y2="45" stroke="var(--text-muted, #888)" stroke-width="3.5" stroke-linecap="round"/><rect x="52" y="14" width="14" height="16" rx="2" fill="var(--text-muted, #888)"/><rect x="84" y="45" width="12" height="9" rx="2" fill="var(--text-muted, #888)"/></svg>',
-    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true,
+    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
     defaultWidth: 62, defaultHeight: 58
   },
   'fead-fan': {
@@ -542,14 +552,14 @@ var componentDefs = {
     // Kesikli dış halka = viskoz kavrama gövdesi; dört kanat tek path'in 90°
     // döndürülmüş kopyasıdır (geometri tek yerde durur).
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="36" fill="none" stroke="var(--text-muted, #888)" stroke-width="2.5" stroke-dasharray="5 4"/><g fill="var(--accent-primary, #3b82f6)" opacity="0.85"><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z"/><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z" transform="rotate(90 50 50)"/><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z" transform="rotate(180 50 50)"/><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z" transform="rotate(270 50 50)"/></g><circle cx="50" cy="50" r="9" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="50" cy="50" r="3" fill="var(--text-secondary, #666)"/></svg>',
-    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true,
+    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
     defaultWidth: 62, defaultHeight: 58
   },
   'fead-idler': {
     name: 'Avara Kasnak',
     // Yük çekmez, kayış yolunu yönlendirir: düz/çıplak kasnak + rulman.
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="32" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="50" cy="50" r="24" fill="none" stroke="var(--text-muted, #888)" stroke-width="2.5"/><circle cx="50" cy="31.5" r="3" fill="var(--text-muted, #888)"/><circle cx="68.5" cy="50" r="3" fill="var(--text-muted, #888)"/><circle cx="50" cy="68.5" r="3" fill="var(--text-muted, #888)"/><circle cx="31.5" cy="50" r="3" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="13" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="50" cy="50" r="4" fill="var(--text-secondary, #666)"/></svg>',
-    inputs: 1, outputs: 1, isFeadPulley: true, isFeadIdler: true,
+    inputs: 1, outputs: 1, isFeadPulley: true, isFeadIdler: true, feadContact: 'back',
     defaultWidth: 54, defaultHeight: 50
   },
   'fead-tensioner': {
@@ -557,7 +567,7 @@ var componentDefs = {
     // Pivot + kol + kasnak; amber yay oku kolun salınım yönünü söyler
     // (otomatik gergi). Avara ile karışmasın diye kol ZORUNLU işarettir.
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><line x1="64" y1="36" x2="24" y2="76" stroke="var(--text-secondary, #666)" stroke-width="8" stroke-linecap="round"/><circle cx="24" cy="76" r="8" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="24" cy="76" r="2.6" fill="var(--text-secondary, #666)"/><circle cx="64" cy="36" r="21" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="64" cy="36" r="6" fill="var(--accent-primary, #3b82f6)"/><path d="M41 89 A 44 44 0 0 0 73 79" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3.5" stroke-linecap="round"/><polygon points="72,72 84,79 71,85" fill="var(--accent-warning, #f59e0b)"/></svg>',
-    inputs: 1, outputs: 1, isFeadPulley: true, isFeadTensioner: true,
+    inputs: 1, outputs: 1, isFeadPulley: true, isFeadTensioner: true, feadContact: 'back',
     defaultWidth: 58, defaultHeight: 54
   },
   // Kayış Özellikleri — kayışın KENDİSİ bir kasnak değildir: konumu yoktur,

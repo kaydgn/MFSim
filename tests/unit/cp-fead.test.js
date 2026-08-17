@@ -1,29 +1,36 @@
 /**
- * cp-fead.test.js — FEAD (motor ön uç kayış-kasnak sistemi) modülü
+ * cp-fead.test.js — FEAD SUNUM katmanı (js/cp-fead.js)
  *
- * Bu dosya modülün İSKELETİNİ değil, iskeletin SAYISAL/YAPISAL çekirdeğini
- * tutar (CLAUDE.md test politikası: mantık ve matematiğe test, HTML dizgisine
- * hayır):
+ * KAPSAM AYRIMI — üç dosya, üç test:
+ *   fead-core.test.js   çekirdek doğru mu (17 Gates raporu, 2095 değer)
+ *   fead-model.test.js  köprü çekirdeğe doğru veriyi mi veriyor
+ *   BU DOSYA            sunum katmanının sözleşmesi + tip tanımlarının yapısı
  *
- *   1. veFeadBeltPath — kayış çevresinin GEOMETRİSİ. Kasnaklar arası dış teğet
- *      ve sarım yayı analitik çözülüyor; burada sessiz bir hata "makul ama
- *      yanlış" bir kayış yolu çizer, gözle yakalanmaz. Referans değerler elde
- *      türetildi (bkz. testteki ara hesap).
- *   2. veFeadRouteOrder — kayışın uğrama sırası. FEAD'de bağlantı = kayış yolu;
- *      sıra kayarsa sarım açıları ve kayış boyu topluca yanlış çıkar.
- *   3. Alt-sistem sözleşmesi — modül panelinin "Alt Topolojiyi Aç" kancası ve
- *      çift tık kapısı. Diğer iki modülde bu kancalar birer kez kırıldı.
+ * Burada geometri testi YOK: eskiden vardı ve cp-fead.js kendi kayış çevresini
+ * hesaplıyordu — o fonksiyon (veFeadBeltPath) bütün kasnakları dış teğet
+ * sayıyordu, yani sırttan temas edenlerde YANLIŞTI (AG00686'da 37°). Emekliye
+ * ayrıldı; geometri artık FEADCore.solveGeometry'den geliyor ve
+ * fead-model.test.js'te Gates referansına karşı ölçülüyor. Yanlış bir
+ * fonksiyonun testlerini taşımak, yanlışı korumak olurdu.
+ *
+ * CLAUDE.md test politikası: panel üreticilerine alan alan assertion açılmaz;
+ * panel başına TEK "üretiliyor mu / patlamıyor mu" smoke testi yeter.
  */
 const fead = require('../../js/cp-fead.js');
+const M = require('../../js/fead-model.js');
+const F = require('../../js/fead-core.js');
 
-// componentDefs, cp-fead.js'in tipten rol okuduğu tek kaynak (isFeadDriver…).
-// Gerçek dosyadan yüklenir; testte elle sahte tanım tutmak ikinci bir gerçek
-// kaynak yaratırdı.
+// componentDefs, tipten rol/temas okumasının tek kaynağı. Gerçek dosyadan
+// yüklenir; testte elle sahte tanım tutmak ikinci bir gerçek kaynak yaratırdı.
 const stubs = stubGlobals();
 document.body.innerHTML = '<div id="ve-canvas"></div>';
 global.nodes = [];
 global.connections = [];
 eval(loadSource('components.js'));
+// Model katmanı ayrı dosyada; tarayıcıda ikisi de global kapsamda yüklenir,
+// testte de öyle kurulur (cp-fead.js bu adları çağırıyor).
+global.FEADCore = F;
+Object.keys(M).forEach((k) => { global[k] = M[k]; });
 
 beforeEach(() => {
   resetStubs(stubs);
@@ -36,112 +43,6 @@ let _id = 0;
 const kasnak = (type, data, name) => ({
   id: 'f' + ++_id, type, customName: name || null,
   def: componentDefs[type], data: data || {}
-});
-
-describe('veFeadBeltPath — kayış çevresinin geometrisi', () => {
-  test('iki eşit kasnak: teğetler merkez doğrusuna PARALEL, sarımlar 180°', () => {
-    // R eşitken dış teğet merkez doğrusuna paraleldir; teğet noktaları tam
-    // tepe ve tam dip olur → path'te y = 50±10 görünmeli.
-    const d = fead.veFeadBeltPath([{ x: 30, y: 50, r: 10 }, { x: 70, y: 50, r: 10 }]);
-    expect(d).toMatch(/^M30 40 L70 40 /);
-    expect(d).toContain('L30 60');
-    expect(d.trim().endsWith('Z')).toBe(true);
-    // Eşit yarıçapta iki sarım da tam yarım tur: large-arc bayrağı ikisinde de 0
-    // (180° "büyük yay" DEĞİLDİR — sınırda 0 kalmalı).
-    expect(d.match(/A10 10 0 0 1/g)).toHaveLength(2);
-  });
-
-  test('farklı yarıçap: büyük kasnakta sarım 180°yi AŞAR → large-arc = 1', () => {
-    // R1=16 @ (38,58), R2=9 @ (68,58): d=30, ψ=acos(7/30)=76,51°.
-    // Sarım(büyük) = 360−2ψ = 206,98° > 180 → 1;  sarım(küçük) = 2ψ = 153° → 0.
-    const d = fead.veFeadBeltPath([{ x: 38, y: 58, r: 16 }, { x: 68, y: 58, r: 9 }]);
-    expect(d).toContain('A9 9 0 0 1');     // küçük kasnak: büyük yay değil
-    expect(d).toContain('A16 16 0 1 1');   // büyük kasnak: büyük yay
-    // Teğet noktaları: (38+16·cosψ, 58−16·sinψ) = (41,73 / 42,44)
-    expect(d).toMatch(/^M41\.73 42\.44 /);
-    expect(d).toContain('L70.1 49.25');
-  });
-
-  test('üç kasnak: her kasnak için bir yay, her kenar için bir teğet', () => {
-    const d = fead.veFeadBeltPath([
-      { x: 34, y: 62, r: 15 }, { x: 70, y: 32, r: 9 }, { x: 74, y: 66, r: 7 }
-    ]);
-    expect((d.match(/ A/g) || [])).toHaveLength(3);
-    expect((d.match(/ L/g) || [])).toHaveLength(3);
-  });
-
-  test('bir kasnak diğerinin İÇİNDE ise dış teğet yoktur → null (sessiz saçma çizim yok)', () => {
-    expect(fead.veFeadBeltPath([{ x: 50, y: 50, r: 30 }, { x: 52, y: 50, r: 5 }])).toBeNull();
-    expect(fead.veFeadBeltPath([{ x: 50, y: 50, r: 10 }, { x: 50, y: 50, r: 10 }])).toBeNull();
-  });
-
-  test('iki kasnaktan az / bozuk veri → null', () => {
-    expect(fead.veFeadBeltPath([])).toBeNull();
-    expect(fead.veFeadBeltPath([{ x: 1, y: 1, r: 5 }])).toBeNull();
-    expect(fead.veFeadBeltPath(null)).toBeNull();
-    // Konumu girilmemiş kasnak elenir → geriye tek kasnak kalır → null
-    expect(fead.veFeadBeltPath([{ x: 1, y: 1, r: 5 }, { x: NaN, y: 2, r: 5 }])).toBeNull();
-  });
-});
-
-describe('veFeadRouteOrder — kayışın uğrama sırası bağlantılardan okunur', () => {
-  test('zincir krank kasnağından başlar, bağlantı sırasını izler', () => {
-    const krank = kasnak('fead-crank');
-    const alt = kasnak('fead-alternator');
-    const ac = kasnak('fead-ac');
-    // Topoloji sırası bilerek KARIŞIK: sıra bağlantıdan gelmeli, diziden değil.
-    const list = [ac, alt, krank];
-    const conns = [
-      { from: krank.id, to: alt.id },
-      { from: alt.id, to: ac.id },
-      { from: ac.id, to: krank.id }        // çevrim kapanır
-    ];
-    expect(fead.veFeadRouteOrder(list, conns).map((n) => n.id)).toEqual([krank.id, alt.id, ac.id]);
-  });
-
-  test('kapalı çevrim sonsuz döngüye girmez (her kasnak bir kez)', () => {
-    const a = kasnak('fead-crank'), b = kasnak('fead-idler');
-    const conns = [{ from: a.id, to: b.id }, { from: b.id, to: a.id }];
-    expect(fead.veFeadRouteOrder([a, b], conns)).toHaveLength(2);
-  });
-
-  test('bağlanmamış kasnak DÜŞMEZ, sona eklenir (yarım model de şema verir)', () => {
-    const krank = kasnak('fead-crank');
-    const alt = kasnak('fead-alternator');
-    const yetim = kasnak('fead-idler');
-    const sira = fead.veFeadRouteOrder([krank, alt, yetim], [{ from: krank.id, to: alt.id }]);
-    expect(sira.map((n) => n.id)).toEqual([krank.id, alt.id, yetim.id]);
-  });
-
-  test('kasnak olmayan düğümler (kayış künyesi, çözücü) sıraya girmez', () => {
-    const krank = kasnak('fead-crank');
-    const sira = fead.veFeadRouteOrder(
-      [krank, kasnak('fead-belt'), kasnak('fead-solver'), kasnak('fead-report')], []);
-    expect(sira.map((n) => n.type)).toEqual(['fead-crank']);
-  });
-
-  test('krank yoksa ilk kasnaktan başlar (patlamaz)', () => {
-    const alt = kasnak('fead-alternator'), idl = kasnak('fead-idler');
-    expect(fead.veFeadRouteOrder([alt, idl], [{ from: alt.id, to: idl.id }])[0].id).toBe(alt.id);
-    expect(fead.veFeadRouteOrder([], [])).toEqual([]);
-  });
-});
-
-describe('veFeadRadius — çap girilmemişse tipe göre makul varsayılan', () => {
-  test('girilen çap her zaman kazanır', () => {
-    expect(fead.veFeadRadius({ type: 'fead-crank', data: { dia: 200 } })).toBe(100);
-    expect(fead.veFeadRadius({ type: 'fead-crank', data: { dia: '150,5' } })).toBeCloseTo(75.25, 6);
-  });
-
-  test('boş/0/geçersiz çap → tipin varsayılanı (önizleme boş kalmasın)', () => {
-    expect(fead.veFeadRadius({ type: 'fead-crank', data: {} }))
-      .toBe(fead.VE_FEAD_DEFAULT_DIA['fead-crank'] / 2);
-    expect(fead.veFeadRadius({ type: 'fead-alternator', data: { dia: '' } }))
-      .toBe(fead.VE_FEAD_DEFAULT_DIA['fead-alternator'] / 2);
-    // Krank varsayılanı aksesuardan BÜYÜK olmalı — şema gerçekçi dursun
-    expect(fead.VE_FEAD_DEFAULT_DIA['fead-crank'])
-      .toBeGreaterThan(fead.VE_FEAD_DEFAULT_DIA['fead-alternator']);
-  });
 });
 
 describe('Alt-sistem sözleşmesi', () => {
@@ -223,5 +124,142 @@ describe('componentDefs — FEAD tipleri yapısal olarak tutarlı', () => {
 
   test('kayış künyesi iç topolojide tek kopya', () => {
     expect(componentDefs['fead-belt'].maxInstances).toBe(1);
+  });
+});
+
+// ── Temas tarafı: TİP VARSAYILANI yapısal kapı ──────────────────────────────
+// Bir kasnak tipine feadContact koymayı unutmak sessizce 'grooved' demektir;
+// avara ve gergi o zaman kayışı yanlış taraftan sarar ve HATA VERİLMEZ.
+describe('componentDefs — temas tarafı varsayılanları', () => {
+  test('avara ve gergi sırttan, tahrik ve aksesuarlar kaburgalı', () => {
+    expect(componentDefs['fead-idler'].feadContact).toBe('back');
+    expect(componentDefs['fead-tensioner'].feadContact).toBe('back');
+    expect(componentDefs['fead-crank'].feadContact).toBe('grooved');
+    Object.keys(componentDefs)
+      .filter((t) => componentDefs[t].isFeadAccessory)
+      .forEach((t) => expect(componentDefs[t].feadContact).toBe('grooved'));
+  });
+});
+
+// ── Kanvas rozeti ───────────────────────────────────────────────────────────
+// Temas tarafı sessiz hatanın kaynağı; rozet onu gözle görünür kılan tek şey.
+// Rozetin İÇERİĞİ değil, DOĞRU DEĞERİ yansıtması test ediliyor.
+describe('veFeadApplyBadge — temas tarafı kanvasta görünür', () => {
+  const el = () => {
+    const d = document.createElement('div');
+    d.className = 've-node';
+    d.innerHTML = '<div class="ve-node-box"></div>';
+    return d;
+  };
+  const rozet = (node) => {
+    const e = el();
+    fead.veFeadApplyBadge(e, node);
+    return e.querySelector('.ve-fead-badge');
+  };
+
+  test('kaburgalı K, sırttan S gösterir', () => {
+    expect(rozet(kasnak('fead-alternator')).textContent).toBe('K');
+    expect(rozet(kasnak('fead-idler')).textContent).toBe('S');
+  });
+
+  test('kullanıcının ezdiği değeri yansıtır', () => {
+    expect(rozet(kasnak('fead-idler', { contact: 'grooved' })).textContent).toBe('K');
+  });
+
+  test('sürücü kasnak ayrıca işaretlenir', () => {
+    expect(rozet(kasnak('fead-crank', { driver: true })).textContent).toBe('► K');
+  });
+
+  test('kasnak olmayan düğüme rozet konmaz; iki kez çağrılınca çoğalmaz', () => {
+    expect(rozet(kasnak('fead-belt'))).toBeNull();
+    const e = el(), n = kasnak('fead-ac');
+    fead.veFeadApplyBadge(e, n);
+    fead.veFeadApplyBadge(e, n);
+    expect(e.querySelectorAll('.ve-fead-badge')).toHaveLength(1);
+  });
+});
+
+// ── Panel smoke testleri ────────────────────────────────────────────────────
+// Her panel: dizgi üretiyor mu, ISTISNA ATMIYOR mu. Alan alan assertion YOK
+// (etiket değişince kırılır, davranışı değil detayı test eder).
+describe('panel üreticileri — üretiliyor ve patlamıyor', () => {
+  const paneller = [
+    ['getFeadModulePropertiesHTML', { id: 'm1', type: 'fead-analysis', data: {} }],
+    ['getFeadPulleyPropertiesHTML', kasnak('fead-crank', { od: 160, x: 0, y: 0 })],
+    ['getFeadPulleyPropertiesHTML', kasnak('fead-idler', {})],
+    ['getFeadTensionerPropertiesHTML', kasnak('fead-tensioner', {})],
+    ['getFeadBeltPropertiesHTML', kasnak('fead-belt', {})],
+    ['getFeadExamplePropertiesHTML', kasnak('fead-example', {})],
+    ['getFeadReportPropertiesHTML', kasnak('fead-report', {})]
+  ];
+  paneller.forEach(([fn, node], i) => {
+    test(fn + ' (#' + i + ') boş veriyle çalışır', () => {
+      const html = fead[fn](node);
+      expect(typeof html).toBe('string');
+      expect(html.length).toBeGreaterThan(50);
+    });
+  });
+
+  // Kasnak paneli açılırken eski kaydı göç ettirmeli (dia → od); açmak
+  // veriyi bozmamalı ama eskimiş alanı da bırakmamalı.
+  test('kasnak paneli açılınca dia → od göçü uygulanır', () => {
+    const n = kasnak('fead-ac', { dia: 120 });
+    fead.getFeadPulleyPropertiesHTML(n);
+    expect(n.data.od).toBe(120);
+    expect(n.data.dia).toBeUndefined();
+  });
+});
+
+// ── Çözücü ve şema: TOPOLOJİYE bakan paneller ───────────────────────────────
+// Bunlar canlı `nodes`/`connections` okur. İki uç durum kritik: yarım kurulmuş
+// model (hata sayılmalı, patlamamalı) ve tam model (şema + tablo gelmeli).
+describe('topolojiye bakan paneller', () => {
+  const kurTam = () => {
+    const crk = kasnak('fead-crank', { od: 160, x: 0, y: 0, driver: true }, 'CRK');
+    const idr = kasnak('fead-idler', { od: 75, x: -72, y: 267 }, 'IDR');
+    const ac = kasnak('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
+    const ten = kasnak('fead-tensioner', {
+      od: 75, pivotX: -180, pivotY: 100, armLen: 90,
+      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1, loadStopRelDeg: 62.4
+    }, 'TEN');
+    const belt = kasnak('fead-belt', {
+      profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6, wearPct: 0.007
+    });
+    const sv = kasnak('fead-solver', { designTensionN: 765.7, driveRatio: 1, lengthOffsetMm: 3.5 });
+    global.nodes = [crk, idr, ac, ten, belt, sv];
+    global.connections = [[crk, idr], [idr, ac], [ac, ten], [ten, crk]]
+      .map(([a, b]) => ({ id: 'c' + a.id + b.id, from: a.id, to: b.id, fromPort: 'output', toPort: 'input' }));
+    return { sv, layout: kasnak('fead-layout', {}) };
+  };
+
+  test('boş topolojide çözücü paneli patlamaz, eksikleri sayar', () => {
+    global.nodes = []; global.connections = [];
+    const html = fead.getFeadSolverPropertiesHTML(kasnak('fead-solver', {}));
+    expect(typeof html).toBe('string');
+    expect(html).toMatch(/çözülemedi|kasnak yok/i);
+  });
+
+  test('boş topolojide şema paneli patlamaz', () => {
+    global.nodes = []; global.connections = [];
+    expect(typeof fead.getFeadLayoutPropertiesHTML(kasnak('fead-layout', {}))).toBe('string');
+  });
+
+  test('tam modelde şema SVG üretir ve kayış yolu yayları çizilir', () => {
+    const { layout } = kurTam();
+    const build = veFeadBuildFromCanvas();
+    expect(build.ok).toBe(true);
+    const svg = fead.veFeadLayoutSVG(build, 320, 240);
+    expect(svg).toMatch(/^<svg /);
+    // Dört kasnak → dört teğet + dört sarım yayı
+    expect((svg.match(/ A/g) || []).length).toBe(4);
+    expect(typeof fead.getFeadLayoutPropertiesHTML(layout)).toBe('string');
+  });
+
+  test('tam modelde çözücü paneli konum tablosunu üretir', () => {
+    const { sv } = kurTam();
+    const html = fead.getFeadSolverPropertiesHTML(sv);
+    expect(html).toMatch(/Serbest kol/);
+    expect(html).toMatch(/Ortalama/);
+    expect(html).toMatch(/çözüldü/);
   });
 });
