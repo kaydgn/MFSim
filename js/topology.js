@@ -391,6 +391,10 @@ function veResetSubtopoNav() {
   // sekmesi ÖNCEKİ projenin takoz adlarıyla durur, kanalları panoya bırakılabilir
   // ve Rapor kısayolu önceki projenin raporunu üretir.
   if(typeof _mntForgetResults === 'function') _mntForgetResults();
+  // FEAD sonucu da oturumluk bir global (window.veFeadResults). Aynı tuzak:
+  // temizlenmezse yeni projede — FEAD modülü hiç olmasa bile — önceki
+  // projenin gerilme/ömür tabloları çözücü panelinde durur.
+  if(typeof _feadForgetResults === 'function') _feadForgetResults();
   // Breadcrumb çipleri stack boşalınca kendini kaldırır; sidebar kapsamı köke döner.
   if(typeof veAracUpdateBreadcrumb === 'function') veAracUpdateBreadcrumb();
   if(typeof veMntUpdateBreadcrumb === 'function') veMntUpdateBreadcrumb();

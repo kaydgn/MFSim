@@ -432,6 +432,22 @@ function getFeadPulleyPropertiesHTML(node){
         : isIdler ? 'Avara kasnak kayıştan güç çekmez; ataleti yalnız geçici rejim için.'
         : 'Aksesuarın çektiği güç, Çözücü panelindeki çalışma çevrimi tablosunda devir başına girilir.'));
 
+  // KATALOG BAĞI — yalnız MFSim'de devir→kW eğrisi bulunan aksesuar tipleri.
+  // Seçilirse çalışma çevrimi tablosundaki boş kW hücreleri bu eğriden dolar ve
+  // AKSESUAR DEVRİ KASNAK PITCH ÇAPLARINDAN hesaplanır — preset'in kendi
+  // driveRatio'su kullanılmaz. Spesifikasyon §2.3: elle yazılmış hız oranları
+  // Excel'in en ciddi hatasıydı, bütün gerilmeleri %17 düşürüyordu.
+  var lib = veFeadPresetLib(node.type);
+  if(lib){
+    var secenekler = [['__manual__', 'Elle gir (katalog kullanma)']];
+    Object.keys(lib).forEach(function(k){ secenekler.push([k, lib[k].name || k]); });
+    html += _feadCard('Katalog Modeli', 'devir → kW eğrisi', 'var(--accent-warning)',
+        _feadSelect(node, 'Model', 'accPreset', secenekler, '__manual__',
+          'Araç Performans modülünün kataloglarıyla AYNI kaynak. Seçilince çalışma çevrimi '
+          + 'tablosundaki boş kW hücreleri bu eğriden doldurulur; aksesuar devri kasnak '
+          + '<b>pitch çaplarından</b> gelir, elle oran girilmez.'));
+  }
+
   html += '</div>';
   return html;
 }
@@ -711,10 +727,19 @@ function getFeadSolverPropertiesHTML(node){
         { key:'driveRatio',     label:'Tahrik oranı [—]',       ph:'1', step:'0.0001' },
         { key:'lengthOffsetMm', label:'Boy ofseti [mm]',        ph:'0', step:'0.01' }
       ], 3)
+    + _feadGrid(node, [
+        { key:'cylinders', label:'Silindir sayısı [—]', ph:'6', step:'1' }
+      ], 1)
+    + _feadSelect(node, 'Yorulma modeli', 'fatigueModel',
+        [['PK-2_2p-MT3', 'PK-2_2p-MT3 (doğrulanmış, 8 sistem)'],
+         ['PK-2_2a-MT3', 'PK-2_2a-MT3 (tek sistem — doğrulanmamış)']], 'PK-2_2p-MT3',
+        'Gates raporunun "Pulley Contributions to Belt Rib Fatigue" başlığında yazan model adı. '
+        + 'İki takım sabit çok farklı (m 5.6 ↔ 4.05); yanlış seçim yorulma dağılımını kaydırır.')
     + _feadHint('<b>Tasarım gerginliği</b> gevşek span gerginliğidir; gerilme zinciri gergiye '
         + 'bu değerle ankrajlanır. <b>Tahrik oranı</b> = sürücü kasnak devri / motor devri — '
         + 'çok kademeli tahrikte şart. <b>Boy ofseti</b> tasarım başına kalibrasyon girdisidir '
-        + '(kuralı bilinmiyor; gözlenen aralık −0.3 … +3.5 mm).'));
+        + '(kuralı bilinmiyor; gözlenen aralık −0.3 … +3.5 mm). <b>Silindir sayısı</b> yalnız '
+        + 'ateşleme frekansı için.'));
 
   html += _feadCard('Algılanan Model', '', 'var(--accent-success)', veFeadModelTable(build));
 
@@ -726,11 +751,97 @@ function getFeadSolverPropertiesHTML(node){
     html += veFeadWarningBox(build);
   }
 
-  html += _feadPending('Çalışma çevrimi (devir · %zaman · kasnak başına kW · °C) tablosu ve '
-    + '▶ Hesapla düğmesi bir sonraki adımda gelecek; gerilme dağılımı, hubload, kayma emniyeti '
-    + 've span frekansları o zaman üretilecek.');
+  html += veFeadDutyEditor(node, build);
+
+  var hazir = build.ok && veFeadDutyRows(node).length > 0;
+  html += '<button ' + (hazir ? '' : 'disabled ')
+    + 'onclick="veFeadSolve(\'' + node.id + '\')" style="width:100%; padding:13px 16px; '
+    + 'font-size:var(--fs-lg); font-weight:700; letter-spacing:0.03em; border:none; cursor:'
+    + (hazir ? 'pointer' : 'not-allowed') + '; background:'
+    + (hazir ? 'var(--accent-warning)' : 'var(--bg-tertiary)') + '; color:'
+    + (hazir ? '#fff' : 'var(--text-muted)')
+    + (hazir ? '' : '; border:1px solid var(--border-color)') + ';">▶ Hesapla'
+    + (hazir ? '' : ' (model veya çevrim eksik)') + '</button>';
+
+  html += veFeadResultBlock(node);
   html += '</div>';
   return html;
+}
+
+// ── ÇALIŞMA ÇEVRİMİ TABLOSU ─────────────────────────────────────────────────
+// Satır = devir noktası. Sütunlar: devir · %zaman · °C · aksesuar başına kW.
+// SÜRÜCÜ SÜTUNU YOK — gücü diğerlerinin toplamı olarak çekirdek hesaplar;
+// elle girilirse çevrim kapanmaz ve çekirdek reddeder.
+// Boş bırakılan aksesuar hücresi: katalog seçiliyse oradan doldurulur (devir
+// kasnak ÇAPLARINDAN gelir, elle oran girilmez), yoksa 0 sayılır.
+function veFeadDutyEditor(node, build){
+  var rows = veFeadDutyRows(node);
+  var yuk = build.ok
+    ? build.order.filter(function(n, i){ return !(build.sys.pulleys[i] && build.sys.pulleys[i].crank); })
+    : [];
+  var yukIdx = {};
+  if(build.ok) build.order.forEach(function(n, i){ yukIdx[n.id] = i; });
+
+  var h = '<table style="width:100%; font-size:var(--fs-micro); border-collapse:collapse; border:1px solid var(--border-color);">';
+  h += '<tr style="background:var(--bg-tertiary);">'
+     + ['Devir', '%zaman', '°C'].map(function(t){
+         return '<th style="padding:3px 4px; border:1px solid var(--border-color); font-weight:600; color:var(--text-secondary);">' + t + '</th>';
+       }).join('')
+     + yuk.map(function(n){
+         return '<th style="padding:3px 4px; border:1px solid var(--border-color); font-weight:600; color:var(--text-secondary);" title="'
+           + _feadEsc(_feadNodeName(n)) + ' [kW]">' + _feadEsc(_feadNodeName(n)) + '</th>';
+       }).join('')
+     + '<th style="padding:3px 4px; border:1px solid var(--border-color);"></th></tr>';
+
+  if(!rows.length){
+    h += '<tr><td colspan="' + (4 + yuk.length) + '" style="padding:9px; text-align:center; color:var(--text-muted); border:1px solid var(--border-color);">'
+       + 'Henüz devir noktası yok.</td></tr>';
+  }
+  rows.forEach(function(r, ri){
+    var cell = function(key, val, step){
+      return '<td style="padding:1px 2px; border:1px solid var(--border-color);">'
+        + '<input type="number" value="' + _feadEsc(val) + '" step="' + (step || 'any') + '"'
+        + ' onchange="veFeadDutySet(\'' + node.id + '\',' + ri + ',\'' + key + '\',this.value)"'
+        + ' style="width:100%; ' + _FEAD_INP + ' height:22px; padding:2px 3px;"></td>';
+    };
+    h += '<tr>' + cell('rpm', r.rpm, '10') + cell('dcPct', r.dcPct, '0.1') + cell('degC', r.degC, '1');
+    yuk.forEach(function(n){
+      var v = (r.kw && r.kw[n.id] != null) ? r.kw[n.id] : '';
+      var oto = (v === '' && build.ok) ? veFeadAutoKw(build.sys, yukIdx[n.id], n, r.rpm) : null;
+      h += '<td style="padding:1px 2px; border:1px solid var(--border-color);">'
+        + '<input type="number" value="' + _feadEsc(v) + '" step="0.01"'
+        + (oto != null ? ' placeholder="' + _feadFmt(oto, 2) + '"' : ' placeholder="0"')
+        + ' title="' + (oto != null ? 'Katalogdan: ' + _feadFmt(oto, 2) + ' kW (boş bırakırsanız bu kullanılır)' : 'Boş = 0 kW')
+        + '" onchange="veFeadDutySet(\'' + node.id + '\',' + ri + ',\'kw:' + n.id + '\',this.value)"'
+        + ' style="width:100%; ' + _FEAD_INP + ' height:22px; padding:2px 3px;'
+        + (oto != null && v === '' ? ' color:var(--text-muted);' : '') + '"></td>';
+    });
+    h += '<td style="padding:1px 3px; border:1px solid var(--border-color); text-align:center;">'
+      + '<button onclick="veFeadDutyRemove(\'' + node.id + '\',' + ri + ')" title="Satırı sil"'
+      + ' style="background:none; border:none; color:var(--accent-danger); cursor:pointer; font-size:var(--fs-body); line-height:1;">×</button></td></tr>';
+  });
+  h += '</table>';
+
+  var toplam = rows.reduce(function(a, r){ return a + r.dcPct; }, 0);
+  h += '<div style="display:flex; gap:6px; margin-top:7px;">'
+    + '<button onclick="veFeadDutyAdd(\'' + node.id + '\')" style="flex:1; padding:5px; font-size:var(--fs-micro); '
+    + 'background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;">+ Devir satırı</button>'
+    + '<button onclick="veFeadDutyFillCatalog(\'' + node.id + '\')" style="flex:1; padding:5px; font-size:var(--fs-micro); '
+    + 'background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" '
+    + 'title="Boş kW hücrelerini seçili katalog eğrilerinden doldur">Katalogdan doldur</button>'
+    + '</div>';
+
+  var uyari = '';
+  if(rows.length && Math.abs(toplam - 100) > 0.5)
+    uyari = _feadHint('<b style="color:var(--accent-warning);">%zaman toplamı ' + _feadFmt(toplam, 1)
+      + '</b> — 100 değil. Yorulma ve ömür payları bu ağırlıklara göre dağıtılır; '
+      + 'toplam 100 değilse mutlak ömür ölçeklenir (dağılım yüzdeleri etkilenmez).');
+
+  return _feadCard('Çalışma Çevrimi', 'sürücü sütunu YOK — gücü hesaplanır', 'var(--accent-success)',
+    h + uyari
+    + _feadHint('Boş bırakılan kW hücresi: aksesuarda katalog modeli seçiliyse o eğriden '
+        + 'doldurulur (aksesuar devri kasnak <b>pitch çaplarından</b> hesaplanır, elle oran '
+        + 'girilmez), seçili değilse 0 sayılır.'));
 }
 
 // Modelin çekirdeğe göre durumu — sayarken TİPE değil ROLE bakılır.
@@ -830,6 +941,230 @@ function getFeadReportPropertiesHTML(node){
   return html;
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+//  ÇALIŞMA ÇEVRİMİ — DÜZENLEME
+// ════════════════════════════════════════════════════════════════════════════
+function _feadSolverNode(nodeId){
+  if(typeof nodes === 'undefined') return null;
+  var n = nodes.find(function(x){ return x.id === nodeId; });
+  if(!n) return null;
+  if(!n.data) n.data = {};
+  if(!Array.isArray(n.data.duty)) n.data.duty = [];
+  return n;
+}
+function _feadRedraw(node){
+  if(typeof saveState === 'function') saveState();
+  if(typeof showNodeProperties === 'function') showNodeProperties(node);
+}
+
+function veFeadDutyAdd(nodeId){
+  var n = _feadSolverNode(nodeId); if(!n) return;
+  var son = n.data.duty[n.data.duty.length - 1];
+  // Yeni satır son satırın devamı gibi başlasın (boş kutuya bakmaktan iyi):
+  // devir bir kademe yukarı, sıcaklık aynı.
+  n.data.duty.push({
+    rpm: son ? _feadNum(son.rpm, 800) + 250 : 800,
+    dcPct: '', degC: son ? son.degC : 90, kw: {}
+  });
+  _feadRedraw(n);
+}
+function veFeadDutyRemove(nodeId, idx){
+  var n = _feadSolverNode(nodeId); if(!n) return;
+  n.data.duty.splice(idx, 1);
+  _feadRedraw(n);
+}
+function veFeadDutySet(nodeId, idx, key, val){
+  var n = _feadSolverNode(nodeId); if(!n) return;
+  var row = n.data.duty[idx]; if(!row) return;
+  if(key.indexOf('kw:') === 0){
+    if(!row.kw) row.kw = {};
+    var pid = key.slice(3);
+    if(val === '' || val === null) delete row.kw[pid]; else row.kw[pid] = val;
+  } else {
+    row[key] = val;
+  }
+  if(typeof saveState === 'function') saveState();
+  // Paneli YENİDEN ÇİZMİYORUZ: kullanıcı hücreler arasında sekme ile geziniyor,
+  // her değişiklikte yeniden çizmek odağı kaybettirir. Sonuç bloğu bir sonraki
+  // ▶ Hesapla ile tazelenir.
+}
+
+// Boş kW hücrelerini katalogdan doldur — kullanıcı sayıları GÖRSÜN, yer
+// tutucuda kalmasın (yer tutucu kaydedilmiyor, değer kaydediliyor).
+function veFeadDutyFillCatalog(nodeId){
+  var n = _feadSolverNode(nodeId); if(!n) return;
+  var build = veFeadBuildFromCanvas();
+  if(!build.ok){
+    if(typeof showToast === 'function') showToast('Model çözülemeden katalog doldurulamaz', 'error');
+    return;
+  }
+  var say = 0;
+  n.data.duty.forEach(function(row){
+    if(!row.kw) row.kw = {};
+    build.order.forEach(function(pn, i){
+      if(build.sys.pulleys[i] && build.sys.pulleys[i].crank) return;
+      if(row.kw[pn.id] != null && row.kw[pn.id] !== '') return;      // kullanıcının değeri korunur
+      var kw = veFeadAutoKw(build.sys, i, pn, _feadNum(row.rpm, 0));
+      if(kw != null){ row.kw[pn.id] = Math.round(kw * 100) / 100; say++; }
+    });
+  });
+  if(typeof showToast === 'function')
+    showToast(say ? say + ' hücre katalogdan dolduruldu' : 'Katalog modeli seçili aksesuar yok', say ? 'success' : 'info');
+  _feadRedraw(n);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ÇÖZÜM
+// ════════════════════════════════════════════════════════════════════════════
+// Sonuç OTURUMLUK bir global: window.veFeadResults. Takoz modülündeki
+// veMountResults ile aynı kalıp — ve aynı tuzak: proje değişince temizlenmeli,
+// yoksa yeni projede ÖNCEKİ projenin sonuçları durur (bkz. _feadForgetResults,
+// topology.js veResetSubtopoNav'dan çağrılıyor).
+function veFeadSolve(nodeId){
+  var node = _feadSolverNode(nodeId);
+  var build = veFeadBuildFromCanvas();
+  if(!build.ok){
+    if(typeof showToast === 'function')
+      showToast('Çözülemedi: ' + (build.errors[0] || 'model eksik'), 'error');
+    if(node) _feadRedraw(node);
+    return null;
+  }
+  var res = veFeadAnalyze(build, {
+    rows: veFeadDutyRows(node),
+    cylinders: _feadNum(node && node.data && node.data.cylinders, 6),
+    fatigueModel: (node && node.data && node.data.fatigueModel) || 'PK-2_2p-MT3'
+  });
+  res.solvedNodeId = nodeId;
+  res.pulleyNames = build.names;
+  if(typeof window !== 'undefined') window.veFeadResults = res;
+  if(typeof showToast === 'function')
+    showToast(res.ok ? 'FEAD çözüldü — ' + res.duty.length + ' devir noktası'
+                     : 'Çözüm hatası: ' + res.error, res.ok ? 'success' : 'error');
+  if(node) _feadRedraw(node);
+  return res;
+}
+function _feadForgetResults(){
+  if(typeof window !== 'undefined') window.veFeadResults = null;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  SONUÇ BLOĞU (çözücü panelinin altı)
+// ════════════════════════════════════════════════════════════════════════════
+function veFeadResultBlock(node){
+  var R = (typeof window !== 'undefined') ? window.veFeadResults : null;
+  if(!R) return '';
+  if(R.solvedNodeId && node && R.solvedNodeId !== node.id) return '';
+  if(!R.ok) return veFeadProblemBox({ errors: [R.error || 'Çözüm başarısız.'] });
+
+  var h = '';
+  if(R.duty.length) h += veFeadDutyResultTable(R);
+  if(R.fatigue) h += veFeadFatigueTable(R);
+  if(R.life) h += veFeadLifeCard(R);
+  h += veFeadLimitsBox(R);
+  return h;
+}
+
+// Duty noktası başına: kasnak çıkış gerilmesi, hubload, kayma emniyeti.
+// Tek tabloda devir × kasnak; kayış hızı ve ateşleme frekansı satır başında.
+function veFeadDutyResultTable(R){
+  var A = R.analysis;
+  var isim = R.pulleyNames || [];
+  var th = function(t, w){ return '<th style="padding:3px 4px; border:1px solid var(--border-color); font-weight:600; color:var(--text-secondary);'
+    + (w ? ' width:' + w : '') + '">' + t + '</th>'; };
+  var td = function(v, col){ return '<td style="padding:3px 4px; border:1px solid var(--border-color); text-align:right;'
+    + (col ? ' color:' + col + ';' : '') + '">' + v + '</td>'; };
+
+  var h = '<div style="overflow-x:auto;"><table style="width:100%; font-size:var(--fs-micro); border-collapse:collapse; border:1px solid var(--border-color);">';
+  h += '<tr style="background:var(--bg-tertiary);">' + th('Devir') + th('%') + th('Kayış [m/s]')
+     + isim.map(function(n){ return th(n); }).join('') + th('Min SF') + '</tr>';
+  A.duty.forEach(function(d){
+    var minSF = Math.min.apply(null, d.slip.map(function(x){ return x.SF; }));
+    h += '<tr>' + td(d.engineRpm) + td(_feadFmt(d.dcPct, 1)) + td(_feadFmt(d.vMs, 2))
+       + d.perPulley.map(function(p){ return td(_feadFmt(p.exitTensionN, 0)); }).join('')
+       + td(_feadFmt(minSF, 2), minSF < 1 ? 'var(--accent-danger)' : (minSF < 1.3 ? 'var(--accent-warning)' : null))
+       + '</tr>';
+  });
+  h += '</table></div>';
+
+  var neg = A.duty.some(function(d){ return d.warnings && d.warnings.length; });
+  var kayma = A.duty.some(function(d){ return d.slip.some(function(x){ return x.SF < 1; }); });
+  var ek = '';
+  if(kayma) ek += _feadHint('<b style="color:var(--accent-danger);">Kayma emniyet faktörü 1\'in altına '
+    + 'iniyor</b> — kayış o devirde kaymaya başlar. Tasarım gerginliğini yükseltin ya da sarım açısını artırın.');
+  if(neg) ek += _feadHint('<b style="color:var(--accent-warning);">Bir spanda negatif gerilme</b> — '
+    + 'kayış gevşiyor: tasarım gerginliği yetersiz.');
+
+  return _feadCard('Çıkış Gerilmeleri', 'kasnak başına, duty noktasında [N]', 'var(--accent-primary)',
+    h + ek + _feadHint('Hubload ve span frekansları için aşağıdaki hubload tablosuna bakın. '
+      + 'Ateşleme frekansı ' + _feadFmt(A.duty.length ? A.duty[0].firingHz : 0, 1) + ' Hz @ '
+      + (A.duty.length ? A.duty[0].engineRpm : 0) + ' rpm (silindir sayısı Çözücü panelinden).'))
+    + veFeadHubTable(R);
+}
+
+function veFeadHubTable(R){
+  var A = R.analysis, isim = R.pulleyNames || [];
+  var h = '<div style="overflow-x:auto;"><table style="width:100%; font-size:var(--fs-micro); border-collapse:collapse; border:1px solid var(--border-color);">';
+  h += '<tr style="background:var(--bg-tertiary);"><th style="padding:3px 4px; border:1px solid var(--border-color); font-weight:600; color:var(--text-secondary);">Devir</th>'
+     + isim.map(function(n){ return '<th style="padding:3px 4px; border:1px solid var(--border-color); font-weight:600; color:var(--text-secondary);">' + n + '</th>'; }).join('')
+     + '</tr>';
+  A.duty.forEach(function(d){
+    h += '<tr><td style="padding:3px 4px; border:1px solid var(--border-color); text-align:right;">' + d.engineRpm + '</td>'
+      + d.hubloads.map(function(x){
+          return '<td style="padding:3px 4px; border:1px solid var(--border-color); text-align:right;">'
+            + _feadFmt(x.FN, 0) + ' <span style="color:var(--text-muted);">/ ' + _feadFmt(x.dirDeg, 0) + '°</span></td>';
+        }).join('') + '</tr>';
+  });
+  h += '</table></div>';
+  return _feadCard('Hubload', 'büyüklük [N] / yön [°]', 'var(--accent-primary)', h);
+}
+
+function veFeadFatigueTable(R){
+  var f = R.fatigue;
+  var h = '<table style="width:100%; font-size:var(--fs-micro); border-collapse:collapse; border:1px solid var(--border-color);">'
+    + '<tr style="background:var(--bg-tertiary);">'
+    + ['Kasnak', 'd_eff [mm]', 'Temas', 'Hasar payı'].map(function(t){
+        return '<th style="padding:3px 5px; border:1px solid var(--border-color); text-align:left; font-weight:600; color:var(--text-secondary);">' + t + '</th>';
+      }).join('') + '</tr>';
+  f.perPulley.forEach(function(p){
+    h += '<tr><td style="padding:3px 5px; border:1px solid var(--border-color);">' + _feadEsc(p.name) + '</td>'
+      + '<td style="padding:3px 5px; border:1px solid var(--border-color); text-align:right;">' + _feadFmt(p.dEffMm, 1) + '</td>'
+      + '<td style="padding:3px 5px; border:1px solid var(--border-color); color:var(--text-muted);">' + veFeadContactLabel(p.contact) + '</td>'
+      + '<td style="padding:3px 5px; border:1px solid var(--border-color); text-align:right; font-weight:600;">%' + _feadFmt(p.sharePct, 1) + '</td></tr>';
+  });
+  h += '</table>';
+  return _feadCard('Kaburga Yorulma Dağılımı', f.constants.fatigueModel, 'var(--accent-warning)',
+    h + _feadHint('Dağılım YALNIZ çapa ve temas tarafına bağlıdır (gerilmeden bağımsız): '
+      + 'hasar ∝ w · d<sub>eff</sub><sup>−m</sup>, m = ' + f.constants.m
+      + ' · w<sub>sırt</sub> = ' + f.constants.wBackside + '. Göreli karşılaştırma için '
+      + 'GÜVENİLİR ölçüt budur — mutlak ömür değil.'));
+}
+
+function veFeadLifeCard(R){
+  var L = R.life;
+  var gecerli = L.inValidRange;
+  var saat = gecerli ? L.hoursB10 : L.hoursB10Corrected;
+  var h = '<div style="display:flex; align-items:baseline; gap:8px; margin-bottom:6px;">'
+    + '<span style="font-size:var(--fs-h2); font-weight:700; color:' + (gecerli ? 'var(--text-heading)' : 'var(--accent-warning)') + ';">'
+    + _feadFmt(saat, 0) + '</span>'
+    + '<span style="font-size:var(--fs-body); color:var(--text-muted);">saat (B10)'
+    + (gecerli ? '' : ' — ampirik düzeltmeli') + '</span></div>';
+  if(!gecerli)
+    h += _feadHint('<b style="color:var(--accent-warning);">GEÇERLİLİK ALANI DIŞINDA.</b> '
+      + 'Model mutlak ömrü yalnız tüm kasnak çapları 79.6–176 mm iken doğrular. Aralık dışında '
+      + 'sistematik olarak ~0.55× veriyor; yukarıdaki sayı bu ampirik düzeltmeyi içerir. '
+      + 'Aralık dışı: ' + _feadEsc((L.outOfRange || []).join(', '))
+      + '. <b>Sertifikasyon için kullanmayın</b> — göreli karşılaştırma için yorulma dağılımını kullanın.');
+  return _feadCard('Kayış Ömrü', 'ham ' + _feadFmt(L.hoursB10, 0) + ' saat', 'var(--accent-danger)', h);
+}
+
+function veFeadLimitsBox(R){
+  if(!R.limits || !R.limits.length) return '';
+  var h = '<ul style="margin:0; padding-left:18px; font-size:var(--fs-micro); line-height:1.6; color:var(--text-secondary);">';
+  R.limits.forEach(function(x){ h += '<li>' + x + '</li>'; });
+  (R.warnings || []).forEach(function(x){ h += '<li style="color:var(--accent-warning);">' + _feadEsc(x) + '</li>'; });
+  return _feadCard('Geçerlilik Sınırları', 'spesifikasyon §7', 'var(--text-secondary)', h + '</ul>');
+}
+
 // Jest/Node köprüsü (tarayıcıda no-op)
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -842,6 +1177,10 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadGeometryTable: veFeadGeometryTable,
     veFeadProblemBox: veFeadProblemBox,
     veFeadWarningBox: veFeadWarningBox,
+    veFeadDutyEditor: veFeadDutyEditor, veFeadSolve: veFeadSolve,
+    veFeadDutyAdd: veFeadDutyAdd, veFeadDutyRemove: veFeadDutyRemove,
+    veFeadDutySet: veFeadDutySet, veFeadDutyFillCatalog: veFeadDutyFillCatalog,
+    veFeadResultBlock: veFeadResultBlock, _feadForgetResults: _feadForgetResults,
     getFeadModulePropertiesHTML: getFeadModulePropertiesHTML,
     getFeadPulleyPropertiesHTML: getFeadPulleyPropertiesHTML,
     getFeadTensionerPropertiesHTML: getFeadTensionerPropertiesHTML,

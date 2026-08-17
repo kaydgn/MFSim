@@ -359,6 +359,148 @@ function veFeadGatherPulleys(){
   return veFeadRouteOrder(nodes, (typeof connections !== 'undefined') ? connections : []);
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+//  ÇALIŞMA ÇEVRİMİ (DUTY CYCLE)
+// ════════════════════════════════════════════════════════════════════════════
+// Çekirdek her duty noktası için şunu ister:
+//   { engineRpm, dcPct, loadsKw: { kasnakAdı: kW }, degC }
+// Kullanıcı arayüzünde ise satırlar Çözücü düğümünde durur:
+//   node.data.duty = [ { rpm, dcPct, degC, kw: { <düğüm id>: kW } } ]
+//
+// kW sözlüğü DÜĞÜM KİMLİĞİYLE anahtarlanır, ADLA DEĞİL: kullanıcı bir kasnağı
+// yeniden adlandırdığında girdiği güç kaybolmasın. Çekirdeğe geçerken ada
+// çevrilir (çekirdek adı anahtar olarak kullanıyor).
+//
+// SÜRÜCÜ GÜCÜ GİRİLMEZ. Çekirdek onu diğerlerinin toplamı olarak hesaplar;
+// çevrim ancak böyle kapanır. Girilirse tutarlılık denetlenir ve uyuşmazsa
+// hata verilir — bu yüzden tabloda sürücü sütunu hiç açılmaz.
+function veFeadDutyRows(solverNode){
+  var raw = (solverNode && solverNode.data && solverNode.data.duty);
+  if(!Array.isArray(raw)) return [];
+  return raw.map(function(r){
+    return {
+      rpm: _feadNum(r && r.rpm, 0),
+      dcPct: _feadNum(r && r.dcPct, 0),
+      degC: _feadNum(r && r.degC, 90),
+      kw: (r && r.kw) ? r.kw : {}
+    };
+  });
+}
+
+// Aksesuar tipi → MFSim'in mevcut katalog kütüphanesi. Araç Performans modülü
+// bu eğrileri zaten taşıyor (js/cp-accessories.js); FEAD onları YENİDEN
+// TANIMLAMAZ, aynı kaynağı okur.
+var VE_FEAD_PRESET_LIB = {
+  'fead-alternator': 'VE_ALTERNATOR_PRESETS',
+  'fead-ac':         'VE_AC_PRESETS',
+  'fead-aircomp':    'VE_AIRCOMP_PRESETS'
+};
+function veFeadPresetLib(type){
+  var nm = VE_FEAD_PRESET_LIB[type];
+  if(!nm) return null;
+  try { /* jshint evil:true */ var lib = eval(nm); return lib || null; } catch(e){ return null; }
+}
+function veFeadPresetOf(node){
+  var lib = veFeadPresetLib(node && node.type);
+  var key = node && node.data && node.data.accPreset;
+  if(!lib || !key || key === '__manual__') return null;
+  return lib[key] || null;
+}
+
+// Katalogdan güç [kW]. Aksesuar devri, kasnak PITCH ÇAPLARINDAN gelen gerçek
+// oranla hesaplanır — preset'in kendi driveRatio'su KULLANILMAZ.
+//
+// Bu bilinçli: spesifikasyon (§2.3) Excel'in en ciddi hatasının elle yazılmış
+// hız oranları olduğunu söylüyor — kasnak çaplarıyla çelişince bütün
+// gerilmeler %17 düşük çıkmış. Oran her zaman çaptan hesaplanır.
+function veFeadAutoKw(sys, idx, node, engineRpm){
+  var pre = veFeadPresetOf(node);
+  if(!pre || !pre.curve || typeof veAccInterpCurve !== 'function') return null;
+  if(typeof FEADCore === 'undefined' || !sys) return null;
+  var accRpm = FEADCore.accessoryRpm(sys, idx, engineRpm);
+  var kw = veAccInterpCurve(pre.curve, accRpm);
+  return Number.isFinite(kw) ? kw : null;
+}
+
+// UI satırları → çekirdek duty dizisi. kw sözlüğünde değeri OLMAYAN aksesuar
+// için katalog denenir; o da yoksa 0 yazılır (avara/gergi için doğru değer).
+function veFeadDutyToCore(build, rows){
+  if(!build || !build.ok) return [];
+  return (rows || []).filter(function(r){ return r.rpm > 0; }).map(function(r){
+    var loads = {};
+    build.order.forEach(function(n, i){
+      if(build.sys.pulleys[i] && build.sys.pulleys[i].crank) return;   // sürücü: hesaplanır
+      var v = r.kw ? r.kw[n.id] : undefined;
+      var kw = (v === undefined || v === null || v === '') ? null : _feadNum(v, 0);
+      if(kw === null) kw = veFeadAutoKw(build.sys, i, n, r.rpm);
+      loads[build.names[i]] = (kw === null) ? 0 : kw;
+    });
+    return { engineRpm: r.rpm, dcPct: r.dcPct, loadsKw: loads, degC: r.degC };
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ÇÖZÜM
+// ════════════════════════════════════════════════════════════════════════════
+// FEADCore.analyze() + yorulma dağılımı + (varsa) B10 ömrü. İstisna ATMAZ;
+// her parça kendi hatasını taşır ki bir bölümün çökmesi tüm sonucu götürmesin.
+//
+// GEÇERLİLİK SINIRLARI SONUCUN İÇİNDE TAŞINIR (spesifikasyon §7): doğal
+// frekans karşılaştırılamaz, mutlak ömür yalnız 79.6–176 mm çap aralığında
+// geçerli. Bunları hesaplayıp sessizce göstermek, hesaplamamaktan kötü olurdu.
+function veFeadAnalyze(build, opts){
+  opts = opts || {};
+  var out = { ok: false, error: null, analysis: null, fatigue: null, life: null,
+              duty: [], warnings: [], limits: [] };
+  if(!build || !build.ok || typeof FEADCore === 'undefined'){
+    out.error = (build && build.errors && build.errors[0]) || 'Model çözülemedi.';
+    return out;
+  }
+  var duty = veFeadDutyToCore(build, opts.rows || []);
+  out.duty = duty;
+
+  try {
+    out.analysis = FEADCore.analyze(build.sys, {
+      duty: duty,
+      cylinders: opts.cylinders > 0 ? opts.cylinders : 6,
+      modes: 1
+    });
+    out.ok = true;
+  } catch(e){
+    out.error = veFeadTranslateError(e && e.message);
+    return out;
+  }
+
+  if(duty.length){
+    try {
+      out.fatigue = FEADCore.ribFatigueDistribution(build.sys, {
+        duty: duty, fatigueModel: opts.fatigueModel || 'PK-2_2p-MT3'
+      });
+    } catch(e){ out.warnings.push('Yorulma dağılımı: ' + veFeadTranslateError(e && e.message)); }
+
+    try {
+      // degC duty satırlarından: hepsi aynıysa o, değilse ağırlıklı ortalama.
+      var dcTop = duty.reduce(function(a, d){ return a + (d.dcPct || 0); }, 0) || duty.length;
+      var degC = duty.reduce(function(a, d){
+        return a + (d.degC || 0) * ((d.dcPct || (100 / duty.length)) / dcTop);
+      }, 0);
+      out.life = FEADCore.beltLifeB10(build.sys, { duty: duty, degC: degC });
+      if(out.life && out.life.warnings) out.life.warnings.forEach(function(w){ out.limits.push(w); });
+    } catch(e){ out.warnings.push('B10 ömrü: ' + veFeadTranslateError(e && e.message)); }
+  } else {
+    out.warnings.push('Çalışma çevrimi boş: gerilme, hubload, kayma ve frekans hesaplanmadı. '
+      + 'Çözücü panelinden devir satırı ekleyin.');
+  }
+
+  // Spesifikasyon §7 — her koşuda görünür olmalı, dipnotta değil.
+  out.limits.push('Doğal frekans: çekirdek yalnız GERGİ KOL MODU tahmini verir. '
+    + 'Gates raporunun "Natural Frequency" değeri krank ve aksesuar ataletlerini de içeren '
+    + 'çok serbestlik dereceli bir burulma modudur — KARŞILAŞTIRILAMAZ.');
+  out.limits.push('Peak / geçici rejim: model yarı-statiktir, gergi kolu dinamiği dahil değildir.');
+  out.limits.push('Hizalama payı: kalibre edilmedi.');
+  return out;
+}
+
 // Jest/Node köprüsü (tarayıcıda no-op)
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -370,6 +512,10 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadMigrateNode: veFeadMigrateNode, veFeadMigrateAll: veFeadMigrateAll,
     veFeadRouteOrder: veFeadRouteOrder, veFeadResolveDriver: veFeadResolveDriver,
     veFeadUniqueNames: veFeadUniqueNames, veFeadTranslateError: veFeadTranslateError,
+    veFeadDutyRows: veFeadDutyRows, veFeadPresetLib: veFeadPresetLib,
+    veFeadPresetOf: veFeadPresetOf, veFeadAutoKw: veFeadAutoKw,
+    veFeadDutyToCore: veFeadDutyToCore, veFeadAnalyze: veFeadAnalyze,
+    VE_FEAD_PRESET_LIB: VE_FEAD_PRESET_LIB,
     veFeadBuildSystem: veFeadBuildSystem, veFeadBuildFromCanvas: veFeadBuildFromCanvas,
     veFeadGatherPulleys: veFeadGatherPulleys
   };
