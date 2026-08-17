@@ -250,8 +250,13 @@ describe('topolojiye bakan paneller', () => {
     expect(build.ok).toBe(true);
     const svg = fead.veFeadLayoutSVG(build, 320, 240);
     expect(svg).toMatch(/^<svg /);
-    // Dört kasnak → dört teğet + dört sarım yayı
-    expect((svg.match(/ A/g) || []).length).toBe(4);
+    // Dört kasnak → dört teğet + dört sarım yayı. Sayım KAYIŞ YOLUNUN kendi
+    // path'inde yapılır (data-ve="belt"): dönüş okları ve yön gülü de yay
+    // çiziyor, SVG'nin tamamında "A" saymak onları da toplardı.
+    const belt = /<path data-ve="belt" d="([^"]+)"/.exec(svg);
+    expect(belt).not.toBeNull();
+    expect((belt[1].match(/ A/g) || []).length).toBe(4);
+    expect((belt[1].match(/ L/g) || []).length).toBe(4);
     expect(typeof fead.getFeadLayoutPropertiesHTML(layout)).toBe('string');
   });
 
@@ -416,5 +421,279 @@ describe('servis faktörü sonuç tablosunda hüküm veriyor', () => {
     const html = fead.veFeadDutyResultTable(sahteR(0, 1.1));
     expect(html).not.toMatch(/GEÇTİ|KALDI/);
     expect(html).not.toMatch(/Servis faktörü/);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  KANVAS KARTI — CANLI KAYIŞ YOLU ŞEMASI
+// ════════════════════════════════════════════════════════════════════════════
+// Bu kartın değeri "HTML üretiyor mu" değil: kullanıcı girdileri değiştirdikçe
+// modelinin tutarlı olup olmadığını PANEL AÇMADAN görebilmesi. Yani test edilen
+// şey (a) çizimin kanvas düğümünün içine girmesi, (b) girdi değişince yeniden
+// çizilmesi, (c) çözülemeyen modelde SEBEBİN yazılması, (d) sarım değişmezi
+// tutmuyorsa şeridin kırmızıya dönmesi.
+describe('Kayış Yolu kanvas kartı', () => {
+  const el = (node) => {
+    const d = document.createElement('div');
+    d.className = 've-node';
+    d.id = node.id;
+    d.innerHTML = '<div class="ve-node-box"><svg><circle/></svg></div>';
+    return d;
+  };
+  // PDF sistemine benzer, çözülebilir küçük bir model (dört kasnak).
+  const kurCozulur = () => {
+    const crk = kasnak('fead-crank', { od: 160, x: 0, y: 0, driver: true }, 'CRK');
+    const idr = kasnak('fead-idler', { od: 75, x: -72, y: 267 }, 'IDR');
+    const ac = kasnak('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
+    const ten = kasnak('fead-tensioner', {
+      od: 75, pivotX: -180, pivotY: 100, armLen: 90,
+      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1
+    }, 'TEN');
+    const belt = kasnak('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6 });
+    const sv = kasnak('fead-solver', { designTensionN: 765.7, driveRatio: 1, lengthOffsetMm: 3.5 });
+    const lay = kasnak('fead-layout', {});
+    global.nodes = [crk, idr, ac, ten, belt, sv, lay];
+    global.connections = [[crk, idr], [idr, ac], [ac, ten], [ten, crk]]
+      .map(([a, b]) => ({ id: 'c' + a.id + b.id, from: a.id, to: b.id, fromPort: 'output', toPort: 'input' }));
+    return { lay, crk, ten };
+  };
+
+  test('kart kanvas düğümünün kutusuna girer, sembolü gizler', () => {
+    const { lay } = kurCozulur();
+    const e = el(lay);
+    expect(fead.veFeadApplyLayoutCard(e, lay)).toBe(true);
+    const card = e.querySelector('.' + fead.VE_FEAD_CARD_CLASS);
+    expect(card).not.toBeNull();
+    expect(card.querySelector('svg')).not.toBeNull();
+    // Düğümün palet sembolü kartın arkasında kalmasın
+    expect(e.querySelector('.ve-node-box > svg').style.display).toBe('none');
+  });
+
+  test('kasnak olmayan / şema olmayan düğüme kart konmaz', () => {
+    const { crk } = kurCozulur();
+    expect(fead.veFeadApplyLayoutCard(el(crk), crk)).toBe(false);
+  });
+
+  test('iki kez çağrılınca kart ÇOĞALMAZ, içi tazelenir', () => {
+    const { lay } = kurCozulur();
+    const e = el(lay);
+    fead.veFeadApplyLayoutCard(e, lay);
+    fead.veFeadApplyLayoutCard(e, lay);
+    expect(e.querySelectorAll('.' + fead.VE_FEAD_CARD_CLASS)).toHaveLength(1);
+  });
+
+  // ASIL KAPI: girdi değişince çizim değişmeli. Değişmezse kart eski
+  // geometriyi göstermeye devam eder ve "tutarlı" yalanı söyler.
+  test('girdi değişince şema YENİDEN çizilir', () => {
+    const { lay, crk } = kurCozulur();
+    const once = fead.veFeadLayoutCardHTML(lay);
+    crk.data.od = 162;                       // krank çapı büyüdü (çözüm korunur)
+    const sonra = fead.veFeadLayoutCardHTML(lay);
+    expect(sonra).not.toBe(once);
+    expect(once).toMatch(/data-ve="belt"/);
+    expect(sonra).toMatch(/data-ve="belt"/);
+  });
+
+  // ROZETİN ORTAĞI. Temas tarafı ters verilirse çekirdek bazen GEÇERLİ ama
+  // başka bir yol çözer (rozetin varlık nedeni), bazen de çevrim hiç kapanmaz.
+  // İkinci durumda kart sebebi yazıyor — kullanıcı "çizim gitti" değil "kayış
+  // yolu kapanmıyor, temas tarafına bak" mesajını görüyor.
+  test('temas tarafı ters verilince kart ÇEVRİMİN KAPANMADIĞINI söyler', () => {
+    const { lay, crk } = kurCozulur();
+    expect(fead.veFeadLayoutCardHTML(lay)).toMatch(/data-ve="belt"/);
+    crk.data.contact = 'back';
+    const html = fead.veFeadLayoutCardHTML(lay);
+    expect(html).not.toMatch(/data-ve="belt"/);
+    expect(html).toMatch(/Şema çizilemiyor/);
+    expect(html).toMatch(/temas tarafı|kapanmıyor/i);
+  });
+
+  test('çözülemeyen modelde SEBEP yazılır — boş kutu değil', () => {
+    const { lay, ten } = kurCozulur();
+    delete ten.data.pivotX;                  // pivot eksik
+    const html = fead.veFeadLayoutCardHTML(lay);
+    expect(html).toMatch(/Şema çizilemiyor/);
+    expect(html).toMatch(/pivot/i);
+    expect(html).not.toMatch(/data-ve="belt"/);
+  });
+
+  test('çözülen modelde durum şeridi YEŞİL ve kasnak sayısı + boy yazılı', () => {
+    const { lay } = kurCozulur();
+    const html = fead.veFeadLayoutCardHTML(lay);
+    expect(html).toMatch(/accent-success/);
+    expect(html).toMatch(/4 kasnak/);
+    expect(html).toMatch(/Σsarım/);
+    expect(html).toMatch(/✓/);
+  });
+
+  test('boş topolojide patlamaz, kırmızı şeritle çıkar', () => {
+    global.nodes = []; global.connections = [];
+    const lay = kasnak('fead-layout', {});
+    const html = fead.veFeadLayoutCardHTML(lay);
+    expect(typeof html).toBe('string');
+    expect(html).toMatch(/accent-danger/);
+    expect(html).toMatch(/✗/);
+  });
+
+  test('veFeadRefreshLayoutCards tuvaldeki TÜM şema düğümlerini tazeler', () => {
+    const { lay } = kurCozulur();
+    const lay2 = kasnak('fead-layout', {});
+    global.nodes.push(lay2);
+    const canvas = document.getElementById('ve-canvas');
+    canvas.innerHTML = '';
+    [lay, lay2].forEach((n) => canvas.appendChild(el(n)));
+    expect(fead.veFeadRefreshLayoutCards()).toBe(2);
+    expect(document.querySelectorAll('.' + fead.VE_FEAD_CARD_CLASS)).toHaveLength(2);
+    canvas.innerHTML = '';
+  });
+});
+
+// ── Şemanın işaretleri: pivot artısı, kol, dönüş oku, yön gülü ──────────────
+// Bunlar süs değil: pivot artısı yanlış girilmiş bir pivotu (kol kayışa ters
+// uzanır) gözle yakalatıyor, yön gülü "montaj açısı −3.18°" gibi bir sayının
+// hangi yöne baktığını okutuyor, dönüş oku sırttan temas eden kasnağın ters
+// döndüğünü gösteriyor.
+describe('şema işaretleri', () => {
+  const kurCozulur = () => {
+    const crk = kasnak('fead-crank', { od: 160, x: 0, y: 0, driver: true }, 'CRK');
+    const idr = kasnak('fead-idler', { od: 75, x: -72, y: 267 }, 'IDR');
+    const ac = kasnak('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
+    const ten = kasnak('fead-tensioner', {
+      od: 75, pivotX: -180, pivotY: 100, armLen: 90,
+      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1
+    }, 'TEN');
+    const belt = kasnak('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6 });
+    const sv = kasnak('fead-solver', { designTensionN: 765.7, driveRatio: 1, lengthOffsetMm: 3.5 });
+    global.nodes = [crk, idr, ac, ten, belt, sv];
+    global.connections = [[crk, idr], [idr, ac], [ac, ten], [ten, crk]]
+      .map(([a, b]) => ({ id: 'c' + a.id + b.id, from: a.id, to: b.id, fromPort: 'output', toPort: 'input' }));
+    return veFeadBuildFromCanvas();
+  };
+
+  test('varsayılanda dördü de çizilir', () => {
+    const svg = fead.veFeadLayoutSVG(kurCozulur(), 420, 340);
+    expect(svg).toMatch(/data-ve="pivot"/);
+    expect(svg).toMatch(/data-ve="arm"/);
+    expect(svg).toMatch(/data-ve="compass"/);
+    expect(svg).toMatch(/data-ve="spin"/);
+    expect(svg).toMatch(/>0</);                 // yön gülü etiketleri
+    expect(svg).toMatch(/>90</);
+    expect(svg).toMatch(/>270</);
+  });
+
+  test('kapatılabilirler (opts)', () => {
+    const b = kurCozulur();
+    const svg = fead.veFeadLayoutSVG(b, 420, 340,
+      { compass: false, pivot: false, arrows: false });
+    expect(svg).not.toMatch(/data-ve="compass"/);
+    expect(svg).not.toMatch(/data-ve="pivot"/);
+    expect(svg).not.toMatch(/data-ve="spin"/);
+    expect(svg).toMatch(/data-ve="belt"/);      // kayış yolu her hâlde çizilir
+  });
+
+  test('her kasnak için bir daire ve bir dönüş oku', () => {
+    const b = kurCozulur();
+    const svg = fead.veFeadLayoutSVG(b, 420, 340);
+    expect((svg.match(/data-ve="pulley"/g) || []).length).toBe(4);
+    expect((svg.match(/data-ve="spin"/g) || []).length).toBeGreaterThan(0);
+  });
+
+  test('gerçek modelde pivot artısı çerçevenin İÇİNDE', () => {
+    const svg = fead.veFeadLayoutSVG(kurCozulur(), 420, 340);
+    const g = /data-ve="pivot"[^>]*><line x1="([-\d.]+)" y1="([-\d.]+)"/.exec(svg);
+    expect(g).not.toBeNull();
+    const [x, y] = [parseFloat(g[1]), parseFloat(g[2])];
+    expect(x).toBeGreaterThanOrEqual(0);
+    expect(x).toBeLessThanOrEqual(420);
+    expect(y).toBeGreaterThanOrEqual(0);
+    expect(y).toBeLessThanOrEqual(340);
+  });
+
+  // PİVOTUN ÖLÇEĞE GİRMESİ — doğrudan çizim fonksiyonuna karşı ölçülüyor.
+  // Neden böyle: doğrulanmış iki sistemde (Gates AG00686 ve BMC) pivot,
+  // kasnak zarfının İÇİNDE kalıyor — yani gerçek veriyle bu koruma tetiklenmiyor
+  // ve onu "uzak pivot gir" diye test etmek mümkün değil (uzak pivotta kayış
+  // yolu hiç kapanmıyor, ölçüldü). O yüzden çizicinin sözleşmesi tek başına
+  // sınanıyor: verilen geometri + pivot → çerçeveye SIĞAN SVG.
+  test('pivot kasnak zarfının DIŞINDAysa ölçek onu da kapsar', () => {
+    const gercek = FEADCore.tensionerState, gercekMean = FEADCore.meanRel;
+    const sahteGeom = {
+      pulleys: [
+        { c: [0, 0],  rPitch: 20, contact: 'grooved', d: +1 },
+        { c: [60, 0], rPitch: 20, contact: 'back',    d: -1 }
+      ],
+      spans: [{ Pi: [0, 20], Pj: [60, 20] }, { Pi: [60, -20], Pj: [0, -20] }],
+      wraps: [Math.PI, Math.PI],
+      names: ['P0', 'TEN'],
+      wrapDeg: () => 180,
+      LeffMm: 200
+    };
+    // meanRel de sahte: çizici tensionerState'i meanRel(sys) ile çağırıyor ve
+    // gerçek meanRel bu iskelet sys üzerinde çalışamaz.
+    FEADCore.meanRel = () => 0;
+    FEADCore.tensionerState = () => ({ geom: sahteGeom });
+    try {
+      const b = {
+        ok: true, order: [{ type: 'fead-crank' }, { type: 'fead-tensioner' }],
+        sys: {
+          pulleys: [{ crank: true, contact: 'grooved' }, { tensioner: true, contact: 'back' }],
+          _tenIdx: 1,
+          tensioner: { pivot: [-600, 0] }        // kasnaklardan ÇOK uzakta
+        }
+      };
+      const ile = fead.veFeadLayoutSVG(b, 420, 340);
+      const g = /data-ve="pivot"[^>]*><line x1="([-\d.]+)"/.exec(ile);
+      expect(g).not.toBeNull();
+      const x = parseFloat(g[1]);
+      expect(x).toBeGreaterThanOrEqual(0);
+      expect(x).toBeLessThanOrEqual(420);
+
+      // Ve pivot ölçeğe girdiği için kasnaklar KÜÇÜLMÜŞ olmalı — pivot yok
+      // sayılsaydı aynı kasnaklar daha büyük çizilirdi.
+      const rIle = parseFloat(/data-ve="pulley" cx="[-\d.]+" cy="[-\d.]+" r="([-\d.]+)"/.exec(ile)[1]);
+      const haric = fead.veFeadLayoutSVG(b, 420, 340, { pivot: false });
+      const rHaric = parseFloat(/data-ve="pulley" cx="[-\d.]+" cy="[-\d.]+" r="([-\d.]+)"/.exec(haric)[1]);
+      expect(rIle).toBeLessThan(rHaric);
+    } finally {
+      FEADCore.tensionerState = gercek;
+      FEADCore.meanRel = gercekMean;
+    }
+  });
+
+  test('inline kipte dış çerçeve/arkaplan yok (kanvas kartı için)', () => {
+    const b = kurCozulur();
+    const kart = fead.veFeadLayoutSVG(b, 420, 320, { inline: true });
+    const panel = fead.veFeadLayoutSVG(b, 320, 240);
+    expect(kart).toMatch(/height:100%/);
+    expect(kart).not.toMatch(/border:1px solid/);
+    expect(panel).toMatch(/border:1px solid/);
+  });
+});
+
+describe('Kayış Yolu düğümünün ölçüsü — tek kaynak', () => {
+  test('componentDefs ölçüyü VE_FEAD_LAYOUT_W/H sabitlerinden alır', () => {
+    expect(componentDefs['fead-layout'].defaultWidth).toBe(VE_FEAD_LAYOUT_W);
+    expect(componentDefs['fead-layout'].defaultHeight).toBe(VE_FEAD_LAYOUT_H);
+    // Şema okunabilir olmak zorunda: küçük kutu bu kartı taşımıyor
+    expect(VE_FEAD_LAYOUT_W).toBeGreaterThan(300);
+    expect(VE_FEAD_LAYOUT_H).toBeGreaterThan(240);
+  });
+
+  test('eski 60×56 kayıt kart ölçüsüne YÜKSELİR', () => {
+    const n = { type: 'fead-layout', width: VE_FEAD_LAYOUT_LEGACY_W, height: VE_FEAD_LAYOUT_LEGACY_H };
+    expect(veFeadNormalizeLayoutSize(n)).toBe(true);
+    expect(n.width).toBe(VE_FEAD_LAYOUT_W);
+    expect(n.height).toBe(VE_FEAD_LAYOUT_H);
+  });
+
+  test('kullanıcının bilerek verdiği ölçü KORUNUR', () => {
+    const n = { type: 'fead-layout', width: 640, height: 500 };
+    expect(veFeadNormalizeLayoutSize(n)).toBe(false);
+    expect(n.width).toBe(640);
+  });
+
+  test('başka tipe dokunmaz', () => {
+    const n = { type: 'fead-crank', width: VE_FEAD_LAYOUT_LEGACY_W, height: VE_FEAD_LAYOUT_LEGACY_H };
+    expect(veFeadNormalizeLayoutSize(n)).toBe(false);
   });
 });
