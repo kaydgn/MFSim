@@ -104,10 +104,6 @@ function updateCanvasTransform() {
   if(_zoomStatus) _zoomStatus.textContent = '%' + Math.round(canvasZoom * 100);
   // Minimap'teki viewport dikdörtgenini tazele (pan/zoom)
   if(typeof veMinimapUpdate === 'function') veMinimapUpdate();
-  // "Yakınlaştırmaya bağlı" modül görünümünde kamera eşiği geçildiyse kartları
-  // yeniden kur (js/topo-mini.js). Biçim değişmedikçe hiçbir şey yapmaz —
-  // yoksa her pan karesinde üç modülün haritası yeniden çizilirdi.
-  if(typeof veSyncModuleZoomLayout === 'function') veSyncModuleZoomLayout();
 }
 
 // Görünümü mevcut TÜM bileşenlere ortalar ve sığdırır (fit-to-content).

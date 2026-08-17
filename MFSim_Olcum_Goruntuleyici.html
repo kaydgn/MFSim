@@ -1019,28 +1019,6 @@
       user-select: none;
     }
     .ve-settings-radio input { accent-color: var(--accent-primary); }
-    /* Açıklamalı seçenek listesi (Modül Kartı): tek satırlık .ve-settings-radios
-       yerine alt alta, her seçeneğin altında bir cümlelik gerekçe. */
-    .ve-settings-radio-group {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .ve-settings-radio-group .ve-settings-radio {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      padding: 9px 11px;
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-sm);
-      font-size: var(--fs-md);
-      line-height: 1.35;
-    }
-    .ve-settings-radio-group .ve-settings-radio:hover { border-color: var(--border-hover); }
-    .ve-settings-radio-group .ve-settings-radio input { margin-top: 2px; flex: 0 0 auto; }
-    .ve-settings-radio-note { color: var(--text-muted); font-size: var(--fs-body); }
     .ve-settings-btn-row {
       display: flex;
       gap: 8px;
@@ -3283,91 +3261,6 @@
 @media (prefers-reduced-motion: reduce){
   .ve-mod-enter, .ve-mod-rail{ transition:none; }
   .ve-node--module:hover .ve-mod-enter{ transform:none; }
-}
-
-/* ── HARİTA BİÇİMİ (.ve-mod-card--map) ─────────────────────────────────────
-   Aynı kartın başlık satırı yukarıda kalır, ALTINA alt topolojinin haritası
-   girer (js/topo-mini.js veTopoMiniSVG). Ad çerçevenin BAŞLIK ŞERİDİNDE
-   duruyor: kart bugün zaten sembol+ad+özet+ok'u tek hizada taşıyordu, harita o
-   satırı bozmadan altına ekleniyor → kullanıcının gözü hiçbir şeyi yeniden
-   aramıyor. Ölçü: components.js VE_MODULE_MAP_W/H (300×190). */
-.ve-mod-card--map{ padding-right:0; }
-.ve-mod-body{
-  flex:1;
-  min-width:0;
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-}
-.ve-mod-head{
-  flex:0 0 auto;
-  display:flex;
-  align-items:center;
-  padding:4px 6px 4px 0;
-  border-bottom:1px solid var(--border-color);
-  background:var(--bg-tertiary);
-}
-/* Başlıktaki sembol kart biçimindekinden küçük: satır 28px, harita alanı
-   olabildiğince yüksek kalsın. */
-.ve-mod-card--map .ve-mod-ico{ margin:0 6px; }
-.ve-mod-card--map .ve-mod-ico svg{ width:18px; height:18px; }
-/* Harita biçiminde özet tek satıra iner (ad ile aynı hizada, sağda) → başlık
-   28px'te kalır. Kart biçimindeki iki satırlık düzen aynen duruyor. */
-.ve-mod-card--map .ve-mod-text{ flex-direction:row; align-items:center; gap:8px; }
-.ve-mod-card--map .ve-mod-meta{ margin-left:auto; }
-.ve-mod-map{
-  flex:1;
-  min-width:0;
-  min-height:0;
-  position:relative;
-  background:var(--bg-primary);       /* tuval zemini: düğüm kutuları üstünde durur */
-  overflow:hidden;
-}
-/* DOĞRUDAN ÇOCUK (>) — kritik. Seçici ".ve-mod-map svg" yazıldığında haritanın
-   İÇİNDEKİ sembol svg'lerine de uyguluyordu: her sembol kendi 43×43'lük
-   yuvasından çıkıp haritanın tamamına yayılıyordu (CSS, x/y/width/height
-   NİTELİKLERİNİ yener). Gerçek tarayıcıda ölçüldü: kutular boş, semboller dev. */
-.ve-mod-map > svg{ display:block; width:100%; height:100%; }
-.ve-mod-map.is-empty{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-.ve-mod-map-hint{
-  font-size:var(--fs-tiny);
-  color:var(--text-muted);
-  letter-spacing:0.02em;
-}
-/* Katla/aç düğmesi — düğümün KENDİ tercihi (genel ayarı değiştirmez). */
-.ve-mod-toggle{
-  flex:0 0 auto;
-  width:16px;
-  height:16px;
-  margin-left:4px;
-  padding:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:transparent;
-  border:1px solid transparent;
-  border-radius:var(--radius-xs);
-  color:var(--text-muted);
-  font-size:var(--fs-tiny);
-  line-height:1;
-  cursor:pointer;
-  transition:color var(--dur-fast), background var(--dur-fast), border-color var(--dur-fast);
-}
-.ve-mod-toggle:hover{
-  color:var(--accent-primary);
-  background:var(--bg-secondary);
-  border-color:var(--border-color);
-}
-.ve-mod-toggle:focus-visible{
-  outline:2px solid var(--accent-primary);
-  outline-offset:1px;
-}
-@media (prefers-reduced-motion: reduce){
-  .ve-mod-toggle{ transition:none; }
 }
 
 /* Şasi metaforu: takoz modülü düğümlerinde port kareleri gizli — bağlantı, düğümden
