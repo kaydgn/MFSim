@@ -342,3 +342,140 @@ describe('panel yerleşimi (smoke)', () => {
     expect((row.match(/class="f"/g) || []).length).toBe(3);
   });
 });
+
+// ═════════════════════════════════════════════════════════════════════
+// Yerleşim kusurları — kullanıcı, 2026-08-19 (ekran görüntüsüyle)
+// "motor seçimi kutucuğu arkada kalmış … veri ızgarası en alta kadar
+//  gitmemiş, yarım kalmış"
+//
+// TARAYICIDA ÖLÇÜLEN:
+//   • <select> içsel genişliğini EN UZUN SEÇENEĞİNDEN alıyor ve esnek kutu
+//     ögesinin varsayılan min-width:auto'su onu küçültmüyordu → 240px'lik sol
+//     sütundan 59px taşıp ORTA SÜTUNUN ALTINA giriyordu.
+//   • Izgara sabit 352px'ti: 16 satırın 3'ü kaydırma altında kalırken hemen
+//     yanındaki doğrulama sütunu 918'e kadar iniyordu; ızgaranın dibi ile
+//     komşusunun dibi arasında 177px fark vardı.
+// ═════════════════════════════════════════════════════════════════════
+describe('motor seçici sütuna sığar', () => {
+  test('seçici küçülmeyi reddetmesin diye min-width:0 taşır', () => {
+    const html = getEnginePropertiesHTML(engineNode('comp-1'));
+    const sel = (html.match(/<select id="ve-ft-motor-select-[^>]*>/) || [])[0] || '';
+    expect(sel).toContain('min-width:0');
+  });
+
+  test('seçiciyi saran esnek satır da küçülebilir', () => {
+    const html = getEnginePropertiesHTML(engineNode('comp-1'));
+    const i = html.indexOf('<select id="ve-ft-motor-select-');
+    const sarmal = html.lastIndexOf('<div', i);
+    expect(html.slice(sarmal, i)).toContain('min-width:0');
+  });
+
+  test('kırpılan ad ipucu olarak duruyor', () => {
+    const html = getEnginePropertiesHTML(engineNode('comp-1'));
+    expect(html).toMatch(/<select id="ve-ft-motor-select-[^>]*title="/);
+  });
+});
+
+describe('veri ızgarası sütunu doldurur', () => {
+  test('kullanıcı boy vermediyse doldurma sınıfı gelir, sabit yükseklik gelmez', () => {
+    const html = getEnginePropertiesHTML(engineNode('comp-1'));
+    const wrap = (html.match(/<div id="ve-motor-table-wrapper-[^>]*>/) || [])[0] || '';
+    expect(wrap).toContain('ve-eng-sheet-wrap');
+    expect(wrap).not.toContain('max-height');
+  });
+
+  // Tutamağı sürükleyen kullanıcının seçimi kazanır: o andan sonra sabit boy.
+  test('node.data.tableHeight varsa sabit yükseklik, doldurma sınıfı YOK', () => {
+    const html = getEnginePropertiesHTML(engineNode('comp-1', { tableHeight: 210 }));
+    const wrap = (html.match(/<div id="ve-motor-table-wrapper-[^>]*>/) || [])[0] || '';
+    expect(wrap).toContain('max-height:210px');
+    expect(wrap).not.toContain('ve-eng-sheet-wrap');
+  });
+
+  test('ızgara alanı esnek sütun olarak açılır (block değil)', () => {
+    const html = getEnginePropertiesHTML(engineNode('comp-1'));
+    const area = (html.match(/<div id="ve-motor-data-area-[^>]*>/) || [])[0] || '';
+    expect(area).toContain('data-show="flex"');
+    expect(area).toContain('display:flex');
+  });
+
+  test('Motor Freni dalında veri alanı BLOK kalır (esnek zincir orada yok)', () => {
+    veActiveModule = 'engine-brake';
+    const html = getEnginePropertiesHTML(engineNode('comp-1'));
+    const area = (html.match(/<div id="ve-motor-data-area-[^>]*>/) || [])[0] || '';
+    expect(area).not.toContain('data-show="flex"');
+    expect(area).toContain('display:block');
+  });
+});
+
+// SÖZLEŞME: alanı gizleyip gösteren üç çağrı yeri eskiden koşulsuz 'block'
+// yazıyordu. Izgarayı sütuna yayan esnek zincir, ilk gizle/göster turunda
+// sessizce blok'a düşer ve ızgara yine yarım kalırdı — ekrana bakan kimse
+// bunun bir kez çalışıp sonra bozulduğunu fark etmezdi.
+describe('veEngShowDataArea — gösterim değeri elemanın kendisinden', () => {
+  const alan = (show) => {
+    const el = document.createElement('div');
+    if (show) el.setAttribute('data-show', show);
+    return el;
+  };
+
+  test('data-show="flex" olan alan flex olarak açılır', () => {
+    const el = alan('flex');
+    veEngShowDataArea(el, true);
+    expect(el.style.display).toBe('flex');
+  });
+
+  test('data-show yoksa blok olarak açılır (Motor Freni dalı)', () => {
+    const el = alan(null);
+    veEngShowDataArea(el, true);
+    expect(el.style.display).toBe('block');
+  });
+
+  test('gizlemek her iki dalda da none', () => {
+    ['flex', null].forEach((s) => {
+      const el = alan(s);
+      veEngShowDataArea(el, false);
+      expect(el.style.display).toBe('none');
+    });
+  });
+
+  test('gizle→göster turundan sonra esnek kip KORUNUR', () => {
+    const el = alan('flex');
+    veEngShowDataArea(el, false);
+    veEngShowDataArea(el, true);
+    expect(el.style.display).toBe('flex');
+  });
+
+  test('eleman yoksa patlamaz', () => {
+    expect(() => veEngShowDataArea(null, true)).not.toThrow();
+  });
+});
+
+// CSS tarafı: sütunların eşit boya çekilmesi ve doldurma zinciri. Bunlar
+// olmadan JS'teki sınıflar tek başına hiçbir şey yapmaz.
+describe('yerleşim kuralları (css/styles.css)', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+  const kural = (sec) => {
+    const i = css.indexOf(sec + '{');
+    return i < 0 ? null : css.slice(i + sec.length + 1, css.indexOf('}', i));
+  };
+
+  test('üç sütun aynı yüksekliğe çekilir', () => {
+    // Temel .ve-cp-grid `start` diyor ve iki sınıf aynı elemanda → açıkça
+    // yazılmazsa sütunlar yine ayrı ayrı biterdi.
+    expect(kural('.ve-cp-grid--sheet')).toContain('align-items:stretch');
+  });
+
+  test('doldurma zincirinin her halkası min-height:0 taşır', () => {
+    expect(kural('.ve-cp-grid--sheet > .ve-cp-col > .ve-ft-extra')).toContain('min-height:0');
+    expect(kural('.ve-eng-sheet-area')).toContain('min-height:0');
+  });
+
+  test('kaydırıcı büyür ama pencereyi şişirmeyecek bir tavanı var', () => {
+    const k = kural('.ve-eng-sheet-wrap');
+    expect(k).toContain('flex:1');
+    expect(k).toMatch(/max-height:/);
+  });
+});

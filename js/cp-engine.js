@@ -44,8 +44,18 @@ function getEnginePropertiesHTML(node) {
 
     // Motor seçici
     var savedPreset = nodeData.ftMotorPreset || '';
-    selectHtml += '<div style="display:flex; gap:6px; margin-bottom:8px; align-items:center;">';
-    selectHtml += '<select id="ve-ft-motor-select-' + node.id + '" onchange="onVEFTMotorSelect(\'' + node.id + '\', this.value)" style="flex:1; font-size:var(--fs-body); padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
+    // min-width:0 ŞART. <select> içsel genişliğini EN UZUN SEÇENEĞİNDEN alır
+    // ("Cummins ISB6.7 (Diesel) ISB6.7 340 - FR98387" gibi), esnek kutu ögesi
+    // varsayılan min-width:auto ile o genişliğin altına inmeyi reddeder →
+    // seçici 240px'lik sol sütundan 59px taşıp ORTA SÜTUNUN ALTINA giriyordu
+    // ("motor seçimi kutucuğu arkada kalmış", kullanıcı 2026-08-19).
+    selectHtml += '<div style="display:flex; gap:6px; margin-bottom:8px; align-items:center; min-width:0;">';
+    // Sütuna sığdırılan seçicide uzun ad kırpılır ve <select> üç nokta koyamaz;
+    // tam ad ipucu olarak durur (pencere başlığında da var).
+    var _selTitle = (savedPreset && VE_FT_MOTOR_PRESETS[savedPreset])
+      ? escapeHTML(VE_FT_MOTOR_PRESETS[savedPreset].name) : 'Hazır motor listesinden seçin';
+    selectHtml += '<select id="ve-ft-motor-select-' + node.id + '" title="' + _selTitle +
+                  '" onchange="onVEFTMotorSelect(\'' + node.id + '\', this.value)" style="flex:1; min-width:0; width:100%; font-size:var(--fs-body); padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
     selectHtml += '<option value="">-- Motor Seçiniz (' + Object.keys(VE_FT_MOTOR_PRESETS).length + ' preset) --</option>';
     // Aile bazlı gruplama
     var _ftFamilies = [
@@ -164,15 +174,27 @@ function getEnginePropertiesHTML(node) {
   // ── CHUNK: Veri Izgarası — A–C girdi, D–F türetilen (ƒ) — yalnız Tam Gaz ──
   var sheetHtml = '';
   if(isFullThrottle) {
-    sheetHtml += '<div id="ve-motor-data-area-' + node.id + '" style="display:' + (hasData ? 'block' : 'none') + ';">';
+    // data-show="flex": alanı gizleyip gösteren JS (showVEMotorPlaceholder /
+    // veri yükleme yolları) eski hâlinde koşulsuz 'block' yazıyordu ve bu,
+    // ızgaranın sütunu doldurmasını sağlayan esnek zinciri kırardı. Gösterim
+    // değeri artık elemanın kendisinde duruyor (bkz. veEngShowDataArea);
+    // Motor Freni dalı 'block' demeye devam ediyor.
+    sheetHtml += '<div id="ve-motor-data-area-' + node.id + '" class="ve-eng-sheet-area" data-show="flex"' +
+                 ' style="display:' + (hasData ? 'flex' : 'none') + ';">';
     sheetHtml += '<div class="sw-section-title" style="display:flex; justify-content:space-between;">Veri Izgarası' +
                  '<span id="ve-sheet-range-' + node.id + '" style="font-family:var(--font-mono); font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-muted);">' +
                  'A1:C' + rows.length + ' girdi · ƒ D:F türetilen</span></div>';
-    // Izgara yüksekliği: 17 satırlık katalog verisi tek ekranda okunsun diye
-    // varsayılan 352px (kullanıcı tutamakla değiştirirse node.data.tableHeight).
-    var sheetHeight = nodeData.tableHeight || 352;
-    sheetHtml += '<div id="ve-motor-table-wrapper-' + node.id + '" style="max-height:' + sheetHeight +
-                 'px; overflow-y:auto; overflow-x:hidden; border:1px solid var(--border-color);' +
+    // Izgara VARSAYILAN OLARAK SÜTUNU DOLDURUR (.ve-eng-sheet-wrap → flex:1).
+    // Eskiden sabit 352px'ti: 21 satırlık katalog verisi kaydırma çubuğuna
+    // düşerken hemen yanındaki doğrulama sütunu 629px'ti ve ızgaranın altında
+    // 177px boş alan duruyordu ("veri ızgarası yarım kalmış", kullanıcı).
+    // Kullanıcı tutamağı sürüklerse SEÇİMİ KAZANIR: node.data.tableHeight
+    // yazılır ve o andan sonra sabit yükseklik uygulanır.
+    var sheetHeight = nodeData.tableHeight;
+    sheetHtml += '<div id="ve-motor-table-wrapper-' + node.id + '"' +
+                 (sheetHeight ? '' : ' class="ve-eng-sheet-wrap"') +
+                 ' style="' + (sheetHeight ? 'max-height:' + sheetHeight + 'px; ' : '') +
+                 'overflow-y:auto; overflow-x:hidden; border:1px solid var(--border-color);' +
                  ' border-radius:var(--radius-sm); border-bottom:none;">';
     sheetHtml += '<table class="ve-eng-sheet">';
     sheetHtml += '<colgroup><col class="c-n"><col class="c-a"><col class="c-b"><col class="c-c">' +
@@ -490,6 +512,15 @@ function getEnginePropertiesHTML(node) {
 // Tablo resize fonksiyonları
 var veTableResizing = null;
 
+// Veri alanını göster/gizle. Gösterim değeri elemanın KENDİSİNDE (data-show):
+// Tam Gaz ızgarası esnek sütun ('flex'), Motor Freni tablosu blok ('block').
+// Eskiden üç ayrı çağrı yeri koşulsuz 'block' yazıyordu; ızgara sütunu
+// dolduran esnek zincir ilk gizle/göster turunda sessizce kırılırdı.
+function veEngShowDataArea(el, show) {
+  if(!el) return;
+  el.style.display = show ? (el.getAttribute('data-show') || 'block') : 'none';
+}
+
 function startVETableResize(e, nodeId) {
   e.preventDefault();
   veTableResizing = {
@@ -508,6 +539,10 @@ function doVETableResize(e) {
   
   var newHeight = veTableResizing.startHeight + (e.clientY - veTableResizing.startY);
   newHeight = Math.max(80, Math.min(400, newHeight)); // 80-400px arası
+  // Kullanıcı tutamağa dokunduğu an SEÇİM ONUNDUR: ızgara artık sütunu
+  // kendiliğinden doldurmaz, sürüklenen yükseklikte kalır. (Doldurma sınıfı
+  // dururken esnek büyüme ile max-height birbiriyle çekişirdi.)
+  wrapper.classList.remove('ve-eng-sheet-wrap');
   wrapper.style.maxHeight = newHeight + 'px';
   
   // Node data güncelle
@@ -2050,7 +2085,7 @@ function removeVEMotorRow(btn, nodeId) {
 function showVEMotorPlaceholder(nodeId) {
   var dataArea = document.getElementById('ve-motor-data-area-' + nodeId);
   var placeholder = document.getElementById('ve-motor-placeholder-' + nodeId);
-  if(dataArea) dataArea.style.display = 'none';
+  veEngShowDataArea(dataArea, false);
   if(placeholder) placeholder.style.display = 'block';
 
   // Veri tamamen silindi → sağ (çıktı) sütunu da kapat ve pencereyi
@@ -2235,7 +2270,7 @@ function onVEMotorSelectChange(nodeId, value) {
   // Veri alanını göster, placeholder'ı gizle
   var dataArea = document.getElementById('ve-motor-data-area-' + nodeId);
   var placeholder = document.getElementById('ve-motor-placeholder-' + nodeId);
-  if(dataArea) dataArea.style.display = 'block';
+  veEngShowDataArea(dataArea, true);
   if(placeholder) placeholder.style.display = 'none';
   
   tbody.innerHTML = '';
@@ -2292,7 +2327,7 @@ function onVEFTMotorSelect(nodeId, value) {
   var placeholder = document.getElementById('ve-motor-placeholder-' + nodeId);
   // İki sütuna dağılmış .ve-ft-extra sarmalayıcılarının ikisini de aç (sol+sağ)
   var ftExtras = document.querySelectorAll('.ve-ft-extra[data-node="' + nodeId + '"]');
-  if(dataArea) dataArea.style.display = 'block';
+  veEngShowDataArea(dataArea, true);
   if(placeholder) placeholder.style.display = 'none';
   // 'flex' — sütun sarmalayıcıları .ve-cp-grid--sheet altında dikey flex
   // (aralar `gap` ile); özet şeridi de zaten yatay flex.
