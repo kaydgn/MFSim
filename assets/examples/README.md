@@ -129,6 +129,49 @@ aksesuar kaybını kendi modeliyle düşer, net girilirse kayıp iki kez sayıl�
 her yol diskte olmalı, diskteki her `ap_*.json` kayıt defterinde olmalı (öksüz
 dosya yok), ve her topoloji çalışır bir güç aktarma zinciri içermeli.
 
+### Kanonik yerleşim — hepsi AYNI ızgarada
+
+Örneklerin `x`/`y` değerleri elle konmaz: tek kaynak
+`js/cp-arac-performans.js` → **`VE_ARAC_PERFORMANS_LAYOUT`**. Izgara PORT
+GEOMETRİSİNDEN türetildi (`js/components.js` → `vePortOffset`: sağ kenarda K
+port varsa r'inci port `h·(r+1)/(K+1)`'de durur), çünkü yerleşim bunu saymazsa
+bağlantı çizgisi eğik çıkar:
+
+| Kural | Değer | Neden |
+|---|---|---|
+| Zincir sütun adımı | 130 px (65 kutu + 65 açıklık) | düzenli ızgara |
+| Dal sütun adımı | 200 px (65 + 135) | dik açılı telin dikey bacağı iki sütunun ORTASINDAN geçer; 130 px'te o kanal düğüm ADININ içine düşüyordu (ölçüldü: en geniş ad 6.77 px/karakter) |
+| Şaft ekseni | `ly 150 + 30` | 65×60 kutuların tek portu %50'de |
+| Motor `ly` | **142**, 190 değil | motor 66×76 ve çıkışı `ly+38`'de — 142+38 ekseni verir |
+| Diferansiyel | eksenden ∓100 px, beslediği ÇİFTİN ortasında | transfer çıkışları eksenin ±10 px'inde → iki dal EŞİT ve ZIT sapar |
+| Tekerlek adımı | 100 px (60 kutu + 40 açıklık) | tekerlek ADI kutunun altında; 80 px adımda alttaki kutuya değiyordu |
+| Bağlantı biçimi | zincir `curve`, dallar `stepped` | eşit y'de `curve` düz yatay çizgiye çöker; dallar dik açı ister |
+| `data.labelPos` | motor + transfer `top`, iki eşleştirme aracı `right` | adları kutudan çok geniş; ortada dururken tellerin şeridine oturuyorlardı |
+
+**Bileşen kümesi** referans topolojiyle aynı: Çözücü, Şanzıman Kontrol, Araç,
+Motor, Tork Konvertörü, Şanzıman, Propşaft, Transfer, Motor-Konvertör
+Eşleştirme, **Motor-Şanzıman Eşleştirme**. Diferansiyel ve tekerlek SAYISI
+projeye göre değişir (4×4 → 2/4, 6×6 → 3/6) — orada genelleme yok.
+"Başlangıç ve Örnekler" (`ap-example`) topolojiye GÖMÜLMEZ; yükleyici onu
+yerleşimin sol üst köşesine geri koyar (bu yüzden o köşe boş bırakılır).
+
+Her iki eşleştirme aracı da motorun AYNI çıkış portundan beslendiği için ikisi
+de Konvertör sütununda, alt alta durur: dik açılı telin İLK ayağı şaft ekseninde
+yatay ilerliyor, hedef daha sağda olsa o ayak Konvertör kutusunun içinden
+geçerdi.
+
+`tests/unit/arac-example-layout.test.js` kodu ve veriyi birbirine bağlar:
+örnekler yerleşim sabitinden sapamaz (6×6'da fan dışı her şey + fan sütunları),
+zincir yatay olmaktan çıkamaz, fan simetrisini kaybedemez, hiçbir tel bir
+bileşenin ya da bir ADIN üstünden geçemez, "Örneği Aktar"ın eklediği düğüm
+boş köşeye düşer.
+
+**Yerleşim değişirse önizlemeler BAYATLAR** — `ap_*.png` topolojinin ekran
+görüntüsüdür. Yeniden üretme akışı yukarıda ("Yeni görsel eklemek"): örneği
+kur, seçim halkası + tutamaklar + minimap + breadcrumb gizli, `#ve-canvas-wrapper`
+kırpılır (1600×950 görünüm → 1316×805). Dosyalar uygulamanın kendi dışa
+aktarma biçiminde (`JSON.stringify(…, null, 2)`) yazılır.
+
 ### Uyarılı örnekler
 
 `warning` alanı olan girdiler panelde sarı bir uyarı bloğu ve listede `⚠` gösterir.

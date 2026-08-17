@@ -131,7 +131,7 @@ describe('Araç Performans — iç topoloji başlangıcı (veAracPopulateStarter
   test('hiçbir güç aktarma bileşeni gelmez (eski preset\'in kapısı)', () => {
     var POWER = ['engine', 'torque-converter', 'gearbox', 'propshaft', 'transfer',
                  'differential', 'wheel', 'vehicle', 'solver', 'shift-controller',
-                 'ec-matching', 'obstacle-crossing'];
+                 'ec-matching', 'engine-gearbox-matching'];
     var types = nodes.map(function (n) { return n.type; });
     POWER.forEach(function (t) { expect(types).not.toContain(t); });
   });

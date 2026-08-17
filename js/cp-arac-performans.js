@@ -23,23 +23,69 @@
 // kalıp (bkz. veAracPopulateStarter / cp-mount.js veMntPopulateStarter).
 // Yerleşim burada, "Örneği Aktar" sonrası ap-example düğümünün geri konduğu
 // koordinat çerçevesi olarak kalır (bkz. cp-arac-example.js veApLoadExample).
+//
+// IZGARA — sayılar keyfî değil, PORT GEOMETRİSİNDEN türetildi
+// ────────────────────────────────────────────────────────────
+// Bir portun düğüm üstündeki y'si `vePortOffset` ile sabittir: sağ kenarda K
+// port varsa r'inci port `h·(r+1)/(K+1)`'de durur (js/components.js). Yerleşim
+// bunu SAYMAZSA bağlantı çizgisi eğik çıkar; eskiden tam olarak bu oluyordu.
+//
+//   • ŞAFT EKSENİ (ly 150 + 30 = 180): 65×60 kutuların tek portu %50'de, yani
+//     ly+30'da. Zincirin tamamı (motor→konvertör→şanzıman→propşaft→transfer)
+//     bu eksende → aradaki dört bağlantı TAM YATAY çizilir.
+//   • MOTOR ly 142: motor 66×76 ve çıkışı %50'de (ly+38) — 142+38 = 180, yani
+//     şaft ekseninin ta kendisi. Eskiden 190'daydı, çıkışı 8 px aşağıdaydı ve
+//     motor→konvertör teli hafif eğikti.
+//   • FAN SİMETRİSİ: transfer çıkışları eksenin ±10 px'inde (h·1/3, h·2/3).
+//     Diferansiyel girişleri eksenden ±100 px (ly 50/250 + 30 = 80/280,
+//     eksen 180) → iki dal EŞİT ve ZIT saparak dik açıyla iner/çıkar.
+//     Aynısı diferansiyel→tekerlekte: çıkışlar ±10, tekerlek girişleri ±50.
+//     Eskiden alt dal 110, üst dal 80 px sapıyordu — fan gözle eğikti.
+//   • TEKERLEK ADIMI 100 px (60 kutu + 40 açıklık): tekerlek ADI kutunun
+//     altında çiziliyor, 6×6'daki eski 80 px adımda ad bir alttaki kutuya
+//     değiyordu. İki biçim de aynı adımı kullanır → örnekler birbirine uyar.
+//   • SÜTUN ADIMI: zincirde 130 px (65 kutu + 65 açıklık), DALLARDA 200 px.
+//     Dik açılı (stepped) bağlantı dikey bacağını iki sütunun ORTASINDAN
+//     geçirir; 130 px'te o kanal düğüm ADININ İÇİNE düşüyordu. Adlar kutuda
+//     ORTALI ve kutudan geniş — gerçek tarayıcıda ölçüldü: en geniş
+//     6.77 px/karakter, "Transfer Kutusu (2 kademe)" 144.2 px,
+//     "Goodyear G275 MSA 335/80R20" 170.8 px. 135 px açıklık iki kanalı da
+//     (x=3212.5 ve 3412.5) adların dışına çıkarır.
+//   • SOL ÜST KÖŞE BOŞ: "Örneği Aktar" sonrası yükleyici "Başlangıç ve
+//     Örnekler" düğümünü yerleşim-yereli (30, −40)'a geri koyuyor
+//     (cp-arac-example.js). Çözücü orada dururken yeni düğümün ADI Çözücü
+//     kutusunun üstüne biniyordu — Çözücü bu yüzden ALT sırada.
+//
+// Örnek topolojileri (assets/examples/ap_*_topoloji.json) bu ızgaradan
+// üretilir; tests/unit/arac-example-layout.test.js ikisini birbirine bağlar.
 var VE_ARAC_PERFORMANS_LAYOUT = [
-  { type:'solver',            lx:150, ly:0   },
-  { type:'shift-controller',  lx:380, ly:0   },
-  { type:'vehicle',           lx:510, ly:0   },
-  { type:'engine',            lx:30,  ly:190 },
-  { type:'torque-converter',  lx:185, ly:190 },
-  { type:'gearbox',           lx:320, ly:190 },
-  { type:'propshaft',         lx:450, ly:190 },
-  { type:'transfer',          lx:585, ly:190 },
-  { type:'differential',      lx:715, ly:110 },
-  { type:'differential',      lx:715, ly:300 },
-  { type:'wheel',             lx:850, ly:40  },
-  { type:'wheel',             lx:850, ly:160 },
-  { type:'wheel',             lx:850, ly:300 },
-  { type:'wheel',             lx:850, ly:420 },
-  { type:'ec-matching',       lx:175, ly:360 },
-  { type:'obstacle-crossing', lx:400, ly:380 }
+  // Şaft ekseni (ly 150 → port 180); motor 76 px yüksek, ly 142 → çıkış 180
+  { type:'engine',                  lx:0,   ly:142, w:66, h:76 },
+  { type:'torque-converter',        lx:130, ly:150 },
+  { type:'gearbox',                 lx:260, ly:150 },
+  { type:'propshaft',               lx:390, ly:150 },
+  { type:'transfer',                lx:520, ly:150 },
+  // Fan — dal sütunları 180 px (etiket kanalı), tekerlek adımı 100,
+  // diferansiyel beslediği ÇİFTİN tam ortasında
+  { type:'differential',            lx:720, ly:50  },
+  { type:'differential',            lx:720, ly:250 },
+  { type:'wheel',                   lx:920, ly:0   },
+  { type:'wheel',                   lx:920, ly:100 },
+  { type:'wheel',                   lx:920, ly:200 },
+  { type:'wheel',                   lx:920, ly:300 },
+  // ARAÇLAR. İki eşleştirme aracı da motorun AYNI çıkış portundan besleniyor
+  // ve ikisi de KONVERTÖR SÜTUNUNDA durmak zorunda: dik açılı telin İLK ayağı
+  // kaynak portun y'sinde, yani şaft ekseninde yatay ilerliyor; hedef daha
+  // sağda olsa o ayak Konvertör kutusunun içinden geçerdi (ölçüldü: Propşaft
+  // sütununda mid=2788, ilk ayak y=2980 · x 2626→2788, TC kutusu 2690–2755).
+  // Alt alta duruyorlar ve ADLARI SAĞDA (node.data.labelPos 'right'): ad
+  // ortada olsaydı ~180 px genişliğiyle alttakine inen dikey bacağı (x=2658)
+  // yutardı. Kurulum düğümleri o ad şeritlerinin sağında.
+  { type:'ec-matching',             lx:130, ly:300 },
+  { type:'engine-gearbox-matching', lx:130, ly:400 },
+  { type:'solver',                  lx:390, ly:300, w:90, h:55 },
+  { type:'vehicle',                 lx:520, ly:300 },
+  { type:'shift-controller',        lx:390, ly:400 }
 ];
 
 // Topolojiyi görünür alanın merkezine ortalayacak taban koordinatı hesapla.

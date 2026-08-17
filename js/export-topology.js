@@ -126,9 +126,13 @@ function veBuildTopologySVG() {
       return;   // etiket kutunun İÇİNDE — altına ikinci kez yazılmaz
     }
     parts.push('</g>');
-    // Etiket (kutunun altında)
-    var cx = n.x + w / 2, ly = n.y + h + 14;
-    parts.push('<text x="' + cx + '" y="' + ly + '" text-anchor="middle" ' +
+    // Etiket — konumu node.data.labelPos'tan (components.js veNodeLabelAnchor,
+    // ekrandaki .lbl-* kuralıyla AYNI). Sabit "kutunun altında" idi; ekranda
+    // üste alınmış bir ad çıktıda yine altta kalıyordu.
+    var _la = (typeof veNodeLabelAnchor === 'function')
+      ? veNodeLabelAnchor(n, w, h, 14)
+      : { x: n.x + w / 2, y: n.y + h + 14, anchor: 'middle' };
+    parts.push('<text x="' + _la.x + '" y="' + _la.y + '" text-anchor="' + _la.anchor + '" ' +
                'font-family="Inter, system-ui, -apple-system, Segoe UI, sans-serif" font-size="11" font-weight="600" ' +
                'fill="' + labelCol + '">' + _veExpEsc(name) + '</text>');
   });
