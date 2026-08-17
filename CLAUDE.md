@@ -95,6 +95,43 @@ Model katmanı, `cp-fead.js`'in de kullandığı saf yardımcıları (`_feadNum`
 3. **Çap = DIŞ ÇAP (`od`).** Yarıçapları çekirdek `hb`/`hr` ile türetir. Eski
    `dia` alanı `veFeadMigrateNode` ile sessizce göç eder.
 
+#### Kanvasta CANLI kayış yolu kartı (`fead-layout`)
+
+"Kayış Yolu" düğümü bir düğme değil: tuvalin üstünde, topolojinin **yanında**
+duran ölçekli bir şema (420×340). Girdi değiştikçe yeniden çizilir, yani
+kullanıcı modelinin tutarlı olup olmadığını **panel açmadan** görür. Topoloji
+grafiği kayışın SIRASINI gösteriyor ama ŞEKLİNİ göstermiyor; üst üste binen iki
+kasnak, ters temas tarafı ya da işareti yanlış bir koordinat orada fark
+edilmiyor — kart o boşluğu kapatıyor.
+
+Şema düğümlerin KANVASTAKİ yerinden değil, kasnakların kayış düzlemindeki (mm)
+koordinatlarından çizilir; düğümü sürüklemek şemayı değiştirmez. Parçalar
+`data-ve` ile adlandırılı (`belt`, `pulley`, `spin`, `pivot`, `arm`, `compass`)
+— ham "A" sayarak yay saymak kırılgandı, oklar ve yön gülü de yay çiziyor.
+
+| İşaret | Ne söylüyor |
+|--------|-------------|
+| Turuncu yol | çekirdeğin teğet noktaları + işaretli sarım yayları |
+| Kesikli çember | kayış o kasnağa **sırttan** değiyor |
+| Kasnak içi ok | dönüş yönü (sırttan temas edende ters döner) |
+| Yeşil artı + kesikli çizgi | gergi **pivotu** ve kolu — ters pivot burada gözle görünür |
+| Yön gülü (0/90/180/270) | açı konvansiyonu; "montaj açısı −3.18°" onsuz okunamıyor |
+| Alt şerit | ✓/✗ · kasnak sayısı · L_eff · **Σsarım** (360° olmak ZORUNDA) |
+
+Çözülemeyen modelde kart boş kalmaz, **sebebi yazar** — kullanıcı "çizim gitti"
+değil "kayış yolu kapanmıyor, temas tarafına bak" mesajını görür.
+
+**TAZELEME TEK NOKTADAN: `saveState()`.** Her mutasyon (alan değişti, bağlantı
+kuruldu/silindi, düğüm eklendi/silindi) zaten oradan geçiyor; yirmi ayrı yere
+çağrı serpiştirmek biri unutulduğunda şemanın sessizce eski geometriyi
+göstermesi olurdu. `try/catch` şart — bir çözüm hatası undo yığınını bozmamalı.
+
+Ölçü tek kaynak: `VE_FEAD_LAYOUT_W/H` (components.js) → `componentDefs`. Eski
+60×56 kayıtlar `veFeadNormalizeLayoutSize` ile yükselir, elle boyutlandırılan
+her ölçü korunur. `veArrangeModuleBase` artık öge başına ölçü kabul ediyor
+(`{lx, ly, w, h}`) — herkese 65×60 sayılınca 420 px'lik kart grubu yanlış
+ortalayıp görünür alanın sağından taşıyordu (ölçüldü).
+
 **`veFeadBeltPath` EMEKLİ.** İskeletin kendi çizimi bütün kasnakları dış teğet
 sayıyordu → sırttan temas edenlerde sarım YANLIŞTI (AG00686: CRK 207.7 ↔ 172.2,
 −35.5°). Kendi içinde tutarlı olduğu için (Σ=360) gözle yakalanmıyordu. Şema

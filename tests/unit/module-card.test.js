@@ -324,3 +324,46 @@ describe('index.html modül satırı sembolü kendi çizmez', () => {
     });
   });
 });
+
+// ── veArrangeModuleBase ölçü duyarlı ────────────────────────────────────────
+// FEAD "Kayış Yolu" düğümü kanvasta 420×340'lık canlı şema kartı. Yerleşim
+// hesabı herkese 65×60 sayarsa grubun genişliği eksik çıkar, ortalama kayar ve
+// kart görünür alanın sağından taşar (gerçek tarayıcıda ölçüldü).
+describe('veArrangeModuleBase — büyük kart grubun ölçüsüne katılır', () => {
+  // Fonksiyon cp-arac-performans.js'te ve module.exports guard'ı var → require.
+  // (Dosyayı eval etmek gereksiz yan etki getirirdi.)
+  const { veArrangeModuleBase } = require('../../js/cp-arac-performans.js');
+
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="ve-canvas-wrapper"></div>';
+    const w = document.getElementById('ve-canvas-wrapper');
+    w.getBoundingClientRect = () => ({ width: 1200, height: 800, left: 0, top: 0 });
+    global.canvasZoom = 1;
+    global.canvasOffset = { x: 3000, y: 3000 };
+  });
+
+  test('ölçü verilmeyen yerleşimde davranış DEĞİŞMEZ (65×60 varsayılır)', () => {
+    const a = veArrangeModuleBase([{ lx: 0, ly: 0 }, { lx: 100, ly: 0 }]);
+    expect(Number.isFinite(a.x)).toBe(true);
+    expect(Number.isFinite(a.y)).toBe(true);
+  });
+
+  test('geniş ögede grup daha SOLA kayar — sağa taşmayı önleyen fark', () => {
+    const kucuk = veArrangeModuleBase([{ lx: 0, ly: 0 }, { lx: 600, ly: 0 }]);
+    const buyuk = veArrangeModuleBase([{ lx: 0, ly: 0 }, { lx: 600, ly: 0, w: 420, h: 340 }]);
+    // 420 genişlik grubu 355 px genişletiyor → ortalama yarısı kadar sola gider.
+    expect(buyuk.x).toBeLessThan(kucuk.x);
+    expect(kucuk.x - buyuk.x).toBeCloseTo((420 - 65) / 2, 0);
+  });
+
+  test('yükseklik de sayılır', () => {
+    // Görünüm YÜKSEK olmalı: veArrangeModuleBase sonucu Math.max(40, …) ile
+    // kırpıyor; kısa görünümde iki değer de tabana oturup farkı gizler.
+    const w = document.getElementById('ve-canvas-wrapper');
+    w.getBoundingClientRect = () => ({ width: 1200, height: 2400, left: 0, top: 0 });
+    const kucuk = veArrangeModuleBase([{ lx: 0, ly: 0 }, { lx: 0, ly: 600 }]);
+    const buyuk = veArrangeModuleBase([{ lx: 0, ly: 0 }, { lx: 0, ly: 600, w: 420, h: 340 }]);
+    expect(buyuk.y).toBeLessThan(kucuk.y);
+    expect(kucuk.y - buyuk.y).toBeCloseTo((340 - 60) / 2, 0);
+  });
+});
