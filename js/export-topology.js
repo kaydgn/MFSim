@@ -92,19 +92,25 @@ function veBuildTopologySVG() {
     // PNG'de "içi boş geniş kutu + altında ad" çıkardı — aynı belgenin iki
     // farklı hâli. Yerleşim tek kaynaktan: js/components.js modül kartı.
     var _modul = (typeof veIsModuleNode === 'function') && veIsModuleNode(n);
+    // Modül düğümü ekranda İKİ biçimden birinde duruyor (js/topo-mini.js):
+    // kart ya da harita. Dışa aktarma aynı çözümü okur, yoksa PNG ekrandan
+    // başka bir şey gösterir.
+    var _modLayout = (_modul && typeof veModuleLayoutFor === 'function') ? veModuleLayoutFor(n) : 'card';
     parts.push('<g>');
     parts.push('<rect x="' + n.x + '" y="' + n.y + '" width="' + w + '" height="' + h +
                '" rx="6" fill="' + boxBg + '" stroke="' + boxBd + '" stroke-width="1.5"/>');
-    // Sembol (nested svg): modülde sola yaslı, diğerlerinde ortalanmış
-    var symSize = _modul ? 30 : Math.min(w, h) * 0.72;
+    // Sembol (nested svg): modül kartında sola yaslı, harita biçiminde başlık
+    // şeridinde küçük, sıradan bileşende ortalanmış.
+    var symSize = _modul ? (_modLayout === 'map' ? 18 : 30) : Math.min(w, h) * 0.72;
     if(def.svg && parser) {
       try {
         var doc = parser.parseFromString(def.svg, 'image/svg+xml');
         var src = doc.documentElement;
         if(src && src.nodeName.toLowerCase() === 'svg') {
           var vb = src.getAttribute('viewBox') || '0 0 100 100';
-          var sx = _modul ? (n.x + 15) : (n.x + (w - symSize) / 2);
-          var sy = n.y + (h - symSize) / 2;
+          var sx = _modul ? ((_modLayout === 'map') ? (n.x + 12) : (n.x + 15))
+                          : (n.x + (w - symSize) / 2);
+          var sy = (_modLayout === 'map') ? (n.y + 6) : (n.y + (h - symSize) / 2);
           parts.push('<svg x="' + sx + '" y="' + sy + '" width="' + symSize + '" height="' + symSize +
                      '" viewBox="' + vb + '" overflow="visible">' + src.innerHTML + '</svg>');
         }
@@ -114,14 +120,34 @@ function veBuildTopologySVG() {
       // Sol şerit + ad + canlı özet — ekrandaki kartla aynı sıra
       parts.push('<rect x="' + (n.x + 4) + '" y="' + (n.y + 4) + '" width="4" height="' + (h - 8) +
                  '" fill="' + accent + '"/>');
+      var _ozet = _veExpEsc(typeof veModuleSummaryText === 'function' ? veModuleSummaryText(n) : '');
       var tx = n.x + 15 + symSize + 8;
+      if(_modLayout === 'map') {
+        // HARİTA BİÇİMİ — ekranda kartın altında alt topolojinin haritası var;
+        // dışa aktarma bunu bilmezse aynı belge ekranda harita, PNG'de boş kutu
+        // çıkardı. Harita AYNI çiziciden geliyor (js/topo-mini.js), yani iki
+        // görüntü ayrışamaz.
+        var mtx = n.x + 12 + symSize + 8;
+        parts.push('<text x="' + mtx + '" y="' + (n.y + 19) + '" ' +
+                   'font-family="Inter, system-ui, -apple-system, Segoe UI, sans-serif" font-size="12" font-weight="600" ' +
+                   'fill="' + labelCol + '">' + _veExpEsc(name) + '</text>');
+        parts.push('<text x="' + (n.x + w - 8) + '" y="' + (n.y + 19) + '" text-anchor="end" ' +
+                   'font-family="Inter, system-ui, -apple-system, Segoe UI, sans-serif" font-size="10" ' +
+                   'fill="' + labelCol + '" opacity="0.7">' + _ozet + '</text>');
+        parts.push('<line x1="' + (n.x + 8) + '" y1="' + (n.y + 28) + '" x2="' + (n.x + w - 4) +
+                   '" y2="' + (n.y + 28) + '" stroke="' + boxBd + '" stroke-width="1"/>');
+        var _map = (typeof veModuleMapSVG === 'function')
+          ? veModuleMapSVG(n, { x: n.x + 5, y: n.y + 29, w: w - 10, h: h - 34 }) : '';
+        if(_map) parts.push(_map);
+        parts.push('</g>');
+        return;
+      }
       parts.push('<text x="' + tx + '" y="' + (n.y + h / 2 - 2) + '" ' +
                  'font-family="Inter, system-ui, -apple-system, Segoe UI, sans-serif" font-size="12" font-weight="600" ' +
                  'fill="' + labelCol + '">' + _veExpEsc(name) + '</text>');
       parts.push('<text x="' + tx + '" y="' + (n.y + h / 2 + 12) + '" ' +
                  'font-family="Inter, system-ui, -apple-system, Segoe UI, sans-serif" font-size="10" ' +
-                 'fill="' + labelCol + '" opacity="0.7">' +
-                 _veExpEsc(typeof veModuleSummaryText === 'function' ? veModuleSummaryText(n) : '') + '</text>');
+                 'fill="' + labelCol + '" opacity="0.7">' + _ozet + '</text>');
       parts.push('</g>');
       return;   // etiket kutunun İÇİNDE — altına ikinci kez yazılmaz
     }

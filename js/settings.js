@@ -119,7 +119,47 @@ function _veSettingsRenderAppearance() {
   html += group('Koyu', dark);
   html += group('Profesyonel', pro);
   html += group('Açık', light);
+  html += _veSettingsRenderModuleView();
   return html;
+}
+
+// ─── GÖRÜNÜM → MODÜL KARTI ─────────────────────────────────────────────────
+// Ana topolojideki alt-sistem düğümü kart mı, harita mı? Mantığı ve ölçüleri
+// js/topo-mini.js + js/components.js taşıyor; burası yalnız seçim yüzeyi.
+var VE_SETTINGS_MODULE_VIEW_OPTS = [
+  { id: 'map',  ad: 'Topoloji haritası',
+    aciklama: 'Modül düğümü, alt topolojisinin haritasını gösterir — üç modül haritalarıyla yan yana durur.' },
+  { id: 'card', ad: 'Kart',
+    aciklama: 'Yalnız ad ve özet (bileşen/bağlantı sayısı). En az yer kaplayan biçim.' },
+  { id: 'zoom', ad: 'Yakınlaştırmaya bağlı',
+    aciklama: 'Uzaktan bakarken kart, yaklaşınca harita. Eşik: kamera %60.' }
+];
+
+function _veSettingsRenderModuleView() {
+  var cur = (typeof veModuleViewSetting === 'function') ? veModuleViewSetting() : 'map';
+  var html = '<h3 class="ve-settings-section-title">Modül Kartı</h3>';
+  html += '<p class="ve-settings-desc">Ana topolojideki <b>Araç Performans</b>, <b>Takoz Çökme-Titreşim</b> ' +
+          've <b>FEAD</b> bloklarının nasıl çizileceğini seçer. Her modülün başlığındaki ' +
+          '<b>▾ / ▴</b> düğmesi yalnız o modülü katlar; buradaki seçim genel varsayılandır.</p>';
+  html += '<div class="ve-settings-radio-group">';
+  VE_SETTINGS_MODULE_VIEW_OPTS.forEach(function(o) {
+    var checked = (o.id === cur) ? ' checked' : '';
+    html += '<label class="ve-settings-radio">' +
+            '<input type="radio" name="module-view" value="' + o.id + '"' + checked +
+            ' onchange="veSettingsSetModuleView(\'' + o.id + '\')"> ' +
+            '<span><b>' + o.ad + '</b><br><span class="ve-settings-radio-note">' + o.aciklama + '</span></span>' +
+            '</label>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function veSettingsSetModuleView(mode) {
+  if(typeof veSetModuleViewSetting !== 'function') return;
+  var applied = veSetModuleViewSetting(mode);
+  var opt = null;
+  VE_SETTINGS_MODULE_VIEW_OPTS.forEach(function(o) { if(o.id === applied) opt = o; });
+  if(typeof showToast === 'function' && opt) showToast('Modül kartı: ' + opt.ad, 'info');
 }
 
 // ─── OTOMATİK KAYDET ───────────────────────────────────────────────────────
