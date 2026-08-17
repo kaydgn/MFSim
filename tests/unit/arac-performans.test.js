@@ -182,11 +182,12 @@ describe('Sidebar kapsamı (veShowAllSidebarComponents + veSyncSidebarScope)', (
       '<div class="ve-category" data-ve-scope="module" id="cat-mod"><div class="ve-category-title">Modüller</div></div>' +
       '<div class="ve-category" data-ve-scope="arac-performans" id="cat-ap"><div class="ve-category-title">Güç Kaynağı</div></div>' +
       '<div class="ve-category" data-ve-scope="mount-analysis" id="cat-mnt"><div class="ve-category-title">Takoz Alt Bileşenleri</div></div>' +
+      '<div class="ve-category" data-ve-scope="fead-analysis" id="cat-fead"><div class="ve-category-title">FEAD Kasnakları</div></div>' +
       '<div class="ve-category" data-always-visible="true" id="cat-tools"><div class="ve-category-title">Araçlar</div></div>';
   }
   const disp = (id) => document.getElementById(id).style.display;
 
-  test('üst seviye (top): Modüller + Araçlar görünür, arac-performans ve mount gizli', () => {
+  test('üst seviye (top): Modüller + Araçlar görünür, modül paletleri gizli', () => {
     setupSidebar();
     veSidebarScope = 'top';
     veShowAllSidebarComponents();
@@ -194,9 +195,10 @@ describe('Sidebar kapsamı (veShowAllSidebarComponents + veSyncSidebarScope)', (
     expect(disp('cat-tools')).toBe('');
     expect(disp('cat-ap')).toBe('none');
     expect(disp('cat-mnt')).toBe('none');
+    expect(disp('cat-fead')).toBe('none');
   });
 
-  test('modül içi (arac-performans): güç aktarma görünür, Modüller GİZLİ (modül içinde modül yok), mount gizli', () => {
+  test('modül içi (arac-performans): güç aktarma görünür, Modüller GİZLİ (modül içinde modül yok), diğer paletler gizli', () => {
     setupSidebar();
     veSidebarScope = 'arac-performans';
     veShowAllSidebarComponents();
@@ -204,6 +206,36 @@ describe('Sidebar kapsamı (veShowAllSidebarComponents + veSyncSidebarScope)', (
     expect(disp('cat-ap')).toBe('');
     expect(disp('cat-tools')).toBe('');
     expect(disp('cat-mnt')).toBe('none');
+    expect(disp('cat-fead')).toBe('none');
+  });
+
+  // Üçüncü modül (FEAD) aynı kapsam kuralına uymak ZORUNDA: kendi paleti gelir,
+  // diğer iki modülün paleti gitmelidir. Kural tek yerde (veShowAllSidebarComponents)
+  // ama kapsam hesabı veSyncSidebarScope'ta — yeni bir stack eklemeyi unutmak
+  // sessizce "FEAD içinde takoz bileşenleri" üretirdi.
+  test('modül içi (fead-analysis): FEAD paleti görünür, Araç Performans ve Takoz gizli', () => {
+    setupSidebar();
+    veSidebarScope = 'fead-analysis';
+    veShowAllSidebarComponents();
+    expect(disp('cat-fead')).toBe('');
+    expect(disp('cat-mod')).toBe('none');
+    expect(disp('cat-ap')).toBe('none');
+    expect(disp('cat-mnt')).toBe('none');
+    expect(disp('cat-tools')).toBe('');
+  });
+
+  test('veSyncSidebarScope: veFeadStack dolunca kapsam fead-analysis olur', () => {
+    setupSidebar();
+    global.veFeadStack = [];
+    veSyncSidebarScope();
+    expect(veSidebarScope).toBe('top');
+
+    global.veFeadStack.push({ nodeId: 'comp-9', parentState: {} });
+    veSyncSidebarScope();
+    expect(veSidebarScope).toBe('fead-analysis');
+    expect(disp('cat-fead')).toBe('');
+
+    global.veFeadStack.length = 0;
   });
 
   test('veSyncSidebarScope: boş stack → top, Araç Performans stack dolu → arac-performans', () => {

@@ -15,6 +15,32 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 
 **ÖNEMLİ:** Kod değişiklikleri **yalnızca** `js/` ve `css/` klasörlerindeki modüler dosyalara ve `index.html`'e yapılır. `MFSim_Code.html` dosyası **elle düzenlenmez** — `npm run build` ile otomatik üretilir.
 
+### Üç ana modül (alt-sistem kartı → kendi iç topolojisi)
+
+Karşılama ekranındaki her kart, ana tuvale tek bir **alt-sistem kartı** bırakır;
+çift tıklayınca kartın kendi iç topolojisi açılır. Üçü de **aynı nested kalıbı**
+paylaşır (stack + `node.data.subTopology` + breadcrumb çipi + sidebar kapsamı):
+
+| Modül | Tip anahtarı | Sidebar kapsamı | Ana dosya | Bağlantının anlamı |
+|-------|--------------|-----------------|-----------|--------------------|
+| Araç Performans | `arac-performans` | `arac-performans` | `js/cp-arac-performans.js` | Güç akışı |
+| Takoz Çökme-Titreşim | `mount-analysis` | `mount-analysis` | `js/cp-mount.js` | Salt görsel (çözücü tipe göre toplar) |
+| FEAD (kayış-kasnak) | `fead-analysis` | `fead-analysis` | `js/cp-fead.js` | **Kayış yolu** — serpantin sırası (Krank çıkışı → … → Krank girişi) |
+
+Yeni bir modül eklerken dokunulan yerler: `js/components.js` (`componentDefs`
+tanımı + `isSubsystem` + `VE_MODULES.components` + `veSyncSidebarScope`),
+`js/cp-core.js` (panel dağıtımı + panel genişlik listeleri), `js/ui-core.js`
+(çift tık), `js/topology.js` (busy bayrağı, köke çökme, gezinme yakala/geri yükle,
+`veResetSubtopoNav`), `index.html` (script etiketi, Modüller satırı, palet
+kategorileri, karşılama kartı).
+
+**FEAD hesap çekirdeği HENÜZ YOK.** `js/cp-fead.js` iskelettir: bileşenler,
+semboller, paneller ve kayış yolu geometrisi (`veFeadBeltPath`) hazır; gerginlik
+/ sarım / kayma hesabı SPEC geldiğinde `js/fead-core.js` içine DOM'suz saf
+fonksiyonlar olarak eklenecek (Takoz modülünün `mount-core.js` ayrımı).
+Panellerdeki kesikli turuncu "Hesap çekirdeği bekleniyor" kutuları bu sınırı
+kullanıcıya söyler.
+
 ### Ölçüm Görüntüleyici (`viewer/`)
 
 MFSim'in içe aktarma + diyagram özelliğinin tek başına çalışan sürümü; tek HTML
@@ -128,6 +154,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/mount-example-names.test.js` | `js/mount-core.js` örnekleri + `assets/examples/*.json` | Örnek modellerde ad ↔ konum tutarlılığı (Sağ/Sol ↔ Y işareti), tekrarlı ad, iki kopyanın ayrışmaması |
 | `tests/unit/mount-results-tab.test.js` | `js/results.js` + `js/graphics.js` | Takoz çözüm sekmesi, tek X ekseni kuralı, pano uzlaştırma |
 | `tests/unit/mount-results-publish.test.js` | `js/cp-mount.js` | Çözümün panoya yayını; alt-topoloji çökertme regresyonu |
+| `tests/unit/cp-fead.test.js` | `js/cp-fead.js` + `js/components.js` | FEAD kayış-kasnak modülü: kayış çevresi geometrisi (dış teğet + sarım yayı, large-arc bayrağı), kayış yolu sırası (bağlantı = serpantin sırası), alt-sistem sözleşmesi, `fead-*` tip tanımlarının yapısal tutarlılığı |
 | `tests/unit/canvas-space.test.js` | `js/canvas-space.js` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama |
 | `tests/unit/module-start-center.test.js` | `js/components.js` `veStartModule` | Karşılama kartından gelen modül bloğu görünümün TAM ortasına düşer (kabuk senkronu ölçümden önce) |
 | `tests/unit/port-geometry.test.js` | `js/components.js` port geometrisi + `js/connections.js` | Bağlantı ucu ile port dairesi aynı noktada — dört kenar, çok port, aynalama |

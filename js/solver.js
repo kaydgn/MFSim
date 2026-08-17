@@ -199,7 +199,7 @@ function veCollectValidation() {
   //
   // Artık iki muafiyet var ve ikisi de TÜRETİLMİŞ:
   //   1. PORTU OLMAYAN düğüm (inputs=0 ve outputs=0) hiç bağlanamaz — modül
-  //      kapsayıcıları (arac-performans, mount-analysis), çözücü, araç, yol,
+  //      kapsayıcıları (arac-performans, mount-analysis, fead-analysis), çözücü, araç, yol,
   //      senaryo, tüm mnt-* araç blokları buraya girer. Bu kural tanımdan
   //      gelir, liste tutmayı gerektirmez.
   //   2. VE_STANDALONE_TYPES — portu OLAN ama bağlantısı zorunlu OLMAYAN

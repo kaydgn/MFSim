@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','arac-performans','mount-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-example','fead-layout','fead-report','arac-performans','mount-analysis','fead-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -25,6 +25,7 @@ var veSidebarMode = 'performans';
 //                       scope="module") + her-zaman (Araçlar) kategorileri.
 //   'arac-performans' → "Araç Performans" alt topolojisi: güç aktarma bileşenleri.
 //   'mount-analysis'  → "Takoz" alt topolojisi: Takoz Alt Bileşenleri (mnt-*).
+//   'fead-analysis'   → "FEAD" alt topolojisi: kayış-kasnak bileşenleri (fead-*).
 // Kategoriler data-ve-scope ile etiketlenir: 'module' (her yerde) | 'top' | modül
 // tipi. Bir alt-sistem açılınca veSyncSidebarScope() kapsamı stack'lerden hesaplar.
 var veSidebarScope = 'top';
@@ -135,13 +136,14 @@ function veShowAllSidebarComponents() {
 }
 
 // Sidebar kapsamını açık alt-sistem stack'lerinden hesapla ve uygula. Ana ekranda
-// (hiçbir alt-sistem açık değil) → 'top'. Araç Performans / Takoz içindeyken ilgili
-// bileşen paleti gelir. Her iki alt-sistem (cp-arac-performans.js, cp-mount.js)
-// aç/kapat sırasında bunu çağırır.
+// (hiçbir alt-sistem açık değil) → 'top'. Araç Performans / Takoz / FEAD içindeyken
+// ilgili bileşen paleti gelir. Üç alt-sistem de (cp-arac-performans.js, cp-mount.js,
+// cp-fead.js) aç/kapat sırasında bunu çağırır.
 function veSyncSidebarScope() {
   var scope = 'top';
   if(typeof veAracStack !== 'undefined' && veAracStack.length) scope = 'arac-performans';
   if(typeof veMntStack !== 'undefined' && veMntStack.length) scope = 'mount-analysis';
+  if(typeof veFeadStack !== 'undefined' && veFeadStack.length) scope = 'fead-analysis';
   veSidebarScope = scope;
   veShowAllSidebarComponents();
 }
@@ -444,6 +446,22 @@ var componentDefs = {
     isSubsystem: true,
     isMountModule: true
   },
+  // FEAD (Front End Accessory Drive) ALT-SİSTEM MODÜLÜ — motorun ön uç kayış-
+  // kasnak sistemi. arac-performans / mount-analysis ile AYNI nested topoloji
+  // kalıbı: ana canvas'ta tek kart, çift tıkla iç topolojisi (Krank Kasnağı /
+  // aksesuar kasnakları / Gergi / Avara / Kayış / Çözücü) açılır
+  // (cp-fead.js veFeadOpenEditor). isFeadModule: dblclick anahtarı.
+  // Sembol: kesikli kap + İKİ kasnağı saran GERÇEK kayış çevresi (dış teğetler
+  // + sarım yayları analitik hesaplandı: R1=16 @ (38,58), R2=9 @ (68,58)) —
+  // modülün kimliği tek bakışta "kayış-kasnak".
+  'fead-analysis': {
+    name: 'FEAD',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-dasharray="7 5"/><circle cx="38" cy="58" r="16" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="38" cy="58" r="5" fill="var(--text-secondary, #666)"/><circle cx="68" cy="58" r="9" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="68" cy="58" r="3.2" fill="var(--text-secondary, #666)"/><path d="M41.7 42.4 L70.1 49.3 A9 9 0 0 1 70.1 66.8 L41.7 73.6 A16 16 0 1 1 41.7 42.4 Z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4" stroke-linejoin="round"/><path d="M64 22 h18 v18" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    inputs: 0,
+    outputs: 0,
+    isSubsystem: true,
+    isFeadModule: true
+  },
   // ── Aksesuarlar (Araç Performans) — Motor'un ön portlarına bağlanır ──────
   // Diğer bileşenlerden bir tık daha küçük kutular. Çıkış portu (sağ) Motor'un
   // ilgili giriş portuna gider. Panel/veri/senkron: js/cp-accessories.js.
@@ -461,6 +479,119 @@ var componentDefs = {
     name: 'Hava Kompresörü',
     svg: '<svg width="34" height="34" viewBox="0 0 100 100"><rect x="20" y="34" width="48" height="46" rx="8" fill="var(--text-secondary, #666)"/><circle cx="44" cy="57" r="13" fill="none" stroke="var(--text-muted, #888)" stroke-width="4"/><line x1="44" y1="57" x2="52" y2="49" stroke="var(--text-muted, #888)" stroke-width="3" stroke-linecap="round"/><rect x="68" y="44" width="16" height="9" rx="1" fill="var(--text-muted, #888)"/><rect x="38" y="20" width="14" height="14" rx="2" fill="var(--text-muted, #888)"/></svg>',
     inputs: 0, outputs: 1, defaultWidth: 54, defaultHeight: 50
+  },
+
+  // ── FEAD (Front End Accessory Drive) — motorun ön uç kayış-kasnak sistemi ──
+  // YALNIZ 'fead-analysis' modülünün İÇ TOPOLOJİSİNDE görünürler (sidebar
+  // kapsamı 'fead-analysis'; bkz. veShowAllSidebarComponents). Panel/aç-kapa
+  // mantığı js/cp-fead.js içindedir.
+  //
+  // BAĞLANTI = KAYIŞ YOLU. Diğer iki modülde bağlantı ya güç akışı (Araç
+  // Performans) ya da salt görsel (Takoz) demekti; burada üçüncü bir anlamı
+  // var ve fiziksel: bağlantı, serpantin kayışın kasnaktan kasnağa geçtiği
+  // SIRAdır. Krank Kasnağı'nın çıkışından başlar, kasnakları dolaşır ve
+  // Krank'ın girişine döner — yani kapalı bir çevrimdir. Bu yüzden HER kasnak
+  // 1 giriş + 1 çıkış taşır (kayış gelir, kayış gider); "kaynak" ile "yük"
+  // ayrımı porttan değil, tipten okunur (isFeadDriver / isFeadAccessory).
+  // Sarım açısı ve kayış boyu bu sıradan + kasnak konumlarından türetilir.
+  //
+  // Renk dili: KAYIŞ her yerde amber (--accent-warning), kasnak kanalı mavi
+  // (--accent-primary), gövdeler nötr gri. Böylece 38 px'lik sembolde bile
+  // "hangisi kayış, hangisi kasnak" ayrımı okunur kalır.
+  'fead-crank': {
+    name: 'Krank Kasnağı',
+    // Torsiyonel damperli krank kasnağı: dış V-kanal halkası, kesikli amber
+    // halka = damper kauçuğu (kasnağı sıradan bir kasnaktan ayıran işaret),
+    // göbek flanşı + 4 cıvata.
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="50" cy="50" r="31" fill="none" stroke="var(--text-muted, #888)" stroke-width="2.5"/><circle cx="50" cy="50" r="25" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3" stroke-dasharray="5 4"/><circle cx="50" cy="50" r="17" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3.5"/><circle cx="50" cy="38.5" r="2.6" fill="var(--text-muted, #888)"/><circle cx="61.5" cy="50" r="2.6" fill="var(--text-muted, #888)"/><circle cx="50" cy="61.5" r="2.6" fill="var(--text-muted, #888)"/><circle cx="38.5" cy="50" r="2.6" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="6" fill="var(--text-secondary, #666)"/></svg>',
+    inputs: 1, outputs: 1, isFeadPulley: true, isFeadDriver: true,
+    defaultWidth: 72, defaultHeight: 66
+  },
+  'fead-alternator': {
+    name: 'Alternatör',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #3b82f6)"/><line x1="36" y1="50" x2="41" y2="50" stroke="var(--text-muted, #888)" stroke-width="5"/><circle cx="64" cy="50" r="24" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><path d="M66.6 32.4 L55 53.2 L62.7 53.2 L59.5 64.1 L71.7 46.2 L64 46.2 Z" fill="var(--text-muted, #888)"/></svg>',
+    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true,
+    defaultWidth: 62, defaultHeight: 58
+  },
+  'fead-ac': {
+    name: 'Klima Kompresörü',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #3b82f6)"/><line x1="36" y1="50" x2="41" y2="50" stroke="var(--text-muted, #888)" stroke-width="5"/><circle cx="64" cy="50" r="24" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><g stroke="var(--text-muted, #888)" stroke-width="4" stroke-linecap="round"><line x1="64" y1="32" x2="64" y2="68"/><line x1="48.4" y1="41" x2="79.6" y2="59"/><line x1="79.6" y1="41" x2="48.4" y2="59"/></g></svg>',
+    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true,
+    defaultWidth: 62, defaultHeight: 58
+  },
+  'fead-waterpump': {
+    name: 'Su Pompası',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #3b82f6)"/><line x1="36" y1="50" x2="40" y2="50" stroke="var(--text-muted, #888)" stroke-width="5"/><circle cx="63" cy="50" r="24" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><g stroke="var(--text-muted, #888)" stroke-width="3.5" stroke-linecap="round"><line x1="70" y1="50" x2="80" y2="50"/><line x1="66.5" y1="56.1" x2="71.5" y2="64.7"/><line x1="59.5" y1="56.1" x2="54.5" y2="64.7"/><line x1="56" y1="50" x2="46" y2="50"/><line x1="59.5" y1="43.9" x2="54.5" y2="35.3"/><line x1="66.5" y1="43.9" x2="71.5" y2="35.3"/></g><circle cx="63" cy="50" r="5" fill="var(--text-secondary, #666)"/><rect x="57" y="73" width="12" height="15" rx="2" fill="var(--text-muted, #888)"/></svg>',
+    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true,
+    defaultWidth: 62, defaultHeight: 58
+  },
+  'fead-ps': {
+    name: 'Direksiyon Pompası',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #3b82f6)"/><line x1="36" y1="50" x2="41" y2="50" stroke="var(--text-muted, #888)" stroke-width="5"/><circle cx="64" cy="50" r="24" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><circle cx="64" cy="50" r="14" fill="none" stroke="var(--text-muted, #888)" stroke-width="4"/><g stroke="var(--text-muted, #888)" stroke-width="3.5" stroke-linecap="round"><line x1="64" y1="45.5" x2="64" y2="36"/><line x1="60.2" y1="52.5" x2="52" y2="57"/><line x1="67.8" y1="52.5" x2="76" y2="57"/></g><circle cx="64" cy="50" r="4.5" fill="var(--text-muted, #888)"/></svg>',
+    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true,
+    defaultWidth: 62, defaultHeight: 58
+  },
+  'fead-aircomp': {
+    name: 'Hava Kompresörü',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="19" cy="52" r="13" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="19" cy="52" r="3.6" fill="var(--accent-primary, #3b82f6)"/><rect x="38" y="30" width="46" height="46" rx="7" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><circle cx="58" cy="53" r="12" fill="none" stroke="var(--text-muted, #888)" stroke-width="4"/><line x1="58" y1="53" x2="66" y2="45" stroke="var(--text-muted, #888)" stroke-width="3.5" stroke-linecap="round"/><rect x="52" y="14" width="14" height="16" rx="2" fill="var(--text-muted, #888)"/><rect x="84" y="45" width="12" height="9" rx="2" fill="var(--text-muted, #888)"/></svg>',
+    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true,
+    defaultWidth: 62, defaultHeight: 58
+  },
+  'fead-fan': {
+    name: 'Fan Kavraması',
+    // Kesikli dış halka = viskoz kavrama gövdesi; dört kanat tek path'in 90°
+    // döndürülmüş kopyasıdır (geometri tek yerde durur).
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="36" fill="none" stroke="var(--text-muted, #888)" stroke-width="2.5" stroke-dasharray="5 4"/><g fill="var(--accent-primary, #3b82f6)" opacity="0.85"><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z"/><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z" transform="rotate(90 50 50)"/><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z" transform="rotate(180 50 50)"/><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z" transform="rotate(270 50 50)"/></g><circle cx="50" cy="50" r="9" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="50" cy="50" r="3" fill="var(--text-secondary, #666)"/></svg>',
+    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true,
+    defaultWidth: 62, defaultHeight: 58
+  },
+  'fead-idler': {
+    name: 'Avara Kasnak',
+    // Yük çekmez, kayış yolunu yönlendirir: düz/çıplak kasnak + rulman.
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="32" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="50" cy="50" r="24" fill="none" stroke="var(--text-muted, #888)" stroke-width="2.5"/><circle cx="50" cy="31.5" r="3" fill="var(--text-muted, #888)"/><circle cx="68.5" cy="50" r="3" fill="var(--text-muted, #888)"/><circle cx="50" cy="68.5" r="3" fill="var(--text-muted, #888)"/><circle cx="31.5" cy="50" r="3" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="13" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="50" cy="50" r="4" fill="var(--text-secondary, #666)"/></svg>',
+    inputs: 1, outputs: 1, isFeadPulley: true, isFeadIdler: true,
+    defaultWidth: 54, defaultHeight: 50
+  },
+  'fead-tensioner': {
+    name: 'Gergi',
+    // Pivot + kol + kasnak; amber yay oku kolun salınım yönünü söyler
+    // (otomatik gergi). Avara ile karışmasın diye kol ZORUNLU işarettir.
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><line x1="64" y1="36" x2="24" y2="76" stroke="var(--text-secondary, #666)" stroke-width="8" stroke-linecap="round"/><circle cx="24" cy="76" r="8" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="24" cy="76" r="2.6" fill="var(--text-secondary, #666)"/><circle cx="64" cy="36" r="21" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="64" cy="36" r="6" fill="var(--accent-primary, #3b82f6)"/><path d="M41 89 A 44 44 0 0 0 73 79" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3.5" stroke-linecap="round"/><polygon points="72,72 84,79 71,85" fill="var(--accent-warning, #f59e0b)"/></svg>',
+    inputs: 1, outputs: 1, isFeadPulley: true, isFeadTensioner: true,
+    defaultWidth: 58, defaultHeight: 54
+  },
+  // Kayış Özellikleri — kayışın KENDİSİ bir kasnak değildir: konumu yoktur,
+  // topolojiye bağlanmaz. İç topolojide tek kopya (maxInstances:1) durur ve
+  // kayış tipini/kesitini/uzunluğunu taşır. Sembol: poly-V kesiti (sırtlar
+  // aşağı bakar — kasnak tarafı) + künye satırları.
+  'fead-belt': {
+    name: 'Kayış Özellikleri',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="14" y="12" width="72" height="76" rx="6" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5"/><path d="M24 30 H76 V40 L67 52 L58 40 L49 52 L40 40 L31 52 L24 40 Z" fill="var(--accent-warning, #f59e0b)" fill-opacity="0.18" stroke="var(--accent-warning, #f59e0b)" stroke-width="3" stroke-linejoin="round"/><line x1="26" y1="66" x2="74" y2="66" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="26" y1="76" x2="58" y2="76" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg>',
+    inputs: 0, outputs: 0, isFeadBelt: true, maxInstances: 1,
+    defaultWidth: 60, defaultHeight: 54
+  },
+  'fead-solver': {
+    name: 'Çözücü',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-warning, #f59e0b)"/><circle cx="78" cy="22" r="6" fill="var(--accent-primary, #3b82f6)"/></svg>',
+    inputs: 0, outputs: 0, isFeadSolver: true
+  },
+  'fead-example': {
+    name: 'Başlangıç ve Örnekler',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M28 14 h32 l14 14 v58 h-46 z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><path d="M60 14 v14 h14" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><circle cx="42" cy="48" r="8" fill="none" stroke="var(--text-muted, #aaa)" stroke-width="3"/><circle cx="62" cy="44" r="5" fill="none" stroke="var(--text-muted, #aaa)" stroke-width="3"/><line x1="36" y1="68" x2="66" y2="68" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="78" x2="54" y2="78" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg>',
+    inputs: 0, outputs: 0, isFeadExample: true, defaultWidth: 56, defaultHeight: 56
+  },
+  // Kayış Yolu — kasnak konumlarından ölçekli serpantin şeması. Sembolün
+  // kendisi de GERÇEK geometridir: üç kasnağın (R=15/9/7) dış teğetleri ve
+  // sarım yayları analitik çözülüp path'e yazıldı (bkz. cp-fead.js).
+  'fead-layout': {
+    name: 'Kayış Yolu',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M25.9 49.3 L65.2 24.4 A9 9 0 0 1 79 31.5 L81 65.6 A7 7 0 0 1 71.9 72.7 L29.6 76.3 A15 15 0 0 1 25.9 49.3 Z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4" stroke-linejoin="round"/><circle cx="34" cy="62" r="15" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="34" cy="62" r="4.5" fill="var(--text-secondary, #666)"/><circle cx="70" cy="32" r="9" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="70" cy="32" r="3" fill="var(--text-secondary, #666)"/><circle cx="74" cy="66" r="7" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="74" cy="66" r="2.6" fill="var(--text-secondary, #666)"/></svg>',
+    inputs: 0, outputs: 0, isFeadLayout: true, defaultWidth: 60, defaultHeight: 56
+  },
+  'fead-report': {
+    name: 'Rapor',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><path d="M60 12 v16 h16" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="60" width="8" height="18" fill="var(--accent-primary, #3b82f6)"/><rect x="47" y="50" width="8" height="28" fill="var(--accent-primary, #3b82f6)"/><rect x="60" y="42" width="8" height="36" fill="var(--accent-primary, #3b82f6)"/><line x1="34" y1="40" x2="66" y2="40" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg>',
+    inputs: 0, outputs: 0, isFeadReport: true, defaultWidth: 60, defaultHeight: 56
   },
 };
 

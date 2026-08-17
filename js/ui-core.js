@@ -28,6 +28,10 @@ function veAttachNodeDrag(nodeEl, node) {
       veMntOpenEditor(node.id);
       return;
     }
+    if(node.type === 'fead-analysis' && typeof veFeadOpenEditor === 'function') {
+      veFeadOpenEditor(node.id);
+      return;
+    }
     if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
   });
   nodeEl.addEventListener('mousedown', function(e) {

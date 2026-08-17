@@ -163,12 +163,15 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   // Takoz Çökme-Titreşim modülü — içerik-yoğun paneller (dalga dalga eklenir)
   'mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-transfer', 'mnt-pto', 'mnt-pump', 'mnt-pto-group',
   'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer',
+  // FEAD — kayış yolu şeması ve çok alanlı kasnak/gergi panelleri
+  'fead-tensioner', 'fead-belt', 'fead-layout',
   // Parametrik: çoklu-seri sonuç grafiği tam genişlikte ferah okunur.
   'parametric'];
 
 // Hafif paneller — içerik az (kısa metin / birkaç alan / tek eylem): geniş yerine
 // DAR "eylem kartı" + kompakt-sol kimlik (ortalı-simge boşluğu gitsin). Salt sunum.
 var VE_COMPACT_PANEL_TYPES = ['mnt-solver', 'mnt-report', 'mount-analysis',
+  'fead-analysis', 'fead-example', 'fead-report',
   'arac-performans', 'terminator', 'sensor', 'scenario', 'coast-down', 'propshaft', 'differential', 'wheel'];
 
 // Son gösterilen bileşen — pencere konumunu sıfırlamak için. Başka bileşene
@@ -264,6 +267,26 @@ function showNodeProperties(node) {
     html += getAracPerformansPropertiesHTML(node);
   } else if(node.type === 'mount-analysis') {
     html += getMntModulePropertiesHTML(node);
+  } else if(node.type === 'fead-analysis') {
+    html += getFeadModulePropertiesHTML(node);
+  } else if(node.type === 'fead-tensioner') {
+    html += getFeadTensionerPropertiesHTML(node);
+  } else if(node.type === 'fead-crank' || node.type === 'fead-alternator' || node.type === 'fead-ac'
+         || node.type === 'fead-waterpump' || node.type === 'fead-ps' || node.type === 'fead-aircomp'
+         || node.type === 'fead-fan' || node.type === 'fead-idler') {
+    // Krank / aksesuarlar / avara — ortak kasnak paneli; farklar tipten okunur
+    // (def.isFeadDriver / isFeadAccessory / isFeadIdler; bkz. js/cp-fead.js).
+    html += getFeadPulleyPropertiesHTML(node);
+  } else if(node.type === 'fead-belt') {
+    html += getFeadBeltPropertiesHTML(node);
+  } else if(node.type === 'fead-layout') {
+    html += getFeadLayoutPropertiesHTML(node);
+  } else if(node.type === 'fead-solver') {
+    html += getFeadSolverPropertiesHTML(node);
+  } else if(node.type === 'fead-example') {
+    html += getFeadExamplePropertiesHTML(node);
+  } else if(node.type === 'fead-report') {
+    html += getFeadReportPropertiesHTML(node);
   } else if(node.type === 'solver') {
     html += getSolverPropertiesHTML(node);
   } else if(node.type === 'road') {
