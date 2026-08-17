@@ -716,6 +716,10 @@ function createNode(type, x, y, width, height) {
   // KOPYALANMAZ, kartın içine taşınır (bkz. components.js veApplyModuleCard) →
   // yeniden adlandırma yolları aynen çalışmaya devam eder.
   if(typeof veApplyModuleCard === 'function') veApplyModuleCard(nodeEl, node);
+  // FEAD kasnağı → temas tarafı / sürücü rozeti (bkz. cp-fead.js). Rozet
+  // KRİTİK: temas tarafı ters verilirse hesap sessizce başka bir güzergâh
+  // çözer; kanvasta görünür olması gözle yakalanmasının tek yolu.
+  if(typeof veFeadApplyBadge === 'function') veFeadApplyBadge(nodeEl, node);
 
   // Handle ve border pozisyonlarını ayarla
   updateNodeHandles(nodeEl, node.width, node.height);

@@ -69,11 +69,43 @@ sınırları: doğal frekans çok serbestlik dereceli bir burulma modu (çekirde
 yalnız kol modu verir, raporla karşılaştırılamaz); mutlak ömür yalnız tüm
 çaplar 79.6–176 mm iken geçerli, dışında sistematik 0.55×.
 
-**Henüz bağlanmadı:** `js/cp-fead.js` panelleri hâlâ iskelet ve çekirdeği
-çağırmıyor. `veFeadBeltPath` (iskeletin kendi çizimi) bütün kasnakları dış
-teğet sayıyor → sırttan temas edenlerde sarım açısı YANLIŞ (AG00686'da 37°).
-Kasnaklara "temas tarafı" (grooved/back) alanı eklendiğinde şema
-`FEADCore.solveGeometry`'ye taşınacak ve o fonksiyon emekliye ayrılacak.
+#### Üç katman — hangi dosya neyi yapar
+
+| Dosya | Katman | Kural |
+|-------|--------|-------|
+| `js/fead-core.js` | Hesap çekirdeği | Dışarıdan geldi, **birebir** durur, dokunulmaz |
+| `js/fead-model.js` | Köprü (DOM'suz) | Kanvas düğümü → `FEADCore.makeSystem()`; temas/sürücü/çap çözümü, hata çevirisi |
+| `js/cp-fead.js` | Sunum | Yalnız HTML kurar; **kendi geometrisini hesaplamaz** |
+
+Yükleme sırası (index.html): `fead-model.js` → `fead-core.js` → `cp-fead.js`.
+Model katmanı, `cp-fead.js`'in de kullandığı saf yardımcıları (`_feadNum`,
+`_feadDefOf`, `_feadIsPulley`, `veFeadContactOf`, `veFeadOD`,
+`veFeadRouteOrder`…) bildirir — aynı adı iki dosyada bildirmek üst-seviye
+çakışması olurdu (`source-hygiene` kapısı).
+
+#### Üç yapısal kural (iskeletten farkı, hepsi testli)
+
+1. **Sürücülük ROL, tip değil** (`node.data.driver`). Gates AG00976'da sürücü
+   kasnak FAN'dır; tipe bağlamak o topolojiyi kurulamaz yapardı.
+2. **Temas tarafı (grooved/back) GERÇEK ALAN.** Ters verilirse çekirdek
+   **geçerli ama başka** bir güzergâh çözer — kapalı çevrim ve sarım değişmezi
+   TUTAR, hata verilmez. Bu yüzden üç katman: tip varsayılanı
+   (`componentDefs.feadContact`) → panelde açık aç/kapa → **kanvasta rozet**
+   (K/S, sürücüde ►). Testi bu sessizliği belgeliyor.
+3. **Çap = DIŞ ÇAP (`od`).** Yarıçapları çekirdek `hb`/`hr` ile türetir. Eski
+   `dia` alanı `veFeadMigrateNode` ile sessizce göç eder.
+
+**`veFeadBeltPath` EMEKLİ.** İskeletin kendi çizimi bütün kasnakları dış teğet
+sayıyordu → sırttan temas edenlerde sarım YANLIŞTI (AG00686: CRK 207.7 ↔ 172.2,
+−35.5°). Kendi içinde tutarlı olduğu için (Σ=360) gözle yakalanmıyordu. Şema
+artık `FEADCore.solveGeometry`'nin teğet noktaları + işaretli sarım yayları.
+
+**ÖLÇÜLDÜ (gerçek tarayıcı):** AG00686 kanvasa kurulunca sarım
+`CRK 210.2 · IDR 26.7 · A_C 202.9 · TEN 26.4`, span
+`249.2 · 212.6 · 248.9 · 212.6`, Mean kol açısı `33.1°`, take-up `0.559 mm/°`
+— **hepsi Gates raporuyla birebir.**
+
+**Sırada:** çalışma çevrimi (duty) tablosu + `analyze()` + sonuç sekmesi.
 
 ### Ölçüm Görüntüleyici (`viewer/`)
 
@@ -202,7 +234,8 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/mount-results-tab.test.js` | `js/results.js` + `js/graphics.js` | Takoz çözüm sekmesi, tek X ekseni kuralı, pano uzlaştırma |
 | `tests/unit/mount-results-publish.test.js` | `js/cp-mount.js` | Çözümün panoya yayını; alt-topoloji çökertme regresyonu |
 | `tests/unit/fead-core.test.js` | `js/fead-core.js` + `tests/fixtures/fead-validation.js` | **FEAD çekirdeğinin doğrulama kapısı**: 17 Gates raporu / 2095 değer (çalışma %0.5, Load dahil %1.5, kol açısı 0.2°), 8 koruma mekanizması, SPEC §9 yapısal özdeşlikleri (sarım değişmezi, `L_pitch−L_eff=2π·hb`, çevrim kapanışı, sürücü gücü), UMD tarayıcı köprüsü |
-| `tests/unit/cp-fead.test.js` | `js/cp-fead.js` + `js/components.js` | FEAD kayış-kasnak modülü: kayış çevresi geometrisi (dış teğet + sarım yayı, large-arc bayrağı), kayış yolu sırası (bağlantı = serpantin sırası), alt-sistem sözleşmesi, `fead-*` tip tanımlarının yapısal tutarlılığı |
+| `tests/unit/fead-model.test.js` | `js/fead-model.js` | **Köprü kapısı**: AG00686 MFSim KANVAS DÜĞÜMÜ olarak kurulup Gates sayılarını üretiyor mu (span %0.5, sarım 0.2°, Mean kol açısı 0.2°); temas tarafı üç katmanlı çözümü, sürücü rolü, `dia→od` göçü, ad tekilleştirme, hata çevirisi. Ayrıca **ters temas tarafının hata VERMEDİĞİNİ** belgeler (rozetin varlık nedeni) |
+| `tests/unit/cp-fead.test.js` | `js/cp-fead.js` + `js/components.js` | FEAD sunum katmanı: kanvas rozeti, `feadContact` varsayılanları, panel smoke testleri, alt-sistem sözleşmesi, `fead-*` tip tanımlarının yapısal tutarlılığı |
 | `tests/unit/canvas-space.test.js` | `js/canvas-space.js` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama |
 | `tests/unit/module-start-center.test.js` | `js/components.js` `veStartModule` | Karşılama kartından gelen modül bloğu görünümün TAM ortasına düşer (kabuk senkronu ölçümden önce) |
 | `tests/unit/port-geometry.test.js` | `js/components.js` port geometrisi + `js/connections.js` | Bağlantı ucu ile port dairesi aynı noktada — dört kenar, çok port, aynalama |

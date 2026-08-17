@@ -1023,6 +1023,7 @@ function veRenderSnapshot(paneIdx) {
       // Alt-sistem kartı önizlemede de kurulur; yoksa sekme küçük resmi ana
       // tuvalden farklı bir şey gösterirdi (modül orada kart, burada kutu).
       if(typeof veApplyModuleCard === 'function') veApplyModuleCard(nodeEl, n);
+      if(typeof veFeadApplyBadge === 'function') veFeadApplyBadge(nodeEl, n);
       canvasWrap.appendChild(nodeEl);
     });
     

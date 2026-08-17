@@ -336,6 +336,7 @@ function _veRestoreStateNodes(state) {
     // veLoadTabState → restoreState), dolayısıyla karttaki "N bileşen · M
     // bağlantı" özeti kullanıcı dışarı çıkar çıkmaz kendiliğinden tazelenir.
     if(typeof veApplyModuleCard === 'function') veApplyModuleCard(nodeEl, node);
+    if(typeof veFeadApplyBadge === 'function') veFeadApplyBadge(nodeEl, node);
 
     document.getElementById('ve-canvas').appendChild(nodeEl);
   });
