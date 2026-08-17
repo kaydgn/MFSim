@@ -850,6 +850,31 @@ test.describe('Açılır pencereler ESC ile kapanır', () => {
     expect(acikKaldi).toBe(false);
   });
 
+  // ESC'in mousedown İKİZİ. Aynı kusur dış tıklama yolunda DURUYORDU: mousedown
+  // dinleyicisi setTimeout(...,0) içinde bağlanıyordu ve gerekçesi "pencereyi
+  // açan tıklama kapatıcıya düşmesin"di — oysa pencereyi kuran şey bir click
+  // işleyicisi, o etkileşimin mousedown'ı çoktan geçmiş. Karşılığında gerçek
+  // bir kaçak vardı: aralıkta gelen tıklama hiçbir dinleyiciye düşmüyor,
+  // ardından dinleyici bağlanıyor ve bir daha tıklama gelmediği için pencere
+  // KALICI açık kalıyordu. Blink'te girdi olayları zamanlayıcıdan öncelikli;
+  // CI'da aşağıdaki "dışarı tıklama" testi tam olarak bu yüzden kırmızıya
+  // döndü (koşu 32021715468: tıklama pencerenin 420 px altına düştü, pencere
+  // yine de kapanmadı).
+  test('pencere açılır açılmaz yapılan dış tıklama kaçmıyor', async ({ page }) => {
+    await openViewer(page);
+    const acikKaldi = await page.evaluate(() => {
+      const pop = document.createElement('div');
+      pop.id = 've-tik-yaris-testi';
+      document.body.appendChild(pop);
+      veTrBindPopupDismiss(pop);
+      // Aynı görev içinde, zamanlayıcıya hiç sıra gelmemişken:
+      document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      return new Promise(res => setTimeout(
+        () => res(!!document.getElementById('ve-tik-yaris-testi')), 20));
+    });
+    expect(acikKaldi).toBe(false);
+  });
+
   test('birleştirme seçicisi', async ({ page }) => {
     await openViewer(page);
     await importFixture(page, canoeXlsx(120));

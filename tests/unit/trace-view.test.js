@@ -1377,3 +1377,55 @@ describe('ad bloğu — sığmayan eksenin sebebi', () => {
     }
   });
 });
+
+// ── Açılır pencere kapanışı (veTrBindPopupDismiss) ───────────────────────────
+//
+// Burada test edilen şey çizim değil ZAMANLAMA, ama kırılganlık değeri yüksek:
+// dinleyici bir görev sonraya kalırsa o aralıkta gelen tıklama HİÇBİR
+// dinleyiciye düşmez, ardından dinleyici bağlanır ve bir daha tıklama
+// gelmediği için pencere KALICI olarak açık kalır — dışarı tıklayarak
+// kapatılamayan bir kutu. CI bunu bir kez yakaladı (koşu 32021715468).
+describe('veTrBindPopupDismiss — kapatıcı GECİKMESİZ bağlanır', () => {
+  function acPencere() {
+    const pop = document.createElement('div');
+    pop.id = 've-pop-yaris';
+    document.body.appendChild(pop);
+    T.veTrBindPopupDismiss(pop);
+    return pop;
+  }
+  afterEach(() => { document.body.innerHTML = ''; });
+
+  test('pencere açılır açılmaz gelen DIŞ tıklama kaçmıyor', () => {
+    acPencere();
+    // setTimeout sıraya bile girmemişken, AYNI görev içinde:
+    document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(document.getElementById('ve-pop-yaris')).toBeNull();
+  });
+
+  test('pencere açılır açılmaz basılan ESC kaçmıyor', () => {
+    acPencere();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(document.getElementById('ve-pop-yaris')).toBeNull();
+  });
+
+  test('İÇE tıklama kapatmaz — pencere kullanılabilir kalmalı', () => {
+    const pop = acPencere();
+    const btn = document.createElement('button');
+    pop.appendChild(btn);
+    btn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(document.getElementById('ve-pop-yaris')).not.toBeNull();
+  });
+
+  test('kapanan pencere dinleyicilerini SÖKER — birikmez', () => {
+    const p1 = acPencere();
+    document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(p1.isConnected).toBe(false);
+    // İlk pencerenin ölü dinleyicisi kalsaydı, ikinci pencere DOM'da dururken
+    // onun `pop.remove()`u da her tıklamada boşa çalışırdı. Gözlenebilir kanıt:
+    // ikinci pencere kendi başına açılıp kapanabiliyor.
+    const p2 = acPencere();
+    expect(document.getElementById('ve-pop-yaris')).toBe(p2);
+    document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(document.getElementById('ve-pop-yaris')).toBeNull();
+  });
+});
