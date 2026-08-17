@@ -104,8 +104,9 @@ function veSanitizeEmbeddedState(state, opts, _depth) {
 }
 
 function veSaveActiveTabState() {
-  // YENİDEN-GİRİŞ KORUMASI: Bir alt-topoloji (Araç Performans / Takoz) giriş-çıkış
-  // işlemi HÂLÂ sürerken (_veAracBusy/_veMntBusy true — atomik canvas takası ortası)
+  // YENİDEN-GİRİŞ KORUMASI: Bir alt-topoloji (Araç Performans / Takoz / FEAD)
+  // giriş-çıkış işlemi HÂLÂ sürerken (_veAracBusy/_veMntBusy/_veFeadBusy true —
+  // atomik canvas takası ortası)
   // buraya sıçranırsa (örn. veAracOpenEditor → veLoadTabState → veUpdateResultsTree
   // yeniden-girişli olarak veSaveActiveTabStateKeepView'i çağırır), canlı canvas henüz
   // köke ÇÖKMEMİŞ düz alt-topolojidir; şimdi serialize etmek tab.state'e composite
@@ -113,13 +114,15 @@ function veSaveActiveTabState() {
   // kaybederiz (kaydedilen dosya bozulur). Dıştaki işlem bitince doğru kök durumu
   // zaten yazılacağı için burada sessizce çık.
   if((typeof _veAracBusy !== 'undefined' && _veAracBusy) ||
-     (typeof _veMntBusy !== 'undefined' && _veMntBusy)) return;
+     (typeof _veMntBusy !== 'undefined' && _veMntBusy) ||
+     (typeof _veFeadBusy !== 'undefined' && _veFeadBusy)) return;
 
   // Bir "Araç Performans" alt-topolojisi içindeysek, kaydetmeden/sekme değiştirmeden
   // önce köke (ana topoloji) çık — böylece canlı canvas alt-topoloji değil kök olur
   // ve serileştirme doğru durumu yazar (alt-topoloji ilgili düğümün data'sına saklı).
   if(typeof veAracCollapseToRoot === 'function') veAracCollapseToRoot();
   if(typeof veMntCollapseToRoot === 'function') veMntCollapseToRoot();
+  if(typeof veFeadCollapseToRoot === 'function') veFeadCollapseToRoot();
   if(veTabs.length === 0) return;
   var tab = veTabs[veActiveTabIdx];
   if(!tab) return;
@@ -169,18 +172,21 @@ function _veCaptureOpenPanel() {
   };
 }
 
-// Alt-topoloji (Araç Performans / Takoz iç topolojisi) gezinme yolunu yakalar ve
-// kullanıcıyı aynı yola SESSİZCE (toast/animasyon yok) geri götüren bir "restore"
-// fonksiyonu döndürür. Köke çökme (veSaveActiveTabState) sonrası yeniden giriş için.
-// Açık özellik penceresi de aynı turda korunur (bkz. _veCaptureOpenPanel).
+// Alt-topoloji (Araç Performans / Takoz / FEAD iç topolojisi) gezinme yolunu
+// yakalar ve kullanıcıyı aynı yola SESSİZCE (toast/animasyon yok) geri götüren
+// bir "restore" fonksiyonu döndürür. Köke çökme (veSaveActiveTabState) sonrası
+// yeniden giriş için. Açık özellik penceresi de aynı turda korunur
+// (bkz. _veCaptureOpenPanel).
 function _veCaptureSubtopoNav() {
   var aracPath = [];
   var mntPath = [];
+  var feadPath = [];
   try { if(typeof veAracStack !== 'undefined' && veAracStack && veAracStack.length) aracPath = veAracStack.map(function(c){ return c.nodeId; }); } catch(e) {}
   try { if(typeof veMntStack !== 'undefined' && veMntStack && veMntStack.length) mntPath = veMntStack.map(function(c){ return c.nodeId; }); } catch(e) {}
+  try { if(typeof veFeadStack !== 'undefined' && veFeadStack && veFeadStack.length) feadPath = veFeadStack.map(function(c){ return c.nodeId; }); } catch(e) {}
   // Alt-topolojide DEĞİLSEK canvas hiç değişmez → panele dokunma (gereksiz
   // yeniden çizim açık panelin kaydırma konumunu/odağını bozardı).
-  if(!aracPath.length && !mntPath.length) {
+  if(!aracPath.length && !mntPath.length && !feadPath.length) {
     return function _veRestoreSubtopoNavNoop() {};
   }
   var restorePanel = _veCaptureOpenPanel();
@@ -191,6 +197,7 @@ function _veCaptureSubtopoNav() {
       // Düğüm silinmişse open editor no-op'tur (güvenli).
       if(aracPath.length && typeof veAracOpenEditor === 'function') aracPath.forEach(function(id){ veAracOpenEditor(id, true); });
       if(mntPath.length && typeof veMntOpenEditor === 'function') mntPath.forEach(function(id){ veMntOpenEditor(id, true); });
+      if(feadPath.length && typeof veFeadOpenEditor === 'function') feadPath.forEach(function(id){ veFeadOpenEditor(id, true); });
     } catch(e) { if(typeof console !== 'undefined') console.warn('[MFSim] alt-topoloji geri yükleme:', e && e.message); }
     finally {
       // Panel geri açılırken bayrak HÂLÂ açık: addToSelection'ın içindeki
@@ -366,7 +373,7 @@ function veClearCanvasDOM() {
 }
 
 // Bir PROJE yüklenirken (dosya açma / otomatik yedekten dönüş) açık alt-topoloji
-// gezinme yolu GEÇERSİZDİR: veAracStack/veMntStack girdilerindeki parentState
+// gezinme yolu GEÇERSİZDİR: veAracStack/veMntStack/veFeadStack girdilerindeki parentState
 // ÖNCEKİ projeye aittir. Temizlenmezse ilk arka-plan kaydı (otomatik yedek,
 // sonuç ağacı yenileme, sekme değiştirme → veSaveActiveTabState) önce
 // veAracCollapseToRoot ile "köke çıkar" ve o ESKİ parentState'i canlı duruma
@@ -377,6 +384,7 @@ function veClearCanvasDOM() {
 function veResetSubtopoNav() {
   if(typeof veAracStack !== 'undefined' && Array.isArray(veAracStack)) veAracStack.length = 0;
   if(typeof veMntStack !== 'undefined' && Array.isArray(veMntStack)) veMntStack.length = 0;
+  if(typeof veFeadStack !== 'undefined' && Array.isArray(veFeadStack)) veFeadStack.length = 0;
   // Takoz çözüm sonucu OTURUMLUK bir global (window.veMountResults / _veMntLast)
   // ve hiçbir sekme durumuna bağlı değil. Proje değiştirilirken temizlenmezse
   // yeni projede — takoz modülü hiç olmasa bile — "Takoz Çökme-Titreşim" çözüm
@@ -386,6 +394,7 @@ function veResetSubtopoNav() {
   // Breadcrumb çipleri stack boşalınca kendini kaldırır; sidebar kapsamı köke döner.
   if(typeof veAracUpdateBreadcrumb === 'function') veAracUpdateBreadcrumb();
   if(typeof veMntUpdateBreadcrumb === 'function') veMntUpdateBreadcrumb();
+  if(typeof veFeadUpdateBreadcrumb === 'function') veFeadUpdateBreadcrumb();
   if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
 }
 

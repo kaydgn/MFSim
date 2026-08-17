@@ -42,9 +42,10 @@ function iskelet(ad) {
 beforeEach(() => resetStubs(stubs));
 
 describe('veIsModuleNode — ölçüt tek: tip tanımındaki isSubsystem', () => {
-  test('iki modül tipi de modüldür', () => {
+  test('üç modül tipi de modüldür', () => {
     expect(veIsModuleNode({ type: 'arac-performans' })).toBe(true);
     expect(veIsModuleNode({ type: 'mount-analysis' })).toBe(true);
+    expect(veIsModuleNode({ type: 'fead-analysis' })).toBe(true);
   });
 
   test('sıradan bileşen modül değildir', () => {
@@ -96,16 +97,26 @@ describe('veModuleSummaryText — boş ile dolu ayrışır', () => {
 // Kart ölçüsü İKİ yerde tutulsaydı (sabit + tip tanımı) biri sessizce eskirdi:
 // tuval kartı 214px çizerken createNode 80px'lik düğüm üretirdi.
 describe('kart ölçüsü tek kaynaktan gelir', () => {
+  // Liste sabit DEĞİL: isSubsystem taşıyan her tip otomatik kapsanır — yeni bir
+  // modül eklendiğinde kapı kendiliğinden onu da tutar (bkz. components.js'teki
+  // "ileride eklenecek üçüncü bir modül kartı kendiliğinden alır" sözü).
+  const MODUL_TIPLERI = Object.keys(componentDefs).filter((t) => componentDefs[t].isSubsystem);
+
+  test('en az üç modül tipi var (Araç Performans / Takoz / FEAD)', () => {
+    expect(MODUL_TIPLERI).toEqual(expect.arrayContaining(['arac-performans', 'mount-analysis', 'fead-analysis']));
+  });
+
   test('tip tanımları sabitle birebir aynı ölçüyü bildirir', () => {
-    ['arac-performans', 'mount-analysis'].forEach((t) => {
+    MODUL_TIPLERI.forEach((t) => {
       expect(componentDefs[t].defaultWidth).toBe(VE_MODULE_CARD_W);
       expect(componentDefs[t].defaultHeight).toBe(VE_MODULE_CARD_H);
     });
   });
 
   test('veNodeDefaultSize de aynı ölçüyü döndürür', () => {
-    expect(veNodeDefaultSize('arac-performans')).toEqual({ w: VE_MODULE_CARD_W, h: VE_MODULE_CARD_H });
-    expect(veNodeDefaultSize('mount-analysis')).toEqual({ w: VE_MODULE_CARD_W, h: VE_MODULE_CARD_H });
+    MODUL_TIPLERI.forEach((t) => {
+      expect(veNodeDefaultSize(t)).toEqual({ w: VE_MODULE_CARD_W, h: VE_MODULE_CARD_H });
+    });
   });
 
   test('kart, kart-öncesi ölçüden gerçekten BÜYÜK (modül bileşenden ayrışsın)', () => {
@@ -297,10 +308,19 @@ describe('index.html modül satırı sembolü kendi çizmez', () => {
   test('her .ve-submodule satırı sembol yuvası taşır ve içinde <svg> yoktur', () => {
     // Satırın içinde iç içe <div> yok (yalnız span'ler) → ilk </div> satırı kapatır
     const satirlar = html.match(/<div class="ve-component ve-submodule"[\s\S]*?<\/div>/g) || [];
-    expect(satirlar.length).toBe(2);
+    // Beklenen sayı SABİT DEĞİL, componentDefs'ten türetilir: üçüncü modül
+    // (FEAD) eklendiğinde bu kapı "2 olmalıydı" diye kırılmıştı — oysa kapının
+    // derdi sayı değil, HER satırın sembolü kendi çizmemesi. Sabit sayı
+    // yarınki dördüncü modülü de aynı yanlış nedenle kırardı.
+    const modulTipleri = Object.keys(componentDefs).filter((t) => componentDefs[t].isSubsystem);
+    expect(satirlar.length).toBe(modulTipleri.length);
     satirlar.forEach((s) => {
       expect(s).toContain('ve-submodule-ico');
       expect(s).not.toContain('<svg');
+    });
+    // …ve her modül tipinin gerçekten BİR satırı var (sayı tutup tip kaçmasın)
+    modulTipleri.forEach((t) => {
+      expect(satirlar.filter((s) => s.includes('data-type="' + t + '"'))).toHaveLength(1);
     });
   });
 });

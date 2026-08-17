@@ -2191,9 +2191,18 @@
   background-size:34px 34px, 34px 34px, auto;
 }
 
+/* Kart taşarsa KIRPILMASIN. Kapsayıcı `align-items:center` ile ortalıyor; kart
+   kapsayıcıdan uzunsa (üç modül kartı + kayıtlı proje düğmesi kısa bir tuval
+   alanında bunu yapabilir) merkezleme taşmayı YUKARI atar ve kaydırılamaz —
+   hero ile ilk kart ekranın dışında kalırdı. Standart çözüm: kapsayıcıda
+   overflow, kartta `margin:auto` (flex'te auto margin, align-items'a baskındır
+   ve taşmayı iki uca eşit dağıtmaz — kaydırılabilir bırakır). */
+.ve-module-overlay{ overflow:auto; }
+
 .ve-welcome{
   width:100%;
   max-width:410px;
+  margin:auto;
   padding:34px 36px 28px;
   background:var(--bg-secondary);
   border:1px solid var(--border-color);
