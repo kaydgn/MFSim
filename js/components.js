@@ -596,7 +596,9 @@ var componentDefs = {
   'fead-layout': {
     name: 'Kayış Yolu',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M25.9 49.3 L65.2 24.4 A9 9 0 0 1 79 31.5 L81 65.6 A7 7 0 0 1 71.9 72.7 L29.6 76.3 A15 15 0 0 1 25.9 49.3 Z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4" stroke-linejoin="round"/><circle cx="34" cy="62" r="15" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="34" cy="62" r="4.5" fill="var(--text-secondary, #666)"/><circle cx="70" cy="32" r="9" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="70" cy="32" r="3" fill="var(--text-secondary, #666)"/><circle cx="74" cy="66" r="7" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="74" cy="66" r="2.6" fill="var(--text-secondary, #666)"/></svg>',
-    inputs: 0, outputs: 0, isFeadLayout: true, defaultWidth: 60, defaultHeight: 56
+    inputs: 0, outputs: 0, isFeadLayout: true
+    // Ölçü BURADA YOK: Kayış Yolu düğümü kanvasta CANLI ŞEMA kartıdır ve
+    // ölçüsü tek yerden gelir (VE_FEAD_LAYOUT_W/H → aşağıdaki döngü).
   },
   'fead-report': {
     name: 'Rapor',
@@ -713,6 +715,47 @@ var VE_MODULE_LEGACY_W = 80;
 var VE_MODULE_LEGACY_H = 66;
 var VE_MODULE_LEGACY_SIZES = [[80, 66], [214, 72]];
 
+// ── KAYIŞ YOLU KARTI (fead-layout) — kanvasta CANLI ŞEMA ────────────────────
+// Bu düğüm bir düğme değil, tuvalin üstünde duran ölçekli bir şema: kasnak
+// daireleri, teğet kayış çizgileri, gergi pivotu ve yön gülü. Kullanıcı
+// koordinat/çap/temas girdilerini değiştirdikçe yeniden çizilir, yani
+// modelinin tutarlı olup olmadığını PANEL AÇMADAN görür.
+//
+// Ölçü ÖLÇÜLDÜ, keyfî değil: FEAD_INFORMATION düzeninin en-boy oranı
+// (465 × 315 mm ≈ 1.48) ve okunabilir en küçük kasnak adı (8px) birlikte
+// 420×340'ta oturuyor; daha darda alternatör dairesi (Ø57) 6px'in altına
+// düşüp ad etiketleri üst üste biniyor.
+var VE_FEAD_LAYOUT_W = 420;
+var VE_FEAD_LAYOUT_H = 340;
+// Kart öncesi varsayılan (Aşama 0–3 kayıtları). BİREBİR bu ölçüdeyse — yani
+// kullanıcı hiç dokunmamışsa — kart ölçüsüne yükseltilir; bilerek verilmiş her
+// ölçü korunur. Modül kartındaki kuralın aynısı, bkz. veModuleSizeFor.
+var VE_FEAD_LAYOUT_LEGACY_W = 60;
+var VE_FEAD_LAYOUT_LEGACY_H = 56;
+
+function veIsFeadLayoutNode(node) {
+  if(!node || !node.type) return false;
+  var defs = (typeof componentDefs !== 'undefined') ? componentDefs : null;
+  var def = defs ? defs[node.type] : null;
+  return !!(def && def.isFeadLayout);
+}
+// SAF (ölçüyü döndürür) + yazan yüzü. Ayrı olmalarının nedeni modül kartıyla
+// aynı: sekme önizlemesi düğümü DEĞİŞTİRMEDEN ölçüye ihtiyaç duyuyor.
+function veFeadLayoutSizeFor(node) {
+  var w = (node && node.width) || 65, h = (node && node.height) || 60;
+  if(veIsFeadLayoutNode(node) && w === VE_FEAD_LAYOUT_LEGACY_W && h === VE_FEAD_LAYOUT_LEGACY_H) {
+    return { w: VE_FEAD_LAYOUT_W, h: VE_FEAD_LAYOUT_H, changed: true };
+  }
+  return { w: w, h: h, changed: false };
+}
+function veFeadNormalizeLayoutSize(node) {
+  var s = veFeadLayoutSizeFor(node);
+  if(!s.changed) return false;
+  node.width = s.w;
+  node.height = s.h;
+  return true;
+}
+
 // Bir biçimin ölçüsü — TEK KAYNAK. veModuleSizeFor, veApplyModuleViewSizes ve
 // testler hep buradan okur.
 function veModuleLayoutSize(layout) {
@@ -744,6 +787,10 @@ function veApplyModuleViewSizes() {
   var layout = (typeof veModuleLayoutFor === 'function') ? veModuleLayoutFor(null) : 'card';
   var s = veModuleLayoutSize(layout);
   Object.keys(componentDefs).forEach(function(t) {
+    if(componentDefs[t] && componentDefs[t].isFeadLayout) {
+      componentDefs[t].defaultWidth = VE_FEAD_LAYOUT_W;
+      componentDefs[t].defaultHeight = VE_FEAD_LAYOUT_H;
+    }
     if(componentDefs[t] && componentDefs[t].isSubsystem) {
       componentDefs[t].defaultWidth = s.w;
       componentDefs[t].defaultHeight = s.h;

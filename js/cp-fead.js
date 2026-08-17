@@ -773,8 +773,19 @@ function veFeadBeltDbHint(node){
 //
 // Ölçek: mm → görünüm. Kayış düzleminde +Y YUKARI (mühendislik çizimi),
 // SVG'de y aşağı → çevrilir.
-function veFeadLayoutSVG(build, W, H){
+// opts:
+//   .compass  yön gülü (0/90/180/270) — kayış düzleminin yönü
+//   .pivot    gergi pivotunda artı + pivottan kasnak merkezine kol çizgisi
+//   .arrows   her kasnakta dönüş yönü oku
+//   .inline   kanvas kartı için: dış çerçeve/arkaplan yok, boy %100
+// Varsayılan (opts verilmezse) hepsi AÇIK: tedarikçi sayfasının çıktısı da bu
+// işaretleri taşıyor ve panelde de aynı dili konuşmak doğrusu.
+function veFeadLayoutSVG(build, W, H, opts){
   W = W || 320; H = H || 240;
+  opts = opts || {};
+  var wantCompass = (opts.compass !== false);
+  var wantPivot   = (opts.pivot   !== false);
+  var wantArrows  = (opts.arrows  !== false);
   if(!build || !build.ok || !build.sys || typeof FEADCore === 'undefined') return null;
   var geom;
   try { geom = FEADCore.tensionerState(build.sys, FEADCore.meanRel(build.sys)).geom; }
@@ -786,10 +797,20 @@ function veFeadLayoutSVG(build, W, H){
     minX=Math.min(minX,p.c[0]-p.rPitch); maxX=Math.max(maxX,p.c[0]+p.rPitch);
     minY=Math.min(minY,p.c[1]-p.rPitch); maxY=Math.max(maxY,p.c[1]+p.rPitch);
   });
+  // GERGİ PİVOTU DA ÖLÇEĞE GİRER: pivot çoğu düzende kasnak kümesinin dışında
+  // kalıyor (BMC'de −259.94 mm, en soldaki kasnaktan 20 mm daha solda). Sınırlara
+  // katılmazsa artı işareti çerçevenin dışına düşüp görünmez olur.
+  var pv = wantPivot && build.sys.tensioner && build.sys.tensioner.pivot;
+  if(pv){
+    minX=Math.min(minX,pv[0]); maxX=Math.max(maxX,pv[0]);
+    minY=Math.min(minY,pv[1]); maxY=Math.max(maxY,pv[1]);
+  }
+  // Yön gülü sağ altta yer istiyor; şema onun altına girmesin.
   var pad = 18;
+  var ROSE = wantCompass ? 54 : 0;                 // yön gülünün ayırdığı sağ şerit
   var spanX = Math.max(1, maxX-minX), spanY = Math.max(1, maxY-minY);
-  var s = Math.min((W-2*pad)/spanX, (H-2*pad)/spanY);
-  var offX = pad + ((W-2*pad) - spanX*s)/2, offY = pad + ((H-2*pad) - spanY*s)/2;
+  var s = Math.min((W-2*pad-ROSE)/spanX, (H-2*pad)/spanY);
+  var offX = pad + ((W-2*pad-ROSE) - spanX*s)/2, offY = pad + ((H-2*pad) - spanY*s)/2;
   function tx(x){ return offX + (x-minX)*s; }
   function ty(y){ return offY + (maxY-y)*s; }
   function f(v){ return Math.round(v*100)/100; }
@@ -811,23 +832,205 @@ function veFeadLayoutSVG(build, W, H){
   // ÖLÇÜ SINIRI ŞART: panel iki sütuna geçtiğinde (VE_WIDE_PANEL_TYPES) yalnız
   // width:100% veren bir viewBox'lı SVG en-boy oranıyla birlikte YÜKSELİR ve
   // pencerenin altından taşarak kırpılır (ölçüldü). max-width bunu keser.
-  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="display:block; width:100%; max-width:'
-    + W + 'px; margin:0 auto; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
-  svg += '<path d="' + d + '" fill="none" stroke="var(--accent-warning)" stroke-width="2.6" stroke-linejoin="round"/>';
+  var kabuk = opts.inline
+    ? '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" style="display:block; width:100%; height:100%;">'
+    : '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="display:block; width:100%; max-width:'
+      + W + 'px; margin:0 auto; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
+  var svg = kabuk;
+
+  // GERGİ KOLU: pivot → kasnak merkezi. Kol boyu ve montaj açısı bu çizgi;
+  // yanlış girilmiş bir pivot burada gözle görünür (kol kayışa ters uzanır).
+  if(pv){
+    var ti = build.sys._tenIdx;
+    var tp = (ti >= 0 && ps[ti]) ? ps[ti] : null;
+    if(tp){
+      svg += '<line data-ve="arm" x1="' + f(tx(pv[0])) + '" y1="' + f(ty(pv[1])) + '" x2="' + f(tx(tp.c[0]))
+          + '" y2="' + f(ty(tp.c[1])) + '" stroke="var(--accent-success)" stroke-width="1.6"'
+          + ' stroke-dasharray="5 3" opacity="0.85"/>';
+    }
+    var px = f(tx(pv[0])), py = f(ty(pv[1])), a = 6;
+    svg += '<g data-ve="pivot" stroke="var(--accent-success)" stroke-width="1.8">'
+        + '<line x1="' + f(px-a) + '" y1="' + py + '" x2="' + f(px+a) + '" y2="' + py + '"/>'
+        + '<line x1="' + px + '" y1="' + f(py-a) + '" x2="' + px + '" y2="' + f(py+a) + '"/></g>';
+  }
+
+  svg += '<path data-ve="belt" d="' + d + '" fill="none" stroke="var(--accent-warning)" stroke-width="2.6" stroke-linejoin="round"/>';
+
   ps.forEach(function(p, k){
     var def = build.order[k] ? _feadDefOf(build.order[k]) : {};
     var isDrv = !!(build.sys.pulleys[k] && build.sys.pulleys[k].crank);
     var col = isDrv ? 'var(--accent-primary)' : (def.isFeadTensioner ? 'var(--accent-success)' : 'var(--text-secondary)');
     var X = f(tx(p.c[0])), Y = f(ty(p.c[1])), R = f(p.rPitch*s);
-    svg += '<circle cx="' + X + '" cy="' + Y + '" r="' + R + '" fill="none" stroke="' + col
+    svg += '<circle data-ve="pulley" cx="' + X + '" cy="' + Y + '" r="' + R + '" fill="none" stroke="' + col
         + '" stroke-width="2"' + (p.contact === 'back' ? ' stroke-dasharray="4 3"' : '') + '/>';
     svg += '<circle cx="' + X + '" cy="' + Y + '" r="2.2" fill="' + col + '"/>';
+
+    // DÖNÜŞ YÖNÜ OKU — kasnağın içinde, yarıçapın %55'inde bir yay + uç oku.
+    // İşaret çekirdeğin p.d'sinden; ekranda y çevrildiği için sweep ters döner.
+    // Tedarikçi çıktısındaki dönüş okunun karşılığı: bütün kasnaklar aynı yöne
+    // dönmüyorsa (sırttan temas) bu gözle görünür.
+    if(wantArrows && R > 9){
+      var rr = R * 0.55, cw = (p.d > 0);
+      var a0 = cw ? -2.3 : -0.85, a1 = cw ? 0.85 : 2.3;
+      var x0 = X + rr*Math.cos(a0), y0 = Y + rr*Math.sin(a0);
+      var x1 = X + rr*Math.cos(a1), y1 = Y + rr*Math.sin(a1);
+      svg += '<path data-ve="spin" d="M' + f(x0) + ' ' + f(y0) + ' A' + f(rr) + ' ' + f(rr) + ' 0 1 '
+          + (cw ? 1 : 0) + ' ' + f(x1) + ' ' + f(y1) + '" fill="none" stroke="' + col
+          + '" stroke-width="1.2" opacity="0.75"/>';
+      var tng = a1 + (cw ? Math.PI/2 : -Math.PI/2), hb = 3.6;
+      svg += '<path d="M' + f(x1) + ' ' + f(y1)
+          + ' L' + f(x1 - hb*Math.cos(tng - 0.4)) + ' ' + f(y1 - hb*Math.sin(tng - 0.4))
+          + ' L' + f(x1 - hb*Math.cos(tng + 0.4)) + ' ' + f(y1 - hb*Math.sin(tng + 0.4))
+          + ' Z" fill="' + col + '" opacity="0.75"/>';
+    }
+
     svg += '<text x="' + X + '" y="' + f(Y - R - 4) + '" text-anchor="middle" font-size="9" fill="var(--text-muted)">'
         + _feadEsc(geom.names[k]) + '</text>';
     svg += '<text x="' + X + '" y="' + f(Y + R + 10) + '" text-anchor="middle" font-size="8" fill="var(--accent-warning)">'
         + f(geom.wrapDeg(k)) + '°</text>';
   });
+
+  // YÖN GÜLÜ — sağ altta, tedarikçi çıktısındaki gibi. Kayış düzleminin açı
+  // konvansiyonu: 0° = +x, açılar CCW. Bu olmadan "montaj açısı −3.18°" gibi
+  // bir sayının hangi yöne baktığı okunamıyor.
+  if(wantCompass){
+    var cx = W - ROSE/2 - 4, cy = H - ROSE/2 - 8, r = ROSE/2 - 15;
+    svg += '<g data-ve="compass" stroke="var(--text-muted)" stroke-width="1" fill="none">'
+        + '<circle cx="' + f(cx) + '" cy="' + f(cy) + '" r="' + f(r) + '"/>'
+        + '<line x1="' + f(cx-r-4) + '" y1="' + f(cy) + '" x2="' + f(cx+r+4) + '" y2="' + f(cy) + '"/>'
+        + '<line x1="' + f(cx) + '" y1="' + f(cy-r-4) + '" x2="' + f(cx) + '" y2="' + f(cy+r+4) + '"/></g>';
+    var et = [['0', cx+r+7, cy+3, 'start'], ['90', cx, cy-r-7, 'middle'],
+              ['180', cx-r-7, cy+3, 'end'], ['270', cx, cy+r+11, 'middle']];
+    et.forEach(function(t){
+      svg += '<text x="' + f(t[1]) + '" y="' + f(t[2]) + '" text-anchor="' + t[3]
+          + '" font-size="7" fill="var(--text-muted)">' + t[0] + '</text>';
+    });
+    // CCW yönünü gösteren küçük yay (0°'den 90°'ye).
+    svg += '<path d="M' + f(cx + r*0.6) + ' ' + f(cy) + ' A' + f(r*0.6) + ' ' + f(r*0.6)
+        + ' 0 0 0 ' + f(cx) + ' ' + f(cy - r*0.6) + '" fill="none" stroke="var(--text-muted)" stroke-width="0.9"/>'
+        + '<path d="M' + f(cx) + ' ' + f(cy - r*0.6) + ' l2.6 2.4 l-3.4 1.1 Z" fill="var(--text-muted)"/>';
+  }
   return svg + '</svg>';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  KANVAS KARTI: CANLI KAYIŞ YOLU ŞEMASI
+// ════════════════════════════════════════════════════════════════════════════
+// Kayış Yolu düğümü tuvalin üstünde ÇİZİM olarak durur — panel açmak gerekmez.
+// Neden kanvasta: kullanıcı koordinat, çap, temas tarafı ve gergi girdilerini
+// yazarken modelin GERÇEKTEN kapanıp kapanmadığını anında görmeli. Topoloji
+// grafiği (düğüm-bağlantı) kayışın SIRASINI gösteriyor ama ŞEKLİNİ göstermiyor;
+// üst üste binen iki kasnak, ters temas tarafı ya da yanlış işaretli bir
+// koordinat orada fark edilmiyor. Bu kart o boşluğu kapatıyor.
+//
+// Şema, düğümlerin KANVASTAKİ yerinden değil, kasnakların kayış düzlemindeki
+// (mm) koordinatlarından çizilir — düğümü sürüklemek şemayı değiştirmez.
+//
+// Stil ELEMANIN ÜSTÜNDE (css/ dosyasında değil): css/styles.css'e dokunmak
+// Ölçüm Görüntüleyici'nin dağıtım dosyasını bayatlatıyor (bkz. CLAUDE.md) ve
+// tek bir kart için o zinciri kurmaya değmez. Rozette de aynı gerekçe var.
+var VE_FEAD_CARD_CLASS = 've-fead-layout-card';
+
+function veFeadApplyLayoutCard(nodeEl, node){
+  if(!nodeEl || !node || typeof document === 'undefined') return false;
+  if(!_feadDefOf(node).isFeadLayout) return false;
+  var box = nodeEl.querySelector('.ve-node-box') || nodeEl;
+
+  // Kart bir kez kurulur, İÇİ tazelenir. Yeniden kurmak her tazelemede
+  // düğümün sembolünü ve etiketini yeniden taşımak olurdu.
+  var card = box.querySelector('.' + VE_FEAD_CARD_CLASS);
+  if(!card){
+    card = document.createElement('div');
+    card.className = VE_FEAD_CARD_CLASS;
+    card.style.cssText = 'position:absolute; inset:0; display:flex; flex-direction:column;'
+      + 'overflow:hidden; border-radius:inherit; background:var(--bg-input, #0f1115);';
+    // Tuvaldeki sembol kartın arkasında kalmasın (düğüm kutusu kendi SVG'sini
+    // ortada gösteriyor); şema onun yerini alır.
+    var sym = box.querySelector(':scope > svg');
+    if(sym) sym.style.display = 'none';
+    box.appendChild(card);
+  }
+  card.innerHTML = veFeadLayoutCardHTML(node);
+  return true;
+}
+
+// Kartın içeriği — AYRI ve SAF(ça) tutuluyor ki test HTML'e bakabilsin.
+function veFeadLayoutCardHTML(node){
+  var build = (typeof veFeadBuildFromCanvas === 'function') ? veFeadBuildFromCanvas() : null;
+  // Ölçü düğümden, yoksa TİP TANIMINDAN (componentDefs.defaultWidth) okunur —
+  // sabitin kendisi js/components.js'te ve orada tek kopya. Buradan bare global
+  // olarak okumak dosyalar arası gizli bir bağ kurardı.
+  var def = _feadDefOf(node);
+  var W = (node && node.width) || def.defaultWidth || 420;
+  var H = (node && node.height) || def.defaultHeight || 340;
+  var SER = 20;                                   // alt durum şeridi
+  var svg = veFeadLayoutSVG(build, Math.max(120, W), Math.max(90, H - SER), { inline: true });
+
+  var h = '<div style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center;">';
+  if(svg){
+    h += svg;
+  } else {
+    // ÇÖZÜLEMEDİ — kartın en değerli hâli bu. Sessiz boş bir kutu yerine
+    // EKSİĞİN KENDİSİ yazılıyor; kullanıcı neyi düzeltmesi gerektiğini
+    // panel açmadan okuyor.
+    var neden = (build && build.errors && build.errors.length)
+      ? build.errors[0]
+      : 'Kayış yolu henüz kurulamadı.';
+    h += '<div style="padding:10px 12px; text-align:center; font-size:var(--fs-micro);'
+      + ' line-height:1.5; color:var(--text-muted);">'
+      + '<div style="font-size:var(--fs-tiny); font-weight:700; color:var(--accent-danger);'
+      + ' margin-bottom:5px;">Şema çizilemiyor</div>' + _feadEsc(neden)
+      + ((build && build.errors && build.errors.length > 1)
+          ? '<div style="margin-top:5px; opacity:0.8;">+' + (build.errors.length - 1)
+            + ' eksik daha — panelde tamamı yazılı</div>' : '')
+      + '</div>';
+  }
+  h += '</div>';
+  h += veFeadLayoutCardStrip(build);
+  return h;
+}
+
+// Durum şeridi — "tutarlı mı" sorusunun tek satırlık cevabı.
+// Sarım değişmezi (Σkaburgalı − Σsırttan = 360°) burada duruyor çünkü kapalı
+// bir kayış çevriminin geometrik ZORUNLULUĞU o; tutmuyorsa şema kendi içinde
+// tutarlı görünse bile yol yanlış çözülmüş demektir.
+function veFeadLayoutCardStrip(build){
+  var ok = !!(build && build.ok);
+  var sol = 'Kayış yolu kapanmadı', sag = '';
+  if(ok){
+    try {
+      var st = FEADCore.tensionerState(build.sys, FEADCore.meanRel(build.sys));
+      var g = st.geom, sg = 0, bk = 0;
+      g.wraps.forEach(function(w, i){
+        if(build.sys.pulleys[i].contact === 'back') bk += w; else sg += w;
+      });
+      var inv = (sg - bk) * 180 / Math.PI;
+      sol = build.order.length + ' kasnak · L ' + _feadFmt(g.LeffMm, 1) + ' mm';
+      sag = 'Σsarım ' + _feadFmt(inv, 1) + '°';
+      if(Math.abs(inv - 360) > 0.05) ok = false;         // değişmez tutmuyor
+    } catch(e){ ok = false; sol = 'Geometri okunamadı'; }
+  }
+  var renk = ok ? 'var(--accent-success)' : 'var(--accent-danger)';
+  return '<div style="flex:0 0 auto; display:flex; justify-content:space-between; gap:6px;'
+    + ' align-items:center; padding:2px 7px; font-size:var(--fs-micro); line-height:1.5;'
+    + ' font-family:ui-monospace, monospace; color:' + renk
+    + '; border-top:1px solid var(--border-color); background:var(--bg-secondary, #16181d);">'
+    + '<span>' + (ok ? '✓ ' : '✗ ') + _feadEsc(sol) + '</span>'
+    + '<span style="opacity:0.85;">' + _feadEsc(sag) + '</span></div>';
+}
+
+// Tuvaldeki BÜTÜN Kayış Yolu kartlarını tazele. Girdi değişince çağrılır
+// (setter'lar + saveState); iç topolojide Kayış Yolu düğümü yoksa hiçbir şey
+// yapmaz, yani ana tuvalde ve diğer modüllerde bedava.
+function veFeadRefreshLayoutCards(){
+  if(typeof document === 'undefined' || typeof nodes === 'undefined') return 0;
+  var n = 0;
+  nodes.forEach(function(x){
+    if(!_feadDefOf(x).isFeadLayout) return;
+    var el = document.getElementById(x.id);
+    if(el && veFeadApplyLayoutCard(el, x)) n++;
+  });
+  return n;
 }
 
 function getFeadLayoutPropertiesHTML(node){
@@ -1253,11 +1456,28 @@ function veFeadLoadExample(key){
   var yer = pack.example.pulleys.map(function(p, i){
     return { lx: 60 + (xs[i] - minX) * s, ly: 150 + (maxY - ys[i]) * s };
   });
-  // Araç kutuları (kayış künyesi · çözücü · kayış yolu) üst şeritte.
-  // SIRA pack.nodes ile aynı olmak zorunda — veFeadExampleNodes kasnakları
-  // önce, araçları sonra ekliyor.
+  // Araç kutuları. SIRA pack.nodes ile aynı olmak ZORUNDA — veFeadExampleNodes
+  // kasnakları önce, araçları (kayış künyesi · çözücü · kayış yolu) sonra ekliyor.
+  //
+  // KAYIŞ YOLU KARTI AYRI ŞERİTTE: 420×340'lık canlı şema üst şeride konsa
+  // kasnak kümesinin üstüne biner ve komşu düğümlerin portları/rozetleri kartın
+  // üstünde görünür (ölçüldü). Kullanıcının istediği yer de bu: topolojinin
+  // YANINDA, kendi alanında duran bir çizim.
   var araclar = pack.nodes.length - pack.example.pulleys.length;
-  for(var t = 0; t < araclar; t++) yer.push({ lx: 60 + t * 180, ly: 20 });
+  var sagSerit = 60 + GEN + 110;
+  var ust = 0;
+  for(var t = 0; t < araclar; t++){
+    var tip = pack.nodes[pack.example.pulleys.length + t].type;
+    var td = (typeof componentDefs !== 'undefined' && componentDefs[tip]) || {};
+    if(tip === 'fead-layout'){
+      // Ölçü de veriliyor: yoksa veArrangeModuleBase kartı 65×60 sayıp grubu
+      // yanlış ortalıyor ve kart görünür alanın sağından taşıyor.
+      yer.push({ lx: sagSerit, ly: 150, w: td.defaultWidth, h: td.defaultHeight });
+    } else {
+      yer.push({ lx: 60 + ust * 180, ly: 20 });
+      ust++;
+    }
+  }
 
   var base = (typeof veArrangeModuleBase === 'function')
     ? veArrangeModuleBase(yer) : { x:3000, y:3000 };
@@ -1569,6 +1789,11 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_STARTER_LAYOUT: VE_FEAD_STARTER_LAYOUT,
     veFeadLayoutSVG: veFeadLayoutSVG,
     veFeadApplyBadge: veFeadApplyBadge,
+    veFeadApplyLayoutCard: veFeadApplyLayoutCard,
+    veFeadLayoutCardHTML: veFeadLayoutCardHTML,
+    veFeadLayoutCardStrip: veFeadLayoutCardStrip,
+    veFeadRefreshLayoutCards: veFeadRefreshLayoutCards,
+    VE_FEAD_CARD_CLASS: VE_FEAD_CARD_CLASS,
     veFeadBeltDbHint: veFeadBeltDbHint,
     veFeadModelTable: veFeadModelTable,
     veFeadPositionTable: veFeadPositionTable,

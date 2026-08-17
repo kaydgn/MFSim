@@ -44,14 +44,23 @@ var VE_ARAC_PERFORMANS_LAYOUT = [
 
 // Topolojiyi görünür alanın merkezine ortalayacak taban koordinatı hesapla.
 // (drop handler ile aynı dönüşüm: ekran → canvas koordinatı; bkz. ui-core.js drop)
+// layout ögeleri {lx, ly} — ölçü VERİLEBİLİR: {lx, ly, w, h}. Verilmezse
+// sıradan bileşen ölçüsü (65×60) varsayılır.
+//
+// ÖLÇÜ NEDEN GEREKLİ: FEAD'in "Kayış Yolu" düğümü kanvasta 420×340'lık canlı bir
+// şema kartı. Herkese 65×60 sayılırsa grubun genişliği eksik hesaplanır ve
+// ortalama kayar — kart görünür alanın sağından taşıyor (ölçüldü). Diğer
+// çağıranlar ölçü vermediği için davranışları DEĞİŞMEZ.
 function veArrangeModuleBase(layout) {
   var CANVAS_OFFSET = 3000, NODE_W = 65, NODE_H = 60;
   var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   layout.forEach(function(it) {
+    var w = (it && isFinite(it.w) && it.w > 0) ? it.w : NODE_W;
+    var h = (it && isFinite(it.h) && it.h > 0) ? it.h : NODE_H;
     minX = Math.min(minX, it.lx);
     minY = Math.min(minY, it.ly);
-    maxX = Math.max(maxX, it.lx + NODE_W);
-    maxY = Math.max(maxY, it.ly + NODE_H);
+    maxX = Math.max(maxX, it.lx + w);
+    maxY = Math.max(maxY, it.ly + h);
   });
   var topoW = maxX - minX, topoH = maxY - minY;
 

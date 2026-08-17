@@ -984,6 +984,11 @@ function veRenderSnapshot(paneIdx) {
       // Modül düğümünde kart ölçüsü kuralı da uygulanır (eski 80×66 kayıtlar) —
       // önizleme ile tuval aynı ölçüyü göstersin diye ortak kaynaktan.
       var _sz = (typeof veModuleSizeFor === 'function') ? veModuleSizeFor(n) : { w: n.width || 65, h: n.height || 60 };
+      // Kayış Yolu kartı da aynı ortak kaynaktan (60×56 → 420×340).
+      if(typeof veFeadLayoutSizeFor === 'function'){
+        var _fz = veFeadLayoutSizeFor(n);
+        if(_fz.changed) _sz = _fz;
+      }
       var w = _sz.w, h = _sz.h;
 
       var nodeEl = document.createElement('div');

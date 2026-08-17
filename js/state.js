@@ -51,6 +51,17 @@ function saveState() {
     undoStack.shift();
   }
   redoStack = []; // Yeni işlem yapılınca redo temizlenir
+
+  // FEAD Kayış Yolu kartı — CANLI ŞEMANIN TEK TAZELEME NOKTASI.
+  // saveState her mutasyondan sonra çağrılıyor (alan değişti, bağlantı kuruldu/
+  // silindi, düğüm eklendi/silindi), yani "girdi değişti" olayının zaten var
+  // olan tek kaynağı bu. Ayrı ayrı yirmi yere çağrı serpiştirmek yerine buraya
+  // takılıyor; biri eklenmeyi unutulsa şema sessizce eski geometriyi gösterirdi.
+  // İç topolojide Kayış Yolu düğümü yoksa hiçbir şey yapmaz. try/catch ŞART:
+  // bir çözüm hatası asla undo yığınını bozmamalı.
+  try {
+    if(typeof veFeadRefreshLayoutCards === 'function') veFeadRefreshLayoutCards();
+  } catch(e) {}
 }
 
 function undo() {
@@ -188,6 +199,10 @@ function _veRestoreStateNodes(state) {
     // kaydedilmiş dosyalarda da var. Kullanıcının bilerek verdiği her ölçü
     // (yeniden boyutlandırılmış modül) olduğu gibi kalır.
     if(typeof veNormalizeModuleSize === 'function') veNormalizeModuleSize(node);
+    // Kayış Yolu düğümü de aynı kuralla: Aşama 0–3'te 60×56 kutuydu, artık
+    // canlı şema kartı. Dokunulmamış kayıtlar yükselir, elle boyutlandırılan
+    // her ölçü korunur (bkz. veFeadLayoutSizeFor).
+    if(typeof veFeadNormalizeLayoutSize === 'function') veFeadNormalizeLayoutSize(node);
 
     // NOT: Eski varsayılan → yeni varsayılan migrasyonu artık restoreState
     // başında veApplyLegacyMigrations(state) ile YALNIZCA legacy state'lere
@@ -337,6 +352,7 @@ function _veRestoreStateNodes(state) {
     // bağlantı" özeti kullanıcı dışarı çıkar çıkmaz kendiliğinden tazelenir.
     if(typeof veApplyModuleCard === 'function') veApplyModuleCard(nodeEl, node);
     if(typeof veFeadApplyBadge === 'function') veFeadApplyBadge(nodeEl, node);
+    if(typeof veFeadApplyLayoutCard === 'function') veFeadApplyLayoutCard(nodeEl, node);
 
     document.getElementById('ve-canvas').appendChild(nodeEl);
   });
