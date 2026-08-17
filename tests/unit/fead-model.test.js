@@ -329,3 +329,217 @@ describe('uçtan uca: AG00686 kanvas düğümlerinden Gates sayıları', () => {
       .toBeCloseTo(3.5, 2);
   });
 });
+
+/**
+ * ════════════════════════════════════════════════════════════════════════
+ *  ÇALIŞMA ÇEVRİMİ VE ÇÖZÜM (Aşama 2)
+ * ════════════════════════════════════════════════════════════════════════
+ * Referans: Gates AG00686'nın duty tablosu. Rapor her devir için kasnak
+ * başına ÇIKIŞ GERİLMESİ ve HUBLOAD basıyor:
+ *
+ *   rpm   A_C[kW]   T: CRK  IDR  A_C  TEN     H: CRK  IDR  A_C  TEN
+ *   800     3       1210 1208  767  766       1911  557 1938  350
+ *   1250    5       1238 1237  767  766       1939  571 1966  349
+ *   2000    8.2     1249 1248  766  766       1949  576 1977  349
+ *
+ * Sürücü (CRK) gücü GİRİLMEZ — çekirdek diğerlerinin toplamı olarak
+ * hesaplar. Avara ve gergi 0.01 kW (rulman sürtünmesi).
+ */
+describe('duty cycle → çekirdek: AG00686 gerilme tablosu', () => {
+  const REF = {
+    800:  { kw: 3,   T: [1210, 1208, 767, 766], H: [1911, 557, 1938, 350] },
+    1250: { kw: 5,   T: [1238, 1237, 767, 766], H: [1939, 571, 1966, 349] },
+    2000: { kw: 8.2, T: [1249, 1248, 766, 766], H: [1949, 576, 1977, 349] }
+  };
+
+  function kur(dutyRows) {
+    const crk = nd('fead-crank', { od: 160, x: 0, y: 0, driver: true }, 'CRK');
+    const idr = nd('fead-idler', { od: 75, x: -72, y: 267 }, 'IDR');
+    const ac = nd('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
+    const ten = nd('fead-tensioner', {
+      od: 75, pivotX: -180, pivotY: 100, armLen: 90,
+      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1, loadStopRelDeg: 62.4
+    }, 'TEN');
+    const belt = nd('fead-belt', {
+      profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6, wearPct: 0.007
+    });
+    const sv = nd('fead-solver', {
+      designTensionN: 765.7, driveRatio: 1, lengthOffsetMm: 3.5, cylinders: 6,
+      duty: (dutyRows || []).map((r) => ({
+        rpm: r.rpm, dcPct: r.dcPct, degC: 92,
+        kw: { [ac.id]: r.kw, [idr.id]: 0.01, [ten.id]: 0.01 }
+      }))
+    });
+    const list = [crk, idr, ac, ten, belt, sv];
+    const conns = [[crk, idr], [idr, ac], [ac, ten], [ten, crk]].map(([a, b]) => link(a, b));
+    return { list, conns, sv, ac, idr, ten, crk };
+  }
+
+  test('kW sözlüğü DÜĞÜM KİMLİĞİYLE anahtarlanır, çekirdeğe ADLA geçer', () => {
+    const b = kur([{ rpm: 1250, dcPct: 100, kw: 5 }]);
+    const build = veFeadBuildSystem(b.list, b.conns);
+    const duty = veFeadDutyToCore(build, veFeadDutyRows(b.sv));
+    expect(duty).toHaveLength(1);
+    expect(Object.keys(duty[0].loadsKw).sort()).toEqual(['A_C', 'IDR', 'TEN']);
+    expect(duty[0].loadsKw.A_C).toBe(5);
+    // Sürücü sözlükte YOK: çekirdek onu toplamdan hesaplıyor.
+    expect(duty[0].loadsKw.CRK).toBeUndefined();
+  });
+
+  // Kimlikle anahtarlamanın nedeni: kullanıcı kasnağı yeniden adlandırdığında
+  // girdiği güç kaybolmasın. Adla anahtarlanırsa sessizce 0'a düşerdi.
+  test('kasnak yeniden adlandırılınca girilen güç KAYBOLMAZ', () => {
+    const b = kur([{ rpm: 1250, dcPct: 100, kw: 5 }]);
+    b.ac.customName = 'Klima (yeni ad)';
+    const build = veFeadBuildSystem(b.list, b.conns);
+    const duty = veFeadDutyToCore(build, veFeadDutyRows(b.sv));
+    expect(duty[0].loadsKw['Klima (yeni ad)']).toBe(5);
+  });
+
+  test('devri 0/boş olan satır çözüme girmez (kayış hızı sıfır olurdu)', () => {
+    const b = kur([{ rpm: 0, dcPct: 10, kw: 5 }, { rpm: 1250, dcPct: 90, kw: 5 }]);
+    const build = veFeadBuildSystem(b.list, b.conns);
+    expect(veFeadDutyToCore(build, veFeadDutyRows(b.sv))).toHaveLength(1);
+  });
+
+  test('çıkış gerilmeleri Gates duty tablosuyla %0.5 içinde', () => {
+    const rows = Object.keys(REF).map((r) => ({ rpm: +r, dcPct: 100 / 3, kw: REF[r].kw }));
+    const b = kur(rows);
+    const build = veFeadBuildSystem(b.list, b.conns);
+    const res = veFeadAnalyze(build, { rows: veFeadDutyRows(b.sv), cylinders: 6 });
+    expect(res.ok).toBe(true);
+    res.analysis.duty.forEach((d) => {
+      const ref = REF[d.engineRpm].T;
+      d.perPulley.forEach((p, i) => {
+        const hata = Math.abs(p.exitTensionN - ref[i]) / ref[i] * 100;
+        expect({ rpm: d.engineRpm, kasnak: p.name, hesap: +p.exitTensionN.toFixed(1), ref: ref[i] })
+          .toMatchObject({ rpm: d.engineRpm });
+        expect(hata).toBeLessThan(0.5);
+      });
+    });
+  });
+
+  test('hubload büyüklükleri Gates duty tablosuyla %0.5 içinde', () => {
+    const rows = Object.keys(REF).map((r) => ({ rpm: +r, dcPct: 100 / 3, kw: REF[r].kw }));
+    const b = kur(rows);
+    const res = veFeadAnalyze(veFeadBuildSystem(b.list, b.conns),
+      { rows: veFeadDutyRows(b.sv), cylinders: 6 });
+    res.analysis.duty.forEach((d) => {
+      const ref = REF[d.engineRpm].H;
+      d.hubloads.forEach((x, i) => {
+        expect(Math.abs(x.FN - ref[i]) / ref[i] * 100).toBeLessThan(0.5);
+      });
+    });
+  });
+
+  test('sürücü gücü diğerlerinin toplamı (çevrim kapanır)', () => {
+    const b = kur([{ rpm: 1250, dcPct: 100, kw: 5 }]);
+    const res = veFeadAnalyze(veFeadBuildSystem(b.list, b.conns),
+      { rows: veFeadDutyRows(b.sv) });
+    const pp = res.analysis.duty[0].perPulley;
+    const crk = pp.filter((p) => p.name === 'CRK')[0];
+    expect(crk.powerKw).toBeCloseTo(5 + 0.01 + 0.01, 9);
+  });
+
+  test('ateşleme frekansı silindir sayısından: 1250 rpm, 6 sil. → 62.5 Hz', () => {
+    const b = kur([{ rpm: 1250, dcPct: 100, kw: 5 }]);
+    const res = veFeadAnalyze(veFeadBuildSystem(b.list, b.conns),
+      { rows: veFeadDutyRows(b.sv), cylinders: 6 });
+    expect(res.analysis.duty[0].firingHz).toBeCloseTo(62.5, 6);
+  });
+
+  // Yorulma dağılımı ÇAPA ve TEMAS TARAFINA bağlı, gerilmeden bağımsız.
+  // AG00686 raporu: CRK 2.6 · IDR 43.3 · A_C 10.8 · TEN 43.3 (IDR ile TEN
+  // birebir eşit — ikisi de ø79.6, sırttan; gerilmeleri çok farklı olsa bile).
+  test('yorulma dağılımı: aynı çap + aynı temas → AYNI pay', () => {
+    const rows = Object.keys(REF).map((r) => ({ rpm: +r, dcPct: 100 / 3, kw: REF[r].kw }));
+    const b = kur(rows);
+    const res = veFeadAnalyze(veFeadBuildSystem(b.list, b.conns),
+      { rows: veFeadDutyRows(b.sv), fatigueModel: 'PK-2_2p-MT3' });
+    expect(res.fatigue).toBeTruthy();
+    const pay = {};
+    res.fatigue.perPulley.forEach((p) => { pay[p.name] = p.sharePct; });
+    expect(pay.IDR).toBeCloseTo(pay.TEN, 6);
+    // Küçük çap en çok hasarı alır; krank en az.
+    expect(pay.IDR).toBeGreaterThan(pay.A_C);
+    expect(pay.A_C).toBeGreaterThan(pay.CRK);
+    expect(Object.values(pay).reduce((a, x) => a + x, 0)).toBeCloseTo(100, 6);
+  });
+
+  test('B10 ömrü hesaplanıyor ve geçerlilik alanı bildiriliyor', () => {
+    const rows = Object.keys(REF).map((r) => ({ rpm: +r, dcPct: 100 / 3, kw: REF[r].kw }));
+    const b = kur(rows);
+    const res = veFeadAnalyze(veFeadBuildSystem(b.list, b.conns), { rows: veFeadDutyRows(b.sv) });
+    expect(res.life).toBeTruthy();
+    expect(res.life.hoursB10).toBeGreaterThan(0);
+    // AG00686'nın çapları (79.6 / 137 / 160) geçerlilik alanı içinde
+    expect(res.life.inValidRange).toBe(true);
+  });
+
+  // Geçerlilik sınırları SONUCUN İÇİNDE taşınır; dipnotta bırakılmaz.
+  test('geçerlilik sınırları her koşuda sonuca ekleniyor', () => {
+    const b = kur([{ rpm: 1250, dcPct: 100, kw: 5 }]);
+    const res = veFeadAnalyze(veFeadBuildSystem(b.list, b.conns), { rows: veFeadDutyRows(b.sv) });
+    const t = res.limits.join(' ');
+    expect(t).toMatch(/Doğal frekans/);
+    expect(t).toMatch(/KARŞILAŞTIRILAMAZ/);
+    expect(t).toMatch(/yarı-statik/);
+  });
+
+  test('boş çevrimde analiz patlamaz, uyarı verir', () => {
+    const b = kur([]);
+    const res = veFeadAnalyze(veFeadBuildSystem(b.list, b.conns), { rows: [] });
+    expect(res.ok).toBe(true);
+    expect(res.duty).toEqual([]);
+    expect(res.warnings.join(' ')).toMatch(/Çalışma çevrimi boş/);
+  });
+
+  test('çözülemeyen modelde analiz hata döndürür, istisna atmaz', () => {
+    const res = veFeadAnalyze(veFeadBuildSystem([], []), { rows: [] });
+    expect(res.ok).toBe(false);
+    expect(res.error).toBeTruthy();
+  });
+});
+
+// Katalog bağı: aksesuar devri KASNAK ÇAPLARINDAN gelmeli, preset'in elle
+// yazılmış driveRatio'sundan DEĞİL. Spesifikasyon §2.3'ün Excel hatası bu.
+describe('katalog bağı — oran çaptan hesaplanır', () => {
+  test('aksesuar devri pitch çap oranıyla, preset driveRatio ile DEĞİL', () => {
+    global.VE_ALTERNATOR_PRESETS = {
+      test_alt: { name: 'Test', driveRatio: 99, curve: [{ rpm: 0, kw: 0 }, { rpm: 10000, kw: 10 }] }
+    };
+    global.veAccInterpCurve = (curve, x) => {
+      if (x <= curve[0].rpm) return curve[0].kw;
+      const last = curve[curve.length - 1];
+      if (x >= last.rpm) return last.kw;
+      const t = (x - curve[0].rpm) / (last.rpm - curve[0].rpm);
+      return curve[0].kw + t * (last.kw - curve[0].kw);
+    };
+    const crk = nd('fead-crank', { od: 160, x: 0, y: 0, driver: true }, 'CRK');
+    const alt = nd('fead-alternator', { od: 60, x: -72, y: 267, accPreset: 'test_alt' }, 'ALT');
+    const ten = nd('fead-tensioner', {
+      od: 75, pivotX: -180, pivotY: 100, armLen: 90,
+      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1
+    }, 'TEN');
+    const belt = nd('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 900, tolerance: 6 });
+    const sv = nd('fead-solver', { designTensionN: 700, driveRatio: 1 });
+    const build = veFeadBuildSystem([crk, alt, ten, belt, sv],
+      [link(crk, alt), link(alt, ten), link(ten, crk)]);
+    expect(build.ok).toBe(true);
+    const i = build.names.indexOf('ALT');
+    // pitch oranı = 81.2 / 31.2 = 2.6026 → 1000 rpm motorda ALT 2602.6 rpm
+    const beklenenRpm = F.accessoryRpm(build.sys, i, 1000);
+    expect(beklenenRpm).toBeCloseTo(1000 * 81.2 / 31.2, 3);
+    // kW eğrisi lineer 0→10 arası 0..10000 rpm → 2602.6 rpm'de 2.6026 kW
+    expect(veFeadAutoKw(build.sys, i, alt, 1000)).toBeCloseTo(beklenenRpm / 1000, 3);
+    // preset'in driveRatio'su 99 — kullanılsaydı 99000 rpm ve 10 kW çıkardı
+    expect(veFeadAutoKw(build.sys, i, alt, 1000)).not.toBeCloseTo(10, 1);
+    delete global.VE_ALTERNATOR_PRESETS; delete global.veAccInterpCurve;
+  });
+
+  test('katalog seçilmemişse (elle) null döner — 0 sayılır', () => {
+    expect(veFeadPresetOf(nd('fead-alternator', {}))).toBeNull();
+    expect(veFeadPresetOf(nd('fead-alternator', { accPreset: '__manual__' }))).toBeNull();
+    expect(veFeadPresetLib('fead-idler')).toBeNull();       // avaranın kataloğu yok
+  });
+});

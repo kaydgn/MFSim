@@ -2945,11 +2945,22 @@ function veTrBindPopupDismiss(pop) {
   // yakaladı. Klavye için gecikmenin gerekçesi de yok — pencereyi açan şey bir
   // TIKLAMA, ESC değil.
   document.addEventListener('keydown', onKey, true);
-  // mousedown için gecikme KALIYOR: pencereyi AÇAN tıklamanın kendisi
-  // kapatıcıya düşmesin.
-  setTimeout(function() {
-    document.addEventListener('mousedown', onDown, true);
-  }, 0);
+  // mousedown DA hemen bağlanır. Buradaki gecikme "pencereyi AÇAN tıklamanın
+  // kendisi kapatıcıya düşmesin" diye duruyordu ama HİÇBİR ŞEYİ korumuyordu:
+  // iki çağıran da pencereyi bir click/dblclick işleyicisinin İÇİNDE kuruyor,
+  // yani o etkileşimin mousedown'ı ÇOKTAN dağıtılmış — şimdi bağlanan bir
+  // dinleyiciye düşmesi imkânsız (mouseup dinlenmiyor).
+  //
+  // Karşılığında gerçek bir kaçak açıyordu: gecikme dolmadan gelen dış tıklama
+  // hiçbir dinleyiciye düşmüyor, ardından dinleyici bağlanıyor ve BİR DAHA
+  // tıklama gelmediği için pencere KALICI olarak açık kalıyordu — dışarı
+  // tıklayarak kapatılamayan bir kutu. Blink'te girdi olayları zamanlayıcı
+  // görevlerinden ÖNCELİKLİ; yüklü makinede setTimeout(...,0) bir tıklamanın
+  // arkasında kalabiliyor. CI'da tam olarak bu görüldü (koşu 32021715468:
+  // "dışarı tıklama hâlâ kapatıyor" — tıklama durum çubuğuna, pencerenin 420 px
+  // altına düştü, pencere yine de kapanmadı). ESC yolu aynı sebeple zaten
+  // gecikmeden çıkarılmıştı; bu onun mousedown ikizi.
+  document.addEventListener('mousedown', onDown, true);
 }
 
 // ── Şerit ölçeği (elle Y sınırı) ─────────────────────────────────────────────
@@ -3456,6 +3467,7 @@ if(typeof module !== 'undefined' && module.exports) {
     veTrLaneCloseRect: veTrLaneCloseRect,
     veTrLaneGrabRect: veTrLaneGrabRect,
     veTrHitLane: veTrHitLane,
-    veTrHitResize: veTrHitResize
+    veTrHitResize: veTrHitResize,
+    veTrBindPopupDismiss: veTrBindPopupDismiss
   };
 }
