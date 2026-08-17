@@ -126,11 +126,23 @@ function veUpdateSolverTabs() {
     if(veActiveSolverTabId !== 'performance') veAdoptSolverTab('performance');
     return;
   }
-  container.style.display = 'flex';
-
   // Aktif tab hala geçerli mi? Değilse panoyla BİRLİKTE devret (veAdoptSolverTab).
+  // Bu, çubuk ÇİZİLMESE de yapılmak zorunda: kimlik ile pano ayrı yaşıyor.
   var activeValid = tabs.some(function(t) { return t.id === veActiveSolverTabId; });
   if(!activeValid) veAdoptSolverTab(tabs[0].id);
+
+  // TEK sekme bir SEÇENEK değildir → çubuk çizilmez. Tek sekmeliyken tam
+  // genişlikte, ortalanmış, altı accent çizgili bir bant çiziliyordu: geçilecek
+  // bir alternatifi olmayan bir "sekme çubuğu". Üstelik sonuçlar panelinin
+  // başlığı ile arama bloğunun arasına girip paneli bir kez daha bölüyordu.
+  // İkinci analiz (Engel Atlama / Takoz) çözülür çözülmez kendiliğinden geri gelir.
+  if(tabs.length < 2) {
+    container.style.display = 'none';
+    container.innerHTML = '';
+    return;
+  }
+
+  container.style.display = 'flex';
 
   var html = '';
   tabs.forEach(function(tab) {

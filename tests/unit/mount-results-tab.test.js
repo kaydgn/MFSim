@@ -222,6 +222,49 @@ describe('takoz sekmesi kaybolunca (çözüm geçersizleşti)', () => {
     expect(veSolverTabSlots['mount'][0].sensors[0].id).toBe('~mnt-frf');
   });
 
+  // TEK sekme bir SEÇENEK değil: çubuk çizilirse tam genişlikte, ortalanmış,
+  // altı accent çizgili bir bant olur — geçilecek alternatifi olmayan bir
+  // "sekme çubuğu". Üstelik Veri Gezgini'nin başlığı ile arama bloğunun
+  // arasına girip paneli bir kez daha bölüyordu (kullanıcı, 2026-08-17).
+  test('tek sekme varken çubuk gizlenir', () => {
+    const bar = tabBar();
+    window.veSimResults = { speed: [0, 1], time: [0, 1] };   // yalnız performans
+    window.veMountResults = null;
+    veActiveSolverTabId = 'performance';
+
+    veUpdateSolverTabs();
+
+    expect(bar.style.display).toBe('none');
+    expect(bar.querySelectorAll('.ve-solver-tab')).toHaveLength(0);
+    // Kimlik yine de doğru: çubuk çizilmese de sekme geçerli olmalı
+    expect(veActiveSolverTabId).toBe('performance');
+  });
+
+  test('ikinci çözüm gelince çubuk kendiliğinden geri gelir', () => {
+    const bar = tabBar();
+    window.veSimResults = { speed: [0, 1], time: [0, 1] };
+    window.veMountResults = solvedMount();
+    veActiveSolverTabId = 'performance';
+
+    veUpdateSolverTabs();
+
+    expect(bar.style.display).toBe('flex');
+    expect(bar.querySelectorAll('.ve-solver-tab').length).toBeGreaterThanOrEqual(2);
+  });
+
+  // Çubuk gizliyken de kimlik devri ÇALIŞMALI: pano ile sekme kimliği ayrı
+  // yaşıyor, devir atlanırsa bir sonraki gerçek geçiş yanlış panoyu ezer.
+  test('çubuk gizliyken bile geçersiz kimlik devredilir', () => {
+    tabBar();
+    window.veSimResults = { speed: [0, 1], time: [0, 1] };
+    window.veMountResults = null;
+    veActiveSolverTabId = 'obstacle';          // artık var olmayan sekme
+
+    veUpdateSolverTabs();
+
+    expect(veActiveSolverTabId).toBe('performance');
+  });
+
   test('hiç sekme kalmayınca kimlik "mount"ta takılı kalmaz', () => {
     // Yalnız takoz çözülmüş oturumda çözüm geçersizleşirse sekme çubuğu gizlenir.
     // Kimlik 'mount' kalırsa sonuç ağacı takoz dalını çizip erken döner ve

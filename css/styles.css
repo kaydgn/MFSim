@@ -646,6 +646,14 @@
       --shadow-xl: 0 4px 16px var(--shadow-color);
       --shadow-inset: 0 0 0 0 transparent;
 
+      /* Sonuçlar ekranının ÜST BANDI. Sol panelin başlığı ("Veri Gezgini" +
+         İçe Aktar) ile sağdaki ölçüm penceresi araç çubuğu AYNI banttır —
+         ekranın tepesinden geçen tek yatay çizgi. İkisi ayrı ayrı ölçü
+         tuttuğu için bant panel ayırıcısında kırılıyordu: sol 40px, sağ
+         35px (tarayıcıda ölçüldü, kullanıcı şikâyeti 2026-08-17). Artık
+         yükseklik buradan; iki taraf da min-height ile buna oturuyor. */
+      --results-bar-h: 36px;
+
       /* Boşluk ölçeği (4px tabanlı) */
       --space-1: 4px;
       --space-2: 8px;
@@ -3153,6 +3161,60 @@
   border-color:var(--accent-primary);
 }
 
+/* Sonuçlar ekranının ÜST BANDI — sol yarı (Veri Gezgini başlığı).
+   Sağ yarı .ve-trace-toolbar; ikisi de --results-bar-h'tan besleniyor. */
+.ve-results-head{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:0 12px;
+  min-height:var(--results-bar-h);
+  box-sizing:border-box;
+  flex-shrink:0;
+  background:linear-gradient(180deg, var(--bg-tertiary), var(--bg-secondary));
+  border-bottom:1px solid var(--border-color);
+}
+.ve-results-head-title{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  font-size:var(--fs-md);
+  font-weight:700;
+  color:var(--text-heading);
+}
+/* Arama satırı — altındaki filtre çubuğuyla (.vsig-toolbar) tek blok:
+   aynı zemin, aynı yatay boşluk, arada çizgi yok. Ayrı çizgileri olduğunda
+   panelin üstü ağaca gelmeden önce üç kata bölünüyordu. */
+.ve-results-search-row{
+  position:relative;
+  padding:6px var(--vsig-pad, 8px) 0;
+  background:var(--bg-tertiary);
+  flex-shrink:0;
+}
+.ve-results-search-row .mf-ico{
+  position:absolute;
+  left:calc(var(--vsig-pad, 8px) + 7px);
+  top:50%;
+  transform:translateY(-50%);
+  color:var(--text-muted);
+  pointer-events:none;
+  font-size:var(--fs-md);
+}
+.ve-results-search-row input{
+  width:100%;
+  height:24px;
+  padding:0 8px 0 25px;
+  font-size:var(--fs-md);
+  border:1px solid var(--border-color);
+  border-radius:var(--radius-sm);
+  background:var(--bg-input);
+  color:var(--text-primary);
+}
+.ve-results-search-row input:focus{
+  outline:none;
+  border-color:var(--accent-primary);
+}
+
 /* Aynalanmış düğüm: yansıma yalnız SEMBOLE uygulanır, kutunun tamamına değil.
    Eskiden .ve-node-box'ın kendisi scaleX(-1) taşıyordu; port kenarı zaten
    aynalamayı hesaba katıyor (defaultPortSide) olduğu için portlar İKİ KEZ
@@ -4398,9 +4460,14 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 }
 
 /* ── Araç çubuğu ── */
+/* Üst bandın SAĞ yarısı — yüksekliği --results-bar-h'tan alır, sol yarısıyla
+   (.ve-results-head) aynı hizaya oturur. min-height, çünkü dar pencerede
+   düğmeler alt satıra sarıyor ve bandın büyümesi gerekiyor. */
 .ve-trace-toolbar{
   display:flex;align-items:center;gap:4px;flex-wrap:wrap;
-  padding:5px 8px;flex-shrink:0;
+  padding:4px 8px;flex-shrink:0;
+  min-height:var(--results-bar-h);
+  box-sizing:border-box;
   background:linear-gradient(180deg, var(--bg-tertiary), var(--bg-secondary));
   border-bottom:1px solid var(--border-color);
 }
@@ -4847,7 +4914,10 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-tree-row{
   display:flex;
   align-items:center;
-  height:var(--vsig-row);
+  /* min-height, sabit height DEĞİL: sabitken uzun bir etiket sarınca ikinci
+     satır kutunun DIŞINA taşıp alttaki satırın üstüne biniyordu. Şimdi satır
+     büyür — panel daraltıldığında da hiçbir şey çakışmaz. */
+  min-height:var(--vsig-row);
   padding:0 var(--vsig-pad);
   cursor:pointer;
   font-size:var(--fs-md);
@@ -4857,6 +4927,11 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 }
 .ve-tree-row:hover{background:var(--accent-tint-8);}
 .ve-tree-row .arrow{width:14px;text-align:center;color:var(--text-muted);flex-shrink:0;cursor:pointer;border-radius:var(--radius-xs);}
+/* Ok SÜTUNU, oku olmayan satırlarda da yer tutar. Yoksa "Detaylı Rapor"
+   (oklu) ile "Tam Gaz Hızlanma Raporu (TXT)" (oksuz) kardeş oldukları hâlde
+   simgeleri 18px kaymış duruyordu — ağacın sol kenarı tırtıklıydı.
+   18px = ok genişliği 14 + satır boşluğu 4. */
+.ve-tree-row > .icon:first-child{margin-left:18px;}
 .ve-tree-row .arrow:hover{background:var(--accent-tint-15);color:var(--text-primary);}
 .ve-tree-row .icon{width:16px;text-align:center;flex-shrink:0;font-size:var(--fs-md);display:inline-flex;align-items:center;justify-content:center;}
 /* Sağa yaslı sayaç rozeti. Eskiden her satır kendi satır-içi font-size'ını
@@ -4894,18 +4969,18 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-tree-signal:active{cursor:grabbing;opacity:0.6;}
 
 /* ── Araç çubuğu: hedef panel + filtre ─────────────────────────────────── */
+/* Sinyal listesinin araç çubuğu — TEK SATIR: [Tümü|Seçili|Kapalı] … N şerit
+   [Kapat]. Eskiden iki satırdı ve üstteki satır yalnız "ÖLÇÜM PENCERESİ"
+   başlığını taşıyordu; o başlık hem gereksizdi (sağdaki pano zaten ölçüm
+   penceresi, üstteki şerit grubunun adı da aynı) hem de sol paneli üç ayrı
+   çubuğa bölüyordu: başlık / arama / iki satırlık filtre. */
 .vsig-toolbar{
-  display:flex;flex-direction:column;gap:4px;
   padding:6px var(--vsig-pad);
   border-bottom:1px solid var(--border-color);
   background:var(--bg-tertiary);
   position:sticky;top:0;z-index:4;
 }
 .vsig-tl-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
-.vsig-tl-label{
-  font-size:var(--fs-md);font-weight:600;letter-spacing:0.08em;text-transform:uppercase;
-  color:var(--text-muted);flex-shrink:0;
-}
 .vsig-tl-count{
   margin-left:auto;font-size:var(--fs-md);color:var(--text-muted);
   font-variant-numeric:tabular-nums;white-space:nowrap;
@@ -4921,8 +4996,10 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .vsig-seg button:last-child{border-right:0;}
 .vsig-seg button:hover[aria-pressed="false"]{background:var(--bg-primary);color:var(--text-primary);}
 .vsig-seg button[aria-pressed="true"]{background:var(--accent-primary);color:var(--on-accent);}
+/* Sayaç zaten margin-left:auto ile sağa itiliyor; "Kapat" onun yanında durur.
+   İkisinde birden auto olsaydı boşluğu paylaşır, sayaç ortada kalırdı. */
 .vsig-mini{
-  margin-left:auto;height:20px;padding:0 7px;
+  height:20px;padding:0 7px;
   font:inherit;font-size:var(--fs-md);font-weight:600;
   background:transparent;border:1px solid var(--border-color);border-radius:var(--radius-sm);
   color:var(--text-muted);cursor:pointer;transition:border-color .12s,color .12s;
