@@ -22,15 +22,7 @@ document.body.innerHTML = '<div id="ve-canvas"></div>';
 global.nodes = [];
 global.connections = [];
 
-// topo-mini.js ÖNCE: components.js açılışta veApplyModuleViewSizes() çağırıyor,
-// o da oradaki veModuleLayoutFor'u okuyor (uygulamadaki yükleme sırasının aynısı).
-eval(loadSource('topo-mini.js'));
 eval(loadSource('components.js'));
-
-// Bu dosya KART biçimini test ediyor; harita biçimi module-map.test.js'te.
-// Genel ayar 'card'a sabitlenmezse varsayılan ('map') altında ölçü kuralı
-// harita ölçüsünü döndürür ve testler kendi konusunu değil ayarı ölçer.
-beforeEach(() => { localStorage.setItem(VE_MODULE_VIEW_KEY, 'card'); veApplyModuleViewSizes(); });
 
 const modulDugum = (over) =>
   Object.assign({ id: 'm1', type: 'arac-performans', x: 0, y: 0,
@@ -138,7 +130,7 @@ describe('kart ölçüsü tek kaynaktan gelir', () => {
 // var. Bu yüzden kural sürümden bağımsız ve DAR: yalnız birebir eski
 // varsayılan yükseltilir.
 describe('veModuleSizeFor / veNormalizeModuleSize — eski kayıt yükseltmesi', () => {
-  test('kart öncesi varsayılan (80×66) güncel biçimin ölçüsüne yükselir', () => {
+  test('kart öncesi varsayılan (80×66) kart ölçüsüne yükselir', () => {
     const n = modulDugum({ width: VE_MODULE_LEGACY_W, height: VE_MODULE_LEGACY_H });
     expect(veModuleSizeFor(n)).toEqual({ w: VE_MODULE_CARD_W, h: VE_MODULE_CARD_H, changed: true });
     expect(veNormalizeModuleSize(n)).toBe(true);
@@ -146,9 +138,9 @@ describe('veModuleSizeFor / veNormalizeModuleSize — eski kayıt yükseltmesi',
   });
 
   test('kullanıcının BİLEREK verdiği ölçü korunur', () => {
-    const n = modulDugum({ width: 340, height: 120 });
+    const n = modulDugum({ width: 300, height: 120 });
     expect(veNormalizeModuleSize(n)).toBe(false);
-    expect([n.width, n.height]).toEqual([340, 120]);
+    expect([n.width, n.height]).toEqual([300, 120]);
   });
 
   test('eski varsayılanın yalnız BİR boyutu tutuyorsa dokunulmaz', () => {
