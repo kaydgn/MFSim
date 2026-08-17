@@ -64,6 +64,19 @@ kez yanlış yapıldı (görüntüleyici açılışta hata veriyordu). Farkları
 `viewer/js/theme.js`, `board.js`, `app.js` görüntüleyiciye özgüdür, kopya
 değildir — MFSim'den taşınmaz.
 
+**`css/` DE GÖRÜNTÜLEYİCİYE GİRİYOR — kolay kaçırılan kapı.** `viewer/build.js`
+`../css/*.css` dosyalarını da inline ediyor. Yani `css/styles.css`'te yapılan
+HERHANGİ bir değişiklik `MFSim_Olcum_Goruntuleyici.html`'i BAYATLATIR; dosya
+git'e dahil olduğu için CI'daki "Dağıtım dosyası taze mi" kapısı
+(`build:viewer` + `git diff --exit-code`) kırmızıya döner. `viewer/js/` hiç
+değişmediğinden `sync:viewer --check` bunu YAKALAMAZ ve `npm test` de yeşil
+kalır — bir kez tam olarak böyle kaçtı. Kural:
+
+```bash
+# css/ VEYA viewer/js/ dokunulduysa, commit'ten önce:
+npm run build:viewer     # ve üretilen HTML'i commit'e dahil et
+```
+
 ## Çalışma Akışı (hızlı döngü)
 
 Amaç: her küçük değişikliği build+tüm-test töreni yapmadan geliştirmek.
