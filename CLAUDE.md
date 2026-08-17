@@ -34,12 +34,46 @@ tanımı + `isSubsystem` + `VE_MODULES.components` + `veSyncSidebarScope`),
 `veResetSubtopoNav`), `index.html` (script etiketi, Modüller satırı, palet
 kategorileri, karşılama kartı).
 
-**FEAD hesap çekirdeği HENÜZ YOK.** `js/cp-fead.js` iskelettir: bileşenler,
-semboller, paneller ve kayış yolu geometrisi (`veFeadBeltPath`) hazır; gerginlik
-/ sarım / kayma hesabı SPEC geldiğinde `js/fead-core.js` içine DOM'suz saf
-fonksiyonlar olarak eklenecek (Takoz modülünün `mount-core.js` ayrımı).
-Panellerdeki kesikli turuncu "Hesap çekirdeği bekleniyor" kutuları bu sınırı
-kullanıcıya söyler.
+#### FEAD hesap çekirdeği — `js/fead-core.js` (DIŞARIDAN GELDİ, BİREBİR DURUR)
+
+`js/fead-core.js` MFSim içinde yazılmadı: 17 Gates raporundan çıkarılmış **2095
+referans değerle** kalibre edilmiş, doğrulanmış bir çekirdek olarak dışarıdan
+alındı (v2.0, UMD, bağımlılıksız → `window.FEADCore`).
+
+**BU DOSYA MFSim STİLİNE ÇEVRİLMEZ.** `const`/arrow/template literal kullanıyor,
+projenin geri kalanı `var` kullanıyor — fark bilerek duruyor. Dosyanın tek
+değeri o 2095 değeri birebir üretmesi; stil uyarlaması sırasındaki bir işaret
+hatası "testten geçen ama yanlış" bir çekirdek üretir. Uyarlanacak olan
+çekirdeğin ÇEVRESİ (`js/cp-fead.js`), çekirdeğin kendisi değil. Sütun-0'da
+üst-seviye bildirimi yok (IIFE sarmalı) → hijyen kapısına takılmaz; içindeki
+`</script` dizisini build kalkanı (`shieldScriptEnd`) zaten kapsıyor.
+
+Doğrulama verisi + koşucu `tests/fixtures/fead-validation.js` içinde, kaynağıyla
+**birebir** (tek yerel fark: `require` yolu — dosyanın başında yazılı).
+`tests/unit/fead-core.test.js` onu koşturup eşiklere bakar. `tests/` altında
+olduğu için build'e girmez. Eşikler (harness'ın kendi ölçütleri):
+
+| Ölçüt | Eşik | Neden |
+|-------|------|-------|
+| Çalışma konumları | %0.5 | deterministik fizik |
+| Load dahil | %1.5 | Load bir MEKANİK STOP; sarım sıfıra yaklaşınca gerginlik tekilleşir, 0.1° yuvarlama %1.4–2.3 fark yaratır |
+| Kol açıları | 0.2° | sıfıra yakın açıda yüzde hatası anlamsız |
+| Kaburga yorulma dağılımı | 1.5 yüzde puanı | kalibre model |
+
+Kapı **ısırıyor** — dört mutasyonla ölçüldü: `hb` 1.2→1.25 (2 test kırmızı),
+gergi dengesinde `2sin(φ/2)`→`sin(φ)` (3), sarım değişmezi kontrolünü kaldırma
+(suit çöker), gerilme işaretini ters çevirme (4).
+
+**Mutlak B10 ömrü ve doğal frekans KAPI DIŞINDA** — spesifikasyonun geçerlilik
+sınırları: doğal frekans çok serbestlik dereceli bir burulma modu (çekirdek
+yalnız kol modu verir, raporla karşılaştırılamaz); mutlak ömür yalnız tüm
+çaplar 79.6–176 mm iken geçerli, dışında sistematik 0.55×.
+
+**Henüz bağlanmadı:** `js/cp-fead.js` panelleri hâlâ iskelet ve çekirdeği
+çağırmıyor. `veFeadBeltPath` (iskeletin kendi çizimi) bütün kasnakları dış
+teğet sayıyor → sırttan temas edenlerde sarım açısı YANLIŞ (AG00686'da 37°).
+Kasnaklara "temas tarafı" (grooved/back) alanı eklendiğinde şema
+`FEADCore.solveGeometry`'ye taşınacak ve o fonksiyon emekliye ayrılacak.
 
 ### Ölçüm Görüntüleyici (`viewer/`)
 
@@ -167,6 +201,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/mount-example-names.test.js` | `js/mount-core.js` örnekleri + `assets/examples/*.json` | Örnek modellerde ad ↔ konum tutarlılığı (Sağ/Sol ↔ Y işareti), tekrarlı ad, iki kopyanın ayrışmaması |
 | `tests/unit/mount-results-tab.test.js` | `js/results.js` + `js/graphics.js` | Takoz çözüm sekmesi, tek X ekseni kuralı, pano uzlaştırma |
 | `tests/unit/mount-results-publish.test.js` | `js/cp-mount.js` | Çözümün panoya yayını; alt-topoloji çökertme regresyonu |
+| `tests/unit/fead-core.test.js` | `js/fead-core.js` + `tests/fixtures/fead-validation.js` | **FEAD çekirdeğinin doğrulama kapısı**: 17 Gates raporu / 2095 değer (çalışma %0.5, Load dahil %1.5, kol açısı 0.2°), 8 koruma mekanizması, SPEC §9 yapısal özdeşlikleri (sarım değişmezi, `L_pitch−L_eff=2π·hb`, çevrim kapanışı, sürücü gücü), UMD tarayıcı köprüsü |
 | `tests/unit/cp-fead.test.js` | `js/cp-fead.js` + `js/components.js` | FEAD kayış-kasnak modülü: kayış çevresi geometrisi (dış teğet + sarım yayı, large-arc bayrağı), kayış yolu sırası (bağlantı = serpantin sırası), alt-sistem sözleşmesi, `fead-*` tip tanımlarının yapısal tutarlılığı |
 | `tests/unit/canvas-space.test.js` | `js/canvas-space.js` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama |
 | `tests/unit/module-start-center.test.js` | `js/components.js` `veStartModule` | Karşılama kartından gelen modül bloğu görünümün TAM ortasına düşer (kabuk senkronu ölçümden önce) |

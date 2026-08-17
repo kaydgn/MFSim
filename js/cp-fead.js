@@ -541,7 +541,18 @@ function getFeadLayoutPropertiesHTML(node){
           + '</div>';
   }
 
-  html += _feadPending('Sarım açıları, kol uzunlukları ve toplam kayış boyu şemanın altına sayısal tablo olarak eklenecek.');
+  // DÜRÜSTLÜK NOTU — bu şema henüz ÖN İZLEMEDİR ve sarım yönlerini modellemez.
+  // Buradaki çizim bütün kasnakları DIŞ TEĞET sayıyor; oysa sırttan temas eden
+  // kasnak (avara, gergi) kayışı TERS yönde sarar. AG00686 üzerinde ölçüldü:
+  // sarım açılarında 37°'ye varan fark. Çizim kendi içinde tutarlı olduğu için
+  // (Σ = 360) gözle yakalanmaz — bu yüzden yazılı söyleniyor.
+  // js/fead-core.js artık programda ve bu geometriyi DOĞRU çözüyor
+  // (solveGeometry: işaretli yarıçap + sarım değişmezi). Şema, kasnaklara
+  // "temas tarafı" alanı eklendiğinde çekirdeğe bağlanacak.
+  html += _feadPending('Bu şema ÖN İZLEMEDİR: sırttan temas eden kasnakların ters sarımını '
+    + 'henüz modellemiyor, sarım açıları hatalıdır. Hesap çekirdeği (<b>js/fead-core.js</b>) '
+    + 'programa alındı ve bu geometriyi doğru çözüyor; şema, kasnaklara "temas tarafı" '
+    + '(kaburgalı / sırttan) alanı eklendiğinde çekirdeğe bağlanacak.');
   html += '</div>';
   return html;
 }
