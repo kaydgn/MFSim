@@ -560,12 +560,13 @@ function veSigApplyFilter(groups, slot, q, filter) {
 function veSigToolbarHTML(slot) {
   var count = (slot && slot.sensors) ? slot.sensors.length : 0;
 
+  // TEK SATIR: [Tümü|Seçili|Kapalı] … N şerit [Kapat].
+  // Eskiden üstte ikinci bir satır daha vardı ve yalnız "ÖLÇÜM PENCERESİ"
+  // başlığını taşıyordu. Başlık gereksizdi — sağdaki pano zaten ölçüm
+  // penceresi ve şeritteki grup da aynı adı taşıyor — üstelik sol paneli
+  // üç ayrı çubuğa bölüyordu (başlık / arama / iki satırlık filtre).
+  // Şerit sayısı bilgi olduğu için kaldı, filtrenin yanına geçti.
   var h = '<div class="vsig-toolbar">';
-  h += '<div class="vsig-tl-row">';
-  h += '<span class="vsig-tl-label">Ölçüm penceresi</span>';
-  h += '<span class="vsig-tl-count">' + count + ' şerit</span>';
-  h += '</div>';
-
   h += '<div class="vsig-tl-row">';
   h += '<div class="vsig-seg" role="group" aria-label="Sinyal filtresi">';
   [['all', 'Tümü'], ['on', 'Seçili'], ['off', 'Kapalı']].forEach(function(f) {
@@ -573,6 +574,7 @@ function veSigToolbarHTML(slot) {
          ' aria-pressed="' + (veSigState.filter === f[0] ? 'true' : 'false') + '">' + f[1] + '</button>';
   });
   h += '</div>';
+  h += '<span class="vsig-tl-count" title="Ölçüm penceresindeki şerit sayısı">' + count + ' şerit</span>';
   h += '<button type="button" class="vsig-mini" data-act="collapse-all" title="Tüm grupları kapat">Kapat</button>';
   h += '</div>';
   h += '</div>';

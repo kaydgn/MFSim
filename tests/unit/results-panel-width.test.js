@@ -32,7 +32,11 @@ const px = (prop) => {
 // results.js veInitResultSlots içindeki kırpma: Math.max(MIN, Math.min(MAX, ...))
 const clamp = results.match(/Math\.max\((\d+),\s*Math\.min\((\d+),\s*startW/);
 
-const OLCULEN_ESIK = 360;   // tarayıcıda ölçüldü: 340 sarıyor, 360 sarmıyor
+// Tarayıcıda ölçüldü. Eşik 360'tı; oku olmayan ağaç satırlarına ok sütunu
+// kadar (18px) girinti eklenince — sol kenar tırtıklı durmasın diye, 2026-08-17
+// — o etiket yeniden sarmaya başladı ve eşik 370'e çıktı. Ölçüm: 360'ta iki
+// satır sarıyor, 370'te hiçbiri sarmıyor.
+const OLCULEN_ESIK = 370;
 
 describe('Veri Gezgini paneli — varsayılan genişlik', () => {
   test('satır-içi stil okunabiliyor', () => {
