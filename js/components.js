@@ -685,28 +685,73 @@ function veNodeDefaultSize(type) {
 // bloğunun standart imzası. Parıltı/gradyan yok; bu dosyanın geri kalanıyla
 // aynı ölçüm-yazılımı dili.
 // Genişlik keyfî değil ÖLÇÜLDÜ: en uzun modül adı ("Takoz Çökme-Titreşim")
-// 12px/600'de 131px yer istiyor; kartın metin dışı payı (şerit + sembol +
-// boşluklar + gir oku) 79px. 214 → ad kesilmeden sığar. Ad kısalırsa kart
-// küçülmez; modülün bileşenden ayrışması ölçünün kendisiyle anlatılıyor.
-var VE_MODULE_CARD_W = 214;
+// 12px/600'de 131 px yer istiyor; kartın metin dışı payı W − 101'dir (şerit 4 +
+// sembol 45 + katla düğmesi 20 + gir oku 14 + boşluklar 18) → 236'da ad
+// kesilmeden sığar (135 px, ölçülen boşluk 4 px). Ad kısalırsa kart küçülmez;
+// modülün bileşenden ayrışması ölçünün kendisiyle anlatılıyor.
+// TARİHÇE: kart 214 px doğmuştu; katla düğmesi (▾/▴) satıra girince metin alanı
+// 133 → 113 px'e indi ve ad gerçek tarayıcıda kesildi ("Takoz Çökme-Titr…").
+// 236 o 22 px'i geri veriyor. Eski 214×72 kayıtlar VE_MODULE_LEGACY_SIZES ile göç eder.
+var VE_MODULE_CARD_W = 236;
 var VE_MODULE_CARD_H = 72;
-// Kart öncesi varsayılan. Eski kayıtlardaki modül düğümü BİREBİR bu ölçüdeyse
-// (yani kullanıcı hiç dokunmamışsa) kart ölçüsüne yükseltilir; bilerek
-// verilmiş her ölçü korunur. Bkz. veNormalizeModuleSize.
+// HARİTA BİÇİMİ ölçüsü (js/topo-mini.js 'map'). Bu kartta aynı başlık satırının
+// ALTINDA alt topolojinin haritası duruyor. 300×190 keyfî değil ÖLÇÜLDÜ: iç
+// harita alanı 286×154 kalıyor ve gerçek topolojiler oraya 0,29 (Araç
+// Performans, 937×532 yerel px) — 0,52 (FEAD, 437×296) ölçekle oturuyor; yani
+// 65 px'lik bir düğüm ekranda ~19 px. Sembol seçiliyor, ad okunmuyor (harita
+// düğüm adlarını bu yüzden yazmıyor). Üç modül yan yana 972 px eder.
+var VE_MODULE_MAP_W = 300;
+var VE_MODULE_MAP_H = 190;
+// ESKİ varsayılanlar. Kayıttaki modül düğümü BİREBİR bunlardan birine eşitse
+// "kullanıcı ölçüye hiç dokunmamış" sayılır ve güncel biçimin ölçüsüne
+// yükseltilir; bilerek verilmiş her ölçü korunur. Bkz. veNormalizeModuleSize.
+//   80×66  — kart öncesi sıradan kutu
+//   214×72 — katla düğmesi öncesi kart
+// Liste büyüyor çünkü her varsayılan değişikliği eski dosyalarda donmuş bir
+// ölçü bırakıyor; burada anılmazsa o dosyalar sonsuza dek eski ölçüde kalırdı.
 var VE_MODULE_LEGACY_W = 80;
 var VE_MODULE_LEGACY_H = 66;
+var VE_MODULE_LEGACY_SIZES = [[80, 66], [214, 72]];
 
-// Kart ölçüsü tip tanımlarına BURADAN yazılır — defs içinde ayrıca sayı
-// tutulmaz. veNodeDefaultSize / createNode / veStartModule / veBoundaryBox
-// hepsi def.defaultWidth üzerinden okuduğu için tek atama yeter.
-if(typeof componentDefs !== 'undefined') {
+// Bir biçimin ölçüsü — TEK KAYNAK. veModuleSizeFor, veApplyModuleViewSizes ve
+// testler hep buradan okur.
+function veModuleLayoutSize(layout) {
+  return (layout === 'map')
+    ? { w: VE_MODULE_MAP_W, h: VE_MODULE_MAP_H }
+    : { w: VE_MODULE_CARD_W, h: VE_MODULE_CARD_H };
+}
+
+// "Kullanıcı bu düğümün ölçüsüne hiç dokunmamış" ölçütü: ölçü, BİLDİĞİMİZ
+// varsayılanlardan birine BİREBİR eşitse. Eski 80×66 kayıtlar, kart ölçüsü ve
+// harita ölçüsü — üçü de "varsayılan". Aradaki her şey kullanıcının kararıdır.
+function veIsDefaultModuleSize(w, h) {
+  if(w === VE_MODULE_CARD_W && h === VE_MODULE_CARD_H) return true;
+  if(w === VE_MODULE_MAP_W  && h === VE_MODULE_MAP_H)  return true;
+  for(var i = 0; i < VE_MODULE_LEGACY_SIZES.length; i++) {
+    if(w === VE_MODULE_LEGACY_SIZES[i][0] && h === VE_MODULE_LEGACY_SIZES[i][1]) return true;
+  }
+  return false;
+}
+
+// Güncel genel ayarın ölçüsü tip tanımlarına BURADAN yazılır — defs içinde
+// ayrıca sayı tutulmaz. veNodeDefaultSize / createNode / veStartModule /
+// veBoundaryBox hepsi def.defaultWidth üzerinden okuduğu için tek atama yeter.
+// Ayar değişince veSetModuleViewSetting yeniden çağırır.
+function veApplyModuleViewSizes() {
+  if(typeof componentDefs === 'undefined') return null;
+  // 'zoom' modunda YENİ düğümün ölçüsü o anki kameradan çözülür (veModuleLayoutFor
+  // düğümsüz çağrıda genel ayarı + kamerayı okur).
+  var layout = (typeof veModuleLayoutFor === 'function') ? veModuleLayoutFor(null) : 'card';
+  var s = veModuleLayoutSize(layout);
   Object.keys(componentDefs).forEach(function(t) {
     if(componentDefs[t] && componentDefs[t].isSubsystem) {
-      componentDefs[t].defaultWidth = VE_MODULE_CARD_W;
-      componentDefs[t].defaultHeight = VE_MODULE_CARD_H;
+      componentDefs[t].defaultWidth = s.w;
+      componentDefs[t].defaultHeight = s.h;
     }
   });
+  return s;
 }
+veApplyModuleViewSizes();
 
 // Bu düğüm bir alt-sistem (modül) mü? Tek ölçüt tip tanımındaki isSubsystem —
 // böylece ileride eklenecek üçüncü bir modül kartı kendiliğinden alır.
@@ -732,14 +777,28 @@ function veModuleSummaryText(node) {
   return s.nodes + ' bileşen · ' + s.connections + ' bağlantı';
 }
 
+// Harita biçiminin başlık şeridi için KISA özet. Uzun sürüm 300px'lik başlıkta
+// adı kesiyordu (gerçek tarayıcıda ölçüldü: "Araç Performa…"); sayılar zaten
+// haritada da görünüyor, başlıkta doğrulama için bir çift sayı yeter.
+function veModuleSummaryShort(node) {
+  var s = veModuleSummary(node);
+  if(!s.initialized) return 'boş';
+  return s.nodes + ' · ' + s.connections;
+}
+
 // Eski kayıt yükseltmesi — TEK KURAL, iki yüz. veModuleSizeFor saf (ölçüyü
 // döndürür), veNormalizeModuleSize onu düğüme yazar. Sekme önizlemesi
 // (topology.js) düğümü DEĞİŞTİRMEDEN ölçüye ihtiyaç duyduğu için ayrıldılar;
 // kural iki yerde ayrı yazılsaydı önizleme ile tuval farklı ölçü gösterirdi.
 function veModuleSizeFor(node) {
   var w = (node && node.width) || 65, h = (node && node.height) || 60;
-  if(veIsModuleNode(node) && w === VE_MODULE_LEGACY_W && h === VE_MODULE_LEGACY_H) {
-    return { w: VE_MODULE_CARD_W, h: VE_MODULE_CARD_H, changed: true };
+  if(veIsModuleNode(node) && veIsDefaultModuleSize(w, h)) {
+    // Ölçüye dokunulmamış → düğümün GÜNCEL biçiminin ölçüsü. Böylece ayar
+    // 'kart' ↔ 'harita' arasında gidip gelince düğümler de birlikte gidip
+    // geliyor; kullanıcının elle boyutlandırdığı düğüm ise yerinde kalıyor.
+    var layout = (typeof veModuleLayoutFor === 'function') ? veModuleLayoutFor(node) : 'card';
+    var s = veModuleLayoutSize(layout);
+    return { w: s.w, h: s.h, changed: (s.w !== w || s.h !== h) };
   }
   return { w: w, h: h, changed: false };
 }
@@ -797,21 +856,25 @@ function veApplyModuleCard(nodeEl, node) {
 
   nodeEl.classList.add('ve-node--module');
 
+  var layout = (typeof veModuleLayoutFor === 'function') ? veModuleLayoutFor(node) : 'card';
   var svg = box.querySelector('svg');
   var label = nodeEl.querySelector('.ve-node-label');
   var summary = veModuleSummary(node);
 
   var card = document.createElement('div');
-  card.className = 've-mod-card' + (summary.initialized ? ' is-filled' : '');
+  card.className = 've-mod-card ve-mod-card--' + layout + (summary.initialized ? ' is-filled' : '');
 
   var rail = document.createElement('span');
   rail.className = 've-mod-rail';
   card.appendChild(rail);
 
+  // ── Ortak başlık satırı (L2): sembol · ad · özet · katla · gir ────────────
+  // Kart biçiminde başlık kartın TAMAMI, harita biçiminde ÜST ŞERİDİ. İki
+  // biçimde de aynı elemanlar aynı sırada duruyor → harita açılıp kapanırken
+  // kullanıcının gözü hiçbir şeyi yeniden aramıyor.
   var ico = document.createElement('span');
   ico.className = 've-mod-ico';
   if(svg) ico.appendChild(svg);          // tipin kendi sembolü — kopya değil, taşınır
-  card.appendChild(ico);
 
   var text = document.createElement('span');
   text.className = 've-mod-text';
@@ -826,18 +889,138 @@ function veApplyModuleCard(nodeEl, node) {
   meta.appendChild(dot);
   var metaText = document.createElement('span');
   metaText.className = 've-mod-stat';
-  metaText.textContent = veModuleSummaryText(node);
+  metaText.textContent = (layout === 'map') ? veModuleSummaryShort(node) : veModuleSummaryText(node);
+  metaText.title = veModuleSummaryText(node);
   meta.appendChild(metaText);
   text.appendChild(meta);
-  card.appendChild(text);
 
+  var toggle = veBuildModuleToggle(node, layout);
   var enter = document.createElement('span');
   enter.className = 've-mod-enter';
   enter.textContent = '▸';
-  card.appendChild(enter);
+
+  if(layout === 'map') {
+    var body = document.createElement('span');
+    body.className = 've-mod-body';
+
+    var head = document.createElement('span');
+    head.className = 've-mod-head';
+    head.appendChild(ico);
+    head.appendChild(text);
+    head.appendChild(toggle);
+    head.appendChild(enter);
+    body.appendChild(head);
+
+    var mapEl = document.createElement('span');
+    mapEl.className = 've-mod-map';
+    var svgStr = (typeof veModuleMapSVG === 'function') ? veModuleMapSVG(node) : '';
+    if(svgStr) {
+      mapEl.innerHTML = svgStr;
+    } else {
+      // Boş modül: harita alanı sessizce boş kalmaz — ne yapılacağını söyler.
+      mapEl.classList.add('is-empty');
+      var hint = document.createElement('span');
+      hint.className = 've-mod-map-hint';
+      hint.textContent = 'Boş — çift tıklayın';
+      mapEl.appendChild(hint);
+    }
+    body.appendChild(mapEl);
+    card.appendChild(body);
+  } else {
+    card.appendChild(ico);
+    card.appendChild(text);
+    card.appendChild(toggle);
+    card.appendChild(enter);
+  }
 
   box.appendChild(card);
   return true;
+}
+
+// Başlıktaki katla/aç düğmesi. Düğümün KENDİ tercihini (node.data.mapOpen)
+// yazar; genel ayarı değiştirmez — bir modülü kapatmak diğerlerini etkilemez.
+function veBuildModuleToggle(node, layout) {
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 've-mod-toggle';
+  btn.textContent = (layout === 'map') ? '▴' : '▾';
+  btn.title = (layout === 'map') ? 'Haritayı katla' : 'Haritayı aç';
+  btn.setAttribute('aria-label', btn.title);
+  // Düğüm sürükleme ve "çift tıkla alt topolojiye gir" bu düğmede tetiklenmesin.
+  btn.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+  btn.addEventListener('dblclick', function(e) { e.stopPropagation(); e.preventDefault(); });
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    veToggleModuleMap(node && node.id);
+  });
+  return btn;
+}
+
+// Tek düğümün biçimini çevir (kart ↔ harita).
+function veToggleModuleMap(nodeId) {
+  if(typeof nodes === 'undefined' || !nodeId) return false;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if(!node || !veIsModuleNode(node)) return false;
+  var layout = (typeof veModuleLayoutFor === 'function') ? veModuleLayoutFor(node) : 'card';
+  if(!node.data) node.data = {};
+  node.data.mapOpen = (layout !== 'map');
+  veRefreshModuleNode(node);
+  if(typeof saveState === 'function') saveState();
+  return true;
+}
+
+// Kartı SÖKER: ad etiketini ve tip sembolünü kartın dışına geri taşır, kartı
+// kaldırır. Ad elemanı kopyalanmadığı için (bkz. veApplyModuleCard sözleşmesi)
+// yeniden kurmadan önce onu kurtarmak ZORUNLU — yoksa biçim her değiştiğinde
+// düğüm adını kaybederdi.
+function veModuleCardTeardown(nodeEl) {
+  if(!nodeEl) return false;
+  var card = nodeEl.querySelector('.ve-mod-card');
+  if(!card) return false;
+  var box = nodeEl.querySelector('.ve-node-box');
+  var label = card.querySelector('.ve-node-label');
+  var svg = card.querySelector('.ve-mod-ico svg');
+  if(box && svg) box.appendChild(svg);
+  if(label) {
+    label.style.pointerEvents = 'auto';
+    nodeEl.appendChild(label);           // createNode'daki yer: kutunun DIŞI
+  }
+  if(card.parentNode) card.parentNode.removeChild(card);
+  nodeEl.classList.remove('ve-node--module');
+  return true;
+}
+
+// Tek modül düğümünü güncel biçimine geçir: ölçü + kart yeniden kurulur.
+function veRefreshModuleNode(node) {
+  if(typeof document === 'undefined' || !veIsModuleNode(node)) return false;
+  var nodeEl = document.getElementById(node.id);
+  if(!nodeEl) return false;
+
+  var s = veModuleSizeFor(node);
+  node.width = s.w;
+  node.height = s.h;
+  nodeEl.style.width = s.w + 'px';
+  var box = nodeEl.querySelector('.ve-node-box');
+  if(box) { box.style.width = s.w + 'px'; box.style.height = s.h + 'px'; }
+  if(typeof updateNodeHandles === 'function') updateNodeHandles(nodeEl, s.w, s.h);
+
+  veModuleCardTeardown(nodeEl);
+  veApplyModuleCard(nodeEl, node);
+  return true;
+}
+
+// Kanvastaki TÜM modül düğümlerini tazele (ayar değişti / kamera eşiği geçildi /
+// alt topoloji güncellendi). Dönen değer: tazelenen düğüm sayısı.
+function veRefreshModuleCards() {
+  if(typeof nodes === 'undefined' || !nodes) return 0;
+  var n = 0;
+  nodes.forEach(function(node) { if(veRefreshModuleNode(node)) n++; });
+  if(n) {
+    if(typeof updateAllConnections === 'function') updateAllConnections();
+    if(typeof veUpdateBoundary === 'function') veUpdateBoundary();
+  }
+  return n;
 }
 
 // ── PORT GEOMETRİSİ — TEK GERÇEK KAYNAK ─────────────────────────────────────

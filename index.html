@@ -1046,6 +1046,10 @@
 <script type="text/x-mfsim-defer" src="js/tabs.js" data-mfsim-label="Sekmeler hazırlanıyor..."></script>
 <script type="text/x-mfsim-defer" src="js/results.js" data-mfsim-label="Sonuç paneli..."></script>
 <script type="text/x-mfsim-defer" src="js/signal-tree.js" data-mfsim-label="Sinyal ağacı..."></script>
+<!-- topo-mini.js components.js'ten ÖNCE: components.js açılışta veApplyModuleViewSizes()
+     çağırıyor, o da buradaki veModuleLayoutFor'u okuyor. Sonra yüklenseydi modül
+     tipleri açılışta hep kart ölçüsüyle kalırdı. -->
+<script type="text/x-mfsim-defer" src="js/topo-mini.js" data-mfsim-label="Modül haritası (mini topoloji)..."></script>
 <script type="text/x-mfsim-defer" src="js/components.js" data-mfsim-label="Bileşen kütüphanesi..."></script>
 <script type="text/x-mfsim-defer" src="js/sensors.js" data-mfsim-label="Sensör tanımları..."></script>
 <script type="text/x-mfsim-defer" src="js/canvas-space.js" data-mfsim-label="Kanvas uzayı (sonsuz ızgara, kamera)..."></script>

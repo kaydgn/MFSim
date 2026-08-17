@@ -27,6 +27,27 @@ paylaşır (stack + `node.data.subTopology` + breadcrumb çipi + sidebar kapsam�
 | Takoz Çökme-Titreşim | `mount-analysis` | `mount-analysis` | `js/cp-mount.js` | Salt görsel (çözücü tipe göre toplar) |
 | FEAD (kayış-kasnak) | `fead-analysis` | `fead-analysis` | `js/cp-fead.js` | **Kayış yolu** — serpantin sırası (Krank çıkışı → … → Krank girişi) |
 
+##### Modül kartı iki biçimli: kart ↔ topoloji haritası
+
+Ana topolojideki modül düğümü ya **kart** (ad + özet) ya da **harita** (aynı
+başlık şeridi + ALTINDA alt topolojinin şeması) olarak çizilir. Seçim üç
+katmanlı, en dar kapsam kazanır: düğümün kendi tercihi (`node.data.mapOpen`,
+başlıktaki ▾/▴) → genel ayar (Ayarlar → Görünüm → Modül Kartı:
+`kart` / `harita` / `yakınlaştırmaya bağlı`) → kamera (`canvasZoom ≥ 0.6`).
+Varsayılan **harita**.
+
+Harita `js/topo-mini.js` `veTopoMiniSVG(düğümler, bağlantılar)` ile
+**durumdan** üretilir — canlı DOM klonlanmaz. İki sonucu var: (a) mini haritada
+düğüm KİMLİĞİ yok, yani içerideki `comp-3` ile dışarıdaki `comp-3`
+çakışamaz; (b) aynı çizici `export-topology.js`'e de hizmet ettiği için ekran
+ile PNG/SVG çıktısı ayrışamaz. Modüle özel kanvas süslemesi (Takoz'un şasi
+çerçevesi + yayları) haritaya **bilerek girmiyor** — sade şematik.
+
+Ölçüler tek yerde (`js/components.js`): kart `236×72`, harita `300×190`.
+"Kullanıcı ölçüye dokunmadı" ölçütü de tek yerde (`veIsDefaultModuleSize`);
+eski varsayılanlar `VE_MODULE_LEGACY_SIZES` içinde anılır — anılmayan bir eski
+ölçü, o dosyalarda sonsuza dek donar.
+
 Yeni bir modül eklerken dokunulan yerler: `js/components.js` (`componentDefs`
 tanımı + `isSubsystem` + `VE_MODULES.components` + `veSyncSidebarScope`),
 `js/cp-core.js` (panel dağıtımı + panel genişlik listeleri), `js/ui-core.js`
@@ -270,6 +291,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/canvas-space.test.js` | `js/canvas-space.js` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama |
 | `tests/unit/module-start-center.test.js` | `js/components.js` `veStartModule` | Karşılama kartından gelen modül bloğu görünümün TAM ortasına düşer (kabuk senkronu ölçümden önce) |
 | `tests/unit/port-geometry.test.js` | `js/components.js` port geometrisi + `js/connections.js` | Bağlantı ucu ile port dairesi aynı noktada — dört kenar, çok port, aynalama |
+| `tests/unit/module-map.test.js` | `js/topo-mini.js` + `js/components.js` | Modül kartının HARİTA biçimi: biçim çözümü (düğüm tercihi > genel ayar > kamera eşiği), ölçünün biçme göre değişmesi + kullanıcı ölçüsünün korunması + eski ölçülerin göçü, haritanın durumdan çizilmesi (kimlik yok, port geometrisi tek kaynak, ölçekle incelmeyen çizgi), biçim değişirken **ad elemanının hayatta kalması** |
 | `tests/unit/module-card.test.js` | `js/components.js` alt-sistem kartı + sidebar modül satırı | Modül kartı: içerik özeti (alt topolojiden), kart ölçüsünün tek kaynağı, eski 80×66 kaydın yükselmesi, **ad elemanının taşınması** (kopyalansaydı yeniden adlandırma sessizce eskirdi); palet sembolü `componentDefs`'ten (index.html'de ikinci kopya tutulmadığına dair kapı) |
 | `tests/unit/example-topology-center.test.js` | `js/cp-mount.js` + `assets/examples/` | Örnek JSON'ları kanvas merkezine açar |
 | `tests/unit/state.test.js` | `js/state.js` | Undo/redo stack yönetimi |
