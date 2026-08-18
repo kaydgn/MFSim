@@ -194,8 +194,11 @@ describe('panel üreticileri — üretiliyor ve patlamıyor', () => {
     ['getFeadPulleyPropertiesHTML', kasnak('fead-idler', {})],
     ['getFeadTensionerPropertiesHTML', kasnak('fead-tensioner', {})],
     ['getFeadBeltPropertiesHTML', kasnak('fead-belt', {})],
-    ['getFeadExamplePropertiesHTML', kasnak('fead-example', {})],
-    ['getFeadReportPropertiesHTML', kasnak('fead-report', {})]
+    ['getFeadExamplePropertiesHTML', kasnak('fead-example', {})]
+    // getFeadReportPropertiesHTML ARTIK BURADA DEĞİL: rapor üreteci kendi
+    // dosyasına taşındı (js/cp-fead-report.js) ve orada test ediliyor
+    // (tests/unit/cp-fead-report.test.js). Aynı adı iki dosyada üst-seviye
+    // bildirmek `source-hygiene` kapısına takılırdı.
   ];
   paneller.forEach(([fn, node], i) => {
     test(fn + ' (#' + i + ') boş veriyle çalışır', () => {

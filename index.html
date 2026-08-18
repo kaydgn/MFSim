@@ -739,7 +739,7 @@
                 <line x1="36" y1="68" x2="66" y2="68" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
                 <line x1="36" y1="78" x2="54" y2="78" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
               </svg> <span class="ve-comp-label">Başlangıç ve Örnekler</span></div>
-            <div class="ve-component" draggable="true" data-type="fead-report" title="Rapor — çözücü sonuçlarını çevrimdışı HTML rapora döker (hazır değil)">
+            <div class="ve-component" draggable="true" data-type="fead-report" title="Rapor — çözücü sonuçlarını çevrimdışı HTML rapora döker">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
                 <path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
                 <path d="M60 12 v16 h16" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
@@ -1068,10 +1068,12 @@
 <script type="text/x-mfsim-defer" src="js/fead-model.js" data-mfsim-label="FEAD: veri modeli köprüsü..."></script>
 <script type="text/x-mfsim-defer" src="js/fead-core.js" data-mfsim-label="FEAD: hesap çekirdeği (kayış-kasnak)..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead.js" data-mfsim-label="FEAD kayış-kasnak modülü..."></script>
+<script type="text/x-mfsim-defer" src="js/cp-fead-report.js" data-mfsim-label="FEAD: rapor üreteci..."></script>
 <!-- Rapor varlıkları (KaTeX + fontlar, ~1MB) ve teori şablonu: type="text/x-mfsim-report"
      → loader bunları AÇILIŞTA yüklemez; ilk rapor üretiminde talep üzerine çekilir.
      build.js monolitik derlemede içeriği inline eder → indirilmiş tek dosyada da çalışır. -->
 <script type="text/x-mfsim-report" src="js/mount-report-template.js"></script>
+<script type="text/x-mfsim-report" src="js/fead-report-template.js"></script>
 <script type="text/x-mfsim-report" src="js/mount-report-assets.js"></script>
 <script type="text/x-mfsim-defer" src="js/cp-arac-performans.js" data-mfsim-label="Araç Performans: alt-sistem topolojisi..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-arac-example.js" data-mfsim-label="Araç Performans: örnek araçlar..."></script>

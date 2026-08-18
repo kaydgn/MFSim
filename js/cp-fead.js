@@ -1795,16 +1795,6 @@ function veFeadLoadExample(key){
   return kuruldu;
 }
 
-function getFeadReportPropertiesHTML(node){
-  if(!node.data) node.data = {};
-  var html = '<div class="sw-panel">';
-  html += '<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-primary);">'
-        + '<b style="color:var(--text-heading);">Rapor.</b> Çözücü sonuçlarını tamamen çevrimdışı bir HTML rapora döker (Takoz modülündeki <b>mnt-report</b> ile aynı kalıp).</div>';
-  html += _feadPending('Rapor üreteci, çözücü sonuç üretmeye başladığında eklenecek.');
-  html += '<button disabled style="width:100%; padding:12px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--bg-tertiary); color:var(--text-muted); border:1px solid var(--border-color); cursor:not-allowed; letter-spacing:0.03em;">Raporu Üret (hazır değil)</button>';
-  html += '</div>';
-  return html;
-}
 
 // ════════════════════════════════════════════════════════════════════════════
 //  ÇALIŞMA ÇEVRİMİ — DÜZENLEME
@@ -1901,6 +1891,12 @@ function veFeadSolve(nodeId){
   });
   res.solvedNodeId = nodeId;
   res.pulleyNames = build.names;
+  // KURULMUŞ SİSTEM SONUCA TAŞINIR. Rapor üreteci (cp-fead-report.js) kayış
+  // künyesini, kasnak çaplarını ve gergi parametrelerini buradan okur —
+  // yeniden veFeadBuildFromCanvas() çağırsaydı, çözümden SONRA değiştirilmiş
+  // bir alan raporun girdi tablosuna sızar ve belge kendi sayılarıyla
+  // çelişirdi. Rapor ÇÖZÜLEN modeli anlatır.
+  res.build = build;
   // SERVİS FAKTÖRÜ sonuca TAŞINIR: kayma emniyetinin istenen alt sınırı bu.
   // Eskiden tabloda 1.3 SABİT yazıyordu — sayfadaki değerle aynı olması
   // tesadüftü; farklı bir servis faktörü giren kullanıcı yine 1.3'e göre
@@ -2095,7 +2091,6 @@ if (typeof module !== 'undefined' && module.exports) {
     getFeadBeltPropertiesHTML: getFeadBeltPropertiesHTML,
     getFeadLayoutPropertiesHTML: getFeadLayoutPropertiesHTML,
     getFeadSolverPropertiesHTML: getFeadSolverPropertiesHTML,
-    getFeadExamplePropertiesHTML: getFeadExamplePropertiesHTML,
-    getFeadReportPropertiesHTML: getFeadReportPropertiesHTML
+    getFeadExamplePropertiesHTML: getFeadExamplePropertiesHTML
   };
 }
