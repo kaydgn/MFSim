@@ -259,6 +259,36 @@ function getPortPosition(node, portType, portIndex) {
   }
 }
 
+// Bağlantının ORTASINA gidiş yönü işareti (chevron). Eğri için kübik Bézier'in
+// t = 0.5 noktası ve türevi analitik; düz/kademeli yolda uçların doğrultusu
+// yeterli. SVG'ye ayrı bir <path> olarak eklenir ve updateAllConnections her
+// tazelemede layer'ı temizlediği için birikmez.
+function veConnDirMark(lineType, x1, y1, x2, y2, cp) {
+  var L = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+  if(!(L > 46)) return null;
+  var mx, my, ux, uy;
+  if(lineType === 'curve' && cp) {
+    // B(0.5) = (P0 + 3C1 + 3C2 + P3) / 8 ;  B'(0.5) ∝ (−P0 − C1 + C2 + P3)
+    mx = (x1 + 3 * cp[0] + 3 * cp[2] + x2) / 8;
+    my = (y1 + 3 * cp[1] + 3 * cp[3] + y2) / 8;
+    ux = (-x1 - cp[0] + cp[2] + x2); uy = (-y1 - cp[1] + cp[3] + y2);
+  } else {
+    mx = (x1 + x2) / 2; my = (y1 + y2) / 2;
+    ux = x2 - x1; uy = y2 - y1;
+  }
+  var n = Math.sqrt(ux * ux + uy * uy);
+  if(!(n > 0)) return null;
+  ux /= n; uy /= n;
+  var px = -uy, py = ux, s = 4.4;
+  var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  p.setAttribute('class', 've-conn-dir');
+  p.setAttribute('d',
+    'M' + (mx - ux * s + px * s * 0.85) + ' ' + (my - uy * s + py * s * 0.85) +
+    'L' + (mx + ux * s) + ' ' + (my + uy * s) +
+    'L' + (mx - ux * s - px * s * 0.85) + ' ' + (my - uy * s - py * s * 0.85));
+  return p;
+}
+
 function updateAllConnections() {
   var svg = document.getElementById('ve-connections-layer');
   if(!svg) return;
@@ -294,8 +324,15 @@ function updateAllConnections() {
     var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('class', 've-connection');
     path.setAttribute('data-conn-id', conn.id);
-    
+
+    // FEAD kayış bağlantısı mı: bu tel bir "ilişki" DEĞİL, serpantin kayışın
+    // o kasnaktan sonrakine giden parçası. Hem rengi hem eğri geometrisi bunu
+    // anlatacak şekilde ayrılıyor (aşağıda).
+    var _feadBelt = (typeof _feadIsPulley === 'function')
+                 && _feadIsPulley(fromNode) && _feadIsPulley(toNode);
+
     var d = '';
+    var _bezCp = null;
     var lineType = conn.lineType || 'curve';
     
     if(lineType === 'straight') {
@@ -319,6 +356,16 @@ function updateAllConnections() {
       var fromSide = fromPort.side;
       var toSide = toPort.side;
       var offset = 40; // Bileşenden uzaklaşma mesafesi
+      // KAYIŞTA KONTROL KOLU MESAFEYLE ORANTILI. Sabit 40 px iki uçta da aynı
+      // "burun" uzunluğunu veriyordu: kısa açıklıkta eğri kutunun dibinde kıvrım
+      // yapıyor, uzun açıklıkta ise ortada düzleşip köşeleniyordu. Uzunluğun
+      // %42'si (26–96 px arası) her iki uçta da teğeti sürekli tutuyor —
+      // yani tel kutudan DİK çıkıp karşı kutuya DİK giriyor, arada tek bir
+      // yumuşak yay kalıyor.
+      if(_feadBelt) {
+        var _L = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+        offset = Math.max(26, Math.min(96, _L * 0.42));
+      }
       
       var cp1x, cp1y, cp2x, cp2y;
       
@@ -369,6 +416,7 @@ function updateAllConnections() {
       }
       
       d = 'M ' + x1 + ' ' + y1 + ' C ' + cp1x + ' ' + cp1y + ', ' + cp2x + ' ' + cp2y + ', ' + x2 + ' ' + y2;
+      _bezCp = [cp1x, cp1y, cp2x, cp2y];
     }
     
     path.setAttribute('d', d);
@@ -382,12 +430,10 @@ function updateAllConnections() {
       tcTitle.textContent = 'Konvertör ↔ Şanzıman: eşleştirme ilişkisi — konvertör ailesi şanzımana göre filtrelenir';
       path.appendChild(tcTitle);
     }
-    // FEAD kayış bağlantısı: bu tel bir "ilişki" DEĞİL, kayışın kendisi —
-    // serpantinin o kasnaktan sonrakine giden parçası. Modülün renk dilinde
-    // kayış her yerde amber (sembollerde de öyle); graf aynı dili konuşmazsa
-    // kullanıcı onu kanvastaki Kayış Yolu kartıyla karşılaştıramaz, ki iki
-    // yüzeyin bir arada durmasının tek sebebi bu.
-    if(typeof _feadIsPulley === 'function' && _feadIsPulley(fromNode) && _feadIsPulley(toNode)) {
+    // Modülün renk dilinde kayış her yerde amber (sembollerde de öyle) ve saç
+    // teli kalınlığı burada yanlış olurdu: bu çizgi "iki bileşen ilişkili"
+    // demiyor, "kayış buradan geçiyor" diyor.
+    if(_feadBelt) {
       path.classList.add('ve-connection-fead-belt');
       var beltTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
       beltTitle.textContent = 'Kayış yolu: '
@@ -411,6 +457,15 @@ function updateAllConnections() {
     });
     
     svg.appendChild(path);
+
+    // GİDİŞ YÖNÜ — kayışın hangi tarafa aktığı. Serpantin bir ÇEVRİM olduğu
+    // için yön topolojiden okunamıyor: aynı halka iki yönde de gezilebilir ve
+    // sarım açıları buna göre değişiyor. Ok telin ORTASINDA, teğetine bakar.
+    // Kısa açıklıkta çizilmez (46 px altında oku sığdırmak teli kalabalıklaştırır).
+    if(_feadBelt && typeof veConnDirMark === 'function') {
+      var mk = veConnDirMark(lineType, x1, y1, x2, y2, _bezCp);
+      if(mk) svg.appendChild(mk);
+    }
     
     // Bağlantı ortasında TEK sensör göstergesi (kaç sensör bağlı olursa olsun)
     var connSensors = nodes.filter(function(nd) {

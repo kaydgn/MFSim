@@ -61,11 +61,6 @@ function saveState() {
   // bir çözüm hatası asla undo yığınını bozmamalı.
   try {
     if(typeof veFeadRefreshLayoutCards === 'function') veFeadRefreshLayoutCards();
-    // FEAD kasnak biçimi de AYNI tek noktadan tazelenir: kasnağın ekrandaki
-    // çapı VERİDİR (1 px = 1 mm), temas tarafı ve sürücü rolü de çeperin
-    // dokusu/rengidir. Panelde çapı 152 yazıp kanvasta 64 px görmek, biçimin
-    // taşıdığı tek bilgiyi yalan yapardı (bkz. js/fead-graph.js).
-    if(typeof veFeadRefreshPulleyForms === 'function') veFeadRefreshPulleyForms();
   } catch(e) {}
 }
 
@@ -208,12 +203,6 @@ function _veRestoreStateNodes(state) {
     // canlı şema kartı. Dokunulmamış kayıtlar yükselir, elle boyutlandırılan
     // her ölçü korunur (bkz. veFeadLayoutSizeFor).
     if(typeof veFeadNormalizeLayoutSize === 'function') veFeadNormalizeLayoutSize(node);
-    // FEAD kasnağı: ölçüsü ÇAPINDAN gelir (1 px = 1 mm), kaydedilen ölçüden
-    // değil. Eski kayıtlar dikdörtgen kutu ölçüsü taşıyor; daire çizilirken
-    // 62×58 bir ELİPS olurdu. DOM henüz kurulmadığı için burada yalnız model
-    // güncellenir — aşağıdaki HTML zaten node.width/height okuyor.
-    if(typeof veFeadMigrateNode === 'function') veFeadMigrateNode(node);
-    if(typeof veFeadSyncPulleySize === 'function') veFeadSyncPulleySize(node);
 
     // NOT: Eski varsayılan → yeni varsayılan migrasyonu artık restoreState
     // başında veApplyLegacyMigrations(state) ile YALNIZCA legacy state'lere
@@ -363,7 +352,6 @@ function _veRestoreStateNodes(state) {
     // bağlantı" özeti kullanıcı dışarı çıkar çıkmaz kendiliğinden tazelenir.
     if(typeof veApplyModuleCard === 'function') veApplyModuleCard(nodeEl, node);
     if(typeof veFeadApplyBadge === 'function') veFeadApplyBadge(nodeEl, node);
-    if(typeof veFeadApplyPulleyForm === 'function') veFeadApplyPulleyForm(nodeEl, node);
     if(typeof veFeadApplyLayoutCard === 'function') veFeadApplyLayoutCard(nodeEl, node);
 
     document.getElementById('ve-canvas').appendChild(nodeEl);
