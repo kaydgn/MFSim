@@ -913,6 +913,74 @@ function veFeadDutyToCore(build, rows){
 // GEÇERLİLİK SINIRLARI SONUCUN İÇİNDE TAŞINIR (spesifikasyon §7): doğal
 // frekans karşılaştırılamaz, mutlak ömür yalnız 79.6–176 mm çap aralığında
 // geçerli. Bunları hesaplayıp sessizce göstermek, hesaplamamaktan kötü olurdu.
+// ─── HASAR-EŞDEĞER SICAKLIK ─────────────────────────────────────────────────
+//
+// Çekirdeğin beltLifeB10'u TEK bir sıcaklık alıyor ve hasarı şöyle kuruyor:
+//   D = (geometri) · Σ_i geçiş_i · 2^((degC − 80) / ΔT)
+// yani sıcaklık çarpanı TOPLAM geçiş sayısını çarpıyor. Duty tablosunda ise
+// sıcaklık SATIR BAŞINA giriliyor (rölantide soğuk, tam yükte sıcak). O tek
+// sayının ne olması gerektiği belli: satır başına hasarı toplayıp geri çözünce
+//   degC_eş = 80 + ΔT · log2( Σ w_i · 2^((T_i − 80) / ΔT) ),   Σ w_i = 1
+// çıkıyor. Bu bir yaklaşıklık DEĞİL — çekirdeğin modeli veriyken cebirsel
+// olarak aynı hasarı üretir. Bütün satırlar aynı sıcaklıktaysa sonuç tam o
+// sıcaklıktır (log2(2^x) = x), yani tek sıcaklıklı tablolar hiç etkilenmez.
+//
+// ARİTMETİK ORTALAMA YANLIŞTI ve HEP AYNI YÖNE yanlıştı: 2^x dışbükey olduğu
+// için sıcaklığın ortalaması hasarın ortalamasını OLDUĞUNDAN AZ gösterir
+// (Jensen). ÖLÇÜLDÜ (BMC örneği, satırlar 70…110 °C): aritmetik ortalama
+// 90.0 °C → 1010 saat; hasar-eşdeğer 96.7 °C → 810 saat. Yani ömür 1.25×
+// UZUN, üstelik güvenli tarafa değil.
+//
+// AĞIRLIK dc DEĞİL, GEÇİŞ SAYISI (dc · v / L): çekirdek de `passes` toplamını
+// böyle kuruyor. Yüksek devirde kayış birim zamanda daha çok geçtiği için o
+// satırın sıcaklığı daha ağır basar; dc ile ağırlıklandırmak sıcak ve hızlı
+// noktayı hafife alırdı.
+//
+// SIFIR YÜZDE "GİRİLMEMİŞ" DEĞİLDİR. Eski ifade `(d.dcPct || 100/n) / Σdc`
+// yazıyordu: paydada 0 sayılan bir yüzde payda 100/n oluyordu, yani ağırlıklar
+// 1'e toplanmıyordu. ÖLÇÜLDÜ — bütün yüzdeler boşken degC 90 yerine 1000 °C
+// çıkıyor, sayfadaki gibi TEK BİR satır %0 girilince (BMC'nin 3000 rpm satırı)
+// 90 yerine 99 °C çıkıp B10 992 → 756 saate (−%24) düşüyordu; uyarı yoktu.
+// Çekirdek aynı yeri doğru yapıyor (`u.dcPct != null ? … `), fark köprüdeydi.
+function veFeadDutyDegC(sys, duty){
+  var rows = Array.isArray(duty) ? duty : [];
+  if(!rows.length || typeof FEADCore === 'undefined') return NaN;
+  var FA = (FEADCore.FATIGUE && FEADCore.FATIGUE.absolute) || {};
+  var ref = Number.isFinite(FA.refDegC) ? FA.refDegC : 80;
+  var dT  = (FA.halvingDegC > 0) ? FA.halvingDegC : 23;
+  var L   = (sys && sys.belt && sys.belt.effLength > 0) ? sys.belt.effLength / 1000 : 0;
+
+  var wTop = 0, dTop = 0, tSum = 0, n = 0;
+  rows.forEach(function(r){
+    var T = _feadNum(r && r.degC, NaN);
+    if(!Number.isFinite(T)) return;
+    tSum += T; n++;
+    // Geçiş payı — çekirdeğin `passes` toplamıyla AYNI ağırlık.
+    var dc = Number.isFinite(r.dcPct) ? (r.dcPct / 100) : (1 / rows.length);
+    if(!(dc > 0) || !(L > 0)) return;
+    var v = 0;
+    try { v = FEADCore.spanTensions(sys, r).vMs; } catch(e){ v = 0; }
+    if(!(v > 0)) return;
+    var w = dc * (v / L);
+    wTop += w;
+    dTop += w * Math.pow(2, (T - ref) / dT);
+  });
+  // Ağırlık kurulamadıysa (yüzdelerin hepsi boş, ya da hız çözülemedi) hasar
+  // toplamı zaten sıfırdır ve sıcaklığın hükmü yoktur; sıcaklıkların DÜZ
+  // ortalaması dürüst karşılıktır — eski koddaki 1000 °C değil.
+  if(!(wTop > 0) || !(dTop > 0)) return n ? (tSum / n) : NaN;
+  return ref + dT * Math.log2(dTop / wTop);
+}
+
+// Mutlak B10 kalibrasyonunun (FATIGUE.absolute.C) AİT OLDUĞU yorulma modeli.
+// C, geomSum = Σ w·d^(−m) ölçeğini soğuruyor: m 5.6 → 4.05 olunca geomSum ~900
+// kat değişir, C aynı kaldığı için ömür de ~900 kat kayar (ölçüldü: BMC 992 →
+// 1.1 saat). Doğrulama koşucusu B10'u yalnız bu sabit takımıyla ölçüyor; tek
+// PK-2_2a sistemi olan AG00810 ayrıca çap aralığının da dışında. Dolayısıyla
+// başka bir model seçilince DAĞILIM o modeli kullanır ama MUTLAK ÖMÜR kullanamaz
+// — ve bunu söylemek zorundadır.
+var VE_FEAD_LIFE_FATIGUE_MODEL = 'PK-2_2p-MT3';
+
 function veFeadAnalyze(build, opts){
   opts = opts || {};
   var out = { ok: false, error: null, analysis: null, fatigue: null, life: null,
@@ -936,21 +1004,47 @@ function veFeadAnalyze(build, opts){
     return out;
   }
 
+  var fatModel = opts.fatigueModel || VE_FEAD_LIFE_FATIGUE_MODEL;
+  out.fatigueModel = fatModel;
+
   if(duty.length){
     try {
       out.fatigue = FEADCore.ribFatigueDistribution(build.sys, {
-        duty: duty, fatigueModel: opts.fatigueModel || 'PK-2_2p-MT3'
+        duty: duty, fatigueModel: fatModel
       });
     } catch(e){ out.warnings.push('Yorulma dağılımı: ' + veFeadTranslateError(e && e.message)); }
 
     try {
-      // degC duty satırlarından: hepsi aynıysa o, değilse ağırlıklı ortalama.
-      var dcTop = duty.reduce(function(a, d){ return a + (d.dcPct || 0); }, 0) || duty.length;
-      var degC = duty.reduce(function(a, d){
-        return a + (d.degC || 0) * ((d.dcPct || (100 / duty.length)) / dcTop);
-      }, 0);
+      // Satır başına sıcaklık → çekirdeğin istediği TEK sıcaklık. Cebirsel
+      // olarak aynı hasarı veren değer; türetme ve ölçüm veFeadDutyDegC'de.
+      var degC = veFeadDutyDegC(build.sys, duty);
+      out.degCEq = degC;
+      if(!Number.isFinite(degC)) throw new Error('Duty sıcaklığı okunamadı.');
       out.life = FEADCore.beltLifeB10(build.sys, { duty: duty, degC: degC });
       if(out.life && out.life.warnings) out.life.warnings.forEach(function(w){ out.limits.push(w); });
+
+      // Bütün yüzdeler boşsa hasar sıfır, ömür sonsuz çıkar ve kart "—" gösterir.
+      // Sebebini yazmazsak kullanıcı hesabın çöktüğünü sanır.
+      if(out.life && !(out.life.damageRate > 0))
+        out.warnings.push('Çalışma çevrimi yüzdeleri (%zaman) girilmedi; mutlak ömür '
+          + 'hesaplanamaz. Yorulma dağılımı yüzdeden bağımsızdır ve geçerlidir.');
+
+      // MUTLAK ÖMÜR SEÇİLEN YORULMA MODELİNİ KULLANAMAZ. Dağılım kullanır —
+      // ikisi yan yana basıldığı için farkı söylemek zorunlu (bkz.
+      // VE_FEAD_LIFE_FATIGUE_MODEL). Model adı yalnız çekirdeğin kendi
+      // anahtarlarından geçerse yazılır: limits satırları HTML olarak
+      // basılıyor (veFeadLimitsBox), kaçırılmamış girdi oraya sızmamalı.
+      var bilinen = (FEADCore.FATIGUE && FEADCore.FATIGUE.byModel) || {};
+      if(out.life && fatModel !== VE_FEAD_LIFE_FATIGUE_MODEL && bilinen[fatModel]){
+        out.life.modelMismatch = fatModel;
+        out.life.calibratedModel = VE_FEAD_LIFE_FATIGUE_MODEL;
+        out.limits.push('Mutlak B10 ömrü <b>' + VE_FEAD_LIFE_FATIGUE_MODEL + '</b> sabitleriyle '
+          + '(m = ' + bilinen[VE_FEAD_LIFE_FATIGUE_MODEL].m + ') kalibre edildi; seçili yorulma '
+          + 'modeli <b>' + fatModel + '</b> (m = ' + bilinen[fatModel].m + '). Kaburga yorulma '
+          + 'DAĞILIMI seçtiğiniz modeli kullanır, mutlak ömür KULLANAMAZ: kalibrasyon sabiti '
+          + 'geometri toplamının ölçeğini soğuruyor, üs değişince ömür yüzlerce kat kayar. '
+          + 'Aşağıdaki saat değeri ' + VE_FEAD_LIFE_FATIGUE_MODEL + ' üssüne göredir.');
+      }
     } catch(e){ out.warnings.push('B10 ömrü: ' + veFeadTranslateError(e && e.message)); }
   } else {
     out.warnings.push('Çalışma çevrimi boş: gerilme, hubload, kayma ve frekans hesaplanmadı. '
@@ -985,6 +1079,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadDutyRows: veFeadDutyRows, veFeadPresetLib: veFeadPresetLib,
     veFeadPresetOf: veFeadPresetOf, veFeadAutoKw: veFeadAutoKw,
     veFeadDutyToCore: veFeadDutyToCore, veFeadAnalyze: veFeadAnalyze,
+    veFeadDutyDegC: veFeadDutyDegC,
+    VE_FEAD_LIFE_FATIGUE_MODEL: VE_FEAD_LIFE_FATIGUE_MODEL,
     VE_FEAD_PRESET_LIB: VE_FEAD_PRESET_LIB,
     veFeadBuildSystem: veFeadBuildSystem, veFeadBuildFromCanvas: veFeadBuildFromCanvas,
     veFeadGatherPulleys: veFeadGatherPulleys,
