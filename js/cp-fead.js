@@ -787,16 +787,44 @@ function veFeadLayoutSVG(build, W, H, opts){
   var wantPivot   = (opts.pivot   !== false);
   var wantArrows  = (opts.arrows  !== false);
   if(!build || !build.ok || !build.sys || typeof FEADCore === 'undefined') return null;
-  var geom;
-  try { geom = FEADCore.tensionerState(build.sys, FEADCore.meanRel(build.sys)).geom; }
-  catch(e){ return null; }
+
+  // HANGİ KOL KONUMU / KONUMLARI. Gergi kolu yay dengesinde duruyor; kayış
+  // uzayıp kısaldıkça (tolerans + aşınma) kol dönüyor ve kayış yolu her konumda
+  // BAŞKA bir eğri oluyor. Seçim model katmanında çözülür (veFeadPosSelection);
+  // burada yalnız çizim var.
+  var sel = (typeof veFeadPosSelection === 'function')
+    ? veFeadPosSelection(build, opts.posMode || 'mean')
+    : { primary: null, ghosts: [] };
+
+  function geomAt(rel){
+    try { return FEADCore.tensionerState(build.sys, rel).geom; }
+    catch(e){ return null; }
+  }
+  var geom = sel.primary ? geomAt(sel.primary.relDeg) : null;
+  if(!geom){                                     // konum tablosu kurulamadıysa
+    geom = geomAt(FEADCore.meanRel ? FEADCore.meanRel(build.sys) : 0);
+  }
+  if(!geom) return null;
+
+  // Hayalet konumların geometrisi (yalnız 'TÜMÜ' kipinde dolu).
+  var hayalet = [];
+  (sel.ghosts || []).forEach(function(r){
+    var g = geomAt(r.relDeg);
+    if(g) hayalet.push({ row: r, geom: g });
+  });
 
   var ps = geom.pulleys;
   var minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
-  ps.forEach(function(p){
-    minX=Math.min(minX,p.c[0]-p.rPitch); maxX=Math.max(maxX,p.c[0]+p.rPitch);
-    minY=Math.min(minY,p.c[1]-p.rPitch); maxY=Math.max(maxY,p.c[1]+p.rPitch);
-  });
+  function sinirla(list){
+    list.forEach(function(p){
+      minX=Math.min(minX,p.c[0]-p.rPitch); maxX=Math.max(maxX,p.c[0]+p.rPitch);
+      minY=Math.min(minY,p.c[1]-p.rPitch); maxY=Math.max(maxY,p.c[1]+p.rPitch);
+    });
+  }
+  sinirla(ps);
+  // HAYALETLER DE ÖLÇEĞE GİRER: gergi kasnağı konumlar arasında BMC'de 60 mm yol
+  // alıyor. Sınırlara katılmazsa uç konumdaki daire çerçeveden taşar.
+  hayalet.forEach(function(h){ sinirla(h.geom.pulleys); });
   // GERGİ PİVOTU DA ÖLÇEĞE GİRER: pivot çoğu düzende kasnak kümesinin dışında
   // kalıyor (BMC'de −259.94 mm, en soldaki kasnaktan 20 mm daha solda). Sınırlara
   // katılmazsa artı işareti çerçevenin dışına düşüp görünmez olur.
@@ -816,18 +844,36 @@ function veFeadLayoutSVG(build, W, H, opts){
   function f(v){ return Math.round(v*100)/100; }
 
   // Kayış yolu: çekirdeğin teğet uçları (Pi/Pj) + her kasnakta sarım yayı.
-  // Yay yönü kasnağın d işaretinden gelir; ekranda y çevrildiği için sweep
-  // bayrağı da tersine döner (d>0 → matematiksel CCW → ekranda CW = sweep 1).
-  var n = ps.length, d = '';
-  for(var i=0;i<n;i++){
-    var sp = geom.spans[i], p = ps[(i+1)%n], spN = geom.spans[(i+1)%n];
-    if(i === 0) d += 'M' + f(tx(sp.Pi[0])) + ' ' + f(ty(sp.Pi[1]));
-    d += ' L' + f(tx(sp.Pj[0])) + ' ' + f(ty(sp.Pj[1]));
-    var R = f(p.rPitch * s), wrap = geom.wraps[(i+1)%n];
-    d += ' A' + R + ' ' + R + ' 0 ' + (wrap > Math.PI ? 1 : 0) + ' ' + (p.d > 0 ? 1 : 0)
-       + ' ' + f(tx(spN.Pi[0])) + ' ' + f(ty(spN.Pi[1]));
+  //
+  // SWEEP BAYRAĞI — bir kez YANLIŞ yazıldı, gözle "bükülmüş kayış" olarak
+  // görüldü ve ölçülerek düzeltildi. Kural:
+  //   ty(y) = offY + (maxY − y)·s  ölçeklemesi mm düzlemini EKRANDA AYNI YÖNDE
+  //   gösterir (mm yukarısı ekran yukarısı) — yani yönelim KORUNUR, dönmez.
+  //   SVG'nin açı sistemi ise y-AŞAĞI: pozitif açı yönü görsel olarak SAAT
+  //   YÖNÜ demek. Dolayısıyla mm düzleminde CCW olan (d > 0) ekranda da CCW
+  //   görünür ve SVG'de NEGATİF yön, yani sweep = 0.
+  // Eskiden sweep = (d > 0 ? 1 : 0) yazıyordu: yarıçap ve uçlar doğru olduğu
+  // için yay yine iki uca değiyordu ama AYNALANMIŞ çemberin üzerinde kalıyordu,
+  // yani kasnağın İÇİNDEN geçiyordu. ÖLÇÜLDÜ (BMC örneği, 420×320): yay
+  // merkezleri kasnak merkezlerinden 6.7–42.7 px sapıyordu; düzeltmeyle altı
+  // kasnakta da sapma 0.00. Testi bu değişmezi kilitliyor (yayın merkezi
+  // kasnağın merkezi olmak ZORUNDA).
+  //
+  // TEK FONKSİYON: hayalet konumlar da aynı yoldan çizilir, yoksa iki ayrı
+  // çizici sessizce ayrışırdı.
+  function beltPath(g){
+    var q = g.pulleys, n = q.length, d = '';
+    for(var i=0;i<n;i++){
+      var sp = g.spans[i], p = q[(i+1)%n], spN = g.spans[(i+1)%n];
+      if(i === 0) d += 'M' + f(tx(sp.Pi[0])) + ' ' + f(ty(sp.Pi[1]));
+      d += ' L' + f(tx(sp.Pj[0])) + ' ' + f(ty(sp.Pj[1]));
+      var R = f(p.rPitch * s), wrap = g.wraps[(i+1)%n];
+      d += ' A' + R + ' ' + R + ' 0 ' + (wrap > Math.PI ? 1 : 0) + ' ' + (p.d > 0 ? 0 : 1)
+         + ' ' + f(tx(spN.Pi[0])) + ' ' + f(ty(spN.Pi[1]));
+    }
+    return d + ' Z';
   }
-  d += ' Z';
+  var d = beltPath(geom);
 
   // ÖLÇÜ SINIRI ŞART: panel iki sütuna geçtiğinde (VE_WIDE_PANEL_TYPES) yalnız
   // width:100% veren bir viewBox'lı SVG en-boy oranıyla birlikte YÜKSELİR ve
@@ -854,6 +900,39 @@ function veFeadLayoutSVG(build, W, H, opts){
         + '<line x1="' + px + '" y1="' + f(py-a) + '" x2="' + px + '" y2="' + f(py+a) + '"/></g>';
   }
 
+  // HAYALET KONUMLAR — ana yolun ARKASINDA, ince ve soluk. Referans tedarikçi
+  // çıktısındaki üst üste binmiş kayış yolları bunlar: kolun gezdiği aralık.
+  var tiG = build.sys._tenIdx;
+  hayalet.forEach(function(h){
+    svg += '<path data-ve="belt-ghost" d="' + beltPath(h.geom) + '" fill="none"'
+        + ' stroke="var(--text-muted)" stroke-width="1.1" stroke-linejoin="round" opacity="0.5"/>';
+    var gp = (tiG >= 0) ? h.geom.pulleys[tiG] : null;
+    if(gp){
+      var GX = f(tx(gp.c[0])), GY = f(ty(gp.c[1])), GR = f(gp.rPitch*s);
+      svg += '<circle data-ve="pulley-ghost" cx="' + GX + '" cy="' + GY + '" r="' + GR
+          + '" fill="none" stroke="var(--text-muted)" stroke-width="1.1"'
+          + ' stroke-dasharray="3 3" opacity="0.6"/>'
+        + '<circle cx="' + GX + '" cy="' + GY + '" r="1.4" fill="var(--text-muted)" opacity="0.7"/>';
+      // ETİKET PİVOTTAN DIŞA DOĞRU. Konumlar pivot çevresinde bir YAY üzerinde
+      // dizildiği için radyal yerleşim onları kendiliğinden yelpazeler; sabit
+      // "solda" yerleşimde üç etiket üst üste biniyordu (ölçüldü — gergi bu
+      // düzende yalnız ~25 px yol alıyor).
+      var lx = GX - GR - 4, ly = GY + 3, anc = 'end';
+      if(pv){
+        var vx = tx(gp.c[0]) - tx(pv[0]), vy = ty(gp.c[1]) - ty(pv[1]);
+        var vl = Math.sqrt(vx*vx + vy*vy);
+        if(vl > 1){
+          lx = f(tx(gp.c[0]) + vx/vl * (gp.rPitch*s + 10));
+          ly = f(ty(gp.c[1]) + vy/vl * (gp.rPitch*s + 10) + 2.5);
+          anc = (vx >= 0) ? 'start' : 'end';
+        }
+      }
+      svg += '<text data-ve="ghost-label" x="' + lx + '" y="' + ly
+          + '" text-anchor="' + anc + '" font-size="7" fill="var(--text-muted)" opacity="0.9">'
+          + _feadEsc(h.row.kisa) + '</text>';
+    }
+  });
+
   svg += '<path data-ve="belt" d="' + d + '" fill="none" stroke="var(--accent-warning)" stroke-width="2.6" stroke-linejoin="round"/>';
 
   ps.forEach(function(p, k){
@@ -866,11 +945,13 @@ function veFeadLayoutSVG(build, W, H, opts){
     svg += '<circle cx="' + X + '" cy="' + Y + '" r="2.2" fill="' + col + '"/>';
 
     // DÖNÜŞ YÖNÜ OKU — kasnağın içinde, yarıçapın %55'inde bir yay + uç oku.
-    // İşaret çekirdeğin p.d'sinden; ekranda y çevrildiği için sweep ters döner.
     // Tedarikçi çıktısındaki dönüş okunun karşılığı: bütün kasnaklar aynı yöne
     // dönmüyorsa (sırttan temas) bu gözle görünür.
+    // YÖN: d > 0 mm düzleminde CCW, yerleşim yönelimi korunduğu için ekranda da
+    // CCW — yani SAAT YÖNÜNÜN TERSİ. Bu da bir kez ters yazılmıştı (kayış
+    // yayıyla aynı hata); ok kasnağın gerçek dönüşünün tersini gösteriyordu.
     if(wantArrows && R > 9){
-      var rr = R * 0.55, cw = (p.d > 0);
+      var rr = R * 0.55, cw = (p.d < 0);
       var a0 = cw ? -2.3 : -0.85, a1 = cw ? 0.85 : 2.3;
       var x0 = X + rr*Math.cos(a0), y0 = Y + rr*Math.sin(a0);
       var x1 = X + rr*Math.cos(a1), y1 = Y + rr*Math.sin(a1);
@@ -889,6 +970,19 @@ function veFeadLayoutSVG(build, W, H, opts){
     svg += '<text x="' + X + '" y="' + f(Y + R + 10) + '" text-anchor="middle" font-size="8" fill="var(--accent-warning)">'
         + f(geom.wrapDeg(k)) + '°</text>';
   });
+
+  // SEÇİLİ KONUMUN KÜNYESİ — sol üstte. "Hangi konumu görüyorum" sorusu şemanın
+  // kendi içinde cevaplanmalı; kip seçicisi kartın altında, çizimin dışında.
+  if(sel.primary){
+    svg += '<text data-ve="pos-label" x="' + f(pad - 6) + '" y="12" font-size="8.5"'
+        + ' fill="var(--accent-warning)">' + _feadEsc(sel.primary.label)
+        + '  ·  kol ' + f(sel.primary.relDeg) + '°'
+        + (Number.isFinite(sel.primary.tensionN) ? '  ·  ' + Math.round(sel.primary.tensionN) + ' N' : '')
+        + '</text>';
+    if(hayalet.length)
+      svg += '<text x="' + f(pad - 6) + '" y="22" font-size="7" fill="var(--text-muted)">'
+          + hayalet.length + ' konum daha (soluk) — kolun gezdiği aralık</text>';
+  }
 
   // YÖN GÜLÜ — sağ altta, tedarikçi çıktısındaki gibi. Kayış düzleminin açı
   // konvansiyonu: 0° = +x, açılar CCW. Bu olmadan "montaj açısı −3.18°" gibi
@@ -964,7 +1058,10 @@ function veFeadLayoutCardHTML(node){
   var W = (node && node.width) || def.defaultWidth || 420;
   var H = (node && node.height) || def.defaultHeight || 340;
   var SER = 20;                                   // alt durum şeridi
-  var svg = veFeadLayoutSVG(build, Math.max(120, W), Math.max(90, H - SER), { inline: true });
+  var SEC = 22;                                   // konum seçici şeridi
+  var mode = veFeadPosMode(node);
+  var svg = veFeadLayoutSVG(build, Math.max(120, W), Math.max(90, H - SER - SEC),
+                            { inline: true, posMode: mode });
 
   var h = '<div style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center;">';
   if(svg){
@@ -986,20 +1083,61 @@ function veFeadLayoutCardHTML(node){
       + '</div>';
   }
   h += '</div>';
-  h += veFeadLayoutCardStrip(build);
+  h += veFeadPosPicker(node, build, mode);
+  h += veFeadLayoutCardStrip(build, mode);
   return h;
+}
+
+// ── KOL KONUMU SEÇİCİSİ (kartın içinde) ─────────────────────────────────────
+// Gergi kolu kayış uzayıp kısaldıkça dönüyor ve kayış yolu her konumda BAŞKA.
+// Kart varsayılan olarak çalışma (Mean) konumunu gösteriyor; bu kutu diğer
+// konumlara geçmeyi ve "TÜMÜ" ile üst üste bindirmeyi sağlıyor.
+//
+// mousedown DURDURULUR: kart bir kanvas düğümünün içinde ve düğüm mousedown ile
+// SÜRÜKLENMEYE başlıyor — durdurulmazsa listeyi açmaya çalışmak düğümü
+// taşıyordu. change ise serbest; saveState zaten kartı tazeliyor.
+function veFeadPosPicker(node, build, mode){
+  var rows = (build && build.ok) ? veFeadPositionRows(build) : [];
+  var cozulen = {};
+  rows.forEach(function(r){ if(r.ok) cozulen[r.key] = r; });
+
+  var opts = '';
+  VE_FEAD_POSITIONS.forEach(function(P){
+    var r = cozulen[P.key];
+    if(!r && P.key !== 'mean') return;              // çözülemeyen konum listede yok
+    opts += '<option value="' + P.key + '"' + (mode === P.key ? ' selected' : '') + '>'
+          + _feadEsc(P.label) + (r ? ' · ' + _feadFmt(r.relDeg, 1) + '°' : '') + '</option>';
+  });
+  var cok = Object.keys(cozulen).length > 1;
+  opts += '<option value="all"' + (mode === 'all' ? ' selected' : '') + '>'
+        + 'TÜMÜ — üst üste' + (cok ? '' : ' (tek konum)') + '</option>';
+
+  return '<div style="flex:0 0 auto; display:flex; align-items:center; gap:5px; padding:1px 6px;'
+    + ' border-top:1px solid var(--border-color); background:var(--bg-secondary, #16181d);"'
+    + ' onmousedown="event.stopPropagation();" ondblclick="event.stopPropagation();">'
+    + '<span style="font-size:var(--fs-micro); color:var(--text-muted); white-space:nowrap;">Kol konumu</span>'
+    + '<select onmousedown="event.stopPropagation();"'
+    + ' onchange="veFeadSetChoice(\'' + node.id + '\',\'posMode\',this.value)"'
+    + ' style="flex:1; min-width:0; height:18px; padding:0 3px; font-size:var(--fs-micro);'
+    + ' background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);'
+    + ' border-radius:2px;">' + opts + '</select></div>';
 }
 
 // Durum şeridi — "tutarlı mı" sorusunun tek satırlık cevabı.
 // Sarım değişmezi (Σkaburgalı − Σsırttan = 360°) burada duruyor çünkü kapalı
 // bir kayış çevriminin geometrik ZORUNLULUĞU o; tutmuyorsa şema kendi içinde
 // tutarlı görünse bile yol yanlış çözülmüş demektir.
-function veFeadLayoutCardStrip(build){
+function veFeadLayoutCardStrip(build, mode){
   var ok = !!(build && build.ok);
   var sol = 'Kayış yolu kapanmadı', sag = '';
   if(ok){
     try {
-      var st = FEADCore.tensionerState(build.sys, FEADCore.meanRel(build.sys));
+      // Şerit HANGİ KONUM ÇİZİLİYORSA onun sayılarını verir; Mean'in sayılarını
+      // gösterip başka bir konumu çizmek sessiz bir yanlış okuma olurdu.
+      var sel = veFeadPosSelection(build, mode || 'mean');
+      var relS = (sel.primary && Number.isFinite(sel.primary.relDeg))
+        ? sel.primary.relDeg : FEADCore.meanRel(build.sys);
+      var st = FEADCore.tensionerState(build.sys, relS);
       var g = st.geom, sg = 0, bk = 0;
       g.wraps.forEach(function(w, i){
         if(build.sys.pulleys[i].contact === 'back') bk += w; else sg += w;
@@ -1042,10 +1180,27 @@ function getFeadLayoutPropertiesHTML(node){
         + 'GERÇEK geometridir: teğet noktaları, sarım yayları ve yönleri temas tarafına göre. '
         + 'Kesikli çember = kayışın <b>sırttan</b> temas ettiği kasnak. Sıra bağlantılardan okunur.</div>';
 
-  var svg = veFeadLayoutSVG(build, 320, 240);
+  var mode = veFeadPosMode(node);
+  var svg = veFeadLayoutSVG(build, 320, 240, { posMode: mode });
   if(svg){
-    html += _feadCard('Şema', 'ölçekli · sarım açıları', 'var(--accent-warning)', svg);
-    html += veFeadGeometryTable(build);
+    // Konum seçimi KARTLA AYNI ALANI okur (node.data.posMode) — iki ayrı ayar
+    // tutulsa panel bir konumu, kanvastaki kart başka bir konumu gösterirdi.
+    var secenekler = [];
+    var rows = veFeadPositionRows(build), coz = {};
+    rows.forEach(function(r){ if(r.ok) coz[r.key] = r; });
+    VE_FEAD_POSITIONS.forEach(function(P){
+      if(!coz[P.key] && P.key !== 'mean') return;
+      secenekler.push([P.key, P.label + (coz[P.key] ? ' · kol ' + _feadFmt(coz[P.key].relDeg, 1) + '°' : '')]);
+    });
+    secenekler.push(['all', 'TÜMÜ — üst üste (kolun gezdiği aralık)']);
+    html += _feadCard('Şema', 'ölçekli · sarım açıları', 'var(--accent-warning)',
+        _feadSelect(node, 'Gergi kol konumu', 'posMode', secenekler, mode,
+          'Kol kayış uzayıp kısaldıkça dönüyor; her konumda teğet noktaları, sarım '
+          + 'açıları ve span boyları DEĞİŞİR. <b>TÜMÜ</b> kolun gezdiği aralığı üst '
+          + 'üste bindirir — tolerans ve aşınma payı 0 ise bütün konumlar aynı açıya '
+          + 'oturur ve tek eğri görünür.')
+      + svg);
+    html += veFeadGeometryTable(build, mode);
   } else {
     html += veFeadProblemBox(build);
   }
@@ -1055,10 +1210,16 @@ function getFeadLayoutPropertiesHTML(node){
 }
 
 // Geometri özeti — çekirdeğin kasnak başına verdiği span + sarım + hız oranı.
-function veFeadGeometryTable(build){
+function veFeadGeometryTable(build, mode){
   var geom, st;
   try {
-    st = FEADCore.tensionerState(build.sys, FEADCore.meanRel(build.sys));
+    // Tablo ŞEMAYLA AYNI konumu anlatır; ikisi ayrışsa kullanıcı bir konumun
+    // çizimine bakıp başka bir konumun sayılarını okurdu.
+    var _sel = (typeof veFeadPosSelection === 'function')
+      ? veFeadPosSelection(build, mode || 'mean') : null;
+    var _rel = (_sel && _sel.primary && Number.isFinite(_sel.primary.relDeg))
+      ? _sel.primary.relDeg : FEADCore.meanRel(build.sys);
+    st = FEADCore.tensionerState(build.sys, _rel);
     geom = st.geom;
   } catch(e){ return ''; }
   var h = '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">'
@@ -1077,7 +1238,9 @@ function veFeadGeometryTable(build){
       + '</tr>';
   });
   h += '</table>';
-  return _feadCard('Geometri', 'ortalama kol açısında', 'var(--accent-primary)', h
+  var _etiket = (_sel && _sel.primary) ? (_sel.primary.label + ' konumunda')
+                                      : 'ortalama kol açısında';
+  return _feadCard('Geometri', _etiket, 'var(--accent-primary)', h
     + _feadHint('Efektif kayış boyu <b>' + _feadFmt(geom.LeffMm,1) + ' mm</b> · '
       + 'pitch boyu ' + _feadFmt(geom.LpitchMm,1) + ' mm · '
       + 'işaretli sarım toplamı ' + _feadFmt(geom.signedWrapDeg,2) + '° (360 olmalı).'));
@@ -1790,6 +1953,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadLayoutSVG: veFeadLayoutSVG,
     veFeadApplyBadge: veFeadApplyBadge,
     veFeadApplyLayoutCard: veFeadApplyLayoutCard,
+    veFeadPosPicker: veFeadPosPicker,
     veFeadLayoutCardHTML: veFeadLayoutCardHTML,
     veFeadLayoutCardStrip: veFeadLayoutCardStrip,
     veFeadRefreshLayoutCards: veFeadRefreshLayoutCards,
