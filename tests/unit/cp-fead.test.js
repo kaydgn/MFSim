@@ -260,6 +260,88 @@ describe('topolojiye bakan paneller', () => {
     expect(typeof fead.getFeadLayoutPropertiesHTML(layout)).toBe('string');
   });
 
+  // ── KAYIŞIN KABURGALI YÜZÜ ────────────────────────────────────────────
+  // Temas tarafı bu modülün en pahalı SESSİZ hatası (ters verilirse çekirdek
+  // geçerli ama başka bir güzergâh çözer). Şemada şimdiye kadar yalnız
+  // kasnağın kesikli çemberi söylüyordu — bir uzlaşım. Diş sırası bunu
+  // parçanın kendisi olarak gösteriyor ve tek bir işaret kuralına dayanıyor;
+  // bu modülde işaret kuralları BİR KEZ ters yazıldı (yay sweep bayrağı,
+  // "bükülmüş kayış"). O yüzden burada üslup değil GEOMETRİ ölçülüyor.
+  test('dişler kaburgalı kasnakta İÇERİ, sırttan temas edende DIŞARI bakar', () => {
+    kurTam();
+    const build = veFeadBuildFromCanvas();
+    const svg = fead.veFeadLayoutSVG(build, 420, 340);
+    const rib = /<path data-ve="rib" d="([^"]+)"/.exec(svg);
+    expect(rib).not.toBeNull();
+    const disler = [...rib[1].matchAll(/M([-\d.]+) ([-\d.]+)L([-\d.]+) ([-\d.]+)/g)]
+      .map((m) => ({ x1: +m[1], y1: +m[2], x2: +m[3], y2: +m[4] }));
+    expect(disler.length).toBeGreaterThan(30);
+
+    // Kasnak çemberleri SVG'den okunur — testin kendi geometrisi yok.
+    const kasnaklar = [...svg.matchAll(
+      /<circle data-ve="pulley" cx="([-\d.]+)" cy="([-\d.]+)" r="([-\d.]+)"([^>]*)>/g)]
+      .map((m) => ({ cx: +m[1], cy: +m[2], r: +m[3], back: /stroke-dasharray/.test(m[4]) }));
+    expect(kasnaklar.length).toBe(4);
+
+    let sarımDisi = 0;
+    disler.forEach((t) => {
+      // Diş TABANI bir kasnağın çeperindeyse o kasnağın sarım yayındadır.
+      const k = kasnaklar.find(
+        (c) => Math.abs(Math.hypot(t.x1 - c.cx, t.y1 - c.cy) - c.r) < 0.6);
+      if (!k) return;
+      sarımDisi++;
+      const d1 = Math.hypot(t.x1 - k.cx, t.y1 - k.cy);
+      const d2 = Math.hypot(t.x2 - k.cx, t.y2 - k.cy);
+      if (k.back) expect(d2).toBeGreaterThan(d1);   // sırt → dişler dışarı
+      else        expect(d2).toBeLessThan(d1);      // kaburgalı → dişler içeri
+    });
+    expect(sarımDisi).toBeGreaterThan(10);
+  });
+
+  // TERS ÇEVRİMDE DE DOĞRU. Diş yönü çevrimin dönüş yönüne (sense) bağlı;
+  // sabit bir yön yazılırsa BU topolojide doğru, aynasında YANLIŞ çıkardı ve
+  // hiçbir şey uyarmazdı. Aynalanmış kasnak takımı çevrimin yönünü tersine
+  // çevirir — kural tek olduğu için sonuç aynı kalmak zorunda.
+  test('aynalanmış topolojide (ters çevrim yönü) diş yönü yine doğru', () => {
+    kurTam();
+    global.nodes.forEach((n) => {
+      if (n.data && typeof n.data.x === 'number') n.data.x = -n.data.x;
+      if (n.data && typeof n.data.pivotX === 'number') {
+        n.data.pivotX = -n.data.pivotX;
+        n.data.freeAngleDeg = 180 - n.data.freeAngleDeg;
+      }
+    });
+    const build = veFeadBuildFromCanvas();
+    expect(build.ok).toBe(true);
+    const svg = fead.veFeadLayoutSVG(build, 420, 340);
+    const rib = /<path data-ve="rib" d="([^"]+)"/.exec(svg)[1];
+    const kasnaklar = [...svg.matchAll(
+      /<circle data-ve="pulley" cx="([-\d.]+)" cy="([-\d.]+)" r="([-\d.]+)"([^>]*)>/g)]
+      .map((m) => ({ cx: +m[1], cy: +m[2], r: +m[3], back: /stroke-dasharray/.test(m[4]) }));
+    let n = 0;
+    [...rib.matchAll(/M([-\d.]+) ([-\d.]+)L([-\d.]+) ([-\d.]+)/g)].forEach((m) => {
+      const x1 = +m[1], y1 = +m[2], x2 = +m[3], y2 = +m[4];
+      const k = kasnaklar.find((c) => Math.abs(Math.hypot(x1 - c.cx, y1 - c.cy) - c.r) < 0.6);
+      if (!k) return;
+      n++;
+      const d1 = Math.hypot(x1 - k.cx, y1 - k.cy), d2 = Math.hypot(x2 - k.cx, y2 - k.cy);
+      if (k.back) expect(d2).toBeGreaterThan(d1);
+      else        expect(d2).toBeLessThan(d1);
+    });
+    expect(n).toBeGreaterThan(10);
+  });
+
+  test('diş uzunluğu sabit ve künye satırı var (ölçek ne olursa olsun)', () => {
+    kurTam();
+    const build = veFeadBuildFromCanvas();
+    const svg = fead.veFeadLayoutSVG(build, 420, 340);
+    expect(svg).toMatch(/data-ve="rib-legend"/);
+    const rib = /<path data-ve="rib" d="([^"]+)"/.exec(svg)[1];
+    const boy = [...rib.matchAll(/M([-\d.]+) ([-\d.]+)L([-\d.]+) ([-\d.]+)/g)]
+      .map((m) => Math.hypot(+m[3] - +m[1], +m[4] - +m[2]));
+    boy.forEach((b) => expect(b).toBeCloseTo(3.2, 1));
+  });
+
   test('tam modelde çözücü paneli konum tablosunu üretir', () => {
     const { sv } = kurTam();
     const html = fead.getFeadSolverPropertiesHTML(sv);

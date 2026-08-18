@@ -179,6 +179,7 @@ koordinatlarından çizilir; düğümü sürüklemek şemayı değiştirmez. Par
 | İşaret | Ne söylüyor |
 |--------|-------------|
 | Turuncu yol | çekirdeğin teğet noktaları + işaretli sarım yayları |
+| Yol üstündeki **dişler** | kayışın **kaburgalı yüzü** — kaburgalı temas edende kasnağın İÇİNE, sırttan temas edende DIŞARI bakar |
 | Kesikli çember | kayış o kasnağa **sırttan** değiyor |
 | Kasnak içi ok | dönüş yönü (sırttan temas edende ters döner) |
 | Yeşil artı + kesikli çizgi | gergi **pivotu** ve kolu — ters pivot burada gözle görünür |
@@ -205,6 +206,30 @@ aralığının dışına çıkıyor) listede yok, seçiliyse şema boş kalmaz �
 ve sebep yazılır. Hayalet etiketleri **pivottan dışa doğru** yerleşir; sabit
 "solda" yerleşimde üç etiket üst üste biniyordu (gergi bu düzende ~25 px yol
 alıyor).
+
+##### Kaburgalı yüz kayışın ÜSTÜNDE çizilir (`data-ve="rib"`)
+
+Temas tarafını şimdiye kadar yalnız kasnağın kesikli çemberi söylüyordu — bir
+**uzlaşım**, yani öğrenilmesi gereken bir kod. Oysa fark gerçek ve çizilebilir:
+kayışın bir yüzü kaburgalı, öbürü düz sırt. Yol boyunca dizilen kısa dişler o
+yüzü işaretliyor; **kaburgalı temas eden kasnakta dişler kasnağın İÇİNE,
+sırttan temas edende DIŞARI bakıyor.** Kullanıcı artık kodu değil parçayı
+görüyor — ve bu modülün en pahalı sessiz hatası (ters temas tarafı) şekil
+olarak yanlış görünüyor.
+
+Yön TEK BİR KURALDAN çıkar ve yol boyunca sabittir (kayış kendi yüzlerini
+değiştiremez): mm düzleminde ilerleme yönü `u` iken kaburgalı yüz normali
+`rot90ccw(u) / sense`. Türetme: kaburgalı kasnakta `d = +sense` ve teğet
+`u = d·(−sinθ, cosθ)` olduğundan `rot90ccw(u) = d·(−cosθ, −sinθ)` = `d ×`
+merkeze doğru; sırttan temas edende `d = −sense` olduğu için aynı normal
+kasnaktan uzağa bakar. **`sense`i yok sayıp sabit bir yön yazmak bu topolojide
+doğru, AYNASINDA yanlış** çizerdi — testi bu yüzden aynalanmış bir çevrimi de
+koşuyor. Üç mutasyonla ölçüldü: normali ters çevirme, `sense`i sabitleme,
+sarım yönünü (`p.d`) sabitleme — üçü de kırmızı.
+
+**ÖLÇÜLDÜ (gerçek tarayıcı, BMC örneği):** üç kaburgalı kasnakta dişlerin
+%100'ü içeri (20 / 24 / 8 diş), üç sırttan temas eden kasnakta %100'ü dışarı
+(5 / 5 / 4 diş).
 
 ##### Sarım yayının sweep bayrağı — bir kez yanlış yazıldı
 
