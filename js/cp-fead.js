@@ -324,7 +324,11 @@ function veFeadApplyBadge(nodeEl, node){
   b.textContent = (drv ? '► ' : '') + (back ? 'S' : 'K');
   b.title = 'Temas: ' + veFeadContactLabel(back ? 'back' : 'grooved')
           + (drv ? ' · Sürücü kasnak' : '');
-  b.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; pointer-events:none;'
+  // Konum dairenin ÜST-SAĞ 45° noktası: kasnak artık daire, "sağ üst köşe"
+  // diye bir yer yok — sabit -9/-6 px, Ø34'lük kasnakta rozetin yarısını
+  // çemberin içine, Ø300'lükte ise çok uzağına düşürüyordu (ölçüldü).
+  // 85.4% / 14.6% = 0.5 ± 0.5·cos45° → çeperin tam üstü, her çapta.
+  b.style.cssText = 'position:absolute; left:85.4%; top:14.6%; transform:translate(-50%,-50%); z-index:3; pointer-events:none;'
     // Ölçek jetonu — ham px değil (bkz. tests/unit/typography-scale.test.js).
     // --fs-micro zaten "rozet, mikro etiket" için tanımlı.
     + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
@@ -1674,6 +1678,11 @@ function veFeadLoadExample(key){
   }
   if(typeof updateAllConnections === 'function') updateAllConnections();
   if(typeof veFeadRefreshBadges === 'function') veFeadRefreshBadges();
+  // Kasnakları KAYIŞ DÜZENİNE göre diz: yukarıdaki `yer` yalnız düğümleri
+  // yaratmak için bir başlangıç konumu; asıl yerleşim (merkez = mm koordinatı,
+  // port = komşuya bakan açı, ölçü = çap) buradan geliyor. Örnek, kullanıcının
+  // "Otomatik Düzenle" ile göreceğiyle BİREBİR aynı resimle açılsın.
+  if(typeof veFeadArrangeGraph === 'function') veFeadArrangeGraph({ quiet:true, fit:false });
   _feadForgetResults();
   if(typeof saveState === 'function') saveState();
   if(typeof showToast === 'function')

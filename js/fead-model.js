@@ -972,6 +972,11 @@ if (typeof module !== 'undefined' && module.exports) {
     _feadNum: _feadNum, _feadDefOf: _feadDefOf, _feadNodeName: _feadNodeName,
     _feadIsPulley: _feadIsPulley,
     VE_FEAD_DEFAULT_DIA: VE_FEAD_DEFAULT_DIA, VE_FEAD_ERROR_MAP: VE_FEAD_ERROR_MAP,
+    // Paylaşılan saf yardımcılar. Tarayıcıda global oldukları için cp-fead.js,
+    // fead-graph.js, connections.js ve export-topology.js doğrudan çağırıyor;
+    // testte de aynı adlarla kurulabilsinler diye dışa veriliyorlar.
+    _feadNum: _feadNum, _feadDefOf: _feadDefOf,
+    _feadNodeName: _feadNodeName, _feadIsPulley: _feadIsPulley,
     veFeadContactOf: veFeadContactOf, veFeadContactLabel: veFeadContactLabel,
     veFeadOD: veFeadOD, veFeadHasOD: veFeadHasOD, veFeadRadius: veFeadRadius,
     veFeadMigrateNode: veFeadMigrateNode, veFeadMigrateAll: veFeadMigrateAll,
