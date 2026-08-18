@@ -382,6 +382,20 @@ function updateAllConnections() {
       tcTitle.textContent = 'Konvertör ↔ Şanzıman: eşleştirme ilişkisi — konvertör ailesi şanzımana göre filtrelenir';
       path.appendChild(tcTitle);
     }
+    // FEAD kayış bağlantısı: bu tel bir "ilişki" DEĞİL, kayışın kendisi —
+    // serpantinin o kasnaktan sonrakine giden parçası. Modülün renk dilinde
+    // kayış her yerde amber (sembollerde de öyle); graf aynı dili konuşmazsa
+    // kullanıcı onu kanvastaki Kayış Yolu kartıyla karşılaştıramaz, ki iki
+    // yüzeyin bir arada durmasının tek sebebi bu.
+    if(typeof _feadIsPulley === 'function' && _feadIsPulley(fromNode) && _feadIsPulley(toNode)) {
+      path.classList.add('ve-connection-fead-belt');
+      var beltTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      beltTitle.textContent = 'Kayış yolu: '
+        + ((typeof _feadNodeName === 'function') ? _feadNodeName(fromNode) : fromNode.type) + ' → '
+        + ((typeof _feadNodeName === 'function') ? _feadNodeName(toNode) : toNode.type);
+      path.appendChild(beltTitle);
+    }
+
     path.addEventListener('contextmenu', function(e) {
       showConnectionContextMenu(e, conn.id);
     });

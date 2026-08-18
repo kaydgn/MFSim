@@ -14,6 +14,17 @@
 
 function veTidyLayout(opts) {
   opts = opts || {};
+  // ── FEAD İÇ TOPOLOJİSİ KENDİ YERLEŞTİRİCİSİNE GİDER ──────────────────────
+  // Aşağıdaki yerleştirici KATMANLI (Sugiyama tarzı) bir DAG düzeni kurar:
+  // güç akışı zincirleri için doğru. FEAD ise bir ÇEVRİM (serpantin kayış
+  // krank çıkışından başlar, kasnakları dolaşır, krank girişine döner);
+  // katmanlamak çevrimi keyfî bir yerden kırar ve dönüş kenarını her şeyin
+  // üstünden geçirir. Üstelik FEAD'de düğümün konumu KEYFÎ DEĞİL — kasnağın
+  // girilmiş mm koordinatı var. Bkz. js/fead-graph.js.
+  if(typeof veFeadInSubTopology === 'function' && veFeadInSubTopology()
+     && typeof veFeadArrangeGraph === 'function') {
+    return veFeadArrangeGraph(opts);
+  }
   if(typeof nodes === 'undefined' || !nodes || nodes.length < 2) {
     if(typeof showToast === 'function') showToast('Düzenlenecek yeterli bileşen yok', 'warning');
     return;

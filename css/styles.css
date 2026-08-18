@@ -2996,6 +2996,62 @@
 @media (prefers-reduced-motion: reduce){
   .ve-node-label{ transition:none; }
 }
+/* ===== FEAD KASNAĞI — DAİRESEL DÜĞÜM =====
+   Kasnak bir DİKDÖRTGEN değil. Kutu biçimi üç şeyi birden imkânsız kılıyordu:
+   çap ekranda yoktu (Ø57 ile Ø162 aynı kutuydu), teğet noktası tanımsızdı, ve
+   "sarım" kavramı çizilemiyordu. Daire üçünü de açar ve biçim üç kanal taşır:
+     • çeper ÇAPI    → gerçek dış çap (kanvasta 1 px = 1 mm; js/fead-graph.js)
+     • çeper DOKUSU  → temas tarafı — DÜZ: kaburgalı yüz, KESİKLİ: kayış sırtı
+     • çeper RENGİ   → rol — sürücü (amber) / aksesuar (mavi) / avara (nötr) /
+                        gergi (yeşil; Kayış Yolu kartındaki pivot rengiyle aynı)
+   Tip kimliği ortadaki sembolde kalır (componentDefs'teki gerçek SVG).
+   Kesikli çember işareti kartla ORTAK: iki yüzey aynı dili konuşmazsa
+   kullanıcı onları karşılaştıramaz, ki kartın tek işi bu. */
+.ve-node--fead-pulley{ --fead-rim: var(--accent-primary); }
+.ve-node--fead-pulley.ve-fead-idler{ --fead-rim: var(--text-secondary); }
+.ve-node--fead-pulley.ve-fead-tensioner{ --fead-rim: var(--accent-success); }
+.ve-node--fead-pulley.ve-fead-driver{ --fead-rim: var(--accent-warning); }
+
+.ve-node--fead-pulley .ve-node-box{
+  border-radius:50%;
+  border:2px solid var(--fead-rim);
+  background:var(--bg-tertiary);
+}
+.ve-node--fead-pulley.ve-fead-driver .ve-node-box{ border-width:3px; }
+.ve-node--fead-pulley.ve-fead-back .ve-node-box{ border-style:dashed; }
+
+/* Jant: kaburgalı yüzde ikinci bir çember (V-kanal halkası). Sırttan temas
+   edende YOK — kayış oraya düz sırtıyla basıyor, oluk görmüyor. */
+.ve-node--fead-pulley .ve-node-box::after{
+  content:'';
+  position:absolute;
+  inset:13%;
+  border-radius:50%;
+  border:1px solid color-mix(in srgb, var(--fead-rim) 45%, transparent);
+  pointer-events:none;
+}
+.ve-node--fead-pulley.ve-fead-back .ve-node-box::after{ display:none; }
+
+/* Çapı GİRİLMEMİŞ kasnak: nötr ölçü + noktalı soluk çeper. "Bu daire bir ölçü
+   söylemiyor" demek, tipe göre uydurulmuş bir çapı ölçekli göstermekten
+   dürüsttür. Ölçekten KIRPILMIŞ kasnak (alt/üst sınıra çarpan) ise ikinci bir
+   halkayla işaretlenir — çizim ölçekli değilse kullanıcı bunu bilmeli. */
+.ve-node--fead-pulley.ve-fead-nodia{ --fead-rim: var(--text-muted); }
+.ve-node--fead-pulley.ve-fead-nodia .ve-node-box{ border-style:dotted; }
+.ve-node--fead-pulley.ve-fead-notoscale:not(.ve-fead-nodia) .ve-node-box{
+  box-shadow:0 0 0 1px var(--bg-primary),
+             0 0 0 3px color-mix(in srgb, var(--fead-rim) 35%, transparent);
+}
+
+/* Sembol daireye göre ölçeklenir: sabit 38 px sembol Ø162'lik kasnağın
+   ortasında kaybolur, Ø34'lük kasnağın dışına taşardı. */
+.ve-node--fead-pulley .ve-node-box > svg{ width:46%; height:46%; opacity:0.9; }
+.ve-node--fead-pulley .ve-selection-border{ border-radius:50%; }
+
+/* ÖLÇÜ VERİDİR — çap panelden girilir, fareyle değil. Tutamağı çekmek
+   panelde 152.0 yazan değeri 151.6 yapardı; tutamaklar bu yüzden gizli. */
+.ve-node--fead-pulley .ve-resize-handle{ display:none; }
+
 /* ===== ALT-SİSTEM (MODÜL) KARTI =====
    Ana topolojideki "Araç Performans" / "Takoz Çökme-Titreşim" blokları bir
    BİLEŞEN değil, içinde kendi topolojisini taşıyan bir KAP. Bunu anlatan biçim
@@ -3387,6 +3443,13 @@
 }
 .ve-connection-tc-gb{
   stroke:#c2610c;
+}
+/* FEAD kayış bağlantısı — modülün renk dilinde kayış her yerde amber. Saç
+   teli kalınlığı burada yanlış olurdu: bu çizgi "iki bileşen ilişkili" demiyor,
+   "kayış buradan geçiyor" diyor. Bkz. js/connections.js. */
+.ve-connection-fead-belt{
+  stroke:var(--accent-warning);
+  stroke-width:2.5;
 }
 
 .ve-connection-temp{

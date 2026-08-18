@@ -92,11 +92,23 @@ function veBuildTopologySVG() {
     // PNG'de "içi boş geniş kutu + altında ad" çıkardı — aynı belgenin iki
     // farklı hâli. Yerleşim tek kaynaktan: js/components.js modül kartı.
     var _modul = (typeof veIsModuleNode === 'function') && veIsModuleNode(n);
+    // FEAD kasnağı ekranda DAİRE, kutu değil — çapı veri (1 px = 1 mm), çeper
+    // dokusu temas tarafı (kesikli = kayış sırttan değiyor). Dışa aktarma bunu
+    // bilmezse aynı topoloji ekranda kasnak sistemi, PNG'de kutular çıkardı:
+    // node.data.labelPos ile yaşanan hatanın aynı sınıfı (bkz.
+    // tests/unit/node-label-anchor.test.js). Biçim kararı tek yerden:
+    // js/fead-graph.js + css .ve-node--fead-pulley.
+    var _kasnak = (typeof _feadIsPulley === 'function') && _feadIsPulley(n);
+    var _rx = _kasnak ? (w / 2) : 6, _ry = _kasnak ? (h / 2) : 6;
+    var _dash = (_kasnak && typeof veFeadContactOf === 'function'
+                 && veFeadContactOf(n) === 'back') ? ' stroke-dasharray="5 4"' : '';
     parts.push('<g>');
     parts.push('<rect x="' + n.x + '" y="' + n.y + '" width="' + w + '" height="' + h +
-               '" rx="6" fill="' + boxBg + '" stroke="' + boxBd + '" stroke-width="1.5"/>');
-    // Sembol (nested svg): modülde sola yaslı, diğerlerinde ortalanmış
-    var symSize = _modul ? 30 : Math.min(w, h) * 0.72;
+               '" rx="' + _rx + '" ry="' + _ry + '" fill="' + boxBg + '" stroke="' + boxBd +
+               '" stroke-width="1.5"' + _dash + '/>');
+    // Sembol (nested svg): modülde sola yaslı, diğerlerinde ortalanmış.
+    // Kasnakta ekrandaki oranla AYNI (%46) — %72 dairenin jant halkasını aşardı.
+    var symSize = _modul ? 30 : Math.min(w, h) * (_kasnak ? 0.46 : 0.72);
     if(def.svg && parser) {
       try {
         var doc = parser.parseFromString(def.svg, 'image/svg+xml');

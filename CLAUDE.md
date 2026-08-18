@@ -69,15 +69,17 @@ sınırları: doğal frekans çok serbestlik dereceli bir burulma modu (çekirde
 yalnız kol modu verir, raporla karşılaştırılamaz); mutlak ömür yalnız tüm
 çaplar 79.6–176 mm iken geçerli, dışında sistematik 0.55×.
 
-#### Üç katman — hangi dosya neyi yapar
+#### Dört katman — hangi dosya neyi yapar
 
 | Dosya | Katman | Kural |
 |-------|--------|-------|
 | `js/fead-core.js` | Hesap çekirdeği | Dışarıdan geldi, **birebir** durur, dokunulmaz |
 | `js/fead-model.js` | Köprü (DOM'suz) | Kanvas düğümü → `FEADCore.makeSystem()`; temas/sürücü/çap çözümü, hata çevirisi |
 | `js/cp-fead.js` | Sunum | Yalnız HTML kurar; **kendi geometrisini hesaplamaz** |
+| `js/fead-graph.js` | Graf yüzü | Topolojinin **girdi** resmi: yerleşim, port açısı, kasnak biçimi. Çözücüye BAĞLI DEĞİL |
 
-Yükleme sırası (index.html): `fead-model.js` → `fead-core.js` → `cp-fead.js`.
+Yükleme sırası (index.html): `fead-model.js` → `fead-core.js` → `cp-fead.js`
+→ `fead-graph.js`.
 Model katmanı, `cp-fead.js`'in de kullandığı saf yardımcıları (`_feadNum`,
 `_feadDefOf`, `_feadIsPulley`, `veFeadContactOf`, `veFeadOD`,
 `veFeadRouteOrder`…) bildirir — aynı adı iki dosyada bildirmek üst-seviye
@@ -94,6 +96,70 @@ Model katmanı, `cp-fead.js`'in de kullandığı saf yardımcıları (`_feadNum`
    (K/S, sürücüde ►). Testi bu sessizliği belgeliyor.
 3. **Çap = DIŞ ÇAP (`od`).** Yarıçapları çekirdek `hb`/`hr` ile türetir. Eski
    `dia` alanı `veFeadMigrateNode` ile sessizce göç eder.
+
+#### İKİ YÜZEY — graf GİRDİ, kart ÇIKTI (`js/fead-graph.js`)
+
+FEAD iç topolojisi artık serbest bir blok diyagramı değil: kasnaklar
+**girilen mm koordinatlarına** oturur (kanvasta **1 px = 1 mm**), düğüm
+**girilen çapında bir DAİRE**dir, portlar kayış sırasındaki **komşuya bakar**.
+Ölçülen kazanç: BMC örneğinde tel kesişimi **3 → 0**.
+
+Bunu yapmayan bir yerleşim üç ayrı sebeple karışıyordu ve üçü de kapatıldı:
+konum keyfîydi (kasnağın mm koordinatı ekranda hiçbir şey ifade etmiyordu),
+port sabitti (giriş SOLDA / çıkış SAĞDA → kayış sağdan sola dönerken tel
+düğümün üstünden geri geçiyordu), biçim dikdörtgendi (çap ekranda yoktu).
+
+**Graf, Kayış Yolu kartının yerine GEÇMEZ — bölüşüm görüntüye göre değil
+YETENEĞE göre:**
+
+| | Graf = **girdi** yüzeyi | Kart = **çıktı** yüzeyi |
+|---|---|---|
+| Ne gösterir | çözücü **olmadan** çizilebilen her şey | yalnız **çözücünün** söyleyebildiği şey |
+| İçerik | merkez, çap, temas tarafı, sürücü rolü, serpantin sırası, pivot | sarım açıları, span, L_eff, `Σsarım=360` kapısı, gerginlik, take-up |
+| Yarım modelde | **çalışır** (3 kasnak, kayış kapanmamış) | "kapanmıyor — temas tarafına bak" der |
+| Etkileşim | düzenlenebilir | salt okunur gösterge |
+
+Ölçüldü: doğru kurulmuş BMC modelinde girilen gergi montaj merkezi
+(−170.08, 99.16) ile çözücünün bulduğu çalışma merkezi (−170.12, 98.46)
+arasında **0.70 mm ≈ 0.21 px** var. Yani model doğruyken iki resim ayırt
+edilemez — bu gereksizlik değil, **doğrulamanın kendisi**; ayrıldıklarında
+(ters temas tarafı, ters pivot, işareti yanlış koordinat) fark teşhis olur.
+Yapısal olarak grafın **asla** yapamayacağı şey ise şu: grafta bir kasnak =
+bir düğüm, düğümün tek konumu var; gergi kasnağının ise BMC'de **4 ayrı
+konumu, 59.9 mm'lik bir zarfı ve 374…876 N aralığı** var — kart TÜMÜ kipinde
+dördünü üst üste çizebiliyor. Bu yüzden "kenar = çözülmüş kayış" (etüt 1'in E
+alternatifi) **yapılmadı**.
+
+**Biçim üç kanal taşıyor** (`css .ve-node--fead-pulley`): çeper ÇAPI → dış çap,
+çeper DOKUSU → temas tarafı (düz = kaburgalı, kesikli = sırt), çeper RENGİ →
+rol (sürücü amber · aksesuar mavi · avara nötr · gergi yeşil — kartın pivot
+rengiyle aynı). Tip kimliği ortadaki sembolde kalır.
+
+**Ölçek SABİT (1 px = 1 mm), "görünüme sığdıran" değil:** sığdıran ölçek daha
+şık dururdu ama iki kasnağın ekrandaki oranı topolojiden topolojiye değişirdi.
+Alt/üst sınıra çarpan kasnak ölçekli DEĞİLDİR ve işaretlenir. Çapı GİRİLMEMİŞ
+kasnak nötr ölçüde (`VE_FEAD_NODIA_DIA = 64`, `componentDefs` varsayılanıyla
+aynı sayı — testi var) ve noktalı çizilir: tipe göre uydurulmuş bir çapı
+(krank 180 mm) ölçekli göstermek, biçimin taşıdığı tek bilgiyi yalan yapardı.
+
+**Port artık AÇI** (`portPositions[pid] = {side:'angle', deg}`). `deg` EKRAN
+düzleminde ölçülür: 0° = +X, 90° = **aşağı** — yani doğrudan
+`atan2(Δy_ekran, Δx_ekran)`. Tek geometri kaynağı yine `vePortOffset`
+(components.js): port DOM'u, bağlantı ucu ve pano üçü de oradan okuyor.
+Teğet noktası DEĞİL merkez doğrultusu kullanılıyor — teğet için çözücü gerekir,
+graf ise çözücüsüz de çalışmak zorunda.
+
+**"Otomatik Düzenle" FEAD'de kendi yerleştiricisine gider** (`veTidyLayout` →
+`veFeadArrangeGraph`). Genel yerleştirici katmanlı bir DAG düzeni kurar; FEAD
+bir ÇEVRİM, katmanlamak onu keyfî bir yerden kırar ve dönüş kenarını her şeyin
+üstünden geçirir. Kasnak biçimi/ölçüsü ise **`saveState()`'ten** tazelenir —
+Kayış Yolu kartıyla aynı tek nokta.
+
+Kayış bağlantısı **düz çizgi ve amber** (`.ve-connection-fead-belt`): kayışın
+kasnaklar arası parçası fizikte zaten bir doğru, ve bu tel "iki bileşen
+ilişkili" demiyor, "kayış buradan geçiyor" diyor. Dışa aktarma (SVG/PNG) da
+kasnağı daire + kesikli çeperle çiziyor — ekranda daire olanın çıktıda kutu
+çıkması `node.data.labelPos` hatasının aynı sınıfıydı.
 
 #### Kanvasta CANLI kayış yolu kartı (`fead-layout`)
 
@@ -380,6 +446,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/fead-core.test.js` | `js/fead-core.js` + `tests/fixtures/fead-validation.js` | **FEAD çekirdeğinin doğrulama kapısı**: 17 Gates raporu / 2095 değer (çalışma %0.5, Load dahil %1.5, kol açısı 0.2°), 8 koruma mekanizması, SPEC §9 yapısal özdeşlikleri (sarım değişmezi, `L_pitch−L_eff=2π·hb`, çevrim kapanışı, sürücü gücü), UMD tarayıcı köprüsü |
 | `tests/unit/fead-model.test.js` | `js/fead-model.js` | **Köprü kapısı**: AG00686 MFSim KANVAS DÜĞÜMÜ olarak kurulup Gates sayılarını üretiyor mu (span %0.5, sarım 0.2°, Mean kol açısı 0.2°); temas tarafı üç katmanlı çözümü, sürücü rolü, `dia→od` göçü, ad tekilleştirme, hata çevirisi. Ayrıca **ters temas tarafının hata VERMEDİĞİNİ** belgeler (rozetin varlık nedeni). **Duty kapısı**: AG00686 duty tablosunun çıkış gerilmeleri ve hubload'ları %0.5 içinde; kW'ın kimlikle anahtarlanması (yeniden adlandırmada kaybolmuyor), sürücü gücünün toplamdan hesaplanması, ateşleme frekansı, yorulma dağılımının çapa bağlı olması, katalog oranının ÇAPTAN hesaplanması |
 | `tests/unit/cp-fead.test.js` | `js/cp-fead.js` + `js/components.js` | FEAD sunum katmanı: kanvas rozeti, `feadContact` varsayılanları, panel smoke testleri, alt-sistem sözleşmesi, `fead-*` tip tanımları; panelin HANGİ ALANLARI sorduğu (montaj merkezi ↔ serbest açı), servis faktörü hükmü |
+| `tests/unit/fead-graph.test.js` | `js/fead-graph.js` + `js/components.js` port geometrisi + `js/export-topology.js` | **Graf yüzü**: girilen merkezin çözümü (gergi montaj merkezi / pivot+kol), 1 px = 1 mm ölçeği ve alt/üst sınır işaretleri, `componentDefs` varsayılanı ↔ `VE_FEAD_NODIA_DIA` tek kaynağı, yerleşimin mm mesafelerine EŞİT olması, mm y-yukarı → ekran y-aşağı çevrimi, **kayış yolunun kendini kesmemesi (kesişim = 0)**, portun komşuya bakması ve `vePortOffset` açısal dalı, kasnak biçim sınıfları, dışa aktarmada daire + kesikli çeper |
 | `tests/unit/fead-example.test.js` | `js/fead-model.js` örnekleri + FEAD_INFORMATION | **Tedarikçi sayfası çıpası** (Gates'ten bağımsız ikinci doğrulama): kayış boyu 1715 mm, kol boyu 90.0 mm, Spring Mean Load 22.07 Nm, tahrik oranı 1.1; sayfanın devir→kW tabloları; **iki sessiz kanalın** ölçülmüş belgesi (montaj merkezi ↔ serbest açı 2.6×, tasarım gerginliği ↔ yay dengesi 250 N) |
 | `tests/unit/canvas-space.test.js` | `js/canvas-space.js` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama |
 | `tests/unit/module-start-center.test.js` | `js/components.js` `veStartModule` | Karşılama kartından gelen modül bloğu görünümün TAM ortasına düşer (kabuk senkronu ölçümden önce) |
