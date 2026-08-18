@@ -8,6 +8,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/` — Modüler JavaScript dosyaları
 - `css/` — Stiller
 - `build.js` — Build script (`index.html` + `js/` + `css/` → `MFSim_Code.html`)
+- `tools/shot.js` — Ekran görüntüsü aracı (ÖNCESİ/SONRASI — bkz. "Görsel Teslim")
 - `tests/unit/` — Jest birim testleri
 - `tests/e2e/` — Playwright E2E testleri
 - `viewer/` — **Ölçüm Görüntüleyici** (ayrı program, bkz. `viewer/README.md`)
@@ -459,6 +460,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/viewer-sync.test.js` | `viewer/sync.js` | Görüntüleyici kopyaları `js/`'ten geride kaldıysa kırmızı — sessiz ayrışmaya karşı kapı |
 | `tests/unit/measure-dropzone.test.js` | `js/measure-dropzone.js` | Sürükle-bırak uzantı süzgeci (sessiz yanlış çıktıya karşı) |
 | `tests/unit/simulation-engine-grade.test.js` | `js/simulation-engine.js` | Yol eğimi işaret konvansiyonu (harita ↔ fizik çevirisi) + dinamiğin değişmediğini bağlayan altın değerler |
+| `tests/unit/shot-tool.test.js` | `tools/shot.js` | ÖNCESİ/SONRASI aracının ayrıştırma çekirdeği: bilinmeyen bayrağın SESSİZCE yutulmaması (yanlış ekranın görüntüsü alınırdı), hedef takma adları, PNG ölçüsü, karşılaştırmanın İKİ GÖRÜNTÜYÜ TEK ÖLÇEKLE küçültmesi |
 | `tests/unit/source-hygiene.test.js` | `js/`, `viewer/js/`, `css/`, `index.html` | **Yapısal kapılar**: üst-seviye bildirim çakışması yok, kaynakta kontrol karakteri yok |
 | `tests/unit/results-txt-preview-download.test.js` | `js/results.js` | TXT önizlemesinin "HTML İndir" yolu — iki rapor üreticisinin ayrı kaldığı ve düğme kablolaması |
 | `tests/e2e/app.spec.js` | Tüm uygulama | Sayfa yükleme, menüler, bileşen ekleme, kaydetme |
@@ -477,9 +479,98 @@ npm run build               # MFSim_Code.html üret (modüler → monolitik) —
 npm run sync:viewer         # js/ → viewer/js/ (yedi kopya + iki yerel fark)
 npm run build:viewer        # MFSim_Olcum_Goruntuleyici.html üret (Ölçüm Görüntüleyici)
 npm run build:all           # ikisi birden
+npm run shot -- --help      # ★ ÖNCESİ/SONRASI ekran görüntüsü (bkz. "Görsel Teslim")
 npm run test:e2e            # E2E testleri (Chromium gerekli)
 npm run test:all            # birim + E2E
 ```
+
+## Görsel Teslim — her değişikliğin ÖNCESİ/SONRASI görüntüsü
+
+Kullanıcı talimatı (2026-08-18): **MFSim'de yapılan her değişiklik, iş bitince
+ÖNCESİ ve SONRASI ekran görüntüsüyle sunulur.** "Şunu düzelttim" cümlesi tek
+başına teslim değildir; değişen şey ekranda görünüyorsa ekranda gösterilir.
+İstisna kullanıcının kendi koyduğu istisnadır: **işin matematiği hariç.**
+
+Gerekçe testlerinkinden farklı: yeşil test "kod ne yaptığını yapıyor" der,
+görüntü "yapılan şey İSTENEN şey mi" sorusuna bakar. Bir yay yanlış yöne
+dönerken, bir etiket tellerin altında kalırken ya da kart görünür alanın
+dışına taşarken bütün testler yeşil kalabiliyor — bu depoda tam olarak böyle
+oldu (bkz. sarım yayının sweep bayrağı). Kullanıcı o farkı bir bakışta görür.
+
+### Kapsam — ölçüt tek: kullanıcının ekranında bir piksel değişiyor mu?
+
+| Değişiklik | Görüntü |
+|------------|---------|
+| Yerleşim, kanvas çizimi, düğüm/port/tel/rozet biçimi | **ZORUNLU** |
+| Panel, form, düğme, etiket, ikon, renk, tema, şerit (ribbon) | **ZORUNLU** |
+| Grafik, şerit diyagramı, kayış yolu kartı, sonuç sekmesi, rapor | **ZORUNLU** |
+| Ölçüm Görüntüleyici yüzeyi (`viewer/`) | **ZORUNLU** |
+| Ekranda GÖRÜNEN bir sayıyı/eğriyi değiştiren hesap düzeltmesi | **ZORUNLU** — o panelin/eğrinin görüntüsü |
+| Görünmeyen matematik: `fead-core.js` içi, `numerics.js`, çözücü iç döngüsü, ekranda çıktısı AYNI kalan yeniden düzenleme | gerekmez |
+| Test, build script, CI, CLAUDE.md/README, yorum | gerekmez |
+
+"Matematik hariç" istisnası **görünmeyen** matematik içindir: sayı ekranda
+değiştiyse o artık görsel bir değişikliktir — kullanıcının doğrulayacağı şey
+zaten o sayının kendisidir. Kararsız kalınan yerde görüntü ALINIR; fazladan
+bir PNG'nin maliyeti, kullanıcının değişikliği gözle doğrulayamamasından
+düşüktür.
+
+### Nasıl alınır — `npm run shot`
+
+```bash
+# 1) ÖNCESİ — değişiklikten ÖNCEKİ kod (çalışma kopyası kirliyken bile):
+npm run shot -- --rev HEAD --module fead-analysis --fit --hide-toast \
+                --script tools/shots/fead-ornek.js --out .shots/oncesi.png
+
+# 2) SONRASI — AYNI argümanlar, --rev YOK (çalışma kopyası):
+npm run shot --       --module fead-analysis --fit --hide-toast \
+                --script tools/shots/fead-ornek.js --out .shots/sonrasi.png
+
+# 3) Tek karede yan yana (ÖNCESİ/SONRASI künyeli, TEK ölçekle):
+npm run shot -- --compose .shots/oncesi.png .shots/sonrasi.png \
+                --out .shots/karsilastirma.png --title "Ne değişti"
+```
+
+Bir çekim ≈ 16 s (uygulama gerçekten açılıyor: giriş → modül yüklemesi →
+senaryo). Çıktılar `.shots/` altına yazılır ve **git'e girmez**.
+
+| Seçenek | Ne işe yarar |
+|---------|--------------|
+| `--rev <git-rev>` | O revizyonu geçici worktree'de açar — ÖNCESİ'ni sonradan da almayı sağlar |
+| `--file index\|built\|viewer` | Modüler sayfa · `MFSim_Code.html` · Ölçüm Görüntüleyici (varsayılan `index`) |
+| `--module <tip>` | Karşılama kartına tıklar: `arac-performans` · `mount-analysis` · `fead-analysis` |
+| `--script <dosya>` | Senaryo: `module.exports = async function(page, ctx)` — Playwright `page`'in tamamı |
+| `--fit` | Kanvası içeriğe sığdırır (`veFitViewToContent`) |
+| `--hide-toast` | Geçici bildirimleri kaldırır |
+| `--selector <seçici>` | Yalnız o ögeyi çeker (panel/kart kadrajı) |
+| `--eval` `--click` `--dblclick` `--size` `--dpr` `--wait` `--full` | Küçük ayarlar; `npm run shot -- --help` |
+
+Senaryo dosyaları `tools/shots/` altında yaşıyor; örnek:
+`tools/shots/fead-ornek.js` (FEAD iç topolojisi + BMC tedarikçi örneği).
+
+### Üç kural — üçü de karşılaştırmanın yalan söylememesi için
+
+1. **ÖNCESİ ile SONRASI aynı argümanlarla çekilir.** Farklı `--size`, farklı
+   modül ya da farklı senaryo iki ayrı ekran demektir; fark "değişikliğin
+   sonucu" gibi okunur. `--compose` de bu yüzden iki görüntüyü **tek ölçekle**
+   küçültüyor — ayrı ölçeklenseydi ölçek farkı "kutu büyümüş" diye okunurdu.
+2. **Kadraj dar tutulur.** Değişen şey bir panelse `--selector` ile o panel
+   çekilir; tüm ekranı çekip "sol üstteki 12 pikselde" demek fark göstermez.
+3. **Kanvasta `--fit --hide-toast`.** Sığdırma yoksa iki çekim topolojinin
+   başka bölgesini gösterebilir; toast'lar zamana bağlı olduğundan iki
+   çekimde farklı çıkar. (Ölçüldü: sığdırmadan önce sarmalayıcının kaydırması
+   sıfırlanmazsa — `scrollLeft≈551`, `scrollTop≈391` — içerik kadrajın sol
+   üstüne taşıyor; araç bunu kendisi sıfırlıyor.)
+
+### Sunum
+
+Kullanıcıya **üç dosya** gider: `oncesi.png`, `sonrasi.png` ve
+`karsilastirma.png` — yanında tek cümlelik "nereye bakmalı". Uzak oturumda
+dosyalar sohbete gönderilir (`SendUserFile`); yerelde yol yazmak yeterli.
+Görüntüler commit edilmez.
+
+Görüntü alınamıyorsa (tarayıcı yok, senaryo kurulamıyor) bu **söylenir** —
+sessizce atlanmaz. Sessiz atlama kuralın tek gerçek başarısızlık kipidir.
 
 ## Teslim Akışı — PR + merge OTOMATİK
 
@@ -494,10 +585,12 @@ npm test          # tüm birim testleri
 ```
 
 1. `npm run build` + `npm test` **ikisi de yeşil** olmadan commit YOK.
-2. Commit → `git push -u origin <dal>`
-3. PR aç (gövdede: sorun, kök neden, ölçüm, test, doğrulama)
-4. **Merge et** (`merge` yöntemi — depo geçmişi merge commit'i kullanıyor)
-5. CI'ı izle ve sonucu kullanıcıya bildir. CI artık **PR'da da koşar** (yalnız
+2. Değişiklik GÖRSELSE ÖNCESİ/SONRASI görüntüsü alınır (bkz. "Görsel Teslim");
+   `.shots/` commit'e GİRMEZ, görüntüler kullanıcıya sohbette sunulur.
+3. Commit → `git push -u origin <dal>`
+4. PR aç (gövdede: sorun, kök neden, ölçüm, test, doğrulama)
+5. **Merge et** (`merge` yöntemi — depo geçmişi merge commit'i kullanıyor)
+6. CI'ı izle ve sonucu kullanıcıya bildir. CI artık **PR'da da koşar** (yalnız
    `test` job'u; `build`/`deploy` PR'da atlanır) — yani kırık kod merge'den ÖNCE
    yakalanır. `main`'e push'ta üç job da koşar ve Pages'e yayınlar.
    `test` job'u ayrıca iki kapı içerir: görüntüleyici senkronu
