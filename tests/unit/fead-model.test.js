@@ -543,3 +543,156 @@ describe('katalog bağı — oran çaptan hesaplanır', () => {
     expect(veFeadPresetLib('fead-idler')).toBeNull();       // avaranın kataloğu yok
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+//  SICAKLIK KAPISI — satır başına °C → çekirdeğin istediği TEK °C
+// ════════════════════════════════════════════════════════════════════════════
+// Çekirdeğin beltLifeB10'u sıcaklığı TOPLAM geçiş sayısını çarpan tek bir sayı
+// olarak alıyor; duty tablosu ise sıcaklığı SATIR BAŞINA soruyor. Aradaki
+// indirgeme köprüde ve iki kez yanlıştı:
+//   (a) `d.dcPct || 100/n` ifadesi AÇIKÇA 0 girilen yüzdeyi "girilmemiş"
+//       sayıyordu — ağırlıklar 1'e toplanmıyordu;
+//   (b) sıcaklıkların ARİTMETİK ortalaması alınıyordu, oysa hasar 2^(ΔT/23)
+//       ile büyüyor: dışbükey bir fonksiyonun ortalaması ortalamanın
+//       fonksiyonundan büyüktür (Jensen), yani ömür HEP UZUN çıkıyordu.
+describe('veFeadDutyDegC — hasar-eşdeğer sıcaklık', () => {
+  const bmc = () => {
+    const ex = veFeadExampleNodes('BMC_FEAD_2026');
+    ex.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const build = veFeadBuildSystem(ex.nodes, ex.connections);
+    expect(build.ok).toBe(true);
+    const solv = ex.nodes.find((n) => n.type === 'fead-solver');
+    return { build, rows: veFeadDutyRows(solv) };
+  };
+
+  test('tek sıcaklıklı tablo TAM O SICAKLIĞI verir (yaklaşıklık değil)', () => {
+    const { build, rows } = bmc();
+    const duty = veFeadDutyToCore(build, rows);
+    expect(duty.every((d) => d.degC === 90)).toBe(true);
+    // log2(2^x) = x → tek sıcaklıkta indirgeme birim işlemdir. Bu, mevcut
+    // doğrulanmış sonuçların (Gates tabloları) kaymadığının kapısı.
+    expect(veFeadDutyDegC(build.sys, duty)).toBeCloseTo(90, 10);
+  });
+
+  test('sıcaklık dağılınca ARİTMETİK ORTALAMANIN ÜSTÜNDE oturur', () => {
+    const { build, rows } = bmc();
+    const spread = [70, 75, 80, 85, 90, 95, 100, 105, 110];
+    const duty = veFeadDutyToCore(build, rows.map((r, i) => ({ ...r, degC: spread[i] })));
+    const eq = veFeadDutyDegC(build.sys, duty);
+
+    // Çekirdeğin modeliyle ELDE kurulan hasar toplamına birebir eşit olmalı.
+    const FA = F.FATIGUE.absolute;
+    const L = build.sys.belt.effLength / 1000;
+    let w = 0, dmg = 0;
+    duty.forEach((d) => {
+      const p = (d.dcPct / 100) * (F.spanTensions(build.sys, d).vMs / L);
+      w += p; dmg += p * Math.pow(2, (d.degC - FA.refDegC) / FA.halvingDegC);
+    });
+    const beklenen = FA.refDegC + FA.halvingDegC * Math.log2(dmg / w);
+    expect(eq).toBeCloseTo(beklenen, 9);
+
+    // Ölçülmüş büyüklük: dc ağırlıklı aritmetik ortalama 89.4 °C (BMC'nin
+    // yüzdeleri düz değil), hasar-eşdeğer ~96.7 °C.
+    const aritmetik = duty.reduce((a, d) => a + d.degC * (d.dcPct / 100), 0);
+    expect(aritmetik).toBeCloseTo(89.4, 6);
+    expect(eq).toBeGreaterThan(aritmetik + 5);
+    expect(eq).toBeCloseTo(96.7, 1);
+
+    // ve bu ömre geçiyor: eski davranış ömrü ~1.25× uzun gösteriyordu.
+    const dogru = F.beltLifeB10(build.sys, { duty, degC: eq }).hoursB10;
+    const eski = F.beltLifeB10(build.sys, { duty, degC: aritmetik }).hoursB10;
+    expect(eski / dogru).toBeGreaterThan(1.2);
+    expect(veFeadAnalyze(build, { rows: rows.map((r, i) => ({ ...r, degC: spread[i] })) })
+      .life.hoursB10).toBeCloseTo(dogru, 6);
+  });
+
+  test('AĞIRLIK dc DEĞİL, GEÇİŞ SAYISI (dc·v) — mutasyon kapısı', () => {
+    const { build, rows } = bmc();
+    // Sıcak nokta YÜKSEK devirde: dc ile ağırlıklandırmak onu hafife alır.
+    const duty = veFeadDutyToCore(build, rows.map((r) => ({ ...r, degC: r.rpm >= 2000 ? 115 : 75 })));
+    const eq = veFeadDutyDegC(build.sys, duty);
+    const FA = F.FATIGUE.absolute;
+    // Aynı formül ama v'siz (yalnız dc) — ayrışmalı, yoksa test kör olurdu.
+    let w = 0, dmg = 0;
+    duty.forEach((d) => {
+      const p = d.dcPct / 100;
+      w += p; dmg += p * Math.pow(2, (d.degC - FA.refDegC) / FA.halvingDegC);
+    });
+    const dcIle = FA.refDegC + FA.halvingDegC * Math.log2(dmg / w);
+    expect(Math.abs(eq - dcIle)).toBeGreaterThan(0.5);
+    expect(eq).toBeGreaterThan(dcIle);          // hızlı = sıcak → geçişler ağır basar
+  });
+
+  test('AÇIKÇA %0 girilen satır SIFIR ağırlıklıdır (0 "girilmemiş" değildir)', () => {
+    const { build, rows } = bmc();
+    // Tedarikçi sayfasında 3000 rpm satırı %0 yazıyor. Eklenince sıcaklığı
+    // değiştirmemeli: ağırlığı sıfır.
+    const temiz = veFeadDutyDegC(build.sys, veFeadDutyToCore(build, rows));
+    const sifirli = veFeadDutyDegC(build.sys,
+      veFeadDutyToCore(build, rows.concat([{ rpm: 3000, dcPct: 0, degC: 200, kw: {} }])));
+    expect(sifirli).toBeCloseTo(temiz, 9);
+    // ESKİ DAVRANIŞ: 200 °C'lik %0 satırı ortalamayı yukarı çekerdi.
+    expect(sifirli).toBeLessThan(95);
+  });
+
+  test('yüzdelerin HEPSİ boşken patlamaz — düz ortalamaya düşer', () => {
+    const { build, rows } = bmc();
+    const bos = rows.map((r) => ({ ...r, dcPct: 0 }));
+    const duty = veFeadDutyToCore(build, bos);
+    // ESKİ DAVRANIŞ: 1000 °C (ağırlıklar 1 yerine 100/n'e toplanıyordu).
+    expect(veFeadDutyDegC(build.sys, duty)).toBeCloseTo(90, 6);
+    const R = veFeadAnalyze(build, { rows: bos });
+    expect(R.degCEq).toBeCloseTo(90, 6);
+    // ve sebebi yazılır: hasar sıfır olduğu için ömür kartı "—" gösterecek.
+    expect(R.warnings.join(' ')).toMatch(/%zaman/);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  YORULMA MODELİ ↔ MUTLAK ÖMÜR — kalibrasyon sabiti üsse bağlı
+// ════════════════════════════════════════════════════════════════════════════
+// Panel iki yorulma modeli sunuyor (m = 5.6 ↔ 4.05) ve seçim DAĞILIMA geçiyor.
+// Mutlak ömre GEÇEMEZ: beltLifeB10'un C sabiti Σ w·d^(−m) ölçeğini soğuruyor,
+// üs değişince ömür yüzlerce kat kayar (ölçüldü: BMC 992 → 1.1 saat). Doğru
+// davranış sessizce 5.6 kullanmak DEĞİL, kullandığını SÖYLEMEK.
+describe('B10 ömrü ↔ seçili yorulma modeli', () => {
+  const bmc = () => {
+    const ex = veFeadExampleNodes('BMC_FEAD_2026');
+    ex.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const build = veFeadBuildSystem(ex.nodes, ex.connections);
+    const solv = ex.nodes.find((n) => n.type === 'fead-solver');
+    return { build, rows: veFeadDutyRows(solv) };
+  };
+
+  test('kalibre model seçiliyken uyarı YOK', () => {
+    const { build, rows } = bmc();
+    const R = veFeadAnalyze(build, { rows, fatigueModel: VE_FEAD_LIFE_FATIGUE_MODEL });
+    expect(R.life.modelMismatch).toBeUndefined();
+    expect(R.limits.join(' ')).not.toMatch(/Mutlak B10 ömrü/);
+  });
+
+  test('başka model seçiliyken DAĞILIM değişir, ömür değişmez — ve bu YAZILIR', () => {
+    const { build, rows } = bmc();
+    const p = veFeadAnalyze(build, { rows, fatigueModel: 'PK-2_2p-MT3' });
+    const a = veFeadAnalyze(build, { rows, fatigueModel: 'PK-2_2a-MT3' });
+
+    // dağılım gerçekten seçilen modeli kullanıyor
+    expect(a.fatigue.constants.m).toBeCloseTo(4.05, 6);
+    expect(p.fatigue.constants.m).toBeCloseTo(5.6, 6);
+    expect(a.fatigue.perPulley[0].sharePct).not.toBeCloseTo(p.fatigue.perPulley[0].sharePct, 1);
+
+    // ömür ise AYNI kaldı (C bu üsse kalibre) — sessiz kalması yasak
+    expect(a.life.hoursB10).toBeCloseTo(p.life.hoursB10, 6);
+    expect(a.life.modelMismatch).toBe('PK-2_2a-MT3');
+    expect(a.life.calibratedModel).toBe('PK-2_2p-MT3');
+    expect(a.limits.join(' ')).toMatch(/Mutlak B10 ömrü/);
+    expect(a.limits.join(' ')).toMatch(/PK-2_2a-MT3/);
+  });
+
+  test('bilinmeyen model adı limits satırına SIZMAZ (HTML olarak basılıyor)', () => {
+    const { build, rows } = bmc();
+    const R = veFeadAnalyze(build, { rows, fatigueModel: '<img src=x onerror=1>' });
+    expect(R.limits.join(' ')).not.toMatch(/<img/);
+    expect(R.warnings.join(' ')).toMatch(/[Yy]orulma dağılımı/);   // çekirdek reddetti
+  });
+});

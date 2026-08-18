@@ -1988,7 +1988,12 @@ function veFeadDutyResultTable(R){
   if(neg) ek += _feadHint('<b style="color:var(--accent-warning);">Bir spanda negatif gerilme</b> — '
     + 'kayış gevşiyor: tasarım gerginliği yetersiz.');
 
-  return _feadCard('Çıkış Gerilmeleri', 'kasnak başına, duty noktasında [N]', 'var(--accent-primary)',
+  // KONUM YAZILIR: gerilme, hubload ve kayma HEP ÇALIŞMA (Mean) konumunda
+  // hesaplanır (FEADCore.analyze meanRel'i kullanır), oysa yukarıdaki Geometri
+  // tablosu kullanıcının seçtiği kol konumunu gösterebiliyor. Sarım açısı
+  // konuma göre değiştiği için hubload da değişir; iki tabloyu yan yana okuyan
+  // kullanıcı hangi konumu gördüğünü söylemezsek yanlış eşleştirir.
+  return _feadCard('Çıkış Gerilmeleri', 'çalışma (Mean) konumunda, duty noktası başına [N]', 'var(--accent-primary)',
     h + ek + _feadHint('Hubload ve span frekansları için aşağıdaki hubload tablosuna bakın. '
       + 'Ateşleme frekansı ' + _feadFmt(A.duty.length ? A.duty[0].firingHz : 0, 1) + ' Hz @ '
       + (A.duty.length ? A.duty[0].engineRpm : 0) + ' rpm (silindir sayısı Çözücü panelinden).'))
@@ -2009,7 +2014,7 @@ function veFeadHubTable(R){
         }).join('') + '</tr>';
   });
   h += '</table></div>';
-  return _feadCard('Hubload', 'büyüklük [N] / yön [°]', 'var(--accent-primary)', h);
+  return _feadCard('Hubload', 'çalışma (Mean) konumunda · büyüklük [N] / yön [°]', 'var(--accent-primary)', h);
 }
 
 function veFeadFatigueTable(R){
@@ -2042,6 +2047,16 @@ function veFeadLifeCard(R){
     + _feadFmt(saat, 0) + '</span>'
     + '<span style="font-size:var(--fs-body); color:var(--text-muted);">saat (B10)'
     + (gecerli ? '' : ' — ampirik düzeltmeli') + '</span></div>';
+  // SEÇİLEN YORULMA MODELİ MUTLAK ÖMRE GEÇMİYOR — bunu kartın kendisi söylemeli.
+  // Dağılım tablosu hemen üstte seçilen modelin adıyla basılıyor; altındaki saat
+  // değeri başka bir üsse göre. Ayrımı yalnız "Geçerlilik Sınırları" kutusuna
+  // bırakmak, iki tabloyu yan yana okuyan kullanıcıyı yanıltırdı.
+  if(L.modelMismatch)
+    h += _feadHint('<b style="color:var(--accent-warning);">SEÇİLEN YORULMA MODELİNE GÖRE DEĞİL.</b> '
+      + 'Bu saat değeri <b>' + _feadEsc(L.calibratedModel || 'PK-2_2p-MT3') + '</b> sabitleriyle '
+      + 'kalibre edilmiştir; Çözücü panelinde <b>' + _feadEsc(L.modelMismatch) + '</b> seçili. '
+      + 'Yukarıdaki <b>dağılım</b> seçtiğiniz modeli kullanır ve geçerlidir — <b>mutlak ömür '
+      + 'kullanmaz</b>. Karşılaştırma için dağılıma bakın.');
   if(!gecerli)
     h += _feadHint('<b style="color:var(--accent-warning);">GEÇERLİLİK ALANI DIŞINDA.</b> '
       + 'Model mutlak ömrü yalnız tüm kasnak çapları 79.6–176 mm iken doğrular. Aralık dışında '
