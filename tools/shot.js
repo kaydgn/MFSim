@@ -7,18 +7,17 @@
  *   npm run shot --       --module fead-analysis --out .shots/sonrasi.png
  *   npm run shot -- --compose .shots/oncesi.png .shots/sonrasi.png --out .shots/karsilastirma.png
  *
- * NEDEN VAR
+ * NE ZAMAN KULLANILIR
  *
- * Kullanıcı talimatı (2026-08-18): MFSim'de yapılan her GÖRSEL değişiklik
- * öncesi/sonrası ekran görüntüsüyle sunulur (bkz. CLAUDE.md "Görsel Teslim").
- * Kural elle uygulanırsa uygulanmaz: her seferinde sunucu kur, giriş yap,
- * modülü seç, senaryoyu kur… derdi yüzünden atlanır. Burada tek komut var.
+ * YALNIZ kullanıcı istediğinde ("bana ekran görüntüsü at"). Zorunlu bir teslim
+ * adımı DEĞİL — 2026-08-18'de bir süre öyleydi, süreci uzattığı için kaldırıldı.
+ * Araç duruyor ki istendiğinde tek komut olsun: sunucu kur, giriş yap, modülü
+ * seç, senaryoyu kur… derdi burada zaten çözülü.
  *
- * ÜÇ TASARIM KARARI — üçü de kuralın sessizce yalan söylememesi için:
+ * ÜÇ TASARIM KARARI — üçü de karşılaştırmanın sessizce yalan söylememesi için:
  *
- *  1) `--rev` GEÇİCİ WORKTREE açar. "Önce görüntü al, sonra düzenle" disiplini
- *     bir kez unutulduğunda ÖNCESİ kaybolur ve geriye "sonrası + laf" kalır.
- *     `--rev HEAD` düzenlemeler çalışma kopyasındayken bile eski hâli çeker.
+ *  1) `--rev` GEÇİCİ WORKTREE açar: ÖNCESİ görüntüsü, düzenlemeler çalışma
+ *     kopyasındayken bile alınabiliyor (önceden çekmeyi hatırlamak gerekmiyor).
  *  2) Giriş şifresi BURADA YAZMAZ. `js/auth.js` içindeki SHA-256 özeti okunup
  *     localStorage'a tohumlanır — şifre değişirse araç kendiliğinden uyar,
  *     kopyalanmış bir parola bayatlamaz.
