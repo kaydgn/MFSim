@@ -165,3 +165,46 @@ describe('Bilinmeyen/eksik girdide çökmez', () => {
     expect(vePortOffset(n, 'input')).toEqual({ dx: 0, dy: 30, side: 'left' });
   });
 });
+
+// ── GİDİŞ YÖNÜ İŞARETİ (kayış bağlantısı) ──────────────────────────────────
+// Serpantin bir ÇEVRİM: aynı halka iki yönde de gezilebilir ve sarım açıları
+// buna göre değişir. Yön topolojiden okunamıyordu; ok telin ORTASINDA, teğetine
+// bakıyor. Eğri için kübik Bézier'in t = 0.5 noktası ve türevi analitik.
+describe('veConnDirMark — telin ortasındaki yön oku', () => {
+  const uclar = (el) => [...el.getAttribute('d').matchAll(/(-?[\d.]+) (-?[\d.]+)/g)]
+    .map((m) => [+m[1], +m[2]]);
+
+  test('kısa açıklıkta çizilmez (46 px eşiği)', () => {
+    expect(veConnDirMark('straight', 0, 0, 30, 0, null)).toBeNull();
+    expect(veConnDirMark('straight', 0, 0, 47, 0, null)).not.toBeNull();
+  });
+
+  test('düz telde ok ORTADA ve gidiş yönüne bakar', () => {
+    const p = uclar(veConnDirMark('straight', 0, 0, 200, 0, null));
+    // uç (tepe) ikinci nokta: orta + yön·s
+    expect(p[1][0]).toBeCloseTo(104.4, 1);
+    expect(p[1][1]).toBeCloseTo(0, 6);
+    // kanatlar tepenin GERİSİNDE ve simetrik
+    expect(p[0][0]).toBeCloseTo(95.6, 1);
+    expect(p[2][0]).toBeCloseTo(95.6, 1);
+    expect(p[0][1]).toBeCloseTo(-p[2][1], 6);
+  });
+
+  // Bézier'de "iki ucun ortası" YANLIŞ olurdu: kontrol kolları eğriyi bir yana
+  // çekiyor ve ok telin üstünden kayardı. B(0.5) = (P0 + 3C1 + 3C2 + P3)/8.
+  test('eğride ok Bézier ORTASINDA, iki ucun ortasında DEĞİL', () => {
+    const cp = [0, 120, 200, 120];                       // her iki kol AŞAĞI
+    const p = uclar(veConnDirMark('curve', 0, 0, 200, 0, cp));
+    const by = (0 + 3 * 120 + 3 * 120 + 0) / 8;          // = 90
+    expect(p[1][1]).toBeCloseTo(by, 0);                  // ok eğrinin üstünde
+    expect(Math.abs(p[1][1])).toBeGreaterThan(10);       // iki ucun ortası y=0 olurdu
+    expect(p[1][0]).toBeCloseTo(104.4, 0);               // teğet yatay → tepe sağda
+  });
+
+  test('yön TERS çevrilince ok da ters döner', () => {
+    const ileri = uclar(veConnDirMark('straight', 0, 0, 200, 0, null));
+    const geri  = uclar(veConnDirMark('straight', 200, 0, 0, 0, null));
+    expect(ileri[1][0]).toBeGreaterThan(100);
+    expect(geri[1][0]).toBeLessThan(100);
+  });
+});

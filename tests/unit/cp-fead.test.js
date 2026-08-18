@@ -31,6 +31,11 @@ eval(loadSource('components.js'));
 // testte de öyle kurulur (cp-fead.js bu adları çağırıyor).
 global.FEADCore = F;
 Object.keys(M).forEach((k) => { global[k] = M[k]; });
+// Tarayıcıda components.js'teki defaultPortSide, cp-fead.js'teki
+// veFeadPortSideFor'u GLOBAL olarak görüyor (ikisi de üst-seviye bildirim).
+// Testte köprü elle kurulur; yoksa kanca sessizce atlanır ve "elle taşınan
+// port kazanır" testi doğru sebepten değil, kanca hiç çalışmadığı için geçer.
+global.veFeadPortSideFor = fead.veFeadPortSideFor;
 
 beforeEach(() => {
   resetStubs(stubs);
@@ -348,6 +353,69 @@ describe('topolojiye bakan paneller', () => {
     expect(html).toMatch(/Serbest kol/);
     expect(html).toMatch(/Ortalama/);
     expect(html).toMatch(/çözüldü/);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  KAYIŞ BAĞLANTISININ UCU — KOMŞUYA BAKAN KENAR
+// ════════════════════════════════════════════════════════════════════════════
+// Klasik kural (giriş SOLDA, çıkış SAĞDA) bir ÇEVRİMDE yolun yarısında ters
+// düşüyor: kayış sağdan sola dönerken tel düğümün ÜSTÜNDEN geri geçiyor ve
+// teller birbirini kesiyor. Kenar seçimi yerleşimi ya da düğümü DEĞİŞTİRMİYOR;
+// yalnız telin çıktığı kenarı seçiyor.
+describe('kayış bağlantısı komşuya bakan kenardan çıkar', () => {
+  const kur = (yerler) => {
+    const ns = yerler.map((y, i) => ({
+      id: 'p' + i, type: y.t || 'fead-idler', def: componentDefs[y.t || 'fead-idler'],
+      x: y.x, y: y.y, width: y.w || 54, height: y.h || 50, data: {}
+    }));
+    global.nodes = ns;
+    global.connections = ns.map((n, i) => ({
+      id: 'c' + i, from: n.id, to: ns[(i + 1) % ns.length].id,
+      fromPort: 'output', toPort: 'input'
+    }));
+    return ns;
+  };
+
+  test('çıkış SIRADAKİ kasnağa, giriş ÖNCEKİNE bakar (dört yön)', () => {
+    // Kare bir düzen: 0 sol-üst, 1 sağ-üst, 2 sağ-alt, 3 sol-alt
+    const n = kur([{ x: 0, y: 0 }, { x: 400, y: 0 }, { x: 400, y: 400 }, { x: 0, y: 400 }]);
+    expect(fead.veFeadPortSideFor(n[0], 'output')).toBe('right');   // → 1
+    expect(fead.veFeadPortSideFor(n[0], 'input')).toBe('bottom');   // ← 3
+    expect(fead.veFeadPortSideFor(n[1], 'output')).toBe('bottom');  // → 2
+    expect(fead.veFeadPortSideFor(n[1], 'input')).toBe('left');     // ← 0
+    expect(fead.veFeadPortSideFor(n[2], 'output')).toBe('left');    // → 3
+    expect(fead.veFeadPortSideFor(n[3], 'output')).toBe('top');     // → 0
+  });
+
+  // Kenar seçimi kutunun ORANINA göre yapılır. Sabit 45° köşegeni kullanmak
+  // geniş kutuda yanlış kenarı seçerdi: 200×50'lik bir kutuda 60° yukarı bakan
+  // bir komşu için doğru cevap ÜST değil YAN'dır (kutu alçak ve geniş).
+  test('kenar kutunun ORANINA göre seçilir, sabit 45° köşegenle değil', () => {
+    const n = kur([{ x: 0, y: 0, w: 200, h: 50 }, { x: 190, y: -110 }]);
+    // Δ = (+95, −85): |dx|·h = 95·50 = 4750 ; |dy|·w = 85·200 = 17000 → ÜST
+    expect(fead.veFeadPortSideFor(n[0], 'output')).toBe('top');
+    // Aynı yön, kutu KARE olsaydı: |dx|·h = 95·50 vs |dy|·w = 85·50 → SAĞ
+    n[0].width = 50; n[0].height = 50;
+    n[1].x = 145; n[1].y = -60;   // Δ = (+95, −85) merkezden merkeze korunur
+    expect(fead.veFeadPortSideFor(n[0], 'output')).toBe('right');
+  });
+
+  test('kasnak olmayan düğüm ve bağlanmamış port null döner (klasik kural kalır)', () => {
+    const n = kur([{ x: 0, y: 0 }, { x: 300, y: 0 }]);
+    expect(fead.veFeadPortSideFor({ id: 'x', type: 'fead-belt', def: componentDefs['fead-belt'],
+      x: 0, y: 0, data: {} }, 'output')).toBeNull();
+    global.connections = [];
+    expect(fead.veFeadPortSideFor(n[0], 'output')).toBeNull();
+  });
+
+  // VARSAYILAN olmak zorunda: kullanıcı bir portu sağ tıkla taşıdıysa
+  // (node.data.portPositions) onun seçimi kazanmalı, yoksa taşıma işe yaramaz.
+  test('defaultPortSide buradan okur; elle taşınan port yine de kazanır', () => {
+    const n = kur([{ x: 0, y: 0 }, { x: 0, y: 400 }]);
+    expect(defaultPortSide(n[0], 'output')).toBe('bottom');
+    n[0].data.portPositions = { output: { side: 'left' } };
+    expect(vePortOffset(n[0], 'output').side).toBe('left');
   });
 });
 

@@ -70,21 +70,50 @@ sınırları: doğal frekans çok serbestlik dereceli bir burulma modu (çekirde
 yalnız kol modu verir, raporla karşılaştırılamaz); mutlak ömür yalnız tüm
 çaplar 79.6–176 mm iken geçerli, dışında sistematik 0.55×.
 
-#### Dört katman — hangi dosya neyi yapar
+#### Üç katman — hangi dosya neyi yapar
 
 | Dosya | Katman | Kural |
 |-------|--------|-------|
 | `js/fead-core.js` | Hesap çekirdeği | Dışarıdan geldi, **birebir** durur, dokunulmaz |
 | `js/fead-model.js` | Köprü (DOM'suz) | Kanvas düğümü → `FEADCore.makeSystem()`; temas/sürücü/çap çözümü, hata çevirisi |
 | `js/cp-fead.js` | Sunum | Yalnız HTML kurar; **kendi geometrisini hesaplamaz** |
-| `js/fead-graph.js` | Graf yüzü | Topolojinin **girdi** resmi: yerleşim, port açısı, kasnak biçimi. Çözücüye BAĞLI DEĞİL |
 
-Yükleme sırası (index.html): `fead-model.js` → `fead-core.js` → `cp-fead.js`
-→ `fead-graph.js`.
+Yükleme sırası (index.html): `fead-model.js` → `fead-core.js` → `cp-fead.js`.
 Model katmanı, `cp-fead.js`'in de kullandığı saf yardımcıları (`_feadNum`,
 `_feadDefOf`, `_feadIsPulley`, `veFeadContactOf`, `veFeadOD`,
 `veFeadRouteOrder`…) bildirir — aynı adı iki dosyada bildirmek üst-seviye
 çakışması olurdu (`source-hygiene` kapısı).
+
+#### Kayış BAĞLANTISININ görünüşü — düğüme dokunmadan
+
+**Kasnak kutusu MFSim'in klasik dörtgeni olarak kalır.** Bir denemede kasnaklar
+gerçek çapına ölçekli DAİREYE çevrilmiş ve düğümler mm koordinatlarına
+dizilmişti; iki sonuç da istenmedi (kutu kimliği kayboldu, topoloji kanvastaki
+Kayış Yolu kartının kopyasına döndü) ve **tamamen geri alındı**. Değişen tek
+şey TEL:
+
+| Ne | Nerede | Neden |
+|----|--------|-------|
+| Port KOMŞUYA BAKAN kenardan çıkar | `veFeadPortSideFor` (cp-fead.js) → `defaultPortSide` (components.js) | Klasik kural (giriş solda / çıkış sağda) bir ÇEVRİMDE yolun yarısında ters düşüyor: kayış sağdan sola dönerken tel düğümün ÜSTÜNDEN geri geçiyordu |
+| Kontrol kolu uzunluğun **%42**'si (26–96 px) | `connections.js` `curve` dalı, yalnız kayış bağlantısında | Sabit 40 px kısa açıklıkta kutunun dibinde kıvrım, uzun açıklıkta ortada köşelenme veriyordu |
+| Amber, 2.5 px | `.ve-connection-fead-belt` | Bu tel "iki bileşen ilişkili" demiyor, "kayış buradan geçiyor" diyor |
+| Telin ortasında **gidiş yönü oku** | `veConnDirMark` (connections.js), `.ve-conn-dir` | Aynı halka iki yönde de gezilebilir ve **sarım açıları buna göre değişir**; yön topolojiden okunamıyordu |
+
+Kenar seçimi kutunun **ORANINA** göre (`|dx|·h ≥ |dy|·w`), sabit 45° köşegenle
+değil — 72×66'lık krank ile 54×50'lik avarada fark ediyor. Ve bu bir
+**VARSAYILAN**: kullanıcı bir portu sağ tıkla taşıdıysa (`node.data.portPositions`)
+onun seçimi kazanmaya devam eder.
+
+Yön oku eğride **Bézier'in t = 0.5 noktasından** çıkar
+(`B(0.5) = (P0 + 3C1 + 3C2 + P3)/8`); "iki ucun ortası" kontrol kolları eğriyi
+bir yana çektiği için telin üstünden kayardı. 46 px'den kısa açıklıkta ok hiç
+çizilmez. Dört mutasyonla ölçüldü (Bézier ortası → uç ortası, eşiği kaldırma,
+oran → 45°, giriş/çıkış komşusunu takas): dördü de kırmızı.
+
+Örnek yüklenirken araç düğümleri (Kayış Özellikleri · Çözücü · Başlangıç ve
+Örnekler · Rapor) **sol şeride** alınır — eskiden kümenin üstüne diziliyorlardı
+ve alt topoloji açılışında konan "Başlangıç ve Örnekler" kutusu tam kayış
+yolunun üstüne düşüyordu (Klima ↔ Avara 1 açıklığı oradan geçiyor).
 
 #### Üç yapısal kural (iskeletten farkı, hepsi testli)
 
@@ -471,12 +500,11 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/mount-results-publish.test.js` | `js/cp-mount.js` | Çözümün panoya yayını; alt-topoloji çökertme regresyonu |
 | `tests/unit/fead-core.test.js` | `js/fead-core.js` + `tests/fixtures/fead-validation.js` | **FEAD çekirdeğinin doğrulama kapısı**: 17 Gates raporu / 2095 değer (çalışma %0.5, Load dahil %1.5, kol açısı 0.2°), 8 koruma mekanizması, SPEC §9 yapısal özdeşlikleri (sarım değişmezi, `L_pitch−L_eff=2π·hb`, çevrim kapanışı, sürücü gücü), UMD tarayıcı köprüsü |
 | `tests/unit/fead-model.test.js` | `js/fead-model.js` | **Köprü kapısı**: AG00686 MFSim KANVAS DÜĞÜMÜ olarak kurulup Gates sayılarını üretiyor mu (span %0.5, sarım 0.2°, Mean kol açısı 0.2°); temas tarafı üç katmanlı çözümü, sürücü rolü, `dia→od` göçü, ad tekilleştirme, hata çevirisi. Ayrıca **ters temas tarafının hata VERMEDİĞİNİ** belgeler (rozetin varlık nedeni). **Duty kapısı**: AG00686 duty tablosunun çıkış gerilmeleri ve hubload'ları %0.5 içinde; kW'ın kimlikle anahtarlanması (yeniden adlandırmada kaybolmuyor), sürücü gücünün toplamdan hesaplanması, ateşleme frekansı, yorulma dağılımının çapa bağlı olması, katalog oranının ÇAPTAN hesaplanması |
-| `tests/unit/cp-fead.test.js` | `js/cp-fead.js` + `js/components.js` | FEAD sunum katmanı: kanvas rozeti, `feadContact` varsayılanları, panel smoke testleri, alt-sistem sözleşmesi, `fead-*` tip tanımları; panelin HANGİ ALANLARI sorduğu (montaj merkezi ↔ serbest açı), servis faktörü hükmü |
-| `tests/unit/fead-graph.test.js` | `js/fead-graph.js` + `js/components.js` port geometrisi + `js/export-topology.js` | **Graf yüzü**: girilen merkezin çözümü (gergi montaj merkezi / pivot+kol), 1 px = 1 mm ölçeği ve alt/üst sınır işaretleri, `componentDefs` varsayılanı ↔ `VE_FEAD_NODIA_DIA` tek kaynağı, yerleşimin mm mesafelerine EŞİT olması, mm y-yukarı → ekran y-aşağı çevrimi, **kayış yolunun kendini kesmemesi (kesişim = 0)**, portun komşuya bakması ve `vePortOffset` açısal dalı, kasnak biçim sınıfları, dışa aktarmada daire + kesikli çeper |
+| `tests/unit/cp-fead.test.js` | `js/cp-fead.js` + `js/components.js` | FEAD sunum katmanı: kanvas rozeti, `feadContact` varsayılanları, panel smoke testleri, alt-sistem sözleşmesi, `fead-*` tip tanımları; panelin HANGİ ALANLARI sorduğu (montaj merkezi ↔ serbest açı), servis faktörü hükmü; **kayışın kaburgalı yüzü** (diş yönü + aynalanmış çevrim) ve **telin komşuya bakan kenarı** (oran kuralı, elle taşınan portun kazanması) |
 | `tests/unit/fead-example.test.js` | `js/fead-model.js` örnekleri + FEAD_INFORMATION | **Tedarikçi sayfası çıpası** (Gates'ten bağımsız ikinci doğrulama): kayış boyu 1715 mm, kol boyu 90.0 mm, Spring Mean Load 22.07 Nm, tahrik oranı 1.1; sayfanın devir→kW tabloları; **iki sessiz kanalın** ölçülmüş belgesi (montaj merkezi ↔ serbest açı 2.6×, tasarım gerginliği ↔ yay dengesi 250 N) |
 | `tests/unit/canvas-space.test.js` | `js/canvas-space.js` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama |
 | `tests/unit/module-start-center.test.js` | `js/components.js` `veStartModule` | Karşılama kartından gelen modül bloğu görünümün TAM ortasına düşer (kabuk senkronu ölçümden önce) |
-| `tests/unit/port-geometry.test.js` | `js/components.js` port geometrisi + `js/connections.js` | Bağlantı ucu ile port dairesi aynı noktada — dört kenar, çok port, aynalama |
+| `tests/unit/port-geometry.test.js` | `js/components.js` port geometrisi + `js/connections.js` | Bağlantı ucu ile port dairesi aynı noktada — dört kenar, çok port, aynalama; **gidiş yönü oku** (Bézier t=0.5, 46 px eşiği, ters yön) |
 | `tests/unit/module-card.test.js` | `js/components.js` alt-sistem kartı + sidebar modül satırı | Modül kartı: içerik özeti (alt topolojiden), kart ölçüsünün tek kaynağı, eski 80×66 kaydın yükselmesi, **ad elemanının taşınması** (kopyalansaydı yeniden adlandırma sessizce eskirdi); palet sembolü `componentDefs`'ten (index.html'de ikinci kopya tutulmadığına dair kapı) |
 | `tests/unit/example-topology-center.test.js` | `js/cp-mount.js` + `assets/examples/` | Örnek JSON'ları kanvas merkezine açar |
 | `tests/unit/state.test.js` | `js/state.js` | Undo/redo stack yönetimi |

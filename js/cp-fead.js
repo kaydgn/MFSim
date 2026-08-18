@@ -304,6 +304,42 @@ function veFeadSet(nodeId, key, val){
   if(typeof saveState === 'function') saveState();
 }
 
+// ── KAYIŞ BAĞLANTISININ UCU: KOMŞUYA BAKAN KENAR ────────────────────────────
+// Bir kasnağın portu klasik kuralla yerleşiyordu: giriş SOLDA, çıkış SAĞDA.
+// Serpantin kayış bir ÇEVRİM olduğu için bu kural yolun yarısında ters düşüyor
+// — kayış sağdan sola dönerken tel düğümün ÜSTÜNDEN geri geçmek zorunda
+// kalıyor, iki tel birbirini kesiyor ve hangi sırayla gidildiği okunmuyor.
+//
+// Çözüm düğümü ya da yerleşimi DEĞİŞTİRMİYOR: yalnız telin çıktığı kenarı
+// seçiyor. Kenar, komşunun yönünden okunur; seçim kutunun ORANINA göre
+// yapılır (|dx|·h ≥ |dy|·w) — sabit 45° köşegeni kullanmak geniş kutularda
+// yanlış kenarı seçerdi (72×66'lık krank ile 54×50'lik avarada fark ediyor).
+//
+// Bu bir VARSAYILAN (defaultPortSide): kullanıcı bir portu sağ tıkla taşıdıysa
+// (node.data.portPositions) onun seçimi kazanmaya devam eder.
+function veFeadPortSideFor(node, portType){
+  if(typeof _feadIsPulley !== 'function' || !_feadIsPulley(node)) return null;
+  if(typeof nodes === 'undefined' || typeof connections === 'undefined') return null;
+  if(!node.id) return null;
+  var isIn = String(portType || '').indexOf('input') === 0, komsuId = null;
+  for(var i = 0; i < connections.length; i++){
+    var c = connections[i];
+    if(!c) continue;
+    if(isIn  && c.to === node.id   && (c.toPort   || 'input')  === portType){ komsuId = c.from; break; }
+    if(!isIn && c.from === node.id && (c.fromPort || 'output') === portType){ komsuId = c.to;   break; }
+  }
+  if(!komsuId) return null;
+  var o = null;
+  for(var j = 0; j < nodes.length; j++) if(nodes[j] && nodes[j].id === komsuId){ o = nodes[j]; break; }
+  if(!o || !_feadIsPulley(o)) return null;
+  var w = node.width || 65, h = node.height || 60;
+  var dx = (o.x + (o.width || 65) / 2) - (node.x + w / 2);
+  var dy = (o.y + (o.height || 60) / 2) - (node.y + h / 2);
+  if(!isFinite(dx) || !isFinite(dy) || (dx === 0 && dy === 0)) return null;
+  if(Math.abs(dx) * h >= Math.abs(dy) * w) return (dx >= 0) ? 'right' : 'left';
+  return (dy >= 0) ? 'bottom' : 'top';
+}
+
 // ── KANVAS ROZETİ: temas tarafı + sürücü ────────────────────────────────────
 // Temas tarafı hesabın en tehlikeli girdisi: ters verilirse çekirdek GEÇERLİ
 // ama BAŞKA bir kayış yolu çözer, hata vermez. Panelde bir açılır listede
@@ -324,11 +360,7 @@ function veFeadApplyBadge(nodeEl, node){
   b.textContent = (drv ? '► ' : '') + (back ? 'S' : 'K');
   b.title = 'Temas: ' + veFeadContactLabel(back ? 'back' : 'grooved')
           + (drv ? ' · Sürücü kasnak' : '');
-  // Konum dairenin ÜST-SAĞ 45° noktası: kasnak artık daire, "sağ üst köşe"
-  // diye bir yer yok — sabit -9/-6 px, Ø34'lük kasnakta rozetin yarısını
-  // çemberin içine, Ø300'lükte ise çok uzağına düşürüyordu (ölçüldü).
-  // 85.4% / 14.6% = 0.5 ± 0.5·cos45° → çeperin tam üstü, her çapta.
-  b.style.cssText = 'position:absolute; left:85.4%; top:14.6%; transform:translate(-50%,-50%); z-index:3; pointer-events:none;'
+  b.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; pointer-events:none;'
     // Ölçek jetonu — ham px değil (bkz. tests/unit/typography-scale.test.js).
     // --fs-micro zaten "rozet, mikro etiket" için tanımlı.
     + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
@@ -1693,13 +1725,38 @@ function veFeadLoadExample(key){
       // yanlış ortalıyor ve kart görünür alanın sağından taşıyor.
       yer.push({ lx: sagSerit, ly: 150, w: td.defaultWidth, h: td.defaultHeight });
     } else {
-      yer.push({ lx: 60 + ust * 180, ly: 20 });
+      // ARAÇLAR SOL ŞERİTTE, KASNAK KÜMESİNİN DIŞINDA. Eskiden kümenin ÜSTÜNE
+      // bir sıra hâlinde diziliyorlardı (ly:20) ve "Başlangıç ve Örnekler"
+      // kutusu tam kayış yolunun üstüne düşüyordu: tel kutunun arkasından
+      // geçiyor, ikisi de okunmuyordu (ölçüldü — Klima ile Avara 1 arasındaki
+      // açıklık oradan geçiyor). Sol şerit kümeyle hiç kesişmiyor.
+      yer.push({ lx: -150, ly: 150 + ust * 96 });
       ust++;
     }
   }
 
   var base = (typeof veArrangeModuleBase === 'function')
     ? veArrangeModuleBase(yer) : { x:3000, y:3000 };
+
+  // İÇ TOPOLOJİDE ZATEN DURAN ARAÇ DÜĞÜMLERİ DE SOL ŞERİDE. Alt topoloji ilk
+  // açıldığında görünür alanın ORTASINA bir "Başlangıç ve Örnekler" düğümü
+  // konuyor (veFeadPopulateStarter) — örnek de aynı merkeze kurulduğu için o
+  // düğüm kasnak kümesinin tam ortasında kalıyor ve kayış yolu arkasından
+  // geçiyordu (ölçüldü: Klima ↔ Avara 1 açıklığının üstünde). Yeni gelenlerle
+  // aynı şeride alınıyor; kullanıcının kendi eklediği kasnaklara dokunulmuyor.
+  var _eskiArac = [];
+  if(typeof nodes !== 'undefined') {
+    nodes.forEach(function(n){
+      var d0 = _feadDefOf(n);
+      if(d0.isFeadExample || d0.isFeadBelt || d0.isFeadSolver || d0.isFeadReport) _eskiArac.push(n);
+    });
+  }
+  _eskiArac.forEach(function(n, i){
+    n.x = Math.round(base.x - 150);
+    n.y = Math.round(base.y + 150 + (ust + i) * 96);
+    var el = (typeof document !== 'undefined') ? document.getElementById(n.id) : null;
+    if(el){ el.style.left = n.x + 'px'; el.style.top = n.y + 'px'; }
+  });
 
   var kuruldu = [], idMap = {};
   pack.nodes.forEach(function(src, i){
@@ -1730,11 +1787,6 @@ function veFeadLoadExample(key){
   }
   if(typeof updateAllConnections === 'function') updateAllConnections();
   if(typeof veFeadRefreshBadges === 'function') veFeadRefreshBadges();
-  // Kasnakları KAYIŞ DÜZENİNE göre diz: yukarıdaki `yer` yalnız düğümleri
-  // yaratmak için bir başlangıç konumu; asıl yerleşim (merkez = mm koordinatı,
-  // port = komşuya bakan açı, ölçü = çap) buradan geliyor. Örnek, kullanıcının
-  // "Otomatik Düzenle" ile göreceğiyle BİREBİR aynı resimle açılsın.
-  if(typeof veFeadArrangeGraph === 'function') veFeadArrangeGraph({ quiet:true, fit:false });
   _feadForgetResults();
   if(typeof saveState === 'function') saveState();
   if(typeof showToast === 'function')
@@ -2012,6 +2064,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VE_FEAD_STARTER_LAYOUT: VE_FEAD_STARTER_LAYOUT,
     veFeadLayoutSVG: veFeadLayoutSVG,
+    veFeadPortSideFor: veFeadPortSideFor,
     veFeadApplyBadge: veFeadApplyBadge,
     veFeadApplyLayoutCard: veFeadApplyLayoutCard,
     veFeadPosPicker: veFeadPosPicker,
