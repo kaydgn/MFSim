@@ -94,6 +94,31 @@ describe('Kasnağın GİRİLEN merkezi', () => {
     expect(c.y).toBeCloseTo(100, 6);
   });
 
+  // GRAF, MODELİN OKUDUĞU SAYIYI ÇİZMEK ZORUNDA. Panel iki kipte çalışıyor:
+  // 'mount' montaj merkezini sorar, 'direct' serbest kol açısını. Kipini
+  // 'direct'e alan kullanıcının verisinde eski cenX/cenY duruyor olabilir —
+  // koşulsuz "önce montaj merkezi" kuralı, model o sayıyı ARTIK KULLANMIYORKEN
+  // grafın onu çizmesi demekti: serbest açıyı değiştiren kullanıcı grafın
+  // kımıldamadığını görürdü.
+  test("kip 'direct' iken serbest açı kazanır — eski montaj merkezi çizilmez", () => {
+    const d = { angleMode:'direct', cenX:-170.08, cenY:99.16,
+                pivotX:0, pivotY:0, armLen:100, freeAngleDeg:90 };
+    const c = veFeadEnteredCenter({ type:'fead-tensioner', data:d });
+    expect(c.from).toBe('arm');
+    expect(c.x).toBeCloseTo(0, 6);
+    expect(c.y).toBeCloseTo(100, 6);
+    // aynı veri 'mount' kipinde montaj merkezini verir
+    d.angleMode = 'mount';
+    expect(veFeadEnteredCenter({ type:'fead-tensioner', data:d }).from).toBe('mount');
+  });
+
+  test("kip 'direct' ama serbest açı yoksa montaj merkezine düşer", () => {
+    const c = veFeadEnteredCenter({ type:'fead-tensioner',
+      data:{ angleMode:'direct', cenX:5, cenY:7, pivotX:0, pivotY:0, armLen:100 } });
+    expect(c.from).toBe('mount');
+    expect(c.x).toBeCloseTo(5, 6);
+  });
+
   test('yalnız pivot varsa kasnak pivota düşer (çizim boş kalmaz)', () => {
     const c = veFeadEnteredCenter({ type: 'fead-tensioner', data: { pivotX: 5, pivotY: 7 } });
     expect(c.ok).toBe(true);

@@ -65,18 +65,32 @@ function veFeadEnteredCenter(node){
     if(Number.isFinite(x) && Number.isFinite(y)){ out.ok=true; out.x=x; out.y=y; out.from='xy'; }
     return out;
   }
+  // SIRA, PANELİN HANGİ ALANI SORDUĞUNA BAĞLI. Panel iki kipte çalışıyor
+  // (veFeadAngleMode): 'mount' montaj merkezini, 'direct' serbest kol açısını
+  // soruyor. Graf bir GİRDİ yüzeyi — kullanıcının o an GİRDİĞİ sayıyı çizmek
+  // zorunda. Sıra koşulsuz "önce cenX/cenY" olsaydı, kipini 'direct'e alıp
+  // serbest açıyı değiştiren kullanıcı grafın kımıldamadığını görürdü: eski
+  // montaj merkezi veride duruyor ama model onu ARTIK KULLANMIYOR. Yani graf
+  // modelin okumadığı bir sayıyı çizerdi — sessiz ve tam da bu modülde en
+  // pahalı olan hata türü.
   var cx = _feadNum(d.cenX, NaN), cy = _feadNum(d.cenY, NaN);
-  if(Number.isFinite(cx) && Number.isFinite(cy)){
-    out.ok=true; out.x=cx; out.y=cy; out.from='mount'; return out;
-  }
   var px = _feadNum(d.pivotX, NaN), py = _feadNum(d.pivotY, NaN);
   var arm = _feadNum(d.armLen, NaN), fa = _feadNum(d.freeAngleDeg, NaN);
+  var mod = (typeof veFeadAngleMode === 'function') ? veFeadAngleMode(d) : 'mount';
+  function mount(){
+    if(!Number.isFinite(cx) || !Number.isFinite(cy)) return false;
+    out.ok=true; out.x=cx; out.y=cy; out.from='mount'; return true;
+  }
+  function kol(){
+    if(!Number.isFinite(px) || !Number.isFinite(py)) return false;
+    if(!(Number.isFinite(arm) && arm > 0 && Number.isFinite(fa))) return false;
+    var a = fa * Math.PI / 180;
+    out.ok=true; out.x = px + arm*Math.cos(a); out.y = py + arm*Math.sin(a); out.from='arm';
+    return true;
+  }
+  if(mod === 'direct'){ if(kol() || mount()) return out; }
+  else               { if(mount() || kol()) return out; }
   if(Number.isFinite(px) && Number.isFinite(py)){
-    if(Number.isFinite(arm) && arm > 0 && Number.isFinite(fa)){
-      var a = fa * Math.PI / 180;
-      out.ok=true; out.x = px + arm*Math.cos(a); out.y = py + arm*Math.sin(a); out.from='arm';
-      return out;
-    }
     out.ok=true; out.x=px; out.y=py; out.from='pivot';
   }
   return out;

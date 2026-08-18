@@ -877,6 +877,51 @@ function veFeadLayoutSVG(build, W, H, opts){
     }
     return d + ' Z';
   }
+  // ── KAYIŞIN KABURGALI YÜZÜ — hangi kasnağa hangi yüzüyle değiyor ────────
+  // Temas tarafı bu modülün en pahalı sessiz hatası: ters verilirse çekirdek
+  // GEÇERLİ ama BAŞKA bir güzergâh çözer, hata vermez. Şemada bunu şimdiye
+  // kadar yalnız kasnağın kesikli çemberi söylüyordu — bir UZLAŞIM, yani
+  // öğrenilmesi gereken bir kod. Oysa fark gerçek ve çizilebilir: kayışın bir
+  // yüzü kaburgalı, öbürü düz sırt. Diş sırası o yüzü işaretler; kaburgalı
+  // yüze değen kasnakta dişler kasnağın İÇİNE, sırttan temas edende DIŞARI
+  // bakar. Kullanıcı artık kodu değil parçayı görüyor.
+  //
+  // Yön TEK BİR YERDEN çözülür ve sabittir: kayış kendi yüzlerini yol boyunca
+  // değiştiremez. mm düzleminde ilerleme yönü u iken kaburgalı yüz normali
+  // rot90ccw(u)/sense'tir (sense = çevrimin dönüş yönü, çekirdekten gelir).
+  // Türetme: kaburgalı bir kasnakta d = +sense ve teğet u = d·(−sinθ, cosθ)
+  // olduğundan rot90ccw(u) = d·(−cosθ, −sinθ) = d · (merkeze doğru).
+  // Sırttan temas edende d = −sense, dolayısıyla aynı normal kasnaktan UZAĞA
+  // bakar — istenen tam olarak bu.
+  function beltRibs(g){
+    var q = g.pulleys, n = q.length, sn = (g.sense < 0) ? -1 : 1;
+    var stepMm = 7 / s, lenMm = 3.2 / s, out = '';
+    function rib(ux, uy){ return sn > 0 ? [-uy, ux] : [uy, -ux]; }
+    function tooth(px, py, nx, ny){
+      var L = Math.sqrt(nx*nx + ny*ny) || 1;
+      out += 'M' + f(tx(px)) + ' ' + f(ty(py))
+           + 'L' + f(tx(px + nx/L*lenMm)) + ' ' + f(ty(py + ny/L*lenMm));
+    }
+    for(var i=0;i<n;i++){
+      var sp = g.spans[i];
+      var dx = sp.Pj[0]-sp.Pi[0], dy = sp.Pj[1]-sp.Pi[1], L = Math.sqrt(dx*dx+dy*dy);
+      if(L > stepMm*0.5){
+        var ux = dx/L, uy = dy/L, nb = rib(ux, uy);
+        for(var t = stepMm*0.5; t < L; t += stepMm)
+          tooth(sp.Pi[0]+ux*t, sp.Pi[1]+uy*t, nb[0], nb[1]);
+      }
+      var p = q[(i+1)%n], R = p.rPitch, wrap = g.wraps[(i+1)%n];
+      var a0 = Math.atan2(sp.Pj[1]-p.c[1], sp.Pj[0]-p.c[0]);
+      var dir = (p.d > 0) ? 1 : -1, stepA = stepMm / Math.max(R, 0.001);
+      for(var a = stepA*0.5; a < wrap; a += stepA){
+        var th = a0 + dir*a;
+        var nb2 = rib(-dir*Math.sin(th), dir*Math.cos(th));
+        tooth(p.c[0] + R*Math.cos(th), p.c[1] + R*Math.sin(th), nb2[0], nb2[1]);
+      }
+    }
+    return out;
+  }
+
   var d = beltPath(geom);
 
   // ÖLÇÜ SINIRI ŞART: panel iki sütuna geçtiğinde (VE_WIDE_PANEL_TYPES) yalnız
@@ -938,6 +983,13 @@ function veFeadLayoutSVG(build, W, H, opts){
   });
 
   svg += '<path data-ve="belt" d="' + d + '" fill="none" stroke="var(--accent-warning)" stroke-width="2.6" stroke-linejoin="round"/>';
+  // Dişler kayışın ÜSTÜNE çizilir (yolun kendisi altta kalsın) ve YALNIZ ana
+  // konumda: hayalet yollarda diş sırası okunmaz, yalnız gürültü olurdu.
+  svg += '<path data-ve="rib" d="' + beltRibs(geom) + '" fill="none"'
+      + ' stroke="var(--accent-warning)" stroke-width="1" stroke-linecap="round" opacity="0.9">'
+      + '<title>Kayışın kaburgalı yüzü — dişler bu yüzün baktığı tarafı gösterir</title></path>';
+  svg += '<text data-ve="rib-legend" x="' + f(pad - 6) + '" y="' + f(H - 5) + '" font-size="7"'
+      + ' fill="var(--text-muted)">dişli kenar = kayışın kaburgalı yüzü</text>';
 
   ps.forEach(function(p, k){
     var def = build.order[k] ? _feadDefOf(build.order[k]) : {};
