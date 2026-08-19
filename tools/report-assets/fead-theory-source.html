@@ -71,6 +71,23 @@ figcaption{font-family:'Archivo',sans-serif;font-size:12.5px;color:#3c4350;margi
   padding-top:8px;border-top:1px solid var(--line-soft)}
 figcaption b{color:var(--prusya)}
 svg{width:100%;height:auto;display:block}
+/* KANVASTAN GELEN ŞEKİL (§8.5) — MFSim'in kendi çizicisi (Kayış Yolu kartı)
+   rapora OLDUĞU GİBİ gömülüyor; tek-çizici kuralı bunu gerektiriyor, ikinci
+   bir çizici sessizce ayrışırdı. Ama o çizici UYGULAMANIN palet jetonlarını
+   kullanıyor (--accent-warning, --text-muted, …) ve raporun paleti bambaşka.
+   Tanımsız bir var() "invalid at computed-value time"dır; kalıtılan bir
+   özellik olan `stroke` için sonuç `unset` → `none` demektir.
+   ÖLÇÜLDÜ (gerçek tarayıcı, BMC raporu): §8.5 şeklinde kayış, altı kasnak
+   çemberi, kaburga dişleri, sarım yayları, gergi kolu ve pivot TAMAMEN
+   GÖRÜNMEZDİ — ayakta kalan tek şey etiketler ve merkez noktalarıydı, çünkü
+   onlar `fill` kullanıyor. Şeklin künyesi ise olmayan bir çizimi anlatıyordu.
+   Uygulamanın jetonları burada raporun baskı paletine bağlanıyor. */
+.appfig{
+  --accent-primary:#24425f; --accent-success:#2e7d4f; --accent-warning:#c8781e;
+  --accent-danger:#a8321f;  --text-secondary:#3c4350; --text-muted:#5a6270;
+  --bg-input:#fff; --border-color:#c9cdd3; --radius-sm:2px;
+  --fs-tiny:11px; --fs-micro:10px;
+}
 svg text{font-family:'IBM Plex Mono',monospace}
 
 /* ── Kod ── */

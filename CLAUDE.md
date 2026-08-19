@@ -385,6 +385,57 @@ kullanıyor) — aynı adı iki dosyada üst-seviye bildirmek `source-hygiene`
 kapısına takılır. `getFeadReportPropertiesHTML` bu yüzden `cp-fead.js`'ten
 **silinip** buraya taşındı.
 
+##### Şeklin geometrisi de ÇEKİRDEKTEN gelir (Şekil 1)
+
+§2'deki kavramsal FEAD şeması elle yazılmış sabit bir SVG'ydi ve **beş yol
+ucunun beşi de** kasnak çemberinin dışındaydı (ölçüldü): krankın "sarım yayı"
+r=70 ile (560,60)→(560,200) arasına çizildiği için örtük merkezi (630,130)
+yerine **(560,130)**'a düşüyor, yani kasnağın MERKEZİNDEN geçiyordu; aksesuar
+yayının kirişi 2r'den uzun olduğu için SVG yarıçapı 62 → 64.2'ye büyütüp yayı
+kasnaktan **96 px** uzağa oturtuyordu — **kayış o kasnağa hiç değmiyordu.** Alt
+künye satırı da 820'lik viewBox'ı 32 px aşıp kırpılıyordu (rapor CSS'i SVG
+yazılarını IBM Plex Mono'ya sabitliyor: karakter 0.6 em, proporsiyonel değil).
+
+Şekil artık `FEADCore.solveGeometry`'nin teğet noktaları, sarım açıları ve
+dönüş yönleriyle çiziliyor. Kazanç yalnız "doğru duruyor" değil: çekirdek
+**kapalı çevrim değişmezini (Σ işaretli sarım = 360°) ve kayışın bir kasnağın
+içinden geçmediğini doğruluyor** — yani şekil kurulduğu anda geçerli, gözle
+denetlenmesi gerekmiyor. Yerleşim doğrulama takımındaki AG00686 ile aynı
+ailedendir (iki kaburgalı büyük kasnak, ana eksenin karşı taraflarında iki sırt
+kasnağı); sarımlar 216/32/200/23°, referansın 208/27/201/22°'sine komşu.
+Sweep bayrağı Kayış Yolu kartıyla **aynı kuralı** kullanır (`d > 0 → sweep 0`);
+iki çizim aynı konvansiyonu paylaşmazsa biri sessizce aynalanır.
+
+İşaretler de ölçülerek yerleşti: sarım açısı önce kasnağın **dışına** halka
+olarak çizilmişti, 216°'lik o yay ikinci bir kayış gibi okunuyor ve krank
+etiketinin üstünden geçiyordu — klasik teknik resim gösterimine (merkezden iki
+teğete yarıçap + içeride küçük yay) alındı. Etiketler `_frTxtW` ile ölçülüp
+çakışmayana kadar itiliyor; elle bir koordinat daha yazmak düzeltilen hatanın
+aynısı olurdu.
+
+Kapı dört mutasyonla ölçüldü (sweep sabitleme, sarım yarıçapını %5 şişirme,
+teğet ucu yerine kasnak merkezine gitme, künyeyi taşırma) — dördü de kırmızı.
+
+##### Kanvastan gelen şekil raporda GÖRÜNMEZDİ — palet jetonları
+
+§8.5'teki şekli MFSim'in kendi çizicisi (`veFeadLayoutSVG`) üretiyor; tek-çizici
+kuralı bunu gerektiriyor. Ama o çizici **uygulamanın** palet değişkenlerini
+kullanıyor (`--accent-warning`, `--text-muted`, `--bg-input`, … 11 jeton) ve
+raporun paleti bambaşka (`--ink`, `--prusya`, `--line`…). Tanımsız bir `var()`
+"invalid at computed-value time"dır; kalıtılan bir özellik olan `stroke` için
+sonuç **`none`** demektir.
+
+**ÖLÇÜLDÜ (gerçek tarayıcı, BMC raporu):** kayış, altı kasnak çemberi, kaburga
+dişleri, sarım yayları, gergi kolu ve pivot **tamamen görünmezdi**; ayakta kalan
+tek şey etiketler ve merkez noktalarıydı (onlar `fill` kullanıyor). Şeklin
+künyesi olmayan bir çizimi anlatıyordu. Sayfa hatası yok, konsol temiz, sessiz.
+
+Şablon CSS'i jetonları `.appfig` altında raporun baskı paletine bağlıyor
+(`tools/report-assets/fead-theory-source.html`), `_frLayoutFigure` de `<figure>`
+elemanına o sınıfı koyuyor. Kapı, şeklin kullandığı **her** `var(--…)` jetonunun
+şablonda tanımlı olmasını arıyor — sınıf düşse de bir jeton eksik kalsa da
+kırmızı (iki mutasyonla ölçüldü).
+
 ##### Uydurulmayan şeyler — raporun kendi §9'unda yazılı
 
 | Gates sayfası | Neden yok |

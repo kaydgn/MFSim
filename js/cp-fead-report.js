@@ -294,49 +294,216 @@ function _frAntet(R, node){
 }
 
 // ─── Şekil 1 — kavramsal çizim (teoride, modele bağlı DEĞİL) ────────────────
-// Elle yazılmış sabit SVG: dört kasnaklı şematik bir FEAD, kaburgalı ve
-// sırttan temas farkı, gergi kolu ve sarım açısı işaretleriyle. Modelden
-// hiçbir sayı almaz — §2'nin görsel karşılığıdır.
+// Dört kasnaklı şematik bir FEAD: sürücü krank, bir aksesuar, sırttan temas
+// eden bir avara ve bir gergi. Modelin hiçbir sayısını almaz — §2'nin görsel
+// karşılığıdır ve her raporda AYNI çizilir.
+//
+// GEOMETRİ ÇEKİRDEKTEN GELİR, ELLE YAZILMAZ. Önceki sürümde yol koordinatları
+// elle yazılmıştı ve BEŞ ucun BEŞİ de yanlış yerdeydi (ölçüldü): krankın
+// "sarım yayı" kasnak çeperinden 29 px uzakta başlıyor, yarıçapı 70 olduğu
+// için merkezi (630,130) yerine (560,130)'a düşüyor ve kasnağın MERKEZİNDEN
+// geçen bir yarım çember çiziyordu; aksesuar yayının kirişi 2r'den uzun olduğu
+// için SVG yarıçapı 62 → 64.2'ye büyütüp merkezi kasnaktan 96 px uzağa
+// oturtuyordu — kayış o kasnağa hiç DEĞMİYORDU. Hepsi tek sebepten: teğet
+// noktası göz kararı yazılamaz, çözülmesi gerekir.
+//
+// `FEADCore.solveGeometry` teğet noktalarını, sarım açılarını ve dönüş
+// yönlerini çözer; üstelik kapalı çevrim değişmezini (Σ işaretli sarım = 360°)
+// ve kayış yolunun bir kasnağın içinden geçmediğini DOĞRULAR — yani bu şekil
+// kurulduğu anda geçerlidir, gözle denetlenmesi gerekmez. Yerleşim, doğrulama
+// takımındaki AG00686'nın topolojisiyle aynı ailedendir (iki kaburgalı büyük
+// kasnak, ana eksenin karşı taraflarında iki sırt kasnağı): sarımlar
+// 216 / 32 / 200 / 23° çıkıyor, referansın 208 / 27 / 201 / 22°'sine komşu.
+var _FR_CONCEPT = {
+  pulleys: [                                    // kayış GİDİŞ sırasında
+    { name:'Krank',    etiket:'Krank (sürücü)',      c:[   0,   0], r:85, contact:'grooved', altta:true  },
+    { name:'Avara',    etiket:'Avara (sırt teması)', c:[-185,  55], r:38, contact:'back',    altta:false },
+    { name:'Aksesuar', etiket:'Aksesuar',            c:[-500,   0], r:65, contact:'grooved', altta:true  },
+    { name:'Gergi',    etiket:'Gergi (sırt teması)', c:[-300, -65], r:38, contact:'back',    altta:true  }
+  ],
+  pivot: [-400, -95],                           // gergi kolu dayanağı
+  phi: 0,                                       // sarım açısı işaretini taşıyan kasnak
+  phiRingMm: 16                                 // işaret halkasının çeperden açıklığı
+};
+
+// Rapor CSS'i SVG yazılarını IBM Plex Mono'ya sabitliyor (`svg text` kuralı),
+// yani karakter genişliği SABİT: 0.6 em. Eski şekilde bu hesaba katılmamıştı
+// ve alt künye satırı 820'lik viewBox'ı 32 px aşıp KIRPILIYORDU — ekranda
+// "…kesikli: sırt t" diye kesiliyordu (ölçüldü). Etiketler artık bu genişlikle
+// yerleştiriliyor; çerçeveye sığdıkları testle kilitli.
+function _frTxtW(s, fs){ return String(s).length * fs * 0.6; }
+
 function _frConceptFigure(){
-  var s = '<svg viewBox="0 0 820 300" role="img" aria-label="Kavramsal FEAD şeması">';
-  s += '<defs><marker id="frArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">'
-     + '<path d="M0 0 L10 5 L0 10 z" fill="#24425f"/></marker></defs>';
-  // kayış yolu (dış teğetler + iki sırt kasnağı içeriden)
-  s += '<path d="M175 78 L560 60 A70 70 0 1 1 560 200 L300 214 A46 46 0 0 1 258 176"'
-     + ' fill="none" stroke="#c8781e" stroke-width="5" stroke-linejoin="round"/>';
-  s += '<path d="M258 176 A46 46 0 0 1 300 214" fill="none" stroke="#c8781e" stroke-width="5"/>';
-  s += '<path d="M175 78 A62 62 0 0 1 258 176" fill="none" stroke="#c8781e" stroke-width="5"/>';
-  // kasnaklar
-  function kas(x, y, r, ad, kesikli){
-    return '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="#fff" stroke="#24425f" stroke-width="2"'
-      + (kesikli ? ' stroke-dasharray="6 5"' : '') + '/>'
-      + '<circle cx="' + x + '" cy="' + y + '" r="3" fill="#24425f"/>'
-      + '<text x="' + x + '" y="' + (y + 5) + '" text-anchor="middle" font-size="13" fill="#24425f" '
-      + 'style="paint-order:stroke" stroke="#fff" stroke-width="4">' + ad + '</text>';
+  var C = _frCore();
+  if(!C || !C.solveGeometry) return '';
+  var P = _FR_CONCEPT.pulleys, geo;
+  try {
+    geo = C.solveGeometry(P.map(function(p){
+      return { name:p.name, c:p.c.slice(), rPitch:p.r, rEff:p.r, contact:p.contact };
+    }));
+  } catch(e){ return ''; }                      // çekirdek gerilerse şekil yerine boşluk
+
+  var W = 820, H = 330, padX = 26, padT = 34, padB = 54;
+  var n = P.length, PHI = _FR_CONCEPT.phi, phiR = _FR_CONCEPT.phiRingMm, pv = _FR_CONCEPT.pivot;
+
+  // SINIRLARA İŞARETLER DE GİRER: sarım halkası çeperden 16 mm dışarıda, φ
+  // etiketi daha da dışarıda, pivot ise kasnak kümesinin tamamen dışında.
+  // Ölçeğe katılmazlarsa çerçeveden taşıp kırpılırlar.
+  var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  P.forEach(function(p, i){
+    var r = p.r + (i === PHI ? phiR + 14 : 0);
+    minX = Math.min(minX, p.c[0]-r); maxX = Math.max(maxX, p.c[0]+r);
+    minY = Math.min(minY, p.c[1]-r); maxY = Math.max(maxY, p.c[1]+r);
+  });
+  minX = Math.min(minX, pv[0]); maxX = Math.max(maxX, pv[0]);
+  minY = Math.min(minY, pv[1]); maxY = Math.max(maxY, pv[1]);
+
+  var spanX = maxX-minX, spanY = maxY-minY;
+  var s = Math.min((W-2*padX)/spanX, (H-padT-padB)/spanY);
+  var offX = padX + ((W-2*padX) - spanX*s)/2;
+  var offY = padT + ((H-padT-padB) - spanY*s)/2;
+  // ty() mm düzlemini EKRANDA AYNI YÖNDE gösterir (yönelim korunur); SVG'nin
+  // açı sistemi y-aşağı olduğu için mm düzleminde CCW olan (d > 0) yay SVG'de
+  // NEGATİF yöndedir → sweep = 0. Kayış Yolu kartındaki kuralın AYNISI; iki
+  // çizim aynı konvansiyonu paylaşmazsa biri sessizce aynalanır.
+  function tx(x){ return offX + (x-minX)*s; }
+  function ty(y){ return offY + (maxY-y)*s; }
+  function f(v){ return Math.round(v*100)/100; }
+  function pt(c){ return f(tx(c[0])) + ' ' + f(ty(c[1])); }
+
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Kavramsal FEAD şeması">';
+  svg += '<defs><marker id="frArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7"'
+       + ' orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a5a1e"/></marker></defs>';
+
+  // ── gergi kolu ve pivotu (kayışın ALTINDA kalsın diye önce çizilir) ─────
+  svg += '<line x1="' + f(tx(pv[0])) + '" y1="' + f(ty(pv[1])) + '" x2="' + f(tx(P[3].c[0]))
+       + '" y2="' + f(ty(P[3].c[1])) + '" stroke="#2e7d4f" stroke-width="1.8" stroke-dasharray="5 4"/>';
+  var px = f(tx(pv[0])), py = f(ty(pv[1])), a = 7;
+  svg += '<g stroke="#2e7d4f" stroke-width="2">'
+       + '<line x1="' + f(px-a) + '" y1="' + py + '" x2="' + f(px+a) + '" y2="' + py + '"/>'
+       + '<line x1="' + px + '" y1="' + f(py-a) + '" x2="' + px + '" y2="' + f(py+a) + '"/></g>';
+  svg += '<text x="' + f(px-11) + '" y="' + f(py+4) + '" text-anchor="end" font-size="12" fill="#2e7d4f">pivot</text>';
+
+  // ── kayış yolu: çekirdeğin teğet uçları + işaretli sarım yayları ────────
+  var d = '';
+  for(var i=0;i<n;i++){
+    var sp = geo.spans[i], q = geo.pulleys[(i+1)%n], spN = geo.spans[(i+1)%n];
+    if(i === 0) d += 'M' + pt(sp.Pi);
+    d += ' L' + pt(sp.Pj);
+    var R = f(q.rPitch*s), wrap = geo.wraps[(i+1)%n];
+    d += ' A' + R + ' ' + R + ' 0 ' + (wrap > Math.PI ? 1 : 0) + ' ' + (q.d > 0 ? 0 : 1) + ' ' + pt(spN.Pi);
   }
-  s += kas(630, 130, 70, '');
-  s += kas(120, 130, 62, '');
-  s += kas(292, 172, 46, '', true);
-  s += '<text x="630" y="220" text-anchor="middle" font-size="12.5" fill="#24425f">Krank (sürücü)</text>';
-  s += '<text x="120" y="215" text-anchor="middle" font-size="12.5" fill="#24425f">Aksesuar</text>';
-  s += '<text x="292" y="240" text-anchor="middle" font-size="12.5" fill="#24425f">Gergi (sırttan)</text>';
-  // pivot + kol
-  s += '<line x1="292" y1="172" x2="360" y2="252" stroke="#2e7d4f" stroke-width="2" stroke-dasharray="5 4"/>';
-  s += '<path d="M352 244 l16 16 M368 244 l-16 16" stroke="#2e7d4f" stroke-width="2"/>';
-  s += '<text x="376" y="262" font-size="12" fill="#2e7d4f">pivot</text>';
-  // sarım açısı işareti
-  s += '<path d="M700 130 A70 70 0 0 1 660 194" fill="none" stroke="#8a5a1e" stroke-width="2.5" marker-end="url(#frArr)"/>';
-  s += '<text x="716" y="176" font-size="13" fill="#8a5a1e">φ</text>';
-  // açıklık etiketi
-  s += '<line x1="200" y1="70" x2="540" y2="53" stroke="#5a6270" stroke-width="1" stroke-dasharray="3 3"/>';
-  s += '<text x="360" y="46" text-anchor="middle" font-size="12" fill="#5a6270">serbest açıklık (span) L</text>';
-  // kaburgalı yüz göstergesi
-  s += '<text x="470" y="240" font-size="12" fill="#5a6270">düz çeper: kaburgalı yüz teması · kesikli: sırt teması</text>';
-  s += '</svg>';
-  return '<figure>' + s + '<figcaption><b>Şekil 1 —</b> Kavramsal FEAD şeması. Kayış krank kasnağından çıkar, '
-    + 'aksesuarları dolaşır ve krank girişine döner. Kaburgalı yüzden temas eden kasnaklar kayışın bir '
-    + 'yüzünü, sırttan temas edenler (kesikli çeper) öbür yüzünü görür; bu fark sarım açılarının '
-    + 'işaretini ve dolayısıyla kapalı çevrim değişmezini belirler (§3.4).</figcaption></figure>';
+  svg += '<path d="' + d + ' Z" fill="none" stroke="#c8781e" stroke-width="5" stroke-linejoin="round"/>';
+
+  // ── kasnaklar: düz çeper = kaburgalı temas, kesikli = sırt teması ───────
+  P.forEach(function(p){
+    var cx = f(tx(p.c[0])), cy = f(ty(p.c[1]));
+    svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + f(p.r*s) + '" fill="none"'
+         + ' stroke="#24425f" stroke-width="2"' + (p.contact === 'back' ? ' stroke-dasharray="6 5"' : '') + '/>'
+         + '<circle cx="' + cx + '" cy="' + cy + '" r="3" fill="#24425f"/>';
+  });
+
+  // ── ETİKET YERLEŞTİRİCİ: çakışana kadar iter ─────────────────────────────
+  // İstenen yönde adım adım ilerleyip bütün kasnak çemberlerinden ve çerçeveden
+  // çıkan ilk konumu seçer. Elle ayarlanmış bir koordinat daha yazmak, bu
+  // şekilde düzeltmeye çalıştığımız hatanın ta kendisi olurdu.
+  function _yerlestir(ax, ay, dx, dy, metin, fs){
+    var w = _frTxtW(metin, fs), hh = fs*1.2;
+    var X = tx(ax), Y = ty(ay), DX = dx, DY = -dy;          // ekran yönü: y ters
+    var L2 = Math.sqrt(DX*DX+DY*DY) || 1; DX /= L2; DY /= L2;
+    var cx = X + DX*16, cy = Y + DY*16;
+    for(var adim=0; adim<48; adim++){
+      cx = X + DX*(16 + adim*5); cy = Y + DY*(16 + adim*5);
+      var sol = cx - w/2, ust = cy - hh, alt = cy + 3;
+      if(sol < 6 || sol + w > W-6 || ust < 4 || alt > H-22) continue;
+      var carpti = false;
+      P.forEach(function(p){
+        var qx = tx(p.c[0]), qy = ty(p.c[1]), rp = p.r*s + 3;
+        var ddx = Math.max(Math.abs(qx-cx) - w/2, 0);
+        var ddy = Math.max(Math.abs(qy-(cy-hh/2)) - hh/2, 0);
+        if(ddx*ddx + ddy*ddy < rp*rp) carpti = true;
+      });
+      if(!carpti) break;
+    }
+    return { x:cx, y:cy, ax:X, ay:Y, w:w, h:hh };
+  }
+  function _leader(L){                                       // etikete ince kılavuz
+    var vx = L.x - L.ax, vy = L.y - L.ay, vl = Math.sqrt(vx*vx+vy*vy) || 1;
+    var ex = L.x - vx/vl*(L.w*0.28), ey = L.y - vy/vl*7 - 4;
+    return '<path d="M' + f(L.ax) + ' ' + f(L.ay) + ' L' + f(ex) + ' ' + f(ey)
+         + '" stroke="#5a6270" stroke-width="1" stroke-dasharray="3 3" opacity="0.85"/>';
+  }
+
+  // ── sarım açısı işareti: kasnağın GERÇEK giriş/çıkış teğetleri arasındaki
+  // açı, klasik teknik resim gösterimiyle — merkezden iki teğet noktasına ince
+  // birer yarıçap, aralarında küçük bir yay, ortada φ.
+  // ÖNCE kasnağın DIŞINA, çeperden 16 mm açıklıkta bir halka olarak çizilmişti
+  // ve tarayıcıda ölçüldü: 216°'lik o yay ikinci bir kayış gibi okunuyor,
+  // çerçevenin sağ ucuna dayanıyor ve "Krank (sürücü)" etiketinin üstünden
+  // geçiyordu. Açı işareti kasnağın İÇİNDE hiçbir şeyle yarışmıyor.
+  var pP = P[PHI], gP = geo.pulleys[PHI];
+  var Tin  = geo.spans[(PHI-1+n)%n].Pj, Tout = geo.spans[PHI].Pi;
+  var aIn  = Math.atan2(Tin[1]-pP.c[1], Tin[0]-pP.c[0]);
+  var wrapP = geo.wraps[PHI], dirP = (gP.d > 0) ? 1 : -1, ri = pP.r*0.46;
+  function onRing(ang, rad){ return [pP.c[0] + rad*Math.cos(ang), pP.c[1] + rad*Math.sin(ang)]; }
+  svg += '<path d="M' + pt(pP.c) + ' L' + pt(Tin) + ' M' + pt(pP.c) + ' L' + pt(Tout)
+       + '" stroke="#8a5a1e" stroke-width="1.1" stroke-dasharray="4 3" opacity="0.9"/>';
+  svg += '<path d="M' + pt(onRing(aIn, ri)) + ' A' + f(ri*s) + ' ' + f(ri*s) + ' 0 '
+       + (wrapP > Math.PI ? 1 : 0) + ' ' + (dirP > 0 ? 0 : 1) + ' ' + pt(onRing(aIn + dirP*wrapP, ri))
+       + '" fill="none" stroke="#8a5a1e" stroke-width="1.8" marker-end="url(#frArr)"/>';
+  var phiLb = onRing(aIn + dirP*wrapP/2, ri + 15);
+  svg += '<text x="' + f(tx(phiLb[0])) + '" y="' + f(ty(phiLb[1])+5) + '" text-anchor="middle"'
+       + ' font-size="14" fill="#8a5a1e">φ</text>';
+
+  // ── serbest açıklık (span) künyesi: EN UZUN açıklığın dışına ────────────
+  // Ölçü çizgisi o açıklığın GERÇEK teğet uçlarından ofsetlenir ve iki ucu
+  // çentiklidir; eski şekilde bağımsız bir doğruydu ve hiçbir açıklığı
+  // göstermiyordu. Yazı ölçü çizgisinin ÜSTÜNE değil, yerleştiriciyle boş
+  // alana konur — çizginin üstüne basılınca ikisi de okunmuyordu (ölçüldü).
+  var best = 0;
+  for(var k=1;k<n;k++) if(geo.spans[k].L > geo.spans[best].L) best = k;
+  var spB = geo.spans[best];
+  var ux = spB.Pj[0]-spB.Pi[0], uy = spB.Pj[1]-spB.Pi[1], LB = Math.sqrt(ux*ux+uy*uy);
+  if(LB > 1){
+    ux /= LB; uy /= LB;
+    var nx = -uy, ny = ux;                                   // dışa doğru normal
+    var mx = (spB.Pi[0]+spB.Pj[0])/2, my = (spB.Pi[1]+spB.Pj[1])/2;
+    if((mx-(minX+maxX)/2)*nx + (my-(minY+maxY)/2)*ny < 0){ nx = -nx; ny = -ny; }
+    var off = 13/s, tick = 5/s;
+    function onSpan(t, o){ return [spB.Pi[0] + ux*LB*t + nx*o, spB.Pi[1] + uy*LB*t + ny*o]; }
+    svg += '<path d="M' + pt(onSpan(0,0)) + ' L' + pt(onSpan(0,off+tick)) + '" stroke="#5a6270" stroke-width="1"/>'
+         + '<path d="M' + pt(onSpan(1,0)) + ' L' + pt(onSpan(1,off+tick)) + '" stroke="#5a6270" stroke-width="1"/>'
+         + '<path d="M' + pt(onSpan(0,off)) + ' L' + pt(onSpan(1,off)) + '" stroke="#5a6270" stroke-width="1"'
+         + ' stroke-dasharray="4 3"/>';
+    var anc = onSpan(0.5, off);
+    var Lb = _yerlestir(anc[0], anc[1], nx, ny, 'serbest açıklık (span) L', 12);
+    svg += _leader(Lb);
+    svg += '<text x="' + f(Lb.x) + '" y="' + f(Lb.y) + '" text-anchor="middle" font-size="12"'
+         + ' fill="#5a6270">serbest açıklık (span) L</text>';
+  }
+
+  // ── kasnak etiketleri: çeperin dışına, çerçeveye SIĞACAK biçimde ────────
+  P.forEach(function(p){
+    var fs = 12.5, w = _frTxtW(p.etiket, fs);
+    var x = Math.max(w/2 + 4, Math.min(W - w/2 - 4, tx(p.c[0])));
+    var y = p.altta ? (ty(p.c[1]-p.r) + 16) : (ty(p.c[1]+p.r) - 9);
+    svg += '<text x="' + f(x) + '" y="' + f(y) + '" text-anchor="middle" font-size="' + fs
+         + '" fill="#24425f">' + _frEsc(p.etiket) + '</text>';
+  });
+
+  // ── alt künye: çeper dokusunun ve renklerin ne anlattığı ────────────────
+  svg += '<text x="14" y="' + (H-10) + '" font-size="12" fill="#5a6270">'
+       + 'düz çeper: kaburgalı yüz teması · kesikli çeper: sırt teması · turuncu: kayış · yeşil: gergi kolu</text>';
+  svg += '</svg>';
+
+  // ŞEKİL NUMARASI SABİT 1: bu şekil teoride, §8'in sayaç sıfırlamasından
+  // ÖNCE üretiliyor. _frFig() çağırmak numarayı önceki üretimden devralırdı.
+  return '<figure>' + svg + '<figcaption><b>Şekil 1 —</b> Kavramsal FEAD şeması. Kayış krank kasnağından '
+    + 'çıkar, aksesuarları dolaşır ve krank girişine döner. Kaburgalı yüzden temas eden kasnaklar kayışın '
+    + 'bir yüzünü, sırttan temas edenler (kesikli çeper) öbür yüzünü görür; bu fark sarım açılarının '
+    + 'işaretini ve dolayısıyla kapalı çevrim değişmezini belirler (§3.4). Şeklin bütün teğet noktaları, '
+    + 'sarım yayları ve dönüş yönleri §3\'ün çözücüsüyle hesaplanmıştır — çizimde elle yerleştirilmiş '
+    + 'koordinat yoktur.</figcaption></figure>';
 }
 
 // ═══════════════════ §8 — SAYISAL ÖRNEK (dinamik) ═══════════════════════════
@@ -531,8 +698,11 @@ function _frLayoutFigure(R){
       svg = veFeadLayoutSVG(R.build, 820, 360, { posMode: 'mean', compass: true, pivot: true, arrows: true });
   } catch(e){ svg = null; }
   if(!svg) return '';
+  // class="appfig": bu şekil UYGULAMANIN çizicisinden geliyor ve onun palet
+  // jetonlarını kullanıyor; şablon CSS'i o jetonları bu sınıf altında raporun
+  // baskı paletine bağlıyor. Sınıf düşerse çizim görünmez olur (testi var).
   return '<h3>8.5 Çözülmüş kayış yolu</h3>'
-    + '<figure>' + svg + '<figcaption><b>Şekil ' + _frFig() + ' —</b> Çalışma (Mean) konumunda çözülmüş kayış yolu: '
+    + '<figure class="appfig">' + svg + '<figcaption><b>Şekil ' + _frFig() + ' —</b> Çalışma (Mean) konumunda çözülmüş kayış yolu: '
     + 'teğet noktaları, işaretli sarım yayları, gergi pivotu ve kolu, dönüş yönleri. Yol üstündeki dişler '
     + 'kayışın kaburgalı yüzünü gösterir — kaburgalı temas eden kasnakta içeri, sırttan temas edende dışarı bakar. '
     + 'Çizim mm ölçeğindedir ve kanvastaki düğüm konumlarından bağımsızdır.</figcaption></figure>';
