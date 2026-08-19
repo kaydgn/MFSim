@@ -481,9 +481,16 @@ describe('duty cycle → çekirdek: AG00686 gerilme tablosu', () => {
     const b = kur([{ rpm: 1250, dcPct: 100, kw: 5 }]);
     const res = veFeadAnalyze(veFeadBuildSystem(b.list, b.conns), { rows: veFeadDutyRows(b.sv) });
     const t = res.limits.join(' ');
-    expect(t).toMatch(/Doğal frekans/);
-    expect(t).toMatch(/KARŞILAŞTIRILAMAZ/);
+    // Burulma modeli çekirdeğe girdikten SONRA bu satır değişti: eskiden
+    // "doğal frekans KARŞILAŞTIRILAMAZ" diyordu, çünkü çekirdek yalnız tek
+    // serbestlik dereceli kol modu veriyordu. Artık çok serbestlik dereceli
+    // model var; sınır "karşılaştırılamaz" değil, "aynı güven düzeyinde değil".
+    expect(t).toMatch(/[Bb]urulma/);
+    expect(t).toMatch(/deterministik değildir/);
     expect(t).toMatch(/yarı-statik/);
+    // Kol modu hâlâ karşılaştırılamaz — ayrımın kaybolmaması gerekiyor.
+    expect(t).toMatch(/KOL MODU/);
+    expect(t).toMatch(/karşılaştırılamaz/);
   });
 
   test('boş çevrimde analiz patlamaz, uyarı verir', () => {
@@ -694,5 +701,76 @@ describe('B10 ömrü ↔ seçili yorulma modeli', () => {
     const R = veFeadAnalyze(build, { rows, fatigueModel: '<img src=x onerror=1>' });
     expect(R.limits.join(' ')).not.toMatch(/<img/);
     expect(R.warnings.join(' ')).toMatch(/[Yy]orulma dağılımı/);   // çekirdek reddetti
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  BURULMA MODELİ — KÖPRÜ TARAFI
+// ════════════════════════════════════════════════════════════════════════════
+// Çekirdek modeli doğru kuruyor (tests/unit/fead-core.test.js); burada
+// kanıtlanan şey KULLANICI ARAYÜZÜNÜN ona doğru veriyi verdiği. En pahalı
+// sessizlik burada: krank serbestliğine yanlış atalet giderse model yine
+// "başarıyla" çözer ve kimse fark etmez.
+describe('burulma modeli köprüsü', () => {
+  const bmc = () => {
+    const ex = veFeadExampleNodes('BMC_FEAD_2026');
+    ex.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const build = veFeadBuildSystem(ex.nodes, ex.connections);
+    expect(build.ok).toBe(true);
+    const solv = ex.nodes.find((n) => n.type === 'fead-solver');
+    return { build, solv, rows: veFeadDutyRows(solv), nodes: ex.nodes };
+  };
+
+  test('gergi KASNAK KÜTLESİ paneldeki alandan çekirdeğe geçiyor', () => {
+    const { build } = bmc();
+    expect(build.cfg.tensioner.pulleyMassKg).toBeCloseTo(0.80, 12);
+    expect(build.sys.tensioner.pulleyMassKg).toBeCloseTo(0.80, 12);
+  });
+
+  test('KRANK ATALETİ Çözücü panelinden burulma modeline geçiyor', () => {
+    // Bu alan burulma modeli gelene kadar ÖLÜ GİRDİYDİ: panelde soruluyor,
+    // hiçbir yere gitmiyordu. Şimdi krank serbestliğinin ataleti oluyor.
+    const { build, rows, solv } = bmc();
+    expect(_feadNum(solv.data.crankInertia, 0)).toBeCloseTo(0.70, 12);
+
+    const ile = veFeadAnalyze(build, { rows, crankInertia: 0.70 });
+    const siz = veFeadAnalyze(build, { rows });          // krank kasnağı 0.064
+    expect(ile.torsional).toBeTruthy();
+    expect(siz.torsional).toBeTruthy();
+    // Ayrışmak ZORUNDA — aynı çıkarsa alan yine bağlanmamış demektir.
+    expect(ile.torsional.firstElasticHz)
+      .not.toBeCloseTo(siz.torsional.firstElasticHz, 1);
+    expect(ile.torsional.firstElasticHz).toBeLessThan(siz.torsional.firstElasticHz);
+  });
+
+  test('veFeadTorsionalOpt krank ADIYLA anahtarlar, sırayla değil', () => {
+    const { build } = bmc();
+    const o = veFeadTorsionalOpt(build, { crankInertia: 1.23 });
+    const crankAdi = build.names[build.sys._crkIdx];
+    expect(o.inertias[crankAdi]).toBeCloseTo(1.23, 12);
+    // girilmemişse hiç dokunmaz (kasnağın kendi ataleti geçerli kalır)
+    expect(veFeadTorsionalOpt(build, {})).toEqual({});
+    expect(veFeadTorsionalOpt(build, { crankInertia: 0 })).toEqual({});
+  });
+
+  test('TEK CEVAP: analyze() içindeki ikinci burulma hesabı kapalı', () => {
+    // analyze() burulmayı seçeneksiz hesaplayabiliyor; açık kalsaydı panel iki
+    // farklı frekans taşırdı (biri krank ataletli, biri kasnak ataletli).
+    const { build, rows } = bmc();
+    const R = veFeadAnalyze(build, { rows, crankInertia: 0.70 });
+    expect(R.analysis.torsional).toBeNull();
+    expect(R.torsional.firstElasticHz).toBeGreaterThan(0);
+  });
+
+  test('atalet eksikse SESSİZ değil: uyarı taşınır, çözüm devam eder', () => {
+    const ex = veFeadExampleNodes('BMC_FEAD_2026');
+    ex.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    ex.nodes.filter((n) => n.type === 'fead-ac').forEach((n) => { delete n.data.inertia; });
+    const build = veFeadBuildSystem(ex.nodes, ex.connections);
+    const solv = ex.nodes.find((n) => n.type === 'fead-solver');
+    const R = veFeadAnalyze(build, { rows: veFeadDutyRows(solv), crankInertia: 0.70 });
+    expect(R.ok).toBe(true);                      // gerilme/ömür etkilenmez
+    expect(R.torsional).toBeNull();
+    expect(R.warnings.join(' ')).toMatch(/[Bb]urulma modeli/);
   });
 });

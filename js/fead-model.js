@@ -385,7 +385,8 @@ var VE_FEAD_EXAMPLES = {
                // montaj pozisyonu" — serbest açı SAYFADA YOK, buradan türetilir.
                angleMode:'mount', pivotX:-259.94, pivotY:104.15,
                cenX:-170.080, cenY:99.160, armLen:90.0,
-               preload:8.60, kArm:0.480, meanLoad:22.07 } }
+               preload:8.60, kArm:0.480, meanLoad:22.07,
+               armInertia:0.0009, pulleyMass:0.80 } }
     ],
     // Kayış serpantin sırası: sürücüden başlar, sürücüye döner.
     route: ['SRC', 'IDR1', 'A_C', 'IDR2', 'ALT', 'TEN']
@@ -654,6 +655,12 @@ function veFeadBuildSystem(nodeList, connList){
   if(Number.isFinite(stop) && stop > 0) cfgTen.loadStopRelDeg = stop;
   var armJ = _feadNum(td.armInertia, 0);
   if(armJ > 0) cfgTen.armInertiaKgM2 = armJ;
+  // Kol, kasnağı kol boyu yarıçapında nokta kütle olarak taşır. Burulma
+  // modelinde bu terim ihmal edilirse 1. mod belirgin şekilde yüksek çıkar
+  // (kalibrasyonda RMS %28 -> %17 fark etti). Gates raporunun "Tensioner
+  // Pulley Mass" satırı tam olarak bu.
+  var armM = _feadNum(td.pulleyMass, 0);
+  if(armM > 0) cfgTen.pulleyMassKg = armM;
 
   // ── Çözücü / tasarım ──
   var design = _feadNum(sd.designTensionN, NaN);
@@ -981,6 +988,39 @@ function veFeadDutyDegC(sys, duty){
 // — ve bunu söylemek zorundadır.
 var VE_FEAD_LIFE_FATIGUE_MODEL = 'PK-2_2p-MT3';
 
+// ─── BURULMA MODELİNİN KRANK SERBESTLİĞİ ────────────────────────────────────
+//
+// `torsionalModel` her kasnak için bir atalet istiyor ve krank düğümününki
+// diğerlerinden FARKLI BİR ŞEY: kayış çevriminde krank kasnağının arkasında
+// krank mili + volan duruyor, yani o serbestliğin ETKİN ataleti kasnağın kendi
+// ataleti değil. Gates raporunun "System Vibration Analysis" sayfası da bunu
+// ayrı bir girdi olarak listeliyor (bkz. CALIBRATION.tensionerArmInertiaKgM2).
+//
+// MFSim bu sayıyı ZATEN SORUYOR — Çözücü panelindeki "Krank ataleti" alanı —
+// ama burulma modeli gelene kadar hiçbir yere gitmiyordu (ölü girdi). Şimdi
+// çekirdeğe `inertias` üzerinden geçiyor: kasnağın kendi `inertiaKgM2` alanına
+// yazmıyoruz ki başka bir hesap (peakEstimate) kasnak ataletini istediğinde
+// karşısında krank milini bulmasın.
+//
+// ÖLÇÜLDÜ (Gates kalibrasyon takımı, 5 sistem — AG00686, AG00686-1520 ve
+// AG0868'in 4/6/8PK üçlüsü): krank ataleti 0.7 kg·m² ve gergi kasnak kütlesi
+// dahilken 1. elastik mod 11.7 · 13.0 · 29.1 · 35.7 · 41.2 Hz çıkıyor; Gates
+// raporlarının "Natural Frequency" satırı 11.87 · 13.35 · 28.28 · 37.61 ·
+// 45.62 Hz — RMS %5.2. Krank yerine krank KASNAĞININ ataleti (0.064) konunca
+// AG0868 ailesi 41.0/49.7/57.1 Hz'e fırlıyor (RMS %33) ve 8PK varyantında
+// birinci mod sayısal olarak çöküyor. Yani bu alan bağlanmadan model
+// kullanılabilir değil.
+function veFeadTorsionalOpt(build, opts){
+  var o = {};
+  var J = _feadNum(opts && opts.crankInertia, NaN);
+  if(!Number.isFinite(J) || !(J > 0)) return o;
+  var i = (build && build.sys) ? build.sys._crkIdx : -1;
+  if(!(i >= 0) || !build.names[i]) return o;
+  o.inertias = {};
+  o.inertias[build.names[i]] = J;
+  return o;
+}
+
 function veFeadAnalyze(build, opts){
   opts = opts || {};
   var out = { ok: false, error: null, analysis: null, fatigue: null, life: null,
@@ -996,12 +1036,27 @@ function veFeadAnalyze(build, opts){
     out.analysis = FEADCore.analyze(build.sys, {
       duty: duty,
       cylinders: opts.cylinders > 0 ? opts.cylinders : 6,
-      modes: 1
+      modes: 1,
+      // analyze() burulmayı da hesaplayabiliyor ama SEÇENEKSİZ — krank ataleti
+      // geçilemediği için kasnak ataletiyle koşar ve aşağıdaki asıl hesaptan
+      // BAŞKA bir frekans verirdi. Tek sonuç kalsın: burada kapalı, aşağıda açık.
+      torsional: false
     });
     out.ok = true;
   } catch(e){
     out.error = veFeadTranslateError(e && e.message);
     return out;
+  }
+
+  // ── Burulma (dönel) titreşim modeli ──
+  // Tüm kasnakların ataleti + gergi kolu ataleti girilmişse çalışır; biri bile
+  // eksikse çekirdek açık hata verir ve buraya uyarı olarak düşer. Sessizce
+  // atlamıyoruz: kullanıcı frekans kartını boş görüp hesabın çöktüğünü sanmasın.
+  try {
+    out.torsional = FEADCore.torsionalModel(build.sys, veFeadTorsionalOpt(build, opts));
+  } catch(e){
+    out.torsional = null;
+    out.warnings.push('Burulma modeli: ' + veFeadTranslateError(e && e.message));
   }
 
   var fatModel = opts.fatigueModel || VE_FEAD_LIFE_FATIGUE_MODEL;
@@ -1052,9 +1107,19 @@ function veFeadAnalyze(build, opts){
   }
 
   // Spesifikasyon §7 — her koşuda görünür olmalı, dipnotta değil.
-  out.limits.push('Doğal frekans: çekirdek yalnız GERGİ KOL MODU tahmini verir. '
-    + 'Gates raporunun "Natural Frequency" değeri krank ve aksesuar ataletlerini de içeren '
-    + 'çok serbestlik dereceli bir burulma modudur — KARŞILAŞTIRILAMAZ.');
+  // Bu satır eskiden "doğal frekans KARŞILAŞTIRILAMAZ" diyordu; çekirdekte çok
+  // serbestlik dereceli burulma modeli olmadığı sürece doğruydu. Artık var ve
+  // Gates'in "System Resonance (Mode 1)" satırına kalibre. Ama güven düzeyi
+  // statik zincirle AYNI DEĞİL ve bunu söylemek zorundayız: statik zincir 17
+  // raporda %0.33, burulma 6 sistemde RMS ~%8.
+  out.limits.push('Burulma (dönel titreşim) modeli KALİBRE bir modeldir, statik zincir gibi '
+    + 'deterministik değildir: Gates "System Resonance (Mode 1)" değerlerine 6 sistemde '
+    + 'RMS ~%8 ile oturur (statik gerilme/geometri zinciri %0.33). Sonucu bir mertebe '
+    + 'göstergesi olarak okuyun; sertifikasyon için değil. Kayış kord rijitliği ve '
+    + 'kavis payı bu kalibrasyonun serbest parametreleridir.');
+  out.limits.push('Gergi KOL MODU tahmini (tensionerMode) ayrı ve daha kabadır — tek '
+    + 'serbestlik dereceli olduğu için raporun "Natural Frequency" değeriyle '
+    + 'karşılaştırılamaz. Karşılaştırılacak olan burulma modelinin 1. elastik modudur.');
   out.limits.push('Peak / geçici rejim: model yarı-statiktir, gergi kolu dinamiği dahil değildir.');
   out.limits.push('Hizalama payı: kalibre edilmedi.');
   return out;
@@ -1079,7 +1144,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadDutyRows: veFeadDutyRows, veFeadPresetLib: veFeadPresetLib,
     veFeadPresetOf: veFeadPresetOf, veFeadAutoKw: veFeadAutoKw,
     veFeadDutyToCore: veFeadDutyToCore, veFeadAnalyze: veFeadAnalyze,
-    veFeadDutyDegC: veFeadDutyDegC,
+    veFeadDutyDegC: veFeadDutyDegC, veFeadTorsionalOpt: veFeadTorsionalOpt,
     VE_FEAD_LIFE_FATIGUE_MODEL: VE_FEAD_LIFE_FATIGUE_MODEL,
     VE_FEAD_PRESET_LIB: VE_FEAD_PRESET_LIB,
     veFeadBuildSystem: veFeadBuildSystem, veFeadBuildFromCanvas: veFeadBuildFromCanvas,

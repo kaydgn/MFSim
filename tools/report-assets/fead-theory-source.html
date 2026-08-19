@@ -159,7 +159,7 @@ pre code{background:none;padding:0}
 
 <div class="note">
   <span class="t">Kapsam sınırı</span>
-  Bu rapor <strong>yarı-statik</strong> bir çözümdür: her devir noktası kendi içinde dengede çözülür. Krank–kayış–aksesuar zincirinin <strong>burulma titreşimi</strong> (sistem doğal frekansı, rezonans devri) kapsam dışıdır; sebebi ve sonucu Bölüm 9.2'de ayrıca yazılmıştır. Serbest açıklıkların enine titreşimi (Bölüm 7) ise hesaplanır — o farklı ve daha basit bir problemdir.
+  Bu rapor <strong>yarı-statik</strong> bir çözümdür: her devir noktası kendi içinde dengede çözülür. Krank–kayış–aksesuar zincirinin <strong>burulma titreşimi</strong> (sistem doğal frekansı, rezonans devri) ayrıca hesaplanır ve Bölüm 8.18'de verilir — ancak <strong>kalibre</strong> bir modeldir, geometri ve gerginlik zinciriyle aynı güven düzeyinde değildir; sınırları Bölüm 9.2'de yazılıdır. Serbest açıklıkların enine titreşimi (Bölüm 7) bundan ayrı ve daha basit bir problemdir.
 </div>
 
 <!-- ═══════════ 2 ═══════════ -->
@@ -408,7 +408,7 @@ $$ f_{\text{ateşleme}} = \frac{n_{\text{krank}}\cdot N_{\text{sil}}}{120} $$
 <p>Bir açıklığın temel frekansı ateşleme frekansına yaklaştığında o açıklık rezonansa girer: gözle görülür çırpınma (flutter), gürültü ve hızlanmış yorulma üretir. Tasarım kuralı, çalışma devir aralığı boyunca her açıklığın \( f_1 \) değerini ateşleme doğrusundan uzak tutmaktır. Bölüm 8.17'de bu iki eğri aynı grafikte verilir.</p>
 <div class="note">
   <span class="t">Bu, sistemin burulma modu DEĞİLDİR</span>
-  (7.2) bir <em>açıklığın enine</em> titreşimidir — kayışın o parçasının teli gibi salınması. Krank, aksesuar milleri ve gergi kolunun birlikte oluşturduğu <strong>burulma</strong> sistemi ayrı ve çok daha karmaşık bir problemdir; bu rapor onu hesaplamaz (§9.2).
+  (7.2) bir <em>açıklığın enine</em> titreşimidir — kayışın o parçasının teli gibi salınması. Krank, aksesuar milleri ve gergi kolunun birlikte oluşturduğu <strong>burulma</strong> sistemi ayrı ve çok daha karmaşık bir problemdir; o Bölüm 8.18'de ayrıca verilir (§9.2). İki büyüklük karıştırılmamalıdır.
 </div>
 
 <!-- ═══════════ 8 (dinamik) ═══════════ -->
@@ -432,11 +432,13 @@ $$ f_{\text{ateşleme}} = \frac{n_{\text{krank}}\cdot N_{\text{sil}}}{120} $$
   <tr><td class="l">Kaburga yorulma dağılımı</td><td>1,5 yüzde puanı</td><td class="l">Kalibre model; pay bir orandır.</td></tr>
 </table>
 
-<h3>9.2 Sistem burulma titreşimi — hesaplanmaz</h3>
-<p>Tedarikçi raporlarındaki "Natural Frequency" değeri, krank–kayış–aksesuar–gergi zincirinin <strong>çok serbestlik dereceli burulma modudur</strong>: kayış açıklıklarının yay gibi davrandığı, aksesuar ataletlerinin ve gergi kolunun birlikte çözüldüğü bir özdeğer problemidir. Bu rapor onu çözmez; çekirdek yalnız <em>gergi kolu modunu</em> verebilir ve o farklı bir büyüklüktür — ölçüldüğünde iki değer arasında %19 mertebesinde fark bulunmuştur.</p>
+<h3>9.2 Sistem burulma titreşimi — kalibre model</h3>
+<p>Tedarikçi raporlarındaki "Natural Frequency" değeri, krank–kayış–aksesuar–gergi zincirinin <strong>çok serbestlik dereceli burulma modudur</strong>: kayış açıklıklarının yay gibi davrandığı, aksesuar ataletlerinin ve gergi kolunun birlikte çözüldüğü bir özdeğer problemidir. Bu belge onu <strong>çözer</strong> (Bölüm 8.18): serbestlikler kasnak açıları ile gergi kolu açısıdır, açıklık eksenel rijitlikleri yayları, kasnak ve kol ataletleri kütleleri oluşturur; rijitlik ve kütle matrisleri doğrudan enerji ifadesinden kurulur ve özdeğer problemi çözülür.</p>
+<p><strong>Ama bu bölüm belgenin geri kalanıyla aynı güven düzeyinde değildir</strong> ve bu ayrım kasıtlı olarak burada durur. Geometri, gerginlik ve hubload zinciri deterministik bir hesaptır: on yedi tedarikçi raporunun iki binden fazla değerine <strong>%0,33</strong> sapmayla oturur, serbest parametresi yoktur. Burulma modelinin ise iki serbest parametresi vardır — kayışın kord eksenel rijitliği ve açıklık dışındaki kavis payı — ve bunlar tedarikçi raporlarının "System Resonance (Mode 1)" satırına <strong>altı sistemde kalibre</strong> edilmiştir; kalan sapma <strong>RMS ~%8</strong>'dir.</p>
+<p>Modelin doğru ölçeklendiğine dair bağımsız kanıt, kaburga sayısı dışında her şeyi aynı olan üç varyantlı bir kontrollü karşılaştırmadır: 4/6/8 kaburgalı üç sistemde model 29,1 · 35,7 · 41,2 Hz verirken tedarikçi raporları 28,3 · 37,6 · 45,6 Hz vermektedir — sıralama ve büyüme eğilimi korunmaktadır.</p>
 <div class="note warn">
-  <span class="t">Karıştırılmamalı</span>
-  Bölüm 8.17'de verilen frekanslar <strong>açıklıkların enine titreşimidir</strong> (§7). Sistem rezonans devri, rölanti yakınında rezonans uyarısı ve tedarikçi raporundaki "System Resonance (Mode 1)" satırı bu belgede <strong>yoktur</strong>.
+  <span class="t">Nasıl okunmalı</span>
+  Bölüm 8.18'deki frekanslar bir <strong>mertebe göstergesidir</strong>: bir modun çalışma devir bandına düşüp düşmediğini görmek için kullanılır, sertifikasyon dayanağı olarak değil. Sönüm, uyarma genliği ve kayış boyunca kayma bu modelin kapsamı dışındadır. Bölüm 8.17'deki frekanslar ise bambaşka bir büyüklüktür — <strong>açıklıkların enine titreşimi</strong> (§7); ikisi karıştırılmamalıdır.
 </div>
 
 <h3>9.3 Mutlak ömrün geçerlilik penceresi</h3>
@@ -453,7 +455,8 @@ $$ f_{\text{ateşleme}} = \frac{n_{\text{krank}}\cdot N_{\text{sil}}}{120} $$
 
 <h3>9.7 Genişletme yolları</h3>
 <ul>
-  <li><strong>Burulma modeli:</strong> aksesuar ataletleri ve açıklık rijitlikleri \( k_{\text{span}} = EA/L \) ile bir \( n \)-serbestlik dereceli burulma matrisi kurulabilir; özdeğerleri sistem doğal frekanslarını verir.</li>
+  <li><strong>Burulma modelinin doğrulanması:</strong> model kurulmuştur (§8.18, §9.2) ancak kalibrasyonu altı sisteme dayanır ve yalnız birinci moda bakar. Üst modların ölçümle karşılaştırılması ve kord rijitliğinin kayış katalogundan doğrudan alınması, modeli kalibre olmaktan çıkarıp deterministik hâle getirir.</li>
+  <li><strong>Sönüm:</strong> burulma modeli sönümsüzdür; modal sönüm oranları eklenirse rezonans genliği ve büyütme faktörü de hesaplanabilir.</li>
   <li><strong>Tepe yük taraması:</strong> (5.8) tüm ivme ve yük kombinasyonları üzerinde taranarak kritik durum ve gereken gerginlik artışı bulunabilir.</li>
   <li><strong>Hizalama:</strong> kasnak eksen vektörleri üç boyuta taşınarak fleeting açısı ve eksenel offset payı hesaplanabilir.</li>
 </ul>

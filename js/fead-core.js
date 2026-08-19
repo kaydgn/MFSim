@@ -76,7 +76,7 @@
    *   massPerRibKgM'i acikca gecmek (veya belt.massPerM vermek) onerilir. */
   const BELT_DB = {
     PK: {
-      GATES:     { hb: 1.2, hr: 1.1, ribPitch: 3.56, thickness: 4.6, minPulleyDia: 45, maxSpeedMs: 50, massPerRibKgM: 0.0144 },
+      GATES:     { hb: 1.2, hr: 1.1, ribPitch: 3.56, thickness: 4.6, minPulleyDia: 45, maxSpeedMs: 50, massPerRibKgM: 0.0144, cordStiffnessNPerRib: 11000 },
       OPTIBELT:  { hb: 1.6, hr: 1.1, ribPitch: 3.56, thickness: 4.6, minPulleyDia: 45, maxSpeedMs: 50, massPerRibKgM: 0.021 },
       CONTITECH: { hb: 1.5, hr: 1.5, ribPitch: 3.56, thickness: 5.0, minPulleyDia: 45, maxSpeedMs: 50, massPerRibKgM: 0.021 },
     },
@@ -146,6 +146,21 @@
             'calibrateLengthOffset(sys,{relDeg,beltLengthMm}) ile bulunur. ' +
             'NOT: raporun bastigi "Required Eff. Belt Length" kolonu bundan ' +
             '0-0.4 mm daha kucuktur; konum cozumu icin EDL tabanli tanim gecerlidir.',
+    },
+    torsional: {
+      cordStiffnessNPerRib: 11000, beltFactor: 0.0,
+      note: 'Burulma modeli (torsionalModel) sabitleri. Gates "System ' +
+            'Resonance (Mode 1)" degerlerine 6 sistemde kalibre edildi ' +
+            '(AG00686 x2, AG0868 4/6/8PK, AG00810; 4-10 kaburga, uc farkli ' +
+            'tahrik): RMS %8.4, en buyuk sapma %16.9 (AG00810). Kaburga ' +
+            'olceklemesi doğru cikiyor: AG0868 ailesinde model 29.3/35.8/41.2 ' +
+            'Hz, Gates 28.3/37.6/45.6 Hz. beltFactor=0 -> kavis payi yok, yani ' +
+            'kayis yalnizca SERBEST span boyunca uzuyor (kasnakta kaymiyor); ' +
+            'tez 0.5 kullaniyor, Gates verisi 0 istiyor. 8PK icin Kb = 88 kN; ' +
+            'kayis uzamasindan geri-hesaplanan EA (140-320 kN, +-%50 sacilma) ' +
+            'ile ayni mertebede ama daha dusuk. DETERMINISTIK DEGIL: %8 ' +
+            'seviyesindeki bir kalibre model, %0.33 olan statik zincirle ayni ' +
+            'guven duzeyinde degildir.',
     },
     fatigue: { note: 'FATIGUE nesnesine ve beltLifeB10() fonksiyonuna bakiniz.' },
   };
@@ -617,6 +632,142 @@
     };
   }
 
+  /* ------------------------------- Burulma (dönel) titreşim modeli ---------
+   * Kaynak: Olatunde (2008, Toronto Ü.) B-ISG tezinin 7-SD modelinin N kasnak
+   * icin genellestirilmis hali. Tezin ara denklemlerindeki indis hatalarindan
+   * kacinmak icin dogrudan enerji formulasyonundan kuruldu:
+   *   serbestlikler q = [theta_1..theta_n, delta_kol]
+   *   span uzamasi  e_i = R_{i+1} th_{i+1} - R_i th_i + a_i * delta
+   *   V = 1/2 SUM k_i e_i^2 + 1/2 k_yay delta^2      ->  K = B' diag(k) B + yay
+   *   T = 1/2 SUM I_j thd_j^2 + 1/2 I_kol deltad^2   ->  M = diag(I)
+   * K tekildir (rijit cisim modu, tum sistem birlikte doner) -> f=0 beklenir;
+   * ilk SIFIRDAN FARKLI frekans sistemin 1. elastik modudur.
+   * a_i (kol -> span uzunlugu turevi) sonlu farkla, gercek geometriden alinir;
+   * toplamlari take-up oranina esit olmalidir (donuste kontrol edilir).
+   * DIKKAT: kalibrasyonu acik, bkz. CALIBRATION.torsional.note */
+
+  /* Span eksenel rijitligi [N/m]. Yay uzunlugu = serbest span + kavis payi. */
+  function spanStiffness(sys, geom, opt = {}) {
+    const Kb = opt.cordStiffnessN != null ? opt.cordStiffnessN
+      : (sys.belt.cordStiffnessN != null ? sys.belt.cordStiffnessN
+        : (sys._bp.cordStiffnessNPerRib != null && sys.belt.ribs != null
+          ? sys._bp.cordStiffnessNPerRib * sys.belt.ribs : null));
+    if (Kb == null) throw new Error(
+      'FEADCore/spanStiffness: kayis kord rijitligi yok. opt.cordStiffnessN ' +
+      'veya belt.ribs + BELT_DB.cordStiffnessNPerRib gerekli.');
+    const kb = opt.beltFactor != null ? opt.beltFactor : CALIBRATION.torsional.beltFactor;
+    const n = geom.pulleys.length;
+    return geom.spans.map((sp, i) => {
+      const j = (i + 1) % n;
+      const arc = kb * (geom.pulleys[i].rPitch * geom.wraps[i] / 2
+                      + geom.pulleys[j].rPitch * geom.wraps[j] / 2) / 1000;
+      return { span: `${geom.names[i]}->${geom.names[j]}`,
+               effLenM: sp.L / 1000 + arc, kNPerM: Kb / (sp.L / 1000 + arc) };
+    });
+  }
+
+  /* Simetrik ozdeger (Jacobi). n kucuk oldugu icin fazlasiyla yeterli. */
+  function jacobiEig(Ain, n) {
+    const A = Ain.map(r => r.slice());
+    const V = Array.from({ length: n }, (_, i) =>
+      Array.from({ length: n }, (_, j) => (i === j ? 1 : 0)));
+    for (let sweep = 0; sweep < 200; sweep++) {
+      let off = 0, p = 0, q = 1;
+      for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+        off += A[i][j] * A[i][j];
+        if (Math.abs(A[i][j]) > Math.abs(A[p][q])) { p = i; q = j; }
+      }
+      if (off < 1e-26) break;
+      const th = 0.5 * Math.atan2(2 * A[p][q], A[q][q] - A[p][p]);
+      const c = Math.cos(th), sn = Math.sin(th);
+      for (let k = 0; k < n; k++) { const a = A[k][p], b = A[k][q]; A[k][p] = c * a - sn * b; A[k][q] = sn * a + c * b; }
+      for (let k = 0; k < n; k++) { const a = A[p][k], b = A[q][k]; A[p][k] = c * a - sn * b; A[q][k] = sn * a + c * b; }
+      for (let k = 0; k < n; k++) { const a = V[k][p], b = V[k][q]; V[k][p] = c * a - sn * b; V[k][q] = sn * a + c * b; }
+    }
+    return { values: A.map((r, i) => r[i]), vectors: V };
+  }
+
+  function torsionalModel(sys, opt = {}) {
+    const rel = opt.relDeg != null ? opt.relDeg : meanRel(sys);
+    const n = sys._n, t = sys._tenIdx, N = n + 1;
+    const st = tensionerState(sys, rel), geom = st.geom;
+
+    /* atalet toplama — eksikse acik hata */
+    const inert = sys.pulleys.map(p => {
+      const J = (opt.inertias && opt.inertias[p.name] != null) ? opt.inertias[p.name] : p.inertiaKgM2;
+      if (J == null) throw new Error(
+        `FEADCore/torsionalModel: "${p.name}" kasnaginin atalet momenti yok. ` +
+        `inertiaKgM2 verin (Gates raporunun "System Vibration Analysis" sayfasi).`);
+      return J;
+    });
+    let armJ = opt.armInertiaKgM2 != null ? opt.armInertiaKgM2 : sys.tensioner.armInertiaKgM2;
+    if (armJ == null) throw new Error(
+      'FEADCore/torsionalModel: tensioner.armInertiaKgM2 gerekli.');
+    /* Kol, kasnagi kol boyu yariçapinda nokta kutle olarak tasir. Raporlarin
+     * "Tensioner Pulley Mass" satiri bunun icindir; ihmal edilirse 1. mod
+     * belirgin sekilde yuksek cikar (kalibrasyonda %28 -> %17 fark etti). */
+    const mp = opt.tensionerPulleyMassKg != null ? opt.tensionerPulleyMassKg
+      : sys.tensioner.pulleyMassKg;
+    const armLm = sys.tensioner.armLength / 1000;
+    if (mp != null) armJ += mp * armLm * armLm;
+
+    const R = sys.pulleys.map(p => p.rPitch / 1000);
+    const kSpan = spanStiffness(sys, geom, opt).map(x => x.kNPerM);
+
+    /* Kol -> span uzunlugu turevi a_i [m/rad].
+     * Serbest span boyunun sonlu farki DEGIL, PROJEKSIYON kullanilir:
+     *   a_giris = u_giris . v ,  a_cikis = -u_cikis . v ,  v = dC/d(delta)
+     * Bu ikisinin toplami tam olarak take-up oranina esittir; cunku
+     * (u_giris - u_cikis).v = 2 sin(phi/2) * r_kol * sin(beta). Serbest span
+     * boylarinin sonlu farki bunu VERMEZ (sarim degisimi teget noktalarini
+     * kaydirir ve kavis terimi disarida kalir) -> once o denendi, take-up
+     * kontrolu %3-49 sapiyordu. Sadece gergiye komsu iki span sifirdan farkli;
+     * sabit kasnaklar arasindaki spanlarin boyu kol hareketinden etkilenmez. */
+    const h = 0.02;
+    const cP = tenCenter(sys, rel + h), cM = tenCenter(sys, rel - h);
+    const vC = [(cP[0] - cM[0]) / 1000 / (2 * h * DEG),
+                (cP[1] - cM[1]) / 1000 / (2 * h * DEG)];
+    const a = geom.spans.map(() => 0);
+    const iIn = (t - 1 + n) % n;
+    a[iIn] = dot(geom.spans[iIn].u, vC);
+    a[t]   = -dot(geom.spans[t].u, vC);
+    const takeupSum = a.reduce((x, y) => x + y, 0);
+
+    /* uyum matrisi ve K */
+    const B = Array.from({ length: n }, () => Array(N).fill(0));
+    for (let i = 0; i < n; i++) { B[i][i] = -R[i]; B[i][(i + 1) % n] = R[(i + 1) % n]; B[i][n] = a[i]; }
+    const K = Array.from({ length: N }, () => Array(N).fill(0));
+    for (let i = 0; i < n; i++) for (let r = 0; r < N; r++) for (let c = 0; c < N; c++)
+      K[r][c] += kSpan[i] * B[i][r] * B[i][c];
+    K[n][n] += sys.tensioner.rateNmPerDeg / DEG;
+
+    const M = [...inert, armJ];
+    const S = M.map(x => 1 / Math.sqrt(x));
+    const A2 = Array.from({ length: N }, (_, r) =>
+      Array.from({ length: N }, (_, c) => K[r][c] * S[r] * S[c]));
+    const e = jacobiEig(A2, N);
+    const idx = e.values.map((v, i) => i).sort((i, j) => e.values[i] - e.values[j]);
+    const dofNames = [...sys.pulleys.map(p => p.name), 'ARM'];
+    const modes = idx.map(i => ({
+      fHz: Math.sqrt(Math.max(e.values[i], 0)) / TWO_PI,
+      shape: dofNames.map((nm, r) => ({ dof: nm, amp: e.vectors[r][i] * S[r] })),
+    }));
+    const elastic = modes.filter(m => m.fHz > 1e-6);
+    return {
+      relDeg: rel, dofNames, modes,
+      rigidBodyModes: modes.length - elastic.length,
+      firstElasticHz: elastic.length ? elastic[0].fHz : null,
+      elasticHz: elastic.map(m => m.fHz),
+      spanStiffnessNPerM: kSpan, armTakeupMPerRad: a,
+      takeupCheck: { sumMPerRad: takeupSum,
+        stateMPerRad: st.takeupMmPerDeg / 1000 / DEG,
+        errPct: Math.abs(Math.abs(takeupSum) / (st.takeupMmPerDeg / 1000 / DEG) - 1) * 100 },
+      matrices: { K, M }, armInertiaUsedKgM2: armJ,
+      isGatesNaturalFrequency: false,
+      caveat: CALIBRATION.torsional.note,
+    };
+  }
+
   /* ==================================================== 7) PEAK (yaklaşık) */
   function peakEstimate(sys, opts) {
     const { engineRpm, accelRpmS, loadsKw = {}, inertias = {} } = opts;
@@ -846,6 +997,9 @@
       positions: positionTable(sys),
       tensionerMode: (() => { try { return tensionerMode(sys, opt); }
                               catch (e) { return { error: e.message }; } })(),
+      torsional: opt.torsional === false ? null
+        : (() => { try { return torsionalModel(sys, opt.torsionalOpt || {}); }
+                   catch (e) { return { error: e.message }; } })(),
       duty: duty.map(d => {
         const t = spanTensions(sys, d);
         return {
@@ -872,6 +1026,7 @@
     springTorque, tenCenter, armAbsDeg,
     beltSpeed, speedRatio, accessoryRpm, spanTensions, hubloads, slipSafety,
     spanFrequencies, firingFrequencyHz, tensionerMode, massPerM,
+    spanStiffness, torsionalModel, jacobiEig,
     peakEstimate, alignmentAllowance, weibull, beltLifeB10,
   ribFatigueDistribution, FATIGUE,
     analyze, bisect,

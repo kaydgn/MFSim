@@ -536,6 +536,7 @@ function _frSection8(R, node){
   h += _frLoadContribTable(R);
   h += _frLifeSection(R);
   h += _frFreqSection(R);
+  h += _frTorsionalSection(R);
   h += _frNotesSection(node);
   return h;
 }
@@ -1117,21 +1118,96 @@ function _frFreqSection(R){
   h += '<p>Ateşleme frekansı çalışma çevrimi boyunca <b>' + _frFs(fLo, 1) + ' – ' + _frFs(fHi, 1)
      + ' Hz</b> aralığındadır (7.3).</p>';
   h += _frFreqFigure(R);
-  h += '<div class="note warn"><span class="t">Sistem burulma frekansı DEĞİL</span>'
-     + 'Buradaki değerler açıklıkların <b>enine</b> titreşimidir. Tedarikçi raporundaki '
-     + '"Natural Frequency" ve "System Resonance" satırları krank, aksesuar ataletleri ve gergi kolunun '
-     + 'birlikte çözüldüğü çok serbestlik dereceli bir <b>burulma</b> modudur; bu belgede '
-     + '<b>hesaplanmamıştır</b> (§9.2).</div>';
+  h += '<div class="note"><span class="t">Bu tablo AÇIKLIK titreşimidir, sistem burulması değil</span>'
+     + 'Yukarıdaki değerler açıklıkların <b>enine</b> titreşimidir — kayışın o parçasının teli gibi '
+     + 'salınması. Tedarikçi raporundaki "Natural Frequency" / "System Resonance" satırları ise krank, '
+     + 'aksesuar ataletleri ve gergi kolunun birlikte çözüldüğü çok serbestlik dereceli bir '
+     + '<b>burulma</b> modudur. İkisi ayrı büyüklüktür; burulma modeli 8.18\'de ayrıca verilmiştir.';
+  h += '</div>';
   return h;
 }
 
-// 8.18 — tasarım notları
+// 8.18 — sistem burulma titreşimi
+// ESKİDEN YOKTU ve rapor bunu "hesaplanmamıştır" diye yazıyordu; doğruydu.
+// Çekirdeğe torsionalModel() girdikten sonra o cümle YANLIŞ hâle geldi — rapor
+// tedarikçiye giden belge olduğu için orada kalan bir yanlış, panelde kalandan
+// daha pahalı. Bölüm, sayıyı da geçerlilik sınırını da birlikte taşıyor.
+function _frTorsionalSection(R){
+  var T = R && R.torsional;
+  var h = '<h3>8.18 Sistem burulma titreşimi</h3>';
+  if(!T || !Number.isFinite(T.firstElasticHz)){
+    // Hesaplanamadıysa SEBEBİ yazılır; boş bölüm "yok" sanılır.
+    h += '<div class="note warn"><span class="t">Hesaplanamadı</span>'
+       + 'Burulma modeli her kasnağın atalet momentini, gergi kolunun ataletini ve gergi kasnağının '
+       + 'kütlesini ister. Bunlardan biri eksikse model kurulamaz — eksik olan alan Çözücü panelindeki '
+       + 'uyarı satırında yazılıdır. Tedarikçi raporunun "System Vibration Analysis" sayfası bu '
+       + 'değerleri listeler.</div>';
+    return h;
+  }
+  h += '<p>Krank–kayış–aksesuar–gergi zinciri, açıklıkların yay gibi davrandığı çok serbestlik dereceli '
+     + 'bir burulma sistemidir. Serbestlikler kasnak açıları ve gergi kolu açısıdır; açıklık eksenel '
+     + 'rijitlikleri (7.4) yayları, kasnak ve kol ataletleri kütleleri oluşturur. Özdeğer çözümü '
+     + 'sistem modlarını verir.</p>';
+
+  h += '<table><caption>Tablo ' + _frTbl() + ' — Sistem burulma modları (çalışma konumunda)</caption>';
+  h += '<tr><th>Mod</th><th>Frekans</th><th>Karşılık gelen motor devri<sup>*</sup></th></tr>';
+  var d0 = (R.analysis && R.analysis.duty && R.analysis.duty[0]) || null;
+  var rpmOf = function(f){
+    return (d0 && d0.firingHz > 0) ? (f / d0.firingHz * d0.engineRpm) : NaN;
+  };
+  h += '<tr><td class="l">Rijit cisim</td><td>0,0</td><td>—</td></tr>';
+  (T.elasticHz || []).forEach(function(f, i){
+    h += '<tr><td class="l">' + (i + 1) + '. elastik</td><td>' + _frFs(f, 1) + '</td>'
+      + '<td>' + _frFs(rpmOf(f), 0) + '</td></tr>';
+  });
+  h += '</table>';
+  h += '<p><sup>*</sup> Ateşleme mertebesinin o frekansa ulaştığı motor devri (7.3). Rijit cisim modu '
+     + 'sistemin bütün olarak dönmesidir; frekansı sıfırdır ve <b>tam bir tane</b> olmak zorundadır — '
+     + 'fazlası modelin koptuğunu gösterir (bu çözümde ' + T.rigidBodyModes + ' tane).</p>';
+
+  // Ateşleme bandıyla örtüşme — hüküm değil, gözlem.
+  var duty = (R.analysis && R.analysis.duty) || [];
+  if(duty.length){
+    var fs = duty.map(function(d){ return _frNum(d.firingHz); });
+    var lo = Math.min.apply(null, fs), hi = Math.max.apply(null, fs);
+    var ic = (T.elasticHz || []).filter(function(f){ return f >= lo && f <= hi; });
+    h += '<div class="note ' + (ic.length ? 'warn' : 'check') + '">'
+       + '<span class="t">Ateşleme bandıyla örtüşme</span>'
+       + 'Çalışma çevrimi boyunca ateşleme frekansı <b>' + _frFs(lo, 1) + ' – ' + _frFs(hi, 1)
+       + ' Hz</b> aralığındadır. '
+       + (ic.length
+          ? 'Bu aralığın içine <b>' + ic.length + ' elastik mod</b> düşüyor ('
+            + ic.map(function(f){ return _frFs(f, 1); }).join(' · ') + ' Hz ≈ '
+            + ic.map(function(f){ return _frFs(rpmOf(f), 0); }).join(' · ')
+            + ' d/dk). Ateşleme mertebesi bu devirlerde ilgili modu uyarır; sönüm ve uyarma '
+            + 'genliği bu modelin kapsamı dışındadır, dolayısıyla bu bir <b>işaret</b>tir, hüküm değil.'
+          : 'Hiçbir elastik mod bu aralığın içine düşmüyor.')
+       + '</div>';
+  }
+
+  // Modelin kendi iç tutarlılık kapısı.
+  if(T.takeupCheck && Number.isFinite(T.takeupCheck.errPct)){
+    h += '<p>İç tutarlılık: kol açısının açıklık boylarına türevlerinin toplamı, gergi take-up oranıyla '
+       + '<b>%' + _frFs(T.takeupCheck.errPct, 3) + '</b> farkla örtüşmektedir (aynı büyüklüğün iki ayrı '
+       + 'yoldan hesabı; ayrışması geometri ile dinamik modelin farklı şeyi anlattığını gösterirdi).</p>';
+  }
+
+  h += '<div class="note warn"><span class="t">Güven düzeyi: bu bölüm KALİBRE bir modeldir</span>'
+     + 'Bu belgenin geometri ve gerginlik zinciri 17 tedarikçi raporunun 2095 değerine <b>%0,33</b> '
+     + 'ile oturan deterministik bir hesaptır. Burulma modeli öyle değildir: iki serbest parametresi '
+     + 'vardır (kayış kord rijitliği ve kavis payı) ve tedarikçi raporlarının "System Resonance '
+     + '(Mode 1)" satırına altı sistemde <b>RMS ~%8</b> ile kalibre edilmiştir. Sonucu bir '
+     + '<b>mertebe göstergesi</b> olarak okuyunuz; sertifikasyon dayanağı değildir (§9.2).</div>';
+  return h;
+}
+
+// 8.19 — tasarım notları
 function _frNotesSection(node){
   var raw = node && node.data && node.data.notes;
   if(!raw || !String(raw).trim()) return '';
   var satirlar = String(raw).split(/\r?\n/).filter(function(s){ return s.trim(); });
   if(!satirlar.length) return '';
-  var h = '<h3>8.18 Tasarım notları</h3>';
+  var h = '<h3>8.19 Tasarım notları</h3>';
   h += '<table><caption>Tablo ' + _frTbl() + ' — Tasarım notları</caption>';
   h += '<tr><th>Tarih</th><th>Not</th></tr>';
   satirlar.forEach(function(s){
@@ -1406,7 +1482,8 @@ function _frFreqFigure(R){
      + '" stroke="#a8321f" stroke-width="2" stroke-dasharray="6 4"/>';
   g += '<text x="' + (lx + 21) + '" y="' + (ly + spans.length * 13) + '" font-size="9.5" fill="#a8321f">ateşleme frekansı</text>';
   return _frFigWrap(g, 'Açıklıkların temel enine titreşim frekansı ve motorun ateşleme frekansı (7.2)–(7.3). '
-    + 'İki eğri kesişirse o devirde ilgili açıklık rezonansa girer. Sistem burulma modu bu grafikte YOKTUR (§9.2).');
+    + 'İki eğri kesişirse o devirde ilgili açıklık rezonansa girer. Bu grafik yalnız AÇIKLIK '
+    + 'titreşimini gösterir; sistem burulma modları 8.18\'de ayrı tablodadır.');
 }
 
 // ═══════════════════ UYGUNLUK HÜKMÜ ════════════════════════════════════════

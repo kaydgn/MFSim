@@ -215,10 +215,43 @@ describe('dürüstlük kapıları', () => {
     expect(blok).toContain('yoktur');
   });
 
-  // Açıklık frekansı ile sistem burulma modu ayrı büyüklükler.
-  test('frekans bölümü sistem burulma modunun YOK olduğunu yazıyor', () => {
-    expect(HTML8).toContain('Sistem burulma frekansı DEĞİL');
-    expect(HTML8).toContain('§9.2');
+  // Açıklık frekansı ile sistem burulma modu AYRI büyüklükler — ikisi de var.
+  //
+  // Bu test eskiden burulma modunun YOK olduğunu doğruluyordu ve doğruydu:
+  // çekirdekte çok serbestlik dereceli model yoktu. Model girdikten sonra o
+  // cümle YANLIŞ hâle geldi — tedarikçiye giden belgede kalan bir yanlış,
+  // panelde kalandan pahalıdır. Kapı artık üç şeyi birden tutuyor: bölüm VAR,
+  // açıklık titreşiminden AYRI, ve güven düzeyi farkı YAZILI.
+  test('burulma bölümü var ve açıklık titreşiminden ayrıldığı yazılı', () => {
+    expect(HTML8).toContain('8.18 Sistem burulma titreşimi');
+    expect(HTML8).toContain('sistem burulması değil');   // 8.17'nin kutusu
+    expect(R8.torsional).toBeTruthy();
+    // Hesaplanan 1. elastik mod belgede gerçekten basılmış olmalı.
+    const f = R8.torsional.firstElasticHz;
+    expect(f).toBeGreaterThan(0);
+    expect(HTML8).toContain(f.toFixed(1).replace('.', ','));   // TR sayı biçimi
+  });
+
+  // Bu bölümün SAYISINDAN çok GEÇERLİLİK SINIRI önemli: belgenin geri kalanı
+  // deterministik (%0,33), burulma kalibre (RMS ~%8). Fark yazılmazsa okuyan
+  // ikisini aynı güvenle okur.
+  test('burulma bölümü KALİBRE olduğunu ve güven farkını yazıyor', () => {
+    const i = HTML8.indexOf('8.18 Sistem burulma titreşimi');
+    expect(i).toBeGreaterThan(0);
+    const blok = HTML8.slice(i);
+    expect(blok).toContain('KALİBRE');
+    expect(blok).toMatch(/%0,33/);      // deterministik zincirin sapması
+    expect(blok).toMatch(/RMS ~%8/);    // burulmanın sapması
+    expect(blok).toContain('sertifikasyon');
+    expect(blok).toContain('§9.2');
+  });
+
+  // Rijit cisim modu TAM BİR TANE olmalı; belge bunu yazıyor ki okuyan
+  // modelin kopmadığını görebilsin.
+  test('burulma bölümü rijit cisim modunu sayıyor', () => {
+    expect(R8.torsional.rigidBodyModes).toBe(1);
+    const blok = HTML8.slice(HTML8.indexOf('8.18 Sistem burulma titreşimi'));
+    expect(blok).toContain('tam bir tane');
   });
 
   test('B10 geçerlilik penceresi dışındaysa açıkça uyarılıyor', () => {
