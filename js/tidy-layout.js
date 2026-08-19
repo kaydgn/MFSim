@@ -20,6 +20,18 @@ function veTidyLayout(opts) {
   }
   var conns = (typeof connections !== 'undefined' && connections) ? connections : [];
 
+  // FEAD ÇEVRİMİ KATMANLANMAZ. Aşağıdaki uzun-yol katmanlaması yönlü bir DAG
+  // varsayıyor; serpantin kayış ise kapalı bir halka. Katmanlama halkayı keyfî
+  // bir yerden kırıp dönüş telini bütün kümenin üstünden geçiriyor (ölçüldü:
+  // BMC örneğinde kesişen tel çifti 0 → 1, altı kasnak tek yatay sıraya
+  // diziliyor). Modül kendi yerleştiricisine gidiyor — bkz. cp-fead.js
+  // veFeadArrangeRing.
+  if(typeof veFeadArrangeRing === 'function' && typeof _feadIsPulley === 'function') {
+    var _kasnak = 0;
+    for(var _i = 0; _i < nodes.length; _i++) if(_feadIsPulley(nodes[_i])) _kasnak++;
+    if(_kasnak >= 2 && veFeadArrangeRing(opts)) return;
+  }
+
   var byId = {};
   nodes.forEach(function(n) { byId[n.id] = n; });
 

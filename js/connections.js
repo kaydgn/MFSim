@@ -231,6 +231,51 @@ var TopologyMath = {
 // BAĞLANTI ÇİZİM GÜNCELLEMESİ (Farklı çizgi tipleri desteği)
 // ============================================================================
 
+// ── PORT DOM'U ile TELİN UCU AYNI ANDA TAZELENİR ────────────────────────────
+// vePortOffset artık DİNAMİK bir cevap verebiliyor: FEAD kayışında bir portun
+// varsayılan kenarı KOMŞUSUNUN nerede olduğuna bakıyor (defaultPortSide →
+// veFeadPortSideFor). Yani aynı düğümün aynı portu, BİR BAĞLANTI KURULUNCA ya da
+// düğüm SÜRÜKLENİNCE başka bir kenara düşüyor.
+//
+// Telin ucu bunu zaten görüyordu (getPortPosition her tazelemede yeniden
+// hesaplıyor). Port DAİRESİ görmüyordu: DOM'a yazan iki yol (ui-core.js
+// createNode ve state.js restoreState) `def.portLayout || node.data.portPositions`
+// varsa yazıyor, FEAD kasnağında İKİSİ DE YOK — daire düğüm kurulurken hesaplanan
+// klasik kenarda (giriş solda / çıkış sağda) çakılı kalıyordu.
+//
+// ÖLÇÜLDÜ (gerçek tarayıcı, elle bağlanan 5 kasnaklı halka): on uçtan altısında
+// daire ile telin ucu arasında 36.8 · 42.4 · 48.8 · 54 · 72 px vardı; yalnız
+// komşu tesadüfen sağda olduğu için klasik kuralla çakışan iki uç 0'daydı.
+// Kullanıcının gördüğü "bağlantı portları denk gelmiyor" tam olarak buydu.
+//
+// Çözüm tazelemeyi TEK NOKTAYA bağlamak: updateAllConnections her mutasyondan
+// (bağlantı kuruldu/silindi, düğüm sürüklendi/eklendi/silindi, geri al/yinele)
+// zaten geçiyor — 35 çağrı yeri. Buraya konan senkron, dairenin telle aynı SAF
+// fonksiyondan (vePortBoxStyle) beslenmesini garanti ediyor.
+//
+// Ucuz: karşılaştırma CSSOM üstünde (yerleşim tetiklemez) ve DEĞİŞENE yazılır —
+// klasik topolojilerde kenar hiç değişmediği için tek bir yazma bile olmaz.
+function veSyncPortDom() {
+  if(typeof document === 'undefined' || typeof nodes === 'undefined') return;
+  if(typeof vePortBoxStyle !== 'function') return;
+  for(var i = 0; i < nodes.length; i++) {
+    var n = nodes[i];
+    if(!n || !n.id) continue;
+    var el = document.getElementById(n.id);
+    if(!el) continue;
+    var ports = el.querySelectorAll('.ve-node-port');
+    for(var j = 0; j < ports.length; j++) {
+      var pe = ports[j], pid = pe.getAttribute('data-port');
+      if(!pid) continue;
+      var s = vePortBoxStyle(n, pid);
+      var l = s.left + 'px', t = s.top + 'px';
+      if(pe.style.left !== l) pe.style.left = l;
+      if(pe.style.top !== t) pe.style.top = t;
+    }
+  }
+}
+
+
 // Bir portun KANVAS koordinatındaki merkezi — bağlantı eğrisinin ucu buraya gider.
 // Geometri tek yerden gelir: components.js vePortOffset (port DOM'u da oradan
 // konumlanır → eğri ile daire aynı noktada buluşur). Eskiden burada kenardan
@@ -292,6 +337,10 @@ function veConnDirMark(lineType, x1, y1, x2, y2, cp) {
 function updateAllConnections() {
   var svg = document.getElementById('ve-connections-layer');
   if(!svg) return;
+
+  // Daireyi telden ÖNCE yerine oturt: ikisi de vePortBoxStyle/vePortOffset'ten
+  // okuyor, yani aynı karede aynı kenarı görüyorlar (bkz. veSyncPortDom).
+  veSyncPortDom();
   
   // Mevcut çizgileri temizle (tempLine hariç)
   Array.from(svg.querySelectorAll('path:not(.ve-connection-temp), circle.ve-control-point, .ve-sensor-dot, .ve-conn-midpoint, .ve-sensor-line, .ve-comp-attach-point, .ve-comp-sensor-line')).forEach(function(el) {

@@ -105,6 +105,91 @@ var VE_FEAD_STARTER_LAYOUT = [
   { type:'fead-idler',       name:'Avara Kasnak',  lx:290, ly:200 }
 ];
 
+// ── "OTOMATİK DÜZENLE" FEAD'DE HALKA KURAR ─────────────────────────────────
+// Genel yerleştirici (tidy-layout.js) katmanlı bir DAG düzeni kuruyor: kenarları
+// soldan sağa sıralı katmanlara böler. FEAD ise bir ÇEVRİM — serpantin kayış
+// son kasnaktan krank girişine dönüyor. Katmanlama o çevrimi keyfî bir yerden
+// kırıyor ve dönüş telini bütün kümenin üstünden geçiriyor.
+//
+// ÖLÇÜLDÜ (gerçek tarayıcı, BMC örneği, 6 kasnak): örnek kurulduğunda kesişen
+// tel çifti 0; "Otomatik Düzenle" sonrası altı kasnak tek bir YATAY sıraya
+// diziliyor ve Sürücü Kasnak → Avara 1 dönüş teli hepsinin üstünden geri
+// geçerek 1 kesişim üretiyor — kullanıcının gördüğü "sağlıklı bir bağlantı
+// kurulamıyor" tablosu.
+//
+// Halka düzeninde kesişim YAPISAL OLARAK sıfırdır: kasnaklar kayış sırasında
+// çember üzerine dizilince her tel yalnız KOMŞUSUNA gidiyor. Kutular, semboller
+// ve ölçüler değişmiyor — yalnız konum. mm koordinatı KULLANILMIYOR: o, kanvastaki
+// Kayış Yolu kartının işi (bkz. CLAUDE.md "graf GİRDİ, kart ÇIKTI").
+function veFeadArrangeRing(opts){
+  opts = opts || {};
+  if(typeof nodes === 'undefined' || !nodes) return false;
+  var order = (typeof veFeadRouteOrder === 'function') ? veFeadRouteOrder(nodes, (typeof connections !== 'undefined' && connections) || []) : [];
+  if(order.length < 2) return false;
+
+  // Halka yarıçapı: iki komşu kutu birbirine değmesin. Kiriş = 2R·sin(π/N).
+  var enBuyuk = 0;
+  order.forEach(function(n){
+    var w = n.width || 65, h = n.height || 60;
+    var d = Math.sqrt(w*w + h*h);
+    if(d > enBuyuk) enBuyuk = d;
+  });
+  var N = order.length;
+  var gerek = enBuyuk + (opts.gap || 74);              // komşu merkezleri arası en az
+  var R = Math.max(opts.minR || 190, gerek / (2 * Math.sin(Math.PI / N)));
+
+  var CX = 3000, CY = 3000;
+  var yer = {};
+  order.forEach(function(n, i){
+    // Saat yönünde ve TEPEDEN başlayarak: ekranda y aşağı olduğu için artan
+    // açı saat yönü demek. Sürücü kasnak (sıranın başı) tepede duruyor.
+    var th = -Math.PI / 2 + (2 * Math.PI * i) / N;
+    yer[n.id] = { x: CX + R * Math.cos(th) - (n.width || 65) / 2,
+                  y: CY + R * Math.sin(th) - (n.height || 60) / 2 };
+  });
+
+  // Araç düğümleri halkanın DIŞINDA. Kayış Yolu kartı (420×340) sağ şeritte,
+  // geri kalan künyeler sol şeritte — veFeadLoadExample ile aynı bölüşüm, yoksa
+  // kart halkanın içine düşüp tellerin altında kalırdı.
+  var sol = [], sag = [];
+  nodes.forEach(function(n){
+    if(yer[n.id]) return;
+    var d = _feadDefOf(n);
+    if(d.isFeadLayout) sag.push(n); else sol.push(n);
+  });
+  function serit(list, x0, hiza){
+    var toplam = 0;
+    list.forEach(function(n){ toplam += (n.height || 60) + 24; });
+    var y = CY - toplam / 2;
+    list.forEach(function(n){
+      yer[n.id] = { x: (hiza === 'sag') ? x0 : (x0 - (n.width || 65)), y: y };
+      y += (n.height || 60) + 24;
+    });
+  }
+  serit(sol, CX - R - enBuyuk / 2 - 90, 'sol');
+  serit(sag, CX + R + enBuyuk / 2 + 90, 'sag');
+
+  if(typeof saveState === 'function') saveState();
+  nodes.forEach(function(n){
+    var p = yer[n.id];
+    if(!p) return;
+    n.x = Math.round(p.x); n.y = Math.round(p.y);
+    var el = (typeof document !== 'undefined') ? document.getElementById(n.id) : null;
+    if(el){ el.style.left = n.x + 'px'; el.style.top = n.y + 'px'; }
+  });
+  if(typeof updateAllConnections === 'function') updateAllConnections();
+  if(typeof veFeadRefreshBadges === 'function') { try { veFeadRefreshBadges(); } catch(e){} }
+
+  var canvas = (typeof document !== 'undefined') ? document.getElementById('ve-canvas') : null;
+  if(canvas && typeof veFitViewToContent === 'function'){
+    canvas.classList.add('tidy-cam');
+    veFitViewToContent({ maxZoom: opts.maxZoom || 1.2 });
+    setTimeout(function(){ if(canvas) canvas.classList.remove('tidy-cam'); }, 520);
+  }
+  if(typeof showToast === 'function') showToast('Kayış halkası düzenlendi', 'success');
+  return true;
+}
+
 // İlk açılışta iç topolojiye YALNIZ "Başlangıç ve Örnekler" (fead-example)
 // gelir; kullanıcı ya oradaki hazır örneği aktarır ya da sidebar'dan kendi
 // kayış düzenini kurar.
@@ -2100,6 +2185,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadPowerCurveCard: veFeadPowerCurveCard,
     veFeadCurveAdd: veFeadCurveAdd, veFeadCurveRemove: veFeadCurveRemove,
     veFeadCurveSet: veFeadCurveSet, veFeadLoadExample: veFeadLoadExample,
+    veFeadArrangeRing: veFeadArrangeRing,
     getFeadModulePropertiesHTML: getFeadModulePropertiesHTML,
     getFeadPulleyPropertiesHTML: getFeadPulleyPropertiesHTML,
     getFeadTensionerPropertiesHTML: getFeadTensionerPropertiesHTML,
