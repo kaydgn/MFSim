@@ -112,8 +112,34 @@ jobs:
       - name: Build (iki ürün dosyası)
         run: npm run build:all
 
+      # ASILMAYA KARŞI: takılan şey Chromium indirmesi DEĞİL, `--with-deps`
+      # içindeki apt-get update. 2026-08-19'da iki main koşusu üst üste burada
+      # asıldı; loglar runner'ın apt aynasını gösteriyor:
+      #   Ign: http://azure.archive.ubuntu.com/ubuntu noble InRelease   (x4)
+      #   Hit: https://archive.ubuntu.com/ubuntu noble InRelease        (yedeğe düştü)
+      #   Ign: http://azure.archive.ubuntu.com .../main amd64 Packages  ← son satır
+      #   …19 dakika sessizlik… ##[error]The operation was canceled.
+      # Yani apt, azure aynasından Packages indekslerini çekerken kara deliğe
+      # giriyor; Chromium ikilisi indirilmeye HİÇ başlamıyor. Aynı adım aynı
+      # dakikalarda PR koşusunda 3 dk 05 sn'de bitti — ayna runner'a göre değişiyor.
+      # İki katmanlı çare: (1) azure aynasını genel aynayla değiştir, (2) her
+      # denemeyi süreyle sınırla ve yeniden dene. Sağlıklı koşuda ilk deneme
+      # ~1 dk 40 sn'de biter, hiçbir şey değişmez. En kötü hâl 3×5 = 15 dk,
+      # job sınırının (20 dk) altında.
       - name: Chromium kur
-        run: npx playwright install --with-deps chromium
+        run: |
+          for f in /etc/apt/apt-mirrors.txt /etc/apt/sources.list; do
+            [ -f "$f" ] && sudo sed -i 's|azure\.archive\.ubuntu\.com|archive.ubuntu.com|g' "$f" || true
+          done
+          sudo sed -i 's|azure\.archive\.ubuntu\.com|archive.ubuntu.com|g' \
+            /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+          for deneme in 1 2 3; do
+            if timeout 300 npx playwright install --with-deps chromium; then exit 0; fi
+            echo "::warning::Chromium kurulumu $deneme. denemede asıldı/başarısız — yeniden deneniyor"
+            sleep 5
+          done
+          echo "::error::Chromium kurulumu üç denemede de tamamlanamadı"
+          exit 1
 
       - name: Ürün açılış kapısı
         run: npx playwright test tests/e2e/published.spec.js tests/e2e/viewer.spec.js
