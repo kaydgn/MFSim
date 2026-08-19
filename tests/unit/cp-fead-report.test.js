@@ -292,7 +292,7 @@ describe('şekiller', () => {
   });
 
   test('her şekil kapanıyor ve numaralanıyor', () => {
-    const ac = (HTML8.match(/<figure>/g) || []).length;
+    const ac = (HTML8.match(/<figure[\s>]/g) || []).length;
     const kap = (HTML8.match(/<\/figure>/g) || []).length;
     expect(ac).toBe(kap);
     const nolar = [...HTML8.matchAll(/<b>Şekil (\d+) —/g)].map((m) => Number(m[1]));
@@ -308,6 +308,119 @@ describe('şekiller', () => {
     a.forEach((n, k) => expect(n).toBe(k + 1));
     const b = oku(RP._frSection8(R8, NODE));   // ikinci üretim
     expect(b).toEqual(a);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ŞEKİL 1 — KAVRAMSAL ŞEMA: GEOMETRİSİ ÇEKİRDEKTEN, GÖZ KARARI DEĞİL
+//
+// Bu kapı gerçek bir hatadan doğdu. Şeklin SVG'si elle yazılmıştı ve BEŞ yol
+// ucunun BEŞİ de kasnak çemberinin dışındaydı: krankın "sarım yayı" r=70 ile
+// (560,60)→(560,200) arasına çizildiği için merkezi (630,130) yerine
+// (560,130)'a düşüyor, yani kasnağın MERKEZİNDEN geçiyordu; aksesuar yayının
+// kirişi 2r'den uzun olduğu için SVG yarıçapı 62 → 64.2'ye büyütüp yayı
+// kasnaktan 96 px uzağa oturtuyor ve kayış o kasnağa HİÇ DEĞMİYORDU. Belge
+// üretiliyor, testler yeşil kalıyor, hata yalnız gözle görülüyordu.
+//
+// Ölçüt Kayış Yolu kartındakiyle AYNI: her yayın ÖRTÜK merkezi (SVG uç→merkez
+// dönüşümü, spec F.6.5) o kasnağın merkezi olmak ZORUNDA.
+describe('Şekil 1 — kavramsal şema geometrisi', () => {
+  const FIG = RP._frConceptFigure();
+  const VB = /viewBox="0 0 (\d+) (\d+)"/.exec(FIG);
+  const W = VB && Number(VB[1]);
+
+  // r > 5 olanlar kasnak çeperi; r = 3 olanlar merkez noktaları
+  const cember = [...FIG.matchAll(/<circle cx="([-\d.]+)" cy="([-\d.]+)" r="([\d.]+)"/g)]
+    .map((m) => ({ x: +m[1], y: +m[2], r: +m[3] })).filter((c) => c.r > 5);
+  const yol = /<path d="(M[^"]+ Z)" fill="none" stroke="#c8781e"/.exec(FIG);
+
+  // SVG uç→merkez dönüşümü (rx = ry, dönme yok)
+  function yayMerkezi(p1, p2, r, fA, fS) {
+    const mx = (p1[0] + p2[0]) / 2, my = (p1[1] + p2[1]) / 2;
+    const dx = (p2[0] - p1[0]) / 2, dy = (p2[1] - p1[1]) / 2;
+    const d = Math.hypot(dx, dy), h = Math.sqrt(Math.max(0, r * r - d * d));
+    const sg = (fA !== fS) ? 1 : -1;
+    return [mx + sg * h * (-dy) / d, my + sg * h * dx / d];
+  }
+  function enYakin(p) {
+    let b = null;
+    cember.forEach((c) => {
+      const d = Math.hypot(p[0] - c.x, p[1] - c.y);
+      if (!b || Math.abs(d - c.r) < Math.abs(b.d - b.c.r)) b = { c, d };
+    });
+    return b;
+  }
+  function gez() {
+    const tok = yol[1].match(/[MLA][^MLAZ]*/g);
+    let cur = null; const dogru = [], yay = [];
+    tok.forEach((t) => {
+      const v = t.slice(1).trim().split(/[\s,]+/).map(Number);
+      if (t[0] === 'M') cur = [v[0], v[1]];
+      else if (t[0] === 'L') { dogru.push(cur, [v[0], v[1]]); cur = [v[0], v[1]]; }
+      else { yay.push({ p1: cur, p2: [v[5], v[6]], r: v[0], fA: v[3], fS: v[4] }); cur = [v[5], v[6]]; }
+    });
+    return { dogru, yay };
+  }
+
+  test('şekil üretiliyor ve dört kasnaklı', () => {
+    expect(FIG).toContain('<figure>');
+    expect(FIG).toContain('<b>Şekil 1 —');
+    expect(cember.length).toBe(4);
+    expect(yol).toBeTruthy();
+  });
+
+  test('her açıklık ucu kasnak ÇEPERİNDE (eskiden 13,7–29 px dışındaydı)', () => {
+    gez().dogru.forEach((p) => {
+      const b = enYakin(p);
+      expect(Math.abs(b.d - b.c.r)).toBeLessThan(0.35);
+    });
+  });
+
+  test('her sarım yayının ÖRTÜK merkezi o kasnağın merkezi', () => {
+    const y = gez().yay;
+    expect(y.length).toBe(4);                       // dört kasnağın dördünde de sarım
+    y.forEach((a) => {
+      const c = yayMerkezi(a.p1, a.p2, a.r, a.fA, a.fS);
+      const b = enYakin(c);
+      expect(Math.hypot(c[0] - b.c.x, c[1] - b.c.y)).toBeLessThan(0.35);
+    });
+  });
+
+  test('KAYIŞ DÖRT KASNAĞIN DA ÜSTÜNDEN GEÇİYOR', () => {
+    // Asıl kusur buydu: aksesuar kasnağına kayış hiç değmiyordu.
+    const merkezler = gez().yay.map((a) => {
+      const c = yayMerkezi(a.p1, a.p2, a.r, a.fA, a.fS);
+      return enYakin(c).c;
+    });
+    cember.forEach((c) => {
+      expect(merkezler.some((m) => Math.hypot(m.x - c.x, m.y - c.y) < 0.5)).toBe(true);
+    });
+  });
+
+  test('hiçbir yazı çerçeveden taşmıyor (mono 0,6 em)', () => {
+    // Rapor CSS'i svg text'i IBM Plex Mono'ya sabitliyor; eski alt künye
+    // satırı 820'lik viewBox'ı 32 px aşıp "…sırt t" diye KIRPILIYORDU.
+    const kutu = [];
+    for (const m of FIG.matchAll(/<text x="([-\d.]+)"[^>]*>([^<]*)</g)) {
+      const x = Number(m[1]), s = m[2];
+      const fs = Number((/font-size="([\d.]+)"/.exec(m[0]) || [0, 12])[1]);
+      const anc = (/text-anchor="(\w+)"/.exec(m[0]) || [0, 'start'])[1];
+      const w = s.length * fs * 0.6;
+      kutu.push([anc === 'middle' ? x - w / 2 : anc === 'end' ? x - w : x, w, s]);
+    }
+    expect(kutu.length).toBeGreaterThan(5);
+    kutu.forEach(([x0, w, s]) => {
+      expect(x0).toBeGreaterThanOrEqual(0);
+      expect(x0 + w).toBeLessThanOrEqual(W);
+    });
+  });
+
+  test('çekirdek yoksa uydurma çizim değil, boşluk döner', () => {
+    const yedek = global.FEADCore;
+    global.FEADCore = null;
+    const bos = RP._frConceptFigure();
+    global.FEADCore = yedek;
+    expect(bos).toBe('');
   });
 });
 
@@ -330,6 +443,24 @@ describe('şablon ve içindekiler bağı', () => {
     });
     expect(HTML8).toContain('id="s8"');
     expect(HTMLU).toContain('id="uygunluk"');
+  });
+
+  // ── KANVASTAN GELEN ŞEKLİN PALETİ ────────────────────────────────────────
+  // §8.5'teki şekli MFSim'in kendi çizicisi (veFeadLayoutSVG) üretiyor ve o
+  // çizici UYGULAMANIN palet jetonlarını kullanıyor. Raporun paleti bambaşka:
+  // tanımsız bir var() "invalid at computed-value time"dır ve kalıtılan bir
+  // özellik olan `stroke` için sonuç `none` demektir.
+  // ÖLÇÜLDÜ (gerçek tarayıcı): jetonlar tanımsızken kayış, altı kasnak çemberi,
+  // kaburga dişleri, sarım yayları, gergi kolu ve pivot GÖRÜNMEZDİ; şeklin
+  // künyesi olmayan bir çizimi anlatıyordu. Sayfa hatası yok, test yok, sessiz.
+  test('§8.5 şeklinin kullandığı HER palet jetonu şablonda tanımlı', () => {
+    const i = HTML8.indexOf('<figure class="appfig">');
+    expect(i).toBeGreaterThan(-1);                       // sınıf düşerse çizim görünmez
+    const blok = HTML8.slice(i, HTML8.indexOf('</figure>', i));
+    const jeton = [...new Set([...blok.matchAll(/var\((--[a-z-]+)\)/g)].map((m) => m[1]))];
+    expect(jeton.length).toBeGreaterThan(4);             // şekil gerçekten jeton kullanıyor
+    const eksik = jeton.filter((j) => !new RegExp('\\' + j + '\\s*:').test(kaynak));
+    expect(eksik).toEqual([]);
   });
 
   test('şablon çevrimdışı — harici URL yok', () => {
