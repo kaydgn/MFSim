@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aksesuar Kayış Tahrik Sistemi (FEAD) — Geometri, Gerginlik ve Ömür Modeli</title>
+<style>@@ASSETS_CSS@@</style>
+<style>
+
+:root{
+  --ink:#1b1e24; --paper:#fdfdfb; --line:#c9cdd3; --line-soft:#e4e6e9;
+  --prusya:#24425f; --prusya-soft:#eef2f6; --check:#2e7d4f; --check-soft:#eaf3ee;
+  --warn:#8a5a1e; --warn-soft:#f7f1e6; --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:'Source Serif 4',Georgia,serif;font-size:15.5px;line-height:1.68;}
+.page{max-width:880px;margin:0 auto;padding:48px 32px 96px}
+h1,h2,h3{font-family:'Archivo',system-ui,sans-serif;color:var(--prusya);line-height:1.25;font-stretch:87%}
+h1{font-size:27px;font-weight:700;letter-spacing:.2px;margin:0 0 6px}
+h2{font-size:19px;font-weight:700;margin:44px 0 14px;padding-top:14px;border-top:2px solid var(--prusya);
+  display:flex;gap:14px;align-items:baseline}
+h2 .no{font-family:var(--mono);font-size:13px;color:var(--paper);background:var(--prusya);
+  padding:2px 8px;border-radius:2px;transform:translateY(-2px)}
+h3{font-size:15.5px;font-weight:600;margin:26px 0 8px;color:var(--ink)}
+p{margin:0 0 13px;text-align:justify;hyphens:auto}
+strong{font-weight:600}
+em{font-style:italic}
+
+/* ── Antet (çizim başlık bloğu) ── */
+.antet{border:1.5px solid var(--ink);margin-bottom:36px}
+.antet .band{background:var(--prusya);color:#fff;padding:16px 20px}
+.antet .band .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;opacity:.85;margin-bottom:6px}
+.antet .band h1{color:#fff}
+.antet .band .sub{font-family:'Archivo',sans-serif;font-size:13.5px;font-weight:400;opacity:.92;margin-top:4px}
+.antet .fields{display:grid;grid-template-columns:repeat(5,1fr);border-top:1.5px solid var(--ink)}
+.antet .f{padding:8px 12px;border-right:1px solid var(--line)}
+.antet .f:last-child{border-right:none}
+.antet .f .k{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#5a6270}
+.antet .f .v{font-family:'Archivo',sans-serif;font-size:13px;font-weight:600;margin-top:2px}
+
+/* ── Denklem/işaret blokları ── */
+.eqno{position:relative}
+.eqno .tag{position:absolute;right:0;top:50%;transform:translateY(-50%);
+  font-family:var(--mono);font-size:12.5px;color:#5a6270}
+.note{background:var(--prusya-soft);border-left:3px solid var(--prusya);padding:12px 16px;margin:16px 0;font-size:14.5px}
+.note.warn{background:var(--warn-soft);border-left-color:var(--warn)}
+.note.check{background:var(--check-soft);border-left-color:var(--check)}
+.note .t{font-family:'Archivo',sans-serif;font-weight:700;font-size:12px;letter-spacing:1.5px;
+  text-transform:uppercase;display:block;margin-bottom:4px}
+.note.warn .t{color:var(--warn)} .note.check .t{color:var(--check)} .note .t{color:var(--prusya)}
+
+/* ── Tablolar ── */
+table{border-collapse:collapse;width:100%;margin:14px 0 20px;font-size:13.5px}
+caption{caption-side:top;text-align:left;font-family:'Archivo',sans-serif;font-size:12.5px;
+  font-weight:600;color:var(--prusya);padding-bottom:6px;letter-spacing:.3px}
+th{font-family:'Archivo',sans-serif;font-size:12px;font-weight:600;letter-spacing:.5px;
+  background:var(--prusya-soft);color:var(--prusya);padding:7px 10px;border:1px solid var(--line);text-align:center}
+td{padding:6px 10px;border:1px solid var(--line-soft);font-family:var(--mono);font-size:12.8px;text-align:right;white-space:nowrap}
+td.l{text-align:left;font-family:'Source Serif 4',serif;font-size:13.8px;white-space:normal}
+td.c{text-align:center}
+tr.sum td{border-top:1.5px solid var(--line);background:#f7f8f9;font-weight:500}
+.ok{color:var(--check);font-weight:600}
+.chip{display:inline-block;font-family:var(--mono);font-size:11px;background:var(--check-soft);
+  color:var(--check);border:1px solid var(--check);border-radius:2px;padding:0 6px;margin-left:6px;vertical-align:1px}
+
+/* ── Şekiller ── */
+figure{margin:22px 0 26px;border:1px solid var(--line);padding:14px 14px 10px;background:#fff}
+figcaption{font-family:'Archivo',sans-serif;font-size:12.5px;color:#3c4350;margin-top:10px;
+  padding-top:8px;border-top:1px solid var(--line-soft)}
+figcaption b{color:var(--prusya)}
+svg{width:100%;height:auto;display:block}
+svg text{font-family:'IBM Plex Mono',monospace}
+
+/* ── Kod ── */
+pre{background:#f4f5f6;border:1px solid var(--line);padding:16px 18px;overflow-x:auto;
+  font-family:var(--mono);font-size:12px;line-height:1.55;margin:14px 0}
+code{font-family:var(--mono);font-size:.92em;background:#f1f2f4;padding:1px 5px;border-radius:2px}
+pre code{background:none;padding:0}
+
+.katex-display{margin:14px 0 18px}
+.toc{font-family:'Archivo',sans-serif;font-size:13.5px;columns:2;column-gap:36px;margin:10px 0 4px}
+.toc a{color:var(--ink);text-decoration:none;display:block;padding:3px 0;border-bottom:1px dotted var(--line-soft)}
+.toc a:hover{color:var(--prusya)}
+.toc .n{font-family:var(--mono);font-size:11.5px;color:var(--prusya);margin-right:8px}
+
+@media print{
+  @page{margin:18mm 16mm}
+  .page{max-width:100%;padding:0}
+  body{font-size:11pt}
+  p{orphans:3;widows:3}
+  thead{display:table-header-group}
+  .antet,.toc{break-inside:avoid}
+  h2,h3{break-after:avoid}
+  figure,table,pre,.note,.katex-display{break-inside:avoid}
+  tr{break-inside:avoid}
+  caption{break-after:avoid}
+  a{color:inherit;text-decoration:none}
+  /* Arka planları (antet bandı, notlar, tablo başlıkları, veri-çubukları)
+     kullanıcının "Arka plan grafikleri" seçeneği KAPALI olsa bile bas. */
+  *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+  /* Geniş tablolar sayfaya sığsın — sağdan kırpılmasın. */
+  table{font-size:9pt}
+  caption{font-size:9pt}
+  th{padding:4px 6px}
+  td{padding:3px 6px;white-space:normal}
+}
+@media (max-width:640px){
+  .antet .fields{grid-template-columns:repeat(2,1fr)}
+  .toc{columns:1}
+  .page{padding:24px 16px 64px}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ═══════════ ANTET ═══════════ -->
+@@ANTET@@
+
+<div class="toc">
+  <a href="#s1"><span class="n">1</span>Amaç ve Kapsam</a>
+  <a href="#s2"><span class="n">2</span>Fiziksel Model ve Varsayımlar</a>
+  <a href="#s3"><span class="n">3</span>Kayış–Kasnak Geometrisi</a>
+  <a href="#s4"><span class="n">4</span>Otomatik Gergi ve Kol Dengesi</a>
+  <a href="#s5"><span class="n">5</span>Gerginlik, Hubload ve Kayma Emniyeti</a>
+  <a href="#s6"><span class="n">6</span>Kaburga Yorulması ve Kayış Ömrü</a>
+  <a href="#s7"><span class="n">7</span>Serbest Açıklık Titreşimi</a>
+  <a href="#s8"><span class="n">8</span>Sayısal Örnek: Bu Modelin Çözümü</a>
+  <a href="#uygunluk"><span class="n">✓</span>FEAD Sistem Uygunluğu</a>
+  <a href="#s9"><span class="n">9</span>Geçerlilik Sınırları ve Genişletmeler</a>
+  <a href="#s10"><span class="n">10</span>Semboller</a>
+  <a href="#ekA"><span class="n">Ek A</span>Referans Uygulama (JavaScript)</a>
+</div>
+
+<!-- ═══════════ 1 ═══════════ -->
+<h2 id="s1"><span class="no">1</span>Amaç ve Kapsam</h2>
+<p>Bu rapor, bir içten yanmalı motorun <strong>ön uç aksesuar tahrik sistemini</strong> (Front End Accessory Drive, FEAD) — krank kasnağından çıkıp alternatör, klima kompresörü, su pompası, direksiyon pompası gibi aksesuarları dolaşarak krank girişine dönen tek parçalı serpantin kayışı ve onu geren otomatik gergiyi — kapalı formda kurulabilen bir matematiksel modelle nasıl çözdüğünü açıklar. Model üç soruyu birlikte cevaplar: kayış <em>nereden geçiyor</em> (geometri), her açıklıkta <em>ne kadar geriliyor</em> (gerginlik ve hubload), ve bu yükleme altında <em>ne kadar dayanıyor</em> (kaburga yorulması ve B10 ömrü).</p>
+<p>Sistemin tamamı iki değişmeze indirgenir: kapalı çevrimin <strong>sarım değişmezi</strong> \( \sum d_i\,\varphi_i = \pm 2\pi \) ve gergi kolunun <strong>moment dengesi</strong> \( M(\theta) = T\cdot \mathrm{d}L/\mathrm{d}\theta \). Birincisi kasnak merkezleri, çapları ve temas taraflarından kayışın izleyebileceği tek güzergâhı belirler; ikincisi o güzergâhta kolun hangi açıda durduğunu ve dolayısıyla kayışın hangi gerginlikte çalıştığını belirler. Geri kalan her şey — span gerginlikleri, hubload'lar, kayma emniyeti, yorulma payları ve ömür — bu ikisinin üzerine kurulur.</p>
+<p>Bölüm 2–7 yöntemi kurar; <strong>Bölüm 8</strong> aynı yöntemi bu projede tanımlı FEAD modeline uygular ve tüm ara sonuçları modelin kendi sayılarıyla verir. Hesap çekirdeği <strong>17 tedarikçi raporundan çıkarılmış 2095 referans değere karşı kalibre edilmiştir</strong> (çalışma konumlarında %0,5, mekanik durdurucu dâhil %1,5, kol açılarında 0,2° bandında). Rapor bunun üzerine <strong>model içi tutarlılık denetimleri</strong> ekler: sarım değişmezi, \( L_{\text{pitch}} - L_{\text{eff}} = 2\pi h_b \) özdeşliği, çevrim kapanışı ve sürücü gücünün aksesuar güçleri toplamına eşitliği.</p>
+
+<div class="note">
+  <span class="t">Kapsam sınırı</span>
+  Bu rapor <strong>yarı-statik</strong> bir çözümdür: her devir noktası kendi içinde dengede çözülür. Krank–kayış–aksesuar zincirinin <strong>burulma titreşimi</strong> (sistem doğal frekansı, rezonans devri) kapsam dışıdır; sebebi ve sonucu Bölüm 9.2'de ayrıca yazılmıştır. Serbest açıklıkların enine titreşimi (Bölüm 7) ise hesaplanır — o farklı ve daha basit bir problemdir.
+</div>
+
+<!-- ═══════════ 2 ═══════════ -->
+<h2 id="s2"><span class="no">2</span>Fiziksel Model ve Varsayımlar</h2>
+<p>Model, sistemin karmaşıklığını yönetilebilir bir çekirdeğe indirger. Aşağıdaki varsayımlar açıkça listelenir; her biri Bölüm 9'da bir geçerlilik sınırına karşılık gelir.</p>
+<ol>
+  <li><strong>Kasnaklar rijittir ve düzlemseldir.</strong> Tüm kasnak merkezleri tek bir düzlemde (kayış düzlemi) yer alır; eksenler bu düzleme diktir. Eksenel kaçıklık ve fleeting açısı geometriye girmez (bkz. §9.4).</li>
+  <li><strong>Kayış uzamaz — geometri çözümünde.</strong> Kayış yolu, verilen efektif boya oturan tek kapalı eğridir. Uzama, kayışın <em>tolerans</em> ve <em>aşınma payı</em> yüzdeleriyle ayrı bir uzunluk değişimi olarak modellenir ve gergi kolunun konumunu kaydırır (§4.4).</li>
+  <li><strong>Kayış kasnağa tam sarılır, kaymaz.</strong> Çözüm, kaymayan (rolling without slip) bir kayış varsayar. Kayma <em>ihtimali</em> capstan bağıntısıyla ayrıca denetlenir (§5.4); kayma gerçekleşiyorsa çözüm değil, <strong>uyarı</strong> üretilir.</li>
+  <li><strong>Temas tarafı verilidir.</strong> Kayışın kaburgalı yüzünün mü yoksa düz sırtının mı kasnağa değdiği bir <em>girdidir</em>, çıkarsanamaz. Ters verilirse model <strong>geçerli ama başka</strong> bir güzergâh çözer (§3.4).</li>
+  <li><strong>Gergi bir burulma yayıdır.</strong> Otomatik gergi, pivot etrafında dönen bir kol ve momenti açıyla lineer artan bir yay olarak modellenir. Sönüm, sürtünme histerezisi ve dinamik aşım kapsam dışıdır.</li>
+  <li><strong>Yükleme yarı-statiktir.</strong> Her motor devri noktasında aksesuarların çektiği güç sabit kabul edilir; kayış boyunca gerginlik basamak basamak düşer. Atalet momentleri yalnız tepe yük tahmininde kullanılır.</li>
+  <li><strong>Sıcaklık yalnız ömre girer.</strong> Kayış sıcaklığı geometriyi ve gerginliği değil, kaburga yorulma hasar hızını etkiler (§6.4).</li>
+  <li><strong>Kasnak çapı dış çaptır.</strong> Girdi olarak dış çap (OD) alınır; pitch ve efektif yarıçaplar kayış profilinin \( h_b \) / \( h_r \) sabitlerinden türetilir (§3.1).</li>
+</ol>
+
+@@FIGURE1@@
+
+<!-- ═══════════ 3 ═══════════ -->
+<h2 id="s3"><span class="no">3</span>Kayış–Kasnak Geometrisi</h2>
+
+<h3>3.1 Yarıçaplar: dış çaptan pitch ve efektif yarıçapa</h3>
+<p>Kayış kasnağa yüzeyinden değmez; kaburgaları kanalın içine oturur ve kord katmanı (kayışın taşıyıcı ipliği) yüzeyden bir miktar dışarıda kalır. Bu yüzden geometri hesabında iki farklı yarıçap kullanılır: <strong>pitch yarıçapı</strong> \( r_p \) (kord katmanının izlediği daire — teğet ve kuvvet hesapları buradan) ve <strong>efektif yarıçap</strong> \( r_e \) (kayış boyu hesabının referansı). Temas tarafına göre:</p>
+<div class="eqno">
+$$ r_p = \frac{D}{2} + h_b \quad \text{(kaburgalı yüz)}, \qquad r_p = \frac{D}{2} + h_r \quad \text{(sırt)} $$
+<span class="tag">(3.1)</span>
+</div>
+<p>Burada \( D \) kasnağın dış çapı, \( h_b \) kaburgalı yüzden kord katmanına, \( h_r \) sırt yüzeyinden kord katmanına olan mesafedir; ikisi de kayış profilinin sabitidir (poly-V için tipik olarak \( h_b \approx 1{,}2 \) mm, \( h_r \) kayış kalınlığından türetilir). Sırttan temas eden bir kasnakta kord katmanı kasnağın <em>dışında</em> kaldığı için \( h_r > h_b \) olur ve aynı dış çap daha büyük bir pitch yarıçapı verir.</p>
+
+<h3>3.2 İşaretli yarıçap ve ortak teğet</h3>
+<p>Serpantin kayışın en önemli özelliği, bazı kasnakları <em>bir yönde</em>, bazılarını <em>ters yönde</em> sarmasıdır. Bunu tek bir formülle taşımak için her kasnağa bir <strong>işaret</strong> \( d_i \in \{+1, -1\} \) atanır: çevrimin dönüş yönü (sense) \( s \) iken kaburgalı temas eden kasnakta \( d_i = s \), sırttan temas edende \( d_i = -s \).</p>
+<p>Ardışık iki kasnak arasındaki serbest açıklık, iki daireye ortak teğet olan doğru parçasıdır. Merkezleri \( \mathbf{c}_i, \mathbf{c}_j \), işaretli yarıçapları \( d_i r_{p,i} \) ve \( d_j r_{p,j} \) olan kasnaklar için teğet doğrultusu \( \mathbf{u} \), aşağıdaki koşulu sağlayan birim vektördür:</p>
+<div class="eqno">
+$$ \mathbf{P}_j - \mathbf{P}_i = L\,\mathbf{u}, \qquad \mathbf{P}_i = \mathbf{c}_i + d_i r_{p,i}\,\mathbf{n},\qquad \mathbf{P}_j = \mathbf{c}_j + d_j r_{p,j}\,\mathbf{n} $$
+<span class="tag">(3.2)</span>
+</div>
+<p>burada \( \mathbf{n} = \mathrm{rot}_{90^\circ}(\mathbf{u}) \). İşaretler aynı olduğunda bu <em>dış</em> teğeti, ters olduğunda <em>iç</em> (çapraz) teğeti verir — yani tek denklem her iki durumu da kapsar. Açıklık uzunluğu \( L \), teğet noktaları \( \mathbf{P}_i \) (çıkış) ve \( \mathbf{P}_j \) (giriş) bu çözümden gelir.</p>
+
+<h3>3.3 Sarım açısı ve kayış boyu</h3>
+<p>Bir kasnaktaki sarım açısı, kayışın o kasnağa girdiği ve terk ettiği teğet noktaları arasındaki, dönüş yönünde ölçülen açıdır:</p>
+<div class="eqno">
+$$ \varphi_i = \Big[\, d_i \big( \theta_i^{\text{çıkış}} - \theta_i^{\text{giriş}} \big) \Big] \bmod 2\pi, \qquad \varphi_i \in [0, 2\pi) $$
+<span class="tag">(3.3)</span>
+</div>
+<p>Kayışın toplam boyu, açıklıkların ve yayların toplamıdır. Efektif boy \( L_{\text{eff}} \) (kayışın etiketinde yazan boy) efektif yarıçaplarla, pitch boyu \( L_{\text{pitch}} \) pitch yarıçaplarıyla hesaplanır:</p>
+<div class="eqno">
+$$ L_{\text{eff}} = \sum_i L_i + \sum_i \varphi_i\, r_{e,i}, \qquad L_{\text{pitch}} = \sum_i L_i + \sum_i \varphi_i\, r_{p,i} $$
+<span class="tag">(3.4)</span>
+</div>
+
+<h3>3.4 Kapalı çevrim değişmezi</h3>
+<p>Kayış kapalı bir eğridir: bir tam turda teğet doğrultusunun toplam dönüşü tam olarak \( \pm 2\pi \) olmak zorundadır. Sarım açıları işaretleriyle toplandığında bu şu değişmeze indirgenir:</p>
+<div class="eqno">
+$$ \sum_i d_i\,\varphi_i = \pm 2\pi \quad\Longleftrightarrow\quad \sum_{\text{kaburgalı}} \varphi_i \;-\; \sum_{\text{sırt}} \varphi_i = \pm 360^\circ $$
+<span class="tag">(3.5)</span>
+</div>
+<div class="note check">
+  <span class="t">Bu bir kapıdır, bir sonuç değil</span>
+  (3.5) sağlanmıyorsa çözüm <strong>reddedilir</strong>: ya kasnak konumları tutarsızdır, ya bir temas tarafı yanlış verilmiştir, ya da serpantin sırası kapalı bir çevrim oluşturmuyordur. Bölüm 8'de bu toplam açıkça basılır.
+</div>
+<div class="note warn">
+  <span class="t">Temas tarafının sessizliği</span>
+  Bir kasnağın temas tarafı ters verildiğinde (3.5) <strong>yine sağlanır</strong> — çünkü model o zaman geçerli ama <em>başka</em> bir güzergâhı çözer. Hata mesajı çıkmaz; sarım açıları, kayış boyu ve tüm gerginlikler sessizce değişir. Bu yüzden temas tarafı hem panelde açık bir aç/kapa hem de kanvasta bir rozet olarak gösterilir ve Bölüm 8.3'te tablo hâlinde tekrar basılır.
+</div>
+
+<h3>3.5 Kayış boyu ↔ pitch boyu özdeşliği</h3>
+<p>(3.4)'teki iki toplam birbirinden bağımsız değildir. \( r_p - r_e \) farkı her kaburgalı kasnakta \( h_b \) kadar sabit olduğundan ve (3.5) gereği işaretli sarım toplamı \( 2\pi \) olduğundan:</p>
+<div class="eqno">
+$$ L_{\text{pitch}} - L_{\text{eff}} = 2\pi\,h_b $$
+<span class="tag">(3.6)</span>
+</div>
+<p>Bu özdeşlik, geometri çözümünün <strong>bağımsız bir denetimidir</strong>: teğet çözümünde ya da sarım açılarında bir işaret hatası olsaydı (3.6) tutmazdı. Bölüm 8.6'da sayısal olarak gösterilir.</p>
+
+<!-- ═══════════ 4 ═══════════ -->
+<h2 id="s4"><span class="no">4</span>Otomatik Gergi ve Kol Dengesi</h2>
+
+<h3>4.1 Kol geometrisi</h3>
+<p>Otomatik gergi, sabit bir <strong>pivot</strong> noktası etrafında dönen, ucunda gergi kasnağı taşıyan bir koldur. Kol açısı \( \theta \) iken kasnak merkezi:</p>
+<div class="eqno">
+$$ \mathbf{c}_{\text{ten}}(\theta) = \mathbf{p} + a\,\big(\cos\theta,\ \sin\theta\big) $$
+<span class="tag">(4.1)</span>
+</div>
+<p>burada \( \mathbf{p} \) pivot, \( a \) kol boyudur. Kol döndükçe gergi kasnağının merkezi bir yay üzerinde gezer; kayış yolu — ve dolayısıyla tüm sarım açıları, açıklık boyları ve gereken kayış boyu — <strong>her açıda başkadır</strong>. Bu, gergiyi diğer kasnaklardan ayıran şeydir: konumu bir girdi değil, bir <em>çözüm</em>dür.</p>
+
+<h3>4.2 Yay momenti ve sanal iş</h3>
+<p>Yayın kola uyguladığı moment, serbest konumdan itibaren lineer artar:</p>
+<div class="eqno">
+$$ M(\theta) = M_0 + k\,\big(\theta - \theta_{\text{serbest}}\big) $$
+<span class="tag">(4.2)</span>
+</div>
+<p>\( M_0 \) ön yük momenti, \( k \) yay oranıdır (Nm/derece). Kol açısı \( \mathrm{d}\theta \) kadar dönerse kayışın gereken boyu \( \mathrm{d}L \) kadar değişir; sanal iş dengesi \( M\,\mathrm{d}\theta = T\,\mathrm{d}L \) kayışın gerginliğini verir:</p>
+<div class="eqno">
+$$ T = \frac{M(\theta)}{\mathrm{d}L/\mathrm{d}\theta}, \qquad \frac{\mathrm{d}L}{\mathrm{d}\theta} = a\,\sin\beta\;\cdot\;2\sin\!\left(\frac{\varphi_{\text{ten}}}{2}\right) $$
+<span class="tag">(4.3)</span>
+</div>
+<p>Buradaki \( \beta \), hubload doğrultusu ile kol doğrultusu arasındaki açıdır (hubload-to-arm angle) ve \( \varphi_{\text{ten}} \) gergi kasnağındaki sarım açısıdır. \( 2\sin(\varphi/2) \) çarpanı, iki açıklığın gergi kasnağına uyguladığı bileşke kuvvetin gerginliğe oranıdır — aynı çarpan (5.3)'te hubload'da da görünür.</p>
+<div class="note">
+  <span class="t">Take-up oranı</span>
+  \( \mathrm{d}L/\mathrm{d}\theta \) büyüklüğü <strong>take-up oranı</strong> olarak adlandırılır (mm/derece) ve gerginin ne kadar kayış boyu değişimini yutabildiğini söyler. Küçük bir take-up oranı, aynı yay momentinin çok daha yüksek bir gerginliğe dönüşmesi demektir: (4.3)'te payda küçüldükçe \( T \) büyür. Sarım açısı sıfıra yaklaşırken \( 2\sin(\varphi/2) \to 0 \) olduğu için gerginlik <strong>tekilleşir</strong>; bu yüzden mekanik durdurucu (Load) konumundaki gerginlik sayısal olarak en hassas değerdir.
+</div>
+
+<h3>4.3 Çalışma açısının çözümü</h3>
+<p>Verilen bir kayış boyu için kol açısı, "kayışın gereken boyu = kayışın gerçek boyu" koşulundan tek boyutlu bir kök bulma ile çözülür:</p>
+<div class="eqno">
+$$ L_{\text{gereken}}(\theta) - L_{\text{eff}} = 0 $$
+<span class="tag">(4.4)</span>
+</div>
+<p>\( L_{\text{gereken}}(\theta) \) monoton azalan olduğu için kök tektir ve aralık daraltma ile güvenle bulunur. Kolun fiziksel olarak ulaşabileceği açı aralığı, sarım açısının sıfıra düştüğü noktayla sınırlıdır.</p>
+
+<h3>4.4 Altı çalışma konumu</h3>
+<p>Kayış boyu üretim toleransı ve servis ömrü boyunca aşınmayla değişir; kol da buna göre yer değiştirir. Tedarikçi raporlarında standartlaşmış altı konum kullanılır:</p>
+<table>
+  <caption>Tablo A — Gergi kolu çalışma konumlarının tanımı</caption>
+  <tr><th>Konum</th><th>Tanım</th><th>Kayış boyu</th></tr>
+  <tr><td class="l"><strong>Free Arm</strong> (serbest kol)</td><td class="l">Yay serbest, kayış takılı değil. Referans açı.</td><td class="l">—</td></tr>
+  <tr><td class="l"><strong>Replace</strong> (değiştirme)</td><td class="l">Aşınma sınırı: kayış bu boya uzadığında değiştirilmelidir.</td><td class="l">\( L(1 + \tau + w) \)</td></tr>
+  <tr><td class="l"><strong>Max Belt</strong></td><td class="l">Tolerans üst sınırındaki yeni kayış.</td><td class="l">\( L + \Delta \)</td></tr>
+  <tr><td class="l"><strong>Mean</strong> (çalışma)</td><td class="l">Nominal boy — <strong>raporun ana çalışma noktası</strong>.</td><td class="l">\( L \)</td></tr>
+  <tr><td class="l"><strong>Min Belt</strong></td><td class="l">Tolerans alt sınırındaki yeni kayış.</td><td class="l">\( L - \Delta \)</td></tr>
+  <tr><td class="l"><strong>Load</strong> (montaj/durdurucu)</td><td class="l">Kolun mekanik durdurucuya dayandığı uç konum. <strong>Çalışma noktası değildir.</strong></td><td class="l">—</td></tr>
+</table>
+<p>\( \tau \) boy toleransı (±mm), \( w \) uzama + aşınma payı (%) olarak girilir. Bu altı konum, kayışın ömrü boyunca gergi kasnağının gezdiği <strong>zarfı</strong> tanımlar: her konumda sarım açıları, hubload'lar ve gerginlik farklıdır. Bölüm 8.8'de altısı da tablo hâlinde verilir.</p>
+<div class="note warn">
+  <span class="t">Load konumunun sayısal hassasiyeti</span>
+  Load bir mekanik durdurucudur; orada sarım açısı sıfıra yaklaştığı için (4.3)'ün paydası küçülür ve gerginlik tekilleşmeye başlar. Kol açısındaki <strong>0,1°</strong> mertebesinde bir yuvarlama tek başına gerginlikte %1,4–2,3 fark yaratır. Bu yüzden çekirdeğin doğrulama eşiği çalışma konumlarında %0,5, Load dâhil edildiğinde %1,5 olarak ayrılmıştır.
+</div>
+
+<!-- ═══════════ 5 ═══════════ -->
+<h2 id="s5"><span class="no">5</span>Gerginlik, Hubload ve Kayma Emniyeti</h2>
+
+<h3>5.1 Açıklık gerginliği zinciri</h3>
+<p>Kayış gerginliği kayış boyunca <strong>sabit değildir</strong>: her güç çeken kasnakta bir basamak düşer, sürücü kasnakta ise toplamı kadar yükselir. Bir kasnağın milinden aldığı tork ile kayışın iki tarafındaki gerginlik farkı arasındaki bağıntı:</p>
+<div class="eqno">
+$$ \Delta T_i = \frac{Q_i}{r_{p,i}}, \qquad Q_i \,[\text{Nm}] = \frac{9549\, P_i\,[\text{kW}]}{n_i\,[\text{d/d}]} $$
+<span class="tag">(5.1)</span>
+</div>
+<p>Aksesuar devri, kayışın çizgisel hızı sabit olduğundan kasnak çaplarının oranıyla belirlenir:</p>
+<div class="eqno">
+$$ n_i = n_{\text{krank}}\cdot \frac{r_{p,\text{krank}}}{r_{p,i}}, \qquad v_{\text{kayış}} = \frac{2\pi\, n_{\text{krank}}\, r_{p,\text{krank}}}{60} $$
+<span class="tag">(5.2)</span>
+</div>
+<div class="note warn">
+  <span class="t">Hız oranı hesaplanır, elle girilmez</span>
+  Aksesuar devri <strong>kasnak pitch çaplarından</strong> türetilir; katalogdaki nominal "tahrik oranı" alanı kullanılmaz. Elle yazılan hız oranları, aksesuarın çektiği gücün yanlış devirde okunmasına ve dolayısıyla tüm gerginliklerin sistematik olarak kaymasına yol açar.
+</div>
+<p>Serpantin sırasında ilerleyen bir kayışta, boş taraftan başlayarak her kasnakta gerginlik güncellenir: sürücü kasnakta \( T_{\text{çıkış}} = T_{\text{giriş}} + \Delta T \), yük çeken kasnakta \( T_{\text{çıkış}} = T_{\text{giriş}} - \Delta T \), avara ve gergi kasnaklarında (yük çekmedikleri için) \( T_{\text{çıkış}} = T_{\text{giriş}} \). Zincirin kapanması — çevrimi bir tur dolaşınca başlangıç gerginliğine dönülmesi — sürücü gücünün aksesuar güçleri toplamına eşit olmasını gerektirir:</p>
+<div class="eqno">
+$$ P_{\text{sürücü}} = \sum_{\text{aksesuar}} P_i $$
+<span class="tag">(5.3)</span>
+</div>
+<div class="note check">
+  <span class="t">Sürücü gücü girilmez, hesaplanır</span>
+  (5.3) bir denklem değil bir <strong>kapanış koşuludur</strong>. Bu yüzden çalışma çevrimi tablosunda sürücü kasnağın kW sütunu yoktur: elle girilirse çevrim kapanmaz ve model reddeder.
+</div>
+
+<h3>5.2 Hubload — kasnak yatağına binen kuvvet</h3>
+<p>Bir kasnağın yatağına binen bileşke kuvvet, kayışın iki tarafındaki gerginlik vektörlerinin toplamıdır:</p>
+<div class="eqno">
+$$ \mathbf{F}_{\text{hub}} = T_{\text{giriş}}\,\hat{\mathbf{u}}_{\text{giriş}} + T_{\text{çıkış}}\,\hat{\mathbf{u}}_{\text{çıkış}} $$
+<span class="tag">(5.4)</span>
+</div>
+<p>Eşit gerginlik özel durumunda (avara, gergi) bu, sarım açısıyla kapalı forma iner:</p>
+<div class="eqno">
+$$ \big|\mathbf{F}_{\text{hub}}\big| = 2\,T\,\sin\!\left(\frac{\varphi}{2}\right) $$
+<span class="tag">(5.5)</span>
+</div>
+<p>Hubload'un <strong>yönü</strong> de en az büyüklüğü kadar önemlidir: yatak seçimi, braket tasarımı ve gergi kolunun moment kolu bu yöne bağlıdır. Bölüm 8.11'de her kasnak için büyüklük ve yön birlikte verilir.</p>
+
+<h3>5.3 Kayma emniyeti — capstan bağıntısı</h3>
+<p>Kayışın kasnak üzerinde kaymadan taşıyabileceği azami gerginlik oranı, sarım açısı ve sürtünme katsayısıyla sınırlıdır (Euler–Eytelwein / capstan):</p>
+<div class="eqno">
+$$ \frac{T_{\text{gergin}}}{T_{\text{boş}}} \;\le\; e^{\mu\varphi} $$
+<span class="tag">(5.6)</span>
+</div>
+<p>Kayma emniyet faktörü, kapasitenin fiili orana bölümüdür:</p>
+<div class="eqno">
+$$ \mathrm{SF} = \frac{e^{\mu\varphi}}{T_{\text{gergin}}/T_{\text{boş}}} $$
+<span class="tag">(5.7)</span>
+</div>
+<p>\( \mathrm{SF} = 1 \) kayma eşiğidir; tasarımda istenen alt sınır <strong>servis faktörü</strong> olarak girilir (tipik olarak 1,3). Kaburgalı temasta \( \mu \) kanal geometrisiyle etkin biçimde büyür; sırttan temasta ise düz yüzeyin sürtünmesi geçerlidir ve belirgin biçimde düşüktür — bu yüzden avara ve gergi kasnaklarındaki emniyet payı daha dardır.</p>
+
+<h3>5.4 Tepe yükler</h3>
+<p>Yukarıdaki denge <em>ortalama</em> çalışmayı anlatır. Motorun hızlanma ve yavaşlamasında aksesuarların atalet momentleri ek tork üretir:</p>
+<div class="eqno">
+$$ Q_i^{\text{atalet}} = J_i\,\dot{\omega}_i, \qquad \dot{\omega}_i = \frac{2\pi}{60}\cdot \dot{n}_{\text{krank}}\cdot \frac{r_{p,\text{krank}}}{r_{p,i}} $$
+<span class="tag">(5.8)</span>
+</div>
+<p>Tepe gerginlik ve hubload, bu ek torkun (5.1)'e eklenmesiyle bulunur ve ivmelenme / yavaşlama yönüne göre farklı kasnaklarda kritik olur.</p>
+
+<!-- ═══════════ 6 ═══════════ -->
+<h2 id="s6"><span class="no">6</span>Kaburga Yorulması ve Kayış Ömrü</h2>
+
+<h3>6.1 Hasar mekanizması</h3>
+<p>Poly-V kayışın ömrünü belirleyen baskın mekanizma <strong>kaburga dibi yorulmasıdır</strong>: kayış her kasnaktan geçerken kaburgalar eğilir, açılır ve gerilir. Bir tur boyunca biriken hasar, kasnakların çapına, temas tarafına ve o andaki gerginliğe bağlıdır. Küçük çaplı bir kasnak kayışı çok daha sert büker; sırttan temas eden bir kasnak kaburgaları <em>ters</em> yöne açar ve bu, kaburgalı temasa göre farklı ağırlıkta bir hasar üretir.</p>
+<p>Kasnak başına tur başı hasar, çapın tersine üstel bir bağıntıyla ölçeklenir:</p>
+<div class="eqno">
+$$ \delta_i \;\propto\; \left(\frac{1}{d_{e,i}}\right)^{m} \cdot w_{\text{temas}}, \qquad w_{\text{temas}} = \begin{cases} 1 & \text{kaburgalı} \\ w_b & \text{sırt} \end{cases} $$
+<span class="tag">(6.1)</span>
+</div>
+<p>Üstel \( m \) ve sırt ağırlığı \( w_b \) kalibrasyon sabitleridir; kayış profiline ve yorulma modeline (ör. <code>PK-2_2p-MT3</code>) bağlıdır.</p>
+
+<h3>6.2 Kasnak katkı payı</h3>
+<p>Her kasnağın toplam hasara katkısı, normalize edilmiş paydır:</p>
+<div class="eqno">
+$$ \text{pay}_i = \frac{\delta_i}{\sum_j \delta_j}\times 100\ \% $$
+<span class="tag">(6.2)</span>
+</div>
+<p>Bu dağılım tasarım için doğrudan kullanışlıdır: payı yüksek çıkan kasnak, çapı büyütülerek ya da temas tarafı değiştirilerek ömrü en çok uzatacak olandır. Tipik bir FEAD'de küçük çaplı avara ve gergi kasnakları payın büyük kısmını taşır — krank kasnağı büyük olduğu için neredeyse hiç hasar üretmez.</p>
+
+<h3>6.3 Yük durumu katkısı</h3>
+<p>Çalışma çevrimindeki her devir noktası, hem kendi süre payıyla (duty cycle %) hem de o noktadaki gerginlik seviyesiyle hasara katkıda bulunur. Yüksek devir hem daha çok tur, hem daha yüksek merkezkaç etkisi demektir:</p>
+<div class="eqno">
+$$ \text{katkı}_k \;\propto\; \mathrm{DC}_k \cdot N_k \cdot g\big(T_{t,k},\,T_{s,k}\big) $$
+<span class="tag">(6.3)</span>
+</div>
+<p>\( N_k \) birim zamandaki tur sayısı, \( T_t \) ve \( T_s \) o noktadaki gergin ve boş taraf gerginlikleridir.</p>
+
+<h3>6.4 B10 ömrü ve sıcaklık</h3>
+<p>Toplam hasar hızından B10 ömrü (popülasyonun %10'unun arızalandığı süre) türetilir. Sıcaklık, hasar hızını üstel olarak artırır ve <strong>yarılanma sıcaklığı</strong> \( \Delta T_{1/2} \) ile modellenir — her \( \Delta T_{1/2} \) derecelik artış ömrü yarıya indirir:</p>
+<div class="eqno">
+$$ t_{B10} = \frac{C}{\dot{\delta}_{\text{toplam}}}\cdot 2^{-\,(T_{\text{kayış}} - T_{\text{ref}})/\Delta T_{1/2}} $$
+<span class="tag">(6.4)</span>
+</div>
+<div class="note warn">
+  <span class="t">Mutlak ömrün geçerlilik penceresi</span>
+  \( C \) sabiti belirli bir çap aralığında kalibre edilmiştir. Sistemdeki kasnak çapları bu pencerenin dışına çıktığında mutlak saat değeri sistematik olarak sapar; <strong>kasnak katkı payları (6.2) ise pencereden bağımsız olarak geçerli kalır</strong>, çünkü onlar bir orandır. Bölüm 8.16 hangi durumda olunduğunu açıkça yazar.
+</div>
+
+<!-- ═══════════ 7 ═══════════ -->
+<h2 id="s7"><span class="no">7</span>Serbest Açıklık Titreşimi</h2>
+<p>İki kasnak arasındaki gergin kayış parçası, iki ucundan tutturulmuş bir tel gibi enine titreşir. Gerilmiş telde dalga hızı:</p>
+<div class="eqno">
+$$ c = \sqrt{\frac{T}{m'}} $$
+<span class="tag">(7.1)</span>
+</div>
+<p>burada \( m' \) kayışın birim uzunluk kütlesidir (kg/m). Kayış aynı zamanda \( v \) hızıyla ilerlediği için, hareketli telin doğal frekansı duran telinkinden düşüktür:</p>
+<div class="eqno">
+$$ f_n = \frac{n\,\big(c^2 - v^2\big)}{2\,L\,c}, \qquad n = 1, 2, 3,\dots $$
+<span class="tag">(7.2)</span>
+</div>
+<p>Uyarım kaynağı motorun <strong>ateşleme frekansıdır</strong>. Dört zamanlı, \( N_{\text{sil}} \) silindirli bir motorda:</p>
+<div class="eqno">
+$$ f_{\text{ateşleme}} = \frac{n_{\text{krank}}\cdot N_{\text{sil}}}{120} $$
+<span class="tag">(7.3)</span>
+</div>
+<p>Bir açıklığın temel frekansı ateşleme frekansına yaklaştığında o açıklık rezonansa girer: gözle görülür çırpınma (flutter), gürültü ve hızlanmış yorulma üretir. Tasarım kuralı, çalışma devir aralığı boyunca her açıklığın \( f_1 \) değerini ateşleme doğrusundan uzak tutmaktır. Bölüm 8.17'de bu iki eğri aynı grafikte verilir.</p>
+<div class="note">
+  <span class="t">Bu, sistemin burulma modu DEĞİLDİR</span>
+  (7.2) bir <em>açıklığın enine</em> titreşimidir — kayışın o parçasının teli gibi salınması. Krank, aksesuar milleri ve gergi kolunun birlikte oluşturduğu <strong>burulma</strong> sistemi ayrı ve çok daha karmaşık bir problemdir; bu rapor onu hesaplamaz (§9.2).
+</div>
+
+<!-- ═══════════ 8 (dinamik) ═══════════ -->
+@@SECTION8@@
+
+<!-- ═══════════ UYGUNLUK (dinamik) ═══════════ -->
+@@COMPLIANCE@@
+
+<!-- ═══════════ 9 ═══════════ -->
+<h2 id="s9"><span class="no">9</span>Geçerlilik Sınırları ve Genişletmeler</h2>
+<p>Bu bölüm, modelin <strong>ne yapmadığını</strong> açıkça sayar. Bir mühendislik raporunda eksik listesi, sonuç listesi kadar bağlayıcıdır: burada yazmayan bir büyüklük bu belgede hesaplanmamıştır ve başka bir kaynaktan doğrulanmalıdır.</p>
+
+<h3>9.1 Kalibre edilmiş alan</h3>
+<p>Hesap çekirdeği 17 tedarikçi raporundan çıkarılmış 2095 referans değere karşı doğrulanmıştır. Geçme ölçütleri:</p>
+<table>
+  <caption>Tablo B — Doğrulama eşikleri</caption>
+  <tr><th>Ölçüt</th><th>Eşik</th><th>Gerekçe</th></tr>
+  <tr><td class="l">Çalışma konumlarında geometri ve gerginlik</td><td>%0,5</td><td class="l">Deterministik geometri; sapma yalnız yuvarlamadan.</td></tr>
+  <tr><td class="l">Mekanik durdurucu (Load) dâhil</td><td>%1,5</td><td class="l">Sarım sıfıra yaklaşırken gerginlik tekilleşir; 0,1° yuvarlama %1,4–2,3 fark yaratır (§4.4).</td></tr>
+  <tr><td class="l">Kol açıları</td><td>0,2°</td><td class="l">Sıfıra yakın açıda yüzde hatası anlamsızdır.</td></tr>
+  <tr><td class="l">Kaburga yorulma dağılımı</td><td>1,5 yüzde puanı</td><td class="l">Kalibre model; pay bir orandır.</td></tr>
+</table>
+
+<h3>9.2 Sistem burulma titreşimi — hesaplanmaz</h3>
+<p>Tedarikçi raporlarındaki "Natural Frequency" değeri, krank–kayış–aksesuar–gergi zincirinin <strong>çok serbestlik dereceli burulma modudur</strong>: kayış açıklıklarının yay gibi davrandığı, aksesuar ataletlerinin ve gergi kolunun birlikte çözüldüğü bir özdeğer problemidir. Bu rapor onu çözmez; çekirdek yalnız <em>gergi kolu modunu</em> verebilir ve o farklı bir büyüklüktür — ölçüldüğünde iki değer arasında %19 mertebesinde fark bulunmuştur.</p>
+<div class="note warn">
+  <span class="t">Karıştırılmamalı</span>
+  Bölüm 8.17'de verilen frekanslar <strong>açıklıkların enine titreşimidir</strong> (§7). Sistem rezonans devri, rölanti yakınında rezonans uyarısı ve tedarikçi raporundaki "System Resonance (Mode 1)" satırı bu belgede <strong>yoktur</strong>.
+</div>
+
+<h3>9.3 Mutlak ömrün geçerlilik penceresi</h3>
+<p>B10 saat değeri, yorulma sabitinin kalibre edildiği çap aralığında geçerlidir. Sistemdeki en küçük ya da en büyük kasnak bu aralığın dışındaysa mutlak saat sistematik olarak sapar; Bölüm 8.16 bu durumu açıkça işaretler. <strong>Kasnak katkı payları (§6.2) ve yük durumu katkıları (§6.3) penceresizdir</strong> — onlar oran olduğu için aralık dışında da kullanılabilir.</p>
+
+<h3>9.4 Hizalama ve eksenel kaçıklık</h3>
+<p>Kasnakların eksenel offseti, açısal kaçıklığı ve bunlardan doğan fleeting açısı bu modelde <strong>yoktur</strong>. Geometri tek düzlemde çözülür (§2.i). Tedarikçi raporundaki "Pulley Alignment Sensitivity" sayfasının karşılığı üretilmez; hizalama toleransları ayrıca değerlendirilmelidir.</p>
+
+<h3>9.5 Kayma duyarlılığı taraması</h3>
+<p>Kayma emniyeti (§5.3) verilen her çalışma noktasında hesaplanır; ancak "hangi ivme ve yük kombinasyonu en kritiktir" sorusunu cevaplayan <strong>tarama</strong> ve "kaç newton gerginlik ya da kaç derece sarım eklenmeli" ters çözümü bu belgede yoktur.</p>
+
+<h3>9.6 İstatistiksel ömür dağılımı</h3>
+<p>B10 tek bir noktadır. Weibull dağılımı, şekil parametresi \( \beta \) ve bin araç başına arıza eğrisi bu modelde üretilmez; bunlar için saha verisi ya da tedarikçinin istatistiksel modeli gerekir.</p>
+
+<h3>9.7 Genişletme yolları</h3>
+<ul>
+  <li><strong>Burulma modeli:</strong> aksesuar ataletleri ve açıklık rijitlikleri \( k_{\text{span}} = EA/L \) ile bir \( n \)-serbestlik dereceli burulma matrisi kurulabilir; özdeğerleri sistem doğal frekanslarını verir.</li>
+  <li><strong>Tepe yük taraması:</strong> (5.8) tüm ivme ve yük kombinasyonları üzerinde taranarak kritik durum ve gereken gerginlik artışı bulunabilir.</li>
+  <li><strong>Hizalama:</strong> kasnak eksen vektörleri üç boyuta taşınarak fleeting açısı ve eksenel offset payı hesaplanabilir.</li>
+</ul>
+
+<!-- ═══════════ 10 ═══════════ -->
+<h2 id="s10"><span class="no">10</span>Semboller</h2>
+<table>
+  <caption>Tablo C — Sembol listesi</caption>
+  <tr><th>Sembol</th><th>Anlam</th><th>Birim</th></tr>
+  <tr><td class="c">\( D \)</td><td class="l">Kasnak dış çapı (girdi)</td><td class="c">mm</td></tr>
+  <tr><td class="c">\( r_p,\ r_e \)</td><td class="l">Pitch ve efektif yarıçap</td><td class="c">mm</td></tr>
+  <tr><td class="c">\( h_b,\ h_r \)</td><td class="l">Kaburgalı yüz / sırt kord ofseti</td><td class="c">mm</td></tr>
+  <tr><td class="c">\( d_i \)</td><td class="l">Sarım işareti (+1 / −1)</td><td class="c">—</td></tr>
+  <tr><td class="c">\( \varphi_i \)</td><td class="l">Sarım açısı</td><td class="c">°, rad</td></tr>
+  <tr><td class="c">\( L_i \)</td><td class="l">Açıklık (span) boyu</td><td class="c">mm</td></tr>
+  <tr><td class="c">\( L_{\text{eff}},\ L_{\text{pitch}} \)</td><td class="l">Efektif ve pitch kayış boyu</td><td class="c">mm</td></tr>
+  <tr><td class="c">\( \theta \)</td><td class="l">Gergi kol açısı</td><td class="c">°</td></tr>
+  <tr><td class="c">\( a \)</td><td class="l">Gergi kol boyu</td><td class="c">mm</td></tr>
+  <tr><td class="c">\( \beta \)</td><td class="l">Hubload–kol açısı</td><td class="c">°</td></tr>
+  <tr><td class="c">\( M_0,\ k \)</td><td class="l">Yay ön yükü ve oranı</td><td class="c">Nm, Nm/°</td></tr>
+  <tr><td class="c">\( T \)</td><td class="l">Kayış gerginliği</td><td class="c">N</td></tr>
+  <tr><td class="c">\( T_t,\ T_s \)</td><td class="l">Gergin ve boş taraf gerginliği</td><td class="c">N</td></tr>
+  <tr><td class="c">\( F_{\text{hub}} \)</td><td class="l">Kasnak yatak kuvveti</td><td class="c">N</td></tr>
+  <tr><td class="c">\( Q \)</td><td class="l">Mil torku</td><td class="c">Nm</td></tr>
+  <tr><td class="c">\( P \)</td><td class="l">Aksesuar gücü</td><td class="c">kW</td></tr>
+  <tr><td class="c">\( n \)</td><td class="l">Devir</td><td class="c">d/d</td></tr>
+  <tr><td class="c">\( v \)</td><td class="l">Kayış çizgisel hızı</td><td class="c">m/s</td></tr>
+  <tr><td class="c">\( \mu \)</td><td class="l">Sürtünme katsayısı</td><td class="c">—</td></tr>
+  <tr><td class="c">\( \mathrm{SF} \)</td><td class="l">Kayma emniyet faktörü</td><td class="c">—</td></tr>
+  <tr><td class="c">\( m' \)</td><td class="l">Kayış birim uzunluk kütlesi</td><td class="c">kg/m</td></tr>
+  <tr><td class="c">\( c \)</td><td class="l">Kayışta dalga hızı</td><td class="c">m/s</td></tr>
+  <tr><td class="c">\( f_n \)</td><td class="l">Açıklık doğal frekansı</td><td class="c">Hz</td></tr>
+  <tr><td class="c">\( J \)</td><td class="l">Atalet momenti</td><td class="c">kg·m²</td></tr>
+  <tr><td class="c">\( \tau,\ w \)</td><td class="l">Kayış boy toleransı, uzama+aşınma payı</td><td class="c">mm, %</td></tr>
+  <tr><td class="c">\( t_{B10} \)</td><td class="l">B10 kayış ömrü</td><td class="c">saat</td></tr>
+</table>
+
+<!-- ═══════════ EK A ═══════════ -->
+<h2 id="ekA"><span class="no">Ek A</span>Referans Uygulama (JavaScript)</h2>
+<p>Aşağıdaki parça, Bölüm 3–5'teki zincirin çekirdek üzerinden nasıl kurulduğunu gösterir. Çekirdek bağımsız bir UMD modülüdür (<code>FEADCore</code>); tarayıcıda ve Node'da aynı sonucu verir.</p>
+<pre><code>// 1) Sistemi kur — kasnaklar KAYIŞ GİDİŞ SIRASINDA
+var sys = FEADCore.makeSystem({
+  pulleys: [
+    { name:'CRK', x:0,       y:0,      od:172, contact:'grooved', crank:true },
+    { name:'IDR', x:-72,     y:267,    od:75,  contact:'back'  },
+    { name:'A_C', x:-224,    y:448,    od:137, contact:'grooved' },
+    { name:'TEN', tensioner:true,      od:75,  contact:'back'  }
+  ],
+  belt: { profile:'PK', ribs:8, effLength:1520, tolerance:6, wearPct:0.7 },
+  tensioner: { pivot:[-180,100], armLenMm:90,
+               preloadNm:8.86, rateNmPerDeg:0.476, freeAngleDeg:42 },
+  designTensionN: 609
+});
+
+// 2) Çalışma noktası — kayış boyuna oturan kol açısı (§4.3)
+var rel  = FEADCore.meanRel(sys);
+var st   = FEADCore.tensionerState(sys, rel);
+var geom = st.geom;
+
+// 3) Kapalı çevrim değişmezi (3.5) ve boy özdeşliği (3.6) — KAPI
+console.assert(Math.abs(Math.abs(geom.signedWrapDeg) - 360) &lt; 0.05);
+console.assert(Math.abs((geom.LpitchMm - geom.LeffMm)
+             - 2*Math.PI*FEADCore.beltProps(sys.belt).hb) &lt; 1e-6);
+
+// 4) Çalışma çevrimi — gerginlik zinciri, hubload, kayma (§5)
+var res = FEADCore.analyze(sys, {
+  duty: [ { engineRpm:800,  dcPct:27, degC:92, loadsKw:{ A_C:3.00 } },
+          { engineRpm:2000, dcPct:13, degC:92, loadsKw:{ A_C:8.20 } } ]
+});
+res.duty.forEach(function(p){
+  p.perPulley.forEach(function(q){
+    console.log(p.engineRpm, q.name, q.exitTensionN.toFixed(0)+' N',
+                q.accessoryRpm.toFixed(0)+' d/d');
+  });
+});</code></pre>
+<p>Bölüm 8'deki bütün sayılar bu zincirden gelir; rapor üreteci kendi geometrisini hesaplamaz.</p>
+
+<div class="note">
+  <span class="t">Belgenin durumu</span>
+  Bu rapor, projede tanımlı FEAD modelinden <strong>otomatik üretilmiştir</strong>; girdi değerleri iç topolojideki kasnak, kayış, gergi ve çözücü tanımlarından alınır. Sonuçlar kalibre edilmiş yarı-statik kayış-kasnak matematiğine dayanır ve model içi tutarlılık kontrolleriyle denetlenir. Bölüm 9'daki sınırlar bağlayıcıdır; tasarım kararlarında güncel tedarikçi verisiyle teyit edilmelidir.
+</div>
+
+</div>
+</body>
+</html>

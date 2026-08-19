@@ -302,6 +302,70 @@ artık `FEADCore.solveGeometry`'nin teğet noktaları + işaretli sarım yaylar�
 `249.2 · 212.6 · 248.9 · 212.6`, Mean kol açısı `33.1°`, take-up `0.559 mm/°`
 — **hepsi Gates raporuyla birebir.**
 
+#### Çevrimdışı HTML rapor (`js/cp-fead-report.js`)
+
+Tedarikçi (Gates) "Accessory Belt Drive System" çıktısının 11 sayfası, Takoz
+raporuyla **AYNI görsel dilde** tek dosyalık çevrimdışı bir HTML'e dökülüyor.
+Kalıp birebir Takoz'unki: sabit **teori şablonu** (§1–7, 9, 10, Ek A) +
+çözümden üretilen **§8** + **Uygunluk hükmü**.
+
+| Dosya | Sorumluluk |
+|-------|-----------|
+| `tools/report-assets/fead-theory-source.html` | Teori metni (elle yazılır) — tokenlar ZATEN içinde |
+| `tools/report-assets/build-fead-report-template.js` | Doğrula → KaTeX önyükleyiciyi ekle → base64 (`npm run build:fead-report`) |
+| `js/fead-report-template.js` | Üretilen şablon (`window.FEAD_REPORT_TEMPLATE_B64`) — **elle düzenlenmez** |
+| `js/cp-fead-report.js` | Panel · giriş · antet · §8 (18 alt bölüm) · Uygunluk · 6 SVG şekli |
+
+Takoz şablonundan **tek yapısal farkı**: orada derleyici harici bir referans
+belgeyi regex ameliyatıyla token'lıyordu; burada kaynak zaten token'lı yazıldı,
+derleyici yalnız **doğruluyor**. Regex ameliyatı, kaynak metin bir kelime
+değiştiğinde sessizce yanlış yere token koyabilecek tek yerdi.
+
+**KaTeX ve fontlar Takoz raporuyla ORTAK** (`window.MNT_REPORT_ASSETS`, ~1 MB).
+İkinci bir kopyanın karşılığı yok; `js/results.js` de aynısını yapıyor. Varlık
+yükleyicideki **sayaç döngüden ÖNCE kurulur** — Takoz'daki tuzağın aynısı:
+artışı döngü içine koymak tek dosya build'inde her oturumun ilk rapor denemesini
+kırıyor, `index.html`'de görünmüyor.
+
+Ad öneki **`_fr…`** (`cp-mount-report.js` `_r…`, `cp-fead.js` `_fead…`
+kullanıyor) — aynı adı iki dosyada üst-seviye bildirmek `source-hygiene`
+kapısına takılır. `getFeadReportPropertiesHTML` bu yüzden `cp-fead.js`'ten
+**silinip** buraya taşındı.
+
+##### Uydurulmayan şeyler — raporun kendi §9'unda yazılı
+
+| Gates sayfası | Neden yok |
+|---|---|
+| Natural Frequency / System Resonance | Çok serbestlik dereceli **burulma** modu; çekirdek yalnız gergi kol modu verir (ölçüldü: %19 fark) |
+| Pulley Alignment Sensitivity | Geometri tek düzlemde çözülüyor; fleeting açısı ve eksenel offset modelde yok |
+| Belt Slip Sensitivity taraması | "En kritik ivme + yük kombinasyonu" araması ve ters çözüm çekirdekte yok |
+| Weibull / incidents per 1000 | İstatistiksel dağılım modeli yok |
+| Peak Torque eğrisi | Ayrı büyüklük; §8.13 açıkça **"ortalama"** diyor |
+
+##### İki sessiz birim tuzağı (ikisi de testli)
+
+`wearPct` çekirdekte **ORAN** (0,007), tedarikçi sayfasında **%0,70** — ham
+basılsaydı okuyan kişi payı yüz kat küçük sanırdı. `Number(null) === 0` ise
+girilmemiş bir alanı "0 ölçüldü" gibi gösterirdi; `_frNum` null/undefined/''
+değerlerini NaN'a çeviriyor ve rapor `—` basıyor.
+
+##### Grafik ölçeği — tekillik kesilir
+
+Belt Tension Control grafiğinde kol açısı çözüm aralığının ucuna yaklaşırken
+gerginlik **tekilleşiyor** (T milyarlara çıkıyor). Ham veriye göre ölçeklenen
+eksen grafiği okunmaz yapıyordu: çalışma noktaları x ekseninin üstüne yapışıyor,
+y etiketleri 9 haneli sayıya dönüyordu (ölçüldü). Eksen çalışma konumlarının
+gerginliğine göre sınırlanıyor ve eğri orada kesiliyor — Gates çıktısı da öyle.
+Tolerans/aşınma 0 iken dört konum aynı açıya oturduğu için etiketler **tek
+çizgide birleştiriliyor**.
+
+##### Biçim: devir SATIR, kasnak SÜTUN
+
+§8.11 ve §8.17 devir başına ayrı tablo basıyordu; aynı span boyları dokuz kez
+tekrarlanıyor ve belge 41 000 px'e çıkıyordu (ölçüldü). Matris biçiminde bir
+sütunu yukarıdan aşağı okumak, o kasnağın devirle nasıl değiştiğini doğrudan
+gösteriyor — tedarikçi sayfasının biçimi de bu.
+
 #### Çalışma çevrimi ve çözüm
 
 Duty satırları Çözücü düğümünde durur ve **kW sözlüğü DÜĞÜM KİMLİĞİYLE
@@ -419,7 +483,7 @@ Servis faktörü (sayfada 1.3) kayma emniyetinin istenen alt sınırı olarak so
 tablosunda hüküm veriyor — eşik eskiden 1.3'te SABİTTİ, artık kullanıcının
 girdiği değer.
 
-**Sırada:** Sonuçlar sayfasında FEAD çözüm sekmesi (kanal yayını) + Rapor.
+**Sırada:** Sonuçlar sayfasında FEAD çözüm sekmesi (kanal yayını).
 
 ### Ölçüm Görüntüleyici (`viewer/`)
 
@@ -552,6 +616,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/fead-core.test.js` | `js/fead-core.js` + `tests/fixtures/fead-validation.js` | **FEAD çekirdeğinin doğrulama kapısı**: 17 Gates raporu / 2095 değer (çalışma %0.5, Load dahil %1.5, kol açısı 0.2°), 8 koruma mekanizması, SPEC §9 yapısal özdeşlikleri (sarım değişmezi, `L_pitch−L_eff=2π·hb`, çevrim kapanışı, sürücü gücü), UMD tarayıcı köprüsü |
 | `tests/unit/fead-model.test.js` | `js/fead-model.js` | **Köprü kapısı**: AG00686 MFSim KANVAS DÜĞÜMÜ olarak kurulup Gates sayılarını üretiyor mu (span %0.5, sarım 0.2°, Mean kol açısı 0.2°); temas tarafı üç katmanlı çözümü, sürücü rolü, `dia→od` göçü, ad tekilleştirme, hata çevirisi. Ayrıca **ters temas tarafının hata VERMEDİĞİNİ** belgeler (rozetin varlık nedeni). **Duty kapısı**: AG00686 duty tablosunun çıkış gerilmeleri ve hubload'ları %0.5 içinde; kW'ın kimlikle anahtarlanması (yeniden adlandırmada kaybolmuyor), sürücü gücünün toplamdan hesaplanması, ateşleme frekansı, yorulma dağılımının çapa bağlı olması, katalog oranının ÇAPTAN hesaplanması. **Sıcaklık kapısı**: satır başına °C → tek °C indirgemesi hasar-eşdeğer (tek sıcaklıkta birebir aynı, dağılımda aritmetik ortalamanın üstünde), ağırlık `dc·v`, açıkça girilen %0 sıfır ağırlıklı; **yorulma modeli** seçimi dağılıma geçer, mutlak ömre geçemez ve bu yazılır |
 | `tests/unit/cp-fead.test.js` | `js/cp-fead.js` + `js/components.js` | FEAD sunum katmanı: kanvas rozeti, `feadContact` varsayılanları, panel smoke testleri, alt-sistem sözleşmesi, `fead-*` tip tanımları; panelin HANGİ ALANLARI sorduğu (montaj merkezi ↔ serbest açı), servis faktörü hükmü; **kayışın kaburgalı yüzü** (diş yönü + aynalanmış çevrim) ve **telin komşuya bakan kenarı** (oran kuralı, elle taşınan portun kazanması) |
+| `tests/unit/cp-fead-report.test.js` | `js/cp-fead-report.js` + `tools/report-assets/fead-theory-source.html` | **Rapor içeriği**: Türkçe sayı biçimi (gerçek eksi, `—` ≠ 0), `wearPct` oran→yüzde çevrimi, sarım açılarının DERECE basılması, Σsarım=360 ve `L_pitch−L_eff=2πh_b` denetimlerinin belgede görünmesi, sürücü kW sütununun duty tablosunda OLMAMASI, çözülemeyen konumun `Err.` ile işaretlenmesi, `undefined`/`NaN`/`[object` sızmaması, "ortalama tork ≠ peak", sistem burulma modunun yokluğunun yazılması, uygunluk hükmünün servis faktörünü kullanması, şekil/tablo numaralarının boşluksuz ve her üretimde sıfırlanması, şablon tokenlarının tek kez geçmesi, içindekiler id'lerinin üreteçle aynı olması |
 | `tests/unit/fead-example.test.js` | `js/fead-model.js` örnekleri + FEAD_INFORMATION | **Tedarikçi sayfası çıpası** (Gates'ten bağımsız ikinci doğrulama): kayış boyu 1715 mm, kol boyu 90.0 mm, Spring Mean Load 22.07 Nm, tahrik oranı 1.1; sayfanın devir→kW tabloları; **iki sessiz kanalın** ölçülmüş belgesi (montaj merkezi ↔ serbest açı 2.6×, tasarım gerginliği ↔ yay dengesi 250 N) |
 | `tests/unit/canvas-space.test.js` | `js/canvas-space.js` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama |
 | `tests/unit/module-start-center.test.js` | `js/components.js` `veStartModule` | Karşılama kartından gelen modül bloğu görünümün TAM ortasına düşer (kabuk senkronu ölçümden önce) |

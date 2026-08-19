@@ -235,13 +235,14 @@ describe('script gövdesinin ham metin KİPLERİ — tarayıcıyla birebir', () 
 });
 
 describe('rapor üreticileri kapanışı tam kurala göre kaçırıyor', () => {
-  // İndirilen HTML raporlara KaTeX gömen iki yer. Kaçış ">" zorunlu tutarsa
+  // İndirilen HTML raporlara KaTeX gömen ÜÇ yer. Kaçış ">" zorunlu tutarsa
   // "</script " ve "</script/" biçimleri sızar ve raporda formül yerine yüz
   // binlerce karakter ham JS görünür. KaTeX gövdesi upstream'den yeniden
   // üretiliyor (tools/report-assets/) — sürüm yükseltmesinde içerik değişir.
   test.each([
     ['js/results.js', path.join(ROOT, 'js/results.js')],
     ['js/cp-mount-report.js', path.join(ROOT, 'js/cp-mount-report.js')],
+    ['js/cp-fead-report.js', path.join(ROOT, 'js/cp-fead-report.js')],
   ])('%s katexJs kaçışı ">" zorunlu tutmuyor', (rel, abs) => {
     const src = fs.readFileSync(abs, 'utf8');
     const m = src.match(/katexJs\s*=\s*[^;]*?\.replace\((\/[^/]+\/[gi]*)/);

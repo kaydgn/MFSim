@@ -41,10 +41,11 @@ const DOSYALAR = [
 //   annotations.js     : kullanıcı tuval notunu +/- ile büyütür; boyut bir
 //                        KULLANICI AYARI, tasarım jetonu değil.
 //   cp-mount-report.js : MFSim arayüzüne değil, İNDİRİLEN BAĞIMSIZ bir HTML
-//                        rapor dosyasına yazıyor (Blob → a.download). O belgenin
+//   cp-fead-report.js    rapor dosyasına yazıyor (Blob → a.download). O belgenin
 //                        kendi tipografisi var ve --fs-* jetonlarına erişimi
-//                        YOK; em-göreli ölçüler orada doğru olan.
-const MUAF = ['js/annotations.js', 'js/cp-mount-report.js'];
+//                        YOK; em-göreli ölçüler orada doğru olan. İki rapor
+//                        üreteci de AYNI şablon CSS'ini kullanıyor.
+const MUAF = ['js/annotations.js', 'js/cp-mount-report.js', 'js/cp-fead-report.js'];
 
 // Serbest (jetona bağlanmamış) font-size bildirimi arar.
 // `font-size:var(--fs-...)` biçimi geçerli; `font-size:12px` / `0.7rem` değil.
@@ -114,15 +115,16 @@ describe('muafiyetler gerekçeli kalsın', () => {
     expect(src).toMatch(/annot\.fontSize/);
   });
 
-  test('rapor üreteci gerçekten bağımsız belge üretiyor', () => {
-    const src = fs.readFileSync(path.join(ROOT, 'js/cp-mount-report.js'), 'utf8');
-    // Muafiyetin sebebi: çıktı canlı arayüze değil, indirilen bir dosyaya gidiyor.
-    expect(src).toMatch(/new Blob\(/);
-    expect(src).toMatch(/\.download\s*=/);
-  });
+  test.each(['js/cp-mount-report.js', 'js/cp-fead-report.js'])(
+    '%s gerçekten bağımsız belge üretiyor', (f) => {
+      const src = fs.readFileSync(path.join(ROOT, f), 'utf8');
+      // Muafiyetin sebebi: çıktı canlı arayüze değil, indirilen bir dosyaya gidiyor.
+      expect(src).toMatch(/new Blob\(/);
+      expect(src).toMatch(/\.download\s*=/);
+    });
 
   test('muafiyet listesi büyümedi', () => {
     // Yeni muafiyet eklemek bilinçli bir karar olmalı; sessizce büyümesin.
-    expect(MUAF).toEqual(['js/annotations.js', 'js/cp-mount-report.js']);
+    expect(MUAF).toEqual(['js/annotations.js', 'js/cp-mount-report.js', 'js/cp-fead-report.js']);
   });
 });
