@@ -763,14 +763,18 @@ function getFeadTensionerPropertiesHTML(node){
         + 'M = önYük + katsayı × göreli; mutlak açı = serbest + sense × göreli. Sense '
         + 'verilmezse çekirdek kayışın kısaldığı yönden kendisi bulur.'));
 
-  html += _feadCard('Mekanik Sınır ve Atalet', 'opsiyonel', 'var(--text-secondary)',
+  html += _feadCard('Mekanik Sınır ve Atalet', 'burulma modeli için', 'var(--text-secondary)',
       _feadGrid(node, [
         { key:'loadStopRelDeg', label:'Load stop (göreli) [°]', ph:'62.4' },
-        { key:'armInertia',     label:'Kol ataleti [kg·m²]',  ph:'0.0076', step:'0.0001' }
-      ], 2)
+        { key:'armInertia',     label:'Kol ataleti [kg·m²]',  ph:'0.0009', step:'0.0001' },
+        { key:'pulleyMass',     label:'Kasnak kütlesi [kg]',   ph:'0.80',   step:'0.01' }
+      ], 3)
     + _feadHint('<b>Load stop</b> bir MEKANİK sınırdır, çalışma noktası değil — boş bırakılabilir. '
-        + '<b>Kol ataleti</b> yalnız kol modu tahmini için; raporun "Natural Frequency" değeriyle '
-        + 'karşılaştırılamaz (o, çok serbestlik dereceli bir burulma modudur).'));
+        + '<b>Kol ataleti</b> ve <b>kasnak kütlesi</b> burulma (dönel titreşim) modeline girer; '
+        + 'ikisi de raporun "Tensioner Data" satırlarında yazar. Kol, kasnağı kol boyu '
+        + 'yarıçapında taşıdığı için etkin atalet J<sub>kol</sub> + m·L² olur — <b>kütle '
+        + 'girilmezse birinci mod belirgin şekilde YÜKSEK çıkar</b> (BMC örneğinde 15.3 yerine '
+        + '20.3 Hz, +%32).'));
 
   html += '</div>';
   return html;
@@ -1972,6 +1976,9 @@ function veFeadSolve(nodeId){
   var res = veFeadAnalyze(build, {
     rows: veFeadDutyRows(node),
     cylinders: _feadNum(node && node.data && node.data.cylinders, 6),
+    // Burulma modelinin krank serbestliği kasnağın değil KRANK MİLİNİN ataletini
+    // ister; panel bu sayıyı zaten soruyor (bkz. veFeadTorsionalOpt).
+    crankInertia: _feadNum(node && node.data && node.data.crankInertia, 0),
     fatigueModel: (node && node.data && node.data.fatigueModel) || 'PK-2_2p-MT3'
   });
   res.solvedNodeId = nodeId;
@@ -2009,10 +2016,72 @@ function veFeadResultBlock(node){
 
   var h = '';
   if(R.duty.length) h += veFeadDutyResultTable(R);
+  if(R.torsional) h += veFeadTorsionalCard(R);
   if(R.fatigue) h += veFeadFatigueTable(R);
   if(R.life) h += veFeadLifeCard(R);
   h += veFeadLimitsBox(R);
   return h;
+}
+
+// ── BURULMA (DÖNEL TİTREŞİM) MODELİ ─────────────────────────────────────────
+// Çekirdek modu hesaplıyordu ama hiçbir yerde GÖRÜNMÜYORDU. Sayının mühendislik
+// karşılığı tek başına frekans değil, ateşleme frekansıyla ÇAKIŞIP çakışmaması:
+// FEAD'i uyaran baskın kuvvet motorun ateşleme mertebesidir ve duty tablosu
+// hangi devir bandında çalışıldığını zaten söylüyor. Kart bu örtüşmeyi
+// ARİTMETİK olarak kuruyor — yeni bir model değil, iki bilinen sayının
+// karşılaştırması — ve hüküm vermiyor, gözlem yazıyor.
+function veFeadTorsionalCard(R){
+  var T = R.torsional;
+  if(!T || !Number.isFinite(T.firstElasticHz)) return '';
+  var A = R.analysis;
+
+  var h = '<div style="display:flex; align-items:baseline; gap:8px; margin-bottom:6px;">'
+    + '<span style="font-size:var(--fs-h2); font-weight:700; color:var(--text-heading);">'
+    + _feadFmt(T.firstElasticHz, 1) + '</span>'
+    + '<span style="font-size:var(--fs-body); color:var(--text-muted);">Hz — 1. elastik mod</span></div>';
+
+  // Bütün elastik modlar. Rijit cisim modu (f = 0, sistem birlikte döner)
+  // LİSTELENMEZ ama SAYISI yazılır: tam 1 tane olmak zorunda, fazlası modelin
+  // koptuğunu (bir kasnağın kayıştan ayrıldığını) gösterir.
+  var mod = (T.elasticHz || []).slice(0, 6);
+  if(mod.length) h += _feadHint('Elastik modlar: <b>'
+    + mod.map(function(f){ return _feadFmt(f, 1); }).join(' · ') + '</b> Hz'
+    + ((T.elasticHz.length > mod.length) ? ' (+' + (T.elasticHz.length - mod.length) + ' tane)' : '')
+    + ' · rijit cisim modu ' + T.rigidBodyModes + ' (1 olmalı)'
+    + ' · serbestlik ' + (T.dofNames || []).length);
+
+  // Ateşleme frekansı bandıyla örtüşme.
+  if(A && A.duty && A.duty.length){
+    var fs = A.duty.map(function(d){ return d.firingHz; });
+    var lo = Math.min.apply(null, fs), hi = Math.max.apply(null, fs);
+    var ic = (T.elasticHz || []).filter(function(f){ return f >= lo && f <= hi; });
+    var rpmOf = function(f){
+      var d0 = A.duty[0];
+      return (d0 && d0.firingHz > 0) ? (f / d0.firingHz * d0.engineRpm) : NaN;
+    };
+    h += _feadHint('Duty tablosunun ateşleme frekansı bandı <b>' + _feadFmt(lo, 1) + '–'
+      + _feadFmt(hi, 1) + ' Hz</b>. '
+      + (ic.length
+          ? '<b style="color:var(--accent-warning);">Bu bandın içinde ' + ic.length
+            + ' elastik mod var</b> (' + ic.map(function(f){ return _feadFmt(f, 1); }).join(' · ')
+            + ' Hz ≈ ' + ic.map(function(f){ return _feadFmt(rpmOf(f), 0); }).join(' · ')
+            + ' rpm). Ateşleme mertebesi bu devirlerde modu uyarır.'
+          : 'Hiçbir elastik mod bu bandın içine düşmüyor; 1. mod '
+            + _feadFmt(rpmOf(T.firstElasticHz), 0) + ' rpm ateşleme mertebesine karşılık geliyor.'));
+  }
+
+  // TAKE-UP ÖZDEŞLİĞİ — modelin kendi iç tutarlılık kapısı. Kol→span uzama
+  // türevlerinin toplamı gergi take-up oranına EŞİT olmak zorunda; ayrışırsa
+  // geometri ile dinamik model farklı şeyi anlatıyor demektir.
+  if(T.takeupCheck && Number.isFinite(T.takeupCheck.errPct)){
+    var tk = T.takeupCheck.errPct, iyi = tk < 1;
+    h += _feadHint('Take-up özdeşliği: Σ(∂span/∂kol) ile gergi take-up oranı '
+      + '<b style="color:' + (iyi ? 'var(--accent-success)' : 'var(--accent-danger)') + ';">%'
+      + _feadFmt(tk, 3) + '</b> farkla ' + (iyi ? 'tutuyor' : 'TUTMUYOR') + '.');
+  }
+
+  return _feadCard('Burulma Titreşimi', 'çalışma (Mean) konumunda · kalibre model',
+    'var(--accent-warning)', h);
 }
 
 // Duty noktası başına: kasnak çıkış gerilmesi, hubload, kayma emniyeti.
@@ -2180,6 +2249,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadResultBlock: veFeadResultBlock, _feadForgetResults: _feadForgetResults,
     veFeadDutyResultTable: veFeadDutyResultTable, veFeadHubTable: veFeadHubTable,
     veFeadFatigueTable: veFeadFatigueTable, veFeadLifeCard: veFeadLifeCard,
+    veFeadTorsionalCard: veFeadTorsionalCard,
     veFeadDriveCard: veFeadDriveCard, veFeadEngineCard: veFeadEngineCard,
     veFeadMountReadout: veFeadMountReadout,
     veFeadPowerCurveCard: veFeadPowerCurveCard,
