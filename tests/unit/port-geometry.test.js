@@ -208,3 +208,154 @@ describe('veConnDirMark — telin ortasındaki yön oku', () => {
     expect(geri[1][0]).toBeLessThan(100);
   });
 });
+
+// ── PORT DAİRESİ TELİ TAKİP EDER (dinamik kenar) ────────────────────────────
+// KULLANICI ŞİKÂYETİ (2026-08-19, iki ekran görüntüsü): "topolojiyi el ile
+// manuel olarak bağlamaya çalıştığımda çok kötü bağlanıyor, bağlantı portları
+// denk gelmiyor."
+//
+// KÖK NEDEN: defaultPortSide artık DİNAMİK bir cevap verebiliyor — FEAD
+// kayışında bir portun varsayılan kenarı KOMŞUSUNUN nerede olduğuna bakıyor
+// (veFeadPortSideFor). Yani cevap, bir BAĞLANTI KURULUNCA ya da düğüm
+// SÜRÜKLENİNCE değişiyor. Telin ucu bunu görüyordu (getPortPosition her
+// tazelemede yeniden hesaplıyor); port DAİRESİ görmüyordu, çünkü DOM'a yazan
+// iki yol (ui-core createNode / state restoreState) yalnız
+// `def.portLayout || node.data.portPositions` varsa yazıyor — FEAD kasnağında
+// ikisi de yok. Daire, düğüm kurulurken hesaplanan KLASİK kenarda çakılı
+// kalıyordu.
+//
+// ÖLÇÜLDÜ (gerçek tarayıcı, elle bağlanan 5 kasnaklı halka): on uçtan altısı
+// 36.8 · 42.4 · 48.8 · 54 · 72 px sapmıştı; düzeltmeden sonra onu da 0.00 px.
+//
+// Buradaki kanca gerçeğin AYNISI: tarayıcıda da defaultPortSide global bir
+// veFeadPortSideFor'u çağırıyor (bkz. components.js). Gerçek fonksiyonun kendi
+// testleri cp-fead.test.js'te.
+describe('veSyncPortDom — port DOM\'u telin ucuyla aynı karede tazelenir', () => {
+  const KENAR = {};                        // { 'nodeId|portId': 'top'|... }
+  let eskiKanca;
+
+  const kutu = (n) => {
+    const el = document.createElement('div');
+    el.id = n.id;
+    el.innerHTML = '<div class="ve-node-box">'
+      + '<div class="ve-node-port input" data-port="input" style="' + vePortStyleAttr(n, 'input') + '"></div>'
+      + '<div class="ve-node-port output" data-port="output" style="' + vePortStyleAttr(n, 'output') + '"></div>'
+      + '</div>';
+    document.body.appendChild(el);
+    return el;
+  };
+  const stil = (nid, pid) => {
+    const e = document.querySelector('#' + nid + ' .ve-node-port[data-port="' + pid + '"]');
+    return { left: e.style.left, top: e.style.top };
+  };
+  const beklenen = (n, pid) => {
+    const s = vePortBoxStyle(n, pid);
+    return { left: s.left + 'px', top: s.top + 'px' };
+  };
+
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="ve-canvas"></div>'
+      + '<svg id="ve-connections-layer"></svg>';
+    // updateAllConnections'ın tarayıcıda hazır bulduğu komşuları (geçici tel,
+    // sınır çerçevesi, mini harita) test kapsamında sahteleriyle karşıla.
+    global.isConnecting = false;
+    global.veUpdateBoundary = () => {};
+    global.veMinimapUpdate = () => {};
+    Object.keys(KENAR).forEach((k) => delete KENAR[k]);
+    eskiKanca = global.veFeadPortSideFor;
+    global.veFeadPortSideFor = (n, p) => KENAR[n.id + '|' + p] || null;
+    global.nodes = [];
+    global.connections = [];
+  });
+  afterEach(() => { global.veFeadPortSideFor = eskiKanca; });
+
+  test('kenar sonradan değişince daire onu takip eder (regresyon)', () => {
+    const a = node({ id: 'a', x: 0, y: 0 });
+    const b = node({ id: 'b', x: 300, y: 0 });
+    global.nodes = [a, b];
+    kutu(a); kutu(b);
+    // Kuruluş anı: bağlantı yok → klasik kural (çıkış SAĞ, giriş SOL)
+    expect(stil('a', 'output')).toEqual({ left: '60px', top: '25px' });
+
+    // Kullanıcı bağlantıyı kurdu; komşu ALTTA kaldığı için kenar değişti
+    global.connections = [{ id: 'c', from: 'a', to: 'b', fromPort: 'output', toPort: 'input' }];
+    KENAR['a|output'] = 'bottom';
+    KENAR['b|input'] = 'top';
+
+    updateAllConnections();
+
+    // Daire artık telin çıktığı kenarda — ve iki sayı da TEK kaynaktan
+    expect(stil('a', 'output')).toEqual(beklenen(a, 'output'));
+    expect(stil('b', 'input')).toEqual(beklenen(b, 'input'));
+    expect(stil('a', 'output')).toEqual({ left: '27.5px', top: '55px' });
+  });
+
+  test('dairenin MERKEZİ ile telin ucu aynı noktada (sapma 0)', () => {
+    const a = node({ id: 'a', x: 0, y: 0 });
+    const b = node({ id: 'b', x: 0, y: 300 });
+    global.nodes = [a, b];
+    kutu(a); kutu(b);
+    global.connections = [{ id: 'c', from: 'a', to: 'b', fromPort: 'output', toPort: 'input' }];
+    KENAR['a|output'] = 'bottom';
+    KENAR['b|input'] = 'top';
+    updateAllConnections();
+
+    const k = VE_NODE_BORDER + VE_PORT_SIZE / 2;   // dairenin sol-üstünden merkezine
+    [[a, 'output'], [b, 'input']].forEach(([n, pid]) => {
+      const s = stil(n.id, pid);
+      const merkez = { x: n.x + parseFloat(s.left) + k, y: n.y + parseFloat(s.top) + k };
+      const uc = getPortPosition(n, pid);
+      expect(Math.hypot(merkez.x - uc.x, merkez.y - uc.y)).toBeCloseTo(0, 6);
+    });
+  });
+
+  test('düğüm SÜRÜKLENİNCE de takip eder (kenar ters döner)', () => {
+    const a = node({ id: 'a', x: 0, y: 0 });
+    const b = node({ id: 'b', x: 300, y: 0 });
+    global.nodes = [a, b];
+    kutu(a); kutu(b);
+    global.connections = [{ id: 'c', from: 'a', to: 'b', fromPort: 'output', toPort: 'input' }];
+    KENAR['a|output'] = 'right';
+    updateAllConnections();
+    expect(stil('a', 'output').left).toBe('60px');
+
+    b.x = -300;                       // komşu artık SOLDA
+    KENAR['a|output'] = 'left';
+    updateAllConnections();
+    expect(stil('a', 'output')).toEqual(beklenen(a, 'output'));
+    expect(stil('a', 'output').left).toBe('-5px');
+  });
+
+  // Elle taşınan port (node.data.portPositions) her zaman kazanır — senkron
+  // onu EZMEMELİ, yoksa sağ tıkla port taşımak işe yaramaz hâle gelirdi.
+  test('elle taşınan portu ezmez', () => {
+    const a = node({ id: 'a', x: 0, y: 0, data: { portPositions: { output: { side: 'top' } } } });
+    global.nodes = [a];
+    kutu(a);
+    KENAR['a|output'] = 'bottom';     // dinamik kural BAŞKA bir kenar diyor
+    updateAllConnections();
+    expect(stil('a', 'output')).toEqual(beklenen(a, 'output'));
+    expect(stil('a', 'output').top).toBe('-5px');            // ÜST kenar korundu
+  });
+
+  // Klasik topolojilerde (Araç Performans, Takoz) kenar hiç değişmiyor: senkron
+  // orada tek bir yazma bile yapmamalı. ÖLÇÜLDÜ (gerçek tarayıcı, 17 düğüm /
+  // 12 bağlantılı örnek): bütün kenarlar left/right, bütün sapmalar 0.
+  test('kenar değişmiyorsa DOM\'a yazmaz', () => {
+    const a = node({ id: 'a', x: 0, y: 0 });
+    const b = node({ id: 'b', x: 300, y: 0 });
+    global.nodes = [a, b];
+    kutu(a); kutu(b);
+    global.connections = [{ id: 'c', from: 'a', to: 'b', fromPort: 'output', toPort: 'input' }];
+    const el = document.querySelector('#a .ve-node-port[data-port="output"]');
+    let yazma = 0;
+    const gercek = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el.style), 'left');
+    Object.defineProperty(el.style, 'left', {
+      configurable: true,
+      get() { return gercek.get.call(this); },
+      set(v) { yazma++; gercek.set.call(this, v); },
+    });
+    updateAllConnections();
+    expect(yazma).toBe(0);
+  });
+});

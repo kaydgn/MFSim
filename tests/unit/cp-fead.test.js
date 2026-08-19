@@ -1106,3 +1106,151 @@ describe('kol konumu seçimi', () => {
     expect(typeof fead.veFeadLayoutCardHTML(lay)).toBe('string');
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+//  "OTOMATİK DÜZENLE" FEAD'DE HALKA KURAR
+// ════════════════════════════════════════════════════════════════════════════
+// Genel yerleştirici (tidy-layout.js) katmanlı bir DAG düzeni kuruyor: kenarlar
+// soldan sağa sıralı katmanlara bölünüyor. FEAD ise kapalı bir ÇEVRİM; katmanlama
+// onu keyfî bir yerden kırıp dönüş telini bütün kümenin üstünden geçiriyor.
+// ÖLÇÜLDÜ (gerçek tarayıcı, BMC örneği, 6 kasnak): kesişen tel çifti 0 → 1 ve
+// altı kasnak tek bir yatay sıraya diziliyordu; halka düzeniyle yine 0.
+describe('veFeadArrangeRing — kayış çevrimi halka olarak dizilir', () => {
+  const kur = (n, ekTip) => {
+    const tipler = ['fead-crank', 'fead-alternator', 'fead-idler', 'fead-ac',
+                    'fead-waterpump', 'fead-tensioner', 'fead-idler', 'fead-alternator'];
+    const ns = [];
+    for (let i = 0; i < n; i++) {
+      const t = tipler[i % tipler.length];
+      const d = componentDefs[t];
+      ns.push({ id: 'r' + i, type: t, def: d, x: 0, y: 0,
+                width: d.defaultWidth || 65, height: d.defaultHeight || 60,
+                data: i === 0 ? { driver: true } : {} });
+    }
+    (ekTip || []).forEach((t, i) => {
+      const d = componentDefs[t];
+      ns.push({ id: 'a' + i, type: t, def: d, x: 0, y: 0,
+                width: d.defaultWidth || 65, height: d.defaultHeight || 60, data: {} });
+    });
+    global.nodes = ns;
+    global.connections = [];
+    for (let i = 0; i < n; i++) {
+      global.connections.push({ id: 'c' + i, from: 'r' + i, to: 'r' + ((i + 1) % n),
+                                fromPort: 'output', toPort: 'input' });
+    }
+    return ns;
+  };
+  const merkez = (nd) => ({ x: nd.x + nd.width / 2, y: nd.y + nd.height / 2 });
+
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="ve-canvas"></div>';
+    global.updateAllConnections = jest.fn();
+  });
+
+  test('kasnaklar ORTAK bir çember üzerinde ve kayış SIRASINDA dizilir', () => {
+    const ns = kur(6);
+    expect(fead.veFeadArrangeRing()).toBe(true);
+    const R = ns.map((n) => Math.hypot(merkez(n).x - 3000, merkez(n).y - 3000));
+    // Hepsi aynı yarıçapta (yuvarlama payı)
+    R.forEach((r) => expect(r).toBeCloseTo(R[0], 0));
+    // Açılar kayış sırasında, SAAT YÖNÜNDE ve eşit aralıklı
+    const aci = ns.map((n) => Math.atan2(merkez(n).y - 3000, merkez(n).x - 3000));
+    const adim = aci.map((a, i) => {
+      let d = a - aci[(i - 1 + 6) % 6];
+      while (d <= 0) d += 2 * Math.PI;
+      return d;
+    });
+    adim.forEach((d) => expect(d).toBeCloseTo((2 * Math.PI) / 6, 2));
+    // Sürücü TEPEDE başlar (kullanıcı kayışı oradan okumaya başlıyor)
+    expect(merkez(ns[0]).y).toBeLessThan(3000);
+    expect(merkez(ns[0]).x).toBeCloseTo(3000, 0);
+  });
+
+  // Sabit bir yarıçap büyük kutularda onları üst üste bindirirdi: kiriş
+  // 2R·sin(π/N) yarıçaptan KÜÇÜK. Yarıçap kutudan TÜRETİLİYOR — aynı halka
+  // büyük kutularla kurulunca genişlemek ZORUNDA.
+  test('yarıçap kutu ölçüsüne göre büyür (sabit değil)', () => {
+    const yaricap = () => Math.hypot(merkez(global.nodes[0]).x - 3000,
+                                     merkez(global.nodes[0]).y - 3000);
+    kur(6);
+    fead.veFeadArrangeRing();
+    const kucuk = yaricap();
+    const ns = kur(6);
+    ns.forEach((n) => { n.width = 180; n.height = 140; });
+    fead.veFeadArrangeRing();
+    expect(yaricap()).toBeGreaterThan(kucuk * 1.5);
+  });
+
+  test('komşu kutular çakışmaz (yarıçap kutu köşegeninden türer)', () => {
+    [2, 3, 5, 8].forEach((n) => {
+      const ns = kur(n);
+      // Kutuları BÜYÜT: 190 px'lik sabit bir yarıçap N=8'de 145 px kiriş verir,
+      // 228 px köşegenli kutu oraya sığmaz — sabit yarıçap burada çakışır.
+      ns.forEach((nd) => { nd.width = 180; nd.height = 140; });
+      fead.veFeadArrangeRing();
+      const kasnak = ns.slice(0, n);
+      for (let i = 0; i < n; i++) {
+        const a = kasnak[i], b = kasnak[(i + 1) % n];
+        if (n === 2 && i === 1) continue;                 // aynı çift
+        const kose = Math.max(Math.hypot(a.width, a.height), Math.hypot(b.width, b.height));
+        expect(Math.hypot(merkez(a).x - merkez(b).x, merkez(a).y - merkez(b).y))
+          .toBeGreaterThanOrEqual(kose);
+      }
+    });
+  });
+
+  // Araç düğümleri halkanın İÇİNE düşerse teller kutuların arkasından geçer —
+  // veFeadLoadExample'ın çözdüğü sorunun aynısı (ölçüldü: "Başlangıç ve
+  // Örnekler" kutusu tam Klima ↔ Avara 1 açıklığının üstüne oturuyordu).
+  test('araç düğümleri halkanın DIŞINDA; Kayış Yolu kartı sağ şeritte', () => {
+    const ns = kur(4, ['fead-belt', 'fead-solver', 'fead-layout']);
+    fead.veFeadArrangeRing();
+    const R = Math.hypot(merkez(ns[0]).x - 3000, merkez(ns[0]).y - 3000);
+    const belt = ns.find((n) => n.type === 'fead-belt');
+    const lay = ns.find((n) => n.type === 'fead-layout');
+    expect(merkez(belt).x).toBeLessThan(3000 - R);       // sol şerit
+    expect(lay.x).toBeGreaterThan(3000 + R);             // sağ şerit
+  });
+
+  test('iki kasnaktan az varsa düzen KURULMAZ (genel yerleştirici çalışsın)', () => {
+    kur(1);
+    expect(fead.veFeadArrangeRing()).toBe(false);
+    global.nodes = []; global.connections = [];
+    expect(fead.veFeadArrangeRing()).toBe(false);
+  });
+
+  // Bağlantı sırası kullanıcının hangi teli önce çektiğine göre değişir; düzen
+  // KAYIŞ sırasını izlemeli, dizideki sırayı değil.
+  test('düğüm dizisi karışık olsa da halka kayış sırasını izler', () => {
+    const ns = kur(4);
+    ns.reverse();                                        // dizi ters, kayış aynı
+    global.nodes = ns;
+    fead.veFeadArrangeRing();
+    const sira = (typeof veFeadRouteOrder === 'function')
+      ? veFeadRouteOrder(global.nodes, global.connections) : [];
+    const aci = sira.map((n) => Math.atan2(merkez(n).y - 3000, merkez(n).x - 3000));
+    for (let i = 1; i < aci.length; i++) {
+      let d = aci[i] - aci[i - 1];
+      while (d <= 0) d += 2 * Math.PI;
+      expect(d).toBeCloseTo((2 * Math.PI) / 4, 2);
+    }
+  });
+
+  // Kapı: genel yerleştirici FEAD'e HİÇ girmemeli.
+  test('veTidyLayout FEAD topolojisinde halka yerleştiricisine devreder', () => {
+    const tidy = require('../../js/tidy-layout.js');
+    global.veFeadArrangeRing = jest.fn(() => true);
+    global._feadIsPulley = M._feadIsPulley;
+    kur(4);
+    tidy.veTidyLayout();
+    expect(global.veFeadArrangeRing).toHaveBeenCalled();
+    // FEAD DIŞI topolojide devretmez
+    global.veFeadArrangeRing.mockClear();
+    global.nodes = [{ id: 'g1', type: 'gearbox', def: {}, x: 0, y: 0, data: {} },
+                    { id: 'g2', type: 'gearbox', def: {}, x: 0, y: 0, data: {} }];
+    global.connections = [];
+    tidy.veTidyLayout();
+    expect(global.veFeadArrangeRing).not.toHaveBeenCalled();
+    delete global.veFeadArrangeRing;
+  });
+});
