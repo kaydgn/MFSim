@@ -23,6 +23,14 @@ permissions:
   id-token: write
   actions: write   # aynı run'da kalan "github-pages" artifact'ını silebilmek için
 
+# ZAMAN SINIRI (her job'da timeout-minutes): GitHub varsayılanı 360 DAKİKA. Main
+# akışı aşağıdaki 'pages' grubunda ve cancel-in-progress:false olduğu için, ASILI
+# kalan tek bir adım ardındaki bütün deploy'ları o süre boyunca kuyrukta tutar.
+# 2026-08-19'da tam olarak bu oldu: 'Chromium kur' adımı — normalde 1 dk 40 sn —
+# hiçbir test gövdesine ulaşmadan 30 dakikadan uzun asılı kaldı ve koşu ancak ELLE
+# iptal edilerek bitti; iptal oturana kadar 'Re-run' da kabul edilmiyordu. Sınır
+# konunca aynı durum kendiliğinden kırmızıya döner, grup boşalır ve yeniden
+# çalıştırma işe yarar. Değerler son yeşil koşunun ÖLÇÜLEN sürelerinin katıdır.
 concurrency:
   # GitHub Pages aynı anda TEK deployment'a izin verir → main akışı "pages"
   # grubunda sırayla koşar ve iptal edilmez. PR koşumları bu gruba GİRMEZ:
@@ -37,6 +45,7 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10          # ölçülen süre: 1 dk 17 sn
     steps:
       - uses: actions/checkout@v4
 
@@ -87,6 +96,7 @@ jobs:
   # (npm run test:e2e); buradaki iş "dağıtılan şey açılıyor mu" sorusu.
   e2e-urun:
     runs-on: ubuntu-latest
+    timeout-minutes: 20          # ölçülen süre: 3 dk 06 sn
     steps:
       - uses: actions/checkout@v4
 
@@ -129,6 +139,7 @@ jobs:
     # PR'da Pages artifact'ı ÜRETİLMEZ: PR'ın işi doğrulama, yayın değil.
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 10          # ölçülen süre: 12 sn
     steps:
       - uses: actions/checkout@v4
 
@@ -192,6 +203,7 @@ jobs:
       name: github-pages
       url: ${{ steps.d1.outputs.page_url || steps.d2.outputs.page_url || steps.d3.outputs.page_url }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15          # ölçülen süre: 9 sn + yeniden deneme bekleyişleri
     steps:
       # GitHub Pages backend zaman zaman geçici "Deployment failed, try again
       # later." hatası verir — özellikle art arda hızlı merge/re-run'larda önceki
