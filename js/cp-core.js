@@ -172,6 +172,7 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
 // DAR "eylem kartı" + kompakt-sol kimlik (ortalı-simge boşluğu gitsin). Salt sunum.
 var VE_COMPACT_PANEL_TYPES = ['mnt-solver', 'mnt-report', 'mount-analysis',
   'fead-analysis', 'fead-example', 'fead-report',
+  'structural-analysis',
   'arac-performans', 'terminator', 'sensor', 'scenario', 'coast-down', 'propshaft', 'differential', 'wheel'];
 
 // Son gösterilen bileşen — pencere konumunu sıfırlamak için. Başka bileşene
@@ -269,6 +270,16 @@ function showNodeProperties(node) {
     html += getMntModulePropertiesHTML(node);
   } else if(node.type === 'fead-analysis') {
     html += getFeadModulePropertiesHTML(node);
+  } else if(node.type === 'structural-analysis') {
+    html += getStrModulePropertiesHTML(node);
+  } else if(node.type === 'str-geometry') {
+    html += getStrGeometryPropertiesHTML(node);
+  } else if(node.type === 'str-mesh') {
+    html += getStrMeshPropertiesHTML(node);
+  } else if(node.type === 'str-bc') {
+    html += getStrBCPropertiesHTML(node);
+  } else if(node.type === 'str-results') {
+    html += getStrResultsPropertiesHTML(node);
   } else if(node.type === 'fead-tensioner') {
     html += getFeadTensionerPropertiesHTML(node);
   } else if(node.type === 'fead-crank' || node.type === 'fead-alternator' || node.type === 'fead-ac'

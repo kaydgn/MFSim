@@ -32,6 +32,10 @@ function veAttachNodeDrag(nodeEl, node) {
       veFeadOpenEditor(node.id);
       return;
     }
+    if(node.type === 'structural-analysis' && typeof veStrOpenEditor === 'function') {
+      veStrOpenEditor(node.id);
+      return;
+    }
     if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
   });
   nodeEl.addEventListener('mousedown', function(e) {
