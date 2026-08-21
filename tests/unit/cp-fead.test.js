@@ -1254,3 +1254,199 @@ describe('veFeadArrangeRing — kayış çevrimi halka olarak dizilir', () => {
     delete global.veFeadArrangeRing;
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+//  YÖN GÜLÜ TAŞINABİLİR — ve taşınınca ŞERİDİ ŞEMAYA BIRAKIR
+// ════════════════════════════════════════════════════════════════════════════
+// Gül varsayılan yerinde (sağ alt) dururken şemadan 54 px'lik bir sağ şerit
+// ayrılıyor; 420 px'lik kartın SEKİZDE BİRİ yalnız dört sayı için. Kartı
+// daraltmak isteyen kullanıcının önündeki asıl engel buydu.
+//
+// Buradaki testlerin ölçtüğü şey "gül taşınabiliyor mu" değil — asıl kazanç
+// ŞERİDİN GERİ ALINMASI, ve o kazanç ancak ÇİZİMİN BÜYÜMESİYLE görülür. Kanca
+// kurulup şerit ayrılmaya devam etseydi arayüz "çalışıyor" görünür, kart yine
+// daralmazdı.
+describe('yön gülünün yeri', () => {
+  const kurCozulur = () => {
+    const crk = kasnak('fead-crank', { od: 160, x: 0, y: 0, driver: true }, 'CRK');
+    const idr = kasnak('fead-idler', { od: 75, x: -72, y: 267 }, 'IDR');
+    const ac = kasnak('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
+    const ten = kasnak('fead-tensioner', {
+      od: 75, pivotX: -180, pivotY: 100, armLen: 90,
+      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1
+    }, 'TEN');
+    const belt = kasnak('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6 });
+    const sv = kasnak('fead-solver', { designTensionN: 765.7, driveRatio: 1, lengthOffsetMm: 3.5 });
+    const lay = kasnak('fead-layout', {});
+    global.nodes = [crk, idr, ac, ten, belt, sv, lay];
+    global.connections = [[crk, idr], [idr, ac], [ac, ten], [ten, crk]]
+      .map(([a, b]) => ({ id: 'c' + a.id + b.id, from: a.id, to: b.id, fromPort: 'output', toPort: 'input' }));
+    return { build: veFeadBuildFromCanvas(), lay };
+  };
+  // Çizimin ölçeği: en büyük kasnak dairesinin yarıçapı (SVG'nin kendi sayısı).
+  const enBuyukR = (svg) => Math.max(...[...svg.matchAll(
+    /<circle data-ve="pulley"[^>]*r="([-\d.]+)"/g)].map((m) => +m[1]));
+
+  test('varsayılan yer sağ alt köşe; taşınmış sayılmaz', () => {
+    const y = fead.veFeadCompassPlace(420, 298, null);
+    expect(y.moved).toBe(false);
+    expect(y.cx).toBeCloseTo(420 - fead.VE_FEAD_ROSE_W / 2 - 4, 6);
+    expect(y.cy).toBeCloseTo(298 - fead.VE_FEAD_ROSE_W / 2 - 8, 6);
+  });
+
+  test('kenetleme: gül hangi kesir verilirse verilsin çerçevenin İÇİNDE kalır', () => {
+    const m = fead.VE_FEAD_ROSE_HALF + 2;
+    [[-5, -5], [0, 0], [0.5, 0.5], [1, 1], [9, 9]].forEach(([fx, fy]) => {
+      const y = fead.veFeadCompassPlace(420, 298, { fx, fy });
+      expect(y.moved).toBe(true);
+      expect(y.cx).toBeGreaterThanOrEqual(m);
+      expect(y.cx).toBeLessThanOrEqual(420 - m);
+      expect(y.cy).toBeGreaterThanOrEqual(m);
+      expect(y.cy).toBeLessThanOrEqual(298 - m);
+    });
+  });
+
+  test('gülden de küçük bir kartta merkeze oturur (yarısı dışarıda kalmaz)', () => {
+    const y = fead.veFeadCompassPlace(40, 30, { fx: 1, fy: 1 });
+    expect(y.cx).toBeCloseTo(20, 6);
+    expect(y.cy).toBeCloseTo(15, 6);
+  });
+
+  // ASIL KAZANÇ — ve NEREDE ortaya çıktığı.
+  //
+  // Ölçek s = min(genişlik/spanX, yükseklik/spanY). Kart GENİŞken bağlayıcı
+  // olan yükseklik, dolayısıyla 54 px'lik şerit ölçeği hiç kısıtlamıyor:
+  // ÖLÇÜLDÜ (BMC, 420×298) kazanç %0.0. Kullanıcı kartı DARALTTIĞI anda
+  // bağlayıcı olan genişlik oluyor ve şerit doğrudan çizimden kesiyor:
+  //   340×298 → %21.6 · 300×240 → %17.3 · 260×200 → %16.5 · 220×180 → %33.7
+  // Bu yüzden test dar kartta ölçüyor: özelliğin varlık sebebi orası.
+  // Ölçüm GERÇEK örnekle (BMC, 6 kasnak): kazanç topolojinin en-boy oranına
+  // bağlı ve yukarıdaki dört kasnaklı çizim fixture'ı çok uzun, yani her
+  // ölçüde yükseklik-bağlı kalıyor — ondan ölçmek özelliği hiç sınamazdı.
+  const bmc = () => {
+    const pack = veFeadExampleNodes('BMC_FEAD_2026');
+    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    global.nodes = pack.nodes; global.connections = pack.connections;
+    return veFeadBuildFromCanvas();
+  };
+
+  test('gül taşınınca sağ şerit ŞEMAYA bırakılır — DAR kartta çizim büyür', () => {
+    const build = bmc();
+    const dar = fead.veFeadLayoutSVG(build, 340, 298, { nodeId: 'lay' });
+    const genis = fead.veFeadLayoutSVG(build, 340, 298,
+      { nodeId: 'lay', compassPos: { fx: 0.12, fy: 0.12 } });
+    expect(enBuyukR(genis) / enBuyukR(dar)).toBeGreaterThan(1.15);   // ölçüldü: %21.6
+  });
+
+  test('kart genişken şerit ölçeği kısıtlamıyor (kazanç dar kartta doğuyor)', () => {
+    const build = bmc();
+    const a = fead.veFeadLayoutSVG(build, 420, 298, { nodeId: 'lay' });
+    const b = fead.veFeadLayoutSVG(build, 420, 298,
+      { nodeId: 'lay', compassPos: { fx: 0.12, fy: 0.12 } });
+    expect(enBuyukR(b)).toBeCloseTo(enBuyukR(a), 2);
+  });
+
+  test('gül verilen kesire oturur ve çember data-cx ile aynı noktadadır', () => {
+    const { build } = kurCozulur();
+    const svg = fead.veFeadLayoutSVG(build, 420, 298,
+      { nodeId: 'lay', compassPos: { fx: 0.3, fy: 0.7 } });
+    const g = /<g data-ve="compass-group" data-cx="([-\d.]+)" data-cy="([-\d.]+)"/.exec(svg);
+    expect(g).not.toBeNull();
+    expect(+g[1]).toBeCloseTo(0.3 * 420, 1);
+    expect(+g[2]).toBeCloseTo(0.7 * 298, 1);
+    const c = /<g data-ve="compass"[^>]*><circle cx="([-\d.]+)" cy="([-\d.]+)"/.exec(svg);
+    expect(+c[1]).toBeCloseTo(+g[1], 6);
+    expect(+c[2]).toBeCloseTo(+g[2], 6);
+  });
+
+  test('taşıma kancası YALNIZ düğüm kimliği verilince kurulur (rapor/dışa aktarma değil)', () => {
+    const { build } = kurCozulur();
+    const kartta = fead.veFeadLayoutSVG(build, 420, 298, { nodeId: 'lay-7' });
+    expect(kartta).toMatch(/veFeadCompassDragStart\(event,'lay-7'\)/);
+    expect(kartta).toMatch(/veFeadCompassReset\('lay-7'\)/);
+    expect(kartta).toMatch(/cursor:move/);
+    expect(kartta).toMatch(/fill="transparent"/);       // tutamak dikdörtgeni
+    const raporda = fead.veFeadLayoutSVG(build, 820, 360, { posMode: 'mean' });
+    expect(raporda).toMatch(/data-ve="compass"/);       // gül yine çizilir
+    expect(raporda).not.toMatch(/veFeadCompassDragStart/);
+    expect(raporda).not.toMatch(/cursor:move/);
+  });
+
+  test('kart ve panel AYNI alanı okur', () => {
+    const { lay } = kurCozulur();
+    lay.data.compassPos = { fx: 0.2, fy: 0.8 };
+    const kart = fead.veFeadLayoutCardHTML(lay);
+    const panel = fead.getFeadLayoutPropertiesHTML(lay);
+    [kart, panel].forEach((h) => {
+      const g = /<g data-ve="compass-group" data-cx="([-\d.]+)" data-cy="([-\d.]+)"/.exec(h);
+      expect(g).not.toBeNull();
+      expect(+g[1] / +g[2]).toBeGreaterThan(0);         // ikisi de taşınmış konumda
+      expect(h).toMatch(new RegExp('veFeadCompassDragStart\\(event,\'' + lay.id + '\'\\)'));
+    });
+  });
+
+  // ── SÜRÜKLEME KANCASI ────────────────────────────────────────────────────
+  // Gerçek SVG geometrisi jsdom'da yok; kanca da zaten ona bağlı değil —
+  // fare noktasını kutu oranından çözüyor (getScreenCTM yedeği). Sahte öge
+  // tam olarak kancanın okuduğu şeyleri verir, fazlasını değil.
+  const sahteGul = (W, H) => {
+    const svg = {
+      viewBox: { baseVal: { width: W, height: H } },
+      getBoundingClientRect: () => ({ left: 0, top: 0, width: W, height: H })
+    };
+    const attrs = { 'data-ve': 'compass-group', 'data-cx': String(W - 31), 'data-cy': String(H - 35) };
+    const g = {
+      ownerSVGElement: svg, setAttribute: jest.fn((k, v) => { attrs[k] = v; }),
+      getAttribute: (k) => attrs[k], parentNode: null
+    };
+    return { svg, g, attrs };
+  };
+  const fareyle = (g, nodeId, yol) => {
+    const kanca = {};
+    const ekle = jest.spyOn(document, 'addEventListener')
+      .mockImplementation((t, fn) => { kanca[t] = fn; });
+    const sil = jest.spyOn(document, 'removeEventListener').mockImplementation(() => {});
+    const bas = yol[0];
+    fead.veFeadCompassDragStart(
+      { currentTarget: g, clientX: bas.x, clientY: bas.y,
+        stopPropagation() {}, preventDefault() {} }, nodeId);
+    yol.slice(1).forEach((p) => kanca.mousemove && kanca.mousemove({ clientX: p.x, clientY: p.y }));
+    if (kanca.mouseup) kanca.mouseup({});
+    ekle.mockRestore(); sil.mockRestore();
+  };
+
+  test('HAREKETSİZ tık hiçbir şey yazmaz (çift tık öğeyi kaybetmesin)', () => {
+    const { lay } = kurCozulur();
+    const { g } = sahteGul(420, 298);
+    stubs.saveState.mockClear();
+    fareyle(g, lay.id, [{ x: 389, y: 263 }, { x: 389.4, y: 263.6 }]);
+    expect(lay.data.compassPos).toBeUndefined();
+    expect(stubs.saveState).not.toHaveBeenCalled();
+  });
+
+  test('sürükleme konumu KESİR olarak yazar ve kenetler', () => {
+    const { lay } = kurCozulur();
+    const { g } = sahteGul(420, 298);
+    fareyle(g, lay.id, [{ x: 389, y: 263 }, { x: 200, y: 150 }, { x: 120, y: 100 }]);
+    expect(lay.data.compassPos).toBeDefined();
+    // 389 → 120, yani −269 px; başlangıç merkezi 389 → 120 (kenetlemenin içinde)
+    expect(lay.data.compassPos.fx).toBeCloseTo(120 / 420, 3);
+    expect(lay.data.compassPos.fy).toBeCloseTo(100 / 298, 3);
+    expect(stubs.saveState).toHaveBeenCalled();
+
+    // Çerçevenin dışına sürüklemek gülü dışarı taşımaz
+    fareyle(g, lay.id, [{ x: 389, y: 263 }, { x: -900, y: -900 }]);
+    const m = fead.VE_FEAD_ROSE_HALF + 2;
+    expect(lay.data.compassPos.fx * 420).toBeCloseTo(m, 1);
+    expect(lay.data.compassPos.fy * 298).toBeCloseTo(m, 1);
+  });
+
+  test('çift tık sıfırlar: alan SİLİNİR, sabit varsayılan yazılmaz', () => {
+    const { lay } = kurCozulur();
+    expect(fead.veFeadCompassReset(lay.id)).toBe(false);   // zaten varsayılanda
+    lay.data.compassPos = { fx: 0.2, fy: 0.8 };
+    expect(fead.veFeadCompassReset(lay.id)).toBe(true);
+    expect(lay.data.compassPos).toBeUndefined();
+    expect(fead.veFeadLayoutCardHTML(lay)).toMatch(/data-ve="compass-group"/);
+  });
+});

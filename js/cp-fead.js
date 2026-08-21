@@ -1026,6 +1026,125 @@ function _feadSpokePath(walk, phaseMm, T, onlyArc){
   return out;
 }
 
+// ── YÖN GÜLÜNÜN YERİ — kullanıcı taşıyabilir ───────────────────────────────
+// Varsayılan yer sağ alt köşe ve o hâlde şemadan 54 px'lik bir SAĞ ŞERİT
+// ayrılır (yoksa gül kayışın üstüne düşerdi). Kullanıcı gülü kendi eliyle bir
+// boşluğa taşıdığında o şerit ARTIK AYRILMAZ — kartı daraltmanın önündeki en
+// büyük engel oydu: 420 px'lik kartın 54 px'i, yani sekizde biri, yalnız dört
+// sayı için duruyordu. Taşıma bir TERCİH bildirimi olduğu için yer açmayı da
+// kullanıcıya devrediyor.
+//
+// Konum KESİR olarak saklanır (kart ölçüsünün oranı), piksel olarak değil:
+// kart yeniden boyutlandırılınca gül aynı bağıl yerde kalır. Piksel saklansaydı
+// kart daraldığı anda gül çerçevenin dışında kalırdı — kullanıcının asıl yapmak
+// istediği şey tam olarak daraltmak.
+var VE_FEAD_ROSE_W    = 54;   // varsayılan konumda ayrılan sağ şerit
+var VE_FEAD_ROSE_HALF = 27;   // gülün merkezden dışa taşan yarı-genişliği
+function veFeadCompassPlace(W, H, pos){
+  var m = VE_FEAD_ROSE_HALF + 2;
+  var fx = pos ? Number(pos.fx) : NaN, fy = pos ? Number(pos.fy) : NaN;
+  if(!Number.isFinite(fx) || !Number.isFinite(fy))
+    return { cx: W - VE_FEAD_ROSE_W/2 - 4, cy: H - VE_FEAD_ROSE_W/2 - 8, moved: false };
+  // Kenetleme: gül her hâlükârda çerçevenin İÇİNDE kalır. Kart gülden de küçükse
+  // (aşırı daraltma) merkeze oturur — yarısı dışarıda bir gül hiçbir şey demez.
+  return {
+    cx: (W < 2*m) ? W/2 : Math.min(Math.max(fx * W, m), W - m),
+    cy: (H < 2*m) ? H/2 : Math.min(Math.max(fy * H, m), H - m),
+    moved: true
+  };
+}
+
+// Fare noktasını SVG kullanıcı birimine çevir. Birincil yol getScreenCTM:
+// kartın kutusu ile viewBox'ı aynı en-boy oranında olsa da (letterbox yok),
+// tuval ZOOM'lu olabiliyor ve CTM onu da kapsıyor. Kutu oranı yalnız yedek.
+function _feadSvgPoint(svg, e){
+  if(!svg || !e) return null;
+  try {
+    var m = svg.getScreenCTM && svg.getScreenCTM();
+    if(m){
+      if(typeof DOMPoint === 'function')
+        return new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+      if(svg.createSVGPoint){
+        var sp = svg.createSVGPoint(); sp.x = e.clientX; sp.y = e.clientY;
+        return sp.matrixTransform(m.inverse());
+      }
+    }
+  } catch(err){ /* yedeğe düş */ }
+  try {
+    var rc = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+    if(rc.width > 0 && rc.height > 0)
+      return { x: (e.clientX - rc.left) / rc.width * vb.width,
+               y: (e.clientY - rc.top)  / rc.height * vb.height };
+  } catch(err2){ /* yok */ }
+  return null;
+}
+
+// Gülü sürükle. Sürükleme boyunca DOM'a yalnız bir transform yazılır; kart
+// ANCAK BIRAKILDIĞINDA yeniden kurulur. Her mousemove'da saveState çağırmak
+// hem yirmi kat gereksiz çizim hem de undo yığınına yüzlerce ara adım demekti.
+//
+// mousedown DURDURULUR: kart bir kanvas düğümünün içinde ve düğüm mousedown ile
+// sürüklenmeye başlıyor — durdurulmazsa gülü taşımaya çalışmak düğümü taşırdı
+// (konum seçicisindeki kuralın aynısı).
+function veFeadCompassDragStart(evt, nodeId){
+  if(typeof document === 'undefined' || !evt) return false;
+  if(evt.stopPropagation) evt.stopPropagation();
+  if(evt.preventDefault) evt.preventDefault();
+  var g = evt.currentTarget || evt.target;
+  while(g && !(g.getAttribute && g.getAttribute('data-ve') === 'compass-group')) g = g.parentNode;
+  if(!g) return false;
+  var svg = g.ownerSVGElement;
+  var vb = svg && svg.viewBox && svg.viewBox.baseVal;
+  var bas = _feadSvgPoint(svg, evt);
+  if(!bas || !vb || !(vb.width > 0) || !(vb.height > 0)) return false;
+
+  var cx0 = parseFloat(g.getAttribute('data-cx')), cy0 = parseFloat(g.getAttribute('data-cy'));
+  if(!Number.isFinite(cx0) || !Number.isFinite(cy0)) return false;
+  var son = { x: cx0, y: cy0 }, tasindi = false;
+
+  function tasi(e){
+    var p = _feadSvgPoint(svg, e);
+    if(!p) return;
+    if(Math.abs(p.x - bas.x) > 1 || Math.abs(p.y - bas.y) > 1) tasindi = true;
+    // Kenetleme sürükleme SIRASINDA uygulanır: bırakıldıktan sonra "gül nereye
+    // gitti" sorusu doğmasın, kullanıcı sınırı çekerken görsün.
+    var yer = veFeadCompassPlace(vb.width, vb.height, {
+      fx: (cx0 + (p.x - bas.x)) / vb.width,
+      fy: (cy0 + (p.y - bas.y)) / vb.height
+    });
+    son = { x: yer.cx, y: yer.cy };
+    g.setAttribute('transform', 'translate(' + _feadR(son.x - cx0) + ',' + _feadR(son.y - cy0) + ')');
+  }
+  function birak(){
+    document.removeEventListener('mousemove', tasi, true);
+    document.removeEventListener('mouseup', birak, true);
+    // HAREKETSİZ TIK HİÇBİR ŞEY YAZMAZ. İki sebep, ikisi de ölçüldü:
+    // (1) Her mouseup'ta saveState çağırmak kartı yeniden kuruyor ve ÇİFT TIK
+    //     olayı, ulaşacağı öğe artık DOM'da olmadığı için hiç ateşlenmiyordu —
+    //     yani sıfırlama sessizce çalışmıyordu (gerçek tarayıcıda doğrulandı).
+    // (2) Gülün üstüne yapılan her tık undo yığınına boş bir adım koyardı.
+    if(!tasindi) return;
+    veFeadSetChoice(nodeId, 'compassPos',
+      { fx: Math.round(son.x / vb.width * 1e4) / 1e4,
+        fy: Math.round(son.y / vb.height * 1e4) / 1e4 });
+  }
+  document.addEventListener('mousemove', tasi, true);
+  document.addEventListener('mouseup', birak, true);
+  return true;
+}
+
+// Çift tık → varsayılan yer (ve sağ şerit geri ayrılır). Alan SİLİNİR, sabit bir
+// varsayılan yazılmaz: "taşındı mı" sorusunun tek cevabı alanın varlığı olsun.
+function veFeadCompassReset(nodeId){
+  if(typeof nodes === 'undefined') return false;
+  var node = nodes.find(function(n){ return n.id === nodeId; });
+  if(!node || !node.data || !node.data.compassPos) return false;
+  delete node.data.compassPos;
+  if(typeof saveState === 'function') saveState();
+  if(typeof showNodeProperties === 'function') showNodeProperties(node);
+  return true;
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 //  KAYIŞ YOLU (2D ŞEMA) — ARTIK ÇEKİRDEĞİN GEOMETRİSİYLE
 // ════════════════════════════════════════════════════════════════════════════
@@ -1101,7 +1220,10 @@ function veFeadLayoutSVG(build, W, H, opts){
   }
   // Yön gülü sağ altta yer istiyor; şema onun altına girmesin.
   var pad = 18;
-  var ROSE = wantCompass ? 54 : 0;                 // yön gülünün ayırdığı sağ şerit
+  // Gül varsayılan yerindeyse sağ şerit ayrılır; kullanıcı taşımışsa şerit
+  // ŞEMAYA bırakılır (bkz. veFeadCompassPlace).
+  var roseYer = wantCompass ? veFeadCompassPlace(W, H, opts.compassPos) : null;
+  var ROSE = (roseYer && !roseYer.moved) ? VE_FEAD_ROSE_W : 0;
   var spanX = Math.max(1, maxX-minX), spanY = Math.max(1, maxY-minY);
   var s = Math.min((W-2*pad-ROSE)/spanX, (H-2*pad)/spanY);
   var offX = pad + ((W-2*pad-ROSE) - spanX*s)/2, offY = pad + ((H-2*pad) - spanY*s)/2;
@@ -1195,7 +1317,7 @@ function veFeadLayoutSVG(build, W, H, opts){
   // içinde güvenli (içinde tek tırnak geçemez).
   var animAttr = animPay
     ? " data-fead-anim='" + JSON.stringify(animPay) + "'"
-      + (opts.animate.nodeId ? ' data-fead-node="' + _feadEsc(opts.animate.nodeId) + '"' : '')
+      + (opts.nodeId ? ' data-fead-node="' + _feadEsc(opts.nodeId) + '"' : '')
     : '';
 
   // ÖLÇÜ SINIRI ŞART: panel iki sütuna geçtiğinde (VE_WIDE_PANEL_TYPES) yalnız
@@ -1340,7 +1462,21 @@ function veFeadLayoutSVG(build, W, H, opts){
   // konvansiyonu: 0° = +x, açılar CCW. Bu olmadan "montaj açısı −3.18°" gibi
   // bir sayının hangi yöne baktığı okunamıyor.
   if(wantCompass){
-    var cx = W - ROSE/2 - 4, cy = H - ROSE/2 - 8, r = ROSE/2 - 15;
+    var cx = f(roseYer.cx), cy = f(roseYer.cy), r = VE_FEAD_ROSE_W/2 - 15;
+    // TAŞIMA KANCASI yalnız düğüm kimliği verilmişse kurulur: rapor ve dışa
+    // aktarma aynı çiziciyi kullanıyor, oralarda sürüklenecek bir şey yok.
+    // Şeffaf dikdörtgen TUTAMAK: gül ince çizgilerden ibaret, 1 px'lik bir
+    // çizgiyi yakalamaya çalışmak sürüklemeyi kullanılamaz yapardı.
+    var tut = opts.nodeId
+      ? ' style="cursor:move;" onmousedown="veFeadCompassDragStart(event,\'' + _feadEsc(opts.nodeId) + '\')"'
+        + ' ondblclick="event.stopPropagation(); veFeadCompassReset(\'' + _feadEsc(opts.nodeId) + '\')"'
+      : '';
+    svg += '<g data-ve="compass-group" data-cx="' + cx + '" data-cy="' + cy + '"' + tut + '>';
+    if(opts.nodeId)
+      svg += '<rect x="' + f(cx - VE_FEAD_ROSE_HALF) + '" y="' + f(cy - VE_FEAD_ROSE_HALF) + '" width="'
+          + (2*VE_FEAD_ROSE_HALF) + '" height="' + (2*VE_FEAD_ROSE_HALF) + '" fill="transparent">'
+          + '<title>Yön gülü — sürükleyerek taşıyın; çift tıklayınca varsayılan yerine döner. '
+          + 'Taşındığında sağdaki ' + VE_FEAD_ROSE_W + ' px\'lik şerit şemaya bırakılır.</title></rect>';
     svg += '<g data-ve="compass" stroke="var(--text-muted)" stroke-width="1" fill="none">'
         + '<circle cx="' + f(cx) + '" cy="' + f(cy) + '" r="' + f(r) + '"/>'
         + '<line x1="' + f(cx-r-4) + '" y1="' + f(cy) + '" x2="' + f(cx+r+4) + '" y2="' + f(cy) + '"/>'
@@ -1355,6 +1491,7 @@ function veFeadLayoutSVG(build, W, H, opts){
     svg += '<path d="M' + f(cx + r*0.6) + ' ' + f(cy) + ' A' + f(r*0.6) + ' ' + f(r*0.6)
         + ' 0 0 0 ' + f(cx) + ' ' + f(cy - r*0.6) + '" fill="none" stroke="var(--text-muted)" stroke-width="0.9"/>'
         + '<path d="M' + f(cx) + ' ' + f(cy - r*0.6) + ' l2.6 2.4 l-3.4 1.1 Z" fill="var(--text-muted)"/>';
+    svg += '</g>';
   }
   return svg + '</svg>';
 }
@@ -1426,8 +1563,9 @@ function veFeadLayoutCardHTML(node){
   var secim = null;
   if(kin) veFeadAnimRpmChoices(build).forEach(function(c){ if(c.rpm === rpmSel) secim = c; });
   var svg = veFeadLayoutSVG(build, Math.max(120, W), Math.max(90, H - SER - SEC),
-                            { inline: true, posMode: mode,
-                              animate: kin ? { dispMmS: kin.dispMmS, nodeId: node.id,
+                            { inline: true, posMode: mode, nodeId: node.id,
+                              compassPos: node.data && node.data.compassPos,
+                              animate: kin ? { dispMmS: kin.dispMmS,
                                                label: _feadAnimLabel(kin, secim && secim.fallback) }
                                            : null });
 
@@ -1679,7 +1817,11 @@ function getFeadLayoutPropertiesHTML(node){
         + 'Kesikli çember = kayışın <b>sırttan</b> temas ettiği kasnak. Sıra bağlantılardan okunur.</div>';
 
   var mode = veFeadPosMode(node);
-  var svg = veFeadLayoutSVG(build, 320, 240, { posMode: mode });
+  // Panel de AYNI alanı okur ve aynı kancayı kurar: gül kartta bir yerde,
+  // panelde başka bir yerde durursa kullanıcı hangisinin geçerli olduğunu
+  // bilemez (kol konumundaki kuralın aynısı).
+  var svg = veFeadLayoutSVG(build, 320, 240,
+    { posMode: mode, nodeId: node.id, compassPos: node.data.compassPos });
   if(svg){
     // Konum seçimi KARTLA AYNI ALANI okur (node.data.posMode) — iki ayrı ayar
     // tutulsa panel bir konumu, kanvastaki kart başka bir konumu gösterirdi.
@@ -2564,6 +2706,9 @@ if (typeof module !== 'undefined' && module.exports) {
     _feadXform: _feadXform, _feadAnimLabel: _feadAnimLabel,
     veFeadAnimTick: veFeadAnimTick, veFeadAnimEnsure: veFeadAnimEnsure,
     veFeadAnimApply: veFeadAnimApply,
+    veFeadCompassPlace: veFeadCompassPlace, veFeadCompassReset: veFeadCompassReset,
+    veFeadCompassDragStart: veFeadCompassDragStart,
+    VE_FEAD_ROSE_W: VE_FEAD_ROSE_W, VE_FEAD_ROSE_HALF: VE_FEAD_ROSE_HALF,
     VE_FEAD_ANIM_ATTR: VE_FEAD_ANIM_ATTR,
     VE_FEAD_SPOKE_N: VE_FEAD_SPOKE_N, VE_FEAD_SPOKE_MIN_PX: VE_FEAD_SPOKE_MIN_PX,
     veFeadLayoutCardHTML: veFeadLayoutCardHTML,

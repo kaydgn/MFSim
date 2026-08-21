@@ -488,6 +488,50 @@ edenler ters yönde), diş sayısı faz boyunca sabit (136).
 Animasyon **yalnız kanvas kartında**: panel, HTML rapor §8.5 ve SVG/PNG dışa
 aktarma aynı çiziciyi kullanıyor ama `animate` geçirmiyor → statik kalıyorlar.
 
+##### Yön gülü TAŞINABİLİR — ve taşınınca şeridini şemaya bırakır
+
+Gül varsayılan yerinde (sağ alt) dururken şemadan **54 px'lik bir sağ şerit**
+ayrılıyor: 420 px'lik kartın sekizde biri, yalnız dört sayı için. Kartı
+daraltmak isteyenin önündeki asıl engel buydu.
+
+Gül artık sürüklenebiliyor (`veFeadCompassDragStart`) ve **taşındığı anda şerit
+ayrılmaz** — yer açma sorumluluğu kullanıcıya geçtiği için. Taşımak bir tercih
+bildirimidir; çift tık varsayılana döndürür ve şerit geri ayrılır.
+
+**Kazanç kart DARALDIKÇA doğuyor.** Ölçek `s = min(genişlik/spanX,
+yükseklik/spanY)`; kart genişken bağlayıcı olan yükseklik, yani şerit ölçeği hiç
+kısıtlamıyor. **ÖLÇÜLDÜ** (BMC, en büyük kasnak yarıçapı px):
+
+| düğüm ölçüsü | şeritli | şeritsiz | kazanç |
+|---|---|---|---|
+| 420×340 (varsayılan) | 45.5 | 45.5 | %0.0 |
+| 380×340 | 41.7 | 45.5 | %9.1 |
+| 340×340 | 35.9 | 43.7 | **%21.6** |
+| 300×300 | 30.2 | 37.9 | **%25.7** |
+| 240×260 | 21.6 | 29.3 | **%36.0** |
+
+Konum **kesir** olarak saklanır (`node.data.compassPos = {fx, fy}`), piksel
+olarak değil: kart yeniden boyutlandırılınca gül aynı bağıl yerde kalır. Piksel
+saklansaydı daraltma anında çerçevenin dışında kalırdı — ki kullanıcının yapmak
+istediği tam olarak daraltmak. Kenetleme sürükleme SIRASINDA uygulanıyor (sınır
+çekilirken görünsün), ve gülden küçük bir kartta gül merkeze oturuyor: yarısı
+dışarıda bir gül hiçbir şey demez.
+
+**HAREKETSİZ TIK HİÇBİR ŞEY YAZMAZ** — gerçek tarayıcıda ölçülen bir hata:
+her `mouseup`'ta `saveState` çağrılınca kart `innerHTML` ile yeniden kuruluyor
+ve **çift tık olayı ulaşacağı öğeyi bulamadan** ateşlenmiyordu, yani "çift tıkla
+varsayılana dön" sessizce çalışmıyordu. İkinci kazanç: gülün üstüne yapılan her
+tık undo yığınına boş bir adım koymuyor artık.
+
+Fare noktası `getScreenCTM` ile çözülür, kutu oranı yalnız yedektir: kart ile
+viewBox aynı en-boy oranında olsa da **tuval zoom'lu olabiliyor** ve onu yalnız
+CTM kapsıyor.
+
+Panel de aynı alanı okuyor ve aynı kancayı kuruyor (kol konumundaki kuralın
+aynısı: iki ayrı ayar tutulsa panel bir yeri, kart başka bir yeri gösterirdi).
+Rapor ve SVG/PNG dışa aktarma düğüm kimliği almadığı için **sürüklenmez** —
+orada gül varsayılan yerinde kalır.
+
 #### Çevrimdışı HTML rapor (`js/cp-fead-report.js`)
 
 Tedarikçi (Gates) "Accessory Belt Drive System" çıktısının 11 sayfası, Takoz
@@ -852,7 +896,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/mount-results-publish.test.js` | `js/cp-mount.js` | Çözümün panoya yayını; alt-topoloji çökertme regresyonu |
 | `tests/unit/fead-core.test.js` | `js/fead-core.js` + `tests/fixtures/fead-validation.js` | **FEAD çekirdeğinin doğrulama kapısı**: 17 Gates raporu / 2095 değer (çalışma %0.5, Load dahil %1.5, kol açısı 0.2°), 8 koruma mekanizması, SPEC §9 yapısal özdeşlikleri (sarım değişmezi, `L_pitch−L_eff=2π·hb`, çevrim kapanışı, sürücü gücü), UMD tarayıcı köprüsü; **burulma modeli**: yapısal özdeşlikler (tam 1 rijit cisim modu, take-up özdeşliği %0.01, yalnız gergi komşusu spanlar) + Gates "System Resonance (Mode 1)" kalibrasyonu (5 sistem RMS <%8, 4/6/8PK kaburga ölçeklemesi) |
 | `tests/unit/fead-model.test.js` | `js/fead-model.js` | **Köprü kapısı**: AG00686 MFSim KANVAS DÜĞÜMÜ olarak kurulup Gates sayılarını üretiyor mu (span %0.5, sarım 0.2°, Mean kol açısı 0.2°); temas tarafı üç katmanlı çözümü, sürücü rolü, `dia→od` göçü, ad tekilleştirme, hata çevirisi. Ayrıca **ters temas tarafının hata VERMEDİĞİNİ** belgeler (rozetin varlık nedeni). **Duty kapısı**: AG00686 duty tablosunun çıkış gerilmeleri ve hubload'ları %0.5 içinde; kW'ın kimlikle anahtarlanması (yeniden adlandırmada kaybolmuyor), sürücü gücünün toplamdan hesaplanması, ateşleme frekansı, yorulma dağılımının çapa bağlı olması, katalog oranının ÇAPTAN hesaplanması. **Sıcaklık kapısı**: satır başına °C → tek °C indirgemesi hasar-eşdeğer (tek sıcaklıkta birebir aynı, dağılımda aritmetik ortalamanın üstünde), ağırlık `dc·v`, açıkça girilen %0 sıfır ağırlıklı; **yorulma modeli** seçimi dağılıma geçer, mutlak ömre geçemez ve bu yazılır. **Burulma köprüsü**: gergi kasnak kütlesi ve KRANK MİLİ ataleti çekirdeğe geçiyor (ölü girdiydi), krank adla anahtarlanır, `analyze()` içindeki çift hesap kapalı, eksik atalet sessiz değil |
-| `tests/unit/cp-fead.test.js` | `js/cp-fead.js` + `js/components.js` | FEAD sunum katmanı: kanvas rozeti, `feadContact` varsayılanları, panel smoke testleri, alt-sistem sözleşmesi, `fead-*` tip tanımları; panelin HANGİ ALANLARI sorduğu (montaj merkezi ↔ serbest açı), servis faktörü hükmü; **kayışın kaburgalı yüzü** (diş yönü + aynalanmış çevrim), **telin komşuya bakan kenarı** (oran kuralı, elle taşınan portun kazanması) ve **`veFeadArrangeRing`** (ortak çember, kayış sırası, kutudan türeyen yarıçap, araçların halka dışında kalması, `veTidyLayout`'un devretmesi) |
+| `tests/unit/cp-fead.test.js` | `js/cp-fead.js` + `js/components.js` | FEAD sunum katmanı: **yön gülünün taşınması** (kenetleme, kesir olarak saklama, taşınınca şeridin şemaya bırakılması — dar kartta ölçülen kazanç, geniş kartta kazanç YOK, hareketsiz tıkın hiçbir şey yazmaması, kancanın yalnız kanvas/panelde kurulması); kanvas rozeti, `feadContact` varsayılanları, panel smoke testleri, alt-sistem sözleşmesi, `fead-*` tip tanımları; panelin HANGİ ALANLARI sorduğu (montaj merkezi ↔ serbest açı), servis faktörü hükmü; **kayışın kaburgalı yüzü** (diş yönü + aynalanmış çevrim), **telin komşuya bakan kenarı** (oran kuralı, elle taşınan portun kazanması) ve **`veFeadArrangeRing`** (ortak çember, kayış sırası, kutudan türeyen yarıçap, araçların halka dışında kalması, `veTidyLayout`'un devretmesi) |
 | `tests/unit/cp-fead-report.test.js` | `js/cp-fead-report.js` + `tools/report-assets/fead-theory-source.html` | **Rapor içeriği**: Türkçe sayı biçimi (gerçek eksi, `—` ≠ 0), `wearPct` oran→yüzde çevrimi, sarım açılarının DERECE basılması, Σsarım=360 ve `L_pitch−L_eff=2πh_b` denetimlerinin belgede görünmesi, sürücü kW sütununun duty tablosunda OLMAMASI, çözülemeyen konumun `Err.` ile işaretlenmesi, `undefined`/`NaN`/`[object` sızmaması, "ortalama tork ≠ peak", sistem burulma modunun yokluğunun yazılması, uygunluk hükmünün servis faktörünü kullanması, şekil/tablo numaralarının boşluksuz ve her üretimde sıfırlanması, şablon tokenlarının tek kez geçmesi, içindekiler id'lerinin üreteçle aynı olması |
 | `tests/unit/fead-anim.test.js` | `js/cp-fead.js` animasyon + `js/fead-model.js` kinematik | **Kayış Yolu kartının animasyonu**: ω·r = v özdeşliği, ağır çekim katsayısının REFERANS devre bağlanması (seçili devre bağlansaydı seçici işlevsiz kalırdı — istenmeyen alternatif de koşturulup belgeleniyor), diş adımının çevreyi tam bölmesi, diş sayısının faz boyunca sabit kalması, bir adımlık fazın deseni birebir kendine getirmesi, dişlerin GİDİŞ yönünde ilerlemesi, kol açısal hızının `d·v/r` olması (sırttan temas edende ters) ve kol ucu çevresel hızının kayış hızına eşitliği (kasnakta kayma yok), animasyonun YALNIZ kanvas kartında olması, fazın düğüm kimliğinde durması (yeniden kurulumda kayış zıplamıyor), uzun duraklamada `dt` kırpması |
 | `tests/unit/fead-example.test.js` | `js/fead-model.js` örnekleri + FEAD_INFORMATION | **Tedarikçi sayfası çıpası** (Gates'ten bağımsız ikinci doğrulama): kayış boyu 1715 mm, kol boyu 90.0 mm, Spring Mean Load 22.07 Nm, tahrik oranı 1.1; sayfanın devir→kW tabloları; **iki sessiz kanalın** ölçülmüş belgesi (montaj merkezi ↔ serbest açı 2.6×, tasarım gerginliği ↔ yay dengesi 250 N) |
