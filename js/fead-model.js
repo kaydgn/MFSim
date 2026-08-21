@@ -304,6 +304,112 @@ function veFeadPosSelection(build, mode){
   return out;
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+//  ANİMASYON KİNEMATİĞİ — kartın canlı çalışması
+// ════════════════════════════════════════════════════════════════════════════
+// Kayış Yolu kartı şimdiye kadar DONMUŞ bir kesitti: geometri doğru, hareket
+// yok. Oysa şemanın anlattığı üç şey — hangi kasnak ne kadar hızlı döner,
+// hangisi TERS döner, kayış ne kadar hızlı gider — ancak hareketle okunur;
+// bugüne kadar yalnız tabloda sayı olarak duruyorlardı.
+//
+// YENİ FİZİK YOK, üçü de çekirdekte hazır:
+//   FEADCore.beltSpeed(sys, N)   kayış hızı (m/s)
+//   FEADCore.speedRatio(sys, i)  kasnak devri / motor devri
+//   geom.pulleys[i].d            dönüş YÖNÜ (sırttan temas edende ters)
+// Buradaki iş yalnız o sayıları EKRANDA OKUNUR bir hıza indirmek.
+//
+// ── GERÇEK ZAMAN NEDEN OLMAZ (ÖLÇÜLDÜ — BMC örneği, 420×340 kart, 0.553 px/mm)
+//   motor  800 dev/dk → kayış  7.56 m/s =  4182 px/s · alternatör  40.5 tur/s
+//   motor 2750 dev/dk → kayış 26.00 m/s = 14377 px/s · alternatör 139.4 tur/s
+// 60 Hz ekranda EN YAVAŞ satırda bile kayış kare başına 70 px (10 diş adımı)
+// atlıyor → diş sırası strob; alternatör kare başına 0.68 tur → wagon-wheel,
+// yani gerçek yönünün TERSİNE dönüyor görünür. Gerçek zaman fiziksel olarak
+// dürüst, görsel olarak okunaksız. Bu yüzden AĞIR ÇEKİM — oranlar birebir.
+//
+// ── KATSAYI NEDEN SEÇİLİ DEVRE DEĞİL, REFERANS DEVRE BAĞLI ─────────────────
+// Katsayı seçili devre göre normalize edilseydi HER devirde ekrandaki hız aynı
+// çıkardı ve devir seçicisi hiçbir şey değiştirmezdi. Katsayı bir kez, listenin
+// EN YÜKSEK devrine göre sabitlenir: orada en hızlı kasnak tavana
+// (VE_FEAD_ANIM_TARGET_REV_S) oturur, daha düşük devirler ekranda GERÇEKTEN
+// daha yavaş akar (BMC: 800 dev/dk'da alternatör 0.29 tur/s).
+//
+// Tavan 1 tur/s KEYFÎ DEĞİL, örnekleme sınırından: en küçük kasnakta (Ø59.4 →
+// ekranda R=16.4 px) diş açı adımı 24.5°, 1 tur/s'de kare başına 6° — adımın
+// yarısının altında, yani yön tek anlamlı. 2 tur/s'de 12°, tam sınırda.
+var VE_FEAD_ANIM_TARGET_REV_S = 1.0;    // referans devirde EN HIZLI kasnak (tur/s)
+var VE_FEAD_ANIM_FALLBACK_RPM = 1000;   // duty tablosu boşken varsayılan motor devri
+
+// Devir seçenekleri — çözücü düğümünün duty tablosundan (tekilleştirilmiş,
+// artan). Tablo boşsa TEK bir varsayılan satır döner ve fallback bayrağı
+// taşınır: oranlar salt geometriden geldiği için animasyon yine doğrudur,
+// uydurma olan yalnız mutlak devirdir ve kartta öyle yazar.
+function veFeadAnimRpmChoices(build){
+  var rows = veFeadDutyRows(build && build.solver);
+  var gorulen = {}, out = [];
+  rows.forEach(function(r){
+    if(!(r.rpm > 0) || gorulen[r.rpm]) return;
+    gorulen[r.rpm] = 1;
+    out.push({ rpm: r.rpm, dcPct: r.dcPct, fallback: false });
+  });
+  out.sort(function(a, b){ return a.rpm - b.rpm; });
+  if(!out.length) out.push({ rpm: VE_FEAD_ANIM_FALLBACK_RPM, dcPct: NaN, fallback: true });
+  return out;
+}
+
+// Kartta seçili devir: 'off' (durgun) ya da bir motor devri.
+// VARSAYILAN, tablonun BASKIN satırıdır (en büyük duty yüzdesi) — "kart açılır
+// açılmaz ne görüyorum" sorusunun cevabı gerçek bir çalışma noktası olsun.
+// Kayıtlı değer listeden düşmüşse (kullanıcı duty satırını sildi) en yakın
+// devre değil, yine baskın satıra düşülür: sessizce başka bir devri göstermek,
+// künyede yazan sayıya güveni bozar.
+function veFeadAnimRpmOf(build, node){
+  var v = node && node.data && node.data.animRpm;
+  if(v === 'off') return 'off';
+  var list = veFeadAnimRpmChoices(build);
+  var n = _feadNum(v, NaN);
+  for(var i=0;i<list.length;i++) if(list[i].rpm === n) return n;
+  var best = list[0];
+  list.forEach(function(r){ if(Number.isFinite(r.dcPct) && (!Number.isFinite(best.dcPct) || r.dcPct > best.dcPct)) best = r; });
+  return best.rpm;
+}
+
+// Seçili devrin kinematiği + ağır çekim katsayısı.
+//   beltMs        gerçek kayış hızı (m/s)
+//   revPerSec[i]  gerçek kasnak devri (tur/s, İŞARETSİZ — yön geom.pulleys[i].d)
+//   slow          ekran katsayısı (≤ 1); referans devirde tavan
+//   dispMmS       ekranda kayışın mm/s hızı (= beltMs·1000·slow)
+// refRpm verilmezse listenin en yükseği alınır (bkz. yukarıdaki gerekçe).
+function veFeadAnimKinematics(build, engineRpm, refRpm){
+  if(!build || !build.ok || !build.sys || typeof FEADCore === 'undefined') return null;
+  var sys = build.sys, n = sys.pulleys.length;
+  var rpm = _feadNum(engineRpm, NaN);
+  if(!(rpm > 0)) return null;
+  var ref = _feadNum(refRpm, NaN);
+  if(!(ref > 0)){
+    ref = 0;
+    veFeadAnimRpmChoices(build).forEach(function(r){ if(r.rpm > ref) ref = r.rpm; });
+    if(!(ref > 0)) ref = rpm;
+  }
+  var oran = [], i;
+  try {
+    for(i=0;i<n;i++) oran.push(Math.abs(FEADCore.speedRatio(sys, i)));
+  } catch(e){ return null; }
+  var enBuyukOran = Math.max.apply(null, oran);
+  var refMaxRev = ref * enBuyukOran / 60;                 // referans devirde tavan kasnak
+  var slow = (refMaxRev > 0) ? Math.min(1, VE_FEAD_ANIM_TARGET_REV_S / refMaxRev) : 1;
+  var beltMs;
+  try { beltMs = FEADCore.beltSpeed(sys, rpm); }
+  catch(e){ return null; }
+  if(!(beltMs > 0)) return null;
+  return {
+    engineRpm: rpm, refRpm: ref, beltMs: beltMs,
+    revPerSec: oran.map(function(o){ return rpm * o / 60; }),
+    ratio: oran, refMaxRevPerSec: refMaxRev,
+    slow: slow, dispMmS: beltMs * 1000 * slow,
+    fallbackRpm: false
+  };
+}
+
 // ─── Tahrik oranı: krank kasnağı → sürücü (fan) kasnağı ─────────────────────
 // Sayfa oranı iki ÇAPLA veriyor (krank 197.32 / fan 179.62 = 1.0985 ≈ 1.1),
 // çünkü FEAD kayışının sürücü kasnağı krank milinde DEĞİL: krank ayrı bir
@@ -559,6 +665,11 @@ function veFeadBuildSystem(nodeList, connList){
 
   var beltNode = all.filter(function(n){ return !!_feadDefOf(n).isFeadBelt; })[0] || null;
   var solvNode = all.filter(function(n){ return !!_feadDefOf(n).isFeadSolver; })[0] || null;
+  // Çözücü düğümünün KENDİSİ de taşınır: duty tablosu (devir listesi) buradan
+  // okunuyor ve kartın devir seçicisi ona bakıyor. Yalnız cfg'yi çıkarıp
+  // düğümü atmak, kartı "nodes" global'ini elle taramaya zorlardı — köprü
+  // katmanının DOM'suz kalması tam olarak bunu engellemek için.
+  out.solver = solvNode;
   if(!beltNode) out.errors.push('Kayış Özellikleri bileşeni yok. Sol paletten ekleyin.');
   if(!solvNode) out.warnings.push('Çözücü bileşeni yok; tasarım gerginliği ve tahrik oranı varsayılanla alınır.');
 
@@ -1156,6 +1267,10 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_POSITIONS: VE_FEAD_POSITIONS, VE_FEAD_POS_TOL_DEG: VE_FEAD_POS_TOL_DEG,
     veFeadPositionRows: veFeadPositionRows, veFeadPosMode: veFeadPosMode,
     veFeadPosSelection: veFeadPosSelection,
+    VE_FEAD_ANIM_TARGET_REV_S: VE_FEAD_ANIM_TARGET_REV_S,
+    VE_FEAD_ANIM_FALLBACK_RPM: VE_FEAD_ANIM_FALLBACK_RPM,
+    veFeadAnimRpmChoices: veFeadAnimRpmChoices, veFeadAnimRpmOf: veFeadAnimRpmOf,
+    veFeadAnimKinematics: veFeadAnimKinematics,
     veFeadPowerCurve: veFeadPowerCurve, veFeadHasPowerCurve: veFeadHasPowerCurve,
     veFeadInterpKw: veFeadInterpKw,
     VE_FEAD_EXAMPLES: VE_FEAD_EXAMPLES, veFeadExampleKeys: veFeadExampleKeys,

@@ -231,6 +231,14 @@ yolunun üstüne düşüyordu (Klima ↔ Avara 1 açıklığı oradan geçiyor).
 
 #### İKİ YÜZEY — graf GİRDİ, kart ÇIKTI (`js/fead-graph.js`)
 
+> **BU BÖLÜM BAYAT — anlatılan yüzey kodda YOK.** `js/fead-graph.js`, dairesel
+> kasnak düğümü, açısal port ve `veFeadArrangeGraph` `c48fe17` ile **geri
+> alındı** (kullanıcı geri bildirimi: "tipik dörtgen topoloji bileşenleri devam
+> etsin; sadece bağlantılarını daha estetik yapalım"). Bugün geçerli olan
+> yukarıdaki *"Kayış BAĞLANTISININ görünüşü — düğüme dokunmadan"* bölümüdür.
+> Aşağısı, aynı yön yeniden denenirse nelerin ölçülmüş olduğunu bilmek için
+> duruyor.
+
 FEAD iç topolojisi artık serbest bir blok diyagramı değil: kasnaklar
 **girilen mm koordinatlarına** oturur (kanvasta **1 px = 1 mm**), düğüm
 **girilen çapında bir DAİRE**dir, portlar kayış sırasındaki **komşuya bakar**.
@@ -403,6 +411,82 @@ artık `FEADCore.solveGeometry`'nin teğet noktaları + işaretli sarım yaylar�
 `CRK 210.2 · IDR 26.7 · A_C 202.9 · TEN 26.4`, span
 `249.2 · 212.6 · 248.9 · 212.6`, Mean kol açısı `33.1°`, take-up `0.559 mm/°`
 — **hepsi Gates raporuyla birebir.**
+
+##### Kart ÇALIŞIR — kayış gider, kasnaklar döner (`veFeadAnimTick`)
+
+Şema doğru ama DONMUŞ bir kesitti. Anlattığı üç şey — hangi kasnak ne kadar
+hızlı döner, hangisi **ters** döner, kayış ne kadar hızlı gider — yalnız
+tabloda sayı olarak duruyordu; artık hareketin kendisi.
+
+**Yeni fizik yok:** üçü de çekirdekte hazırdı (`beltSpeed`, `speedRatio`,
+`geom.pulleys[i].d`). Yapılan iş o sayıları ekranda okunur bir hıza indirmek.
+
+**GERÇEK ZAMAN OLMAZ — ÖLÇÜLDÜ** (BMC, 420×340 kart, 0.553 px/mm):
+
+| motor | kayış | ekranda | diş/s | alternatör |
+|---|---|---|---|---|
+| 800 dev/dk | 7.56 m/s | 4182 px/s | 597 | 40.5 tur/s |
+| 2750 dev/dk | 26.00 m/s | 14377 px/s | 2054 | 139.4 tur/s |
+
+60 Hz ekranda **en yavaş** satırda bile kayış kare başına 70 px (10 diş adımı)
+atlıyor → diş sırası strob; alternatör kare başına 0.68 tur → wagon-wheel, yani
+gerçek yönünün **tersine** dönüyor görünür. Bu yüzden ağır çekim — oranlar
+birebir. Tavan (`VE_FEAD_ANIM_TARGET_REV_S` = 1 tur/s) örnekleme sınırından:
+en küçük kasnakta diş açı adımı 24.5°, 1 tur/s'de kare başına 6°, yani adımın
+yarısının altında → yön tek anlamlı.
+
+**Katsayı SEÇİLİ devre değil REFERANS devre (listenin en yükseği) bağlanır.**
+Seçili devre göre normalize edilseydi her devirde ekrandaki hız AYNI çıkar ve
+devir seçicisi hiçbir şey değiştirmezdi; testi bu istenmeyen alternatifi de
+koşturup belgeliyor. BMC'de katsayı `×1/139`: 800 dev/dk'da alternatör
+0.29 tur/s, kayış 30 px/s; 2750'de 103 px/s.
+
+**Diş sırası ve kollar TEK FAZDAN** (`_feadBeltWalk` → `_feadTeethPath` /
+`_feadSpokePath`): kayış zinciri boyunca kümülatif yay uzunluğu. Kol açısı
+`θ = a0 + d·faz/r` olduğundan `ω = d·v/r` **kendiliğinden** çıkıyor — kayışın
+kasnak üzerinde kaymadığı yapısal olarak garanti. İki ayrı sayaçtan sürülseydi
+zamanla ayrışır ve V kaburgalı bir tahrikte **olmayan** bir kayma gösterirdi.
+
+**Çepere diş değil KOL çizilir.** V kaburgalı kayış sürtünmeyle çalışır,
+kasnak oluğu **çevreseldir**; çepere radyal diş koymak senkron (dişli) kayış
+resmi olurdu — yanlış bir mekanizma öğretirdi. Kol bir yüzey iddiası değil,
+nirengi işareti. Animasyon açıkken dönüş oku çizilmez (aynı şeyi ikinci kez
+söyler ve 0.55R'de kollarla çakışırdı); `Durgun` seçilince geri gelir.
+
+**Diş adımı çevreyi TAM BÖLER** (`_feadToothStep`): 7 px hedefi çevreye tam
+oturmuyor ve kapanış artığı, akan kayışın üstünde sabit bir noktada duran tek
+bir tökezleme olurdu (BMC: 1722.5 mm → 136 diş → 12.67 mm). Parça sınırı da
+epsilonla kapanır ve sayaç katla ilerletilir: **ÖLÇÜLDÜ**, kayan noktada tam
+sınıra düşen diş 12 fazın birinde iki parçaya birden yazılıyordu (141 ↔ 140
+diş) — çevrimde bir kez yanıp sönen bir diş.
+
+**Animatör DOM'da DURUM TUTMAZ.** Kart her `saveState()`'te innerHTML ile
+baştan kuruluyor; kurulum/temizlik çiftine dayanan bir animasyon o yeniden
+kurulmayı her seferinde yakalamak zorunda kalırdı (unutulan tek yol → sızıntı
+ya da donmuş kart). Tek rAF döngüsü her karede `svg[data-fead-anim]` arar,
+bulduğuna fazı uygular, kart kalmayınca **kendini durdurur**. Faz **düğüm
+kimliğiyle** saklanır (öğeyle değil): öğede dursaydı kayış her tuş vuruşunda
+başa sarardı. Sekme gizliyken rAF zaten durur, `dt` 0.1 s'ye kırpılır (bir
+dakikalık gizlilikten sonra kayış fırlamasın), `prefers-reduced-motion` açıksa
+animasyon hiç başlamaz. Kare başına iş: bir diş yolu + kasnak başına bir kol
+yolu, hepsi attribute yazımı.
+
+**Devir seçicisi kol konumuyla AYNI satırda** (ikinci bir şerit çizimden 22 px
+alırdı; iki şeritle alternatör dairesi 13 px'in altına iniyordu). Seçenekler
+duty tablosundan gelir, `Durgun` ilk sıradadır, varsayılan **baskın** duty
+satırıdır (en büyük yüzde). Duty tablosu boşsa tek bir varsayılan devir
+(1000) gelir ve etiketinde bunu **yazar**: oranlar salt geometriden geldiği
+için animasyon yine doğrudur, uydurma olan yalnız mutlak devirdir. Ağır çekim
+katsayısı da künyede yazılıdır — gizlenseydi kullanıcı ekrandan devir okumaya
+kalkardı.
+
+**ÖLÇÜLDÜ (gerçek tarayıcı, BMC, 800 dev/dk):** altı kasnağın altısı da
+beklenen hızda dönüyor — `Sürücü 0.105 · Klima 0.112 · Alternatör 0.291 ·
+üç sırt kasnağı −0.224 tur/s` — sapma **%0.0**, işaretler doğru (sırttan temas
+edenler ters yönde), diş sayısı faz boyunca sabit (136).
+
+Animasyon **yalnız kanvas kartında**: panel, HTML rapor §8.5 ve SVG/PNG dışa
+aktarma aynı çiziciyi kullanıyor ama `animate` geçirmiyor → statik kalıyorlar.
 
 #### Çevrimdışı HTML rapor (`js/cp-fead-report.js`)
 
@@ -770,6 +854,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/fead-model.test.js` | `js/fead-model.js` | **Köprü kapısı**: AG00686 MFSim KANVAS DÜĞÜMÜ olarak kurulup Gates sayılarını üretiyor mu (span %0.5, sarım 0.2°, Mean kol açısı 0.2°); temas tarafı üç katmanlı çözümü, sürücü rolü, `dia→od` göçü, ad tekilleştirme, hata çevirisi. Ayrıca **ters temas tarafının hata VERMEDİĞİNİ** belgeler (rozetin varlık nedeni). **Duty kapısı**: AG00686 duty tablosunun çıkış gerilmeleri ve hubload'ları %0.5 içinde; kW'ın kimlikle anahtarlanması (yeniden adlandırmada kaybolmuyor), sürücü gücünün toplamdan hesaplanması, ateşleme frekansı, yorulma dağılımının çapa bağlı olması, katalog oranının ÇAPTAN hesaplanması. **Sıcaklık kapısı**: satır başına °C → tek °C indirgemesi hasar-eşdeğer (tek sıcaklıkta birebir aynı, dağılımda aritmetik ortalamanın üstünde), ağırlık `dc·v`, açıkça girilen %0 sıfır ağırlıklı; **yorulma modeli** seçimi dağılıma geçer, mutlak ömre geçemez ve bu yazılır. **Burulma köprüsü**: gergi kasnak kütlesi ve KRANK MİLİ ataleti çekirdeğe geçiyor (ölü girdiydi), krank adla anahtarlanır, `analyze()` içindeki çift hesap kapalı, eksik atalet sessiz değil |
 | `tests/unit/cp-fead.test.js` | `js/cp-fead.js` + `js/components.js` | FEAD sunum katmanı: kanvas rozeti, `feadContact` varsayılanları, panel smoke testleri, alt-sistem sözleşmesi, `fead-*` tip tanımları; panelin HANGİ ALANLARI sorduğu (montaj merkezi ↔ serbest açı), servis faktörü hükmü; **kayışın kaburgalı yüzü** (diş yönü + aynalanmış çevrim), **telin komşuya bakan kenarı** (oran kuralı, elle taşınan portun kazanması) ve **`veFeadArrangeRing`** (ortak çember, kayış sırası, kutudan türeyen yarıçap, araçların halka dışında kalması, `veTidyLayout`'un devretmesi) |
 | `tests/unit/cp-fead-report.test.js` | `js/cp-fead-report.js` + `tools/report-assets/fead-theory-source.html` | **Rapor içeriği**: Türkçe sayı biçimi (gerçek eksi, `—` ≠ 0), `wearPct` oran→yüzde çevrimi, sarım açılarının DERECE basılması, Σsarım=360 ve `L_pitch−L_eff=2πh_b` denetimlerinin belgede görünmesi, sürücü kW sütununun duty tablosunda OLMAMASI, çözülemeyen konumun `Err.` ile işaretlenmesi, `undefined`/`NaN`/`[object` sızmaması, "ortalama tork ≠ peak", sistem burulma modunun yokluğunun yazılması, uygunluk hükmünün servis faktörünü kullanması, şekil/tablo numaralarının boşluksuz ve her üretimde sıfırlanması, şablon tokenlarının tek kez geçmesi, içindekiler id'lerinin üreteçle aynı olması |
+| `tests/unit/fead-anim.test.js` | `js/cp-fead.js` animasyon + `js/fead-model.js` kinematik | **Kayış Yolu kartının animasyonu**: ω·r = v özdeşliği, ağır çekim katsayısının REFERANS devre bağlanması (seçili devre bağlansaydı seçici işlevsiz kalırdı — istenmeyen alternatif de koşturulup belgeleniyor), diş adımının çevreyi tam bölmesi, diş sayısının faz boyunca sabit kalması, bir adımlık fazın deseni birebir kendine getirmesi, dişlerin GİDİŞ yönünde ilerlemesi, kol açısal hızının `d·v/r` olması (sırttan temas edende ters) ve kol ucu çevresel hızının kayış hızına eşitliği (kasnakta kayma yok), animasyonun YALNIZ kanvas kartında olması, fazın düğüm kimliğinde durması (yeniden kurulumda kayış zıplamıyor), uzun duraklamada `dt` kırpması |
 | `tests/unit/fead-example.test.js` | `js/fead-model.js` örnekleri + FEAD_INFORMATION | **Tedarikçi sayfası çıpası** (Gates'ten bağımsız ikinci doğrulama): kayış boyu 1715 mm, kol boyu 90.0 mm, Spring Mean Load 22.07 Nm, tahrik oranı 1.1; sayfanın devir→kW tabloları; **iki sessiz kanalın** ölçülmüş belgesi (montaj merkezi ↔ serbest açı 2.6×, tasarım gerginliği ↔ yay dengesi 250 N) |
 | `tests/unit/canvas-space.test.js` | `js/canvas-space.js` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama |
 | `tests/unit/module-start-center.test.js` | `js/components.js` `veStartModule` | Karşılama kartından gelen modül bloğu görünümün TAM ortasına düşer (kabuk senkronu ölçümden önce) |
