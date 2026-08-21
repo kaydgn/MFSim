@@ -831,11 +831,11 @@ girdiği değer.
 
 **Sırada:** Sonuçlar sayfasında FEAD çözüm sekmesi (kanal yayını).
 
-#### Yapısal Analiz — `js/cp-structural.js` (İSKELET, panelleri bilerek boş)
+#### Yapısal Analiz — `js/cp-structural.js` (Geometri DOLU, kalan üçü iskelet)
 
-Dördüncü modül. Şu an **yalnız iskelet**: modül kartı, iç topoloji gezinmesi,
-breadcrumb, sidebar kapsamı ve dört zincir bileşeni. Bileşen panelleri **boş** —
-ayrı oturumlarda tek tek doldurulacak.
+Dördüncü modül. Zincirin **ilk bileşeni (Geometri) çalışıyor** — STEP içe
+aktarma + 3B görüntüleyici; kalan üç panel hâlâ iskelet ve ayrı oturumlarda
+doldurulacak. `_strPending` kuralı orada duruyor: panel boş ama SESSİZ değil.
 
 ```
 Geometri → Hesaplama Ağı → Sınır Koşulları → Sonuçlar
@@ -897,8 +897,85 @@ build AGPL-3** (MIT tek yönlü uyumlu; telif hakkı kullanıcıda olduğu için
 optikonalite korunur). WASM'lar tek dosyaya inline EDİLMEZ, talep üzerine
 yüklenir — hem boyut (occt 7,25 MB + tetgen) hem lisans aynı kapıya çıkıyor.
 
-**Sırada:** Geometri (STEP içe aktarma + 3B görüntüleyici) · Hesaplama Ağı
-(yeniden-mesh + TetGen WASM) · Sınır Koşulları (yüz seçimi) · Sonuçlar (çözücü).
+##### Geometri — STEP içe aktarma (`js/structural-model.js` + `cp-structural-viewer.js`)
+
+Zincirin ilk bileşeni. FEAD'deki üç katmanın aynısı:
+
+| Dosya | Katman | Kural |
+|-------|--------|-------|
+| `vendor/occt-import-js.*` | Hesap çekirdeği | **Dışarıdan geldi, birebir durur** (npm `occt-import-js@0.0.23`, LGPL-2.1). `fead-core.js` ile aynı kural |
+| `js/structural-model.js` | Köprü (DOM'suz) | Ham occt çıktısı → MFSim modeli; yüz kimliği, sınır kutusu, hata çevirisi |
+| `js/cp-structural-viewer.js` | Sunum (THREE) | Kanvas, kamera, yüz vurgusu. Kalıp `cp-mount-viewer.js` |
+| `js/cp-structural.js` | Sunum (HTML) | Panel, dosya alma, künye. **Kendi geometrisini hesaplamaz** |
+
+**WASM `wasmBinary` ile verilir, `locateFile` ile DEĞİL.** Emscripten glue'u
+.wasm yolunu `document.currentScript.src`'den tahmin eder; tek dosya sürümünde
+bütün script'ler INLINE olduğu için o alan **yoktur** ve tahmin sessizce yanlış
+yere gider. .wasm'ı köprü kendisi getiriyor (`VE_STR_OCCT_WASM_PATHS` sırayla
+denenir, tutan yol künyeye yazılır). **Tek dosyaya GÖMÜLMEZ** — 7,3 MB ve
+LGPL-2.1 aynı kapıya çıkıyor; CI deploy `_site/vendor/`'a kopyalıyor.
+
+**EN KRİTİK ÖZELLİK — yüz kimliği ağ inceliğinden BAĞIMSIZ.** Sınır koşulu CAD
+yüzüne bağlanacak, yakınsama çalışması ise ağı defalarca yenileyecek; kimlik
+incelikle değişseydi her yenilemede bütün sınır koşulları düşerdi. **ÖLÇÜLDÜ**
+(`as1-tu-203.stp`, üç incelik): `4688 → 4408 → 2456` üçgen, **160 yüz ve aynı
+kimlikler**. Kimlik `m<mesh>/f<yüz>` (`veStrFaceKey`). İkinci değişmez: yüz
+aralıkları üçgenleri **boşluksuz ve örtüşmesiz** böler — `first`/`last` anlamı
+sessizce kayarsa (0↔1 tabanlı, kapsayan↔kapsamayan) geometri kusursuz görünür
+ama yüz seçimi YANLIŞ üçgenleri toplar.
+
+**Birim çevrimi occt'de doğru, regex'le OKUNMAZ.** Aynı küp mm/inch/metre ile
+yazılmış üç dosyada da 1000,0000 mm çıkıyor — sessiz 25,4× hatası yok. STEP
+başlığından birimi regex ile okuma **denendi ve bırakıldı**: `cube-m.step`
+hiçbir `SI_UNIT(...METRE)` kalıbına uymuyor.
+
+**Künye ÜÇGEN TAŞIMAZ** (`veStrGeomRecord`). `node.data` alt-topolojiye
+GÖMÜLÜYOR; üçgenler künyeye sızsa proje dosyası çarpımsal büyürdü. Ağır olan iki
+şey ayrı: **STEP kaynağı** `node.data.geometry.source`'a (yalnız 3 MB altındaysa
+— panel hangisi olduğunu **açıkça yazıyor**), **üçgenler** oturumluk önbelleğe
+(`window.veStrGeometryCache`, `_strForgetResults`'tan temizleniyor — Takoz/FEAD
+tuzağının aynısı). Üçgen zaten TÜRETİLMİŞ veri: yakınsama çalışması için ZATEN
+farklı inceliklerde yeniden üretilecek.
+
+**Ağ inceliği FEA ağı DEĞİL** — OCCT'nin RENDER tessellation'ı, yalnız
+görüntülemek ve yüz aralıklarını kurmak için (min açı 2,81°, sıkmak BOZUYOR;
+yukarıda ölçülü). Panel bunu yazıyor ki kimse bu üçgeni TetGen'e verilecek
+sanmasın.
+
+**OCCT'nin kendi teşhisi kullanıcıya ULAŞIYOR.** Kütüphane `"Line 2: Incorrect
+syntax: unexpected QUID, expecting STEP"` gibi tam sebebi yazıyor ama varsayılanda
+bu `console`'a düşüyor ve kullanıcı yalnız "dosya okunamadı" görüyordu;
+`print`/`printErr` yakalanıp mesaja iliştiriliyor (`_sgWithDiag`, en fazla iki
+satır).
+
+**Fare vurgusu bir süs değil, zincirin KANITI:** vurgulanan şey üçgen değil CAD
+YÜZÜ (`veStrFaceOfTriangle`). Sınır Koşulları bileşeni yüz seçerken AYNI
+çeviriyi kullanacak.
+
+**ÖLÇÜLDÜ (gerçek tarayıcı):** `rounded-cube.step` → 64 üçgen · 7 CAD yüzü ·
+10×10×10 mm · 684 ms; fareyle `m0/f3` yüzü (2 üçgen) vurgulanıyor.
+
+###### Bileşen bırakma alanı ölçüm kaplamasını devralır (`data-ve-dropzone`)
+
+`js/measure-dropzone.js` dinleyicileri `document` üzerinde ve **bubble**
+evresinde. Geometri'nin STEP bırakma alanı `stopPropagation()` çağırınca oradaki
+`drop` işleyicisi **hiç çalışmıyor** → `veImpDropShow(false)` çağrılmıyor →
+ölçüm kaplaması ekranda **ASILI kalıyor**, program kilitlenmiş görünüyor. İkinci
+sorun daha sinsi: kullanıcı .step sürüklerken kaplama "ölçüm dosyasını bırakın"
+diyerek **yanlış hedefi** gösteriyordu.
+
+Çözüm tek yerde: `data-ve-dropzone` taşıyan bir alanın üstünde kaplama kendini
+çeker ve sayacı sıfırlar (`veImpLocalZone` / `veImpYieldToLocal`); alandan
+çıkılınca `dragenter` onu geri getirir — kendi kendini düzeltir. Ağ ve Sınır
+Koşulları bileşenleri de kendi alanlarını böyle kuracak.
+
+**ÖLÇÜLDÜ (gerçek tarayıcı, öncesi/sonrası):** alan üzerindeyken kaplama açık
+`ESKİ true → YENİ false`; **bıraktıktan sonra** kaplama açık
+`ESKİ true → YENİ false`. Genel davranış korunuyor (alan dışında kaplama yine
+açılıyor). `measure-dropzone.js` ORTAK dosya → `npm run sync:viewer` yapıldı.
+
+**Sırada:** Hesaplama Ağı (yeniden-mesh + TetGen WASM) · Sınır Koşulları
+(yüz seçimi) · Sonuçlar (çözücü).
 
 ### Ölçüm Görüntüleyici (`viewer/`)
 
@@ -1034,7 +1111,8 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/cp-fead-report.test.js` | `js/cp-fead-report.js` + `tools/report-assets/fead-theory-source.html` | **Rapor içeriği**: Türkçe sayı biçimi (gerçek eksi, `—` ≠ 0), `wearPct` oran→yüzde çevrimi, sarım açılarının DERECE basılması, Σsarım=360 ve `L_pitch−L_eff=2πh_b` denetimlerinin belgede görünmesi, sürücü kW sütununun duty tablosunda OLMAMASI, çözülemeyen konumun `Err.` ile işaretlenmesi, `undefined`/`NaN`/`[object` sızmaması, "ortalama tork ≠ peak", sistem burulma modunun yokluğunun yazılması, uygunluk hükmünün servis faktörünü kullanması, şekil/tablo numaralarının boşluksuz ve her üretimde sıfırlanması, şablon tokenlarının tek kez geçmesi, içindekiler id'lerinin üreteçle aynı olması |
 | `tests/unit/fead-anim.test.js` | `js/cp-fead.js` animasyon + `js/fead-model.js` kinematik | **Kayış Yolu kartının animasyonu**: ω·r = v özdeşliği, ağır çekim katsayısının REFERANS devre bağlanması (seçili devre bağlansaydı seçici işlevsiz kalırdı — istenmeyen alternatif de koşturulup belgeleniyor), diş adımının çevreyi tam bölmesi, diş sayısının faz boyunca sabit kalması, bir adımlık fazın deseni birebir kendine getirmesi, dişlerin GİDİŞ yönünde ilerlemesi, kol açısal hızının `d·v/r` olması (sırttan temas edende ters) ve kol ucu çevresel hızının kayış hızına eşitliği (kasnakta kayma yok), animasyonun YALNIZ kanvas kartında olması, fazın düğüm kimliğinde durması (yeniden kurulumda kayış zıplamıyor), uzun duraklamada `dt` kırpması |
 | `tests/unit/fead-example.test.js` | `js/fead-model.js` örnekleri + FEAD_INFORMATION | **Tedarikçi sayfası çıpası** (Gates'ten bağımsız ikinci doğrulama): kayış boyu 1715 mm, kol boyu 90.0 mm, Spring Mean Load 22.07 Nm, tahrik oranı 1.1; sayfanın devir→kW tabloları; **iki sessiz kanalın** ölçülmüş belgesi (montaj merkezi ↔ serbest açı 2.6×, tasarım gerginliği ↔ yay dengesi 250 N) |
-| `tests/unit/cp-structural.test.js` | `js/cp-structural.js` + `js/components.js` | **Yapısal Analiz iskeleti**: alt-sistem sözleşmesi, zincirin PORTLARLA zorlanması (Geometri girişsiz / Sonuçlar çıkışsız), başlangıç kenarlarının indisle değil TİPLE yazılı olması, panel smoke testleri, iskeletin BEŞ dosyaya birden bağlı olduğu (components / cp-core / ui-core / topology / index.html — biri unutulursa kaydedilen proje bozulur) |
+| `tests/unit/structural-model.test.js` | `js/structural-model.js` + `vendor/occt-import-js.*` | **STEP köprüsü**: GERÇEK dosyalar GERÇEK OCCT ile okunuyor (sahte veri yok). **Yüz kimliği ağ inceliğinden bağımsız** (üçgen değişir, `m<i>/f<j>` değişmez), yüz aralıkları üçgenleri boşluksuz/örtüşmesiz böler, `veStrFaceOfTriangle` eşlemesi, birimin mm'ye çevrilmesi, künyenin ÜÇGEN TAŞIMAMASI, hata çevirisi (bozuk dosya ≠ katısız dosya) + OCCT'nin kendi teşhisinin mesaja iliştirilmesi, .wasm aday-yol araması (ilk tutan kazanır, hiçbiri tutmazsa denenenler yazılır), oturumluk önbelleğin temizlenmesi |
+| `tests/unit/cp-structural.test.js` | `js/cp-structural.js` + `js/components.js` | **Yapısal Analiz iskeleti**: alt-sistem sözleşmesi, zincirin PORTLARLA zorlanması (Geometri girişsiz / Sonuçlar çıkışsız), başlangıç kenarlarının indisle değil TİPLE yazılı olması, panel smoke testleri, iskeletin BEŞ dosyaya birden bağlı olduğu (components / cp-core / ui-core / topology / index.html — biri unutulursa kaydedilen proje bozulur). **Geometri artık DOLU**: hâlâ iskelet olan panel sayısı üç (biri dolunca liste güncellenmeli), içe aktarma yüzeyi + sürükle-bırak bağlı, geometri YOKKEN 3B kanvas kurulmuyor, kaynağın projeye yazılıp yazılmadığı AÇIKÇA yazılı; vendorlu okuyucu/.wasm/lisans deposu ve CI'ın .wasm'ı Pages'e kopyalaması |
 | `tests/unit/canvas-space.test.js` | `js/canvas-space.js` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama |
 | `tests/unit/module-start-center.test.js` | `js/components.js` `veStartModule` | Karşılama kartından gelen modül bloğu görünümün TAM ortasına düşer (kabuk senkronu ölçümden önce) |
 | `tests/unit/port-geometry.test.js` | `js/components.js` port geometrisi + `js/connections.js` | Bağlantı ucu ile port dairesi aynı noktada — dört kenar, çok port, aynalama; **gidiş yönü oku** (Bézier t=0.5, 46 px eşiği, ters yön); **`veSyncPortDom`** — kenar sonradan değişince (bağlantı/sürükleme) dairenin teli takip etmesi, elle taşınan portun ezilmemesi, kenar değişmiyorsa DOM'a hiç yazılmaması |
@@ -1045,7 +1123,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/toolbar-save.test.js` | `js/toolbar.js` | Proje kaydetme, JSON serileştirme, showSaveFilePicker |
 | `tests/unit/viewer-board.test.js` | `viewer/js/board.js` | Görüntüleyici panosu: bir panoda tek ölçüm dosyası kuralı, X ekseni seçenekleri, veri kapısı |
 | `tests/unit/viewer-sync.test.js` | `viewer/sync.js` | Görüntüleyici kopyaları `js/`'ten geride kaldıysa kırmızı — sessiz ayrışmaya karşı kapı |
-| `tests/unit/measure-dropzone.test.js` | `js/measure-dropzone.js` | Sürükle-bırak uzantı süzgeci (sessiz yanlış çıktıya karşı) |
+| `tests/unit/measure-dropzone.test.js` | `js/measure-dropzone.js` | Sürükle-bırak uzantı süzgeci (sessiz yanlış çıktıya karşı); **yerel bırakma alanı** (`data-ve-dropzone`) kaplamayı devralıyor — alan içine bırakılan dosya ölçüm sihirbazını açmıyor, alan dışı davranış korunuyor |
 | `tests/unit/simulation-engine-grade.test.js` | `js/simulation-engine.js` | Yol eğimi işaret konvansiyonu (harita ↔ fizik çevirisi) + dinamiğin değişmediğini bağlayan altın değerler |
 | `tests/unit/shot-tool.test.js` | `tools/shot.js` | Ekran görüntüsü aracının ayrıştırma çekirdeği: bilinmeyen bayrağın SESSİZCE yutulmaması (yanlış ekranın görüntüsü alınırdı), hedef takma adları, PNG ölçüsü, karşılaştırmanın İKİ GÖRÜNTÜYÜ TEK ÖLÇEKLE küçültmesi |
 | `tests/unit/source-hygiene.test.js` | `js/`, `viewer/js/`, `css/`, `index.html` | **Yapısal kapılar**: üst-seviye bildirim çakışması yok, kaynakta kontrol karakteri yok |
@@ -1053,6 +1131,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/e2e/app.spec.js` | Tüm uygulama | Sayfa yükleme, menüler, bileşen ekleme, kaydetme |
 | `tests/e2e/measure-import.spec.js` | İçe aktarma sihirbazı | Gerçek .xlsx → sütun tarama → X/Y seçimi → şeritler |
 | `tests/e2e/viewer.spec.js` | `MFSim_Olcum_Goruntuleyici.html` | **Üretilen tek dosya**, `file://` üzerinden: açılış, içe aktarma, sürükle-bırak, birleştirme, tema, sıfır ağ isteği |
+| `tests/e2e/structural-geometry.spec.js` | Geometri bileşeni (uçtan uca) | **GERÇEK tarayıcı**: 7,3 MB .wasm'ın göreli yoldan çekilmesi → OCCT → panel künyesi → WebGL sahnesi; fareyle CAD YÜZÜ vurgusu (üçgen değil), ağ inceliği değişince üçgen değişip kimliklerin sabit kalması, STEP olmayan dosyanın sessizce yutulmaması, **ölçüm kaplamasının STEP alanında çekilip asılı kalmaması**. Bu dört halka Node'da HİÇ koşmuyor |
 | `tests/e2e/measure-merge-drop.spec.js` | `js/measure-dropzone.js` + `js/trace-view.js` | MFSim'de sürükle-bırak ve çok eksenli birleştirme — araç performans VE takoz sekmesi |
 
 ## Sık Kullanılan Komutlar

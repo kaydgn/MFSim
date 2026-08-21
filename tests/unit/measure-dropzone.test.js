@@ -78,3 +78,54 @@ describe('veImpAcceptDropped', () => {
     expect(stubs.showToast.mock.calls[0][0]).toContain('a.png');
   });
 });
+
+// ── YEREL BIRAKMA ALANI — kaplama kendini çeker ────────────────────────────
+// Bu dinleyiciler `document` üzerinde ve BUBBLE evresinde. Bir bileşen paneli
+// kendi bırakma alanını kurup stopPropagation çağırınca buradaki `drop`
+// işleyicisi HİÇ ÇALIŞMAZ → veImpDropShow(false) çağrılmaz → kaplama ekranda
+// ASILI KALIR. (Yapısal Analiz / Geometri'nin STEP alanı eklenirken çıktı.)
+describe('veImpLocalZone — bileşen bırakma alanı kaplamayı devralır', () => {
+  const ev = (html, sel) => {
+    document.body.innerHTML = html;
+    return { target: sel ? document.querySelector(sel) : document.body };
+  };
+
+  test('data-ve-dropzone İÇİNDEKİ hedef yerel alan sayılır', () => {
+    const e = ev('<div data-ve-dropzone><span id="ic">x</span></div>', '#ic');
+    expect(veImpLocalZone(e)).not.toBeNull();
+  });
+
+  test('alan DIŞINDAKİ hedef yerel sayılmaz — genel kaplama çalışmaya devam eder', () => {
+    const e = ev('<div data-ve-dropzone></div><span id="dis">x</span>', '#dis');
+    expect(veImpLocalZone(e)).toBeNull();
+  });
+
+  test('closest olmayan hedefte patlamıyor (document/window)', () => {
+    expect(veImpLocalZone({ target: null })).toBeNull();
+    expect(veImpLocalZone({ target: {} })).toBeNull();
+    expect(veImpLocalZone(null)).toBeNull();
+  });
+
+  test('yerel alana bırakılan dosya ölçüm sihirbazını AÇMAZ', () => {
+    document.body.innerHTML = '<div data-ve-dropzone id="z"></div>';
+    global.veImpLoadFile = jest.fn();
+    veImpOnDrop({
+      target: document.getElementById('z'),
+      preventDefault() {},
+      dataTransfer: { types: ['Files'], files: [f('olcum.xlsx')] },
+    });
+    // .xlsx bile olsa: alan sahibi bileşenindir.
+    expect(global.veImpLoadFile).not.toHaveBeenCalled();
+  });
+
+  test('yerel alan DIŞINA bırakılan dosya sihirbazı açar (regresyon kapısı)', () => {
+    document.body.innerHTML = '<div data-ve-dropzone></div><div id="d"></div>';
+    global.veImpLoadFile = jest.fn();
+    veImpOnDrop({
+      target: document.getElementById('d'),
+      preventDefault() {},
+      dataTransfer: { types: ['Files'], files: [f('olcum.xlsx')] },
+    });
+    expect(global.veImpLoadFile).toHaveBeenCalledWith(f('olcum.xlsx'));
+  });
+});

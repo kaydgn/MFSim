@@ -4144,6 +4144,88 @@
 }
 .mnt-vwr-bar .mnt-vwr-toggle,.mnt-vwr-bar .mnt-vwr-action{ width:auto;padding:5px 11px; }
 
+/* ══ YAPISAL ANALİZ — GEOMETRİ (STEP içe aktarma + 3B görüntüleyici) ══
+   Çip dili Takoz görüntüleyicisiyle ORTAK (yukarıdaki .mnt-vwr-*): aynı
+   yükseklik, aynı kenarlık, aynı vurgu kuralı. İki modülün denetimleri yan
+   yana görülmese de aynı programın parçası gibi okunmalı. */
+.ve-str-drop{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  padding:18px 14px;margin-bottom:9px;text-align:center;
+  background:var(--bg-secondary);
+  border:1px dashed var(--border-color);border-radius:var(--radius-md);
+  transition:border-color var(--dur-fast) var(--ease-out),
+             background var(--dur-fast) var(--ease-out);
+}
+/* Sürükleme sırasında hedefin AÇIKÇA aydınlanması gerekiyor: kullanıcı fareyi
+   bırakmadan önce doğru yerde olduğunu görmeli (measure-dropzone kaplamasıyla
+   aynı gerekçe). */
+.ve-str-drop.on{
+  border-color:var(--accent-primary);
+  background:color-mix(in srgb, var(--accent-primary) 10%, var(--bg-secondary));
+}
+.ve-str-drop-ico{ opacity:0.85;line-height:0; }
+.ve-str-drop-txt{ font-size:var(--fs-micro);line-height:1.5;color:var(--text-secondary); }
+.ve-str-drop-txt b{ color:var(--text-heading);font-size:var(--fs-tiny); }
+.ve-str-drop-txt span{ color:var(--text-muted); }
+
+.ve-str-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:27px;padding:5px 11px;
+  font-family:inherit;font-size:var(--fs-micro);font-weight:600;line-height:1;
+  color:var(--text-secondary);background:var(--bg-tertiary);
+  border:1px solid var(--border-color);border-radius:var(--radius-sm);
+  cursor:pointer;white-space:nowrap;
+  transition:background var(--dur-fast) var(--ease-out),
+             border-color var(--dur-fast) var(--ease-out),
+             color var(--dur-fast) var(--ease-out);
+}
+.ve-str-btn:hover{ border-color:var(--text-muted);color:var(--text-primary); }
+.ve-str-btn--primary{
+  color:#fff;background:var(--accent-primary);border-color:var(--accent-primary);
+}
+.ve-str-btn--primary:hover{ filter:brightness(1.12);color:#fff; }
+.ve-str-btn--danger:hover{
+  color:var(--accent-danger);
+  border-color:color-mix(in srgb, var(--accent-danger) 45%, var(--border-color));
+}
+
+/* Kademeli seçici (incelik / görünüm): sabit sütun — ragged wrap yok. */
+.ve-str-seg{ display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:5px; }
+.ve-str-seg-btn{
+  min-height:27px;padding:5px 7px;min-width:0;
+  font-family:inherit;font-size:var(--fs-micro);font-weight:600;line-height:1;
+  color:var(--text-secondary);background:var(--bg-tertiary);
+  border:1px solid var(--border-color);border-radius:var(--radius-sm);
+  cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:background var(--dur-fast) var(--ease-out),
+             border-color var(--dur-fast) var(--ease-out),
+             color var(--dur-fast) var(--ease-out);
+}
+.ve-str-seg-btn:hover{ border-color:var(--text-muted);color:var(--text-primary); }
+.ve-str-seg-btn.on{
+  color:var(--accent-primary);
+  background:color-mix(in srgb, var(--accent-primary) 12%, var(--bg-tertiary));
+  border-color:color-mix(in srgb, var(--accent-primary) 45%, var(--border-color));
+}
+
+/* Yüz künyesi — fare parçanın üstündeyken. pointer-events:none ŞART: kutu
+   farenin altına girerse raycast kendi kutusunu vurur ve vurgu titrer. */
+.ve-str-vwr-tip{
+  position:absolute;z-index:5;pointer-events:none;
+  padding:5px 8px;max-width:220px;
+  font-size:var(--fs-micro);line-height:1.45;
+  color:var(--text-primary);background:var(--bg-secondary);
+  border:1px solid var(--border-color);border-radius:var(--radius-sm);
+  box-shadow:0 2px 8px rgba(0,0,0,0.28);
+}
+.ve-str-vwr-hint{
+  position:absolute;left:0;right:0;bottom:0;z-index:4;pointer-events:none;
+  padding:5px 9px;
+  font-size:var(--fs-micro);line-height:1.4;color:var(--text-muted);
+  background:color-mix(in srgb, var(--bg-primary) 82%, transparent);
+  border-top:1px solid var(--border-color);
+}
+
 /* ── Bileşen kimlik bloğu (simge + ad + ID + sil düğmesi) ──
    Varsayılan: ORTALANMIŞ dikey yığın — tüm bileşen pencerelerinde eskisi gibi. */
 .ve-prop-identity{

@@ -196,6 +196,16 @@ jobs:
           # Harici varlıklar (ör. örnek topoloji görselleri) — göreli yolla
           # referans verilenler Pages'e aynı yapıda kopyalanır.
           if [ -d assets ]; then cp -r assets _site/assets; fi
+          # STEP okuyucusunun .wasm'i (7.3 MB) — build.js vendor JS'lerini inline
+          # ediyor ama bir WASM IKILISI script etiketine gomulemez. Yapisal Analiz
+          # Geometri bileseni bunu calisma aninda 'vendor/occt-import-js.wasm'
+          # yolundan cekiyor (js/structural-model.js VE_STR_OCCT_WASM_PATHS), o
+          # yuzden Pages'te de ayni goreli yolda durmali. Tek dosyaya GOMULMUYOR:
+          # boyut ve LGPL-2.1 ayni kapiya cikiyor (bkz. CLAUDE.md).
+          mkdir -p _site/vendor
+          cp vendor/occt-import-js.wasm _site/vendor/occt-import-js.wasm
+          cp vendor/license.occt.txt _site/vendor/license.occt.txt
+          cp vendor/license.occt-import-js.txt _site/vendor/license.occt-import-js.txt
           touch _site/.nojekyll
 
       - name: Generate version.json

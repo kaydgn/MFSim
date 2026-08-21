@@ -43,6 +43,32 @@ function veImpDropShow(on) {
   el.setAttribute('aria-hidden', on ? 'false' : 'true');
 }
 
+// YEREL BIRAKMA ALANI — bu kaplamanın çekilmesi gereken yer.
+//
+// Bu dinleyiciler `document` üzerinde ve BUBBLE evresinde. Bir bileşen paneli
+// kendi bırakma alanını kurup `stopPropagation()` çağırdığında buradaki `drop`
+// İŞLEYİCİSİ HİÇ ÇALIŞMAZ — yani `veImpDropShow(false)` çağrılmaz ve kaplama
+// ekranda ASILI KALIR; program kilitlenmiş görünür. (Yapısal Analiz / Geometri
+// bileşeninin STEP bırakma alanı eklenirken tam olarak bu çıktı.)
+//
+// İkinci sorun daha sinsi: kullanıcı .step dosyasını sürüklerken kaplama
+// "ölçüm dosyasını bırakın" diyor — YANLIŞ hedefi gösteriyor.
+//
+// Çözüm tek yerde: `data-ve-dropzone` taşıyan bir alanın üstündeyken bu kaplama
+// kendini çeker ve sayacı sıfırlar. Alandan çıkılınca dragenter yeniden
+// tetiklenip kaplamayı geri getirir — kendi kendini düzeltir.
+function veImpLocalZone(e) {
+  var t = e && e.target;
+  if(!t || typeof t.closest !== 'function') return null;
+  try { return t.closest('[data-ve-dropzone]'); } catch(err) { return null; }
+}
+
+// Kaplamayı kapat ve sayacı sıfırla. Yerel alan devraldığında çağrılır.
+function veImpYieldToLocal() {
+  _veImpDragDepth = 0;
+  veImpDropShow(false);
+}
+
 // Sürüklenen şey DOSYA mı? Başka bir sayfadan metin ya da resim sürükleyen
 // kullanıcıya "ölçüm dosyasını bırakın" demek yanıltıcı olurdu.
 function veImpDragHasFiles(e) {
@@ -86,6 +112,10 @@ function veImpOnDrop(e) {
   _veImpDragDepth = 0;
   veImpDropShow(false);
 
+  // Yerel alan kendi dosyasını aldı → sihirbazı AÇMA. (Yerel alan zaten
+  // stopPropagation çağırıyorsa buraya hiç gelinmez; bu, çağırmayan bir
+  // alan için ikinci kapı.)
+  if(veImpLocalZone(e)) return;
   if(!veImpDragHasFiles(e)) return;
   var file = veImpAcceptDropped(e.dataTransfer.files);
   if(file && typeof veImpLoadFile === 'function') veImpLoadFile(file);
@@ -96,6 +126,7 @@ function veImpOnDrop(e) {
 function veImpBindDropzone() {
   document.addEventListener('dragenter', function(e) {
     e.preventDefault();
+    if(veImpLocalZone(e)) { veImpYieldToLocal(); return; }
     if(!veImpDragHasFiles(e)) return;
     _veImpDragDepth++;
     veImpDropShow(true);
@@ -106,10 +137,15 @@ function veImpBindDropzone() {
   // olmaz.
   document.addEventListener('dragover', function(e) {
     e.preventDefault();
+    // Yerel alanın üstündeyken kaplama çekilir — ama preventDefault YUKARIDA
+    // zaten çağrıldı: çağrılmazsa tarayıcı bırakmayı hiç kabul etmez ve yerel
+    // alanın drop olayı da gelmez.
+    if(veImpLocalZone(e)) { veImpYieldToLocal(); return; }
     if(veImpDragHasFiles(e) && e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
   });
 
   document.addEventListener('dragleave', function(e) {
+    if(veImpLocalZone(e)) return;
     if(!veImpDragHasFiles(e)) return;
     _veImpDragDepth = Math.max(0, _veImpDragDepth - 1);
     if(_veImpDragDepth === 0) veImpDropShow(false);

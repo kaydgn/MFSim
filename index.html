@@ -1137,7 +1137,15 @@
 <script type="text/x-mfsim-defer" src="js/fead-core.js" data-mfsim-label="FEAD: hesap çekirdeği (kayış-kasnak)..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead.js" data-mfsim-label="FEAD kayış-kasnak modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead-report.js" data-mfsim-label="FEAD: rapor üreteci..."></script>
+<!-- STEP okuyucusu (OpenCascade / emscripten, vendored from npm occt-import-js@0.0.23).
+     Bu ETIKET yalnız 96 KB'lık fabrikayı tanımlar — 7.3 MB'lık .wasm AÇILIŞTA
+     YÜKLENMEZ, ilk içe aktarmada js/structural-model.js tarafından talep üzerine
+     getirilir (bkz. veStrOcctReady). Lisans LGPL-2.1: kütüphane AYRI ve
+     değiştirilebilir bir dosya olarak duruyor (vendor/license.occt*.txt). -->
+<script type="text/x-mfsim-defer" src="vendor/occt-import-js.js" data-mfsim-label="STEP okuyucusu (OpenCascade)..."></script>
+<script type="text/x-mfsim-defer" src="js/structural-model.js" data-mfsim-label="Yapısal Analiz: geometri köprüsü (STEP)..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-structural.js" data-mfsim-label="Yapısal Analiz (sonlu elemanlar) modülü..."></script>
+<script type="text/x-mfsim-defer" src="js/cp-structural-viewer.js" data-mfsim-label="Yapısal Analiz: 3B geometri görüntüleyici..."></script>
 <!-- Rapor varlıkları (KaTeX + fontlar, ~1MB) ve teori şablonu: type="text/x-mfsim-report"
      → loader bunları AÇILIŞTA yüklemez; ilk rapor üretiminde talep üzerine çekilir.
      build.js monolitik derlemede içeriği inline eder → indirilmiş tek dosyada da çalışır. -->
