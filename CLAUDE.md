@@ -16,10 +16,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 
 **ÖNEMLİ:** Kod değişiklikleri **yalnızca** `js/` ve `css/` klasörlerindeki modüler dosyalara ve `index.html`'e yapılır. `MFSim_Code.html` dosyası **elle düzenlenmez** — `npm run build` ile otomatik üretilir.
 
-### Üç ana modül (alt-sistem kartı → kendi iç topolojisi)
+### Dört ana modül (alt-sistem kartı → kendi iç topolojisi)
 
 Karşılama ekranındaki her kart, ana tuvale tek bir **alt-sistem kartı** bırakır;
-çift tıklayınca kartın kendi iç topolojisi açılır. Üçü de **aynı nested kalıbı**
+çift tıklayınca kartın kendi iç topolojisi açılır. Dördü de **aynı nested kalıbı**
 paylaşır (stack + `node.data.subTopology` + breadcrumb çipi + sidebar kapsamı):
 
 | Modül | Tip anahtarı | Sidebar kapsamı | Ana dosya | Bağlantının anlamı |
@@ -27,6 +27,7 @@ paylaşır (stack + `node.data.subTopology` + breadcrumb çipi + sidebar kapsam�
 | Araç Performans | `arac-performans` | `arac-performans` | `js/cp-arac-performans.js` | Güç akışı |
 | Takoz Çökme-Titreşim | `mount-analysis` | `mount-analysis` | `js/cp-mount.js` | Salt görsel (çözücü tipe göre toplar) |
 | FEAD (kayış-kasnak) | `fead-analysis` | `fead-analysis` | `js/cp-fead.js` | **Kayış yolu** — serpantin sırası (Krank çıkışı → … → Krank girişi) |
+| Yapısal Analiz (FEA) | `structural-analysis` | `structural-analysis` | `js/cp-structural.js` | **Analiz zinciri** — veri akışı (Geometri → Ağ → Sınır Koşulları → Sonuçlar) |
 
 Yeni bir modül eklerken dokunulan yerler: `js/components.js` (`componentDefs`
 tanımı + `isSubsystem` + `VE_MODULES.components` + `veSyncSidebarScope`),
@@ -766,6 +767,75 @@ girdiği değer.
 
 **Sırada:** Sonuçlar sayfasında FEAD çözüm sekmesi (kanal yayını).
 
+#### Yapısal Analiz — `js/cp-structural.js` (İSKELET, panelleri bilerek boş)
+
+Dördüncü modül. Şu an **yalnız iskelet**: modül kartı, iç topoloji gezinmesi,
+breadcrumb, sidebar kapsamı ve dört zincir bileşeni. Bileşen panelleri **boş** —
+ayrı oturumlarda tek tek doldurulacak.
+
+```
+Geometri → Hesaplama Ağı → Sınır Koşulları → Sonuçlar
+```
+
+**Zincir PORTLARLA zorlanır, yorumla değil:** `str-geometry` girişi 0,
+`str-results` çıkışı 0 → kullanıcı zinciri ters kuramaz. İlk açılışta zincir
+**kurulu ve bağlı** gelir (diğer üç modül yalnız "Başlangıç" kartı koyar; onların
+alt topolojisi değişken, bunun ki sabit — tam bir Geometri, bir Ağ, bir Sınır
+Koşulları, bir Sonuçlar. Seçim yok, o yüzden boş tuval bırakmanın karşılığı yok).
+
+##### Kapsam ölçümle belirlendi — iki kural
+
+Aynı konsol kiriş (200×20×10 mm, çelik, 1000 N) saf JS'te üç eleman tipiyle:
+
+| Eleman | DOF | Süre | Hata |
+|--------|----:|-----:|-----:|
+| 2D lineer üçgen (CST) | 410 | 23 ms | **−17,96 %** |
+| 2D kuadratik (Q8) | 330 | 13 ms | −0,35 % |
+| 3D lineer tet (tet4) | 27 783 | 14,7 s | **−24,0 %** |
+
+1. **ELEMAN KUADRATİK (tet10).** tet4 ile 28 bin serbestlik derecesinde bile
+   cevap %24 yanlış — ve hep **rijit** tarafa, yani güvenli tarafa değil. Kontur
+   grafiği kusursuz görünür; hata gözle yakalanmaz.
+2. **YAKINSAMA GÖSTERİLMEK ZORUNDA.** Tek bir FEA sonucu bir sayı değil bir
+   kanaattir. Rapor yakınsama eğrisini basmadan hüküm veremez.
+
+##### Mesh boru hattı — darboğaz TetGen DEĞİL
+
+TetGen 1.6.1 native derlenip ölçüldü: küpte hacim **tam 1000,000000 mm³**, ters
+tet 0, sınır işaretçileri korunuyor. `-o2` **doğrudan tet10** üretiyor (orta
+düğümleri biz eklemiyoruz). Kalite reçetesi `-pq1.4/20 -O9 -o/150//2.5` →
+min dihedral **7,58°**, `<10°` kuyruğu **%0,01**. (`-q<radius-edge>/<min-dihedral>`
+kısa yardımda yazmıyor, kaynaktan çıkarıldı.)
+
+**`predicates.cxx` MUTLAKA `-O0`** — Shewchuk'un kesin aritmetiği terimlerin
+yeniden sıralanmamasına dayanır; iyileştirme açılırsa TetGen **sessizce
+geçersiz** ağ üretir (TetGen'in kendi `CMakeLists.txt`'i uyarıyor).
+
+Asıl darboğaz **OCCT'nin RENDER tessellation'ı**: min açı 2,81° (küp) — ve
+parametreyi sıkmak **iyileştirmiyor, BOZUYOR**: 2,50° → **0,14°**, tet
+11,8 bin → **1,32 M**. Altı gerçek CAD parçasında ham besleme denendi: **biri
+hiç çözülemedi** (yüzey kendi kendini kesiyor), MAINBODY_BACK'te 11 bin üçgen
+**834 bin tete** patladı. Araya **yüzey yeniden-mesh'leme** adımı şart; prototip
+küpte 2,50° → **11,96°** yaptı (su geçirmez, hacim sapması %0,035).
+
+##### Sınır koşulu CAD YÜZÜNE bağlanır, ağ düğümüne değil
+
+Zincir uçtan uca ölçüldü ve ayakta:
+`occt brep_faces` → `TetGen facetmarkerlist` → çıktı `trifacemarkerlist`.
+Yüzey yeniden bölünse bile kimlik korunuyor. Ağ düğümüne bağlansaydı, yakınsama
+çalışması için ağ her yenilendiğinde bütün sınır koşulları düşerdi — ve yakınsama
+çalışması bu modülde **zorunlu** (yukarıdaki 2. kural).
+
+##### Lisans — TetGen AGPL, MFSim MIT
+
+TetGen AGPL-3 veya WIAS'tan ticari lisans. Karar: **kaynak MIT kalır, dağıtılan
+build AGPL-3** (MIT tek yönlü uyumlu; telif hakkı kullanıcıda olduğu için
+optikonalite korunur). WASM'lar tek dosyaya inline EDİLMEZ, talep üzerine
+yüklenir — hem boyut (occt 7,25 MB + tetgen) hem lisans aynı kapıya çıkıyor.
+
+**Sırada:** Geometri (STEP içe aktarma + 3B görüntüleyici) · Hesaplama Ağı
+(yeniden-mesh + TetGen WASM) · Sınır Koşulları (yüz seçimi) · Sonuçlar (çözücü).
+
 ### Ölçüm Görüntüleyici (`viewer/`)
 
 MFSim'in içe aktarma + diyagram özelliğinin tek başına çalışan sürümü; tek HTML
@@ -900,6 +970,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/cp-fead-report.test.js` | `js/cp-fead-report.js` + `tools/report-assets/fead-theory-source.html` | **Rapor içeriği**: Türkçe sayı biçimi (gerçek eksi, `—` ≠ 0), `wearPct` oran→yüzde çevrimi, sarım açılarının DERECE basılması, Σsarım=360 ve `L_pitch−L_eff=2πh_b` denetimlerinin belgede görünmesi, sürücü kW sütununun duty tablosunda OLMAMASI, çözülemeyen konumun `Err.` ile işaretlenmesi, `undefined`/`NaN`/`[object` sızmaması, "ortalama tork ≠ peak", sistem burulma modunun yokluğunun yazılması, uygunluk hükmünün servis faktörünü kullanması, şekil/tablo numaralarının boşluksuz ve her üretimde sıfırlanması, şablon tokenlarının tek kez geçmesi, içindekiler id'lerinin üreteçle aynı olması |
 | `tests/unit/fead-anim.test.js` | `js/cp-fead.js` animasyon + `js/fead-model.js` kinematik | **Kayış Yolu kartının animasyonu**: ω·r = v özdeşliği, ağır çekim katsayısının REFERANS devre bağlanması (seçili devre bağlansaydı seçici işlevsiz kalırdı — istenmeyen alternatif de koşturulup belgeleniyor), diş adımının çevreyi tam bölmesi, diş sayısının faz boyunca sabit kalması, bir adımlık fazın deseni birebir kendine getirmesi, dişlerin GİDİŞ yönünde ilerlemesi, kol açısal hızının `d·v/r` olması (sırttan temas edende ters) ve kol ucu çevresel hızının kayış hızına eşitliği (kasnakta kayma yok), animasyonun YALNIZ kanvas kartında olması, fazın düğüm kimliğinde durması (yeniden kurulumda kayış zıplamıyor), uzun duraklamada `dt` kırpması |
 | `tests/unit/fead-example.test.js` | `js/fead-model.js` örnekleri + FEAD_INFORMATION | **Tedarikçi sayfası çıpası** (Gates'ten bağımsız ikinci doğrulama): kayış boyu 1715 mm, kol boyu 90.0 mm, Spring Mean Load 22.07 Nm, tahrik oranı 1.1; sayfanın devir→kW tabloları; **iki sessiz kanalın** ölçülmüş belgesi (montaj merkezi ↔ serbest açı 2.6×, tasarım gerginliği ↔ yay dengesi 250 N) |
+| `tests/unit/cp-structural.test.js` | `js/cp-structural.js` + `js/components.js` | **Yapısal Analiz iskeleti**: alt-sistem sözleşmesi, zincirin PORTLARLA zorlanması (Geometri girişsiz / Sonuçlar çıkışsız), başlangıç kenarlarının indisle değil TİPLE yazılı olması, panel smoke testleri, iskeletin BEŞ dosyaya birden bağlı olduğu (components / cp-core / ui-core / topology / index.html — biri unutulursa kaydedilen proje bozulur) |
 | `tests/unit/canvas-space.test.js` | `js/canvas-space.js` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama |
 | `tests/unit/module-start-center.test.js` | `js/components.js` `veStartModule` | Karşılama kartından gelen modül bloğu görünümün TAM ortasına düşer (kabuk senkronu ölçümden önce) |
 | `tests/unit/port-geometry.test.js` | `js/components.js` port geometrisi + `js/connections.js` | Bağlantı ucu ile port dairesi aynı noktada — dört kenar, çok port, aynalama; **gidiş yönü oku** (Bézier t=0.5, 46 px eşiği, ters yön); **`veSyncPortDom`** — kenar sonradan değişince (bağlantı/sürükleme) dairenin teli takip etmesi, elle taşınan portun ezilmemesi, kenar değişmiyorsa DOM'a hiç yazılmaması |

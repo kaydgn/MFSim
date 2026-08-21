@@ -251,6 +251,13 @@
                 <span class="ve-submodule-sub">Kayış-kasnak · Alt topoloji</span>
               </span>
             </div>
+            <div class="ve-component ve-submodule" draggable="true" data-type="structural-analysis" title="Sürükleyip bırakın → ana canvas'ta tek 'Yapısal Analiz' bloğu oluşur. Çift tıklayınca kendi ALT TOPOLOJİSİ (Geometri / Mesh / Malzeme / Sınır Koşulları / Çözücü) açılır.">
+              <span class="ve-submodule-ico" aria-hidden="true"></span>
+              <span class="ve-submodule-text">
+                <span class="ve-comp-label">Yapısal Analiz</span>
+                <span class="ve-submodule-sub">Sonlu elemanlar · Alt topoloji</span>
+              </span>
+            </div>
           </div>
 
           <div class="ve-category" data-ve-scope="arac-performans">
@@ -749,6 +756,43 @@
               </svg> <span class="ve-comp-label">Rapor</span></div>
           </div>
 
+          <!-- ═══ YAPISAL ANALİZ (sonlu elemanlar) ═══
+               Yalnız 'structural-analysis' modülünün İÇ topolojisinde görünür.
+               Zincir: Geometri → Hesaplama Ağı → Sınır Koşulları → Sonuçlar.
+               Paneller şimdilik BOŞ; ayrı oturumlarda doldurulacak. -->
+          <div class="ve-category" data-ve-scope="structural-analysis">
+            <div class="ve-category-title">Yapısal Analiz</div>
+            <div class="ve-component" draggable="true" data-type="str-geometry" title="Geometri — analiz edilecek parça; .STEP dosyası buradan içe aktarılır. Zincirin başı: girişi yoktur.">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <path d="M28 36 L52 22 L76 36 L76 64 L52 78 L28 64 Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+                <path d="M28 36 L52 50 L76 36 M52 50 V78" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round" opacity="0.6"/>
+                <ellipse cx="52" cy="36" rx="7" ry="4" fill="none" stroke="currentColor" stroke-width="3"/>
+              </svg> <span class="ve-comp-label">Geometri</span></div>
+            <div class="ve-component" draggable="true" data-type="str-mesh" title="Hesaplama Ağı — geometriye sayısal ağ örer (tet10)">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <path d="M18 76 L50 20 L82 76 Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+                <path d="M34 48 H66 M50 20 V76 M34 48 L50 76 M66 48 L50 76" fill="none" stroke="currentColor" stroke-width="3" opacity="0.65"/>
+                <circle cx="34" cy="48" r="4" fill="currentColor"/>
+                <circle cx="66" cy="48" r="4" fill="currentColor"/>
+                <circle cx="50" cy="76" r="4" fill="currentColor"/>
+              </svg> <span class="ve-comp-label">Hesaplama Ağı</span></div>
+            <div class="ve-component" draggable="true" data-type="str-bc" title="Sınır Koşulları — ağ örülmüş geometriye mesnet ve yük tanımlar">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <path d="M24 18 V84" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+                <path d="M24 28 l-9 -8 M24 42 l-9 -8 M24 56 l-9 -8 M24 70 l-9 -8 M24 84 l-9 -8" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+                <line x1="24" y1="54" x2="80" y2="54" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>
+                <path d="M70 18 v20 M64.5 32 L70 43 L75.5 32" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg> <span class="ve-comp-label">Sınır Koşulları</span></div>
+            <div class="ve-component" draggable="true" data-type="str-results" title="Sonuçlar — gerilme ve deformasyon çıktısı. Zincirin sonu: çıkışı yoktur.">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <path d="M18 34 H82" stroke="currentColor" stroke-width="3.5" stroke-dasharray="7 5" stroke-linecap="round" opacity="0.55"/>
+                <path d="M18 34 Q52 34 82 66" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+                <rect x="18" y="78" width="20" height="9" rx="2" fill="currentColor" opacity="0.35"/>
+                <rect x="40" y="78" width="20" height="9" rx="2" fill="currentColor" opacity="0.65"/>
+                <rect x="62" y="78" width="20" height="9" rx="2" fill="currentColor"/>
+              </svg> <span class="ve-comp-label">Sonuçlar</span></div>
+          </div>
+
           <div class="ve-category ve-category-tools" data-always-visible="true">
             <div class="ve-category-title">Araçlar</div>
             <div class="ve-annotation-tool ve-component" draggable="true" data-annotation-type="frame">
@@ -884,6 +928,30 @@
                       <span class="ve-module-card-text">
                         <span class="ve-module-card-name">FEAD</span>
                         <span class="ve-module-card-desc">Motorun ön uç kayış-kasnak sistemi — kasnaklar, gergi ve kayış yolu.</span>
+                      </span>
+                      <span class="ve-module-card-arrow" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+                      </span>
+                    </div>
+                    <div class="ve-module-card" onclick="veStartModule('structural-analysis')" tabindex="0" role="button"
+                         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();veStartModule('structural-analysis');}">
+                      <span class="ve-module-card-icon">
+                        <!-- Ankastre duvara bağlı L braket + üstünde mesh çizgileri +
+                             serbest ucunda yük oku (bkz. js/components.js
+                             'structural-analysis'). -->
+                        <svg viewBox="0 0 100 100" width="38" height="38" aria-hidden="true">
+                          <rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="7 5"/>
+                          <path d="M20 32 V78" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+                          <path d="M20 40 l-7 -6 M20 52 l-7 -6 M20 64 l-7 -6 M20 76 l-7 -6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" opacity="0.6"/>
+                          <path d="M20 36 h14 v26 h26 v13 h-40 z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+                          <path d="M20 49 h14 M27 36 v39 M34 62 l26 13 M34 75 l26 -13 M47 62 v13" stroke="currentColor" stroke-width="1.7" opacity="0.45"/>
+                          <path d="M54 38 v17 M49.5 51 L54 59 L58.5 51" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M64 22 h18 v18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+                        </svg>
+                      </span>
+                      <span class="ve-module-card-text">
+                        <span class="ve-module-card-name">Yapısal Analiz</span>
+                        <span class="ve-module-card-desc">Braket ve taşıyıcı parçaların sonlu elemanlar analizi — gerilme ve sehim.</span>
                       </span>
                       <span class="ve-module-card-arrow" aria-hidden="true">
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
@@ -1069,6 +1137,7 @@
 <script type="text/x-mfsim-defer" src="js/fead-core.js" data-mfsim-label="FEAD: hesap çekirdeği (kayış-kasnak)..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead.js" data-mfsim-label="FEAD kayış-kasnak modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead-report.js" data-mfsim-label="FEAD: rapor üreteci..."></script>
+<script type="text/x-mfsim-defer" src="js/cp-structural.js" data-mfsim-label="Yapısal Analiz (sonlu elemanlar) modülü..."></script>
 <!-- Rapor varlıkları (KaTeX + fontlar, ~1MB) ve teori şablonu: type="text/x-mfsim-report"
      → loader bunları AÇILIŞTA yüklemez; ilk rapor üretiminde talep üzerine çekilir.
      build.js monolitik derlemede içeriği inline eder → indirilmiş tek dosyada da çalışır. -->
