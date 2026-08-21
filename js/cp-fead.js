@@ -1693,8 +1693,14 @@ function veFeadLayoutCardStrip(build, mode){
       });
       var inv = (sg - bk) * 180 / Math.PI;
       sol = build.order.length + ' kasnak · L ' + _feadFmt(g.LeffMm, 1) + ' mm';
-      sag = 'Σsarım ' + _feadFmt(inv, 1) + '°';
-      if(Math.abs(inv - 360) > 0.05) ok = false;         // değişmez tutmuyor
+      // ÇEVRİM İKİ YÖNE DE GEZİLEBİLİR: aynalanmış bir düzende kayış ters yönde
+      // dolanır ve işaretli sarım toplamı −360° çıkar. Çekirdek bunu ZATEN kabul
+      // ediyor (fead-core.js: |‌|Σ|−360| > 0.05 → hata), yani ±360'ın ikisi de
+      // geçerli çözüm. Buradaki kapı yalnız +360 arıyordu; rastgele üretilmiş
+      // bir topolojide çekirdeğin kusursuz çözdüğü bir yerleşim kartta ✗ ile
+      // "tutarsız" görünüyordu. Yön künyede yazılıyor ki bilgi kaybolmasın.
+      sag = 'Σsarım ' + _feadFmt(inv, 1) + '°' + (inv < 0 ? ' (ters yön)' : '');
+      if(Math.abs(Math.abs(inv) - 360) > 0.05) ok = false;    // değişmez tutmuyor
     } catch(e){ ok = false; sol = 'Geometri okunamadı'; }
   }
   var renk = ok ? 'var(--accent-success)' : 'var(--accent-danger)';

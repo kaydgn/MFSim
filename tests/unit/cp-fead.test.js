@@ -1450,3 +1450,84 @@ describe('yön gülünün yeri', () => {
     expect(fead.veFeadLayoutCardHTML(lay)).toMatch(/data-ve="compass-group"/);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DURUM ŞERİDİ: ÇEVRİM İKİ YÖNE DE GEZİLEBİLİR (±360°)
+// ════════════════════════════════════════════════════════════════════════════
+// Aynalanmış bir yerleşimde kayış ters yönde dolanır ve işaretli sarım toplamı
+// −360° çıkar. ÇEKİRDEK bunu zaten kabul ediyor (fead-core.js: ||Σ|−360| > 0.05
+// → hata) ve HTML rapor da |Σ| ile bakıyor; yalnız kart şeridi +360 arıyordu.
+// Sonuç: çekirdeğin kusursuz çözdüğü bir topoloji kartta ✗ "tutarsız"
+// görünüyordu. RASTGELE ÜRETİLMİŞ bir konfigürasyonda yakalandı — ezber bir
+// eşiğin genel matematikle ayrıştığı yer tam olarak burasıydı.
+describe('durum şeridi — aynalanmış çevrim', () => {
+  const kurDort = () => {
+    const crk = kasnak('fead-crank', { od: 160, x: 0, y: 0, driver: true }, 'CRK');
+    const idr = kasnak('fead-idler', { od: 75, x: -72, y: 267 }, 'IDR');
+    const ac = kasnak('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
+    const ten = kasnak('fead-tensioner', {
+      od: 75, pivotX: -180, pivotY: 100, armLen: 90,
+      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1
+    }, 'TEN');
+    const belt = kasnak('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6 });
+    const sv = kasnak('fead-solver', { designTensionN: 765.7, driveRatio: 1, lengthOffsetMm: 3.5 });
+    global.nodes = [crk, idr, ac, ten, belt, sv];
+    global.connections = [[crk, idr], [idr, ac], [ac, ten], [ten, crk]]
+      .map(([a, b]) => ({ id: 'c' + a.id + b.id, from: a.id, to: b.id, fromPort: 'output', toPort: 'input' }));
+  };
+
+  test('düz çevrim: ✓ ve Σsarım 360°', () => {
+    kurDort();
+    const h = fead.veFeadLayoutCardStrip(veFeadBuildFromCanvas(), 'mean');
+    expect(h).toMatch(/✓/);
+    expect(h).toMatch(/Σsarım 360\.0°/);
+    expect(h).not.toMatch(/ters yön/);
+  });
+
+  // Bu düzen RASTGELE ÜRETİLDİ (tohum 69) ve kapıyı bu yakaladı: sekiz kasnak,
+  // dördü sırttan temas, çekirdek kusursuz çözüyor ama işaretli sarım toplamı
+  // −360° çıkıyor. Sayılar birebir o üretimden; elle "ayarlanmış" bir düzen
+  // değil. Eski kapı bunu ✗ ile "tutarsız" gösteriyordu.
+  const kurNegatif = () => {
+    const P = [
+      ['fead-crank', { od: 197.9, x: -10.4, y: -261.6, contact: 'grooved', driver: true }],
+      ['fead-idler', { od: 74.5, x: 127.6, y: -198.8, contact: 'back' }],
+      ['fead-ac', { od: 130, x: 190.2, y: -63.1, contact: 'grooved' }],
+      ['fead-idler', { od: 94.6, x: 157.5, y: 155.9, contact: 'back' }],
+      ['fead-idler', { od: 68.7, x: 59.7, y: 249.5, contact: 'back' }],
+      ['fead-waterpump', { od: 65.7, x: -101.6, y: 224, contact: 'grooved' }],
+      ['fead-ac', { od: 112.6, x: -193.7, y: 39.2, contact: 'grooved' }],
+      ['fead-tensioner', { od: 84.1, x: -172.3, y: -124.8, contact: 'back',
+        pivotX: -226.2, pivotY: -154, armLen: 61.3, angleMode: 'free',
+        freeAngleDeg: 28.4, preload: 12.05, kArm: 0.696 }]
+    ].map(([t, d], i) => kasnak(t, d, 'P' + i));
+    const belt = kasnak('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8,
+      effLength: 2266.1, tolerance: 3, wearPct: 0.007 });
+    const sv = kasnak('fead-solver', { designTensionN: 408, driveRatio: 1, lengthOffsetMm: 0 });
+    global.nodes = P.concat([belt, sv]);
+    global.connections = P.map((n, i) => ({ id: 'k' + i, from: n.id, to: P[(i + 1) % P.length].id,
+      fromPort: 'output', toPort: 'input' }));
+  };
+
+  test('Σ = −360° veren düzen ÇÖZÜLÜYOR ve şerit onu ✗ saymıyor', () => {
+    kurNegatif();
+    const build = veFeadBuildFromCanvas();
+    expect(build.ok).toBe(true);
+    const g = F.tensionerState(build.sys, F.meanRel(build.sys)).geom;
+    let sg = 0, bk = 0;
+    g.wraps.forEach((w, i) => { if (build.sys.pulleys[i].contact === 'back') bk += w; else sg += w; });
+    const inv = (sg - bk) * 180 / Math.PI;
+    expect(inv).toBeCloseTo(-360, 1);                       // gerçekten negatif
+    const h = fead.veFeadLayoutCardStrip(build, 'mean');
+    expect(h).toMatch(/✓/);
+    expect(h).not.toMatch(/✗/);
+    expect(h).toMatch(/ters yön/);
+  });
+
+  test('çözülemeyen model ✗ kalır (kapı yalnız işareti gevşetti)', () => {
+    kurNegatif();
+    global.connections = global.connections.slice(0, 3);    // zincir kopuk
+    const h = fead.veFeadLayoutCardStrip(veFeadBuildFromCanvas(), 'mean');
+    expect(h).toMatch(/✗/);
+  });
+});
