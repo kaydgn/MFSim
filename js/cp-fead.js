@@ -1181,9 +1181,19 @@ function veFeadLayoutSVG(build, W, H, opts){
     ? veFeadPosSelection(build, opts.posMode || 'mean')
     : { primary: null, ghosts: [] };
 
+  // ÇÖZÜCÜ HATASI YUTULMAZ. Kurulum geçerli olsa bile geometri çözülemeyebilir
+  // (kayış hedef boyu erişilebilir aralığın dışında, kol sınıra dayandı…) ve
+  // eskiden bu durumda kart yalnız "Kayış yolu henüz kurulamadı" diyordu —
+  // yani kullanıcı NEDEN olduğunu göremiyordu. Sebep build üzerinde taşınıyor;
+  // kart ve panel onu basıyor.
   function geomAt(rel){
     try { return FEADCore.tensionerState(build.sys, rel).geom; }
-    catch(e){ return null; }
+    catch(e){
+      if(!build.geomError)
+        build.geomError = (typeof veFeadTranslateError === 'function')
+          ? veFeadTranslateError(e && e.message) : String(e && e.message || e);
+      return null;
+    }
   }
   var geom = sel.primary ? geomAt(sel.primary.relDeg) : null;
   if(!geom){                                     // konum tablosu kurulamadıysa
@@ -1576,8 +1586,8 @@ function veFeadLayoutCardHTML(node){
     // ÇÖZÜLEMEDİ — kartın en değerli hâli bu. Sessiz boş bir kutu yerine
     // EKSİĞİN KENDİSİ yazılıyor; kullanıcı neyi düzeltmesi gerektiğini
     // panel açmadan okuyor.
-    var neden = (build && build.errors && build.errors.length)
-      ? build.errors[0]
+    var neden = (build && build.errors && build.errors.length) ? build.errors[0]
+      : (build && build.geomError) ? build.geomError
       : 'Kayış yolu henüz kurulamadı.';
     h += '<div style="padding:10px 12px; text-align:center; font-size:var(--fs-micro);'
       + ' line-height:1.5; color:var(--text-muted);">'
@@ -1889,14 +1899,18 @@ function veFeadGeometryTable(build, mode){
 // Çözülemeyen model: NE EKSİK olduğunu say. Yanlış bir şema, doğru bir
 // uyarıdan kötüdür — bu yüzden hata varken hiç çizmiyoruz.
 function veFeadProblemBox(build){
-  if(!build || !build.errors || !build.errors.length){
+  // Girdi hatası yoksa ama geometri yine de çözülemediyse ÇÖZÜCÜNÜN sebebini
+  // bas: "Geometri çözülemedi" tek başına kullanıcıyı aramaya bırakırdı.
+  var _liste = (build && build.errors && build.errors.length) ? build.errors.slice() : [];
+  if(!_liste.length && build && build.geomError) _liste.push(build.geomError);
+  if(!_liste.length){
     return '<div style="padding:14px; text-align:center; font-size:var(--fs-body); color:var(--text-muted); border:1px dashed var(--border-color); border-radius:var(--radius-md); margin-bottom:9px;">'
       + 'Geometri çözülemedi.</div>';
   }
   var h = '<div style="padding:10px 12px; margin-bottom:9px; background:var(--bg-secondary); border:1px solid var(--accent-danger); border-left:3px solid var(--accent-danger); border-radius:var(--radius-sm);">'
     + '<div style="font-size:var(--fs-tiny); font-weight:700; color:var(--text-heading); margin-bottom:6px;">Şema çizilemiyor — eksik ya da tutarsız girdi</div>'
     + '<ul style="margin:0; padding-left:18px; font-size:var(--fs-micro); line-height:1.6; color:var(--text-secondary);">';
-  build.errors.forEach(function(e){ h += '<li>' + _feadEsc(e) + '</li>'; });
+  _liste.forEach(function(e){ h += '<li>' + _feadEsc(e) + '</li>'; });
   return h + '</ul></div>';
 }
 

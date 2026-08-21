@@ -532,26 +532,80 @@ function veFeadExampleNodes(key){
 // Bağlantı = kayış yolu. Zincir sürücüden başlar, çıkış→giriş izlenir. Zincire
 // hiç girmemiş kasnaklar (kullanıcı henüz bağlamadıysa) sona, topoloji
 // sırasıyla eklenir — yarım bağlanmış modelde de şema bir şey gösterir.
-function veFeadRouteOrder(nodeList, connList){
+// Kayış güzergâhı + TOPOLOJİNİN TEŞHİSİ.
+//
+// Eskiden burada tek bir sıra üretiliyordu ve son satır şuydu:
+//     pulleys.forEach(function(p){ if(!seen[p.id]) order.push(p); });
+// yani zincire BAĞLI OLMAYAN kasnak da kayış yoluna sessizce ekleniyordu.
+// Sonucu ağırdı: kullanıcı bir teli koparıyor, çözücü yine aynı kapalı çevrimi
+// kuruyor ve şema hiç değişmiyordu — çizim kurulan TOPOLOJİYİ değil, bileşen
+// LİSTESİNİ gösteriyordu. ÖLÇÜLDÜ (gerçek tarayıcı, BMC): "Avara 2"nin iki
+// telini de silince kart hâlâ "✓ 6 kasnak · L 1715.0 mm" diyordu. Kullanıcı
+// bunu "bağlantı kurulmuyor, topolojiyi tekrar kuramıyorum" diye bildirdi.
+//
+// Artık sıra yine üretiliyor (yerleştirici ve çizim onu kullanıyor) ama
+// GEÇERLİLİK ayrı bir alan olarak taşınıyor: kapalı mı, kopuk kasnak var mı,
+// çatal var mı. veFeadBuildSystem bunlara bakıp ÇÖZMEYİ REDDEDİYOR ve sebebini
+// yazıyor — kanvasta teller görünmeye devam ediyor, yanlış olan şema değil,
+// şemanın YERİNE yazılan mesaj oluyor.
+function veFeadRouteDiagnose(nodeList, connList){
   var pulleys = (nodeList||[]).filter(_feadIsPulley);
-  if(!pulleys.length) return [];
-  var byId = {};
-  pulleys.forEach(function(n){ byId[n.id] = n; });
+  var out = { order: [], ok: false, closed: false, isolated: [], errors: [] };
+  if(!pulleys.length) return out;
+
+  var byId = {}, cikis = {}, giris = {};
+  pulleys.forEach(function(n){ byId[n.id] = n; cikis[n.id] = 0; giris[n.id] = 0; });
   var next = {};
   (connList||[]).forEach(function(c){
-    if(!c) return;
-    if(byId[c.from] && byId[c.to] && next[c.from] === undefined) next[c.from] = c.to;
+    if(!c || !byId[c.from] || !byId[c.to]) return;
+    cikis[c.from]++; giris[c.to]++;
+    if(next[c.from] === undefined) next[c.from] = c.to;      // ilk tel kazanır
   });
-  var start = veFeadResolveDriver(pulleys);
-  if(!start) start = pulleys[0];
+
+  // ÇATAL: kayış tek bir sıra izler; bir kasnaktan iki tel çıkması hangi
+  // sıranın geçerli olduğunu belirsiz bırakır (ilk tel sessizce kazanırdı).
+  pulleys.forEach(function(p){
+    if(cikis[p.id] > 1)
+      out.errors.push('"' + _feadNodeName(p) + '" kasnağından ' + cikis[p.id]
+        + ' kayış çıkıyor. Kayış yolu tek sıradır: her kasnaktan bir tel çıkar, bir tel girer.');
+    if(giris[p.id] > 1)
+      out.errors.push('"' + _feadNodeName(p) + '" kasnağına ' + giris[p.id]
+        + ' kayış giriyor. Kayış yolu tek sıradır: her kasnaktan bir tel çıkar, bir tel girer.');
+  });
+
+  var start = veFeadResolveDriver(pulleys) || pulleys[0];
   var order = [], seen = {}, cur = start.id, guard = 0;
   while(cur && byId[cur] && !seen[cur] && guard++ < 512){
     seen[cur] = 1;
     order.push(byId[cur]);
     cur = next[cur];
   }
-  pulleys.forEach(function(p){ if(!seen[p.id]) order.push(p); });
-  return order;
+  out.closed = (cur === start.id);
+  out.isolated = pulleys.filter(function(p){ return !seen[p.id]; });
+  // Sıra yine BÜTÜN kasnakları taşır: yerleştirici (veFeadArrangeRing) ve
+  // rozetler kopuk kasnağı da görmeli. Geçerlilik ayrı alanda.
+  out.order = order.concat(out.isolated);
+
+  if(!out.closed){
+    var son = order.length ? _feadNodeName(order[order.length-1]) : _feadNodeName(start);
+    out.errors.push(cur
+      ? ('Kayış yolu kapanmıyor: "' + son + '" kasnağından çıkan tel, başlangıç kasnağı "'
+         + _feadNodeName(start) + '" yerine "' + _feadNodeName(byId[cur]) + '" kasnağına dönüyor.')
+      : ('Kayış yolu kapanmıyor: "' + son + '" kasnağından çıkan tel yok. '
+         + 'Serpantin sırası krank çıkışından başlayıp krank girişine dönmeli.'));
+  }
+  if(out.isolated.length){
+    out.errors.push('Kayış yoluna bağlı olmayan kasnak var: '
+      + out.isolated.map(_feadNodeName).join(', ')
+      + '. Kanvasta teli çekilmemiş bir kasnak kayışa dahil EDİLMEZ.');
+  }
+  out.ok = out.closed && !out.isolated.length && !out.errors.length;
+  return out;
+}
+
+// Yalnız sırayı isteyen çağrılar için ince sarmal (yerleştirici, testler).
+function veFeadRouteOrder(nodeList, connList){
+  return veFeadRouteDiagnose(nodeList, connList).order;
 }
 
 // Sürücü kasnağı çöz (ROL): açık işaret → tip → ilk kasnak.
@@ -643,9 +697,16 @@ function veFeadBuildSystem(nodeList, connList){
     return out;
   }
 
-  var order = veFeadRouteOrder(all, connList);
+  var teshis = veFeadRouteDiagnose(all, connList);
+  var order = teshis.order;
   out.order = order;
+  out.route = teshis;
   if(!order.length){ out.errors.push('İç topolojide hiç kasnak yok.'); return out; }
+  // TOPOLOJİ GEÇERLİ DEĞİLSE ÇÖZÜLMEZ. Eskiden kopuk kasnak sıraya sessizce
+  // ekleniyor ve çekirdek pekâlâ "geçerli" bir çevrim çözüyordu — yani kart
+  // kullanıcının KURMADIĞI bir kayışı gösteriyordu. Artık sebep yazılıyor;
+  // kanvastaki teller olduğu gibi duruyor.
+  teshis.errors.forEach(function(m){ out.errors.push(m); });
   if(order.length < 3){ out.errors.push('En az 3 kasnak gerekli (sürücü + aksesuar + gergi); şu an ' + order.length + '.'); }
 
   var un = veFeadUniqueNames(order);
@@ -1250,7 +1311,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadContactOf: veFeadContactOf, veFeadContactLabel: veFeadContactLabel,
     veFeadOD: veFeadOD, veFeadHasOD: veFeadHasOD, veFeadRadius: veFeadRadius,
     veFeadMigrateNode: veFeadMigrateNode, veFeadMigrateAll: veFeadMigrateAll,
-    veFeadRouteOrder: veFeadRouteOrder, veFeadResolveDriver: veFeadResolveDriver,
+    veFeadRouteOrder: veFeadRouteOrder, veFeadRouteDiagnose: veFeadRouteDiagnose,
+    veFeadResolveDriver: veFeadResolveDriver,
     veFeadUniqueNames: veFeadUniqueNames, veFeadTranslateError: veFeadTranslateError,
     veFeadDutyRows: veFeadDutyRows, veFeadPresetLib: veFeadPresetLib,
     veFeadPresetOf: veFeadPresetOf, veFeadAutoKw: veFeadAutoKw,

@@ -232,9 +232,17 @@ describe('uçtan uca: AG00686 kanvas düğümlerinden Gates sayıları', () => {
   }
 
   test('köprü sistemi kurabiliyor, hata yok', () => {
-    const r = veFeadBuildSystem(kur().list, kur().conns);
+    // kur() HER ÇAĞRIDA YENİ düğüm kimlikleri üretiyor; ikisini ayrı ayrı
+    // çağırmak bağlantıları BAŞKA bir düğüm kümesine bağlar. Eskiden bu
+    // görünmüyordu, çünkü güzergâh çözücüsü bağlanmamış kasnakları sıraya
+    // sessizce ekliyordu ve dizi sırası tesadüfen doğru yolu veriyordu — yani
+    // bu uçtan uca test kabloları HİÇ sınamıyordu (bkz. veFeadRouteDiagnose).
+    const k = kur();
+    const r = veFeadBuildSystem(k.list, k.conns);
     expect(r.errors).toEqual([]);
     expect(r.ok).toBe(true);
+    expect(r.route.closed).toBe(true);
+    expect(r.route.isolated).toEqual([]);
   });
 
   test('kayış sırası CRK → IDR → A_C → TEN', () => {
@@ -772,5 +780,92 @@ describe('burulma modeli köprüsü', () => {
     expect(R.ok).toBe(true);                      // gerilme/ömür etkilenmez
     expect(R.torsional).toBeNull();
     expect(R.warnings.join(' ')).toMatch(/[Bb]urulma modeli/);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  GÜZERGÂH TEŞHİSİ — ÇİZİM KURULAN TOPOLOJİYİ GÖSTERİR
+// ════════════════════════════════════════════════════════════════════════════
+// Eskiden veFeadRouteOrder'ın son satırı şuydu:
+//     pulleys.forEach(function(p){ if(!seen[p.id]) order.push(p); });
+// yani zincire BAĞLI OLMAYAN kasnak kayış yoluna sessizce ekleniyordu. Sonuç:
+// kullanıcı bir teli koparıyor, çekirdek yine aynı kapalı çevrimi çözüyor,
+// şema hiç değişmiyor. ÖLÇÜLDÜ (gerçek tarayıcı, BMC): "Avara 2"nin iki teli
+// de silindikten sonra kart hâlâ "✓ 6 kasnak · L 1715.0 mm" diyordu.
+//
+// Buradaki testlerin çapası tek bir cümle: KANVASTA OLMAYAN BİR TEL, ÇÖZÜMDE
+// DE OLMAMALI. Hata mesajı ayrıca hangi kasnağın kopuk olduğunu söylemeli —
+// "çözülemedi" demek kullanıcıyı aramaya bırakırdı.
+describe('güzergâh teşhisi', () => {
+  function dortlu() {
+    const crk = nd('fead-crank', { od: 160, x: 0, y: 0, driver: true }, 'CRK');
+    const idr = nd('fead-idler', { od: 75, x: -72, y: 267 }, 'IDR');
+    const ac = nd('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
+    const ten = nd('fead-tensioner', {
+      od: 75, pivotX: -180, pivotY: 100, armLen: 90,
+      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1
+    }, 'TEN');
+    const belt = nd('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6 });
+    const sv = nd('fead-solver', { designTensionN: 765.7, driveRatio: 1, lengthOffsetMm: 3.5 });
+    return {
+      list: [crk, idr, ac, ten, belt, sv], crk, idr, ac, ten,
+      conns: [link(crk, idr), link(idr, ac), link(ac, ten), link(ten, crk)]
+    };
+  }
+
+  test('tam çevrim: kapalı, kopuk yok', () => {
+    const k = dortlu();
+    const t = veFeadRouteDiagnose(k.list, k.conns);
+    expect(t.ok).toBe(true);
+    expect(t.closed).toBe(true);
+    expect(t.isolated).toEqual([]);
+    expect(t.order.map((n) => n.customName)).toEqual(['CRK', 'IDR', 'A_C', 'TEN']);
+  });
+
+  // ASIL REGRESYON: tek bir tel silinince sonuç DEĞİŞMEK ZORUNDA.
+  test('bir tel silinince çözüm ARTIK aynı kalmıyor', () => {
+    const k = dortlu();
+    const tam = veFeadBuildSystem(k.list, k.conns);
+    expect(tam.ok).toBe(true);
+
+    const eksik = veFeadBuildSystem(k.list, k.conns.filter((c) => c.to !== k.ac.id));
+    expect(eksik.ok).toBe(false);
+    expect(eksik.errors.join(' ')).toMatch(/A_C/);          // hangi kasnak kopuk, adıyla
+    expect(eksik.route.isolated.map((n) => n.customName)).toContain('A_C');
+  });
+
+  test('kopuk kasnak sıraya eklenir ama ÇÖZÜME girmez', () => {
+    const k = dortlu();
+    const t = veFeadRouteDiagnose(k.list, k.conns.filter((c) => c.to !== k.ac.id));
+    // Yerleştirici ve rozetler kopuk kasnağı da görmeli → sıra yine dört kasnak
+    expect(t.order.length).toBe(4);
+    expect(t.ok).toBe(false);
+    // IDR→A_C kopunca zincir CRK→IDR'de bitiyor; A_C ve TEN'e ULAŞILAMIYOR.
+    // Kopukluk tek kasnakla sınırlı değil, o telden SONRAKİ her şey düşüyor —
+    // eski davranışta ikisi de sessizce kayışa dahil ediliyordu.
+    expect(t.isolated.map((n) => n.customName)).toEqual(['A_C', 'TEN']);
+    expect(t.errors.join(' ')).toMatch(/bağlı olmayan kasnak/);
+  });
+
+  test('kapanmayan zincir sebebini yazar', () => {
+    const k = dortlu();
+    const t = veFeadRouteDiagnose(k.list, k.conns.filter((c) => c.from !== k.ten.id));
+    expect(t.closed).toBe(false);
+    expect(t.errors.join(' ')).toMatch(/kapanmıyor/);
+    expect(t.errors.join(' ')).toMatch(/TEN/);
+  });
+
+  test('bir kasnaktan iki tel çıkarsa çatal bildirilir (ilk tel sessizce kazanmaz)', () => {
+    const k = dortlu();
+    const t = veFeadRouteDiagnose(k.list, k.conns.concat([link(k.crk, k.ac)]));
+    expect(t.ok).toBe(false);
+    expect(t.errors.join(' ')).toMatch(/CRK.*iki|CRK.*2 kayış çıkıyor/);
+  });
+
+  test('veFeadRouteOrder sözleşmesi değişmedi (yerleştirici bunu kullanıyor)', () => {
+    const k = dortlu();
+    expect(veFeadRouteOrder(k.list, k.conns).map((n) => n.customName))
+      .toEqual(['CRK', 'IDR', 'A_C', 'TEN']);
+    expect(veFeadRouteOrder(k.list, []).length).toBe(4);   // hiç tel yokken de dört kasnak
   });
 });

@@ -310,14 +310,12 @@ function _veRestoreStateNodes(state) {
           // Sensör ise midpoint'leri göster
           if(node.type === 'sensor') { updateAllConnections(); }
         } else {
-          if(pNodeId !== connectingFrom.nodeId) {
-            var fp = connectingFrom.port;
-            if(fp.startsWith('output') && pType.startsWith('input')) {
-              createConnection(connectingFrom.nodeId, pNodeId, fp, pType);
-            } else if(fp.startsWith('input') && pType.startsWith('output')) {
-              createConnection(pNodeId, connectingFrom.nodeId, pType, fp);
-            }
-          }
+          // Karar TEK YERDE (ui-core.js veTryConnectPorts): geçersiz çiftte
+          // sessiz kalmak yerine sebebini söylüyor. Burada ikinci bir kopya
+          // tutulsaydı, geri-al/yükle sonrası kurulan portlar o mesajı
+          // vermezdi — yani hata bildirimi kullanıcının hangi yoldan geldiğine
+          // göre değişirdi.
+          veTryConnectPorts(connectingFrom.nodeId, connectingFrom.port, pNodeId, pType);
           if(connectingFrom.element) { connectingFrom.element.style.background = ''; connectingFrom.element.style.transform = ''; }
           cleanupTempLine();
         }
