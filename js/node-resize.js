@@ -186,9 +186,21 @@ function updateNodeHandles(nodeEl, width, height) {
 
 function stopResize() {
   if(isResizing) showAlignmentGuides(null);
+  var bittiMi = isResizing;
   isResizing = false;
   resizeNode = null;
   document.removeEventListener('mousemove', doResize);
   document.removeEventListener('mouseup', stopResize);
+
+  // ÖLÇÜYE GÖRE YENİDEN ÇİZİLMESİ GEREKEN KARTLAR (Kayış Yolu) burada tazelenir.
+  // Kart bir SVG ve viewBox'ı düğümün ölçüsünden üretiliyor; yeniden çizilmezse
+  // yeni kutuya ESKİ çizim ölçeklenerek oturuyor: en-boy oranı değiştiyse boş
+  // bantlar, yazılar ve çizgi kalınlıkları orantısız. Kullanıcı bunu ancak
+  // başka bir alana dokunup saveState'i tetikleyince düzelmiş görüyordu.
+  //
+  // saveState BURADA ÇAĞRILMAZ: yığına ön-durum zaten startResize'da kondu,
+  // ikinci bir çağrı tek bir yeniden boyutlandırma için iki geri-al adımı olurdu.
+  // Kart yokken fonksiyon hiçbir şey yapmıyor, yani diğer modüllerde bedava.
+  if(bittiMi && typeof veFeadRefreshLayoutCards === 'function') veFeadRefreshLayoutCards();
 }
 
