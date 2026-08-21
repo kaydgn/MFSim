@@ -798,6 +798,34 @@ function createNode(type, x, y, width, height) {
   return node;
 }
 
+// İki porta arka arkaya tıklandığında bağlantıyı KUR — ya da NEDEN kurulmadığını
+// SÖYLE. Eskiden bu karar iki yerde (createNode kancası ve restoreState kancası)
+// ayrı ayrı yazılıydı ve geçersiz çift SESSİZCE yutuluyordu: kullanıcı iki çıkışa
+// tıklıyor, hiçbir şey olmuyor, hiçbir mesaj çıkmıyor.
+//
+// Sessizlik özellikle FEAD'de yanıltıcı: orada port kenarı KOMŞUYA BAKACAK
+// şekilde dinamik (bkz. veFeadPortSideFor), yani klasik "giriş solda / çıkış
+// sağda" ipucu YOK — kullanıcı hangisinin giriş hangisinin çıkış olduğunu
+// konumdan okuyamıyor ve yanlış çifte tıklaması olağan. ÖLÇÜLDÜ: çıkış→çıkış
+// tıklamasında ne bağlantı kuruluyordu ne de uyarı çıkıyordu.
+function veTryConnectPorts(fromNodeId, fromPort, toNodeId, toPort) {
+  if(!fromNodeId || !toNodeId || !fromPort || !toPort) return false;
+  if(fromNodeId === toNodeId) {
+    if(typeof showToast === 'function')
+      showToast('Bir bileşen kendisine bağlanamaz.', 'warning');
+    return false;
+  }
+  var fOut = fromPort.indexOf('output') === 0, tOut = toPort.indexOf('output') === 0;
+  if(fOut && !tOut) { createConnection(fromNodeId, toNodeId, fromPort, toPort); return true; }
+  if(!fOut && tOut) { createConnection(toNodeId, fromNodeId, toPort, fromPort); return true; }
+  if(typeof showToast === 'function')
+    showToast(fOut
+      ? 'İki ÇIKIŞ portu birbirine bağlanmaz — çıkışı karşı bileşenin GİRİŞ portuna bağlayın.'
+      : 'İki GİRİŞ portu birbirine bağlanmaz — girişe karşı bileşenin ÇIKIŞ portundan gelin.',
+      'warning');
+  return false;
+}
+
 // Bir port DOM elemanına bağlantı-oluşturma (tıkla-bağla) dinleyicilerini ekler.
 // createNode + veRebuildNodePorts ortak kullanır (davranış birebir aynı).
 function veAttachPortConnect(port, node) {
@@ -822,15 +850,7 @@ function veAttachPortConnect(port, node) {
       svg.appendChild(tempLine);
       if(node.type === 'sensor') { updateAllConnections(); }
     } else {
-      var fromPort = connectingFrom.port;
-      var fromNodeId = connectingFrom.nodeId;
-      if(portNodeId !== fromNodeId) {
-        if(fromPort.startsWith('output') && portType.startsWith('input')) {
-          createConnection(fromNodeId, portNodeId, fromPort, portType);
-        } else if(fromPort.startsWith('input') && portType.startsWith('output')) {
-          createConnection(portNodeId, fromNodeId, portType, fromPort);
-        }
-      }
+      veTryConnectPorts(connectingFrom.nodeId, connectingFrom.port, portNodeId, portType);
       if(connectingFrom.element) {
         connectingFrom.element.style.background = '';
         connectingFrom.element.style.transform = '';

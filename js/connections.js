@@ -808,6 +808,45 @@ function updateAllConnections() {
   // Takoz modülü: takozların dış ucuna "şasi" sembolü çiz (varsa; başka
   // modüllerde no-op). Bağlantı katmanı her yenilendiğinde birlikte tazelenir.
   if(typeof veMntDecorateConnections === 'function') veMntDecorateConnections(svg);
+
+  // ── ÖLÇÜYE DEĞİL TOPOLOJİYE BAĞLI KARTLAR (Kayış Yolu) ────────────────────
+  // Kartın tek tazeleme noktası saveState()'ti. Ama saveState mutasyondan
+  // ÖNCE çağrılıyor — geri-al yığınına ÖN durumu koymak için — dolayısıyla
+  // bağlantı kurulduktan/silindikten SONRA kart hiç yenilenmiyordu:
+  //
+  //   ÖLÇÜLDÜ (gerçek tarayıcı, BMC): 6 bağlantıdan 2'si silinip Avara 2
+  //   tamamen koparıldıktan sonra kart hâlâ "✓ 6 kasnak · L 1715.0 mm"
+  //   diyordu; yeniden bağlayınca da aynı şema duruyordu. Kullanıcı bunu
+  //   "bağlantı kurulmuyor / topolojiyi tekrar kuramıyorum" diye görüyor,
+  //   çünkü ekranda hiçbir şey değişmiyor.
+  //
+  // updateAllConnections HER mutasyondan geçiyor (port DOM senkronu da aynı
+  // gerekçeyle buraya bağlanmıştı) — ama SÜRÜKLEME de buradan geçiyor ve
+  // kartı kurmak çözücüyü koşturmak demek. Bu yüzden TOPOLOJİ İMZASI
+  // karşılaştırılıyor: kart yalnız düğüm/bağlantı kümesi gerçekten
+  // değiştiğinde kuruluyor, sürüklemede tek bir yeniden çizim bile olmuyor.
+  veFeadTopoRefresh();
+}
+
+// Düğüm ve bağlantı kümesinin imzası — kimlik ve uçlar. Konum GİRMEZ: düğümü
+// sürüklemek kartı değiştirmiyor (şema mm koordinatlarından çiziliyor).
+var _veFeadTopoSig = null;
+function veFeadTopoSignature() {
+  if(typeof nodes === 'undefined' || !nodes) return '';
+  var i, s = nodes.length + '|';
+  for(i = 0; i < nodes.length; i++) s += nodes[i].id + ':' + nodes[i].type + ',';
+  s += '#';
+  var c = (typeof connections !== 'undefined' && connections) ? connections : [];
+  for(i = 0; i < c.length; i++) s += c[i].from + '>' + c[i].to + ';';
+  return s;
+}
+function veFeadTopoRefresh() {
+  if(typeof veFeadRefreshLayoutCards !== 'function') return false;
+  var sig = veFeadTopoSignature();
+  if(sig === _veFeadTopoSig) return false;
+  _veFeadTopoSig = sig;
+  veFeadRefreshLayoutCards();
+  return true;
 }
 
 // Kontrol noktası sürükleme
