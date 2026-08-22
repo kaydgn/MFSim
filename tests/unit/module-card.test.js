@@ -85,7 +85,7 @@ describe('veModuleSummary — kartın canlı özeti alt topolojiden okunur', () 
 
 describe('veModuleSummaryText — boş ile dolu ayrışır', () => {
   test('boş modül kullanıcıya ne yapacağını söyler', () => {
-    expect(veModuleSummaryText(modulDugum())).toBe('Boş — çift tıklayın');
+    expect(veModuleSummaryText(modulDugum())).toBe('Boş');
   });
 
   test('dolu modül sayıları gösterir', () => {

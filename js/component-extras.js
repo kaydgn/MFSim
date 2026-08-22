@@ -1177,7 +1177,7 @@ function veUpdateWarnings() {
     
     // Elzem bileşen uyarıları - sonlandırıcı varsa kısmi model uyarıları gösterme
     if(!hasTerminator) {
-      if(hasEngine && !hasGearbox && !hasWheel) warnings.push({type:'info', msg:'Motor eklendi. Şanzıman ve Tekerlek ekleyerek güç zinciri kurun.'});
+      if(hasEngine && !hasGearbox && !hasWheel) warnings.push({type:'info', msg:'Güç zinciri eksik — Şanzıman ve Tekerlek yok.'});
       if(hasEngine && hasGearbox && !hasWheel) warnings.push({type:'warn', msg:'Tekerlek bileşeni eksik.'});
       if(hasWheel && !hasEngine) warnings.push({type:'warn', msg:'Motor bileşeni eksik.'});
       if(!hasVehicle && nodes.length >= 3) warnings.push({type:'info', msg:'Araç bileşeni önerilir (kütle, Cd, alan parametreleri için).'});
