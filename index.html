@@ -1141,7 +1141,22 @@
 <script type="text/x-mfsim-defer" src="js/fead-core.js" data-mfsim-label="FEAD: hesap çekirdeği (kayış-kasnak)..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead.js" data-mfsim-label="FEAD kayış-kasnak modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead-report.js" data-mfsim-label="FEAD: rapor üreteci..."></script>
+<!-- STEP okuyucusu (OpenCascade / emscripten, vendored from npm occt-import-js@0.0.23).
+     Bu ETIKET yalnız 96 KB'lık fabrikayı tanımlar. data-mfsim-occt-glue:
+     js/structural-model.js worker'ı kurarken bu etiketin KAYNAK METNİNİ okur
+     (tek dosya sürümünde içerik burada INLINE durur → AĞ GEREKMEZ).
+     Lisans LGPL-2.1: vendor/license.occt*.txt. -->
+<script type="text/x-mfsim-defer" src="vendor/occt-import-js.js" data-mfsim-occt-glue data-mfsim-label="STEP okuyucusu (OpenCascade)..."></script>
+<!-- STEP okuyucusunun .wasm'i, GOMULU (gzip+base64, 3.96 MB — ham 7.25 MB).
+     type="text/x-mfsim-asset" → ne tarayici ne MFSimLoader calistirir; ILK STEP
+     ice aktarmasinda js/structural-model.js talep uzerine calistirir.
+     GOMULU OLMASININ SEBEBI CEVRIMDISI KULLANIM: MFSim tek dosya olarak
+     indirilip kullaniliyor, yaninda vendor/ olmayan kurulumda STEP hic
+     acilmiyordu. Uretim: npm run build:occt-wasm -->
+<script type="text/x-mfsim-asset" data-mfsim-asset="occt-wasm" src="js/structural-occt-wasm.js"></script>
+<script type="text/x-mfsim-defer" src="js/structural-model.js" data-mfsim-label="Yapısal Analiz: geometri köprüsü (STEP)..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-structural.js" data-mfsim-label="Yapısal Analiz (sonlu elemanlar) modülü..."></script>
+<script type="text/x-mfsim-defer" src="js/cp-structural-viewer.js" data-mfsim-label="Yapısal Analiz: 3B geometri görüntüleyici..."></script>
 <!-- Rapor varlıkları (KaTeX + fontlar, ~1MB) ve teori şablonu: type="text/x-mfsim-report"
      → loader bunları AÇILIŞTA yüklemez; ilk rapor üretiminde talep üzerine çekilir.
      build.js monolitik derlemede içeriği inline eder → indirilmiş tek dosyada da çalışır. -->

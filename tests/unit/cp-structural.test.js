@@ -150,8 +150,74 @@ describe('paneller üretiliyor ve sızıntı yok', () => {
 
   // Boş panel SESSİZ olmamalı: kullanıcı iskeletin nerede bittiğini görmeli.
   // (cp-fead.js _feadPending ile aynı gerekçe — CLAUDE.md'de yazılı.)
-  test.each(uretecler.slice(1))('%s paneli eksiğini SÖYLÜYOR', (_ad, fn) => {
+  // Geometri ARTIK DOLU (STEP içe aktarma) → listeden çıkarıldı; kalan üçü
+  // hâlâ iskelet ve eksiğini söylemek ZORUNDA.
+  const hala_iskelet = uretecler.filter(([ad]) => ['Hesaplama Ağı', 'Sınır Koşulları', 'Sonuçlar'].includes(ad));
+
+  test('hâlâ iskelet olan panel sayısı üç — biri dolunca bu liste güncellenmeli', () => {
+    expect(hala_iskelet).toHaveLength(3);
+  });
+
+  test.each(hala_iskelet)('%s paneli eksiğini SÖYLÜYOR', (_ad, fn) => {
     expect(fn({ id: 'n1', type: 'x', data: {} })).toContain('Bileşen bekleniyor');
+  });
+
+  test('Geometri paneli ARTIK iskelet değil — içe aktarma yüzeyi taşıyor', () => {
+    const html = str.getStrGeometryPropertiesHTML({ id: 'n1', type: 'str-geometry', data: {} });
+    expect(html).not.toContain('Bileşen bekleniyor');
+    expect(html).toContain('veStrGeomPick(\'n1\')');
+    expect(html).toContain('accept=".step,.stp"');
+    // Sürükle-bırak da bağlı: dragover'sız bir drop hedefi tarayıcıyı dosyaya
+    // GÖTÜRÜR (measure-dropzone.js'te belgelenmiş hata sınıfı).
+    expect(html).toContain('veStrGeomDragOver(event)');
+    expect(html).toContain('veStrGeomDrop(\'n1\', event)');
+  });
+
+  test('geometri YOKKEN 3B kanvas kurulmuyor — boş WebGL bağlamı açılmasın', () => {
+    const bos = str.getStrGeometryPropertiesHTML({ id: 'n1', type: 'str-geometry', data: {} });
+    expect(bos).not.toContain('id="ve-str-geom-canvas"');
+    const dolu = str.getStrGeometryPropertiesHTML({
+      id: 'n1', type: 'str-geometry',
+      data: { geometry: { fileName: 'x.step', fileSize: 10, stats: { meshCount: 1, triCount: 12, faceCount: 6 }, bbox: { size: [1, 2, 3], diag: 4 }, faces: [], sourceKept: true } }
+    });
+    expect(dolu).toContain('id="ve-str-geom-canvas"');
+  });
+
+  test('kaynağın projeye YAZILIP yazılmadığı panelde AÇIKÇA yazılı', () => {
+    // Durum CANLI depodan okunuyor — künyeye yazılmış bayat bir bayraktan
+    // DEĞİL. Kaynak node.data'da durmuyor (undo yığınını şişiriyordu), o
+    // yüzden panel model katmanına soruyor.
+    const mk = () => str.getStrGeometryPropertiesHTML({
+      id: 'n1', type: 'str-geometry',
+      data: { geometry: { fileName: 'x.step', fileSize: 10, stats: { meshCount: 1, triCount: 12, faceCount: 6 }, bbox: { size: [1, 2, 3], diag: 4 }, faces: [] } }
+    });
+    const onceki = global.veStrSrcWillPersist;
+    try {
+      global.veStrSrcWillPersist = () => true;
+      expect(mk()).toContain('kaydedilirken');
+      global.veStrSrcWillPersist = () => false;
+      // Sessiz bırakılsaydı kullanıcı projeyi kaydedip kapatır, geometrinin
+      // gitmiş olduğunu ancak yeniden açtığında görürdü.
+      expect(mk()).toContain('yeniden içe aktarılması');
+    } finally { global.veStrSrcWillPersist = onceki; }
+  });
+
+  test('künye STEP kaynağı TAŞIMIYOR — undo yığını şişmesin', () => {
+    // ÖLÇÜLDÜ: 140 KB'lık kaynak node.data'dayken saveState 0,03 → 2,17 ms ve
+    // 20 adımlık undo yığını 22 KB → 3,14 MB oluyordu. Kaynak artık oturumluk
+    // depoda; künyeye geri sızarsa bu test kırmızıya döner.
+    const src = require('../../js/structural-model.js');
+    const geom = {
+      ok: true, fileName: 'x.step', fileSize: 999, unit: 'millimeter',
+      stats: { meshCount: 1, triCount: 2, faceCount: 1 },
+      bbox: { min: [0, 0, 0], max: [1, 1, 1], size: [1, 1, 1], center: [0, 0, 0], diag: 1 },
+      meshes: [{ positions: new Float32Array(9), indices: new Uint32Array(3) }],
+      faces: [{ id: 'm0/f0', meshName: 'x', triCount: 2 }],
+    };
+    const rec = src.veStrGeomRecord(geom);
+    expect(rec.source).toBeUndefined();
+    expect(rec.sourceGz).toBeUndefined();
+    expect(JSON.stringify(rec)).not.toMatch(/source/);
   });
 });
 
@@ -195,6 +261,48 @@ describe('modül kablolaması eksiksiz', () => {
     ['str-geometry', 'str-mesh', 'str-bc', 'str-results'].forEach((t) => {
       expect(s).toContain('data-type="' + t + '"');
     });
+  });
+
+  // ── GEOMETRİ İÇE AKTARMA — DÖRT PARÇAYA BİRDEN BAĞLI ────────────────────
+  // Vendorlu okuyucu, köprü, görüntüleyici ve panel kancası. Biri düşerse
+  // panel yine açılır ve "içe aktar" düğmesi yine görünür — ama basınca
+  // HİÇBİR ŞEY olmaz. Sessiz kırılma tam olarak bu kapının konusu.
+  test('index.html: STEP okuyucusu, köprü ve 3B görüntüleyici yüklü', () => {
+    const s = oku('index.html');
+    expect(s).toContain('src="vendor/occt-import-js.js"');
+    expect(s).toContain('src="js/structural-model.js"');
+    expect(s).toContain('src="js/cp-structural-viewer.js"');
+  });
+
+  test('vendorlu okuyucu ve .wasm depoda duruyor', () => {
+    // .wasm 7.3 MB ve tek dosya build'ine GÖMÜLMÜYOR (boyut + LGPL-2.1);
+    // çalışma anında yanından çekiliyor. Depoda yoksa özellik hiç çalışmaz.
+    expect(fs.existsSync(path.join(ROOT, 'vendor/occt-import-js.js'))).toBe(true);
+    expect(fs.existsSync(path.join(ROOT, 'vendor/occt-import-js.wasm'))).toBe(true);
+    // LGPL-2.1 → lisans metni dağıtımla birlikte durmak zorunda.
+    expect(fs.existsSync(path.join(ROOT, 'vendor/license.occt.txt'))).toBe(true);
+    expect(fs.existsSync(path.join(ROOT, 'vendor/license.occt-import-js.txt'))).toBe(true);
+  });
+
+  test('CI deploy .wasm\'i Pages\'e kopyalıyor — yoksa yayında 404', () => {
+    // build.js vendor JS'lerini inline ediyor ama bir WASM ikilisi script
+    // etiketine giremez; deploy adımı yalnız MFSim_Code.html kopyalıyordu.
+    const yml = oku('.github/workflows/ci-deploy.yml');
+    expect(yml).toContain('_site/vendor/occt-import-js.wasm');
+  });
+
+  test('cp-core.js: Geometri geniş panel + 3B görüntüleyici kancası', () => {
+    const s = oku('js/cp-core.js');
+    expect(s).toMatch(/VE_WIDE_PANEL_TYPES[\s\S]{0,900}'str-geometry'/);
+    expect(s).toContain('veStrGeomMountViewer');
+  });
+
+  test('proje değişince içe aktarılmış geometri UNUTULUYOR', () => {
+    // Takoz/FEAD'deki tuzağın aynısı: temizlenmezse yeni projede önceki
+    // projenin parçası görüntüleyicide durur.
+    const s = oku('js/cp-structural.js');
+    expect(s).toMatch(/_strForgetResults[\s\S]{0,600}veStrGeomCacheClear/);
+    expect(s).toMatch(/_strForgetResults[\s\S]{0,600}veStrViewerDispose/);
   });
 
   test('cp-structural.js index.html\'de fead-model/core SONRASINDA yüklenir değil — sırası serbest ama TEK kez', () => {

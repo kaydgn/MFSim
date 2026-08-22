@@ -4283,6 +4283,192 @@
 }
 .mnt-vwr-bar .mnt-vwr-toggle,.mnt-vwr-bar .mnt-vwr-action{ width:auto;padding:5px 11px; }
 
+/* ══ YAPISAL ANALİZ — GEOMETRİ (STEP içe aktarma + 3B görüntüleyici) ══
+   Çip dili Takoz görüntüleyicisiyle ORTAK (yukarıdaki .mnt-vwr-*): aynı
+   yükseklik, aynı kenarlık, aynı vurgu kuralı. İki modülün denetimleri yan
+   yana görülmese de aynı programın parçası gibi okunmalı. */
+.ve-str-drop{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  padding:18px 14px;margin-bottom:9px;text-align:center;
+  background:var(--bg-secondary);
+  border:1px dashed var(--border-color);border-radius:var(--radius-md);
+  transition:border-color var(--dur-fast) var(--ease-out),
+             background var(--dur-fast) var(--ease-out);
+}
+/* Sürükleme sırasında hedefin AÇIKÇA aydınlanması gerekiyor: kullanıcı fareyi
+   bırakmadan önce doğru yerde olduğunu görmeli (measure-dropzone kaplamasıyla
+   aynı gerekçe). */
+.ve-str-drop.on{
+  border-color:var(--accent-primary);
+  background:color-mix(in srgb, var(--accent-primary) 10%, var(--bg-secondary));
+}
+.ve-str-drop-ico{ opacity:0.85;line-height:0; }
+.ve-str-drop-txt{ font-size:var(--fs-micro);line-height:1.5;color:var(--text-secondary); }
+.ve-str-drop-txt b{ color:var(--text-heading);font-size:var(--fs-tiny); }
+.ve-str-drop-txt span{ color:var(--text-muted); }
+
+.ve-str-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:27px;padding:5px 11px;
+  font-family:inherit;font-size:var(--fs-micro);font-weight:600;line-height:1;
+  color:var(--text-secondary);background:var(--bg-tertiary);
+  border:1px solid var(--border-color);border-radius:var(--radius-sm);
+  cursor:pointer;white-space:nowrap;
+  transition:background var(--dur-fast) var(--ease-out),
+             border-color var(--dur-fast) var(--ease-out),
+             color var(--dur-fast) var(--ease-out);
+}
+.ve-str-btn:hover{ border-color:var(--text-muted);color:var(--text-primary); }
+.ve-str-btn--primary{
+  color:#fff;background:var(--accent-primary);border-color:var(--accent-primary);
+}
+.ve-str-btn--primary:hover{ filter:brightness(1.12);color:#fff; }
+.ve-str-btn--danger:hover{
+  color:var(--accent-danger);
+  border-color:color-mix(in srgb, var(--accent-danger) 45%, var(--border-color));
+}
+
+/* Kademeli seçici (incelik / görünüm): sabit sütun — ragged wrap yok. */
+.ve-str-seg{ display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:5px; }
+.ve-str-seg-btn{
+  min-height:27px;padding:5px 7px;min-width:0;
+  font-family:inherit;font-size:var(--fs-micro);font-weight:600;line-height:1;
+  color:var(--text-secondary);background:var(--bg-tertiary);
+  border:1px solid var(--border-color);border-radius:var(--radius-sm);
+  cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:background var(--dur-fast) var(--ease-out),
+             border-color var(--dur-fast) var(--ease-out),
+             color var(--dur-fast) var(--ease-out);
+}
+.ve-str-seg-btn:hover{ border-color:var(--text-muted);color:var(--text-primary); }
+.ve-str-seg-btn.on{
+  color:var(--accent-primary);
+  background:color-mix(in srgb, var(--accent-primary) 12%, var(--bg-tertiary));
+  border-color:color-mix(in srgb, var(--accent-primary) 45%, var(--border-color));
+}
+
+/* ── İçe aktarma ilerlemesi ──
+   STEP çözümlemesi WORKER'da koştuğu için bu animasyon GERÇEKTEN akar. Ana
+   iş parçacığında koşsaydı çubuk donar ve "çalışıyor" demek yerine "kilitlendi"
+   derdi — yani süs değil, işin sürdüğünün tek kanıtı. */
+.ve-str-prog{
+  padding:10px 11px;
+  background:var(--bg-secondary);
+  border:1px solid var(--border-color);
+  border-left:3px solid var(--accent-primary);
+  border-radius:var(--radius-sm);
+}
+.ve-str-prog-head{
+  display:flex;align-items:center;gap:7px;
+  font-size:var(--fs-tiny);color:var(--text-heading);
+}
+.ve-str-prog-spin{
+  width:12px;height:12px;flex:0 0 auto;border-radius:50%;
+  border:2px solid var(--border-color);
+  border-top-color:var(--accent-primary);
+  animation:veStrSpin 0.7s linear infinite;
+}
+@keyframes veStrSpin{ to{ transform:rotate(360deg); } }
+.ve-str-prog-file{
+  margin:4px 0 7px;
+  font-size:var(--fs-micro);color:var(--text-muted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.ve-str-prog-bar{
+  position:relative;height:5px;overflow:hidden;
+  background:var(--bg-tertiary);border-radius:3px;
+}
+.ve-str-prog-bar > i{
+  position:absolute;top:0;bottom:0;left:0;width:0;
+  background:var(--accent-primary);border-radius:3px;
+  transition:width var(--dur-fast) var(--ease-out);
+}
+/* BELİRSİZ kip: yüzdesi bilinmeyen aşamalar (WASM derlemesi, OCCT
+   çözümlemesi). Sahte bir yüzde göstermek yerine akan bir şerit — "ne kadar
+   kaldı" demiyor, "sürüyor" diyor. */
+.ve-str-prog-bar > i.indet{
+  width:38%;
+  animation:veStrIndet 1.15s var(--ease-out) infinite;
+}
+@keyframes veStrIndet{
+  0%{ left:-38%; } 100%{ left:100%; }
+}
+.ve-str-prog-foot{
+  display:flex;justify-content:space-between;gap:10px;margin-top:6px;
+  font-size:var(--fs-micro);color:var(--text-muted);
+}
+.ve-str-prog-foot > span:first-child{
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.ve-str-prog-foot > span:last-child{ flex:0 0 auto;font-variant-numeric:tabular-nums; }
+@media (prefers-reduced-motion: reduce){
+  .ve-str-prog-spin{ animation:none; }
+  .ve-str-prog-bar > i.indet{ animation:none;width:100%;opacity:0.45; }
+}
+
+/* ── CAD yüz listesi ──
+   Sınır koşulunun bağlanacağı kimlik burada seçiliyor. 3B ile liste TEK bir
+   seçimi paylaşıyor: `.hover` fare parçanın üstündeyken gelip geçen işaret,
+   `.on` kullanıcının seçtiği yüz — ikisi ayrı, çünkü fare parçadan çıkınca
+   seçim silinmemeli. */
+.ve-str-faces{
+  max-height:180px;overflow-y:auto;overflow-x:hidden;
+  border:1px solid var(--border-color);border-radius:var(--radius-sm);
+  background:var(--bg-secondary);
+}
+.ve-str-face{
+  display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;
+  width:100%;padding:3px 8px;
+  font-family:ui-monospace, monospace;font-size:var(--fs-micro);line-height:1.5;
+  color:var(--text-secondary);background:transparent;
+  border:0;border-bottom:1px solid color-mix(in srgb, var(--border-color) 55%, transparent);
+  cursor:pointer;text-align:left;
+}
+.ve-str-face:last-child{ border-bottom:0; }
+.ve-str-face:hover,
+.ve-str-face.hover{
+  color:var(--text-primary);
+  background:color-mix(in srgb, var(--accent-warning) 16%, transparent);
+}
+/* Seçim rengi 3B vurgusuyla AYNI magenta — liste ve parça tek bir seçimi
+   gösteriyor, iki farklı renk "iki ayrı şey seçili" gibi okunurdu. Ton tema
+   jetonundan DEĞİL çünkü parça renkleri STEP dosyasından geliyor (bkz.
+   cp-structural-viewer.js _svwMarkFace). */
+.ve-str-face.on{
+  color:#ff2fd0;font-weight:700;
+  background:color-mix(in srgb, #ff2fd0 18%, transparent);
+}
+.ve-str-face-id{ flex:0 0 auto; }
+.ve-str-face-mesh{
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  color:var(--text-muted);font-family:inherit;
+}
+/* Üçgen sayısı sağa yaslı ve tabular: sütun göz için hizalı kalsın. */
+.ve-str-face-tri{ flex:0 0 auto;color:var(--text-muted);font-variant-numeric:tabular-nums; }
+.ve-str-face.on .ve-str-face-tri,
+.ve-str-face.on .ve-str-face-mesh{ color:inherit; }
+.ve-str-face-sel{
+  margin:5px 0 9px;font-size:var(--fs-micro);line-height:1.45;color:var(--text-secondary);
+}
+
+/* Yüz künyesi — fare parçanın üstündeyken. pointer-events:none ŞART: kutu
+   farenin altına girerse raycast kendi kutusunu vurur ve vurgu titrer. */
+.ve-str-vwr-tip{
+  position:absolute;z-index:5;pointer-events:none;
+  padding:5px 8px;max-width:220px;
+  font-size:var(--fs-micro);line-height:1.45;
+  color:var(--text-primary);background:var(--bg-secondary);
+  border:1px solid var(--border-color);border-radius:var(--radius-sm);
+  box-shadow:0 2px 8px rgba(0,0,0,0.28);
+}
+.ve-str-vwr-hint{
+  position:absolute;left:0;right:0;bottom:0;z-index:4;pointer-events:none;
+  padding:5px 9px;
+  font-size:var(--fs-micro);line-height:1.4;color:var(--text-muted);
+  background:color-mix(in srgb, var(--bg-primary) 82%, transparent);
+  border-top:1px solid var(--border-color);
+}
+
 /* ── Bileşen kimlik bloğu (simge + ad + ID + sil düğmesi) ──
    Varsayılan: ORTALANMIŞ dikey yığın — tüm bileşen pencerelerinde eskisi gibi. */
 .ve-prop-identity{
@@ -14399,6 +14585,32 @@ function veImpDropShow(on) {
   el.setAttribute('aria-hidden', on ? 'false' : 'true');
 }
 
+// YEREL BIRAKMA ALANI — bu kaplamanın çekilmesi gereken yer.
+//
+// Bu dinleyiciler `document` üzerinde ve BUBBLE evresinde. Bir bileşen paneli
+// kendi bırakma alanını kurup `stopPropagation()` çağırdığında buradaki `drop`
+// İŞLEYİCİSİ HİÇ ÇALIŞMAZ — yani `veImpDropShow(false)` çağrılmaz ve kaplama
+// ekranda ASILI KALIR; program kilitlenmiş görünür. (Yapısal Analiz / Geometri
+// bileşeninin STEP bırakma alanı eklenirken tam olarak bu çıktı.)
+//
+// İkinci sorun daha sinsi: kullanıcı .step dosyasını sürüklerken kaplama
+// "ölçüm dosyasını bırakın" diyor — YANLIŞ hedefi gösteriyor.
+//
+// Çözüm tek yerde: `data-ve-dropzone` taşıyan bir alanın üstündeyken bu kaplama
+// kendini çeker ve sayacı sıfırlar. Alandan çıkılınca dragenter yeniden
+// tetiklenip kaplamayı geri getirir — kendi kendini düzeltir.
+function veImpLocalZone(e) {
+  var t = e && e.target;
+  if(!t || typeof t.closest !== 'function') return null;
+  try { return t.closest('[data-ve-dropzone]'); } catch(err) { return null; }
+}
+
+// Kaplamayı kapat ve sayacı sıfırla. Yerel alan devraldığında çağrılır.
+function veImpYieldToLocal() {
+  _veImpDragDepth = 0;
+  veImpDropShow(false);
+}
+
 // Sürüklenen şey DOSYA mı? Başka bir sayfadan metin ya da resim sürükleyen
 // kullanıcıya "ölçüm dosyasını bırakın" demek yanıltıcı olurdu.
 function veImpDragHasFiles(e) {
@@ -14442,6 +14654,10 @@ function veImpOnDrop(e) {
   _veImpDragDepth = 0;
   veImpDropShow(false);
 
+  // Yerel alan kendi dosyasını aldı → sihirbazı AÇMA. (Yerel alan zaten
+  // stopPropagation çağırıyorsa buraya hiç gelinmez; bu, çağırmayan bir
+  // alan için ikinci kapı.)
+  if(veImpLocalZone(e)) return;
   if(!veImpDragHasFiles(e)) return;
   var file = veImpAcceptDropped(e.dataTransfer.files);
   if(file && typeof veImpLoadFile === 'function') veImpLoadFile(file);
@@ -14452,6 +14668,7 @@ function veImpOnDrop(e) {
 function veImpBindDropzone() {
   document.addEventListener('dragenter', function(e) {
     e.preventDefault();
+    if(veImpLocalZone(e)) { veImpYieldToLocal(); return; }
     if(!veImpDragHasFiles(e)) return;
     _veImpDragDepth++;
     veImpDropShow(true);
@@ -14462,10 +14679,15 @@ function veImpBindDropzone() {
   // olmaz.
   document.addEventListener('dragover', function(e) {
     e.preventDefault();
+    // Yerel alanın üstündeyken kaplama çekilir — ama preventDefault YUKARIDA
+    // zaten çağrıldı: çağrılmazsa tarayıcı bırakmayı hiç kabul etmez ve yerel
+    // alanın drop olayı da gelmez.
+    if(veImpLocalZone(e)) { veImpYieldToLocal(); return; }
     if(veImpDragHasFiles(e) && e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
   });
 
   document.addEventListener('dragleave', function(e) {
+    if(veImpLocalZone(e)) return;
     if(!veImpDragHasFiles(e)) return;
     _veImpDragDepth = Math.max(0, _veImpDragDepth - 1);
     if(_veImpDragDepth === 0) veImpDropShow(false);
