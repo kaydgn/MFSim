@@ -996,13 +996,84 @@ yazılmış üç dosyada da 1000,0000 mm çıkıyor — sessiz 25,4× hatası yo
 başlığından birimi regex ile okuma **denendi ve bırakıldı**: `cube-m.step`
 hiçbir `SI_UNIT(...METRE)` kalıbına uymuyor.
 
-**Künye ÜÇGEN TAŞIMAZ** (`veStrGeomRecord`). `node.data` alt-topolojiye
-GÖMÜLÜYOR; üçgenler künyeye sızsa proje dosyası çarpımsal büyürdü. Ağır olan iki
-şey ayrı: **STEP kaynağı** `node.data.geometry.source`'a (yalnız 3 MB altındaysa
-— panel hangisi olduğunu **açıkça yazıyor**), **üçgenler** oturumluk önbelleğe
-(`window.veStrGeometryCache`, `_strForgetResults`'tan temizleniyor — Takoz/FEAD
-tuzağının aynısı). Üçgen zaten TÜRETİLMİŞ veri: yakınsama çalışması için ZATEN
-farklı inceliklerde yeniden üretilecek.
+**Künye HAFİF** (`veStrGeomRecord`): ne üçgen ne STEP kaynağı girer. `node.data`
+her `saveState()`'te derin kopyalanıyor ve alt-topolojiye gömülüyor. Üçgenler
+oturumluk önbellekte (`window.veStrGeometryCache`, `_strForgetResults`'tan
+temizleniyor — Takoz/FEAD tuzağının aynısı); zaten TÜRETİLMİŞ veri, yakınsama
+çalışması için ZATEN farklı inceliklerde yeniden üretilecek.
+
+###### STEP kaynağı node.data'da DURMAZ — ölçülmüş bir hatanın düzeltmesi
+
+İlk sürüm kaynağı `node.data.geometry.source`'a yazıyordu. **ÖLÇÜLDÜ (gerçek
+tarayıcı) ve bu bir hataydı — üstelik dosya yalnız 140 KB'ken:**
+
+| | kaynak künyede | oturumluk depoda |
+|---|---:|---:|
+| `saveState()` süresi | 2,17 ms | **0,12 ms** |
+| 20 adımlık undo yığını | 3,14 MB | **184 KB** |
+| künye boyutu | 155,8 KB | **8,0 KB** |
+
+Sebep: `saveState()` bütün `node.data`'yı `JSON.parse(JSON.stringify(...))` ile
+kopyalıyor ve yığın **50 adım** tutuyor (`js/state.js` `MAX_UNDO_STEPS`). 3 MB'lık
+bir kaynakta bu ~150 MB yığın demekti. **İkinci ve daha sessiz sorun:** otomatik
+yedek `localStorage`'a yazılıyor (kota ~5-10 MB, `js/settings.js`) ve aynı
+temizleyiciden geçiyor — çok MB'lık bir kaynak yedeği SESSİZCE bozardı, ki
+`simResults`'ın oraya hiç yazılmama sebebi tam olarak budur.
+
+Artık kaynak oturumluk depoda (`veStrSrcSet/Get/Clear`) ve **yalnız proje
+DOSYAYA kaydedilirken** enjekte ediliyor (`veStrSrcAttach`, `js/toolbar.js`
+`veSaveTopology`); yüklenirken geri toplanıyor (`veStrSrcHarvest`). Dosyaya
+gzip+base64 gider — STEP metni ~4,6–5,3× sıkışıyor, base64'ten sonra net kazanç
+**~4×** (ölçüldü). Sınır SIKIŞTIRILMIŞ boyuta konuyor
+(`VE_STR_SRC_STORE_LIMIT` = 8 MB ≈ 30 MB ham STEP), çünkü dosyaya giden o.
+
+**`veStrSrcAttach` KOPYALA-YAZ olmak ZORUNDA** ve ilk hâli değildi: yerinde
+yazıyordu, ama `veSanitizeNodesSubtopology` (topology.js) hiçbir şey
+değişmediyse AYNI diziyi döndürüyor ("gereksiz kopya üretme"). **ÖLÇÜLDÜ:**
+kaynak canlı `tab.state`'e sızıp otomatik yedeğe de giriyordu — yedek 9,9 KB
+yerine **46,4 KB**, yani düzeltmenin tamamı boşa çıkıyordu. Artık dokunulan her
+düğüm kopyalanıyor; canlı duruma tek bir yazma bile yapılmıyor.
+
+**ÖLÇÜLDÜ (gidiş-dönüş):** as1-tu-203 içe aktarılıp kaydedilince dosya
+10,0 → 46,5 KB (+36,5 KB sıkıştırılmış kaynak), yedek 9,9 KB ve kaynaksız;
+yüklenince kaynak depoya dönüyor ve geometri **4688 üçgen / 160 yüz** olarak
+yeniden üretiliyor.
+
+###### Kanvas rozeti — parça yüklü mü, kaç CAD yüzü var
+
+Zincirin ilk halkası boşsa gerisi de boştur; ama Geometri kutusu kanvasta dolu
+ile boş arasında hiç fark göstermiyordu. `veStrApplyBadge` (FEAD rozetiyle aynı
+kalıp ve aynı gerekçe: stil ELEMANIN ÜSTÜNDE, çünkü `css/styles.css`'e dokunmak
+Ölçüm Görüntüleyici'nin dağıtım dosyasını bayatlatıyor). Boşken **`STEP`**
+(nötr), doluyken **`⬡160`** (amber) + künye başlığı. Boşken de rozet VAR:
+"rozet yok" ile "parça yok" ayırt edilemezdi. Üç yerden tazeleniyor —
+`ui-core.js` (düğüm kurulumu), `state.js` (geri yükleme), `topology.js` (sekme
+yükleme) — FEAD rozetinin bağlı olduğu üç noktanın aynısı.
+
+###### CAD yüz listesi — Sınır Koşullarının doğrudan hazırlığı
+
+3B'de fareyle yüz bulmak keşif için iyi ama 160 yüzlü bir montajda "hangi yüzü
+seçtim / hangileri var" sorusuna cevap vermiyor. Panelde kaydırılabilir liste
+var ve **liste ile 3B TEK seçimi paylaşıyor**: listeden tıkla → parçada
+vurgulanır, parçada tıkla → listede işaretlenir ve görünüre kaydırılır, fareyle
+gez → listede `hover`. Aynı satıra ikinci tık seçimi kaldırır (başka yolu yoktu).
+
+**Gezinme vurgusu ile seçim AYRI katman** (`hl` / `sel`): tek katman olsaydı
+fare parçadan çıkınca seçim de silinirdi — oysa seçim, sınır koşulunun
+bağlanacağı şey.
+
+**Seçim rengi tema jetonundan DEĞİL, sabit magenta.** Parça rengi STEP
+dosyasından geliyor (occt `mesh.color`) ve her şey olabilir; **ÖLÇÜLDÜ:**
+as1-tu-203'te plaka MAVİ ve seçim `--accent-primary` (mavi) iken vurgu
+görünmüyordu. Liste satırı da aynı magentayı kullanıyor — iki farklı renk "iki
+ayrı şey seçili" gibi okunurdu.
+
+**Döndürme seçimi bozmuyor:** hareketsiz sol tık seçer, 4 px'i aşan hareket
+döndürmedir. Eşik olmasaydı her döndürme sonunda seçim kayardı.
+
+Seçim OTURUMLUK (`node.data`'ya yazılmıyor): bir vurgu tercihi her
+`saveState()`'te undo yığınına binmemeli. Sınır Koşulları kendi kalıcı bağlarını
+kuracak — kimlik zaten künyede duruyor.
 
 **Ağ inceliği FEA ağı DEĞİL** — OCCT'nin RENDER tessellation'ı, yalnız
 görüntülemek ve yüz aralıklarını kurmak için (min açı 2,81°, sıkmak BOZUYOR;
@@ -1078,6 +1149,21 @@ YÜZÜ (`veStrFaceOfTriangle`). Sınır Koşulları bileşeni yüz seçerken AYN
 
 **ÖLÇÜLDÜ (gerçek tarayıcı):** `rounded-cube.step` → 64 üçgen · 7 CAD yüzü ·
 10×10×10 mm · 684 ms; fareyle `m0/f3` yüzü (2 üçgen) vurgulanıyor.
+
+**ÖLÇÜLDÜ — GERÇEK PARÇA (kullanıcının braketi, AP242 / 3DEXPERIENCE, 378 KB).**
+Fixture'lar AP203/214; **AP242 de sorunsuz okunuyor**:
+
+| incelik | üçgen | CAD yüzü | kimlikler | süre |
+|---|---:|---:|---|---:|
+| Kaba (0,01) | 4 836 | 240 | — | 648 ms |
+| Orta (0,002) | 4 902 | 240 | aynı | 505 ms |
+| İnce (0,0005) | 5 572 | 240 | aynı | 485 ms |
+
+7 katı · 131,00 × 150,82 × 131,76 mm · yüz aralıkları üçgenleri **tam bölüyor**.
+Parça adı dosyada BOŞ — künye `Parça N` yedeğine düşüyor (normalize'da yazılı).
+Kaynak sıkıştırma bu dosyada 6,6× (base64 sonrası net **4,9×**).
+Dosya kullanıcının kendi parçası → **depoya eklenmedi**, yalnız ölçüm için
+kullanıldı; fixture'lar occt-import-js'in kendi açık test dosyaları.
 
 ###### Bileşen bırakma alanı ölçüm kaplamasını devralır (`data-ve-dropzone`)
 
@@ -1235,7 +1321,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/cp-fead-report.test.js` | `js/cp-fead-report.js` + `tools/report-assets/fead-theory-source.html` | **Rapor içeriği**: Türkçe sayı biçimi (gerçek eksi, `—` ≠ 0), `wearPct` oran→yüzde çevrimi, sarım açılarının DERECE basılması, Σsarım=360 ve `L_pitch−L_eff=2πh_b` denetimlerinin belgede görünmesi, sürücü kW sütununun duty tablosunda OLMAMASI, çözülemeyen konumun `Err.` ile işaretlenmesi, `undefined`/`NaN`/`[object` sızmaması, "ortalama tork ≠ peak", sistem burulma modunun yokluğunun yazılması, uygunluk hükmünün servis faktörünü kullanması, şekil/tablo numaralarının boşluksuz ve her üretimde sıfırlanması, şablon tokenlarının tek kez geçmesi, içindekiler id'lerinin üreteçle aynı olması |
 | `tests/unit/fead-anim.test.js` | `js/cp-fead.js` animasyon + `js/fead-model.js` kinematik | **Kayış Yolu kartının animasyonu**: ω·r = v özdeşliği, ağır çekim katsayısının REFERANS devre bağlanması (seçili devre bağlansaydı seçici işlevsiz kalırdı — istenmeyen alternatif de koşturulup belgeleniyor), diş adımının çevreyi tam bölmesi, diş sayısının faz boyunca sabit kalması, bir adımlık fazın deseni birebir kendine getirmesi, dişlerin GİDİŞ yönünde ilerlemesi, kol açısal hızının `d·v/r` olması (sırttan temas edende ters) ve kol ucu çevresel hızının kayış hızına eşitliği (kasnakta kayma yok), animasyonun YALNIZ kanvas kartında olması, fazın düğüm kimliğinde durması (yeniden kurulumda kayış zıplamıyor), uzun duraklamada `dt` kırpması |
 | `tests/unit/fead-example.test.js` | `js/fead-model.js` örnekleri + FEAD_INFORMATION | **Tedarikçi sayfası çıpası** (Gates'ten bağımsız ikinci doğrulama): kayış boyu 1715 mm, kol boyu 90.0 mm, Spring Mean Load 22.07 Nm, tahrik oranı 1.1; sayfanın devir→kW tabloları; **iki sessiz kanalın** ölçülmüş belgesi (montaj merkezi ↔ serbest açı 2.6×, tasarım gerginliği ↔ yay dengesi 250 N) |
-| `tests/unit/structural-model.test.js` | `js/structural-model.js` + `vendor/occt-import-js.*` | **STEP köprüsü**: GERÇEK dosyalar GERÇEK OCCT ile okunuyor (sahte veri yok). **Yüz kimliği ağ inceliğinden bağımsız** (üçgen değişir, `m<i>/f<j>` değişmez), yüz aralıkları üçgenleri boşluksuz/örtüşmesiz böler, `veStrFaceOfTriangle` eşlemesi, birimin mm'ye çevrilmesi, künyenin ÜÇGEN TAŞIMAMASI, hata çevirisi (bozuk dosya ≠ katısız dosya) + OCCT'nin kendi teşhisinin mesaja iliştirilmesi, .wasm aday-yol araması (ilk tutan kazanır, hiçbiri tutmazsa denenenler yazılır), oturumluk önbelleğin temizlenmesi. **Gömülü okuyucu**: `js/structural-occt-wasm.js` vendor .wasm'ıyla BAYT BAYT aynı (vendor güncellenip varlık üretilmezse kırmızı), WASM imzası, gzip'in gerçekten kazandırdığı, index.html'de AÇILIŞTA yüklenmediği. **Worker sözleşmesi**: köprü DOM'a dokunmuyor (worker'da `document`/`window` yok), sonuç tipli dizi + transfer, `brep_faces` worker'dan aynen geçiyor, normalize hem worker hem ana-iş-parçacığı biçimini kabul ediyor ve tipli diziyi YENİDEN KOPYALAMIYOR. **İlerleme**: `VE_STR_OCCT_WASM_BYTES` gerçek dosya boyutuna kilitli, indirme loaded/total/pct bildiriyor, tahmin tutmazsa yüzde gösterilmiyor |
+| `tests/unit/structural-model.test.js` | `js/structural-model.js` + `vendor/occt-import-js.*` | **STEP köprüsü**: GERÇEK dosyalar GERÇEK OCCT ile okunuyor (sahte veri yok). **Yüz kimliği ağ inceliğinden bağımsız** (üçgen değişir, `m<i>/f<j>` değişmez), yüz aralıkları üçgenleri boşluksuz/örtüşmesiz böler, `veStrFaceOfTriangle` eşlemesi, birimin mm'ye çevrilmesi, künyenin ÜÇGEN TAŞIMAMASI, hata çevirisi (bozuk dosya ≠ katısız dosya) + OCCT'nin kendi teşhisinin mesaja iliştirilmesi, .wasm aday-yol araması (ilk tutan kazanır, hiçbiri tutmazsa denenenler yazılır), oturumluk önbelleğin temizlenmesi. **Gömülü okuyucu**: `js/structural-occt-wasm.js` vendor .wasm'ıyla BAYT BAYT aynı (vendor güncellenip varlık üretilmezse kırmızı), WASM imzası, gzip'in gerçekten kazandırdığı, index.html'de AÇILIŞTA yüklenmediği. **Kaynak deposu**: künye STEP kaynağı TAŞIMIYOR (undo yığını), `veStrSrcAttach` KOPYALA-YAZ (canlı state'e tek yazma bile yok — kaynağın otomatik yedeğe sızdığı ölçülmüş hatanın kapısı), alt-topolojideki düğüme ulaşması, deposu olmayan düğümde gereksiz kopya üretmemesi, eski projelerin HAM `source` alanını da kabul etmesi. **Worker sözleşmesi**: köprü DOM'a dokunmuyor (worker'da `document`/`window` yok), sonuç tipli dizi + transfer, `brep_faces` worker'dan aynen geçiyor, normalize hem worker hem ana-iş-parçacığı biçimini kabul ediyor ve tipli diziyi YENİDEN KOPYALAMIYOR. **İlerleme**: `VE_STR_OCCT_WASM_BYTES` gerçek dosya boyutuna kilitli, indirme loaded/total/pct bildiriyor, tahmin tutmazsa yüzde gösterilmiyor |
 | `tests/unit/cp-structural.test.js` | `js/cp-structural.js` + `js/components.js` | **Yapısal Analiz iskeleti**: alt-sistem sözleşmesi, zincirin PORTLARLA zorlanması (Geometri girişsiz / Sonuçlar çıkışsız), başlangıç kenarlarının indisle değil TİPLE yazılı olması, panel smoke testleri, iskeletin BEŞ dosyaya birden bağlı olduğu (components / cp-core / ui-core / topology / index.html — biri unutulursa kaydedilen proje bozulur). **Geometri artık DOLU**: hâlâ iskelet olan panel sayısı üç (biri dolunca liste güncellenmeli), içe aktarma yüzeyi + sürükle-bırak bağlı, geometri YOKKEN 3B kanvas kurulmuyor, kaynağın projeye yazılıp yazılmadığı AÇIKÇA yazılı; vendorlu okuyucu/.wasm/lisans deposu ve CI'ın .wasm'ı Pages'e kopyalaması |
 | `tests/unit/canvas-space.test.js` | `js/canvas-space.js` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama |
 | `tests/unit/module-start-center.test.js` | `js/components.js` `veStartModule` | Karşılama kartından gelen modül bloğu görünümün TAM ortasına düşer (kabuk senkronu ölçümden önce) |
@@ -1255,7 +1341,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/e2e/app.spec.js` | Tüm uygulama | Sayfa yükleme, menüler, bileşen ekleme, kaydetme |
 | `tests/e2e/measure-import.spec.js` | İçe aktarma sihirbazı | Gerçek .xlsx → sütun tarama → X/Y seçimi → şeritler |
 | `tests/e2e/viewer.spec.js` | `MFSim_Olcum_Goruntuleyici.html` | **Üretilen tek dosya**, `file://` üzerinden: açılış, içe aktarma, sürükle-bırak, birleştirme, tema, sıfır ağ isteği |
-| `tests/e2e/structural-geometry.spec.js` | Geometri bileşeni (uçtan uca) | **GERÇEK tarayıcı**: 7,3 MB .wasm'ın göreli yoldan çekilmesi → OCCT → panel künyesi → WebGL sahnesi; fareyle CAD YÜZÜ vurgusu (üçgen değil), ağ inceliği değişince üçgen değişip kimliklerin sabit kalması, STEP olmayan dosyanın sessizce yutulmaması, **ölçüm kaplamasının STEP alanında çekilip asılı kalmaması**; **arayüz donmuyor** — içe aktarma boyunca çizilen kare sayısı ana iş parçacığında ≤3, worker'da >20 (ölçümde 1 ↔ 91), panelin gerçekten worker'a gitmesi ve ilerleme kartının aşama değiştirip iş bitince kapanması; **AĞ KESİKKEN içe aktarma** (okuyucu gömülü → `(gömülü)`, hiç gerçek istek çıkmıyor, `download` aşaması hiç görünmüyor). Bu halkalar Node'da HİÇ koşmuyor |
+| `tests/e2e/structural-geometry.spec.js` | Geometri bileşeni (uçtan uca) | **GERÇEK tarayıcı**: 7,3 MB .wasm'ın göreli yoldan çekilmesi → OCCT → panel künyesi → WebGL sahnesi; fareyle CAD YÜZÜ vurgusu (üçgen değil), ağ inceliği değişince üçgen değişip kimliklerin sabit kalması, STEP olmayan dosyanın sessizce yutulmaması, **ölçüm kaplamasının STEP alanında çekilip asılı kalmaması**; **arayüz donmuyor** — içe aktarma boyunca çizilen kare sayısı ana iş parçacığında ≤3, worker'da >20 (ölçümde 1 ↔ 91), panelin gerçekten worker'a gitmesi ve ilerleme kartının aşama değiştirip iş bitince kapanması; **kanvas rozeti** (boşken `STEP`, doluyken `⬡160`), **CAD yüz listesi** (160 satır; listeden tık → 3B'de vurgu, 3B'de gezinme → listede işaret, 3B'de tık → listede seçim, ikinci tık seçimi kaldırır, DÖNDÜRME seçimi bozmaz), **kaynağın yalnız dosyaya yazılması** (künye ve otomatik yedek kaynaksız). Bu halkalar Node'da HİÇ koşmuyor |
 | `tests/e2e/measure-merge-drop.spec.js` | `js/measure-dropzone.js` + `js/trace-view.js` | MFSim'de sürükle-bırak ve çok eksenli birleştirme — araç performans VE takoz sekmesi |
 
 ## Sık Kullanılan Komutlar

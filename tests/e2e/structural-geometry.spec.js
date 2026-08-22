@@ -374,6 +374,160 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
     expect(istekler.filter((u) => !/^blob:/.test(u))).toEqual([]);
   });
 
+  // ── KANVAS ROZETİ ───────────────────────────────────────────────────────
+  // Zincirin ilk halkası boşsa gerisi de boştur; ama Geometri kutusu kanvasta
+  // dolu ile boş arasında hiç fark göstermiyordu — kullanıcı panelini açmadan
+  // bilemiyordu.
+  test('kanvas rozeti parçanın yüklü olup olmadığını söylüyor', async ({ page }) => {
+    await bootApp(page);
+    await openGeometryPanel(page);
+
+    const rozet = () => page.evaluate(() => {
+      const n = nodes.find((x) => x.type === 'str-geometry');
+      const b = document.getElementById(n.id).querySelector('.ve-str-badge');
+      return b ? { metin: b.textContent, baslik: b.title } : null;
+    });
+
+    const bos = await rozet();
+    expect(bos).not.toBeNull();                     // boşken de rozet VAR:
+    expect(bos.metin).toBe('STEP');                 // "rozet yok" ile "parça yok" ayırt edilemezdi
+    expect(bos.baslik).toMatch(/içe aktarılmadı/);
+
+    await page.locator('#ve-str-geom-file').setInputFiles(ASSEMBLY);
+    await page.waitForFunction(
+      () => window.veStrGeometryCache && Object.keys(window.veStrGeometryCache).length > 0,
+      null, { timeout: 120000 }
+    );
+    const dolu = await rozet();
+    expect(dolu.metin).toBe('⬡160');                // CAD yüz sayısı — BC'nin bağlanacağı sayı
+    expect(dolu.baslik).toContain('as1-tu-203.stp');
+    expect(dolu.baslik).toContain('CAD yüzü');
+  });
+
+  // ── CAD YÜZ LİSTESİ — Sınır Koşullarının hazırlığı ──────────────────────
+  // Liste ve 3B TEK bir seçimi paylaşıyor. İki ayrı seçim tutulsaydı kullanıcı
+  // "hangi yüzü seçtim" sorusuna iki farklı cevap görürdü.
+  test('yüz listesi ile 3B görünüm TEK seçimi paylaşıyor', async ({ page }) => {
+    await bootApp(page);
+    await openGeometryPanel(page);
+    await page.locator('#ve-str-geom-file').setInputFiles(ASSEMBLY);
+    await page.waitForFunction(
+      () => window.veStrGeometryCache && Object.keys(window.veStrGeometryCache).length > 0,
+      null, { timeout: 120000 }
+    );
+    await expect(page.locator('#ve-str-geom-canvas')).toBeVisible();
+
+    // Liste, künyedeki her CAD yüzü için bir satır taşıyor
+    await expect(page.locator('#ve-str-face-list .ve-str-face')).toHaveCount(160);
+
+    // LİSTEDEN TIK → 3B'de seçilir
+    await page.locator('.ve-str-face[data-face="m3/f5"]').click();
+    let d = await page.evaluate(() => ({
+      viewer: (veStrViewerSelectedFace() || {}).id || null,
+      sel3B: !!(window._veStrViewer && window._veStrViewer.sel),
+      satir: (document.querySelector('.ve-str-face.on') || {}).dataset?.face || null,
+    }));
+    expect(d.viewer).toBe('m3/f5');
+    expect(d.sel3B).toBe(true);                      // parçada gerçekten bir vurgu var
+    expect(d.satir).toBe('m3/f5');
+    await expect(page.locator('#ve-str-face-sel')).toContainText('m3/f5');
+
+    // AYNI satıra ikinci tık → seçim KALKAR (seçimden çıkmanın başka yolu yok)
+    await page.locator('.ve-str-face[data-face="m3/f5"]').click();
+    d = await page.evaluate(() => ({
+      viewer: (veStrViewerSelectedFace() || {}).id || null,
+      satir: !!document.querySelector('.ve-str-face.on'),
+    }));
+    expect(d.viewer).toBeNull();
+    expect(d.satir).toBe(false);
+
+    // 3B'DE GEZİN → listede aynı satır işaretlenir.
+    //
+    // MERKEZ PİKSELE GÜVENİLMİYOR: montajda parçalar arasında boşluk var ve
+    // kanvas ölçüsü görünüm penceresine göre değişiyor — merkez ıskalayabilir
+    // (ölçüldü: 1600×1000'de isabet, 1280×720'de ıska). Parçaya isabet eden
+    // bir nokta ARANIYOR; testin konusu "merkez tutar mı" değil, gezinme ile
+    // listenin aynı yüzü göstermesi.
+    const box = await page.locator('#ve-str-geom-canvas').boundingBox();
+    let nokta = null;
+    for (const [fx, fy] of [[0.5, 0.5], [0.45, 0.45], [0.55, 0.55], [0.4, 0.5],
+                            [0.6, 0.5], [0.5, 0.4], [0.5, 0.6], [0.35, 0.6], [0.65, 0.4]]) {
+      const x = box.x + box.width * fx, y = box.y + box.height * fy;
+      await page.mouse.move(x, y, { steps: 4 });
+      const vuruldu = await page.evaluate(
+        () => !!(window._veStrViewer && window._veStrViewer.hoverFace));
+      if (vuruldu) { nokta = { x, y }; break; }
+    }
+    expect(nokta).not.toBeNull();                    // parçaya hiç isabet edilemedi
+
+    d = await page.evaluate(() => ({
+      hover3B: window._veStrViewer.hoverFace.id,
+      satir: (document.querySelector('.ve-str-face.hover') || {}).dataset?.face || null,
+    }));
+    expect(d.satir).toBe(d.hover3B);
+
+    // 3B'DE TIKLA → listede seçilir
+    await page.mouse.down();
+    await page.mouse.up();
+    d = await page.evaluate(() => ({
+      viewer: (veStrViewerSelectedFace() || {}).id || null,
+      satir: (document.querySelector('.ve-str-face.on') || {}).dataset?.face || null,
+    }));
+    expect(d.viewer).toBe(d.satir);
+    expect(d.viewer).not.toBeNull();
+
+    // DÖNDÜRME seçimi DEĞİŞTİRMEZ — eşik olmasaydı her döndürme sonunda
+    // seçim kayardı ve kullanıcı sebebini anlayamazdı.
+    const once = d.viewer;
+    await page.mouse.move(nokta.x, nokta.y);
+    await page.mouse.down();
+    await page.mouse.move(nokta.x + 60, nokta.y + 40, { steps: 8 });
+    await page.mouse.up();
+    expect(await page.evaluate(() => (veStrViewerSelectedFace() || {}).id || null)).toBe(once);
+  });
+
+  // ── STEP KAYNAĞI node.data'DA DURMUYOR ──────────────────────────────────
+  // ÖLÇÜLDÜ (140 KB'lık dosya): kaynak künyedeyken saveState 0,03 → 2,17 ms ve
+  // 20 adımlık undo yığını 22 KB → 3,14 MB oluyordu; ayrıca otomatik
+  // localStorage yedeği (kota ~5-10 MB) aynı yoldan geçiyor. Kaynak yalnız
+  // proje DOSYASINA yazılır.
+  test('kaynak yalnız proje DOSYASINA yazılıyor — künyeye ve yedeğe değil', async ({ page }) => {
+    await bootApp(page);
+    await openGeometryPanel(page);
+    await page.locator('#ve-str-geom-file').setInputFiles(ASSEMBLY);
+    await page.waitForFunction(
+      () => window.veStrGeometryCache && Object.keys(window.veStrGeometryCache).length > 0,
+      null, { timeout: 120000 }
+    );
+    await page.waitForTimeout(800);      // arka plandaki gzip bitsin
+
+    const r = await page.evaluate(() => {
+      const g = nodes.find((n) => n.type === 'str-geometry');
+      const kunye = JSON.stringify(g.data.geometry);
+
+      if (typeof veSaveActiveTabStateKeepView === 'function') veSaveActiveTabStateKeepView();
+      const tabs = veTabs.map((t) => ({ id: t.id, name: t.name, state: veBuildCleanTabState(t.state) }));
+      const dosyaOnce = JSON.stringify(tabs).length;
+      const enjekte = veStrSrcAttach(tabs);
+      const dosyaSonra = JSON.stringify(tabs).length;
+
+      // Otomatik yedek yolu (js/settings.js ile AYNI çağrı)
+      const yedek = JSON.stringify(veTabs.map((t) => veBuildCleanTabState(t.state, { stripResults: true })));
+      return { kunyedeKaynak: /"source(Gz)?"/.test(kunye), kunyeBayt: kunye.length,
+               enjekte: enjekte, dosyaArtisi: dosyaSonra - dosyaOnce,
+               yedekteKaynak: /"source(Gz)?"/.test(yedek) };
+    });
+
+    expect(r.kunyedeKaynak).toBe(false);          // node.data HAFİF → undo yığını hafif
+    expect(r.kunyeBayt).toBeLessThan(20000);
+    expect(r.enjekte).toBe(1);                    // DOSYAYA enjekte edildi
+    expect(r.dosyaArtisi).toBeGreaterThan(10000); // gerçekten yazıldı (gzip+base64)
+    // BU KAPI GERÇEK BİR HATADAN DOĞDU: attach yerinde yazıyordu ve
+    // veSanitizeNodesSubtopology değişiklik yoksa AYNI diziyi döndürdüğü için
+    // kaynak canlı state'e, oradan da otomatik yedeğe sızıyordu.
+    expect(r.yedekteKaynak).toBe(false);
+  });
+
   test('STEP olmayan dosya SESSİZCE yutulmuyor — sebep yazılıyor', async ({ page }) => {
     await bootApp(page);
     await openGeometryPanel(page);

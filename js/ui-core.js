@@ -724,6 +724,7 @@ function createNode(type, x, y, width, height) {
   // KRİTİK: temas tarafı ters verilirse hesap sessizce başka bir güzergâh
   // çözer; kanvasta görünür olması gözle yakalanmasının tek yolu.
   if(typeof veFeadApplyBadge === 'function') veFeadApplyBadge(nodeEl, node);
+  if(typeof veStrApplyBadge === 'function') veStrApplyBadge(nodeEl, node);
   // FEAD Kayış Yolu → kanvasta CANLI ŞEMA kartı (bkz. cp-fead.js
   // veFeadApplyLayoutCard). Girdiler değiştikçe saveState üzerinden tazelenir.
   if(typeof veFeadApplyLayoutCard === 'function') veFeadApplyLayoutCard(nodeEl, node);
