@@ -125,6 +125,12 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
     );
     await expect(page.locator('#ve-str-geom-canvas')).toBeVisible();
 
+    // Yüz inceleme kipi VARSAYILAN KAPALI (kullanıcı isteği) — künye ve vurgu
+    // ancak kullanıcı açınca gelir. Bu testin konusu vurgunun NE OLDUĞU
+    // (üçgen değil CAD yüzü), kipin kendisi değil; kipin varsayılanını
+    // "yüz listesi ile 3B görünüm TEK seçimi paylaşıyor" testi tutuyor.
+    await page.locator('#ve-str-face-toggle').click();
+
     // Kanvasın ortasına gel — kamera parçayı çerçeveliyor, orta piksel katıyı vurur.
     const box = await page.locator('#ve-str-geom-canvas').boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -146,7 +152,15 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
     expect(await page.locator('.ve-str-vwr-tip').innerText()).toContain('CAD yüzü');
   });
 
-  test('ağ inceliği değişince ÜÇGEN değişir, CAD yüz kimlikleri DEĞİŞMEZ', async ({ page }) => {
+  // Panel artık ne ağ inceliği kademesi ne de "Kenarlar" kutusu sunuyor
+  // (kullanıcı isteği): her içe aktarma EN İNCE ağla gelir, kenarlar hep
+  // açıktır. Kapı iki şeyi birden tutuyor — kontrollerin YOKLUĞU ve
+  // yokluklarının SESSİZ bir varsayılana değil, DOĞRU varsayılana düşmesi.
+  //
+  // "İncelik değişince kimlikler değişmez" değişmezi yerinde duruyor ve
+  // GERÇEK OCCT ile üç incelikte tests/unit/structural-model.test.js'te
+  // ölçülüyor; buradan kalkmasının sebebi değişmezin değil ARAYÜZÜN gitmesi.
+  test('panel incelik/kenar ayarı SUNMUYOR — her içe aktarma en ince ağla gelir', async ({ page }) => {
     await bootApp(page);
     await openGeometryPanel(page);
     await page.locator('#ve-str-geom-file').setInputFiles(ROUNDED);
@@ -154,26 +168,24 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
       () => window.veStrGeometryCache && Object.keys(window.veStrGeometryCache).length > 0,
       null, { timeout: 120000 }
     );
+    await expect(page.locator('#ve-str-geom-canvas')).toBeAttached({ timeout: 15000 });
 
-    const oku = () => page.evaluate(() => {
+    // Kaldırılan iki kontrol panelde YOK
+    await expect(page.locator('.ve-str-seg-btn', { hasText: 'Kaba' })).toHaveCount(0);
+    await expect(page.locator('.ve-str-seg-btn', { hasText: 'İnce' })).toHaveCount(0);
+    await expect(page.locator('.ve-properties-content input[type="checkbox"]')).toHaveCount(0);
+
+    const d = await page.evaluate(() => {
       const k = Object.keys(window.veStrGeometryCache)[0];
-      const x = window.veStrGeometryCache[k];
-      return { tri: x.stats.triCount, ids: x.faces.map((f) => f.id).join(',') };
+      return {
+        linear: window.veStrGeometryCache[k].deflection.linear,
+        kenarSayisi: window._veStrViewer.edges.length,
+        hepsiAcik: window._veStrViewer.edges.every((e) => e.visible)
+      };
     });
-    const orta = await oku();
-
-    // "Kaba" kademesine geç (panelde gerçek düğme)
-    await page.locator('.ve-str-seg-btn', { hasText: 'Kaba' }).first().click();
-    await page.waitForFunction(
-      (t) => {
-        const k = Object.keys(window.veStrGeometryCache)[0];
-        return window.veStrGeometryCache[k].stats.triCount !== t;
-      }, orta.tri, { timeout: 60000 }
-    );
-    const kaba = await oku();
-
-    expect(kaba.tri).toBeLessThan(orta.tri);   // ağ GERÇEKTEN değişti
-    expect(kaba.ids).toBe(orta.ids);           // kimlikler AYNI ← sınır koşulları ayakta kalır
+    expect(d.linear).toBe(0.0005);      // EN İNCE kademe — "orta" (0.002) değil
+    expect(d.kenarSayisi).toBeGreaterThan(0);
+    expect(d.hepsiAcik).toBe(true);     // kenarlar varsayılan AÇIK
   });
 
   // Bu kapı GERÇEK bir hatadan doğdu ve ölçüldü. js/measure-dropzone.js
@@ -417,6 +429,28 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
     );
     await expect(page.locator('#ve-str-geom-canvas')).toBeVisible();
 
+    // ── VARSAYILAN: YÜZ İNCELEME KAPALI ──────────────────────────────────
+    // Liste de fare künyesi de kullanıcı AÇANA KADAR görünmez (kullanıcı
+    // isteği). Bu tek bir kip: anahtar ikisini birden çevirir.
+    await expect(page.locator('#ve-str-face-toggle')).toBeVisible();
+    await expect(page.locator('#ve-str-face-list')).toBeHidden();
+    await expect(page.locator('#ve-str-vwr-hint')).not.toContainText('CAD yüzü');
+
+    const box0 = await page.locator('#ve-str-geom-canvas').boundingBox();
+    for (const [fx, fy] of [[0.5, 0.5], [0.45, 0.45], [0.55, 0.55], [0.4, 0.5], [0.6, 0.5]]) {
+      await page.mouse.move(box0.x + box0.width * fx, box0.y + box0.height * fy, { steps: 4 });
+    }
+    expect(await page.evaluate(() => ({
+      hover: !!(window._veStrViewer && window._veStrViewer.hoverFace),
+      kunye: document.querySelector('.ve-str-vwr-tip').style.display,
+      vurgu: !!(window._veStrViewer && window._veStrViewer.hl)
+    }))).toEqual({ hover: false, kunye: 'none', vurgu: false });
+
+    // ── KULLANICI AÇIYOR ─────────────────────────────────────────────────
+    await page.locator('#ve-str-face-toggle').click();
+    await expect(page.locator('#ve-str-face-list')).toBeVisible();
+    await expect(page.locator('#ve-str-vwr-hint')).toContainText('CAD yüzü');
+
     // Liste, künyedeki her CAD yüzü için bir satır taşıyor
     await expect(page.locator('#ve-str-face-list .ve-str-face')).toHaveCount(160);
 
@@ -484,6 +518,18 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
     await page.mouse.move(nokta.x + 60, nokta.y + 40, { steps: 8 });
     await page.mouse.up();
     expect(await page.evaluate(() => (veStrViewerSelectedFace() || {}).id || null)).toBe(once);
+
+    // ── KULLANICI KAPATIYOR → EKRANDA HİÇBİR İŞARET KALMAZ ───────────────
+    // Yarısı duran bir kip kapalı sayılmaz: seçili yüzün görünür tek
+    // karşılığı vurgu ve liste satırı, ikisi de gizliyken "seçili" durmak
+    // sessiz bir durum olurdu.
+    await page.locator('#ve-str-face-toggle').click();
+    await expect(page.locator('#ve-str-face-list')).toBeHidden();
+    expect(await page.evaluate(() => ({
+      secim: !!veStrViewerSelectedFace(),
+      vurgu: !!(window._veStrViewer.hl || window._veStrViewer.sel),
+      kunye: document.querySelector('.ve-str-vwr-tip').style.display
+    }))).toEqual({ secim: false, vurgu: false, kunye: 'none' });
   });
 
   // ── STEP KAYNAĞI node.data'DA DURMUYOR ──────────────────────────────────

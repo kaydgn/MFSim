@@ -339,12 +339,74 @@ describe('modül kablolaması eksiksiz', () => {
     expect(blok).toMatch(/--strgeom \.ve-str-vwr-box\{[^}]*flex:1[^}]*height:auto/);
   });
 
+  // ── Kullanıcı isteği: üç varsayılan ─────────────────────────────────────
+  // (1) CAD yüz listesi ve fare künyesi KAPALI gelsin, (2) ağ inceliği hep
+  // "İnce" olsun, (3) kenarlar hep açık olsun. Üçü de KALDIRILMIŞ bir kontrol
+  // ya da KAPATILMIŞ bir varsayılan — yani sessizce geri gelebilir: bir kontrol
+  // geri eklenirse ya da kip kapalı yerine açık başlarsa panel yine çalışır,
+  // yalnız kullanıcının istemediği şeyi yapar.
+  test('ağ inceliği SEÇİCİSİ yok — sabit ve en ince', () => {
+    const s = oku('js/cp-structural.js');
+    expect(s).toContain('VE_STR_MESH_LINEAR = 0.0005');
+    // Kademe listesi ve onu değiştiren yol tamamen kalktı.
+    expect(s).not.toContain('VE_STR_QUALITY');
+    expect(s).not.toContain('veStrGeomSetQuality');
+    expect(s).not.toContain('geomQuality');
+    // İçe aktarma sabiti KULLANIYOR — sabit tanımlanıp yolda başka bir sayı
+    // yazılsaydı test yine yeşil kalırdı.
+    expect(s).toMatch(/deflection: \{ type: 'bounding_box_ratio', linear: VE_STR_MESH_LINEAR/);
+  });
+
+  test('"Kenarlar" aç/kapa kutusu yok — kenarlar hep açık', () => {
+    const s = oku('js/cp-structural.js');
+    expect(s).not.toContain('veStrViewerToggleEdges');
+    expect(s).not.toMatch(/type="checkbox"/);
+    // Görüntüleyici de artık böyle bir kapı sunmuyor (ölü API bırakmıyoruz).
+    expect(oku('js/cp-structural-viewer.js')).not.toContain('function veStrViewerToggleEdges');
+  });
+
+  test('yüz inceleme kipi KAPALI başlar ve liste ile künyeyi BİRLİKTE açar', () => {
+    const s = oku('js/cp-structural.js');
+    // Kip oturumluk — seçimle aynı gerekçe (undo yığınına binmesin).
+    expect(s).toMatch(/var _veStrFaceMode = \{\};/);
+    expect(s).not.toMatch(/node\.data\.faceMode/);
+    // Anahtar tek: hem listeyi hem 3B künyesini çeviriyor.
+    expect(s).toMatch(/veStrGeomToggleFaceMode[\s\S]{0,900}veStrViewerSetFaceMode/);
+    expect(s).toMatch(/veStrGeomToggleFaceMode[\s\S]{0,900}ve-str-face-block/);
+    // Kapanınca seçim de gider.
+    expect(s).toMatch(/veStrGeomToggleFaceMode[\s\S]{0,400}delete _veStrSelFace\[nodeId\]/);
+    // Kanvas ipucu kipe bağlı — kapalıyken "üstüne gel → CAD yüzü" yalan olurdu.
+    expect(s).toMatch(/function _strViewerHintHTML\(faceMode\)[\s\S]{0,220}if\(faceMode\)/);
+    // Liste gövdesi varsayılan GİZLİ.
+    expect(s).toMatch(/id="ve-str-face-block"'\s*\+\s*\(acik \? '' : ' style="display:none;"'\)/);
+    // Görüntüleyici her kurulduğunda kip yeniden bildiriliyor.
+    expect(s).toMatch(/veStrViewerInit[\s\S]{0,400}veStrViewerSetFaceMode\(veStrGeomFaceMode\(nodeId\)\)/);
+  });
+
+  test('kip kapalıyken görüntüleyici raycast bile yapmıyor', () => {
+    // Erken çıkış yalnız görsel değil: kapalıyken kare başına bir raycast
+    // yapılmıyor. Kapı `faceMode` denetiminin raycaster'dan ÖNCE olmasını arar.
+    const v = oku('js/cp-structural-viewer.js');
+    const oh = v.slice(v.indexOf('function onHover'), v.indexOf('function onLeave'));
+    expect(oh.indexOf('!W.faceMode')).toBeGreaterThan(-1);
+    expect(oh.indexOf('!W.faceMode')).toBeLessThan(oh.indexOf('setFromCamera'));
+    // Tıkla-seç de kipe bağlı: liste gizliyken tıklamanın görünür karşılığı yok.
+    expect(v).toMatch(/drag\.btn === 0[\s\S]{0,80}\)\{/);
+    expect(v).toContain('W.faceMode && drag');
+    // Kapatınca üç işaret de siliniyor.
+    expect(v).toMatch(/function veStrViewerSetFaceMode[\s\S]{0,500}_svwMarkFace\('hl'[\s\S]{0,200}_svwMarkFace\('sel'/);
+  });
+
   test('proje değişince içe aktarılmış geometri UNUTULUYOR', () => {
     // Takoz/FEAD'deki tuzağın aynısı: temizlenmezse yeni projede önceki
     // projenin parçası görüntüleyicide durur.
     const s = oku('js/cp-structural.js');
     expect(s).toMatch(/_strForgetResults[\s\S]{0,600}veStrGeomCacheClear/);
     expect(s).toMatch(/_strForgetResults[\s\S]{0,600}veStrViewerDispose/);
+    // Oturumluk görünüm durumları da: düğüm kimlikleri yeniden kullanılırsa
+    // önceki projenin açık kipi ve seçili yüzü yeni projede durur.
+    expect(s).toMatch(/_strForgetResults[\s\S]{0,900}_veStrSelFace = \{\}/);
+    expect(s).toMatch(/_strForgetResults[\s\S]{0,900}_veStrFaceMode = \{\}/);
   });
 
   test('cp-structural.js index.html\'de fead-model/core SONRASINDA yüklenir değil — sırası serbest ama TEK kez', () => {

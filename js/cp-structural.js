@@ -271,6 +271,11 @@ function _strForgetResults(){
   if(typeof veStrGeomCacheClear === 'function') veStrGeomCacheClear();
   if(typeof veStrSrcClear === 'function') veStrSrcClear();
   if(typeof veStrViewerDispose === 'function') veStrViewerDispose();
+  // Oturumluk görünüm durumları da (seçili yüz, yüz inceleme kipi) yeni
+  // projeye taşınmasın — düğüm kimlikleri yeniden kullanılırsa önceki projenin
+  // tercihi açık gelirdi.
+  _veStrSelFace = {};
+  _veStrFaceMode = {};
 }
 
 // "Bu bölüm sonraki adımda gelecek" notu — kullanıcıya iskeletin nerede
@@ -317,14 +322,18 @@ var VE_STR_STEP_EXT = /\.(stp|step)$/i;
 // kopyalanıp 50 adımlık undo yığınına biniyor ve localStorage yedeğini bozuyor
 // (ayrıntı model katmanının başlığında). Sınır da orada: VE_STR_SRC_STORE_LIMIT.
 
-// Ağ inceliği kademeleri. Değer `bounding_box_ratio` — parçanın boyuna ORAN,
-// mutlak mm değil (bkz. structural-model.js VE_STR_GEOM_DEFLECTION).
+// Görüntü ağı inceliği SABİT — panelde üç kademeli bir seçici vardı,
+// kullanıcı isteğiyle kaldırıldı: her içe aktarma en ince (kaliteli) ağla
+// gelir, yuvarlatmalar hep belirgin olur. Değer `bounding_box_ratio` —
+// parçanın boyuna ORAN, mutlak mm değil (bkz. structural-model.js
+// VE_STR_GEOM_DEFLECTION).
+//
+// Kademe kaldırmak bir SEÇİMDİR ve bedeli ölçüldü: as1-tu-203'te üçgen
+// 4 408 → 4 688, kullanıcının braketinde 4 902 → 5 572. Yani "ince" pahalı
+// bir kademe değil; kabayla arası %14, ve yüz kimlikleri incelikten
+// BAĞIMSIZ olduğu için sınır koşulları bundan etkilenmiyor.
 // TEKRAR: bu ağ FEA ağı DEĞİL, yalnız görüntüleme ve yüz aralıkları içindir.
-var VE_STR_QUALITY = [
-  { key: 'kaba', label: 'Kaba',  linear: 0.01,   hint: 'hızlı önizleme' },
-  { key: 'orta', label: 'Orta',  linear: 0.002,  hint: 'varsayılan' },
-  { key: 'ince', label: 'İnce',  linear: 0.0005, hint: 'yuvarlatmalar belirginleşir' }
-];
+var VE_STR_MESH_LINEAR = 0.0005;
 
 // İçe aktarma sürerken ikinci bir çağrıyı engelle (kullanıcı düğmeye iki kez
 // basarsa iki okuma birbirinin üstüne yazardı).
@@ -554,30 +563,9 @@ function _strGeomIngest(nodeId, file){
   rd.readAsArrayBuffer(file);
 }
 
-// Ağ inceliği kademesini değiştir → dosyayı YENİDEN SORMADAN yeniden üçgenle.
-function veStrGeomSetQuality(nodeId, key){
-  var node = _strNodeById(nodeId);
-  if(!node) return;
-  if(!node.data) node.data = {};
-  node.data.geomQuality = key;
-  var src = _strSourceGet(nodeId);
-  if(!src){
-    // Kaynak oturumda yok (proje yeni açıldı ve dosya sınırın üstündeydi).
-    _strStatus(nodeId, 'Ağ inceliğini değiştirmek için STEP dosyası yeniden içe aktarılmalı.', 'err');
-    return;
-  }
-  _strGeomRun(nodeId, src.bytes, { fileName: src.name, fileSize: src.size });
-}
-
-function _strQualityOf(node){
-  var key = (node && node.data && node.data.geomQuality) || 'orta';
-  for(var i = 0; i < VE_STR_QUALITY.length; i++) if(VE_STR_QUALITY[i].key === key) return VE_STR_QUALITY[i];
-  return VE_STR_QUALITY[1];
-}
-
-// İçe aktarmanın TEK yolu. Hem dosya seçme, hem bırakma, hem incelik değişimi,
-// hem proje açılışında kaynaktan geri yükleme buradan geçer — iki ayrı yol
-// açmak iki davranışın zamanla ayrışması demekti.
+// İçe aktarmanın TEK yolu. Hem dosya seçme, hem bırakma, hem proje açılışında
+// kaynaktan geri yükleme buradan geçer — iki ayrı yol açmak iki davranışın
+// zamanla ayrışması demekti.
 function _strGeomRun(nodeId, bytes, meta){
   if(_veStrGeomBusy[nodeId]) return;
   if(typeof veStrImportStep !== 'function'){
@@ -587,7 +575,6 @@ function _strGeomRun(nodeId, bytes, meta){
   var node = _strNodeById(nodeId);
   if(!node) return;
   if(!node.data) node.data = {};
-  var q = _strQualityOf(node);
 
   _veStrGeomBusy[nodeId] = true;
   _strStatus(nodeId, '');
@@ -597,7 +584,7 @@ function _strGeomRun(nodeId, bytes, meta){
   veStrImportStep(bytes, {
     fileName: meta.fileName, fileSize: meta.fileSize,
     importedAt: new Date().toISOString(),
-    deflection: { type: 'bounding_box_ratio', linear: q.linear, angular: 0.5 }
+    deflection: { type: 'bounding_box_ratio', linear: VE_STR_MESH_LINEAR, angular: 0.5 }
   }, {
     onProgress: function(stage, info){ _strProgSet(nodeId, stage, info); }
   }).then(function(geom){
@@ -637,6 +624,7 @@ function veStrGeomRemove(nodeId){
   if(typeof veStrSrcClear === 'function') veStrSrcClear(nodeId);
   if(typeof veStrViewerDispose === 'function') veStrViewerDispose();
   delete _veStrSelFace[nodeId];
+  delete _veStrFaceMode[nodeId];
   if(typeof saveState === 'function') { try { saveState(); } catch(e){} }
   veStrRefreshBadge(nodeId);
   if(typeof showNodeProperties === 'function') showNodeProperties(node);
@@ -651,6 +639,10 @@ function veStrGeomMountViewer(nodeId){
   var geom = (typeof veStrGeomCacheGet === 'function') ? veStrGeomCacheGet(nodeId) : null;
   if(geom && geom.ok){
     if(typeof veStrViewerInit === 'function') veStrViewerInit('ve-str-geom-canvas', geom, nodeId);
+    // Kip görüntüleyicinin DEĞİL panelin durumunda; her kurulumda yeniden
+    // bildirilmeli, yoksa panel açıkken sahne yenilendiğinde (incelik yok ama
+    // yeniden içe aktarma var) kip sessizce kapanırdı.
+    if(typeof veStrViewerSetFaceMode === 'function') veStrViewerSetFaceMode(veStrGeomFaceMode(nodeId));
     return;
   }
   // Önbellek yok (proje yeni açıldı) → oturumluk kaynaktan yeniden üret.
@@ -680,6 +672,62 @@ function veStrGeomMountViewer(nodeId){
 // kalıcı bağlarını kuracak — o zaman kimlik zaten künyede duruyor.
 var _veStrSelFace = {};
 
+// YÜZ İNCELEME KİPİ — VARSAYILAN KAPALI (kullanıcı isteği).
+//
+// Eskiden hem 123–240 satırlık CAD yüz listesi hem de fareyle gezerken çıkan
+// yüz künyesi panel açılır açılmaz oradaydı. İkisi de Sınır Koşulları için
+// hazırlık; parçaya bakmak isteyen biri için ise gürültü — liste sol rayın
+// yarısını yiyor, künye parçanın üstünde sürekli beliriyordu.
+//
+// TEK ANAHTAR, İKİ YÜZ: liste ile 3B künyesi aynı kipin iki görünümü. Ayrı
+// ayrı açılsalardı "liste açık ama parçada bir şey görünmüyor" gibi yarım
+// durumlar çıkardı — ve kullanıcı hangisinin neyi açtığını ezberlemek zorunda
+// kalırdı.
+//
+// Kip OTURUMLUK (`node.data`'ya yazılmıyor): bir görünüm tercihi her
+// `saveState()`'te undo yığınına binmemeli — seçimin kendisiyle aynı gerekçe.
+var _veStrFaceMode = {};
+
+function veStrGeomFaceMode(nodeId){ return !!_veStrFaceMode[nodeId]; }
+
+// Kipi çevir. PANELİ YENİDEN ÇİZMEDEN: showNodeProperties çağrılsaydı 3B
+// kanvas da yeniden kurulur, kamera ve sahne baştan yüklenirdi — bir liste
+// açmanın bedeli olamaz.
+function veStrGeomToggleFaceMode(nodeId){
+  var acik = !_veStrFaceMode[nodeId];
+  _veStrFaceMode[nodeId] = acik;
+  // Kapanırken seçim de gider: seçili yüzün görünür tek karşılığı vurgu ve
+  // liste satırı; ikisi de gizliyken "seçili" durmak sessiz bir durum olurdu.
+  if(!acik) delete _veStrSelFace[nodeId];
+  if(typeof veStrViewerSetFaceMode === 'function') { try { veStrViewerSetFaceMode(acik); } catch(e){} }
+
+  if(typeof document === 'undefined') return;
+  var blok = document.getElementById('ve-str-face-block');
+  if(blok) blok.style.display = acik ? '' : 'none';
+  var btn = document.getElementById('ve-str-face-toggle');
+  if(btn){
+    btn.setAttribute('aria-expanded', acik ? 'true' : 'false');
+    btn.classList.toggle('on', acik);
+    var ok = btn.querySelector('.ve-str-face-caret');
+    if(ok) ok.textContent = acik ? '▾' : '▸';
+  }
+  var ipucu = document.getElementById('ve-str-vwr-hint');
+  if(ipucu) ipucu.innerHTML = _strViewerHintHTML(acik);
+  if(!acik){
+    var sel = document.getElementById('ve-str-face-sel');
+    if(sel) sel.innerHTML = _strFaceSelText(nodeId);
+    _strFaceMarkRow(nodeId, 'on', '');
+  }
+}
+
+// Kanvasın alt şeridi. Kip kapalıyken "parçanın üstüne gel → CAD yüzü"
+// yazmak yalan olurdu: gelince hiçbir şey çıkmıyor.
+function _strViewerHintHTML(faceMode){
+  var h = 'Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş';
+  if(faceMode) h += ' · parçanın üstüne gel → <b>CAD yüzü</b>';
+  return h;
+}
+
 function _strFaceRowId(faceId){
   return 've-str-face-' + String(faceId).replace(/[^a-zA-Z0-9]/g, '_');
 }
@@ -692,7 +740,23 @@ function _strFaceListHTML(node, rec){
   // anlaşılır; tek katıda sütun gereksiz yer kaplar.
   var cokKati = !!(rec.stats && rec.stats.meshCount > 1);
 
-  var h = '<div class="sw-section-title">CAD yüzleri (' + _strFmt(faces.length) + ')</div>';
+  var acik = veStrGeomFaceMode(node.id);
+
+  // Başlık artık DÜĞME: bölümü açan tek anahtar. Sayı kapalıyken de yazılı —
+  // "aç ve gör" ile "aç, sonra kaç yüz olduğunu gör" arasında fark var.
+  var h = '<button type="button" id="ve-str-face-toggle" class="ve-str-face-toggle' + (acik ? ' on' : '') + '" '
+        + 'aria-expanded="' + (acik ? 'true' : 'false') + '" aria-controls="ve-str-face-block" '
+        + 'onclick="veStrGeomToggleFaceMode(\'' + node.id + '\')">'
+        + '<span class="ve-str-face-caret">' + (acik ? '▾' : '▸') + '</span>'
+        + '<span>CAD yüzlerini incele</span>'
+        + '<span class="ve-str-face-count">' + _strFmt(faces.length) + '</span>'
+        + '</button>';
+
+  // Liste DOM'da hep duruyor, yalnız gizli: 240 satırı her açılışta yeniden
+  // kurmak (ve kaydırma konumunu kaybetmek) bir görünüm anahtarının bedeli
+  // olamaz — seçim işaretleyicisi de (_strFaceMarkRow) satırların DOM'da
+  // olmasına dayanıyor.
+  h += '<div id="ve-str-face-block"' + (acik ? '' : ' style="display:none;"') + '>';
   h += '<div class="ve-str-faces" id="ve-str-face-list">';
   faces.forEach(function(f){
     h += '<button type="button" class="ve-str-face' + (f.id === secili ? ' on' : '') + '" '
@@ -705,6 +769,7 @@ function _strFaceListHTML(node, rec){
   });
   h += '</div>';
   h += '<div class="ve-str-face-sel" id="ve-str-face-sel">' + _strFaceSelText(node.id) + '</div>';
+  h += '</div>';
   return h;
 }
 
@@ -811,7 +876,6 @@ function _strGeomInfoTable(g){
 function getStrGeometryPropertiesHTML(node){
   if(!node.data) node.data = {};
   var rec = node.data.geometry || null;
-  var q = _strQualityOf(node);
 
   // ── SOL: kimlik · içe aktarma · künye · denetimler ──
   var left = '';
@@ -834,17 +898,9 @@ function getStrGeometryPropertiesHTML(node){
     // aktarmadan hemen sonra görmek istediği tek satır — görünmüyordu.
     left += _strStatusSlots();
 
-    left += '<div class="sw-section-title">Görüntü ağı inceliği</div>';
-    left += '<div class="ve-str-seg">';
-    VE_STR_QUALITY.forEach(function(o){
-      left += '<button class="ve-str-seg-btn' + (o.key === q.key ? ' on' : '') + '" title="' + _strEsc(o.hint) + '" '
-            + 'onclick="veStrGeomSetQuality(\'' + node.id + '\', \'' + o.key + '\')">' + o.label + '</button>';
-    });
-    left += '</div>';
-    left += '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin:4px 0 9px; line-height:1.4;">'
-          + 'Yalnız <b>görüntüyü</b> ve yüz aralıklarını böler. Hesaplama ağı ayrı bileşende üretilir; '
-          + 'CAD yüz kimlikleri incelikten <b>bağımsızdır</b>.</div>';
-
+    // Görüntü ağı inceliği seçicisi KALDIRILDI (hep en ince) ve "Kenarlar"
+    // aç/kapa kutusu da öyle (kenarlar teknik görüntünün varsayılanı) —
+    // ikisi de kullanıcının hiç dokunmadığı, panelde yer kaplayan ayarlardı.
     left += '<div class="sw-section-title">Görünüm</div>';
     left += '<div class="ve-str-seg">';
     [['iso', 'İzo'], ['front', 'Ön'], ['top', 'Üst'], ['right', 'Sağ']].forEach(function(v){
@@ -853,8 +909,6 @@ function getStrGeometryPropertiesHTML(node){
     left += '</div>';
     left += '<div style="display:flex; gap:6px; margin-top:6px; align-items:center; flex-wrap:wrap;">';
     left += '<button class="ve-str-btn" onclick="veStrViewerReset()">Sıfırla</button>';
-    left += '<label style="display:flex; align-items:center; gap:5px; font-size:var(--fs-micro); color:var(--text-secondary); cursor:pointer;">'
-          + '<input type="checkbox" checked onchange="veStrViewerToggleEdges(this.checked)"> Kenarlar</label>';
     left += '</div>';
 
     left += _strFaceListHTML(node, rec);
@@ -888,7 +942,7 @@ function getStrGeometryPropertiesHTML(node){
   var right = '<div id="ve-str-geom-wrap" class="ve-str-vwr-box">';
   if(rec){
     right += '<canvas id="ve-str-geom-canvas" style="width:100%; height:100%; display:block;"></canvas>';
-    right += '<div class="ve-str-vwr-hint">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş · parçanın üstüne gel → <b>CAD yüzü</b></div>';
+    right += '<div class="ve-str-vwr-hint" id="ve-str-vwr-hint">' + _strViewerHintHTML(veStrGeomFaceMode(node.id)) + '</div>';
   } else {
     right += '<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; padding:20px; '
            + 'font-size:var(--fs-tiny); color:var(--text-muted); line-height:1.6;">'
@@ -931,7 +985,7 @@ if(typeof module !== 'undefined' && module.exports) {
     VE_STR_STARTER_LAYOUT: VE_STR_STARTER_LAYOUT,
     VE_STR_STARTER_CHAIN: VE_STR_STARTER_CHAIN,
     VE_STR_STEP_EXT: VE_STR_STEP_EXT,
-    VE_STR_QUALITY: VE_STR_QUALITY,
+    VE_STR_MESH_LINEAR: VE_STR_MESH_LINEAR,
     veStrApplyBadge: veStrApplyBadge,
     veStrGeomSelectFace: veStrGeomSelectFace,
     getStrModulePropertiesHTML: getStrModulePropertiesHTML,
