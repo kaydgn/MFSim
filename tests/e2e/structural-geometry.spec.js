@@ -528,6 +528,65 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
     expect(r.yedekteKaynak).toBe(false);
   });
 
+  // 3B görüntüleyicinin BÜYÜKLÜĞÜ — yalnız burada ölçülebilir.
+  //
+  // ÖLÇÜLDÜ (önce): 1600×1000'de pencere 980×900, sol ray 830.6 px,
+  // görüntüleyici 540 px → parçanın ALTINDA 290.6 px boşluk, ve pencere
+  // ekran genişliğinin %61'i. Kullanıcı bildirimi tam olarak buydu.
+  //
+  // Node tarafındaki kapı (cp-structural.test.js) yalnız flex zincirinin
+  // halkalarını sayıyor; zincirin İŞE YARADIĞINI ancak yerleşim motoru
+  // söyler — bir halka doğru yazılıp yanlış elemana bağlanmış olabilir.
+  test('parça yüklüyken pencere büyür ve görüntüleyici ALTINDAKİ BOŞLUĞU yutar', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await bootApp(page);
+    await openGeometryPanel(page);
+
+    // Parça YOKKEN büyük pencere verilmiyor — sağ sütun tek satırlık bir yer
+    // tutucu, 94vh'lik pencere bomboş açılırdı.
+    expect(await page.evaluate(() =>
+      document.querySelector('.ve-properties').classList.contains('ve-properties--strgeom'))).toBe(false);
+
+    await page.locator('#ve-str-geom-file').setInputFiles(ASSEMBLY);
+    await page.waitForFunction(
+      () => window.veStrGeometryCache && Object.keys(window.veStrGeometryCache).length > 0,
+      null, { timeout: 120000 }
+    );
+    await expect(page.locator('#ve-str-geom-canvas')).toBeAttached({ timeout: 15000 });
+    await page.waitForTimeout(500);
+
+    const m = await page.evaluate(() => {
+      const r = (el) => { const b = el.getBoundingClientRect(); return { w: b.width, h: b.height, alt: b.bottom }; };
+      const win = document.querySelector('.ve-properties');
+      const content = document.querySelector('.ve-properties-content');
+      const sol = document.querySelector('.ve-str-col-in');
+      const wrap = document.getElementById('ve-str-geom-wrap');
+      const cv = document.getElementById('ve-str-geom-canvas');
+      return {
+        strgeom: win.classList.contains('ve-properties--strgeom'),
+        vw: innerWidth, vh: innerHeight,
+        win: r(win), sol: r(sol), wrap: r(wrap), canvas: r(cv),
+        kayar: content.scrollHeight - content.clientHeight
+      };
+    });
+
+    expect(m.strgeom).toBe(true);
+    // 1) Pencere ekranı kullanıyor (980 px'lik sabit tavan kalktı).
+    expect(m.win.w).toBeGreaterThan(m.vw * 0.85);
+    expect(m.win.h).toBeGreaterThan(m.vh * 0.85);
+    // 2) BOŞLUK KAPANDI — asıl ölçüm. Sol ray ile görüntüleyici aynı yerde biter.
+    expect(Math.abs(m.sol.alt - m.wrap.alt)).toBeLessThanOrEqual(1.5);
+    // 3) Görüntüleyici panelin baskın parçası.
+    expect(m.wrap.w).toBeGreaterThan(m.win.w * 0.6);
+    expect(m.wrap.h).toBeGreaterThan(m.win.h * 0.7);
+    // 4) Kanvas gerçekten o ölçüde kuruldu (ResizeObserver çalıştı) — flex
+    //    kutuyu büyütüp WebGL 540 px'te kalsaydı görüntü gerilirdi.
+    expect(m.canvas.h).toBeGreaterThan(m.wrap.h - 4);
+    // 5) İçerik alanı KAYDIRMIYOR: kaydırsaydı görüntüleyicinin bir kısmı
+    //    katlamanın altında kalırdı.
+    expect(m.kayar).toBeLessThanOrEqual(1);
+  });
+
   test('STEP olmayan dosya SESSİZCE yutulmuyor — sebep yazılıyor', async ({ page }) => {
     await bootApp(page);
     await openGeometryPanel(page);

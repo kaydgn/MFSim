@@ -1050,6 +1050,43 @@ kalıp ve aynı gerekçe: stil ELEMANIN ÜSTÜNDE, çünkü `css/styles.css`'e d
 `ui-core.js` (düğüm kurulumu), `state.js` (geri yükleme), `topology.js` (sekme
 yükleme) — FEAD rozetinin bağlı olduğu üç noktanın aynısı.
 
+###### Panel parça YÜKLÜYKEN büyür — görüntüleyici boşluğu yutar
+
+Kullanıcı bildirimi (2026-08-22): *"Daha geniş bir pencere olsun, genişlettikçe
+de [görüntüleyicinin altındaki boşluk] kapansın."* **ÖLÇÜLDÜ (gerçek tarayıcı,
+1600×1000, as1-tu-203):** pencere 980×900, sol ray 830.6 px, görüntüleyici
+540 px → parçanın **altında 290.6 px boşluk**, ve pencere ekran genişliğinin
+ancak **%61**'i. İçerik ayrıca kaydırıyordu (905 > 865).
+
+Düzeltme **iki parçalı ve ikisi de gerekli**: pencere büyüyor
+(`.ve-properties--strgeom`: `min(1560px, 96vw)` × `94vh`) **ve** görüntüleyici
+artan boyu yutuyor (grid `align-items:stretch`, sağ sütun flex sütunu, kutu
+`flex:1`). Yalnız birincisi yapılsaydı **boşluk BÜYÜRDÜ**.
+
+| | önce | sonra |
+|---|---:|---:|
+| Pencere | 980 × 900 | **1536 × 940** |
+| Görüntüleyici | 699 × 540 | **1202 × 831** (alan **2,65×**) |
+| Altındaki boşluk | 290.6 px | **0** |
+| İçerik kaydırıyor mu | evet (905 > 865) | **hayır** |
+
+**Sınıf yalnız parça YÜKLÜYKEN veriliyor** (`node.data.geometry`, cp-core.js) —
+motor panelindeki `--engine-empty` kuralının aynısı: boşken sağ sütun tek
+satırlık bir yer tutucu, 94vh'lik pencere bomboş açılırdı.
+
+Kutunun ölçüsü **satır içinde değil sınıfta** (`.ve-str-vwr-box`): satır içi bir
+`height` özgüllükte sınıfı ezer ve boşluğu sessizce geri getirirdi. Sol ray
+**sabit 300 px** — `--wideright` oranı (0.6fr) 1560 px'te rayı 396 px yapıyordu,
+yani görüntüleyiciden çalıyordu. Ray kendi içinde kaydırır (sayfanın tamamı
+kaydırılsaydı görüntüleyici de ekrandan çıkardı) ve **CAD yüz listesi artan boyu
+yutar** (`max-height:180px` tavanı kalkar).
+
+Kapı iki katmanlı: Node tarafı flex zincirinin **her halkasını** arıyor (üç
+mutasyonla ölçüldü — `align-items:stretch` kaldırma, kutuya satır içi `height`
+geri koyma, sınıfı koşulsuz verme), gerçek ölçüm ise E2E'de
+(`structural-geometry.spec.js`): sol ray ile kutunun **aynı yerde bitmesi**,
+kanvasın gerçekten o ölçüde kurulması (ResizeObserver), içeriğin kaydırmaması.
+
 ###### CAD yüz listesi — Sınır Koşullarının doğrudan hazırlığı
 
 3B'de fareyle yüz bulmak keşif için iyi ama 160 yüzlü bir montajda "hangi yüzü
@@ -1322,7 +1359,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/fead-anim.test.js` | `js/cp-fead.js` animasyon + `js/fead-model.js` kinematik | **Kayış Yolu kartının animasyonu**: ω·r = v özdeşliği, ağır çekim katsayısının REFERANS devre bağlanması (seçili devre bağlansaydı seçici işlevsiz kalırdı — istenmeyen alternatif de koşturulup belgeleniyor), diş adımının çevreyi tam bölmesi, diş sayısının faz boyunca sabit kalması, bir adımlık fazın deseni birebir kendine getirmesi, dişlerin GİDİŞ yönünde ilerlemesi, kol açısal hızının `d·v/r` olması (sırttan temas edende ters) ve kol ucu çevresel hızının kayış hızına eşitliği (kasnakta kayma yok), animasyonun YALNIZ kanvas kartında olması, fazın düğüm kimliğinde durması (yeniden kurulumda kayış zıplamıyor), uzun duraklamada `dt` kırpması |
 | `tests/unit/fead-example.test.js` | `js/fead-model.js` örnekleri + FEAD_INFORMATION | **Tedarikçi sayfası çıpası** (Gates'ten bağımsız ikinci doğrulama): kayış boyu 1715 mm, kol boyu 90.0 mm, Spring Mean Load 22.07 Nm, tahrik oranı 1.1; sayfanın devir→kW tabloları; **iki sessiz kanalın** ölçülmüş belgesi (montaj merkezi ↔ serbest açı 2.6×, tasarım gerginliği ↔ yay dengesi 250 N) |
 | `tests/unit/structural-model.test.js` | `js/structural-model.js` + `vendor/occt-import-js.*` | **STEP köprüsü**: GERÇEK dosyalar GERÇEK OCCT ile okunuyor (sahte veri yok). **Yüz kimliği ağ inceliğinden bağımsız** (üçgen değişir, `m<i>/f<j>` değişmez), yüz aralıkları üçgenleri boşluksuz/örtüşmesiz böler, `veStrFaceOfTriangle` eşlemesi, birimin mm'ye çevrilmesi, künyenin ÜÇGEN TAŞIMAMASI, hata çevirisi (bozuk dosya ≠ katısız dosya) + OCCT'nin kendi teşhisinin mesaja iliştirilmesi, .wasm aday-yol araması (ilk tutan kazanır, hiçbiri tutmazsa denenenler yazılır), oturumluk önbelleğin temizlenmesi. **Gömülü okuyucu**: `js/structural-occt-wasm.js` vendor .wasm'ıyla BAYT BAYT aynı (vendor güncellenip varlık üretilmezse kırmızı), WASM imzası, gzip'in gerçekten kazandırdığı, index.html'de AÇILIŞTA yüklenmediği. **Kaynak deposu**: künye STEP kaynağı TAŞIMIYOR (undo yığını), `veStrSrcAttach` KOPYALA-YAZ (canlı state'e tek yazma bile yok — kaynağın otomatik yedeğe sızdığı ölçülmüş hatanın kapısı), alt-topolojideki düğüme ulaşması, deposu olmayan düğümde gereksiz kopya üretmemesi, eski projelerin HAM `source` alanını da kabul etmesi. **Worker sözleşmesi**: köprü DOM'a dokunmuyor (worker'da `document`/`window` yok), sonuç tipli dizi + transfer, `brep_faces` worker'dan aynen geçiyor, normalize hem worker hem ana-iş-parçacığı biçimini kabul ediyor ve tipli diziyi YENİDEN KOPYALAMIYOR. **İlerleme**: `VE_STR_OCCT_WASM_BYTES` gerçek dosya boyutuna kilitli, indirme loaded/total/pct bildiriyor, tahmin tutmazsa yüzde gösterilmiyor |
-| `tests/unit/cp-structural.test.js` | `js/cp-structural.js` + `js/components.js` | **Yapısal Analiz iskeleti**: alt-sistem sözleşmesi, zincirin PORTLARLA zorlanması (Geometri girişsiz / Sonuçlar çıkışsız), başlangıç kenarlarının indisle değil TİPLE yazılı olması, panel smoke testleri, iskeletin BEŞ dosyaya birden bağlı olduğu (components / cp-core / ui-core / topology / index.html — biri unutulursa kaydedilen proje bozulur). **Geometri artık DOLU**: hâlâ iskelet olan panel sayısı üç (biri dolunca liste güncellenmeli), içe aktarma yüzeyi + sürükle-bırak bağlı, geometri YOKKEN 3B kanvas kurulmuyor, kaynağın projeye yazılıp yazılmadığı AÇIKÇA yazılı; vendorlu okuyucu/.wasm/lisans deposu ve CI'ın .wasm'ı Pages'e kopyalaması |
+| `tests/unit/cp-structural.test.js` | `js/cp-structural.js` + `js/components.js` | **Yapısal Analiz iskeleti**: alt-sistem sözleşmesi, zincirin PORTLARLA zorlanması (Geometri girişsiz / Sonuçlar çıkışsız), başlangıç kenarlarının indisle değil TİPLE yazılı olması, panel smoke testleri, iskeletin BEŞ dosyaya birden bağlı olduğu (components / cp-core / ui-core / topology / index.html — biri unutulursa kaydedilen proje bozulur). **Geometri artık DOLU**: hâlâ iskelet olan panel sayısı üç (biri dolunca liste güncellenmeli), içe aktarma yüzeyi + sürükle-bırak bağlı, geometri YOKKEN 3B kanvas kurulmuyor, kaynağın projeye yazılıp yazılmadığı AÇIKÇA yazılı; vendorlu okuyucu/.wasm/lisans deposu ve CI'ın .wasm'ı Pages'e kopyalaması; **panel ölçüsü** — büyük pencere sınıfı yalnız parça yüklüyken veriliyor, kutunun ölçüsü satır içinde değil sınıfta, boşluğu yutan flex zincirinin her halkası yerinde |
 | `tests/unit/canvas-space.test.js` | `js/canvas-space.js` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama |
 | `tests/unit/module-start-center.test.js` | `js/components.js` `veStartModule` | Karşılama kartından gelen modül bloğu görünümün TAM ortasına düşer (kabuk senkronu ölçümden önce) |
 | `tests/unit/port-geometry.test.js` | `js/components.js` port geometrisi + `js/connections.js` | Bağlantı ucu ile port dairesi aynı noktada — dört kenar, çok port, aynalama; **gidiş yönü oku** (Bézier t=0.5, 46 px eşiği, ters yön); **`veSyncPortDom`** — kenar sonradan değişince (bağlantı/sürükleme) dairenin teli takip etmesi, elle taşınan portun ezilmemesi, kenar değişmiyorsa DOM'a hiç yazılmaması |
@@ -1341,7 +1378,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/e2e/app.spec.js` | Tüm uygulama | Sayfa yükleme, menüler, bileşen ekleme, kaydetme |
 | `tests/e2e/measure-import.spec.js` | İçe aktarma sihirbazı | Gerçek .xlsx → sütun tarama → X/Y seçimi → şeritler |
 | `tests/e2e/viewer.spec.js` | `MFSim_Olcum_Goruntuleyici.html` | **Üretilen tek dosya**, `file://` üzerinden: açılış, içe aktarma, sürükle-bırak, birleştirme, tema, sıfır ağ isteği |
-| `tests/e2e/structural-geometry.spec.js` | Geometri bileşeni (uçtan uca) | **GERÇEK tarayıcı**: 7,3 MB .wasm'ın göreli yoldan çekilmesi → OCCT → panel künyesi → WebGL sahnesi; fareyle CAD YÜZÜ vurgusu (üçgen değil), ağ inceliği değişince üçgen değişip kimliklerin sabit kalması, STEP olmayan dosyanın sessizce yutulmaması, **ölçüm kaplamasının STEP alanında çekilip asılı kalmaması**; **arayüz donmuyor** — içe aktarma boyunca çizilen kare sayısı ana iş parçacığında ≤3, worker'da >20 (ölçümde 1 ↔ 91), panelin gerçekten worker'a gitmesi ve ilerleme kartının aşama değiştirip iş bitince kapanması; **kanvas rozeti** (boşken `STEP`, doluyken `⬡160`), **CAD yüz listesi** (160 satır; listeden tık → 3B'de vurgu, 3B'de gezinme → listede işaret, 3B'de tık → listede seçim, ikinci tık seçimi kaldırır, DÖNDÜRME seçimi bozmaz), **kaynağın yalnız dosyaya yazılması** (künye ve otomatik yedek kaynaksız). Bu halkalar Node'da HİÇ koşmuyor |
+| `tests/e2e/structural-geometry.spec.js` | Geometri bileşeni (uçtan uca) | **GERÇEK tarayıcı**: 7,3 MB .wasm'ın göreli yoldan çekilmesi → OCCT → panel künyesi → WebGL sahnesi; fareyle CAD YÜZÜ vurgusu (üçgen değil), ağ inceliği değişince üçgen değişip kimliklerin sabit kalması, STEP olmayan dosyanın sessizce yutulmaması, **ölçüm kaplamasının STEP alanında çekilip asılı kalmaması**; **arayüz donmuyor** — içe aktarma boyunca çizilen kare sayısı ana iş parçacığında ≤3, worker'da >20 (ölçümde 1 ↔ 91), panelin gerçekten worker'a gitmesi ve ilerleme kartının aşama değiştirip iş bitince kapanması; **kanvas rozeti** (boşken `STEP`, doluyken `⬡160`), **CAD yüz listesi** (160 satır; listeden tık → 3B'de vurgu, 3B'de gezinme → listede işaret, 3B'de tık → listede seçim, ikinci tık seçimi kaldırır, DÖNDÜRME seçimi bozmaz), **kaynağın yalnız dosyaya yazılması** (künye ve otomatik yedek kaynaksız); **görüntüleyicinin boyu** — parça yüklenince pencere ekranı kullanıyor, sol ray ile 3B kutusu AYNI yerde bitiyor (boşluk 290.6 → 0 px), kanvas o ölçüde kuruluyor ve içerik kaydırmıyor. Bu halkalar Node'da HİÇ koşmuyor |
 | `tests/e2e/measure-merge-drop.spec.js` | `js/measure-dropzone.js` + `js/trace-view.js` | MFSim'de sürükle-bırak ve çok eksenli birleştirme — araç performans VE takoz sekmesi |
 
 ## Sık Kullanılan Komutlar
