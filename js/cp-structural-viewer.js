@@ -105,7 +105,7 @@ function _svwAttachControls(canvas){
     var W = _veStrViewer;
     // HAREKETSİZ SOL TIK = YÜZ SEÇ. Eşik olmadan her döndürme sonunda seçim
     // değişirdi; 4 px, "tıkladım" ile "döndürdüm" arasındaki gerçek sınır.
-    if(W && !W.disposed && drag && drag.btn === 0 && drag.moved < 4 && W.hoverFace){
+    if(W && !W.disposed && W.faceMode && drag && drag.btn === 0 && drag.moved < 4 && W.hoverFace){
       veStrViewerSelectFace(W.hoverFace.id);
       if(typeof veStrGeomOnPickFace === 'function') { try { veStrGeomOnPickFace(W.hoverFace); } catch(e2){} }
     }
@@ -249,6 +249,13 @@ function _svwAttachHover(canvas){
     // Sürükleme SIRASINDA vurgu arama: her karede raycast pahalı ve
     // kullanıcı zaten döndürüyor, seçmiyor.
     if(W.dragging){ tip.style.display = 'none'; return; }
+    // Kip kapalı: künye de vurgu da YOK. Erken çıkış aynı zamanda kare başına
+    // bir raycast'ten kurtarıyor — kapalıyken hiç arama yapılmıyor.
+    if(!W.faceMode){
+      if(W.hoverFace){ _svwHighlightFace(-1, null); W.hoverFace = null; }
+      tip.style.display = 'none';
+      return;
+    }
     var r = canvas.getBoundingClientRect();
     W.mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
     W.mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
@@ -335,7 +342,13 @@ function veStrViewerInit(canvasId, geom, nodeId){
     ctrl: { theta: -Math.PI * 0.72, phi: Math.PI / 3, radius: diag * 1.9, target: new THREE.Vector3(0, 0, 0) },
     minRadius: Math.max(diag * 0.05, 0.05), maxRadius: diag * 40,
     raf: null, disposed: false, ro: null, detach: [],
-    raycaster: new THREE.Raycaster(), mouse: new THREE.Vector2(), tooltip: null, dragging: false
+    raycaster: new THREE.Raycaster(), mouse: new THREE.Vector2(), tooltip: null, dragging: false,
+    // YÜZ İNCELEME KİPİ — VARSAYILAN KAPALI. Fare parçanın üstünde gezerken
+    // çıkan yüz künyesi ve amber vurgu, kullanıcı istemeden görünmemeli:
+    // parçaya bakmak isteyen biri için sürekli beliren bir kutu gürültü.
+    // Panel bunu veStrViewerSetFaceMode ile açar (CAD yüzleri bölümüyle
+    // AYNI anahtar — liste ile künye tek bir kipin iki yüzü).
+    faceMode: false
   };
 
   var solidCol = _svwCssColor('--accent-primary', '#3b82f6');
@@ -420,11 +433,24 @@ function veStrViewerReset(){
   _svwUpdateCamera();
 }
 
-// Kenar çizgilerini gizle/göster.
-function veStrViewerToggleEdges(on){
+// Yüz inceleme kipini aç/kapa. Kapatınca ekranda hiçbir işaret KALMAMALI:
+// vurgu, seçim ve künye üçü de silinir — yarısı duran bir kip, kapalı sayılmaz.
+// (Kenar çizgileri artık her zaman açık: aç/kapa kutusu kaldırıldı, kenarlar
+// teknik görüntünün varsayılanı.)
+function veStrViewerSetFaceMode(on){
   var V = _veStrViewer;
   if(!V || V.disposed) return;
-  V.edges.forEach(function(e){ e.visible = !!on; });
+  V.faceMode = !!on;
+  if(!V.faceMode){
+    _svwMarkFace('hl', -1, null);
+    _svwMarkFace('sel', -1, null);
+    V.hoverFace = null; V.selFace = null;
+    if(V.tooltip) V.tooltip.style.display = 'none';
+  }
+}
+
+function veStrViewerFaceMode(){
+  return !!(_veStrViewer && !_veStrViewer.disposed && _veStrViewer.faceMode);
 }
 
 // Standart görüşler — teknik resim alışkanlığı (Ön/Üst/Sağ/İzometrik).
