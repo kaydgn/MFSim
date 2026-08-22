@@ -147,6 +147,15 @@ function _veStatusRender() {
 }
 
 function _veStatusLoadCommits() {
+  // Artifact önizlemesi dış hosta çıkamaz (CSP). Sessizce boş bırakmak yerine
+  // sebebini yaz — yoksa kullanıcı "commit listesi bozulmuş" sanır.
+  if (typeof veArtifactEnv === 'function' && veArtifactEnv()) {
+    var elA = document.getElementById('ve-status-commits');
+    if (elA) elA.innerHTML = '<div style="color:var(--text-muted);font-size:var(--fs-body);">' +
+      veOfflineNote('Commit listesi') + '</div>';
+    return;
+  }
+
   fetch('https://api.github.com/repos/kaydgn/MFSim/commits?per_page=10')
     .then(function(r) {
       if(!r.ok) throw new Error('HTTP ' + r.status + (r.status === 403 ? ' (API limiti)' : ''));

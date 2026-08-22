@@ -378,6 +378,44 @@ function maskRawText(src) {
   return out + src.slice(i);
 }
 
+// maskRawText'in KONUM KORUYAN kardeşi: script/style gövdelerini silmek yerine
+// boşlukla doldurur. Maskeli metinde bulunan bir indis HAM metinde de geçerlidir.
+//
+// NEDEN GEREKLİ: bir belgede gerçek <body>/</body>/<head> etiketini bulmak,
+// "ilk eşleşme" ya da "son eşleşme" varsayımıyla yapılamaz — bu diziler JS
+// gövdelerinin İÇİNDE de geçiyor. ÖLÇÜLDÜ (MFSim_Code.html): "</body>" 3 kez
+// geçiyor, üçünden ikisi rapor üreticilerinin bastığı HTML şablonunun parçası
+// (cp-mount-report.js, cp-fead-report.js). "İlk eşleşme gerçektir" diyen bir
+// ayrıştırıcı gövdeyi 425 KB'ta kesiyor ve 80 script'in 9'unu görüyordu.
+function maskRawTextKeepOffsets(src) {
+  var bosluk = function (n, kaynak) {
+    var o = '';
+    for (var k = 0; k < n; k++) o += (kaynak.charCodeAt(k) === 10 ? '\n' : ' ');
+    return o;
+  };
+  var out = '', i = 0;
+  var OPEN = /<(script|style)\b/gi, m;
+  while (true) {
+    OPEN.lastIndex = i;
+    m = OPEN.exec(src);
+    if (!m) break;
+    var gt = endOfOpenTag(src, m.index);
+    if (gt === -1) break;
+    var ad = m[1].toLowerCase();
+    var end = (ad === 'script')
+      ? (function () { var r = scanScriptBody(src, gt + 1); return r.end; })()
+      : (function () {
+          var re = /<\/style(?=[\t\n\f \/>]|$)/gi; re.lastIndex = gt + 1;
+          var mm = re.exec(src); return mm ? mm.index : -1;
+        })();
+    if (end === -1) { out += src.slice(i, gt + 1); i = src.length; break; }
+    out += src.slice(i, gt + 1);                                   // açılış etiketi korunur
+    out += bosluk(end - (gt + 1), src.slice(gt + 1, end));         // gövde boşluğa döner
+    i = end;
+  }
+  return out + src.slice(i);
+}
+
 // <style> gövdelerinin metinleri.
 function styleBodies(src) {
   var out = [], i = 0;
@@ -400,6 +438,6 @@ function styleBodies(src) {
 module.exports = {
   shieldScriptEnd, shieldStyleEnd,
   scanDocument, countScriptElements, countScriptClosers, verifyScriptBlocks,
-  leftoverRefs, maskRawText, styleBodies,
+  leftoverRefs, maskRawText, maskRawTextKeepOffsets, styleBodies,
   indexOfCI,
 };

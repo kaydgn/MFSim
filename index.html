@@ -53,6 +53,10 @@
   </div>
 </div>
 
+<!-- Ortam bayrağı EN ÖNCE: veArtifactEnv() ağa bağlı özellikleri kapatıyor ve
+     bayrak gövdenin başında tanımlandığı için buradan sonraki HER modül
+     (loader dahil) onu okuyabilir. Bkz. js/env.js -->
+<script src="js/env.js"></script>
 <script src="js/loader.js"></script>
 
 <!-- ═══ LOGIN SCREEN ═══ -->
@@ -1261,7 +1265,12 @@
 if('serviceWorker' in navigator) {
   // Yol KOKTEN: bir SW'nin varsayilan kapsami kendi dizinidir. 'pwa/sw.js'
   // kaydi kapsami <site>/pwa/ yapiyordu ve bu sayfayi hic kontrol etmiyordu.
-  navigator.serviceWorker.register('sw.js').catch(function(){});
+  // Artifact önizlemesinde sw.js diye bir dosya yok (deploy _site'a kopyalıyor).
+  // .catch() hatayı yutardı ama kayıt denemesi yine de konsola düşer; ortamı
+  // bildiğimiz için hiç denemiyoruz.
+  if (!(typeof veArtifactEnv === 'function' && veArtifactEnv())) {
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  }
 }
 </script>
 

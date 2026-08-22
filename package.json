@@ -7,7 +7,7 @@
     "build": "node build.js",
     "build:viewer": "node viewer/build.js",
     "build:fead-report": "node tools/report-assets/build-fead-report-template.js",
-    "build:all": "node build.js && node viewer/build.js",
+    "build:all": "node build.js && node viewer/build.js && npm run build:artifact",
     "shot": "node tools/shot.js",
     "sync:viewer": "node viewer/sync.js",
     "test": "jest",
@@ -16,7 +16,8 @@
     "test:changed": "jest -o",
     "test:ci": "jest --verbose --ci",
     "test:e2e": "npx playwright test",
-    "test:all": "jest && npx playwright test"
+    "test:all": "jest && npx playwright test",
+    "build:artifact": "node tools/build-artifact.js"
   },
   "repository": {
     "type": "git",

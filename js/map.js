@@ -189,6 +189,16 @@ function veInitRoadMap(nodeId) {
   var container = document.getElementById('ve-road-map-' + nodeId);
   if(!container) return;
 
+  // Harita İKİ dış servise birden bağlı: OSM karo sunucusu ve OSRM rota
+  // servisi. Artifact önizlemesinde ikisi de engellidir — haritayı yine de
+  // kurmak BOŞ GRİ bir kare verir (Leaflet karo hatasını kendi içinde yutar),
+  // yani kullanıcı "harita bozuk" sanardı. Kurmuyoruz, sebebini yazıyoruz.
+  if (typeof veArtifactEnv === 'function' && veArtifactEnv()) {
+    container.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:var(--fs-body);line-height:1.5;">' +
+      veOfflineNote('Harita ve rota') + '</div>';
+    return;
+  }
+
   // Modal açıksa haritayı yeniden oluşturma — modal kapanınca geri gelecek
   if(_veMapModalActive === nodeId && veRoadMaps[nodeId]) {
     return;
