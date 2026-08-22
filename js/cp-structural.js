@@ -882,8 +882,10 @@ function getStrGeometryPropertiesHTML(node){
 
 
   // ── SAĞ: 3B görüntüleyici ──
-  var right = '<div id="ve-str-geom-wrap" style="width:100%; height:min(58vh,540px); min-height:320px; overflow:hidden; '
-            + 'border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:var(--radius-md);">';
+  // Ölçü SATIR İÇİNDE DEĞİL sınıfta (.ve-str-vwr-box): parça yüklüyken pencere
+  // büyük açılıyor (.ve-properties--strgeom) ve kutu orada panelin BOYUNU
+  // dolduruyor — satır içi `height` onu ezerdi.
+  var right = '<div id="ve-str-geom-wrap" class="ve-str-vwr-box">';
   if(rec){
     right += '<canvas id="ve-str-geom-canvas" style="width:100%; height:100%; display:block;"></canvas>';
     right += '<div class="ve-str-vwr-hint">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş · parçanın üstüne gel → <b>CAD yüzü</b></div>';
@@ -895,9 +897,9 @@ function getStrGeometryPropertiesHTML(node){
   right += '</div>';
 
   var html = '<div class="sw-panel">';
-  html += '<div class="ve-cp-grid ve-cp-grid--wideright">';
-  html += '<div class="ve-cp-col ve-cp-col--in">' + left + '</div>';
-  html += '<div class="ve-cp-col ve-cp-col--out">' + right + '</div>';
+  html += '<div class="ve-cp-grid ve-cp-grid--wideright ve-str-geom-grid">';
+  html += '<div class="ve-cp-col ve-cp-col--in ve-str-col-in">' + left + '</div>';
+  html += '<div class="ve-cp-col ve-cp-col--out ve-str-col-out">' + right + '</div>';
   html += '</div></div>';
   return html;
 }

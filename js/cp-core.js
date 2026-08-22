@@ -351,6 +351,12 @@ function showNodeProperties(node) {
   }
   // Yol / Ortam: harita hero → çok geniş+yüksek pencere (--wide boyutunu ezer).
   if(_propWin) _propWin.classList.toggle('ve-properties--road', node.type === 'road');
+  // Yapısal Analiz / Geometri: parça YÜKLÜYKEN büyük pencere — 3B görüntüleyici
+  // panelin bütün boyunu doldurur (--wide boyutunu ezer, CSS'te sonra tanımlı).
+  // Parça YOKKEN verilmez: sağ sütun tek satırlık bir yer tutucu, 94vh'lik
+  // pencere bomboş açılırdı (--engine-empty ile aynı gerekçe).
+  if(_propWin) _propWin.classList.toggle('ve-properties--strgeom',
+    node.type === 'str-geometry' && !!(node.data && node.data.geometry));
   // Hafif paneller (VE_COMPACT_PANEL_TYPES): içerik az → dar pencere + kompakt-sol
   // kimlik. Geniş yapmak boş sütun bırakırdı. Salt sunum.
   if(_propWin) _propWin.classList.toggle('ve-properties--compact', VE_COMPACT_PANEL_TYPES.indexOf(node.type) >= 0);

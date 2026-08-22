@@ -4469,6 +4469,68 @@
   border-top:1px solid var(--border-color);
 }
 
+/* ── 3B GÖRÜNTÜLEYİCİ KUTUSU ──
+   Ölçü burada, satır içinde değil: parça yüklüyken panel .ve-properties--strgeom
+   ile büyür ve kutu aşağıdaki kuralla panelin BOYUNU doldurur — satır içi bir
+   `height` onu ezer, kutu 540 px'te kalır ve altında boşluk açılırdı. */
+.ve-str-vwr-box{
+  position:relative;overflow:hidden;
+  width:100%;height:min(58vh,540px);min-height:320px;
+  border:1px solid var(--border-color);border-radius:var(--radius-md);
+  background:var(--bg-primary);
+}
+
+/* ══ GEOMETRİ PANELİ — PARÇA YÜKLÜYKEN BÜYÜK PENCERE ══
+   ÖLÇÜLDÜ (gerçek tarayıcı, 1600×1000, as1-tu-203): pencere 980×900 iken sol
+   ray 830.6 px, görüntüleyici 540 px — yani parçanın ALTINDA 290.6 px boşluk
+   duruyordu ve pencere ekran genişliğinin ancak %61'ini kullanıyordu. Parça
+   3B'de incelenen tek nesne; boşluk onun hakkı.
+
+   İki ayrı iş yapılıyor:
+     1) pencere büyüyor (genişlik ~1560 px'e, yükseklik 94vh'ye),
+     2) görüntüleyici o boşluğu YUTUYOR — grid `stretch`, sağ sütun flex
+        sütunu, kutu `flex:1`. Yalnız (1) yapılsaydı boşluk BÜYÜRDÜ.
+
+   Sınıf yalnız parça YÜKLÜYKEN veriliyor (bkz. cp-core.js): boşken sağ sütun
+   tek bir yer tutucu yazıdan ibaret, 94vh'lik pencere bomboş açılırdı —
+   motor panelindeki --engine-empty kuralının aynısı. */
+.ve-properties.ve-properties--strgeom{
+  max-width:min(1560px, 96vw);
+  height:94vh;
+  max-height:94vh;
+}
+/* İçerik alanı artık KAYDIRMIYOR: dikey boşluğu paylaştıran flex zinciri
+   pencereden kutuya kadar kesintisiz olmalı (bir halkada `min-height:0`
+   unutulursa flex çocuk içeriğine göre şişer ve zincir kopar). */
+.ve-properties--strgeom .ve-properties-content{
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.ve-properties--strgeom .ve-properties-content > .sw-panel{
+  flex:1;min-height:0;display:flex;flex-direction:column;
+}
+/* Sol ray SABİT genişlikte: --wideright oranı (0.6fr) 1560 px'te rayı 396 px
+   yapıyordu — künye ve düğmeler için gereğinden geniş, görüntüleyiciden çalınan
+   yer. align-items:stretch şart; taban .ve-cp-grid kuralı `start` diyor. */
+.ve-properties--strgeom .ve-str-geom-grid{
+  grid-template-columns:300px minmax(0,1fr);
+  align-items:stretch;
+  flex:1;min-height:0;
+}
+@media (max-width:820px){
+  .ve-properties--strgeom .ve-str-geom-grid{ grid-template-columns:1fr; }
+}
+.ve-properties--strgeom .ve-str-col-in,
+.ve-properties--strgeom .ve-str-col-out{
+  display:flex;flex-direction:column;min-height:0;
+}
+/* Ray kendi içinde kaydırır — sayfanın tamamı kaydırılsaydı görüntüleyici de
+   ekrandan çıkardı. */
+.ve-properties--strgeom .ve-str-col-in{ overflow-y:auto; }
+/* Artan boyu CAD yüz listesi yutar: 180 px'lik sabit tavan, ray 880 px iken
+   listenin altında boşluk bırakıyordu. */
+.ve-properties--strgeom .ve-str-faces{ flex:1 1 auto;max-height:none;min-height:120px; }
+.ve-properties--strgeom .ve-str-vwr-box{ flex:1;height:auto; }
+
 /* ── Bileşen kimlik bloğu (simge + ad + ID + sil düğmesi) ──
    Varsayılan: ORTALANMIŞ dikey yığın — tüm bileşen pencerelerinde eskisi gibi. */
 .ve-prop-identity{

@@ -297,6 +297,48 @@ describe('modül kablolaması eksiksiz', () => {
     expect(s).toContain('veStrGeomMountViewer');
   });
 
+  // ÖLÇÜLDÜ (gerçek tarayıcı, 1600×1000, as1-tu-203): pencere 980×900 iken sol
+  // ray 830.6 px, görüntüleyici 540 px — parçanın ALTINDA 290.6 px boşluk.
+  // Düzeltme İKİ parçalı ve ikisi de gerekli: pencere büyüyor VE görüntüleyici
+  // artan boyu yutuyor. Yalnız birincisi yapılsaydı boşluk BÜYÜRDÜ.
+  //
+  // Kapı burada string arıyor çünkü kırılma sessiz: flex zincirinin bir
+  // halkası (min-height:0, stretch, flex:1) düşse ya da kutuya satır içi bir
+  // `height` geri gelse panel yine açılır, parça yine görünür — yalnız boşluk
+  // geri gelir. Gerçek ölçüm E2E'de (structural-geometry.spec.js).
+  test('Geometri paneli parça YÜKLÜYKEN büyür, boşken büyümez', () => {
+    const s = oku('js/cp-core.js');
+    // Sınıf koşullu: boş panelde 94vh'lik pencere bomboş açılırdı.
+    expect(s).toMatch(/ve-properties--strgeom'[\s\S]{0,220}node\.data\.geometry/);
+    // --wide de veriliyor; --strgeom onu EZMELİ → CSS'te SONRA tanımlı olmalı.
+    const css = oku('css/styles.css');
+    expect(css.indexOf('.ve-properties.ve-properties--strgeom'))
+      .toBeGreaterThan(css.indexOf('.ve-properties.ve-properties--wide'));
+  });
+
+  test('3B kutunun ölçüsü SINIFTA — satır içi height boşluğu geri getirirdi', () => {
+    const s = oku('js/cp-structural.js');
+    // Kutu yalnız sınıfla kuruluyor; satır içi stil özgüllükte sınıfı ezerdi.
+    expect(s).toMatch(/id="ve-str-geom-wrap" class="ve-str-vwr-box"/);
+    expect(s).not.toMatch(/ve-str-geom-wrap"[^>]*style=/);
+    // Grid ve sütunlar işaretli olmalı — flex zinciri bu kancalardan geçiyor.
+    expect(s).toContain('ve-str-geom-grid');
+    expect(s).toContain('ve-str-col-in');
+    expect(s).toContain('ve-str-col-out');
+  });
+
+  test('boşluğu yutan flex zinciri KESİNTİSİZ — her halka CSS\'te', () => {
+    const css = oku('css/styles.css');
+    const blok = css.slice(css.indexOf('.ve-properties.ve-properties--strgeom'));
+    // pencere → içerik → sw-panel → grid → sağ sütun → kutu
+    expect(blok).toMatch(/--strgeom \.ve-properties-content\{[^}]*overflow:hidden/);
+    expect(blok).toMatch(/--strgeom \.ve-properties-content > \.sw-panel\{[^}]*min-height:0/);
+    expect(blok).toMatch(/--strgeom \.ve-str-geom-grid\{[^}]*align-items:stretch/);
+    expect(blok).toMatch(/--strgeom \.ve-str-geom-grid\{[^}]*min-height:0/);
+    expect(blok).toMatch(/--strgeom \.ve-str-col-in,\s*\.ve-properties--strgeom \.ve-str-col-out\{[^}]*min-height:0/);
+    expect(blok).toMatch(/--strgeom \.ve-str-vwr-box\{[^}]*flex:1[^}]*height:auto/);
+  });
+
   test('proje değişince içe aktarılmış geometri UNUTULUYOR', () => {
     // Takoz/FEAD'deki tuzağın aynısı: temizlenmezse yeni projede önceki
     // projenin parçası görüntüleyicide durur.
