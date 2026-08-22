@@ -199,7 +199,7 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '</tr>';
     
     html += '<tr>';
-    html += '<td colspan="2" style="padding:6px 8px; font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;"><b>Kilitli tork konvertörü için 1.0 giriniz.</b> Eğer tork konvertörü kilidi yoksa veya aktif değilse, dönüştürme oranını giriniz. Tipik değerler: 1.8–2.5 (düşük hızda), yaklaşık 1.0 (yüksek hızda).</td>';
+    html += '<td colspan="2" style="padding:6px 8px; font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Kilitli konvertörde oran 1.0\'dır. Kilitsiz çalışmada tipik değerler: düşük hızda 1.8–2.5, yüksek hızda ≈1.0.</td>';
     html += '</tr>';
     
     html += '</table>';

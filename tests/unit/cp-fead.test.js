@@ -54,7 +54,6 @@ describe('Alt-sistem sözleşmesi', () => {
   test('modül paneli "Alt Topolojiyi Aç" kancasını düğümün id\'siyle kurar', () => {
     const html = fead.getFeadModulePropertiesHTML({ id: 'comp-3', type: 'fead-analysis', data: {} });
     expect(html).toContain("veFeadOpenEditor('comp-3')");
-    expect(html).toContain('alt topolojisine');
   });
 
   test('açılmış alt-topolojinin bileşen/bağlantı sayısı özette görünür', () => {

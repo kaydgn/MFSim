@@ -2,30 +2,6 @@
 // INFO POPUP SİSTEMİ
 // ============================================================================
 var infoPopupData = {
-  'motorVerileri': {
-    title: 'Motor Verileri Hakkında',
-    content: 'Bu bölümde motor freni veya motor tork-güç değerlerini girebilirsiniz. Bilgi içeriği kullanıcı tarafından düzenlenecek.'
-  },
-  'torkGucEgrisi': {
-    title: 'Tork & Güç Eğrisi Hakkında',
-    content: 'Girilen veriler grafiksel olarak gösterilir. Bilgi içeriği kullanıcı tarafından düzenlenecek.'
-  },
-  'egriYaklaşımı': {
-    title: 'Eğri Yaklaşımı Hakkında',
-    content: 'Verilerinize en uygun matematiksel modeli seçebilirsiniz. Bilgi içeriği kullanıcı tarafından düzenlenecek.'
-  },
-  'motorFreniParametreleri': {
-    title: 'Motor Freni Parametreleri Hakkında',
-    content: 'Motor freni verim ve governed RPM değerlerini ayarlayabilirsiniz. Bilgi içeriği kullanıcı tarafından düzenlenecek.'
-  },
-  'sanzimanVerileri': {
-    title: 'Şanzıman Verileri Hakkında',
-    content: 'Bu bölümde şanzıman vites oranlarını tanımlayabilirsiniz. Hazır şanzıman presetlerinden birini seçebilir veya manuel olarak kendi değerlerinizi girebilirsiniz. Her vites için oran ve isteğe bağlı not ekleyebilirsiniz.'
-  },
-  'testVitesi': {
-    title: 'Test Başlangıç Vitesi Hakkında',
-    content: 'Motor freni testinin hangi viteste başladığını belirler. Şanzıman verilerini girdikten sonra bu listeden ilgili vitesi seçin. Seçilen vitesin oranı otomatik olarak hesaplamalarda kullanılacaktır.'
-  },
   'torkKonvertoru': {
     title: 'Tork Konvertörü Hakkında',
     content: 'Tork konvertörü, motor ile şanzıman arasında hidrolik bağlantı sağlar. Kilitli konvertör direkt mekanik bağlantı sağlar (oran 1.0). Kilitsiz durumda ise düşük hızlarda tork çarpanı (1.8-2.5), yüksek hızlarda ise yaklaşık 1.0 oran uygulanır.'

@@ -67,18 +67,12 @@ function getFeadModulePropertiesHTML(node){
   var cCount = (sub && sub.connections) ? sub.connections.length : 0;
   var initialized = !!(sub && sub.nodes && sub.nodes.length);
   var html = '<div class="sw-panel">';
-  html += '<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-warning);">'
-        + '<b style="color:var(--text-heading);">FEAD — alt-sistem.</b> '
-        + 'Motorun ön uç kayış-kasnak sistemi. Üstüne <b>çift tıklayınca</b> kendi <b>alt topolojisine</b> girilir. '
-        + 'Krank Kasnağı / Alternatör / Klima / Su Pompası / Direksiyon / Fan / Avara / Gergi bileşenlerini orada kurar, '
-        + '<b>kayış yolunu</b> bağlantılarla (Krank çıkışı → … → Krank girişi) çizersiniz.'
-        + '</div>';
   html += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
   if(initialized){
     html += '<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bileşen</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">' + nCount + '</td></tr>';
     html += '<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bağlantı</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">' + cCount + '</td></tr>';
   } else {
-    html += '<tr><td style="padding:7px 8px; border:1px solid var(--border-color); color:var(--text-muted);">Henüz açılmadı — ilk açılışta "Başlangıç ve Örnekler" bileşeni ile başlar.</td></tr>';
+    html += '<tr><td style="padding:7px 8px; border:1px solid var(--border-color); color:var(--text-muted);">Alt topoloji henüz açılmadı</td></tr>';
   }
   html += '</table>';
   html += '<button onclick="veFeadOpenEditor(\'' + node.id + '\')" style="width:100%; padding:14px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.03em;" onmouseover="this.style.filter=\'brightness(1.15)\'" onmouseout="this.style.filter=\'none\'">▶ Alt Topolojiyi Aç</button>';
@@ -514,11 +508,6 @@ function getFeadPulleyPropertiesHTML(node){
   var isDriver = !!(node.data.driver);
   var html = '<div class="sw-panel">';
 
-  var rol = isDriver ? 'Bu kasnak SÜRÜCÜ: kayışı o döndürür, gücü diğerlerinin toplamıdır.'
-          : isIdler  ? 'Avara kasnak — yük çekmez, yalnız kayış yolunu yönlendirir ve sarım açısını artırır.'
-                     : 'Aksesuar — kayıştan güç çeker.';
-  html += '<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-warning);">'
-        + '<b style="color:var(--text-heading);">' + _feadEsc(_feadNodeName(node)) + '.</b> ' + rol + '</div>';
 
   // ── TEMAS TARAFI — sessiz hataya karşı en kritik alan ──
   // Ters verilirse çekirdek BAŞKA BİR GEÇERLİ güzergâh hesaplar; kapalı çevrim
@@ -691,9 +680,6 @@ function veFeadCurveSet(nodeId, i, key, val){
 function getFeadTensionerPropertiesHTML(node){
   if(!node.data) node.data = {};
   var html = '<div class="sw-panel">';
-  html += '<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-warning);">'
-        + '<b style="color:var(--text-heading);">Gergi.</b> Kayış gerginliğini çalışma boyunca sabit tutar: pivot etrafında dönen kolun ucundaki kasnak, yay momentiyle kayışa bastırır.</div>';
-
   html += _feadCard('Temas Tarafı', 'hesap için kritik', 'var(--accent-danger)',
       _feadSelect(node, 'Kayış gergi kasnağına', 'contact',
         [['back', 'Sırtından değiyor'], ['grooved', 'Kaburgalı yüzden değiyor']],
@@ -837,9 +823,6 @@ function veFeadMountReadout(node){
 function getFeadBeltPropertiesHTML(node){
   if(!node.data) node.data = {};
   var html = '<div class="sw-panel">';
-  html += '<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-warning);">'
-        + '<b style="color:var(--text-heading);">Kayış Özellikleri.</b> Kayışın kendisi bir kasnak değildir: konumu yoktur, topolojiye bağlanmaz. İç topolojide <b>tek kopya</b> durur ve kayışın kesit/malzeme künyesini taşır.</div>';
-
   // Profil + marka, çekirdeğin BELT_DB'sindeki hb/hr'yi seçer — kasnak
   // yarıçapları buradan türetildiği için künyenin en belirleyici iki alanı bu.
   var profiller = [['PK','PK'],['PJ','PJ'],['PH','PH'],['PL','PL'],['PM','PM']];
@@ -1485,8 +1468,7 @@ function veFeadLayoutSVG(build, W, H, opts){
     if(opts.nodeId)
       svg += '<rect x="' + f(cx - VE_FEAD_ROSE_HALF) + '" y="' + f(cy - VE_FEAD_ROSE_HALF) + '" width="'
           + (2*VE_FEAD_ROSE_HALF) + '" height="' + (2*VE_FEAD_ROSE_HALF) + '" fill="transparent">'
-          + '<title>Yön gülü — sürükleyerek taşıyın; çift tıklayınca varsayılan yerine döner. '
-          + 'Taşındığında sağdaki ' + VE_FEAD_ROSE_W + ' px\'lik şerit şemaya bırakılır.</title></rect>';
+          + '<title>Yön gülü — sürükle ile taşınır, çift tık varsayılan yerine döndürür</title></rect>';
     svg += '<g data-ve="compass" stroke="var(--text-muted)" stroke-width="1" fill="none">'
         + '<circle cx="' + f(cx) + '" cy="' + f(cy) + '" r="' + f(r) + '"/>'
         + '<line x1="' + f(cx-r-4) + '" y1="' + f(cy) + '" x2="' + f(cx+r+4) + '" y2="' + f(cy) + '"/>'
@@ -1827,11 +1809,6 @@ function getFeadLayoutPropertiesHTML(node){
   if(!node.data) node.data = {};
   var build = veFeadBuildFromCanvas();
   var html = '<div class="sw-panel">';
-  html += '<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-warning);">'
-        + '<b style="color:var(--text-heading);">Kayış Yolu.</b> Şema hesap çekirdeğinin çözdüğü '
-        + 'GERÇEK geometridir: teğet noktaları, sarım yayları ve yönleri temas tarafına göre. '
-        + 'Kesikli çember = kayışın <b>sırttan</b> temas ettiği kasnak. Sıra bağlantılardan okunur.</div>';
-
   var mode = veFeadPosMode(node);
   // Panel de AYNI alanı okur ve aynı kancayı kurar: gül kartta bir yerde,
   // panelde başka bir yerde durursa kullanıcı hangisinin geçerli olduğunu
@@ -1940,10 +1917,6 @@ function getFeadSolverPropertiesHTML(node){
   if(!node.data) node.data = {};
   var build = veFeadBuildFromCanvas();
   var html = '<div class="sw-panel">';
-  html += '<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-warning);">'
-        + '<b style="color:var(--text-heading);">FEAD Çözücü.</b> İç topolojideki kasnakları, gergiyi ve '
-        + 'kayış künyesini <b>otomatik</b> algılar — çözücüye bileşen bağlanmaz.</div>';
-
   html += _feadCard('Tasarım', '', 'var(--accent-primary)',
       _feadGrid(node, [
         { key:'designTensionN', label:'Tasarım gerginliği [N]', ph:'765.7' },
@@ -2225,8 +2198,6 @@ function veFeadPositionTable(build){
 function getFeadExamplePropertiesHTML(node){
   if(!node.data) node.data = {};
   var html = '<div class="sw-panel">';
-  html += '<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-warning);">'
-        + '<b style="color:var(--text-heading);">Başlangıç ve Örnekler.</b> Hazır bir FEAD düzenini (kasnaklar + kayış yolu + künye) iç topolojiye tek tıkla kurar.</div>';
   veFeadExampleKeys().forEach(function(k){
     var ex = veFeadExampleOf(k);
     var kasnak = ex.pulleys.length;
@@ -2246,8 +2217,6 @@ function getFeadExamplePropertiesHTML(node){
       + _feadHint('<b>Mevcut kasnakların üzerine eklenir</b>, silinmez — boş bir iç topolojide '
         + 'kurmak en temizidir.'));
   });
-  html += '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.5;">Kendi düzeninizi sol paletten de kurabilirsiniz: '
-        + 'sürücü kasnağı bırakın, aksesuar kasnaklarını ekleyin, ardından <b>sürücü çıkışı → aksesuar → … → sürücü girişi</b> sırasıyla bağlayarak kayış yolunu çizin.</div>';
   html += '</div>';
   return html;
 }

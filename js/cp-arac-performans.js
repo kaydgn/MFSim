@@ -154,16 +154,12 @@ function getAracPerformansPropertiesHTML(node){
   var cCount = (sub && sub.connections) ? sub.connections.length : 0;
   var initialized = !!(sub && sub.nodes && sub.nodes.length);
   var html = '<div class="sw-panel">';
-  html += '<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); line-height:1.4; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-primary);">'
-        + '<b style="color:var(--text-heading);">Araç Performans — alt-sistem.</b> '
-        + 'Üstüne <b>çift tıklayınca</b> kendi <b>alt topolojisine</b> girilir. Motor / Tork Konvertörü / Şanzıman / Diferansiyel / Tekerlek gibi güç aktarma bileşenlerini orada, kendi panellerinden düzenlersiniz. İlk açılışta gelen <b>Başlangıç ve Örnekler</b> bileşeninden hazır bir araç örneği aktarabilirsiniz.'
-        + '</div>';
   html += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
   if(initialized){
     html += '<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bileşen</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">' + nCount + '</td></tr>';
     html += '<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bağlantı</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">' + cCount + '</td></tr>';
   } else {
-    html += '<tr><td style="padding:7px 8px; border:1px solid var(--border-color); color:var(--text-muted);">Henüz açılmadı — ilk açılışta "Başlangıç ve Örnekler" bileşeni ile başlar.</td></tr>';
+    html += '<tr><td style="padding:7px 8px; border:1px solid var(--border-color); color:var(--text-muted);">Alt topoloji henüz açılmadı</td></tr>';
   }
   html += '</table>';
   html += '<button onclick="veAracOpenEditor(\'' + node.id + '\')" style="width:100%; padding:14px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.03em;" onmouseover="this.style.filter=\'brightness(1.15)\'" onmouseout="this.style.filter=\'none\'">▶ Alt Topolojiyi Aç</button>';

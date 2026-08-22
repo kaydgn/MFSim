@@ -35,8 +35,7 @@ function getSensorPropertiesHTML(node) {
   if(!conn && !compNode) {
     // Bağlı değil
     html += '<tr><td style="padding:10px; text-align:center; background:var(--bg-tertiary); color:var(--text-muted); font-size:var(--fs-tiny);">';
-    html += '<span class="mf-ico mf-ico-radio"></span> Sensör portunu bir bağlantı çizgisine<br>veya bileşene bağlayın.<br>';
-    html += '<span style="font-size:var(--fs-micro); opacity:0.7;">Porta tıklayın → yeşil noktaya/bileşene tıklayın</span>';
+    html += '<span class="mf-ico mf-ico-radio"></span> Sensör portu bir bağlantı çizgisine<br>veya bileşene bağlı değil.';
     html += '</td></tr>';
   } else if(compNode) {
     // Doğrudan bileşene bağlı
@@ -122,7 +121,7 @@ function getSensorPropertiesHTML(node) {
     // Yön açıklama
     var dirLabel = sensorDirection === 'from' ? fromName + ' çıkış' : toName + ' giriş';
     html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="padding:4px 8px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">';
-    html += '<span class="mf-ico mf-ico-ruler"></span> Sensör <b>' + dirLabel + '</b> değerlerini okuyor. Yönü değiştirerek diğer bileşenin sinyallerini görebilirsiniz.';
+    html += '<span class="mf-ico mf-ico-ruler"></span> Sensör <b>' + dirLabel + '</b> değerlerini okuyor.';
     html += '</td></tr>';
     
     html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary); font-size:var(--fs-tiny); vertical-align:top;">Sinyaller</th>';
@@ -160,7 +159,7 @@ function getSensorPropertiesHTML(node) {
   }
   
   html += '</table>';
-  html += '<div style="margin-top:6px; font-size:var(--fs-micro); color:var(--text-muted);"><span class="mf-ico mf-ico-lightbulb"></span> Simülasyonda seçili sinyal zamana bağlı kaydedilir.</div>';
+  html += '<div style="margin-top:6px; font-size:var(--fs-micro); color:var(--text-muted);">Simülasyonda seçili sinyal zamana bağlı kaydedilir.</div>';
   html += '</div>';
   return html;
 }
@@ -349,7 +348,7 @@ function getScenarioPropertiesHTML(node) {
   var html = '<div class="sw-panel">';
 
   html += '<div class="sw-section-title">Senaryo Parametreleri</div>';
-  html += '<div class="sw-pkg-desc">Sürüş senaryosunu tanımlayın. Bu bileşen topolojiye dahilse ilgili parametreler aktif olur.</div>';
+  html += '<div class="sw-pkg-desc">Bu bileşen topolojiye dahilse ilgili parametreler aktif olur.</div>';
   
   html += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
   
@@ -364,7 +363,7 @@ function getScenarioPropertiesHTML(node) {
   var showThrottle = ['partial_throttle','full_throttle','custom'].indexOf(scenarioType) > -1;
   html += '<tr id="ve-scenario-throttle-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showThrottle?'display:none;':'') + '"><th style="padding:7px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Gaz pedal oranı [%]</th><td style="padding:7px; background:var(--bg-tertiary);"><input type="number" id="ve-scenario-throttle-' + node.id + '" value="' + throttle + '" step="5" min="0" max="100" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEScenarioChange(\'' + node.id + '\')"></td></tr>';
   
-  html += '<tr><td colspan="2" style="padding:5px 8px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Senaryo tipi seçimi simülasyon davranışını belirler.</td></tr>';
+  html += '<tr><td colspan="2" style="padding:5px 8px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Senaryo tipi simülasyon davranışını belirler.</td></tr>';
 
   html += '</table>';
 
@@ -835,7 +834,7 @@ function veOpenCoastDownWizard(nodeId) {
     '<div style="display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dotted var(--border-color);"><span>R²:</span><span id="cdw-crr-r2" style="font-weight:700; color:var(--text-primary);">—</span></div>' +
     '<div style="display:flex; justify-content:space-between; padding:3px 0;"><span>RMS hata [m/s²]:</span><span id="cdw-crr-rms">—</span></div>' +
     '</div>' +
-    '<div id="cdw-crr-hint" style="font-size:var(--fs-tiny); color:var(--text-muted); padding-top:5px; border-top:1px dashed var(--border-color);">CFD Cd değerini girin ve "Crr Hesapla" basın.</div>' +
+    '<div id="cdw-crr-hint" style="font-size:var(--fs-tiny); color:var(--text-muted); padding-top:5px; border-top:1px dashed var(--border-color);">Crr hesaplanmadı.</div>' +
 
     '</div></div>';
 
@@ -917,7 +916,7 @@ function cdwResetSummaries() {
   ids.forEach(function(id) { var el = document.getElementById(id); if(el) el.textContent = '—'; });
   var countIds = ['cdw-crr-count'];
   countIds.forEach(function(id) { var el = document.getElementById(id); if(el) el.textContent = '0'; });
-  var hintEl = document.getElementById('cdw-crr-hint'); if(hintEl) hintEl.textContent = 'CFD Cd değerini girin ve "Crr Hesapla" basın.';
+  var hintEl = document.getElementById('cdw-crr-hint'); if(hintEl) hintEl.textContent = 'Crr hesaplanmadı.';
 }
 
 // --- Sihirbaz: İstatistik yardımcıları ---
@@ -1239,7 +1238,7 @@ function veRenderWarningsPanel(items, opts) {
     // yokken bile "Topoloji hazır" yazıyordu ve Çalıştır aynı anda reddediyordu.
     var msg = (opts.source === 'dogrulama')
       ? '<span style="color:var(--accent-success);">✓ Doğrulama temiz — hesaplamaya hazır.</span>'
-      : 'Uyarı yok. Doğrulamak için Giriş sekmesindeki <strong>Doğrula</strong>\'ya basın.';
+      : 'Uyarı yok — doğrulama henüz çalıştırılmadı.';
     body.innerHTML = '<div style="padding:10px 14px;font-size:var(--fs-md);color:var(--text-muted);">' + msg + '</div>';
     return;
   }
@@ -1823,7 +1822,7 @@ function getVehiclePropertiesHTML(node) {
   html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-vehicle-cd-' + node.id + '" value="' + cd + '" step="0.01" min="0" max="2" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEVehicleParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
-  html += '<td colspan="2" style="padding:5px 8px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Şirket içinde yapılan CFD analizlerinden elde edebilirsiniz. Askeri araçlar için tipik 0.63–0.67 aralığındadır.</td>';
+  html += '<td colspan="2" style="padding:5px 8px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">CFD analizinden alınır. Askeri araçlarda tipik aralık 0.63–0.67.</td>';
   html += '</tr>';
   
   // Frontal alan
@@ -2077,7 +2076,7 @@ function onVERoadParamChange(nodeId) {
 
 function _veManualSegTableHTML(nodeId, segs) {
   if(!segs || segs.length === 0) {
-    return '<div style="padding:14px; text-align:center; font-size:var(--fs-tiny); color:var(--text-muted);">Henüz segment eklenmedi.<br><span style="opacity:0.7;">Yukarıdaki <b>+</b> butonuyla segment ekleyin.</span></div>';
+    return '<div style="padding:14px; text-align:center; font-size:var(--fs-tiny); color:var(--text-muted);">Henüz segment eklenmedi.</div>';
   }
   var html = '<table style="width:100%; font-size:var(--fs-tiny); border-collapse:collapse; table-layout:fixed;">';
   html += '<colgroup><col style="width:24px;"><col><col style="width:62px;"><col style="width:58px;"><col style="width:68px;"><col style="width:50px;"><col style="width:22px;"></colgroup>';
@@ -2531,8 +2530,7 @@ function getParametricPropertiesHTML(node) {
   html += ' Parametrik Analiz</div>';
   
   html += '<p style="font-size:var(--fs-tiny); color:var(--text-muted); margin-bottom:12px; line-height:1.4;">';
-  html += 'Bileşen parametrelerini farklı değerlerle tarayarak otomatik çoklu simülasyon çalıştırır. ';
-  html += 'Parametre eklemek için bileşen özelliklerindeki <span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--accent-primary);color:white;font-size:var(--fs-micro);font-weight:800;">P</span> butonlarını kullanın.</p>';
+  html += 'Bileşen parametrelerini farklı değerlerle tarayarak otomatik çoklu simülasyon çalıştırır.</p>';
   
   // Durum göstergesi
   html += '<div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:10px; margin-bottom:12px;">';
@@ -2541,7 +2539,6 @@ function getParametricPropertiesHTML(node) {
     html += '<div style="text-align:center; padding:12px 0;">';
     html += '<div style="font-size:var(--fs-h1); margin-bottom:6px; opacity:0.4;"><span class="mf-ico mf-ico-bar-chart"></span></div>';
     html += '<div style="font-size:var(--fs-body); color:var(--text-muted); font-weight:500;">Henüz parametre eklenmedi</div>';
-    html += '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:4px; opacity:0.7;">Bileşen özelliklerindeki ⓟ butonları ile parametre ekleyin</div>';
     html += '</div>';
   } else {
     html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:8px;"><span class="mf-ico mf-ico-clipboard"></span> Taranacak Parametreler (' + params.length + ')</div>';
@@ -2608,13 +2605,6 @@ function getParametricPropertiesHTML(node) {
     }
   }
   
-  html += '</div>';
-  
-  // Açıklama
-  html += '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; padding:8px; background:var(--bg-tertiary); border-radius:var(--radius-sm); border:1px solid var(--border-color);">';
-  html += '<span class="mf-ico mf-ico-lightbulb"></span> <strong>Kullanım:</strong> Bileşen özelliklerindeki sayısal girdilerin yanındaki ';
-  html += '<span style="display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;border-radius:50%;background:var(--accent-primary);color:white;font-size:var(--fs-micro);font-weight:800;">P</span>';
-  html += ' butonuna tıklayarak parametreleri buraya ekleyin. Simülasyon tüm kombinasyonları otomatik çalıştırır.';
   html += '</div>';
   
   html += '</div>';

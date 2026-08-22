@@ -6,9 +6,9 @@ function getShiftControllerPropertiesHTML(node) {
   // Status bar — veri durumunu göster
   var hasData = !!(nodes.find(function(n) { return n.type === 'gearbox'; }) && nodes.find(function(n) { return n.type === 'engine'; }));
 
-  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Shift Schedule (Vites Geçiş Takvimi) <button class="sw-info-btn" onclick="showInfoPopup(\'shiftController\')" title="Bilgi">?</button></div>';
+  html += '<div class="sw-section-title">Shift Schedule (Vites Geçiş Takvimi)</div>';
 
-  html += '<div class="sw-pkg-desc">Bu bileşen otomatik şanzıman vites geçiş stratejisini kontrol eder. Converter modda SR eşiklerine göre upshift, lockup modda RPM eşiklerine göre shift kararı verilir.</div>';
+  html += '<div class="sw-pkg-desc">Converter modda SR eşiklerine göre upshift, lockup modda RPM eşiklerine göre shift kararı verilir.</div>';
   
   // Şanzıman ve motor bileşenlerinden veri çek
   var gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
@@ -169,8 +169,8 @@ function getShiftControllerPropertiesHTML(node) {
   html += '</div>';
   
   // Bilgi kutusu
-  html += '<div class="sw-pkg-desc" style="border-left:3px solid var(--accent-primary); padding:8px 10px; font-style:italic;">';
-  html += '"N_out = N_engine × SR / i_gear (şanzıman çıkış devri). Geçiş oranları iSCAAN çapraz validasyondan türetilmiştir. 3200 SP: 2 motor, 4000 SP: 3 motor + 2 TC ile doğrulanmış."';
+  html += '<div class="sw-pkg-desc" style="border-left:3px solid var(--accent-primary); padding:8px 10px;">';
+  html += 'N_out = N_engine × SR / i_gear (şanzıman çıkış devri). Geçiş oranları iSCAAN çapraz validasyonundan türetildi: 3200 SP 2 motor, 4000 SP 3 motor + 2 TC ile doğrulandı.';
   html += '</div>';
 
   html += '</div></div>';
@@ -419,7 +419,7 @@ function getGearboxPropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Şanzıman Verileri <button class="sw-info-btn" onclick="showInfoPopup(\'sanzimanVerileri\')" title="Bilgi">?</button></div>';
+  html += '<div class="sw-section-title">Şanzıman Verileri</div>';
 
   if(isFullThrottle) {
     // ── TAM GAZ HIZLANMA: Şanzıman Parametreleri ──
@@ -681,7 +681,6 @@ function getGearboxPropertiesHTML(node) {
     html += '<div class="sw-pkg-card" style="margin-top:10px;">';
     html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Vites Oranları ve Verimler</span></div>';
     html += '<div class="sw-pkg-body">';
-    html += '<div class="sw-pkg-desc">Her vites için oranı, mekanik verimi ve lockup desteğini girin.</div>';
     
     html += '<div id="ve-ftgear-table-wrapper-' + node.id + '" style="max-height:' + ftGearTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:var(--radius-sm); border-bottom:none;">';
     html += '<table style="width:100%; border-collapse:collapse; font-size:var(--fs-body);">';
@@ -726,7 +725,6 @@ function getGearboxPropertiesHTML(node) {
   
   // İKİ SÜTUN (kart yığını): SOL = seçici + vites tablosu, SAĞ = test vitesi + verim
   html += '<div class="ve-cp-grid ve-cp-grid--cards"><div class="ve-cp-col">';
-  html += '<div class="sw-pkg-desc">Test sırasında kullanılan şanzımanın vites oranlarını giriniz veya hazır şanzıman seçiniz.</div>';
 
   // Şanzıman Seçici
   var _hasEGM2 = nodes.some(function(n) { return n.type === 'engine-gearbox-matching'; });
@@ -787,7 +785,7 @@ function getGearboxPropertiesHTML(node) {
   html += '<div class="ve-cp-col">';                  // SAĞ sütun: test vitesi + verim
   // ===== TEST BAŞLANGIÇ VİTESİ =====
   html += '<div class="sw-pkg-card" style="margin-top:12px;">';
-  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Test Başlangıç Vitesi</span> <button class="sw-info-btn" onclick="showInfoPopup(\'testVitesi\')" title="Bilgi">?</button></div>';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Test Başlangıç Vitesi</span></div>';
   html += '<div class="sw-pkg-body">';
   
   html += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
@@ -805,7 +803,6 @@ function getGearboxPropertiesHTML(node) {
   html += '</tr>';
   html += '</table>';
   
-  html += '<div class="sw-pkg-desc">Önce yukarıdan şanzıman seçin, ardından test başlangıç vitesini belirleyin.</div>';
 
   html += '</div></div>';
   

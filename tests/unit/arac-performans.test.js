@@ -160,8 +160,8 @@ describe('Araç Performans — özellik paneli', () => {
     expect(typeof html).toBe('string');
     expect(html).toContain("veAracOpenEditor('comp-7')");
     expect(html).toContain('Alt Topolojiyi Aç');
-    // Henüz açılmamış → "Başlangıç ve Örnekler bileşeni ile başlar" bilgisi
-    expect(html).toContain('Başlangıç ve Örnekler');
+    // Henüz açılmamış → durum satırı (ders anlatan tanıtım metni DEĞİL)
+    expect(html).toContain('Alt topoloji henüz açılmadı');
     expect(html).not.toContain('hazır güç aktarma topolojisi');
   });
 
