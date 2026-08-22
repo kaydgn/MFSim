@@ -837,18 +837,22 @@ girdiği değer.
 #### Yapısal Analiz — `js/cp-structural.js` (Geometri DOLU, kalan üçü iskelet)
 
 Dördüncü modül. Zincirin **ilk bileşeni (Geometri) çalışıyor** — STEP içe
-aktarma + 3B görüntüleyici; kalan üç panel hâlâ iskelet ve ayrı oturumlarda
-doldurulacak. `_strPending` kuralı orada duruyor: panel boş ama SESSİZ değil.
+aktarma + 3B görüntüleyici — ve ona asılı **Malzeme ve Özellikler** alt bileşeni
+de çalışıyor; kalan üç panel hâlâ iskelet ve ayrı oturumlarda doldurulacak.
+`_strPending` kuralı orada duruyor: panel boş ama SESSİZ değil.
 
 ```
 Geometri → Hesaplama Ağı → Sınır Koşulları → Sonuçlar
+   │
+   └── Malzeme ve Özellikler   (ALT bileşen — zincirin halkası değil)
 ```
 
 **Zincir PORTLARLA zorlanır, yorumla değil:** `str-geometry` girişi 0,
 `str-results` çıkışı 0 → kullanıcı zinciri ters kuramaz. İlk açılışta zincir
 **kurulu ve bağlı** gelir (diğer üç modül yalnız "Başlangıç" kartı koyar; onların
 alt topolojisi değişken, bunun ki sabit — tam bir Geometri, bir Ağ, bir Sınır
-Koşulları, bir Sonuçlar. Seçim yok, o yüzden boş tuval bırakmanın karşılığı yok).
+Koşulları, bir Sonuçlar, ve Geometri'ye asılı bir Malzeme. Seçim yok, o yüzden
+boş tuval bırakmanın karşılığı yok).
 
 ##### Kapsam ölçümle belirlendi — iki kural
 
@@ -1250,6 +1254,105 @@ Koşulları bileşenleri de kendi alanlarını böyle kuracak.
 `ESKİ true → YENİ false`. Genel davranış korunuyor (alan dışında kaplama yine
 açılıyor). `measure-dropzone.js` ORTAK dosya → `npm run sync:viewer` yapıldı.
 
+##### Malzeme ve Özellikler — Geometri'ye asılan ALT bileşen (`str-material`)
+
+Zincirin halkası **değil**, Geometri'nin **eki**: içe aktarılan parçaya malzeme
+atar. "Alt bileşen" olduğu iki YAPISAL işaretten okunuyor, yazıdan değil:
+
+| İşaret | Değer | Neyi imkânsız kılıyor |
+|--------|-------|-----------------------|
+| **Çıkışı YOK** (`outputs: 0`) | kutu bir yaprak | "Geometri → Malzeme → Ağ" diye yanlış bir zincir kurulamaz |
+| **Kutu küçük** (50×46 ↔ zincirin 62×56) | bakışta hiyerarşi | — (aksesuarların Motor'a asılırkenki 54×50 kalıbı) |
+
+**Geometri'nin GİRİŞİ AÇILMADI** ve bu bilinçli: malzeme ekini girişten
+beslemek zincirin başını kaybettirir (`str-mesh` çıkışı Geometri'ye
+bağlanabilirdi). Bunun yerine Geometri **ikinci bir ÇIKIŞ** aldı:
+`output-0` (SAĞ) = analiz zinciri, `output-1` (ALT) = malzeme eki. Tek porta
+iki tel de bağlanabilirdi (bir port çok bağlantı taşıyor) ama ikisi **aynı
+ağızdan** çıkardı ve alttaki kutuya giden tel sağa çıkıp geri dönerdi.
+
+**Eski kayıtlar göç İSTEMİYOR — ölçüldü.** Geometri tek çıkışlıyken kaydedilmiş
+projelerde bağlantı `fromPort: 'output'` taşıyor ve o ad artık yok; ama çizici
+`vePortOffset` üzerinden onu da sağ kenarın ortasına koyuyor: yeni `output-0`
+ile sapma **0,00 px** (gerçek tarayıcı). Tel yerinden oynamıyor.
+
+**Geometri'nin ADI SOLA alındı** — zevk değil, ölçülmüş bir çakışmanın
+düzeltmesi. Malzeme teli alt porttan **dümdüz** iniyor (yatay sapma 0,00 px) ve
+ad varsayılan yerinde tam onun altında ortalıydı → tel adın üstünden geçiyordu,
+yani projenin kendi yerleşim kuralının ihlali. Dört seçenek ölçüldü:
+
+| Ad konumu | Tel adı kesiyor mu | Rozet/zincir çakışması |
+|-----------|--------------------|------------------------|
+| bottom (varsayılan) | **evet** | — |
+| top | hayır | **STEP rozeti adın üstünde** |
+| right | hayır | **ad zincir telinin üstünde** |
+| **left** | hayır | yok ✓ |
+
+###### Çözücünün gerçekten istediği şey — ve eksik olanın NEYİ engellediği
+
+Lineer elastik tet10 için gereken tam liste kısa: **E ve ν**. Geri kalanı ayrı
+sorulara cevap veriyor, o yüzden hepsi tek "zorunlu" torbasına atılmadı —
+`errors` çözümü DURDURUR, `warns` yalnız bir yeteneği kapatır:
+
+| Alan | Yoksa |
+|------|-------|
+| E, ν | **ÇÖZÜM YOK** (rijitlik matrisi kurulamaz) |
+| ρ | öz ağırlık / kütle / modal kapalı |
+| σ_akma | gerilme basılır, **emniyet payı hükmü verilemez** |
+| σ_çekme | kopma payı (bilgi) |
+| α | ısıl yük (ileride) |
+
+Hepsi tek torbaya atılsaydı ρ'suz bir model "çözülemez" ilan edilirdi — oysa
+öz ağırlıksız bir gerilme çözümü geçerli bir analizdir.
+
+###### ν < 0,5 bir zevk meselesi değil, TEKİLLİK
+
+`K = E / (3(1−2ν))`; ν → 0,5'te payda sıfıra gider, K → ∞. Yer değiştirme
+temelli standart elemanlarda bu rijitlik matrisinin koşullanmasının bozulması
+demek: **ν = 0,5 tam tekillik**, **ν > 0,49 hacimsel kilitlenme** — çözüm koşar,
+sayı çıkar ve sonuç sistematik olarak **FAZLA RİJİT** olur. Yani gözle
+yakalanmayan, güvenli tarafta OLMAYAN bir hata: modülün tet4 ölçümünde
+(%24 rijit) belgelenen sınıfın aynısı. ν ≥ 0,5 **reddediliyor**, 0,49–0,5
+**uyarılıyor**, ve türetilen K o aralıkta sayı üretmiyor (`null`).
+
+###### SESSİZ BİRİM TUZAĞI: ρ
+
+Modülün birim sistemi **mm · N · MPa**; o sistemde kütle birimi **TON**, yani
+yoğunluk **ton/mm³**: çelik 7850 kg/m³ = **7,85e-9 ton/mm³**. 7850'i doğrudan
+yazmak kütleyi **10¹² kat** büyütür — çözüm yine koşar, öz ağırlık altında parça
+"erir". Panel kg/m³ soruyor (kullanıcının bildiği birim), çevrimi kendisi yapıyor
+ve **çevrilmiş değeri panelde yazıyor** — kimse hangi sayının çözücüye gittiğini
+tahmin etmek zorunda kalmasın. FEAD'deki `wearPct` oran↔yüzde tuzağının aynısı.
+
+###### Bağ TELDEN okunuyor, ikinci bir "hedef seç" alanı yok
+
+`veStrMatHost` malzeme kutusuna gelen teli izleyip `str-geometry` düğümünü
+buluyor. Panelde ayrı bir hedef alanı tutulsaydı tel ile alan sessizce
+ayrışırdı (FEAD'de panel ile kartın AYNI alanı okuması kuralının aynısı).
+Üç durum da AÇIKÇA yazılı: bağlı değil / bağlı ama parça yok / parça künyesi.
+"Bağlı değil" sessiz bırakılsaydı kullanıcı malzemeyi girer, kaydeder ve çözücü
+onu hiç görmezdi.
+
+###### Rozet AMBER yalnız çözülebilir kayıtta
+
+Adı yazılmış ama E'si girilmemiş bir malzeme "hazır" görünmemeli. Boşken de
+rozet **var** (`MALZ`) — Geometri rozetindeki gerekçenin aynısı: "rozet yok" ile
+"malzeme yok" ayırt edilemezdi. Adsız ama E girilmiş kayıt `210 GPa` okur.
+
+**ÖLÇÜLDÜ (gerçek tarayıcı, başlangıç topolojisi):** beş bileşen kuruluyor,
+Geometri 62×56 / Malzeme 50×46, teller `output-0→Ağ` ve `output-1→Malzeme`,
+malzeme telinin **yatay sapması 0,00 px** (alt kenar → üst kenar), Malzeme'nin
+DOM'da **0 çıkış portu**, elle bağlama iki yönden de aynı bağlantıyı kuruyor,
+S355JR girilince G **80.769,2 MPa** · K **175.000,0 MPa** · ρ **7,850e-9 ton/mm³**,
+alt topolojiden çıkıp geri girince kayıt ve tel aynen duruyor, konsol hatası
+**yok**.
+
+**Sırada:** panelin içine **malzeme kütüphanesi** (yapı çeliği, alüminyum, döküm,
+paslanmaz). Alan tablosu tek kaynaktan (`VE_STR_MAT_FIELDS`) beslendiği için
+kütüphane aynı kayda yazacak; panel bunu `_strNextUp` ile söylüyor —
+`_strPending` DEĞİL, çünkü o işaret "bu bileşen iskelet" demek ve iskelet
+sayacının testi ona bakıyor.
+
 **Sırada:** Hesaplama Ağı (yeniden-mesh + TetGen WASM) · Sınır Koşulları
 (yüz seçimi) · Sonuçlar (çözücü).
 
@@ -1388,7 +1491,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/fead-anim.test.js` | `js/cp-fead.js` animasyon + `js/fead-model.js` kinematik | **Kayış Yolu kartının animasyonu**: ω·r = v özdeşliği, ağır çekim katsayısının REFERANS devre bağlanması (seçili devre bağlansaydı seçici işlevsiz kalırdı — istenmeyen alternatif de koşturulup belgeleniyor), diş adımının çevreyi tam bölmesi, diş sayısının faz boyunca sabit kalması, bir adımlık fazın deseni birebir kendine getirmesi, dişlerin GİDİŞ yönünde ilerlemesi, kol açısal hızının `d·v/r` olması (sırttan temas edende ters) ve kol ucu çevresel hızının kayış hızına eşitliği (kasnakta kayma yok), animasyonun YALNIZ kanvas kartında olması, fazın düğüm kimliğinde durması (yeniden kurulumda kayış zıplamıyor), uzun duraklamada `dt` kırpması |
 | `tests/unit/fead-example.test.js` | `js/fead-model.js` örnekleri + FEAD_INFORMATION | **Tedarikçi sayfası çıpası** (Gates'ten bağımsız ikinci doğrulama): kayış boyu 1715 mm, kol boyu 90.0 mm, Spring Mean Load 22.07 Nm, tahrik oranı 1.1; sayfanın devir→kW tabloları; **iki sessiz kanalın** ölçülmüş belgesi (montaj merkezi ↔ serbest açı 2.6×, tasarım gerginliği ↔ yay dengesi 250 N) |
 | `tests/unit/structural-model.test.js` | `js/structural-model.js` + `vendor/occt-import-js.*` | **STEP köprüsü**: GERÇEK dosyalar GERÇEK OCCT ile okunuyor (sahte veri yok). **Yüz kimliği ağ inceliğinden bağımsız** (üçgen değişir, `m<i>/f<j>` değişmez), yüz aralıkları üçgenleri boşluksuz/örtüşmesiz böler, `veStrFaceOfTriangle` eşlemesi, birimin mm'ye çevrilmesi, künyenin ÜÇGEN TAŞIMAMASI, hata çevirisi (bozuk dosya ≠ katısız dosya) + OCCT'nin kendi teşhisinin mesaja iliştirilmesi, .wasm aday-yol araması (ilk tutan kazanır, hiçbiri tutmazsa denenenler yazılır), oturumluk önbelleğin temizlenmesi. **Gömülü okuyucu**: `js/structural-occt-wasm.js` vendor .wasm'ıyla BAYT BAYT aynı (vendor güncellenip varlık üretilmezse kırmızı), WASM imzası, gzip'in gerçekten kazandırdığı, index.html'de AÇILIŞTA yüklenmediği. **Kaynak deposu**: künye STEP kaynağı TAŞIMIYOR (undo yığını), `veStrSrcAttach` KOPYALA-YAZ (canlı state'e tek yazma bile yok — kaynağın otomatik yedeğe sızdığı ölçülmüş hatanın kapısı), alt-topolojideki düğüme ulaşması, deposu olmayan düğümde gereksiz kopya üretmemesi, eski projelerin HAM `source` alanını da kabul etmesi. **Worker sözleşmesi**: köprü DOM'a dokunmuyor (worker'da `document`/`window` yok), sonuç tipli dizi + transfer, `brep_faces` worker'dan aynen geçiyor, normalize hem worker hem ana-iş-parçacığı biçimini kabul ediyor ve tipli diziyi YENİDEN KOPYALAMIYOR. **İlerleme**: `VE_STR_OCCT_WASM_BYTES` gerçek dosya boyutuna kilitli, indirme loaded/total/pct bildiriyor, tahmin tutmazsa yüzde gösterilmiyor |
-| `tests/unit/cp-structural.test.js` | `js/cp-structural.js` + `js/components.js` | **Yapısal Analiz iskeleti**: alt-sistem sözleşmesi, zincirin PORTLARLA zorlanması (Geometri girişsiz / Sonuçlar çıkışsız), başlangıç kenarlarının indisle değil TİPLE yazılı olması, panel smoke testleri, iskeletin BEŞ dosyaya birden bağlı olduğu (components / cp-core / ui-core / topology / index.html — biri unutulursa kaydedilen proje bozulur). **Geometri artık DOLU**: hâlâ iskelet olan panel sayısı üç (biri dolunca liste güncellenmeli), içe aktarma yüzeyi + sürükle-bırak bağlı, geometri YOKKEN 3B kanvas kurulmuyor, kaynağın projeye yazılıp yazılmadığı AÇIKÇA yazılı; vendorlu okuyucu/.wasm/lisans deposu ve CI'ın .wasm'ı Pages'e kopyalaması; **panel ölçüsü** — büyük pencere sınıfı yalnız parça yüklüyken veriliyor, kutunun ölçüsü satır içinde değil sınıfta, boşluğu yutan flex zincirinin her halkası yerinde; **üç varsayılan** — incelik seçicisi ve "Kenarlar" kutusu YOK (sabit + hep açık), yüz inceleme kipi KAPALI başlar ve liste ile 3B künyesini tek anahtarla birlikte açar, kapalıyken raycast yapılmaz |
+| `tests/unit/cp-structural.test.js` | `js/cp-structural.js` + `js/components.js` | **Yapısal Analiz iskeleti**: alt-sistem sözleşmesi, zincirin PORTLARLA zorlanması (Geometri girişsiz / Sonuçlar çıkışsız), başlangıç kenarlarının indisle değil TİPLE yazılı olması, panel smoke testleri, iskeletin BEŞ dosyaya birden bağlı olduğu (components / cp-core / ui-core / topology / index.html — biri unutulursa kaydedilen proje bozulur). **Geometri artık DOLU**: hâlâ iskelet olan panel sayısı üç (biri dolunca liste güncellenmeli), içe aktarma yüzeyi + sürükle-bırak bağlı, geometri YOKKEN 3B kanvas kurulmuyor, kaynağın projeye yazılıp yazılmadığı AÇIKÇA yazılı; vendorlu okuyucu/.wasm/lisans deposu ve CI'ın .wasm'ı Pages'e kopyalaması; **panel ölçüsü** — büyük pencere sınıfı yalnız parça yüklüyken veriliyor, kutunun ölçüsü satır içinde değil sınıfta, boşluğu yutan flex zincirinin her halkası yerinde; **üç varsayılan** — incelik seçicisi ve "Kenarlar" kutusu YOK (sabit + hep açık), yüz inceleme kipi KAPALI başlar ve liste ile 3B künyesini tek anahtarla birlikte açar, kapalıyken raycast yapılmaz. **Malzeme ve Özellikler**: alt bileşen sözleşmesi (çıkışı YOK → zincire ara halka olarak sokulamaz; kutu zincirinkinden küçük; giriş ÜST kenarda), ν ≥ 0,5 tekillik kapısı ve 0,49–0,5 kilitlenme uyarısı, ρ'nun kg/m³ → ton/mm³ çevrimi (7850 → 7,85e-9) ve girilmemiş ρ'nun 0 DEĞİL null olması, G/K formülleri, bağın TELDEN okunması, rozetin yalnız çözülebilir kayıtta amber olması, eski kayıtlardaki `output` adının yeni `output-0` ile aynı noktaya düşmesi (göç gerekmiyor), Geometri adının SOLA alınması ve bunun düğüme gerçekten yazılması |
 | `tests/unit/canvas-space.test.js` | `js/canvas-space.js` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama |
 | `tests/unit/module-start-center.test.js` | `js/components.js` `veStartModule` | Karşılama kartından gelen modül bloğu görünümün TAM ortasına düşer (kabuk senkronu ölçümden önce) |
 | `tests/unit/port-geometry.test.js` | `js/components.js` port geometrisi + `js/connections.js` | Bağlantı ucu ile port dairesi aynı noktada — dört kenar, çok port, aynalama; **gidiş yönü oku** (Bézier t=0.5, 46 px eşiği, ters yön); **`veSyncPortDom`** — kenar sonradan değişince (bağlantı/sürükleme) dairenin teli takip etmesi, elle taşınan portun ezilmemesi, kenar değişmiyorsa DOM'a hiç yazılmaması |
