@@ -17,6 +17,7 @@ const path = require('path');
 
 const CUBE = path.join(__dirname, '../fixtures/step/cube-mm.step');
 const ROUNDED = path.join(__dirname, '../fixtures/step/rounded-cube.step');
+const ASSEMBLY = path.join(__dirname, '../fixtures/step/as1-tu-203.stp');
 
 async function bootApp(page) {
   await page.goto('/index.html');
@@ -218,6 +219,112 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
     expect(r.isaretli).toBe(true);    // doğru hedef kendini işaretliyor
     expect(r.sonra).toBe(false);      // ← ASIL KAPI: kaplama asılı kalmıyor
     expect(r.acildi).toBe(0);         // ölçüm sihirbazı açılmıyor
+  });
+
+  // ── ASIL KAPI: ARAYÜZ DONMUYOR ──────────────────────────────────────────
+  // STEP çözümlemesi worker'a taşındı. Ölçüt "hızlı mı" değil — toplam süre
+  // zaten benzer; ölçüt ARAYÜZÜN YAŞIYOR OLMASI. Bunu tek dürüst biçimde
+  // ölçmenin yolu içe aktarma boyunca ÇİZİLEN KARE SAYISI.
+  //
+  // ÖLÇÜLDÜ (as1-tu-203.stp, linearDeflection 0.000004 → 45 240 üçgen):
+  //   ana iş parçacığı : 1665 ms —  1 kare  (tam donma)
+  //   worker           : 1497 ms — 91 kare  (en uzun boşluk 19 ms)
+  //
+  // Okuyucu ÖNCE ISITILIYOR: yoksa ölçüm 7,3 MB indirmeyi ve WASM derlemesini
+  // de sayar, oysa sorulan soru ÇÖZÜMLEMENİN ana iş parçacığını kilitleyip
+  // kilitlemediği.
+  test('içe aktarma sırasında arayüz YAŞIYOR — worker ana iş parçacığını kilitlemiyor', async ({ page }) => {
+    await bootApp(page);
+
+    const olc = async (noWorker) => page.evaluate(async (nw) => {
+      const bytes = new Uint8Array(await (await fetch('/tests/fixtures/step/as1-tu-203.stp')).arrayBuffer());
+      const opt = { noWorker: nw, onProgress: function(){} };
+      const meta = (d) => ({ fileName: 'as1.stp', fileSize: bytes.length,
+        deflection: { type: 'bounding_box_ratio', linear: d, angular: 0.5 } });
+      // ISIT: okuyucu önbelleğe girsin (kaba ağ, hızlı).
+      await veStrImportStep(bytes, meta(0.01), opt);
+
+      let frames = 0, running = true;
+      (function tick(){ if(!running) return; frames++; requestAnimationFrame(tick); })();
+      const t0 = performance.now();
+      const g = await veStrImportStep(bytes, meta(0.000004), opt);
+      const ms = performance.now() - t0;
+      running = false;
+      return { ok: g.ok, worker: g.worker, tri: g.stats && g.stats.triCount, ms: Math.round(ms), frames };
+    }, noWorker);
+
+    const ana = await olc(true);
+    await page.evaluate(() => veStrOcctForget());
+    const wrk = await olc(false);
+
+    // İkisi de AYNI geometriyi üretmeli — yoksa kare sayısı kıyaslanamaz.
+    expect(ana.ok).toBe(true);
+    expect(wrk.ok).toBe(true);
+    expect(wrk.tri).toBe(ana.tri);
+    expect(wrk.tri).toBeGreaterThan(20000);      // ölçüm anlamlı olacak kadar büyük
+    expect(ana.worker).toBe(false);
+    expect(wrk.worker).toBe(true);
+
+    // Ana iş parçacığı yolu DONUYOR: saniyelerce süren işte birkaç kare.
+    expect(ana.frames).toBeLessThanOrEqual(3);
+    // Worker yolu AKIYOR: en az 20 kare (ölçümde 91 idi; eşik cömert tutuldu
+    // ki yavaş bir CI makinesinde kırılgan olmasın).
+    expect(wrk.frames).toBeGreaterThan(20);
+    // Ve worker toplam süreyi kötüleştirmiyor (transfer kopyayı da eliyor).
+    expect(wrk.ms).toBeLessThan(ana.ms * 2);
+  });
+
+  test('gerçek panelde içe aktarma worker\'da koşuyor ve ilerleme bildiriliyor', async ({ page }) => {
+    await bootApp(page);
+    await openGeometryPanel(page);
+
+    // İlerleme kartını yakalamak için hızlı yokla — ilk içe aktarmada 7,3 MB
+    // iniyor, kart birkaç yüz ms görünür.
+    const kareler = [];
+    const poll = setInterval(async () => {
+      try {
+        const s = await page.evaluate(() => {
+          const p = document.querySelector('.ve-str-prog');
+          if (!p) return null;
+          return { stage: p.querySelector('[data-ve="stage"]').textContent,
+                   detail: p.querySelector('[data-ve="detail"]').textContent,
+                   indet: p.querySelector('[data-ve="fill"]').className === 'indet' };
+        });
+        if (s) kareler.push(s);
+      } catch (e) { /* sayfa gezinirken yoklama düşebilir */ }
+    }, 25);
+
+    await page.locator('#ve-str-geom-file').setInputFiles(ASSEMBLY);
+    await page.waitForFunction(
+      () => window.veStrGeometryCache && Object.keys(window.veStrGeometryCache).length > 0,
+      null, { timeout: 120000 }
+    );
+    clearInterval(poll);
+
+    const g = await page.evaluate(() => {
+      const k = Object.keys(window.veStrGeometryCache)[0];
+      return window.veStrGeometryCache[k];
+    });
+    expect(g.worker).toBe(true);                 // panel gerçekten worker'a gidiyor
+    expect(g.stats.faceCount).toBe(160);         // montaj: 160 CAD yüzü
+
+    // İlerleme kartı GERÇEKTEN göründü ve aşama adı değişti (donmuş tek bir
+    // etiket değil, akan bir anlatı).
+    expect(kareler.length).toBeGreaterThan(0);
+    const asamalar = Array.from(new Set(kareler.map((k) => k.stage)));
+    expect(asamalar.length).toBeGreaterThan(1);
+    expect(asamalar.join('|')).toMatch(/indiriliyor|hazırlanıyor|çözümleniyor/);
+
+    // İndirme aşamasında BELİRLİ yüzde var (bayt sayılıyor); çözümlemede YOK
+    // (uydurma yüzde göstermiyoruz).
+    const indirme = kareler.filter((k) => /indiriliyor/.test(k.stage) && k.detail);
+    if (indirme.length) expect(indirme.some((k) => !k.indet)).toBe(true);
+    const cozum = kareler.filter((k) => /çözümleniyor/.test(k.stage));
+    if (cozum.length) expect(cozum.every((k) => k.indet)).toBe(true);
+
+    // Kart iş bitince KAPANIYOR — ekranda asılı kalmıyor.
+    await expect(page.locator('.ve-str-prog')).toHaveCount(0);
+    await expect(page.locator('#ve-str-geom-status')).toContainText('İçe aktarıldı');
   });
 
   test('STEP olmayan dosya SESSİZCE yutulmuyor — sebep yazılıyor', async ({ page }) => {

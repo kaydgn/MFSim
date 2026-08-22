@@ -301,3 +301,143 @@ describe('OCCT teşhisi hata mesajına iliştiriliyor', () => {
     expect(model._sgWithDiag('Temel mesaj.', null)).toBe('Temel mesaj.');
   });
 });
+
+// ── 10) WORKER'A TAŞIMA ────────────────────────────────────────────────────
+// STEP çözümlemesi ana iş parçacığında değil worker'da koşuyor. Worker'ın
+// KENDİSİ ancak gerçek tarayıcıda sınanabilir (jsdom'da Worker yok) →
+// tests/e2e/structural-geometry.spec.js orada kare sayarak ölçüyor.
+// Burada worker'a taşımanın SAF sözleşmeleri sınanıyor.
+describe('worker köprüsü — sözleşme', () => {
+  const src = model.VE_STR_WORKER_BRIDGE;
+
+  test('protokolün dört mesajı da köprüde geçiyor', () => {
+    ['"init"', '"step"', '"ready"', '"result"', '"error"', '"fatal"'].forEach((k) => {
+      expect(src).toContain(k);
+    });
+  });
+
+  test('köprü DOM\'a dokunmuyor — worker\'da document/window YOK', () => {
+    // Bir `document.` sızarsa worker açılır açılmaz patlar ve içe aktarma
+    // sessizce ana iş parçacığı yedeğine düşerdi: yani "çalışıyor" görünürken
+    // donmaya geri dönerdik.
+    expect(src).not.toMatch(/\bdocument\./);
+    expect(src).not.toMatch(/\bwindow\./);
+  });
+
+  test('sonuç TİPLİ dizi olarak ve TRANSFER ile dönüyor', () => {
+    // Düz JS dizisi kopyalanarak geçerdi; 45 bin üçgende bu ikinci bir maliyet.
+    expect(src).toContain('Float32Array');
+    expect(src).toContain('Uint32Array');
+    expect(src).toMatch(/postMessage\(\s*\{[^}]*type:"result"[\s\S]*?\},\s*transfer\s*\)/);
+  });
+
+  test('brep_faces worker\'dan AYNEN geçiyor — yüz kimliği worker\'da kaybolmaz', () => {
+    expect(src).toContain('brep_faces');
+  });
+});
+
+describe('worker sonucu ana iş parçacığında normalize ediliyor', () => {
+  // Worker mesh'i occt'nin `attributes.position.array` biçiminde DEĞİL,
+  // tipli `positions`/`indices` alanlarıyla gönderiyor. veStrNormalizeImport
+  // ikisini de kabul etmeli — yoksa worker yolu boş geometri üretirdi.
+  const workerRaw = {
+    success: true,
+    meshes: [{
+      name: 'Braket',
+      color: null,
+      brep_faces: [{ first: 0, last: 0, color: null }, { first: 1, last: 1, color: null }],
+      positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1]),
+      normals: null,
+      indices: new Uint32Array([0, 1, 2, 0, 1, 3]),
+    }],
+  };
+
+  test('tipli dizilerle gelen mesh çözülüyor', () => {
+    const g = model.veStrNormalizeImport(workerRaw, { fileName: 'w.step' });
+    expect(g.ok).toBe(true);
+    expect(g.stats.triCount).toBe(2);
+    expect(g.stats.faceCount).toBe(2);
+    expect(g.faces[1].id).toBe('m0/f1');
+  });
+
+  test('zaten tipli olan dizi YENİDEN KOPYALANMIYOR', () => {
+    // 100 bin üçgende gereksiz kopya megabaytlarca bellek ve duraklama demek.
+    const g = model.veStrNormalizeImport(workerRaw, {});
+    expect(g.meshes[0].positions).toBe(workerRaw.meshes[0].positions);
+    expect(g.meshes[0].indices).toBe(workerRaw.meshes[0].indices);
+  });
+
+  test('_sgTyped: tip uyuyorsa aynı nesne, uymuyorsa çevirir', () => {
+    const f = new Float32Array([1, 2, 3]);
+    expect(model._sgTyped(Float32Array, f)).toBe(f);
+    const conv = model._sgTyped(Float32Array, [1, 2, 3]);
+    expect(conv).toBeInstanceOf(Float32Array);
+    expect(Array.from(conv)).toEqual([1, 2, 3]);
+    expect(model._sgTyped(Float32Array, null)).toBeNull();
+  });
+
+  test('worker bayrağı sonuca geçiyor — panel donmanın SEBEBİNİ yazabilsin', () => {
+    expect(model.veStrNormalizeImport(workerRaw, { worker: true }).worker).toBe(true);
+    expect(model.veStrNormalizeImport(workerRaw, {}).worker).toBe(false);
+  });
+});
+
+// ── 11) İLERLEME ───────────────────────────────────────────────────────────
+describe('ilerleme bildirimi', () => {
+  test('aşama adları sabit ve sıralı', () => {
+    expect(model.VE_STR_STAGES).toEqual(['download', 'compile', 'parse', 'build']);
+  });
+
+  // BU KAPI GERÇEK BİR ÖLÇÜMDEN DOĞDU: hem `npx serve` hem GitHub Pages
+  // .wasm'ı `content-encoding: br` + `chunked` ile gönderiyor → tarayıcıda
+  // `content-length` HİÇ GELMİYOR. Yüzde bu yüzden bilinen dosya boyutundan
+  // hesaplanıyor; sabit dosyayla birlikte kaymamalı.
+  test('VE_STR_OCCT_WASM_BYTES gerçek dosya boyutuna EŞİT', () => {
+    const st = fs.statSync(path.join(ROOT, 'vendor/occt-import-js.wasm'));
+    expect(model.VE_STR_OCCT_WASM_BYTES).toBe(st.size);
+  });
+
+  test('indirme aşaması loaded/total/pct bildiriyor', async () => {
+    const parcalar = [new Uint8Array(400), new Uint8Array(600)];
+    let i = 0;
+    global.fetch = () => Promise.resolve({
+      ok: true,
+      headers: { get: () => null },                       // br/chunked: başlık YOK
+      body: { getReader: () => ({ read: () => Promise.resolve(
+        i < parcalar.length ? { done: false, value: parcalar[i++] } : { done: true }) }) },
+    });
+    const gorulen = [];
+    try {
+      await model.veStrImportStep(new Uint8Array([0]), {}, {
+        force: true, wasmUrls: ['x.wasm'], expectedBytes: 1000, noWorker: true,
+        onProgress: (s, info) => gorulen.push({ s: s, pct: info && info.pct, loaded: info && info.loaded }),
+      });
+    } finally { delete global.fetch; }
+
+    const ind = gorulen.filter((g) => g.s === 'download');
+    expect(ind.length).toBe(2);
+    expect(ind[0]).toEqual({ s: 'download', loaded: 400, pct: 0.4 });
+    expect(ind[1]).toEqual({ s: 'download', loaded: 1000, pct: 1 });
+    // İndirmeden sonra derleme aşaması da bildiriliyor
+    expect(gorulen.map((g) => g.s)).toContain('compile');
+  }, 60000);
+
+  test('tahmin tutmazsa yüzde GÖSTERİLMİYOR — %140 yazan çubuk olmaz', async () => {
+    let i = 0;
+    const parcalar = [new Uint8Array(5000)];
+    global.fetch = () => Promise.resolve({
+      ok: true,
+      headers: { get: () => null },
+      body: { getReader: () => ({ read: () => Promise.resolve(
+        i < parcalar.length ? { done: false, value: parcalar[i++] } : { done: true }) }) },
+    });
+    const gorulen = [];
+    try {
+      await model.veStrImportStep(new Uint8Array([0]), {}, {
+        force: true, wasmUrls: ['x.wasm'], expectedBytes: 1000, noWorker: true,
+        onProgress: (s, info) => { if (s === 'download') gorulen.push(info.pct); },
+      });
+    } finally { delete global.fetch; }
+    expect(gorulen).toEqual([null]);
+  }, 60000);
+});

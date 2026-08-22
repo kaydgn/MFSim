@@ -364,6 +364,87 @@ function _strSourceGet(nodeId){
   return window.veStrGeometrySource[nodeId] || null;
 }
 
+// ─── İLERLEME ARAYÜZÜ ───────────────────────────────────────────────────────
+// STEP çözümlemesi artık WORKER'da (bkz. structural-model.js): ana iş
+// parçacığı boşta olduğu için buradaki animasyon GERÇEKTEN akar. Bu bir süs
+// değil, işin sürdüğünün TEK kanıtı — donmuş bir arayüzde kullanıcı programın
+// çöktüğünü sanıp sekmeyi kapatıyor.
+//
+// AŞAMA ADLARI structural-model.js'ten geliyor (VE_STR_STAGES). Yalnız
+// 'download' belirli bir yüzde taşır; kalan üçü OCCT'nin içinde tek bir
+// çağrıdır ve oraya uydurma bir yüzde koymak yalan olurdu → belirsiz kipte
+// akan çubuk + geçen süre.
+var VE_STR_STAGE_TEXT = {
+  download: 'STEP okuyucusu indiriliyor',
+  compile:  'Okuyucu hazırlanıyor',
+  parse:    'STEP çözümleniyor',
+  build:    'Sahne kuruluyor'
+};
+
+// Geçen süre sayacı — düğüm kimliğine göre. Sayacın AKMASI, "program çalışıyor"
+// diyen en ucuz ve en dürüst işaret.
+var _veStrProgTimer = {};
+
+function _strProgEl(){ return (typeof document !== 'undefined') ? document.getElementById('ve-str-geom-progress') : null; }
+
+function _strProgStart(nodeId, fileName, fileSize){
+  var el = _strProgEl();
+  if(!el) return;
+  var t0 = Date.now();
+  el.innerHTML =
+      '<div class="ve-str-prog">'
+    +   '<div class="ve-str-prog-head">'
+    +     '<span class="ve-str-prog-spin"></span>'
+    +     '<b data-ve="stage">Hazırlanıyor</b>'
+    +   '</div>'
+    +   '<div class="ve-str-prog-file">' + _strEsc(fileName || '') + ' · ' + _strBytes(fileSize) + '</div>'
+    +   '<div class="ve-str-prog-bar"><i data-ve="fill" class="indet"></i></div>'
+    +   '<div class="ve-str-prog-foot"><span data-ve="detail"></span><span data-ve="clock">0,0 sn</span></div>'
+    + '</div>';
+  el.style.display = 'block';
+  if(_veStrProgTimer[nodeId]) clearInterval(_veStrProgTimer[nodeId]);
+  _veStrProgTimer[nodeId] = setInterval(function(){
+    var c = _strProgEl();
+    c = c && c.querySelector('[data-ve="clock"]');
+    if(!c){ clearInterval(_veStrProgTimer[nodeId]); delete _veStrProgTimer[nodeId]; return; }
+    c.textContent = _strFmt((Date.now() - t0) / 1000, 1) + ' sn';
+  }, 100);
+}
+
+function _strProgSet(nodeId, stage, info){
+  var el = _strProgEl();
+  if(!el) return;
+  var s = el.querySelector('[data-ve="stage"]');
+  var fill = el.querySelector('[data-ve="fill"]');
+  var det = el.querySelector('[data-ve="detail"]');
+  if(s) s.textContent = VE_STR_STAGE_TEXT[stage] || stage;
+  if(!fill || !det) return;
+  if(stage === 'download' && info && info.pct != null){
+    // BELİRLİ: gerçekten bilinen tek yüzde.
+    fill.className = '';
+    fill.style.width = Math.max(2, Math.round(info.pct * 100)) + '%';
+    det.textContent = _strBytes(info.loaded) + ' / ' + _strBytes(info.total);
+  } else if(stage === 'download' && info && info.loaded){
+    // Toplam bilinmiyor ama İNDİRİLEN biliniyor — sayı akıyorsa kullanıcı
+    // işin ilerlediğini görür; sahte bir yüzdeye gerek yok.
+    fill.className = 'indet';
+    fill.style.width = '';
+    det.textContent = _strBytes(info.loaded) + ' indirildi';
+  } else {
+    fill.className = 'indet';
+    fill.style.width = '';
+    det.textContent = (info && info.fallback)
+      ? 'worker açılamadı — ana iş parçacığında sürüyor'
+      : (stage === 'parse' ? 'worker\'da — arayüz yanıt vermeye devam ediyor' : '');
+  }
+}
+
+function _strProgEnd(nodeId){
+  if(_veStrProgTimer[nodeId]){ clearInterval(_veStrProgTimer[nodeId]); delete _veStrProgTimer[nodeId]; }
+  var el = _strProgEl();
+  if(el){ el.innerHTML = ''; el.style.display = 'none'; }
+}
+
 // Panelin durum satırına yaz — PANELİ YENİDEN ÇİZMEDEN. İçe aktarma sırasında
 // panel yeniden çizilirse kullanıcının bastığı düğme ve dosya girdisi DOM'dan
 // silinir; ayrıca 3B kanvas yeniden kurulur (WebGL bağlamı boşuna yenilenir).
@@ -458,15 +539,19 @@ function _strGeomRun(nodeId, bytes, meta){
   var q = _strQualityOf(node);
 
   _veStrGeomBusy[nodeId] = true;
-  _strStatus(nodeId, 'STEP okunuyor… (ilk açılışta okuyucu indiriliyor, ~7 MB)');
+  _strStatus(nodeId, '');
+  _strProgStart(nodeId, meta.fileName, meta.fileSize);
 
   var t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : 0;
   veStrImportStep(bytes, {
     fileName: meta.fileName, fileSize: meta.fileSize,
     importedAt: new Date().toISOString(),
     deflection: { type: 'bounding_box_ratio', linear: q.linear, angular: 0.5 }
+  }, {
+    onProgress: function(stage, info){ _strProgSet(nodeId, stage, info); }
   }).then(function(geom){
     _veStrGeomBusy[nodeId] = false;
+    _strProgEnd(nodeId);
     if(!geom || !geom.ok){
       _strStatus(nodeId, (geom && geom.error) || 'İçe aktarma başarısız.', 'err');
       return;
@@ -492,9 +577,11 @@ function _strGeomRun(nodeId, bytes, meta){
     if(typeof saveState === 'function') { try { saveState(); } catch(e){} }
     if(typeof showNodeProperties === 'function') showNodeProperties(node);
     _strStatus(nodeId, 'İçe aktarıldı · ' + geom.stats.triCount + ' üçgen · '
-      + geom.stats.faceCount + ' CAD yüzü' + (ms ? ' · ' + ms + ' ms' : ''), 'ok');
+      + geom.stats.faceCount + ' CAD yüzü' + (ms ? ' · ' + ms + ' ms' : '')
+      + (geom.worker ? '' : ' · ana iş parçacığı'), 'ok');
   })['catch'](function(e){
     _veStrGeomBusy[nodeId] = false;
+    _strProgEnd(nodeId);
     _strStatus(nodeId, 'İçe aktarma hatası: ' + ((e && e.message) || e), 'err');
   });
 }
@@ -635,6 +722,10 @@ function getStrGeometryPropertiesHTML(node){
           + '</div>';
   }
 
+  // İlerleme kartının yuvası — boşken görünmez. Panel içe aktarma SIRASINDA
+  // yeniden çizilmiyor (kullanıcının bastığı düğme DOM'dan silinmesin), bu
+  // yüzden ilerleme buraya yerinde yazılıyor.
+  left += '<div id="ve-str-geom-progress" style="display:none; margin-top:9px;"></div>';
   left += '<div id="ve-str-geom-status" style="margin-top:9px; font-size:var(--fs-micro); line-height:1.45; min-height:1.2em; color:var(--text-secondary);"></div>';
 
   // ── SAĞ: 3B görüntüleyici ──
