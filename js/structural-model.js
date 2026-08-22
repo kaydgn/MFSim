@@ -684,6 +684,198 @@ function veStrGeomRecord(geom){
   };
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  STEP KAYNAĞI — node.data'DA DURMAZ
+// ═══════════════════════════════════════════════════════════════════════════
+// İlk sürümde STEP metni `node.data.geometry.source`'a yazılıyordu. ÖLÇÜLDÜ ve
+// bu bir hataydı — üstelik dosya yalnız 140 KB'ken:
+//
+//   saveState() süresi        0,03 ms → 2,17 ms   (72×)
+//   20 adımlık undo yığını    22 KB   → 3,14 MB
+//
+// Sebep: `saveState()` bütün `node.data`'yı `JSON.parse(JSON.stringify(...))`
+// ile DERİN KOPYALIYOR ve yığın 50 adım tutuyor (js/state.js MAX_UNDO_STEPS).
+// 3 MB'lık bir kaynakta bu ~150 MB yığın ve her mutasyonda ~46 ms demek.
+//
+// İKİNCİ VE DAHA SESSİZ SORUN: otomatik yedek `localStorage`'a yazılıyor
+// (kota ~5-10 MB, js/settings.js) ve aynı temizleyiciden geçiyor. Çok MB'lık
+// bir kaynak yedeği SESSİZCE bozardı — `simResults`'ın oraya hiç yazılmama
+// sebebinin ta kendisi (settings.js'teki yorum bunu anlatıyor).
+//
+// ÇÖZÜM: kaynak OTURUMLUK depoda durur; yalnız kullanıcı projeyi DOSYAYA
+// kaydederken içeri enjekte edilir (veStrSrcAttach) ve yüklenirken geri
+// toplanır (veStrSrcHarvest). Undo yığını ve localStorage yedeği hafif kalır.
+//
+// Dosyaya gzip+base64 yazılır: STEP metni ~4,6–5,3× sıkışıyor, base64'ten
+// sonra net kazanç ~4× (ölçüldü).
+var _sgSrc = {};
+
+// Saklanan (sıkıştırılmış) kaynağın üst sınırı. Sınır SIKIŞTIRILMIŞ boyuta
+// konuyor çünkü proje dosyasına giden şey o; ~4× kazançla bu, kabaca 30 MB'lık
+// ham STEP'e karşılık geliyor. Üstündekiler yalnız oturumda kalır ve panel
+// bunu AÇIKÇA yazar.
+var VE_STR_SRC_STORE_LIMIT = 8 * 1024 * 1024;
+
+function _sgGzipB64(bytes){
+  if(typeof CompressionStream !== 'function' || typeof Blob !== 'function'){
+    return Promise.reject(new Error('Bu tarayıcıda CompressionStream yok.'));
+  }
+  return new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip')))
+    .arrayBuffer()
+    .then(function(buf){
+      var u = new Uint8Array(buf), s = '';
+      // Parça parça: tek `apply` çağrısında 30 MB'lık dizi yığın taşırır.
+      for(var i = 0; i < u.length; i += 0x8000){
+        s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
+      }
+      return btoa(s);
+    });
+}
+
+// Kaynağı depola ve sıkıştırılmış biçimini ARKA PLANDA hazırla. Kaydetme
+// senkron olduğu için sıkıştırma içe aktarma anında bir kez yapılıyor;
+// kaydederken yalnız hazır dizgi okunuyor.
+function veStrSrcSet(nodeId, bytes, name, size){
+  var rec = { bytes: bytes, name: name || '', size: Number(size) || (bytes ? bytes.length : 0), gzB64: null };
+  _sgSrc[nodeId] = rec;
+  _sgGzipB64(bytes).then(function(b64){
+    if(_sgSrc[nodeId] === rec) rec.gzB64 = (b64.length <= VE_STR_SRC_STORE_LIMIT) ? b64 : null;
+  })['catch'](function(){ /* sıkıştırılamadı → dosyaya ham metin yazılır */ });
+  return rec;
+}
+function veStrSrcGet(nodeId){ return _sgSrc[nodeId] || null; }
+function veStrSrcClear(nodeId){
+  if(nodeId) delete _sgSrc[nodeId];
+  else _sgSrc = {};
+}
+// Kaynağın projeye YAZILIP yazılmayacağı — panel bunu kullanıcıya söylüyor.
+function veStrSrcWillPersist(nodeId){
+  var r = _sgSrc[nodeId];
+  return !!(r && (r.gzB64 || r.bytes));
+}
+
+// Düğüm ağacında (alt-topolojiler dahil) `data.geometry` taşıyan her düğümü gez.
+function _sgWalkGeomNodes(nodeArr, fn, _depth){
+  _depth = _depth || 0;
+  if(!nodeArr || !nodeArr.length || _depth > 8) return;
+  nodeArr.forEach(function(n){
+    if(n && n.data){
+      if(n.data.geometry) fn(n);
+      if(n.data.subTopology && n.data.subTopology.nodes){
+        _sgWalkGeomNodes(n.data.subTopology.nodes, fn, _depth + 1);
+      }
+    }
+  });
+}
+
+// PROJE DOSYASINA yazarken kaynağı enjekte et. YALNIZ dosya yolundan çağrılır
+// (js/toolbar.js veSaveTopology) — otomatik localStorage yedeğinden ÇAĞRILMAZ,
+// yoksa kota taşar (yukarıdaki gerekçe).
+//
+// KOPYALA-YAZ, ZORUNLU. Çağıranın verdiği yapı "temizlenmiş" görünse de CANLI
+// nesneleri paylaşabiliyor: `veSanitizeNodesSubtopology` (topology.js) hiçbir
+// şey değişmediyse AYNI diziyi döndürüyor ("gereksiz kopya üretme"). İlk
+// sürümde yerinde yazılıyordu ve ÖLÇÜLDÜ: kaynak canlı `tab.state`'e sızıp
+// otomatik localStorage yedeğine de giriyordu (yedek 46 KB — yani düzeltmenin
+// tamamı boşa çıkıyordu). Burada dokunulan her düğüm KOPYALANIYOR; canlı
+// duruma tek bir yazma bile yapılmıyor.
+function veStrSrcAttach(tabs){
+  var n = 0;
+
+  function srcFor(nodeId){
+    var r = _sgSrc[nodeId];
+    if(!r) return null;
+    if(r.gzB64) return { sourceGz: r.gzB64 };
+    if(r.bytes && typeof TextDecoder !== 'undefined'){
+      // Sıkıştırma henüz bitmediyse ya da tarayıcı desteklemiyorsa HAM yaz:
+      // büyük ama DOĞRU. Veri kaybetmektense dosya şişsin.
+      try { return { source: new TextDecoder('utf-8').decode(r.bytes) }; } catch(e){}
+    }
+    return null;
+  }
+
+  // Diziyi gez; yalnız DEĞİŞEN dal kopyalanır, gerisi paylaşılır (ucuz).
+  function mapNodes(arr, _depth){
+    if(!arr || !arr.length || _depth > 8) return arr;
+    var degisti = false;
+    var out = arr.map(function(node){
+      if(!node || !node.data) return node;
+      var yeniData = null;
+
+      if(node.data.geometry){
+        var ek = srcFor(node.id);
+        if(ek){
+          var g = {};
+          for(var k in node.data.geometry) if(Object.prototype.hasOwnProperty.call(node.data.geometry, k)) g[k] = node.data.geometry[k];
+          for(var k2 in ek) g[k2] = ek[k2];
+          yeniData = {};
+          for(var dk in node.data) if(Object.prototype.hasOwnProperty.call(node.data, dk)) yeniData[dk] = node.data[dk];
+          yeniData.geometry = g;
+          n++;
+        }
+      }
+
+      var sub = node.data.subTopology;
+      if(sub && sub.nodes){
+        var altYeni = mapNodes(sub.nodes, _depth + 1);
+        if(altYeni !== sub.nodes){
+          if(!yeniData){
+            yeniData = {};
+            for(var dk2 in node.data) if(Object.prototype.hasOwnProperty.call(node.data, dk2)) yeniData[dk2] = node.data[dk2];
+          }
+          var yeniSub = {};
+          for(var sk in sub) if(Object.prototype.hasOwnProperty.call(sub, sk)) yeniSub[sk] = sub[sk];
+          yeniSub.nodes = altYeni;
+          yeniData.subTopology = yeniSub;
+        }
+      }
+
+      if(!yeniData) return node;
+      degisti = true;
+      var yeniNode = {};
+      for(var nk in node) if(Object.prototype.hasOwnProperty.call(node, nk)) yeniNode[nk] = node[nk];
+      yeniNode.data = yeniData;
+      return yeniNode;
+    });
+    return degisti ? out : arr;
+  }
+
+  (tabs || []).forEach(function(t){
+    var st = t && t.state;
+    if(!st || !st.nodes) return;
+    // `t.state` veBuildCleanTabState'in ürettiği YENİ nesne → alanını değiştirmek
+    // güvenli; içindeki DİZİ canlı olabilir, o yüzden yerine kopyası konuyor.
+    st.nodes = mapNodes(st.nodes, 0);
+  });
+  return n;
+}
+
+// PROJE YÜKLENİRKEN kaynağı node.data'dan ÇIKAR ve oturumluk depoya al.
+// Böylece yüklenen proje de undo yığınını şişirmez. Eski projelerde alan ham
+// metin (`source`), yenilerde gzip+base64 (`sourceGz`) — ikisi de kabul edilir.
+function veStrSrcHarvest(state){
+  if(!state || !state.nodes) return Promise.resolve(0);
+  var isler = [];
+  _sgWalkGeomNodes(state.nodes, function(node){
+    var g = node.data.geometry;
+    if(g.sourceGz){
+      var gz = g.sourceGz;
+      delete g.sourceGz;
+      isler.push(_sgGunzipMain(gz).then(function(buf){
+        _sgSrc[node.id] = { bytes: new Uint8Array(buf), name: g.fileName || '', size: g.fileSize || 0, gzB64: gz };
+      })['catch'](function(){}));
+    } else if(g.source){
+      var txt = g.source;
+      delete g.source;
+      try {
+        var bytes = new TextEncoder().encode(txt);
+        veStrSrcSet(node.id, bytes, g.fileName || '', g.fileSize || bytes.length);
+      } catch(e){}
+    }
+  });
+  return Promise.all(isler).then(function(){ return isler.length; });
+}
+
 // ─── Oturumluk üçgen önbelleği ──────────────────────────────────────────────
 // Takoz'un veMountResults'ı ve FEAD'in veFeadResults'ı ile AYNI kalıp ve AYNI
 // TUZAK: proje değişince temizlenmezse yeni projede önceki projenin parçası
@@ -785,6 +977,13 @@ if(typeof module !== 'undefined' && module.exports) {
     veStrNormalizeImport: veStrNormalizeImport,
     veStrFaceOfTriangle: veStrFaceOfTriangle,
     veStrGeomRecord: veStrGeomRecord,
+    VE_STR_SRC_STORE_LIMIT: VE_STR_SRC_STORE_LIMIT,
+    veStrSrcSet: veStrSrcSet,
+    veStrSrcGet: veStrSrcGet,
+    veStrSrcClear: veStrSrcClear,
+    veStrSrcWillPersist: veStrSrcWillPersist,
+    veStrSrcAttach: veStrSrcAttach,
+    veStrSrcHarvest: veStrSrcHarvest,
     veStrGeomCacheSet: veStrGeomCacheSet,
     veStrGeomCacheGet: veStrGeomCacheGet,
     veStrGeomCacheClear: veStrGeomCacheClear,

@@ -98,14 +98,25 @@ function _svwAttachControls(canvas){
 
   function onDown(e){
     // 0 = sol (döndür), 2 = sağ (kaydır)
-    drag = { btn: e.button, x: e.clientX, y: e.clientY };
+    drag = { btn: e.button, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: 0 };
     V.dragging = true;
   }
-  function onUp(){ drag = null; if(_veStrViewer) _veStrViewer.dragging = false; }
+  function onUp(e){
+    var W = _veStrViewer;
+    // HAREKETSİZ SOL TIK = YÜZ SEÇ. Eşik olmadan her döndürme sonunda seçim
+    // değişirdi; 4 px, "tıkladım" ile "döndürdüm" arasındaki gerçek sınır.
+    if(W && !W.disposed && drag && drag.btn === 0 && drag.moved < 4 && W.hoverFace){
+      veStrViewerSelectFace(W.hoverFace.id);
+      if(typeof veStrGeomOnPickFace === 'function') { try { veStrGeomOnPickFace(W.hoverFace); } catch(e2){} }
+    }
+    drag = null;
+    if(W) W.dragging = false;
+  }
   function onMove(e){
     if(!drag || !_veStrViewer || _veStrViewer.disposed) return;
     var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     drag.x = e.clientX; drag.y = e.clientY;
+    drag.moved = Math.max(drag.moved, Math.abs(e.clientX - drag.x0) + Math.abs(e.clientY - drag.y0));
     var c = _veStrViewer.ctrl;
     if(drag.btn === 2){
       // Kaydırma EKRAN düzleminde: kameranın sağ ve yukarı eksenleri boyunca.
@@ -150,14 +161,14 @@ function _svwAttachControls(canvas){
 // ─── CAD yüzü vurgusu ───────────────────────────────────────────────────────
 // Raycaster üçgen indisi verir; veStrFaceOfTriangle onu `brep_faces`
 // aralığına çevirir. Vurgulanan geometri o yüzün BÜTÜN üçgenleridir.
-function _svwHighlightFace(meshIndex, face){
+//
+// İKİ AYRI VURGU, bilerek: `hover` fare gezerken gelip geçen, `sel` kullanıcının
+// SEÇTİĞİ yüz. Tek katman olsaydı fare parçadan çıkınca seçim de silinirdi —
+// oysa seçim, sınır koşulunun bağlanacağı şey; kalıcı olmak zorunda.
+function _svwFaceGeometry(meshIndex, face){
   var V = _veStrViewer;
-  if(!V) return;
-  if(V.hl){ V.group.remove(V.hl); try { V.hl.geometry.dispose(); } catch(e){} V.hl = null; }
-  if(!face) return;
-  var src = V.geom.meshes[meshIndex];
-  if(!src) return;
-
+  var src = V && V.geom.meshes[meshIndex];
+  if(!src) return null;
   var tri = face.last - face.first + 1;
   var pos = new Float32Array(tri * 9);
   var idx = src.indices, p = src.positions;
@@ -171,16 +182,57 @@ function _svwHighlightFace(meshIndex, face){
   var g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.computeVertexNormals();
+  return g;
+}
+
+function _svwMarkFace(kind, meshIndex, face){
+  var V = _veStrViewer;
+  if(!V) return;
+  var eski = V[kind];
+  if(eski){ V.group.remove(eski); try { eski.geometry.dispose(); } catch(e){} V[kind] = null; }
+  if(!face) return;
+  var g = _svwFaceGeometry(meshIndex, face);
+  if(!g) return;
+  var secim = (kind === 'sel');
+  // SEÇİM RENGİ TEMA JETONUNDAN DEĞİL, SABİT MAGENTA. Parçanın rengi STEP
+  // dosyasından geliyor (occt `mesh.color`) ve her şey olabilir; ÖLÇÜLDÜ:
+  // as1-tu-203 montajında plaka MAVİ ve seçim `--accent-primary` (mavi) iken
+  // vurgu görünmüyordu. Magenta, CAD araçlarının parça rengi olarak tipik
+  // olarak ÜRETMEDİĞİ bir ton — gri/mavi/yeşil/sarı/kırmızının hepsinden ayrı.
+  // Gezinme vurgusu amber kalıyor: iki işaret birbirinden de ayrı olmalı.
   var mat = new THREE.MeshBasicMaterial({
-    color: _svwCssColor('--accent-warning', '#f59e0b'),
-    transparent: true, opacity: 0.75, side: THREE.DoubleSide,
+    color: secim ? new THREE.Color('#ff2fd0') : _svwCssColor('--accent-warning', '#f59e0b'),
+    transparent: true, opacity: secim ? 0.9 : 0.7, side: THREE.DoubleSide,
     // Vurgu yüzeyin İÇİNDE kalıyordu (z-fighting: aynı derinlikte iki üçgen)
-    // → polygonOffset ile bir tık öne alınıyor.
-    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+    // → polygonOffset ile bir tık öne alınıyor. Seçim, gezinme vurgusundan da
+    // önde dursun diye bir tık daha ileride.
+    polygonOffset: true, polygonOffsetFactor: secim ? -4 : -2, polygonOffsetUnits: secim ? -4 : -2,
     depthWrite: false
   });
-  V.hl = new THREE.Mesh(g, mat);
-  V.group.add(V.hl);
+  V[kind] = new THREE.Mesh(g, mat);
+  V.group.add(V[kind]);
+}
+
+function _svwHighlightFace(meshIndex, face){ _svwMarkFace('hl', meshIndex, face); }
+
+// Yüzü KİMLİĞİYLE seç (panel listesinden tıklanınca). Kimlik `m<mesh>/f<yüz>`
+// — sınır koşulunun bağlanacağı dizginin ta kendisi.
+function veStrViewerSelectFace(faceId){
+  var V = _veStrViewer;
+  if(!V || V.disposed) return null;
+  if(!faceId){ _svwMarkFace('sel', -1, null); V.selFace = null; return null; }
+  var bulunan = null, mi = -1;
+  V.geom.meshes.forEach(function(m, i){
+    (m.faces || []).forEach(function(f){ if(f.id === faceId){ bulunan = f; mi = i; } });
+  });
+  if(!bulunan) return null;
+  _svwMarkFace('sel', mi, bulunan);
+  V.selFace = bulunan;
+  return bulunan;
+}
+
+function veStrViewerSelectedFace(){
+  return (_veStrViewer && !_veStrViewer.disposed) ? (_veStrViewer.selFace || null) : null;
 }
 
 function _svwAttachHover(canvas){
@@ -216,6 +268,9 @@ function _svwAttachHover(canvas){
     if(!W.hoverFace || W.hoverFace.id !== face.id){
       _svwHighlightFace(mi, face);
       W.hoverFace = face;
+      // Panelin yüz listesi de aynı satırı işaretlesin — 3B ile liste tek bir
+      // seçimi paylaşıyor, iki ayrı "hangi yüz" duygusu olmasın.
+      if(typeof veStrGeomOnHoverFace === 'function') { try { veStrGeomOnHoverFace(face); } catch(e){} }
     }
     tip.innerHTML = '<b>' + String(face.meshName).replace(/</g, '&lt;') + '</b><br>'
       + 'CAD yüzü <b>' + face.id + '</b> · ' + face.triCount + ' üçgen';
@@ -228,6 +283,7 @@ function _svwAttachHover(canvas){
     _svwHighlightFace(-1, null);
     _veStrViewer.hoverFace = null;
     tip.style.display = 'none';
+    if(typeof veStrGeomOnHoverFace === 'function') { try { veStrGeomOnHoverFace(null); } catch(e){} }
   }
   canvas.addEventListener('mousemove', onHover);
   canvas.addEventListener('mouseleave', onLeave);
@@ -275,7 +331,7 @@ function veStrViewerInit(canvasId, geom, nodeId){
   _veStrViewer = {
     scene: scene, camera: camera, renderer: renderer, canvas: canvas, group: group,
     geom: geom, nodeId: nodeId || null,
-    solids: [], edges: [], hl: null, hoverFace: null,
+    solids: [], edges: [], hl: null, sel: null, hoverFace: null, selFace: null,
     ctrl: { theta: -Math.PI * 0.72, phi: Math.PI / 3, radius: diag * 1.9, target: new THREE.Vector3(0, 0, 0) },
     minRadius: Math.max(diag * 0.05, 0.05), maxRadius: diag * 40,
     raf: null, disposed: false, ro: null, detach: [],

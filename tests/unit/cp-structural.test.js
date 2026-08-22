@@ -184,14 +184,40 @@ describe('paneller üretiliyor ve sızıntı yok', () => {
   });
 
   test('kaynağın projeye YAZILIP yazılmadığı panelde AÇIKÇA yazılı', () => {
-    const mk = (sourceKept) => str.getStrGeometryPropertiesHTML({
+    // Durum CANLI depodan okunuyor — künyeye yazılmış bayat bir bayraktan
+    // DEĞİL. Kaynak node.data'da durmuyor (undo yığınını şişiriyordu), o
+    // yüzden panel model katmanına soruyor.
+    const mk = () => str.getStrGeometryPropertiesHTML({
       id: 'n1', type: 'str-geometry',
-      data: { geometry: { fileName: 'x.step', fileSize: 10, stats: { meshCount: 1, triCount: 12, faceCount: 6 }, bbox: { size: [1, 2, 3], diag: 4 }, faces: [], sourceKept: sourceKept } }
+      data: { geometry: { fileName: 'x.step', fileSize: 10, stats: { meshCount: 1, triCount: 12, faceCount: 6 }, bbox: { size: [1, 2, 3], diag: 4 }, faces: [] } }
     });
-    // Sessiz bırakılsaydı kullanıcı projeyi kaydedip kapatır, geometrinin
-    // gitmiş olduğunu ancak yeniden açtığında görürdü.
-    expect(mk(true)).toContain('kaydediliyor');
-    expect(mk(false)).toContain('yazılmıyor');
+    const onceki = global.veStrSrcWillPersist;
+    try {
+      global.veStrSrcWillPersist = () => true;
+      expect(mk()).toContain('kaydedilirken');
+      global.veStrSrcWillPersist = () => false;
+      // Sessiz bırakılsaydı kullanıcı projeyi kaydedip kapatır, geometrinin
+      // gitmiş olduğunu ancak yeniden açtığında görürdü.
+      expect(mk()).toContain('yeniden içe aktarılması');
+    } finally { global.veStrSrcWillPersist = onceki; }
+  });
+
+  test('künye STEP kaynağı TAŞIMIYOR — undo yığını şişmesin', () => {
+    // ÖLÇÜLDÜ: 140 KB'lık kaynak node.data'dayken saveState 0,03 → 2,17 ms ve
+    // 20 adımlık undo yığını 22 KB → 3,14 MB oluyordu. Kaynak artık oturumluk
+    // depoda; künyeye geri sızarsa bu test kırmızıya döner.
+    const src = require('../../js/structural-model.js');
+    const geom = {
+      ok: true, fileName: 'x.step', fileSize: 999, unit: 'millimeter',
+      stats: { meshCount: 1, triCount: 2, faceCount: 1 },
+      bbox: { min: [0, 0, 0], max: [1, 1, 1], size: [1, 1, 1], center: [0, 0, 0], diag: 1 },
+      meshes: [{ positions: new Float32Array(9), indices: new Uint32Array(3) }],
+      faces: [{ id: 'm0/f0', meshName: 'x', triCount: 2 }],
+    };
+    const rec = src.veStrGeomRecord(geom);
+    expect(rec.source).toBeUndefined();
+    expect(rec.sourceGz).toBeUndefined();
+    expect(JSON.stringify(rec)).not.toMatch(/source/);
   });
 });
 

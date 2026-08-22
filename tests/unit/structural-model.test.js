@@ -499,3 +499,98 @@ describe('gömülü .wasm varlığı', () => {
     expect(model.VE_STR_WORKER_BRIDGE).toContain('wasmB64');
   });
 });
+
+// ── 13) STEP KAYNAĞI node.data'DA DURMAZ ──────────────────────────────────
+// ÖLÇÜLDÜ (gerçek tarayıcı, 140 KB'lık STEP):
+//   kaynak node.data'dayken   saveState 2,17 ms · 20 adım yığın 3,14 MB
+//   oturumluk depodayken      saveState 0,12 ms · 20 adım yığın  184 KB
+// Sebep: saveState() bütün node.data'yı derin kopyalıyor ve yığın 50 adım
+// tutuyor; ayrıca otomatik localStorage yedeği (kota ~5-10 MB) aynı yoldan
+// geçiyor. Kaynak yalnız proje DOSYASINA yazılır.
+describe('kaynak deposu — dosyaya yazılır, undo yığınına binmez', () => {
+  const bytes = new Uint8Array([73, 83, 79, 45, 49, 48]);   // "ISO-10"
+
+  beforeEach(() => model.veStrSrcClear());
+  afterAll(() => model.veStrSrcClear());
+
+  const dugum = (id) => ({
+    id: id, type: 'str-geometry',
+    data: { geometry: { fileName: 'x.step', fileSize: 6, stats: {}, faces: [] } },
+  });
+
+  test('veStrSrcAttach KOPYALA-YAZ — girdiyi DEĞİŞTİRMİYOR', () => {
+    // BU KAPI GERÇEK BİR HATADAN DOĞDU. İlk sürüm yerinde yazıyordu; ama
+    // veSanitizeNodesSubtopology (topology.js) hiçbir şey değişmediyse AYNI
+    // diziyi döndürüyor, dolayısıyla kaynak CANLI tab.state'e sızıyor ve
+    // otomatik yedeğe de giriyordu (ölçüldü: yedek 9,9 KB yerine 46,4 KB).
+    const r = model.veStrSrcSet('n1', bytes, 'x.step', 6);
+    r.gzB64 = 'SAHTE_GZIP';                      // sıkıştırma bitmiş gibi
+
+    const canli = [dugum('n1')];
+    const tabs = [{ state: { nodes: canli } }];
+    const n = model.veStrSrcAttach(tabs);
+
+    expect(n).toBe(1);
+    // ÇIKTIDA var
+    expect(tabs[0].state.nodes[0].data.geometry.sourceGz).toBe('SAHTE_GZIP');
+    // GİRDİDE yok — tek bir alan bile yazılmamış
+    expect(canli[0].data.geometry.sourceGz).toBeUndefined();
+    expect(canli[0].data.geometry.source).toBeUndefined();
+    expect(tabs[0].state.nodes).not.toBe(canli);            // dizi kopyalandı
+    expect(tabs[0].state.nodes[0]).not.toBe(canli[0]);      // düğüm kopyalandı
+  });
+
+  test('alt-topolojideki geometri düğümüne de ulaşıyor', () => {
+    const ic = dugum('n9');
+    const dis = { id: 'mod', type: 'structural-analysis', data: { subTopology: { nodes: [ic] } } };
+    const r = model.veStrSrcSet('n9', bytes, 'x.step', 6);
+    r.gzB64 = 'GZ';
+
+    const tabs = [{ state: { nodes: [dis] } }];
+    expect(model.veStrSrcAttach(tabs)).toBe(1);
+    expect(tabs[0].state.nodes[0].data.subTopology.nodes[0].data.geometry.sourceGz).toBe('GZ');
+    // Canlı ağaç yine dokunulmamış
+    expect(ic.data.geometry.sourceGz).toBeUndefined();
+    expect(dis.data.subTopology.nodes[0]).toBe(ic);
+  });
+
+  test('deposu olmayan düğüme hiçbir şey yazılmıyor ve KOPYA da üretilmiyor', () => {
+    const canli = [dugum('yok')];
+    const tabs = [{ state: { nodes: canli } }];
+    expect(model.veStrSrcAttach(tabs)).toBe(0);
+    // Değişiklik yoksa gereksiz kopya üretilmemeli (topology.js ile aynı kural)
+    expect(tabs[0].state.nodes).toBe(canli);
+  });
+
+  test('veStrSrcHarvest eski projelerin HAM kaynağını da kabul ediyor', async () => {
+    // Önceki sürümler node.data.geometry.source'a düz metin yazıyordu.
+    const onceki = global.TextEncoder;
+    global.TextEncoder = require('util').TextEncoder;
+    try {
+      const n = dugum('n3');
+      n.data.geometry.source = 'ISO-10303-21;';
+      const st = { nodes: [n] };
+      await model.veStrSrcHarvest(st);
+      // node.data'dan ÇIKARILDI
+      expect(n.data.geometry.source).toBeUndefined();
+      // ve depoya alındı
+      const r = model.veStrSrcGet('n3');
+      expect(r).not.toBeNull();
+      expect(r.bytes.length).toBe('ISO-10303-21;'.length);
+    } finally { global.TextEncoder = onceki; }
+  });
+
+  test('veStrSrcWillPersist depoya göre cevap veriyor', () => {
+    expect(model.veStrSrcWillPersist('yok')).toBe(false);
+    model.veStrSrcSet('n5', bytes, 'x.step', 6);
+    expect(model.veStrSrcWillPersist('n5')).toBe(true);
+    model.veStrSrcClear('n5');
+    expect(model.veStrSrcWillPersist('n5')).toBe(false);
+  });
+
+  test('saklama sınırı SIKIŞTIRILMIŞ boyuta konuyor (dosyaya giden o)', () => {
+    // STEP metni ~4,6-5,3× sıkışıyor; base64 sonrası net kazanç ~4× (ölçüldü),
+    // yani 8 MB'lık sınır kabaca 30 MB'lık ham STEP'e karşılık geliyor.
+    expect(model.VE_STR_SRC_STORE_LIMIT).toBe(8 * 1024 * 1024);
+  });
+});

@@ -269,7 +269,7 @@ function _strForgetResults(){
   // (bkz. veStrGeomRecord). Temizlenmezse yeni projede önceki projenin parçası
   // görüntüleyicide durur — Takoz/FEAD'deki tuzağın birebir aynısı.
   if(typeof veStrGeomCacheClear === 'function') veStrGeomCacheClear();
-  if(typeof window !== 'undefined') window.veStrGeometrySource = {};
+  if(typeof veStrSrcClear === 'function') veStrSrcClear();
   if(typeof veStrViewerDispose === 'function') veStrViewerDispose();
 }
 
@@ -311,15 +311,11 @@ function _strStub(baslik, ozet, bekleyen){
 // OLMAMASIDIR. Kapıyı önce uzantı tutuyor ki sebep doğru yazılsın.
 var VE_STR_STEP_EXT = /\.(stp|step)$/i;
 
-// node.data'ya YAZILAN STEP kaynağının üst sınırı. Bunun altındaki dosyalar
-// projeyle birlikte kaydedilir → proje yeniden açıldığında geometri geri gelir.
-// Üstündekiler yalnız OTURUMLUK kalır ve panel bunu AÇIKÇA yazar.
-//
-// Neden sınır var: node.data alt-topolojiye GÖMÜLÜR (veStrCloseEditor →
-// subTopology). Sınırsız bırakılsaydı 40 MB'lık bir montaj STEP'i proje
-// dosyasını yutardı — veSanitizeEmbeddedState'in hafifletmeye çalıştığı
-// çarpımsal büyümenin ta kendisi.
-var VE_STR_SOURCE_KEEP_LIMIT = 3 * 1024 * 1024;
+// STEP KAYNAĞI node.data'DA DURMAZ — oturumluk depoda durur ve yalnız proje
+// DOSYAYA kaydedilirken enjekte edilir (js/structural-model.js veStrSrcAttach).
+// Gerekçesi ölçülmüş: node.data'ya yazılan kaynak her `saveState()`'te derin
+// kopyalanıp 50 adımlık undo yığınına biniyor ve localStorage yedeğini bozuyor
+// (ayrıntı model katmanının başlığında). Sınır da orada: VE_STR_SRC_STORE_LIMIT.
 
 // Ağ inceliği kademeleri. Değer `bounding_box_ratio` — parçanın boyuna ORAN,
 // mutlak mm değil (bkz. structural-model.js VE_STR_GEOM_DEFLECTION).
@@ -354,16 +350,14 @@ function _strBytes(n){
   return _strFmt(v / (1024 * 1024), 2) + ' MB';
 }
 
-// Oturumluk STEP kaynağı (bayt). Ağ inceliği değişince dosyayı yeniden
-// SORMADAN yeniden üçgenleyebilmek için duruyor.
+// Oturumluk STEP kaynağı — sahibi model katmanı. Panel yalnız iki şey için
+// okuyor: ağ inceliği değişince dosyayı yeniden SORMADAN üçgenlemek, ve
+// kaynağın projeye yazılıp yazılmayacağını kullanıcıya söylemek.
 function _strSourceSet(nodeId, bytes, name, size){
-  if(typeof window === 'undefined') return;
-  if(!window.veStrGeometrySource) window.veStrGeometrySource = {};
-  window.veStrGeometrySource[nodeId] = { bytes: bytes, name: name, size: size };
+  if(typeof veStrSrcSet === 'function') veStrSrcSet(nodeId, bytes, name, size);
 }
 function _strSourceGet(nodeId){
-  if(typeof window === 'undefined' || !window.veStrGeometrySource) return null;
-  return window.veStrGeometrySource[nodeId] || null;
+  return (typeof veStrSrcGet === 'function') ? veStrSrcGet(nodeId) : null;
 }
 
 // ─── İLERLEME ARAYÜZÜ ───────────────────────────────────────────────────────
@@ -468,6 +462,54 @@ function _strStatus(nodeId, msg, kind){
   el.innerHTML = msg ? _strEsc(msg) : '';
 }
 
+// ── KANVAS ROZETİ: parça yüklü mü, kaç CAD yüzü var ─────────────────────────
+// Zincirin ilk halkası boşsa geri kalan üçü de boştur; ama kanvasta Geometri
+// kutusu dolu ile boş arasında HİÇ fark göstermiyordu — kullanıcı panelini
+// açmadan bilemiyordu. Rozet iki şeyi söylüyor: parça geldi mi, ve kaç CAD
+// YÜZÜ var (sınır koşullarının bağlanacağı sayı).
+//
+// Stil ELEMANIN ÜSTÜNDE, css/ dosyasında değil — `css/styles.css`'e dokunmak
+// Ölçüm Görüntüleyici'nin dağıtım dosyasını bayatlatıyor (bkz. CLAUDE.md);
+// tek rozet için o zinciri kurmaya değmez. FEAD rozetiyle (veFeadApplyBadge)
+// aynı gerekçe, aynı biçim.
+function veStrApplyBadge(nodeEl, node){
+  if(!nodeEl || !node || typeof document === 'undefined') return false;
+  var old = nodeEl.querySelector('.ve-str-badge');
+  if(old) old.remove();
+  if(node.type !== 'str-geometry') return false;
+
+  var g = node.data && node.data.geometry;
+  var dolu = !!(g && g.stats);
+  var b = document.createElement('span');
+  b.className = 've-str-badge';
+  if(dolu){
+    b.textContent = '⬡' + (g.stats.faceCount || 0);
+    b.title = (g.fileName || 'Parça') + ' · ' + _strFmt(g.stats.triCount) + ' üçgen · '
+            + _strFmt(g.stats.faceCount) + ' CAD yüzü';
+  } else {
+    // Boşken de rozet VAR: "rozet yok" ile "parça yok" ayırt edilemezdi.
+    b.textContent = 'STEP';
+    b.title = 'Henüz parça içe aktarılmadı — panelden .step/.stp seçin.';
+  }
+  b.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; pointer-events:none;'
+    // Ölçek jetonu — ham px değil (bkz. tests/unit/typography-scale.test.js).
+    + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
+    + 'padding:2px 4px; border-radius:3px; font-family:ui-monospace, monospace;'
+    + 'color:#fff; background:' + (dolu ? 'var(--accent-warning, #f59e0b)' : 'var(--text-muted, #888)')
+    + '; border:1px solid var(--bg-primary, #111);';
+  var box = nodeEl.querySelector('.ve-node-box') || nodeEl;
+  box.appendChild(b);
+  return true;
+}
+
+// Tek düğümün rozetini tazele (içe aktarma / kaldırma sonrası).
+function veStrRefreshBadge(nodeId){
+  if(typeof document === 'undefined') return false;
+  var node = _strNodeById(nodeId);
+  var el = node ? document.getElementById(node.id) : null;
+  return (el && node) ? veStrApplyBadge(el, node) : false;
+}
+
 function veStrGeomPick(nodeId){
   var inp = document.getElementById('ve-str-geom-file');
   if(inp) { inp.value = ''; inp.click(); }
@@ -570,20 +612,12 @@ function _strGeomRun(nodeId, bytes, meta){
     if(typeof veStrGeomCacheSet === 'function') veStrGeomCacheSet(nodeId, geom);
     var rec = (typeof veStrGeomRecord === 'function') ? veStrGeomRecord(geom) : null;
     if(rec){
-      // STEP KAYNAĞINI da sakla (sınırın altındaysa) → proje kaydedilip
-      // yeniden açıldığında geometri geri gelir. Üçgenler GİRMEZ: türetilmiş
-      // veri, kaynaktan her an yeniden üretilir (ve yakınsama çalışması için
-      // ZATEN farklı inceliklerde yeniden üretilecek).
-      if(meta.fileSize <= VE_STR_SOURCE_KEEP_LIMIT){
-        try {
-          rec.source = (typeof TextDecoder !== 'undefined')
-            ? new TextDecoder('utf-8').decode(bytes) : null;
-        } catch(e){ rec.source = null; }
-      }
-      rec.sourceKept = !!rec.source;
+      // KÜNYE HAFİF: ne üçgen ne STEP kaynağı girer. İkisi de türetilmiş ya da
+      // oturumluk; node.data her `saveState()`'te derin kopyalanıyor.
       node.data.geometry = rec;
     }
     if(typeof saveState === 'function') { try { saveState(); } catch(e){} }
+    veStrRefreshBadge(nodeId);
     if(typeof showNodeProperties === 'function') showNodeProperties(node);
     _strStatus(nodeId, 'İçe aktarıldı · ' + geom.stats.triCount + ' üçgen · '
       + geom.stats.faceCount + ' CAD yüzü' + (ms ? ' · ' + ms + ' ms' : '')
@@ -600,9 +634,11 @@ function veStrGeomRemove(nodeId){
   if(!node) return;
   if(node.data) { node.data.geometry = null; }
   if(typeof veStrGeomCacheClear === 'function') veStrGeomCacheClear(nodeId);
-  if(typeof window !== 'undefined' && window.veStrGeometrySource) delete window.veStrGeometrySource[nodeId];
+  if(typeof veStrSrcClear === 'function') veStrSrcClear(nodeId);
   if(typeof veStrViewerDispose === 'function') veStrViewerDispose();
+  delete _veStrSelFace[nodeId];
   if(typeof saveState === 'function') { try { saveState(); } catch(e){} }
+  veStrRefreshBadge(nodeId);
   if(typeof showNodeProperties === 'function') showNodeProperties(node);
 }
 
@@ -617,20 +653,121 @@ function veStrGeomMountViewer(nodeId){
     if(typeof veStrViewerInit === 'function') veStrViewerInit('ve-str-geom-canvas', geom, nodeId);
     return;
   }
-  // Önbellek yok → kaynaktan geri yükle.
-  var src = node.data.geometry.source;
-  if(!src){
-    _strStatus(nodeId, 'Geometri künyesi kayıtlı ama STEP kaynağı bu projede saklanmamış (dosya '
-      + _strBytes(VE_STR_SOURCE_KEEP_LIMIT) + ' sınırının üstündeydi) — yeniden içe aktarın.', 'err');
+  // Önbellek yok (proje yeni açıldı) → oturumluk kaynaktan yeniden üret.
+  // Kaynak proje yüklenirken node.data'dan çıkarılıp depoya alınmıştı
+  // (veStrSrcHarvest); orada da yoksa dosya kaydedilmemiş demektir.
+  var src = _strSourceGet(nodeId);
+  if(!src || !src.bytes){
+    _strStatus(nodeId, 'Geometri künyesi kayıtlı ama STEP kaynağı bu projede saklanmamış — '
+      + 'dosyayı yeniden içe aktarın.', 'err');
     return;
   }
-  try {
-    var bytes = new TextEncoder().encode(src);
-    _strSourceSet(nodeId, bytes, node.data.geometry.fileName, node.data.geometry.fileSize);
-    _strGeomRun(nodeId, bytes, { fileName: node.data.geometry.fileName, fileSize: node.data.geometry.fileSize });
-  } catch(e){
-    _strStatus(nodeId, 'Kayıtlı STEP kaynağı çözülemedi: ' + ((e && e.message) || e), 'err');
+  _strGeomRun(nodeId, src.bytes, { fileName: src.name || node.data.geometry.fileName,
+                                   fileSize: src.size || node.data.geometry.fileSize });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CAD YÜZ LİSTESİ — Sınır Koşullarının doğrudan hazırlığı
+// ═══════════════════════════════════════════════════════════════════════════
+// Yüz kimliği (`m<mesh>/f<yüz>`) sınır koşulunun bağlanacağı dizgi. 3B'de
+// fareyle bulmak keşif için iyi ama 160 yüzlü bir montajda "hangi yüzü
+// seçtim / hangileri var" sorusuna cevap vermiyor. Liste ile 3B TEK bir
+// seçimi paylaşıyor: listeden tıkla → parçada vurgulanır, parçada tıkla →
+// listede işaretlenir ve görünüre kaydırılır.
+//
+// Seçim OTURUMLUK (node.data'ya yazılmıyor): bir vurgu tercihi her
+// `saveState()`'te undo yığınına binmemeli. Sınır Koşulları bileşeni kendi
+// kalıcı bağlarını kuracak — o zaman kimlik zaten künyede duruyor.
+var _veStrSelFace = {};
+
+function _strFaceRowId(faceId){
+  return 've-str-face-' + String(faceId).replace(/[^a-zA-Z0-9]/g, '_');
+}
+
+function _strFaceListHTML(node, rec){
+  var faces = (rec && rec.faces) || [];
+  if(!faces.length) return '';
+  var secili = _veStrSelFace[node.id] || '';
+  // Çok katılı montajda hangi yüzün hangi parçaya ait olduğu ancak adla
+  // anlaşılır; tek katıda sütun gereksiz yer kaplar.
+  var cokKati = !!(rec.stats && rec.stats.meshCount > 1);
+
+  var h = '<div class="sw-section-title">CAD yüzleri (' + _strFmt(faces.length) + ')</div>';
+  h += '<div class="ve-str-faces" id="ve-str-face-list">';
+  faces.forEach(function(f){
+    h += '<button type="button" class="ve-str-face' + (f.id === secili ? ' on' : '') + '" '
+       + 'id="' + _strFaceRowId(f.id) + '" data-face="' + _strEsc(f.id) + '" '
+       + 'onclick="veStrGeomSelectFace(\'' + node.id + '\', \'' + _strEsc(f.id) + '\')">'
+       + '<span class="ve-str-face-id">' + _strEsc(f.id) + '</span>'
+       + (cokKati ? '<span class="ve-str-face-mesh">' + _strEsc(f.meshName || '') + '</span>' : '')
+       + '<span class="ve-str-face-tri">' + _strFmt(f.triCount) + '</span>'
+       + '</button>';
+  });
+  h += '</div>';
+  h += '<div class="ve-str-face-sel" id="ve-str-face-sel">' + _strFaceSelText(node.id) + '</div>';
+  return h;
+}
+
+function _strFaceSelText(nodeId){
+  var id = _veStrSelFace[nodeId];
+  if(!id) return 'Seçili yüz yok — listeden ya da parçanın üstünden tıklayın.';
+  return 'Seçili: <b>' + _strEsc(id) + '</b>';
+}
+
+// Listeden ya da 3B'den seçim — tek yol, iki giriş.
+function veStrGeomSelectFace(nodeId, faceId){
+  var onceki = _veStrSelFace[nodeId];
+  // Aynı yüze ikinci tık seçimi KALDIRIR: seçimden çıkmanın başka yolu yoktu.
+  var yeni = (onceki === faceId) ? '' : faceId;
+  _veStrSelFace[nodeId] = yeni;
+  if(typeof veStrViewerSelectFace === 'function') veStrViewerSelectFace(yeni || null);
+  _strFaceMarkRow(nodeId, 'on', yeni);
+  var el = (typeof document !== 'undefined') ? document.getElementById('ve-str-face-sel') : null;
+  if(el) el.innerHTML = _strFaceSelText(nodeId);
+}
+
+// Satır işaretle. PANELİ YENİDEN ÇİZMEDEN — 160 satırlık listeyi her fare
+// hareketinde yeniden kurmak hem pahalı hem de kaydırma konumunu sıfırlardı.
+function _strFaceMarkRow(nodeId, sinif, faceId){
+  if(typeof document === 'undefined') return;
+  var list = document.getElementById('ve-str-face-list');
+  if(!list) return;
+  var eski = list.querySelectorAll('.' + sinif);
+  Array.prototype.forEach.call(eski, function(e){ e.classList.remove(sinif); });
+  if(!faceId) return;
+  var row = document.getElementById(_strFaceRowId(faceId));
+  if(row) row.classList.add(sinif);
+  return row;
+}
+
+// 3B'de fare bir yüzün üstündeyken listede de işaretlensin.
+function veStrGeomOnHoverFace(face){
+  _strFaceMarkRow(null, 'hover', face ? face.id : '');
+}
+
+// 3B'de bir yüze tıklanınca: listede seç ve satırı GÖRÜNÜRE KAYDIR — 160
+// satırlık listede seçilen satır ekran dışında kalırsa seçim görünmez olurdu.
+function veStrGeomOnPickFace(face){
+  if(!face) return;
+  var nodeId = null;
+  if(typeof nodes !== 'undefined'){
+    var n = nodes.find(function(x){ return x.type === 'str-geometry' && x.data && x.data.geometry; });
+    if(n) nodeId = n.id;
   }
+  if(!nodeId) return;
+  _veStrSelFace[nodeId] = face.id;
+  var row = _strFaceMarkRow(nodeId, 'on', face.id);
+  if(row && row.scrollIntoView) { try { row.scrollIntoView({ block: 'nearest' }); } catch(e){} }
+  var el = (typeof document !== 'undefined') ? document.getElementById('ve-str-face-sel') : null;
+  if(el) el.innerHTML = _strFaceSelText(nodeId);
+}
+
+// İlerleme kartının ve durum satırının yuvaları. Panel içe aktarma SIRASINDA
+// yeniden çizilmiyor (kullanıcının bastığı düğme DOM'dan silinmesin), bu
+// yüzden ikisi de yerinde güncelleniyor (_strProgSet / _strStatus).
+function _strStatusSlots(){
+  return '<div id="ve-str-geom-progress" style="display:none; margin-top:9px;"></div>'
+       + '<div id="ve-str-geom-status" style="margin:9px 0; font-size:var(--fs-micro); line-height:1.45; min-height:1.2em; color:var(--text-secondary);"></div>';
 }
 
 // ─── Panel ──────────────────────────────────────────────────────────────────
@@ -688,8 +825,14 @@ function getStrGeometryPropertiesHTML(node){
           + 'STEP okuyucusu (OpenCascade) <b>uygulamanın içinde</b> — internet gerekmez, '
           + '<b>çevrimdışı çalışır</b>. İlk içe aktarmada bir kez hazırlanır, sonrakiler anında.'
           + '</div>';
+    left += _strStatusSlots();
   } else {
     left += _strGeomInfoTable(rec);
+    // Durum ve ilerleme KÜNYENİN HEMEN ALTINDA. Panelin en altındayken
+    // ölçüldü: 1600×1000'de bile katlamanın 5 px altında kalıyordu ve
+    // "İçe aktarıldı · 4.902 üçgen · 240 CAD yüzü" — yani kullanıcının içe
+    // aktarmadan hemen sonra görmek istediği tek satır — görünmüyordu.
+    left += _strStatusSlots();
 
     left += '<div class="sw-section-title">Görüntü ağı inceliği</div>';
     left += '<div class="ve-str-seg">';
@@ -714,6 +857,8 @@ function getStrGeometryPropertiesHTML(node){
           + '<input type="checkbox" checked onchange="veStrViewerToggleEdges(this.checked)"> Kenarlar</label>';
     left += '</div>';
 
+    left += _strFaceListHTML(node, rec);
+
     left += '<div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">';
     left += '<button class="ve-str-btn" onclick="veStrGeomPick(\'' + node.id + '\')">Başka Dosya</button>';
     left += '<button class="ve-str-btn ve-str-btn--danger" onclick="veStrGeomRemove(\'' + node.id + '\')">Kaldır</button>';
@@ -721,22 +866,20 @@ function getStrGeometryPropertiesHTML(node){
           + 'onchange="veStrGeomFileChosen(\'' + node.id + '\', this)">';
     left += '</div>';
 
-    // Kaynağın projeyle kaydedilip kaydedilmediğini AÇIKÇA yaz. Sessiz
+    // Kaynağın projeyle kaydedilip kaydedilmeyeceğini AÇIKÇA yaz. Sessiz
     // bırakılsaydı kullanıcı projeyi kaydedip kapatır, geri açtığında
-    // geometrinin gitmiş olduğunu ancak orada görürdü.
+    // geometrinin gitmiş olduğunu ancak orada görürdü. Durum CANLI depodan
+    // okunuyor — künyeye yazılmış bayat bir bayraktan değil.
+    var kalir = (typeof veStrSrcWillPersist === 'function') && veStrSrcWillPersist(node.id);
     left += '<div style="margin-top:9px; padding:6px 9px; font-size:var(--fs-micro); line-height:1.45; border:1px solid var(--border-color); '
-          + 'color:' + (rec.sourceKept ? 'var(--text-muted)' : 'var(--accent-warning)') + '; background:var(--bg-secondary);">'
-          + (rec.sourceKept
-              ? 'STEP kaynağı projeyle birlikte <b>kaydediliyor</b> — proje yeniden açıldığında geometri geri gelir.'
-              : 'Dosya ' + _strBytes(VE_STR_SOURCE_KEEP_LIMIT) + ' sınırının üstünde: kaynak projeye <b>yazılmıyor</b>, geometri yalnız bu oturumda duruyor.')
+          + 'color:' + (kalir ? 'var(--text-muted)' : 'var(--accent-warning)') + '; background:var(--bg-secondary);">'
+          + (kalir
+              ? 'STEP kaynağı <b>projeye kaydedilirken</b> dosyaya sıkıştırılarak yazılır — proje yeniden açıldığında geometri geri gelir. '
+                + '(Otomatik yedeğe yazılmaz; oradan dönünce yeniden içe aktarılır.)'
+              : 'STEP kaynağı bu oturumda yok: geometri künyesi duruyor ama <b>yeniden içe aktarılması</b> gerekiyor.')
           + '</div>';
   }
 
-  // İlerleme kartının yuvası — boşken görünmez. Panel içe aktarma SIRASINDA
-  // yeniden çizilmiyor (kullanıcının bastığı düğme DOM'dan silinmesin), bu
-  // yüzden ilerleme buraya yerinde yazılıyor.
-  left += '<div id="ve-str-geom-progress" style="display:none; margin-top:9px;"></div>';
-  left += '<div id="ve-str-geom-status" style="margin-top:9px; font-size:var(--fs-micro); line-height:1.45; min-height:1.2em; color:var(--text-secondary);"></div>';
 
   // ── SAĞ: 3B görüntüleyici ──
   var right = '<div id="ve-str-geom-wrap" style="width:100%; height:min(58vh,540px); min-height:320px; overflow:hidden; '
@@ -786,8 +929,9 @@ if(typeof module !== 'undefined' && module.exports) {
     VE_STR_STARTER_LAYOUT: VE_STR_STARTER_LAYOUT,
     VE_STR_STARTER_CHAIN: VE_STR_STARTER_CHAIN,
     VE_STR_STEP_EXT: VE_STR_STEP_EXT,
-    VE_STR_SOURCE_KEEP_LIMIT: VE_STR_SOURCE_KEEP_LIMIT,
     VE_STR_QUALITY: VE_STR_QUALITY,
+    veStrApplyBadge: veStrApplyBadge,
+    veStrGeomSelectFace: veStrGeomSelectFace,
     getStrModulePropertiesHTML: getStrModulePropertiesHTML,
     getStrGeometryPropertiesHTML: getStrGeometryPropertiesHTML,
     getStrMeshPropertiesHTML: getStrMeshPropertiesHTML,

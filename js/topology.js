@@ -1046,6 +1046,7 @@ function veRenderSnapshot(paneIdx) {
       // tuvalden farklı bir şey gösterirdi (modül orada kart, burada kutu).
       if(typeof veApplyModuleCard === 'function') veApplyModuleCard(nodeEl, n);
       if(typeof veFeadApplyBadge === 'function') veFeadApplyBadge(nodeEl, n);
+      if(typeof veStrApplyBadge === 'function') veStrApplyBadge(nodeEl, n);
       canvasWrap.appendChild(nodeEl);
     });
     
