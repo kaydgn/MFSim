@@ -76,6 +76,19 @@ function _veApplyDotState(dot, info) {
 function _veCheckDeploy(callback) {
   var dot = document.getElementById('ve-deploy-dot');
 
+  // Artifact önizlemesinde deploy diye bir şey YOK: sayfa GitHub Pages'ten
+  // değil claude.ai'dan geliyor. version.json 404 verir, api.github.com ise
+  // CSP'ye takılır — ikisinin sonucu KIRMIZI NOKTA olurdu, yani kullanıcıya
+  // "deploy başarısız" diye YANLIŞ bir şey söylerdi. Sormadan nötr duruyoruz.
+  if (typeof veArtifactEnv === 'function' && veArtifactEnv()) {
+    if (dot) {
+      dot.className = 've-deploy-dot ve-deploy-offline';
+      dot.title = 'claude.ai önizlemesi — deploy durumu burada okunamaz';
+    }
+    if (callback) callback(null);
+    return;
+  }
+
   // Cache-buster: SW veya tarayıcı bayat sürüm tutmasın
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
     .then(function(r) {
