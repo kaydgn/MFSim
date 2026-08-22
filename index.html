@@ -763,7 +763,9 @@
           <!-- ═══ YAPISAL ANALİZ (sonlu elemanlar) ═══
                Yalnız 'structural-analysis' modülünün İÇ topolojisinde görünür.
                Zincir: Geometri → Hesaplama Ağı → Sınır Koşulları → Sonuçlar.
-               Paneller şimdilik BOŞ; ayrı oturumlarda doldurulacak. -->
+               'Malzeme ve Özellikler' zincirin halkası DEĞİL: Geometri'ye asılan
+               ALT bileşen (küçük kutu, çıkışı yok).
+               Ağ / Sınır Koşulları / Sonuçlar panelleri şimdilik BOŞ. -->
           <div class="ve-category" data-ve-scope="structural-analysis">
             <div class="ve-category-title">Yapısal Analiz</div>
             <div class="ve-component" draggable="true" data-type="str-geometry" title="Geometri — analiz edilecek parça; .STEP dosyası buradan içe aktarılır. Zincirin başı: girişi yoktur.">
@@ -772,6 +774,14 @@
                 <path d="M28 36 L52 50 L76 36 M52 50 V78" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round" opacity="0.6"/>
                 <ellipse cx="52" cy="36" rx="7" ry="4" fill="none" stroke="currentColor" stroke-width="3"/>
               </svg> <span class="ve-comp-label">Geometri</span></div>
+            <div class="ve-component" draggable="true" data-type="str-material" title="Malzeme ve Özellikler — Geometri'ye asılan ALT bileşen; parçaya E, ν, ρ, akma/çekme dayanımı atar. Çıkışı yoktur: zincire ara halka olarak giremez.">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="10" y="44" width="46" height="44" rx="4" fill="none" stroke="currentColor" stroke-width="5"/>
+                <path d="M14 74 L40 48 M14 86 L52 48 M26 88 L54 60 M40 88 L54 74" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+                <path d="M62 12 V44 H96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+                <path d="M62 44 L74 20 Q82 13 94 16" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="74" cy="20" r="4.5" fill="currentColor"/>
+              </svg> <span class="ve-comp-label">Malzeme ve Özellikler</span></div>
             <div class="ve-component" draggable="true" data-type="str-mesh" title="Hesaplama Ağı — geometriye sayısal ağ örer (tet10)">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
                 <path d="M18 76 L50 20 L82 76 Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
