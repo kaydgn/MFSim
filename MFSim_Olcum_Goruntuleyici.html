@@ -4411,6 +4411,29 @@
    seçimi paylaşıyor: `.hover` fare parçanın üstündeyken gelip geçen işaret,
    `.on` kullanıcının seçtiği yüz — ikisi ayrı, çünkü fare parçadan çıkınca
    seçim silinmemeli. */
+/* CAD yüz bölümünün anahtarı. Bölüm varsayılan KAPALI (bkz. cp-structural.js
+   _veStrFaceMode) — bu düğme hem başlık hem açma kolu. Görünüşü .sw-section-title
+   ile aynı ritimde durur ki panelde yabancı bir öge gibi okunmasın. */
+.ve-str-face-toggle{
+  display:flex;align-items:center;gap:6px;width:100%;
+  padding:0 0 4px;margin:12px 0 6px;
+  font-size:var(--fs-tiny);font-weight:600;color:var(--text-secondary);
+  text-transform:uppercase;letter-spacing:0.4px;text-align:left;
+  background:transparent;border:0;border-bottom:1px solid var(--border-color);
+  cursor:pointer;
+}
+.ve-str-face-toggle:hover{ color:var(--text-primary); }
+.ve-str-face-toggle.on{ color:var(--text-heading); }
+.ve-str-face-caret{ flex:0 0 auto;font-size:var(--fs-micro);line-height:1; }
+.ve-str-face-toggle > span:nth-child(2){ flex:1 1 auto;min-width:0; }
+.ve-str-face-count{
+  flex:0 0 auto;letter-spacing:0;font-variant-numeric:tabular-nums;
+  color:var(--accent-warning);
+}
+/* Gövde flex zincirinin bir halkası: liste açtığında artan boyu yutabilsin. */
+.ve-properties--strgeom #ve-str-face-block{
+  display:flex;flex-direction:column;min-height:0;flex:1 1 auto;
+}
 .ve-str-faces{
   max-height:180px;overflow-y:auto;overflow-x:hidden;
   border:1px solid var(--border-color);border-radius:var(--radius-sm);
