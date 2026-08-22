@@ -7,6 +7,7 @@
     "build": "node build.js",
     "build:viewer": "node viewer/build.js",
     "build:fead-report": "node tools/report-assets/build-fead-report-template.js",
+    "build:occt-wasm": "node tools/build-occt-wasm-asset.js",
     "build:all": "node build.js && node viewer/build.js",
     "shot": "node tools/shot.js",
     "sync:viewer": "node viewer/sync.js",

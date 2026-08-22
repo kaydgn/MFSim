@@ -20,12 +20,23 @@
 // (npm: occt-import-js). Lisans LGPL-2.1 (MFSim MIT) → kütüphane AYRI ve
 // DEĞİŞTİRİLEBİLİR bir dosya olarak duruyor, tek dosyaya gömülmüyor.
 //
+// ── .wasm UYGULAMAYA GÖMÜLÜ — ÇEVRİMDIŞI ÇALIŞIR ───────────────────────────
+// `js/structural-occt-wasm.js` (gzip+base64, 3,96 MB; ham 7,25 MB) uygulamanın
+// içinde taşınır ve İLK içe aktarmada talep üzerine çalıştırılır. Eskiden
+// `vendor/` yolundan indiriliyordu; iki sorunu vardı:
+//   1) ÇEVRİMDIŞI ÇALIŞMIYORDU — MFSim tek dosya olarak indirilip kullanılıyor,
+//      yanında vendor/ olmayan bir kurulumda STEP hiç açılmıyordu.
+//   2) Kullanıcıya YANLIŞ ŞEYİ anlatıyordu: yükleme göstergesi PARÇANIN
+//      işlendiğini söylemeli, kütüphanenin indiğini değil.
+// `vendor/occt-import-js.wasm` depoda KALIYOR: hem gömülü varlığın kaynağı,
+// hem eski tarayıcı yedeği (DecompressionStream yoksa), hem de LGPL-2.1'in
+// "kütüphane değiştirilebilir olmalı" koşulunun karşılığı.
+//
 // ── WASM `wasmBinary` İLE VERİLİR, `locateFile` İLE DEĞİL ───────────────────
 // Emscripten glue'u .wasm yolunu normalde `document.currentScript.src`'den
 // tahmin eder. MFSim'in TEK DOSYA sürümünde (MFSim_Code.html) bütün script'ler
 // INLINE'dır → `currentScript.src` yoktur ve tahmin sessizce yanlış yere gider.
-// Bu yüzden .wasm'ı KENDİMİZ getirip ArrayBuffer olarak veriyoruz: yol arama
-// bizim elimizde, hata mesajı bizim dilimizde, aday yollar sırayla denenebilir.
+// Bu yüzden baytları KENDİMİZ verip `wasmBinary` ile geçiyoruz.
 //
 // ── ÖLÇÜLDÜ: YÜZ KİMLİĞİ AĞ İNCELİĞİNDEN BAĞIMSIZ ──────────────────────────
 // Bu modülün EN KRİTİK özelliği. Sınır koşulu mesh düğümüne değil CAD YÜZÜNE
@@ -103,12 +114,16 @@ function _sgOcctFactory(){
 }
 
 // ─── İLERLEME AŞAMALARI ─────────────────────────────────────────────────────
-// Panel bu adlara göre yazı ve çubuk seçiyor. YALNIZ İLKİ BELİRLİ (%):
-// indirilen bayt gerçekten sayılabiliyor. Diğer üçü OCCT'nin içinde tek bir
-// çağrı; oraya uydurma bir yüzde koymak — "%60" deyip 8 saniye beklemek —
-// kullanıcıya yalan söylemek olurdu. Belirsiz aşamada akan bir çubuk + geçen
-// süre gösteriliyor.
-var VE_STR_STAGES = ['download', 'compile', 'parse', 'build'];
+// Panel bu adlara göre yazı seçiyor:
+//   reader   okuyucu hazırlanıyor — YALNIZ ilk içe aktarmada, gömülü .wasm
+//            açılıp derlenirken (worker'da). Ağ YOK.
+//   download YEDEK yol: gömülü varlık yoksa vendor/'dan indiriliyor. Tek
+//            BELİRLİ (%) aşama budur ve normalde HİÇ GÖRÜLMEZ.
+//   parse    geometri çözümleniyor — kullanıcının beklediği asıl iş.
+//   build    sahne kuruluyor.
+// Belirsiz aşamalara uydurma bir yüzde koymak — "%60" deyip 8 saniye
+// beklemek — yalan olurdu; orada akan çubuk + geçen süre gösteriliyor.
+var VE_STR_STAGES = ['reader', 'download', 'parse', 'build'];
 
 // `vendor/occt-import-js.wasm`'ın AÇILMIŞ boyutu. Yüzde bunun üzerinden
 // hesaplanıyor çünkü `Content-Length` GÜVENİLMEZ — ÖLÇÜLDÜ: hem `npx serve`
@@ -190,13 +205,25 @@ function _sgFetchWasm(paths, onProgress, expectedBytes){
 // varsayımı yok — glue nereden geldiyse worker da oradan gelmiş oluyor.
 var VE_STR_WORKER_BRIDGE = [
   'var _occt = null, _log = [];',
+  // base64 çözme ve gzip açma DA worker'da: 3,96 MB'lık dizgiyi ana iş
+  // parçacığında çözmek yüz milisaniyelik bir donma demekti — kaçındığımız
+  // şeyin ta kendisi.
+  'function _b64(s){ var b = atob(s), u = new Uint8Array(b.length);',
+  '  for(var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }',
+  'function _gunzip(u){',
+  '  if(typeof DecompressionStream !== "function") return Promise.reject(new Error("DecompressionStream yok"));',
+  '  return new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();',
+  '}',
   'self.onmessage = function(e){',
   '  var d = e.data || {};',
   '  if(d.type === "init"){',
   '    try {',
-  '      occtimportjs({ wasmBinary: d.wasmBinary,',
-  '        print: function(s){ _log.push(String(s)); },',
-  '        printErr: function(s){ _log.push(String(s)); } })',
+  '      var bin = d.wasmBinary ? Promise.resolve(d.wasmBinary) : _gunzip(_b64(d.wasmB64));',
+  '      bin.then(function(wasm){',
+  '        return occtimportjs({ wasmBinary: wasm,',
+  '          print: function(s){ _log.push(String(s)); },',
+  '          printErr: function(s){ _log.push(String(s)); } });',
+  '      })',
   '      .then(function(m){ _occt = m; self.postMessage({ type:"ready" }); })',
   '      ["catch"](function(err){ self.postMessage({ type:"fatal", error:String((err && err.message) || err) }); });',
   '    } catch(err){ self.postMessage({ type:"fatal", error:String((err && err.message) || err) }); }',
@@ -234,6 +261,81 @@ var _sgWorkerPromise = null;
 var _sgWorkerUrl = '';
 var _sgJobSeq = 0;
 
+// ─── GÖMÜLÜ OKUYUCU ─────────────────────────────────────────────────────────
+// .wasm ARTIK UYGULAMANIN İÇİNDE (js/structural-occt-wasm.js, gzip+base64).
+// Eskiden `vendor/` yolundan çekiliyordu; iki sorunu vardı:
+//   1) ÇEVRİMDIŞI ÇALIŞMIYORDU — MFSim tek dosya olarak indirilip kullanılıyor,
+//      yanında vendor/ olmayan bir kurulumda STEP hiç açılmıyordu.
+//   2) Kullanıcıya YANLIŞ ŞEYİ anlatıyordu: yükleme göstergesi PARÇANIN
+//      işlendiğini söylemeli, kütüphanenin indiğini değil.
+//
+// AÇILIŞTA YÜKLENMEZ: index.html'de `type="text/x-mfsim-asset"` ile işaretli,
+// yani ne tarayıcı ne de MFSimLoader onu çalıştırır. İlk STEP içe aktarmasında
+// buradan talep üzerine çalıştırılıyor (js/mount-report-assets.js ile aynı
+// kalıp — bkz. cp-mount-report.js _mntReportEnsureAssets).
+var _sgAssetPromise = null;
+
+function _sgRunAsset(sel, hazirMi){
+  return new Promise(function(resolve, reject){
+    if(typeof document === 'undefined') return reject(new Error('Gömülü varlık yalnız tarayıcıda okunur.'));
+    if(hazirMi()) return resolve();
+    var ph = document.querySelector(sel);
+    if(!ph) return reject(new Error('Gömülü varlık sayfada yok: ' + sel));
+    var s = document.createElement('script');
+    if(ph.src){
+      // Modüler kurulum (index.html): yer tutucunun src'si var.
+      s.src = ph.src;
+      s.onload = function(){ hazirMi() ? resolve() : reject(new Error('Gömülü varlık çalıştı ama içerik gelmedi: ' + sel)); };
+      s.onerror = function(){ reject(new Error('Gömülü varlık yüklenemedi: ' + ph.src)); };
+      document.head.appendChild(s);
+    } else {
+      // Tek dosya sürümü: içerik ZATEN sayfada, yalnız çalıştırılmamış
+      // (type javascript değil). Kopyala ve çalıştır — AĞ YOK.
+      s.textContent = ph.textContent;
+      document.head.appendChild(s);
+      hazirMi() ? resolve() : reject(new Error('Gömülü varlık çalıştı ama içerik gelmedi: ' + sel));
+    }
+  });
+}
+
+// Gömülü .wasm'ın gzip+base64 dizgisini döndürür. AÇMAZ — açma işi worker'da
+// (3,96 MB'lık dizgiyi ana iş parçacığında çözmek yüz milisaniyelik donma).
+function _sgEmbeddedWasmB64(){
+  if(_sgAssetPromise) return _sgAssetPromise;
+  var hazir = function(){ return typeof window !== 'undefined' && !!window.VE_STR_OCCT_WASM_GZ_B64; };
+  var p = _sgRunAsset('script[data-mfsim-asset="occt-wasm"]', hazir)
+    .then(function(){ return window.VE_STR_OCCT_WASM_GZ_B64; });
+  _sgAssetPromise = p;
+  p['catch'](function(){ if(_sgAssetPromise === p) _sgAssetPromise = null; });
+  return p;
+}
+
+// Worker'a verilecek glue KAYNAĞI — AĞSIZ. Tek dosya sürümünde vendor script'i
+// sayfada INLINE durur (type="text/x-mfsim-defer" olduğu için tarayıcı onu
+// çalıştırmaz, MFSimLoader kopyasını çalıştırır → yer tutucunun metni yerinde
+// kalır). Modüler kurulumda src'den çekilir.
+function _sgGlueSource(){
+  var ph = (typeof document !== 'undefined')
+    ? document.querySelector('script[data-mfsim-occt-glue]') : null;
+  if(ph && ph.textContent && ph.textContent.length > 1000) return Promise.resolve(ph.textContent);
+  var url = (ph && ph.src) || _sgGlueUrlFor(VE_STR_OCCT_WASM_PATHS[0]);
+  if(typeof fetch !== 'function') return Promise.reject(new Error('STEP okuyucusunun kod dosyası okunamadı.'));
+  return fetch(url).then(function(res){
+    if(!res.ok) throw new Error('STEP okuyucusunun kod dosyası bulunamadı: ' + url);
+    return res.text();
+  });
+}
+
+// Ana iş parçacığında gzip açma — yalnız worker YOKSA kullanılır.
+function _sgGunzipMain(b64){
+  if(typeof DecompressionStream !== 'function'){
+    return Promise.reject(new Error('Bu tarayıcı gömülü okuyucuyu açamıyor (DecompressionStream yok).'));
+  }
+  var bin = atob(b64), u = new Uint8Array(bin.length);
+  for(var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+}
+
 function _sgWorkerSupported(){
   return typeof Worker === 'function' && typeof Blob === 'function'
       && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function'
@@ -255,12 +357,22 @@ function veStrOcctWorker(opts){
   if(!_sgWorkerSupported()) return Promise.reject(new Error('Bu tarayıcıda Worker yok.'));
 
   var onp = opts.onProgress || function(){};
-  var out = _sgFetchWasm(opts.wasmUrls, onp, opts.expectedBytes || VE_STR_OCCT_WASM_BYTES).then(function(got){
-    onp('compile', {});
-    return fetch(_sgGlueUrlFor(got.url)).then(function(res){
-      if(!res.ok) throw new Error('STEP okuyucusunun kod dosyası bulunamadı: ' + _sgGlueUrlFor(got.url));
-      return res.text();
-    }).then(function(glue){
+
+  // GÖMÜLÜ okuyucu ÖNCE denenir — ağ yok, çevrimdışı çalışır. Yalnız o
+  // bulunamazsa (varlık üretilmemiş, tarayıcı DecompressionStream bilmiyor)
+  // `vendor/` yolundan indirmeye düşülür; o zaman panel "indiriliyor" der.
+  var kaynak = opts.wasmBinary
+    ? Promise.resolve({ wasmBinary: opts.wasmBinary, url: '(bellek)' })
+    : _sgEmbeddedWasmB64()
+        .then(function(b64){ return { wasmB64: b64, url: '(gömülü)' }; })
+        ['catch'](function(){
+          return _sgFetchWasm(opts.wasmUrls, onp, opts.expectedBytes || VE_STR_OCCT_WASM_BYTES)
+            .then(function(got){ return { wasmBinary: got.buffer, url: got.url }; });
+        });
+
+  var out = kaynak.then(function(got){
+    onp('reader', {});
+    return _sgGlueSource().then(function(glue){
       var blob = new Blob([glue, '\n', VE_STR_WORKER_BRIDGE], { type: 'text/javascript' });
       var url = URL.createObjectURL(blob);
       var w = new Worker(url);
@@ -280,10 +392,11 @@ function veStrOcctWorker(opts){
           else if(e.data && e.data.type === 'fatal'){ bitir(new Error(e.data.error)); }
         };
         w.onerror = function(err){ bitir(new Error('STEP okuyucusu worker içinde açılamadı: ' + ((err && err.message) || 'bilinmeyen hata'))); };
-        // .wasm TRANSFER EDİLMİYOR, kopyalanıyor: tek seferlik ~7 MB memcpy
-        // ölçülemeyecek kadar ucuz, buna karşılık çağıranın tamponu
-        // detach OLMUYOR (testler aynı tamponu yeniden kullanabiliyor).
-        w.postMessage({ type: 'init', wasmBinary: got.buffer });
+        // Gömülü yolda worker'a giden şey 3,96 MB'lık BASE64 DİZGİ; açma
+        // (atob + gunzip) ve derleme worker'da yapılıyor → ana iş parçacığı
+        // hiç durmuyor. Yedek yolda hazır .wasm tamponu gider; transfer
+        // EDİLMİYOR (tek seferlik memcpy ucuz, çağıranın tamponu detach olmasın).
+        w.postMessage({ type: 'init', wasmBinary: got.wasmBinary, wasmB64: got.wasmB64 });
       });
     });
   });
@@ -341,12 +454,16 @@ function veStrOcctReady(opts, onProgress){
   var p;
   if(opts.wasmBinary){
     p = Promise.resolve({ buffer: opts.wasmBinary, url: '(bellek)' });
-  } else if(typeof fetch !== 'function'){
-    p = Promise.reject(new Error('STEP okuyucusu yüklenemedi: bu ortamda fetch yok.'));
   } else {
-    p = _sgFetchWasm(opts.wasmUrls, onp, opts.expectedBytes || VE_STR_OCCT_WASM_BYTES);
+    // Worker yolundaki sıranın aynısı: ÖNCE gömülü (ağsız), sonra vendor/.
+    p = _sgEmbeddedWasmB64()
+      .then(function(b64){ return _sgGunzipMain(b64).then(function(buf){ return { buffer: buf, url: '(gömülü)' }; }); })
+      ['catch'](function(e){
+        if(typeof fetch !== 'function') throw e;
+        return _sgFetchWasm(opts.wasmUrls, onp, opts.expectedBytes || VE_STR_OCCT_WASM_BYTES);
+      });
   }
-  p = p.then(function(got){ onp('compile', {}); return got; });
+  p = p.then(function(got){ onp('reader', {}); return got; });
 
   // OCCT kendi teşhisini stdout'a yazar ("Line 2: Incorrect syntax: unexpected
   // QUID, expecting STEP" gibi). Varsayılanda bu console'a düşer ve KULLANICI
@@ -633,7 +750,7 @@ function veStrImportStep(bytes, meta, opts){
         // açılmadı" ile "donarak açıldı" arasında dağlar kadar fark var.
         ['catch'](function(e){
           if(opts.noFallback) throw e;
-          onp('compile', { fallback: true });
+          onp('reader', { fallback: true });
           return _sgImportMainThread(bytes, meta, opts, onp);
         })
     : _sgImportMainThread(bytes, meta, opts, onp);

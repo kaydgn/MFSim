@@ -62,15 +62,17 @@
 // için mesh'i her yenilediğinde bütün sınır koşulları düşerdi — ve yakınsama
 // çalışması bu modülde ZORUNLU (yukarıdaki 2. kural).
 //
-// ── BU DOSYADA HENÜZ OLMAYANLAR ─────────────────────────────────────────────
-// Dört zincir bileşeni KURULU ve BAĞLI, ama panelleri bilerek BOŞ: her biri
-// yalnız kimliğini ve zincirdeki yerini yazıyor. Boş ama sessiz değil — panel
-// nerede bittiğini SÖYLÜYOR (bkz. _strPending: sessizce boş bir panel,
-// çalışmayan panelden kötüdür). Sonraki oturumlarda tek tek doldurulacaklar:
-//   Geometri        → STEP içe aktarma (occt-import-js/WASM) + 3B görüntüleyici
+// ── ZİNCİRİN NERESİ DOLU ────────────────────────────────────────────────────
+//   Geometri        ✔ DOLU — STEP içe aktarma (gömülü occt/WASM, worker'da) +
+//                     3B görüntüleyici + CAD yüzü vurgusu. Bu dosyanın alt
+//                     yarısı; hesap js/structural-model.js'te.
 //   Hesaplama Ağı   → yüzey yeniden-mesh'leme + TetGen (WASM) → tet10
 //   Sınır Koşulları → CAD yüzü seçimi, mesnet/yük/simetri, RBE ile delik yükü
 //   Sonuçlar        → gerilme/sehim konturu, yakınsama eğrisi, emniyet payı
+//
+// Kalan üçünün paneli bilerek BOŞ ama SESSİZ DEĞİL: her biri nerede bittiğini
+// SÖYLÜYOR (bkz. _strPending — sessizce boş bir panel, çalışmayan panelden
+// kötüdür).
 //
 // Birim (UI): uzunluk mm, kuvvet N, gerilme MPa, elastisite modülü MPa.
 // Kalıcılık: her düğüm kendi node.data'sında (proje kaydet/yükle otomatik).
@@ -374,10 +376,16 @@ function _strSourceGet(nodeId){
 // 'download' belirli bir yüzde taşır; kalan üçü OCCT'nin içinde tek bir
 // çağrıdır ve oraya uydurma bir yüzde koymak yalan olurdu → belirsiz kipte
 // akan çubuk + geçen süre.
+// Kartın ANA SATIRI dosyanın adıdır; aşama alt satırda. Kullanıcının beklediği
+// şey PARÇANIN işlenmesi — okuyucunun hazırlanması bir uygulama ayrıntısıdır ve
+// yalnız ilk içe aktarmada, kısa bir alt satır olarak geçer.
+//
+// `download` normalde HİÇ GÖRÜLMEZ: .wasm uygulamaya gömülü. Yalnız gömülü
+// varlık yoksa (eski tarayıcı → DecompressionStream yok) yedek yolda çıkar.
 var VE_STR_STAGE_TEXT = {
+  reader:   'Okuyucu hazırlanıyor',
   download: 'STEP okuyucusu indiriliyor',
-  compile:  'Okuyucu hazırlanıyor',
-  parse:    'STEP çözümleniyor',
+  parse:    'Geometri çözümleniyor',
   build:    'Sahne kuruluyor'
 };
 
@@ -395,9 +403,9 @@ function _strProgStart(nodeId, fileName, fileSize){
       '<div class="ve-str-prog">'
     +   '<div class="ve-str-prog-head">'
     +     '<span class="ve-str-prog-spin"></span>'
-    +     '<b data-ve="stage">Hazırlanıyor</b>'
+    +     '<b>' + _strEsc(fileName || 'Geometri') + '</b>'
     +   '</div>'
-    +   '<div class="ve-str-prog-file">' + _strEsc(fileName || '') + ' · ' + _strBytes(fileSize) + '</div>'
+    +   '<div class="ve-str-prog-file">' + _strBytes(fileSize) + ' · <span data-ve="stage">içe aktarılıyor</span></div>'
     +   '<div class="ve-str-prog-bar"><i data-ve="fill" class="indet"></i></div>'
     +   '<div class="ve-str-prog-foot"><span data-ve="detail"></span><span data-ve="clock">0,0 sn</span></div>'
     + '</div>';
@@ -435,7 +443,8 @@ function _strProgSet(nodeId, stage, info){
     fill.style.width = '';
     det.textContent = (info && info.fallback)
       ? 'worker açılamadı — ana iş parçacığında sürüyor'
-      : (stage === 'parse' ? 'worker\'da — arayüz yanıt vermeye devam ediyor' : '');
+      : (stage === 'parse' ? 'worker\'da — arayüz donmuyor'
+      : (stage === 'reader' ? 'ilk içe aktarma — bir kez' : ''));
   }
 }
 
@@ -676,7 +685,8 @@ function getStrGeometryPropertiesHTML(node){
   if(!rec){
     left += _strGeomImportCard(node);
     left += '<div style="margin-top:9px; padding:7px 9px; font-size:var(--fs-micro); line-height:1.45; color:var(--text-muted); background:var(--bg-secondary); border:1px solid var(--border-color);">'
-          + 'Okuyucu <b>talep üzerine</b> yüklenir (OpenCascade / WASM, ~7 MB) — ilk içe aktarma bu yüzden birkaç saniye sürebilir, sonrakiler anında.'
+          + 'STEP okuyucusu (OpenCascade) <b>uygulamanın içinde</b> — internet gerekmez, '
+          + '<b>çevrimdışı çalışır</b>. İlk içe aktarmada bir kez hazırlanır, sonrakiler anında.'
           + '</div>';
   } else {
     left += _strGeomInfoTable(rec);

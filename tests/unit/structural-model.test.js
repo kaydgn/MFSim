@@ -24,6 +24,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 const model = require('../../js/structural-model.js');
 
 const ROOT = path.join(__dirname, '../..');
@@ -384,8 +385,8 @@ describe('worker sonucu ana iş parçacığında normalize ediliyor', () => {
 
 // ── 11) İLERLEME ───────────────────────────────────────────────────────────
 describe('ilerleme bildirimi', () => {
-  test('aşama adları sabit ve sıralı', () => {
-    expect(model.VE_STR_STAGES).toEqual(['download', 'compile', 'parse', 'build']);
+  test('aşama adları sabit', () => {
+    expect(model.VE_STR_STAGES).toEqual(['reader', 'download', 'parse', 'build']);
   });
 
   // BU KAPI GERÇEK BİR ÖLÇÜMDEN DOĞDU: hem `npx serve` hem GitHub Pages
@@ -418,8 +419,8 @@ describe('ilerleme bildirimi', () => {
     expect(ind.length).toBe(2);
     expect(ind[0]).toEqual({ s: 'download', loaded: 400, pct: 0.4 });
     expect(ind[1]).toEqual({ s: 'download', loaded: 1000, pct: 1 });
-    // İndirmeden sonra derleme aşaması da bildiriliyor
-    expect(gorulen.map((g) => g.s)).toContain('compile');
+    // İndirmeden sonra okuyucu hazırlama aşaması da bildiriliyor
+    expect(gorulen.map((g) => g.s)).toContain('reader');
   }, 60000);
 
   test('tahmin tutmazsa yüzde GÖSTERİLMİYOR — %140 yazan çubuk olmaz', async () => {
@@ -440,4 +441,61 @@ describe('ilerleme bildirimi', () => {
     } finally { delete global.fetch; }
     expect(gorulen).toEqual([null]);
   }, 60000);
+});
+
+// ── 12) GÖMÜLÜ OKUYUCU — ÇEVRİMDIŞI ÇALIŞMANIN ŞARTI ──────────────────────
+// .wasm artık uygulamanın içinde (js/structural-occt-wasm.js). Eskiden
+// `vendor/` yolundan indiriliyordu ve yanında vendor/ olmayan bir kurulumda
+// STEP hiç açılmıyordu. Gerçek tarayıcıdaki uçtan uca kapı
+// tests/e2e/structural-geometry.spec.js'te (ağ kesikken içe aktarma).
+describe('gömülü .wasm varlığı', () => {
+  const ASSET = path.join(ROOT, 'js/structural-occt-wasm.js');
+
+  test('varlık üretilmiş ve depoda', () => {
+    expect(fs.existsSync(ASSET)).toBe(true);
+  });
+
+  // EN ÖNEMLİ KAPI: vendor .wasm güncellenip varlık yeniden üretilmezse
+  // program SESSİZCE ESKİ okuyucuyu taşır. Bayt bayt karşılaştırılıyor.
+  test('gömülü içerik vendor/occt-import-js.wasm ile BİREBİR aynı', () => {
+    const src = fs.readFileSync(ASSET, 'utf8');
+    const m = src.match(/VE_STR_OCCT_WASM_GZ_B64 = "([A-Za-z0-9+/=]+)"/);
+    expect(m).not.toBeNull();
+    const acilmis = zlib.gunzipSync(Buffer.from(m[1], 'base64'));
+    const vendor = fs.readFileSync(path.join(ROOT, 'vendor/occt-import-js.wasm'));
+    expect(acilmis.length).toBe(vendor.length);
+    expect(acilmis.equals(vendor)).toBe(true);
+    // WebAssembly imzası ("\0asm") — yanlış dosya gömülürse burada düşer.
+    expect(Array.from(acilmis.slice(0, 4))).toEqual([0x00, 0x61, 0x73, 0x6d]);
+  });
+
+  test('varlık, ham base64\'ten belirgin biçimde KÜÇÜK (gzip gerçekten işe yarıyor)', () => {
+    const boyut = fs.statSync(ASSET).size;
+    const ham = fs.statSync(path.join(ROOT, 'vendor/occt-import-js.wasm')).size;
+    // Ham base64 ~%133 olurdu; gzip+base64 yarısının altında olmalı.
+    expect(boyut).toBeLessThan(ham * 0.66);
+  });
+
+  test('bildirilen açılmış boyut gerçek dosyayla tutuyor', () => {
+    const src = fs.readFileSync(ASSET, 'utf8');
+    const m = src.match(/VE_STR_OCCT_WASM_BYTES_EMBEDDED = (\d+);/);
+    expect(m).not.toBeNull();
+    expect(Number(m[1])).toBe(fs.statSync(path.join(ROOT, 'vendor/occt-import-js.wasm')).size);
+  });
+
+  test('index.html: varlık AÇILIŞTA yüklenmiyor, glue metni işaretli', () => {
+    const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+    // type="text/x-mfsim-asset" → ne tarayıcı ne MFSimLoader çalıştırır.
+    expect(html).toMatch(/type="text\/x-mfsim-asset"[^>]*data-mfsim-asset="occt-wasm"[^>]*src="js\/structural-occt-wasm\.js"/);
+    // Worker glue'yu AĞSIZ okuyabilsin diye vendor script'i işaretli.
+    expect(html).toContain('data-mfsim-occt-glue');
+    // Varlık `x-mfsim-defer` OLMAMALI — olsaydı 4 MB açılışta yüklenirdi.
+    expect(html).not.toMatch(/x-mfsim-defer[^>]*structural-occt-wasm/);
+  });
+
+  test('worker köprüsü gzip açmayı KENDİSİ yapıyor (ana iş parçacığı durmasın)', () => {
+    expect(model.VE_STR_WORKER_BRIDGE).toContain('DecompressionStream');
+    expect(model.VE_STR_WORKER_BRIDGE).toContain('atob');
+    expect(model.VE_STR_WORKER_BRIDGE).toContain('wasmB64');
+  });
 });

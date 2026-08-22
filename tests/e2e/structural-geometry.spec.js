@@ -4,13 +4,13 @@
  * GERÇEK TARAYICI kapısı. Birim testler köprüyü (js/structural-model.js) Node
  * altında sınıyor; buradaki soru başka: ZİNCİR uçtan uca ayakta mı?
  *
- *   vendor script → 7.3 MB .wasm'ın FETCH'i → OCCT derlemesi → panel →
+ *   gömülü .wasm varlığı → worker'da gunzip + OCCT derlemesi → panel →
  *   THREE sahnesi → CAD yüzü vurgusu
  *
- * Bu zincirin dört halkası Node'da HİÇ koşmuyor: .wasm'ın göreli yoldan
- * çekilmesi, `document.currentScript.src` olmadan çalışması, WebGL bağlamı ve
- * fare ile yüz seçimi. Biri kırılırsa panel yine açılır, düğme yine görünür —
- * ve basınca hiçbir şey olmaz. Sessiz kırılma tam olarak burada yakalanır.
+ * Bu zincirin halkaları Node'da HİÇ koşmuyor: talep üzerine çalıştırılan gömülü
+ * varlık, Blob worker, `DecompressionStream`, WebGL bağlamı ve fare ile yüz
+ * seçimi. Biri kırılırsa panel yine açılır, düğme yine görünür — ve basınca
+ * hiçbir şey olmaz. Sessiz kırılma tam olarak burada yakalanır.
  */
 const { test, expect } = require('@playwright/test');
 const path = require('path');
@@ -79,7 +79,7 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
 
     await page.locator('#ve-str-geom-file').setInputFiles(CUBE);
 
-    // .wasm ilk kez indiriliyor (7.3 MB) → cömert süre
+    // İlk içe aktarma: gömülü okuyucu bir kez açılıp derleniyor → cömert süre
     await page.waitForFunction(
       () => window.veStrGeometryCache && Object.keys(window.veStrGeometryCache).length > 0,
       null, { timeout: 120000 }
@@ -94,9 +94,9 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
     expect(g.tri).toBe(12);            // küp: 6 yüz × 2 üçgen
     expect(g.faces).toBe(6);
     g.size.forEach((s) => expect(s).toBeCloseTo(1000, 2));   // mm'ye çevrildi
-    // .wasm GERÇEKTEN ağdan geldi (gömülü değil) — tek dosya sürümündeki
-    // kırılganlığın kaynağı da bu, o yüzden hangi yolun tuttuğu ölçülüyor.
-    expect(g.wasm).toContain('occt-import-js.wasm');
+    // Okuyucu UYGULAMANIN İÇİNDEN geldi — ağdan değil. Çevrimdışı kapısı
+    // tests/e2e/published.spec.js'te (dağıtılan tek dosya, ağ kesik).
+    expect(g.wasm).toBe('(gömülü)');
 
     // 3B görüntüleyici GERÇEKTEN kuruldu: WebGL bağlamı + sahnede katı var.
     await expect(page.locator('#ve-str-geom-canvas')).toBeVisible();
@@ -325,6 +325,53 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
     // Kart iş bitince KAPANIYOR — ekranda asılı kalmıyor.
     await expect(page.locator('.ve-str-prog')).toHaveCount(0);
     await expect(page.locator('#ve-str-geom-status')).toContainText('İçe aktarıldı');
+  });
+
+  // ── OKUYUCU BİR KEZ HAZIRLANIR ─────────────────────────────────────────
+  // .wasm artık uygulamanın İÇİNDE (js/structural-occt-wasm.js, gzip+base64) →
+  // ikinci içe aktarma HİÇ ağ isteği çıkarmaz. Bu, hem "her içe aktarmada 7 MB
+  // inmiyor" hem de "okuyucu yeniden derlenmiyor" demek.
+  //
+  // ÇEVRİMDIŞI kapısı BURADA DEĞİL: bu spec index.html'i (modüler kurulum)
+  // açıyor ve orada varlık AYRI bir dosyadır, yani ilk kullanımda doğal olarak
+  // ağdan gelir. Çevrimdışı garantisi DAĞITILAN TEK DOSYANIN özelliğidir ve
+  // kapısı tests/e2e/published.spec.js'te — ürünün kendisi orada açılıyor.
+  test('okuyucu bir kez hazırlanır — ikinci içe aktarma AĞ İSTEĞİ ÇIKARMIYOR', async ({ page }) => {
+    await bootApp(page);
+    await openGeometryPanel(page);
+
+    // 1. içe aktarma: okuyucu hazırlanır.
+    await page.locator('#ve-str-geom-file').setInputFiles(ROUNDED);
+    await page.waitForFunction(
+      () => window.veStrGeometryCache && Object.keys(window.veStrGeometryCache).length > 0,
+      null, { timeout: 120000 }
+    );
+    const ilk = await page.evaluate(() => {
+      const k = Object.keys(window.veStrGeometryCache)[0];
+      return window.veStrGeometryCache[k].wasmUrl;
+    });
+    expect(ilk).toBe('(gömülü)');            // ağdan indirilen bir .wasm YOK
+
+    // 2. içe aktarma: buradan sonra çıkan her GERÇEK istek bir gerilemedir.
+    const istekler = [];
+    page.on('request', (r) => istekler.push(r.url()));
+    await page.locator('#ve-str-geom-file').setInputFiles(CUBE);
+    await page.waitForFunction(
+      () => {
+        const k = Object.keys(window.veStrGeometryCache)[0];
+        return window.veStrGeometryCache[k].fileName === 'cube-mm.step';
+      }, null, { timeout: 60000 }
+    );
+    const r = await page.evaluate(() => {
+      const k = Object.keys(window.veStrGeometryCache)[0];
+      const x = window.veStrGeometryCache[k];
+      return { wasm: x.wasmUrl, tri: x.stats.triCount };
+    });
+    expect(r.wasm).toBe('(gömülü)');
+    expect(r.tri).toBe(12);
+
+    // blob: worker URL'i ağ değildir; onun dışında hiçbir şey çıkmamalı.
+    expect(istekler.filter((u) => !/^blob:/.test(u))).toEqual([]);
   });
 
   test('STEP olmayan dosya SESSİZCE yutulmuyor — sebep yazılıyor', async ({ page }) => {

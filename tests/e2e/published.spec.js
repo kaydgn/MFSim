@@ -115,6 +115,59 @@ async function sizanKaynak(page) {
   });
 }
 
+// ── ÇEVRİMDIŞI: STEP OKUYUCUSU ÜRÜNÜN İÇİNDE ───────────────────────────────
+// Kullanıcı isteği (2026-08-22): "Bunu offline olarak kullanamam o zaman.
+// Ona da ihtiyacım olacak."
+//
+// Bir ara sürümde .wasm çalışma anında `vendor/` yolundan indiriliyordu; yanında
+// vendor/ olmayan bir kurulumda — yani ürünün NORMAL kullanım biçiminde, tek
+// dosyayı indirip açmakta — STEP hiç açılmıyordu. Artık gömülü
+// (js/structural-occt-wasm.js, gzip+base64) ve bu dosyaya inline ediliyor.
+//
+// KAPI BURADA, structural-geometry.spec.js'te DEĞİL: orası index.html'i açıyor
+// ve modüler kurulumda varlık AYRI bir dosyadır. Çevrimdışı garantisi
+// DAĞITILAN TEK DOSYANIN özelliğidir — bu spec'in var oluş sebebi de zaten
+// "index.html yeşil ama ürün bozuk" asimetrisi.
+test.describe('Yayınlanan tek dosya — çevrimdışı STEP', () => {
+  test.setTimeout(180000);
+
+  test('AĞ KESİKKEN STEP içe aktarılıyor — okuyucu ürünün içinde', async ({ page }) => {
+    await bootPublished(page);
+
+    const istekler = [];
+    page.on('request', (r) => istekler.push(r.url()));
+    // Bu noktadan sonra HİÇBİR istek çıkamaz.
+    await page.route('**', (route) => route.abort());
+    const n0 = istekler.length;
+
+    // STEP baytları Node'dan geçiriliyor — gerçek kullanımda da dosya
+    // KULLANICIDAN gelir, ağdan değil.
+    const b64 = fs.readFileSync(path.join(ROOT, 'tests/fixtures/step/rounded-cube.step')).toString('base64');
+    const r = await page.evaluate(async (s) => {
+      const bin = atob(s); const u = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+      const asamalar = [];
+      const g = await veStrImportStep(u, { fileName: 'rounded-cube.step', fileSize: u.length },
+        { onProgress: (st) => { if (asamalar[asamalar.length - 1] !== st) asamalar.push(st); } });
+      return { ok: g.ok, err: g.error, wasm: g.wasmUrl, worker: g.worker,
+               tri: g.stats && g.stats.triCount, faces: g.stats && g.stats.faceCount,
+               asamalar: asamalar };
+    }, b64);
+
+    expect(r.err).toBeUndefined();
+    expect(r.ok).toBe(true);                 // ← ağ yokken de açılıyor
+    expect(r.wasm).toBe('(gömülü)');         // okuyucu dosyanın içinden geldi
+    expect(r.worker).toBe(true);
+    expect(r.tri).toBe(64);
+    expect(r.faces).toBe(7);
+    // "indiriliyor" aşaması HİÇ görülmemeli — indirilecek bir şey yok.
+    expect(r.asamalar).not.toContain('download');
+
+    // blob: worker URL'i ağ değildir; onun dışında hiçbir şey çıkmamalı.
+    expect(istekler.slice(n0).filter((u) => !/^blob:/.test(u))).toEqual([]);
+  });
+});
+
 test.describe('Yayınlanan tek dosya — açılış', () => {
   test('ekrana ham kaynak DÖKÜLMÜYOR', async ({ page }) => {
     await bootPublished(page);
