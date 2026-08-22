@@ -17,8 +17,11 @@
 // ÇEVRİLMEZ — `js/fead-core.js` ile aynı kural, aynı gerekçe: değeri OCCT'nin
 // B-rep çekirdeğini birebir üretmesi, stil uyarlaması sırasındaki tek bir
 // hata "okunan ama yanlış" bir geometri üretir. Güncelleme de dışarıdan gelir
-// (npm: occt-import-js). Lisans LGPL-2.1 (MFSim MIT) → kütüphane AYRI ve
-// DEĞİŞTİRİLEBİLİR bir dosya olarak duruyor, tek dosyaya gömülmüyor.
+// (npm: occt-import-js). Lisans LGPL-2.1 (MFSim MIT): kütüphane uygulamaya
+// GÖMÜLÜ ama DEĞİŞTİRİLEBİLİR — kaynak `vendor/occt-import-js.wasm` depoda
+// duruyor, lisans metinleri dağıtımla gidiyor ve `npm run build:occt-wasm`
+// gömülü blob'u o dosyadan yeniden üretiyor. LGPL'in istediği "ayrı dosya"
+// değil, değiştirilebilirliktir.
 //
 // ── .wasm UYGULAMAYA GÖMÜLÜ — ÇEVRİMDIŞI ÇALIŞIR ───────────────────────────
 // `js/structural-occt-wasm.js` (gzip+base64, 3,96 MB; ham 7,25 MB) uygulamanın
@@ -77,16 +80,18 @@ var VE_STR_GEOM_UNIT = 'millimeter';
 // yüzey yeniden-mesh'leme koyacak; buradaki üçgen doğrudan TetGen'e GİTMEZ.
 var VE_STR_GEOM_DEFLECTION = { type: 'bounding_box_ratio', linear: 0.002, angular: 0.5 };
 
-// .wasm aday yolları — SIRAYLA denenir, ilk tutan kazanır.
+// .wasm aday yolları — YALNIZ YEDEK YOL. Normalde okuyucu gömülü varlıktan
+// gelir (yukarı bkz.) ve buraya hiç düşülmez; bu liste yalnız gömülü varlık
+// okunamadığında (ör. `DecompressionStream` bilmeyen tarayıcı) sırayla
+// denenir, ilk tutan kazanır. Hiçbiri tutmazsa denenen yollar yazılır —
+// sessizce boş geometri dönülmez.
 //   vendor/…      : index.html (modüler) ve `npx serve` ile kök dizinden servis
 //   ./vendor/…    : alt dizinden servis edilen kurulum
-//   occt-…        : .wasm MFSim_Code.html'in YANINA konmuşsa (tek dosya sürümü)
-// Tek dosya sürümü .wasm'ı İÇİNDE TAŞIMAZ (7.3 MB + LGPL) — yanında bulamazsa
-// sebebini yazar, sessizce boş kalmaz.
+//   occt-…        : .wasm dağıtılan dosyanın YANINA konmuşsa
 var VE_STR_OCCT_WASM_PATHS = ['vendor/occt-import-js.wasm', './vendor/occt-import-js.wasm', 'occt-import-js.wasm'];
 
-// Tek seferlik yükleme sözü. İkinci çağrı aynı sözü döner → 7.3 MB iki kez
-// indirilmez, WASM iki kez derlenmez.
+// Tek seferlik yükleme sözü. İkinci çağrı aynı sözü döner → varlık iki kez
+// açılmaz, WASM iki kez derlenmez.
 var _sgOcctPromise = null;
 
 function _sgNum(v){

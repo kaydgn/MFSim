@@ -899,13 +899,43 @@ TetGen AGPL-3 veya WIAS'tan ticari lisans. Karar: **kaynak MIT kalır, dağıtı
 build AGPL-3** (MIT tek yönlü uyumlu; telif hakkı kullanıcıda olduğu için
 optikonalite korunur).
 
-> **Bu bölümdeki "WASM'lar tek dosyaya inline EDİLMEZ" kaydı occt için ARTIK
-> GEÇERSİZ.** Kullanıcı kararı (2026-08-22): *"Bunu offline olarak kullanamam o
-> zaman. Ona da ihtiyacım olacak."* MFSim tek dosya olarak indirilip
-> kullanılıyor; yanında `vendor/` olmayan bir kurulumda STEP hiç açılmıyordu.
-> occt'nin .wasm'ı artık **gömülü** (gzip+base64, 3,96 MB — bkz. Geometri
-> bölümü). TetGen geldiğinde aynı soru yeniden sorulacak; oradaki tercih bu
-> kararla kendiliğinden bağlı değil.
+##### AĞIR VARLIKLAR GÖMÜLÜR — çevrimdışı çalışmak ŞART
+
+MFSim tek dosya olarak indirilip kullanılıyor. Yanında `vendor/` klasörü
+olmayan bir kurulumda çalışma anında çekilen her varlık **yok** demektir; bu
+bir incelik değil, özelliğin hiç olmaması demek. Bu yüzden ağır varlıklar
+(WASM, font, KaTeX) uygulamanın İÇİNE gömülür ve **talep üzerine** açılır.
+
+> **Bu bölümde eskiden "WASM'lar tek dosyaya inline EDİLMEZ — hem boyut hem
+> lisans aynı kapıya çıkıyor" yazıyordu (`623647f`, iskelet commit'i). O kayıt
+> KALDIRILDI: bir planlama varsayımıydı, ölçülmemişti, ve iki ayrı konuyu tek
+> gerekçede birleştiriyordu. İkisi de tutmadı.**
+>
+> • **Boyut** — sanılan maliyet ham base64'ün %133'üydü (occt için 9,67 MB).
+>   Ölçüldü: `gzip -9` + base64 ile **3,96 MB**, yani üçte biri. Tek dosya
+>   8,58 → **12,64 MB**.
+> • **Lisans** — LGPL-2.1'in istediği "ayrı dosya" değil, kütüphanenin
+>   **değiştirilebilir** olması. `vendor/occt-import-js.wasm` depoda,
+>   lisans metinleri dağıtımda, `npm run build:occt-wasm` gömülü blob'u o
+>   dosyadan yeniden üretiyor → koşul karşılanıyor. TetGen'in AGPL-3'ü için
+>   gömme/gömmeme hiçbir şeyi değiştirmez: yükümlülük "dağıtılan build AGPL-3"
+>   kararında zaten karşılanmış.
+
+**Yeni bir ağır varlık eklerken sorulacaklar** (kural değil, ölçüm):
+
+1. `gzip -9` sonrası base64 boyutu kaç MB? (`tools/build-occt-wasm-asset.js`
+   bunu basıyor.)
+2. Tek dosyanın toplamı kabul edilebilir mi? Bugün 12,64 MB.
+3. Açılışta yüklenmiyor mu? (`type="text/x-mfsim-asset"` → ne tarayıcı ne
+   `MFSimLoader` dokunur.)
+4. Açma işi **worker'da** mı? Ana iş parçacığında base64+gunzip yüz
+   milisaniyelik donma demek.
+5. Kaynak dosya depoda kalıyor mu? (Yeniden üretilebilirlik + lisans + eski
+   tarayıcı yedeği.) Ve gömülü içeriğin kaynakla **bayt bayt** aynı olduğunu
+   doğrulayan bir test var mı?
+
+TetGen geldiğinde bu beş soru yeniden sorulacak; boyutu **ölçülmedi**, occt'ye
+bakarak tahmin edilmeyecek.
 
 ##### Geometri — STEP içe aktarma (`js/structural-model.js` + `cp-structural-viewer.js`)
 
