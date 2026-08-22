@@ -165,6 +165,8 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer',
   // FEAD — kayış yolu şeması ve çok alanlı kasnak/gergi panelleri
   'fead-tensioner', 'fead-belt', 'fead-layout',
+  // Yapısal Analiz — Geometri: sol künye/denetim rayı + sağda 3B görüntüleyici
+  'str-geometry',
   // Parametrik: çoklu-seri sonuç grafiği tam genişlikte ferah okunur.
   'parametric'];
 
@@ -407,6 +409,16 @@ function showNodeProperties(node) {
   if(node.type === 'mnt-viewer') {
     setTimeout(function() {
       if(typeof veMntViewerRefresh === 'function') veMntViewerRefresh();
+    }, 140);
+  }
+
+  // Yapısal Analiz Geometri: panel DOM'u kurulduktan sonra 3B görüntüleyiciyi
+  // bağla. Panel HTML'i her yeniden çizildiğinde kanvas da yeniden kurulur →
+  // sahne sıfırdan inşa edilir (kamera açısı düğüm kimliğiyle saklı, bkz.
+  // cp-structural-viewer.js _veStrViewerCam).
+  if(node.type === 'str-geometry') {
+    setTimeout(function() {
+      if(typeof veStrGeomMountViewer === 'function') veStrGeomMountViewer(node.id);
     }, 140);
   }
 
