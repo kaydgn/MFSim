@@ -271,12 +271,12 @@ describe('paneller üretiliyor ve sızıntı yok', () => {
   // Boş panel SESSİZ olmamalı: kullanıcı bileşenin kullanıma açık olmadığını
   // görmeli. (cp-fead.js _feadPending ile aynı gerekçe — CLAUDE.md'de yazılı.)
   // Metin DURUM bildirir; ne kullanım anlatır ne de geliştirme planı duyurur.
-  // Geometri ARTIK DOLU (STEP içe aktarma) → listeden çıkarıldı; kalan üçü
-  // hâlâ iskelet ve eksiğini söylemek ZORUNDA.
-  const hala_iskelet = uretecler.filter(([ad]) => ['Hesaplama Ağı', 'Sınır Koşulları', 'Sonuçlar'].includes(ad));
+  // Geometri (STEP içe aktarma) ve Hesaplama Ağı (TetGen) ARTIK DOLU →
+  // listeden çıkarıldılar; kalan ikisi hâlâ iskelet ve eksiğini söylemek ZORUNDA.
+  const hala_iskelet = uretecler.filter(([ad]) => ['Sınır Koşulları', 'Sonuçlar'].includes(ad));
 
-  test('hâlâ iskelet olan panel sayısı üç — biri dolunca bu liste güncellenmeli', () => {
-    expect(hala_iskelet).toHaveLength(3);
+  test('hâlâ iskelet olan panel sayısı iki — biri dolunca bu liste güncellenmeli', () => {
+    expect(hala_iskelet).toHaveLength(2);
   });
 
   test.each(hala_iskelet)('%s paneli eksiğini SÖYLÜYOR', (_ad, fn) => {
@@ -1268,12 +1268,42 @@ describe('modül kablolaması eksiksiz', () => {
     // Takoz/FEAD'deki tuzağın aynısı: temizlenmezse yeni projede önceki
     // projenin parçası görüntüleyicide durur.
     const s = oku('js/cp-structural.js');
-    expect(s).toMatch(/_strForgetResults[\s\S]{0,600}veStrGeomCacheClear/);
-    expect(s).toMatch(/_strForgetResults[\s\S]{0,600}veStrViewerDispose/);
+    expect(s).toMatch(/_strForgetResults[\s\S]{0,900}veStrGeomCacheClear/);
+    expect(s).toMatch(/_strForgetResults[\s\S]{0,900}veStrViewerDispose/);
+    // HACİM AĞI da oturumluk ve aynı sebeple temizlenmeli: künye hafif,
+    // ağın kendisi (yüz binlerce sayı) node.data'ya hiç yazılmıyor.
+    expect(s).toMatch(/_strForgetResults[\s\S]{0,900}veStrMeshCacheClear/);
+    // Ağ worker'ı da bırakılmalı — canlı bir worker + derlenmiş WASM örneği
+    // proje değişince boşuna yaşamaya devam ederdi.
+    expect(s).toMatch(/_strForgetResults[\s\S]{0,900}veStrMeshForget/);
     // Oturumluk görünüm durumları da: düğüm kimlikleri yeniden kullanılırsa
     // önceki projenin açık kipi ve seçili yüzü yeni projede durur.
-    expect(s).toMatch(/_strForgetResults[\s\S]{0,900}_veStrSelFace = \{\}/);
-    expect(s).toMatch(/_strForgetResults[\s\S]{0,900}_veStrFaceMode = \{\}/);
+    expect(s).toMatch(/_strForgetResults[\s\S]{0,1200}_veStrSelFace = \{\}/);
+    expect(s).toMatch(/_strForgetResults[\s\S]{0,1200}_veStrFaceMode = \{\}/);
+  });
+
+  test('Hesaplama Ağı zinciri BEŞ dosyaya birden bağlı — biri unutulursa ağ hiç kurulmaz', () => {
+    // Geometri iskeletindeki dersin aynısı: bir bileşen tek dosyada yaşamıyor.
+    const html = oku('index.html');
+    ['js/structural-remesh.js', 'js/structural-mesh-model.js',
+     'js/structural-tetgen-wasm.js', 'vendor/tetgen-wasm.js'].forEach((f) => {
+      expect(html).toContain(f);
+    });
+    // Köprü, remesh'ten SONRA yüklenmeli (worker kaynağını ondan okuyor).
+    // Karşılaştırma SCRIPT ETİKETİNE göre: dosya adı yorumlarda da geçiyor ve
+    // ham `indexOf` oradaki ilk geçişi bulup sırayı yanlış ölçerdi.
+    expect(html.indexOf('src="js/structural-remesh.js"'))
+      .toBeLessThan(html.indexOf('src="js/structural-mesh-model.js"'));
+    // Panel açılınca 3B görüntüleyici kancası kurulu (cp-core.js).
+    expect(oku('js/cp-core.js')).toContain('veStrMeshMountViewer');
+  });
+
+  test('CI, TetGen .wasm ve lisansını Pages\'e kopyalıyor', () => {
+    // Gömülü varlık PRİMER yol; vendor dosyası eski tarayıcı yedeği ve
+    // AGPL-3 kaynağının yanında dağıtılan ikili.
+    const ci = oku('.github/workflows/ci-deploy.yml');
+    expect(ci).toContain('vendor/tetgen-wasm.wasm');
+    expect(ci).toContain('vendor/license.tetgen.txt');
   });
 
   test('cp-structural.js index.html\'de fead-model/core SONRASINDA yüklenir değil — sırası serbest ama TEK kez', () => {

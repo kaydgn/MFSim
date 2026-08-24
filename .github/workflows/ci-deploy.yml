@@ -206,6 +206,12 @@ jobs:
           cp vendor/occt-import-js.wasm _site/vendor/occt-import-js.wasm
           cp vendor/license.occt.txt _site/vendor/license.occt.txt
           cp vendor/license.occt-import-js.txt _site/vendor/license.occt-import-js.txt
+          # TetGen ağ üretecinin .wasm'i (~0.7 MB) — occt-import-js.wasm ile AYNI
+          # gerekçe: gömülü (js/structural-tetgen-wasm.js) PRİMER yol, bu dosya
+          # yalnız DecompressionStream'i olmayan eski tarayıcı yedeği + AGPL-3
+          # kaynağın (vendor/tetgen-src/) yanında dağıtılan ikili.
+          cp vendor/tetgen-wasm.wasm _site/vendor/tetgen-wasm.wasm
+          cp vendor/license.tetgen.txt _site/vendor/license.tetgen.txt
           touch _site/.nojekyll
 
       - name: Generate version.json
