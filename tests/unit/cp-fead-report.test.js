@@ -511,3 +511,429 @@ describe('şablon ve içindekiler bağı', () => {
     expect(html).toContain('Kayış–Kasnak Geometrisi');
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TASARIM GERGİNLİĞİNİN KAYNAĞI — φ, β, take-up ve iki kanal
+//
+// Bu blok bir mühendis sorusundan doğdu (2026-08-24): "Take-up oranı nasıl
+// hesaplanıyor, bir girdi giriyor muyuz? φ ve β nasıl elde ediliyor?" — üçü de
+// aynı şeyi sorguluyordu: TASARIM GERGİNLİĞİ nereden geliyor.
+//
+// Üretilince ÜÇ GERÇEK KUSUR çıktı ve üçünün de kapısı burada:
+//
+//  1) §8.7'nin TEK denklemi yanlış çevrim çarpanıyla basılıyordu:
+//     "M/(dL/dθ) · (180/π) · (1/1000)" elle çalışıldığında 650 N yerine
+//     2,13 N veriyordu (ÖLÇÜLDÜ). Basılan T doğruydu — ayrı bir alandan
+//     geliyordu — yani aritmetiği denetleyen okuyucu RAPORUN yanlış olduğu
+//     sonucuna varıyordu. Sorunun kaynağı büyük olasılıkla tam olarak buydu.
+//  2) §8.9 eğrinin UÇTAN UCA ORTALAMA eğimini hesaplayıp ona "take-up oranı"
+//     diyordu: 0,4481 mm/° — §8.7'nin ve tedarikçi raporunun kullandığı ANLIK
+//     türevden (0,5984) %25,1 farklı. Aynı ad, iki farklı sayı.
+//  3) Tasarım gerginliğinin GİRDİ olduğu, yay dengesinden türetilen değerin
+//     ise AYRI bir kanal olduğu hiçbir yerde yazmıyordu.
+const _sy = (x) => Number(String(x).replace(/\u2212/g, '-').replace(/\./g, '').replace(',', '.'));
+
+describe('§8.7 — denklem zinciri ELLE ÇALIŞILABİLİR', () => {
+  test('(8.2) |f| = 2 sin(φ/2) — basılan sayı özdeşliği sağlıyor', () => {
+    const m = /\|\\mathbf\{f\}\| = \\big\|[^=]*\\big\| = 2\\sin\\frac\{\\varphi\}\{2\} = 2\\sin\\frac\{([\d,]+)\^\\circ\}\{2\} = ([\d,]+)/.exec(HTML8);
+    expect(m).toBeTruthy();
+    const phi = _sy(m[1]), f = _sy(m[2]);
+    expect(Math.abs(f - 2 * Math.sin(phi * Math.PI / 360))).toBeLessThan(1e-4);
+    // basılan φ, çözümün gergi sarımı olmalı — şekil ile tablo ayrışmasın
+    expect(phi).toBeCloseTo(R8.analysis.tensioner.wrapDeg, 2);
+  });
+
+  test('(8.3) dL/dθ = a·|f|·sinβ·(π/180) — çarpanlar basılan sonucu veriyor', () => {
+    const m = /= ([\d,]+)\\cdot ([\d,]+)\\cdot ([\d,]+)\\cdot\\frac\{\\pi\}\{180\} = ([\d,]+)\\ \\text\{mm\/\}/.exec(HTML8);
+    expect(m).toBeTruthy();
+    const [a, f, sinB, tk] = [_sy(m[1]), _sy(m[2]), _sy(m[3]), _sy(m[4])];
+    expect(a * f * sinB * Math.PI / 180).toBeCloseTo(tk, 3);
+    expect(tk).toBeCloseTo(R8.analysis.tensioner.takeupMmPerDeg, 3);
+    // sinβ gerçekten β'nın sinüsü olmalı (etiket doğru sayıyı taşısın)
+    expect(sinB).toBeCloseTo(Math.sin(R8.analysis.tensioner.betaDeg * Math.PI / 180), 3);
+  });
+
+  // ★ ASIL KAPI: çevrim çarpanı bir kez TERS yazılmıştı.
+  test('(8.4) mm/° → m/rad çevrimi DOĞRU YÖNDE ve basılan ara değeri veriyor', () => {
+    const m = /\\frac\{([\d,]+)\}\{1000\}\\cdot\\frac\{180\}\{\\pi\} = ([\d,]+)\\ \\text\{m\/rad\}/.exec(HTML8);
+    expect(m).toBeTruthy();                       // ters çarpanlı biçim eşleşmez
+    const tk = _sy(m[1]), rad = _sy(m[2]);
+    // tk BASILAN (4 ondalığa yuvarlı) değer; yuvarlama payı çarpanla taşınır
+    expect(Math.abs(rad / (tk / 1000 * (180 / Math.PI)) - 1)).toBeLessThan(1e-4);
+    // TERS çarpan bu değerin ~3280 katı küçüğünü verirdi — kapı orada ısırıyor
+    expect(rad / (tk / (180 / Math.PI) / 1000)).toBeGreaterThan(1000);
+  });
+
+  test('(8.5) T = M/(dL/dθ) — BASILAN sayılarla BASILAN sonucu veriyor', () => {
+    const m = /T = \\frac\{M\(\\theta\)\}\{[^}]*\}[^=]*= \\frac\{([\d,]+)\\ \\text\{Nm\}\}\{([\d,]+)\\ \\text\{m\/rad\}\} = ([\d,]+)\\ \\text\{N\}/.exec(HTML8);
+    expect(m).toBeTruthy();
+    const M = _sy(m[1]), rad = _sy(m[2]), T = _sy(m[3]);
+    expect(M / rad).toBeCloseTo(T, 0);            // ← eski sürüm 2,13 veriyordu
+    expect(T).toBeCloseTo(R8.analysis.tensioner.tensionN, 0);
+  });
+
+  test('denklem numaraları sayaçtan: §8 içinde 8.1..8.n, boşluksuz ve tekrarsız', () => {
+    const nolar = [...HTML8.matchAll(/<span class="tag">\(8\.(\d+)\)<\/span>/g)].map((x) => Number(x[1]));
+    expect(nolar.length).toBeGreaterThanOrEqual(5);
+    expect(nolar).toEqual(nolar.map((_, i) => i + 1));
+  });
+
+  test('metindeki (8.x) atıfları GERÇEKTEN basılan bir denklemi gösteriyor', () => {
+    const var_ = new Set([...HTML8.matchAll(/<span class="tag">\((8\.\d+)\)<\/span>/g)].map((x) => x[1]));
+    const atif = [...HTML8.matchAll(/\((8\.\d+)\)/g)].map((x) => x[1]);
+    expect(atif.length).toBeGreaterThan(var_.size);          // metinde de anılıyor
+    atif.forEach((a) => expect(var_.has(a)).toBe(true));     // ölü atıf yok
+  });
+});
+
+describe('§8.7 — hangi sayı GİRDİ, hangisi TÜREV', () => {
+  test('kaynak envanteri girdiyi ve türevi AÇIKÇA ayırıyor', () => {
+    const i = HTML8.indexOf('Bu bölümdeki her büyüklüğün kaynağı');
+    const blok = HTML8.slice(i, HTML8.indexOf('</table>', i));
+    const satir = (ad) => {
+      const j = blok.indexOf(ad);
+      expect(j).toBeGreaterThan(-1);
+      return blok.slice(j, blok.indexOf('</tr>', j));
+    };
+    ['Kol boyu a', 'Yay ön yükü', 'Yay oranı k', 'Gergi pivotu']
+      .forEach((ad) => expect(satir(ad)).toContain('<b>girdi</b>'));
+    ['Gergi kasnağı sarımı', 'Hubload–kol açısı', 'Take-up oranı', 'Yay momenti']
+      .forEach((ad) => expect(satir(ad)).toContain('<b>türev</b>'));
+    // Tasarım gerginliği GİRDİ ve ankraj olduğu yazılı
+    expect(satir('Tasarım gerginliği')).toContain('<b>girdi</b>');
+    expect(satir('Tasarım gerginliği')).toMatch(/ankraj/i);
+  });
+
+  test('take-up bir girdi DEĞİL — ve rapor bunu söylüyor', () => {
+    expect(HTML8).toContain('Take-up oranı bir girdi değildir');
+    expect(HTML8).toMatch(/Panelde take-up diye bir alan yoktur/);
+  });
+});
+
+describe('§8.7 — tasarım gerginliği: iki kanal', () => {
+  test('tutan modelde iki kanal da basılıyor ve ✓ veriliyor', () => {
+    const i = HTML8.indexOf('İki kanalın karşılaştırması');
+    const blok = HTML8.slice(i, HTML8.indexOf('</table>', i));
+    expect(blok).toContain('Girilen tasarım gerginliği');
+    expect(blok).toContain('Yay dengesinden türetilen');
+    expect(blok).toMatch(/eşiğinin içinde/);
+    expect(HTML8).toContain('İki kanal birbirini doğruluyor');
+  });
+
+  // ÖLÇÜLDÜ (BMC): yay dengesi 650 N iken designTensionN 400 girilince BÜTÜN
+  // gerilmeler ve hubloadlar 250 N kayıyor, hata mesajı çıkmıyor ve kayma
+  // emniyeti bir ORAN olduğu için tabloya bakarak da anlaşılmıyor.
+  test('uyuşmazlıkta KAÇ NEWTON kaydığı yazılıyor ve ✗ veriliyor', () => {
+    const R = coz({ mutate: (ns) => {
+      const s = ns.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver)[0];
+      s.data.designTensionN = 400;
+    } });
+    const H = RP._frSection8(R, NODE);
+    const i = H.indexOf('İki kanalın karşılaştırması');
+    const blok = H.slice(i, H.indexOf('</table>', i));
+    expect(blok).toMatch(/eşiğinin dışında/);
+    expect(H).toContain('Uyuşmazlık sessizdir');
+    const m = /bütün açıklık gerilmeleri ve bütün\s+hubloadlar <b>(−?[\d,]+) N<\/b> kayar/.exec(H.replace(/\s+/g, ' '))
+           || /hubloadlar <b>(−?[\d,]+) N<\/b> kayar/.exec(H);
+    expect(m).toBeTruthy();
+    expect(Math.abs(_sy(m[1]))).toBeCloseTo(250, 0);
+    // ÖLÇÜLDÜ (800 d/d, 650→400 N): yük ÇEKEN kasnakların SF'i değişiyor
+    // (Sürücü 5,348→4,024) ama yük çekmeyenlerde gerginlik oranı TAM 1 olduğu
+    // için SF hiç değişmiyor — ve HÜKMÜ VEREN en düşük SF tam orada: %0,0.
+    // Uyarının varlık sebebi bu: tablonun hükmü uyuşmazlığı göstermeyebiliyor.
+    const s1 = R.analysis.duty[0].slip, s0 = R8.analysis.duty[0].slip;
+    const cift = s0.map((x, k) => [x, s1[k]]);
+    const yuksuz = cift.filter(([a]) => Math.abs(a.tensionRatio - 1) < 1e-9);
+    expect(yuksuz.length).toBeGreaterThan(0);
+    yuksuz.forEach(([a, b]) => expect(b.SF).toBeCloseTo(a.SF, 9));
+    const yuklu = cift.filter(([a]) => Math.abs(a.tensionRatio - 1) > 1e-6);
+    expect(yuklu.length).toBeGreaterThan(0);
+    expect(yuklu.some(([a, b]) => Math.abs(b.SF / a.SF - 1) > 0.05)).toBe(true);
+    expect(Math.min(...s1.map((x) => x.SF))).toBeCloseTo(Math.min(...s0.map((x) => x.SF)), 9);
+    expect(H).toMatch(/ancak KISMEN gösterir/);
+  });
+});
+
+describe('§8.6 — sarım açısının kuruluşu (φ nereden geliyor)', () => {
+  const W = () => RP._frWrapRows(R8);
+
+  test('her satırın φ değeri, BASILAN iki θ değerinden yeniden çıkıyor', () => {
+    const W_ = W();
+    expect(W_.rows.length).toBe(R8.build.names.length);
+    W_.rows.forEach((q) => {
+      const el = (((q.d * (q.thOut - q.thIn)) % 360) + 360) % 360;
+      expect(el).toBeCloseTo(q.wrapDeg, 6);       // (3.3) elle denetlenebilir
+      expect(q.wrapCalc).toBeCloseTo(q.wrapDeg, 6);
+    });
+  });
+
+  test('işaretli sarım toplamı 360° — kapalı çevrim değişmezi tabloda', () => {
+    const t = W().rows.reduce((a, q) => a + (q.contact === 'back' ? -1 : 1) * q.wrapDeg, 0);
+    expect(Math.abs(Math.abs(t) - 360)).toBeLessThan(0.05);
+    const i = HTML8.indexOf('Sarım açılarının teğet açılarından kuruluşu');
+    expect(i).toBeGreaterThan(-1);
+    expect(HTML8.slice(i, HTML8.indexOf('</table>', i))).toContain('kapalı çevrim değişmezi');
+  });
+
+  test('φ denklemi (8.1) tabloyla AYNI sayıları taşıyor', () => {
+    const m = /\\big\[\\, ([+-]1)\\cdot\\big\((\u2212?[\d,]+)\^\\circ - \((\u2212?[\d,]+)\^\\circ\)\\big\)\\big\]\\ \\mathrm\{mod\}\\ 360\^\\circ = ([\d,]+)/.exec(HTML8);
+    expect(m).toBeTruthy();
+    const d = Number(m[1]), out = _sy(m[2]), inn = _sy(m[3]), phi = _sy(m[4]);
+    expect(((((d * (out - inn)) % 360) + 360) % 360)).toBeCloseTo(phi, 1);
+    // en büyük sarımlı kasnak seçilmiş olmalı (küçük sarımda şekil okunmaz)
+    const enBuyuk = Math.max(...W().rows.map((q) => q.wrapDeg));
+    expect(phi).toBeCloseTo(enBuyuk, 1);
+  });
+});
+
+describe('§8.9 — take-up: ANLIK türev ≠ ORTALAMA eğim', () => {
+  const blk = () => {
+    const i = HTML8.indexOf('8.9 Kayış take-up');
+    return HTML8.slice(i, HTML8.indexOf('<h3>8.10', i));
+  };
+
+  test('take-up oranı ANLIK eğim olarak tanımlanıyor', () => {
+    const blok = blk();
+    expect(blok).toMatch(/ANLIK eğimidir/);
+    expect(blok).toContain(RP._frFs(R8.analysis.tensioner.takeupMmPerDeg, 4));
+  });
+
+  // ★ Eski sürüm ortalama eğimi "take-up oranı" diye basıyordu (%25,1 sapma).
+  test('ortalama eğim de basılıyor ama AÇIKÇA "ortalama" diye adlandırılıyor', () => {
+    const blok = blk();
+    const m = /ortalama eğimi ise <b>([\d,]+) mm\/°<\/b>/.exec(blok);
+    expect(m).toBeTruthy();
+    const ort = _sy(m[1]), anlik = R8.analysis.tensioner.takeupMmPerDeg;
+    expect(Math.abs(ort - anlik) / anlik).toBeGreaterThan(0.05);   // farklı sayılar
+    expect(blok).toMatch(/Hesaplarda kullanılan\s+<b>anlık<\/b> olandır/);
+  });
+
+  test('take-up oranı kol açısıyla MONOTON DEĞİL — tepe noktası çiziliyor', () => {
+    const blok = blk();
+    const sw = [];
+    const C = global.FEADCore, sys = R8.build.sys;
+    const hi = C.feasibleRelMax(sys);
+    for (let k = 0; k <= 40; k++) {
+      try { sw.push(C.tensionerState(sys, hi * k / 40).takeupMmPerDeg); } catch (e) { /* uç */ }
+    }
+    const enB = Math.max(...sw);
+    expect(enB).toBeGreaterThan(sw[0]);                    // önce artıyor
+    expect(enB).toBeGreaterThan(sw[sw.length - 1]);        // sonra azalıyor
+    expect(blok).toMatch(/monoton değildir/);
+    expect(blok).toMatch(/tepe [\d,]+ mm\/° @/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// YENİ ŞEKİLLERİN GEOMETRİSİ — Şekil 1'deki kapının aynısı
+//
+// Ölçüt Kayış Yolu kartı ve Şekil 1 ile AYNI: her sarım yayının ÖRTÜK merkezi
+// (SVG uç→merkez dönüşümü, spec F.6.5) o kasnağın merkezi olmak ZORUNDA.
+// Sweep bayrağı bu projede bir kez yanlış yazılmıştı: yarıçap ve teğet uçları
+// doğru olduğu için yay yine iki uca değiyor ama AYNALANMIŞ çemberin üstünde
+// kalıyor, yani kasnağın İÇİNDEN geçiyordu — ve yay SAYISINA bakan test yeşil
+// kalmıştı.
+describe('Şekil — φ ve β kuruluşlarının geometrisi', () => {
+  function yayMerkezi(p1, p2, r, fA, fS) {
+    const mx = (p1[0] + p2[0]) / 2, my = (p1[1] + p2[1]) / 2;
+    const dx = (p2[0] - p1[0]) / 2, dy = (p2[1] - p1[1]) / 2;
+    const d = Math.hypot(dx, dy), h = Math.sqrt(Math.max(0, r * r - d * d));
+    const sg = (fA !== fS) ? 1 : -1;
+    return [mx + sg * h * (-dy) / d, my + sg * h * dx / d];
+  }
+  const sekiller = () => [
+    ['φ kuruluşu', RP._frWrapFigure(R8)],
+    ['β / take-up', RP._frBetaFigure(R8)]
+  ];
+
+  test('ikisi de üretiliyor, figure/svg dengeli, künyesi var', () => {
+    sekiller().forEach(([ad, svg]) => {
+      expect(typeof svg).toBe('string');
+      expect(svg.length).toBeGreaterThan(800);
+      expect((svg.match(/<svg[\s>]/g) || []).length).toBe(1);
+      expect((svg.match(/<\/svg>/g) || []).length).toBe(1);
+      expect((svg.match(/<figure[\s>]/g) || []).length).toBe(1);
+      expect((svg.match(/<\/figure>/g) || []).length).toBe(1);
+      expect(svg).toMatch(/<b>Şekil \d+ —/);
+    });
+  });
+
+  test('hiçbir koordinat NaN/Infinity değil — bozuk yol tarayıcıda SESSİZCE çizilmez', () => {
+    sekiller().forEach(([ad, svg]) => {
+      expect(svg).not.toMatch(/NaN|Infinity|undefined/);
+      const say = [...svg.matchAll(/(?:^|\s)(?:cx|cy|r|x|y|x1|y1|x2|y2)="([-\d.]+)"/g)].map((m) => Number(m[1]));
+      expect(say.length).toBeGreaterThan(10);
+      say.forEach((v) => expect(Number.isFinite(v)).toBe(true));
+    });
+  });
+
+  test('★ sarım yayının ÖRTÜK merkezi kasnağın merkezinde (sweep bayrağı kapısı)', () => {
+    sekiller().forEach(([ad, svg]) => {
+      const cem = [...svg.matchAll(/<circle cx="([-\d.]+)" cy="([-\d.]+)" r="([\d.]+)"/g)]
+        .map((m) => ({ x: +m[1], y: +m[2], r: +m[3] })).filter((c) => c.r > 10);
+      expect(cem.length).toBe(1);
+      const yay = [...svg.matchAll(/<path d="M([-\d.]+) ([-\d.]+) A([\d.]+) ([\d.]+) 0 ([01]) ([01]) ([-\d.]+) ([-\d.]+)"[^>]*stroke-width="5"/g)];
+      expect(yay.length).toBe(1);                       // kayış kalınlığındaki tek yay
+      const a = yay[0].slice(1).map(Number);
+      expect(a[2]).toBeCloseTo(cem[0].r, 2);            // yay yarıçapı = çember yarıçapı
+      const c = yayMerkezi([a[0], a[1]], [a[6], a[7]], a[2], a[4], a[5]);
+      expect(Math.hypot(c[0] - cem[0].x, c[1] - cem[0].y)).toBeLessThan(0.05);
+    });
+  });
+
+  test('yayın SÜPÜRMESİ sarım açısına eşit — kısa yola normalize edilmiyor', () => {
+    // 198°'lik bir sarımda "kısa yol" 162° çizerdi: aynı iki uca değen ama
+    // YANLIŞ yay. Şekil 1'deki hatanın kardeşi.
+    const svg = RP._frWrapFigure(R8);
+    const cem = [...svg.matchAll(/<circle cx="([-\d.]+)" cy="([-\d.]+)" r="([\d.]+)"/g)]
+      .map((m) => ({ x: +m[1], y: +m[2], r: +m[3] })).filter((c) => c.r > 10)[0];
+    const a = [...svg.matchAll(/<path d="M([-\d.]+) ([-\d.]+) A([\d.]+) ([\d.]+) 0 ([01]) ([01]) ([-\d.]+) ([-\d.]+)"[^>]*stroke-width="5"/g)][0]
+      .slice(1).map(Number);
+    const A1 = Math.atan2(a[1] - cem.y, a[0] - cem.x) * 180 / Math.PI;
+    const A2 = Math.atan2(a[7] - cem.y, a[6] - cem.x) * 180 / Math.PI;
+    let sw = A2 - A1;
+    if (a[5] === 1) { while (sw < 0) sw += 360; } else { while (sw > 0) sw -= 360; }
+    const enBuyuk = Math.max(...RP._frWrapRows(R8).rows.map((q) => q.wrapDeg));
+    expect(Math.abs(Math.abs(sw) - enBuyuk)).toBeLessThan(0.05);
+    expect(enBuyuk).toBeGreaterThan(180);               // BMC'de gerçekten > 180
+  });
+
+  // MUTASYON ÖLÇÜMÜ bu kapıyı EKSİK buldu: yukarıdaki test kayış yayını
+  // (stroke-width 5) denetliyor, ama φ'yi GÖSTEREN işaret yayı _frAngMark'tan
+  // çıkıyor ve ayrı bir yol. _frAngMark'ı "kısa yola normalize et" diye
+  // değiştirmek 198°'lik sarımı 162° çizdiriyor ve bütün testler YEŞİL kalıyordu.
+  test('★ φ İŞARET yayı da tam sarım kadar süpürüyor (kısa yola normalize edilmiyor)', () => {
+    const svg = RP._frWrapFigure(R8);
+    const cem = [...svg.matchAll(/<circle cx="([-\d.]+)" cy="([-\d.]+)" r="([\d.]+)"/g)]
+      .map((m) => ({ x: +m[1], y: +m[2], r: +m[3] })).filter((c) => c.r > 10)[0];
+    const m = /<path d="M([-\d.]+) ([-\d.]+) A([\d.]+) [\d.]+ 0 ([01]) ([01]) ([-\d.]+) ([-\d.]+)" fill="none" stroke="#c8781e" stroke-width="2"/.exec(svg);
+    expect(m).toBeTruthy();
+    const [x1, y1, rr, laf, sf, x2, y2] = m.slice(1).map(Number);
+    const A1 = Math.atan2(y1 - cem.y, x1 - cem.x) * 180 / Math.PI;
+    const A2 = Math.atan2(y2 - cem.y, x2 - cem.x) * 180 / Math.PI;
+    let sw = A2 - A1;
+    if (sf === 1) { while (sw < 0) sw += 360; } else { while (sw > 0) sw -= 360; }
+    const phi = Math.max(...RP._frWrapRows(R8).rows.map((q) => q.wrapDeg));
+    expect(Math.abs(Math.abs(sw) - phi)).toBeLessThan(0.1);
+    expect(laf).toBe(phi > 180 ? 1 : 0);        // büyük yay bayrağı da doğru
+    // işaret yayı da kasnakla EŞ MERKEZLİ olmalı
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    const dx = (x2 - x1) / 2, dy = (y2 - y1) / 2;
+    const d = Math.hypot(dx, dy), h = Math.sqrt(Math.max(0, rr * rr - d * d));
+    const sg = (laf !== sf) ? 1 : -1;
+    expect(Math.hypot(mx + sg * h * (-dy) / d - cem.x, my + sg * h * dx / d - cem.y)).toBeLessThan(0.05);
+  });
+
+  test('|f| = 2 sin(φ/2) özdeşliği — köprü ile şekil aynı sayıyı taşıyor', () => {
+    const K = RP._frTenConstruct(R8);
+    expect(K.normF).toBeCloseTo(2 * Math.sin(K.st.wrapDeg * Math.PI / 360), 9);
+    expect(K.armLen).toBeCloseTo(R8.build.sys.tensioner.armLength, 6);
+    // take-up özdeşliği: a·|f|·sinβ·(π/180) = çekirdeğin değeri
+    const el = K.armLen * K.normF * Math.sin(K.st.betaDeg * Math.PI / 180) * Math.PI / 180;
+    expect(el).toBeCloseTo(K.st.takeupMmPerDeg, 9);
+  });
+
+  test('çizim SEMBOL taşır, sayı denklemde durur', () => {
+    // Değerleri yay işaretlerinin yanına yazmak ölçüldü: etiket kutuları
+    // yayların ve yarıçap doğrularının üstüne biniyordu.
+    const svg = RP._frWrapFigure(R8);
+    const yazi = [...svg.matchAll(/<text[^>]*>([^<]*)<\/text>/g)].map((m) => m[1]);
+    expect(yazi.some((t) => /^θ_giriş$/.test(t))).toBe(true);
+    expect(yazi.some((t) => /^θ_çıkış$/.test(t))).toBe(true);
+    expect(yazi.some((t) => /^φ$/.test(t))).toBe(true);
+    // sarım/teğet açısı SAYISI çizimde geçmiyor
+    expect(yazi.some((t) => /θ_giriş\s+[−\d]/.test(t))).toBe(false);
+  });
+});
+
+describe('etiket yerleştirici — çakışma önleme', () => {
+  test('aynı çıpadan iki etiket ÜST ÜSTE BİNMEZ', () => {
+    const LB = RP._frLabels(600, 400);
+    const a = LB.ekle(300, 200, 1, 0, 'birinci etiket', '#000', 12, 20);
+    const b = LB.ekle(300, 200, 1, 0, 'ikinci etiket', '#000', 12, 20);
+    const kutu = (t) => {
+      const m = /x="([\d.]+)" y="([\d.]+)"[^>]*font-size="([\d.]+)"[^>]*>([^<]*)</.exec(t);
+      const w = String(m[4]).length * Number(m[3]) * 0.6;
+      return { x: +m[1] - w / 2, y: +m[2], w, h: Number(m[3]) * 1.25 };
+    };
+    const A = kutu(a), B = kutu(b);
+    const carpisma = !(A.x + A.w < B.x || B.x + B.w < A.x
+                    || A.y < B.y - B.h || B.y < A.y - A.h);
+    expect(carpisma).toBe(false);
+  });
+
+  test('kilitlenen alan (alt künye) etiket almaz', () => {
+    const LB = RP._frLabels(600, 400);
+    LB.kilit(0, 360, 600, 40);
+    const t = LB.ekle(300, 355, 0, 1, 'aşağı', '#000', 12, 10);
+    const y = Number(/y="([\d.]+)"/.exec(t)[1]);
+    expect(y).toBeLessThan(360);
+  });
+
+  test('çember engeli: kayışın üstüne etiket konmaz', () => {
+    const LB = RP._frLabels(600, 400);
+    LB.engelCember(300, 200, 100, 10);
+    const t = LB.ekle(300, 200, 1, 0, 'x', '#000', 12, 100);   // tam çember üstü
+    const m = /x="([\d.]+)" y="([\d.]+)"/.exec(t);
+    const d = Math.hypot(+m[1] - 300, +m[2] - 200);
+    expect(Math.abs(d - 100)).toBeGreaterThan(4);              // çeperden itilmiş
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEORİ KAYNAĞI — (4.3) artık TÜRETİLİYOR, ankraj §5.1'de yazılı
+//
+// Eskiden (4.3) yalnız İDDİA ediliyordu ("dL/dθ = a sinβ · 2sin(φ/2)") ve
+// §5.1 gerginliğin kasnaktan kasnağa nasıl DEĞİŞTİĞİNİ anlatıp mutlak
+// SEVİYESİNİN nereden geldiğini hiç söylemiyordu — yani "tasarım gerginliği"
+// belgede tanımsız bir büyüklüktü.
+describe('teori kaynağı — türetme ve ankraj', () => {
+  const fs = require('fs'), path = require('path');
+  const T = fs.readFileSync(path.join(__dirname, '..', '..', 'tools',
+    'report-assets', 'fead-theory-source.html'), 'utf8');
+
+  test('§4.2 (4.3)\'ün türetmesini taşıyor', () => {
+    expect(T).toContain("(4.3)'ün türetilmesi");
+    // zincirin üç halkası da yazılı olmalı
+    expect(T).toMatch(/\\frac\{\\mathrm\{d\}\\mathbf\{c\}_\{\\text\{ten\}\}\}\{\\mathrm\{d\}\\theta\} = a\\,\\mathbf\{t\}/);
+    expect(T).toContain('\\mathbf{f} \\;=\\; \\mathbf{u}_{\\text{çıkış}} - \\mathbf{u}_{\\text{giriş}}');
+    expect(T).toMatch(/\|\\mathbf\{f\}\| = 2\\sin\\frac\{\\varphi_\{\\text\{ten\}\}\}\{2\}/);
+    expect(T).toMatch(/90\^\\circ - \\beta/);
+  });
+
+  test('take-up bir GİRDİ olmadığı teoride de yazılı', () => {
+    expect(T).toContain('Take-up bir girdi değil, bir türevdir');
+    expect(T).toMatch(/elle girilen tek büyüklük kol boyu/);
+    expect(T).toMatch(/monoton bir fonksiyonu değildir/);
+  });
+
+  test('§5.1 zincirin MUTLAK SEVİYESİNİ (ankraj) anlatıyor', () => {
+    expect(T).toContain('Zincirin mutlak seviyesi: tasarım gerginliği');
+    expect(T).toMatch(/mutlak seviyesini vermez/);
+    expect(T).toMatch(/T_\{\\text\{gergi\}\} = T_\{\\text\{tasarım\}\}/);
+    expect(T).toMatch(/bağımsız olarak/);
+  });
+
+  test('§10 yeni semboller listede', () => {
+    ['\\mathbf{f}', '\\mathbf{t}', '\\mathrm{d}L/\\mathrm{d}\\theta', 'T_{\\text{tasarım}}']
+      .forEach((s) => expect(T).toContain(s));
+    expect(T).toMatch(/Take-up oranı \(türev, girdi değil\)/);
+  });
+
+  test('hubload atfı (5.5) — (5.3) sürücü gücü denklemidir, hubload değil', () => {
+    const i = T.indexOf('4.2 Yay momenti');
+    const blok = T.slice(i, T.indexOf('4.3 Çalışma açısının', i));
+    expect(blok).toMatch(/aynı çarpan \(5\.5\)'te hubload'da da görünür/);
+    expect(blok).not.toMatch(/\(5\.3\)'te hubload/);
+  });
+
+  test('teori metni ÜRETİLEN şablona gerçekten girmiş', () => {
+    const tpl = fs.readFileSync(path.join(__dirname, '..', '..', 'js',
+      'fead-report-template.js'), 'utf8');
+    const b64 = /window\.FEAD_REPORT_TEMPLATE_B64 = "([^"]+)"/.exec(tpl)[1];
+    const html = Buffer.from(b64, 'base64').toString('utf8');
+    expect(html).toContain("(4.3)'ün türetilmesi");
+    expect(html).toContain('Zincirin mutlak seviyesi: tasarım gerginliği');
+    expect(html).toMatch(/h4\{font-size/);            // h4 kuralı şablon CSS'inde
+  });
+});
