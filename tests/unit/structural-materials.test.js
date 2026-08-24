@@ -399,3 +399,300 @@ describe('kütüphane — kayda çevirme ve iz', () => {
     expect(L.veStrMatLibMatches(L.veStrMatLibRecord('al2o3-995'))).toBe(true);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+//  GENİŞLETİLMİŞ VERİ — SICAKLIK · YORULMA · SERTLİK
+// ════════════════════════════════════════════════════════════════════════════
+// Bu üç blok kataloğun "Ansys kıvamı" kısmını tutuyor. Ortak ilke aynı:
+// sayıların kendisi ölçülemez, ama ARALARINDAKİ İLİŞKİ ölçülür — eğri
+// monoton mu, 20 °C'de 1,000 mi, σ_W gerçekten f_W·Rm mi, Rm/HB oranı sınıfın
+// penceresinde mi.
+
+describe('genişletilmiş alanlar — hepsi dolu ve makul', () => {
+  test.each(HER)('%s — uzama (A) ve azami servis sıcaklığı var', (_ad, m) => {
+    expect(typeof m.A).toBe('number');
+    expect(m.A).toBeGreaterThanOrEqual(0);
+    expect(m.A).toBeLessThanOrEqual(700);      // elastomerlerde %550'ye çıkıyor
+    expect(typeof m.tmax).toBe('number');
+    expect(m.tmax).toBeGreaterThan(40);
+    expect(m.tmax).toBeLessThanOrEqual(2000);  // tungsten
+  });
+
+  test.each(HER)('%s — bir SERTLİK ölçeği taşıyor', (_ad, m) => {
+    const h = L.veStrMatHardness(m);
+    expect(h).toBeTruthy();
+    expect(h.deger).toBeGreaterThan(0);
+    expect(['HBW', 'HV', 'Shore D', 'Shore A']).toContain(h.birim);
+  });
+
+  // Sertlik ÖLÇEĞİ sınıfa göre: metalde Brinell, seramikte Vickers,
+  // termoplastikte Shore D, elastomerde Shore A. Hepsini tek sayıya indirmek
+  // yanlış olurdu — Shore A 70 ile HB 70 aynı büyüklük bile değil.
+  test('sertlik ölçeği sınıfa uygun', () => {
+    const olcek = (id) => L.veStrMatHardness(L.veStrMatLibById(id)).olcek;
+    expect(olcek('s355jr')).toBe('hb');
+    expect(olcek('al2o3-995')).toBe('hv');
+    expect(olcek('pa66')).toBe('shD');
+    expect(olcek('nbr70')).toBe('shA');
+    L.veStrMatLibByCat('elastomer').forEach((m) => expect(m.shA).toBeGreaterThan(0));
+    L.veStrMatLibByCat('seramik').forEach((m) => expect(m.hv).toBeGreaterThan(0));
+  });
+
+  // ASIL KAPI: Rm ≈ 3,38·HB (ISO 18265) alaşımsız çelikte geçerli; başka
+  // sınıflarda oran BAŞKA — gri dökme demirde grafit lamelleri yüzünden
+  // 1,2–1,5, titanyumda ≈ 2,8. Oran penceresi bir σ_ç ya da HB yazım
+  // hatasını yakalar: ikisinden biri on kat kayarsa oran pencereden çıkar.
+  test.each(HER)('%s — Rm/HB oranı sınıfının penceresinde', (_ad, m) => {
+    const r = L.veStrMatHardnessRatio(m);
+    if (r === null) return;                    // Brinell'i olmayan sınıflar
+    const c = catOf(m);
+    expect(c.hbWin).toBeTruthy();
+    expect(r).toBeGreaterThanOrEqual(c.hbWin[0]);
+    expect(r).toBeLessThanOrEqual(c.hbWin[1]);
+  });
+
+  test('gri dökme demirin oranı çelikten AÇIKÇA farklı — grafit lamelleri', () => {
+    // Aynı pencereye sıkıştırılsalardı kapı hiçbir şey yakalamazdı.
+    expect(L.veStrMatHardnessRatio(L.veStrMatLibById('gjl-150'))).toBeLessThan(2);
+    expect(L.veStrMatHardnessRatio(L.veStrMatLibById('s355jr'))).toBeGreaterThan(2.9);
+  });
+});
+
+describe('sıcaklık eğrileri', () => {
+  const SETS = Object.keys(L.VE_STR_MAT_TEMP_SETS).map((k) => [k, L.VE_STR_MAT_TEMP_SETS[k]]);
+
+  test.each(SETS)('%s — 20 °C\'de bütün oranlar 1,000', (_k, set) => {
+    const ref = set.p.find((q) => q[0] === 20 || q[0] === 23);
+    expect(ref).toBeTruthy();
+    expect(ref[1]).toBeCloseTo(1, 6);          // kE
+    expect(ref[2]).toBeCloseTo(1, 6);          // kY
+  });
+
+  test.each(SETS)('%s — sıcaklık arttıkça kE ve kY MONOTON düşüyor', (_k, set) => {
+    // Bir noktanın yanlış yere yazılması (ör. 0,31 yerine 0,81) eğriyi
+    // monotonluktan çıkarır; gözle grafikte de görünür ama kapı burada.
+    for (let i = 1; i < set.p.length; i++) {
+      expect(set.p[i][0]).toBeGreaterThan(set.p[i - 1][0]);
+      expect(set.p[i][1]).toBeLessThanOrEqual(set.p[i - 1][1] + 1e-9);
+      expect(set.p[i][2]).toBeLessThanOrEqual(set.p[i - 1][2] + 1e-9);
+    }
+  });
+
+  // HANGİ EĞRİNİN STANDART OLDUĞU SABİTLENMİŞ. Üstteki test yalnız "tur alanı
+  // std ya da tipik" diyor; bir el kitabı eğrisini sessizce 'std'ye
+  // yükseltmek ondan GEÇERDİ (mutasyonla ölçüldü) — ve panel o eğriyi
+  // standardın tablosuymuş gibi, daha yüksek bir yetkiyle basardı.
+  test('std ↔ tipik SINIFLANDIRMASI sabitlenmiş', () => {
+    const beklenen = {
+      'karbon-celik': 'std',   'ostenitik': 'std',
+      'alu-6xxx-t6': 'std',    'alu-5xxx': 'std',
+      'ferritik-mart': 'tipik','dokme-demir': 'tipik', 'titanyum': 'tipik',
+      'nikel': 'tipik',        'bakir': 'tipik',       'magnezyum': 'tipik',
+      'polimer': 'tipik',      'seramik': 'tipik',
+    };
+    // Yeni bir takım eklenirse burada da sınıflandırılmak ZORUNDA
+    expect(Object.keys(L.VE_STR_MAT_TEMP_SETS).sort()).toEqual(Object.keys(beklenen).sort());
+    Object.keys(beklenen).forEach((k) => {
+      expect(L.VE_STR_MAT_TEMP_SETS[k].tur).toBe(beklenen[k]);
+    });
+    // 'std' olanların kaynağı bir STANDARDI adıyla anmalı
+    Object.keys(beklenen).filter((k) => beklenen[k] === 'std').forEach((k) => {
+      expect(L.VE_STR_MAT_TEMP_SETS[k].kaynak).toMatch(/EN \d/);
+    });
+    // 'tipik' olanlar standart numarası VERMEMELİ — yetki taklidi olurdu
+    Object.keys(beklenen).filter((k) => beklenen[k] === 'tipik').forEach((k) => {
+      expect(L.VE_STR_MAT_TEMP_SETS[k].kaynak).not.toMatch(/EN \d/);
+    });
+  });
+
+  // Yorulma takımlarında da aynı ayrım: FKM'in kendi sabiti mi, tipik mi.
+  test('yorulma takımlarında FKM ↔ tipik ayrımı sabitlenmiş', () => {
+    const fkm = ['celik', 'paslanmaz', 'dokme-celik', 'gjs', 'gjm', 'gjl', 'alu-dovme', 'alu-dokum'];
+    const tipik = ['titanyum', 'bakir', 'magnezyum', 'nikel', 'polimer'];
+    expect(Object.keys(L.VE_STR_MAT_FAT_SETS).sort()).toEqual(fkm.concat(tipik).sort());
+    fkm.forEach((k) => expect(L.VE_STR_MAT_FAT_SETS[k].kaynak).toBe('FKM'));
+    tipik.forEach((k) => expect(L.VE_STR_MAT_FAT_SETS[k].kaynak).toBe('tipik'));
+  });
+
+  test.each(SETS)('%s — kaynağı ve türü (std/tipik) yazılı', (_k, set) => {
+    // İKİ AYRI GÜVEN DÜZEYİ: bir standardın tablosu ile el kitabının tipik
+    // seyri aynı ağırlıkta okunmamalı. Ayrım gizlenseydi kullanıcı ikisini
+    // aynı sayarak tasarım yapardı.
+    expect(typeof set.kaynak).toBe('string');
+    expect(set.kaynak.length).toBeGreaterThan(0);
+    expect(['std', 'tipik']).toContain(set.tur);
+    expect(typeof set.ad).toBe('string');
+  });
+
+  // ÇIPA: EN 1993-1-2 Tablo 3.1'in doğrulanmış değerleri.
+  test('EN 1993-1-2 karbon çeliği çıpaları kaymamış', () => {
+    const s355 = L.veStrMatLibById('s355jr');
+    const f = (t) => L.veStrMatTempFactors(s355, t);
+    expect(f(500).kY).toBeCloseTo(0.780, 6);
+    expect(f(600).kY).toBeCloseTo(0.470, 6);
+    expect(f(700).kY).toBeCloseTo(0.230, 6);
+    expect(f(400).kE).toBeCloseTo(0.700, 6);
+    expect(f(20).kE).toBeCloseTo(1.000, 6);
+    expect(f(1200).kY).toBeCloseTo(0.000, 6);
+  });
+
+  // kY'nin 400 °C'ye kadar 1,000 kalması ŞAŞIRTICI ama DOĞRU: EN 1993-1-2'nin
+  // kY'si %2 gerinimdeki ETKİN akma dayanımı. Elastik sınır (kP) çoktan
+  // düşmeye başlamıştır. İkisi birden basılmasaydı kullanıcı "400 °C'ye kadar
+  // hiçbir şey olmuyor" diye okurdu.
+  test('karbon çeliğinde kY 400 °C\'ye kadar 1,000 ama kP ÇOKTAN düşüyor', () => {
+    const s = L.veStrMatLibById('s355jr');
+    expect(L.veStrMatTempFactors(s, 400).kY).toBeCloseTo(1.0, 6);
+    expect(L.veStrMatTempFactors(s, 400).kP).toBeCloseTo(0.420, 6);
+    expect(L.veStrMatTempFactors(s, 200).kP).toBeCloseTo(0.807, 6);
+    expect(L.veStrMatTempFactors(s, 400).kP).toBeLessThan(0.5);
+  });
+
+  test('ara değerleme DOĞRUSAL — standardın kendi kuralı', () => {
+    const s = L.veStrMatLibById('s355jr');
+    // 550 °C: 500 (0.780) ile 600 (0.470) arasının tam ortası
+    expect(L.veStrMatTempFactors(s, 550).kY).toBeCloseTo((0.780 + 0.470) / 2, 9);
+    expect(L.veStrMatTempFactors(s, 450).kE).toBeCloseTo((0.700 + 0.600) / 2, 9);
+  });
+
+  test('aralık DIŞINDA ekstrapolasyon YOK — uçtaki değere sabitleniyor', () => {
+    // Ekstrapolasyon 1200 °C'nin ötesinde NEGATİF dayanım üretirdi.
+    const s = L.veStrMatLibById('s355jr');
+    const ust = L.veStrMatTempFactors(s, 2000);
+    expect(ust.kY).toBe(0);
+    expect(ust.disarida).toBe(true);
+    const alt = L.veStrMatTempFactors(s, -100);
+    expect(alt.kY).toBe(1);
+    expect(alt.disarida).toBe(true);
+    expect(L.veStrMatTempFactors(s, 500).disarida).toBe(false);
+  });
+
+  test('MUTLAK değerler 20 °C tabanıyla çarpılıyor', () => {
+    const s = L.veStrMatLibById('s355jr');
+    const at = L.veStrMatAtTemp(s, 500);
+    expect(at.E).toBeCloseTo(210000 * 0.600, 6);
+    expect(at.sy).toBeCloseTo(355 * 0.780, 6);
+    expect(at.rp).toBeCloseTo(355 * 0.360, 6);
+  });
+
+  // ALÜMİNYUMUN ÇÖKÜŞÜ ÇOK ERKEN — kütüphanenin en öğretici karşılaştırması.
+  test('6082-T6 200 °C\'de dayanımının üçte ikisini kaybediyor, çelik kaybetmiyor', () => {
+    const al = L.veStrMatLibById('aw6082-t6');
+    const st = L.veStrMatLibById('s355jr');
+    expect(L.veStrMatTempFactors(al, 200).kY).toBeLessThan(0.45);
+    expect(L.veStrMatTempFactors(st, 200).kY).toBeCloseTo(1.0, 6);
+  });
+
+  test('5xxx (AlMg) 6xxx-T6\'dan ISIDA DAHA İYİ — çökelme sertleşmesi yok', () => {
+    const a5 = L.veStrMatLibById('aw5083-h111');
+    const a6 = L.veStrMatLibById('aw6082-t6');
+    expect(L.veStrMatTempSet(a5).ad).toMatch(/5xxx/);
+    expect(L.veStrMatTempFactors(a5, 200).kY)
+      .toBeGreaterThan(L.veStrMatTempFactors(a6, 200).kY);
+  });
+
+  test('ferritik/martenzitik paslanmaz ÖSTENİTİĞİN eğrisini kullanmıyor', () => {
+    ['1.4016', '1.4021', '1.4542', '1.4462'].forEach((id) => {
+      expect(L.veStrMatTempSet(L.veStrMatLibById(id)).ad).toMatch(/Ferritik/);
+    });
+    ['1.4301', '1.4404'].forEach((id) => {
+      expect(L.veStrMatTempSet(L.veStrMatLibById(id)).ad).toMatch(/Östenitik/);
+    });
+  });
+
+  test('eğrisi OLMAYAN sınıfta null dönüyor — uydurma eğri çizilmiyor', () => {
+    L.veStrMatLibByCat('elastomer').forEach((m) => {
+      expect(L.veStrMatTempSet(m)).toBeNull();
+      expect(L.veStrMatTempFactors(m, 100)).toBeNull();
+      expect(L.veStrMatAtTemp(m, 100)).toBeNull();
+    });
+  });
+
+  test('HER kaydın eğrisi ya var ya AÇIKÇA yok — sessiz üçüncü durum yok', () => {
+    LIB.forEach((m) => {
+      const set = L.veStrMatTempSet(m);
+      expect(set === null || (set && Array.isArray(set.p))).toBe(true);
+    });
+    // Ve metallerin ezici çoğunluğunun eğrisi VAR
+    const metal = LIB.filter((m) => m.hb != null);
+    const egrili = metal.filter((m) => L.veStrMatTempSet(m));
+    expect(egrili.length / metal.length).toBeGreaterThan(0.9);
+  });
+});
+
+describe('Wöhler (S-N) eğrisi', () => {
+  const FATLI = LIB.filter((m) => L.veStrMatFatigue(m)).map((m) => [m.n + ' (' + m.id + ')', m]);
+
+  test('yorulma modeli olan kayıt sayısı anlamlı', () => {
+    expect(FATLI.length).toBeGreaterThan(80);
+  });
+
+  test.each(FATLI)('%s — σ_W = f_W · Rm ve f_W 0,25–0,45 arasında', (_ad, m) => {
+    const f = L.veStrMatFatigue(m);
+    expect(f.sw).toBeCloseTo(f.fw * m.su, 9);
+    expect(f.fw).toBeGreaterThanOrEqual(0.25);
+    expect(f.fw).toBeLessThanOrEqual(0.45);
+    expect(f.sw).toBeLessThan(m.su);          // dayanma sınırı Rm'nin altında
+  });
+
+  test.each(FATLI)('%s — S-N eğrisi MONOTON düşüyor ve Rm\'de kesiliyor', (_ad, m) => {
+    const N = [1e3, 1e4, 1e5, 1e6, 1e7, 1e8];
+    let onceki = Infinity;
+    N.forEach((n) => {
+      const s = L.veStrMatSN(m, n);
+      expect(s).toBeLessThanOrEqual(onceki + 1e-9);
+      expect(s).toBeLessThanOrEqual(m.su + 1e-9);   // KESİM: Rm aşılmıyor
+      expect(s).toBeGreaterThan(0);
+      onceki = s;
+    });
+  });
+
+  test('ÇELİKTE gerçek dayanma sınırı var, ALÜMİNYUMDA yok', () => {
+    // Alüminyumun S-N eğrisi dizden sonra da düşer (k2). "Sonsuz ömür"
+    // bölgesi çizilseydi olmayan bir güvenlik anlatılmış olurdu.
+    const st = L.veStrMatLibById('s355jr');
+    const al = L.veStrMatLibById('aw6082-t6');
+    expect(L.veStrMatFatigue(st).sinirVar).toBe(true);
+    expect(L.veStrMatFatigue(al).sinirVar).toBe(false);
+    expect(L.veStrMatSN(st, 1e8)).toBeCloseTo(L.veStrMatSN(st, 1e6), 9);
+    expect(L.veStrMatSN(al, 1e8)).toBeLessThan(L.veStrMatSN(al, 1e6) - 1);
+  });
+
+  test('dizde (N_D) süreklilik — eğri sıçramıyor', () => {
+    LIB.filter((m) => L.veStrMatFatigue(m)).forEach((m) => {
+      const f = L.veStrMatFatigue(m);
+      const a = L.veStrMatSN(m, f.nd * 0.999);
+      const b = L.veStrMatSN(m, f.nd * 1.001);
+      expect(Math.abs(a - b)).toBeLessThan(Math.max(0.01, f.sw * 0.002));
+    });
+  });
+
+  // MODELİN GEÇERLİLİK SINIRI: Basquin doğrusu geriye uzatılınca Rm'yi aşar;
+  // orası düşük çevrimli yorulma (LCF) bölgesi ve bu model orada geçerli
+  // DEĞİL. Sınır hesaplanabiliyor ve çizimde işaretleniyor.
+  test('LCF sınırı hesaplanıyor ve makul bir çevrim sayısında', () => {
+    const s = L.veStrMatLibById('s355jr');
+    const n = L.veStrMatSNlimit(s);
+    expect(n).toBeGreaterThan(1e3);
+    expect(n).toBeLessThan(1e6);
+    // Tam o noktada eğri Rm'ye eşit
+    expect(L.veStrMatSN(s, n)).toBeCloseTo(s.su, 6);
+  });
+
+  test('σ_ç OLMAYAN kayıtta yorulma modeli YOK — uydurulmuyor', () => {
+    const yok = { c: 'celik-yapi', E: 210000, nu: 0.3, su: null };
+    expect(L.veStrMatFatigue(yok)).toBeNull();
+    // Elastomer ve seramikte de model yok (fset tanımsız)
+    L.veStrMatLibByCat('elastomer').forEach((m) => expect(L.veStrMatFatigue(m)).toBeNull());
+    L.veStrMatLibByCat('seramik').forEach((m) => expect(L.veStrMatFatigue(m)).toBeNull());
+  });
+
+  test('gri dökme demirin f_W\'si çelikten DÜŞÜK — grafit çentik etkisi', () => {
+    expect(L.veStrMatFatigue(L.veStrMatLibById('gjl-250')).fw)
+      .toBeLessThan(L.veStrMatFatigue(L.veStrMatLibById('s355jr')).fw);
+  });
+
+  test.each(FATLI)('%s — kaynağı yazılı', (_ad, m) => {
+    expect(['FKM', 'tipik']).toContain(L.veStrMatFatigue(m).kaynak);
+  });
+});

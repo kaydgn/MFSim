@@ -402,6 +402,15 @@ function showNodeProperties(node) {
     }, 140);
   }
 
+  // Yapısal Analiz Malzeme: panel kurulduktan sonra UYGULANAN kaydı listede
+  // görünür yap. 112 satırlık listede ekranın dışında kalan bir ✓ işareti
+  // hiçbir şey söylemez.
+  if(node.type === 'str-material') {
+    setTimeout(function() {
+      if(typeof veStrMatLibScrollToApplied === 'function') veStrMatLibScrollToApplied(node.id);
+    }, 60);
+  }
+
   // Yapısal Analiz Geometri: panel DOM'u kurulduktan sonra 3B görüntüleyiciyi
   // bağla. Panel HTML'i her yeniden çizildiğinde kanvas da yeniden kurulur →
   // sahne sıfırdan inşa edilir (kamera açısı düğüm kimliğiyle saklı, bkz.
