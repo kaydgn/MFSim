@@ -143,6 +143,8 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   'fead-tensioner', 'fead-belt', 'fead-layout',
   // Yapısal Analiz — Geometri: sol künye/denetim rayı + sağda 3B görüntüleyici
   'str-geometry',
+  // Yapısal Analiz — Malzeme: solda 112 kayıtlık katalog, sağda uygulanan kayıt
+  'str-material',
   // Parametrik: çoklu-seri sonuç grafiği tam genişlikte ferah okunur.
   'parametric'];
 
@@ -335,6 +337,10 @@ function showNodeProperties(node) {
   // pencere bomboş açılırdı (--engine-empty ile aynı gerekçe).
   if(_propWin) _propWin.classList.toggle('ve-properties--strgeom',
     node.type === 'str-geometry' && !!(node.data && node.data.geometry));
+  // Yapısal Analiz / Malzeme: katalog listesi kısa olursa gezilemez → büyük
+  // pencere. Geometri'nin aksine KOŞULSUZ veriliyor: sol sütun (katalog) her
+  // zaman dolu, "boş açılan büyük pencere" durumu burada yok.
+  if(_propWin) _propWin.classList.toggle('ve-properties--strmat', node.type === 'str-material');
   // Hafif paneller (VE_COMPACT_PANEL_TYPES): içerik az → dar pencere + kompakt-sol
   // kimlik. Geniş yapmak boş sütun bırakırdı. Salt sunum.
   if(_propWin) _propWin.classList.toggle('ve-properties--compact', VE_COMPACT_PANEL_TYPES.indexOf(node.type) >= 0);

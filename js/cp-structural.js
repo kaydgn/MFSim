@@ -294,6 +294,8 @@ function _strForgetResults(){
   // (bkz. veStrGeomRecord). Temizlenmezse yeni projede önceki projenin parçası
   // görüntüleyicide durur — Takoz/FEAD'deki tuzağın birebir aynısı.
   if(typeof veStrGeomCacheClear === 'function') veStrGeomCacheClear();
+  // Kütüphane tarama durumu da oturumluk (arama metni, seçili kategori/kayıt).
+  if(typeof _strLibForget === 'function') _strLibForget();
   if(typeof veStrSrcClear === 'function') veStrSrcClear();
   if(typeof veStrViewerDispose === 'function') veStrViewerDispose();
   // Oturumluk görünüm durumları da (seçili yüz, yüz inceleme kipi) yeni
@@ -311,14 +313,6 @@ function _strPending(){
     + '<b style="color:var(--text-heading);">Kullanıma açık değil.</b></div>';
 }
 
-// "Bu bileşen ÇALIŞIYOR, sırada bir kolaylık var" notu. _strPending'den AYRI
-// tutuluyor çünkü ikisi farklı şey söylüyor: _strPending "bu panel henüz
-// çalışmıyor" der ve testi iskelet SAYISINI ona göre tutuyor. Aynı işareti
-// çalışan bir panelde kullanmak o sayacı bozar ve okuyanı yanıltır.
-function _strNextUp(text){
-  return '<div style="padding:8px 10px; margin-bottom:9px; font-size:var(--fs-micro); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px dashed var(--accent-primary);">'
-    + '<b style="color:var(--text-heading);">Sırada.</b> ' + text + '</div>';
-}
 
 // ════════════════════════════════════════════════════════════════════════════
 //  ZİNCİR BİLEŞENLERİ — PANELLER BİLEREK BOŞ
@@ -1148,12 +1142,28 @@ function veStrMatHost(node){
 // AMBER yalnız ÇÖZÜLEBİLİR kayıtta: adı yazılmış ama E'si girilmemiş bir
 // malzeme "hazır" görünmemeli. Rozet boşken de VAR (Geometri rozetindeki
 // gerekçenin aynısı: "rozet yok" ile "malzeme yok" ayırt edilemezdi).
+// Rozet metni: 50×46'lık kutuya SIĞACAK kadar kısa bir kimlik. Kütüphane
+// gelince bu bir soruna dönüştü — katalog adları elle yazılanlardan uzun:
+// "EN AW-6082 T6" ham kısaltmayla "EN AW-608…" oluyordu ve bu BAŞKA BİR
+// ALAŞIM NUMARASI gibi okunuyor. Kısaltmadan önce iki şey atılıyor:
+//   • baştaki standart öneki ("EN ", "EN-")  → EN AW-6082 T6  → AW-6082 T6
+//   • parantez içi açıklama                    → EN AC-43000 (AlSi10Mg) T6
+//                                                → AC-43000 T6
+// Kalan, gösterimin AYIRT EDİCİ parçası. Tam ad zaten ipucunda (title).
+function _strMatShortName(ad){
+  var t = String(ad || '').trim();
+  t = t.replace(/^EN[\s-]+/i, '');
+  t = t.replace(/\s*\([^)]*\)\s*/g, ' ');
+  t = t.replace(/\s+/g, ' ').trim();
+  return (t.length > 11) ? t.slice(0, 10) + '…' : t;
+}
+
 function veStrMatBadgeInfo(node){
   var m = veStrMatOf(node);
   var v = veStrMatValidate(m);
   var ad = (m.name != null && String(m.name).trim() !== '') ? String(m.name).trim() : '';
   var E = _strMatNum(m.E);
-  var txt = ad ? (ad.length > 10 ? ad.slice(0, 9) + '…' : ad)
+  var txt = ad ? _strMatShortName(ad)
                : (!isNaN(E) ? _strFmt(E / 1000, 0) + ' GPa' : 'MALZ');
   var tip;
   if(v.ok){
@@ -1250,46 +1260,300 @@ function _strMatDerivedTable(node){
   return h;
 }
 
+// ── KÜTÜPHANE TARAYICISI ────────────────────────────────────────────────────
+// Katalog js/structural-materials.js'te (112 kayıt, 16 aile). Bu blok yalnız
+// onu GÖSTERİYOR — tek bir malzeme değeri burada yazılı değil.
+//
+// TARAMA DURUMU OTURUMLUK, node.data'DA DEĞİL. Arama kutusuna yazılan metin,
+// seçili kategori ve listede işaretlenen kayıt birer GÖRÜNÜM tercihidir;
+// node.data'ya yazılsalardı her tuş vuruşu `saveState()` üzerinden undo
+// yığınına binerdi ve kullanıcı "geri al" dediğinde malzemesi değil arama
+// metni geri gelirdi. CAD yüz seçimindeki kuralın aynısı.
+//
+// Düğüm kimliğiyle anahtarlı: iki farklı malzeme kutusu arasında gidip
+// gelirken her biri kendi taramasını koruyor.
+var _veStrLibUI = {};
+function _strLibUI(nodeId){
+  if(!_veStrLibUI[nodeId]) _veStrLibUI[nodeId] = { q:'', cat:'', sel:'' };
+  return _veStrLibUI[nodeId];
+}
+function _strLibForget(){ _veStrLibUI = {}; }
+
+function _strLibHas(){
+  return (typeof VE_STR_MAT_LIB !== 'undefined') && (typeof veStrMatLibSearch === 'function');
+}
+
+// Arama kutusuna yazıldıkça YALNIZ LİSTE yeniden kuruluyor, panel DEĞİL.
+// `showNodeProperties` çağrılsaydı arama kutusu DOM'dan silinip yeniden
+// kurulur ve odak (imleç) her harfte kaybolurdu — yazmak imkânsız olurdu.
+function veStrMatLibQuery(nodeId, q){
+  _strLibUI(nodeId).q = String(q == null ? '' : q);
+  _strLibRepaint(nodeId);
+}
+function veStrMatLibSetCat(nodeId, cat){
+  _strLibUI(nodeId).cat = String(cat == null ? '' : cat);
+  _strLibRepaint(nodeId);
+}
+function veStrMatLibPick(nodeId, libId){
+  var ui = _strLibUI(nodeId);
+  // Aynı satıra ikinci tık seçimi kaldırır (CAD yüz listesindeki kuralın
+  // aynısı) — başka türlü künyeyi kapatmanın yolu yoktu.
+  ui.sel = (ui.sel === libId) ? '' : libId;
+  _strLibRepaint(nodeId);
+}
+
+function _strLibRepaint(nodeId){
+  if(typeof document === 'undefined') return;
+  // Arama kutusunu YALNIZ ayrıştıysa yaz. Kullanıcı yazarken değer zaten
+  // eşit olduğu için DOM'a hiç dokunulmuyor (yazma imleci bozulmaz); ama
+  // sorgu koddan değiştirildiyse (test, dışarıdan çağrı) kutu listeyle
+  // ayrışık kalmasın — ölçümde tam olarak bu görüldü: liste tazelendi,
+  // kutuda eski metin durdu.
+  var kutu = document.getElementById('ve-str-mat-q');
+  if(kutu && kutu.value !== _strLibUI(nodeId).q) kutu.value = _strLibUI(nodeId).q;
+  var liste = document.getElementById('ve-str-mat-list');
+  var say = document.getElementById('ve-str-mat-count');
+  var det = document.getElementById('ve-str-mat-det');
+  if(liste) liste.innerHTML = _strLibListHTML(nodeId);
+  if(say) say.textContent = _strLibCountText(nodeId);
+  if(det) det.innerHTML = _strLibDetailHTML(nodeId);
+}
+
+function _strLibResults(nodeId){
+  if(!_strLibHas()) return [];
+  var ui = _strLibUI(nodeId);
+  return veStrMatLibSearch(ui.q, ui.cat);
+}
+
+function _strLibCountText(nodeId){
+  if(!_strLibHas()) return '';
+  var n = _strLibResults(nodeId).length;
+  var t = _strFmt(VE_STR_MAT_LIB.length) + ' kayıt · ' + VE_STR_MAT_CATS.length + ' aile'
+        + ' · sürüm ' + VE_STR_MAT_LIB_VERSION + ' · ' + VE_STR_MAT_LIB_TEMP_C + ' °C';
+  var ui = _strLibUI(nodeId);
+  if(ui.q || ui.cat) t = _strFmt(n) + ' sonuç · ' + t;
+  return t;
+}
+
+function _strLibListHTML(nodeId){
+  if(!_strLibHas()) return '<div class="ve-str-mat-empty">Malzeme kütüphanesi yüklenmedi.</div>';
+  var ui = _strLibUI(nodeId);
+  var node = _strNodeById(nodeId);
+  var uygulanan = (node && veStrMatOf(node).lib) || '';
+  var list = _strLibResults(nodeId);
+  if(!list.length){
+    return '<div class="ve-str-mat-empty">Eşleşen malzeme yok.<br>'
+         + 'Standart numarası (10025), malzeme numarası (1.4301), yabancı ad (AISI 304) '
+         + 'ya da atölye adı (sfero) ile de aranabilir.</div>';
+  }
+  // Kategoriye SÜZÜLMEMİŞ ve ARAMA YAPILMAMIŞ listede aile başlığı basılıyor:
+  // 112 kayıt düz bir şerit hâlinde okunmaz. Arama sonuçlarında başlık YOK —
+  // orada sıra PUANA göre, aileye göre değil; başlık koymak sırayı yalanlardı.
+  var basliklar = !ui.q;
+  var h = '', sonCat = null;
+  list.forEach(function(m){
+    if(basliklar && m.c !== sonCat){
+      sonCat = m.c;
+      var c = veStrMatLibCat(m.c);
+      h += '<div class="ve-str-mat-head">' + _strEsc(c ? c.ad : m.c) + '</div>';
+    }
+    var alt = (m.alt && m.alt.length) ? m.alt.slice(0, 3).join(' · ') : (m.std || '');
+    h += '<button type="button" class="ve-str-mat-row'
+      +  (ui.sel === m.id ? ' on' : '')
+      +  (uygulanan === m.id ? ' applied' : '') + '"'
+      +  ' onclick="veStrMatLibPick(\'' + nodeId + '\',\'' + _strEsc(m.id) + '\')"'
+      +  ' title="' + _strEsc(m.n + ' — ' + (m.std || '')) + '">'
+      +  '<span class="ve-str-mat-row-n">' + _strEsc(m.n)
+      +    '<span class="ve-str-mat-row-alt">' + _strEsc(alt) + '</span></span>'
+      +  '<span class="ve-str-mat-row-num">' + _strFmt(m.E / 1000, 0) + ' GPa</span>'
+      +  '<span class="ve-str-mat-row-num">' + _strFmt(m.rho) + ' kg/m³</span>'
+      +  '</button>';
+  });
+  return h;
+}
+
+// Seçilenin künyesi — "Uygula"dan ÖNCEKİ tek durak. Bütün sayılar burada
+// görünüyor: kullanıcı kör bir kimliğe değil, OKUDUĞU değerlere onay veriyor.
+function _strLibDetailHTML(nodeId){
+  if(!_strLibHas()) return '';
+  var ui = _strLibUI(nodeId);
+  if(!ui.sel) return '';
+  var m = veStrMatLibById(ui.sel);
+  if(!m) return '';
+  var cat = veStrMatLibCat(m.c);
+  var node = _strNodeById(nodeId);
+  var uygulanan = (node && veStrMatOf(node).lib) || '';
+
+  function prop(sym, v, unit, ref){
+    return '<div class="ve-str-mat-prop' + (ref ? ' ref' : '') + '">'
+         + '<b>' + (v === null || v === undefined ? '—' : v) + '</b>'
+         + '<span>' + sym + (unit ? ' [' + unit + ']' : '') + '</span></div>';
+  }
+
+  var h = '<div class="ve-str-mat-det">';
+  h += '<div class="ve-str-mat-det-h">'
+     + '<span class="ve-str-mat-det-n">' + _strEsc(m.n) + '</span>'
+     + '<span class="ve-str-mat-det-std">' + _strEsc(m.std || '') + ' · ' + _strEsc(cat ? cat.ad : m.c) + '</span>'
+     + '</div>';
+  if(m.alt && m.alt.length){
+    h += '<div class="ve-str-mat-note">Diğer adlar: ' + _strEsc(m.alt.join(' · ')) + '</div>';
+  }
+  h += '<div class="ve-str-mat-props">';
+  h += prop('E', _strFmt(m.E), 'MPa');
+  h += prop('ν', _strFmt(m.nu, 3), '');
+  h += prop('ρ', _strFmt(m.rho), 'kg/m³');
+  h += prop('σ<sub>ak</sub>', m.sy == null ? null : _strFmt(m.sy), 'MPa');
+  h += prop('σ<sub>ç</sub>', m.su == null ? null : _strFmt(m.su), 'MPa');
+  h += prop('α', m.a == null ? null : _strFmt(m.a, 1), '10⁻⁶/K');
+  // Referans alanlar SOLGUN ve etiketleri bunu söylüyor: çözücüye gitmiyorlar.
+  h += prop('λ <i>(ref.)</i>', m.k == null ? null : _strFmt(m.k, 2), 'W/m·K', true);
+  h += prop('c<sub>p</sub> <i>(ref.)</i>', m.cp == null ? null : _strFmt(m.cp), 'J/kg·K', true);
+  h += '</div>';
+  if(m.not) h += '<div class="ve-str-mat-note">' + _strEsc(m.not) + '</div>';
+  if(m.uyari) h += '<div class="ve-str-mat-warn"><b>Dikkat.</b> ' + _strEsc(m.uyari) + '</div>';
+
+  if(uygulanan === m.id && veStrMatLibMatches(veStrMatOf(node))){
+    h += '<div style="font-size:var(--fs-micro); color:var(--accent-warning); font-weight:600;">✓ Bu malzeme parçaya uygulanmış.</div>';
+  } else {
+    h += '<button class="ve-str-btn ve-str-btn--primary" style="width:100%;"'
+      +  ' onclick="veStrMatApplyLib(\'' + nodeId + '\',\'' + _strEsc(m.id) + '\')">'
+      +  'Parçaya Uygula</button>';
+  }
+  return h + '</div>';
+}
+
+// Katalog kaydını parçaya uygula. Kayıt KOPYA olarak gidiyor (bkz.
+// veStrMatLibRecord) — kütüphane sürümü değişse bile kaydedilmiş proje
+// kendiliğinden değişmiyor.
+function veStrMatApplyLib(nodeId, libId){
+  var node = _strNodeById(nodeId);
+  if(!node || !_strLibHas()) return false;
+  var rec = veStrMatLibRecord(libId);
+  if(!rec) return false;
+  if(!node.data) node.data = {};
+  node.data.material = rec;
+  if(typeof saveState === 'function') saveState();
+  if(typeof veStrRefreshBadge === 'function') veStrRefreshBadge(nodeId);
+  if(typeof showToast === 'function') showToast(rec.name + ' uygulandı', 'success');
+  if(typeof showNodeProperties === 'function') showNodeProperties(node);
+  return true;
+}
+
+// Uygulanan kaydın İZİ — panelde açıkça yazılı. Üç durum var ve üçü farklı
+// şey söylüyor; ikisini birleştirmek kullanıcıyı yanıltırdı:
+//   • katalogdan geldi ve DEĞİŞMEDİ        → katalog adı geçerli
+//   • katalogdan geldi ama ELLE DEĞİŞTİ    → ad artık kaydı anlatmıyor
+//   • hiç katalogdan gelmedi               → elle girilmiş
+function _strMatSourceLine(node){
+  var m = veStrMatOf(node);
+  if(!m.lib || !_strLibHas()){
+    var doluMu = Object.keys(m).length > 0;
+    if(!doluMu) return '';
+    return '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:8px;">'
+         + 'Elle girilmiş kayıt — kütüphane izi yok.</div>';
+  }
+  var kat = veStrMatLibById(m.lib);
+  var ad = kat ? kat.n : m.lib;
+  var std = kat ? (' · ' + kat.std) : '';
+  if(veStrMatLibMatches(m)){
+    return '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:8px;">'
+         + 'Kütüphaneden: <b style="color:var(--text-secondary);">' + _strEsc(ad) + '</b>'
+         + _strEsc(std) + ' · katalog sürümü ' + _strEsc(m.libVer || '?') + '</div>';
+  }
+  return '<div style="font-size:var(--fs-micro); color:var(--accent-warning); margin-bottom:8px;">'
+       + '<b>' + _strEsc(ad) + '</b> kaydından türetildi, <b>elle değiştirildi</b> — '
+       + 'değerler artık katalogdakiler değil.</div>';
+}
+
 function getStrMaterialPropertiesHTML(node){
   if(!node.data) node.data = {};
   var m = veStrMatOf(node);
 
   var html = '<div class="sw-panel">';
-  html += '<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-primary);">'
+  html += '<div style="padding:8px 10px; margin-bottom:9px; font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-primary);">'
         + '<b style="color:var(--text-heading);">Malzeme ve Özellikler.</b> Geometri\'ye asılan <b>alt bileşen</b> — '
         + 'içe aktarılan parçaya malzeme atar. Zincirin halkası değildir: çıkışı yoktur, '
         + 'Geometri\'nin <b>alt</b> portundan beslenir.</div>';
 
   html += _strMatHostCard(node);
 
-  html += '<div class="sw-section-title">Malzeme</div>';
-  html += '<div style="display:flex; align-items:center; gap:10px; margin-bottom:9px;">'
-        + '<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">Ad</div>'
-        + '<input type="text" id="ve-str-mat-name-' + node.id + '" value="' + _strEsc(m.name == null ? '' : m.name) + '"'
-        + ' placeholder="ör. S355JR" onchange="veStrMatSet(\'' + node.id + '\',\'name\',this.value)"'
-        + ' style="width:170px; ' + _STR_INP + ' text-align:left;">'
-        + '</div>';
+  // ── İKİ SÜTUN: solda KATALOG, sağda parçaya UYGULANMIŞ kayıt ──
+  // Bölüşüm görüntüye göre değil SORUYA göre: "hangi malzemeler var" ile
+  // "bu parçanın malzemesi ne" ayrı iki soru, ve ikincisi birincisine
+  // bakarken görünmek zorunda — yoksa kullanıcı uygulayıp uygulamadığını
+  // unutuyor. (Ansys Engineering Data'nın bölüşümü de bu.)
+  html += '<div class="ve-cp-grid ve-str-mat-grid">';
 
-  html += _strMatFieldGrid(node);
-  html += _strMatVerdict(node);
+  // ── SOL: kütüphane ──
+  var sol = '<div class="sw-section-title">Malzeme Kütüphanesi</div>';
+  if(_strLibHas()){
+    // GEÇERLİLİK SINIRI listenin ÜSTÜNDE, panelin altında değil: katalog
+    // değerini ölçülmüş değer sanmak bu modülün en pahalı sessiz hatası olurdu.
+    sol += '<div class="ve-str-mat-disc">'
+         + 'Değerler ilgili <b>standardın nominal</b> değerleridir, bir döküm sertifikası değil. '
+         + 'Hüküm verilecek analizde tedarikçinin muayene belgesiyle (EN 10204) doğrulayın. '
+         + 'Hepsi <b>' + VE_STR_MAT_LIB_TEMP_C + ' °C</b> içindir.'
+         + '</div>';
+    sol += _strLibFilterHTML(node.id);
+    sol += '<div class="ve-str-mat-count" id="ve-str-mat-count">' + _strEsc(_strLibCountText(node.id)) + '</div>';
+    sol += '<div class="ve-str-mat-list" id="ve-str-mat-list">' + _strLibListHTML(node.id) + '</div>';
+    sol += '<div id="ve-str-mat-det">' + _strLibDetailHTML(node.id) + '</div>';
+  } else {
+    // Kütüphane dosyası yüklenmediyse SESSİZ kalınmıyor: değerler elle
+    // girilebilir ve panel bunu söylüyor.
+    sol += '<div class="ve-str-mat-empty">Malzeme kütüphanesi yüklenmedi '
+         + '(js/structural-materials.js). Değerler sağdaki alanlardan elle girilebilir.</div>';
+  }
 
-  html += '<div class="sw-section-title">Türetilen</div>';
-  html += _strMatDerivedTable(node);
+  // ── SAĞ: parçaya uygulanmış kayıt ──
+  var sag = '<div class="sw-section-title">Uygulanan Malzeme</div>';
+  sag += _strMatSourceLine(node);
+  sag += '<div style="display:flex; align-items:center; gap:10px; margin-bottom:9px;">'
+       + '<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">Ad</div>'
+       + '<input type="text" id="ve-str-mat-name-' + node.id + '" value="' + _strEsc(m.name == null ? '' : m.name) + '"'
+       + ' placeholder="ör. S355JR" onchange="veStrMatSet(\'' + node.id + '\',\'name\',this.value)"'
+       + ' style="width:150px; ' + _STR_INP + ' text-align:left;">'
+       + '</div>';
+  sag += _strMatFieldGrid(node);
+  sag += _strMatVerdict(node);
+  sag += '<div class="sw-section-title">Türetilen</div>';
+  sag += _strMatDerivedTable(node);
+  sag += '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">';
+  sag += '<button class="ve-str-btn ve-str-btn--danger" onclick="veStrMatClear(\'' + node.id + '\')">Temizle</button>';
+  sag += '</div>';
+  // Katalogun KAPSAMADIĞI şeyler — raporun §9 kalıbı. Sessiz bırakmak,
+  // olmayan bir yeteneği varmış gibi göstermek olurdu.
+  sag += '<div style="padding:7px 9px; font-size:var(--fs-micro); line-height:1.45; color:var(--text-muted); background:var(--bg-secondary); border:1px dashed var(--border-color);">'
+       + '<b style="color:var(--text-secondary);">Katalogda olmayanlar:</b> kompozit laminatlar (ortotrop — bu kart izotrop), '
+       + 'sıcaklığa bağlı E(T)/σ(T) eğrileri, S-N yorulma eğrileri, akma sonrası pekleşme, '
+       + 'anizotropi (haddeleme yönü, eklemeli imalatta katman yönü).'
+       + '</div>';
 
-  html += '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">';
-  html += '<button class="ve-str-btn ve-str-btn--danger" onclick="veStrMatClear(\'' + node.id + '\')">Temizle</button>';
-  html += '</div>';
-
-  // Kütüphane SIRADA. `_strPending` DEĞİL, `_strNextUp`: o işaret "bu bileşen
-  // iskelet" demek ve testi (hâlâ iskelet olan panel sayısı) ona bakıyor.
-  // Malzeme paneli iskelet değil — çalışıyor; bekleyen şey KOLAYLIK.
-  html += _strNextUp('Hazır <b>malzeme kütüphanesi</b> (yapı çeliği, alüminyum, döküm, paslanmaz…) '
-        + 'sonraki adımda buraya gelecek; şimdilik değerler elle giriliyor. '
-        + 'Alan tablosu tek kaynaktan (<code>VE_STR_MAT_FIELDS</code>) besleniyor, '
-        + 'kütüphane geldiğinde aynı kayda yazacak.');
-
-  html += '</div>';
+  html += '<div class="ve-cp-col ve-str-mat-col-lib">' + sol + '</div>';
+  html += '<div class="ve-cp-col ve-str-mat-col-cur">' + sag + '</div>';
+  html += '</div></div>';
   return html;
+}
+
+// Arama + kategori süzgeci. `oninput` LİSTEYİ tazeliyor, paneli değil —
+// panel yeniden çizilseydi arama kutusu DOM'dan silinir ve odak her harfte
+// kaybolurdu.
+function _strLibFilterHTML(nodeId){
+  if(!_strLibHas()) return '';
+  var ui = _strLibUI(nodeId);
+  var say = veStrMatLibCounts();
+  var h = '<div class="ve-str-mat-filter">';
+  h += '<input type="search" id="ve-str-mat-q" value="' + _strEsc(ui.q) + '"'
+    +  ' placeholder="Ara: S355 · 1.4301 · AISI 304 · sfero · 42CrMo4"'
+    +  ' oninput="veStrMatLibQuery(\'' + nodeId + '\', this.value)">';
+  h += '<select onchange="veStrMatLibSetCat(\'' + nodeId + '\', this.value)">';
+  h += '<option value=""' + (ui.cat ? '' : ' selected') + '>Tüm aileler (' + VE_STR_MAT_LIB.length + ')</option>';
+  VE_STR_MAT_CATS.forEach(function(c){
+    h += '<option value="' + _strEsc(c.key) + '"' + (ui.cat === c.key ? ' selected' : '') + '>'
+      +  _strEsc(c.ad) + ' (' + (say[c.key] || 0) + ')</option>';
+  });
+  h += '</select></div>';
+  return h;
 }
 
 function getStrMeshPropertiesHTML(node){
@@ -1325,6 +1589,11 @@ if(typeof module !== 'undefined' && module.exports) {
     veStrMatDerived: veStrMatDerived,
     veStrMatHost: veStrMatHost,
     veStrMatBadgeInfo: veStrMatBadgeInfo,
+    _strMatShortName: _strMatShortName,
+    veStrMatLibQuery: veStrMatLibQuery,
+    veStrMatLibSetCat: veStrMatLibSetCat,
+    veStrMatLibPick: veStrMatLibPick,
+    veStrMatApplyLib: veStrMatApplyLib,
     veStrApplyBadge: veStrApplyBadge,
     veStrGeomSelectFace: veStrGeomSelectFace,
     getStrModulePropertiesHTML: getStrModulePropertiesHTML,

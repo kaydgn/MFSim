@@ -20,6 +20,11 @@
  *      yanlış bağlardı.
  */
 const str = require('../../js/cp-structural.js');
+// Tarayıcıda js/structural-materials.js düz <script> olarak yükleniyor ve
+// bildirdikleri GERÇEK global. Node'da cp-structural.js `require` ile geldiği
+// için serbest tanımlayıcılar `global`e düşüyor — köprüyü burada kuruyoruz.
+const MATLIB = require('../../js/structural-materials.js');
+Object.keys(MATLIB).forEach((k) => { global[k] = MATLIB[k]; });
 const fs = require('fs');
 const path = require('path');
 
@@ -511,13 +516,60 @@ describe('malzeme — kayıt, rozet ve bağlı geometri', () => {
 describe('malzeme paneli', () => {
   const mk = (data) => str.getStrMaterialPropertiesHTML({ id: 'm1', type: 'str-material', data: data || {} });
 
-  test('İSKELET DEĞİL — \"Bileşen bekleniyor\" demiyor, kütüphaneyi SIRAYA koyuyor', () => {
+  test('İSKELET DEĞİL — \"Bileşen bekleniyor\" demiyor', () => {
     // _strPending işareti \"bu panel henüz çalışmıyor\" demek ve iskelet sayacı
     // ona bakıyor; çalışan bir panelde kullanmak o sayacı bozardı.
+    expect(mk()).not.toContain('Bileşen bekleniyor');
+  });
+
+  test('İKİ SÜTUN: solda katalog, sağda uygulanan kayıt', () => {
+    // Bölüşüm görüntüye göre değil SORUYA göre: \"hangi malzemeler var\" ile
+    // \"bu parçanın malzemesi ne\" ayrı iki soru ve ikincisi birincisine
+    // bakarken görünmek zorunda.
     const h = mk();
-    expect(h).not.toContain('Bileşen bekleniyor');
-    expect(h).toContain('Sırada');
-    expect(h).toContain('malzeme kütüphanesi');
+    expect(h).toContain('ve-str-mat-col-lib');
+    expect(h).toContain('ve-str-mat-col-cur');
+    expect(h).toContain('Malzeme Kütüphanesi');
+    expect(h).toContain('Uygulanan Malzeme');
+  });
+
+  test('katalog listesi ve süzgeçleri panelde kurulu', () => {
+    const h = mk();
+    expect(h).toContain('id="ve-str-mat-list"');
+    expect(h).toContain('id="ve-str-mat-q"');
+    expect(h).toContain("veStrMatLibQuery('m1'");
+    expect(h).toContain("veStrMatLibSetCat('m1'");
+    // Bütün aileler süzgeçte
+    MATLIB.VE_STR_MAT_CATS.forEach((c) => expect(h).toContain('value="' + c.key + '"'));
+  });
+
+  test('GEÇERLİLİK SINIRI listenin ÜSTÜNDE yazılı — nominal ≠ sertifika', () => {
+    // Katalog değerini ölçülmüş değer sanmak bu modülün en pahalı sessiz
+    // hatası olurdu; uyarı paneli değil LİSTEYİ karşılıyor.
+    const h = mk();
+    expect(h).toContain('nominal');
+    expect(h).toContain('EN 10204');
+    expect(h).toContain(String(MATLIB.VE_STR_MAT_LIB_TEMP_C) + ' °C');
+    expect(h.indexOf('nominal')).toBeLessThan(h.indexOf('id="ve-str-mat-list"'));
+  });
+
+  test('KATALOGDA OLMAYANLAR yazılı — olmayan yetenek varmış gibi görünmesin', () => {
+    const h = mk();
+    expect(h).toContain('Katalogda olmayanlar');
+    expect(h).toMatch(/ortotrop/);
+    expect(h).toMatch(/S-N/);
+  });
+
+  test('kütüphane YÜKLENMEZSE panel sessiz kalmıyor', () => {
+    const yedek = global.VE_STR_MAT_LIB;
+    try {
+      delete global.VE_STR_MAT_LIB;
+      const h = mk();
+      expect(h).toContain('kütüphanesi yüklenmedi');
+      // ...ve sağ sütun (elle giriş) YİNE ÇALIŞIYOR: kütüphane bir kolaylık,
+      // bileşenin çalışma şartı değil.
+      expect(h).toContain("veStrMatSet('m1','E'");
+    } finally { global.VE_STR_MAT_LIB = yedek; }
   });
 
   test('altı alanın altısı da panelde ve TEK kaynaktan geliyor', () => {
@@ -563,6 +615,200 @@ describe('malzeme paneli', () => {
   test('undefined/NaN sızmıyor — dolu ve boş kayıtta', () => {
     [undefined, { material: {} }, { material: { E: 210000, nu: 0.3, rho: 7850, sy: 355, su: 510, alpha: 12, name: 'S355JR' } }]
       .forEach((d) => expect(mk(d)).not.toMatch(/undefined|NaN|\[object/));
+  });
+});
+
+// ── 4c) KÜTÜPHANEDEN UYGULAMA — katalog ↔ düğüm ────────────────────────────
+describe('malzeme kütüphanesinden uygulama', () => {
+  const mkNode = (id) => ({ id, type: 'str-material', data: {}, x: 0, y: 0, width: 50, height: 46 });
+
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="m1"><div class="ve-node-box"></div></div>';
+  });
+
+  test('uygulanan kayıt KOPYA — katalog güncellemesi eski projeyi bozmaz', () => {
+    // Kütüphane bir REFERANS olsaydı, katalogda bir değer düzeltildiğinde
+    // kaydedilmiş bir analizin sayıları SESSİZCE değişirdi. Bu projenin en
+    // çok kaçındığı hata sınıfı bu.
+    const n = mkNode('m1');
+    global.nodes = [n];
+    expect(str.veStrMatApplyLib('m1', 's355jr')).toBe(true);
+    expect(n.data.material.E).toBe(210000);
+    expect(n.data.material.sy).toBe(355);
+    expect(n.data.material.lib).toBe('s355jr');
+    expect(n.data.material.libVer).toBe(MATLIB.VE_STR_MAT_LIB_VERSION);
+    // Kayda dokunmak katalogu etkilemiyor
+    n.data.material.E = 1;
+    expect(MATLIB.veStrMatLibById('s355jr').E).toBe(210000);
+  });
+
+  test('uygulama sonrası kayıt ÇÖZÜLEBİLİR ve rozet amber', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatApplyLib('m1', 'aw6082-t6');
+    expect(str.veStrMatValidate(n.data.material).ok).toBe(true);
+    const bi = str.veStrMatBadgeInfo(n);
+    expect(bi.ready).toBe(true);
+    // ROZET METNİ: "EN AW-6082 T6" ham kısaltmayla "EN AW-608…" olurdu ve
+    // bu BAŞKA BİR ALAŞIM gibi okunur. Standart öneki atılınca ayırt edici
+    // parça (6082) ayakta kalıyor.
+    expect(bi.text).toBe('AW-6082 T6');
+    expect(bi.title).toContain('EN AW-6082 T6');   // tam ad ipucunda
+  });
+
+  test('bilinmeyen kimlik kaydı BOZMUYOR', () => {
+    const n = mkNode('m1');
+    n.data.material = { name: 'elle', E: 1000, nu: 0.3 };
+    global.nodes = [n];
+    expect(str.veStrMatApplyLib('m1', 'yok-boyle-bir-sey')).toBe(false);
+    expect(n.data.material.name).toBe('elle');   // eski kayıt yerinde
+  });
+
+  // İZ ÜÇ DURUM anlatıyor ve üçü farklı şey söylüyor. İkisini birleştirmek
+  // kullanıcıyı yanıltırdı: katalog adı, artık katalogda olmayan sayıların
+  // üstünde durur.
+  test('iz satırı: katalogdan geldi / elle değişti / hiç katalogdan gelmedi', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+
+    // 1) hiç katalogdan gelmedi
+    str.veStrMatSet('m1', 'E', '210000');
+    expect(str.getStrMaterialPropertiesHTML(n)).toContain('kütüphane izi yok');
+
+    // 2) katalogdan geldi, değişmedi
+    str.veStrMatApplyLib('m1', '1.4404');
+    let h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).toContain('Kütüphaneden');
+    expect(h).toContain('X2CrNiMo17-12-2');
+    expect(h).not.toContain('elle değiştirildi');
+
+    // 3) katalogdan geldi ama elle değişti
+    str.veStrMatSet('m1', 'E', '195000');
+    h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).toContain('elle değiştirildi');
+    expect(n.data.material.lib).toBe('1.4404');   // İZ duruyor
+    expect(n.data.material.source).toBe('manual');
+  });
+
+  test('elle değişen kayıtta katalog kimliği KAYBOLMUYOR', () => {
+    // İz atılsaydı \"bu neyden türetildi\" sorusu cevapsız kalırdı.
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatApplyLib('m1', '42crmo4');
+    str.veStrMatSet('m1', 'sy', '650');          // d = 100 mm kademesi
+    expect(n.data.material.lib).toBe('42crmo4');
+    expect(MATLIB.veStrMatLibMatches(n.data.material)).toBe(false);
+  });
+
+  test('uzun katalog adları rozette AYIRT EDİCİ parçayı koruyor', () => {
+    // Ham kısaltma "EN AC-43000 (AlSi10Mg) T6" için "EN AC-430…" verirdi.
+    expect(str._strMatShortName('EN AW-6082 T6')).toBe('AW-6082 T6');
+    expect(str._strMatShortName('EN AC-43000 (AlSi10Mg) T6')).toBe('AC-43000 T6');
+    expect(str._strMatShortName('EN-GJS-500-7')).toBe('GJS-500-7');
+    expect(str._strMatShortName('S355JR')).toBe('S355JR');
+    // Kısaltılamayacak kadar uzun olan yine kısalıyor — ama ipucunda tam ad var.
+    expect(str._strMatShortName('X5CrNiMo17-12-2')).toBe('X5CrNiMo17…');
+  });
+
+  test('liste UYGULANAN kaydı işaretliyor — \"şu an hangisi takılı\"', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatApplyLib('m1', 'gjs-500-7');
+    const h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).toMatch(/class="ve-str-mat-row[^"]*applied/);
+  });
+
+  test('seçim OTURUMLUK: aynı satıra ikinci tık seçimi kaldırıyor', () => {
+    // Bir gezinme tercihi undo yığınına binmemeli (CAD yüz seçimindeki kural).
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatLibPick('m1', 's355jr');
+    expect(str.getStrMaterialPropertiesHTML(n)).toContain('Parçaya Uygula');
+    str.veStrMatLibPick('m1', 's355jr');          // ikinci tık
+    expect(str.getStrMaterialPropertiesHTML(n)).not.toContain('Parçaya Uygula');
+    expect(n.data.material).toBeUndefined();      // düğüme HİÇ yazılmadı
+  });
+
+  test('seçilenin BÜTÜN sayıları uygulamadan ÖNCE görünüyor', () => {
+    // Kullanıcı kör bir kimliğe değil, OKUDUĞU değerlere onay veriyor.
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatLibPick('m1', 'ti-6al-4v');
+    const h = str.getStrMaterialPropertiesHTML(n);
+    ['113.800', '0,342', '4.430', '880', '950'].forEach((v) => expect(h).toContain(v));
+    expect(h).toContain('ASTM B348');             // standart = değerin kaynağı
+  });
+
+  test('kaydın UYARISI listede de künyede de görünüyor', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatLibPick('m1', 'nbr70');
+    expect(str.getStrMaterialPropertiesHTML(n)).toContain('UYGUN DEĞİL');
+    str.veStrMatLibPick('m1', 'gjl-250');
+    expect(str.getStrMaterialPropertiesHTML(n)).toMatch(/AKMA GÖSTERMEZ/);
+  });
+
+  test('arama süzgeci listeyi gerçekten daraltıyor', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    const hepsi = str.getStrMaterialPropertiesHTML(n);
+    const tumSatir = (hepsi.match(/<button type="button" class="ve-str-mat-row/g) || []).length;
+    expect(tumSatir).toBe(MATLIB.VE_STR_MAT_LIB.length);
+
+    str.veStrMatLibQuery('m1', '1.4301');
+    const dar = str.getStrMaterialPropertiesHTML(n);
+    expect((dar.match(/<button type="button" class="ve-str-mat-row/g) || []).length).toBe(1);
+    expect(dar).toContain('X5CrNi18-10');
+
+    str.veStrMatLibQuery('m1', '');
+    str.veStrMatLibSetCat('m1', 'titanyum');
+    const kat = str.getStrMaterialPropertiesHTML(n);
+    expect((kat.match(/<button type="button" class="ve-str-mat-row/g) || []).length).toBe(3);
+    str.veStrMatLibSetCat('m1', '');
+  });
+
+  test('AİLE BAŞLIKLARI yalnız aranmamış listede — arama sırası PUANA göre', () => {
+    // Arama sonucunda başlık basmak sırayı YALANLARDI: orada sıra aileye göre
+    // değil eşleşme puanına göre.
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatLibQuery('m1', '');
+    const h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).toContain('ve-str-mat-head');
+    // AİLE BAŞLIĞI SAYISI = AİLE SAYISI. ÖLÇÜLDÜ: sıralama alfabetikken 16
+    // aile için 30 başlık basılıyordu — aileler birbirinin içine giriyordu.
+    expect((h.match(/class="ve-str-mat-head"/g) || []).length)
+      .toBe(MATLIB.VE_STR_MAT_CATS.length);
+    str.veStrMatLibQuery('m1', 'celik');
+    expect(str.getStrMaterialPropertiesHTML(n)).not.toContain('ve-str-mat-head');
+    str.veStrMatLibQuery('m1', '');
+  });
+
+  test('panelde undefined/NaN sızmıyor — boş, seçili ve uygulanmış hâlde', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    expect(str.getStrMaterialPropertiesHTML(n)).not.toMatch(/undefined|NaN|\[object/);
+    str.veStrMatLibPick('m1', 'al2o3-995');       // σ_ak null olan kayıt
+    expect(str.getStrMaterialPropertiesHTML(n)).not.toMatch(/undefined|NaN|\[object/);
+    str.veStrMatApplyLib('m1', 'al2o3-995');
+    expect(str.getStrMaterialPropertiesHTML(n)).not.toMatch(/undefined|NaN|\[object/);
+    str.veStrMatLibPick('m1', 'al2o3-995');
+  });
+
+  test('HER kayıt paneli patlatmadan seçilebiliyor ve uygulanabiliyor', () => {
+    // 112 kaydın hepsi tek tek: seçim künyesi kuruluyor, uygulama kayıt
+    // üretiyor ve kayıt çözülebilir. Bir kaydın eksik alanı paneli
+    // patlatırsa burada görünür.
+    const n = mkNode('m1');
+    global.nodes = [n];
+    MATLIB.VE_STR_MAT_LIB.forEach((m) => {
+      str.veStrMatLibPick('m1', m.id);
+      const h = str.getStrMaterialPropertiesHTML(n);
+      expect(h).not.toMatch(/undefined|NaN|\[object/);
+      expect(str.veStrMatApplyLib('m1', m.id)).toBe(true);
+      expect(str.veStrMatValidate(n.data.material).ok).toBe(true);
+      str.veStrMatLibPick('m1', m.id);
+    });
   });
 });
 
@@ -617,6 +863,41 @@ describe('modül kablolaması eksiksiz', () => {
     expect(s).toContain('src="vendor/occt-import-js.js"');
     expect(s).toContain('src="js/structural-model.js"');
     expect(s).toContain('src="js/cp-structural-viewer.js"');
+  });
+
+  test('index.html: malzeme kütüphanesi TEK kez ve cp-structural\'den ÖNCE', () => {
+    // Sıra önemli: cp-structural.js panel kurarken kütüphane globallerini
+    // okuyor. Sonra yüklenseydi panel ilk açılışta \"kütüphane yüklenmedi\"
+    // derdi — sessiz değil ama yanlış.
+    const s = oku('index.html');
+    expect(s.match(/src="js\/structural-materials\.js"/g)).toHaveLength(1);
+    expect(s.indexOf('src="js/structural-materials.js"'))
+      .toBeLessThan(s.indexOf('src="js/cp-structural.js"'));
+  });
+
+  test('cp-core.js: Malzeme paneli GENİŞ ve kendi pencere sınıfını alıyor', () => {
+    const s = oku('js/cp-core.js');
+    expect(s).toMatch(/VE_WIDE_PANEL_TYPES[\s\S]{0,1000}'str-material'/);
+    expect(s).toContain("'ve-properties--strmat'");
+    // Pencere sınıfı KOŞULSUZ: sol sütun (katalog) her zaman dolu, Geometri'deki
+    // \"boş açılan büyük pencere\" durumu burada yok.
+    expect(s).toMatch(/ve-properties--strmat',\s*node\.type === 'str-material'\)/);
+  });
+
+  test('CSS: katalog listesinin boşluğu yutan flex zinciri KESİNTİSİZ', () => {
+    // --strgeom'daki dersin aynısı: bir halka (min-height:0 / stretch / flex:1)
+    // düşerse panel yine açılır, liste yine görünür — yalnız altında boşluk
+    // kalır ve liste kısalır.
+    const css = oku('css/styles.css');
+    const blok = css.slice(css.indexOf('.ve-properties.ve-properties--strmat'));
+    expect(blok).toMatch(/--strmat \.ve-properties-content\{[^}]*overflow:hidden/);
+    expect(blok).toMatch(/--strmat \.ve-properties-content > \.sw-panel\{[^}]*min-height:0/);
+    expect(blok).toMatch(/--strmat \.ve-str-mat-grid\{[^}]*align-items:stretch/);
+    expect(blok).toMatch(/--strmat \.ve-str-mat-grid\{[^}]*min-height:0/);
+    expect(blok).toMatch(/--strmat \.ve-str-mat-list\{[^}]*flex:1/);
+    // Ve pencere sınıfı --wide'dan SONRA tanımlı olmalı ki onu ezebilsin.
+    expect(css.indexOf('.ve-properties.ve-properties--strmat'))
+      .toBeGreaterThan(css.indexOf('.ve-properties.ve-properties--wide'));
   });
 
   test('vendorlu okuyucu ve .wasm depoda duruyor', () => {
