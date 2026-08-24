@@ -118,19 +118,45 @@ function getStrModulePropertiesHTML(node){
 // tam olarak bir Geometri, bir Ağ, bir Sınır Koşulları, bir Sonuçlar. Seçim yok.
 // O yüzden zincir ilk açılışta KURULU ve BAĞLI gelir; kullanıcı boş tuvale değil
 // çalışan bir iskelete düşer.
+//
+// MALZEME ZİNCİRİN İÇİNDE DEĞİL, GEOMETRİ'NİN ALTINDA: zincir yatay bir
+// şerittir (Geometri → Ağ → Sınır Koşulları → Sonuçlar); Malzeme o şeridin
+// ALTINA, Geometri'nin tam hizasına iner. Şeridin içine dizilseydi beşinci bir
+// halka gibi okunurdu — oysa çıkışı yok, zincire giremez.
+//
+// GEOMETRİ'NİN ADI SOLA ALINDI ve bu bir zevk tercihi değil, ÖLÇÜLMÜŞ bir
+// çakışmanın düzeltmesi. Malzeme teli Geometri'nin ALT portundan dümdüz iniyor;
+// ad varsayılan yerinde (kutunun altında, ortalı) dururken tel tam onun
+// ÜSTÜNDEN geçiyordu — projenin kendi yerleşim kuralının ihlali
+// (bkz. tests/unit/arac-example-layout.test.js: "dik açılı tel ne bileşenin ne
+// de bir ADIN üstünden geçer"). Dört seçenek gerçek tarayıcıda ölçüldü:
+//
+//   bottom (varsayılan)  tel adı KESİYOR                        ✗
+//   top                  tel temiz, ama STEP ROZETİ adın üstünde ✗
+//   right                tel temiz, ama ad ZİNCİR TELİNİN üstünde ✗
+//   left                 ikisi de temiz                          ✓
+//
+// Ad kullanıcının tercihidir (sağ tık → Etiket Konumu); bu yalnız VARSAYILAN.
 var VE_STR_STARTER_LAYOUT = [
-  { type:'str-geometry', lx: 40, ly:  40 },
+  { type:'str-geometry', lx: 40, ly:  40, labelPos: 'left' },
   { type:'str-mesh',     lx:190, ly:  40 },
   { type:'str-bc',       lx:340, ly:  40 },
-  { type:'str-results',  lx:490, ly:  40 }
+  { type:'str-results',  lx:490, ly:  40 },
+  // Geometri kutusu 62 geniş, Malzeme 50 → 6 px sağa kaydırınca ikisi ORTALANIR
+  // ve tel dümdüz iner (Geometri alt portu %50'de, Malzeme üst portu %50'de).
+  { type:'str-material', lx: 46, ly: 150 }
 ];
 
-// Zincirin kenarları — yerleşim dizisindeki İNDİSLERLE değil TİPLERLE yazıldı:
-// yerleşim yeniden sıralanırsa indisli bir tablo sessizce yanlış bağlanırdı.
+// Kenarlar — yerleşim dizisindeki İNDİSLERLE değil TİPLERLE yazıldı: yerleşim
+// yeniden sıralanırsa indisli bir tablo sessizce yanlış bağlanırdı.
+// Dördüncü alan PORTU da yazıyor: Geometri'nin artık İKİ çıkışı var
+// (output-0 = zincir, output-1 = malzeme eki) ve hangisinin hangisi olduğu
+// varsayılana bırakılamaz — 'output' yazsaydık ikisi de aynı ağızdan çıkardı.
 var VE_STR_STARTER_CHAIN = [
-  ['str-geometry', 'str-mesh'],
-  ['str-mesh',     'str-bc'],
-  ['str-bc',       'str-results']
+  ['str-geometry', 'str-mesh',     'output-0', 'input'],
+  ['str-mesh',     'str-bc',       'output',   'input'],
+  ['str-bc',       'str-results',  'output',   'input'],
+  ['str-geometry', 'str-material', 'output-1', 'input']
 ];
 
 function veStrPopulateStarter(){
@@ -149,6 +175,11 @@ function veStrPopulateStarter(){
     createNode(it.type, base.x + it.lx, base.y + it.ly);
     if(typeof nodes !== 'undefined' && nodes.length > before){
       var n = nodes[nodes.length-1];
+      if(it.labelPos){
+        if(!n.data) n.data = {};
+        n.data.labelPos = it.labelPos;
+        if(typeof applyNodeLabelPos === 'function') applyNodeLabelPos(n);
+      }
       created.push(n);
       byType[it.type] = n.id;
     }
@@ -156,7 +187,7 @@ function veStrPopulateStarter(){
 
   if(typeof createConnection === 'function'){
     VE_STR_STARTER_CHAIN.forEach(function(e){
-      if(byType[e[0]] && byType[e[1]]) createConnection(byType[e[0]], byType[e[1]]);
+      if(byType[e[0]] && byType[e[1]]) createConnection(byType[e[0]], byType[e[1]], e[2], e[3]);
     });
   }
   if(typeof updateAllConnections === 'function') updateAllConnections();
@@ -265,6 +296,11 @@ function _strForgetResults(){
   if(typeof veStrGeomCacheClear === 'function') veStrGeomCacheClear();
   if(typeof veStrSrcClear === 'function') veStrSrcClear();
   if(typeof veStrViewerDispose === 'function') veStrViewerDispose();
+  // Oturumluk görünüm durumları da (seçili yüz, yüz inceleme kipi) yeni
+  // projeye taşınmasın — düğüm kimlikleri yeniden kullanılırsa önceki projenin
+  // tercihi açık gelirdi.
+  _veStrSelFace = {};
+  _veStrFaceMode = {};
 }
 
 // Boş panelin DURUM satırı — sessizce boş bırakılan bir panel, çalışmayan bir
@@ -273,6 +309,15 @@ function _strForgetResults(){
 function _strPending(){
   return '<div style="padding:8px 10px; margin-bottom:9px; font-size:var(--fs-micro); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px dashed var(--accent-warning);">'
     + '<b style="color:var(--text-heading);">Kullanıma açık değil.</b></div>';
+}
+
+// "Bu bileşen ÇALIŞIYOR, sırada bir kolaylık var" notu. _strPending'den AYRI
+// tutuluyor çünkü ikisi farklı şey söylüyor: _strPending "bu panel henüz
+// çalışmıyor" der ve testi iskelet SAYISINI ona göre tutuyor. Aynı işareti
+// çalışan bir panelde kullanmak o sayacı bozar ve okuyanı yanıltır.
+function _strNextUp(text){
+  return '<div style="padding:8px 10px; margin-bottom:9px; font-size:var(--fs-micro); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px dashed var(--accent-primary);">'
+    + '<b style="color:var(--text-heading);">Sırada.</b> ' + text + '</div>';
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -306,14 +351,18 @@ var VE_STR_STEP_EXT = /\.(stp|step)$/i;
 // kopyalanıp 50 adımlık undo yığınına biniyor ve localStorage yedeğini bozuyor
 // (ayrıntı model katmanının başlığında). Sınır da orada: VE_STR_SRC_STORE_LIMIT.
 
-// Ağ inceliği kademeleri. Değer `bounding_box_ratio` — parçanın boyuna ORAN,
-// mutlak mm değil (bkz. structural-model.js VE_STR_GEOM_DEFLECTION).
+// Görüntü ağı inceliği SABİT — panelde üç kademeli bir seçici vardı,
+// kullanıcı isteğiyle kaldırıldı: her içe aktarma en ince (kaliteli) ağla
+// gelir, yuvarlatmalar hep belirgin olur. Değer `bounding_box_ratio` —
+// parçanın boyuna ORAN, mutlak mm değil (bkz. structural-model.js
+// VE_STR_GEOM_DEFLECTION).
+//
+// Kademe kaldırmak bir SEÇİMDİR ve bedeli ölçüldü: as1-tu-203'te üçgen
+// 4 408 → 4 688, kullanıcının braketinde 4 902 → 5 572. Yani "ince" pahalı
+// bir kademe değil; kabayla arası %14, ve yüz kimlikleri incelikten
+// BAĞIMSIZ olduğu için sınır koşulları bundan etkilenmiyor.
 // TEKRAR: bu ağ FEA ağı DEĞİL, yalnız görüntüleme ve yüz aralıkları içindir.
-var VE_STR_QUALITY = [
-  { key: 'kaba', label: 'Kaba',  linear: 0.01,   hint: 'hızlı önizleme' },
-  { key: 'orta', label: 'Orta',  linear: 0.002,  hint: 'varsayılan' },
-  { key: 'ince', label: 'İnce',  linear: 0.0005, hint: 'yuvarlatmalar belirginleşir' }
-];
+var VE_STR_MESH_LINEAR = 0.0005;
 
 // İçe aktarma sürerken ikinci bir çağrıyı engelle (kullanıcı düğmeye iki kez
 // basarsa iki okuma birbirinin üstüne yazardı).
@@ -465,21 +514,30 @@ function veStrApplyBadge(nodeEl, node){
   if(!nodeEl || !node || typeof document === 'undefined') return false;
   var old = nodeEl.querySelector('.ve-str-badge');
   if(old) old.remove();
-  if(node.type !== 'str-geometry') return false;
+  if(node.type !== 'str-geometry' && node.type !== 'str-material') return false;
 
-  var g = node.data && node.data.geometry;
-  var dolu = !!(g && g.stats);
+  var dolu, metin, tip;
+  if(node.type === 'str-material'){
+    // MALZEME: amber yalnız ÇÖZÜLEBİLİR kayıtta (bkz. veStrMatBadgeInfo).
+    var mi = veStrMatBadgeInfo(node);
+    dolu = mi.ready; metin = mi.text; tip = mi.title;
+  } else {
+    var g = node.data && node.data.geometry;
+    dolu = !!(g && g.stats);
+    if(dolu){
+      metin = '⬡' + (g.stats.faceCount || 0);
+      tip = (g.fileName || 'Parça') + ' · ' + _strFmt(g.stats.triCount) + ' üçgen · '
+          + _strFmt(g.stats.faceCount) + ' CAD yüzü';
+    } else {
+      // Boşken de rozet VAR: "rozet yok" ile "parça yok" ayırt edilemezdi.
+      metin = 'STEP';
+      tip = 'Henüz parça içe aktarılmadı — panelden .step/.stp seçin.';
+    }
+  }
   var b = document.createElement('span');
   b.className = 've-str-badge';
-  if(dolu){
-    b.textContent = '⬡' + (g.stats.faceCount || 0);
-    b.title = (g.fileName || 'Parça') + ' · ' + _strFmt(g.stats.triCount) + ' üçgen · '
-            + _strFmt(g.stats.faceCount) + ' CAD yüzü';
-  } else {
-    // Boşken de rozet VAR: "rozet yok" ile "parça yok" ayırt edilemezdi.
-    b.textContent = 'STEP';
-    b.title = 'Henüz parça içe aktarılmadı — panelden .step/.stp seçin.';
-  }
+  b.textContent = metin;
+  b.title = tip;
   b.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; pointer-events:none;'
     // Ölçek jetonu — ham px değil (bkz. tests/unit/typography-scale.test.js).
     + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
@@ -543,30 +601,9 @@ function _strGeomIngest(nodeId, file){
   rd.readAsArrayBuffer(file);
 }
 
-// Ağ inceliği kademesini değiştir → dosyayı YENİDEN SORMADAN yeniden üçgenle.
-function veStrGeomSetQuality(nodeId, key){
-  var node = _strNodeById(nodeId);
-  if(!node) return;
-  if(!node.data) node.data = {};
-  node.data.geomQuality = key;
-  var src = _strSourceGet(nodeId);
-  if(!src){
-    // Kaynak oturumda yok (proje yeni açıldı ve dosya sınırın üstündeydi).
-    _strStatus(nodeId, 'Ağ inceliğini değiştirmek için STEP dosyası yeniden içe aktarılmalı.', 'err');
-    return;
-  }
-  _strGeomRun(nodeId, src.bytes, { fileName: src.name, fileSize: src.size });
-}
-
-function _strQualityOf(node){
-  var key = (node && node.data && node.data.geomQuality) || 'orta';
-  for(var i = 0; i < VE_STR_QUALITY.length; i++) if(VE_STR_QUALITY[i].key === key) return VE_STR_QUALITY[i];
-  return VE_STR_QUALITY[1];
-}
-
-// İçe aktarmanın TEK yolu. Hem dosya seçme, hem bırakma, hem incelik değişimi,
-// hem proje açılışında kaynaktan geri yükleme buradan geçer — iki ayrı yol
-// açmak iki davranışın zamanla ayrışması demekti.
+// İçe aktarmanın TEK yolu. Hem dosya seçme, hem bırakma, hem proje açılışında
+// kaynaktan geri yükleme buradan geçer — iki ayrı yol açmak iki davranışın
+// zamanla ayrışması demekti.
 function _strGeomRun(nodeId, bytes, meta){
   if(_veStrGeomBusy[nodeId]) return;
   if(typeof veStrImportStep !== 'function'){
@@ -576,7 +613,6 @@ function _strGeomRun(nodeId, bytes, meta){
   var node = _strNodeById(nodeId);
   if(!node) return;
   if(!node.data) node.data = {};
-  var q = _strQualityOf(node);
 
   _veStrGeomBusy[nodeId] = true;
   _strStatus(nodeId, '');
@@ -586,7 +622,7 @@ function _strGeomRun(nodeId, bytes, meta){
   veStrImportStep(bytes, {
     fileName: meta.fileName, fileSize: meta.fileSize,
     importedAt: new Date().toISOString(),
-    deflection: { type: 'bounding_box_ratio', linear: q.linear, angular: 0.5 }
+    deflection: { type: 'bounding_box_ratio', linear: VE_STR_MESH_LINEAR, angular: 0.5 }
   }, {
     onProgress: function(stage, info){ _strProgSet(nodeId, stage, info); }
   }).then(function(geom){
@@ -626,6 +662,7 @@ function veStrGeomRemove(nodeId){
   if(typeof veStrSrcClear === 'function') veStrSrcClear(nodeId);
   if(typeof veStrViewerDispose === 'function') veStrViewerDispose();
   delete _veStrSelFace[nodeId];
+  delete _veStrFaceMode[nodeId];
   if(typeof saveState === 'function') { try { saveState(); } catch(e){} }
   veStrRefreshBadge(nodeId);
   if(typeof showNodeProperties === 'function') showNodeProperties(node);
@@ -640,6 +677,10 @@ function veStrGeomMountViewer(nodeId){
   var geom = (typeof veStrGeomCacheGet === 'function') ? veStrGeomCacheGet(nodeId) : null;
   if(geom && geom.ok){
     if(typeof veStrViewerInit === 'function') veStrViewerInit('ve-str-geom-canvas', geom, nodeId);
+    // Kip görüntüleyicinin DEĞİL panelin durumunda; her kurulumda yeniden
+    // bildirilmeli, yoksa panel açıkken sahne yenilendiğinde (incelik yok ama
+    // yeniden içe aktarma var) kip sessizce kapanırdı.
+    if(typeof veStrViewerSetFaceMode === 'function') veStrViewerSetFaceMode(veStrGeomFaceMode(nodeId));
     return;
   }
   // Önbellek yok (proje yeni açıldı) → oturumluk kaynaktan yeniden üret.
@@ -669,6 +710,62 @@ function veStrGeomMountViewer(nodeId){
 // kalıcı bağlarını kuracak — o zaman kimlik zaten künyede duruyor.
 var _veStrSelFace = {};
 
+// YÜZ İNCELEME KİPİ — VARSAYILAN KAPALI (kullanıcı isteği).
+//
+// Eskiden hem 123–240 satırlık CAD yüz listesi hem de fareyle gezerken çıkan
+// yüz künyesi panel açılır açılmaz oradaydı. İkisi de Sınır Koşulları için
+// hazırlık; parçaya bakmak isteyen biri için ise gürültü — liste sol rayın
+// yarısını yiyor, künye parçanın üstünde sürekli beliriyordu.
+//
+// TEK ANAHTAR, İKİ YÜZ: liste ile 3B künyesi aynı kipin iki görünümü. Ayrı
+// ayrı açılsalardı "liste açık ama parçada bir şey görünmüyor" gibi yarım
+// durumlar çıkardı — ve kullanıcı hangisinin neyi açtığını ezberlemek zorunda
+// kalırdı.
+//
+// Kip OTURUMLUK (`node.data`'ya yazılmıyor): bir görünüm tercihi her
+// `saveState()`'te undo yığınına binmemeli — seçimin kendisiyle aynı gerekçe.
+var _veStrFaceMode = {};
+
+function veStrGeomFaceMode(nodeId){ return !!_veStrFaceMode[nodeId]; }
+
+// Kipi çevir. PANELİ YENİDEN ÇİZMEDEN: showNodeProperties çağrılsaydı 3B
+// kanvas da yeniden kurulur, kamera ve sahne baştan yüklenirdi — bir liste
+// açmanın bedeli olamaz.
+function veStrGeomToggleFaceMode(nodeId){
+  var acik = !_veStrFaceMode[nodeId];
+  _veStrFaceMode[nodeId] = acik;
+  // Kapanırken seçim de gider: seçili yüzün görünür tek karşılığı vurgu ve
+  // liste satırı; ikisi de gizliyken "seçili" durmak sessiz bir durum olurdu.
+  if(!acik) delete _veStrSelFace[nodeId];
+  if(typeof veStrViewerSetFaceMode === 'function') { try { veStrViewerSetFaceMode(acik); } catch(e){} }
+
+  if(typeof document === 'undefined') return;
+  var blok = document.getElementById('ve-str-face-block');
+  if(blok) blok.style.display = acik ? '' : 'none';
+  var btn = document.getElementById('ve-str-face-toggle');
+  if(btn){
+    btn.setAttribute('aria-expanded', acik ? 'true' : 'false');
+    btn.classList.toggle('on', acik);
+    var ok = btn.querySelector('.ve-str-face-caret');
+    if(ok) ok.textContent = acik ? '▾' : '▸';
+  }
+  var ipucu = document.getElementById('ve-str-vwr-hint');
+  if(ipucu) ipucu.innerHTML = _strViewerHintHTML(acik);
+  if(!acik){
+    var sel = document.getElementById('ve-str-face-sel');
+    if(sel) sel.innerHTML = _strFaceSelText(nodeId);
+    _strFaceMarkRow(nodeId, 'on', '');
+  }
+}
+
+// Kanvasın alt şeridi. Kip kapalıyken "parçanın üstüne gel → CAD yüzü"
+// yazmak yalan olurdu: gelince hiçbir şey çıkmıyor.
+function _strViewerHintHTML(faceMode){
+  var h = 'Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş';
+  if(faceMode) h += ' · parçanın üstüne gel → <b>CAD yüzü</b>';
+  return h;
+}
+
 function _strFaceRowId(faceId){
   return 've-str-face-' + String(faceId).replace(/[^a-zA-Z0-9]/g, '_');
 }
@@ -681,7 +778,23 @@ function _strFaceListHTML(node, rec){
   // anlaşılır; tek katıda sütun gereksiz yer kaplar.
   var cokKati = !!(rec.stats && rec.stats.meshCount > 1);
 
-  var h = '<div class="sw-section-title">CAD yüzleri (' + _strFmt(faces.length) + ')</div>';
+  var acik = veStrGeomFaceMode(node.id);
+
+  // Başlık artık DÜĞME: bölümü açan tek anahtar. Sayı kapalıyken de yazılı —
+  // "aç ve gör" ile "aç, sonra kaç yüz olduğunu gör" arasında fark var.
+  var h = '<button type="button" id="ve-str-face-toggle" class="ve-str-face-toggle' + (acik ? ' on' : '') + '" '
+        + 'aria-expanded="' + (acik ? 'true' : 'false') + '" aria-controls="ve-str-face-block" '
+        + 'onclick="veStrGeomToggleFaceMode(\'' + node.id + '\')">'
+        + '<span class="ve-str-face-caret">' + (acik ? '▾' : '▸') + '</span>'
+        + '<span>CAD yüzlerini incele</span>'
+        + '<span class="ve-str-face-count">' + _strFmt(faces.length) + '</span>'
+        + '</button>';
+
+  // Liste DOM'da hep duruyor, yalnız gizli: 240 satırı her açılışta yeniden
+  // kurmak (ve kaydırma konumunu kaybetmek) bir görünüm anahtarının bedeli
+  // olamaz — seçim işaretleyicisi de (_strFaceMarkRow) satırların DOM'da
+  // olmasına dayanıyor.
+  h += '<div id="ve-str-face-block"' + (acik ? '' : ' style="display:none;"') + '>';
   h += '<div class="ve-str-faces" id="ve-str-face-list">';
   faces.forEach(function(f){
     h += '<button type="button" class="ve-str-face' + (f.id === secili ? ' on' : '') + '" '
@@ -694,6 +807,7 @@ function _strFaceListHTML(node, rec){
   });
   h += '</div>';
   h += '<div class="ve-str-face-sel" id="ve-str-face-sel">' + _strFaceSelText(node.id) + '</div>';
+  h += '</div>';
   return h;
 }
 
@@ -800,7 +914,6 @@ function _strGeomInfoTable(g){
 function getStrGeometryPropertiesHTML(node){
   if(!node.data) node.data = {};
   var rec = node.data.geometry || null;
-  var q = _strQualityOf(node);
 
   // ── SOL: kimlik · içe aktarma · künye · denetimler ──
   var left = '';
@@ -815,16 +928,9 @@ function getStrGeometryPropertiesHTML(node){
     // aktarmadan hemen sonra görmek istediği tek satır — görünmüyordu.
     left += _strStatusSlots();
 
-    left += '<div class="sw-section-title">Görüntü ağı inceliği</div>';
-    left += '<div class="ve-str-seg">';
-    VE_STR_QUALITY.forEach(function(o){
-      left += '<button class="ve-str-seg-btn' + (o.key === q.key ? ' on' : '') + '" title="' + _strEsc(o.hint) + '" '
-            + 'onclick="veStrGeomSetQuality(\'' + node.id + '\', \'' + o.key + '\')">' + o.label + '</button>';
-    });
-    left += '</div>';
-    left += '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin:4px 0 9px; line-height:1.4;">'
-          + 'Görüntü ağı — hesaplama ağı değil. CAD yüz kimlikleri incelikten bağımsızdır.</div>';
-
+    // Görüntü ağı inceliği seçicisi KALDIRILDI (hep en ince) ve "Kenarlar"
+    // aç/kapa kutusu da öyle (kenarlar teknik görüntünün varsayılanı) —
+    // ikisi de kullanıcının hiç dokunmadığı, panelde yer kaplayan ayarlardı.
     left += '<div class="sw-section-title">Görünüm</div>';
     left += '<div class="ve-str-seg">';
     [['iso', 'İzo'], ['front', 'Ön'], ['top', 'Üst'], ['right', 'Sağ']].forEach(function(v){
@@ -833,8 +939,6 @@ function getStrGeometryPropertiesHTML(node){
     left += '</div>';
     left += '<div style="display:flex; gap:6px; margin-top:6px; align-items:center; flex-wrap:wrap;">';
     left += '<button class="ve-str-btn" onclick="veStrViewerReset()">Sıfırla</button>';
-    left += '<label style="display:flex; align-items:center; gap:5px; font-size:var(--fs-micro); color:var(--text-secondary); cursor:pointer;">'
-          + '<input type="checkbox" checked onchange="veStrViewerToggleEdges(this.checked)"> Kenarlar</label>';
     left += '</div>';
 
     left += _strFaceListHTML(node, rec);
@@ -867,7 +971,7 @@ function getStrGeometryPropertiesHTML(node){
   var right = '<div id="ve-str-geom-wrap" class="ve-str-vwr-box">';
   if(rec){
     right += '<canvas id="ve-str-geom-canvas" style="width:100%; height:100%; display:block;"></canvas>';
-    right += '<div class="ve-str-vwr-hint">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş · parçanın üstüne gel → <b>CAD yüzü</b></div>';
+    right += '<div class="ve-str-vwr-hint" id="ve-str-vwr-hint">' + _strViewerHintHTML(veStrGeomFaceMode(node.id)) + '</div>';
   } else {
     right += '<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; padding:20px; '
            + 'font-size:var(--fs-tiny); color:var(--text-muted); line-height:1.6;">'
@@ -880,6 +984,311 @@ function getStrGeometryPropertiesHTML(node){
   html += '<div class="ve-cp-col ve-cp-col--in ve-str-col-in">' + left + '</div>';
   html += '<div class="ve-cp-col ve-cp-col--out ve-str-col-out">' + right + '</div>';
   html += '</div></div>';
+  return html;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  MALZEME VE ÖZELLİKLER — Geometri'ye asılan ALT BİLEŞEN
+// ════════════════════════════════════════════════════════════════════════════
+// Zincirin halkası DEĞİL, Geometri'nin EKİ: içe aktarılan parçaya malzeme atar.
+// Kutu bilerek küçük (50×46 ↔ zincirin 62×56) ve çıkışı yok — ikisi birden
+// "bu bir alt bileşen" diyor (components.js str-material).
+//
+// ── ÇÖZÜCÜNÜN GERÇEKTEN İSTEDİĞİ ŞEY ────────────────────────────────────────
+// Lineer elastik tet10 çözümü için gereken TAM liste kısa: E ve ν. Geri kalanı
+// ayrı sorulara cevap veriyor ve eksikliği FARKLI şeyi imkânsız kılıyor —
+// bu yüzden hepsi tek "zorunlu" torbasına atılmadı, eksik olanın NEYİ
+// engellediği yazılıyor:
+//     E, ν      → rijitlik matrisi.       Yoksa ÇÖZÜM YOK.
+//     ρ         → öz ağırlık, kütle, modal analiz. Yoksa yalnız o kapalı.
+//     σ_akma    → emniyet payı hükmü.     Yoksa gerilme basılır, hüküm verilmez.
+//     σ_çekme   → kopma payı (bilgi).
+//     α         → ısıl genleşme (ileride).
+//
+// ── ν < 0.5 BİR ZEVK MESELESİ DEĞİL, TEKİLLİK ───────────────────────────────
+// Hacimsel modül K = E / (3(1−2ν)); ν → 0.5'te payda sıfıra gider ve K → ∞.
+// Yer değiştirme temelli standart elemanlarda bu, rijitlik matrisinin
+// KOŞULLANMASININ bozulması demek: ν = 0.5 tam tekillik, ν > 0.49 ise hacimsel
+// kilitlenme (locking) bölgesi — çözüm koşar, sayı çıkar, ve sonuç sistematik
+// olarak FAZLA RİJİT olur. Yani gözle yakalanmayan, güvenli tarafta OLMAYAN bir
+// hata: modülün tet4 ölçümünde (%24 rijit) belgelenen sınıfın aynısı.
+// Bu yüzden ν ≥ 0.5 REDDEDİLİYOR, 0.49 < ν < 0.5 UYARILIYOR.
+//
+// ── SESSİZ BİRİM TUZAĞI: ρ ──────────────────────────────────────────────────
+// Modülün birim sistemi mm · N · MPa. O sistemde kütle birimi TON, yani
+// yoğunluk ton/mm³ olmak zorunda: çelik 7850 kg/m³ = 7,85e-9 ton/mm³.
+// 7850'i doğrudan yazmak kütleyi 10¹² kat büyütür — çözüm yine koşar, öz ağırlık
+// altında parça "erir". Panel kg/m³ soruyor (kullanıcının bildiği birim) ve
+// çevrimi KENDİSİ yapıyor; çevrilmiş değer panelde AÇIKÇA yazılı ki kimse
+// hangi sayının çözücüye gittiğini tahmin etmek zorunda kalmasın.
+
+// Alan tablosu — TEK KAYNAK: panel, doğrulama ve (sırada olan) kütüphane hepsi
+// buradan besleniyor. İkinci bir kopya tutmak, kütüphane geldiğinde iki listeyi
+// sessizce ayrıştırırdı.
+var VE_STR_MAT_FIELDS = [
+  { key:'E',     sym:'E',   unit:'MPa',     step:'any',  ph:'210000', ad:'Elastisite modülü',      rol:'rijitlik' },
+  { key:'nu',    sym:'ν',   unit:'—',       step:'0.01', ph:'0.30',   ad:'Poisson oranı',          rol:'rijitlik' },
+  { key:'rho',   sym:'ρ',   unit:'kg/m³',   step:'any',  ph:'7850',   ad:'Yoğunluk',               rol:'öz ağırlık · kütle' },
+  { key:'sy',    sym:'σ<sub>ak</sub>', unit:'MPa', step:'any', ph:'355', ad:'Akma dayanımı',       rol:'emniyet payı' },
+  { key:'su',    sym:'σ<sub>ç</sub>',  unit:'MPa', step:'any', ph:'510', ad:'Çekme dayanımı',      rol:'kopma payı' },
+  { key:'alpha', sym:'α',   unit:'10⁻⁶/K', step:'any',  ph:'12',     ad:'Isıl genleşme katsayısı', rol:'ısıl yük' }
+];
+
+// kg/m³ → ton/mm³ (mm·N·MPa birim sisteminin kütle birimi TON'dur).
+// 1 kg/m³ = 1e-12 ton/mm³. Çelik: 7850 → 7,85e-9.
+var VE_STR_RHO_SI_TO_MM = 1e-12;
+function veStrMatDensityMM(rhoKgM3){
+  var v = Number(rhoKgM3);
+  if(rhoKgM3 === null || rhoKgM3 === undefined || rhoKgM3 === '' || !isFinite(v)) return null;
+  return v * VE_STR_RHO_SI_TO_MM;
+}
+
+var _STR_INP = 'padding:4px 6px; font-size:var(--fs-body); height:25px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; box-sizing:border-box;';
+
+// Girilmemiş alan NaN'dır, 0 DEĞİL. `Number(null) === 0` bu projede belgelenmiş
+// bir sessiz hata sınıfı (cp-fead-report.js _frNum): girilmemiş bir dayanımı
+// "0 MPa ölçüldü" gibi göstermek emniyet payını 0'a çakardı.
+function _strMatNum(v){
+  if(v === null || v === undefined || v === '') return NaN;
+  var n = Number(v);
+  return isFinite(n) ? n : NaN;
+}
+
+function veStrMatOf(node){
+  return (node && node.data && node.data.material) ? node.data.material : {};
+}
+
+// Malzeme kaydını yaz. Boş dizge alanı SİLER (undefined bırakmaz) — "0 girildi"
+// ile "girilmedi" ayrımı kaydın kendisinde de korunsun.
+function veStrMatSet(nodeId, key, val){
+  var node = _strNodeById(nodeId);
+  if(!node) return;
+  if(!node.data) node.data = {};
+  if(!node.data.material) node.data.material = {};
+  var m = node.data.material;
+  if(val === '' || val === null || val === undefined) delete m[key];
+  else if(key === 'name') m[key] = String(val);
+  else {
+    var n = Number(val);
+    if(isFinite(n)) m[key] = n; else delete m[key];
+  }
+  // Elle düzenlenen bir kayıt artık kütüphane kaydı değildir; kütüphane
+  // geldiğinde "hangi katalog kaydı" sorusuna yanlış cevap vermesin.
+  if(key !== 'name' && m.source && m.source !== 'manual') m.source = 'manual';
+  if(typeof saveState === 'function') saveState();
+  if(typeof veStrRefreshBadge === 'function') veStrRefreshBadge(nodeId);
+}
+
+function veStrMatClear(nodeId){
+  var node = _strNodeById(nodeId);
+  if(!node || !node.data) return;
+  delete node.data.material;
+  if(typeof saveState === 'function') saveState();
+  if(typeof veStrRefreshBadge === 'function') veStrRefreshBadge(nodeId);
+  if(typeof showNodeProperties === 'function') showNodeProperties(node);
+}
+
+// ── DOĞRULAMA ───────────────────────────────────────────────────────────────
+// İki ayrı torba: `errors` çözümü DURDURUR, `warns` yalnız bir yeteneği kapatır
+// ya da veri girişi hatasından şüphelenir. Hepsini tek torbaya atmak, ρ'suz bir
+// modeli "çözülemez" ilan ederdi — oysa öz ağırlıksız bir gerilme çözümü
+// pekâlâ geçerli bir analizdir.
+function veStrMatValidate(m){
+  m = m || {};
+  var errors = [], warns = [];
+  var E = _strMatNum(m.E), nu = _strMatNum(m.nu), rho = _strMatNum(m.rho);
+  var sy = _strMatNum(m.sy), su = _strMatNum(m.su);
+
+  if(isNaN(E)) errors.push('Elastisite modülü (E) girilmedi — rijitlik matrisi kurulamaz.');
+  else if(E <= 0) errors.push('E pozitif olmalı (girilen: ' + _strFmt(E, 0) + ' MPa).');
+
+  if(isNaN(nu)) errors.push('Poisson oranı (ν) girilmedi — rijitlik matrisi kurulamaz.');
+  else if(nu >= 0.5) errors.push('ν ≥ 0,5 çözülemez: K = E/(3(1−2ν)) ıraksar, rijitlik matrisi tekilleşir (girilen: ' + _strFmt(nu, 3) + ').');
+  else if(nu > 0.49) warns.push('ν = ' + _strFmt(nu, 3) + ' hacimsel kilitlenme bölgesinde: çözüm koşar ama sonuç sistematik olarak FAZLA RİJİT çıkar.');
+  else if(nu < 0) warns.push('ν negatif (auxetic malzeme). Fiziksel olarak mümkün ama nadir — yazım hatası olabilir.');
+
+  if(isNaN(rho)) warns.push('Yoğunluk (ρ) yok: öz ağırlık ve kütle hesabı kapalı kalır.');
+  else if(rho <= 0) warns.push('ρ pozitif olmalı — öz ağırlık hesabı kapalı kalır.');
+
+  if(isNaN(sy)) warns.push('Akma dayanımı (σ_ak) yok: gerilme basılır ama emniyet payı hükmü verilemez.');
+  else if(sy <= 0) warns.push('σ_ak pozitif olmalı — emniyet payı hükmü verilemez.');
+
+  if(!isNaN(sy) && !isNaN(su) && su < sy)
+    warns.push('Çekme dayanımı akma dayanımından küçük (σ_ç < σ_ak) — iki alan yer değiştirmiş olabilir.');
+
+  return { ok: errors.length === 0, errors: errors, warns: warns };
+}
+
+// Türetilen büyüklükler. Panelde göstermenin karşılığı var: kullanıcı girdiği
+// ν'nün ne demek olduğunu G ve K üzerinden görüyor, ve ρ'nun çözücüye HANGİ
+// sayı olarak gittiği yazılı duruyor (yukarıdaki birim tuzağı).
+function veStrMatDerived(m){
+  m = m || {};
+  var E = _strMatNum(m.E), nu = _strMatNum(m.nu);
+  var G = (!isNaN(E) && !isNaN(nu) && nu > -1) ? E / (2 * (1 + nu)) : null;
+  var K = (!isNaN(E) && !isNaN(nu) && nu < 0.5) ? E / (3 * (1 - 2 * nu)) : null;
+  return { G: G, K: K, rhoMM: veStrMatDensityMM(m.rho) };
+}
+
+// Bu malzeme kutusu HANGİ Geometri'ye asılı? Bağ, kanvasta çekilen telden
+// okunuyor — ikinci bir "hedef seç" alanı tutulsaydı tel ile alan sessizce
+// ayrışırdı (FEAD'de panel ile kartın AYNI alanı okuması kuralının aynısı).
+function veStrMatHost(node){
+  if(!node || typeof connections === 'undefined' || typeof nodes === 'undefined') return null;
+  var host = null;
+  connections.forEach(function(c){
+    if(host || c.to !== node.id) return;
+    var n = nodes.find(function(x){ return x.id === c.from; });
+    if(n && n.type === 'str-geometry') host = n;
+  });
+  return host;
+}
+
+// ── KANVAS ROZETİ ───────────────────────────────────────────────────────────
+// AMBER yalnız ÇÖZÜLEBİLİR kayıtta: adı yazılmış ama E'si girilmemiş bir
+// malzeme "hazır" görünmemeli. Rozet boşken de VAR (Geometri rozetindeki
+// gerekçenin aynısı: "rozet yok" ile "malzeme yok" ayırt edilemezdi).
+function veStrMatBadgeInfo(node){
+  var m = veStrMatOf(node);
+  var v = veStrMatValidate(m);
+  var ad = (m.name != null && String(m.name).trim() !== '') ? String(m.name).trim() : '';
+  var E = _strMatNum(m.E);
+  var txt = ad ? (ad.length > 10 ? ad.slice(0, 9) + '…' : ad)
+               : (!isNaN(E) ? _strFmt(E / 1000, 0) + ' GPa' : 'MALZ');
+  var tip;
+  if(v.ok){
+    tip = (ad || 'Malzeme') + ' · E ' + _strFmt(E, 0) + ' MPa · ν ' + _strFmt(_strMatNum(m.nu), 2)
+        + (isNaN(_strMatNum(m.rho)) ? '' : ' · ρ ' + _strFmt(_strMatNum(m.rho), 0) + ' kg/m³');
+  } else {
+    tip = v.errors[0] || 'Malzeme tanımlanmadı — panelden E ve ν girin.';
+  }
+  return { text: txt, title: tip, ready: v.ok };
+}
+
+// ─── Panel ──────────────────────────────────────────────────────────────────
+// Bağlı parça kartı: bağ TELDEN okunuyor. Üç durum ve üçü de AÇIKÇA yazılı —
+// "bağlı değil" sessiz bırakılsaydı kullanıcı malzemeyi girer, kaydeder ve
+// çözücü onu hiç görmezdi.
+function _strMatHostCard(node){
+  var host = veStrMatHost(node);
+  if(!host){
+    return '<div style="padding:8px 10px; margin-bottom:9px; font-size:var(--fs-micro); line-height:1.45; '
+         + 'color:var(--accent-warning); background:var(--bg-secondary); border:1px solid var(--accent-warning);">'
+         + '<b>Geometri\'ye bağlı değil.</b> Bu kutunun <b>üst</b> portunu, Geometri bileşeninin '
+         + '<b>alt</b> portuna bağlayın — malzeme parçaya ancak o telle atanır.</div>';
+  }
+  var g = host.data && host.data.geometry;
+  var ad = _strEsc(host.customName || 'Geometri');
+  if(!g || !g.stats){
+    return '<div style="padding:8px 10px; margin-bottom:9px; font-size:var(--fs-micro); line-height:1.45; '
+         + 'color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color);">'
+         + '<b style="color:var(--text-heading);">' + ad + '</b> bağlı — ama <b>parça henüz içe aktarılmadı</b>. '
+         + 'Malzeme şimdiden girilebilir; parça gelince ona uygulanır.</div>';
+  }
+  var bb = g.bbox || {}, sz = bb.size || [];
+  return '<div style="padding:8px 10px; margin-bottom:9px; font-size:var(--fs-micro); line-height:1.5; '
+       + 'color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-warning);">'
+       + '<b style="color:var(--text-heading);">' + _strEsc(g.fileName || 'Parça') + '</b>'
+       + ' <span style="color:var(--text-muted);">← ' + ad + '</span><br>'
+       + _strFmt(g.stats.meshCount) + ' katı · ' + _strFmt(g.stats.faceCount) + ' CAD yüzü · '
+       + _strFmt(sz[0], 1) + ' × ' + _strFmt(sz[1], 1) + ' × ' + _strFmt(sz[2], 1) + ' mm'
+       + '</div>';
+}
+
+function _strMatFieldGrid(node){
+  var m = veStrMatOf(node);
+  var h = '<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px 7px; margin-bottom:9px;">';
+  VE_STR_MAT_FIELDS.forEach(function(f){
+    var v = (m[f.key] === null || m[f.key] === undefined) ? '' : m[f.key];
+    h += '<label title="' + _strEsc(f.ad + ' — ' + f.rol) + '" style="display:flex; flex-direction:column; gap:2px; min-width:0;">'
+      +   '<span style="font-size:var(--fs-micro); color:var(--text-muted); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">'
+      +     f.sym + ' <span style="opacity:0.75;">[' + f.unit + ']</span></span>'
+      +   '<input type="number" id="ve-str-mat-' + f.key + '-' + node.id + '" value="' + _strEsc(v) + '" step="' + f.step + '"'
+      +   ' placeholder="' + _strEsc(f.ph) + '"'
+      +   ' onchange="veStrMatSet(\'' + node.id + '\',\'' + f.key + '\',this.value)" style="width:100%; ' + _STR_INP + '">'
+      + '</label>';
+  });
+  return h + '</div>';
+}
+
+function _strMatVerdict(node){
+  var v = veStrMatValidate(veStrMatOf(node));
+  var h = '';
+  if(v.ok){
+    h += '<div style="padding:7px 9px; margin-bottom:8px; font-size:var(--fs-micro); line-height:1.45; '
+       + 'color:var(--text-primary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-success, #22c55e);">'
+       + '<b>Çözülebilir.</b> E ve ν girildi — rijitlik matrisi kurulabilir.</div>';
+  }
+  v.errors.forEach(function(t){
+    h += '<div style="padding:6px 9px; margin-bottom:6px; font-size:var(--fs-micro); line-height:1.45; '
+       + 'color:var(--accent-danger, #ef4444); background:var(--bg-secondary); border:1px solid var(--accent-danger, #ef4444);">'
+       + _strEsc(t) + '</div>';
+  });
+  v.warns.forEach(function(t){
+    h += '<div style="padding:6px 9px; margin-bottom:6px; font-size:var(--fs-micro); line-height:1.45; '
+       + 'color:var(--text-secondary); background:var(--bg-secondary); border:1px dashed var(--accent-warning);">'
+       + _strEsc(t) + '</div>';
+  });
+  return h;
+}
+
+// Türetilenler — G ve K girilen ν'nün ne demek olduğunu gösteriyor; ρ satırı
+// ise çözücüye GİDEN sayıyı yazıyor (mm·N·MPa sisteminin ton/mm³ tuzağı).
+function _strMatDerivedTable(node){
+  var d = veStrMatDerived(veStrMatOf(node));
+  function row(k, v, not){
+    return '<tr><td style="padding:4px 8px; border:1px solid var(--border-color); color:var(--text-secondary); white-space:nowrap;">' + k + '</td>'
+         + '<td style="padding:4px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">' + v
+         + (not ? ' <span style="color:var(--text-muted); font-weight:400;">' + not + '</span>' : '') + '</td></tr>';
+  }
+  var rhoTxt = (d.rhoMM === null) ? '—' : d.rhoMM.toExponential(3).replace('.', ',') + ' ton/mm³';
+  var h = '<table style="width:100%; font-size:var(--fs-tiny); border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:9px;">';
+  h += row('Kayma modülü G', d.G === null ? '—' : _strFmt(d.G, 0) + ' MPa', '= E / 2(1+ν)');
+  h += row('Hacimsel modül K', d.K === null ? '—' : _strFmt(d.K, 0) + ' MPa', '= E / 3(1−2ν)');
+  h += row('Çözücüye giden ρ', rhoTxt, '← mm·N·MPa sisteminde kütle TON');
+  h += '</table>';
+  return h;
+}
+
+function getStrMaterialPropertiesHTML(node){
+  if(!node.data) node.data = {};
+  var m = veStrMatOf(node);
+
+  var html = '<div class="sw-panel">';
+  html += '<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-primary);">'
+        + '<b style="color:var(--text-heading);">Malzeme ve Özellikler.</b> Geometri\'ye asılan <b>alt bileşen</b> — '
+        + 'içe aktarılan parçaya malzeme atar. Zincirin halkası değildir: çıkışı yoktur, '
+        + 'Geometri\'nin <b>alt</b> portundan beslenir.</div>';
+
+  html += _strMatHostCard(node);
+
+  html += '<div class="sw-section-title">Malzeme</div>';
+  html += '<div style="display:flex; align-items:center; gap:10px; margin-bottom:9px;">'
+        + '<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">Ad</div>'
+        + '<input type="text" id="ve-str-mat-name-' + node.id + '" value="' + _strEsc(m.name == null ? '' : m.name) + '"'
+        + ' placeholder="ör. S355JR" onchange="veStrMatSet(\'' + node.id + '\',\'name\',this.value)"'
+        + ' style="width:170px; ' + _STR_INP + ' text-align:left;">'
+        + '</div>';
+
+  html += _strMatFieldGrid(node);
+  html += _strMatVerdict(node);
+
+  html += '<div class="sw-section-title">Türetilen</div>';
+  html += _strMatDerivedTable(node);
+
+  html += '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">';
+  html += '<button class="ve-str-btn ve-str-btn--danger" onclick="veStrMatClear(\'' + node.id + '\')">Temizle</button>';
+  html += '</div>';
+
+  // Kütüphane SIRADA. `_strPending` DEĞİL, `_strNextUp`: o işaret "bu bileşen
+  // iskelet" demek ve testi (hâlâ iskelet olan panel sayısı) ona bakıyor.
+  // Malzeme paneli iskelet değil — çalışıyor; bekleyen şey KOLAYLIK.
+  html += _strNextUp('Hazır <b>malzeme kütüphanesi</b> (yapı çeliği, alüminyum, döküm, paslanmaz…) '
+        + 'sonraki adımda buraya gelecek; şimdilik değerler elle giriliyor. '
+        + 'Alan tablosu tek kaynaktan (<code>VE_STR_MAT_FIELDS</code>) besleniyor, '
+        + 'kütüphane geldiğinde aynı kayda yazacak.');
+
+  html += '</div>';
   return html;
 }
 
@@ -903,12 +1312,24 @@ if(typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VE_STR_STARTER_LAYOUT: VE_STR_STARTER_LAYOUT,
     VE_STR_STARTER_CHAIN: VE_STR_STARTER_CHAIN,
+    veStrPopulateStarter: veStrPopulateStarter,
     VE_STR_STEP_EXT: VE_STR_STEP_EXT,
-    VE_STR_QUALITY: VE_STR_QUALITY,
+    VE_STR_MESH_LINEAR: VE_STR_MESH_LINEAR,
+    VE_STR_MAT_FIELDS: VE_STR_MAT_FIELDS,
+    VE_STR_RHO_SI_TO_MM: VE_STR_RHO_SI_TO_MM,
+    veStrMatDensityMM: veStrMatDensityMM,
+    veStrMatOf: veStrMatOf,
+    veStrMatSet: veStrMatSet,
+    veStrMatClear: veStrMatClear,
+    veStrMatValidate: veStrMatValidate,
+    veStrMatDerived: veStrMatDerived,
+    veStrMatHost: veStrMatHost,
+    veStrMatBadgeInfo: veStrMatBadgeInfo,
     veStrApplyBadge: veStrApplyBadge,
     veStrGeomSelectFace: veStrGeomSelectFace,
     getStrModulePropertiesHTML: getStrModulePropertiesHTML,
     getStrGeometryPropertiesHTML: getStrGeometryPropertiesHTML,
+    getStrMaterialPropertiesHTML: getStrMaterialPropertiesHTML,
     getStrMeshPropertiesHTML: getStrMeshPropertiesHTML,
     getStrBCPropertiesHTML: getStrBCPropertiesHTML,
     getStrResultsPropertiesHTML: getStrResultsPropertiesHTML

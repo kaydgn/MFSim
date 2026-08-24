@@ -252,6 +252,8 @@ function showNodeProperties(node) {
     html += getStrModulePropertiesHTML(node);
   } else if(node.type === 'str-geometry') {
     html += getStrGeometryPropertiesHTML(node);
+  } else if(node.type === 'str-material') {
+    html += getStrMaterialPropertiesHTML(node);
   } else if(node.type === 'str-mesh') {
     html += getStrMeshPropertiesHTML(node);
   } else if(node.type === 'str-bc') {
