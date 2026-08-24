@@ -812,6 +812,232 @@ describe('malzeme kütüphanesinden uygulama', () => {
   });
 });
 
+// ── 4d) DİYAGRAMLAR — çizim geometrisi ─────────────────────────────────────
+// Diyagramlar KAYITTAN türüyor, sabit resim değil. Kapı iki şey arıyor:
+// (a) hiçbir koordinat NaN/Infinity olmasın — eksik bir alan sessizce bozuk
+// bir yol üretirdi ve tarayıcı onu ÇİZMEZ (hata da vermez), (b) çizilen şey
+// kaydın anlattığıyla tutarlı olsun (gevrekte akma çizgisi yok, alüminyumda
+// dayanma sınırı yok).
+describe('malzeme diyagramları', () => {
+  const mkNode = (id) => ({ id, type: 'str-material', data: {}, x: 0, y: 0, width: 50, height: 46 });
+  // Bir SVG'deki bütün sayısal koordinatları topla
+  const sayilar = (svg) => (svg.match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/g) || []).map(Number);
+
+  test('HER kayıt için üç diyagram da SONLU koordinatlar üretiyor', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    let wohlerli = 0, sicaklikli = 0;
+    MATLIB.VE_STR_MAT_LIB.forEach((m) => {
+      str.veStrMatApplyLib('m1', m.id);
+      const h = str.getStrMaterialPropertiesHTML(n);
+      expect(h).not.toMatch(/NaN|undefined|Infinity/);
+      // path/line/circle koordinatları
+      (h.match(/ d="[^"]*"/g) || []).forEach((d) => {
+        sayilar(d).forEach((v) => expect(Number.isFinite(v)).toBe(true));
+      });
+      if (h.includes('data-ve="sn"')) wohlerli++;
+      if (h.includes('data-ve="kE"')) sicaklikli++;
+    });
+    // Ve diyagramlar gerçekten çiziliyor — hepsi boş dönseydi test yeşil kalırdı
+    expect(wohlerli).toBeGreaterThan(80);
+    expect(sicaklikli).toBeGreaterThan(90);
+  });
+
+  test('σ–ε: sünekte akma çizgisi VAR, gevrekte YOK ve kopma işareti var', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatApplyLib('m1', 's355jr');
+    let h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).toContain('data-ve="sy"');          // akma çizgisi
+    expect(h).toContain('data-ve="su"');
+    expect(h).toContain('data-ve="fracture"');
+    // GEVREK: σ_ak yok → akma çizgisi de olmamalı, yoksa olmayan bir
+    // özellik çizilmiş olurdu.
+    str.veStrMatApplyLib('m1', 'gjl-250');
+    h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).toContain('data-ve="curve"');
+    expect(h).not.toContain('data-ve="sy"');
+  });
+
+  test('σ–ε eğrisi ORİJİNDEN başlıyor', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatApplyLib('m1', 's355jr');
+    const h = str.getStrMaterialPropertiesHTML(n);
+    const d = h.match(/data-ve="curve" d="M ([\d.]+) ([\d.]+)/);
+    expect(d).toBeTruthy();
+    // Çerçevenin sol-alt köşesi: x = padL = 44,
+    // y = padT + ph = 14 + (190 − 14 − 30) = 160.
+    expect(Number(d[1])).toBeCloseTo(44, 1);
+    expect(Number(d[2])).toBeCloseTo(160, 1);
+  });
+
+  test('Wöhler: eğri MONOTON düşüyor (ekranda soldan sağa aşağı)', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatApplyLib('m1', 's355jr');
+    const h = str.getStrMaterialPropertiesHTML(n);
+    const d = h.match(/data-ve="sn" d="([^"]+)"/);
+    expect(d).toBeTruthy();
+    const pts = d[1].split(/[ML]\s*/).filter(Boolean).map((q) => q.trim().split(/\s+/).map(Number));
+    expect(pts.length).toBeGreaterThan(20);
+    for (let i = 1; i < pts.length; i++) {
+      expect(pts[i][0]).toBeGreaterThan(pts[i - 1][0]);          // x artıyor
+      expect(pts[i][1]).toBeGreaterThanOrEqual(pts[i - 1][1] - 1e-6); // y artıyor = σ düşüyor
+    }
+  });
+
+  test('Wöhler: LCF bölgesi TARANIYOR ve diz noktası işaretli', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatApplyLib('m1', 's355jr');
+    const h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).toContain('data-ve="lcf"');
+    expect(h).toContain('LCF — model dışı');
+    expect(h).toContain('data-ve="knee"');
+    expect(h).toContain('data-ve="sw"');
+  });
+
+  test('Wöhler: ALÜMİNYUMDA "dayanma sınırı YOK" yazıyor, ÇELİKTE yazmıyor', () => {
+    // Alüminyumun eğrisi dizden sonra da düşer. Yazılmasaydı grafikteki
+    // yataylık olmayan bir güvenlik anlatırdı.
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatApplyLib('m1', 'aw6082-t6');
+    expect(str.getStrMaterialPropertiesHTML(n)).toContain('dayanma sınırı YOK');
+    str.veStrMatApplyLib('m1', 's355jr');
+    expect(str.getStrMaterialPropertiesHTML(n)).not.toContain('dayanma sınırı YOK');
+  });
+
+  test('sıcaklık eğrisi: karbon çeliğinde ÜÇ seri (E, akma, orantı sınırı)', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatApplyLib('m1', 's355jr');
+    let h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).toContain('data-ve="kE"');
+    expect(h).toContain('data-ve="kY"');
+    expect(h).toContain('data-ve="kP"');           // yalnız karbon çeliğinde var
+    expect(h).toContain('orantı sınırı');
+    // Östenitikte orantı sınırı verisi YOK → seri de çizilmiyor
+    str.veStrMatApplyLib('m1', '1.4301');
+    h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).toContain('data-ve="kY"');
+    expect(h).not.toContain('data-ve="kP"');
+  });
+
+  test('sıcaklık eğrisi: azami servis sıcaklığı çizgisi ve KAYNAK TÜRÜ yazılı', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatApplyLib('m1', 's355jr');
+    let h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).toContain('data-ve="tmax"');
+    expect(h).toContain('EN 1993-1-2');
+    expect(h).not.toContain('TİPİK SEYİR, standart tablosu değil');
+    // TİPİK bir eğride kaynak türü AÇIKÇA yazılmalı — standardın tablosuyla
+    // aynı ağırlıkta okunmasın.
+    str.veStrMatApplyLib('m1', 'gjs-500-7');
+    h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).toContain('TİPİK SEYİR, standart tablosu değil');
+  });
+
+  test('eğrisi olmayan sınıfta diyagram ÇİZİLMİYOR (uydurulmuyor)', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatApplyLib('m1', 'nbr70');         // elastomer: tset ve fset yok
+    const h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).not.toContain('data-ve="kE"');
+    expect(h).not.toContain('data-ve="sn"');
+  });
+
+  test('MODELİN SINIRLARI diyagramların altında YAZILI', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatApplyLib('m1', 's355jr');
+    const h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).toContain('idealleştirilmiş');
+    expect(h).toMatch(/ölçülmüş değil/);
+    expect(h).toMatch(/yüzey pürüzlülüğü/);       // FKM K_WK çarpanları dahil değil
+    expect(h).toContain('Katalogda olmayanlar');
+  });
+
+  test('ELLE girilmiş kayıtta diyagram YOK ve SEBEBİ yazılı', () => {
+    // Sertlik, uzama, sıcaklık eğrisi ve yorulma modeli KATALOGDAN gelir;
+    // altı sayısal alan bunları üretmeye yetmez. Sessiz bırakılsaydı
+    // kullanıcı "neden grafik çıkmıyor" diye kendinde arardı.
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatSet('m1', 'E', '210000');
+    str.veStrMatSet('m1', 'nu', '0.3');
+    const h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).not.toContain('data-ve="sn"');
+    expect(h).toContain('Diyagramlar yok');
+    expect(h).toContain('katalogdan');
+  });
+
+  test('uygulanan kayıt listede GÖRÜNÜR yapılıyor (112 satırda ✓ ekran dışında kalırdı)', () => {
+    document.body.innerHTML =
+      '<div id="ve-str-mat-list">'
+      + '<button class="ve-str-mat-row"></button>'
+      + '<button class="ve-str-mat-row applied"></button></div>';
+    const hedef = document.querySelector('.applied');
+    let cagrildi = false;
+    hedef.scrollIntoView = (opt) => { cagrildi = true; expect(opt.block).toBe('nearest'); };
+    expect(str.veStrMatLibScrollToApplied('m1')).toBe(true);
+    expect(cagrildi).toBe(true);
+    // Liste yoksa patlamıyor
+    document.body.innerHTML = '';
+    expect(str.veStrMatLibScrollToApplied('m1')).toBe(false);
+  });
+
+  test('cp-core.js panel kurulduktan SONRA kaydırma kancasını çağırıyor', () => {
+    const s = fs.readFileSync(path.join(ROOT, 'js/cp-core.js'), 'utf8');
+    expect(s).toMatch(/str-material'[\s\S]{0,300}veStrMatLibScrollToApplied/);
+  });
+
+  test('genişletilmiş künye: sertlik, uzama, servis sıcaklığı, σ_W, özgül dayanım', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatApplyLib('m1', 'ti-6al-4v');
+    const h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).toContain('330 HBW');
+    expect(h).toContain('Kopma uzaması');
+    expect(h).toContain('Azami sürekli servis');
+    expect(h).toContain('Dayanma sınırı');
+    expect(h).toContain('Özgül dayanım');
+    expect(h).toContain('ISO 18265');
+    // Referans alanlar SOLGUN etiketiyle: çözücüye gitmiyorlar
+    expect(h).toMatch(/çözücüye gitmez/);
+  });
+
+  test('sıcaklık değerlendirici: θ değişince değerler değişiyor, düğüme YAZILMIYOR', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatApplyLib('m1', 's355jr');
+    const h20 = str.getStrMaterialPropertiesHTML(n);
+    expect(h20).toContain('Sıcaklıkta Değerlendir');
+    expect(h20).toContain('210.000');                  // E(20) = 210 GPa
+    str.veStrMatSetTemp('m1', 500);
+    const h500 = str.getStrMaterialPropertiesHTML(n);
+    expect(h500).toContain('126.000');                 // E(500) = 0,6 × 210 GPa
+    expect(h500).toContain('277');                     // σ_ak(500) = 0,78 × 355
+    // OTURUMLUK: kayda tek bir alan bile yazılmadı
+    expect('tempC' in n.data.material).toBe(false);
+    expect(JSON.stringify(n.data.material)).not.toContain('500');
+    str.veStrMatSetTemp('m1', 20);
+  });
+
+  test('servis sıcaklığı AŞILINCA değerlendirici uyarıyor', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatApplyLib('m1', 'aw6082-t6');           // tmax 150 °C
+    str.veStrMatSetTemp('m1', 300);
+    const h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).toMatch(/Azami sürekli servis sıcaklığının/);
+    expect(h).toMatch(/sürünme/);
+    str.veStrMatSetTemp('m1', 20);
+  });
+});
+
 // ── 5) İSKELET BEŞ DOSYAYA BAĞLI — biri unutulursa kayıt bozulur ────────────
 describe('modül kablolaması eksiksiz', () => {
   const oku = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -882,6 +1108,21 @@ describe('modül kablolaması eksiksiz', () => {
     // Pencere sınıfı KOŞULSUZ: sol sütun (katalog) her zaman dolu, Geometri'deki
     // \"boş açılan büyük pencere\" durumu burada yok.
     expect(s).toMatch(/ve-properties--strmat',\s*node\.type === 'str-material'\)/);
+  });
+
+  // KULLANICI İSTEĞİ (2026-08-24): "'Malzeme Kütüphanesi' kısmı çok geniş
+  // olmuş. O kadar geniş olmasına gerek yok." Sütun oranı TERSİNE çevrildi:
+  // katalog SABİT ve dar, uygulanan malzeme esnek ve geniş. Oranı geri
+  // çevirmek hiçbir testi kırmıyordu (mutasyonla ölçüldü) — bu kapı onu tutar.
+  test('CSS: katalog sütunu DAR ve sabit, uygulanan malzeme GENİŞ', () => {
+    const css = oku('css/styles.css');
+    const blok = css.slice(css.indexOf('.ve-properties--strmat .ve-str-mat-grid'));
+    const m = blok.match(/grid-template-columns:\s*([^;]+);/);
+    expect(m).toBeTruthy();
+    const [ilk, ikinci] = m[1].trim().split(/\s+/);
+    expect(ilk).toMatch(/^\d+px$/);              // katalog: sabit genişlik
+    expect(parseInt(ilk, 10)).toBeLessThanOrEqual(340);
+    expect(ikinci).toMatch(/minmax\(0,\s*1fr\)/); // uygulanan malzeme: kalan her şey
   });
 
   test('CSS: katalog listesinin boşluğu yutan flex zinciri KESİNTİSİZ', () => {
