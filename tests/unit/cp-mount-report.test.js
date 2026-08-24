@@ -104,7 +104,7 @@ describe('Panel — Çözücü guard\'ı (çözülmemişse UYARIR)', () => {
   test('çözülmemiş: uyarı + devre dışı buton (rapor üretmez)', () => {
     global._veMntLast = null;
     const html = rep.getMntReportPropertiesHTML({ id: 'n1' });
-    expect(html).toContain('Önce hesaplayın');
+    expect(html).toContain('Model çözülmedi');
     expect(html).toContain('Çözücü');
     expect(html).toContain('disabled');
     expect(html).not.toContain('veMntGenerateReport(\'n1\')');

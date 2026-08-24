@@ -88,7 +88,7 @@ function getTransferPropertiesHTML(node) {
     html += '</div>';
     
     // ── BİLGİ NOTU ──
-    html += '<div class="sw-pkg-desc"><span class="mf-ico mf-ico-zap"></span> Tam Gaz Hızlanma simülasyonu tüm kademeler için ayrı ayrı çalıştırılır. Sonuçlar her kademe için ayrı iSCAAN tablosu olarak raporlanır.</div>';
+    html += '<div class="sw-pkg-desc">Tam Gaz Hızlanma simülasyonu tüm kademeler için ayrı ayrı çalıştırılır; sonuçlar kademe başına ayrı iSCAAN tablosu olarak raporlanır.</div>';
     html += '</div>';                                  // ve-cp-col (sağ) kapat
     html += '</div>';                                  // ve-cp-grid kapat
 
@@ -101,7 +101,6 @@ function getTransferPropertiesHTML(node) {
   var selectedMode = nodeData.selectedMode || '';
   var selectedRatio = nodeData.selectedRatio || '';
   
-  html += '<div class="sw-pkg-desc">Transfer kutusu kademelerini ve oranlarını tanımlayınız.</div>';
 
   // İKİ SÜTUN (kart yığını): SOL = marka/model + kademe tablosu, SAĞ = aktif kademe + verim
   html += '<div class="ve-cp-grid ve-cp-grid--cards"><div class="ve-cp-col">';

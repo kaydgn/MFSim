@@ -97,18 +97,12 @@ function getStrModulePropertiesHTML(node){
   var cCount = (sub && sub.connections) ? sub.connections.length : 0;
   var initialized = !!(sub && sub.nodes && sub.nodes.length);
   var html = '<div class="sw-panel">';
-  html += '<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-warning);">'
-        + '<b style="color:var(--text-heading);">Yapısal Analiz — alt-sistem.</b> '
-        + 'Braket ve taşıyıcı parçaların sonlu elemanlar analizi. Üstüne <b>çift tıklayınca</b> kendi '
-        + '<b>alt topolojisine</b> girilir. Bağlantılar burada <b>analiz zincirini</b> anlatır: '
-        + 'Geometri → Hesaplama Ağı → Sınır Koşulları → Sonuçlar.'
-        + '</div>';
   html += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
   if(initialized){
     html += '<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bileşen</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">' + nCount + '</td></tr>';
     html += '<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bağlantı</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">' + cCount + '</td></tr>';
   } else {
-    html += '<tr><td style="padding:7px 8px; border:1px solid var(--border-color); color:var(--text-muted);">Henüz açılmadı — ilk açılışta dört bileşenli analiz zinciri kurulu gelir.</td></tr>';
+    html += '<tr><td style="padding:7px 8px; border:1px solid var(--border-color); color:var(--text-muted);">Alt topoloji henüz açılmadı</td></tr>';
   }
   html += '</table>';
   html += '<button onclick="veStrOpenEditor(\'' + node.id + '\')" style="width:100%; padding:14px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.03em;" onmouseover="this.style.filter=\'brightness(1.15)\'" onmouseout="this.style.filter=\'none\'">▶ Alt Topolojiyi Aç</button>';
@@ -309,12 +303,12 @@ function _strForgetResults(){
   _veStrFaceMode = {};
 }
 
-// "Bu bölüm sonraki adımda gelecek" notu — kullanıcıya iskeletin nerede
-// bittiğini SÖYLER. Sessizce boş bırakılan bir panel, çalışmayan bir panelden
-// kötüdür (cp-fead.js _feadPending ile aynı gerekçe).
-function _strPending(text){
+// Boş panelin DURUM satırı — sessizce boş bırakılan bir panel, çalışmayan bir
+// panelden kötüdür (cp-fead.js _feadPending ile aynı gerekçe). Metin DURUM
+// bildirir; kullanım anlatmaz, geliştirme planı duyurmaz.
+function _strPending(){
   return '<div style="padding:8px 10px; margin-bottom:9px; font-size:var(--fs-micro); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px dashed var(--accent-warning);">'
-    + '<b style="color:var(--text-heading);">Bileşen bekleniyor.</b> ' + text + '</div>';
+    + '<b style="color:var(--text-heading);">Kullanıma açık değil.</b></div>';
 }
 
 // "Bu bileşen ÇALIŞIYOR, sırada bir kolaylık var" notu. _strPending'den AYRI
@@ -334,13 +328,8 @@ function _strNextUp(text){
 // doldurulacak. Panel boş ama SESSİZ DEĞİL: kullanıcı iskeletin nerede
 // bittiğini görüyor (bkz. cp-fead.js _feadPending ile aynı gerekçe).
 
-function _strStub(baslik, ozet, bekleyen){
-  return '<div class="sw-panel">'
-    + '<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-primary);">'
-    + '<b style="color:var(--text-heading);">' + baslik + '.</b> ' + ozet
-    + '</div>'
-    + _strPending(bekleyen)
-    + '</div>';
+function _strStub(){
+  return '<div class="sw-panel">' + _strPending() + '</div>';
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -486,7 +475,7 @@ function _strProgSet(nodeId, stage, info){
     fill.style.width = '';
     det.textContent = (info && info.fallback)
       ? 'worker açılamadı — ana iş parçacığında sürüyor'
-      : (stage === 'parse' ? 'worker\'da — arayüz donmuyor'
+      : (stage === 'parse' ? 'worker\'da'
       : (stage === 'reader' ? 'ilk içe aktarma — bir kez' : ''));
   }
 }
@@ -928,16 +917,8 @@ function getStrGeometryPropertiesHTML(node){
 
   // ── SOL: kimlik · içe aktarma · künye · denetimler ──
   var left = '';
-  left += '<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-primary);">'
-        + '<b style="color:var(--text-heading);">Geometri.</b> Analiz edilecek parça. <b>.STEP</b> dosyası buradan içe aktarılır. '
-        + 'Zincirin başıdır — girişi yoktur.</div>';
-
   if(!rec){
     left += _strGeomImportCard(node);
-    left += '<div style="margin-top:9px; padding:7px 9px; font-size:var(--fs-micro); line-height:1.45; color:var(--text-muted); background:var(--bg-secondary); border:1px solid var(--border-color);">'
-          + 'STEP okuyucusu (OpenCascade) <b>uygulamanın içinde</b> — internet gerekmez, '
-          + '<b>çevrimdışı çalışır</b>. İlk içe aktarmada bir kez hazırlanır, sonrakiler anında.'
-          + '</div>';
     left += _strStatusSlots();
   } else {
     left += _strGeomInfoTable(rec);
@@ -977,9 +958,8 @@ function getStrGeometryPropertiesHTML(node){
     left += '<div style="margin-top:9px; padding:6px 9px; font-size:var(--fs-micro); line-height:1.45; border:1px solid var(--border-color); '
           + 'color:' + (kalir ? 'var(--text-muted)' : 'var(--accent-warning)') + '; background:var(--bg-secondary);">'
           + (kalir
-              ? 'STEP kaynağı <b>projeye kaydedilirken</b> dosyaya sıkıştırılarak yazılır — proje yeniden açıldığında geometri geri gelir. '
-                + '(Otomatik yedeğe yazılmaz; oradan dönünce yeniden içe aktarılır.)'
-              : 'STEP kaynağı bu oturumda yok: geometri künyesi duruyor ama <b>yeniden içe aktarılması</b> gerekiyor.')
+              ? 'STEP kaynağı proje dosyasına sıkıştırılarak yazılır. Otomatik yedeğe yazılmaz.'
+              : 'STEP kaynağı bu oturumda yok — geometri künyesi duruyor, yeniden içe aktarma gerekiyor.')
           + '</div>';
   }
 
@@ -995,7 +975,7 @@ function getStrGeometryPropertiesHTML(node){
   } else {
     right += '<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; padding:20px; '
            + 'font-size:var(--fs-tiny); color:var(--text-muted); line-height:1.6;">'
-           + 'Parça içe aktarılınca<br>3B görüntüleyici burada açılır.</div>';
+           + 'Parça içe aktarılmadı</div>';
   }
   right += '</div>';
 
@@ -1313,21 +1293,15 @@ function getStrMaterialPropertiesHTML(node){
 }
 
 function getStrMeshPropertiesHTML(node){
-  return _strStub('Hesaplama Ağı',
-    'Geometriye sayısal ağ örer. Çıktısı Sınır Koşulları bileşenine gider.',
-    'Ağ örücü ayrı bir oturumda eklenecek.');
+  return _strStub();
 }
 
 function getStrBCPropertiesHTML(node){
-  return _strStub('Sınır Koşulları',
-    'Ağ örülmüş geometriye mesnet ve yük tanımlar.',
-    'Koşul düzenleyicisi ayrı bir oturumda eklenecek.');
+  return _strStub();
 }
 
 function getStrResultsPropertiesHTML(node){
-  return _strStub('Sonuçlar',
-    'Çözümün gerilme ve deformasyon çıktısı. Zincirin sonudur — çıkışı yoktur.',
-    'Çözücü ve kontur çizimi ayrı bir oturumda eklenecek.');
+  return _strStub();
 }
 
 // ── Test köprüsü ────────────────────────────────────────────────────────────

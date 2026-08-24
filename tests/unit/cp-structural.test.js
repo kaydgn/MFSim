@@ -263,8 +263,9 @@ describe('paneller üretiliyor ve sızıntı yok', () => {
     expect(html).toContain("veStrOpenEditor('n7')");
   });
 
-  // Boş panel SESSİZ olmamalı: kullanıcı iskeletin nerede bittiğini görmeli.
-  // (cp-fead.js _feadPending ile aynı gerekçe — CLAUDE.md'de yazılı.)
+  // Boş panel SESSİZ olmamalı: kullanıcı bileşenin kullanıma açık olmadığını
+  // görmeli. (cp-fead.js _feadPending ile aynı gerekçe — CLAUDE.md'de yazılı.)
+  // Metin DURUM bildirir; ne kullanım anlatır ne de geliştirme planı duyurur.
   // Geometri ARTIK DOLU (STEP içe aktarma) → listeden çıkarıldı; kalan üçü
   // hâlâ iskelet ve eksiğini söylemek ZORUNDA.
   const hala_iskelet = uretecler.filter(([ad]) => ['Hesaplama Ağı', 'Sınır Koşulları', 'Sonuçlar'].includes(ad));
@@ -274,12 +275,12 @@ describe('paneller üretiliyor ve sızıntı yok', () => {
   });
 
   test.each(hala_iskelet)('%s paneli eksiğini SÖYLÜYOR', (_ad, fn) => {
-    expect(fn({ id: 'n1', type: 'x', data: {} })).toContain('Bileşen bekleniyor');
+    expect(fn({ id: 'n1', type: 'x', data: {} })).toContain('Kullanıma açık değil');
   });
 
   test('Geometri paneli ARTIK iskelet değil — içe aktarma yüzeyi taşıyor', () => {
     const html = str.getStrGeometryPropertiesHTML({ id: 'n1', type: 'str-geometry', data: {} });
-    expect(html).not.toContain('Bileşen bekleniyor');
+    expect(html).not.toContain('Kullanıma açık değil');
     expect(html).toContain('veStrGeomPick(\'n1\')');
     expect(html).toContain('accept=".step,.stp"');
     // Sürükle-bırak da bağlı: dragover'sız bir drop hedefi tarayıcıyı dosyaya
@@ -309,11 +310,11 @@ describe('paneller üretiliyor ve sızıntı yok', () => {
     const onceki = global.veStrSrcWillPersist;
     try {
       global.veStrSrcWillPersist = () => true;
-      expect(mk()).toContain('kaydedilirken');
+      expect(mk()).toContain('proje dosyasına');
       global.veStrSrcWillPersist = () => false;
       // Sessiz bırakılsaydı kullanıcı projeyi kaydedip kapatır, geometrinin
       // gitmiş olduğunu ancak yeniden açtığında görürdü.
-      expect(mk()).toContain('yeniden içe aktarılması');
+      expect(mk()).toContain('yeniden içe aktarma gerekiyor');
     } finally { global.veStrSrcWillPersist = onceki; }
   });
 

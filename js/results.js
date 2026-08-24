@@ -1109,7 +1109,7 @@ function veRenderDetailedReport(filter) {
   
   sections.forEach(function(s) {
     if(!shouldShow(s.id)) return;
-    var bodyContent = s.content || '<span style="color:var(--text-muted); font-style:italic;">İçerik henüz tanımlanmadı</span>';
+    var bodyContent = s.content || '<span style="color:var(--text-muted);">Veri yok</span>';
     // If single section filter, auto-expand it
     var autoOpen = (!showAll && !isGirdi);
     html += '<div class="dr-section" data-section="' + s.id + '">';

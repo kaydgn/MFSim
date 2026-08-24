@@ -114,7 +114,7 @@ function veStartModule(type) {
   }
 
   var label = (componentDefs[type] && componentDefs[type].name) ? componentDefs[type].name : type;
-  if(typeof showToast === 'function') showToast(label + ' eklendi — çift tıklayarak açın', 'info');
+  if(typeof showToast === 'function') showToast(label + ' eklendi', 'info');
 }
 
 // Aktif moda ait sidebar bileşenlerini göster.
@@ -862,7 +862,7 @@ function veModuleSummary(node) {
 
 function veModuleSummaryText(node) {
   var s = veModuleSummary(node);
-  if(!s.initialized) return 'Boş — çift tıklayın';
+  if(!s.initialized) return 'Boş';
   return s.nodes + ' bileşen · ' + s.connections + ' bağlantı';
 }
 

@@ -94,9 +94,8 @@ function getEnginePropertiesHTML(node) {
     selectHtml += '<div id="ve-motor-placeholder-' + node.id + '" style="display:' + (hasData ? 'none' : 'block') + '; padding:20px; text-align:center; background:var(--bg-tertiary); border-radius:var(--radius-sm); margin-bottom:12px;">';
     selectHtml += '<div style="font-size:var(--fs-h1); margin-bottom:8px;"><span class="mf-ico mf-ico-zap"></span></div>';
     // Kontrolün NEREDE olduğunu söyle: "Manuel Giriş" ayrı bir düğme değil,
-    // yukarıdaki listenin son seçeneği. Eski metin var olmayan bir kontrole
-    // işaret ediyor gibi okunuyordu.
-    selectHtml += '<div style="font-size:var(--fs-md); color:var(--text-muted);">Yukarıdaki listeden hazır bir motor seçin<br>ya da listenin sonundaki <strong>+ Manuel Giriş</strong> ile kendi verinizi girin.</div>';
+    // yukarıdaki listenin son seçeneği.
+    selectHtml += '<div style="font-size:var(--fs-md); color:var(--text-muted);">Motor seçilmedi — listeden bir motor<br>ya da son seçenek <strong>+ Manuel Giriş</strong>.</div>';
     selectHtml += '</div>';
   }
 
@@ -105,8 +104,7 @@ function getEnginePropertiesHTML(node) {
   // kart yığını kalkınca sığıyor. ID'ler ve onchange bağlayıcıları aynı.
   var specCardHtml = '';
   if(isFullThrottle) {
-    specCardHtml += '<div class="sw-section-title" style="display:flex; justify-content:space-between; align-items:center;">Motor Parametreleri';
-    specCardHtml += '<button onclick="showInfoPopup(\'motorVerileri\')" class="sw-info-btn" title="Bilgi">?</button></div>';
+    specCardHtml += '<div class="sw-section-title">Motor Parametreleri</div>';
     specCardHtml += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
 
     var specRows = [
@@ -254,7 +252,6 @@ function getEnginePropertiesHTML(node) {
   chartHtml += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
   chartHtml += '<div class="sw-pkg-header" style="cursor:default;">';
   chartHtml += '<span class="sw-pkg-name">Tork & Güç Eğrisi</span>';
-  chartHtml += '<button onclick="showInfoPopup(\'torkGucEgrisi\')" class="sw-info-btn" title="Bilgi">?</button>';
   chartHtml += '<button class="sw-btn sw-btn-outline" style="font-size:var(--fs-micro);padding:2px 8px;margin-left:auto;" onclick="updateVEMotorChart(\'' + node.id + '\')">Güncelle</button>';
   chartHtml += '</div>';
   chartHtml += '<div class="sw-pkg-body">';
@@ -274,13 +271,11 @@ function getEnginePropertiesHTML(node) {
   // doğrulama sütununun içine düz akıyor).
   var fitHtml = '';
   if(isFullThrottle) {
-    fitHtml += '<div class="sw-section-title" style="display:flex; justify-content:space-between; align-items:center;">Eğri Yaklaşımı';
-    fitHtml += '<button onclick="showInfoPopup(\'egriYaklaşımı\')" class="sw-info-btn" title="Bilgi">?</button></div>';
+    fitHtml += '<div class="sw-section-title">Eğri Yaklaşımı</div>';
   } else {
   fitHtml += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
   fitHtml += '<div class="sw-pkg-header" style="cursor:default;">';
   fitHtml += '<span class="sw-pkg-name">Eğri Yaklaşımı</span>';
-  fitHtml += '<button onclick="showInfoPopup(\'egriYaklaşımı\')" class="sw-info-btn" title="Bilgi">?</button>';
   fitHtml += '</div>';
   fitHtml += '<div class="sw-pkg-body">';
   }
@@ -395,7 +390,6 @@ function getEnginePropertiesHTML(node) {
     brakeHtml += '<div class="sw-pkg-card" style="margin-top:10px;">';
     brakeHtml += '<div class="sw-pkg-header" style="cursor:default;">';
     brakeHtml += '<span class="sw-pkg-name">Motor Freni Parametreleri</span>';
-    brakeHtml += '<button onclick="showInfoPopup(\'motorFreniParametreleri\')" class="sw-info-btn" title="Bilgi">?</button>';
     brakeHtml += '</div>';
     brakeHtml += '<div class="sw-pkg-body">';
 
@@ -410,7 +404,7 @@ function getEnginePropertiesHTML(node) {
 
     // Verim açıklama satırı
     brakeHtml += '<tr style="border-bottom:1px solid var(--border-color);">';
-    brakeHtml += '<td colspan="2" style="padding:6px 8px; font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Üretici katalog değerlerinin ne kadarının gerçek araca aktarılacağını ifade eder. Örneğin %95 girildiğinde, tork/güç değerleri 0,95 ile çarpılarak kullanılır.</td>';
+    brakeHtml += '<td colspan="2" style="padding:6px 8px; font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Katalog tork/güç değerleri bu oranla çarpılarak kullanılır (%95 → ×0,95).</td>';
     brakeHtml += '</tr>';
 
     // Governed RPM satırı

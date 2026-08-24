@@ -608,7 +608,7 @@ function getGearShiftPropertiesHTML(node) {
   html += '  [ESL &gt; maxESL₂] → a₃ × ESL + b₃';
   html += '</div>';
 
-  html += '<div style="background:var(--bg-secondary); border-left:3px solid var(--accent-primary); border-radius:0 5px 5px 0; padding:8px 10px; font-size:var(--fs-micro); color:var(--text-muted); line-height:1.5; font-style:italic;">';
+  html += '<div style="background:var(--bg-secondary); border-left:3px solid var(--accent-primary); border-radius:0 5px 5px 0; padding:8px 10px; font-size:var(--fs-micro); color:var(--text-muted); line-height:1.5;">';
   html += 'Tüm katsayılar iSCAAN çapraz validasyondan türetilmiştir. Tipik max hata: ±0.5 rpm (lineer), ±6-12 rpm (nonlineer bölgeler).';
   html += '</div>';
   html += '</div>';
