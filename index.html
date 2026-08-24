@@ -1166,6 +1166,21 @@
 <script type="text/x-mfsim-asset" data-mfsim-asset="occt-wasm" src="js/structural-occt-wasm.js"></script>
 <script type="text/x-mfsim-defer" src="js/structural-model.js" data-mfsim-label="Yapısal Analiz: geometri köprüsü (STEP)..."></script>
 <script type="text/x-mfsim-defer" src="js/structural-materials.js" data-mfsim-label="Yapısal Analiz: malzeme kütüphanesi..."></script>
+<!-- TetGen ağ üreticisi — vendor/tetgen-src/ derlenerek üretildi (npm'de hazır
+     WASM paketi YOK, bkz. CLAUDE.md). Bu ETIKET yalnız ~99 KB'lık fabrikayı
+     tanımlar. data-mfsim-tetgen-glue: js/structural-mesh-model.js worker'ı
+     kurarken bu etiketin KAYNAK METNİNİ okur (tek dosya sürümünde içerik
+     burada INLINE durur → AĞ GEREKMEZ) — occt köprüsüyle AYNI kalıp.
+     Lisans AGPL-3: vendor/license.tetgen.txt. -->
+<script type="text/x-mfsim-defer" src="vendor/tetgen-wasm.js" data-mfsim-tetgen-glue data-mfsim-label="Hesaplama Ağı: TetGen köprüsü..."></script>
+<!-- TetGen'in .wasm'i, GOMULU (gzip+base64). type="text/x-mfsim-asset" → ne
+     tarayici ne MFSimLoader calistirir; ILK ağ oluşturmada
+     js/structural-mesh-model.js talep uzerine calistirir. Uretim:
+     npm run build:tetgen-wasm-asset (occt-wasm ile AYNI gerekçe: çevrimdışı
+     kullanım). -->
+<script type="text/x-mfsim-asset" data-mfsim-asset="tetgen-wasm" src="js/structural-tetgen-wasm.js"></script>
+<script type="text/x-mfsim-defer" src="js/structural-remesh.js" data-mfsim-remesh-src data-mfsim-label="Yapısal Analiz: yüzey yeniden-mesh'leme..."></script>
+<script type="text/x-mfsim-defer" src="js/structural-mesh-model.js" data-mfsim-label="Yapısal Analiz: ağ köprüsü (TetGen)..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-structural.js" data-mfsim-label="Yapısal Analiz (sonlu elemanlar) modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-structural-viewer.js" data-mfsim-label="Yapısal Analiz: 3B geometri görüntüleyici..."></script>
 <!-- Rapor varlıkları (KaTeX + fontlar, ~1MB) ve teori şablonu: type="text/x-mfsim-report"

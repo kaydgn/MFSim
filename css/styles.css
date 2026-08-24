@@ -4415,6 +4415,56 @@
 .ve-properties--strgeom .ve-str-faces{ flex:1 1 auto;max-height:none;min-height:120px; }
 .ve-properties--strgeom .ve-str-vwr-box{ flex:1;height:auto; }
 
+/* ══ HESAPLAMA AĞI PANELİ — AĞ VARKEN BÜYÜK PENCERE ══
+   Geometri panelinin kuralıyla BİREBİR aynı ve aynı gerekçeyle: bir ağı
+   "gördüğünü" söyleyebilmek için eleman sınırlarını görmek gerekir, o da yer
+   ister. Sınıf yalnız ağ VARKEN veriliyor (bkz. cp-core.js) — ağ yokken panel
+   tek sütunluk kısa bir formdur ve 94vh'lik pencere bomboş açılırdı. */
+.ve-properties.ve-properties--strmesh{
+  max-width:min(1560px, 96vw);
+  height:94vh;
+  max-height:94vh;
+}
+.ve-properties--strmesh .ve-properties-content{
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.ve-properties--strmesh .ve-properties-content > .ve-str-mesh-grid{
+  flex:1;min-height:0;
+}
+.ve-str-mesh-grid{
+  display:grid;grid-template-columns:1fr;gap:12px;align-items:stretch;
+}
+.ve-properties--strmesh .ve-str-mesh-grid{
+  grid-template-columns:340px minmax(0,1fr);
+}
+@media (max-width:820px){
+  .ve-properties--strmesh .ve-str-mesh-grid{ grid-template-columns:1fr; }
+}
+/* Sol sütun (ayar + künye) kendi içinde kaydırır; sağdaki görüntüleyici artan
+   boyu yutar — Geometri panelindeki flex zincirinin aynısı, aynı tuzakla:
+   bir halkada `min-height:0` unutulursa zincir kopar ve kutu içeriğine göre
+   şişer. */
+.ve-properties--strmesh .ve-str-mesh-grid > .sw-panel{
+  display:flex;flex-direction:column;min-height:0;overflow-y:auto;
+}
+.ve-properties--strmesh .ve-str-mesh-grid > .ve-str-vwr-box{
+  height:auto;min-height:0;
+}
+/* Görüş çubuğu kutunun İÇİNDE, altta: teknik resim alışkanlığı (Ön/Üst/Sağ/
+   İzometrik). Kutunun dışına konsaydı görüntüleyicinin yüksekliğinden çalardı. */
+.ve-str-vwr-bar{
+  position:absolute;left:0;right:0;bottom:0;
+  display:flex;align-items:center;gap:5px;padding:5px 7px;
+  background:color-mix(in srgb, var(--bg-secondary) 88%, transparent);
+  border-top:1px solid var(--border-color);
+}
+.ve-str-vwr-bar > button{
+  padding:3px 8px;font-size:var(--fs-micro);
+  background:transparent;color:var(--text-secondary);
+  border:1px solid var(--border-color);border-radius:3px;cursor:pointer;
+}
+.ve-str-vwr-bar > button:hover{ color:var(--text-primary);border-color:var(--accent-primary); }
+
 /* ── Bileşen kimlik bloğu (simge + ad + ID + sil düğmesi) ──
    Varsayılan: ORTALANMIŞ dikey yığın — tüm bileşen pencerelerinde eskisi gibi. */
 .ve-prop-identity{

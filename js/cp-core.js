@@ -341,6 +341,11 @@ function showNodeProperties(node) {
   // pencere. Geometri'nin aksine KOŞULSUZ veriliyor: sol sütun (katalog) her
   // zaman dolu, "boş açılan büyük pencere" durumu burada yok.
   if(_propWin) _propWin.classList.toggle('ve-properties--strmat', node.type === 'str-material');
+  // Yapısal Analiz / Hesaplama Ağı: Geometri ile AYNI kural ve aynı gerekçe —
+  // büyük pencere yalnız ağ VARKEN, çünkü ancak o zaman sağ sütunda 3B
+  // görüntüleyici basılıyor. Ağ yokken panel tek sütunluk kısa bir formdur.
+  if(_propWin) _propWin.classList.toggle('ve-properties--strmesh',
+    node.type === 'str-mesh' && !!(node.data && node.data.mesh));
   // Hafif paneller (VE_COMPACT_PANEL_TYPES): içerik az → dar pencere + kompakt-sol
   // kimlik. Geniş yapmak boş sütun bırakırdı. Salt sunum.
   if(_propWin) _propWin.classList.toggle('ve-properties--compact', VE_COMPACT_PANEL_TYPES.indexOf(node.type) >= 0);
@@ -409,6 +414,14 @@ function showNodeProperties(node) {
   if(node.type === 'str-geometry') {
     setTimeout(function() {
       if(typeof veStrGeomMountViewer === 'function') veStrGeomMountViewer(node.id);
+    }, 140);
+  }
+
+  // Yapısal Analiz Hesaplama Ağı: aynı kanca, aynı gerekçe. Görüntüleyici
+  // yalnız ağ VARSA kurulur (kanvas HTML'i de ancak o zaman basılıyor).
+  if(node.type === 'str-mesh') {
+    setTimeout(function() {
+      if(typeof veStrMeshMountViewer === 'function') veStrMeshMountViewer(node.id);
     }, 140);
   }
 

@@ -297,6 +297,10 @@ function _strForgetResults(){
   // Kütüphane tarama durumu da oturumluk (arama metni, seçili kategori/kayıt).
   if(typeof _strLibForget === 'function') _strLibForget();
   if(typeof veStrSrcClear === 'function') veStrSrcClear();
+  // Hacim ağı da oturumluk (künye hafif, ağın kendisi node.data'ya yazılmıyor);
+  // worker + derlenmiş WASM örneği de bırakılır.
+  if(typeof veStrMeshCacheClear === 'function') veStrMeshCacheClear();
+  if(typeof veStrMeshForget === 'function') veStrMeshForget();
   if(typeof veStrViewerDispose === 'function') veStrViewerDispose();
   // Oturumluk görünüm durumları da (seçili yüz, yüz inceleme kipi) yeni
   // projeye taşınmasın — düğüm kimlikleri yeniden kullanılırsa önceki projenin
@@ -508,9 +512,39 @@ function veStrApplyBadge(nodeEl, node){
   if(!nodeEl || !node || typeof document === 'undefined') return false;
   var old = nodeEl.querySelector('.ve-str-badge');
   if(old) old.remove();
-  if(node.type !== 'str-geometry' && node.type !== 'str-material') return false;
+  if(node.type !== 'str-geometry' && node.type !== 'str-material' && node.type !== 'str-mesh') return false;
 
   var dolu, metin, tip;
+  if(node.type === 'str-mesh'){
+    // AĞ ROZETİ: eleman sayısı. AMBER yalnız ÇÖZÜLEBİLİR ağda — dejenere
+    // eleman varsa ağ "hazır" görünmemeli (o eleman rijitlik matrisini tekil
+    // yapar), o yüzden kırmızı. Boşken de rozet VAR: Geometri rozetindeki
+    // gerekçenin aynısı, "rozet yok" ile "ağ yok" ayırt edilemezdi.
+    var mr = node.data && node.data.mesh;
+    var st = mr && mr.stats;
+    if(st){
+      dolu = !(st.degenerate > 0);
+      metin = '△' + _strMeshShort(st.tets);
+      tip = _strFmt(st.tets) + ' eleman · ' + _strFmt(st.nodes) + ' düğüm · '
+          + _strFmt(st.dof) + ' SD'
+          + (st.degenerate > 0 ? (' · DEJENERE ' + st.degenerate) : '');
+    } else {
+      dolu = false; metin = 'AĞ';
+      tip = 'Ağ henüz kurulmadı — panelden "Ağı Oluştur".';
+    }
+    var bm = document.createElement('span');
+    bm.className = 've-str-badge';
+    bm.textContent = metin;
+    bm.title = tip;
+    bm.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; pointer-events:none;'
+      + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
+      + 'padding:2px 4px; border-radius:3px; font-family:ui-monospace, monospace;'
+      + 'color:#fff; background:' + (dolu ? 'var(--accent-warning, #f59e0b)'
+          : (st ? 'var(--accent-danger, #ef4444)' : 'var(--text-muted, #888)'))
+      + '; border:1px solid var(--bg-primary, #111);';
+    (nodeEl.querySelector('.ve-node-box') || nodeEl).appendChild(bm);
+    return true;
+  }
   if(node.type === 'str-material'){
     // MALZEME: amber yalnız ÇÖZÜLEBİLİR kayıtta (bkz. veStrMatBadgeInfo).
     var mi = veStrMatBadgeInfo(node);
@@ -1556,8 +1590,347 @@ function _strLibFilterHTML(nodeId){
   return h;
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+//  HESAPLAMA AĞI — TetGen ile tet10 hacim ağı
+// ════════════════════════════════════════════════════════════════════════════
+// Zincirin ikinci bileşeni. SUNUM katmanı: ayarları alır, köprüye
+// (js/structural-mesh-model.js) verir, dönen ağı künye olarak gösterir.
+// KENDİ AĞINI ÖRMEZ — tek tetrahedron bile burada üretilmiyor.
+//
+// GEOMETRİ TELDEN OKUNUYOR, ikinci bir "kaynak seç" alanı YOK — Malzeme
+// bileşenindeki kuralın aynısı ve aynı gerekçesi: panelde ayrı bir hedef alanı
+// tutulsaydı tel ile alan sessizce ayrışırdı.
+var VE_STR_MESH_DEFAULT_DIVISOR = 40;   // hedef kenar ≈ sınır kutusu köşegeni / 40
+
+// Kullanıcının dokunacağı TEK sayı hedef kenar boyu. Kalite reçetesi (radius-edge
+// oranı, min dihedral) panelde YOK ve bu bilinçli: aynı braket için kurulmuş
+// Python boru hattı bu parametreleri taramış ve "2,5 kat eleman, marjinal kazanç,
+// minimum kalite DAHA DA DÜŞÜK" sonucuna varmış — yani bu düğmeleri kullanıcının
+// önüne koymak, iyileştirdiğini sanarak ağı bozabileceği bir yüzey açardı.
+// Değerler köprüde sabit (VE_STR_TETGEN_DEFAULTS) ve künyede YAZILI.
+// Rozet 62×56'lık kutuya sığmak zorunda: 82.016 gibi bir sayı taşardı.
+// "82b" okunabilir ve büyüklük mertebesini doğru veriyor; tam sayı ipucunda.
+function _strMeshShort(n){
+  n = Number(n) || 0;
+  if(n < 1000) return String(n);
+  if(n < 1000000) return _strFmt(Math.round(n / 100) / 10, 1) + 'b';
+  return _strFmt(Math.round(n / 100000) / 10, 1) + 'M';
+}
+
+function veStrMeshHost(node){
+  if(!node || typeof connections === 'undefined' || typeof nodes === 'undefined') return null;
+  var host = null;
+  connections.forEach(function(c){
+    if(host || c.to !== node.id) return;
+    var n = nodes.find(function(x){ return x.id === c.from; });
+    if(n && n.type === 'str-geometry') host = n;
+  });
+  return host;
+}
+
+// Hedef kenar boyu: kullanıcı girmediyse parçanın sınır kutusundan TÜRETİLİR.
+// Sabit bir varsayılan (ör. "3 mm") 10 mm'lik bir pimde saçma, 1 m'lik bir
+// şasede imkânsız olurdu.
+function veStrMeshTargetLen(node, geomNode){
+  var girilen = Number(node && node.data && node.data.targetLen);
+  if(isFinite(girilen) && girilen > 0) return girilen;
+  var g = geomNode && geomNode.data && geomNode.data.geometry;
+  var diag = g && g.bbox && Number(g.bbox.diag);
+  if(!isFinite(diag) || diag <= 0) return null;
+  return Math.round((diag / VE_STR_MESH_DEFAULT_DIVISOR) * 100) / 100;
+}
+
+function _strMeshStatus(msg, kind){
+  if(typeof document === 'undefined') return;
+  var el = document.getElementById('ve-str-mesh-status');
+  if(!el) return;
+  el.style.color = (kind === 'err') ? 'var(--accent-danger, #ef4444)'
+                 : (kind === 'ok') ? 'var(--accent-success, #22c55e)'
+                 : 'var(--text-secondary)';
+  el.innerHTML = msg ? _strEsc(msg) : '';
+}
+
+var VE_STR_MESH_STAGE_TEXT = {
+  reader: 'Ağ üreteci hazırlanıyor',
+  remesh: 'Yüzey hazırlanıyor',
+  tetgen: 'Hacim ağı örülüyor',
+  build:  'Ağ kuruluyor'
+};
+
+var _veStrMeshTimer = {};
+
+function _strMeshProgStart(nodeId, baslik){
+  if(typeof document === 'undefined') return;
+  var el = document.getElementById('ve-str-mesh-progress');
+  if(!el) return;
+  var t0 = Date.now();
+  el.innerHTML =
+      '<div class="ve-str-prog">'
+    +   '<div class="ve-str-prog-head"><span class="ve-str-prog-spin"></span><b>' + _strEsc(baslik) + '</b></div>'
+    +   '<div class="ve-str-prog-file"><span data-ve="stage">başlıyor</span></div>'
+    +   '<div class="ve-str-prog-bar"><i data-ve="fill" class="indet"></i></div>'
+    +   '<div class="ve-str-prog-foot"><span data-ve="detail"></span><span data-ve="clock">0,0 sn</span></div>'
+    + '</div>';
+  el.style.display = 'block';
+  if(_veStrMeshTimer[nodeId]) clearInterval(_veStrMeshTimer[nodeId]);
+  _veStrMeshTimer[nodeId] = setInterval(function(){
+    var c = document.getElementById('ve-str-mesh-progress');
+    c = c && c.querySelector('[data-ve="clock"]');
+    if(!c){ clearInterval(_veStrMeshTimer[nodeId]); delete _veStrMeshTimer[nodeId]; return; }
+    c.textContent = _strFmt((Date.now() - t0) / 1000, 1) + ' sn';
+  }, 100);
+}
+
+function _strMeshProgSet(stage, info){
+  if(typeof document === 'undefined') return;
+  var el = document.getElementById('ve-str-mesh-progress');
+  if(!el) return;
+  var s = el.querySelector('[data-ve="stage"]');
+  var det = el.querySelector('[data-ve="detail"]');
+  if(s) s.textContent = VE_STR_MESH_STAGE_TEXT[stage] || stage;
+  // Katı sayacı UYDURMA BİR YÜZDE DEĞİL: kaçıncı katının işlendiği gerçekten
+  // biliniyor. Tek katılı parçada hiç yazılmaz (yanıltıcı olurdu).
+  if(det) det.textContent = (info && info.total > 1) ? ('katı ' + (info.solid + 1) + ' / ' + info.total) : '';
+}
+
+function _strMeshProgEnd(nodeId){
+  if(_veStrMeshTimer[nodeId]){ clearInterval(_veStrMeshTimer[nodeId]); delete _veStrMeshTimer[nodeId]; }
+  if(typeof document === 'undefined') return;
+  var el = document.getElementById('ve-str-mesh-progress');
+  if(el){ el.innerHTML = ''; el.style.display = 'none'; }
+}
+
+function veStrMeshSetTarget(nodeId, val){
+  var node = _strNodeById(nodeId);
+  if(!node) return;
+  if(!node.data) node.data = {};
+  var n = Number(val);
+  if(isFinite(n) && n > 0) node.data.targetLen = n; else delete node.data.targetLen;
+  if(typeof saveState === 'function') saveState();
+}
+
+function veStrMeshBuild(nodeId){
+  var node = _strNodeById(nodeId);
+  if(!node) return;
+  var geomNode = veStrMeshHost(node);
+  var geom = geomNode && (typeof veStrGeomCacheGet === 'function') ? veStrGeomCacheGet(geomNode.id) : null;
+  if(!geomNode){ _strMeshStatus('Bu bileşen bir Geometri bileşenine bağlı değil.', 'err'); return; }
+  if(!geom || !geom.ok){
+    _strMeshStatus('Bağlı Geometri bileşeninde parça yok — önce bir STEP dosyası içe aktarın.', 'err');
+    return;
+  }
+  if(typeof veStrBuildMesh !== 'function'){
+    _strMeshStatus('Ağ köprüsü yüklenmedi (structural-mesh-model.js).', 'err');
+    return;
+  }
+
+  var target = veStrMeshTargetLen(node, geomNode);
+  _strMeshStatus('');
+  _strMeshProgStart(nodeId, (geom.fileName || 'Parça') + ' · hedef kenar ' + _strFmt(target, 2) + ' mm');
+
+  veStrBuildMesh(geom, { targetLen: target }, {
+    onProgress: function(stage, info){ _strMeshProgSet(stage, info); }
+  }).then(function(res){
+    _strMeshProgEnd(nodeId);
+    if(!res || !res.ok){
+      _strMeshStatus((res && res.error) || 'Ağ kurulamadı.', 'err');
+      if(typeof veStrMeshCacheClear === 'function') veStrMeshCacheClear();
+      if(!node.data) node.data = {};
+      delete node.data.mesh;
+      if(typeof saveState === 'function') saveState();
+      if(typeof showNodeProperties === 'function') showNodeProperties(node);
+      return;
+    }
+    if(typeof veStrMeshCacheSet === 'function') veStrMeshCacheSet(nodeId, res);
+    if(!node.data) node.data = {};
+    node.data.mesh = (typeof veStrMeshRecord === 'function') ? veStrMeshRecord(res) : null;
+    node.data.meshSourceFile = geom.fileName || '';
+    if(typeof saveState === 'function') saveState();
+    _strMeshStatus('Ağ hazır: ' + _strFmt(res.stats.tets) + ' eleman.', 'ok');
+    if(typeof showNodeProperties === 'function') showNodeProperties(node);
+    if(typeof veStrRefreshBadge === 'function') veStrRefreshBadge(nodeId);
+  }, function(err){
+    _strMeshProgEnd(nodeId);
+    _strMeshStatus('Ağ kurulamadı: ' + ((err && err.message) || err), 'err');
+  });
+}
+
+function veStrMeshClear(nodeId){
+  var node = _strNodeById(nodeId);
+  if(!node) return;
+  if(node.data) delete node.data.mesh;
+  if(typeof veStrMeshCacheClear === 'function') veStrMeshCacheClear();
+  if(typeof saveState === 'function') saveState();
+  if(typeof showNodeProperties === 'function') showNodeProperties(node);
+  if(typeof veStrRefreshBadge === 'function') veStrRefreshBadge(nodeId);
+}
+
+// ── AĞ KÜNYESİ ──────────────────────────────────────────────────────────────
+// Dört sayı ZORUNLU ve her biri ayrı bir soruya cevap veriyor. Hangisinin
+// KRİTİK olduğu ölçülmüş bir ders: aynı braket için kurulmuş Python boru hattı
+// notlarına "kritik metrik `v_min`, `q_min` DEĞİL" diye yazmış — şekil ölçütü
+// iyi bir ağda bile sıfır görünebiliyor, ama HACMİ sıfıra yakın tetler
+// rijitlik matrisini tekil yapıyor ve hiçbir ön koşullandırıcı kurtaramıyor
+// (o tarafta CG 800 iterasyonda 1e-2'de takılmış). Bu yüzden dejenere eleman
+// sayısı burada bir UYARI değil, çözümü durduran bir HÜKÜM.
+function _strMeshStatsHTML(rec){
+  var s = rec.stats || {};
+  var su = s.surface || {};
+  var h = '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:9px;">';
+  function sat(ad, deger, vurgu){
+    h += '<tr><td style="padding:4px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">' + ad + '</td>'
+      +  '<td style="padding:4px 8px; border:1px solid var(--border-color); color:' + (vurgu || 'var(--text-primary)') + '; font-weight:600; text-align:right;">' + deger + '</td></tr>';
+  }
+  sat('Düğüm', _strFmt(s.nodes));
+  sat('Eleman (tet' + (s.order === 2 ? '10' : '4') + ')', _strFmt(s.tets));
+  sat('Serbestlik derecesi', _strFmt(s.dof));
+  sat('Ağ hacmi', _strFmt(s.volume, 1) + ' mm³');
+  if(s.solidTotal > 1) sat('Katı', s.solidCount + ' / ' + s.solidTotal);
+  sat('En küçük eleman hacmi', (s.minTetVolume != null ? s.minTetVolume.toExponential(2) : '—') + ' mm³');
+  sat('Dejenere eleman', _strFmt(s.degenerate),
+      s.degenerate > 0 ? 'var(--accent-danger, #ef4444)' : 'var(--accent-success, #22c55e)');
+  if(su.volumeLossPct != null){
+    sat('Hacim kaybı (yüzey hazırlığı)', _strFmt(su.volumeLossPct, 2) + ' %',
+        su.volumeLossPct > 4 ? 'var(--accent-warning, #f59e0b)' : 'var(--text-primary)');
+  }
+  if(su.qualityAfter){
+    sat('Yüzey min açı', _strFmt(su.qualityBefore ? su.qualityBefore.minAngleDeg : 0, 2) + '° → '
+      + _strFmt(su.qualityAfter.minAngleDeg, 2) + '°');
+  }
+  if(su.nonManifoldEdges) sat('Non-manifold kenar', _strFmt(su.nonManifoldEdges), 'var(--accent-warning, #f59e0b)');
+  h += '</table>';
+  return h;
+}
+
+function _strMeshWarnHTML(rec){
+  var s = rec.stats || {}, su = s.surface || {};
+  var uyari = [];
+  if(s.degenerate > 0){
+    uyari.push(['err', 'Dejenere eleman var (' + _strFmt(s.degenerate) + ' adet, hacim < 1e-6 mm³). '
+      + 'Bu elemanlar rijitlik matrisini sayısal olarak tekil yapar ve çözüm yakınsamaz — '
+      + 'hedef kenar boyunu büyütüp ağı yeniden kurun.']);
+  }
+  if(s.inverted > 0) uyari.push(['err', 'Ters çevrilmiş eleman var (' + _strFmt(s.inverted) + ' adet).']);
+  if(su.volumeLossPct > 4){
+    uyari.push(['warn', 'Yüzey hazırlığı hacmin %' + _strFmt(su.volumeLossPct, 1) + '\'ini yedi. '
+      + 'Ağ parçadan ince kalıyor, gerilme sistematik olarak yüksek çıkar — hedef kenar boyunu küçültün.']);
+  }
+  if(s.solidTotal > 1 && s.solidCount < s.solidTotal){
+    uyari.push(['err', 'Parçanın ' + s.solidTotal + ' katısından ' + (s.solidTotal - s.solidCount)
+      + ' tanesi ağa giremedi. Çözüm EKSİK bir gövde üzerinde koşar.']);
+  }
+  if(s.perSolid && s.solidCount > 1){
+    uyari.push(['warn', 'Katılar AYRI AYRI ağlandı: temas yüzeylerinde düğümler çakışmaz, '
+      + 'yani parçalar ağ düzeyinde birbirine bağlı değildir.']);
+  }
+  if(!uyari.length) return '';
+  var h = '';
+  uyari.forEach(function(u){
+    var renk = (u[0] === 'err') ? 'var(--accent-danger, #ef4444)' : 'var(--accent-warning, #f59e0b)';
+    h += '<div style="padding:7px 9px; margin-bottom:6px; font-size:var(--fs-micro); line-height:1.45;'
+      +  ' color:var(--text-secondary); background:var(--bg-secondary); border-left:3px solid ' + renk + ';">'
+      +  _strEsc(u[1]) + '</div>';
+  });
+  return h;
+}
+
 function getStrMeshPropertiesHTML(node){
-  return _strStub();
+  var id = node.id;
+  var geomNode = veStrMeshHost(node);
+  var g = geomNode && geomNode.data && geomNode.data.geometry;
+  var rec = node.data && node.data.mesh;
+  var target = veStrMeshTargetLen(node, geomNode);
+
+  var h = '<div class="sw-panel">';
+
+  // 1) KAYNAK — üç durum da AÇIKÇA yazılı (Malzeme bileşenindeki kural).
+  h += '<div style="padding:7px 9px; margin-bottom:9px; font-size:var(--fs-micro); line-height:1.45;'
+    +  ' background:var(--bg-secondary); border:1px solid var(--border-color);">';
+  if(!geomNode){
+    h += '<b style="color:var(--accent-warning, #f59e0b);">Geometri bileşenine bağlı değil.</b>'
+      +  ' Kanvasta Geometri çıkışını bu bileşenin girişine bağlayın.';
+  } else if(!g || !g.stats){
+    h += '<b style="color:var(--accent-warning, #f59e0b);">Bağlı Geometri bileşeninde parça yok.</b>'
+      +  ' Önce bir STEP dosyası içe aktarın.';
+  } else {
+    h += '<b style="color:var(--text-heading);">' + _strEsc(g.fileName || 'Parça') + '</b><br>'
+      +  _strFmt(g.stats.triCount) + ' üçgen · ' + _strFmt(g.stats.faceCount) + ' CAD yüzü'
+      +  (g.stats.meshCount > 1 ? (' · ' + g.stats.meshCount + ' katı') : '');
+  }
+  h += '</div>';
+
+  // 2) AYAR — tek sayı: hedef kenar boyu.
+  var hazir = !!(g && g.stats);
+  h += '<div style="display:grid; grid-template-columns:1fr auto; gap:7px; align-items:end; margin-bottom:9px;">';
+  h += '<div><label style="display:block; font-size:var(--fs-micro); color:var(--text-secondary); margin-bottom:3px;">'
+    +  'Hedef kenar boyu (mm)</label>'
+    +  '<input type="number" step="0.1" min="0.01" style="width:100%;" '
+    +  (hazir ? '' : 'disabled ')
+    +  'value="' + (target != null ? _strEsc(String(target)) : '') + '"'
+    +  ' onchange="veStrMeshSetTarget(\'' + id + '\', this.value)"'
+    +  ' placeholder="' + (target != null ? _strEsc(String(target)) : 'parçadan türetilir') + '"></div>';
+  h += '<button onclick="veStrMeshBuild(\'' + id + '\')"' + (hazir ? '' : ' disabled')
+    +  ' style="padding:9px 16px; font-size:var(--fs-body); font-weight:700; background:var(--accent-primary);'
+    +  ' color:#fff; border:none; cursor:' + (hazir ? 'pointer' : 'not-allowed') + '; white-space:nowrap;">'
+    +  (rec ? 'Ağı Yenile' : 'Ağı Oluştur') + '</button>';
+  h += '</div>';
+
+  h += '<div id="ve-str-mesh-progress" style="display:none; margin-bottom:9px;"></div>';
+  h += '<div id="ve-str-mesh-status" style="font-size:var(--fs-micro); line-height:1.45; margin-bottom:9px;"></div>';
+
+  // 3) SONUÇ
+  if(rec && rec.stats){
+    h += _strMeshWarnHTML(rec);
+    h += _strMeshStatsHTML(rec);
+    h += '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.5; margin-bottom:9px;">'
+      +  'Eleman: <b>ikinci derece tetrahedron (tet10)</b> · TetGen anahtarları: <code>' + _strEsc(rec.switches || '') + '</code>'
+      +  (rec.targetLen ? (' · hedef kenar ' + _strFmt(rec.targetLen, 2) + ' mm') : '')
+      +  '</div>';
+    h += '<button onclick="veStrMeshClear(\'' + id + '\')" style="width:100%; padding:7px; font-size:var(--fs-micro);'
+      +  ' background:transparent; color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer;">'
+      +  'Ağı Kaldır</button>';
+  } else if(hazir){
+    h += '<div style="padding:8px 10px; font-size:var(--fs-micro); line-height:1.45; color:var(--text-secondary);'
+      +  ' background:var(--bg-secondary); border:1px dashed var(--border-color);">'
+      +  'Ağ henüz kurulmadı. Hedef kenar boyu, parçanın sınır kutusu köşegeninin '
+      +  VE_STR_MESH_DEFAULT_DIVISOR + '\'ta biri olarak türetildi; değiştirebilirsiniz.</div>';
+  }
+
+  h += '</div>';
+
+  // 4) 3B GÖRÜNÜM — yalnız ağ VARKEN. Geometri panelindeki kuralın aynısı:
+  // boş bir WebGL bağlamı açmak bedava değil (tarayıcı sınırı ~8-16 bağlam,
+  // dolunca EN ESKİSİ düşürülür).
+  if(rec && rec.stats){
+    h = '<div class="ve-str-mesh-grid">' + h
+      + '<div id="ve-str-mesh-wrap" class="ve-str-vwr-box">'
+      + '<canvas id="ve-str-mesh-canvas" style="width:100%; height:100%; display:block;"></canvas>'
+      + '<div class="ve-str-vwr-bar">'
+      +   '<button onclick="veStrViewerView(\'iso\')">İzometrik</button>'
+      +   '<button onclick="veStrViewerView(\'front\')">Ön</button>'
+      +   '<button onclick="veStrViewerView(\'top\')">Üst</button>'
+      +   '<button onclick="veStrViewerView(\'right\')">Sağ</button>'
+      +   '<button onclick="veStrViewerReset()">Sıfırla</button>'
+      +   '<span style="margin-left:auto; color:var(--text-muted); font-size:var(--fs-micro);">'
+      +     'ağın dış yüzeyi · eleman sınırları çizili</span>'
+      + '</div></div></div>';
+  }
+  return h;
+}
+
+// Panel DOM'u kurulduktan SONRA çağrılır (cp-core.js kancası). Ağ oturumluk
+// önbellekten gelir; önbellek boşsa (proje yeni açıldı) görüntüleyici KURULMAZ
+// ve panel bunu YAZAR — ağ türetilmiş veridir, künyesi kalıcı, kendisi değil.
+function veStrMeshMountViewer(nodeId){
+  var node = _strNodeById(nodeId);
+  if(!node || !node.data || !node.data.mesh) return;
+  var mesh = (typeof veStrMeshCacheGet === 'function') ? veStrMeshCacheGet(nodeId) : null;
+  if(mesh && mesh.ok){
+    if(typeof veStrMeshViewerInit === 'function') veStrMeshViewerInit('ve-str-mesh-canvas', mesh, nodeId);
+    return;
+  }
+  _strMeshStatus('Ağ künyesi kayıtlı ama bu oturumda yeniden kurulmadı — '
+    + '3B görünüm için "Ağı Yenile".');
 }
 
 function getStrBCPropertiesHTML(node){
@@ -1596,6 +1969,14 @@ if(typeof module !== 'undefined' && module.exports) {
     veStrMatApplyLib: veStrMatApplyLib,
     veStrApplyBadge: veStrApplyBadge,
     veStrGeomSelectFace: veStrGeomSelectFace,
+    VE_STR_MESH_DEFAULT_DIVISOR: VE_STR_MESH_DEFAULT_DIVISOR,
+    veStrMeshHost: veStrMeshHost,
+    veStrMeshTargetLen: veStrMeshTargetLen,
+    veStrMeshSetTarget: veStrMeshSetTarget,
+    veStrMeshBuild: veStrMeshBuild,
+    veStrMeshClear: veStrMeshClear,
+    veStrMeshMountViewer: veStrMeshMountViewer,
+    _strMeshShort: _strMeshShort,
     getStrModulePropertiesHTML: getStrModulePropertiesHTML,
     getStrGeometryPropertiesHTML: getStrGeometryPropertiesHTML,
     getStrMaterialPropertiesHTML: getStrMaterialPropertiesHTML,

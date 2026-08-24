@@ -453,6 +453,88 @@ function veStrViewerFaceMode(){
   return !!(_veStrViewer && !_veStrViewer.disposed && _veStrViewer.faceMode);
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+//  AĞ GÖRÜNTÜLEYİCİ — üretilen tet ağının DIŞ YÜZEYİ
+// ════════════════════════════════════════════════════════════════════════════
+// AYNI görüntüleyiciyi kullanır (aynı kamera, aynı kontroller, aynı yaşam
+// döngüsü); değişen tek şey sahneye konan geometridir. İkinci bir görüntüleyici
+// yazmak, kamera/dispose/ResizeObserver mantığının İKİ kopyasını tutmak olurdu
+// ve biri düzeltildiğinde öbürü sessizce eskirdi.
+//
+// GÖSTERİLEN ŞEY SINIR ÜÇGENLERİ — hacim elemanlarının kendisi DEĞİL. Bir tet
+// ağının içi zaten görünmez; 41 bin elemanın dördü de çizilseydi (164 bin
+// üçgen) hem kare hızı düşerdi hem de ekranda dış yüzeyden başka bir şey
+// görünmezdi. TetGen sınır üçgenlerini zaten ayrı veriyor (`trifacelist`).
+//
+// TEL KAFES ZORUNLU: bir ağı "gördüğünü" söyleyebilmek için ELEMAN SINIRLARINI
+// görmek gerekir. Düz gölgeli bir katı, 500 elemanlı bir ağ ile 500 bin
+// elemanlı bir ağda AYNI görünür — oysa kullanıcının panelde ayarladığı tek
+// şey tam olarak o yoğunluk.
+function veStrMeshViewerInit(canvasId, mesh, nodeId){
+  if(typeof THREE === 'undefined') return false;
+  if(!mesh || !mesh.ok || !mesh.triFaces || !mesh.triFaces.length) return false;
+
+  // Sınır üçgenlerini görüntüleyicinin beklediği "geom" biçimine çevir.
+  // Yüz aralıkları BURADA kurulmuyor: ağ görünümünde CAD yüzü vurgusu yok
+  // (o Geometri bileşeninin işi), yüz kimliği künyede zaten duruyor.
+  var geomLike = {
+    ok: true,
+    meshes: [{
+      name: 'Ağ',
+      color: null,
+      positions: mesh.points instanceof Float32Array ? mesh.points : new Float32Array(mesh.points),
+      normals: null,
+      indices: mesh.triFaces instanceof Uint32Array ? mesh.triFaces : new Uint32Array(mesh.triFaces),
+      faces: []
+    }],
+    bbox: _svwBBoxOf(mesh.points)
+  };
+
+  var ok = veStrViewerInit(canvasId, geomLike, nodeId);
+  if(!ok) return false;
+
+  var V = _veStrViewer;
+  V.isMesh = true;
+  // Yüz inceleme kipi ağ görünümünde ANLAMSIZ: yüz aralıkları kurulmadı,
+  // raycast bir şey bulamaz. Açık bırakılsaydı fare parçanın üstünde
+  // gezerken sessizce hiçbir şey olmazdı — "bozuk" görünürdü.
+  V.faceMode = false;
+
+  // ELEMAN SINIRLARI: EdgesGeometry açı eşiğine bakar ve bir ağın düz
+  // bölgelerindeki eleman sınırlarını (ki tam olarak görmek istediğimiz şey)
+  // ELER. Bu yüzden üçgen kenarları doğrudan çiziliyor.
+  V.edges.forEach(function(e){ V.group.remove(e); try { e.geometry.dispose(); } catch(err){} });
+  V.edges.length = 0;
+  try {
+    var src = geomLike.meshes[0];
+    var wire = new THREE.WireframeGeometry(V.solids[0].geometry);
+    var line = new THREE.LineSegments(wire, new THREE.LineBasicMaterial({
+      color: _svwCssColor('--text-muted', '#888888'), transparent: true, opacity: 0.45
+    }));
+    V.group.add(line);
+    V.edges.push(line);
+  } catch(e){}
+
+  return true;
+}
+
+function _svwBBoxOf(points){
+  var mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
+  for(var i = 0; i < points.length; i += 3){
+    for(var a = 0; a < 3; a++){
+      if(points[i+a] < mn[a]) mn[a] = points[i+a];
+      if(points[i+a] > mx[a]) mx[a] = points[i+a];
+    }
+  }
+  if(!isFinite(mn[0])) return { center: [0,0,0], size: [1,1,1], diag: 1 };
+  var size = [mx[0]-mn[0], mx[1]-mn[1], mx[2]-mn[2]];
+  return {
+    center: [(mn[0]+mx[0])/2, (mn[1]+mx[1])/2, (mn[2]+mx[2])/2],
+    size: size,
+    diag: Math.sqrt(size[0]*size[0] + size[1]*size[1] + size[2]*size[2]) || 1
+  };
+}
+
 // Standart görüşler — teknik resim alışkanlığı (Ön/Üst/Sağ/İzometrik).
 function veStrViewerView(which){
   var V = _veStrViewer;
