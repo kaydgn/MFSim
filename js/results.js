@@ -6229,7 +6229,13 @@ function veUpdateBoundary() {
   // Kutu js/canvas-space.js'ten gelir — alt-topoloji çıkış çipi de aynı kutunun
   // alt kenarına tutunur. Çerçeve GİZLİYKEN de hesaplanır: çipin yeri sınır
   // görünürlüğüne göre zıplamasın.
-  var box = (typeof veBoundaryBox === 'function') ? veBoundaryBox(nodes, veBoundaryPadding) : null;
+  // Ölçüm işlevi geçilir → düğüm ADININ kutu dışına taşan kısmı da çerçeveye
+  // girer (canvas-space.js veNodeLabelOverflow). Geçilmezse çerçeve, adı sola
+  // alınmış düğümde adın üstünden geçerdi.
+  var box = (typeof veBoundaryBox === 'function')
+    ? veBoundaryBox(nodes, veBoundaryPadding,
+        (typeof veMeasureNodeLabel === 'function') ? veMeasureNodeLabel : null)
+    : null;
   if(typeof veAnchorBoundaryChip === 'function') veAnchorBoundaryChip();
 
   if(!veBoundaryVisible || !box) return;

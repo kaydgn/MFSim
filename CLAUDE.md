@@ -1556,6 +1556,63 @@ Kapı **14 mutasyonla** ölçüldü, on dördü de kırmızı.
 bağlı özellikler ve ortotrop (kompozit) malzeme kartı — ikisi de bugün
 katalogda YOK ve panel bunu yazıyor.
 
+### Topoloji sınır çerçevesi ADI da sarar (`veNodeLabelOverflow`)
+
+Kesikli çerçeve (`veBoundaryBox` → `veUpdateBoundary`) yalnız KUTULARI sarıyordu;
+ada ait tek pay altta sabit `VE_NODE_LABEL_H` (20 px) idi. Oysa ad dört kenara
+da konabiliyor (sağ tık → Etiket Konumu · `node.data.labelPos` · css
+`.lbl-top/.lbl-left/.lbl-right`) ve yana alındığında kutunun dışına ADIN
+GENİŞLİĞİ kadar taşıyor. Kullanıcı bildirimi (2026-08-24, Yapısal Analiz ·
+Geometri): *"ismini sola çektiğim zaman topoloji çizgisinin dışına taşmış."*
+
+Aynı sessizlik **yatayda da** vardı ve dört modülün hepsini ilgilendiriyor: alt
+etiket kutunun MERKEZİNE göre ortalanıyor (`translateX(-50%)`), yani kutusundan
+geniş her ad iki yana eşit taşıyor.
+
+**ÖLÇÜLDÜ (gerçek tarayıcı).** Kullanıcının bildirdiği durum: "Geometri" adı
+sola alınınca adın sol ucu çerçevenin **5,0 px DIŞINDA**; düzeltmeyle **50,0 px
+içeride** — yani tam dolgu kadar. Depodaki 18 örnek topoloji tek tek koşuldu:
+
+| | eski | yeni |
+|---|---|---|
+| adı çerçeve dışında kalan örnek | **9 / 18** | 0 |
+| en kötü taşma | **79,5 px** (`ap_ypa4x4`, motor adı · üst) | 0 |
+| tek örnekte en çok taşan ad | **5** (`ap_jmma`) | 0 |
+
+Çerçeve yatayda 24–145 px açılıyor, **dikeyde hiç değişmiyor**: alt pay hiç
+küçülmüyor (`of.bottom` tabanı `VE_NODE_LABEL_H`) → bu düzeltme çerçeveyi
+yalnız BÜYÜTÜR, kurulu hiçbir topoloji daralmaz.
+
+**Modül KARTI dışarıda:** kart adı kutunun dışında yüzmez, kartın İÇİNDE bir
+satırdır (`.ve-node--module .ve-node-label{position:static}`) → taşma sayılmaz.
+Ölçüt tip listesi değil, o kuralın kendi ölçütü (`veIsModuleNode`).
+
+**Ölçü DOM'dan, `offsetWidth` ile — `getBoundingClientRect` DEĞİL:** ikincisi
+kamera zoom'unu (CSS transform) içine katar, sınır kutusu ise yerel px; zoom
+%50'de çerçeve adın yarısını keserdi. `veBoundaryBox` SAF kalsın diye ölçüm
+işlevi DIŞARIDAN geçiliyor; geçilmezse fonksiyon birebir eski davranışını
+korur (saf koşucuda DOM yok, uydurma bir genişlik çerçeveyi yanlış yere koyar).
+
+**ÖNBELLEK ŞART — ölçüldü** (16 düğüm · 12 tel, kare başına, 300 kare):
+ölçümsüz 0,369 ms · **önbellekli 0,480 ms** · önbelleksiz 0,784 ms. `veUpdateBoundary`,
+`updateAllConnections`'tan geçtiği için her sürükleme karesinde koşuyor;
+önbelleksiz hâl kare başına zorlanmış bir yerleşim (layout) demekti. Anahtar
+METİN + ELEMAN: ölçüyü değiştiren tek şey yeniden adlandırma, `isConnected` de
+DOM yeniden kurulduğunda bayat referansı ele veriyor. Yazı tipi geç yüklenirse
+`document.fonts.ready` önbelleği bir kez boşaltıyor.
+
+**Ad kenarı değişince çerçeve de tazelenmeli.** `handleLabelContextAction`'ın
+`saveState()`'i mutasyondan ÖNCE çağrılıyor (geri-al yığını — FEAD kartındaki
+tuzağın aynısı), yani tazelemeyi o üstlenemez; `veUpdateBoundary` hem oradan hem
+yeniden adlandırmadan (`map.js`) çağrılıyor.
+
+Boşluk sayıları (`VE_LABEL_GAP_V` 4 · `VE_LABEL_GAP_H` 7) CSS'te de yazılı; kapı
+sayıyı JS'e değil `css/styles.css`'in KENDİSİNE bağlıyor — ayrışırlarsa çerçeve
+yine çizilir, yalnız adı birkaç piksel keser. Yedi mutasyonla ölçüldü (yan
+taşmayı yok sayma, iki boşluk sabitini kaydırma, CSS tarafını kaydırma, yatay
+taşmayı ikiye bölmeme, modül istisnasını kaldırma, alt pay tabanını kaldırma,
+ölçüm işlevini hiç kullanmama) — yedisi de kırmızı.
+
 ### Ölçüm Görüntüleyici (`viewer/`)
 
 MFSim'in içe aktarma + diyagram özelliğinin tek başına çalışan sürümü; tek HTML
@@ -1693,7 +1750,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/structural-model.test.js` | `js/structural-model.js` + `vendor/occt-import-js.*` | **STEP köprüsü**: GERÇEK dosyalar GERÇEK OCCT ile okunuyor (sahte veri yok). **Yüz kimliği ağ inceliğinden bağımsız** (üçgen değişir, `m<i>/f<j>` değişmez), yüz aralıkları üçgenleri boşluksuz/örtüşmesiz böler, `veStrFaceOfTriangle` eşlemesi, birimin mm'ye çevrilmesi, künyenin ÜÇGEN TAŞIMAMASI, hata çevirisi (bozuk dosya ≠ katısız dosya) + OCCT'nin kendi teşhisinin mesaja iliştirilmesi, .wasm aday-yol araması (ilk tutan kazanır, hiçbiri tutmazsa denenenler yazılır), oturumluk önbelleğin temizlenmesi. **Gömülü okuyucu**: `js/structural-occt-wasm.js` vendor .wasm'ıyla BAYT BAYT aynı (vendor güncellenip varlık üretilmezse kırmızı), WASM imzası, gzip'in gerçekten kazandırdığı, index.html'de AÇILIŞTA yüklenmediği. **Kaynak deposu**: künye STEP kaynağı TAŞIMIYOR (undo yığını), `veStrSrcAttach` KOPYALA-YAZ (canlı state'e tek yazma bile yok — kaynağın otomatik yedeğe sızdığı ölçülmüş hatanın kapısı), alt-topolojideki düğüme ulaşması, deposu olmayan düğümde gereksiz kopya üretmemesi, eski projelerin HAM `source` alanını da kabul etmesi. **Worker sözleşmesi**: köprü DOM'a dokunmuyor (worker'da `document`/`window` yok), sonuç tipli dizi + transfer, `brep_faces` worker'dan aynen geçiyor, normalize hem worker hem ana-iş-parçacığı biçimini kabul ediyor ve tipli diziyi YENİDEN KOPYALAMIYOR. **İlerleme**: `VE_STR_OCCT_WASM_BYTES` gerçek dosya boyutuna kilitli, indirme loaded/total/pct bildiriyor, tahmin tutmazsa yüzde gösterilmiyor |
 | `tests/unit/structural-materials.test.js` | `js/structural-materials.js` + `js/cp-structural.js` | **Malzeme kütüphanesinin tutarlılık kapısı** (112 kayıt × beş katman): sayılar ölçülemez (standart değerleri) ama TUTARLILIKLARI ölçülür — kimlik tekilliği, GÖSTERİM çakışması (kapı gerçek bir çakışma buldu: `AL995` alümina ↔ `Al99,5` saf alüminyum, ρ 3890 ↔ 2710), 0 ≤ ν < 0,5, σ_ak ≤ σ_ç, σ_ak'ın gevrekte null olması (0 DEĞİL), sınıf başına E ve ρ pencereleri ve **türetilen G = E/2(1+ν)**'nün sınıf aralığına düşmesi (ν ondalık kaymasını yakalayan asıl kapı — 0,03 da ν aralığından geçer, G'den geçmez). **Uçtan uca**: HER kaydın `veStrMatValidate`'ten hatasız geçmesi, gevrek kayıtların akma uyarısını, elastomerlerin kilitlenme uyarısını ÜRETMESİ. **Çapa değerler** ve özgül dayanım sıralaması (Ti > Al > çelik). **Arama**: Türkçe katlama (`toLowerCase` tek başına yetmez), ayıraç bağımsızlığı (1.4301 = 14301), parça eşleşmesi ("304" → 304, 304L değil), aile terimlerinin (`fam`) tekillik beklemeden bütün aileyi getirmesi, boş sorgunun AİLEYE göre sıralanması (alfabetikken 16 aile için 30 başlık basılıyordu). **Kayda çevirme**: kopya olması (katalog güncellemesi eski projeyi bozmaz), `lib`/`libVer` izi, referans alanların (λ, c_p) kayda GEÇMEMESİ. **Genişletilmiş veri**: her kaydın uzama/servis sıcaklığı/sertlik ölçeği (metalde HB, seramikte HV, termoplastikte Shore D, elastomerde Shore A), **Rm/HB oranının sınıf penceresi** (ISO 18265; gri dökme demirin oranı çelikten AÇIKÇA farklı). **Sıcaklık eğrileri**: 20 °C'de k=1, monoton düşüş, EN 1993-1-2 çıpaları (kY 500/600/700 = 0,780/0,470/0,230 · kE 400 = 0,700), kY'nin 400 °C'ye kadar 1,000 kalması ama kP'nin çoktan düşmesi, DOĞRUSAL ara değerleme, aralık dışında EKSTRAPOLASYON YOK, alüminyumun 200 °C'de dayanımının üçte ikisini kaybetmesi, 5xxx'in 6xxx-T6'dan ısıda daha iyi olması, ferritik/martenzitiğin östenitik eğrisini KULLANMAMASI, eğrisi olmayan sınıfta null; **std ↔ tipik sınıflandırmasının SABİTLENMESİ** (bir el kitabı eğrisini sessizce standarda yükseltmek genel testten geçiyordu). **Wöhler**: σ_W = f_W·Rm, monotonluk, Rm'de KESİM, çelikte dayanma sınırı VAR / alüminyumda YOK, dizde süreklilik, LCF sınırının hesaplanması, σ_ç olmayan kayıtta model üretilmemesi |
 | `tests/unit/cp-structural.test.js` | `js/cp-structural.js` + `js/components.js` | **Yapısal Analiz iskeleti**: alt-sistem sözleşmesi, zincirin PORTLARLA zorlanması (Geometri girişsiz / Sonuçlar çıkışsız), başlangıç kenarlarının indisle değil TİPLE yazılı olması, panel smoke testleri, iskeletin BEŞ dosyaya birden bağlı olduğu (components / cp-core / ui-core / topology / index.html — biri unutulursa kaydedilen proje bozulur). **Geometri artık DOLU**: hâlâ iskelet olan panel sayısı üç (biri dolunca liste güncellenmeli), içe aktarma yüzeyi + sürükle-bırak bağlı, geometri YOKKEN 3B kanvas kurulmuyor, kaynağın projeye yazılıp yazılmadığı AÇIKÇA yazılı; vendorlu okuyucu/.wasm/lisans deposu ve CI'ın .wasm'ı Pages'e kopyalaması; **panel ölçüsü** — büyük pencere sınıfı yalnız parça yüklüyken veriliyor, kutunun ölçüsü satır içinde değil sınıfta, boşluğu yutan flex zincirinin her halkası yerinde; **üç varsayılan** — incelik seçicisi ve "Kenarlar" kutusu YOK (sabit + hep açık), yüz inceleme kipi KAPALI başlar ve liste ile 3B künyesini tek anahtarla birlikte açar, kapalıyken raycast yapılmaz. **Malzeme ve Özellikler**: alt bileşen sözleşmesi (çıkışı YOK → zincire ara halka olarak sokulamaz; kutu zincirinkinden küçük; giriş ÜST kenarda), ν ≥ 0,5 tekillik kapısı ve 0,49–0,5 kilitlenme uyarısı, ρ'nun kg/m³ → ton/mm³ çevrimi (7850 → 7,85e-9) ve girilmemiş ρ'nun 0 DEĞİL null olması, G/K formülleri, bağın TELDEN okunması, rozetin yalnız çözülebilir kayıtta amber olması, eski kayıtlardaki `output` adının yeni `output-0` ile aynı noktaya düşmesi (göç gerekmiyor), Geometri adının SOLA alınması ve bunun düğüme gerçekten yazılması. **Malzeme kütüphanesi paneli**: iki sütun (solda katalog / sağda uygulanan kayıt), geçerlilik sınırının listenin ÜSTÜNDE olması, kütüphane yüklenmezse panelin sessiz kalmaması, uygulanan kaydın KOPYA olması, izin üç durumu (katalogdan geldi / elle değişti / hiç gelmedi), aynı satıra ikinci tıkın seçimi kaldırması ve seçimin düğüme HİÇ yazılmaması, aile başlığı sayısının aile sayısına eşit olması, uzun katalog adlarının rozette ayırt edici parçayı koruması (`EN AW-6082 T6` → `AW-6082 T6`), 112 kaydın hepsinin tek tek seçilip uygulanabilmesi. **Diyagramlar**: 112 kaydın hepsinde üç diyagramın da SONLU koordinat üretmesi (NaN'lı bir yol tarayıcıda sessizce çizilmez), σ–ε'nin orijinden başlaması ve gevrekte akma çizgisi ÇİZMEMESİ, Wöhler eğrisinin monoton düşmesi + LCF bölgesinin taranması + alüminyumda "dayanma sınırı YOK" yazması, sıcaklık eğrisinde karbon çeliğinin ÜÇ serisi (östenitikte orantı sınırı verisi yok → seri de yok) ve azami servis çizgisi, TİPİK eğrilerde kaynak türünün açıkça yazılması, model sınırlarının diyagramların altında durması, ELLE girilen kayıtta diyagram olmaması ve sebebinin yazılması, sıcaklık değerlendiricisinin düğüme HİÇ yazmaması, uygulanan kaydın listede görünür yapılması, **katalog sütununun DAR ve sabit olması** (oranı geri çevirmek hiçbir testi kırmıyordu) |
-| `tests/unit/canvas-space.test.js` | `js/canvas-space.js` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama |
+| `tests/unit/canvas-space.test.js` | `js/canvas-space.js` + `css/styles.css` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama; **sınır çerçevesi düğüm ADINI da sarar** — `veNodeLabelOverflow` dört kenar için taşma (yanda 7+genişlik, alt/üstte 4+yükseklik, karşılıklı taşma İKİ YANA EŞİT), modül kartının adının taşma EKLEMEMESİ, alt payın hiç küçülmemesi (çerçeve yalnız büyür), ölçüm işlevi geçilmezse davranışın BİREBİR eski hâli, ve boşluk sabitlerinin `css/styles.css`'teki margin'lerle aynı olması |
 | `tests/unit/module-start-center.test.js` | `js/components.js` `veStartModule` | Karşılama kartından gelen modül bloğu görünümün TAM ortasına düşer (kabuk senkronu ölçümden önce) |
 | `tests/unit/port-geometry.test.js` | `js/components.js` port geometrisi + `js/connections.js` | Bağlantı ucu ile port dairesi aynı noktada — dört kenar, çok port, aynalama; **gidiş yönü oku** (Bézier t=0.5, 46 px eşiği, ters yön); **`veSyncPortDom`** — kenar sonradan değişince (bağlantı/sürükleme) dairenin teli takip etmesi, elle taşınan portun ezilmemesi, kenar değişmiyorsa DOM'a hiç yazılmaması |
 | `tests/unit/module-card.test.js` | `js/components.js` alt-sistem kartı + sidebar modül satırı | Modül kartı: içerik özeti (alt topolojiden), kart ölçüsünün tek kaynağı, eski 80×66 kaydın yükselmesi, **ad elemanının taşınması** (kopyalansaydı yeniden adlandırma sessizce eskirdi); palet sembolü `componentDefs`'ten (index.html'de ikinci kopya tutulmadığına dair kapı) |
