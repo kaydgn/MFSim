@@ -142,6 +142,89 @@ var VE_BOUNDARY_PAD = 50;            // çerçevenin bileşenlerden uzaklığı 
 var VE_CHIP_GAP = 12;                // çip ile çerçevenin alt kenarı arası (ekran px)
 var VE_CHIP_INSET = 10;              // görünüm kenarına en yakın duruş (ekran px)
 
+// ── AD ETİKETİNİN ÇERÇEVEYE ETKİSİ ──────────────────────────────────────────
+// KULLANICI BİLDİRİMİ (2026-08-24, Yapısal Analiz · Geometri): "bileşenin
+// ismini SOLA çektiğim zaman topoloji çizgisinin dışına taşmış."
+//
+// Sebep: çerçeve yalnız KUTULARI sarıyor, ada ait tek pay altta sabit 20px.
+// Oysa ad node.data.labelPos ile dört kenara da konabiliyor (sağ tık → Etiket
+// Konumu; css .lbl-top/.lbl-left/.lbl-right) ve sola/sağa alındığında kutunun
+// dışına ADIN GENİŞLİĞİ kadar taşıyor — çerçeve bunu hiç görmüyordu.
+//
+// Aynı sessizlik YATAYDA da vardı ve dört modülün hepsini ilgilendiriyor:
+// alt etiket kutunun MERKEZİNE göre ortalanıyor (css translateX(-50%)), yani
+// kutusundan geniş her ad iki yana eşit taşıyor — "Malzeme ve Özellikler"
+// 50px'lik kutuda ~140px, yani her yandan ~45px. O da sayılmıyordu.
+//
+// Boşluk ölçüleri CSS'ten OKUNMUYOR, elle eşleniyor (.ve-node-label margin
+// 4px alt/üst · .lbl-left/right margin 7px yan) — ikisi ayrışırsa çerçeve adı
+// yine keser; testi bu iki sayıyı çiviliyor.
+var VE_LABEL_GAP_V = 4;              // css .ve-node-label margin-top / .lbl-top margin-bottom
+var VE_LABEL_GAP_H = 7;              // css .lbl-left margin-right / .lbl-right margin-left
+
+// SAF: adın kutu DIŞINA taştığı miktar, dört yönde ayrı ayrı (px).
+//   pos — 'bottom' (varsayılan) | 'top' | 'left' | 'right'
+//   w,h — düğüm kutusunun ölçüsü
+//   lbl — {w,h} adın ÖLÇÜLMÜŞ kutusu; yoksa (ölçülemeyen düğüm) taşma sayılmaz
+// Ad alt/üstte yatay merkeze, yanlarda dikey merkeze hizalı → taşma karşılıklı
+// iki yana EŞİT bölünür.
+function veNodeLabelOverflow(pos, w, h, lbl) {
+  var lw = (lbl && isFinite(lbl.w) && lbl.w > 0) ? lbl.w : 0;
+  var lh = (lbl && isFinite(lbl.h) && lbl.h > 0) ? lbl.h : 0;
+  var o = { left: 0, right: 0, top: 0, bottom: 0 };
+  var half;
+  if(pos === 'left' || pos === 'right') {
+    if(lw > 0) o[pos] = VE_LABEL_GAP_H + lw;
+    half = Math.max(0, (lh - h) / 2);
+    o.top = half; o.bottom = half;
+  } else {
+    if(lh > 0) o[pos === 'top' ? 'top' : 'bottom'] = VE_LABEL_GAP_V + lh;
+    half = Math.max(0, (lw - w) / 2);
+    o.left = half; o.right = half;
+  }
+  return o;
+}
+
+// ── ADIN ÖLÇÜSÜ (DOM) ───────────────────────────────────────────────────────
+// offsetWidth/offsetHeight KULLANILIR, getBoundingClientRect DEĞİL: ikincisi
+// kamera zoom'unu (CSS transform) içine katar, sınır kutusu ise YEREL px ile
+// hesaplanıyor — zoom %50'de çerçeve adın yarısını keserdi.
+//
+// ÖNBELLEK ŞART: veUpdateBoundary, updateAllConnections'tan çağrılıyor, o da
+// her sürükleme karesinde koşuyor. Karede yapılan bütün DOM yazmalarından
+// SONRA N etiket ölçmek, kare başına zorlanmış bir yerleşim (layout) demekti.
+// Anahtar METNİN kendisi — ölçüyü değiştiren tek şey yeniden adlandırma; metin
+// okumak yerleşim zorlamaz. Yazı tipi geç yüklenirse ilk ölçümler yedek fontla
+// alınmış olur, o yüzden document.fonts.ready önbelleği bir kez boşaltır.
+var _veLabelSizeCache = {};
+
+function veForgetLabelSizes() { _veLabelSizeCache = {}; }
+
+function veMeasureNodeLabel(node) {
+  if(typeof document === 'undefined' || !node || !node.id) return null;
+  var hit = _veLabelSizeCache[node.id];
+  // Eleman da önbellekte: getElementById + querySelector kare başına 16 düğümde
+  // ölçülebilir bir pay tutuyordu. isConnected, DOM yeniden kurulduğunda
+  // (restoreState aynı kimlikle YENİ eleman üretir) bayat referansı ele verir.
+  var lbl = (hit && hit.el && hit.el.isConnected) ? hit.el : null;
+  if(!lbl) {
+    var el = document.getElementById(node.id);
+    lbl = el ? el.querySelector('.ve-node-label') : null;
+    if(!lbl) return null;
+    hit = null;
+  }
+  var t = lbl.textContent || '';
+  if(hit && hit.t === t) return { w: hit.w, h: hit.h };
+  var m = { el: lbl, t: t, w: lbl.offsetWidth, h: lbl.offsetHeight };
+  _veLabelSizeCache[node.id] = m;
+  return { w: m.w, h: m.h };
+}
+
+if(typeof document !== 'undefined' && document.fonts && document.fonts.ready &&
+   typeof document.fonts.ready.then === 'function') {
+  document.fonts.ready.then(veForgetLabelSizes, function() {});
+}
+
 // SAF: sınır çerçevesinin YEREL kutusu — {x, y, w, h}; çizilecek düğüm yoksa null.
 //
 // Kural (kullanıcı, 2026-08-13): kanvasa BIRAKILAN HER bileşen çerçeveyi
@@ -152,7 +235,12 @@ var VE_CHIP_INSET = 10;              // görünüm kenarına en yakın duruş (e
 // Ölçüsü kaydedilmemiş düğüm için varsayılan tipten okunur
 // (components.js veNodeDefaultSize): sensör 33×33, diğerleri 65×60. Sabit 65
 // yazılsaydı sensörün sağında 32px hayalet boşluk açılırdı.
-function veBoundaryBox(nodeList, pad) {
+//
+// measure — İSTEĞE BAĞLI ölçüm işlevi (node → {w,h}); tarayıcıda
+// veMeasureNodeLabel geçilir, adın kutu dışına taşan kısmı da çerçeveye girer.
+// Geçilmezse fonksiyon eski davranışını korur (yalnız kutular + alttaki pay):
+// saf koşucuda DOM yok, uydurma bir genişlik çerçeveyi yanlış yere koyardı.
+function veBoundaryBox(nodeList, pad, measure) {
   var p = (typeof pad === 'number' && isFinite(pad)) ? pad : VE_BOUNDARY_PAD;
   var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, seen = 0;
   (nodeList || []).forEach(function(n) {
@@ -161,10 +249,24 @@ function veBoundaryBox(nodeList, pad) {
     var ds = (typeof veNodeDefaultSize === 'function') ? veNodeDefaultSize(n.type) : { w: 65, h: 60 };
     var w = isFinite(n.width) ? n.width : ds.w;
     var h = isFinite(n.height) ? n.height : ds.h;
-    if(n.x < minX) minX = n.x;
-    if(n.y < minY) minY = n.y;
-    if(n.x + w > maxX) maxX = n.x + w;
-    if(n.y + h + VE_NODE_LABEL_H > maxY) maxY = n.y + h + VE_NODE_LABEL_H;
+
+    // Modül KARTINDA ad kutunun dışında yüzmez, kartın İÇİNDE bir satırdır
+    // (css .ve-node--module .ve-node-label{position:static}) → taşma yok.
+    // Tipe göre değil, o kuralın tek ölçütüne göre soruluyor.
+    var of = { left: 0, right: 0, top: 0, bottom: 0 };
+    if(!((typeof veIsModuleNode === 'function') && veIsModuleNode(n))) {
+      var lbl = (typeof measure === 'function') ? measure(n) : null;
+      of = veNodeLabelOverflow((n.data && n.data.labelPos) || 'bottom', w, h, lbl);
+    }
+    // Alt pay HİÇ KÜÇÜLMEZ: ad başka kenara alınsa bile kutunun altında eski
+    // VE_NODE_LABEL_H'lik nefes payı kalır. Böylece bu düzeltme çerçeveyi
+    // yalnız BÜYÜTÜR — kurulu hiçbir topoloji daralmaz.
+    if(of.bottom < VE_NODE_LABEL_H) of.bottom = VE_NODE_LABEL_H;
+
+    if(n.x - of.left < minX) minX = n.x - of.left;
+    if(n.y - of.top < minY) minY = n.y - of.top;
+    if(n.x + w + of.right > maxX) maxX = n.x + w + of.right;
+    if(n.y + h + of.bottom > maxY) maxY = n.y + h + of.bottom;
     seen++;
   });
   if(!seen) return null;
@@ -218,7 +320,7 @@ function veAnchorBoundaryChip() {
   var wrap = document.getElementById('ve-canvas-wrapper');
   var view = wrap ? { w: wrap.clientWidth, h: wrap.clientHeight } : { w: 0, h: 0 };
   var pad = (typeof veBoundaryPadding === 'number') ? veBoundaryPadding : VE_BOUNDARY_PAD;
-  var box = (typeof nodes !== 'undefined') ? veBoundaryBox(nodes, pad) : null;
+  var box = (typeof nodes !== 'undefined') ? veBoundaryBox(nodes, pad, veMeasureNodeLabel) : null;
   var zoom = (typeof canvasZoom !== 'undefined') ? canvasZoom : 1;
   var off = (typeof canvasOffset !== 'undefined') ? canvasOffset : { x: 0, y: 0 };
   Array.prototype.forEach.call(chips, function(el) {
@@ -271,6 +373,8 @@ if(typeof module !== 'undefined' && module.exports) {
     VE_CANVAS_CENTER: VE_CANVAS_CENTER,
     VE_GRID_MIN_PX: VE_GRID_MIN_PX,
     VE_NODE_LABEL_H: VE_NODE_LABEL_H,
+    VE_LABEL_GAP_V: VE_LABEL_GAP_V,
+    VE_LABEL_GAP_H: VE_LABEL_GAP_H,
     VE_BOUNDARY_PAD: VE_BOUNDARY_PAD,
     VE_CHIP_GAP: VE_CHIP_GAP,
     VE_CHIP_INSET: VE_CHIP_INSET,
@@ -280,6 +384,9 @@ if(typeof module !== 'undefined' && module.exports) {
     veHomeCameraOffset: veHomeCameraOffset,
     veCameraHome: veCameraHome,
     veTopoBBox: veTopoBBox,
+    veNodeLabelOverflow: veNodeLabelOverflow,
+    veMeasureNodeLabel: veMeasureNodeLabel,
+    veForgetLabelSizes: veForgetLabelSizes,
     veBoundaryBox: veBoundaryBox,
     veBoundaryChipPos: veBoundaryChipPos,
     veAnchorBoundaryChip: veAnchorBoundaryChip,

@@ -1209,6 +1209,245 @@ function veStrMatBadgeInfo(node){
   return { text: txt, title: tip, ready: v.ok };
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+//  MALZEME DİYAGRAMLARI
+// ════════════════════════════════════════════════════════════════════════════
+// Üç diyagram, üç ayrı soruya cevap veriyor ve üçü de KAYITTAN türüyor —
+// hiçbiri sabit bir resim değil:
+//   σ–ε      "bu malzeme yük altında nasıl davranır"   (E, Ry, Rm, A)
+//   Wöhler   "tekrarlı yükte kaç çevrim dayanır"       (FKM modeli)
+//   k(θ)     "ısındığında ne kaybeder"                 (EN 1993-1-2 vb.)
+//
+// TABLODAKİ SAYI İLE DİYAGRAM AYNI KAYNAKTAN BESLENİR (structural-materials.js).
+// Diyagram ayrı bir veriden çizilseydi ikisi sessizce ayrışırdı — bu projenin
+// en çok kaçındığı hata sınıfı.
+//
+// Ölçek jetonları: renkler tema değişkenlerinden. Rapor tarafındaki dersin
+// aynısı (cp-fead-report.js): tanımsız bir var() "invalid at computed-value
+// time"dır ve kalıtılan `stroke` için sonuç `none` demektir — yani çizgi
+// görünmez olur. Buradaki jetonların hepsi css/styles.css'te tanımlı.
+var _STR_DIA_W = 380, _STR_DIA_H = 190;
+
+// Eksen çerçevesi + ızgara. Dönen nesne ölçekleyicileri taşıyor.
+function _strDiaFrame(opt){
+  var w = opt.w || _STR_DIA_W, h = opt.h || _STR_DIA_H;
+  var L = opt.padL || 44, R = opt.padR || 12, T = opt.padT || 14, B = opt.padB || 30;
+  var pw = w - L - R, ph = h - T - B;
+  return {
+    w:w, h:h, L:L, T:T, pw:pw, ph:ph,
+    x: function(v){ return L + pw * v; },     // v: 0..1 normalize
+    y: function(v){ return T + ph * (1 - v); }
+  };
+}
+
+function _strDiaAxes(fr, xlab, ylab){
+  var g = '<g data-ve="axes">';
+  g += '<rect x="' + fr.L + '" y="' + fr.T + '" width="' + fr.pw + '" height="' + fr.ph + '" '
+     + 'fill="none" stroke="var(--border-color)" stroke-width="1"/>';
+  g += '<text x="' + (fr.L + fr.pw / 2) + '" y="' + (fr.T + fr.ph + 24) + '" text-anchor="middle" '
+     + 'font-size="9" fill="var(--text-muted)">' + xlab + '</text>';
+  g += '<text x="10" y="' + (fr.T + fr.ph / 2) + '" text-anchor="middle" font-size="9" '
+     + 'fill="var(--text-muted)" transform="rotate(-90 10 ' + (fr.T + fr.ph / 2) + ')">' + ylab + '</text>';
+  return g + '</g>';
+}
+
+function _strDiaTick(fr, yön, v, metin){
+  if(yön === 'x'){
+    var px = fr.x(v);
+    return '<line x1="' + px + '" y1="' + (fr.T + fr.ph) + '" x2="' + px + '" y2="' + (fr.T + fr.ph + 4) + '" '
+         + 'stroke="var(--border-color)" stroke-width="1"/>'
+         + '<text x="' + px + '" y="' + (fr.T + fr.ph + 13) + '" text-anchor="middle" font-size="8" '
+         + 'fill="var(--text-muted)">' + metin + '</text>';
+  }
+  var py = fr.y(v);
+  return '<line x1="' + (fr.L - 4) + '" y1="' + py + '" x2="' + fr.L + '" y2="' + py + '" '
+       + 'stroke="var(--border-color)" stroke-width="1"/>'
+       + '<text x="' + (fr.L - 6) + '" y="' + (py + 3) + '" text-anchor="end" font-size="8" '
+       + 'fill="var(--text-muted)">' + metin + '</text>';
+}
+
+function _strDiaWrap(baslik, not, ic, w, h){
+  return '<figure class="ve-str-dia">'
+       + '<figcaption>' + baslik + (not ? ' <span>' + not + '</span>' : '') + '</figcaption>'
+       + '<svg viewBox="0 0 ' + (w || _STR_DIA_W) + ' ' + (h || _STR_DIA_H) + '" '
+       + 'preserveAspectRatio="xMidYMid meet" role="img">' + ic + '</svg></figure>';
+}
+
+// ── 1) GERİLME–GERİNİM (idealleştirilmiş) ───────────────────────────────────
+// ŞEMATİK ve panel bunu YAZIYOR: gerçek eğri bir çekme deneyiyle çıkar.
+// Şemayı taşıyan dört sayı (E eğimi, Ry, Rm, A) GERÇEK; aralarını bağlayan
+// biçim idealleştirme. İkisini ayırmadan basmak, çizilmiş bir deney sonucu
+// gibi okunurdu.
+function _strMatStressStrainSVG(m){
+  if(!m || !(m.E > 0) || !(m.su > 0)) return '';
+  var A = (typeof m.A === 'number' && m.A > 0) ? m.A : 1;   // % kopma uzaması
+  var fr = _strDiaFrame({});
+  var yMax = m.su * 1.12;
+  var xMax = A * 1.05;
+  var gevrek = (m.sy == null);
+  var ey = (gevrek ? m.su : m.sy) / m.E * 100;              // % elastik gerinim
+
+  var sx = function(pct){ return fr.x(Math.min(1, pct / xMax)); };
+  var sy = function(mpa){ return fr.y(Math.min(1, mpa / yMax)); };
+
+  var g = _strDiaAxes(fr, 'Gerinim ε [%]', 'σ [MPa]');
+  [0, 0.25, 0.5, 0.75, 1].forEach(function(f){
+    g += _strDiaTick(fr, 'x', f, _strFmt(xMax * f, xMax < 10 ? 1 : 0));
+    g += _strDiaTick(fr, 'y', f, _strFmt(yMax * f, 0));
+  });
+
+  var d;
+  if(gevrek){
+    // GEVREK: akma yok, doğrusal çizgi kopmaya kadar. Kopma noktası ×.
+    d = 'M ' + sx(0) + ' ' + sy(0) + ' L ' + sx(ey) + ' ' + sy(m.su);
+    g += '<path data-ve="curve" d="' + d + '" fill="none" stroke="var(--accent-warning)" stroke-width="2.4"/>';
+    g += '<path data-ve="fracture" d="M ' + (sx(ey) - 4) + ' ' + (sy(m.su) - 4) + ' l 8 8 M '
+      + (sx(ey) + 4) + ' ' + (sy(m.su) - 4) + ' l -8 8" stroke="var(--accent-danger, #ef4444)" stroke-width="2"/>';
+  } else {
+    // SÜNEK: elastik doğru → akma → pekleşerek Rm → boyunlanma → kopma.
+    // Düzgün uzama (Ag) toplam uzamanın ~%60'ı alınıyor; ondan sonrası
+    // boyunlanma bölgesi ve gerilme (mühendislik gerilmesi olarak) DÜŞER.
+    var eu = Math.max(ey * 2, A * 0.6);
+    d = 'M ' + sx(0) + ' ' + sy(0) + ' L ' + sx(ey) + ' ' + sy(m.sy)
+      + ' C ' + sx(ey + (eu - ey) * 0.35) + ' ' + sy(m.sy + (m.su - m.sy) * 0.55)
+      + ' '   + sx(ey + (eu - ey) * 0.65) + ' ' + sy(m.su)
+      + ' '   + sx(eu) + ' ' + sy(m.su)
+      + ' Q ' + sx(eu + (A - eu) * 0.5) + ' ' + sy(m.su)
+      + ' '   + sx(A) + ' ' + sy(m.su * 0.93);
+    g += '<path data-ve="curve" d="' + d + '" fill="none" stroke="var(--accent-warning)" stroke-width="2.4" stroke-linejoin="round"/>';
+    g += '<path data-ve="fracture" d="M ' + (sx(A) - 4) + ' ' + (sy(m.su * 0.93) - 4) + ' l 8 8 M '
+      + (sx(A) + 4) + ' ' + (sy(m.su * 0.93) - 4) + ' l -8 8" stroke="var(--accent-danger, #ef4444)" stroke-width="2"/>';
+    // Akma çizgisi
+    g += '<line data-ve="sy" x1="' + fr.L + '" y1="' + sy(m.sy) + '" x2="' + sx(A) + '" y2="' + sy(m.sy)
+      + '" stroke="var(--accent-primary)" stroke-width="1" stroke-dasharray="4 3" opacity="0.75"/>';
+    g += '<text x="' + (fr.L + 5) + '" y="' + (sy(m.sy) - 4) + '" font-size="8.5" fill="var(--accent-primary)">σ_ak '
+      + _strFmt(m.sy) + '</text>';
+  }
+  // Çekme dayanımı çizgisi
+  g += '<line data-ve="su" x1="' + fr.L + '" y1="' + sy(m.su) + '" x2="' + sx(A) + '" y2="' + sy(m.su)
+    + '" stroke="var(--accent-warning)" stroke-width="1" stroke-dasharray="4 3" opacity="0.75"/>';
+  g += '<text x="' + (fr.L + 5) + '" y="' + (sy(m.su) - 4) + '" font-size="8.5" fill="var(--accent-warning)">σ_ç '
+    + _strFmt(m.su) + '</text>';
+  // E eğimi — elastik doğrunun kendisi zaten E; üçgenle işaretleniyor.
+  g += '<text data-ve="emod" x="' + (sx(ey) + 6) + '" y="' + (sy(gevrek ? m.su : m.sy) + 14) + '" font-size="8.5" '
+    + 'fill="var(--text-secondary)">E = ' + _strFmt(m.E / 1000, 0) + ' GPa</text>';
+
+  return _strDiaWrap('Gerilme–Gerinim', '(idealleştirilmiş — E, σ_ak, σ_ç, A gerçek)', g);
+}
+
+// ── 2) WÖHLER (S-N) ─────────────────────────────────────────────────────────
+// Log-log. FKM modeli (bkz. structural-materials.js VE_STR_MAT_FAT_SETS).
+// Modelin GEÇERLİLİK SINIRI çizimde işaretli: Basquin doğrusu Rm'yi kestiği
+// çevrimden önce düşük çevrimli yorulma (LCF) bölgesi var ve orada bu model
+// geçerli DEĞİL — o bölge taranıyor.
+function _strMatWohlerSVG(m){
+  if(typeof veStrMatFatigue !== 'function') return '';
+  var f = veStrMatFatigue(m);
+  if(!f) return '';
+  var fr = _strDiaFrame({ padL: 46 });
+  var N0 = 1e3, N1 = 1e9;
+  var lo = Math.log10(N0), hi = Math.log10(N1);
+  var sMax = f.rm * 1.1, sMin = Math.max(1, f.sw * 0.35);
+  var ly = Math.log10(sMin), hy = Math.log10(sMax);
+  var sx = function(n){ return fr.x((Math.log10(n) - lo) / (hi - lo)); };
+  var sy = function(v){ return fr.y((Math.log10(Math.max(sMin, v)) - ly) / (hy - ly)); };
+
+  var g = _strDiaAxes(fr, 'Çevrim sayısı N (log)', 'σ_a [MPa]');
+  for(var e = 3; e <= 9; e++) g += _strDiaTick(fr, 'x', (e - lo) / (hi - lo), '10' + '³⁴⁵⁶⁷⁸⁹'.charAt(e - 3));
+  [sMin, Math.sqrt(sMin * sMax), sMax].forEach(function(v){
+    g += _strDiaTick(fr, 'y', (Math.log10(v) - ly) / (hy - ly), _strFmt(v, 0));
+  });
+
+  // LCF bölgesi — modelin dışı
+  var nLcf = veStrMatSNlimit(m);
+  if(nLcf > N0){
+    g += '<rect data-ve="lcf" x="' + fr.L + '" y="' + fr.T + '" width="' + Math.max(0, sx(Math.min(nLcf, N1)) - fr.L)
+      + '" height="' + fr.ph + '" fill="var(--text-muted)" opacity="0.13"/>';
+    g += '<text x="' + (fr.L + 4) + '" y="' + (fr.T + 11) + '" font-size="8" fill="var(--text-muted)">LCF — model dışı</text>';
+  }
+
+  // Eğri
+  var pts = [], n;
+  for(var i = 0; i <= 60; i++){
+    n = Math.pow(10, lo + (hi - lo) * i / 60);
+    pts.push((i ? 'L ' : 'M ') + sx(n) + ' ' + sy(veStrMatSN(m, n)));
+  }
+  g += '<path data-ve="sn" d="' + pts.join(' ') + '" fill="none" stroke="var(--accent-warning)" stroke-width="2.4"/>';
+
+  // Diz noktası ve dayanma sınırı
+  g += '<line data-ve="sw" x1="' + fr.L + '" y1="' + sy(f.sw) + '" x2="' + (fr.L + fr.pw) + '" y2="' + sy(f.sw)
+    + '" stroke="var(--accent-primary)" stroke-width="1" stroke-dasharray="4 3" opacity="0.8"/>';
+  g += '<circle data-ve="knee" cx="' + sx(f.nd) + '" cy="' + sy(f.sw) + '" r="3.2" fill="var(--accent-primary)"/>';
+  g += '<text x="' + (sx(f.nd) + 5) + '" y="' + (sy(f.sw) - 5) + '" font-size="8.5" fill="var(--accent-primary)">σ_W '
+    + _strFmt(f.sw, 0) + ' MPa</text>';
+  if(!f.sinirVar){
+    g += '<text x="' + (fr.L + fr.pw - 4) + '" y="' + (fr.T + fr.ph - 5) + '" text-anchor="end" font-size="8" '
+      + 'fill="var(--accent-danger, #ef4444)">dayanma sınırı YOK — eğri düşmeye devam eder</text>';
+  }
+  return _strDiaWrap('Wöhler (S-N) eğrisi',
+    '(FKM modeli: σ_W = ' + _strFmt(f.fw, 2) + ' · σ_ç · k=' + f.k + ' · N_D=10⁶)', g);
+}
+
+// ── 3) SICAKLIK AZALTMA EĞRİSİ ──────────────────────────────────────────────
+function _strMatTempSVG(m){
+  if(typeof veStrMatTempSet !== 'function') return '';
+  var set = veStrMatTempSet(m);
+  if(!set) return '';
+  var fr = _strDiaFrame({ padL: 40 });
+  var p = set.p;
+  var t0 = p[0][0], t1 = p[p.length-1][0];
+  var kMax = 1;
+  p.forEach(function(q){ if(q[1] > kMax) kMax = q[1]; if(q[2] > kMax) kMax = q[2]; });
+  kMax = Math.ceil(kMax * 10) / 10;
+  var sx = function(t){ return fr.x((t - t0) / (t1 - t0)); };
+  var sy = function(k){ return fr.y(k / kMax); };
+
+  var g = _strDiaAxes(fr, 'Sıcaklık θ [°C]', 'k(θ)');
+  [0, 0.25, 0.5, 0.75, 1].forEach(function(fq){
+    g += _strDiaTick(fr, 'x', fq, _strFmt(t0 + (t1 - t0) * fq, 0));
+    g += _strDiaTick(fr, 'y', fq, _strFmt(kMax * fq, 2));
+  });
+
+  function seri(idx, renk, ad, kesik){
+    var d = '', v = 0;
+    p.forEach(function(q){
+      if(q[idx] === null) return;
+      d += (v++ ? ' L ' : 'M ') + sx(q[0]) + ' ' + sy(q[idx]);
+    });
+    if(!v) return '';
+    return '<path data-ve="' + ad + '" d="' + d + '" fill="none" stroke="' + renk + '" stroke-width="2.2"'
+         + (kesik ? ' stroke-dasharray="5 3"' : '') + '/>';
+  }
+  g += seri(1, 'var(--accent-primary)', 'kE', false);
+  g += seri(2, 'var(--accent-warning)', 'kY', false);
+  g += seri(3, 'var(--text-muted)', 'kP', true);
+
+  // Azami sürekli servis sıcaklığı — malzemenin kendi sınırı
+  if(typeof m.tmax === 'number' && m.tmax > t0 && m.tmax < t1){
+    g += '<line data-ve="tmax" x1="' + sx(m.tmax) + '" y1="' + fr.T + '" x2="' + sx(m.tmax) + '" y2="' + (fr.T + fr.ph)
+      + '" stroke="var(--accent-danger, #ef4444)" stroke-width="1.4" stroke-dasharray="3 3"/>';
+    g += '<text x="' + (sx(m.tmax) + 4) + '" y="' + (fr.T + fr.ph - 6) + '" font-size="8" '
+      + 'fill="var(--accent-danger, #ef4444)">azami servis ' + _strFmt(m.tmax) + ' °C</text>';
+  }
+
+  // Gösterge
+  var lg = '<g data-ve="legend" font-size="8.5">';
+  var lx = fr.L + 6, ly2 = fr.T + 11;
+  lg += '<line x1="' + lx + '" y1="' + ly2 + '" x2="' + (lx+14) + '" y2="' + ly2 + '" stroke="var(--accent-primary)" stroke-width="2.2"/>'
+     +  '<text x="' + (lx+18) + '" y="' + (ly2+3) + '" fill="var(--text-secondary)">E</text>';
+  lg += '<line x1="' + (lx+40) + '" y1="' + ly2 + '" x2="' + (lx+54) + '" y2="' + ly2 + '" stroke="var(--accent-warning)" stroke-width="2.2"/>'
+     +  '<text x="' + (lx+58) + '" y="' + (ly2+3) + '" fill="var(--text-secondary)">akma</text>';
+  if(p.some(function(q){ return q[3] !== null; })){
+    lg += '<line x1="' + (lx+96) + '" y1="' + ly2 + '" x2="' + (lx+110) + '" y2="' + ly2 + '" stroke="var(--text-muted)" stroke-width="2.2" stroke-dasharray="5 3"/>'
+       +  '<text x="' + (lx+114) + '" y="' + (ly2+3) + '" fill="var(--text-secondary)">orantı sınırı</text>';
+  }
+  g += lg + '</g>';
+
+  // KAYNAK TÜRÜ ETİKETTE: standardın tablosu mu, el kitabının tipik seyri mi.
+  var etiket = (set.tur === 'std') ? set.kaynak : (set.kaynak + ' — TİPİK SEYİR, standart tablosu değil');
+  return _strDiaWrap('Sıcaklık azaltma eğrisi', '(' + _strEsc(etiket) + ')', g);
+}
+
 // ─── Panel ──────────────────────────────────────────────────────────────────
 // Bağlı parça kartı: bağ TELDEN okunuyor. Üç durum ve üçü de AÇIKÇA yazılı —
 // "bağlı değil" sessiz bırakılsaydı kullanıcı malzemeyi girer, kaydeder ve
@@ -1391,16 +1630,19 @@ function _strLibListHTML(nodeId){
       var c = veStrMatLibCat(m.c);
       h += '<div class="ve-str-mat-head">' + _strEsc(c ? c.ad : m.c) + '</div>';
     }
+    // Dar sütunda satır İKİ SATIR: ad + gösterimler, sağda tek sayı. ρ listeden
+    // ÇIKARILDI — künyede zaten var ve üçüncü kolon satırı üç satıra taşırıyordu
+    // (ölçüldü: 112 satırlık liste bir buçuk kat uzuyordu).
     var alt = (m.alt && m.alt.length) ? m.alt.slice(0, 3).join(' · ') : (m.std || '');
     h += '<button type="button" class="ve-str-mat-row'
       +  (ui.sel === m.id ? ' on' : '')
       +  (uygulanan === m.id ? ' applied' : '') + '"'
       +  ' onclick="veStrMatLibPick(\'' + nodeId + '\',\'' + _strEsc(m.id) + '\')"'
-      +  ' title="' + _strEsc(m.n + ' — ' + (m.std || '')) + '">'
-      +  '<span class="ve-str-mat-row-n">' + _strEsc(m.n)
+      +  ' title="' + _strEsc(m.n + ' — ' + (m.std || '') + ' · ' + m.rho + ' kg/m³') + '">'
+      +  '<span class="ve-str-mat-row-n">'
+      +    '<span class="ve-str-mat-row-t">' + _strEsc(m.n) + '</span>'
       +    '<span class="ve-str-mat-row-alt">' + _strEsc(alt) + '</span></span>'
       +  '<span class="ve-str-mat-row-num">' + _strFmt(m.E / 1000, 0) + ' GPa</span>'
-      +  '<span class="ve-str-mat-row-num">' + _strFmt(m.rho) + ' kg/m³</span>'
       +  '</button>';
   });
   return h;
@@ -1459,6 +1701,22 @@ function _strLibDetailHTML(nodeId){
 // Katalog kaydını parçaya uygula. Kayıt KOPYA olarak gidiyor (bkz.
 // veStrMatLibRecord) — kütüphane sürümü değişse bile kaydedilmiş proje
 // kendiliğinden değişmiyor.
+// Uygulanan kaydı listede GÖRÜNÜR yap. 112 satırlık bir listede ✓ işareti
+// ekranın dışındaysa hiçbir şey söylemiyor demektir — kullanıcı "hangisi
+// takılı" sorusunu ancak kaydırarak cevaplayabilirdi. CAD yüz listesindeki
+// `scrollIntoView` kuralının aynısı.
+function veStrMatLibScrollToApplied(nodeId){
+  if(typeof document === 'undefined') return false;
+  var liste = document.getElementById('ve-str-mat-list');
+  if(!liste) return false;
+  var satir = liste.querySelector('.ve-str-mat-row.applied') || liste.querySelector('.ve-str-mat-row.on');
+  if(!satir) return false;
+  // `block:'nearest'` sayfayı DEĞİL yalnız listeyi kaydırır; 'center' olsaydı
+  // panelin tamamı zıplardı.
+  try { satir.scrollIntoView({ block: 'nearest' }); } catch(e) { return false; }
+  return true;
+}
+
 function veStrMatApplyLib(nodeId, libId){
   var node = _strNodeById(nodeId);
   if(!node || !_strLibHas()) return false;
@@ -1511,62 +1769,188 @@ function getStrMaterialPropertiesHTML(node){
 
   html += _strMatHostCard(node);
 
-  // ── İKİ SÜTUN: solda KATALOG, sağda parçaya UYGULANMIŞ kayıt ──
-  // Bölüşüm görüntüye göre değil SORUYA göre: "hangi malzemeler var" ile
-  // "bu parçanın malzemesi ne" ayrı iki soru, ve ikincisi birincisine
-  // bakarken görünmek zorunda — yoksa kullanıcı uygulayıp uygulamadığını
-  // unutuyor. (Ansys Engineering Data'nın bölüşümü de bu.)
+  // ── İKİ SÜTUN ──
+  // SOL DAR, SAĞ GENİŞ: katalog bir SEÇİCİ, asıl içerik seçilenin kendisi.
+  // İlk sürümde katalog geniş, künye dardı ve kullanıcı haklı olarak itiraz
+  // etti: "Malzeme Kütüphanesi kısmı çok geniş olmuş." Liste bir ad + iki
+  // sayıdan ibaret; genişlik ona değil diyagramlara lazım.
   html += '<div class="ve-cp-grid ve-str-mat-grid">';
 
-  // ── SOL: kütüphane ──
+  // ── SOL: kütüphane (dar) ──
   var sol = '<div class="sw-section-title">Malzeme Kütüphanesi</div>';
   if(_strLibHas()){
-    // GEÇERLİLİK SINIRI listenin ÜSTÜNDE, panelin altında değil: katalog
-    // değerini ölçülmüş değer sanmak bu modülün en pahalı sessiz hatası olurdu.
     sol += '<div class="ve-str-mat-disc">'
-         + 'Değerler ilgili <b>standardın nominal</b> değerleridir, bir döküm sertifikası değil. '
-         + 'Hüküm verilecek analizde tedarikçinin muayene belgesiyle (EN 10204) doğrulayın. '
-         + 'Hepsi <b>' + VE_STR_MAT_LIB_TEMP_C + ' °C</b> içindir.'
+         + 'Değerler standardın <b>nominal</b> değerleridir, döküm sertifikası değil. '
+         + 'Hüküm verilecek analizde muayene belgesiyle (EN 10204) doğrulayın. Taban <b>'
+         + VE_STR_MAT_LIB_TEMP_C + ' °C</b>.'
          + '</div>';
     sol += _strLibFilterHTML(node.id);
     sol += '<div class="ve-str-mat-count" id="ve-str-mat-count">' + _strEsc(_strLibCountText(node.id)) + '</div>';
     sol += '<div class="ve-str-mat-list" id="ve-str-mat-list">' + _strLibListHTML(node.id) + '</div>';
     sol += '<div id="ve-str-mat-det">' + _strLibDetailHTML(node.id) + '</div>';
   } else {
-    // Kütüphane dosyası yüklenmediyse SESSİZ kalınmıyor: değerler elle
-    // girilebilir ve panel bunu söylüyor.
     sol += '<div class="ve-str-mat-empty">Malzeme kütüphanesi yüklenmedi '
          + '(js/structural-materials.js). Değerler sağdaki alanlardan elle girilebilir.</div>';
   }
 
-  // ── SAĞ: parçaya uygulanmış kayıt ──
+  // ── SAĞ: uygulanan malzeme — künye, diyagramlar, sıcaklık değerlendirici ──
+  var kat = (m.lib && _strLibHas()) ? veStrMatLibById(m.lib) : null;
   var sag = '<div class="sw-section-title">Uygulanan Malzeme</div>';
   sag += _strMatSourceLine(node);
   sag += '<div style="display:flex; align-items:center; gap:10px; margin-bottom:9px;">'
-       + '<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">Ad</div>'
+       + '<div style="flex:0 0 auto; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">Ad</div>'
        + '<input type="text" id="ve-str-mat-name-' + node.id + '" value="' + _strEsc(m.name == null ? '' : m.name) + '"'
        + ' placeholder="ör. S355JR" onchange="veStrMatSet(\'' + node.id + '\',\'name\',this.value)"'
-       + ' style="width:150px; ' + _STR_INP + ' text-align:left;">'
+       + ' style="flex:1 1 auto; min-width:0; ' + _STR_INP + ' text-align:left;">'
        + '</div>';
   sag += _strMatFieldGrid(node);
   sag += _strMatVerdict(node);
+
   sag += '<div class="sw-section-title">Türetilen</div>';
   sag += _strMatDerivedTable(node);
+
+  // Katalog kaydı varsa: genişletilmiş künye + diyagramlar. Elle girilmiş
+  // kayıtta bunlar YOK ve panel sebebini söylüyor — sertlik, uzama, sıcaklık
+  // eğrisi ve yorulma modeli KATALOGDAN geliyor, altı sayısal alandan değil.
+  if(kat){
+    sag += _strMatExtTable(kat);
+    sag += _strMatTempEval(node, kat);
+    sag += '<div class="sw-section-title">Diyagramlar</div>';
+    sag += '<div class="ve-str-dia-grid">';
+    sag += _strMatStressStrainSVG(kat);
+    sag += _strMatWohlerSVG(kat);
+    sag += _strMatTempSVG(kat);
+    sag += '</div>';
+    sag += _strMatDiaNote(kat);
+  } else if(Object.keys(m).length){
+    sag += '<div style="padding:7px 9px; margin:8px 0; font-size:var(--fs-micro); line-height:1.45; '
+         + 'color:var(--text-muted); background:var(--bg-secondary); border:1px dashed var(--border-color);">'
+         + '<b style="color:var(--text-secondary);">Diyagramlar yok.</b> Sertlik, uzama, sıcaklık eğrisi ve '
+         + 'yorulma modeli <b>katalogdan</b> gelir — elle girilen altı sayı bunları üretmeye yetmez. '
+         + 'Soldan bir kayıt uygulayın, sonra istediğiniz alanı elle düzeltin.'
+         + '</div>';
+  }
+
   sag += '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">';
   sag += '<button class="ve-str-btn ve-str-btn--danger" onclick="veStrMatClear(\'' + node.id + '\')">Temizle</button>';
   sag += '</div>';
-  // Katalogun KAPSAMADIĞI şeyler — raporun §9 kalıbı. Sessiz bırakmak,
-  // olmayan bir yeteneği varmış gibi göstermek olurdu.
   sag += '<div style="padding:7px 9px; font-size:var(--fs-micro); line-height:1.45; color:var(--text-muted); background:var(--bg-secondary); border:1px dashed var(--border-color);">'
        + '<b style="color:var(--text-secondary);">Katalogda olmayanlar:</b> kompozit laminatlar (ortotrop — bu kart izotrop), '
-       + 'sıcaklığa bağlı E(T)/σ(T) eğrileri, S-N yorulma eğrileri, akma sonrası pekleşme, '
-       + 'anizotropi (haddeleme yönü, eklemeli imalatta katman yönü).'
+       + 'ölçülmüş S-N eğrileri (buradaki Wöhler bir MODELDİR), akma sonrası pekleşme eğrisi, '
+       + 'sürünme (creep) eğrileri, kırılma tokluğu K_Ic, anizotropi.'
        + '</div>';
 
   html += '<div class="ve-cp-col ve-str-mat-col-lib">' + sol + '</div>';
   html += '<div class="ve-cp-col ve-str-mat-col-cur">' + sag + '</div>';
   html += '</div></div>';
   return html;
+}
+
+// ── GENİŞLETİLMİŞ KÜNYE ─────────────────────────────────────────────────────
+// Çözücüye giden altı alanın YANINDA duran, malzemeyi ANLATAN veriler.
+// Hepsi katalogdan; hiçbiri kayda kopyalanmıyor (ölü veri olurdu).
+function _strMatExtTable(kat){
+  var h = (typeof veStrMatHardness === 'function') ? veStrMatHardness(kat) : null;
+  var f = (typeof veStrMatFatigue === 'function') ? veStrMatFatigue(kat) : null;
+  var oz = (kat.sy != null && kat.rho > 0) ? (kat.sy / kat.rho * 1000) : null;  // kNm/kg
+  function sat(k, v, not){
+    return '<tr><td>' + k + '</td><td>' + v
+         + (not ? ' <span class="ve-str-ext-not">' + not + '</span>' : '') + '</td></tr>';
+  }
+  var t = '<div class="sw-section-title">Malzeme Künyesi</div>';
+  t += '<table class="ve-str-ext">';
+  t += sat('Sertlik', h ? (_strFmt(h.deger) + ' ' + h.birim) : '—',
+           h && h.olcek === 'hb' ? 'Rm/HB = ' + _strFmt(veStrMatHardnessRatio(kat), 2) + ' (ISO 18265)' : '');
+  t += sat('Kopma uzaması A', _strFmt(kat.A, kat.A < 10 ? 1 : 0) + ' %',
+           kat.A < 2 ? 'gevrek' : (kat.A > 20 ? 'çok sünek' : ''));
+  t += sat('Azami sürekli servis', _strFmt(kat.tmax) + ' °C', 'malzemenin kendi sınırı');
+  if(f){
+    t += sat('Dayanma sınırı σ_W', _strFmt(f.sw, 0) + ' MPa',
+             f.sinirVar ? ('N_D = 10⁶ · f_W = ' + _strFmt(f.fw, 2)) : 'GERÇEK SINIR YOK — eğri düşmeye devam eder');
+  } else {
+    t += sat('Dayanma sınırı σ_W', '—', 'bu sınıf için yorulma modeli yok');
+  }
+  if(oz !== null) t += sat('Özgül dayanım σ_ak/ρ', _strFmt(oz, 1) + ' kN·m/kg', 'hafiflik ölçütü');
+  t += sat('Isıl iletkenlik λ', kat.k == null ? '—' : _strFmt(kat.k, 2) + ' W/(m·K)', 'ref. — çözücüye gitmez');
+  t += sat('Özgül ısı c_p', kat.cp == null ? '—' : _strFmt(kat.cp) + ' J/(kg·K)', 'ref. — çözücüye gitmez');
+  t += '</table>';
+  return t;
+}
+
+// ── SICAKLIK DEĞERLENDİRİCİ ─────────────────────────────────────────────────
+// Eğriyi okumak yerine SAYIYI vermek: kullanıcı θ yazıyor, panel o sıcaklıktaki
+// E ve akma dayanımını basıyor. Seçilen θ OTURUMLUK (node.data'ya yazılmıyor):
+// bir okuma tercihi undo yığınına binmemeli — arama metnindeki kuralın aynısı.
+function _strMatTempEval(node, kat){
+  if(typeof veStrMatTempSet !== 'function' || !veStrMatTempSet(kat)) return '';
+  var ui = _strLibUI(node.id);
+  var t = (ui.tempC == null) ? 20 : ui.tempC;
+  var at = veStrMatAtTemp(kat, t);
+  var set = veStrMatTempSet(kat);
+  var asildi = (typeof kat.tmax === 'number') && t > kat.tmax;
+
+  var h = '<div class="sw-section-title">Sıcaklıkta Değerlendir</div>';
+  h += '<div class="ve-str-tempeval">';
+  h += '<label>θ <input type="number" id="ve-str-mat-temp" value="' + _strEsc(t) + '" step="10"'
+    +  ' oninput="veStrMatSetTemp(\'' + node.id + '\', this.value)"> °C</label>';
+  h += '<span class="ve-str-tempeval-v"><b>' + (at.E == null ? '—' : _strFmt(at.E, 0)) + '</b> MPa <i>E</i></span>';
+  h += '<span class="ve-str-tempeval-v"><b>' + (at.sy == null ? '—' : _strFmt(at.sy, 0)) + '</b> MPa <i>σ_ak</i></span>';
+  h += '<span class="ve-str-tempeval-v"><b>' + _strFmt(at.kE * 100, 0) + '%</b> <i>E oranı</i></span>';
+  h += '</div>';
+  var uyari = '';
+  if(at.disarida) uyari = 'Eğrinin tanım aralığının dışı — uçtaki değere sabitlendi, ekstrapolasyon yapılmadı.';
+  else if(asildi) uyari = 'Azami sürekli servis sıcaklığının (' + _strFmt(kat.tmax) + ' °C) ÜSTÜ: '
+    + 'kısa süreli dayanım okunabilir ama sürünme ve kalıcı hasar bu modelde YOK.';
+  else if(set.tur !== 'std') uyari = 'Bu eğri bir standardın tablosu değil, sınıfın TİPİK SEYRİDİR.';
+  if(uyari){
+    h += '<div class="ve-str-tempwarn">' + _strEsc(uyari) + '</div>';
+  }
+  return h;
+}
+
+function _strMatDiaNote(kat){
+  var f = (typeof veStrMatFatigue === 'function') ? veStrMatFatigue(kat) : null;
+  var set = (typeof veStrMatTempSet === 'function') ? veStrMatTempSet(kat) : null;
+  var n = '<div class="ve-str-dia-note">';
+  n += '<b>Diyagramlar kayıttan türetildi.</b> ';
+  n += 'Gerilme–gerinim <b>idealleştirilmiş</b> bir şemadır (E, σ_ak, σ_ç, A gerçek; aralarındaki biçim değil). ';
+  if(f){
+    n += 'Wöhler eğrisi <b>ölçülmüş değil</b>, ' + _strEsc(f.kaynak === 'FKM' ? 'FKM yönergesinin' : 'sınıfın tipik')
+      + ' modelidir (σ_W = f_W · σ_ç); yüzey pürüzlülüğü, boyut, çentik ve ortalama gerilme etkileri '
+      + '<b>dahil değildir</b> — gerçek bir parçanın dayanma sınırı bunlarla DÜŞER. ';
+  }
+  if(set) n += 'Sıcaklık eğrisinin kaynağı: ' + _strEsc(set.kaynak) + '.';
+  return n + '</div>';
+}
+
+// Sıcaklık değerlendiricinin girdisi — OTURUMLUK, node.data'ya yazılmıyor.
+// Panel değil yalnız değerlendirici satırı tazeleniyor: `showNodeProperties`
+// çağrılsaydı sayı kutusu DOM'dan silinir ve odak her tuşta kaybolurdu
+// (arama kutusundaki dersin aynısı).
+function veStrMatSetTemp(nodeId, val){
+  var v = Number(val);
+  _strLibUI(nodeId).tempC = isFinite(v) ? v : 20;
+  var node = _strNodeById(nodeId);
+  if(!node || typeof document === 'undefined') return;
+  var kat = (typeof veStrMatLibById === 'function') ? veStrMatLibById(veStrMatOf(node).lib) : null;
+  if(!kat) return;
+  var kutu = document.getElementById('ve-str-mat-temp');
+  if(!kutu) return;
+  var blok = kutu.closest ? kutu.closest('.ve-str-tempeval') : null;
+  if(!blok || !blok.parentNode) return;
+  var yeniHTML = _strMatTempEval(node, kat);
+  // Yalnız değer alanlarını ve uyarıyı değiştir; sayı kutusuna DOKUNMA.
+  var tmp = document.createElement('div');
+  tmp.innerHTML = yeniHTML;
+  var yeniBlok = tmp.querySelector('.ve-str-tempeval');
+  var eskiV = blok.querySelectorAll('.ve-str-tempeval-v');
+  var yeniV = yeniBlok ? yeniBlok.querySelectorAll('.ve-str-tempeval-v') : [];
+  for(var i = 0; i < eskiV.length && i < yeniV.length; i++) eskiV[i].innerHTML = yeniV[i].innerHTML;
+  var eskiU = blok.parentNode.querySelector('.ve-str-tempwarn');
+  var yeniU = tmp.querySelector('.ve-str-tempwarn');
+  if(eskiU && yeniU) eskiU.innerHTML = yeniU.innerHTML;
+  else if(eskiU && !yeniU) eskiU.remove();
+  else if(!eskiU && yeniU) blok.parentNode.insertBefore(yeniU, blok.nextSibling);
 }
 
 // Arama + kategori süzgeci. `oninput` LİSTEYİ tazeliyor, paneli değil —
@@ -1967,6 +2351,8 @@ if(typeof module !== 'undefined' && module.exports) {
     veStrMatLibSetCat: veStrMatLibSetCat,
     veStrMatLibPick: veStrMatLibPick,
     veStrMatApplyLib: veStrMatApplyLib,
+    veStrMatSetTemp: veStrMatSetTemp,
+    veStrMatLibScrollToApplied: veStrMatLibScrollToApplied,
     veStrApplyBadge: veStrApplyBadge,
     veStrGeomSelectFace: veStrGeomSelectFace,
     VE_STR_MESH_DEFAULT_DIVISOR: VE_STR_MESH_DEFAULT_DIVISOR,

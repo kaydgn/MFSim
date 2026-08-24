@@ -2944,6 +2944,10 @@ function veEditNodeName(nodeId) {
       var label = nodeEl.querySelector('.ve-node-label');
       if(label) label.textContent = newName;
     }
+    // Uzun ad çerçeveyi zorlar: sınır kutusu adın taşmasını da sarıyor
+    // (canvas-space.js veNodeLabelOverflow), o yüzden yeniden adlandırma
+    // çerçeveyi de tazelemeli.
+    if(typeof veUpdateBoundary === 'function') veUpdateBoundary();
     showToast('İsim güncellendi: ' + newName);
   }
   
