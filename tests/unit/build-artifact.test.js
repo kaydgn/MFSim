@@ -189,3 +189,46 @@ describe('build-shield — maskRawTextKeepOffsets', () => {
     expect(src.slice(mk.search(/<\/body\s*>/i))).toMatch(/^<\/body>/i);
   });
 });
+
+// ── OCCT ÇEKİRDEĞİ ÖNİZLEMEYE GİRMEZ ───────────────────────────────────────
+// Boolean'lı çekirdeğe geçince gömülü .wasm 17,5 MB oldu — tek başına artifact
+// sınırının (16 MB) üstünde. Yük çıkarılmazsa önizleme kanalı TAMAMEN kapanır;
+// oysa kullanıcının programı görebildiği tek kanal bu (CI bunu yakaladı:
+// "boyut 26.82 MB — artifact sınırı 16 MB").
+describe('artifact varyantı OCCT yükünü çıkarıyor', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const ROOT = path.join(__dirname, '../..');
+  const src = fs.readFileSync(path.join(ROOT, 'tools/build-artifact.js'), 'utf8');
+
+  test('yük ÇIKIYOR ama etiket KALIYOR', () => {
+    // Etiketi de silseydik köprü "gömülü varlık sayfada yok" derdi ve sebep
+    // bir yapılandırma hatası gibi okunurdu.
+    expect(src).toContain('occtVarliginiCikar');
+    expect(src).toMatch(/data-mfsim-asset="occt-wasm"/);
+    expect(src).toMatch(/m\[1\] \+ '[\s\S]*?' \+ m\[3\]/);
+  });
+
+  test('bayrak shim\'de veriliyor — köprü SEBEBİYLE reddedebilsin', () => {
+    expect(src).toContain('window.VE_STR_OCCT_ABSENT = true;');
+    const model = fs.readFileSync(path.join(ROOT, 'js/structural-model.js'), 'utf8');
+    expect(model).toContain('function veStrOcctAbsent()');
+    // Erken çıkış: varlık okunmaya HİÇ kalkışılmamalı.
+    expect(model).toMatch(/function _sgEmbeddedWasmB64\(\)\{\s*\n\s*if\(veStrOcctAbsent\(\)\) return Promise\.reject/);
+    // Panel bunu DÜĞMEYE BASMADAN ÖNCE yazıyor.
+    const panel = fs.readFileSync(path.join(ROOT, 'js/cp-structural.js'), 'utf8');
+    expect(panel).toMatch(/veStrOcctAbsent\(\)[\s\S]{0,400}VE_STR_OCCT_ABSENT_MSG/);
+  });
+
+  test('üretilen dosya sınırın ALTINDA (varsa)', () => {
+    const out = path.join(ROOT, 'MFSim_Artifact.html');
+    if (!fs.existsSync(out)) return;          // build:artifact koşmamış
+    const mb = fs.statSync(out).size / 1048576;
+    expect(mb).toBeLessThan(16);
+    // Ve yük gerçekten YOK: 17,5 MB'lık base64 içeride olsaydı sınırı aşardı,
+    // ama küçük bir kalıntı da sessizce kalabilir — açıkça arıyoruz.
+    const html = fs.readFileSync(out, 'utf8');
+    expect(html).not.toMatch(/VE_STR_OCCT_WASM_GZ_B64\s*=\s*"[A-Za-z0-9+/=]{1000}/);
+    expect(html).toContain('VE_STR_OCCT_ABSENT = true');
+  });
+});

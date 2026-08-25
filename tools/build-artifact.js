@@ -93,6 +93,17 @@ function temaKorumasi(temalar, varsayilan) {
   ].join('\n');
 }
 
+// Gömülü OCCT .wasm'ının YÜKÜNÜ söker, etiketi yerinde bırakır.
+// Kaç bayt kazandığını döner ki build çıktısında yazılabilsin.
+function occtVarliginiCikar(body) {
+  var re = /(<script\b[^>]*data-mfsim-asset="occt-wasm"[^>]*>)([\s\S]*?)(<\/script\s*>)/i;
+  var m = re.exec(body);
+  if (!m) return { body: body, kazanc: 0, bulundu: false };
+  var yeni = m[1] + '\n/* OCCT cekirdegi bu ONIZLEME varyantina GIRMEZ (17.5 MB, artifact siniri 16 MB).\n'
+           + '   Indirilen tek dosyada ve Pages surumunde yerinde duruyor. */\n' + m[3];
+  return { body: body.replace(m[0], yeni), kazanc: m[0].length - yeni.length, bulundu: true };
+}
+
 // Monolitik belgeyi Artifact gövdesine çevirir.
 function donustur(html) {
   var hataOnEk = 'build-artifact: ';
@@ -149,6 +160,19 @@ function donustur(html) {
 
   DUSURULEN_LINKLER.forEach(function (re) { head = head.replace(re, ''); });
 
+  // ── OCCT ÇEKİRDEĞİ ÖNİZLEMEYE GİRMEZ — 16 MB SINIRI ─────────────────────
+  // Gömülü .wasm (gzip+base64, 17,5 MB) tek başına artifact sınırının
+  // ÜSTÜNDE. Boolean'lı çekirdeğe geçince tek dosya 12,6 → 26,8 MB oldu ve
+  // önizleme kanalı tamamen kapanacaktı — oysa kullanıcının programı
+  // görebildiği tek kanal bu (ağı GitHub'a da Pages'e de çıkmıyor).
+  //
+  // Yük ÇIKARILIYOR, etiket KALIYOR: yer tutucunun varlığı "bu sürümde
+  // çekirdek yok" demenin tek dürüst yolu; etiketi de silseydik köprü
+  // "gömülü varlık sayfada yok" derdi ve sebep bir yapılandırma hatası gibi
+  // okunurdu. Bayrak (VE_STR_OCCT_ABSENT) shim'de veriliyor.
+  var occt = occtVarliginiCikar(body);
+  body = occt.body;
+
   var temalar = temalariCikar(html);
   var varsayilan = (/data-theme="([^"]*)"/i.exec(htmlAc[1]) || [])[1] || temalar[0];
   if (temalar.indexOf(varsayilan) === -1) {
@@ -161,7 +185,10 @@ function donustur(html) {
     '//    EN ÖNDE olmak zorunda — arkasındaki hiçbir modül bayraksız koşmasın.',
     'window.MFSIM_ENV = "artifact";',
     lang ? 'document.documentElement.setAttribute("lang", ' + JSON.stringify(lang) + ');' : '',
-    '// 2) Tema koruması (aşağıdaki yorumun gerekçesi: data-theme çakışması).',
+    '// 2) OCCT çekirdeği bu varyantta YOK (16 MB sınırı) — köprü bunu okuyup',
+    '//    SEBEBİYLE reddediyor; "bozuk kurulum" gibi görünmesin.',
+    'window.VE_STR_OCCT_ABSENT = true;',
+    '// 3) Tema koruması (aşağıdaki yorumun gerekçesi: data-theme çakışması).',
     temaKorumasi(temalar, varsayilan)
   ].filter(Boolean).join('\n');
 

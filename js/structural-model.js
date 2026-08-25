@@ -456,7 +456,20 @@ function _sgRunAsset(sel, hazirMi){
 
 // Gömülü .wasm'ın gzip+base64 dizgisini döndürür. AÇMAZ — açma işi worker'da
 // (3,96 MB'lık dizgiyi ana iş parçacığında çözmek yüz milisaniyelik donma).
+// claude.ai Artifact önizlemesinde çekirdek YOK: gömülü .wasm tek başına
+// 17,5 MB ve artifact sınırı 16 MB. Bayrağı tools/build-artifact.js koyuyor.
+// Erken ve AÇIK reddetmek şart — yoksa köprü "gömülü varlık sayfada yok"
+// derdi ve sebep bir kurulum hatası gibi okunurdu.
+function veStrOcctAbsent(){
+  return typeof window !== 'undefined' && !!window.VE_STR_OCCT_ABSENT;
+}
+
+var VE_STR_OCCT_ABSENT_MSG =
+  'Bu ÖNİZLEME sürümünde geometri çekirdeği yok (17,5 MB, artifact sınırı 16 MB). '
+  + 'STEP içe aktarmak için indirilen tek dosyayı ya da yayındaki sürümü kullanın.';
+
 function _sgEmbeddedWasmB64(){
+  if(veStrOcctAbsent()) return Promise.reject(new Error(VE_STR_OCCT_ABSENT_MSG));
   if(_sgAssetPromise) return _sgAssetPromise;
   var hazir = function(){ return typeof window !== 'undefined' && !!window.VE_STR_OCCT_WASM_GZ_B64; };
   var p = _sgRunAsset('script[data-mfsim-asset="occt-wasm"]', hazir)
@@ -1102,6 +1115,8 @@ if(typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VE_STR_GEOM_UNIT: VE_STR_GEOM_UNIT,
     VE_STR_GEOM_DEFLECTION: VE_STR_GEOM_DEFLECTION,
+    veStrOcctAbsent: veStrOcctAbsent,
+    VE_STR_OCCT_ABSENT_MSG: VE_STR_OCCT_ABSENT_MSG,
     veStrOcctReady: veStrOcctReady,
     veStrOcctForget: veStrOcctForget,
     veStrOcctWorker: veStrOcctWorker,
