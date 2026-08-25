@@ -845,9 +845,21 @@ function _rmSegTriHit(p, q, a, b, c){
 // komşusunu reddetmesine yol açıyor, iyileştirici işlemleri de birlikte
 // engelliyordu — ortalama min açı 41,6° → 0,01°.
 //
-// Eşik bağıl (kenar boyunun binde biri): mutlak bir mm eşiği ölçek değişince
-// anlamını yitirir.
-var VE_STR_REMESH_TJUNC_REL = 1e-3;
+// EŞİK BAĞIL (kenar boyunun on binde biri) ve değeri ÖLÇÜLEREK oturdu. Kenar
+// çaprazlaması ölçütü eklendikten SONRA gerçek kesişimleri o yakaladığı için
+// bu eşiğin gevşek olmasına gerek kalmadı; gevşekliğin bedeli ise doğrudan
+// KALİTE (braket, TetGen üç eşikte de TEMİZ):
+//
+//   eşik    h=8 min/ort/<10°     h=6                  h=4
+//   1e-4    3,956° / 38,1° / %1,24   3,565° / 41,6° / %0,51   2,746° / 43,6° / %0,27
+//   3e-4    0,007° / 37,6° / %2,49   0,007° / 41,1° / %1,78   0,007° / 43,1° / %1,26
+//   1e-3    0,007° / 37,4° / %2,95
+//
+// Yani gevşek eşik en kötü üçgeni 4°'den 0,007°'ye indiriyor ve o sliver'lar
+// TetGen'de DEJENERE TET'e dönüşüyordu (ölçüldü: h=12/8/6 → 54/478/103 adet).
+// 1e-4'te dejenere eleman kalmıyor ve ortalama kalite kalkansız tabanla
+// (ort 41,6° · <10° %0,56) aynı bantta.
+var VE_STR_REMESH_TJUNC_REL = 1e-4;
 
 function _rmPointOnEdge(V, pi, a, b){
   var ax = V[a*3], ay = V[a*3+1], az = V[a*3+2];
