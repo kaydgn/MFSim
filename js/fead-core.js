@@ -253,8 +253,19 @@
     throw new Error(`FEADCore/geometri: ${nmI}-${nmJ} tegeti icin kok bulunamadi`);
   }
 
-  /* resolved: [{name, c:[x,y], rPitch, rEff, contact}] — KAYIŞ GİDİŞ SIRASINDA */
-  function solveGeometry(resolved) {
+  /* resolved: [{name, c:[x,y], rPitch, rEff, contact}] — KAYIŞ GİDİŞ SIRASINDA
+   *
+   * opt.tolerant = true  ->  KAPANMA ve TEMIZLIK ihlalleri HATA DEGIL, geom.violations.
+   *   Gerekce: kasnak konumu kanvastan surukleniyorsa kullanici cozum uzayinin
+   *   disindan GECEREK icine giriyor; her ara karede istisna atmak "model
+   *   cozulemez" demek olurdu. Sayilar bu iki durumda ZATEN hesaplanabiliyor
+   *   (teget noktalari, spanlar, sarimlar) — gecersiz olan YOL, aritmetik degil.
+   *   Kasnaklarin cakismasi (tangent) bunun disindadir: orada teget YOKTUR,
+   *   uretilecek sayi da yoktur; o hâlâ atar.
+   *   VARSAYILAN KAPALI -> 2095 referans degerli dogrulama kapisi degismez. */
+  function solveGeometry(resolved, opt) {
+    opt = opt || {};
+    const violations = [];
     const n = resolved.length;
     if (n < 3) throw new Error('FEADCore: en az 3 kasnak gerekli');
     const s = loopSense(resolved.map(p => p.c));
@@ -281,11 +292,15 @@
     for (const sp of spans) { Leff += sp.L; Lpitch += sp.L; }
 
     /* Kapalı çevrim değişmezi: işaretli sarım toplamı tam 360 olmalı. */
-    if (Math.abs(Math.abs(signedWrapDeg) - 360) > 0.05)
-      throw new Error(
+    if (Math.abs(Math.abs(signedWrapDeg) - 360) > 0.05) {
+      const wrapMsg =
         `FEADCore/geometri: isaretli sarim toplami ${signedWrapDeg.toFixed(2)} ` +
         `(360 olmali). Kasnak sirasi kayis gidis yonunde mi, temas taraflari ` +
-        `(grooved/back) dogru mu?`);
+        `(grooved/back) dogru mu?`;
+      if (!opt.tolerant) throw new Error(wrapMsg);
+      violations.push({ type: 'wrapSum', signedWrapDeg,
+        deltaDeg: Math.abs(signedWrapDeg) - 360, message: wrapMsg });
+    }
 
     const geom = {
       pulleys: ps, spans, wraps, names, sense: s, signedWrapDeg,
@@ -296,12 +311,18 @@
       indexOf: (nm) => names.indexOf(nm),
     };
     const clash = checkClearance(geom);
-    if (clash.length) throw new Error(
-      'FEADCore/geometri: kayis yolu kasnaklarin icinden geciyor -> ' +
-      clash.map(c => `${c.span} spani ${c.pulley} kasnagini ` +
-        `${(-c.clearanceMm).toFixed(1)} mm kesiyor`).join('; ') +
-      '. Temas taraflari (grooved/back) ve kasnak sirasi kontrol edilmeli.');
+    if (clash.length) {
+      const clashMsg =
+        'FEADCore/geometri: kayis yolu kasnaklarin icinden geciyor -> ' +
+        clash.map(c => `${c.span} spani ${c.pulley} kasnagini ` +
+          `${(-c.clearanceMm).toFixed(1)} mm kesiyor`).join('; ') +
+        '. Temas taraflari (grooved/back) ve kasnak sirasi kontrol edilmeli.';
+      if (!opt.tolerant) throw new Error(clashMsg);
+      violations.push({ type: 'clearance', items: clash, message: clashMsg });
+    }
     geom.clearance = clash;
+    geom.violations = violations;
+    geom.valid = violations.length === 0;
     return geom;
   }
 
@@ -338,6 +359,11 @@
       throw new Error('FEADCore: pulleys dizisi gerekli');
     sys.belt = sys.belt || {};
     sys._bp = beltProps(sys.belt);
+    /* Geometri secenekleri (bkz. solveGeometry tolerant kipi) SISTEMIN OMRUNUN
+     * BASINDA kurulur — asagidaki `sense` probu da geometri cozuyor ve
+     * geometryAtRaw cagrisi try/catch DISINDA. Atama sonraya birakilirsa
+     * hosgoru orada etkisiz kalir ve model, kurulmadan atar. */
+    sys._geomOpt = cfg.geomOpt || {};
 
     sys._crkIdx = sys.pulleys.findIndex(p => p.crank);
     sys._tenIdx = sys.pulleys.findIndex(p => p.tensioner);
@@ -398,9 +424,12 @@
       c: (i === sys._tenIdx) ? center : [p.x, p.y],
     }));
   }
+  /* sys._geomOpt: solveGeometry'ye giden secenekler (bkz. tolerant kipi).
+   * Tanimsizsa {} -> davranis birebir eskisi. */
   const geometryAtRaw = (sys, absDeg) =>
-    solveGeometry(resolveAt(sys, tenCenterAbs(sys, absDeg)));
-  const geometryAt = (sys, rel) => solveGeometry(resolveAt(sys, tenCenter(sys, rel)));
+    solveGeometry(resolveAt(sys, tenCenterAbs(sys, absDeg)), sys._geomOpt);
+  const geometryAt = (sys, rel) =>
+    solveGeometry(resolveAt(sys, tenCenter(sys, rel)), sys._geomOpt);
 
   /* ==================================================== 4) GERGİ DENGESİ */
 
@@ -441,7 +470,30 @@
    * (sarım sıfıra iner, teğet kaybolur) sınır burada bulunur. */
   function feasibleRelMax(sys, hardMax) {
     const hi0 = hardMax != null ? hardMax : relMax(sys);
-    const ok = (r) => { try { tensionerState(sys, r); return true; } catch (e) { return false; } };
+    /* Olcut "istisna atiyor mu" DEGIL, "gecerli bir geometri veriyor mu".
+     * Ikisi hosgoru KAPALIYKEN ayni sey: ihlal zaten atar, ok() false doner.
+     * ACIKKEN ayrisiyorlar ve fark sessiz olurdu — ihlali gormezsek kol,
+     * kayisin bir kasnagin icinden gectigi acilara kadar "erisilebilir"
+     * gorunur, kol araligi buyur ve calisma noktasi yanlis yere oturur.
+     * OLCULDU (BMC): hosgoru acikken sinir 66.5° -> 89° cikiyordu, kayis
+     * boyu hedefi kusatilmamis sayilip kol 0°'ye kenetleniyor ve L_eff
+     * 1715.0 yerine 1730.2 mm veriyordu (+%0.89). */
+    const solves = (r) => {
+      try { tensionerState(sys, r); return true; } catch (e) { return false; }
+    };
+    const clean = (r) => {
+      try {
+        const st = tensionerState(sys, r);
+        return !(st.geom && st.geom.violations && st.geom.violations.length);
+      } catch (e) { return false; }
+    };
+    /* Olcut GECERLI GEOMETRI. Ama rel=0'da BILE ihlal varsa (yol bastan
+     * gecersiz — yanlis kasnak sirasi gibi) bu olcut butun araligi eler ve
+     * "hicbir kol acisi yok" denir; oysa cagiran taraf ihlali zaten
+     * geom.violations'tan okuyor ve bir CEVAP bekliyor. O durumda matematiksel
+     * alana geri duseriz. Hosgoru KAPALIYKEN clean === solves (ihlal zaten
+     * atar), yani bu satirin dogrulanmis davranisa etkisi YOK. */
+    const ok = clean(0) ? clean : solves;
     if (ok(hi0)) return hi0;
     let lo = 0, hi = hi0;
     if (!ok(lo)) throw new Error('FEADCore: serbest kol konumunda bile geometri cozulemiyor');

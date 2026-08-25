@@ -304,12 +304,32 @@ describe('uçtan uca: AG00686 kanvas düğümlerinden Gates sayıları', () => {
     expect(Math.abs(g.wrapDeg(i) - REF.wrap.IDR)).toBeGreaterThan(1);   // ← ama sonuç yanlış
   });
 
+  // SÖZLEŞME DEĞİŞTİ: geçersiz bir yol artık çözümü DURDURMUYOR, GEÇERSİZ
+  // olduğunu söylüyor. Gerekçe: kasnak konumu kanvastan sürüklenebildiği için
+  // kullanıcı çözüm uzayına dışarıdan giriyor ve her ara karede "model
+  // çözülemez" demek kullanılamaz bir yüzey olurdu. Sayılar bu durumda ZATEN
+  // hesaplanabiliyor (teğet noktaları, spanlar, sarımlar) — geçersiz olan YOL.
+  //
+  // Değişmezin kendisi aynen ısırıyor; değişen tek şey ne YAPTIĞI: eskiden
+  // istisna atıyordu, şimdi `geomValid=false` + adıyla yazılmış bir uyarı.
   test('yanlış bağlantı sırası sarım değişmeziyle YAKALANIR', () => {
     const b = kur();
     const bozuk = [link(b.crk, b.ac), link(b.ac, b.idr), link(b.idr, b.ten), link(b.ten, b.crk)];
     const r = veFeadBuildSystem(b.list, bozuk);
-    expect(r.ok).toBe(false);
-    expect(r.errors.join(' ')).toMatch(/Kayış yolu kapanmıyor|kasnağın içinden|teğet/i);
+
+    expect(r.ok).toBe(true);                 // sayılar üretiliyor
+    expect(r.geomValid).toBe(false);         // ama YOL geçersiz ve bu YAZILI
+    expect(r.warnings.join(' ')).toMatch(/KAPANMIYOR|içinden geçiyor/i);
+
+    // Değişmez gerçekten ısırıyor: Σ işaretli sarım 360'tan uzak.
+    const g = F.geometryAt(r.sys, r.relDeg);
+    expect(Math.abs(Math.abs(g.signedWrapDeg) - 360)).toBeGreaterThan(1);
+    expect(g.violations.map((v) => v.type)).toContain('wrapSum');
+
+    // DOĞRU sıra kurulunca ihlal yok — kapı yanlış yöne de kapalı.
+    const dogru = veFeadBuildSystem(b.list, b.conns);
+    expect(dogru.geomValid).toBe(true);
+    expect(F.geometryAt(dogru.sys, dogru.relDeg).violations).toHaveLength(0);
   });
 
   test('konum tablosu üretiliyor, Mean kol açısı Gates ile 0.2° içinde', () => {
