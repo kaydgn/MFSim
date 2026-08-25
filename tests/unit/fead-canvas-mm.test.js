@@ -306,8 +306,9 @@ describe('ORİJİN GÖÇÜ — öteleme BEDAVA (ölçüldü)', () => {
     const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
     const kolOnce = M.veFeadTensionerMount(ten.data).armFromCoords;
     M.veFeadNormalizeOrigin(pack.nodes);
-    expect(ten.data.pivotX).toBeCloseTo(-259.94, 3);
-    expect(ten.data.cenX).toBeCloseTo(-170.08, 3);
+    // Gergi künyesi Gates raporunun Tensioner Data bloğundan (pivot −250/110).
+    expect(ten.data.pivotX).toBeCloseTo(-250.00, 3);
+    expect(ten.data.cenX).toBeCloseTo(-161.97, 3);
     expect(M.veFeadTensionerMount(ten.data).armFromCoords).toBeCloseTo(kolOnce, 6);
   });
 

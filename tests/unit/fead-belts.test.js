@@ -7,7 +7,7 @@
  *
  * EN DEĞERLİ TEST BU DOSYANIN SONUNDA: BMC tedarikçi sayfasının kendi kayışı
  * (8PK 1715) katalogdan GERİ ÇIKIYOR mu? Serbest kip boyu hiç görmeden
- * 1715.27 mm hesaplıyor; katalog buna en yakın boyu öneriyor; o boy seçilince
+ * 1716.17 mm hesaplıyor; katalog buna en yakın boyu öneriyor; o boy seçilince
  * çözüm sabit kipin tabanına (kol 28.5090° · T 649.986 N) BİREBİR oturuyor.
  * Üç bağımsız yol tek noktada buluşuyor.
  *
@@ -99,7 +99,7 @@ describe('veri bütünlüğü', () => {
 
 describe('otomotiv ızgarası — bir KURAL, liste değil', () => {
   test('en yakın adıma yuvarlar', () => {
-    expect(B.veFeadBeltGridNearest('PK', 1715.27)).toBe(1715);
+    expect(B.veFeadBeltGridNearest('PK', 1716.17)).toBe(1715);
     expect(B.veFeadBeltGridNearest('PK', 1712.4)).toBe(1710);
     expect(B.veFeadBeltGridNearest('PK', 1713)).toBe(1715);
   });
@@ -150,7 +150,7 @@ describe('katalog kodu', () => {
 
 describe('en yakın adaylar', () => {
   test('iki küme AYRI dönüyor ve etiketli', () => {
-    const n = B.veFeadBeltNearest('PK', 1715.27, { count: 3 });
+    const n = B.veFeadBeltNearest('PK', 1716.17, { count: 3 });
     expect(n.stock).toHaveLength(3);
     n.stock.forEach((c) => expect(c.kind).toBe('stock'));
     expect(n.grid.kind).toBe('grid');
@@ -158,7 +158,7 @@ describe('en yakın adaylar', () => {
   });
 
   test('stok adayları gerçekten EN YAKINLAR ve boya göre sıralı', () => {
-    const t = 1715.27;
+    const t = 1716.17;
     const n = B.veFeadBeltNearest('PK', t, { count: 3 });
     const hepsi = B.veFeadBeltStock('PK')
       .map((L) => Math.abs(L - t)).sort((a, b) => a - b).slice(0, 3);
@@ -196,8 +196,8 @@ describe('BMC kayışı stok listesinde YOK — kataloğun iki kümeli olmasın�
   });
 
   test('ama otomotiv ızgarası onu TAM veriyor', () => {
-    expect(B.veFeadBeltGridNearest('PK', 1715.27)).toBe(1715);
-    expect(B.veFeadBeltBest('PK', 1715.27).lengthMm).toBe(1715);
+    expect(B.veFeadBeltGridNearest('PK', 1716.17)).toBe(1715);
+    expect(B.veFeadBeltBest('PK', 1716.17).lengthMm).toBe(1715);
   });
 });
 
@@ -216,7 +216,7 @@ describe('katalog + çözücü: üç bağımsız yol tek noktada buluşuyor', ()
     expect(o.ok).toBe(true);
     expect(o.profile).toBe('PK');
     expect(o.ribs).toBe(8);
-    expect(o.targetMm).toBeCloseTo(1715.27, 1);      // 1 · geometriden
+    expect(o.targetMm).toBeCloseTo(1716.17, 1);      // 1 · geometriden
 
     expect(o.grid.lengthMm).toBe(1715);              // 2 · katalogdan
     expect(o.grid.code).toBe('8PK1715');             //     sayfanın kendi kodu
@@ -224,9 +224,11 @@ describe('katalog + çözücü: üç bağımsız yol tek noktada buluşuyor', ()
     const f = o.grid.fit;                            // 3 · çözücüden
     expect(f.ok).toBe(true);
     expect(f.fits).toBe(true);
-    expect(f.relDeg).toBeCloseTo(28.5090, 3);
-    expect(f.tensionN).toBeCloseTo(649.986, 2);
-    expect(f.hubloadN).toBeCloseTo(369.064, 2);
+    // Sabit kip tabanı (bkz. fead-belt-mode.test.js TABAN). Gergi künyesi
+    // Gates raporunun Tensioner Data bloğundan geldiğinden beri bu değerler.
+    expect(f.relDeg).toBeCloseTo(29.7296, 3);
+    expect(f.tensionN).toBeCloseTo(571.071, 2);
+    expect(f.hubloadN).toBeCloseTo(327.144, 2);
   });
 
   // SIĞMAYAN ADAY BİR SAYI DEĞİL, BİR HÜKÜM. Kenetlenme kolun uç konumuna

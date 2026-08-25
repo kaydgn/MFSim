@@ -1374,6 +1374,7 @@ function _frOperatingPoint(R){
   h += tr('Gergi hubload', _frF(T.hubloadN, 0) + ' @ ' + _frFs(T.hubDirDeg, 1) + '°', 'N');
   h += '</table>';
 
+  h += _frPivotBlock(R);
   h += _frDesignTensionBlock(R);
   h += _frTensionFigure(R);
   return h;
@@ -1390,6 +1391,122 @@ function _frOperatingPoint(R){
 // Gates raporu): girilen ile türeyen arasındaki fark en çok %0.12, RMS %0.08 —
 // tamamı yuvarlama, çünkü Gates tam sayı basıyor (766 ↔ 765.9). İki kanal
 // zaten tek kanaldı. Artık bölüm karşılaştırma değil KURULUŞ anlatıyor.
+// ─── Gergi PİVOTU nereden geliyor (kullanıcı isteği, 2026-08-25) ────────────
+//
+// Kullanıcı bildirimi: "Tensioner pivot noktası tedarikçiye girdi olarak
+// gitmeyecek. İlk önce bu hesabın nasıl yapıldığını verelim."
+//
+// Haklı: pivot müşterinin elinde olan bir sayı değil. Ama BAĞIMSIZ da değil.
+// İki gözlem:
+//
+// 1) KAYIŞ YOLU PİVOTA HİÇ BAĞLI DEĞİL. Geometri yalnız gergi KASNAĞININ
+//    merkezine bakar (teğet çözümü merkez farklarından kurulur). Pivotu
+//    kaydırmak sarımları, açıklıkları, kayış boyunu DEĞİŞTİRMEZ.
+//
+// 2) PİVOTUN TEK ETKİSİ KOLUN HANGİ YÖNDE HAREKET ETTİĞİDİR — yani β, yani
+//    take-up, yani gerginlik. Pivot ile tasarım gerginliği AYNI DENKLEMİN İKİ
+//    YÜZÜDÜR:  pivot → β → dL/dθ → T   (ANALİZ, bu belgenin yaptığı)
+//              T*    → dL/dθ → β → pivot   (TASARIM)
+//
+// TAUTOLOJİ TUZAĞI — İLK SÜRÜMDE TAM BUNA DÜŞÜLDÜ. Blok önce "türetilen pivot"
+// ile "girilen pivot" arasındaki sapmayı bir DENETİM diye basıyordu. Sapma iki
+// örnekte de 0,000 mm çıktı ve çıkmak ZORUNDAYDI: T zaten pivottan türüyor,
+// onu denkleme geri beslemek aynı β'yı ve aynı pivotu verir. Geçen bir denetim
+// gibi görünüp hiçbir şey ölçmüyordu (uygunluk kriteri #6'da düzeltilen hatanın
+// aynısı).
+//
+// DOĞRUSU: denklemi ANALİZ yönünde bir denetim gibi göstermek değil, TASARIM
+// yönünde bir DUYARLILIK olarak vermek. Hedef gerginlik SEÇİLİR (bağımsız bir
+// mühendislik kararıdır), pivot ondan çıkar. Tablo o eşlemeyi veriyor.
+function _frPivotBlock(R){
+  var sys = R.build && R.build.sys, A = R.analysis || {}, T = A.tensioner || {};
+  if(!sys || !sys.tensioner) return '';
+  var t = sys.tensioner;
+  var a = _frNum(t.armLength), phi = _frNum(T.wrapDeg);
+  var Mnm = _frNum(T.springNm), Tn = _frNum(T.tensionN), hubDir = _frNum(T.hubDirDeg);
+  var C = _frCore(), cen = [];
+  try { cen = C.tensionerState(sys, _frNum(A.meanRelDeg)).center || []; } catch(e){ cen = []; }
+  var cx = _frNum(cen[0]), cy = _frNum(cen[1]);
+  var px = _frNum(t.pivot && t.pivot[0]), py = _frNum(t.pivot && t.pivot[1]);
+  if(![a, phi, Mnm, Tn, hubDir, cx, cy].every(Number.isFinite)) return '';
+
+  var D = Math.PI / 180;
+  var fLen = 2 * Math.sin(phi * D / 2);                    // |f| = 2sin(φ/2)
+  var sense = (_frNum(t.sense) < 0) ? -1 : 1;
+  // Hedef gerginlik T* → gereken take-up → β → kol doğrultusu → pivot.
+  function pivotFor(Thedef){
+    var takeup = (Mnm / Thedef) * 1000 * D;                // mm/°
+    var sinB = takeup / (a * fLen * D);
+    if(!(sinB > -1 && sinB < 1)) return null;              // erişilemez hedef
+    var beta = Math.asin(sinB) / D;
+    var kol = hubDir + sense * beta;
+    return { T: Thedef, takeup: takeup, beta: beta,
+             x: cx + a * Math.cos(kol * D), y: cy + a * Math.sin(kol * D) };
+  }
+
+  var h = '<h4>Gergi pivotu nereden geliyor</h4>';
+  h += '<p>Pivot, tedarikçiye giden sayfada <b>bulunmaz</b>: müşteri gergi kasnağının nereye '
+     + 'oturacağını (montaj merkezi — paketleme kararı) ve hangi gergiyi kullanacağını (kol boyu, '
+     + 'yay künyesi) söyler. Pivotun yeri bunlardan <b>çıkar</b>, ve çıkışı iki gözleme dayanır.</p>';
+  h += '<p><b>1 · Kayış yolu pivota bağlı değildir.</b> Geometri yalnız gergi <b>kasnağının '
+     + 'merkezine</b> bakar (§3.2\'nin teğet çözümü merkez farklarından kurulur). Pivotu kaydırmak '
+     + 'sarım açılarını, açıklıkları ve kayış boyunu <b>değiştirmez</b> — bu tablodaki her satırın '
+     + 'geometrisi aynıdır.</p>';
+  h += '<p><b>2 · Pivotun tek etkisi kolun hangi yönde hareket ettiğidir</b> — yani \( \beta \), '
+     + 'yani take-up, yani gerginlik. Bu yüzden <b>pivot ile tasarım gerginliği aynı denklemin iki '
+     + 'yüzüdür</b>. Bu belge <i>analiz</i> yönünde çalışır (pivot verilir, gerginlik çıkar); '
+     + 'tasarım yönü tersidir ve kapalı formdadır:</p>';
+  h += '<div class="eq">$$ \sin\beta = \frac{M/T^{*}}{a\,\cdot\,2\sin(\varphi/2)},'
+     + '\qquad \theta_{\text{kol}} = \theta_{\text{hub}} + s\,\beta,'
+     + '\qquad \mathbf{p} = \mathbf{c} + a\,(\cos\theta_{\text{kol}},\ \sin\theta_{\text{kol}})'
+     + ' $$<span class="tag">(' + (_frEqRef.pivot = _frEq()) + ')</span></div>';
+  h += '<p>Buradaki tek serbest sayı <b>hedef gerginlik</b> \( T^{*} \)\'dır; \( M \), \( a \) '
+     + 've \( s \) gergi künyesinden, \( \varphi \) ile \( \theta_{\text{hub}} \) çözülmüş '
+     + 'geometriden gelir. Aşağıdaki tablo o eşlemeyi veriyor: hangi gerginliği istiyorsanız pivot '
+     + 'nereye gitmeli.</p>';
+
+  var carp = [0.85, 0.925, 1.0, 1.075, 1.15];
+  h += '<table><caption>Tablo ' + _frTbl() + ' — Hedef gerginlik → gereken pivot konumu ('
+     + _frEqRef.pivot + ')</caption>';
+  h += '<tr><th>Hedef T*</th><th>Gereken dL/dθ</th><th>Kol açısı β</th><th>Pivot X</th>'
+     + '<th>Pivot Y</th><th>Pivot kayması</th></tr>';
+  var bu = pivotFor(Tn);
+  carp.forEach(function(c){
+    var r = pivotFor(Tn * c);
+    if(!r) return;
+    var d = (bu ? Math.hypot(r.x - bu.x, r.y - bu.y) : NaN);
+    var vurgu = (c === 1.0);
+    h += '<tr' + (vurgu ? ' style="background:rgba(200,120,30,0.10);font-weight:600;"' : '') + '>'
+      + '<td>' + _frFs(r.T, 0) + ' N' + (vurgu ? ' <span class="ok">◂ bu model</span>' : '') + '</td>'
+      + '<td>' + _frFs(r.takeup, 4) + '</td><td>' + _frFs(r.beta, 2) + '°</td>'
+      + '<td>' + _frFs(r.x, 2) + '</td><td>' + _frFs(r.y, 2) + '</td>'
+      + '<td>' + (vurgu ? '—' : _frFs(d, 1) + ' mm') + '</td></tr>';
+  });
+  h += '</table>';
+
+  h += '<div class="note"><span class="t">Bu tablo nasıl okunur</span>'
+     + 'Gergi kasnağının montaj merkezi <b>' + _frFs(cx, 2) + ' / ' + _frFs(cy, 2) + ' mm</b> '
+     + 'sabit tutulmuştur — orası paketleme kararıdır ve tedarikçiye giden sayfada zaten yazar. '
+     + 'Kol boyu ' + _frFs(a, 1) + ' mm olduğuna göre pivot, bu merkezin çevresindeki '
+     + _frFs(a, 1) + ' mm yarıçaplı çemberin ÜZERİNDEDİR; çember üzerinde <b>nereye</b> düşeceğini '
+     + 'yalnız istenen gerginlik belirler. '
+     + (Number.isFinite(px)
+         ? ('Bu modele girilen pivot <b>' + _frFs(px, 2) + ' / ' + _frFs(py, 2) + ' mm</b> ve '
+            + 'yukarıdaki vurgulu satır ona karşılık gelir — yani belgedeki bütün gerginlikler, '
+            + 'hubload\'lar ve kayma emniyetleri o pivot seçiminin sonucudur.')
+         : '')
+     + '</div>';
+  h += '<div class="note warn"><span class="t">Bu bir DENETİM değildir</span>'
+     + 'Vurgulu satır, modelin kendi pivotunu geri verir ve <b>vermek zorundadır</b>: bu belgede '
+     + 'tasarım gerginliği zaten pivottan türetiliyor (aşağıdaki blok), dolayısıyla onu denkleme '
+     + 'geri beslemek aynı pivotu üretir. Tablonun değeri denetim değil <b>duyarlılık</b>: '
+     + 'gerginliği %' + _frF((carp[carp.length - 1] - 1) * 100, 0) + ' değiştirmek pivotu kaç mm '
+     + 'kaydırır, onu gösterir. Pivotun BAĞIMSIZ olarak doğrulanması ancak ölçülmüş bir pivotla '
+     + '(tedarikçi raporu, montaj resmi) karşılaştırarak yapılabilir.'
+     + '</div>';
+  return h;
+}
+
 function _frDesignTensionBlock(R){
   var sys = R.build && R.build.sys, A = R.analysis || {}, T = A.tensioner || {};
   if(!sys) return '';
@@ -2447,6 +2564,7 @@ if(typeof module !== 'undefined' && module.exports){
     _frLabels: _frLabels,
     _frTakeupRateFigure: _frTakeupRateFigure,
     _frDesignTensionBlock: _frDesignTensionBlock,
+    _frPivotBlock: _frPivotBlock,
     _frF: _frF, _frFs: _frFs, _frPct: _frPct, _frEsc: _frEsc,
     VE_FEAD_REP_SECTIONS: VE_FEAD_REP_SECTIONS
   };

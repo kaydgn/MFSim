@@ -1038,10 +1038,34 @@ var VE_FEAD_EXAMPLES = {
                           {rpm:5985,kw:4.27}, {rpm:6300,kw:4.28}, {rpm:6615,kw:4.28} ] } },
       { key:'TEN',  type:'fead-tensioner',  name:'Otomatik Gergi',
         data:{ od:75, contact:'back', inertia:0.00087,
-               // Sayfadaki Tensioner tablosu + "gerginin öngörülen merkezi
-               // montaj pozisyonu" — serbest açı SAYFADA YOK, buradan türetilir.
-               angleMode:'mount', pivotX:-259.94, pivotY:104.15,
-               cenX:-170.080, cenY:99.160, armLen:90.0,
+               // GERGİ KÜNYESİ GATES RAPORUNUN "Tensioner Data" BLOĞUNDAN
+               // (AG00976 · Ten@-250/110 · 05.06.2025). Kullanıcı kararı
+               // (2026-08-25): tedarikçiye giden sayfanın "gerginin ÖNGÖRÜLEN
+               // merkezi montaj pozisyonu" tahmini terk edildi.
+               //
+               // SAYFA PİVOTU VERMİYORDU ve örnek onu TÜRETİYORDU: merkez
+               // (−170.080, 99.160) alınıp |merkez − pivot| = 90 mm olacak
+               // şekilde bir pivot seçiliyordu (−259.94, 104.15). Rapor gerçek
+               // pivotu yazınca ayrışma ölçülebilir oldu — iki pivot 11,5 mm
+               // apayrı ve türetilmiş olan çalışma gerginliğini şişiriyordu:
+               //   türetilmiş pivot  → kol 28,51° · T 650,0 N   (Gates 544 → +%19,5)
+               //   GATES pivotu      → kol 29,73° · T 571,1 N   (Gates 544 → +%5,0)
+               //
+               // MERKEZ DE RAPORDAN. Gates pivotu sayfanın merkeziyle BİRLİKTE
+               // kullanılamaz: ikisi arası 90 değil 80,65 mm ve kol boyu kapısı
+               // çözümü haklı olarak durduruyor (fark −9,35 mm). Buradaki
+               // merkez raporun Layout Data satırındaki TEN konumudur — yani
+               // çözülmüş ÇALIŞMA merkezi — ve pivottan tam 90,00 mm uzakta.
+               // Serbest açı ondan türetiliyor: 16,06° (raporun "Free Arm"
+               // satırı 16,1°, 0,04° fark).
+               //
+               // KALAN %5 GERGİDEN DEĞİL, KAYIŞTAN: bu örnek kayış künyesini
+               // hâlâ sayfadan alıyor (effLength 1715, tolerans 0, aşınma 0,
+               // lengthOffset 0). Raporun Belt Data bloğu 1714,6 / ±6,00 /
+               // %0,60 diyor ve onlarla sapma −%0,1'e iniyor; o blok
+               // AG00976_GATES_2025 örneğinde birebir duruyor.
+               angleMode:'mount', pivotX:-250.00, pivotY:110.00,
+               cenX:-161.97, cenY:91.29, armLen:90.0,
                preload:8.60, kArm:0.480, meanLoad:22.07,
                armInertia:0.0009, pulleyMass:0.80 } }
     ],

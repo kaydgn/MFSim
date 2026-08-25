@@ -108,12 +108,27 @@ describe('sayfanın dört çıpası', () => {
     expect(Math.abs(ac.deltaMm)).toBeLessThan(0.01);
   });
 
-  test('Spring Mean Load 22.07 Nm — çalışma noktasındaki yay momenti', () => {
+  test('Spring Mean Load 22.07 Nm — ÇÖZÜLEN nokta ondan ne kadar ayrışıyor', () => {
+    // Sayfanın "Spring Mean Load"u kolun NOMİNAL çalışma açısını söyler:
+    // rel_nominal = (22,07 − 8,60)/0,480 = 28,06°. Serbest açı buradan türetilir.
+    // Ama GERÇEK çalışma açısı kayış boyundan çözülür ve ikisi aynı olmak
+    // zorunda değildir — aradaki fark, gergi künyesi ile kayış künyesinin ne
+    // kadar tutarlı olduğunun ÖLÇÜSÜDÜR.
+    //
+    // Bu örnek artık İKİ KAYNAK KARIŞTIRIYOR (kullanıcı kararı, 2026-08-25):
+    // gergi künyesi Gates raporunun "Tensioner Data" bloğundan, kayış künyesi
+    // hâlâ tedarikçiye giden sayfadan (effLength 1715 · tolerans 0 · aşınma 0 ·
+    // lengthOffset 0). ÖLÇÜLDÜ: çözülen açı 29,73°, orada M = 22,87 Nm → %3,6.
+    //
+    // Kapı bu farkı GÖRÜNÜR tutuyor, gizlemiyor: %5'i aşarsa iki künye artık
+    // aynı sistemi anlatmıyor demektir. Raporun Belt Data bloğu da alınınca
+    // fark kapanıyor — AG00976_GATES_2025'te aynı büyüklük %0,09 (testi orada).
     const { build } = kur();
     const mr = F.meanRel(build.sys);
     const M_yay = F.springTorque(build.sys, mr);
-    // %1.5: çalışma açısı kayış boyunun yuvarlanmasına duyarlı (1715 ↔ 1715.27).
-    expect(Math.abs(M_yay - SAYFA.springMeanNm) / SAYFA.springMeanNm).toBeLessThan(0.015);
+    const sapma = Math.abs(M_yay - SAYFA.springMeanNm) / SAYFA.springMeanNm;
+    expect(sapma).toBeGreaterThan(0.02);      // karışık künye: fark GERÇEKTEN var
+    expect(sapma).toBeLessThan(0.05);         // ama iki künye hâlâ aynı sistemi anlatıyor
   });
 
   test('tahrik oranı 1.1 — krank/fan çapından', () => {
@@ -153,7 +168,9 @@ describe('montaj merkezi serbest açı DEĞİLDİR', () => {
     const ten = veFeadExampleOf('BMC_FEAD_2026').pulleys.find((p) => p.key === 'TEN');
     const m = veFeadTensionerMount(ten.data);
     expect(m.ok).toBe(true);
-    expect(m.montajDeg).toBeCloseTo(-3.178, 2);
+    // Montaj açısı GATES pivotuna göre: atan2(91,29 − 110 ; −161,97 + 250).
+    // (Sayfanın türetilmiş pivotuyla −3,178° idi.)
+    expect(m.montajDeg).toBeCloseTo(-11.999, 2);
     expect(m.relMeanDeg).toBeCloseTo((22.07 - 8.60) / 0.480, 6);   // 28.06°
     expect(veFeadFreeAngleFrom(m, +1)).toBeCloseTo(m.montajDeg - m.relMeanDeg, 9);
     expect(veFeadFreeAngleFrom(m, -1)).toBeCloseTo(m.montajDeg + m.relMeanDeg, 9);
@@ -187,8 +204,9 @@ describe('montaj merkezi serbest açı DEĞİLDİR', () => {
 
     // 3) Ve gerginlik 2.6 kat düşük (ölçüldü: 650 N ↔ 251 N).
     const T_yanlis = F.tensionerState(yanlis.sys, F.meanRel(yanlis.sys)).tensionN;
+    // ÖLÇÜLDÜ (Gates gergi künyesiyle): 571,1 ↔ 234,7 N — oran 2,43.
     expect(T_dogru / T_yanlis).toBeGreaterThan(2.2);
-    expect(T_dogru).toBeGreaterThan(600);
+    expect(T_dogru).toBeGreaterThan(540);
     expect(T_yanlis).toBeLessThan(300);
   });
 
@@ -463,8 +481,11 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
   test('türetilen değer çekirdeğe ANKRAJ olarak yazılıyor', () => {
     const { build } = kur();
     expect(build.warnings).toEqual([]);
-    // Bu sistemde 22.284 Nm / 0.5984 mm/° = 650 N (tedarikçi sayfasıyla tutuyor)
-    expect(build.springTensionN).toBeCloseTo(650, 0);
+    // Bu sistemde 22,87 Nm / 0,6990 mm/° = 571 N. (Gergi künyesi Gates
+    // raporunun "Tensioner Data" bloğundan geldiğinden beri; sayfanın
+    // TÜRETİLMİŞ pivotuyla 650 N çıkıyordu ve Gates'in 544 N'undan %19,5
+    // yukarıdaydı. Kalan %5 kayış künyesinden — bkz. yay momenti testi.)
+    expect(build.springTensionN).toBeCloseTo(571, 0);
     expect(build.sys.designTensionN).toBeCloseTo(build.springTensionN, 9);
     expect(build.cfg.designTensionN).toBeCloseTo(build.springTensionN, 9);
   });
@@ -488,7 +509,7 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
     pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     const build = veFeadBuildSystem(pack.nodes, pack.connections);
     expect(build.ok).toBe(true);
-    expect(build.sys.designTensionN).toBeCloseTo(650, 0);   // 400 DEĞİL
+    expect(build.sys.designTensionN).toBeCloseTo(571, 0);   // 400 DEĞİL
     expect(build.warnings).toEqual([]);                     // uyuşmazlık diye bir şey kalmadı
   });
 
@@ -532,8 +553,12 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
     expect(b.sys.designTensionN).toBeGreaterThan(0);
     expect(b.sys.designTensionN).toBeLessThan(5000);
 
-    // Ve gereken boy, sayfanın kendi kayışını (1715 mm) geri veriyor.
-    expect(al.suggestedBeltMm).toBeCloseTo(SAYFA.beltEffMm, 0);
+    // Ve gereken boy, GATES RAPORUNUN KENDİ "Effective Drive Length" değerini
+    // geri veriyor: rapor Mean konumunda 1716,2 mm basıyor, model 1716,17.
+    // Bu bedava ve BAĞIMSIZ bir doğrulama — örnek o sayıyı hiç taşımıyor,
+    // yalnız gergi künyesinden ve kasnak koordinatlarından çıkıyor.
+    // (Sayfanın türetilmiş pivotuyla 1715 çıkıyordu.)
+    expect(al.suggestedBeltMm).toBeCloseTo(1716.2, 0);
   });
 
   // TÜRETME YİNE DE BAŞARISIZ OLABİLİR: yay ÖLÜyse (ön yük 0, katsayı 0)

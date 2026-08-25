@@ -82,7 +82,10 @@ const coz = (k) => {
 
 // Değişiklikten ÖNCE ölçülen taban. Bunlar Gates/tedarikçi çıpaları değil,
 // "sabit kip birebir eski davranışını koruyor mu" kapısı.
-const TABAN = { rel: 28.5090, L: 1715.0, T: 649.986, hub: 369.064 };
+// GERGİ KÜNYESİ GATES RAPORUNDAN (Tensioner Data, pivot −250/110) geldiğinden
+// beri taban budur. Sayfanın TÜRETİLMİŞ pivotuyla (−259.94, 104.15) rel 28.5090
+// ve T 649.986 çıkıyordu — Gates'in 544 N'undan %19.5 yukarıda.
+const TABAN = { rel: 29.7296, L: 1715.0, T: 571.071, hub: 327.144 };
 
 describe('kip çözümü — geriye dönük uyumluluk', () => {
   test('kip yazılı değilse ve boy varsa SABİT — eski her proje aynen çalışır', () => {
@@ -143,26 +146,33 @@ describe('SERBEST kip — kayış boyu ÇIKTI', () => {
 
   // BAĞIMSIZ DOĞRULAMA. Serbest kip kayış boyunu HİÇ görmeden hesaplıyor
   // (girdi: kasnak koordinatları, çaplar, gergi künyesi) ve tedarikçi
-  // sayfasının kendi kayışını geri veriyor: 1715.27 ↔ 1715 mm, %0.016.
+  // sayfasının kayışına %0.07 ile oturuyor: 1716.17 ↔ 1715 mm.
+  // AYRICA: türetilen boy Gates raporunun Mean konumundaki EFFECTIVE DRIVE
+  // LENGTH'ine (1716.2 mm) 0.03 mm ile oturuyor — örnek o sayıyı taşımıyor,
+  // yalnız gergi künyesinden ve kasnak koordinatlarından çıkıyor.
   test('türetilen boy tedarikçi sayfasının kayışını geri veriyor', () => {
     const r = coz(kur({ mode: 'free' }));
-    expect(r.L).toBeCloseTo(1715.27, 1);
-    expect(Math.abs(r.L - 1715) / 1715).toBeLessThan(0.0005);
+    expect(r.L).toBeCloseTo(1716.17, 1);
+    expect(Math.abs(r.L - 1715) / 1715).toBeLessThan(0.001);
+    expect(r.L).toBeCloseTo(1716.2, 0);          // Gates EDL(Mean)
   });
 
   // İKİ KİP AYNI YERE YAKINSIYOR ama ÖZDEŞ DEĞİL — ve fark anlamlı:
-  //   sabit  : kol 28.5090°, L 1715.0000 (GİRDİ), T 649.99 N
-  //   serbest: kol 28.0625°, L 1715.2673 (ÇIKTI), T 643.21 N
-  // 0.45°'lik açı farkı 1715'in YUVARLANMIŞ bir katalog boyu olmasından.
+  //   sabit  : kol 29.7296°, L 1715.0000 (GİRDİ), T 571.07 N
+  //   serbest: kol 28.0625°, L 1716.1735 (ÇIKTI), T 543.70 N
+  // 1.67°'lik açı farkı, sayfanın kayışının (1715) bu yerleşimin gerektirdiği
+  // boydan (1716.17) 1.17 mm KISA olmasından. Gergi künyesi Gates raporundan,
+  // kayış künyesi hâlâ sayfadan geldiği için iki kaynak burada ayrışıyor;
+  // AG00976_GATES_2025'te ikisi de rapordan gelir ve fark 0.02°'ye iner.
   // Sabit kip "elimdeki boyla kol nerede oturur", serbest kip "kol nominalde
   // otursun diye hangi boy gerekir" diyor. Aynı olmalarını beklemek, katalog
   // yuvarlamasını yok saymak olurdu.
   test('iki kip yakınsıyor ama fark KATALOG YUVARLAMASI kadar', () => {
     const a = coz(kur({ mode: 'fixed' }));
     const b = coz(kur({ mode: 'free' }));
-    expect(Math.abs(b.rel - a.rel)).toBeLessThan(0.5);
-    expect(Math.abs(b.L - a.L)).toBeLessThan(0.5);
-    expect(Math.abs(b.T - a.T) / a.T).toBeLessThan(0.02);
+    expect(Math.abs(b.rel - a.rel)).toBeLessThan(2.0);
+    expect(Math.abs(b.L - a.L)).toBeLessThan(1.5);
+    expect(Math.abs(b.T - a.T) / a.T).toBeLessThan(0.06);
     expect(b.L).not.toBe(a.L);                    // ÇIKTI ≠ GİRDİ
   });
 
@@ -173,9 +183,11 @@ describe('SERBEST kip — kayış boyu ÇIKTI', () => {
     // Kol nominal açıda SABİT; değişen kayış boyu ve — geometrinin gergiye
     // verdiği mekanik avantaj değiştiği için — gerginlik.
     const beklenen = [
-      [-200, 2095.44, 358.8], [-120, 1940.22, 405.7], [-60, 1825.93, 476.8],
-      [-20, 1751.58, 568.5], [0, 1715.27, 643.2], [20, 1679.74, 754.8],
-      [40, 1645.22, 933.9], [60, 1611.97, 1253.6],
+      // dx = 0 satırı BAĞIMSIZ DOĞRULAMA: kol nominal yay açısındayken
+      // gerginlik 543.7 N çıkıyor, Gates raporunun Design Tension'ı 544 N.
+      [-200, 2095.20, 321.7], [-120, 1940.37, 360.4], [-60, 1826.45, 417.4],
+      [-20, 1752.37, 488.0], [0, 1716.17, 543.7], [20, 1680.74, 623.9],
+      [40, 1646.26, 746.7], [60, 1612.99, 951.1],
     ];
     beklenen.forEach(([dx, L, T]) => {
       const r = coz(kur({ id: 'ex-ALT', dx, mode: 'free' }));
@@ -190,13 +202,13 @@ describe('SERBEST kip — kayış boyu ÇIKTI', () => {
 
   // Gerginlik sabit DEĞİL ve bu fizik: aynı yay açısında moment aynı
   // (M = M₀ + k·θ) ama take-up geometriyle değişiyor (dL/dθ = a·sinβ·2sin(φ/2)),
-  // dolayısıyla T = M/(dL/dθ) da değişiyor. Sürükleme aralığında 3.5 kat.
+  // dolayısıyla T = M/(dL/dθ) da değişiyor. Sürükleme aralığında 2.96 kat.
   test('aynı kol açısında gerginlik GEOMETRİYLE değişiyor', () => {
     const T = [-200, 0, 60].map((dx) =>
       coz(kur({ id: 'ex-ALT', dx, mode: 'free' })).build.sys.designTensionN);
     expect(T[0]).toBeLessThan(T[1]);
     expect(T[1]).toBeLessThan(T[2]);
-    expect(T[2] / T[0]).toBeGreaterThan(3);
+    expect(T[2] / T[0]).toBeGreaterThan(2.9);
   });
 
   test('gereken boy sürüklemeyle MONOTON değişiyor (fizik: uzaklaşan kasnak = uzun kayış)', () => {
@@ -237,16 +249,16 @@ describe('KENETLEME — hedef erişilemezse istisna değil, sınır', () => {
     expect(al).not.toBeNull();
     expect(al.resolvedAt).toBe('nominalArm');
     expect(r.rel).toBeCloseTo(28.0625, 4);
-    expect(r.T).toBeCloseTo(602.4, 0);            // 4e10 DEĞİL
+    expect(r.T).toBeCloseTo(513.5, 0);            // 4e10 DEĞİL
     expect(r.hub).toBeLessThan(2000);
   });
 
   test('düşülen konumda ÖNERİLEN kayış boyu yazılıyor — eyleme geçirilebilir cevap', () => {
     const r = coz(kur({ id: 'ex-ALT', dx: -10, mode: 'fixed' }));
     const al = r.build.workPoint.atLimit;
-    expect(al.suggestedBeltMm).toBeCloseTo(1733.3, 0);
+    expect(al.suggestedBeltMm).toBeCloseTo(1734.19, 0);
     const t = veFeadAtLimitText(al);
-    expect(t).toMatch(/1733[.,]3 mm/);
+    expect(t).toMatch(/1734[.,]2 mm/);
     expect(t).toMatch(/SERBEST/);
     // Önerilen boy, serbest kipin aynı yerleşimde bulduğu boyla AYNI olmalı —
     // iki yol tek cevaba varmazsa biri sessizce yanlış demektir.
