@@ -52,12 +52,14 @@ const SAYFA = {
 
 // Örneği köprüden geçir. Kanvas YOK: örnek tanımı DOM'suz katmanda durduğu için
 // düğüm dizisi doğrudan veFeadBuildSystem'e verilebiliyor.
-function kur() {
+function kur(mut) {
   const pack = veFeadExampleNodes('BMC_FEAD_2026');
   pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+  if (mut) mut(pack.nodes);
   const build = veFeadBuildSystem(pack.nodes, pack.connections);
   return { pack, build };
 }
+const tipOf = (nodes, tip) => nodes.find((n) => n.type === tip).data;
 
 // Çekirdeğe giden adlar KULLANICININ GÖRDÜĞÜ adlardır (veFeadUniqueNames
 // customName'den üretir) — kısaltma değil. Tabloların anahtarı bu.
@@ -115,24 +117,70 @@ describe('sayfanın dört çıpası', () => {
     // zorunda değildir — aradaki fark, gergi künyesi ile kayış künyesinin ne
     // kadar tutarlı olduğunun ÖLÇÜSÜDÜR.
     //
-    // Bu örnek artık İKİ KAYNAK KARIŞTIRIYOR (kullanıcı kararı, 2026-08-25):
-    // gergi künyesi Gates raporunun "Tensioner Data" bloğundan, kayış künyesi
-    // hâlâ tedarikçiye giden sayfadan (effLength 1715 · tolerans 0 · aşınma 0 ·
-    // lengthOffset 0). ÖLÇÜLDÜ: çözülen açı 29,73°, orada M = 22,87 Nm → %3,6.
+    // Bu örnek İKİ KAYNAK KARIŞTIRIYOR: gergi künyesi Gates raporunun
+    // "Tensioner Data" bloğundan (kol boyu + yay), kayış künyesi hâlâ
+    // tedarikçiye giden sayfadan (effLength 1715 · tolerans 0 · aşınma 0 ·
+    // lengthOffset 0).
     //
-    // Kapı bu farkı GÖRÜNÜR tutuyor, gizlemiyor: %5'i aşarsa iki künye artık
-    // aynı sistemi anlatmıyor demektir. Raporun Belt Data bloğu da alınınca
-    // fark kapanıyor — AG00976_GATES_2025'te aynı büyüklük %0,09 (testi orada).
+    // ÖLÇÜLDÜ (pivot parça çiziminden türetildiğinden beri): çözülen bağıl açı
+    // 28,43°, orada M = 22,245 Nm → nominalden %0,79. Gates'in ÖLÇÜLMÜŞ pivotu
+    // sayfanın kayışıyla birlikte kullanıldığında bu sapma %3,6'ydı (29,73° ·
+    // 22,87 Nm) — iki kaynağın karıştığının ölçüsüydü ve türetilen pivot onu
+    // dörtte birine indiriyor.
+    //
+    // Kapı farkı GÖRÜNÜR tutuyor, gizlemiyor: %1,5'i aşarsa iki künye artık
+    // aynı sistemi anlatmıyor demektir.
+    //
+    // "RAPORUN BELT DATA BLOĞU DA ALINSA FARK KAPANIR" SANILDI — ÖLÇÜLDÜ,
+    // TERSİ ÇIKTI. Pivot Gates raporundan GİRİLİRKEN doğruydu; türetilen
+    // pivotla değil:
+    //   sayfa kayışı (bugün)  → bağıl 28,43° · M 22,245 Nm · %0,79 · T 532,1 N
+    //   + Gates Belt Data     → bağıl 26,80° · M 21,463 Nm · %2,75 · T 503,7 N
+    // Yani raporun kayışını sayfanın gergi koordinatıyla karıştırmak modeli
+    // Gates'ten UZAKLAŞTIRIYOR (−%2,2 → −%7,4). İki künye tek kaynaktan
+    // gelmeli; AG00976_GATES_2025 ikisini de rapordan alıyor ve aynı büyüklük
+    // orada %0,09 (testi orada).
     const { build } = kur();
     const mr = F.meanRel(build.sys);
     const M_yay = F.springTorque(build.sys, mr);
-    // PİVOT TÜRETİLDİĞİNDEN BERİ MODEL YİNE KENDİ İÇİNDE TUTARLI: gergi künyesi
-    // (kol boyu + kol açısı + yay) ile kayış künyesi aynı kaynaktan geliyor ve
-    // çözülen açı nominale %0.79 ile oturuyor. Gates'in pivotu sayfanın kayışıyla
-    // birlikte kullanıldığında bu sapma %3.6'ya çıkıyordu — iki kaynağın
-    // karıştığının ölçüsüydü.
     const sapma = Math.abs(M_yay - SAYFA.springMeanNm) / SAYFA.springMeanNm;
     expect(sapma).toBeLessThan(0.015);
+  });
+
+  // ── İSTENMEYEN ALTERNATİF: raporun kayışını sayfanın gergisiyle karıştırmak ──
+  //
+  // Bu test bir DAVRANIŞ değil bir KARAR kilitliyor: "madem AG00976 raporunun
+  // Belt Data bloğu var, BMC'ye de koyalım" ilk bakışta iyileştirme gibi
+  // görünüyor ve bir dönem öyleydi de — pivot RAPORDAN GİRİLİRKEN kalan farkı
+  // kapatıyordu. Pivot artık sayfanın kendi koordinatından TÜRÜYOR ve aynı
+  // hamle modeli ters yöne götürüyor.
+  //
+  // Kapı olmadan bu sessizce yapılırdı: model yine çözülür, hiçbir uyarı
+  // çıkmaz, yalnız sonuç Gates'ten uzaklaşır.
+  test('Gates Belt Data BMC\'ye KONMAZ — karıştırmak modeli UZAKLAŞTIRIYOR', () => {
+    const gates = 543.9;                       // AG00976 Mean tasarım gerginliği
+    const bugun = kur().build;
+    const karisik = kur((nodes) => {
+      Object.assign(tipOf(nodes, 'fead-belt'),
+        { effLength: 1714.6, tolerance: 6, wearPct: 0.006 });
+      tipOf(nodes, 'fead-solver').lengthOffsetMm = 1.6;
+    }).build;
+
+    // İkisi de çözülüyor — fark bir hata değil, bir SAPMA.
+    expect(bugun.ok).toBe(true);
+    expect(karisik.ok).toBe(true);
+
+    const sapma = (b) => Math.abs(b.springTensionN - gates) / gates;
+    expect(sapma(bugun)).toBeLessThan(0.03);      // ÖLÇÜLDÜ: %2,2
+    expect(sapma(karisik)).toBeGreaterThan(0.06); // ÖLÇÜLDÜ: %7,4
+    // Yön açık: karıştırmak sapmayı en az iki katına çıkarıyor.
+    expect(sapma(karisik)).toBeGreaterThan(sapma(bugun) * 2);
+
+    // Aynı şey yay momentinde de görünüyor: çözülen nokta nominalden UZAKLAŞIYOR.
+    const nom = (b) => Math.abs(F.springTorque(b.sys, F.meanRel(b.sys))
+      - SAYFA.springMeanNm) / SAYFA.springMeanNm;
+    expect(nom(bugun)).toBeLessThan(0.015);       // ÖLÇÜLDÜ: %0,79
+    expect(nom(karisik)).toBeGreaterThan(0.02);   // ÖLÇÜLDÜ: %2,75
   });
 
   test('tahrik oranı 1.1 — krank/fan çapından', () => {
@@ -507,10 +555,16 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
   test('türetilen değer çekirdeğe ANKRAJ olarak yazılıyor', () => {
     const { build } = kur();
     expect(build.warnings).toEqual([]);
-    // Bu sistemde 22,87 Nm / 0,6990 mm/° = 571 N. (Gergi künyesi Gates
-    // raporunun "Tensioner Data" bloğundan geldiğinden beri; sayfanın
-    // TÜRETİLMİŞ pivotuyla 650 N çıkıyordu ve Gates'in 544 N'undan %19,5
-    // yukarıdaydı. Kalan %5 kayış künyesinden — bkz. yay momenti testi.)
+    // ÖLÇÜLDÜ: 22,245 Nm / 0,7296 mm/° = 532,1 N. Üç sayı da türev — hiçbiri
+    // girilmiyor (yay künyesi + çözülmüş geometri).
+    //
+    // Bu satırın sayısı iki kez değişti ve ikisi de AYNI şeyi ölçüyor; hangi
+    // pivotun kullanıldığını söylemeden okunamaz:
+    //   sayfanın TÜRETİLMİŞ pivotu (−259,94/104,15)  → 650,0 N   (+%19,5)
+    //   Gates'in ÖLÇÜLMÜŞ pivotu   (−250,00/110,00)  → 571,1 N   (+%5,0)
+    //   parça çiziminden TÜREYEN   (−256,59/123,97)  → 532,1 N   (−%2,2)
+    // (yüzdeler Gates'in 543,9 N'una göre; o rapor KENDİ kayışıyla koşuyor,
+    // bu örnek hâlâ sayfanınkiyle — bkz. "KAYIŞ KÜNYESİ AYRI" testi.)
     expect(build.springTensionN).toBeCloseTo(532, 0);
     expect(build.sys.designTensionN).toBeCloseTo(build.springTensionN, 9);
     expect(build.cfg.designTensionN).toBeCloseTo(build.springTensionN, 9);
