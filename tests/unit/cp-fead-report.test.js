@@ -599,9 +599,16 @@ describe('§8.7 — hangi sayı GİRDİ, hangisi TÜREV', () => {
       .forEach((ad) => expect(satir(ad)).toContain('<b>girdi</b>'));
     ['Gergi kasnağı sarımı', 'Hubload–kol açısı', 'Take-up oranı', 'Yay momenti']
       .forEach((ad) => expect(satir(ad)).toContain('<b>türev</b>'));
-    // Tasarım gerginliği GİRDİ ve ankraj olduğu yazılı
-    expect(satir('Tasarım gerginliği')).toContain('<b>girdi</b>');
+    // Tasarım gerginliği ARTIK TÜREV: alan kaldırıldı, yay dengesinden geliyor.
+    // Eskiden burada '<b>girdi</b>' aranıyordu ve o doğruydu — Çözücü panelinde
+    // bir alan vardı. Bağımsız veri olmadığı ölçülünce (10 Gates raporunda
+    // girilen ↔ türeyen farkı %0.12) alan kaldırıldı; satır taraf değiştirdi.
+    expect(satir('Tasarım gerginliği')).toContain('<b>türev</b>');
     expect(satir('Tasarım gerginliği')).toMatch(/ankraj/i);
+    // ve "hiçbiri girilmez" ayracının ALTINDA olmalı — üstünde kalırsa belge
+    // onu hâlâ girdi diye sunuyor demektir.
+    expect(blok.indexOf('hiçbiri girilmez'))
+      .toBeLessThan(blok.indexOf('Tasarım gerginliği'));
   });
 
   test('take-up bir girdi DEĞİL — ve rapor bunu söylüyor', () => {
@@ -610,47 +617,55 @@ describe('§8.7 — hangi sayı GİRDİ, hangisi TÜREV', () => {
   });
 });
 
-describe('§8.7 — tasarım gerginliği: iki kanal', () => {
-  test('tutan modelde iki kanal da basılıyor ve ✓ veriliyor', () => {
-    const i = HTML8.indexOf('İki kanalın karşılaştırması');
-    const blok = HTML8.slice(i, HTML8.indexOf('</table>', i));
-    expect(blok).toContain('Girilen tasarım gerginliği');
-    expect(blok).toContain('Yay dengesinden türetilen');
-    expect(blok).toMatch(/eşiğinin içinde/);
-    expect(HTML8).toContain('İki kanal birbirini doğruluyor');
+// Bu blok eskiden İKİ KANALI (girilen ankraj ↔ yay dengesi) ve uyuşmazlık
+// uyarısını sınıyordu. Alan kaldırıldığı için karşılaştırılacak ikinci sayı
+// yok; bölüm artık KURULUŞ anlatıyor ve kapı da onu tutuyor.
+describe('§8.7 — tasarım gerginliğinin kuruluşu (tek kanal)', () => {
+  test('formül ve sayı basılıyor, "sorulmaz" olduğu yazılı', () => {
+    expect(HTML8).toContain('Tasarım gerginliği nereden geliyor');
+    expect(HTML8).toMatch(/<b>sorulmaz<\/b>/);
+    // T = M/(dL/dθ) formülü belgede
+    expect(HTML8).toMatch(/\\frac\{M\(\\theta\)\}\{dL\/d\\theta\}/);
+    // ve hesaplanan değer TR biçiminde basılı
+    const T = R8.build.springTensionN;
+    expect(T).toBeGreaterThan(0);
+    expect(HTML8).toContain(Math.round(T).toString());
   });
 
-  // ÖLÇÜLDÜ (BMC): yay dengesi 650 N iken designTensionN 400 girilince BÜTÜN
-  // gerilmeler ve hubloadlar 250 N kayıyor, hata mesajı çıkmıyor ve kayma
-  // emniyeti bir ORAN olduğu için tabloya bakarak da anlaşılmıyor.
-  test('uyuşmazlıkta KAÇ NEWTON kaydığı yazılıyor ve ✗ veriliyor', () => {
+  test('neden sorulmadığı — sessiz kayma sınıfı belgede anlatılıyor', () => {
+    expect(HTML8).toContain('Neden ayrıca sorulmuyor');
+    expect(HTML8).toMatch(/çelişebilir/);
+    expect(HTML8).toMatch(/ancak kısmen gösterir/i);
+    // Değiştirilecek şeyin KÜNYE olduğu söyleniyor, bir alan değil
+    expect(HTML8).toMatch(/gergi <b>künyesidir<\/b>/);
+  });
+
+  test('ESKİ karşılaştırma tablosu ARTIK YOK', () => {
+    expect(HTML8).not.toContain('İki kanalın karşılaştırması');
+    expect(HTML8).not.toContain('Girilen tasarım gerginliği');
+    expect(HTML8).not.toContain('Uyuşmazlık sessizdir');
+  });
+
+  // Kullanıcı eski bir kayıttan gelen designTensionN taşısa bile rapor onu
+  // KULLANMAMALI: ankraj her koşulda yay dengesinden gelir.
+  test('eski kayıttaki designTensionN raporu ETKİLEMİYOR', () => {
     const R = coz({ mutate: (ns) => {
       const s = ns.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver)[0];
       s.data.designTensionN = 400;
     } });
+    expect(R.build.sys.designTensionN).toBeCloseTo(R8.build.sys.designTensionN, 6);
+    // Envanterdeki tasarım gerginliği satırı türetileni göstermeli, 400'ü değil.
+    // ("400" dizesini belgenin TAMAMINDA aramak yanlış olurdu: devir değerleri
+    //  ve başka sayılar içinde meşru olarak geçiyor.)
     const H = RP._frSection8(R, NODE);
-    const i = H.indexOf('İki kanalın karşılaştırması');
-    const blok = H.slice(i, H.indexOf('</table>', i));
-    expect(blok).toMatch(/eşiğinin dışında/);
-    expect(H).toContain('Uyuşmazlık sessizdir');
-    const m = /bütün açıklık gerilmeleri ve bütün\s+hubloadlar <b>(−?[\d,]+) N<\/b> kayar/.exec(H.replace(/\s+/g, ' '))
-           || /hubloadlar <b>(−?[\d,]+) N<\/b> kayar/.exec(H);
-    expect(m).toBeTruthy();
-    expect(Math.abs(_sy(m[1]))).toBeCloseTo(250, 0);
-    // ÖLÇÜLDÜ (800 d/d, 650→400 N): yük ÇEKEN kasnakların SF'i değişiyor
-    // (Sürücü 5,348→4,024) ama yük çekmeyenlerde gerginlik oranı TAM 1 olduğu
-    // için SF hiç değişmiyor — ve HÜKMÜ VEREN en düşük SF tam orada: %0,0.
-    // Uyarının varlık sebebi bu: tablonun hükmü uyuşmazlığı göstermeyebiliyor.
-    const s1 = R.analysis.duty[0].slip, s0 = R8.analysis.duty[0].slip;
-    const cift = s0.map((x, k) => [x, s1[k]]);
-    const yuksuz = cift.filter(([a]) => Math.abs(a.tensionRatio - 1) < 1e-9);
-    expect(yuksuz.length).toBeGreaterThan(0);
-    yuksuz.forEach(([a, b]) => expect(b.SF).toBeCloseTo(a.SF, 9));
-    const yuklu = cift.filter(([a]) => Math.abs(a.tensionRatio - 1) > 1e-6);
-    expect(yuklu.length).toBeGreaterThan(0);
-    expect(yuklu.some(([a, b]) => Math.abs(b.SF / a.SF - 1) > 0.05)).toBe(true);
-    expect(Math.min(...s1.map((x) => x.SF))).toBeCloseTo(Math.min(...s0.map((x) => x.SF)), 9);
-    expect(H).toMatch(/ancak KISMEN gösterir/);
+    const q = H.indexOf('Tasarım gerginliği (ankraj)');
+    expect(q).toBeGreaterThan(-1);
+    const satir = H.slice(q, H.indexOf('</tr>', q));
+    expect(satir).toContain(Math.round(R8.build.springTensionN).toString());
+    expect(satir).not.toContain('400');
+    // gerilme zinciri de kaymamalı
+    expect(R.analysis.duty[0].perPulley.map((p) => p.exitTensionN))
+      .toEqual(R8.analysis.duty[0].perPulley.map((p) => p.exitTensionN));
   });
 });
 
