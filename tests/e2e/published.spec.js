@@ -158,13 +158,27 @@ test.describe('Yayınlanan tek dosya — çevrimdışı STEP', () => {
     expect(r.ok).toBe(true);                 // ← ağ yokken de açılıyor
     expect(r.wasm).toBe('(gömülü)');         // okuyucu dosyanın içinden geldi
     expect(r.worker).toBe(true);
-    expect(r.tri).toBe(64);
+    // Üçgen sayısı ÇEKİRDEĞE bağlı: occt-import-js 64 üretiyordu, ham OCCT
+    // (opencascade.js) aynı sapmada 52. Sayının kendisi bir sözleşme değil;
+    // burada bir ÇAPA — sessizce değişirse çekirdek ya da ağ ayarı değişmiş
+    // demektir ve o bilinmeli.
+    expect(r.tri).toBe(52);
     expect(r.faces).toBe(7);
     // "indiriliyor" aşaması HİÇ görülmemeli — indirilecek bir şey yok.
     expect(r.asamalar).not.toContain('download');
 
-    // blob: worker URL'i ağ değildir; onun dışında hiçbir şey çıkmamalı.
-    expect(istekler.slice(n0).filter((u) => !/^blob:/.test(u))).toEqual([]);
+    // blob: worker URL'i ağ değildir. Uygulamanın KENDİ arka plan yoklamaları
+    // da (deploy durumu: version.json + GitHub Actions API) bu testin konusu
+    // değil — STEP içe aktarmasıyla ilgileri yok, kendi zamanlayıcılarından
+    // çıkıyorlar ve zaten `route.abort()` ile düşüyorlar. Çekirdek 62,8 MB'a
+    // büyüyünce içe aktarma penceresi uzadı ve o yoklamalar pencerenin İÇİNE
+    // düşmeye başladı; testin ölçtüğü şey değişmedi.
+    //
+    // KAPI ŞU: içe aktarma yüzünden çıkan HİÇBİR istek olmamalı — özellikle
+    // çekirdeğe/vendor'a giden.
+    const disari = istekler.slice(n0).filter((u) => !/^blob:/.test(u));
+    expect(disari.filter((u) => /wasm|vendor|opencascade|occt/i.test(u))).toEqual([]);
+    expect(disari.filter((u) => !/version\.json|api\.github\.com/.test(u))).toEqual([]);
   });
 });
 
