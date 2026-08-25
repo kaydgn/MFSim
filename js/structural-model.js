@@ -3,37 +3,48 @@
 // ============================================================================
 // Üç katmanın ORTASI (bkz. cp-structural.js başlığı ve CLAUDE.md):
 //
-//   vendor/occt-import-js.*  HESAP ÇEKİRDEĞİ — DIŞARIDAN GELDİ, BİREBİR DURUR.
+//   vendor/opencascade.*     HESAP ÇEKİRDEĞİ — DIŞARIDAN GELDİ, BİREBİR DURUR.
 //                            OpenCascade'in emscripten arayüzü. B-rep okur,
-//                            üçgenler ve CAD yüz aralıkları döner.
+//                            KATILARI BİRLEŞTİRİR (boolean) ve üçgenler.
 //   js/structural-model.js   BU DOSYA. KÖPRÜ: ham occt çıktısını MFSim'in
 //                            modeline çevirir, yüz kimliğini kurar, hatayı
 //                            Türkçeleştirir. DOM'suz, saf.
 //   js/cp-structural.js      SUNUM. Yalnız HTML kurar; kendi geometrisini
 //                            HESAPLAMAZ.
 //
+// ── ÇEKİRDEK NEDEN DEĞİŞTİ (2026-08-25) ─────────────────────────────────────
+// Önceki çekirdek `occt-import-js` idi (7,6 MB) ve SALT OKUYUCUYDU: dışa
+// verdiği üç fonksiyon ReadStepFile / ReadIgesFile / ReadBrepFile. Kullanıcı
+// çok gövdeli CAD dosyalarının TEK KATI olarak gelmesini istedi (ağ örme
+// sorunları yüzünden) — ve bunun ucuz bir çaresi yok: değen ama ayrı duran
+// katıların yüzey üçgenlemesi arayüzde uyuşmuyor (ÖLÇÜLDÜ, as1-tu-203:
+// 1 800 köşeden yalnız 204'ü ortak), yani üçgenleri tek tampona yığmak bir tet
+// ağ örücüsü için hâlâ kendi kendini kesen girdi. Uyumlu arayüz ancak B-Rep
+// seviyesinde imprint & merge ile kurulur.
+//
+// `opencascade.js@1.1.1` bunu veriyor (BRepAlgoAPI_Fuse, BOPAlgo,
+// ShapeUpgrade_UnifySameDomain) ama 62,8 MB — tek dosya 12,6 → 26,8 MB.
+// Karar kullanıcınındı, ölçümlerle alındı (CLAUDE.md).
+//
 // ── VENDORLU KÜTÜPHANE DOKUNULMAZ ───────────────────────────────────────────
-// `vendor/occt-import-js.js` MFSim içinde yazılmadı ve MFSim stiline
-// ÇEVRİLMEZ — `js/fead-core.js` ile aynı kural, aynı gerekçe: değeri OCCT'nin
-// B-rep çekirdeğini birebir üretmesi, stil uyarlaması sırasındaki tek bir
-// hata "okunan ama yanlış" bir geometri üretir. Güncelleme de dışarıdan gelir
-// (npm: occt-import-js). Lisans LGPL-2.1 (MFSim MIT): kütüphane uygulamaya
-// GÖMÜLÜ ama DEĞİŞTİRİLEBİLİR — kaynak `vendor/occt-import-js.wasm` depoda
-// duruyor, lisans metinleri dağıtımla gidiyor ve `npm run build:occt-wasm`
-// gömülü blob'u o dosyadan yeniden üretiyor. LGPL'in istediği "ayrı dosya"
-// değil, değiştirilebilirliktir.
+// `vendor/opencascade.js` MFSim içinde yazılmadı ve MFSim stiline ÇEVRİLMEZ —
+// `js/fead-core.js` ile aynı kural, aynı gerekçe: değeri OCCT'nin B-rep
+// çekirdeğini birebir üretmesi. Güncelleme de dışarıdan gelir (npm:
+// opencascade.js). Lisans LGPL-2.1 (MFSim MIT): kütüphane uygulamaya GÖMÜLÜ
+// ama DEĞİŞTİRİLEBİLİR — kaynak `vendor/opencascade.wasm.gz` depoda duruyor
+// (62,8 MB ham depoya konmaz), lisans metinleri dağıtımla gidiyor ve
+// `npm run build:occt-wasm` gömülü blob'u o dosyadan yeniden üretiyor. LGPL'in
+// istediği "ayrı dosya" değil, değiştirilebilirliktir.
 //
 // ── .wasm UYGULAMAYA GÖMÜLÜ — ÇEVRİMDIŞI ÇALIŞIR ───────────────────────────
-// `js/structural-occt-wasm.js` (gzip+base64, 3,96 MB; ham 7,25 MB) uygulamanın
+// `js/structural-occt-wasm.js` (gzip+base64, 17,5 MB; ham 62,8 MB) uygulamanın
 // içinde taşınır ve İLK içe aktarmada talep üzerine çalıştırılır. Eskiden
 // `vendor/` yolundan indiriliyordu; iki sorunu vardı:
 //   1) ÇEVRİMDIŞI ÇALIŞMIYORDU — MFSim tek dosya olarak indirilip kullanılıyor,
 //      yanında vendor/ olmayan bir kurulumda STEP hiç açılmıyordu.
 //   2) Kullanıcıya YANLIŞ ŞEYİ anlatıyordu: yükleme göstergesi PARÇANIN
 //      işlendiğini söylemeli, kütüphanenin indiğini değil.
-// `vendor/occt-import-js.wasm` depoda KALIYOR: hem gömülü varlığın kaynağı,
-// hem eski tarayıcı yedeği (DecompressionStream yoksa), hem de LGPL-2.1'in
-// "kütüphane değiştirilebilir olmalı" koşulunun karşılığı.
+// Derleme bedeli ÖLÇÜLDÜ (gerçek tarayıcı): 7,8 s, oturumda BİR KEZ.
 //
 // ── WASM `wasmBinary` İLE VERİLİR, `locateFile` İLE DEĞİL ───────────────────
 // Emscripten glue'u .wasm yolunu normalde `document.currentScript.src`'den
@@ -80,15 +91,16 @@ var VE_STR_GEOM_UNIT = 'millimeter';
 // yüzey yeniden-mesh'leme koyacak; buradaki üçgen doğrudan TetGen'e GİTMEZ.
 var VE_STR_GEOM_DEFLECTION = { type: 'bounding_box_ratio', linear: 0.002, angular: 0.5 };
 
-// .wasm aday yolları — YALNIZ YEDEK YOL. Normalde okuyucu gömülü varlıktan
-// gelir (yukarı bkz.) ve buraya hiç düşülmez; bu liste yalnız gömülü varlık
-// okunamadığında (ör. `DecompressionStream` bilmeyen tarayıcı) sırayla
-// denenir, ilk tutan kazanır. Hiçbiri tutmazsa denenen yollar yazılır —
-// sessizce boş geometri dönülmez.
-//   vendor/…      : index.html (modüler) ve `npx serve` ile kök dizinden servis
-//   ./vendor/…    : alt dizinden servis edilen kurulum
-//   occt-…        : .wasm dağıtılan dosyanın YANINA konmuşsa
-var VE_STR_OCCT_WASM_PATHS = ['vendor/occt-import-js.wasm', './vendor/occt-import-js.wasm', 'occt-import-js.wasm'];
+// AĞDAN İNDİRME YOLU YOK — çekirdek yalnız gömülü varlıktan gelir.
+//
+// Eskiden bir yedek vardı: gömülü varlık okunamazsa `vendor/…wasm` indirilirdi.
+// Tek gerekçesi `DecompressionStream` bilmeyen tarayıcıydı; ama vendor'daki
+// dosya artık ZATEN gzip'li (62,8 MB ham depoya konmaz), yani o tarayıcıda
+// yedek de açılamazdı. Yani yedek, var olmayan bir durumu kurtarıyordu.
+// Kaldırıldı; eksik yetenek SEBEBİYLE yazılıyor (aşağıda _sgGunzip).
+//
+// Vendor dosyası depoda KALIYOR: gömülü varlığın kaynağı ve LGPL-2.1'in
+// "kütüphane değiştirilebilir olmalı" koşulunun karşılığı.
 
 // Tek seferlik yükleme sözü. İkinci çağrı aynı sözü döner → varlık iki kez
 // açılmaz, WASM iki kez derlenmez.
@@ -107,90 +119,239 @@ function _sgTyped(Ctor, arr){
   return (arr instanceof Ctor) ? arr : new Ctor(arr);
 }
 
-// occt fabrikasını bul: tarayıcıda vendorlu script global `occtimportjs`
-// bırakır; Node'da (testler) require ile alınır.
+// OCCT fabrikasını bul: tarayıcıda vendorlu glue global `opencascade`
+// bırakır. Node tarafında (testler) glue bir ESM DEĞİL — `export default`
+// satırı vendor'a alınırken çıkarıldı — ama yine de `require` ile alınamıyor
+// (modül.exports yazmıyor), bu yüzden testler fabrikayı `opts.factory` ile
+// veriyor. Sessiz bir `null` yerine sebep yazılıyor.
 function _sgOcctFactory(){
-  if(typeof occtimportjs !== 'undefined') return occtimportjs;
-  if(typeof window !== 'undefined' && window.occtimportjs) return window.occtimportjs;
-  if(typeof require === 'function'){
-    try { return require('../vendor/occt-import-js.js'); } catch(e){}
-  }
+  if(typeof opencascade !== 'undefined') return opencascade;
+  if(typeof self !== 'undefined' && self.opencascade) return self.opencascade;
+  if(typeof window !== 'undefined' && window.opencascade) return window.opencascade;
   return null;
 }
 
 // ─── İLERLEME AŞAMALARI ─────────────────────────────────────────────────────
 // Panel bu adlara göre yazı seçiyor:
-//   reader   okuyucu hazırlanıyor — YALNIZ ilk içe aktarmada, gömülü .wasm
-//            açılıp derlenirken (worker'da). Ağ YOK.
-//   download YEDEK yol: gömülü varlık yoksa vendor/'dan indiriliyor. Tek
-//            BELİRLİ (%) aşama budur ve normalde HİÇ GÖRÜLMEZ.
-//   parse    geometri çözümleniyor — kullanıcının beklediği asıl iş.
-//   build    sahne kuruluyor.
+//   reader   çekirdek hazırlanıyor — YALNIZ ilk içe aktarmada, gömülü .wasm
+//            açılıp derlenirken (worker'da). Ağ YOK. ÖLÇÜLDÜ: 7,8 s.
+//   parse    STEP çözümleniyor.
+//   fuse     katılar TEK KATIYA birleştiriliyor (boolean). Yalnız dosyada
+//            birden çok katı varsa görülür.
+//   build    ağ örülüp sahne kuruluyor.
 // Belirsiz aşamalara uydurma bir yüzde koymak — "%60" deyip 8 saniye
 // beklemek — yalan olurdu; orada akan çubuk + geçen süre gösteriliyor.
-var VE_STR_STAGES = ['reader', 'download', 'parse', 'build'];
+var VE_STR_STAGES = ['reader', 'parse', 'fuse', 'build'];
 
-// `vendor/occt-import-js.wasm`'ın AÇILMIŞ boyutu. Yüzde bunun üzerinden
-// hesaplanıyor çünkü `Content-Length` GÜVENİLMEZ — ÖLÇÜLDÜ: hem `npx serve`
-// hem GitHub Pages bu dosyayı `content-encoding: br` + `transfer-encoding:
-// chunked` ile gönderiyor, o durumda başlık HİÇ GELMİYOR (tarayıcıda
-// `headers.get('content-length')` → null). Yani tam da yayına çıkan kurulumda
-// yüzde asla görünmezdi.
+// ═══════════════════════════════════════════════════════════════════════════
+//  GEOMETRİ BORU HATTI — oku → BİRLEŞTİR → ağ ör → çıkar
+// ═══════════════════════════════════════════════════════════════════════════
+// TEK KAYNAK, İKİ ORTAM. Bu fonksiyon hem ana iş parçacığında doğrudan
+// çağrılıyor hem de `toString()` ile worker Blob'una yazılıyor. İkinci bir
+// kopya tutmak, iki yolun zamanla ayrışması demekti — ve ayrışma sessiz
+// olurdu: worker yolu çalışırken yedek yol başka bir geometri üretirdi.
+// Bu yüzden DIŞARIDAN HİÇBİR ŞEYE BAŞVURMAZ (yalnız `oc`, `bytes`, `opts`).
 //
-// `fetch` gövdeyi saydam biçimde açtığı için okunan baytlar AÇILMIŞ baytlardır
-// → bu sabitle karşılaştırmak doğru. Sabit dosyayla birlikte kaymasın diye
-// tests/unit/structural-model.test.js gerçek dosya boyutuna KİLİTLİYOR.
-var VE_STR_OCCT_WASM_BYTES = 7604031;
+// ÇOK GÖVDELİ CAD DOSYASI TEK KATIYA İNER (kullanıcı kararı, 2026-08-25).
+// Sebep ağ örme: birbirine değen ama AYRI duran katıların yüzey üçgenlemesi
+// arayüzde uyuşmuyor (ÖLÇÜLDÜ, as1-tu-203: 1 800 köşeden yalnız 204'ü ortak),
+// ve uyumsuz arayüz bir tet ağ örücüsü için kendi kendini kesen girdi demek.
+// Uyumlu arayüz ancak B-Rep seviyesinde imprint & merge ile kurulur:
+//
+//   BRepAlgoAPI_Fuse (tek BOP, arguments=ilk · tools=geri kalanı)
+//     → ShapeUpgrade_UnifySameDomain (iç duvarlar ve dikişler silinir)
+//
+// ÖLÇÜLDÜ (gerçek OCCT):
+//   plaka + 2 kulak + 4 göbek (7 gövde) → 1 katı · 18 yüz ·  135 ms
+//   3 değen kutu                        → 1 katı ·  6 yüz ·  119 ms
+//   as1-tu-203 montajı (18 katı)        → 1 katı · 104 yüz · 15,5 s
+//   hacim sapması: %0,00002
+// Yani çok gövdeli bir PARÇADA birleştirme fark edilmiyor; saniyeler ancak
+// cıvataları deliklerden geçen gerçek bir MONTAJDA görülüyor.
+function _sgOcctPipeline(oc, bytes, opts){
+  opts = opts || {};
+  var ANY = oc.TopAbs_ShapeEnum.TopAbs_SHAPE;
+  var SOLID = oc.TopAbs_ShapeEnum.TopAbs_SOLID;
+  var FACE = oc.TopAbs_ShapeEnum.TopAbs_FACE;
+  var simdi = function(){ return (typeof Date !== 'undefined' && Date.now) ? Date.now() : 0; };
+  var sure = {};
 
-// .wasm'ı aday yollardan İLERLEME BİLDİREREK getir. Hangi yolun tuttuğunu da
-// döner ki panel bunu yazabilsin (bir kurulumda neden çalışmadığı ancak böyle
-// anlaşılır).
-function _sgFetchWasm(paths, onProgress, expectedBytes){
-  var list = (paths && paths.length) ? paths.slice() : VE_STR_OCCT_WASM_PATHS.slice();
-  var tried = [];
-  function next(){
-    if(!list.length){
-      return Promise.reject(new Error('STEP okuyucusu (occt-import-js.wasm) bulunamadı. Denenen yollar: ' + tried.join(', ')));
-    }
-    var url = list.shift();
-    tried.push(url);
-    return fetch(url).then(function(res){
-      if(!res.ok) throw new Error(res.status + ' ' + res.statusText);
-      var hdr = Number(res.headers && res.headers.get && res.headers.get('content-length')) || 0;
-      // Başlık yoksa (br/chunked — yayındaki normal durum) BEKLENEN boyutu
-      // kullan. Yine de bilinmiyorsa akış devam eder, yalnız yüzde olmaz.
-      var total = hdr || Number(expectedBytes) || 0;
-      // Akış okunamıyorsa (eski tarayıcı) BELİRSİZ ilerlemeye düş — indirme
-      // yine çalışır.
-      if(!res.body || typeof res.body.getReader !== 'function'){
-        if(onProgress) onProgress('download', { loaded: 0, total: total, pct: null });
-        return res.arrayBuffer();
-      }
-      var reader = res.body.getReader();
-      var chunks = [], loaded = 0;
-      return (function pump(){
-        return reader.read().then(function(r){
-          if(r.done){
-            var all = new Uint8Array(loaded), o = 0;
-            for(var i = 0; i < chunks.length; i++){ all.set(chunks[i], o); o += chunks[i].length; }
-            return all.buffer;
-          }
-          chunks.push(r.value);
-          loaded += r.value.length;
-          if(onProgress){
-            // Tahminimiz tutmadıysa (dosya güncellenmiş, sabit kalmış) yüzde
-            // GÖSTERİLMEZ: %140 yazan bir çubuk, çubuk olmamasından kötüdür.
-            var pct = (total && loaded <= total) ? (loaded / total) : null;
-            onProgress('download', { loaded: loaded, total: total, pct: pct });
-          }
-          return pump();
-        });
-      })();
-    }).then(function(buf){
-      return { buffer: buf, url: url };
-    })['catch'](function(){ return next(); });
+  function sayim(shape, tip){
+    var n = 0, ex = new oc.TopExp_Explorer_2(shape, tip, ANY);
+    for(; ex.More(); ex.Next()) n++;
+    ex.delete();
+    return n;
   }
-  return next();
+  function hacim(shape){
+    var g = new oc.GProp_GProps_1();
+    oc.BRepGProp.VolumeProperties_1(shape, g, false, false, false);
+    var v = g.Mass();
+    g.delete();
+    return v;
+  }
+  function sinirKutusu(shape){
+    var b = new oc.Bnd_Box_1();
+    oc.BRepBndLib.Add(shape, b, true);
+    if(b.IsVoid()){ b.delete(); return null; }
+    var a = b.CornerMin(), c = b.CornerMax();
+    var mn = [a.X(), a.Y(), a.Z()], mx = [c.X(), c.Y(), c.Z()];
+    a.delete(); c.delete(); b.delete();
+    var dx = mx[0] - mn[0], dy = mx[1] - mn[1], dz = mx[2] - mn[2];
+    return { min: mn, max: mx, size: [dx, dy, dz], center: [(mn[0]+mx[0])/2, (mn[1]+mx[1])/2, (mn[2]+mx[2])/2],
+             diag: Math.sqrt(dx*dx + dy*dy + dz*dz) };
+  }
+
+  // ── 1) OKU ────────────────────────────────────────────────────────────────
+  var t = simdi();
+  try { oc.FS.unlink('ve-in.step'); } catch(e){}
+  oc.FS.writeFile('ve-in.step', bytes);
+  var rd = new oc.STEPControl_Reader_1();
+  if(rd.ReadFile('ve-in.step') !== oc.IFSelect_ReturnStatus.IFSelect_RetDone){
+    // OCCT KENDİ TEŞHİSİNİ İSTENMEDEN YAZMIYOR (eski okuyucu yazıyordu).
+    // PrintCheckLoad onu stdout'a döker, print/printErr kancası yakalar ve
+    // hata mesajına iliştirilir — kullanıcı "dosya okunamadı" yerine SEBEBİ
+    // görür. Çağrı `try` içinde: teşhis alınamaması asıl hatayı gizlemesin.
+    try { rd.PrintCheckLoad(false, oc.IFSelect_PrintCount.IFSelect_ItemsByEntity); } catch(e2){}
+    throw new Error('Dosya STEP olarak okunamadı. Dosya bozuk olabilir ya da desteklenmeyen bir sürümde yazılmış olabilir.');
+  }
+  rd.TransferRoots();
+  var shape = rd.OneShape();
+  sure.read = simdi() - t;
+  if(!shape || shape.IsNull()){
+    try { rd.PrintCheckTransfer(false, oc.IFSelect_PrintCount.IFSelect_ItemsByEntity); } catch(e2){}
+    throw new Error('STEP dosyası okundu ama içinde katı/yüzey geometrisi yok (yalnız eğri, nokta ya da boş montaj olabilir).');
+  }
+
+  // ── 2) KATILARI TOPLA ─────────────────────────────────────────────────────
+  var kati = [], ex = new oc.TopExp_Explorer_2(shape, SOLID, ANY);
+  for(; ex.More(); ex.Next()) kati.push(oc.TopoDS.Solid_1(ex.Current()));
+  ex.delete();
+  var onceKati = kati.length;
+  var onceHacim = onceKati ? hacim(shape) : 0;
+
+  // ── 3) BOOLEAN ────────────────────────────────────────────────────────────
+  var fuse = { istendi: false, ok: false, once: onceKati, sonra: onceKati, ms: 0, hata: '',
+               hacimOnce: onceHacim, hacimSonra: onceHacim };
+  if(onceKati > 1 && opts.fuse !== false){
+    fuse.istendi = true;
+    if(opts.onStage) opts.onStage('fuse');
+    t = simdi();
+    try {
+      var arg = new oc.TopTools_ListOfShape_1(); arg.Append_1(kati[0]);
+      var tool = new oc.TopTools_ListOfShape_1();
+      for(var i = 1; i < kati.length; i++) tool.Append_1(kati[i]);
+      var bop = new oc.BRepAlgoAPI_Fuse_1();
+      bop.SetArguments(arg); bop.SetTools(tool);
+      bop.Build();
+      if(bop.IsDone()){
+        // UnifySameDomain OLMADAN da tek katı çıkar ama iç arayüzden kalan
+        // dikiş yüzeyleri durur: aynı düzlemin iki parçası ayrı CAD yüzü
+        // olarak görünür ve sınır koşulu seçimi gereksizce bölünür.
+        var u = new oc.ShapeUpgrade_UnifySameDomain_2(bop.Shape(), true, true, false);
+        u.Build();
+        shape = u.Shape();
+        fuse.ok = true;
+      } else {
+        fuse.hata = 'çözücü birleştirmeyi tamamlayamadı';
+      }
+    } catch(err){
+      fuse.hata = String((err && err.message) || err);
+    }
+    fuse.ms = simdi() - t;
+    sure.fuse = fuse.ms;
+    fuse.sonra = sayim(shape, SOLID);
+    fuse.hacimSonra = hacim(shape);
+  }
+
+  // ── 4) AĞ ÖR ──────────────────────────────────────────────────────────────
+  if(opts.onStage) opts.onStage('build');
+  var bb = sinirKutusu(shape);
+  // Oran → MUTLAK sapma. occt-import-js `bounding_box_ratio`'yu kendi
+  // çeviriyordu; ham OCCT mutlak mm istiyor, çeviri artık burada ve AÇIK.
+  var oran = (opts.deflection && opts.deflection.linear) || 0.0005;
+  var linear = Math.max(1e-4, (bb ? bb.diag : 100) * oran);
+  var angular = (opts.deflection && opts.deflection.angular) || 0.5;
+  t = simdi();
+  new oc.BRepMesh_IncrementalMesh_2(shape, linear, false, angular, false);
+  sure.mesh = simdi() - t;
+
+  // ── 5) ÜÇGENLERİ VE YÜZ ARALIKLARINI ÇIKAR ───────────────────────────────
+  // Normaller YÜZ İÇİNDE ortalanıyor: CAD'in doğru gölgelemesi budur —
+  // yüzey içinde pürüzsüz, yüz sınırında keskin. Bütün parçada ortalamak
+  // keskin kenarları yuvarlatır ve teknik görüntüyü yalanlar.
+  t = simdi();
+  var pos = [], nrm = [], idx = [], yuzler = [], triTop = 0;
+  var fe = new oc.TopExp_Explorer_2(shape, FACE, ANY), fi = 0;
+  for(; fe.More(); fe.Next(), fi++){
+    var f = oc.TopoDS.Face_1(fe.Current());
+    var loc = new oc.TopLoc_Location_1();
+    var h = oc.BRep_Tool.Triangulation(f, loc);
+    if(h.IsNull()){
+      // Üçgenlenemeyen yüz SESSİZCE atlanmaz: kimliği listede kalır, yalnız
+      // üçgeni yoktur. Aksi hâlde sonraki yüzlerin kimliği KAYAR.
+      yuzler.push({ index: fi, first: -1, last: -1, triCount: 0 });
+      loc.delete();
+      continue;
+    }
+    var tri = h.get();
+    var kimlik = loc.IsIdentity();
+    var trsf = kimlik ? null : loc.Transformation();
+    var ters = (f.Orientation_1() === oc.TopAbs_Orientation.TopAbs_REVERSED);
+    var nN = tri.NbNodes(), nT = tri.NbTriangles();
+    var v0 = pos.length / 3;
+
+    var yerel = new Float64Array(nN * 3);
+    for(var k = 1; k <= nN; k++){
+      var pt = tri.Node(k);
+      if(!kimlik){ var pt2 = pt.Transformed(trsf); pt.delete(); pt = pt2; }
+      yerel[(k-1)*3] = pt.X(); yerel[(k-1)*3+1] = pt.Y(); yerel[(k-1)*3+2] = pt.Z();
+      pt.delete();
+    }
+    var acc = new Float64Array(nN * 3);
+    var yt = new Int32Array(nT * 3);
+    for(var j = 1; j <= nT; j++){
+      var tr = tri.Triangle(j);
+      var a = tr.Value(1) - 1, b = tr.Value(2) - 1, c = tr.Value(3) - 1;
+      tr.delete();
+      // Ters yönelimli yüzde sarım çevriliyor: yoksa normal parçanın İÇİNE
+      // bakar ve tek yüzlü çizimde o yüzey görünmez olur.
+      if(ters){ var sw = b; b = c; c = sw; }
+      yt[(j-1)*3] = a; yt[(j-1)*3+1] = b; yt[(j-1)*3+2] = c;
+      var ax = yerel[a*3], ay = yerel[a*3+1], az = yerel[a*3+2];
+      var ux = yerel[b*3] - ax, uy = yerel[b*3+1] - ay, uz = yerel[b*3+2] - az;
+      var vx = yerel[c*3] - ax, vy = yerel[c*3+1] - ay, vz = yerel[c*3+2] - az;
+      var nx = uy*vz - uz*vy, ny = uz*vx - ux*vz, nz = ux*vy - uy*vx;
+      acc[a*3] += nx; acc[a*3+1] += ny; acc[a*3+2] += nz;
+      acc[b*3] += nx; acc[b*3+1] += ny; acc[b*3+2] += nz;
+      acc[c*3] += nx; acc[c*3+1] += ny; acc[c*3+2] += nz;
+    }
+    for(var q = 0; q < nN; q++){
+      pos.push(yerel[q*3], yerel[q*3+1], yerel[q*3+2]);
+      var gx = acc[q*3], gy = acc[q*3+1], gz = acc[q*3+2];
+      var L = Math.sqrt(gx*gx + gy*gy + gz*gz) || 1;
+      nrm.push(gx/L, gy/L, gz/L);
+    }
+    for(var w = 0; w < nT; w++) idx.push(v0 + yt[w*3], v0 + yt[w*3+1], v0 + yt[w*3+2]);
+    yuzler.push({ index: fi, first: triTop, last: triTop + nT - 1, triCount: nT });
+    triTop += nT;
+    loc.delete();
+  }
+  fe.delete();
+  sure.extract = simdi() - t;
+
+  return {
+    positions: new Float32Array(pos),
+    normals: new Float32Array(nrm),
+    indices: new Uint32Array(idx),
+    faces: yuzler,
+    triCount: triTop,
+    solidCount: fuse.istendi ? fuse.sonra : onceKati,
+    bbox: bb,
+    volume: fuse.hacimSonra,
+    fuse: fuse,
+    deflectionLinearMm: linear,
+    ms: sure
+  };
 }
 
 // ─── WORKER ─────────────────────────────────────────────────────────────────
@@ -209,14 +370,14 @@ function _sgFetchWasm(paths, onProgress, expectedBytes){
 // yazılıp `new Worker(blobURL)` ile açılıyor. Böylece hiçbir dosya yolu
 // varsayımı yok — glue nereden geldiyse worker da oradan gelmiş oluyor.
 var VE_STR_WORKER_BRIDGE = [
-  'var _occt = null, _log = [];',
-  // base64 çözme ve gzip açma DA worker'da: 3,96 MB'lık dizgiyi ana iş
-  // parçacığında çözmek yüz milisaniyelik bir donma demekti — kaçındığımız
-  // şeyin ta kendisi.
+  'var _oc = null, _log = [];',
+  // base64 çözme ve gzip açma DA worker'da: 17,5 MB'lık dizgiyi ana iş
+  // parçacığında çözmek saniyelik bir donma demekti — kaçındığımız şeyin
+  // ta kendisi.
   'function _b64(s){ var b = atob(s), u = new Uint8Array(b.length);',
   '  for(var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }',
   'function _gunzip(u){',
-  '  if(typeof DecompressionStream !== "function") return Promise.reject(new Error("DecompressionStream yok"));',
+  '  if(typeof DecompressionStream !== "function") return Promise.reject(new Error("Bu tarayici gomulu cekirdegi acamiyor (DecompressionStream yok)."));',
   '  return new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();',
   '}',
   'self.onmessage = function(e){',
@@ -225,39 +386,29 @@ var VE_STR_WORKER_BRIDGE = [
   '    try {',
   '      var bin = d.wasmBinary ? Promise.resolve(d.wasmBinary) : _gunzip(_b64(d.wasmB64));',
   '      bin.then(function(wasm){',
-  '        return occtimportjs({ wasmBinary: wasm,',
+  '        return opencascade({ wasmBinary: new Uint8Array(wasm),',
   '          print: function(s){ _log.push(String(s)); },',
   '          printErr: function(s){ _log.push(String(s)); } });',
   '      })',
-  '      .then(function(m){ _occt = m; self.postMessage({ type:"ready" }); })',
+  '      .then(function(m){ _oc = m; self.postMessage({ type:"ready" }); })',
   '      ["catch"](function(err){ self.postMessage({ type:"fatal", error:String((err && err.message) || err) }); });',
   '    } catch(err){ self.postMessage({ type:"fatal", error:String((err && err.message) || err) }); }',
   '    return;',
   '  }',
   '  if(d.type === "step"){',
-  '    if(!_occt){ self.postMessage({ type:"error", id:d.id, error:"okuyucu hazır değil" }); return; }',
+  '    if(!_oc){ self.postMessage({ type:"error", id:d.id, error:"cekirdek hazir degil" }); return; }',
   '    _log.length = 0;',
-  '    var raw;',
-  '    try { raw = _occt.ReadStepFile(new Uint8Array(d.bytes), d.params); }',
+  '    var g;',
+  // Aşama bildirimi worker'dan geliyor: boolean saniyeler sürebiliyor ve
+  // kullanıcı o sırada NE olduğunu görmeli ("çözümleniyor" yazıp 15 saniye
+  // beklemek, ilerleme göstergesinin var oluş sebebini yok ederdi).
+  '    var onStage = function(ad){ self.postMessage({ type:"stage", id:d.id, stage:ad }); };',
+  '    try { g = _sgOcctPipeline(_oc, new Uint8Array(d.bytes), { deflection:d.deflection, fuse:d.fuse, onStage:onStage }); }',
   '    catch(err){ self.postMessage({ type:"error", id:d.id, error:String((err && err.message) || err), log:_log.slice(0,4) }); return; }',
-  // Tipli diziye BURADA çevriliyor: ana iş parçacığına TRANSFER edilebilsin
-  // diye. Kopyalanan bir düz JS dizisi yüz binlerce üçgende hem bellek hem
-  // duraklama demek — transfer sıfır kopya.
-  '    var out = { success: !!(raw && raw.success), root: (raw && raw.root) || null, meshes: [] };',
-  '    var transfer = [];',
-  '    var ms = (raw && raw.meshes) || [];',
-  '    for(var i = 0; i < ms.length; i++){',
-  '      var m = ms[i];',
-  '      var a = m.attributes || {};',
-  '      var pos = new Float32Array((a.position && a.position.array) || []);',
-  '      var idx = new Uint32Array((m.index && m.index.array) || []);',
-  '      var nrm = (a.normal && a.normal.array) ? new Float32Array(a.normal.array) : null;',
-  '      transfer.push(pos.buffer, idx.buffer);',
-  '      if(nrm) transfer.push(nrm.buffer);',
-  '      out.meshes.push({ name:m.name, color:m.color || null, brep_faces:m.brep_faces || [],',
-  '                        positions:pos, normals:nrm, indices:idx });',
-  '    }',
-  '    self.postMessage({ type:"result", id:d.id, raw:out, log:_log.slice(0,4) }, transfer);',
+  // Tipli diziler TRANSFER ediliyor — sıfır kopya. Kopyalanan bir dizi yüz
+  // binlerce üçgende hem bellek hem duraklama demek.
+  '    self.postMessage({ type:"result", id:d.id, geom:g, log:_log.slice(0,4) },',
+  '      [g.positions.buffer, g.normals.buffer, g.indices.buffer]);',
   '  }',
   '};'
 ].join('\n');
@@ -323,10 +474,10 @@ function _sgGlueSource(){
   var ph = (typeof document !== 'undefined')
     ? document.querySelector('script[data-mfsim-occt-glue]') : null;
   if(ph && ph.textContent && ph.textContent.length > 1000) return Promise.resolve(ph.textContent);
-  var url = (ph && ph.src) || _sgGlueUrlFor(VE_STR_OCCT_WASM_PATHS[0]);
-  if(typeof fetch !== 'function') return Promise.reject(new Error('STEP okuyucusunun kod dosyası okunamadı.'));
+  var url = (ph && ph.src) || 'vendor/opencascade.js';
+  if(typeof fetch !== 'function') return Promise.reject(new Error('OCCT çekirdeğinin kod dosyası okunamadı.'));
   return fetch(url).then(function(res){
-    if(!res.ok) throw new Error('STEP okuyucusunun kod dosyası bulunamadı: ' + url);
+    if(!res.ok) throw new Error('OCCT çekirdeğinin kod dosyası bulunamadı: ' + url);
     return res.text();
   });
 }
@@ -347,13 +498,6 @@ function _sgWorkerSupported(){
       && typeof fetch === 'function';
 }
 
-// Glue metni .wasm ile AYNI dizinden alınır: yol araması bir kez yapılıp
-// (wasm) sonucu buradan türetiliyor. İki ayrı arama iki ayrı kurulumda
-// birbirinden ayrı düşebilirdi.
-function _sgGlueUrlFor(wasmUrl){
-  return String(wasmUrl).replace(/occt-import-js\.wasm(\?.*)?$/, 'occt-import-js.js');
-}
-
 // Worker'ı TEK SEFER kur ve yaşat: ikinci içe aktarma 7,3 MB'ı yeniden
 // indirmez, WASM'ı yeniden derlemez.
 function veStrOcctWorker(opts){
@@ -368,17 +512,16 @@ function veStrOcctWorker(opts){
   // `vendor/` yolundan indirmeye düşülür; o zaman panel "indiriliyor" der.
   var kaynak = opts.wasmBinary
     ? Promise.resolve({ wasmBinary: opts.wasmBinary, url: '(bellek)' })
-    : _sgEmbeddedWasmB64()
-        .then(function(b64){ return { wasmB64: b64, url: '(gömülü)' }; })
-        ['catch'](function(){
-          return _sgFetchWasm(opts.wasmUrls, onp, opts.expectedBytes || VE_STR_OCCT_WASM_BYTES)
-            .then(function(got){ return { wasmBinary: got.buffer, url: got.url }; });
-        });
+    : _sgEmbeddedWasmB64().then(function(b64){ return { wasmB64: b64, url: '(gömülü)' }; });
 
   var out = kaynak.then(function(got){
     onp('reader', {});
     return _sgGlueSource().then(function(glue){
-      var blob = new Blob([glue, '\n', VE_STR_WORKER_BRIDGE], { type: 'text/javascript' });
+      // Boru hattı worker'a KAYNAK METİN olarak gidiyor (toString). Tek
+      // kaynak kuralı: ana iş parçacığı yedeği ile worker aynı fonksiyonu
+      // koşuyor, ikinci bir kopya yok.
+      var blob = new Blob([glue, '\n;var _sgOcctPipeline = ', _sgOcctPipeline.toString(), ';\n',
+                           VE_STR_WORKER_BRIDGE], { type: 'text/javascript' });
       var url = URL.createObjectURL(blob);
       var w = new Worker(url);
       // Blob URL'i KURULUMDAN HEMEN SONRA bırak: worker çalışmaya devam eder
@@ -396,7 +539,7 @@ function veStrOcctWorker(opts){
           if(e.data && e.data.type === 'ready'){ w.onmessage = null; w.onerror = null; resolve({ worker: w, wasmUrl: got.url }); }
           else if(e.data && e.data.type === 'fatal'){ bitir(new Error(e.data.error)); }
         };
-        w.onerror = function(err){ bitir(new Error('STEP okuyucusu worker içinde açılamadı: ' + ((err && err.message) || 'bilinmeyen hata'))); };
+        w.onerror = function(err){ bitir(new Error('OCCT çekirdeği worker içinde açılamadı: ' + ((err && err.message) || 'bilinmeyen hata'))); };
         // Gömülü yolda worker'a giden şey 3,96 MB'lık BASE64 DİZGİ; açma
         // (atob + gunzip) ve derleme worker'da yapılıyor → ana iş parçacığı
         // hiç durmuyor. Yedek yolda hazır .wasm tamponu gider; transfer
@@ -423,13 +566,15 @@ function _sgImportViaWorker(bytes, meta, opts, onp){
       function onMsg(e){
         var d = e.data || {};
         if(d.id !== id) return;
+        // Aşama bildirimi worker'dan geliyor: boolean saniyeler sürebiliyor,
+        // kullanıcı o sırada NE olduğunu görmeli.
+        if(d.type === 'stage'){ onp(d.stage, {}); return; }
         ctx.worker.removeEventListener('message', onMsg);
-        if(d.type === 'error'){ resolve({ ok: false, error: _sgWithDiag('STEP okuyucusu dosyayı işlerken durdu: ' + d.error, d.log) }); return; }
+        if(d.type === 'error'){ resolve({ ok: false, error: _sgWithDiag('OCCT çekirdeği dosyayı işlerken durdu: ' + d.error, d.log) }); return; }
         if(d.type !== 'result'){ reject(new Error('Worker beklenmeyen yanıt verdi: ' + d.type)); return; }
-        onp('build', {});
         meta.wasmUrl = ctx.wasmUrl;
         meta.worker = true;
-        var res = veStrNormalizeImport(d.raw, meta);
+        var res = veStrNormalizeImport(d.geom, meta);
         if(!res.ok) res.error = _sgWithDiag(res.error, d.log);
         resolve(res);
       }
@@ -437,7 +582,8 @@ function _sgImportViaWorker(bytes, meta, opts, onp){
       // STEP baytları TRANSFER EDİLİYOR (kopya yok). Çağıranın tamponu
       // detach olur; bu yüzden panel kaynağı ayrıca saklıyor.
       var copy = bytes.slice();
-      ctx.worker.postMessage({ type: 'step', id: id, bytes: copy.buffer, params: meta._params }, [copy.buffer]);
+      ctx.worker.postMessage({ type: 'step', id: id, bytes: copy.buffer,
+                               deflection: meta.deflection, fuse: opts.fuse }, [copy.buffer]);
     });
   });
 }
@@ -453,20 +599,15 @@ function veStrOcctReady(opts, onProgress){
 
   var factory = opts.factory || _sgOcctFactory();
   if(!factory){
-    return Promise.reject(new Error('STEP okuyucusu yüklenemedi: vendor/occt-import-js.js sayfaya eklenmemiş.'));
+    return Promise.reject(new Error('OCCT çekirdeği yüklenemedi: vendor/opencascade.js sayfaya eklenmemiş.'));
   }
 
   var p;
   if(opts.wasmBinary){
     p = Promise.resolve({ buffer: opts.wasmBinary, url: '(bellek)' });
   } else {
-    // Worker yolundaki sıranın aynısı: ÖNCE gömülü (ağsız), sonra vendor/.
     p = _sgEmbeddedWasmB64()
-      .then(function(b64){ return _sgGunzipMain(b64).then(function(buf){ return { buffer: buf, url: '(gömülü)' }; }); })
-      ['catch'](function(e){
-        if(typeof fetch !== 'function') throw e;
-        return _sgFetchWasm(opts.wasmUrls, onp, opts.expectedBytes || VE_STR_OCCT_WASM_BYTES);
-      });
+      .then(function(b64){ return _sgGunzipMain(b64).then(function(buf){ return { buffer: new Uint8Array(buf), url: '(gömülü)' }; }); });
   }
   p = p.then(function(got){ onp('reader', {}); return got; });
 
@@ -570,57 +711,40 @@ function veStrGeomBBox(meshes){
 // THREE'ye vermeden önce zaten çevrilecek — bir kez, burada.
 function veStrNormalizeImport(raw, meta){
   meta = meta || {};
-  if(!raw || !raw.success){
+  if(!raw || !raw.positions || !raw.indices){
     return { ok: false, error: 'Dosya STEP olarak okunamadı. Dosya bozuk olabilir ya da desteklenmeyen bir sürümde yazılmış olabilir.' };
   }
-  var rawMeshes = raw.meshes || [];
-  if(!rawMeshes.length){
+  if(!raw.triCount){
     return { ok: false, error: 'STEP dosyası okundu ama içinde katı/yüzey geometrisi yok (yalnız eğri, nokta ya da boş montaj olabilir).' };
   }
 
-  var meshes = [], faces = [];
-  var triTotal = 0, vtxTotal = 0;
-
-  rawMeshes.forEach(function(m, mi){
-    // İKİ GİRDİ BİÇİMİ, TEK ÇIKTI. Worker yolunda diziler ZATEN tipli gelir
-    // (orada çevrilip transfer edilirler); ana iş parçacığı yedeğinde occt'nin
-    // düz JS dizileri gelir. `_sgTyped` ikisini de kabul eder ve tipli olanı
-    // YENİDEN KOPYALAMAZ — 100 bin üçgende o kopya boşuna bir megabayt.
-    var pos = _sgTyped(Float32Array, (m.positions) || (m.attributes && m.attributes.position && m.attributes.position.array) || []);
-    var nrm = _sgTyped(Float32Array, (m.normals) || (m.attributes && m.attributes.normal && m.attributes.normal.array) || null);
-    var idx = _sgTyped(Uint32Array, (m.indices) || (m.index && m.index.array) || []);
-    var triCount = Math.floor(idx.length / 3);
-    var name = (m.name && String(m.name).trim()) || ('Parça ' + (mi + 1));
-
-    var mFaces = [];
-    (m.brep_faces || []).forEach(function(f, fi){
-      var first = _sgNum(f.first), last = _sgNum(f.last);
-      if(!isFinite(first) || !isFinite(last)) return;
-      var rec = {
-        id: veStrFaceKey(mi, fi),
-        meshIndex: mi, meshName: name, faceIndex: fi,
-        first: first, last: last,
-        triCount: (last - first + 1),
-        color: f.color || null
-      };
-      mFaces.push(rec);
-      faces.push(rec);
-    });
-
-    meshes.push({
-      index: mi, name: name,
-      color: m.color || null,
-      positions: pos,
-      normals: nrm,
-      indices: idx,
-      triCount: triCount,
-      faces: mFaces
-    });
-    triTotal += triCount;
-    vtxTotal += Math.floor(pos.length / 3);
+  // TEK PARÇA. Boolean'dan sonra dosyada kaç gövde olursa olsun model TEK bir
+  // üçgen tamponu taşıyor; "kaç katı" bilgisi künyede AYRI duruyor (stats +
+  // fuse). Eskiden her katı ayrı bir mesh'ti ve yüz kimliği `m<katı>/f<yüz>`
+  // idi; birleştirmeden sonra katı diye bir bölünme kalmadığı için hepsi m0.
+  var name = (meta.partName && String(meta.partName).trim()) || 'Parça';
+  var faces = (raw.faces || []).map(function(f){
+    return {
+      id: veStrFaceKey(0, f.index),
+      meshIndex: 0, meshName: name, faceIndex: f.index,
+      first: f.first, last: f.last,
+      triCount: f.triCount,
+      color: null
+    };
   });
 
-  var bbox = veStrGeomBBox(meshes);
+  var mesh = {
+    index: 0, name: name, color: null,
+    positions: _sgTyped(Float32Array, raw.positions),
+    normals: _sgTyped(Float32Array, raw.normals),
+    indices: _sgTyped(Uint32Array, raw.indices),
+    triCount: raw.triCount,
+    faces: faces
+  };
+
+  var bbox = raw.bbox || veStrGeomBBox([mesh]);
+  var fuse = raw.fuse || { istendi: false, ok: false, once: raw.solidCount || 1, sonra: raw.solidCount || 1, ms: 0, hata: '' };
+
   return {
     ok: true,
     fileName: meta.fileName || '',
@@ -628,26 +752,27 @@ function veStrNormalizeImport(raw, meta){
     importedAt: meta.importedAt || null,
     unit: VE_STR_GEOM_UNIT,
     deflection: meta.deflection || VE_STR_GEOM_DEFLECTION,
+    deflectionLinearMm: raw.deflectionLinearMm || 0,
     wasmUrl: meta.wasmUrl || '',
-    // Worker'da mı çözüldü? Panel bunu yazıyor: ana iş parçacığına düşülmüşse
-    // kullanıcı donmanın SEBEBİNİ görmeli, "program ağır" sanmamalı.
     worker: !!meta.worker,
-    root: raw.root || null,
-    meshes: meshes,
+    root: null,
+    meshes: [mesh],
     faces: faces,
     bbox: bbox,
+    volume: raw.volume || 0,
+    fuse: fuse,
+    ms: raw.ms || {},
     stats: {
-      meshCount: meshes.length,
-      triCount: triTotal,
-      vertexCount: vtxTotal,
-      faceCount: faces.length
+      meshCount: 1,
+      solidCount: raw.solidCount || 1,
+      solidCountBefore: fuse.once,
+      faceCount: faces.length,
+      triCount: raw.triCount,
+      vertexCount: Math.floor((raw.positions.length || 0) / 3)
     }
   };
 }
 
-// Üçgen indisinden CAD yüzünü bul. Sınır Koşulları bileşeni yüz seçerken
-// bunu kullanacak; şimdilik görüntüleyicinin fare vurgusu kullanıyor —
-// yani zincir prototipte de CANLI, sonradan eklenen bir varsayım değil.
 function veStrFaceOfTriangle(geom, meshIndex, triIndex){
   if(!geom || !geom.meshes || !geom.meshes[meshIndex]) return null;
   var fs = geom.meshes[meshIndex].faces || [];
@@ -676,6 +801,16 @@ function veStrGeomRecord(geom){
     deflection: geom.deflection,
     stats: geom.stats,
     bbox: geom.bbox,
+    volume: geom.volume,
+    // Birleştirmenin künyesi: kaç katı vardı, kaça indi, ne kadar sürdü,
+    // hacim korundu mu. Panel bunu YAZIYOR — "1 katı" demek yetmez, boolean
+    // sessizce başarısız olduysa kullanıcı bunu ancak ağ örerken anlardı.
+    fuse: geom.fuse ? {
+      istendi: !!geom.fuse.istendi, ok: !!geom.fuse.ok,
+      once: geom.fuse.once, sonra: geom.fuse.sonra,
+      ms: geom.fuse.ms, hata: geom.fuse.hata || '',
+      hacimOnce: geom.fuse.hacimOnce, hacimSonra: geom.fuse.hacimSonra
+    } : null,
     // Yüz künyesi HAFİF: kimlik + üçgen sayısı. Sınır koşulu kimliğe bağlanır,
     // üçgen sayısı yalnız "aynı dosya mı" denetimi için.
     faces: (geom.faces || []).map(function(f){
@@ -899,22 +1034,25 @@ function veStrGeomCacheClear(nodeId){
 // altındaki birim testleri) kullanılır. Donma pahasına ÇALIŞIR — hiç
 // çalışmamasından iyidir; panel bu yola düşüldüğünü künyeye yazıyor.
 function _sgImportMainThread(bytes, meta, opts, onp){
-  return veStrOcctReady(opts, onp).then(function(occt){
+  return veStrOcctReady(opts, onp).then(function(oc){
     onp('parse', {});
     // Teşhis tamponunu bu okumadan ÖNCE boşalt: önceki dosyanın hatası bu
     // dosyanın mesajına yapışmasın.
-    if(occt._veLog) occt._veLog.length = 0;
-    var raw;
+    if(oc._veLog) oc._veLog.length = 0;
+    var geom;
     try {
-      raw = occt.ReadStepFile(bytes, meta._params);
+      geom = _sgOcctPipeline(oc, bytes, {
+        deflection: meta.deflection,
+        fuse: opts.fuse,
+        onStage: function(ad){ onp(ad, {}); }
+      });
     } catch(e){
-      return { ok: false, error: 'STEP okuyucusu dosyayı işlerken durdu: ' + (e && e.message ? e.message : e) };
+      return { ok: false, error: _sgWithDiag('OCCT çekirdeği dosyayı işlerken durdu: ' + (e && e.message ? e.message : e), oc._veLog) };
     }
-    onp('build', {});
-    meta.wasmUrl = occt._veWasmUrl || '';
+    meta.wasmUrl = oc._veWasmUrl || '';
     meta.worker = false;
-    var res = veStrNormalizeImport(raw, meta);
-    if(!res.ok) res.error = _sgWithDiag(res.error, occt._veLog);
+    var res = veStrNormalizeImport(geom, meta);
+    if(!res.ok) res.error = _sgWithDiag(res.error, oc._veLog);
     return res;
   });
 }
@@ -932,12 +1070,12 @@ function veStrImportStep(bytes, meta, opts){
   var onp = opts.onProgress || function(){};
   var defl = meta.deflection || VE_STR_GEOM_DEFLECTION;
   meta.deflection = defl;
-  meta._params = {
-    linearUnit: VE_STR_GEOM_UNIT,
-    linearDeflectionType: defl.type,
-    linearDeflection: defl.linear,
-    angularDeflection: defl.angular
-  };
+  // Parça adı DOSYA ADINDAN. Birleştirmeden sonra STEP'in ürün adları
+  // anlamını yitiriyor (yedi gövde tek katı oldu, hangisinin adı taşınsın?);
+  // kullanıcının o parçayı tanıdığı ad zaten dosya adı.
+  if(!meta.partName && meta.fileName){
+    meta.partName = String(meta.fileName).replace(/\.(stp|step)$/i, '');
+  }
 
   var useWorker = !opts.noWorker && !opts.wasmBinary && !opts.factory && _sgWorkerSupported();
   var run = useWorker
@@ -964,13 +1102,12 @@ if(typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VE_STR_GEOM_UNIT: VE_STR_GEOM_UNIT,
     VE_STR_GEOM_DEFLECTION: VE_STR_GEOM_DEFLECTION,
-    VE_STR_OCCT_WASM_PATHS: VE_STR_OCCT_WASM_PATHS,
     veStrOcctReady: veStrOcctReady,
     veStrOcctForget: veStrOcctForget,
     veStrOcctWorker: veStrOcctWorker,
     VE_STR_STAGES: VE_STR_STAGES,
-    VE_STR_OCCT_WASM_BYTES: VE_STR_OCCT_WASM_BYTES,
     VE_STR_WORKER_BRIDGE: VE_STR_WORKER_BRIDGE,
+    _sgOcctPipeline: _sgOcctPipeline,
     _sgTyped: _sgTyped,
     veStrFaceKey: veStrFaceKey,
     veStrGeomBBox: veStrGeomBBox,
