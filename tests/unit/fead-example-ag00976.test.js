@@ -390,19 +390,37 @@ describe('İKİ ÖRNEK AYNI GERGİYİ, FARKLI KAYIŞI ANLATIYOR', () => {
   // (1715 · tolerans 0 · aşınma 0) taşıyor, AG00976 raporunkini
   // (1714.6 · ±6 · %0.60 · lengthOffset 1.6).
 
-  test('GERGİ KÜNYESİ İKİ ÖRNEKTE DE AYNI — Gates "Tensioner Data" bloğu', () => {
+  test('PİVOT: biri TÜRETİLİYOR, öbürü RAPORDAN ÖLÇÜLÜ', () => {
+    // BMC = müşteri tarafı: kasnak merkezi girilir, pivot parça künyesindeki
+    // kol açısından çıkar. AG00976 = tedarikçi cevabı: pivot raporda YAZILI.
     const a = veFeadExampleOf('BMC_FEAD_2026').pulleys.find((p) => p.key === 'TEN').data;
     const b = veFeadExampleOf(KEY).pulleys.find((p) => p.key === 'TEN').data;
-    // Raporun bastığı beş sayı, ikisinde de birebir.
-    ['pivotX', 'pivotY', 'armLen', 'preload', 'kArm', 'meanLoad'].forEach((k) => {
+    expect(a.pivotX).toBeUndefined();
+    expect(a.armMeanDeg).toBeCloseTo(344.0, 6);
+    expect(b.pivotX).toBeCloseTo(-250.00, 6);
+    expect(b.pivotY).toBeCloseTo(110.00, 6);
+    // Yay künyesi ve kol boyu ikisinde de aynı parça (E9843).
+    ['armLen', 'preload', 'kArm', 'meanLoad'].forEach((k) => {
       expect(a[k]).toBeCloseTo(b[k], 6);
     });
-    expect(a.pivotX).toBeCloseTo(-250.00, 6);
-    expect(a.pivotY).toBeCloseTo(110.00, 6);
-    // TÜRETİLMİŞ pivot geri gelmemeli: sayfanın kendi merkezinden 90 mm uzağa
-    // konan uydurma pivot (−259.94, 104.15) gerçeğinden 11.5 mm sapıyor ve
-    // çalışma gerginliğini 544 yerine 650 N gösteriyordu.
-    expect(Math.hypot(a.pivotX + 259.94, a.pivotY - 104.15)).toBeGreaterThan(10);
+  });
+
+  test('TÜRETME RAPORUN PİVOTUNU GERİ VERİYOR — bağımsız doğrulama', () => {
+    // Kapı burada ısırıyor: türetme bağıntısı (pivot = c − a·(cosθ, sinθ))
+    // raporun KENDİ kasnak merkezine ve KENDİ kol açısına uygulanınca raporun
+    // KENDİ pivotunu vermeli. Üç sayı da rapordan, bağıntı bizim — yani bu bir
+    // totoloji değil, bağıntının doğrulanması.
+    const b = veFeadExampleOf(KEY).pulleys.find((p) => p.key === 'TEN').data;
+    const ref = G.pos.find((p) => p.name === 'Mean');
+    const tur = veFeadPivotFromArm({
+      cenX: ref.X, cenY: ref.Y, armLen: b.armLen, armMeanDeg: ref.absDeg,
+    });
+    expect(Math.hypot(tur[0] - b.pivotX, tur[1] - b.pivotY)).toBeLessThan(0.15);
+    // Altı konumun ALTISI da aynı pivotu vermeli (kolun tanımı).
+    G.pos.forEach((p) => {
+      const t = veFeadPivotFromArm({ cenX: p.X, cenY: p.Y, armLen: b.armLen, armMeanDeg: p.absDeg });
+      expect(Math.hypot(t[0] - b.pivotX, t[1] - b.pivotY)).toBeLessThan(0.15);
+    });
   });
 
   test('KAYIŞ KÜNYESİ AYRI — ve fark ölçülebilir', () => {
@@ -433,16 +451,19 @@ describe('İKİ ÖRNEK AYNI GERGİYİ, FARKLI KAYIŞI ANLATIYOR', () => {
     expect(pctErr(meanB.tensionN, ref.T)).toBeLessThan(10);       // ama artık %19.5 değil
   });
 
-  test('SERBEST KİPTE İKİSİ DE RAPORUN GERGİNLİĞİNE VARIYOR', () => {
-    // Kol nominal yay açısına oturunca kayış boyu ÇIKTI olur ve sayfanın
-    // kayışı denklemden düşer. ÖLÇÜLDÜ: BMC serbest kipte 543.7 N — Gates'in
-    // Design Tension'ı 544 N. Yani iki örnek arasındaki tek gerçek fark,
-    // sabit kipte hangi kayışın dayatıldığı.
+  test('MÜŞTERİ TARAFI MODEL, TEDARİKÇİNİN GERGİNLİĞİNE YAKIN VARIYOR', () => {
+    // BMC hiçbir Gates sayısı taşımıyor: kasnak koordinatları müşterinin,
+    // gergi künyesi E9843 parça çiziminin, kayış sayfanın. Buna rağmen çalışma
+    // gerginliği raporun 544 N'una %5 içinde çıkıyor — modelin müşteri tarafı
+    // girdilerle ne kadar ileri gidebildiğinin ölçüsü.
     const pb = veFeadExampleNodes('BMC_FEAD_2026');
-    pb.nodes.find((n) => n.type === 'fead-belt').data.lengthMode = 'free';
     pb.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     const bb = veFeadBuildSystem(pb.nodes, pb.connections);
-    expect(pctErr(bb.sys.designTensionN, G.design)).toBeLessThan(0.5);
+    expect(bb.pivotDerived).toBe(true);
+    expect(pctErr(bb.sys.designTensionN, G.design)).toBeLessThan(5);
+    // AG00976 (her şeyi rapordan) çok daha yakın — fark ölçülebilir olmalı.
+    const { build } = kur();
+    expect(pctErr(build.sys.designTensionN, G.design)).toBeLessThan(0.5);
   });
 });
 

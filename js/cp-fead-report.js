@@ -1391,119 +1391,101 @@ function _frOperatingPoint(R){
 // Gates raporu): girilen ile türeyen arasındaki fark en çok %0.12, RMS %0.08 —
 // tamamı yuvarlama, çünkü Gates tam sayı basıyor (766 ↔ 765.9). İki kanal
 // zaten tek kanaldı. Artık bölüm karşılaştırma değil KURULUŞ anlatıyor.
-// ─── Gergi PİVOTU nereden geliyor (kullanıcı isteği, 2026-08-25) ────────────
+// ─── Gergi PİVOTU nereden geliyor ───────────────────────────────────────────
 //
-// Kullanıcı bildirimi: "Tensioner pivot noktası tedarikçiye girdi olarak
-// gitmeyecek. İlk önce bu hesabın nasıl yapıldığını verelim."
+// Kullanıcı bildirimi (2026-08-25): "Otomatik gergi bileşeninde kol ve pivot
+// kısmına kullanıcı girdi girmeyecek. Kullanıcının girdiği koordinat gergi
+// KASNAĞININ merkezi; pivot noktası sonra hesaplanıyor."
 //
-// Haklı: pivot müşterinin elinde olan bir sayı değil. Ama BAĞIMSIZ da değil.
-// İki gözlem:
+// Doğru ve zincir kapanıyor. Kapanışı gerginin PARÇA ÇİZİMİ veriyor:
+//   "E9843 PIN POSITION FOR THE 344° MEAN ANGLE AND 22.5 Nm SPRING TORQUE
+//    @ 28° FREEARM-MEAN ROTATION"
+// yani kolun ÇALIŞMA konumundaki MUTLAK açısı bir parça künyesidir.
 //
-// 1) KAYIŞ YOLU PİVOTA HİÇ BAĞLI DEĞİL. Geometri yalnız gergi KASNAĞININ
-//    merkezine bakar (teğet çözümü merkez farklarından kurulur). Pivotu
-//    kaydırmak sarımları, açıklıkları, kayış boyunu DEĞİŞTİRMEZ.
+//     pivot = c − a·(cos θ_kol , sin θ_kol)
 //
-// 2) PİVOTUN TEK ETKİSİ KOLUN HANGİ YÖNDE HAREKET ETTİĞİDİR — yani β, yani
-//    take-up, yani gerginlik. Pivot ile tasarım gerginliği AYNI DENKLEMİN İKİ
-//    YÜZÜDÜR:  pivot → β → dL/dθ → T   (ANALİZ, bu belgenin yaptığı)
-//              T*    → dL/dθ → β → pivot   (TASARIM)
-//
-// TAUTOLOJİ TUZAĞI — İLK SÜRÜMDE TAM BUNA DÜŞÜLDÜ. Blok önce "türetilen pivot"
-// ile "girilen pivot" arasındaki sapmayı bir DENETİM diye basıyordu. Sapma iki
-// örnekte de 0,000 mm çıktı ve çıkmak ZORUNDAYDI: T zaten pivottan türüyor,
-// onu denkleme geri beslemek aynı β'yı ve aynı pivotu verir. Geçen bir denetim
-// gibi görünüp hiçbir şey ölçmüyordu (uygunluk kriteri #6'da düzeltilen hatanın
-// aynısı).
-//
-// DOĞRUSU: denklemi ANALİZ yönünde bir denetim gibi göstermek değil, TASARIM
-// yönünde bir DUYARLILIK olarak vermek. Hedef gerginlik SEÇİLİR (bağımsız bir
-// mühendislik kararıdır), pivot ondan çıkar. Tablo o eşlemeyi veriyor.
+// İKİ AYRI DURUM VE İKİSİ AYNI ŞEY DEĞİL:
+//   • pivot TÜRETİLDİ  → blok kuruluşu anlatır; kol boyu çapraz kontrolü
+//                         TOTOLOJİKTİR ve blok bunu SÖYLER
+//   • pivot GİRİLDİ    → (tedarikçi raporundan ölçülmüş) türetme bağımsız bir
+//                         DENETİM olur: iki ayrı kaynak aynı noktayı vermeli
 function _frPivotBlock(R){
   var sys = R.build && R.build.sys, A = R.analysis || {}, T = A.tensioner || {};
   if(!sys || !sys.tensioner) return '';
-  var t = sys.tensioner;
-  var a = _frNum(t.armLength), phi = _frNum(T.wrapDeg);
-  var Mnm = _frNum(T.springNm), Tn = _frNum(T.tensionN), hubDir = _frNum(T.hubDirDeg);
+  var t = sys.tensioner, b = R.build || {};
+  var a = _frNum(t.armLength);
   var C = _frCore(), cen = [];
   try { cen = C.tensionerState(sys, _frNum(A.meanRelDeg)).center || []; } catch(e){ cen = []; }
   var cx = _frNum(cen[0]), cy = _frNum(cen[1]);
   var px = _frNum(t.pivot && t.pivot[0]), py = _frNum(t.pivot && t.pivot[1]);
-  if(![a, phi, Mnm, Tn, hubDir, cx, cy].every(Number.isFinite)) return '';
+  if(![a, cx, cy, px, py].every(Number.isFinite)) return '';
 
   var D = Math.PI / 180;
-  var fLen = 2 * Math.sin(phi * D / 2);                    // |f| = 2sin(φ/2)
-  var sense = (_frNum(t.sense) < 0) ? -1 : 1;
-  // Hedef gerginlik T* → gereken take-up → β → kol doğrultusu → pivot.
-  function pivotFor(Thedef){
-    var takeup = (Mnm / Thedef) * 1000 * D;                // mm/°
-    var sinB = takeup / (a * fLen * D);
-    if(!(sinB > -1 && sinB < 1)) return null;              // erişilemez hedef
-    var beta = Math.asin(sinB) / D;
-    var kol = hubDir + sense * beta;
-    return { T: Thedef, takeup: takeup, beta: beta,
-             x: cx + a * Math.cos(kol * D), y: cy + a * Math.sin(kol * D) };
-  }
+  // Kolun MUTLAK açısı: pivottan merkeze bakan doğrultu.
+  var kolDeg = Math.atan2(cy - py, cx - px) / D;
+  var kol360 = (kolDeg % 360 + 360) % 360;
+  var turev = !!b.pivotDerived;
+  var mount = b.mount || {};
+  var relMean = _frNum(mount.relMeanDeg);
 
   var h = '<h4>Gergi pivotu nereden geliyor</h4>';
-  h += '<p>Pivot, tedarikçiye giden sayfada <b>bulunmaz</b>: müşteri gergi kasnağının nereye '
-     + 'oturacağını (montaj merkezi — paketleme kararı) ve hangi gergiyi kullanacağını (kol boyu, '
-     + 'yay künyesi) söyler. Pivotun yeri bunlardan <b>çıkar</b>, ve çıkışı iki gözleme dayanır.</p>';
-  h += '<p><b>1 · Kayış yolu pivota bağlı değildir.</b> Geometri yalnız gergi <b>kasnağının '
-     + 'merkezine</b> bakar (§3.2\'nin teğet çözümü merkez farklarından kurulur). Pivotu kaydırmak '
-     + 'sarım açılarını, açıklıkları ve kayış boyunu <b>değiştirmez</b> — bu tablodaki her satırın '
-     + 'geometrisi aynıdır.</p>';
-  h += '<p><b>2 · Pivotun tek etkisi kolun hangi yönde hareket ettiğidir</b> — yani \( \beta \), '
-     + 'yani take-up, yani gerginlik. Bu yüzden <b>pivot ile tasarım gerginliği aynı denklemin iki '
-     + 'yüzüdür</b>. Bu belge <i>analiz</i> yönünde çalışır (pivot verilir, gerginlik çıkar); '
-     + 'tasarım yönü tersidir ve kapalı formdadır:</p>';
-  h += '<div class="eq">$$ \sin\beta = \frac{M/T^{*}}{a\,\cdot\,2\sin(\varphi/2)},'
-     + '\qquad \theta_{\text{kol}} = \theta_{\text{hub}} + s\,\beta,'
-     + '\qquad \mathbf{p} = \mathbf{c} + a\,(\cos\theta_{\text{kol}},\ \sin\theta_{\text{kol}})'
+  h += '<p>Pivot, tedarikçiye giden sayfada <b>bulunmaz</b> ve kullanıcıdan <b>istenmez</b>. '
+     + 'Koordinat tablosunda gerginin satırı da diğer bütün kasnaklarla aynı şeydir: '
+     + '<b>gergi kasnağının merkezi</b>. (Alternatör satırı bunun en açık örneğidir — orada da '
+     + 'alternatör gövdesinin değil, ona takılı küçük kasnağın merkezi yazar.) Pivot bu '
+     + 'merkezden ve gerginin <b>parça künyesinden</b> çıkar.</p>';
+  h += '<p>Kapanışı veren sayı, gergi üreticisinin parça çiziminde yazan <b>kolun çalışma '
+     + '(Mean) konumundaki mutlak açısıdır</b>. Kol boyu da künyededir; pivot kolun öbür '
+     + 'ucudur:</p>';
+  h += '<div class="eq">$$ \\mathbf{p} \;=\; \\mathbf{c} \;-\; a\\,\\big(\\cos\\theta_{\\text{kol}},\\ '
+     + '\\sin\\theta_{\\text{kol}}\\big) \;=\; \\big(' + _frF(cx, 2) + ',\\ ' + _frF(cy, 2) + '\\big)'
+     + ' - ' + _frF(a, 1) + '\\big(\\cos ' + _frF(kol360, 2) + '^\\circ,\\ \\sin '
+     + _frF(kol360, 2) + '^\\circ\\big) = \\big(' + _frF(px, 2) + ',\\ ' + _frF(py, 2) + '\\big)'
      + ' $$<span class="tag">(' + (_frEqRef.pivot = _frEq()) + ')</span></div>';
-  h += '<p>Buradaki tek serbest sayı <b>hedef gerginlik</b> \( T^{*} \)\'dır; \( M \), \( a \) '
-     + 've \( s \) gergi künyesinden, \( \varphi \) ile \( \theta_{\text{hub}} \) çözülmüş '
-     + 'geometriden gelir. Aşağıdaki tablo o eşlemeyi veriyor: hangi gerginliği istiyorsanız pivot '
-     + 'nereye gitmeli.</p>';
 
-  var carp = [0.85, 0.925, 1.0, 1.075, 1.15];
-  h += '<table><caption>Tablo ' + _frTbl() + ' — Hedef gerginlik → gereken pivot konumu ('
-     + _frEqRef.pivot + ')</caption>';
-  h += '<tr><th>Hedef T*</th><th>Gereken dL/dθ</th><th>Kol açısı β</th><th>Pivot X</th>'
-     + '<th>Pivot Y</th><th>Pivot kayması</th></tr>';
-  var bu = pivotFor(Tn);
-  carp.forEach(function(c){
-    var r = pivotFor(Tn * c);
-    if(!r) return;
-    var d = (bu ? Math.hypot(r.x - bu.x, r.y - bu.y) : NaN);
-    var vurgu = (c === 1.0);
-    h += '<tr' + (vurgu ? ' style="background:rgba(200,120,30,0.10);font-weight:600;"' : '') + '>'
-      + '<td>' + _frFs(r.T, 0) + ' N' + (vurgu ? ' <span class="ok">◂ bu model</span>' : '') + '</td>'
-      + '<td>' + _frFs(r.takeup, 4) + '</td><td>' + _frFs(r.beta, 2) + '°</td>'
-      + '<td>' + _frFs(r.x, 2) + '</td><td>' + _frFs(r.y, 2) + '</td>'
-      + '<td>' + (vurgu ? '—' : _frFs(d, 1) + ' mm') + '</td></tr>';
-  });
+  h += '<table><caption>Tablo ' + _frTbl() + ' — Pivotun kuruluşu</caption>';
+  h += '<tr><th>Büyüklük</th><th>Değer</th><th>Birim</th><th>Kaynak</th></tr>';
+  function tr(k, v, u, src){ return '<tr><td class="l">' + k + '</td><td>' + v + '</td><td class="c">'
+    + (u || '—') + '</td><td class="l">' + src + '</td></tr>'; }
+  h += tr('Gergi <b>kasnağının</b> merkezi <b>c</b>', _frFs(cx, 2) + ' / ' + _frFs(cy, 2), 'mm',
+          '<b>girdi</b> — koordinat tablosu, diğer kasnaklarla aynı');
+  h += tr('Kol boyu a', _frFs(a, 1), 'mm', '<b>girdi</b> — gergi parça künyesi');
+  h += tr('Kolun çalışma açısı θ<sub>kol</sub>', _frFs(kol360, 2), '°',
+          turev ? '<b>girdi</b> — gergi parça çizimi (MEAN ANGLE)'
+                : 'türev — girilen pivottan geri okundu');
+  if(Number.isFinite(relMean))
+    h += tr('Serbest→çalışma dönüşü', _frFs(relMean, 2), '°',
+            'türev — (M<sub>çalışma</sub> − M<sub>ön</sub>)/k, parça çizimiyle karşılaştırılabilir');
+  h += tr('<b>Gergi pivotu p</b>', '<b>' + _frFs(px, 2) + ' / ' + _frFs(py, 2) + '</b>', 'mm',
+          turev ? '<b>türev</b> — (' + _frEqRef.pivot + ')' : '<b>girdi</b> — ölçülmüş/raporlanmış');
   h += '</table>';
 
-  h += '<div class="note"><span class="t">Bu tablo nasıl okunur</span>'
-     + 'Gergi kasnağının montaj merkezi <b>' + _frFs(cx, 2) + ' / ' + _frFs(cy, 2) + ' mm</b> '
-     + 'sabit tutulmuştur — orası paketleme kararıdır ve tedarikçiye giden sayfada zaten yazar. '
-     + 'Kol boyu ' + _frFs(a, 1) + ' mm olduğuna göre pivot, bu merkezin çevresindeki '
-     + _frFs(a, 1) + ' mm yarıçaplı çemberin ÜZERİNDEDİR; çember üzerinde <b>nereye</b> düşeceğini '
-     + 'yalnız istenen gerginlik belirler. '
-     + (Number.isFinite(px)
-         ? ('Bu modele girilen pivot <b>' + _frFs(px, 2) + ' / ' + _frFs(py, 2) + ' mm</b> ve '
-            + 'yukarıdaki vurgulu satır ona karşılık gelir — yani belgedeki bütün gerginlikler, '
-            + 'hubload\'lar ve kayma emniyetleri o pivot seçiminin sonucudur.')
-         : '')
-     + '</div>';
-  h += '<div class="note warn"><span class="t">Bu bir DENETİM değildir</span>'
-     + 'Vurgulu satır, modelin kendi pivotunu geri verir ve <b>vermek zorundadır</b>: bu belgede '
-     + 'tasarım gerginliği zaten pivottan türetiliyor (aşağıdaki blok), dolayısıyla onu denkleme '
-     + 'geri beslemek aynı pivotu üretir. Tablonun değeri denetim değil <b>duyarlılık</b>: '
-     + 'gerginliği %' + _frF((carp[carp.length - 1] - 1) * 100, 0) + ' değiştirmek pivotu kaç mm '
-     + 'kaydırır, onu gösterir. Pivotun BAĞIMSIZ olarak doğrulanması ancak ölçülmüş bir pivotla '
-     + '(tedarikçi raporu, montaj resmi) karşılaştırarak yapılabilir.'
-     + '</div>';
+  if(turev){
+    h += '<div class="note"><span class="t">Kol boyu çapraz kontrolü burada bir DENETİM DEĞİLDİR</span>'
+       + 'Pivot, merkezden tam kol boyu kadar uzağa <b>konularak</b> hesaplandığı için '
+       + '|merkez − pivot| = kol boyu <b>yapısal olarak</b> sağlanır; sıfır sapma bir şey '
+       + 'ölçmez. Bu kontrol ancak pivot <b>ayrıca ölçülmüş</b>se (tedarikçi raporu, montaj '
+       + 'resmi) anlam taşır — o zaman iki bağımsız sayı karşılaştırılıyordur.</div>';
+    h += '<div class="note check"><span class="t">Sıra bu</span>'
+       + 'Kullanıcı yalnız gergi <b>kasnağının</b> merkezini girer → parça künyesindeki kol boyu '
+       + 've kol açısıyla <b>pivot hesaplanır</b> → kol açısı kayış boyundan çözülür → kayış yolu, '
+       + 'gerginlik, hubload ve ömür bu pivota göre kurulur. Belgedeki bütün sayılar bu zincirin '
+       + 'sonucudur.</div>';
+  } else {
+    h += '<div class="note check"><span class="t">Bu modelde pivot ÖLÇÜLMÜŞ</span>'
+       + 'Pivot burada bir tedarikçi raporundan geliyor, yani türetilmedi. O yüzden kol boyu '
+       + 'çapraz kontrolü <b>gerçek bir denetimdir</b>: koordinatlardan çıkan kol boyu '
+       + '(' + _frFs(_frNum(mount.armFromCoords), 3) + ' mm) ile künyedeki kol boyu '
+       + '(' + _frFs(a, 1) + ' mm) iki <b>bağımsız</b> sayıdır ve tutmak zorundadır.</div>';
+  }
+
+  // KAYIŞ YOLU PİVOTA BAĞLI DEĞİL — bu, pivotun neden ayrı çözülebildiğinin sebebi.
+  h += '<p><b>Kayış yolu pivota bağlı değildir.</b> Geometri yalnız gergi <b>kasnağının</b> '
+     + 'merkezine bakar (§3.2\'nin teğet çözümü merkez farklarından kurulur): sarım açıları, '
+     + 'açıklıklar ve kayış boyu pivot kaydırılsa da <b>değişmez</b>. Pivotun tek etkisi kolun '
+     + 'hangi yönde hareket ettiğidir — yani \\( \\beta \\), yani take-up, yani gerginlik '
+     + '(§8.7\'nin geri kalanı). Zincirin bu şekilde ayrılabilmesi, pivotun ayrı bir adımda '
+     + 'çözülebilmesinin sebebidir.</p>';
   return h;
 }
 

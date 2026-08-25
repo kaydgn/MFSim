@@ -118,14 +118,53 @@ function veFeadMigrateAll(nodeList){
 // Döner: { ok, pivot, cen, armFromCoords, montajDeg, relMeanDeg, notes }
 // (serbest açı `sense`e bağlı olduğu için ayrıca veFeadFreeAngleFrom ile
 // hesaplanır — sense'i çekirdek buluyor, bkz. veFeadBuildSystem iki geçişi.)
+// ─── PİVOT BİR GİRDİ DEĞİL, PARÇA KÜNYESİNDEN TÜRER ────────────────────────
+//
+// Kullanıcı bildirimi (2026-08-25): "Otomatik gergi bileşeninde kol ve pivot
+// kısmına kullanıcı girdi girmeyecek. Kullanıcının girdiği koordinat gergi
+// KASNAĞININ merkezi; pivot noktası sonra HESAPLANIYOR."
+//
+// Haklı ve zincir kapanıyor. Kapanışı veren şey gerginin PARÇA ÇİZİMİ:
+//   "E9843 PIN POSITION FOR THE 344° MEAN ANGLE AND 22.5 Nm SPRING TORQUE
+//    @ 28° FREEARM-MEAN ROTATION"
+// yani üretici, kolun ÇALIŞMA (Mean) konumundaki MUTLAK açısını parça künyesi
+// olarak veriyor. Kol boyu da künyede. O zaman pivot kolun öbür ucudur:
+//
+//     pivot = c − a·(cos θ_kol , sin θ_kol)
+//
+// ÖLÇÜLDÜ (Gates AG00976, altı kol konumunun ALTISI da): raporun bastığı
+// kasnak merkezi + raporun bastığı kol açısı, raporun bastığı pivotu
+// 0,11 mm içinde geri veriyor. Bağıntı kolun tanımının ta kendisi.
+//
+// KÜNYEDEKİ ÜÇ SAYI BİRBİRİNİ DOĞRULUYOR: çizim "28° FREEARM-MEAN" diyor,
+// yay künyesinden türeyen rel_mean = (22,07 − 8,60)/0,480 = 28,06°.
+//
+// GERİYE DÖNÜK: pivotX/pivotY girilmişse O KAZANIR (tedarikçi raporundan gelen
+// ÖLÇÜLMÜŞ pivot böyle taşınır) ve eski her proje aynen çalışır. armMeanDeg
+// yalnız pivot YOKKEN devreye girer.
+function veFeadPivotFromArm(td){
+  td = td || {};
+  var cx = _feadNum(td.cenX, NaN), cy = _feadNum(td.cenY, NaN);
+  var a = _feadNum(td.armLen, NaN), th = _feadNum(td.armMeanDeg, NaN);
+  if(!Number.isFinite(cx) || !Number.isFinite(cy)) return null;
+  if(!Number.isFinite(a) || !(a > 0) || !Number.isFinite(th)) return null;
+  var r = th * Math.PI / 180;
+  return [cx - a * Math.cos(r), cy - a * Math.sin(r)];
+}
+
 function veFeadTensionerMount(td){
   td = td || {};
   var out = { ok: false, pivot: null, cen: null, armFromCoords: NaN,
-              montajDeg: NaN, relMeanDeg: NaN, notes: [] };
+              montajDeg: NaN, relMeanDeg: NaN, pivotDerived: false, notes: [] };
   var px = _feadNum(td.pivotX, NaN), py = _feadNum(td.pivotY, NaN);
   var cx = _feadNum(td.cenX, NaN),   cy = _feadNum(td.cenY, NaN);
-  if(!Number.isFinite(px) || !Number.isFinite(py)) return out;
   if(!Number.isFinite(cx) || !Number.isFinite(cy)) return out;
+  if(!Number.isFinite(px) || !Number.isFinite(py)){
+    var tur = veFeadPivotFromArm(td);
+    if(!tur) return out;
+    px = tur[0]; py = tur[1];
+    out.pivotDerived = true;
+  }
   out.pivot = [px, py]; out.cen = [cx, cy];
   var dx = cx - px, dy = cy - py;
   out.armFromCoords = Math.sqrt(dx*dx + dy*dy);
@@ -154,10 +193,18 @@ function veFeadTensionerMount(td){
 function veFeadArmCheck(td){
   var m = veFeadTensionerMount(td);
   var girilen = _feadNum(td && td.armLen, NaN);
-  var out = { ok: false, fromCoords: m.armFromCoords, entered: girilen, deltaMm: NaN };
+  var out = { ok: false, fromCoords: m.armFromCoords, entered: girilen,
+              deltaMm: NaN, tautological: false };
   if(!m.ok || !Number.isFinite(girilen) || !(girilen > 0)) return out;
   out.deltaMm = m.armFromCoords - girilen;
   out.ok = Math.abs(out.deltaMm) <= VE_FEAD_ARM_TOL_MM;
+  // PİVOT TÜRETİLMİŞSE BU KONTROL BİR DENETİM DEĞİL, TOTOLOJİDİR: pivot zaten
+  // merkezden tam `armLen` uzağa konuyor, dolayısıyla fark yapısal olarak
+  // sıfır. Geçen bir kriter gibi sunmak, bu oturumda iki kez düzeltilen
+  // hatanın (uygunluk #6, ilk pivot bloğu) üçüncü kez tekrarı olurdu.
+  // Kontrol ancak pivot GİRİLDİĞİNDE bir şey ölçer — o zaman iki bağımsız
+  // sayı (koordinatlar ↔ künyedeki kol boyu) karşılaştırılıyordur.
+  out.tautological = !!m.pivotDerived;
   return out;
 }
 var VE_FEAD_ARM_TOL_MM = 0.5;
@@ -627,8 +674,14 @@ function veFeadDragTensioner(node, originNode, scale){
   if(Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return false;
   td.cenX = Math.round((eski.cen[0] + dx) * 1000) / 1000;
   td.cenY = Math.round((eski.cen[1] + dy) * 1000) / 1000;
-  td.pivotX = Math.round((eski.pivot[0] + dx) * 1000) / 1000;
-  td.pivotY = Math.round((eski.pivot[1] + dy) * 1000) / 1000;
+  // PİVOT YALNIZ GİRİLMİŞSE TAŞINIR. Türetilmiş pivot merkezden ve kol
+  // açısından çıkıyor, yani merkez taşınınca KENDİLİĞİNDEN takip ediyor;
+  // buraya yazmak onu sessizce GİRİLMİŞ pivota çevirirdi ve kullanıcı bir
+  // daha parça künyesini değiştiremezdi (ilk sürükleme künyeyi dondururdu).
+  if(!eski.pivotDerived){
+    td.pivotX = Math.round((eski.pivot[0] + dx) * 1000) / 1000;
+    td.pivotY = Math.round((eski.pivot[1] + dy) * 1000) / 1000;
+  }
   return true;
 }
 
@@ -1038,34 +1091,35 @@ var VE_FEAD_EXAMPLES = {
                           {rpm:5985,kw:4.27}, {rpm:6300,kw:4.28}, {rpm:6615,kw:4.28} ] } },
       { key:'TEN',  type:'fead-tensioner',  name:'Otomatik Gergi',
         data:{ od:75, contact:'back', inertia:0.00087,
-               // GERGİ KÜNYESİ GATES RAPORUNUN "Tensioner Data" BLOĞUNDAN
-               // (AG00976 · Ten@-250/110 · 05.06.2025). Kullanıcı kararı
-               // (2026-08-25): tedarikçiye giden sayfanın "gerginin ÖNGÖRÜLEN
-               // merkezi montaj pozisyonu" tahmini terk edildi.
+               // ── PİVOT GİRDİ DEĞİL, TÜRETİLİYOR ────────────────────────────
+               // Kullanıcı kararı (2026-08-25): "Otomatik gergi bileşeninde kol
+               // ve pivot kısmına kullanıcı girdi girmeyecek. Kullanıcının
+               // girdiği koordinat gergi KASNAĞININ merkezi; pivot noktası
+               // sonra hesaplanıyor."
                //
-               // SAYFA PİVOTU VERMİYORDU ve örnek onu TÜRETİYORDU: merkez
-               // (−170.080, 99.160) alınıp |merkez − pivot| = 90 mm olacak
-               // şekilde bir pivot seçiliyordu (−259.94, 104.15). Rapor gerçek
-               // pivotu yazınca ayrışma ölçülebilir oldu — iki pivot 11,5 mm
-               // apayrı ve türetilmiş olan çalışma gerginliğini şişiriyordu:
-               //   türetilmiş pivot  → kol 28,51° · T 650,0 N   (Gates 544 → +%19,5)
-               //   GATES pivotu      → kol 29,73° · T 571,1 N   (Gates 544 → +%5,0)
+               // Sayfanın koordinat tablosundaki "Gergi Kasnağı" satırı
+               // (−170,080 / 99,160 · Ø75 flat) diğer bütün kasnaklarla AYNI
+               // şeydir: kasnağın merkezi. Alternatör satırı bunun kanıtı —
+               // orada da gövdenin (kocaman) değil Ø57'lik KASNAĞIN merkezi
+               // yazıyor.
                //
-               // MERKEZ DE RAPORDAN. Gates pivotu sayfanın merkeziyle BİRLİKTE
-               // kullanılamaz: ikisi arası 90 değil 80,65 mm ve kol boyu kapısı
-               // çözümü haklı olarak durduruyor (fark −9,35 mm). Buradaki
-               // merkez raporun Layout Data satırındaki TEN konumudur — yani
-               // çözülmüş ÇALIŞMA merkezi — ve pivottan tam 90,00 mm uzakta.
-               // Serbest açı ondan türetiliyor: 16,06° (raporun "Free Arm"
-               // satırı 16,1°, 0,04° fark).
+               // Kapanışı gerginin PARÇA ÇİZİMİ veriyor:
+               //   "E9843 PIN POSITION FOR THE 344° MEAN ANGLE AND 22.5 Nm
+               //    SPRING TORQUE @ 28° FREEARM-MEAN ROTATION"
+               // yani kolun ÇALIŞMA konumundaki MUTLAK açısı bir parça
+               // künyesidir. pivot = c − a·(cos θ, sin θ).
                //
-               // KALAN %5 GERGİDEN DEĞİL, KAYIŞTAN: bu örnek kayış künyesini
-               // hâlâ sayfadan alıyor (effLength 1715, tolerans 0, aşınma 0,
-               // lengthOffset 0). Raporun Belt Data bloğu 1714,6 / ±6,00 /
-               // %0,60 diyor ve onlarla sapma −%0,1'e iniyor; o blok
-               // AG00976_GATES_2025 örneğinde birebir duruyor.
-               angleMode:'mount', pivotX:-250.00, pivotY:110.00,
-               cenX:-161.97, cenY:91.29, armLen:90.0,
+               // ÖLÇÜLDÜ — üç hipotez çözdürüldü (Gates AG00976'ya karşı):
+               //   koordinat = kasnak · θ=344° (çizim) → T 541,3 N  (−%0,5) ✔
+               //   koordinat = kasnak · θ=348° (Gates)  → T 571,1 N  (+%5,0)
+               //   koordinat = PİVOT                    → T 3608 N   (+%563) ✘
+               // Sonuncusu koordinatın pivot OLMADIĞINI kesin olarak eliyor:
+               // sarım 9,9° (Gates 34,6) ve span sapması 77,7 mm.
+               //
+               // Çizimin üç sayısı birbirini de doğruluyor: "28° FREEARM-MEAN"
+               // ↔ yay künyesinden türeyen (22,07−8,60)/0,480 = 28,06°.
+               cenX:-170.080, cenY:99.160, armLen:90.0, armMeanDeg:344.0,
+               angleMode:'mount',
                preload:8.60, kArm:0.480, meanLoad:22.07,
                armInertia:0.0009, pulleyMass:0.80 } }
     ],
@@ -1512,7 +1566,16 @@ function veFeadBuildSystem(nodeList, connList){
   // ── Gergi ──
   // freeAngleDeg/preloadNm/rateNmPerDeg/armLength ZORUNLU; sense ve
   // loadStopRelDeg opsiyonel (sense verilmezse çekirdek kendisi bulur).
+  // PİVOT ÖNCE KÜNYEDEN, YOKSA TÜRETİLİR (bkz. veFeadPivotFromArm). Kullanıcı
+  // gergi KASNAĞININ merkezini giriyor; pivot, parça künyesindeki kol boyu ve
+  // kolun mean mutlak açısından çıkıyor. Girilmiş bir pivot varsa o kazanır —
+  // tedarikçi raporundan gelen ÖLÇÜLMÜŞ pivot böyle taşınır.
   var pivotX = _feadNum(td.pivotX, NaN), pivotY = _feadNum(td.pivotY, NaN);
+  var _pivotTurev = false;
+  if(!Number.isFinite(pivotX) || !Number.isFinite(pivotY)){
+    var _tp = veFeadPivotFromArm(td);
+    if(_tp){ pivotX = _tp[0]; pivotY = _tp[1]; _pivotTurev = true; }
+  }
   var armLen = _feadNum(td.armLen, 0);
   var preload = _feadNum(td.preload, NaN);
   var rate = _feadNum(td.kArm, NaN);
@@ -1529,8 +1592,16 @@ function veFeadBuildSystem(nodeList, connList){
   var mount = veFeadTensionerMount(td);
   out.mount = mount;
   out.angleMode = mode;
+  // Pivot GİRİLDİ mi TÜRETİLDİ mi — rapor ve panel bunu ayırt etmek zorunda:
+  // türetilmiş pivotta kol boyu çapraz kontrolü YAPISAL OLARAK geçer (pivot
+  // zaten kol boyu kadar uzağa konuyor), yani bir denetim değil totolojidir.
+  out.pivotDerived = _pivotTurev;
+  out.pivot = (Number.isFinite(pivotX) && Number.isFinite(pivotY)) ? [pivotX, pivotY] : null;
   if(tensNodes.length === 1){
-    if(!Number.isFinite(pivotX) || !Number.isFinite(pivotY)) out.errors.push('Gergi pivot konumu (X / Y) girilmedi.');
+    if(!Number.isFinite(pivotX) || !Number.isFinite(pivotY))
+      out.errors.push('Gergi pivotu ne girildi ne de türetilebildi. Pivot bir girdi '
+        + 'değildir: gergi KASNAĞININ merkezi (X / Y), kol boyu ve kolun çalışma '
+        + '(Mean) mutlak açısı verilirse pivot bunlardan çıkar.');
     if(!(armLen > 0)) out.errors.push('Gergi kol boyu girilmedi.');
     if(!Number.isFinite(preload)) out.errors.push('Gergi yay ön yük momenti girilmedi.');
     if(!Number.isFinite(rate)) out.errors.push('Gergi yay katsayısı (Nm/°) girilmedi.');
@@ -2156,6 +2227,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadAnimKinematics: veFeadAnimKinematics,
     veFeadPowerCurve: veFeadPowerCurve, veFeadHasPowerCurve: veFeadHasPowerCurve,
     veFeadInterpKw: veFeadInterpKw,
+    veFeadPivotFromArm: veFeadPivotFromArm,
     VE_FEAD_EXAMPLES: VE_FEAD_EXAMPLES, veFeadExampleKeys: veFeadExampleKeys,
     veFeadRemapDutyKw: veFeadRemapDutyKw,
     veFeadExampleOf: veFeadExampleOf, veFeadExampleNodes: veFeadExampleNodes

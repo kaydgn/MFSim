@@ -219,6 +219,38 @@ describe('GERGİ — sürükleme PİVOTU taşır, kol boyu korunur', () => {
     expect(t.data.pivotY).toBeCloseTo(104.15 - 25, 3);
   });
 
+  // KAPI BOŞLUĞUYDU (mutasyonla ölçüldü): türetilmiş pivotlu bir gergiyi
+  // sürüklerken pivotX/pivotY yazmak, pivotu sessizce GİRİLMİŞ pivota çevirir —
+  // ilk sürükleme parça künyesini DONDURUR ve kullanıcı kol açısını bir daha
+  // değiştiremez. Hiçbir test bunu tutmuyordu.
+  test('TÜRETİLMİŞ pivotlu gergi sürüklenince pivot GİRDİYE dönüşmez', () => {
+    const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true, x: 0, y: 0 });
+    const t = kasnak('t', 'fead-tensioner', 0, 0, {
+      cenX: -170.08, cenY: 99.16, armLen: 90.0, armMeanDeg: 344,
+      preload: 8.6, kArm: 0.48, meanLoad: 22.07 });
+    M.veFeadSyncCanvasFromMm([org, t], { origin: org });
+    const onceKol = M.veFeadTensionerMount(t.data).montajDeg;
+
+    t.x += 40; t.y += 25;
+    expect(M.veFeadDragTensioner(t, org, 1)).toBe(true);
+
+    // Merkez taşındı…
+    expect(t.data.cenX).toBeCloseTo(-170.08 + 40, 3);
+    expect(t.data.cenY).toBeCloseTo(99.16 - 25, 3);
+    // …ama pivot HÂLÂ türetiliyor, künye canlı.
+    expect(t.data.pivotX).toBeUndefined();
+    expect(t.data.pivotY).toBeUndefined();
+    const m = M.veFeadTensionerMount(t.data);
+    expect(m.pivotDerived).toBe(true);
+    expect(m.montajDeg).toBeCloseTo(onceKol, 6);       // kol açısı korunuyor
+    expect(m.armFromCoords).toBeCloseTo(90.0, 6);
+    // Kol açısını değiştirmek HÂLÂ pivotu taşıyor (künye donmadı).
+    const p1 = m.pivot.slice();
+    t.data.armMeanDeg = 350;
+    const p2 = M.veFeadTensionerMount(t.data).pivot;
+    expect(Math.hypot(p2[0] - p1[0], p2[1] - p1[1])).toBeGreaterThan(5);
+  });
+
   test('montaj AÇISI da korunur — gergi gövdesi dönmüyor, ötleniyor', () => {
     const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true, x: 0, y: 0 });
     const t = gergi(0, 0);
@@ -306,9 +338,16 @@ describe('ORİJİN GÖÇÜ — öteleme BEDAVA (ölçüldü)', () => {
     const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
     const kolOnce = M.veFeadTensionerMount(ten.data).armFromCoords;
     M.veFeadNormalizeOrigin(pack.nodes);
-    // Gergi künyesi Gates raporunun Tensioner Data bloğundan (pivot −250/110).
-    expect(ten.data.pivotX).toBeCloseTo(-250.00, 3);
-    expect(ten.data.cenX).toBeCloseTo(-161.97, 3);
+    // BMC gergisinde pivot GİRİLMİYOR, kol açısından türetiliyor — göç yalnız
+    // merkezi taşır ve pivot onu KENDİLİĞİNDEN takip eder. Buraya pivotX
+    // yazılsaydı ilk göç parça künyesini donduracaktı.
+    expect(ten.data.pivotX).toBeUndefined();
+    expect(ten.data.cenX).toBeCloseTo(-170.08, 3);
+    // Türetilen pivot da doğru ötelenmiş olmalı: kol boyu ve açı korunuyor.
+    const m2 = M.veFeadTensionerMount(ten.data);
+    expect(m2.pivotDerived).toBe(true);
+    expect(m2.armFromCoords).toBeCloseTo(kolOnce, 6);
+    expect(m2.montajDeg).toBeCloseTo(-16.0, 6);
     expect(M.veFeadTensionerMount(ten.data).armFromCoords).toBeCloseTo(kolOnce, 6);
   });
 

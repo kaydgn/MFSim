@@ -126,9 +126,13 @@ describe('sayfanın dört çıpası', () => {
     const { build } = kur();
     const mr = F.meanRel(build.sys);
     const M_yay = F.springTorque(build.sys, mr);
+    // PİVOT TÜRETİLDİĞİNDEN BERİ MODEL YİNE KENDİ İÇİNDE TUTARLI: gergi künyesi
+    // (kol boyu + kol açısı + yay) ile kayış künyesi aynı kaynaktan geliyor ve
+    // çözülen açı nominale %0.79 ile oturuyor. Gates'in pivotu sayfanın kayışıyla
+    // birlikte kullanıldığında bu sapma %3.6'ya çıkıyordu — iki kaynağın
+    // karıştığının ölçüsüydü.
     const sapma = Math.abs(M_yay - SAYFA.springMeanNm) / SAYFA.springMeanNm;
-    expect(sapma).toBeGreaterThan(0.02);      // karışık künye: fark GERÇEKTEN var
-    expect(sapma).toBeLessThan(0.05);         // ama iki künye hâlâ aynı sistemi anlatıyor
+    expect(sapma).toBeLessThan(0.015);
   });
 
   test('tahrik oranı 1.1 — krank/fan çapından', () => {
@@ -168,9 +172,10 @@ describe('montaj merkezi serbest açı DEĞİLDİR', () => {
     const ten = veFeadExampleOf('BMC_FEAD_2026').pulleys.find((p) => p.key === 'TEN');
     const m = veFeadTensionerMount(ten.data);
     expect(m.ok).toBe(true);
-    // Montaj açısı GATES pivotuna göre: atan2(91,29 − 110 ; −161,97 + 250).
-    // (Sayfanın türetilmiş pivotuyla −3,178° idi.)
-    expect(m.montajDeg).toBeCloseTo(-11.999, 2);
+    // Montaj açısı = kolun MUTLAK açısı ve artık PARÇA KÜNYESİNDEN geliyor:
+    // E9843 çizimi "344° MEAN ANGLE" diyor, −16° onun eşdeğeri.
+    expect(m.montajDeg).toBeCloseTo(-16.0, 3);
+    expect(m.pivotDerived).toBe(true);
     expect(m.relMeanDeg).toBeCloseTo((22.07 - 8.60) / 0.480, 6);   // 28.06°
     expect(veFeadFreeAngleFrom(m, +1)).toBeCloseTo(m.montajDeg - m.relMeanDeg, 9);
     expect(veFeadFreeAngleFrom(m, -1)).toBeCloseTo(m.montajDeg + m.relMeanDeg, 9);
@@ -204,9 +209,9 @@ describe('montaj merkezi serbest açı DEĞİLDİR', () => {
 
     // 3) Ve gerginlik 2.6 kat düşük (ölçüldü: 650 N ↔ 251 N).
     const T_yanlis = F.tensionerState(yanlis.sys, F.meanRel(yanlis.sys)).tensionN;
-    // ÖLÇÜLDÜ (Gates gergi künyesiyle): 571,1 ↔ 234,7 N — oran 2,43.
+    // ÖLÇÜLDÜ (türetilen pivotla): 532,1 N ↔ yanlış yol belirgin altında.
     expect(T_dogru / T_yanlis).toBeGreaterThan(2.2);
-    expect(T_dogru).toBeGreaterThan(540);
+    expect(T_dogru).toBeGreaterThan(500);
     expect(T_yanlis).toBeLessThan(300);
   });
 
@@ -230,10 +235,30 @@ describe('montaj merkezi serbest açı DEĞİLDİR', () => {
     expect(build.errors.join(' ')).toMatch(/montaj merkezi/i);
   });
 
-  // Kol boyu çapraz kontrolü BEDAVA bir doğrulama: iki sayı da sayfada yazıyor.
-  test('kol boyu koordinatlarla uyuşmazsa çözüm DURUR', () => {
-    const pack = veFeadExampleNodes('BMC_FEAD_2026');
+  // KOL BOYU ÇAPRAZ KONTROLÜ YALNIZ GİRİLMİŞ PİVOTTA BİR ŞEY ÖLÇER.
+  // Pivot türetildiğinde (BMC_FEAD_2026) kontrol TOTOLOJİKTİR: pivot zaten
+  // merkezden tam armLen uzağa konuyor, dolayısıyla fark yapısal olarak sıfır.
+  // Bunu bir "geçti" gibi sunmak, bu oturumda iki kez düzeltilen hatanın
+  // (uygunluk #6, ilk pivot bloğu) tekrarı olurdu — kod bayrakla söylüyor.
+  test('TÜRETİLEN pivotta kol boyu kontrolü TOTOLOJİK ve öyle işaretli', () => {
+    const ten = veFeadExampleOf('BMC_FEAD_2026').pulleys.find((p) => p.key === 'TEN');
+    expect(ten.data.pivotX).toBeUndefined();
+    const ac = veFeadArmCheck(ten.data);
+    expect(ac.ok).toBe(true);
+    expect(ac.tautological).toBe(true);
+    // Kol boyunu değiştirmek pivotu da taşıdığı için fark YİNE sıfır kalır.
+    const ac2 = veFeadArmCheck(Object.assign({}, ten.data, { armLen: 70 }));
+    expect(Math.abs(ac2.deltaMm)).toBeLessThan(1e-9);
+    expect(ac2.tautological).toBe(true);
+  });
+
+  // Pivot GİRİLDİĞİNDE (tedarikçi raporundan gelen ÖLÇÜLMÜŞ pivot) kontrol
+  // gerçek bir denetimdir: iki bağımsız sayı karşılaştırılır.
+  test('GİRİLEN pivotta kol boyu uyuşmazlığı çözümü DURDURUR', () => {
+    const pack = veFeadExampleNodes('AG00976_GATES_2025');
     const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
+    expect(ten.data.pivotX).toBeDefined();
+    expect(veFeadArmCheck(ten.data).tautological).toBe(false);
     ten.data.armLen = 70;                     // koordinatlar 90 mm diyor
     pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     const build = veFeadBuildSystem(pack.nodes, pack.connections);
@@ -242,9 +267,8 @@ describe('montaj merkezi serbest açı DEĞİLDİR', () => {
   });
 
   test('0.5 mm altındaki sapma kabul edilir (ölçü yuvarlaması)', () => {
-    const ten = veFeadExampleOf('BMC_FEAD_2026').pulleys.find((p) => p.key === 'TEN');
-    const td = Object.assign({}, ten.data, { armLen: 90.3 });
-    expect(veFeadArmCheck(td).ok).toBe(true);
+    const ten = veFeadExampleOf('AG00976_GATES_2025').pulleys.find((p) => p.key === 'TEN');
+    expect(veFeadArmCheck(Object.assign({}, ten.data, { armLen: 90.3 })).ok).toBe(true);
     expect(veFeadArmCheck(Object.assign({}, ten.data, { armLen: 90.8 })).ok).toBe(false);
   });
 });
@@ -391,8 +415,10 @@ describe('örnek kaydı ↔ tanım tutarlılığı', () => {
       veFeadExampleOf(k).pulleys.forEach((p) => {
         expect(p.data.od).toBeGreaterThan(0);
         if (p.type === 'fead-tensioner') {
-          expect(p.data.pivotX).toBeDefined();
+          // Merkez HER ZAMAN gerekli; pivot ya girilir ya da kol açısından
+          // türetilir — ikisinden biri olmak zorunda.
           expect(p.data.cenX).toBeDefined();
+          expect(p.data.pivotX !== undefined || p.data.armMeanDeg !== undefined).toBe(true);
         } else {
           expect(Number.isFinite(p.data.x)).toBe(true);
           expect(Number.isFinite(p.data.y)).toBe(true);
@@ -485,7 +511,7 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
     // raporunun "Tensioner Data" bloğundan geldiğinden beri; sayfanın
     // TÜRETİLMİŞ pivotuyla 650 N çıkıyordu ve Gates'in 544 N'undan %19,5
     // yukarıdaydı. Kalan %5 kayış künyesinden — bkz. yay momenti testi.)
-    expect(build.springTensionN).toBeCloseTo(571, 0);
+    expect(build.springTensionN).toBeCloseTo(532, 0);
     expect(build.sys.designTensionN).toBeCloseTo(build.springTensionN, 9);
     expect(build.cfg.designTensionN).toBeCloseTo(build.springTensionN, 9);
   });
@@ -509,7 +535,7 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
     pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     const build = veFeadBuildSystem(pack.nodes, pack.connections);
     expect(build.ok).toBe(true);
-    expect(build.sys.designTensionN).toBeCloseTo(571, 0);   // 400 DEĞİL
+    expect(build.sys.designTensionN).toBeCloseTo(532, 0);   // 400 DEĞİL
     expect(build.warnings).toEqual([]);                     // uyuşmazlık diye bir şey kalmadı
   });
 
@@ -553,12 +579,8 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
     expect(b.sys.designTensionN).toBeGreaterThan(0);
     expect(b.sys.designTensionN).toBeLessThan(5000);
 
-    // Ve gereken boy, GATES RAPORUNUN KENDİ "Effective Drive Length" değerini
-    // geri veriyor: rapor Mean konumunda 1716,2 mm basıyor, model 1716,17.
-    // Bu bedava ve BAĞIMSIZ bir doğrulama — örnek o sayıyı hiç taşımıyor,
-    // yalnız gergi künyesinden ve kasnak koordinatlarından çıkıyor.
-    // (Sayfanın türetilmiş pivotuyla 1715 çıkıyordu.)
-    expect(al.suggestedBeltMm).toBeCloseTo(1716.2, 0);
+    // Ve gereken boy, sayfanın kendi kayışını (1715 mm) geri veriyor.
+    expect(al.suggestedBeltMm).toBeCloseTo(SAYFA.beltEffMm, 0);
   });
 
   // TÜRETME YİNE DE BAŞARISIZ OLABİLİR: yay ÖLÜyse (ön yük 0, katsayı 0)

@@ -281,7 +281,7 @@ describe('kayış boyu kipi — topoloji seçicisi', () => {
     global.connections = pack.connections;
     const html = fead.getFeadBeltPropertiesHTML(belt);
     expect(html).toMatch(/Gereken efektif boy/);
-    expect(html).toMatch(/1716[.,]\d+ mm/);          // türetilen boy basılı
+    expect(html).toMatch(/1715[.,]\d+ mm/);          // türetilen boy basılı
     expect(html).toMatch(/kol 28[.,]\d+°/);          // hangi kol açısından geldiği
   });
 
@@ -1752,5 +1752,45 @@ describe('Çözücü paneli tasarım gerginliği SORMUYOR', () => {
     expect(h).toMatch(/Tasarım gerginliği \(türetildi\)/);
     expect(h).toContain(Math.round(build.springTensionN).toString());
     expect(h).toMatch(/yay dengesinden/);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  GERGİ PANELİ — PİVOT ARTIK SORULMUYOR (kullanıcı kararı, 2026-08-25)
+// ════════════════════════════════════════════════════════════════════════════
+describe('gergi paneli: pivot bir girdi değil', () => {
+  const ten = (d) => kasnak('fead-tensioner', d);
+
+  test('kol künyesi KOL AÇISINI soruyor ve türetilen pivotu YAZIYOR', () => {
+    const html = fead.getFeadTensionerPropertiesHTML(ten({
+      od: 75, cenX: -170.08, cenY: 99.16, armLen: 90, armMeanDeg: 344,
+      preload: 8.6, kArm: 0.48, meanLoad: 22.07,
+    }));
+    expect(html).toMatch(/armMeanDeg/);
+    expect(html).toMatch(/Pivot sorulmaz/);
+    expect(html).toMatch(/Türetilen pivot/);
+    // pivot = c − 90·(cos344°, sin344°) = (−256.59, 123.97)
+    expect(html).toMatch(/−?-?256\.59/);
+    expect(html).toMatch(/123\.97/);
+  });
+
+  test('ÖLÇÜLMÜŞ pivot ayrı ve opsiyonel bir alan olarak duruyor', () => {
+    // Tedarikçi raporundan gelen pivot kaybolmamalı — ama ikincil olmalı.
+    const html = fead.getFeadTensionerPropertiesHTML(ten({
+      od: 75, cenX: -161.97, cenY: 91.29, armLen: 90,
+      pivotX: -250, pivotY: 110, preload: 8.6, kArm: 0.48, meanLoad: 22.07,
+    }));
+    expect(html).toMatch(/Ölçülmüş Pivot/);
+    expect(html).toMatch(/opsiyonel/);
+    expect(html).toMatch(/türetilir/);
+  });
+
+  test('kol açısı YOKSA türetilen pivot satırı da BASILMIYOR (uydurma yok)', () => {
+    const html = fead.getFeadTensionerPropertiesHTML(ten({
+      od: 75, cenX: -170.08, cenY: 99.16, armLen: 90,
+      preload: 8.6, kArm: 0.48, meanLoad: 22.07,
+    }));
+    expect(html).not.toMatch(/Türetilen pivot/);
+    expect(html).not.toMatch(/NaN/);
   });
 });
