@@ -296,3 +296,140 @@ describe('kalite ölçütleri', () => {
     expect(veStrSurfaceVolume(m.positions, ters)).toBeCloseTo(-1000, 6);
   });
 });
+
+// ── KESİŞME KALKANI ─────────────────────────────────────────────────────────
+// Bu kapı, kullanıcının braketinde NATIVE TetGen `-d` ile ölçülen üç ayrı
+// kusur sınıfını tutuyor. Üçü de ekranda KUSURSUZ görünüyor ve üçünü de
+// mevcut hiçbir kapı görmüyordu: ağ hepsinde su geçirmez ve manifold kalıyor
+// (açık kenar 0, anormal kenar 0 — ölçüldü), yalnız TetGen üçgen ATIYOR.
+//
+// Sınıfların üçü de ÖLÇÜLEN yapılarla sınanıyor; "şu parça bozuluyor" gibi
+// bir fikstüre bağlanmadılar, çünkü ölçütlerin kendisi saf geometri.
+describe('kesişme kalkanı — üçgen çifti ölçütleri', () => {
+  const A = [[0,0,0],[10,0,0],[0,10,0]];
+
+  test('üçgen–üçgen: delen EVET, uzak/dejenere/paralel HAYIR', () => {
+    expect(_rmTriTriHit(...A, [2,2,-5],[2,2,5],[6,2,0])).toBe(true);
+    expect(_rmTriTriHit(...A, [0,0,20],[10,0,20],[0,10,20])).toBe(false);
+    expect(_rmTriTriHit(...A, [5,5,0],[5,5,0],[5,5,0])).toBe(false);
+    // İnce duvarın KARŞI yüzeyini delen üçgen — bu modülün asıl kusuru.
+    const duvar = [[0,0,3],[10,0,3],[0,10,3]];
+    expect(_rmTriTriHit(...duvar, [1,1,-1],[2,1,6],[3,3,-1])).toBe(true);
+    expect(_rmTriTriHit(...A, ...duvar)).toBe(false);   // 3 mm ötede paralel
+  });
+
+  test('EŞ DÜZLEMLİ örtüşme de kesişimdir', () => {
+    // TetGen'in bu parçada bildirdiği durumlardan biri tam olarak buydu
+    // ("Two line segments are nearly overlapping"); eş düzlemli dal
+    // atlanırsa o sınıf sessizce geçer.
+    expect(_rmTriTriHit(...A, [1,1,0],[9,1,0],[1,9,0])).toBe(true);
+    expect(_rmTriTriHit(...A, [20,20,0],[30,20,0],[20,30,0])).toBe(false);
+  });
+
+  test('parça–üçgen: içinden geçen EVET, köşede değen HAYIR', () => {
+    expect(_rmSegTriHit([2,2,-5],[2,2,5], ...A)).toBe(true);
+    expect(_rmSegTriHit([20,20,-5],[20,20,5], ...A)).toBe(false);
+    expect(_rmSegTriHit([0,0,-5],[0,0,5], ...A)).toBe(false);    // köşe teması
+    expect(_rmSegTriHit([1,1,0],[5,1,0], ...A)).toBe(false);      // eş düzlemli
+    // Parça düzleme ULAŞMIYOR: uzatılsa keserdi, ama parça olarak kesmiyor.
+    expect(_rmSegTriHit([2,2,2],[2,2,5], ...A)).toBe(false);
+    expect(_rmSegTriHit([2,2,-5],[2,2,-2], ...A)).toBe(false);
+  });
+
+  test('kenar–kenar çaprazlaması: TetGen\'in kendi ölçütü', () => {
+    expect(_rmSegSegHit([0,0,0],[10,0,0], [5,-5,0],[5,5,0])).toBe(true);
+    expect(_rmSegSegHit([0,0,0],[10,0,0], [5,-5,1],[5,5,1])).toBe(false);  // 1 mm ötede
+    expect(_rmSegSegHit([0,0,0],[10,0,0], [0,1,0],[10,1,0])).toBe(false);  // paralel
+    expect(_rmSegSegHit([0,0,0],[10,0,0], [10,0,0],[10,5,0])).toBe(false); // uçta değiyor
+    expect(_rmSegSegHit([0,0,0],[10,0,0], [20,-5,0],[20,5,0])).toBe(false);// uzanınca keser
+  });
+
+  // ── Çift ölçütü: ORTAK KÖŞE SAYISI ────────────────────────────────────────
+  // Kalkanın üç kör noktası da tam buradaydı ve üçü de ölçülerek bulundu.
+  test('KENAR KOMŞUSU çaprazlarsa YAKALANIYOR — 2 ortak köşe elenmiyor', () => {
+    // Ortak kenar (0,1); üçüncü köşeler karşılıklı katlanmış → (0,c)×(1,d)
+    // köşe paylaşmıyor ve çaprazlıyor. İlk sürüm "kenar komşusu" diye bu çifti
+    // tümden eliyordu; ÖLÇÜLDÜ, braket h=4,2'de TetGen'in bildirdiği çift tam
+    // olarak buydu (doğrular arası uzaklık 0,000e+0 · s=0,440 · t=0,751).
+    const V = new Float64Array([
+      0,0,0,   10,0,0,           // 0,1 ortak kenar
+      8,5,0,                     // 2  (tri'nin üçüncüsü)
+      2,5,0,                     // 3  (o'nun üçüncüsü)
+    ]);
+    const tri = [0,1,2], o = [1,0,3];
+    expect(_rmSegSegHit([V[0],V[1],V[2]],[V[6],V[7],V[8]],
+                        [V[3],V[4],V[5]],[V[9],V[10],V[11]])).toBe(true);
+    expect(_rmPairHits(V, tri, o, [0,0,0],[10,0,0],[8,5,0])).toBe(true);
+  });
+
+  test('TEK ortak köşede DEĞMEK serbest, DELMEK değil', () => {
+    // Ortak köşe 0. İki üçgen yalnız orada değiyor → kesişim YOK.
+    const V1 = new Float64Array([0,0,0, 10,0,0, 0,10,0,  -10,0,0, 0,-10,0]);
+    expect(_rmPairHits(V1, [0,1,2], [0,3,4], [0,0,0],[10,0,0],[0,10,0])).toBe(false);
+    // Aynı ortak köşe, ama ikinci üçgen birincinin İÇİNDEN geçiyor.
+    const V2 = new Float64Array([0,0,0, 10,0,0, 0,10,0,  4,1,-5, 4,1,5]);
+    expect(_rmPairHits(V2, [0,1,2], [0,3,4], [0,0,0],[10,0,0],[0,10,0])).toBe(true);
+  });
+
+  test('ASILI DÜĞÜM: kenarın içine düşen yabancı düğüm yakalanıyor', () => {
+    // Braketde ölçülen yapı: 3,10 mm'lik kenarın tam ortasına (t=0,5000)
+    // oturan bir zincir düğümü. Ağ manifold ve su geçirmez kalıyor.
+    // FİKSTÜR GERÇEK DURUMU TAKLİT ETMEK ZORUNDA: asılı düğümün zincir
+    // komşusu, kenarı taşıyan üçgenin köşesidir — yani iki üçgen TEK KÖŞE
+    // paylaşır. Köşe paylaşmayan bir fikstürde `_rmTriTriHit` zaten "kesişiyor"
+    // diyor ve kapı, T-bağlantısı ölçütü SİLİNSE DE yeşil kalıyordu
+    // (mutasyonla ölçüldü). Tek ortak köşede ise devreye giren KARŞI KENAR
+    // ölçütü bu yapıyı göremez; tek gören T-bağlantısıdır.
+    const V = new Float64Array([
+      0,0,0,  3.1,0,0,  1.5,2,0,     // 0,1,2 : üçgen A, kenarı (0,1)
+      1.55,0,0,  2,-1,2,             // 3 : (0,1)'in TAM ORTASI · 4 : düzlem dışı
+    ]);
+    const A2 = [0,1,2], B2 = [1,3,4];          // ortak köşe: yalnız 1
+    expect(_rmTJuncPair(V, A2, B2)).toBe(true);
+    // ve ÇİFT ÖLÇÜTÜNDEN de geçmeli — yoksa kapı yalnız yardımcıyı sınar,
+    // kalkanın onu KULLANDIĞINI sınamaz.
+    expect(_rmPairHits(V, A2, B2, [0,0,0],[3.1,0,0],[1.5,2,0])).toBe(true);
+    // Düğüm kenardan uzaklaşınca temiz.
+    V[3*3+1] = -0.5; V[3*3+2] = 0.5;
+    expect(_rmTJuncPair(V, A2, B2)).toBe(false);
+    expect(_rmPairHits(V, A2, B2, [0,0,0],[3.1,0,0],[1.5,2,0])).toBe(false);
+  });
+
+  test('SLIVER kendi KENAR KOMŞUSUNU reddettirmiyor', () => {
+    // Bu, kaliteyi yıkan ölçülmüş hatanın kapısı: bir sliver üçgenin üçüncü
+    // köşesi tanım gereği karşı kenarının üstündedir. Kenar komşuları
+    // elenmezse her sliver kendi komşusunu asılı düğüm sanıyor ve
+    // iyileştirici işlemler engelleniyordu — ortalama min açı 41,6° → 0,01°.
+    const V = new Float64Array([
+      0,0,0,  10,0,0,  5,0.001,0,     // 0,1,2 : sliver (2 neredeyse (0,1) üstünde)
+      5,-3,0,                          // 3
+    ]);
+    // Kenar komşusu (ortak kenar 0-1) → kalkan ELEMELİ.
+    expect(_rmPairHits(V, [0,1,2], [1,0,3], [0,0,0],[10,0,0],[5,0.001,0])).toBe(false);
+  });
+
+  test('kalkan ANAHTARI gerçekten kapatıyor (kapının kendisi ölçülebilir)', () => {
+    const eski = VE_STR_REMESH_SHIELD;
+    try {
+      VE_STR_REMESH_SHIELD = false;
+      const st = { V: kup().positions, T: toT(kup().indices), Tface: [], dead: {}, cell: 5, grid: null };
+      expect(_rmShieldGrid(st)).toBe(null);
+      VE_STR_REMESH_SHIELD = true;
+      const st2 = { V: kup().positions, T: toT(kup().indices), Tface: [], dead: {}, cell: 5, grid: null };
+      expect(_rmShieldGrid(st2)).not.toBe(null);
+    } finally { VE_STR_REMESH_SHIELD = eski; }
+  });
+
+  test('ızgara: ekle/sil/güncelle tutarlı ve BÜYÜK üçgen kaybolmuyor', () => {
+    const m = kup();
+    const T = toT(m.indices);
+    const g = _rmGridBuild(m.positions, T, 2);
+    // Her canlı üçgen ya hücrelerde ya büyük kovada.
+    T.forEach((tri, i) => expect(g.tc[i] !== undefined).toBe(true));
+    _rmGridDel(g, 0);
+    expect(g.tc[0]).toBe(undefined);
+    _rmGridUpdate(g, m.positions, T, 0);
+    expect(g.tc[0] !== undefined).toBe(true);
+  });
+});
+
