@@ -1688,6 +1688,90 @@ vurgulu satırın neden modelin kendi pivotunu vermek zorunda olduğunu açıkl�
 montaj resmi) mümkün — model kendi kendini doğrulayamaz ve rapor bunu söylüyor.
 
 
+##### PİVOT BİR GİRDİ DEĞİL — parça künyesinden TÜRER (2026-08-25)
+
+Bir önceki bölüm pivotu Gates raporundan almıştı. Kullanıcı asıl noktayı
+sonra koydu ve **haklıydı**:
+
+> *"Otomatik gergi bileşeninde kol ve pivot kısmına kullanıcı girdi
+> girmeyecek. Kullanıcının girdiği koordinat gergi KASNAĞININ merkezi;
+> pivot noktası sonra hesaplanıyor."*
+
+**KOORDİNAT TABLOSU KASNAK MERKEZİ VERİR, GÖVDE DEĞİL** — ve bunun kanıtı
+tablonun kendi **ALT satırı**: alternatör gövdesi kocaman (render'da bordo
+silindir) ama tabloya giren Ø57'lik **kasnağın** merkezi. Gergi satırı da
+(Ø75 flat) aynı şeydir.
+
+Kapanışı gerginin **parça çizimi** veriyor:
+
+> `E9843 PIN POSITION FOR THE 344° MEAN ANGLE AND 22.5 Nm SPRING TORQUE
+> @ 28° FREEARM-MEAN ROTATION`
+
+yani kolun **çalışma (Mean) konumundaki mutlak açısı** bir parça künyesidir.
+Kol boyu da künyede. Pivot kolun öbür ucudur:
+
+```
+pivot = c − a·(cos θ_kol , sin θ_kol)
+```
+
+**ÖLÇÜLDÜ — bağıntı raporun kendi pivotunu geri veriyor:** AG00976'nın altı
+kol konumunun **altısında da**, raporun bastığı kasnak merkezi + raporun
+bastığı kol açısı, raporun bastığı pivotu **0,11 mm** içinde veriyor.
+
+###### ÜÇ HİPOTEZ ÇÖZDÜRÜLDÜ — koordinat KASNAK, pivot DEĞİL
+
+| hipotez | sarım | T | Gates 543,9 N'a | span sapması |
+|---|---|---|---|---|
+| koordinat = kasnak · θ=**344°** (parça çizimi) | 33,3° | **541,3 N** | **−%0,5** | **1,6 mm** |
+| koordinat = kasnak · θ=348° (Gates'in kol açısı) | 33,3° | 571,1 N | +%5,0 | 1,8 mm |
+| koordinat = **PİVOT** | 9,9° | 3608 N | +%563 | **77,7 mm** |
+
+Üçüncüsü koordinatın pivot **olmadığını** kesin olarak eliyor. Birincisi ise
+şunu gösteriyor: pivot **hiç girilmeden**, yalnız müşterinin koordinatı +
+parça künyesiyle tedarikçinin cevabına **%0,5** içinde varılıyor.
+
+Çizimin üç sayısı birbirini de doğruluyor: *"28° FREEARM-MEAN"* ↔ yay
+künyesinden türeyen `(22,07 − 8,60)/0,480 = 28,06°`.
+
+###### İKİ DURUM, İKİ ANLAM — ve karıştırmak TOTOLOJİ üretir
+
+| | pivot TÜRETİLDİ (`BMC_FEAD_2026`) | pivot GİRİLDİ (`AG00976_GATES_2025`) |
+|---|---|---|
+| Kaynak | kasnak merkezi + parça künyesi | tedarikçi raporunda **ölçülü** |
+| Kol boyu çapraz kontrolü | **TOTOLOJİK** — pivot zaten kol boyu kadar uzağa konuyor | **GERÇEK DENETİM** — iki bağımsız sayı |
+| Rapor ne der | *"Bu bir denetim değildir"* | *"kol boyu tutmak zorundadır"* |
+
+`veFeadArmCheck` bunu `tautological` bayrağıyla taşıyor. Bayrak olmasaydı
+yapısal olarak sıfır çıkan bir fark "geçen kriter" diye basılırdı — bu
+oturumda **üçüncü kez** aynı tuzak (uygunluk #6, ilk pivot bloğu).
+
+###### SÜRÜKLEME PİVOTU DONDURMAMALI — kapı boşluğuydu
+
+`veFeadDragTensioner` merkezi ve pivotu birlikte taşıyordu. Türetilmiş
+pivotta `pivotX/pivotY` yazmak onu sessizce **girilmiş** pivota çevirir:
+ilk sürükleme parça künyesini dondurur, kullanıcı kol açısını bir daha
+değiştiremez. Artık türetilmiş pivotta yalnız merkez taşınıyor; pivot
+kendiliğinden takip ediyor. Mutasyonla ölçüldü — kapı **yoktu**, eklendi.
+
+###### Panel ve rapor
+
+Panelde **"Kol Künyesi"** kartı kol boyu + kol açısını soruyor ve türetilen
+pivotu **yazıyor**; pivot alanları *"Ölçülmüş Pivot — opsiyonel"* başlığı
+altında ikincil kaldı. Rapor §8.7'nin pivot bloğu artık gerçek kuruluşu
+anlatıyor ve iki durumu ayırıyor.
+
+**Kayış yolunun pivota bağlı olmaması** zincirin ayrılabilmesinin sebebi ve
+raporda yazılı: geometri yalnız kasnak merkezine bakar; pivot yalnız β'yı,
+yani take-up'ı, yani gerginliği belirler. Testi bunu ÖLÇÜYOR — pivot kolun
+etrafında döndürülünce sarım `<0,001°` değişiyor ama β `>1°` ve gerginlik
+`>%1` değişiyor.
+
+**Kapı altı mutasyonla ölçüldü, altısı da kırmızı:** türetmeyi kaldırma
+(103 test), türetmede işareti çevirme (14), örnekte kol açısı 344 → 348 (8),
+totoloji bayrağını sabitleme (1), sürüklemede pivotu yine yazma (1), raporun
+totoloji uyarısını basmaması (1).
+
+
 **Sırada:** Sonuçlar sayfasında FEAD çözüm sekmesi (kanal yayını).
 
 #### Yapısal Analiz — `js/cp-structural.js` (Geometri + Ağ DOLU, kalan ikisi iskelet)

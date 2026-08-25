@@ -897,14 +897,48 @@ function getFeadTensionerPropertiesHTML(node){
 
   var mode = veFeadAngleMode(node.data);
 
-  html += _feadCard('Kol ve Pivot', '[mm]', 'var(--text-secondary)',
+  // ── KOL KÜNYESİ — PİVOT ARTIK SORULMUYOR ─────────────────────────────────
+  //
+  // Kullanıcı kararı (2026-08-25): "Otomatik gergi bileşeninde kol ve pivot
+  // kısmına kullanıcı girdi girmeyecek. Kullanıcının girdiği koordinat gergi
+  // KASNAĞININ merkezi; pivot noktası sonra hesaplanıyor."
+  //
+  // Doğru: koordinat tablosundaki gergi satırı diğer kasnaklarla aynı şeydir
+  // (kasnağın merkezi) ve pivot oradan + parça künyesinden çıkar:
+  //     pivot = c − a·(cos θ_kol , sin θ_kol)
+  // θ_kol gergi üreticisinin parça çiziminde yazar (E9843: "344° MEAN ANGLE").
+  //
+  // PİVOT ALANLARI YİNE DE DURUYOR ama ikincil: tedarikçi raporundan gelen
+  // ÖLÇÜLMÜŞ bir pivot varsa o kazanır ve kol boyu çapraz kontrolü orada
+  // gerçek bir denetim olur. Boş bırakılırsa türetilir.
+  var _tp = veFeadPivotFromArm(node.data);
+  html += _feadCard('Kol Künyesi', 'pivot BURADAN türer', 'var(--text-secondary)',
       _feadGrid(node, [
-        { key:'pivotX', label:'Pivot X', ph:'0' },
-        { key:'pivotY', label:'Pivot Y', ph:'0' },
-        { key:'armLen', label:'Kol boyu (Arm Length)', ph:'90' }
-      ], 3)
-    + _feadHint('Pivot, kolun döndüğü sabit noktadır. Kasnak merkezi pivot + kol boyu + kol '
-        + 'açısından TÜRETİLİR. Kol boyu 56–90 mm aralığında doğrulandı.'));
+        { key:'armLen',     label:'Kol boyu (Arm Length) [mm]', ph:'90' },
+        { key:'armMeanDeg', label:'Kol çalışma açısı (MEAN) [°]', ph:'344', step:'0.1' }
+      ], 2)
+    + (_tp
+        ? '<div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">'
+          + '<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">'
+          + 'Türetilen pivot</div><div style="width:150px; text-align:center; '
+          + 'font-family:ui-monospace, monospace; font-weight:700; font-size:var(--fs-body); '
+          + 'color:var(--accent-warning);">' + _feadEsc(_tp[0].toFixed(2) + ' / ' + _tp[1].toFixed(2))
+          + '</div></div>'
+        : '')
+    + _feadHint('<b>Pivot sorulmaz.</b> Kasnak merkezi (aşağıdaki montaj konumu) ile kol boyu ve '
+        + 'kolun çalışma açısı verilince pivot bunlardan <b>hesaplanır</b>. Kol açısı gergi '
+        + 'üreticisinin parça çiziminde yazar (ör. E9843 için <b>344°</b>). Kol boyu 56–90 mm '
+        + 'aralığında doğrulandı.'));
+
+  // Ölçülmüş pivot (tedarikçi raporu) varsa girilebilsin — ikincil yol.
+  html += _feadCard('Ölçülmüş Pivot', 'opsiyonel — tedarikçi raporundan', 'var(--text-muted)',
+      _feadGrid(node, [
+        { key:'pivotX', label:'Pivot X [mm]', ph:'(türetilir)' },
+        { key:'pivotY', label:'Pivot Y [mm]', ph:'(türetilir)' }
+      ], 2)
+    + _feadHint('Boş bırakın — normalde pivot yukarıdaki künyeden türetilir. Yalnız '
+        + 'tedarikçi raporunda ya da montaj resminde <b>ölçülmüş</b> bir pivot varsa doldurun; '
+        + 'o zaman girilen değer kazanır ve kol boyu çapraz kontrolü gerçek bir denetim olur.'));
 
   // ── YAY KÜNYESİ — tedarikçi sayfasındaki dört satırın birebir karşılığı ──
   html += _feadCard('Yay Künyesi', 'sayfadaki dört satır', 'var(--accent-success)',
