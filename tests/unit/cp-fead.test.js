@@ -27,6 +27,7 @@ document.body.innerHTML = '<div id="ve-canvas"></div>';
 global.nodes = [];
 global.connections = [];
 eval(loadSource('components.js'));
+eval(loadSource('fead-belts.js'));
 // Model katmanı ayrı dosyada; tarayıcıda ikisi de global kapsamda yüklenir,
 // testte de öyle kurulur (cp-fead.js bu adları çağırıyor).
 global.FEADCore = F;

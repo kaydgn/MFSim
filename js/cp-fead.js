@@ -936,6 +936,8 @@ function getFeadBeltPropertiesHTML(node){
         + '(0.007 = %0.70). Konum tablosu bu üç sayıdan kurulur: Replace = L+tol+aşınma·L, '
         + 'Max = L+tol, Mean = L, Min = L−tol.'));
 
+  html += veFeadBeltCatalogCard(node, serbest);
+
   html += _feadCard('Malzeme', 'opsiyonel', 'var(--accent-success)',
       _feadGrid(node, [
         { key:'massPerRibKgM', label:'Kaburga başına kütle [kg/m]', ph:'0.0196', step:'0.0001' }
@@ -945,6 +947,106 @@ function getFeadBeltPropertiesHTML(node){
         + 'frekans haritasından geri-hesap <b>0.0196</b> veriyor. Frekans önemliyse elle girin.'));
   html += '</div>';
   return html;
+}
+
+// ─── KATALOG KARTI ──────────────────────────────────────────────────────────
+//
+// Katalogun değeri bir boy listesi DEĞİL, o listeden birini seçmenin NE
+// YAPACAĞI: kayış boyu değişince gergi kolu başka bir açıya oturuyor ve
+// gerginlik onunla değişiyor. "1690 mı 1755 mi" sorusu ancak bu sayılarla
+// cevaplanabilir; çıplak bir liste kullanıcıyı kendi başına bırakırdı.
+//
+// İKİ KÜME AYRI GÖSTERİLİYOR ve etiketli — biri gerçek bir STOK listesi
+// (ISO 9982 / DIN 7867), öbürü otomotiv IZGARASI (bir kural). Tek listede
+// karıştırmak "bunlar da stokta" sanılmasına yol açardı. Ölçülmüş sebep:
+// BMC'nin kendi kayışı (8PK 1715) stok listesinde YOK — komşuları 1690 ve
+// 1755, yani 65 mm'lik bir boşluk.
+function veFeadBeltCatalogCard(node, serbest){
+  // KATALOĞUN KENDİ sembolüne bakılıyor, köprününkine değil: köprü
+  // (fead-model.js) her zaman yüklü ama katalog ayrı bir dosya. Yanlış sembolü
+  // yoklamak, katalog eksikken paneli ReferenceError ile düşürüyordu.
+  if(typeof veFeadBeltNearest !== 'function' || typeof veFeadBeltOptions !== 'function')
+    return _feadCard('Katalog', '', 'var(--text-muted)',
+      _feadHint('Kayış kataloğu yüklenmedi (js/fead-belts.js).'));
+  var kaynak = (typeof VE_FEAD_BELT_LIB_SOURCE === 'string') ? VE_FEAD_BELT_LIB_SOURCE : '';
+
+  var b = null;
+  try { b = (typeof veFeadBuildFromCanvas === 'function') ? veFeadBuildFromCanvas() : null; }
+  catch(e){ b = null; }
+  var o = veFeadBeltOptions(b, { count: 3 });
+  if(!o.ok)
+    return _feadCard('Katalog', 'ISO 9982 / DIN 7867', 'var(--text-muted)',
+      _feadHint(_feadEsc(o.error || 'Gereken boy henüz belli değil.')));
+
+  var sut = function(t, w, al){
+    return '<th style="padding:3px 5px; text-align:' + (al||'right') + '; width:' + w
+      + '; font-size:var(--fs-micro); font-weight:600; color:var(--text-muted);'
+      + ' border-bottom:1px solid var(--border-color); white-space:nowrap;">' + t + '</th>';
+  };
+  var h = '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin:-3px 0 7px;">'
+    + 'Gereken boy <b style="color:var(--accent-warning);">' + _feadFmt(o.targetMm, 2)
+    + ' mm</b> — aşağıdaki boylardan birini seçerseniz gergi kolu ve gerginlik '
+    + 'şu değerlere oturur.</div>';
+  h += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse;'
+    + ' font-family:ui-monospace, monospace; font-size:var(--fs-micro);">'
+    + '<thead><tr>' + sut('Boy', '20%') + sut('Δ', '16%') + sut('Kod', '26%', 'left')
+    + sut('Kol', '16%') + sut('Gerginlik', '22%') + '</tr></thead><tbody>';
+
+  var satir = function(c, izgara){
+    if(!c) return '';
+    var f = c.fit || {};
+    var vur = izgara ? ' background:var(--bg-input);' : '';
+    // SIĞMAYAN ADAY: sayı değil HÜKÜM. Kenetlenmiş çözümün gerginliği
+    // tekilliğe komşu ve fiziksel değil (bkz. veFeadBeltFit).
+    var kol = (f.ok && f.fits) ? _feadFmt(f.relDeg, 2) + '°' : '—';
+    var ger = (f.ok && f.fits && Number.isFinite(f.tensionN))
+      ? _feadFmt(f.tensionN, 0) + ' N' : '—';
+    var sig = !(f.ok && f.fits);
+    if(sig){ kol = '<span style="color:var(--accent-danger);">sığmıyor</span>'; }
+    return '<tr style="cursor:pointer;' + vur + (sig ? ' opacity:0.65;' : '') + '"'
+      + ' onclick="veFeadPickBelt(\'' + node.id + '\',' + c.lengthMm + ')"'
+      + ' title="Bu boyu seç (kip SABİT olur)">'
+      + '<td style="padding:3px 5px; text-align:right; font-weight:700;">' + _feadFmt(c.lengthMm, 0) + '</td>'
+      + '<td style="padding:3px 5px; text-align:right; color:var(--text-muted);">'
+      + (c.deltaMm >= 0 ? '+' : '−') + _feadFmt(Math.abs(c.deltaMm), 1) + '</td>'
+      + '<td style="padding:3px 5px; text-align:left;">' + _feadEsc(c.code)
+      + (izgara ? ' <span style="color:var(--accent-warning);">◇</span>' : '') + '</td>'
+      + '<td style="padding:3px 5px; text-align:right;">' + kol + '</td>'
+      + '<td style="padding:3px 5px; text-align:right;">' + ger + '</td></tr>';
+  };
+  // Izgara adayı listeye SIRALI giriyor ama ayrı işaretli (◇).
+  var hepsi = o.stock.slice();
+  if(o.grid && !hepsi.some(function(x){ return x.lengthMm === o.grid.lengthMm; }))
+    hepsi.push(o.grid);
+  hepsi.sort(function(a, b){ return a.lengthMm - b.lengthMm; });
+  hepsi.forEach(function(c){ h += satir(c, c.kind === 'grid'); });
+  h += '</tbody></table></div>';
+
+  h += _feadHint('<b>◇</b> otomotiv ızgarası (5 mm adım) — stok listesinde değil ama '
+    + 'ısmarlanabilir; FEAD kayışları uygulama başına üretiliyor. İşaretsiz satırlar '
+    + 'ISO 9982 / DIN 7867 <b>stok</b> boyları. Katalog bir KISIT DEĞİL: ara boy '
+    + 'tedarik edilebilir, boyu elle de girebilirsiniz. Kaynak: ' + _feadEsc(kaynak) + '.');
+
+  return _feadCard('Katalog', serbest ? 'gereken boya en yakınlar' : 'başka bir boy seçersem',
+                   'var(--accent-primary)', h);
+}
+
+// Katalogdan boy seçmek KİPİ DE SABİTLER: seçilen boy bir GİRDİ, dolayısıyla
+// serbest kipte kalmak kullanıcının seçimini sessizce yok saymak olurdu.
+function veFeadPickBelt(nodeId, lengthMm){
+  if(typeof nodes === 'undefined') return null;
+  var node = nodes.find(function(n){ return n.id === nodeId; });
+  if(!node || !_feadDefOf(node).isFeadBelt) return null;
+  if(!node.data) node.data = {};
+  var L = _feadNum(lengthMm, NaN);
+  if(!Number.isFinite(L) || !(L > 0)) return null;
+  node.data.effLength = L;
+  node.data.lengthMode = 'fixed';
+  if(typeof saveState === 'function') saveState();
+  veFeadRefreshBadges();
+  if(typeof veFeadRefreshLayoutCards === 'function') veFeadRefreshLayoutCards();
+  if(typeof showNodeProperties === 'function') showNodeProperties(node);
+  return L;
 }
 
 // SERBEST KİPTE BOY BİR OKUMA, ALAN DEĞİL — ama GÖRÜNMEK ZORUNDA.
@@ -2862,6 +2964,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadApplyBeltModeBadge: veFeadApplyBeltModeBadge,
     veFeadToggleBeltMode: veFeadToggleBeltMode,
     veFeadDerivedLengthHTML: veFeadDerivedLengthHTML,
+    veFeadBeltCatalogCard: veFeadBeltCatalogCard,
+    veFeadPickBelt: veFeadPickBelt,
     veFeadApplyLayoutCard: veFeadApplyLayoutCard,
     veFeadPosPicker: veFeadPosPicker,
     // Animasyon: yürüyüş + faz + döngü. Testler dişleri ve kolları doğrudan

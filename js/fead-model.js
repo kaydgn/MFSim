@@ -459,6 +459,89 @@ function veFeadWorkingPoint(sys, mode, nominalRelDeg){
   return out;
 }
 
+// ─── KATALOG ADAYLARININ SONUCU ─────────────────────────────────────────────
+//
+// Katalogun asıl değeri bir boy LİSTESİ vermek değil — o listeden birini
+// seçmenin NE YAPACAĞINI söylemek. Kayış boyu değişince gergi kolu başka bir
+// açıya oturuyor, gerginlik ve hubload da onunla değişiyor; kullanıcı "1690 mı
+// 1755 mi" sorusunu ancak bu sayıları görerek cevaplayabilir.
+//
+// Hesap sabit kipin kendisi: rel = solveArmForBeltLength(L). Kenetlenen
+// sarmalayıcıdan geçtiği için erişilemeyen bir aday da CEVAP veriyor —
+// "bu boy kolun aralığının dışında" bir sonuçtur, hata değil.
+function veFeadBeltFit(sys, lengthMm){
+  var out = { lengthMm: _feadNum(lengthMm, NaN), ok: false, fits: false, relDeg: NaN,
+              tensionN: NaN, hubloadN: NaN, atLimit: null, error: null };
+  if(typeof FEADCore === 'undefined' || !sys || !Number.isFinite(out.lengthMm)){
+    out.error = 'Model çözülemedi.'; return out;
+  }
+  var r = veFeadSolveArmClamped(sys, 'belt', out.lengthMm);
+  if(!r.ok){ out.error = r.error; return out; }
+  out.relDeg = r.relDeg;
+  out.atLimit = r.atLimit;
+  out.ok = true;                       // bir CEVAP her zaman var
+  out.fits = !r.atLimit;               // ama "sığıyor mu" ayrı bir soru
+
+  // SIĞMAYAN ADAYDA GERGİNLİK YAZILMAZ. Kenetlenme kolun uç konumuna oturuyor
+  // ve orası take-up tekilliğine komşu (T = M/(dL/dθ), dL/dθ → 0); ÖLÇÜLDÜ:
+  // BMC'ye 1690 mm kayış denenince 4.05e10 N çıkıyor. Sayı modelin kendi
+  // cevabı ama FİZİKSEL DEĞİL — katalog tablosuna böyle bir sayı basmak,
+  // kullanıcıya "bu kayış çok gergi olur" diye okutulacak bir yalan olurdu.
+  // Doğru cevap bir sayı değil, bir HÜKÜM: bu boy bu yerleşime sığmıyor.
+  if(r.atLimit && r.atLimit.degenerate) return out;
+
+  try {
+    var st = FEADCore.tensionerState(sys, r.relDeg);
+    out.tensionN = st.tensionN; out.hubloadN = st.hubloadN;
+    out.wrapDeg = st.wrapDeg; out.takeupMmPerDeg = st.takeupMmPerDeg;
+  } catch(e){ out.error = veFeadTranslateError(e && e.message); }
+  return out;
+}
+
+// Çözülmüş bir modelin GEREKEN boyu için katalog adayları + her birinin sonucu.
+// `build` sabit kipte de serbest kipte de olabilir: ikisinde de bir "gereken
+// boy" var (sabit kipte kayış sığmıyorsa atLimit.suggestedBeltMm, sığıyorsa
+// girilen boyun kendisi).
+function veFeadBeltOptions(build, opt){
+  opt = opt || {};
+  var out = { ok: false, targetMm: NaN, profile: null, ribs: null,
+              stock: [], grid: null, error: null };
+  if(!build || !build.ok || !build.sys){
+    out.error = (build && build.errors && build.errors[0]) || 'Model çözülemedi.';
+    return out;
+  }
+  var wp = build.workPoint || {};
+  out.targetMm = _feadNum(
+    (wp.atLimit && Number.isFinite(wp.atLimit.suggestedBeltMm)) ? wp.atLimit.suggestedBeltMm
+      : build.beltLengthMm, NaN);
+  out.profile = (typeof veFeadBeltProfileOf === 'function')
+    ? veFeadBeltProfileOf(build.sys.belt && build.sys.belt.profile) : null;
+  out.ribs = _feadNum(build.sys.belt && build.sys.belt.ribs, NaN);
+  if(!Number.isFinite(out.targetMm) || !out.profile){
+    out.error = 'Gereken kayış boyu henüz belli değil.'; return out;
+  }
+  if(typeof veFeadBeltNearest !== 'function'){
+    out.error = 'Kayış kataloğu yüklenmedi (js/fead-belts.js).'; return out;
+  }
+
+  // Çalışma noktası ADAYLARDAN BAĞIMSIZ olmalı: her aday kendi çözümünü
+  // istiyor ama hepsi AYNI sistemden. `sys` üzerinde meanRel önbelleği duruyor
+  // (çalışma noktası tohumlandı) — adaylar onu okumuyor, kendi bisect'lerini
+  // koşuyorlar, yani önbelleği bozan bir yan etki YOK.
+  var n = veFeadBeltNearest(out.profile, out.targetMm, { count: opt.count || 3 });
+  var degerle = function(c){
+    var f = veFeadBeltFit(build.sys, c.lengthMm);
+    return { lengthMm: c.lengthMm, deltaMm: c.deltaMm, kind: c.kind,
+             code: (typeof veFeadBeltCode === 'function')
+                     ? veFeadBeltCode(out.profile, out.ribs, c.lengthMm) : '',
+             fit: f };
+  };
+  out.stock = n.stock.map(degerle);
+  out.grid = n.grid ? degerle(n.grid) : null;
+  out.ok = true;
+  return out;
+}
+
 // ─── GERGİ KOL KONUMLARI — kayış yolu her konumda BAŞKA ─────────────────────
 //
 // Gergi kolu bir yay dengesinde duruyor: kayış uzadıkça (tolerans, aşınma) kol
@@ -1791,6 +1874,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadFreeAngleFrom: veFeadFreeAngleFrom, veFeadAngleMode: veFeadAngleMode,
     VE_FEAD_BELT_MODES: VE_FEAD_BELT_MODES, veFeadBeltMode: veFeadBeltMode,
     VE_FEAD_MIN_TAKEUP_RATIO: VE_FEAD_MIN_TAKEUP_RATIO,
+    veFeadBeltFit: veFeadBeltFit, veFeadBeltOptions: veFeadBeltOptions,
     veFeadSolveArmClamped: veFeadSolveArmClamped,
     veFeadWorkingPoint: veFeadWorkingPoint,
     veFeadAtLimitText: veFeadAtLimitText, veFeadViolationText: veFeadViolationText,
