@@ -1255,7 +1255,7 @@ function veFeadRouteDiagnose(nodeList, connList){
   }
   out.closed = (cur === start.id);
   out.isolated = pulleys.filter(function(p){ return !seen[p.id]; });
-  // Sıra yine BÜTÜN kasnakları taşır: yerleştirici (veFeadArrangeRing) ve
+  // Sıra yine BÜTÜN kasnakları taşır: yerleştirici (veFeadArrangeByCoords) ve
   // rozetler kopuk kasnağı da görmeli. Geçerlilik ayrı alanda.
   out.order = order.concat(out.isolated);
 

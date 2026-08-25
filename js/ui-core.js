@@ -67,7 +67,31 @@ function veAttachNodeDrag(nodeEl, node) {
 
     selectedNodes.forEach(function(n) { n.x += dx; n.y += dy; });
 
-    var snap = (typeof checkAlignment === 'function') ? checkAlignment(selectedNodes) : { snapX: 0, snapY: 0 };
+    // HİZALAMA KENETLEMESİ FEAD KASNAĞINDA KAPALI.
+    //
+    // Kenetleme bir YERLEŞİM yardımı: kutuları birbirine hizalar. FEAD'de ise
+    // konum artık FİZİKSEL VERİ — kenetleme, kullanıcının koyduğu koordinatı
+    // sessizce kaydırmak demek.
+    //
+    // Kenetleme VARSAYILAN OLARAK KAPALI (SNAP_ENABLED, results.js), yani bu
+    // ancak kullanıcı onu açtığında ya da Q'yu basılı tuttuğunda ateşlenir.
+    // Ateşlendiğinde ÖLÇÜLDÜ (gerçek tarayıcı, BMC, alternatör Avara 2'nin
+    // satırına doğru 16 ekran px yukarı, zoom 0.653):
+    //
+    //     kenetleme FEAD'de açıkken   Δy = 24.514 mm istendi →  3.940 mm oldu
+    //     kenetleme FEAD'de kapalıyken Δy = 24.514 mm istendi → 24.514 mm oldu
+    //
+    // Yani 20.6 mm sessizce yutuluyor: kutu komşusunun kenarına yapışıyor ve
+    // model kullanıcının hiç koymadığı bir koordinatla çözülüyor.
+    //
+    // Üstelik kenetleme kutu KENARLARINI hizalıyor ve bunu yaparken BÜTÜN
+    // düğümler için sabit 65 px genişlik varsayıyor (checkAlignment); kasnak
+    // kutuları 54…72 px olduğu için hizalanan şey merkez de değil, kenar da
+    // değil. Kasnak koordinatı için anlamı yok.
+    var _feadDrag = (typeof _feadIsPulley === 'function')
+      && selectedNodes.some(function(n){ return _feadIsPulley(n); });
+    var snap = (!_feadDrag && typeof checkAlignment === 'function')
+      ? checkAlignment(selectedNodes) : { snapX: 0, snapY: 0 };
     if(snap.snapX !== 0 || snap.snapY !== 0) {
       selectedNodes.forEach(function(n) { n.x += snap.snapX; n.y += snap.snapY; });
     }
