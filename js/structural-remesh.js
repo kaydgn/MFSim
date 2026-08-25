@@ -773,23 +773,6 @@ function _rmBoxApart(V, o, x0, x1, y0, y1, z0, z1){
   return (mx < z0 || mn > z1);
 }
 
-// Aday üçgenin kutusu sorgu kutusundan AYRIK mı? Ayrıksa kesişim imkânsız.
-function _rmBoxApart(V, o, x0, x1, y0, y1, z0, z1){
-  var i0 = o[0]*3, i1 = o[1]*3, i2 = o[2]*3;
-  var v = V[i0];   var mn = v, mx = v;
-  v = V[i1]; if(v < mn) mn = v; else if(v > mx) mx = v;
-  v = V[i2]; if(v < mn) mn = v; else if(v > mx) mx = v;
-  if(mx < x0 || mn > x1) return true;
-  v = V[i0+1]; mn = v; mx = v;
-  v = V[i1+1]; if(v < mn) mn = v; else if(v > mx) mx = v;
-  v = V[i2+1]; if(v < mn) mn = v; else if(v > mx) mx = v;
-  if(mx < y0 || mn > y1) return true;
-  v = V[i0+2]; mn = v; mx = v;
-  v = V[i1+2]; if(v < mn) mn = v; else if(v > mx) mx = v;
-  v = V[i2+2]; if(v < mn) mn = v; else if(v > mx) mx = v;
-  return (mx < z0 || mn > z1);
-}
-
 // İKİ ÜÇGEN ARASINDA KESİŞİM — ORTAK KÖŞE SAYISINA GÖRE.
 // İlk sürüm köşe paylaşan HER çifti eliyordu ("komşular tanım gereği değer")
 // ve bu kalkanda ÖLÇÜLEBİLİR bir delik açıyordu: braket h=10'da TetGen'in

@@ -297,6 +297,55 @@ describe('kalite ölçütleri', () => {
   });
 });
 
+// ── PASO SAYISI HEDEFTEN TÜRER ──────────────────────────────────────────────
+// Sabit 10 paso İNCE hedeflerde yetmiyordu ve bedeli ÇÖZÜMÜ DURDURAN dejenere
+// elemandı. Döngünün ilk işi bölme, bölme her pasoda kenarı yarıya indiriyor;
+// ham OCCT üçgenlemesinde 150 mm'ye varan kenarlar var (parça 131×150×131 mm),
+// yani 3 mm hedefe inmek ~6 paso yiyor ve kaliteye paso kalmıyor.
+//
+// ÖLÇÜLDÜ (kullanıcının braketi, h=3):
+//   10 paso → min açı 1,59° · 2° altı 4 üçgen · 34.554 üçgen → 2.081 dejenere tet
+//   20 paso → min açı 5,89° · 2° altı 0 üçgen · 32.108 üçgen →     0 dejenere tet
+describe('paso sayısı', () => {
+  test('KABA hedefte taban paso sayısı korunuyor (doğrulanmış ölçümler kaymasın)', () => {
+    // Kenar zaten hedefin altındaysa bölme pasosu gerekmez → taban.
+    const m = kup(10);
+    const r = veStrRemeshMesh(m, { targetLen: 20 });
+    expect(r.ok).toBe(true);
+    // Formülün kendisi: bölme payı 0 → max(10, min(24, 0+12)) = 12 değil 10 DEĞİL;
+    // taban 10, kalite payı 12 → 12. Sözleşme: TABANDAN AZ OLAMAZ.
+    expect(VE_STR_REMESH_DEFAULT_ITERATIONS).toBe(10);
+    expect(VE_STR_REMESH_QUALITY_PASSES).toBeGreaterThanOrEqual(10);
+    expect(VE_STR_REMESH_MAX_ITERATIONS).toBeGreaterThan(VE_STR_REMESH_QUALITY_PASSES);
+  });
+
+  test('İNCE hedefte paso ARTIYOR ve sliver KALMIYOR', () => {
+    // 30 mm'lik küpte 6 mm hedef: bölme payı ceil(log2(30/6)) = 3. Fikstür KÜÇÜK
+    // tutuldu — 150 mm'lik ilk deneme bu dosyayı 20 s'den 457 s'ye çıkarıyordu
+    // ve projenin hızlı döngü kuralını tek başına bozuyordu.
+    const m = kup(30);
+    const r = veStrRemeshMesh(m, { targetLen: 6 });
+    expect(r.ok).toBe(true);
+    // Asıl ölçüt sayı değil SONUÇ: 2° altı üçgen kalmamalı.
+    const T = toT(r.indices);
+    const kotu = T.filter((t) => _rmTriMinAngle(r.positions, t) < 2).length;
+    expect(kotu).toBe(0);
+    expect(r.qualityAfter.minAngleDeg).toBeGreaterThan(2);
+  });
+
+  test('ELLE verilen paso sayısı KAZANIR (ölçüm koşucuları buna dayanıyor)', () => {
+    // İKİ KOŞU DA UCUZ tutuldu: burada sınanan şey kalite değil, seçeneğin
+    // formülü EZMESİ. Pahalı bir fikstür bu dosyayı tek başına dakikalara
+    // çıkarıyordu (ölçüldü: 20 s → 457 s).
+    const m = kup(30);
+    const az = veStrRemeshMesh(m, { targetLen: 6, iterations: 1 });
+    const cok = veStrRemeshMesh(m, { targetLen: 6, iterations: 4 });
+    expect(az.ok && cok.ok).toBe(true);
+    // Tek paso hedefe inemez → belirgin şekilde daha az üçgen.
+    expect(az.indices.length).toBeLessThan(cok.indices.length);
+  });
+});
+
 // ── KESİŞME KALKANI ─────────────────────────────────────────────────────────
 // Bu kapı, kullanıcının braketinde NATIVE TetGen `-d` ile ölçülen üç ayrı
 // kusur sınıfını tutuyor. Üçü de ekranda KUSURSUZ görünüyor ve üçünü de

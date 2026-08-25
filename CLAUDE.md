@@ -2339,6 +2339,64 @@ iyileştirici işlemleri de birlikte engelliyordu.
 yüzeylerde 150 mm'ye varan üçgenler var (parça 131×150×131 mm), yani kova
 doluydu ve her sorgu onu baştan sona tarıyordu.
 
+###### PASO SAYISI HEDEFTEN TÜRER — dejenere tet'in GERÇEK sebebi
+
+Kalkan ve eşik yerine oturduktan sonra bile İNCE hedeflerde dejenere tet
+kalıyordu (h=3 → **2.081**, h=2 → 377) ve sebebi ikisinden de bağımsız çıktı:
+**paso sayısı yetmiyordu.**
+
+Döngünün ilk işi bölme ve bölme her pasoda kenarı yarıya indiriyor. Hedef
+küçüldükçe pasoların daha çoğu boya inmeye gidiyor, geriye kaliteyi
+toparlayacak paso kalmıyor.
+
+**ÖLÇÜLDÜ (kullanıcının braketi, h=3):**
+
+| | min açı | 2° altı | 5° altı | üçgen |
+|---|---|---|---|---|
+| 10 paso | 1,59° | **4** | 42 | 34.554 |
+| 20 paso | **5,89°** | **0** | **0** | 32.108 |
+
+Ve o birkaç sliver YÜZEY üçgeninin TetGen'de binlerce dejenere tet'e
+dönüştüğü korelasyonla gösterildi — bir sliver yüzey üçgeni etrafında yassı
+tet yelpazesi doğuruyor:
+
+| hedef | 2° altı yüzey üçgeni | dejenere tet |
+|---|---:|---:|
+| 4 | 0 | **0** |
+| 3 | 4 | **2.081** |
+| 2,5 | 8 | 2 |
+| 2 | 12 | 377 |
+
+**Paso ARTINCA üçgen sayısı DÜŞÜYOR** (34,5 bin → 32,1 bin): fazladan pasolar
+bölmüyor, birleştirip düzeltiyor — yani TetGen'in işi de azalıyor.
+
+Formül: `ceil(log2(başlangıç ortalama kenarı / hedef))` bölme pasosu **+ 12**
+kalite pasosu, 24 tavanıyla. **ÖLÇÜLDÜ** (braket, başlangıç ortalama kenarı
+**15,45 mm**): h=16 → 12 paso · h=12 → 13 · h=8 → 13 · h=4 → 14 · h=3 → 15.
+
+> **Kaba hedefte davranış BİREBİR eski DEĞİL** ve bu bilerek: taban 10'dan
+> 12'ye çıktı. Bedeli ölçüldü ve kazanç yönünde — h=8'de eleman sayısı
+> 43.990 → **41.772**, yüzey 2° altı üçgen zaten 0'dı ve öyle kaldı.
+
+###### SON DURUM — dejenere eleman HER hedefte sıfır
+
+| hedef (mm) | yüzey üçgeni | yüzey min açı | 2° altı | düğüm | eleman | SD | **dejenere** |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 8 | 6.110 | 3,96° | 0 | 74.828 | 41.772 | 224.484 | **0** |
+| 4 | 18.772 | 3,61° | 0 | 95.950 | 52.579 | 287.850 | **0** |
+| 3 | 32.220 | 5,89° | 0 | 168.681 | 94.347 | 506.043 | **0** |
+| 2,5 | 46.208 | 5,95° | 0 | 244.161 | 140.548 | 732.483 | **0** |
+| 2 | 72.222 | **10,02°** | 0 | 384.450 | 226.579 | 1.153.350 | **0** |
+
+Eleman sayısı da serbestlik derecesi de **monoton** — yakınsama çalışması için
+gereken kaba→ince seri artık var. h=2'de yüzeyde **10° altı üçgen bile
+kalmıyor**.
+
+**Kaba uçta hedef DOYUYOR ve bu fizik:** braket 3,1 mm sac. 12 mm'lik bir
+eleman o duvarın içinden geçemez, TetGen kaliteyi tutmak için Steiner noktası
+ekler ve sayı sabitlenir (h=12/8/6 → 46k/44k/40k, hatta hafif TERS). Anlamlı
+yakınsama aralığı duvar kalınlığının altında başlıyor.
+
 ###### SONUÇ — on bir hedef boyunun on biri de temiz
 
 NATIVE TetGen `-d`, kullanıcının braketi:
