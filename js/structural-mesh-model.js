@@ -209,11 +209,24 @@ function veStrBuildPLC(meshes, options){
     var m = meshes[mi];
     if(!m || !m.indices || !m.indices.length) continue;
 
-    var r = (typeof veStrRemeshMesh === 'function')
-      ? veStrRemeshMesh(m, { targetLen: options.targetLen, iterations: options.remeshIterations })
-      : null;
-    if(!r) return { ok: false, error: 'Yüzey hazırlama modülü yüklenmedi (structural-remesh.js).' };
-    if(!r.ok) return { ok: false, error: r.error };
+    // YÜZEY HAZIRLIĞI ATLANABİLİR (options.remesh === false). Gerekçesi
+    // veStrMeshRunAll'daki yedek yolda: yeniden-mesh bazı parçalarda yüzeyi
+    // kendi kendini keser hâle getiriyor, oysa HAM CAD üçgenlemesi temiz.
+    var r;
+    if(options.remesh === false){
+      r = { ok: true, positions: m.positions, indices: m.indices,
+            faceIds: (m.faces || []).reduce(function(acc, f){
+              for(var q = f.first; q <= f.last; q++) acc[q] = f.id || ('m' + mi + '/f' + f.faceIndex);
+              return acc;
+            }, []),
+            weldedCount: 0, nonManifoldEdges: 0, raw: true };
+    } else {
+      r = (typeof veStrRemeshMesh === 'function')
+        ? veStrRemeshMesh(m, { targetLen: options.targetLen, iterations: options.remeshIterations })
+        : null;
+      if(!r) return { ok: false, error: 'Yüzey hazırlama modülü yüklenmedi (structural-remesh.js).' };
+      if(!r.ok) return { ok: false, error: r.error };
+    }
 
     welded += r.weldedCount || 0;
     nonManifold += r.nonManifoldEdges || 0;
@@ -250,6 +263,9 @@ function veStrBuildPLC(meshes, options){
     triMarkers: new Int32Array(markers),
     faceOfMarker: faceOfMarker,
     report: {
+      // Yüzey hazırlığı ATLANDI mı — yedek yolun kendini tanıması için
+      // (ham yüzeyle koşarken tekrar yedeğe düşmeye kalkmasın).
+      raw: options.remesh === false,
       surfaceNodes: points.length / 3,
       surfaceTris: tris.length / 3,
       faceCount: nextMarker - 1,
@@ -478,6 +494,12 @@ function _smBuildMain(geom, options, opts, workerNote){
 // (non-manifold kenar 0). Çökme sonrası taze örnekle o beşi sorunsuz
 // tamamlanıyor. Küçük bir sentetik durumda örnek sağ çıkmıştı; gerçek bir
 // parçadaki taşma o kadar iyi huylu değil.
+// Object.assign yok (ES5 hedefi) — sığ birleştirme.
+function _smAssign(hedef, a, b){
+  [a, b].forEach(function(o){ if(o) for(var k in o) if(Object.prototype.hasOwnProperty.call(o, k)) hedef[k] = o[k]; });
+  return hedef;
+}
+
 function veStrMeshRunAll(getModule, meshes, options, onp){
   onp = onp || function(){};
   var perSolid = options.perSolid !== false && meshes.length > 1;
@@ -493,6 +515,34 @@ function veStrMeshRunAll(getModule, meshes, options, onp){
         if(!plc.ok){ failed.push({ solid: g, error: plc.error }); return; }
         onp('tetgen', { solid: g, total: groups.length });
         var raw = veStrRunTetGen(mod, plc, options);
+
+        // ── YEDEK YOL: HAM YÜZEYLE YENİDEN DENE ────────────────────────────
+        // ÖLÇÜLDÜ (kullanıcının braketi, native TetGen 1.6 `-d` ile):
+        //   ham CAD üçgenlemesi        → "The input surface mesh is correct."
+        //   yeniden-mesh h=10/8/6/4/3  → 8 / 3 / 2 / 10 / 19 üçgen ATILIYOR
+        //                                ("self-intersections")
+        // Yani yüzeyi bozan şey CAD verisi değil, HAZIRLIK adımının kendisi:
+        // izotropik döngü ince bölgelerde birbirini kesen kenarlar üretiyor.
+        // Bu, structural-remesh.js'te düzeltilmesi gereken bir kusur; ama o
+        // düzelene kadar kullanıcının parçası HİÇ ağ örülemiyor olamaz.
+        //
+        // Ham yüzeyle örmenin bedeli ELEMAN SAYISI: TetGen kalite için Steiner
+        // noktası ekliyor (aynı brakette 220 bin tet10). Pahalı ama ÇALIŞAN
+        // bir ağ, hiç ağ olmamasından iyidir — ve sonuç bunu YAZIYOR.
+        if(!raw.ok && options.remesh !== false && plc.report && !plc.report.raw){
+          var hamPlc = veStrBuildPLC(group, _smAssign({}, options, { remesh: false }));
+          if(hamPlc.ok){
+            var ham = veStrRunTetGen(mod, hamPlc, options);
+            if(ham.ok){
+              ham.surfacePrep = 'ham';
+              ham.surfacePrepNote = 'Yüzey hazırlığı bu parçada kendini kesen üçgen üretti; '
+                + 'ham CAD üçgenlemesiyle örüldü (daha çok eleman).';
+              plc = hamPlc;
+              raw = ham;
+            }
+          }
+        }
+
         if(!raw.ok){
           failed.push({ solid: g, error: raw.error, surface: plc.report });
           if(raw.crashed){

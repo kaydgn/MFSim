@@ -367,3 +367,48 @@ describe('gömülü TetGen .wasm varlığı', () => {
     expect(meshModel.VE_STR_MESH_WORKER_BRIDGE || '').toBeDefined();
   });
 });
+
+// ── HAM YÜZEY YEDEĞİ ────────────────────────────────────────────────────────
+// Kullanıcının braketi (AP242, 7 gövde → 1 katı) hiç ağ örülemiyordu. Sebep
+// NATIVE TetGen 1.6 ile `-d` (kesişim tespiti) koşturularak kesinleştirildi:
+//
+//   ham CAD üçgenlemesi          → "The input surface mesh is correct."
+//   yeniden-mesh h=10/8/6/4/3    → 8 / 3 / 2 / 10 / 19 üçgen ATILIYOR
+//                                  ("skipped due to self-intersections")
+//
+// Yani yüzeyi bozan CAD verisi değil, HAZIRLIK adımının kendisi: izotropik
+// döngü ince bölgelerde birbirini kesen kenarlar üretiyor. Bu structural-
+// remesh.js'te düzeltilecek bir kusur; o düzelene kadar köprü ham yüzeyle
+// yeniden deniyor — ÖLÇÜLDÜ: braket 216.137 tet10 · 354.565 düğüm · 12 s.
+describe('yeniden-mesh yüzeyi bozarsa HAM yüzeyle yeniden denenir', () => {
+  test('hazırlık ATLANABİLİR ve atlandığını künyeye yazar', () => {
+    const src = fs.readFileSync(path.join(ROOT, 'js/structural-mesh-model.js'), 'utf8');
+    expect(src).toMatch(/options\.remesh === false/);
+    // Künye bunu taşımalı: yedek yol kendini tanıyıp SONSUZ denemeye girmesin.
+    expect(src).toMatch(/raw: options\.remesh === false/);
+    expect(src).toMatch(/!raw\.ok && options\.remesh !== false && plc\.report && !plc\.report\.raw/);
+  });
+
+  test('yedeğe düşülünce SEBEP yazılıyor — sessiz kalite düşüşü olmaz', () => {
+    // Ham yüzeyle örülen ağ çok daha fazla eleman taşıyor; kullanıcı bunu
+    // bilmezse "ağ neden bu kadar büyük" sorusunun cevabı hiçbir yerde olmaz.
+    const src = fs.readFileSync(path.join(ROOT, 'js/structural-mesh-model.js'), 'utf8');
+    expect(src).toContain("surfacePrep = 'ham'");
+    expect(src).toMatch(/surfacePrepNote[\s\S]{0,200}ham CAD üçgenlemesiyle örüldü/);
+  });
+
+  test('hazırlık atlanınca yüz kimlikleri KORUNUYOR', async () => {
+    // Sınır koşulu zincirinin tamamı buna bağlı: ham yolda faceIds üretilmezse
+    // her sınır üçgeni işaretsiz kalır ve CAD yüzü bağı kopar.
+    const ham = await meshModel.veStrBuildMesh(geom, { remesh: false },
+      { factory: tetFactory, noWorker: true });
+    expect(ham.ok).toBe(true);
+    const kimlikler = new Set((ham.triFaceIds || (ham.mesh && ham.mesh.triFaceIds) || []).filter(Boolean));
+    expect(kimlikler.size).toBeGreaterThan(0);
+    kimlikler.forEach((id) => expect(String(id)).toMatch(/^m\d+\/f\d+$/));
+    // Ve HİÇBİR sınır üçgeni işaretsiz kalmamalı — kalan, hangi CAD yüzüne
+    // ait olduğu bilinmeyen bir yüzey demek; sınır koşulu oraya bağlanamaz.
+    const hepsi = ham.triFaceIds || (ham.mesh && ham.mesh.triFaceIds) || [];
+    expect(hepsi.filter((x) => !x).length).toBe(0);
+  }, 300000);
+});
