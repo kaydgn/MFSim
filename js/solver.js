@@ -513,7 +513,7 @@ function veSolverRunLegacy() {
           rhtml += '</div>';
         }
         
-        rhtml += '<div style="font-size:var(--fs-body); color:var(--text-muted); text-align:center;">Sonuçlar sekmesinden detayları görüntüleyebilirsiniz.</div>';
+        rhtml += '<div style="font-size:var(--fs-body); color:var(--text-muted); text-align:center;">Ayrıntılar Sonuçlar sekmesindedir.</div>';
         rhtml += '</div>';
         resultEl.innerHTML = rhtml;
         

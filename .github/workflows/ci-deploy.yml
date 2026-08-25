@@ -204,6 +204,11 @@ jobs:
           cp vendor/opencascade.js _site/vendor/opencascade.js
           cp vendor/license.occt.txt _site/vendor/license.occt.txt
           cp vendor/license.opencascade-js.txt _site/vendor/license.opencascade-js.txt
+          # TetGen ağ üretecinin .wasm'i (~0.7 MB) — OCCT ile AYNI gerekçe:
+          # gömülü (js/structural-tetgen-wasm.js) PRİMER yol, bu dosya yalnız
+          # AGPL-3 kaynağın (vendor/tetgen-src/) yanında dağıtılan ikili.
+          cp vendor/tetgen-wasm.wasm _site/vendor/tetgen-wasm.wasm
+          cp vendor/license.tetgen.txt _site/vendor/license.tetgen.txt
           touch _site/.nojekyll
 
       - name: Generate version.json

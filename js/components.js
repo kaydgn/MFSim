@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-example','fead-layout','fead-report','str-geometry','str-mesh','str-bc','str-results','arac-performans','mount-analysis','fead-analysis','structural-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-example','fead-layout','fead-report','str-geometry','str-material','str-mesh','str-bc','str-results','arac-performans','mount-analysis','fead-analysis','structural-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -114,7 +114,7 @@ function veStartModule(type) {
   }
 
   var label = (componentDefs[type] && componentDefs[type].name) ? componentDefs[type].name : type;
-  if(typeof showToast === 'function') showToast(label + ' eklendi — çift tıklayarak açın', 'info');
+  if(typeof showToast === 'function') showToast(label + ' eklendi', 'info');
 }
 
 // Aktif moda ait sidebar bileşenlerini göster.
@@ -488,7 +488,42 @@ var componentDefs = {
   'str-geometry': {
     name: 'Geometri',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M28 36 L52 22 L76 36 L76 64 L52 78 L28 64 Z" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5" stroke-linejoin="round"/><path d="M28 36 L52 50 L76 36 M52 50 V78" fill="none" stroke="var(--text-muted, #888)" stroke-width="3.5" stroke-linejoin="round"/><ellipse cx="52" cy="36" rx="7" ry="4" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3"/></svg>',
-    inputs: 0, outputs: 1, isStrGeometry: true, defaultWidth: 62, defaultHeight: 56
+    // İKİ ÇIKIŞ, İKİ AYRI ANLAM — ve kenarları da ayrı:
+    //   output-0 (SAĞ)  → ANALİZ ZİNCİRİ: Hesaplama Ağı'na gider.
+    //   output-1 (ALT)  → MALZEME EKİ: 'str-material' alt bileşenine iner.
+    // Tek porta iki teli birden bağlamak da mümkündü (bir port çok bağlantı
+    // taşıyabiliyor) ama o zaman iki tel AYNI noktadan çıkardı: zincir teli ile
+    // ek teli aynı ağızdan doğardı ve alttaki malzeme kutusuna giden tel sağa
+    // çıkıp geri dönerdi. Ayrı port = ayrı ağız = okunur yol.
+    //
+    // GİRİŞ HÂLÂ YOK ve bu yapısal kapı korunuyor: zincirin başı Geometri'dir,
+    // kullanıcı zinciri ters kuramaz (bkz. tests/unit/cp-structural.test.js).
+    // Malzeme eki bunu ZAYIFLATMIYOR çünkü ek, Geometri'nin ÇIKIŞINDAN doğuyor
+    // ve 'str-material'ın çıkışı yok — yani zincire ara halka olarak giremez.
+    inputs: 0, outputs: 2, portLayout: { outputs: ['right', 'bottom'] },
+    isStrGeometry: true, defaultWidth: 62, defaultHeight: 56
+  },
+  // MALZEME VE ÖZELLİKLER — Geometri'ye asılan ALT BİLEŞEN (zincir halkası
+  // DEĞİL). Parçaya (STEP) malzeme atar: E, ν, ρ, akma/çekme dayanımı.
+  //
+  // ÜÇ YAPISAL KARAR:
+  //  1) ÇIKIŞI YOK (outputs: 0) → zincire ara halka olarak sokulamaz. Kutu
+  //     kanvasta bir YAPRAK; "Geometri → Malzeme → Ağ" diye yanlış bir zincir
+  //     kurulamaz, çünkü Malzeme'den çıkan tel yoktur.
+  //  2) GİRİŞİ ÜST KENARDA (portLayout) → tel Geometri'nin ALT portundan
+  //     dümdüz aşağı iner. Klasik "giriş solda" kuralı bırakılsaydı tel sağa
+  //     çıkıp sola dönerdi (FEAD'de ölçülmüş kusurun aynısı).
+  //  3) KUTU KÜÇÜK (50×46; zincir bileşenleri 62×56) → bakışta "bu bir alt
+  //     bileşen" der. Aksesuarların (acc-*) Motor'a asılırken 54×50 olmasıyla
+  //     aynı gerekçe: ölçü, hiyerarşiyi yazıya gerek kalmadan anlatıyor.
+  //
+  // Sembol: teknik resimdeki KESİT TARAMASI (malzeme işareti) + akma noktası
+  // işaretli σ–ε eğrisi. Panel/veri: js/cp-structural.js.
+  'str-material': {
+    name: 'Malzeme ve Özellikler',
+    svg: '<svg width="34" height="34" viewBox="0 0 100 100"><rect x="10" y="44" width="46" height="44" rx="4" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><path d="M14 74 L40 48 M14 86 L52 48 M26 88 L54 60 M40 88 L54 74" stroke="var(--text-muted, #888)" stroke-width="3" stroke-linecap="round"/><path d="M62 12 V44 H96" fill="none" stroke="var(--text-muted, #888)" stroke-width="3" stroke-linecap="round"/><path d="M62 44 L74 20 Q82 13 94 16" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="74" cy="20" r="4.5" fill="var(--accent-warning, #f59e0b)"/></svg>',
+    inputs: 1, outputs: 0, portLayout: { inputs: ['top'] },
+    isStrMaterial: true, defaultWidth: 50, defaultHeight: 46
   },
   'str-mesh': {
     name: 'Hesaplama Ağı',
@@ -827,7 +862,7 @@ function veModuleSummary(node) {
 
 function veModuleSummaryText(node) {
   var s = veModuleSummary(node);
-  if(!s.initialized) return 'Boş — çift tıklayın';
+  if(!s.initialized) return 'Boş';
   return s.nodes + ' bileşen · ' + s.connections + ' bağlantı';
 }
 

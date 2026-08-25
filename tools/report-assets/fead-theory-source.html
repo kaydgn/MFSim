@@ -17,13 +17,14 @@ html{scroll-behavior:smooth}
 body{margin:0;background:var(--paper);color:var(--ink);
   font-family:'Source Serif 4',Georgia,serif;font-size:15.5px;line-height:1.68;}
 .page{max-width:880px;margin:0 auto;padding:48px 32px 96px}
-h1,h2,h3{font-family:'Archivo',system-ui,sans-serif;color:var(--prusya);line-height:1.25;font-stretch:87%}
+h1,h2,h3,h4{font-family:'Archivo',system-ui,sans-serif;color:var(--prusya);line-height:1.25;font-stretch:87%}
 h1{font-size:27px;font-weight:700;letter-spacing:.2px;margin:0 0 6px}
 h2{font-size:19px;font-weight:700;margin:44px 0 14px;padding-top:14px;border-top:2px solid var(--prusya);
   display:flex;gap:14px;align-items:baseline}
 h2 .no{font-family:var(--mono);font-size:13px;color:var(--paper);background:var(--prusya);
   padding:2px 8px;border-radius:2px;transform:translateY(-2px)}
 h3{font-size:15.5px;font-weight:600;margin:26px 0 8px;color:var(--ink)}
+h4{font-size:14px;font-weight:600;margin:20px 0 7px;color:var(--ink)}
 p{margin:0 0 13px;text-align:justify;hyphens:auto}
 strong{font-weight:600}
 em{font-style:italic}
@@ -255,10 +256,31 @@ $$ M(\theta) = M_0 + k\,\big(\theta - \theta_{\text{serbest}}\big) $$
 $$ T = \frac{M(\theta)}{\mathrm{d}L/\mathrm{d}\theta}, \qquad \frac{\mathrm{d}L}{\mathrm{d}\theta} = a\,\sin\beta\;\cdot\;2\sin\!\left(\frac{\varphi_{\text{ten}}}{2}\right) $$
 <span class="tag">(4.3)</span>
 </div>
-<p>Buradaki \( \beta \), hubload doğrultusu ile kol doğrultusu arasındaki açıdır (hubload-to-arm angle) ve \( \varphi_{\text{ten}} \) gergi kasnağındaki sarım açısıdır. \( 2\sin(\varphi/2) \) çarpanı, iki açıklığın gergi kasnağına uyguladığı bileşke kuvvetin gerginliğe oranıdır — aynı çarpan (5.3)'te hubload'da da görünür.</p>
+<p>Buradaki \( \beta \), hubload doğrultusu ile kol doğrultusu arasındaki açıdır (hubload-to-arm angle) ve \( \varphi_{\text{ten}} \) gergi kasnağındaki sarım açısıdır. \( 2\sin(\varphi/2) \) çarpanı, iki açıklığın gergi kasnağına uyguladığı bileşke kuvvetin gerginliğe oranıdır — aynı çarpan (5.5)'te hubload'da da görünür.</p>
+
+<p><strong>(4.3)'ün türetilmesi.</strong> Kol \( \mathrm{d}\theta \) kadar döndüğünde gergi kasnağının merkezi, kola <strong>dik</strong> olan \( \mathbf{t} \) yönünde \( a\,\mathrm{d}\theta \) kadar yol alır; \( \mathbf{t} \) kolun ucunun izlediği yayın teğetidir:</p>
+<div class="eqno">
+$$ \frac{\mathrm{d}\mathbf{c}_{\text{ten}}}{\mathrm{d}\theta} = a\,\mathbf{t}, \qquad \mathbf{t} \perp (\mathbf{c}_{\text{ten}} - \mathbf{p}) $$
+</div>
+<p>Merkez kaydığında kayış boyunun yalnız <strong>gergiye komşu iki açıklığı</strong> değişir. Giriş açıklığının birim doğrultusu \( \mathbf{u}_{\text{giriş}} \) (kasnağa doğru), çıkışınki \( \mathbf{u}_{\text{çıkış}} \) (kasnaktan uzağa) iken, merkezin \( \delta \) kadar ötelenmesi giriş açıklığını \( +\mathbf{u}_{\text{giriş}}\!\cdot\!\delta \), çıkış açıklığını \( -\mathbf{u}_{\text{çıkış}}\!\cdot\!\delta \) kadar uzatır. Toplam:</p>
+<div class="eqno">
+$$ \mathrm{d}L = -\,\mathbf{f}\cdot\delta, \qquad \mathbf{f} \;=\; \mathbf{u}_{\text{çıkış}} - \mathbf{u}_{\text{giriş}} $$
+</div>
+<p>Bu \( \mathbf{f} \), (5.4)'teki hubload bileşkesinin birim-gerginlikteki hâlidir; yani take-up oranı ile hubload <em>aynı</em> vektörden doğar. İki birim vektör arasındaki açı sarım açısı \( \varphi \) olduğundan boyu kapalı formdadır:</p>
+<div class="eqno">
+$$ |\mathbf{f}| = 2\sin\frac{\varphi_{\text{ten}}}{2} $$
+</div>
+<p>\( \beta \) tanım gereği \( \mathbf{f} \) ile <em>kol</em> arasındaki açı, \( \mathbf{t} \) ise kola dik olduğundan \( \mathbf{f} \) ile \( \mathbf{t} \) arasındaki açı \( 90^\circ - \beta \)'dır. \( \delta = a\,\mathbf{t}\,\mathrm{d}\theta \) konup büyüklük alınırsa (4.3) çıkar:</p>
+<div class="eqno">
+$$ \left|\frac{\mathrm{d}L}{\mathrm{d}\theta}\right| = a\,\big|\mathbf{f}\big|\,\big|\cos(90^\circ-\beta)\big| = a\,\sin\beta\cdot 2\sin\frac{\varphi_{\text{ten}}}{2} $$
+</div>
+<div class="note check">
+  <span class="t">Take-up bir girdi değil, bir türevdir</span>
+  Bu zincirde <strong>elle girilen tek büyüklük kol boyu \( a \)</strong>'dır; \( \varphi \) ve \( \beta \) çözülmüş geometriden gelir. Dolayısıyla take-up oranı bir katalog değeri gibi girilemez — kol her konuma geldiğinde yeniden hesaplanır. Bölüm 8.7 bu aritmetiği çözülen model için adım adım basar.
+</div>
 <div class="note">
   <span class="t">Take-up oranı</span>
-  \( \mathrm{d}L/\mathrm{d}\theta \) büyüklüğü <strong>take-up oranı</strong> olarak adlandırılır (mm/derece) ve gerginin ne kadar kayış boyu değişimini yutabildiğini söyler. Küçük bir take-up oranı, aynı yay momentinin çok daha yüksek bir gerginliğe dönüşmesi demektir: (4.3)'te payda küçüldükçe \( T \) büyür. Sarım açısı sıfıra yaklaşırken \( 2\sin(\varphi/2) \to 0 \) olduğu için gerginlik <strong>tekilleşir</strong>; bu yüzden mekanik durdurucu (Load) konumundaki gerginlik sayısal olarak en hassas değerdir.
+  \( \mathrm{d}L/\mathrm{d}\theta \) büyüklüğü <strong>take-up oranı</strong> olarak adlandırılır (mm/derece) ve gerginin ne kadar kayış boyu değişimini yutabildiğini söyler. Kol açısı arttıkça \( \varphi \) küçülür ama \( \beta \) büyür; iki çarpan ters yönde çalıştığı için take-up oranı kol açısının <strong>monoton bir fonksiyonu değildir</strong> ve bir tepe noktasından geçer (Bölüm 8.9). Küçük bir take-up oranı, aynı yay momentinin çok daha yüksek bir gerginliğe dönüşmesi demektir: (4.3)'te payda küçüldükçe \( T \) büyür. Sarım açısı sıfıra yaklaşırken \( 2\sin(\varphi/2) \to 0 \) olduğu için gerginlik <strong>tekilleşir</strong>; bu yüzden mekanik durdurucu (Load) konumundaki gerginlik sayısal olarak en hassas değerdir.
 </div>
 
 <h3>4.3 Çalışma açısının çözümü</h3>
@@ -310,6 +332,14 @@ $$ n_i = n_{\text{krank}}\cdot \frac{r_{p,\text{krank}}}{r_{p,i}}, \qquad v_{\te
 $$ P_{\text{sürücü}} = \sum_{\text{aksesuar}} P_i $$
 <span class="tag">(5.3)</span>
 </div>
+<div class="note warn">
+  <span class="t">Zincirin mutlak seviyesi: tasarım gerginliği</span>
+  Yukarıdaki bağıntılar gerginliğin kasnaktan kasnağa <em>nasıl değiştiğini</em> verir, <strong>mutlak seviyesini vermez</strong>. Seviye tek bir <strong>ankraj</strong> değerinden gelir: gergi kasnağının taşıdığı gerginlik, yani <strong>tasarım gerginliği</strong> \( T_{\text{tasarım}} \). Zincir \( T_{\text{gergi}} = T_{\text{tasarım}} \) alınarak serpantin sırasında ilerletilir.
+  <br><br>
+  Bu değer <strong>sorulmaz, türetilir</strong>: gergi kolunun taşıyabileceği gerginlik yay dengesinden (4.3) zaten belirlidir — \( T_{\text{tasarım}} = M(\theta)/(dL/d\theta) \). Sağdaki büyüklüklerin hiçbiri serbest değildir; kol boyu ile yay künyesi girdidir, kol açısı, sarım ve fark açısı ise çözülmüş geometriden gelir. Kuruluşu Bölüm 8.7'de adım adım verilir.
+  <br><br>
+  Bir zamanlar ayrıca girdi olarak da isteniyordu ve bu, aynı bilgiyi ikinci kez ve <strong>çelişebilir</strong> biçimde sormak anlamına geliyordu: çeliştiğinde zincir girilen değerle ankrajlanır, tüm gerginlikler ile hubload'lar aradaki fark kadar kayar ve hiçbir hata çıkmazdı. Kayma emniyeti bir <em>oran</em> olduğu için (5.6) bu kaymayı ancak kısmen gösterir — yük çekmeyen kasnaklarda gerginlik oranı 1'dir ve emniyet hiç değişmez. On tedarikçi raporunda girilen ile türetilen değer arasındaki fark en çok %0,12 ölçülmüştür; iki kanal zaten tek kanaldı. Farklı bir gerginlik isteniyorsa değiştirilecek olan gergi <strong>künyesidir</strong> (yay ön yükü, yay oranı, kol boyu), bir sayı alanı değil.
+</div>
 <div class="note check">
   <span class="t">Sürücü gücü girilmez, hesaplanır</span>
   (5.3) bir denklem değil bir <strong>kapanış koşuludur</strong>. Bu yüzden çalışma çevrimi tablosunda sürücü kasnağın kW sütunu yoktur: elle girilirse çevrim kapanmaz ve model reddeder.
@@ -318,7 +348,7 @@ $$ P_{\text{sürücü}} = \sum_{\text{aksesuar}} P_i $$
 <h3>5.2 Hubload — kasnak yatağına binen kuvvet</h3>
 <p>Bir kasnağın yatağına binen bileşke kuvvet, kayışın iki tarafındaki gerginlik vektörlerinin toplamıdır:</p>
 <div class="eqno">
-$$ \mathbf{F}_{\text{hub}} = T_{\text{giriş}}\,\hat{\mathbf{u}}_{\text{giriş}} + T_{\text{çıkış}}\,\hat{\mathbf{u}}_{\text{çıkış}} $$
+$$ \mathbf{F}_{\text{hub}} = T_{\text{giriş}}\,\mathbf{u}_{\text{giriş}} + T_{\text{çıkış}}\,\mathbf{u}_{\text{çıkış}} $$
 <span class="tag">(5.4)</span>
 </div>
 <p>Eşit gerginlik özel durumunda (avara, gergi) bu, sarım açısıyla kapalı forma iner:</p>
@@ -476,6 +506,10 @@ $$ f_{\text{ateşleme}} = \frac{n_{\text{krank}}\cdot N_{\text{sil}}}{120} $$
   <tr><td class="c">\( \theta \)</td><td class="l">Gergi kol açısı</td><td class="c">°</td></tr>
   <tr><td class="c">\( a \)</td><td class="l">Gergi kol boyu</td><td class="c">mm</td></tr>
   <tr><td class="c">\( \beta \)</td><td class="l">Hubload–kol açısı</td><td class="c">°</td></tr>
+  <tr><td class="c">\( \mathbf{f} \)</td><td class="l">Birim-gerginlik bileşke doğrultusu, \( \mathbf{u}_{\text{çıkış}}-\mathbf{u}_{\text{giriş}} \)</td><td class="c">—</td></tr>
+  <tr><td class="c">\( \mathbf{t} \)</td><td class="l">Gergi merkezinin hareket yönü (kola dik)</td><td class="c">—</td></tr>
+  <tr><td class="c">\( \mathrm{d}L/\mathrm{d}\theta \)</td><td class="l">Take-up oranı (türev, girdi değil)</td><td class="c">mm/°</td></tr>
+  <tr><td class="c">\( T_{\text{tasarım}} \)</td><td class="l">Tasarım gerginliği — gerilme zincirinin ankrajı</td><td class="c">N</td></tr>
   <tr><td class="c">\( M_0,\ k \)</td><td class="l">Yay ön yükü ve oranı</td><td class="c">Nm, Nm/°</td></tr>
   <tr><td class="c">\( T \)</td><td class="l">Kayış gerginliği</td><td class="c">N</td></tr>
   <tr><td class="c">\( T_t,\ T_s \)</td><td class="l">Gergin ve boş taraf gerginliği</td><td class="c">N</td></tr>

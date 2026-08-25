@@ -450,11 +450,10 @@ var VE_FEAD_EXAMPLES = {
         + 'Kayış 8PK/EPDM, efektif boy 1715 mm, servis faktörü 1.3.',
     belt:  { profile:'PK', brand:'GATES', beltType:'8PK 1715', ribs:8,
              effLength:1715, tolerance:0, wearPct:0 },
-    // designTensionN SAYFADA YOK: sayfa gevşek span gerginliğini vermiyor.
-    // 650 N uydurma bir sayı değil — bu sistemin GERGİ YAY DENGESİNDEN çıkan
-    // değer (22.28 Nm / take-up). Tutarsız bir sayı bütün gerilmeleri kaydırır,
-    // bkz. veFeadBuildSystem'deki tutarlılık uyarısı.
-    solver:{ designTensionN:650, crankOD:197.32, fanOD:179.62, ratioMode:'derive',
+    // Tasarım gerginliği burada YOK ve olmamalı: sayfa da vermiyor, model de
+    // sormuyor. Yay dengesinden türetiliyor ve bu sistemde 650 N çıkıyor
+    // (22.28 Nm / 0.5984 mm/°) — fead-example.test.js bunu çıpalıyor.
+    solver:{ crankOD:197.32, fanOD:179.62, ratioMode:'derive',
              cylinders:6, serviceFact:1.3, crankInertia:0.70,
              accelRpmS:1000, decelRpmS:1000, lengthOffsetMm:0,
              // Sayfadaki Duty Cycle tablosu (% ↔ Engine RPM); %0'lık 3000 satırı
@@ -658,7 +657,10 @@ var VE_FEAD_ERROR_MAP = [
   [/kasnagi icin od \(dis cap\)/i, 'Bir kasnağın dış çapı girilmedi.'],
   [/kasnagi icin x,y gerekli/i, 'Bir kasnağın konumu (X / Y) girilmedi.'],
   [/belt\.effLength gerekli/i, 'Kayış efektif boyu girilmedi (Kayış Özellikleri panelinde).'],
-  [/designTensionN veya slackN gerekli/i, 'Tasarım gerginliği girilmedi (Çözücü panelinde).'],
+  // Tasarım gerginliği artık sorulmuyor, türetiliyor — bu hata "girilmedi"
+  // demek yerine türetmenin neden yapılamadığını göstermeli.
+  [/designTensionN veya slackN gerekli/i,
+   'Tasarım gerginliği yay dengesinden türetilemedi (gergi yay künyesi veya kol geometrisi eksik).'],
   [/bilinmeyen kayis profili/i, 'Kayış profili tanınmıyor (PK / PJ / PH / PL / PM).'],
   [/markasi yok/i, 'Bu kayış profilinde seçilen marka yok.'],
   [/hedef .* erisilebilir araligin disinda/i,
@@ -835,9 +837,10 @@ function veFeadBuildSystem(nodeList, connList){
   if(armM > 0) cfgTen.pulleyMassKg = armM;
 
   // ── Çözücü / tasarım ──
-  var design = _feadNum(sd.designTensionN, NaN);
-  if(!Number.isFinite(design) || !(design > 0))
-    out.errors.push('Tasarım gerginliği girilmedi (Çözücü panelinde).');
+  // TASARIM GERGİNLİĞİ ARTIK SORULMUYOR. Bağımsız bir veri değil: geometri ve
+  // yay künyesi verildiğinde gergi kasnağının taşıdığı gerginlik zaten
+  // belirlidir (T = M/(dL/dθ)). Sistem kurulduktan SONRA türetilip
+  // sys.designTensionN'e yazılıyor — bkz. "ANKRAJ TÜRETİLİYOR" bloğu.
   var dr = veFeadDriveRatio(sd);
   out.drive = dr;
   var driveRatio = dr.ratio;
@@ -845,7 +848,7 @@ function veFeadBuildSystem(nodeList, connList){
 
   var cfg = {
     pulleys: cfgPulleys, belt: cfgBelt, tensioner: cfgTen,
-    designTensionN: Number.isFinite(design) ? design : undefined,
+    designTensionN: undefined,          // aşağıda türetilir
     driveRatio: driveRatio,
     lengthOffsetMm: _feadNum(sd.lengthOffsetMm, 0)
   };
@@ -900,38 +903,47 @@ function veFeadBuildSystem(nodeList, connList){
   out.sys = sys;
   out.ok = true;
 
-  // ── TASARIM GERGİNLİĞİ ↔ YAY DENGESİ TUTARLILIĞI ────────────────────────
-  // designTensionN gerilme zincirinin gergideki ANKRAJIDIR; gergi kasnağının
-  // iki spanı bu değeri taşır. Ama gergi kasnağının taşıyabileceği gerginlik
-  // yay dengesinden ZATEN BELLİ (moment / take-up). İkisi ayrı ayrı
-  // girildiğinde çekirdek hangisinin doğru olduğunu sormaz: zinciri
-  // designTensionN'den kurar ve yay dengesini yok sayar.
+  // ── ANKRAJ TÜRETİLİYOR — tasarım gerginliği bir GİRDİ DEĞİL ───────────────
   //
-  // ÖLÇÜLDÜ (BMC örneği): yay dengesi 650 N iken designTensionN 400 girilince
-  // 800 rpm'de çıkış gerilmeleri 1122/906/400 çıkıyor; doğru değerle
-  // 1372/1156/650. Yani TÜM gerilmeler ve hubload'lar 250 N kayıyor, hata
-  // mesajı yok. (Kayma emniyeti bir ORAN olduğu için değişmiyor — tabloya
-  // bakarak da anlaşılmıyor.) Gates raporlarında iki değer zaten tutuyor;
-  // uyuşmazlık kullanıcının elle girdiği bir sayının işareti.
+  // Gerilme zinciri gergi kasnağında ankrajlanır: T[gergi] = designTensionN ve
+  // bütün span gerilmeleri, hubloadlar, kayma emniyetleri ondan kurulur. Bu
+  // sayı eskiden Çözücü panelinden SORULUYORDU — ama bağımsız bir veri değil:
+  // gergi kolunun taşıyabileceği gerginlik yay dengesinden zaten belirli.
+  //
+  //     T = M(θ) / (dL/dθ),   M = M₀ + k·θ,   dL/dθ = a·sinβ·2sin(φ/2)
+  //
+  // Sağdaki her şey ya girdidir (kol boyu a, yay künyesi M₀/k) ya da çözülmüş
+  // geometriden gelir (θ, φ, β). Ayrıca sormak aynı bilgiyi İKİNCİ KEZ ve
+  // ÇELİŞEBİLİR biçimde istemek demekti; çekirdek çeliştiğinde hangisinin
+  // doğru olduğunu sormuyor, girileni kullanıp yay dengesini yok sayıyordu.
+  //
+  // ÖLÇÜLDÜ (10 Gates raporu, girilen ↔ türeyen): en büyük fark %0.12, RMS
+  // %0.08 — farkların tamamı yuvarlama (Gates tam sayı basıyor: 766 ↔ 765.9).
+  // Yani iki sayı zaten aynı sayıydı. Türetilmiş ankrajla 2095 değerlik
+  // doğrulama kapısı GEÇİYOR: çalışma sapması %0.328 → %0.391 (eşik %0.5),
+  // Load ve kol açısı hiç değişmiyor. O 0.06 puan Gates'in kendi zincirini
+  // YUVARLANMIŞ tam sayıyla ankrajlamasından geliyor, model hatasından değil.
+  //
+  // Türetme BAŞARISIZ olursa ankraj yoktur ve gerilme hesabı yapılamaz. Bunu
+  // sessizce geçmiyoruz: uyarı düşer, çekirdek de kendi açık hatasını verir.
+  // (out.ok true kalır ki yarım modelde kayış yolu kartı çizilmeye devam
+  // etsin — kart gerginlik değil geometri gösteriyor.)
   try {
     var mrTut = FEADCore.meanRel(sys);
     var tsTut = FEADCore.tensionerState(sys, mrTut);
     if(tsTut && Number.isFinite(tsTut.tensionN) && tsTut.tensionN > 0){
       out.springTensionN = tsTut.tensionN;
-      var dsg = _feadNum(cfg.designTensionN, NaN);
-      if(Number.isFinite(dsg) && dsg > 0){
-        var sapma = Math.abs(dsg - tsTut.tensionN) / tsTut.tensionN;
-        if(sapma > VE_FEAD_TENSION_TOL)
-          out.warnings.push('Tasarım gerginliği (' + dsg.toFixed(0) + ' N) gergi yay '
-            + 'dengesinden çıkan gerginlikle (' + tsTut.tensionN.toFixed(0) + ' N) '
-            + 'uyuşmuyor — fark ' + (sapma * 100).toFixed(0) + '%. Gerilme zinciri '
-            + 'GİRDİĞİNİZ değerle ankrajlanır, yani bütün gerilmeler ve hubloadlar '
-            + (dsg > tsTut.tensionN ? '' : '−') + Math.abs(dsg - tsTut.tensionN).toFixed(0)
-            + ' N kayar. Yay künyesi doğruysa tasarım gerginliğini '
-            + tsTut.tensionN.toFixed(0) + ' N yapın.');
-      }
+      sys.designTensionN = tsTut.tensionN;
+      cfg.designTensionN = tsTut.tensionN;      // cfg ile sys ayrışmasın
+    } else {
+      out.warnings.push('Tasarım gerginliği yay dengesinden türetilemedi; '
+        + 'gerilme, hubload ve ömür hesaplanamaz. Gergi yay künyesini (ön yük, '
+        + 'yay katsayısı) ve kol geometrisini kontrol edin.');
     }
-  } catch(e){ /* tutarlılık kontrolü çözümü engellemez */ }
+  } catch(e){
+    out.warnings.push('Tasarım gerginliği yay dengesinden türetilemedi: '
+      + veFeadTranslateError(e && e.message));
+  }
 
   if(sys._senseAuto)
     out.warnings.push('Gergi dönüş yönü (sense) verilmedi; çekirdek kayışın kısaldığı yönden '

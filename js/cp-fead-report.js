@@ -59,8 +59,15 @@ function _frFs(v, d){
 function _frPct(v, d){ var s = _frFs(v, d == null ? 1 : d); return s === '—' ? s : ('%' + s); }
 
 // Tablo / şekil numaraları — her rapor üretiminde sıfırlanır.
-var _frTblNo = 0, _frFigNo = 0;
+var _frTblNo = 0, _frFigNo = 0, _frEqNo = 0;
 function _frTbl(){ return ++_frTblNo; }
+// §8'in kendi denklem numaraları. Elle '(8.1)' yazmak, araya bir denklem
+// girdiğinde sessizce kayardı — tablo ve şekil sayaçlarındaki kuralın aynısı.
+function _frEq(){ return '8.' + (++_frEqNo); }
+// Denklem numaraları METİNDE de anılıyor ("(8.4) ile bağımsız olarak üretir").
+// Numara sayaçtan gelirken atıf elle yazılsaydı, araya bir denklem girdiğinde
+// gövde metni sessizce YANLIŞ denklemi gösterirdi. İkisi de buradan okunur.
+var _frEqRef = {};
 function _frFig(){ return ++_frFigNo; }
 
 function _frCore(){
@@ -87,12 +94,6 @@ function getFeadReportPropertiesHTML(node){
   var R = _frResults();
   var solved = !!(R && R.ok);
   var html = '<div class="sw-panel">';
-  html += '<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-primary);">'
-        + '<b style="color:var(--text-heading);">Rapor — FEAD kayış-kasnak.</b> '
-        + 'Çözücü sonuçlarını akademik bir <b>HTML rapora</b> döker: teori (§1–7) + bu modelin '
-        + 'geometrisi, gerginlikleri, kayma emniyeti ve kaburga yorulması. '
-        + 'Dosya <b>tamamen çevrimdışı</b>; matematik ve fontlar gömülüdür — her yerde açılır, yazdırılabilir.</div>';
-
   if(solved){
     var nP = (R.pulleyNames || []).length;
     var nD = (R.duty || []).length;
@@ -103,8 +104,7 @@ function getFeadReportPropertiesHTML(node){
     html += '<button onclick="veFeadGenerateReport(\'' + node.id + '\')" style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:var(--radius-sm);" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 Raporu Oluştur ve İndir</button>';
   } else {
     html += '<div style="padding:10px 12px; margin-bottom:10px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:var(--fs-body); line-height:1.5;">'
-          + '<b>Önce çözün.</b> Rapor, <b>Çözücü</b> bileşenindeki <b>▶ Çöz</b> ile üretilen sonuçları kullanır. '
-          + 'Çözücüyü çalıştırdıktan sonra buraya dönün.</div>';
+          + '<b>Model çözülmedi.</b> Rapor, Çözücü sonuçlarından üretilir.</div>';
     html += '<button disabled style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--bg-tertiary); color:var(--text-muted); border:1px solid var(--border-color); cursor:not-allowed; border-radius:var(--radius-sm);">📄 Raporu Oluştur ve İndir</button>';
   }
   html += '<div id="ve-fead-report-status" style="margin-top:8px; font-size:var(--fs-tiny); color:var(--text-muted);"></div>';
@@ -511,7 +511,7 @@ function _frSection8(R, node){
   // Sayaçlar BURADA sıfırlanır, montaj fonksiyonunda değil: §8 her üretimde
   // 1'den başlamalı ve Uygunluk bölümü numaralandırmayı SÜRDÜRMELİ.
   // Şekil 1 teoride (kavramsal çizim) olduğu için dinamik şekiller 2'den başlar.
-  _frTblNo = 0; _frFigNo = 1;
+  _frTblNo = 0; _frFigNo = 1; _frEqNo = 0; _frEqRef = {};
   var h = _frH2(0);
   h += '<p>Bölüm 3–7\'deki yöntem, projede tanımlı FEAD modeline uygulanır. Kasnaklar, kayış künyesi, '
      + 'gergi parametreleri ve çalışma çevrimi iç topolojiden otomatik toplanır; girdiler aşağıda '
@@ -710,6 +710,739 @@ function _frLayoutFigure(R){
 }
 
 // 8.6 — çözülmüş geometri
+// ═══════════════ AÇILARIN KURULUŞU — φ, β ve take-up ════════════════════════
+// Mühendis sorusu (2026-08-24): "Take-up oranı nasıl hesaplanıyor, bir girdi
+// giriyor muyuz? φ ve β nasıl elde ediliyor?" — üçü de aynı şeyi sorguluyordu:
+// TASARIM GERGİNLİĞİ nereden geliyor. Rapor bugüne kadar bu zincirin yalnız
+// SONUÇLARINI basıyordu (φ, β, dL/dθ birer tablo satırıydı); kuruluşunu
+// göstermiyordu, o yüzden okuyan kişi hangisinin girdi hangisinin türev
+// olduğunu ayırt edemiyordu.
+//
+// Aşağıdaki üreteçler o kuruluşu ÇÖZÜLMÜŞ GEOMETRİDEN çıkarır. Şekil 1'deki
+// kuralın aynısı geçerli: hiçbir şekilde elle yerleştirilmiş koordinat yok —
+// her nokta çekirdeğin teğet çözümünden gelir, yani şekil modelle birlikte
+// değişir ve modelle birlikte doğrudur.
+
+// Açı yayı işareti. Sweep AÇIKÇA verilir (da, EKRAN düzleminde işaretli
+// radyan): kısa yola normalize eden bir sürüm 180°'den büyük SARIM açısını
+// sessizce kırpardı — krank kasnağında sarım tipik olarak 200°'nin üstündedir.
+function _frAngMark(cx, cy, rr, a1, da, renk, kal, dash){
+  if(!Number.isFinite(da) || Math.abs(da) < 1e-6) return '';
+  if(Math.abs(da) > 2 * Math.PI - 1e-6) da = (da > 0 ? 1 : -1) * (2 * Math.PI - 1e-3);
+  var x1 = cx + rr * Math.cos(a1), y1 = cy + rr * Math.sin(a1);
+  var x2 = cx + rr * Math.cos(a1 + da), y2 = cy + rr * Math.sin(a1 + da);
+  return '<path d="M' + x1.toFixed(2) + ' ' + y1.toFixed(2) + ' A' + rr.toFixed(2) + ' ' + rr.toFixed(2)
+    + ' 0 ' + (Math.abs(da) > Math.PI ? 1 : 0) + ' ' + (da > 0 ? 1 : 0) + ' '
+    + x2.toFixed(2) + ' ' + y2.toFixed(2)
+    + '" fill="none" stroke="' + renk + '" stroke-width="' + (kal || 1.4) + '"'
+    + (dash ? ' stroke-dasharray="' + dash + '"' : '') + '/>';
+}
+
+// mm kutusunu çerçeveye oturtan ölçekleyici. ty() mm düzlemini EKRANDA AYNI
+// YÖNDE gösterir (yönelim korunur) — Şekil 1 ve Kayış Yolu kartıyla aynı
+// konvansiyon; paylaşılmazsa çizimlerden biri sessizce aynalanır.
+function _frFitter(pts, W, H, pad){
+  var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  pts.forEach(function(p){
+    if(!p || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) return;
+    minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]);
+    minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]);
+  });
+  if(!Number.isFinite(minX)) return null;
+  var spanX = Math.max(maxX - minX, 1e-6), spanY = Math.max(maxY - minY, 1e-6);
+  var s = Math.min((W - pad.l - pad.r) / spanX, (H - pad.t - pad.b) / spanY);
+  var offX = pad.l + ((W - pad.l - pad.r) - spanX * s) / 2;
+  var offY = pad.t + ((H - pad.t - pad.b) - spanY * s) / 2;
+  return { s: s,
+    tx: function(x){ return offX + (x - minX) * s; },
+    ty: function(y){ return offY + (maxY - y) * s; } };
+}
+
+// SVG metni satır kaydırmaz: sarmayı elle yapmak zorundayız.
+function _frWrap(metin, maxCh){
+  var kel = String(metin).split(' '), sat = [], cur = '';
+  kel.forEach(function(k){
+    if(!cur) cur = k;
+    else if((cur + ' ' + k).length <= maxCh) cur += ' ' + k;
+    else { sat.push(cur); cur = k; }
+  });
+  if(cur) sat.push(cur);
+  return sat;
+}
+
+// Şeklin AÇIKLAMA SÜTUNU. Kullanıcı bildirimi (2026-08-24): "'fi' ne demek
+// falan çok belli olmamış." Doğru: çizimde yalnız sembol bırakınca (sayıların
+// yay işaretlerinin üstüne binmesini önlemek için gerekiyordu) sembolün NE
+// OLDUĞU yalnız künye metninde kalıyor — okuyucu şekle bakarken orada değil.
+// Açıklama artık şeklin YANINDA, boşta duran şeritte; ayrıca kadraj yataya
+// döndüğü için şekil de kısalıyor (ölçüldü: 534 → 310 px).
+function _frLegend(x0, y0, genislik, satirlar, fs){
+  var g = '', y = y0, maxCh = Math.floor(genislik / (fs * 0.6));
+  satirlar.forEach(function(sr){
+    g += '<text x="' + x0 + '" y="' + (y + fs).toFixed(1) + '" font-size="' + (fs + 1)
+       + '" fill="' + sr[2] + '" font-weight="600">' + _frEsc(sr[0]) + '</text>';
+    y += (fs + 1) * 1.35;
+    _frWrap(sr[1], maxCh - 3).forEach(function(t){
+      g += '<text x="' + (x0 + 10) + '" y="' + (y + fs * 0.85).toFixed(1) + '" font-size="' + fs
+         + '" fill="#5a6270">' + _frEsc(t) + '</text>';
+      y += fs * 1.3;
+    });
+    y += 7;
+  });
+  return g;
+}
+
+// Çakışmayan etiket yerleştirici. Elle koordinat yazmak yerine, istenen yönde
+// adım adım ilerleyip HEM çerçeveden HEM daha önce konmuş etiketlerden çıkan
+// ilk yeri seçer. Kavramsal şekildeki (_yerlestir) fikrin aynısı, ama orada
+// yalnız kasnak çemberlerine bakılıyordu; burada asıl çakışma ETİKET-ETİKET:
+// ölçüldü, "θ_çıkış" ile "φ" ve "β" ile "f" üst üste biniyordu.
+function _frLabels(W, H){
+  var kutular = [];
+  function carpar(b){
+    return kutular.some(function(o){
+      return !(b.x + b.w < o.x - 2 || b.x > o.x + o.w + 2 ||
+               b.y + b.h < o.y - 2 || b.y > o.y + o.h + 2);
+    });
+  }
+  return {
+    // (ax,ay) çıpa, (dx,dy) TERCİH edilen yön, minR ilk deneme yarıçapı.
+    // Arama YARIÇAP-BASKIN, yön ikincil: istenen yön en küçük yarıçapta
+    // denenir, tutmazsa aynı yarıçapta yana sapılır. Yalnız radyal ilerleyen
+    // sürümde 'u_çıkış' etiketi çerçevenin dışına itilip KAYBOLUYORDU (ölçüldü).
+    ekle: function(ax, ay, dx, dy, metin, renk, fs, minR){
+      var w = _frTxtW(metin, fs), hh = fs * 1.25;
+      var L = Math.sqrt(dx * dx + dy * dy) || 1;
+      var a0 = Math.atan2(dy / L, dx / L);
+      var sapma = [0, 0.44, -0.44, 0.87, -0.87, 1.31, -1.31, 1.75, -1.75, 2.20, -2.20, Math.PI];
+      var r0 = (minR == null ? 14 : minR), kutu = null, X = ax + Math.cos(a0) * r0, Y = ay + Math.sin(a0) * r0;
+      for(var adim = 0; adim < 26 && !kutu; adim++){
+        var rr = r0 + adim * 7;
+        for(var k = 0; k < sapma.length && !kutu; k++){
+          var a = a0 + sapma[k];
+          var bx = ax + Math.cos(a) * rr, by = ay + Math.sin(a) * rr;
+          var b = { x: bx - w / 2, y: by - hh / 2, w: w, h: hh };
+          if(b.x < 4 || b.x + b.w > W - 4 || b.y < 2 || b.y + b.h > H - 2) continue;
+          if(!carpar(b)){ kutu = b; X = bx; Y = by; }
+        }
+      }
+      if(!kutu) kutu = { x: Math.max(4, Math.min(W - 4 - w, X - w / 2)),
+                         y: Math.max(2, Math.min(H - 2 - hh, Y - hh / 2)), w: w, h: hh };
+      kutular.push(kutu);
+      return '<text x="' + (kutu.x + w / 2).toFixed(1) + '" y="' + (kutu.y + hh * 0.76).toFixed(1)
+        + '" text-anchor="middle" font-size="' + fs + '" fill="' + renk + '">' + _frEsc(metin) + '</text>';
+    },
+    // Çizimin dışında kalması gereken alanı (alt künye) rezerve eder.
+    kilit: function(x, y, w, h){ kutular.push({ x: x, y: y, w: w, h: h }); },
+    // Kasnak çemberini (ve üstündeki sarım yayını) ENGEL yapar: etiketler
+    // ölçüldü, kayışın üstünden geçiyordu — sayı okunmuyordu. Çember örnek
+    // noktalarla temsil edilir; kutu-kutu testi zaten var.
+    engelCember: function(cx, cy, r, kal){
+      var n = 40, yc = (kal || 8) / 2;
+      for(var i = 0; i < n; i++){
+        var a = i / n * 2 * Math.PI;
+        kutular.push({ x: cx + r * Math.cos(a) - yc, y: cy + r * Math.sin(a) - yc, w: yc * 2, h: yc * 2 });
+      }
+    },
+    // Yarıçap doğruları ve referans ışını da engeldir: etiket onların üstüne
+    // oturunca sayı okunmuyor (ölçüldü — 'θ_giriş' yarıçap doğrusunun üstündeydi).
+    engelDogru: function(x1, y1, x2, y2, kal){
+      var yc = (kal || 8) / 2, L = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+      var n = Math.max(2, Math.round(L / 10));
+      for(var i = 0; i <= n; i++){
+        var u = i / n, X = x1 + (x2 - x1) * u, Y = y1 + (y2 - y1) * u;
+        kutular.push({ x: X - yc, y: Y - yc, w: yc * 2, h: yc * 2 });
+      }
+    }
+  };
+}
+
+// Çalışma (Mean) konumunda çözülmüş geometriden kasnak başına giriş/çıkış
+// teğet açıları. (3.3)'ün SAYISAL olarak denetlenebilmesi için wrapCalc,
+// basılan θ değerlerinden YENİDEN hesaplanır: tabloya bakan kişi aritmetiği
+// elle tekrarlayabilsin diye.
+function _frWrapRows(R){
+  var C = _frCore(), sys = R.build && R.build.sys;
+  if(!C || !sys || !C.meanRel || !C.tensionerState) return null;
+  var st;
+  try { st = C.tensionerState(sys, C.meanRel(sys)); } catch(e){ return null; }
+  var g = st && st.geom;
+  if(!g || !g.spans || !g.pulleys || !g.pulleys.length) return null;
+  var n = g.pulleys.length, out = [], i;
+  for(i = 0; i < n; i++){
+    var p = g.pulleys[i];
+    var pIn = g.spans[(i - 1 + n) % n].Pj, pOut = g.spans[i].Pi;
+    var thIn  = Math.atan2(pIn[1]  - p.c[1], pIn[0]  - p.c[0]) * 180 / Math.PI;
+    var thOut = Math.atan2(pOut[1] - p.c[1], pOut[0] - p.c[0]) * 180 / Math.PI;
+    var w = (p.d * (thOut - thIn)) % 360; if(w < 0) w += 360;
+    out.push({ name: g.names[i], contact: p.contact, d: p.d, c: p.c, rPitch: p.rPitch,
+               Pin: pIn, Pout: pOut, uIn: g.spans[(i - 1 + n) % n].u, uOut: g.spans[i].u,
+               thIn: thIn, thOut: thOut, wrapDeg: g.wraps[i] * 180 / Math.PI, wrapCalc: w });
+  }
+  return { rows: out, geom: g, st: st, sense: g.sense, signedWrapDeg: g.signedWrapDeg,
+           tenIdx: sys._tenIdx };
+}
+
+// Gergi kolundaki kuruluş: kol vektörü, teğet noktaları, birim açıklık
+// doğrultuları, bileşke f = û_çıkış − û_giriş ve β.
+function _frTenConstruct(R){
+  var W = _frWrapRows(R), sys = R.build && R.build.sys;
+  if(!W || !sys || !sys.tensioner) return null;
+  var i = W.tenIdx;
+  if(!(i >= 0) || !W.rows[i]) return null;
+  var row = W.rows[i], st = W.st;
+  var f = [row.uOut[0] - row.uIn[0], row.uOut[1] - row.uIn[1]];
+  var arm = [sys.tensioner.pivot[0] - st.center[0], sys.tensioner.pivot[1] - st.center[1]];
+  var nf = Math.sqrt(f[0] * f[0] + f[1] * f[1]);
+  var na = Math.sqrt(arm[0] * arm[0] + arm[1] * arm[1]);
+  if(!(nf > 1e-9) || !(na > 1e-9)) return null;
+  return { row: row, st: st, sys: sys, idx: i, f: f, arm: arm, normF: nf, armLen: na,
+           pivot: sys.tensioner.pivot, center: st.center };
+}
+
+// ── ŞEKİL: sarım açısı φ teğet noktalarından ────────────────────────────────
+// En büyük sarımlı kasnak seçilir: aynı kuruluş her kasnakta geçerli, ama
+// küçük sarımda yay ile etiketler üst üste biner ve şekil hiçbir şey anlatmaz.
+function _frWrapFigure(R){
+  var W = _frWrapRows(R);
+  if(!W) return '';
+  var best = 0, i;
+  for(i = 1; i < W.rows.length; i++) if(W.rows[i].wrapDeg > W.rows[best].wrapDeg) best = i;
+  var q = W.rows[best], r = q.rPitch, c = q.c;
+  var Wd = 820, Hd = 310, pad = { l: 330, r: 30, t: 20, b: 34 };
+  var stub = r * 1.05, ref = r * 1.5;
+  var pIn0 = [q.Pin[0] - q.uIn[0] * stub, q.Pin[1] - q.uIn[1] * stub];
+  var pOut1 = [q.Pout[0] + q.uOut[0] * stub, q.Pout[1] + q.uOut[1] * stub];
+  var fit = _frFitter([[c[0] - r * 1.35, c[1] - r * 1.35], [c[0] + ref, c[1] + r * 1.35],
+                       pIn0, pOut1, q.Pin, q.Pout], Wd, Hd, pad);
+  if(!fit) return '';
+  var tx = fit.tx, ty = fit.ty, s = fit.s;
+  function f2(v){ return Math.round(v * 100) / 100; }
+  function X(p){ return f2(tx(p[0])); }
+  function Y(p){ return f2(ty(p[1])); }
+  function P(p){ return X(p) + ' ' + Y(p); }
+  var cx = tx(c[0]), cy = ty(c[1]), rs = r * s;
+  // EKRAN açısı = −(mm açısı): ty() y'yi ters çevirir.
+  var sIn = -q.thIn * Math.PI / 180, sOut = -q.thOut * Math.PI / 180;
+
+  var g = '<svg viewBox="0 0 ' + Wd + ' ' + Hd + '" role="img" aria-label="Sarım açısının teğet noktalarından kuruluşu">';
+  g += '<defs><marker id="frW1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7"'
+     + ' orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#c8781e"/></marker></defs>';
+  // +X referans ışını ve 0° işareti
+  g += '<line x1="' + f2(cx) + '" y1="' + f2(cy) + '" x2="' + f2(tx(c[0] + ref)) + '" y2="' + f2(cy)
+     + '" stroke="#9aa2ad" stroke-width="1" stroke-dasharray="5 4"/>';
+  g += '<text x="' + f2(tx(c[0] + ref) + 4) + '" y="' + f2(cy + 4) + '" font-size="11.5" fill="#9aa2ad">0° (+X)</text>';
+  // kasnak çemberi
+  g += '<circle cx="' + f2(cx) + '" cy="' + f2(cy) + '" r="' + f2(rs) + '" fill="none" stroke="#24425f"'
+     + ' stroke-width="2"' + (q.contact === 'back' ? ' stroke-dasharray="6 5"' : '') + '/>';
+  g += '<circle cx="' + f2(cx) + '" cy="' + f2(cy) + '" r="3.2" fill="#24425f"/>';
+  // yarıçap doğruları (teğet noktalarına)
+  [q.Pin, q.Pout].forEach(function(z){
+    g += '<line x1="' + f2(cx) + '" y1="' + f2(cy) + '" x2="' + X(z) + '" y2="' + Y(z)
+       + '" stroke="#24425f" stroke-width="1.2" stroke-dasharray="4 3"/>';
+  });
+  // açıklık parçaları + sarım yayı (kayış rengi)
+  g += '<path d="M' + P(pIn0) + ' L' + P(q.Pin) + '" fill="none" stroke="#c8781e" stroke-width="4" marker-end="url(#frW1)"/>';
+  g += '<path d="M' + P(q.Pout) + ' L' + P(pOut1) + '" fill="none" stroke="#c8781e" stroke-width="4" marker-end="url(#frW1)"/>';
+  var wrapRad = q.wrapDeg * Math.PI / 180;
+  g += '<path d="M' + P(q.Pin) + ' A' + f2(rs) + ' ' + f2(rs) + ' 0 ' + (q.wrapDeg > 180 ? 1 : 0)
+     + ' ' + (q.d > 0 ? 0 : 1) + ' ' + P(q.Pout) + '" fill="none" stroke="#c8781e" stroke-width="5"/>';
+  // θ işaretleri (+X'ten teğet noktalarına)
+  g += _frAngMark(cx, cy, rs * 0.34, 0, sIn,  '#5a6270', 1.3, '3 3');
+  g += _frAngMark(cx, cy, rs * 0.50, 0, sOut, '#5a6270', 1.3, '3 3');
+  // sIn/sOut atan2'den geldiği için |·| ≤ π: doğrudan sweep olarak verilebilir.
+  var LB = _frLabels(Wd, Hd);
+  LB.kilit(0, 0, pad.l - 14, Hd);        // açıklama sütunu
+  LB.kilit(0, Hd - 26, Wd, 26);          // alt künye satırı
+  LB.engelCember(cx, cy, rs, 9);         // kayışın üstüne etiket konmasın
+  LB.engelDogru(cx, cy, tx(q.Pin[0]),  ty(q.Pin[1]),  9);    // yarıçap doğruları
+  LB.engelDogru(cx, cy, tx(q.Pout[0]), ty(q.Pout[1]), 9);
+  LB.engelDogru(cx, cy, tx(c[0] + ref), cy, 5);              // +X referans ışını
+  function etk(ang, rr, metin, renk, fs){
+    return LB.ekle(cx, cy, Math.cos(ang), Math.sin(ang), metin, renk, fs, rr);
+  }
+  // ÇİZİM SEMBOL TAŞIR, SAYI DENKLEMDE DURUR. Değerleri yayların yanına
+  // yazmak ölçüldü: metin kutuları yay işaretlerinin ve yarıçap doğrularının
+  // üstüne biniyordu. Sayılar hemen alttaki denklemde ve tabloda zaten var.
+  // Etiketler açıortaya DEĞİL, kendi yarıçap doğrultularına konur: iki
+  // teğet noktası çevrenin karşıt yerlerinde olduğu için etiketler YAPISAL
+  // olarak ayrılır. Açıortayda ikisi de üst-sağ dörtte bire düşüp sıkışıyordu
+  // (ölçüldü — kadraj küçüldükten sonra iç bölge dar).
+  g += etk(sIn,  rs * 0.30 + 15, 'θ_giriş', '#5a6270', 12);
+  g += etk(sOut, rs * 0.46 + 15, 'θ_çıkış', '#5a6270', 12);
+  // φ yayı — kasnağın İÇİNDE, klasik teknik resim gösterimi
+  var phiSweep = (q.d > 0 ? -1 : 1) * wrapRad;      // mm CCW → ekranda negatif
+  g += _frAngMark(cx, cy, rs * 0.74, sIn, phiSweep, '#c8781e', 2, null);
+  // φ etiketi kayışın DIŞINDA: 198°'lik bir sarımda yay ortası ile θ_çıkış
+  // açıortayı neredeyse aynı yöne düşüyor ve iki etiket yan yana yapışıyordu.
+  g += etk(sIn + phiSweep / 2, rs + 24, 'φ', '#c8781e', 15);
+  // teğet noktaları — künye bu adlara atıf yaptığı için ŞEKİLDE de yazılı
+  [[q.Pin, 'P_giriş'], [q.Pout, 'P_çıkış']].forEach(function(z){
+    var zx = tx(z[0][0]), zy = ty(z[0][1]);
+    g += '<circle cx="' + f2(zx) + '" cy="' + f2(zy) + '" r="3.6" fill="#c8781e"/>';
+    g += LB.ekle(zx, zy, zx - cx, zy - cy, z[1], '#c8781e', 11.5, 13);
+  });
+  // Şeklin İÇİNDE sayısal türetme YOK: SVG metni KaTeX ile dizilemez ve
+  // belgenin geri kalanının tipografisinden kopuk görünür. Aritmetik şeklin
+  // ALTINDA KaTeX denklemi olarak durur — kaynak aynı, dizgi tutarlı.
+  // ── açıklama sütunu ──────────────────────────────────────────────────
+  g += '<line x1="' + (pad.l - 20) + '" y1="14" x2="' + (pad.l - 20) + '" y2="' + (Hd - 34)
+     + '" stroke="#e4e6e9" stroke-width="1"/>';
+  g += _frLegend(14, 16, pad.l - 44, [
+    ['P_giriş · P_çıkış — teğet noktaları', 'Kayışın kasnağa değdiği ve ayrıldığı '
+      + 'noktalar; §3.2\'nin ortak teğet çözümünden gelir.', '#c8781e'],
+    ['θ_giriş · θ_çıkış — teğet açıları', 'Bu iki noktanın, merkezden +X eksenine '
+      + '(kesikli gri ışın) göre ölçülen açısı.', '#5a6270'],
+    ['φ — SARIM AÇISI', 'Kayışın kasnağı sardığı yay: iki teğet açısının, sarım '
+      + 'işareti d ile çarpılmış farkı. Aşağıdaki denklem bu kasnak için birebir gösterir.', '#c8781e'],
+    ['d — sarım işareti', 'Temas tarafından gelir: kaburgalı yüzden temas edende +1, '
+      + 'sırttan temas edende −1 (çeper kesikli çizilir).', '#24425f']
+  ], 10.2);
+  // Uzun kasnak adı alt künyeyi çerçeveden taşırırdı (SVG metni kırpılmaz).
+  var kunye = q.name + ' — ' + (q.contact === 'back' ? 'sırttan temas, d = −1' : 'kaburgalı temas, d = +1');
+  var enCok = Math.floor((Wd - 28) / (11 * 0.6));
+  if(kunye.length > enCok) kunye = kunye.slice(0, enCok - 1) + '…';
+  g += '<text x="14" y="' + (Hd - 10) + '" font-size="11" fill="#1b1e24">' + _frEsc(kunye) + '</text>';
+  var fig = _frFigWrap(g, 'Sarım açısının kuruluşu (3.3). Kayış kasnağa <b>P<sub>giriş</sub></b> teğet '
+    + 'noktasında değer, çeperi izler ve <b>P<sub>çıkış</sub></b>\'te ayrılır; iki teğet noktası '
+    + '§3.2\'nin ortak teğet çözümünden gelir. θ açıları merkezden <b>+X eksenine göre</b> ölçülür '
+    + '(kesikli gri ışın). Sarım açısı bu iki açının, kasnağın dönüş işareti <b>d</b> ile çarpılmış '
+    + 'farkıdır — şeklin altındaki denklem aritmetiği bu kasnak için birebir gösterir. İşaret d, temas tarafından '
+    + 'gelir: kaburgalı yüzden temas edende \\( d = +s \\), sırttan temas edende \\( d = -s \\) '
+    + '(§3.2). Aynı kuruluş her kasnakta geçerlidir; burada en büyük sarımlı kasnak seçilmiştir.');
+  var esit = '<div class="eqno">$$ \\varphi = \\big[\\, d\\,\\big(\\theta_{\\text{çıkış}} '
+    + '- \\theta_{\\text{giriş}}\\big) \\big]\\ \\mathrm{mod}\\ 360^\\circ = \\big[\\, '
+    + (q.d > 0 ? '+1' : '-1') + '\\cdot\\big(' + _frFs(q.thOut, 2) + '^\\circ - ('
+    + _frFs(q.thIn, 2) + '^\\circ)\\big)\\big]\\ \\mathrm{mod}\\ 360^\\circ = '
+    + _frFs(q.wrapCalc, 2) + '^\\circ $$<span class="tag">(' + _frEq() + ')</span></div>';
+  return fig + esit;
+}
+
+// ── TABLO: her kasnak için θ_giriş, θ_çıkış, d, φ ──────────────────────────
+function _frWrapAngleTable(R){
+  var W = _frWrapRows(R);
+  if(!W) return '';
+  var h = '<table><caption>Tablo ' + _frTbl() + ' — Sarım açılarının teğet açılarından kuruluşu (3.3)</caption>';
+  h += '<tr><th>Kasnak</th><th>Temas</th><th>θ<sub>giriş</sub> [°]</th><th>θ<sub>çıkış</sub> [°]</th>'
+     + '<th>d</th><th>φ hesaplanan [°]</th><th>d·φ [°]</th></tr>';
+  var toplam = 0;
+  W.rows.forEach(function(q){
+    var isaretli = (q.contact === 'back' ? -1 : 1) * q.wrapDeg;
+    toplam += isaretli;
+    h += '<tr><td class="l">' + _frEsc(q.name) + '</td>'
+      + '<td class="c">' + (q.contact === 'back' ? 'sırt' : 'kaburgalı') + '</td>'
+      + '<td>' + _frFs(q.thIn, 2) + '</td><td>' + _frFs(q.thOut, 2) + '</td>'
+      + '<td class="c">' + (q.d > 0 ? '+1' : '−1') + '</td>'
+      + '<td>' + _frFs(q.wrapCalc, 2) + '</td>'
+      + '<td>' + _frFs(isaretli, 2) + '</td></tr>';
+  });
+  h += '<tr class="sum"><td class="l" colspan="6">Σ d·φ — kapalı çevrim değişmezi (3.5)</td>'
+     + '<td>' + _frFs(toplam, 2) + '</td></tr></table>';
+  h += '<p>Her satırın φ sütunu, <b>o satırdaki iki θ değerinden</b> yeniden hesaplanmıştır; '
+     + 'yani tablo kendi aritmetiğini taşır ve elle denetlenebilir. Son satır (3.5) değişmezidir: '
+     + 'işaretli sarım toplamı ' + (Math.abs(Math.abs(toplam) - 360) <= 0.05
+        ? '<span class="ok">✓ 360°</span>' : '<b>✗ 360° değil</b>') + '.</p>';
+  return h;
+}
+
+// ── ŞEKİL: β ve take-up oranının kuruluşu (gergi kolunda) ──────────────────
+// Take-up oranı bir GİRDİ DEĞİL: kol boyu a (girdi) ile çözülmüş geometriden
+// gelen φ ve β'nın çarpımı. Bu şekil o üç büyüklüğü aynı karede gösterir.
+function _frBetaFigure(R){
+  var K = _frTenConstruct(R);
+  if(!K) return '';
+  var q = K.row, c = K.center, p = K.pivot, r = q.rPitch;
+  var Wd = 820, Hd = 330, pad = { l: 344, r: 34, t: 26, b: 26 };
+  var Lv = r * 1.35, stub = r * 0.95;
+  // birim vektörler: kayışın kasnağı ÇEKTİĞİ iki doğrultu
+  var vIn  = [-q.uIn[0], -q.uIn[1]];              // giriş açıklığı geriye çeker
+  var vOut = [ q.uOut[0],  q.uOut[1]];            // çıkış açıklığı ileriye çeker
+  var fv   = [ K.f[0], K.f[1]];                   // bileşke = vIn + vOut
+  var uArm = [(c[0] - p[0]) / K.armLen, (c[1] - p[1]) / K.armLen];   // pivot → merkez
+  var tHat = [-uArm[1], uArm[0]];                                     // merkezin hareket yönü
+  function ek(v, k){ return [c[0] + v[0] * k, c[1] + v[1] * k]; }
+  var eIn = ek(vIn, Lv), eOut = ek(vOut, Lv), eF = ek(fv, Lv), eT = ek(tHat, Lv * 0.8);
+  var pIn0  = [q.Pin[0]  - q.uIn[0]  * stub, q.Pin[1]  - q.uIn[1]  * stub];
+  var pOut1 = [q.Pout[0] + q.uOut[0] * stub, q.Pout[1] + q.uOut[1] * stub];
+  var fit = _frFitter([[c[0] - r * 1.2, c[1] - r * 1.2], [c[0] + r * 1.2, c[1] + r * 1.2],
+                       p, eIn, eOut, eF, eT, pIn0, pOut1], Wd, Hd, pad);
+  if(!fit) return '';
+  var tx = fit.tx, ty = fit.ty, s = fit.s;
+  function f2(v){ return Math.round(v * 100) / 100; }
+  function X(z){ return f2(tx(z[0])); }
+  function Y(z){ return f2(ty(z[1])); }
+  function P(z){ return X(z) + ' ' + Y(z); }
+  var cx = tx(c[0]), cy = ty(c[1]), rs = r * s;
+  var sIn = -q.thIn * Math.PI / 180;
+  var wrapRad = q.wrapDeg * Math.PI / 180;
+
+  var g = '<svg viewBox="0 0 ' + Wd + ' ' + Hd + '" role="img" aria-label="Hubload-kol açısı beta ve take-up oranının kuruluşu">';
+  g += '<defs>'
+     + '<marker id="frB1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">'
+     + '<path d="M0 0 L10 5 L0 10 z" fill="#c8781e"/></marker>'
+     + '<marker id="frB2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">'
+     + '<path d="M0 0 L10 5 L0 10 z" fill="#a8321f"/></marker>'
+     + '<marker id="frB3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">'
+     + '<path d="M0 0 L10 5 L0 10 z" fill="#5a6270"/></marker>'
+     + '<marker id="frB4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">'
+     + '<path d="M0 0 L10 5 L0 10 z" fill="#2e7d4f"/></marker></defs>';
+
+  // kol + pivot (kayışın altında kalsın diye önce)
+  g += '<line x1="' + X(p) + '" y1="' + Y(p) + '" x2="' + f2(cx) + '" y2="' + f2(cy)
+     + '" stroke="#2e7d4f" stroke-width="2" stroke-dasharray="5 4"/>';
+  var px = X(p), py = Y(p), aa = 7;
+  g += '<g stroke="#2e7d4f" stroke-width="2">'
+     + '<line x1="' + f2(px - aa) + '" y1="' + py + '" x2="' + f2(px + aa) + '" y2="' + py + '"/>'
+     + '<line x1="' + px + '" y1="' + f2(py - aa) + '" x2="' + px + '" y2="' + f2(py + aa) + '"/></g>';
+  g += '<text x="' + f2(px) + '" y="' + f2(py + 20) + '" text-anchor="middle" font-size="12" fill="#2e7d4f">pivot</text>';
+
+  // açıklıklar + sarım yayı
+  g += '<path d="M' + P(pIn0) + ' L' + P(q.Pin) + '" fill="none" stroke="#c8781e" stroke-width="4" marker-end="url(#frB1)"/>';
+  g += '<path d="M' + P(q.Pout) + ' L' + P(pOut1) + '" fill="none" stroke="#c8781e" stroke-width="4" marker-end="url(#frB1)"/>';
+  g += '<path d="M' + P(q.Pin) + ' A' + f2(rs) + ' ' + f2(rs) + ' 0 ' + (q.wrapDeg > 180 ? 1 : 0)
+     + ' ' + (q.d > 0 ? 0 : 1) + ' ' + P(q.Pout) + '" fill="none" stroke="#c8781e" stroke-width="5"/>';
+  // kasnak
+  g += '<circle cx="' + f2(cx) + '" cy="' + f2(cy) + '" r="' + f2(rs) + '" fill="none" stroke="#24425f"'
+     + ' stroke-width="2"' + (q.contact === 'back' ? ' stroke-dasharray="6 5"' : '') + '/>';
+  g += '<circle cx="' + f2(cx) + '" cy="' + f2(cy) + '" r="3.2" fill="#24425f"/>';
+  // φ yayı (kasnağın içinde)
+  g += _frAngMark(cx, cy, rs * 0.62, sIn, (q.d > 0 ? -1 : 1) * wrapRad, '#c8781e', 2, null);
+
+  // ── vektör üçgeni: f = û_çıkış + (−û_giriş) ─────────────────────────────
+  g += '<g data-ve="unit-vec">';
+  [[eIn, '−u_giriş'], [eOut, 'u_çıkış']].forEach(function(z){
+    g += '<line x1="' + f2(cx) + '" y1="' + f2(cy) + '" x2="' + X(z[0]) + '" y2="' + Y(z[0])
+       + '" stroke="#5a6270" stroke-width="1.8" marker-end="url(#frB3)"/>';
+  });
+  g += '</g>';
+  // paralelkenar kapanışı
+  g += '<g data-ve="parallelogram" stroke="#5a6270" stroke-width="1" stroke-dasharray="3 3" opacity="0.75">'
+     + '<line x1="' + X(eIn) + '" y1="' + Y(eIn) + '" x2="' + X(eF) + '" y2="' + Y(eF) + '"/>'
+     + '<line x1="' + X(eOut) + '" y1="' + Y(eOut) + '" x2="' + X(eF) + '" y2="' + Y(eF) + '"/></g>';
+  // bileşke f  (= hubload doğrultusu)
+  g += '<line data-ve="resultant" x1="' + f2(cx) + '" y1="' + f2(cy) + '" x2="' + X(eF) + '" y2="' + Y(eF)
+     + '" stroke="#a8321f" stroke-width="3" marker-end="url(#frB2)"/>';
+  // merkezin hareket yönü t (kola dik)
+  g += '<line data-ve="that" x1="' + f2(cx) + '" y1="' + f2(cy) + '" x2="' + X(eT) + '" y2="' + Y(eT)
+     + '" stroke="#2e7d4f" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#frB4)"/>';
+  // β yayı: bileşke ile KOL (merkez → pivot) arasında
+  var aF   = Math.atan2(ty(eF[1]) - cy, tx(eF[0]) - cx);
+  var aArm = Math.atan2(py - cy, px - cx);
+  var dB = aArm - aF;
+  while(dB >  Math.PI) dB -= 2 * Math.PI;
+  while(dB < -Math.PI) dB += 2 * Math.PI;
+  g += _frAngMark(cx, cy, rs * 0.50, aF, dB, '#a8321f', 1.8, null);
+
+  var LB = _frLabels(Wd, Hd);
+  LB.kilit(0, 0, pad.l - 14, Hd);        // açıklama sütunu
+  LB.engelCember(cx, cy, rs, 9);         // kasnak çeperi/kayış etiket almasın
+  LB.engelDogru(px, py, cx, cy, 9);      // gergi kolu
+  LB.kilit(px - 30, py + 6, 60, 20);     // 'pivot' yazısı (satır içi çiziliyor)
+  [eIn, eOut, eF, eT].forEach(function(e){   // çizilen vektörlerin gövdeleri
+    LB.engelDogru(cx, cy, tx(e[0]), ty(e[1]), 11);
+  });
+  // Uç etiketi: çıpa vektörün UCU, yön merkezden dışarı.
+  function ucEtk(e, metin, renk, fs){
+    var ex = tx(e[0]), ey = ty(e[1]);
+    return LB.ekle(ex, ey, ex - cx, ey - cy, metin, renk, fs, 20);
+  }
+  // SIRA = ÖNCELİK: yerleştirici ilk geleni en iyi yere koyar, sonrakileri
+  // iter. Şeklin KONUSU β ve φ olduğu için onlar önce yerleşir; birim vektör
+  // etiketleri (uzun ve ikincil) en sona kalır. Ters sırada β, yayından
+  // kopup û_çıkış'ın yanına düşüyordu (ölçüldü).
+  g += LB.ekle(cx, cy, Math.cos(aF + dB / 2), Math.sin(aF + dB / 2),
+               'β', '#a8321f', 15, rs * 0.42);
+  var aPhiMid = sIn + (q.d > 0 ? -1 : 1) * wrapRad / 2;
+  g += LB.ekle(cx, cy, Math.cos(aPhiMid), Math.sin(aPhiMid),
+               'φ', '#c8781e', 15, rs * 0.58);
+  g += LB.ekle((px + cx) / 2, (py + cy) / 2, -(cy - py), (cx - px),
+               'a', '#2e7d4f', 15, 15);
+  g += ucEtk(eF,   'f', '#a8321f', 14);
+  g += ucEtk(eT,   't', '#2e7d4f', 14);
+  g += ucEtk(eIn,  '−u_giriş', '#5a6270', 12);
+  g += ucEtk(eOut, 'u_çıkış',  '#5a6270', 12);
+  // Sayısal türetme şeklin İÇİNDE değil ALTINDA (KaTeX, §8.7): φ şeklindeki
+  // gerekçenin aynısı. Şekil yalnız SEMBOLLERİ taşır — a, φ, β, f, t.
+  // ── açıklama sütunu ──────────────────────────────────────────────────
+  g += '<line x1="' + (pad.l - 22) + '" y1="16" x2="' + (pad.l - 22) + '" y2="' + (Hd - 16)
+     + '" stroke="#e4e6e9" stroke-width="1"/>';
+  g += _frLegend(14, 14, pad.l - 46, [
+    ['a — gergi kol boyu', 'Pivottan kasnak merkezine. Bu zincirdeki TEK girdi.', '#2e7d4f'],
+    ['t — merkezin hareket yönü', 'Kola dik. Kol dθ dönünce merkez t yönünde a·dθ yol alır.', '#2e7d4f'],
+    ['u_giriş · u_çıkış — açıklık doğrultuları', 'Kayışın kasnağı çektiği iki birim vektör.', '#5a6270'],
+    ['f — bileşke', 'f = u_çıkış − u_giriş. Hem hubload doğrultusu (5.4) hem take-up\'ın '
+      + 'kaynağı. Boyu yalnız sarıma bağlı: |f| = 2 sin(φ/2).', '#a8321f'],
+    ['φ — gergi kasnağındaki sarım açısı', '|f|\'i belirler.', '#c8781e'],
+    ['β — bileşke ile kol arasındaki açı', 'f\'nin hareket yönü t üzerindeki izdüşümü '
+      + '|f|·sin β olur; take-up oranı bunun a ile çarpımıdır.', '#a8321f']
+  ], 10.2);
+  return _frFigWrap(g, 'Take-up oranının ve β açısının kuruluşu. Gergi kasnağı, pivot etrafında dönen '
+    + '<b>a</b> boyundaki kolun ucundadır; kol \\( \\mathrm{d}\\theta \\) kadar dönerse merkez, kola '
+    + '<b>dik</b> olan <b>t</b> yönünde \\( a\\,\\mathrm{d}\\theta \\) kadar yol alır (yeşil kesikli ok). '
+    + 'Kayışın kasnağı çektiği iki doğrultu <b>−u<sub>giriş</sub></b> ve <b>u<sub>çıkış</sub></b>; '
+    + 'bileşkeleri <b>f</b> (kırmızı) hem hubload doğrultusudur (5.4) hem de kayış boyunun merkez '
+    + 'hareketine duyarlılığıdır. İki birim vektör arasındaki açı sarım açısı φ olduğundan '
+    + '\\( |f| = 2\\sin(\\varphi/2) \\); <b>β</b> ise f ile kol arasındaki açıdır, dolayısıyla f\'nin '
+    + 'hareket yönü t üzerindeki izdüşümü \\( |f|\\sin\\beta \\) olur. Take-up oranı bu izdüşümün '
+    + 'kol boyuyla çarpımıdır; aritmetiği aşağıdaki denklemler bu model için birebir gösterir. '
+    + '<b>Elle girilen bir take-up değeri yoktur:</b> girdi yalnız kol boyu a\'dır, φ ve β çözülmüş '
+    + 'geometriden gelir.');
+}
+
+// ── 8.7 — gergi çalışma noktası VE tasarım gerginliğinin kaynağı ───────────
+// Bu bölüm eskiden yalnız sonucu basıyordu ve TEK denklemi de yanlış çevrim
+// çarpanıyla yazıyordu: "M/(dL/dθ) · (180/π) · (1/1000)" elle çalışıldığında
+// 650 N yerine 2,13 N veriyordu (ölçüldü). Basılan T doğruydu — çünkü ayrı bir
+// alandan geliyordu — yani aritmetiği elle denetleyen okuyucu raporun yanlış
+// olduğu sonucuna varıyordu. Çarpan artık doğru yönde ve ARA DEĞER de basılıyor.
+function _frOperatingPoint(R){
+  var A = R.analysis || {}, T = A.tensioner || {}, b = R.build || {};
+  var sys = b.sys, t = (sys && sys.tensioner) || {};
+  var K = _frTenConstruct(R);
+  var takeup = _frNum(T.takeupMmPerDeg);
+  var takeupRad = Number.isFinite(takeup) ? (takeup / 1000) * (180 / Math.PI) : NaN;
+  var h = '<h3>8.7 Gergi çalışma noktası ve tasarım gerginliğinin kaynağı</h3>';
+  h += '<p>Bu bölüm, <b>tasarım gerginliğinin nereden geldiğini</b> baştan sona kurar. Modelde '
+     + '"gerginlik" adını taşıyan <b>iki ayrı sayı</b> vardır ve karıştırılmaları bu modülün en pahalı '
+     + 'sessiz hatasıdır: biri kullanıcının girdiği <b>ankraj</b>, öbürü gergi yayının dengesinden '
+     + '<b>türetilen</b> değerdir. Önce türetilenin kuruluşu, sonra ikisinin karşılaştırması verilir.</p>';
+
+  // (a) girdi ↔ türev envanteri
+  h += '<table><caption>Tablo ' + _frTbl() + ' — Bu bölümdeki her büyüklüğün kaynağı</caption>';
+  h += '<tr><th>Büyüklük</th><th>Değer</th><th>Birim</th><th>Kaynak</th></tr>';
+  function gr(k, v, u, src){
+    return '<tr><td class="l">' + k + '</td><td>' + v + '</td><td class="c">' + (u || '—')
+      + '</td><td class="l">' + src + '</td></tr>';
+  }
+  h += gr('Kasnak merkezleri ve dış çapları', '§8.3', '—', '<b>girdi</b> — yerleşim çizimi');
+  h += gr('Kayış efektif boyu L<sub>eff</sub>', _frFs(sys && sys.belt && sys.belt.effLength, 1), 'mm', '<b>girdi</b> — kayış künyesi');
+  h += gr('Gergi pivotu', _frFs(t.pivot && t.pivot[0], 2) + ' / ' + _frFs(t.pivot && t.pivot[1], 2), 'mm', '<b>girdi</b>');
+  h += gr('Kol boyu a', _frFs(t.armLength, 1), 'mm', '<b>girdi</b>'
+        + (b.mount && b.mount.ok ? ' — montaj merkezi ile denetlendi (§8.4)' : ''));
+  h += gr('Yay ön yükü M<sub>0</sub>', _frFs(t.preloadNm, 2), 'Nm', '<b>girdi</b>');
+  h += gr('Yay oranı k', _frFs(t.rateNmPerDeg, 3), 'Nm/°', '<b>girdi</b>');
+  h += gr('Serbest kol açısı θ<sub>serbest</sub>', _frFs(t.freeAngleDeg, 2), '°',
+          b.angleMode === 'mount' ? '<b>türev</b> — montaj merkezinden (§8.4)' : '<b>girdi</b>');
+  h += '<tr class="sum"><td class="l" colspan="4">— aşağıdakilerin hiçbiri girilmez —</td></tr>';
+  h += gr('Kol açısı θ (göreli / mutlak)', _frFs(A.meanRelDeg, 2) + ' / ' + _frFs(A.meanAbsDeg, 2), '°',
+          '<b>türev</b> — (4.4) kökü: L<sub>gereken</sub>(θ) = L<sub>eff</sub>');
+  h += gr('Gergi kasnağı sarımı φ', _frFs(T.wrapDeg, 2), '°', '<b>türev</b> — (3.3), teğet noktalarından');
+  h += gr('Hubload–kol açısı β', _frFs(T.betaDeg, 2), '°', '<b>türev</b> — bileşke f ile kol arasındaki açı');
+  h += gr('Take-up oranı dL/dθ', _frFs(T.takeupMmPerDeg, 4), 'mm/°', '<b>türev</b> — a·sinβ·2sin(φ/2)');
+  h += gr('Yay momenti M(θ)', _frFs(T.springNm, 2), 'Nm', '<b>türev</b> — (4.2): M<sub>0</sub> + k·θ<sub>göreli</sub>');
+  h += gr('Yay dengesinden gerginlik', _frF(T.tensionN, 0), 'N', '<b>türev</b> — (4.3): M/(dL/dθ)');
+  h += gr('<b>Tasarım gerginliği (ankraj)</b>', '<b>' + _frF(sys && sys.designTensionN, 0) + '</b>', 'N',
+          '<b>türev</b> — yay dengesinin ta kendisi; §8.11 zincirinin ankrajı');
+  h += '</table>';
+  h += '<div class="note"><span class="t">Take-up oranı bir girdi değildir</span>'
+     + 'Panelde take-up diye bir alan yoktur ve olamaz: dL/dθ, kol boyu <b>a</b> (girdi) ile çözülmüş '
+     + 'geometriden gelen <b>φ</b> ve <b>β</b>\'nın çarpımıdır. Kol açısı değiştikçe φ küçülür ama β '
+     + 'büyür; çarpımları bu yüzden <b>monoton değildir</b> ve bir tepe noktasından geçer (§8.9).</div>';
+
+  // (b) β ve take-up kuruluşu — şekil
+  h += _frBetaFigure(R);
+
+  // (c) take-up sayısal kuruluşu
+  if(K && Number.isFinite(takeup)){
+    var sinB = Math.sin(_frNum(T.betaDeg) * Math.PI / 180);
+    _frEqRef.f = _frEq();
+    h += '<p>Bileşke doğrultunun boyu yalnız gergi kasnağındaki sarım açısına bağlıdır:</p>';
+    h += '<div class="eqno">$$ |\\mathbf{f}| = \\big|\\mathbf{u}_{\\text{çıkış}} '
+       + '- \\mathbf{u}_{\\text{giriş}}\\big| = 2\\sin\\frac{\\varphi}{2} = 2\\sin\\frac{'
+       + _frFs(T.wrapDeg, 2) + '^\\circ}{2} = ' + _frFs(K.normF, 4)
+       + ' $$<span class="tag">(' + _frEqRef.f + ')</span></div>';
+    _frEqRef.takeup = _frEq();
+    h += '<p>Take-up oranı, bu bileşkenin hareket yönü \\( \\mathbf{t} \\) üzerindeki '
+       + 'izdüşümünün kol boyuyla çarpımıdır (4.3):</p>';
+    h += '<div class="eqno">$$ \\frac{\\mathrm{d}L}{\\mathrm{d}\\theta} = a\\,|\\mathbf{f}|\\,\\sin\\beta'
+       + '\\cdot\\frac{\\pi}{180} = ' + _frFs(K.armLen, 1) + '\\cdot ' + _frFs(K.normF, 4) + '\\cdot '
+       + _frFs(sinB, 4) + '\\cdot\\frac{\\pi}{180} = ' + _frFs(takeup, 4)
+       + '\\ \\text{mm/}^\\circ $$<span class="tag">(' + _frEqRef.takeup + ')</span></div>';
+  }
+
+  // (d) yay dengesi → gerginlik. ÇEVRİM ÇARPANI AÇIK YAZILIR.
+  if(Number.isFinite(takeupRad)){
+    h += '<p>Kol açısı, "gereken kayış boyu = kayışın efektif boyu" koşulundan (4.4) çözülür. Bulunan '
+       + 'açıda yay momenti ile take-up oranı, kayış gerginliğini (4.3) ile verir. Bölme <b>m/rad</b> '
+       + 'biriminde yapılmalıdır; mm/° değeri önce çevrilir:</p>';
+    h += '<div class="eqno">$$ \\left(\\frac{\\mathrm{d}L}{\\mathrm{d}\\theta}\\right)_{\\text{m/rad}} = '
+       + '\\frac{' + _frFs(takeup, 4) + '}{1000}\\cdot\\frac{180}{\\pi} = ' + _frFs(takeupRad, 6)
+       + '\\ \\text{m/rad} $$<span class="tag">(' + (_frEqRef.conv = _frEq()) + ')</span></div>';
+    h += '<div class="eqno">$$ T = \\frac{M(\\theta)}{(\\mathrm{d}L/\\mathrm{d}\\theta)_{\\text{m/rad}}} = '
+       + '\\frac{' + _frFs(T.springNm, 2) + '\\ \\text{Nm}}{' + _frFs(takeupRad, 6) + '\\ \\text{m/rad}} = '
+       + _frF(T.tensionN, 0) + '\\ \\text{N} $$<span class="tag">(' + (_frEqRef.T = _frEq()) + ')</span></div>';
+  }
+
+  h += '<table><caption>Tablo ' + _frTbl() + ' — Çalışma (Mean) konumu</caption>';
+  h += '<tr><th>Büyüklük</th><th>Değer</th><th>Birim</th></tr>';
+  function tr(k, v, u){ return '<tr><td class="l">' + k + '</td><td>' + v + '</td><td class="c">' + u + '</td></tr>'; }
+  h += tr('Kol açısı (göreli / mutlak)', _frFs(A.meanRelDeg, 2) + ' / ' + _frFs(A.meanAbsDeg, 2), '°');
+  h += tr('Gergi kasnağı sarımı', _frFs(T.wrapDeg, 2), '°');
+  h += tr('Hubload–kol açısı β', _frFs(T.betaDeg, 2), '°');
+  h += tr('Take-up oranı dL/dθ', _frFs(T.takeupMmPerDeg, 4), 'mm/°');
+  h += tr('Yay momenti M(θ)', _frFs(T.springNm, 2), 'Nm');
+  h += tr('Kayış gerginliği T', _frF(T.tensionN, 0), 'N');
+  h += tr('Gergi hubload', _frF(T.hubloadN, 0) + ' @ ' + _frFs(T.hubDirDeg, 1) + '°', 'N');
+  h += '</table>';
+
+  h += _frDesignTensionBlock(R);
+  h += _frTensionFigure(R);
+  return h;
+}
+
+// ── Tasarım gerginliği: GİRİLEN ↔ TÜRETİLEN ───────────────────────────────
+// ── Tasarım gerginliğinin kaynağı ──────────────────────────────────────────
+// Bu bölüm eskiden İKİ KANALI karşılaştırıyordu: kullanıcının girdiği ankraj ve
+// yay dengesinden türetilen değer. Karşılaştırma anlamlıydı çünkü ankraj bir
+// GİRDİYDİ ve çeliştiğinde çekirdek girileni kullanıp yay dengesini yok
+// sayıyordu — bütün gerilmeler sessizce kayıyordu.
+//
+// Alan KALDIRILDI: tasarım gerginliği bağımsız bir veri değil. ÖLÇÜLDÜ (10
+// Gates raporu): girilen ile türeyen arasındaki fark en çok %0.12, RMS %0.08 —
+// tamamı yuvarlama, çünkü Gates tam sayı basıyor (766 ↔ 765.9). İki kanal
+// zaten tek kanaldı. Artık bölüm karşılaştırma değil KURULUŞ anlatıyor.
+function _frDesignTensionBlock(R){
+  var sys = R.build && R.build.sys, A = R.analysis || {}, T = A.tensioner || {};
+  if(!sys) return '';
+  var yay = _frNum(R.build && R.build.springTensionN);
+  if(!Number.isFinite(yay)) yay = _frNum(T.tensionN);
+  var h = '<h4>Tasarım gerginliği nereden geliyor</h4>';
+  h += '<p>Gerilme zinciri (§8.11) gergi kasnağından başlar ve tasarım gerginliğine ankrajlanır: '
+     + '\\( T_{\\text{gergi}} = T_{\\text{tasarım}} \\). Bu sayı <b>sorulmaz</b> — gergi kolunun '
+     + 'taşıyabileceği gerginlik yay dengesinden zaten belirlidir'
+     + (_frEqRef.T ? ' (' + _frEqRef.T + ')' : '') + ':</p>';
+  h += '<div class="eq">\\[ T_{\\text{tasarım}} \\;=\\; \\frac{M(\\theta)}{dL/d\\theta} '
+     + '\\;=\\; \\frac{M_0 + k\\,\\theta}{a\\,\\sin\\beta\\;2\\sin(\\varphi/2)} \\]</div>';
+  h += '<p>Sağdaki büyüklüklerin hiçbiri serbest değildir: <b>a</b>, <b>M<sub>0</sub></b> ve '
+     + '<b>k</b> gergi künyesinden okunur, <b>θ</b>, <b>φ</b> ve <b>β</b> ise çözülmüş '
+     + 'geometriden gelir (yukarıdaki envanter). Bu sistemde sonuç '
+     + '<b>' + _frF(yay, 0) + ' N</b>\'dur.</p>';
+  h += '<div class="note"><span class="t">Neden ayrıca sorulmuyor</span>'
+     + 'Bu değer bir tasarım tercihi değil, kurulan gerginin <em>sonucudur</em>. Ayrıca girdi olarak '
+     + 'istemek aynı bilgiyi ikinci kez ve <b>çelişebilir</b> biçimde sormak olurdu: çeliştiğinde '
+     + 'zincir girilen değerle ankrajlanır, bütün açıklık gerilmeleri ve hubloadlar farkı kadar '
+     + 'kayar ve hiçbir hata çıkmazdı. Kayma emniyeti bir <em>oran</em> olduğundan (5.6) bu kaymayı '
+     + 'ancak kısmen gösterir — yük çekmeyen kasnaklarda gerginlik oranı 1\'dir ve SF hiç değişmez. '
+     + 'Farklı bir gerginlik isteniyorsa değiştirilecek şey gergi <b>künyesidir</b> (yay ön yükü, '
+     + 'yay oranı, kol boyu), bir sayı alanı değil. '
+     + 'Tedarikçi sayfasında basılı bir tasarım gerginliği varsa yukarıdaki değerle karşılaştırınız: '
+     + 'ayrışıyorlarsa sayfadan okunan gergi künyesi ya da kasnak yerleşimi hatalıdır.</div>';
+  return h;
+}
+// ── 8.9 — take-up: ANLIK TÜREV ile ORTALAMA EĞİM ayrı şeylerdir ────────────
+// Eski sürüm L(θ) eğrisinin uçtan uca ORTALAMA eğimini hesaplayıp ona
+// "take-up oranı" diyordu. ÖLÇÜLDÜ (BMC): ortalama eğim 0,4481 mm/°, çalışma
+// noktasındaki gerçek türev 0,5984 mm/° — %25,1 fark. §8.7 ve tedarikçi
+// raporunun "Belt Takeup / Tensioner Arm Ratio" satırı ANLIK türevdir; iki
+// farklı sayının aynı adı taşıması raporun kendi içinde çelişmesi demekti.
+function _frTakeupFigure(R){
+  var sw = _frArmSweep(R);
+  if(!sw) return '';
+  var K = _frTenConstruct(R);
+  var Ls = sw.pts.map(function(p){ return p.L; });
+  var lo = Math.min.apply(null, Ls), hi = Math.max.apply(null, Ls);
+  var pad = (hi - lo) * 0.08 || 1;
+  var c = _frChart({ xMin: 0, xMax: sw.relMax, yMin: lo - pad, yMax: hi + pad,
+                     xLabel: 'Gergi kol açısı — göreli [°]', yLabel: 'Gereken tahrik boyu [mm]',
+                     xDec: 0, yDec: 1, H: 280, alt: 'Kayış take-up eğrisi' });
+  var g = c.svg;
+  g += '<g data-ve="takeup-curve">' + _frPolyline(c, sw.pts.map(function(p){ return [p.rel, p.L]; }), '#24425f', 2.4) + '</g>';
+  var t0 = sw.pts[0], t1 = sw.pts[sw.pts.length - 1];
+  var ort = Math.abs((t1.L - t0.L) / (t1.rel - t0.rel));
+  var anlik = K ? _frNum(K.st.takeupMmPerDeg) : NaN;
+
+  // ÇALIŞMA NOKTASINDAKİ TEĞET: eğimi take-up oranının TA KENDİSİ.
+  if(K && Number.isFinite(anlik)){
+    var rm = _frNum(K.st.relDeg), Lm = _frNum(K.st.driveLenMm);
+    var yari = sw.relMax * 0.18;
+    var r1 = Math.max(0, rm - yari), r2 = Math.min(sw.relMax, rm + yari);
+    g += '<g data-ve="tangent">'
+       + _frPolyline(c, [[r1, Lm + anlik * (rm - r1)], [r2, Lm - anlik * (r2 - rm)]], '#a8321f', 2.2, '6 4')
+       + '</g>';
+    var XM = c.sx(rm), YM = c.sy(Lm);
+    g += '<line data-ve="mean-line" x1="' + XM.toFixed(1) + '" y1="' + c.pad.t + '" x2="' + XM.toFixed(1)
+       + '" y2="' + (c.H - c.pad.b) + '" stroke="#2e7d4f" stroke-width="1.6" stroke-dasharray="4 3"/>';
+    g += '<circle cx="' + XM.toFixed(1) + '" cy="' + YM.toFixed(1) + '" r="4" fill="#2e7d4f"/>';
+    var et = 'teğetin eğimi = dL/dθ = ' + _frFs(anlik, 4) + ' mm/°';
+    var xe = Math.min(XM + 10, c.W - _frTxtW(et, 11.5) - 8);
+    g += '<text x="' + xe.toFixed(1) + '" y="' + (YM - 12).toFixed(1) + '" font-size="11.5" fill="#a8321f">'
+       + _frEsc(et) + '</text>';
+    g += '<text x="' + (XM + 6).toFixed(1) + '" y="' + (c.pad.t + 12) + '" font-size="11" fill="#2e7d4f">Mean</text>';
+  }
+  var h = '<h3>8.9 Kayış take-up</h3>';
+  h += '<p>Kol açısı arttıkça gergi kasnağı kayışı içeri alır ve gereken tahrik boyu azalır. '
+     + '<b>Take-up oranı, bu eğrinin çalışma noktasındaki ANLIK eğimidir</b> (mm/°) — '
+     + (_frEqRef.takeup ? '(' + _frEqRef.takeup + ') ile ' : '')
+     + 'hesaplanan ve §8.7\'de basılan değer budur, tedarikçi raporunun "Belt Take-up / Tensioner Arm '
+     + 'Ratio" satırı da aynı büyüklüktür.</p>';
+  h += _frFigWrap(g, 'Gereken tahrik boyunun kol açısıyla değişimi. Kesikli kırmızı doğru, çalışma '
+     + '(Mean) noktasındaki teğettir; <b>eğimi take-up oranıdır</b>. Kayışın tolerans ve aşınma payı '
+     + 'bu eğri üzerinde bir aralığa karşılık gelir ve kol o aralıkta gezer (§4.4).');
+
+  if(Number.isFinite(anlik) && Number.isFinite(ort)){
+    h += '<p>Eğri <b>doğru değildir</b>, bu yüzden anlık eğim ile uçtan uca ortalama eğim aynı sayı '
+       + 'değildir: bu modelde çalışma noktasındaki türev <b>' + _frFs(anlik, 4) + ' mm/°</b>, '
+       + '0°–' + _frFs(sw.relMax, 1) + '° aralığının ortalama eğimi ise <b>' + _frFs(ort, 4) + ' mm/°</b> '
+       + '(' + _frPct(Math.abs(anlik - ort) / anlik * 100, 1) + ' fark). Hesaplarda kullanılan '
+       + '<b>anlık</b> olandır; ortalama yalnız eğrinin ne kadar büküldüğünü gösterir.</p>';
+  }
+  h += _frTakeupRateFigure(R, sw);
+  return h;
+}
+
+// ── ŞEKİL: take-up oranının kol açısıyla değişimi (φ ↓ ile β ↑ yarışı) ─────
+function _frTakeupRateFigure(R, sw){
+  if(!sw) sw = _frArmSweep(R);
+  if(!sw) return '';
+  var pts = sw.pts.filter(function(p){ return Number.isFinite(p.tk); });
+  if(pts.length < 4) return '';
+  var K = _frTenConstruct(R);
+  var vals = pts.map(function(p){ return p.tk; });
+  var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+  var pad = (hi - lo) * 0.15 || 0.05;
+  var c = _frChart({ xMin: 0, xMax: sw.relMax, yMin: Math.max(0, lo - pad), yMax: hi + pad,
+                     xLabel: 'Gergi kol açısı — göreli [°]', yLabel: 'Take-up oranı dL/dθ [mm/°]',
+                     xDec: 0, yDec: 3, H: 260, alt: 'Take-up oranının kol açısıyla değişimi' });
+  var g = c.svg;
+  g += '<g data-ve="takeup-rate">' + _frPolyline(c, pts.map(function(p){ return [p.rel, p.tk]; }), '#24425f', 2.4) + '</g>';
+  // tepe noktası
+  var tepe = pts[0];
+  pts.forEach(function(p){ if(p.tk > tepe.tk) tepe = p; });
+  g += '<circle cx="' + c.sx(tepe.rel).toFixed(1) + '" cy="' + c.sy(tepe.tk).toFixed(1)
+     + '" r="4" fill="#8a5a1e"/>';
+  var tm = 'tepe ' + _frFs(tepe.tk, 4) + ' mm/° @ ' + _frFs(tepe.rel, 1) + '°';
+  // Tepe ile Mean çok yakın olabiliyor (BMC: 26,6° ↔ 28,5°) ve iki etiket üst
+  // üste biniyordu (ölçüldü). Yakınsa tepe etiketi ALTA ve SOLA alınır.
+  var rmT = K ? _frNum(K.st.relDeg) : NaN;
+  var yakin = Number.isFinite(rmT) && Math.abs(tepe.rel - rmT) < sw.relMax * 0.14;
+  var tmW = _frTxtW(tm, 11);
+  var tmX = yakin ? Math.max(c.pad.l + 4, c.sx(tepe.rel) - tmW - 10)
+                  : Math.min(c.sx(tepe.rel) + 8, c.W - tmW - 8);
+  g += '<text x="' + tmX.toFixed(1) + '" y="' + (c.sy(tepe.tk) + (yakin ? 20 : -9)).toFixed(1)
+     + '" font-size="11" fill="#8a5a1e">' + _frEsc(tm) + '</text>';
+  if(K){
+    var rm = rmT, tkm = _frNum(K.st.takeupMmPerDeg);
+    var XM = c.sx(rm);
+    g += '<line x1="' + XM.toFixed(1) + '" y1="' + c.pad.t + '" x2="' + XM.toFixed(1) + '" y2="'
+       + (c.H - c.pad.b) + '" stroke="#2e7d4f" stroke-width="1.6" stroke-dasharray="4 3"/>';
+    g += '<circle cx="' + XM.toFixed(1) + '" cy="' + c.sy(tkm).toFixed(1) + '" r="4" fill="#2e7d4f"/>';
+    g += '<text x="' + (XM + 6).toFixed(1) + '" y="' + (c.pad.t + 12) + '" font-size="11" fill="#2e7d4f">Mean</text>';
+  }
+  var ilk = pts[0], son = pts[pts.length - 1];
+  var aciklama = '';
+  if(Number.isFinite(ilk.phi) && Number.isFinite(son.phi) && Number.isFinite(ilk.beta) && Number.isFinite(son.beta)){
+    aciklama = ' Kol 0°\'den ' + _frFs(son.rel, 1) + '°\'ye giderken sarım açısı φ '
+      + _frFs(ilk.phi, 1) + '° → ' + _frFs(son.phi, 1) + '° <b>düşer</b> (yani 2sin(φ/2) küçülür), '
+      + 'buna karşılık β ' + _frFs(ilk.beta, 1) + '° → ' + _frFs(son.beta, 1) + '° <b>yükselir</b> '
+      + '(yani sin β büyür). Çarpımları önce artar, sonra azalır.';
+  }
+  return _frFigWrap(g, 'Take-up oranının kol açısıyla değişimi. Eğri <b>monoton değildir</b>, çünkü '
+    + '(4.3)\'ün iki çarpanı ters yönde çalışır.' + aciklama + ' Bu, take-up oranının neden tek bir '
+    + 'sabit sayı olarak girilemeyeceğinin doğrudan gösterimidir: her kol konumunda başka bir değer alır '
+    +'ve hesaplarda kullanılan, çalışma noktasındaki değerdir (yeşil).');
+}
+
+// 8.6 — çözülmüş geometri
 function _frGeometryTable(R){
   var g = (R.analysis && R.analysis.geometry) || [];
   if(!g.length) return '';
@@ -746,7 +1479,13 @@ function _frGeometryTable(R){
        + 'beklenen \\( 2\\pi h_b = \\) <b>' + _frFs(bek, 4) + ' mm</b> — '
        + (Math.abs(fark - bek) < 1e-3 ? '<span class="ok">✓ tutuyor</span>' : '<b>✗ tutmuyor</b>') + '.</p>';
   }
-  return h + h1;
+  // φ'nin KURULUŞU: tabloda sarım açıları bir SONUÇ olarak duruyordu; bir
+  // mühendis "bu açı nereden çıktı" diye sorduğunda cevap yalnız §3.3'ün
+  // formülüydü. Şekil + tablo o formülü BU MODELİN sayılarıyla gösterir.
+  var h2 = '<p>Yukarıdaki sarım açıları bir girdi değildir: her biri, kayışın kasnağa değdiği '
+    + '<b>iki teğet noktasından</b> (3.3) ile hesaplanır. Aşağıda önce kuruluş bir kasnak üzerinde '
+    + 'çizilmiş, ardından bütün kasnaklar için aritmetiği tablo hâlinde verilmiştir.</p>';
+  return h + h1 + h2 + _frWrapFigure(R) + _frWrapAngleTable(R);
 }
 function _frSumArcPitch(g, sys){
   var t = 0;
@@ -755,31 +1494,6 @@ function _frSumArcPitch(g, sys){
     if(p) t += (_frNum(row.wrapDeg) * Math.PI / 180) * _frNum(p.rPitch);
   });
   return t;
-}
-
-// 8.7 — gergi çalışma noktası + gerginlik kontrol grafiği
-function _frOperatingPoint(R){
-  var A = R.analysis || {}, T = A.tensioner || {};
-  var h = '<h3>8.7 Gergi çalışma noktası</h3>';
-  h += '<p>Kol açısı, "gereken kayış boyu = kayışın efektif boyu" koşulundan (4.4) çözülür. Bulunan açıda '
-     + 'yay momenti ve take-up oranı, kayış gerginliğini (4.3) ile verir:</p>';
-  h += '<div class="eqno">$$ T = \\frac{M(\\theta)}{\\mathrm{d}L/\\mathrm{d}\\theta} = \\frac{'
-     + _frFs(T.springNm, 2) + '\\ \\text{Nm}}{' + _frFs(T.takeupMmPerDeg, 4)
-     + '\\ \\text{mm/}^\\circ} \\cdot \\frac{180}{\\pi}\\cdot\\frac{1}{1000} = '
-     + _frF(T.tensionN, 0) + '\\ \\text{N} $$</div>';
-  h += '<table><caption>Tablo ' + _frTbl() + ' — Çalışma (Mean) konumu</caption>';
-  h += '<tr><th>Büyüklük</th><th>Değer</th><th>Birim</th></tr>';
-  function tr(k, v, u){ return '<tr><td class="l">' + k + '</td><td>' + v + '</td><td class="c">' + u + '</td></tr>'; }
-  h += tr('Kol açısı (göreli / mutlak)', _frFs(A.meanRelDeg, 2) + ' / ' + _frFs(A.meanAbsDeg, 2), '°');
-  h += tr('Gergi kasnağı sarımı', _frFs(T.wrapDeg, 2), '°');
-  h += tr('Hubload–kol açısı β', _frFs(T.betaDeg, 2), '°');
-  h += tr('Take-up oranı dL/dθ', _frFs(T.takeupMmPerDeg, 4), 'mm/°');
-  h += tr('Yay momenti M(θ)', _frFs(T.springNm, 2), 'Nm');
-  h += tr('Kayış gerginliği T', _frF(T.tensionN, 0), 'N');
-  h += tr('Gergi hubload', _frF(T.hubloadN, 0) + ' @ ' + _frFs(T.hubDirDeg, 1) + '°', 'N');
-  h += '</table>';
-  h += _frTensionFigure(R);
-  return h;
 }
 
 // Konum etiketleri — model katmanının sözlüğünden (kisa=true → grafik etiketi).
@@ -1281,7 +1995,8 @@ function _frArmSweep(R){
     try {
       var st = C.tensionerState(sys, rel);
       if(st && Number.isFinite(st.tensionN))
-        pts.push({ rel: rel, abs: st.absDeg, T: st.tensionN, L: st.driveLenMm, tk: st.takeupMmPerDeg });
+        pts.push({ rel: rel, abs: st.absDeg, T: st.tensionN, L: st.driveLenMm, tk: st.takeupMmPerDeg,
+                   phi: st.wrapDeg, beta: st.betaDeg });
     } catch(e){}
   }
   return pts.length > 3 ? { pts: pts, relMax: hi } : null;
@@ -1356,28 +2071,6 @@ function _frTensionFigure(R){
     + 'Kol açısı büyüdükçe gergi sarımı küçülür ve (4.3)\'ün paydası daralarak gerginliği hızla yükseltir'
     + (kesildi ? '; eğri, çalışma konumlarının ' + _frF(1.6, 1) + ' katını aştığı yerde kesilmiştir '
               + '(tekilliğe kadar çizmek grafiği okunmaz yapardı).' : '.'));
-}
-
-// Şekil — Belt Take-up
-function _frTakeupFigure(R){
-  var sw = _frArmSweep(R);
-  if(!sw) return '';
-  var Ls = sw.pts.map(function(p){ return p.L; });
-  var lo = Math.min.apply(null, Ls), hi = Math.max.apply(null, Ls);
-  var pad = (hi - lo) * 0.08 || 1;
-  var c = _frChart({ xMin: 0, xMax: sw.relMax, yMin: lo - pad, yMax: hi + pad,
-                     xLabel: 'Gergi kol açısı — göreli [°]', yLabel: 'Tahrik boyu [mm]',
-                     xDec: 0, yDec: 1, H: 260, alt: 'Kayış take-up eğrisi' });
-  var g = c.svg;
-  g += '<g data-ve="takeup-curve">' + _frPolyline(c, sw.pts.map(function(p){ return [p.rel, p.L]; }), '#24425f', 2.4) + '</g>';
-  var t0 = sw.pts[0], t1 = sw.pts[sw.pts.length - 1];
-  var ort = (t1.L - t0.L) / (t1.rel - t0.rel);
-  return '<h3>8.9 Kayış take-up</h3>'
-    + '<p>Kol açısı arttıkça gergi kasnağı kayışı içeri alır ve gereken tahrik boyu azalır. Eğrinin eğimi '
-    + '<b>take-up oranıdır</b> (mm/°); ortalama eğim bu modelde <b>' + _frFs(Math.abs(ort), 4) + ' mm/°</b>. '
-    + 'Küçük take-up oranı, kayış boyundaki küçük bir değişimin gerginliği çok değiştirmesi demektir.</p>'
-    + _frFigWrap(g, 'Gereken tahrik boyunun kol açısıyla değişimi. Kayışın tolerans ve aşınma payı bu eğri '
-      + 'üzerinde bir aralığa karşılık gelir; kol o aralıkta gezer (§4.4).');
 }
 
 // Şekil — kayma emniyeti çubukları
@@ -1613,6 +2306,17 @@ if(typeof module !== 'undefined' && module.exports){
     _frAntet: _frAntet,
     _frEnsureAssets: _frEnsureAssets,
     _frConceptFigure: _frConceptFigure,
+    _frOperatingPoint: _frOperatingPoint,
+    _frGeometryTable: _frGeometryTable,
+    _frTakeupFigure: _frTakeupFigure,
+    _frWrapRows: _frWrapRows,
+    _frTenConstruct: _frTenConstruct,
+    _frWrapFigure: _frWrapFigure,
+    _frWrapAngleTable: _frWrapAngleTable,
+    _frBetaFigure: _frBetaFigure,
+    _frLabels: _frLabels,
+    _frTakeupRateFigure: _frTakeupRateFigure,
+    _frDesignTensionBlock: _frDesignTensionBlock,
     _frF: _frF, _frFs: _frFs, _frPct: _frPct, _frEsc: _frEsc,
     VE_FEAD_REP_SECTIONS: VE_FEAD_REP_SECTIONS
   };

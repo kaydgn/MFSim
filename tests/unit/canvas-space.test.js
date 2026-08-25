@@ -226,6 +226,174 @@ describe('veBoundaryBox — topoloji sınır çerçevesinin kutusu', () => {
   });
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// DÜĞÜM ADININ ÇERÇEVEYE ETKİSİ
+// ───────────────────────────────────────────────────────────────────────────
+// KULLANICI BİLDİRİMİ (2026-08-24, Yapısal Analiz · Geometri): adı SOLA alınan
+// bileşende ad, kesikli topoloji çerçevesinin DIŞINA taşıyordu. Çerçeve yalnız
+// KUTULARI sarıyor, ada ait tek pay altta sabit 20px'ti.
+//
+// Bu sessizlik gözle ancak ekran görüntüsü gönderilince yakalanıyor: çerçeve
+// kendi içinde tutarlı (kutuları kusursuz sarıyor), yalnız ADI görmüyor.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('veNodeLabelOverflow — adın kutu dışına taşması', () => {
+  const W = 65, H = 60;
+
+  test('alt etiket: aşağı 4+yükseklik, geniş adın taşması İKİ YANA EŞİT', () => {
+    // 140px'lik ad ("Malzeme ve Özellikler") 50px kutuda: her yandan 45px
+    const o = cs.veNodeLabelOverflow('bottom', 50, 46, { w: 140, h: 16 });
+    expect(o.bottom).toBe(cs.VE_LABEL_GAP_V + 16);
+    expect(o.top).toBe(0);
+    expect(o.left).toBe(45);
+    expect(o.right).toBe(45);
+  });
+
+  test('üst etiket: aynı taşma YUKARI çıkar', () => {
+    const o = cs.veNodeLabelOverflow('top', 50, 46, { w: 140, h: 16 });
+    expect(o.top).toBe(cs.VE_LABEL_GAP_V + 16);
+    expect(o.bottom).toBe(0);
+    expect(o.left).toBe(45);
+    expect(o.right).toBe(45);
+  });
+
+  test('sol etiket: SOLA 7+genişlik — kullanıcının bildirdiği durum', () => {
+    const o = cs.veNodeLabelOverflow('left', W, H, { w: 58, h: 16 });
+    expect(o.left).toBe(cs.VE_LABEL_GAP_H + 58);
+    expect(o.right).toBe(0);
+    // Ad kutudan alçak → dikeyde taşma yok
+    expect(o.top).toBe(0);
+    expect(o.bottom).toBe(0);
+  });
+
+  test('sağ etiket sol etiketin AYNASI', () => {
+    const sol = cs.veNodeLabelOverflow('left', W, H, { w: 58, h: 16 });
+    const sag = cs.veNodeLabelOverflow('right', W, H, { w: 58, h: 16 });
+    expect(sag.right).toBe(sol.left);
+    expect(sag.left).toBe(sol.right);
+  });
+
+  test('kutudan dar ad yatayda taşmaz (negatif pay üretmez)', () => {
+    const o = cs.veNodeLabelOverflow('bottom', 200, 120, { w: 40, h: 16 });
+    expect(o.left).toBe(0);
+    expect(o.right).toBe(0);
+  });
+
+  test('kutudan yüksek yan etiket dikeyde eşit taşar', () => {
+    // 33×33 sensör kutusunda 16px'lik ad değil, 41px'lik iki satırlık ad
+    const o = cs.veNodeLabelOverflow('left', 33, 33, { w: 58, h: 41 });
+    expect(o.top).toBe(4);
+    expect(o.bottom).toBe(4);
+  });
+
+  test('ölçülemeyen ad taşma üretmez (uydurma genişlik yok)', () => {
+    expect(cs.veNodeLabelOverflow('left', W, H, null))
+      .toEqual({ left: 0, right: 0, top: 0, bottom: 0 });
+    expect(cs.veNodeLabelOverflow('bottom', W, H, { w: 0, h: 0 }))
+      .toEqual({ left: 0, right: 0, top: 0, bottom: 0 });
+  });
+
+  // Boşluk sayıları CSS'te de yazılı (.ve-node-label margin'leri). İki yer
+  // ayrışırsa hata SESSİZ: çerçeve yine çizilir, yalnız adı birkaç piksel
+  // keser — yani düzeltilen kusurun küçük hâli geri gelir. Kapı bu yüzden
+  // sayıyı canvas-space.js'e değil, CSS'in KENDİSİNE bağlıyor.
+  test('boşluk sabitleri css/styles.css ile AYNI', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+
+    const blok = (sec) => {
+      const i = css.indexOf('\n' + sec + '{');
+      expect(i).toBeGreaterThan(-1);
+      return css.slice(i, css.indexOf('}', i));
+    };
+    const px = (metin, ozellik) => {
+      const m = new RegExp(ozellik + '\\s*:\\s*(\\d+(?:\\.\\d+)?)px').exec(metin);
+      expect(m).not.toBeNull();
+      return parseFloat(m[1]);
+    };
+
+    expect(px(blok('.ve-node-label'), 'margin-top')).toBe(cs.VE_LABEL_GAP_V);
+    expect(px(blok('.ve-node-label.lbl-top'), 'margin-bottom')).toBe(cs.VE_LABEL_GAP_V);
+    expect(px(blok('.ve-node-label.lbl-left'), 'margin-right')).toBe(cs.VE_LABEL_GAP_H);
+    expect(px(blok('.ve-node-label.lbl-right'), 'margin-left')).toBe(cs.VE_LABEL_GAP_H);
+  });
+});
+
+describe('veBoundaryBox — ad çerçeveye girer (ölçüm işlevi geçilince)', () => {
+  const N = (x, y, extra) => Object.assign({ id: 'n' + x, type: 'engine', x, y }, extra || {});
+  const olc = (w, h) => () => ({ w: w, h: h });
+
+  test('adı SOLA alınmış düğümde çerçeve SOLA açılır', () => {
+    const dugum = N(3000, 3000, { data: { labelPos: 'left' } });
+    const eski = cs.veBoundaryBox([dugum], 50);                    // ölçüm YOK → eski davranış
+    const yeni = cs.veBoundaryBox([dugum], 50, olc(58, 16));
+    expect(eski.x).toBe(2950);                                     // ad çerçevenin dışında kalıyordu
+    expect(yeni.x).toBe(3000 - (cs.VE_LABEL_GAP_H + 58) - 50);     // 2885
+    expect(yeni.w).toBe(eski.w + (cs.VE_LABEL_GAP_H + 58));
+  });
+
+  test('ADIN SOL UCU çerçevenin İÇİNDE ve dolgu kadar uzağında', () => {
+    // Kullanıcının bildirdiği senaryonun doğrudan ölçüsü.
+    const dugum = N(3000, 3000, { data: { labelPos: 'left' } });
+    const box = cs.veBoundaryBox([dugum], 50, olc(58, 16));
+    const adSolUc = 3000 - cs.VE_LABEL_GAP_H - 58;
+    expect(adSolUc - box.x).toBe(50);        // ad ile çerçeve arası tam dolgu
+    expect(box.x).toBeLessThan(adSolUc);     // ve ad HER HÂLÜKÂRDA içeride
+  });
+
+  test('kutusundan geniş ALT etiket çerçeveyi iki yana açar', () => {
+    // "Malzeme ve Özellikler" — 50px kutu, ~140px ad
+    const dugum = N(3000, 3000, { width: 50, height: 46 });
+    const box = cs.veBoundaryBox([dugum], 50, olc(140, 16));
+    expect(box.x).toBe(3000 - 45 - 50);
+    expect(box.x + box.w).toBe(3000 + 50 + 45 + 50);
+  });
+
+  test('sağa alınmış ad çerçeveyi SAĞA açar', () => {
+    const dugum = N(3000, 3000, { data: { labelPos: 'right' } });
+    const box = cs.veBoundaryBox([dugum], 50, olc(58, 16));
+    expect(box.x).toBe(2950);                                       // sol kenar değişmez
+    expect(box.x + box.w).toBe(3000 + 65 + cs.VE_LABEL_GAP_H + 58 + 50);
+  });
+
+  test('üste alınmış ad çerçeveyi YUKARI açar', () => {
+    const dugum = N(3000, 3000, { data: { labelPos: 'top' } });
+    const box = cs.veBoundaryBox([dugum], 50, olc(58, 16));
+    expect(box.y).toBe(3000 - (cs.VE_LABEL_GAP_V + 16) - 50);
+  });
+
+  // Çerçeve yalnız BÜYÜR: ad başka kenara gitse de kutunun altındaki eski
+  // 20px'lik nefes payı durur. Kurulu hiçbir topoloji bu düzeltmeyle daralmaz.
+  test('ad sola gitse bile alttaki pay küçülmez', () => {
+    const dugum = N(3000, 3000, { data: { labelPos: 'left' } });
+    const box = cs.veBoundaryBox([dugum], 50, olc(58, 16));
+    expect(box.y + box.h).toBe(3000 + 60 + cs.VE_NODE_LABEL_H + 50);
+  });
+
+  test('ölçüm işlevi geçilmezse davranış BİREBİR eski hâli', () => {
+    const liste = [N(3000, 3000, { data: { labelPos: 'left' } }), N(3400, 3200)];
+    expect(cs.veBoundaryBox(liste, 50))
+      .toEqual({ x: 2950, y: 2950, w: 3400 + 65 + 50 - 2950, h: 3200 + 60 + 20 + 50 - 2950 });
+  });
+
+  // MODÜL KARTINDA ad kutunun dışında yüzmez, kartın İÇİNDE bir satırdır
+  // (css .ve-node--module .ve-node-label{position:static}). Kart adı için pay
+  // ayırmak, ana topolojide dört modül kartının çevresinde sebepsiz boşluk
+  // açardı — ölçüt tipin adı değil, kuralın kendi ölçütü (veIsModuleNode).
+  test('modül kartının adı çerçeveye taşma EKLEMEZ', () => {
+    global.veIsModuleNode = (n) => n.type === 'arac-performans';
+    try {
+      const kart = { id: 'm', type: 'arac-performans', x: 3000, y: 3000, width: 120, height: 96 };
+      const box = cs.veBoundaryBox([kart], 50, olc(200, 16));
+      expect(box.x).toBe(2950);
+      expect(box.x + box.w).toBe(3000 + 120 + 50);
+      expect(box.y + box.h).toBe(3000 + 96 + cs.VE_NODE_LABEL_H + 50);
+    } finally {
+      delete global.veIsModuleNode;
+    }
+  });
+});
+
 describe('veBoundaryChipPos — çıkış çipi çerçevenin ALT KENARINA tutunur', () => {
   const BOX = { x: 2900, y: 2900, w: 400, h: 200 };   // yerel: alt kenar y=3100, merkez x=3100
   const CHIP = { w: 260, h: 30 };

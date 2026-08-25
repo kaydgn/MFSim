@@ -2,30 +2,6 @@
 // INFO POPUP SİSTEMİ
 // ============================================================================
 var infoPopupData = {
-  'motorVerileri': {
-    title: 'Motor Verileri Hakkında',
-    content: 'Bu bölümde motor freni veya motor tork-güç değerlerini girebilirsiniz. Bilgi içeriği kullanıcı tarafından düzenlenecek.'
-  },
-  'torkGucEgrisi': {
-    title: 'Tork & Güç Eğrisi Hakkında',
-    content: 'Girilen veriler grafiksel olarak gösterilir. Bilgi içeriği kullanıcı tarafından düzenlenecek.'
-  },
-  'egriYaklaşımı': {
-    title: 'Eğri Yaklaşımı Hakkında',
-    content: 'Verilerinize en uygun matematiksel modeli seçebilirsiniz. Bilgi içeriği kullanıcı tarafından düzenlenecek.'
-  },
-  'motorFreniParametreleri': {
-    title: 'Motor Freni Parametreleri Hakkında',
-    content: 'Motor freni verim ve governed RPM değerlerini ayarlayabilirsiniz. Bilgi içeriği kullanıcı tarafından düzenlenecek.'
-  },
-  'sanzimanVerileri': {
-    title: 'Şanzıman Verileri Hakkında',
-    content: 'Bu bölümde şanzıman vites oranlarını tanımlayabilirsiniz. Hazır şanzıman presetlerinden birini seçebilir veya manuel olarak kendi değerlerinizi girebilirsiniz. Her vites için oran ve isteğe bağlı not ekleyebilirsiniz.'
-  },
-  'testVitesi': {
-    title: 'Test Başlangıç Vitesi Hakkında',
-    content: 'Motor freni testinin hangi viteste başladığını belirler. Şanzıman verilerini girdikten sonra bu listeden ilgili vitesi seçin. Seçilen vitesin oranı otomatik olarak hesaplamalarda kullanılacaktır.'
-  },
   'torkKonvertoru': {
     title: 'Tork Konvertörü Hakkında',
     content: 'Tork konvertörü, motor ile şanzıman arasında hidrolik bağlantı sağlar. Kilitli konvertör direkt mekanik bağlantı sağlar (oran 1.0). Kilitsiz durumda ise düşük hızlarda tork çarpanı (1.8-2.5), yüksek hızlarda ise yaklaşık 1.0 oran uygulanır.'
@@ -167,6 +143,8 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   'fead-tensioner', 'fead-belt', 'fead-layout',
   // Yapısal Analiz — Geometri: sol künye/denetim rayı + sağda 3B görüntüleyici
   'str-geometry',
+  // Yapısal Analiz — Malzeme: solda 112 kayıtlık katalog, sağda uygulanan kayıt
+  'str-material',
   // Parametrik: çoklu-seri sonuç grafiği tam genişlikte ferah okunur.
   'parametric'];
 
@@ -276,6 +254,8 @@ function showNodeProperties(node) {
     html += getStrModulePropertiesHTML(node);
   } else if(node.type === 'str-geometry') {
     html += getStrGeometryPropertiesHTML(node);
+  } else if(node.type === 'str-material') {
+    html += getStrMaterialPropertiesHTML(node);
   } else if(node.type === 'str-mesh') {
     html += getStrMeshPropertiesHTML(node);
   } else if(node.type === 'str-bc') {
@@ -357,6 +337,15 @@ function showNodeProperties(node) {
   // pencere bomboş açılırdı (--engine-empty ile aynı gerekçe).
   if(_propWin) _propWin.classList.toggle('ve-properties--strgeom',
     node.type === 'str-geometry' && !!(node.data && node.data.geometry));
+  // Yapısal Analiz / Malzeme: katalog listesi kısa olursa gezilemez → büyük
+  // pencere. Geometri'nin aksine KOŞULSUZ veriliyor: sol sütun (katalog) her
+  // zaman dolu, "boş açılan büyük pencere" durumu burada yok.
+  if(_propWin) _propWin.classList.toggle('ve-properties--strmat', node.type === 'str-material');
+  // Yapısal Analiz / Hesaplama Ağı: Geometri ile AYNI kural ve aynı gerekçe —
+  // büyük pencere yalnız ağ VARKEN, çünkü ancak o zaman sağ sütunda 3B
+  // görüntüleyici basılıyor. Ağ yokken panel tek sütunluk kısa bir formdur.
+  if(_propWin) _propWin.classList.toggle('ve-properties--strmesh',
+    node.type === 'str-mesh' && !!(node.data && node.data.mesh));
   // Hafif paneller (VE_COMPACT_PANEL_TYPES): içerik az → dar pencere + kompakt-sol
   // kimlik. Geniş yapmak boş sütun bırakırdı. Salt sunum.
   if(_propWin) _propWin.classList.toggle('ve-properties--compact', VE_COMPACT_PANEL_TYPES.indexOf(node.type) >= 0);
@@ -418,6 +407,15 @@ function showNodeProperties(node) {
     }, 140);
   }
 
+  // Yapısal Analiz Malzeme: panel kurulduktan sonra UYGULANAN kaydı listede
+  // görünür yap. 112 satırlık listede ekranın dışında kalan bir ✓ işareti
+  // hiçbir şey söylemez.
+  if(node.type === 'str-material') {
+    setTimeout(function() {
+      if(typeof veStrMatLibScrollToApplied === 'function') veStrMatLibScrollToApplied(node.id);
+    }, 60);
+  }
+
   // Yapısal Analiz Geometri: panel DOM'u kurulduktan sonra 3B görüntüleyiciyi
   // bağla. Panel HTML'i her yeniden çizildiğinde kanvas da yeniden kurulur →
   // sahne sıfırdan inşa edilir (kamera açısı düğüm kimliğiyle saklı, bkz.
@@ -425,6 +423,14 @@ function showNodeProperties(node) {
   if(node.type === 'str-geometry') {
     setTimeout(function() {
       if(typeof veStrGeomMountViewer === 'function') veStrGeomMountViewer(node.id);
+    }, 140);
+  }
+
+  // Yapısal Analiz Hesaplama Ağı: aynı kanca, aynı gerekçe. Görüntüleyici
+  // yalnız ağ VARSA kurulur (kanvas HTML'i de ancak o zaman basılıyor).
+  if(node.type === 'str-mesh') {
+    setTimeout(function() {
+      if(typeof veStrMeshMountViewer === 'function') veStrMeshMountViewer(node.id);
     }, 140);
   }
 

@@ -459,6 +459,11 @@ function handleLabelContextAction(action){
   if(action === 'reset') delete node.data.labelPos;
   else node.data.labelPos = action;   // top / bottom / left / right
   applyNodeLabelPos(node, el);
+  // Sınır çerçevesi adın taşmasını da sarıyor (canvas-space.js
+  // veNodeLabelOverflow) → ad kenar değiştirince ÇERÇEVE DE değişmeli.
+  // saveState() burada mutasyondan ÖNCE çağrılıyor (geri-al yığını), yani
+  // tazelemeyi o üstlenemez; tek tazeleme noktası veUpdateBoundary.
+  if(typeof veUpdateBoundary === 'function') veUpdateBoundary();
   if(typeof showToast === 'function') showToast('Etiket konumu güncellendi');
 }
 

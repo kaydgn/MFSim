@@ -442,48 +442,92 @@ describe('servis faktörü kayma emniyetiyle karşılaştırılır', () => {
 // zinciri girilen sayıdan kurar. Uyuşmazlık TÜM gerilmeleri ve hubloadları
 // kaydırır ama kayma emniyetini (bir ORAN) değiştirmez — yani tabloya bakarak
 // da anlaşılmaz. Uyarı bu boşluğu kapatıyor.
-describe('tasarım gerginliği yay dengesiyle karşılaştırılır', () => {
-  test('örnekte iki değer TUTUYOR — uyarı yok', () => {
-    const { build } = kur();
-    expect(build.warnings).toEqual([]);
-    expect(build.springTensionN).toBeGreaterThan(600);
-    expect(veFeadExampleOf('BMC_FEAD_2026').solver.designTensionN)
-      .toBeCloseTo(build.springTensionN, 0);
+// ════════════════════════════════════════════════════════════════════════════
+//  TASARIM GERGİNLİĞİ TÜRETİLİR — ARTIK BİR GİRDİ DEĞİL
+// ════════════════════════════════════════════════════════════════════════════
+// Bu blok eskiden "girilen değer ↔ yay dengesi" karşılaştırmasını ve uyuşmazlık
+// uyarısını sınıyordu. Alan kaldırıldı: karşılaştırılacak ikinci bir sayı yok,
+// çünkü tasarım gerginliği bağımsız bir veri değil — gergi kolunun taşıdığı
+// gerginlik geometri + yay künyesinden zaten belirli:
+//
+//     T = M(θ)/(dL/dθ),  M = M₀ + k·θ,  dL/dθ = a·sinβ·2sin(φ/2)
+//
+// ÖLÇÜLDÜ (10 Gates raporu): girilen ↔ türeyen farkı en çok %0.12, RMS %0.08 —
+// tamamı yuvarlama. Türetilmiş ankrajla 2095 değerlik kapı geçiyor
+// (çalışma %0.328 → %0.391, eşik %0.5).
+describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
+  test('örnek tasarım gerginliği TAŞIMIYOR — sorulmuyor', () => {
+    expect(veFeadExampleOf('BMC_FEAD_2026').solver.designTensionN).toBeUndefined();
   });
 
-  test('uyuşmazlık UYARI verir ve kaymanın büyüklüğünü söyler', () => {
+  test('türetilen değer çekirdeğe ANKRAJ olarak yazılıyor', () => {
+    const { build } = kur();
+    expect(build.warnings).toEqual([]);
+    // Bu sistemde 22.284 Nm / 0.5984 mm/° = 650 N (tedarikçi sayfasıyla tutuyor)
+    expect(build.springTensionN).toBeCloseTo(650, 0);
+    expect(build.sys.designTensionN).toBeCloseTo(build.springTensionN, 9);
+    expect(build.cfg.designTensionN).toBeCloseTo(build.springTensionN, 9);
+  });
+
+  test('KURULUŞU: T = M/(dL/dθ) — üç çarpan da türev', () => {
+    const { build } = kur();
+    const st = F.tensionerState(build.sys, F.meanRel(build.sys));
+    // take-up = a·sinβ·2sin(φ/2), mm/° cinsinden
+    const a = build.sys.tensioner.armLength;
+    const beklenenTakeup = a * Math.sin(st.betaDeg * Math.PI / 180)
+      * 2 * Math.sin(st.wrapDeg * Math.PI / 180 / 2) * (Math.PI / 180);
+    expect(st.takeupMmPerDeg).toBeCloseTo(beklenenTakeup, 6);
+    expect(st.tensionN).toBeCloseTo(st.springNm / (st.takeupMmPerDeg / 1000 * (180 / Math.PI)), 6);
+    expect(st.tensionN).toBeCloseTo(build.sys.designTensionN, 9);
+  });
+
+  test('kullanıcı ARTIK bu sayıyı ezemez — girilen alan yok sayılır', () => {
+    // Eski kayıtlarda designTensionN duruyor olabilir; okunmamalı.
     const pack = veFeadExampleNodes('BMC_FEAD_2026');
     pack.nodes.find((n) => n.type === 'fead-solver').data.designTensionN = 400;
     pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     const build = veFeadBuildSystem(pack.nodes, pack.connections);
-    expect(build.ok).toBe(true);                       // çözüm ENGELLENMEZ
-    const u = build.warnings.join(' ');
-    expect(u).toMatch(/Tasarım gerginliği/);
-    expect(u).toMatch(/400 N/);
-    expect(u).toMatch(/650 N/);
-    expect(u).toMatch(/250 N kayar/);
+    expect(build.ok).toBe(true);
+    expect(build.sys.designTensionN).toBeCloseTo(650, 0);   // 400 DEĞİL
+    expect(build.warnings).toEqual([]);                     // uyuşmazlık diye bir şey kalmadı
   });
 
-  // Kayma emniyeti bir ORAN: iki gerilme birlikte kaydığı için DEĞİŞMİYOR.
-  // Uyarının varlık nedeni tam olarak bu — tablodan fark edilemiyor.
-  test('kayma emniyeti uyuşmazlıktan ETKİLENMİYOR (uyarı bu yüzden var)', () => {
-    const minSF = (dt) => {
+  // Eskiden bu sınıfın tehlikesi şuydu: kayma emniyeti bir ORAN olduğu için
+  // yanlış ankraj tablodan fark edilmiyordu. Artık ankraj kullanıcıdan
+  // gelmediği için sınıf tamamen kapandı — testi bunu belgeliyor.
+  test('ankraj artık kullanıcıdan gelmediği için sessiz kayma sınıfı kapandı', () => {
+    const coz = (dt) => {
       const pack = veFeadExampleNodes('BMC_FEAD_2026');
       const sv = pack.nodes.find((n) => n.type === 'fead-solver');
-      sv.data.designTensionN = dt;
+      if (dt != null) sv.data.designTensionN = dt;
       pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
       const b = veFeadBuildSystem(pack.nodes, pack.connections);
       const R = veFeadAnalyze(b, { rows: veFeadDutyRows(sv), cylinders: 6 });
-      return Math.min.apply(null, R.analysis.duty.map(
-        (d) => Math.min.apply(null, d.slip.map((s) => s.SF))));
+      return R.analysis.duty[0].perPulley.map((p) => p.exitTensionN);
     };
-    expect(minSF(400)).toBeCloseTo(minSF(650), 2);
+    // Eskiden 400 girmek BÜTÜN gerilmeleri 250 N kaydırıyordu; artık hiçbir şey.
+    expect(coz(400)).toEqual(coz(null));
   });
 
-  test('%2 altındaki fark uyarı üretmez (yuvarlama gürültüsü)', () => {
+  // TÜRETME BAŞARISIZ OLABİLİR ve o zaman ankraj YOKTUR. Sessiz geçmek en kötü
+  // hâl olurdu: model "çözüldü" görünür, gerilme tablosu ise boş/çöker.
+  test('türetilemezse SESSİZ kalmıyor — uyarı düşüyor, ankraj yazılmıyor', () => {
     const pack = veFeadExampleNodes('BMC_FEAD_2026');
-    pack.nodes.find((n) => n.type === 'fead-solver').data.designTensionN = 655;
     pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    expect(veFeadBuildSystem(pack.nodes, pack.connections).warnings).toEqual([]);
+    // Kayış boyu gergi kolunun erişemeyeceği kadar kısa → meanRel çözülemez.
+    pack.nodes.find((n) => n.type === 'fead-belt').data.effLength = 1000;
+    const b = veFeadBuildSystem(pack.nodes, pack.connections);
+    // Geometri hâlâ çizilebilir olduğu için ok kalır (kayış yolu kartı çalışsın)
+    expect(b.ok).toBe(true);
+    expect(b.sys.designTensionN).toBeUndefined();
+    expect(b.warnings.join(' ')).toMatch(/türetilemedi/);
+    // ve çekirdek gerilme istendiğinde kendi açık hatasını verir
+    expect(() => F.spanTensions(b.sys, { engineRpm: 1000, loadsKw: {} }))
+      .toThrow(/designTensionN veya slackN gerekli/);
+    // hata çevirisi de artık "girilmedi" DEMİYOR
+    expect(veFeadTranslateError('FEADCore: designTensionN veya slackN gerekli'))
+      .toMatch(/türetilemedi/);
+    expect(veFeadTranslateError('FEADCore: designTensionN veya slackN gerekli'))
+      .not.toMatch(/girilmedi/);
   });
 });

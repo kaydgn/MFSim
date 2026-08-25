@@ -2274,8 +2274,8 @@ function veTrEmptyHTML() {
   if(noSim) {
     h += '<div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-play"></span></div>';
     h += '<div class="ve-trace-empty-title">Çözüm sonucu yok</div>';
-    h += '<div class="ve-trace-empty-sub">Ölçüm penceresinde çizilecek veri için önce ' +
-         'çözümü çalıştırın. Eksik bir şey varsa Uyarılar panelinde listelenir.</div>';
+    h += '<div class="ve-trace-empty-sub">Çizilecek veri yok; eksikler Uyarılar ' +
+         'panelinde listelenir.</div>';
     if(typeof veSolverRun === 'function') {
       // Düğme hesabı başlatmıyor, Çözücü bileşenini açıyor — etiket de bunu
       // söylesin. "Çalıştır" yazıp panel açmak yanıltıyordu.
@@ -2285,8 +2285,8 @@ function veTrEmptyHTML() {
     }
     // Çözüm koşmak tek yol değil: hazır bir ölçüm dosyası da çizilebilir.
     if(typeof veImpOpenPicker === 'function') {
-      h += '<div class="ve-trace-empty-sub" style="margin-top:10px;">ya da elinizdeki ' +
-           'ölçüm dosyasını (Excel/CSV) doğrudan açın:</div>';
+      h += '<div class="ve-trace-empty-sub" style="margin-top:10px;">ya da bir ölçüm ' +
+           'dosyası (Excel/CSV):</div>';
       h += '<button type="button" class="ve-trace-btn" data-act="import-measure" ' +
            'style="height:26px;margin-top:4px;">' +
            '<span class="mf-ico mf-ico-upload"></span> Ölçüm Verisi İçe Aktar</button>';
@@ -2296,9 +2296,9 @@ function veTrEmptyHTML() {
 
   h += '<div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-trending-up"></span></div>';
   h += '<div class="ve-trace-empty-title">Ölçüm penceresi boş</div>';
-  h += '<div class="ve-trace-empty-sub">Soldaki <b>Veri Gezgini</b>\'nde bir sinyali ' +
-       'işaretleyin — sinyal burada kendi şeridinde, kendi Y ekseniyle çizilir. ' +
-       'Bir sinyali başka bir şeridin üzerine bırakırsanız ortak eksende birleşirler.</div>';
+  h += '<div class="ve-trace-empty-sub"><b>Veri Gezgini</b>\'nden seçilen her sinyal kendi ' +
+       'şeridinde ve kendi Y ekseninde çizilir; bir şeridin üzerine bırakılan sinyal ' +
+       'ortak eksende birleşir.</div>';
   return h;
 }
 
@@ -3400,7 +3400,7 @@ function veTrEnter() {
     }
     if(mig.from3d) {
       showToast('3B panelin X/Y/Z sinyalleri ayrı eğriler olarak geldi. ' +
-                'Görünüm çubuğundan "3B" kipine geçebilirsiniz.', 'info');
+                '3B kipi görünüm çubuğundadır.', 'info');
     }
   }
   if(!slot.xAxis && typeof veInheritedXAxis === 'function') {

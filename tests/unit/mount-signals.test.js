@@ -405,7 +405,8 @@ describe('diyagram yorumu — ŞERİT BAŞINA', () => {
     const t = text(B.forLane(ds, R, [id]));
     // kstat_z = 1800 N/mm; eğriden okunan eğim bunu vermeli
     expect(t).toContain('1800 N/mm');
-    expect(t).toMatch(/mm.*eziliyor|eziliyor/);
+    // Statik çalışma noktası (çökme) yazılıyor mu — sayı taşıyan cümle
+    expect(t).toMatch(/Statik çökme \*\*[\d,]+ mm\*\*/);
   });
 
   test('süpürme: çok takoz → en çok ve en az yüklenen', () => {

@@ -329,7 +329,7 @@ function getAccessoryPropertiesHTML(node){
   s1 += '<span class="ve-acc-stepno ' + mb.step + '" id="ve-acc-stepno1-' + nid + '">1</span><span class="sw-pkg-name">Model</span>';
   s1 += '<span class="sw-pkg-badge ' + mb.cls + '" id="ve-acc-modelbadge-' + nid + '">' + mb.text + '</span>';
   s1 += '</div><div class="sw-pkg-body ve-acc-stepbody">';
-  s1 += '<div class="sw-pkg-desc">Kütüphaneden bir model seçin ya da manuel sabit kW girin. Seçim, aşağıdaki eğri tablosunu doldurur.</div>';
+  s1 += '<div class="sw-pkg-desc">Seçim, aşağıdaki eğri tablosunu doldurur.</div>';
 
   s1 += '<select id="ve-acc-preset-' + nid + '" onchange="onVEAccPresetSelect(\'' + nid + '\', this.value)" class="ve-acc-select">';
   s1 += '<option value="">-- Model Seçiniz (' + Object.keys(lib).length + ' preset) --</option>';
@@ -420,7 +420,7 @@ function veAccCurveTableHTML(node){
   // Manuel sabit kW modunda eğri hiç okunmaz → boş tablo + dört düğme ölü
   // arayüzdü; niçin ölü olduğunu söyleyen tek satır daha dürüst.
   if(node.data && node.data.accPreset === '__manual__'){
-    return '<div class="sw-pkg-desc" style="margin:0;">Manuel sabit kW modunda eğri kullanılmaz — çekilen güç tüm devirlerde Adım 1\'deki sabit değerdir. Devire bağlı bir eğri girmek için kütüphaneden bir model seçin.</div>';
+    return '<div class="sw-pkg-desc" style="margin:0;">Manuel sabit kW modunda eğri kullanılmaz — çekilen güç tüm devirlerde Adım 1\'deki sabit değerdir.</div>';
   }
 
   var h = '<table class="ve-acc-curve">';

@@ -112,7 +112,7 @@ var AP_EXAMPLES = [
     {
       id: 'bmc10ton_460', name: 'BMC 10TON 6×6 — ISG12 460HP',
       vehicle: 'BMC 10TON 6×6', subtitle: '6×6 · 32 t · 343 kW',
-      description: 'Platformun en güçlü sürümü (343 kW). iSCAAN bu eşleşmede TC551’i "Unacceptable" işaretliyor — konvertör motora göre küçük kalıyor; örnek bunu göstermek için de değerli. iSCAAN 497-A355435-1 Iter. 5.',
+      description: 'Platformun en güçlü sürümü (343 kW). iSCAAN bu eşleşmede TC551’i "Unacceptable" işaretliyor — konvertör motora göre küçük kalıyor. iSCAAN 497-A355435-1 Iter. 5.',
       specs: [
         ['Motor', '343 kW · 2101 N·m · governed 1900 rpm'],
         ['Aksesuar kaybı', '37.7 kW'],
@@ -128,7 +128,7 @@ var AP_EXAMPLES = [
     {
       id: 'tta2', name: 'BMC TTA2 — AZRA I4 280 kW',
       vehicle: 'BMC TTA2', subtitle: '4×4 · 21.1 t · 3200 SP / TC421',
-      description: 'Yerli BMC AZRA I4 motor (280 kW @2100), Allison 3200 SP, 6.54 aks, 1.054/2.337 transfer. Programın en iyi eşleşen örneği: hızlanma süreleri iSCAAN ile %1 içinde. iSCAAN 497-A299082-1.',
+      description: 'Yerli BMC AZRA I4 motor (280 kW @2100), Allison 3200 SP, 6.54 aks, 1.054/2.337 transfer. Hızlanma süreleri iSCAAN ile %1 içinde. iSCAAN 497-A299082-1.',
       specs: [
         ['Motor', '280 kW · 1600 N·m · governed 2100 rpm'],
         ['Aksesuar kaybı', '28.0 kW'],
@@ -192,7 +192,7 @@ var AP_EXAMPLES = [
     {
       id: 'duramax', name: 'GM Duramax 6.6L — 3200 SP',
       vehicle: 'GM Duramax L5D', subtitle: '4×4 · 11.5 t · 470 hp @2800',
-      description: 'Yüksek devirli benzin-benzeri dizel (470 hp @2800, ESL 3000). Konvertör stall’ı 1023 rpm’de — TC415 bu motora göre çok büyük, iSCAAN "Unacceptable" diyor. Uç eşleşmelerin nasıl göründüğünü gösteren örnek. iSCAAN 497-A392415-1.',
+      description: 'Yüksek devirli benzin-benzeri dizel (470 hp @2800, ESL 3000). Konvertör stall’ı 1023 rpm’de — TC415 bu motora göre çok büyük, iSCAAN "Unacceptable" işaretliyor. iSCAAN 497-A392415-1.',
       specs: [
         ['Motor', '350 kW · 1332 N·m · governed 3000 rpm'],
         ['Aksesuar kaybı', '41.6 kW'],

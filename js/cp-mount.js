@@ -423,15 +423,12 @@ function getMntModulePropertiesHTML(node){
   var cCount = (sub && sub.connections) ? sub.connections.length : 0;
   var initialized = !!(sub && sub.nodes && sub.nodes.length);
   var html='<div class="sw-panel">';
-  html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-primary);">'
-      + '<b style="color:var(--text-heading);">Takoz Çökme-Titreşim — alt-sistem.</b> '
-      + 'Üstüne <b>çift tıklayınca</b> kendi <b>alt topolojisine</b> girilir. Motor / Şanzıman / Şaft / Braket / Kütle / Takoz / Takoz Özellikleri / Çözücü alt bileşenlerini orada, kendi panellerinden düzenler, Çözücü\'ye bağlarsınız. Yük durumları otomatik.</div>';
   html+='<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
   if(initialized){
     html+='<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bileşen</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">'+nCount+'</td></tr>';
     html+='<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bağlantı</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">'+cCount+'</td></tr>';
   } else {
-    html+='<tr><td style="padding:7px 8px; border:1px solid var(--border-color); color:var(--text-muted);">Henüz açılmadı — ilk açılışta hazır bileşenlerle başlar.</td></tr>';
+    html+='<tr><td style="padding:7px 8px; border:1px solid var(--border-color); color:var(--text-muted);">Alt topoloji henüz açılmadı</td></tr>';
   }
   html+='</table>';
   html+='<button onclick="veMntOpenEditor(\''+node.id+'\')" style="width:100%; padding:14px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.03em;" onmouseover="this.style.filter=\'brightness(1.15)\'" onmouseout="this.style.filter=\'none\'">▶ Alt Topolojiyi Aç</button>';
@@ -899,7 +896,7 @@ function _mntPtoRefTable(type){
     h+='</tr>';
   });
   h+='</tbody></table></div>';
-  h+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.45; margin-top:6px;">Değerler global eksen takımına göredir. Atalet birimi kg·m². Kendi projenin değerlerini gir — bunlar yalnız mertebe referansıdır.</div>';
+  h+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.45; margin-top:6px;">Değerler global eksen takımına göredir. Atalet birimi kg·m². Değerler yalnız mertebe referansıdır.</div>';
   h+='</details>';
   return h;
 }
@@ -909,11 +906,11 @@ function _mntPtoRefTable(type){
 function _mntPtoSection(node){
   var isGroup = (node.type==='mnt-pto-group');
   var lead = isGroup
-    ? '<b style="color:var(--text-heading);">Toplu giriş.</b> Tüm PTO grubunu (kuyruk mili + pompalar) tek kalemde tanımlarsın: '
-      + 'grup kütlesi, grup ağırlık merkezi ve <b>grup atalet tensörü</b>. Ayrıntı gerekmiyorsa en pratik yol budur.'
-    : '<b style="color:var(--text-heading);">Ayrıntılı giriş.</b> Her parçayı kendi kütle ve ağırlık merkeziyle ayrı ayrı tanımlarsın. '
+    ? '<b style="color:var(--text-heading);">Toplu giriş.</b> Tüm PTO grubu (kuyruk mili + pompalar) tek kalemde tanımlanır: '
+      + 'grup kütlesi, grup ağırlık merkezi ve <b>grup atalet tensörü</b>.'
+    : '<b style="color:var(--text-heading);">Ayrıntılı giriş.</b> Her parça kendi kütle ve ağırlık merkeziyle ayrı tanımlanır. '
       + 'Parça ataleti çoğu katalogda verilmez — <b>nokta kütle</b> bırakılırsa grubun ataleti, parçaların CG yayılımından '
-      + 'paralel-eksen teoremiyle çözücüde kendiliğinden oluşur.';
+      + 'paralel-eksen teoremiyle çözücüde oluşur.';
   var body = '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.55; margin-bottom:8px;">'+lead+'</div>';
 
   var cf=_mntPtoConflict();
@@ -949,7 +946,7 @@ function getMntMassPropertiesHTML(node){
           _mntTriple(node,'Köşegen','',['Ixx','Iyy','Izz'],['Ixx','Iyy','Izz'],'0.001',(ph&&ph.I?ph.I:null))
         + _mntTriple(node,'Çarpım','',['Ixy','Ixz','Iyz'],['Ixy','Ixz','Iyz'],'0.001'))
     : _mntCard('Nokta Kütle','I = 0','var(--accent-warning)',
-          '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.5;">Atalet tensörü <b style="color:var(--text-heading);">sıfır</b> kabul edilir; kütle tümüyle ağırlık merkezinde toplanır. '+ptFor+' Atalet girmek için işareti kaldırın.</div>');
+          '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.5;">Atalet tensörü <b style="color:var(--text-heading);">sıfır</b> kabul edilir; kütle tümüyle ağırlık merkezinde toplanır. '+ptFor+'</div>');
   var drive = node.type==='mnt-motor'  ? _mntEngineSection(node)
             : node.type==='mnt-gearbox' ? _mntGearboxSection(node)
             : node.type==='mnt-transfer'? _mntTransferSection(node)
@@ -2166,7 +2163,7 @@ function _mnt2DFigure(o){
 }
 function _mnt2DViewSVG(data){
   if(!data.comps.length && !data.mounts.length){
-    return '<div style="padding:24px 10px; text-align:center; font-size:var(--fs-body); color:var(--text-muted);">Görüntülenecek bileşen yok — Motor / Şanzıman / Takoz ekleyip değer girin.</div>';
+    return '<div style="padding:24px 10px; text-align:center; font-size:var(--fs-body); color:var(--text-muted);">Görüntülenecek bileşen yok.</div>';
   }
   // ÜÇ figür ALT ALTA — her biri KENDİ <svg>'sinde (bağımsız yakınlaştır/kaydır).
   // Üstten (X–Y) ve Yandan (X–Z) ortak X yatay ölçeğini paylaşır; Önden (Y–Z)
@@ -2381,7 +2378,7 @@ function _mntLibDropdown(node, custom, builtins, sel){
   h+='<div class="mntlib-list" id="mntlib-list-'+node.id+'">';
   h+='<div class="mntlib-group">Özel Takozlar · '+cnt(custom.length)+'</div>';
   if(!custom.length){
-    h+='<div class="mntlib-note">Henüz özel takoz yok. Sağdaki <b>＋ Yeni Takoz</b> ile ekleyin.</div>';
+    h+='<div class="mntlib-note">Henüz özel takoz yok.</div>';
   } else {
     custom.forEach(function(e){ h+=_mntLibOptionRow(node, e, sel); });
   }
@@ -2573,7 +2570,7 @@ function _mntLibDetail(node, e){
     }
   } else {
     var anyC=_mntEntryHasLaw(e);
-    inner+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin-top:2px; padding:7px 9px; background:var(--bg-tertiary); border:1px dashed var(--border-color); border-radius:6px;">'+(anyC?'Gömülü takoz — eğriler <b>fabrika</b> değeridir (salt-okunur). Kendi eğrini düzenlemek için bir <b>Özel Takoz</b> oluştur.':'Bu gömülü takoz lineerdir. Nonlineer eğri için bir <b>Özel Takoz</b> oluşturun.')+'</div>';
+    inner+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin-top:2px; padding:7px 9px; background:var(--bg-tertiary); border:1px dashed var(--border-color); border-radius:6px;">'+(anyC?'Gömülü takoz — eğriler <b>fabrika</b> değeridir, salt okunur.':'Bu gömülü takoz lineerdir; nonlineer eğri yalnız özel takozlarda tanımlanır.')+'</div>';
   }
   return '<div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid '+accent+'; border-radius:9px; padding:12px 12px 9px;">'
     +'<div style="font-size:var(--fs-micro); font-weight:700; letter-spacing:0.05em; color:var(--text-muted); text-transform:uppercase; margin-bottom:9px;">Seçili Takoz</div>'
@@ -2596,7 +2593,7 @@ function getMntLibraryPropertiesHTML(node){
   var html='<div class="sw-panel">';
   html+='<div class="sw-status-bar installed"><span class="sw-status-dot"></span><span>Takoz Kütüphanesi</span>'
     +'<span style="margin-left:auto; font-weight:400; font-size:var(--fs-micro); opacity:0.85;">'+custom.length+' özel · '+builtins.length+' gömülü'+(nCurve?' · '+nCurve+' eğri':'')+'</span></div>';
-  html+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.45; margin:8px 0 12px;">Listeden bir takoz <b>seçin</b>: altında statik + dinamik rijitlikleri ve 3 eksen kuvvet–sehim eğrisi görünür. Eklenen takozlar tüm Takoz bileşenlerinin listesinde çıkar. Rijitlikler <b>N/mm</b>.</div>';
+  html+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.45; margin:8px 0 12px;">Eklenen takozlar tüm Takoz bileşenlerinin listesinde çıkar. Rijitlikler <b>N/mm</b>.</div>';
 
   // ── Seçici: açılır liste + yeni takoz ──
   html+='<div class="sw-section-title">Takoz Seçimi</div>';
@@ -2607,7 +2604,7 @@ function getMntLibraryPropertiesHTML(node){
 
   // ── Seçili takoz detayı (tam genişlik) ──
   if(sel){ html+=_mntLibDetail(node, sel); }
-  else { html+='<div style="padding:14px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary); border:1px dashed var(--border-color); border-radius:9px;">Yukarıdaki listeden bir takoz seçin.</div>'; }
+  else { html+='<div style="padding:14px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary); border:1px dashed var(--border-color); border-radius:9px;">Takoz seçilmedi.</div>'; }
 
   html+='</div>';   // /sw-panel
   return html;
@@ -3427,7 +3424,7 @@ function _mntSolverStatusHTML(R){
       h+='</div>';
     }
   }
-  h+='<div style="margin-top:8px; font-size:var(--fs-micro); color:var(--text-muted); line-height:1.45;">Ayrıntılı sonuçlar (çökme matrisi, mod şekilleri, kriter değerlendirmesi) için <b>Rapor</b> bileşenini kullanın.</div>';
+  h+='<div style="margin-top:8px; font-size:var(--fs-micro); color:var(--text-muted); line-height:1.45;">Çökme matrisi, mod şekilleri ve kriter değerlendirmesi <b>Rapor</b> bileşenindedir.</div>';
   return h;
 }
 

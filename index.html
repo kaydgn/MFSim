@@ -234,28 +234,28 @@
                  veSyncSidebarModuleIcons). Eskiden burada ikinci bir SVG kopyası
                  vardı: tek renk çizilmişti ve geometrisi de ayrışmıştı, yani
                  palette'teki sembol tuvale düşen sembolle aynı değildi. -->
-            <div class="ve-component ve-submodule" draggable="true" data-type="arac-performans" title="Sürükleyip bırakın → ana canvas'ta tek 'Araç Performans' bloğu oluşur. Çift tıklayınca kendi ALT TOPOLOJİSİ (güç aktarma bileşenleri) açılır.">
+            <div class="ve-component ve-submodule" draggable="true" data-type="arac-performans" title="Araç Performans — güç aktarma organları alt topolojisi">
               <span class="ve-submodule-ico" aria-hidden="true"></span>
               <span class="ve-submodule-text">
                 <span class="ve-comp-label">Araç Performans</span>
                 <span class="ve-submodule-sub">Alt topoloji</span>
               </span>
             </div>
-            <div class="ve-component ve-submodule" draggable="true" data-type="mount-analysis" title="Sürükleyip bırakın → ana canvas'ta tek 'Takoz Çökme-Titreşim' bloğu oluşur. Çift tıklayınca kendi ALT TOPOLOJİSİ (Motor / Takoz / Çözücü) açılır.">
+            <div class="ve-component ve-submodule" draggable="true" data-type="mount-analysis" title="Takoz Çökme-Titreşim — güç grubu takoz sistemi alt topolojisi">
               <span class="ve-submodule-ico" aria-hidden="true"></span>
               <span class="ve-submodule-text">
                 <span class="ve-comp-label">Takoz Çökme-Titreşim</span>
                 <span class="ve-submodule-sub">Alt topoloji</span>
               </span>
             </div>
-            <div class="ve-component ve-submodule" draggable="true" data-type="fead-analysis" title="Sürükleyip bırakın → ana canvas'ta tek 'FEAD' bloğu oluşur. Çift tıklayınca kendi ALT TOPOLOJİSİ (Krank Kasnağı / aksesuar kasnakları / Gergi / Kayış) açılır.">
+            <div class="ve-component ve-submodule" draggable="true" data-type="fead-analysis" title="FEAD — ön uç kayış-kasnak alt topolojisi">
               <span class="ve-submodule-ico" aria-hidden="true"></span>
               <span class="ve-submodule-text">
                 <span class="ve-comp-label">FEAD</span>
                 <span class="ve-submodule-sub">Kayış-kasnak · Alt topoloji</span>
               </span>
             </div>
-            <div class="ve-component ve-submodule" draggable="true" data-type="structural-analysis" title="Sürükleyip bırakın → ana canvas'ta tek 'Yapısal Analiz' bloğu oluşur. Çift tıklayınca kendi ALT TOPOLOJİSİ (Geometri / Mesh / Malzeme / Sınır Koşulları / Çözücü) açılır.">
+            <div class="ve-component ve-submodule" draggable="true" data-type="structural-analysis" title="Yapısal Analiz — sonlu elemanlar alt topolojisi">
               <span class="ve-submodule-ico" aria-hidden="true"></span>
               <span class="ve-submodule-text">
                 <span class="ve-comp-label">Yapısal Analiz</span>
@@ -591,7 +591,7 @@
                 <circle cx="52" cy="66" r="4" fill="currentColor"/>
                 <rect x="64" y="70" width="8" height="8" fill="none" stroke="currentColor" stroke-width="2"/>
               </svg> <span class="ve-comp-label">2D Görünüm</span></div>
-            <div class="ve-component" draggable="true" data-type="mnt-report" title="Rapor — Çözücü'nün 6 SD sonuçlarını akademik, tamamen çevrimdışı bir HTML rapora döker (teori + bu modelin sayısal örneği). Önce Çözücü'de hesaplayın.">
+            <div class="ve-component" draggable="true" data-type="mnt-report" title="Rapor — 6 SD çözüm sonuçlarını HTML rapora döker">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
                 <path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
                 <path d="M60 12 v16 h16" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
@@ -604,7 +604,7 @@
 
           <div class="ve-category" data-ve-scope="mount-analysis">
             <div class="ve-category-title">PTO Grubu</div>
-            <div class="ve-component" draggable="true" data-type="mnt-pto" title="PTO (kuyruk mili) — güç grubuna civatalanan yardımcı kütle: kütle + CG. Parça ataleti verilmiyorsa nokta kütle bırakın; yayılımın ataleti birleştirmede otomatik oluşur.">
+            <div class="ve-component" draggable="true" data-type="mnt-pto" title="PTO (kuyruk mili) — güç grubuna civatalanan yardımcı kütle: kütle + CG">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
                 <g stroke="currentColor" stroke-width="7" stroke-linecap="round">
                   <line x1="32" y1="15" x2="32" y2="25"/>
@@ -620,7 +620,7 @@
                 <line x1="52" y1="50" x2="78" y2="50" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
                 <line x1="84" y1="36" x2="84" y2="64" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
               </svg> <span class="ve-comp-label">PTO</span></div>
-            <div class="ve-component" draggable="true" data-type="mnt-pump" title="Pompa — PTO'dan tahrikli pompa kütlesi: kütle + CG. Her pompa ayrı bileşen olarak eklenebilir.">
+            <div class="ve-component" draggable="true" data-type="mnt-pump" title="Pompa — PTO'dan tahrikli pompa kütlesi: kütle + CG">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
                 <line x1="10" y1="50" x2="30" y2="50" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
                 <circle cx="57" cy="50" r="26" fill="none" stroke="currentColor" stroke-width="6"/>
@@ -628,7 +628,7 @@
                 <line x1="57" y1="24" x2="57" y2="10" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
                 <line x1="57" y1="76" x2="57" y2="90" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
               </svg> <span class="ve-comp-label">Pompa</span></div>
-            <div class="ve-component" draggable="true" data-type="mnt-pto-group" title="PTO Toplam — tüm PTO grubunu (kuyruk mili + pompalar) TEK kalemde gir: grup kütlesi + grup CG'si + grup ataleti. Ayrı PTO/Pompa bileşenleriyle birlikte kullanılmaz (kütle iki kez sayılır).">
+            <div class="ve-component" draggable="true" data-type="mnt-pto-group" title="PTO Toplam — PTO grubu tek kalemde: grup kütlesi + CG + atalet. Ayrı PTO/Pompa bileşenleriyle birlikte kullanılmaz (kütle iki kez sayılır).">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
                 <text x="50" y="21" text-anchor="middle" font-size="24" font-weight="700" fill="currentColor">&#931;</text>
                 <rect x="7" y="28" width="86" height="57" rx="10" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="9 6"/>
@@ -736,7 +736,7 @@
                 <circle cx="70" cy="32" r="9" fill="none" stroke="currentColor" stroke-width="3" opacity="0.6"/>
                 <circle cx="74" cy="66" r="7" fill="none" stroke="currentColor" stroke-width="3" opacity="0.6"/>
               </svg> <span class="ve-comp-label">Kayış Yolu</span></div>
-            <div class="ve-component" draggable="true" data-type="fead-solver" title="Çözücü — iç topolojideki kasnakları, gergiyi ve kayış künyesini otomatik algılar (hesap çekirdeği eklenecek)">
+            <div class="ve-component" draggable="true" data-type="fead-solver" title="Çözücü — iç topolojideki kasnakları, gergiyi ve kayış künyesini otomatik algılar">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
                 <rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="currentColor" stroke-width="6"/>
                 <polygon points="40,32 40,68 70,50" fill="currentColor"/>
@@ -750,7 +750,7 @@
                 <line x1="36" y1="68" x2="66" y2="68" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
                 <line x1="36" y1="78" x2="54" y2="78" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
               </svg> <span class="ve-comp-label">Başlangıç ve Örnekler</span></div>
-            <div class="ve-component" draggable="true" data-type="fead-report" title="Rapor — çözücü sonuçlarını çevrimdışı HTML rapora döker">
+            <div class="ve-component" draggable="true" data-type="fead-report" title="Rapor — çözücü sonuçlarını HTML rapora döker">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
                 <path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
                 <path d="M60 12 v16 h16" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
@@ -763,15 +763,25 @@
           <!-- ═══ YAPISAL ANALİZ (sonlu elemanlar) ═══
                Yalnız 'structural-analysis' modülünün İÇ topolojisinde görünür.
                Zincir: Geometri → Hesaplama Ağı → Sınır Koşulları → Sonuçlar.
-               Paneller şimdilik BOŞ; ayrı oturumlarda doldurulacak. -->
+               'Malzeme ve Özellikler' zincirin halkası DEĞİL: Geometri'ye asılan
+               ALT bileşen (küçük kutu, çıkışı yok).
+               Ağ / Sınır Koşulları / Sonuçlar panelleri şimdilik BOŞ. -->
           <div class="ve-category" data-ve-scope="structural-analysis">
             <div class="ve-category-title">Yapısal Analiz</div>
-            <div class="ve-component" draggable="true" data-type="str-geometry" title="Geometri — analiz edilecek parça; .STEP dosyası buradan içe aktarılır. Zincirin başı: girişi yoktur.">
+            <div class="ve-component" draggable="true" data-type="str-geometry" title="Geometri — .STEP parça geometrisi">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
                 <path d="M28 36 L52 22 L76 36 L76 64 L52 78 L28 64 Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
                 <path d="M28 36 L52 50 L76 36 M52 50 V78" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round" opacity="0.6"/>
                 <ellipse cx="52" cy="36" rx="7" ry="4" fill="none" stroke="currentColor" stroke-width="3"/>
               </svg> <span class="ve-comp-label">Geometri</span></div>
+            <div class="ve-component" draggable="true" data-type="str-material" title="Malzeme ve Özellikler — Geometri'ye asılan ALT bileşen; parçaya E, ν, ρ, akma/çekme dayanımı atar. Çıkışı yoktur: zincire ara halka olarak giremez.">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="10" y="44" width="46" height="44" rx="4" fill="none" stroke="currentColor" stroke-width="5"/>
+                <path d="M14 74 L40 48 M14 86 L52 48 M26 88 L54 60 M40 88 L54 74" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+                <path d="M62 12 V44 H96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+                <path d="M62 44 L74 20 Q82 13 94 16" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="74" cy="20" r="4.5" fill="currentColor"/>
+              </svg> <span class="ve-comp-label">Malzeme ve Özellikler</span></div>
             <div class="ve-component" draggable="true" data-type="str-mesh" title="Hesaplama Ağı — geometriye sayısal ağ örer (tet10)">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
                 <path d="M18 76 L50 20 L82 76 Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
@@ -787,7 +797,7 @@
                 <line x1="24" y1="54" x2="80" y2="54" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>
                 <path d="M70 18 v20 M64.5 32 L70 43 L75.5 32" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
               </svg> <span class="ve-comp-label">Sınır Koşulları</span></div>
-            <div class="ve-component" draggable="true" data-type="str-results" title="Sonuçlar — gerilme ve deformasyon çıktısı. Zincirin sonu: çıkışı yoktur.">
+            <div class="ve-component" draggable="true" data-type="str-results" title="Sonuçlar — gerilme ve deformasyon çıktısı">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
                 <path d="M18 34 H82" stroke="currentColor" stroke-width="3.5" stroke-dasharray="7 5" stroke-linecap="round" opacity="0.55"/>
                 <path d="M18 34 Q52 34 82 66" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
@@ -841,7 +851,7 @@
               <button type="button" class="ve-warnings-close" onclick="veToggleWarnings()" title="Paneli kapat (Esc)" aria-label="Uyarı panelini kapat"><span class="mf-ico mf-ico-x"></span></button>
             </div>
             <div class="ve-warnings-body collapsed" id="ve-warnings-body">
-              <div style="padding:10px 14px;font-size:var(--fs-md);color:var(--text-muted);">Henüz doğrulanmadı. Giriş sekmesindeki <strong>Doğrula</strong>&#39;ya basın.</div>
+              <div style="padding:10px 14px;font-size:var(--fs-md);color:var(--text-muted);">Henüz doğrulanmadı.</div>
             </div>
           </div>
           <div class="ve-tab-bar ve-tab-bar--top" id="ve-tab-bar"></div>
@@ -997,7 +1007,7 @@
     <div class="ve-solver-container">
       <div class="ve-solver-header">
         <h2><span class="mf-ico mf-ico-zap"></span>Çözücü</h2>
-        <p>Topoloji modelini doğrulayın ve hesaplamayı başlatın</p>
+        <p>Topoloji doğrulaması ve hesaplama</p>
       </div>
       
       <div class="ve-solver-content">
@@ -1005,7 +1015,7 @@
         <div class="ve-solver-card">
           <div class="ve-solver-card-title"><span class="mf-ico mf-ico-search"></span> Topoloji Doğrulama</div>
           <div id="ve-solver-validation" class="ve-solver-card-body">
-            <div class="ve-solver-empty">Doğrulama başlatılmadı. "Doğrula" butonuna tıklayın.</div>
+            <div class="ve-solver-empty">Doğrulama başlatılmadı.</div>
           </div>
           <div class="ve-solver-card-footer">
             <button class="ve-solver-btn primary" onclick="veSolverValidate()"><span class="mf-ico mf-ico-search"></span>Doğrula</button>
@@ -1017,7 +1027,7 @@
           <div class="ve-solver-card-title"><span class="mf-ico mf-ico-sliders"></span> Hesaplama Ayarları</div>
           <div class="ve-solver-card-body">
             <div id="ve-solver-settings-summary" style="font-size:var(--fs-md); color:var(--text-muted); line-height:1.5;">
-              Topolojideki <b>Çözücü</b> bileşenine tıklayarak ayarları yapılandırın (zaman modu, çözünürlük, yöntem vb.)
+              Ayarlar (zaman modu, çözünürlük, yöntem) topolojideki <b>Çözücü</b> bileşeninde tanımlanır.
             </div>
           </div>
         </div>
@@ -1158,6 +1168,22 @@
      acilmiyordu. URETILEN DOSYA, GIT'E DAHIL DEGIL: npm run build:occt-wasm -->
 <script type="text/x-mfsim-asset" data-mfsim-asset="occt-wasm" src="js/structural-occt-wasm.js"></script>
 <script type="text/x-mfsim-defer" src="js/structural-model.js" data-mfsim-label="Yapısal Analiz: geometri köprüsü (STEP)..."></script>
+<script type="text/x-mfsim-defer" src="js/structural-materials.js" data-mfsim-label="Yapısal Analiz: malzeme kütüphanesi..."></script>
+<!-- TetGen ağ üreticisi — vendor/tetgen-src/ derlenerek üretildi (npm'de hazır
+     WASM paketi YOK, bkz. CLAUDE.md). Bu ETIKET yalnız ~99 KB'lık fabrikayı
+     tanımlar. data-mfsim-tetgen-glue: js/structural-mesh-model.js worker'ı
+     kurarken bu etiketin KAYNAK METNİNİ okur (tek dosya sürümünde içerik
+     burada INLINE durur → AĞ GEREKMEZ) — occt köprüsüyle AYNI kalıp.
+     Lisans AGPL-3: vendor/license.tetgen.txt. -->
+<script type="text/x-mfsim-defer" src="vendor/tetgen-wasm.js" data-mfsim-tetgen-glue data-mfsim-label="Hesaplama Ağı: TetGen köprüsü..."></script>
+<!-- TetGen'in .wasm'i, GOMULU (gzip+base64). type="text/x-mfsim-asset" → ne
+     tarayici ne MFSimLoader calistirir; ILK ağ oluşturmada
+     js/structural-mesh-model.js talep uzerine calistirir. Uretim:
+     npm run build:tetgen-wasm-asset (occt-wasm ile AYNI gerekçe: çevrimdışı
+     kullanım). -->
+<script type="text/x-mfsim-asset" data-mfsim-asset="tetgen-wasm" src="js/structural-tetgen-wasm.js"></script>
+<script type="text/x-mfsim-defer" src="js/structural-remesh.js" data-mfsim-remesh-src data-mfsim-label="Yapısal Analiz: yüzey yeniden-mesh'leme..."></script>
+<script type="text/x-mfsim-defer" src="js/structural-mesh-model.js" data-mfsim-label="Yapısal Analiz: ağ köprüsü (TetGen)..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-structural.js" data-mfsim-label="Yapısal Analiz (sonlu elemanlar) modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-structural-viewer.js" data-mfsim-label="Yapısal Analiz: 3B geometri görüntüleyici..."></script>
 <!-- Rapor varlıkları (KaTeX + fontlar, ~1MB) ve teori şablonu: type="text/x-mfsim-report"
@@ -1252,7 +1278,7 @@
     </div>
     <div class="ve-imp-body" id="ve-import-content"></div>
     <div class="ve-imp-footer">
-      <span class="ve-imp-hint">İlk sütun genelde zaman eksenidir — yukarıdan değiştirebilirsiniz.</span>
+      <span class="ve-imp-hint">X ekseni varsayılan olarak ilk sütundur.</span>
       <button type="button" class="ve-imp-btn" onclick="veImpCloseModal()">İptal</button>
       <button type="button" class="ve-imp-btn ve-imp-btn-primary" id="ve-import-apply" onclick="veImpConfirm()" disabled>Diyagramlara Aktar</button>
     </div>

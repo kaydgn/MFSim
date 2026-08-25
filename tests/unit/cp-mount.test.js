@@ -41,7 +41,6 @@ describe('Ana modül (alt-sistem) paneli', () => {
     const node = { id: 'comp-1', type: 'mount-analysis', def: { name: 'Takoz Çökme-Titreşim' }, data: {} };
     const html = cp.getMntModulePropertiesHTML(node);
     expect(html).toContain("veMntOpenEditor('comp-1')");
-    expect(html).toContain('alt topolojisine');
   });
   test('başlatılmış alt-topoloji özeti bileşen/bağlantı sayısını gösterir', () => {
     const node = { id: 'comp-2', type: 'mount-analysis', data: { subTopology: { nodes: [{}, {}, {}], connections: [{}, {}] } } };
