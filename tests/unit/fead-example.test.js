@@ -509,13 +509,47 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
     expect(coz(400)).toEqual(coz(null));
   });
 
-  // TÜRETME BAŞARISIZ OLABİLİR ve o zaman ankraj YOKTUR. Sessiz geçmek en kötü
-  // hâl olurdu: model "çözüldü" görünür, gerilme tablosu ise boş/çöker.
-  test('türetilemezse SESSİZ kalmıyor — uyarı düşüyor, ankraj yazılmıyor', () => {
+  // KAYIŞ SIĞMAZSA ARTIK "ÇÖZÜM YOK" DEĞİL — sözleşme değişti.
+  //
+  // Eskiden erişilemeyen bir kayış boyu meanRel'i çözülemez yapıyor, ankraj
+  // yazılamıyor ve model gerilme üretemiyordu. Kullanıcı bildirimi (2026-08-25):
+  // *"modelin çözülemez olduğu bir küme olmaması gerekiyor"*. Artık kol
+  // gerginin NOMİNAL açısına alınıyor, ankraj oradan türüyor ve asıl cevap
+  // veriliyor: bu yerleşim hangi kayışı istiyor.
+  test('erişilemeyen kayış boyu ÇÖZÜLÜYOR ve gereken boyu söylüyor', () => {
     const pack = veFeadExampleNodes('BMC_FEAD_2026');
     pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    // Kayış boyu gergi kolunun erişemeyeceği kadar kısa → meanRel çözülemez.
     pack.nodes.find((n) => n.type === 'fead-belt').data.effLength = 1000;
+    const b = veFeadBuildSystem(pack.nodes, pack.connections);
+
+    expect(b.ok).toBe(true);
+    const al = b.workPoint.atLimit;
+    expect(al).not.toBeNull();
+    expect(al.resolvedAt).toBe('nominalArm');
+    expect(b.warnings.join(' ')).toMatch(/700[.,]4 mm KISA/);
+
+    // Ankraj YİNE türetiliyor — çalışma noktası fiziksel olduğu için.
+    expect(b.sys.designTensionN).toBeGreaterThan(0);
+    expect(b.sys.designTensionN).toBeLessThan(5000);
+
+    // Ve gereken boy, sayfanın kendi kayışını (1715 mm) geri veriyor.
+    expect(al.suggestedBeltMm).toBeCloseTo(SAYFA.beltEffMm, 0);
+  });
+
+  // TÜRETME YİNE DE BAŞARISIZ OLABİLİR: yay ÖLÜyse (ön yük 0, katsayı 0)
+  // moment sıfırdır, dolayısıyla gerginlik de sıfırdır ve ankraj YOKTUR.
+  // Sessiz geçmek en kötü hâl olurdu: model "çözüldü" görünür, gerilme
+  // tablosu ise boş/çöker.
+  test('ölü yayda ankraj türetilemiyor ve SESSİZ kalınmıyor', () => {
+    const pack = veFeadExampleNodes('BMC_FEAD_2026');
+    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
+    ten.data.angleMode = 'direct';
+    ten.data.freeAngleDeg = 3.6;
+    ten.data.preload = 0;
+    ten.data.kArm = 0;
+    delete ten.data.meanLoad;
+
     const b = veFeadBuildSystem(pack.nodes, pack.connections);
     // Geometri hâlâ çizilebilir olduğu için ok kalır (kayış yolu kartı çalışsın)
     expect(b.ok).toBe(true);
@@ -527,7 +561,5 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
     // hata çevirisi de artık "girilmedi" DEMİYOR
     expect(veFeadTranslateError('FEADCore: designTensionN veya slackN gerekli'))
       .toMatch(/türetilemedi/);
-    expect(veFeadTranslateError('FEADCore: designTensionN veya slackN gerekli'))
-      .not.toMatch(/girilmedi/);
   });
 });

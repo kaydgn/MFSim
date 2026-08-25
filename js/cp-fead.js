@@ -1682,7 +1682,17 @@ function veFeadLayoutCardStrip(build, mode){
       // bir topolojide çekirdeğin kusursuz çözdüğü bir yerleşim kartta ✗ ile
       // "tutarsız" görünüyordu. Yön künyede yazılıyor ki bilgi kaybolmasın.
       sag = 'Σsarım ' + _feadFmt(inv, 1) + '°' + (inv < 0 ? ' (ters yön)' : '');
-      if(Math.abs(Math.abs(inv) - 360) > 0.05) ok = false;    // değişmez tutmuyor
+      // ÇEKİRDEK ARTIK HOŞGÖRÜLÜ: kapanmayan çevrim istisna atmıyor, sayıları
+      // üretip ihlali taşıyor (bkz. solveGeometry tolerant). Yani kart artık
+      // ÇİZİYOR — ve tam bu yüzden şeridin sebebi ADIYLA söylemesi gerekiyor:
+      // çizilen yol makul görünür, yanlış olduğu yalnız buradan okunur.
+      if(Math.abs(Math.abs(inv) - 360) > 0.05){
+        ok = false;
+        sol = 'Kayış yolu KAPANMIYOR · ' + sol;
+      } else if((g.violations || []).length){
+        ok = false;
+        sol = 'Kayış kasnağın İÇİNDEN geçiyor · ' + sol;
+      }
     } catch(e){ ok = false; sol = 'Geometri okunamadı'; }
   }
   var renk = ok ? 'var(--accent-success)' : 'var(--accent-danger)';

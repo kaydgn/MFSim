@@ -1506,8 +1506,12 @@ function _strMatHostCard(node){
        + '</div>';
 }
 
-function _strMatFieldGrid(node){
-  var m = veStrMatOf(node);
+// Alan ızgarası. `salt` (önizleme) durumunda alanlar SALT OKUNUR: gösterilen
+// kayıt parçaya uygulanmış olan değil, katalogdan SEÇİLEN olduğu için
+// düzenlemenin gideceği bir yer yok. Düzenlenebilir bıraksaydık kullanıcı
+// yazar, hiçbir şey olmaz ve sebebini anlamazdı.
+function _strMatFieldGrid(node, m, salt){
+  m = m || {};
   var h = '<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px 7px; margin-bottom:9px;">';
   VE_STR_MAT_FIELDS.forEach(function(f){
     var v = (m[f.key] === null || m[f.key] === undefined) ? '' : m[f.key];
@@ -1516,14 +1520,16 @@ function _strMatFieldGrid(node){
       +     f.sym + ' <span style="opacity:0.75;">[' + f.unit + ']</span></span>'
       +   '<input type="number" id="ve-str-mat-' + f.key + '-' + node.id + '" value="' + _strEsc(v) + '" step="' + f.step + '"'
       +   ' placeholder="' + _strEsc(f.ph) + '"'
-      +   ' onchange="veStrMatSet(\'' + node.id + '\',\'' + f.key + '\',this.value)" style="width:100%; ' + _STR_INP + '">'
+      +   (salt ? ' readonly tabindex="-1"'
+             : ' onchange="veStrMatSet(\'' + node.id + '\',\'' + f.key + '\',this.value)"')
+      +   ' style="width:100%; ' + _STR_INP + (salt ? ' opacity:0.75; cursor:default;' : '') + '">'
       + '</label>';
   });
   return h + '</div>';
 }
 
-function _strMatVerdict(node){
-  var v = veStrMatValidate(veStrMatOf(node));
+function _strMatVerdict(rec){
+  var v = veStrMatValidate(rec || {});
   var h = '';
   if(v.ok){
     h += '<div style="padding:7px 9px; margin-bottom:8px; font-size:var(--fs-micro); line-height:1.45; '
@@ -1545,8 +1551,8 @@ function _strMatVerdict(node){
 
 // Türetilenler — G ve K girilen ν'nün ne demek olduğunu gösteriyor; ρ satırı
 // ise çözücüye GİDEN sayıyı yazıyor (mm·N·MPa sisteminin ton/mm³ tuzağı).
-function _strMatDerivedTable(node){
-  var d = veStrMatDerived(veStrMatOf(node));
+function _strMatDerivedTable(rec){
+  var d = veStrMatDerived(rec || {});
   function row(k, v, not){
     return '<tr><td style="padding:4px 8px; border:1px solid var(--border-color); color:var(--text-secondary); white-space:nowrap;">' + k + '</td>'
          + '<td style="padding:4px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">' + v
@@ -1598,9 +1604,41 @@ function veStrMatLibSetCat(nodeId, cat){
 function veStrMatLibPick(nodeId, libId){
   var ui = _strLibUI(nodeId);
   // Aynı satıra ikinci tık seçimi kaldırır (CAD yüz listesindeki kuralın
-  // aynısı) — başka türlü künyeyi kapatmanın yolu yoktu.
+  // aynısı) — başka türlü önizlemeden çıkmanın yolu yoktu.
   ui.sel = (ui.sel === libId) ? '' : libId;
-  _strLibRepaint(nodeId);
+  // Seçim artık SAĞ SÜTUNUN TAMAMINI değiştiriyor (özellikler, künye,
+  // diyagramlar), yalnız listeyi değil → panel baştan çiziliyor. Arama
+  // metni oturumluk durumdan geri geliyor, kaybolmuyor.
+  var node = _strNodeById(nodeId);
+  if(node && typeof showNodeProperties === 'function') showNodeProperties(node);
+  else _strLibRepaint(nodeId);
+}
+
+// ── SAĞ SÜTUNDA HANGİ KAYIT GÖSTERİLİYOR ────────────────────────────────────
+// Kullanıcı bildirimi (2026-08-24): *"malzeme kütüphanesinden malzeme
+// seçtiğim zaman 'Uygulanan Malzeme' penceresi üzerinden malzeme özellikleri
+// görünmüyor. 'Parçaya Uygula' dediğim zaman görünüyor."* — yani uygulamak,
+// BAKMANIN ön koşuluydu. Oysa sıra tersi olmalı: önce bak, sonra uygula.
+//
+// Karar TEK YERDE, çünkü paneli çizen yer ile sıcaklık değerlendiricisini
+// tazeleyen yer AYNI kaydı görmek zorunda; ikisi ayrı hesaplasaydı sıcaklık
+// satırı önizlemede başka bir malzemeyi anlatırdı.
+//
+// Öncelik: katalogda SEÇİLİ kayıt (önizleme) → yoksa parçaya UYGULANMIŞ kayıt.
+// Seçili kayıt zaten uygulanmışsa (ve elle değiştirilmemişse) ÖNİZLEME DEĞİL:
+// o durumda düğümün kendi kaydı gösteriliyor ve alanlar düzenlenebilir kalıyor.
+function veStrMatShown(node){
+  var uyg = veStrMatOf(node);
+  var ui = _strLibUI(node.id);
+  var sec = (ui.sel && _strLibHas()) ? veStrMatLibById(ui.sel) : null;
+  if(sec){
+    var ayni = (uyg.lib === sec.id) && veStrMatLibMatches(uyg);
+    return ayni
+      ? { rec: uyg, kat: sec, onizleme: false, uygulandi: true }
+      : { rec: veStrMatLibRecord(sec.id), kat: sec, onizleme: true, uygulandi: false };
+  }
+  var uygKat = (uyg.lib && _strLibHas()) ? veStrMatLibById(uyg.lib) : null;
+  return { rec: uyg, kat: uygKat, onizleme: false, uygulandi: !!Object.keys(uyg).length };
 }
 
 function _strLibRepaint(nodeId){
@@ -1614,10 +1652,8 @@ function _strLibRepaint(nodeId){
   if(kutu && kutu.value !== _strLibUI(nodeId).q) kutu.value = _strLibUI(nodeId).q;
   var liste = document.getElementById('ve-str-mat-list');
   var say = document.getElementById('ve-str-mat-count');
-  var det = document.getElementById('ve-str-mat-det');
   if(liste) liste.innerHTML = _strLibListHTML(nodeId);
   if(say) say.textContent = _strLibCountText(nodeId);
-  if(det) det.innerHTML = _strLibDetailHTML(nodeId);
 }
 
 function _strLibResults(nodeId){
@@ -1678,54 +1714,6 @@ function _strLibListHTML(nodeId){
 
 // Seçilenin künyesi — "Uygula"dan ÖNCEKİ tek durak. Bütün sayılar burada
 // görünüyor: kullanıcı kör bir kimliğe değil, OKUDUĞU değerlere onay veriyor.
-function _strLibDetailHTML(nodeId){
-  if(!_strLibHas()) return '';
-  var ui = _strLibUI(nodeId);
-  if(!ui.sel) return '';
-  var m = veStrMatLibById(ui.sel);
-  if(!m) return '';
-  var cat = veStrMatLibCat(m.c);
-  var node = _strNodeById(nodeId);
-  var uygulanan = (node && veStrMatOf(node).lib) || '';
-
-  function prop(sym, v, unit, ref){
-    return '<div class="ve-str-mat-prop' + (ref ? ' ref' : '') + '">'
-         + '<b>' + (v === null || v === undefined ? '—' : v) + '</b>'
-         + '<span>' + sym + (unit ? ' [' + unit + ']' : '') + '</span></div>';
-  }
-
-  var h = '<div class="ve-str-mat-det">';
-  h += '<div class="ve-str-mat-det-h">'
-     + '<span class="ve-str-mat-det-n">' + _strEsc(m.n) + '</span>'
-     + '<span class="ve-str-mat-det-std">' + _strEsc(m.std || '') + ' · ' + _strEsc(cat ? cat.ad : m.c) + '</span>'
-     + '</div>';
-  if(m.alt && m.alt.length){
-    h += '<div class="ve-str-mat-note">Diğer adlar: ' + _strEsc(m.alt.join(' · ')) + '</div>';
-  }
-  h += '<div class="ve-str-mat-props">';
-  h += prop('E', _strFmt(m.E), 'MPa');
-  h += prop('ν', _strFmt(m.nu, 3), '');
-  h += prop('ρ', _strFmt(m.rho), 'kg/m³');
-  h += prop('σ<sub>ak</sub>', m.sy == null ? null : _strFmt(m.sy), 'MPa');
-  h += prop('σ<sub>ç</sub>', m.su == null ? null : _strFmt(m.su), 'MPa');
-  h += prop('α', m.a == null ? null : _strFmt(m.a, 1), '10⁻⁶/K');
-  // Referans alanlar SOLGUN ve etiketleri bunu söylüyor: çözücüye gitmiyorlar.
-  h += prop('λ <i>(ref.)</i>', m.k == null ? null : _strFmt(m.k, 2), 'W/m·K', true);
-  h += prop('c<sub>p</sub> <i>(ref.)</i>', m.cp == null ? null : _strFmt(m.cp), 'J/kg·K', true);
-  h += '</div>';
-  if(m.not) h += '<div class="ve-str-mat-note">' + _strEsc(m.not) + '</div>';
-  if(m.uyari) h += '<div class="ve-str-mat-warn"><b>Dikkat.</b> ' + _strEsc(m.uyari) + '</div>';
-
-  if(uygulanan === m.id && veStrMatLibMatches(veStrMatOf(node))){
-    h += '<div style="font-size:var(--fs-micro); color:var(--accent-warning); font-weight:600;">✓ Bu malzeme parçaya uygulanmış.</div>';
-  } else {
-    h += '<button class="ve-str-btn ve-str-btn--primary" style="width:100%;"'
-      +  ' onclick="veStrMatApplyLib(\'' + nodeId + '\',\'' + _strEsc(m.id) + '\')">'
-      +  'Parçaya Uygula</button>';
-  }
-  return h + '</div>';
-}
-
 // Katalog kaydını parçaya uygula. Kayıt KOPYA olarak gidiyor (bkz.
 // veStrMatLibRecord) — kütüphane sürümü değişse bile kaydedilmiş proje
 // kendiliğinden değişmiyor.
@@ -1737,7 +1725,9 @@ function veStrMatLibScrollToApplied(nodeId){
   if(typeof document === 'undefined') return false;
   var liste = document.getElementById('ve-str-mat-list');
   if(!liste) return false;
-  var satir = liste.querySelector('.ve-str-mat-row.applied') || liste.querySelector('.ve-str-mat-row.on');
+  // Önce SEÇİLİ satır: seçim yapıldıysa kullanıcının baktığı yer orası.
+  // Seçim yoksa uygulanan kayda kaydır.
+  var satir = liste.querySelector('.ve-str-mat-row.on') || liste.querySelector('.ve-str-mat-row.applied');
   if(!satir) return false;
   // `block:'nearest'` sayfayı DEĞİL yalnız listeyi kaydırır; 'center' olsaydı
   // panelin tamamı zıplardı.
@@ -1759,11 +1749,35 @@ function veStrMatApplyLib(nodeId, libId){
   return true;
 }
 
-// Uygulanan kaydın İZİ — panelde açıkça yazılı. Üç durum var ve üçü farklı
-// şey söylüyor; ikisini birleştirmek kullanıcıyı yanıltırdı:
-//   • katalogdan geldi ve DEĞİŞMEDİ        → katalog adı geçerli
-//   • katalogdan geldi ama ELLE DEĞİŞTİ    → ad artık kaydı anlatmıyor
-//   • hiç katalogdan gelmedi               → elle girilmiş
+// ── DURUM ŞERİDİ ────────────────────────────────────────────────────────────
+// Sağ sütunun ne gösterdiğini TEK BAKIŞTA söylüyor. Dört durum var ve dördü
+// farklı şey anlatıyor; birleştirmek kullanıcıyı yanıltırdı:
+//   • ÖNİZLEME               → katalogdan seçildi, parçaya HENÜZ uygulanmadı
+//   • katalogdan, değişmedi  → katalog adı geçerli
+//   • katalogdan, elle değişti → ad artık kaydı anlatmıyor
+//   • hiç katalogdan gelmedi → elle girilmiş
+// ÖNİZLEME özellikle sessiz bırakılamaz: alanlar dolu görünüyor ama parçanın
+// malzemesi hâlâ eskisi. Şerit olmasaydı kullanıcı uyguladığını sanırdı.
+function _strMatStateBar(node, g){
+  if(g.onizleme){
+    var cat = veStrMatLibCat(g.kat.c);
+    return '<div class="ve-str-mat-preview">'
+         + '<b>ÖNİZLEME</b> — <b>' + _strEsc(g.kat.n) + '</b> '
+         + '<span>' + _strEsc((g.kat.std || '') + ' · ' + (cat ? cat.ad : g.kat.c)) + '</span><br>'
+         + 'Değerler katalogdan okunuyor, parçaya <b>henüz uygulanmadı</b>. '
+         + 'Aşağıdaki <b>Parçaya Uygula</b> düğmesiyle uygulayın.'
+         + (g.kat.alt && g.kat.alt.length
+             ? '<br><span>Diğer adlar: ' + _strEsc(g.kat.alt.join(' · ')) + '</span>' : '')
+         + (g.kat.not ? '<br><span>' + _strEsc(g.kat.not) + '</span>' : '')
+         + '</div>'
+         + (g.kat.uyari ? '<div class="ve-str-mat-warn"><b>Dikkat.</b> ' + _strEsc(g.kat.uyari) + '</div>' : '');
+  }
+  var iz = _strMatSourceLine(node);
+  if(g.kat && g.kat.uyari) iz += '<div class="ve-str-mat-warn"><b>Dikkat.</b> ' + _strEsc(g.kat.uyari) + '</div>';
+  return iz;
+}
+
+// Uygulanan kaydın İZİ — panelde açıkça yazılı.
 function _strMatSourceLine(node){
   var m = veStrMatOf(node);
   if(!m.lib || !_strLibHas()){
@@ -1814,28 +1828,37 @@ function getStrMaterialPropertiesHTML(node){
          + '</div>';
     sol += _strLibFilterHTML(node.id);
     sol += '<div class="ve-str-mat-count" id="ve-str-mat-count">' + _strEsc(_strLibCountText(node.id)) + '</div>';
+    // Künye kartı SOL SÜTUNDAN KALKTI: seçilen kaydın bütün özellikleri artık
+    // sağ sütunda görünüyor. İkisini birden basmak aynı sayıları iki kez
+    // göstermek olurdu ve dar sütunda listeden yer çalardı.
     sol += '<div class="ve-str-mat-list" id="ve-str-mat-list">' + _strLibListHTML(node.id) + '</div>';
-    sol += '<div id="ve-str-mat-det">' + _strLibDetailHTML(node.id) + '</div>';
   } else {
     sol += '<div class="ve-str-mat-empty">Malzeme kütüphanesi yüklenmedi '
          + '(js/structural-materials.js). Değerler sağdaki alanlardan elle girilebilir.</div>';
   }
 
-  // ── SAĞ: uygulanan malzeme — künye, diyagramlar, sıcaklık değerlendirici ──
-  var kat = (m.lib && _strLibHas()) ? veStrMatLibById(m.lib) : null;
-  var sag = '<div class="sw-section-title">Uygulanan Malzeme</div>';
-  sag += _strMatSourceLine(node);
+  // ── SAĞ: MALZEME ÖZELLİKLERİ ──
+  // Gösterilen kayıt veStrMatShown'dan geliyor: seçili katalog kaydı varsa O,
+  // yoksa parçaya uygulanmış olan. Yani liste satırına tıklamak yeterli —
+  // uygulamak, bakmanın ön koşulu DEĞİL.
+  var g = veStrMatShown(node);
+  var kat = g.kat;
+  var sag = '<div class="sw-section-title">Malzeme Özellikleri</div>';
+  sag += _strMatStateBar(node, g);
   sag += '<div style="display:flex; align-items:center; gap:10px; margin-bottom:9px;">'
        + '<div style="flex:0 0 auto; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">Ad</div>'
-       + '<input type="text" id="ve-str-mat-name-' + node.id + '" value="' + _strEsc(m.name == null ? '' : m.name) + '"'
-       + ' placeholder="ör. S355JR" onchange="veStrMatSet(\'' + node.id + '\',\'name\',this.value)"'
-       + ' style="flex:1 1 auto; min-width:0; ' + _STR_INP + ' text-align:left;">'
+       + '<input type="text" id="ve-str-mat-name-' + node.id + '" value="' + _strEsc(g.rec.name == null ? '' : g.rec.name) + '"'
+       + ' placeholder="ör. S355JR"'
+       + (g.onizleme ? ' readonly tabindex="-1"'
+                     : ' onchange="veStrMatSet(\'' + node.id + '\',\'name\',this.value)"')
+       + ' style="flex:1 1 auto; min-width:0; ' + _STR_INP + ' text-align:left;'
+       + (g.onizleme ? ' opacity:0.75; cursor:default;' : '') + '">'
        + '</div>';
-  sag += _strMatFieldGrid(node);
-  sag += _strMatVerdict(node);
+  sag += _strMatFieldGrid(node, g.rec, g.onizleme);
+  sag += _strMatVerdict(g.rec);
 
   sag += '<div class="sw-section-title">Türetilen</div>';
-  sag += _strMatDerivedTable(node);
+  sag += _strMatDerivedTable(g.rec);
 
   // Katalog kaydı varsa: genişletilmiş künye + diyagramlar. Elle girilmiş
   // kayıtta bunlar YOK ve panel sebebini söylüyor — sertlik, uzama, sıcaklık
@@ -1850,18 +1873,32 @@ function getStrMaterialPropertiesHTML(node){
     sag += _strMatTempSVG(kat);
     sag += '</div>';
     sag += _strMatDiaNote(kat);
-  } else if(Object.keys(m).length){
+  } else if(Object.keys(g.rec).length){
     sag += '<div style="padding:7px 9px; margin:8px 0; font-size:var(--fs-micro); line-height:1.45; '
          + 'color:var(--text-muted); background:var(--bg-secondary); border:1px dashed var(--border-color);">'
          + '<b style="color:var(--text-secondary);">Diyagramlar yok.</b> Sertlik, uzama, sıcaklık eğrisi ve '
          + 'yorulma modeli <b>katalogdan</b> gelir — elle girilen altı sayı bunları üretmeye yetmez. '
-         + 'Soldan bir kayıt uygulayın, sonra istediğiniz alanı elle düzeltin.'
+         + 'Soldan bir kayıt seçin.'
          + '</div>';
   }
 
-  sag += '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">';
-  sag += '<button class="ve-str-btn ve-str-btn--danger" onclick="veStrMatClear(\'' + node.id + '\')">Temizle</button>';
+  // ── EYLEM ŞERİDİ — panelin ALTINDA ──
+  // "Parçaya Uygula" buraya taşındı: kullanıcı önce özellikleri okuyor, sonra
+  // uyguluyor. Eskiden düğme sol sütundaki künye kartındaydı ve özellikler
+  // ancak uyguladıktan SONRA görünüyordu.
+  sag += '<div class="ve-str-mat-actions">';
+  if(kat && g.onizleme){
+    sag += '<button class="ve-str-btn ve-str-btn--primary ve-str-mat-apply"'
+        +  ' onclick="veStrMatApplyLib(\'' + node.id + '\',\'' + _strEsc(kat.id) + '\')">'
+        +  'Parçaya Uygula</button>';
+  } else if(kat && g.uygulandi){
+    sag += '<span class="ve-str-mat-applied-tag">✓ Bu malzeme parçaya uygulanmış</span>';
+  }
+  if(Object.keys(veStrMatOf(node)).length){
+    sag += '<button class="ve-str-btn ve-str-btn--danger" onclick="veStrMatClear(\'' + node.id + '\')">Temizle</button>';
+  }
   sag += '</div>';
+
   sag += '<div style="padding:7px 9px; font-size:var(--fs-micro); line-height:1.45; color:var(--text-muted); background:var(--bg-secondary); border:1px dashed var(--border-color);">'
        + '<b style="color:var(--text-secondary);">Katalogda olmayanlar:</b> kompozit laminatlar (ortotrop — bu kart izotrop), '
        + 'ölçülmüş S-N eğrileri (buradaki Wöhler bir MODELDİR), akma sonrası pekleşme eğrisi, '
@@ -1960,7 +1997,9 @@ function veStrMatSetTemp(nodeId, val){
   _strLibUI(nodeId).tempC = isFinite(v) ? v : 20;
   var node = _strNodeById(nodeId);
   if(!node || typeof document === 'undefined') return;
-  var kat = (typeof veStrMatLibById === 'function') ? veStrMatLibById(veStrMatOf(node).lib) : null;
+  // GÖSTERİLEN kayıt — panelin çizdiğiyle AYNI kaynaktan. Uygulanan kayda
+  // bakılsaydı önizlemede sıcaklık satırı başka bir malzemeyi anlatırdı.
+  var kat = veStrMatShown(node).kat;
   if(!kat) return;
   var kutu = document.getElementById('ve-str-mat-temp');
   if(!kutu) return;
@@ -2378,6 +2417,7 @@ if(typeof module !== 'undefined' && module.exports) {
     veStrMatLibQuery: veStrMatLibQuery,
     veStrMatLibSetCat: veStrMatLibSetCat,
     veStrMatLibPick: veStrMatLibPick,
+    veStrMatShown: veStrMatShown,
     veStrMatApplyLib: veStrMatApplyLib,
     veStrMatSetTemp: veStrMatSetTemp,
     veStrMatLibScrollToApplied: veStrMatLibScrollToApplied,
