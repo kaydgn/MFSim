@@ -366,6 +366,52 @@ describe('gömülü TetGen .wasm varlığı', () => {
   test('worker köprüsü gzip açmayı KENDİSİ yapıyor (ana iş parçacığı durmasın)', () => {
     expect(meshModel.VE_STR_MESH_WORKER_BRIDGE || '').toBeDefined();
   });
+
+  // ── PAKET KENDİ KENDİNE YETMELİ ──────────────────────────────────────────
+  // Worker'a giden şey bir DOSYA değil, elle sayılmış bir fonksiyon LİSTESİ
+  // (`_smMeshBridgeSource`). Listeye eklenmeyen bir yardımcı ana iş
+  // parçacığında ÇALIŞIR (aynı kapsamda), worker'da `ReferenceError` atar —
+  // yani birim testleri yeşil kalır, kullanıcı hata alır.
+  //
+  // ÖLÇÜLDÜ (kullanıcının braketi, tek dosya, `file://`): `_smAssign` listede
+  // olmadığı için ham-yüzey yedeğine düşen her iş
+  // "_smAssign is not defined" ile bitiyordu.
+  test('worker paketi kendi çağırdığı her yardımcıyı TAŞIYOR', () => {
+    // Worker'a giden metin ÜÇ parçadan kuruluyor (bkz. `_smEnsureWorker`):
+    // TetGen glue + `js/structural-remesh.js` + bu paket. Kapı da aynı bütünü
+    // görmeli, yoksa remesh'in kendi adlarını "eksik" sanardı.
+    const remesh = fs.readFileSync(path.join(ROOT, 'js/structural-remesh.js'), 'utf8');
+    const paket = meshModel._smMeshBridgeSource();
+    const src = remesh + '\n' + paket;
+    // Paket ayrıştırılabilir mi (sözdizimi) — toString() birleştirmesi bozuksa
+    // worker açılır açılmaz ölür.
+    expect(() => new (require('vm').Script)(paket)).not.toThrow();
+
+    const bildirilen = new Set();
+    let m;
+    const bildirimRe = /(?:^|\n)\s*(?:function\s+([A-Za-z_$][\w$]*)|var\s+([A-Za-z_$][\w$]*))/g;
+    while ((m = bildirimRe.exec(src))) bildirilen.add(m[1] || m[2]);
+
+    const cagrilan = new Set();
+    const cagriRe = /\b((?:_sm|veStr)[\w$]*)\s*\(/g;
+    while ((m = cagriRe.exec(src))) cagrilan.add(m[1]);
+
+    const eksik = [...cagrilan].filter((ad) => !bildirilen.has(ad));
+    expect(eksik).toEqual([]);
+    // Kapının gerçekten bir şey aradığının kanıtı.
+    expect(cagrilan.has('_smAssign')).toBe(true);
+    expect(bildirilen.has('_smAssign')).toBe(true);
+  });
+
+  // Kapının ISIRDIĞININ kanıtı: `_smAssign` listeden düşürülünce paket onu
+  // çağırıyor ama bildirmiyor — yukarıdaki kapı kırmızıya döner.
+  test('kapı ısırıyor — listeden bir ad düşerse yakalanıyor', () => {
+    const src = meshModel._smMeshBridgeSource();
+    const sakat = src.replace(/\nfunction _smAssign\(hedef[\s\S]*?\n}\n/, '\n');
+    expect(sakat).not.toBe(src);
+    expect(/\bfunction _smAssign\b/.test(sakat)).toBe(false);
+    expect(/\b_smAssign\s*\(/.test(sakat)).toBe(true);
+  });
 });
 
 // ── HAM YÜZEY YEDEĞİ ────────────────────────────────────────────────────────

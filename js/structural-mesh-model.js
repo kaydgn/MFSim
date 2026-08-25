@@ -710,12 +710,23 @@ function _smEnsureWorker(){
 // Worker'ın içinde çalışacak KÖPRÜ FONKSİYONLARI. Bu dosya worker'a bir bütün
 // olarak gönderilemez (DOM'a dokunan asset/worker yardımcıları var); worker'ın
 // ihtiyacı olan saf hesap fonksiyonları kaynak metni olarak geçiyor.
+//
+// LİSTE EKSİK KALIRSA HATA SESSİZ DEĞİL AMA GÖRÜNMEZ: worker `ReferenceError`
+// atar, köprü onu `{ok:false, error:…}` olarak döndürür — ve panel o mesajı
+// basar. ÖLÇÜLDÜ (kullanıcının braketi, tek dosya, `file://`): `_smAssign`
+// listede olmadığı için ham-yüzey yedeğine düşen her iş
+// "_smAssign is not defined" ile bitiyordu; ana iş parçacığı yolunda aynı kod
+// ÇALIŞIYOR (fonksiyon orada kapsamda), yani hata yalnız worker'da çıkıyor ve
+// birim testlerinden geçiyordu. `structural-mesh-model.test.js` bu yüzden
+// paketin İÇİNDEN çağrılan her `_sm…`/`veStr…` adının pakette BİLDİRİLMİŞ
+// olmasını arıyor.
 function _smMeshBridgeSource(){
   return [
     'var VE_STR_TETGEN_DEFAULTS = ' + JSON.stringify(VE_STR_TETGEN_DEFAULTS) + ';',
     'var VE_STR_TETGEN_STEINER_LIMIT = ' + VE_STR_TETGEN_STEINER_LIMIT + ';',
     'var VE_STR_TET_DEGENERATE_VOL = ' + VE_STR_TET_DEGENERATE_VOL + ';',
     _smNum.toString(),
+    _smAssign.toString(),
     veStrBuildPLC.toString(),
     veStrTetGenSwitches.toString(),
     veStrRunTetGen.toString(),
@@ -784,6 +795,9 @@ if(typeof module !== 'undefined' && module.exports){
     veStrMeshCacheSet: veStrMeshCacheSet,
     veStrMeshCacheGet: veStrMeshCacheGet,
     veStrMeshCacheClear: veStrMeshCacheClear,
-    veStrMeshForget: veStrMeshForget
+    veStrMeshForget: veStrMeshForget,
+    // Yalnız TEST için: worker paketinin gerçek metni. Kapı, paketin İÇİNDEN
+    // çağrılan her `_sm…`/`veStr…` adının pakette bildirilmiş olmasını arıyor.
+    _smMeshBridgeSource: _smMeshBridgeSource
   };
 }

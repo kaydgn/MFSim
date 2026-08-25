@@ -2160,6 +2160,14 @@ function veStrMeshSetTarget(nodeId, val){
   if(typeof saveState === 'function') saveState();
 }
 
+// MESAJ PANELDEN SONRA YAZILIR — sırası ölçülmüş bir hatanın düzeltmesi.
+// `showNodeProperties(node)` paneli innerHTML ile BAŞTAN kurar, yani
+// `#ve-str-mesh-status` elemanını da yeniler. Mesaj önce yazılırsa o yenileme
+// mesajı SİLER ve başarısız bir iş ekranda HİÇBİR İZ bırakmaz: ilerleme kartı
+// kapanmış, durum satırı boş, sonuç yok. Kullanıcının bildirdiği "ne hata
+// veriyor ne başka bir şey" tam olarak buydu (ÖLÇÜLDÜ, tek dosya / `file://`:
+// worker gerçek bir hata döndürüyordu — "_smAssign is not defined" — ve panel
+// onu basıp hemen siliyordu).
 function veStrMeshBuild(nodeId){
   var node = _strNodeById(nodeId);
   if(!node) return;
@@ -2184,12 +2192,14 @@ function veStrMeshBuild(nodeId){
   }).then(function(res){
     _strMeshProgEnd(nodeId);
     if(!res || !res.ok){
-      _strMeshStatus((res && res.error) || 'Ağ kurulamadı.', 'err');
       if(typeof veStrMeshCacheClear === 'function') veStrMeshCacheClear();
       if(!node.data) node.data = {};
       delete node.data.mesh;
       if(typeof saveState === 'function') saveState();
+      // ÖNCE panel yenilenir, SONRA mesaj yazılır — tersi sessizliğe çıkıyordu
+      // (aşağıdaki kural).
       if(typeof showNodeProperties === 'function') showNodeProperties(node);
+      _strMeshStatus((res && res.error) || 'Ağ kurulamadı.', 'err');
       return;
     }
     if(typeof veStrMeshCacheSet === 'function') veStrMeshCacheSet(nodeId, res);
@@ -2197,11 +2207,12 @@ function veStrMeshBuild(nodeId){
     node.data.mesh = (typeof veStrMeshRecord === 'function') ? veStrMeshRecord(res) : null;
     node.data.meshSourceFile = geom.fileName || '';
     if(typeof saveState === 'function') saveState();
-    _strMeshStatus('Ağ hazır: ' + _strFmt(res.stats.tets) + ' eleman.', 'ok');
     if(typeof showNodeProperties === 'function') showNodeProperties(node);
+    _strMeshStatus('Ağ hazır: ' + _strFmt(res.stats.tets) + ' eleman.', 'ok');
     if(typeof veStrRefreshBadge === 'function') veStrRefreshBadge(nodeId);
   }, function(err){
     _strMeshProgEnd(nodeId);
+    if(typeof showNodeProperties === 'function') showNodeProperties(node);
     _strMeshStatus('Ağ kurulamadı: ' + ((err && err.message) || err), 'err');
   });
 }
