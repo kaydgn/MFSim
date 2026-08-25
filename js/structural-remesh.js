@@ -47,6 +47,11 @@
 // ----------------------------------------------------------------------------
 
 var VE_STR_REMESH_DEFAULT_ITERATIONS = 10;
+// Bölme pasolarının ÜSTÜNE eklenen kalite pasoları + toplam tavan. Tavan
+// olmasa çok ince bir hedef pasoları sınırsız büyütürdü; 24'te braketin en
+// ince hedefi bile (h=2) bölmeyi bitirip kaliteye 10+ paso ayırıyor.
+var VE_STR_REMESH_QUALITY_PASSES = 12;
+var VE_STR_REMESH_MAX_ITERATIONS = 24;
 var VE_STR_REMESH_SPLIT_FACTOR = 4 / 3;
 var VE_STR_REMESH_COLLAPSE_FACTOR = 4 / 5;
 var VE_STR_REMESH_WELD_EPS = 1e-6;     // mm
@@ -1118,7 +1123,30 @@ function veStrRemeshMesh(mesh, opts){
   var cap = ownDiag / 8;
   if(targetLen > cap) targetLen = cap;
   targetLen = Math.max(targetLen, 1e-3);
-  var iterations = opts.iterations || VE_STR_REMESH_DEFAULT_ITERATIONS;
+  // PASO SAYISI HEDEFTEN TÜRER — sabit 10 İNCE hedeflerde yetmiyor ve bunun
+  // bedeli doğrudan ÇÖZÜMÜ DURDURAN dejenere elemandı.
+  //
+  // Döngünün ilk işi bölme ve bölme her pasoda kenarı YARIYA indiriyor; ham
+  // OCCT üçgenlemesinde düz yüzeylerde 150 mm'ye varan kenarlar var. Hedef
+  // 3 mm ise yalnız boya inmek ~6 paso yiyor, geriye kaliteyi toparlayacak
+  // paso kalmıyor.
+  //
+  // ÖLÇÜLDÜ (kullanıcının braketi, h=3):
+  //   10 paso → min açı 1,59° · 2° altı 4 üçgen · 5° altı 42 · 34.554 üçgen
+  //   20 paso → min açı 5,89° · 2° altı 0 üçgen · 5° altı  0 · 32.108 üçgen
+  // ve o 4 sliver YÜZEYİN, TetGen'de 2.081 DEJENERE TET'e dönüştüğü ölçüldü
+  // (h=4'te 2° altı üçgen 0 → dejenere tet de 0). Yani birkaç sliver yüzey
+  // üçgeni, etrafında yüzlerce yassı tet doğuruyor.
+  //
+  // Paso sayısı ARTINCA üçgen sayısı DÜŞÜYOR (34,5 bin → 32,1 bin): fazladan
+  // pasolar bölmüyor, birleştirip düzeltiyor — yani TetGen'in işi de azalıyor.
+  var iterations = opts.iterations;
+  if(!iterations){
+    var l0 = _rmMeanEdge({ V: V, T: T });
+    var bolme = (l0 > targetLen) ? Math.ceil(Math.log(l0 / targetLen) / Math.LN2) : 0;
+    iterations = Math.max(VE_STR_REMESH_DEFAULT_ITERATIONS,
+                 Math.min(VE_STR_REMESH_MAX_ITERATIONS, bolme + VE_STR_REMESH_QUALITY_PASSES));
+  }
 
   var state = { V: V, T: T, Tface: Tface, dead: {}, cell: targetLen, grid: null };
   for(var iter = 0; iter < iterations; iter++){
