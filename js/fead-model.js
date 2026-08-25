@@ -195,6 +195,232 @@ function veFeadAngleMode(td){
   return 'mount';
 }
 
+// ─── KAYIŞ BOYU: SEÇİLMİŞ mi, TASARIMDAN ÇIKAN mı? ──────────────────────────
+//
+// İki ayrı mühendislik sorusu, TEK serbestlik derecesi. Gergi kolunun oturduğu
+// açı ile kayış boyu birbirini belirliyor; hangisinin GİRDİ olduğunu seçmek
+// zorundayız:
+//
+//   'fixed'  Kayış zaten seçilmiş (katalogdan bir boy). Kol, kayış yolunu O
+//            BOYA eşitleyen açıya oturur; gerginlik oradan ÇIKAR.
+//              rel = solveArmForBeltLength(effLength)
+//
+//   'free'   Kayış henüz seçilmemiş — tasarım yapılıyor, kayış sonra tedarik
+//            edilecek. Kol, tasarım gerginliğini veren açıya oturur; GEREKEN
+//            KAYIŞ BOYU oradan ÇIKAR.
+//              rel        = solveArmForTension(designTensionN)
+//              effLength := requiredBeltMm(rel)          ← ÇIKTI, girdi değil
+//
+// SERBEST KİP "ÇÖZÜLEMEZ" BÖLGEYİ YAPISAL OLARAK KALDIRIYOR. Sabit kipte hedef
+// (kayış boyu) kolun erişebildiği aralığın DIŞINA düşebiliyor ve bu geometrik
+// bir sorun DEĞİL — ÖLÇÜLDÜ (BMC): alternatörü 10 mm kaydırmak yetiyor; kol
+// 0..64.5° arasında 1711.3..1684.4 mm üretiyor, istenen 1715 mm ise 3.7 mm
+// YUKARIDA kalıyor. Geometri o noktada kusursuz çözülüyor (Σsarım = 360.00°,
+// altı span da geçerli); çöken tek şey "bu kayış bu düzene sığar mı" sorusu.
+// Serbest kipte böyle bir hedef yok, dolayısıyla böyle bir duvar da yok.
+//
+// GERİYE DÖNÜK: kip yazılı değilse effLength'i olan proje 'fixed' sayılır —
+// bugüne kadar kaydedilmiş her proje birebir eski davranışını korur.
+var VE_FEAD_BELT_MODES = ['fixed', 'free'];
+
+function veFeadBeltMode(bd){
+  var m = bd && bd.lengthMode;
+  if(m === 'free' || m === 'fixed') return m;
+  var L = _feadNum(bd && (bd.effLength != null ? bd.effLength : bd.length), 0);
+  return (L > 0) ? 'fixed' : 'free';
+}
+
+// Kenetlenen kol çözümü — HİÇBİR ZAMAN ATMAZ.
+//
+// FEADCore.bisect kök kuşatılmamışsa açık hata veriyor ve bu DOĞRU bir çekirdek
+// davranışı: sessizce uç nokta döndürmek "makul ama yanlış" bir cevap üretirdi
+// (çekirdeğin kendi notu: "v1'de bu kontrol yoktu"). Ama kasnak konumu
+// kanvastan sürükleniyorsa kullanıcı çözüm uzayının içine DIŞARIDAN giriyor;
+// her ara karede istisna "model çözülemez" demek olur.
+//
+// Sarmalayıcı ayrımı koruyor: hedef kuşatılmışsa ÇEKİRDEĞİN KENDİ çözümü döner
+// (birebir aynı, toleransı dahil); kuşatılmamışsa en yakın uca kenetlenir ve
+// NEDEN kenetlendiği yapısal olarak taşınır. Yani cevap "çözülemedi" değil,
+// "şu sınırda, hedeften şu kadar uzakta" oluyor.
+function veFeadSolveArmClamped(sys, kind, target){
+  var out = { ok:false, relDeg:0, atLimit:null, error:null };
+  if(typeof FEADCore === 'undefined' || !sys){
+    out.error = 'Hesap çekirdeği yüklenmedi (js/fead-core.js).'; return out;
+  }
+  if(!Number.isFinite(target)){
+    out.error = (kind === 'tension') ? 'Tasarım gerginliği girilmedi (Çözücü panelinde).'
+                                     : 'Kayış efektif boyu girilmedi (Kayış Özellikleri panelinde).';
+    return out;
+  }
+  var isT = (kind === 'tension');
+  var lo = isT ? 1e-6 : 0, hi;
+  try { hi = FEADCore.feasibleRelMax(sys); }
+  catch(e){ out.error = veFeadTranslateError(e && e.message); return out; }
+
+  var f = function(r){
+    var st = FEADCore.tensionerState(sys, r);
+    return isT ? st.tensionN : st.requiredBeltMm;
+  };
+  var flo, fhi;
+  try { flo = f(lo); fhi = f(hi); }
+  catch(e){ out.error = veFeadTranslateError(e && e.message); return out; }
+  if(!Number.isFinite(flo) || !Number.isFinite(fhi)){
+    out.error = 'Kolun uç konumlarında çözüm tanımsız.'; return out;
+  }
+
+  if((flo - target) * (fhi - target) <= 0){
+    try {
+      out.relDeg = isT ? FEADCore.solveArmForTension(sys, target, { hi: hi })
+                       : FEADCore.solveArmForBeltLength(sys, target, { hi: hi });
+      out.ok = true;
+      return out;
+    } catch(e){ /* sayısal uç durum — aşağıdaki kenetlemeye düş */ }
+  }
+
+  var dLo = Math.abs(flo - target), dHi = Math.abs(fhi - target);
+  var low = (dLo <= dHi);
+  out.relDeg = low ? lo : hi;
+  out.ok = true;
+  out.atLimit = {
+    kind: kind, target: target, achieved: low ? flo : fhi,
+    side: low ? 'free' : 'stop',
+    shortfall: (low ? flo : fhi) - target,
+    rangeMin: Math.min(flo, fhi), rangeMax: Math.max(flo, fhi),
+    relMaxDeg: hi
+  };
+
+  // KOLUN UÇ KONUMU TAKE-UP TEKİLLİĞİNE KOMŞU. T = M / (dL/dθ) olduğu için
+  // sarım sıfıra yaklaşırken gerginlik patlıyor — ÖLÇÜLDÜ: ters temas tarafı
+  // verilmiş BMC'de kenetlenen konumda 3.2e10 N. Sayı modelin kendi cevabı
+  // ama FİZİKSEL DEĞİL; öyle işaretlenmezse gerilme, hubload ve ömür
+  // tablolarına anlamsız değerler olarak sızar ve kullanıcı onları okur.
+  try {
+    var stL = FEADCore.tensionerState(sys, out.relDeg);
+    var stRef = FEADCore.tensionerState(sys, 0);
+    out.atLimit.wrapDeg = stL.wrapDeg;
+    out.atLimit.takeupMmPerDeg = stL.takeupMmPerDeg;
+    out.atLimit.tensionN = stL.tensionN;
+    var ref = Math.abs(stRef.takeupMmPerDeg);
+    out.atLimit.takeupRatio = ref > 0 ? Math.abs(stL.takeupMmPerDeg) / ref : 0;
+    out.atLimit.degenerate = !(out.atLimit.takeupRatio > VE_FEAD_MIN_TAKEUP_RATIO);
+  } catch(e){ out.atLimit.degenerate = true; }
+  return out;
+}
+
+// ÖLÇÜT TAKE-UP, SARIM DEĞİL — ölçülerek düzeltildi.
+//
+// İlk sürüm "sarım 2°'nin altındaysa dejenere" diyordu ve YANLIŞTI: ters temas
+// tarafı verilmiş BMC'de kenetlenme noktasında sarım 360.00° (kocaman) ama
+// take-up 1.7e-8 mm/° — kol yönü bileşke kuvvetle hizalanmış, yani kolu
+// döndürmek kayış boyunu DEĞİŞTİRMİYOR. Tekilliğin kaynağı sin(β), sarım değil.
+//
+// T = M / (dL/dθ) olduğu için tekilleşen büyüklük doğrudan take-up'ın kendisi:
+// orada gerginlik 3.2e10 N çıkıyor. Ölçüt SERBEST KOL konumundaki take-up'a
+// GÖRE, mutlak bir sayıya göre değil — mutlak eşik tasarımdan tasarıma kayardı.
+// %2: ölçülen dejenere oran 1.6e-8, sağlıklı konumlarda oran 1'e yakın.
+var VE_FEAD_MIN_TAKEUP_RATIO = 0.02;
+
+// Kenetlenme sebebini kullanıcının dilinde yaz. Sayı gizlenmiyor: kullanıcı
+// "ne kadar uzakta" olduğunu görmeden düzeltemez.
+function veFeadAtLimitText(al){
+  if(!al) return '';
+  var f1 = function(x){ return (Math.round(x * 10) / 10).toFixed(1); };
+  if(al.kind === 'belt'){
+    var fazla = al.target - al.achieved;
+    return 'Seçilen kayış (' + f1(al.target) + ' mm) bu yerleşime '
+      + f1(Math.abs(fazla)) + ' mm ' + (fazla > 0 ? 'UZUN' : 'KISA')
+      + '. Gergi kolunun tüm gezinme aralığı (0…' + f1(al.relMaxDeg) + '°) '
+      + f1(al.rangeMin) + '…' + f1(al.rangeMax) + ' mm karşılıyor. '
+      + (al.resolvedAt === 'designTension'
+          ? 'Çalışma noktası, tasarım gerginliğini veren kol açısına alındı; '
+            + 'bu yerleşim için gereken kayış ' + f1(al.suggestedBeltMm) + ' mm. '
+            + 'Kayış boyunu SERBEST bırakırsanız bu değer doğrudan hesaplanır.'
+          : 'Kol ' + (al.side === 'free' ? 'serbest' : 'yük stopu') + ' konumuna '
+      + 'kenetlendi. ' + (al.degenerate
+          ? 'O konumda kolun take-up etkisi sıfıra iniyor (serbest konumun '
+            + 'yalnız %' + (100 * (al.takeupRatio || 0)).toPrecision(2) + '\u2019i), '
+            + 'yani gerginlik ve hubload sayıları FİZİKSEL DEĞİL. Bu kayış bu '
+            + 'yerleşime takılamaz. '
+          : 'Gerilmeler o konumdan hesaplandı. ')
+      + 'Kayış boyunu değiştirin ya da kayış boyunu SERBEST bırakın.');
+  }
+  return 'Tasarım gerginliği (' + f1(al.target) + ' N) bu yerleşimde kol boyunca '
+    + 'erişilemiyor; aralık ' + f1(al.rangeMin) + '…' + f1(al.rangeMax) + ' N '
+    + '(kol 0…' + f1(al.relMaxDeg) + '°). Kol ' + f1(al.achieved) + ' N veren '
+    + (al.side === 'free' ? 'serbest' : 'uç') + ' konuma kenetlendi. '
+    + 'Yay künyesi ya da kasnak yerleşimi bu gerginliği desteklemiyor.';
+}
+
+// Geometri ihlalini kullanıcının dilinde yaz (çekirdeğin hoşgörülü kipi).
+function veFeadViolationText(v){
+  if(!v) return '';
+  if(v.type === 'wrapSum')
+    return 'Kayış yolu KAPANMIYOR: işaretli sarım toplamı '
+      + v.signedWrapDeg.toFixed(2) + '° (360° olmalı, fark '
+      + v.deltaDeg.toFixed(2) + '°). Sayılar hesaplandı ama bu YOL geçersiz — '
+      + 'kasnak sırası kayışın gidiş yönünde mi, temas tarafları doğru mu?';
+  if(v.type === 'clearance')
+    return 'Kayış bir kasnağın İÇİNDEN geçiyor: '
+      + (v.items || []).map(function(c){
+          return c.span + ' spanı ' + c.pulley + ' kasnağını '
+            + (-c.clearanceMm).toFixed(1) + ' mm kesiyor'; }).join('; ')
+      + '. Sayılar hesaplandı ama bu yerleşim fiziksel değil.';
+  return v.message || '';
+}
+
+// Kayışın ÇALIŞMA NOKTASI — kipten bağımsız tek giriş noktası.
+// Döndürdüğü relDeg her zaman geçerlidir (kenetlenmiş olabilir), effLengthMm
+// serbest kipte TÜRETİLMİŞTİR.
+function veFeadWorkingPoint(sys, mode, designTensionN){
+  var out = { mode: mode, relDeg: NaN, effLengthMm: NaN, derived: false,
+              atLimit: null, error: null };
+  if(mode === 'free'){
+    var r = veFeadSolveArmClamped(sys, 'tension', designTensionN);
+    if(!r.ok){ out.error = r.error; return out; }
+    out.relDeg = r.relDeg; out.atLimit = r.atLimit; out.derived = true;
+    try { out.effLengthMm = FEADCore.tensionerState(sys, r.relDeg).requiredBeltMm; }
+    catch(e){ out.error = veFeadTranslateError(e && e.message); return out; }
+    return out;
+  }
+  var L = (sys && sys.belt) ? sys.belt.effLength : NaN;
+  var b = veFeadSolveArmClamped(sys, 'belt', _feadNum(L, NaN));
+  if(!b.ok){ out.error = b.error; return out; }
+  out.relDeg = b.relDeg; out.atLimit = b.atLimit; out.effLengthMm = L;
+
+  // ── SEÇİLEN KAYIŞ SIĞMIYORSA: TASARIM GERGİNLİĞİ KONUMUNA DÜŞ ─────────
+  //
+  // Kenetleme tek başına yetmiyordu ve sebebi fizikte: kolun uç konumu take-up
+  // TEKİLLİĞİNE komşu (T = M/(dL/dθ), dL/dθ → 0). Oraya kenetlenince ÖLÇÜLDÜ:
+  // alternatörü 10 mm kaydırmak 4.15e10 N gerginlik veriyordu — sayı modelin
+  // kendi cevabı ama fiziksel değil, ve gerilme/hubload/ömür tablolarına
+  // öylece sızıyordu.
+  //
+  // Doğal çıkış noktası KEYFÎ BİR EŞİK DEĞİL: T(rel) monoton arttığı için
+  // tasarım gerginliğini veren TEK bir kol açısı var — serbest kipin zaten
+  // çözdüğü açı. Kayış sığmıyorsa fiziksel olarak anlamlı tek çalışma noktası
+  // odur, ve oradaki `requiredBeltMm` doğrudan "hangi kayışı ısmarlamalıyım"
+  // sorusunun cevabı. Yani sabit kip, sığmayan bir kayışta serbest kipin
+  // cevabına düşüyor ve FARKI söylüyor.
+  if(b.atLimit && Number.isFinite(designTensionN) && designTensionN > 0){
+    var alt = veFeadSolveArmClamped(sys, 'tension', designTensionN);
+    if(alt.ok && !alt.atLimit){
+      try {
+        var stA = FEADCore.tensionerState(sys, alt.relDeg);
+        out.relDeg = alt.relDeg;
+        out.fallback = 'designTension';
+        out.suggestedBeltMm = stA.requiredBeltMm;
+        out.atLimit = Object.assign({}, b.atLimit, {
+          resolvedAt: 'designTension',
+          suggestedBeltMm: stA.requiredBeltMm,
+          tensionN: stA.tensionN,
+          degenerate: false
+        });
+      } catch(e){ /* düşemedik: kenetlenmiş hâl kalsın */ }
+    }
+  }
+  return out;
+}
+
 // ─── GERGİ KOL KONUMLARI — kayış yolu her konumda BAŞKA ─────────────────────
 //
 // Gergi kolu bir yay dengesinde duruyor: kayış uzadıkça (tolerans, aşınma) kol
@@ -759,8 +985,13 @@ function veFeadBuildSystem(nodeList, connList){
   });
 
   // ── Kayış ──
+  // Kayış boyu SABİT kipte zorunlu bir GİRDİ, SERBEST kipte hesaplanan bir
+  // ÇIKTI. İkincisinde boş bırakılması hata değil, kipin kendisi.
+  var beltMode = veFeadBeltMode(bd);
+  out.beltMode = beltMode;
   var effLength = _feadNum(bd.effLength != null ? bd.effLength : bd.length, 0);
-  if(!(effLength > 0)) out.errors.push('Kayış efektif boyu girilmedi (Kayış Özellikleri panelinde).');
+  if(beltMode === 'fixed' && !(effLength > 0))
+    out.errors.push('Kayış efektif boyu girilmedi (Kayış Özellikleri panelinde).');
   var ribs = _feadNum(bd.ribs, 0);
   if(!(ribs > 0)) out.errors.push('Kayış kanal (kaburga) sayısı girilmedi.');
   var cfgBelt = {
@@ -847,7 +1078,12 @@ function veFeadBuildSystem(nodeList, connList){
     pulleys: cfgPulleys, belt: cfgBelt, tensioner: cfgTen,
     designTensionN: Number.isFinite(design) ? design : undefined,
     driveRatio: driveRatio,
-    lengthOffsetMm: _feadNum(sd.lengthOffsetMm, 0)
+    lengthOffsetMm: _feadNum(sd.lengthOffsetMm, 0),
+    // Kapanma ve temizlik ihlalleri artık istisna DEĞİL, taşınan birer ihlal.
+    // Sürüklerken kullanıcı çözüm uzayına dışarıdan giriyor; ara karelerde
+    // "model çözülemez" demek yerine sayıyı verip yolun neden geçersiz
+    // olduğunu yazıyoruz. Kasnak çakışması bunun dışında: orada teğet YOK.
+    geomOpt: { tolerant: true }
   };
   out.cfg = cfg;
   if(out.errors.length) return out;              // eksik girdiyle çekirdeği çağırma
@@ -890,12 +1126,61 @@ function veFeadBuildSystem(nodeList, connList){
   // hemen ardından şema ve konum tablosu ayrı ayrı patlardı — kullanıcı
   // panelde "Geometri: çözüldü" görürken altında hata okurdu.
   // Serbest kol (rel = 0) yeterli: yerleşim orada da çözülmüyorsa hiç çözülmez.
+  //
+  // HOŞGÖRÜLÜ KİPTE BU PROB ARTIK YALNIZ TEK BİR ŞEYİ YAKALAR: kasnakların
+  // birbirinin içine girmesi. Kapanmayan çevrim ve kasnağı kesen kayış artık
+  // istisna atmıyor, `geom.violations` olarak taşınıyor — çünkü o iki durumda
+  // sayılar HESAPLANABİLİYOR (teğet noktaları, spanlar, sarımlar); geçersiz
+  // olan YOL, aritmetik değil. Çakışmada ise teğet YOKTUR: üretilecek bir sayı
+  // da yoktur, o yüzden orası hâlâ durduruyor.
   try {
     FEADCore.geometryAt(sys, 0);
   } catch(e){
     out.errors.push(veFeadTranslateError(e && e.message));
     return out;
   }
+
+  // ── ÇALIŞMA NOKTASI ────────────────────────────────────────────────────
+  // Kolun oturduğu açı ile kayış boyu tek serbestlik derecesini paylaşıyor;
+  // hangisinin girdi olduğunu kip söylüyor (bkz. veFeadBeltMode).
+  //
+  // Sonuç HER ZAMAN bir açı veriyor: hedef kolun erişemediği yerdeyse en yakın
+  // uca kenetleniyor ve sebebi `atLimit` ile taşınıyor. Bu yüzden aşağıdaki
+  // bütün zincir (konum tablosu, gerilme, ömür, rapor) girdiden bağımsız
+  // olarak ÇALIŞIR — "çözülemez" diye bir küme kalmıyor.
+  var wp = veFeadWorkingPoint(sys, beltMode, cfg.designTensionN);
+  out.workPoint = wp;
+  if(wp.error){ out.errors.push(wp.error); return out; }
+
+  if(beltMode === 'free'){
+    // TÜRETİLEN boy çekirdeğe geri yazılır: positionTable, meanRel,
+    // ribFatigueDistribution ve beltLifeB10 hepsi belt.effLength okuyor.
+    // Böylece serbest kip, "boyu hesaplanmış sabit kip"e indirgeniyor ve
+    // aşağıdaki hiçbir hesap kipten haberdar olmak zorunda kalmıyor.
+    sys.belt.effLength = wp.effLengthMm;
+    cfgBelt.effLength = wp.effLengthMm;
+  }
+  // meanRel ÖNCEDEN TOHUMLANIR. Kenetlenmiş bir çalışma noktasında çekirdeğin
+  // kendi meanRel'i yine bisect'e girip atardı; önbelleğe yazınca zincirin
+  // tamamı kenetlenmiş açıyı kullanıyor. (Çekirdeğin önbellek sözleşmesi:
+  // `_cache.meanRel` doluysa yeniden çözmez.)
+  sys._cache = sys._cache || {};
+  sys._cache.meanRel = wp.relDeg;
+
+  out.relDeg = wp.relDeg;
+  out.beltLengthMm = wp.effLengthMm;
+  out.beltLengthDerived = !!wp.derived;
+  if(wp.atLimit) out.warnings.push(veFeadAtLimitText(wp.atLimit));
+
+  // Çalışma noktasındaki geometri ihlalleri (hoşgörülü kip) — sayı üretildi
+  // ama yol geçersizse kullanıcı bunu OKUMALI.
+  try {
+    var gWp = FEADCore.geometryAt(sys, wp.relDeg);
+    (gWp.violations || []).forEach(function(v){
+      out.warnings.push(veFeadViolationText(v));
+    });
+    out.geomValid = (gWp.violations || []).length === 0;
+  } catch(e){ out.geomValid = false; }
 
   out.sys = sys;
   out.ok = true;
@@ -913,12 +1198,25 @@ function veFeadBuildSystem(nodeList, connList){
   // mesajı yok. (Kayma emniyeti bir ORAN olduğu için değişmiyor — tabloya
   // bakarak da anlaşılmıyor.) Gates raporlarında iki değer zaten tutuyor;
   // uyuşmazlık kullanıcının elle girdiği bir sayının işareti.
+  // NOT: meanRel yukarıda çalışma noktasıyla tohumlandığı için burada
+  // kenetlenmiş açı okunur — kenetli bir modelde de tutarlılık kontrolü çalışır.
   try {
     var mrTut = FEADCore.meanRel(sys);
     var tsTut = FEADCore.tensionerState(sys, mrTut);
     if(tsTut && Number.isFinite(tsTut.tensionN) && tsTut.tensionN > 0){
       out.springTensionN = tsTut.tensionN;
       var dsg = _feadNum(cfg.designTensionN, NaN);
+      // SERBEST KİPTE BU UYARI ANLAMSIZDIR: kol zaten tasarım gerginliğini
+      // veren açıya oturtuluyor, yani iki değer TANIM GEREĞİ eşit. Uyarıyı
+      // orada da basmak, kullanıcıya kendi kurduğumuz özdeşliği hata diye
+      // göstermek olurdu. (Kenetlenmişse fark gerçek — ama onu atLimit
+      // zaten kendi diliyle yazdı.)
+      if(beltMode === 'free') dsg = NaN;
+      // Kenetlenmiş bir çalışma noktasında yay dengesi zaten uç konumun
+      // (çoğu zaman tekilliğe komşu) değeridir; onu "uyuşmuyor" diye basmak
+      // atLimit'in söylediği tek sebebi ikinci kez, üstelik anlamsız bir
+      // sayıyla tekrar etmek olurdu.
+      if(wp && wp.atLimit) dsg = NaN;
       if(Number.isFinite(dsg) && dsg > 0){
         var sapma = Math.abs(dsg - tsTut.tensionN) / tsTut.tensionN;
         if(sapma > VE_FEAD_TENSION_TOL)
@@ -1324,6 +1622,11 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadGatherPulleys: veFeadGatherPulleys,
     veFeadTensionerMount: veFeadTensionerMount, veFeadArmCheck: veFeadArmCheck,
     veFeadFreeAngleFrom: veFeadFreeAngleFrom, veFeadAngleMode: veFeadAngleMode,
+    VE_FEAD_BELT_MODES: VE_FEAD_BELT_MODES, veFeadBeltMode: veFeadBeltMode,
+    VE_FEAD_MIN_TAKEUP_RATIO: VE_FEAD_MIN_TAKEUP_RATIO,
+    veFeadSolveArmClamped: veFeadSolveArmClamped,
+    veFeadWorkingPoint: veFeadWorkingPoint,
+    veFeadAtLimitText: veFeadAtLimitText, veFeadViolationText: veFeadViolationText,
     VE_FEAD_ARM_TOL_MM: VE_FEAD_ARM_TOL_MM, VE_FEAD_TENSION_TOL: VE_FEAD_TENSION_TOL,
     veFeadDriveRatio: veFeadDriveRatio,
     VE_FEAD_POSITIONS: VE_FEAD_POSITIONS, VE_FEAD_POS_TOL_DEG: VE_FEAD_POS_TOL_DEG,

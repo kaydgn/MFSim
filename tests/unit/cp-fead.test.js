@@ -650,14 +650,22 @@ describe('Kayış Yolu kanvas kartı', () => {
   // başka bir yol çözer (rozetin varlık nedeni), bazen de çevrim hiç kapanmaz.
   // İkinci durumda kart sebebi yazıyor — kullanıcı "çizim gitti" değil "kayış
   // yolu kapanmıyor, temas tarafına bak" mesajını görüyor.
+  // SÖZLEŞME DEĞİŞTİ: geçersiz bir yol artık çizilir ve sebebi durum şeridinde
+  // ADIYLA yazılır. Eskiden çizim gizlenip yerine mesaj konuyordu; ama çizim
+  // teşhisin kendisi — hangi kasnağın ters sarıldığı ancak ona bakınca görünür.
+  // Kapı bu yüzden "çizim var mı"dan "sebep yazıyor mu"ya taşındı.
   test('temas tarafı ters verilince kart ÇEVRİMİN KAPANMADIĞINI söyler', () => {
     const { lay, crk } = kurCozulur();
-    expect(fead.veFeadLayoutCardHTML(lay)).toMatch(/data-ve="belt"/);
+    const saglam = fead.veFeadLayoutCardHTML(lay);
+    expect(saglam).toMatch(/data-ve="belt"/);
+    expect(saglam).toMatch(/✓/);
+    expect(saglam).not.toMatch(/KAPANMIYOR|İÇİNDEN/);
+
     crk.data.contact = 'back';
     const html = fead.veFeadLayoutCardHTML(lay);
-    expect(html).not.toMatch(/data-ve="belt"/);
-    expect(html).toMatch(/Şema çizilemiyor/);
-    expect(html).toMatch(/temas tarafı|kapanmıyor/i);
+    expect(html).toMatch(/data-ve="belt"/);               // sayılar var → çizilir
+    expect(html).toMatch(/✗/);                            // ama geçersiz
+    expect(html).toMatch(/KAPANMIYOR|İÇİNDEN geçiyor/);   // ve sebebi YAZILI
   });
 
   test('çözülemeyen modelde SEBEP yazılır — boş kutu değil', () => {
