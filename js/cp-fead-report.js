@@ -1223,8 +1223,6 @@ function _frOperatingPoint(R){
   h += gr('Yay oranı k', _frFs(t.rateNmPerDeg, 3), 'Nm/°', '<b>girdi</b>');
   h += gr('Serbest kol açısı θ<sub>serbest</sub>', _frFs(t.freeAngleDeg, 2), '°',
           b.angleMode === 'mount' ? '<b>türev</b> — montaj merkezinden (§8.4)' : '<b>girdi</b>');
-  h += gr('Tasarım gerginliği (ankraj)', _frF(sys && sys.designTensionN, 0), 'N',
-          '<b>girdi</b> — gerilme zincirinin ankrajı (§8.11)');
   h += '<tr class="sum"><td class="l" colspan="4">— aşağıdakilerin hiçbiri girilmez —</td></tr>';
   h += gr('Kol açısı θ (göreli / mutlak)', _frFs(A.meanRelDeg, 2) + ' / ' + _frFs(A.meanAbsDeg, 2), '°',
           '<b>türev</b> — (4.4) kökü: L<sub>gereken</sub>(θ) = L<sub>eff</sub>');
@@ -1233,6 +1231,8 @@ function _frOperatingPoint(R){
   h += gr('Take-up oranı dL/dθ', _frFs(T.takeupMmPerDeg, 4), 'mm/°', '<b>türev</b> — a·sinβ·2sin(φ/2)');
   h += gr('Yay momenti M(θ)', _frFs(T.springNm, 2), 'Nm', '<b>türev</b> — (4.2): M<sub>0</sub> + k·θ<sub>göreli</sub>');
   h += gr('Yay dengesinden gerginlik', _frF(T.tensionN, 0), 'N', '<b>türev</b> — (4.3): M/(dL/dθ)');
+  h += gr('<b>Tasarım gerginliği (ankraj)</b>', '<b>' + _frF(sys && sys.designTensionN, 0) + '</b>', 'N',
+          '<b>türev</b> — yay dengesinin ta kendisi; §8.11 zincirinin ankrajı');
   h += '</table>';
   h += '<div class="note"><span class="t">Take-up oranı bir girdi değildir</span>'
      + 'Panelde take-up diye bir alan yoktur ve olamaz: dL/dθ, kol boyu <b>a</b> (girdi) ile çözülmüş '
@@ -1291,59 +1291,44 @@ function _frOperatingPoint(R){
 }
 
 // ── Tasarım gerginliği: GİRİLEN ↔ TÜRETİLEN ───────────────────────────────
-// Bu iki sayı ayrı ayrı girilebiliyor ve çekirdek hangisinin doğru olduğunu
-// SORMUYOR: zinciri girilen değerden ankrajlıyor, yay dengesini yok sayıyor.
-// Uyuşmazlıkta bütün gerilmeler ve hubloadlar farkı kadar kayıyor; kayma
-// emniyeti bir ORAN olduğu için tabloya bakarak da anlaşılmıyor.
+// ── Tasarım gerginliğinin kaynağı ──────────────────────────────────────────
+// Bu bölüm eskiden İKİ KANALI karşılaştırıyordu: kullanıcının girdiği ankraj ve
+// yay dengesinden türetilen değer. Karşılaştırma anlamlıydı çünkü ankraj bir
+// GİRDİYDİ ve çeliştiğinde çekirdek girileni kullanıp yay dengesini yok
+// sayıyordu — bütün gerilmeler sessizce kayıyordu.
+//
+// Alan KALDIRILDI: tasarım gerginliği bağımsız bir veri değil. ÖLÇÜLDÜ (10
+// Gates raporu): girilen ile türeyen arasındaki fark en çok %0.12, RMS %0.08 —
+// tamamı yuvarlama, çünkü Gates tam sayı basıyor (766 ↔ 765.9). İki kanal
+// zaten tek kanaldı. Artık bölüm karşılaştırma değil KURULUŞ anlatıyor.
 function _frDesignTensionBlock(R){
   var sys = R.build && R.build.sys, A = R.analysis || {}, T = A.tensioner || {};
   if(!sys) return '';
-  var girilen = _frNum(sys.designTensionN);
   var yay = _frNum(R.build && R.build.springTensionN);
   if(!Number.isFinite(yay)) yay = _frNum(T.tensionN);
-  // Satır içi stil YOK: h4 kuralı şablon CSS'inde (h1–h4 aynı tipografi ailesi).
-  var h = '<h4>Tasarım gerginliği: girilen ankraj ↔ yay dengesinden türetilen</h4>';
-  h += '<p>Gerilme zinciri (§8.11) gergi kasnağından başlar ve <b>girilen</b> tasarım gerginliğine '
-     + 'ankrajlanır: \\( T_{\\text{gergi}} = T_{\\text{tasarım}} \\). Yay dengesi ise aynı gerginliği '
-     + (_frEqRef.T ? '(' + _frEqRef.T + ') ile ' : '') + '<b>bağımsız olarak</b> üretir. Doğru kurulmuş '
-     + 'bir modelde ikisi tutar; tutmuyorsa '
-     + 'sayfadan okunan bir değer yanlıştır.</p>';
-  h += '<table><caption>Tablo ' + _frTbl() + ' — İki kanalın karşılaştırması</caption>';
-  h += '<tr><th>Kanal</th><th>Değer [N]</th><th>Nereden</th></tr>';
-  h += '<tr><td class="l">Girilen tasarım gerginliği</td><td>' + _frF(girilen, 0)
-     + '</td><td class="l"><b>girdi</b> — Çözücü paneli; §8.11 zincirinin ankrajı</td></tr>';
-  h += '<tr><td class="l">Yay dengesinden türetilen</td><td>' + _frF(yay, 0)
-     + '</td><td class="l"><b>türev</b> — '
-     + (_frEqRef.f && _frEqRef.T ? '(' + _frEqRef.f + ')–(' + _frEqRef.T + '): ' : '')
-     + 'a, M<sub>0</sub>, k ve çözülmüş geometriden</td></tr>';
-  if(Number.isFinite(girilen) && Number.isFinite(yay) && yay > 0){
-    var fark = girilen - yay, pct = Math.abs(fark) / yay * 100;
-    var tol = (typeof VE_FEAD_TENSION_TOL !== 'undefined') ? VE_FEAD_TENSION_TOL * 100 : 2;
-    var ok = pct <= tol;
-    h += '<tr class="sum"><td class="l">Fark</td><td>' + _frFs(fark, 1) + ' (' + _frPct(pct, 1) + ')'
-       + '</td><td class="l">' + (ok ? '<span class="ok">✓ ' + _frPct(tol, 0) + ' eşiğinin içinde</span>'
-            : '<b style="color:#a8321f;">✗ ' + _frPct(tol, 0) + ' eşiğinin dışında</b>') + '</td></tr>';
-    h += '</table>';
-    if(!ok){
-      h += '<div class="note warn"><span class="t">Uyuşmazlık sessizdir</span>'
-         + 'Zincir <b>girilen</b> değerle ankrajlandığı için bütün açıklık gerilmeleri ve bütün '
-         + 'hubloadlar <b>' + _frFs(fark, 0) + ' N</b> kayar; hata mesajı çıkmaz. Kayma emniyeti '
-         + 'bir <em>oran</em> olduğundan (5.6) bu kaymayı ancak KISMEN gösterir: yük çekmeyen '
-         + 'kasnaklarda (avara, gergi) gerginlik oranı 1 olduğu için SF hiç değişmez, yalnız yük '
-         + 'çeken kasnaklarınki değişir. Hükmü veren en düşük SF çoğu düzende yük çekmeyen bir '
-         + 'kasnaktadır — yani §8.12\'nin hükmü uyuşmazlığa rağmen aynı kalabilir. '
-         + 'Yay künyesi doğruysa tasarım gerginliği <b>' + _frF(yay, 0) + ' N</b> olmalıdır.</div>';
-    } else {
-      h += '<div class="note check"><span class="t">İki kanal birbirini doğruluyor</span>'
-         + 'Girilen ankraj ile yay dengesinden türetilen gerginlik ' + _frPct(pct, 1) + ' içinde '
-         + 'örtüşüyor. Bu bir yuvarlama değil bir <b>denetimdir</b>: iki değer bağımsız yollardan '
-         + 'gelir — biri tedarikçi sayfasından okunur, öbürü kol boyu, yay künyesi ve çözülmüş '
-         + 'geometriden hesaplanır.</div>';
-    }
-  } else h += '</table>';
+  var h = '<h4>Tasarım gerginliği nereden geliyor</h4>';
+  h += '<p>Gerilme zinciri (§8.11) gergi kasnağından başlar ve tasarım gerginliğine ankrajlanır: '
+     + '\\( T_{\\text{gergi}} = T_{\\text{tasarım}} \\). Bu sayı <b>sorulmaz</b> — gergi kolunun '
+     + 'taşıyabileceği gerginlik yay dengesinden zaten belirlidir'
+     + (_frEqRef.T ? ' (' + _frEqRef.T + ')' : '') + ':</p>';
+  h += '<div class="eq">\\[ T_{\\text{tasarım}} \\;=\\; \\frac{M(\\theta)}{dL/d\\theta} '
+     + '\\;=\\; \\frac{M_0 + k\\,\\theta}{a\\,\\sin\\beta\\;2\\sin(\\varphi/2)} \\]</div>';
+  h += '<p>Sağdaki büyüklüklerin hiçbiri serbest değildir: <b>a</b>, <b>M<sub>0</sub></b> ve '
+     + '<b>k</b> gergi künyesinden okunur, <b>θ</b>, <b>φ</b> ve <b>β</b> ise çözülmüş '
+     + 'geometriden gelir (yukarıdaki envanter). Bu sistemde sonuç '
+     + '<b>' + _frF(yay, 0) + ' N</b>\'dur.</p>';
+  h += '<div class="note"><span class="t">Neden ayrıca sorulmuyor</span>'
+     + 'Bu değer bir tasarım tercihi değil, kurulan gerginin <em>sonucudur</em>. Ayrıca girdi olarak '
+     + 'istemek aynı bilgiyi ikinci kez ve <b>çelişebilir</b> biçimde sormak olurdu: çeliştiğinde '
+     + 'zincir girilen değerle ankrajlanır, bütün açıklık gerilmeleri ve hubloadlar farkı kadar '
+     + 'kayar ve hiçbir hata çıkmazdı. Kayma emniyeti bir <em>oran</em> olduğundan (5.6) bu kaymayı '
+     + 'ancak kısmen gösterir — yük çekmeyen kasnaklarda gerginlik oranı 1\'dir ve SF hiç değişmez. '
+     + 'Farklı bir gerginlik isteniyorsa değiştirilecek şey gergi <b>künyesidir</b> (yay ön yükü, '
+     + 'yay oranı, kol boyu), bir sayı alanı değil. '
+     + 'Tedarikçi sayfasında basılı bir tasarım gerginliği varsa yukarıdaki değerle karşılaştırınız: '
+     + 'ayrışıyorlarsa sayfadan okunan gergi künyesi ya da kasnak yerleşimi hatalıdır.</div>';
   return h;
 }
-
 // ── 8.9 — take-up: ANLIK TÜREV ile ORTALAMA EĞİM ayrı şeylerdir ────────────
 // Eski sürüm L(θ) eğrisinin uçtan uca ORTALAMA eğimini hesaplayıp ona
 // "take-up oranı" diyordu. ÖLÇÜLDÜ (BMC): ortalama eğim 0,4481 mm/°, çalışma

@@ -1927,18 +1927,26 @@ function getFeadSolverPropertiesHTML(node){
   if(!node.data) node.data = {};
   var build = veFeadBuildFromCanvas();
   var html = '<div class="sw-panel">';
+  // TASARIM GERGİNLİĞİ ALANI KALDIRILDI. Bağımsız bir veri değildi: gergi
+  // kolunun taşıdığı gerginlik yay dengesinden zaten belirli (T = M/(dL/dθ)) ve
+  // 10 Gates raporunda girilen değerle türeyen değer %0.12 içinde örtüşüyordu.
+  // Ayrıca sormak, aynı bilgiyi ikinci kez ve ÇELİŞEBİLİR biçimde istemekti;
+  // çeliştiğinde çekirdek girileni kullanıp yay dengesini yok sayıyordu ve
+  // bütün gerilmeler sessizce kayıyordu. Artık köprü türetiyor
+  // (veFeadBuildSystem, "ANKRAJ TÜRETİLİYOR"); okunacak yeri aşağıdaki
+  // Algılanan Model tablosu.
   html += _feadCard('Tasarım', '', 'var(--accent-primary)',
       _feadGrid(node, [
-        { key:'designTensionN', label:'Tasarım gerginliği [N]', ph:'765.7' },
-        { key:'lengthOffsetMm', label:'Boy ofseti [mm]',        ph:'0', step:'0.01' }
-      ], 2)
+        { key:'lengthOffsetMm', label:'Boy ofseti [mm]', ph:'0', step:'0.01' }
+      ], 1)
     + _feadSelect(node, 'Yorulma modeli', 'fatigueModel',
         [['PK-2_2p-MT3', 'PK-2_2p-MT3 (doğrulanmış, 8 sistem)'],
          ['PK-2_2a-MT3', 'PK-2_2a-MT3 (tek sistem — doğrulanmamış)']], 'PK-2_2p-MT3',
         'Gates raporunun "Pulley Contributions to Belt Rib Fatigue" başlığında yazan model adı. '
         + 'İki takım sabit çok farklı (m 5.6 ↔ 4.05); yanlış seçim yorulma dağılımını kaydırır.')
-    + _feadHint('<b>Tasarım gerginliği</b> gevşek span gerginliğidir; gerilme zinciri gergiye '
-        + 'bu değerle ankrajlanır. <b>Boy ofseti</b> tasarım başına kalibrasyon girdisidir '
+    + _feadHint('<b>Tasarım gerginliği sorulmaz</b> — gergi yay dengesinden türetilir '
+        + '(T = M/(dL/dθ)); değeri "Algılanan Model" tablosunda yazar. '
+        + '<b>Boy ofseti</b> tasarım başına kalibrasyon girdisidir '
         + '(kuralı bilinmiyor; gözlenen aralık −0.3 … +3.5 mm).'));
 
   html += veFeadDriveCard(node);
@@ -2154,6 +2162,15 @@ function veFeadModelTable(build){
   if(build.drive)
     h += satir('Tahrik oranı', _feadFmt(build.drive.ratio, 4)
       + (build.drive.mode === 'derive' ? ' (çaplardan)' : ' (elle)'), build.drive.ok);
+
+  // TÜRETİLEN TASARIM GERGİNLİĞİ. Panelde artık alan yok; kullanıcının hesabın
+  // hangi ankrajla kurulduğunu okuyacağı tek yer burası. Görünmezse "gerginlik
+  // nereden geldi" sorusu cevapsız kalır — bu modülde en pahalı sessizlik türü.
+  if(Number.isFinite(build.springTensionN) && build.springTensionN > 0)
+    h += satir('Tasarım gerginliği (türetildi)',
+      _feadFmt(build.springTensionN, 0) + ' N — yay dengesinden', true);
+  else if(build.ok)
+    h += satir('Tasarım gerginliği', 'türetilemedi', false);
 
   h += satir('Geometri', build.ok ? 'çözüldü' : 'çözülemedi', !!build.ok);
   return h + '</table>';

@@ -413,10 +413,10 @@ function _strSourceGet(nodeId){
 // `download` normalde HİÇ GÖRÜLMEZ: .wasm uygulamaya gömülü. Yalnız gömülü
 // varlık yoksa (eski tarayıcı → DecompressionStream yok) yedek yolda çıkar.
 var VE_STR_STAGE_TEXT = {
-  reader:   'Okuyucu hazırlanıyor',
-  download: 'STEP okuyucusu indiriliyor',
+  reader:   'Çekirdek hazırlanıyor',
   parse:    'Geometri çözümleniyor',
-  build:    'Sahne kuruluyor'
+  fuse:     'Katılar tek katıya birleştiriliyor',
+  build:    'Ağ örülüyor, sahne kuruluyor'
 };
 
 // Geçen süre sayacı — düğüm kimliğine göre. Sayacın AKMASI, "program çalışıyor"
@@ -457,24 +457,17 @@ function _strProgSet(nodeId, stage, info){
   var det = el.querySelector('[data-ve="detail"]');
   if(s) s.textContent = VE_STR_STAGE_TEXT[stage] || stage;
   if(!fill || !det) return;
-  if(stage === 'download' && info && info.pct != null){
-    // BELİRLİ: gerçekten bilinen tek yüzde.
-    fill.className = '';
-    fill.style.width = Math.max(2, Math.round(info.pct * 100)) + '%';
-    det.textContent = _strBytes(info.loaded) + ' / ' + _strBytes(info.total);
-  } else if(stage === 'download' && info && info.loaded){
-    // Toplam bilinmiyor ama İNDİRİLEN biliniyor — sayı akıyorsa kullanıcı
-    // işin ilerlediğini görür; sahte bir yüzdeye gerek yok.
-    fill.className = 'indet';
-    fill.style.width = '';
-    det.textContent = _strBytes(info.loaded) + ' indirildi';
-  } else {
+  {
+    // BELİRLİ (%) aşama YOK: ağdan indirme yolu kalktı, çekirdek gömülü.
+    // Belirsiz aşamalara uydurma bir yüzde koymak yalan olurdu; akan çubuk
+    // ve geçen süre sayacı var.
     fill.className = 'indet';
     fill.style.width = '';
     det.textContent = (info && info.fallback)
       ? 'worker açılamadı — ana iş parçacığında sürüyor'
-      : (stage === 'parse' ? 'worker\'da'
-      : (stage === 'reader' ? 'ilk içe aktarma — bir kez' : ''));
+      : (stage === 'parse' ? 'worker\'da — arayüz donmuyor'
+      : (stage === 'fuse' ? 'B-Rep birleştirme — gövde sayısıyla büyür'
+      : (stage === 'reader' ? 'ilk içe aktarma — bir kez' : '')));
   }
 }
 
@@ -919,6 +912,41 @@ function _strGeomImportCard(node){
   return h;
 }
 
+// "Katı" satırı — BİRLEŞTİRMEYİ AÇIKÇA ANLATIR.
+//
+// Çok gövdeli bir CAD dosyası tek katıya indiriliyor (kullanıcı kararı):
+// ağ örücüye tek su geçirmez hacim gitsin diye. Ama sonuç SESSİZ olamaz —
+// boolean başarısız olduysa panel "1 katı" deyip geçseydi, kullanıcı bunu
+// ancak ağ örerken, anlaşılmaz bir hatayla öğrenirdi.
+//
+// Hacim de yazılıyor ve iki hacim AYNI DEĞİLSE bu bir hata değil BİLGİ:
+// birleşim hacmi parçaların toplamından küçükse gövdeler ÜST ÜSTE BİNİYORDU
+// (ölçüldü: örnek brakette %6,1 — göbekler plakanın içine giriyor).
+function _strSolidHTML(g){
+  var f = g.fuse || null;
+  var n = (g.stats && g.stats.solidCount) || 1;
+  if(!f || !f.istendi){
+    return _strFmt(n) + ' <span style="color:var(--text-muted); font-weight:400;">(dosyada tek gövde — birleştirme gerekmedi)</span>';
+  }
+  if(!f.ok){
+    return '<span style="color:var(--accent-warning);">' + _strFmt(f.once) + ' ayrı katı</span>'
+         + ' <span style="color:var(--text-muted); font-weight:400;">— birleştirilemedi'
+         + (f.hata ? ' (' + _strEsc(f.hata) + ')' : '') + '; ağ örerken sorun çıkarabilir</span>';
+  }
+  var h = '<b>1</b> <span style="color:var(--text-muted); font-weight:400;">← '
+        + _strFmt(f.once) + ' gövde birleştirildi'
+        + (f.ms ? ' · ' + _strFmt(f.ms) + ' ms' : '') + '</span>';
+  var v0 = f.hacimOnce, v1 = f.hacimSonra;
+  if(isFinite(v0) && isFinite(v1) && v0 > 0){
+    var d = (v0 - v1) / v0 * 100;
+    h += '<br><span style="color:var(--text-muted); font-weight:400;">hacim '
+       + _strFmt(v1, 1) + ' mm³'
+       + (Math.abs(d) > 0.01 ? ' · gövdeler örtüşüyordu (%' + _strFmt(d, 1) + ' ortak hacim)' : ' · gövdeler yalnız değiyordu')
+       + '</span>';
+  }
+  return h;
+}
+
 function _strGeomInfoTable(g){
   var bb = g.bbox || {};
   var sz = bb.size || [];
@@ -931,7 +959,7 @@ function _strGeomInfoTable(g){
   h += row('Birim', 'mm <span style="color:var(--text-muted); font-weight:400;">(dosyanın kendi birimi okunup çevrildi)</span>');
   h += row('Ölçü (X×Y×Z)', _strFmt(sz[0], 2) + ' × ' + _strFmt(sz[1], 2) + ' × ' + _strFmt(sz[2], 2) + ' mm');
   h += row('Köşegen', _strFmt(bb.diag, 2) + ' mm');
-  h += row('Katı / kabuk', _strFmt(g.stats.meshCount));
+  h += row('Katı', _strSolidHTML(g));
   h += row('CAD yüzü', '<span style="color:var(--accent-warning);">' + _strFmt(g.stats.faceCount) + '</span>'
       + ' <span style="color:var(--text-muted); font-weight:400;">← sınır koşulları buraya bağlanacak</span>');
   h += row('Görüntü üçgeni', _strFmt(g.stats.triCount) + ' <span style="color:var(--text-muted); font-weight:400;">(FEA ağı değil)</span>');

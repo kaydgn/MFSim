@@ -10,8 +10,13 @@
  *
  *   'fixed'  kayış seçilmiş → kol, yolu o boya eşitleyen açıya oturur
  *                             (gerginlik ÇIKAR)
- *   'free'   kayış seçilmemiş → kol, tasarım gerginliğini veren açıya oturur
- *                             (kayış boyu ÇIKAR)
+ *   'free'   kayış seçilmemiş → kol, GERGİNİN NOMİNAL YAY YÜKÜNÜN açısına
+ *                             oturur (kayış boyu ÇIKAR)
+ *
+ * Serbest kipin ankrajı GERGİNLİK OLAMAZ: tasarım gerginliği artık bir girdi
+ * değil, yay dengesinden türüyor — hedef alsaydı döngü kurulurdu (gerginlik
+ * açıdan çıkıyor, açı gerginlikten). Nominal kol açısı ise salt yay
+ * künyesinden geliyor: rel = (M_mean − M₀)/k, geometriye hiç bakmadan.
  *
  * İkinci sözleşme: ÇÖZÜLEMEYEN BİR KÜME KALMAMALI. Kasnak konumu kanvastan
  * sürüklenebildiği için kullanıcı çözüm uzayına DIŞARIDAN giriyor; her ara
@@ -126,40 +131,72 @@ describe('SABİT kip — davranış birebir eskisi', () => {
 });
 
 describe('SERBEST kip — kayış boyu ÇIKTI', () => {
-  test('gerginlik tasarım değerinde tutulur, boy ondan çıkar', () => {
+  test('kol NOMİNAL yay yükünün açısında tutulur, boy ondan çıkar', () => {
     const r = coz(kur({ mode: 'free' }));
     expect(r.ok).toBe(true);
     expect(r.build.beltLengthDerived).toBe(true);
-    expect(r.T).toBeCloseTo(650, 1);              // ← ankraj, çıktı değil
-    expect(r.L).toBeCloseTo(1715.0, 1);           // ← BMC'nin kendi kayışı
+    // rel = (22.07 − 8.60)/0.480 = 28.0625° — salt yay künyesi, geometri YOK
+    expect(r.rel).toBeCloseTo(28.0625, 4);
+    expect(r.build.workPoint.nominalRelDeg).toBeCloseTo(28.0625, 4);
+    expect(r.build.workPoint.nominalFallback).toBe(false);
   });
 
-  // Bu, kipin varlık sebebi: BMC'nin 1715 mm'si tesadüf değil, bu yerleşimin
-  // 650 N'da gerektirdiği boy. İki kip aynı modelde AYNI cevaba varıyor.
-  test('doğru kurulmuş modelde iki kip AYNI çalışma noktasını veriyor', () => {
+  // BAĞIMSIZ DOĞRULAMA. Serbest kip kayış boyunu HİÇ görmeden hesaplıyor
+  // (girdi: kasnak koordinatları, çaplar, gergi künyesi) ve tedarikçi
+  // sayfasının kendi kayışını geri veriyor: 1715.27 ↔ 1715 mm, %0.016.
+  test('türetilen boy tedarikçi sayfasının kayışını geri veriyor', () => {
+    const r = coz(kur({ mode: 'free' }));
+    expect(r.L).toBeCloseTo(1715.27, 1);
+    expect(Math.abs(r.L - 1715) / 1715).toBeLessThan(0.0005);
+  });
+
+  // İKİ KİP AYNI YERE YAKINSIYOR ama ÖZDEŞ DEĞİL — ve fark anlamlı:
+  //   sabit  : kol 28.5090°, L 1715.0000 (GİRDİ), T 649.99 N
+  //   serbest: kol 28.0625°, L 1715.2673 (ÇIKTI), T 643.21 N
+  // 0.45°'lik açı farkı 1715'in YUVARLANMIŞ bir katalog boyu olmasından.
+  // Sabit kip "elimdeki boyla kol nerede oturur", serbest kip "kol nominalde
+  // otursun diye hangi boy gerekir" diyor. Aynı olmalarını beklemek, katalog
+  // yuvarlamasını yok saymak olurdu.
+  test('iki kip yakınsıyor ama fark KATALOG YUVARLAMASI kadar', () => {
     const a = coz(kur({ mode: 'fixed' }));
     const b = coz(kur({ mode: 'free' }));
-    expect(b.rel).toBeCloseTo(a.rel, 2);
-    expect(b.L).toBeCloseTo(a.L, 1);
-    expect(b.T).toBeCloseTo(a.T, 0);
+    expect(Math.abs(b.rel - a.rel)).toBeLessThan(0.5);
+    expect(Math.abs(b.L - a.L)).toBeLessThan(0.5);
+    expect(Math.abs(b.T - a.T) / a.T).toBeLessThan(0.02);
+    expect(b.L).not.toBe(a.L);                    // ÇIKTI ≠ GİRDİ
   });
 
   // ASIL KAZANÇ. Sabit kipte alternatörü 10 mm kaydırmak modeli çözülemez
   // yapıyordu; geometri kusursuz çözülüyor (Σsarım = 360.00°), çöken tek şey
   // "1715 mm bu düzene sığar mı" sorusuydu. Serbest kipte böyle bir hedef yok.
   test('kasnak SÜRÜKLENİRKEN çözüm kopmuyor — boy takip ediyor', () => {
+    // Kol nominal açıda SABİT; değişen kayış boyu ve — geometrinin gergiye
+    // verdiği mekanik avantaj değiştiği için — gerginlik.
     const beklenen = [
-      [-200, 2068.3], [-120, 1921.6], [-60, 1815.7], [-20, 1747.8],
-      [0, 1715.0], [20, 1683.2], [40, 1652.6],
+      [-200, 2095.44, 358.8], [-120, 1940.22, 405.7], [-60, 1825.93, 476.8],
+      [-20, 1751.58, 568.5], [0, 1715.27, 643.2], [20, 1679.74, 754.8],
+      [40, 1645.22, 933.9], [60, 1611.97, 1253.6],
     ];
-    beklenen.forEach(([dx, L]) => {
+    beklenen.forEach(([dx, L, T]) => {
       const r = coz(kur({ id: 'ex-ALT', dx, mode: 'free' }));
       expect({ dx, ok: r.ok }).toEqual({ dx, ok: true });
-      expect(r.L).toBeCloseTo(L, 0);
-      expect(r.T).toBeCloseTo(650, 1);            // gerginlik SABİT kalıyor
-      expect(r.build.workPoint.atLimit).toBeNull();
+      expect(r.rel).toBeCloseTo(28.0625, 4);      // kol NOMİNALDE duruyor
+      expect(r.L).toBeCloseTo(L, 1);
+      expect(r.build.sys.designTensionN).toBeCloseTo(T, 0);
+      expect(r.build.workPoint.atLimit).toBeNull();   // HİÇ kenetlenmiyor
       expect(r.build.geomValid).toBe(true);
     });
+  });
+
+  // Gerginlik sabit DEĞİL ve bu fizik: aynı yay açısında moment aynı
+  // (M = M₀ + k·θ) ama take-up geometriyle değişiyor (dL/dθ = a·sinβ·2sin(φ/2)),
+  // dolayısıyla T = M/(dL/dθ) da değişiyor. Sürükleme aralığında 3.5 kat.
+  test('aynı kol açısında gerginlik GEOMETRİYLE değişiyor', () => {
+    const T = [-200, 0, 60].map((dx) =>
+      coz(kur({ id: 'ex-ALT', dx, mode: 'free' })).build.sys.designTensionN);
+    expect(T[0]).toBeLessThan(T[1]);
+    expect(T[1]).toBeLessThan(T[2]);
+    expect(T[2] / T[0]).toBeGreaterThan(3);
   });
 
   test('gereken boy sürüklemeyle MONOTON değişiyor (fizik: uzaklaşan kasnak = uzun kayış)', () => {
@@ -193,22 +230,23 @@ describe('KENETLEME — hedef erişilemezse istisna değil, sınır', () => {
   // gerginlik fiziksel değil (ölçüldü: 4.15e10 N). Doğal çıkış noktası keyfî
   // bir eşik değil: T(rel) monoton arttığı için tasarım gerginliğini veren TEK
   // bir açı var; sığmayan kayışta anlamlı tek çalışma noktası odur.
-  test('sığmayan kayış → tasarım gerginliği konumuna düşer, sayılar FİZİKSEL kalır', () => {
+  test('sığmayan kayış → NOMİNAL kol açısına düşer, sayılar FİZİKSEL kalır', () => {
     const r = coz(kur({ id: 'ex-ALT', dx: -10, mode: 'fixed' }));
     expect(r.ok).toBe(true);
     const al = r.build.workPoint.atLimit;
     expect(al).not.toBeNull();
-    expect(al.resolvedAt).toBe('designTension');
-    expect(r.T).toBeCloseTo(650, 1);              // 4e10 DEĞİL
+    expect(al.resolvedAt).toBe('nominalArm');
+    expect(r.rel).toBeCloseTo(28.0625, 4);
+    expect(r.T).toBeCloseTo(602.4, 0);            // 4e10 DEĞİL
     expect(r.hub).toBeLessThan(2000);
   });
 
   test('düşülen konumda ÖNERİLEN kayış boyu yazılıyor — eyleme geçirilebilir cevap', () => {
     const r = coz(kur({ id: 'ex-ALT', dx: -10, mode: 'fixed' }));
     const al = r.build.workPoint.atLimit;
-    expect(al.suggestedBeltMm).toBeCloseTo(1731.3, 0);
+    expect(al.suggestedBeltMm).toBeCloseTo(1733.3, 0);
     const t = veFeadAtLimitText(al);
-    expect(t).toMatch(/1731[.,]3 mm/);
+    expect(t).toMatch(/1733[.,]3 mm/);
     expect(t).toMatch(/SERBEST/);
     // Önerilen boy, serbest kipin aynı yerleşimde bulduğu boyla AYNI olmalı —
     // iki yol tek cevaba varmazsa biri sessizce yanlış demektir.

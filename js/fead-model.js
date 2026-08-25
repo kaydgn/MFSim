@@ -206,10 +206,24 @@ function veFeadAngleMode(td){
 //              rel = solveArmForBeltLength(effLength)
 //
 //   'free'   Kayış henüz seçilmemiş — tasarım yapılıyor, kayış sonra tedarik
-//            edilecek. Kol, tasarım gerginliğini veren açıya oturur; GEREKEN
-//            KAYIŞ BOYU oradan ÇIKAR.
-//              rel        = solveArmForTension(designTensionN)
+//            edilecek. Kol, gerginin NOMİNAL YAY YÜKÜNÜN açısına oturur;
+//            GEREKEN KAYIŞ BOYU oradan ÇIKAR.
+//              rel        = (M_mean − M₀) / k            ← salt yay künyesi
 //              effLength := requiredBeltMm(rel)          ← ÇIKTI, girdi değil
+//
+//            ANKRAJ NEDEN GERGİNLİK DEĞİL: tasarım gerginliği artık bir girdi
+//            değil, yay dengesinden TÜRÜYOR (bkz. "ANKRAJ TÜRETİLİYOR").
+//            Serbest kip onu hedef alsaydı döngü kurulurdu — gerginlik açıdan
+//            çıkıyor, açı gerginlikten. Nominal yay yükü ise geometriye HİÇ
+//            bakmıyor: tedarikçi sayfasındaki "Spring Mean Load" (BMC: 22.07 Nm)
+//            ve yay künyesi (M₀, k) yeter. Fizik de bunu söylüyor: gergi kolu
+//            yayı nominal momentine kurulmuş halde çalışsın diye seçilir,
+//            kayış boyu da onu oraya oturtan boydur.
+//
+//            ÖLÇÜLDÜ (BMC): rel_nominal = (22.07 − 8.60)/0.480 = 28.06°;
+//            katalog kayışı 1715 mm ile çözülen açı 28.51°. Aradaki 0.45°,
+//            1715'in YUVARLANMIŞ bir katalog boyu olmasından — serbest kip
+//            "gereken boy" der, sabit kip "elimdeki boyla nerede oturur" der.
 //
 // SERBEST KİP "ÇÖZÜLEMEZ" BÖLGEYİ YAPISAL OLARAK KALDIRIYOR. Sabit kipte hedef
 // (kayış boyu) kolun erişebildiği aralığın DIŞINA düşebiliyor ve bu geometrik
@@ -248,16 +262,21 @@ function veFeadSolveArmClamped(sys, kind, target){
     out.error = 'Hesap çekirdeği yüklenmedi (js/fead-core.js).'; return out;
   }
   if(!Number.isFinite(target)){
-    out.error = (kind === 'tension') ? 'Tasarım gerginliği girilmedi (Çözücü panelinde).'
+    out.error = (kind === 'tension') ? 'Tasarım gerginliği çözülemedi.'
+              : (kind === 'arm')     ? 'Gergi kolunun nominal açısı çözülemedi.'
                                      : 'Kayış efektif boyu girilmedi (Kayış Özellikleri panelinde).';
     return out;
   }
-  var isT = (kind === 'tension');
+  var isT = (kind === 'tension'), isArm = (kind === 'arm');
   var lo = isT ? 1e-6 : 0, hi;
   try { hi = FEADCore.feasibleRelMax(sys); }
   catch(e){ out.error = veFeadTranslateError(e && e.message); return out; }
 
+  // 'arm' türünde hedefin KENDİSİ bir kol açısı; f birim fonksiyon. Ayrı bir
+  // yol yazmak yerine aynı kenetleme disiplininden geçiriyoruz ki "erişilebilir
+  // aralık" ve atLimit künyesi tek yerden üretilsin.
   var f = function(r){
+    if(isArm) return r;
     var st = FEADCore.tensionerState(sys, r);
     return isT ? st.tensionN : st.requiredBeltMm;
   };
@@ -270,7 +289,8 @@ function veFeadSolveArmClamped(sys, kind, target){
 
   if((flo - target) * (fhi - target) <= 0){
     try {
-      out.relDeg = isT ? FEADCore.solveArmForTension(sys, target, { hi: hi })
+      out.relDeg = isArm ? target
+                 : isT ? FEADCore.solveArmForTension(sys, target, { hi: hi })
                        : FEADCore.solveArmForBeltLength(sys, target, { hi: hi });
       out.ok = true;
       return out;
@@ -325,14 +345,21 @@ var VE_FEAD_MIN_TAKEUP_RATIO = 0.02;
 function veFeadAtLimitText(al){
   if(!al) return '';
   var f1 = function(x){ return (Math.round(x * 10) / 10).toFixed(1); };
+  if(al.kind === 'arm'){
+    return 'Gerginin nominal çalışma açısı (' + f1(al.target) + '°) bu yerleşimde '
+      + 'kolun erişebildiği aralığın dışında (0…' + f1(al.rangeMax) + '°). '
+      + 'Kol ' + f1(al.achieved) + '° konumuna kenetlendi ve gereken kayış boyu '
+      + 'oradan hesaplandı. Gergi künyesi (ön yük, yay katsayısı, çalışma '
+      + 'momenti) ya da kasnak yerleşimi bu gergiyle uyumlu değil.';
+  }
   if(al.kind === 'belt'){
     var fazla = al.target - al.achieved;
     return 'Seçilen kayış (' + f1(al.target) + ' mm) bu yerleşime '
       + f1(Math.abs(fazla)) + ' mm ' + (fazla > 0 ? 'UZUN' : 'KISA')
       + '. Gergi kolunun tüm gezinme aralığı (0…' + f1(al.relMaxDeg) + '°) '
       + f1(al.rangeMin) + '…' + f1(al.rangeMax) + ' mm karşılıyor. '
-      + (al.resolvedAt === 'designTension'
-          ? 'Çalışma noktası, tasarım gerginliğini veren kol açısına alındı; '
+      + (al.resolvedAt === 'nominalArm'
+          ? 'Çalışma noktası, gerginin nominal kol açısına alındı; '
             + 'bu yerleşim için gereken kayış ' + f1(al.suggestedBeltMm) + ' mm. '
             + 'Kayış boyunu SERBEST bırakırsanız bu değer doğrudan hesaplanır.'
           : 'Kol ' + (al.side === 'free' ? 'serbest' : 'yük stopu') + ' konumuna '
@@ -371,11 +398,22 @@ function veFeadViolationText(v){
 // Kayışın ÇALIŞMA NOKTASI — kipten bağımsız tek giriş noktası.
 // Döndürdüğü relDeg her zaman geçerlidir (kenetlenmiş olabilir), effLengthMm
 // serbest kipte TÜRETİLMİŞTİR.
-function veFeadWorkingPoint(sys, mode, designTensionN){
+function veFeadWorkingPoint(sys, mode, nominalRelDeg){
   var out = { mode: mode, relDeg: NaN, effLengthMm: NaN, derived: false,
-              atLimit: null, error: null };
+              atLimit: null, error: null, nominalRelDeg: nominalRelDeg,
+              nominalFallback: false };
   if(mode === 'free'){
-    var r = veFeadSolveArmClamped(sys, 'tension', designTensionN);
+    var hedef = _feadNum(nominalRelDeg, NaN);
+    // Gergi künyesinde çalışma momenti YOKSA nominal açı türetilemez. O zaman
+    // kolun gezinme aralığının ORTASI seçiliyor — otomatik gerginin tasarım
+    // kuralı da budur (iki yöne de pay kalsın: kayış uzadıkça kol kapanır,
+    // aşındıkça açılır). Uydurma bir sayı değil ama TÜRETİLMİŞ de değil:
+    // aşağıda ayrıca işaretleniyor ki kullanıcı künyeyi tamamlasın.
+    if(!Number.isFinite(hedef)){
+      try { hedef = FEADCore.feasibleRelMax(sys) / 2; out.nominalFallback = true; }
+      catch(e){ out.error = veFeadTranslateError(e && e.message); return out; }
+    }
+    var r = veFeadSolveArmClamped(sys, 'arm', hedef);
     if(!r.ok){ out.error = r.error; return out; }
     out.relDeg = r.relDeg; out.atLimit = r.atLimit; out.derived = true;
     try { out.effLengthMm = FEADCore.tensionerState(sys, r.relDeg).requiredBeltMm; }
@@ -387,7 +425,7 @@ function veFeadWorkingPoint(sys, mode, designTensionN){
   if(!b.ok){ out.error = b.error; return out; }
   out.relDeg = b.relDeg; out.atLimit = b.atLimit; out.effLengthMm = L;
 
-  // ── SEÇİLEN KAYIŞ SIĞMIYORSA: TASARIM GERGİNLİĞİ KONUMUNA DÜŞ ─────────
+  // ── SEÇİLEN KAYIŞ SIĞMIYORSA: NOMİNAL KOL AÇISINA DÜŞ ────────────────
   //
   // Kenetleme tek başına yetmiyordu ve sebebi fizikte: kolun uç konumu take-up
   // TEKİLLİĞİNE komşu (T = M/(dL/dθ), dL/dθ → 0). Oraya kenetlenince ÖLÇÜLDÜ:
@@ -395,22 +433,22 @@ function veFeadWorkingPoint(sys, mode, designTensionN){
   // kendi cevabı ama fiziksel değil, ve gerilme/hubload/ömür tablolarına
   // öylece sızıyordu.
   //
-  // Doğal çıkış noktası KEYFÎ BİR EŞİK DEĞİL: T(rel) monoton arttığı için
-  // tasarım gerginliğini veren TEK bir kol açısı var — serbest kipin zaten
-  // çözdüğü açı. Kayış sığmıyorsa fiziksel olarak anlamlı tek çalışma noktası
-  // odur, ve oradaki `requiredBeltMm` doğrudan "hangi kayışı ısmarlamalıyım"
-  // sorusunun cevabı. Yani sabit kip, sığmayan bir kayışta serbest kipin
-  // cevabına düşüyor ve FARKI söylüyor.
-  if(b.atLimit && Number.isFinite(designTensionN) && designTensionN > 0){
-    var alt = veFeadSolveArmClamped(sys, 'tension', designTensionN);
+  // Doğal çıkış noktası KEYFÎ BİR EŞİK DEĞİL: gerginin künyesi kolun nominal
+  // çalışma açısını zaten söylüyor (yay çalışma momenti). Kayış sığmıyorsa
+  // fiziksel olarak anlamlı tek çalışma noktası odur — serbest kipin bulduğu
+  // açının aynısı — ve oradaki `requiredBeltMm` doğrudan "hangi kayışı
+  // ısmarlamalıyım" sorusunun cevabı. Yani sabit kip, sığmayan bir kayışta
+  // serbest kipin cevabına düşüyor ve FARKI söylüyor.
+  if(b.atLimit && Number.isFinite(nominalRelDeg)){
+    var alt = veFeadSolveArmClamped(sys, 'arm', nominalRelDeg);
     if(alt.ok && !alt.atLimit){
       try {
         var stA = FEADCore.tensionerState(sys, alt.relDeg);
         out.relDeg = alt.relDeg;
-        out.fallback = 'designTension';
+        out.fallback = 'nominalArm';
         out.suggestedBeltMm = stA.requiredBeltMm;
         out.atLimit = Object.assign({}, b.atLimit, {
-          resolvedAt: 'designTension',
+          resolvedAt: 'nominalArm',
           suggestedBeltMm: stA.requiredBeltMm,
           tensionN: stA.tensionN,
           degenerate: false
@@ -676,11 +714,10 @@ var VE_FEAD_EXAMPLES = {
         + 'Kayış 8PK/EPDM, efektif boy 1715 mm, servis faktörü 1.3.',
     belt:  { profile:'PK', brand:'GATES', beltType:'8PK 1715', ribs:8,
              effLength:1715, tolerance:0, wearPct:0 },
-    // designTensionN SAYFADA YOK: sayfa gevşek span gerginliğini vermiyor.
-    // 650 N uydurma bir sayı değil — bu sistemin GERGİ YAY DENGESİNDEN çıkan
-    // değer (22.28 Nm / take-up). Tutarsız bir sayı bütün gerilmeleri kaydırır,
-    // bkz. veFeadBuildSystem'deki tutarlılık uyarısı.
-    solver:{ designTensionN:650, crankOD:197.32, fanOD:179.62, ratioMode:'derive',
+    // Tasarım gerginliği burada YOK ve olmamalı: sayfa da vermiyor, model de
+    // sormuyor. Yay dengesinden türetiliyor ve bu sistemde 650 N çıkıyor
+    // (22.28 Nm / 0.5984 mm/°) — fead-example.test.js bunu çıpalıyor.
+    solver:{ crankOD:197.32, fanOD:179.62, ratioMode:'derive',
              cylinders:6, serviceFact:1.3, crankInertia:0.70,
              accelRpmS:1000, decelRpmS:1000, lengthOffsetMm:0,
              // Sayfadaki Duty Cycle tablosu (% ↔ Engine RPM); %0'lık 3000 satırı
@@ -884,7 +921,10 @@ var VE_FEAD_ERROR_MAP = [
   [/kasnagi icin od \(dis cap\)/i, 'Bir kasnağın dış çapı girilmedi.'],
   [/kasnagi icin x,y gerekli/i, 'Bir kasnağın konumu (X / Y) girilmedi.'],
   [/belt\.effLength gerekli/i, 'Kayış efektif boyu girilmedi (Kayış Özellikleri panelinde).'],
-  [/designTensionN veya slackN gerekli/i, 'Tasarım gerginliği girilmedi (Çözücü panelinde).'],
+  // Tasarım gerginliği artık sorulmuyor, türetiliyor — bu hata "girilmedi"
+  // demek yerine türetmenin neden yapılamadığını göstermeli.
+  [/designTensionN veya slackN gerekli/i,
+   'Tasarım gerginliği yay dengesinden türetilemedi (gergi yay künyesi veya kol geometrisi eksik).'],
   [/bilinmeyen kayis profili/i, 'Kayış profili tanınmıyor (PK / PJ / PH / PL / PM).'],
   [/markasi yok/i, 'Bu kayış profilinde seçilen marka yok.'],
   [/hedef .* erisilebilir araligin disinda/i,
@@ -1066,9 +1106,10 @@ function veFeadBuildSystem(nodeList, connList){
   if(armM > 0) cfgTen.pulleyMassKg = armM;
 
   // ── Çözücü / tasarım ──
-  var design = _feadNum(sd.designTensionN, NaN);
-  if(!Number.isFinite(design) || !(design > 0))
-    out.errors.push('Tasarım gerginliği girilmedi (Çözücü panelinde).');
+  // TASARIM GERGİNLİĞİ ARTIK SORULMUYOR. Bağımsız bir veri değil: geometri ve
+  // yay künyesi verildiğinde gergi kasnağının taşıdığı gerginlik zaten
+  // belirlidir (T = M/(dL/dθ)). Sistem kurulduktan SONRA türetilip
+  // sys.designTensionN'e yazılıyor — bkz. "ANKRAJ TÜRETİLİYOR" bloğu.
   var dr = veFeadDriveRatio(sd);
   out.drive = dr;
   var driveRatio = dr.ratio;
@@ -1076,7 +1117,7 @@ function veFeadBuildSystem(nodeList, connList){
 
   var cfg = {
     pulleys: cfgPulleys, belt: cfgBelt, tensioner: cfgTen,
-    designTensionN: Number.isFinite(design) ? design : undefined,
+    designTensionN: undefined,          // aşağıda türetilir
     driveRatio: driveRatio,
     lengthOffsetMm: _feadNum(sd.lengthOffsetMm, 0),
     // Kapanma ve temizlik ihlalleri artık istisna DEĞİL, taşınan birer ihlal.
@@ -1148,7 +1189,10 @@ function veFeadBuildSystem(nodeList, connList){
   // uca kenetleniyor ve sebebi `atLimit` ile taşınıyor. Bu yüzden aşağıdaki
   // bütün zincir (konum tablosu, gerilme, ömür, rapor) girdiden bağımsız
   // olarak ÇALIŞIR — "çözülemez" diye bir küme kalmıyor.
-  var wp = veFeadWorkingPoint(sys, beltMode, cfg.designTensionN);
+  // Nominal kol açısı SALT YAY KÜNYESİNDEN çıkar (M_mean, M₀, k) — geometriye
+  // bakmaz, dolayısıyla ankrajın türetilmesiyle döngü kurmaz.
+  var nomRel = veFeadTensionerMount(td).relMeanDeg;
+  var wp = veFeadWorkingPoint(sys, beltMode, nomRel);
   out.workPoint = wp;
   if(wp.error){ out.errors.push(wp.error); return out; }
 
@@ -1185,51 +1229,52 @@ function veFeadBuildSystem(nodeList, connList){
   out.sys = sys;
   out.ok = true;
 
-  // ── TASARIM GERGİNLİĞİ ↔ YAY DENGESİ TUTARLILIĞI ────────────────────────
-  // designTensionN gerilme zincirinin gergideki ANKRAJIDIR; gergi kasnağının
-  // iki spanı bu değeri taşır. Ama gergi kasnağının taşıyabileceği gerginlik
-  // yay dengesinden ZATEN BELLİ (moment / take-up). İkisi ayrı ayrı
-  // girildiğinde çekirdek hangisinin doğru olduğunu sormaz: zinciri
-  // designTensionN'den kurar ve yay dengesini yok sayar.
+  // ── ANKRAJ TÜRETİLİYOR — tasarım gerginliği bir GİRDİ DEĞİL ───────────────
   //
-  // ÖLÇÜLDÜ (BMC örneği): yay dengesi 650 N iken designTensionN 400 girilince
-  // 800 rpm'de çıkış gerilmeleri 1122/906/400 çıkıyor; doğru değerle
-  // 1372/1156/650. Yani TÜM gerilmeler ve hubload'lar 250 N kayıyor, hata
-  // mesajı yok. (Kayma emniyeti bir ORAN olduğu için değişmiyor — tabloya
-  // bakarak da anlaşılmıyor.) Gates raporlarında iki değer zaten tutuyor;
-  // uyuşmazlık kullanıcının elle girdiği bir sayının işareti.
-  // NOT: meanRel yukarıda çalışma noktasıyla tohumlandığı için burada
-  // kenetlenmiş açı okunur — kenetli bir modelde de tutarlılık kontrolü çalışır.
+  // Gerilme zinciri gergi kasnağında ankrajlanır: T[gergi] = designTensionN ve
+  // bütün span gerilmeleri, hubloadlar, kayma emniyetleri ondan kurulur. Bu
+  // sayı eskiden Çözücü panelinden SORULUYORDU — ama bağımsız bir veri değil:
+  // gergi kolunun taşıyabileceği gerginlik yay dengesinden zaten belirli.
+  //
+  //     T = M(θ) / (dL/dθ),   M = M₀ + k·θ,   dL/dθ = a·sinβ·2sin(φ/2)
+  //
+  // Sağdaki her şey ya girdidir (kol boyu a, yay künyesi M₀/k) ya da çözülmüş
+  // geometriden gelir (θ, φ, β). Ayrıca sormak aynı bilgiyi İKİNCİ KEZ ve
+  // ÇELİŞEBİLİR biçimde istemek demekti; çekirdek çeliştiğinde hangisinin
+  // doğru olduğunu sormuyor, girileni kullanıp yay dengesini yok sayıyordu.
+  //
+  // ÖLÇÜLDÜ (10 Gates raporu, girilen ↔ türeyen): en büyük fark %0.12, RMS
+  // %0.08 — farkların tamamı yuvarlama (Gates tam sayı basıyor: 766 ↔ 765.9).
+  // Yani iki sayı zaten aynı sayıydı. Türetilmiş ankrajla 2095 değerlik
+  // doğrulama kapısı GEÇİYOR: çalışma sapması %0.328 → %0.391 (eşik %0.5),
+  // Load ve kol açısı hiç değişmiyor. O 0.06 puan Gates'in kendi zincirini
+  // YUVARLANMIŞ tam sayıyla ankrajlamasından geliyor, model hatasından değil.
+  //
+  // Türetme BAŞARISIZ olursa ankraj yoktur ve gerilme hesabı yapılamaz. Bunu
+  // sessizce geçmiyoruz: uyarı düşer, çekirdek de kendi açık hatasını verir.
+  // (out.ok true kalır ki yarım modelde kayış yolu kartı çizilmeye devam
+  // etsin — kart gerginlik değil geometri gösteriyor.)
+  //
+  // NOT (kayış kipi): `meanRel` yukarıda ÇALIŞMA NOKTASIYLA tohumlandığı için
+  // burada okunan açı kipin bulduğu açıdır — sabit kipte kayış boyundan,
+  // serbest kipte gerginin nominal yay yükünden. Kenetlenmiş bir modelde de
+  // ankraj o kenetli açıdan türer, yani gerilme zinciri her durumda kurulur.
   try {
     var mrTut = FEADCore.meanRel(sys);
     var tsTut = FEADCore.tensionerState(sys, mrTut);
     if(tsTut && Number.isFinite(tsTut.tensionN) && tsTut.tensionN > 0){
       out.springTensionN = tsTut.tensionN;
-      var dsg = _feadNum(cfg.designTensionN, NaN);
-      // SERBEST KİPTE BU UYARI ANLAMSIZDIR: kol zaten tasarım gerginliğini
-      // veren açıya oturtuluyor, yani iki değer TANIM GEREĞİ eşit. Uyarıyı
-      // orada da basmak, kullanıcıya kendi kurduğumuz özdeşliği hata diye
-      // göstermek olurdu. (Kenetlenmişse fark gerçek — ama onu atLimit
-      // zaten kendi diliyle yazdı.)
-      if(beltMode === 'free') dsg = NaN;
-      // Kenetlenmiş bir çalışma noktasında yay dengesi zaten uç konumun
-      // (çoğu zaman tekilliğe komşu) değeridir; onu "uyuşmuyor" diye basmak
-      // atLimit'in söylediği tek sebebi ikinci kez, üstelik anlamsız bir
-      // sayıyla tekrar etmek olurdu.
-      if(wp && wp.atLimit) dsg = NaN;
-      if(Number.isFinite(dsg) && dsg > 0){
-        var sapma = Math.abs(dsg - tsTut.tensionN) / tsTut.tensionN;
-        if(sapma > VE_FEAD_TENSION_TOL)
-          out.warnings.push('Tasarım gerginliği (' + dsg.toFixed(0) + ' N) gergi yay '
-            + 'dengesinden çıkan gerginlikle (' + tsTut.tensionN.toFixed(0) + ' N) '
-            + 'uyuşmuyor — fark ' + (sapma * 100).toFixed(0) + '%. Gerilme zinciri '
-            + 'GİRDİĞİNİZ değerle ankrajlanır, yani bütün gerilmeler ve hubloadlar '
-            + (dsg > tsTut.tensionN ? '' : '−') + Math.abs(dsg - tsTut.tensionN).toFixed(0)
-            + ' N kayar. Yay künyesi doğruysa tasarım gerginliğini '
-            + tsTut.tensionN.toFixed(0) + ' N yapın.');
-      }
+      sys.designTensionN = tsTut.tensionN;
+      cfg.designTensionN = tsTut.tensionN;      // cfg ile sys ayrışmasın
+    } else {
+      out.warnings.push('Tasarım gerginliği yay dengesinden türetilemedi; '
+        + 'gerilme, hubload ve ömür hesaplanamaz. Gergi yay künyesini (ön yük, '
+        + 'yay katsayısı) ve kol geometrisini kontrol edin.');
     }
-  } catch(e){ /* tutarlılık kontrolü çözümü engellemez */ }
+  } catch(e){
+    out.warnings.push('Tasarım gerginliği yay dengesinden türetilemedi: '
+      + veFeadTranslateError(e && e.message));
+  }
 
   if(sys._senseAuto)
     out.warnings.push('Gergi dönüş yönü (sense) verilmedi; çekirdek kayışın kısaldığı yönden '

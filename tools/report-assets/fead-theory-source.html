@@ -336,7 +336,9 @@ $$ P_{\text{sürücü}} = \sum_{\text{aksesuar}} P_i $$
   <span class="t">Zincirin mutlak seviyesi: tasarım gerginliği</span>
   Yukarıdaki bağıntılar gerginliğin kasnaktan kasnağa <em>nasıl değiştiğini</em> verir, <strong>mutlak seviyesini vermez</strong>. Seviye tek bir <strong>ankraj</strong> değerinden gelir: gergi kasnağının taşıdığı gerginlik, yani <strong>tasarım gerginliği</strong> \( T_{\text{tasarım}} \). Zincir \( T_{\text{gergi}} = T_{\text{tasarım}} \) alınarak serpantin sırasında ilerletilir.
   <br><br>
-  Bu değer <strong>bir girdidir</strong> — tedarikçi sayfasından okunur. Aynı gerginliği gergi yay dengesi (4.3) ile <strong>bağımsız olarak</strong> da üretir; doğru kurulmuş bir modelde ikisi örtüşür. Örtüşmüyorsa çekirdek <strong>girilen</strong> değeri kullanır ve tüm gerginlikler ile hubload'lar aradaki fark kadar kayar. Kayma emniyeti bir <em>oran</em> olduğu için (5.6) bu kaymayı göstermez; bu yüzden Bölüm 8.7 iki kanalı yan yana basar ve farkı hüküm olarak verir.
+  Bu değer <strong>sorulmaz, türetilir</strong>: gergi kolunun taşıyabileceği gerginlik yay dengesinden (4.3) zaten belirlidir — \( T_{\text{tasarım}} = M(\theta)/(dL/d\theta) \). Sağdaki büyüklüklerin hiçbiri serbest değildir; kol boyu ile yay künyesi girdidir, kol açısı, sarım ve fark açısı ise çözülmüş geometriden gelir. Kuruluşu Bölüm 8.7'de adım adım verilir.
+  <br><br>
+  Bir zamanlar ayrıca girdi olarak da isteniyordu ve bu, aynı bilgiyi ikinci kez ve <strong>çelişebilir</strong> biçimde sormak anlamına geliyordu: çeliştiğinde zincir girilen değerle ankrajlanır, tüm gerginlikler ile hubload'lar aradaki fark kadar kayar ve hiçbir hata çıkmazdı. Kayma emniyeti bir <em>oran</em> olduğu için (5.6) bu kaymayı ancak kısmen gösterir — yük çekmeyen kasnaklarda gerginlik oranı 1'dir ve emniyet hiç değişmez. On tedarikçi raporunda girilen ile türetilen değer arasındaki fark en çok %0,12 ölçülmüştür; iki kanal zaten tek kanaldı. Farklı bir gerginlik isteniyorsa değiştirilecek olan gergi <strong>künyesidir</strong> (yay ön yükü, yay oranı, kol boyu), bir sayı alanı değil.
 </div>
 <div class="note check">
   <span class="t">Sürücü gücü girilmez, hesaplanır</span>

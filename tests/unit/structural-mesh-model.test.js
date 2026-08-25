@@ -35,7 +35,26 @@ global.veStrRemeshMesh = veStrRemeshMesh;
 global.veStrMeshQuality = veStrMeshQuality;
 global.veStrSurfaceVolume = veStrSurfaceVolume;
 
-const OCCT_WASM = new Uint8Array(fs.readFileSync(path.join(ROOT, 'vendor/occt-import-js.wasm')));
+// OCCT çekirdeği artık opencascade.js (boolean'lı) ve vendor'da GZİP'Lİ duruyor
+// — 62,8 MB ham depoya konmaz. Fabrika da `require` ile alınamıyor (glue ne ESM
+// ne CJS; tarayıcıda global `opencascade` bırakıyor), bu yüzden bir vm bağlamında
+// aynı şekilde üretilip `opts.factory` ile veriliyor.
+const vm = require('vm');
+const zlib = require('zlib');
+const OCCT_WASM = zlib.gunzipSync(fs.readFileSync(path.join(ROOT, 'vendor/opencascade.wasm.gz')));
+const OCCT_FACTORY = (function(){
+  const glue = fs.readFileSync(path.join(ROOT, 'vendor/opencascade.js'), 'utf8');
+  const util = require('util');
+  const sb = { console, process, require, Buffer, URL, performance,
+               TextDecoder: global.TextDecoder || util.TextDecoder,
+               TextEncoder: global.TextEncoder || util.TextEncoder,
+               __filename: path.join(ROOT, 'vendor/opencascade.js'),
+               __dirname: path.join(ROOT, 'vendor') };
+  sb.global = sb;
+  vm.createContext(sb);
+  vm.runInContext(glue + '\n;globalThis.__oc = opencascade;', sb);
+  return sb.__oc;
+})();
 const TET_WASM = new Uint8Array(fs.readFileSync(path.join(ROOT, 'vendor/tetgen-wasm.wasm')));
 const VeTetGenModule = require('../../vendor/tetgen-wasm.js');
 
@@ -48,7 +67,8 @@ let geom, mesh;
 
 beforeAll(async () => {
   geom = await geomModel.veStrImportStep(stepBytes('rounded-cube.step'),
-    { fileName: 'rounded-cube.step', fileSize: 1 }, { wasmBinary: OCCT_WASM });
+    { fileName: 'rounded-cube.step', fileSize: 1 },
+    { factory: OCCT_FACTORY, wasmBinary: OCCT_WASM, noWorker: true });
   expect(geom.ok).toBe(true);
   mesh = await meshModel.veStrBuildMesh(geom, { targetLen: 2.0, remeshIterations: 6 },
     { factory: tetFactory, noWorker: true });
@@ -283,7 +303,6 @@ describe('çok katılı montaj', () => {
 // indirilip kullanılıyor, yanında vendor/ olmayan bir kurulumda ağ üreteci
 // hiç çalışmazdı.
 describe('gömülü TetGen .wasm varlığı', () => {
-  const zlib = require('zlib');
   const ASSET = path.join(ROOT, 'js/structural-tetgen-wasm.js');
   const VENDOR = path.join(ROOT, 'vendor/tetgen-wasm.wasm');
 

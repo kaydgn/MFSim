@@ -1084,9 +1084,9 @@ describe('modül kablolaması eksiksiz', () => {
   // Vendorlu okuyucu, köprü, görüntüleyici ve panel kancası. Biri düşerse
   // panel yine açılır ve "içe aktar" düğmesi yine görünür — ama basınca
   // HİÇBİR ŞEY olmaz. Sessiz kırılma tam olarak bu kapının konusu.
-  test('index.html: STEP okuyucusu, köprü ve 3B görüntüleyici yüklü', () => {
+  test('index.html: OCCT çekirdeği, köprü ve 3B görüntüleyici yüklü', () => {
     const s = oku('index.html');
-    expect(s).toContain('src="vendor/occt-import-js.js"');
+    expect(s).toContain('src="vendor/opencascade.js"');
     expect(s).toContain('src="js/structural-model.js"');
     expect(s).toContain('src="js/cp-structural-viewer.js"');
   });
@@ -1141,21 +1141,32 @@ describe('modül kablolaması eksiksiz', () => {
       .toBeGreaterThan(css.indexOf('.ve-properties.ve-properties--wide'));
   });
 
-  test('vendorlu okuyucu ve .wasm depoda duruyor', () => {
-    // .wasm 7.3 MB ve tek dosya build'ine GÖMÜLMÜYOR (boyut + LGPL-2.1);
-    // çalışma anında yanından çekiliyor. Depoda yoksa özellik hiç çalışmaz.
-    expect(fs.existsSync(path.join(ROOT, 'vendor/occt-import-js.js'))).toBe(true);
-    expect(fs.existsSync(path.join(ROOT, 'vendor/occt-import-js.wasm'))).toBe(true);
-    // LGPL-2.1 → lisans metni dağıtımla birlikte durmak zorunda.
+  test('vendorlu çekirdek, .wasm ve LİSANS depoda duruyor', () => {
+    // Çekirdek tek dosyaya GÖMÜLÜYOR (çevrimdışı çalışmanın şartı), ama
+    // kaynağı depoda kalmak zorunda: gömülü varlığın kaynağı ve LGPL-2.1'in
+    // "kütüphane değiştirilebilir olmalı" koşulunun karşılığı. 62,8 MB ham
+    // depoya konmaz → gzip'li duruyor.
+    expect(fs.existsSync(path.join(ROOT, 'vendor/opencascade.js'))).toBe(true);
+    expect(fs.existsSync(path.join(ROOT, 'vendor/opencascade.wasm.gz'))).toBe(true);
     expect(fs.existsSync(path.join(ROOT, 'vendor/license.occt.txt'))).toBe(true);
-    expect(fs.existsSync(path.join(ROOT, 'vendor/license.occt-import-js.txt'))).toBe(true);
+    expect(fs.existsSync(path.join(ROOT, 'vendor/license.opencascade-js.txt'))).toBe(true);
+    // Eski okuyucu tamamen KALKTI — iki OCCT taşımanın karşılığı yok.
+    expect(fs.existsSync(path.join(ROOT, 'vendor/occt-import-js.js'))).toBe(false);
   });
 
-  test('CI deploy .wasm\'i Pages\'e kopyalıyor — yoksa yayında 404', () => {
-    // build.js vendor JS'lerini inline ediyor ama bir WASM ikilisi script
-    // etiketine giremez; deploy adımı yalnız MFSim_Code.html kopyalıyordu.
+  test('CI deploy kütüphaneyi Pages\'e kopyalıyor — LGPL-2.1 gereği', () => {
     const yml = oku('.github/workflows/ci-deploy.yml');
-    expect(yml).toContain('_site/vendor/occt-import-js.wasm');
+    expect(yml).toContain('_site/vendor/opencascade.wasm.gz');
+    expect(yml).toContain('_site/vendor/license.opencascade-js.txt');
+  });
+
+  test('gömülü varlık BUILD\'de üretiliyor — bayat kalma sınıfı yok', () => {
+    // Varlık git'e dahil değil; `npm run build` her seferinde vendor'dan
+    // yeniden üretiyor. Bu adım build zincirinden düşerse modüler sayfa
+    // (index.html) çalışma anında "gömülü varlık sayfada yok" der.
+    const pkg = JSON.parse(oku('package.json'));
+    expect(pkg.scripts.build).toContain('build-occt-wasm-asset.js');
+    expect(oku('.gitignore')).toMatch(/^js\/structural-occt-wasm\.js$/m);
   });
 
   test('cp-core.js: Geometri geniş panel + 3B görüntüleyici kancası', () => {
