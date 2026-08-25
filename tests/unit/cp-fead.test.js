@@ -1530,3 +1530,31 @@ describe('durum şeridi — aynalanmış çevrim', () => {
     expect(h).toMatch(/✗/);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+//  TASARIM GERGİNLİĞİ PANELDE SORULMUYOR
+// ════════════════════════════════════════════════════════════════════════════
+// Alan kaldırıldı çünkü bağımsız bir veri değildi (10 Gates raporunda girilen ↔
+// türeyen farkı %0.12). Geri gelirse sessiz kayma sınıfı da geri gelir: girilen
+// bir sayı zinciri ankrajlar, bütün gerilmeler kayar ve kayma emniyeti bir ORAN
+// olduğu için tablodan anlaşılmaz.
+describe('Çözücü paneli tasarım gerginliği SORMUYOR', () => {
+  test('panelde designTensionN alanı yok', () => {
+    const node = { id: 'sv', type: 'fead-solver', def: componentDefs['fead-solver'], data: {} };
+    const html = fead.getFeadSolverPropertiesHTML(node);
+    expect(html).not.toMatch(/designTensionN/);
+    expect(html).not.toMatch(/Tasarım gerginliği \[N\]/);
+    // yerine nereden geldiği YAZILI olmalı
+    expect(html).toMatch(/Tasarım gerginliği sorulmaz/);
+  });
+
+  test('Algılanan Model tablosu TÜRETİLEN değeri gösteriyor', () => {
+    const ex = veFeadExampleNodes('BMC_FEAD_2026');
+    ex.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const build = veFeadBuildSystem(ex.nodes, ex.connections);
+    const h = fead.veFeadModelTable(build);
+    expect(h).toMatch(/Tasarım gerginliği \(türetildi\)/);
+    expect(h).toContain(Math.round(build.springTensionN).toString());
+    expect(h).toMatch(/yay dengesinden/);
+  });
+});
