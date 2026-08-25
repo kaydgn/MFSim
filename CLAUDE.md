@@ -8,6 +8,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/` — Modüler JavaScript dosyaları
 - `css/` — Stiller
 - `build.js` — Build script (`index.html` + `js/` + `css/` → `MFSim_Code.html`)
+- `js/fead-belts.js` — FEAD kayış kataloğu (5 profil, 244 stok boy + otomotiv
+  ızgarası). DOM'suz saf veri; ISO 9982 / DIN 7867, üretici kataloglarından çıkarıldı.
 - `js/structural-materials.js` — Yapısal Analiz malzeme kütüphanesi (112 kayıt / 16 aile,
   DOM'suz saf veri + arama). Değerler standartların NOMİNAL değerleridir, sertifika değil.
 - `js/structural-occt-wasm.js` — **Üretilen, git'e DAHİL DEĞİL**: OCCT çekirdeğinin
@@ -318,9 +320,51 @@ davranışa etkisi YOK.
 kenetlemeye düşüyor; ön-kontrol sıcak yolda istisna kurmayı önleyen bir hızlı
 yol, bağımsız gözlenebilir bir davranış değil.
 
-**Sırada:** kayış kipinin topoloji yüzeyi (basit sabit/serbest seçici) ve sabit
-kipte **programa kayıtlı kayış boyları** kataloğu — bugün katalogda standart
-boy YOK, `BELT_DB` yalnız profil sabitlerini (hb/hr/kütle) taşıyor.
+##### Katalog — `js/fead-belts.js` (5 profil, 244 stok boy + otomotiv ızgarası)
+
+`BELT_DB` (çekirdek) yalnız profil SABİTLERİNİ taşıyor (hb/hr/kütle); standart
+BOYLAR ayrı bir katalog katmanında ve DOM'suz (`structural-materials.js` kalıbı).
+
+**KATALOG BİR KISIT DEĞİL, BİR ÖNERİ.** Kullanıcının akışı tasarımdan tedariğe
+gidiyor ve Optibelt kataloğu da bunu yazıyor: *"Further dimensions and minimum
+order quantities on request"* + ayrı bir *"Intermediate lengths"* satırı. Ara
+boy ısmarlanabiliyor, dolayısıyla panel elle girişi engellemiyor.
+
+**İKİ KÜME AYRI ve karıştırılmıyor:**
+
+| Küme | Ne | Nereden |
+|------|-----|---------|
+| `VE_FEAD_BELT_STOCK` | ISO 9982 / DIN 7867 endüstriyel boylar (PH 37 · PJ 71 · PK 62 · PL 47 · PM 27) | Optibelt "product range" kataloğunun RB bölümü, `profile and Lb (mm)` tablolarından birebir |
+| `VE_FEAD_BELT_GRID` | Otomotiv pratiği — bir **KURAL** (5 mm adım), liste değil | piyasa taraması (1700·1705·1706·1707·1710·1714·1715·1720·1725) |
+
+**AYRIMIN SEBEBİ ÖLÇÜLDÜ:** BMC'nin kendi kayışı **8PK 1715 endüstriyel stok
+listesinde YOK** — komşuları 1690 ve 1755, yani **65 mm'lik boşluk**. Yalnız
+stok listesi katalog sayılsaydı kullanıcının elindeki kayış "katalogda yok"
+görünürdü. Izgara ise onu **tam** veriyor.
+
+Izgara neden liste değil: 5 mm adım ölçülmüş bir PRATİK, gerçek üretim yer yer
+daha ince (1706, 1707, 1714). 460 satırlık bir liste yazmak olmayan bir
+kesinlik iddia etmek olurdu.
+
+**KATALOGUN DEĞERİ LİSTE DEĞİL, SONUÇ.** `veFeadBeltFit` bir aday boyu çözüp
+kolun nereye oturacağını ve gerginliği veriyor; "1690 mı 1755 mi" sorusu ancak
+böyle cevaplanıyor. **Sığmayan aday bir sayı değil, bir HÜKÜM:** kenetlenme
+take-up tekilliğine komşu olduğu için 1690 mm denenince **4.05e10 N** çıkıyor —
+o sayı tabloya basılmıyor, `fits:false` ve "sığmıyor" yazılıyor.
+
+**ÜÇ BAĞIMSIZ YOL TEK NOKTADA BULUŞUYOR** (testli): serbest kip geometriden
+`1715.27 mm` diyor → katalog ızgarası `8PK1715` öneriyor → o boy seçilince
+çözüm sabit kip tabanına (`kol 28.5090° · T 649.986 N · hub 369.064 N`)
+**birebir** oturuyor.
+
+Kaburga sayısı yalnız **PK** için yazılı (3–12, ContiTech otomotiv); endüstriyel
+kayışlar kaburgalı rulodan kesildiği için diğerlerinde sayı UYDURULMADI —
+`veFeadBeltRibsCheck` orada `null` döner, "geçersiz" demez.
+
+Katalogdan boy seçmek **kipi de SABİTLER** (`veFeadPickBelt`): seçilen boy bir
+girdi, serbest kipte kalmak kullanıcının seçimini sessizce yok saymak olurdu.
+
+Kapı yedi mutasyonla ölçüldü, yedisi de kırmızı.
 
 #### Üç katman — hangi dosya neyi yapar
 
@@ -2565,6 +2609,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/mount-results-tab.test.js` | `js/results.js` + `js/graphics.js` | Takoz çözüm sekmesi, tek X ekseni kuralı, pano uzlaştırma |
 | `tests/unit/mount-results-publish.test.js` | `js/cp-mount.js` | Çözümün panoya yayını; alt-topoloji çökertme regresyonu |
 | `tests/unit/fead-core.test.js` | `js/fead-core.js` + `tests/fixtures/fead-validation.js` | **FEAD çekirdeğinin doğrulama kapısı**: 17 Gates raporu / 2095 değer (çalışma %0.5, Load dahil %1.5, kol açısı 0.2°), 8 koruma mekanizması, SPEC §9 yapısal özdeşlikleri (sarım değişmezi, `L_pitch−L_eff=2π·hb`, çevrim kapanışı, sürücü gücü), UMD tarayıcı köprüsü; **burulma modeli**: yapısal özdeşlikler (tam 1 rijit cisim modu, take-up özdeşliği %0.01, yalnız gergi komşusu spanlar) + Gates "System Resonance (Mode 1)" kalibrasyonu (5 sistem RMS <%8, 4/6/8PK kaburga ölçeklemesi) |
+| `tests/unit/fead-belts.test.js` | `js/fead-belts.js` + `js/fead-model.js` aday değerlendirmesi | **Kayış kataloğu**: listelerin sıralı/tekil/pozitif olması, aralıkların ContiTech beyanıyla çakışması (bir listenin yanlış profile yapışması ancak böyle yakalanır), en kısa boyun min. kasnak çevresinden büyük olması, `veFeadBeltStock`'un KOPYA döndürmesi. **Izgara bir kural**: en yakın adıma yuvarlama, aralık dışında kenetlenme, ızgarası olmayan profilde sessizce PK ızgarasının kullanılmaması. **Kod**: otomotiv ve endüstriyel yazımın ikisinin de çözülmesi, gidiş-dönüş, kaburga denetiminin yalnız verisi olan profilde hüküm vermesi. **Ölçülmüş boşluk**: 8PK 1715'in endüstriyel listede OLMAMASI (komşuları 65 mm uzakta) — kataloğun iki kümeli olmasının sebebi. **Uçtan uca**: serbest kipin gereken boyu → katalog ızgarası → sabit kip tabanı (kol 28.5090° · T 649.986 · hub 369.064) birebir; sığmayan adayın gerginlik YAZMAMASI (4.05e10 N sızmıyor), boy uzadıkça kol ve gerginliğin düşmesi, aday değerlendirmesinin çalışma noktası önbelleğini kirletmemesi |
 | `tests/unit/fead-belt-mode.test.js` | `js/fead-model.js` kayış kipi + `js/fead-core.js` hoşgörülü geometri | **Kayış boyu sabit değil**: kip çözümü ve geriye dönük uyumluluk (boyu olan eski proje `fixed`, boyu olmayan artık ÇÖZÜLÜYOR); sabit kipte tabanın BİREBİR korunması (kol 28.5090° · L 1715.0000 · T 649.986 · hub 369.064); serbest kipte gerginliğin ankraj, boyun ÇIKTI olması ve iki kipin doğru modelde AYNI çalışma noktasına varması; sürüklerken çözümün kopmaması (−200…+40 mm, boy monoton). **Kenetleme**: kuşatılmış hedefte çekirdeğin çözümünün birebir dönmesi, erişilemeyen hedefte istisna yerine sınır + aralığın yazılması, sığmayan kayışta NOMİNAL kol açısına düşülüp ÖNERİLEN boyun serbest kipinkiyle aynı çıkması, kenetlenmişken uyuşmazlık uyarısının İKİNCİ KEZ basılmaması. **Hoşgörülü geometri**: kapanmayan çevrimin çözülüp `geomValid:false` ile yazılması, çekirdek varsayılanının hâlâ ATMASI, çakışan kasnakların tek gerçek durdurucu olması. **Üç sessiz hata**: `feasibleRelMax` ölçütü, `_geomOpt`'un sistem ömrünün başında kurulması, dejenereliğin SARIM değil TAKE-UP ile ölçülmesi |
 | `tests/unit/fead-model.test.js` | `js/fead-model.js` | **Köprü kapısı**: AG00686 MFSim KANVAS DÜĞÜMÜ olarak kurulup Gates sayılarını üretiyor mu (span %0.5, sarım 0.2°, Mean kol açısı 0.2°); temas tarafı üç katmanlı çözümü, sürücü rolü, `dia→od` göçü, ad tekilleştirme, hata çevirisi. **Güzergâh teşhisi**: tel silinince çözüm ARTIK aynı kalmıyor (eskiden kopuk kasnak sıraya sessizce ekleniyordu), kopuk kasnak adıyla bildiriliyor, kapanmayan zincir ve çatal (bir kasnaktan iki tel) sebebiyle yazılıyor, `veFeadRouteOrder` sözleşmesi (yerleştirici için bütün kasnaklar) korunuyor. Ayrıca **ters temas tarafının hata VERMEDİĞİNİ** belgeler (rozetin varlık nedeni). **Duty kapısı**: AG00686 duty tablosunun çıkış gerilmeleri ve hubload'ları %0.5 içinde; kW'ın kimlikle anahtarlanması (yeniden adlandırmada kaybolmuyor), sürücü gücünün toplamdan hesaplanması, ateşleme frekansı, yorulma dağılımının çapa bağlı olması, katalog oranının ÇAPTAN hesaplanması. **Sıcaklık kapısı**: satır başına °C → tek °C indirgemesi hasar-eşdeğer (tek sıcaklıkta birebir aynı, dağılımda aritmetik ortalamanın üstünde), ağırlık `dc·v`, açıkça girilen %0 sıfır ağırlıklı; **yorulma modeli** seçimi dağılıma geçer, mutlak ömre geçemez ve bu yazılır. **Burulma köprüsü**: gergi kasnak kütlesi ve KRANK MİLİ ataleti çekirdeğe geçiyor (ölü girdiydi), krank adla anahtarlanır, `analyze()` içindeki çift hesap kapalı, eksik atalet sessiz değil |
 | `tests/unit/cp-fead.test.js` | `js/cp-fead.js` + `js/components.js` | FEAD sunum katmanı: **yön gülünün taşınması** (kenetleme, kesir olarak saklama, taşınınca şeridin şemaya bırakılması — dar kartta ölçülen kazanç, geniş kartta kazanç YOK, hareketsiz tıkın hiçbir şey yazmaması, kancanın yalnız kanvas/panelde kurulması); kanvas rozeti, `feadContact` varsayılanları, panel smoke testleri, alt-sistem sözleşmesi, `fead-*` tip tanımları; panelin HANGİ ALANLARI sorduğu (montaj merkezi ↔ serbest açı), servis faktörü hükmü; **kayışın kaburgalı yüzü** (diş yönü + aynalanmış çevrim), **telin komşuya bakan kenarı** (oran kuralı, elle taşınan portun kazanması) ve **`veFeadArrangeRing`** (ortak çember, kayış sırası, kutudan türeyen yarıçap, araçların halka dışında kalması, `veTidyLayout`'un devretmesi) |
