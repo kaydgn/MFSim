@@ -415,3 +415,96 @@ describe('İKİ ÖRNEK AYNI SİSTEMİ ANLATIYOR AMA AYNI DEĞİL', () => {
     expect(mean.tensionN / ref.T).toBeGreaterThan(1.1);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+//  KANVASA KURULAN ÖRNEK — kW KİMLİK GÖÇÜ (kullanıcı bildirimi, 2026-08-25)
+// ════════════════════════════════════════════════════════════════════════════
+// Kullanıcı bu örnekten üretilmiş bir rapor gönderdi: çalışma çevrimi
+// tablosundaki BÜTÜN kW değerleri 0,00, bütün açıklık gerginlikleri 544 N ve
+// hubload'lar 1065/484/1074/579/1066/323 idi. Hiçbir hata mesajı yoktu.
+//
+// SEBEP: duty satırlarının kW sözlüğü DÜĞÜM KİMLİĞİYLE anahtarlanır
+// (veFeadDutyToCore → r.kw[n.id]) ama veFeadLoadExample her düğümü YENİ bir
+// kimlikle kuruyor (createNode kendi kimliğini üretir) ve data'yı birebir
+// kopyalıyor. Sözlük 'ex-A_C' anahtarlarıyla kalıyor, kanvas düğümü
+// 'canvas-3' oluyor, hiçbir aksesuar eşleşmiyor → hepsi 0 kW.
+//
+// Yukarıdaki testler bu sınıfı GÖREMEZ: hepsi veFeadExampleNodes'u doğrudan
+// kullanıyor, yani kimlikler 'ex-*' olarak kalıyor ve eşleşme tesadüfen
+// tutuyor. Kapı bu yüzden GERÇEK YÜKLEYİCİYİ koşturmak zorunda.
+describe('kanvasa kurma — duty kW kimlik göçü', () => {
+  const CP = require('../../js/cp-fead.js');
+  Object.keys(CP).forEach((k) => { if (global[k] === undefined) global[k] = CP[k]; });
+
+  function kanvasaKur(key) {
+    let c = 0;
+    global.nodes = []; global.connections = [];
+    global.createNode = (type, x, y) => {
+      const n = { id: 'canvas-' + (++c), type, x, y, data: {} };
+      global.nodes.push(n);
+      return n;
+    };
+    global.createConnection = (from, to) => { global.connections.push({ from, to }); };
+    global.updateAllConnections = () => {};
+    global.veFeadRefreshBadges = () => {};
+    CP.veFeadLoadExample(key);
+    const ns = global.nodes.map((n) => Object.assign({}, n, { def: componentDefs[n.type] }));
+    return { ns, conns: global.connections, solver: ns.find((n) => n.type === 'fead-solver') };
+  }
+
+  test('kW sözlüğü KANVAS kimliklerine taşınıyor', () => {
+    const { ns, solver } = kanvasaKur(KEY);
+    const acId = ns.find((n) => n.type === 'fead-ac').id;
+    const kw = solver.data.duty[0].kw;
+    expect(Object.keys(kw)).toContain(acId);
+    // Örnek tanımındaki 'ex-*' anahtarı ARTIK YOK — kalırsa sessizce 0 kW.
+    expect(Object.keys(kw).some((k) => /^ex-/.test(k))).toBe(false);
+    expect(kw[acId]).toBe(2.70);
+  });
+
+  test('kanvasa kurulan örnek Gates duty tablosunu GERİ ÜRETİYOR', () => {
+    const { ns, conns, solver } = kanvasaKur(KEY);
+    const build = veFeadBuildSystem(ns, conns);
+    expect(build.ok).toBe(true);
+    const res = veFeadAnalyze(build, {
+      rows: veFeadDutyRows(solver), cylinders: 6, crankInertia: 0.70,
+    });
+    const r0 = res.analysis.duty[0];
+    expect(r0.perPulley[0].powerKw).toBeCloseTo(6.34, 2);   // sürücü = toplam
+    GN.forEach((nm, k) => {
+      expect(pctErr(r0.perPulley[k].exitTensionN, G.duty[0].T[nm])).toBeLessThan(0.5);
+      expect(pctErr(r0.hubloads[k].FN, G.duty[0].H[nm])).toBeLessThan(0.5);
+    });
+  });
+
+  test('GÖÇ OLMAZSA sonuç GERÇEKTEN bozulur — yüksüz koşar', () => {
+    // Kapının ısırdığının kanıtı: göçü geri alınca kullanıcının bildirdiği
+    // tablo birebir geri geliyor (bütün gerginlikler tasarım gerginliğine
+    // düzleşiyor). Bu test olmasaydı düzeltme sessizce geri alınabilirdi.
+    const { ns, conns, solver } = kanvasaKur(KEY);
+    const bozuk = JSON.parse(JSON.stringify(solver.data.duty));
+    bozuk.forEach((r) => {
+      const yeni = {};
+      Object.keys(r.kw).forEach((k, i) => { yeni['ex-sahte-' + i] = r.kw[k]; });
+      r.kw = yeni;
+    });
+    const build = veFeadBuildSystem(ns, conns);
+    const res = veFeadAnalyze(build, {
+      rows: veFeadDutyRows({ data: { duty: bozuk } }), cylinders: 6,
+    });
+    const r0 = res.analysis.duty[0];
+    r0.perPulley.forEach((q) => expect(q.powerKw).toBe(0));
+    // Bütün gerginlikler tasarım gerginliğine düzleşiyor — kullanıcının gördüğü.
+    const T = r0.perPulley.map((q) => q.exitTensionN);
+    expect(Math.max.apply(null, T) - Math.min.apply(null, T)).toBeLessThan(1);
+    expect(pctErr(T[0], G.duty[0].T.FAN)).toBeGreaterThan(50);
+  });
+
+  test('göç EŞLEŞMEYEN anahtarı silmiyor — kullanıcının kendi satırı korunur', () => {
+    // Harita yalnız kurulan düğümleri kapsar; kanvasta zaten düzenlenmiş bir
+    // satırın anahtarı haritada olmaz ve silinmesi VERİ KAYBI olurdu.
+    const rows = [{ rpm: 800, dcPct: 100, degC: 90, kw: { 'ex-A_C': 1, 'baska-dugum': 2 } }];
+    veFeadRemapDutyKw(rows, { 'ex-A_C': 'canvas-9' });
+    expect(rows[0].kw).toEqual({ 'canvas-9': 1, 'baska-dugum': 2 });
+  });
+});

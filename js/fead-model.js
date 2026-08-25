@@ -996,6 +996,36 @@ function veFeadExampleNodes(key){
   return { nodes: nodesOut, connections: conns, solverId: 'ex-solver', example: ex };
 }
 
+// ─── Duty kW sözlüğünün KİMLİK GÖÇÜ ─────────────────────────────────────────
+//
+// Duty satırlarındaki kW sözlüğü DÜĞÜM KİMLİĞİYLE anahtarlanır (bkz.
+// veFeadDutyToCore → r.kw[n.id]). Bir düğüm kümesi kopyalanıp YENİ kimliklerle
+// kurulduğunda (örneği kanvasa kurmak, bir grubu çoğaltmak) sözlük eski
+// kimliklerle kalır ve HİÇBİR aksesuar eşleşmez.
+//
+// HATA SESSİZDİR VE ÖLÇÜLDÜ: eşleşmeyen kimlik "kW girilmemiş" sayılır, o
+// aksesuar 0 kW ile koşar, çözüm yine üretilir. AG00976 örneği kanvasa
+// kurulduğunda bütün açıklık gerginlikleri tasarım gerginliğine (544 N)
+// düzleşiyordu — Gates raporu 880 d/d'de 1381/1380/1023/1022/545/544 diyor —
+// ve hubload'lar 1891/1228/2372/1088/1539/324 yerine
+// 1065/484/1074/579/1066/323 çıkıyordu. Hiçbir uyarı yoktu.
+//
+// Eşleşmeyen anahtar DÜŞÜRÜLMEZ, olduğu gibi taşınır: harita yalnız kurulan
+// düğümleri kapsar, kullanıcının kanvasta zaten düzenlediği bir satır varsa
+// onun anahtarı haritada olmaz ve silinmesi veri kaybı olurdu.
+function veFeadRemapDutyKw(dutyRows, idMap){
+  if(!Array.isArray(dutyRows) || !idMap) return dutyRows;
+  dutyRows.forEach(function(r){
+    if(!r || !r.kw) return;
+    var out = {};
+    Object.keys(r.kw).forEach(function(k){
+      out[idMap[k] != null ? idMap[k] : k] = r.kw[k];
+    });
+    r.kw = out;
+  });
+  return dutyRows;
+}
+
 // ─── Kayış sırası ───────────────────────────────────────────────────────────
 // Bağlantı = kayış yolu. Zincir sürücüden başlar, çıkış→giriş izlenir. Zincire
 // hiç girmemiş kasnaklar (kullanıcı henüz bağlamadıysa) sona, topoloji
@@ -1890,6 +1920,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadPowerCurve: veFeadPowerCurve, veFeadHasPowerCurve: veFeadHasPowerCurve,
     veFeadInterpKw: veFeadInterpKw,
     VE_FEAD_EXAMPLES: VE_FEAD_EXAMPLES, veFeadExampleKeys: veFeadExampleKeys,
+    veFeadRemapDutyKw: veFeadRemapDutyKw,
     veFeadExampleOf: veFeadExampleOf, veFeadExampleNodes: veFeadExampleNodes
   };
 }
