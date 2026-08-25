@@ -654,6 +654,25 @@
          yükseklik buradan; iki taraf da min-height ile buna oturuyor. */
       --results-bar-h: 36px;
 
+      /* ── TXT RAPOR SAYFASI ──
+         Sonuçlar penceresindeki TXT rapor önizlemesi A4 sayfadır (210×297 mm
+         @96dpi). Eskiden sayfa yoktu: metin boş-satır bloklarına bölünüp her
+         blok AYRI AYRI ortalanıyordu. Raporun iki farklı sütun genişliği var
+         (dar bölümler ~80, geniş tablolar ~119 karakter — ölçüldü), dolayısıyla
+         bloklar birbirine göre kayıyor ve belge ortada duran bir FİŞ gibi
+         görünüyordu: 43 blok, 10 ayrı sol kenar, 222px yayılım (tarayıcıda
+         ölçüldü, kullanıcı şikâyeti 2026-08-25).
+         --rep-ch: monospace karakter genişliği / font boyutu. Font ailesine
+         göre değişir (Consolas 0.55, DejaVu Sans Mono / Menlo 0.60); gerçek
+         değeri veTxtCharRatio() ölçüp sayfaya yazar, buradaki yalnız güvenli
+         varsayılandır (büyük değer = daha küçük font = taşma yerine boşluk). */
+      --rep-page-w:   794px;   /* 210 mm */
+      --rep-page-h:  1123px;   /* 297 mm */
+      --rep-page-pad:  45px;   /* ~12 mm kenar boşluğu */
+      --rep-fs-max:    11px;   /* okunur üst sınır; geniş tablolarda font küçülür */
+      --rep-ch:        0.62;
+      --rep-mono: 'Consolas','Monaco','SF Mono','DejaVu Sans Mono','Courier New',monospace;
+
       /* Boşluk ölçeği (4px tabanlı) */
       --space-1: 4px;
       --space-2: 8px;
@@ -5734,6 +5753,86 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   position:absolute;top:0;left:0;right:0;bottom:0;
   background:var(--bg-primary);z-index:20;
   display:none;flex-direction:column;overflow:hidden;
+}
+
+/* ── Rapor overlay'inin ÜST BANDI ──
+   Soldaki "Veri Gezgini" bandıyla (.ve-results-head) AYNI ölçü kaynağından
+   beslenir. Ayrı ölçü tutarken bant panel ayırıcısında kırılıyordu: sol 36px /
+   sağ 48px, alt çizgiler 12px kayık, çizgi 1px'e karşı 2px, başlık 12px'e
+   karşı 13px (tarayıcıda ölçüldü, kullanıcı şikâyeti 2026-08-25). Bu, 2026-08-17'de
+   .ve-results-head ↔ .ve-trace-toolbar arasında kapatılan kırılmanın aynısıydı;
+   overlay o düzeltmeye dahil edilmemişti. */
+.ve-rep-head{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:0 12px;
+  min-height:var(--results-bar-h);
+  box-sizing:border-box;
+  flex-shrink:0;
+  background:linear-gradient(180deg, var(--bg-tertiary), var(--bg-secondary));
+  border-bottom:1px solid var(--border-color);
+}
+.ve-rep-head-title{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  font-size:var(--fs-md);
+  font-weight:700;
+  color:var(--text-heading);
+}
+/* Sağ grup: düğmeler .ve-trace-btn'i PAYLAŞIR (ölçüm penceresi araç çubuğuyla
+   aynı bant → aynı düğme). İkinci bir düğme stili tutmanın karşılığı yok. */
+.ve-rep-head-actions{ display:flex; align-items:center; gap:4px; margin-left:auto; }
+
+/* ── TXT rapor gövdesi: gri zemin üzerinde A4 sayfa ──
+   Sayfa DARALTILMAZ (max-width yok): dar pencerede zemin yatay kaydırır,
+   sayfa A4 kalır. Block yerleşimde margin:0 auto taşmada kırpmaz — öge sol
+   kenardan başlar ve kaydırmayla tamamı görünür. */
+.ve-rep-doc{
+  flex:1;
+  overflow:auto;
+  background:var(--bg-primary);
+  padding:24px 24px 48px;
+}
+.ve-rep-page{
+  width:var(--rep-page-w);
+  min-height:var(--rep-page-h);
+  margin:0 auto;
+  box-sizing:border-box;
+  padding:var(--rep-page-pad);
+  background:var(--bg-secondary);
+  border:1px solid var(--border-color);
+  border-radius:2px;
+  box-shadow:0 2px 16px var(--shadow-color);
+}
+/* Metin SOLA yaslı, tek blok. Font ölçüsü sayfaya sığmaktan türer:
+   içerik genişliği / sütun sayısı / karakter oranı — okunur bir tavanla
+   sınırlı. --rep-cols (en uzun satır) sayfaya satır içinde yazılır. */
+.ve-rep-page pre{
+  margin:0;
+  padding:0;
+  white-space:pre;
+  font-family:var(--rep-mono);
+  font-size:min(var(--rep-fs-max),
+                calc((var(--rep-page-w) - 2 * var(--rep-page-pad))
+                     / var(--rep-cols, 100) / var(--rep-ch)));
+  line-height:1.5;
+  color:var(--text-primary);
+  tab-size:4;
+}
+/* Karakter oranını ölçen gizli öge — font ailesi TEK KAYNAKTAN (--rep-mono)
+   gelsin diye sınıf; ölçüm elemanına ayrı bir font listesi yazmak ikinci
+   kopya olurdu ve sessizce ayrışırdı. Font BOYUTU burada YOK: o bir tasarım
+   jetonu değil, ölçüm hassasiyetini belirleyen bir parametre — veTxtCharRatio()
+   verir ve okuduğu değerle böler (bkz. tests/unit/typography-scale.test.js). */
+.ve-rep-measure{
+  position:absolute;
+  visibility:hidden;
+  pointer-events:none;
+  white-space:pre;
+  margin:0;padding:0;
+  font-family:var(--rep-mono);
 }
 /* Profesyonel sonuç tablosu */
 .ve-result-table{width:100%;font-size:var(--fs-md);border-collapse:collapse;font-variant-numeric:tabular-nums;}

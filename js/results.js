@@ -1080,19 +1080,20 @@ function veRenderDetailedReport(filter) {
   if(R.hasTC || R.hasECM) sections.splice(3, 0, {id:'ecm', title:'KONVERTÖR DEĞERLENDİRMESİ', content: ecmHTML});
   
   // ═══ HTML oluştur ═══
+  // Üst bant: dört TXT önizlemesiyle AYNI üreticiden (veRepHeadHTML) — beşi de
+  // aynı bandı satır içi stille kopyalarken sol paneldeki "Veri Gezgini"
+  // bandından 12px kayıyordu (tarayıcıda ölçüldü).
   var html = '';
-  html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
-  html += '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:var(--fs-title);"><span class="mf-ico mf-ico-clipboard"></span></span>';
-  html += '<span style="font-size:var(--fs-lg); font-weight:700; color:var(--text-heading);">' + reportTitle + '</span>';
-  if(filter) {
-    html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:var(--fs-tiny); font-weight:500; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Tüm Rapor</button>';
-  }
-  html += '</div>';
-  html += '<div style="display:flex; align-items:center; gap:6px;">';
-  html += '<button onclick="veDownloadReportHTML()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'" title="Bağımsız, baskıya hazır HTML rapor indir"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
-  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
-  html += '</div>';
-  html += '</div>';
+  html += veRepHeadHTML({
+    icon: 'clipboard',
+    title: reportTitle,
+    back: filter ? { onclick: 'veRenderDetailedReport()', label: '← Tüm Rapor' } : null,
+    actions: [
+      { onclick: 'veDownloadReportHTML()', icon: 'download', label: 'HTML İndir',
+        title: 'Bağımsız, baskıya hazır HTML rapor indir' },
+      { onclick: 'veCloseDetailedReport()', label: '✕ Kapat', danger: true }
+    ]
+  });
   
   // Geniş beyaz kart container
   html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
@@ -2266,59 +2267,155 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
 }
 
 // ═══════ TXT RAPOR ÖNİZLEME ═══════
-// TXT raporu önizlemede YATAYDA ORTALAR. Metni boş-satır bloklarına ayırır,
-// her bloğu ayrı <pre width:fit-content; margin:0 auto> olarak render eder →
-// tüm bloklar aynı merkez ekseninde. Blok-içi sütun hizası korunur (her blok
-// tek parça kayar). Boş satır aralıkları eşdeğer yükseklikte boşlukla korunur.
+// TXT raporu A4 SAYFA olarak gösterilir (210×297 mm), metin SOLA yaslı.
+//
+// Eskiden sayfa yoktu: metin boş-satır bloklarına ayrılıp her blok ayrı bir
+// <pre width:fit-content; margin:0 auto> ile ORTALANIYORDU. Raporun iki farklı
+// sütun genişliği var (dar bölümler ~80, geniş tablolar ~119 karakter —
+// ölçüldü), dolayısıyla bloklar birbirine göre kayıyor ve belge ortada duran
+// bir FİŞ gibi görünüyordu. Tarayıcıda ölçüldü: 43 blok, 10 ayrı sol kenar,
+// 222px yayılım. Sütun hizası blok İÇİNDE korunuyordu ama bloklar ARASINDA
+// bozuluyordu — yani "ortalama" ile kazanılan hiçbir şey yoktu.
 // İndirilen .txt DEĞİŞMEZ — ham metin ayrıca saklanır.
-function veRenderCenteredTXT(txtContent) {
-  // Kaçış için js/ui-core.js'teki tek kaynak kullanılır. Burada `& < >` ile
-  // yetinen üçüncü bir yerel sürüm vardı; <pre> içinde tırnak kaçırmak
-  // görüntüyü değiştirmez (tarayıcı geri çözer) ama ayrı bir uygulamayı
-  // sürdürmenin karşılığı yok. String garantisi çağrı yerinde: join('\n').
-  function esc(s){ return escapeHTML(String(s)); }
-  var lines = String(txtContent == null ? '' : txtContent).split('\n');
-  var out = '', cur = [], blanks = 0;
-  function flush(){
-    if(!cur.length) return;
-    out += '<pre style="margin:0 auto; padding:0; width:fit-content; max-width:100%; white-space:pre; overflow-x:auto; line-height:1.55;">' + esc(cur.join('\n')) + '</pre>';
-    cur = [];
-  }
-  for(var i=0;i<lines.length;i++){
-    if(lines[i].trim()===''){ flush(); blanks++; }
-    else {
-      if(blanks>0){ out += '<div style="height:' + (blanks*1.55).toFixed(2) + 'em;"></div>'; blanks=0; }
-      cur.push(lines[i]);
-    }
-  }
-  flush();
-  return out;
+
+// Monospace karakter genişliği / font boyutu oranı. Font ailesine göre değişir
+// (Consolas 0.55, DejaVu Sans Mono / Menlo 0.60) ve sayfaya sığan sütun sayısı
+// buna bağlı: sabit bir oran varsaymak dar karakterli fontta sayfanın onda
+// birini boş bırakırdı. Bir kez ölçülür, oturum boyunca saklanır.
+function veTxtCharRatio() {
+  if(window._veTxtChRatio) return window._veTxtChRatio;
+  var r = 0;
+  try {
+    var el = document.createElement('pre');
+    el.className = 've-rep-measure';
+    // Boyut CSS'te DEĞİL: bu bir tasarım jetonu değil, ölçüm parametresi —
+    // büyük punto alt-piksel yuvarlamasını oransal olarak önemsizleştirir.
+    // Bölen, tarayıcının gerçekten uyguladığı boyuttan okunur.
+    el.style.fontSize = '100px';
+    el.textContent = new Array(101).join('0');   // 100 karakter
+    document.body.appendChild(el);
+    var fs = parseFloat(getComputedStyle(el).fontSize) || 100;
+    r = el.getBoundingClientRect().width / 100 / fs;
+    document.body.removeChild(el);
+  } catch(e) { r = 0; }
+  // Ölçüm tutmazsa (DOM yok, font yüklenmemiş) CSS'in kendi varsayılanına düş:
+  // büyük oran = küçük font = taşma yerine boşluk, yani güvenli taraf.
+  if(!(r > 0.3 && r < 1.2)) r = 0.62;
+  window._veTxtChRatio = r;
+  return r;
 }
 
-// Raporu, HER TARAYICIDA önizlemedeki gibi ORTALI açılan, kendi kendine yeten
-// bir HTML belgeye sarar. (Düz .txt tarayıcıda daima sola yaslı gelir — metin
-// CSS taşımaz; ortalama yalnız HTML/CSS ile mümkün.)
+// Metnin en uzun satırı = sayfanın sütun sayısı. Kutu-çizimi karakterleri
+// (─ │ ┏) ve Türkçe harfler tek kod birimi → .length sütun sayısıdır.
+function veTxtCols(txtContent) {
+  var lines = String(txtContent == null ? '' : txtContent).split('\n');
+  var m = 1;
+  for(var i = 0; i < lines.length; i++) if(lines[i].length > m) m = lines[i].length;
+  return m;
+}
+
+// Sayfaya yazılan satır içi değişkenler: font ölçüsü bunlardan TÜRER
+// (bkz. css .ve-rep-page pre). Ölçüyü JS'te hesaplayıp px yazmak yerine CSS'e
+// bırakmak, aynı kuralın indirilen HTML'de de birebir çalışmasını sağlıyor.
+function veTxtPageVars(txtContent) {
+  return '--rep-cols:' + veTxtCols(txtContent) + '; --rep-ch:' + veTxtCharRatio().toFixed(4) + ';';
+}
+
+// Belge gövdesi: TEK <pre>, sola yaslı. Kaçış için js/ui-core.js'teki tek
+// kaynak kullanılır.
+function veRenderTXTBody(txtContent) {
+  return '<pre>' + escapeHTML(String(txtContent == null ? '' : txtContent)) + '</pre>';
+}
+
+// Gri zemin + A4 sayfa. id sayfanın ÜSTÜNDE: yazar adı girilince içerik
+// yeniden basılırken sütun sayısı da değişebilir, yani değişkenlerin durduğu
+// eleman tazelenmeli.
+function veTxtDocHTML(txtContent) {
+  return '<div class="ve-rep-doc"><div class="ve-rep-page" id="ve-txt-report-content" style="' +
+         veTxtPageVars(txtContent) + '">' + veRenderTXTBody(txtContent) + '</div></div>';
+}
+
+// Rapor overlay'inin ÜST BANDI — TEK üretici.
+// Beş panel (dört TXT önizlemesi + Detaylı Rapor) bu bandı satır içi stille,
+// birbirinin kopyası olarak kuruyordu; biri düzeltilince diğer dördü sessizce
+// ayrışıyordu. Ölçü artık .ve-rep-head kuralında ve soldaki "Veri Gezgini"
+// bandıyla (.ve-results-head) AYNI --results-bar-h'tan besleniyor.
+// opt: { icon, title, back:{onclick,label}, actions:[{onclick,icon,label,title,danger}] }
+function veRepHeadHTML(opt) {
+  opt = opt || {};
+  var h = '<div class="ve-rep-head">';
+  h += '<span class="ve-rep-head-title"><span class="mf-ico mf-ico-' + (opt.icon || 'file-text') +
+       '"></span> ' + escapeHTML(String(opt.title || '')) + '</span>';
+  if(opt.back) {
+    h += '<button class="ve-trace-btn" onclick="' + opt.back.onclick + '">' +
+         escapeHTML(String(opt.back.label)) + '</button>';
+  }
+  h += '<span class="ve-rep-head-actions">';
+  (opt.actions || []).forEach(function(a) {
+    h += '<button class="ve-trace-btn' + (a.danger ? ' danger' : '') + '" onclick="' + a.onclick + '"' +
+         (a.title ? ' title="' + escapeHTML(String(a.title)) + '"' : '') + '>' +
+         (a.icon ? '<span class="mf-ico mf-ico-' + a.icon + '"></span>' : '') +
+         escapeHTML(String(a.label)) + '</button>';
+  });
+  h += '</span></div>';
+  return h;
+}
+
+// Dört TXT önizlemesinin TAM yüzeyi: bant + A4 sayfa. Panel yalnız başlığını
+// ve indirme adını verir.
+function veTxtPreviewHTML(title, txtContent) {
+  return veRepHeadHTML({
+    icon: 'file-text',
+    title: title,
+    back: { onclick: 'veRenderDetailedReport()', label: '← Detaylı Rapor' },
+    actions: [
+      { onclick: 'veDownloadTXTPreviewAsHTML()', icon: 'download', label: 'HTML İndir',
+        title: 'Ekrandaki TXT raporunu bağımsız HTML olarak indir' },
+      { onclick: 'veDownloadTXTFromPreview()', icon: 'download', label: 'TXT İndir' },
+      { onclick: 'veCloseDetailedReport()', label: '✕ Kapat', danger: true }
+    ]
+  }) + veTxtDocHTML(txtContent);
+}
+
+// Önizlemeyi overlay'e basar ve indirme için gereken durumu saklar.
+function veTxtPreviewShow(title, txtContent, downloadName, reportType) {
+  var overlay = document.getElementById('ve-report-overlay');
+  if(!overlay) return;
+  window._veTxtPreviewContent = txtContent;
+  window._veTxtPreviewFilename = downloadName;
+  window._veTxtPreviewReportType = reportType;
+  overlay.innerHTML = veTxtPreviewHTML(title, txtContent);
+  overlay.style.display = 'flex';
+}
+
+// Raporu, HER TARAYICIDA önizlemedeki gibi A4 sayfa olarak açılan, kendi
+// kendine yeten bir HTML belgeye sarar. (Düz .txt tarayıcıda kenar boşluksuz,
+// ölçeksiz gelir — sayfa yalnız HTML/CSS ile mümkün.)
 function veBuildReportHTML(content, title) {
   var t = String(title || 'MFSim Rapor').replace(/[<>&"]/g, '');
+  // Ölçüler önizlemedeki A4 sayfayla AYNI; ama bu İNDİRİLEN bağımsız bir
+  // belge — arayüzün jetonlarına erişimi YOK, kendi ölçeğini kendi :root'unda
+  // taşımak zorunda (bkz. tests/unit/report-cosmetics.test.js).
   return '<!DOCTYPE html>\n<html lang="tr"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width, initial-scale=1">' +
-    // --rfs-*: bu da İNDİRİLEN bağımsız bir belge — arayüzün --fs-* jetonlarına
-    // erişimi YOK, kendi ölçeğini kendi :root'unda taşımak zorunda.
     '<title>' + t + '</title><style>' +
-    ':root{--rfs-md:12.5px;}' +
+    ':root{--rp-w:794px;--rp-pad:45px;--rp-fs-max:11px;' +
+    '--rp-ch:' + veTxtCharRatio().toFixed(4) + ';--rp-cols:' + veTxtCols(content) + ';' +
+    "--rp-mono:'Consolas','Monaco','SF Mono','DejaVu Sans Mono','Courier New',monospace;}" +
     'html,body{margin:0;background:#eceff3;}' +
-    '.mf-wrap{padding:28px 12px;}' +
-    '.mf-card{width:fit-content;max-width:100%;margin:0 auto;background:#fff;' +
-    'border:1px solid #d8dce2;box-shadow:0 2px 14px rgba(0,0,0,.08);' +
-    'padding:26px 34px;box-sizing:border-box;}' +
-    '.mf-card pre{margin:0 auto;padding:0;width:fit-content;max-width:100%;' +
-    'white-space:pre;overflow-x:auto;line-height:1.5;font-size:var(--rfs-md);color:#14171c;' +
-    "font-family:'Consolas','Menlo','DejaVu Sans Mono','Courier New',monospace;}" +
+    '.mf-wrap{padding:28px 24px 48px;}' +
+    '.mf-card{width:var(--rp-w);min-height:1123px;margin:0 auto;background:#fff;' +
+    'border:1px solid #d8dce2;box-shadow:0 2px 16px rgba(0,0,0,.10);' +
+    'padding:var(--rp-pad);box-sizing:border-box;}' +
+    '.mf-card pre{margin:0;padding:0;white-space:pre;line-height:1.5;color:#14171c;' +
+    'font-family:var(--rp-mono);' +
+    'font-size:min(var(--rp-fs-max),calc((var(--rp-w) - 2 * var(--rp-pad))/var(--rp-cols)/var(--rp-ch)));}' +
     '@media(prefers-color-scheme:dark){html,body{background:#23201c;}' +
     '.mf-card{background:#2b2621;border-color:#3d352e;}.mf-card pre{color:#e6ddd0;}}' +
-    '@media print{html,body{background:#fff;}.mf-card{border:none;box-shadow:none;}}' +
+    '@media print{@page{size:A4;margin:12mm;}html,body{background:#fff;}' +
+    '.mf-wrap{padding:0;}.mf-card{width:auto;min-height:0;border:none;box-shadow:none;padding:0;}}' +
     '</style></head><body><div class="mf-wrap"><div class="mf-card">' +
-    veRenderCenteredTXT(content) + '</div></div></body></html>';
+    veRenderTXTBody(content) + '</div></div></body></html>';
 }
 
 // TXT ÖNİZLEMESİNİ HTML olarak indirir (dört TXT önizleme panelinin "HTML
@@ -2377,37 +2474,8 @@ function veRenderTXTReport(reportType) {
 
   if(!txtContent) { showToast('Rapor oluşturulamadı', 'warning'); return; }
 
-  // Overlay HTML
-  var html = '';
-  // Header bar
-  html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
-  html += '<div style="display:flex; align-items:center; gap:8px;">';
-  html += '<span style="font-size:var(--fs-title);"><span class="mf-ico mf-ico-file-text"></span></span>';
-  html += '<span style="font-size:var(--fs-lg); font-weight:700; color:var(--text-heading);">' + reportTitle + '</span>';
-  html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:var(--fs-tiny); font-weight:500; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
-  html += '</div>';
-  html += '<div style="display:flex; align-items:center; gap:6px;">';
-  html += '<button onclick="veDownloadTXTPreviewAsHTML()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'" title="Ekrandaki TXT raporunu bağımsız HTML olarak indir"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
-  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
-  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
-  html += '</div>';
-  html += '</div>';
+  veTxtPreviewShow(reportTitle, txtContent, downloadName, reportType);
 
-  // TXT content area — düz belge görünümü
-  html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
-  html += '<div style="width:fit-content; max-width:100%; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
-  html += '<div id="ve-txt-report-content" style="padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:var(--fs-body); color:var(--text-primary); tab-size:4;">';
-  html += veRenderCenteredTXT(txtContent);
-  html += '</div>';
-  html += '</div></div>';
-
-  // Store content for download
-  window._veTxtPreviewContent = txtContent;
-  window._veTxtPreviewFilename = downloadName;
-  window._veTxtPreviewReportType = reportType;
-
-  overlay.innerHTML = html;
-  overlay.style.display = 'flex';
 }
 
 function veRenderSegmentDriveTXTReport() {
@@ -2432,32 +2500,8 @@ function veRenderSegmentDriveTXTReport() {
 
   if(!txtContent) { showToast('Rapor oluşturulamadı', 'warning'); return; }
 
-  var html = '';
-  html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
-  html += '<div style="display:flex; align-items:center; gap:8px;">';
-  html += '<span style="font-size:var(--fs-title);"><span class="mf-ico mf-ico-file-text"></span></span>';
-  html += '<span style="font-size:var(--fs-lg); font-weight:700; color:var(--text-heading);">Hızlanma-Yavaşlama Raporu (TXT)</span>';
-  html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:var(--fs-tiny); font-weight:500; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
-  html += '</div>';
-  html += '<div style="display:flex; align-items:center; gap:6px;">';
-  html += '<button onclick="veDownloadTXTPreviewAsHTML()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'" title="Ekrandaki TXT raporunu bağımsız HTML olarak indir"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
-  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
-  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
-  html += '</div>';
-  html += '</div>';
-  html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
-  html += '<div style="width:fit-content; max-width:100%; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
-  html += '<div id="ve-txt-report-content" style="padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:var(--fs-body); color:var(--text-primary); tab-size:4;">';
-  html += veRenderCenteredTXT(txtContent);
-  html += '</div>';
-  html += '</div></div>';
+  veTxtPreviewShow('Hızlanma-Yavaşlama Raporu (TXT)', txtContent, downloadName, 'sd');
 
-  window._veTxtPreviewContent = txtContent;
-  window._veTxtPreviewFilename = downloadName;
-  window._veTxtPreviewReportType = 'sd';
-
-  overlay.innerHTML = html;
-  overlay.style.display = 'flex';
 }
 
 function veRenderObstacleCrossingTXTReport() {
@@ -2477,32 +2521,8 @@ function veRenderObstacleCrossingTXTReport() {
 
   if(!txtContent) { showToast('Rapor oluşturulamadı', 'warning'); return; }
 
-  var html = '';
-  html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
-  html += '<div style="display:flex; align-items:center; gap:8px;">';
-  html += '<span style="font-size:var(--fs-title);"><span class="mf-ico mf-ico-file-text"></span></span>';
-  html += '<span style="font-size:var(--fs-lg); font-weight:700; color:var(--text-heading);">Engel Atlama Raporu (TXT)</span>';
-  html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:var(--fs-tiny); font-weight:500; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
-  html += '</div>';
-  html += '<div style="display:flex; align-items:center; gap:6px;">';
-  html += '<button onclick="veDownloadTXTPreviewAsHTML()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'" title="Ekrandaki TXT raporunu bağımsız HTML olarak indir"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
-  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
-  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
-  html += '</div>';
-  html += '</div>';
-  html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
-  html += '<div style="width:fit-content; max-width:100%; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
-  html += '<div id="ve-txt-report-content" style="padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:var(--fs-body); color:var(--text-primary); tab-size:4;">';
-  html += veRenderCenteredTXT(txtContent);
-  html += '</div>';
-  html += '</div></div>';
+  veTxtPreviewShow('Engel Atlama Raporu (TXT)', txtContent, downloadName, 'obs');
 
-  window._veTxtPreviewContent = txtContent;
-  window._veTxtPreviewFilename = downloadName;
-  window._veTxtPreviewReportType = 'obs';
-
-  overlay.innerHTML = html;
-  overlay.style.display = 'flex';
 }
 
 function veRenderTopologyTXTReport() {
@@ -2523,32 +2543,8 @@ function veRenderTopologyTXTReport() {
 
   if(!txtContent) { showToast('Rapor oluşturulamadı', 'warning'); return; }
 
-  var html = '';
-  html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
-  html += '<div style="display:flex; align-items:center; gap:8px;">';
-  html += '<span style="font-size:var(--fs-title);"><span class="mf-ico mf-ico-file-text"></span></span>';
-  html += '<span style="font-size:var(--fs-lg); font-weight:700; color:var(--text-heading);">Topoloji Detay Raporu (TXT)</span>';
-  html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:var(--fs-tiny); font-weight:500; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
-  html += '</div>';
-  html += '<div style="display:flex; align-items:center; gap:6px;">';
-  html += '<button onclick="veDownloadTXTPreviewAsHTML()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'" title="Ekrandaki TXT raporunu bağımsız HTML olarak indir"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
-  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
-  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
-  html += '</div>';
-  html += '</div>';
-  html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
-  html += '<div style="width:fit-content; max-width:100%; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
-  html += '<div id="ve-txt-report-content" style="padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:var(--fs-body); color:var(--text-primary); tab-size:4;">';
-  html += veRenderCenteredTXT(txtContent);
-  html += '</div>';
-  html += '</div></div>';
+  veTxtPreviewShow('Topoloji Detay Raporu (TXT)', txtContent, downloadName, 'topo');
 
-  window._veTxtPreviewContent = txtContent;
-  window._veTxtPreviewFilename = downloadName;
-  window._veTxtPreviewReportType = 'topo';
-
-  overlay.innerHTML = html;
-  overlay.style.display = 'flex';
 }
 
 function veDownloadTXTFromPreview() {
@@ -2617,10 +2613,14 @@ function veDownloadTXTFromPreview() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    // Önizlemeyi de güncelle
+    // Önizlemeyi de güncelle. Yazar adı satır uzunluğunu değiştirebildiği
+    // için sayfa değişkenleri (sütun sayısı → font ölçüsü) de tazelenir.
     window._veTxtPreviewContent = content;
-    var preEl = document.getElementById('ve-txt-report-content');
-    if(preEl) preEl.innerHTML = veRenderCenteredTXT(content);
+    var pageEl = document.getElementById('ve-txt-report-content');
+    if(pageEl) {
+      pageEl.setAttribute('style', veTxtPageVars(content));
+      pageEl.innerHTML = veRenderTXTBody(content);
+    }
 
     ov.remove();
     showToast('TXT rapor indirildi', 'success');
