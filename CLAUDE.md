@@ -1627,6 +1627,67 @@ hükmünü global en düşüğe çevirme (1).
 > ve hükmü verenin yük taşıyanların en düşüğü olduğunu SAYIYLA tutuyor.
 
 
+##### GERGİ KÜNYESİ RAPORDAN, PİVOT BİR TASARIM ÇIKTISI (2026-08-25)
+
+Kullanıcı kararı: *"Tedarikçiye ne gönderdik kısmını geçelim, sen Gates
+raporundaki 'Tensioner Data' kısmını baz alarak hesaplamalarını yap."* Ardından
+asıl noktayı koydu: *"Tensioner pivot noktası tedarikçiye girdi olarak
+gitmeyecek. İlk önce bu hesabın nasıl yapıldığını verelim."*
+
+`BMC_FEAD_2026`'nın gergisi artık raporun **Tensioner Data** bloğundan
+(pivot −250,00 / 110,00 · merkez −161,97 / 91,29). Sayfanın *"öngörülen merkezi
+montaj pozisyonu"* tahmininden türetilmiş pivot (−259,94 / 104,15) **terk
+edildi** — gerçeğinden 11,5 mm sapıyordu.
+
+**ÖLÇÜLDÜ:**
+
+| | serbest açı | Mean kol | T | Gates 544 N'a |
+|---|---|---|---|---|
+| türetilmiş pivot (eski) | 24,88° | 28,51° | 650,0 N | **+%19,5** |
+| Gates pivotu + sayfa merkezi | — | — | — | **ÇÖZÜLMEZ** (kol boyu −9,35 mm) |
+| **Gates pivotu + Gates merkezi** | 16,06° | 29,73° | **571,1 N** | **+%5,0** |
+
+Kalan %5 **gergiden değil kayıştan**: bu örnek kayış künyesini hâlâ sayfadan
+alıyor (1715 · tolerans 0 · aşınma 0 · lengthOffset 0). Kanıtı: **serbest
+kipte** — kol nominal yay açısına oturduğu, yani sayfanın kayışı denklemden
+düştüğü zaman — T **543,7 N** çıkıyor, Gates'in Design Tension'ı **544 N**.
+
+İki örnek artık **aynı gergiyi, farklı kayışı** anlatıyor ve testi bunu
+kilitliyor.
+
+###### PİVOT BAĞIMSIZ DEĞİL — ama denetlenebilir de değil
+
+Rapora §8.7'ye *"Gergi pivotu nereden geliyor"* bloğu girdi. Dayandığı iki
+gözlem:
+
+1. **Kayış yolu pivota HİÇ bağlı değil.** Geometri yalnız gergi *kasnağının
+   merkezine* bakar (teğet çözümü merkez farklarından kurulur). Pivotu
+   kaydırmak sarımları, açıklıkları, kayış boyunu değiştirmez.
+2. **Pivotun tek etkisi kolun hangi yönde hareket ettiğidir** — yani β, yani
+   take-up, yani gerginlik. Pivot ile tasarım gerginliği **aynı denklemin iki
+   yüzü**: `pivot → β → dL/dθ → T` (analiz) ↔ `T* → dL/dθ → β → pivot` (tasarım).
+
+Tasarım yönü kapalı formda: `sinβ = (M/T*)/(a·2sin(φ/2))`, `θ_kol = θ_hub + s·β`,
+`p = c + a·(cos θ_kol, sin θ_kol)`. **ÖLÇÜLDÜ:** AG00976 için Gates'in bastığı
+pivotu **0,01 mm**, β'yı **0,006°** ile geri veriyor.
+
+**TAUTOLOJİ TUZAĞINA İLK SÜRÜMDE DÜŞÜLDÜ.** Blok önce *"türetilen pivot ↔
+girilen pivot sapması"*nı bir **DENETİM** diye basıyordu. Sapma iki örnekte de
+**0,000 mm** çıktı ve çıkmak **ZORUNDAYDI**: tasarım gerginliği zaten pivottan
+türüyor, onu denkleme geri beslemek aynı β'yı ve aynı pivotu verir. Geçen bir
+denetim gibi görünüp hiçbir şey ölçmüyordu — uygunluk kriteri #6'da düzeltilen
+hatanın birebir aynısı, aynı oturumda ikinci kez.
+
+Doğrusu denklemi **duyarlılık** olarak vermek: hedef gerginlik SEÇİLİR (bağımsız
+bir mühendislik kararıdır), pivot ondan çıkar. Tablo o eşlemeyi veriyor ve
+**gerçekten ayrışıyor** — AG00976'da %15 düşük gerginlik pivotu **21,7 mm**
+kaydırıyor. Belge ayrıca *"Bu bir DENETİM değildir"* diye **yazıyor** ve
+vurgulu satırın neden modelin kendi pivotunu vermek zorunda olduğunu açıklıyor.
+
+**Pivotun BAĞIMSIZ doğrulanması ancak ölçülmüş bir pivotla** (tedarikçi raporu,
+montaj resmi) mümkün — model kendi kendini doğrulayamaz ve rapor bunu söylüyor.
+
+
 **Sırada:** Sonuçlar sayfasında FEAD çözüm sekmesi (kanal yayını).
 
 #### Yapısal Analiz — `js/cp-structural.js` (Geometri + Ağ DOLU, kalan ikisi iskelet)

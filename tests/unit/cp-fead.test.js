@@ -281,7 +281,7 @@ describe('kayış boyu kipi — topoloji seçicisi', () => {
     global.connections = pack.connections;
     const html = fead.getFeadBeltPropertiesHTML(belt);
     expect(html).toMatch(/Gereken efektif boy/);
-    expect(html).toMatch(/1715[.,]\d+ mm/);          // türetilen boy basılı
+    expect(html).toMatch(/1716[.,]\d+ mm/);          // türetilen boy basılı
     expect(html).toMatch(/kol 28[.,]\d+°/);          // hangi kol açısından geldiği
   });
 

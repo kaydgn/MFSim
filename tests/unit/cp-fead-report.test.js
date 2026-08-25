@@ -1158,3 +1158,70 @@ describe('rapor incelemesi — etiket, bayat metin ve hüküm kapıları', () =>
     expect(hu).not.toMatch(/değerlendirilemedi[\s\S]{0,80}Kayma/);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+//  §8.7 — GERGİ PİVOTUNUN KURULUŞU (kullanıcı isteği, 2026-08-25)
+// ════════════════════════════════════════════════════════════════════════════
+// "Tensioner pivot noktası tedarikçiye girdi olarak gitmeyecek. İlk önce bu
+// hesabın nasıl yapıldığını verelim." Blok pivotun bağımsız OLMADIĞINI kurar:
+// kayış yolu pivota hiç bağlı değil, pivotun tek etkisi β → take-up → gerginlik.
+describe('§8.7 gergi pivotunun kuruluşu', () => {
+  function cozAG2() {
+    const pack = veFeadExampleNodes('AG00976_GATES_2025');
+    const ns = pack.nodes.map((n) => ({
+      id: n.id, type: n.type, def: componentDefs[n.type],
+      customName: n.customName, data: JSON.parse(JSON.stringify(n.data)),
+    }));
+    const build = veFeadBuildSystem(ns, pack.connections);
+    const solv = ns.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver)[0];
+    const R = veFeadAnalyze(build, { rows: veFeadDutyRows(solv), cylinders: 6, crankInertia: 0.70 });
+    R.build = build; R.pulleyNames = build.names;
+    R.serviceFact = Number(solv.data.serviceFact) || 0;
+    return R;
+  }
+  let RP2, HP;
+  beforeAll(() => { RP2 = cozAG2(); HP = RP._frPivotBlock(RP2); });
+
+  test('blok İKİ GÖZLEMİ de kuruyor', () => {
+    expect(HP).toMatch(/Kayış yolu pivota bağlı değildir/);
+    expect(HP).toMatch(/aynı denklemin iki\s*yüzüdür/);
+    expect(HP).toMatch(/tedarikçiye giden sayfada <b>bulunmaz<\/b>/);
+  });
+
+  test('TAUTOLOJİ OLMADIĞINI KENDİSİ SÖYLÜYOR', () => {
+    // İlk sürüm "türetilen ↔ girilen pivot sapması" diye bir DENETİM basıyordu
+    // ve sapma iki örnekte de 0,000 mm çıkıyordu — çıkmak ZORUNDAYDI, çünkü
+    // tasarım gerginliği zaten pivottan türüyor. Geçen bir denetim gibi görünüp
+    // hiçbir şey ölçmüyordu (uygunluk #6'da düzeltilen hatanın aynısı).
+    expect(HP).toMatch(/Bu bir DENETİM değildir/);
+    expect(HP).toMatch(/vermek zorundadır/);
+    expect(HP).not.toMatch(/Sapma \|türetilen/);
+  });
+
+  test('vurgulu satır modelin KENDİ pivotunu geri veriyor (özdeşlik)', () => {
+    const t = RP2.build.sys.tensioner;
+    const say = (x) => x.toFixed(2).replace('.', ',').replace('-', '−');
+    expect(HP).toMatch(/◂ bu model/);
+    expect(HP).toMatch(new RegExp(say(t.pivot[0]).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    expect(HP).toMatch(new RegExp(say(t.pivot[1]).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  });
+
+  test('DUYARLILIK GERÇEK — farklı hedef gerginlik farklı pivot veriyor', () => {
+    // Tablonun değeri burada: gerginliği değiştirmek pivotu kaç mm kaydırır.
+    // Bütün satırlar aynı pivotu verseydi tablo hiçbir şey anlatmazdı.
+    const kayma = (HP.match(/([\d,]+) mm<\/td><\/tr>/g) || [])
+      .map((x) => parseFloat(x.replace(/[^\d,]/g, '').replace(',', '.')))
+      .filter((x) => Number.isFinite(x) && x > 0);
+    expect(kayma.length).toBeGreaterThanOrEqual(3);
+    expect(Math.max.apply(null, kayma)).toBeGreaterThan(5);
+  });
+
+  test('§8.7 içinde ve tasarım gerginliği bloğundan ÖNCE geliyor', () => {
+    // Sıra anlamlı: önce pivot kurulur, sonra ondan çıkan gerginlik.
+    const h8 = RP._frSection8(RP2, NODE);
+    const iP = h8.indexOf('Gergi pivotu nereden geliyor');
+    const iT = h8.indexOf('Tasarım gerginliği nereden geliyor');
+    expect(iP).toBeGreaterThan(-1);
+    expect(iT).toBeGreaterThan(iP);
+  });
+});

@@ -380,58 +380,72 @@ describe('EFEKTİF BOY 1714.6 — raporun başlığı değil, REBL sütunu', () 
   });
 });
 
-describe('İKİ ÖRNEK AYNI SİSTEMİ ANLATIYOR AMA AYNI DEĞİL', () => {
-  test('tedarikçi sayfasının türetilmiş pivotu raporun gerçek pivotundan uzak', () => {
-    // BMC_FEAD_2026 pivotu VERİDEN TÜRETMİŞTİ: sayfa pivotu vermiyor, yalnız
-    // gergi kasnağının "öngörülen merkezi montaj pozisyonunu" veriyor; örnek
-    // de |merkez − pivot| = kol boyu olacak şekilde bir pivot seçmişti. Rapor
-    // gerçek pivotu yazınca ikisinin ayrıştığı ölçülebilir oldu.
-    //
-    // Bu test ikisinin FARKLI OLDUĞUNU kilitliyor, birini "doğru" ilan etmiyor:
-    // sayfa tedarikçiye giden girdidir, rapor dönen cevaptır ve ikisi ayrı
-    // belgedir. Fark sessizce kapanırsa (biri diğerine kopyalanırsa) bu
-    // karşılaştırmanın anlamı kaybolur.
-    const sayfa = veFeadExampleOf('BMC_FEAD_2026').pulleys.find((p) => p.key === 'TEN').data;
-    const rapor = veFeadExampleOf(KEY).pulleys.find((p) => p.key === 'TEN').data;
-    const d = Math.hypot(sayfa.pivotX - rapor.pivotX, sayfa.pivotY - rapor.pivotY);
-    expect(d).toBeGreaterThan(10);
+describe('İKİ ÖRNEK AYNI GERGİYİ, FARKLI KAYIŞI ANLATIYOR', () => {
+  // Kullanıcı kararı (2026-08-25): "Tedarikçiye ne gönderdik kısmını geçelim,
+  // sen Gates raporundaki 'Tensioner Data' kısmını baz alarak hesaplamalarını
+  // yap." Eskiden BMC_FEAD_2026 pivotu VERİDEN TÜRETİYORDU (sayfa pivotu
+  // vermiyor); artık iki örnek de raporun Tensioner Data bloğunu taşıyor.
+  //
+  // AYRIŞMA KAYIŞ KÜNYESİNDE KALDI ve bilinçli: BMC hâlâ sayfanın kayışını
+  // (1715 · tolerans 0 · aşınma 0) taşıyor, AG00976 raporunkini
+  // (1714.6 · ±6 · %0.60 · lengthOffset 1.6).
 
-    // Sayfanın montaj merkezi, raporun GERÇEK pivotundan 90 değil 80.65 mm
-    // uzakta — yani iki belge birleştirilseydi model çözülemezdi. Kol boyu
-    // kapısının bu veride ısırdığının kanıtı.
-    const karisik = Math.hypot(sayfa.cenX - rapor.pivotX, sayfa.cenY - rapor.pivotY);
-    expect(karisik).toBeCloseTo(80.65, 1);
-    expect(Math.abs(karisik - sayfa.armLen)).toBeGreaterThan(0.5);
+  test('GERGİ KÜNYESİ İKİ ÖRNEKTE DE AYNI — Gates "Tensioner Data" bloğu', () => {
+    const a = veFeadExampleOf('BMC_FEAD_2026').pulleys.find((p) => p.key === 'TEN').data;
+    const b = veFeadExampleOf(KEY).pulleys.find((p) => p.key === 'TEN').data;
+    // Raporun bastığı beş sayı, ikisinde de birebir.
+    ['pivotX', 'pivotY', 'armLen', 'preload', 'kArm', 'meanLoad'].forEach((k) => {
+      expect(a[k]).toBeCloseTo(b[k], 6);
+    });
+    expect(a.pivotX).toBeCloseTo(-250.00, 6);
+    expect(a.pivotY).toBeCloseTo(110.00, 6);
+    // TÜRETİLMİŞ pivot geri gelmemeli: sayfanın kendi merkezinden 90 mm uzağa
+    // konan uydurma pivot (−259.94, 104.15) gerçeğinden 11.5 mm sapıyor ve
+    // çalışma gerginliğini 544 yerine 650 N gösteriyordu.
+    expect(Math.hypot(a.pivotX + 259.94, a.pivotY - 104.15)).toBeGreaterThan(10);
   });
 
-  test('sayfa modeli raporun çalışma gerginliğinden belirgin yüksek', () => {
-    // ÖLÇÜLDÜ: sayfa 650.0 N, rapor 543.9 N → %19.5. Sebebi tek başına pivot:
-    // yay künyesi, çaplar ve koordinatlar iki belgede de aynı.
-    const pack = veFeadExampleNodes('BMC_FEAD_2026');
-    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    const b = veFeadBuildSystem(pack.nodes, pack.connections);
-    const mean = F.positionTable(b.sys).find((r) => r.position === 'Mean');
+  test('KAYIŞ KÜNYESİ AYRI — ve fark ölçülebilir', () => {
+    const a = veFeadExampleOf('BMC_FEAD_2026').belt;
+    const b = veFeadExampleOf(KEY).belt;
+    expect(a.effLength).toBe(1715);        // sayfanın "modelden bulunan" boyu
+    expect(b.effLength).toBe(1714.6);      // raporun REBL sütunu
+    expect(a.tolerance).toBe(0);
+    expect(b.tolerance).toBe(6);
+  });
+
+  test('AYNI GERGİYLE, KAYIŞ FARKI ÇALIŞMA NOKTASINI KAYDIRIYOR', () => {
+    // Gates raporu Mean'de 543.9 N diyor. AG00976 (kayış da rapordan) buna
+    // %0.5 içinde oturuyor; BMC (kayış sayfadan) yukarıda kalıyor — ve kalan
+    // fark ARTIK gergiden değil, yalnız kayış künyesinden geliyor.
     const ref = G.pos.find((p) => p.name === 'Mean');
-    expect(mean.tensionN / ref.T).toBeGreaterThan(1.1);
+
+    const pb = veFeadExampleNodes('BMC_FEAD_2026');
+    pb.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const bb = veFeadBuildSystem(pb.nodes, pb.connections);
+    const meanB = F.positionTable(bb.sys).find((r) => r.position === 'Mean');
+
+    const { build } = kur();
+    const meanA = F.positionTable(build.sys).find((r) => r.position === 'Mean');
+
+    expect(pctErr(meanA.tensionN, ref.T)).toBeLessThan(0.5);      // rapor künyesi
+    expect(pctErr(meanB.tensionN, ref.T)).toBeGreaterThan(2);     // sayfa kayışı
+    expect(pctErr(meanB.tensionN, ref.T)).toBeLessThan(10);       // ama artık %19.5 değil
+  });
+
+  test('SERBEST KİPTE İKİSİ DE RAPORUN GERGİNLİĞİNE VARIYOR', () => {
+    // Kol nominal yay açısına oturunca kayış boyu ÇIKTI olur ve sayfanın
+    // kayışı denklemden düşer. ÖLÇÜLDÜ: BMC serbest kipte 543.7 N — Gates'in
+    // Design Tension'ı 544 N. Yani iki örnek arasındaki tek gerçek fark,
+    // sabit kipte hangi kayışın dayatıldığı.
+    const pb = veFeadExampleNodes('BMC_FEAD_2026');
+    pb.nodes.find((n) => n.type === 'fead-belt').data.lengthMode = 'free';
+    pb.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const bb = veFeadBuildSystem(pb.nodes, pb.connections);
+    expect(pctErr(bb.sys.designTensionN, G.design)).toBeLessThan(0.5);
   });
 });
 
-// ════════════════════════════════════════════════════════════════════════════
-//  KANVASA KURULAN ÖRNEK — kW KİMLİK GÖÇÜ (kullanıcı bildirimi, 2026-08-25)
-// ════════════════════════════════════════════════════════════════════════════
-// Kullanıcı bu örnekten üretilmiş bir rapor gönderdi: çalışma çevrimi
-// tablosundaki BÜTÜN kW değerleri 0,00, bütün açıklık gerginlikleri 544 N ve
-// hubload'lar 1065/484/1074/579/1066/323 idi. Hiçbir hata mesajı yoktu.
-//
-// SEBEP: duty satırlarının kW sözlüğü DÜĞÜM KİMLİĞİYLE anahtarlanır
-// (veFeadDutyToCore → r.kw[n.id]) ama veFeadLoadExample her düğümü YENİ bir
-// kimlikle kuruyor (createNode kendi kimliğini üretir) ve data'yı birebir
-// kopyalıyor. Sözlük 'ex-A_C' anahtarlarıyla kalıyor, kanvas düğümü
-// 'canvas-3' oluyor, hiçbir aksesuar eşleşmiyor → hepsi 0 kW.
-//
-// Yukarıdaki testler bu sınıfı GÖREMEZ: hepsi veFeadExampleNodes'u doğrudan
-// kullanıyor, yani kimlikler 'ex-*' olarak kalıyor ve eşleşme tesadüfen
-// tutuyor. Kapı bu yüzden GERÇEK YÜKLEYİCİYİ koşturmak zorunda.
 describe('kanvasa kurma — duty kW kimlik göçü', () => {
   const CP = require('../../js/cp-fead.js');
   Object.keys(CP).forEach((k) => { if (global[k] === undefined) global[k] = CP[k]; });
