@@ -1629,6 +1629,16 @@ hükmünü global en düşüğe çevirme (1).
 
 ##### GERGİ KÜNYESİ RAPORDAN, PİVOT BİR TASARIM ÇIKTISI (2026-08-25)
 
+> **BU BÖLÜM AŞILDI — anlatılan yapılandırma kodda YOK.** `BMC_FEAD_2026` bir
+> sonraki bölümde pivotu GİRMEYİ bıraktı; bugün kasnak merkezi sayfanın kendi
+> koordinatı (−170,080 / 99,160) ve pivot ondan TÜRÜYOR. Aşağıdaki tablonun
+> son satırı (Gates pivotu + Gates merkezi → 571,1 N) ve *"kalan %5 kayıştan,
+> kanıtı serbest kipte 543,7 N"* çıkarımı **o yapılandırmaya aittir**; serbest
+> kip bugün 525,6 N veriyor ve o çıkarım artık tutmuyor (bkz. bir sonraki
+> bölüm). Burası, aynı yol yeniden denenirse nelerin ölçülmüş olduğunu bilmek
+> için duruyor. Pivotun kayış yoluna bağlı OLMAMASI ve tautoloji dersi ise
+> bugün de geçerli.
+
 Kullanıcı kararı: *"Tedarikçiye ne gönderdik kısmını geçelim, sen Gates
 raporundaki 'Tensioner Data' kısmını baz alarak hesaplamalarını yap."* Ardından
 asıl noktayı koydu: *"Tensioner pivot noktası tedarikçiye girdi olarak
@@ -1707,8 +1717,9 @@ Kapanışı gerginin **parça çizimi** veriyor:
 > `E9843 PIN POSITION FOR THE 344° MEAN ANGLE AND 22.5 Nm SPRING TORQUE
 > @ 28° FREEARM-MEAN ROTATION`
 
-yani kolun **çalışma (Mean) konumundaki mutlak açısı** bir parça künyesidir.
-Kol boyu da künyede. Pivot kolun öbür ucudur:
+yani kolun **çalışma (Mean) konumundaki mutlak açısı**, parçanın konum
+pimiyle birlikte **okunan** bir değerdir — türetilmiyor. Kol boyu da künyede.
+Pivot kolun öbür ucudur:
 
 ```
 pivot = c − a·(cos θ_kol , sin θ_kol)
@@ -1720,18 +1731,63 @@ bastığı kol açısı, raporun bastığı pivotu **0,11 mm** içinde veriyor.
 
 ###### ÜÇ HİPOTEZ ÇÖZDÜRÜLDÜ — koordinat KASNAK, pivot DEĞİL
 
-| hipotez | sarım | T | Gates 543,9 N'a | span sapması |
-|---|---|---|---|---|
-| koordinat = kasnak · θ=**344°** (parça çizimi) | 33,3° | **541,3 N** | **−%0,5** | **1,6 mm** |
-| koordinat = kasnak · θ=348° (Gates'in kol açısı) | 33,3° | 571,1 N | +%5,0 | 1,8 mm |
-| koordinat = **PİVOT** | 9,9° | 3608 N | +%563 | **77,7 mm** |
+| hipotez | sarım | T | Gates 543,9 N'a |
+|---|---|---|---|
+| koordinat = kasnak · θ=**344°** (parça çizimi) | 33,0° | **532,1 N** | **−%2,2** |
+| koordinat = kasnak · θ=348° (Gates'in kol açısı) | 33,0° | 561,1 N | +%3,2 |
+| koordinat = **PİVOT** | — | **ÇÖZÜLMÜYOR** | — |
 
-Üçüncüsü koordinatın pivot **olmadığını** kesin olarak eliyor. Birincisi ise
+Üçüncüsü koordinatın pivot **olmadığını** kesin olarak eliyor ve elemeyi bir
+sayı değil **geometri** yapıyor: kasnak sürücünün içine düşüyor (merkez
+mesafesi 111,6 mm, gereken >120,8 mm), teğet hiç çözülemiyor. Birincisi ise
 şunu gösteriyor: pivot **hiç girilmeden**, yalnız müşterinin koordinatı +
-parça künyesiyle tedarikçinin cevabına **%0,5** içinde varılıyor.
+parça künyesiyle tedarikçinin cevabına **%2,2** içinde varılıyor.
 
-Çizimin üç sayısı birbirini de doğruluyor: *"28° FREEARM-MEAN"* ↔ yay
-künyesinden türeyen `(22,07 − 8,60)/0,480 = 28,06°`.
+**KALAN %2,2'NİN KAYNAĞI ÖLÇÜLDÜ — ve KAYIŞ DEĞİL.** Bir önceki bölüm
+(Gates pivotu girilirken) kalan %5'i kayışa bağlıyor ve kanıtını *serbest
+kipte* buluyordu: kol nominal yay açısına oturunca, yani sayfanın kayışı
+denklemden düşünce, T 543,7 N çıkıyordu. **O kanıt artık geçerli değil** —
+türetilmiş pivotla serbest kip **525,6 N** veriyor, yani sabit kipten (532,1)
+Gates'e **daha uzak**. Kayış denklemden düştüğünde fark kapanmıyorsa fark
+kayıştan gelmiyor demektir.
+
+Geriye kalan tek serbest büyüklük **pivot**, ve iki belge onu farklı yere
+koyuyor: türetilen (−256,59 / 123,97) ile Gates'in ölçtüğü (−250,00 / 110,00)
+arasında **11,5 mm** var. Duyarlılığı da ölçülü: aynı kasnak merkezinde kol
+açısını 344° → 348° almak T'yi **532,1 → 561,1 N** yapıyor, yani **4° ≈ %5,4**.
+
+İlk iki satırın **sarımı aynı** (33,0°): kasnak merkezi ikisinde de aynı,
+değişen yalnız β — yani take-up, yani gerginlik.
+
+**MUTLAK AÇI SALT PARÇAYA AİT DEĞİL, MONTAJA DA BAĞLI.** Aynı E9843 Gates
+raporunda **347,99°**'de duruyor. Parçanın kendi değişmezi **bağıl** dönme —
+*"28° FREEARM-MEAN"* ↔ yay künyesinden türeyen `(22,07 − 8,60)/0,480 =
+28,06°` — ve iki örnek de onu doğruluyor (BMC **28,43°**, AG00976
+**28,08°**). Bu yüzden iki örnek farklı mutlak açı taşır ve biri
+"düzeltilerek" öbürüne eşitlenmemelidir.
+
+###### RAPORUN BELT DATA BLOĞU BMC'YE KONMAZ — ölçüldü, TERSİ çıktı
+
+Açık duran bir soru vardı: *"AG00976 raporunun Belt Data bloğu (1714,6 · ±6 ·
+%0,60 · offset 1,6) `BMC_FEAD_2026`'ya da konsun mu?"* Pivot **raporundan
+girilirken** cevap evetti — kalan %5'i kapatıyordu. Türetilmiş pivotla
+**ÖLÇÜLDÜ ve cevap hayır**:
+
+| BMC | bağıl kol | M | nominalden | T | Gates 543,9 N'a |
+|---|---|---|---|---|---|
+| sayfa kayışı (bugün) | 28,43° | 22,245 Nm | **%0,79** | **532,1 N** | **−%2,2** |
+| + Gates Belt Data | 26,80° | 21,463 Nm | %2,75 | 503,7 N | **−%7,4** |
+
+Sapma **üç katına** çıkıyor. Sebep basit: gergi koordinatı sayfadan, kayış
+künyesi rapordan gelirse model **iki farklı sistemi** anlatır. İki künye tek
+kaynaktan gelmeli — `AG00976_GATES_2025` ikisini de rapordan alıyor ve aynı
+büyüklük orada **%0,09**.
+
+Kapı bu kararı kilitliyor (`fead-example.test.js`, *"Gates Belt Data BMC'ye
+KONMAZ"*): istenmeyen alternatif de koşturuluyor, çünkü karıştırma **sessiz** —
+model yine çözülür, uyarı çıkmaz, yalnız sonuç uzaklaşır. İki mutasyonla
+ölçüldü (BMC kayışını Gates'inkiyle değiştirme → 4 test kırmızı; kol açısını
+344 → 348 → 5 test kırmızı).
 
 ###### İKİ DURUM, İKİ ANLAM — ve karıştırmak TOTOLOJİ üretir
 

@@ -1106,18 +1106,28 @@ var VE_FEAD_EXAMPLES = {
                // Kapanışı gerginin PARÇA ÇİZİMİ veriyor:
                //   "E9843 PIN POSITION FOR THE 344° MEAN ANGLE AND 22.5 Nm
                //    SPRING TORQUE @ 28° FREEARM-MEAN ROTATION"
-               // yani kolun ÇALIŞMA konumundaki MUTLAK açısı bir parça
-               // künyesidir. pivot = c − a·(cos θ, sin θ).
+               // yani kolun çalışma konumundaki MUTLAK açısı, parçanın konum
+               // pimiyle birlikte OKUNAN bir değerdir — türetilmiyor.
+               //   pivot = c − a·(cos θ, sin θ)
                //
-               // ÖLÇÜLDÜ — üç hipotez çözdürüldü (Gates AG00976'ya karşı):
-               //   koordinat = kasnak · θ=344° (çizim) → T 541,3 N  (−%0,5) ✔
-               //   koordinat = kasnak · θ=348° (Gates)  → T 571,1 N  (+%5,0)
-               //   koordinat = PİVOT                    → T 3608 N   (+%563) ✘
+               // MUTLAK AÇI SALT PARÇAYA AİT DEĞİL, MONTAJA DA BAĞLI: aynı
+               // E9843 Gates raporunda 347,99°'de duruyor. Parçanın kendi
+               // değişmezi BAĞIL dönme — "28° FREEARM-MEAN" ↔ yay künyesinden
+               // türeyen (22,07−8,60)/0,480 = 28,06° — ve iki örnek de onu
+               // doğruluyor (BMC 28,43° · AG00976 28,08°). Bu yüzden iki örnek
+               // FARKLI mutlak açı taşır ve biri "düzeltilerek" öbürüne
+               // eşitlenmemelidir.
+               //
+               // ÖLÇÜLDÜ — üç hipotez çözdürüldü (Gates AG00976'nın 543,9 N'una):
+               //   koordinat = kasnak · θ=344° (çizim) → T 532,1 N  (−%2,2) ✔
+               //   koordinat = kasnak · θ=348° (Gates)  → T 561,1 N  (+%3,2)
+               //   koordinat = PİVOT                    → HİÇ ÇÖZÜLMÜYOR ✘
                // Sonuncusu koordinatın pivot OLMADIĞINI kesin olarak eliyor:
-               // sarım 9,9° (Gates 34,6) ve span sapması 77,7 mm.
+               // kasnak sürücünün İÇİNE düşüyor (merkez mesafesi 111,6 mm,
+               // gereken >120,8 mm) — sayı değil, geometri reddediyor.
                //
-               // Çizimin üç sayısı birbirini de doğruluyor: "28° FREEARM-MEAN"
-               // ↔ yay künyesinden türeyen (22,07−8,60)/0,480 = 28,06°.
+               // İlk iki satırın sarımı AYNI (33,0°): kasnak merkezi ikisinde de
+               // aynı, değişen yalnız β — yani take-up, yani gerginlik.
                cenX:-170.080, cenY:99.160, armLen:90.0, armMeanDeg:344.0,
                angleMode:'mount',
                preload:8.60, kArm:0.480, meanLoad:22.07,
