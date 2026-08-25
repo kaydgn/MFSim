@@ -974,16 +974,6 @@ function getStrGeometryPropertiesHTML(node){
   // ── SOL: kimlik · içe aktarma · künye · denetimler ──
   var left = '';
   if(!rec){
-    // Önizleme (claude.ai Artifact) sürümünde çekirdek yok — bunu DÜĞMEYE
-    // BASMADAN ÖNCE söyle. Sonra söylersek kullanıcı dosya seçer, bekler ve
-    // ancak o zaman öğrenir.
-    if(typeof veStrOcctAbsent === 'function' && veStrOcctAbsent()){
-      left += '<div style="margin-bottom:10px; padding:8px 10px; font-size:var(--fs-micro); line-height:1.5; '
-            + 'color:var(--accent-warning); background:var(--bg-secondary); border:1px solid var(--border-color); '
-            + 'border-left:3px solid var(--accent-warning);">'
-            + '<b>Bu sürümde STEP içe aktarılamaz.</b><br>' + _strEsc(VE_STR_OCCT_ABSENT_MSG)
-            + '</div>';
-    }
     left += _strGeomImportCard(node);
     left += _strStatusSlots();
   } else {

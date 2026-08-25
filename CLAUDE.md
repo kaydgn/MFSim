@@ -2209,60 +2209,34 @@ npm run build:occt-wasm     # vendor/opencascade.wasm.gz → js/structural-occt-
 npm run build:tetgen-wasm       # vendor/tetgen-src/ → vendor/tetgen-wasm.{js,wasm}  (emscripten GEREKİR, nadiren)
 npm run build:tetgen-wasm-asset # vendor/tetgen-wasm.wasm → js/structural-tetgen-wasm.js (gömülü ağ üreteci)
 npm run build:viewer        # MFSim_Olcum_Goruntuleyici.html üret (Ölçüm Görüntüleyici)
-npm run build:artifact      # MFSim_Artifact.html (claude.ai önizlemesi)
-npm run build:all           # üçü birden
+npm run build:all           # ikisi birden (monolit + görüntüleyici)
 npm run shot -- --help      # ekran görüntüsü — İSTEĞE BAĞLI, yalnız kullanıcı isteyince
 npm run test:e2e            # E2E testleri (Chromium gerekli)
 npm run test:all            # birim + E2E
 ```
 
-## Artifact önizlemesi — programı claude.ai üzerinden görmek
+## Artifact önizlemesi KALDIRILDI (2026-08-25)
 
-Kullanıcının ağı **GitHub'a da GitHub Pages'e de çıkamıyor** (2026-08-22);
-çalışan tek kanal claude.ai. Program açılışta **sıfır ağ isteği** yaptığı için
-(ölçüldü: 0 istek, 0 konsol hatası) barındırma yeri serbest — tek dosya
-claude.ai'ın Artifact sayfası olarak yayınlanıyor.
+Bir dönem tek dosya claude.ai'ın Artifact sayfası olarak yayınlanıyordu
+(`tools/build-artifact.js` → `MFSim_Artifact.html`, gövde varyantı + ortam
+bayrağı `js/env.js`). Kullanıcı **kullanmadığını** söyledi ve kaldırıldı.
 
-```bash
-npm run build           # MFSim_Code.html
-npm run build:artifact  # MFSim_Artifact.html (gövde varyantı, .gitignore'da)
-```
-Sonra Artifact aracıyla **aynı dosya yolundan** yeniden yayınla → **URL değişmez**.
+Kaldırmayı tetikleyen şey de bu zaten bir kapıydı: boolean'lı OCCT çekirdeğine
+geçince tek dosya 12,6 → 26,8 MB oldu ve **artifact'in 16 MB sınırı** CI'ı
+kırdı. Kullanılmayan bir varyantın, uygulama her büyüdüğünde merge'i bloke
+etmesinin karşılığı yok.
 
-**Neden ayrı varyant:** Artifact sayfayı kendi iskeletine sarıyor
-(`<!doctype><html><head>…<body>`). Tam belge göndermek iç içe html/head/body
-üretirdi. `tools/build-artifact.js` sarmalayıcıyı söküp gövdeyi teslim eder;
-girdisi **üretilmiş monolit** olduğu için build.js'in bütün kalkanları ve
-gömmeleri zaten koşmuş olur (ikinci bir gömme yolu sessizce ayrışırdı).
+Kalkanlar da onunla gitti: `js/env.js` (`veArtifactEnv` / `veNetworkAllowed` /
+`veOfflineNote`) ve onu okuyan dört kapı — deploy noktası, commit listesi,
+harita, canlı radyo — artık koşulsuz çalışıyor. Bunlar zaten yalnız artifact
+ortamında kapanıyordu; Pages ve indirilen tek dosya sürümlerinde hep açıktı,
+yani **davranış değişmedi**.
 
-### Üç sessiz tuzak — üçü de ölçüldü, üçü de testli
-
-| Tuzak | Olan | Kapı |
-|---|---|---|
-| **Sahte `</body>`** | Rapor üreticileri HTML şablonu basıyor → dize JS içinde de geçiyor (gerçek belgede **3 kez**). "İlk eşleşme gerçektir" varsayan sürüm gövdeyi 425 KB'ta kesti, **80 script'in 9'unu** taşıdı | `maskRawTextKeepOffsets` (build-shield.js) — gövdeleri boşluğa çevirir, konumları korur |
-| **`data-theme` çakışması** | MFSim 16 temayı `documentElement`'e yazıyor; artifact host'u **aynı özniteliğe** `dark`/`light` damgalıyor → paletin tamamı düşer | Shim'deki MutationObserver yabancı değeri geri alır; tema listesi **CSS'ten çıkarılır**, elle yazılmaz |
-| **`<script>`/`<style>` sayımı** | `countScriptElements`/`styleBodies` JS içindeki şablonları da sayıyor (style 4 yerine **9**) | Doğrulama `scanDocument`'ten besleniyor |
-
-### Ağ kapıları — `js/env.js`
-
-Bayrağı **derleme zamanı** koyar (`window.MFSIM_ENV='artifact'`), sniffing YOK:
-"fetch patlıyorsa artifact'teyiz" çıkarımı, güvenlik duvarı arkasındaki Pages
-kullanıcısına da "bu ortamda kapalı" derdi. `index.html` ve `MFSim_Code.html`'de
-bayrak yoktur → `veArtifactEnv()` false → **Pages sürümü sıfır risk alır.**
-
-Dört özellik kapıya bağlı: **deploy noktası** (kırmızı yanıp "deploy başarısız"
-diye YANLIŞ bir şey söylerdi), **commit listesi**, **harita** (boş gri kare
-verirdi — Leaflet karo hatasını yutuyor), **canlı radyo**. Yerel müzik
-kütüphanesi kapıya TAKILMAZ: ağı yok, kapatmak çalışan özelliği sebepsiz alırdı.
-
-**Bilinen kısıt:** indirme bağlantıları (proje kaydet, rapor, PNG/SVG/CSV)
-artifact görüntüleyicisinde çalışmaz — `downloads` yeteneğiyle çözülebilir,
-bugün yapılmadı. İndirme gereken iş Pages sürümünde ya da indirilen tek dosyada
-yapılır.
-
-Kapılar **beş mutasyonla ölçüldü** (deploy kapısını kaldır, harita kapısını
-kaldır, `veArtifactEnv` hep false, sahte-`</body>` korumasını naif eşleşmeye
-döndür, tema geri-almasını kaldır) — beşi de kırmızı.
+> Yeniden gerekirse: gövde varyantının üç sessiz tuzağı ölçülmüştü — sahte
+> `</body>` (rapor üreticileri HTML şablonu basıyor, gerçek belgede 3 kez
+> geçiyor; `maskRawTextKeepOffsets` bunun için var ve **build.js'te KALDI**),
+> `data-theme` çakışması (host aynı özniteliğe yazıyor), ve script/style
+> sayımının JS içindeki şablonları da sayması. Git geçmişinde duruyor.
 
 ## Teslim Akışı — PR + merge OTOMATİK
 

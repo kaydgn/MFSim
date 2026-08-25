@@ -418,12 +418,6 @@
   function playStation(station) {
     var a = getAudio();
     if (!a || !station) return;
-    // Canlı yayınlar dış hosttan gelir → artifact önizlemesinde engelli.
-    // YEREL KÜTÜPHANE (playTrack) etkilenmez: onun kaynağı object-url, ağ yok.
-    if (typeof global.veArtifactEnv === 'function' && global.veArtifactEnv()) {
-      toast(global.veOfflineNote('Canlı radyo'), 'warning');
-      return;
-    }
     current = { type: 'station', id: station.id, name: station.name, genre: station.genre, url: station.url };
     libIndex = -1;
     setLcd(station.name, station.genre || 'Canlı yayın');

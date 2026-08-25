@@ -7,7 +7,6 @@ playwright-report/
 # Üretilen monolitik build — commit edilmez. `npm run build` ile üretilir,
 # CI deploy'da GitHub Pages'e index.html olarak yayınlanır.
 MFSim_Code.html
-MFSim_Artifact.html
 
 # Ekran görüntüleri (öncesi/sonrası) — üretilir, commit edilmez.
 .shots/

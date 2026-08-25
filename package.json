@@ -10,7 +10,7 @@
     "build:occt-wasm": "node tools/build-occt-wasm-asset.js",
     "build:tetgen-wasm": "node tools/build-tetgen-wasm.js",
     "build:tetgen-wasm-asset": "node tools/build-tetgen-wasm-asset.js",
-    "build:all": "npm run build && node viewer/build.js && npm run build:artifact",
+    "build:all": "npm run build && node viewer/build.js",
     "shot": "node tools/shot.js",
     "sync:viewer": "node viewer/sync.js",
     "test": "jest",
@@ -19,8 +19,7 @@
     "test:changed": "jest -o",
     "test:ci": "jest --verbose --ci",
     "test:e2e": "npx playwright test",
-    "test:all": "jest && npx playwright test",
-    "build:artifact": "node tools/build-artifact.js"
+    "test:all": "jest && npx playwright test"
   },
   "repository": {
     "type": "git",
