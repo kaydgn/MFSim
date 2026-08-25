@@ -884,11 +884,50 @@ function _rmTJuncPair(V, tri, o){
   return false;
 }
 
+// KENAR–KENAR ÇAPRAZLAMASI — TetGen'in kendi ölçütü ("Two segments exactly
+// intersect") ve kalkanın ÜÇÜNCÜ kör noktası. ÖLÇÜLDÜ (braket, h=4,2; TetGen'in
+// bildirdiği çift doğrudan incelendi):
+//   seg1 boy 4,8183 · seg2 boy 3,4784 · doğrular arası uzaklık 0,000e+0
+//   parametreler s = 0,440 · t = 0,751  → tam anlamıyla ÇAPRAZLIYORLAR
+// ve bu çifti taşıyan üçgenler ya 2 ortak köşeli (kenar komşusu → kalkan
+// tümden eliyordu) ya da 1 ortak köşeli (karşı kenar ölçütü EŞ DÜZLEMLİ
+// durumu göremiyor: parça üçgen düzlemine paralel).
+//
+// KENAR KOMŞUSU İKİ ÜÇGEN DE ÇAPRAZLAYABİLİR: ortak kenar (a,b) iken
+// (a,c)×(b,d) ve (b,c)×(a,d) çiftleri köşe paylaşmaz ve yüzey keskin katlanınca
+// gerçekten kesişirler. Bu yüzden bu ölçüt ortak köşe sayısına BAKMADAN,
+// yalnız köşe paylaşmayan kenar çiftlerine uygulanır.
+function _rmSegSegHit(p1, p2, q1, q2){
+  var d1 = _rmSub(p2, p1), d2 = _rmSub(q2, q1), r = _rmSub(q1, p1);
+  var n = _rmCross(d1, d2), n2 = _rmDot(n, n);
+  var l1 = _rmLen(d1), l2 = _rmLen(d2);
+  if(l1 < 1e-12 || l2 < 1e-12) return false;
+  if(n2 < 1e-18 * l1 * l1 * l2 * l2) return false;      // paralel → T-bağlantısının işi
+  // Eş düzlemli mi (doğrular arası uzaklık, kısa parçaya BAĞIL)?
+  if(Math.abs(_rmDot(r, n)) / Math.sqrt(n2) > 1e-6 * Math.min(l1, l2)) return false;
+  var sPar = _rmDot(_rmCross(r, d2), n) / n2;
+  var tPar = _rmDot(_rmCross(r, d1), n) / n2;
+  return (sPar > 1e-9 && sPar < 1 - 1e-9 && tPar > 1e-9 && tPar < 1 - 1e-9);
+}
+function _rmEdgeCross(V, tri, o){
+  var i, k, a, b, c, d;
+  for(i = 0; i < 3; i++){
+    a = tri[i]; b = tri[(i+1)%3];
+    for(k = 0; k < 3; k++){
+      c = o[k]; d = o[(k+1)%3];
+      if(a === c || a === d || b === c || b === d) continue;   // köşe paylaşıyor
+      if(_rmSegSegHit(_rmVec(V,a), _rmVec(V,b), _rmVec(V,c), _rmVec(V,d))) return true;
+    }
+  }
+  return false;
+}
+
 function _rmPairHits(V, tri, o, pa, pb, pc){
   var ortak = 0, paylasilan = -1, i, j;
   for(i = 0; i < 3; i++){
     for(j = 0; j < 3; j++) if(tri[i] === o[j]){ ortak++; paylasilan = tri[i]; break; }
   }
+  if(_rmEdgeCross(V, tri, o)) return true;
   if(ortak >= 2) return false;
   if(_rmTJuncPair(V, tri, o)) return true;
   var qa = _rmVec(V, o[0]), qb = _rmVec(V, o[1]), qc = _rmVec(V, o[2]);
