@@ -317,6 +317,55 @@ describe('çok gövdeli parça TEK KATIYA birleştiriliyor', () => {
     expect(ham.stats.faceCount).toBeGreaterThan(bracket.stats.faceCount);
   }, 120000);
 
+  // ── KULLANICININ GERÇEK BRAKETİNDEN DOĞAN İKİ KAPI ────────────────────
+  // Bildirim: "7 ayrı katı — birleştirilemedi (20736120)". O sayı bir mesaj
+  // bile değildi: emscripten'in istisna işaretçisi.
+  test('sadeleştirme başarısız olsa da BİRLEŞTİRME ayakta kalır', () => {
+    // ÖLÇÜLDÜ (kullanıcının braketi, AP242, 7 gövde): fuse 668 ms'de sorunsuz
+    // 1 katı üretiyor, ama ShapeUpgrade_UnifySameDomain'in YÜZ kademesi OCCT
+    // içinde istisna atıyor. İkisi tek try içindeyken başarılı birleştirme de
+    // çöpe gidiyordu. Kapı ikisinin AYRI olduğunu arıyor.
+    const fn = fs.readFileSync(path.join(ROOT, 'js/structural-model.js'), 'utf8');
+    // Şekil önce atanır, ok işaretlenir; sadeleştirme SONRA ve KENDİ try'ında.
+    expect(fn).toMatch(/shape = bop\.Shape\(\);[\s\S]{0,120}fuse\.ok = true;/);
+    expect(fn).toMatch(/kademeler[\s\S]{0,400}try \{[\s\S]{0,400}ShapeUpgrade_UnifySameDomain_2/);
+    // Kademe düşüşü: tam → kenar → atlandı (ölçüldü: braket yalnız 'kenar'ı geçiyor).
+    expect(fn).toMatch(/ad: 'tam',\s*kenar: true,\s*yuz: true/);
+    expect(fn).toMatch(/ad: 'kenar',\s*kenar: true,\s*yuz: false/);
+    expect(fn).toContain("fuse.sadelestirme = 'atlandı'");
+  });
+
+  test('çıplak istisna İŞARETÇİSİ kullanıcıya basılmaz', () => {
+    // String(err) bir sayı basardı ("20736120") — hata gibi değil, bozulmuş
+    // bir sayı gibi okunur.
+    const fn = fs.readFileSync(path.join(ROOT, 'js/structural-model.js'), 'utf8');
+    expect(fn).toMatch(/function hataMetni\(err\)/);
+    expect(fn).toMatch(/typeof err === 'number'[\s\S]{0,80}OCCT iç istisnası/);
+    expect(fn).toContain('fuse.hata = hataMetni(err);');
+  });
+
+  test('İÇ ARAYÜZ temizleniyor — ters normalli çakışık yüz ÇİFTLERİ atılır', () => {
+    // ÖLÇÜLDÜ (aynı braket): birleşme sonrası 6 çakışan yüz çifti kalıyor
+    // (değen gövdelerin ortak yüzeyi, her gövdeden bir kopya) → üçgenlemede
+    // 26 NON-MANIFOLD kenar. Temizlikten sonra 0.
+    const fn = fs.readFileSync(path.join(ROOT, 'js/structural-model.js'), 'utf8');
+    expect(fn).toMatch(/temizlik = \{ cift: 0/);
+    // TERS normal şartı: aynı yöne bakan çakışık iki yüz iç arayüz DEĞİL,
+    // sıfır kalınlıklı kabuktur — atmak parçayı delerdi.
+    expect(fn).toMatch(/> -0\.99\) continue;/);
+    // Kalan yüzlerin kimliği DEĞİŞMEZ: index TopExp sırasından geliyor.
+    expect(fn).toMatch(/yeniYuz\.push\(\{ index: f\.index/);
+  });
+
+  test('temizlik tek gövdeli parçada HİÇBİR ŞEY atmıyor', () => {
+    // Yanlış bir eşleşme sessizce yüzey silerdi; küp ve yuvarlatılmış küp
+    // dokunulmadan geçmeli.
+    expect(cube.interfaceCleanup.cift).toBe(0);
+    expect(cube.stats.faceCount).toBe(6);
+    expect(rounded.interfaceCleanup.cift).toBe(0);
+    expect(rounded.stats.faceCount).toBe(7);
+  });
+
   test('birleştirme künyeye GİRİYOR — panel sessiz kalamasın', () => {
     const rec = model.veStrGeomRecord(bracket);
     expect(rec.fuse.ok).toBe(true);

@@ -189,6 +189,15 @@ function _sgOcctPipeline(oc, bytes, opts){
     g.delete();
     return v;
   }
+  // Emscripten C++ istisnası JS'e SAYI (işaretçi) olarak gelir; `err.message`
+  // yoktur ve String(err) çıplak bir sayı basar. Kullanıcıya "20736120" demek,
+  // hiçbir şey dememekten kötü: hata gibi değil, bozulmuş bir sayı gibi okunur.
+  function hataMetni(err){
+    if(err && err.message) return String(err.message);
+    if(typeof err === 'number') return 'OCCT iç istisnası (#' + err + ')';
+    return String(err);
+  }
+
   function sinirKutusu(shape){
     var b = new oc.Bnd_Box_1();
     oc.BRepBndLib.Add(shape, b, true);
@@ -244,18 +253,50 @@ function _sgOcctPipeline(oc, bytes, opts){
       bop.SetArguments(arg); bop.SetTools(tool);
       bop.Build();
       if(bop.IsDone()){
-        // UnifySameDomain OLMADAN da tek katı çıkar ama iç arayüzden kalan
-        // dikiş yüzeyleri durur: aynı düzlemin iki parçası ayrı CAD yüzü
-        // olarak görünür ve sınır koşulu seçimi gereksizce bölünür.
-        var u = new oc.ShapeUpgrade_UnifySameDomain_2(bop.Shape(), true, true, false);
-        u.Build();
-        shape = u.Shape();
+        // BİRLEŞTİRME BURADA BİTTİ. Şekil buradan itibaren TEK KATI ve bu
+        // sonuç KORUNUR — aşağıdaki sadeleştirme onu bozamaz.
+        shape = bop.Shape();
         fuse.ok = true;
+
+        // ── DİKİŞ SADELEŞTİRME AYRI VE İSTEĞE BAĞLI ────────────────────────
+        // UnifySameDomain, iç arayüzden kalan dikiş yüzeylerini birleştirir
+        // (aynı düzlemin iki parçası tek CAD yüzü olur). Güzel ama ŞART DEĞİL.
+        //
+        // ÖLÇÜLDÜ (kullanıcının braketi, AP242, 7 gövde): fuse 668 ms'de
+        // sorunsuz 1 katı üretiyor, ama YÜZ sadeleştirme OCCT içinde istisna
+        // atıyor. Eskiden ikisi tek try içindeydi → başarılı birleştirme de
+        // çöpe gidiyor ve panel "7 ayrı katı — birleştirilemedi (20736120)"
+        // diyordu. O sayı bir mesaj bile değildi: emscripten'in istisna
+        // işaretçisi.
+        //
+        // Kademeler ölçülerek seçildi (aynı braket):
+        //   kenar+yüz          → İSTİSNA
+        //   yalnız yüz         → İSTİSNA
+        //   yalnız KENAR       → OK, 1 katı · 238 yüz · 41 ms
+        // Yani en agresif kademeden başlayıp düşüyoruz; hiçbiri tutmazsa
+        // sadeleştirme ATLANIR ve birleştirme yine geçerlidir.
+        fuse.sadelestirme = 'atlandı';
+        var kademeler = [
+          { ad: 'tam',   kenar: true, yuz: true  },
+          { ad: 'kenar', kenar: true, yuz: false }
+        ];
+        for(var ki = 0; ki < kademeler.length; ki++){
+          try {
+            var u = new oc.ShapeUpgrade_UnifySameDomain_2(shape, kademeler[ki].kenar, kademeler[ki].yuz, false);
+            u.Build();
+            var us = u.Shape();
+            if(us && !us.IsNull()){
+              shape = us;
+              fuse.sadelestirme = kademeler[ki].ad;
+              break;
+            }
+          } catch(e2){ /* bir alt kademeyi dene */ }
+        }
       } else {
-        fuse.hata = 'çözücü birleştirmeyi tamamlayamadı';
+        fuse.hata = 'çekirdek birleştirmeyi tamamlayamadı';
       }
     } catch(err){
-      fuse.hata = String((err && err.message) || err);
+      fuse.hata = hataMetni(err);
     }
     fuse.ms = simdi() - t;
     sure.fuse = fuse.ms;
@@ -339,6 +380,95 @@ function _sgOcctPipeline(oc, bytes, opts){
   fe.delete();
   sure.extract = simdi() - t;
 
+  // ── 6) İÇ ARAYÜZ TEMİZLİĞİ ───────────────────────────────────────────────
+  // Birbirine DEĞEN gövdeler birleşince ortak yüzey iki KOPYA olarak kalabilir
+  // (her gövdeden bir tane, normalleri ters). Normalde UnifySameDomain'in yüz
+  // kademesi bunları siler — ama o kademe bu geometride istisna atıyor
+  // (yukarıda), yani kopyalar yüzeyde kalıyor.
+  //
+  // ÖLÇÜLDÜ (kullanıcının braketi): 6 çakışan yüz çifti → üçgenlemede 26
+  // NON-MANIFOLD kenar (bir kenarı 4 üçgen paylaşıyor). Yüzey bu hâldeyken
+  // TetGen "kendini kesiyor" diyip duruyor — yani birleştirme başarılı olsa
+  // bile AĞ ÖRÜLEMİYOR, ki bu işin bütün amacıydı.
+  //
+  // Çift bulunursa İKİSİ DE atılır: bu yüzey artık parçanın İÇİNDE kalıyor,
+  // dış sınırın parçası değil. Kalan yüzlerin KİMLİĞİ DEĞİŞMEZ (`f.index`
+  // TopExp sırasından geliyor, silmekten etkilenmiyor) — sınır koşulları
+  // kimliğe bağlanacak, kimlik kayarsa hepsi düşerdi.
+  t = simdi();
+  var temizlik = { cift: 0, atilanYuz: 0, atilanUcgen: 0 };
+  (function(){
+    var ozet = [];
+    yuzler.forEach(function(f){
+      if(!f.triCount) return;
+      var A = 0, cx = 0, cy = 0, cz = 0, nx = 0, ny = 0, nz = 0;
+      for(var tr = f.first; tr <= f.last; tr++){
+        var ia = idx[tr*3], ib = idx[tr*3+1], ic = idx[tr*3+2];
+        var ax = pos[ia*3], ay = pos[ia*3+1], az = pos[ia*3+2];
+        var ux = pos[ib*3] - ax, uy = pos[ib*3+1] - ay, uz = pos[ib*3+2] - az;
+        var vx = pos[ic*3] - ax, vy = pos[ic*3+1] - ay, vz = pos[ic*3+2] - az;
+        var X = uy*vz - uz*vy, Y = uz*vx - ux*vz, Z = ux*vy - uy*vx;
+        var ar = Math.sqrt(X*X + Y*Y + Z*Z) / 2;
+        A += ar; nx += X; ny += Y; nz += Z;
+        cx += ar * (ax + pos[ib*3] + pos[ic*3]) / 3;
+        cy += ar * (ay + pos[ib*3+1] + pos[ic*3+1]) / 3;
+        cz += ar * (az + pos[ib*3+2] + pos[ic*3+2]) / 3;
+      }
+      if(A > 0) ozet.push({ f: f, A: A, c: [cx/A, cy/A, cz/A], n: [nx, ny, nz] });
+    });
+    var tol = Math.max(1e-4, (bb ? bb.diag : 100) * 1e-6);
+    var at = {};
+    for(var i = 0; i < ozet.length; i++){
+      if(at[ozet[i].f.index]) continue;
+      for(var j = i + 1; j < ozet.length; j++){
+        if(at[ozet[j].f.index]) continue;
+        var a = ozet[i], c = ozet[j];
+        if(Math.abs(a.A - c.A) > 1e-6 * Math.max(a.A, c.A)) continue;
+        var d = Math.sqrt(Math.pow(a.c[0]-c.c[0],2) + Math.pow(a.c[1]-c.c[1],2) + Math.pow(a.c[2]-c.c[2],2));
+        if(d > tol) continue;
+        var la = Math.sqrt(a.n[0]*a.n[0]+a.n[1]*a.n[1]+a.n[2]*a.n[2]);
+        var lc = Math.sqrt(c.n[0]*c.n[0]+c.n[1]*c.n[1]+c.n[2]*c.n[2]);
+        if(!la || !lc) continue;
+        // TERS normal ŞART: aynı yöne bakan iki çakışık yüz iç arayüz değil,
+        // sıfır kalınlıklı bir kabuk olurdu — onu atmak parçayı delerdi.
+        if((a.n[0]*c.n[0] + a.n[1]*c.n[1] + a.n[2]*c.n[2]) / (la*lc) > -0.99) continue;
+        at[a.f.index] = 1; at[c.f.index] = 1;
+        temizlik.cift++;
+        break;
+      }
+    }
+    if(!temizlik.cift) return;
+
+    // Üçgenleri süz, köşeleri yeniden numarala (kullanılmayan köşe bırakmak
+    // ağ üretecinde "başıboş nokta" demek).
+    var yeniIdx = [], yeniYuz = [], top = 0;
+    var kullanilan = {}, harita = {};
+    yuzler.forEach(function(f){
+      if(!f.triCount || at[f.index]){
+        if(at[f.index]){ temizlik.atilanYuz++; temizlik.atilanUcgen += f.triCount; }
+        return;
+      }
+      for(var tr = f.first; tr <= f.last; tr++)
+        for(var k = 0; k < 3; k++) kullanilan[idx[tr*3+k]] = 1;
+      yeniYuz.push({ index: f.index, first: top, last: top + f.triCount - 1, triCount: f.triCount });
+      top += f.triCount;
+    });
+    var yeniPos = [], yeniNrm = [], say = 0;
+    for(var v = 0; v < pos.length / 3; v++){
+      if(!kullanilan[v]) continue;
+      harita[v] = say++;
+      yeniPos.push(pos[v*3], pos[v*3+1], pos[v*3+2]);
+      yeniNrm.push(nrm[v*3], nrm[v*3+1], nrm[v*3+2]);
+    }
+    yuzler.forEach(function(f){
+      if(!f.triCount || at[f.index]) return;
+      for(var tr = f.first; tr <= f.last; tr++)
+        yeniIdx.push(harita[idx[tr*3]], harita[idx[tr*3+1]], harita[idx[tr*3+2]]);
+    });
+    pos = yeniPos; nrm = yeniNrm; idx = yeniIdx; yuzler = yeniYuz; triTop = top;
+  })();
+  sure.clean = simdi() - t;
+
   return {
     positions: new Float32Array(pos),
     normals: new Float32Array(nrm),
@@ -349,6 +479,7 @@ function _sgOcctPipeline(oc, bytes, opts){
     bbox: bb,
     volume: fuse.hacimSonra,
     fuse: fuse,
+    interfaceCleanup: temizlik,
     deflectionLinearMm: linear,
     ms: sure
   };
@@ -761,6 +892,7 @@ function veStrNormalizeImport(raw, meta){
     bbox: bbox,
     volume: raw.volume || 0,
     fuse: fuse,
+    interfaceCleanup: raw.interfaceCleanup || { cift: 0, atilanYuz: 0, atilanUcgen: 0 },
     ms: raw.ms || {},
     stats: {
       meshCount: 1,
