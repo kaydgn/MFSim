@@ -1191,6 +1191,146 @@ Servis faktörü (sayfada 1.3) kayma emniyetinin istenen alt sınırı olarak so
 tablosunda hüküm veriyor — eşik eskiden 1.3'te SABİTTİ, artık kullanıcının
 girdiği değer.
 
+##### Tedarikçiden DÖNEN rapor da bir örnek — `AG00976_GATES_2025` (2026-08-25)
+
+Yukarıdaki `BMC_FEAD_2026` tedarikçiye **giden** sayfadır (FEAD_INFORMATION,
+26.05.2025). Artık ondan **dönen** rapor da kayıt defterinde: *"AG00976 BMC
+Otomotif FEAD 5 · Cummins Eng.Scndr ALT&AC Drive · Gates 8PK1715HD-Fleetrunner ·
+Ten@-250/110 · Corrected-IDR1 · 05.06.2025"*, Gates v13.02. Aynı araç, aynı altı
+kasnak — ama **aynı sayılar değil**, ve ikisinin birden durmasının sebebi bu.
+
+Bu rapor `tests/fixtures/fead-validation.js` içinde **zaten** vardı
+(`AG00976['1715@-250/110']`, 2095 değerlik kapının parçası); eksik olan onu
+kanvasa **kurulabilir** yapmaktı. Referans değerler ikinci kez yazılmadı —
+`tests/unit/fead-example-ag00976.test.js` fixture'dan okuyor.
+
+###### Uçtan uca ÖLÇÜLDÜ — örnek raporu geri üretiyor
+
+Doğrulama harness'ı `makeSystem()`i doğrudan çağırıyor, yani **köprüyü atlıyor**.
+Bu örnek zincirin tamamını koşturuyor (örnek tanımı → düğüm dizisi →
+`veFeadBuildSystem` → çekirdek):
+
+| Ne | Kaç değer | En kötü sapma |
+|----|----------:|---------------|
+| span + sarım | 12 | **0.039** (derece/mm) |
+| gergi konum tablosu (kol · X · Y · β · sarım · EDL · REBL) | 6 × 7 | kol **0.063°** |
+| konum gerginliği / hubload | 6 × 2 | **%0.13** / **%0.09** |
+| duty gerilme + hubload | 12 × 6 × 2 | **%0.09** / **%0.15** |
+| sürücü kW | 12 | **birebir** (6.34) |
+| take-up · yay momenti | 2 | **%0.03** / %0.09 |
+| **tasarım gerginliği (TÜRETİLEN)** | 1 | **birebir** (544 N) |
+| **serbest kol açısı (TÜRETİLEN)** | 1 | **0.04°** (16.06 ↔ 16.1) |
+
+Son iki satır bedava değil, **bağımsız doğrulama**: ikisi de örnekte YAZILI
+DEĞİL, geometri + yay künyesinden çıkıyor, ve rapor ikisini de ayrıca basıyor.
+
+###### EFEKTİF BOY 1714.6 — raporun başlığı değil, REBL sütunu
+
+Rapor başlığı `Effective Belt Length (ISO 9981) 1715` diyor. Ama kendi
+*Tensioner Geometry* tablosunun REBL sütunu dört konumun **dördünde de tam
+0.4 mm aşağıda**: 1730.9 / 1720.6 / 1714.6 / 1708.6. Aradaki **adımlar** birebir
+tutuyor (tol 6.0 ve `wear·L` = 0.006 × 1715 = 10.29), yani kayan şey adım değil
+nominal boyun **kendisi** — "1715" yuvarlanmış katalog adı (8PK**1715**HD).
+
+**ÖLÇÜLDÜ:**
+
+| efektif boy | en kötü kol | en kötü gerginlik | 12 span/sarım |
+|---|---|---|---|
+| 1715.0 (katalog adı) | 0.62° | **%2.28** | 2'si kayık |
+| **1714.6** (REBL sütunu) | **0.08°** | **%0.29** | **12/12 birebir** |
+
+0.4 mm'lik bir okuma farkı kolu 0.56° döndürüyor ve gerginliği %1.5 kaydırıyor.
+
+###### DEVİR SÜTUNU MOTOR DEVRİ DEĞİL
+
+Rapor FAN kasnağını krank kabul ediyor (`Speed Ratio (Ref. Engine) FAN = 1.000`)
+ve duty tablosunun "Engine RPM" sütunu **o kasnağın** devri. Sayfanın kendi ilk
+satırı bunu doğruluyor: motor 800 × 1.1 = **880**. Bu yüzden örnek
+`driveRatio: 1` ile kurulu — raporu geri üretmek için gereken tanım budur.
+Gerçek motor devri isteniyorsa `ratioMode:'derive'` + krank/fan çapları
+(`BMC_FEAD_2026` öyle).
+
+###### Sayfanın elle yazdığı hız oranı ÇAPLA çelişiyor
+
+Sayfa alternatör oranını **dış çaplarla** yazmış: `162/57 = 2,842`. Raporun ve
+modelin değeri **2.768** (pitch: 164.4/59.4). **%2.7 fark**, ve bu sayı aksesuar
+devrini belirlediği için doğrudan güç eğrisi okumasına giriyor. Spesifikasyon
+§2.3'ün *"Excel'in en ciddi hatası elle yazılmış hız oranlarıydı"* maddesinin
+bu veri setindeki karşılığı; oran her zaman **pitch çapından** hesaplanıyor
+(`veFeadAutoKw`) ve test bunu ayırt ediyor.
+
+###### SAYFADA OLMAYIP RAPORDA OLAN ÜÇ ŞEY — ve %19.5'lik fark
+
+| Alan | Sayfa | Rapor |
+|------|-------|-------|
+| gergi **PİVOTU** | **yok** — yalnız kasnağın *"öngörülen merkezi montaj pozisyonu"* | **(−250.00, 110.00)**, dosya adında da yazılı |
+| kayış **toleransı** | yok | **±6.00 mm** |
+| **aşınma payı** | yok | **%0.60** |
+
+`BMC_FEAD_2026` pivotu **veriden TÜRETMİŞTİ** (`|merkez − pivot| = kol boyu`
+olacak şekilde: −259.94, 104.15). Rapor gerçek pivotu yazınca ayrışma
+ölçülebilir oldu: iki pivot **11.5 mm** apayrı.
+
+**İZOLASYON — ÖLÇÜLDÜ** (Mean konumu, rapor 543.9 N):
+
+| adım | kol | gerginlik | sapma |
+|------|-----|-----------|-------|
+| 0 · sayfa olduğu gibi | 28.51° | 650.0 N | **+%19.5** |
+| 1 · + gerçek pivot | — | — | **ÇÖZÜLMEZ** ↓ |
+| 2 · gerçek pivot + serbest açı 16.1° | 29.77° | 571.5 N | +%5.1 |
+| 3 · + tolerans/aşınma | 29.77° | 571.5 N | +%5.1 |
+| 4 · + `lengthOffset` 1.6 | 27.50° | 534.8 N | −%1.7 |
+| 5 · + efektif boy 1714.6 | 28.06° | 543.5 N | **−%0.1** |
+
+**1. adım bir hata değil, kapının ısırması:** sayfanın montaj merkezi raporun
+gerçek pivotundan 90 değil **80.65 mm** uzakta, ve `veFeadArmCheck` çözümü
+durdurup farkı adıyla yazıyor (*"fark −9.35 mm; ikisi de sayfada yazar, biri
+yanlış okunmuş"*). İki belge körlemesine birleştirilemiyor — tam olarak
+istenen davranış.
+
+**3. adım tolerans/aşınmanın Mean'i etkilemediğini gösteriyor** ve bu doğru:
+o iki alan çalışma noktasını değil **zarfı** açar. Sıfır bırakılınca
+`Replace = Max = Mean = Min` oluyor, yani kolun gezinme aralığı hiç görünmüyor —
+hata da alınmıyor. Örneğin o iki alanı taşıması bu yüzden veri değil **özellik**.
+
+###### İki sapma kaldı, ikisinin de sebebi MODELİN KENDİ İLAN ETTİĞİ SINIR
+
+| Büyüklük | MFSim | Gates | Sapma | Neden |
+|---|---|---|---|---|
+| B10 (ham) | 1403 s | 2670 s | **−%47** | ALT **Ø57 mm**, geçerlilik aralığı 79.6–176 mm. Model bunu `inValidRange:false` + `outOfRange:["…(d=57.0 mm)"]` ile **kendisi söylüyor** ve 0.55× sistematiği belgeli |
+| B10 (düzeltilmiş) | 2551 s | 2670 s | **−%4.5** | ampirik düzeltme uygulanmış hâli |
+| Burulma 1. mod | 12.95 Hz | 12.52 Hz | **+%3.4** | bu sistem burulma **kalibrasyon takımında DEĞİL** (takım: AG00686 ×2 + AG0868 ailesi) → kalibre edilmemiş bir sisteme karşı bağımsız ölçüm, modelin kendi ±%8 bandının içinde |
+
+Burulmada **krank MİLİ ataleti** yine ısırdı: geçilmezse 12.95 → **16.76 Hz**
+(+%29). Testi ikisini de koşturup farkı belgeliyor.
+
+###### kW örnekte KASNAK ANAHTARIYLA durur, çekirdeğe DÜĞÜM KİMLİĞİYLE gider
+
+Duty satırlarının kW sözlüğü çekirdeğe **düğüm kimliğiyle** gidiyor
+(`veFeadDutyToCore` → `r.kw[n.id]`), ama örnek tanımına kimlik yazmak örneği
+düğüm kurma ayrıntısına bağlardı. Örnek `kwByKey:{ A_C:2.70, … }` yazıyor,
+çeviri `veFeadExampleNodes`'ta **tek yerde**. Ayrışırsa hata **SESSİZ**:
+eşleşmeyen kimlik "kW girilmemiş" sayılır ve o aksesuar **0 kW** ile koşar —
+çözüm yine üretilir, yalnız gerilmeler düşer. Kapı bunu iki uçtan tutuyor
+(çeviri oldu mu · olmazsa sonuç gerçekten değişiyor mu).
+
+###### Panel kartı iki örneği AYIRT EDİYOR
+
+Kart *"birinci kademe: `<crankOD>` / `<fanOD>` mm"* satırını ham basıyordu;
+Gates örneğinde o iki alan YOK (`ratioMode:'direct'`) → **"undefined / undefined
+mm"** çıkıyordu ve bir sayı gibi okunuyordu. Satır artık kipe göre yazılıyor,
+ve karta **kayış satırı** eklendi (`8PK1715HD · 1714.6 mm · tolerans ±6 mm ·
+aşınma %0.60` ↔ `8PK 1715 · 1715 mm · tolerans YOK · aşınma YOK`) — iki örneğin
+farkı listede görünsün diye. Aksesuar gücü iki yoldan gelebildiği için
+(kasnağın kendi eğrisi ↔ duty satırındaki kW) kart ikisini ayrı ayrı sayıyor;
+yalnız eğriyi saysaydı raporlu örnek "0 aksesuar" der ve boş görünürdü.
+
+**Kapı sekiz mutasyonla ölçüldü, sekizi de kırmızı:** efektif boy 1714.6 → 1715
+(6 test), pivot → sayfanınki (19), gergi teması back → grooved (10), tolerans
+6 → 0 (2), kimlik çevirisini kaldırma (3), tahrik oranı 1 → 1.0985 (3), ALT
+çapı 57 → 59.4 (8), kart düzeltmesini geri alma (1).
+
+
 **Sırada:** Sonuçlar sayfasında FEAD çözüm sekmesi (kanal yayını).
 
 #### Yapısal Analiz — `js/cp-structural.js` (Geometri + Ağ DOLU, kalan ikisi iskelet)
@@ -2386,6 +2526,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/cp-fead-report.test.js` | `js/cp-fead-report.js` + `tools/report-assets/fead-theory-source.html` | **Rapor içeriği**: Türkçe sayı biçimi (gerçek eksi, `—` ≠ 0), `wearPct` oran→yüzde çevrimi, sarım açılarının DERECE basılması, Σsarım=360 ve `L_pitch−L_eff=2πh_b` denetimlerinin belgede görünmesi, sürücü kW sütununun duty tablosunda OLMAMASI, çözülemeyen konumun `Err.` ile işaretlenmesi, `undefined`/`NaN`/`[object` sızmaması, "ortalama tork ≠ peak", sistem burulma modunun yokluğunun yazılması, uygunluk hükmünün servis faktörünü kullanması, şekil/tablo numaralarının boşluksuz ve her üretimde sıfırlanması, şablon tokenlarının tek kez geçmesi, içindekiler id'lerinin üreteçle aynı olması; **tasarım gerginliğinin kaynağı**: (8.x) denklem zincirinin ELLE ÇALIŞILABİLİR olması (çevrim çarpanı bir kez TERS yazılmıştı — basılan denklem 650 N yerine 2,13 N veriyordu), girdi ↔ türev envanteri, take-up'ın GİRDİ OLMADIĞI, tasarım gerginliğinin TÜRETİLDİĞİ (T = M/(dL/dθ) formülü ve sayısı belgede, "sorulmaz" yazılı, eski karşılaştırma tablosu YOK, eski kayıttaki designTensionN raporu etkilemiyor); **φ kuruluşu**: her satırın φ'sinin BASILAN iki θ'dan yeniden çıkması, Σd·φ=360, sarım ve φ İŞARET yaylarının örtük merkezinin kasnak merkezinde olması ve süpürmenin kısa yola normalize EDİLMEMESİ (198°'lik sarımda 162° çizerdi); **§8.9**: take-up'ın ANLIK türev olarak adlandırılması, ortalama eğimin ayrı basılması, monoton olmaması; **etiket yerleştirici**: çakışma, kilitli alan ve çember engeli; **teori**: (4.3) türetmesi, §5.1 ankraj paragrafı, §10 sembolleri, şablona gerçekten girmiş olması |
 | `tests/unit/fead-anim.test.js` | `js/cp-fead.js` animasyon + `js/fead-model.js` kinematik | **Kayış Yolu kartının animasyonu**: ω·r = v özdeşliği, ağır çekim katsayısının REFERANS devre bağlanması (seçili devre bağlansaydı seçici işlevsiz kalırdı — istenmeyen alternatif de koşturulup belgeleniyor), diş adımının çevreyi tam bölmesi, diş sayısının faz boyunca sabit kalması, bir adımlık fazın deseni birebir kendine getirmesi, dişlerin GİDİŞ yönünde ilerlemesi, kol açısal hızının `d·v/r` olması (sırttan temas edende ters) ve kol ucu çevresel hızının kayış hızına eşitliği (kasnakta kayma yok), animasyonun YALNIZ kanvas kartında olması, fazın düğüm kimliğinde durması (yeniden kurulumda kayış zıplamıyor), uzun duraklamada `dt` kırpması |
 | `tests/unit/fead-example.test.js` | `js/fead-model.js` örnekleri + FEAD_INFORMATION | **Tedarikçi sayfası çıpası** (Gates'ten bağımsız ikinci doğrulama): kayış boyu 1715 mm, kol boyu 90.0 mm, Spring Mean Load 22.07 Nm, tahrik oranı 1.1; sayfanın devir→kW tabloları; **sessiz kanalın** ölçülmüş belgesi (montaj merkezi ↔ serbest açı 2.6×); **tasarım gerginliği TÜRETİLİR**: örnek onu taşımıyor, T = M/(dL/dθ) kuruluşu, eski kayıttaki değerin yok sayılması, türetilemezse sessiz kalmaması |
+| `tests/unit/fead-example-ag00976.test.js` | `js/fead-model.js` örnek kayıt defteri + `js/cp-fead.js` örnek kartı | **Gates raporu çıpası** — tedarikçiden DÖNEN rapor (AG00976 · 8PK1715HD · Ten@-250/110 · Corrected-IDR1) örnek olarak kurulup UÇTAN UCA geri üretiliyor. Doğrulama harness'ı köprüyü ATLIYOR (`makeSystem`i doğrudan çağırıyor); burada zincirin tamamı koşuyor. Referans değerler fixture'dan okunuyor, İKİNCİ KOPYA YOK. Kapsam: 12 span+sarım (0.2 derece/mm), 6 konum × 7 sütun (kol 0.2°, çalışma gerginliği %0.5, Load %1.5), duty 12×6 gerilme+hubload (%0.5), sürücü gücünün TOPLAMDAN hesaplanması, dış çap → raporun Pitch/Effective sütunları, hız oranının PITCH çapından gelmesi (sayfanın elle yazdığı 162/57 = 2.842'yi AYIRT EDİYOR), **tasarım gerginliğinin ve serbest kol açısının TÜRETİLİP** raporun kendi satırlarına oturması, kol boyu çapraz kontrolünün ısırması; **efektif boy 1714.6** (raporun REBL sütunu — katalog adı 1715 kullanılırsa AÇIKÇA kırılıyor), tolerans/aşınma yoksa kol zarfının tek noktaya ÇÖKMESİ, `kwByKey` → düğüm kimliği çevirisi (kayarsa aksesuar SESSİZCE 0 kW ile koşar), B10'un aralık dışı olduğunu MODELİN KENDİSİNİN söylemesi, burulmanın kalibrasyon takımı DIŞINDAKİ bir sistemde %8 bandına düşmesi ve krank MİLİ ataleti geçilmezse %29 kayması; iki örneğin (giden sayfa ↔ dönen rapor) AYRI KALMASI ve pivot farkının gerginliği %19.5 kaydırması; panel kartında `undefined` basılmaması |
 | `tests/unit/structural-model.test.js` | `js/structural-model.js` + `vendor/opencascade.*` | **STEP köprüsü**: GERÇEK dosyalar GERÇEK OCCT ile okunuyor (sahte veri yok). **Yüz kimliği ağ inceliğinden bağımsız** (üçgen değişir, `m<i>/f<j>` değişmez), yüz aralıkları üçgenleri boşluksuz/örtüşmesiz böler, `veStrFaceOfTriangle` eşlemesi, birimin mm'ye çevrilmesi, künyenin ÜÇGEN TAŞIMAMASI, hata çevirisi (bozuk dosya ≠ katısız dosya) + OCCT'nin kendi teşhisinin mesaja iliştirilmesi, oturumluk önbelleğin temizlenmesi. **BOOLEAN**: 7 gövdeli parça 1 katıya iniyor, yüz sayısı 30 → 18 (dikişler siliniyor), hacim korunuyor (kayıp yalnız örtüşen ortak hacim), birleştirmeden SONRA da yüz aralıkları üçgenleri tam bölüyor, tek katılı dosyada boolean HİÇ çalışmıyor, `fuse:false` ile kapatılabiliyor, künyeye giriyor. **Gömülü çekirdek**: üretilmişse vendor'la bayt bayt aynı, WASM imzası, gzip'in gerçekten kazandırdığı, index.html'de AÇILIŞTA yüklenmediği, varlığın `.gitignore`'da olduğu. **Kaynak deposu**: künye STEP kaynağı TAŞIMIYOR (undo yığını), `veStrSrcAttach` KOPYALA-YAZ (canlı state'e tek yazma bile yok — kaynağın otomatik yedeğe sızdığı ölçülmüş hatanın kapısı), alt-topolojideki düğüme ulaşması, deposu olmayan düğümde gereksiz kopya üretmemesi, eski projelerin HAM `source` alanını da kabul etmesi. **Worker sözleşmesi**: köprü DOM'a dokunmuyor (worker'da `document`/`window` yok), sonuç transfer ile dönüyor, AŞAMA worker'dan bildiriliyor, boru hattı worker'a KAYNAK METİN olarak giriyor ve dışarıdan hiçbir şeye başvurmuyor (ikinci kopya yok), normalize tipli diziyi YENİDEN KOPYALAMIYOR. **İlerleme**: aşamalar `reader·parse·fuse·build`, çok gövdeli dosyada `fuse` sırayla bildiriliyor, tek katılıda HİÇ bildirilmiyor |
 | `tests/unit/structural-remesh.test.js` | `js/structural-remesh.js` | **Yüzey hazırlığının DEĞİŞMEZ kapısı**: modülün değeri min açıda ama asıl kapılar değişmezlerde — bir yeniden-mesh üç ayrı şekilde sessizce bozulur ve üçü de ekranda kusursuz görünür. Fikstürün KENDİSİ önce doğrulanıyor (küp DIŞA-CCW, hacim tam +1000, açık kenar 0 — yanlış sarımlı bir fikstür bütün hacim kapılarını anlamsız yapardı). **Topoloji**: açık kenar 0 + anormal (3+ üçgenli) kenar 0 — bu kapı geliştirme sırasında ÜÇ hatayı yakaladı (anlık görüntü üzerinde ikinci bölme → 1220 açık kenar, bağlantı koşulsuz birleştirme → 8 anormal, pasoda ikinci çevirme → 4 anormal). **Hacim**: 1000 mm³ %0,01 içinde — içbükey dörtgenin çevrilmesini normal denetimi GÖREMEZ (normaller aynı yönde kalır), yalnız hacim değişmezinden görünür (ölçüldü: 1000,000 → 1000,418). **Düğümler yüzeyde kalıyor** (teğetsel düzleştirme yüzeyden çıkarmıyor, sapma < 1e-9). **Kalite**: min açı > 30° ve 10° altı üçgen 0 (sırasız bölmeyle 45° → 0,20° ve %45,8). **CAD yüzü kimliği** her üçgende ve yalnız girdideki altı kimlik, altısı da temsil ediliyor. **Sliver iyileştirme**: kasıtlı ince üçgen enjekte edilmiş küpte min açı yükseliyor, topoloji ve hacim korunuyor. **Hedef kenar**: verilmezse katının KENDİ köşegeninden (÷40), kaba bir hedef katı başına TAVANLA kırpılıyor (÷8 — braket montajında 5,98 mm hedef 17 mm'lik parçaları çakıl taşına çeviriyordu). **Non-manifold**: temiz ağda 0, kusurlu ağda ÜRETİLMİYOR ve BÖLÜNEREK ÇOĞALMIYOR (4 kenar 303'e çıkıyordu). **Şekil ölçütü** min açıyla aynı yönde değişiyor (kapılar `acos` kullanamaz — düzleştirme 11,0 s sürüyordu) |
 | `tests/unit/structural-mesh-model.test.js` | `js/structural-mesh-model.js` + `vendor/tetgen-wasm.*` | **Ağ köprüsü**: GERÇEK TetGen çekirdeği GERÇEK STEP dosyasında (sahte veri yok). **SINIR KOŞULU ZİNCİRİ** — occt `brep_faces` → remesh `faceIds` → TetGen `facetmarkerlist` → çıktı `trifacemarkerlist` → yeniden `m<i>/f<j>`: her sınır üçgeni bir CAD yüzüne bağlı (kayıp YOK), girdideki BÜTÜN yüzler çıktıda, kimlik biçimi Geometri bileşeniyle AYNI. **ELEMAN KUADRATİK** (`cornersPerTet === 10`) — tet4 bu modülde yasak, ölçüldü: 27.783 SD'de bile %24 RİJİT. **Dejenere/ters eleman yok**, `minTetVolume` eşiğin üstünde (kritik metrik `v_min`, `q_min` DEĞİL). **Hacim kaybı** %4 altında ve ağ hacmi yüzey hacmiyle tutarlı. **Reçete**: `p` + `q1.4/18` + `o2` + Steiner TAVANI (tarayıcıda sınırsız nokta sekmeyi kilitler) + `Q`; kullanılan anahtarlar sonuçta YAZILI. **Künye AĞ TAŞIMIYOR** (düğüm/eleman dizileri yok, künye < ağın kendisi) ve çözümün ne ile kurulduğunu taşıyor; oturumluk önbellek temizlenebiliyor. **PLC**: CAD kimliği tamsayı işaretçiye eşleniyor ve TERS TABLO dönüyor (yoksa çıktıdaki 17 numaralı işaretçinin hangi yüz olduğu kaybolurdu), sıfır KULLANILMIYOR (TetGen işaretçisizleri 0 sayıyor). **Hata sessiz değil**: parçasız istek ve kendini kesen yüzey — sözleşme "bu girdi ÇÖKER" değil, köprünün İKİ durumdan birini vermesi (ham istisna sızdırmaması). **Gömülü ağ üreteci**: `js/structural-tetgen-wasm.js` vendor .wasm'ıyla BAYT BAYT aynı, WASM imzası, index.html'de AÇILIŞTA yüklenmiyor, AGPL-3 lisansı ve TetGen KAYNAĞI depoda, derleyici `predicates.cxx`'i `-O0` ile derliyor (kesin aritmetik şartı) |
