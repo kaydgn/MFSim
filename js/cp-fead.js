@@ -126,6 +126,10 @@ var VE_FEAD_STARTER_LAYOUT = [
 // Yeni anlamı: kanvas konumlarını mm'den YENİDEN KUR. Elle kaydırılmış bir
 // düğümü (ya da bir çakışmayı) toparlamak için gerçek bir ihtiyaç, ve tersine
 // çevrilebilir: koordinatlar değişmiyor, yalnız kutular yerine oturuyor.
+//
+// opts.silent: örnek kurucusu (veFeadLoadExample) buradan geçerken kendi
+// saveState'ini, kendi toast'ını ve kendi kamerasını kullanır; ikinci bir
+// undo adımı ve üst üste binen iki bildirim istenmiyor.
 function veFeadArrangeByCoords(opts){
   opts = opts || {};
   if(typeof nodes === 'undefined' || !nodes) return false;
@@ -193,11 +197,14 @@ function veFeadArrangeByCoords(opts){
   serit(sol, CX - yariX - 150, 'sol');
   serit(sag, CX + yariX + 150, 'sag');
 
-  if(typeof saveState === 'function') saveState();
+  if(!opts.silent && typeof saveState === 'function') saveState();
   nodes.forEach(function(n){
     var p = yer[n.id];
     if(!p) return;
-    n.x = Math.round(p.x); n.y = Math.round(p.y);
+    // TAM SAYIYA YUVARLANMIYOR: 1 px = 1 mm olduğu için tam sayı yuvarlaması
+    // koordinatı 1 mm'ye kuantalar (veFeadSyncCanvasFromMm'deki ölçümün
+    // aynısı — alternatörün 1 mm'si gerginliği %5.9 değiştiriyor).
+    n.x = Math.round(p.x * 100) / 100; n.y = Math.round(p.y * 100) / 100;
     var el = (typeof document !== 'undefined') ? document.getElementById(n.id) : null;
     if(el){ el.style.left = n.x + 'px'; el.style.top = n.y + 'px'; }
   });
@@ -205,12 +212,12 @@ function veFeadArrangeByCoords(opts){
   if(typeof veFeadRefreshBadges === 'function') { try { veFeadRefreshBadges(); } catch(e){} }
 
   var canvas = (typeof document !== 'undefined') ? document.getElementById('ve-canvas') : null;
-  if(canvas && typeof veFitViewToContent === 'function'){
+  if(!opts.silent && canvas && typeof veFitViewToContent === 'function'){
     canvas.classList.add('tidy-cam');
     veFitViewToContent({ maxZoom: opts.maxZoom || 1.2 });
     setTimeout(function(){ if(canvas) canvas.classList.remove('tidy-cam'); }, 520);
   }
-  if(typeof showToast === 'function')
+  if(!opts.silent && typeof showToast === 'function')
     showToast('Kasnaklar koordinatlarına yerleştirildi (1 px = 1 mm)'
       + (eksik.length ? ' · ' + eksik.length + ' kasnağın koordinatı yok' : ''),
       eksik.length ? 'warning' : 'success');
@@ -2645,10 +2652,29 @@ function veFeadLoadExample(key){
   });
   var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
   var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
-  var GEN = 520, YUK = 400;                       // kanvasta kaplayacağı alan
-  var sx = (maxX - minX) > 1 ? GEN / (maxX - minX) : 1;
-  var sy = (maxY - minY) > 1 ? YUK / (maxY - minY) : 1;
-  var s = Math.min(sx, sy);
+
+  // ── ÖLÇEK 1 px = 1 mm, "GÖRÜNÜME SIĞDIRAN" DEĞİL ────────────────────────
+  //
+  // Burada eskiden kümeyi 520×400'lük bir kutuya sığdıran bir ölçek vardı
+  // (BMC'de ×1.1178) ve kutular köşe koordinatıyla diziliyordu. Kanvas artık
+  // KAYIŞ DÜZLEMİ olduğu için bu sessiz bir TUTARSIZLIK üretiyordu: örnek
+  // yüklenir yüklenmez kutunun kanvastaki yeri, düğümün taşıdığı mm
+  // koordinatını YALANLIYORDU.
+  //
+  // ÖLÇÜLDÜ (gerçek tarayıcı, BMC, sürüklemeden ÖNCE):
+  //   alternatör merkezi − krank merkezi = −319.108 px
+  //   alternatör mm koordinatı           = −281.000 mm      → 38.108 mm FARK
+  //
+  // Fark = ölçek payı (−281 × 0.1178 = −33.11) + kutu genişliği payı
+  // ((54−72)/2 = −5.00). İlk sürüklemede `veFeadSyncMmFromCanvas` kanvası
+  // okuyup mm'yi tazelediği için o 38.108 mm koordinatın üstüne SESSİZCE
+  // biniyordu: kullanıcı 60 px sürüklüyor, model 98 mm oynuyordu.
+  //
+  // Yerleştirme artık TEK NOKTADAN: aşağıdaki `veFeadArrangeByCoords` — yani
+  // "Otomatik Düzenle"nin ve panel düzenlemesinin kullandığı yolun ta kendisi.
+  // Buradaki dizi yalnız `createNode`'un ilk karesi ve o yol çalışamazsa
+  // (iki kasnaktan az koordinat) geçerli kalan yedek; ölçeği bu yüzden 1.
+  var s = (typeof VE_FEAD_PX_PER_MM === 'number') ? VE_FEAD_PX_PER_MM : 1;
 
   var yer = pack.example.pulleys.map(function(p, i){
     return { lx: 60 + (xs[i] - minX) * s, ly: 150 + (maxY - ys[i]) * s };
@@ -2661,7 +2687,7 @@ function veFeadLoadExample(key){
   // üstünde görünür (ölçüldü). Kullanıcının istediği yer de bu: topolojinin
   // YANINDA, kendi alanında duran bir çizim.
   var araclar = pack.nodes.length - pack.example.pulleys.length;
-  var sagSerit = 60 + GEN + 110;
+  var sagSerit = 60 + (maxX - minX) * s + 110;
   var ust = 0;
   for(var t = 0; t < araclar; t++){
     var tip = pack.nodes[pack.example.pulleys.length + t].type;
@@ -2742,9 +2768,16 @@ function veFeadLoadExample(key){
       if(idMap[c.from] && idMap[c.to]) createConnection(idMap[c.from], idMap[c.to]);
     });
   }
+  // KUTULARI KOORDİNATLARINA OTURT — kanvas ile mm ilk kareden itibaren AYNI
+  // şeyi söylesin. Sessiz kip: saveState/toast/kamera bu fonksiyonun kendisine
+  // ait (ikinci bir undo adımı ve üst üste iki bildirim istenmiyor).
+  if(typeof veFeadArrangeByCoords === 'function'){
+    try { veFeadArrangeByCoords({ silent: true }); } catch(e){ /* yedek: yukarıdaki sıra */ }
+  }
   if(typeof updateAllConnections === 'function') updateAllConnections();
   if(typeof veFeadRefreshBadges === 'function') veFeadRefreshBadges();
   _feadForgetResults();
+  if(typeof veFitViewToContent === 'function') veFitViewToContent();
   if(typeof saveState === 'function') saveState();
   if(typeof showToast === 'function')
     showToast(pack.example.name + ' kuruldu — ' + kuruldu.length + ' bileşen, '

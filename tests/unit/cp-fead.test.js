@@ -1330,6 +1330,29 @@ describe('veFeadArrangeByCoords — kasnaklar KOORDİNATLARINA yerleşir', () =>
     expect(ns.map((n) => JSON.stringify(n.data))).toEqual(once);
   });
 
+  // SESSİZ KİP — örnek kurucusu buradan geçiyor ve kendi saveState'ini,
+  // kendi toast'ını, kendi kamerasını kullanıyor. Bayrak yutulursa kullanıcı
+  // tek bir "örnek kuruldu" yerine üst üste iki bildirim görür ve tek bir
+  // "geri al" örneği kaldırmaz (undo yığınında iki adım kalır).
+  test('silent: saveState ve toast ÇAĞRILMAZ, yerleştirme yine yapılır', () => {
+    const ns = kur([{ x: 0, y: 0 }, { x: 200, y: 0 }]);
+    global.saveState.mockClear(); global.showToast.mockClear();
+    expect(fead.veFeadArrangeByCoords({ silent: true })).toBe(true);
+    expect(global.saveState).not.toHaveBeenCalled();
+    expect(global.showToast).not.toHaveBeenCalled();
+    expect(merkez(ns[1]).x - merkez(ns[0]).x).toBeCloseTo(200, 6);
+  });
+
+  // TAM SAYIYA YUVARLAMA KUANTALARDI. 1 px = 1 mm olduğu için Math.round
+  // koordinatı 1 mm'ye oturtur; ölçüldü, alternatörün 1 mm'si gerginliği
+  // 38.6 N (%5.9) değiştiriyor ve gergi kol boyu kapısının toleransı 0.5 mm.
+  test('kutu konumu 1 mm\'ye KUANTALANMAZ (kesirli mm korunur)', () => {
+    const ns = kur([{ x: 0, y: 0 }, { x: 130.08, y: 139.92 }]);
+    fead.veFeadArrangeByCoords();
+    expect(merkez(ns[1]).x - merkez(ns[0]).x).toBeCloseTo(130.08, 1);
+    expect(merkez(ns[1]).y - merkez(ns[0]).y).toBeCloseTo(-139.92, 1);
+  });
+
   test('veTidyLayout FEAD topolojisinde koordinat yerleştiricisine devreder', () => {
     kur([{ x: 0, y: 0 }, { x: 200, y: 0 }]);
     eval(loadSource('tidy-layout.js'));
@@ -1343,6 +1366,98 @@ describe('veFeadArrangeByCoords — kasnaklar KOORDİNATLARINA yerleşir', () =>
     veTidyLayout();
     expect(global.veFeadArrangeByCoords).not.toHaveBeenCalled();
     delete global.veFeadArrangeByCoords;
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ÖRNEK KURULUNCA KANVAS İLE mm AYNI ŞEYİ SÖYLER
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Kanvas artık KAYIŞ DÜZLEMİ; kutunun yeri bir görünüm tercihi değil, düğümün
+// taşıdığı mm koordinatının ta kendisi. Örnek kurucusu bunu bir dönem
+// YALANLIYORDU: kümeyi 520×400'lük bir kutuya sığdıran kendi ölçeğini
+// (BMC'de ×1.1178) kullanıyor ve kutuları köşe koordinatıyla diziyordu.
+//
+// ÖLÇÜLDÜ (gerçek tarayıcı, BMC, HİÇ SÜRÜKLEMEDEN önce):
+//   alternatör merkezi − krank merkezi = −319.108 px
+//   alternatör mm koordinatı           = −281.000 mm   →  38.108 mm FARK
+//
+// Sessizliğin sebebi: hata ancak İLK SÜRÜKLEMEDE ortaya çıkıyor.
+// veFeadSyncMmFromCanvas kanvası okuyup mm'yi tazelediği için o 38.108 mm
+// koordinatın üstüne biniyor — kullanıcı 60 px sürüklüyor, model 98 mm
+// oynuyor ve kayış boyu bir anda hiç istenmeyen bir yere gidiyor.
+describe('veFeadLoadExample — kutu konumu mm koordinatını YALANLAMAZ', () => {
+  const kurExample = (key) => {
+    document.body.innerHTML = '<div id="ve-canvas"></div><div id="ve-canvas-wrapper"></div>';
+    global.nodes = []; global.connections = [];
+    let k = 0;
+    // Gerçek createNode DOM kurar ve tip tanımlarına bakar; burada sınanan şey
+    // KONUM aritmetiği, o yüzden düğüm kabuğu yeter. def GERÇEK tanımdan gelir:
+    // kutu genişliği hatanın bir parçasıydı ((54−72)/2 = −5 px).
+    global.createNode = (type, x, y) => {
+      const d = componentDefs[type] || {};
+      const n = { id: 'ex' + ++k, type, def: d, x, y,
+                  width: d.defaultWidth || 65, height: d.defaultHeight || 60, data: {} };
+      global.nodes.push(n);
+      return n;
+    };
+    global.createConnection = (from, to) =>
+      global.connections.push({ id: 'c' + global.connections.length, from, to,
+                               fromPort: 'output', toPort: 'input' });
+    const out = fead.veFeadLoadExample(key);
+    delete global.createNode; delete global.createConnection;
+    return out;
+  };
+  const merkez = (n) => ({ x: n.x + n.width / 2, y: n.y + n.height / 2 });
+
+  test('BMC örneğinde HER kasnağın kutu merkezi mm koordinatına oturur', () => {
+    expect(kurExample('BMC_FEAD_2026')).toBeTruthy();
+    const kasnaklar = global.nodes.filter((n) => M._feadIsPulley(n));
+    expect(kasnaklar.length).toBe(6);
+    const org = M.veFeadOriginNode(global.nodes);
+    expect(org).toBeTruthy();
+    const o = merkez(org);
+    let enBuyukSapma = 0;
+    kasnaklar.forEach((n) => {
+      const d = n.data || {};
+      const mx = M._feadDefOf(n).isFeadTensioner ? d.cenX : d.x;
+      const my = M._feadDefOf(n).isFeadTensioner ? d.cenY : d.y;
+      if (!Number.isFinite(mx) || !Number.isFinite(my)) return;
+      const c = merkez(n);
+      enBuyukSapma = Math.max(enBuyukSapma,
+        Math.abs((c.x - o.x) - mx), Math.abs((c.y - o.y) - (-my)));   // Y TERS
+    });
+    // Eski ölçekli yerleşimde bu sayı 38.108 idi.
+    expect(enBuyukSapma).toBeLessThan(0.05);
+  });
+
+  // Asıl bedel burada ödeniyordu: mm zaten doğru duruyor, sürükleme onu
+  // BOZUYORDU. Bir karelik sürüklemeyi birebir yeniden koşturuyoruz.
+  test('İLK SÜRÜKLEME koordinatı KAYDIRMIYOR — sürüklenen kadar oynuyor', () => {
+    kurExample('BMC_FEAD_2026');
+    const alt = global.nodes.find((n) => n.type === 'fead-alternator');
+    const once = alt.data.x;
+    alt.x -= 60;                                   // kanvasta 60 px sola
+    M.veFeadSyncMmFromCanvas(global.nodes);
+    expect(alt.data.x).toBeCloseTo(once - 60, 2);  // ← eskiden −98.1 oynuyordu
+  });
+
+  test('kurulan her örnekte aynı kapı — kasnak sayısı ve bağlantılar da yerinde', () => {
+    Object.keys(M.VE_FEAD_EXAMPLES).forEach((key) => {
+      expect(kurExample(key)).toBeTruthy();
+      const org = M.veFeadOriginNode(global.nodes);
+      if (!org) return;
+      const o = merkez(org);
+      global.nodes.filter((n) => M._feadIsPulley(n)).forEach((n) => {
+        const d = n.data || {};
+        const mx = M._feadDefOf(n).isFeadTensioner ? d.cenX : d.x;
+        const my = M._feadDefOf(n).isFeadTensioner ? d.cenY : d.y;
+        if (!Number.isFinite(mx) || !Number.isFinite(my)) return;
+        const c = merkez(n);
+        expect(c.x - o.x).toBeCloseTo(mx, 1);
+        expect(c.y - o.y).toBeCloseTo(-my, 1);
+      });
+    });
   });
 });
 
