@@ -78,6 +78,11 @@ function veAttachNodeDrag(nodeEl, node) {
     });
 
     _veNodeDrag.dragStart = { x: e.clientX - node.x * canvasZoom, y: e.clientY - node.y * canvasZoom };
+    // FEAD: kasnak konumu FİZİKSEL — kanvasta taşımak kasnağı kayış düzleminde
+    // taşımak demek. Kanvas → mm dönüşümü burada, kareden önce yapılıyor ki
+    // updateAllConnections'ın tetiklediği kart tazelemesi YENİ geometriyi
+    // görsün. FEAD dışındaki topolojilerde bedava (kasnak yoksa erken çıkar).
+    if(typeof veFeadSyncDrag === 'function') veFeadSyncDrag(selectedNodes);
     if(typeof updateAllConnections === 'function') updateAllConnections();
     if(typeof veMinimapUpdate === 'function') veMinimapUpdate();
   });

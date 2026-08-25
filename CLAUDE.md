@@ -464,6 +464,93 @@ oran → 45°, giriş/çıkış komşusunu takas): dördü de kırmızı.
 ve alt topoloji açılışında konan "Başlangıç ve Örnekler" kutusu tam kayış
 yolunun üstüne düşüyordu (Klima ↔ Avara 1 açıklığı oradan geçiyor).
 
+#### KANVAS = KAYIŞ DÜZLEMİ — konum artık FİZİKSEL
+
+Kullanıcı isteği (2026-08-25): *"Krank kasnağına koordinatları girdiğimiz zaman,
+bu koordinatların 0,0 noktası olması ve topoloji üzerinde bileşenleri hareket
+ettirdiğimde, örneğin alternatör kasnağını, kanvas üzerinde de hareket etmesi ve
+hesapların buna göre anında güncellenmesi."*
+
+Eskiden kanvastaki konum **hiçbir şey ifade etmiyordu** — çözücü mm
+koordinatlarını yalnız panelden okuyordu. Artık ikisi TEK BİR ŞEY.
+
+| Ne | Karar | Nerede |
+|----|-------|--------|
+| Orijin | **Sürücü kasnak** (rol, tip değil) | `veFeadOriginNode` |
+| Ölçek | **1 px = 1 mm**, hassasiyet zoom'dan | `VE_FEAD_PX_PER_MM` |
+| Y ekseni | Kanvasta aşağı, mm'de **yukarı** | `veFeadCanvasToMm` |
+| Gergi sürüklemesi | **Pivot** taşınır, montaj merkezi rijit takip eder | `veFeadDragTensioner` |
+| Gerçek çap | Kutunun arkasında soluk çember | `veFeadApplyDiaGhost` |
+| "Otomatik Düzenle" | Halka değil, **koordinata yerleştir** | `veFeadArrangeByCoords` |
+
+**ÖTELEME BEDAVA — ÖLÇÜLDÜ.** Bütün geometri merkez FARKLARINDAN kuruluyor
+(`tangent`: `w = c_j − c_i`), dolayısıyla krankı orijine almak ücretsiz. BMC'nin
+altı kasnağı + gergi pivotu + montaj merkezi birlikte `(+500, −300)` ötelenince
+`ΔL_eff = 0.00e+0`, altı sarım açısında `Δ = 0.00e+0`, gerginlik
+`649.986 → 649.986 N` — kayan nokta hassasiyetinde **birebir**. Eski projeler bu
+yüzden sessizce göç edebiliyor (`veFeadNormalizeOrigin`, alt topoloji açılışında).
+
+##### Üç sessiz kırılma noktası — üçü de testli
+
+| Nokta | Yanlış yapılırsa | Neden sessiz |
+|-------|------------------|--------------|
+| **Y ekseni** | Bütün topoloji aynalanır | TAM ayna bütün skalerleri BİREBİR aynı bırakıyor (fizik ayna simetrik); hata sayılardan görünmez, yalnız çizimden |
+| **Kutu merkezi** | Her kasnağa kendi kutu yarısı kadar kayma | Kutu ölçüleri 54…72 px arasında değiştiği için kayma kasnaktan kasnağa farklı — tek bir ofsetle yakalanamaz |
+| **Gergi** | Pivot bayat kalır, gergi yanlış yerde çözülür | Kol boyu TUTAR (`veFeadArmCheck` geçer), yalnız yerleşim yanlış |
+
+Üçüncüsü **kapı boşluğuydu**: gergi senkrondan çıkarılınca hiçbir test
+kırılmıyordu. Orijin sürüklendiğinde krank-göreli HER koordinat aynı karede
+tazelenmeli — gergininki ayrı bir geçişe bırakılamaz.
+
+##### mm → px TAM SAYIYA YUVARLANMAZ
+
+1 px = 1 mm olduğu için tam sayı yuvarlaması koordinatı **1 mm'ye kuantalardı**
+ve bu sessiz bir kayıp: ölçüldü, alternatörün 1 mm'si gerginliği **38.6 N (%5.9)**
+değiştiriyor, gergi kol boyu kapısının toleransı ise 0.5 mm. Yuvarlama 0.01 mm
+— her iki eşiğin de çok altında ve gidiş-dönüş kayıpsız.
+
+##### İmza: kasnak konumu girer, araç düğümü GİRMEZ
+
+`veFeadTopoSignature` konumu bilerek dışlıyordu (ölçüldü: 30 sürükleme karesinde
+0 yeniden kurulum). Artık konum fiziksel olduğu için kasnak koordinatı imzaya
+**giriyor** — bu bilinçli bir geri adım. Ama imzaya giren şey **kanvas pikseli
+değil mm koordinatı**: 420×340'lık Kayış Yolu kartını kendi kutusundan tutup
+taşımak çözücüyü koşturmuyor.
+
+##### Kademeli tazeleme — ÖLÇÜLDÜ
+
+| Ne | Süre | Ne zaman |
+|----|-----:|----------|
+| `veFeadSyncMmFromCanvas` (6 kasnak) | 0.025 ms | her karede |
+| `veFeadBuildSystem` + geometri (kart) | 2.245 ms | her karede |
+| `veFeadAnalyze` (duty + ömür + burulma) | 7.013 ms | **bırakınca** |
+
+Karede koşan toplam **2.27 ms** → 60 fps bütçesinde **7.4× pay**, kare tavanı
+441 fps. Tam çözüm sürükleme yolunda HİÇ koşmuyor.
+
+##### Gerçek çap hayaleti — kutu daireye ÇEVRİLMİYOR
+
+Kutu 54–72 px, gerçek kasnaklar 57–162 mm; birebir ölçekte kutu krankı **2.25 kat
+küçük** gösteriyor. Konum fiziksel olduğu için bu yanıltıcı: **çakışmayan iki
+kutu, çakışan iki kasnak** olabilir — ve çekirdek onu "kayış kasnağın içinden
+geçiyor" diye reddeder. Hayalet o çarpışmayı hata çıkmadan ÖNCE görünür yapıyor.
+Kasnaklar daireye çevrilmiyor: `c48fe17`'de denendi ve kullanıcının isteğiyle
+geri alındı.
+
+Hayalet rozetle **aynı dört noktadan** tazeleniyor (`veFeadApplyBadge` içinden) —
+ayrı bir çağrı zinciri kurmak, dördünden biri unutulduğunda hayaletin sessizce
+bayat kalması demekti.
+
+##### "Otomatik Düzenle" artık koordinata yerleştiriyor
+
+Halka düzeni doğruydu — **konum hiçbir şey ifade etmezken**. Artık halkaya
+dizmek kullanıcının girdiği bütün mm koordinatlarını SİLMEK olurdu, yani
+"düzenle" düğmesi modeli bozardı. Yeni anlamı: kanvas konumlarını mm'den yeniden
+kur. Koordinatı olmayan kasnak gizlenmiyor, kümenin altına diziliyor (sessizce
+(0,0)'a koymak iki kasnağı üst üste bindirirdi).
+
+Kapı **sekiz mutasyonla** ölçüldü, sekizi de kırmızı.
+
 #### Üç yapısal kural (iskeletten farkı, hepsi testli)
 
 1. **Sürücülük ROL, tip değil** (`node.data.driver`). Gates AG00976'da sürücü
@@ -2782,6 +2869,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/mount-results-tab.test.js` | `js/results.js` + `js/graphics.js` | Takoz çözüm sekmesi, tek X ekseni kuralı, pano uzlaştırma |
 | `tests/unit/mount-results-publish.test.js` | `js/cp-mount.js` | Çözümün panoya yayını; alt-topoloji çökertme regresyonu |
 | `tests/unit/fead-core.test.js` | `js/fead-core.js` + `tests/fixtures/fead-validation.js` | **FEAD çekirdeğinin doğrulama kapısı**: 17 Gates raporu / 2095 değer (çalışma %0.5, Load dahil %1.5, kol açısı 0.2°), 8 koruma mekanizması, SPEC §9 yapısal özdeşlikleri (sarım değişmezi, `L_pitch−L_eff=2π·hb`, çevrim kapanışı, sürücü gücü), UMD tarayıcı köprüsü; **burulma modeli**: yapısal özdeşlikler (tam 1 rijit cisim modu, take-up özdeşliği %0.01, yalnız gergi komşusu spanlar) + Gates "System Resonance (Mode 1)" kalibrasyonu (5 sistem RMS <%8, 4/6/8PK kaburga ölçeklemesi) |
+| `tests/unit/fead-canvas-mm.test.js` | `js/fead-model.js` koordinat katmanı + `js/connections.js` imza | **Kanvas = kayış düzlemi**: gidiş-dönüş birebir, Y EKSENİ TERS (kanvasta aşağı = mm'de azalan), kutu ölçüsünün sistematik kayma ÜRETMEMESİ (sol üstten ölçmek 54…72 px arası değişen bir sapma verirdi), 1 px = 1 mm. **Orijin**: sürücü kasnak (rol, tip değil), kendi mm'sinin (0,0) olması, kasnak yoksa senkronun hiç çalışmaması. **Senkron**: sürüklemenin mm'yi o kadar değiştirmesi, ORİJİNİ sürüklemenin diğerlerini karşı yönde kaydırması, araç düğümlerine dokunmaması. **Gergi**: pivot + montaj merkezinin RİJİT taşınması (kol boyu ve montaj açısı korunur, `veFeadArmCheck` geçer) ve ORİJİN sürüklenince gergi pivotunun da tazelenmesi (bu bir KAPI BOŞLUĞUYDU — gergi senkrondan çıkarılınca hiçbir test kırılmıyordu). **Göç**: ötelemenin L_eff/sarım/gerginliği BİREBİR bırakması, göçün krankı (0,0)'a çekmesi, gergi pivotunun da ötelenmesi (kısmi göç modeli bozardı). **İmza**: kasnak mm koordinatı/çapı/temas tarafı imzaya girer, Kayış Yolu kartını taşımak imzayı DEĞİŞTİRMEZ. **Uçtan uca**: alternatörü kanvasta taşımak gereken kayış boyunu gerçekten değiştiriyor |
 | `tests/unit/fead-belts.test.js` | `js/fead-belts.js` + `js/fead-model.js` aday değerlendirmesi | **Kayış kataloğu**: listelerin sıralı/tekil/pozitif olması, aralıkların ContiTech beyanıyla çakışması (bir listenin yanlış profile yapışması ancak böyle yakalanır), en kısa boyun min. kasnak çevresinden büyük olması, `veFeadBeltStock`'un KOPYA döndürmesi. **Izgara bir kural**: en yakın adıma yuvarlama, aralık dışında kenetlenme, ızgarası olmayan profilde sessizce PK ızgarasının kullanılmaması. **Kod**: otomotiv ve endüstriyel yazımın ikisinin de çözülmesi, gidiş-dönüş, kaburga denetiminin yalnız verisi olan profilde hüküm vermesi. **Ölçülmüş boşluk**: 8PK 1715'in endüstriyel listede OLMAMASI (komşuları 65 mm uzakta) — kataloğun iki kümeli olmasının sebebi. **Uçtan uca**: serbest kipin gereken boyu → katalog ızgarası → sabit kip tabanı (kol 28.5090° · T 649.986 · hub 369.064) birebir; sığmayan adayın gerginlik YAZMAMASI (4.05e10 N sızmıyor), boy uzadıkça kol ve gerginliğin düşmesi, aday değerlendirmesinin çalışma noktası önbelleğini kirletmemesi |
 | `tests/unit/fead-belt-mode.test.js` | `js/fead-model.js` kayış kipi + `js/fead-core.js` hoşgörülü geometri | **Kayış boyu sabit değil**: kip çözümü ve geriye dönük uyumluluk (boyu olan eski proje `fixed`, boyu olmayan artık ÇÖZÜLÜYOR); sabit kipte tabanın BİREBİR korunması (kol 28.5090° · L 1715.0000 · T 649.986 · hub 369.064); serbest kipte gerginliğin ankraj, boyun ÇIKTI olması ve iki kipin doğru modelde AYNI çalışma noktasına varması; sürüklerken çözümün kopmaması (−200…+40 mm, boy monoton). **Kenetleme**: kuşatılmış hedefte çekirdeğin çözümünün birebir dönmesi, erişilemeyen hedefte istisna yerine sınır + aralığın yazılması, sığmayan kayışta NOMİNAL kol açısına düşülüp ÖNERİLEN boyun serbest kipinkiyle aynı çıkması, kenetlenmişken uyuşmazlık uyarısının İKİNCİ KEZ basılmaması. **Hoşgörülü geometri**: kapanmayan çevrimin çözülüp `geomValid:false` ile yazılması, çekirdek varsayılanının hâlâ ATMASI, çakışan kasnakların tek gerçek durdurucu olması. **Üç sessiz hata**: `feasibleRelMax` ölçütü, `_geomOpt`'un sistem ömrünün başında kurulması, dejenereliğin SARIM değil TAKE-UP ile ölçülmesi |
 | `tests/unit/fead-model.test.js` | `js/fead-model.js` | **Köprü kapısı**: AG00686 MFSim KANVAS DÜĞÜMÜ olarak kurulup Gates sayılarını üretiyor mu (span %0.5, sarım 0.2°, Mean kol açısı 0.2°); temas tarafı üç katmanlı çözümü, sürücü rolü, `dia→od` göçü, ad tekilleştirme, hata çevirisi. **Güzergâh teşhisi**: tel silinince çözüm ARTIK aynı kalmıyor (eskiden kopuk kasnak sıraya sessizce ekleniyordu), kopuk kasnak adıyla bildiriliyor, kapanmayan zincir ve çatal (bir kasnaktan iki tel) sebebiyle yazılıyor, `veFeadRouteOrder` sözleşmesi (yerleştirici için bütün kasnaklar) korunuyor. Ayrıca **ters temas tarafının hata VERMEDİĞİNİ** belgeler (rozetin varlık nedeni). **Duty kapısı**: AG00686 duty tablosunun çıkış gerilmeleri ve hubload'ları %0.5 içinde; kW'ın kimlikle anahtarlanması (yeniden adlandırmada kaybolmuyor), sürücü gücünün toplamdan hesaplanması, ateşleme frekansı, yorulma dağılımının çapa bağlı olması, katalog oranının ÇAPTAN hesaplanması. **Sıcaklık kapısı**: satır başına °C → tek °C indirgemesi hasar-eşdeğer (tek sıcaklıkta birebir aynı, dağılımda aritmetik ortalamanın üstünde), ağırlık `dc·v`, açıkça girilen %0 sıfır ağırlıklı; **yorulma modeli** seçimi dağılıma geçer, mutlak ömre geçemez ve bu yazılır. **Burulma köprüsü**: gergi kasnak kütlesi ve KRANK MİLİ ataleti çekirdeğe geçiyor (ölü girdiydi), krank adla anahtarlanır, `analyze()` içindeki çift hesap kapalı, eksik atalet sessiz değil |

@@ -833,11 +833,31 @@ function updateAllConnections() {
 var _veFeadTopoSig = null;
 function veFeadTopoSignature() {
   if(typeof nodes === 'undefined' || !nodes) return '';
-  var i, s = nodes.length + '|';
+  var i, n, s = nodes.length + '|';
   for(i = 0; i < nodes.length; i++) s += nodes[i].id + ':' + nodes[i].type + ',';
   s += '#';
   var c = (typeof connections !== 'undefined' && connections) ? connections : [];
   for(i = 0; i < c.length; i++) s += c[i].from + '>' + c[i].to + ';';
+  // KASNAK KONUMU ARTIK İMZAYA GİRİYOR — ve bu bilinçli bir GERİ ADIM.
+  //
+  // Eskiden konum bilerek DIŞLANIYORDU: düğümü sürüklemek çözümü değiştirmiyor
+  // olduğu için kartı yeniden kurmak boşuna çözücü koşturmak demekti (ölçüldü:
+  // 30 sürükleme karesinde 0 yeniden kurulum). Artık konum FİZİKSEL — kasnağı
+  // sürüklemek geometriyi gerçekten değiştiriyor, dolayısıyla kart tazelenmeli.
+  //
+  // İmzaya giren şey KANVAS PİKSELİ DEĞİL, mm koordinatı: araç düğümlerini
+  // (Çözücü, Rapor, Kayış Yolu kartının kendisi) taşımak hiçbir şeyi
+  // değiştirmiyor ve onlar imzada yok — kartı kendi kutusundan tutup taşımak
+  // çözücüyü koşturmasın.
+  s += '#';
+  for(i = 0; i < nodes.length; i++) {
+    n = nodes[i];
+    if(typeof _feadIsPulley !== 'function' || !_feadIsPulley(n)) continue;
+    var d = n.data || {};
+    s += n.id + '@' + d.x + ',' + d.y + ',' + d.od + ',' + d.contact
+       + (d.pivotX !== undefined ? ':' + d.pivotX + ',' + d.pivotY : '')
+       + (d.cenX !== undefined ? '/' + d.cenX + ',' + d.cenY : '') + ';';
+  }
   return s;
 }
 function veFeadTopoRefresh() {

@@ -459,6 +459,211 @@ function veFeadWorkingPoint(sys, mode, nominalRelDeg){
   return out;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  KANVAS = KAYIŞ DÜZLEMİ — konum artık FİZİKSEL
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı isteği (2026-08-25): *"Krank kasnağına koordinatları girdiğimiz
+// zaman, bu koordinatların 0,0 noktası olması ve topoloji üzerinde bileşenleri
+// hareket ettirdiğimde, örneğin alternatör kasnağını, kanvas üzerinde de
+// hareket etmesi ve hesapların buna göre anında güncellenmesi."*
+//
+// Eskiden kanvastaki konum HİÇBİR ŞEY ifade etmiyordu: çözücü mm
+// koordinatlarını yalnız panelden okuyordu. Artık ikisi TEK BİR ŞEY.
+//
+// ── ÖTELEME BEDAVA — ÖLÇÜLDÜ ───────────────────────────────────────────────
+// Krankı orijine almak matematiksel olarak ücretsiz: bütün geometri merkez
+// FARKLARINDAN kuruluyor (`tangent()` içindeki w = c_j − c_i). BMC'nin altı
+// kasnağı + gergi pivotu + montaj merkezi birlikte (+500, −300) ötelendiğinde
+// ΔL_eff = 0.00e+0, altı sarım açısında Δ = 0.00e+0, gerginlik 649.986 →
+// 649.986 N. Kayan nokta hassasiyetinde BİREBİR aynı.
+//
+// ── Y EKSENİ TERS ──────────────────────────────────────────────────────────
+// Kanvasta y AŞAĞI artar, kayış düzleminde YUKARI. Dönüşüm bu yüzden bir
+// yansıma taşıyor ve TEK BİR YERDE duruyor — iki ayrı yerde yazılsaydı biri
+// sessizce ters kalabilirdi.
+//
+// Ölçüldü ve iki durum ayrı: TAM ayna (her şey y→−y) bütün skalerleri BİREBİR
+// aynı bırakıyor (fizik ayna simetrik), KISMİ ayna (kasnaklar çevrilir, gergi
+// pivotu eski konvansiyonda kalır) modeli ÇÖZÜLEMEZ yapıyor ve sebebini
+// yazıyor. Yani kapı burada gürültülü — ama başka bir topolojide sessiz
+// olabileceği için dönüşüm yine de tek noktada.
+//
+// ── ÖLÇEK 1 px = 1 mm ──────────────────────────────────────────────────────
+// Hassasiyet ZOOM'dan geliyor: %400 zoom'da bir ekran pikseli 0.25 mm.
+// Sabit bir büyütme seçilseydi "ekrandaki mesafe kaç mm" sorusu zoom'a göre
+// yine değişirdi; birebir ölçek o soruyu tek cevaplı yapıyor.
+// ÖLÇÜLDÜ: BMC kümesi 465 × 314 mm, yani birebir ölçekte kanvasa rahat sığıyor.
+var VE_FEAD_PX_PER_MM = 1;
+
+// Kutu ölçüsü — düğümün kendi ölçüsü yoksa tip varsayılanı, o da yoksa 65×60
+// (projenin `createNode` varsayılanı).
+function veFeadNodeBox(node){
+  var d = _feadDefOf(node);
+  return { w: _feadNum(node && node.width,  0) || d.defaultWidth  || 65,
+           h: _feadNum(node && node.height, 0) || d.defaultHeight || 60 };
+}
+
+// Kasnağın kanvastaki MERKEZİ. node.x/y kutunun SOL ÜSTÜ — merkezi kullanmak
+// zorunlu: kasnak çapları farklı olduğu için sol üstten ölçmek her kasnağa
+// kendi kutu yarısı kadar sistematik bir kayma verirdi.
+function veFeadNodeCenter(node){
+  var b = veFeadNodeBox(node);
+  return { x: _feadNum(node && node.x, 0) + b.w / 2,
+           y: _feadNum(node && node.y, 0) + b.h / 2 };
+}
+
+// ORİJİN = SÜRÜCÜ KASNAK. Tipe değil ROLE bağlı (`veFeadResolveDriver`):
+// AG00976'da sürücü kasnak FAN'dır, tipe bağlamak o topolojiyi orijinsiz
+// bırakırdı. Kasnak yoksa null → çağıran taraf senkronu ATLAR, konumlar
+// serbest kalır (yarım modelde kutuları yerinden oynatmak istemiyoruz).
+function veFeadOriginNode(nodeList){
+  var pulleys = (nodeList || []).filter(_feadIsPulley);
+  if(!pulleys.length) return null;
+  return veFeadResolveDriver(pulleys);
+}
+
+// Kanvas px → kayış düzlemi mm. Y TERS.
+function veFeadCanvasToMm(node, originNode, scale){
+  var s = _feadNum(scale, 0) || VE_FEAD_PX_PER_MM;
+  var c = veFeadNodeCenter(node), o = veFeadNodeCenter(originNode);
+  return { x: (c.x - o.x) / s, y: -(c.y - o.y) / s };
+}
+
+// Kayış düzlemi mm → kanvas px (kutunun SOL ÜSTÜ, DOM'a yazılacak değer).
+function veFeadMmToCanvas(mmX, mmY, originNode, scale, box){
+  var s = _feadNum(scale, 0) || VE_FEAD_PX_PER_MM;
+  var o = veFeadNodeCenter(originNode);
+  var b = box || { w: 65, h: 60 };
+  return { x: o.x + _feadNum(mmX, 0) * s - b.w / 2,
+           y: o.y - _feadNum(mmY, 0) * s - b.h / 2 };
+}
+
+// ── KANVASTAN mm'YE ────────────────────────────────────────────────────────
+// Sürükleme sırasında çağrılır. BÜTÜN kasnaklar tek geçişte tazeleniyor,
+// yalnız sürüklenen değil — çünkü orijin de bir kasnak: KRANK sürüklenirse
+// diğerlerinin krank-göreli konumu değişir, ve bu fiziksel olarak DOĞRUdur
+// (krank aksesuarlara göre kaymıştır). Özel durum yazmak yerine tek geçiş.
+function veFeadSyncMmFromCanvas(nodeList, opt){
+  opt = opt || {};
+  var org = opt.origin || veFeadOriginNode(nodeList);
+  if(!org) return 0;
+  var s = _feadNum(opt.scale, 0) || VE_FEAD_PX_PER_MM;
+  var n = 0;
+  (nodeList || []).forEach(function(x){
+    if(!_feadIsPulley(x)) return;
+    // GERGİ AYNI GEÇİŞTE, AMA KENDİ KURALIYLA. Merkezi bir girdi değil,
+    // çözücünün çıktısı; kanvastan yazılan şey MONTAJ merkezi ve pivot
+    // (rijit, kol boyu korunarak). Ayrı bir geçişe bırakmak, orijin
+    // sürüklendiğinde gerginin pivotunu BAYAT bırakırdı — krank-göreli her
+    // koordinat aynı karede tazelenmeli.
+    if(_feadDefOf(x).isFeadTensioner){
+      if(veFeadDragTensioner(x, org, s)) n++;
+      return;
+    }
+    if(!x.data) x.data = {};
+    var mm = veFeadCanvasToMm(x, org, s);
+    var nx = Math.round(mm.x * 1000) / 1000, ny = Math.round(mm.y * 1000) / 1000;
+    if(x.data.x !== nx || x.data.y !== ny){ x.data.x = nx; x.data.y = ny; n++; }
+  });
+  return n;
+}
+
+// ── mm'DEN KANVASA ─────────────────────────────────────────────────────────
+// Yükleme, örnek kurma ve "Otomatik Düzenle" yolunda çağrılır. Orijinin KENDİ
+// kanvas konumu DEĞİŞMEZ: çerçeveyi o tanımlıyor, onu da taşımak bütün kümeyi
+// kaydırırdı.
+function veFeadSyncCanvasFromMm(nodeList, opt){
+  opt = opt || {};
+  var org = opt.origin || veFeadOriginNode(nodeList);
+  if(!org) return 0;
+  var s = _feadNum(opt.scale, 0) || VE_FEAD_PX_PER_MM;
+  var n = 0;
+  (nodeList || []).forEach(function(x){
+    if(!_feadIsPulley(x) || x === org) return;
+    var mmX = _feadNum(x.data && x.data.x, NaN), mmY = _feadNum(x.data && x.data.y, NaN);
+    // Gergi merkezi girdi değil; kanvas konumu PİVOTUNDAN kurulur (aşağıda).
+    if(_feadDefOf(x).isFeadTensioner){
+      var td = x.data || {};
+      mmX = _feadNum(td.cenX, NaN); mmY = _feadNum(td.cenY, NaN);
+    }
+    if(!Number.isFinite(mmX) || !Number.isFinite(mmY)) return;
+    var p = veFeadMmToCanvas(mmX, mmY, org, s, veFeadNodeBox(x));
+    // TAM SAYIYA YUVARLANMIYOR. 1 px = 1 mm olduğu için tam sayı yuvarlaması
+    // koordinatı 1 mm'ye KUANTALARDI ve bu sessiz bir kayıp: ölçüldü,
+    // alternatörün 1 mm'si gerginliği 38.6 N (%5.9) değiştiriyor, gergi kol
+    // boyu kapısının toleransı ise 0.5 mm. 0.01 mm'lik yuvarlama her iki
+    // eşiğin de çok altında ve gidiş-dönüşü kayıpsız yapıyor.
+    var px = Math.round(p.x * 100) / 100, py = Math.round(p.y * 100) / 100;
+    if(x.x !== px || x.y !== py){ x.x = px; x.y = py; n++; }
+  });
+  return n;
+}
+
+// ── GERGİ SÜRÜKLEMESİ PİVOTU TAŞIR ─────────────────────────────────────────
+//
+// Gergi kasnağının merkezi bir GİRDİ DEĞİL: çekirdek onu pivot + kol boyu +
+// yay dengesinden çözüyor ve kol konumuna göre ALTI ayrı yerde durabiliyor
+// (BMC'de 59.9 mm'lik bir zarf). Dolayısıyla "gergi düğümünü sürükledim"
+// cümlesinin tek başına karşılığı yok — hangi merkezin taşındığı söylenmeli.
+//
+// PİVOT taşınıyor: fiziksel bağlantı noktası odur, ve montaj merkezi kol
+// boyunu koruyarak rijit takip ettiği için `veFeadArmCheck`'in 0.5 mm kapısı
+// kendiliğinden sağlanıyor. Montaj merkezini taşımak o kapıyı kırar ve
+// kullanıcı sebebini anlamaz.
+function veFeadDragTensioner(node, originNode, scale){
+  if(!node || !_feadDefOf(node).isFeadTensioner || !originNode) return false;
+  if(!node.data) node.data = {};
+  var td = node.data;
+  var eski = veFeadTensionerMount(td);
+  if(!eski.ok) return false;
+  var s = _feadNum(scale, 0) || VE_FEAD_PX_PER_MM;
+  // Kanvasta sürüklenen kutu MONTAJ MERKEZİNİ gösteriyor (çözücünün çalışma
+  // merkezine en yakın olan o); pivot onunla RİJİT taşınıyor, yani kol boyu
+  // ve montaj açısı korunuyor — taşınan şey gerginin gövdesinin tamamı.
+  var yeni = veFeadCanvasToMm(node, originNode, s);
+  var dx = yeni.x - eski.cen[0], dy = yeni.y - eski.cen[1];
+  if(!Number.isFinite(dx) || !Number.isFinite(dy)) return false;
+  if(Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return false;
+  td.cenX = Math.round((eski.cen[0] + dx) * 1000) / 1000;
+  td.cenY = Math.round((eski.cen[1] + dy) * 1000) / 1000;
+  td.pivotX = Math.round((eski.pivot[0] + dx) * 1000) / 1000;
+  td.pivotY = Math.round((eski.pivot[1] + dy) * 1000) / 1000;
+  return true;
+}
+
+// ── ORİJİN GÖÇÜ ────────────────────────────────────────────────────────────
+// Krank (0,0) değilse bütün koordinatlardan onunkini çıkar. Bu TANIM GEREĞİ
+// bir öteleme, dolayısıyla geometriye etkisi YOK (yukarıda ölçüldü) — eski
+// projeler sessizce göç edebilir. Gergi pivotu ve montaj merkezi de ötelenir;
+// yalnız kasnakları ötelemek KISMİ bir öteleme olurdu ve modeli bozardı.
+function veFeadNormalizeOrigin(nodeList){
+  var org = veFeadOriginNode(nodeList);
+  if(!org || !org.data) return 0;
+  var ox = _feadNum(org.data.x, NaN), oy = _feadNum(org.data.y, NaN);
+  if(!Number.isFinite(ox) || !Number.isFinite(oy)) return 0;
+  if(Math.abs(ox) < 1e-9 && Math.abs(oy) < 1e-9) return 0;
+  var n = 0;
+  (nodeList || []).forEach(function(x){
+    if(!_feadIsPulley(x) || !x.data) return;
+    var d = x.data;
+    if(Number.isFinite(_feadNum(d.x, NaN)) && Number.isFinite(_feadNum(d.y, NaN))){
+      d.x = Math.round((_feadNum(d.x, 0) - ox) * 1000) / 1000;
+      d.y = Math.round((_feadNum(d.y, 0) - oy) * 1000) / 1000;
+      n++;
+    }
+    ['pivot', 'cen'].forEach(function(k){
+      var kx = k + 'X', ky = k + 'Y';
+      if(Number.isFinite(_feadNum(d[kx], NaN)) && Number.isFinite(_feadNum(d[ky], NaN))){
+        d[kx] = Math.round((_feadNum(d[kx], 0) - ox) * 1000) / 1000;
+        d[ky] = Math.round((_feadNum(d[ky], 0) - oy) * 1000) / 1000;
+        n++;
+      }
+    });
+  });
+  return n;
+}
+
 // ─── KATALOG ADAYLARININ SONUCU ─────────────────────────────────────────────
 //
 // Katalogun asıl değeri bir boy LİSTESİ vermek değil — o listeden birini
@@ -1905,6 +2110,14 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_BELT_MODES: VE_FEAD_BELT_MODES, veFeadBeltMode: veFeadBeltMode,
     VE_FEAD_MIN_TAKEUP_RATIO: VE_FEAD_MIN_TAKEUP_RATIO,
     veFeadBeltFit: veFeadBeltFit, veFeadBeltOptions: veFeadBeltOptions,
+    VE_FEAD_PX_PER_MM: VE_FEAD_PX_PER_MM,
+    veFeadNodeBox: veFeadNodeBox, veFeadNodeCenter: veFeadNodeCenter,
+    veFeadOriginNode: veFeadOriginNode,
+    veFeadCanvasToMm: veFeadCanvasToMm, veFeadMmToCanvas: veFeadMmToCanvas,
+    veFeadSyncMmFromCanvas: veFeadSyncMmFromCanvas,
+    veFeadSyncCanvasFromMm: veFeadSyncCanvasFromMm,
+    veFeadDragTensioner: veFeadDragTensioner,
+    veFeadNormalizeOrigin: veFeadNormalizeOrigin,
     veFeadSolveArmClamped: veFeadSolveArmClamped,
     veFeadWorkingPoint: veFeadWorkingPoint,
     veFeadAtLimitText: veFeadAtLimitText, veFeadViolationText: veFeadViolationText,
