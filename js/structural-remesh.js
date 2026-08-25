@@ -785,6 +785,120 @@ function _rmBoxApart(V, o, x0, x1, y0, y1, z0, z1){
   return (mx < z0 || mn > z1);
 }
 
+// İKİ ÜÇGEN ARASINDA KESİŞİM — ORTAK KÖŞE SAYISINA GÖRE.
+// İlk sürüm köşe paylaşan HER çifti eliyordu ("komşular tanım gereği değer")
+// ve bu kalkanda ÖLÇÜLEBİLİR bir delik açıyordu: braket h=10'da TetGen'in
+// bildirdiği `KESİŞEN SEGMENT [794,595] ↔ [793,597]` çifti tam da tek köşe
+// paylaşan iki üçgene aitti — kalkan onlara hiç bakmıyordu.
+//
+//   2+ ortak köşe → KENAR KOMŞUSU (ya da kopya): kesişme sayılmaz, elenir.
+//   1 ortak köşe  → temas MEŞRU, kesişme YİNE MÜMKÜN → aşağıdaki KARŞI KENAR
+//                   ölçütü.
+//   0 ortak köşe  → doğrudan Möller.
+//
+// TEK ORTAK KÖŞEDE MÖLLER KULLANILAMAZ ve bu ölçülerek görüldü. İki üçgen
+// ortak köşede zaten değdiği için Möller onları HEP kesişiyor sayıyor; üçgenleri
+// ağırlık merkezlerine doğru zerre büzüp (1e-6) ayırma hilesi de İŞE YARAMADI,
+// çünkü ayrılma yönü kesişim doğrultusuyla aynı değil — aralıklar örtüşmeye
+// devam ediyor. ÖLÇÜLDÜ (braket, h=6): kalkanın 51.797 reddinin 51.691'i tam
+// olarak bu yoldan geliyordu, yani reddin %99,8'i ASILSIZDI ve iyileştirici
+// işlemleri de birlikte engelliyordu — ortalama min açı 41,6° → 29,7°,
+// 10° altı üçgen %0,56 → %25,76.
+//
+// DOĞRU ÖLÇÜT: ortak köşede değmek serbest, GERÇEK kesişim ancak bir üçgenin
+// o köşeye KOMŞU OLMAYAN kenarı öbürünün içinden geçerse vardır. Her üçgende
+// böyle tek bir kenar var (karşı kenar), yani iki parça–üçgen testi yetiyor.
+function _rmOppEdge(tri, v){
+  var out = [];
+  for(var i = 0; i < 3; i++) if(tri[i] !== v) out.push(tri[i]);
+  return out.length === 2 ? out : null;
+}
+// Parça (p→q) üçgeni (a,b,c) İÇİNDEN geçiyor mu? Möller–Trumbore; uçlarda ve
+// kenarlarda DEĞMEK sayılmaz (kesin iç bölge).
+function _rmSegTriHit(p, q, a, b, c){
+  var e1 = _rmSub(b, a), e2 = _rmSub(c, a), d = _rmSub(q, p);
+  var h = _rmCross(d, e2), det = _rmDot(e1, h);
+  if(Math.abs(det) < 1e-18) return false;                 // paralel / dejenere
+  var f = 1 / det, sv = _rmSub(p, a);
+  var u = f * _rmDot(sv, h);
+  if(u <= 1e-9 || u >= 1 - 1e-9) return false;
+  var qv = _rmCross(sv, e1);
+  var vv = f * _rmDot(d, qv);
+  if(vv <= 1e-9 || u + vv >= 1 - 1e-9) return false;
+  var t = f * _rmDot(e2, qv);
+  return (t > 1e-9 && t < 1 - 1e-9);
+}
+// ─── ASILI DÜĞÜM (T-BAĞLANTISI) ─────────────────────────────────────────────
+// Üçgen–üçgen ölçütünün göremediği İKİNCİ kusur; o da ölçülerek bulundu.
+// ÖLÇÜLDÜ (braket, h=8, paso paso izlenerek): 9. pasonun DÜZLEŞTİRME adımında
+//   kenar[1915,1916] boy 3,1000 mm · içine düşen düğüm 1924 · t = 0,5000
+// yani özellik zinciri üstündeki bir düğüm, kendi zinciri boyunca kayarken
+// BAŞKA bir üçgenin kenarının tam ortasına oturuyor (zincir düzleştirmesi
+// düğümü iki komşusunun orta noktasına çektiği için t hep 0,5). Ağ bundan
+// sonra da su geçirmez ve manifold kalıyor (açık kenar 0, anormal kenar 0 —
+// ölçüldü), yani hiçbir topoloji kapısı görmüyor; gören tek şey TetGen:
+// "Two line segments are nearly overlapping" → üçgen ATILIYOR.
+//
+// KENAR KOMŞULARI MUTLAKA DIŞARIDA KALMALI ve bu ölçülerek öğrenildi: ilk
+// sürüm bütün adayları sınıyordu, oysa bir SLIVER üçgenin üçüncü köşesi tanım
+// gereği zaten karşı kenarının üstündedir. Kapı böylece her sliver'ın kendi
+// komşusunu reddetmesine yol açıyor, iyileştirici işlemleri de birlikte
+// engelliyordu — ortalama min açı 41,6° → 0,01°.
+//
+// Eşik bağıl (kenar boyunun binde biri): mutlak bir mm eşiği ölçek değişince
+// anlamını yitirir.
+var VE_STR_REMESH_TJUNC_REL = 1e-3;
+
+function _rmPointOnEdge(V, pi, a, b){
+  var ax = V[a*3], ay = V[a*3+1], az = V[a*3+2];
+  var dx = V[b*3]-ax, dy = V[b*3+1]-ay, dz = V[b*3+2]-az;
+  var L2 = dx*dx + dy*dy + dz*dz;
+  if(L2 < 1e-18) return false;
+  var wx = V[pi*3]-ax, wy = V[pi*3+1]-ay, wz = V[pi*3+2]-az;
+  var par = (wx*dx + wy*dy + wz*dz) / L2;
+  if(par <= 1e-3 || par >= 1 - 1e-3) return false;          // uçlar değil, İÇİ
+  var ex = wx - dx*par, ey = wy - dy*par, ez = wz - dz*par;
+  return (ex*ex + ey*ey + ez*ez) < VE_STR_REMESH_TJUNC_REL * VE_STR_REMESH_TJUNC_REL * L2;
+}
+// İKİ YÖNLÜ: düğüm yabancı bir kenarın içine girebildiği gibi, bir kenar da
+// (birleştirme daha uzun kenarlar üretirken) yabancı bir düğümün üstünden
+// geçebilir. Tek yön ikinci sınıfı sessizce geçirirdi.
+function _rmTJuncPair(V, tri, o){
+  var i, k, v, a, b;
+  for(i = 0; i < 3; i++){
+    v = tri[i];
+    for(k = 0; k < 3; k++){
+      a = o[k]; b = o[(k+1)%3];
+      if(a === v || b === v) continue;
+      if(_rmPointOnEdge(V, v, a, b)) return true;
+    }
+  }
+  for(i = 0; i < 3; i++){
+    v = o[i];
+    for(k = 0; k < 3; k++){
+      a = tri[k]; b = tri[(k+1)%3];
+      if(a === v || b === v) continue;
+      if(_rmPointOnEdge(V, v, a, b)) return true;
+    }
+  }
+  return false;
+}
+
+function _rmPairHits(V, tri, o, pa, pb, pc){
+  var ortak = 0, paylasilan = -1, i, j;
+  for(i = 0; i < 3; i++){
+    for(j = 0; j < 3; j++) if(tri[i] === o[j]){ ortak++; paylasilan = tri[i]; break; }
+  }
+  if(ortak >= 2) return false;
+  if(_rmTJuncPair(V, tri, o)) return true;
+  var qa = _rmVec(V, o[0]), qb = _rmVec(V, o[1]), qc = _rmVec(V, o[2]);
+  if(ortak === 0) return _rmTriTriHit(pa, pb, pc, qa, qb, qc);
+  var k1 = _rmOppEdge(tri, paylasilan), k2 = _rmOppEdge(o, paylasilan);
+  if(!k1 || !k2) return false;
+  if(_rmSegTriHit(_rmVec(V,k1[0]), _rmVec(V,k1[1]), qa, qb, qc)) return true;
+  return _rmSegTriHit(_rmVec(V,k2[0]), _rmVec(V,k2[1]), pa, pb, pc);
+}
+
 // `tri` (YENİ konumlarıyla) ızgaradaki herhangi bir üçgeni kesiyor mu?
 // KÖŞE PAYLAŞANLAR ELENİR: komşu üçgenler tanım gereği birbirine değer,
 // kesişme sayılmaz — TetGen'in `-d` ölçütü de budur. `skip` işlemin yerine
@@ -816,9 +930,7 @@ function _rmShieldHit(g, V, T, tri, skip){
       o = T[t];
       if(!o) continue;
       if(_rmBoxApart(V, o, qx0, qx1, qy0, qy1, qz0, qz1)) continue;
-      if(o[0]===a || o[0]===b || o[0]===c || o[1]===a || o[1]===b || o[1]===c
-      || o[2]===a || o[2]===b || o[2]===c) continue;
-      if(_rmTriTriHit(pa, pb, pc, _rmVec(V,o[0]), _rmVec(V,o[1]), _rmVec(V,o[2]))) return true;
+      if(_rmPairHits(V, tri, o, pa, pb, pc)) return true;
     }
   }
   // Sorgu üçgeni kendisi "büyük" ise (kutusu tavanı aşıyor) hücreleri
@@ -836,126 +948,11 @@ function _rmShieldHit(g, V, T, tri, skip){
         o = T[t];
         if(!o) continue;
         if(_rmBoxApart(V, o, qx0, qx1, qy0, qy1, qz0, qz1)) continue;
-        if(o[0]===a || o[0]===b || o[0]===c || o[1]===a || o[1]===b || o[1]===c
-        || o[2]===a || o[2]===b || o[2]===c) continue;
-        if(_rmTriTriHit(pa, pb, pc, _rmVec(V,o[0]), _rmVec(V,o[1]), _rmVec(V,o[2]))) return true;
+        if(_rmPairHits(V, tri, o, pa, pb, pc)) return true;
       }
     }
   }
   return false;
-}
-
-// ─── 6) ASILI DÜĞÜM ONARIMI ─────────────────────────────────────────────────
-// ÖNLEMEK YERİNE ONARMAK — ve bu bir teslim değil, ölçülmüş bir tercih.
-//
-// Asılı düğümü işlemlerin İÇİNDE önlemek bir EŞİK meselesine dönüşüyor ve eşik
-// iki yönde de yanlış: ÖLÇÜLDÜ (kullanıcının braketi),
-//   eşik 1e-4 → kapı TetGen'in kendi eş-doğrusallık toleransından SIKI, üçgen
-//               hâlâ atılıyor (3,1 mm kenarda 3,8e-4 mm sapma "temiz" sayılıyor)
-//   eşik 1e-2 → kapı meşru birleştirmeleri de reddediyor: üçgen sayısı İKİYE
-//               KATLANIYOR (h=12'de 3.546 → 8.932), min açı 3,36° → 0,01°
-// Yani doğru eşik yok; TetGen'in toleransını kovalamak kırılgan bir düzeltme
-// olurdu.
-//
-// Onarım ise ölçüt tanımı gereği KESİN: "v düğümü (a,b) kenarının içinde" ise
-// o kenarı v'de BÖL. Sonuç uyumlu (conforming) bir ağ — üst üste binen segment
-// çifti ortadan kalkar, geometri v zaten kenarın üstünde olduğu için ölçülemez
-// düzeyde değişir. Yeni bir sınıf da açmaz: bölme, kesişim ÜRETEMEYEN tek
-// işlemdir (yeni üçgenlerin birleşimi eskisinin tam olarak aynı noktalarını
-// kaplar).
-var VE_STR_REMESH_REPAIR_REL = 1e-3;
-var VE_STR_REMESH_REPAIR_ROUNDS = 6;
-
-// Bir turda bulunan asılı düğümleri onarır; onarılan sayıyı döndürür.
-function _rmRepairHangingOnce(state){
-  var V = state.V, T = state.T, Tface = state.Tface;
-  var grid = _rmGridBuild(V, T, state.cell || _rmMeanEdge(state));
-  var ix = _rmIndex(T, Tface);
-  var isler = [], gorulen = {};
-
-  Object.keys(ix.edges).forEach(function(key){
-    var e = ix.edges[key];
-    var ax = V[e.a*3], ay = V[e.a*3+1], az = V[e.a*3+2];
-    var dx = V[e.b*3]-ax, dy = V[e.b*3+1]-ay, dz = V[e.b*3+2]-az;
-    var L2 = dx*dx + dy*dy + dz*dz;
-    if(L2 < 1e-18) return;
-    // Kenarın kutusuna düşen üçgenlerin köşelerini tara.
-    var sahte = [e.a, e.b, e.a];
-    var keys = _rmGridCellKeys(grid, V, sahte);
-    var tick = ++grid.tick, stamp = grid.stamp;
-    var i, j, k, arr, t, o;
-    for(i = -1; i < (keys ? keys.length : 0); i++){
-      arr = (i < 0) ? grid.big : grid.map[keys[i]];
-      if(!arr) continue;
-      for(j = 0; j < arr.length; j++){
-        t = arr[j];
-        if(stamp[t] === tick) continue;
-        stamp[t] = tick;
-        o = T[t];
-        if(!o) continue;
-        for(k = 0; k < 3; k++){
-          var v = o[k];
-          if(v === e.a || v === e.b) continue;
-          if(gorulen[v]) continue;
-          if(!_rmPointOnEdgeRel(V, v, e.a, e.b, VE_STR_REMESH_REPAIR_REL)) continue;
-          // v, kenarın üçgenlerinden birinin köşesi ise bu bir T-bağlantısı
-          // DEĞİL, normal komşuluktur.
-          var komsu = false;
-          for(var q = 0; q < e.tris.length; q++){
-            var tr = T[e.tris[q]];
-            if(tr && (tr[0] === v || tr[1] === v || tr[2] === v)){ komsu = true; break; }
-          }
-          if(komsu) continue;
-          gorulen[v] = true;
-          isler.push({ a: e.a, b: e.b, v: v, tris: e.tris.slice() });
-        }
-      }
-    }
-  });
-
-  var n = 0;
-  for(var s = 0; s < isler.length; s++){
-    var iş = isler[s];
-    var bozuk = false;
-    for(var z = 0; z < iş.tris.length; z++) if(!T[iş.tris[z]]) bozuk = true;
-    if(bozuk) continue;                       // bu turda önceki bir onarım değiştirdi
-    for(var z2 = 0; z2 < iş.tris.length; z2++){
-      var ti = iş.tris[z2], tri = T[ti];
-      var c = _rmThirdVertex(tri, iş.a, iş.b);
-      if(c < 0) continue;
-      // Sarımı KORU: (a,b,c) sırasını bozmadan (a,v,c) ve (v,b,c) üret.
-      var yeni1 = null, yeni2 = null;
-      for(var r = 0; r < 3; r++){
-        if(tri[r] === iş.a && tri[(r+1)%3] === iş.b){ yeni1 = [iş.a, iş.v, c]; yeni2 = [iş.v, iş.b, c]; break; }
-        if(tri[r] === iş.b && tri[(r+1)%3] === iş.a){ yeni1 = [iş.b, iş.v, c]; yeni2 = [iş.v, iş.a, c]; break; }
-      }
-      if(!yeni1) continue;
-      T[ti] = yeni1;
-      T.push(yeni2); Tface.push(Tface[ti]);
-    }
-    n++;
-  }
-  return n;
-}
-function _rmPointOnEdgeRel(V, pi, a, b, rel){
-  var ax = V[a*3], ay = V[a*3+1], az = V[a*3+2];
-  var dx = V[b*3]-ax, dy = V[b*3+1]-ay, dz = V[b*3+2]-az;
-  var L2 = dx*dx + dy*dy + dz*dz;
-  if(L2 < 1e-18) return false;
-  var wx = V[pi*3]-ax, wy = V[pi*3+1]-ay, wz = V[pi*3+2]-az;
-  var par = (wx*dx + wy*dy + wz*dz) / L2;
-  if(par <= 1e-3 || par >= 1 - 1e-3) return false;
-  var ex = wx - dx*par, ey = wy - dy*par, ez = wz - dz*par;
-  return (ex*ex + ey*ey + ez*ez) < rel * rel * L2;
-}
-function _rmRepairHanging(state){
-  var toplam = 0;
-  for(var r = 0; r < VE_STR_REMESH_REPAIR_ROUNDS; r++){
-    var n = _rmRepairHangingOnce(state);
-    toplam += n;
-    if(!n) break;
-  }
-  return toplam;
 }
 
 // KAPALI YÜZEYİN ÇEVRELEDİĞİ HACİM (diverjans teoremi). Yeniden-mesh'lemenin
@@ -1091,11 +1088,6 @@ function veStrRemeshMesh(mesh, opts){
     for(var sm = 0; sm < 3; sm++) _rmSmooth(state, ixSmooth);
   }
 
-  // ASILI DÜĞÜM ONARIMI — döngü bittikten SONRA, tek sefer. Döngünün içinde
-  // koşsaydı bir sonraki paso onardığı kenarları yeniden birleştirip aynı
-  // yapıyı geri getirebilirdi; sondaki tek geçiş nihai ağı uyumlu bırakıyor.
-  var onarilan = _rmRepairHanging(state);
-
   // Sıkıştır: silinen üçgenleri ve kullanılmayan düğümleri at.
   var liveT = [], liveFace = [];
   for(var ti = 0; ti < state.T.length; ti++){
@@ -1123,7 +1115,6 @@ function veStrRemeshMesh(mesh, opts){
     faceIds: liveFace,
     weldedCount: weld.weldedCount,
     nonManifoldEdges: nonManifold,
-    repairedHangingNodes: onarilan,
     volumeBefore: volBefore,
     volumeAfter: veStrSurfaceVolume(outPosArr, remapped),
     qualityBefore: qBefore,
