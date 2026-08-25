@@ -1419,6 +1419,61 @@ describe('modül kablolaması eksiksiz', () => {
   });
 });
 
+// ── 5b) AĞ PANELİ: HATA EKRANDA KALIR ───────────────────────────────────────
+// Kullanıcı bildirimi (2026-08-25): "ağı oluştur diyorum, herhangi bir şey
+// olmuyor. Ne hata veriyor ne başka bir şey." Sebep ölçüldü ve İKİ katmanlıydı;
+// bu kapı ikincisini tutuyor: köprü gerçek bir sebep DÖNDÜRÜYORDU, panel onu
+// yazıyor ve hemen ardından `showNodeProperties(node)` paneli innerHTML ile
+// baştan kurup SİLİYORDU. Sıra tersine döndüğü an başarısız iş ekranda hiçbir
+// iz bırakmaz — ilerleme kartı kapalı, durum satırı boş, sonuç yok.
+describe('veStrMeshBuild — sebep panel yenilendikten SONRA yazılır', () => {
+  function kur(sonuc, reddet){
+    document.body.innerHTML = '<div id="ve-canvas"></div>'
+      + '<div id="ve-str-mesh-progress" style="display:none"></div>'
+      + '<div id="ve-str-mesh-status"></div>';
+    global.nodes = [
+      { id: 'g1', type: 'str-geometry', data: { geometry: { stats: { triCount: 10, faceCount: 2 } } } },
+      { id: 'm1', type: 'str-mesh', data: { targetLen: 5 } }
+    ];
+    global.connections = [{ from: 'g1', to: 'm1' }];
+    global.veStrGeomCacheGet = () => ({ ok: true, fileName: 'braket.stp', meshes: [{}] });
+    global.veStrMeshCacheClear = jest.fn();
+    global.veStrMeshCacheSet = jest.fn();
+    global.veStrRefreshBadge = jest.fn();
+    global.veStrBuildMesh = () => (reddet ? Promise.reject(new Error(sonuc)) : Promise.resolve(sonuc));
+    // GERÇEK davranış: panel innerHTML ile BAŞTAN kuruluyor, yani durum
+    // elemanı da yenileniyor (bu testin bütün değeri burada).
+    global.showNodeProperties = jest.fn(() => {
+      document.getElementById('ve-str-mesh-status').innerHTML = '';
+    });
+  }
+  const durum = () => document.getElementById('ve-str-mesh-status').textContent;
+
+  test('köprü ok:false döndürünce SEBEP ekranda kalıyor', async () => {
+    kur({ ok: false, error: '_smAssign is not defined' });
+    str.veStrMeshBuild('m1');
+    await new Promise((r) => setTimeout(r, 0));
+    expect(global.showNodeProperties).toHaveBeenCalled();
+    expect(durum()).toContain('_smAssign is not defined');
+  });
+
+  test('köprü reddedince de sebep ekranda kalıyor', async () => {
+    kur('worker açılamadı', true);
+    str.veStrMeshBuild('m1');
+    await new Promise((r) => setTimeout(r, 0));
+    expect(durum()).toContain('worker açılamadı');
+  });
+
+  test('başarıda da künye YENİLENİYOR ve mesaj kalıyor', async () => {
+    kur({ ok: true, stats: { tets: 1234 }, meta: {} });
+    global.veStrMeshRecord = () => ({ stats: { tets: 1234 } });
+    str.veStrMeshBuild('m1');
+    await new Promise((r) => setTimeout(r, 0));
+    expect(global.showNodeProperties).toHaveBeenCalled();
+    expect(durum()).toContain('Ağ hazır');
+  });
+});
+
 // ── 6) Sidebar kapsamı ──────────────────────────────────────────────────────
 describe('veSyncSidebarScope', () => {
   test('yığın boşken kök, doluyken modül kapsamı', () => {
