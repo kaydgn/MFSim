@@ -1681,12 +1681,36 @@ kapı türetilen **G = E/2(1+ν)**'nün sınıf penceresine düşmesi: ν 0,30 y
 0,03 yazılırsa E ve ρ doğru kalır, ν aralık kontrolünden de geçer (0,03 < 0,5)
 — yalnız G pencereden çıkar. On mutasyonla ölçüldü, onu da kırmızı.
 
-###### Panel İKİ SÜTUN — bölüşüm görüntüye göre değil SORUYA göre
+###### Panel İKİ SÜTUN — ve sağ sütun SEÇİLENİ gösterir, uygulananı değil
 
-Solda katalog (ara · süz · liste · seçilenin künyesi), sağda parçaya
-**uygulanmış** kayıt. "Hangi malzemeler var" ile "bu parçanın malzemesi ne"
-ayrı iki soru ve ikincisi birincisine bakarken görünmek zorunda — yoksa
-kullanıcı uygulayıp uygulamadığını unutuyor.
+Solda katalog (ara · süz · liste), sağda **Malzeme Özellikleri**. "Hangi
+malzemeler var" ile "bu malzemenin özellikleri ne" ayrı iki soru ve ikincisi
+birincisine bakarken görünmek zorunda.
+
+**ÖNCE BAK, SONRA UYGULA.** Kullanıcı bildirimi (2026-08-24): *"malzeme
+kütüphanesinden malzeme seçtiğim zaman 'Uygulanan Malzeme' penceresi üzerinden
+malzeme özellikleri görünmüyor. 'Parçaya Uygula' dediğim zaman görünüyor."* —
+yani **uygulamak, bakmanın ön koşuluydu**. Artık liste satırına tıklamak
+yeterli: bütün özellikler, künye ve üç diyagram anında sağ sütunda.
+
+Karar TEK YERDE (`veStrMatShown`), çünkü paneli çizen yer ile sıcaklık
+değerlendiricisini tazeleyen yer AYNI kaydı görmek zorunda; ikisi ayrı
+hesaplasaydı sıcaklık satırı önizlemede başka bir malzemeyi anlatırdı.
+
+| Durum | Gösterilen | Alanlar | Alt şerit |
+|-------|-----------|---------|-----------|
+| Katalogdan **seçili**, uygulanmamış | katalog kaydı | **salt okunur** | **Parçaya Uygula** |
+| Seçili = uygulanmış (değişmemiş) | düğümün kaydı | düzenlenebilir | ✓ uygulanmış |
+| Seçim yok, kayıt var | düğümün kaydı | düzenlenebilir | — |
+| Elle değiştirilmiş kayıt yeniden seçildi | katalog kaydı | salt okunur | Parçaya Uygula (yeniden) |
+
+**Önizlemede alanlar SALT OKUNUR** ve şerit "ÖNİZLEME — henüz uygulanmadı"
+diyor. İkisi de gerekli: düzenlenebilir bıraksaydık yazının gideceği bir yer
+olmazdı, şerit olmasaydı dolu görünen alanlara bakan kullanıcı uyguladığını
+sanırdı. Önizleme düğüme **tek bir alan bile yazmıyor** (testli).
+
+Katalog künye kartı SOL sütundan **kalktı** — aynı sayıları iki kez basmak
+olurdu ve dar sütunda listeden yer çalıyordu.
 
 **Tarama durumu OTURUMLUK** (arama metni, seçili kategori/kayıt): `node.data`'ya
 yazılsalardı her tuş vuruşu undo yığınına binerdi ve "geri al" malzemeyi değil

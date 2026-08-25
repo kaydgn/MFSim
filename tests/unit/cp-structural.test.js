@@ -522,15 +522,15 @@ describe('malzeme paneli', () => {
     expect(mk()).not.toContain('Bileşen bekleniyor');
   });
 
-  test('İKİ SÜTUN: solda katalog, sağda uygulanan kayıt', () => {
+  test('İKİ SÜTUN: solda katalog, sağda MALZEME ÖZELLİKLERİ', () => {
     // Bölüşüm görüntüye göre değil SORUYA göre: \"hangi malzemeler var\" ile
-    // \"bu parçanın malzemesi ne\" ayrı iki soru ve ikincisi birincisine
+    // \"bu malzemenin özellikleri ne\" ayrı iki soru ve ikincisi birincisine
     // bakarken görünmek zorunda.
     const h = mk();
     expect(h).toContain('ve-str-mat-col-lib');
     expect(h).toContain('ve-str-mat-col-cur');
     expect(h).toContain('Malzeme Kütüphanesi');
-    expect(h).toContain('Uygulanan Malzeme');
+    expect(h).toContain('Malzeme Özellikleri');
   });
 
   test('katalog listesi ve süzgeçleri panelde kurulu', () => {
@@ -624,6 +624,12 @@ describe('malzeme kütüphanesinden uygulama', () => {
 
   beforeEach(() => {
     document.body.innerHTML = '<div id="m1"><div class="ve-node-box"></div></div>';
+    // OTURUMLUK tarama durumu düğüm kimliğiyle anahtarlı ve testler arasında
+    // TAŞINIR (uygulamada doğru davranış: kullanıcı panele geri dönünce
+    // seçimini bulur). Testte her senaryo temiz başlamalı.
+    str.veStrMatLibPick('m1', '');      // seçimi kaldır
+    str.veStrMatSetTemp('m1', 20);
+    global.nodes = [];
   });
 
   test('uygulanan kayıt KOPYA — katalog güncellemesi eski projeyi bozmaz', () => {
@@ -729,14 +735,104 @@ describe('malzeme kütüphanesinden uygulama', () => {
     expect(n.data.material).toBeUndefined();      // düğüme HİÇ yazılmadı
   });
 
-  test('seçilenin BÜTÜN sayıları uygulamadan ÖNCE görünüyor', () => {
-    // Kullanıcı kör bir kimliğe değil, OKUDUĞU değerlere onay veriyor.
+  // KULLANICI BİLDİRİMİ (2026-08-24): "malzeme kütüphanesinden malzeme
+  // seçtiğim zaman 'Uygulanan Malzeme' penceresi üzerinden malzeme özellikleri
+  // görünmüyor. 'Parçaya Uygula' dediğim zaman görünüyor." — yani UYGULAMAK,
+  // BAKMANIN ön koşuluydu. Artık sıra doğru: önce bak, sonra uygula.
+  test('SEÇMEK yeterli: özellikler uygulamadan ÖNCE sağ sütunda', () => {
     const n = mkNode('m1');
     global.nodes = [n];
     str.veStrMatLibPick('m1', 'ti-6al-4v');
     const h = str.getStrMaterialPropertiesHTML(n);
-    ['113.800', '0,342', '4.430', '880', '950'].forEach((v) => expect(h).toContain(v));
+    // Ham sayılar alan ızgarasında
+    expect(h).toContain('value="113800"');
+    expect(h).toContain('value="0.342"');
+    expect(h).toContain('value="4430"');
+    // Türetilenler, künye ve diyagramlar da SEÇİMDE çiziliyor
+    expect(h).toContain('Kayma modülü G');
+    expect(h).toContain('330 HBW');
+    expect(h).toContain('data-ve="sn"');
     expect(h).toContain('ASTM B348');             // standart = değerin kaynağı
+    // ...ve düğüme HİÇBİR ŞEY yazılmadı
+    expect(n.data.material).toBeUndefined();
+  });
+
+  test('ÖNİZLEME şeridi durumu SÖYLÜYOR ve alanlar SALT OKUNUR', () => {
+    // Şerit olmasaydı alanlar dolu görünürdü ve kullanıcı uyguladığını
+    // sanırdı — oysa parçanın malzemesi hâlâ eskisi.
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatLibPick('m1', 's355jr');
+    const h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).toContain('ÖNİZLEME');
+    expect(h).toContain('henüz uygulanmadı');
+    expect(h).toContain('readonly');
+    expect(h).not.toContain("veStrMatSet('m1','E'");   // düzenleme kancası YOK
+  });
+
+  test('"Parçaya Uygula" düğmesi ALTTA ve yalnız önizlemede', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    // Seçim yokken düğme yok
+    expect(str.getStrMaterialPropertiesHTML(n)).not.toContain('Parçaya Uygula');
+    str.veStrMatLibPick('m1', 's355jr');
+    const h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).toContain('ve-str-mat-apply');
+    expect(h).toContain("veStrMatApplyLib('m1','s355jr')");
+    // ALTTA: diyagramlardan SONRA geliyor
+    expect(h.indexOf('ve-str-mat-apply')).toBeGreaterThan(h.indexOf('data-ve="sn"'));
+    // Uygulandıktan sonra düğme yerini "uygulanmış" işaretine bırakıyor
+    str.veStrMatApplyLib('m1', 's355jr');
+    const h2 = str.getStrMaterialPropertiesHTML(n);
+    expect(h2).not.toContain('ve-str-mat-apply');
+    expect(h2).toContain('parçaya uygulanmış');
+  });
+
+  test('uygulanmış kayıt seçiliyken alanlar YİNE düzenlenebilir', () => {
+    // Önizleme yalnız BAŞKA bir kayıt seçiliyken; kendi kaydına bakarken
+    // kullanıcı bir alanı elle düzeltebilmeli.
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatApplyLib('m1', 's355jr');
+    str.veStrMatLibPick('m1', 's355jr');
+    const h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).not.toContain('ÖNİZLEME');
+    expect(h).toContain("veStrMatSet('m1','E'");
+    expect(str.veStrMatShown(n).onizleme).toBe(false);
+  });
+
+  test('elle DEĞİŞTİRİLMİŞ kayıt yeniden seçilince önizlemeye döner', () => {
+    // Katalogla artık aynı değil → "katalog kaydını yeniden uygula" teklifi.
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatApplyLib('m1', 's355jr');
+    str.veStrMatSet('m1', 'E', '195000');
+    str.veStrMatLibPick('m1', 's355jr');
+    const g = str.veStrMatShown(n);
+    expect(g.onizleme).toBe(true);
+    expect(g.rec.E).toBe(210000);                 // katalogdaki değer
+    expect(n.data.material.E).toBe(195000);       // düğümdeki hâlâ elle girilen
+  });
+
+  test('seçim yokken UYGULANMIŞ kayıt gösteriliyor', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatApplyLib('m1', 'aw6082-t6');
+    const g = str.veStrMatShown(n);
+    expect(g.onizleme).toBe(false);
+    expect(g.rec.lib).toBe('aw6082-t6');
+    expect(g.kat.n).toBe('EN AW-6082 T6');
+    expect(str.getStrMaterialPropertiesHTML(n)).toContain('Kütüphaneden');
+  });
+
+  test('katalog künye kartı SOL sütundan kalktı — aynı sayılar iki kez basılmıyor', () => {
+    const n = mkNode('m1');
+    global.nodes = [n];
+    str.veStrMatLibPick('m1', 's355jr');
+    const h = str.getStrMaterialPropertiesHTML(n);
+    expect(h).not.toContain('ve-str-mat-det');
+    // E değeri tek bir yerde: alan ızgarasında
+    expect((h.match(/value="210000"/g) || []).length).toBe(1);
   });
 
   test('kaydın UYARISI listede de künyede de görünüyor', () => {
