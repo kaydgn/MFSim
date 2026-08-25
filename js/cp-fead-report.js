@@ -758,6 +758,40 @@ function _frFitter(pts, W, H, pad){
     ty: function(y){ return offY + (maxY - y) * s; } };
 }
 
+// SVG metni satır kaydırmaz: sarmayı elle yapmak zorundayız.
+function _frWrap(metin, maxCh){
+  var kel = String(metin).split(' '), sat = [], cur = '';
+  kel.forEach(function(k){
+    if(!cur) cur = k;
+    else if((cur + ' ' + k).length <= maxCh) cur += ' ' + k;
+    else { sat.push(cur); cur = k; }
+  });
+  if(cur) sat.push(cur);
+  return sat;
+}
+
+// Şeklin AÇIKLAMA SÜTUNU. Kullanıcı bildirimi (2026-08-24): "'fi' ne demek
+// falan çok belli olmamış." Doğru: çizimde yalnız sembol bırakınca (sayıların
+// yay işaretlerinin üstüne binmesini önlemek için gerekiyordu) sembolün NE
+// OLDUĞU yalnız künye metninde kalıyor — okuyucu şekle bakarken orada değil.
+// Açıklama artık şeklin YANINDA, boşta duran şeritte; ayrıca kadraj yataya
+// döndüğü için şekil de kısalıyor (ölçüldü: 534 → 310 px).
+function _frLegend(x0, y0, genislik, satirlar, fs){
+  var g = '', y = y0, maxCh = Math.floor(genislik / (fs * 0.6));
+  satirlar.forEach(function(sr){
+    g += '<text x="' + x0 + '" y="' + (y + fs).toFixed(1) + '" font-size="' + (fs + 1)
+       + '" fill="' + sr[2] + '" font-weight="600">' + _frEsc(sr[0]) + '</text>';
+    y += (fs + 1) * 1.35;
+    _frWrap(sr[1], maxCh - 3).forEach(function(t){
+      g += '<text x="' + (x0 + 10) + '" y="' + (y + fs * 0.85).toFixed(1) + '" font-size="' + fs
+         + '" fill="#5a6270">' + _frEsc(t) + '</text>';
+      y += fs * 1.3;
+    });
+    y += 7;
+  });
+  return g;
+}
+
 // Çakışmayan etiket yerleştirici. Elle koordinat yazmak yerine, istenen yönde
 // adım adım ilerleyip HEM çerçeveden HEM daha önce konmuş etiketlerden çıkan
 // ilk yeri seçer. Kavramsal şekildeki (_yerlestir) fikrin aynısı, ama orada
@@ -875,7 +909,7 @@ function _frWrapFigure(R){
   var best = 0, i;
   for(i = 1; i < W.rows.length; i++) if(W.rows[i].wrapDeg > W.rows[best].wrapDeg) best = i;
   var q = W.rows[best], r = q.rPitch, c = q.c;
-  var Wd = 660, Hd = 430, pad = { l: 78, r: 78, t: 34, b: 58 };
+  var Wd = 820, Hd = 310, pad = { l: 330, r: 30, t: 20, b: 34 };
   var stub = r * 1.05, ref = r * 1.5;
   var pIn0 = [q.Pin[0] - q.uIn[0] * stub, q.Pin[1] - q.uIn[1] * stub];
   var pOut1 = [q.Pout[0] + q.uOut[0] * stub, q.Pout[1] + q.uOut[1] * stub];
@@ -918,19 +952,24 @@ function _frWrapFigure(R){
   g += _frAngMark(cx, cy, rs * 0.50, 0, sOut, '#5a6270', 1.3, '3 3');
   // sIn/sOut atan2'den geldiği için |·| ≤ π: doğrudan sweep olarak verilebilir.
   var LB = _frLabels(Wd, Hd);
-  LB.kilit(0, Hd - 30, Wd, 30);          // alt künye satırı rezerve
+  LB.kilit(0, 0, pad.l - 14, Hd);        // açıklama sütunu
+  LB.kilit(0, Hd - 26, Wd, 26);          // alt künye satırı
   LB.engelCember(cx, cy, rs, 9);         // kayışın üstüne etiket konmasın
   LB.engelDogru(cx, cy, tx(q.Pin[0]),  ty(q.Pin[1]),  9);    // yarıçap doğruları
   LB.engelDogru(cx, cy, tx(q.Pout[0]), ty(q.Pout[1]), 9);
-  LB.engelDogru(cx, cy, tx(c[0] + ref), cy, 9);              // +X referans ışını
+  LB.engelDogru(cx, cy, tx(c[0] + ref), cy, 5);              // +X referans ışını
   function etk(ang, rr, metin, renk, fs){
     return LB.ekle(cx, cy, Math.cos(ang), Math.sin(ang), metin, renk, fs, rr);
   }
   // ÇİZİM SEMBOL TAŞIR, SAYI DENKLEMDE DURUR. Değerleri yayların yanına
   // yazmak ölçüldü: metin kutuları yay işaretlerinin ve yarıçap doğrularının
   // üstüne biniyordu. Sayılar hemen alttaki denklemde ve tabloda zaten var.
-  g += etk(sIn  / 2, rs * 0.30, 'θ_giriş',  '#5a6270', 12);
-  g += etk(sOut / 2, rs * 0.46, 'θ_çıkış', '#5a6270', 12);
+  // Etiketler açıortaya DEĞİL, kendi yarıçap doğrultularına konur: iki
+  // teğet noktası çevrenin karşıt yerlerinde olduğu için etiketler YAPISAL
+  // olarak ayrılır. Açıortayda ikisi de üst-sağ dörtte bire düşüp sıkışıyordu
+  // (ölçüldü — kadraj küçüldükten sonra iç bölge dar).
+  g += etk(sIn,  rs * 0.30 + 15, 'θ_giriş', '#5a6270', 12);
+  g += etk(sOut, rs * 0.46 + 15, 'θ_çıkış', '#5a6270', 12);
   // φ yayı — kasnağın İÇİNDE, klasik teknik resim gösterimi
   var phiSweep = (q.d > 0 ? -1 : 1) * wrapRad;      // mm CCW → ekranda negatif
   g += _frAngMark(cx, cy, rs * 0.74, sIn, phiSweep, '#c8781e', 2, null);
@@ -946,9 +985,24 @@ function _frWrapFigure(R){
   // Şeklin İÇİNDE sayısal türetme YOK: SVG metni KaTeX ile dizilemez ve
   // belgenin geri kalanının tipografisinden kopuk görünür. Aritmetik şeklin
   // ALTINDA KaTeX denklemi olarak durur — kaynak aynı, dizgi tutarlı.
-  g += '<text x="14" y="' + (Hd - 14) + '" font-size="12" fill="#1b1e24">' + _frEsc(q.name)
-     + ' — ' + (q.contact === 'back' ? 'sırttan temas (kesikli çeper): d = −s' : 'kaburgalı temas: d = +s')
-     + '</text>';
+  // ── açıklama sütunu ──────────────────────────────────────────────────
+  g += '<line x1="' + (pad.l - 20) + '" y1="14" x2="' + (pad.l - 20) + '" y2="' + (Hd - 34)
+     + '" stroke="#e4e6e9" stroke-width="1"/>';
+  g += _frLegend(14, 16, pad.l - 44, [
+    ['P_giriş · P_çıkış — teğet noktaları', 'Kayışın kasnağa değdiği ve ayrıldığı '
+      + 'noktalar; §3.2\'nin ortak teğet çözümünden gelir.', '#c8781e'],
+    ['θ_giriş · θ_çıkış — teğet açıları', 'Bu iki noktanın, merkezden +X eksenine '
+      + '(kesikli gri ışın) göre ölçülen açısı.', '#5a6270'],
+    ['φ — SARIM AÇISI', 'Kayışın kasnağı sardığı yay: iki teğet açısının, sarım '
+      + 'işareti d ile çarpılmış farkı. Aşağıdaki denklem bu kasnak için birebir gösterir.', '#c8781e'],
+    ['d — sarım işareti', 'Temas tarafından gelir: kaburgalı yüzden temas edende +1, '
+      + 'sırttan temas edende −1 (çeper kesikli çizilir).', '#24425f']
+  ], 10.2);
+  // Uzun kasnak adı alt künyeyi çerçeveden taşırırdı (SVG metni kırpılmaz).
+  var kunye = q.name + ' — ' + (q.contact === 'back' ? 'sırttan temas, d = −1' : 'kaburgalı temas, d = +1');
+  var enCok = Math.floor((Wd - 28) / (11 * 0.6));
+  if(kunye.length > enCok) kunye = kunye.slice(0, enCok - 1) + '…';
+  g += '<text x="14" y="' + (Hd - 10) + '" font-size="11" fill="#1b1e24">' + _frEsc(kunye) + '</text>';
   var fig = _frFigWrap(g, 'Sarım açısının kuruluşu (3.3). Kayış kasnağa <b>P<sub>giriş</sub></b> teğet '
     + 'noktasında değer, çeperi izler ve <b>P<sub>çıkış</sub></b>\'te ayrılır; iki teğet noktası '
     + '§3.2\'nin ortak teğet çözümünden gelir. θ açıları merkezden <b>+X eksenine göre</b> ölçülür '
@@ -998,7 +1052,7 @@ function _frBetaFigure(R){
   var K = _frTenConstruct(R);
   if(!K) return '';
   var q = K.row, c = K.center, p = K.pivot, r = q.rPitch;
-  var Wd = 780, Hd = 430, pad = { l: 92, r: 92, t: 40, b: 46 };
+  var Wd = 820, Hd = 330, pad = { l: 344, r: 34, t: 26, b: 26 };
   var Lv = r * 1.35, stub = r * 0.95;
   // birim vektörler: kayışın kasnağı ÇEKTİĞİ iki doğrultu
   var vIn  = [-q.uIn[0], -q.uIn[1]];              // giriş açıklığı geriye çeker
@@ -1080,6 +1134,7 @@ function _frBetaFigure(R){
   g += _frAngMark(cx, cy, rs * 0.50, aF, dB, '#a8321f', 1.8, null);
 
   var LB = _frLabels(Wd, Hd);
+  LB.kilit(0, 0, pad.l - 14, Hd);        // açıklama sütunu
   LB.engelCember(cx, cy, rs, 9);         // kasnak çeperi/kayış etiket almasın
   LB.engelDogru(px, py, cx, cy, 9);      // gergi kolu
   LB.kilit(px - 30, py + 6, 60, 20);     // 'pivot' yazısı (satır içi çiziliyor)
@@ -1108,6 +1163,19 @@ function _frBetaFigure(R){
   g += ucEtk(eOut, 'u_çıkış',  '#5a6270', 12);
   // Sayısal türetme şeklin İÇİNDE değil ALTINDA (KaTeX, §8.7): φ şeklindeki
   // gerekçenin aynısı. Şekil yalnız SEMBOLLERİ taşır — a, φ, β, f, t.
+  // ── açıklama sütunu ──────────────────────────────────────────────────
+  g += '<line x1="' + (pad.l - 22) + '" y1="16" x2="' + (pad.l - 22) + '" y2="' + (Hd - 16)
+     + '" stroke="#e4e6e9" stroke-width="1"/>';
+  g += _frLegend(14, 14, pad.l - 46, [
+    ['a — gergi kol boyu', 'Pivottan kasnak merkezine. Bu zincirdeki TEK girdi.', '#2e7d4f'],
+    ['t — merkezin hareket yönü', 'Kola dik. Kol dθ dönünce merkez t yönünde a·dθ yol alır.', '#2e7d4f'],
+    ['u_giriş · u_çıkış — açıklık doğrultuları', 'Kayışın kasnağı çektiği iki birim vektör.', '#5a6270'],
+    ['f — bileşke', 'f = u_çıkış − u_giriş. Hem hubload doğrultusu (5.4) hem take-up\'ın '
+      + 'kaynağı. Boyu yalnız sarıma bağlı: |f| = 2 sin(φ/2).', '#a8321f'],
+    ['φ — gergi kasnağındaki sarım açısı', '|f|\'i belirler.', '#c8781e'],
+    ['β — bileşke ile kol arasındaki açı', 'f\'nin hareket yönü t üzerindeki izdüşümü '
+      + '|f|·sin β olur; take-up oranı bunun a ile çarpımıdır.', '#a8321f']
+  ], 10.2);
   return _frFigWrap(g, 'Take-up oranının ve β açısının kuruluşu. Gergi kasnağı, pivot etrafında dönen '
     + '<b>a</b> boyundaki kolun ucundadır; kol \\( \\mathrm{d}\\theta \\) kadar dönerse merkez, kola '
     + '<b>dik</b> olan <b>t</b> yönünde \\( a\\,\\mathrm{d}\\theta \\) kadar yol alır (yeşil kesikli ok). '
