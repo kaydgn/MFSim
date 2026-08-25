@@ -2436,6 +2436,82 @@ taşmayı yok sayma, iki boşluk sabitini kaydırma, CSS tarafını kaydırma, y
 taşmayı ikiye bölmeme, modül istisnasını kaldırma, alt pay tabanını kaldırma,
 ölçüm işlevini hiç kullanmama) — yedisi de kırmızı.
 
+### Sonuçlar penceresi — TXT raporları A4 SAYFA (kullanıcı isteği 2026-08-25)
+
+Kullanıcı bildirimi: *"sonuçlar penceresi üzerinde TXT raporları sanki bir fiş
+gibi duruyor… Burası normal bir A4 boyutunda olsun… Ayrıca başlığın yazdığı
+header, 'Veri Gezgini' headeri ile aynı doğrultuda ve boyutta değil."*
+Üretildi; **iki ayrı hata** çıktı ve ikisi de ölçüldü.
+
+**1 · "Fiş" — ortalama blok blok yapılıyordu.** `veRenderCenteredTXT` metni
+boş-satır bloklarına ayırıp her bloğu ayrı bir `<pre width:fit-content;
+margin:0 auto>` olarak ORTALIYORDU. Ama raporun **iki farklı sütun genişliği**
+var (ölçüldü: dar bölümler ~80, geniş tablolar **119** karakter; iz raporunda
+121), dolayısıyla bloklar birbirine göre kayıyordu:
+
+| | eski | yeni |
+|---|---:|---:|
+| `<pre>` bloğu | **43** | **1** |
+| ayrı sol kenar | **10** | **1** |
+| sol kenar yayılımı | **222 px** | 0 |
+| kutu genişliği | 854 px (içeriğe göre) | **794 px** (A4) |
+
+Yani sütun hizası blok İÇİNDE korunuyor, bloklar ARASINDA bozuluyordu —
+ortalamanın kazandırdığı hiçbir şey yoktu. Metin artık **tek `<pre>`, sola
+yaslı**; kutu A4 sayfa (210×297 mm @96dpi = 794×1123 px). Gölge farkı korundu
+(kullanıcı açıkça istedi).
+
+**Font ölçüsü sayfaya SIĞMAKTAN türer, sabit değil.** A4 içerik alanına
+(794 − 2·45 = 704 px) 119 sütun sığması gerekiyor; hesap **CSS'te**:
+
+```css
+font-size: min(var(--rep-fs-max),
+               calc((var(--rep-page-w) - 2*var(--rep-page-pad))
+                    / var(--rep-cols) / var(--rep-ch)));
+```
+
+`--rep-cols` (en uzun satır) sayfaya satır içinde yazılır. Hesabı JS'te yapıp
+px yazmak yerine CSS'e bırakmak, **aynı kuralın indirilen HTML'de de birebir
+çalışmasını** sağlıyor — orada JS yok. **ÖLÇÜLDÜ:** 119 sütunlu Tam Gaz raporu
+9.83 px'e oturuyor ve `<pre>` genişliği **702 px = içerik alanı 702 px**, yani
+yatay kaydırma YOK; 80 sütunluk dar rapor tavana (`--rep-fs-max` 11 px)
+oturuyor, sayfayı doldurmak için şişmiyor.
+
+`--rep-ch` (karakter genişliği / font boyutu) **ölçülür, varsayılmaz**: font
+ailesine göre değişiyor (Consolas 0.55, DejaVu Sans Mono / Menlo 0.60) ve sabit
+bir oran dar karakterli fontta sayfanın onda birini boş bırakırdı.
+`veTxtCharRatio()` gizli bir ögeyle bir kez ölçer; ölçüm tutmazsa CSS'in
+varsayılanına (0.62) düşer — **büyük oran = küçük font = taşma yerine boşluk**,
+yani güvenli taraf. Ölçüm ögesinin punto'su CSS'te DEĞİL JS'te: o bir tasarım
+jetonu değil, ölçüm parametresidir (tipografi ölçeği kapısı bunu doğru yakaladı).
+
+**2 · Üst bant panel ayırıcısında KIRILIYORDU.** Rapor bandı 48 px, soldaki
+"Veri Gezgini" bandı 36 px; alt çizgiler **12 px kayık**, çizgi 2 px'e karşı
+1 px, başlık 13 px'e karşı 12 px (gerçek tarayıcı, 1600×950). Bu, 2026-08-17'de
+`.ve-results-head` ↔ `.ve-trace-toolbar` arasında kapatılan kırılmanın
+**aynısıydı**; rapor overlay'i o düzeltmeye dahil edilmemişti. Bant artık
+`.ve-rep-head` ile **aynı `--results-bar-h`'tan** besleniyor, düğmeler ölçüm
+penceresi araç çubuğunun düğmesini (`.ve-trace-btn`) **paylaşıyor** — aynı
+bandın iki yarısı için ikinci bir düğme stili tutmanın karşılığı yok.
+**ÖLÇÜLDÜ:** alt çizgi farkı **12 → 0 px**, yükseklik 36 ↔ 36, başlık 12 ↔ 12.
+
+**BANDI KURAN TEK YER VAR.** Beş panel (dört TXT önizlemesi + Detaylı Rapor)
+bandı satır içi stille, birbirinin kopyası olarak kuruyordu; biri düzeltilince
+diğer dördü sessizce ayrışırdı — nitekim ayrışmıştı. Artık `veRepHeadHTML` tek
+üretici, panel yalnız başlığını ve indirme adını veriyor (`veTxtPreviewShow`).
+Bu, düğme kablolaması testinin ölçütünü de değiştirdi: kopya SAYMAK anlamını
+yitirdi, test artık ÜRETİLEN YÜZEYE bakıyor.
+
+İndirilen HTML aynı sayfayı açar ve `@page{size:A4}` ile gerçekten A4'e basar.
+Arayüz jetonlarına başvurmama kuralı (`report-cosmetics.test.js`) korunuyor:
+belge kendi `--rp-*` ölçeğini kendi `:root`'unda taşıyor.
+
+Kapı **sekiz mutasyonla** ölçüldü, sekizi de kırmızı: bandın kendi ölçüsünü
+tutması, sayfanın içeriğe göre daralması, A4 yerine keyfî genişlik, font
+tavanının kalkması, gövdenin yine blok blok ortalanması, karakter oranının
+güvensiz tarafa kayması, indirilen belgenin A4'e basmaması, bir panelin kendi
+bandını kurması.
+
 ### Ölçüm Görüntüleyici (`viewer/`)
 
 MFSim'in içe aktarma + diyagram özelliğinin tek başına çalışan sürümü; tek HTML
@@ -2591,11 +2667,13 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/simulation-engine-grade.test.js` | `js/simulation-engine.js` | Yol eğimi işaret konvansiyonu (harita ↔ fizik çevirisi) + dinamiğin değişmediğini bağlayan altın değerler |
 | `tests/unit/shot-tool.test.js` | `tools/shot.js` | Ekran görüntüsü aracının ayrıştırma çekirdeği: bilinmeyen bayrağın SESSİZCE yutulmaması (yanlış ekranın görüntüsü alınırdı), hedef takma adları, PNG ölçüsü, karşılaştırmanın İKİ GÖRÜNTÜYÜ TEK ÖLÇEKLE küçültmesi |
 | `tests/unit/source-hygiene.test.js` | `js/`, `viewer/js/`, `css/`, `index.html` | **Yapısal kapılar**: üst-seviye bildirim çakışması yok, kaynakta kontrol karakteri yok |
-| `tests/unit/results-txt-preview-download.test.js` | `js/results.js` | TXT önizlemesinin "HTML İndir" yolu — iki rapor üreticisinin ayrı kaldığı ve düğme kablolaması |
+| `tests/unit/results-txt-preview-download.test.js` | `js/results.js` | TXT önizlemesinin "HTML İndir" yolu — iki rapor üreticisinin ayrı kaldığı; düğme kablolaması artık ÜRETİLEN YÜZEYDEN ölçülüyor (kopya sayısı değil: bandı tek üretici kuruyor) ve dört panelin de aynı kabuğa gittiği |
+| `tests/unit/results-txt-page.test.js` | `js/results.js` + `css/styles.css` | **TXT raporunun görünümü**: üst bandın soldaki "Veri Gezgini" bandıyla TEK ölçü kaynağından beslenmesi (yükseklik, alt çizgi, başlık puntosu, zemin, düğme sınıfı), sayfanın A4 olması ve içeriğe göre DARALMAMASI, gövdenin tek `<pre>` kalması (blok blok ortalama yok) ve metnin bire bir korunup kaçışlanması, font ölçüsünün sayfaya sığmaktan türemesi + okunur tavan, karakter oranının ölçülemeyince GÜVENLİ tarafa düşmesi, indirilen belgenin aynı sayfayı açıp `@page{size:A4}` ile basması |
 | `tests/e2e/app.spec.js` | Tüm uygulama | Sayfa yükleme, menüler, bileşen ekleme, kaydetme |
 | `tests/e2e/measure-import.spec.js` | İçe aktarma sihirbazı | Gerçek .xlsx → sütun tarama → X/Y seçimi → şeritler |
 | `tests/e2e/viewer.spec.js` | `MFSim_Olcum_Goruntuleyici.html` | **Üretilen tek dosya**, `file://` üzerinden: açılış, içe aktarma, sürükle-bırak, birleştirme, tema, sıfır ağ isteği |
 | `tests/e2e/structural-geometry.spec.js` | Geometri bileşeni (uçtan uca) | **GERÇEK tarayıcı**: gömülü 62,8 MB wasm'ın worker'da açılıp derlenmesi → OCCT → **boolean** → panel künyesi → WebGL sahnesi; **7 gövdeli parça TEK KATI olarak geliyor** ve panel bunu yazıyor (worker'da, künyeye de giriyor); fareyle CAD YÜZÜ vurgusu (üçgen değil), ağ inceliği değişince üçgen değişip kimliklerin sabit kalması, STEP olmayan dosyanın sessizce yutulmaması, **ölçüm kaplamasının STEP alanında çekilip asılı kalmaması**; **arayüz donmuyor** — içe aktarma boyunca çizilen kare sayısı ana iş parçacığında ≤3, worker'da >20 (ölçümde 1 ↔ 91), panelin gerçekten worker'a gitmesi ve ilerleme kartının aşama değiştirip iş bitince kapanması; **kanvas rozeti** (boşken `STEP`, doluyken `⬡18`), **CAD yüz listesi** (18 satır; listeden tık → 3B'de vurgu, 3B'de gezinme → listede işaret, 3B'de tık → listede seçim, ikinci tık seçimi kaldırır, DÖNDÜRME seçimi bozmaz), **kaynağın yalnız dosyaya yazılması** (künye ve otomatik yedek kaynaksız); **görüntüleyicinin boyu** — parça yüklenince pencere ekranı kullanıyor, sol ray ile 3B kutusu AYNI yerde bitiyor (boşluk 290.6 → 0 px), kanvas o ölçüde kuruluyor ve içerik kaydırmıyor; **varsayılanlar** — incelik/kenar kontrolü panelde yok ve her içe aktarma 0.0005 ile geliyor, yüz listesi ve fare künyesi kullanıcı açana kadar çıkmıyor, kapatınca hiçbir işaret kalmıyor. Bu halkalar Node'da HİÇ koşmuyor |
+| `tests/e2e/results-txt-page.spec.js` | TXT rapor önizlemesi (yerleşim) | **GERÇEK tarayıcı**: iki bandın AYNI yerde bitmesi (ölçülen eski fark 12 px), başlıkların aynı punto, sayfanın 794 px = A4 olması, metnin tek blok / tek sol kenar kalması (eski: 43 blok, 10 kenar), 119 sütunluk tablonun sayfaya sığması (yatay kaydırma yok) ve dar raporun tavan puntoyla açılması. Rapor METNİ sahte — ölçülen şey kabuk; bu halkalar Node'da HİÇ koşmuyor |
 | `tests/e2e/measure-merge-drop.spec.js` | `js/measure-dropzone.js` + `js/trace-view.js` | MFSim'de sürükle-bırak ve çok eksenli birleştirme — araç performans VE takoz sekmesi |
 
 ## Sık Kullanılan Komutlar

@@ -109,25 +109,42 @@ describe('düğme kablolaması — hangi düğme hangi üreticiye gidiyor', () =
   const path = require('path');
   const src = fs.readFileSync(path.join(__dirname, '../../js/results.js'), 'utf8');
 
-  // Her düğme tek bir `html += '<button ...>'` satırında durur; "HTML İndir"
-  // geçen satırların onclick hedefini çıkar.
-  const hedefler = src.split('\n')
-    .filter(l => l.includes('HTML İndir') && l.includes('<button'))
-    .map(l => (l.match(/onclick="(ve[A-Za-z]+)\(\)"/) || [])[1])
-    .filter(Boolean);
+  // Bandı artık TEK üretici kuruyor (veRepHeadHTML). Eskiden beş panel onu
+  // satır içi stille kopyalıyordu ve düğme sayısı tek güvenceydi; kopyalar
+  // gidince sayım anlamını yitirir — ölçülen şey artık ÜRETİLEN YÜZEY.
+  const yuzey = veTxtPreviewHTML('Tam Gaz Hızlanma Raporu (TXT)', 'ORNEK SATIR');
+  const dugmeler = yuzey.split('<button').slice(1).map((b) => b.split('</button>')[0]);
+  const hedef = (etiket) => {
+    const b = dugmeler.find((x) => x.includes(etiket));
+    return b && (b.match(/onclick="(ve[A-Za-z]+)\(\)"/) || [])[1];
+  };
 
-  test('beş "HTML İndir" düğmesi var: dördü TXT önizleme, biri tasarımlı rapor', () => {
-    expect(hedefler).toHaveLength(5);
-    const txt = hedefler.filter(h => h === 'veDownloadTXTPreviewAsHTML');
-    const tasarim = hedefler.filter(h => h === 'veDownloadReportHTML');
-    expect(txt).toHaveLength(4);
-    expect(tasarim).toHaveLength(1);
+  test('"HTML İndir" TXT önizleme üreticisine gider (tasarımlı rapora DEĞİL)', () => {
+    expect(hedef('HTML İndir')).toBe('veDownloadTXTPreviewAsHTML');
   });
 
-  test('TXT önizleme panellerinde "HTML İndir" ile "TXT İndir" yan yana', () => {
-    // Dört önizleme panelinin her birinde ikisi ardışık satırlarda durur;
-    // sayıları tutmuyorsa bir panel yanlış üreticiye bağlanmış demektir.
-    const txtIndir = (src.match(/onclick="veDownloadTXTFromPreview\(\)"/g) || []).length;
-    expect(txtIndir).toBe(4);
+  test('"TXT İndir" ham metin indiricisine gider', () => {
+    expect(hedef('TXT İndir')).toBe('veDownloadTXTFromPreview');
+  });
+
+  test('dört TXT panelinin hepsi AYNI kabuğa gider', () => {
+    // Panel yalnız başlığını ve indirme adını verir; yüzeyi kuran tek yer
+    // veTxtPreviewShow. Biri kendi bandını kurmaya kalkarsa burada düşer.
+    ['veRenderTXTReport', 'veRenderSegmentDriveTXTReport',
+     'veRenderObstacleCrossingTXTReport', 'veRenderTopologyTXTReport'].forEach((fn) => {
+      const i = src.indexOf('function ' + fn + '(');
+      expect(i).toBeGreaterThan(-1);
+      const govde = src.slice(i, src.indexOf('\n}\n', i));
+      expect(govde).toContain('veTxtPreviewShow(');
+      expect(govde).not.toContain('<button');       // kendi düğmesini kurmuyor
+      expect(govde).not.toContain('overlay.innerHTML');
+    });
+  });
+
+  test('Detaylı Rapor TASARIMLI üreticiye gider, TXT üreticisine değil', () => {
+    const i = src.indexOf('function veRenderDetailedReport(');
+    const govde = src.slice(i, src.indexOf('\n}\n', i));
+    expect(govde).toContain("onclick: 'veDownloadReportHTML()'");
+    expect(govde).not.toContain('veDownloadTXTPreviewAsHTML');
   });
 });
