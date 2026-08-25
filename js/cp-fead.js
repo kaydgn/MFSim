@@ -115,53 +115,83 @@ var VE_FEAD_STARTER_LAYOUT = [
 // çember üzerine dizilince her tel yalnız KOMŞUSUNA gidiyor. Kutular, semboller
 // ve ölçüler değişmiyor — yalnız konum. mm koordinatı KULLANILMIYOR: o, kanvastaki
 // Kayış Yolu kartının işi (bkz. CLAUDE.md "graf GİRDİ, kart ÇIKTI").
-function veFeadArrangeRing(opts){
+// ── "OTOMATİK DÜZENLE" — KOORDİNATLARA GÖRE YERLEŞTİR ─────────────────────
+//
+// Bu fonksiyon eskiden kasnakları bir HALKAYA diziyordu ve o zaman doğruydu:
+// kanvastaki konum hiçbir şey ifade etmiyordu, dolayısıyla tel kesişimini
+// sıfırlayan bir düzen en iyisiydi.
+//
+// Artık konum FİZİKSEL. Halkaya dizmek, kullanıcının girdiği bütün mm
+// koordinatlarını SİLMEK demek olurdu — düğme "düzenle" derken modeli bozardı.
+// Yeni anlamı: kanvas konumlarını mm'den YENİDEN KUR. Elle kaydırılmış bir
+// düğümü (ya da bir çakışmayı) toparlamak için gerçek bir ihtiyaç, ve tersine
+// çevrilebilir: koordinatlar değişmiyor, yalnız kutular yerine oturuyor.
+function veFeadArrangeByCoords(opts){
   opts = opts || {};
   if(typeof nodes === 'undefined' || !nodes) return false;
-  var order = (typeof veFeadRouteOrder === 'function') ? veFeadRouteOrder(nodes, (typeof connections !== 'undefined' && connections) || []) : [];
-  if(order.length < 2) return false;
+  var kasnaklar = nodes.filter(function(n){ return _feadIsPulley(n); });
+  if(kasnaklar.length < 2) return false;
+  var org = (typeof veFeadOriginNode === 'function') ? veFeadOriginNode(nodes) : null;
+  if(!org) return false;
 
-  // Halka yarıçapı: iki komşu kutu birbirine değmesin. Kiriş = 2R·sin(π/N).
-  var enBuyuk = 0;
-  order.forEach(function(n){
-    var w = n.width || 65, h = n.height || 60;
-    var d = Math.sqrt(w*w + h*h);
-    if(d > enBuyuk) enBuyuk = d;
-  });
-  var N = order.length;
-  var gerek = enBuyuk + (opts.gap || 74);              // komşu merkezleri arası en az
-  var R = Math.max(opts.minR || 190, gerek / (2 * Math.sin(Math.PI / N)));
-
+  var s = (typeof VE_FEAD_PX_PER_MM === 'number') ? VE_FEAD_PX_PER_MM : 1;
   var CX = 3000, CY = 3000;
+
+  // Koordinatı olan kasnakların mm sınır kutusu — küme görünür alanda
+  // ORTALANSIN diye. Orijini doğrudan (CX,CY)'ye koymak, krank kümenin
+  // kenarındaysa (BMC'de öyle: X −281…+184) her şeyi bir yana yığardı.
+  var mm = [], eksik = [];
+  kasnaklar.forEach(function(n){
+    var d = n.data || {};
+    var x = _feadNum(d.x, NaN), y = _feadNum(d.y, NaN);
+    if(_feadDefOf(n).isFeadTensioner){ x = _feadNum(d.cenX, NaN); y = _feadNum(d.cenY, NaN); }
+    if(Number.isFinite(x) && Number.isFinite(y)) mm.push({ n: n, x: x, y: y });
+    else eksik.push(n);
+  });
+  if(mm.length < 2) return false;
+  var minX = Math.min.apply(null, mm.map(function(o){ return o.x; }));
+  var maxX = Math.max.apply(null, mm.map(function(o){ return o.x; }));
+  var minY = Math.min.apply(null, mm.map(function(o){ return o.y; }));
+  var maxY = Math.max.apply(null, mm.map(function(o){ return o.y; }));
+  var ortX = (minX + maxX) / 2, ortY = (minY + maxY) / 2;
+
   var yer = {};
-  order.forEach(function(n, i){
-    // Saat yönünde ve TEPEDEN başlayarak: ekranda y aşağı olduğu için artan
-    // açı saat yönü demek. Sürücü kasnak (sıranın başı) tepede duruyor.
-    var th = -Math.PI / 2 + (2 * Math.PI * i) / N;
-    yer[n.id] = { x: CX + R * Math.cos(th) - (n.width || 65) / 2,
-                  y: CY + R * Math.sin(th) - (n.height || 60) / 2 };
+  mm.forEach(function(o){
+    var b = veFeadNodeBox(o.n);
+    yer[o.n.id] = { x: CX + (o.x - ortX) * s - b.w / 2,
+                    y: CY - (o.y - ortY) * s - b.h / 2 };   // Y TERS
   });
 
-  // Araç düğümleri halkanın DIŞINDA. Kayış Yolu kartı (420×340) sağ şeritte,
-  // geri kalan künyeler sol şeritte — veFeadLoadExample ile aynı bölüşüm, yoksa
-  // kart halkanın içine düşüp tellerin altında kalırdı.
+  // KOORDİNATI OLMAYAN KASNAK GİZLENMİYOR: kümenin altına bir sıraya diziliyor
+  // ki kullanıcı onu görüp koordinatını girsin. Sessizce (0,0)'a koymak, iki
+  // kasnağı üst üste bindirip "kasnaklar çakışıyor" hatası üretirdi.
+  var altY = CY + (maxY - ortY) * s + 120;
+  eksik.forEach(function(n, i){
+    var b = veFeadNodeBox(n);
+    yer[n.id] = { x: CX - ((eksik.length - 1) * 100) / 2 + i * 100 - b.w / 2, y: altY };
+  });
+
+  // Araç düğümleri kümenin DIŞINDA. Kayış Yolu kartı (420×340) sağ şeritte,
+  // künyeler sol şeritte — veFeadLoadExample ile aynı bölüşüm, yoksa kart
+  // kümenin içine düşüp tellerin altında kalırdı.
+  var yariX = (maxX - minX) * s / 2, yariY = (maxY - minY) * s / 2;
   var sol = [], sag = [];
   nodes.forEach(function(n){
     if(yer[n.id]) return;
-    var d = _feadDefOf(n);
-    if(d.isFeadLayout) sag.push(n); else sol.push(n);
+    if(_feadDefOf(n).isFeadLayout) sag.push(n); else sol.push(n);
   });
   function serit(list, x0, hiza){
     var toplam = 0;
-    list.forEach(function(n){ toplam += (n.height || 60) + 24; });
+    list.forEach(function(n){ toplam += veFeadNodeBox(n).h + 24; });
     var y = CY - toplam / 2;
     list.forEach(function(n){
-      yer[n.id] = { x: (hiza === 'sag') ? x0 : (x0 - (n.width || 65)), y: y };
-      y += (n.height || 60) + 24;
+      var b = veFeadNodeBox(n);
+      yer[n.id] = { x: (hiza === 'sag') ? x0 : (x0 - b.w), y: y };
+      y += b.h + 24;
     });
   }
-  serit(sol, CX - R - enBuyuk / 2 - 90, 'sol');
-  serit(sag, CX + R + enBuyuk / 2 + 90, 'sag');
+  serit(sol, CX - yariX - 150, 'sol');
+  serit(sag, CX + yariX + 150, 'sag');
 
   if(typeof saveState === 'function') saveState();
   nodes.forEach(function(n){
@@ -180,7 +210,10 @@ function veFeadArrangeRing(opts){
     veFitViewToContent({ maxZoom: opts.maxZoom || 1.2 });
     setTimeout(function(){ if(canvas) canvas.classList.remove('tidy-cam'); }, 520);
   }
-  if(typeof showToast === 'function') showToast('Kayış halkası düzenlendi', 'success');
+  if(typeof showToast === 'function')
+    showToast('Kasnaklar koordinatlarına yerleştirildi (1 px = 1 mm)'
+      + (eksik.length ? ' · ' + eksik.length + ' kasnağın koordinatı yok' : ''),
+      eksik.length ? 'warning' : 'success');
   return true;
 }
 
@@ -235,6 +268,17 @@ function veFeadOpenEditor(nodeId, _silent){
   // Eski kayıt göçü (data.dia → data.od) ve temas/sürücü rozetleri, alt
   // topoloji YÜKLENDİKTEN sonra: düğümler artık canlı ve DOM'da.
   if(typeof veFeadMigrateAll === 'function' && typeof nodes !== 'undefined') veFeadMigrateAll(nodes);
+  // ORİJİN GÖÇÜ + KUTULARI KOORDİNATA OTURTMA. Konum artık fiziksel; eski
+  // projelerde krank (0,0)'da olmayabilir ve kutular keyfî yerlerde durur.
+  // Göç TANIM GEREĞİ bir öteleme (geometriye etkisi ölçüldü: 0.00e+0), yani
+  // sessizce yapılabilir. Yerleştirme de kutuyu koordinatının söylediği yere
+  // koyuyor — yoksa kanvas ile mm ilk açılıştan itibaren ayrışırdı.
+  if(typeof veFeadNormalizeOrigin === 'function' && typeof nodes !== 'undefined'){
+    try {
+      veFeadNormalizeOrigin(nodes);
+      veFeadPlaceFromCoords();
+    } catch(e){ /* yarım model açılışı engellemez */ }
+  }
   veFeadRefreshBadges();
 
   if(!_silent && typeof veFitViewToContent === 'function') veFitViewToContent();
@@ -374,13 +418,39 @@ function _feadToggle(node, title, key, handler, hint){
     + '</label>' + (hint ? _feadHint(hint) : '');
 }
 
+// KOORDİNAT ALANLARI KUTUYU DA TAŞIR. Panel ile kanvas artık AYNI ŞEYİ
+// gösteriyor; panele 250 yazıp kutunun yerinde kalması, iki yüzeyin sessizce
+// ayrışması olurdu (bu modülün tekrar eden kuralı: tek alan, tek kaynak).
+var VE_FEAD_COORD_KEYS = ['x', 'y', 'pivotX', 'pivotY', 'cenX', 'cenY', 'armLen', 'od'];
+
 function veFeadSet(nodeId, key, val){
   if(typeof nodes === 'undefined') return;
   var node = nodes.find(function(n){ return n.id === nodeId; });
   if(!node) return;
   if(!node.data) node.data = {};
   node.data[key] = val;
+  if(VE_FEAD_COORD_KEYS.indexOf(key) >= 0 && _feadIsPulley(node)){
+    veFeadPlaceFromCoords();
+    veFeadRefreshDiaGhosts();            // çap değiştiyse hayalet de büyür
+  }
   if(typeof saveState === 'function') saveState();
+}
+
+// Kutuları mm koordinatlarına oturt ve DOM'a yaz. Tek nokta: açılış, panel
+// düzenlemesi ve "Otomatik Düzenle" hepsi buradan geçiyor.
+function veFeadPlaceFromCoords(){
+  if(typeof nodes === 'undefined' || !nodes) return 0;
+  if(typeof veFeadSyncCanvasFromMm !== 'function') return 0;
+  var k = veFeadSyncCanvasFromMm(nodes);
+  if(!k) return 0;
+  if(typeof document !== 'undefined'){
+    nodes.forEach(function(n){
+      var el = document.getElementById(n.id);
+      if(el){ el.style.left = n.x + 'px'; el.style.top = n.y + 'px'; }
+    });
+  }
+  if(typeof updateAllConnections === 'function') updateAllConnections();
+  return k;
 }
 
 // ── KAYIŞ BAĞLANTISININ UCU: KOMŞUYA BAKAN KENAR ────────────────────────────
@@ -427,8 +497,68 @@ function veFeadPortSideFor(node, portType){
 // Stil ELEMANIN ÜSTÜNDE (css/ dosyasında değil) çünkü css/styles.css'e
 // dokunmak Ölçüm Görüntüleyici'nin dağıtım dosyasını bayatlatıyor (bkz.
 // CLAUDE.md); tek rozet için o zinciri kurmaya değmez.
+// GERÇEK ÇAP HAYALETİ — kutunun arkasında soluk bir çember.
+//
+// Kutu 54–72 px, gerçek kasnaklar 57–162 mm; birebir ölçekte kutu krankı
+// 2.25 KAT küçük gösteriyor. Konum artık fiziksel olduğu için bu fark
+// yanıltıcı: ÇAKIŞMAYAN İKİ KUTU, ÇAKIŞAN İKİ KASNAK olabilir — ve çekirdek
+// onu "kayış kasnağın içinden geçiyor" diye reddeder. Hayalet, o çarpışmayı
+// hata çıkmadan ÖNCE görünür yapıyor.
+//
+// Kasnaklar DAİREYE ÇEVRİLMİYOR: `c48fe17`'de denendi ve kullanıcının
+// isteğiyle geri alındı ("tipik dörtgen topoloji bileşenleri devam etsin").
+// Kutu kimliği duruyor; çember yalnız arkada bir ölçü referansı.
+function veFeadApplyDiaGhost(nodeEl, node){
+  if(!nodeEl || !node || typeof document === 'undefined') return false;
+  var box = nodeEl.querySelector('.ve-node-box') || nodeEl;
+  var old = box.querySelector('.ve-fead-dia');
+  if(old) old.remove();
+  if(!_feadIsPulley(node)) return false;
+  var od = (typeof veFeadOD === 'function') ? veFeadOD(node) : 0;
+  var s = (typeof VE_FEAD_PX_PER_MM === 'number') ? VE_FEAD_PX_PER_MM : 1;
+  if(!(od > 0)) return false;
+  var d = od * s;
+  var g = document.createElement('div');
+  g.className = 've-fead-dia';
+  g.title = 'Gerçek dış çap ' + _feadFmt(od, 1) + ' mm (1 px = 1 mm)';
+  // Kutunun MERKEZİNE göre ortalanıyor; taşması normal ve isteniyor.
+  g.style.cssText = 'position:absolute; left:50%; top:50%; pointer-events:none; z-index:0;'
+    + 'width:' + d + 'px; height:' + d + 'px; margin-left:' + (-d / 2) + 'px;'
+    + 'margin-top:' + (-d / 2) + 'px; border-radius:50%;'
+    + 'border:1px dashed var(--text-muted, #888); opacity:0.30;';
+  box.insertBefore(g, box.firstChild);
+  return true;
+}
+
+// Bütün kasnakların çap hayaletini tazele (çap değişince / sürüklerken).
+function veFeadRefreshDiaGhosts(){
+  if(typeof document === 'undefined' || typeof nodes === 'undefined') return 0;
+  var n = 0;
+  nodes.forEach(function(x){
+    var el = document.getElementById(x.id);
+    if(el && veFeadApplyDiaGhost(el, x)) n++;
+  });
+  return n;
+}
+
+// SÜRÜKLEME → mm. ui-core.js'in sürükleme döngüsünden her karede çağrılıyor.
+// Tek geçiş: gergi dahil bütün kasnakların krank-göreli mm'si tazeleniyor
+// (bkz. veFeadSyncMmFromCanvas). Kasnak yoksa bedava.
+function veFeadSyncDrag(){
+  if(typeof nodes === 'undefined' || !nodes) return 0;
+  if(typeof veFeadSyncMmFromCanvas !== 'function') return 0;
+  var org = veFeadOriginNode(nodes);
+  if(!org) return 0;
+  return veFeadSyncMmFromCanvas(nodes, { origin: org });
+}
+
 function veFeadApplyBadge(nodeEl, node){
   if(!nodeEl || !node || typeof document === 'undefined') return false;
+  // Çap hayaleti rozetle AYNI dört noktadan tazelensin diye buradan çağrılıyor
+  // (createNode · restoreState · sekme yükleme · rozet tazeleme). Ayrı bir
+  // çağrı zinciri kurmak, dördünden biri unutulduğunda hayaletin sessizce
+  // bayat kalması demekti.
+  veFeadApplyDiaGhost(nodeEl, node);
   var old = nodeEl.querySelector('.ve-fead-badge');
   if(old) old.remove();
   if(_feadDefOf(node).isFeadBelt) return veFeadApplyBeltModeBadge(nodeEl, node);
@@ -2962,6 +3092,11 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadPortSideFor: veFeadPortSideFor,
     veFeadApplyBadge: veFeadApplyBadge,
     veFeadApplyBeltModeBadge: veFeadApplyBeltModeBadge,
+    veFeadApplyDiaGhost: veFeadApplyDiaGhost,
+    veFeadRefreshDiaGhosts: veFeadRefreshDiaGhosts,
+    veFeadSyncDrag: veFeadSyncDrag,
+    veFeadPlaceFromCoords: veFeadPlaceFromCoords,
+    VE_FEAD_COORD_KEYS: VE_FEAD_COORD_KEYS,
     veFeadToggleBeltMode: veFeadToggleBeltMode,
     veFeadDerivedLengthHTML: veFeadDerivedLengthHTML,
     veFeadBeltCatalogCard: veFeadBeltCatalogCard,
@@ -3002,7 +3137,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadPowerCurveCard: veFeadPowerCurveCard,
     veFeadCurveAdd: veFeadCurveAdd, veFeadCurveRemove: veFeadCurveRemove,
     veFeadCurveSet: veFeadCurveSet, veFeadLoadExample: veFeadLoadExample,
-    veFeadArrangeRing: veFeadArrangeRing,
+    veFeadArrangeByCoords: veFeadArrangeByCoords,
     getFeadModulePropertiesHTML: getFeadModulePropertiesHTML,
     getFeadPulleyPropertiesHTML: getFeadPulleyPropertiesHTML,
     getFeadTensionerPropertiesHTML: getFeadTensionerPropertiesHTML,

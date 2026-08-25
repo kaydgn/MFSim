@@ -25,11 +25,12 @@ function veTidyLayout(opts) {
   // bir yerden kırıp dönüş telini bütün kümenin üstünden geçiriyor (ölçüldü:
   // BMC örneğinde kesişen tel çifti 0 → 1, altı kasnak tek yatay sıraya
   // diziliyor). Modül kendi yerleştiricisine gidiyor — bkz. cp-fead.js
-  // veFeadArrangeRing.
-  if(typeof veFeadArrangeRing === 'function' && typeof _feadIsPulley === 'function') {
+  // veFeadArrangeByCoords: FEAD konumu FİZİKSEL (1 px = 1 mm), dolayısıyla
+  // genel katmanlı yerleştirici girilen koordinatları SİLERDİ.
+  if(typeof veFeadArrangeByCoords === 'function' && typeof _feadIsPulley === 'function') {
     var _kasnak = 0;
     for(var _i = 0; _i < nodes.length; _i++) if(_feadIsPulley(nodes[_i])) _kasnak++;
-    if(_kasnak >= 2 && veFeadArrangeRing(opts)) return;
+    if(_kasnak >= 2 && veFeadArrangeByCoords(opts)) return;
   }
 
   var byId = {};
