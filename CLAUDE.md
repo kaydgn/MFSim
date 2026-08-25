@@ -755,13 +755,30 @@ taşındı — SVG metni KaTeX ile dizilemez ve belgenin tipografisinden kopuk
 görünüyordu (kullanıcı bildirimi: *"çok yazısal görünüyor, ana görünüm temasını
 bozmayalım"*).
 
+**Şeklin YANINDA açıklama sütunu var** (`_frLegend`). Kullanıcı bildirimi
+(2026-08-24): *"'fi' ne demek falan çok belli olmamış."* Doğruydu — sayıları
+çizimden çıkarınca sembolün NE OLDUĞU yalnız künye metninde kalıyordu, oysa
+okuyucu şekle bakarken orada değil. Sol şerit her sembolü tanımlıyor
+(`φ — SARIM AÇISI`, `f — bileşke`, `a — gergi kol boyu`, …); SVG metni satır
+kaydırmadığı için sarma elle yapılıyor (`_frWrap`).
+
+**Kadraj YATAY, çünkü şekiller fazla uzundu.** `svg{width:100%}` olduğu için
+ekrandaki yükseklik = genişlik × (H/W); iki yeni şekil **534 ve 452 px** iken
+raporun diğer sekizi 209–346 px bandındaydı (ölçüldü). viewBox yataylaşınca
+hem **297 / 316 px**'e indiler hem de açığa çıkan sol şerit açıklamaya yer
+açtı — aynı değişiklik iki sorunu birden çözüyor. Kapı oranı `H/W < 0,45`
+olarak kilitliyor.
+
 **Etiketler ÇAKIŞMA ÖNLEYİCİ bir yerleştiriciden geçiyor** (`_frLabels`): istenen
 yönde adım adım ilerleyip hem çerçeveden, hem önceki etiketlerden, hem de
 **engel olarak kaydedilen çizim öğelerinden** (kasnak çemberi, yarıçap doğruları,
 kol, vektör gövdeleri) çıkan ilk yeri seçer. Yalnız radyal ilerleyen ilk sürümde
 `u_çıkış` etiketi çerçevenin dışına itilip **kayboluyordu** (ölçüldü); arama
 yarıçap-baskın, yön ikincil oldu. Sıra = öncelik: şeklin konusu olan β ve φ önce
-yerleşir.
+yerleşir. `θ_giriş`/`θ_çıkış` açıortayda değil
+**kendi yarıçap doğrultularında** duruyor: iki teğet noktası çevrenin karşıt
+yerlerinde olduğu için etiketler yapısal olarak ayrılır — açıortayda ikisi de
+aynı dörtte bire düşüp sıkışıyordu (kadraj küçüldükten sonra iç bölge dar).
 
 **Denklem numaraları sayaçtan** (`_frEq`, tablo/şekil sayaçlarıyla aynı kalıp) ve
 metindeki atıflar **aynı kaynaktan** (`_frEqRef`) basılıyor — elle "(8.4)" yazmak,

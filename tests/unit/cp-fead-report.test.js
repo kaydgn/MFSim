@@ -937,3 +937,70 @@ describe('teori kaynağı — türetme ve ankraj', () => {
     expect(html).toMatch(/h4\{font-size/);            // h4 kuralı şablon CSS'inde
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ŞEKİL AÇIKLAMA SÜTUNU — sembol tek başına ŞİFRE
+//
+// Kullanıcı bildirimi (2026-08-24): *"bu şekildeki tanımları biraz daha güzel
+// yapalım; 'fi' ne demek falan çok belli olmamış."* Doğruydu: sayıların yay
+// işaretlerinin üstüne binmesini önlemek için çizimde yalnız sembol
+// bırakılmıştı, sembolün NE OLDUĞU ise yalnız künye metninde kalıyordu —
+// okuyucu şekle bakarken orada değil.
+//
+// Aynı bildirimde şekiller "çok büyük" bulundu: 534 ve 452 px iken raporun
+// diğer sekiz şekli 209–346 px bandındaydı. Kadraj yatayladı (viewBox
+// oranı düştü) ve açığa çıkan sol şerit açıklamaya verildi.
+describe('şekil açıklama sütunu ve ölçüsü', () => {
+  const yaziGetir = (svg) => [...svg.matchAll(/<text[^>]*>([^<]*)<\/text>/g)].map((m) => m[1]);
+
+  test('φ şekli sembolleri TANIMLIYOR', () => {
+    const t = yaziGetir(RP._frWrapFigure(R8)).join(' | ');
+    expect(t).toMatch(/φ — SARIM AÇISI/);
+    expect(t).toMatch(/teğet noktaları/);
+    expect(t).toMatch(/teğet açıları/);
+    expect(t).toMatch(/d — sarım işareti/);
+    // sembolün kendisi çizimde de duruyor
+    expect(yaziGetir(RP._frWrapFigure(R8)).some((x) => x === 'φ')).toBe(true);
+  });
+
+  test('β şekli sembolleri TANIMLIYOR', () => {
+    const t = yaziGetir(RP._frBetaFigure(R8)).join(' | ');
+    ['a — gergi kol boyu', 't — merkezin hareket yönü', 'f — bileşke',
+     'φ — gergi kasnağındaki sarım açısı', 'β — bileşke ile kol arasındaki açı']
+      .forEach((x) => expect(t).toContain(x));
+    // açıklama metni satırlara SARILIYOR: boşlukla birleştirip ara
+    expect(yaziGetir(RP._frBetaFigure(R8)).join(' ')).toMatch(/Bu zincirdeki TEK\s+girdi/);
+  });
+
+  test('kadraj YATAY — şekil raporun diğer şekilleriyle aynı bantta', () => {
+    // svg{width:100%} olduğu için ekrandaki yükseklik = genişlik × (H/W).
+    // Diğer sekiz şeklin oranı 0,26–0,44 arasında; bu ikisi 0,81 ve 0,55'ti.
+    [RP._frWrapFigure(R8), RP._frBetaFigure(R8)].forEach((svg) => {
+      const m = /viewBox="0 0 (\d+) (\d+)"/.exec(svg);
+      expect(m).toBeTruthy();
+      expect(Number(m[2]) / Number(m[1])).toBeLessThan(0.45);
+    });
+  });
+
+  test('açıklama sütunu ile çizim ÇAKIŞMAZ — sütun alanı kilitli', () => {
+    const svg = RP._frWrapFigure(R8);
+    const cem = [...svg.matchAll(/<circle cx="([-\d.]+)" cy="([-\d.]+)" r="([\d.]+)"/g)]
+      .map((m) => ({ x: +m[1], r: +m[3] })).filter((c) => c.r > 10)[0];
+    expect(cem.x - cem.r).toBeGreaterThan(300);        // çember sütunun sağında
+  });
+
+  test('uzun kasnak adı alt künyeyi çerçeveden TAŞIRMAZ', () => {
+    // Şekil EN BÜYÜK SARIMLI kasnağı seçiyor; hangisi olduğunu bilmediğimiz
+    // için hepsini yeniden adlandırıyoruz (tek birini adlandırmak kapıyı
+    // sessizce boşa çıkarıyordu — mutasyon ölçümüyle yakalandı).
+    const R = coz({ mutate: (ns) => {
+      ns.forEach((n, k) => {
+        if (n.data && n.data.od != null) n.customName = 'Ç'.repeat(180) + k;
+      });
+    } });
+    const svg = RP._frWrapFigure(R);
+    const W = Number(/viewBox="0 0 (\d+)/.exec(svg)[1]);
+    [...svg.matchAll(/<text x="(\d+)" y="[\d.]+" font-size="(11)"[^>]*>([^<]*)</g)]
+      .forEach((m) => expect(Number(m[1]) + String(m[3]).length * 11 * 0.6).toBeLessThan(W));
+  });
+});
