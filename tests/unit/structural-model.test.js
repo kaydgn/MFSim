@@ -27,27 +27,53 @@ const path = require('path');
 const zlib = require('zlib');
 const model = require('../../js/structural-model.js');
 
+const vm = require('vm');
+
 const ROOT = path.join(__dirname, '../..');
-const WASM = new Uint8Array(fs.readFileSync(path.join(ROOT, 'vendor/occt-import-js.wasm')));
+// Vendor .wasm DEPODA GZİP'Lİ duruyor (62,8 MB ham depoya konmaz).
+const WASM = zlib.gunzipSync(fs.readFileSync(path.join(ROOT, 'vendor/opencascade.wasm.gz')));
 const stepBytes = (name) =>
   new Uint8Array(fs.readFileSync(path.join(ROOT, 'tests/fixtures/step', name)));
 
-// OCCT yüklemesi (7.3 MB WASM derlemesi) pahalı → suite başına BİR kez.
-const imp = (name, deflection) =>
-  model.veStrImportStep(stepBytes(name), { fileName: name, fileSize: 123, deflection }, { wasmBinary: WASM });
+// OCCT glue'su bir ESM değil (vendor'a alınırken `export default` çıkarıldı)
+// ama `module.exports` da yazmıyor → `require` ile alınamaz. Tarayıcıda global
+// `opencascade` olarak duruyor; burada onu bir vm bağlamında aynı şekilde
+// üretip `opts.factory` ile veriyoruz. Sahte fabrika DEĞİL — vendor'daki
+// dosyanın ta kendisi.
+function occtFactory(){
+  const glue = fs.readFileSync(path.join(ROOT, 'vendor/opencascade.js'), 'utf8');
+  // jsdom ortamında TextDecoder/TextEncoder global DEĞİL; emscripten glue'su
+  // onları arıyor → node:util'den veriliyor.
+  const util = require('util');
+  const sb = { console, process, require, Buffer, URL, performance,
+               TextDecoder: global.TextDecoder || util.TextDecoder,
+               TextEncoder: global.TextEncoder || util.TextEncoder,
+               __filename: path.join(ROOT, 'vendor/opencascade.js'), __dirname: path.join(ROOT, 'vendor') };
+  sb.global = sb;
+  vm.createContext(sb);
+  vm.runInContext(glue + '\n;globalThis.__oc = opencascade;', sb);
+  return sb.__oc;
+}
+const FACTORY = occtFactory();
 
-let cube, rounded;
+// OCCT yüklemesi (62,8 MB WASM derlemesi) pahalı → suite başına BİR kez.
+const imp = (name, deflection, extra) =>
+  model.veStrImportStep(stepBytes(name), { fileName: name, fileSize: 123, deflection },
+    Object.assign({ factory: FACTORY, wasmBinary: WASM, noWorker: true }, extra || {}));
+
+let cube, rounded, bracket;
 beforeAll(async () => {
   cube = await imp('cube-mm.step');
   rounded = await imp('rounded-cube.step');
-}, 120000);
+  bracket = await imp('multibody-bracket.step');
+}, 240000);
 
 // Derlenmiş WASM örneği (7.3 MB) suite sonunda BIRAKILMALI: tutulursa jest
 // worker'ı teardown'da zorla kapatılıyor ("failed to exit gracefully").
 afterAll(() => {
   model.veStrOcctForget();
   model.veStrGeomCacheClear();
-  cube = null; rounded = null;
+  cube = null; rounded = null; bracket = null;
 });
 
 // ── 1) İçe aktarma gerçekten oluyor mu ──────────────────────────────────────
@@ -153,7 +179,9 @@ describe('veStrGeomRecord: node.data\'ya yazılan künye hafif', () => {
   test('yüz künyesi kimlik + üçgen sayısı taşıyor (sınır koşulu buna bağlanacak)', () => {
     const rec = model.veStrGeomRecord(cube);
     expect(rec.faces).toHaveLength(6);
-    expect(rec.faces[0]).toEqual({ id: 'm0/f0', meshName: 'Cube', triCount: 2 });
+    // Parça adı artık DOSYA ADINDAN geliyor: birleştirmeden sonra STEP'in
+    // ürün adları anlamını yitiriyor (yedi gövde tek katı oldu).
+    expect(rec.faces[0]).toEqual({ id: 'm0/f0', meshName: 'cube-mm', triCount: 2 });
     expect(rec.stats.faceCount).toBe(6);
     expect(rec.bbox.size[0]).toBeCloseTo(1000, 3);
   });
@@ -175,9 +203,9 @@ describe('hata çevirisi', () => {
     expect(r.error).not.toMatch(/undefined|NaN|\[object/);
   }, 120000);
 
-  test('success:false → okunamadı; boş mesh listesi → AYRI sebep', () => {
-    const a = model.veStrNormalizeImport({ success: false }, {});
-    const b = model.veStrNormalizeImport({ success: true, meshes: [] }, {});
+  test('boş çıktı → okunamadı; üçgensiz çıktı → AYRI sebep', () => {
+    const a = model.veStrNormalizeImport(null, {});
+    const b = model.veStrNormalizeImport({ positions: new Float32Array(0), indices: new Uint32Array(0), triCount: 0, faces: [] }, {});
     expect(a.ok).toBe(false);
     expect(b.ok).toBe(false);
     // İki sebep AYNI olsaydı kullanıcı "dosya bozuk" ile "içinde katı yok"u
@@ -224,66 +252,96 @@ describe('geometri önbelleği oturumluk', () => {
   });
 });
 
-// ── 8) WASM yolu — tek dosya sürümü sessizce kırılmasın ───────────────────
-describe('WASM yükleyici sözleşmesi', () => {
-  test('aday yollar arasında vendor/ var ve sıralı denenir', () => {
-    expect(model.VE_STR_OCCT_WASM_PATHS[0]).toBe('vendor/occt-import-js.wasm');
-    expect(model.VE_STR_OCCT_WASM_PATHS.length).toBeGreaterThan(1);
+// ── 8) BOOLEAN — çok gövdeli CAD dosyası TEK KATIYA iner ──────────────────
+// Bu modülün YENİ ÇEKİRDEK istemesinin tek sebebi bu: eski okuyucuda
+// (occt-import-js) boolean YOKTU, ve birbirine değen ama ayrı duran katıların
+// yüzey üçgenlemesi arayüzde uyuşmadığı için tet ağ örücüsü kendi kendini
+// kesen bir girdi görüyordu.
+//
+// Kapı SAYIYA değil DEĞİŞMEZE bakıyor: katı sayısı 1'e iner, hacim korunur
+// (ya da örtüşme kadar azalır), yüz aralıkları üçgenleri hâlâ tam böler.
+describe('çok gövdeli parça TEK KATIYA birleştiriliyor', () => {
+  test('7 gövdeli braket → 1 katı', () => {
+    expect(bracket.ok).toBe(true);
+    expect(bracket.fuse.istendi).toBe(true);
+    expect(bracket.fuse.ok).toBe(true);
+    expect(bracket.fuse.once).toBe(7);
+    expect(bracket.stats.solidCount).toBe(1);
+    expect(bracket.stats.solidCountBefore).toBe(7);
+    // Tek üçgen tamponu: ağ örücüye tek nesne gider.
+    expect(bracket.meshes).toHaveLength(1);
   });
 
-  test('hiçbir aday yol tutmazsa REDDEDİYOR ve DENENEN YOLLARI yazıyor', async () => {
-    // Sessizce boş geometri dönmek en kötüsü olurdu: kullanıcı "parça gelmedi"
-    // görür, sebebini (dosya yanlış yerde) asla öğrenemez.
-    // jsdom'da fetch yok → aday-yol aramasını sınamak için sahte fetch.
-    const cagrilan = [];
-    global.fetch = (u) => { cagrilan.push(u); return Promise.reject(new Error('404')); };
-    try {
-      const r = await model.veStrImportStep(
-        new Uint8Array([0]),
-        {},
-        { force: true, wasmUrls: ['yok-1.wasm', 'yok-2.wasm'] }
-      );
-      expect(r.ok).toBe(false);
-      expect(r.error).toMatch(/bulunamadı/i);
-      // Yollar SIRAYLA denendi ve hepsi mesajda yazılı
-      expect(cagrilan).toEqual(['yok-1.wasm', 'yok-2.wasm']);
-      expect(r.error).toContain('yok-1.wasm');
-      expect(r.error).toContain('yok-2.wasm');
-    } finally { delete global.fetch; }
-  }, 60000);
+  test('birleşim gerçekten YAPILDI — yüzler imprint edildi, dikişler silindi', () => {
+    // Ham hâlde 7 gövde = 30 yüz (plaka 6 + iki kulak 6+6 + dört silindir 3'er).
+    // Birleşince 18: iç duvarlar gitti, plakanın üstü delikleriyle TEK yüz oldu.
+    // Sayının kendisi değil, KÜÇÜLMESİ anlamlı — kaynaşma olmasaydı 30 kalırdı.
+    expect(bracket.stats.faceCount).toBe(18);
+    expect(bracket.stats.faceCount).toBeLessThan(30);
+  });
 
-  test('ilk tutan yol kazanır — kalanlar denenmez', async () => {
-    const cagrilan = [];
-    global.fetch = (u) => {
-      cagrilan.push(u);
-      if (u === 'ikinci.wasm') return Promise.resolve({ ok: true, arrayBuffer: () => Promise.resolve(WASM) });
-      return Promise.reject(new Error('404'));
-    };
-    try {
-      const r = await model.veStrImportStep(
-        stepBytes('cube-mm.step'),
-        { fileName: 'cube-mm.step' },
-        { force: true, wasmUrls: ['birinci.wasm', 'ikinci.wasm', 'ucuncu.wasm'] }
-      );
-      expect(r.ok).toBe(true);
-      expect(cagrilan).toEqual(['birinci.wasm', 'ikinci.wasm']);   // üçüncüye hiç gidilmedi
-      expect(r.wasmUrl).toBe('ikinci.wasm');                       // hangi yolun tuttuğu künyede
-    } finally { delete global.fetch; }
+  test('hacim korunuyor — kayıp yalnız ÖRTÜŞEN gövdelerin ortak hacmi kadar', () => {
+    const f = bracket.fuse;
+    // Bu fixture'da göbekler plakanın İÇİNE giriyor → birleşim hacmi toplamdan
+    // küçük olmalı ama parçanın kendisinden büyük kalmalı.
+    expect(f.hacimSonra).toBeLessThan(f.hacimOnce);
+    expect(f.hacimSonra).toBeGreaterThan(f.hacimOnce * 0.9);
+    // Sınır kutusu değişmedi: birleştirme parçayı büyütüp küçültmez.
+    expect(bracket.bbox.size[0]).toBeCloseTo(60, 3);
+    expect(bracket.bbox.size[1]).toBeCloseTo(40, 3);
+    expect(bracket.bbox.size[2]).toBeCloseTo(31, 3);
+  });
+
+  test('birleştirmeden SONRA da yüz aralıkları üçgenleri TAM bölüyor', () => {
+    let bek = 0;
+    bracket.faces.forEach((f) => {
+      if (f.triCount === 0) return;
+      expect(f.first).toBe(bek);
+      bek = f.last + 1;
+    });
+    expect(bek).toBe(bracket.stats.triCount);
+  });
+
+  test('tek katılı dosyada boolean HİÇ ÇALIŞMIYOR', () => {
+    // Gereksiz bir BOP, küçük bir parçada bile yüz milisaniye ve —daha
+    // kötüsü— topolojiyi gereksizce yeniden kurma riski demek.
+    expect(cube.fuse.istendi).toBe(false);
+    expect(cube.stats.solidCount).toBe(1);
+  });
+
+  test('fuse KAPATILABİLİR ve kapalıyken gövdeler ayrı kalır', async () => {
+    const ham = await imp('multibody-bracket.step', undefined, { fuse: false });
+    expect(ham.fuse.istendi).toBe(false);
+    expect(ham.stats.solidCount).toBe(7);
+    expect(ham.stats.faceCount).toBe(30);          // birleşmemiş yüz sayısı
+    expect(ham.stats.faceCount).toBeGreaterThan(bracket.stats.faceCount);
   }, 120000);
+
+  test('birleştirme künyeye GİRİYOR — panel sessiz kalamasın', () => {
+    const rec = model.veStrGeomRecord(bracket);
+    expect(rec.fuse.ok).toBe(true);
+    expect(rec.fuse.once).toBe(7);
+    expect(rec.fuse.sonra).toBe(1);
+    expect(rec.stats.solidCountBefore).toBe(7);
+    // Künye hâlâ HAFİF: üçgen taşımıyor.
+    expect(JSON.stringify(rec)).not.toContain('positions');
+  });
 });
 
 // ── 9) Okuyucunun kendi teşhisi kullanıcıya ULAŞIYOR ──────────────────────
 describe('OCCT teşhisi hata mesajına iliştiriliyor', () => {
-  test('bozuk STEP: genel cümlenin yanında okuyucunun satırı da var', async () => {
-    // OCCT "Line 2: Incorrect syntax: unexpected QUID, expecting STEP" gibi
-    // TAM SEBEBİ yazıyor ama varsayılanda bu console'a düşer ve kullanıcı
-    // yalnız "dosya okunamadı" görür. Teşhis olmadan kullanıcı dosyanın mı
-    // yoksa programın mı sorunlu olduğunu ayırt edemez.
+  test('bozuk STEP: genel cümlenin yanında okuyucunun teşhisi de var', async () => {
+    // YENİ ÇEKİRDEKTE TEŞHİS İSTENMEDEN GELMİYOR — ölçüldü: bozuk bir dosyada
+    // print/printErr'e SIFIR satır düşüyor. Eski okuyucu kendiliğinden
+    // yazıyordu; bu çekirdekte `PrintCheckLoad` çağrılmazsa kullanıcı yalnız
+    // "dosya okunamadı" görür ve dosyanın mı programın mı sorunlu olduğunu
+    // ayırt edemez. Kapı o çağrının YAPILDIĞINI sınıyor.
     const bozuk = new Uint8Array(Buffer.from('ISO-10303-21;\nHEADER_BOZUK;\n', 'utf8'));
-    const r = await model.veStrImportStep(bozuk, { fileName: 'bozuk.step' }, { wasmBinary: WASM });
+    const r = await model.veStrImportStep(bozuk, { fileName: 'bozuk.step' },
+      { factory: FACTORY, wasmBinary: WASM, noWorker: true });
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/teşhisi/);
-    expect(r.error).toMatch(/syntax|STEP|Line/i);
+    expect(r.error).toMatch(/check|data|entity|step/i);
   }, 120000);
 
   test('teşhis en fazla iki satır — durum satırına on satır dökülmüyor', () => {
@@ -325,32 +383,55 @@ describe('worker köprüsü — sözleşme', () => {
     expect(src).not.toMatch(/\bwindow\./);
   });
 
-  test('sonuç TİPLİ dizi olarak ve TRANSFER ile dönüyor', () => {
-    // Düz JS dizisi kopyalanarak geçerdi; 45 bin üçgende bu ikinci bir maliyet.
-    expect(src).toContain('Float32Array');
-    expect(src).toContain('Uint32Array');
-    expect(src).toMatch(/postMessage\(\s*\{[^}]*type:"result"[\s\S]*?\},\s*transfer\s*\)/);
+  test('sonuç TRANSFER ile dönüyor — kopyalanmıyor', () => {
+    // Düz kopya 45 bin üçgende ikinci bir maliyet; transfer sıfır kopya.
+    expect(src).toMatch(/postMessage\(\{ type:"result"[\s\S]*?\},\s*\n?\s*\[g\.positions\.buffer, g\.normals\.buffer, g\.indices\.buffer\]\)/);
   });
 
-  test('brep_faces worker\'dan AYNEN geçiyor — yüz kimliği worker\'da kaybolmaz', () => {
-    expect(src).toContain('brep_faces');
+  test('AŞAMA bildirimi worker\'dan geliyor — boolean saniyeler sürebilir', () => {
+    // Birleştirme 18 katılı bir montajda 15 s sürebiliyor (ölçüldü). Worker
+    // aşama bildirmeseydi kullanıcı "Geometri çözümleniyor" yazısına 15 saniye
+    // bakardı — ilerleme göstergesinin var oluş sebebi yok olurdu.
+    expect(src).toContain('"stage"');
+    expect(src).toContain('onStage');
+  });
+
+  test('BORU HATTI worker\'a kaynak metin olarak giriyor — ikinci kopya YOK', () => {
+    // Tek kaynak kuralı: ana iş parçacığı yedeği ile worker AYNI fonksiyonu
+    // koşuyor. İki kopya tutulsaydı ayrışma sessiz olurdu — worker yolu
+    // çalışırken yedek yol başka bir geometri üretirdi.
+    const model_src = fs.readFileSync(path.join(ROOT, 'js/structural-model.js'), 'utf8');
+    expect(model_src).toContain('_sgOcctPipeline.toString()');
+    expect(src).toContain('_sgOcctPipeline(_oc');
+    expect(model_src).toMatch(/function _sgImportMainThread[\s\S]{0,600}_sgOcctPipeline\(oc,/);
+    // Boru hattı DIŞARIYA BAŞVURMAMALI: worker'a metin olarak gidiyor, dış
+    // bir yardımcıya başvursaydı orada tanımsız olurdu.
+    const fn = model._sgOcctPipeline.toString();
+    ['_sgNum(', '_sgTyped(', 'veStrFaceKey(', 'VE_STR_GEOM_'].forEach((ad) => {
+      expect(fn).not.toContain(ad);
+    });
+  });
+
+  test('BOOLEAN worker tarafında koşuyor — ana iş parçacığı kilitlenmiyor', () => {
+    const fn = model._sgOcctPipeline.toString();
+    expect(fn).toContain('BRepAlgoAPI_Fuse_1');
+    expect(fn).toContain('ShapeUpgrade_UnifySameDomain_2');
   });
 });
 
 describe('worker sonucu ana iş parçacığında normalize ediliyor', () => {
-  // Worker mesh'i occt'nin `attributes.position.array` biçiminde DEĞİL,
-  // tipli `positions`/`indices` alanlarıyla gönderiyor. veStrNormalizeImport
-  // ikisini de kabul etmeli — yoksa worker yolu boş geometri üretirdi.
+  // Worker, boru hattının ÇIKTISINI olduğu gibi gönderiyor (tipli diziler +
+  // yüz aralıkları). Normalize onu model biçimine çeviriyor.
   const workerRaw = {
-    success: true,
-    meshes: [{
-      name: 'Braket',
-      color: null,
-      brep_faces: [{ first: 0, last: 0, color: null }, { first: 1, last: 1, color: null }],
-      positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1]),
-      normals: null,
-      indices: new Uint32Array([0, 1, 2, 0, 1, 3]),
-    }],
+    positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1]),
+    normals: new Float32Array(12),
+    indices: new Uint32Array([0, 1, 2, 0, 1, 3]),
+    faces: [{ index: 0, first: 0, last: 0, triCount: 1 },
+            { index: 1, first: 1, last: 1, triCount: 1 }],
+    triCount: 2,
+    solidCount: 1,
+    volume: 0,
+    fuse: { istendi: false, ok: false, once: 1, sonra: 1, ms: 0, hata: '' }
   };
 
   test('tipli dizilerle gelen mesh çözülüyor', () => {
@@ -364,8 +445,8 @@ describe('worker sonucu ana iş parçacığında normalize ediliyor', () => {
   test('zaten tipli olan dizi YENİDEN KOPYALANMIYOR', () => {
     // 100 bin üçgende gereksiz kopya megabaytlarca bellek ve duraklama demek.
     const g = model.veStrNormalizeImport(workerRaw, {});
-    expect(g.meshes[0].positions).toBe(workerRaw.meshes[0].positions);
-    expect(g.meshes[0].indices).toBe(workerRaw.meshes[0].indices);
+    expect(g.meshes[0].positions).toBe(workerRaw.positions);
+    expect(g.meshes[0].indices).toBe(workerRaw.indices);
   });
 
   test('_sgTyped: tip uyuyorsa aynı nesne, uymuyorsa çevirir', () => {
@@ -384,63 +465,41 @@ describe('worker sonucu ana iş parçacığında normalize ediliyor', () => {
 });
 
 // ── 11) İLERLEME ───────────────────────────────────────────────────────────
+// Çekirdek GÖMÜLÜ olduğu için "indiriliyor" diye bir aşama YOK; ağdan indirme
+// yolu tamamen kalktı (vendor dosyası zaten gzip'li, yani DecompressionStream
+// bilmeyen tarayıcıda yedek de açılamazdı — var olmayan bir durumu kurtaran
+// bir yol taşımanın karşılığı yoktu).
 describe('ilerleme bildirimi', () => {
-  test('aşama adları sabit', () => {
-    expect(model.VE_STR_STAGES).toEqual(['reader', 'download', 'parse', 'build']);
+  test('aşama adları sabit ve BOOLEAN kendi aşamasını taşıyor', () => {
+    expect(model.VE_STR_STAGES).toEqual(['reader', 'parse', 'fuse', 'build']);
+    // 'download' KALKTI: gömülü çekirdek indirilmiyor.
+    expect(model.VE_STR_STAGES).not.toContain('download');
   });
 
-  // BU KAPI GERÇEK BİR ÖLÇÜMDEN DOĞDU: hem `npx serve` hem GitHub Pages
-  // .wasm'ı `content-encoding: br` + `chunked` ile gönderiyor → tarayıcıda
-  // `content-length` HİÇ GELMİYOR. Yüzde bu yüzden bilinen dosya boyutundan
-  // hesaplanıyor; sabit dosyayla birlikte kaymamalı.
-  test('VE_STR_OCCT_WASM_BYTES gerçek dosya boyutuna EŞİT', () => {
-    const st = fs.statSync(path.join(ROOT, 'vendor/occt-import-js.wasm'));
-    expect(model.VE_STR_OCCT_WASM_BYTES).toBe(st.size);
-  });
-
-  test('indirme aşaması loaded/total/pct bildiriyor', async () => {
-    const parcalar = [new Uint8Array(400), new Uint8Array(600)];
-    let i = 0;
-    global.fetch = () => Promise.resolve({
-      ok: true,
-      headers: { get: () => null },                       // br/chunked: başlık YOK
-      body: { getReader: () => ({ read: () => Promise.resolve(
-        i < parcalar.length ? { done: false, value: parcalar[i++] } : { done: true }) }) },
-    });
+  test('çok gövdeli dosyada aşamalar SIRAYLA bildiriliyor, fuse dahil', async () => {
     const gorulen = [];
-    try {
-      await model.veStrImportStep(new Uint8Array([0]), {}, {
-        force: true, wasmUrls: ['x.wasm'], expectedBytes: 1000, noWorker: true,
-        onProgress: (s, info) => gorulen.push({ s: s, pct: info && info.pct, loaded: info && info.loaded }),
-      });
-    } finally { delete global.fetch; }
+    const g = await model.veStrImportStep(
+      stepBytes('multibody-bracket.step'), { fileName: 'mb.step', fileSize: 1 },
+      { factory: FACTORY, wasmBinary: WASM, noWorker: true,
+        onProgress: (st) => { if (gorulen[gorulen.length - 1] !== st) gorulen.push(st); } });
+    expect(g.ok).toBe(true);
+    expect(gorulen).toContain('parse');
+    expect(gorulen).toContain('fuse');
+    expect(gorulen).toContain('build');
+    // Sıra anlamlı: birleştirme çözümlemeden SONRA, ağ örmeden ÖNCE.
+    expect(gorulen.indexOf('fuse')).toBeGreaterThan(gorulen.indexOf('parse'));
+    expect(gorulen.indexOf('build')).toBeGreaterThan(gorulen.indexOf('fuse'));
+  }, 120000);
 
-    const ind = gorulen.filter((g) => g.s === 'download');
-    expect(ind.length).toBe(2);
-    expect(ind[0]).toEqual({ s: 'download', loaded: 400, pct: 0.4 });
-    expect(ind[1]).toEqual({ s: 'download', loaded: 1000, pct: 1 });
-    // İndirmeden sonra okuyucu hazırlama aşaması da bildiriliyor
-    expect(gorulen.map((g) => g.s)).toContain('reader');
-  }, 60000);
-
-  test('tahmin tutmazsa yüzde GÖSTERİLMİYOR — %140 yazan çubuk olmaz', async () => {
-    let i = 0;
-    const parcalar = [new Uint8Array(5000)];
-    global.fetch = () => Promise.resolve({
-      ok: true,
-      headers: { get: () => null },
-      body: { getReader: () => ({ read: () => Promise.resolve(
-        i < parcalar.length ? { done: false, value: parcalar[i++] } : { done: true }) }) },
-    });
+  test('tek katılı dosyada fuse aşaması HİÇ bildirilmiyor', async () => {
     const gorulen = [];
-    try {
-      await model.veStrImportStep(new Uint8Array([0]), {}, {
-        force: true, wasmUrls: ['x.wasm'], expectedBytes: 1000, noWorker: true,
-        onProgress: (s, info) => { if (s === 'download') gorulen.push(info.pct); },
-      });
-    } finally { delete global.fetch; }
-    expect(gorulen).toEqual([null]);
-  }, 60000);
+    await model.veStrImportStep(
+      stepBytes('rounded-cube.step'), { fileName: 'r.step', fileSize: 1 },
+      { factory: FACTORY, wasmBinary: WASM, noWorker: true,
+        onProgress: (st) => gorulen.push(st) });
+    // Olmayan bir işi bildirmek, kullanıcının okuduğu her satırı şüpheli yapar.
+    expect(gorulen).not.toContain('fuse');
+  }, 120000);
 });
 
 // ── 12) GÖMÜLÜ OKUYUCU — ÇEVRİMDIŞI ÇALIŞMANIN ŞARTI ──────────────────────
@@ -450,53 +509,65 @@ describe('ilerleme bildirimi', () => {
 // tests/e2e/structural-geometry.spec.js'te (ağ kesikken içe aktarma).
 describe('gömülü .wasm varlığı', () => {
   const ASSET = path.join(ROOT, 'js/structural-occt-wasm.js');
+  const VENDOR = path.join(ROOT, 'vendor/opencascade.wasm.gz');
 
-  test('varlık üretilmiş ve depoda', () => {
-    expect(fs.existsSync(ASSET)).toBe(true);
+  test('vendor .wasm depoda ve GERÇEKTEN bir WebAssembly ikilisi', () => {
+    // Ham 62,8 MB depoya konmaz → gzip'li duruyor. LGPL-2.1'in "kütüphane
+    // değiştirilebilir olmalı" koşulu bununla karşılanıyor.
+    expect(fs.existsSync(VENDOR)).toBe(true);
+    const ham = zlib.gunzipSync(fs.readFileSync(VENDOR));
+    expect(Array.from(ham.slice(0, 4))).toEqual([0x00, 0x61, 0x73, 0x6d]);
+    expect(fs.existsSync(path.join(ROOT, 'vendor/opencascade.js'))).toBe(true);
+    expect(fs.existsSync(path.join(ROOT, 'vendor/license.occt.txt'))).toBe(true);
+    expect(fs.existsSync(path.join(ROOT, 'vendor/license.opencascade-js.txt'))).toBe(true);
   });
 
-  // EN ÖNEMLİ KAPI: vendor .wasm güncellenip varlık yeniden üretilmezse
-  // program SESSİZCE ESKİ okuyucuyu taşır. Bayt bayt karşılaştırılıyor.
-  test('gömülü içerik vendor/occt-import-js.wasm ile BİREBİR aynı', () => {
+  test('üretilen varlık vendor dosyasıyla BİREBİR aynı', () => {
+    // Varlık artık git'e dahil DEĞİL, her `npm run build` yeniden üretiyor →
+    // "vendor güncellendi, varlık bayat kaldı" sınıfı ortadan kalktı. Ama
+    // varlık ÜRETİLMİŞSE içeriği vendor'la aynı olmalı: üreteç yanlış dosyayı
+    // gömerse program sessizce başka bir çekirdek taşırdı.
+    if (!fs.existsSync(ASSET)) return;                       // henüz üretilmemiş
     const src = fs.readFileSync(ASSET, 'utf8');
     const m = src.match(/VE_STR_OCCT_WASM_GZ_B64 = "([A-Za-z0-9+/=]+)"/);
     expect(m).not.toBeNull();
-    const acilmis = zlib.gunzipSync(Buffer.from(m[1], 'base64'));
-    const vendor = fs.readFileSync(path.join(ROOT, 'vendor/occt-import-js.wasm'));
-    expect(acilmis.length).toBe(vendor.length);
-    expect(acilmis.equals(vendor)).toBe(true);
-    // WebAssembly imzası ("\0asm") — yanlış dosya gömülürse burada düşer.
-    expect(Array.from(acilmis.slice(0, 4))).toEqual([0x00, 0x61, 0x73, 0x6d]);
-  });
-
-  test('varlık, ham base64\'ten belirgin biçimde KÜÇÜK (gzip gerçekten işe yarıyor)', () => {
-    const boyut = fs.statSync(ASSET).size;
-    const ham = fs.statSync(path.join(ROOT, 'vendor/occt-import-js.wasm')).size;
-    // Ham base64 ~%133 olurdu; gzip+base64 yarısının altında olmalı.
-    expect(boyut).toBeLessThan(ham * 0.66);
+    expect(Buffer.from(m[1], 'base64').equals(fs.readFileSync(VENDOR))).toBe(true);
   });
 
   test('bildirilen açılmış boyut gerçek dosyayla tutuyor', () => {
+    if (!fs.existsSync(ASSET)) return;
     const src = fs.readFileSync(ASSET, 'utf8');
     const m = src.match(/VE_STR_OCCT_WASM_BYTES_EMBEDDED = (\d+);/);
     expect(m).not.toBeNull();
-    expect(Number(m[1])).toBe(fs.statSync(path.join(ROOT, 'vendor/occt-import-js.wasm')).size);
+    expect(Number(m[1])).toBe(zlib.gunzipSync(fs.readFileSync(VENDOR)).length);
+  });
+
+  test('gzip GERÇEKTEN kazandırıyor — ham base64 çok daha büyük olurdu', () => {
+    const ham = zlib.gunzipSync(fs.readFileSync(VENDOR)).length;
+    const gz = fs.statSync(VENDOR).size;
+    // Ölçüldü: 62,8 MB → 13,1 MB (base64 sonrası 17,5 MB). Ham base64 83,8 MB
+    // olurdu; yani gömme maliyeti beşte bire iniyor.
+    expect(gz).toBeLessThan(ham * 0.35);
+    expect(gz * 4 / 3).toBeLessThan(ham * 4 / 3 * 0.35);
   });
 
   test('index.html: varlık AÇILIŞTA yüklenmiyor, glue metni işaretli', () => {
     const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-    // type="text/x-mfsim-asset" → ne tarayıcı ne MFSimLoader çalıştırır.
     expect(html).toMatch(/type="text\/x-mfsim-asset"[^>]*data-mfsim-asset="occt-wasm"[^>]*src="js\/structural-occt-wasm\.js"/);
-    // Worker glue'yu AĞSIZ okuyabilsin diye vendor script'i işaretli.
-    expect(html).toContain('data-mfsim-occt-glue');
-    // Varlık `x-mfsim-defer` OLMAMALI — olsaydı 4 MB açılışta yüklenirdi.
+    expect(html).toMatch(/src="vendor\/opencascade\.js"[^>]*data-mfsim-occt-glue/);
+    // x-mfsim-defer olsaydı AÇILIŞTA yüklenirdi — 17,5 MB'lık bir dizgiyi her
+    // açılışta okumak, kullanıcı hiç STEP açmayacak olsa bile.
     expect(html).not.toMatch(/x-mfsim-defer[^>]*structural-occt-wasm/);
   });
 
   test('worker köprüsü gzip açmayı KENDİSİ yapıyor (ana iş parçacığı durmasın)', () => {
     expect(model.VE_STR_WORKER_BRIDGE).toContain('DecompressionStream');
     expect(model.VE_STR_WORKER_BRIDGE).toContain('atob');
-    expect(model.VE_STR_WORKER_BRIDGE).toContain('wasmB64');
+  });
+
+  test('varlık git\'e dahil DEĞİL — .gitignore\'da', () => {
+    const gi = fs.readFileSync(path.join(ROOT, '.gitignore'), 'utf8');
+    expect(gi).toMatch(/^js\/structural-occt-wasm\.js$/m);
   });
 });
 

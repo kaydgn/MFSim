@@ -18,6 +18,11 @@ const path = require('path');
 const CUBE = path.join(__dirname, '../fixtures/step/cube-mm.step');
 const ROUNDED = path.join(__dirname, '../fixtures/step/rounded-cube.step');
 const ASSEMBLY = path.join(__dirname, '../fixtures/step/as1-tu-203.stp');
+// Çok gövdeli TEK PARÇA: plaka + 2 kulak + 4 göbek, hepsi birbirine değiyor.
+// Kullanıcının gerçek durumu bu (braketi 7 gövdeydi) ve boolean burada
+// ölçüldüğü gibi ANLIK: 7 katı → 1 katı, ~0,6 s.
+const MULTIBODY = path.join(__dirname, '../fixtures/step/multibody-bracket.step');
+const MB_FACES = 18;      // birleştirmeden SONRA (ham hâlde 30)
 
 async function bootApp(page) {
   await page.goto('/index.html');
@@ -273,7 +278,11 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
     expect(ana.ok).toBe(true);
     expect(wrk.ok).toBe(true);
     expect(wrk.tri).toBe(ana.tri);
-    expect(wrk.tri).toBeGreaterThan(20000);      // ölçüm anlamlı olacak kadar büyük
+    // Ölçüm anlamlı olacak kadar büyük. Eşik 20 000'den 10 000'e indi: katılar
+    // artık BİRLEŞTİRİLİYOR (160 yüz → 104), yani aynı sapmada üçgen sayısı
+    // doğal olarak düştü (ölçüldü: 15 200). Sayının kendisi değil, büyüklük
+    // mertebesi önemli — kare sayısı ancak saniyeler süren bir işte ayrışır.
+    expect(wrk.tri).toBeGreaterThan(10000);
     expect(ana.worker).toBe(false);
     expect(wrk.worker).toBe(true);
 
@@ -306,7 +315,7 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
       } catch (e) { /* sayfa gezinirken yoklama düşebilir */ }
     }, 25);
 
-    await page.locator('#ve-str-geom-file').setInputFiles(ASSEMBLY);
+    await page.locator('#ve-str-geom-file').setInputFiles(MULTIBODY);
     await page.waitForFunction(
       () => window.veStrGeometryCache && Object.keys(window.veStrGeometryCache).length > 0,
       null, { timeout: 120000 }
@@ -318,7 +327,7 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
       return window.veStrGeometryCache[k];
     });
     expect(g.worker).toBe(true);                 // panel gerçekten worker'a gidiyor
-    expect(g.stats.faceCount).toBe(160);         // montaj: 160 CAD yüzü
+    expect(g.stats.faceCount).toBe(MB_FACES);     // birleştirilmiş parça: 18 CAD yüzü
 
     // İlerleme kartı GERÇEKTEN göründü ve aşama adı değişti (donmuş tek bir
     // etiket değil, akan bir anlatı).
@@ -405,14 +414,14 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
     expect(bos.metin).toBe('STEP');                 // "rozet yok" ile "parça yok" ayırt edilemezdi
     expect(bos.baslik).toMatch(/içe aktarılmadı/);
 
-    await page.locator('#ve-str-geom-file').setInputFiles(ASSEMBLY);
+    await page.locator('#ve-str-geom-file').setInputFiles(MULTIBODY);
     await page.waitForFunction(
       () => window.veStrGeometryCache && Object.keys(window.veStrGeometryCache).length > 0,
       null, { timeout: 120000 }
     );
     const dolu = await rozet();
-    expect(dolu.metin).toBe('⬡160');                // CAD yüz sayısı — BC'nin bağlanacağı sayı
-    expect(dolu.baslik).toContain('as1-tu-203.stp');
+    expect(dolu.metin).toBe('⬡' + MB_FACES);        // CAD yüz sayısı — BC'nin bağlanacağı sayı
+    expect(dolu.baslik).toContain('multibody-bracket.step');
     expect(dolu.baslik).toContain('CAD yüzü');
   });
 
@@ -422,7 +431,7 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
   test('yüz listesi ile 3B görünüm TEK seçimi paylaşıyor', async ({ page }) => {
     await bootApp(page);
     await openGeometryPanel(page);
-    await page.locator('#ve-str-geom-file').setInputFiles(ASSEMBLY);
+    await page.locator('#ve-str-geom-file').setInputFiles(MULTIBODY);
     await page.waitForFunction(
       () => window.veStrGeometryCache && Object.keys(window.veStrGeometryCache).length > 0,
       null, { timeout: 120000 }
@@ -452,22 +461,22 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
     await expect(page.locator('#ve-str-vwr-hint')).toContainText('CAD yüzü');
 
     // Liste, künyedeki her CAD yüzü için bir satır taşıyor
-    await expect(page.locator('#ve-str-face-list .ve-str-face')).toHaveCount(160);
+    await expect(page.locator('#ve-str-face-list .ve-str-face')).toHaveCount(MB_FACES);
 
     // LİSTEDEN TIK → 3B'de seçilir
-    await page.locator('.ve-str-face[data-face="m3/f5"]').click();
+    await page.locator('.ve-str-face[data-face="m0/f5"]').click();
     let d = await page.evaluate(() => ({
       viewer: (veStrViewerSelectedFace() || {}).id || null,
       sel3B: !!(window._veStrViewer && window._veStrViewer.sel),
       satir: (document.querySelector('.ve-str-face.on') || {}).dataset?.face || null,
     }));
-    expect(d.viewer).toBe('m3/f5');
+    expect(d.viewer).toBe('m0/f5');
     expect(d.sel3B).toBe(true);                      // parçada gerçekten bir vurgu var
-    expect(d.satir).toBe('m3/f5');
-    await expect(page.locator('#ve-str-face-sel')).toContainText('m3/f5');
+    expect(d.satir).toBe('m0/f5');
+    await expect(page.locator('#ve-str-face-sel')).toContainText('m0/f5');
 
     // AYNI satıra ikinci tık → seçim KALKAR (seçimden çıkmanın başka yolu yok)
-    await page.locator('.ve-str-face[data-face="m3/f5"]').click();
+    await page.locator('.ve-str-face[data-face="m0/f5"]').click();
     d = await page.evaluate(() => ({
       viewer: (veStrViewerSelectedFace() || {}).id || null,
       satir: !!document.querySelector('.ve-str-face.on'),
@@ -540,7 +549,7 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
   test('kaynak yalnız proje DOSYASINA yazılıyor — künyeye ve yedeğe değil', async ({ page }) => {
     await bootApp(page);
     await openGeometryPanel(page);
-    await page.locator('#ve-str-geom-file').setInputFiles(ASSEMBLY);
+    await page.locator('#ve-str-geom-file').setInputFiles(MULTIBODY);
     await page.waitForFunction(
       () => window.veStrGeometryCache && Object.keys(window.veStrGeometryCache).length > 0,
       null, { timeout: 120000 }
@@ -593,7 +602,7 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
     expect(await page.evaluate(() =>
       document.querySelector('.ve-properties').classList.contains('ve-properties--strgeom'))).toBe(false);
 
-    await page.locator('#ve-str-geom-file').setInputFiles(ASSEMBLY);
+    await page.locator('#ve-str-geom-file').setInputFiles(MULTIBODY);
     await page.waitForFunction(
       () => window.veStrGeometryCache && Object.keys(window.veStrGeometryCache).length > 0,
       null, { timeout: 120000 }
@@ -631,6 +640,52 @@ test.describe('Yapısal Analiz — Geometri: STEP içe aktarma', () => {
     // 5) İçerik alanı KAYDIRMIYOR: kaydırsaydı görüntüleyicinin bir kısmı
     //    katlamanın altında kalırdı.
     expect(m.kayar).toBeLessThanOrEqual(1);
+  });
+
+  // ── ÇOK GÖVDELİ CAD DOSYASI TEK KATIYA İNİYOR ────────────────────────
+  // Kullanıcı bildirimi (2026-08-25): braket parçası "7 ayrı katı/kabuk"
+  // olarak okunuyordu ve ağ örmede sorun çıkarıyordu. Birleştirme B-Rep
+  // seviyesinde (BRepAlgoAPI_Fuse + ShapeUpgrade_UnifySameDomain) yapılıyor;
+  // bu zincir yalnız GERÇEK tarayıcıda, gömülü çekirdek worker'da derlenip
+  // koştuğunda uçtan uca ayakta olduğunu gösterebilir.
+  test('7 gövdeli parça TEK KATI olarak geliyor ve panel bunu YAZIYOR', async ({ page }) => {
+    await bootApp(page);
+    await openGeometryPanel(page);
+    await page.locator('#ve-str-geom-file').setInputFiles(MULTIBODY);
+    await page.waitForFunction(
+      () => window.veStrGeometryCache && Object.keys(window.veStrGeometryCache).length > 0,
+      null, { timeout: 180000 }
+    );
+    await expect(page.locator('#ve-str-geom-canvas')).toBeAttached({ timeout: 15000 });
+
+    const g = await page.evaluate(() => {
+      const k = Object.keys(window.veStrGeometryCache)[0];
+      const x = window.veStrGeometryCache[k];
+      const n = window.nodes.find((y) => y.type === 'str-geometry');
+      return { stats: x.stats, fuse: x.fuse, worker: x.worker, mesh: x.meshes.length,
+               kunyeFuse: n.data.geometry.fuse };
+    });
+    expect(g.worker).toBe(true);                  // boolean WORKER'da koştu
+    expect(g.fuse.istendi).toBe(true);
+    expect(g.fuse.ok).toBe(true);
+    expect(g.fuse.once).toBe(7);
+    expect(g.stats.solidCount).toBe(1);
+    expect(g.stats.faceCount).toBe(MB_FACES);
+    expect(g.mesh).toBe(1);                       // ağ örücüye TEK nesne gider
+    // Künyeye de girmeli: proje kaydedilip açıldığında panel yine yazabilsin.
+    expect(g.kunyeFuse.ok).toBe(true);
+    expect(g.kunyeFuse.once).toBe(7);
+
+    // Panel SESSİZ değil — birleştirme künyede yazılı.
+    const satir = await page.evaluate(() => {
+      const tds = [...document.querySelectorAll('.ve-properties-content td')];
+      const i = tds.findIndex((e) => e.textContent.trim() === 'Katı');
+      return i >= 0 ? tds[i + 1].innerText.replace(/\s+/g, ' ').trim() : null;
+    });
+    expect(satir).toMatch(/7 gövde birleştirildi/);
+    // Gövdeler üst üste biniyordu (göbekler plakanın içinde) — bu bir hata
+    // değil BİLGİ, ve panel onu da yazıyor.
+    expect(satir).toMatch(/örtüşüyordu/);
   });
 
   test('STEP olmayan dosya SESSİZCE yutulmuyor — sebep yazılıyor', async ({ page }) => {
