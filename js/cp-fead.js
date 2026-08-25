@@ -2494,6 +2494,17 @@ function veFeadLoadExample(key){
     kuruldu.push(yeni);
   });
 
+  // DUTY kW SÖZLÜĞÜ KİMLİK GÖÇÜNDEN GEÇMEK ZORUNDA. Yukarıdaki döngü her düğümü
+  // YENİ bir kimlikle kuruyor (createNode kendi kimliğini üretir) ama data'yı
+  // birebir kopyalıyor; kW sözlüğü ise düğüm kimliğiyle anahtarlı. Göç
+  // yapılmazsa hiçbir aksesuar eşleşmez ve hepsi 0 kW ile koşar — çözüm yine
+  // üretilir, yalnız bütün gerginlikler tasarım gerginliğine düzleşir. Göç
+  // ancak idMap TAMAMLANDIKTAN sonra yapılabilir (çözücü düğümü de aynı
+  // döngüde kuruluyor), bu yüzden döngünün İÇİNDE değil, burada.
+  kuruldu.forEach(function(n){
+    if(n.data && Array.isArray(n.data.duty)) veFeadRemapDutyKw(n.data.duty, idMap);
+  });
+
   if(typeof createConnection === 'function'){
     pack.connections.forEach(function(c){
       if(idMap[c.from] && idMap[c.to]) createConnection(idMap[c.from], idMap[c.to]);

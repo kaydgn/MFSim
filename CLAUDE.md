@@ -1330,6 +1330,103 @@ yalnız eğriyi saysaydı raporlu örnek "0 aksesuar" der ve boş görünürdü.
 6 → 0 (2), kimlik çevirisini kaldırma (3), tahrik oranı 1 → 1.0985 (3), ALT
 çapı 57 → 59.4 (8), kart düzeltmesini geri alma (1).
 
+##### Rapor incelemesi — bir SESSİZ girdi kaybı ve beş bayat yüzey (2026-08-25)
+
+Kullanıcı, `AG00976_GATES_2025` örneğinden üretilmiş bir raporu inceletti:
+*"Raporda yanlış yerler var. Eksik yerler de var."* Haklıydı ve çıkan kusurlar
+iki ayrı sınıftandı.
+
+###### KÖK NEDEN: duty kW'ı çözüme HİÇ ULAŞMIYORDU
+
+Raporun §8.10 tablosunda bütün kW'lar **0,00**, §8.11'de bütün açıklık
+gerginlikleri **544 N** (yani tasarım gerginliğine düzleşmiş), hubload'lar
+`1065/484/1074/579/1066/323`. **Hiçbir hata mesajı yoktu.**
+
+Sebep: duty satırlarının kW sözlüğü **düğüm kimliğiyle** anahtarlanır
+(`veFeadDutyToCore` → `r.kw[n.id]`), ama `veFeadLoadExample` her düğümü
+**yeni bir kimlikle** kuruyor (`createNode` kendi kimliğini üretir) ve
+`data`'yı birebir kopyalıyor. Sözlük `ex-A_C` anahtarlarıyla kalıyor, kanvas
+düğümü `canvas-3` oluyor → hiçbir aksesuar eşleşmiyor → hepsi 0 kW.
+
+`idMap` zaten vardı ama **yalnız bağlantılar için** kullanılıyordu. Göç artık
+`veFeadRemapDutyKw` ile (fead-model.js, DOM'suz) ve döngü BİTTİKTEN sonra
+yapılıyor — çözücü düğümü de aynı döngüde kurulduğu için harita ancak orada
+tamamlanıyor. Eşleşmeyen anahtar **silinmiyor**, olduğu gibi taşınıyor:
+kullanıcının kanvasta zaten düzenlediği bir satırın anahtarı haritada olmaz.
+
+**ÖLÇÜLDÜ (gerçek yükleyici, düzeltmeden önce ↔ sonra):**
+
+| 880 d/d | önce | sonra | Gates |
+|---|---|---|---|
+| sürücü kW | 0,00 | **6,34** | 6,34 |
+| gerilme | `544·6` | **1381/1380/1023/1022/545/544** | 1381/1380/1023/1022/545/544 |
+| hubload | `1065/484/1074/579/1066/323` | **1892/1228/2373/1089/1539/324** | 1891/1228/2372/1088/1539/324 |
+
+**MEVCUT TESTLER BU SINIFI GÖREMİYORDU** ve sebebi öğretici: hepsi
+`veFeadExampleNodes`'u DOĞRUDAN kullanıyor, yani kimlikler `ex-*` olarak
+kalıyor ve eşleşme **tesadüfen** tutuyor. Kapı bu yüzden gerçek yükleyiciyi
+(`createNode` sözleşmesi taklit edilerek) koşturmak zorunda.
+
+###### KAYMA HÜKMÜ KAYMASI İMKÂNSIZ BİR KASNAKTAN GELİYORDU
+
+Rapor *"En düşük kayma emniyeti 1,24 ✗"* deyip **"tasarım onaylanmamalıdır"**
+hükmü veriyor ve çaresini *"tasarım gerginliğini yükseltin"* diye yazıyordu.
+Ama raporun **kendi §8.7'si** şunu söylüyor: *"yük çekmeyen kasnaklarda
+gerginlik oranı 1'dir ve SF hiç değişmez."* Yani önerilen çare, hükmü veren
+kasnakta **ölçülebilir bir etki yapmıyor**. Belge kendi kendisiyle çelişiyordu.
+
+**ÖLÇÜLDÜ (AG00976, 880 d/d):**
+
+| | oran | kapasite | SF |
+|---|---|---|---|
+| Sürücü · Klima · Alternatör (**yük taşıyan**) | 1,348–2,538 | 11,6–22,6 | **4,58–16,73** |
+| Avara 1 · Avara 2 · Gergi (**yük taşımayan**) | 1,0010–1,0024 | 1,24–1,48 | **1,232–1,479** |
+
+SF = kapasite / oran. Oran ~1,00 iken SF bir **MARJ değil, KAPASİTEDİR** — o
+sarım açısının taşıyabileceği azami oran. Servis faktörü ise TALEBİN üzerine
+konan bir marjdır; talep yokken anlamsızdır. İki küme arasında **iki mertebe**
+fark var, yani ayrımın eşiği (`VE_FR_SLIP_LOADED_RATIO` = 1,01) kritik değil.
+
+Gates de aynı sistem için hemfikir: *"Belt Slip Sensitivity"* sayfasının
+*"Required Increase Tension or Wrap Angle"* sütunu **altı kasnağın hiçbirinde
+dolu değil**.
+
+**Tablo GİZLENMİYOR** — altı kasnağın altı sayısı da basılmaya devam ediyor;
+değişen yalnız HÜKMÜ verenin hangisi olduğu, ve yük taşımayanlar kapasiteleriyle
+ayrıca yazılıyor.
+
+###### Dört bayat yüzey — model değişti, metin kalmıştı
+
+| Yer | Neydi | Neden yanlış |
+|-----|-------|--------------|
+| §8.1 | `Kayış efektif boyu: 1716,2 mm · gereken 1714,6 mm` | 1716,2 **TAHRİK** boyudur (Gates *Effective Drive Length*), kayış künyesindeki efektif boy değil. §8.8 ikisini zaten ayrı adlandırıyordu, özet ayırmıyordu |
+| Antet | `8 kaburga · 1715 mm` | `_frF(effLength, 0)` — tam sayıya yuvarlama katalog adını gerçek boyun yerine koyuyordu; aradaki 0,4 mm kolu 0,56° döndürüyor |
+| §8.7 giriş | *"biri kullanıcının girdiği ankraj… ikisinin karşılaştırması verilir"* | Tasarım gerginliği alanı KALDIRILDI (ankraj türetiliyor); okuyucu panelde olmayan bir alanı arıyordu |
+| Uygunluk #6 | `Tasarım gerginliği ↔ yay dengesi · sapma ≤ %2 · ✓` | **TOTOLOJİ**: ankraj artık yay dengesinin ta kendisi, sapma yapısal olarak sıfır. Geçen bir kriter gibi görünüp hiçbir şey denetlemiyordu → artık *"türetilebildi mi"* soruyor ve sayıyı yazıyor |
+
+###### İki eksik yüzey
+
+**§8.3'te gergi kasnağının X/Y'si `—` basılıyordu** — oysa konum bilinmiyor
+değil, **türetilmiş**: çözülmüş çalışma merkezi. Artık basılıyor (eğik + †
+ile türev olduğu işaretli). Dipnot ayrıca **§8.7'ye** yolluyordu; orada X/Y
+YOK (kol açısı, sarım, β, take-up, moment, gerginlik, hubload var), konum
+tablosu **§8.8**'de.
+
+**§8.13 hiçbir aksesuara güç girilmemişse tek sütunlu ve bomboş** çıkıyordu:
+on iki devir satırı, hiçbir sayı, hiçbir açıklama. Okuyucu bunu *"tork
+hesaplanamadı"* diye okuyordu; sebep girdinin kendisiydi. Artık boş tablo hiç
+basılmıyor, yerine sebep yazılıyor.
+
+**Kapı sekiz mutasyonla ölçüldü, sekizi de kırmızı:** kW göçünü kaldırma (2 test),
+göçün eşleşmeyeni silmesi (1), §8.1 eski etiket (1), antet yuvarlaması (1),
+§8.7 bayat metin (1), uygunluk #6 totolojisi (1), §8.13 kapısı (1), kayma
+hükmünü global en düşüğe çevirme (1).
+
+> Sekizincisi **ilk turda YEŞİL kaldı**: kapı hükmün ETİKETİNE bakıyordu,
+> SAYISINA değil. Yalnız başlığı denetleyen bir test, `_frMinSF`'i global en
+> düşüğe geri çeviren mutasyonu geçiriyordu. Kapı artık iki kümenin ayrıştığını
+> ve hükmü verenin yük taşıyanların en düşüğü olduğunu SAYIYLA tutuyor.
+
 
 **Sırada:** Sonuçlar sayfasında FEAD çözüm sekmesi (kanal yayını).
 

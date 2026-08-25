@@ -272,7 +272,12 @@ function _frAntet(R, node){
   var d  = (node && node.data) || {};
   var dok = (d.docNo ? String(d.docNo) : '—') + (d.revision ? ' · rev ' + d.revision : '');
   var kayis = (b.profile || '—') + (b.ribs ? ' · ' + b.ribs + ' kaburga' : '')
-            + (b.effLength ? ' · ' + _frF(b.effLength, 0) + ' mm' : '');
+            // BİR BASAMAK ŞART: efektif boy tam sayıya yuvarlanınca 1714,6 →
+            // "1715" oluyordu, yani KATALOG ADI gibi okunuyordu. Aradaki
+            // 0,4 mm kolu 0,56° döndürüp gerginliği %1,5 kaydırıyor (AG00976
+            // raporunda ölçüldü), yani bu yuvarlama anlam taşıyan bir farkı
+            // gizliyordu.
+            + (b.effLength ? ' · ' + _frF(b.effLength, 1) + ' mm' : '');
   var geom = R.analysis && R.analysis.geometry;
   var Leff = (R.analysis && R.analysis.driveLenMm) || (b.effLength || NaN);
   var tarih = new Date().toLocaleDateString('tr-TR', { year:'numeric', month:'long', day:'numeric' });
@@ -286,7 +291,11 @@ function _frAntet(R, node){
   h += '<div class="fields">';
   h += '<div class="f"><div class="k">Doküman</div><div class="v">' + _frEsc(dok) + '</div></div>';
   h += '<div class="f"><div class="k">Kayış</div><div class="v">' + _frEsc(kayis) + '</div></div>';
-  h += '<div class="f"><div class="k">Sistem</div><div class="v">' + nP + ' kasnak · ' + _frF(Leff, 1) + ' mm</div></div>';
+  // Antette iki farklı uzunluk yan yana duruyor (kayış künyesi ↔ çözülmüş
+  // tahrik boyu) ve ikincisi adsızdı: okuyucu aynı sayının iki kez basıldığını
+  // sanıp aradaki farkı yuvarlama zannediyordu.
+  h += '<div class="f"><div class="k">Sistem</div><div class="v">' + nP + ' kasnak · tahrik boyu '
+     + _frF(Leff, 1) + ' mm</div></div>';
   h += '<div class="f"><div class="k">Çözüm</div><div class="v">Yarı-statik · kalibre çekirdek</div></div>';
   h += '<div class="f"><div class="k">Tarih</div><div class="v">' + _frEsc(tarih) + '</div></div>';
   h += '</div></div>';
@@ -570,10 +579,19 @@ function _frSummary(R){
   function sat(k, v){ return '<div style="margin:3px 0;"><strong style="color:var(--prusya);">' + k + ':</strong> ' + v + '</div>'; }
   h += sat('Kapalı çevrim', 'Σ işaretli sarım = <b>' + _frFs(sigma, 2) + '°</b> '
         + (kapali ? '<span class="ok">✓</span>' : '<b>(360° olmalı)</b>'));
-  h += sat('Kayış efektif boyu', _frFs(A.driveLenMm, 1) + ' mm · gereken ' + _frFs(A.requiredBeltMm, 1) + ' mm');
+  // İKİ AYRI UZUNLUK, tek başlık altında basılıyordu ve baştaki sayı kayışın
+  // künyesindeki boy sanılıyordu. driveLenMm kayışın o güzergâhta kat ettiği
+  // TAHRİK boyudur (Gates "Effective Drive Length"); requiredBeltMm ise o
+  // güzergâhı veren kayışın efektif boyudur (Gates "Required Eff. Belt
+  // Length") ve künyedeki değerle karşılaştırılacak olan budur. §8.8'in
+  // tablosu ikisini zaten bu adlarla ayırıyor; özet satırı ayırmıyordu.
+  var bEff = _frNum(g && g.belt && g.belt.effLength);
+  h += sat('Tahrik boyu', _frFs(A.driveLenMm, 1) + ' mm · gereken kayış boyu <b>'
+        + _frFs(A.requiredBeltMm, 1) + '</b> mm'
+        + (Number.isFinite(bEff) ? ' · künyedeki efektif boy ' + _frFs(bEff, 1) + ' mm' : ''));
   h += sat('Gergi çalışma noktası', 'kol ' + _frFs(A.meanRelDeg, 1) + '° (göreli) · '
         + _frFs(A.meanAbsDeg, 1) + '° (mutlak) · gerginlik <b>' + _frF(A.tensioner && A.tensioner.tensionN, 0) + ' N</b>');
-  h += sat('En düşük kayma emniyeti', Number.isFinite(minSF)
+  h += sat('En düşük kayma emniyeti (yük taşıyan kasnaklarda)', Number.isFinite(minSF)
         ? ('<b>' + _frFs(minSF, 2) + '</b>' + (Number.isFinite(sf) && sf > 0 ? ' (istenen ≥ ' + _frF(sf, 2) + ')' : '')
            + (sfOK ? ' <span class="ok">✓</span>' : ' <b>✗</b>'))
         : '—');
@@ -598,12 +616,57 @@ function _frSignedWrap(R){
   });
   return t;
 }
-function _frMinSF(R){
-  var m = Infinity;
+// KAYMA EMNİYETİ İKİ AYRI SORUYU CEVAPLIYOR ve tek bir "en düşük SF" ikisini
+// birbirine karıştırıyordu.
+//
+// SF = capstan kapasitesi / fiili gerginlik oranı. Yük ÇEKMEYEN bir kasnakta
+// (avara, gergi) fiili oran ~1,00'dir; SF o zaman kapasitenin ta kendisi olur —
+// yani bir MARJ değil, o sarım açısının taşıyabileceği azami orandır. Servis
+// faktörü ise TALEBİN üzerine konan bir marjdır; talep yokken anlamsızdır.
+//
+// ÖLÇÜLDÜ (AG00976, 880 d/d): yük taşıyan üç kasnakta oran 1,348–2,538 ve
+// SF 4,58–16,73; yük taşımayan üçünde oran 1,0010–1,0024 ve SF 1,232–1,479.
+// İki küme arasında iki mertebe fark var, yani ayrımın eşiği kritik değil.
+// Eski kod global en düşüğü (1,23) alıp servis faktörüyle karşılaştırıyor,
+// "tasarım onaylanmamalıdır" hükmü veriyor ve çaresini "tasarım gerginliğini
+// yükseltin" diye yazıyordu — oysa raporun kendi §8.7'si "yük çekmeyen
+// kasnaklarda gerginlik oranı 1'dir ve SF hiç değişmez" diyor: önerilen çare
+// o kasnakta ÖLÇÜLEBİLİR BİR ETKİ YAPMAZ. Gates'in aynı sistem için bastığı
+// "Belt Slip Sensitivity" sayfası da altı kasnağın hiçbirinde artış istemiyor.
+//
+// Ayrım gizleme değil: tablo bütün kasnakları ve bütün sayıları basmaya devam
+// eder, yalnız HÜKÜM yük taşıyanlara dayanır ve taşımayanlar ayrıca yazılır.
+var VE_FR_SLIP_LOADED_RATIO = 1.01;   // bu oranın altı "yük taşımıyor" sayılır
+
+function _frSlipStats(R){
+  var out = { min: NaN, minName: '', minRpm: NaN, minRatio: NaN,
+              loadedMin: NaN, loadedName: '', loadedRpm: NaN,
+              idle: [] , anyLoaded: false };
+  var m = Infinity, lm = Infinity, gorulen = {};
   ((R.analysis && R.analysis.duty) || []).forEach(function(d){
-    (d.slip || []).forEach(function(s){ var v = _frNum(s.SF); if(Number.isFinite(v) && v < m) m = v; });
+    (d.slip || []).forEach(function(s){
+      var v = _frNum(s.SF), r = _frNum(s.tensionRatio);
+      if(!Number.isFinite(v)) return;
+      if(v < m){ m = v; out.minName = s.name; out.minRpm = d.engineRpm; out.minRatio = r; }
+      if(Number.isFinite(r) && r >= VE_FR_SLIP_LOADED_RATIO){
+        out.anyLoaded = true;
+        if(v < lm){ lm = v; out.loadedName = s.name; out.loadedRpm = d.engineRpm; }
+      } else if(!gorulen[s.name]){
+        gorulen[s.name] = 1;
+        out.idle.push({ name: s.name, SF: v, ratio: r, cap: _frNum(s.capstanCapacity) });
+      }
+    });
   });
-  return Number.isFinite(m) ? m : NaN;
+  out.min = Number.isFinite(m) ? m : NaN;
+  out.loadedMin = Number.isFinite(lm) ? lm : NaN;
+  return out;
+}
+// Hükmü veren sayı: yük taşıyan kasnakların en düşüğü. Hiç yük taşıyan kasnak
+// yoksa (bütün güçler sıfır) global en düşüğe düşülür — orada da bir hüküm
+// vermek gerekiyor ve tek elde olan o.
+function _frMinSF(R){
+  var st = _frSlipStats(R);
+  return st.anyLoaded ? st.loadedMin : st.min;
 }
 function _frDutySum(R){
   var t = 0;
@@ -650,10 +713,24 @@ function _frPulleyTable(R){
      +'ve ters verilirse model geçerli ama başka bir güzergâh çözer (§3.4) — bu yüzden burada tekrar basılır.</p>';
   h += '<table><caption>Tablo ' + _frTbl() + ' — Kasnak yerleşim verisi (kayış gidiş sırasında)</caption>';
   h += '<tr><th>#</th><th>Kasnak</th><th>X</th><th>Y</th><th>Dış çap</th><th>Pitch Ø</th><th>Efektif Ø</th><th>Temas</th><th>Rol</th><th>Atalet</th></tr>';
+  // GERGİ SATIRININ X/Y'Sİ "—" BASILIYORDU ve tablo o yüzden yarım okunuyordu:
+  // gergi kasnağının konumu bir GİRDİ değil ama BİLİNMEYEN de değil — çözülmüş
+  // çalışma (Mean) merkezidir ve §8.8'in tablosunda zaten var. Burada da
+  // basılıyor, ama TÜREV olduğu işaretli kalsın diye eğik ve † ile.
+  var tenC = (R.analysis && R.analysis.tensioner && R.analysis.tensioner.center) || null;
+  var gergiTurev = false;
   sys.pulleys.forEach(function(p, i){
     var rol = p.crank ? 'sürücü' : (p.tensioner ? 'gergi' : (_frNum(p.inertiaKgM2) >= 0 ? 'aksesuar/avara' : '—'));
+    var px = _frNum(p.x), py = _frNum(p.y), tur = false;
+    if(p.tensioner && !(Number.isFinite(px) && Number.isFinite(py)) && tenC){
+      px = _frNum(tenC[0]); py = _frNum(tenC[1]);
+      tur = Number.isFinite(px) && Number.isFinite(py);
+      if(tur) gergiTurev = true;
+    }
+    var hx = tur ? '<em>' + _frFs(px, 2) + '</em>†' : _frFs(px, 2);
+    var hy = tur ? '<em>' + _frFs(py, 2) + '</em>' : _frFs(py, 2);
     h += '<tr><td class="c">' + (i + 1) + '</td><td class="l">' + _frEsc(p.name) + '</td>'
-      + '<td>' + _frFs(p.x, 2) + '</td><td>' + _frFs(p.y, 2) + '</td>'
+      + '<td>' + hx + '</td><td>' + hy + '</td>'
       + '<td>' + _frFs(p.od, 1) + '</td><td>' + _frFs(_frNum(p.rPitch) * 2, 1) + '</td>'
       + '<td>' + _frFs(_frNum(p.rEff) * 2, 1) + '</td>'
       + '<td class="c">' + (p.contact === 'back' ? 'sırt' : 'kaburgalı') + '</td>'
@@ -661,8 +738,15 @@ function _frPulleyTable(R){
       + '<td>' + (Number.isFinite(_frNum(p.inertiaKgM2)) ? _frFs(p.inertiaKgM2, 4) : '—') + '</td></tr>';
   });
   h += '</table>';
-  h += '<p style="font-size:13px;color:#5a6270;">Pitch ve efektif çaplar dış çaptan (3.1) ile türetilir; '
-     + 'gergi kasnağının X/Y değeri çalışma konumundan (§8.7) gelir, bir girdi değildir.</p>';
+  // §8.7'nin tablosunda X/Y YOKTUR (kol açısı, sarım, β, take-up, moment,
+  // gerginlik, hubload var); konum tablosu §8.8'dedir. Referans oraya
+  // gidiyordu ve okuyucu bulamıyordu.
+  h += '<p style="font-size:13px;color:#5a6270;">Pitch ve efektif çaplar dış çaptan (3.1) ile türetilir. '
+     + (gergiTurev
+         ? '<b>†</b> Gergi kasnağının X/Y değeri bir <b>girdi değildir</b>: kolun çalışma (Mean) '
+           + 'açısından çözülür (§8.7) ve kayış boyu değiştikçe kayar — altı konumun tamamı §8.8\'dedir.'
+         : 'Gergi kasnağının konumu çalışma noktasından çözülür (§8.8).')
+     + '</p>';
   return h;
 }
 
@@ -1202,10 +1286,15 @@ function _frOperatingPoint(R){
   var takeup = _frNum(T.takeupMmPerDeg);
   var takeupRad = Number.isFinite(takeup) ? (takeup / 1000) * (180 / Math.PI) : NaN;
   var h = '<h3>8.7 Gergi çalışma noktası ve tasarım gerginliğinin kaynağı</h3>';
-  h += '<p>Bu bölüm, <b>tasarım gerginliğinin nereden geldiğini</b> baştan sona kurar. Modelde '
-     + '"gerginlik" adını taşıyan <b>iki ayrı sayı</b> vardır ve karıştırılmaları bu modülün en pahalı '
-     + 'sessiz hatasıdır: biri kullanıcının girdiği <b>ankraj</b>, öbürü gergi yayının dengesinden '
-     + '<b>türetilen</b> değerdir. Önce türetilenin kuruluşu, sonra ikisinin karşılaştırması verilir.</p>';
+  // BU PARAGRAF BAYATLAMIŞTI. Tasarım gerginliği bir girdi olduğu dönemde
+  // yazılmıştı ("kullanıcının girdiği ankraj") ve "ikisinin karşılaştırması"
+  // vaat ediyordu; alan kaldırılıp ankraj yay dengesinden türetilir olunca
+  // ortada karşılaştırılacak iki kanal kalmadı ama metin kaldı. Okuyucu
+  // panelde olmayan bir alanı arıyordu.
+  h += '<p>Bu bölüm, <b>tasarım gerginliğinin nereden geldiğini</b> baştan sona kurar. '
+     + 'Gerilme zincirinin ankrajı olan bu sayı <b>sorulmaz</b>: gergi kolunun taşıyabileceği '
+     + 'gerginlik yay dengesinden zaten belirlidir. Aşağıda önce hangi büyüklüğün girdi hangisinin '
+     + 'türev olduğu dökülür, sonra ankraj adım adım kurulur.</p>';
 
   // (a) girdi ↔ türev envanteri
   h += '<table><caption>Tablo ' + _frTbl() + ' — Bu bölümdeki her büyüklüğün kaynağı</caption>';
@@ -1645,13 +1734,7 @@ function _frSlipSection(R){
      + '\\( \\mathrm{SF}=1 \\) kayma eşiğidir'
      + (Number.isFinite(esik) ? ', istenen alt sınır <b>servis faktörü ' + _frF(esik, 2) + '</b>' : '')
      + '.</p>';
-  var enKotu = { SF: Infinity };
-  duty.forEach(function(d){
-    (d.slip || []).forEach(function(s){
-      var v = _frNum(s.SF);
-      if(Number.isFinite(v) && v < enKotu.SF) enKotu = { SF: v, name: s.name, rpm: d.engineRpm };
-    });
-  });
+  var st = _frSlipStats(R);
   h += '<table><caption>Tablo ' + _frTbl() + ' — Kayma emniyet faktörü (her devir noktası × kasnak)</caption>';
   h += '<tr><th>Motor devri</th>';
   ((duty[0] && duty[0].slip) || []).forEach(function(s){ h += '<th>' + _frEsc(s.name) + '</th>'; });
@@ -1669,13 +1752,27 @@ function _frSlipSection(R){
   });
   h += '</table>';
   h += _frSlipFigure(R, esik);
-  if(Number.isFinite(enKotu.SF)){
-    var ok = !Number.isFinite(esik) || enKotu.SF >= esik;
-    h += '<div class="note ' + (ok ? 'check' : 'warn') + '"><span class="t">En kritik nokta</span>'
-       + '<b>' + _frEsc(enKotu.name) + '</b> kasnağı, ' + _frF(enKotu.rpm, 0) + ' d/d — SF = <b>'
-       + _frFs(enKotu.SF, 2) + '</b>. '
-       + (ok ? 'Servis faktörünün üstünde.' : 'Servis faktörünün ALTINDA: sarım açısını artırın ya da tasarım gerginliğini yükseltin.')
+  if(st.anyLoaded && Number.isFinite(st.loadedMin)){
+    var ok = !Number.isFinite(esik) || st.loadedMin >= esik;
+    h += '<div class="note ' + (ok ? 'check' : 'warn') + '"><span class="t">En kritik YÜK TAŞIYAN kasnak</span>'
+       + '<b>' + _frEsc(st.loadedName) + '</b>, ' + _frF(st.loadedRpm, 0) + ' d/d — SF = <b>'
+       + _frFs(st.loadedMin, 2) + '</b>. '
+       + (ok ? 'Servis faktörünün üstünde.'
+             : 'Servis faktörünün ALTINDA: sarım açısını artırın ya da gergi künyesini '
+               + '(yay ön yükü / oranı / kol boyu) güçlendirin.')
        + '</div>';
+  }
+  // YÜK TAŞIMAYAN KASNAKLAR AYRI YAZILIR — gizlenmez, ama hükme girmez.
+  if(st.idle.length){
+    var ib = st.idle.map(function(q){
+      return _frEsc(q.name) + ' (oran ' + _frFs(q.ratio, 4) + ' · kapasite ' + _frFs(q.cap, 2) + ')';
+    }).join(' · ');
+    h += '<div class="note"><span class="t">Yük taşımayan kasnaklarda SF bir MARJ değil, KAPASİTEDİR</span>'
+       + 'Aşağıdaki kasnaklarda gerginlik oranı 1,00\'e eşit sayılacak kadar yakındır, yani kayışın '
+       + 'kayması için bir talep yoktur; SF sayısı o sarım açısının taşıyabileceği azami orandır. '
+       + '<b>Bu kasnaklarda tasarım gerginliğini yükseltmek SF\'yi DEĞİŞTİRMEZ</b> — gergin ve boş '
+       + 'taraf birlikte yükselir, oran 1\'de kalır (§8.7). Tek etkili değişken sarım açısıdır. '
+       + 'Bu yüzden yukarıdaki hüküm yalnız yük taşıyan kasnaklara dayanır: ' + ib + '.</div>';
   }
   h += '<p style="font-size:13px;color:#5a6270;">Kaburgalı temasta etkin sürtünme kanal geometrisiyle '
      + 'büyür; sırttan temas eden avara ve gergi kasnaklarında düz yüzey sürtünmesi geçerlidir ve emniyet '
@@ -1691,9 +1788,21 @@ function _frTorqueSection(R){
   h += '<p>Mil torku güçten ve devirden çıkar: \\( Q = 9549\\,P/n \\) (5.1). Aşağıdaki değerler '
      + '<b>ortalama</b> çalışma torklarıdır; motorun hızlanma/yavaşlamasında atalet momentlerinden '
      + 'doğan tepe torklar (5.8) bu tabloda <b>yoktur</b> (§9.5).</p>';
+  // HİÇBİR AKSESUARA GÜÇ GİRİLMEMİŞSE tablo tek sütunlu ve bomboş çıkıyordu:
+  // on iki devir satırı, hiçbir sayı, hiçbir açıklama. Okuyucu bunu "tork
+  // hesaplanamadı" diye okuyordu; oysa sebep girdinin kendisi. Sebep yazılıyor
+  // ve boş tablo hiç basılmıyor.
+  var yukler = ((duty[0] && duty[0].perPulley) || []).filter(function(q){ return _frNum(q.powerKw) > 0; });
+  if(!yukler.length){
+    h += '<div class="note warn"><span class="t">Aksesuar gücü girilmedi</span>'
+       + 'Çalışma çevrimi tablosundaki (§8.10) hiçbir aksesuar için sıfırdan büyük bir güç yok, '
+       + 'dolayısıyla mil torku hesaplanacak bir yük de yok. Bu bir hesap hatası değil, eksik '
+       + 'girdidir: aksesuar güçleri girilmeden §8.11\'deki gerginlikler de tasarım gerginliğine '
+       + 'düzleşir ve sistem yüksüz görünür.</div>';
+    return h;
+  }
   h += '<table><caption>Tablo ' + _frTbl() + ' — Aksesuar ortalama mil torku [Nm]</caption>';
   h += '<tr><th>Motor devri</th>';
-  var yukler = ((duty[0] && duty[0].perPulley) || []).filter(function(q){ return _frNum(q.powerKw) > 0; });
   yukler.forEach(function(q){ h += '<th>' + _frEsc(q.name) + '</th>'; });
   h += '</tr>';
   duty.forEach(function(d){
@@ -2203,9 +2312,17 @@ function _frCompliance(R){
 
   // 2 — kayma emniyeti
   var minSF = _frMinSF(R), sf = _frNum(R.serviceFact);
-  ekle('Kayma emniyeti (en düşük)',
+  // Kriter YÜK TAŞIYAN kasnakların en düşüğüne dayanır (_frMinSF). Global en
+  // düşük alınsaydı, yük çekmeyen bir avaranın capstan KAPASİTESİ bir MARJ gibi
+  // okunur ve "tasarım onaylanmamalıdır" hükmü, kayması fiziksel olarak mümkün
+  // olmayan bir kasnaktan gelirdi (§8.12'de ölçümüyle yazılı).
+  var slipSt = _frSlipStats(R);
+  ekle('Kayma emniyeti — yük taşıyan kasnaklarda en düşük',
        (Number.isFinite(sf) && sf > 0) ? ('SF ≥ ' + _frF(sf, 2)) : 'SF > 1',
-       Number.isFinite(minSF) ? _frFs(minSF, 2) : '—',
+       Number.isFinite(minSF)
+         ? (_frFs(minSF, 2) + (slipSt.anyLoaded && slipSt.loadedName
+              ? ' (' + _frEsc(slipSt.loadedName) + ')' : ''))
+         : '—',
        !Number.isFinite(minSF) ? 'wait'
          : ((Number.isFinite(sf) && sf > 0) ? (minSF >= sf ? 'ok' : 'no') : (minSF > 1 ? 'ok' : 'no')));
 
@@ -2234,10 +2351,23 @@ function _frCompliance(R){
        Number.isFinite(rel) ? (_frFs(rel, 1) + '°') : '—',
        (Number.isFinite(rel) && Number.isFinite(relMax)) ? ((rel >= 0 && rel <= relMax) ? 'ok' : 'no') : 'wait');
 
-  // 6 — tasarım gerginliği ↔ yay dengesi
+  // 6 — ankraj türetilebildi mi
+  //
+  // ESKİDEN "tasarım gerginliği ↔ yay dengesi, sapma ≤ %2" yazıyordu ve bu bir
+  // TOTOLOJİYDİ: tasarım gerginliği artık kullanıcıdan alınmıyor, yay
+  // dengesinin ta kendisi oluyor (§8.7), dolayısıyla sapma yapısal olarak
+  // sıfır. Geçen bir kriter gibi görünüp hiçbir şey denetlemiyordu. Gerçekten
+  // denetlenebilen şey TÜRETMENİN BAŞARILI OLUP OLMADIĞI: kayış boyu gergi
+  // kolunun erişemeyeceği kadar kısa/uzunsa meanRel çözülemez, ankraj YOKTUR
+  // ve köprü bunu uyarı olarak taşır.
   var uy = ((R.build && R.build.warnings) || []).filter(function(w){ return /gerginli/i.test(w); });
-  ekle('Tasarım gerginliği ↔ yay dengesi', 'sapma ≤ %2',
-       uy.length ? _frEsc(uy[0]) : 'sapma eşiğin altında', uy.length ? 'no' : 'ok');
+  var ankraj = _frNum(R.build && R.build.sys && R.build.sys.designTensionN);
+  ekle('Tasarım gerginliği ankrajı (§8.7)', 'yay dengesinden türetilebilmeli',
+       uy.length ? _frEsc(uy[0])
+                 : (Number.isFinite(ankraj) && ankraj > 0
+                     ? ('türetildi: ' + _frF(ankraj, 0) + ' N')
+                     : 'türetilemedi'),
+       uy.length ? 'no' : ((Number.isFinite(ankraj) && ankraj > 0) ? 'ok' : 'no'));
 
   // 7 — kol boyu ↔ montaj merkezi
   var m = R.build && R.build.mount;

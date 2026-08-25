@@ -1019,3 +1019,142 @@ describe('şekil açıklama sütunu ve ölçüsü', () => {
       .forEach((m) => expect(Number(m[1]) + String(m[3]).length * 11 * 0.6).toBeLessThan(W));
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+//  KULLANICI RAPOR İNCELEMESİ (2026-08-25) — "yanlış yerler var, eksik yerler de"
+// ════════════════════════════════════════════════════════════════════════════
+// Kullanıcı, AG00976 örneğinden üretilmiş bir raporu inceletti. Çıkan kusurlar
+// iki sınıftaydı ve ikisi de SESSİZDİ: (a) çözüme hiç ulaşmayan bir girdi
+// yüzünden bütün yük tablolarının yüksüz koşması, (b) modelin değişmesine
+// rağmen güncellenmemiş metin/etiket/hüküm. Aşağıdaki kapılar ikisini de tutar.
+describe('rapor incelemesi — etiket, bayat metin ve hüküm kapıları', () => {
+  // Gates raporundan kurulmuş örnek: yük tabloları burada gerçekten dolu.
+  function cozAG() {
+    const pack = veFeadExampleNodes('AG00976_GATES_2025');
+    const ns = pack.nodes.map((n) => ({
+      id: n.id, type: n.type, def: componentDefs[n.type],
+      customName: n.customName, data: JSON.parse(JSON.stringify(n.data)),
+    }));
+    const build = veFeadBuildSystem(ns, pack.connections);
+    const solv = ns.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver)[0];
+    const R = veFeadAnalyze(build, {
+      rows: veFeadDutyRows(solv), cylinders: 6, crankInertia: 0.70,
+    });
+    R.build = build;
+    R.pulleyNames = build.names;
+    R.serviceFact = Number(solv.data.serviceFact) || 0;
+    return R;
+  }
+  let RA, H8, HU, HA;
+  beforeAll(() => { RA = cozAG(); H8 = RP._frSection8(RA, NODE); HU = RP._frCompliance(RA); HA = RP._frAntet(RA); });
+
+  test('§8.1 İKİ AYRI UZUNLUĞU ayrı adlandırıyor', () => {
+    // Eskiden tek satırdı: "Kayış efektif boyu: 1716,2 mm · gereken 1714,6 mm".
+    // Baştaki sayı TAHRİK boyudur (Gates "Effective Drive Length"), kayışın
+    // künyesindeki efektif boy değil — okuyucu ikisini aynı sanıyordu.
+    expect(H8).toMatch(/Tahrik boyu/);
+    expect(H8).toMatch(/gereken kayış boyu/);
+    expect(H8).toMatch(/künyedeki efektif boy/);
+    // Eski, karıştıran biçim geri gelmemeli.
+    expect(H8).not.toMatch(/Kayış efektif boyu:<\/strong> [\d.,]+ mm · gereken /);
+  });
+
+  test('ANTET efektif boyu BİR BASAMAKLA basıyor — 1714,6 ≠ "1715"', () => {
+    // Tam sayıya yuvarlamak katalog adını (8PK1715HD) gerçek efektif boyun
+    // yerine koyuyordu; aradaki 0,4 mm kolu 0,56° döndürüp gerginliği %1,5
+    // kaydırıyor (AG00976'da ölçüldü).
+    expect(RA.build.sys.belt.effLength).toBeCloseTo(1714.6, 3);
+    expect(HA).toMatch(/1714,6 mm/);
+    expect(HA).not.toMatch(/8 kaburga · 1715 mm/);
+    // İkinci uzunluk (tahrik boyu) da adlandırılmış olmalı: antette iki farklı
+    // sayı adsız yan yana durunca fark yuvarlama sanılıyordu.
+    expect(HA).toMatch(/tahrik boyu/);
+  });
+
+  test('§8.7 tasarım gerginliğini GİRDİ diye anlatmıyor (bayat metin)', () => {
+    // Alan kaldırılıp ankraj türetilir olduktan sonra da giriş paragrafı
+    // "kullanıcının girdiği ankraj" diyor ve "ikisinin karşılaştırması"
+    // vaat ediyordu; okuyucu panelde olmayan bir alanı arıyordu.
+    expect(H8).not.toMatch(/kullanıcının girdiği/);
+    expect(H8).not.toMatch(/ikisinin karşılaştırması/);
+    expect(H8).toMatch(/sorulmaz/);
+  });
+
+  test('UYGUNLUK #6 TOTOLOJİ DEĞİL — türetilen ankrajı adıyla yazıyor', () => {
+    // "Tasarım gerginliği ↔ yay dengesi, sapma ≤ %2" bir totolojiydi: ankraj
+    // artık yay dengesinin ta kendisi, sapma yapısal olarak sıfır. Geçen bir
+    // kriter gibi görünüp hiçbir şey denetlemiyordu.
+    expect(HU).not.toMatch(/sapma ≤ %2/);
+    expect(HU).toMatch(/Tasarım gerginliği ankrajı/);
+    expect(HU).toMatch(/türetildi: 544 N/);
+  });
+
+  test('§8.3 gergi kasnağının ÇALIŞMA KONUMUNU basıyor ve §8.8\'e yolluyor', () => {
+    // X/Y "—" basılıyordu; oysa konum bilinmiyor değil, TÜRETİLMİŞ.
+    // Ayrıca dipnot §8.7'ye yolluyordu — orada X/Y YOK, konum tablosu §8.8'de.
+    expect(H8).toMatch(/−161,9\d|−162,0\d/);
+    expect(H8).toMatch(/§8\.8/);
+    expect(H8).toMatch(/girdi değildir/);
+  });
+
+  test('§8.13 aksesuar gücü yoksa BOŞ TABLO basmıyor, sebebini yazıyor', () => {
+    // Bütün güçler sıfırken tablo tek sütunlu ve bomboş çıkıyordu; okuyucu
+    // bunu "tork hesaplanamadı" diye okuyordu, oysa sebep eksik girdiydi.
+    const bos = cozAG();
+    bos.analysis.duty.forEach((d) => d.perPulley.forEach((q) => { q.powerKw = 0; }));
+    const hb = RP._frSection8(bos, NODE);
+    expect(hb).toMatch(/Aksesuar gücü girilmedi/);
+    expect(hb).toMatch(/eksik\s*girdidir/);
+    // Dolu modelde uyarı YOK ve tablo gerçekten dolu.
+    expect(H8).not.toMatch(/Aksesuar gücü girilmedi/);
+    expect(H8).toMatch(/Aksesuar ortalama mil torku/);
+  });
+
+  test('KAYMA HÜKMÜ yük taşıyan kasnaklara dayanır, öğüt de doğru olur', () => {
+    // ÖLÇÜLDÜ (AG00976, 880 d/d): yük taşıyan üç kasnakta oran 1,348–2,538 ve
+    // SF 4,58–16,73; yük taşımayan üçünde oran 1,0010–1,0024 ve SF 1,232–1,479.
+    // Global en düşük (1,23) hükmü veriyordu ve çaresi "tasarım gerginliğini
+    // yükseltin" diye yazılıyordu — oysa raporun kendi §8.7'si o kasnaklarda
+    // SF'nin DEĞİŞMEYECEĞİNİ söylüyor. Yani önerilen çare etkisizdi.
+    const d0 = RA.analysis.duty[0];
+    const yuklu = d0.slip.filter((s) => s.tensionRatio >= 1.01);
+    const bos = d0.slip.filter((s) => s.tensionRatio < 1.01);
+    expect(yuklu.length).toBe(3);
+    expect(bos.length).toBe(3);
+    expect(Math.min.apply(null, yuklu.map((s) => s.SF))).toBeGreaterThan(4);
+    expect(Math.max.apply(null, bos.map((s) => s.SF))).toBeLessThan(1.5);
+
+    expect(H8).toMatch(/En kritik YÜK TAŞIYAN kasnak/);
+    expect(H8).toMatch(/Yük taşımayan kasnaklarda SF bir MARJ değil/);
+    // Yük taşımayanlar GİZLENMİYOR: tabloda da, açıklamada da adları geçiyor.
+    expect(H8).toMatch(/Otomatik Gergi \(E9843\)/);
+    // Etkisiz öğüt kalkmış olmalı.
+    expect(H8).not.toMatch(/tasarım gerginliğini yükseltin/);
+    // ETİKET DEĞİL SAYI: hükmü veren değer gerçekten yük taşıyanların en
+    // düşüğü olmalı. (Yalnız başlığa bakan bir kapı, _frMinSF'i global en
+    // düşüğe geri çeviren bir mutasyonu YEŞİL geçiriyordu — ölçüldü.)
+    const yukluMin = Math.min.apply(null, RA.analysis.duty.flatMap(
+      (d) => d.slip.filter((s) => s.tensionRatio >= 1.01).map((s) => s.SF)));
+    const globalMin = Math.min.apply(null, RA.analysis.duty.flatMap(
+      (d) => d.slip.map((s) => s.SF)));
+    expect(yukluMin).toBeGreaterThan(globalMin * 2);          // iki küme ayrı
+    const yaz = (x) => x.toFixed(2).replace('.', ',');
+    expect(HU).toMatch(new RegExp(yaz(yukluMin)));
+    expect(HU).toMatch(/yük taşıyan kasnaklarda en düşük/);
+    // Hüküm servis faktörünü GEÇMELİ: global en düşük alınsaydı ✗ olurdu ve
+    // "tasarım onaylanmamalıdır" hükmü kayması imkânsız bir kasnaktan gelirdi.
+    expect(yukluMin).toBeGreaterThanOrEqual(RA.serviceFact);
+    expect(globalMin).toBeLessThan(RA.serviceFact);
+    expect(H8).toMatch(new RegExp('yük taşıyan kasnaklarda\\)[\\s\\S]{0,60}' + yaz(yukluMin)));
+  });
+
+  test('YÜK TAŞIYAN KASNAK YOKSA hüküm yine verilir (global en düşüğe düşer)', () => {
+    // Ayrım bir kaçış kapısı olmamalı: bütün güçler sıfırsa "değerlendirilemedi"
+    // demek yerine elde olan tek sayıya düşülür.
+    const bos = cozAG();
+    bos.analysis.duty.forEach((d) => d.slip.forEach((s) => { s.tensionRatio = 1.0; }));
+    const hu = RP._frCompliance(bos);
+    expect(hu).toMatch(/Kayma emniyeti/);
+    expect(hu).not.toMatch(/değerlendirilemedi[\s\S]{0,80}Kayma/);
+  });
+});
