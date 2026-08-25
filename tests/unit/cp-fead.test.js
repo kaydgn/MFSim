@@ -174,12 +174,122 @@ describe('veFeadApplyBadge — temas tarafı kanvasta görünür', () => {
     expect(rozet(kasnak('fead-crank', { driver: true })).textContent).toBe('► K');
   });
 
-  test('kasnak olmayan düğüme rozet konmaz; iki kez çağrılınca çoğalmaz', () => {
-    expect(rozet(kasnak('fead-belt'))).toBeNull();
+  test('ne kasnak ne kayış olan düğüme rozet konmaz; iki kez çağrılınca çoğalmaz', () => {
+    expect(rozet(kasnak('fead-solver'))).toBeNull();
+    expect(rozet(kasnak('fead-layout'))).toBeNull();
     const e = el(), n = kasnak('fead-ac');
     fead.veFeadApplyBadge(e, n);
     fead.veFeadApplyBadge(e, n);
     expect(e.querySelectorAll('.ve-fead-badge')).toHaveLength(1);
+  });
+
+  // KAYIŞ DÜĞÜMÜ ROZETİ AYRI BİR ŞEY: temas tarafı değil, BOY KİPİ — ve salt
+  // gösterge değil, seçim yüzeyi. Kullanıcı isteği: "topoloji üzerinden çok
+  // basit bir şekilde 'kayış boyu sabit' veya 'kayış boyu değişken' seçeneği".
+  describe('kayış düğümü: boy kipi rozeti', () => {
+    test('kipi yazıyor ve varsayılan geriye dönük (boyu olan proje SABİT)', () => {
+      expect(rozet(kasnak('fead-belt', { effLength: 1715 })).textContent).toBe('SABİT');
+      expect(rozet(kasnak('fead-belt', {})).textContent).toBe('SERBEST');
+      expect(rozet(kasnak('fead-belt', { lengthMode: 'free', effLength: 1715 })).textContent)
+        .toBe('SERBEST');
+    });
+
+    test('TIKLANABİLİR — sürükleme başlatmaz, çift tık yutulur', () => {
+      const b = rozet(kasnak('fead-belt', { effLength: 1715 }));
+      expect(b.style.cursor).toBe('pointer');
+      expect(typeof b.onclick).toBe('function');
+      // Düğüm sürüklemesi mousedown'da başlıyor; rozet onu durdurmazsa tık
+      // hiç gelmez (kanvasta ölçülmüş bir sınıf: hareketsiz tık kayboluyordu).
+      expect(typeof b.onmousedown).toBe('function');
+      expect(typeof b.ondblclick).toBe('function');
+    });
+
+    test('renk kipin ANLAMINI taşıyor: girdi mavi, türetilmiş amber', () => {
+      expect(rozet(kasnak('fead-belt', { effLength: 1715 })).style.background)
+        .toMatch(/accent-primary/);
+      expect(rozet(kasnak('fead-belt', {})).style.background).toMatch(/accent-warning/);
+    });
+
+    test('iki kez çağrılınca çoğalmaz', () => {
+      const e = el(), n = kasnak('fead-belt', { effLength: 1715 });
+      fead.veFeadApplyBadge(e, n);
+      fead.veFeadApplyBadge(e, n);
+      expect(e.querySelectorAll('.ve-fead-badge')).toHaveLength(1);
+    });
+  });
+});
+
+// ── Boy kipi seçicisi ───────────────────────────────────────────────────────
+describe('kayış boyu kipi — topoloji seçicisi', () => {
+  const kurBelt = (data) => {
+    const n = { id: 'blt1', type: 'fead-belt', def: componentDefs['fead-belt'],
+                data: data || {} };
+    global.nodes = [n];
+    global.connections = [];
+    return n;
+  };
+
+  test('geçiş kipi ÇEVİRİR ve düğüme yazar', () => {
+    const n = kurBelt({ effLength: 1715 });
+    expect(fead.veFeadToggleBeltMode('blt1')).toBe('free');
+    expect(n.data.lengthMode).toBe('free');
+    expect(fead.veFeadToggleBeltMode('blt1')).toBe('fixed');
+    expect(n.data.lengthMode).toBe('fixed');
+  });
+
+  // Kip bir KULLANICI KARARI: geri alınabilmeli. (Kol konumu ya da yön gülü
+  // gibi salt görünüm tercihleri undo yığınına binmiyor; bu ONLARDAN DEĞİL —
+  // çözümü değiştiriyor.)
+  test('geçiş saveState çağırır — geri alınabilir', () => {
+    kurBelt({ effLength: 1715 });
+    stubs.saveState.mockClear();
+    fead.veFeadToggleBeltMode('blt1');
+    expect(stubs.saveState).toHaveBeenCalled();
+  });
+
+  test('kayış olmayan düğümde geçiş HİÇBİR ŞEY yapmaz', () => {
+    const n = { id: 'p1', type: 'fead-ac', def: componentDefs['fead-ac'], data: {} };
+    global.nodes = [n];
+    expect(fead.veFeadToggleBeltMode('p1')).toBeNull();
+    expect(n.data.lengthMode).toBeUndefined();
+  });
+
+  test('panel kipi SORUYOR ve kanvas rozetiyle AYNI alanı okuyor', () => {
+    const n = kurBelt({ effLength: 1715 });
+    const sabit = fead.getFeadBeltPropertiesHTML(n);
+    expect(sabit).toMatch(/lengthMode/);
+    expect(sabit).toMatch(/value="fixed" selected/);
+    expect(sabit).toMatch(/Efektif boy/);            // SABİT kipte GİRDİ alanı var
+
+    n.data.lengthMode = 'free';
+    const serb = fead.getFeadBeltPropertiesHTML(n);
+    expect(serb).toMatch(/value="free" selected/);
+    // SERBEST kipte boy bir alan DEĞİL, bir okuma
+    expect(serb).not.toMatch(/id="ve-fead-effLength-/);
+    expect(serb).toMatch(/Gereken efektif boy/);
+  });
+
+  // Türetilen sayı GÖRÜNMEK ZORUNDA: alanı kaldırıp yerine hiçbir şey koymamak
+  // "boy nereden geldi" sorusunu cevapsız bırakırdı.
+  test('serbest kipte türetilen boy panelde YAZILI', () => {
+    const pack = M.veFeadExampleNodes('BMC_FEAD_2026');
+    pack.nodes.forEach((x) => { x.def = componentDefs[x.type]; });
+    const belt = pack.nodes.find((x) => x.type === 'fead-belt');
+    belt.data.lengthMode = 'free';
+    global.nodes = pack.nodes;
+    global.connections = pack.connections;
+    const html = fead.getFeadBeltPropertiesHTML(belt);
+    expect(html).toMatch(/Gereken efektif boy/);
+    expect(html).toMatch(/1715[.,]\d+ mm/);          // türetilen boy basılı
+    expect(html).toMatch(/kol 28[.,]\d+°/);          // hangi kol açısından geldiği
+  });
+
+  test('çözülemeyen modelde sayı UYDURULMUYOR, sebep yazılıyor', () => {
+    const n = kurBelt({ lengthMode: 'free' });        // tek başına kayış düğümü
+    const html = fead.getFeadBeltPropertiesHTML(n);
+    expect(html).toMatch(/Gereken efektif boy/);
+    expect(html).toMatch(/—/);
+    expect(html).not.toMatch(/NaN|undefined/);
   });
 });
 

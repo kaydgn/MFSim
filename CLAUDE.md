@@ -198,6 +198,60 @@ sürükleme aralığında **3.5 kat**.
 **yuvarlanmış bir katalog boyu** olmasından. Özdeş olmalarını beklemek katalog
 yuvarlamasını yok saymak olurdu.
 
+##### Kipin TOPOLOJİ YÜZEYİ — kayış düğümünde tıklanabilir rozet
+
+Kullanıcı isteği: *"Topoloji üzerinden çok basit bir şekilde 'kayış boyu sabit'
+veya 'kayış boyu değişken' seçeneği olsun."*
+
+Kip `node.data.lengthMode`'da ve **panel ile kanvas AYNI alanı okuyor**
+(`veFeadBeltMode`) — Kayış Yolu kartındaki kol konumu seçicisinin kuralının
+aynısı: iki ayrı ayar tutulsa panel bir kipi, rozet başkasını gösterirdi.
+
+| Yüzey | Ne | Nerede |
+|-------|-----|--------|
+| Kanvas | Tıklanabilir rozet `SABİT` ↔ `SERBEST` | `veFeadApplyBeltModeBadge` |
+| Panel | Açılır seçici + kipe göre değişen künye | `getFeadBeltPropertiesHTML` |
+
+**Rozet salt gösterge değil, SEÇİM YÜZEYİ.** 60×54'lük kayış kutusuna açılır
+liste sığmıyor, iki durumlu bir anahtar sığıyor. Renk kipin anlamını taşıyor:
+`SABİT` mavi (bir GİRDİ), `SERBEST` amber (bir ÇIKTI — kayışın kendi rengi ve
+bu modülde "hesaplanmış" demek).
+
+**Rozet `mousedown`'ı DURDURMAK ZORUNDA:** düğüm sürüklemesi orada başlıyor
+(`veAttachNodeDrag`), durdurulmazsa tık hiç gelmiyor — yön gülünde ölçülmüş
+"hareketsiz tık kayboluyor" sınıfının aynısı.
+
+**Serbest kipte "Efektif boy" bir ALAN DEĞİL, bir OKUMA.** Alan kaldırılıp
+yerine hiçbir şey konmasaydı kullanıcı "boy nereden geldi" sorusuyla baş başa
+kalırdı; `veFeadDerivedLengthHTML` türetilen boyu ve hangi kol açısından
+geldiğini basıyor (tasarım gerginliğinin "Algılanan Model" tablosunda
+görünmesiyle aynı gerekçe). Çözülemeyen modelde sayı UYDURULMUYOR — `—` ve sebep.
+
+**Geçiş `saveState` çağırır** (geri alınabilir): kip bir görünüm tercihi değil,
+çözümü değiştiren bir karar. Kol konumu ve yön gülü konumu bunun tersi ve
+bilerek öyle.
+
+Altı mutasyonla ölçüldü, altısı da kırmızı.
+
+##### KATALOG BOYU = EFEKTİF BOY — depodaki veriyle kanıtlandı
+
+Üreticiler aynı sayıya farklı ad veriyor: Gates *"effective length"*, Optibelt
+ve ContiTech *"reference length L_b"*. Hangisi olduğu MFSim için kritik, çünkü
+`belt.effLength` ISO 9981 efektif boyunu bekliyor ve `L_pitch − L_eff = 2π·h_b`
+(Gates PK'da **7.54 mm**) — karıştırmak sessiz bir %0.44 kayması olurdu.
+
+Cevap tahminle değil **ölçümle** verildi: BMC tedarikçi sayfası hem kasnak
+koordinatlarını hem kayış adını (`8PK 1715`) veriyor. Serbest kip boyu HİÇ
+görmeden hesaplıyor:
+
+| hipotez | sapma |
+|---|---|
+| "1715" **efektif** boy | **0.267 mm · %0.0156** |
+| "1715" pitch boy | 7.807 mm · %0.4552 |
+
+Efektif hipotezi **29 kat** daha iyi uyuyor. Katalog adındaki sayı doğrudan
+`effLength`'e yazılır, çevrim YOK.
+
 ##### "Çözülemez" yerine "sınırda" — kenetlenen kol çözümü
 
 `FEADCore.bisect` kök kuşatılmamışsa açık hata veriyor ve bu **doğru bir

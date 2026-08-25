@@ -431,6 +431,7 @@ function veFeadApplyBadge(nodeEl, node){
   if(!nodeEl || !node || typeof document === 'undefined') return false;
   var old = nodeEl.querySelector('.ve-fead-badge');
   if(old) old.remove();
+  if(_feadDefOf(node).isFeadBelt) return veFeadApplyBeltModeBadge(nodeEl, node);
   if(!_feadIsPulley(node)) return false;
   var back = veFeadContactOf(node) === 'back';
   var drv = !!(node.data && node.data.driver);
@@ -449,6 +450,70 @@ function veFeadApplyBadge(nodeEl, node){
   var box = nodeEl.querySelector('.ve-node-box') || nodeEl;
   box.appendChild(b);
   return true;
+}
+
+// KAYIŞ BOYU KİPİ ROZETİ — kanvasta, TIKLANABİLİR.
+//
+// Kip `node.data.lengthMode` alanında ve panel ile kanvas AYNI alanı okuyor
+// (Kayış Yolu kartındaki kol konumu seçicisinin kuralının aynısı: iki ayrı
+// ayar tutulsa panel bir kipi, kanvastaki rozet başkasını gösterirdi).
+//
+// Rozet SEÇİM YÜZEYİ, salt gösterge değil: kullanıcı "topoloji üzerinden çok
+// basit bir şekilde" seçebilmeli. 60×54'lük kayış kutusuna açılır liste
+// sığmıyor, iki durumlu bir anahtar sığıyor.
+//
+// Renk kipin ANLAMINI taşıyor: SABİT bir GİRDİ (mavi — panelde girilen her
+// şeyin rengi), SERBEST bir ÇIKTI (amber — kayışın kendi rengi, ve bu modülde
+// "hesaplanmış" demek).
+function veFeadApplyBeltModeBadge(nodeEl, node){
+  var serbest = (typeof veFeadBeltMode === 'function')
+    ? (veFeadBeltMode(node.data) === 'free') : false;
+  var b = document.createElement('span');
+  b.className = 've-fead-badge';
+  b.textContent = serbest ? 'SERBEST' : 'SABİT';
+  b.title = serbest
+    ? 'Kayış boyu SERBEST: tasarımdan hesaplanıyor (gergi nominal açısında). '
+      + 'Tıkla → sabit boya geç.'
+    : 'Kayış boyu SABİT: girilen boy kullanılıyor. Tıkla → tasarımdan hesaplansın.';
+  b.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; cursor:pointer;'
+    + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
+    + 'padding:2px 4px; border-radius:3px; font-family:ui-monospace, monospace;'
+    + 'color:#fff; background:' + (serbest ? 'var(--accent-warning, #f59e0b)'
+                                           : 'var(--accent-primary, #3b82f6)')
+    + '; border:1px solid var(--bg-primary, #111);';
+  // Rozete basmak düğümü SÜRÜKLEMEYE başlatmamalı: veAttachNodeDrag mousedown'ı
+  // yakalıyor ve sürükleme başlarsa tık hiç gelmiyor.
+  b.onmousedown = function(e){ e.stopPropagation(); };
+  b.ondblclick  = function(e){ e.stopPropagation(); e.preventDefault(); };
+  b.onclick = function(e){
+    e.stopPropagation(); e.preventDefault();
+    veFeadToggleBeltMode(node.id);
+  };
+  var box = nodeEl.querySelector('.ve-node-box') || nodeEl;
+  box.appendChild(b);
+  return true;
+}
+
+// Kipi çevir. saveState mutasyondan SONRA çağrılıyor (rozet bir kullanıcı
+// kararı, geri alınabilmeli) ve rozet ile Kayış Yolu kartı birlikte tazeleniyor
+// — kart kipe göre başka bir boy gösteriyor.
+function veFeadToggleBeltMode(nodeId){
+  if(typeof nodes === 'undefined') return null;
+  var node = nodes.find(function(n){ return n.id === nodeId; });
+  if(!node || !_feadDefOf(node).isFeadBelt) return null;
+  if(!node.data) node.data = {};
+  var yeni = (typeof veFeadBeltMode === 'function' && veFeadBeltMode(node.data) === 'free')
+    ? 'fixed' : 'free';
+  node.data.lengthMode = yeni;
+  if(typeof saveState === 'function') saveState();
+  veFeadRefreshBadges();
+  if(typeof veFeadRefreshLayoutCards === 'function') veFeadRefreshLayoutCards();
+  // Panel açıksa o da tazelensin: serbest kipte "Efektif boy" alanı GİRDİ
+  // olmaktan çıkıp türetilmiş bir okumaya dönüşüyor.
+  if(typeof showNodeProperties === 'function'
+     && typeof selectedNode !== 'undefined' && selectedNode && selectedNode.id === nodeId)
+    showNodeProperties(node);
+  return yeni;
 }
 
 // Tüm kasnakların rozetini tazele (temas tarafı / sürücü değişince).
@@ -471,7 +536,7 @@ function veFeadSetChoice(nodeId, key, val){
   if(!node.data) node.data = {};
   node.data[key] = val;
   if(typeof saveState === 'function') saveState();
-  if(key === 'contact') veFeadRefreshBadges();
+  if(key === 'contact' || key === 'lengthMode') veFeadRefreshBadges();
   if(typeof showNodeProperties === 'function') showNodeProperties(node);
 }
 
@@ -831,15 +896,43 @@ function getFeadBeltPropertiesHTML(node){
       _feadSelect(node, 'Profil', 'profile', profiller, 'PK')
     + _feadSelect(node, 'Marka', 'brand', markalar, 'GATES', veFeadBeltDbHint(node)));
 
+  // ── BOY KİPİ ───────────────────────────────────────────────────────────
+  // Kol açısı ile kayış boyu TEK serbestlik derecesini paylaşıyor; hangisinin
+  // GİRDİ olduğu burada seçiliyor. Panel ile kanvas rozeti AYNI alanı okuyor
+  // (veFeadBeltMode → node.data.lengthMode).
+  var kip = (typeof veFeadBeltMode === 'function') ? veFeadBeltMode(node.data) : 'fixed';
+  var serbest = (kip === 'free');
+  html += _feadCard('Kayış Boyu', serbest ? 'tasarımdan HESAPLANIR' : 'katalogdan SEÇİLİR',
+      serbest ? 'var(--accent-warning)' : 'var(--accent-primary)',
+      _feadSelect(node, 'Boy kipi', 'lengthMode', [
+        ['fixed', 'Sabit — kayış seçilmiş'],
+        ['free',  'Serbest — tasarımdan çıkar']
+      ], kip)
+    + _feadHint(serbest
+        ? 'Gergi kolu <b>nominal yay yüküne</b> karşılık gelen açıya oturuyor '
+          + '((M<sub>çalışma</sub> − M<sub>ön</sub>)/k) ve gereken kayış boyu oradan '
+          + '<b>hesaplanıyor</b>. Tasarım yapıp kayışı sonra tedarik ediyorsanız bu kip. '
+          + 'Kasnak konumunu değiştirdikçe gereken boy da değişir.'
+        : 'Girilen boy kullanılıyor; gergi kolu kayış yolunu <b>o boya eşitleyen</b> açıya '
+          + 'oturuyor ve gerginlik oradan çıkıyor. Elinizde belirli bir kayış varsa bu kip. '
+          + 'Kayış bu yerleşime sığmıyorsa model yine çözülür — kol nominal açısına alınır '
+          + 've <b>gereken boy</b> yazılır.'));
+
   html += _feadCard('Künye', '', 'var(--accent-warning)',
       _feadText(node, 'Tip / kod', 'beltType', 'ör. 8PK 1475HD')
-    + _feadGrid(node, [
+    + _feadGrid(node, serbest ? [
+        { key:'ribs',      label:'Kanal sayısı',        ph:'8', step:'1' },
+        { key:'tolerance', label:'Tolerans ± [mm]',     ph:'6' },
+        { key:'wearPct',   label:'Aşınma payı [oran]',  ph:'0.007', step:'0.0001' }
+      ] : [
         { key:'ribs',      label:'Kanal sayısı',        ph:'8', step:'1' },
         { key:'effLength', label:'Efektif boy [mm]',    ph:'1475' },
         { key:'tolerance', label:'Tolerans ± [mm]',     ph:'6' },
         { key:'wearPct',   label:'Aşınma payı [oran]',  ph:'0.007', step:'0.0001' }
       ], 2)
-    + _feadHint('<b>Efektif boy</b> ISO 9981 boyudur. <b>Aşınma payı</b> ORAN olarak girilir '
+    + (serbest ? veFeadDerivedLengthHTML(node) : '')
+    + _feadHint('<b>Efektif boy</b> ISO 9981 boyudur — katalog adındaki sayının ta kendisi '
+        + '(8PK<b>1715</b> → 1715 mm). <b>Aşınma payı</b> ORAN olarak girilir '
         + '(0.007 = %0.70). Konum tablosu bu üç sayıdan kurulur: Replace = L+tol+aşınma·L, '
         + 'Max = L+tol, Mean = L, Min = L−tol.'));
 
@@ -852,6 +945,34 @@ function getFeadBeltPropertiesHTML(node){
         + 'frekans haritasından geri-hesap <b>0.0196</b> veriyor. Frekans önemliyse elle girin.'));
   html += '</div>';
   return html;
+}
+
+// SERBEST KİPTE BOY BİR OKUMA, ALAN DEĞİL — ama GÖRÜNMEK ZORUNDA.
+//
+// Alanı kaldırıp yerine hiçbir şey koymamak, kullanıcıyı "boy nereden geldi"
+// sorusuyla baş başa bırakırdı; bu modülün kuralı türetilen her sayıyı
+// okunabilir bir yerde göstermek (tasarım gerginliğinin "Algılanan Model"
+// tablosunda görünmesiyle aynı gerekçe).
+function veFeadDerivedLengthHTML(node){
+  var b = null;
+  try { b = (typeof veFeadBuildFromCanvas === 'function') ? veFeadBuildFromCanvas() : null; }
+  catch(e){ b = null; }
+  var deger = '—', not = 'Model henüz çözülemedi; kasnakları ve gergi künyesini tamamlayın.';
+  if(b && b.ok && Number.isFinite(b.beltLengthMm)){
+    deger = _feadFmt(b.beltLengthMm, 2) + ' mm';
+    not = 'Kasnak koordinatları, çaplar ve gergi künyesinden hesaplandı '
+        + '(kol ' + _feadFmt(b.relDeg, 3) + '°). Tedarikçiye verilecek boy budur; '
+        + 'en yakın katalog boyunu seçerseniz kip SABİT olur ve kol biraz kayar.';
+  } else if(b && b.errors && b.errors.length){
+    not = _feadEsc(b.errors[0]);
+  }
+  return '<div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">'
+    + '<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">'
+    + 'Gereken efektif boy</div>'
+    + '<div style="width:130px; text-align:center; font-family:ui-monospace, monospace;'
+    + ' font-weight:700; font-size:var(--fs-body); color:var(--accent-warning);">'
+    + _feadEsc(deger) + '</div></div>'
+    + _feadHint(not);
 }
 
 // Seçili profil+marka için çekirdeğin katalogda tuttuğu değerleri göster —
@@ -2713,6 +2834,9 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadLayoutSVG: veFeadLayoutSVG,
     veFeadPortSideFor: veFeadPortSideFor,
     veFeadApplyBadge: veFeadApplyBadge,
+    veFeadApplyBeltModeBadge: veFeadApplyBeltModeBadge,
+    veFeadToggleBeltMode: veFeadToggleBeltMode,
+    veFeadDerivedLengthHTML: veFeadDerivedLengthHTML,
     veFeadApplyLayoutCard: veFeadApplyLayoutCard,
     veFeadPosPicker: veFeadPosPicker,
     // Animasyon: yürüyüş + faz + döngü. Testler dişleri ve kolları doğrudan
