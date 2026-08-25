@@ -759,6 +759,111 @@ var VE_FEAD_EXAMPLES = {
     ],
     // Kayış serpantin sırası: sürücüden başlar, sürücüye döner.
     route: ['SRC', 'IDR1', 'A_C', 'IDR2', 'ALT', 'TEN']
+  },
+
+  // ── AG00976 — TEDARİKÇİDEN DÖNEN GATES RAPORU ──────────────────────────────
+  //
+  // Yukarıdaki BMC_FEAD_2026 tedarikçiye GİDEN sayfadır (FEAD_INFORMATION,
+  // 26 Mayıs 2025); bu ise ondan DÖNEN rapordur: "AG00976 BMC Otomotif FEAD 5 ·
+  // Cummins Eng.Scndr ALT&AC Drive · Gates 8PK1715HD-Fleetrunner ·
+  // Ten@-250/110 · Corrected-IDR1 · 05 Haziran 2025", Gates v13.02.
+  //
+  // İKİSİ DE DURUYOR ÇÜNKÜ AYNI DEĞİLLER. Sayfada olmayıp raporda olan üç şey
+  // var ve üçü de sayıyı değiştiriyor (ölçüm aşağıda):
+  //   • gergi PİVOTU        — sayfa yalnız kasnağın "öngörülen merkezi montaj
+  //                            pozisyonunu" veriyor, pivotu vermiyor
+  //   • kayış TOLERANSI     — ±6.00 mm  (sayfada yok → 0 kalıyordu)
+  //   • AŞINMA PAYI         — %0.60     (sayfada yok → 0 kalıyordu)
+  // Tolerans/aşınma 0 iken gergi konum tablosu tek noktaya çöküyor: Replace =
+  // Max = Mean = Min. Yani kolun gezinme zarfı hiç görünmüyor.
+  //
+  // ── EFEKTİF BOY 1714.6, "1715" DEĞİL ────────────────────────────────────────
+  // Raporun başlığı "Effective Belt Length (ISO 9981) 1715" yazıyor ama kendi
+  // Tensioner Geometry tablosundaki REBL sütunu dört konumun DÖRDÜNDE de tam
+  // 0.4 mm aşağıda: 1730.9 / 1720.6 / 1714.6 / 1708.6. Aradaki adımlar
+  // (tol 6.0 ve wear 0.006·L) birebir tutuyor, yani kayan şey nominal boyun
+  // KENDİSİ — "1715" yuvarlanmış katalog adı (8PK**1715**HD). ÖLÇÜLDÜ:
+  //   effLength 1715.0 → en kötü kol 0.62° · gerginlik %2.28 · 2 sarım kayık
+  //   effLength 1714.6 → en kötü kol 0.08° · gerginlik %0.29 · 12/12 birebir
+  //
+  // ── DEVİR SÜTUNU MOTOR DEVRİ DEĞİL, SÜRÜCÜ KASNAK DEVRİ ─────────────────────
+  // Rapor FAN kasnağını krank kabul ediyor ("Speed Ratio (Ref. Engine) FAN =
+  // 1.000") ve duty tablosunun "Engine RPM" sütunu o kasnağın devri. Sayfanın
+  // kendi ilk satırı bunu doğruluyor: motor 800 × 1.1 = 880. Bu yüzden burada
+  // driveRatio 1 — raporu GERİ ÜRETMEK için gereken tanım budur. Gerçek motor
+  // devri isteniyorsa ratioMode 'derive' + krank/fan çapları kullanılır
+  // (BMC_FEAD_2026 öyle kurulu).
+  'AG00976_GATES_2025': {
+    name: 'BMC Otomotif FEAD 5 — Gates AG00976 raporu',
+    note: 'Tedarikçiden dönen Gates raporunun (8PK1715HD, Ten@-250/110, '
+        + 'Corrected-IDR1, 05.06.2025) birebir modeli. Aynı 6 kasnaklı düzen, '
+        + 'ama gergi PİVOTU, kayış toleransı (±6 mm) ve aşınma payı (%0.60) '
+        + 'raporda var, tedarikçiye giden sayfada yok. Raporun sonuç '
+        + 'sayfalarını geri üretir.',
+    belt:  { profile:'PK', brand:'GATES', beltType:'8PK1715HD', ribs:8,
+             // Bkz. yukarıdaki "EFEKTİF BOY" notu: rapor başlığı 1715 diyor,
+             // kendi REBL sütunu 1714.6 istiyor.
+             effLength:1714.6, tolerance:6, wearPct:0.006 },
+    solver:{ ratioMode:'direct', driveRatio:1,
+             cylinders:6, serviceFact:1.3, crankInertia:0.70,
+             // "Peak Tension & Hubload" sayfasındaki Accel. RPM/s sütunu.
+             accelRpmS:1100, decelRpmS:1100,
+             // EDL − REBL: raporun iki uzunluk sütunu arasındaki sabit fark.
+             lengthOffsetMm:1.6,
+             // "Load Conditions for DC 95%" sayfası. kW'lar KASNAK ANAHTARIYLA
+             // yazılır (kwByKey); veFeadExampleNodes bunu düğüm kimliğine
+             // çevirir — örnek verisi okunabilir kalsın, kimlik şeması tek
+             // yerde dursun. Sürücü (FAN) sütunu YOK: çekirdek onu diğerlerinin
+             // toplamı olarak hesaplar (raporda da 6.34 = 2.70+3.61+3×0.01).
+             duty:[
+               { rpm:880,  dcPct:25.0, degC:90, kwByKey:{ A_C:2.70, ALT:3.61, IDR1:0.01, IDR2:0.01, TEN:0.01 } },
+               { rpm:1000, dcPct:4.0,  degC:90, kwByKey:{ A_C:3.60, ALT:3.78, IDR1:0.01, IDR2:0.01, TEN:0.01 } },
+               { rpm:1100, dcPct:4.5,  degC:90, kwByKey:{ A_C:4.00, ALT:3.83, IDR1:0.01, IDR2:0.01, TEN:0.01 } },
+               { rpm:1200, dcPct:5.0,  degC:90, kwByKey:{ A_C:4.40, ALT:3.87, IDR1:0.01, IDR2:0.01, TEN:0.01 } },
+               { rpm:1400, dcPct:5.5,  degC:90, kwByKey:{ A_C:5.10, ALT:3.93, IDR1:0.01, IDR2:0.01, TEN:0.01 } },
+               { rpm:1500, dcPct:6.0,  degC:90, kwByKey:{ A_C:5.40, ALT:3.94, IDR1:0.01, IDR2:0.01, TEN:0.01 } },
+               { rpm:1600, dcPct:7.5,  degC:90, kwByKey:{ A_C:5.70, ALT:3.69, IDR1:0.01, IDR2:0.01, TEN:0.01 } },
+               { rpm:1700, dcPct:9.0,  degC:90, kwByKey:{ A_C:6.00, ALT:3.97, IDR1:0.01, IDR2:0.01, TEN:0.01 } },
+               { rpm:1800, dcPct:0.5,  degC:90, kwByKey:{ A_C:6.30, ALT:3.98, IDR1:0.01, IDR2:0.01, TEN:0.01 } },
+               { rpm:2000, dcPct:12.0, degC:90, kwByKey:{ A_C:6.70, ALT:3.99, IDR1:0.01, IDR2:0.01, TEN:0.01 } },
+               { rpm:2500, dcPct:16.0, degC:90, kwByKey:{ A_C:7.00, ALT:4.00, IDR1:0.01, IDR2:0.01, TEN:0.01 } },
+               { rpm:2750, dcPct:5.0,  degC:90, kwByKey:{ A_C:7.40, ALT:4.02, IDR1:0.01, IDR2:0.01, TEN:0.01 } }
+             ] },
+    // "Layout Data" sayfası. MFSim DIŞ ÇAP (od) ister; raporun Pitch/Effective
+    // sütunlarını çekirdek hb/hr ile kendisi türetir ve BİREBİR tutturur:
+    //   grooved od 162 → pitch 164.4 / eff 162.0   (rapor: 164.40 / 162.00)
+    //   back    od  75 → pitch  77.2 / eff  79.6   (rapor:  77.20 /  79.60)
+    // Ataletler tedarikçiye giden sayfadan (rapor onları basmıyor).
+    pulleys: [
+      { key:'FAN',  type:'fead-fan',         name:'Sürücü Kasnak (FAN)',
+        data:{ od:162, x:0,        y:0,      contact:'grooved', driver:true, inertia:0.064 } },
+      { key:'IDR1', type:'fead-idler',       name:'Avara 1',
+        data:{ od:75,  x:130.10,   y:139.90, contact:'back',    inertia:0.00087 } },
+      { key:'A_C',  type:'fead-ac',          name:'Klima Kompresörü',
+        data:{ od:152, x:184.20,   y:314.50, contact:'grooved', inertia:0.031 } },
+      { key:'IDR2', type:'fead-idler',       name:'Avara 2',
+        data:{ od:75,  x:0,        y:267.40, contact:'back',    inertia:0.00087 } },
+      { key:'ALT',  type:'fead-alternator',  name:'Alternatör (155 A)',
+        data:{ od:57,  x:-281.00,  y:259.50, contact:'grooved', inertia:0.0144 } },
+      { key:'TEN',  type:'fead-tensioner',   name:'Otomatik Gergi (E9843)',
+        // "Tensioner Data": pivot RAPORDA YAZILI (dosya adı da söylüyor:
+        // Ten@-250/110). Merkez, Layout Data'nın TEN satırı — yani çözülmüş
+        // ÇALIŞMA merkezi, ve pivottan uzaklığı tam 90.00 mm: kol boyu çapraz
+        // kontrolü kendiliğinden geçiyor. Serbest açı buradan türetilince
+        // 16.07° çıkıyor, raporun "Free Arm" satırı 16.1° — 0.03°.
+        data:{ od:75, contact:'back', inertia:0.00087,
+               angleMode:'mount', pivotX:-250.00, pivotY:110.00,
+               cenX:-161.97, cenY:91.29, armLen:90.0,
+               preload:8.60, kArm:0.480, meanLoad:22.07,
+               // Gates E9843 — çekirdeğin kendi ölçülmüş gergi künyesi
+               // (CALIBRATION.tensionerArmInertiaKgM2.measured.E9843).
+               // Burulma modeline J = armInertia + pulleyMass·a² olarak girer.
+               armInertia:0.0009, pulleyMass:0.80,
+               // "Tensioner Geometry" tablosunun Load sütunu: mekanik stop.
+               loadStopRelDeg:60.4 } }
+    ],
+    // Raporun kasnak sırası (Layout Data satır sırası = kayış gidiş yönü).
+    route: ['FAN', 'IDR1', 'A_C', 'IDR2', 'ALT', 'TEN']
   }
 };
 function veFeadExampleKeys(){ return Object.keys(VE_FEAD_EXAMPLES); }
@@ -778,7 +883,24 @@ function veFeadExampleNodes(key){
     nodesOut.push(n);
   });
   nodesOut.push({ id:'ex-belt',   type:'fead-belt',   data: JSON.parse(JSON.stringify(ex.belt)) });
-  nodesOut.push({ id:'ex-solver', type:'fead-solver', data: JSON.parse(JSON.stringify(ex.solver)) });
+  var solverData = JSON.parse(JSON.stringify(ex.solver));
+  // Duty satırlarındaki kW sözlüğü örnek tanımında KASNAK ANAHTARIYLA yazılır
+  // (kwByKey: { A_C: 2.70, ... }); çekirdeğe giden biçim ise DÜĞÜM KİMLİĞİYLE
+  // anahtarlı (veFeadDutyToCore → r.kw[n.id]). Çeviri BURADA, tek yerde:
+  // örnek verisi okunabilir kalıyor ve 'ex-' kimlik şeması bu fonksiyonun
+  // dışına sızmıyor. Kimlik doğrudan yazılsaydı örnek tanımı, düğüm kurma
+  // ayrıntısını bilmek zorunda kalırdı — ikisi ayrıştığında hata SESSİZ olur:
+  // eşleşmeyen kimlik "kW girilmemiş" sayılır ve o aksesuar 0 kW ile koşar.
+  if(Array.isArray(solverData.duty)) solverData.duty.forEach(function(r){
+    if(!r || !r.kwByKey) return;
+    var kw = r.kw ? r.kw : {};
+    Object.keys(r.kwByKey).forEach(function(k){
+      if(byKey[k]) kw[byKey[k].id] = r.kwByKey[k];
+    });
+    r.kw = kw;
+    delete r.kwByKey;
+  });
+  nodesOut.push({ id:'ex-solver', type:'fead-solver', data: solverData });
   // Kayış Yolu şeması da kurulur: örnek "çözülebilir bir model" değil, KULLANIMA
   // HAZIR bir model olmalı. Şema düğümü olmadan kullanıcı çözümü görüyor ama
   // kayış yolunu göremiyor ve onu paletten ayrıca aramak zorunda kalıyordu.

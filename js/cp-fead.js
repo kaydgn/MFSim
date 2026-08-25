@@ -2229,15 +2229,40 @@ function getFeadExamplePropertiesHTML(node){
     var ex = veFeadExampleOf(k);
     var kasnak = ex.pulleys.length;
     var egri = ex.pulleys.filter(function(p){ return p.data && p.data.pwrCurve; }).length;
+    // Aksesuar gücü İKİ YOLDAN gelebiliyor: kasnağın kendi devir→kW eğrisinden
+    // (tedarikçi sayfasının biçimi) ya da duty satırına doğrudan yazılmış kW'dan
+    // (Gates raporunun biçimi). Kart yalnız eğriyi sayarsa raporlu örnek
+    // "0 aksesuar" der ve boş görünür; ikisi ayrı ayrı yazılıyor.
+    var dutyKw = 0;
+    (ex.solver.duty || []).forEach(function(r){
+      var m = r && (r.kwByKey || r.kw);
+      if(m) dutyKw = Math.max(dutyKw, Object.keys(m).filter(function(k){ return m[k] > 0.05; }).length);
+    });
+    // Birinci kademe SATIRI koşullu: 'derive' kipinde iki çap yazılır, 'direct'
+    // kipinde o iki alan YOKTUR ve ham basmak "undefined / undefined mm"
+    // üretiyordu. Oran her iki kipte de tek kaynaktan (veFeadDriveRatio).
+    var dr = veFeadDriveRatio(ex.solver);
+    var kademe = (dr.mode === 'derive' && dr.crankOD > 0 && dr.fanOD > 0)
+      ? ('birinci kademe: ' + dr.crankOD + ' / ' + dr.fanOD + ' mm (oran '
+         + dr.ratio.toFixed(3) + ')')
+      : ('tahrik oranı: ' + dr.ratio.toFixed(3)
+         + ' — devir sütunu SÜRÜCÜ KASNAK devri');
+    var b = ex.belt || {};
+    var kayis = 'kayış: ' + _feadEsc(b.beltType || ((b.ribs || '?') + b.profile))
+      + ' · ' + b.effLength + ' mm'
+      + ' · tolerans ' + (b.tolerance > 0 ? '±' + b.tolerance + ' mm' : 'YOK')
+      + ' · aşınma ' + (b.wearPct > 0 ? '%' + (b.wearPct * 100).toFixed(2) : 'YOK');
     html += _feadCard(_feadEsc(ex.name), kasnak + ' kasnak', 'var(--accent-success)',
         '<div style="font-size:var(--fs-micro); color:var(--text-secondary); line-height:1.5; margin-bottom:9px;">'
       + _feadEsc(ex.note) + '</div>'
       + '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.6; margin-bottom:10px;">'
       + '• kasnak koordinatları + çaplar + temas tarafı<br>'
       + '• gergi: pivot, kol boyu, montaj merkezi, yay künyesi<br>'
-      + '• ' + egri + ' aksesuarın devir → kW eğrisi<br>'
+      + '• ' + kayis + '<br>'
+      + '• ' + (egri ? egri + ' aksesuarın devir → kW eğrisi'
+                     : dutyKw + ' aksesuarın kW\'ı duty satırında') + '<br>'
       + '• çalışma çevrimi: ' + ex.solver.duty.length + ' devir noktası<br>'
-      + '• birinci kademe: ' + ex.solver.crankOD + ' / ' + ex.solver.fanOD + ' mm</div>'
+      + '• ' + kademe + '</div>'
       + '<button onclick="veFeadLoadExample(\'' + _feadEsc(k) + '\')" style="width:100%; padding:11px 16px; '
       + 'font-size:var(--fs-body); font-weight:700; letter-spacing:0.02em; border:none; cursor:pointer; '
       + 'background:var(--accent-success); color:#fff;">İç topolojiye kur</button>'
