@@ -3632,6 +3632,39 @@ yani **davranış değişmedi**.
 > `data-theme` çakışması (host aynı özniteliğe yazıyor), ve script/style
 > sayımının JS içindeki şablonları da sayması. Git geçmişinde duruyor.
 
+## "Güncel programı alayım" — dosya + DURUM ÖZETİ
+
+Kullanıcının ağı GitHub'a da GitHub Pages'e de çıkamıyor (2026-08-22); yayınlanan
+programı göremiyor. Çalışan tek kanal claude.ai. Bu yüzden kullanıcı zaman zaman
+tek dosyayı DOĞRUDAN sohbete istiyor. İstek geldiğinde sıra:
+
+```bash
+git checkout main && git pull origin main   # BAYAT DOSYA GÖNDERME
+npm run build                                # MFSim_Code.html
+```
+sonra gerçek tarayıcıda aç ve **0 ağ isteği / 0 konsol hatası** olduğunu ölç,
+ardından dosyayı SendUserFile ile bırak.
+
+**Gönderilen dosya `MFSim_Code.html`** — tam belge, çift tıkla açılır.
+
+Kullanıcı isteği (2026-08-25): dosyayla birlikte **DURUM ÖZETİ** de verilir —
+*"hem takibini yaparız"*:
+
+| Ne | Nereden |
+|----|---------|
+| Son gönderiden bu yana hangi PR'lar girdi | `git log --oneline <öncekiHEAD>..HEAD --merges` |
+| Açık PR var mı | `list_pull_requests state=open` |
+| Merge edilmemiş dal var mı | `git branch -r --no-merged origin/main` |
+| Test + build durumu, dosya boyutu | `npm test`, build çıktısı |
+
+**DEĞİŞMEMİŞSE DOSYA GÖNDERİLMEZ.** `main` bir önceki gönderimdeki commit'teyse
+27 MB'ı ikinci kez indirtmenin karşılığı yok: özet verilir, "aynı dosya" denir.
+
+**Boyut takip edilir ve BÜYÜME SEBEBİYLE BİRLİKTE yazılır.** Dosya 8,6 → 27,7 MB
+yolunu izledi ve sıçramaların hepsi gömülen WASM'lardan: OCCT STEP okuyucusu
+(+3,96 MB), TetGen (+0,24 MB), boolean'lı OCCT çekirdeği (12,6 → 26,8 MB).
+Sebepsiz bir büyüme bir regresyon işaretidir; sayıyı çıplak basmak onu gizler.
+
 ## Teslim Akışı — PR + merge OTOMATİK
 
 Kullanıcı talimatı (2026-07-31): **her güncellemeden sonra PR aç ve merge et.**
