@@ -1179,7 +1179,25 @@ var VE_FEAD_EXAMPLES = {
     belt:  { profile:'PK', brand:'GATES', beltType:'8PK1715HD', ribs:8,
              // Bkz. yukarıdaki "EFEKTİF BOY" notu: rapor başlığı 1715 diyor,
              // kendi REBL sütunu 1714.6 istiyor.
-             effLength:1714.6, tolerance:6, wearPct:0.006 },
+             effLength:1714.6, tolerance:6, wearPct:0.006,
+             // KAYIŞ KÜTLESİ AÇIKÇA GEÇİLİR — çekirdeğin KENDİ uyarısı bunu
+             // istiyor (fead-core.js, BELT_DB): Gates PK'nın KATALOG kütlesi
+             // 0.0144 kg/m/kaburga, ama hem kesit tahmini hem AG00686 frekans
+             // haritasından geri-hesap ~0.0196 veriyor ve çekirdek "acikca
+             // gecmek onerilir" diye yazıyor.
+             //
+             // Alan boş bırakılınca katalog değeri kullanılıyordu ve ÖLÇÜLDÜ:
+             // açıklık frekansları %16,7 YÜKSEK çıkıyor (2750 d/d'de
+             // 299,0 · 312,9 · 237,6 · 131,3 · 155,8 · 214,3 Hz yerine
+             // 250,1 · 261,7 · 196,3 · 108,5 · 127,1 · 174,7). Hata EMNİYETLİ
+             // TARAFTA DEĞİL: kütle arttıkça f₁ düşer, yani katalog değeri
+             // rezonans riskini olduğundan KÜÇÜK gösteriyor — ateşleme
+             // frekansıyla kesişen hücre 1/72 yerine 3/72, en düşük
+             // f₁/ateşleme oranı 0,955 yerine 0,789.
+             //
+             // Yalnız FREKANS tablosunu etkiliyor: B10 (1403,032) ve tasarım
+             // gerginliği (544,0497) her iki değerde de BİREBİR aynı.
+             massPerRibKgM:0.0196 },
     solver:{ ratioMode:'direct', driveRatio:1,
              cylinders:6, serviceFact:1.3, crankInertia:0.70,
              // "Peak Tension & Hubload" sayfasındaki Accel. RPM/s sütunu.

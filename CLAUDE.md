@@ -1366,6 +1366,14 @@ Hayalet ETİKETLERİ kapalı (`ghostLabels:false`): 395 px'lik şemada altı ad 
 üste biniyordu (ölçüldü: "Serbest" ↔ "Değişt." **104 px²**) ve konumların adı
 zaten sayfa 3'te. Tedarikçi çıktısı da zarfı etiketsiz çiziyor.
 
+**İKİ GRAFİK YAN YANA** (kullanıcı isteği): gerginlik eğrisi ve take-up
+eğrisi AYNI yatay ekseni (gergi kol açısı) paylaşıyor; yan yana konunca aynı
+x'te iki büyüklük birlikte okunuyor — solda gerginlik yükselirken sağda
+gereken kayış boyu düşüyor. Alt alta bu eşleme gözle kurulmuyordu. Kutu
+ölçüsü sütundan BÜYÜK seçilir (390 birim ↔ 345 px sütun) ki ölçek 0,885
+olsun ve puntolar 9,3–10,2 px'e insin; sütun genişliği seçilseydi ölçek 1
+kalır ve grafik yazıları gövdeden büyük görünürdü.
+
 **AMA "BİR KEZ" DEMEK "BÜYÜK" DEMEK DEĞİL** — üçüncü bildirim bunu söyledi:
 *"Şekiller çok büyük. Gerçekten bu kadar büyük olmasına gerek yok."*
 **ÖLÇÜLDÜ ve haklıydı:**
@@ -1492,6 +1500,106 @@ kullanıldığı her yüzeyde karşılığı aynı sayfada basılmak zorunda.
 > çağırıyordu, GRAFİĞİN onu kullandığını ölçmüyordu. İkinci kapı basılan bölme
 > ETİKETLERİNE bakıyor (eşit aralık + adım 1/2/2,5/5 × 10ⁿ) — Şekil 1'deki
 > *"yay sayısına bakan test"* dersinin aynısı.
+
+##### DENETİM TURU — üç sessiz SAYI hatası (2026-08-26)
+
+Kullanıcı sordu: *"Ayrıca tepe gerginliği ve hubload için kalibre değil
+yazmışsın. Neden kalibre değil? Programımız bunu hesaplamıyor mu?"* — ve
+ayrıca *"hesapların rapora tam olarak aktarıldığından da emin olalım"*.
+On üç ajanlık bir denetim koştu; Gates'ten aktarılan **sayılarda yanlış
+YOK** (yerleşim 34 değer 0,00 mm · span+sarım 12 değer 0,039 · ortalama
+gerginlik/hubload 144 değer ≤1 N · kayma matrisi 72 değer 0 uyuşmazlık),
+ama **hüküm ve metin katmanında üç gerçek hata** çıktı.
+
+###### 1 · KAYIŞ BİRİM KÜTLESİ — çekirdeğin KENDİ uyarısı yok sayılıyordu
+
+`fead-core.js` `BELT_DB` Gates PK için **katalog** kütlesini taşıyor
+(0,0144 kg/m/kaburga) ama kendi yorumunda **reddediyor**: hem kesit tahmini
+hem AG00686 frekans haritasından geri-hesap **~0,0196** veriyor ve
+*"massPerRibKgM'i acikca gecmek onerilir"* diye yazıyor. `AG00976_GATES_2025`
+örneği alanı **yazmıyordu** → katalog değeri kullanılıyordu.
+
+**ÖLÇÜLDÜ** (2750 d/d, altı açıklık):
+
+| m′ | f₁ [Hz] | ateşlemeyle kesişen hücre | en düşük f₁/ateşleme |
+|---|---|---:|---:|
+| 0,0144 (katalog) | 299,0 · 312,9 · 237,6 · **131,3** · 155,8 · 214,3 | **1 / 72** | 0,955 |
+| **0,0196** (geri-hesap) | 250,1 · 261,7 · 196,3 · **108,5** · 127,1 · 174,7 | **3 / 72** | **0,789** |
+
+**HATA EMNİYETLİ TARAFTA DEĞİL:** `f₁ ∝ 1/√m′`, yani hafif kayış frekansı
+YÜKSEK gösterir ve **rezonans riskini küçültür**. Yalnız frekans tablosunu
+etkiliyor: B10 (1403,032) ve tasarım gerginliği (544,0497) iki değerde de
+birebir aynı.
+
+###### 2 · REZONANS HÜKMÜ YOKTU — üstelik sayfanın KENDİ verisinde kesişme var
+
+Belge hem açıklık frekansını hem ateşleme frekansını basıyor ama
+**karşılaştırmıyordu**. Basılan tek titreşim hükmü `Çırpınma = yok` idi ve
+okuyucu onu *"titreşim sorunu yok"* diye okuyor — oysa çırpınma bambaşka bir
+mod (kayış hızı ↔ enine dalga hızı), rezonansla ilgisi yok.
+
+Artık hüküm basılıyor: *"en düşük f₁ / ateşleme = 0,789 (AVA2 → ALT @ 2750
+d/d); ateşleme frekansının altına düşen hücre 3 / 72 ✗"*. **Frekans haritası
+ile açıklık tablosu aynı sayfaya alındı** — harita bu tablonun çizimi, tablo
+haritanın sayısı; ayrı sayfalarda okuyucu eğriyi sayıya bağlayamıyordu.
+
+Kapsam kutusundaki *"rezonans haritası yer ALMAZ"* satırı da düzeltildi:
+sayfa 1 o haritayı **çiziyor**. Yer almayan şey açıklık titreşimi değil, çok
+serbestlik dereceli **burulma** modu.
+
+###### 3 · MANŞETTE HAM B10 — modelin kendi düzeltmesi gizliydi
+
+Sayfa 1'in kartı ham **1403 saat** basıyordu (Gates 2670'e −%47), modelin
+ampirik düzeltmeli kestirimi **2551** (−%4,5) yalnız sayfa 5'te duruyordu.
+Kart artık düzeltilmiş değeri manşete, hamı alt satıra alıyor — sayı
+gizlenmiyor, **sıralaması** düzeliyor.
+
+Ayrıca: *"yorulma payları çap penceresinden bağımsız olarak geçerlidir"*
+iddiası **geçersizdi** — pencere dağılımın kendisinden kalibre edilmiş.
+Doğrusu ölçüldü: **SIRALAMA** üs seçiminden bağımsız (m = 5,6 ↔ 4,05 ↔ 3,4
+için de ALT baskın), ama mutlak pay değil (%86,9 → %73,4).
+
+###### "KALİBRE DEĞİL" = HESAPLANMIYOR DEĞİL, DOĞRULANMIYOR
+
+Kullanıcının sorusunun cevabı: **tepe yük hesaplanıyor.** Çekirdeğin
+`peakEstimate`'i yarı-statik gerilme zinciri + kasnak başına atalet terimi
+kuruyor; köprü katmanı aksesuar güçlerinin %100/%10 kombinasyonları ile
+± ivmeyi tarayıp kasnak başına en büyüğü alıyor.
+
+Eksik olan **doğrulama**: 17 rapordan çıkarılmış 2095 değerlik kümede
+**tek bir tepe değeri yok** (ölçüldü — fixture'da `peak`/`accel` alanı hiç
+geçmiyor). Tepe tablosu olan tek rapora karşı sapma gerginlikte
+**−%10,5 … +%22,8** (RMS %11,8), hubloadda **−%10,3 … +%17,5** (RMS %9,7).
+
+**AMA ASIL FARK BÜYÜKLÜKTE DEĞİL ŞEKİLDE** — damganın gerçek gerekçesi bu.
+Tepe/ortalama oranı:
+
+| | MFSim | Gates |
+|---|---:|---:|
+| FAN | 1,065 | 1,148 |
+| AVA1 | 1,061 | 1,146 |
+| KK | 1,034 | 1,151 |
+| AVA2 | 1,029 | 1,149 |
+| **ALT** | **1,230** | **1,002** |
+| TEN | 1,000 | 1,000 |
+
+Tedarikçi yük taşıyan dört kasnağın dördüne de neredeyse **aynı payı**
+(≈1,15) veriyor ve alternatöre hiç vermiyor. Bu model tersini yapıyor:
+atalet terimi kasnak BAŞINA (`J·α·oran/r`) olduğu için ivmenin etkisi küçük
+ve hızlı dönen alternatörde **toplanıyor** (+%23), büyükler %3–7'de kalıyor.
+İki model aynı sayıya farklı yoldan yaklaşmıyor; yükü **başka yere
+dağıtıyorlar**. Damganın kalkması için birden çok raporun tepe tablosu
+gerekir — tek raporla sabit uydurmak o raporu ezberlemek olurdu.
+
+Gerekçe artık tablonun altında paragraf değil, **kapsam bölümünde künye**
+(model sınırları: tepe yük · B10 çap penceresi · kayış kütlesi). Tablonun
+altında tek satır kalıyor: *"Kalibre değil, HESAPLANMIYOR demek değildir."*
+
+Kapı **sekiz mutasyonla** ölçüldü, sekizi de kırmızı: rezonans hükmünü
+kaldırma, kayış kütlesini katalog değerine döndürme, kapsam çelişkisini geri
+getirme, manşete yine ham B10 yazma, model sınırları künyesini silme,
+frekans göstergesini içeri alma, kayma grafiğinde yük ayrımını kaldırma,
+gergi kod kısayolunu silme.
 
 ##### Uydurulmayan şeyler — raporun kendi §9'unda yazılı
 

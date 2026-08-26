@@ -180,12 +180,18 @@ describe('tepe yük tablosu', () => {
     expect(a.rows[0].tensionN).toBeGreaterThan(b.rows[0].tensionN + 100);
   });
 
-  // Tepe yük GENEL BAKIŞ sayfasında (1) — Gates de 1. sayfasında basıyor.
+  // TABLO DAYANIM SAYFASINDA, GEREKÇESİ KAPSAM BÖLÜMÜNDE (s3).
+  // "Kalibre değil" HESAPLANMIYOR demek değil — belge bunu açıkça söylemeli,
+  // yoksa okuyucu tablonun uydurma olduğunu sanır.
   test('kalibre olmadığı ve sapma bandı BELGEDE yazılı', () => {
-    const s1 = SU._fsrSheet1(R, NODE);
-    expect(s1).toMatch(/kalibre değil/i);
-    expect(s1).toContain(SU.VE_FSR_PEAK_BAND);
-    expect(s1).toMatch(/gergi kolu dinamiğini içermez/);
+    const s5 = SU._fsrSheet5(R, NODE);
+    expect(s5).toMatch(/kalibre değil/i);
+    expect(s5).toMatch(/HESAPLANMIYOR demek değildir/);
+    const s3 = SU._fsrSheet3(R, NODE);
+    expect(s3).toContain(SU.VE_FSR_PEAK_BAND);
+    // Gerekçe SAYIYLA: dağılım farkı da yazılı
+    expect(s3).toContain(SU.VE_FSR_PEAK_SHAPE.mfsimAlt);
+    expect(s3).toContain(SU.VE_FSR_PEAK_SHAPE.gatesYuklu);
   });
 });
 
@@ -279,13 +285,35 @@ describe('tedarikçi sayfa düzeni', () => {
   // beş kritik sayı ve belgenin KAPSAMI. Kapsam bloğu bir süs değil — bir özet
   // raporun en pahalı sessiz hatası, İÇERMEDİĞİ bir kontrolün yapıldığı
   // izlenimini bırakmaktır.
-  test('sayfa 1: şema · künyeler · kritik sayılar · kapsam', () => {
+  test('sayfa 1: şema · künyeler · kritik sayılar · frekans', () => {
     const s1 = SU._fsrSheet1(R, NODE);
-    ['Kayış', 'Otomatik gergi', 'Belgenin Kapsamı',
+    ['Kayış', 'Otomatik gergi', 'Doğal Frekans Haritası', 'Serbest Açıklık Titreşimi',
      'Tasarım gerginliği', 'En düşük kayma emniyeti', 'B10 kayış ömrü',
      'Kapalı çevrim', 'Çalışma çevrimi'].forEach((b) => expect(s1).toContain(b));
     expect((s1.match(/class="card[ "]/g) || []).length).toBe(5);
-    expect(s1).toMatch(/Bu belgede yer ALMAZ/);
+  });
+
+  // FREKANS HARİTASI İLE AÇIKLIK TABLOSU AYNI SAYFADA: harita bu tablonun
+  // çizimi, tablo haritanın sayısı. Ayrı sayfalara düşünce okuyucu eğriyi
+  // sayıya bağlayamıyordu.
+  test('rezonans hükmü basılıyor ve haritayla aynı sayfada', () => {
+    const s1 = SU._fsrSheet1(R, NODE);
+    expect(s1).toMatch(/Rezonans hükmü/);
+    expect(s1).toMatch(/f₁ \/ ateşleme/);
+    expect(s1.indexOf('Doğal Frekans Haritası')).toBeLessThan(s1.indexOf('Serbest Açıklık Titreşimi'));
+    // Çırpınma AYRI bir mod — "yok" olması rezonans güvencesi değil
+    expect(s1).toMatch(/Çırpınma ayrı bir moddur/);
+  });
+
+  // Kapsam bloğu belge DÜZEYİNDE bir ifade; sayfa 1 dolduğu için sayfa 3'te.
+  test('kapsam bloğu ve model sınırları sayfa 3’te', () => {
+    const s3 = SU._fsrSheet3(R, NODE);
+    expect(s3).toContain('Belgenin Kapsamı');
+    expect(s3).toMatch(/Bu belgede yer ALMAZ/);
+    expect(s3).toMatch(/Modelin ilan ettiği sınırlar/);
+    // Damganın GEREKÇESİ burada, sayısıyla
+    expect(s3).toContain(SU.VE_FSR_PEAK_BAND);
+    expect(s3).toMatch(/2095 değerlik doğrulama kümesinde tek bir tepe/);
   });
 });
 
@@ -624,5 +652,63 @@ describe('şekiller — ortak çizici kapıları', () => {
     expect(M.veFeadPulleyCodes({ pulleys: [{ name: 'Otomatik Gergi (E9843)', tensioner: 1 }] })[0]).toBe('TEN');
     // ve özet rapor ONU kullanıyor (ikinci kopya yok)
     expect(SU._fsrCodes(R.build.sys)).toEqual(kod);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DOĞRULUK KAPILARI — üçü de "belge üretiliyor, hata yok, sayı yanlış" sınıfı.
+describe('doğruluk — sessiz sayı hataları', () => {
+  // ── KAYIŞ BİRİM KÜTLESİ ────────────────────────────────────────────────
+  // Çekirdek BELT_DB'de Gates PK için KATALOG kütlesini (0,0144 kg/m/kaburga)
+  // taşıyor ama kendi yorumunda reddediyor: hem kesit tahmini hem AG00686
+  // frekans haritasından geri-hesap ~0,0196 veriyor ve "acikca gecmek
+  // onerilir" diyor. Örnek alanı boş bırakınca katalog değeri kullanılıyordu.
+  // Hata EMNİYETLİ TARAFTA DEĞİL: f₁ ∝ 1/√m′, yani hafif kayış frekansı
+  // YÜKSEK gösterir ve rezonans riskini küçültür.
+  test('örnek, çekirdeğin geri-hesapladığı kütleyi AÇIKÇA geçiyor', () => {
+    const b = R.build.sys.belt;
+    expect(b.massPerRibKgM).toBeCloseTo(0.0196, 6);
+    // Çekirdeğin katalog değeri hâlâ 0,0144 — örnek onu EZMİYOR, geçiyor
+    const db = F.BELT_DB || (F.constants && F.constants.BELT_DB);
+    if (db && db.PK && db.PK.GATES) expect(db.PK.GATES.massPerRibKgM).toBeCloseTo(0.0144, 6);
+  });
+
+  test('KATALOG kütlesi frekansları ölçülebilir biçimde KAYDIRIYOR', () => {
+    const d = R.analysis.duty[R.analysis.duty.length - 1];
+    const f1 = d.frequencies.map((s) => s.fHz[0]);
+    // 0,0196 ile ölçülen değerler
+    [250.1, 261.7, 196.3, 108.5, 127.1, 174.7].forEach((g, i) =>
+      expect(Math.abs(f1[i] - g)).toBeLessThan(0.2));
+    // Katalog değeri √(196/144) = 1,167 kat YÜKSEK verirdi — yani bu kapı
+    // yalnız "bir sayı" değil, YÖNÜ de tutuyor.
+    expect(Math.sqrt(0.0196 / 0.0144)).toBeCloseTo(1.167, 2);
+  });
+
+  // ── REZONANS: KAPSAM KUTUSU BELGEYLE ÇELİŞEMEZ ─────────────────────────
+  // Kapsam kutusu "rezonans haritası yer ALMAZ" diyordu, oysa sayfa 1 doğal
+  // frekans haritasını ÇİZİYOR ve sayfa 1 bütün girdilerini basıyor.
+  test('kapsam kutusu, belgenin ÇİZDİĞİ şeyi "yok" diye yazmıyor', () => {
+    const s3 = SU._fsrSheet3(R, NODE);
+    const i = s3.indexOf('Bu belgede yer ALMAZ');
+    const yok = s3.slice(i, s3.indexOf('</ul>', i));
+    expect(yok).not.toMatch(/rezonans haritası/i);
+    expect(yok).toMatch(/burulma/i);                       // yer almayan GERÇEK şey
+    // ve haritanın kendisi sayfa 1'de duruyor
+    expect(SU._fsrSheet1(R, NODE)).toContain('data-ve="span-freq"');
+  });
+
+  // ── MANŞETTE MODELİN EN İYİ KESTİRİMİ ──────────────────────────────────
+  // Ham B10 çap penceresi dışında sistematik 0,55×; manşette ham değeri
+  // basmak, okuyucuya modelin kendi düzeltmesini göstermeden sayı vermekti.
+  test('B10 kartı düzeltilmiş değeri gösteriyor, hamı alt satırda', () => {
+    expect(R.life.inValidRange).toBe(false);              // kapı ısırıyor
+    const s1 = SU._fsrSheet1(R, NODE);
+    const i = s1.indexOf('B10 kayış ömrü');
+    const kart = s1.slice(i, i + 400);
+    const duz = Math.round(R.life.hoursB10Corrected);
+    const ham = Math.round(R.life.hoursB10);
+    expect(duz).not.toBe(ham);                            // ikisi gerçekten ayrı
+    expect(kart).toContain(String(duz));                  // manşet: düzeltilmiş
+    expect(kart).toContain('ham ' + ham);                 // alt satır: ham
   });
 });

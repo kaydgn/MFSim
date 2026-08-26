@@ -2441,7 +2441,7 @@ function _frSlipFigure(R, esik){
   var maxV = Math.max.apply(null, mins.concat([Number.isFinite(esik) ? esik * 1.4 : 2]));
   // Boy çubuk SAYISINDAN türüyor (sabit bir H anlamsız olurdu); RAW kipte
   // satır aralığı daralıyor — özet raporda şekil küçük basılıyor.
-  var W = _FR_W, satir = (_FR_RAW ? 22 : 30), H = 34 + isim.length * satir + 34;
+  var W = _FR_W, satir = (_FR_RAW ? 19 : 30), H = 26 + isim.length * satir + 30;
   // SAĞ PAY DEĞER ETİKETİNİ SIĞDIRMAK ZORUNDA. Sabit 30 px, "14,95" gibi beş
   // karakterlik bir etiketi kesiyordu — ÖLÇÜLDÜ (özet rapor, sayfa 5):
   // yazı viewBox'ı 10 px aşıyor ve kırpılıyordu. Pay artık en uzun etiketin
@@ -2452,6 +2452,12 @@ function _frSlipFigure(R, esik){
   var enGenis = 0;
   mins.forEach(function(v){ enGenis = Math.max(enGenis, _frTxtW(_frFs(v, 2), 11.5)); });
   var R2 = Math.max(30, Math.ceil(enGenis) + 10);
+  // ALT ŞERİT KUTUYA SIĞMAK ZORUNDA. Uzun hâli 780 birimlik kutuda sığıyor,
+  // 390 birimlik (yarım sütun) kutuda viewBox'ı 209 px aşıyordu — ÖLÇÜLDÜ.
+  // Sığmayan ikinci cümle DÜŞER; aynı bilgi bloğun kendi notunda zaten var.
+  var uzunAlt = 'çubuk boyu = SF · SF = 1 kayma eşiği · soluk çubuk = yük taşımayan kasnak (kapasite)';
+  var kisaAlt = 'çubuk boyu = SF · SF = 1 kayma eşiği';
+  var altYazi = (L + _frTxtW(uzunAlt, 11) <= W - 4) ? uzunAlt : kisaAlt;
   var g = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Kayma emniyet faktörü">';
   isim.forEach(function(n, i){
     var y = 24 + i * satir;
@@ -2474,7 +2480,7 @@ function _frSlipFigure(R, esik){
     g += '<text x="' + (X + 4).toFixed(1) + '" y="12" font-size="11" fill="#a8321f">servis faktörü '
        + _frF(esik, 2) + '</text>';
   }
-  g += '<text x="' + L + '" y="' + (H - 12) + '" font-size="11" fill="#5a6270">çubuk boyu = SF · SF = 1 kayma eşiği · soluk çubuk = yük taşımayan kasnak (kapasite)</text>';
+  g += '<text x="' + L + '" y="' + (H - 12) + '" font-size="11" fill="#5a6270">' + _frEsc(altYazi) + '</text>';
   return _frFigWrap(g, 'Kasnak başına EN DÜŞÜK kayma emniyet faktörü (tüm devir noktaları üzerinden). '
     + 'Kesikli kırmızı çizgi istenen servis faktörüdür; altında kalan çubuk kırmızı basılır.');
 }
