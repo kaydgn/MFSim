@@ -271,35 +271,38 @@ function _fsrSheet1(R, node){
 
   var h = _fsrH1('Genel Bakış', 'Sistem künyesi, yerleşim ve kritik sonuçlar');
 
-  // ŞEMA TAM GENİŞLİKTE. Sistemin yerleşimi YATAY bir kümedir (BMC'de
-  // ≈520 × 300 mm); dar bir sütuna konunca ölçek genişlikten sınırlanıyor ve
-  // altta/üstte ölü boşluk kalıyordu (ÖLÇÜLDÜ: 390×619'luk kutuda çizim
-  // yüksekliğin ancak %55'ini dolduruyordu). Tam genişlik hem o boşluğu
-  // kaldırıyor hem de belgenin TEK şemasına açılış sayfasında hak ettiği yeri
-  // veriyor — kullanıcı iki kez "her yere bu şekli koymuşsun" dedi; cevap
-  // şemayı küçültmek değil, BİR KEZ ve DOĞRU DÜZGÜN çizmek.
+  // ŞEMANIN ÖLÇÜSÜ — kullanıcı bildirimi (2026-08-26): *"Şekiller çok büyük.
+  // Gerçekten bu kadar büyük olmasına gerek yok."* ÖLÇÜLDÜ ve haklıydı: tam
+  // genişlikteki şema 521 px, yani A4 içerik alanının (972 px) **%54'ü**;
+  // sayfa 3'ün grafiği 623 px ile **%64'ü**. Teknik bir raporda şekil sayfanın
+  // yarısını yemez — anlattığı şey bir tablo satırı kadar bilgi taşıyorsa
+  // özellikle yemez.
   //
-  // W = kabın genişliği: çizicinin kabuğu `max-width:<W>px` taşıyor, yani
-  // istenen kutu kaptan genişse SVG küçültülür ve kullanıcı birimindeki sabit
-  // puntolar (ad 9, sarım 8) gövde yazısının altına iner.
-  h += _fsrLayout(R, 703, 520);
-
-  h += '<div class="cols">';
-  h += '<div class="col">' + _fsrKV('Kayış', [
+  // Küçültme ÖLÇEĞİ BOZMUYOR: çizicinin kabuğu `max-width:<W>px` taşıdığı ve
+  // W kabın genişliğinden küçük seçildiği için oran 1 kalıyor, yani kullanıcı
+  // birimindeki puntolar (ad 9) ekranda yine 9 px. Küçülen çizim, yazı DEĞİL.
+  //
+  // Şema SÜTUNA giriyor: kümenin doğal en-boy oranı ≈1,64 (yatay). Tam
+  // genişlikte yükseklik zorunlu olarak 430 px'e çıkıyordu; 395 px'lik sütunda
+  // aynı oran 242 px veriyor ve boşalan yeri künyeler dolduruyor.
+  h += '<div class="cols c58">';
+  h += '<div class="col">' + _fsrLayout(R, 395, 242) + '</div>';
+  h += '<div class="col">';
+  h += _fsrKV('Kayış', [
     ['Profil / marka', _frEsc((b.brand ? b.brand + ' ' : '') + (b.ribs || '') + (b.profile || ''))],
     ['Kaburga sayısı', _frF(b.ribs, 0)],
     ['Efektif boy (ISO 9981)', _frFs(b.effLength, 1) + ' mm'],
     ['Boy toleransı', b.tolerance ? '± ' + _frFs(b.tolerance, 2) + ' mm' : '—'],
     ['Uzama + aşınma payı', _frPct(_frNum(b.wearPct) * 100, 2)]
-  ]) + '</div>';
-  h += '<div class="col">' + _fsrKV('Otomatik gergi', [
+  ]);
+  h += _fsrKV('Otomatik gergi', [
     ['Kol boyu', _frFs(t.armLength, 1) + ' mm'],
     ['Yay ön yükü / oranı', _frFs(t.preloadNm, 2) + ' Nm · ' + _frFs(t.rateNmPerDeg, 3) + ' Nm/°'],
     ['Pivot {X, Y}', _frFs(t.pivot && t.pivot[0], 1) + ' , ' + _frFs(t.pivot && t.pivot[1], 1)],
     ['Çalışma kol açısı', _frFs(A.meanRelDeg, 2) + '° (göreli)'],
     ['Take-up oranı', _frFs(A.tensioner && A.tensioner.takeupMmPerDeg, 3) + ' mm/°']
-  ]) + '</div>';
-  h += '</div>';
+  ]);
+  h += '</div></div>';
 
   // — kritik sonuçlar: okuyucunun ilk bakışta görmesi gereken beş sayı
   var sig = _fsrSignedWrap(R);
@@ -486,7 +489,7 @@ function _fsrSheet3(R, node){
   // TEK GRAFİK. Zarfın anlattığı şeyin görsel karşılığı bu eğri; diğer
   // grafikler aynı bilgiyi ikinci kez anlatıyordu.
   h += _fsrBlk('Gerginliğin Kol Açısına Bağımlılığı',
-    _fsrFig(typeof _frTensionFigure === 'function' ? _frTensionFigure : null, R, 780, 624),
+    _fsrFig(typeof _frTensionFigure === 'function' ? _frTensionFigure : null, R, 780, 390),
     'Kalın eğri hesaplanan gerginlik, <b>soluk kesikli iki eğri onun ±%10 bandıdır</b> — '
     + 'yay imalat saçılması, sürtünme ve montaj payı için alışılmış tolerans zarfı. '
     + 'Kesikli dikey çizgiler yukarıdaki altı kol konumunu işaretler. Eğri, kol açısı çözüm '

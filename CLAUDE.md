@@ -1333,11 +1333,31 @@ baskıyı kaldırdı, punto serbest kaldı. Tedarikçi çıktısının FAN/IDR/A
 kullanmasının sebebi de bu. **Kısaltma ancak karşılığı AYNI SAYFADA duruyorsa
 okunur** → kodu kullanan her sayfa `_fsrCodeLegend` basıyor.
 
-**DİYAGRAM İKİ KEZ DEĞİL, BİR KEZ VE BÜYÜK.** Kullanıcı aynı itirazı iki kez
-yaptı; cevap şemayı küçültmek değil. Belgede **tek yerleşim şeması** (sayfa 1,
-tam genişlik 703×520) ve **tek grafik** (sayfa 3, 780×624) var. Doğal frekans
-haritası, take-up eğrisi, kayma çubuk grafiği ve yorulma çubuk grafiği
-KALKTI — dördü de aynı sayfadaki bir tablo satırını ikinci kez anlatıyordu.
+**DİYAGRAM İKİ KEZ DEĞİL, BİR KEZ.** Kullanıcı aynı itirazı iki kez yaptı.
+Belgede **tek yerleşim şeması** (sayfa 1) ve **tek grafik** (sayfa 3) var.
+Doğal frekans haritası, take-up eğrisi, kayma çubuk grafiği ve yorulma çubuk
+grafiği KALKTI — dördü de aynı sayfadaki bir tablo satırını ikinci kez
+anlatıyordu.
+
+**AMA "BİR KEZ" DEMEK "BÜYÜK" DEMEK DEĞİL** — üçüncü bildirim bunu söyledi:
+*"Şekiller çok büyük. Gerçekten bu kadar büyük olmasına gerek yok."*
+**ÖLÇÜLDÜ ve haklıydı:**
+
+| | önce | sonra | A4 içerik alanının (972 px) |
+|---|---:|---:|---:|
+| Sayfa 1 · yerleşim şeması | 521 px | **243 px** | %54 → **%25** |
+| Sayfa 3 · gerginlik grafiği | 623 px | **412 px** | %64 → **%42** |
+
+**KÜÇÜLEN ÇİZİM, YAZI DEĞİL.** Çizicinin kabuğu `max-width:<W>px` taşıyor:
+W kabın genişliğinden küçük seçildiği sürece ölçek 1 kalır ve kullanıcı
+birimindeki puntolar (kasnak adı 9) ekranda yine 9 px basılır. Aynı kuralın
+TERSİ yönü daha önce ısırmıştı — 460 birimlik kutuyu 397 px'lik sütuna
+sığdırmak ölçeği 0,863 yapıp adları 6,0 px'e indiriyordu.
+
+Şema **sütuna** giriyor: kümenin doğal en-boy oranı ≈1,64 (yatay), yani tam
+genişlikte yükseklik zorunlu olarak 430 px'e çıkıyor. 395 px'lik sütunda aynı
+oran **242 px** veriyor ve boşalan yeri künyeler dolduruyor — yani küçültme
+yer kaybı değil, yer KAZANCI (sayfa 1'de 455 px, sayfa 3'te 264 px).
 
 ##### Sekiz kozmetik karar — her biri ölçülmüş bir kusurun karşılığı
 
