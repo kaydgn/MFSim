@@ -2186,8 +2186,48 @@ function veFeadAnalyze(build, opts){
 }
 
 // Jest/Node köprüsü (tarayıcıda no-op)
+
+// ─── KASNAK KISA KODU ───────────────────────────────────────────────────────
+// Matris sütun başlığı ya da grafik göstergesi kasnak ADIYSA yerleşim taşıyor:
+// "Otomatik Gergi (E9843)" tek başına 22 karakter, altı kasnaklı bir tabloda
+// satır A4'e sığmıyor ve sığdırmanın tek yolu puntoyu kırmak oluyor (ÖLÇÜLDÜ:
+// özet raporda gövde 8,2 px'e inmişti). Doğal frekans haritasının göstergesi
+// aynı sebeple çizim alanının %42'sini yiyordu. Tedarikçi çıktısının
+// FAN/IDR/A_C/ALT/TEN kullanma sebebi de bu.
+//
+// KOD BİR KISALTMA DEĞİL, BİR KİMLİK: kullanıldığı her yüzeyde karşılığı
+// (kod → ad künyesi) AYNI SAYFADA basılmak zorunda. Bu yüzden köprü
+// katmanında — hem özet rapor hem ayrıntılı raporun grafikleri aynı kodu
+// kullanıyor; ikinci bir kopya `source-hygiene` kapısına takılır ve iki
+// yüzey sessizce ayrışırdı.
+function veFeadPulleyCodes(sys){
+
+  var ps = (sys && sys.pulleys) || [];
+  function ham(p, i){
+    var ad = String(p.name || '');
+    // Parantez içi YALNIZ harfse ve 2-4 karakterse bir KODDUR (FAN, ALT, A_C).
+    // "155 A" bir ölçü, "E9843" bir parça numarası — ikisi de kod değil.
+    var m = ad.match(/\(([A-Za-z_\/]{2,4})\)/);
+    if(m) return m[1].toUpperCase().replace(/[^A-Z_\/]/g, '');
+    if(p.tensioner) return 'TEN';
+    if(p.crank) return 'CRK';
+    var sade = ad.replace(/\([^)]*\)/g, ' ').trim();
+    var son  = (sade.match(/(\d+)\s*$/) || [])[1] || '';
+    var kel  = sade.replace(/\d+\s*$/, '').split(/\s+/).filter(Boolean);
+    var k = kel.length >= 2 ? kel.map(function(w){ return w[0]; }).join('') : (kel[0] || 'P').slice(0, 3);
+    k = k.toLocaleUpperCase('tr').replace(/[^A-ZÇĞİÖŞÜ0-9]/g, '').slice(0, 3);
+    return (k || ('P' + (i + 1))) + son;
+  }
+  var out = ps.map(ham), gor = {};
+  return out.map(function(k, i){
+    if(!gor[k]){ gor[k] = 1; return k; }
+    gor[k]++; return k + gor[k];
+  });
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    veFeadPulleyCodes: veFeadPulleyCodes,
     _feadNum: _feadNum, _feadDefOf: _feadDefOf, _feadNodeName: _feadNodeName,
     _feadIsPulley: _feadIsPulley,
     VE_FEAD_DEFAULT_DIA: VE_FEAD_DEFAULT_DIA, VE_FEAD_ERROR_MAP: VE_FEAD_ERROR_MAP,

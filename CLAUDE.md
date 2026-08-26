@@ -1339,6 +1339,33 @@ Doğal frekans haritası, take-up eğrisi, kayma çubuk grafiği ve yorulma çub
 grafiği KALKTI — dördü de aynı sayfadaki bir tablo satırını ikinci kez
 anlatıyordu.
 
+**AMA "BİR KEZ" DEMEK "HİÇ" DEMEK DE DEĞİL — ve dördü fazla silinmişti.**
+Üçüncü bildirim şuydu: *"Rapordaki tüm şekiller yok ama? Gates raporundaki tüm
+şekilleri, diyagramları çıkar bakalım."* Çıkarıldı ve **ölçüm kullanıcıyı
+doğruladı**: tedarikçi çıktısının beş şekil türünden **üçü** belgede yoktu.
+
+| # | Gates şekli | Gates sayfası | Kozmetik turundan sonra | Bugün |
+|---|-------------|---------------|-------------------------|-------|
+| 1 | Yerleşim şeması + pusula | 1 · 2 · 5 | ✓ s1 | ✓ s1 |
+| 2 | Belt Tension Control | 1 · 2 | ✓ s3 | ✓ s3 |
+| 3 | **Natural Frequency Map** | 1 | ✗ | **✓ s1** |
+| 4 | **Belt Take-up** | 3 | ✗ | **✓ s3** |
+| 5 | **Belt Slip Safety Factor** | 4 | ✗ | **✓ s5** |
+| 6 | **Gergi kolu konum zarfı** | 5 | ✗ | **✓ s1** (şemanın içinde) |
+
+Üçünün de üreticisi ayrıntılı raporda **zaten vardı** (`_frFreqFigure`,
+`_frTakeupChartRaw`, `_frSlipFigure`) — eksik olan hesap değil YERLEŞİMDİ.
+"Aynı sayfadaki bir tablo satırını tekrar ediyor" gerekçesi yanlıştı: take-up
+eğrisinin **çalışma noktasındaki teğetinin eğimi take-up oranının ta kendisi**
+(0,7082 ↔ tablodaki 0,708), yani grafik sayıyı tekrar etmiyor, **kanıtlıyor**.
+
+**Kol zarfı BEDAVA:** `veFeadLayoutSVG`'ye `posMode:'all'` geçmek yeterli —
+gergi kasnağı altı konumda üst üste çiziliyor, her konum için ayrı kayış yolu
+soluk çiziliyor. 0 px ek yer, ve sayfa 3'ün zarf tablosunun görsel karşılığı.
+Hayalet ETİKETLERİ kapalı (`ghostLabels:false`): 395 px'lik şemada altı ad üst
+üste biniyordu (ölçüldü: "Serbest" ↔ "Değişt." **104 px²**) ve konumların adı
+zaten sayfa 3'te. Tedarikçi çıktısı da zarfı etiketsiz çiziyor.
+
 **AMA "BİR KEZ" DEMEK "BÜYÜK" DEMEK DEĞİL** — üçüncü bildirim bunu söyledi:
 *"Şekiller çok büyük. Gerçekten bu kadar büyük olmasına gerek yok."*
 **ÖLÇÜLDÜ ve haklıydı:**
@@ -1440,6 +1467,26 @@ yapma (sentetik), iki satırlık tabloda da sabit sütun arama, şemada tam ad +
 sarım açısına dönme, kırmızıyı global en düşüğe çevirme, `nice` ekseni kapatma,
 bir sayfanın kod künyesini düşürme, punto tabanını 7,4'e indirme, şemayı ikinci
 kez çizme.
+
+##### Eksik şekiller geri gelirken ÇİZİCİLER de düzeldi — beş sessiz kusur
+
+Beşinin de ortak imzası aynı: belge yine üretiliyor, hata çıkmıyor, yalnız
+şekil ya yanlış duruyor ya da **yanlış şeyi söylüyor**. Beşi de kapısızken
+mutasyondan sağ çıkıyordu; kapıları eklendi ve onu da kırmızı.
+
+| Kusur | Belirti | Kök neden |
+|-------|---------|-----------|
+| Frekans haritasının **göstergesi çizim alanının içinde** | yedi girdi, altı eğrinin dördünü kesiyor | `_frChart`'ın sağ payı 18 px'te sabitti; gösterge için pay yoktu |
+| Gösterge **tam kasnak adlarını** basıyor | en geniş girdi 262 px = çizim alanının %42'si | ad kısaltma yüzeyi yoktu |
+| Kayma grafiğinin **sağ payı 30 px'te sabit** | `14,95` viewBox'ı **10 px** aşıp kırpılıyor | pay etiket genişliğinden türemiyordu |
+| Kayma grafiği **gergiyi kırmızı** basıyor | sayfanın kendi hükmüyle çelişiyor | yük taşıyan/taşımayan ayrımı yalnız MATRİSTE yapılmıştı |
+| Frekans haritası **`H: 300`** yazıyor | özet raporda sayfa taşıyor | `_FR_H` sessizce yutuluyordu (take-up doğru yapıyordu) |
+
+**KOD ÜRETİCİSİ KÖPRÜYE TAŞINDI** (`veFeadPulleyCodes`, `js/fead-model.js`):
+kısa kodu artık hem özet rapor hem ayrıntılı raporun frekans ve kayma
+grafikleri kullanıyor. İkinci bir kopya `source-hygiene` kapısına takılır ve
+iki yüzey sessizce ayrışırdı. Kod bir kısaltma değil bir **kimlik**:
+kullanıldığı her yüzeyde karşılığı aynı sayfada basılmak zorunda.
 
 > Beşincisi **ilk turda YEŞİL kaldı**: kapı `_frNiceAxis`'i doğrudan
 > çağırıyordu, GRAFİĞİN onu kullandığını ölçmüyordu. İkinci kapı basılan bölme

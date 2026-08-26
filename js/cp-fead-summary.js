@@ -56,28 +56,11 @@ var VE_FSR_PEAK_BAND = '−%10,5 … +%22,8';
 // düşürülmüştü, yani okunaksızlığın kökü buydu. Kod + künye ikilisi hem
 // sığıyor hem eksiksiz. Tedarikçi çıktısının FAN/IDR/A_C/ALT/TEN kullanmasının
 // sebebi de bu.
+// Kasnak kısa kodu KÖPRÜ KATMANINDA (veFeadPulleyCodes, js/fead-model.js):
+// hem özet rapor hem ayrıntılı raporun frekans haritası aynı kodu kullanıyor;
+// ikinci bir kopya `source-hygiene` kapısına takılır ve sessizce ayrışırdı.
 function _fsrCodes(sys){
-  var ps = (sys && sys.pulleys) || [];
-  function ham(p, i){
-    var ad = String(p.name || '');
-    // Parantez içi YALNIZ harfse ve 2-4 karakterse bir KODDUR (FAN, ALT, A_C).
-    // "155 A" bir ölçü, "E9843" bir parça numarası — ikisi de kod değil.
-    var m = ad.match(/\(([A-Za-z_\/]{2,4})\)/);
-    if(m) return m[1].toUpperCase().replace(/[^A-Z_\/]/g, '');
-    if(p.tensioner) return 'TEN';
-    if(p.crank) return 'CRK';
-    var sade = ad.replace(/\([^)]*\)/g, ' ').trim();
-    var son  = (sade.match(/(\d+)\s*$/) || [])[1] || '';
-    var kel  = sade.replace(/\d+\s*$/, '').split(/\s+/).filter(Boolean);
-    var k = kel.length >= 2 ? kel.map(function(w){ return w[0]; }).join('') : (kel[0] || 'P').slice(0, 3);
-    k = k.toLocaleUpperCase('tr').replace(/[^A-ZÇĞİÖŞÜ0-9]/g, '').slice(0, 3);
-    return (k || ('P' + (i + 1))) + son;
-  }
-  var out = ps.map(ham), gor = {};
-  return out.map(function(k, i){
-    if(!gor[k]){ gor[k] = 1; return k; }
-    gor[k]++; return k + gor[k];
-  });
+  return (typeof veFeadPulleyCodes === 'function') ? veFeadPulleyCodes(sys) : [];
 }
 // Kod → ad künyesi. Kodun kullanıldığı her sayfada bir kez basılır: kısaltma
 // ancak karşılığı aynı sayfada duruyorsa okunabilir.
@@ -145,12 +128,13 @@ function _fsrIdBlock(R, node){
 // Yerleşim şeması — TEK ÇİZİCİ. class="appfig" ŞART: o çizici uygulamanın
 // palet jetonlarını kullanıyor, bu belgenin paleti başka; tanımsız var()
 // kalıtılan `stroke` için `none` demektir (ayrıntılı raporda ölçüldü).
-function _fsrLayout(R, W, H){
+function _fsrLayout(R, W, H, opts){
   var svg = null;
   try {
     if(typeof veFeadLayoutSVG === 'function' && R.build)
       svg = veFeadLayoutSVG(R.build, W || 250, H || 210,
-        { posMode: 'mean', compass: true, pivot: true, arrows: false,
+        { posMode: opts && opts.posMode ? opts.posMode : 'mean',
+          compass: true, pivot: true, arrows: false, ghostLabels: false,
           // Şemada KISA KOD: tam ad çerçeveyi taşırıyor ve kayış yolunun
           // üstüne biniyor. Sarım açıları da kapalı — aynı altı sayı bir
           // sonraki sayfada hizalı bir tabloda duruyor.
@@ -268,6 +252,7 @@ function _fsrSheet1(R, node){
   var dcTop = 0; duty.forEach(function(r){ dcTop += _frNum(r.dcPct) || 0; });
   var st = (typeof _frSlipStats === 'function') ? _frSlipStats(R) : null;
   var sf = _frNum(R.serviceFact);
+  var kod = _fsrCodes(sys);
 
   var h = _fsrH1('Genel Bakış', 'Sistem künyesi, yerleşim ve kritik sonuçlar');
 
@@ -286,7 +271,11 @@ function _fsrSheet1(R, node){
   // genişlikte yükseklik zorunlu olarak 430 px'e çıkıyordu; 395 px'lik sütunda
   // aynı oran 242 px veriyor ve boşalan yeri künyeler dolduruyor.
   h += '<div class="cols c58">';
-  h += '<div class="col">' + _fsrLayout(R, 395, 242) + '</div>';
+  // KOL ZARFI ŞEMANIN İÇİNDE — Gates'in 5. sayfasında da öyle: gergi kasnağı
+  // ALTI KOL KONUMUNDA üst üste çizilir ve her konum için ayrı kayış yolu
+  // görünür. Bedeli SIFIR px (aynı şeklin içinde) ama sayfa 3'ün zarf
+  // tablosunun görsel karşılığını veriyor.
+  h += '<div class="col">' + _fsrLayout(R, 395, 242, { posMode: 'all' }) + '</div>';
   h += '<div class="col">';
   h += _fsrKV('Kayış', [
     ['Profil / marka', _frEsc((b.brand ? b.brand + ' ' : '') + (b.ribs || '') + (b.profile || ''))],
@@ -324,6 +313,20 @@ function _fsrSheet1(R, node){
   }).join('') + '</div>';
 
   h += _fsrWarnBox(R);
+
+  // TEPE YÜK VE DOĞAL FREKANS HARİTASI GATES'İN DE 1. SAYFASINDA.
+  // Kozmetik turunda ikisi de çıkarılmıştı; kullanıcı haklı olarak sordu
+  // ("Gates raporundaki tüm şekilleri çıkar bakalım") ve ölçüm onu doğruladı:
+  // Gates'in beş şekil türünden ÜÇÜ bizde yoktu. Üçünün de üreticisi
+  // ayrıntılı raporda ZATEN vardı — eksik olan yerleşimdi, hesap değil.
+  h += _fsrPeakBlock(R, kod);
+  h += _fsrBlk('Doğal Frekans Haritası',
+    _fsrFig(typeof _frFreqFigure === 'function' ? _frFreqFigure : null, R, 780, 190),
+    'Her eğri bir serbest açıklığın <b>enine</b> titreşim frekansı; devir arttıkça gerginlik '
+    + 've dolayısıyla frekans yükselir. Kesikli doğru <b>ateşleme frekansı</b> (altı silindir → '
+    + '3 × devir/60); bir açıklık eğrisiyle kesiştiği devirde o açıklık zorlanır. Sayısal '
+    + 'karşılığı sayfa 5\'teki açıklık tablosudur.');
+
   h += _fsrScopeBlock();
   h += _fsrCodeLegend(sys);
   return h;
@@ -495,6 +498,16 @@ function _fsrSheet3(R, node){
     + 'Kesikli dikey çizgiler yukarıdaki altı kol konumunu işaretler. Eğri, kol açısı çözüm '
     + 'aralığının ucuna yaklaşırken tekilleşir; eksen bu yüzden çalışma konumlarına göre '
     + 'sınırlanmıştır.');
+
+  // BELT TAKE-UP — Gates'in 3. sayfasının kendi grafiği ve tam da bu sayfanın
+  // konusu: kol açısı ile gereken kayış boyunun ilişkisi. Take-up oranı
+  // (0,708 mm/°) bu eğrinin ÇALIŞMA NOKTASINDAKİ eğimidir; tablo sayıyı,
+  // eğri o sayının nereden geldiğini veriyor.
+  h += _fsrBlk('Kayış Take-up Eğrisi',
+    _fsrFig(typeof _frTakeupChartRaw === 'function' ? _frTakeupChartRaw : null, R, 780, 235),
+    'Yatay eksen gergi kol açısı, düşey eksen o açıda <b>gereken efektif kayış boyu</b>. '
+    + 'Take-up oranı bu eğrinin çalışma noktasındaki <b>anlık eğimi</b>dir — uçtan uca '
+    + 'ortalama eğim değil (ikisi bu sistemde %25 ayrışıyor).');
   return h;
 }
 
@@ -654,7 +667,15 @@ function _fsrSheet5(R, node){
       + ' Hz</b>. Bunlar açıklıkların <b>enine</b> titreşimidir; sistem burulma modu ayrı bir '
       + 'büyüklüktür ve bu belgede yer almaz. ' + _fsrConstNote(vSbt));
   }
-  h += _fsrPeakBlock(R, kod);
+  // KAYMA EMNİYETİ GRAFİĞİ — Gates'in 4. sayfasının kendi şekli. Matris
+  // her devirdeki değeri verir; grafik hangi kasnağın hükmü verdiğini bir
+  // bakışta gösterir, çünkü çubuklar SIRALI değil KASNAK bazında ve eşik
+  // çizgisi hepsinin üstünden geçer.
+  h += _fsrBlk('Kayma Emniyeti — Kasnak Başına En Düşük',
+    _fsrFig(typeof _frSlipFigure === 'function' ? _frSlipFigure : null, R, 780, 215, sf),
+    'Her çubuk, o kasnağın çalışma çevrimi boyunca gördüğü <b>en düşük</b> emniyet '
+    + 'faktörüdür; kesikli çizgi istenen servis faktörüdür. Yük taşımayan kasnaklarda '
+    + 'çubuk bir marj değil <b>kapasite</b> gösterir (bkz. yukarıdaki hüküm).');
   h += _fsrCodeLegend(sys);
   return h;
 }

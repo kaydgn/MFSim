@@ -1858,9 +1858,16 @@ function veFeadLayoutSVG(build, W, H, opts){
           anc = (vx >= 0) ? 'start' : 'end';
         }
       }
-      svg += '<text data-ve="ghost-label" x="' + lx + '" y="' + ly
-          + '" text-anchor="' + anc + '" font-size="7" fill="var(--text-muted)" opacity="0.9">'
-          + _feadEsc(h.row.kisa) + '</text>';
+      // HAYALET ETİKETİ KAPATILABİLİR. Kanvas kartında gerekli: orada kolun
+      // hangi konumda olduğunu söyleyen başka bir yüzey yok. RAPORDA gereksiz
+      // ve zararlı — konumların adı zaten hemen yanındaki tabloda, 395 px'lik
+      // küçük bir şemada ise altı etiket üst üste biniyor (ÖLÇÜLDÜ: "Serbest"
+      // ile "Değişt." 104 px² çakışıyordu). Tedarikçi çıktısı da zarfı
+      // etiketsiz çiziyor.
+      if(opts.ghostLabels !== false)
+        svg += '<text data-ve="ghost-label" x="' + lx + '" y="' + ly
+            + '" text-anchor="' + anc + '" font-size="7" fill="var(--text-muted)" opacity="0.9">'
+            + _feadEsc(h.row.kisa) + '</text>';
     }
   });
 
