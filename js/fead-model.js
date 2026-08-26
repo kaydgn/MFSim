@@ -923,7 +923,10 @@ function veFeadPosSelection(build, mode){
 //   geom.pulleys[i].d            dönüş YÖNÜ (sırttan temas edende ters)
 // Buradaki iş yalnız o sayıları EKRANDA OKUNUR bir hıza indirmek.
 //
-// ── GERÇEK ZAMAN NEDEN OLMAZ (ÖLÇÜLDÜ — BMC örneği, 420×340 kart, 0.553 px/mm)
+// ── GERÇEK ZAMAN NEDEN OLMAZ (ÖLÇÜLDÜ — BMC örneği, o zamanki 420×340 kart,
+//    0.553 px/mm; kart 440×500 olunca ölçek 1.277× büyüdü, aşağıdaki px/s
+//    sayıları da o kadar — ama TAVAN devir tabanlı (VE_FEAD_ANIM_TARGET_REV_S)
+//    olduğu için gerekçe DEĞİŞMİYOR)
 //   motor  800 dev/dk → kayış  7.56 m/s =  4182 px/s · alternatör  40.5 tur/s
 //   motor 2750 dev/dk → kayış 26.00 m/s = 14377 px/s · alternatör 139.4 tur/s
 // 60 Hz ekranda EN YAVAŞ satırda bile kayış kare başına 70 px (10 diş adımı)
@@ -1281,6 +1284,17 @@ function veFeadExampleNodes(key){
   // HAZIR bir model olmalı. Şema düğümü olmadan kullanıcı çözümü görüyor ama
   // kayış yolunu göremiyor ve onu paletten ayrıca aramak zorunda kalıyordu.
   nodesOut.push({ id:'ex-layout', type:'fead-layout', data:{} });
+  // RAPOR DA KURULUR — aynı gerekçe. Örnek "çözülebilir bir model" değil,
+  // KULLANIMA HAZIR bir model: kullanıcı çözümü görüyor ama raporu almak için
+  // bileşeni paletten ayrıca aramak zorunda kalıyordu. `data:{}` bilerek boş —
+  // veFeadReportKind alanı olmayan düğümü 'detailed' sayar, yani örnek
+  // varsayılan rapor türüyle gelir (bkz. cp-fead-report.js).
+  //
+  // SIRA ÖNEMLİ: veFeadArrangeByCoords'un sol şeridi araç düğümlerini `nodes`
+  // dizisi sırasına göre diziyor ve bu dizi buradan besleniyor. Kayış
+  // Özellikleri → Çözücü → Rapor sırası istenen sıradır; rapor solver'dan önce
+  // push edilseydi şeritte de onun üstünde çıkardı.
+  nodesOut.push({ id:'ex-report',  type:'fead-report',  data:{} });
   var conns = [];
   ex.route.forEach(function(k, i){
     var next = ex.route[(i + 1) % ex.route.length];

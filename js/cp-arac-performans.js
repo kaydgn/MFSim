@@ -93,7 +93,7 @@ var VE_ARAC_PERFORMANS_LAYOUT = [
 // layout ögeleri {lx, ly} — ölçü VERİLEBİLİR: {lx, ly, w, h}. Verilmezse
 // sıradan bileşen ölçüsü (65×60) varsayılır.
 //
-// ÖLÇÜ NEDEN GEREKLİ: FEAD'in "Kayış Yolu" düğümü kanvasta 420×340'lık canlı bir
+// ÖLÇÜ NEDEN GEREKLİ: FEAD'in "Kayış Yolu" düğümü kanvasta 440×500'lük canlı bir
 // şema kartı. Herkese 65×60 sayılırsa grubun genişliği eksik hesaplanır ve
 // ortalama kayar — kart görünür alanın sağından taşıyor (ölçüldü). Diğer
 // çağıranlar ölçü vermediği için davranışları DEĞİŞMEZ.

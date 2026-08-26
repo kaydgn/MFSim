@@ -175,7 +175,7 @@ function veFeadArrangeByCoords(opts){
     yer[n.id] = { x: CX - ((eksik.length - 1) * 100) / 2 + i * 100 - b.w / 2, y: altY };
   });
 
-  // Araç düğümleri kümenin DIŞINDA. Kayış Yolu kartı (420×340) sağ şeritte,
+  // Araç düğümleri kümenin DIŞINDA. Kayış Yolu kartı (440×500) sağ şeritte,
   // künyeler sol şeritte — veFeadLoadExample ile aynı bölüşüm, yoksa kart
   // kümenin içine düşüp tellerin altında kalırdı.
   var yariX = (maxX - minX) * s / 2, yariY = (maxY - minY) * s / 2;
@@ -436,10 +436,7 @@ function veFeadSet(nodeId, key, val){
   if(!node) return;
   if(!node.data) node.data = {};
   node.data[key] = val;
-  if(VE_FEAD_COORD_KEYS.indexOf(key) >= 0 && _feadIsPulley(node)){
-    veFeadPlaceFromCoords();
-    veFeadRefreshDiaGhosts();            // çap değiştiyse hayalet de büyür
-  }
+  if(VE_FEAD_COORD_KEYS.indexOf(key) >= 0 && _feadIsPulley(node)) veFeadPlaceFromCoords();
   if(typeof saveState === 'function') saveState();
 }
 
@@ -496,58 +493,6 @@ function veFeadPortSideFor(node, portType){
   return (dy >= 0) ? 'bottom' : 'top';
 }
 
-// ── KANVAS ROZETİ: temas tarafı + sürücü ────────────────────────────────────
-// Temas tarafı hesabın en tehlikeli girdisi: ters verilirse çekirdek GEÇERLİ
-// ama BAŞKA bir kayış yolu çözer, hata vermez. Panelde bir açılır listede
-// gizlenirse kullanıcı yanlışı fark edemez. Bu yüzden değer kanvasta, düğümün
-// üstünde durur — "K" kaburgalı, "S" sırttan; sürücü kasnak ayrıca "►" taşır.
-// Stil ELEMANIN ÜSTÜNDE (css/ dosyasında değil) çünkü css/styles.css'e
-// dokunmak Ölçüm Görüntüleyici'nin dağıtım dosyasını bayatlatıyor (bkz.
-// CLAUDE.md); tek rozet için o zinciri kurmaya değmez.
-// GERÇEK ÇAP HAYALETİ — kutunun arkasında soluk bir çember.
-//
-// Kutu 54–72 px, gerçek kasnaklar 57–162 mm; birebir ölçekte kutu krankı
-// 2.25 KAT küçük gösteriyor. Konum artık fiziksel olduğu için bu fark
-// yanıltıcı: ÇAKIŞMAYAN İKİ KUTU, ÇAKIŞAN İKİ KASNAK olabilir — ve çekirdek
-// onu "kayış kasnağın içinden geçiyor" diye reddeder. Hayalet, o çarpışmayı
-// hata çıkmadan ÖNCE görünür yapıyor.
-//
-// Kasnaklar DAİREYE ÇEVRİLMİYOR: `c48fe17`'de denendi ve kullanıcının
-// isteğiyle geri alındı ("tipik dörtgen topoloji bileşenleri devam etsin").
-// Kutu kimliği duruyor; çember yalnız arkada bir ölçü referansı.
-function veFeadApplyDiaGhost(nodeEl, node){
-  if(!nodeEl || !node || typeof document === 'undefined') return false;
-  var box = nodeEl.querySelector('.ve-node-box') || nodeEl;
-  var old = box.querySelector('.ve-fead-dia');
-  if(old) old.remove();
-  if(!_feadIsPulley(node)) return false;
-  var od = (typeof veFeadOD === 'function') ? veFeadOD(node) : 0;
-  var s = (typeof VE_FEAD_PX_PER_MM === 'number') ? VE_FEAD_PX_PER_MM : 1;
-  if(!(od > 0)) return false;
-  var d = od * s;
-  var g = document.createElement('div');
-  g.className = 've-fead-dia';
-  g.title = 'Gerçek dış çap ' + _feadFmt(od, 1) + ' mm (1 px = 1 mm)';
-  // Kutunun MERKEZİNE göre ortalanıyor; taşması normal ve isteniyor.
-  g.style.cssText = 'position:absolute; left:50%; top:50%; pointer-events:none; z-index:0;'
-    + 'width:' + d + 'px; height:' + d + 'px; margin-left:' + (-d / 2) + 'px;'
-    + 'margin-top:' + (-d / 2) + 'px; border-radius:50%;'
-    + 'border:1px dashed var(--text-muted, #888); opacity:0.30;';
-  box.insertBefore(g, box.firstChild);
-  return true;
-}
-
-// Bütün kasnakların çap hayaletini tazele (çap değişince / sürüklerken).
-function veFeadRefreshDiaGhosts(){
-  if(typeof document === 'undefined' || typeof nodes === 'undefined') return 0;
-  var n = 0;
-  nodes.forEach(function(x){
-    var el = document.getElementById(x.id);
-    if(el && veFeadApplyDiaGhost(el, x)) n++;
-  });
-  return n;
-}
-
 // SÜRÜKLEME → mm. ui-core.js'in sürükleme döngüsünden her karede çağrılıyor.
 // Tek geçiş: gergi dahil bütün kasnakların krank-göreli mm'si tazeleniyor
 // (bkz. veFeadSyncMmFromCanvas). Kasnak yoksa bedava.
@@ -559,13 +504,16 @@ function veFeadSyncDrag(){
   return veFeadSyncMmFromCanvas(nodes, { origin: org });
 }
 
+// ── KANVAS ROZETİ: temas tarafı + sürücü ────────────────────────────────────
+// Temas tarafı hesabın en tehlikeli girdisi: ters verilirse çekirdek GEÇERLİ
+// ama BAŞKA bir kayış yolu çözer, hata vermez. Panelde bir açılır listede
+// gizlenirse kullanıcı yanlışı fark edemez. Bu yüzden değer kanvasta, düğümün
+// üstünde durur — "K" kaburgalı, "S" sırttan; sürücü kasnak ayrıca "►" taşır.
+// Stil ELEMANIN ÜSTÜNDE (css/ dosyasında değil) çünkü css/styles.css'e
+// dokunmak Ölçüm Görüntüleyici'nin dağıtım dosyasını bayatlatıyor (bkz.
+// CLAUDE.md); tek rozet için o zinciri kurmaya değmez.
 function veFeadApplyBadge(nodeEl, node){
   if(!nodeEl || !node || typeof document === 'undefined') return false;
-  // Çap hayaleti rozetle AYNI dört noktadan tazelensin diye buradan çağrılıyor
-  // (createNode · restoreState · sekme yükleme · rozet tazeleme). Ayrı bir
-  // çağrı zinciri kurmak, dördünden biri unutulduğunda hayaletin sessizce
-  // bayat kalması demekti.
-  veFeadApplyDiaGhost(nodeEl, node);
   var old = nodeEl.querySelector('.ve-fead-badge');
   if(old) old.remove();
   if(_feadDefOf(node).isFeadBelt) return veFeadApplyBeltModeBadge(nodeEl, node);
@@ -1607,10 +1555,26 @@ function veFeadLayoutSVG(build, W, H, opts){
   }
   // Yön gülü sağ altta yer istiyor; şema onun altına girmesin.
   var pad = 18;
-  // Gül varsayılan yerindeyse sağ şerit ayrılır; kullanıcı taşımışsa şerit
-  // ŞEMAYA bırakılır (bkz. veFeadCompassPlace).
+  // ── SAĞ ŞERİT KOŞULLU: gül ÇİZİMİN ÜSTÜNE DÜŞÜYORSA ayrılır ────────────
+  //
+  // Eskiden kural şuydu: gül varsayılan yerindeyse 54 px'lik sağ şerit KOŞULSUZ
+  // ayrılır. Bu, kartın sekizde birini dört sayı için ölü alan yapıyordu — ve
+  // çoğu yerleşimde gereksiz: gül sağ ALT köşede duruyor, kayış yolunun sağ alt
+  // köşesi ise sıklıkla BOŞ (BMC'de krank sağ değil ORTA-ALTTA).
+  //
+  // Yeni kural bir ÖLÇÜM: önce şerit AYRILMADAN ölçeklenir, sonra gülün kutusu
+  // gerçekten çizilen şeylere (kasnak çemberleri · kayış açıklıkları · pivot)
+  // çarpıyor mu diye bakılır. Çarpmıyorsa şerit hiç ayrılmaz.
+  //
+  // ÖLÇÜLDÜ (BMC örneği, 440×500 kart): şerit koşulsuzken şemaya 350 px kalıyor,
+  // koşulluyken 404 px — %15.4 daha geniş çizim, ve gül çizime yaklaşıyor
+  // (kullanıcının istediği tam olarak bu). Çarpışma varsa davranış BİREBİR
+  // eskisi: şerit ayrılır, hiçbir şey kötüleşmez.
+  //
+  // Kullanıcı gülü ELİYLE taşımışsa şerit yine hiç ayrılmaz (moved) — o bir
+  // TERCİH bildirimi ve yer açma sorumluluğu ona geçmiş demektir.
   var roseYer = wantCompass ? veFeadCompassPlace(W, H, opts.compassPos) : null;
-  var ROSE = (roseYer && !roseYer.moved) ? VE_FEAD_ROSE_W : 0;
+  var ROSE = 0;
   var spanX = Math.max(1, maxX-minX), spanY = Math.max(1, maxY-minY);
   var s, offX, offY;
   function olcekle(padL, padR, padU, padD){
@@ -1644,7 +1608,7 @@ function veFeadLayoutSVG(build, W, H, opts){
   var etW = (typeof opts.labelWidth === 'function') ? opts.labelWidth : function(t, fs){
     return String(t == null ? '' : t).length * fs * 0.6;      // monospace/dar sans
   };
-  (function(){
+  function etiketPayi(){
     var solTas = 0, sagTas = 0, ustTas = 0;
     ps.forEach(function(p, k){
       var X = offX + (p.c[0] - minX) * s, Y = offY + (maxY - p.c[1]) * s;
@@ -1658,7 +1622,75 @@ function veFeadLayoutSVG(build, W, H, opts){
     var tavX = W * 0.22, tavY = H * 0.14;
     olcekle(pad + Math.min(Math.max(0, solTas), tavX), pad + Math.min(Math.max(0, sagTas), tavX),
             pad + Math.min(Math.max(0, ustTas), tavY), pad);
-  })();
+  }
+  etiketPayi();
+
+  // ── ŞERİT KARARI — ÖLÇÜMLE ────────────────────────────────────────────────
+  // Gülün kutusu: HALF (27) yön etiketlerini (0/90/180/270, merkezden en fazla
+  // 23 px) zaten kapsıyor; +3 px nefes payı.
+  //
+  // KUTU KOŞULSUZ, ŞERİT KOŞULLU — İKİ AYRI SORU, tek bayrağa bağlanamaz:
+  //   "şerit ayırayım mı"  → taşınmış gülde HAYIR; yer açma sorumluluğu
+  //                          kullanıcıya geçmiştir (eski kural, korunuyor).
+  //   "etiket buraya girmesin" → taşınmış gülde de EVET; taşınmış gül de
+  //                          ÇİZİLİYOR, üstelik kullanıcı onu şemanın tam
+  //                          ortasına sürükleyebilir.
+  // İkisi `!moved`e birden bağlanınca compassPos verilir verilmez gül etiket
+  // engeli olmaktan çıkıyordu — yani tam da gülün çizimin içine girdiği durumda
+  // koruma kapanıyordu.
+  var roseKutu = roseYer ? {
+    x0: roseYer.cx - VE_FEAD_ROSE_HALF - 3, x1: roseYer.cx + VE_FEAD_ROSE_HALF + 3,
+    y0: roseYer.cy - VE_FEAD_ROSE_HALF - 3, y1: roseYer.cy + VE_FEAD_ROSE_HALF + 3
+  } : null;
+  var seritAdayi = !!(roseYer && !roseYer.moved);
+  // ÇARPIŞMA ÖLÇÜTÜ SINIR KUTUSU DEĞİL, ÇİZİLEN ŞEYİN KENDİSİ. Sınır kutusu
+  // kullanılsaydı BMC'de de çarpardı (kutunun sağ alt köşesi güle 0.5 px kalıyor)
+  // ve şerit hiç kazanılmazdı — oysa orası BOŞ: krank sağda değil, ORTA-ALTTA.
+  function _roseCarpti(){
+    if(!seritAdayi || !roseKutu) return false;
+    var T = _feadXform(s, offX, offY, minX, maxY);
+    function kutuKesisir(x0,y0,x1,y1){       // doğru parçası ↔ gül kutusu
+      var r = roseKutu;
+      if(Math.max(x0,x1) < r.x0 || Math.min(x0,x1) > r.x1) return false;
+      if(Math.max(y0,y1) < r.y0 || Math.min(y0,y1) > r.y1) return false;
+      if((x0>=r.x0&&x0<=r.x1&&y0>=r.y0&&y0<=r.y1) || (x1>=r.x0&&x1<=r.x1&&y1>=r.y0&&y1<=r.y1)) return true;
+      var dx=x1-x0, dy=y1-y0;
+      function yan(x,y){ return dx*(y-y0) - dy*(x-x0); }
+      var a=yan(r.x0,r.y0), b=yan(r.x1,r.y0), c=yan(r.x1,r.y1), d=yan(r.x0,r.y1);
+      return !((a>0&&b>0&&c>0&&d>0) || (a<0&&b<0&&c<0&&d<0));
+    }
+    // Kasnak çemberi ↔ kutu: kutunun çembere en yakın noktası yarıçapın içindeyse.
+    for(var i=0;i<ps.length;i++){
+      var X = T.tx(ps[i].c[0]), Y = T.ty(ps[i].c[1]), R = ps[i].rPitch * s + 12;  // +ad payı
+      var nx = Math.min(Math.max(X, roseKutu.x0), roseKutu.x1);
+      var ny = Math.min(Math.max(Y, roseKutu.y0), roseKutu.y1);
+      if((nx-X)*(nx-X) + (ny-Y)*(ny-Y) <= R*R) return true;
+    }
+    var sp = geom.spans || [];
+    for(var j=0;j<sp.length;j++)
+      if(kutuKesisir(T.tx(sp[j].Pi[0]), T.ty(sp[j].Pi[1]), T.tx(sp[j].Pj[0]), T.ty(sp[j].Pj[1]))) return true;
+    // Gergi pivotu (artı işareti) ve KOLU (pivot → kasnak merkezi) da çizilen
+    // şeyler. Kol bir DOĞRU PARÇASI: yalnız pivot noktasına bakmak, kutunun
+    // kolun ORTASINDA kaldığı yerleşimde çarpışmayı kaçırırdı.
+    if(pv){
+      var px = T.tx(pv[0]), py = T.ty(pv[1]);
+      if(px >= roseKutu.x0-8 && px <= roseKutu.x1+8 && py >= roseKutu.y0-8 && py <= roseKutu.y1+8) return true;
+      var _ti = build.sys._tenIdx, _tp = (_ti >= 0 && ps[_ti]) ? ps[_ti] : null;
+      if(_tp && kutuKesisir(px, py, T.tx(_tp.c[0]), T.ty(_tp.c[1]))) return true;
+    }
+    // Hayalet konumların kayış yolları da görünür.
+    for(var h=0;h<hayalet.length;h++){
+      var hs = hayalet[h].geom.spans || [];
+      for(var m=0;m<hs.length;m++)
+        if(kutuKesisir(T.tx(hs[m].Pi[0]), T.ty(hs[m].Pi[1]), T.tx(hs[m].Pj[0]), T.ty(hs[m].Pj[1]))) return true;
+    }
+    return false;
+  }
+  if(_roseCarpti()){
+    ROSE = VE_FEAD_ROSE_W;
+    olcekle(pad, pad, pad, pad);
+    etiketPayi();
+  }
   // ── ETİKET YERLEŞİMİ — KAYIŞ YOLU BİR ENGELDİR ─────────────────────────
   // Ad şimdiye kadar koşulsuz çemberin ÜSTÜNE konuyordu. Yerleşim dairesel
   // olduğu için kasnakların yarısında kayış tam oradan geçiyor: ÖLÇÜLDÜ
@@ -1689,7 +1721,13 @@ function veFeadLayoutSVG(build, W, H, opts){
     function ortusur(a, b){
       return !(a.x1 <= b.x0 || a.x0 >= b.x1 || a.y1 <= b.y0 || a.y0 >= b.y1);
     }
-    var kutular = [];
+    // GÜL DE BİR ENGEL. Şerit artık koşullu olduğu için etiket, gülün durduğu
+    // sağ alt köşeye girebiliyor; girerse yön etiketleri (0/90/180/270) ile üst
+    // üste biner. Engel listesine konunca yerleştirici oraya hiç bakmıyor.
+    // TAŞINMIŞ GÜL DE ENGELDİR (yukarıdaki `roseKutu` notu): engeli `!moved`e
+    // bağlamak, kullanıcı gülü şemanın ortasına sürüklediğinde etiketlerin
+    // tam onun altına düşmesi demekti.
+    var kutular = roseKutu ? [roseKutu] : [];
     ps.forEach(function(p, k){
       var X = offX + (p.c[0]-minX)*s, Y = offY + (maxY-p.c[1])*s, R = p.rPitch*s;
       var w = etW(gorAd(k), 9), h = 10;
@@ -1917,7 +1955,7 @@ function veFeadLayoutSVG(build, W, H, opts){
     }
 
     var et = _etiket[k] || { x: X, y: Y - R - 4, an: 'middle' };
-    svg += '<text x="' + f(et.x) + '" y="' + f(et.y) + '" text-anchor="' + et.an
+    svg += '<text data-ve="name" x="' + f(et.x) + '" y="' + f(et.y) + '" text-anchor="' + et.an
         + '" font-size="9" fill="var(--text-muted)">' + _feadEsc(gorAd(k)) + '</text>';
     // SARIM AÇISI ŞEMADA İKİNCİ KEZ YAZILIR. Kanvasta bunun karşılığı var:
     // orada tablo YOK, kart tek başına duruyor. Raporda aynı altı sayı bir
@@ -2038,8 +2076,15 @@ function veFeadLayoutCardHTML(node){
   // sabitin kendisi js/components.js'te ve orada tek kopya. Buradan bare global
   // olarak okumak dosyalar arası gizli bir bağ kurardı.
   var def = _feadDefOf(node);
-  var W = (node && node.width) || def.defaultWidth || 420;
-  var H = (node && node.height) || def.defaultHeight || 340;
+  // YEDEK SAYI TUTULMAZ: buradaki `|| 420` / `|| 340` kart ölçüsünün İKİNCİ
+  // KOPYASIYDI ve kart 440×500'e büyüyünce sessizce eskidi (components.js'in
+  // kendi kuralı: "ölçü tip tanımlarına BURADAN yazılır, defs içinde ayrıca
+  // sayı tutulmaz"). Yedek sabitten okunuyor; def zaten her zaman yazılı
+  // olduğu için bu dal pratikte hiç koşmuyor, ama koşarsa doğru sayıyı verir.
+  var _vW = (typeof VE_FEAD_LAYOUT_W === 'number') ? VE_FEAD_LAYOUT_W : 440;
+  var _vH = (typeof VE_FEAD_LAYOUT_H === 'number') ? VE_FEAD_LAYOUT_H : 500;
+  var W = (node && node.width) || def.defaultWidth || _vW;
+  var H = (node && node.height) || def.defaultHeight || _vH;
   var SER = 20;                                   // alt durum şeridi
   var SEC = 22;                                   // konum seçici şeridi
   var mode = veFeadPosMode(node);
@@ -2821,7 +2866,7 @@ function veFeadLoadExample(key){
   // Araç kutuları. SIRA pack.nodes ile aynı olmak ZORUNDA — veFeadExampleNodes
   // kasnakları önce, araçları (kayış künyesi · çözücü · kayış yolu) sonra ekliyor.
   //
-  // KAYIŞ YOLU KARTI AYRI ŞERİTTE: 420×340'lık canlı şema üst şeride konsa
+  // KAYIŞ YOLU KARTI AYRI ŞERİTTE: 440×500'lük canlı şema üst şeride konsa
   // kasnak kümesinin üstüne biner ve komşu düğümlerin portları/rozetleri kartın
   // üstünde görünür (ölçüldü). Kullanıcının istediği yer de bu: topolojinin
   // YANINDA, kendi alanında duran bir çizim.
@@ -2849,17 +2894,21 @@ function veFeadLoadExample(key){
   var base = (typeof veArrangeModuleBase === 'function')
     ? veArrangeModuleBase(yer) : { x:3000, y:3000 };
 
-  // İÇ TOPOLOJİDE ZATEN DURAN ARAÇ DÜĞÜMLERİ DE SOL ŞERİDE. Alt topoloji ilk
-  // açıldığında görünür alanın ORTASINA bir "Başlangıç ve Örnekler" düğümü
-  // konuyor (veFeadPopulateStarter) — örnek de aynı merkeze kurulduğu için o
-  // düğüm kasnak kümesinin tam ortasında kalıyor ve kayış yolu arkasından
-  // geçiyordu (ölçüldü: Klima ↔ Avara 1 açıklığının üstünde). Yeni gelenlerle
-  // aynı şeride alınıyor; kullanıcının kendi eklediği kasnaklara dokunulmuyor.
+  // İÇ TOPOLOJİDE ZATEN DURAN ARAÇ DÜĞÜMLERİ DE SOL ŞERİDE — kullanıcının kendi
+  // eklediği kasnaklara dokunulmuyor. Bu yalnız bir YEDEK yerleşim: asıl işi
+  // aşağıdaki `veFeadArrangeByCoords` yapıyor ve o, araç düğümlerini kümenin
+  // dışındaki iki şeride koyuyor. Yerleştirici çalışamazsa (iki kasnaktan az
+  // koordinat) geçerli kalan sıra budur.
+  //
+  // `isFeadExample` BURADA ARANMAZ: o düğüm birkaç satır aşağıda siliniyor,
+  // yani taşınacak bir şey yok. Listede tutulsaydı önce taşınıp sonra silinen
+  // bir kutu olurdu ve yukarıdaki gerekçe onu hâlâ "sol şeride alınıyor" diye
+  // anlatırdı — kodun kendi kaydını yalanlaması.
   var _eskiArac = [];
   if(typeof nodes !== 'undefined') {
     nodes.forEach(function(n){
       var d0 = _feadDefOf(n);
-      if(d0.isFeadExample || d0.isFeadBelt || d0.isFeadSolver || d0.isFeadReport) _eskiArac.push(n);
+      if(d0.isFeadBelt || d0.isFeadSolver || d0.isFeadReport) _eskiArac.push(n);
     });
   }
   _eskiArac.forEach(function(n, i){
@@ -2907,6 +2956,41 @@ function veFeadLoadExample(key){
       if(idMap[c.from] && idMap[c.to]) createConnection(idMap[c.from], idMap[c.to]);
     });
   }
+  // ── "BAŞLANGIÇ VE ÖRNEKLER" DÜĞÜMÜ İŞİNİ BİTİRDİ ────────────────────────
+  //
+  // O düğüm bir AÇILIŞ yüzeyi: alt topoloji ilk açıldığında tek başına gelir
+  // (veFeadPopulateStarter) ve tek işi buradaki örnek listesini sunmaktır.
+  // Örnek kurulduktan sonra kanvasta kalması iki şey yapıyordu: sol şeritte
+  // yer kaplıyor, ve kullanıcıya "buradan devam et" diyen bir düğme gibi
+  // duruyordu — oysa devam edilecek yer artık kurulmuş modelin kendisi.
+  //
+  // Bağlantısı YOK (fead-example girişsiz/çıkışsız), o yüzden silmek diziden
+  // ve DOM'dan çıkarmakla bitiyor; deleteSelectedNodes'un sensör/parametrik
+  // temizliğine ihtiyaç yok ve o fonksiyon `selectedNodes` global'ini de
+  // tüketiyor (burada seçim kullanıcınındır, ona dokunulmaz).
+  //
+  // SPLICE, YENİDEN ATAMA DEĞİL: `nodes = nodes.filter(...)` global'i yeni bir
+  // diziye bağlar; bu dosya ile onu tutan diğer modüller tarayıcıda aynı
+  // global'i paylaştığı için çalışır ama Node testinde `global.nodes` bayat
+  // kalır. Yerinde mutasyon iki ortamda da aynı şeyi yapıyor.
+  //
+  // SIRASI: yerleştiriciden ÖNCE. Sonra silinseydi sol şeritte ona ayrılmış
+  // boş bir sıra kalır, altındaki iki kutu bir kademe aşağıda dururdu.
+  if(typeof nodes !== 'undefined' && nodes){
+    for(var _i = nodes.length - 1; _i >= 0; _i--){
+      if(!_feadDefOf(nodes[_i]).isFeadExample) continue;
+      var _el = (typeof document !== 'undefined') ? document.getElementById(nodes[_i].id) : null;
+      if(_el) _el.remove();
+      nodes.splice(_i, 1);
+    }
+    if(typeof selectedNodes !== 'undefined' && Array.isArray(selectedNodes)){
+      // Silinen düğüm seçiliyse seçimde bayat referans kalmasın (panel onu
+      // gösterip "bileşen bulunamadı" durumuna düşerdi).
+      for(var _k = selectedNodes.length - 1; _k >= 0; _k--)
+        if(nodes.indexOf(selectedNodes[_k]) < 0) selectedNodes.splice(_k, 1);
+    }
+  }
+
   // KUTULARI KOORDİNATLARINA OTURT — kanvas ile mm ilk kareden itibaren AYNI
   // şeyi söylesin. Sessiz kip: saveState/toast/kamera bu fonksiyonun kendisine
   // ait (ikinci bir undo adımı ve üst üste iki bildirim istenmiyor).
@@ -3275,8 +3359,6 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadPortSideFor: veFeadPortSideFor,
     veFeadApplyBadge: veFeadApplyBadge,
     veFeadApplyBeltModeBadge: veFeadApplyBeltModeBadge,
-    veFeadApplyDiaGhost: veFeadApplyDiaGhost,
-    veFeadRefreshDiaGhosts: veFeadRefreshDiaGhosts,
     veFeadSyncDrag: veFeadSyncDrag,
     veFeadPlaceFromCoords: veFeadPlaceFromCoords,
     VE_FEAD_COORD_KEYS: VE_FEAD_COORD_KEYS,

@@ -390,7 +390,7 @@ describe('sürükleme çözümü GERÇEKTEN değiştiriyor', () => {
 // ── KADEMELİ TAZELEME ───────────────────────────────────────────────────────
 // Karar 6: geometri + Kayış Yolu kartı her karede, duty/ömür/burulma bırakınca.
 // Sözleşmenin taşıyıcısı TOPOLOJİ İMZASI: kasnak konumu imzaya giriyor (kartı
-// tazelesin), araç düğümlerinin konumu GİRMİYOR — 420×340'lık kartı kendi
+// tazelesin), araç düğümlerinin konumu GİRMİYOR — 440×500'lük kartı kendi
 // kutusundan tutup taşımak çözücüyü koşturmasın.
 describe('imza: kasnak konumu girer, araç düğümü GİRMEZ', () => {
   const kurCanvas = () => {
