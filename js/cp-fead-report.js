@@ -1569,15 +1569,22 @@ function _frDesignTensionBlock(R){
 // raporunun "Belt Takeup / Tensioner Arm Ratio" satırı ANLIK türevdir; iki
 // farklı sayının aynı adı taşıması raporun kendi içinde çelişmesi demekti.
 function _frTakeupFigure(R){
+  var ç = _frTakeupChart(R);
+  if(!ç) return '';
+  var sw = ç.sw, K = ç.K, g = ç.g, anlik = ç.anlik, ort = ç.ort;
+  return _frTakeupSection(R, sw, K, g, anlik, ort);
+}
+// Yalnız GRAFİK — iki belge de bunu çizer, ikinci bir çizici yok.
+function _frTakeupChart(R){
   var sw = _frArmSweep(R);
-  if(!sw) return '';
+  if(!sw) return null;
   var K = _frTenConstruct(R);
   var Ls = sw.pts.map(function(p){ return p.L; });
   var lo = Math.min.apply(null, Ls), hi = Math.max.apply(null, Ls);
   var pad = (hi - lo) * 0.08 || 1;
   var c = _frChart({ xMin: 0, xMax: sw.relMax, yMin: lo - pad, yMax: hi + pad,
                      xLabel: 'Gergi kol açısı — göreli [°]', yLabel: 'Gereken tahrik boyu [mm]',
-                     xDec: 0, yDec: 1, H: 280, alt: 'Kayış take-up eğrisi' });
+                     xDec: 0, yDec: 1, H: (_FR_RAW ? _FR_H : 280), alt: 'Kayış take-up eğrisi' });
   var g = c.svg;
   g += '<g data-ve="takeup-curve">' + _frPolyline(c, sw.pts.map(function(p){ return [p.rel, p.L]; }), '#24425f', 2.4) + '</g>';
   var t0 = sw.pts[0], t1 = sw.pts[sw.pts.length - 1];
@@ -1602,6 +1609,13 @@ function _frTakeupFigure(R){
        + _frEsc(et) + '</text>';
     g += '<text x="' + (XM + 6).toFixed(1) + '" y="' + (c.pad.t + 12) + '" font-size="11" fill="#2e7d4f">Mean</text>';
   }
+  return { g: g, sw: sw, K: K, anlik: anlik, ort: ort };
+}
+function _frTakeupChartRaw(R){
+  var ç = _frTakeupChart(R);
+  return ç ? (ç.g + '</svg>') : '';
+}
+function _frTakeupSection(R, sw, K, g, anlik, ort){
   var h = '<h3>8.9 Kayış take-up</h3>';
   h += '<p>Kol açısı arttıkça gergi kasnağı kayışı içeri alır ve gereken tahrik boyu azalır. '
      + '<b>Take-up oranı, bu eğrinin çalışma noktasındaki ANLIK eğimidir</b> (mm/°) — '
@@ -2232,7 +2246,18 @@ function _frPolyline(c, pts, renk, kal, dash){
     + '"' + (dash ? ' stroke-dasharray="' + dash + '"' : '') + ' stroke-linejoin="round"/>';
 }
 function _frFigWrap(svg, caption){
+  if(_FR_RAW) return svg + '</svg>';        // özet rapor: numarasız ham SVG
   return '<figure>' + svg + '</svg><figcaption><b>Şekil ' + _frFig() + ' —</b> ' + caption + '</figcaption></figure>';
+}
+var _FR_RAW = false;
+// Aynı figür işlevini KÜÇÜK ölçüde ve numarasız çalıştırır. Sayaçlara
+// dokunmaz: özet rapor ayrıntılı raporun şekil numaralandırmasını kaydırmamalı.
+function veFeadFigureRaw(fn, R, W, H, extra){
+  var oW = _FR_W, oH = _FR_H, oR = _FR_RAW;
+  _FR_W = W; _FR_H = H; _FR_RAW = true;
+  try { return fn(R, extra); }
+  catch(e){ return ''; }
+  finally { _FR_W = oW; _FR_H = oH; _FR_RAW = oR; }
 }
 
 // Gergi kolu taraması — Belt Tension Control ve Take-up grafiklerinin ortak verisi.
@@ -2268,7 +2293,8 @@ function _frTensionFigure(R){
   var sw = _frArmSweep(R);
   if(!sw) return '';
   var pos = ((R.analysis && R.analysis.positions) || []).filter(function(p){ return !p.error; });
-  var konumT = pos.map(function(p){ return _frNum(p.tensionN); }).filter(Number.isFinite);
+  var konumT = pos.filter(function(p){ return p.position !== 'Load'; })
+                  .map(function(p){ return _frNum(p.tensionN); }).filter(Number.isFinite);
   var tasarim = _frNum(R.build && R.build.sys && R.build.sys.designTensionN);
   var taban = Math.max.apply(null, konumT.concat([Number.isFinite(tasarim) ? tasarim : 0, 1]));
   var yMax = taban * 1.6;
@@ -2574,6 +2600,11 @@ if(typeof module !== 'undefined' && module.exports){
   module.exports = {
     getFeadReportPropertiesHTML: getFeadReportPropertiesHTML,
     veFeadReportKind: veFeadReportKind,
+    veFeadFigureRaw: veFeadFigureRaw,
+    _frTakeupChartRaw: _frTakeupChartRaw,
+    _frTensionFigure: _frTensionFigure, _frFreqFigure: _frFreqFigure,
+    _frTakeupFigure: _frTakeupFigure, _frSlipFigure: _frSlipFigure,
+    _frArmSweep: _frArmSweep,
     VE_FEAD_REPORT_KINDS: VE_FEAD_REPORT_KINDS,
     _frKindPicker: _frKindPicker,
     veFeadGenerateReport: veFeadGenerateReport,

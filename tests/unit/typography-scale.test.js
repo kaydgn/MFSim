@@ -45,7 +45,7 @@ const DOSYALAR = [
 //   cp-fead-summary.js   kendi tipografisi var ve --fs-* jetonlarına erişimi
 //                        YOK; em-göreli ölçüler orada doğru olan. Üçü de
 //                        belgenin KENDİ ölçeğini kendi :root'unda taşıyor.
-//                        cp-fead-summary.js ayrıca A4 YATAY basılan bir belge:
+//                        cp-fead-summary.js ayrıca A4 DİKEY basılan bir belge:
 //                        punto seçimi arayüz ölçeğine değil, sayfaya sığmaya
 //                        bağlı (Sonuçlar penceresindeki TXT raporlarıyla aynı
 //                        gerekçe).
@@ -134,7 +134,7 @@ describe('muafiyetler gerekçeli kalsın', () => {
   test('js/cp-fead-summary.js gerçekten bağımsız belge üretiyor', () => {
     const src = fs.readFileSync(path.join(ROOT, 'js/cp-fead-summary.js'), 'utf8');
     expect(src).toMatch(/<!DOCTYPE html>/);
-    expect(src).toMatch(/@page\{size:A4 landscape/);
+    expect(src).toMatch(/@page\{size:A4 portrait/);
     expect(src).toMatch(/':root\{/);
   });
 

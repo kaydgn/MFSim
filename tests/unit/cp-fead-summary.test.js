@@ -67,7 +67,8 @@ const say = (s) => Number(String(s).replace('−', '-').replace(/\s/g, '').repla
 describe('belge iskeleti', () => {
   test('beş sayfa, her birinde künye bloğu ve sayfa numarası', () => {
     expect((DOC.match(/class="sheet"/g) || []).length).toBe(5);
-    expect((DOC.match(/class="titleblock"/g) || []).length).toBe(5);
+    expect((DOC.match(/class="hdr"/g) || []).length).toBe(5);      // tedarikçi anteti
+    expect((DOC.match(/class="idblk"/g) || []).length).toBeGreaterThanOrEqual(5);
     SU.VE_FSR_SHEETS.forEach((ad) => expect(DOC).toContain(ad));
     for (let i = 1; i <= 5; i++) expect(DOC).toContain('Sayfa ' + i + ' / 5');
   });
@@ -78,13 +79,15 @@ describe('belge iskeleti', () => {
     expect(dis).toEqual([]);
   });
 
-  test('A4 YATAY basar', () => {
-    expect(SU._fsrCss()).toContain('size:A4 landscape');
+  // Tedarikçi çıktısının sayfası DİKEY; yatay bir sayfa düzeni onun iki
+  // sütunlu yerleşimini taşıyamaz.
+  test('A4 DİKEY basar', () => {
+    expect(SU._fsrCss()).toContain('size:A4 portrait');
   });
 
   test('BMC markası künye bloğunda', () => {
     expect(SU._fsrLogo()).toContain('BMC');
-    expect(DOC).toContain('class="tb-logo"');
+    expect((DOC.match(/class="hdr-logo"/g) || []).length).toBe(5);
   });
 
   test('hiçbir yerde undefined / NaN / [object sızmıyor', () => {
@@ -99,24 +102,24 @@ describe('belge iskeleti', () => {
 // GATES ÇIPALARI — AG00976 raporunun kendi sayfaları geri üretiliyor mu?
 // Referans: 05June2025 tarihli Gates v13.02 çıktısı (fixture'daki kayıtla aynı).
 describe('Gates çıpaları — tedarikçi sayfası geri üretiliyor', () => {
+  // Tedarikçi sayfasında satır = KASNAK, sütun = büyüklük.
   test('sayfa 2: açıklık, sarım ve hız oranı birebir', () => {
     const s2 = SU._fsrSheet2(R, NODE);
-    const span = hucreler(s2, 'Açıklık boyu', 6).map(say);
-    const wrap = hucreler(s2, 'Sarım açısı', 6).map(say);
-    const oran = hucreler(s2, 'Hız oranı', 6).map(say);
-    [148.0, 141.4, 150.8, 272.7, 194.4, 141.3].forEach((g, i) =>
-      expect(Math.abs(span[i] - g)).toBeLessThan(0.1));
-    [156.2, 52.8, 198.4, 64.3, 157.1, 34.6].forEach((g, i) =>
-      expect(Math.abs(wrap[i] - g)).toBeLessThan(0.1));
-    [1.000, 2.130, 1.065, 2.130, 2.768, 2.130].forEach((g, i) =>
-      expect(Math.abs(oran[i] - g)).toBeLessThan(0.002));
+    const G = [[148.0, 156.2, 1.000], [141.4, 52.8, 2.130], [150.8, 198.4, 1.065],
+               [272.7, 64.3, 2.130], [194.4, 157.1, 2.768], [141.3, 34.6, 2.130]];
+    R.pulleyNames.forEach((ad, i) => {
+      const c = hucreler(s2.slice(s2.indexOf('Kayış Tahrik Sistemi Geometrisi')), ad, 3).map(say);
+      expect(Math.abs(c[0] - G[i][0])).toBeLessThan(0.1);
+      expect(Math.abs(c[1] - G[i][1])).toBeLessThan(0.1);
+      expect(Math.abs(c[2] - G[i][2])).toBeLessThan(0.002);
+    });
   });
 
   test('sayfa 3: gergi konum tablosu ve take-up oranı birebir', () => {
     const s3 = SU._fsrSheet3(R, NODE);
     expect(s3).toMatch(/0,708 mm\/°/);
     const kol = hucreler(s3, 'Kol konumu', 6).map(say);
-    const reb = hucreler(s3, 'Gereken kayış boyu', 6).map(say);
+    const reb = hucreler(s3, 'Gereken efektif kayış boyu', 6).map(say);
     [16.1, 11.4, 356.3, 348.0, 339.1, 315.7].forEach((g, i) =>
       expect(Math.abs(kol[i] - g)).toBeLessThan(0.2));
     [1733.8, 1730.9, 1720.6, 1714.6, 1708.6, 1699.1].forEach((g, i) =>
@@ -184,8 +187,8 @@ describe('kanvastan gelen şekil', () => {
   // kullanıyor; tanımsız var() kalıtılan `stroke` için `none` demek, yani
   // kayış ve kasnaklar GÖRÜNMEZ olur.
   test('şekil .appfig taşıyor ve kullandığı HER jeton CSS\'te tanımlı', () => {
-    expect(DOC).toContain('class="appfig fsr-fig"');
-    const i = DOC.indexOf('class="appfig fsr-fig"');
+    expect(DOC).toContain('class="appfig fig"');
+    const i = DOC.indexOf('class="appfig fig"');
     const blok = DOC.slice(i, i + 60000);
     const jeton = [...new Set([...blok.matchAll(/var\((--[a-z-]+)\)/g)].map((m) => m[1]))];
     expect(jeton.length).toBeGreaterThan(3);
@@ -195,6 +198,70 @@ describe('kanvastan gelen şekil', () => {
 
   test('şema tek çiziciden geliyor (kendi geometrisini yazmıyor)', () => {
     expect(DOC).toContain('data-ve="belt"');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe('tedarikçi sayfa düzeni', () => {
+  // Kullanıcı bildirimi: "Her yere bu şekli koymuşsun. Gerek yok."
+  // Tedarikçi çıktısında yerleşim şeması 1, 2 ve 5. sayfalarda var; 3 ve 4'te
+  // sayfayı tablo ve grafik dolduruyor.
+  test('yerleşim şeması YALNIZ 1, 2 ve 5. sayfalarda', () => {
+    const va = (h) => h.indexOf('class="appfig fig"') >= 0;
+    expect(va(SU._fsrSheet1(R, NODE))).toBe(true);
+    expect(va(SU._fsrSheet2(R, NODE))).toBe(true);
+    expect(va(SU._fsrSheet3(R, NODE))).toBe(false);
+    expect(va(SU._fsrSheet4(R, NODE))).toBe(false);
+    expect(va(SU._fsrSheet5(R, NODE))).toBe(true);
+  });
+
+  // _frTakeupFigure bir BÖLÜM üreticisidir (başlık + paragraflar + iki şekil).
+  // Özet rapora onu çağırmak §8.9'un gövdesini sürüklüyordu (ölçüldü).
+  test('take-up sayfasına ayrıntılı raporun METNİ sızmıyor', () => {
+    const s3 = SU._fsrSheet3(R, NODE);
+    expect(s3).not.toMatch(/<h3>/);
+    expect(s3).not.toMatch(/8\.9 Kayış take-up/);
+    expect(s3).toMatch(/data-ve="takeup-curve"/);       // grafik yine burada
+  });
+
+  test('gergi kasnağının konumu türetilmiş olarak BASILIYOR', () => {
+    const s2 = SU._fsrSheet2(R, NODE);
+    const mean = R.analysis.positions.filter((p) => p.position === 'Mean')[0];
+    // −161,97 / 91,29 — tedarikçi sayfasının kendi değerleri
+    expect(Math.abs(mean.idlerX - (-161.97))).toBeLessThan(0.2);
+    const ten = R.build.sys.pulleys.filter((p) => p.tensioner)[0];
+    const tbl = s2.slice(s2.indexOf('Yerleşim Verisi'));
+    const hucre = hucreler(tbl, ten.name, 2).map(say);   // yardımcı etiketi zaten atlar
+    expect(Math.abs(hucre[0] - mean.idlerX)).toBeLessThan(0.1);
+    expect(Math.abs(hucre[1] - mean.idlerY)).toBeLessThan(0.1);
+    expect(s2).toMatch(/bir girdi değildir/);
+  });
+
+  test('sayfa 1 tedarikçi sayfasının bloklarını taşıyor', () => {
+    const s1 = SU._fsrSheet1(R, NODE);
+    ['Kayış Verisi', 'Gergi Verisi', 'Kayış Gerginlik Kontrolü', 'Doğal Frekans Haritası',
+     'Kayış Ömrü B10', 'Tepe Gerginlik ve Hubload'].forEach((b) => expect(s1).toContain(b));
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe('gerginlik grafiği ölçeği — Load ölçeğe GİRMEZ', () => {
+  // Load bir MEKANİK DURDURUCU: orada take-up tekilleşir ve gerginlik çalışma
+  // değerinin on katına çıkar (AG00976: 5257 N ↔ 544 N). Tabana katılınca y
+  // ekseni 8411 N'e uzuyor ve altı çalışma konumu x ekseninin dibinde tek
+  // çizgiye yapışıyordu — fonksiyonun kendi yorumunun tam tersi.
+  test('y ekseni çalışma konumlarına göre, Load\'a göre DEĞİL', () => {
+    const svg = RP.veFeadFigureRaw(RP._frTensionFigure, R, 820, 300);
+    const sayilar = [...svg.matchAll(/>([0-9][0-9.]*)</g)].map((m) => Number(m[1]))
+      .filter((v) => Number.isFinite(v));
+    const enBuyuk = Math.max.apply(null, sayilar);
+    const pos = R.analysis.positions.filter((p) => !p.error);
+    const load = pos.filter((p) => p.position === 'Load')[0];
+    const calisma = Math.max.apply(null, pos.filter((p) => p.position !== 'Load')
+      .map((p) => p.tensionN));
+    expect(load.tensionN).toBeGreaterThan(calisma * 3);   // fikstür gerçekten tekil
+    expect(enBuyuk).toBeLessThan(load.tensionN * 0.6);    // ölçek ona uymuyor
+    expect(enBuyuk).toBeGreaterThan(calisma);             // ama çalışmayı kapsıyor
   });
 });
 

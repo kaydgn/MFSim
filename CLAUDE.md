@@ -1201,6 +1201,47 @@ eski proje bugüne kadarki davranışını birebir korur (testli). Panel iki KAR
 Özet rapor **KaTeX taşımıyor** — teori yok, denklem yok. Boy farkının tamamı bu.
 Fontlar Takoz/ayrıntılı raporla ORTAK (`window.MNT_REPORT_ASSETS.fontsCss`).
 
+###### DÜZEN TEDARİKÇİ SAYFASININ KENDİSİ — kendi yorumumuz değil (2026-08-26)
+
+İlk sürüm A4 **yatay**, kendi başlıklarıyla ("Sonuç Özeti" kartları) ve şemayı
+üç sayfaya birden koyan bir belgeydi. Kullanıcı reddetti: *"Her yere bu şekli
+koymuşsun. Gerek yok… Gates raporunun aynısı olsun. Gates raporunda sayfalarda
+ne varsa aynısı olsun."*
+
+PDF `pymupdf` ile görüntüye çevrilip yerleşim **okundu** (metin koordinatları
+döndürülmüş çıktığı için tahminle kurulamıyordu). Gerçek yapı:
+
+| | Gates | ilk sürümümüz |
+|---|---|---|
+| Sayfa | A4 **dikey**, iki sütun, kırmızı ayraçlar | A4 yatay, tek akış |
+| Antet | marka + firma + sistem adı ÜSTTE | teknik resim antedi ALTTA |
+| Şema | 1, 2 ve 5. sayfalarda | **üç sayfada da, büyük** |
+| Sayfa 1 | kayış/gergi künyesi · şema · **gerginlik kontrol grafiği** · B10 · **doğal frekans haritası** · tepe yük · eksenel kaçıklık | kendi uydurduğumuz özet kartları |
+| Sayfa 3 | gergi tablosu + **küçük** take-up grafiği | tablo + büyük kendi grafiğimiz |
+
+Belge yeniden kuruldu. Grafikler AYRINTILI RAPORDAN geliyor — ikinci bir çizici
+yok: `veFeadFigureRaw(fn, R, W, H)` aynı figür işlevini **küçük ve numarasız**
+koşturuyor (`_FR_W`/`_FR_H` zaten `_frChart`'ın yedeği, `_FR_RAW` figür
+sarmalını atlıyor; şekil sayaçlarına dokunmuyor).
+
+**ÜÇ SESSİZ KUSUR — üçü de bu turda çıktı, üçü de testli:**
+
+| Kusur | Belirti | Kök neden |
+|---|---|---|
+| Gerginlik grafiğinin ekseni | y ekseni **8411 N**'e uzuyor, altı çalışma konumu x ekseninin dibinde tek çizgiye yapışıyordu | Ölçek tabanına **Load** katılıyordu. Load bir MEKANİK DURDURUCU: orada take-up tekilleşir ve gerginlik 5257 N (çalışma 544 N). Fonksiyonun kendi yorumu "çalışma konumlarına göre sınırlanır" diyordu — tersi oluyordu. **Bu kusur AYRINTILI RAPORDA da vardı**; düzeltme ikisini birden düzeltiyor (yeni tavan 1170 N, Gates 900) |
+| Take-up çağrısı bölümü sürüklüyordu | Özet sayfa 3'e §8.9'un başlığı ve iki paragrafı düşüyordu | `_frTakeupFigure` bir **bölüm** üreticisi, figür değil. Çizim `_frTakeupChart` olarak ayrıldı; bölüm de onu çağırıyor |
+| Gergi kasnağının X/Y'si `—` | Yerleşim tablosunda konum "bilinmiyor" gibi okunuyordu | Konum bir GİRDİ değil, kol açısından türeyen çalışma merkezi. Çalışma (Ortalama) konumundan basılıyor ve † ile türev olduğu işaretli (−161,97 / 91,27 ↔ Gates −161,97 / 91,29) |
+
+Boşalan yere gerçek tablo kondu (kaburga yorulma dağılımı — kalibre bir sonuç),
+sayfa 3'ün take-up grafiğinin yanına açıklık frekansları.
+
+**ÖLÇÜ KALDIRACI:** şekiller sütuna `width:100%` ile oturuyor, yazı boyutu ise
+viewBox biriminde sabit. Küçük viewBox'ta etiketler çizimin üstüne biniyordu;
+viewBox BÜYÜTÜLÜNCE yazı göreli küçülüyor ve sığıyor. Kalan taşma (uzun kasnak
+adları şema çerçevesini aşıyor) `veFeadLayoutSVG`'nin sınırlara etiket
+genişliğini katmamasından — Şekil 1'de düzeltilen sınıfın aynısı, kanvas
+çizicisinde duruyor.
+
 ###### Sayfa eşlemesi — Gates AG00976 (05.06.2025, v13.02)
 
 | Özet sayfa | Gates sayfa | İçerik |
@@ -1208,7 +1249,7 @@ Fontlar Takoz/ayrıntılı raporla ORTAK (`window.MNT_REPORT_ASSETS.fontsCss`).
 | 1 Sonuç Özeti | 1/12 | kayış+gergi künyesi · şema · duty+B10 · **tepe yük** |
 | 2 Geometrik Analiz 1/2 | 2/12 | yerleşim verisi · kayış/gergi girdisi · span/sarım/oran |
 | 3 Geometrik Analiz 2/2 | 3/12 | gergi geometrisi (6 konum × 10 satır) · take-up · boy eğrisi |
-| 4 Kayma ve Gerginlik | 6/12 | kayma emniyeti matrisi · açıklık frekansları |
+| 4 Kayma ve Gerginlik | 6/12 | kayma duyarlılığı (en kritik kombinasyon) · emniyet matrisi + grafiği |
 | 5 Hubload Analizi | 8/12 | yük koşulları · ortalama gerginlik/hubload/yön matrisleri |
 
 **ÖLÇÜLDÜ — tedarikçi sayfası geri üretiliyor** (AG00976 örneği, PDF'in kendi
@@ -1261,13 +1302,13 @@ için `none` demek (ayrıntılı raporda ölçüldü: kayış ve kasnaklar gör�
 kalmıştı). Kapı, şeklin kullandığı her jetonun belgenin CSS'inde tanımlı
 olmasını arıyor.
 
-###### BİLİNEN KISIT: sayfa A4'e SIĞMIYOR
+###### BİLİNEN KISIT — kozmetik turuna kalanlar
 
-Belge A4 **yatay** basıyor (`@page{size:A4 landscape}`) ama **ÖLÇÜLDÜ**: beş
-sayfanın beşi de içerik tavanını (≈733 px) aşıyor — 6 · 111 · 137 · 190 ·
-**981** px. Sayfa 5'te dört uzun matris var (Gates'in aynı sayfasında üç).
-Bu yüzden panel açıklaması *"baskıya hazır"* DEMİYOR. Sayfa uyumu kozmetik
-turuna bırakıldı.
+Belge artık A4 **dikey** basıyor. Kalanlar: uzun kasnak adları yerleşim
+şemasının çerçevesini aşıyor (`veFeadLayoutSVG` sınırlara etiket genişliğini
+katmıyor — Şekil 1'de düzeltilen sınıfın kanvas çizicisindeki hâli), doğal
+frekans haritasının göstergesi eğrilerin üstüne biniyor ve kayma grafiğinde
+uzun ad kırpılıyor. Panel açıklaması bu yüzden *"baskıya hazır"* DEMİYOR.
 
 Kapı altı mutasyonla ölçüldü, altısı da kırmızı: tepe kW anahtarını geri
 bozma, `.appfig` sınıfını düşürme, varsayılan türü `summary` yapma, açıklık
