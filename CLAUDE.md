@@ -2745,6 +2745,176 @@ olabiliyor: braket montajında 5,98 mm hedefle 17 mm'lik mesafe parçaları
 ekranda **yuvarlak çakıl taşına** dönüyor ve hacim kaybı %5,7'ye çıkıyordu;
 tavanla %3,9.
 
+###### KESİŞME KALKANI — yerel denetimlerin göremediği üç sınıf
+
+Kullanıcı bildirimi (2026-08-25): *"eleman boyutunun önemi yoksa, ağdan
+bağımsızlık hesapları vs nasıl yapacağız?"* Haklıydı ve sorun gerçekti:
+yeniden-mesh'lenmiş yüzeyi TetGen bazı hedef boylarında REDDEDİYOR, köprü de
+ham yüzeye düşüp eleman boyu kontrolünü tamamen kaybediyordu.
+
+> **ÖNCEKİ ÖLÇÜM GEÇERSİZDİ.** "Her hedef boyda kesişim üretiliyor" kaydı
+> bozuk bir koşucudan geliyordu: TetGen girdisi `.smesh` uzantısı olmadan
+> yazılıyor, TetGen hata verip çıkıyor, ayrıştırıcı da "0 kesişim" okuyordu.
+> Uzantı düzeltilince gerçek tablo çıktı ve arıza hedef boyla **MONOTON
+> DEĞİL** (h=12 ve h=5 zaten temizdi) — yani "eleman boyu kalınlıktan büyük
+> olmasın" gibi bir kural bunu AÇIKLAMIYOR.
+
+**Yeniden-mesh KALİTEDE zaten çalışıyordu** ve bu ayrım önemli: ortalama min
+açı **12,5° → 41,6°**, 10° altı üçgen **%46,7 → %0,56**. Kalan *minimum*
+(~3,5°) bir kusur değil, KISITIN kendisi: en kötü 200 üçgenin **170'inin üç
+köşesi de bir CAD yüzü sınırında** (226 yüzün 20'si 3 mm'den dar şeritler).
+
+Üç işlemin (birleştir/çevir/düzleştir) denetimleri **YEREL**: normal
+katlanması, alan korunumu, şekil ölçütü — hepsi işlemin DOKUNDUĞU yıldıza
+bakar. Hiçbiri *"bu üçgen 3 mm ötedeki karşı duvarın içinden geçiyor mu"*
+diye soramaz. Kalkan (`VE_STR_REMESH_SHIELD`) düzgün bir ızgarayla o soruyu
+soruyor. **Bölme kalkan DIŞINDA** ve bu bir eksiklik değil: yeni düğümü mevcut
+kenarın üstüne koyduğu için yeni üçgenlerin birleşimi eskisinin TAM aynı
+noktalarını kaplar, kesişim üretmesi geometrik olarak imkânsız.
+
+**Kusur ABLASYONLA yerini buldu** (h=6): yalnız-split, split+collapse,
+split+smooth, flip KAPALI ve smooth KAPALI koşularının BEŞİ de temiz; kesişim
+ancak flip ile smooth BİRLİKTE koşunca doğuyor.
+
+###### Kalkanın ÜÇ kör noktası — üçü de ölçülerek bulundu
+
+| # | Kör nokta | Nasıl görüldü | Ölçüt |
+|---|-----------|---------------|-------|
+| 1 | **Köşe paylaşan çiftler tümden eleniyordu** ("komşular zaten değer") | TetGen'in h=10'da bildirdiği `[794,595] ↔ [793,597]` çifti tam da tek köşe paylaşan iki üçgene aitti | 1 ortak köşede **KARŞI KENAR**: temas meşru, gerçek kesişim ancak o köşeye komşu OLMAYAN kenar öbürünün içinden geçerse var |
+| 2 | **Asılı düğüm (T-bağlantısı)** | Paso paso izlendi: 9. pasonun DÜZLEŞTİRME adımında `kenar[1915,1916] boy 3,1000 · düğüm 1924 · t = 0,5000` | Yabancı kenarın İÇİNE düşen düğüm, **iki yönde** (düğüm→kenar ve kenar→düğüm) |
+| 3 | **Eş düzlemli kenar çaprazlaması** | TetGen'in kendi ölçütü ("Two segments exactly intersect"); çift doğrudan incelendi: doğrular arası uzaklık **0,000e+0**, parametreler **s=0,440 · t=0,751** | Köşe PAYLAŞMAYAN kenar çiftleri için parça–parça çaprazlama, **ortak köşe sayısına bakmadan** |
+
+Üçüncüsü kritik bir ayrıntı taşıyor: **kenar komşusu iki üçgen de
+çaprazlayabilir** — ortak kenar (a,b) iken (a,c)×(b,d) ve (b,c)×(a,d) çiftleri
+köşe paylaşmaz ve yüzey keskin katlanınca gerçekten kesişirler.
+
+**İKİ YAKLAŞIM ÖLÇÜLDÜ VE ATILDI:**
+
+| Deneme | Sonuç |
+|--------|-------|
+| Asılı düğümü ONARMAK (kenarı düğümde bölmek) | h=12'de atılan üçgen **0 → 4**; durumu KÖTÜLEŞTİRİYOR |
+| Köşe paylaşan çiftleri "zerre büzüp" (1e-6) Möller ile sınamak | Hile İŞE YARAMIYOR: ayrılma yönü kesişim doğrultusuyla aynı değil. Kalkanın **51.797 reddinin 51.691'i** bu yoldan geliyordu — reddin **%99,8'i asılsız**, ortalama min açı 41,6° → **29,7°** |
+| Eşikle ÖNLEME (T-bağlantısı eşiğini büyütmek) | 1e-2'de meşru birleştirmeler de reddediliyor: üçgen sayısı İKİYE KATLANIYOR, min açı 3,36° → **0,01°** |
+
+###### T-bağlantısı eşiği KALİTEYLE ödeniyor — 1e-4
+
+Kenar çaprazlaması ölçütü eklendikten sonra gerçek kesişimleri o yakaladığı
+için eşiğin gevşek olmasına gerek kalmadı; gevşekliğin bedeli ise doğrudan
+kalite. **ÖLÇÜLDÜ (TetGen üç eşikte de TEMİZ, yani seçim yalnız kaliteye
+bakıyor):**
+
+| eşik | h=8 (min / ort / <10°) | h=6 | h=4 |
+|---|---|---|---|
+| **1e-4** | **3,956° / 38,1° / %1,24** | **3,565° / 41,6° / %0,51** | **2,746° / 43,6° / %0,27** |
+| 3e-4 | 0,007° / 37,6° / %2,49 | 0,007° / 41,1° / %1,78 | 0,007° / 43,1° / %1,26 |
+| 1e-3 | 0,007° / 37,4° / %2,95 | — | — |
+
+Gevşek eşik en kötü üçgeni 4°'den **0,007°**'ye indiriyor ve o sliver'lar
+TetGen'de **DEJENERE TET**'e dönüşüyordu (ölçüldü: h=12/8/6 → **54/478/103**
+adet) — ki bu modülün kendi kuralına göre dejenere eleman bir uyarı değil,
+çözümü durduran bir HÜKÜM. 1e-4'te ortalama kalite kalkansız tabanla
+(ort 41,6° · <10° %0,56) aynı bantta.
+
+
+**T-BAĞLANTISI ÖLÇÜTÜNDE KENAR KOMŞULARI MUTLAKA ELENMELİ** ve bunun sebebi
+tanım gereği: bir **sliver** üçgenin üçüncü köşesi zaten karşı kenarının
+üstündedir. Elenmezse her sliver kendi komşusunu asılı düğüm sanıyor ve
+iyileştirici işlemleri de birlikte engelliyordu.
+
+###### Kalkanın MALİYETİ — ölçülerek üçe bölündü
+
+İlk sürüm toplam sürenin **%96'sıydı** (h=10, 2 paso: 44 s; sorgu başına
+**486** aday). İki değişiklik:
+
+| Değişiklik | Aday/sorgu | Süre |
+|---|---:|---:|
+| ilk sürüm ("büyük kova" her sorguda taranıyor) | 486 | 44,0 s |
+| kutusu çok hücreye yayılan üçgeni **yayarak yazmak** | 117 | 12,6 s |
+| aday başına **kutu ön elemesi** | **3** | **2,96 s** |
+
+"Büyük kova" tasarımının neden çöktüğü ölçüldü: ham OCCT üçgenlemesinde düz
+yüzeylerde 150 mm'ye varan üçgenler var (parça 131×150×131 mm), yani kova
+doluydu ve her sorgu onu baştan sona tarıyordu.
+
+###### PASO SAYISI HEDEFTEN TÜRER — dejenere tet'in GERÇEK sebebi
+
+Kalkan ve eşik yerine oturduktan sonra bile İNCE hedeflerde dejenere tet
+kalıyordu (h=3 → **2.081**, h=2 → 377) ve sebebi ikisinden de bağımsız çıktı:
+**paso sayısı yetmiyordu.**
+
+Döngünün ilk işi bölme ve bölme her pasoda kenarı yarıya indiriyor. Hedef
+küçüldükçe pasoların daha çoğu boya inmeye gidiyor, geriye kaliteyi
+toparlayacak paso kalmıyor.
+
+**ÖLÇÜLDÜ (kullanıcının braketi, h=3):**
+
+| | min açı | 2° altı | 5° altı | üçgen |
+|---|---|---|---|---|
+| 10 paso | 1,59° | **4** | 42 | 34.554 |
+| 20 paso | **5,89°** | **0** | **0** | 32.108 |
+
+Ve o birkaç sliver YÜZEY üçgeninin TetGen'de binlerce dejenere tet'e
+dönüştüğü korelasyonla gösterildi — bir sliver yüzey üçgeni etrafında yassı
+tet yelpazesi doğuruyor:
+
+| hedef | 2° altı yüzey üçgeni | dejenere tet |
+|---|---:|---:|
+| 4 | 0 | **0** |
+| 3 | 4 | **2.081** |
+| 2,5 | 8 | 2 |
+| 2 | 12 | 377 |
+
+**Paso ARTINCA üçgen sayısı DÜŞÜYOR** (34,5 bin → 32,1 bin): fazladan pasolar
+bölmüyor, birleştirip düzeltiyor — yani TetGen'in işi de azalıyor.
+
+Formül: `ceil(log2(başlangıç ortalama kenarı / hedef))` bölme pasosu **+ 12**
+kalite pasosu, 24 tavanıyla. **ÖLÇÜLDÜ** (braket, başlangıç ortalama kenarı
+**15,45 mm**): h=16 → 12 paso · h=12 → 13 · h=8 → 13 · h=4 → 14 · h=3 → 15.
+
+> **Kaba hedefte davranış BİREBİR eski DEĞİL** ve bu bilerek: taban 10'dan
+> 12'ye çıktı. Bedeli ölçüldü ve kazanç yönünde — h=8'de eleman sayısı
+> 43.990 → **41.772**, yüzey 2° altı üçgen zaten 0'dı ve öyle kaldı.
+
+###### SON DURUM — dejenere eleman HER hedefte sıfır
+
+| hedef (mm) | yüzey üçgeni | yüzey min açı | 2° altı | düğüm | eleman | SD | **dejenere** |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 8 | 6.110 | 3,96° | 0 | 74.828 | 41.772 | 224.484 | **0** |
+| 4 | 18.772 | 3,61° | 0 | 95.950 | 52.579 | 287.850 | **0** |
+| 3 | 32.220 | 5,89° | 0 | 168.681 | 94.347 | 506.043 | **0** |
+| 2,5 | 46.208 | 5,95° | 0 | 244.161 | 140.548 | 732.483 | **0** |
+| 2 | 72.222 | **10,02°** | 0 | 384.450 | 226.579 | 1.153.350 | **0** |
+
+Eleman sayısı da serbestlik derecesi de **monoton** — yakınsama çalışması için
+gereken kaba→ince seri artık var. h=2'de yüzeyde **10° altı üçgen bile
+kalmıyor**.
+
+**Kaba uçta hedef DOYUYOR ve bu fizik:** braket 3,1 mm sac. 12 mm'lik bir
+eleman o duvarın içinden geçemez, TetGen kaliteyi tutmak için Steiner noktası
+ekler ve sayı sabitlenir (h=12/8/6 → 46k/44k/40k, hatta hafif TERS). Anlamlı
+yakınsama aralığı duvar kalınlığının altında başlıyor.
+
+###### SONUÇ — on bir hedef boyunun on biri de temiz
+
+NATIVE TetGen `-d`, kullanıcının braketi:
+
+| hedef (mm) | 16 | 12 | 10 | 8 | 6 | 5 | 4,2 | 4 | 3,15 | 3 | 2,5 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| atılan üçgen | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| üçgen | 2760 | 3598 | 4748 | 6334 | 9832 | 13682 | 18872 | 20404 | 32118 | 35630 | 50358 |
+
+Öncesinde h=12/10/8/6/4/3 sırasıyla 8/6/1/2/2/4 üçgen atıyordu. Köprü artık
+gerçekten yeniden-mesh'lenmiş yüzeyle çalışıyor (h=12'de **59.556** eleman;
+eski ham yol her hedefte **204.542**) ve eleman sayısı hedefle **monoton**
+değişiyor — **yakınsama çalışması artık mümkün.**
+
+Kapı dört mutasyonla ölçüldü, dördü de kırmızı. İki fikstür de ölçülerek
+düzeltildi çünkü ilk hâlleri mutasyonu YAKALAMIYORDU: asılı düğüm fikstürü
+köşe paylaşmıyordu (o durumda `_rmTriTriHit` zaten "kesişiyor" diyor), oysa
+gerçek durumda asılı düğümün zincir komşusu kenarı taşıyan üçgenin köşesidir
+— yani TEK ortak köşe vardır ve orada devreye giren karşı kenar ölçütü bu
+yapıyı göremez.
+
 ###### NON-MANIFOLD ÜRETİLMEZ, KORUNUR, RAPORLANIR
 
 Gerçek CAD verisinde bir kenar 2'den fazla üçgene komşu olabiliyor: OCCT
