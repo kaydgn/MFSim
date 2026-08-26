@@ -89,11 +89,29 @@ function _frH2(idx){
 }
 
 // ═══════════════════ BİLEŞEN PANELİ ═════════════════════════════════════════
+// RAPOR TÜRÜ. İki belge AYNI çözümden üretilir, farkı OKUYUCUSU:
+//   detailed  teoriyi anlatır (§1-10 + Ek A) — nasıl hesaplandığını gösterir
+//   summary   yalnız sonuç sayfaları — tedarikçi çıktısının beş sayfası
+// Varsayılan `detailed`: alanı olmayan eski projeler bugüne kadarki
+// davranışlarını birebir korusun.
+var VE_FEAD_REPORT_KINDS = [
+  { key: 'detailed', ad: 'Detaylı Rapor',
+    aciklama: 'Teori + türetme + bu modelin çözümü. Akademik biçim, KaTeX matematik.' },
+  { key: 'summary',  ad: 'Özet Rapor',
+    aciklama: 'Beş sonuç sayfası: özet, geometri, gergi zarfı, kayma, hubload.' }
+];
+function veFeadReportKind(node){
+  var k = node && node.data && node.data.reportKind;
+  return (k === 'summary') ? 'summary' : 'detailed';
+}
+
 function getFeadReportPropertiesHTML(node){
   if(!node.data) node.data = {};
   var R = _frResults();
   var solved = !!(R && R.ok);
+  var kind = veFeadReportKind(node);
   var html = '<div class="sw-panel">';
+  html += _frKindPicker(node, kind);
   if(solved){
     var nP = (R.pulleyNames || []).length;
     var nD = (R.duty || []).length;
@@ -101,7 +119,8 @@ function getFeadReportPropertiesHTML(node){
           + '<span style="color:var(--accent-success); font-weight:700;">✓ Model çözüldü</span> — '
           + nP + ' kasnak · ' + nD + ' devir noktası. Rapor güncel çözüme göre üretilir.</div>';
     html += _frDocFields(node);
-    html += '<button onclick="veFeadGenerateReport(\'' + node.id + '\')" style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:var(--radius-sm);" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 Raporu Oluştur ve İndir</button>';
+    var kAd = (kind === 'summary') ? 'Özet Raporu' : 'Detaylı Raporu';
+    html += '<button onclick="veFeadGenerateReport(\'' + node.id + '\')" style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:var(--radius-sm);" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 ' + kAd + ' Oluştur ve İndir</button>';
   } else {
     html += '<div style="padding:10px 12px; margin-bottom:10px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:var(--fs-body); line-height:1.5;">'
           + '<b>Model çözülmedi.</b> Rapor, Çözücü sonuçlarından üretilir.</div>';
@@ -110,6 +129,30 @@ function getFeadReportPropertiesHTML(node){
   html += '<div id="ve-fead-report-status" style="margin-top:8px; font-size:var(--fs-tiny); color:var(--text-muted);"></div>';
   html += '</div>';
   return html;
+}
+
+// Rapor türü seçici. İki durumlu bir anahtar değil İKİ KART: her türün ne
+// olduğu seçim yapılmadan ÖNCE okunabilsin. Seçim `saveState` çağırır ve
+// paneli yeniden çizer (veFeadSetChoice kalıbı) — tür bir görünüm tercihi
+// değil, hangi belgenin indirileceğini belirleyen bir karar.
+function _frKindPicker(node, kind){
+  var h = '<div style="margin:0 0 10px;">'
+    + '<div style="font-size:var(--fs-tiny); font-weight:600; color:var(--text-heading); margin-bottom:5px;">Rapor türü</div>';
+  VE_FEAD_REPORT_KINDS.forEach(function(k){
+    var on = (k.key === kind);
+    h += '<div onclick="veFeadSetChoice(\'' + node.id + '\',\'reportKind\',\'' + k.key + '\')"'
+      + ' style="cursor:pointer; margin-bottom:5px; padding:7px 9px; border:1px solid '
+      + (on ? 'var(--accent-primary)' : 'var(--border-color)') + '; background:'
+      + (on ? 'rgba(59,130,246,0.10)' : 'var(--bg-secondary)') + ';">'
+      + '<div style="display:flex; align-items:center; gap:7px;">'
+      + '<span style="width:11px; height:11px; flex:none; border-radius:50%; border:2px solid '
+      + (on ? 'var(--accent-primary)' : 'var(--text-muted)') + '; background:'
+      + (on ? 'var(--accent-primary)' : 'transparent') + ';"></span>'
+      + '<b style="font-size:var(--fs-tiny); color:var(--text-heading);">' + k.ad + '</b></div>'
+      + '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:3px; line-height:1.4;">'
+      + k.aciklama + '</div></div>';
+  });
+  return h + '</div>';
 }
 
 // Doküman künyesi — antete ve §8.18'e akan üç alan. Tedarikçi sayfasının
@@ -190,6 +233,7 @@ function _frFindReportNode(nodeId){
 function veFeadGenerateReport(nodeId){
   var node = _frFindReportNode(nodeId);
   var R = _frResults();
+  var kind = veFeadReportKind(node);
   // ÇÖZÜLMEMİŞ MODELDE İNDİRME YOK. Boş/yarım bir belge indirmek, kullanıcıya
   // "rapor üretildi" izlenimi verip içinde hiçbir sayı olmayan bir dosya
   // bırakırdı — sessiz başarısızlığın ders kitabı hâli.
@@ -208,14 +252,15 @@ function veFeadGenerateReport(nodeId){
     }
     var html;
     try {
-      html = _frBuildReportHTML(R, node);
+      html = (kind === 'summary') ? veFeadSummaryHTML(R, node) : _frBuildReportHTML(R, node);
     } catch(e){
       _frStatus('Rapor üretilemedi: ' + (e && e.message ? e.message : e), 'var(--accent-danger)');
       if(typeof showToast === 'function') showToast('Rapor üretilemedi.', 'error');
       return;
     }
-    var ad = 'MFSim_FEAD_Raporu';
-    if(node && node.data && node.data.docNo) ad = String(node.data.docNo).replace(/[^\w.-]+/g, '_');
+    var ad = (kind === 'summary') ? 'MFSim_FEAD_Ozet' : 'MFSim_FEAD_Raporu';
+    if(node && node.data && node.data.docNo) ad = String(node.data.docNo).replace(/[^\w.-]+/g, '_')
+      + (kind === 'summary' ? '_Ozet' : '');
     _frDownload(html, ad + '_' + _frDateStamp() + '.html');
     _frStatus('Rapor indirildi (' + Math.round(html.length / 1024) + ' KB).', 'var(--accent-success)');
     if(typeof showToast === 'function') showToast('FEAD raporu indirildi.', 'success');
@@ -2528,6 +2573,9 @@ function _frCompliance(R){
 if(typeof module !== 'undefined' && module.exports){
   module.exports = {
     getFeadReportPropertiesHTML: getFeadReportPropertiesHTML,
+    veFeadReportKind: veFeadReportKind,
+    VE_FEAD_REPORT_KINDS: VE_FEAD_REPORT_KINDS,
+    _frKindPicker: _frKindPicker,
     veFeadGenerateReport: veFeadGenerateReport,
     _frBuildReportHTML: _frBuildReportHTML,
     _frSection8: _frSection8,
@@ -2547,7 +2595,8 @@ if(typeof module !== 'undefined' && module.exports){
     _frTakeupRateFigure: _frTakeupRateFigure,
     _frDesignTensionBlock: _frDesignTensionBlock,
     _frPivotBlock: _frPivotBlock,
-    _frF: _frF, _frFs: _frFs, _frPct: _frPct, _frEsc: _frEsc,
+    _frF: _frF, _frFs: _frFs, _frPct: _frPct, _frEsc: _frEsc, _frNum: _frNum,
+    _frSlipStats: _frSlipStats,
     VE_FEAD_REP_SECTIONS: VE_FEAD_REP_SECTIONS
   };
 }

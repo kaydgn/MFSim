@@ -1182,6 +1182,97 @@ karşılaştırmasını kaldırma, teoriden türetmeyi silme, §8.9'da ortalama 
 "take-up oranı" deme. Dördüncüsü ilk turda **YEŞİL kaldı** — kayış yayını
 denetleyen test φ'yi *gösteren* işaret yayına bakmıyordu; o kapı da eklendi.
 
+##### İKİ RAPOR TÜRÜ — 'Rapor' bileşeninden seçilir (2026-08-26)
+
+Kullanıcı isteği: *"Bu raporun kalmasını istiyorum, yanına Gates raporunun
+aynısı olacak şekilde özet bir rapor daha çıkar. Rapor bileşeninde 'Detaylı
+Rapor' ve 'Özet Rapor' seçenekleri olsun."*
+
+| Tür | Dosya | Ne anlatır | Boy |
+|-----|-------|-----------|-----|
+| `detailed` (varsayılan) | `js/cp-fead-report.js` | Teori §1–10 + Ek A + §8 çözümü | ~944 KB |
+| `summary` | `js/cp-fead-summary.js` | Tedarikçi çıktısının **beş sonuç sayfası** | ~340 KB |
+
+Seçim `node.data.reportKind`'da; **varsayılan `detailed`** → alanı olmayan her
+eski proje bugüne kadarki davranışını birebir korur (testli). Panel iki KART
+çiziyor (iki durumlu anahtar değil): hangi belgenin ne olduğu seçim yapılmadan
+ÖNCE okunabilsin.
+
+Özet rapor **KaTeX taşımıyor** — teori yok, denklem yok. Boy farkının tamamı bu.
+Fontlar Takoz/ayrıntılı raporla ORTAK (`window.MNT_REPORT_ASSETS.fontsCss`).
+
+###### Sayfa eşlemesi — Gates AG00976 (05.06.2025, v13.02)
+
+| Özet sayfa | Gates sayfa | İçerik |
+|---|---|---|
+| 1 Sonuç Özeti | 1/12 | kayış+gergi künyesi · şema · duty+B10 · **tepe yük** |
+| 2 Geometrik Analiz 1/2 | 2/12 | yerleşim verisi · kayış/gergi girdisi · span/sarım/oran |
+| 3 Geometrik Analiz 2/2 | 3/12 | gergi geometrisi (6 konum × 10 satır) · take-up · boy eğrisi |
+| 4 Kayma ve Gerginlik | 6/12 | kayma emniyeti matrisi · açıklık frekansları |
+| 5 Hubload Analizi | 8/12 | yük koşulları · ortalama gerginlik/hubload/yön matrisleri |
+
+**ÖLÇÜLDÜ — tedarikçi sayfası geri üretiliyor** (AG00976 örneği, PDF'in kendi
+sayıları): açıklık `148,0 · 141,4 · 150,8 · 272,7 · 194,4 · 141,3`, sarım
+`156,2 · 52,8 · 198,4 · 64,3 · 157,1 · 34,6`, hız oranı ve gereken kayış boyu
+altı konumda **birebir**; take-up `0,708 mm/°`; ortalama gerginlik/hubload
+880 d/d'de `1381/1380/1023/1022/545/544` ve `1892/1228/2373/1089/1539/324`
+(≤2 N). Tek sapma Load sütununda (%0,66) — orası belgeli tekillik.
+
+###### TEPE YÜK TABLOSU BASILIR AMA "KALİBRE DEĞİL" DAMGASIYLA
+
+Gates bu tabloyu *"en kritik ivme + yük kombinasyonu"* **arayarak** kuruyor.
+Çekirdeğin `peakEstimate`'i yarı-statik ve kendi notu şunu diyor: *"gergi kolu
+dinamigi dahil DEGIL"*. Kombinasyon taraması (aksesuarlar %100/%10, ivme
+±1100 d/d/s) köprü katmanında yapıldı — çekirdeğe DOKUNULMADAN — ve
+**ÖLÇÜLDÜ: yakınsamıyor**:
+
+| | MFSim | Gates | fark |
+|---|---:|---:|---:|
+| yük taşıyanlar | 1471 · 1464 · 1058 · 1051 | 1585 · 1582 · 1177 · 1174 | −%7,2 … −%10,5 |
+| alternatör | 671 | 546 | **+%22,8** |
+| gergi | 544 | 544 | %0,0 |
+
+Tablo yine basılıyor — düzen tedarikçi çıktısıyla aynı kalsın — ama başlığında
+`KALİBRE DEĞİL` damgası, altında ölçülen sapma bandı ve *"yatak/braket
+seçiminde tek başına kullanılmamalıdır"* uyarısı var. Sayı gizlenmiyor, çünkü
+bu modülün kuralı geçerlilik sınırını sonucun **içinde** taşımak.
+
+**SESSİZ KIRILMA — kW anahtarı.** İlk sürümde tepe gerginlik ORTALAMANIN
+ALTINA düşüyordu (FAN 634 N, oysa ortalaması 1381 N): `R.duty` zaten çekirdek
+biçiminde (kW kasnak ADIYLA anahtarlı) ama kod onu ikinci kez
+`veFeadDutyToCore`'dan geçiriyordu; anahtarlar tutmayınca **bütün aksesuarlar
+0 kW** ile koşuyordu. Tablo yine üretiliyor, yalnız sayı küçülüyor — modülün
+en pahalı sınıfının aynısı. Kapı artık *"tepe ≥ ortalama"* değişmezini tutuyor.
+
+###### Uydurulmayan iki şey
+
+`Belt Slip Sensitivity`'nin ters çözümü (gereken gerginlik/sarım artışı) ve
+`Permissible Axial Offset` yok. İkincisi için çekirdekte `alignmentAllowance`
+VAR ama düz kasnakların açısal kaçıklığını (ψ) GİRDİ olarak istiyor ve MFSim
+o alanı sormuyor; ψ=0 ile basılan sayı iyimser bir yalan olurdu.
+
+###### Sayı biçimi ve şekil ORTAK — ikinci kopya yok
+
+`_frF`/`_frFs`/`_frPct`/`_frEsc`/`_frNum` ve kayma hükmü (`_frSlipStats`)
+ayrıntılı rapordan çağrılıyor; iki belge aynı sayıyı farklı basamazdı.
+Yerleşim şeması yine `veFeadLayoutSVG` — ve `class="appfig"` ŞART: o çizici
+uygulamanın palet jetonlarını kullanıyor, tanımsız `var()` kalıtılan `stroke`
+için `none` demek (ayrıntılı raporda ölçüldü: kayış ve kasnaklar görünmez
+kalmıştı). Kapı, şeklin kullandığı her jetonun belgenin CSS'inde tanımlı
+olmasını arıyor.
+
+###### BİLİNEN KISIT: sayfa A4'e SIĞMIYOR
+
+Belge A4 **yatay** basıyor (`@page{size:A4 landscape}`) ama **ÖLÇÜLDÜ**: beş
+sayfanın beşi de içerik tavanını (≈733 px) aşıyor — 6 · 111 · 137 · 190 ·
+**981** px. Sayfa 5'te dört uzun matris var (Gates'in aynı sayfasında üç).
+Bu yüzden panel açıklaması *"baskıya hazır"* DEMİYOR. Sayfa uyumu kozmetik
+turuna bırakıldı.
+
+Kapı altı mutasyonla ölçüldü, altısı da kırmızı: tepe kW anahtarını geri
+bozma, `.appfig` sınıfını düşürme, varsayılan türü `summary` yapma, açıklık
+boyunu %1 kaydırma, CSS'ten `--accent-warning` silme, sapma bandını yutma.
+
 ##### Uydurulmayan şeyler — raporun kendi §9'unda yazılı
 
 | Gates sayfası | Neden yok |

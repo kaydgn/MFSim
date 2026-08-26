@@ -42,10 +42,15 @@ const DOSYALAR = [
 //                        KULLANICI AYARI, tasarım jetonu değil.
 //   cp-mount-report.js : MFSim arayüzüne değil, İNDİRİLEN BAĞIMSIZ bir HTML
 //   cp-fead-report.js    rapor dosyasına yazıyor (Blob → a.download). O belgenin
-//                        kendi tipografisi var ve --fs-* jetonlarına erişimi
-//                        YOK; em-göreli ölçüler orada doğru olan. İki rapor
-//                        üreteci de AYNI şablon CSS'ini kullanıyor.
-const MUAF = ['js/annotations.js', 'js/cp-mount-report.js', 'js/cp-fead-report.js'];
+//   cp-fead-summary.js   kendi tipografisi var ve --fs-* jetonlarına erişimi
+//                        YOK; em-göreli ölçüler orada doğru olan. Üçü de
+//                        belgenin KENDİ ölçeğini kendi :root'unda taşıyor.
+//                        cp-fead-summary.js ayrıca A4 YATAY basılan bir belge:
+//                        punto seçimi arayüz ölçeğine değil, sayfaya sığmaya
+//                        bağlı (Sonuçlar penceresindeki TXT raporlarıyla aynı
+//                        gerekçe).
+const MUAF = ['js/annotations.js', 'js/cp-mount-report.js', 'js/cp-fead-report.js',
+              'js/cp-fead-summary.js'];
 
 // Serbest (jetona bağlanmamış) font-size bildirimi arar.
 // `font-size:var(--fs-...)` biçimi geçerli; `font-size:12px` / `0.7rem` değil.
@@ -123,8 +128,19 @@ describe('muafiyetler gerekçeli kalsın', () => {
       expect(src).toMatch(/\.download\s*=/);
     });
 
+  // Özet rapor indirmeyi KENDİ yapmıyor (cp-fead-report.js'in _frDownload'ı
+  // indiriyor); bağımsızlığının kanıtı, TAM bir belge ve kendi sayfa ölçeğini
+  // üretmesi. Blob araması burada yanlış ölçüt olurdu.
+  test('js/cp-fead-summary.js gerçekten bağımsız belge üretiyor', () => {
+    const src = fs.readFileSync(path.join(ROOT, 'js/cp-fead-summary.js'), 'utf8');
+    expect(src).toMatch(/<!DOCTYPE html>/);
+    expect(src).toMatch(/@page\{size:A4 landscape/);
+    expect(src).toMatch(/':root\{/);
+  });
+
   test('muafiyet listesi büyümedi', () => {
     // Yeni muafiyet eklemek bilinçli bir karar olmalı; sessizce büyümesin.
-    expect(MUAF).toEqual(['js/annotations.js', 'js/cp-mount-report.js', 'js/cp-fead-report.js']);
+    expect(MUAF).toEqual(['js/annotations.js', 'js/cp-mount-report.js',
+                          'js/cp-fead-report.js', 'js/cp-fead-summary.js']);
   });
 });
