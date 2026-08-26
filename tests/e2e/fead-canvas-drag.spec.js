@@ -130,24 +130,6 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
     expect(Math.abs(Lsurukle - L0)).toBeGreaterThan(1);
   });
 
-  test('gerçek çap hayaleti kutunun arkasında ve ÇAPA göre ölçekli', async ({ page }) => {
-    await bootApp(page);
-    await openFeadWithExample(page);
-    const olcu = await page.evaluate(() => {
-      const out = [];
-      window.nodes.forEach((n) => {
-        if (!n.data || !n.data.od) return;
-        const el = document.getElementById(n.id);
-        const g = el && el.querySelector('.ve-fead-dia');
-        if (g) out.push({ od: n.data.od, w: Math.round(parseFloat(g.style.width)) });
-      });
-      return out;
-    });
-    expect(olcu.length).toBeGreaterThanOrEqual(5);
-    // 1 px = 1 mm → hayaletin genişliği dış çapın ta kendisi
-    olcu.forEach((o) => expect(o.w).toBe(Math.round(o.od)));
-  });
-
   test('kayış boyu kipi rozeti TIKLANINCA değişiyor ve çözüm kipe uyuyor', async ({ page }) => {
     await bootApp(page);
     await openFeadWithExample(page);
@@ -215,6 +197,53 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
     const z = await zoomOf(page);
     expect(sonra.y - once.y).toBeCloseTo(16 / z, 0);   // ← kenetlemeliyken 3.94
     expect(sonra.x).toBeCloseTo(once.x, 1);
+  });
+
+  // ── ÖRNEK "KULLANIMA HAZIR" GELİYOR ─────────────────────────────────────
+  //
+  // Kullanıcı isteği (2026-08-26): kesikli çap daireleri kalksın; "Başlangıç ve
+  // Örnekler" kutusu örnek kurulduktan sonra kalmasın; "Rapor" kutusu Çözücü'nün
+  // altında gelsin; kart daha büyük olsun ve yön gülü ana şekle yaklaşsın.
+  //
+  // Node bunların hiçbirini GÖREMEZ: kutu DOM'da mı, kart gerçekten o ölçüde mi
+  // kuruldu, SVG viewBox'ı ne — hepsi gerçek tarayıcının işi.
+  test('örnek kurulunca: hayalet YOK, başlangıç kutusu YOK, Rapor VAR', async ({ page }) => {
+    await bootApp(page);
+    await openFeadWithExample(page);
+
+    const r = await page.evaluate(() => {
+      const araclar = window.nodes
+        .filter((n) => {
+          const d = (window.componentDefs || {})[n.type] || {};
+          return d.isFeadExample || d.isFeadBelt || d.isFeadSolver || d.isFeadReport;
+        })
+        .slice().sort((a, b) => a.y - b.y).map((n) => n.type);
+      const lay = window.nodes.find((n) => n.type === 'fead-layout');
+      const svg = document.querySelector('svg[data-fead-node]');
+      const belt = svg && svg.querySelector('path[data-ve="belt"]');
+      const bb = belt ? belt.getBBox() : null;
+      return {
+        araclar,
+        // Kesikli çap hayaleti DOM'dan tamamen kalkmalı
+        hayalet: window.nodes.filter((n) => {
+          const el = document.getElementById(n.id);
+          return el && el.querySelector('.ve-fead-dia');
+        }).length,
+        kart: lay ? { w: lay.width, h: lay.height } : null,
+        viewBox: svg ? svg.getAttribute('viewBox') : null,
+        beltW: bb ? +bb.width.toFixed(1) : null
+      };
+    });
+
+    // Sol şerit: Kayış Özellikleri → Çözücü → Rapor, başlangıç kutusu YOK
+    expect(r.araclar).toEqual(['fead-belt', 'fead-solver', 'fead-report']);
+    expect(r.hayalet).toBe(0);
+    // Kart yeni varsayılan ölçüde ve SVG'si kartın kendi genişliğinde
+    expect(r.kart).toEqual({ w: 440, h: 500 });
+    expect(r.viewBox).toBe('0 0 440 458');
+    // ŞERİT AYRILMADI: çizim 18 px payın dışında kalan TAM genişliği kullanıyor.
+    // Şerit ayrılsaydı 440−36−54 = 350 px olurdu (eski davranış, ölçüldü).
+    expect(r.beltW).toBeGreaterThan(400);
   });
 
   test('"Otomatik Düzenle" koordinatları SİLMİYOR, kutuları yerine koyuyor', async ({ page }) => {

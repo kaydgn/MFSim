@@ -184,6 +184,36 @@ describe('veFeadApplyBadge — temas tarafı kanvasta görünür', () => {
     expect(e.querySelectorAll('.ve-fead-badge')).toHaveLength(1);
   });
 
+  // ── ÇAP HAYALETİ KALDIRILDI, GERİ GELMEMELİ (2026-08-26) ────────────────
+  //
+  // Kutunun arkasına gerçek dış çapı gösteren soluk kesikli bir çember
+  // çiziliyordu; kullanıcı isteğiyle kaldırıldı ("bu bileşenlerin etrafına
+  // böyle sanal bir çizgili daireler çizmişsin. Onları kaldıralım, gerek yok").
+  //
+  // ÖLÇÜLDÜ: özelliğin tamamı silindiğinde 5918 birim testinin HİÇBİRİ
+  // kırılmadı — hayaletin hiç kapısı yoktu. Kaldırılan bir yüzeyi negatif
+  // kapıyla kilitlemek bu deponun kalıbı (bkz. Geometri panelindeki "incelik
+  // seçicisi ve 'Kenarlar' kutusu YOK"): yoksa biri çağrıyı geri koyar ve
+  // kullanıcı isteği SESSİZCE geri alınmış olur.
+  //
+  // `od` VERİLİ olmak zorunda: eski üretici zaten `od > 0` olmadan çizmiyordu,
+  // çapsız bir düğümle bu kapı ısırmazdı.
+  test('kasnak kutusuna kesikli ÇAP HAYALETİ çizilmez', () => {
+    [kasnak('fead-crank', { od: 162, driver: true }),
+     kasnak('fead-alternator', { od: 57 }),
+     kasnak('fead-idler', { od: 75, contact: 'back' })].forEach((n) => {
+      const e = el();
+      fead.veFeadApplyBadge(e, n);
+      expect(e.querySelector('.ve-fead-dia')).toBeNull();
+      // Kutuya HİÇBİR kesikli çember eklenmiyor (sınıf adı değişse de yakalar)
+      expect(e.innerHTML).not.toMatch(/border-radius:\s*50%/);
+      expect(e.innerHTML).not.toMatch(/dashed/);
+    });
+    // ve üretici/tazeleyici dışa da açılmıyor
+    expect(fead.veFeadApplyDiaGhost).toBeUndefined();
+    expect(fead.veFeadRefreshDiaGhosts).toBeUndefined();
+  });
+
   // KAYIŞ DÜĞÜMÜ ROZETİ AYRI BİR ŞEY: temas tarafı değil, BOY KİPİ — ve salt
   // gösterge değil, seçim yüzeyi. Kullanıcı isteği: "topoloji üzerinden çok
   // basit bir şekilde 'kayış boyu sabit' veya 'kayış boyu değişken' seçeneği".
@@ -948,6 +978,10 @@ describe('Kayış Yolu düğümünün ölçüsü — tek kaynak', () => {
     // Şema okunabilir olmak zorunda: küçük kutu bu kartı taşımıyor
     expect(VE_FEAD_LAYOUT_W).toBeGreaterThan(300);
     expect(VE_FEAD_LAYOUT_H).toBeGreaterThan(240);
+    // KULLANICI İSTEĞİ (2026-08-26): "kanvas biraz BOYUNA GENİŞ" — kart
+    // yükseklik-baskın olmak zorunda. Yalnız iki alt sınır tutulsaydı 500×440
+    // (yani YATAY) da geçerdi ve istek sessizce geri alınmış olurdu.
+    expect(VE_FEAD_LAYOUT_H).toBeGreaterThan(VE_FEAD_LAYOUT_W);
   });
 
   test('eski 60×56 kayıt kart ölçüsüne YÜKSELİR', () => {
@@ -957,10 +991,35 @@ describe('Kayış Yolu düğümünün ölçüsü — tek kaynak', () => {
     expect(n.height).toBe(VE_FEAD_LAYOUT_H);
   });
 
+  // Kart ölçüsü 420×340 → 440×500 büyüdüğünde, bugüne kadar kaydedilmiş HER
+  // proje eski ölçüyü taşıyor. Liste olmasaydı o projeler küçük kartla açılır,
+  // yeni ölçü yalnız yeni kartlarda görünür ve aynı sürümde iki farklı kart
+  // ölçüsü dolaşırdı — kullanıcı da farkı kendi yaptığı bir şey sanırdı.
+  test('AŞILMIŞ her varsayılan yükselir — 60×56 DE 420×340 DA', () => {
+    expect(VE_FEAD_LAYOUT_LEGACY.length).toBeGreaterThanOrEqual(2);
+    VE_FEAD_LAYOUT_LEGACY.forEach((e) => {
+      const n = { type: 'fead-layout', width: e.w, height: e.h };
+      expect(veFeadNormalizeLayoutSize(n)).toBe(true);
+      expect(n.width).toBe(VE_FEAD_LAYOUT_W);
+      expect(n.height).toBe(VE_FEAD_LAYOUT_H);
+    });
+    // Listedeki hiçbir çift GÜNCEL ölçü olamaz: olursa göç kendi kendini
+    // sonsuza kadar "değişti" sayar ve saveState her açılışta kirlenirdi.
+    VE_FEAD_LAYOUT_LEGACY.forEach((e) => {
+      expect(e.w === VE_FEAD_LAYOUT_W && e.h === VE_FEAD_LAYOUT_H).toBe(false);
+    });
+  });
+
   test('kullanıcının bilerek verdiği ölçü KORUNUR', () => {
-    const n = { type: 'fead-layout', width: 640, height: 500 };
+    // Ölçü ne GÜNCEL ne de AŞILMIŞ hiçbir çiftle örtüşmemeli: 640×500 seçilseydi
+    // yükseklik VE_FEAD_LAYOUT_H'in ta kendisi olurdu ve "korunuyor" iddiası
+    // tek alandan ayrışırdı (test yine geçerdi, ama yanlış sebepten).
+    const n = { type: 'fead-layout', width: 640, height: 420 };
+    expect(VE_FEAD_LAYOUT_LEGACY.concat([{ w: VE_FEAD_LAYOUT_W, h: VE_FEAD_LAYOUT_H }])
+      .some((e) => e.w === n.width || e.h === n.height)).toBe(false);
     expect(veFeadNormalizeLayoutSize(n)).toBe(false);
     expect(n.width).toBe(640);
+    expect(n.height).toBe(420);
   });
 
   test('başka tipe dokunmaz', () => {
@@ -1410,6 +1469,76 @@ describe('veFeadLoadExample — kutu konumu mm koordinatını YALANLAMAZ', () =>
   };
   const merkez = (n) => ({ x: n.x + n.width / 2, y: n.y + n.height / 2 });
 
+  // ── ÖRNEK "KULLANIMA HAZIR" GELİR: BAŞLANGIÇ GİDER, RAPOR KALIR ─────────
+  //
+  // Kullanıcı isteği (2026-08-26): örnek kurulduktan sonra "Başlangıç ve
+  // Örnekler" kutusu kanvasta kalmasın, "Rapor" kutusu ise Çözücü'nün altında
+  // dursun. İkisi de bir SÖZLEŞME: biri açılış yüzeyi ve işini bitiriyor,
+  // öbürü örneğin eksik kalan halkası (kullanıcı raporu almak için bileşeni
+  // paletten ayrıca aramak zorunda kalıyordu).
+  test('örnek kurulunca "Başlangıç ve Örnekler" düğümü KALMAZ', () => {
+    // Örnekten ÖNCE starter kutusu kanvasta duruyor (veFeadPopulateStarter'ın
+    // koyduğu düğümü taklit ediyoruz; kurExample global.nodes'u sıfırlıyor,
+    // o yüzden createNode kancasını kurup starter'ı ONUNLA ekliyoruz).
+    const eskiKur = fead.veFeadLoadExample;
+    document.body.innerHTML = '<div id="ve-canvas"></div><div id="ve-canvas-wrapper"></div>';
+    global.nodes = []; global.connections = [];
+    let k = 0;
+    global.createNode = (type, x, y) => {
+      const d = componentDefs[type] || {};
+      const n = { id: 'ex' + ++k, type, def: d, x, y,
+                  width: d.defaultWidth || 65, height: d.defaultHeight || 60, data: {} };
+      global.nodes.push(n); return n;
+    };
+    global.createConnection = (from, to) =>
+      global.connections.push({ id: 'c' + global.connections.length, from, to,
+                                fromPort: 'output', toPort: 'input' });
+    createNode('fead-example', 100, 100);
+    expect(global.nodes.filter((n) => n.type === 'fead-example').length).toBe(1);
+
+    expect(eskiKur('BMC_FEAD_2026')).toBeTruthy();
+    expect(global.nodes.filter((n) => n.type === 'fead-example').length).toBe(0);
+    delete global.createNode; delete global.createConnection;
+  });
+
+  test('örnek "Rapor" düğümünü de kurar', () => {
+    expect(kurExample('BMC_FEAD_2026')).toBeTruthy();
+    expect(global.nodes.filter((n) => n.type === 'fead-report').length).toBe(1);
+  });
+
+  // SOL ŞERİT SIRASI nodes dizisi sırasından geliyor (veFeadArrangeByCoords →
+  // serit()). Rapor Çözücü'den ÖNCE push edilseydi şeritte de onun ÜSTÜNDE
+  // çıkardı — sıra bir yerleşim ayrıntısı değil, veFeadExampleNodes'un push
+  // sırasının gözlenebilir sonucu.
+  test('sol şerit sırası: Kayış Özellikleri → Çözücü → Rapor', () => {
+    expect(kurExample('BMC_FEAD_2026')).toBeTruthy();
+    const sol = global.nodes
+      .filter((n) => { const d = componentDefs[n.type] || {};
+                       return d.isFeadBelt || d.isFeadSolver || d.isFeadReport || d.isFeadExample; })
+      .slice().sort((a, b) => a.y - b.y)
+      .map((n) => n.type);
+    expect(sol).toEqual(['fead-belt', 'fead-solver', 'fead-report']);
+    // ve hepsi kasnak kümesinin SOLUNDA (araç kutuları çizime girmez)
+    const kasnakMinX = Math.min(...global.nodes.filter((n) => M._feadIsPulley(n)).map((n) => n.x));
+    global.nodes.filter((n) => { const d = componentDefs[n.type] || {};
+      return d.isFeadBelt || d.isFeadSolver || d.isFeadReport; })
+      .forEach((n) => expect(n.x).toBeLessThan(kasnakMinX));
+  });
+
+  test('kayıtlı BÜTÜN örnekler Rapor düğümünü taşır', () => {
+    Object.keys(M.VE_FEAD_EXAMPLES).forEach((key) => {
+      const pack = M.veFeadExampleNodes(key);
+      const tipler = pack.nodes.map((n) => n.type);
+      expect(tipler).toContain('fead-report');
+      expect(tipler).toContain('fead-layout');
+      // Rapor, Çözücü'den SONRA
+      expect(tipler.indexOf('fead-report')).toBeGreaterThan(tipler.indexOf('fead-solver'));
+      // Rapor düğümü rapor TÜRÜ taşımaz → veFeadReportKind varsayılana ('detailed') düşer
+      const rep = pack.nodes.find((n) => n.type === 'fead-report');
+      expect(rep.data && rep.data.reportKind).toBeUndefined();
+    });
+  });
+
   test('BMC örneğinde HER kasnağın kutu merkezi mm koordinatına oturur', () => {
     expect(kurExample('BMC_FEAD_2026')).toBeTruthy();
     const kasnaklar = global.nodes.filter((n) => M._feadIsPulley(n));
@@ -1507,38 +1636,134 @@ describe('yön gülünün yeri', () => {
     expect(y.cy).toBeCloseTo(15, 6);
   });
 
-  // ASIL KAZANÇ — ve NEREDE ortaya çıktığı.
+  // ── ŞERİT ARTIK KOŞULLU — ve ölçütü ÇİZİLEN ŞEYİN KENDİSİ ────────────────
   //
-  // Ölçek s = min(genişlik/spanX, yükseklik/spanY). Kart GENİŞken bağlayıcı
-  // olan yükseklik, dolayısıyla 54 px'lik şerit ölçeği hiç kısıtlamıyor:
-  // ÖLÇÜLDÜ (BMC, 420×298) kazanç %0.0. Kullanıcı kartı DARALTTIĞI anda
-  // bağlayıcı olan genişlik oluyor ve şerit doğrudan çizimden kesiyor:
-  //   340×298 → %21.6 · 300×240 → %17.3 · 260×200 → %16.5 · 220×180 → %33.7
-  // Bu yüzden test dar kartta ölçüyor: özelliğin varlık sebebi orası.
-  // Ölçüm GERÇEK örnekle (BMC, 6 kasnak): kazanç topolojinin en-boy oranına
-  // bağlı ve yukarıdaki dört kasnaklı çizim fixture'ı çok uzun, yani her
-  // ölçüde yükseklik-bağlı kalıyor — ondan ölçmek özelliği hiç sınamazdı.
+  // Eski kural: gül varsayılan yerindeyse 54 px'lik sağ şerit KOŞULSUZ ayrılır.
+  // Yeni kural bir ölçüm: şerit ayrılmadan ölçeklenir, sonra gülün kutusu
+  // gerçekten çizilen şeylere (kasnak çemberleri · kayış açıklıkları · gergi
+  // kolu · pivot) çarpıyor mu diye bakılır. Çarpmıyorsa şerit hiç ayrılmaz.
+  //
+  // ÖLÇÜLDÜ (BMC, 6 kasnak) — en büyük kasnak yarıçapı px:
+  //   kart      eski (koşulsuz)   yeni    kazanç
+  //   440×458        50.29        58.05   +%15.4   ← yeni varsayılan kart
+  //   380×298        41.67        45.45   +%9.1
+  //   340×298        35.92        43.68   +%21.6
+  //   300×240        30.17        35.39   +%17.3
+  //   260×200        23.50        28.45   +%21.1
+  //   220×180        16.68        16.68     %0     ← ÇARPIŞMA VAR, şerit ayrılır
+  //   180×140         9.86         9.86     %0     ← çarpışma var
+  //
+  // Yani kazanç yer VARKEN doğuyor, yer YOKKEN davranış birebir eskisi.
+  // 420×298'de iki kural da aynı sonucu veriyor çünkü orada ölçek zaten
+  // YÜKSEKLİĞE bağlıydı — şerit hiçbir şeyi kısıtlamıyordu.
   const bmc = () => {
     const pack = veFeadExampleNodes('BMC_FEAD_2026');
     pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     global.nodes = pack.nodes; global.connections = pack.connections;
     return veFeadBuildFromCanvas();
   };
+  // "Şerit ayrıldı mı" sorusunun gözlenebilir karşılığı: gülü TAŞIMAK çizimi
+  // büyütüyor mu? Taşınmış gül hiçbir zaman şerit ayırmaz, dolayısıyla fark
+  // yalnız varsayılan konumda şerit ayrılmışsa doğar.
+  const seritAyrildi = (build, W, H) => {
+    const a = enBuyukR(fead.veFeadLayoutSVG(build, W, H, { nodeId: 'lay' }));
+    const b = enBuyukR(fead.veFeadLayoutSVG(build, W, H,
+      { nodeId: 'lay', compassPos: { fx: 0.12, fy: 0.12 } }));
+    return { ayrildi: Math.abs(b - a) > 0.01, a: a, b: b };
+  };
 
-  test('gül taşınınca sağ şerit ŞEMAYA bırakılır — DAR kartta çizim büyür', () => {
+  test('gül çizime ÇARPMIYORSA şerit ayrılmaz — varsayılan kartta ayrılmıyor', () => {
     const build = bmc();
-    const dar = fead.veFeadLayoutSVG(build, 340, 298, { nodeId: 'lay' });
-    const genis = fead.veFeadLayoutSVG(build, 340, 298,
-      { nodeId: 'lay', compassPos: { fx: 0.12, fy: 0.12 } });
-    expect(enBuyukR(genis) / enBuyukR(dar)).toBeGreaterThan(1.15);   // ölçüldü: %21.6
+    const r = seritAyrildi(build, VE_FEAD_LAYOUT_W, VE_FEAD_LAYOUT_H - 42);
+    expect(r.ayrildi).toBe(false);
+    // Kullanıcı gülü taşısa bile kazanacağı bir şey yok: çizim ZATEN tam alanda.
+    expect(r.b).toBeCloseTo(r.a, 2);
+    // ve gerçekten büyük: eski koşulsuz şeritte 50.29 px'ti (yukarıdaki tablo)
+    expect(r.a).toBeGreaterThan(55);
   });
 
-  test('kart genişken şerit ölçeği kısıtlamıyor (kazanç dar kartta doğuyor)', () => {
+  test('çarpışma VARSA şerit AYRILIR — dar kartta eski davranış korunuyor', () => {
     const build = bmc();
-    const a = fead.veFeadLayoutSVG(build, 420, 298, { nodeId: 'lay' });
-    const b = fead.veFeadLayoutSVG(build, 420, 298,
-      { nodeId: 'lay', compassPos: { fx: 0.12, fy: 0.12 } });
-    expect(enBuyukR(b)).toBeCloseTo(enBuyukR(a), 2);
+    const r = seritAyrildi(build, 200, 150);
+    expect(r.ayrildi).toBe(true);
+    expect(r.b / r.a).toBeGreaterThan(1.2);          // ölçüldü: %49.0
+  });
+
+  test('geniş kartta iki kural da aynı sonucu verir (ölçek yüksekliğe bağlı)', () => {
+    const build = bmc();
+    const r = seritAyrildi(build, 420, 298);
+    expect(r.ayrildi).toBe(false);
+    expect(r.b).toBeCloseTo(r.a, 2);
+  });
+
+  // ── GÜL ETİKET YERLEŞTİRİCİSİNDE BİR ENGELDİR ──────────────────────────
+  //
+  // Şerit koşullu olunca çizim gülün durduğu sağ alt köşeye kadar uzanabiliyor;
+  // orada duran bir kasnağın ADI yön etiketlerinin (0/90/180/270) üstüne biner
+  // ve bu, çizim hatası gibi değil VERİ hatası gibi okunur.
+  //
+  // ÖLÇÜT ÇAPA NOKTASI DEĞİL, ETİKET KUTUSU. İlk yazımda çapa noktasına
+  // bakılıyordu ve kapı MUTASYONDAN GEÇTİ (engeli kaldırmak testi kırmıyordu):
+  // `middle` çapası çakışmanın 43 px solunda duruyor, kutu ise sağa taşıyor.
+  // Kutu ölçütüyle ölçüldüğünde beş kombinasyon çakışıyor — engel gerçekten
+  // iş yapıyor. Kutu kuralı yerleştiricinin kendisiyle AYNI (bkz. `aday`).
+  const adKutulari = (svg) =>
+    [...svg.matchAll(/<text data-ve="name" x="([-\d.]+)" y="([-\d.]+)" text-anchor="(\w+)" font-size="9"[^>]*>([^<]*)</g)]
+      .map((m) => {
+        const x = +m[1], y = +m[2], an = m[3], w = m[4].length * 9 * 0.6;
+        const x0 = an === 'middle' ? x - w / 2 : an === 'start' ? x : x - w;
+        return { x0, x1: x0 + w, y0: y - 8, y1: y + 2 };
+      });
+
+  test('kasnak adı gülün kutusuna GİRMEZ', () => {
+    const build = bmc();
+    // Çakışmanın GERÇEKTEN doğduğu kombinasyon (ölçüldü): dar kart + uzun ad.
+    // Varsayılan 440×458 kartta hiçbir ad güle yaklaşmıyor, yani orada ölçmek
+    // engeli hiç sınamazdı.
+    [[340, 298], [300, 240]].forEach(([W, H]) => {
+      const svg = fead.veFeadLayoutSVG(build, W, H,
+        { nodeId: 'lay', names: { 0: 'Klima Kompresörü Kasnağı (Denso 6SEU14C)' } });
+      const g = /<g data-ve="compass-group" data-cx="([-\d.]+)" data-cy="([-\d.]+)"/.exec(svg);
+      expect(g).not.toBeNull();
+      const m = fead.VE_FEAD_ROSE_HALF + 3;
+      const r = { x0: +g[1] - m, x1: +g[1] + m, y0: +g[2] - m, y1: +g[2] + m };
+      const ad = adKutulari(svg);
+      expect(ad.length).toBeGreaterThan(0);
+      ad.forEach((b) => {
+        const ortusuyor = !(b.x1 <= r.x0 || b.x0 >= r.x1 || b.y1 <= r.y0 || b.y0 >= r.y1);
+        expect(ortusuyor).toBe(false);
+      });
+    });
+  });
+
+  // TAŞINMIŞ GÜL DE ENGELDİR. "Şerit ayırayım mı" ile "etiket buraya girmesin"
+  // İKİ AYRI SORU: birincisi taşınmış gülde gerçekten kullanıcının sorumluluğu,
+  // ikincisi koşulsuz doğru — taşınmış gül de çiziliyor ve kullanıcı onu tam
+  // şemanın ORTASINA sürükleyebilir. İkisi tek bayrağa (`!moved`) bağlanınca
+  // compassPos verilir verilmez koruma kapanıyordu; yani gül çizime GİRDİĞİ
+  // anda etiketler onun altına düşüyordu.
+  //
+  // ÖLÇÜLDÜ (BMC, 440×458, gülün 16×16'lık kesir ızgarası = 256 konum):
+  //   engel VARKEN  çakışan konum sayısı **3**
+  //   engel YOKKEN  çakışan konum sayısı **61**
+  // Kalan 3 konum (fx 0.20 · fy 0.25–0.35) yerleştiricinin kendi ilan ettiği
+  // geri düşüşü: dört adayın hiçbiri temiz değilse etiket üste döner ve
+  // çakışır — kaybolmaz. Aşağıdaki konumlar o üçün DIŞINDAN, yani engelin
+  // gerçekten kurtardığı yerlerden seçildi.
+  test('gül TAŞINMIŞKEN de etiket engelidir — şemanın ortasına sürüklense bile', () => {
+    const build = bmc();
+    [{ fx: 0.40, fy: 0.60 }, { fx: 0.40, fy: 0.65 }, { fx: 0.45, fy: 0.25 },
+     { fx: 0.30, fy: 0.65 }, { fx: 0.86, fy: 0.86 }].forEach((pos) => {
+      const svg = fead.veFeadLayoutSVG(build, VE_FEAD_LAYOUT_W, VE_FEAD_LAYOUT_H - 42,
+        { nodeId: 'lay', compassPos: pos });
+      const g = /<g data-ve="compass-group" data-cx="([-\d.]+)" data-cy="([-\d.]+)"/.exec(svg);
+      expect(g).not.toBeNull();
+      const m = fead.VE_FEAD_ROSE_HALF + 3;
+      const r = { x0: +g[1] - m, x1: +g[1] + m, y0: +g[2] - m, y1: +g[2] + m };
+      adKutulari(svg).forEach((b) => {
+        expect(!(b.x1 <= r.x0 || b.x0 >= r.x1 || b.y1 <= r.y0 || b.y0 >= r.y1)).toBe(false);
+      });
+    });
   });
 
   test('gül verilen kesire oturur ve çember data-cx ile aynı noktadadır', () => {

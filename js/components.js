@@ -791,17 +791,37 @@ var VE_MODULE_LEGACY_H = 66;
 // koordinat/çap/temas girdilerini değiştirdikçe yeniden çizilir, yani
 // modelinin tutarlı olup olmadığını PANEL AÇMADAN görür.
 //
-// Ölçü ÖLÇÜLDÜ, keyfî değil: FEAD_INFORMATION düzeninin en-boy oranı
-// (465 × 315 mm ≈ 1.48) ve okunabilir en küçük kasnak adı (8px) birlikte
-// 420×340'ta oturuyor; daha darda alternatör dairesi (Ø57) 6px'in altına
-// düşüp ad etiketleri üst üste biniyor.
-var VE_FEAD_LAYOUT_W = 420;
-var VE_FEAD_LAYOUT_H = 340;
-// Kart öncesi varsayılan (Aşama 0–3 kayıtları). BİREBİR bu ölçüdeyse — yani
-// kullanıcı hiç dokunmamışsa — kart ölçüsüne yükseltilir; bilerek verilmiş her
-// ölçü korunur. Modül kartındaki kuralın aynısı, bkz. veModuleSizeFor.
-var VE_FEAD_LAYOUT_LEGACY_W = 60;
-var VE_FEAD_LAYOUT_LEGACY_H = 56;
+// Ölçü ÖLÇÜLDÜ, keyfî değil. İlk ölçü 420×340'tı: FEAD_INFORMATION düzeninin
+// en-boy oranı (465 × 315 mm ≈ 1.48) ve okunabilir en küçük kasnak adı (8px)
+// orada oturuyordu — yani bu bir ALT SINIRDI, hedef değil.
+//
+// Kullanıcı isteği (2026-08-26): *"Kanvas biraz boyuna geniş [olsun]"*.
+// ÖLÇÜLDÜ (BMC örneği, 420×340): şemaya kalan alan 330 × 262 px (420−54 şerit
+// −36 pay · 298−36) ve kayış yolu 316.3 × 262 ile YÜKSEKLİĞE dayanıyordu —
+// yani kart, çizimin istediği yeri veremiyordu.
+//
+// 440×500'de aynı içerik 404 × 334.7 px'e çıkıyor (yön gülü şeridi de artık
+// koşullu, bkz. cp-fead.js). Kazanç TEK BİR ÖLÇEK ÇARPANI, altı kasnakta da
+// aynı: **1.277, yani +%27.7** — yarıçaplar 45.5→58.0 · 42.7→54.5 ·
+// 21.3→27.3 (×3) · **16.4→21.0** (alternatör Ø57, en küçüğü). Dikeyde kalan
+// 87 px boşluk da gülün oturduğu ölü alan oluyor (458 − 334.7 − 2·18 = 87.3).
+//
+// Sabit şeritlerin (SER 20 + SEC 22 = 42 px) yüksekliğe maliyeti de düşüyor:
+// %12.4 → %8.4, yani büyüme SVG'ye orantısından FAZLA geçiyor.
+var VE_FEAD_LAYOUT_W = 440;
+var VE_FEAD_LAYOUT_H = 500;
+// AŞILMIŞ VARSAYILANLAR — biri BİREBİR duruyorsa (yani kullanıcı hiç
+// dokunmamışsa) güncel ölçüye yükseltilir; bilerek verilmiş her ölçü korunur.
+// Modül kartındaki kuralın aynısı, bkz. veModuleSizeFor.
+//
+// LİSTE, TEK ÇİFT DEĞİL: 60×56 kart-öncesi (Aşama 0–3) ölçüydü, 420×340 ise
+// kartın ilk ölçüsü. İkincisi listeye alınmasaydı bugüne kadar kaydedilmiş
+// HER proje eski küçük kartla açılır, yeni ölçü yalnız yeni kartlarda görünür
+// ve aynı sürümde iki farklı kart ölçüsü dolaşırdı.
+var VE_FEAD_LAYOUT_LEGACY = [ { w: 60, h: 56 }, { w: 420, h: 340 } ];
+// Geriye dönük adlar (dışarıdan okuyan bir yer kalırsa bozulmasın).
+var VE_FEAD_LAYOUT_LEGACY_W = VE_FEAD_LAYOUT_LEGACY[0].w;
+var VE_FEAD_LAYOUT_LEGACY_H = VE_FEAD_LAYOUT_LEGACY[0].h;
 
 function veIsFeadLayoutNode(node) {
   if(!node || !node.type) return false;
@@ -813,8 +833,11 @@ function veIsFeadLayoutNode(node) {
 // aynı: sekme önizlemesi düğümü DEĞİŞTİRMEDEN ölçüye ihtiyaç duyuyor.
 function veFeadLayoutSizeFor(node) {
   var w = (node && node.width) || 65, h = (node && node.height) || 60;
-  if(veIsFeadLayoutNode(node) && w === VE_FEAD_LAYOUT_LEGACY_W && h === VE_FEAD_LAYOUT_LEGACY_H) {
-    return { w: VE_FEAD_LAYOUT_W, h: VE_FEAD_LAYOUT_H, changed: true };
+  if(veIsFeadLayoutNode(node)) {
+    for(var i = 0; i < VE_FEAD_LAYOUT_LEGACY.length; i++) {
+      if(w === VE_FEAD_LAYOUT_LEGACY[i].w && h === VE_FEAD_LAYOUT_LEGACY[i].h)
+        return { w: VE_FEAD_LAYOUT_W, h: VE_FEAD_LAYOUT_H, changed: true };
+    }
   }
   return { w: w, h: h, changed: false };
 }
