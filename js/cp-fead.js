@@ -1612,8 +1612,107 @@ function veFeadLayoutSVG(build, W, H, opts){
   var roseYer = wantCompass ? veFeadCompassPlace(W, H, opts.compassPos) : null;
   var ROSE = (roseYer && !roseYer.moved) ? VE_FEAD_ROSE_W : 0;
   var spanX = Math.max(1, maxX-minX), spanY = Math.max(1, maxY-minY);
-  var s = Math.min((W-2*pad-ROSE)/spanX, (H-2*pad)/spanY);
-  var offX = pad + ((W-2*pad-ROSE) - spanX*s)/2, offY = pad + ((H-2*pad) - spanY*s)/2;
+  var s, offX, offY;
+  function olcekle(padL, padR, padU, padD){
+    var eW = W - padL - padR - ROSE, eH = H - padU - padD;
+    s = Math.min(eW/spanX, eH/spanY);
+    offX = padL + (eW - spanX*s)/2; offY = padU + (eH - spanY*s)/2;
+  }
+  olcekle(pad, pad, pad, pad);
+
+  // ── ETİKET GENİŞLİĞİ DE ÖLÇEĞE GİRER ───────────────────────────────────
+  // Kasnak adı merkezde ORTALANIR; "Alternatör (155 A)" 18 karakter, 9 px
+  // yazıda ≈97 px, yani merkezden ±49 px. Küme kenara yakınsa ad çerçevenin
+  // DIŞINA taşar — ÖLÇÜLDÜ (özet rapor, sayfa 1): 9 px dışarıda ve kırpılmış.
+  // Sınır kutusu yalnız çemberleri sardığı için hata sayılardan görünmez,
+  // yalnız çizimden; Şekil 1'de düzeltilen sınıfın aynısı.
+  //
+  // Ölçek ile etiket genişliği BİRBİRİNE BAĞLI (etiket px, sınır mm; ikisini
+  // çözen `s`'nin kendisi sınırdan geliyor) → tek geçişte çözülemez. İKİ GEÇİŞ:
+  // önce ölçek, sonra taşan payı kadar kenar payı büyütülüp yeniden ölçek.
+  // İkinci geçiş `s`'yi küçültür, yani etiketler daha da daralır — yakınsama
+  // tek adımda garanti.
+  // GÖRÜNEN AD ÇAĞIRANDAN GELEBİLİR. Kanvas kartında tam ad okunur (kutu 420
+  // px ve kullanıcı zaten kasnağı adıyla tanıyor); RAPORDA aynı ad şemayı
+  // taşırıyor ve kayış yolunun üstüne biniyor — ÖLÇÜLDÜ: "Alternatör (155 A)"
+  // çerçeveyi 10,4 px aşıyor, dört etiket kayışla çakışıyordu. Rapor kısa kodu
+  // geçiyor; kod ↔ ad künyesi aynı sayfada duruyor.
+  function gorAd(k){
+    var a = opts.names && opts.names[k];
+    return (a == null || a === '') ? geom.names[k] : String(a);
+  }
+  var etW = (typeof opts.labelWidth === 'function') ? opts.labelWidth : function(t, fs){
+    return String(t == null ? '' : t).length * fs * 0.6;      // monospace/dar sans
+  };
+  (function(){
+    var solTas = 0, sagTas = 0, ustTas = 0;
+    ps.forEach(function(p, k){
+      var X = offX + (p.c[0] - minX) * s, Y = offY + (maxY - p.c[1]) * s;
+      var R = p.rPitch * s, yari = etW(gorAd(k), 9) / 2;
+      solTas = Math.max(solTas, 2 - (X - yari));
+      sagTas = Math.max(sagTas, (X + yari) - (W - ROSE - 2));
+      ustTas = Math.max(ustTas, 11 - (Y - R - 4));            // ad, çemberin ÜSTÜNDE
+    });
+    if(solTas <= 0.5 && sagTas <= 0.5 && ustTas <= 0.5) return;
+    // Pay sınırlı: bir etiket şemanın yarısını yiyemez.
+    var tavX = W * 0.22, tavY = H * 0.14;
+    olcekle(pad + Math.min(Math.max(0, solTas), tavX), pad + Math.min(Math.max(0, sagTas), tavX),
+            pad + Math.min(Math.max(0, ustTas), tavY), pad);
+  })();
+  // ── ETİKET YERLEŞİMİ — KAYIŞ YOLU BİR ENGELDİR ─────────────────────────
+  // Ad şimdiye kadar koşulsuz çemberin ÜSTÜNE konuyordu. Yerleşim dairesel
+  // olduğu için kasnakların yarısında kayış tam oradan geçiyor: ÖLÇÜLDÜ
+  // (AG00976, 480×420) dört etiket kayış yolunun üstüne biniyordu ve hangi
+  // sayının hangi kasnağa ait olduğu okunmuyordu.
+  //
+  // Aday sıralaması ÜST → ALT → SAĞ → SOL: üst, teknik resimde alışılmış yer;
+  // yan adaylar ancak dikey iki yer de doluysa kullanılıyor, çünkü yandaki
+  // etiket komşu kasnağın alanına giriyor. İlk TEMİZ aday seçilir; hiçbiri
+  // temiz değilse üste dönülür (etiket kaybolmaz, yalnız çakışır).
+  var _etiket = [];
+  (function(){
+    var T0 = _feadXform(s, offX, offY, minX, maxY);
+    var segler = [];
+    (geom.spans || []).forEach(function(sp){
+      segler.push([T0.tx(sp.Pi[0]), T0.ty(sp.Pi[1]), T0.tx(sp.Pj[0]), T0.ty(sp.Pj[1])]);
+    });
+    function kesisir(seg, r){                       // doğru parçası ↔ dikdörtgen
+      var x1=seg[0], y1=seg[1], x2=seg[2], y2=seg[3];
+      if(Math.max(x1,x2) < r.x0 || Math.min(x1,x2) > r.x1) return false;
+      if(Math.max(y1,y2) < r.y0 || Math.min(y1,y2) > r.y1) return false;
+      if((x1>=r.x0&&x1<=r.x1&&y1>=r.y0&&y1<=r.y1) || (x2>=r.x0&&x2<=r.x1&&y2>=r.y0&&y2<=r.y1)) return true;
+      var dx=x2-x1, dy=y2-y1;
+      function yan(x,y){ return dx*(y-y1) - dy*(x-x1); }
+      var a=yan(r.x0,r.y0), b=yan(r.x1,r.y0), c=yan(r.x1,r.y1), d=yan(r.x0,r.y1);
+      return !((a>0&&b>0&&c>0&&d>0) || (a<0&&b<0&&c<0&&d<0));
+    }
+    function ortusur(a, b){
+      return !(a.x1 <= b.x0 || a.x0 >= b.x1 || a.y1 <= b.y0 || a.y0 >= b.y1);
+    }
+    var kutular = [];
+    ps.forEach(function(p, k){
+      var X = offX + (p.c[0]-minX)*s, Y = offY + (maxY-p.c[1])*s, R = p.rPitch*s;
+      var w = etW(gorAd(k), 9), h = 10;
+      var aday = [
+        { x:X,        y:Y-R-4,      an:'middle', x0:X-w/2,  x1:X+w/2,  y0:Y-R-4-8,   y1:Y-R-4+2 },
+        { x:X,        y:Y+R+11,     an:'middle', x0:X-w/2,  x1:X+w/2,  y0:Y+R+11-8,  y1:Y+R+11+2 },
+        { x:X+R+5,    y:Y+3,        an:'start',  x0:X+R+5,  x1:X+R+5+w, y0:Y-5,      y1:Y+5 },
+        { x:X-R-5,    y:Y+3,        an:'end',    x0:X-R-5-w, x1:X-R-5, y0:Y-5,       y1:Y+5 }
+      ];
+      var sec = null;
+      for(var i=0;i<aday.length && !sec;i++){
+        var a = aday[i];
+        if(a.x0 < 1 || a.x1 > W-ROSE-1 || a.y0 < 1 || a.y1 > H-1) continue;
+        var carpti = false;
+        for(var j=0;j<segler.length && !carpti;j++) if(kesisir(segler[j], a)) carpti = true;
+        for(var m=0;m<kutular.length && !carpti;m++) if(ortusur(kutular[m], a)) carpti = true;
+        if(!carpti) sec = a;
+      }
+      if(!sec) sec = aday[0];
+      kutular.push(sec); _etiket.push(sec);
+    });
+  })();
+
   // mm → ekran dönüşümü TEK NESNEDE (_feadXform): animatör de kare başına aynı
   // katsayıları kullanıyor. İki ayrı dönüşüm tutmak, hareket eden dişlerin
   // duran kayıştan kayması demekti.
@@ -1817,10 +1916,16 @@ function veFeadLayoutSVG(build, W, H, opts){
           + ' Z" fill="' + col + '" opacity="0.75"/>';
     }
 
-    svg += '<text x="' + X + '" y="' + f(Y - R - 4) + '" text-anchor="middle" font-size="9" fill="var(--text-muted)">'
-        + _feadEsc(geom.names[k]) + '</text>';
-    svg += '<text x="' + X + '" y="' + f(Y + R + 10) + '" text-anchor="middle" font-size="8" fill="var(--accent-warning)">'
-        + f(geom.wrapDeg(k)) + '°</text>';
+    var et = _etiket[k] || { x: X, y: Y - R - 4, an: 'middle' };
+    svg += '<text x="' + f(et.x) + '" y="' + f(et.y) + '" text-anchor="' + et.an
+        + '" font-size="9" fill="var(--text-muted)">' + _feadEsc(gorAd(k)) + '</text>';
+    // SARIM AÇISI ŞEMADA İKİNCİ KEZ YAZILIR. Kanvasta bunun karşılığı var:
+    // orada tablo YOK, kart tek başına duruyor. Raporda aynı altı sayı bir
+    // sonraki sayfada hizalı ve iki ondalıkla basılıyor; şemada ise kayış
+    // yolunun üstüne düşüyor (ölçüldü: dört çakışmanın ikisi bu etiketten).
+    if(opts.wrapLabels !== false)
+      svg += '<text x="' + X + '" y="' + f(Y + R + 10) + '" text-anchor="middle" font-size="8" fill="var(--accent-warning)">'
+          + f(geom.wrapDeg(k)) + '°</text>';
   });
 
   // SEÇİLİ KONUMUN KÜNYESİ — sol üstte. "Hangi konumu görüyorum" sorusu şemanın

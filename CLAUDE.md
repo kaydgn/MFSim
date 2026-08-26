@@ -1182,6 +1182,250 @@ karşılaştırmasını kaldırma, teoriden türetmeyi silme, §8.9'da ortalama 
 "take-up oranı" deme. Dördüncüsü ilk turda **YEŞİL kaldı** — kayış yayını
 denetleyen test φ'yi *gösteren* işaret yayına bakmıyordu; o kapı da eklendi.
 
+##### İKİ RAPOR TÜRÜ — 'Rapor' bileşeninden seçilir (2026-08-26)
+
+Kullanıcı isteği: *"Bu raporun kalmasını istiyorum, yanına Gates raporunun
+aynısı olacak şekilde özet bir rapor daha çıkar. Rapor bileşeninde 'Detaylı
+Rapor' ve 'Özet Rapor' seçenekleri olsun."*
+
+| Tür | Dosya | Ne anlatır | Boy |
+|-----|-------|-----------|-----|
+| `detailed` (varsayılan) | `js/cp-fead-report.js` | Teori §1–10 + Ek A + §8 çözümü | ~944 KB |
+| `summary` | `js/cp-fead-summary.js` | Tedarikçi çıktısının **beş sonuç sayfası** | ~340 KB |
+
+Seçim `node.data.reportKind`'da; **varsayılan `detailed`** → alanı olmayan her
+eski proje bugüne kadarki davranışını birebir korur (testli). Panel iki KART
+çiziyor (iki durumlu anahtar değil): hangi belgenin ne olduğu seçim yapılmadan
+ÖNCE okunabilsin.
+
+Özet rapor **KaTeX taşımıyor** — teori yok, denklem yok. Boy farkının tamamı bu.
+Fontlar Takoz/ayrıntılı raporla ORTAK (`window.MNT_REPORT_ASSETS.fontsCss`).
+
+###### DÜZEN TEDARİKÇİ SAYFASININ KENDİSİ — kendi yorumumuz değil (2026-08-26)
+
+İlk sürüm A4 **yatay**, kendi başlıklarıyla ("Sonuç Özeti" kartları) ve şemayı
+üç sayfaya birden koyan bir belgeydi. Kullanıcı reddetti: *"Her yere bu şekli
+koymuşsun. Gerek yok… Gates raporunun aynısı olsun. Gates raporunda sayfalarda
+ne varsa aynısı olsun."*
+
+PDF `pymupdf` ile görüntüye çevrilip yerleşim **okundu** (metin koordinatları
+döndürülmüş çıktığı için tahminle kurulamıyordu). Gerçek yapı:
+
+| | Gates | ilk sürümümüz |
+|---|---|---|
+| Sayfa | A4 **dikey**, iki sütun, kırmızı ayraçlar | A4 yatay, tek akış |
+| Antet | marka + firma + sistem adı ÜSTTE | teknik resim antedi ALTTA |
+| Şema | 1, 2 ve 5. sayfalarda | **üç sayfada da, büyük** |
+| Sayfa 1 | kayış/gergi künyesi · şema · **gerginlik kontrol grafiği** · B10 · **doğal frekans haritası** · tepe yük · eksenel kaçıklık | kendi uydurduğumuz özet kartları |
+| Sayfa 3 | gergi tablosu + **küçük** take-up grafiği | tablo + büyük kendi grafiğimiz |
+
+Belge yeniden kuruldu. Grafikler AYRINTILI RAPORDAN geliyor — ikinci bir çizici
+yok: `veFeadFigureRaw(fn, R, W, H)` aynı figür işlevini **küçük ve numarasız**
+koşturuyor (`_FR_W`/`_FR_H` zaten `_frChart`'ın yedeği, `_FR_RAW` figür
+sarmalını atlıyor; şekil sayaçlarına dokunmuyor).
+
+**ÜÇ SESSİZ KUSUR — üçü de bu turda çıktı, üçü de testli:**
+
+| Kusur | Belirti | Kök neden |
+|---|---|---|
+| Gerginlik grafiğinin ekseni | y ekseni **8411 N**'e uzuyor, altı çalışma konumu x ekseninin dibinde tek çizgiye yapışıyordu | Ölçek tabanına **Load** katılıyordu. Load bir MEKANİK DURDURUCU: orada take-up tekilleşir ve gerginlik 5257 N (çalışma 544 N). Fonksiyonun kendi yorumu "çalışma konumlarına göre sınırlanır" diyordu — tersi oluyordu. **Bu kusur AYRINTILI RAPORDA da vardı**; düzeltme ikisini birden düzeltiyor (yeni tavan 1170 N, Gates 900) |
+| Take-up çağrısı bölümü sürüklüyordu | Özet sayfa 3'e §8.9'un başlığı ve iki paragrafı düşüyordu | `_frTakeupFigure` bir **bölüm** üreticisi, figür değil. Çizim `_frTakeupChart` olarak ayrıldı; bölüm de onu çağırıyor |
+| Gergi kasnağının X/Y'si `—` | Yerleşim tablosunda konum "bilinmiyor" gibi okunuyordu | Konum bir GİRDİ değil, kol açısından türeyen çalışma merkezi. Çalışma (Ortalama) konumundan basılıyor ve † ile türev olduğu işaretli (−161,97 / 91,27 ↔ Gates −161,97 / 91,29) |
+
+Boşalan yere gerçek tablo kondu (kaburga yorulma dağılımı — kalibre bir sonuç),
+sayfa 3'ün take-up grafiğinin yanına açıklık frekansları.
+
+**ÖLÇÜ KALDIRACI:** şekiller sütuna `width:100%` ile oturuyor, yazı boyutu ise
+viewBox biriminde sabit. Küçük viewBox'ta etiketler çizimin üstüne biniyordu;
+viewBox BÜYÜTÜLÜNCE yazı göreli küçülüyor ve sığıyor. Kalan taşma (uzun kasnak
+adları şema çerçevesini aşıyor) `veFeadLayoutSVG`'nin sınırlara etiket
+genişliğini katmamasından — Şekil 1'de düzeltilen sınıfın aynısı, kanvas
+çizicisinde duruyor.
+
+###### Sayfa eşlemesi — Gates AG00976 (05.06.2025, v13.02)
+
+| Özet sayfa | Gates sayfa | İçerik |
+|---|---|---|
+| 1 Sonuç Özeti | 1/12 | kayış+gergi künyesi · şema · duty+B10 · **tepe yük** |
+| 2 Geometrik Analiz 1/2 | 2/12 | yerleşim verisi · kayış/gergi girdisi · span/sarım/oran |
+| 3 Geometrik Analiz 2/2 | 3/12 | gergi geometrisi (6 konum × 10 satır) · take-up · boy eğrisi |
+| 4 Kayma ve Gerginlik | 6/12 | kayma duyarlılığı (en kritik kombinasyon) · emniyet matrisi + grafiği |
+| 5 Hubload Analizi | 8/12 | yük koşulları · ortalama gerginlik/hubload/yön matrisleri |
+
+**ÖLÇÜLDÜ — tedarikçi sayfası geri üretiliyor** (AG00976 örneği, PDF'in kendi
+sayıları): açıklık `148,0 · 141,4 · 150,8 · 272,7 · 194,4 · 141,3`, sarım
+`156,2 · 52,8 · 198,4 · 64,3 · 157,1 · 34,6`, hız oranı ve gereken kayış boyu
+altı konumda **birebir**; take-up `0,708 mm/°`; ortalama gerginlik/hubload
+880 d/d'de `1381/1380/1023/1022/545/544` ve `1892/1228/2373/1089/1539/324`
+(≤2 N). Tek sapma Load sütununda (%0,66) — orası belgeli tekillik.
+
+###### TEPE YÜK TABLOSU BASILIR AMA "KALİBRE DEĞİL" DAMGASIYLA
+
+Gates bu tabloyu *"en kritik ivme + yük kombinasyonu"* **arayarak** kuruyor.
+Çekirdeğin `peakEstimate`'i yarı-statik ve kendi notu şunu diyor: *"gergi kolu
+dinamigi dahil DEGIL"*. Kombinasyon taraması (aksesuarlar %100/%10, ivme
+±1100 d/d/s) köprü katmanında yapıldı — çekirdeğe DOKUNULMADAN — ve
+**ÖLÇÜLDÜ: yakınsamıyor**:
+
+| | MFSim | Gates | fark |
+|---|---:|---:|---:|
+| yük taşıyanlar | 1471 · 1464 · 1058 · 1051 | 1585 · 1582 · 1177 · 1174 | −%7,2 … −%10,5 |
+| alternatör | 671 | 546 | **+%22,8** |
+| gergi | 544 | 544 | %0,0 |
+
+Tablo yine basılıyor — düzen tedarikçi çıktısıyla aynı kalsın — ama başlığında
+`KALİBRE DEĞİL` damgası, altında ölçülen sapma bandı ve *"yatak/braket
+seçiminde tek başına kullanılmamalıdır"* uyarısı var. Sayı gizlenmiyor, çünkü
+bu modülün kuralı geçerlilik sınırını sonucun **içinde** taşımak.
+
+**SESSİZ KIRILMA — kW anahtarı.** İlk sürümde tepe gerginlik ORTALAMANIN
+ALTINA düşüyordu (FAN 634 N, oysa ortalaması 1381 N): `R.duty` zaten çekirdek
+biçiminde (kW kasnak ADIYLA anahtarlı) ama kod onu ikinci kez
+`veFeadDutyToCore`'dan geçiriyordu; anahtarlar tutmayınca **bütün aksesuarlar
+0 kW** ile koşuyordu. Tablo yine üretiliyor, yalnız sayı küçülüyor — modülün
+en pahalı sınıfının aynısı. Kapı artık *"tepe ≥ ortalama"* değişmezini tutuyor.
+
+###### Uydurulmayan iki şey
+
+`Belt Slip Sensitivity`'nin ters çözümü (gereken gerginlik/sarım artışı) ve
+`Permissible Axial Offset` yok. İkincisi için çekirdekte `alignmentAllowance`
+VAR ama düz kasnakların açısal kaçıklığını (ψ) GİRDİ olarak istiyor ve MFSim
+o alanı sormuyor; ψ=0 ile basılan sayı iyimser bir yalan olurdu.
+
+###### Sayı biçimi ve şekil ORTAK — ikinci kopya yok
+
+`_frF`/`_frFs`/`_frPct`/`_frEsc`/`_frNum` ve kayma hükmü (`_frSlipStats`)
+ayrıntılı rapordan çağrılıyor; iki belge aynı sayıyı farklı basamazdı.
+Yerleşim şeması yine `veFeadLayoutSVG` — ve `class="appfig"` ŞART: o çizici
+uygulamanın palet jetonlarını kullanıyor, tanımsız `var()` kalıtılan `stroke`
+için `none` demek (ayrıntılı raporda ölçüldü: kayış ve kasnaklar görünmez
+kalmıştı). Kapı, şeklin kullandığı her jetonun belgenin CSS'inde tanımlı
+olmasını arıyor.
+
+Kapı altı mutasyonla ölçüldü, altısı da kırmızı: tepe kW anahtarını geri
+bozma, `.appfig` sınıfını düşürme, varsayılan türü `summary` yapma, açıklık
+boyunu %1 kaydırma, CSS'ten `--accent-warning` silme, sapma bandını yutma.
+
+###### KOZMETİK TUR — okunmazlığın kökü TİPOGRAFİ DEĞİL YERLEŞİMDİ (2026-08-26)
+
+Kullanıcı bildirimi: *"Yine her yere bu diyagramları koymuşsun… Zaten tablolar
+diyagramlar taşmış, yazılar komik bir şekilde kötü duruyor falan. Gates
+raporuna tamamen bağımlı kalmana gerek yok. Güzel bir kozmetik düzenleme ile
+raporu gerçekten okunabilir bir hale getirmeni istiyorum."*
+
+**ÖLÇÜLDÜ (gerçek tarayıcı, önce ↔ sonra):**
+
+| | önce | sonra |
+|---|---:|---:|
+| yatay taşan öge | **41** | **0** |
+| ayrı punto sayısı | **17** | 6 (belge) + şeklin kendi 4'ü |
+| 8,5 px altındaki öge | **651** | **11** (yalnız pusula ve künye) |
+| viewBox dışına taşan SVG yazısı | **8** | **0** |
+| sentetik kalın (gömülü olmayan ağırlık) | **2 çift · 36 öge** | **0** |
+| etiket ↔ kayış yolu çakışması (şema) | **4** | **0** |
+| sayfa doluluk oranı | %48–116 | **%92–97** |
+
+**KÖK NEDEN TİPOGRAFİ DEĞİLDİ.** Punto 8,2 px'e o yüzden düşürülmüştü:
+matris sütun başlığı kasnak ADIYDI ve *"Otomatik Gergi (E9843)"* tek başına
+22 karakter — altı kasnakta satır A4'e sığmıyor, sığdırmanın tek yolu puntoyu
+kırmaktı. Kısa kod (`_fsrCodes` → `FAN · AVA1 · KK · AVA2 · ALT · TEN`) o
+baskıyı kaldırdı, punto serbest kaldı. Tedarikçi çıktısının FAN/IDR/A_C/ALT/TEN
+kullanmasının sebebi de bu. **Kısaltma ancak karşılığı AYNI SAYFADA duruyorsa
+okunur** → kodu kullanan her sayfa `_fsrCodeLegend` basıyor.
+
+**DİYAGRAM İKİ KEZ DEĞİL, BİR KEZ VE BÜYÜK.** Kullanıcı aynı itirazı iki kez
+yaptı; cevap şemayı küçültmek değil. Belgede **tek yerleşim şeması** (sayfa 1,
+tam genişlik 703×520) ve **tek grafik** (sayfa 3, 780×624) var. Doğal frekans
+haritası, take-up eğrisi, kayma çubuk grafiği ve yorulma çubuk grafiği
+KALKTI — dördü de aynı sayfadaki bir tablo satırını ikinci kez anlatıyordu.
+
+##### Sekiz kozmetik karar — her biri ölçülmüş bir kusurun karşılığı
+
+| # | Karar | Neyi kapatıyor |
+|---|-------|----------------|
+| 1 | Sütun başlığı **kısa kod** + sayfa altında künye | 41 yatay taşmanın çoğu; puntoyu kıran baskı |
+| 2 | **Bütün hücreleri aynı olan sütun tablodan çıkar**, künyeye iner (`_fsrConstCols`) | 5 tabloda 11 sütun · 130 hücre · 11 farklı sayı |
+| 3 | Kalınlık **gömülü ağırlıklara** bağlı (Archivo 700 · serif 600 · mono 500) | sentetik kalın: 36 ögede glifler şişiyordu |
+| 4 | Punto **tek ölçekten** (`--f-xl…--f-xs`), satır içi px YOK | 17 ayrı punto |
+| 5 | Şemada etiket **kayış yolunu ENGEL sayar** (üst→alt→sağ→sol) | 4 çakışma |
+| 6 | Şemanın **W'si kabın genişliğini aşmaz** | 460 birimlik kutu 397 px'e sığdırılınca ölçek 0,863 → adlar **6,0 px** |
+| 7 | Eksen bölmesi **1/2/2,5/5 × 10ⁿ**'e oturur (`_frNiceAxis`) | `0 · 12,1 · 24,2 · 36,2 · 48,3` — 36,2 bir bölme değil, yuvarlama artığı |
+| 8 | Kırmızı vurgu yalnız **hükmü verebilen** kasnakta | 36 hücre kırmızıydı ve sayfanın KENDİ hükmüyle çelişiyordu |
+
+**6. maddenin sebebi çizicinin kabuğunda:** `veFeadLayoutSVG` `max-width:<W>px`
+yazıyor, yani SVG asla W'den geniş çizilmiyor ama dar bir kaba konursa
+KÜÇÜLTÜLÜYOR — ve puntolar kullanıcı biriminde sabit olduğu için onlar da
+küçülüyor. Kural: **istenen W, kabın genişliğinden küçük ya da eşit olmalı.**
+Kanvas kartında W zaten kutunun kendi ölçüsü, yani oran 1 ve sorun yok.
+
+**8. madde bir MANTIK hatasıydı, kozmetik değil.** `SF < servis faktörü` olan
+her hücre kırmızı basılıyordu; AG00976'da bu, gerginlik oranı 1,00 olan üç
+sütunun (iki avara + gergi) **36 hücresini** kırmızıya boyuyordu. Ama aynı
+sayfanın hükmü *"yük taşımayanlarda o sayı bir marj değil KAPASİTEDİR"* diyor
+— vurgu metnin tam tersini bağırıyordu. Sayı gizlenmiyor: soluk basılıyor ve
+başlığında **`yük taşımaz`** yazıyor.
+
+##### Çizici de düzeldi — kazanç KANVASTA da var
+
+Üçü de `js/cp-fead.js` / `js/cp-fead-report.js` içinde ve iki belgeyi birden
+düzeltiyor:
+
+| Ne | Nerede | Kanvasa etkisi |
+|----|--------|----------------|
+| Sınır kutusuna **etiket genişliği** katılıyor (iki geçiş: önce ölçek, sonra taşan pay kadar kenar payı) | `veFeadLayoutSVG` | uzun adlı kasnak artık çerçeveyi aşmıyor |
+| Etiket **kayış yolunu engel sayıyor** | `veFeadLayoutSVG` | kart da okunur oldu |
+| Eksen bölmesi yuvarlak sayıya oturuyor | `_frNiceAxis` / `_frChart` | ayrıntılı raporun **bütün** grafikleri (ölçüldü: `0 | 200 | 400…`, `1690 | 1700…`) |
+
+Ölçek ile etiket genişliği **birbirine bağlı** (etiket px, sınır mm; ikisini
+çözen `s` sınırdan geliyor) → tek geçişte çözülemez. İkinci geçiş `s`'yi
+küçültür, yani etiketler daha da daralır; yakınsama tek adımda garanti.
+
+**Etiket kısaltmak ile yer değiştirmek AYRI işler** ve mutasyonla ayrıştı:
+etiketi koşulsuz üste sabitleyince **kısa kodla bile** iki çakışma çıkıyor
+(`AVA1`, `TEN`); yerleştirici açıkken **tam adla bile** çakışma yok. Yani kod
+GENİŞLİK için, yerleştirici ÇAKIŞMA için.
+
+##### Ekranda kırpılan ≠ baskıda taşan — ikisi de sessizdi
+
+Sayfa bir ara `height:297mm; overflow:hidden` idi ve baskıda `height:auto`.
+Yani ekranda **sessizce kırpılan** içerik baskıda **altıncı sayfaya** düşüyor,
+iki yüzey birbirinden habersiz kalıyordu. Artık `min-height`: taşan sayfa
+ekranda da UZUYOR — kardeşlerinden uzun duran bir sayfa gözle görünür.
+
+##### Beş sayfa = beş soru
+
+Tedarikçi çıktısının sayfa adları (*"Geometric Analysis 1/2"*) bir DOSYA
+numaralandırmasıydı; sayfanın neyi cevapladığını söylemiyordu.
+
+| # | Sayfa | Cevapladığı soru |
+|---|-------|------------------|
+| 1 | **Genel Bakış** | nasıl duruyor · özetle nasıl (şema · künyeler · 5 kritik sayı · **kapsam**) |
+| 2 | **Geometri** | nerede duruyor (yerleşim · kayış yolu · aksesuar devirleri · **boy dengesi**) |
+| 3 | **Gergi Çalışma Zarfı** | kol nasıl geziyor (6 konum × 10 satır · gerginlik eğrisi) |
+| 4 | **Yükler** | ne kadar yükleniyor (duty girdisi · gerginlik ve hubload matrisleri) |
+| 5 | **Dayanım** | ne kadar dayanıyor (kayma · yorulma · ömür · titreşim · tepe yük) |
+
+**Sayfa 1'in "Belgenin Kapsamı" bloğu bir süs değil:** bir özet raporun en
+pahalı sessiz hatası, İÇERMEDİĞİ bir kontrolün yapıldığı izlenimini
+bırakmasıdır — tablolar dolu görünür, hüküm verilir, okuyucu neyin
+denetlenmediğini bilmez. Blok "ne var / ne yok"u yan yana yazıyor.
+
+**Sayfa 2'nin "Kayış Boyu Dengesi" tablosu ELLE TOPLANABİLİR olsun diye var:**
+*"efektif tahrik boyu 1716,2 mm"* tek başına doğrulanamaz; sarım yayları
+(667,53) + serbest açıklıklar (1048,67) = 1716,20 mm olarak parçalanınca
+okuyucu toplamı kendisi yapabiliyor.
+
+Kapı **sekiz mutasyonla** ölçüldü, sekizi de kırmızı: serif kalınlığını 700
+yapma (sentetik), iki satırlık tabloda da sabit sütun arama, şemada tam ad +
+sarım açısına dönme, kırmızıyı global en düşüğe çevirme, `nice` ekseni kapatma,
+bir sayfanın kod künyesini düşürme, punto tabanını 7,4'e indirme, şemayı ikinci
+kez çizme.
+
+> Beşincisi **ilk turda YEŞİL kaldı**: kapı `_frNiceAxis`'i doğrudan
+> çağırıyordu, GRAFİĞİN onu kullandığını ölçmüyordu. İkinci kapı basılan bölme
+> ETİKETLERİNE bakıyor (eşit aralık + adım 1/2/2,5/5 × 10ⁿ) — Şekil 1'deki
+> *"yay sayısına bakan test"* dersinin aynısı.
+
 ##### Uydurulmayan şeyler — raporun kendi §9'unda yazılı
 
 | Gates sayfası | Neden yok |

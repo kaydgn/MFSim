@@ -89,11 +89,29 @@ function _frH2(idx){
 }
 
 // ═══════════════════ BİLEŞEN PANELİ ═════════════════════════════════════════
+// RAPOR TÜRÜ. İki belge AYNI çözümden üretilir, farkı OKUYUCUSU:
+//   detailed  teoriyi anlatır (§1-10 + Ek A) — nasıl hesaplandığını gösterir
+//   summary   yalnız sonuç sayfaları — tedarikçi çıktısının beş sayfası
+// Varsayılan `detailed`: alanı olmayan eski projeler bugüne kadarki
+// davranışlarını birebir korusun.
+var VE_FEAD_REPORT_KINDS = [
+  { key: 'detailed', ad: 'Detaylı Rapor',
+    aciklama: 'Teori + türetme + bu modelin çözümü. Akademik biçim, KaTeX matematik.' },
+  { key: 'summary',  ad: 'Özet Rapor',
+    aciklama: 'Beş sonuç sayfası: özet, geometri, gergi zarfı, kayma, hubload.' }
+];
+function veFeadReportKind(node){
+  var k = node && node.data && node.data.reportKind;
+  return (k === 'summary') ? 'summary' : 'detailed';
+}
+
 function getFeadReportPropertiesHTML(node){
   if(!node.data) node.data = {};
   var R = _frResults();
   var solved = !!(R && R.ok);
+  var kind = veFeadReportKind(node);
   var html = '<div class="sw-panel">';
+  html += _frKindPicker(node, kind);
   if(solved){
     var nP = (R.pulleyNames || []).length;
     var nD = (R.duty || []).length;
@@ -101,7 +119,8 @@ function getFeadReportPropertiesHTML(node){
           + '<span style="color:var(--accent-success); font-weight:700;">✓ Model çözüldü</span> — '
           + nP + ' kasnak · ' + nD + ' devir noktası. Rapor güncel çözüme göre üretilir.</div>';
     html += _frDocFields(node);
-    html += '<button onclick="veFeadGenerateReport(\'' + node.id + '\')" style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:var(--radius-sm);" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 Raporu Oluştur ve İndir</button>';
+    var kAd = (kind === 'summary') ? 'Özet Raporu' : 'Detaylı Raporu';
+    html += '<button onclick="veFeadGenerateReport(\'' + node.id + '\')" style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:var(--radius-sm);" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 ' + kAd + ' Oluştur ve İndir</button>';
   } else {
     html += '<div style="padding:10px 12px; margin-bottom:10px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:var(--fs-body); line-height:1.5;">'
           + '<b>Model çözülmedi.</b> Rapor, Çözücü sonuçlarından üretilir.</div>';
@@ -110,6 +129,30 @@ function getFeadReportPropertiesHTML(node){
   html += '<div id="ve-fead-report-status" style="margin-top:8px; font-size:var(--fs-tiny); color:var(--text-muted);"></div>';
   html += '</div>';
   return html;
+}
+
+// Rapor türü seçici. İki durumlu bir anahtar değil İKİ KART: her türün ne
+// olduğu seçim yapılmadan ÖNCE okunabilsin. Seçim `saveState` çağırır ve
+// paneli yeniden çizer (veFeadSetChoice kalıbı) — tür bir görünüm tercihi
+// değil, hangi belgenin indirileceğini belirleyen bir karar.
+function _frKindPicker(node, kind){
+  var h = '<div style="margin:0 0 10px;">'
+    + '<div style="font-size:var(--fs-tiny); font-weight:600; color:var(--text-heading); margin-bottom:5px;">Rapor türü</div>';
+  VE_FEAD_REPORT_KINDS.forEach(function(k){
+    var on = (k.key === kind);
+    h += '<div onclick="veFeadSetChoice(\'' + node.id + '\',\'reportKind\',\'' + k.key + '\')"'
+      + ' style="cursor:pointer; margin-bottom:5px; padding:7px 9px; border:1px solid '
+      + (on ? 'var(--accent-primary)' : 'var(--border-color)') + '; background:'
+      + (on ? 'rgba(59,130,246,0.10)' : 'var(--bg-secondary)') + ';">'
+      + '<div style="display:flex; align-items:center; gap:7px;">'
+      + '<span style="width:11px; height:11px; flex:none; border-radius:50%; border:2px solid '
+      + (on ? 'var(--accent-primary)' : 'var(--text-muted)') + '; background:'
+      + (on ? 'var(--accent-primary)' : 'transparent') + ';"></span>'
+      + '<b style="font-size:var(--fs-tiny); color:var(--text-heading);">' + k.ad + '</b></div>'
+      + '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:3px; line-height:1.4;">'
+      + k.aciklama + '</div></div>';
+  });
+  return h + '</div>';
 }
 
 // Doküman künyesi — antete ve §8.18'e akan üç alan. Tedarikçi sayfasının
@@ -190,6 +233,7 @@ function _frFindReportNode(nodeId){
 function veFeadGenerateReport(nodeId){
   var node = _frFindReportNode(nodeId);
   var R = _frResults();
+  var kind = veFeadReportKind(node);
   // ÇÖZÜLMEMİŞ MODELDE İNDİRME YOK. Boş/yarım bir belge indirmek, kullanıcıya
   // "rapor üretildi" izlenimi verip içinde hiçbir sayı olmayan bir dosya
   // bırakırdı — sessiz başarısızlığın ders kitabı hâli.
@@ -208,14 +252,15 @@ function veFeadGenerateReport(nodeId){
     }
     var html;
     try {
-      html = _frBuildReportHTML(R, node);
+      html = (kind === 'summary') ? veFeadSummaryHTML(R, node) : _frBuildReportHTML(R, node);
     } catch(e){
       _frStatus('Rapor üretilemedi: ' + (e && e.message ? e.message : e), 'var(--accent-danger)');
       if(typeof showToast === 'function') showToast('Rapor üretilemedi.', 'error');
       return;
     }
-    var ad = 'MFSim_FEAD_Raporu';
-    if(node && node.data && node.data.docNo) ad = String(node.data.docNo).replace(/[^\w.-]+/g, '_');
+    var ad = (kind === 'summary') ? 'MFSim_FEAD_Ozet' : 'MFSim_FEAD_Raporu';
+    if(node && node.data && node.data.docNo) ad = String(node.data.docNo).replace(/[^\w.-]+/g, '_')
+      + (kind === 'summary' ? '_Ozet' : '');
     _frDownload(html, ad + '_' + _frDateStamp() + '.html');
     _frStatus('Rapor indirildi (' + Math.round(html.length / 1024) + ' KB).', 'var(--accent-success)');
     if(typeof showToast === 'function') showToast('FEAD raporu indirildi.', 'success');
@@ -1524,15 +1569,22 @@ function _frDesignTensionBlock(R){
 // raporunun "Belt Takeup / Tensioner Arm Ratio" satırı ANLIK türevdir; iki
 // farklı sayının aynı adı taşıması raporun kendi içinde çelişmesi demekti.
 function _frTakeupFigure(R){
+  var ç = _frTakeupChart(R);
+  if(!ç) return '';
+  var sw = ç.sw, K = ç.K, g = ç.g, anlik = ç.anlik, ort = ç.ort;
+  return _frTakeupSection(R, sw, K, g, anlik, ort);
+}
+// Yalnız GRAFİK — iki belge de bunu çizer, ikinci bir çizici yok.
+function _frTakeupChart(R){
   var sw = _frArmSweep(R);
-  if(!sw) return '';
+  if(!sw) return null;
   var K = _frTenConstruct(R);
   var Ls = sw.pts.map(function(p){ return p.L; });
   var lo = Math.min.apply(null, Ls), hi = Math.max.apply(null, Ls);
   var pad = (hi - lo) * 0.08 || 1;
   var c = _frChart({ xMin: 0, xMax: sw.relMax, yMin: lo - pad, yMax: hi + pad,
                      xLabel: 'Gergi kol açısı — göreli [°]', yLabel: 'Gereken tahrik boyu [mm]',
-                     xDec: 0, yDec: 1, H: 280, alt: 'Kayış take-up eğrisi' });
+                     xDec: 0, yDec: 1, H: (_FR_RAW ? _FR_H : 280), alt: 'Kayış take-up eğrisi' });
   var g = c.svg;
   g += '<g data-ve="takeup-curve">' + _frPolyline(c, sw.pts.map(function(p){ return [p.rel, p.L]; }), '#24425f', 2.4) + '</g>';
   var t0 = sw.pts[0], t1 = sw.pts[sw.pts.length - 1];
@@ -1557,6 +1609,13 @@ function _frTakeupFigure(R){
        + _frEsc(et) + '</text>';
     g += '<text x="' + (XM + 6).toFixed(1) + '" y="' + (c.pad.t + 12) + '" font-size="11" fill="#2e7d4f">Mean</text>';
   }
+  return { g: g, sw: sw, K: K, anlik: anlik, ort: ort };
+}
+function _frTakeupChartRaw(R){
+  var ç = _frTakeupChart(R);
+  return ç ? (ç.g + '</svg>') : '';
+}
+function _frTakeupSection(R, sw, K, g, anlik, ort){
   var h = '<h3>8.9 Kayış take-up</h3>';
   h += '<p>Kol açısı arttıkça gergi kasnağı kayışı içeri alır ve gereken tahrik boyu azalır. '
      + '<b>Take-up oranı, bu eğrinin çalışma noktasındaki ANLIK eğimidir</b> (mm/°) — '
@@ -2147,26 +2206,69 @@ function _frNotesSection(node){
 // global); burada yalnız geometri var. Eksen etiketleri her zaman basılır —
 // birimsiz bir eğri okunamaz.
 var _FR_W = 820, _FR_H = 300;
+// ── EKSEN BÖLMESİ YUVARLAK SAYIYA OTURUR ────────────────────────────────────
+// Eskiden aralık beşe/dörde eşit bölünüyordu ve bölmeler ham veri ucundan
+// türüyordu: gerginlik grafiğinde X `0 · 12,1 · 24,2 · 36,2 · 48,3 · 60,4`,
+// Y `0 · 293 · 585 · 878 · 1170` çıkıyordu (ÖLÇÜLDÜ). `36,2` bir bölme değil,
+// 12,08'lik adımın yuvarlama artığı — okuyucu ondan bir değer okuyamıyor,
+// üstelik iki komşu etiket arasındaki fark her seferinde başka.
+//
+// Adım 1 · 2 · 2,5 · 5 × 10ⁿ kümesinden seçilir ve aralık ADIMA GÖRE DIŞA
+// yuvarlanır (veriye kırpılmaz) — böylece hem etiketler okunur sayılar olur
+// hem de eğrinin uçları eksene yapışmaz.
+// EN YAKIN aday seçilir, YUKARI yuvarlanmaz. Yukarı yuvarlama bir kez denendi
+// ve ÖLÇÜLDÜ: 0…60,4 aralığı (ham adım 12,08) adımı 20'ye çıkarıyor, eksen
+// 0…80 oluyordu — verinin bittiği yerden sonra çizim alanının dörtte biri boş.
+// En yakın aday 10 veriyor, eksen 0…70 oluyor.
+function _frNiceStep(ham){
+  if(!(ham > 0) || !Number.isFinite(ham)) return 1;
+  var us = Math.pow(10, Math.floor(Math.log10(ham))), k = ham / us;
+  var aday = [1, 2, 2.5, 5, 10], en = aday[0], d = Infinity;
+  aday.forEach(function(a){
+    var q = Math.abs(Math.log(k / a));          // ORANSAL yakınlık: 1↔2 ile 5↔10 eşit uzak
+    if(q < d){ d = q; en = a; }
+  });
+  return en * us;
+}
+function _frNiceAxis(v0, v1, hedef){
+  if(!(v1 > v0)) v1 = v0 + 1;
+  var n = Math.max(2, hedef || 5);
+  var st = _frNiceStep((v1 - v0) / n);
+  var a = Math.floor(v0 / st) * st, b = Math.ceil(v1 / st) * st;
+  // Kayan nokta artığı: 0.30000000000000004 gibi bir bölme etiketi basılmasın.
+  var ond = Math.max(0, -Math.floor(Math.log10(st)) + 1);
+  var t = [];
+  for(var v = a; v <= b + st * 1e-6; v += st) t.push(Number(v.toFixed(ond)));
+  return { min: a, max: b, step: st, ticks: t };
+}
+
 function _frChart(opt){
   var pad = { l: 62, r: 18, t: 16, b: 42 };
   var W = opt.W || _FR_W, H = opt.H || _FR_H;
   var x0 = opt.xMin, x1 = opt.xMax, y0 = opt.yMin, y1 = opt.yMax;
   if(!(x1 > x0)) x1 = x0 + 1;
   if(!(y1 > y0)) y1 = y0 + 1;
+  // `nice:false` ham aralığı korur (kalibrasyon çizimleri için kaçış kapağı).
+  var axX = null, axY = null;
+  if(opt.nice !== false){
+    axX = _frNiceAxis(x0, x1, opt.nX || 6); x0 = axX.min; x1 = axX.max;
+    axY = _frNiceAxis(y0, y1, opt.nY || 5); y0 = axY.min; y1 = axY.max;
+  }
   var sx = function(v){ return pad.l + (v - x0) / (x1 - x0) * (W - pad.l - pad.r); };
   var sy = function(v){ return H - pad.b - (v - y0) / (y1 - y0) * (H - pad.t - pad.b); };
   var g = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + _frEsc(opt.alt || '') + '">';
   // ızgara + eksen
-  var nX = 5, nY = 4, i;
+  var tX = axX ? axX.ticks : null, tY = axY ? axY.ticks : null;
+  var nX = tX ? tX.length - 1 : 5, nY = tY ? tY.length - 1 : 4, i;
   for(i = 0; i <= nX; i++){
-    var xv = x0 + (x1 - x0) * i / nX, X = sx(xv);
+    var xv = tX ? tX[i] : x0 + (x1 - x0) * i / nX, X = sx(xv);
     g += '<line x1="' + X.toFixed(1) + '" y1="' + pad.t + '" x2="' + X.toFixed(1) + '" y2="' + (H - pad.b)
        + '" stroke="#e4e6e9" stroke-width="1"/>';
     g += '<text x="' + X.toFixed(1) + '" y="' + (H - pad.b + 15) + '" text-anchor="middle" font-size="11" fill="#5a6270">'
        + _frF(xv, opt.xDec == null ? 0 : opt.xDec) + '</text>';
   }
   for(i = 0; i <= nY; i++){
-    var yv = y0 + (y1 - y0) * i / nY, Y = sy(yv);
+    var yv = tY ? tY[i] : y0 + (y1 - y0) * i / nY, Y = sy(yv);
     g += '<line x1="' + pad.l + '" y1="' + Y.toFixed(1) + '" x2="' + (W - pad.r) + '" y2="' + Y.toFixed(1)
        + '" stroke="#e4e6e9" stroke-width="1"/>';
     g += '<text x="' + (pad.l - 7) + '" y="' + (Y + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="#5a6270">'
@@ -2187,7 +2289,18 @@ function _frPolyline(c, pts, renk, kal, dash){
     + '"' + (dash ? ' stroke-dasharray="' + dash + '"' : '') + ' stroke-linejoin="round"/>';
 }
 function _frFigWrap(svg, caption){
+  if(_FR_RAW) return svg + '</svg>';        // özet rapor: numarasız ham SVG
   return '<figure>' + svg + '</svg><figcaption><b>Şekil ' + _frFig() + ' —</b> ' + caption + '</figcaption></figure>';
+}
+var _FR_RAW = false;
+// Aynı figür işlevini KÜÇÜK ölçüde ve numarasız çalıştırır. Sayaçlara
+// dokunmaz: özet rapor ayrıntılı raporun şekil numaralandırmasını kaydırmamalı.
+function veFeadFigureRaw(fn, R, W, H, extra){
+  var oW = _FR_W, oH = _FR_H, oR = _FR_RAW;
+  _FR_W = W; _FR_H = H; _FR_RAW = true;
+  try { return fn(R, extra); }
+  catch(e){ return ''; }
+  finally { _FR_W = oW; _FR_H = oH; _FR_RAW = oR; }
 }
 
 // Gergi kolu taraması — Belt Tension Control ve Take-up grafiklerinin ortak verisi.
@@ -2223,7 +2336,8 @@ function _frTensionFigure(R){
   var sw = _frArmSweep(R);
   if(!sw) return '';
   var pos = ((R.analysis && R.analysis.positions) || []).filter(function(p){ return !p.error; });
-  var konumT = pos.map(function(p){ return _frNum(p.tensionN); }).filter(Number.isFinite);
+  var konumT = pos.filter(function(p){ return p.position !== 'Load'; })
+                  .map(function(p){ return _frNum(p.tensionN); }).filter(Number.isFinite);
   var tasarim = _frNum(R.build && R.build.sys && R.build.sys.designTensionN);
   var taban = Math.max.apply(null, konumT.concat([Number.isFinite(tasarim) ? tasarim : 0, 1]));
   var yMax = taban * 1.6;
@@ -2528,6 +2642,14 @@ function _frCompliance(R){
 if(typeof module !== 'undefined' && module.exports){
   module.exports = {
     getFeadReportPropertiesHTML: getFeadReportPropertiesHTML,
+    veFeadReportKind: veFeadReportKind,
+    veFeadFigureRaw: veFeadFigureRaw,
+    _frTakeupChartRaw: _frTakeupChartRaw,
+    _frTensionFigure: _frTensionFigure, _frFreqFigure: _frFreqFigure,
+    _frTakeupFigure: _frTakeupFigure, _frSlipFigure: _frSlipFigure,
+    _frArmSweep: _frArmSweep,
+    VE_FEAD_REPORT_KINDS: VE_FEAD_REPORT_KINDS,
+    _frKindPicker: _frKindPicker,
     veFeadGenerateReport: veFeadGenerateReport,
     _frBuildReportHTML: _frBuildReportHTML,
     _frSection8: _frSection8,
@@ -2547,7 +2669,10 @@ if(typeof module !== 'undefined' && module.exports){
     _frTakeupRateFigure: _frTakeupRateFigure,
     _frDesignTensionBlock: _frDesignTensionBlock,
     _frPivotBlock: _frPivotBlock,
-    _frF: _frF, _frFs: _frFs, _frPct: _frPct, _frEsc: _frEsc,
+    _frF: _frF, _frFs: _frFs, _frPct: _frPct, _frEsc: _frEsc, _frNum: _frNum,
+    _frSlipStats: _frSlipStats,
+    _frNiceStep: _frNiceStep, _frNiceAxis: _frNiceAxis,
+    VE_FR_SLIP_LOADED_RATIO: VE_FR_SLIP_LOADED_RATIO,
     VE_FEAD_REP_SECTIONS: VE_FEAD_REP_SECTIONS
   };
 }
