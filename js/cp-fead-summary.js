@@ -44,10 +44,45 @@ var VE_FSR_SHEETS = [
   'Dayanım'
 ];
 
-// Tepe yük modelinin ÖLÇÜLMÜŞ sapması (AG00976 ↔ Gates tepe tablosu).
-// Çekirdeğin `peakEstimate`'i yarı-statik; kendi notu "gergi kolu dinamigi
-// dahil DEGIL" diyor. Kombinasyon taraması yapılsa bile yakınsamıyor.
+// ─── TEPE YÜK: HESAPLANIYOR AMA DOĞRULANMIYOR ──────────────────────────────
+// "Kalibre değil" damgası "hesaplamıyoruz" demek DEĞİL. Çekirdek tepe yükü
+// hesaplıyor (`peakEstimate`: yarı-statik gerilme zinciri + kasnak başına
+// atalet terimi) ve köprü katmanı aksesuar güçlerinin %100/%10 kombinasyonları
+// ile ± ivmeyi tarayıp kasnak başına en büyüğü alıyor.
+//
+// EKSİK OLAN ŞEY DOĞRULAMA. Doğrulama kümemiz 17 Gates raporundan çıkarılmış
+// 2095 referans değer taşıyor; içinde TEK BİR tepe değeri YOK (ölçüldü:
+// `tests/fixtures/fead-validation.js` içinde peak/accel alanı hiç geçmiyor).
+// Yani hiçbir testimiz bu tabloyu bir referansa bağlamıyor.
+//
+// Tepe tablosu olan tek rapor AG00976 ve ona karşı ÖLÇÜLDÜ (880 d/d, ±1100
+// d/d/s): gerginlik −%10,5 … +%22,8 (RMS %11,8), hubload −%10,3 … +%17,5
+// (RMS %9,7).
+//
+// AMA ASIL FARK BÜYÜKLÜKTE DEĞİL ŞEKİLDE — ve bu, damganın gerçek gerekçesi.
+// Tepe/ortalama oranı:
+//
+//        MFSim   Gates
+//   FAN   1,065   1,148
+//   AVA1  1,061   1,146
+//   KK    1,034   1,151
+//   AVA2  1,029   1,149
+//   ALT   1,230   1,002      ← ters yönde ayrışma
+//   TEN   1,000   1,000
+//
+// Gates yük taşıyan dört kasnağın DÖRDÜNE de neredeyse aynı payı (≈1,15)
+// veriyor ve alternatöre hiç vermiyor. Bizim modelimiz tersini yapıyor:
+// atalet terimi kasnak BAŞINA (`J·α·oran/r`) olduğu için ivmenin etkisi
+// küçük ve hızlı dönen alternatörde toplanıyor (+%23), büyük kasnaklarda
+// ise %3–7'de kalıyor. İki model aynı sayıya farklı yoldan yaklaşmıyor;
+// yükü BAŞKA yere dağıtıyorlar.
+//
+// Damganın kalkması için gereken: birden çok raporun tepe tablosu (kalibrasyon
+// takımı) — tek raporla bir sabit uydurmak, o raporu ezberlemek olurdu.
 var VE_FSR_PEAK_BAND = '−%10,5 … +%22,8';
+// Tepe/ortalama oranının ölçülmüş ayrışması — rapora BASILIYOR.
+var VE_FSR_PEAK_SHAPE = { mfsimYuklu: '1,03 – 1,07', gatesYuklu: '≈1,15',
+                          mfsimAlt: '1,23', gatesAlt: '1,00' };
 
 // ─── KÜÇÜK YARDIMCILAR ──────────────────────────────────────────────────────
 // KASNAK KISA KODU. Matrislerde sütun başlığı kasnak ADIYSA tablo taşıyor:
@@ -56,28 +91,11 @@ var VE_FSR_PEAK_BAND = '−%10,5 … +%22,8';
 // düşürülmüştü, yani okunaksızlığın kökü buydu. Kod + künye ikilisi hem
 // sığıyor hem eksiksiz. Tedarikçi çıktısının FAN/IDR/A_C/ALT/TEN kullanmasının
 // sebebi de bu.
+// Kasnak kısa kodu KÖPRÜ KATMANINDA (veFeadPulleyCodes, js/fead-model.js):
+// hem özet rapor hem ayrıntılı raporun frekans haritası aynı kodu kullanıyor;
+// ikinci bir kopya `source-hygiene` kapısına takılır ve sessizce ayrışırdı.
 function _fsrCodes(sys){
-  var ps = (sys && sys.pulleys) || [];
-  function ham(p, i){
-    var ad = String(p.name || '');
-    // Parantez içi YALNIZ harfse ve 2-4 karakterse bir KODDUR (FAN, ALT, A_C).
-    // "155 A" bir ölçü, "E9843" bir parça numarası — ikisi de kod değil.
-    var m = ad.match(/\(([A-Za-z_\/]{2,4})\)/);
-    if(m) return m[1].toUpperCase().replace(/[^A-Z_\/]/g, '');
-    if(p.tensioner) return 'TEN';
-    if(p.crank) return 'CRK';
-    var sade = ad.replace(/\([^)]*\)/g, ' ').trim();
-    var son  = (sade.match(/(\d+)\s*$/) || [])[1] || '';
-    var kel  = sade.replace(/\d+\s*$/, '').split(/\s+/).filter(Boolean);
-    var k = kel.length >= 2 ? kel.map(function(w){ return w[0]; }).join('') : (kel[0] || 'P').slice(0, 3);
-    k = k.toLocaleUpperCase('tr').replace(/[^A-ZÇĞİÖŞÜ0-9]/g, '').slice(0, 3);
-    return (k || ('P' + (i + 1))) + son;
-  }
-  var out = ps.map(ham), gor = {};
-  return out.map(function(k, i){
-    if(!gor[k]){ gor[k] = 1; return k; }
-    gor[k]++; return k + gor[k];
-  });
+  return (typeof veFeadPulleyCodes === 'function') ? veFeadPulleyCodes(sys) : [];
 }
 // Kod → ad künyesi. Kodun kullanıldığı her sayfada bir kez basılır: kısaltma
 // ancak karşılığı aynı sayfada duruyorsa okunabilir.
@@ -145,12 +163,13 @@ function _fsrIdBlock(R, node){
 // Yerleşim şeması — TEK ÇİZİCİ. class="appfig" ŞART: o çizici uygulamanın
 // palet jetonlarını kullanıyor, bu belgenin paleti başka; tanımsız var()
 // kalıtılan `stroke` için `none` demektir (ayrıntılı raporda ölçüldü).
-function _fsrLayout(R, W, H){
+function _fsrLayout(R, W, H, opts){
   var svg = null;
   try {
     if(typeof veFeadLayoutSVG === 'function' && R.build)
       svg = veFeadLayoutSVG(R.build, W || 250, H || 210,
-        { posMode: 'mean', compass: true, pivot: true, arrows: false,
+        { posMode: opts && opts.posMode ? opts.posMode : 'mean',
+          compass: true, pivot: true, arrows: false, ghostLabels: false,
           // Şemada KISA KOD: tam ad çerçeveyi taşırıyor ve kayış yolunun
           // üstüne biniyor. Sarım açıları da kapalı — aynı altı sayı bir
           // sonraki sayfada hizalı bir tabloda duruyor.
@@ -243,8 +262,8 @@ function _fsrBlk(baslik, icerik, not){
 
 // Etiket/değer — ama TABLO olarak: değerler tek bir sağ kenarda hizalanır.
 // `_fsrKV` serbest genişlikte (künye kartı), bu ise sayıların karşılaştırıldığı yer.
-function _fsrKVT(rows){
-  return '<table class="gt kvt2">' + rows.map(function(r){
+function _fsrKVT(rows, dar){
+  return '<table class="gt kvt2' + (dar ? ' kvt3' : '') + '">' + rows.map(function(r){
     return '<tr><td class="l">' + r[0] + '</td><td>' + r[1] + '</td></tr>';
   }).join('') + '</table>';
 }
@@ -268,6 +287,7 @@ function _fsrSheet1(R, node){
   var dcTop = 0; duty.forEach(function(r){ dcTop += _frNum(r.dcPct) || 0; });
   var st = (typeof _frSlipStats === 'function') ? _frSlipStats(R) : null;
   var sf = _frNum(R.serviceFact);
+  var kod = _fsrCodes(sys);
 
   var h = _fsrH1('Genel Bakış', 'Sistem künyesi, yerleşim ve kritik sonuçlar');
 
@@ -286,7 +306,11 @@ function _fsrSheet1(R, node){
   // genişlikte yükseklik zorunlu olarak 430 px'e çıkıyordu; 395 px'lik sütunda
   // aynı oran 242 px veriyor ve boşalan yeri künyeler dolduruyor.
   h += '<div class="cols c58">';
-  h += '<div class="col">' + _fsrLayout(R, 395, 242) + '</div>';
+  // KOL ZARFI ŞEMANIN İÇİNDE — Gates'in 5. sayfasında da öyle: gergi kasnağı
+  // ALTI KOL KONUMUNDA üst üste çizilir ve her konum için ayrı kayış yolu
+  // görünür. Bedeli SIFIR px (aynı şeklin içinde) ama sayfa 3'ün zarf
+  // tablosunun görsel karşılığını veriyor.
+  h += '<div class="col">' + _fsrLayout(R, 395, 242, { posMode: 'all' }) + '</div>';
   h += '<div class="col">';
   h += _fsrKV('Kayış', [
     ['Profil / marka', _frEsc((b.brand ? b.brand + ' ' : '') + (b.ribs || '') + (b.profile || ''))],
@@ -312,8 +336,16 @@ function _fsrSheet1(R, node){
     ['Tasarım gerginliği', _frF(sys && sys.designTensionN, 0) + ' N', 'yay dengesinden türetildi'],
     ['En düşük kayma emniyeti', st && Number.isFinite(st.loadedMin) ? _frFs(st.loadedMin, 2) : '—',
       (Number.isFinite(sf) && sf > 0 ? 'istenen ≥ ' + _frF(sf, 2) : 'yük taşıyan kasnaklarda'), sfOK ? 'ok' : 'no'],
-    ['B10 kayış ömrü', _frF(life.hoursB10, 0) + ' saat',
-      life.inValidRange ? 'çap penceresi içinde' : 'çap penceresi dışında — bkz. sayfa 5',
+    // MANŞETTE MODELİN EN İYİ KESTİRİMİ DURUR. Ham B10 çap penceresi dışında
+    // sistematik olarak düşük (0,55×) ve bunu modelin kendisi söylüyor;
+    // manşette ham değeri basmak, okuyucuya modelin kendi düzeltmesini
+    // görmeden bir sayı vermek olurdu. Ham değer alt satırda duruyor.
+    ['B10 kayış ömrü',
+      _frF(life.inValidRange ? life.hoursB10
+           : (Number.isFinite(_frNum(life.hoursB10Corrected)) ? life.hoursB10Corrected : life.hoursB10), 0)
+      + ' saat',
+      life.inValidRange ? 'çap penceresi içinde'
+        : 'ampirik düzeltmeli · ham ' + _frF(life.hoursB10, 0) + ' saat — bkz. sayfa 5',
       life.inValidRange ? 'ok' : 'uy'],
     ['Kapalı çevrim', _frFs(sig, 2) + '°', 'Σ işaretli sarım · 360° olmalı', kapali ? 'ok' : 'no'],
     ['Çalışma çevrimi', duty.length + ' devir', 'toplam süre payı ' + _frPct(dcTop, 1)]
@@ -324,7 +356,20 @@ function _fsrSheet1(R, node){
   }).join('') + '</div>';
 
   h += _fsrWarnBox(R);
-  h += _fsrScopeBlock();
+
+  // TEPE YÜK VE DOĞAL FREKANS HARİTASI GATES'İN DE 1. SAYFASINDA.
+  // Kozmetik turunda ikisi de çıkarılmıştı; kullanıcı haklı olarak sordu
+  // ("Gates raporundaki tüm şekilleri çıkar bakalım") ve ölçüm onu doğruladı:
+  // Gates'in beş şekil türünden ÜÇÜ bizde yoktu. Üçünün de üreticisi
+  // ayrıntılı raporda ZATEN vardı — eksik olan yerleşimdi, hesap değil.
+  h += _fsrBlk('Doğal Frekans Haritası',
+    _fsrFig(typeof _frFreqFigure === 'function' ? _frFreqFigure : null, R, 780, 190),
+    'Her eğri bir serbest açıklığın <b>enine</b> titreşim frekansı; devir arttıkça gerginlik '
+    + 've dolayısıyla frekans yükselir. Kesikli doğru <b>ateşleme frekansı</b> (altı silindir → '
+    + '3 × devir/60); bir açıklık eğrisiyle kesiştiği devirde o açıklık zorlanır. Sayısal '
+    + 'karşılığı hemen aşağıdaki tablodur.');
+  h += _fsrVibBlock(R);
+
   h += _fsrCodeLegend(sys);
   return h;
 }
@@ -338,17 +383,46 @@ function _fsrScopeBlock(){
     'çalışma çevrimi boyunca ortalama gerginlik ve hubload',
     'kayma emniyet faktörü ve kaburga yorulma dağılımı',
     'B10 kayış ömrü (çap penceresi denetimiyle)'];
-  var yok = ['sistem burulma modu / rezonans haritası — ayrı büyüklük',
+  // "rezonans haritası yer almaz" demek belgenin KENDİSİYLE çelişiyordu:
+  // sayfa 1 doğal frekans haritasını çiziyor, sayfa 5 bütün girdilerini
+  // basıyor. Yer almayan şey AÇIKLIK titreşimi değil, çok serbestlik
+  // dereceli BURULMA modu.
+  var yok = ['sistem burulma modu (çok serbestlik dereceli) — açıklık titreşimi VAR (s1, s5)',
     'kasnak eksenel kaçıklığı (ψ girdisi sorulmuyor; ψ=0 iyimser olurdu)',
     'kayma duyarlılığının TERS çözümü (gereken gerginlik artışı)',
     'Weibull dağılımı / 1000 adette arıza sayısı',
     'tepe tork eğrisi — bu belgedeki tork ORTALAMADIR'];
+  // MODEL SINIRLARI KAPSAMIN PARÇASI. "Kalibre değil" damgasının gerekçesi
+  // tablonun altında on satırlık bir paragraftı; oysa bu bir model-sınırı
+  // ifadesi ve yeri kapsam bölümü. Damganın YANINDA tek satır kalıyor,
+  // gerekçe burada duruyor.
+  var sinir = _fsrKVT([
+    ['Tepe yük — neden “kalibre değil”',
+     '17 tedarikçi raporundan çıkarılmış <b>2095 değerlik doğrulama kümesinde tek bir tepe '
+     + 'değeri yok</b>; hiçbir test bu tabloyu bir referansa bağlamıyor. Tepe tablosu olan '
+     + 'tek rapora karşı sapma: gerginlik ' + VE_FSR_PEAK_BAND + ' (RMS %11,8), hubload '
+     + '−%10,3 … +%17,5 (RMS %9,7). Fark büyüklükte değil <b>dağılımda</b>: tepe/ortalama '
+     + 'oranı tedarikçide yük taşıyan dört kasnakta ' + VE_FSR_PEAK_SHAPE.gatesYuklu
+     + ' ve alternatörde ' + VE_FSR_PEAK_SHAPE.gatesAlt + '; bu modelde '
+     + VE_FSR_PEAK_SHAPE.mfsimYuklu + ' ve <b>' + VE_FSR_PEAK_SHAPE.mfsimAlt + '</b> — '
+     + 'ivmenin etkisi küçük ve hızlı dönen alternatörde toplanıyor. Damganın kalkması için '
+     + 'birden çok raporun tepe tablosu gerekir.'],
+    ['B10 ömrü — çap penceresi',
+     'Mutlak ömür yalnız tüm kasnak çapları <b>79,6–176 mm</b> arasındayken kalibre '
+     + '(5 sistem, RMS %2,4). Dışında model sistematik olarak ~0,55× veriyor; manşet ve '
+     + 'sayfa 5 ampirik düzeltmeli değeri, ham değeri de yanında basıyor.'],
+    ['Açıklık frekansı — kayış kütlesi',
+     'f₁ ∝ 1/√m′. Katalog kütlesi (0,0144 kg/m/kaburga) ile çekirdeğin geri-hesabı '
+     + '(0,0196) arasında %36 fark var ve frekansları %16,7 kaydırıyor; bu belge '
+     + '<b>geri-hesabı</b> kullanıyor — katalog değeri rezonans riskini küçük gösterir.']
+  ], true);
   return _fsrBlk('Belgenin Kapsamı',
     '<div class="cols"><div class="col"><div class="scope in"><b>Bu belge şunları verir</b><ul>'
     + var_.map(function(x){ return '<li>' + _frEsc(x) + '</li>'; }).join('')
     + '</ul></div></div><div class="col"><div class="scope out"><b>Bu belgede yer ALMAZ</b><ul>'
     + yok.map(function(x){ return '<li>' + _frEsc(x) + '</li>'; }).join('')
-    + '</ul></div></div></div>',
+    + '</ul></div></div></div>'
+    + '<div class="bt2">Modelin ilan ettiği sınırlar</div>' + sinir,
     'Ayrıntılı rapor aynı çözümü teorisiyle birlikte anlatır; kapsam farkı sayıda değil, '
     + '<b>gerekçede</b>dir.');
 }
@@ -388,7 +462,10 @@ function _fsrSheet2(R, node){
             _frFs(x, 2), _frFs(y, 2), _frFs(p.od, 1),
             _frFs(_frNum(p.rPitch) * 2, 2), _frFs(_frNum(p.rEff) * 2, 2),
             sirt ? 'sırt' : 'kaburgalı',
-            Number.isFinite(_frNum(p.inertiaKgM2)) ? _frFs(p.inertiaKgM2, 4) : '—'];
+            // ONDALIK SAYIYA GÖRE: sabit 4 ondalık avaraların 0,00087'sini
+            // 0,0009'a yuvarlıyordu (+%3,45). Küçük atalet daha çok basamak ister.
+            Number.isFinite(_frNum(p.inertiaKgM2))
+              ? _frFs(p.inertiaKgM2, Math.abs(_frNum(p.inertiaKgM2)) < 0.01 ? 5 : 4) : '—'];
   });
   h += _fsrBlk('Kasnak Yerleşimi',
     _fsrT(['Kod', 'Kasnak', 'X<br>[mm]', 'Y<br>[mm]', 'Dış çap<br>[mm]', 'Pitch Ø<br>[mm]',
@@ -486,15 +563,33 @@ function _fsrSheet3(R, node){
     + 'için gerginlik tekilleşir. Tasarımın çalışma noktası <b>Çalışma (Mean)</b> sütunudur; '
     + 'kayış toleransı ve aşınma payı kolu bu zarf boyunca gezdirir.');
 
-  // TEK GRAFİK. Zarfın anlattığı şeyin görsel karşılığı bu eğri; diğer
-  // grafikler aynı bilgiyi ikinci kez anlatıyordu.
-  h += _fsrBlk('Gerginliğin Kol Açısına Bağımlılığı',
-    _fsrFig(typeof _frTensionFigure === 'function' ? _frTensionFigure : null, R, 780, 390),
-    'Kalın eğri hesaplanan gerginlik, <b>soluk kesikli iki eğri onun ±%10 bandıdır</b> — '
-    + 'yay imalat saçılması, sürtünme ve montaj payı için alışılmış tolerans zarfı. '
-    + 'Kesikli dikey çizgiler yukarıdaki altı kol konumunu işaretler. Eğri, kol açısı çözüm '
-    + 'aralığının ucuna yaklaşırken tekilleşir; eksen bu yüzden çalışma konumlarına göre '
-    + 'sınırlanmıştır.');
+  // İKİ GRAFİK YAN YANA — kullanıcı isteği: "Şu iki diyagramı da yan yana
+  // verelim. Alt alta olmasına gerek yok." İkisi de AYNI yatay ekseni (gergi
+  // kol açısı) paylaşıyor, yani yan yana konunca aynı x'te iki büyüklük
+  // birlikte okunuyor: solda gerginlik nasıl yükseliyor, sağda gereken kayış
+  // boyu nasıl düşüyor. Alt alta bu eşleme gözle kurulmuyordu.
+  //
+  // KUTU ÖLÇÜSÜ SÜTUNDAN BÜYÜK SEÇİLİR ki yazı KÜÇÜLSÜN: çizicinin puntoları
+  // kullanıcı biriminde sabit (eksen 11, etiket 10,5). Sütun ~345 px; 390
+  // birimlik kutu 0,885 ölçekle basılır ve puntolar 9,3–10,2 px'e iner, yani
+  // gövde yazısıyla (9,4) aynı bantta. Sütun genişliğini seçseydik ölçek 1
+  // kalır ve grafik yazıları gövdeden BÜYÜK görünürdü.
+  h += '<div class="cols">';
+  h += '<div class="col">' + _fsrBlk('Gerginliğin Kol Açısına Bağımlılığı',
+    _fsrFig(typeof _frTensionFigure === 'function' ? _frTensionFigure : null, R, 390, 330),
+    'Kalın eğri hesaplanan gerginlik, <b>soluk kesikli iki eğri onun ±%10 bandıdır</b>. '
+    + 'Kesikli dikey çizgiler yukarıdaki altı kol konumunu işaretler; eğri, çözüm '
+    + 'aralığının ucuna yaklaşırken tekilleşir.') + '</div>';
+  h += '<div class="col">' + _fsrBlk('Kayış Take-up Eğrisi',
+    _fsrFig(typeof _frTakeupChartRaw === 'function' ? _frTakeupChartRaw : null, R, 390, 330),
+    'Aynı yatay eksende <b>gereken efektif kayış boyu</b>. Take-up oranı bu eğrinin '
+    + 'çalışma noktasındaki <b>anlık eğimi</b>dir — uçtan uca ortalama eğim değil '
+    + '(ikisi bu sistemde %25 ayrışıyor).') + '</div>';
+  h += '</div>';
+
+  // Kapsam bloğu belge DÜZEYİNDE bir ifade; konusu olan bir sayfası yok ve
+  // sayfa 1 tepe yük + frekans haritasıyla dolduğu için buraya taşındı.
+  h += _fsrScopeBlock();
   return h;
 }
 
@@ -558,6 +653,7 @@ function _fsrSheet5(R, node){
   var h = _fsrH1('Dayanım', 'Kayma emniyeti, kaburga yorulması, ömür ve titreşim');
   if(!duty.length) return h + '<div class="nofig">Çalışma çevrimi tanımlı değil.</div>';
   var kod = _fsrCodes(sys), sf = _frNum(R.serviceFact);
+  var b2 = (sys && sys.belt) || {};
 
   // VURGU HÜKÜMLE ÇELİŞEMEZ. İlk sürüm SF < servis faktörü olan her hücreyi
   // kırmızı kalın basıyordu; AG00976'da bu, gerginlik oranı 1,00 olan üç
@@ -609,8 +705,11 @@ function _fsrSheet5(R, node){
     });
     h += '<div class="col">' + _fsrBlk('Kaburga Yorulma Dağılımı',
       _fsrT(['Kod', 'Efektif Ø<br>[mm]', 'Temas', 'Pay<br>[%]'], fr, { ilkSol: true }),
-      'Payı yüksek olan kasnak, çapı büyütülerek ömrü en çok uzatacak olandır. Bu dağılım bir '
-      + '<b>orandır</b> ve mutlak ömrün çap penceresinden bağımsızdır.') + '</div>';
+      'Payı yüksek olan kasnak, çapı büyütülerek ömrü en çok uzatacak olandır. '
+      + '<b>SIRALAMA</b> yorulma üssünün seçiminden bağımsızdır (m = 5,6 ↔ 4,05 ↔ 3,4 için de '
+      + 'aynı kasnak baskın kalıyor), ama <b>mutlak pay öyle değildir</b>: ALT çapı (57,0 mm) '
+      + 'kalibrasyon penceresinin dışında ve payı m = 3,4 ile %86,9\'dan %73,4\'e iniyor.')
+      + '</div>';
   }
   var life = R.life || {};
   var om = [
@@ -621,15 +720,42 @@ function _fsrSheet5(R, node){
   ];
   if(!life.inValidRange && Number.isFinite(_frNum(life.hoursB10Corrected)))
     om.push(['Ampirik düzeltmeli', _frF(life.hoursB10Corrected, 0) + ' saat']);
-  h += '<div class="col">' + _fsrBlk('Kayış Ömrü', _fsrKVT(om),
+  // KAYMA GRAFİĞİ YORULMA TABLOSUNUN YANINA. İkisi de "Dayanım" ve alt alta
+  // 410 px yiyorlardı; yan yana 210. Grafiğin kutusu 390 birim seçiliyor ki
+  // 345 px'lik sütuna 0,885 ölçekle otursun ve puntolar 10,6 px'te kalsın —
+  // sütun genişliği seçilseydi ölçek 1 kalır, yazı gövdeden büyük görünürdü.
+  h += '<div class="col">' + _fsrBlk('Kayma Emniyeti — Kasnak Başına En Düşük',
+    _fsrFig(typeof _frSlipFigure === 'function' ? _frSlipFigure : null, R, 390, 200, sf),
+    'Her çubuk o kasnağın çevrim boyunca gördüğü <b>en düşük</b> emniyet faktörü; kesikli '
+    + 'çizgi istenen servis faktörü. Soluk çubuk = yük taşımayan kasnak (marj değil '
+    + '<b>kapasite</b>).') + '</div>';
+  h += '</div>';
+
+  h += _fsrBlk('Kayış Ömrü', _fsrKVT(om),
     life.inValidRange ? 'Tüm kasnak çapları kalibrasyon aralığında; mutlak saat kullanılabilir.'
       : '<b>Çap penceresi dışında:</b> ' + _frEsc((life.outOfRange || []).join(', '))
         + '. Model bu durumda ömrü sistematik olarak düşük verir; düzeltmeli satır bu sapmayı '
-        + 'kabaca telafi eder. <b>Yorulma payları bundan bağımsız olarak geçerlidir.</b>') + '</div>';
-  h += '</div>';
+        + 'kabaca telafi eder. <b>Yorulma SIRALAMASI bundan etkilenmez</b>, mutlak paylar etkilenir.');
 
+  // TEPE YÜK DAYANIM SAYFASINDA: bir yatak/braket seçim büyüklüğü, ve
+  // damgasının gerekçesi (kalibrasyon takımı yok) burada okunmalı.
+  h += _fsrPeakBlock(R, kod);
+  h += _fsrCodeLegend(sys);
+  return h;
+}
+
+
+// ─── SERBEST AÇIKLIK TİTREŞİMİ + REZONANS HÜKMÜ ────────────────────────────
+// Doğal frekans haritasıyla AYNI SAYFADA duruyor: harita bu tablonun çizimi,
+// tablo haritanın sayısı. Ayrı sayfalara düşünce okuyucu eğriyi sayıya
+// bağlayamıyordu.
+function _fsrVibBlock(R){
+  var duty = (R.analysis && R.analysis.duty) || [], sys = R.build && R.build.sys;
+  if(!duty.length || !sys) return '';
+  var kod = _fsrCodes(sys), b2 = sys.belt || {};
   var d0 = duty[0];
-  if(d0 && d0.frequencies && d0.frequencies.length){
+  if(!(d0 && d0.frequencies && d0.frequencies.length)) return '';
+  var h = '';
     var rows = d0.frequencies.map(function(s0, i){
       var L = NaN, lo = Infinity, hi = -Infinity, flut = false;
       duty.forEach(function(d){
@@ -645,17 +771,55 @@ function _fsrSheet5(R, node){
       return [_frEsc(ad), _frFs(L, 1), _frFs(lo, 1) + ' – ' + _frFs(hi, 1),
               flut ? '<b class="bad">var</b>' : '<span class="ok">yok</span>'];
     });
+    // REZONANS HÜKMÜ — belge iki büyüklüğü de basıyordu ama KARŞILAŞTIRMIYORDU.
+    // Basılan tek titreşim hükmü "Çırpınma = yok" idi ve okuyucu onu "titreşim
+    // sorunu yok" diye okuyor; oysa çırpınma bambaşka bir mod (kayış hızı ↔
+    // enine dalga hızı), rezonansla ilgisi yok. ÖLÇÜLDÜ (AG00976, 72 hücre):
+    // ÜÇ hücrede açıklık frekansı ateşleme frekansının ALTINA düşüyor, en
+    // düşük oran 0,789 — sayfanın kendi verisinde bir kesişme VAR ve belge
+    // bunu söylemiyordu.
+    var kesN = 0, enAz = Infinity, enAzNer = '';
+    duty.forEach(function(d){
+      var fr = _frNum(d.firingHz);
+      (d.frequencies || []).forEach(function(sp){
+        var fq = (sp.fHz && sp.fHz.length) ? _frNum(sp.fHz[0]) : NaN;
+        if(!Number.isFinite(fq) || !Number.isFinite(fr) || fr <= 0) return;
+        var o = fq / fr;
+        if(o < enAz){
+          enAz = o;
+          var ad2 = String(sp.span);
+          (sys.pulleys || []).forEach(function(p, k){ ad2 = ad2.split(p.name).join(kod[k]); });
+          enAzNer = ad2.replace(/\s*->\s*/g, ' → ') + ' @ ' + _frF(d.engineRpm, 0) + ' d/d';
+        }
+        if(fq < fr) kesN++;
+      });
+    });
+    var toplamHucre = duty.length * ((d0.frequencies || []).length || 1);
+    var rezHuk = Number.isFinite(enAz)
+      ? '<b>Rezonans hükmü:</b> en düşük <b>f₁ / ateşleme = ' + _frFs(enAz, 3) + '</b> ('
+        + _frEsc(enAzNer) + '); ateşleme frekansının altına düşen hücre <b>'
+        + kesN + ' / ' + toplamHucre + '</b>'
+        + (kesN === 0
+            ? ' <span class="ok">✓</span>. Hiçbir açıklık çalışma çevrimi boyunca ateşleme '
+              + 'frekansıyla kesişmiyor. '
+            : ' <b class="bad">✗</b>. Kesişen hücrede o açıklık ateşleme mertebesiyle zorlanır; '
+              + 'çare açıklığı kısaltmak (avara konumu) ya da gerginliği yükseltmektir — '
+              + 'f₁ ∝ √T ⁄ L. ')
+      : '';
     var f1 = _frNum(d0.firingHz), f2 = _frNum(duty[duty.length - 1].firingHz);
     var vHead = ['Açıklık', 'Boy<br>[mm]', 'f₁ aralığı<br>[Hz]', 'Çırpınma'];
     var vSbt = _fsrConstCols(vHead, rows, 1), vSade = _fsrStripCols(vHead, rows, vSbt);
     h += _fsrBlk('Serbest Açıklık Titreşimi',
       _fsrT(vSade.head, vSade.rows, { ilkSol: true }),
-      'Ateşleme frekansı çalışma çevrimi boyunca <b>' + _frFs(f1, 1) + ' – ' + _frFs(f2, 1)
+      rezHuk
+      + 'Ateşleme frekansı çalışma çevrimi boyunca <b>' + _frFs(f1, 1) + ' – ' + _frFs(f2, 1)
       + ' Hz</b>. Bunlar açıklıkların <b>enine</b> titreşimidir; sistem burulma modu ayrı bir '
-      + 'büyüklüktür ve bu belgede yer almaz. ' + _fsrConstNote(vSbt));
-  }
-  h += _fsrPeakBlock(R, kod);
-  h += _fsrCodeLegend(sys);
+      + 'büyüklüktür ve bu belgede yer almaz. <b>Çırpınma ayrı bir moddur</b> (kayış hızı ↔ '
+      + 'enine dalga hızı); biri "yok" diye öbürü güvenli sayılmaz. Frekanslar kayışın birim '
+      + 'kütlesine <b>f₁ ∝ 1 ⁄ √m′</b> ile bağlıdır; burada m′ = <b>'
+      + _frFs(_frNum(b2.massPerRibKgM) * (_frNum(b2.ribs) || 1), 4) + ' kg/m</b>. '
+      + _fsrConstNote(vSbt));
+
   return h;
 }
 
@@ -674,10 +838,14 @@ function _fsrPeakBlock(R, kod){
   var pSbt = _fsrConstCols(pHead, rows, 1), pSade = _fsrStripCols(pHead, rows, pSbt);
   return _fsrBlk('Tepe Gerginlik ve Hubload <span class="stamp">kalibre değil</span>',
     _fsrT(pSade.head, pSade.rows, { ilkSol: true }),
-    'Tepe yükler, aksesuar güçlerinin %100/%10 kombinasyonları ve ± ivme taranarak kasnak başına '
-    + 'en büyük değerden alınır. <b>Model yarı-statiktir ve gergi kolu dinamiğini içermez</b>; '
-    + 'tedarikçi çıktısına karşı ölçülen sapma ' + VE_FSR_PEAK_BAND + ' bandındadır. Yatak ve '
-    + 'braket seçiminde <b>tek başına kullanılmamalıdır</b>. ' + _fsrConstNote(pSbt));
+    '<b>Kalibre değil, HESAPLANMIYOR demek değildir</b>: tablo yarı-statik gerilme zinciri + '
+    + 'kasnak başına atalet terimiyle hesaplanır, aksesuar güçlerinin %100/%10 kombinasyonları '
+    + 've ± ivme taranıp kasnak başına en büyüğü alınır. Doğrulanmamıştır — gerekçesi ve ölçülen '
+    + 'sapması <b>Belgenin Kapsamı</b> bölümünde (sayfa 3). Hubload sütunu kasnak başına en büyük '
+    + '<b>gerginliklerden</b> kurulan vektörden gelir; bu vektör tek bir yük durumuna ait '
+    + 'değildir (fark alternatörde %3,6, emniyetli yönde). Yatak ve braket seçiminde <b>tek '
+    + 'başına kullanılmamalıdır</b>. ' + _fsrConstNote(pSbt));
+
 }
 
 // ─── TEPE YÜK TARAMASI (köprü katmanında, çekirdeğe dokunmadan) ─────────────
@@ -835,6 +1003,8 @@ function _fsrCss(){
     ".bt{font-family:'Archivo',sans-serif;font-size:var(--f-lg);font-weight:700;color:#000;",
     '  margin:0 0 3px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;',
     '  border-left:3px solid var(--prusya);padding-left:6px}',
+    ".bt2{font-family:'Archivo',sans-serif;font-size:var(--f-sm);font-weight:700;color:#000;",
+    '  margin:6px 0 2px}',
     '.kvi{font-weight:400;color:var(--dim);font-size:var(--f-xs);',
     "  font-family:'Source Serif 4',Georgia,serif}",
     '.stamp{font-weight:700;color:var(--warn);background:#fdf4e6;border:1px solid var(--warn);',
@@ -876,6 +1046,9 @@ function _fsrCss(){
     // etiket/değer tablosu — iki sütun, değerler tek kenarda
     'table.gt.kvt2 td{font-size:var(--f-sm)}',
     'table.gt.kvt2 td.l{width:62%}',
+    // Açıklama sütunu geniş: künye bir tablo değil, gerekçe listesi.
+    "table.gt.kvt3 td.l{width:26%;white-space:normal}",
+    "table.gt.kvt3 td:not(.l){text-align:left;white-space:normal;font-family:'Source Serif 4',Georgia,serif;font-size:var(--f-xs);line-height:1.4}",
 
     // ── KÜNYE KARTI ──
     ".kvblk{border:1px solid var(--line);border-top:2px solid var(--prusya);padding:4px 7px 3px;",
@@ -925,7 +1098,10 @@ function _fsrCss(){
     '.nofig{border:1px dashed var(--line);padding:10px;color:var(--dim);',
     '  font-size:var(--f-sm);text-align:center}',
 
-    '.bad{color:var(--bad);font-weight:500}.ok{color:var(--ok)}',
+    // `.bad` AĞIRLIK YAZMAZ: hem mono hücrede (tavan 500) hem serif gövde
+    // metninde (tavan 600) kullanılıyor; tek bir ağırlık yazmak birinde
+    // sentetik kalın demek (ölçüldü: gövdedeki "✗" serif @500 istiyordu).
+    '.bad{color:var(--bad)}.ok{color:var(--ok)}',
     // Hükmü VEREMEYEN sayı: gizlenmez, ama vurgulanmaz da.
     '.pas{color:#8a919b}',
     ".kh{font-weight:400;font-size:var(--f-xs);color:var(--dim);text-transform:none;",
@@ -933,6 +1109,8 @@ function _fsrCss(){
     // Sayısal hücreler MONO (tavan 500), ilk sütun SERİF (tavan 600).
     'table.gt td b{font-weight:500}',
     'table.gt td.l b{font-weight:600}',
+    // kvt3'ün açıklama sütunu SERİF (gerekçe metni), mono değil → tavan 600.
+    'table.gt.kvt3 td b{font-weight:600}',
 
     // ── KAPSAM ── ne var / ne yok, yan yana
     '.scope{border:1px solid var(--line);border-left:3px solid var(--ok);padding:4px 8px 5px;',
@@ -967,6 +1145,7 @@ if(typeof module !== 'undefined' && module.exports){
     _fsrPeak: _fsrPeak, _fsrLogo: _fsrLogo, _fsrCss: _fsrCss, _fsrLayout: _fsrLayout,
     _fsrCodes: _fsrCodes, _fsrCodeLegend: _fsrCodeLegend,
     _fsrConstCols: _fsrConstCols, _fsrStripCols: _fsrStripCols, _fsrConstNote: _fsrConstNote,
-    VE_FSR_SHEETS: VE_FSR_SHEETS, VE_FSR_PEAK_BAND: VE_FSR_PEAK_BAND
+    VE_FSR_SHEETS: VE_FSR_SHEETS, VE_FSR_PEAK_BAND: VE_FSR_PEAK_BAND,
+    VE_FSR_PEAK_SHAPE: VE_FSR_PEAK_SHAPE
   };
 }

@@ -2243,7 +2243,11 @@ function _frNiceAxis(v0, v1, hedef){
 }
 
 function _frChart(opt){
-  var pad = { l: 62, r: 18, t: 16, b: 42 };
+  // SAĞ PAY ÇAĞIRANDAN GELEBİLİR: göstergesi olan bir grafikte gösterge çizim
+  // alanının DIŞINDA durmalı. İçeride durduğunda eğrilerin üstüne biniyordu —
+  // ÖLÇÜLDÜ (doğal frekans haritası): yedi girdilik gösterge çizim alanının
+  // %42'sini kaplıyor ve altı eğrinin dördünü kesiyordu.
+  var pad = { l: 62, r: (opt.padR || 18), t: 16, b: 42 };
   var W = opt.W || _FR_W, H = opt.H || _FR_H;
   var x0 = opt.xMin, x1 = opt.xMax, y0 = opt.yMin, y1 = opt.yMax;
   if(!(x1 > x0)) x1 = x0 + 1;
@@ -2408,18 +2412,64 @@ function _frSlipFigure(R, esik){
     });
     return m;
   });
+  // YÜK TAŞIYAN ↔ TAŞIMAYAN AYRIMI GRAFİKTE DE GEÇERLİ. Kırmızı çubuk
+  // "eşiğin altında kaldı" demek; ama gerginlik oranı 1,00 olan bir kasnakta
+  // (avara, gergi) o sayı bir MARJ değil o sarım açısının KAPASİTESİDİR ve
+  // tasarım gerginliğini yükseltmek onu değiştirmez. Ayrım yapılmayınca
+  // grafik, aynı sayfadaki hükmün TERSİNİ söylüyordu (ölçüldü: AG00976'da
+  // üç kasnak kırmızı, oysa hükmü veren 4,51 ile FAN).
+  var esk = (typeof VE_FR_SLIP_LOADED_RATIO === 'number') ? VE_FR_SLIP_LOADED_RATIO : 1.01;
+  var yukTasir = isim.map(function(n){
+    var t = false;
+    duty.forEach(function(d){
+      (d.slip || []).forEach(function(x){
+        if(x.name === n && _frNum(x.tensionRatio) >= esk) t = true;
+      });
+    });
+    return t;
+  });
+  // Etiket KISA KOD: tam ad sol payı 190 px'e zorluyor ve çubuklara yer
+  // bırakmıyor. Kod → ad künyesi belgede aynı sayfada duruyor.
+  var kodF = (typeof veFeadPulleyCodes === 'function' && R.build && R.build.sys)
+    ? veFeadPulleyCodes(R.build.sys) : null;
+  var ps = (R.build && R.build.sys && R.build.sys.pulleys) || [];
+  var etAd = isim.map(function(n){
+    if(!kodF) return n;
+    for(var i = 0; i < ps.length; i++) if(ps[i].name === n) return kodF[i];
+    return n;
+  });
   var maxV = Math.max.apply(null, mins.concat([Number.isFinite(esik) ? esik * 1.4 : 2]));
-  var W = _FR_W, satir = 30, H = 34 + isim.length * satir + 34;
-  var L = 190, R2 = 30;
+  // Boy çubuk SAYISINDAN türüyor (sabit bir H anlamsız olurdu); RAW kipte
+  // satır aralığı daralıyor — özet raporda şekil küçük basılıyor.
+  var W = _FR_W, satir = (_FR_RAW ? 19 : 30), H = 26 + isim.length * satir + 30;
+  // SAĞ PAY DEĞER ETİKETİNİ SIĞDIRMAK ZORUNDA. Sabit 30 px, "14,95" gibi beş
+  // karakterlik bir etiketi kesiyordu — ÖLÇÜLDÜ (özet rapor, sayfa 5):
+  // yazı viewBox'ı 10 px aşıyor ve kırpılıyordu. Pay artık en uzun etiketin
+  // ölçülen genişliğinden türüyor (_frTxtW, eş aralıklı 0,6 em).
+  var enSol = 0;
+  etAd.forEach(function(t){ enSol = Math.max(enSol, _frTxtW(t, 12)); });
+  var L = Math.min(190, Math.ceil(enSol) + 16);
+  var enGenis = 0;
+  mins.forEach(function(v){ enGenis = Math.max(enGenis, _frTxtW(_frFs(v, 2), 11.5)); });
+  var R2 = Math.max(30, Math.ceil(enGenis) + 10);
+  // ALT ŞERİT KUTUYA SIĞMAK ZORUNDA. Uzun hâli 780 birimlik kutuda sığıyor,
+  // 390 birimlik (yarım sütun) kutuda viewBox'ı 209 px aşıyordu — ÖLÇÜLDÜ.
+  // Sığmayan ikinci cümle DÜŞER; aynı bilgi bloğun kendi notunda zaten var.
+  var uzunAlt = 'çubuk boyu = SF · SF = 1 kayma eşiği · soluk çubuk = yük taşımayan kasnak (kapasite)';
+  var kisaAlt = 'çubuk boyu = SF · SF = 1 kayma eşiği';
+  var altYazi = (L + _frTxtW(uzunAlt, 11) <= W - 4) ? uzunAlt : kisaAlt;
   var g = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Kayma emniyet faktörü">';
   isim.forEach(function(n, i){
     var y = 24 + i * satir;
     var w = (mins[i] / maxV) * (W - L - R2);
-    var kotu = Number.isFinite(esik) && mins[i] < esik;
-    g += '<text x="' + (L - 8) + '" y="' + (y + 13) + '" text-anchor="end" font-size="12" fill="#1b1e24">' + _frEsc(n) + '</text>';
+    var kotu = yukTasir[i] && Number.isFinite(esik) && mins[i] < esik;
+    var dolgu = kotu ? '#a8321f' : (yukTasir[i] ? '#24425f' : '#9aa3ad');
+    g += '<text x="' + (L - 8) + '" y="' + (y + 13) + '" text-anchor="end" font-size="12" fill="'
+       + (yukTasir[i] ? '#1b1e24' : '#5a6270') + '">' + _frEsc(etAd[i]) + '</text>';
     g += '<rect data-ve="sf-bar" x="' + L + '" y="' + y + '" width="' + Math.max(1, w).toFixed(1) + '" height="18" '
-       + 'fill="' + (kotu ? '#a8321f' : '#24425f') + '" opacity="0.82"/>';
-    g += '<text x="' + (L + w + 6).toFixed(1) + '" y="' + (y + 13) + '" font-size="11.5" fill="#1b1e24">' + _frFs(mins[i], 2) + '</text>';
+       + 'fill="' + dolgu + '" opacity="' + (yukTasir[i] ? '0.82' : '0.55') + '"/>';
+    var etX = Math.min(L + w + 6, W - R2 + 4);
+    g += '<text x="' + etX.toFixed(1) + '" y="' + (y + 13) + '" font-size="11.5" fill="#1b1e24">' + _frFs(mins[i], 2) + '</text>';
   });
   if(Number.isFinite(esik) && esik > 0){
     var X = L + (esik / maxV) * (W - L - R2);
@@ -2430,7 +2480,7 @@ function _frSlipFigure(R, esik){
     g += '<text x="' + (X + 4).toFixed(1) + '" y="12" font-size="11" fill="#a8321f">servis faktörü '
        + _frF(esik, 2) + '</text>';
   }
-  g += '<text x="' + L + '" y="' + (H - 12) + '" font-size="11" fill="#5a6270">çubuk boyu = SF · SF = 1 kayma eşiği</text>';
+  g += '<text x="' + L + '" y="' + (H - 12) + '" font-size="11" fill="#5a6270">' + _frEsc(altYazi) + '</text>';
   return _frFigWrap(g, 'Kasnak başına EN DÜŞÜK kayma emniyet faktörü (tüm devir noktaları üzerinden). '
     + 'Kesikli kırmızı çizgi istenen servis faktörüdür; altında kalan çubuk kırmızı basılır.');
 }
@@ -2470,9 +2520,28 @@ function _frFreqFigure(R){
   });
   if(!tumF.length) return '';
   var yMax = Math.max.apply(null, tumF) * 1.1;
-  var c = _frChart({ xMin: rpmLo, xMax: rpmHi, yMin: 0, yMax: yMax,
+  // AÇIKLIK ADI KISALTILIR. Ham ad "Sürücü Kasnak (FAN)->Avara 1" = 28 karakter;
+  // yedi girdilik bir gösterge o adlarla 262 px'e çıkıyor ve grafiği yiyordu.
+  // Kısa kod köprü katmanının kendi kuralı (veFeadPulleyCodes); burada yoksa
+  // ham ada düşülür — grafik yine çizilir, yalnız gösterge genişler.
+  var kod = (typeof veFeadPulleyCodes === 'function' && R.build && R.build.sys)
+    ? veFeadPulleyCodes(R.build.sys) : null;
+  var adlar = (R.build && R.build.sys && R.build.sys.pulleys) || [];
+  function kisaSpan(sp){
+    var t = String(sp);
+    if(kod) adlar.forEach(function(p, i){ t = t.split(p.name).join(kod[i]); });
+    return t.replace(/\s*->\s*/g, ' → ');
+  }
+  var etiket = spans.map(kisaSpan).concat(['ateşleme frekansı']);
+  var gW = 0;
+  etiket.forEach(function(t){ gW = Math.max(gW, _frTxtW(t, 9.5)); });
+  var padR = Math.ceil(gW) + 34;                      // çizgi örneği + boşluk
+  var c = _frChart({ xMin: rpmLo, xMax: rpmHi, yMin: 0, yMax: yMax, padR: padR,
                      xLabel: 'Motor devri [d/d]', yLabel: 'Frekans [Hz]', xDec: 0, yDec: 0,
-                     H: 300, alt: 'Doğal frekans haritası' });
+                     // RAW kipte (özet rapor) istenen boy geçerli: orada şekil
+                     // küçük basılıyor. Sabit 300 yazmak _FR_H'yi sessizce
+                     // yutuyordu — özet raporda sayfa taşıyordu (ölçüldü).
+                     H: (_FR_RAW ? _FR_H : 300), alt: 'Doğal frekans haritası' });
   var g = c.svg;
   var renk = ['#24425f', '#8a5a1e', '#2e7d4f', '#a8321f', '#5a6270', '#7a4fa8'];
   spans.forEach(function(sp, si){
@@ -2486,16 +2555,20 @@ function _frFreqFigure(R){
   var fire = duty.map(function(d){ return [_frNum(d.engineRpm), _frNum(d.firingHz)]; })
                  .filter(function(p){ return Number.isFinite(p[1]); });
   g += '<g data-ve="firing-line">' + _frPolyline(c, fire, '#a8321f', 2.2, '6 4') + '</g>';
-  // gösterge
-  var lx = c.pad.l + 8, ly = c.pad.t + 12;
+  // GÖSTERGE ÇİZİM ALANININ DIŞINDA — sağ payda, dikey liste.
+  var lx = c.W - c.pad.r + 6, ly = c.pad.t + 10;
+  var adim = Math.min(13, (c.H - c.pad.t - c.pad.b) / (spans.length + 1));
   spans.forEach(function(sp, si){
-    g += '<line x1="' + lx + '" y1="' + (ly + si * 13 - 4) + '" x2="' + (lx + 16) + '" y2="' + (ly + si * 13 - 4)
+    var y = ly + si * adim;
+    g += '<line x1="' + lx + '" y1="' + (y - 4).toFixed(1) + '" x2="' + (lx + 16) + '" y2="' + (y - 4).toFixed(1)
        + '" stroke="' + renk[si % renk.length] + '" stroke-width="2"/>';
-    g += '<text x="' + (lx + 21) + '" y="' + (ly + si * 13) + '" font-size="9.5" fill="#5a6270">' + _frEsc(sp) + '</text>';
+    g += '<text x="' + (lx + 21) + '" y="' + y.toFixed(1) + '" font-size="9.5" fill="#5a6270">'
+       + _frEsc(etiket[si]) + '</text>';
   });
-  g += '<line x1="' + lx + '" y1="' + (ly + spans.length * 13 - 4) + '" x2="' + (lx + 16) + '" y2="' + (ly + spans.length * 13 - 4)
+  var yf = ly + spans.length * adim;
+  g += '<line x1="' + lx + '" y1="' + (yf - 4).toFixed(1) + '" x2="' + (lx + 16) + '" y2="' + (yf - 4).toFixed(1)
      + '" stroke="#a8321f" stroke-width="2" stroke-dasharray="6 4"/>';
-  g += '<text x="' + (lx + 21) + '" y="' + (ly + spans.length * 13) + '" font-size="9.5" fill="#a8321f">ateşleme frekansı</text>';
+  g += '<text x="' + (lx + 21) + '" y="' + yf.toFixed(1) + '" font-size="9.5" fill="#a8321f">ateşleme frekansı</text>';
   return _frFigWrap(g, 'Açıklıkların temel enine titreşim frekansı ve motorun ateşleme frekansı (7.2)–(7.3). '
     + 'İki eğri kesişirse o devirde ilgili açıklık rezonansa girer. Bu grafik yalnız AÇIKLIK '
     + 'titreşimini gösterir; sistem burulma modları 8.18\'de ayrı tablodadır.');

@@ -180,12 +180,18 @@ describe('tepe yük tablosu', () => {
     expect(a.rows[0].tensionN).toBeGreaterThan(b.rows[0].tensionN + 100);
   });
 
-  // Tepe yük DAYANIM sayfasında (5): "ne kadar dayanıyor" sorusunun parçası.
+  // TABLO DAYANIM SAYFASINDA, GEREKÇESİ KAPSAM BÖLÜMÜNDE (s3).
+  // "Kalibre değil" HESAPLANMIYOR demek değil — belge bunu açıkça söylemeli,
+  // yoksa okuyucu tablonun uydurma olduğunu sanır.
   test('kalibre olmadığı ve sapma bandı BELGEDE yazılı', () => {
     const s5 = SU._fsrSheet5(R, NODE);
     expect(s5).toMatch(/kalibre değil/i);
-    expect(s5).toContain(SU.VE_FSR_PEAK_BAND);
-    expect(s5).toMatch(/gergi kolu dinamiğini içermez/);
+    expect(s5).toMatch(/HESAPLANMIYOR demek değildir/);
+    const s3 = SU._fsrSheet3(R, NODE);
+    expect(s3).toContain(SU.VE_FSR_PEAK_BAND);
+    // Gerekçe SAYIYLA: dağılım farkı da yazılı
+    expect(s3).toContain(SU.VE_FSR_PEAK_SHAPE.mfsimAlt);
+    expect(s3).toContain(SU.VE_FSR_PEAK_SHAPE.gatesYuklu);
   });
 });
 
@@ -211,18 +217,39 @@ describe('kanvastan gelen şekil', () => {
 
 // ═══════════════════════════════════════════════════════════════════════════
 describe('tedarikçi sayfa düzeni', () => {
-  // Kullanıcı bildirimi İKİ KEZ geldi: "Her yere bu şekli koymuşsun. Gerek yok."
-  // ve ardından "Yine her yere bu diyagramları koymuşsun." Cevap şemayı
-  // küçültmek değil, BİR KEZ ve büyük çizmek: belgede TEK yerleşim şeması ve
-  // TEK grafik var. Aynı şeyi ikinci kez çizmek bilgi eklemiyor, yalnız her
-  // ikisini de küçültüp okunmaz yapıyordu.
-  test('yerleşim şeması YALNIZ 1. sayfada, grafik YALNIZ 3. sayfada', () => {
+  // ŞEKİL SAYISI DEĞİL, ŞEKİL DAĞILIMI. Kullanıcı önce "her yere bu şekli
+  // koymuşsun" dedi (aynı şema üç sayfada), sonra "şekiller çok büyük", sonra
+  // da "Gates raporundaki tüm şekilleri çıkar bakalım" — ve sonuncusunda
+  // ölçüm onu doğruladı: tedarikçi çıktısının BEŞ şekil türünden ÜÇÜ bizde
+  // yoktu. Doğru kural "tek şekil" değil: HER ŞEKİL BİR KEZ, konusuna ait
+  // sayfada. Kapı dağılımı tutuyor.
+  test('Gates’in beş şekli var ve her biri BİR KEZ, konusuna ait sayfada', () => {
     const sf = [1, 2, 3, 4, 5].map((n) => SU['_fsrSheet' + n](R, NODE));
-    const sema = sf.map((h) => (h.match(/class="appfig fig"/g) || []).length);
-    expect(sema).toEqual([1, 0, 0, 0, 0]);
-    const grafik = sf.map((h) => (h.match(/class="fig"/g) || []).length);
-    expect(grafik).toEqual([0, 0, 1, 0, 0]);
-    expect(DOC.match(/<svg/g).length).toBe(5 /* logo */ + 1 /* şema */ + 1 /* grafik */);
+    // yerleşim şeması (kanvas çizicisi) — yalnız sayfa 1
+    expect(sf.map((h) => (h.match(/class="appfig fig"/g) || []).length)).toEqual([1, 0, 0, 0, 0]);
+    // grafikler (`class="fig"` — şemanınki `class="appfig fig"` olduğu için
+    // bu kalıba GİRMEZ): s1 doğal frekans · s3 gerginlik + take-up · s5 kayma
+    expect(sf.map((h) => (h.match(/class="fig"/g) || []).length)).toEqual([1, 0, 2, 0, 1]);
+    // toplam SVG: 5 logo + 1 şema + 4 grafik
+    expect(DOC.match(/<svg/g).length).toBe(5 + 1 + 4);
+    // her grafiğin KENDİ imzası bir kez geçiyor (ikinci kopya yok)
+    [/data-ve="tension-curve"/g, /data-ve="takeup-curve"/g,
+     /data-ve="span-freq"/g, /data-ve="sf-bar"/g].forEach((re) => {
+      expect((DOC.match(re) || []).length).toBeGreaterThan(0);
+    });
+    expect((DOC.match(/data-ve="tension-curve"/g) || []).length).toBe(1);
+    expect((DOC.match(/data-ve="takeup-curve"/g) || []).length).toBe(1);
+  });
+
+  // GERGİ KOL ZARFI ŞEMANIN İÇİNDE — Gates 5. sayfasında da öyle. Bedeli 0 px
+  // (aynı şeklin içinde) ama sayfa 3'ün zarf tablosunun görsel karşılığı.
+  test('şema altı kol konumunu üst üste çiziyor, ETİKETSİZ', () => {
+    const s1 = SU._fsrSheet1(R, NODE);
+    expect((s1.match(/data-ve="belt-ghost"/g) || []).length).toBe(5);      // 6 konum − çizilen 1
+    expect((s1.match(/data-ve="pulley-ghost"/g) || []).length).toBe(5);
+    // Etiket kapalı: 395 px'lik şemada altı ad üst üste biniyordu (ölçüldü:
+    // "Serbest" ile "Değişt." 104 px² çakışma). Konumların adı sayfa 3'te.
+    expect(s1).not.toContain('data-ve="ghost-label"');
   });
 
   // Ayrıntılı raporun ŞEKİL işlevleri ile BÖLÜM işlevleri karışabiliyor:
@@ -258,13 +285,35 @@ describe('tedarikçi sayfa düzeni', () => {
   // beş kritik sayı ve belgenin KAPSAMI. Kapsam bloğu bir süs değil — bir özet
   // raporun en pahalı sessiz hatası, İÇERMEDİĞİ bir kontrolün yapıldığı
   // izlenimini bırakmaktır.
-  test('sayfa 1: şema · künyeler · kritik sayılar · kapsam', () => {
+  test('sayfa 1: şema · künyeler · kritik sayılar · frekans', () => {
     const s1 = SU._fsrSheet1(R, NODE);
-    ['Kayış', 'Otomatik gergi', 'Belgenin Kapsamı',
+    ['Kayış', 'Otomatik gergi', 'Doğal Frekans Haritası', 'Serbest Açıklık Titreşimi',
      'Tasarım gerginliği', 'En düşük kayma emniyeti', 'B10 kayış ömrü',
      'Kapalı çevrim', 'Çalışma çevrimi'].forEach((b) => expect(s1).toContain(b));
     expect((s1.match(/class="card[ "]/g) || []).length).toBe(5);
-    expect(s1).toMatch(/Bu belgede yer ALMAZ/);
+  });
+
+  // FREKANS HARİTASI İLE AÇIKLIK TABLOSU AYNI SAYFADA: harita bu tablonun
+  // çizimi, tablo haritanın sayısı. Ayrı sayfalara düşünce okuyucu eğriyi
+  // sayıya bağlayamıyordu.
+  test('rezonans hükmü basılıyor ve haritayla aynı sayfada', () => {
+    const s1 = SU._fsrSheet1(R, NODE);
+    expect(s1).toMatch(/Rezonans hükmü/);
+    expect(s1).toMatch(/f₁ \/ ateşleme/);
+    expect(s1.indexOf('Doğal Frekans Haritası')).toBeLessThan(s1.indexOf('Serbest Açıklık Titreşimi'));
+    // Çırpınma AYRI bir mod — "yok" olması rezonans güvencesi değil
+    expect(s1).toMatch(/Çırpınma ayrı bir moddur/);
+  });
+
+  // Kapsam bloğu belge DÜZEYİNDE bir ifade; sayfa 1 dolduğu için sayfa 3'te.
+  test('kapsam bloğu ve model sınırları sayfa 3’te', () => {
+    const s3 = SU._fsrSheet3(R, NODE);
+    expect(s3).toContain('Belgenin Kapsamı');
+    expect(s3).toMatch(/Bu belgede yer ALMAZ/);
+    expect(s3).toMatch(/Modelin ilan ettiği sınırlar/);
+    // Damganın GEREKÇESİ burada, sayısıyla
+    expect(s3).toContain(SU.VE_FSR_PEAK_BAND);
+    expect(s3).toMatch(/2095 değerlik doğrulama kümesinde tek bir tepe/);
   });
 });
 
@@ -491,7 +540,9 @@ describe('kozmetik — okunabilirlik kararları', () => {
   // adım okunur bir sayı olmalı.
   test('grafiğin BASTIĞI bölmeler okunur sayılar', () => {
     const s3 = SU._fsrSheet3(R, NODE);
-    const svg = s3.slice(s3.indexOf('<div class="fig">'));
+    // Sayfada İKİ grafik var (gerginlik + take-up); kapı ilkini ölçüyor.
+    const i0 = s3.indexOf('<div class="fig">');
+    const svg = s3.slice(i0, s3.indexOf('</svg>', i0));
     // y ekseni etiketleri: text-anchor="end" olanlar
     const yEt = [...svg.matchAll(/text-anchor="end"[^>]*>([^<]+)<\/text>/g)]
       .map((m) => Number(m[1].replace(/\s/g, '').replace('−', '-').replace(',', '.')))
@@ -523,5 +574,141 @@ describe('kozmetik — okunabilirlik kararları', () => {
     const kirmizi = (blok.match(/class="bad"/g) || []).length;
     expect(kirmizi).toBe(0);                              // yük taşıyanların hepsi geçiyor
     expect(blok).toMatch(/kapasitesidir/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GATES'İN BEŞ ŞEKLİ — ortak çizicilerin kapıları.
+// Bu beş kusurun ortak imzası: belge yine üretiliyor, hata çıkmıyor, yalnız
+// şekil yanlış duruyor ya da yanlış şeyi söylüyor. Beşi de önce mutasyonla
+// ölçüldü (kapısızken beşi de SAĞ KALIYORDU).
+describe('şekiller — ortak çizici kapıları', () => {
+  const svgOl = (s) => {
+    const vb = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(s);
+    return vb ? { W: Number(vb[1]), H: Number(vb[2]) } : null;
+  };
+
+  // ── Doğal frekans haritası ─────────────────────────────────────────────
+  // Gösterge çizim alanının İÇİNDEYDİ: yedi girdi, en genişi 262 px, çizim
+  // alanının %42'si — altı eğrinin dördünü kesiyordu.
+  test('frekans göstergesi çizim alanının DIŞINDA', () => {
+    const svg = RP.veFeadFigureRaw(RP._frFreqFigure, R, 780, 190);
+    expect(svg).toContain('data-ve="span-freq"');
+    const o = svgOl(svg);
+    // düşey ızgara çizgileri = çizim alanının sağ sınırı
+    const grid = [...svg.matchAll(/<line x1="([\d.]+)"[^>]*stroke="#e4e6e9"/g)].map((m) => Number(m[1]));
+    expect(grid.length).toBeGreaterThan(2);
+    const cizimSag = Math.max(...grid);
+    const gost = [...svg.matchAll(/<text x="([\d.]+)"[^>]*font-size="9\.5"/g)].map((m) => Number(m[1]));
+    expect(gost.length).toBeGreaterThanOrEqual(4);          // 6 açıklık + ateşleme
+    expect(Math.min(...gost)).toBeGreaterThan(cizimSag);
+    // ve göstergenin en uzun satırı viewBox'ı AŞMIYOR
+    const met = [...svg.matchAll(/<text x="([\d.]+)"[^>]*font-size="9\.5"[^>]*>([^<]+)</g)];
+    met.forEach(([, x, t]) => expect(Number(x) + t.length * 9.5 * 0.6).toBeLessThanOrEqual(o.W + 1));
+  });
+
+  // Boy istenen ölçüyü DİNLEMELİ: sabit H:300 yazmak _FR_H'yi sessizce
+  // yutuyordu ve özet raporda sayfa taşıyordu.
+  test('frekans haritası istenen boyu kullanıyor', () => {
+    expect(svgOl(RP.veFeadFigureRaw(RP._frFreqFigure, R, 780, 190)).H).toBe(190);
+    expect(svgOl(RP.veFeadFigureRaw(RP._frFreqFigure, R, 780, 300)).H).toBe(300);
+  });
+
+  // ── Kayma emniyeti çubuk grafiği ───────────────────────────────────────
+  // Sağ pay 30 px'te SABİTTİ: "14,95" gibi bir etiket viewBox'ı 10 px aşıp
+  // kırpılıyordu (ölçüldü, özet rapor sayfa 5).
+  test('kayma grafiğinde değer etiketi viewBox içinde', () => {
+    const svg = RP.veFeadFigureRaw(RP._frSlipFigure, R, 780, 215, R.serviceFact);
+    const o = svgOl(svg);
+    const et = [...svg.matchAll(/<text x="([\d.]+)"[^>]*font-size="11\.5"[^>]*>([^<]+)</g)];
+    expect(et.length).toBeGreaterThanOrEqual(4);
+    et.forEach(([, x, t]) => expect(Number(x) + t.length * 11.5 * 0.6).toBeLessThanOrEqual(o.W));
+  });
+
+  // VURGU HÜKÜMLE ÇELİŞEMEZ — matriste kapatılan çelişkinin GRAFİK tarafı.
+  // Gerginlik oranı ~1,00 olan kasnakta SF bir marj değil KAPASİTEDİR;
+  // kırmızı basmak "başarısız" demek olur ve sayfanın kendi hükmüyle çelişir.
+  test('kayma grafiğinde kırmızı yalnız yük TAŞIYAN kasnakta', () => {
+    const svg = RP.veFeadFigureRaw(RP._frSlipFigure, R, 780, 215, R.serviceFact);
+    const st = RP._frSlipStats(R);
+    expect(st.idle.length).toBeGreaterThan(0);
+    expect(st.idle.some((x) => x.SF < R.serviceFact)).toBe(true);   // kapı ısırıyor
+    const cubuk = [...svg.matchAll(/data-ve="sf-bar"[^>]*fill="(#[0-9a-f]{6})"/g)].map((m) => m[1]);
+    expect(cubuk.length).toBe(R.build.sys.pulleys.length);
+    // yük taşımayan sayısı kadar SOLUK çubuk, ve hiç kırmızı YOK
+    expect(cubuk.filter((c) => c === '#9aa3ad').length).toBe(st.idle.length);
+    expect(cubuk.filter((c) => c === '#a8321f').length).toBe(0);
+  });
+
+  // ── Kod üreticisi köprüde ve çıpalı ────────────────────────────────────
+  test('kod üreticisi köprü katmanında ve rol kısayolları duruyor', () => {
+    expect(typeof M.veFeadPulleyCodes).toBe('function');
+    const kod = M.veFeadPulleyCodes(R.build.sys);
+    R.build.sys.pulleys.forEach((p, i) => {
+      if (p.tensioner) expect(kod[i]).toBe('TEN');
+    });
+    // parantez içi kısa harf dizisi bir KODDUR, parça numarası değil
+    expect(M.veFeadPulleyCodes({ pulleys: [{ name: 'Sürücü Kasnak (FAN)' }] })[0]).toBe('FAN');
+    expect(M.veFeadPulleyCodes({ pulleys: [{ name: 'Otomatik Gergi (E9843)', tensioner: 1 }] })[0]).toBe('TEN');
+    // ve özet rapor ONU kullanıyor (ikinci kopya yok)
+    expect(SU._fsrCodes(R.build.sys)).toEqual(kod);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DOĞRULUK KAPILARI — üçü de "belge üretiliyor, hata yok, sayı yanlış" sınıfı.
+describe('doğruluk — sessiz sayı hataları', () => {
+  // ── KAYIŞ BİRİM KÜTLESİ ────────────────────────────────────────────────
+  // Çekirdek BELT_DB'de Gates PK için KATALOG kütlesini (0,0144 kg/m/kaburga)
+  // taşıyor ama kendi yorumunda reddediyor: hem kesit tahmini hem AG00686
+  // frekans haritasından geri-hesap ~0,0196 veriyor ve "acikca gecmek
+  // onerilir" diyor. Örnek alanı boş bırakınca katalog değeri kullanılıyordu.
+  // Hata EMNİYETLİ TARAFTA DEĞİL: f₁ ∝ 1/√m′, yani hafif kayış frekansı
+  // YÜKSEK gösterir ve rezonans riskini küçültür.
+  test('örnek, çekirdeğin geri-hesapladığı kütleyi AÇIKÇA geçiyor', () => {
+    const b = R.build.sys.belt;
+    expect(b.massPerRibKgM).toBeCloseTo(0.0196, 6);
+    // Çekirdeğin katalog değeri hâlâ 0,0144 — örnek onu EZMİYOR, geçiyor
+    const db = F.BELT_DB || (F.constants && F.constants.BELT_DB);
+    if (db && db.PK && db.PK.GATES) expect(db.PK.GATES.massPerRibKgM).toBeCloseTo(0.0144, 6);
+  });
+
+  test('KATALOG kütlesi frekansları ölçülebilir biçimde KAYDIRIYOR', () => {
+    const d = R.analysis.duty[R.analysis.duty.length - 1];
+    const f1 = d.frequencies.map((s) => s.fHz[0]);
+    // 0,0196 ile ölçülen değerler
+    [250.1, 261.7, 196.3, 108.5, 127.1, 174.7].forEach((g, i) =>
+      expect(Math.abs(f1[i] - g)).toBeLessThan(0.2));
+    // Katalog değeri √(196/144) = 1,167 kat YÜKSEK verirdi — yani bu kapı
+    // yalnız "bir sayı" değil, YÖNÜ de tutuyor.
+    expect(Math.sqrt(0.0196 / 0.0144)).toBeCloseTo(1.167, 2);
+  });
+
+  // ── REZONANS: KAPSAM KUTUSU BELGEYLE ÇELİŞEMEZ ─────────────────────────
+  // Kapsam kutusu "rezonans haritası yer ALMAZ" diyordu, oysa sayfa 1 doğal
+  // frekans haritasını ÇİZİYOR ve sayfa 1 bütün girdilerini basıyor.
+  test('kapsam kutusu, belgenin ÇİZDİĞİ şeyi "yok" diye yazmıyor', () => {
+    const s3 = SU._fsrSheet3(R, NODE);
+    const i = s3.indexOf('Bu belgede yer ALMAZ');
+    const yok = s3.slice(i, s3.indexOf('</ul>', i));
+    expect(yok).not.toMatch(/rezonans haritası/i);
+    expect(yok).toMatch(/burulma/i);                       // yer almayan GERÇEK şey
+    // ve haritanın kendisi sayfa 1'de duruyor
+    expect(SU._fsrSheet1(R, NODE)).toContain('data-ve="span-freq"');
+  });
+
+  // ── MANŞETTE MODELİN EN İYİ KESTİRİMİ ──────────────────────────────────
+  // Ham B10 çap penceresi dışında sistematik 0,55×; manşette ham değeri
+  // basmak, okuyucuya modelin kendi düzeltmesini göstermeden sayı vermekti.
+  test('B10 kartı düzeltilmiş değeri gösteriyor, hamı alt satırda', () => {
+    expect(R.life.inValidRange).toBe(false);              // kapı ısırıyor
+    const s1 = SU._fsrSheet1(R, NODE);
+    const i = s1.indexOf('B10 kayış ömrü');
+    const kart = s1.slice(i, i + 400);
+    const duz = Math.round(R.life.hoursB10Corrected);
+    const ham = Math.round(R.life.hoursB10);
+    expect(duz).not.toBe(ham);                            // ikisi gerçekten ayrı
+    expect(kart).toContain(String(duz));                  // manşet: düzeltilmiş
+    expect(kart).toContain('ham ' + ham);                 // alt satır: ham
   });
 });
