@@ -2206,26 +2206,69 @@ function _frNotesSection(node){
 // global); burada yalnız geometri var. Eksen etiketleri her zaman basılır —
 // birimsiz bir eğri okunamaz.
 var _FR_W = 820, _FR_H = 300;
+// ── EKSEN BÖLMESİ YUVARLAK SAYIYA OTURUR ────────────────────────────────────
+// Eskiden aralık beşe/dörde eşit bölünüyordu ve bölmeler ham veri ucundan
+// türüyordu: gerginlik grafiğinde X `0 · 12,1 · 24,2 · 36,2 · 48,3 · 60,4`,
+// Y `0 · 293 · 585 · 878 · 1170` çıkıyordu (ÖLÇÜLDÜ). `36,2` bir bölme değil,
+// 12,08'lik adımın yuvarlama artığı — okuyucu ondan bir değer okuyamıyor,
+// üstelik iki komşu etiket arasındaki fark her seferinde başka.
+//
+// Adım 1 · 2 · 2,5 · 5 × 10ⁿ kümesinden seçilir ve aralık ADIMA GÖRE DIŞA
+// yuvarlanır (veriye kırpılmaz) — böylece hem etiketler okunur sayılar olur
+// hem de eğrinin uçları eksene yapışmaz.
+// EN YAKIN aday seçilir, YUKARI yuvarlanmaz. Yukarı yuvarlama bir kez denendi
+// ve ÖLÇÜLDÜ: 0…60,4 aralığı (ham adım 12,08) adımı 20'ye çıkarıyor, eksen
+// 0…80 oluyordu — verinin bittiği yerden sonra çizim alanının dörtte biri boş.
+// En yakın aday 10 veriyor, eksen 0…70 oluyor.
+function _frNiceStep(ham){
+  if(!(ham > 0) || !Number.isFinite(ham)) return 1;
+  var us = Math.pow(10, Math.floor(Math.log10(ham))), k = ham / us;
+  var aday = [1, 2, 2.5, 5, 10], en = aday[0], d = Infinity;
+  aday.forEach(function(a){
+    var q = Math.abs(Math.log(k / a));          // ORANSAL yakınlık: 1↔2 ile 5↔10 eşit uzak
+    if(q < d){ d = q; en = a; }
+  });
+  return en * us;
+}
+function _frNiceAxis(v0, v1, hedef){
+  if(!(v1 > v0)) v1 = v0 + 1;
+  var n = Math.max(2, hedef || 5);
+  var st = _frNiceStep((v1 - v0) / n);
+  var a = Math.floor(v0 / st) * st, b = Math.ceil(v1 / st) * st;
+  // Kayan nokta artığı: 0.30000000000000004 gibi bir bölme etiketi basılmasın.
+  var ond = Math.max(0, -Math.floor(Math.log10(st)) + 1);
+  var t = [];
+  for(var v = a; v <= b + st * 1e-6; v += st) t.push(Number(v.toFixed(ond)));
+  return { min: a, max: b, step: st, ticks: t };
+}
+
 function _frChart(opt){
   var pad = { l: 62, r: 18, t: 16, b: 42 };
   var W = opt.W || _FR_W, H = opt.H || _FR_H;
   var x0 = opt.xMin, x1 = opt.xMax, y0 = opt.yMin, y1 = opt.yMax;
   if(!(x1 > x0)) x1 = x0 + 1;
   if(!(y1 > y0)) y1 = y0 + 1;
+  // `nice:false` ham aralığı korur (kalibrasyon çizimleri için kaçış kapağı).
+  var axX = null, axY = null;
+  if(opt.nice !== false){
+    axX = _frNiceAxis(x0, x1, opt.nX || 6); x0 = axX.min; x1 = axX.max;
+    axY = _frNiceAxis(y0, y1, opt.nY || 5); y0 = axY.min; y1 = axY.max;
+  }
   var sx = function(v){ return pad.l + (v - x0) / (x1 - x0) * (W - pad.l - pad.r); };
   var sy = function(v){ return H - pad.b - (v - y0) / (y1 - y0) * (H - pad.t - pad.b); };
   var g = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + _frEsc(opt.alt || '') + '">';
   // ızgara + eksen
-  var nX = 5, nY = 4, i;
+  var tX = axX ? axX.ticks : null, tY = axY ? axY.ticks : null;
+  var nX = tX ? tX.length - 1 : 5, nY = tY ? tY.length - 1 : 4, i;
   for(i = 0; i <= nX; i++){
-    var xv = x0 + (x1 - x0) * i / nX, X = sx(xv);
+    var xv = tX ? tX[i] : x0 + (x1 - x0) * i / nX, X = sx(xv);
     g += '<line x1="' + X.toFixed(1) + '" y1="' + pad.t + '" x2="' + X.toFixed(1) + '" y2="' + (H - pad.b)
        + '" stroke="#e4e6e9" stroke-width="1"/>';
     g += '<text x="' + X.toFixed(1) + '" y="' + (H - pad.b + 15) + '" text-anchor="middle" font-size="11" fill="#5a6270">'
        + _frF(xv, opt.xDec == null ? 0 : opt.xDec) + '</text>';
   }
   for(i = 0; i <= nY; i++){
-    var yv = y0 + (y1 - y0) * i / nY, Y = sy(yv);
+    var yv = tY ? tY[i] : y0 + (y1 - y0) * i / nY, Y = sy(yv);
     g += '<line x1="' + pad.l + '" y1="' + Y.toFixed(1) + '" x2="' + (W - pad.r) + '" y2="' + Y.toFixed(1)
        + '" stroke="#e4e6e9" stroke-width="1"/>';
     g += '<text x="' + (pad.l - 7) + '" y="' + (Y + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="#5a6270">'
@@ -2628,6 +2671,8 @@ if(typeof module !== 'undefined' && module.exports){
     _frPivotBlock: _frPivotBlock,
     _frF: _frF, _frFs: _frFs, _frPct: _frPct, _frEsc: _frEsc, _frNum: _frNum,
     _frSlipStats: _frSlipStats,
+    _frNiceStep: _frNiceStep, _frNiceAxis: _frNiceAxis,
+    VE_FR_SLIP_LOADED_RATIO: VE_FR_SLIP_LOADED_RATIO,
     VE_FEAD_REP_SECTIONS: VE_FEAD_REP_SECTIONS
   };
 }
