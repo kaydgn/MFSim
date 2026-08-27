@@ -1590,6 +1590,97 @@ describe('veFeadLoadExample — kutu konumu mm koordinatını YALANLAMAZ', () =>
   });
 });
 
+// ════════════════════════════════════════════════════════════════════════════
+//  TÜRETİLEN BOY, KOLUN NEREDE OTURDUĞUNU SÖYLEMEK ZORUNDA
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Serbest kipin cevabı "kol yayın ÇALIŞMA momentindeyken kayış yolu ne kadar"
+// sorusunun cevabı. Kol oraya oturamadıysa çıkan sayı hâlâ bir sayıdır ama
+// "tedarikçiye verilecek boy" DEĞİLDİR. İki hâl var, ikisi de eskiden
+// sessizdi ve panel ikisinde de "Tedarikçiye verilecek boy budur" diyordu:
+//
+//   nominalFallback : künye eksik → kol aralığın ORTASINA düştü
+//   atLimit         : nominal açı erişilemez → kol KENETLENDİ (+39.7 mm)
+//
+// Bu, modülün kendi kuralının ihlaliydi: geçerlilik sınırı sonucun İÇİNDE
+// taşınır (bkz. B10 çap penceresi, tepe yük "KALİBRE DEĞİL" damgası).
+describe('serbest kipte türetilen boyun KÖKENİ', () => {
+  const bmc = (mut) => {
+    const pack = veFeadExampleNodes('BMC_FEAD_2026');
+    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    pack.nodes.find((n) => n.type === 'fead-belt').data.lengthMode = 'free';
+    if (mut) mut(pack);
+    global.nodes = pack.nodes; global.connections = pack.connections;
+    return pack.nodes.find((n) => n.type === 'fead-belt');
+  };
+  const duz = (h) => h.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  // Montaj merkezini kaldırıp pivotu veren "direct" kurulumu — panelin
+  // birinci sınıf seçeneği (cp-fead.js: "Serbest kol açısını elle gir").
+  const direct = (pack, sil) => {
+    const t = pack.nodes.find((n) => n.type === 'fead-tensioner');
+    const mm = M.veFeadTensionerMount(t.data);
+    t.data.angleMode = 'direct';
+    t.data.pivotX = mm.pivot[0]; t.data.pivotY = mm.pivot[1];
+    t.data.freeAngleDeg = 24.88; t.data.sense = -1;
+    delete t.data.cenX; delete t.data.cenY;
+    if (sil) delete t.data.meanLoad;
+  };
+
+  test('SAĞLIKLI modelde metin değişmedi — yanlış alarm YOK', () => {
+    const belt = bmc();
+    const t = duz(fead.veFeadDerivedLengthHTML(belt));
+    expect(t).toMatch(/Tedarikçiye verilecek boy budur/);
+    expect(t).not.toMatch(/künyesi eksik|oturamadı/);
+    // sayı amber kalır, soru işareti eklenmez
+    expect(fead.veFeadDerivedLengthHTML(belt)).toMatch(/--accent-warning/);
+    expect(t).not.toMatch(/mm \?/);
+    // ve panelde uyarı kutusu çıkmaz
+    expect(duz(fead.getFeadBeltPropertiesHTML(belt))).not.toMatch(/Uyarılar/);
+  });
+
+  test('künye EKSİKSE: "tedarikçiye verilecek boy" DEMEZ', () => {
+    const belt = bmc((p) => direct(p, true));
+    const h = fead.veFeadDerivedLengthHTML(belt), t = duz(h);
+    expect(t).toMatch(/Gergi künyesi eksik/);
+    expect(t).toMatch(/gezinme aralığının ORTASINDAN/);
+    expect(t).toMatch(/tedarikçiye verilecek boy DEĞİLDİR/);
+    expect(t).not.toMatch(/Tedarikçiye verilecek boy budur/);
+    expect(h).toMatch(/--accent-danger/);            // sayı da işaretli
+    expect(t).toMatch(/mm \?/);
+  });
+
+  test('kol KENETLENDİYSE: nominale oturamadığını yazar', () => {
+    const belt = bmc((p) => {
+      p.nodes.find((n) => n.type === 'fead-tensioner').data.kArm = 0.048;  // ondalık kayması
+    });
+    const h = fead.veFeadDerivedLengthHTML(belt), t = duz(h);
+    expect(t).toMatch(/Kol nominal açısına oturamadı/);
+    expect(t).not.toMatch(/Tedarikçiye verilecek boy budur/);
+    expect(h).toMatch(/--accent-danger/);
+  });
+
+  // Boyun OKUNDUĞU panel, sebebi de basmak zorunda: veFeadWarningBox Kayış
+  // Yolu ve Çözücü panellerinde vardı, burada YOKTU.
+  test('kenetlenmiş çözümün SEBEBİ Kayış Özellikleri panelinde basılır', () => {
+    const belt = bmc((p) => {
+      p.nodes.find((n) => n.type === 'fead-tensioner').data.kArm = 0.048;
+    });
+    const panel = duz(fead.getFeadBeltPropertiesHTML(belt));
+    expect(panel).toMatch(/Uyarılar/);
+    expect(panel).toMatch(/aralığın dışında|kenetlendi/);
+  });
+
+  test('çözülemeyen modelde sayı UYDURULMAZ', () => {
+    const belt = bmc((p) => {
+      const t = p.nodes.find((n) => n.type === 'fead-tensioner');
+      delete t.data.cenX; delete t.data.cenY; delete t.data.pivotX; delete t.data.pivotY;
+    });
+    const t = duz(fead.veFeadDerivedLengthHTML(belt));
+    expect(t).toMatch(/Gereken efektif boy —/);
+    expect(t).not.toMatch(/\d+\.\d+ mm/);
+  });
+});
+
 describe('yön gülünün yeri', () => {
   const kurCozulur = () => {
     const crk = kasnak('fead-crank', { od: 160, x: 0, y: 0, driver: true }, 'CRK');

@@ -156,6 +156,35 @@ function veFeadTensionerMount(td){
   td = td || {};
   var out = { ok: false, pivot: null, cen: null, armFromCoords: NaN,
               montajDeg: NaN, relMeanDeg: NaN, pivotDerived: false, notes: [] };
+
+  // ── NOMİNAL KOL AÇISI GEOMETRİYE BAKMAZ — EN BAŞTA HESAPLANIR ────────────
+  //
+  // rel_mean: kol, yay ÇALIŞMA momentine kadar kaç derece kurulmuş.
+  //     rel_mean = (M_mean − M₀) / k
+  // Sağdaki üç sayı da SALT YAY KÜNYESİNDEN gelir; montaj merkezi, pivot ve
+  // kol boyu bu hesaba HİÇ girmez. Bu yüzden aşağıdaki geometri kapılarının
+  // ÜSTÜNDE duruyor.
+  //
+  // ESKİDEN ALTTAYDI ve sessiz bir kusurdu: panelin birinci sınıf seçeneği
+  // "Serbest kol açısını elle gir" (angleMode='direct') montaj merkezini
+  // SORMUYOR, dolayısıyla `cx/cy` yok diye erken dönülüyor ve künye tastamam
+  // yerindeyken bile relMeanDeg NaN kalıyordu. Serbest kayış kipi de nominal
+  // açıyı bulamayıp kolun gezinme aralığının ORTASINA düşüyordu.
+  //
+  // ÖLÇÜLDÜ (BMC, preload 8.60 · kArm 0.480 · meanLoad 22.07 — üçü de girili):
+  //     (mean − pre)/k = 28.0625°   ← hesaplanabiliyordu
+  //     mount kipi     : kol 28.0625° · L 1715.27 mm
+  //     direct kipi    : kol 38.1174° · L 1717.32 mm · hata 0 · uyarı 0
+  // Yani kullanıcı hatasız ve uyarısız YANLIŞ BOY ısmarlıyordu.
+  var pre = _feadNum(td.preload, NaN), rate = _feadNum(td.kArm, NaN),
+      mean = _feadNum(td.meanLoad, NaN);
+  if(Number.isFinite(pre) && Number.isFinite(mean) && Number.isFinite(rate) && rate > 0){
+    out.relMeanDeg = (mean - pre) / rate;
+    if(out.relMeanDeg < 0)
+      out.notes.push('Yay çalışma momenti ön yükten KÜÇÜK (' + mean + ' < ' + pre
+        + ' Nm); kol serbest konumun ters yanında kalır.');
+  }
+
   var px = _feadNum(td.pivotX, NaN), py = _feadNum(td.pivotY, NaN);
   var cx = _feadNum(td.cenX, NaN),   cy = _feadNum(td.cenY, NaN);
   if(!Number.isFinite(cx) || !Number.isFinite(cy)) return out;
@@ -173,16 +202,6 @@ function veFeadTensionerMount(td){
     return out;
   }
   out.montajDeg = Math.atan2(dy, dx) * 180 / Math.PI;
-
-  // rel_mean: yay çalışma momentine kadar kaç derece kurulmuş.
-  var pre = _feadNum(td.preload, NaN), rate = _feadNum(td.kArm, NaN),
-      mean = _feadNum(td.meanLoad, NaN);
-  if(Number.isFinite(pre) && Number.isFinite(mean) && Number.isFinite(rate) && rate > 0){
-    out.relMeanDeg = (mean - pre) / rate;
-    if(out.relMeanDeg < 0)
-      out.notes.push('Yay çalışma momenti ön yükten KÜÇÜK (' + mean + ' < ' + pre
-        + ' Nm); kol serbest konumun ters yanında kalır.');
-  }
   out.ok = true;
   return out;
 }
@@ -522,8 +541,8 @@ function veFeadWorkingPoint(sys, mode, nominalRelDeg){
 // Krankı orijine almak matematiksel olarak ücretsiz: bütün geometri merkez
 // FARKLARINDAN kuruluyor (`tangent()` içindeki w = c_j − c_i). BMC'nin altı
 // kasnağı + gergi pivotu + montaj merkezi birlikte (+500, −300) ötelendiğinde
-// ΔL_eff = 0.00e+0, altı sarım açısında Δ = 0.00e+0, gerginlik 649.986 →
-// 649.986 N. Kayan nokta hassasiyetinde BİREBİR aynı.
+// ΔL_eff = 0.00e+0, altı sarım açısında Δ = 0.00e+0, gerginlik 532.142 →
+// 532.142 N. Kayan nokta hassasiyetinde BİREBİR aynı.
 //
 // ── Y EKSENİ TERS ──────────────────────────────────────────────────────────
 // Kanvasta y AŞAĞI artar, kayış düzleminde YUKARI. Dönüşüm bu yüzden bir

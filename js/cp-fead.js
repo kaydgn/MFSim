@@ -1007,6 +1007,15 @@ function veFeadMountReadout(node){
 function getFeadBeltPropertiesHTML(node){
   if(!node.data) node.data = {};
   var html = '<div class="sw-panel">';
+  // UYARILAR BU PANELDE DE BASILIR. `veFeadWarningBox` Kayış Yolu ve Çözücü
+  // panellerinde vardı ama boyun OKUNDUĞU panelde yoktu: kol kenetlendiğinde
+  // köprü sebebi adıyla yazıyor ("nominal çalışma açısı … aralığın dışında"),
+  // kullanıcı ise o sayıyı burada, izsiz, "tedarikçiye verilecek boy" diye
+  // okuyordu. Geçerlilik sınırı sonucun İÇİNDE taşınır — modülün kendi kuralı.
+  try {
+    var _b = (typeof veFeadBuildFromCanvas === 'function') ? veFeadBuildFromCanvas() : null;
+    if(_b) html += veFeadWarningBox(_b);
+  } catch(e){ /* yarım model paneli açmayı engellemez */ }
   // Profil + marka, çekirdeğin BELT_DB'sindeki hb/hr'yi seçer — kasnak
   // yarıçapları buradan türetildiği için künyenin en belirleyici iki alanı bu.
   var profiller = [['PK','PK'],['PJ','PJ'],['PH','PH'],['PL','PL'],['PM','PM']];
@@ -1179,11 +1188,38 @@ function veFeadDerivedLengthHTML(node){
   try { b = (typeof veFeadBuildFromCanvas === 'function') ? veFeadBuildFromCanvas() : null; }
   catch(e){ b = null; }
   var deger = '—', not = 'Model henüz çözülemedi; kasnakları ve gergi künyesini tamamlayın.';
+  var supheli = false;
   if(b && b.ok && Number.isFinite(b.beltLengthMm)){
     deger = _feadFmt(b.beltLengthMm, 2) + ' mm';
-    not = 'Kasnak koordinatları, çaplar ve gergi künyesinden hesaplandı '
-        + '(kol ' + _feadFmt(b.relDeg, 3) + '°). Tedarikçiye verilecek boy budur; '
-        + 'en yakın katalog boyunu seçerseniz kip SABİT olur ve kol biraz kayar.';
+    var wp = b.workPoint || {};
+    // ── BOY, KOLUN NOMİNALDE OTURDUĞU VARSAYIMIYLA ANLAMLI ────────────────
+    //
+    // Serbest kipin cevabı "kol yayın çalışma momentindeyken kayış yolu ne
+    // kadar" sorusunun cevabı. Kol oraya OTURAMADIYSA çıkan sayı hâlâ bir
+    // sayıdır ama "tedarikçiye verilecek boy" DEĞİLDİR. İki hâl var ve ikisi
+    // de eskiden sessizdi — ÖLÇÜLDÜ:
+    //   nominalFallback : künye eksik, kol aralığın ORTASINA düştü
+    //                     (BMC/direct: 1717.32 yerine 1715.27 mm)
+    //   atLimit         : nominal açı kolun erişemediği yerde, kol KENETLENDİ
+    //                     (kArm ondalık kayması: 1754.94 mm, +39.7 mm)
+    // İkisinde de panel "Tedarikçiye verilecek boy budur" diyordu.
+    if(wp.nominalFallback){
+      supheli = true;
+      not = '<b>Gergi künyesi eksik.</b> Yay çalışma momenti (Spring Mean Load), ön yük ve '
+          + 'yay sabitinden biri girilmediği için kolun NOMİNAL açısı türetilemedi; boy, kolun '
+          + 'gezinme aralığının ORTASINDAN (kol ' + _feadFmt(b.relDeg, 3) + '°) hesaplandı. '
+          + 'Bu sayı tedarikçiye verilecek boy DEĞİLDİR — künyeyi tamamlayın.';
+    } else if(wp.atLimit){
+      supheli = true;
+      not = '<b>Kol nominal açısına oturamadı.</b> Boy, kolun kenetlendiği '
+          + _feadFmt(b.relDeg, 3) + '° konumundan hesaplandı; nominal çalışma noktası bu '
+          + 'yerleşimde erişilebilir değil. Sebebi aşağıdaki uyarılarda yazılı — '
+          + 'düzeltilmeden bu boy ısmarlanmamalıdır.';
+    } else {
+      not = 'Kasnak koordinatları, çaplar ve gergi künyesinden hesaplandı '
+          + '(kol ' + _feadFmt(b.relDeg, 3) + '°). Tedarikçiye verilecek boy budur; '
+          + 'en yakın katalog boyunu seçerseniz kip SABİT olur ve kol biraz kayar.';
+    }
   } else if(b && b.errors && b.errors.length){
     not = _feadEsc(b.errors[0]);
   }
@@ -1191,8 +1227,9 @@ function veFeadDerivedLengthHTML(node){
     + '<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">'
     + 'Gereken efektif boy</div>'
     + '<div style="width:130px; text-align:center; font-family:ui-monospace, monospace;'
-    + ' font-weight:700; font-size:var(--fs-body); color:var(--accent-warning);">'
-    + _feadEsc(deger) + '</div></div>'
+    + ' font-weight:700; font-size:var(--fs-body); color:'
+    + (supheli ? 'var(--accent-danger)' : 'var(--accent-warning)') + ';">'
+    + _feadEsc(deger) + (supheli ? ' ?' : '') + '</div></div>'
     + _feadHint(not);
 }
 
