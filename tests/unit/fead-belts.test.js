@@ -8,7 +8,7 @@
  * EN DEĞERLİ TEST BU DOSYANIN SONUNDA: BMC tedarikçi sayfasının kendi kayışı
  * (8PK 1715) katalogdan GERİ ÇIKIYOR mu? Serbest kip boyu hiç görmeden
  * 1715.27 mm hesaplıyor; katalog buna en yakın boyu öneriyor; o boy seçilince
- * çözüm sabit kipin tabanına (kol 28.5090° · T 649.986 N) BİREBİR oturuyor.
+ * çözüm sabit kipin tabanına (kol 28.4271° · T 532.142 N) BİREBİR oturuyor.
  * Üç bağımsız yol tek noktada buluşuyor.
  *
  * ── İKİ KÜME KARIŞTIRILMAMALI ──────────────────────────────────────────────

@@ -116,6 +116,85 @@ describe('kip çözümü — geriye dönük uyumluluk', () => {
   });
 });
 
+// ════════════════════════════════════════════════════════════════════════════
+//  NOMİNAL KOL AÇISI GEOMETRİYE BAKMAZ
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Serbest kipin ANKRAJI kolun nominal yay açısı: rel_mean = (M_mean − M₀)/k.
+// Üç sayı da SALT YAY KÜNYESİNDEN gelir — montaj merkezi, pivot ve kol boyu bu
+// hesaba HİÇ girmez. Buna rağmen `veFeadTensionerMount` onu geometri
+// kapılarının ALTINDA hesaplıyordu ve montaj merkezi yoksa erken dönüşte
+// kaybediyordu.
+//
+// Bu, panelin BİRİNCİ SINIF seçeneğinde ısırıyordu: "Serbest kol açısını elle
+// gir" (angleMode='direct') montaj merkezini SORMUYOR. ÖLÇÜLDÜ (BMC, künye
+// tastamam: preload 8.60 · kArm 0.480 · meanLoad 22.07 → 28.0625°):
+//   mount  : kol 28.0625° · nominalRel 28.0625 · fallback false
+//   direct : kol 38.1174° · nominalRel NaN     · fallback TRUE · hata 0 · uyarı 0
+// Yani kullanıcı hatasız ve uyarısız YANLIŞ BOY ısmarlıyordu.
+describe('nominal kol açısı — yay künyesinden, geometriden DEĞİL', () => {
+  const KUNYE = { preload: 8.60, kArm: 0.480, meanLoad: 22.07 };   // → 28.0625°
+
+  test('montaj merkezi YOKKEN de türetilir', () => {
+    const m = M.veFeadTensionerMount(KUNYE);
+    expect(m.ok).toBe(false);                       // geometri yok — bu doğru
+    expect(m.relMeanDeg).toBeCloseTo(28.0625, 4);   // ama nominal açı VAR
+  });
+
+  test('pivot YOKKEN de türetilir (kol boyu/pivot bu hesaba girmez)', () => {
+    expect(M.veFeadTensionerMount(Object.assign({ cenX: -170.08, cenY: 99.16 }, KUNYE))
+      .relMeanDeg).toBeCloseTo(28.0625, 4);
+  });
+
+  test('künye eksikse NaN kalır — uydurulmaz', () => {
+    expect(Number.isNaN(M.veFeadTensionerMount({ preload: 8.6, kArm: 0.48 }).relMeanDeg)).toBe(true);
+    expect(Number.isNaN(M.veFeadTensionerMount({ meanLoad: 22.07, kArm: 0.48 }).relMeanDeg)).toBe(true);
+    expect(Number.isNaN(M.veFeadTensionerMount({ preload: 8.6, meanLoad: 22.07, kArm: 0 }).relMeanDeg)).toBe(true);
+  });
+
+  test('çalışma momenti ön yükten küçükse not düşülür (erken dönüşte de)', () => {
+    const m = M.veFeadTensionerMount({ preload: 22.07, kArm: 0.48, meanLoad: 8.60 });
+    expect(m.relMeanDeg).toBeLessThan(0);
+    expect(m.notes.join(' ')).toMatch(/ön yükten KÜÇÜK/);
+  });
+
+  // UÇTAN UCA: direct kipte serbest kayış artık nominale oturuyor.
+  test('DIRECT kol açısı kipinde serbest kayış NOMİNALE oturur, aralık ortasına DEĞİL', () => {
+    const p = pack();
+    p.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const t = p.nodes.find((n) => n.type === 'fead-tensioner');
+    const mm = M.veFeadTensionerMount(t.data);          // mount kipindeki pivot
+    t.data.angleMode = 'direct';
+    t.data.pivotX = mm.pivot[0]; t.data.pivotY = mm.pivot[1];
+    t.data.freeAngleDeg = 24.88; t.data.sense = -1;
+    delete t.data.cenX; delete t.data.cenY;             // panel bu kipte sormuyor
+    p.nodes.find((n) => n.type === 'fead-belt').data.lengthMode = 'free';
+    global.nodes = p.nodes; global.connections = p.connections;
+    const b = veFeadBuildFromCanvas();
+    expect(b.ok).toBe(true);
+    expect(b.workPoint.nominalRelDeg).toBeCloseTo(28.0625, 4);
+    expect(b.workPoint.nominalFallback).toBeFalsy();    // ← eskiden true idi
+    expect(b.relDeg).toBeCloseTo(28.0625, 4);           // ← eskiden 38.1174
+  });
+
+  test('künye GERÇEKTEN eksikse fallback bayrağı kalkar (bayrak ölü değil)', () => {
+    const p = pack();
+    p.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const t = p.nodes.find((n) => n.type === 'fead-tensioner');
+    const mm = M.veFeadTensionerMount(t.data);
+    t.data.angleMode = 'direct';
+    t.data.pivotX = mm.pivot[0]; t.data.pivotY = mm.pivot[1];
+    t.data.freeAngleDeg = 24.88; t.data.sense = -1;
+    delete t.data.cenX; delete t.data.cenY;
+    delete t.data.meanLoad;                              // künye eksik
+    p.nodes.find((n) => n.type === 'fead-belt').data.lengthMode = 'free';
+    global.nodes = p.nodes; global.connections = p.connections;
+    const b = veFeadBuildFromCanvas();
+    expect(b.ok).toBe(true);
+    expect(b.workPoint.nominalFallback).toBe(true);
+  });
+});
+
 describe('SABİT kip — davranış birebir eskisi', () => {
   test('dokunulmamış BMC taban değerlerini birebir veriyor', () => {
     const r = coz(kur({ mode: 'fixed' }));
