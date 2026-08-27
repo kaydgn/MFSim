@@ -1787,6 +1787,83 @@ getirme, manşete yine ham B10 yazma, model sınırları künyesini silme,
 frekans göstergesini içeri alma, kayma grafiğinde yük ayrımını kaldırma,
 gergi kod kısayolunu silme.
 
+##### PROFESYONEL TUR — kapsam kutusu kalktı, dört bölüm eklendi (2026-08-27)
+
+Kullanıcı bildirimi: *"'Belgenin Kapsamı' kısmını da çıkar. Ona da gerek yok.
+Çok amatörce olmuş. Bu raporu daha profesyonel bir yapıya kavuşturalım. Amatör
+açıklamaları kaldıralım."* Ayrıca: *"'Detay Rapor' kısmında olup da bu raporda
+olmayan hangi kısımlar var?"*
+
+###### AÇIKLAMA DEĞİL KÜNYE — ölçülen ton farkı
+
+**ÖLÇÜLDÜ:** on sekiz açıklama notundan ikisi 627 ve 684 karakterdi — birer
+deneme yazısı. Bir mühendislik raporunda tablo altı notu bir cümledir.
+
+| | önce | sonra |
+|---|---:|---:|
+| en uzun not | **684 karakter** | 176 |
+| 300 karakteri aşan not | **4** | **0** |
+| toplam açıklama metni | 4 186 karakter | **1 693** |
+
+Kaldırılan kalıplar: ikinci tekil anlatım, *"…demek değildir"*, *"çare …"*,
+*"biri 'yok' diye öbürü güvenli sayılmaz"*, ölçüm anlatısı. Kalan: birim,
+kaynak, ve sayının yanlış okunmasını önleyen tek cümle.
+
+**KAPSAM KUTUSU KALKTI, YERİNE NUMARALI NOTLAR.** *"Bu belge şunları verir /
+Bu belgede yer ALMAZ"* iki kutusu bir rapor bölümü değil, bir sunum öğesiydi.
+Model sınırları bir mühendislik raporunda kalmak ZORUNDA — ama yeri belgenin
+sonundaki **numaralı Notlar** bölümüdür ve metin oraya `(Not n)` ile atıf
+yapar. Altı not: tepe yükün doğrulanmamışlığı · B10 çap penceresi · yorulma
+üssü · kayış birim kütlesi · hubload vektörü · kapsam dışı kalanlar.
+
+###### DETAYLI RAPORLA KAPSAM DENKLİĞİ — dört bölüm eksikti
+
+Ayrıntılı raporun 19 alt bölümü tek tek tarandı (`kapsam.js`). On beşi özette
+zaten vardı; **dördü yoktu ve dördü de üretilebilirdi**:
+
+| Detaylı rapor | Özette | Bugün | Veri |
+|---|---|---|---|
+| §8.13 Aksesuar mil torku | ✗ | **✓ s4** | `Q = 9549·P/n`, perPulley'den türer |
+| §8.15 Yük durumunun yorulmaya katkısı | ✗ | **✓ s4** | `fatigue.perLoadPct` |
+| §8.18 Sistem burulma titreşimi | ✗ | **✓ s1** | `R.torsional` |
+| §8.19 Tasarım notları | ✗ | **✓ s6** | numaralı Notlar |
+
+**BURULMA SAYFA 1'DE, TİTREŞİMİN GERİ KALANIYLA BİRLİKTE:** doğal frekans
+haritası, açıklık tablosu ve burulma modları üçü de titreşim; ayrı sayfalara
+düşünce okuyucu üçünü birbirine bağlayamıyordu.
+
+**BURULMA SAYISI KRANK MİLİ ATALETİNE BAĞLI** ve harness'ta ölü girdiydi:
+gerçek panel yolu `crankInertia` geçiyor, doğrulama harness'ı geçmiyordu —
+1. elastik mod **12,9 yerine 16,8 Hz** çıkıyordu (%29). Test harness'ı artık
+uygulamanın yolunu birebir taklit ediyor; kapı frekansı 11–15 Hz bandında
+tutuyor.
+
+###### ALTI SAYFA — içerik büyüdüğü için, tercih olarak değil
+
+| # | Sayfa | Cevapladığı soru |
+|---|-------|------------------|
+| 1 | **Genel Bakış** | nasıl duruyor · titreşimi ne (şema · künyeler · 5 kart · frekans haritası · açıklık tablosu · burulma) |
+| 2 | **Geometri** | nerede duruyor |
+| 3 | **Gergi Çalışma Zarfı** | kol nasıl geziyor (6 konum · iki grafik yan yana) |
+| 4 | **Çalışma Çevrimi ve Torklar** | ne isteniyor (duty girdisi · mil torku · yorulma katkısı) |
+| 5 | **Gerginlik ve Hubload** | ne kadar kuvvet (ortalama gerginlik · hubload · tepe yük) |
+| 6 | **Dayanım ve Titreşim** | ne kadar dayanıyor (kayma · yorulma · ömür · Notlar) |
+
+Sayfa 4'ün üç tablosu da **devir noktasıyla indekslidir** (girdi → ondan çıkan
+tork → o noktanın yorulmaya katkısı); sayfa 5'in üçü de kuvvettir. Bölüşüm
+tema değil, INDEKS ortaklığı.
+
+**ÖLÇÜLDÜ:** altı sayfa da taşmasız, doluluk %81–99, yatay taşma 0, viewBox
+dışı SVG yazısı 0, çakışma 0, sentetik kalın 0.
+
+Kapı **sekiz mutasyonla** ölçüldü, sekizi de kırmızı: Notlar bölümünü kaldırma,
+burulma / mil torku / yük katkısı bloklarını tek tek kaldırma, kapsam dışı
+notunu silme, tork sabitini bozma (9549 → 9459), rezonans hükmünü kaldırma,
+kayış kütlesini katalog değerine döndürme. Tork ve yük katkısı kapıları önce
+**yalnız başlığa** bakıyordu ve mutasyondan sağ çıkıyordu — artık basılan
+hücrenin ARİTMETİĞİNİ (`Q = 9549·P/n`) ve payların toplamının %100 olmasını
+tutuyorlar.
+
 ##### Uydurulmayan şeyler — raporun kendi §9'unda yazılı
 
 | Gates sayfası | Neden yok |

@@ -40,8 +40,9 @@ var VE_FSR_SHEETS = [
   'Genel Bakış',
   'Geometri',
   'Gergi Çalışma Zarfı',
-  'Yükler',
-  'Dayanım'
+  'Çalışma Çevrimi ve Torklar',
+  'Gerginlik ve Hubload',
+  'Dayanım ve Titreşim'
 ];
 
 // ─── TEPE YÜK: HESAPLANIYOR AMA DOĞRULANMIYOR ──────────────────────────────
@@ -99,6 +100,12 @@ function _fsrCodes(sys){
 }
 // Kod → ad künyesi. Kodun kullanıldığı her sayfada bir kez basılır: kısaltma
 // ancak karşılığı aynı sayfada duruyorsa okunabilir.
+// Kasnak adını kısa koda çevirir; karşılığı yoksa ad olduğu gibi döner.
+function _fsrKisaAd(sys, ad){
+  var ps = (sys && sys.pulleys) || [], kod = _fsrCodes(sys);
+  for(var i = 0; i < ps.length; i++) if(ps[i].name === ad) return kod[i];
+  return ad;
+}
 function _fsrCodeLegend(sys){
   var ps = (sys && sys.pulleys) || [], k = _fsrCodes(sys);
   if(!ps.length) return '';
@@ -363,69 +370,16 @@ function _fsrSheet1(R, node){
   // Gates'in beş şekil türünden ÜÇÜ bizde yoktu. Üçünün de üreticisi
   // ayrıntılı raporda ZATEN vardı — eksik olan yerleşimdi, hesap değil.
   h += _fsrBlk('Doğal Frekans Haritası',
-    _fsrFig(typeof _frFreqFigure === 'function' ? _frFreqFigure : null, R, 780, 190),
-    'Her eğri bir serbest açıklığın <b>enine</b> titreşim frekansı; devir arttıkça gerginlik '
-    + 've dolayısıyla frekans yükselir. Kesikli doğru <b>ateşleme frekansı</b> (altı silindir → '
-    + '3 × devir/60); bir açıklık eğrisiyle kesiştiği devirde o açıklık zorlanır. Sayısal '
-    + 'karşılığı hemen aşağıdaki tablodur.');
+    _fsrFig(typeof _frFreqFigure === 'function' ? _frFreqFigure : null, R, 780, 150),
+    'Eğriler serbest açıklıkların temel enine titreşim frekansı; kesikli doğru ateşleme '
+    + 'frekansı (3 × devir / 60). Sayısal karşılığı aşağıdaki tablodadır.');
   h += _fsrVibBlock(R);
+  h += _fsrTorsionalBlock(R);
 
   h += _fsrCodeLegend(sys);
   return h;
 }
 
-// BELGENİN KAPSAMI SONUCUN İÇİNDE DURUR. Bir özet raporun en pahalı sessiz
-// hatası, İÇERMEDİĞİ bir kontrolün yapıldığı izlenimini bırakmasıdır: tablolar
-// dolu görünür, hüküm verilir, ama okuyucu neyin denetlenmediğini bilmez.
-function _fsrScopeBlock(){
-  var var_ = ['kapalı çevrim geometrisi (Σ işaretli sarım = 360°)',
-    'gergi kolunun altı konumu ve take-up oranı',
-    'çalışma çevrimi boyunca ortalama gerginlik ve hubload',
-    'kayma emniyet faktörü ve kaburga yorulma dağılımı',
-    'B10 kayış ömrü (çap penceresi denetimiyle)'];
-  // "rezonans haritası yer almaz" demek belgenin KENDİSİYLE çelişiyordu:
-  // sayfa 1 doğal frekans haritasını çiziyor, sayfa 5 bütün girdilerini
-  // basıyor. Yer almayan şey AÇIKLIK titreşimi değil, çok serbestlik
-  // dereceli BURULMA modu.
-  var yok = ['sistem burulma modu (çok serbestlik dereceli) — açıklık titreşimi VAR (s1, s5)',
-    'kasnak eksenel kaçıklığı (ψ girdisi sorulmuyor; ψ=0 iyimser olurdu)',
-    'kayma duyarlılığının TERS çözümü (gereken gerginlik artışı)',
-    'Weibull dağılımı / 1000 adette arıza sayısı',
-    'tepe tork eğrisi — bu belgedeki tork ORTALAMADIR'];
-  // MODEL SINIRLARI KAPSAMIN PARÇASI. "Kalibre değil" damgasının gerekçesi
-  // tablonun altında on satırlık bir paragraftı; oysa bu bir model-sınırı
-  // ifadesi ve yeri kapsam bölümü. Damganın YANINDA tek satır kalıyor,
-  // gerekçe burada duruyor.
-  var sinir = _fsrKVT([
-    ['Tepe yük — neden “kalibre değil”',
-     '17 tedarikçi raporundan çıkarılmış <b>2095 değerlik doğrulama kümesinde tek bir tepe '
-     + 'değeri yok</b>; hiçbir test bu tabloyu bir referansa bağlamıyor. Tepe tablosu olan '
-     + 'tek rapora karşı sapma: gerginlik ' + VE_FSR_PEAK_BAND + ' (RMS %11,8), hubload '
-     + '−%10,3 … +%17,5 (RMS %9,7). Fark büyüklükte değil <b>dağılımda</b>: tepe/ortalama '
-     + 'oranı tedarikçide yük taşıyan dört kasnakta ' + VE_FSR_PEAK_SHAPE.gatesYuklu
-     + ' ve alternatörde ' + VE_FSR_PEAK_SHAPE.gatesAlt + '; bu modelde '
-     + VE_FSR_PEAK_SHAPE.mfsimYuklu + ' ve <b>' + VE_FSR_PEAK_SHAPE.mfsimAlt + '</b> — '
-     + 'ivmenin etkisi küçük ve hızlı dönen alternatörde toplanıyor. Damganın kalkması için '
-     + 'birden çok raporun tepe tablosu gerekir.'],
-    ['B10 ömrü — çap penceresi',
-     'Mutlak ömür yalnız tüm kasnak çapları <b>79,6–176 mm</b> arasındayken kalibre '
-     + '(5 sistem, RMS %2,4). Dışında model sistematik olarak ~0,55× veriyor; manşet ve '
-     + 'sayfa 5 ampirik düzeltmeli değeri, ham değeri de yanında basıyor.'],
-    ['Açıklık frekansı — kayış kütlesi',
-     'f₁ ∝ 1/√m′. Katalog kütlesi (0,0144 kg/m/kaburga) ile çekirdeğin geri-hesabı '
-     + '(0,0196) arasında %36 fark var ve frekansları %16,7 kaydırıyor; bu belge '
-     + '<b>geri-hesabı</b> kullanıyor — katalog değeri rezonans riskini küçük gösterir.']
-  ], true);
-  return _fsrBlk('Belgenin Kapsamı',
-    '<div class="cols"><div class="col"><div class="scope in"><b>Bu belge şunları verir</b><ul>'
-    + var_.map(function(x){ return '<li>' + _frEsc(x) + '</li>'; }).join('')
-    + '</ul></div></div><div class="col"><div class="scope out"><b>Bu belgede yer ALMAZ</b><ul>'
-    + yok.map(function(x){ return '<li>' + _frEsc(x) + '</li>'; }).join('')
-    + '</ul></div></div></div>'
-    + '<div class="bt2">Modelin ilan ettiği sınırlar</div>' + sinir,
-    'Ayrıntılı rapor aynı çözümü teorisiyle birlikte anlatır; kapsam farkı sayıda değil, '
-    + '<b>gerekçede</b>dir.');
-}
 function _fsrSignedWrap(R){
   var g = R.analysis && R.analysis.geometry, sys = R.build && R.build.sys;
   if(!g || !sys) return NaN;
@@ -436,6 +390,8 @@ function _fsrSignedWrap(R){
   });
   return t;
 }
+// Çözümün taşıdığı uyarılar gizlenmez: hesap koştu ama bir kısıt sınırdaysa
+// okuyucu bunu tablodan çıkaramaz.
 function _fsrWarnBox(R){
   var w = [];
   (R.warnings || []).forEach(function(x){ w.push(x); });
@@ -481,9 +437,9 @@ function _fsrSheet2(R, node){
   h += _fsrBlk('Çözülmüş Kayış Yolu',
     _fsrT(['Kod', 'Kasnak', 'Çıkış açıklığı<br>[mm]', 'Sarım açısı<br>[°]', 'İşaret',
            'Hız oranı<br>(motor ref.)'], geo, { ilkIkiSol: true }),
-    'Açıklık, o kasnaktan <b>çıkan</b> serbest kayış parçasıdır. Σ işaretli sarım = <b>'
-    + _frFs(sig, 2) + '°</b> (kapalı çevrim koşulu 360°). Efektif tahrik boyu <b>'
-    + _frFs(A.driveLenMm, 1) + ' mm</b>, gereken kayış boyu <b>' + _frFs(A.requiredBeltMm, 1) + ' mm</b>.');
+    'Açıklık, kasnaktan çıkan serbest kayış parçasıdır. Σ işaretli sarım = <b>'
+    + _frFs(sig, 2) + '°</b> (kapalı çevrim koşulu 360°). Efektif tahrik boyu '
+    + _frFs(A.driveLenMm, 1) + ' mm; gereken kayış boyu ' + _frFs(A.requiredBeltMm, 1) + ' mm.');
 
   // HIZ ORANI GEOMETRİDEN GELİR, ELLE YAZILMAZ. Aksesuar devri kasnak PITCH
   // çaplarından çıkar; elle yazılmış bir oran bütün güç okumalarını kaydırır
@@ -497,8 +453,7 @@ function _fsrSheet2(R, node){
     });
     h += _fsrBlk('Aksesuar Devirleri [d/d]',
       _fsrT(['Motor devri<br>[d/d]'].concat(kod), rows, { ilkSol: true }),
-      'Her sütun, o kasnağın motor devrine göre <b>pitch çapından</b> hesaplanan devridir; '
-      + 'aksesuarın güç eğrisi bu devirden okunur. Oranlar sayfanın üstündeki tabloda.');
+      'Devirler kasnak pitch çaplarından hesaplanır; oranlar üstteki tablodadır.');
   }
 
   // BOY DENGESİ ELLE TOPLANABİLİR OLMALI. "Efektif tahrik boyu 1716,2 mm"
@@ -519,11 +474,9 @@ function _fsrSheet2(R, node){
   h += _fsrBlk('Kayış Boyu Dengesi',
     _fsrT(['Kod', 'Efektif Ø<br>[mm]', 'Sarım<br>[°]', 'Sarım yayı<br>[mm]',
            'Çıkış açıklığı<br>[mm]'], bal, { ilkSol: true }),
-    'Kayışın efektif boyu iki parçadan oluşur: kasnaklara <b>saran</b> yaylar ve aralarındaki '
-    + '<b>serbest açıklıklar</b>. Toplamları ' + _frFs(topYay, 2) + ' + ' + _frFs(topSpan, 2)
-    + ' = <b>' + _frFs(topYay + topSpan, 2) + ' mm</b>, efektif tahrik boyu <b>'
-    + _frFs(A.driveLenMm, 1) + ' mm</b>. Sırttan temas eden kasnakta yay kayışı <b>uzatır</b> '
-    + 'ama sarım işareti eksidir; kapalı çevrim koşulu bu yüzden işaretli toplamda aranır.');
+    'Σ sarım yayı ' + _frFs(topYay, 2) + ' mm + Σ açıklık ' + _frFs(topSpan, 2) + ' mm = <b>'
+    + _frFs(topYay + topSpan, 2) + ' mm</b> = efektif tahrik boyu. Sırttan temaslı kasnakta '
+    + 'sarım işareti eksidir.');
 
   h += _fsrCodeLegend(sys);
   return h;
@@ -559,9 +512,8 @@ function _fsrSheet3(R, node){
   h += _fsrBlk('Altı Kol Konumu <span class="kvi">take-up oranı ' + _frFs(T.takeupMmPerDeg, 3)
       + ' mm/°</span>',
     _fsrT(head, rows, { ilkSol: true, vurguSutun: pos.map(function(p){ return p.position === 'Mean'; }) }),
-    '<b>Load bir mekanik durdurucudur</b>, çalışma noktası değildir: orada sarım sıfıra yaklaştığı '
-    + 'için gerginlik tekilleşir. Tasarımın çalışma noktası <b>Çalışma (Mean)</b> sütunudur; '
-    + 'kayış toleransı ve aşınma payı kolu bu zarf boyunca gezdirir.');
+    'Load mekanik durdurucudur; orada sarım sıfıra yaklaşır ve gerginlik tekilleşir. Tasarımın '
+    + 'çalışma noktası <b>Çalışma (Mean)</b> sütunudur.');
 
   // İKİ GRAFİK YAN YANA — kullanıcı isteği: "Şu iki diyagramı da yan yana
   // verelim. Alt alta olmasına gerek yok." İkisi de AYNI yatay ekseni (gergi
@@ -576,28 +528,25 @@ function _fsrSheet3(R, node){
   // kalır ve grafik yazıları gövdeden BÜYÜK görünürdü.
   h += '<div class="cols">';
   h += '<div class="col">' + _fsrBlk('Gerginliğin Kol Açısına Bağımlılığı',
-    _fsrFig(typeof _frTensionFigure === 'function' ? _frTensionFigure : null, R, 390, 330),
-    'Kalın eğri hesaplanan gerginlik, <b>soluk kesikli iki eğri onun ±%10 bandıdır</b>. '
-    + 'Kesikli dikey çizgiler yukarıdaki altı kol konumunu işaretler; eğri, çözüm '
-    + 'aralığının ucuna yaklaşırken tekilleşir.') + '</div>';
+    _fsrFig(typeof _frTensionFigure === 'function' ? _frTensionFigure : null, R, 390, 520),
+    'Kalın eğri hesaplanan gerginlik, kesikli eğriler ±%10 bandı. Dikey çizgiler altı kol '
+    + 'konumu.') + '</div>';
   h += '<div class="col">' + _fsrBlk('Kayış Take-up Eğrisi',
-    _fsrFig(typeof _frTakeupChartRaw === 'function' ? _frTakeupChartRaw : null, R, 390, 330),
-    'Aynı yatay eksende <b>gereken efektif kayış boyu</b>. Take-up oranı bu eğrinin '
-    + 'çalışma noktasındaki <b>anlık eğimi</b>dir — uçtan uca ortalama eğim değil '
-    + '(ikisi bu sistemde %25 ayrışıyor).') + '</div>';
+    _fsrFig(typeof _frTakeupChartRaw === 'function' ? _frTakeupChartRaw : null, R, 390, 520),
+    'Düşey eksen gereken efektif kayış boyu. Take-up oranı, eğrinin çalışma noktasındaki '
+    + 'anlık eğimidir.') + '</div>';
   h += '</div>';
 
-  // Kapsam bloğu belge DÜZEYİNDE bir ifade; konusu olan bir sayfası yok ve
-  // sayfa 1 tepe yük + frekans haritasıyla dolduğu için buraya taşındı.
-  h += _fsrScopeBlock();
   return h;
 }
 
-// ═══════════════════ SAYFA 4 — YÜKLER ═══════════════════════════════════════
+// ═══════════════════ SAYFA 4 — ÇALIŞMA ÇEVRİMİ VE TORKLAR ═══════════════════
+// Üçü de DEVİR NOKTASIYLA indeksli: girdi, ondan çıkan mil torku, ve o
+// noktanın yorulmaya katkısı.
 function _fsrSheet4(R, node){
   var duty = (R.analysis && R.analysis.duty) || [], raw = R.duty || [];
   var sys = R.build && R.build.sys;
-  var h = _fsrH1('Yükler', 'Çalışma çevrimi boyunca gerginlik ve yatak kuvvetleri');
+  var h = _fsrH1('Çalışma Çevrimi ve Torklar', 'Girdi, aksesuar mil torku ve yorulma katkısı');
   if(!duty.length) return h + '<div class="nofig">Çalışma çevrimi tanımlı değil.</div>';
 
   var kod = _fsrCodes(sys);
@@ -622,35 +571,46 @@ function _fsrSheet4(R, node){
   var lcSbt = _fsrConstCols(lcHead, lc, 1), lcSade = _fsrStripCols(lcHead, lc, lcSbt);
   h += _fsrBlk('Çalışma Çevrimi Girdisi',
     _fsrT(lcSade.head, lcSade.rows, { ilkSol: true }),
-    '<b>Sürücü kasnağın gücü bir girdi değildir</b>: çevrimin kapanabilmesi için aksesuar '
-    + 'güçlerinin toplamı olarak hesaplanır. ' + _fsrConstNote(lcSbt));
+    'Sürücü gücü girdi değildir; aksesuar güçlerinin toplamı olarak hesaplanır. '
+    + _fsrConstNote(lcSbt));
+
+  h += _fsrTorqueBlock(R);
+  h += _fsrLoadCaseBlock(R);
+  h += _fsrCodeLegend(sys);
+  return h;
+}
+
+// ═══════════════════ SAYFA 5 — GERGİNLİK VE HUBLOAD ═════════════════════════
+function _fsrSheet5(R, node){
+  var duty = (R.analysis && R.analysis.duty) || [], sys = R.build && R.build.sys;
+  var h = _fsrH1('Gerginlik ve Hubload', 'Çalışma çevrimi boyunca kuvvetler');
+  if(!duty.length) return h + '<div class="nofig">Çalışma çevrimi tanımlı değil.</div>';
+  var kod = _fsrCodes(sys);
 
   function mat(baslik, oku, dec, not){
-    var rows = duty.map(function(d, k){
+    var rows = duty.map(function(d){
       var c = [_frF(d.engineRpm, 0)];
       sys.pulleys.forEach(function(p, i){ c.push(_frFs(oku(d, i), dec)); });
       return c;
     });
     return _fsrBlk(baslik,
-      _fsrT(['Motor devri<br>[d/d]'].concat(kod.map(function(k){ return k; })), rows, { ilkSol: true }),
-      not);
+      _fsrT(['Motor devri<br>[d/d]'].concat(kod), rows, { ilkSol: true }), not);
   }
   h += mat('Ortalama Gerginlikler [N]',
     function(d, i){ return (d.perPulley[i] || {}).exitTensionN; }, 0,
-    'Değer, o kasnaktan <b>sonraki</b> açıklığın gerginliğidir: sürücüde yükselir, güç çeken her '
-    + 'kasnakta bir basamak düşer, avara ve gergide değişmez.');
+    'Değer, kasnaktan sonraki açıklığın gerginliğidir.');
   h += mat('Ortalama Hubloadlar [N]',
     function(d, i){ return ((d.hubloads || [])[i] || {}).FN; }, 0,
-    'Hubload, kasnak yatağına binen bileşke kuvvettir; yatak ve braket seçimi bu değere bakar.');
-
+    'Kasnak yatağına binen bileşke kuvvet.');
+  h += _fsrPeakBlock(R, kod);
   h += _fsrCodeLegend(sys);
   return h;
 }
 
-// ═══════════════════ SAYFA 5 — DAYANIM ══════════════════════════════════════
-function _fsrSheet5(R, node){
+// ═══════════════════ SAYFA 6 — DAYANIM VE TİTREŞİM ══════════════════════════
+function _fsrSheet6(R, node){
   var duty = (R.analysis && R.analysis.duty) || [], sys = R.build && R.build.sys;
-  var h = _fsrH1('Dayanım', 'Kayma emniyeti, kaburga yorulması, ömür ve titreşim');
+  var h = _fsrH1('Dayanım ve Titreşim', 'Kayma emniyeti, yorulma, ömür ve burulma');
   if(!duty.length) return h + '<div class="nofig">Çalışma çevrimi tanımlı değil.</div>';
   var kod = _fsrCodes(sys), sf = _frNum(R.serviceFact);
   var b2 = (sys && sys.belt) || {};
@@ -686,10 +646,9 @@ function _fsrSheet5(R, node){
   if(st && Number.isFinite(st.loadedMin)){
     var ok = !(Number.isFinite(sf) && sf > 0) || st.loadedMin >= sf;
     hukum = '<b>Hüküm:</b> yük taşıyan kasnakların en düşük emniyet faktörü <b>'
-      + _frFs(st.loadedMin, 2) + '</b>' + (st.loadedName ? ' (' + _frEsc(st.loadedName) + ')' : '')
+      + _frFs(st.loadedMin, 2) + '</b>' + (st.loadedName ? ' (' + _frEsc(_fsrKisaAd(sys, st.loadedName)) + ')' : '')
       + (Number.isFinite(sf) && sf > 0 ? ', istenen ≥ ' + _frF(sf, 2) : '') + (ok ? ' ✓' : ' ✗')
-      + '. Yük taşımayan avara ve gergide gerginlik oranı 1\'e yakındır; oradaki sayı bir marj '
-      + 'değil, o sarım açısının <b>kapasitesidir</b>.';
+      + '. Yük taşımayan kasnaklarda gerginlik oranı ≈ 1; değer marj değil kapasitedir.';
   }
   h += _fsrBlk('Kayma Emniyet Faktörü'
       + (Number.isFinite(sf) && sf > 0 ? ' <span class="kvi">servis faktörü ' + _frF(sf, 2) + '</span>' : ''),
@@ -705,11 +664,8 @@ function _fsrSheet5(R, node){
     });
     h += '<div class="col">' + _fsrBlk('Kaburga Yorulma Dağılımı',
       _fsrT(['Kod', 'Efektif Ø<br>[mm]', 'Temas', 'Pay<br>[%]'], fr, { ilkSol: true }),
-      'Payı yüksek olan kasnak, çapı büyütülerek ömrü en çok uzatacak olandır. '
-      + '<b>SIRALAMA</b> yorulma üssünün seçiminden bağımsızdır (m = 5,6 ↔ 4,05 ↔ 3,4 için de '
-      + 'aynı kasnak baskın kalıyor), ama <b>mutlak pay öyle değildir</b>: ALT çapı (57,0 mm) '
-      + 'kalibrasyon penceresinin dışında ve payı m = 3,4 ile %86,9\'dan %73,4\'e iniyor.')
-      + '</div>';
+      'Pay, kasnak başına yorulma hasarının oranıdır. Sıralama yorulma üssünden bağımsızdır; '
+      + 'mutlak paylar değildir (Not 3).') + '</div>';
   }
   var life = R.life || {};
   var om = [
@@ -726,20 +682,17 @@ function _fsrSheet5(R, node){
   // sütun genişliği seçilseydi ölçek 1 kalır, yazı gövdeden büyük görünürdü.
   h += '<div class="col">' + _fsrBlk('Kayma Emniyeti — Kasnak Başına En Düşük',
     _fsrFig(typeof _frSlipFigure === 'function' ? _frSlipFigure : null, R, 390, 200, sf),
-    'Her çubuk o kasnağın çevrim boyunca gördüğü <b>en düşük</b> emniyet faktörü; kesikli '
-    + 'çizgi istenen servis faktörü. Soluk çubuk = yük taşımayan kasnak (marj değil '
-    + '<b>kapasite</b>).') + '</div>';
+    'Çubuk boyu: kasnak başına en düşük emniyet faktörü. Soluk çubuk yük taşımayan '
+    + 'kasnaktır.') + '</div>';
   h += '</div>';
 
   h += _fsrBlk('Kayış Ömrü', _fsrKVT(om),
-    life.inValidRange ? 'Tüm kasnak çapları kalibrasyon aralığında; mutlak saat kullanılabilir.'
-      : '<b>Çap penceresi dışında:</b> ' + _frEsc((life.outOfRange || []).join(', '))
-        + '. Model bu durumda ömrü sistematik olarak düşük verir; düzeltmeli satır bu sapmayı '
-        + 'kabaca telafi eder. <b>Yorulma SIRALAMASI bundan etkilenmez</b>, mutlak paylar etkilenir.');
+    life.inValidRange ? 'Tüm kasnak çapları kalibrasyon aralığındadır.'
+      : 'Çap penceresi dışında: ' + _frEsc((life.outOfRange || []).join(', ')) + ' (Not 2).');
 
   // TEPE YÜK DAYANIM SAYFASINDA: bir yatak/braket seçim büyüklüğü, ve
   // damgasının gerekçesi (kalibrasyon takımı yok) burada okunmalı.
-  h += _fsrPeakBlock(R, kod);
+  h += _fsrNotes(R);
   h += _fsrCodeLegend(sys);
   return h;
 }
@@ -796,15 +749,9 @@ function _fsrVibBlock(R){
     });
     var toplamHucre = duty.length * ((d0.frequencies || []).length || 1);
     var rezHuk = Number.isFinite(enAz)
-      ? '<b>Rezonans hükmü:</b> en düşük <b>f₁ / ateşleme = ' + _frFs(enAz, 3) + '</b> ('
-        + _frEsc(enAzNer) + '); ateşleme frekansının altına düşen hücre <b>'
-        + kesN + ' / ' + toplamHucre + '</b>'
-        + (kesN === 0
-            ? ' <span class="ok">✓</span>. Hiçbir açıklık çalışma çevrimi boyunca ateşleme '
-              + 'frekansıyla kesişmiyor. '
-            : ' <b class="bad">✗</b>. Kesişen hücrede o açıklık ateşleme mertebesiyle zorlanır; '
-              + 'çare açıklığı kısaltmak (avara konumu) ya da gerginliği yükseltmektir — '
-              + 'f₁ ∝ √T ⁄ L. ')
+      ? '<b>Hüküm:</b> en düşük f₁ / ateşleme = <b>' + _frFs(enAz, 3) + '</b> ('
+        + _frEsc(enAzNer) + '); ateşleme frekansının altında <b>' + kesN + ' / ' + toplamHucre
+        + '</b> hücre' + (kesN === 0 ? ' <span class="ok">✓</span>. ' : ' <b class="bad">✗</b>. ')
       : '';
     var f1 = _frNum(d0.firingHz), f2 = _frNum(duty[duty.length - 1].firingHz);
     var vHead = ['Açıklık', 'Boy<br>[mm]', 'f₁ aralığı<br>[Hz]', 'Çırpınma'];
@@ -812,16 +759,136 @@ function _fsrVibBlock(R){
     h += _fsrBlk('Serbest Açıklık Titreşimi',
       _fsrT(vSade.head, vSade.rows, { ilkSol: true }),
       rezHuk
-      + 'Ateşleme frekansı çalışma çevrimi boyunca <b>' + _frFs(f1, 1) + ' – ' + _frFs(f2, 1)
-      + ' Hz</b>. Bunlar açıklıkların <b>enine</b> titreşimidir; sistem burulma modu ayrı bir '
-      + 'büyüklüktür ve bu belgede yer almaz. <b>Çırpınma ayrı bir moddur</b> (kayış hızı ↔ '
-      + 'enine dalga hızı); biri "yok" diye öbürü güvenli sayılmaz. Frekanslar kayışın birim '
-      + 'kütlesine <b>f₁ ∝ 1 ⁄ √m′</b> ile bağlıdır; burada m′ = <b>'
-      + _frFs(_frNum(b2.massPerRibKgM) * (_frNum(b2.ribs) || 1), 4) + ' kg/m</b>. '
-      + _fsrConstNote(vSbt));
+      + 'Ateşleme frekansı bandı ' + _frFs(f1, 1) + ' – ' + _frFs(f2, 1) + ' Hz. Değerler '
+      + 'açıklıkların enine titreşimidir (Not 4). ' + _fsrConstNote(vSbt));
 
   return h;
 }
+
+// ─── NOTLAR ────────────────────────────────────────────────────────────────
+// Mühendislik raporunun standart bölümü: modelin geçerlilik sınırları ve
+// okuyucunun bilmeden yanlış okuyabileceği tanımlar. Metin içinde "(Not n)"
+// ile atıf yapılır — açıklamalar tablo altına dağılmaz.
+function _fsrNotes(R){
+  var sys = R.build && R.build.sys, b = (sys && sys.belt) || {};
+  var life = R.life || {}, C = life.constants || {};
+  var mAlan = _frNum(b.massPerRibKgM) * (_frNum(b.ribs) || 1);
+  var n = [];
+
+  n.push('<b>Tepe gerginlik ve hubload doğrulanmamıştır.</b> Değerler hesaplanır (yarı-statik '
+    + 'gerilme zinciri + kasnak başına atalet), ancak modelin doğrulama kümesi — 17 tedarikçi '
+    + 'raporu, 2095 referans değer — tepe verisi içermez. Tepe tablosu bulunan tek referansa '
+    + 'karşı sapma: gerginlik ' + VE_FSR_PEAK_BAND + ' (RMS %11,8), hubload −%10,3 … +%17,5 '
+    + '(RMS %9,7). Sapma dağılımı da farklıdır: referansta tepe/ortalama oranı yük taşıyan '
+    + 'kasnaklarda ' + VE_FSR_PEAK_SHAPE.gatesYuklu + ', alternatörde '
+    + VE_FSR_PEAK_SHAPE.gatesAlt + '; bu modelde ' + VE_FSR_PEAK_SHAPE.mfsimYuklu + ' ve '
+    + VE_FSR_PEAK_SHAPE.mfsimAlt + '. Yatak ve braket seçiminde tek başına kullanılmamalıdır.');
+
+  n.push('<b>B10 mutlak ömrü</b> yalnız tüm kasnak çapları '
+    + _frFs(79.6, 1) + ' – ' + _frFs(176, 1) + ' mm aralığındayken kalibredir'
+    + (C.nSystems ? ' (' + C.nSystems + ' sistem, RMS ' + _frPct(C.rmsPct, 1) + ')' : '')
+    + '. Aralık dışında model ömrü sistematik olarak düşük verir; ampirik düzeltmeli değer bu '
+    + 'sapmayı telafi eder. Sıralama ve karşılaştırmalar her iki durumda da geçerlidir.');
+
+  n.push('<b>Kaburga yorulma payları</b> ' + _frEsc(R.fatigueModel || '—') + ' üssüyle '
+    + 'hesaplanmıştır. Kasnaklar arası sıralama üs seçiminden bağımsızdır; mutlak paylar '
+    + 'değildir (m = 3,4 ile baskın kasnağın payı %86,9\'dan %73,4\'e iner).');
+
+  n.push('<b>Açıklık frekansları</b> kayış birim kütlesine f₁ ∝ 1 ⁄ √m′ ile bağlıdır; '
+    + 'm′ = ' + _frFs(mAlan, 4) + ' kg/m (kesit geri-hesabı). Değerler açıklıkların enine '
+    + 'titreşimidir; sistem burulma modları ayrı tablodadır. Çırpınma ayrı bir moddur ve '
+    + 'rezonanstan bağımsız değerlendirilir.');
+
+  n.push('<b>Hubload sütunu</b> kasnak başına en büyük gerginliklerden kurulan vektörden '
+    + 'hesaplanır; bu vektör tek bir yük durumuna ait değildir. Durum-bazlı hesapla en büyük '
+    + 'fark %3,6 olup emniyetli yöndedir.');
+
+  n.push('<b>Kapsam dışı:</b> kasnak eksenel kaçıklığı ve izin verilen kaçıklık payı '
+    + '(açısal kaçıklık girdisi alınmamaktadır), kayma duyarlılığının ters çözümü (gereken '
+    + 'gerginlik veya sarım artışı), Weibull ömür dağılımı, tepe tork eğrisi. Bu belgedeki '
+    + 'tork ve gerginlik değerleri ortalamadır.');
+
+  return _fsrBlk('Notlar',
+    '<ol class="notes">' + n.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ol>');
+}
+
+// ─── AKSESUAR MİL TORKU ────────────────────────────────────────────────────
+// Q = 9549 · P / n (kW ve d/d). Ortalama çalışma torkudur; ivmelenmede
+// atalet momentlerinden doğan tepe torklar dahil değildir (Not 6).
+function _fsrTorqueBlock(R){
+  var duty = (R.analysis && R.analysis.duty) || [], sys = R.build && R.build.sys;
+  if(!duty.length || !sys) return '';
+  var kod = _fsrCodes(sys);
+  var yuk = [];
+  (duty[0].perPulley || []).forEach(function(q, i){ if(_frNum(q.powerKw) > 0) yuk.push(i); });
+  if(!yuk.length) return '';
+  var rows = duty.map(function(d){
+    var c = [_frF(d.engineRpm, 0)];
+    yuk.forEach(function(i){
+      var q = (d.perPulley || [])[i];
+      var nR = q ? _frNum(q.accessoryRpm) : NaN;
+      c.push(_frFs((q && nR > 0) ? 9549 * _frNum(q.powerKw) / nR : NaN, 2));
+    });
+    return c;
+  });
+  var head = ['Motor devri<br>[d/d]'].concat(yuk.map(function(i){ return kod[i] + '<br>[Nm]'; }));
+  var sbt = _fsrConstCols(head, rows, 1), sade = _fsrStripCols(head, rows, sbt);
+  return _fsrBlk('Aksesuar Mil Torku (ortalama)',
+    _fsrT(sade.head, sade.rows, { ilkSol: true }),
+    'Q = 9549 · P ⁄ n. Ortalama çalışma torkudur; ivmelenmede atalet momentlerinden doğan '
+    + 'tepe torklar dahil değildir (Not 6). ' + _fsrConstNote(sbt));
+}
+
+// ─── YÜK DURUMUNUN YORULMAYA KATKISI ───────────────────────────────────────
+function _fsrLoadCaseBlock(R){
+  var f = R.fatigue;
+  if(!f || !f.perLoadPct || !f.perLoadPct.length) return '';
+  var duty = (R.analysis && R.analysis.duty) || [];
+  var top = 0;
+  var rows = f.perLoadPct.map(function(r){
+    var d = duty.filter(function(x){ return _frNum(x.engineRpm) === _frNum(r.engineRpm); })[0];
+    var Tt = NaN, Ts = NaN;
+    if(d && d.perPulley && d.perPulley.length){
+      var v = d.perPulley.map(function(q){ return _frNum(q.exitTensionN); }).filter(Number.isFinite);
+      if(v.length){ Tt = Math.max.apply(null, v); Ts = Math.min.apply(null, v); }
+    }
+    top += _frNum(r.sharePct) || 0;
+    return [_frF(r.engineRpm, 0), _frFs(r.vMs, 1), _frF(Tt, 0), _frF(Ts, 0), _frFs(r.sharePct, 1)];
+  });
+  rows.push(['<b>Σ</b>', '', '', '', '<b>' + _frFs(top, 1) + '</b>']);
+  return _fsrBlk('Yük Durumunun Yorulmaya Katkısı',
+    _fsrT(['Motor devri<br>[d/d]', 'Kayış hızı<br>[m/s]', 'Gergin taraf<br>[N]',
+           'Boş taraf<br>[N]', 'Katkı<br>[%]'], rows, { ilkSol: true }),
+    'Katkı: süre payı, tur sayısı ve o devirdeki gergin/boş taraf gerginlikleri birlikte '
+    + 'belirlenir.');
+}
+
+// ─── SİSTEM BURULMA TİTREŞİMİ ──────────────────────────────────────────────
+function _fsrTorsionalBlock(R){
+  var T = R && R.torsional;
+  if(!T || !Number.isFinite(T.firstElasticHz)) return '';
+  var duty = (R.analysis && R.analysis.duty) || [];
+  var d0 = duty[0] || null;
+  var rpmOf = function(f){
+    return (d0 && _frNum(d0.firingHz) > 0) ? f / _frNum(d0.firingHz) * _frNum(d0.engineRpm) : NaN;
+  };
+  var rows = [['Rijit cisim', '0,0', '—']];
+  (T.elasticHz || []).forEach(function(f, i){
+    rows.push([(i + 1) + '. elastik', _frFs(f, 1), _frFs(rpmOf(f), 0)]);
+  });
+  var fs = duty.map(function(d){ return _frNum(d.firingHz); }).filter(Number.isFinite);
+  var lo = fs.length ? Math.min.apply(null, fs) : NaN, hi = fs.length ? Math.max.apply(null, fs) : NaN;
+  var ic = (T.elasticHz || []).filter(function(f){ return f >= lo && f <= hi; });
+  return _fsrBlk('Sistem Burulma Titreşimi',
+    _fsrT(['Mod', 'Frekans<br>[Hz]', 'Karşılık gelen<br>motor devri [d/d]'], rows, { ilkSol: true }),
+    '<b>Hüküm:</b> ateşleme bandı ' + _frFs(lo, 1) + ' – ' + _frFs(hi, 1) + ' Hz; bu bandın '
+    + 'içine <b>' + ic.length + '</b> elastik mod düşüyor'
+    + (ic.length ? ' <b class="bad">✗</b>' : ' <span class="ok">✓</span>')
+    + '. Serbestlikler kasnak açıları ve gergi kolu açısıdır; açıklık eksenel rijitlikleri yay, '
+    + 'kasnak ve kol ataletleri kütle oluşturur. Rijit cisim modu tam bir tane olmalıdır ('
+    + T.rigidBodyModes + ').');
+}
+
 
 // Tepe yük — düzen tedarikçi çıktısıyla aynı, damgası üstünde.
 function _fsrPeakBlock(R, kod){
@@ -838,13 +905,8 @@ function _fsrPeakBlock(R, kod){
   var pSbt = _fsrConstCols(pHead, rows, 1), pSade = _fsrStripCols(pHead, rows, pSbt);
   return _fsrBlk('Tepe Gerginlik ve Hubload <span class="stamp">kalibre değil</span>',
     _fsrT(pSade.head, pSade.rows, { ilkSol: true }),
-    '<b>Kalibre değil, HESAPLANMIYOR demek değildir</b>: tablo yarı-statik gerilme zinciri + '
-    + 'kasnak başına atalet terimiyle hesaplanır, aksesuar güçlerinin %100/%10 kombinasyonları '
-    + 've ± ivme taranıp kasnak başına en büyüğü alınır. Doğrulanmamıştır — gerekçesi ve ölçülen '
-    + 'sapması <b>Belgenin Kapsamı</b> bölümünde (sayfa 3). Hubload sütunu kasnak başına en büyük '
-    + '<b>gerginliklerden</b> kurulan vektörden gelir; bu vektör tek bir yük durumuna ait '
-    + 'değildir (fark alternatörde %3,6, emniyetli yönde). Yatak ve braket seçiminde <b>tek '
-    + 'başına kullanılmamalıdır</b>. ' + _fsrConstNote(pSbt));
+    'Tepe yükler, aksesuar güçlerinin %100/%10 kombinasyonları ve ± ivme taranarak kasnak '
+    + 'başına en büyük değerden alınır. <b>Doğrulanmamıştır (Not 1).</b> ' + _fsrConstNote(pSbt));
 
 }
 
@@ -918,11 +980,13 @@ function _fsrPeak(R){
 function veFeadSummaryHTML(R, node){
   var A = (typeof window !== 'undefined') ? window.MNT_REPORT_ASSETS : null;
   var fonts = (A && A.fontsCss) ? A.fontsCss : '';
-  var body = _fsrSheet(1, VE_FSR_SHEETS[0], _fsrSheet1(R, node), R, node)
-           + _fsrSheet(2, VE_FSR_SHEETS[1], _fsrSheet2(R, node), R, node)
-           + _fsrSheet(3, VE_FSR_SHEETS[2], _fsrSheet3(R, node), R, node)
-           + _fsrSheet(4, VE_FSR_SHEETS[3], _fsrSheet4(R, node), R, node)
-           + _fsrSheet(5, VE_FSR_SHEETS[4], _fsrSheet5(R, node), R, node);
+  // Sayfa üreticileri AÇIK DİZİDE: ada göre çözmek (window[...] ya da eval)
+  // hem tek dosya sürümünde hem Node'da farklı davranıyor ve bir sayfanın
+  // sessizce boş basılmasına yol açardı.
+  var uretici = [_fsrSheet1, _fsrSheet2, _fsrSheet3, _fsrSheet4, _fsrSheet5, _fsrSheet6];
+  var body = '';
+  for(var i = 0; i < VE_FSR_SHEETS.length; i++)
+    body += _fsrSheet(i + 1, VE_FSR_SHEETS[i], uretici[i](R, node), R, node);
   return '<!DOCTYPE html>\n<html lang="tr"><head><meta charset="UTF-8">'
     + '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
     + '<title>FEAD — Sonuç Özeti</title>'
@@ -1081,6 +1145,9 @@ function _fsrCss(){
     ".legend b{font-family:'IBM Plex Mono',monospace;font-weight:500;color:#000;margin-right:3px}",
 
     // ── UYARI KUTUSU ──
+    'ol.notes{margin:0;padding-left:18px;font-size:var(--f-xs);line-height:1.45;color:var(--dim)}',
+    'ol.notes li{margin-bottom:3px}',
+    'ol.notes b{color:var(--ink)}',
     '.warnbox{border:1px solid var(--warn);border-left:3px solid var(--warn);background:#fdf9f2;',
     '  padding:4px 8px;font-size:var(--f-xs);color:var(--ink);line-height:1.4}',
     ".warnbox b{font-family:'Archivo',sans-serif;font-weight:700;display:block;margin-bottom:1px}",
@@ -1141,9 +1208,11 @@ if(typeof module !== 'undefined' && module.exports){
   module.exports = {
     veFeadSummaryHTML: veFeadSummaryHTML,
     _fsrSheet1: _fsrSheet1, _fsrSheet2: _fsrSheet2, _fsrSheet3: _fsrSheet3,
-    _fsrSheet4: _fsrSheet4, _fsrSheet5: _fsrSheet5,
+    _fsrSheet4: _fsrSheet4, _fsrSheet5: _fsrSheet5, _fsrSheet6: _fsrSheet6,
     _fsrPeak: _fsrPeak, _fsrLogo: _fsrLogo, _fsrCss: _fsrCss, _fsrLayout: _fsrLayout,
     _fsrCodes: _fsrCodes, _fsrCodeLegend: _fsrCodeLegend,
+    _fsrNotes: _fsrNotes, _fsrTorqueBlock: _fsrTorqueBlock,
+    _fsrLoadCaseBlock: _fsrLoadCaseBlock, _fsrTorsionalBlock: _fsrTorsionalBlock,
     _fsrConstCols: _fsrConstCols, _fsrStripCols: _fsrStripCols, _fsrConstNote: _fsrConstNote,
     VE_FSR_SHEETS: VE_FSR_SHEETS, VE_FSR_PEAK_BAND: VE_FSR_PEAK_BAND,
     VE_FSR_PEAK_SHAPE: VE_FSR_PEAK_SHAPE
