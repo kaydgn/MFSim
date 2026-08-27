@@ -38,7 +38,12 @@ function coz(anahtar) {
   const build = veFeadBuildSystem(ns, pack.connections);
   const solv = ns.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver)[0];
   const R = veFeadAnalyze(build, {
-    rows: veFeadDutyRows(solv), cylinders: 6, fatigueModel: 'PK-2_2p-MT3'
+    rows: veFeadDutyRows(solv), cylinders: 6,
+    // KRANK MİLİ ATALETİ — gerçek panel yolu bunu geçiyor (cp-fead.js).
+    // Geçilmezse burulma 1. modu 12,9 yerine 16,8 Hz çıkar (%29) ve test
+    // harness'ı uygulamadan başka bir sonucu doğrulamış olurdu.
+    crankInertia: (solv && solv.data && Number(solv.data.crankInertia)) || 0,
+    fatigueModel: 'PK-2_2p-MT3'
   });
   R.build = build; R.pulleyNames = build.names;
   R.serviceFact = (solv && solv.data && Number(solv.data.serviceFact)) || 0;
@@ -65,12 +70,13 @@ const say = (s) => Number(String(s).replace('−', '-').replace(/\s/g, '').repla
 
 // ═══════════════════════════════════════════════════════════════════════════
 describe('belge iskeleti', () => {
-  test('beş sayfa, her birinde künye bloğu ve sayfa numarası', () => {
-    expect((DOC.match(/class="sheet"/g) || []).length).toBe(5);
-    expect((DOC.match(/class="hdr"/g) || []).length).toBe(5);      // tedarikçi anteti
-    expect((DOC.match(/class="h1"/g) || []).length).toBe(5);        // sayfa başlığı
+  test('her sayfada antet, başlık ve sayfa numarası', () => {
+    const N = SU.VE_FSR_SHEETS.length;
+    expect((DOC.match(/class="sheet"/g) || []).length).toBe(N);
+    expect((DOC.match(/class="hdr"/g) || []).length).toBe(N);
+    expect((DOC.match(/class="h1"/g) || []).length).toBe(N);
     SU.VE_FSR_SHEETS.forEach((ad) => expect(DOC).toContain(ad));
-    for (let i = 1; i <= 5; i++) expect(DOC).toContain('Sayfa ' + i + ' / 5');
+    for (let i = 1; i <= N; i++) expect(DOC).toContain('Sayfa ' + i + ' / ' + N);
   });
 
   test('tek dosya ve çevrimdışı — harici URL yok', () => {
@@ -87,7 +93,7 @@ describe('belge iskeleti', () => {
 
   test('BMC markası künye bloğunda', () => {
     expect(SU._fsrLogo()).toContain('BMC');
-    expect((DOC.match(/class="hdr-logo"/g) || []).length).toBe(5);
+    expect((DOC.match(/class="hdr-logo"/g) || []).length).toBe(SU.VE_FSR_SHEETS.length);
   });
 
   test('hiçbir yerde undefined / NaN / [object sızmıyor', () => {
@@ -133,8 +139,8 @@ describe('Gates çıpaları — tedarikçi sayfası geri üretiliyor', () => {
 
   // Matrisler "Yükler" sayfasında (4): tedarikçi çıktısında ayrı sayfalardaydı,
   // burada aynı soruyu (ne kadar yükleniyor) tek sayfa cevaplıyor.
-  test('sayfa 4: 880 d/d ortalama gerginlik ve hubload birebir', () => {
-    const s5 = SU._fsrSheet4(R, NODE);
+  test('sayfa 5: 880 d/d ortalama gerginlik ve hubload birebir', () => {
+    const s5 = SU._fsrSheet5(R, NODE);
     function satir880(baslik) {
       const t = s5.replace(/<[^>]+>/g, '|').replace(/\|+/g, '|');
       const g = t.slice(t.indexOf(baslik)).split('|').map((x) => x.trim()).filter(Boolean);
@@ -186,12 +192,12 @@ describe('tepe yük tablosu', () => {
   test('kalibre olmadığı ve sapma bandı BELGEDE yazılı', () => {
     const s5 = SU._fsrSheet5(R, NODE);
     expect(s5).toMatch(/kalibre değil/i);
-    expect(s5).toMatch(/HESAPLANMIYOR demek değildir/);
-    const s3 = SU._fsrSheet3(R, NODE);
-    expect(s3).toContain(SU.VE_FSR_PEAK_BAND);
-    // Gerekçe SAYIYLA: dağılım farkı da yazılı
-    expect(s3).toContain(SU.VE_FSR_PEAK_SHAPE.mfsimAlt);
-    expect(s3).toContain(SU.VE_FSR_PEAK_SHAPE.gatesYuklu);
+    expect(s5).toMatch(/Doğrulanmamıştır \(Not 1\)/);
+    // Gerekçe Not 1'de, SAYIYLA — dağılım farkı dahil
+    const s6 = SU._fsrSheet6(R, NODE);
+    expect(s6).toContain(SU.VE_FSR_PEAK_BAND);
+    expect(s6).toContain(SU.VE_FSR_PEAK_SHAPE.mfsimAlt);
+    expect(s6).toContain(SU.VE_FSR_PEAK_SHAPE.gatesYuklu);
   });
 });
 
@@ -224,14 +230,14 @@ describe('tedarikçi sayfa düzeni', () => {
   // yoktu. Doğru kural "tek şekil" değil: HER ŞEKİL BİR KEZ, konusuna ait
   // sayfada. Kapı dağılımı tutuyor.
   test('Gates’in beş şekli var ve her biri BİR KEZ, konusuna ait sayfada', () => {
-    const sf = [1, 2, 3, 4, 5].map((n) => SU['_fsrSheet' + n](R, NODE));
+    const sf = [1, 2, 3, 4, 5, 6].map((n) => SU['_fsrSheet' + n](R, NODE));
     // yerleşim şeması (kanvas çizicisi) — yalnız sayfa 1
-    expect(sf.map((h) => (h.match(/class="appfig fig"/g) || []).length)).toEqual([1, 0, 0, 0, 0]);
+    expect(sf.map((h) => (h.match(/class="appfig fig"/g) || []).length)).toEqual([1, 0, 0, 0, 0, 0]);
     // grafikler (`class="fig"` — şemanınki `class="appfig fig"` olduğu için
-    // bu kalıba GİRMEZ): s1 doğal frekans · s3 gerginlik + take-up · s5 kayma
-    expect(sf.map((h) => (h.match(/class="fig"/g) || []).length)).toEqual([1, 0, 2, 0, 1]);
-    // toplam SVG: 5 logo + 1 şema + 4 grafik
-    expect(DOC.match(/<svg/g).length).toBe(5 + 1 + 4);
+    // bu kalıba GİRMEZ): s1 doğal frekans · s3 gerginlik + take-up · s6 kayma
+    expect(sf.map((h) => (h.match(/class="fig"/g) || []).length)).toEqual([1, 0, 2, 0, 0, 1]);
+    // toplam SVG: N logo + 1 şema + 4 grafik
+    expect(DOC.match(/<svg/g).length).toBe(SU.VE_FSR_SHEETS.length + 1 + 4);
     // her grafiğin KENDİ imzası bir kez geçiyor (ikinci kopya yok)
     [/data-ve="tension-curve"/g, /data-ve="takeup-curve"/g,
      /data-ve="span-freq"/g, /data-ve="sf-bar"/g].forEach((re) => {
@@ -298,22 +304,31 @@ describe('tedarikçi sayfa düzeni', () => {
   // sayıya bağlayamıyordu.
   test('rezonans hükmü basılıyor ve haritayla aynı sayfada', () => {
     const s1 = SU._fsrSheet1(R, NODE);
-    expect(s1).toMatch(/Rezonans hükmü/);
+    expect(s1).toMatch(/<b>Hüküm:<\/b> en düşük f₁ \/ ateşleme/);
     expect(s1).toMatch(/f₁ \/ ateşleme/);
     expect(s1.indexOf('Doğal Frekans Haritası')).toBeLessThan(s1.indexOf('Serbest Açıklık Titreşimi'));
-    // Çırpınma AYRI bir mod — "yok" olması rezonans güvencesi değil
-    expect(s1).toMatch(/Çırpınma ayrı bir moddur/);
+    // BURULMA DA AYNI SAYFADA: üçü de titreşim, üçü de birlikte okunmalı
+    expect(s1).toContain('Sistem Burulma Titreşimi');
+    expect(s1).toMatch(/Rijit cisim/);
   });
 
-  // Kapsam bloğu belge DÜZEYİNDE bir ifade; sayfa 1 dolduğu için sayfa 3'te.
-  test('kapsam bloğu ve model sınırları sayfa 3’te', () => {
-    const s3 = SU._fsrSheet3(R, NODE);
-    expect(s3).toContain('Belgenin Kapsamı');
-    expect(s3).toMatch(/Bu belgede yer ALMAZ/);
-    expect(s3).toMatch(/Modelin ilan ettiği sınırlar/);
-    // Damganın GEREKÇESİ burada, sayısıyla
-    expect(s3).toContain(SU.VE_FSR_PEAK_BAND);
-    expect(s3).toMatch(/2095 değerlik doğrulama kümesinde tek bir tepe/);
+  // KAPSAM KUTUSU KALKTI. Kullanıcı bildirimi: "'Belgenin Kapsamı' kısmını da
+  // çıkar. Ona da gerek yok. Çok amatörce olmuş." Model sınırları bir mühendislik
+  // raporunda kalmak zorunda ama yeri numaralı NOTLAR bölümü — tablo altına
+  // dağılmış paragraflar değil.
+  test('kapsam kutusu YOK, numaralı Notlar bölümü VAR', () => {
+    expect(DOC).not.toMatch(/Belgenin Kapsamı/);
+    expect(DOC).not.toMatch(/Bu belgede yer ALMAZ/);
+    expect(DOC).not.toMatch(/Bu belge şunları verir/);
+    const s6 = SU._fsrSheet6(R, NODE);
+    expect(s6).toContain('Notlar');
+    expect(s6).toMatch(/<ol class="notes">/);
+    expect((s6.match(/<li>/g) || []).length).toBeGreaterThanOrEqual(6);
+    // Damganın gerekçesi Not 1'de, sayısıyla
+    expect(s6).toContain(SU.VE_FSR_PEAK_BAND);
+    expect(s6).toMatch(/2095 referans değer/);
+    // Metin içindeki atıflar gerçek not numaralarını göstermeli
+    [1, 2, 3, 4].forEach((n) => expect(DOC).toContain('(Not ' + n + ')'));
   });
 });
 
@@ -561,7 +576,7 @@ describe('kozmetik — okunabilirlik kararları', () => {
   // birden kırmızıya boyuyordu. Ama sayfanın kendi hükmü "yük taşımayanlarda
   // o sayı bir marj değil KAPASİTEDİR" diyor — vurgu metnin tersini bağırdı.
   test('kırmızı yalnız hükmü VEREBİLEN kasnakta', () => {
-    const s5 = SU._fsrSheet5(R, NODE);
+    const s5 = SU._fsrSheet6(R, NODE);
     const blok = s5.slice(s5.indexOf('Kayma Emniyet Faktörü'), s5.indexOf('Kaburga Yorulma'));
     expect(blok).toContain('yük taşımaz');
     expect(blok).toContain('class="pas"');
@@ -573,7 +588,7 @@ describe('kozmetik — okunabilirlik kararları', () => {
     expect(st.idle.some((x) => x.SF < R.serviceFact)).toBe(true);
     const kirmizi = (blok.match(/class="bad"/g) || []).length;
     expect(kirmizi).toBe(0);                              // yük taşıyanların hepsi geçiyor
-    expect(blok).toMatch(/kapasitesidir/);
+    expect(blok).toMatch(/marj değil kapasitedir/);
   });
 });
 
@@ -687,14 +702,19 @@ describe('doğruluk — sessiz sayı hataları', () => {
   // ── REZONANS: KAPSAM KUTUSU BELGEYLE ÇELİŞEMEZ ─────────────────────────
   // Kapsam kutusu "rezonans haritası yer ALMAZ" diyordu, oysa sayfa 1 doğal
   // frekans haritasını ÇİZİYOR ve sayfa 1 bütün girdilerini basıyor.
-  test('kapsam kutusu, belgenin ÇİZDİĞİ şeyi "yok" diye yazmıyor', () => {
-    const s3 = SU._fsrSheet3(R, NODE);
-    const i = s3.indexOf('Bu belgede yer ALMAZ');
-    const yok = s3.slice(i, s3.indexOf('</ul>', i));
-    expect(yok).not.toMatch(/rezonans haritası/i);
-    expect(yok).toMatch(/burulma/i);                       // yer almayan GERÇEK şey
-    // ve haritanın kendisi sayfa 1'de duruyor
-    expect(SU._fsrSheet1(R, NODE)).toContain('data-ve="span-freq"');
+  // Kapsam kutusu "rezonans haritası yer ALMAZ" diyordu, oysa sayfa 1 onu
+  // çiziyordu. Kutu kalktı; kapsam dışı maddeler Not 6'da ve o listede
+  // belgenin ÇİZDİĞİ hiçbir şey olamaz.
+  test('kapsam dışı listesi, belgenin ÜRETTİĞİ şeyi içermiyor', () => {
+    const s6 = SU._fsrSheet6(R, NODE);
+    const i = s6.indexOf('Kapsam dışı');
+    expect(i).toBeGreaterThan(0);
+    const yok = s6.slice(i, s6.indexOf('</li>', i));
+    expect(yok).not.toMatch(/rezonans|frekans|burulma|take-?up|kayma emniyet/i);
+    // ve üç titreşim yüzeyinin üçü de sayfa 1'de duruyor
+    const s1 = SU._fsrSheet1(R, NODE);
+    expect(s1).toContain('data-ve="span-freq"');
+    expect(s1).toContain('Sistem Burulma Titreşimi');
   });
 
   // ── MANŞETTE MODELİN EN İYİ KESTİRİMİ ──────────────────────────────────
@@ -710,5 +730,84 @@ describe('doğruluk — sessiz sayı hataları', () => {
     expect(duz).not.toBe(ham);                            // ikisi gerçekten ayrı
     expect(kart).toContain(String(duz));                  // manşet: düzeltilmiş
     expect(kart).toContain('ham ' + ham);                 // alt satır: ham
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AYRINTILI RAPORLA KAPSAM DENKLİĞİ — özet, detayın hangi bölümlerini taşıyor?
+// Ölçüldü: dört bölüm eksikti (§8.13 mil torku, §8.15 yük katkısı,
+// §8.18 burulma, §8.19 tasarım notları). Dördü de ÜRETİLEBİLİRDİ; eksik olan
+// hesap değil yerleşimdi.
+describe('kapsam — ayrıntılı raporun bölümleri', () => {
+  // ── §8.13 AKSESUAR MİL TORKU ───────────────────────────────────────────
+  // Kapı yalnız başlığa bakmaz: basılan her hücre Q = 9549·P/n olmalı.
+  test('mil torku basılıyor ve Q = 9549·P/n tutuyor', () => {
+    const s4 = SU._fsrSheet4(R, NODE);
+    expect(s4).toContain('Aksesuar Mil Torku');
+    const d = R.analysis.duty[0];
+    const yuk = d.perPulley.filter((q) => Number(q.powerKw) > 0);
+    expect(yuk.length).toBeGreaterThan(0);
+    const t = s4.replace(/<[^>]+>/g, '|').replace(/\|+/g, '|');
+    const i = t.indexOf('Aksesuar Mil Torku');
+    const g = t.slice(i).split('|').map((x) => x.trim()).filter(Boolean);
+    const k = g.indexOf(String(Math.round(d.engineRpm)));
+    expect(k).toBeGreaterThan(0);
+    yuk.forEach((q, n) => {
+      const basilan = say(g[k + 1 + n]);
+      const beklenen = 9549 * Number(q.powerKw) / Number(q.accessoryRpm);
+      expect(Math.abs(basilan - beklenen)).toBeLessThan(0.01);
+    });
+  });
+
+  // ── §8.15 YÜK DURUMUNUN YORULMAYA KATKISI ──────────────────────────────
+  test('yük katkısı basılıyor ve payların toplamı %100', () => {
+    const s4 = SU._fsrSheet4(R, NODE);
+    expect(s4).toContain('Yük Durumunun Yorulmaya Katkısı');
+    const f = R.fatigue;
+    expect(f.perLoadPct.length).toBe(R.duty.length);
+    const top = f.perLoadPct.reduce((a, r) => a + Number(r.sharePct), 0);
+    expect(Math.abs(top - 100)).toBeLessThan(0.5);
+    // Σ satırı BASILIYOR ve basılan sayı gerçekten toplam
+    const t = s4.replace(/<[^>]+>/g, '|').replace(/\|+/g, '|');
+    const i = t.indexOf('Yük Durumunun Yorulmaya Katkısı');
+    expect(t.slice(i)).toContain('Σ');
+  });
+
+  // ── §8.18 SİSTEM BURULMA TİTREŞİMİ ─────────────────────────────────────
+  // Rijit cisim modu TAM BİR TANE olmak zorunda; fazlası modelin koptuğunu
+  // gösterir. Kapı bunu hem çekirdekte hem basılan tabloda tutuyor.
+  test('burulma tablosu çekirdeğin modlarını basıyor', () => {
+    const s1 = SU._fsrSheet1(R, NODE);
+    const T = R.torsional;
+    expect(Number.isFinite(T.firstElasticHz)).toBe(true);
+    expect(T.rigidBodyModes).toBe(1);
+    const t = s1.replace(/<[^>]+>/g, '|').replace(/\|+/g, '|');
+    const i = t.indexOf('Sistem Burulma Titreşimi');
+    const g = t.slice(i);
+    expect(g).toContain('Rijit cisim');
+    // her elastik mod frekansı tabloda
+    T.elasticHz.forEach((f, n) => {
+      expect(g).toContain((n + 1) + '. elastik');
+    });
+    // ve 1. elastik mod KRANK MİLİ ataletiyle hesaplanmış olmalı:
+    // geçilmezse 12,9 yerine 16,8 Hz çıkar (ölçüldü, %29 fark)
+    expect(T.firstElasticHz).toBeGreaterThan(11);
+    expect(T.firstElasticHz).toBeLessThan(15);
+  });
+
+  // ── §8.19 TASARIM NOTLARI → numaralı Notlar ────────────────────────────
+  test('model sınırlarının hepsi Notlar’da ve metinden atıf yapılıyor', () => {
+    const s6 = SU._fsrSheet6(R, NODE);
+    ['doğrulanmamıştır', 'B10 mutlak ömrü', 'yorulma payları',
+     'Açıklık frekansları', 'Hubload sütunu', 'Kapsam dışı'].forEach(
+      (x) => expect(s6.toLowerCase()).toContain(x.toLowerCase()));
+    // Atıf yapılan her not numarası GERÇEKTEN var
+    const enBuyuk = (s6.match(/<li>/g) || []).length;
+    const atif = [...DOC.matchAll(/\(Not (\d+)\)/g)].map((m) => Number(m[1]));
+    expect(atif.length).toBeGreaterThan(0);
+    atif.forEach((n) => {
+      expect(n).toBeGreaterThanOrEqual(1);
+      expect(n).toBeLessThanOrEqual(enBuyuk);
+    });
   });
 });
