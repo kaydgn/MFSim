@@ -2941,11 +2941,24 @@ bastığı kol açısı, raporun bastığı pivotu **0,11 mm** içinde veriyor.
 |---|---|---|---|
 | koordinat = kasnak · θ=**344°** (parça çizimi) | 33,0° | **532,1 N** | **−%2,2** |
 | koordinat = kasnak · θ=348° (Gates'in kol açısı) | 33,0° | 561,1 N | +%3,2 |
-| koordinat = **PİVOT** | — | **ÇÖZÜLMÜYOR** | — |
+| koordinat = **PİVOT** (zarf kipi) | 59,7° | **279,4 N** | **−%48,6** |
 
-Üçüncüsü koordinatın pivot **olmadığını** kesin olarak eliyor ve elemeyi bir
-sayı değil **geometri** yapıyor: kasnak sürücünün içine düşüyor (merkez
-mesafesi 111,6 mm, gereken >120,8 mm), teğet hiç çözülemiyor. Birincisi ise
+> **ÜÇÜNCÜ SATIRIN GEREKÇESİ DEĞİŞTİ (2026-08-28).** Bu satır bir dönem
+> *"ÇÖZÜLMÜYOR — kasnak sürücünün içine düşüyor (merkez mesafesi 111,6 mm)"*
+> diyordu ve o eleme kol açısını **344°'de sabit** tutuyordu, yani bir MODEL
+> sınırıydı, geometrik bir imkânsızlık değil. Zarf kipinde kol açısı serbest ve
+> model **çözülüyor**: 360 açının **280'i** geçerli geometri veriyor. Eleme
+> artık sayısal ve daha güçlü — üstelik **360°'in tamamı tarandı** ve boyu ile
+> gerginliği BİRLİKTE tutan açı yok: boyu en iyi tutan θ=134° gerginliği %28,
+> gerginliği en iyi tutan θ=0° boyu %4,6 ıskalıyor; gevşek pencerede (L ±%0,5
+> ve T ±%5) kalan **2 açıda** (141–142°) sarım RMS 6,0–6,3° ile çöküyor.
+>
+> **En doğrudan kanıt ise ayrı:** mount kipinde ÇÖZÜLEN çalışma merkezi
+> (−170,240 / 98,610) sayfanın koordinatına yalnız **0,57 mm** uzakta.
+> Koordinat pivot olsaydı kasnak merkezi ondan tam kol boyu (90 mm) uzakta
+> olurdu — nitekim hipotez satırında öyle çıkıyor.
+
+Üçüncüsü koordinatın pivot **olmadığını** eliyor. Birincisi ise
 şunu gösteriyor: pivot **hiç girilmeden**, yalnız müşterinin koordinatı +
 parça künyesiyle tedarikçinin cevabına **%2,2** içinde varılıyor.
 
@@ -2959,7 +2972,8 @@ kayıştan gelmiyor demektir.
 
 Geriye kalan tek serbest büyüklük **pivot**, ve iki belge onu farklı yere
 koyuyor: türetilen (−256,59 / 123,97) ile Gates'in ölçtüğü (−250,00 / 110,00)
-arasında **11,5 mm** var. Duyarlılığı da ölçülü: aynı kasnak merkezinde kol
+arasında **15,445 mm** var (aynı belgede bir dönem 11,5 yazılıydı — o sayı
+TERK EDİLMİŞ −259,94/104,15 pivotuna aitti). Duyarlılığı da ölçülü: aynı kasnak merkezinde kol
 açısını 344° → 348° almak T'yi **532,1 → 561,1 N** yapıyor, yani **4° ≈ %5,4**.
 
 İlk iki satırın **sarımı aynı** (33,0°): kasnak merkezi ikisinde de aynı,
@@ -3185,6 +3199,102 @@ sabitlenmiş açıyı zaten aynen döndürüyor, dolayısıyla gözlenebilir bir
 > üzerinden sınanıyordu (rozetin kendi `onclick` kapısını görmüyordu) ve zarf
 > okuması `veFeadEnvelopeReadout` doğrudan çağrılıyordu (panelden düşürülmesini
 > görmüyordu). Şekil 1'deki *"yay SAYISINA bakan test"* dersinin aynısı.
+
+##### MONTAJ KOORDİNATI ↔ KASNAK MERKEZİ — arşivden ölçüldü (2026-08-28)
+
+Kullanıcı bildirimi: *"Otomatik gergilerde kasnak merkezi montaj civatasının
+koordinatı olacak. Yani kasnak merkezi ile montaj koordinatı aynı otomatik
+gergide."* Ve daha önce yazılmış bir cümle düzeltildi: *"BMC örneği zarf kipine
+geçemiyor… tedarikçiye giden sayfa kasnak merkezini veriyor, montaj cıvatasının
+koordinatını vermiyor."*
+
+İki ayrı iddia var ve **ölçüm ikisini de ayırdı**. `docs/gates-reports/pdf/`
+arşivindeki 10 gerçek Gates raporu + fixture'ın 14 sistemi / 81 konumu okundu.
+
+###### İKİ NOKTA AYNI DEĞİL — dört bağımsız kanıt
+
+| kanıt | ölçüm |
+|---|---|
+| Mesafe **tam kol boyu** | 14/14 sistem, 81 konum: `\|merkez − pivot\| ↔ arm` en büyük sapma **0,0645 mm**, RMS 0,0248 — basım yuvarlama bütçesi (√2·0,05 = 0,0707) **içinde** |
+| Merkez **geziyor**, pivot **gezmiyor** | FreeArm→Load arası merkez yolu **37,4…98,7 mm**; pivot altı konumda da tek sayı çifti. Bir montaj cıvatası kolun konumuyla gezemez |
+| Raporun **kendi tanımı** (s.4) | *"arm direction is from **pulley center to pivot**"*, `pt = Tensioner pivot point` — kol ikisinin arasındaki doğrudur |
+| `Layout Data` tablosunun gergi satırı | Mean **konumuna** 0,014–0,058 mm, pivota **90 mm** — o satır pivot değil çalışma merkezi |
+
+Raporlarda `mounting` / `bolt` / `boss` / `attachment` diye **ayrı bir gergi
+koordinatı YOK** (3/3 tarama). Gerginin tek sabit noktası
+`Pivot Point {X, Y Coordinates} mm` satırıdır ve **yalnız DÖNEN raporda** basılır.
+
+###### İDDİANIN HAKLI YARISI — ve bir belge farkı
+
+Kullanıcının kastettiği "montaj koordinatı" gerçekten bir GİRDİ olarak vardır;
+adı **Pivot Point**'tir. Ama tedarikçiye **giden** FEAD bilgi sayfası o satırı
+**hiç taşımaz** — oradaki gergi satırı diğer kasnaklarla aynı şeydir. Yani iki
+belge farklı şeyleri adlandırmıyor: **biri bir alanı hiç taşımıyor.**
+
+**BMC sayfasının (−170,080 / 99,160) koordinatı KASNAK MERKEZİDİR** ve bu ayrıca
+ölçüldü:
+
+| ölçüm | sayı |
+|---|---|
+| mount kipinde ÇÖZÜLEN çalışma merkezi ↔ sayfa koordinatı | **0,57 mm** |
+| koordinat pivot sayılsaydı merkez oradan | **90,00 mm** (tanım gereği) |
+| pivot sayılınca T (zarfın seçtiği θ=114,6°) | **279,4 N** ↔ Gates 544 = **−%48,6** |
+| aynı hipotezde kayış boyu | +%1,36 · sarım RMS **15,4°**, en kötü **+27,9°** |
+
+###### AMA MFSim'DE KOORDİNAT ARTIK MONTAJ CIVATASIDIR — ve bu bir kapı boşluğuydu
+
+Kullanıcının kararı MFSim'in kendi yüzeyine dair ve uygulandı: **gergi
+bileşeninin koordinatı, diğer bütün kasnaklardan farklı olarak, kasnağın
+merkezi değil gövdenin motora bağlandığı noktadır.** Zarf kipinde zaten tek
+girdi odur.
+
+Bu kapatılana kadar zarf kipinde **kanvas↔mm zincirinin İKİ UCU DA gergiyi
+atlıyordu** ve ikisi de sessizdi: `veFeadSyncCanvasFromMm` 6 kasnaklı AG00976'da
+4 düğüme dokunup gergiyi bırakıyor (kutu kayış düzleminden **kopuk**),
+`veFeadDragTensioner` ise `mount.ok=false`'ta erken çıkıp gergi kutusunun
+sürüklenmesini **hiç modele yansıtmıyordu**. İkisi de artık pivotu okuyor/yazıyor;
+**mount kipi birebir eski.**
+
+###### KAPI BEDAVA: iki koordinat birlikte varsa mesafe hüküm veriyor
+
+`|c − p|` üç banda ayrılıyor: **≈0** → *"aynı nokta girilmiş"*, **≈kol boyu** →
+tutarlı, **başka** → *"biri yanlış okunmuş"* (BMC koordinatı ↔ Gates pivotu:
+**80,652 mm**, kol 90). Panel de pivot alanının etiketinde ölçülen bedeli
+(**−%48,6**) yazıyor.
+
+Kapı sekiz mutasyonla ölçüldü, sekizi de kırmızı.
+
+###### RAPOR VE TEORİ BELGESİ DE ÇEVRİLDİ
+
+Detaylı raporun `_frPivotBlock`'u bugünkü akışın **TERSİNİ** yazıyordu
+(*"Pivot… bulunmaz ve kullanıcıdan istenmez"*) ve bu belge tedarikçiye gidiyor.
+Blok kipe göre ikiye ayrıldı; mount dalı birebir eski. Zarf dalı pivotun bir
+GİRDİ olduğunu, iki noktanın ayrımını **ölçüsüyle** ve denklemi ters yönde
+(`c = p + a(cosθ, sinθ)`) yazıyor.
+
+**§8.7 içine `<h4>` "Kol açısı zarftan nasıl seçiliyor" girdi** — yeni bir
+§8.x AÇILMADI ve sebebi ölçüldü: belgede **elle yazılmış 32 tane §8.x çapraz
+atfı** var; 8.8–8.19 kaydırılsa on ikisi **sessizce** yanlış bölüme yollardı.
+
+Teori belgesinde §4.3 iki yönü de anlatıyor ((4.4) kök bulma ↔ (4.5) boy bir
+çıktı), yeni **§4.5 Montaj zarfı** bölümü ölçütü (4.6)/(4.7) ile veriyor, ve
+bir **AD ÇAKIŞMASI** kapandı: §4.4'ün *servis zarfı* (pivot sabit, kol kayış
+boyuyla gezer) ile §4.5'in *montaj zarfı* (kol saati serbest) artık ayrı
+adlandırılıyor.
+
+Rapor tarafında üç sessiz kusur daha kapandı: zarf kipinde *"gerçek bir
+denetimdir"* dalı basılıyor ve `armFromCoords` NaN olduğu için **"(— mm)"**
+yazıyordu (aynı sınıfın **dördüncü** tekrarı); §8.2 türetilen efektif boya
+*"girdi"* derken §8.7 envanteri aynı sayıya *"türev"* diyordu; uygunluk kriteri
+*"montaj merkezi girilmedi"* basıyordu — girilmedi değil, **sorulmuyor**.
+
+Kapı dokuz mutasyonla ölçüldü, dokuzu da kırmızı.
+
+###### ÖLÇÜLMEDİ (karar buna dayanmıyor)
+
+Gergi **gövde cıvatasının** ekseni ile **kol dönme ekseninin** eşeksenli olup
+olmadığı — parça çizimi depoda yok. Model ikisini bir sayıyor; eksantrik bir
+gövdede montaj noktası pivottan bir miktar kaçık olurdu.
 
 ##### GERGİ KÜNYE KÜTÜPHANESİ — `js/fead-tensioners.js` (14 kayıt, 2 aile)
 

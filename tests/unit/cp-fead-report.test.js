@@ -922,8 +922,53 @@ describe('teori kaynağı — türetme ve ankraj', () => {
 
   test('take-up bir GİRDİ olmadığı teoride de yazılı', () => {
     expect(T).toContain('Take-up bir girdi değil, bir türevdir');
-    expect(T).toMatch(/elle girilen tek büyüklük kol boyu/);
+    // GİRDİ SAYISI İKİ. Bir dönem "elle girilen TEK büyüklük kol boyu"
+    // yazıyordu ve yön tersine çevrilince (pivot bir GİRDİ oldu) bu cümle
+    // take-up zincirinin EN DUYARLI girdisini gizler hâle geldi: pivot β'yı,
+    // β take-up'ı, take-up gerginliği belirliyor.
+    expect(T).toMatch(/elle girilen iki büyüklük vardır: kol boyu/);
+    expect(T).toMatch(/pivot/i);
+    expect(T).not.toMatch(/elle girilen tek büyüklük kol boyu/);
     expect(T).toMatch(/monoton bir fonksiyonu değildir/);
+  });
+
+  // ── YÖN TERSİNE ÇEVRİLDİ: teori de iki yolu anlatmak ZORUNDA ────────────
+  // Bu belge tedarikçiye gidiyor. §4.3 bir dönem kol açısının TEK çözüm
+  // yolunun (4.4)'ün kökü olduğunu söylüyordu; zarf kipinde o kök hiç
+  // aranmıyor — ok tam ters yönde. Okuyucu, çözücünün gerçekte yapmadığı bir
+  // hesabı yapıyor sanırdı.
+  test('§4.3 İKİ YÖNÜ de anlatıyor — kök bulma ve zarftan seçim', () => {
+    expect(T).toMatch(/Çalışma açısının çözümü — iki yön/);
+    expect(T).toMatch(/tek bir serbestlik derecesini paylaşır/);
+    expect(T).toMatch(/Kayış seçilmişse/);
+    expect(T).toMatch(/Kayış henüz seçilmemişse/);
+    expect(T).toMatch(/L_\{\\text\{eff\}\} \\;=\\; L_\{\\text\{gereken\}\}\(\\theta\^\{\*\}\)/);
+    expect(T).toMatch(/\(4\.5\)/);
+  });
+
+  test('§4.5 MONTAJ ZARFI bölümü var ve ölçütü denklemle veriyor', () => {
+    expect(T).toMatch(/4\.5 Montaj zarfı ve kol açısının seçimi/);
+    expect(T).toMatch(/\\arg\\max/);
+    expect(T).toMatch(/\(4\.6\)/);
+    expect(T).toMatch(/\(4\.7\)/);
+    // fiziksel gerekçe ve ölçülen sınır BASILMAK ZORUNDA
+    expect(T).toMatch(/tepe gerginliği en küçük/);
+    expect(T).toMatch(/42,7…59,5/);                       // β bandı
+    expect(T).toMatch(/kalibrasyondur, bağımsız doğrulama değildir/);
+    expect(T).toMatch(/153/);                             // paketleme aykırısı
+  });
+
+  test('AD ÇAKIŞMASI kapandı: servis zarfı ↔ montaj zarfı ayrı adlandırılıyor', () => {
+    expect(T).toMatch(/servis zarfını/);
+    expect(T).toMatch(/montaj zarfıyla/);
+    // ve iki zarfın FARKI yazılı (hangisinde ne sabit)
+    expect(T).toMatch(/pivot sabit, kolun saati serbesttir/);
+  });
+
+  test('§1 dördüncü soruyu — hangi kayışı ısmarlamalıyım — sayıyor', () => {
+    expect(T).toMatch(/Model dört soruyu birlikte cevaplar/);
+    expect(T).toMatch(/hangi kayışı ısmarlamalıyım/);
+    expect(T).not.toMatch(/Model üç soruyu birlikte cevaplar/);
   });
 
   test('§5.1 zincirin MUTLAK SEVİYESİNİ (ankraj) anlatıyor', () => {
