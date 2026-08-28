@@ -810,7 +810,16 @@ function _frTensionerTable(R){
   h += tr('Serbest kol açısı θ<sub>serbest</sub>', _frFs(t.freeAngleDeg, 2), '°');
   h += tr('Sarım yönü (sense)', (t.sense > 0 ? '+1 (CCW)' : '−1 (CW)'), '—');
   if(b.angleMode)
-    h += tr('Açı kipi', b.angleMode === 'mount' ? 'montaj merkezinden türetildi' : 'serbest açı doğrudan girildi', '—');
+    h += tr('Açı kipi', b.angleMode === 'envelope'
+      ? 'montaj koordinatından ZARF çözüldü — kol açısı seçildi'
+      : b.angleMode === 'mount' ? 'montaj merkezinden türetildi'
+      : 'serbest açı doğrudan girildi', '—');
+  if(b.angleMode === 'envelope'){
+    h += tr('Kol çalışma açısı θ<sub>kol</sub>',
+      _frFs(b.armAbsDeg, 2) + (b.armPinned ? ' (sabitlendi)' : ' (seçildi)'), '°');
+    if(b.envelope && b.envelope.best)
+      h += tr('Zarf ölçütü · en küçük take-up', _frFs(b.envelope.best.takeupMin, 4), 'mm/°');
+  }
   if(b.mount && b.mount.ok){
     h += tr('Montaj merkezi (girdi)', _frFs(b.mount.cen[0], 2) + ' / ' + _frFs(b.mount.cen[1], 2), 'mm');
     h += tr('Koordinatlardan kol boyu', _frFs(b.mount.armFromCoords, 3), 'mm');
@@ -1349,15 +1358,30 @@ function _frOperatingPoint(R){
       + '</td><td class="l">' + src + '</td></tr>';
   }
   h += gr('Kasnak merkezleri ve dış çapları', '§8.3', '—', '<b>girdi</b> — yerleşim çizimi');
-  h += gr('Kayış efektif boyu L<sub>eff</sub>', _frFs(sys && sys.belt && sys.belt.effLength, 1), 'mm', '<b>girdi</b> — kayış künyesi');
-  h += gr('Gergi pivotu', _frFs(t.pivot && t.pivot[0], 2) + ' / ' + _frFs(t.pivot && t.pivot[1], 2), 'mm', '<b>girdi</b>');
+  var _zarf = (b.angleMode === 'envelope');
+  // ZARF KİPİNDE KAYIŞ BOYU ENVANTERİN GİRDİ YARISINDA DURAMAZ: orada bir
+  // ÇIKTIDIR. Etiketi sabit bırakmak, bu belgede iki kez düzeltilmiş hatanın
+  // (tasarım gerginliği "girdi" yazıyordu; uygunluk #6 totolojiydi) üçüncüsü
+  // olurdu — geçen bir kriter gibi görünüp hiçbir şey denetlemeyen bir satır.
+  if(!_zarf)
+    h += gr('Kayış efektif boyu L<sub>eff</sub>', _frFs(sys && sys.belt && sys.belt.effLength, 1), 'mm', '<b>girdi</b> — kayış künyesi');
+  h += gr(_zarf ? 'Gergi montaj koordinatı (pivot)' : 'Gergi pivotu',
+          _frFs(t.pivot && t.pivot[0], 2) + ' / ' + _frFs(t.pivot && t.pivot[1], 2), 'mm', '<b>girdi</b>');
   h += gr('Kol boyu a', _frFs(t.armLength, 1), 'mm', '<b>girdi</b>'
         + (b.mount && b.mount.ok ? ' — montaj merkezi ile denetlendi (§8.4)' : ''));
   h += gr('Yay ön yükü M<sub>0</sub>', _frFs(t.preloadNm, 2), 'Nm', '<b>girdi</b>');
   h += gr('Yay oranı k', _frFs(t.rateNmPerDeg, 3), 'Nm/°', '<b>girdi</b>');
   h += gr('Serbest kol açısı θ<sub>serbest</sub>', _frFs(t.freeAngleDeg, 2), '°',
-          b.angleMode === 'mount' ? '<b>türev</b> — montaj merkezinden (§8.4)' : '<b>girdi</b>');
+          _zarf ? '<b>türev</b> — seçilen kol açısından (§8.4)'
+        : b.angleMode === 'mount' ? '<b>türev</b> — montaj merkezinden (§8.4)' : '<b>girdi</b>');
   h += '<tr class="sum"><td class="l" colspan="4">— aşağıdakilerin hiçbiri girilmez —</td></tr>';
+  if(_zarf){
+    h += gr('Kol çalışma açısı θ<sub>kol</sub> (mutlak)', _frFs(b.armAbsDeg, 2), '°',
+            b.armPinned ? '<b>girdi</b> — kullanıcı sabitledi'
+                        : '<b>türev</b> — zarf ölçütü: min take-up en büyük');
+    h += gr('<b>Kayış efektif boyu L<sub>eff</sub></b>', '<b>' + _frFs(b.beltLengthMm, 1) + '</b>', 'mm',
+            '<b>türev</b> — seçilen kol açısındaki gereken boy');
+  }
   h += gr('Kol açısı θ (göreli / mutlak)', _frFs(A.meanRelDeg, 2) + ' / ' + _frFs(A.meanAbsDeg, 2), '°',
           '<b>türev</b> — (4.4) kökü: L<sub>gereken</sub>(θ) = L<sub>eff</sub>');
   h += gr('Gergi kasnağı sarımı φ', _frFs(T.wrapDeg, 2), '°', '<b>türev</b> — (3.3), teğet noktalarından');
