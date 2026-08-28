@@ -22,6 +22,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   `.wasm`'ın kendisi de üretilen: `npm run build:tetgen-wasm` (emscripten gerekir,
   kaynak `vendor/tetgen-src/` + `tools/tetgen-wasm-src/`). Aynı bayt-bayt kapısı.
 - `tools/shot.js` — Ekran görüntüsü aracı (İSTEĞE BAĞLI — yalnız kullanıcı isteyince; `npm run shot -- --help`)
+- `docs/gates-reports/` — Gates FEAD raporlarının ham PDF'leri + **künye indeksi**
+  (`README.md`). Bir rapor bir kez konur, sonraki oturumlar yeniden yüklemeden okur.
+  Build/test/Pages'e girmez (ölçüldü). `assets/` DEĞİL, çünkü orası Pages'e kopyalanıyor.
 - `tests/unit/` — Jest birim testleri
 - `tests/e2e/` — Playwright E2E testleri
 - `viewer/` — **Ölçüm Görüntüleyici** (ayrı program, bkz. `viewer/README.md`)
