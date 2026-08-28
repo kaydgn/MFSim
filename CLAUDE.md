@@ -1757,7 +1757,16 @@ Eksik olan **doğrulama**: 17 rapordan çıkarılmış 2095 değerlik kümede
 geçmiyor). Tepe tablosu olan tek rapora karşı sapma gerginlikte
 **−%10,5 … +%22,8** (RMS %11,8), hubloadda **−%10,3 … +%17,5** (RMS %9,7).
 
-**AMA ASIL FARK BÜYÜKLÜKTE DEĞİL ŞEKİLDE** — damganın gerçek gerekçesi bu.
+> **BU AÇIKLAMA ÇÜRÜTÜLDÜ (2026-08-27).** Aşağıdaki "şekil farkı" gerekçesi bir
+> yıl sonra ölçümle düştü: aksesuarların atalet talepleri iki modelde **%2,5
+> içinde aynıydı** (KK 49,25 ↔ 48 N · ALT 154,58 ↔ 151 N). Dağılım aynı;
+> ayrışan tek şey tepe zincirinde **çevrimin kapanmamasıydı**. Çevrim
+> kapatılınca aşağıdaki bütün sapmalar %1'in altına iniyor ve tablo Gates'in
+> desenine oturuyor (bkz. *"TEPE ZİNCİRİNDE ÇEVRİM KAPANMIYORDU"*). Sayılar
+> **o zamanki hâli** belgelemek için duruyor; bugünkü sapma bandı
+> gerginlikte −%0,0 … +%1,0, hubloadda −%0,0 … +%0,9.
+
+**AMA ASIL FARK BÜYÜKLÜKTE DEĞİL ŞEKİLDE** — damganın *o zamanki* gerekçesi buydu.
 Tepe/ortalama oranı:
 
 | | MFSim | Gates |
@@ -1863,6 +1872,129 @@ kayış kütlesini katalog değerine döndürme. Tork ve yük katkısı kapılar
 **yalnız başlığa** bakıyordu ve mutasyondan sağ çıkıyordu — artık basılan
 hücrenin ARİTMETİĞİNİ (`Q = 9549·P/n`) ve payların toplamının %100 olmasını
 tutuyorlar.
+
+##### TEPE ZİNCİRİNDE ÇEVRİM KAPANMIYORDU — 14 farkın tek kök nedeni (2026-08-27)
+
+Kullanıcı özet raporu Gates AG00976'nın kendi PDF'iyle **tablo tablo, sayı sayı**
+karşılaştırttı. 318 değer ölçüldü, **300'ü tuttu**; tutmayan 18'in **14'ü tek
+tabloda** — tepe gerginlik/hubload — ve hepsinin tek bir kök nedeni çıktı.
+
+| Blok | Değer | Tutan |
+|------|------:|------:|
+| Kasnak yerleşimi · kayış yolu · duty girdisi | 96 | 96 |
+| Ortalama gerginlik + hubload (12×6×2) | 144 | 144 |
+| Gergi çalışma zarfı (6×10) | 60 | 56 |
+| **Tepe gerginlik + hubload + yön** | 18 | **4** |
+
+Gergi zarfındaki dördü de Gates'in **kendi basım gürültüsünün** içinde: Gates
+1 ondalık basıyor ve kendi tablosu (θ ↔ X,Y, pivot + kol boyu ile) **0,108 mm /
+0,068°** kendi içinde tutarsız; modelinki 2,8e−14. Load konumundaki +%0,66 ise
+take-up tekilliğinin büyütmesi — aynı 0,05°'lik sarım farkı Mean'de %0,14,
+Load'da **%1,08** oynatıyor (7,7 kat).
+
+**BAĞIMSIZ DOĞRULAMA — Gates'in kendi eğrisi:** s1'deki "Belt Tension Control"
+grafiği 600 dpi'da piksel piksel izlendi. Dikey konum çizgileri modelin göreli
+kol açılarına **0,08° içinde** oturuyor (tablodaki 1 ondalıklı basımdan daha
+iyi), ve eğrinin kendisi 58 noktada **RMS %0,25** (en kötü %0,70) örtüşüyor.
+
+###### Kök neden: ivme terimi kayış çevrimini kapatmıyordu
+
+Kayış KAPALI bir halkadır: bir tam turda gerginlik değişimlerinin toplamı sıfır
+olmak **zorunda** — topolojik özdeşlik, modelleme tercihi değil.
+`peakEstimate` bunu GÜÇ için zorluyor (`kw[krank] = Σ diğerleri`), ATALET için
+zorlamıyordu: kranka kasnağın **kendi** ataletini yazıyordu.
+
+```
+krank adımı  J·α·oran/r                        =  +89,69 N
+Σ aksesuar   5,53 + 49,25 + 5,53 + 154,58      = −214,89 N
+ÇEVRİM ARTIĞI                                  = −125,20 N   ← sıfır olmalıydı
+```
+
+Zincir gergi açıklığında ankrajlanıp ondan **bir önceki** kasnakta bittiği için
+artık hiçbir yere yazılmıyor: tamamı son halkaya (ALT→gergi) biniyor.
+
+**ÜÇ REFERANSSIZ KANIT** (Gates'e hiç bakmadan):
+
+| Kanıt | Ölçüm |
+|-------|-------|
+| Yön bağımlılığı | zinciri ileri ↔ geri yürütmek beş kasnakta da tam **130,73 N** fark veriyor; çevrim kapansaydı 0 olurdu |
+| Ankraj bağımlılığı | ankrajı ALT'a almak sistemi 6,85 N, ALT'ta 123,88 N kaydırıyor |
+| Fiziksel imkânsızlık | 0,010 kW'lık bir **avara** üzerinden %29,5 gerginlik sıçraması (ortalama zincirde aynı avarada fark −1,3 N = fiziksel beklenti) |
+
+Aynı sınama ORTALAMA zincirde **1,4e−13 N** ile kapanıyor — yani yaklaşım değil,
+tutarsızlık. AG00976'ya özgü de değil: `BMC_FEAD_2026`'da −157,8 N.
+
+**FİZİK:** kayış krank kasnağını hızlandırmaz — o motora cıvatalı ve motor onu
+zaten döndürüyor. Kayışın hızlandırdığı kütleler AKSESUARLARDIR; krankta görülen
+gerginlik artışı onların taleplerinin **toplamıdır**. Gates'in tablosu bu
+kapanışı sağlıyor (204 ↔ 205 N), MFSim'inki sağlamıyordu.
+
+###### Düzeltme çekirdeğe DOKUNMUYOR
+
+`peakEstimate` `inertias` sözlüğünü zaten kabul ediyor — burulma modelinin
+kullandığı yol. `veFeadPeakInertias` (fead-model.js) kranka, adımı Σ aksesuara
+eşitleyen **eşdeğer** bir J geçiriyor; α sadeleştiği için J_eş ivmeden bağımsız.
+
+**GERGİ KASNAĞI TOPLAMA GİRMEZ** ve bu bir eksiklik değil: zincir orada
+ankrajlı olduğu için o kasnağın kendi adımı zaten hiç uygulanmıyor. Toplama
+katılsaydı çevrim yine kapanmaz, +5,53 N artık kalırdı. Çekirdeğin kendi notu
+*"gergi kolu dinamigi dahil DEGIL"* diyor; gergi kasnağının atalet talebi
+(≈%0,35) o sınırın içinde ve **raporda yazılı**.
+
+**ÖLÇÜLDÜ:**
+
+| | önce | sonra | Gates |
+|---|---:|---:|---:|
+| Tepe gerginlik RMS | %11,83 | **%0,41** | — |
+| en kötü | %22,81 | **%0,69** | — |
+| Tepe hubload RMS | %9,75 | **%0,39** | — |
+| ALT tepe gerginliği | 671 N | **545 N** | 546 N |
+| Gergi hubload yönü | 198,8° | **217,1°** | 218° |
+
+**İKİNCİ, BAĞIMSIZ DOĞRULAMA:** düzeltme yalnız s1 tepe tablosundan türetildi.
+Gates'in **s6/12** "Most Critical Load Condition" tablosu türetmede hiç
+kullanılmadı; kayma-kritik kombinasyon seçimi orada **2/6 → 5/6** tutmaya geçti.
+
+###### "ŞEKİL FARKI" AÇIKLAMASI YANLIŞTI — ölçümle çürütüldü
+
+Bu kayıt ve `cp-fead-summary.js`'in künyesi bir dönem sapmayı bir **model
+karakteri** olarak anlatıyordu: *"atalet terimi kasnak başına olduğu için etki
+hızlı dönen alternatörde toplanıyor; iki model yükü BAŞKA yere dağıtıyor."*
+Ölçüm bunu çürüttü: aksesuarların atalet talepleri iki modelde **%2,5 içinde
+aynı** (KK 49,25 ↔ 48 N · ALT 154,58 ↔ 151 N). Dağılım aynıydı; ayrışan tek şey
+çevrimin kapanmasıydı. Şekil farkı bağımsız bir karakter değil, kusurun
+SONUCUYDU — tepe/ortalama oranı kapanışla birlikte **1,155–1,162** oluyor
+(Gates ≈1,15) ve alternatörde 1,00 (Gates 1,002).
+
+**"Kalibre değil" damgası KALIYOR:** doğrulama kümesinde hâlâ tek bir tepe
+değeri yok, yani tablo TEK bir rapora karşı ölçülebiliyor.
+
+###### Aynı turda kapatılan dört yan kusur
+
+| Kusur | Belirti | Düzeltme |
+|-------|---------|----------|
+| **Ölü girdi** — panel ivmesi tabloya ulaşmıyor | `R.peakAccelRpmS` okunuyor, `js/` içinde YAZAN yok; panelde 1100 → 3000 tabloyu **hiç değiştirmiyordu** | `veFeadAnalyze` `accelRpmS`/`decelRpmS`'i sonuca taşıyor, `cp-fead.js` geçiriyor |
+| **Basılan ivme işareti** | ALT satırı +1100 yazıyordu, kazanan dal yavaşlamaydı | Etkin işaret dalından okunuyor |
+| **Anlamsız kombinasyon etiketi** | ALT ve TEN kW kombinasyonundan cebirsel bağımsız (yayılım 2,3e−13 N); kazanan kayan nokta artığıyla seçiliyordu | Ayırt etmiyorsa `combo: null` |
+| **Taramanın yarısı tekrar** | köprü ±ivme geçiyor, çekirdek de kendi içinde ±dallanıyor → 16 dalın 8'i kopya | Tek katmanda süpürme |
+
+**İVME İŞARETİ KAPISI AG00976'DA ISIRAMAZ** ve sebebi öğretici: çevrim
+kapatıldıktan sonra altı kasnağın altısı da **hızlanma** dalında kazanıyor —
+yavaşlama hiçbir yerde tepe üretmiyor. Kapı bu yüzden yavaşlamanın gerçekten
+kazandığı bir düzende kurulu (avara ataletleri ×1000 → 1/6 kasnak decel).
+
+###### Belgenin kendi tutarlılığı — üç bayat metin
+
+| Ne | Neydi | Ne oldu |
+|----|-------|---------|
+| Manşetteki sayfa atfı | `bkz. sayfa 5` elle yazılı; belge beş sayfadan altıya çıkınca bayat kaldı, ömür bloğu **sayfa 6**'da | `_fsrSheetNo` sayfa listesinden türetiyor |
+| Not 3'ün üs duyarlılığı | `%86,9'dan %73,4'e` elle yazılı iki sabit, yalnız m = 5,6 ↔ 3,4 çiftine ait; PK-2_2a seçiliyken tablo **%53,0** derken not %86,9 diyordu | Baskın kasnak ve payı dağılımın KENDİSİNDEN |
+| Ömür kartı | Seçili yorulma modelini etiket olarak basıyor ama saat **her zaman m = 5,6** ile hesaplanıyordu; köprü uyumsuzluğu `life.modelMismatch` ile bildiriyordu, özet rapor **okumuyordu** | Kart uyuşmazlığı kırmızı basıyor |
+
+**Kapı sekiz mutasyonla ölçüldü, sekizi de kırmızı:** `veFeadPeakInertias`'ı boş
+döndürme (7 test), `inertias`'ı geçirmeme (5), panel ivmesini taşımama, etiketi
+her zaman basma, uyuşmazlığı susturma, Not 3'ü yine elle yazma, sayfa atfını
+5'e sabitleme, geçirilen ivmeyi kaydetme.
 
 ##### Uydurulmayan şeyler — raporun kendi §9'unda yazılı
 

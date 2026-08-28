@@ -3147,7 +3147,11 @@ function veFeadSolve(nodeId){
     // Burulma modelinin krank serbestliği kasnağın değil KRANK MİLİNİN ataletini
     // ister; panel bu sayıyı zaten soruyor (bkz. veFeadTorsionalOpt).
     crankInertia: _feadNum(node && node.data && node.data.crankInertia, 0),
-    fatigueModel: (node && node.data && node.data.fatigueModel) || 'PK-2_2p-MT3'
+    fatigueModel: (node && node.data && node.data.fatigueModel) || 'PK-2_2p-MT3',
+    // Tepe yük taraması bu iki alanı kullanır; geçilmezse tablo varsayılan
+    // 1100 d/d/s ile koşar ve panelde girilen değer hiçbir yere gitmez.
+    accelRpmS: _feadNum(node && node.data && node.data.accelRpmS, NaN),
+    decelRpmS: _feadNum(node && node.data && node.data.decelRpmS, NaN)
   });
   res.solvedNodeId = nodeId;
   res.pulleyNames = build.names;

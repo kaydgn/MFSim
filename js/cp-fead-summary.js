@@ -48,42 +48,59 @@ var VE_FSR_SHEETS = [
 // ─── TEPE YÜK: HESAPLANIYOR AMA DOĞRULANMIYOR ──────────────────────────────
 // "Kalibre değil" damgası "hesaplamıyoruz" demek DEĞİL. Çekirdek tepe yükü
 // hesaplıyor (`peakEstimate`: yarı-statik gerilme zinciri + kasnak başına
-// atalet terimi) ve köprü katmanı aksesuar güçlerinin %100/%10 kombinasyonları
-// ile ± ivmeyi tarayıp kasnak başına en büyüğü alıyor.
+// atalet terimi) ve köprü katmanı aksesuar güçlerinin %100/%10 kombinasyonlarını
+// tarayıp kasnak başına en büyüğü alıyor.
 //
 // EKSİK OLAN ŞEY DOĞRULAMA. Doğrulama kümemiz 17 Gates raporundan çıkarılmış
 // 2095 referans değer taşıyor; içinde TEK BİR tepe değeri YOK (ölçüldü:
 // `tests/fixtures/fead-validation.js` içinde peak/accel alanı hiç geçmiyor).
 // Yani hiçbir testimiz bu tabloyu bir referansa bağlamıyor.
 //
-// Tepe tablosu olan tek rapor AG00976 ve ona karşı ÖLÇÜLDÜ (880 d/d, ±1100
-// d/d/s): gerginlik −%10,5 … +%22,8 (RMS %11,8), hubload −%10,3 … +%17,5
-// (RMS %9,7).
+// ── BİR DÖNEM BURADA YANLIŞ BİR GEREKÇE YAZIYORDU ──────────────────────────
+// Eskiden bu blok sapmayı bir ŞEKİL FARKI olarak açıklıyordu: "atalet terimi
+// kasnak başına olduğu için etki hızlı dönen alternatörde toplanıyor; iki
+// model yükü BAŞKA yere dağıtıyor." ÖLÇÜM BUNU ÇÜRÜTTÜ. Aksesuarların atalet
+// talepleri iki modelde %2,5 içinde AYNI (KK 49,25 ↔ 48 N · ALT 154,58 ↔ 151 N);
+// dağılım aynı, ayrışan tek şey ÇEVRİMİN KAPANMASIYDI. Şekil farkı bağımsız
+// bir model karakteri değil, o kusurun SONUCUYDU (bkz. veFeadPeakInertias).
 //
-// AMA ASIL FARK BÜYÜKLÜKTE DEĞİL ŞEKİLDE — ve bu, damganın gerçek gerekçesi.
-// Tepe/ortalama oranı:
+// ── ÇEVRİM KAPATILDIKTAN SONRA ÖLÇÜLEN ────────────────────────────────────
+// AG00976, 880 d/d, ±1100 d/d/s — Gates s1 "Peak Tension & Hubload"a karşı:
 //
-//        MFSim   Gates
-//   FAN   1,065   1,148
-//   AVA1  1,061   1,146
-//   KK    1,034   1,151
-//   AVA2  1,029   1,149
-//   ALT   1,230   1,002      ← ters yönde ayrışma
-//   TEN   1,000   1,000
+//              önce            sonra
+//   gerginlik  RMS %11,83      RMS %0,41   (en kötü %22,81 → %0,69)
+//   hubload    RMS  %9,75      RMS %0,39   (en kötü %17,51 → %0,55)
+//   gergi yönü 198,8°          217,1°      (Gates 218°)
 //
-// Gates yük taşıyan dört kasnağın DÖRDÜNE de neredeyse aynı payı (≈1,15)
-// veriyor ve alternatöre hiç vermiyor. Bizim modelimiz tersini yapıyor:
-// atalet terimi kasnak BAŞINA (`J·α·oran/r`) olduğu için ivmenin etkisi
-// küçük ve hızlı dönen alternatörde toplanıyor (+%23), büyük kasnaklarda
-// ise %3–7'de kalıyor. İki model aynı sayıya farklı yoldan yaklaşmıyor;
-// yükü BAŞKA yere dağıtıyorlar.
+// Tepe/ortalama oranı da Gates'in desenine oturuyor: yük taşıyan dördünde
+// 1,155–1,162 (Gates ≈1,15), alternatörde 1,000 (Gates 1,002).
 //
-// Damganın kalkması için gereken: birden çok raporun tepe tablosu (kalibrasyon
-// takımı) — tek raporla bir sabit uydurmak, o raporu ezberlemek olurdu.
-var VE_FSR_PEAK_BAND = '−%10,5 … +%22,8';
+// BAĞIMSIZ DOĞRULAMA: düzeltme yalnız s1 tepe tablosundan türetildi. Gates'in
+// s6/12 "Most Critical Load Condition" tablosu türetmede HİÇ kullanılmadı ve
+// kayma-kritik kombinasyon seçimi orada 2/6 → 5/6 tutmaya geçti.
+//
+// DAMGA NEDEN DURUYOR: doğrulama kümesinde hâlâ tek bir tepe değeri yok, yani
+// bu tablo TEK bir rapora karşı ölçülüyor. Damganın kalkması için birden çok
+// raporun tepe tablosu gerekir; tek raporla sabit uydurmak onu ezberlemek olurdu.
+var VE_FSR_PEAK_BAND = '−%0,0 … +%1,0';
 // Tepe/ortalama oranının ölçülmüş ayrışması — rapora BASILIYOR.
-var VE_FSR_PEAK_SHAPE = { mfsimYuklu: '1,03 – 1,07', gatesYuklu: '≈1,15',
-                          mfsimAlt: '1,23', gatesAlt: '1,00' };
+var VE_FSR_PEAK_SHAPE = { mfsimYuklu: '1,155 – 1,162', gatesYuklu: '≈1,15',
+                          mfsimAlt: '1,00', gatesAlt: '1,00' };
+// Hubload RMS bandı — Notlar bölümünde basılıyor.
+var VE_FSR_PEAK_HUB_BAND = '−%0,0 … +%0,9';
+// Kombinasyon etiketi ancak durumlar arasında BU KADAR fark varsa bilgi taşır.
+// Gergi ve alternatör açıklıkları kW kombinasyonundan cebirsel olarak bağımsız
+// (ölçülen yayılım 2,3e−13 N), yani etiket orada anlamsız.
+var VE_FSR_COMBO_EPS = 1e-6;
+
+
+// SAYFA ATFI ELLE YAZILMAZ. Belge beş sayfadan altıya çıkarıldığında manşetteki
+// "bkz. sayfa 5" bayat kaldı ve okuyucuyu boş bir sayfaya yolladı (ölçüldü:
+// ömür bloğu 6. sayfada). Numara artık sayfa listesinden türüyor.
+function _fsrSheetNo(ad){
+  var i = VE_FSR_SHEETS.indexOf(ad);
+  return (i >= 0) ? String(i + 1) : '—';
+}
 
 // ─── KÜÇÜK YARDIMCILAR ──────────────────────────────────────────────────────
 // KASNAK KISA KODU. Matrislerde sütun başlığı kasnak ADIYSA tablo taşıyor:
@@ -352,7 +369,8 @@ function _fsrSheet1(R, node){
            : (Number.isFinite(_frNum(life.hoursB10Corrected)) ? life.hoursB10Corrected : life.hoursB10), 0)
       + ' saat',
       life.inValidRange ? 'çap penceresi içinde'
-        : 'ampirik düzeltmeli · ham ' + _frF(life.hoursB10, 0) + ' saat — bkz. sayfa 5',
+        : 'ampirik düzeltmeli · ham ' + _frF(life.hoursB10, 0) + ' saat — bkz. sayfa '
+          + _fsrSheetNo('Dayanım ve Titreşim'),
       life.inValidRange ? 'ok' : 'uy'],
     ['Kapalı çevrim', _frFs(sig, 2) + '°', 'Σ işaretli sarım · 360° olmalı', kapali ? 'ok' : 'no'],
     ['Çalışma çevrimi', duty.length + ' devir', 'toplam süre payı ' + _frPct(dcTop, 1)]
@@ -686,9 +704,21 @@ function _fsrSheet6(R, node){
     + 'kasnaktır.') + '</div>';
   h += '</div>';
 
-  h += _fsrBlk('Kayış Ömrü', _fsrKVT(om),
-    life.inValidRange ? 'Tüm kasnak çapları kalibrasyon aralığındadır.'
-      : 'Çap penceresi dışında: ' + _frEsc((life.outOfRange || []).join(', ')) + ' (Not 2).');
+  // MUTLAK ÖMÜR SEÇİLEN YORULMA MODELİNİ KULLANAMAZ ve bunu SÖYLEMEK ZORUNDA.
+  // Kart bir dönem "Yorulma modeli: <seçilen>" yazıp yanında BAŞKA sabitlerle
+  // hesaplanmış bir saat basıyordu — sessizce. Köprü uyumsuzluğu zaten
+  // `life.modelMismatch` ile bildiriyordu (bkz. fead-model.js), yalnız özet
+  // rapor onu okumuyordu.
+  var omurNot = life.inValidRange ? 'Tüm kasnak çapları kalibrasyon aralığındadır.'
+      : 'Çap penceresi dışında: ' + _frEsc((life.outOfRange || []).join(', ')) + ' (Not 2).';
+  if(life.modelMismatch)
+    omurNot = '<b class="bad">Saat değeri ' + _frEsc(life.calibratedModel || '')
+      + ' sabitleriyle hesaplanmıştır; seçili yorulma modeli '
+      + _frEsc(life.modelMismatch) + '.</b> Mutlak ömür seçilen modeli kullanamaz — '
+      + 'kalibrasyon sabiti geometri toplamının ölçeğini soğurur, üs değişince ömür '
+      + 'yüzlerce kat kayar. Kaburga yorulma DAĞILIMI seçtiğiniz modeli kullanır. '
+      + omurNot;
+  h += _fsrBlk('Kayış Ömrü', _fsrKVT(om), omurNot);
 
   // TEPE YÜK DAYANIM SAYFASINDA: bir yatak/braket seçim büyüklüğü, ve
   // damgasının gerekçesi (kalibrasyon takımı yok) burada okunmalı.
@@ -769,20 +799,39 @@ function _fsrVibBlock(R){
 // Mühendislik raporunun standart bölümü: modelin geçerlilik sınırları ve
 // okuyucunun bilmeden yanlış okuyabileceği tanımlar. Metin içinde "(Not n)"
 // ile atıf yapılır — açıklamalar tablo altına dağılmaz.
+
+// Baskın kasnak ve payı — yorulma dağılımının KENDİSİNDEN. Notlar bölümü bu
+// sayıyı elle yazmıyor; seçilen yorulma modeli değişince not da değişiyor.
+function _fsrDominantShare(R){
+  var f = R && R.fatigue, sys = R && R.build && R.build.sys;
+  var pp = f && f.perPulley;
+  if(!pp || !pp.length || !sys) return null;
+  var kod = _fsrCodes(sys), en = -Infinity, idx = -1, i, v;
+  for(i = 0; i < pp.length; i++){
+    v = _frNum(pp[i].sharePct);
+    if(Number.isFinite(v) && v > en){ en = v; idx = i; }
+  }
+  if(idx < 0) return null;
+  return { kod: kod[idx] || pp[idx].name, pct: en };
+}
+
 function _fsrNotes(R){
   var sys = R.build && R.build.sys, b = (sys && sys.belt) || {};
   var life = R.life || {}, C = life.constants || {};
   var mAlan = _frNum(b.massPerRibKgM) * (_frNum(b.ribs) || 1);
+  var fc = (R.fatigue && R.fatigue.constants) || {};
   var n = [];
 
   n.push('<b>Tepe gerginlik ve hubload doğrulanmamıştır.</b> Değerler hesaplanır (yarı-statik '
-    + 'gerilme zinciri + kasnak başına atalet), ancak modelin doğrulama kümesi — 17 tedarikçi '
-    + 'raporu, 2095 referans değer — tepe verisi içermez. Tepe tablosu bulunan tek referansa '
-    + 'karşı sapma: gerginlik ' + VE_FSR_PEAK_BAND + ' (RMS %11,8), hubload −%10,3 … +%17,5 '
-    + '(RMS %9,7). Sapma dağılımı da farklıdır: referansta tepe/ortalama oranı yük taşıyan '
-    + 'kasnaklarda ' + VE_FSR_PEAK_SHAPE.gatesYuklu + ', alternatörde '
-    + VE_FSR_PEAK_SHAPE.gatesAlt + '; bu modelde ' + VE_FSR_PEAK_SHAPE.mfsimYuklu + ' ve '
-    + VE_FSR_PEAK_SHAPE.mfsimAlt + '. Yatak ve braket seçiminde tek başına kullanılmamalıdır.');
+    + 'gerilme zinciri + kasnak başına atalet, kayış çevrimi kapatılarak), ancak modelin '
+    + 'doğrulama kümesi — 17 tedarikçi raporu, 2095 referans değer — tepe verisi içermez: '
+    + 'bu tablo TEK bir referansa karşı ölçülebiliyor. O referansa karşı sapma gerginlikte '
+    + VE_FSR_PEAK_BAND + ', hubloadda ' + VE_FSR_PEAK_HUB_BAND + '; tepe/ortalama oranı yük '
+    + 'taşıyan kasnaklarda ' + VE_FSR_PEAK_SHAPE.mfsimYuklu + ' (referans '
+    + VE_FSR_PEAK_SHAPE.gatesYuklu + '), alternatörde ' + VE_FSR_PEAK_SHAPE.mfsimAlt
+    + ' (referans ' + VE_FSR_PEAK_SHAPE.gatesAlt + '). Gergi kasnağının kendi atalet talebi '
+    + 'modelin dışındadır (zincir orada ankrajlıdır; burada ≈%0,35). Yatak ve braket '
+    + 'seçiminde tek başına kullanılmamalıdır.');
 
   n.push('<b>B10 mutlak ömrü</b> yalnız tüm kasnak çapları '
     + _frFs(79.6, 1) + ' – ' + _frFs(176, 1) + ' mm aralığındayken kalibredir'
@@ -790,9 +839,18 @@ function _fsrNotes(R){
     + '. Aralık dışında model ömrü sistematik olarak düşük verir; ampirik düzeltmeli değer bu '
     + 'sapmayı telafi eder. Sıralama ve karşılaştırmalar her iki durumda da geçerlidir.');
 
+  // ÜS DUYARLILIĞI SABİT DEĞİL, ÖLÇÜLÜYOR. Burada bir dönem "%86,9'dan
+  // %73,4'e iner" diye ELLE YAZILI iki sayı duruyordu ve yalnız m = 5,6 ↔ 3,4
+  // çiftine aitti; başka bir yorulma modeli seçilince aynı cümle tablonun
+  // TERSİNİ söylüyordu (ölçüldü: PK-2_2a'da tablo %53,0 derken not %86,9).
+  var bask = _fsrDominantShare(R);
   n.push('<b>Kaburga yorulma payları</b> ' + _frEsc(R.fatigueModel || '—') + ' üssüyle '
+    + (fc.m != null ? '(m = ' + _frFs(fc.m, 2) + ') ' : '')
     + 'hesaplanmıştır. Kasnaklar arası sıralama üs seçiminden bağımsızdır; mutlak paylar '
-    + 'değildir (m = 3,4 ile baskın kasnağın payı %86,9\'dan %73,4\'e iner).');
+    + 'değildir'
+    + (bask ? ' (baskın kasnak ' + _frEsc(bask.kod) + ', payı ' + _frPct(bask.pct, 1)
+              + '; üs küçüldükçe bu pay düşer)' : '')
+    + '.');
 
   n.push('<b>Açıklık frekansları</b> kayış birim kütlesine f₁ ∝ 1 ⁄ √m′ ile bağlıdır; '
     + 'm′ = ' + _frFs(mAlan, 4) + ' kg/m (kesit geri-hesabı). Değerler açıklıkların enine '
@@ -940,8 +998,20 @@ function _fsrPeak(R){
   var geom = null;
   try { geom = C.tensionerState(sys, C.meanRel(sys)).geom; } catch(e){ return null; }
 
+  // ÇEVRİM KAPANIŞI. Krank adımı, kasnağın kendi ataleti yerine aksesuar
+  // atalet taleplerinin TOPLAMI olmalı — gerekçesi ve ölçümü
+  // veFeadPeakInertias'ta (js/fead-model.js). Geçilmezse zincir kapanmıyor ve
+  // artık tamamen son halkaya biniyor.
+  var inertias = (typeof veFeadPeakInertias === 'function')
+    ? veFeadPeakInertias(R.build) : {};
+
+  // İŞARET SÜPÜRMESİ TEK KATMANDA. peakEstimate zaten kendi içinde sgn = ±1
+  // dallanıp accel/decel'i BİRLİKTE döndürüyor; dışarıdan bir de [+a, −a]
+  // geçmek her durumu iki kez koşuyordu (ölçüldü: 16 dalın 8'i birebir kopya).
+  // Sonucu değiştirmiyor ama beraberlikleri kayan nokta artığına göre kırıyor.
   var n = sys.pulleys.length, best = [];
-  for(var i = 0; i < n; i++) best.push({ T: -Infinity, combo: null, a: accel });
+  for(var i = 0; i < n; i++) best.push({ T: -Infinity, combo: null, a: accel,
+                                         enAz: Infinity, enCok: -Infinity });
   for(var m = 0; m < (1 << yuk.length); m++){
     var kw = {}, f = {};
     Object.keys(kw0).forEach(function(k){ kw[k] = kw0[k]; });
@@ -949,14 +1019,18 @@ function _fsrPeak(R){
       f[yuk[j]] = (m >> j & 1) ? 0.10 : 1.00;
       kw[yuk[j]] = kw0[yuk[j]] * f[yuk[j]];
     }
-    [accel, -accel].forEach(function(a){
-      var pe;
-      try { pe = C.peakEstimate(sys, { engineRpm: rpm, accelRpmS: a, loadsKw: kw }); }
-      catch(e){ return; }
-      ['accel', 'decel'].forEach(function(br){
-        (pe[br].spanN || []).forEach(function(T, i2){
-          if(T > best[i2].T) best[i2] = { T: T, combo: f, a: a };
-        });
+    var pe;
+    try { pe = C.peakEstimate(sys, { engineRpm: rpm, accelRpmS: accel,
+                                     loadsKw: kw, inertias: inertias }); }
+    catch(e){ continue; }
+    // ETKİN İVME, GEÇİRİLEN DEĞİL. peakEstimate 'accel' dalını +a, 'decel'
+    // dalını −a ile kuruyor; kazananın işareti dalından okunur. Geçirilen
+    // değeri kaydetmek ALT satırında yanlış işaret bastırıyordu (ölçüldü).
+    [['accel', accel], ['decel', -accel]].forEach(function(dal){
+      (pe[dal[0]].spanN || []).forEach(function(T, i2){
+        if(T < best[i2].enAz) best[i2].enAz = T;
+        if(T > best[i2].enCok) best[i2].enCok = T;
+        if(T > best[i2].T){ best[i2].T = T; best[i2].combo = f; best[i2].a = dal[1]; }
       });
     });
   }
@@ -967,7 +1041,12 @@ function _fsrPeak(R){
   var rows = sys.pulleys.map(function(p, i){
     return {
       name: p.name, tensionN: best[i].T, accelRpmS: best[i].a,
-      combo: best[i].combo || {},
+      // KOMBİNASYON ETİKETİ AYIRT ETMİYORSA BASILMAZ. Gergi ve alternatör
+      // açıklıkları kW kombinasyonundan cebirsel olarak BAĞIMSIZ (ölçüldü:
+      // sekiz durumun yayılımı 2,3e−13 N); kazanan kayan nokta artığına göre
+      // seçiliyordu ve basılan etiket bir bilgi taşımıyordu.
+      combo: (best[i].enCok - best[i].enAz > VE_FSR_COMBO_EPS) ? (best[i].combo || {}) : null,
+      comboYayilimN: best[i].enCok - best[i].enAz,
       hubloadN: hb[i] ? hb[i].FN : NaN,
       dirDeg: hb[i] ? hb[i].dirDeg : NaN,
       wrapDeg: geom.wraps[i] * 180 / Math.PI

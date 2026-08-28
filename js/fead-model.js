@@ -2132,6 +2132,71 @@ function veFeadTorsionalOpt(build, opts){
   return o;
 }
 
+// ─── TEPE ZİNCİRİNDE ÇEVRİM KAPANIŞI ────────────────────────────────────────
+//
+// Kayış KAPALI bir halkadır: bir tam turda gerginlik değişimlerinin toplamı
+// sıfır olmak ZORUNDA. Bu bir modelleme tercihi değil, topolojik özdeşlik.
+//
+// `peakEstimate` bunu GÜÇ terimi için zorluyor (kw[krank] = Σ diğerleri) ama
+// ATALET terimi için zorlamıyor: kranka kasnağın KENDİ ataletini yazıyor.
+// Oysa kayış krank kasnağını hızlandırmaz — o motora cıvatalı ve motor onu
+// zaten döndürüyor. Kayışın hızlandırdığı kütleler AKSESUARLARDIR; krankta
+// görülen gerginlik artışı onların taleplerinin TOPLAMIDIR.
+//
+// ÖLÇÜLDÜ (AG00976, 880 d/d, 1100 d/d/s):
+//   krank adımı  J·α·oran/r = 89,69 N
+//   Σ aksesuar                214,89 N
+//   ÇEVRİM ARTIĞI            −125,20 N   ← sıfır olmalıydı
+// Artık hiçbir yere yazılmıyor: zincir gergi açıklığında ankrajlanıp ondan
+// BİR ÖNCEKİ kasnakta bittiği için tamamı son halkaya (ALT→gergi) biniyor.
+// Sonucu: alternatör tepesi +%22,8, gergi hubload yönü 19° yanlış.
+//
+// ÜÇ REFERANSSIZ KANIT (Gates'e hiç bakmadan):
+//   · yön bağımlılığı — zinciri ileri/geri yürütmek beş kasnakta da tam
+//     130,73 N fark veriyor; çevrim kapansaydı 0 olurdu
+//   · ankraj bağımlılığı — ankrajı ALT'a almak sistemi 6,85 N kaydırıyor
+//   · fiziksel imkânsızlık — 0,010 kW'lık bir AVARA üzerinden %29,5 gerginlik
+//     sıçraması yazılıyor (ortalama zincirde aynı avarada fark −1,3 N)
+// Aynı sınama ORTALAMA zincirde 1,4e−13 N ile kapanıyor, yani yaklaşım değil
+// tutarsızlık. Kusur AG00976'ya özgü de değil: BMC_FEAD_2026'da −157,8 N.
+//
+// DÜZELTME ÇEKİRDEĞE DOKUNMUYOR. `peakEstimate` `inertias` sözlüğünü kabul
+// ediyor (`inertias[ad] != null ? … : p.inertiaKgM2`) — burulma modelinin
+// zaten kullandığı yol. Kranka, adımı Σ aksesuara eşitleyen EŞDEĞER bir J
+// geçiyoruz. α sadeleştiği için J_eş ivmeden BAĞIMSIZ.
+//
+// GERGİ KASNAĞI TOPLAMA GİRMEZ — ve bu bir eksiklik değil, çekirdeğin ilan
+// ettiği sınırın karşılığı: zincir orada ankrajlı olduğu için o kasnağın kendi
+// adımı HİÇ uygulanmıyor. Toplama katılsaydı çevrim yine kapanmaz, +5,53 N
+// artık kalırdı. Çekirdeğin kendi notu zaten "gergi kolu dinamigi dahil DEGIL"
+// diyor; gergi kasnağının atalet talebi (burada 5,53 N ≈ %0,35) o sınırın
+// içinde kalıyor ve raporda yazılı.
+//
+// ÖLÇÜLEN ETKİ (Gates AG00976 tepe tablosuna karşı):
+//   gerginlik RMS %11,83 → %0,41 (en kötü %22,81 → %0,69)
+//   hubload   RMS  %9,75 → %0,39 (en kötü %17,51 → %0,55)
+//   gergi hubload yönü 198,8° → 217,1°  (Gates 218°)
+function veFeadPeakInertias(build){
+  var out = {};
+  var sys = build && build.sys;
+  if(!sys || !sys.pulleys || typeof FEADCore === 'undefined') return out;
+  var c = sys._crkIdx, t = sys._tenIdx;
+  if(!(c >= 0) || !sys.pulleys[c]) return out;
+  // dI = J·α·oran/r  →  α ortak çarpan, sadeleşiyor.
+  var pay = 0, i, p, oran;
+  for(i = 0; i < sys.pulleys.length; i++){
+    if(i === c || i === t) continue;
+    p = sys.pulleys[i];
+    oran = FEADCore.speedRatio(sys, i);
+    if(!(p.rPitch > 0) || !Number.isFinite(oran)) return out;
+    pay += (p.inertiaKgM2 || 0) * oran / (p.rPitch / 1000);
+  }
+  var pc = sys.pulleys[c], oc = FEADCore.speedRatio(sys, c);
+  if(!(pc.rPitch > 0) || !(oc > 0)) return out;
+  out[pc.name] = pay * (pc.rPitch / 1000) / oc;
+  return out;
+}
+
 function veFeadAnalyze(build, opts){
   opts = opts || {};
   var out = { ok: false, error: null, analysis: null, fatigue: null, life: null,
@@ -2142,6 +2207,16 @@ function veFeadAnalyze(build, opts){
   }
   var duty = veFeadDutyToCore(build, opts.rows || []);
   out.duty = duty;
+
+  // PANEL İVMESİ SONUCA TAŞINIR. Tepe tablosu `R.peakAccelRpmS`'i okuyor ama o
+  // alanı YAZAN hiçbir yer yoktu: panelin "İvmelenme [RPM/s]" alanı tabloya hiç
+  // ulaşmıyordu ve tablo sessizce 1100 varsayılanıyla koşuyordu. AG00976'da
+  // sayı tesadüfen doğruydu (raporun ivmesi de 1100), başka bir modelde
+  // sessizce yanlış olurdu — "krank ataleti ölü girdiydi" vakasının aynı sınıfı.
+  var acc = _feadNum(opts.accelRpmS, NaN);
+  var dec = _feadNum(opts.decelRpmS, NaN);
+  if(Number.isFinite(acc) && acc > 0) out.peakAccelRpmS = acc;
+  if(Number.isFinite(dec) && dec > 0) out.peakDecelRpmS = dec;
 
   try {
     out.analysis = FEADCore.analyze(build.sys, {
@@ -2297,6 +2372,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadPresetOf: veFeadPresetOf, veFeadAutoKw: veFeadAutoKw,
     veFeadDutyToCore: veFeadDutyToCore, veFeadAnalyze: veFeadAnalyze,
     veFeadDutyDegC: veFeadDutyDegC, veFeadTorsionalOpt: veFeadTorsionalOpt,
+    veFeadPeakInertias: veFeadPeakInertias,
     VE_FEAD_LIFE_FATIGUE_MODEL: VE_FEAD_LIFE_FATIGUE_MODEL,
     VE_FEAD_PRESET_LIB: VE_FEAD_PRESET_LIB,
     veFeadBuildSystem: veFeadBuildSystem, veFeadBuildFromCanvas: veFeadBuildFromCanvas,
