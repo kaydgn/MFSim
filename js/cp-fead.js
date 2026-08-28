@@ -1282,8 +1282,15 @@ function getFeadTensionerPropertiesHTML(node){
       + _feadHint('Gergi <b>gövdesinin motora cıvatalandığı</b> nokta — kolun döndüğü '
           + 'pivot. Kasnak merkezi buradan <b>çıkar</b>, tersi değil: kol bu nokta '
           + 'etrafında kol boyu yarıçapında dönüyor ve kasnak o çemberin üstünde '
-          + 'gezinen bir konumda. Motor tasarımının verisidir; tedarikçi sayfasındaki '
-          + 'koordinat tablosunda <b>yoktur</b> (o tablo kasnak merkezini verir).'));
+          + 'gezinen bir konumda.<br><br>'
+          + '<b style="color:var(--accent-danger);">Buraya kasnak merkezi YAZILMAZ.</b> '
+          + 'Tedarikçiye <b>giden</b> FEAD sayfasındaki gergi satırı kasnak merkezidir; '
+          + 'pivot yalnız tedarikçiden <b>dönen</b> raporun '
+          + '<i>Pivot Point {X, Y}</i> satırında bulunur. İkisi kolun iki ayrı ucudur ve '
+          + 'aralarında tam kol boyu kadar mesafe vardır (14 Gates sisteminin 81 '
+          + 'konumunda ölçüldü, sapma ≤0,065 mm). Karıştırılırsa model <b>yine '
+          + 'çözülür</b> ve uyarı çıkmaz — ölçüldü: gerginlik <b>−%48,6</b>, sarım '
+          + 'en kötü <b>+27,9°</b>.'));
     html += _feadCard('Kol Künyesi', 'parça verisi', 'var(--text-secondary)',
         _feadGrid(node, [{ key:'armLen', label:'Kol boyu (Arm Length) [mm]', ph:'90' }], 1)
       + _feadHint('Pivot ile avara kasnağının merkezi arasındaki <b>sabit</b> mesafe; '

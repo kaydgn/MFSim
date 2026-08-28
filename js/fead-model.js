@@ -987,10 +987,28 @@ function veFeadSyncCanvasFromMm(nodeList, opt){
   (nodeList || []).forEach(function(x){
     if(!_feadIsPulley(x) || x === org) return;
     var mmX = _feadNum(x.data && x.data.x, NaN), mmY = _feadNum(x.data && x.data.y, NaN);
-    // Gergi merkezi girdi değil; kanvas konumu PİVOTUNDAN kurulur (aşağıda).
+    // ── GERGİNİN KUTUSU HANGİ NOKTAYI GÖSTERİR ────────────────────────────
+    //
+    // Kullanıcı kararı (2026-08-28): *"Otomatik gergilerde kasnak merkezi
+    // montaj cıvatasının koordinatı olacak."* Yani MFSim'de gergi bileşeninin
+    // koordinatı, diğer kasnaklardan FARKLI olarak, kasnağın merkezi değil
+    // gövdenin motora cıvatalandığı noktadır — kolun dönme ekseni.
+    //
+    // Bu zarf kipinin zaten tek girdisi; kutuyu oraya oturtmak kanvası yine
+    // fiziksel yapıyor. ÖLÇÜLDÜ — eskiden yapmıyordu: zarf kipinde `cenX/cenY`
+    // hiç yazılmadığı için bu geçiş gergiyi ATLIYOR (6 kasnaklı AG00976'da 4
+    // düğüme dokunup gergiyi bırakıyordu) ve kutu kayış düzleminden KOPUK
+    // kalıyordu.
+    //
+    // Mount kipinde davranış BİREBİR eski: orada girdi kasnağın montaj
+    // merkezidir ve kutu onu gösterir.
     if(_feadDefOf(x).isFeadTensioner){
       var td = x.data || {};
-      mmX = _feadNum(td.cenX, NaN); mmY = _feadNum(td.cenY, NaN);
+      if(veFeadAngleMode(td) === 'envelope'){
+        mmX = _feadNum(td.pivotX, NaN); mmY = _feadNum(td.pivotY, NaN);
+      } else {
+        mmX = _feadNum(td.cenX, NaN); mmY = _feadNum(td.cenY, NaN);
+      }
     }
     if(!Number.isFinite(mmX) || !Number.isFinite(mmY)) return;
     var p = veFeadMmToCanvas(mmX, mmY, org, s, veFeadNodeBox(x));
@@ -1020,9 +1038,32 @@ function veFeadDragTensioner(node, originNode, scale){
   if(!node || !_feadDefOf(node).isFeadTensioner || !originNode) return false;
   if(!node.data) node.data = {};
   var td = node.data;
+  var s0 = _feadNum(scale, 0) || VE_FEAD_PX_PER_MM;
+
+  // ── ZARF KİPİ: SÜRÜKLENEN ŞEY PİVOTUN KENDİSİ ─────────────────────────
+  //
+  // Orada montaj merkezi diye bir girdi YOK — kasnak merkezi bir çıktı. Kutu
+  // pivotu gösteriyor (bkz. veFeadSyncCanvasFromMm), dolayısıyla sürükleme de
+  // doğrudan pivotu yazar. Aracı bir "montaj merkezi" üzerinden geçmek onu
+  // sessizce GİRDİ yapardı ve zarf kipinin kendi kuralını (pivot türetilmez)
+  // bozardı.
+  //
+  // ÖLÇÜLDÜ — eskiden bu yol HİÇ ÇALIŞMIYORDU: `veFeadTensionerMount` zarf
+  // kipinde `ok:false` döndüğü için fonksiyon erken çıkıyor, gergi kutusunu
+  // sürüklemek modeli değiştirmiyordu (sessiz: hata yok, sayı oynamıyor).
+  if(veFeadAngleMode(td) === 'envelope'){
+    var px0 = _feadNum(td.pivotX, NaN), py0 = _feadNum(td.pivotY, NaN);
+    if(!Number.isFinite(px0) || !Number.isFinite(py0)) return false;
+    var yeniP = veFeadCanvasToMm(node, originNode, s0);
+    var nx0 = Math.round(yeniP.x * 1000) / 1000, ny0 = Math.round(yeniP.y * 1000) / 1000;
+    if(nx0 === px0 && ny0 === py0) return false;
+    td.pivotX = nx0; td.pivotY = ny0;
+    return true;
+  }
+
   var eski = veFeadTensionerMount(td);
   if(!eski.ok) return false;
-  var s = _feadNum(scale, 0) || VE_FEAD_PX_PER_MM;
+  var s = s0;
   // Kanvasta sürüklenen kutu MONTAJ MERKEZİNİ gösteriyor (çözücünün çalışma
   // merkezine en yakın olan o); pivot onunla RİJİT taşınıyor, yani kol boyu
   // ve montaj açısı korunuyor — taşınan şey gerginin gövdesinin tamamı.
@@ -2165,8 +2206,38 @@ function veFeadBuildSystem(nodeList, connList, opt){
           + ' mm girilmiş (fark ' + ac.deltaMm.toFixed(2) + ' mm). '
           + 'İkisi de sayfada yazar; biri yanlış okunmuş.');
     } else if(mode === 'envelope'){
-      // Pivot eksikse yukarıdaki genel kapı zaten zarf kipinin kendi metniyle
-      // konuştu; burada kalan tek zorunluluk yay çalışma momenti.
+      // ── EN PAHALI SESSİZ HATA: MERKEZİ PİVOT ALANINA YAZMAK ─────────────
+      //
+      // Tedarikçiye GİDEN sayfanın gergi satırı kasnak MERKEZİDİR; DÖNEN
+      // raporun `Pivot Point {X, Y}` satırı ise pivottur ve ikisi arasında
+      // TAM kol boyu kadar mesafe vardır — 14 Gates sisteminin 81 konumunda
+      // ölçüldü: |merkez − pivot| ↔ kol boyu sapması en fazla 0,0645 mm,
+      // tamamı raporun 1 ondalıklı basımının yuvarlaması.
+      //
+      // Kullanıcı merkezi pivot alanına yazarsa model YİNE ÇÖZÜLÜR (360
+      // açının 280'i geçerli geometri veriyor) ve hiçbir uyarı çıkmaz.
+      // ÖLÇÜLDÜ (BMC sayfası koordinatı pivot sayıldı): gerginlik
+      // 544 → 279,4 N (−%48,6), kayış boyu +%1,36, sarım en kötü +27,9°.
+      //
+      // Kapı bedava: kullanıcının elinde İKİ koordinat varsa (eski proje ya
+      // da sayfayı raporla birleştiren kullanıcı) aralarındaki mesafe üç
+      // bandın hangisine düştüğü ölçülebilir.
+      var _cx = _feadNum(td.cenX, NaN), _cy = _feadNum(td.cenY, NaN);
+      if(Number.isFinite(_cx) && Number.isFinite(_cy)
+         && Number.isFinite(pivotX) && Number.isFinite(pivotY) && armLen > 0){
+        var _d = Math.sqrt((_cx - pivotX) * (_cx - pivotX) + (_cy - pivotY) * (_cy - pivotY));
+        if(_d < VE_FEAD_ARM_TOL_MM)
+          out.warnings.push('Gergi montaj koordinatı ile girilen kasnak merkezi AYNI '
+            + 'noktada (' + _d.toFixed(2) + ' mm). İkisi kolun iki ayrı ucudur ve '
+            + 'aralarında tam kol boyu (' + armLen.toFixed(1) + ' mm) kadar mesafe olmalı; '
+            + 'biri yanlış alana yazılmış olabilir.');
+        else if(Math.abs(_d - armLen) > VE_FEAD_ARM_TOL_MM)
+          out.warnings.push('Gergi montaj koordinatı ile girilen kasnak merkezi arasındaki '
+            + 'mesafe ' + _d.toFixed(2) + ' mm; kol boyu ' + armLen.toFixed(1) + ' mm '
+            + '(fark ' + (_d - armLen).toFixed(2) + ' mm). Kasnak merkezi pivot etrafında '
+            + 'kol boyu yarıçapında döner — iki sayıdan biri yanlış okunmuş olabilir. '
+            + 'Zarf kipi yalnız montaj koordinatını kullanır.');
+      }
       if(!Number.isFinite(mount.relMeanDeg))
         out.errors.push('Yay çalışma momenti (Spring Mean Load) girilmedi; kolun '
           + 'nominal çalışma açısı (M_mean − M₀)/k onsuz türetilemez ve zarf '

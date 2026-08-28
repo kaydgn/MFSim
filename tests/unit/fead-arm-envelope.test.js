@@ -697,3 +697,177 @@ describe('kayış tipine bağlı çıktılar', () => {
     expect(h2).not.toMatch(/üretilmiyor/);
   });
 });
+
+/* ═══ 7) KANVAS: GERGİNİN KUTUSU MONTAJ CIVATASINI GÖSTERİR ═══════════════ */
+//
+// Kullanıcı kararı (2026-08-28): *"Otomatik gergilerde kasnak merkezi montaj
+// cıvatasının koordinatı olacak."* MFSim'de gergi bileşeninin koordinatı, diğer
+// bütün kasnaklardan FARKLI olarak, kasnağın merkezi değil gövdenin motora
+// bağlandığı noktadır — kolun dönme ekseni. Kasnak merkezi bir ÇIKTIDIR.
+//
+// Bu bir kapı boşluğuydu ve SESSİZDİ: zarf kipinde `cenX/cenY` hiç yazılmadığı
+// için kanvas↔mm zincirinin iki ucu da gergiyi ATLIYORDU — kutu kayış
+// düzleminden kopuk kalıyor, sürüklemek modeli hiç değiştirmiyordu.
+describe('kanvas ↔ mm — zarf kipinde gergi kutusu PİVOTU gösterir', () => {
+  function kur() {
+    const pack = veFeadExampleNodes(KEY);
+    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
+    ZARF(ten.data);
+    global.nodes = pack.nodes; global.connections = pack.connections;
+    return { pack, ten, org: veFeadOriginNode(pack.nodes) };
+  }
+
+  test('mm → kanvas: gergi ATLANMIYOR, kutusu pivota oturuyor', () => {
+    const { pack, ten, org } = kur();
+    const n = veFeadSyncCanvasFromMm(pack.nodes);
+    // orijin hariç BÜTÜN kasnaklar yerleşti — gergi dahil
+    const kasnak = pack.nodes.filter((x) => componentDefs[x.type] && componentDefs[x.type].isFeadPulley);
+    expect(n).toBe(kasnak.length - 1);
+    expect(Number.isFinite(ten.x)).toBe(true);
+    // kutunun MERKEZİ pivotun mm'sine düşüyor
+    const mm = veFeadCanvasToMm(ten, org, VE_FEAD_PX_PER_MM);
+    expect(mm.x).toBeCloseTo(ten.data.pivotX, 2);
+    expect(mm.y).toBeCloseTo(ten.data.pivotY, 2);
+    // ve bu KASNAK MERKEZİ DEĞİL: çözülen merkez tam kol boyu kadar uzakta
+    const b = veFeadBuildSystem(pack.nodes, pack.connections);
+    const c = F.tensionerState(b.sys, b.relDeg).center;
+    const d = Math.hypot(c[0] - ten.data.pivotX, c[1] - ten.data.pivotY);
+    expect(d).toBeCloseTo(ten.data.armLen, 6);
+    expect(Math.hypot(c[0] - mm.x, c[1] - mm.y)).toBeGreaterThan(80);
+  });
+
+  test('sürükleme PİVOTU taşır — kasnak merkezi onu takip eder', () => {
+    const { pack, ten, org } = kur();
+    veFeadSyncCanvasFromMm(pack.nodes);
+    const b0 = veFeadBuildSystem(pack.nodes, pack.connections);
+    const c0 = F.tensionerState(b0.sys, b0.relDeg).center;
+    const p0 = [ten.data.pivotX, ten.data.pivotY];
+
+    ten.x += 30;                                    // kanvasta 30 px = 30 mm sağa
+    expect(veFeadDragTensioner(ten, org, VE_FEAD_PX_PER_MM)).toBe(true);
+    expect(ten.data.pivotX).toBeCloseTo(p0[0] + 30, 2);
+    expect(ten.data.pivotY).toBeCloseTo(p0[1], 2);
+    // montaj merkezi diye bir alan YAZILMIYOR — o bir çıktı
+    expect(ten.data.cenX).toBeUndefined();
+    expect(ten.data.cenY).toBeUndefined();
+    // ve model gerçekten değişti
+    const b1 = veFeadBuildSystem(pack.nodes, pack.connections);
+    const c1 = F.tensionerState(b1.sys, b1.relDeg).center;
+    expect(Math.hypot(c1[0] - c0[0], c1[1] - c0[1])).toBeGreaterThan(1);
+    expect(Math.abs(b1.beltLengthMm - b0.beltLengthMm)).toBeGreaterThan(0.5);
+  });
+
+  test('hareketsiz sürükleme hiçbir şey yazmaz', () => {
+    const { pack, ten, org } = kur();
+    veFeadSyncCanvasFromMm(pack.nodes);
+    veFeadDragTensioner(ten, org, VE_FEAD_PX_PER_MM);      // bir kez otur
+    expect(veFeadDragTensioner(ten, org, VE_FEAD_PX_PER_MM)).toBe(false);
+  });
+
+  test('MOUNT kipinde davranış BİREBİR eski — kutu montaj merkezini gösterir', () => {
+    const pack = veFeadExampleNodes(KEY);
+    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
+    const org = veFeadOriginNode(pack.nodes);
+    veFeadSyncCanvasFromMm(pack.nodes);
+    const mm = veFeadCanvasToMm(ten, org, VE_FEAD_PX_PER_MM);
+    expect(mm.x).toBeCloseTo(ten.data.cenX, 2);
+    expect(mm.y).toBeCloseTo(ten.data.cenY, 2);
+    // sürüklemede pivot ve merkez RİJİT taşınıyor (kol boyu korunuyor)
+    const a0 = veFeadArmCheck(ten.data);
+    ten.x += 25;
+    expect(veFeadDragTensioner(ten, org, VE_FEAD_PX_PER_MM)).toBe(true);
+    const a1 = veFeadArmCheck(ten.data);
+    expect(a1.fromCoords).toBeCloseTo(a0.fromCoords, 6);
+  });
+
+  test('orijin göçü pivotu da ötelemeye devam ediyor', () => {
+    const { pack, ten } = kur();
+    const p0 = [ten.data.pivotX, ten.data.pivotY];
+    const org = veFeadOriginNode(pack.nodes);
+    org.data.x = 500; org.data.y = -300;
+    pack.nodes.forEach((x) => {
+      if (x === org || !componentDefs[x.type] || !componentDefs[x.type].isFeadPulley) return;
+      if (Number.isFinite(Number(x.data.x))) { x.data.x += 500; x.data.y += -300; }
+    });
+    ten.data.pivotX += 500; ten.data.pivotY += -300;
+    veFeadNormalizeOrigin(pack.nodes);
+    expect(ten.data.pivotX).toBeCloseTo(p0[0], 3);
+    expect(ten.data.pivotY).toBeCloseTo(p0[1], 3);
+  });
+});
+
+/* ═══ 8) MERKEZİ PİVOT ALANINA YAZMAK — sessiz, pahalı, ve artık uyarılı ══ */
+describe('montaj koordinatı ↔ kasnak merkezi karışması', () => {
+  function kur(patch) {
+    const pack = veFeadExampleNodes(KEY);
+    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
+    ZARF(ten.data);
+    if (patch) patch(ten.data);
+    return veFeadBuildSystem(pack.nodes, pack.connections);
+  }
+
+  test('iki alan AYNI noktadaysa uyarı düşer', () => {
+    const b = kur((d) => { d.cenX = d.pivotX; d.cenY = d.pivotY; });
+    expect(b.ok).toBe(true);                       // model YİNE çözülüyor
+    expect(b.warnings.join(' ')).toMatch(/AYNI\s+noktada/);
+  });
+
+  test('mesafe kol boyu KADARSA uyarı YOK (yanlış alarm yok)', () => {
+    const b = kur((d) => {
+      // gerçek çalışma merkezi: pivottan tam kol boyu kadar uzakta
+      d.cenX = -161.97; d.cenY = 91.29;
+    });
+    expect(b.ok).toBe(true);
+    expect(b.warnings.join(' ')).not.toMatch(/montaj koordinatı/i);
+  });
+
+  test('mesafe ne 0 ne kol boyu ise SEBEBİYLE uyarılır', () => {
+    // BMC sayfasının koordinatı ↔ Gates pivotu: ölçülen 80,652 mm, kol 90
+    const b = kur((d) => { d.cenX = -170.08; d.cenY = 99.16; });
+    expect(b.ok).toBe(true);
+    const w = b.warnings.join(' ');
+    expect(w).toMatch(/80[,.]6/);
+    expect(w).toMatch(/yanlış okunmuş/);
+  });
+
+  test('KARIŞTIRMANIN BEDELİ ÖLÇÜLÜ — model çözülür ama sayı kayar', () => {
+    // Doğru: BMC sayfası koordinatı KASNAK MERKEZİDİR (mount kipi).
+    const pm = veFeadExampleNodes('BMC_FEAD_2026');
+    pm.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const dogru = veFeadBuildSystem(pm.nodes, pm.connections);
+    expect(dogru.ok).toBe(true);
+
+    // Yanlış: aynı sayı pivot alanına yazılıyor, zarf kipi.
+    const py = veFeadExampleNodes('BMC_FEAD_2026');
+    py.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const t = py.nodes.find((n) => n.type === 'fead-tensioner');
+    const cx = t.data.cenX, cy = t.data.cenY;
+    ZARF(t.data);
+    t.data.pivotX = cx; t.data.pivotY = cy;
+    const yanlis = veFeadBuildSystem(py.nodes, py.connections);
+
+    // MODEL ÇÖZÜLÜYOR — sessizliğin kaynağı bu.
+    expect(yanlis.ok).toBe(true);
+    // …ama gerginlik yarıya iniyor (ölçüldü: 532,1 → 279,4 N).
+    const oran = yanlis.springTensionN / dogru.springTensionN;
+    expect(oran).toBeLessThan(0.6);
+    // ve kayış boyu %1'den fazla kayıyor
+    expect(Math.abs(yanlis.beltLengthMm - dogru.beltLengthMm) / dogru.beltLengthMm)
+      .toBeGreaterThan(0.01);
+  });
+
+  test('panel pivot alanının etiketinde "kasnak merkezi YAZILMAZ" diyor', () => {
+    const pack = veFeadExampleNodes(KEY);
+    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
+    ZARF(ten.data);
+    global.nodes = pack.nodes; global.connections = pack.connections;
+    const h = fead.getFeadTensionerPropertiesHTML(ten);
+    expect(h).toMatch(/kasnak merkezi YAZILMAZ/i);
+    expect(h).toMatch(/Pivot Point/);
+    expect(h).toMatch(/48[,.]6/);                  // ölçülen bedel yazılı
+  });
+});
