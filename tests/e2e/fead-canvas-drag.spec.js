@@ -273,4 +273,204 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
     expect(kontrol.dxPx).toBeCloseTo(kontrol.dxMm, 0);
     expect(kontrol.dyPx).toBeCloseTo(-kontrol.dyMm, 0);      // Y TERS
   });
+
+  // ── KONUM BAĞI (fead-coordlink) ─────────────────────────────────────────
+  //
+  // Kullanıcı isteği (2026-08-28): *"ufak, böyle açılıp kapanabilen bir
+  // bileşen… topolojiye çekip açtığımız kapattığımız zaman [koordinatın
+  // değişmesi] devreye girsin veya devreden çıksın."*
+  //
+  // Node bunu göremiyor: rozete GERÇEK bir fare tıklaması, gerçek
+  // `mousedown/mousemove/mouseup` dizisi, DOM'a yazılan `style.left` ve
+  // kenetlemenin gerçekten ateşlenmesi — dördü de yalnız tarayıcıda koşuyor.
+
+  // Düğümü kanvasın açık ortasına al: rozet sidebar'ın altında kalırsa
+  // gerçek fare olayı oraya hiç gitmez (kayış kipi rozetindeki dersin aynısı).
+  async function bagiKur(page) {
+    const id = await page.evaluate(() => {
+      const n = createNode('fead-coordlink', 0, 0);
+      const c = document.getElementById('ve-canvas').getBoundingClientRect();
+      const k = (typeof canvasZoom !== 'undefined' ? canvasZoom : 1);
+      const off = (typeof canvasOffset !== 'undefined') ? canvasOffset : { x: 0, y: 0 };
+      n.x = (c.width * 0.55 - off.x) / k;
+      n.y = (c.height * 0.5 - off.y) / k;
+      const el = document.getElementById(n.id);
+      el.style.left = n.x + 'px'; el.style.top = n.y + 'px';
+      if (typeof updateAllConnections === 'function') updateAllConnections();
+      return n.id;
+    });
+    await page.waitForTimeout(150);
+    // Rozet YERLEŞENE KADAR bekle. Tazeleme (saveState → veFeadRefreshBadges)
+    // rozeti DOM'dan söküp yeniden kuruyor; beklemeden tıklamak bayat bir
+    // öğeye gidiyor ve tık sessizce kayboluyor (ölçüldü).
+    await expect(page.locator('#' + id + ' .ve-fead-badge')).toHaveText('AÇIK');
+    return id;
+  }
+
+  const rozet = (page, id) => page.locator('#' + id + ' .ve-fead-badge');
+
+  test('rozet TIKLANINCA bağ kapanıyor: kutu oynuyor, mm oynamıyor', async ({ page }) => {
+    await bootApp(page);
+    await openFeadWithExample(page);
+    const bagId = await bagiKur(page);
+
+    // Paletten bırakmak tek başına HİÇBİR ŞEYİ değiştirmemeli: AÇIK doğar.
+    await expect(rozet(page, bagId)).toHaveText('AÇIK');
+
+    await rozet(page, bagId).click();
+    await expect(rozet(page, bagId)).toHaveText('KAPALI');
+
+    const altId = await page.evaluate(() =>
+      window.nodes.find((n) => n.type === 'fead-alternator').id);
+    const once = await mmOf(page, altId);
+    const L0 = await readL(page);
+
+    const box = await page.locator('#' + altId).boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 - 60, box.y + box.height / 2 - 40, { steps: 8 });
+    await page.mouse.up();
+
+    const sonra = await mmOf(page, altId);
+    const z = await zoomOf(page);
+    // MODEL DEĞİŞMEDİ…
+    expect(sonra.x).toBeCloseTo(once.x, 6);
+    expect(sonra.y).toBeCloseTo(once.y, 6);
+    // …KUTU DEĞİŞTİ (kapatılan şey yazma, hareket değil)
+    expect(sonra.px - once.px).toBeCloseTo(-60 / z, 0);
+    expect(sonra.py - once.py).toBeCloseTo(-40 / z, 0);
+    // Kayış Yolu kartı da aynı kaldı — geometri değişmedi, çizim değişmemeli.
+    expect(await readL(page)).toBeCloseTo(L0, 6);
+  });
+
+  test('bağı YENİDEN AÇMAK kutuyu koordinata döndürür, koordinatı kutuya YAZMAZ',
+    async ({ page }) => {
+      await bootApp(page);
+      await openFeadWithExample(page);
+      const bagId = await bagiKur(page);
+      const altId = await page.evaluate(() =>
+        window.nodes.find((n) => n.type === 'fead-alternator').id);
+      const once = await mmOf(page, altId);
+
+      await rozet(page, bagId).click();                       // KAPAT
+      await expect(rozet(page, bagId)).toHaveText('KAPALI');
+
+      const box = await page.locator('#' + altId).boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width / 2 - 70, box.y + box.height / 2, { steps: 8 });
+      await page.mouse.up();
+      const serbest = await mmOf(page, altId);
+      expect(Math.abs(serbest.px - once.px)).toBeGreaterThan(20);
+
+      await rozet(page, bagId).click();                       // AÇ
+      await expect(rozet(page, bagId)).toHaveText('AÇIK');
+      await page.waitForTimeout(200);
+
+      const geri = await mmOf(page, altId);
+      expect(geri.x).toBeCloseTo(once.x, 6);       // model hiç değişmedi
+      expect(geri.y).toBeCloseTo(once.y, 6);
+      expect(geri.px).toBeCloseTo(once.px, 1);     // kutu koordinatına döndü
+      expect(geri.py).toBeCloseTo(once.py, 1);
+      // DOM da tazelendi — dizi güncellenip elemanın style'ı eski kalsaydı
+      // kutu ekranda serbest yerinde görünmeye devam ederdi.
+      const domX = await page.evaluate((id) =>
+        parseFloat(document.getElementById(id).style.left), altId);
+      expect(domX).toBeCloseTo(geri.px, 1);
+    });
+
+  // KENETLEME İSTİSNASI BAĞA BAĞLI. Kasnak sürüklenirken hizalama kenetlemesi
+  // KAPALI, çünkü kutu kenarlarını yapıştırmak koordinatı sessizce yutuyordu
+  // (ölçüldü: 24.514 mm istenirken 3.940 mm). Bağ kapalıyken o gerekçe yok —
+  // kutu salt görsel, yani kenetleme klasik topolojilerdeki anlamına dönüyor.
+  test('bağ KAPALIYKEN kenetleme geri geliyor (yutacak bir mm yok)', async ({ page }) => {
+    await bootApp(page);
+    await openFeadWithExample(page);
+    const bagId = await bagiKur(page);
+    await rozet(page, bagId).click();                          // KAPAT
+    await expect(rozet(page, bagId)).toHaveText('KAPALI');
+    // Kullanıcının kenetlemeyi AÇTIĞI durum (varsayılan kapalı).
+    await page.evaluate(() => { window.SNAP_ENABLED = true; });
+
+    const altId = await page.evaluate(() =>
+      window.nodes.find((n) => n.type === 'fead-alternator').id);
+    const once = await mmOf(page, altId);
+
+    // Kardeş testteki HEDEFİN AYNISI: Avara 2 kayış düzleminde 7.94 mm
+    // yukarıda, yani 8 px kenetleme eşiğinin tam içinde.
+    const box = await page.locator('#' + altId).boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 8; i++)
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 - i * 2, { steps: 2 });
+    await page.mouse.up();
+
+    const sonra = await mmOf(page, altId);
+    const z = await zoomOf(page);
+    // KENETLEME ATEŞLENDİ: kutu istenen 16/z px'in belirgin ALTINDA kaldı.
+    // (Kardeş test aynı hareketle bağ AÇIKKEN 16/z'yi birebir alıyor.)
+    expect(Math.abs(sonra.py - once.py)).toBeLessThan((16 / z) * 0.75);
+    // …ve yutulan şey bir mm DEĞİL: model kılı kıpırdamadı.
+    expect(sonra.x).toBeCloseTo(once.x, 6);
+    expect(sonra.y).toBeCloseTo(once.y, 6);
+  });
+
+  // BAĞ DÜĞÜMÜNÜ SİLMEK = BAĞI AÇMAK. Silme gerçek `deleteSelectedNodes`
+  // yolundan geçiyor (map.js) ve DOM'a da yazması gerekiyor; Node bunu görmüyor.
+  //
+  // ÖLÇÜLDÜ (kanca YOKKEN, BMC, kapalıyken alternatör dizilmiş, sonra düğüm
+  // silinmiş): sonraki 1 px sürükleme alternatörü mm'de 81 mm sıçratıyordu.
+  test('kapalı bağ düğümünü SİLMEK kutuları koordinata oturtur', async ({ page }) => {
+    await bootApp(page);
+    await openFeadWithExample(page);
+    const bagId = await bagiKur(page);
+    await rozet(page, bagId).click();
+    await expect(rozet(page, bagId)).toHaveText('KAPALI');
+
+    const altId = await page.evaluate(() =>
+      window.nodes.find((n) => n.type === 'fead-alternator').id);
+    const once = await mmOf(page, altId);
+
+    const box = await page.locator('#' + altId).boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 80, box.y + box.height / 2 - 50, { steps: 8 });
+    await page.mouse.up();
+    expect(Math.abs((await mmOf(page, altId)).px - once.px)).toBeGreaterThan(20);
+
+    // Düğümü GERÇEK silme yolundan sil.
+    await page.evaluate((id) => {
+      window.selectedNodes = [window.nodes.find((n) => n.id === id)];
+      deleteSelectedNodes();
+    }, bagId);
+    await page.waitForTimeout(200);
+
+    const sonra = await mmOf(page, altId);
+    expect(sonra.px).toBeCloseTo(once.px, 1);     // kutu koordinatına oturdu
+    expect(sonra.py).toBeCloseTo(once.py, 1);
+    expect(sonra.x).toBeCloseTo(once.x, 6);       // model hiç değişmedi
+    const domX = await page.evaluate((id) =>
+      parseFloat(document.getElementById(id).style.left), altId);
+    expect(domX).toBeCloseTo(sonra.px, 1);
+
+    // …ve bundan sonra 1 px, 1 mm eder — 81 mm değil.
+    const b2 = await page.locator('#' + altId).boundingBox();
+    await page.mouse.move(b2.x + b2.width / 2, b2.y + b2.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(b2.x + b2.width / 2 + 10, b2.y + b2.height / 2, { steps: 4 });
+    await page.mouse.up();
+    const z = await zoomOf(page);
+    expect((await mmOf(page, altId)).x - once.x).toBeCloseTo(10 / z, 0);
+  });
+
+  test('düğüm YOKKEN davranış birebir eski — bağ varsayılan AÇIK', async ({ page }) => {
+    await bootApp(page);
+    await openFeadWithExample(page);
+    // Bu, bugüne kadar kaydedilmiş HER projenin durumu: bağ düğümü yok.
+    const acik = await page.evaluate(() => veFeadCoordLinkOn(window.nodes));
+    expect(acik).toBe(true);
+    const bagVar = await page.evaluate(() =>
+      window.nodes.some((n) => n.type === 'fead-coordlink'));
+    expect(bagVar).toBe(false);
+  });
 });

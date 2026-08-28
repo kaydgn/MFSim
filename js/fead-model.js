@@ -605,6 +605,39 @@ function veFeadMmToCanvas(mmX, mmY, originNode, scale, box){
            y: o.y - _feadNum(mmY, 0) * s - b.h / 2 };
 }
 
+// ── KONUM BAĞI — TEK OKUMA NOKTASI ─────────────────────────────────────────
+//
+// "Kanvas = kayış düzlemi" bağı kapatılabilir (Konum Bağı düğümü). Bağ
+// kapalıyken kanvas konumu ile mm koordinatı BAĞIMSIZ: kutu salt görsel,
+// koordinat salt panel girdisi.
+//
+// OKUMA TEK NOKTADAN. Kanvas (sürükleme), panel ve rozet üçü de bu
+// fonksiyonu çağırıyor — bu modülün tekrar eden kuralı (kayış kipinde
+// `veFeadBeltMode`, kol konumunda `posMode`): iki ayrı yerde hesaplanan bir
+// durum, iki yüzeyin sessizce ayrışması demektir.
+//
+// DÜĞÜM YOKSA BAĞ AÇIK. Geriye dönük uyum bu satırda: bugüne kadar
+// kaydedilmiş hiçbir projede bu düğüm yok, dolayısıyla hepsi birebir eski
+// davranışını sürdürür. Düğüm var ama `linked` yazılı değilse de AÇIK —
+// paletten bırakmak tek başına modeli değiştirmemeli.
+//
+// ÇOK KOPYADA "KAPALI" KAZANIR. `maxInstances:1` ikinci kopyayı zaten
+// engelliyor, ama eski bir kayıt ya da elle düzenlenmiş bir dosya iki kopya
+// taşıyabilir. O zaman açıkça KAPALI diyen bir düğümü yok saymak, kullanıcının
+// verdiği talimatı sessizce çöpe atmak olurdu.
+function veFeadCoordLinkNode(nodeList){
+  var a = (nodeList || []).filter(function(n){ return !!_feadDefOf(n).isFeadCoordLink; });
+  if(!a.length) return null;
+  for(var i = 0; i < a.length; i++)
+    if(a[i] && a[i].data && a[i].data.linked === false) return a[i];
+  return a[0];
+}
+
+function veFeadCoordLinkOn(nodeList){
+  var n = veFeadCoordLinkNode(nodeList);
+  return !n || !n.data || n.data.linked !== false;
+}
+
 // ── KANVASTAN mm'YE ────────────────────────────────────────────────────────
 // Sürükleme sırasında çağrılır. BÜTÜN kasnaklar tek geçişte tazeleniyor,
 // yalnız sürüklenen değil — çünkü orijin de bir kasnak: KRANK sürüklenirse
@@ -2465,6 +2498,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadNodeBox: veFeadNodeBox, veFeadNodeCenter: veFeadNodeCenter,
     veFeadOriginNode: veFeadOriginNode,
     veFeadCanvasToMm: veFeadCanvasToMm, veFeadMmToCanvas: veFeadMmToCanvas,
+    veFeadCoordLinkNode: veFeadCoordLinkNode, veFeadCoordLinkOn: veFeadCoordLinkOn,
     veFeadSyncMmFromCanvas: veFeadSyncMmFromCanvas,
     veFeadSyncCanvasFromMm: veFeadSyncCanvasFromMm,
     veFeadDragTensioner: veFeadDragTensioner,

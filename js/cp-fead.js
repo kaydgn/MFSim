@@ -440,11 +440,24 @@ function veFeadSet(nodeId, key, val){
   if(typeof saveState === 'function') saveState();
 }
 
-// Kutuları mm koordinatlarına oturt ve DOM'a yaz. Tek nokta: açılış, panel
-// düzenlemesi ve "Otomatik Düzenle" hepsi buradan geçiyor.
+// Kutuları mm koordinatlarına oturt ve DOM'a yaz. İki OTOMATİK çağıran var:
+// alt topoloji açılışı ve panelde bir koordinat alanının düzenlenmesi.
+//
+// KONUM BAĞI KAPALIYKEN BU YOL DA KAPALI — ve bu, bağın tek yönlü
+// kapatılamayacağının sonucu. Yalnız kanvas→mm yönü kesilseydi özellik
+// ÇALIŞMAZDI: kullanıcının serbestçe dizdiği kutular alt topolojiden her
+// çıkıp girişte (satır ~286) koordinatlarına geri çekilir, panele tek bir
+// sayı yazmak da (veFeadSet) o kutuyu tek başına yerine oturtup dizilişi
+// bozardı. Kapalı bağın tanımı "kutu ile koordinat BAĞIMSIZ"; bağımsızlık
+// simetriktir.
+//
+// "Otomatik Düzenle" (veFeadArrangeByCoords) bu kapının DIŞINDA ve kendi
+// yerleştirmesini yapıyor: o AÇIK bir kullanıcı eylemi ("kutuları
+// koordinatına geri koy") ve bağ kapalıyken tek yönlü uzlaştırma yolu odur.
 function veFeadPlaceFromCoords(){
   if(typeof nodes === 'undefined' || !nodes) return 0;
   if(typeof veFeadSyncCanvasFromMm !== 'function') return 0;
+  if(typeof veFeadCoordLinkOn === 'function' && !veFeadCoordLinkOn(nodes)) return 0;
   var k = veFeadSyncCanvasFromMm(nodes);
   if(!k) return 0;
   if(typeof document !== 'undefined'){
@@ -496,9 +509,17 @@ function veFeadPortSideFor(node, portType){
 // SÜRÜKLEME → mm. ui-core.js'in sürükleme döngüsünden her karede çağrılıyor.
 // Tek geçiş: gergi dahil bütün kasnakların krank-göreli mm'si tazeleniyor
 // (bkz. veFeadSyncMmFromCanvas). Kasnak yoksa bedava.
+//
+// KONUM BAĞI KAPISI BURADA, `veFeadSyncMmFromCanvas`'ın İÇİNDE DEĞİL. O
+// fonksiyon SAF bir dönüşüm ("kutuların yerini koordinata yaz") ve öyle
+// kalmalı: kapı oraya konsaydı, bağdan bağımsız olarak koordinat yazması
+// gereken bir çağıran (göç, örnek kurucu, ileride bir toplu işlem) sessizce
+// engellenirdi. Kapı, bağın ANLAMLI olduğu tek yerde: kullanıcı kutuyu
+// sürüklerken.
 function veFeadSyncDrag(){
   if(typeof nodes === 'undefined' || !nodes) return 0;
   if(typeof veFeadSyncMmFromCanvas !== 'function') return 0;
+  if(typeof veFeadCoordLinkOn === 'function' && !veFeadCoordLinkOn(nodes)) return 0;
   var org = veFeadOriginNode(nodes);
   if(!org) return 0;
   return veFeadSyncMmFromCanvas(nodes, { origin: org });
@@ -517,6 +538,7 @@ function veFeadApplyBadge(nodeEl, node){
   var old = nodeEl.querySelector('.ve-fead-badge');
   if(old) old.remove();
   if(_feadDefOf(node).isFeadBelt) return veFeadApplyBeltModeBadge(nodeEl, node);
+  if(_feadDefOf(node).isFeadCoordLink) return veFeadApplyCoordLinkBadge(nodeEl, node);
   if(!_feadIsPulley(node)) return false;
   var back = veFeadContactOf(node) === 'back';
   var drv = !!(node.data && node.data.driver);
@@ -601,6 +623,183 @@ function veFeadToggleBeltMode(nodeId){
   return yeni;
 }
 
+// ── KONUM BAĞI ROZETİ ───────────────────────────────────────────────────────
+//
+// Rozet salt gösterge DEĞİL, SEÇİM YÜZEYİ — kayış kipi rozetinin kuralının
+// aynısı. Kullanıcı isteği zaten bunu söylüyordu: *"ufak, böyle açılıp
+// kapanabilen bir bileşen"*.
+//
+// RENK ANLAM TAŞIR ve bu modülün kendi renk dilinden geliyor (mavi = GİRDİ,
+// amber = HESAPLANMIŞ; bkz. kayış kipi rozeti):
+//   AÇIK   amber → mm koordinatı kanvastan TÜREYEN bir değer
+//   KAPALI mavi  → mm koordinatı salt panelden gelen bir GİRDİ
+// Kapalı hâli soluk grı basmak da düşünüldü ve BIRAKILDI: bu modülün en pahalı
+// sessiz hatası kullanıcının bağın kapalı olduğunu FARK ETMEMESİ olurdu; soluk
+// bir rozet tam olarak onu davet ederdi.
+function veFeadApplyCoordLinkBadge(nodeEl, node){
+  var acik = (typeof veFeadCoordLinkOn === 'function' && typeof nodes !== 'undefined')
+    ? veFeadCoordLinkOn(nodes)
+    : !(node && node.data && node.data.linked === false);
+  var b = document.createElement('span');
+  b.className = 've-fead-badge';
+  b.textContent = acik ? 'AÇIK' : 'KAPALI';
+  b.title = acik
+    ? 'Konum bağı AÇIK: kasnağı kanvasta taşımak mm koordinatını da değiştirir '
+      + '(1 px = 1 mm). Tıkla → bağı kapat, kutular serbest kalsın.'
+    : 'Konum bağı KAPALI: kutu salt görsel, koordinat salt panel girdisi. '
+      + 'Tıkla → bağı aç; kutular koordinatlarına geri oturur.';
+  b.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; cursor:pointer;'
+    + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
+    + 'padding:2px 4px; border-radius:3px; font-family:ui-monospace, monospace;'
+    + 'color:#fff; background:' + (acik ? 'var(--accent-warning, #f59e0b)'
+                                        : 'var(--accent-primary, #3b82f6)')
+    + '; border:1px solid var(--bg-primary, #111);';
+  // Rozete basmak düğümü SÜRÜKLEMEYE başlatmamalı (veAttachNodeDrag mousedown'ı
+  // yakalıyor; durdurulmazsa tık hiç gelmiyor).
+  b.onmousedown = function(e){ e.stopPropagation(); };
+  b.ondblclick  = function(e){ e.stopPropagation(); e.preventDefault(); };
+  b.onclick = function(e){
+    e.stopPropagation(); e.preventDefault();
+    veFeadToggleCoordLink(node.id);
+  };
+  var box = nodeEl.querySelector('.ve-node-box') || nodeEl;
+  box.appendChild(b);
+  return true;
+}
+
+// ── BAĞI ÇEVİR ──────────────────────────────────────────────────────────────
+//
+// AÇARKEN KUTULAR KOORDİNATA GERİ OTURUR — ve bu üç seçenekten tek güvenli
+// olanı:
+//   (a) kutular mm'ye döner            ← SEÇİLEN
+//   (b) mm kutulardan yeniden yazılır  → kullanıcının bağı kapatma SEBEBİNİ
+//       (modeli değiştirmeden dizmek) tersine çevirir: tek tıkla bütün
+//       koordinatlar sessizce değişir. Bu modülün en pahalı hata sınıfı.
+//   (c) hiçbir şey                     → (b)'nin gecikmiş hâli ve daha kötüsü:
+//       `veFeadSyncMmFromCanvas` mm'yi MUTLAK hesaplıyor (delta değil), yani
+//       açtıktan sonraki İLK sürükleme bütün kasnakların koordinatını kutu
+//       konumlarına sıçratırdı — hem de alakasız bir anda.
+// (a) ayrıca sistemin kendi davranışıyla tutarlı: alt topoloji her açılışında
+// `veFeadPlaceFromCoords` zaten kutuları koordinata oturtuyor (satır ~286).
+//
+// Kaç kutunun oynadığı TOAST'ta yazılı: 0 ise kullanıcı hiçbir şeyin
+// değişmediğini görür, 6 ise dizilişinin geri alındığını.
+function veFeadToggleCoordLink(nodeId){
+  if(typeof nodes === 'undefined') return null;
+  var node = nodes.find(function(n){ return n.id === nodeId; });
+  if(!node || !_feadDefOf(node).isFeadCoordLink) return null;
+  if(!node.data) node.data = {};
+  var acik = (typeof veFeadCoordLinkOn === 'function') ? veFeadCoordLinkOn(nodes) : true;
+  node.data.linked = !acik;
+  var oturan = 0;
+  // Bağ AÇILDIYSA kutuları koordinata oturt. Kapatmada yapılacak bir şey yok:
+  // o anda kutu ile koordinat zaten uyuşuyor.
+  if(node.data.linked && typeof veFeadPlaceFromCoords === 'function'){
+    try { oturan = veFeadPlaceFromCoords(); } catch(e){ oturan = 0; }
+  }
+  if(typeof saveState === 'function') saveState();
+  veFeadRefreshBadges();
+  if(typeof veFeadRefreshLayoutCards === 'function') veFeadRefreshLayoutCards();
+  if(typeof showNodeProperties === 'function'
+     && typeof selectedNode !== 'undefined' && selectedNode && selectedNode.id === nodeId)
+    showNodeProperties(node);
+  if(typeof showToast === 'function'){
+    showToast(node.data.linked
+      ? ('Konum bağı AÇIK — kanvas konumu = mm koordinatı'
+         + (oturan ? ' · ' + oturan + ' kutu koordinatına oturdu' : ''))
+      : 'Konum bağı KAPALI — kutular serbest, koordinatlar panelden', 'info');
+  }
+  return node.data.linked;
+}
+
+// ── KONUM BAĞI PANELİ ───────────────────────────────────────────────────────
+//
+// Panel ile rozet AYNI ALANI okuyor (`veFeadCoordLinkOn`) ve AYNI eylemi
+// çağırıyor (`veFeadToggleCoordLink`) — iki ayrı ayar tutulsa panel bir durumu,
+// kanvastaki rozet başkasını gösterirdi. Kayış kipindeki kuralın aynısı.
+//
+// Künye bir SÜS DEĞİL: bağ açıkken "kanvasta 1 px kaç mm" ve "orijin hangi
+// kasnak" sorularının cevabı olmadan kullanıcı kutuyu neye göre taşıdığını
+// bilemez. Orijin bir ROL (sürücü kasnak), tip değil — yani topolojiye göre
+// değişiyor ve panelde adıyla yazılması gerekiyor.
+function getFeadCoordLinkPropertiesHTML(node){
+  if(!node.data) node.data = {};
+  var acik = (typeof veFeadCoordLinkOn === 'function' && typeof nodes !== 'undefined')
+    ? veFeadCoordLinkOn(nodes) : true;
+  var org = (typeof veFeadOriginNode === 'function' && typeof nodes !== 'undefined')
+    ? veFeadOriginNode(nodes) : null;
+  var kasnak = (typeof nodes !== 'undefined' && nodes)
+    ? nodes.filter(function(n){ return _feadIsPulley(n); }).length : 0;
+  var s = (typeof VE_FEAD_PX_PER_MM === 'number') ? VE_FEAD_PX_PER_MM : 1;
+  var renk = acik ? 'var(--accent-warning)' : 'var(--accent-primary)';
+
+  var html = '<div class="sw-panel">';
+
+  html += _feadCard('Konum Bağı', '', renk,
+      '<button onclick="veFeadToggleCoordLink(\'' + node.id + '\')" '
+    + 'style="width:100%; padding:11px 14px; margin-bottom:9px; border:none; cursor:pointer; '
+    + 'border-radius:var(--radius-sm); color:#fff; font-weight:700; letter-spacing:0.03em; '
+    + 'font-size:var(--fs-body); background:' + renk + ';">'
+    + (acik ? 'AÇIK — kapatmak için tıkla' : 'KAPALI — açmak için tıkla') + '</button>'
+    + '<div style="font-size:var(--fs-micro); color:var(--text-secondary); line-height:1.6;">'
+    + (acik
+        ? '<b>Kanvas = kayış düzlemi.</b> Bir kasnağı kanvasta taşımak onu kayış '
+          + 'düzleminde taşır; mm koordinatı, kayış yolu ve gerginlik aynı karede '
+          + 'tazelenir.'
+        : '<b>Kutu ile koordinat bağımsız.</b> Kasnakları okunur bir blok diyagramı '
+          + 'gibi dizebilirsin; model değişmez. Koordinatlar yalnız kasnak '
+          + 'panellerinden girilir.')
+    + '</div>');
+
+  html += _feadCard('Künye', '', 'var(--text-muted)',
+      '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.7;">'
+    + '• ölçek: <b>1 px = ' + _feadFmt(1 / s, 2) + ' mm</b> (hassasiyet zoom\'dan)<br>'
+    + '• orijin: <b>' + (org ? _feadEsc(_feadNodeName(org)) : '—')
+    + '</b> (sürücü kasnak — bir ROL, tip değil)<br>'
+    + '• kapsam: <b>' + kasnak + ' kasnak</b> · gergide taşınan şey pivot + montaj merkezi'
+    + '</div>');
+
+  html += _feadHint('Bağ kapalıyken de <b>Otomatik Düzenle</b> kutuları '
+    + 'koordinatlarına geri oturtur — tek yönlü uzlaştırma yolu odur. Bağı '
+    + 'yeniden açmak da aynı şeyi yapar: kutular koordinata döner, koordinatlar '
+    + 'kutulara YAZILMAZ.');
+
+  html += '</div>';
+  return html;
+}
+
+// ── BAĞ DÜĞÜMÜ SİLİNİNCE UZLAŞTIR ───────────────────────────────────────────
+//
+// Düğüm silinince bağ AÇILIR — "düğüm yoksa AÇIK" varsayılanı gereği. Ama
+// kutular hâlâ kullanıcının onları bıraktığı serbest yerlerde duruyor, yani
+// silme tek başına kanvas ile modeli AYRIŞMIŞ bırakıyor. Ve ayrışma sessiz
+// kalmıyor, PATLIYOR: `veFeadSyncMmFromCanvas` mm'yi MUTLAK hesaplıyor
+// (delta değil), dolayısıyla sonraki İLK sürükleme birikmiş kaymanın
+// tamamını tek karede modele yazıyor.
+//
+// ÖLÇÜLDÜ (BMC, bağ kapalıyken alternatör 80 px sağa / 50 px yukarı dizilmiş,
+// sonra bağ düğümü silinmiş):
+//     silmeden hemen sonra   alternatör mm −281.00 · kol 28.4271°
+//     ve 1 px SÜRÜKLENİNCE   alternatör mm −200.00 · kol 28.0625°
+// Yani bir pikselin karşılığı 81 mm — uyarısız, hatasız. Bu, modülün
+// belgelenmiş 38.108 mm sınıfının aynısı.
+//
+// Silme, rozeti AÇIK'a çevirmekle aynı şeydir; uzlaştırma da aynı olmalı:
+// kutular koordinata döner, koordinat kutuya YAZILMAZ.
+function veFeadCoordLinkAfterDelete(silinen){
+  if(typeof nodes === 'undefined' || !silinen || !silinen.length) return 0;
+  var vardi = silinen.some(function(n){ return !!_feadDefOf(n).isFeadCoordLink; });
+  if(!vardi) return 0;
+  // Geriye KAPALI bir kopya kaldıysa bağ hâlâ kapalı — uzlaştırma yanlış olurdu.
+  if(typeof veFeadCoordLinkOn === 'function' && !veFeadCoordLinkOn(nodes)) return 0;
+  var oturan = 0;
+  try { oturan = veFeadPlaceFromCoords(); } catch(e){ oturan = 0; }
+  if(oturan && typeof showToast === 'function')
+    showToast('Konum bağı düğümü silindi — bağ AÇIK; ' + oturan
+      + ' kutu koordinatına oturdu', 'info');
+  return oturan;
+}
+
 // Tüm kasnakların rozetini tazele (temas tarafı / sürücü değişince).
 function veFeadRefreshBadges(){
   if(typeof document === 'undefined' || typeof nodes === 'undefined') return 0;
@@ -679,7 +878,18 @@ function getFeadPulleyPropertiesHTML(node){
       ], 3)
     + _feadHint('<b>Dış çap</b> girilir; pitch ve efektif yarıçapları çekirdek kayış profilinden '
         + 'türetir (kaburgalı: r<sub>pitch</sub>=OD/2+h<sub>b</sub>, r<sub>eff</sub>=OD/2). '
-        + 'Konum, kayış düzleminde (motor önden görünüş) kasnak merkezidir.'));
+        + 'Konum, kayış düzleminde (motor önden görünüş) kasnak merkezidir.'
+        // BAĞ KAPALIYKEN KUTU OYNAMAZ VE BUNU BURADA SÖYLER. Normalde bu üç
+        // alan kanvastaki kutuyu da taşıyor (VE_FEAD_COORD_KEYS →
+        // veFeadPlaceFromCoords); bağ kapalıyken taşımıyor. Sessiz bırakılsaydı
+        // kullanıcı sayıyı yazar, kutu yerinde kalır ve alanın bozuk olduğunu
+        // sanardı — oysa model DEĞİŞTİ. Sağlıklı (bağ açık) durumda metin
+        // birebir eskisi: yanlış alarm yok.
+        + ((typeof veFeadCoordLinkOn === 'function' && typeof nodes !== 'undefined'
+            && !veFeadCoordLinkOn(nodes))
+             ? '<br><b style="color:var(--accent-primary);">Konum Bağı KAPALI</b> — '
+               + 'girilen değer modele işler ama kanvastaki kutu yerinden oynamaz.'
+             : '')));
 
   html += _feadCard('Rol', '', 'var(--accent-success)',
       _feadToggle(node, 'Sürücü kasnak (kayışı bu döndürür)', 'driver', 'veFeadSetDriver',
@@ -2952,7 +3162,8 @@ function veFeadLoadExample(key){
   if(typeof nodes !== 'undefined') {
     nodes.forEach(function(n){
       var d0 = _feadDefOf(n);
-      if(d0.isFeadBelt || d0.isFeadSolver || d0.isFeadReport) _eskiArac.push(n);
+      if(d0.isFeadBelt || d0.isFeadSolver || d0.isFeadReport || d0.isFeadCoordLink)
+        _eskiArac.push(n);
     });
   }
   _eskiArac.forEach(function(n, i){
@@ -3408,9 +3619,13 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadApplyBadge: veFeadApplyBadge,
     veFeadApplyBeltModeBadge: veFeadApplyBeltModeBadge,
     veFeadSyncDrag: veFeadSyncDrag,
-    veFeadPlaceFromCoords: veFeadPlaceFromCoords,
+    veFeadSet: veFeadSet, veFeadPlaceFromCoords: veFeadPlaceFromCoords,
     VE_FEAD_COORD_KEYS: VE_FEAD_COORD_KEYS,
     veFeadToggleBeltMode: veFeadToggleBeltMode,
+    veFeadApplyCoordLinkBadge: veFeadApplyCoordLinkBadge,
+    veFeadToggleCoordLink: veFeadToggleCoordLink,
+    veFeadCoordLinkAfterDelete: veFeadCoordLinkAfterDelete,
+    getFeadCoordLinkPropertiesHTML: getFeadCoordLinkPropertiesHTML,
     veFeadDerivedLengthHTML: veFeadDerivedLengthHTML,
     veFeadBeltCatalogCard: veFeadBeltCatalogCard,
     veFeadPickBelt: veFeadPickBelt,
