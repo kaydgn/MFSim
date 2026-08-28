@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-example','fead-layout','fead-report','str-geometry','str-material','str-mesh','str-bc','str-results','arac-performans','mount-analysis','fead-analysis','structural-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-example','fead-layout','fead-report','fead-coordlink','str-geometry','str-material','str-mesh','str-bc','str-results','arac-performans','mount-analysis','fead-analysis','structural-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -677,6 +677,33 @@ var componentDefs = {
     inputs: 0, outputs: 0, isFeadLayout: true
     // Ölçü BURADA YOK: Kayış Yolu düğümü kanvasta CANLI ŞEMA kartıdır ve
     // ölçüsü tek yerden gelir (VE_FEAD_LAYOUT_W/H → aşağıdaki döngü).
+  },
+  // ── KONUM BAĞI — kanvas konumu ile mm koordinatı arasındaki bağ ────────────
+  //
+  // Bu modülde kanvas KAYIŞ DÜZLEMİDİR: bir kasnağı sürüklemek onu kayış
+  // düzleminde taşımak demek (1 px = 1 mm, orijin sürücü kasnak). O bağ
+  // 2026-08-25'te kullanıcının kendi isteğiyle kuruldu ve VARSAYILAN olarak
+  // açık kalıyor.
+  //
+  // Ama bağ açıkken kanvas bir BLOK DİYAGRAMI olmaktan çıkıyor: kutular
+  // fiziksel yerlerinde durmak zorunda, yani okunurluk için kaydırılamıyorlar.
+  // Bu düğüm o bağı KAPATILABİLİR yapıyor — kapalıyken kutu salt görsel,
+  // koordinat salt panel girdisi.
+  //
+  // DÜĞÜM YOKKEN BAĞ AÇIK. Bugüne kadar kaydedilmiş her proje davranışını
+  // birebir korur; paletten sürükleyip bırakmak da tek başına hiçbir şeyi
+  // değiştirmez (düğüm AÇIK doğar). Değişen tek şey rozete tıklamak.
+  //
+  // maxInstances:1 — iki kopya iki farklı durum taşıyabilirdi ve "hangisi
+  // geçerli" sorusunun cevabı yok. Yine de okuyucu (veFeadCoordLinkOn) çok
+  // kopyaya karşı dayanıklı: KAPALI diyen varsa o kazanır (bkz. fead-model.js).
+  'fead-coordlink': {
+    name: 'Konum Bağı',
+    // Koordinat düzlemi (gri eksenler) + kasnak (mavi) + aradaki zincir halkası
+    // (amber): "kutunun yeri ile koordinat aynı şey".
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><g stroke="var(--text-muted, #888)" stroke-width="4" stroke-linecap="round" fill="none"><path d="M20 84 H86"/><path d="M20 84 V18"/></g><polygon points="92,84 80,78.5 80,89.5" fill="var(--text-muted, #888)"/><polygon points="20,12 14.5,24 25.5,24" fill="var(--text-muted, #888)"/><line x1="22" y1="82" x2="60" y2="44" stroke="var(--text-muted, #888)" stroke-width="2.5" stroke-dasharray="5 4"/><circle cx="66" cy="38" r="17" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="66" cy="38" r="5" fill="var(--accent-primary, #3b82f6)"/><g transform="rotate(-45 42 62)" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5"><rect x="24" y="55" width="22" height="14" rx="7"/><rect x="38" y="55" width="22" height="14" rx="7"/></g></svg>',
+    inputs: 0, outputs: 0, isFeadCoordLink: true, maxInstances: 1,
+    defaultWidth: 54, defaultHeight: 48
   },
   'fead-report': {
     name: 'Rapor',

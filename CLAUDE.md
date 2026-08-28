@@ -605,6 +605,124 @@ taşımak çözücüyü koşturmuyor.
 Karede koşan toplam **2.27 ms** → 60 fps bütçesinde **7.4× pay**, kare tavanı
 441 fps. Tam çözüm sürükleme yolunda HİÇ koşmuyor.
 
+##### BAĞ AÇILIP KAPANABİLİR — `fead-coordlink` "Konum Bağı" (2026-08-28)
+
+Kullanıcı isteği: *"topoloji üzerindeki bileşenleri kaydırdığımızda, gerçekten
+koordinatları da değişiyordu. Şu an default olarak öyle. Bunu açılır kapanır bir
+özellik haline getirmek istiyorum… ufak, böyle açılıp kapanabilen bir bileşen…
+Onu topolojiye çekip açtığımız kapattığımız zaman, yukarıda bahsettiğim özellik
+devreye girsin veya devreden çıksın."*
+
+Bağ açıkken kanvas bir BLOK DİYAGRAMI olmaktan çıkıyor: kutular fiziksel
+yerlerinde durmak zorunda, yani okunurluk için kaydırılamıyorlar. Yeni düğüm o
+bağı kapatılabilir yapıyor — kapalıyken kutu salt görsel, koordinat salt panel
+girdisi.
+
+| Ne | Karar | Nerede |
+|----|-------|--------|
+| Ad / tip | **Konum Bağı** · `fead-coordlink` · 54×48 · 0 giriş / 0 çıkış · `maxInstances:1` | `components.js` |
+| Bayrak | `node.data.linked` — yalnız `=== false` anlamlı | `veFeadCoordLinkOn` |
+| Okuma | **TEK NOKTA** (kanvas · panel · rozet üçü de aynı fonksiyon) | `fead-model.js` |
+| Rozet | `AÇIK` **amber** ↔ `KAPALI` **mavi**, tıklanabilir | `veFeadApplyCoordLinkBadge` |
+
+**DÜĞÜM YOKSA BAĞ AÇIK** — geriye dönük uyum tam bu satırda: bugüne kadar
+kaydedilmiş hiçbir projede bu düğüm yok, hepsi birebir eski davranışını
+sürdürüyor. Düğüm var ama `linked` yazılı değilse de AÇIK: paletten bırakmak tek
+başına modeli değiştirmemeli. **ÇOK KOPYADA KAPALI KAZANIR** (`maxInstances`
+ikinciyi engelliyor ama elle düzenlenmiş bir dosya taşıyabilir; açıkça KAPALI
+diyen bir düğümü yok saymak kullanıcının talimatını çöpe atmak olurdu).
+
+**RENK ANLAM TAŞIR** ve modülün kendi dilinden geliyor (kayış kipi rozetiyle
+aynı): amber = TÜREYEN, mavi = GİRDİ. Bağ açıkken mm kanvastan türüyor,
+kapalıyken salt panel girdisi. **Soluk gri REDDEDİLDİ** — bu özelliğin en pahalı
+sessiz hatası kullanıcının bağın kapalı olduğunu FARK ETMEMESİ; soluk bir rozet
+tam olarak onu davet ederdi. `BAĞLI/SERBEST` de reddedildi: kayış kipi rozeti
+aynı kanvasta `SERBEST` yazıyor, 60 px yan yana iki farklı anlam olurdu.
+
+###### BAĞIMSIZLIK SİMETRİK — tek yön kapatmak özelliği ÇALIŞMAZ yapardı
+
+Kapı iki yönde de var ve ikincisi bir incelik değil, özelliğin var olma şartı:
+
+| Yön | Kapı | Kapatılmasaydı |
+|-----|------|----------------|
+| kanvas → mm | `veFeadSyncDrag` | — (istenen davranış zaten bu) |
+| mm → kanvas | `veFeadPlaceFromCoords` | Alt topoloji her açılışta kutuları koordinata GERİ ÇEKER; kullanıcının dizilişi kaybolur. Panele tek bir sayı yazmak da (`veFeadSet` → `VE_FEAD_COORD_KEYS`) o kutuyu tek başına yerine oturtup dizilişi bozar |
+
+**KAPI SAF FONKSİYONUN İÇİNDE DEĞİL.** `veFeadSyncMmFromCanvas` /
+`veFeadSyncCanvasFromMm` DOM'suz saf dönüşümler ve öyle kalıyor: kapı oraya
+konsaydı bağdan bağımsız olarak koordinat yazması gereken çağıranlar (göç, örnek
+kurucu, ileride bir toplu işlem) sessizce engellenirdi. Testi bu ayrımı ayrıca
+tutuyor.
+
+**"Otomatik Düzenle" KAPININ DIŞINDA** — açık bir kullanıcı eylemi ve kapalı
+bağda tek yönlü uzlaştırma yolu odur. Örnek yükleme de öyle (ona devrediyor).
+`veFeadNormalizeOrigin` mm→mm bir öteleme, tek kutuya dokunmuyor → etkilenmiyor.
+
+**Kart tazeleme için ek kapı YOK ve gerekmiyor:** `veFeadTopoSignature` mm
+okuyor, piksel değil. Bağ kapalıyken mm değişmiyor → imza sabit → kart yeniden
+kurulmuyor. Doğru davranış kendiliğinden çıkıyor.
+
+###### AÇARKEN KUTU KOORDİNATA DÖNER — koordinat kutuya YAZILMAZ
+
+Üç seçenek vardı ve ikisi tehlikeli:
+
+| | Ne yapar | Hüküm |
+|---|---|---|
+| **(a) kutular mm'ye döner** | model doğrudur, diziliş geçicidir | **SEÇİLEN** |
+| (b) mm kutulardan yeniden yazılır | Kullanıcının bağı kapatma SEBEBİNİ (modeli değiştirmeden dizmek) tek tıkla ve sessizce tersine çevirir | RED |
+| (c) hiçbir şey | (b)'nin gecikmiş ve daha kötü hâli — aşağıya bak | RED |
+
+(a) ayrıca sistemin kendi davranışıyla tutarlı: alt topoloji her açılışında
+`veFeadPlaceFromCoords` zaten kutuları koordinata oturtuyor. Geçiş `saveState`
+çağırıyor (geri alınabilir) ve toast kaç kutunun oturduğunu yazıyor — 0 ise
+kullanıcı hiçbir şeyin değişmediğini görür.
+
+###### DÜĞÜMÜ SİLMEK = BAĞI AÇMAK — ölçülmüş bir sessiz patlama
+
+Bu, ilk uygulamada **kaçırılan** kusurdu ve (c) seçeneğinin neden reddedildiğini
+de açıklıyor. Düğüm silinince bağ AÇILIYOR ("düğüm yoksa AÇIK" varsayılanı),
+ama kutular hâlâ serbest yerlerinde. Ayrışma sessiz kalmıyor, **PATLIYOR**:
+`veFeadSyncMmFromCanvas` mm'yi **MUTLAK** hesaplıyor (delta değil), dolayısıyla
+sonraki İLK sürükleme birikmiş kaymanın tamamını tek karede modele yazıyor.
+
+**ÖLÇÜLDÜ** (BMC, bağ kapalıyken alternatör 80 px sağa / 50 px yukarı dizilmiş,
+sonra bağ düğümü silinmiş):
+
+| | alternatör mm | kol |
+|---|---|---|
+| silmeden hemen sonra | −281.00 | 28.4271° |
+| **ve 1 px SÜRÜKLENİNCE** | **−200.00** | **28.0625°** |
+
+Bir pikselin karşılığı **81 mm** — uyarısız, hatasız. Bu, modülün belgelenmiş
+38.108 mm sınıfının aynısı. `veFeadCoordLinkAfterDelete` (silme yolundan,
+`map.js` `deleteSelectedNodes`) silmeyi rozeti AÇIK'a çevirmekle aynı şey
+sayıyor: kutular koordinata döner. Geriye KAPALI bir kopya kaldıysa uzlaştırma
+YAPILMAZ.
+
+###### İki yan etki, ikisi de bilinçli
+
+**KENETLEME GERİ GELİR.** Kasnak sürüklenirken hizalama kenetlemesi kapalıydı,
+çünkü kutu KENARLARINI yapıştırmak koordinatı sessizce yutuyordu (ölçüldü:
+24.514 mm istenirken 3.940 mm). Bağ kapalıyken o gerekçe yok — kutu salt görsel,
+kenetleme klasik topolojilerdeki anlamına dönüyor ve yutacak bir mm yok.
+
+**KASNAK PANELİ SEBEBİ YAZIYOR.** Konum X/Y alanları normalde kutuyu da taşıyor;
+kapalıyken taşımıyor. Sessiz bırakılsaydı kullanıcı sayıyı yazar, kutu yerinde
+kalır ve **alanın bozuk olduğunu sanardı** — oysa model DEĞİŞTİ. Sağlıklı (bağ
+açık) durumda metin birebir eskisi: yanlış alarm yok.
+
+**ÖLÇÜLDÜ (gerçek tarayıcı, tek dosya `file://`, BMC):** palet girdisi "FEAD
+Araçları" kategorisinde ve `fead-analysis` kapsamında; düğüm 54×48, rozet
+`AÇIK` amber; kapatınca hiçbir şey oynamıyor; kapalıyken alternatör kutusu
+2736.41 → 2826.41 px (DOM dahil) giderken mm **−281 sabit**; yeniden açınca kutu
+2736.41'e dönüyor ve mm yine −281. Konsolda bu özelliğe ait hata yok.
+
+Kapı **on mutasyonla** ölçüldü, onu da kırmızı: sürükleme kapısını silme,
+varsayılanı ters çevirme (11 test), ters yön kapısını silme, `saveState`'i
+kaldırma, açarken mm←kutu yazma, KAPALI rozetini soluk griye çevirme,
+kenetlemeyi bağdan koparma, silme kancasını kaldırma, kasnak paneli uyarısını
+yutma, çok kopyada İLKİNİ kazandırma.
+
 ##### Gerçek çap hayaleti — KALDIRILDI (2026-08-26)
 
 > **EMEKLİ.** Kullanıcı bildirimi: *"topolojide bu bileşenlerin etrafına böyle
@@ -3917,6 +4035,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/fead-belts.test.js` | `js/fead-belts.js` + `js/fead-model.js` aday değerlendirmesi | **Kayış kataloğu**: listelerin sıralı/tekil/pozitif olması, aralıkların ContiTech beyanıyla çakışması (bir listenin yanlış profile yapışması ancak böyle yakalanır), en kısa boyun min. kasnak çevresinden büyük olması, `veFeadBeltStock`'un KOPYA döndürmesi. **Izgara bir kural**: en yakın adıma yuvarlama, aralık dışında kenetlenme, ızgarası olmayan profilde sessizce PK ızgarasının kullanılmaması. **Kod**: otomotiv ve endüstriyel yazımın ikisinin de çözülmesi, gidiş-dönüş, kaburga denetiminin yalnız verisi olan profilde hüküm vermesi. **Ölçülmüş boşluk**: 8PK 1715'in endüstriyel listede OLMAMASI (komşuları 65 mm uzakta) — kataloğun iki kümeli olmasının sebebi. **Uçtan uca**: serbest kipin gereken boyu → katalog ızgarası → sabit kip tabanı (kol 28.4271° · T 532.142 · hub 302.125) birebir; sığmayan adayın gerginlik YAZMAMASI (4.05e10 N sızmıyor), boy uzadıkça kol ve gerginliğin düşmesi, aday değerlendirmesinin çalışma noktası önbelleğini kirletmemesi |
 | `tests/unit/fead-belt-mode.test.js` | `js/fead-model.js` kayış kipi + `js/fead-core.js` hoşgörülü geometri | **Kayış boyu sabit değil**: kip çözümü ve geriye dönük uyumluluk (boyu olan eski proje `fixed`, boyu olmayan artık ÇÖZÜLÜYOR); sabit kipte tabanın BİREBİR korunması (kol 28.4271° · L 1715.0000 · T 532.142 · hub 302.125); **nominal kol açısı yay künyesinden, geometriden DEĞİL** — montaj merkezi ya da pivot yokken de türetilir, künye gerçekten eksikse NaN kalır (uydurulmaz) ve `direct` kol açısı kipinde serbest kayış NOMİNALE oturur, aralığın ortasına DEĞİL (eskiden kol 38.1174° · fallback true · uyarı 0); serbest kipte gerginliğin ankraj, boyun ÇIKTI olması ve iki kipin doğru modelde AYNI çalışma noktasına varması; sürüklerken çözümün kopmaması (−200…+40 mm, boy monoton). **Kenetleme**: kuşatılmış hedefte çekirdeğin çözümünün birebir dönmesi, erişilemeyen hedefte istisna yerine sınır + aralığın yazılması, sığmayan kayışta NOMİNAL kol açısına düşülüp ÖNERİLEN boyun serbest kipinkiyle aynı çıkması, kenetlenmişken uyuşmazlık uyarısının İKİNCİ KEZ basılmaması. **Hoşgörülü geometri**: kapanmayan çevrimin çözülüp `geomValid:false` ile yazılması, çekirdek varsayılanının hâlâ ATMASI, çakışan kasnakların tek gerçek durdurucu olması. **Üç sessiz hata**: `feasibleRelMax` ölçütü, `_geomOpt`'un sistem ömrünün başında kurulması, dejenereliğin SARIM değil TAKE-UP ile ölçülmesi |
 | `tests/unit/fead-model.test.js` | `js/fead-model.js` | **Köprü kapısı**: AG00686 MFSim KANVAS DÜĞÜMÜ olarak kurulup Gates sayılarını üretiyor mu (span %0.5, sarım 0.2°, Mean kol açısı 0.2°); temas tarafı üç katmanlı çözümü, sürücü rolü, `dia→od` göçü, ad tekilleştirme, hata çevirisi. **Güzergâh teşhisi**: tel silinince çözüm ARTIK aynı kalmıyor (eskiden kopuk kasnak sıraya sessizce ekleniyordu), kopuk kasnak adıyla bildiriliyor, kapanmayan zincir ve çatal (bir kasnaktan iki tel) sebebiyle yazılıyor, `veFeadRouteOrder` sözleşmesi (yerleştirici için bütün kasnaklar) korunuyor. Ayrıca **ters temas tarafının hata VERMEDİĞİNİ** belgeler (rozetin varlık nedeni). **Duty kapısı**: AG00686 duty tablosunun çıkış gerilmeleri ve hubload'ları %0.5 içinde; kW'ın kimlikle anahtarlanması (yeniden adlandırmada kaybolmuyor), sürücü gücünün toplamdan hesaplanması, ateşleme frekansı, yorulma dağılımının çapa bağlı olması, katalog oranının ÇAPTAN hesaplanması. **Sıcaklık kapısı**: satır başına °C → tek °C indirgemesi hasar-eşdeğer (tek sıcaklıkta birebir aynı, dağılımda aritmetik ortalamanın üstünde), ağırlık `dc·v`, açıkça girilen %0 sıfır ağırlıklı; **yorulma modeli** seçimi dağılıma geçer, mutlak ömre geçemez ve bu yazılır. **Burulma köprüsü**: gergi kasnak kütlesi ve KRANK MİLİ ataleti çekirdeğe geçiyor (ölü girdiydi), krank adla anahtarlanır, `analyze()` içindeki çift hesap kapalı, eksik atalet sessiz değil |
+| `tests/unit/fead-coordlink.test.js` | `js/fead-model.js` okuyucu + `js/cp-fead.js` kapıları + `js/map.js` silme kancası | **Konum Bağı**: düğüm yoksa bağ AÇIK (geriye dönük uyumun kendisi), `linked` yazılı değilse de AÇIK, çok kopyada KAPALI kazanır; sürükleme kapısı (TABAN çıpası: bağ düğümü YOKKEN alternatör +40/+25 px → +40/+25 mm, gergi merkezi −15/−10, orijin sürüklemesi 5 düğüm) ve kapalıyken **0**; kapı SAF fonksiyonun içinde DEĞİL (`veFeadSyncMmFromCanvas` doğrudan çağrılınca yine çalışır); **bağımsızlık SİMETRİK** — kapalıyken `veFeadPlaceFromCoords` da 0 döner ve panelden koordinat yazmak kutuyu oynatmaz; açarken kutu koordinata DÖNER, koordinat kutuya YAZILMAZ; **düğümü silmek bağı açar ve UZLAŞTIRIR** (kanca yokken 1 px sürükleme mm'yi 81 mm sıçratıyordu), geriye KAPALI kopya kalırsa uzlaştırma yapılmaz; rozet AÇIK amber / KAPALI mavi (ikisi de SATURE — soluk gri kullanıcıyı fark etmemeye davet ederdi), mousedown durduruluyor; panel kanvasla aynı alanı okur ve düğüme HİÇ yazmaz; kasnak paneli kapalıyken kutunun oynamayacağını YAZAR; sözleşme (0/0, `maxInstances:1`, FEAD araçlarının hepsinden küçük kutu, palet + `VE_MODULES` + `cp-core` dağıtımı) |
 | `tests/unit/cp-fead.test.js` | `js/cp-fead.js` + `js/components.js` | FEAD sunum katmanı: **yön gülü** (kenetleme, kesir olarak saklama, hareketsiz tıkın hiçbir şey yazmaması, kancanın yalnız kanvas/panelde kurulması); **şerit ÖLÇÜLMÜŞ bir çarpışmaya bağlı** — gül çizime çarpmıyorsa ayrılmaz (varsayılan kartta ayrılmıyor, taşımak hiçbir şey kazandırmıyor), çarpıyorsa AYRILIR ve dar kartta eski davranış birebir korunuyor; **gül etiket engelidir ve bu KOŞULSUZ** (taşınmışken de — engeli `!moved`e bağlamak, gül şemanın ortasına sürüklendiğinde korumayı kapatıyordu; ölçüldü: 256 konumda çakışma 3 ↔ 61), ölçüt çapa noktası değil etiket KUTUSU (çapa ölçütü mutasyondan GEÇİYORDU); **türetilen boyun KÖKENİ** — sağlıklı modelde metin değişmiyor (yanlış alarm yok), künye eksikse *"tedarikçiye verilecek boy DEĞİLDİR"* diyor, kol kenetlendiyse *"nominal açısına oturamadı"* diyor, ikisinde de sayı kırmızı + `?`, ve kenetlenmenin SEBEBİ Kayış Özellikleri panelinde basılıyor (`veFeadWarningBox` orada YOKTU); **kart ölçüsü** — aşılmış her varsayılan (60×56 ve 420×340) yükselir, listedeki hiçbir çift güncel ölçü olamaz, bilerek verilen ölçü korunur; **örnek KULLANIMA HAZIR** — "Başlangıç ve Örnekler" düğümü örnek kurulunca KALMAZ, "Rapor" düğümü kurulur ve sol şerit sırası Kayış Özellikleri → Çözücü → Rapor çıkar (sıra `veFeadExampleNodes`'un push sırasının gözlenebilir sonucu), kayıtlı BÜTÜN örneklerde; kanvas rozeti, `feadContact` varsayılanları, panel smoke testleri, alt-sistem sözleşmesi, `fead-*` tip tanımları; panelin HANGİ ALANLARI sorduğu (montaj merkezi ↔ serbest açı), servis faktörü hükmü; **kayışın kaburgalı yüzü** (diş yönü + aynalanmış çevrim), **telin komşuya bakan kenarı** (oran kuralı, elle taşınan portun kazanması) ve **`veFeadArrangeByCoords`** (kanvas mesafesi = mm mesafesi, Y TERS, kümenin ortalanması, koordinatsız kasnağın gizlenmemesi, araçların kümenin dışında kalması, koordinata DOKUNMAMASI, `veTidyLayout`'un devretmesi, `silent` kipinde saveState/toast'ın çağrılmaması, konumun 1 mm'ye KUANTALANMAMASI); **örnek kurucusu koordinatı yalanlamıyor** — `veFeadLoadExample` gerçek `createNode` ile koşturulup her kasnağın kutu merkezinin mm koordinatına oturması ölçülüyor (eski ölçekli yerleşimde sapma 38.108 mm) ve ilk sürüklemenin koordinatı KAYDIRMADIĞI, kayıtlı BÜTÜN örneklerde |
 | `tests/unit/cp-fead-report.test.js` | `js/cp-fead-report.js` + `tools/report-assets/fead-theory-source.html` | **Rapor içeriği**: Türkçe sayı biçimi (gerçek eksi, `—` ≠ 0), `wearPct` oran→yüzde çevrimi, sarım açılarının DERECE basılması, Σsarım=360 ve `L_pitch−L_eff=2πh_b` denetimlerinin belgede görünmesi, sürücü kW sütununun duty tablosunda OLMAMASI, çözülemeyen konumun `Err.` ile işaretlenmesi, `undefined`/`NaN`/`[object` sızmaması, "ortalama tork ≠ peak", sistem burulma modunun yokluğunun yazılması, uygunluk hükmünün servis faktörünü kullanması, şekil/tablo numaralarının boşluksuz ve her üretimde sıfırlanması, şablon tokenlarının tek kez geçmesi, içindekiler id'lerinin üreteçle aynı olması; **tasarım gerginliğinin kaynağı**: (8.x) denklem zincirinin ELLE ÇALIŞILABİLİR olması (çevrim çarpanı bir kez TERS yazılmıştı — basılan denklem 650 N yerine 2,13 N veriyordu), girdi ↔ türev envanteri, take-up'ın GİRDİ OLMADIĞI, tasarım gerginliğinin TÜRETİLDİĞİ (T = M/(dL/dθ) formülü ve sayısı belgede, "sorulmaz" yazılı, eski karşılaştırma tablosu YOK, eski kayıttaki designTensionN raporu etkilemiyor); **φ kuruluşu**: her satırın φ'sinin BASILAN iki θ'dan yeniden çıkması, Σd·φ=360, sarım ve φ İŞARET yaylarının örtük merkezinin kasnak merkezinde olması ve süpürmenin kısa yola normalize EDİLMEMESİ (198°'lik sarımda 162° çizerdi); **§8.9**: take-up'ın ANLIK türev olarak adlandırılması, ortalama eğimin ayrı basılması, monoton olmaması; **etiket yerleştirici**: çakışma, kilitli alan ve çember engeli; **teori**: (4.3) türetmesi, §5.1 ankraj paragrafı, §10 sembolleri, şablona gerçekten girmiş olması |
 | `tests/unit/fead-anim.test.js` | `js/cp-fead.js` animasyon + `js/fead-model.js` kinematik | **Kayış Yolu kartının animasyonu**: ω·r = v özdeşliği, ağır çekim katsayısının REFERANS devre bağlanması (seçili devre bağlansaydı seçici işlevsiz kalırdı — istenmeyen alternatif de koşturulup belgeleniyor), diş adımının çevreyi tam bölmesi, diş sayısının faz boyunca sabit kalması, bir adımlık fazın deseni birebir kendine getirmesi, dişlerin GİDİŞ yönünde ilerlemesi, kol açısal hızının `d·v/r` olması (sırttan temas edende ters) ve kol ucu çevresel hızının kayış hızına eşitliği (kasnakta kayma yok), animasyonun YALNIZ kanvas kartında olması, fazın düğüm kimliğinde durması (yeniden kurulumda kayış zıplamıyor), uzun duraklamada `dt` kırpması |
@@ -3948,7 +4067,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/e2e/viewer.spec.js` | `MFSim_Olcum_Goruntuleyici.html` | **Üretilen tek dosya**, `file://` üzerinden: açılış, içe aktarma, sürükle-bırak, birleştirme, tema, sıfır ağ isteği |
 | `tests/e2e/structural-geometry.spec.js` | Geometri bileşeni (uçtan uca) | **GERÇEK tarayıcı**: gömülü 62,8 MB wasm'ın worker'da açılıp derlenmesi → OCCT → **boolean** → panel künyesi → WebGL sahnesi; **7 gövdeli parça TEK KATI olarak geliyor** ve panel bunu yazıyor (worker'da, künyeye de giriyor); fareyle CAD YÜZÜ vurgusu (üçgen değil), ağ inceliği değişince üçgen değişip kimliklerin sabit kalması, STEP olmayan dosyanın sessizce yutulmaması, **ölçüm kaplamasının STEP alanında çekilip asılı kalmaması**; **arayüz donmuyor** — içe aktarma boyunca çizilen kare sayısı ana iş parçacığında ≤3, worker'da >20 (ölçümde 1 ↔ 91), panelin gerçekten worker'a gitmesi ve ilerleme kartının aşama değiştirip iş bitince kapanması; **kanvas rozeti** (boşken `STEP`, doluyken `⬡18`), **CAD yüz listesi** (18 satır; listeden tık → 3B'de vurgu, 3B'de gezinme → listede işaret, 3B'de tık → listede seçim, ikinci tık seçimi kaldırır, DÖNDÜRME seçimi bozmaz), **kaynağın yalnız dosyaya yazılması** (künye ve otomatik yedek kaynaksız); **görüntüleyicinin boyu** — parça yüklenince pencere ekranı kullanıyor, sol ray ile 3B kutusu AYNI yerde bitiyor (boşluk 290.6 → 0 px), kanvas o ölçüde kuruluyor ve içerik kaydırmıyor; **varsayılanlar** — incelik/kenar kontrolü panelde yok ve her içe aktarma 0.0005 ile geliyor, yüz listesi ve fare künyesi kullanıcı açana kadar çıkmıyor, kapatınca hiçbir işaret kalmıyor. Bu halkalar Node'da HİÇ koşmuyor |
 | `tests/e2e/results-txt-page.spec.js` | TXT rapor önizlemesi (yerleşim) | **GERÇEK tarayıcı**: iki bandın AYNI yerde bitmesi (ölçülen eski fark 12 px), başlıkların aynı punto, sayfanın 794 px = A4 olması, metnin tek blok / tek sol kenar kalması (eski: 43 blok, 10 kenar), 119 sütunluk tablonun sayfaya sığması (yatay kaydırma yok) ve dar raporun tavan puntoyla açılması. Rapor METNİ sahte — ölçülen şey kabuk; bu halkalar Node'da HİÇ koşmuyor |
-| `tests/e2e/fead-canvas-drag.spec.js` | FEAD kanvas ↔ mm zinciri (uçtan uca) | **GERÇEK tarayıcı**: fare sürüklemesi → `veAttachNodeDrag` → `veFeadSyncDrag` → mm → topoloji imzası → Kayış Yolu kartının yeniden kurulması → yeni L_eff. Node'da HİÇ koşmayan halkalar: gerçek `mousedown/mousemove/mouseup`, `canvasZoom` bölmesi, DOM'a yazılan `style.left`, kartın `innerHTML` ile kurulması. Kart sürüklerken CANLI tazeleniyor (bırakmayı beklemiyor), kayış kipi rozeti gerçek tıkla değişiyor ve çözüm kipe uyuyor, "Otomatik Düzenle" koordinatları silmiyor. **Örneğin yeni hâli**: kesikli çap hayaleti DOM'da HİÇ YOK, sol şerit `Kayış Özellikleri → Çözücü → Rapor` (başlangıç kutusu yok), kart 440×500 ve SVG'si `0 0 440 458`, kayış yolu 400 px'ten geniş — yani yön gülü şeridi AYRILMAMIŞ (ayrılsaydı 350 px olurdu). **Kenetleme kapısı**: `SNAP_ENABLED` açıkken bile kasnak istendiği kadar oynuyor (kapatılmasa 24.514 mm istenirken 3.940 mm olurdu — varsayılan kapalı olduğu için ancak açıkça açılarak yakalanıyor) |
+| `tests/e2e/fead-canvas-drag.spec.js` | FEAD kanvas ↔ mm zinciri (uçtan uca) | **GERÇEK tarayıcı**: fare sürüklemesi → `veAttachNodeDrag` → `veFeadSyncDrag` → mm → topoloji imzası → Kayış Yolu kartının yeniden kurulması → yeni L_eff. Node'da HİÇ koşmayan halkalar: gerçek `mousedown/mousemove/mouseup`, `canvasZoom` bölmesi, DOM'a yazılan `style.left`, kartın `innerHTML` ile kurulması. Kart sürüklerken CANLI tazeleniyor (bırakmayı beklemiyor), kayış kipi rozeti gerçek tıkla değişiyor ve çözüm kipe uyuyor, "Otomatik Düzenle" koordinatları silmiyor. **Konum Bağı**: rozet tıklanınca kapanıyor (kutu oynuyor, mm ve kartın `L`'si birebir sabit), yeniden açınca kutu koordinatına dönüyor ve `style.left` de tazeleniyor, kapalı bağda kenetleme geri geliyor, kapalı düğümü SİLMEK kutuları oturtuyor ve sonraki 1 px yine 1 mm ediyor (kanca yokken 81 mm ediyordu). **Örneğin yeni hâli**: kesikli çap hayaleti DOM'da HİÇ YOK, sol şerit `Kayış Özellikleri → Çözücü → Rapor` (başlangıç kutusu yok), kart 440×500 ve SVG'si `0 0 440 458`, kayış yolu 400 px'ten geniş — yani yön gülü şeridi AYRILMAMIŞ (ayrılsaydı 350 px olurdu). **Kenetleme kapısı**: `SNAP_ENABLED` açıkken bile kasnak istendiği kadar oynuyor (kapatılmasa 24.514 mm istenirken 3.940 mm olurdu — varsayılan kapalı olduğu için ancak açıkça açılarak yakalanıyor) |
 | `tests/e2e/measure-merge-drop.spec.js` | `js/measure-dropzone.js` + `js/trace-view.js` | MFSim'de sürükle-bırak ve çok eksenli birleştirme — araç performans VE takoz sekmesi |
 
 ## Sık Kullanılan Komutlar

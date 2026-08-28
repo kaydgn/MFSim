@@ -3028,6 +3028,10 @@ function deleteSelectedNodes() {
       if(selectedNodes.length === 0) return;
     }
   }
+  // Silinenlerin kopyası: aşağıda `selectedNodes` boşaltılıyor, ama silme
+  // sonrası uzlaştırmaları (FEAD Konum Bağı) NE silindiğini bilmek zorunda.
+  var _silinen = selectedNodes.slice();
+
   selectedNodes.forEach(function(node) {
     // Silinecek bağlantıları bul
     var deadConnIds = connections.filter(function(c) {
@@ -3077,6 +3081,10 @@ function deleteSelectedNodes() {
   // (bağlantıları doğrudan filtreliyor) aksi halde silinen aksesuarın eğrisi
   // Motor'da hayalet kayıp olarak kalırdı.
   if(typeof veSyncAllEngineAccessories === 'function') veSyncAllEngineAccessories();
+  // FEAD: Konum Bağı düğümü silinince bağ AÇILIR (düğüm yoksa varsayılan
+  // AÇIK) — kutular koordinatlarına oturtulmazsa sonraki İLK sürükleme
+  // birikmiş kaymanın tamamını modele yazar (ölçüldü: 1 px → 81 mm).
+  if(typeof veFeadCoordLinkAfterDelete === 'function') veFeadCoordLinkAfterDelete(_silinen);
   showEmptyProperties();
   updateAllConnections();
   updateNodeCount();
