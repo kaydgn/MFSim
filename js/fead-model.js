@@ -315,6 +315,58 @@ function veFeadAngleMode(td){
 // bugüne kadar kaydedilmiş her proje birebir eski davranışını korur.
 var VE_FEAD_BELT_MODES = ['fixed', 'free'];
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  KAYIŞ TİPİNE BAĞLI ÇIKTILAR — ayrı bir anahtar
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı isteği (2026-08-28): *"'kayış boyu' kullanılarak yapılan
+// hesaplamalar, diyagramlar vb şeyler, yani 'kayış tipi' özelinde gelen profil
+// sabitleri ile hesaplanan şeyler olmayacak. ŞİMDİLİK. İlerleyen zamanlarda
+// BELKİ kayış tipi sabit kabul ederek bir hesaplama yapabiliriz."*
+//
+// Zarf kipinde kayış boyu bir ÇIKTI, yani tasarım aşamasında kayış HENÜZ
+// SEÇİLMEMİŞTİR. O aşamada kayış katalogundan gelen sabitlerle hesap yapmak,
+// olmayan bir seçimi varsaymak olurdu — ve bu modülde en pahalı hata sınıfı
+// "makul ama yanlış" sayıdır: tablolar dolu görünür, hüküm verilir, okuyucu
+// neyin varsayıldığını bilmez.
+//
+// ── HANGİ ÇIKTI NEYE BAĞLI (tek tek ölçüldü) ────────────────────────────────
+//
+// | çıktı                        | kayış katalogundan gelen |
+// |------------------------------|--------------------------|
+// | B10 kayış ömrü               | effLength · massPerRibKgM×ribs · yorulma sabitleri |
+// | Kaburga yorulma dağılımı     | yorulma sabitleri (PK-2_2p-MT3 / PK-2_2a-MT3) |
+// | Açıklık doğal frekansları    | birim kütle (massPerRibKgM × ribs) |
+// | Çırpınma (flutter) hükmü     | aynı birim kütle |
+// | Konum tablosu zarfı          | tolerance · wearPct |
+//
+// ── KAPATILAMAYAN TEK ŞEY: hb / hr ──────────────────────────────────────────
+// Pitch yarıçapı `OD/2 + hb` (kaburgalı) ya da `OD/2 + hr` (sırttan); ikisi de
+// profil sabiti. PK'da hb = 1.2 mm, yani merkez mesafelerinde 2.4 mm'lik bir
+// fark. Bunlar olmadan TEĞET GEOMETRİSİ YOKTUR — kapatmak "kayışsız kayış
+// tahriki" demek olurdu. Panel bunu açıkça yazıyor: profil hâlâ soruluyor,
+// kapatılan şey profilin KATALOG SABİTLERİNE dayanan sonuçlar.
+//
+// VARSAYILAN VERİDEN ÇÖZÜLÜR: zarf kipinde 'none' (kayış henüz seçilmedi),
+// diğer kiplerde 'full' (bugüne kadarki davranış birebir). Kullanıcının açık
+// seçimi her ikisini de ezer.
+var VE_FEAD_BELT_DATA_MODES = ['full', 'none'];
+
+function veFeadBeltDataMode(beltData, angleMode){
+  var m = beltData && beltData.beltDataMode;
+  if(m === 'full' || m === 'none') return m;
+  return (angleMode === 'envelope') ? 'none' : 'full';
+}
+
+// Kapatılan çıktıların listesi — panel ve rapor bunu SEBEBİYLE basıyor.
+// "Sessizce yok" ile "bilerek kapalı" arasında dağlar kadar fark var.
+var VE_FEAD_BELT_DATA_OFF = [
+  'B10 kayış ömrü',
+  'Kaburga yorulma dağılımı',
+  'Açıklık doğal frekansları ve çırpınma hükmü',
+  'Kol konum tablosunun tolerans/aşınma zarfı'
+];
+
 // KAYIŞ KİPİ ZARF KİPİNDE KİLİTLİ. Gergi 'envelope' kipindeyken kayış boyu
 // yapısal olarak bir ÇIKTIDIR (bkz. veFeadBuildSystem), yani kayış düğümünün
 // kendi `lengthMode` alanı hükümsüz kalıyor. Panel ve kanvas rozeti bunu bilmek
@@ -1847,6 +1899,7 @@ function veFeadBuildSystem(nodeList, connList, opt){
   // serbestlik derecesini iki farklı yerden çözerdi.
   if(veFeadAngleMode(td) === 'envelope') beltMode = 'free';
   out.beltMode = beltMode;
+  out.beltDataMode = veFeadBeltDataMode(bd, veFeadAngleMode(td));
   var effLength = _feadNum(bd.effLength != null ? bd.effLength : bd.length, 0);
   if(beltMode === 'fixed' && !(effLength > 0))
     out.errors.push('Kayış efektif boyu girilmedi (Kayış Özellikleri panelinde).');
@@ -2570,10 +2623,25 @@ function veFeadAnalyze(build, opts){
     out.warnings.push('Burulma modeli: ' + veFeadTranslateError(e && e.message));
   }
 
+  // ── KAYIŞ TİPİNE BAĞLI ÇIKTILAR KAPALI MI? ───────────────────────────────
+  // Kapatılan şey hesap değil VERİNİN VARLIĞI: kayış henüz seçilmemişse
+  // katalog sabitleriyle üretilen sayı bir varsayımdır. Sessizce atlamıyoruz —
+  // `beltDataOff` listesi sonuca giriyor ve panel/rapor sebebini basıyor
+  // (modülün kendi kuralı: geçerlilik sınırı sonucun İÇİNDE taşınır).
+  var beltData = (opts.beltDataMode || build.beltDataMode || 'full');
+  out.beltDataMode = beltData;
+  if(beltData === 'none'){
+    out.beltDataOff = VE_FEAD_BELT_DATA_OFF.slice();
+    // Açıklık frekansları ve çırpınma birim kütleden geliyor; duty satırlarının
+    // içinden çıkarılıyor ki rapor "0 Hz" gibi bir sayı basmasın.
+    if(out.analysis && Array.isArray(out.analysis.duty))
+      out.analysis.duty.forEach(function(d){ delete d.frequencies; });
+  }
+
   var fatModel = opts.fatigueModel || VE_FEAD_LIFE_FATIGUE_MODEL;
   out.fatigueModel = fatModel;
 
-  if(duty.length){
+  if(duty.length && beltData !== 'none'){
     try {
       out.fatigue = FEADCore.ribFatigueDistribution(build.sys, {
         duty: duty, fatigueModel: fatModel
@@ -2706,6 +2774,9 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadFreeAngleFrom: veFeadFreeAngleFrom, veFeadAngleMode: veFeadAngleMode,
     veFeadArmEnvelope: veFeadArmEnvelope, _feadEnvSample: _feadEnvSample,
     veFeadBeltModeLocked: veFeadBeltModeLocked,
+    veFeadBeltDataMode: veFeadBeltDataMode,
+    VE_FEAD_BELT_DATA_MODES: VE_FEAD_BELT_DATA_MODES,
+    VE_FEAD_BELT_DATA_OFF: VE_FEAD_BELT_DATA_OFF,
     VE_FEAD_ENV_TRAVEL_MULT: VE_FEAD_ENV_TRAVEL_MULT,
     VE_FEAD_ENV_COARSE_DEG: VE_FEAD_ENV_COARSE_DEG,
     VE_FEAD_BELT_MODES: VE_FEAD_BELT_MODES, veFeadBeltMode: veFeadBeltMode,

@@ -1315,6 +1315,35 @@ function getFeadBeltPropertiesHTML(node){
         + '(0.007 = %0.70). Konum tablosu bu üç sayıdan kurulur: Replace = L+tol+aşınma·L, '
         + 'Max = L+tol, Mean = L, Min = L−tol.'));
 
+  // ── KAYIŞ TİPİNE BAĞLI ÇIKTILAR ANAHTARI ────────────────────────────────
+  var _bdm = (typeof veFeadBeltDataMode === 'function')
+    ? veFeadBeltDataMode(node.data, (typeof veFeadBeltModeLocked === 'function'
+        && veFeadBeltModeLocked()) ? 'envelope' : 'mount') : 'full';
+  var _kapali = (_bdm === 'none');
+  html += _feadCard('Kayış Tipine Bağlı Çıktılar',
+      _kapali ? 'KAPALI' : 'açık',
+      _kapali ? 'var(--text-muted)' : 'var(--accent-success)',
+      _feadSelect(node, 'Katalog sabitleriyle hesap', 'beltDataMode', [
+        ['none', 'KAPALI — kayış henüz seçilmedi'],
+        ['full', 'Açık — seçilen kayışın sabitleriyle hesapla']
+      ], _bdm)
+    + (_kapali
+        ? _feadHint('Şu çıktılar <b>üretilmiyor</b>: '
+            + _feadEsc((typeof VE_FEAD_BELT_DATA_OFF !== 'undefined'
+                ? VE_FEAD_BELT_DATA_OFF : []).join(' · '))
+            + '. Dördü de kayış katalogundan gelen sabitlere dayanıyor (efektif '
+            + 'boy · birim kütle · yorulma sabitleri · tolerans/aşınma) ve kayış '
+            + 'henüz seçilmemişken üretilen sayı bir <b>varsayım</b> olurdu.<br><br>'
+            + '<b>Profil (PK/PJ/…) yine soruluyor</b> ve kapatılamaz: pitch '
+            + 'yarıçapı <code>OD/2 + h<sub>b</sub></code>, yani teğet geometrisi '
+            + 'profil sabitine dayanıyor (PK’da h<sub>b</sub> = 1,2 mm → merkez '
+            + 'mesafelerinde 2,4 mm). Kapatılan şey profil değil, profilin '
+            + '<b>katalog sonuçları</b>.')
+        : _feadHint('Ömür, yorulma dağılımı, açıklık frekansları ve kol konum '
+            + 'zarfı seçilen kayışın katalog sabitleriyle hesaplanıyor. '
+            + 'Geçerlilik sınırları (B10 çap penceresi, yorulma modeli) sonucun '
+            + 'kendi içinde yazılı.')));
+
   html += veFeadBeltCatalogCard(node, serbest);
 
   html += _feadCard('Malzeme', 'opsiyonel', 'var(--accent-success)',

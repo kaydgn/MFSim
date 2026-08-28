@@ -549,3 +549,115 @@ describe('rapor — zarf kipinde kayış boyu ÇIKTI tarafında', () => {
     expect(m).toMatch(/Gergi pivotu/);
   });
 });
+
+/* ═══════════════ 6) KAYIŞ TİPİNE BAĞLI ÇIKTILAR — ŞİMDİLİK KAPALI ═══════ */
+describe('kayış tipine bağlı çıktılar', () => {
+  function coz(zarf, override) {
+    const pack = veFeadExampleNodes(KEY);
+    const ns = pack.nodes.map((n) => ({
+      id: n.id, type: n.type, def: componentDefs[n.type],
+      customName: n.customName, data: JSON.parse(JSON.stringify(n.data)),
+    }));
+    if (zarf) ZARF(ns.find((n) => n.type === 'fead-tensioner').data);
+    if (override) ns.find((n) => n.type === 'fead-belt').data.beltDataMode = override;
+    const build = veFeadBuildSystem(ns, pack.connections);
+    const solv = ns.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver)[0];
+    return { build, R: veFeadAnalyze(build, {
+      rows: veFeadDutyRows(solv), cylinders: 6, fatigueModel: 'PK-2_2p-MT3' }), ns };
+  }
+
+  test('kip çözümü: zarfta none, diğerlerinde full, açık seçim ezer', () => {
+    expect(veFeadBeltDataMode({}, 'envelope')).toBe('none');
+    expect(veFeadBeltDataMode({}, 'mount')).toBe('full');
+    expect(veFeadBeltDataMode({}, 'direct')).toBe('full');
+    expect(veFeadBeltDataMode({ beltDataMode: 'full' }, 'envelope')).toBe('full');
+    expect(veFeadBeltDataMode({ beltDataMode: 'none' }, 'mount')).toBe('none');
+  });
+
+  test('KAPALIYKEN ömür, yorulma ve açıklık frekansları ÜRETİLMİYOR', () => {
+    const { R } = coz(true);
+    expect(R.ok).toBe(true);
+    expect(R.beltDataMode).toBe('none');
+    expect(R.life).toBeNull();
+    expect(R.fatigue).toBeNull();
+    expect(R.analysis.duty.length).toBeGreaterThan(0);
+    R.analysis.duty.forEach((d) => { expect(d.frequencies).toBeUndefined(); });
+    // …ama kalan zincir ÇALIŞIYOR: gerilme, hubload, kayma, tork
+    R.analysis.duty.forEach((d) => {
+      expect(d.perPulley.length).toBeGreaterThan(0);
+      expect(d.hubloads.length).toBeGreaterThan(0);
+      expect(d.slip.length).toBeGreaterThan(0);
+    });
+  });
+
+  test('SESSİZ DEĞİL: kapatılanlar adıyla listeleniyor', () => {
+    const { R } = coz(true);
+    expect(Array.isArray(R.beltDataOff)).toBe(true);
+    expect(R.beltDataOff.length).toBe(4);
+    expect(R.beltDataOff.join(' ')).toMatch(/B10/);
+    expect(R.beltDataOff.join(' ')).toMatch(/frekans/i);
+  });
+
+  test('AÇIKKEN hepsi geri geliyor — kapatma gerçekten bir fark', () => {
+    const { R } = coz(true, 'full');
+    expect(R.beltDataMode).toBe('full');
+    expect(R.beltDataOff).toBeUndefined();
+    expect(R.life).toBeTruthy();
+    expect(R.fatigue).toBeTruthy();
+    R.analysis.duty.forEach((d) => { expect(d.frequencies).toBeTruthy(); });
+  });
+
+  test('GERİYE DÖNÜK: mount kipindeki eski kayıt full kalıyor', () => {
+    const { R } = coz(false);
+    expect(R.beltDataMode).toBe('full');
+    expect(R.life).toBeTruthy();
+    expect(R.fatigue).toBeTruthy();
+  });
+
+  test('PROFİL KAPATILMIYOR — geometri hâlâ hb/hr ile çözülüyor', () => {
+    const kapali = coz(true).build;
+    const acik = coz(true, 'full').build;
+    // Aynı kol açısı, aynı geometri: anahtar sayıları DEĞİŞTİRMİYOR.
+    expect(kapali.armAbsDeg).toBeCloseTo(acik.armAbsDeg, 6);
+    expect(kapali.beltLengthMm).toBeCloseTo(acik.beltLengthMm, 6);
+    expect(kapali.springTensionN).toBeCloseTo(acik.springTensionN, 6);
+    // ve pitch yarıçapı gerçekten hb taşıyor (OD/2 değil)
+    const p = kapali.sys.pulleys.find((x) => !x.tensioner);
+    expect(p.rPitch).toBeGreaterThan(p.rEff);
+  });
+
+  test('RAPOR kapatılanları adıyla ve sebebiyle yazıyor', () => {
+    const { R } = coz(true);
+    R.build = R.build || null;
+    // BELGENİN KENDİSİNDEN okunuyor, üreteciden değil: kutuyu doğrudan çağıran
+    // bir test, onu §8'den düşüren mutasyonu GEÇİRİYORDU.
+    R.pulleyNames = R.build && R.build.names;
+    R.serviceFact = 1.3;
+    const h = RP._frSection8(R, { id: 'rep1', type: 'fead-report', data: {} });
+    expect(h).toMatch(/YER ALMIYOR/);
+    expect(h).toMatch(/B10 kayış ömrü/);
+    expect(h).toMatch(/kapatılamaz/);
+    // açıkken kutu HİÇ basılmıyor (yanlış alarm yok)
+    const a = coz(true, 'full'); a.R.pulleyNames = a.build.names; a.R.serviceFact = 1.3;
+    expect(RP._frSection8(a.R, { id: 'r2', type: 'fead-report', data: {} }))
+      .not.toMatch(/YER ALMIYOR/);
+    expect(RP._frBeltDataBox(a.R)).toBe('');
+  });
+
+  test('panel anahtarı ve KAPATILANLARIN listesi kayış panelinde', () => {
+    const pack = veFeadExampleNodes(KEY);
+    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    ZARF(pack.nodes.find((n) => n.type === 'fead-tensioner').data);
+    global.nodes = pack.nodes; global.connections = pack.connections;
+    const belt = pack.nodes.find((n) => n.type === 'fead-belt');
+    const h = fead.getFeadBeltPropertiesHTML(belt);
+    expect(h).toMatch(/Kayış Tipine Bağlı Çıktılar/);
+    expect(h).toMatch(/id="ve-fead-beltDataMode-/);
+    expect(h).toMatch(/B10 kayış ömrü/);
+    expect(h).toMatch(/Profil .* yine soruluyor/);
+    // açıkken metin değişiyor
+    belt.data.beltDataMode = 'full';
+    const h2 = fead.getFeadBeltPropertiesHTML(belt);
+    expect(h2).not.toMatch(/üretilmiyor/);
+  });
+});

@@ -2890,9 +2890,52 @@ künyeyi uygulamama.
 > `'I'.toLowerCase() === 'i'` (Türkçe'de `'ı'` olmalı), yani ancak katlamayla
 > bulunuyor.
 
-**Sırada:** kayış tipi profil sabitlerine bağlı çıktıların ayrılması
-(B10 ömrü · kaburga yorulma dağılımı · açıklık frekansları — üçü de
-`massPerRibKgM × ribs` ve efektif boy üzerinden kayış katalogundan geliyor).
+##### KAYIŞ TİPİNE BAĞLI ÇIKTILAR — ŞİMDİLİK KAPALI (2026-08-28)
+
+Kullanıcı isteği: *"'kayış boyu' kullanılarak yapılan hesaplamalar, diyagramlar
+vb şeyler, yani 'kayış tipi' özelinde gelen profil sabitleri ile hesaplanan
+şeyler olmayacak. ŞİMDİLİK. İlerleyen zamanlarda BELKİ kayış tipi sabit kabul
+ederek bir hesaplama yapabiliriz."*
+
+Zarf kipinde kayış boyu bir ÇIKTI, yani tasarım aşamasında kayış **henüz
+seçilmemiştir**. O aşamada katalog sabitleriyle hesap yapmak olmayan bir seçimi
+varsaymak olurdu — ve bu modülde en pahalı hata sınıfı "makul ama yanlış"
+sayıdır: tablolar dolu görünür, hüküm verilir, okuyucu neyin varsayıldığını
+bilmez.
+
+| kapatılan çıktı | kayış katalogundan gelen |
+|---|---|
+| B10 kayış ömrü | `effLength` · `massPerRibKgM × ribs` · yorulma sabitleri |
+| Kaburga yorulma dağılımı | yorulma sabitleri (PK-2_2p-MT3 / PK-2_2a-MT3) |
+| Açıklık doğal frekansları + çırpınma | birim kütle (`massPerRibKgM × ribs`) |
+| Kol konum tablosunun zarfı | `tolerance` · `wearPct` |
+
+**KAPATILAMAYAN TEK ŞEY: `hb` / `hr`.** Pitch yarıçapı `OD/2 + hb` (kaburgalı)
+ya da `OD/2 + hr` (sırttan); ikisi de profil sabiti. PK'da `hb = 1,2 mm`, yani
+merkez mesafelerinde 2,4 mm'lik fark. Bunlar olmadan **teğet geometrisi
+yoktur** — kapatmak "kayışsız kayış tahriki" demek olurdu. Panel ve rapor bunu
+açıkça yazıyor: kapatılan şey profil değil, profilin **katalog sonuçları**.
+
+**VARSAYILAN VERİDEN ÇÖZÜLÜR** (`veFeadBeltDataMode`): zarf kipinde `none`,
+diğer kiplerde `full` — yani bugüne kadarki her kayıt davranışını birebir
+koruyor (testli). Kullanıcının açık seçimi ikisini de ezer.
+
+**SESSİZ DEĞİL:** kapatılanlar `beltDataOff` olarak sonuca giriyor, panel
+listeliyor, rapor §8'in başında *"Kayış tipine bağlı çıktılar bu belgede YER
+ALMIYOR"* kutusunu basıyor. Bir özet belgenin en pahalı sessiz hatası,
+İÇERMEDİĞİ bir kontrolün yapıldığı izlenimini bırakmasıdır.
+
+Kapı **altı mutasyonla** ölçüldü, altısı da kırmızı: zarf kipinde yine `full`
+verme, kapalıyken ömür/yorulmayı yine üretme, frekansları bırakma, kapatılanlar
+listesini boşaltma, panel anahtarını başlıksız bırakma, rapordan kutuyu düşürme.
+
+> Altıncısı **ilk turda YEŞİL kaldı** — kapı `_frBeltDataBox`'ı doğrudan
+> çağırıyordu, `_frSection8`'in onu BASTIĞINI ölçmüyordu. Aynı oturumda
+> **üçüncü kez** aynı ders: kapı ÜRETİLEN YÜZEYE bakmalı, üreticiye değil.
+
+**Sırada:** kullanıcı kayışı seçtikten sonra anahtarı açıp katalog sonuçlarını
+geri almanın akışı (bugün elle yapılıyor); ve zarf çözümünün Sonuçlar
+sayfasında kanal olarak yayını.
 
 
 
