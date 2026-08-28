@@ -220,13 +220,30 @@ function gatesPdfPages(file) {
 function gatesPdfText(file) { return gatesPdfPages(file).join('\n'); }
 
 /**
+ * Etiketi metinde bulur ve BİTİŞ konumunu döndürür (yoksa -1).
+ *
+ * TİRE AYRI ÇİZİM ÇAĞRISIDIR — eksi işaretiyle aynı olgu. Aynı alanın etiketi
+ * bir raporda `Spring Pre-Load Nm` tek parça, ötekinde `Spring Pre` + `-` +
+ * `Load Nm` olarak bölünmüş. Düz `indexOf` ikinci gruptaki raporlarda etiketi
+ * BULAMIYOR ve değer sessizce `null` dönüyordu — "bu raporda ön yük yok" gibi
+ * okunur, oysa var (ölçüldü: on raporun altısı).
+ */
+function labelEnd(text, label) {
+  const i = text.indexOf(label);
+  if (i >= 0) return i + label.length;
+  const pat = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/-/g, '\\s*-\\s*');
+  const m = new RegExp(pat).exec(text);
+  return m ? m.index + m[0].length : -1;
+}
+
+/**
  * `etiket`ten SONRAKİ ilk sayıyı döndürür. Ölçüt sayfa NUMARASI değil
  * ETİKETİN KENDİSİ: alıntı belgelerde numaralar kayıyor.
  */
 function numberAfter(text, label) {
-  const i = text.indexOf(label);
-  if (i < 0) return null;
-  const rest = text.slice(i + label.length, i + label.length + 200);
+  const e = labelEnd(text, label);
+  if (e < 0) return null;
+  const rest = text.slice(e, e + 200);
   // Burada kalıp ESNEK olmalı: değer hücresi `356 (80 lbf)` gibi birim de
   // taşıyabiliyor. Sütun okuyan `numbersAfter` ise KATI (tam satır) — ikisi
   // ayrı iş, tek bir kalıba indirilirse biri sessizce yanlış sayıyı alır

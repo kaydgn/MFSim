@@ -200,3 +200,113 @@ describe('Gates arşivi — belge bütünlüğü', () => {
     });
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════════
+//  GERGİ KÜNYE KÜTÜPHANESİ — kaynağına bağlı
+// ══════════════════════════════════════════════════════════════════════════
+// `js/fead-tensioners.js` künyeleri `tests/fixtures/fead-validation.js`'ten
+// çıkarılmıştı; arşiv kurulunca ONUNU da asıl raporuna karşı ölçmek mümkün
+// oldu. Kütüphanenin kendi testi (fead-tensioners.test.js) iç tutarlılığa
+// bakıyor; BURASI kaynağa bakıyor.
+describe('gergi künye kütüphanesi — arşive karşı', () => {
+  const TL = require('../../js/fead-tensioners.js');
+  // Kütüphane anahtarı → arşiv dosyası. AG00976'nın dördü arşivde YOK.
+  const ARSIV = {
+    'AG00879':      STATIK['AG00879'],
+    'AG00894':      STATIK['AG00894'],
+    'AG00902-1300': STATIK['AG00902-1300'],
+    'AG00902-1275': STATIK['AG00902-1275'],
+    'AG00686':      STATIK['AG00686'],
+    'AG00686-1520': STATIK['AG00686-1520'],
+    'AG0868-8PK':   STATIK['AG0868'],
+    'AG0868-6PK':   STATIK['AG0868-6PK'],
+    'AG0868-4PK':   STATIK['AG0868-4PK'],
+    'AG00810':      STATIK['AG00810'],
+  };
+  const geo = (key) => sayfa(ARSIV[key], 'Geometric Analysis, Sheet 1 of 2');
+
+  test('kol · yay oranı · çalışma momenti: on kayıt raporuyla birebir', () => {
+    const bad = [];
+    let checked = 0;
+    TL.veFeadTensionerList().forEach((r) => {
+      if (!ARSIV[r.key]) return;
+      const t = geo(r.key);
+      [['Arm Length mm', r.armLen, 0.05],
+       ['Spring Rate Nm/deg', r.rateNm, 0.0005],
+       ['Spring Mean Load Nm', r.meanNm, 0.005]].forEach(([lab, val, tol]) => {
+        const got = numberAfter(t, lab);
+        checked++;
+        if (got == null || Math.abs(got - val) > tol) bad.push(`${r.key} ${lab}: ${val} ↔ ${got}`);
+      });
+    });
+    expect(bad).toEqual([]);
+    expect(checked).toBe(30);
+  });
+
+  // ÖN YÜK: dokuz raporda YAZIYOR, AG00810'da YOK ve türetilmiş. Kayıt bunu
+  // `preloadDerived` ile söylüyor; söylemeseydi okuyan kişi 11.561'i raporun
+  // kendi sayısı sanırdı.
+  test('ön yük: ölçülen dokuzu birebir, AG00810 TÜRETİLMİŞ diye işaretli', () => {
+    const bad = [];
+    TL.veFeadTensionerList().forEach((r) => {
+      if (!ARSIV[r.key]) return;
+      const got = numberAfter(geo(r.key), 'Spring Pre-Load Nm');
+      if (r.preloadDerived) {
+        if (got != null) bad.push(`${r.key}: türetilmiş deniyor ama raporda VAR (${got})`);
+        return;
+      }
+      if (got == null) bad.push(`${r.key}: raporda ön yük YOK ama kayıt türetilmiş demiyor`);
+      else if (Math.abs(got - r.preloadNm) > 0.005) bad.push(`${r.key} ön yük: ${r.preloadNm} ↔ ${got}`);
+    });
+    expect(bad).toEqual([]);
+    expect(TL.veFeadTensionerList().filter((r) => r.preloadDerived).map((r) => r.key)).toEqual(['AG00810']);
+  });
+
+  // KAYIŞ GENİŞLİĞİ künyenin hangi kayışla ölçüldüğünü söyler (`meanNm` onun
+  // için geçerli). AG00810 bir dönem 8 yazıyordu; raporu 10PK1215HD.
+  test('kaburga sayısı raporun kendi künyesiyle aynı', () => {
+    const bad = [];
+    TL.veFeadTensionerList().forEach((r) => {
+      if (!ARSIV[r.key]) return;
+      const got = numberAfter(geo(r.key), '# of Ribs / Cord Material');
+      if (got !== r.ribs) bad.push(`${r.key}: kütüphane ${r.ribs} ↔ rapor ${got}`);
+    });
+    expect(bad).toEqual([]);
+    expect(TL.veFeadTensionerOf('AG00810').ribs).toBe(10);
+  });
+
+  // PARÇA NUMARASI RAPORDA YAZIYOR — kütüphanenin künyesi bir dönem
+  // "Gates raporları parça numarasını yazmıyor" diyordu; on raporun onunda da
+  // Drive Notes alanında duruyor ve DÖRT ayrı kod var.
+  test('parça kodu raporun Drive Notes alanından doğrulanıyor', () => {
+    const bad = [];
+    let n = 0;
+    TL.veFeadTensionerList().forEach((r) => {
+      if (!ARSIV[r.key]) return;
+      n++;
+      if (!r.part) { bad.push(`${r.key}: parça kodu yok`); return; }
+      if (geo(r.key).indexOf(r.part) < 0) bad.push(`${r.key}: ${r.part} raporda geçmiyor`);
+    });
+    expect(bad).toEqual([]);
+    expect(n).toBe(10);
+    const kod = new Set(TL.veFeadTensionerList().filter((r) => r.part).map((r) => r.part));
+    expect(Array.from(kod).sort()).toEqual(['E9843', 'T38519', 'T38624', 'T38665']);
+  });
+
+  // DOĞRULANAMAYAN KOD YAZILMAZ: AG00976'nın PDF'i arşivde yok.
+  test('arşivde PDF\'i olmayan kayıt parça kodu TAŞIMAZ', () => {
+    TL.veFeadTensionerList().filter((r) => !ARSIV[r.key])
+      .forEach((r) => expect(r.part).toBeUndefined());
+  });
+
+  // Drive Notes BAĞIL AÇIYI da yazıyor ve künyeden hesaplanan (mean−pre)/rate
+  // ile tutuyor — künyenin iç tutarlılığının kaynaktan bağımsız kanıtı.
+  test('raporun yazdığı bağıl açı, künyeden hesaplananla tutuyor', () => {
+    [['AG0868-4PK', 15], ['AG0868-6PK', 21], ['AG0868-8PK', 28]].forEach(([key, yazan]) => {
+      const t = geo(key);
+      expect(t).toMatch(new RegExp('@\\s*' + yazan + '\\s*°'));
+      const r = TL.veFeadTensionerOf(key);
+      expect(TL.veFeadTenRelNom(r)).toBeCloseTo(yazan, 0);
+    });
+  });
+});

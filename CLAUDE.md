@@ -3067,10 +3067,55 @@ Kullanıcı isteği: *"Bu otomatik gergi özelliklerini de Gates raporlarından
 kalibre ederek çekeceğiz."* Kalıp `fead-belts.js` ile aynı: DOM'suz saf veri,
 panel yalnız okur.
 
-**PARÇA NUMARASI UYDURULMADI.** Gates raporları gerginin parça numarasını
-yazmıyor; tek bilinen `E9843` ve o da tek bir aracın montaj çiziminden geliyor.
-Kayıtlar **kaynak raporla** adlandırıldı — uydurulmuş bir numara, kullanıcının
-tedarikçiye yanlış bir kod söylemesi demekti.
+**PARÇA NUMARASI UYDURULMADI** ve kayıtlar **kaynak raporla** adlandırıldı;
+anahtar hangi ölçümden geldiğini söyler.
+
+> **DÜZELTME — parça numarası RAPORDA VAR.** Bu paragraf bir dönem *"Gates
+> raporları gerginin parça numarasını yazmıyor; tek bilinen `E9843` ve o da tek
+> bir aracın montaj çiziminden geliyor"* diyordu. `docs/gates-reports/pdf/`
+> arşivi kurulunca ÖLÇÜLDÜ ve tutmadı: **on raporun onunda da** kod raporun
+> kendi **Drive Notes** alanında yazıyor, üstelik **dört ayrı kod**:
+>
+> ```
+> Tensioner T38624; CW; 24.6Nm          E9843, 22Nm@27°, CCW@115/260
+> Tensioner Gates T38665; 31Nm          T38519 (29.5Nm): CCW@-303/7
+> ```
+>
+> Kodlar artık `part` alanında. Arşivde PDF'i olmayan **dört AG00976 kaydı
+> `part` TAŞIMIYOR** — doğrulanamayan bir kod yazmak tam da kaçınılmak istenen
+> şey olurdu; kapı bunu ayrıca tutuyor.
+
+Aynı alan bir şey daha ele verdi: Drive Notes **bağıl açıyı** da yazıyor
+(`E9843/16Nm@15°` · `/19Nm@21°` · `/22.5Nm@28°`) ve bunlar künyeden hesaplanan
+`(mean−pre)/rate` ile birebir tutuyor (`15.07 · 20.99 · 27.96`) — künyenin iç
+tutarlılığının **kaynaktan bağımsız** kanıtı.
+
+###### İKİ VERİ KUSURU — arşive karşı ölçülünce çıktı
+
+| Kusur | Neydi | Rapor ne diyor |
+|-------|-------|----------------|
+| `AG00810.ribs` | **8** | **10** (`10PK1215HD`). Alanın kendi tanımı *"künyenin ölçüldüğü kayış genişliği — `meanNm` bunun için geçerli"*, yani yanlış genişlik yanlış çalışma momenti demek |
+| `AG00810.preloadNm` | `11.561`, notu yalnız *"bandın üstünde"* | Raporda **HİÇ YOK** — fixture'ın kendi künyesinde *"mean torktan türetildi"* yazılı. Artık `preloadDerived:true` ile işaretli; işaretsiz hâlinde okuyan kişi onu raporun sayısı sanırdı |
+
+**`ribs` kusuru BUGÜN ÇIKTIYI DEĞİŞTİRMİYOR ve bunu söylemek önemli:** bant
+hesabı (`relNom8PK`) `ribs === 8` süzgecinden sonra bir de `rel < 30` kesiyor
+ve AG00810'un 37.1°'si zaten oradan eleniyor — düzeltmeden önce ve sonra bant
+birebir `27.10–29.62`. Yani `<30` kesmesi, `ribs` alanının yapması gereken işi
+yapıyordu.
+
+###### Kütüphane ARŞİVE bağlı (`tests/unit/gates-archive.test.js`)
+
+Künyeler `tests/fixtures/fead-validation.js`'ten çıkarılmıştı; arşiv kurulunca
+onu da **asıl raporuna** karşı ölçmek mümkün oldu. Kütüphanenin kendi testi iç
+tutarlılığa bakar, bu kapı **kaynağa**: on kaydın kol/oran/moment değerleri
+(30 sayı) birebir, ön yükün dokuzu birebir ve onuncusu türetilmiş diye
+işaretli, kaburga sayısı raporun künyesiyle aynı, parça kodu Drive Notes'ta
+gerçekten geçiyor.
+
+Kapı **altı mutasyonla** ölçüldü, altısı da kırmızı: `ribs`'i 8'e geri alma,
+türetilmiş ön yük işaretini kaldırma, bir parça kodunu yanlış yazma,
+doğrulanamayan kayda kod uydurma, bir yay oranını kaydırma, okuyucudaki
+tire-bölünmesi düzeltmesini kaldırma.
 
 ###### HANGİ ALAN PARÇANIN, HANGİSİ MONTAJIN — ÖLÇÜLDÜ
 
@@ -4673,7 +4718,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/mount-results-tab.test.js` | `js/results.js` + `js/graphics.js` | Takoz çözüm sekmesi, tek X ekseni kuralı, pano uzlaştırma |
 | `tests/unit/mount-results-publish.test.js` | `js/cp-mount.js` | Çözümün panoya yayını; alt-topoloji çökertme regresyonu |
 | `tests/unit/fead-core.test.js` | `js/fead-core.js` + `tests/fixtures/fead-validation.js` | **FEAD çekirdeğinin doğrulama kapısı**: 17 Gates raporu / 2095 değer (çalışma %0.5, Load dahil %1.5, kol açısı 0.2°), 8 koruma mekanizması, SPEC §9 yapısal özdeşlikleri (sarım değişmezi, `L_pitch−L_eff=2π·hb`, çevrim kapanışı, sürücü gücü), UMD tarayıcı köprüsü; **burulma modeli**: yapısal özdeşlikler (tam 1 rijit cisim modu, take-up özdeşliği %0.01, yalnız gergi komşusu spanlar) + Gates "System Resonance (Mode 1)" kalibrasyonu (5 sistem RMS <%8, 4/6/8PK kaburga ölçeklemesi) |
-| `tests/unit/gates-archive.test.js` | `docs/gates-reports/pdf/` + `tests/helpers/gates-pdf.js` + `tests/fixtures/fead-validation.js` | **Arşiv KAPISI — testler Gates PDF'lerini doğrudan okuyor.** Okuyucu saf Node + `zlib` (yeni bağımlılık yok) ve üç sessiz kusuru çözmek zorunda: font BAŞINA ToUnicode (birleştirme dört raporda çöp metin üretiyor — glif 44 → `space`/`A`/`#`/`@`/`G`), eksi işaretinin AYRI çizim çağrısı olması (`["-","72.00"]` → kaçırılırsa kasnak aynalanır), nesne akışları (ObjStm — AG00894'te tek font bile bulunamıyor). Fixture'ın **284** statik değeri (yerleşim · çap · açıklık · sarım · gergi künyesi) on raporun tamamında **0 uyuşmazlıkla** geri üretiliyor. Belge bütünlüğü: `Page N of M` ile alıntı tespiti — üç rapor alıntı, yedisi tam (AG00879'un sayfa AĞACI 5 gösteriyor ama 12 sayfa da içinde). Altbilgi tek satır ve birleşik (`Page 1 of 119.37.0.0`) → düz kalıp **119** okur |
+| `tests/unit/gates-archive.test.js` | `docs/gates-reports/pdf/` + `tests/helpers/gates-pdf.js` + `tests/fixtures/fead-validation.js` | **Arşiv KAPISI — testler Gates PDF'lerini doğrudan okuyor.** Okuyucu saf Node + `zlib` (yeni bağımlılık yok) ve üç sessiz kusuru çözmek zorunda: font BAŞINA ToUnicode (birleştirme dört raporda çöp metin üretiyor — glif 44 → `space`/`A`/`#`/`@`/`G`), eksi işaretinin AYRI çizim çağrısı olması (`["-","72.00"]` → kaçırılırsa kasnak aynalanır), nesne akışları (ObjStm — AG00894'te tek font bile bulunamıyor). Fixture'ın **284** statik değeri (yerleşim · çap · açıklık · sarım · gergi künyesi) on raporun tamamında **0 uyuşmazlıkla** geri üretiliyor. Belge bütünlüğü: `Page N of M` ile alıntı tespiti — üç rapor alıntı, yedisi tam (AG00879'un sayfa AĞACI 5 gösteriyor ama 12 sayfa da içinde). Altbilgi tek satır ve birleşik (`Page 1 of 119.37.0.0`) → düz kalıp **119** okur  Ayrıca **gergi künye kütüphanesini** (`js/fead-tensioners.js`) kaynağına bağlar: on kaydın kol/oran/moment değeri (30 sayı) birebir, ön yükün dokuzu birebir + onuncusu `preloadDerived` ile işaretli (raporda YOK), kaburga sayısı raporun künyesiyle aynı (AG00810 bir dönem 8 yazıyordu, raporu 10PK), parça kodu Drive Notes'ta gerçekten geçiyor ve doğrulanamayan dört kayıt kod TAŞIMIYOR |
 | `tests/unit/fead-canvas-mm.test.js` | `js/fead-model.js` koordinat katmanı + `js/connections.js` imza | **Kanvas = kayış düzlemi**: gidiş-dönüş birebir, Y EKSENİ TERS (kanvasta aşağı = mm'de azalan), kutu ölçüsünün sistematik kayma ÜRETMEMESİ (sol üstten ölçmek 54…72 px arası değişen bir sapma verirdi), 1 px = 1 mm. **Orijin**: sürücü kasnak (rol, tip değil), kendi mm'sinin (0,0) olması, kasnak yoksa senkronun hiç çalışmaması. **Senkron**: sürüklemenin mm'yi o kadar değiştirmesi, ORİJİNİ sürüklemenin diğerlerini karşı yönde kaydırması, araç düğümlerine dokunmaması. **Gergi**: pivot + montaj merkezinin RİJİT taşınması (kol boyu ve montaj açısı korunur, `veFeadArmCheck` geçer) ve ORİJİN sürüklenince gergi pivotunun da tazelenmesi (bu bir KAPI BOŞLUĞUYDU — gergi senkrondan çıkarılınca hiçbir test kırılmıyordu). **Göç**: ötelemenin L_eff/sarım/gerginliği BİREBİR bırakması, göçün krankı (0,0)'a çekmesi, gergi pivotunun da ötelenmesi (kısmi göç modeli bozardı). **İmza**: kasnak mm koordinatı/çapı/temas tarafı imzaya girer, Kayış Yolu kartını taşımak imzayı DEĞİŞTİRMEZ. **Uçtan uca**: alternatörü kanvasta taşımak gereken kayış boyunu gerçekten değiştiriyor |
 | `tests/unit/fead-belts.test.js` | `js/fead-belts.js` + `js/fead-model.js` aday değerlendirmesi | **Kayış kataloğu**: listelerin sıralı/tekil/pozitif olması, aralıkların ContiTech beyanıyla çakışması (bir listenin yanlış profile yapışması ancak böyle yakalanır), en kısa boyun min. kasnak çevresinden büyük olması, `veFeadBeltStock`'un KOPYA döndürmesi. **Izgara bir kural**: en yakın adıma yuvarlama, aralık dışında kenetlenme, ızgarası olmayan profilde sessizce PK ızgarasının kullanılmaması. **Kod**: otomotiv ve endüstriyel yazımın ikisinin de çözülmesi, gidiş-dönüş, kaburga denetiminin yalnız verisi olan profilde hüküm vermesi. **Ölçülmüş boşluk**: 8PK 1715'in endüstriyel listede OLMAMASI (komşuları 65 mm uzakta) — kataloğun iki kümeli olmasının sebebi. **Uçtan uca**: serbest kipin gereken boyu → katalog ızgarası → sabit kip tabanı (kol 28.4271° · T 532.142 · hub 302.125) birebir; sığmayan adayın gerginlik YAZMAMASI (4.05e10 N sızmıyor), boy uzadıkça kol ve gerginliğin düşmesi, aday değerlendirmesinin çalışma noktası önbelleğini kirletmemesi |
 | `tests/unit/fead-belt-mode.test.js` | `js/fead-model.js` kayış kipi + `js/fead-core.js` hoşgörülü geometri | **Kayış boyu sabit değil**: kip çözümü ve geriye dönük uyumluluk (boyu olan eski proje `fixed`, boyu olmayan artık ÇÖZÜLÜYOR); sabit kipte tabanın BİREBİR korunması (kol 28.4271° · L 1715.0000 · T 532.142 · hub 302.125); **nominal kol açısı yay künyesinden, geometriden DEĞİL** — montaj merkezi ya da pivot yokken de türetilir, künye gerçekten eksikse NaN kalır (uydurulmaz) ve `direct` kol açısı kipinde serbest kayış NOMİNALE oturur, aralığın ortasına DEĞİL (eskiden kol 38.1174° · fallback true · uyarı 0); serbest kipte gerginliğin ankraj, boyun ÇIKTI olması ve iki kipin doğru modelde AYNI çalışma noktasına varması; sürüklerken çözümün kopmaması (−200…+40 mm, boy monoton). **Kenetleme**: kuşatılmış hedefte çekirdeğin çözümünün birebir dönmesi, erişilemeyen hedefte istisna yerine sınır + aralığın yazılması, sığmayan kayışta NOMİNAL kol açısına düşülüp ÖNERİLEN boyun serbest kipinkiyle aynı çıkması, kenetlenmişken uyuşmazlık uyarısının İKİNCİ KEZ basılmaması. **Hoşgörülü geometri**: kapanmayan çevrimin çözülüp `geomValid:false` ile yazılması, çekirdek varsayılanının hâlâ ATMASI, çakışan kasnakların tek gerçek durdurucu olması. **Üç sessiz hata**: `feasibleRelMax` ölçütü, `_geomOpt`'un sistem ömrünün başında kurulması, dejenereliğin SARIM değil TAKE-UP ile ölçülmesi |
