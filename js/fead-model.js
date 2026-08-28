@@ -1523,10 +1523,26 @@ var VE_FEAD_EXAMPLES = {
                // ÖLÇÜLDÜ — üç hipotez çözdürüldü (Gates AG00976'nın 543,9 N'una):
                //   koordinat = kasnak · θ=344° (çizim) → T 532,1 N  (−%2,2) ✔
                //   koordinat = kasnak · θ=348° (Gates)  → T 561,1 N  (+%3,2)
-               //   koordinat = PİVOT                    → HİÇ ÇÖZÜLMÜYOR ✘
-               // Sonuncusu koordinatın pivot OLMADIĞINI kesin olarak eliyor:
-               // kasnak sürücünün İÇİNE düşüyor (merkez mesafesi 111,6 mm,
-               // gereken >120,8 mm) — sayı değil, geometri reddediyor.
+               //   koordinat = PİVOT (zarf kipi)        → T 279,4 N  (−%48,6) ✘
+               //
+               // ÜÇÜNCÜ SATIRIN GEREKÇESİ 2026-08-28'de DEĞİŞTİ. Bir dönem
+               // "HİÇ ÇÖZÜLMÜYOR — kasnak sürücünün içine düşüyor" yazıyordu ve
+               // o eleme kol açısını 344°'de SABİT tutuyordu, yani bir MODEL
+               // sınırıydı. Zarf kipinde kol açısı serbest ve model ÇÖZÜLÜYOR:
+               // 360 açının 280'i geçerli geometri veriyor. Eleme artık
+               // sayısal ve daha güçlü:
+               //   zarfın seçtiği θ=114,6° → T 279,4 N · L 1738,2 mm (+%1,36)
+               //   sarım sapması RMS 15,4°, en kötü +27,9° (ALT), TEN +25,1°
+               //   360°'in TAMAMI tarandı: boyu ve gerginliği BİRLİKTE tutan
+               //   açı YOK (gevşek pencerede kalan 2 açıda sarım çöküyor)
+               // KONTROL: aynı yerleşime AG00976'nın gerçek pivotu (−250,110)
+               // verilince zarf θ=−10,9° seçiyor → L 1716,96 (+%0,14),
+               // T 539,9 N (−%0,76), sarım en kötü 0,81°.
+               //
+               // Ve asıl doğrudan kanıt: mount kipinde ÇÖZÜLEN çalışma merkezi
+               // (−170,240 / 98,610) sayfanın koordinatına yalnız 0,57 mm
+               // uzakta. Koordinat pivot olsaydı merkez ondan tam kol boyu
+               // (90 mm) uzakta olurdu.
                //
                // İlk iki satırın sarımı AYNI (33,0°): kasnak merkezi ikisinde de
                // aynı, değişen yalnız β — yani take-up, yani gerginlik.
