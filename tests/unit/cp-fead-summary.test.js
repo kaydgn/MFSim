@@ -29,7 +29,7 @@ Object.keys(RP).forEach((k) => { global[k] = RP[k]; });
 const SU = require('../../js/cp-fead-summary.js');
 Object.keys(SU).forEach((k) => { if (global[k] === undefined) global[k] = SU[k]; });
 
-function coz(anahtar) {
+function coz(anahtar, fatModel) {
   const pack = veFeadExampleNodes(anahtar);
   const ns = pack.nodes.map((n) => ({
     id: n.id, type: n.type, def: componentDefs[n.type],
@@ -43,7 +43,12 @@ function coz(anahtar) {
     // Geçilmezse burulma 1. modu 12,9 yerine 16,8 Hz çıkar (%29) ve test
     // harness'ı uygulamadan başka bir sonucu doğrulamış olurdu.
     crankInertia: (solv && solv.data && Number(solv.data.crankInertia)) || 0,
-    fatigueModel: 'PK-2_2p-MT3'
+    fatigueModel: fatModel || 'PK-2_2p-MT3',
+    // TEPE İVMESİ — gerçek panel yolu bunu da geçiyor (cp-fead.js). Geçilmezse
+    // tepe tablosu varsayılan 1100 ile koşar ve harness uygulamadan BAŞKA bir
+    // yolu doğrulamış olur; "krank ataleti" vakasının aynı sınıfı.
+    accelRpmS: (solv && solv.data && Number(solv.data.accelRpmS)) || undefined,
+    decelRpmS: (solv && solv.data && Number(solv.data.decelRpmS)) || undefined
   });
   R.build = build; R.pulleyNames = build.names;
   R.serviceFact = (solv && solv.data && Number(solv.data.serviceFact)) || 0;
@@ -809,5 +814,253 @@ describe('kapsam — ayrıntılı raporun bölümleri', () => {
       expect(n).toBeGreaterThanOrEqual(1);
       expect(n).toBeLessThanOrEqual(enBuyuk);
     });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEPE ZİNCİRİNDE ÇEVRİM KAPANIŞI
+//
+// Kayış kapalı bir halkadır: bir tam turda gerginlik değişimlerinin toplamı
+// sıfır olmak ZORUNDA — topolojik özdeşlik, modelleme tercihi değil.
+// `peakEstimate` bunu güç terimi için zorluyordu, atalet terimi için değil;
+// kranka kasnağın KENDİ ataleti yazıldığı için −125,20 N'lik bir artık
+// zincirin son halkasına biniyordu (bkz. veFeadPeakInertias).
+//
+// Kapılar Gates'e BAKMADAN da ısırıyor (çevrim özdeşliği) ve Gates'e karşı da
+// (tedarikçi tablosu). İkisi ayrı testte: biri referanssız, biri referanslı.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('FEAD özet · tepe zincirinde çevrim kapanışı', () => {
+  const GATES_T = [1585, 1582, 1177, 1174, 546, 544];
+  const GATES_H = [2094.8, 1409.1, 2724.8, 1251.6, 1690.3, 323.8];
+  const GATES_D = [92, 330, 221, 110, 340, 218];
+
+  // dI = J·α·oran/r — α ortak çarpan olduğu için sadeleşir.
+  function adimlar(R) {
+    const sys = R.build.sys;
+    const ov = veFeadPeakInertias(R.build);
+    return sys.pulleys.map((p, i) => {
+      const J = (ov[p.name] != null) ? ov[p.name] : (p.inertiaKgM2 || 0);
+      return J * FEADCore.speedRatio(sys, i) / (p.rPitch / 1000);
+    });
+  }
+
+  test('çevrim KAPANIYOR: krank adımı = Σ aksesuar adımı (gergi ankrajda)', () => {
+    const sys = R.build.sys;
+    const dI = adimlar(R);
+    let krank = 0, aksesuar = 0;
+    dI.forEach((v, i) => {
+      if (i === sys._crkIdx) krank = v;
+      else if (i !== sys._tenIdx) aksesuar += v;
+    });
+    expect(aksesuar).toBeGreaterThan(0);
+    // Artık, kendi büyüklüğünün milyonda birinden küçük olmalı.
+    expect(Math.abs(krank - aksesuar)).toBeLessThan(aksesuar * 1e-9);
+  });
+
+  test('ham ataletlerle çevrim AÇIK — düzeltmenin neyi kapattığı ölçülü', () => {
+    const sys = R.build.sys;
+    let krank = 0, aksesuar = 0;
+    sys.pulleys.forEach((p, i) => {
+      const v = (p.inertiaKgM2 || 0) * FEADCore.speedRatio(sys, i) / (p.rPitch / 1000);
+      if (i === sys._crkIdx) krank = v;
+      else if (i !== sys._tenIdx) aksesuar += v;
+    });
+    // Ham hâlde krank adımı aksesuar toplamının yarısından bile küçük.
+    expect(krank).toBeLessThan(aksesuar * 0.5);
+  });
+
+  test('veFeadPeakInertias YALNIZ krank kasnağını ezer', () => {
+    const ov = veFeadPeakInertias(R.build);
+    const ad = R.build.sys.pulleys[R.build.sys._crkIdx].name;
+    expect(Object.keys(ov)).toEqual([ad]);
+    expect(ov[ad]).toBeGreaterThan(0);
+  });
+
+  test('tepe gerginlikleri Gates AG00976 s1 tablosuna %1 içinde', () => {
+    const pk = SU._fsrPeak(R);
+    expect(pk).toBeTruthy();
+    pk.rows.forEach((r, i) => {
+      const d = Math.abs(r.tensionN - GATES_T[i]) / GATES_T[i] * 100;
+      expect(d).toBeLessThan(1.0);
+    });
+  });
+
+  test('tepe hubloadları Gates AG00976 s1 tablosuna %1 içinde', () => {
+    const pk = SU._fsrPeak(R);
+    pk.rows.forEach((r, i) => {
+      const d = Math.abs(r.hubloadN - GATES_H[i]) / GATES_H[i] * 100;
+      expect(d).toBeLessThan(1.0);
+    });
+  });
+
+  test('hubload YÖNLERİ Gates ile 2° içinde — gergi dahil', () => {
+    const pk = SU._fsrPeak(R);
+    pk.rows.forEach((r, i) => {
+      const d = Math.abs(((r.dirDeg - GATES_D[i] + 540) % 360) - 180);
+      expect(d).toBeLessThanOrEqual(2.0);
+    });
+  });
+
+  test('tepe ≥ ortalama — her kasnakta', () => {
+    const pk = SU._fsrPeak(R);
+    const ref = R.analysis.duty.reduce((a, b) => ((b.dcPct || 0) > (a.dcPct || 0) ? b : a),
+      R.analysis.duty[0]);
+    pk.rows.forEach((r, i) => {
+      expect(r.tensionN).toBeGreaterThanOrEqual(ref.perPulley[i].exitTensionN - 1e-6);
+    });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PANEL İVMESİ · ETKİN İŞARET · KOMBİNASYON ETİKETİ
+// ═══════════════════════════════════════════════════════════════════════════
+describe('FEAD özet · tepe taramasının girdisi ve etiketleri', () => {
+  test('panel ivmesi sonuca TAŞINIYOR ve tabloyu gerçekten değiştiriyor', () => {
+    const pack = veFeadExampleNodes('AG00976_GATES_2025');
+    const ns = pack.nodes.map((n) => ({
+      id: n.id, type: n.type, def: componentDefs[n.type],
+      customName: n.customName, data: JSON.parse(JSON.stringify(n.data))
+    }));
+    const build = veFeadBuildSystem(ns, pack.connections);
+    const solv = ns.filter((n) => componentDefs[n.type] &&
+      componentDefs[n.type].isFeadSolver)[0];
+    const kur = (acc) => {
+      const A = veFeadAnalyze(build, {
+        rows: veFeadDutyRows(solv), cylinders: 6,
+        crankInertia: Number(solv.data.crankInertia) || 0,
+        fatigueModel: 'PK-2_2p-MT3', accelRpmS: acc
+      });
+      A.build = build; A.pulleyNames = build.names;
+      return A;
+    };
+    const a1 = kur(1100), a2 = kur(3000);
+    expect(a1.peakAccelRpmS).toBe(1100);
+    expect(a2.peakAccelRpmS).toBe(3000);
+    const t1 = SU._fsrPeak(a1).rows.map((r) => r.tensionN);
+    const t2 = SU._fsrPeak(a2).rows.map((r) => r.tensionN);
+    // Sürücü kasnakta ivme 2,7 kat artınca tepe belirgin yükselmeli.
+    expect(t2[0]).toBeGreaterThan(t1[0] * 1.15);
+  });
+
+  // BASILAN İVME, SAYIYI ÜRETEN DALIN İŞARETİ OLMALI.
+  // `peakEstimate` kendi içinde sgn = ±1 dallanıyor; köprü bir dönem çekirdeğe
+  // GEÇİRDİĞİ değeri kaydediyordu, kazanan dalınkini değil.
+  //
+  // AG00976'DA BU KAPI ISIRAMAZ ve sebebi öğretici: çevrim kapatıldıktan sonra
+  // altı kasnağın altısı da HIZLANMA dalında kazanıyor (ölçüldü) — yani
+  // yavaşlama hiçbir yerde tepe üretmiyor ve işaret ayırt edici olmuyor.
+  // Kusur, kırık zincirde görünürdü (orada ALT decel dalında kazanıyordu).
+  // Kapı bu yüzden yavaşlamanın GERÇEKTEN kazandığı bir düzende kuruluyor:
+  // avara ataletleri ×1000 alınınca ALT'ın atalet talebi güç talebini aşıyor
+  // ve kazanan dal decel oluyor (ölçüldü: 1/6 kasnak).
+  test('basılan ivme, sayıyı ÜRETEN dalın işareti', () => {
+    const pack = veFeadExampleNodes('AG00976_GATES_2025');
+    const ns = pack.nodes.map((n) => ({
+      id: n.id, type: n.type, def: componentDefs[n.type],
+      customName: n.customName, data: JSON.parse(JSON.stringify(n.data))
+    }));
+    ns.forEach((n) => {
+      if (n.type === 'fead-idler' && n.data.inertia != null) n.data.inertia *= 1000;
+    });
+    const build = veFeadBuildSystem(ns, pack.connections);
+    const solv = ns.filter((n) => componentDefs[n.type] &&
+      componentDefs[n.type].isFeadSolver)[0];
+    const A = veFeadAnalyze(build, {
+      rows: veFeadDutyRows(solv), cylinders: 6,
+      crankInertia: Number(solv.data.crankInertia) || 0,
+      fatigueModel: 'PK-2_2p-MT3', accelRpmS: 1100
+    });
+    A.build = build; A.pulleyNames = build.names;
+    const pk = SU._fsrPeak(A);
+    expect(pk).toBeTruthy();
+    const sys = build.sys, ov = veFeadPeakInertias(build);
+    const ref = A.duty.reduce((x, y) => ((y.dcPct || 0) > (x.dcPct || 0) ? y : x), A.duty[0]);
+    const kw0 = ref.loadsKw;
+    const yuk = Object.keys(kw0).filter((k) => kw0[k] > 0.05);
+
+    // Kazanan dalı BAĞIMSIZ olarak yeniden bul.
+    const kaz = sys.pulleys.map(() => ({ T: -Infinity, dal: null }));
+    for (let m = 0; m < (1 << yuk.length); m++) {
+      const kw = {};
+      Object.keys(kw0).forEach((k) => { kw[k] = kw0[k]; });
+      for (let j = 0; j < yuk.length; j++) kw[yuk[j]] = kw0[yuk[j]] * ((m >> j & 1) ? 0.10 : 1.00);
+      const pe = FEADCore.peakEstimate(sys, {
+        engineRpm: ref.engineRpm, accelRpmS: 1100, loadsKw: kw, inertias: ov
+      });
+      ['accel', 'decel'].forEach((br) => {
+        pe[br].spanN.forEach((T, i) => { if (T > kaz[i].T) { kaz[i] = { T, dal: br }; } });
+      });
+    }
+    // Bu düzende en az bir kasnak YAVAŞLAMA dalında kazanmalı; yoksa kapı
+    // hiçbir şey ölçmüyor demektir.
+    expect(kaz.filter((k) => k.dal === 'decel').length).toBeGreaterThan(0);
+    pk.rows.forEach((r, i) => {
+      expect(Math.sign(r.accelRpmS)).toBe(kaz[i].dal === 'decel' ? -1 : 1);
+    });
+  });
+
+  test('kombinasyon etiketi AYIRT ETMİYORSA basılmaz', () => {
+    const pk = SU._fsrPeak(R);
+    const sys = R.build.sys;
+    // Gergi açıklığı ankraj; alternatörünki kW kombinasyonundan cebirsel
+    // olarak bağımsız → ikisinde de etiket anlamsız.
+    expect(pk.rows[sys._tenIdx].combo).toBeNull();
+    expect(pk.rows[sys._tenIdx].comboYayilimN).toBeLessThan(1e-6);
+    // Sürücüde ayırt ediyor.
+    expect(pk.rows[sys._crkIdx].combo).toBeTruthy();
+    expect(pk.rows[sys._crkIdx].comboYayilimN).toBeGreaterThan(1);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BELGENİN KENDİ TUTARLILIĞI — türetilen metinler
+// ═══════════════════════════════════════════════════════════════════════════
+describe('FEAD özet · metin kendi sayısıyla tutarlı', () => {
+  const govde = (h) => h.replace(/<style[\s\S]*?<\/style>/g, '');
+
+  test('sayfa atfı SAYFA LİSTESİNDEN türüyor', () => {
+    const g = govde(DOC);
+    const i = SU.VE_FSR_SHEETS.indexOf('Dayanım ve Titreşim');
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(g).toContain('bkz. sayfa ' + (i + 1));
+  });
+
+  test('yorulma modeli uyuşmazlığı ÖMÜR KARTINDA yazıyor', () => {
+    const R2 = coz('AG00976_GATES_2025', 'PK-2_2a-MT3');
+    const g2 = govde(SU.veFeadSummaryHTML(R2, NODE));
+    expect(R2.life.modelMismatch).toBe('PK-2_2a-MT3');
+    expect(g2).toMatch(/sabitleriyle hesaplanmıştır; seçili yorulma modeli/);
+    // Kalibre modeldeyken yanlış alarm YOK.
+    expect(govde(DOC)).not.toMatch(/sabitleriyle hesaplanmıştır; seçili yorulma modeli/);
+  });
+
+  test('Not 3 baskın payı TABLODAN alıyor, elle yazılmıyor', () => {
+    const g = govde(DOC);
+    // Elle yazılı eski çift artık yok.
+    expect(g).not.toMatch(/%86,9['’]dan %73,4/);
+    const bask = Math.max.apply(null,
+      R.fatigue.perPulley.map((p) => p.sharePct));
+    const m = g.match(/baskın kasnak ([A-Z0-9]+), payı %([\d,]+)/);
+    expect(m).toBeTruthy();
+    expect(Number(m[2].replace(',', '.'))).toBeCloseTo(bask, 0);
+
+    // Model değişince NOT da değişiyor — sabit olsaydı değişmezdi.
+    const R2 = coz('AG00976_GATES_2025', 'PK-2_2a-MT3');
+    const m2 = govde(SU.veFeadSummaryHTML(R2, NODE))
+      .match(/baskın kasnak ([A-Z0-9]+), payı %([\d,]+)/);
+    expect(m2).toBeTruthy();
+    expect(Number(m2[2].replace(',', '.')))
+      .not.toBeCloseTo(Number(m[2].replace(',', '.')), 1);
+  });
+
+  test('Not 1 sapma bandı ile tablonun kendisi çelişmiyor', () => {
+    const pk = SU._fsrPeak(R);
+    const GATES_T = [1585, 1582, 1177, 1174, 546, 544];
+    const enKotu = Math.max.apply(null, pk.rows.map(
+      (r, i) => Math.abs(r.tensionN - GATES_T[i]) / GATES_T[i] * 100));
+    // Notta yazan bandın üst ucu, ölçülen en kötü sapmadan küçük olamaz.
+    const ust = Number(String(SU.VE_FSR_PEAK_BAND).split('+%')[1].replace(',', '.'));
+    expect(ust).toBeGreaterThanOrEqual(enKotu);
+    expect(ust).toBeLessThan(enKotu + 1.0);
   });
 });
