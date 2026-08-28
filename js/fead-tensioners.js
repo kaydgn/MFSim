@@ -11,10 +11,24 @@
 // ── KAYITLAR ÖLÇÜLDÜ, PARÇA NUMARASI UYDURULMADI ────────────────────────────
 // Aşağıdaki 14 künyenin tamamı `tests/fixtures/fead-validation.js` içindeki
 // Gates raporlarından çıkarıldı — yani doğrulama kapısının kullandığı AYNI
-// sayılar. Ama Gates raporları gerginin PARÇA NUMARASINI yazmıyor; tek
-// bilinen `E9843` ve o da tek bir aracın montaj çiziminden geliyor. Bu yüzden
-// kayıtlar KAYNAK RAPORLA adlandırıldı. Uydurulmuş bir parça numarası,
-// kullanıcının tedarikçiye yanlış bir kod söylemesi demekti.
+// sayılar. Kayıtlar KAYNAK RAPORLA adlandırıldı ve öyle kalıyor: anahtar
+// hangi ölçümden geldiğini söyler, parça numarası ise ayrı bir alandır.
+//
+// > **DÜZELTME (2026-08-28).** Bu blok bir dönem *"Gates raporları gerginin
+// > PARÇA NUMARASINI yazmıyor; tek bilinen E9843 ve o da tek bir aracın montaj
+// > çiziminden geliyor"* diyordu. `docs/gates-reports/pdf/` arşivi kurulunca
+// > ÖLÇÜLDÜ ve tutmadı: on raporun ONUNDA da parça kodu raporun kendi
+// > **Drive Notes** alanında yazıyor, üstelik DÖRT ayrı kod —
+// > `Tensioner T38624; CW; 24.6Nm` · `Tensioner Gates T38665; 31Nm` ·
+// > `E9843, 22Nm@27°, CCW@115/260` · `T38519 (29.5Nm): CCW@-303/7`.
+// > Kodlar artık `part` alanında ve `tests/unit/gates-archive.test.js`
+// > her birini kaynağına karşı denetliyor. Arşivde PDF'i olmayan dört
+// > AG00976 kaydı `part` TAŞIMIYOR — doğrulanamayan bir kod yazmak, tam da
+// > kaçınılmak istenen şey olurdu.
+//
+// Aynı alan bir şey daha ele verdi: Drive Notes BAĞIL AÇIYI da yazıyor
+// (`E9843/16Nm@15°` · `/19Nm@21°` · `/22.5Nm@28°`) ve bunlar künyeden
+// hesaplanan `(mean−pre)/rate` ile birebir tutuyor (15.07 · 20.99 · 27.96).
 //
 // ── HANGİ ALAN PARÇANIN, HANGİSİ MONTAJIN — ÖLÇÜLDÜ ─────────────────────────
 // Ayrım tahmin değil: AG0868 ailesi AYNI gergiyi üç farklı kayış genişliğiyle
@@ -81,36 +95,37 @@ var VE_FEAD_TENSIONER_DB = [
   { key:'AG00976-1655', src:'AG00976 · 1655 mm · Ten@-250/104',
     armLen:90, preloadNm:8.99, rateNm:0.484, meanNm:22.54, od:77.2, contact:'back',
     inertia:null, ribs:8, note:'' },
-  { key:'AG00879', src:'AG00879 · 5 kasnak · kol 56 mm',
+  { key:'AG00879', part:'T38665', src:'AG00879 · 5 kasnak · kol 56 mm',
     armLen:56, preloadNm:20.05, rateNm:0.409, meanNm:31.14, od:76.2, contact:'back',
     inertia:null, ribs:8, note:'Bandın DIŞINDA: kısa kollu ayrı bir gövde' },
-  { key:'AG00894', src:'AG00894 · 6 kasnak',
+  { key:'AG00894', part:'E9843', src:'AG00894 · 6 kasnak',
     armLen:90, preloadNm:8.93, rateNm:0.475, meanNm:23.00, od:77.2, contact:'back',
     inertia:0.0002, ribs:8, note:'' },
-  { key:'AG00902-1300', src:'AG00902 · 1300 mm · 4 kasnak',
+  { key:'AG00902-1300', part:'E9843', src:'AG00902 · 1300 mm · 4 kasnak',
     armLen:90, preloadNm:9.31, rateNm:0.476, meanNm:22.21, od:77.2, contact:'back',
     inertia:0.0004, ribs:8, note:'' },
-  { key:'AG00902-1275', src:'AG00902 · 1275 mm · 4 kasnak',
+  { key:'AG00902-1275', part:'E9843', src:'AG00902 · 1275 mm · 4 kasnak',
     armLen:90, preloadNm:9.13, rateNm:0.480, meanNm:22.15, od:77.2, contact:'back',
     inertia:0.0004, ribs:8, note:'' },
-  { key:'AG00686', src:'AG00686 · 8PK1475 · 4 kasnak',
+  { key:'AG00686', part:'T38624', src:'AG00686 · 8PK1475 · 4 kasnak',
     armLen:90, preloadNm:8.59, rateNm:0.482, meanNm:24.54, od:77.2, contact:'back',
     inertia:0.0076, ribs:8, note:'Nominal dönme 33.1° — banttan yüksek ayar' },
-  { key:'AG00686-1520', src:'AG00686 · 1520 mm',
+  { key:'AG00686-1520', part:'T38624', src:'AG00686 · 1520 mm',
     armLen:90, preloadNm:8.86, rateNm:0.476, meanNm:22.20, od:77.2, contact:'back',
     inertia:0.0076, ribs:8, note:'' },
-  { key:'AG0868-8PK', src:'AG0868 · 3 kasnak · 8PK',
+  { key:'AG0868-8PK', part:'E9843', src:'AG0868 · 3 kasnak · 8PK',
     armLen:90, preloadNm:8.56, rateNm:0.501, meanNm:22.57, od:77.2, contact:'back',
     inertia:0.0009, ribs:8, note:'' },
-  { key:'AG0868-6PK', src:'AG0868 · 3 kasnak · 6PK',
+  { key:'AG0868-6PK', part:'E9843', src:'AG0868 · 3 kasnak · 6PK',
     armLen:90, preloadNm:8.65, rateNm:0.495, meanNm:19.04, od:77.2, contact:'back',
     inertia:0.0009, ribs:6, note:'Aynı gövde, dar kayış → düşük ayar' },
-  { key:'AG0868-4PK', src:'AG0868 · 3 kasnak · 4PK',
+  { key:'AG0868-4PK', part:'E9843', src:'AG0868 · 3 kasnak · 4PK',
     armLen:90, preloadNm:8.46, rateNm:0.505, meanNm:16.07, od:77.2, contact:'back',
     inertia:0.0009, ribs:4, note:'Aynı gövde, dar kayış → düşük ayar' },
   { key:'AG00810', src:'AG00810 · 4 kasnak',
-    armLen:90, preloadNm:11.561, rateNm:0.483, meanNm:29.48, od:77.2, contact:'back',
-    inertia:0.0004, ribs:8, note:'Ön yük ve ayar bandın üstünde' }
+    armLen:90, preloadNm:11.561, preloadDerived:true, rateNm:0.483, meanNm:29.48,
+    od:77.2, contact:'back', inertia:0.0004, ribs:10, part:'T38519',
+    note:'Ön yük RAPORDA YOK — mean torktan türetildi (11.561). Ayar bandın üstünde.' }
 ];
 
 // Kol 90 mm ailesinin ÖLÇÜLEN bandı. Uydurma bir tolerans değil: yukarıdaki
