@@ -1478,6 +1478,127 @@ function veFeadRouteDiagnose(nodeList, connList){
   return out;
 }
 
+// ── KAYIŞ DÖNÜŞ YÖNÜ (CW / CCW) ────────────────────────────────────────────
+//
+// YÖN BİR AYAR DEĞİL, ROTA SIRASININ SONUCUDUR. Çekirdek `loopSense`
+// (fead-core.js) kasnak merkezlerinin AYAKKABI BAĞI işaretli alanına bakıyor:
+// merkezleri kayış gidiş sırasında dolaşınca saat yönünün TERSİNE dönüyorsa
+// +1 (CCW), saat yönündeyse −1 (CW). Yani kabloları hangi sırada çektiysen
+// yön odur; "Dönüş Yönü" düğümü o sırayı TERS yürüterek yönü seçtiriyor.
+//
+// ÖLÇÜT ÇEKİRDEĞİN KENDİSİNDEN — ikinci bir kopya yazılsaydı iki yüzey
+// sessizce ayrışabilirdi. Merkez sözleşmesi de aynı: kasnakta (x, y),
+// gergide MONTAJ merkezi (cenX, cenY).
+//
+// KOORDİNATI EKSİK MODELDE YÖN YOKTUR (0 döner). Eksik koordinatla geometri
+// zaten çözülemiyor; uydurma bir yön üretip rotayı ters çevirmek, çözülemeyen
+// bir modeli sessizce BAŞKA bir çözülemeyen modele çevirirdi.
+function veFeadNaturalSense(order){
+  var list = (order || []).filter(_feadIsPulley);
+  if(list.length < 3 || typeof FEADCore === 'undefined'
+     || typeof FEADCore.loopSense !== 'function') return 0;
+  var c = [], i, d, x, y;
+  for(i = 0; i < list.length; i++){
+    d = list[i].data || {};
+    if(_feadDefOf(list[i]).isFeadTensioner){
+      x = _feadNum(d.cenX, NaN); y = _feadNum(d.cenY, NaN);
+    } else {
+      x = _feadNum(d.x, NaN); y = _feadNum(d.y, NaN);
+    }
+    if(!Number.isFinite(x) || !Number.isFinite(y)) return 0;
+    c.push([x, y]);
+  }
+  return FEADCore.loopSense(c);
+}
+
+// ── ROTAYI TERS YÜRÜT — KABLOLARI ÇEVİREREK ────────────────────────────────
+//
+// Yön BİR BAYRAKTA DEĞİL, KABLOLARIN KENDİSİNDE durur. Düğüme `data.dir` gibi
+// bir alan koymak ikinci bir gerçek kaynağı yaratırdı ve üç yerden ısırırdı:
+//
+//   1. Kanvastaki gidiş yönü oku (`veConnDirMark`, connections.js) telin
+//      from→to yönünü çiziyor. Bayrak kullanılsaydı ok, çözülen yönü DEĞİL
+//      kabloyu gösterir — yani yalan söylerdi.
+//   2. `veFeadTopoSignature` tel uçlarını okuyor ama araç düğümlerinin
+//      `data`'sını OKUMUYOR (ölçüldü: araç düğümü alanı değişince imza
+//      değişmiyor). Bayrak imzaya girmezdi → rozete tıklayınca kart doğrudan
+//      çağrıyla tazelenir ama GERİ AL sonrası bayat kalırdı, hem de sessizce.
+//   3. Bayrak silinince yön sessizce dönerdi (Konum Bağı'nda ölçülmüş
+//      "düğümü silmek durumu çeviriyor" sınıfı) → ayrı bir silme kancası.
+//
+// Kabloyu çevirmek üçünü birden yok ediyor: tek gerçek kaynak, ok kendiliğinden
+// doğru, imza kendiliğinden değişiyor, silinecek bir durum yok.
+//
+// ÖLÇÜLDÜ: kablo çevirmenin verdiği sıra, "krank sabit + kalanı ters" kuralının
+// verdiği sırayla BİREBİR aynı — yani bayrak yolunun tek iddia edilen üstünlüğü
+// (kabloya dokunmamak) karşılıksız.
+//
+// YERİNDE TAKAS, sil-ve-yeniden-kur DEĞİL: `createConnection` kimliği
+// `'conn-' + Date.now()` ile üretiyor, altı teli tek karede kurmak altı ÖZDEŞ
+// kimlik verirdi.
+//
+// YALNIZ İKİ UCU DA KASNAK olan teller çevrilir: araç düğümleri 0/0 portlu,
+// ama elle düzenlenmiş bir dosya başka tel taşıyabilir.
+function veFeadReverseRoute(nodeList, connList){
+  var kasnak = {};
+  (nodeList || []).forEach(function(n){ if(_feadIsPulley(n)) kasnak[n.id] = 1; });
+  var k = 0;
+  (connList || []).forEach(function(c){
+    if(!c || !kasnak[c.from] || !kasnak[c.to]) return;
+    var t = c.to; c.to = c.from; c.from = t;
+    // Kasnak 1 giriş / 1 çıkış taşıyor → port kimlikleri tam olarak bunlar
+    // (js/ui-core.js: inCount === 1 ? 'input' : 'input-' + i).
+    c.fromPort = 'output'; c.toPort = 'input';
+    k++;
+  });
+  return k;
+}
+
+// ── GERGİ GEVŞEK SPANDA MI? ────────────────────────────────────────────────
+//
+// Çekirdek ankrajı gergiye yazıyor (`spanTensions`: T[gergi] = designTensionN)
+// ve zinciri oradan gidiş yönünde yürütüyor: sürücüde +P/v, aksesuarlarda
+// −P/v. Ankraj EN DÜŞÜK span değilse başka spanlar onun ALTINA iner; yeterince
+// inerse NEGATİF olur — ve kayış itemez.
+//
+// Bu bir modelleme kusuru değil, gerçek bir tasarım kuralı: otomatik gergi
+// kayışın GEVŞEK tarafına konur. Gergin tarafa konsaydı tahrik gerginliğinin
+// tamamını yayla karşılamak zorunda kalır ve durdurucusuna dayanırdı.
+//
+// ÖLÇÜLDÜ — 14 Gates sisteminin 14'ünde de ankraj GLOBAL MİNİMUM, üstelik
+// gergi sıranın SON kasnağı (doğrudan krankın önünde). İstisna yok.
+//
+// ÖLÇÜT EŞİKSİZ: "ankrajın altına inen span var mı". Negatif sayı ARAMAZ —
+// ankrajın altına inmek yeterli; negatiflik yalnız o durumun uç hâli.
+// "Gergi kranka komşu olmalı" gibi bir konum kuralı YANLIŞ olurdu: aralarında
+// güç ÇEKMEYEN bir avara bulunabilir ve bu geçerlidir (sentetik olarak
+// ölçüldü). Sayılan şey komşuluk değil, GÜÇ.
+function _feadFmt3(x){ return Number.isFinite(x) ? x.toFixed(1) : '—'; }
+
+function veFeadTensionerSide(row, tensionerName){
+  var out = { ok: true, anchorN: NaN, minN: NaN, minName: null,
+              deficitN: 0, negative: false, drain: [] };
+  var pp = (row && row.perPulley) || [];
+  if(!pp.length || !tensionerName) return out;
+  var i, T;
+  for(i = 0; i < pp.length; i++)
+    if(pp[i].name === tensionerName) out.anchorN = _feadNum(pp[i].exitTensionN, NaN);
+  if(!Number.isFinite(out.anchorN)) return out;
+  var en = Infinity, enAd = null;
+  for(i = 0; i < pp.length; i++){
+    T = _feadNum(pp[i].exitTensionN, NaN);
+    if(!Number.isFinite(T)) return out;
+    if(T < en){ en = T; enAd = pp[i].name; }
+    // Ankrajın ALTINA inen spanlar — hükmü verenler bunlar.
+    if(T < out.anchorN - 1e-6 * Math.max(1, Math.abs(out.anchorN))) out.drain.push(pp[i].name);
+  }
+  out.minN = en; out.minName = enAd;
+  out.negative = en < 0;
+  out.deficitN = out.anchorN - en;
+  out.ok = !out.drain.length;
+  return out;
+}
+
 // Yalnız sırayı isteyen çağrılar için ince sarmal (yerleştirici, testler).
 function veFeadRouteOrder(nodeList, connList){
   return veFeadRouteDiagnose(nodeList, connList).order;
@@ -1579,6 +1700,10 @@ function veFeadBuildSystem(nodeList, connList){
   var order = teshis.order;
   out.order = order;
   out.route = teshis;
+  // DÖNÜŞ YÖNÜ: rota sırasının SONUCU, ayrı bir bayrak DEĞİL (bkz.
+  // veFeadNaturalSense). "Dönüş Yönü" düğümü kabloları çeviriyor; buradan
+  // okunan sıra zaten çevrilmiş sıradır.
+  out.spin = veFeadNaturalSense(order);
   if(!order.length){ out.errors.push('İç topolojide hiç kasnak yok.'); return out; }
   // TOPOLOJİ GEÇERLİ DEĞİLSE ÇÖZÜLMEZ. Eskiden kopuk kasnak sıraya sessizce
   // ekleniyor ve çekirdek pekâlâ "geçerli" bir çevrim çözüyordu — yani kart
@@ -2355,6 +2480,45 @@ function veFeadAnalyze(build, opts){
     out.warnings.push('Burulma modeli: ' + veFeadTranslateError(e && e.message));
   }
 
+  // ── GERGİ TARAFI HÜKMÜ + ÇEKİRDEK UYARILARININ YÜKSELTİLMESİ ────────────
+  //
+  // İKİ SESSİZLİK BİRDEN kapanıyor:
+  //
+  // 1. Çekirdeğin "Negatif span gerilmesi" uyarısı YALNIZ duty satırında
+  //    duruyordu (`analysis.duty[i].warnings`). İki rapor da yalnız üst
+  //    seviyeye bakıyor (`_frWarnBox` / `_fsrWarnBox` → R.warnings +
+  //    R.build.warnings), dolayısıyla ters yönde çözülen bir modelde
+  //    "Çözümün taşıdığı uyarılar" kutusu BOŞ kalıyordu. ÖLÇÜLDÜ:
+  //    12 duty satırının 10'u uyarı taşırken R.warnings = null.
+  //
+  // 2. Uyarının SEBEBİ yazılmıyordu. Panel "tasarım gerginliği yetersiz"
+  //    diyordu; oysa tasarım gerginliği 2026-08-25'te GİRDİ OLMAKTAN ÇIKTI
+  //    (yay dengesinden türüyor), yani gösterilen çare kullanıcının
+  //    dokunamadığı bir alanı işaret ediyordu. Gerçek sebep gerginin GERGİN
+  //    spana düşmesi.
+  out.tensionerSide = null;
+  try {
+    var tenAd = null, ii;
+    for(ii = 0; ii < build.sys.pulleys.length; ii++)
+      if(build.sys.pulleys[ii].tensioner) tenAd = build.sys.pulleys[ii].name;
+    var satirlar = (out.analysis && out.analysis.duty) || [];
+    var enKotu = null;
+    satirlar.forEach(function(row){
+      var v = veFeadTensionerSide(row, tenAd);
+      if(!v.ok && (!enKotu || v.deficitN > enKotu.deficitN)) enKotu = v;
+    });
+    out.tensionerSide = enKotu || { ok: true };
+    if(enKotu){
+      out.warnings.push('Gergi kayışın GERGİN tarafında: '
+        + enKotu.drain.length + ' span ankrajın (' + _feadFmt3(enKotu.anchorN)
+        + ' N) altına iniyor, en düşüğü ' + _feadFmt3(enKotu.minN) + ' N ("'
+        + enKotu.minName + '"). Otomatik gergi kayışın GEVŞEK tarafına konur — '
+        + 'kayış dönüş yönünü çevirin ya da gergiyi kayış sırasında sürücünün '
+        + 'önüne alın. Tasarım gerginliği yay dengesinden TÜREDİĞİ için '
+        + 'yükseltilemez.');
+    }
+  } catch(e){ /* hüküm üretilemezse çözüm yine de döner */ }
+
   var fatModel = opts.fatigueModel || VE_FEAD_LIFE_FATIGUE_MODEL;
   out.fatigueModel = fatModel;
 
@@ -2476,6 +2640,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadOD: veFeadOD, veFeadHasOD: veFeadHasOD, veFeadRadius: veFeadRadius,
     veFeadMigrateNode: veFeadMigrateNode, veFeadMigrateAll: veFeadMigrateAll,
     veFeadRouteOrder: veFeadRouteOrder, veFeadRouteDiagnose: veFeadRouteDiagnose,
+    veFeadNaturalSense: veFeadNaturalSense, veFeadReverseRoute: veFeadReverseRoute,
+    veFeadTensionerSide: veFeadTensionerSide,
     veFeadResolveDriver: veFeadResolveDriver,
     veFeadUniqueNames: veFeadUniqueNames, veFeadTranslateError: veFeadTranslateError,
     veFeadDutyRows: veFeadDutyRows, veFeadPresetLib: veFeadPresetLib,
