@@ -10,6 +10,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `build.js` — Build script (`index.html` + `js/` + `css/` → `MFSim_Code.html`)
 - `js/fead-belts.js` — FEAD kayış kataloğu (5 profil, 244 stok boy + otomotiv
   ızgarası). DOM'suz saf veri; ISO 9982 / DIN 7867, üretici kataloglarından çıkarıldı.
+- `js/fead-tensioners.js` — FEAD otomatik gergi künye kütüphanesi (14 kayıt, 2 aile).
+  DOM'suz saf veri; **14 Gates raporundan ölçülerek** çıkarıldı, parça numarası
+  uydurulmadı. Bant kayıtlardan TÜRETİLİR, elle yazılmaz.
 - `js/structural-materials.js` — Yapısal Analiz malzeme kütüphanesi (112 kayıt / 16 aile,
   DOM'suz saf veri + arama). Değerler standartların NOMİNAL değerleridir, sertifika değil.
 - `js/structural-occt-wasm.js` — **Üretilen, git'e DAHİL DEĞİL**: OCCT çekirdeğinin
@@ -2757,6 +2760,16 @@ montaj resmi) mümkün — model kendi kendini doğrulayamaz ve rapor bunu söyl
 
 ##### PİVOT BİR GİRDİ DEĞİL — parça künyesinden TÜRER (2026-08-25)
 
+> **BU BÖLÜM AŞILDI (2026-08-28) — yön TERSİNE çevrildi.** Kullanıcı kararı:
+> *"Kullanıcı ilk olarak KIRMIZI NOKTA olarak OTOMATİK GERGİ MONTAJ
+> KOORDİNATLARInı verecek."* Bugün pivot bir GİRDİ, kasnak merkezi bir ÇIKTI
+> ve kol açısı bir ZARFTAN seçiliyor (bkz. *"PİVOT GİRDİ, KOL AÇISI ZARFTAN"*).
+> Aşağıdaki türetme `angleMode:'mount'` kipinde **aynen duruyor** — kaydedilmiş
+> her proje onu kullanıyor ve tabanı birebir korunuyor. Tautoloji dersi ve
+> "kayış yolu pivota bağlı değil" ölçümü bugün de geçerli; **ölçülen bedeli**
+> ise yeni bölümde: türetilen pivot Gates'in ölçtüğünden 15,45 mm sapıyor ve
+> gerginliği **%7,1** kaydırıyor.
+
 Bir önceki bölüm pivotu Gates raporundan almıştı. Kullanıcı asıl noktayı
 sonra koydu ve **haklıydı**:
 
@@ -2883,6 +2896,290 @@ etrafında döndürülünce sarım `<0,001°` değişiyor ama β `>1°` ve gergi
 (103 test), türetmede işareti çevirme (14), örnekte kol açısı 344 → 348 (8),
 totoloji bayrağını sabitleme (1), sürüklemede pivotu yine yazma (1), raporun
 totoloji uyarısını basmaması (1).
+
+##### PİVOT GİRDİ, KOL AÇISI ZARFTAN SEÇİLİR — yön tersine çevrildi (2026-08-28)
+
+Kullanıcı isteği: *"Kullanıcı ilk olarak KIRMIZI NOKTA olarak OTOMATİK GERGİ
+MONTAJ KOORDİNATLARInı verecek. Daha sonra program OTOMATİK GERGİ ÖZELLİKLERİ
+baz alınarak bir PİVOT NOKTASI ZARFI oluşturacak … bu sonsuz noktalar içinden
+en uygun noktayı seçecek. Bunu Gates'in nasıl yaptığını daha bilmiyoruz.
+Amacımız bunu bulmak zaten."* Ve: *"kayış boyu KESİNLİKLE BİR SONUÇ OLACAK."*
+
+**İkisi TEK değişiklik.** Gergi kasnağının merkezi girdi olmaktan çıkınca kol
+açısını pinleyen şey de kalkıyor; geriye kalan tek serbestlik derecesi zarftan
+seçiliyor ve kayış boyu **yapısal olarak** o seçimin sonucu oluyor.
+
+| | eski (`mount`) | yeni (`envelope`) |
+|---|---|---|
+| Kullanıcı verir | gergi **KASNAĞININ** merkezi (YEŞİL) | gergi **GÖVDESİNİN** montaj noktası = pivot (KIRMIZI) |
+| Program türetir | pivot | kasnak merkezi **ve kayış boyu** |
+| Kayış boyu | GİRDİ (`fixed`) ya da seçilebilir | **her zaman ÇIKTI** — kip kilitli |
+
+###### YÖN DEĞİŞİKLİĞİ BİR KOLAYLIK DEĞİL, ÖLÇÜLMÜŞ BİR HATANIN DÜZELTMESİ
+
+Montajda SABİT olan pivottur; kasnak merkezi kolun o anki açısıyla değişen bir
+konumdur. Eskiden **değişken olanı sorup sabit olanı türetiyorduk**.
+
+**ÖLÇÜLDÜ** (AG00976 · Gates 8PK1715HD raporu, aynı araç):
+
+| | pivot | Gates'e sapma | gerginlik |
+|---|---|---|---|
+| Gates'in ölçtüğü | (−250,00 · 110,00) | — | 544,3 N |
+| BMC örneğinin merkezden **türettiği** | (−256,59 · 123,97) | **15,45 mm** | **505,8 N (−%7,1)** |
+
+Ve bunu **hiçbir şey yakalamıyordu**: `veFeadArmCheck` pivot türetilmişken
+TOTOLOJİK (fark yapısal olarak sıfır) — kodun kendi notu bunu yazıyor.
+
+###### SEÇİM ÖLÇÜTÜ TAHMİN EDİLMEDİ, 14 GATES SİSTEMİNDEN GERİYE ÇÖZÜLDÜ
+
+Altı aday ölçüt, her sistemde zarf 0,25° adımla taranarak Gates'in gerçek
+çalışma açısıyla karşılaştırıldı (**aci farkinin medyani**):
+
+| ölçüt | medyan | ±5° içinde |
+|---|---:|---:|
+| **min take-up EN BÜYÜK** | **4,5°** | **9 / 14** |
+| ortalama konumdaki T en küçük | 10,3° | 2 / 14 |
+| T tepe değeri en küçük | 20,3° | 0 / 14 |
+| T_max / T_min en küçük | 23,5° | 1 / 14 |
+| hubload tepesi en küçük | 30,8° | 0 / 14 |
+| en küçük sarım en büyük | 53,1° | 0 / 14 |
+
+```
+ÖLÇÜT:  max over θ  of  min over rel ∈ [0, 1,5·rel_nom]  of  dL/dθ(θ, rel)
+```
+
+**FİZİKSEL ANLAMI:** `T = M/(dL/dθ)` olduğu için take-up'ın en KÜÇÜK olduğu yer
+gerginliğin en BÜYÜK olduğu yerdir. Ölçüt, kayışın servis zarfı boyunca (yeni/
+uzun kayıştan yıpranmış/kısa kayışa) görülen **tepe gerginliği en küçük** yapan
+montaj saatini seçiyor — klasik gergi yerleşim kuralı.
+
+**β = 90° DEĞİL** (klasik ders kitabı kuralı) ve bu ölçüldü: Gates'in çalışma
+noktalarında β **42,7…59,5°**. sin β büyürken sarım çöküyor, çarpım orta bir
+açıda tepe yapıyor.
+
+**TEPE DÜZ DEĞİL — isabet gerçek.** %1 platosu ortalama **4,9°** (çoğu sistemde
+1,0–2,8°), yani "±5° içinde" ucuz bir isabet olmuyor. Gates'in noktasındaki
+ölçüt cezası medyan **%4,0**, iki sistemde tam **%0,0**.
+
+**1,5 ÇARPANI UYDURULMADI:** 1,0…2,0 tarandı, **1,2–1,6 bir PLATO** (medyan
+3,5–4,5°, 8–9/14 sistem ±5°); 1,0'da 6,5°, 2,0'de 11,5°'e bozuluyor. 1,5
+platonun ortasında ve fiziksel karşılığı var: çalışma açısı + %50 pay.
+
+###### BAĞIMSIZ DOĞRULAMA — KAYIŞ BOYU KAYIŞA HİÇ BAKMADAN GERİ ÜRETİLİYOR
+
+Ölçüt kayış verisine girmiyor (gezinme aralığı yay künyesinden:
+`rel_nom = (M_mean − M₀)/k`). Ölçüldü: kayıştan türeyen aralık (Replace…MinBelt)
+ile künyeden türeyen `[0, 1,5·nom]` **aynı** sonucu veriyor (medyan 4,5° ↔ 4,5°).
+Bu, kayış boyunun çıktı olabilmesinin ön koşulu — yoksa döngü kurulurdu.
+
+Sonuç: program kayışı **hiç görmeden** Gates'in kayışını geri veriyor.
+
+| | sapma |
+|---|---|
+| 11 / 14 sistem | **±%0,35 içinde** |
+| medyan | **%0,21** |
+| en kötü (AG0868-4PK) | %1,98 |
+
+**UÇTAN UCA** (gerçek örnek düğümleri → köprü → çekirdek, AG00976): seçilen kol
+açısı −10,90°, **kayış boyu 1715,39 mm** (Gates REBL 1714,6 → **+%0,05**),
+gerginlik 540,1 N (Gates 544 → −%0,7), sarımlar `156,6 · 52,8 · 198,4 · 64,3 ·
+157,6 · 35,4` (Gates `156,2 · 52,8 · 198,4 · 64,3 · 157,1 · 34,6`, en kötü 0,8°).
+
+###### SINIR: PAKETLEME MODELDE YOK — ve sonuç bunu SÖYLÜYOR
+
+Zarfın hangi yayının motor bloğunda kullanılabilir olduğunu model bilmiyor.
+14 sistemin 13'ünde en iyi nokta Gates'inkine komşu; **AG00879'da 153° uzakta**
+ve orası motorun öteki yanı. Bu yüzden sonuç bir **ÖNERİ**: kullanıcı açıyı
+sabitleyebiliyor (`armPinned`) ve zarf o zaman bir seçici değil bir **TEŞHİS**
+yüzeyi oluyor. Sınır panelde ve raporda **yazılı** — modülün kendi kuralı
+(B10 çap penceresi, tepe yükün *"KALİBRE DEĞİL"* damgası ile aynı gerekçe).
+
+###### KİP ÜÇLÜ, VARSAYILAN GERİYE DÖNÜK
+
+`veFeadAngleMode`: açık seçim kazanır; yoksa `cenX/cenY` → `mount`,
+`freeAngleDeg` → `direct`, `pivotX/pivotY` → **`envelope`**, hiçbiri yoksa
+**`envelope`** (yeni akış). **Geriye dönük etkisi YOK ve ölçüldü:** kaydedilmiş
+her projede bu üç alandan en az biri yazılı, dolayısıyla değişen tek şey
+paletten YENİ konan bir gerginin hangi soruyla açıldığı. Taban birebir
+korunuyor — AG00976 `kol 28,0750° · L 1714,60 · T 544,05`, BMC
+`kol 28,4271° · L 1715,00 · T 532,14`.
+
+**ZARF KİPİNDE PİVOT TÜRETİLMEZ.** Montaj merkezi + kol açısı girilse bile
+köprü onları kullanmıyor ve sebebini adıyla yazıyor. Türetmeye izin verilseydi
+kullanıcı montaj merkezini girip pivotu "girdi" sanabilirdi — düzeltilen sessiz
+hata sınıfının ta kendisi, üstelik ölçülmüş bedeliyle.
+
+**KAYIŞ KİPİ KİLİTLİ ve kilit ÜÇ YÜZEYDE birden.** Zarf kipinde kayış boyu
+yapısal olarak bir çıktı; panel seçici yerine *"SERBEST (kilitli)"* yazıyor,
+kanvas rozeti tıklamayı reddediyor, `veFeadToggleBeltMode` de. Tek yerde
+tutulsaydı panel bir kipi, rozet başkasını gösterirdi — bu modülün tekrar eden
+kuralı (*"panel ile kart AYNI alanı okur"*).
+
+###### KADEMELİ TAZELEME — ÖLÇÜLDÜ
+
+| yol | ne yapar | süre |
+|---|---|---:|
+| genel zarf taraması (360°, kaba 2° + ince 0,1°) | ilk çözüm | **84 ms** |
+| tohumlu **yerel** arama (±6°, 0,5°) | bırakma / yeniden çözüm | **6 ms** |
+| saklanan açı (`selectArm:false`) | **her sürükleme karesi** | **0 ms** |
+
+Kart bütçesi 2,2 ms, yani genel tarama 38 kat aşardı. Sürükleme yolunda kol
+açısı **donuyor** — ve bu yalnız bir hız kararı değil, fiziksel olarak doğrusu:
+kullanıcı alternatörü sürüklerken gerginin montajdaki saati değişmiyor, değişen
+kayış boyu ve gerginlik. Bırakınca `veFeadReselectArm` yeniden iyileştiriyor.
+
+Seçilen açı düğüme **memo** olarak yazılıyor (`armMeanDeg` + `armAuto`) ama
+**`saveState` çağrılmıyor**: bu bir kullanıcı kararı değil, hesabın ara sonucu —
+geri-al yığınına binmesi kartın her tazelenmesinde bir adım eklemek olurdu (yön
+gülü konumundaki kuralın aynısı).
+
+**Kapı 17 mutasyonla ölçüldü, 16'sı kırmızı:** ölçütü ortalamaya çevirme (4
+test), çarpanı 2,6 yapma (5), kayış kipi kilidini kaldırma (3), pivotu yine
+türetme (1), memoyu yazmama (2), sabitlenmiş açıyı yok sayma (1), zarfın üçte
+birini tarama (19), ince taramayı kapatma (3), yeni gerginin varsayılanını mount
+yapma (1), panel kilidini kaldırma (1), rozeti kilitte SABİT yazdırma (1),
+`selectArm:false`'u yutma (2), kart yolunu her karede taratma (1), boşuna
+tazeleme (1), raporda boyu yine GİRDİ tarafına koyma (1), rapordan kol açısını
+düşürme (1), panelden zarf okumasını düşürme (1). On yedincisi (bırakma
+yolundaki `armPinned` kontrolü) **semantik olarak eşdeğer** — köprü katmanı
+sabitlenmiş açıyı zaten aynen döndürüyor, dolayısıyla gözlenebilir bir fark yok.
+
+> İki mutasyon **ilk turda YEŞİL kaldı** ve ikisi de aynı dersi tekrarladı:
+> kapı ÜRETİLEN YÜZEYE bakmalı, üreticiye değil. Rozet tıkı `veFeadToggleBeltMode`
+> üzerinden sınanıyordu (rozetin kendi `onclick` kapısını görmüyordu) ve zarf
+> okuması `veFeadEnvelopeReadout` doğrudan çağrılıyordu (panelden düşürülmesini
+> görmüyordu). Şekil 1'deki *"yay SAYISINA bakan test"* dersinin aynısı.
+
+##### GERGİ KÜNYE KÜTÜPHANESİ — `js/fead-tensioners.js` (14 kayıt, 2 aile)
+
+Kullanıcı isteği: *"Bu otomatik gergi özelliklerini de Gates raporlarından
+kalibre ederek çekeceğiz."* Kalıp `fead-belts.js` ile aynı: DOM'suz saf veri,
+panel yalnız okur.
+
+**PARÇA NUMARASI UYDURULMADI.** Gates raporları gerginin parça numarasını
+yazmıyor; tek bilinen `E9843` ve o da tek bir aracın montaj çiziminden geliyor.
+Kayıtlar **kaynak raporla** adlandırıldı — uydurulmuş bir numara, kullanıcının
+tedarikçiye yanlış bir kod söylemesi demekti.
+
+###### HANGİ ALAN PARÇANIN, HANGİSİ MONTAJIN — ÖLÇÜLDÜ
+
+Ayrım tahmin değil: **AG0868 ailesi AYNI gergiyi üç kayış genişliğiyle**
+kullanıyor ve yalnız bir alan değişiyor.
+
+| | ön yük | katsayı | çalışma momenti | nominal dönme |
+|---|---:|---:|---:|---:|
+| 8PK | 8,56 | 0,501 | **22,57** | **27,96°** |
+| 6PK | 8,65 | 0,495 | **19,04** | **20,99°** |
+| 4PK | 8,46 | 0,505 | **16,07** | **15,07°** |
+
+Ön yük ve katsayı **%2 içinde sabit** (aynı yay), çalışma momenti kayış
+genişliğiyle ölçekleniyor. Yani:
+
+| | alanlar |
+|---|---|
+| **PARÇA** | kol boyu · ön yük · yay katsayısı · kasnak çapı · temas tarafı |
+| **MONTAJ** | çalışma momenti — kolun ne kadar kurulduğu, bir TASARIM AYARI |
+
+Künye uygulamak **pivot ve kol açısını YAZMAZ** (testli): ikisi de motorun
+verisi, parçanın değil. Künye pivotu da taşısaydı kullanıcı bir kataloğun
+koordinatını kendi motoruna uygulamış olurdu.
+
+###### İKİ AİLE, VE ~28°'nin RASTLANTI OLMADIĞI
+
+14 kaydın 13'ü tek gövde ailesinden: kol **90 mm**, kasnak **Ø77,2**, sırttan
+temas, katsayı **0,475–0,505** Nm/° (±%3). Tek istisna **AG00879**: kol 56 mm,
+Ø76,2, katsayı 0,409, ön yük 20,05 — belirgin şekilde başka bir parça.
+
+Kol-90 ailesinin tam genişlikli (8PK) **dokuz** kaydında
+`(M_mean − M₀)/k = 27,10 … 29,62°`. Kullanıcının gönderdiği E9843 montaj
+çizimi aynı sayıyı yazıyor: *"PIN POSITION FOR THE 344° MEAN ANGLE AND 22.5 Nm
+SPRING TORQUE @ **28° FREEARM-MEAN ROTATION**"*. Parçanın kendi değişmezi
+**bağıl** dönmedir; mutlak açı montaja aittir ve zarftan seçilir.
+
+###### BANT KAYITLARDAN TÜRETİLİR, ELLE YAZILMAZ
+
+İlk sürüm yuvarlanmış sınırlar taşıyordu ve **kapı bunu yakaladı**:
+`(16,07 − 8,46)/0,505 = 15,0693…`, elle yazılan alt sınır ise `15,07` — yani
+kütüphane **kendi kaydını** "bandın dışında" ilan ediyordu. Elle yazılmış bir
+sınır ayrıca yeni bir kayıt eklendiğinde sessizce eskir (kart ölçüsündeki
+"ikinci kopya" dersinin aynısı).
+
+**Bant bir HÜKÜM değil bir KARŞILAŞTIRMA:** kullanıcının gergisi bu 14 raporun
+dışından olabilir ve bu bir hata değildir. Ama **bir ondalık kayması tam
+buradan görünür** — `rate 0,480 → 0,048` hem katsayı bandını hem nominal
+dönmeyi (280°) düşürüyor, yani iki bağımsız işaret veriyor.
+
+**KAYIT KOPYA OLARAK GİDER:** kütüphane sürümü değişip bir değer düzeltilse
+bile kaydedilmiş proje kendiliğinden değişmez (`tenLib`/`tenLibVer` yalnız İZ
+bırakıyor) — `structural-materials.js`'in kendi kuralı, bu projenin en çok
+kaçındığı hata sınıfı.
+
+**EN KRİTİK KAPI:** kütüphanedeki her sayı `tests/fixtures/fead-validation.js`
+içindeki raporlardan çıkarıldı, yani **ikinci bir kopya**. Ayrışırsa hata
+SESSİZ olur — kullanıcı künye seçer, model çözülür, uyarı çıkmaz, yalnız
+sayılar raporunkinden başkadır. Test 14 kaydın 14'ünü de fixture'la **birebir**
+karşılaştırıyor ve nominal dönmeyi raporun kendi Mean satırıyla (0,2° içinde)
+tutuyor.
+
+Kapı **dokuz mutasyonla** ölçüldü, dokuzu da kırmızı: bir künyeyi fixture'dan
+kaydırma, uygulamada kasnak çapını atlama, bant denetimini boşaltma, listeyi
+referansla döndürme, künyeden pivota yazma, Türkçe katlamayı kaldırma, bandı
+elle yazılmış sınıra döndürme, paneli künye kartını basmaz yapma, seçilen
+künyeyi uygulamama.
+
+> Türkçe katlama kapısı **ilk turda YEŞİL kaldı**: test `AG00976` / `KASNAK`
+> gibi sorgularla koşuyordu ve ikisi de `toLowerCase()` ile de bulunuyor. Kapı
+> artık `DIŞINDA` / `dışında` / `DISINDA` dörtlüsünü koşuyor — JS'te
+> `'I'.toLowerCase() === 'i'` (Türkçe'de `'ı'` olmalı), yani ancak katlamayla
+> bulunuyor.
+
+##### KAYIŞ TİPİNE BAĞLI ÇIKTILAR — ŞİMDİLİK KAPALI (2026-08-28)
+
+Kullanıcı isteği: *"'kayış boyu' kullanılarak yapılan hesaplamalar, diyagramlar
+vb şeyler, yani 'kayış tipi' özelinde gelen profil sabitleri ile hesaplanan
+şeyler olmayacak. ŞİMDİLİK. İlerleyen zamanlarda BELKİ kayış tipi sabit kabul
+ederek bir hesaplama yapabiliriz."*
+
+Zarf kipinde kayış boyu bir ÇIKTI, yani tasarım aşamasında kayış **henüz
+seçilmemiştir**. O aşamada katalog sabitleriyle hesap yapmak olmayan bir seçimi
+varsaymak olurdu — ve bu modülde en pahalı hata sınıfı "makul ama yanlış"
+sayıdır: tablolar dolu görünür, hüküm verilir, okuyucu neyin varsayıldığını
+bilmez.
+
+| kapatılan çıktı | kayış katalogundan gelen |
+|---|---|
+| B10 kayış ömrü | `effLength` · `massPerRibKgM × ribs` · yorulma sabitleri |
+| Kaburga yorulma dağılımı | yorulma sabitleri (PK-2_2p-MT3 / PK-2_2a-MT3) |
+| Açıklık doğal frekansları + çırpınma | birim kütle (`massPerRibKgM × ribs`) |
+| Kol konum tablosunun zarfı | `tolerance` · `wearPct` |
+
+**KAPATILAMAYAN TEK ŞEY: `hb` / `hr`.** Pitch yarıçapı `OD/2 + hb` (kaburgalı)
+ya da `OD/2 + hr` (sırttan); ikisi de profil sabiti. PK'da `hb = 1,2 mm`, yani
+merkez mesafelerinde 2,4 mm'lik fark. Bunlar olmadan **teğet geometrisi
+yoktur** — kapatmak "kayışsız kayış tahriki" demek olurdu. Panel ve rapor bunu
+açıkça yazıyor: kapatılan şey profil değil, profilin **katalog sonuçları**.
+
+**VARSAYILAN VERİDEN ÇÖZÜLÜR** (`veFeadBeltDataMode`): zarf kipinde `none`,
+diğer kiplerde `full` — yani bugüne kadarki her kayıt davranışını birebir
+koruyor (testli). Kullanıcının açık seçimi ikisini de ezer.
+
+**SESSİZ DEĞİL:** kapatılanlar `beltDataOff` olarak sonuca giriyor, panel
+listeliyor, rapor §8'in başında *"Kayış tipine bağlı çıktılar bu belgede YER
+ALMIYOR"* kutusunu basıyor. Bir özet belgenin en pahalı sessiz hatası,
+İÇERMEDİĞİ bir kontrolün yapıldığı izlenimini bırakmasıdır.
+
+Kapı **altı mutasyonla** ölçüldü, altısı da kırmızı: zarf kipinde yine `full`
+verme, kapalıyken ömür/yorulmayı yine üretme, frekansları bırakma, kapatılanlar
+listesini boşaltma, panel anahtarını başlıksız bırakma, rapordan kutuyu düşürme.
+
+> Altıncısı **ilk turda YEŞİL kaldı** — kapı `_frBeltDataBox`'ı doğrudan
+> çağırıyordu, `_frSection8`'in onu BASTIĞINI ölçmüyordu. Aynı oturumda
+> **üçüncü kez** aynı ders: kapı ÜRETİLEN YÜZEYE bakmalı, üreticiye değil.
+
+**Sırada:** kullanıcı kayışı seçtikten sonra anahtarı açıp katalog sonuçlarını
+geri almanın akışı (bugün elle yapılıyor); ve zarf çözümünün Sonuçlar
+sayfasında kanal olarak yayını.
+
 
 
 **Sırada:** Sonuçlar sayfasında FEAD çözüm sekmesi (kanal yayını).
