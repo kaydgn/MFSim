@@ -88,8 +88,16 @@ function veAttachNodeDrag(nodeEl, node) {
     // düğümler için sabit 65 px genişlik varsayıyor (checkAlignment); kasnak
     // kutuları 54…72 px olduğu için hizalanan şey merkez de değil, kenar da
     // değil. Kasnak koordinatı için anlamı yok.
+    //
+    // KONUM BAĞI KAPALIYKEN KENETLEME GERİ GELİR. İstisnanın tek gerekçesi
+    // koordinatın kanvastan TÜREMESİYDİ; bağ kapalıyken kutu salt görsel,
+    // yani kenetleme klasik topolojilerdeki anlamına (kenarları hizala)
+    // dönüyor ve hiçbir sayıyı bozamaz — kenetlenen 20.6 mm artık
+    // kenetlenecek bir mm değil.
     var _feadDrag = (typeof _feadIsPulley === 'function')
-      && selectedNodes.some(function(n){ return _feadIsPulley(n); });
+      && selectedNodes.some(function(n){ return _feadIsPulley(n); })
+      && (typeof veFeadCoordLinkOn !== 'function' || typeof nodes === 'undefined'
+          || veFeadCoordLinkOn(nodes));
     var snap = (!_feadDrag && typeof checkAlignment === 'function')
       ? checkAlignment(selectedNodes) : { snapX: 0, snapY: 0 };
     if(snap.snapX !== 0 || snap.snapY !== 0) {

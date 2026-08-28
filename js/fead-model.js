@@ -890,6 +890,39 @@ function veFeadMmToCanvas(mmX, mmY, originNode, scale, box){
            y: o.y - _feadNum(mmY, 0) * s - b.h / 2 };
 }
 
+// ── KONUM BAĞI — TEK OKUMA NOKTASI ─────────────────────────────────────────
+//
+// "Kanvas = kayış düzlemi" bağı kapatılabilir (Konum Bağı düğümü). Bağ
+// kapalıyken kanvas konumu ile mm koordinatı BAĞIMSIZ: kutu salt görsel,
+// koordinat salt panel girdisi.
+//
+// OKUMA TEK NOKTADAN. Kanvas (sürükleme), panel ve rozet üçü de bu
+// fonksiyonu çağırıyor — bu modülün tekrar eden kuralı (kayış kipinde
+// `veFeadBeltMode`, kol konumunda `posMode`): iki ayrı yerde hesaplanan bir
+// durum, iki yüzeyin sessizce ayrışması demektir.
+//
+// DÜĞÜM YOKSA BAĞ AÇIK. Geriye dönük uyum bu satırda: bugüne kadar
+// kaydedilmiş hiçbir projede bu düğüm yok, dolayısıyla hepsi birebir eski
+// davranışını sürdürür. Düğüm var ama `linked` yazılı değilse de AÇIK —
+// paletten bırakmak tek başına modeli değiştirmemeli.
+//
+// ÇOK KOPYADA "KAPALI" KAZANIR. `maxInstances:1` ikinci kopyayı zaten
+// engelliyor, ama eski bir kayıt ya da elle düzenlenmiş bir dosya iki kopya
+// taşıyabilir. O zaman açıkça KAPALI diyen bir düğümü yok saymak, kullanıcının
+// verdiği talimatı sessizce çöpe atmak olurdu.
+function veFeadCoordLinkNode(nodeList){
+  var a = (nodeList || []).filter(function(n){ return !!_feadDefOf(n).isFeadCoordLink; });
+  if(!a.length) return null;
+  for(var i = 0; i < a.length; i++)
+    if(a[i] && a[i].data && a[i].data.linked === false) return a[i];
+  return a[0];
+}
+
+function veFeadCoordLinkOn(nodeList){
+  var n = veFeadCoordLinkNode(nodeList);
+  return !n || !n.data || n.data.linked !== false;
+}
+
 // ── KANVASTAN mm'YE ────────────────────────────────────────────────────────
 // Sürükleme sırasında çağrılır. BÜTÜN kasnaklar tek geçişte tazeleniyor,
 // yalnız sürüklenen değil — çünkü orijin de bir kasnak: KRANK sürüklenirse
@@ -1908,6 +1941,11 @@ function veFeadBuildSystem(nodeList, connList, opt){
   var cfgBelt = {
     profile: bd.profile || 'PK',
     brand: bd.brand || 'GATES',
+    // KATALOG ADI ÇÖZÜME TAŞINIR. Düğüm verisinde duruyordu ama köprü onu
+    // sys.belt'e geçirmediği için özet rapor kayışın kimliğini BASAMIYORDU
+    // (belgede '8PK1715HD' 0 kez geçiyordu). Hesaba girmez, yalnız künyedir —
+    // ama tedarikçiyle konuşurken tek tanımlayıcı odur.
+    beltType: (typeof bd.beltType === 'string' && bd.beltType) ? bd.beltType : undefined,
     ribs: ribs || undefined,
     effLength: effLength || undefined,
     tolerance: _feadNum(bd.tolerance, 0),
@@ -2575,6 +2613,78 @@ function veFeadPeakInertias(build){
   return out;
 }
 
+// Bir kasnağın YÜK TAŞIYIP taşımadığının ölçütü. Gerginlik oranı ≈ 1 olan bir
+// kasnakta (avara, gergi) SF bir MARJ değil, o sarım açısının KAPASİTESİDİR;
+// ne hükme girer ne de bir kayma eşiği üretir. Ölçüt köprü katmanında çünkü
+// fiziksel bir soru ve iki yüzey birden kullanıyor: kayma hükmü (sunum) ve
+// kayma eşiği (aşağıdaki hesap). İki yerde iki sayı tutmak sessizce ayrışırdı;
+// sunum katmanındaki VE_FR_SLIP_LOADED_RATIO buradan okur ve bir kapı ikisinin
+// eşit kaldığını tutar.
+var VE_FEAD_SLIP_LOADED_RATIO = 1.01;
+
+// ─── KAYMA EŞİĞİ — "ne kadar aşağı inebilirim" ──────────────────────────────
+//
+// Kayma hükmü boyutsuz SF ile veriliyordu; N cinsinden "kaymamak için gereken
+// en düşük ankraj gerginliği" diye bir büyüklük modelde HİÇ YOKTU. Tedarikçi
+// çıktısı onu gerginlik grafiğinde yatay bir çizgi olarak basıyor.
+//
+// KURULUŞ — kapalı form, iterasyon YOK. Açıklık gerginlikleri ankrajdan sabit
+// farklarla ayrılır (fark tork tarafından belirlenir, ankrajdan bağımsızdır):
+//   T_i = T₀ + Δ_i
+// Bir kasnakta kayma sınırı  T_maks / T_min = e^(μφ) = cap  olduğunda:
+//   (T₀ + Δ_maks) / (T₀ + Δ_min) = cap   →   T₀* = (Δ_maks − cap·Δ_min)/(cap − 1)
+// Eşik, YÜK TAŞIYAN kasnakların en büyüğü ve BÜTÜN devir satırlarının en
+// büyüğüdür (en kötü durum).
+//
+// YÜK TAŞIMAYANLAR DIŞARIDA ve gerekçe TUTARLILIK, matematiksel imkânsızlık
+// DEĞİL. Bir avara da pekâlâ bir kök verir (Δ farkı küçük ama sıfır değil);
+// ÖLÇÜLDÜ, AG00976'da yük taşımayanların kökleri −856,6 … +5,6 N aralığında,
+// yani belirleyici olan 80,95 N'ın çok altında — filtre bu sistemde SAYIYI
+// DEĞİŞTİRMİYOR. Filtrenin işi hükmü hizada tutmak: kayma hükmünü raporun
+// kendisi yük taşıyanların en düşüğünden veriyor (`_frMinSF`), çünkü oran ≈ 1
+// olan bir avarada SF bir MARJ değil o sarım açısının KAPASİTESİDİR. Eşiği
+// başka bir kümeden almak, aynı belgede iki farklı kayma ölçütü olurdu.
+//
+// ÖLÇÜLDÜ (AG00976): iki bağımsız yol — kapalı form ve iki-bölme — on iki devrin
+// on ikisinde de aynı sayıyı veriyor (|Δ| ≤ 1,4e−14 N). Eşik 80,95 N @ 1000 d/d,
+// belirleyici FAN; tasarım gerginliği 544,05 N, yani 6,72 kat pay.
+//
+// GATES'İN BASTIĞI SAYI BAŞKA ve kopyalanmamalı: s1 grafiğinde 157,65 N yazıyor
+// ama Gates'in KENDİ kayma sayfasındaki (s6/12) FAN eğrisinden türeyen değer
+// 66,6 N — aynı raporun iki sayfası arasında 2,37 kat fark var. MFSim'in 80,95
+// N'ı Gates'in kayma verisine +%21,5 uzakta; basılı çizgiye 2 kat.
+function veFeadSlipThreshold(build, duty){
+  var sys = build && build.sys;
+  if(!sys || !Array.isArray(duty) || !duty.length) return null;
+  var n = sys.pulleys.length;
+  var en = null;
+  duty.forEach(function(d){
+    var per = d && d.perPulley, slip = d && d.slip;
+    if(!per || !slip || per.length !== n || slip.length !== n) return;
+    var T0 = _feadNum(per[sys._tenIdx] && per[sys._tenIdx].exitTensionN, NaN);
+    if(!Number.isFinite(T0)) return;
+    var D = per.map(function(p){ return _feadNum(p.exitTensionN, NaN) - T0; });
+    if(D.some(function(v){ return !Number.isFinite(v); })) return;
+    for(var i = 0; i < n; i++){
+      var oran = _feadNum(slip[i].tensionRatio, NaN);
+      var cap  = _feadNum(slip[i].capstanCapacity, NaN);
+      // YÜK TAŞIMAYAN kasnak eşik üretemez (bkz. yukarıdaki gerekçe).
+      if(!(oran > VE_FEAD_SLIP_LOADED_RATIO) || !(cap > 1)) continue;
+      var din = D[(i - 1 + n) % n], dout = D[i];
+      var mx = Math.max(din, dout), mn = Math.min(din, dout);
+      var t = (mx - cap * mn) / (cap - 1);
+      if(!Number.isFinite(t)) continue;
+      if(!en || t > en.tensionN)
+        en = { tensionN: t, engineRpm: _feadNum(d.engineRpm, NaN),
+               pulley: sys.pulleys[i].name, index: i };
+    }
+  });
+  if(!en || !(en.tensionN > 0)) return null;
+  en.designTensionN = _feadNum(sys.designTensionN, NaN);
+  en.margin = (en.designTensionN > 0) ? en.designTensionN / en.tensionN : NaN;
+  return en;
+}
+
 function veFeadAnalyze(build, opts){
   opts = opts || {};
   var out = { ok: false, error: null, analysis: null, fatigue: null, life: null,
@@ -2766,6 +2876,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadDutyToCore: veFeadDutyToCore, veFeadAnalyze: veFeadAnalyze,
     veFeadDutyDegC: veFeadDutyDegC, veFeadTorsionalOpt: veFeadTorsionalOpt,
     veFeadPeakInertias: veFeadPeakInertias,
+    veFeadSlipThreshold: veFeadSlipThreshold,
+    VE_FEAD_SLIP_LOADED_RATIO: VE_FEAD_SLIP_LOADED_RATIO,
     VE_FEAD_LIFE_FATIGUE_MODEL: VE_FEAD_LIFE_FATIGUE_MODEL,
     VE_FEAD_PRESET_LIB: VE_FEAD_PRESET_LIB,
     veFeadBuildSystem: veFeadBuildSystem, veFeadBuildFromCanvas: veFeadBuildFromCanvas,
@@ -2786,6 +2898,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadNodeBox: veFeadNodeBox, veFeadNodeCenter: veFeadNodeCenter,
     veFeadOriginNode: veFeadOriginNode,
     veFeadCanvasToMm: veFeadCanvasToMm, veFeadMmToCanvas: veFeadMmToCanvas,
+    veFeadCoordLinkNode: veFeadCoordLinkNode, veFeadCoordLinkOn: veFeadCoordLinkOn,
     veFeadSyncMmFromCanvas: veFeadSyncMmFromCanvas,
     veFeadSyncCanvasFromMm: veFeadSyncCanvasFromMm,
     veFeadDragTensioner: veFeadDragTensioner,

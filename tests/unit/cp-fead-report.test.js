@@ -1258,3 +1258,89 @@ describe('§8.7 gergi pivotunun kuruluşu', () => {
     expect(iT).toBeGreaterThan(iP);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// KAYMA EŞİĞİ AYRINTILI RAPORDA DA — iki belge aynı çiziciyi kullanıyor
+// (`_frTensionFigure`), yani eşik çizgisi tek yerden geliyor. Kapı burada
+// AYRICA duruyor çünkü özet rapor kaldırılsa bile bu belge onu basmalı.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('gerginlik grafiği · kayma eşiği çizgisi', () => {
+  test('BMC: eşik çizgisi ve künyesi köprünün sayısını taşıyor', () => {
+    const A = veFeadSlipThreshold(R8.build, R8.analysis.duty);
+    expect(A).toBeTruthy();
+    const fig = RP._frTensionFigure(R8);
+    expect((fig.match(/data-ve="slip-threshold"/g) || []).length).toBe(1);
+    expect(fig).toContain('kayma eşiği ' + Math.round(A.tensionN) + ' N');
+    expect(fig).toContain('KAYMA EŞİĞİ (' + Math.round(A.tensionN) + ' N)');
+    // Belirleyici kasnak ve devir künyede ADIYLA yazıyor.
+    expect(fig).toContain(A.pulley);
+    expect(fig).toContain(String(A.engineRpm) + ' d/d');
+  });
+
+  test('eşik çizgisi doğru YÜKSEKLİKTE — grafiğin kendi y ölçeğinde', () => {
+    // Sayıyı künyeye doğru yazıp çizgiyi yanlış yere koymak SESSİZ bir kusur:
+    // belge tutarlı görünür, grafik yalan söyler. Kapı, çizginin y'sini
+    // grafiğin ekseninden BAĞIMSIZ olarak yeniden çözüyor.
+    const A = veFeadSlipThreshold(R8.build, R8.analysis.duty);
+    const fig = RP._frTensionFigure(R8);
+    const g = fig.match(/data-ve="slip-threshold"[\s\S]*?<\/g>/);
+    expect(g).toBeTruthy();
+    const cz = g[0].match(/<line[^>]*y1="([\d.]+)"[^>]*y2="([\d.]+)"/);
+    expect(cz).toBeTruthy();
+    expect(Number(cz[1])).toBeCloseTo(Number(cz[2]), 6);     // gerçekten YATAY
+    const y = Number(cz[1]);
+
+    // Eksen etiketlerinden ölçeği geri kur. Y bölmeleri sola dayalı
+    // (`text-anchor="end"`) yazılıyor; ölçeği onlardan çözmek, çizicinin
+    // içindeki `sy`ye HİÇ başvurmadan bağımsız bir ölçüm veriyor.
+    const tik = [];
+    const re = /<text x="([\d.]+)" y="([\d.]+)" text-anchor="end" font-size="11"[^>]*>([^<]+)<\/text>/g;
+    let m;
+    while ((m = re.exec(fig))) {
+      const v = Number(String(m[3]).replace(/\u2212/g, '-').replace(/\./g, '').replace(',', '.'));
+      if (Number.isFinite(v)) tik.push({ y: Number(m[2]), v });
+    }
+    const ys = tik.filter((t, i, a) => a.findIndex((b) => b.v === t.v) === i)
+      .sort((a, b) => a.v - b.v);
+    expect(ys.length).toBeGreaterThan(1);
+    const a0 = ys[0], a1 = ys[ys.length - 1];
+    const egim = (a1.y - a0.y) / (a1.v - a0.v);
+
+    // Etiket TEMEL ÇİZGİSİ bölmenin 4 px altına yazılıyor (`y="(Y + 4)"`),
+    // ve bu ofset bütün bölmelerde AYNI olduğu için eğim etkilenmiyor —
+    // yalnız kesişim 4 px kayıyor. ÖLÇÜLDÜ: fark −4,014 px (0,014'ü y'nin
+    // bir ondalığa yuvarlanması).
+    const OFS = 4;
+    const bekY = a0.y + egim * (A.tensionN - a0.v) - OFS;
+
+    // TOLERANS SIKI OLMAK ZORUNDA: bölme aralığı 48,4 px, yani "başka bir
+    // bölmeye düşmesin" ölçütü 24 px'lik bir kapı demek ve 12 px'lik bir
+    // kaymayı da, %50'lik bir ölçek hatasını da SESSİZCE geçiriyordu
+    // (mutasyonla ölçüldü). Yarım piksel, yuvarlamanın hemen üstü.
+    expect(Math.abs(y - bekY)).toBeLessThan(0.5);
+  });
+
+  test('AG00976: eşik Gates\'in bastığı 157,65 N DEĞİL (kopyalanmıyor)', () => {
+    const RA = coz();
+    const A = veFeadSlipThreshold(RA.build, RA.analysis.duty);
+    // Gates s1 grafiğinde 157,65 N yazıyor ama KENDİ kayma sayfası (s6/12)
+    // 66,6 N ima ediyor — aynı raporun iki sayfası 2,37 kat ayrışıyor. Model
+    // kendi zincirinden türetiyor; basılı sayı kopyalanmıyor.
+    expect(Math.abs(A.tensionN - 157.65)).toBeGreaterThan(20);
+  });
+
+  test('HAZIRLAYAN alanı panelde var ve düğüme YAZIYOR', () => {
+    // Panelin kendisinden okunuyor: `_frDocFields` dışa açılmıyor, ve açmak
+    // için imza değiştirmek kapının ölçtüğü şeyi (kullanıcının GÖRDÜĞÜ panel)
+    // değiştirirdi.
+    const eski = window.veFeadResults;
+    let panel = '';
+    try {
+      window.veFeadResults = R8;      // künye alanları YALNIZ çözülmüş modelde
+      panel = RP.getFeadReportPropertiesHTML({ id: 'r1', type: 'fead-report', data: {} });
+    } finally { window.veFeadResults = eski; }
+    expect(panel).toContain('Hazırlayan');
+    // Alan düğüme GERÇEKTEN yazıyor — salt etiket değil.
+    expect(panel).toContain("veFeadSet('r1','author',this.value)");
+  });
+});
