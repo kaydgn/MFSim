@@ -1064,3 +1064,96 @@ describe('FEAD özet · metin kendi sayısıyla tutarlı', () => {
     expect(ust).toBeLessThan(enKotu + 1.0);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// KAYMA EŞİĞİ, KAYIŞ KİMLİĞİ ve YAY ORTALAMA MOMENTİ — üçü de tedarikçi
+// çıktısında olup belgede OLMAYAN satırlardı. Üçünün de kapısı SAYIYA bakıyor:
+// yalnız etikete bakan bir kapı, sayının yanlış alandan gelmesini görmez —
+// bu modülde tam olarak öyle bir kusur ölçüldü (§8.13 tork kapısı).
+// ═══════════════════════════════════════════════════════════════════════════
+describe('FEAD özet · kayma eşiği, kayış kimliği, yay momenti', () => {
+  const govde = (h) => (String(h).split('<body>')[1] || '');
+
+  test('eşik çizgisi gerginlik grafiğinde ve SAYISI köprünün verdiği sayı', () => {
+    const A = veFeadSlipThreshold(R.build, R.analysis.duty);
+    expect(A).toBeTruthy();
+    // Grafikte TEK bir eşik çizgisi var (iki kez çizilirse ikisi de yanlış yerde
+    // olabilir ve fark edilmez).
+    expect((DOC.match(/data-ve="slip-threshold"/g) || []).length).toBe(1);
+    // Etiketteki sayı köprünün sayısı — elle yazılmış bir sabit değil.
+    const yuvar = String(Math.round(A.tensionN));
+    expect(DOC).toContain('kayma eşiği ' + yuvar + ' N');
+
+    // Künye de aynı sayıyı, aynı kasnağı, aynı devri ve aynı payı anlatıyor.
+    const g = govde(DOC);
+    expect(g).toContain('kayma eşiği (' + yuvar + ' N)');
+    expect(g).toContain(String(A.engineRpm) + ' d/d');
+    const m = g.match(/Tasarım gerginliği bunun ([\d,]+) katıdır/);
+    expect(m).toBeTruthy();
+    expect(say(m[1])).toBeCloseTo(A.margin, 1);
+  });
+
+  test('eşik hükmü YÜK TAŞIYAN kasnağı adlandırıyor (kayma hükmüyle aynı küme)', () => {
+    const A = veFeadSlipThreshold(R.build, R.analysis.duty);
+    const i = R.build.names.indexOf(A.pulley);
+    expect(i).toBeGreaterThanOrEqual(0);
+    // O kasnak gerçekten yük taşıyor: bütün devirlerde oranı eşiğin üstünde.
+    R.analysis.duty.forEach((d) => {
+      expect(d.slip[i].tensionRatio).toBeGreaterThan(VE_FEAD_SLIP_LOADED_RATIO);
+    });
+  });
+
+  test('KATALOG ADI künyede — profil satırı ikinci kez basılmıyor', () => {
+    const g = govde(DOC);
+    const b = R.build.sys.belt;
+    expect(b.beltType).toBeTruthy();
+    expect(g).toContain(b.brand + ' ' + b.beltType);
+    // Ayrı bir "Kayış kimliği" satırı YOK: ölçüldü, sayfa 1'i 8 px taşırıyordu
+    // ve katalog adı profili zaten kapsıyor.
+    expect(g).not.toContain('Kayış kimliği');
+    expect((g.match(/Profil \/ marka/g) || []).length).toBe(1);
+  });
+
+  test('beltType YOKSA türetilmiş künyeye düşer (undefined basmaz)', () => {
+    const R2 = coz('BMC_FEAD_2026');
+    const g2 = govde(SU.veFeadSummaryHTML(R2, NODE));
+    expect(g2).not.toMatch(/undefined/);
+    const b2 = R2.build.sys.belt;
+    expect(g2).toContain(((b2.brand ? b2.brand + ' ' : '')
+      + (b2.beltType || ((b2.ribs || '') + (b2.profile || '')))).trim());
+  });
+
+  test('yay ortalama momenti M₀ + k·rel ile TUTUYOR ve † ile türev işaretli', () => {
+    const t = R.build.sys.tensioner;
+    const bek = t.preloadNm + t.rateNmPerDeg * R.analysis.meanRelDeg;
+    const g = govde(DOC);
+    const c = hucreler(g, 'Yay ortalama momenti', 1);
+    expect(c).toBeTruthy();
+    expect(say(c[0].replace(' Nm', ''))).toBeCloseTo(bek, 3);
+    // Gates künyesi 22,07 Nm; türetilen 22,076 → %0,027, yani yuvarlama
+    // mertebesinde. Kapı MUTLAK değil BAĞIL: kol açısı kayarsa bu ısırır.
+    expect(Math.abs(say(c[0].replace(' Nm', '')) - 22.07) / 22.07)
+      .toBeLessThan(0.001);
+    expect(g).toContain('Yay ortalama momenti †');
+
+    // İKİ YOL AYNI: birincil yol çekirdeğin `springTorque`u, yedek yol
+    // M₀ + k·rel. Ayrışırlarsa çekirdeksiz bir ortamda belge sessizce başka
+    // bir sayı basardı.
+    expect(F.springTorque(R.build.sys, R.analysis.meanRelDeg)).toBeCloseTo(bek, 9);
+  });
+
+  test('HAZIRLAYAN antette basılıyor — panelde yazılan alan buraya ULAŞIYOR', () => {
+    // Antet bu alanı OKUYORDU ama hiçbir yüzey onu yazmıyordu: altı sayfanın
+    // altısında da "Hazırlayan: —" çıkıyordu. Kapı zinciri uçtan uca tutuyor.
+    const g0 = govde(DOC);
+    expect(g0).toContain('Hazırlayan: —');            // alan boşken
+    const D2 = SU.veFeadSummaryHTML(R,
+      { id: 'r2', type: 'fead-report', data: { author: 'K. Aydoğan' } });
+    const g2 = govde(D2);
+    expect(g2).toContain('Hazırlayan: K. Aydoğan');
+    expect(g2).not.toContain('Hazırlayan: —');
+    // Altı sayfanın hepsinde
+    expect((g2.match(/Hazırlayan: K\. Aydoğan/g) || []).length)
+      .toBe(SU.VE_FSR_SHEETS.length);
+  });
+});

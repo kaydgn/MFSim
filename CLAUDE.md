@@ -1996,6 +1996,128 @@ döndürme (7 test), `inertias`'ı geçirmeme (5), panel ivmesini taşımama, et
 her zaman basma, uyuşmazlığı susturma, Not 3'ü yine elle yazma, sayfa atfını
 5'e sabitleme, geçirilen ivmeyi kaydetme.
 
+##### KAYMA EŞİĞİ — "ne kadar aşağı inebilirim" (2026-08-28)
+
+Kayma hükmü boyutsuz SF ile veriliyordu; **N cinsinden** *"kaymamak için gereken
+en düşük ankraj gerginliği"* diye bir büyüklük modelde HİÇ YOKTU. Tedarikçi
+çıktısı onu gerginlik grafiğinde yatay bir çizgi olarak basıyor; MFSim'in aynı
+grafiği o çizgisiz çiziyordu.
+
+`veFeadSlipThreshold` (fead-model.js) **kapalı formda, iterasyonsuz**: açıklık
+gerginlikleri ankrajdan SABİT farklarla ayrılır (fark torkla belirlenir,
+ankrajdan bağımsızdır), yani `T_i = T₀ + Δ_i`. Bir kasnakta kayma sınırı
+`T_gergin/T_gevşek = e^(μφ) = cap` olduğunda
+
+```
+T₀* = (Δ_gergin − cap·Δ_gevşek) / (cap − 1)
+```
+
+**İKİ BAĞIMSIZ YOL, |Δ| ≤ 1,4e−14 N.** İkinci yol cebirle ilgisiz: ankraj
+gerçekten değiştirilip `veFeadAnalyze` baştan koşturuluyor ve yük taşıyan
+kasnakların en düşük SF'sinin 1'e düştüğü nokta iki-bölmeyle aranıyor.
+Sonuç `SF = 1,000000000` @ **80,948 N**, aynı kasnak (FAN), aynı devir (1000).
+Bir işaret hatası iki yolda birden aynı şekilde çıkamaz.
+
+| | AG00976 |
+|---|---|
+| Eşik | **80,95 N** |
+| Belirleyici | Sürücü Kasnak (FAN) @ **1000 d/d** |
+| Tasarım gerginliği | 544,05 N |
+| Pay | **6,72 kat** |
+
+**GERGİN OLAN AÇIKLIK ARANIR — sürücüde ÇIKIŞ, sürülende GİRİŞ.** ÖLÇÜLDÜ
+(@1000 d/d): altı kasnağın **beşinde giriş** daha gergin. *"Çıkış her zaman
+gergin"* varsayımı alternatörde kökü **39,52 → −480,98 N** yapıyor — ama genel
+EN BÜYÜK yine FAN'da kaldığı için toplam sayıya bakan bir kapı bunu SESSİZCE
+geçiriyor (mutasyonla ölçüldü, kapı yeniden kuruldu: tek bir sürülen kasnak
+yalıtılıyor).
+
+**YÜK TAŞIMAYANLAR DIŞARIDA — gerekçe TUTARLILIK, matematiksel imkânsızlık
+DEĞİL.** Bir avara da pekâlâ kök verir; ÖLÇÜLDÜ, kökleri **−856,6 … +5,6 N**,
+yani belirleyicinin çok altında → **bu sistemde filtre sayıyı DEĞİŞTİRMİYOR**.
+Filtrenin işi hükmü hizada tutmak: kayma hükmünü raporun kendisi yük
+taşıyanların en düşüğünden veriyor (`_frMinSF`), çünkü oran ≈ 1 olan bir
+avarada SF bir MARJ değil o sarım açısının KAPASİTESİDİR. İki farklı kayma
+ölçütü aynı belgede duramaz. Kapı bu yüzden **sentetik**: avaranın kökü
+belirleyicinin üstüne (19 490 N) çıkarılıyor ve yine yüklü olan seçiliyor.
+
+**GATES'İN BASTIĞI SAYI KOPYALANMIYOR ve sebebi Gates'in kendi çelişkisi:**
+s1 grafiğinde **157,65 N** yazıyor, ama kendi kayma sayfasının (s6/12) FAN
+eğrisinden türeyen değer **66,6 N** — aynı raporun iki sayfası arasında
+**2,37 kat**. MFSim'in 80,95 N'ı Gates'in kayma VERİSİNE +%21,5 uzakta, basılı
+ÇİZGİYE 2 kat. Sayı modelin kendi zincirinden türetiliyor.
+
+**Çizgi eğrinin ALTINA çiziliyor** (üstünü örtmesin) ve altı taralı — tedarikçi
+çıktısının kendi biçimi. Çizgi hem ayrıntılı hem özet raporda, **tek çiziciden**
+(`_frTensionFigure`).
+
+###### Eşik çizgisinin YERİ ayrı bir kapı — ve ilk hâli ısırmıyordu
+
+Sayıyı künyeye doğru yazıp çizgiyi yanlış yere koymak SESSİZ bir kusur: belge
+tutarlı görünür, grafik yalan söyler. Kapı çizginin y'sini grafiğin kendi
+**bölme etiketlerinden** geri çözüyor (çizicinin `sy`sine hiç başvurmadan).
+
+İlk tolerans *"başka bir bölmeye düşmesin"* idi ve bölme aralığı **48,4 px**
+olduğu için bu **24 px'lik** bir kapı demekti: `+12 px` kaydırma da, `×1,5`
+ölçek hatası da SESSİZCE geçiyordu (ölçüldü). Etiket temel çizgisinin bölmenin
+4 px altına yazıldığı (`y="(Y+4)"`) fark edilip ofset ayıklanınca tolerans
+**0,5 px**'e indi; dört mutasyonun dördü de kırmızı — `×1,5`, `+12 px`,
+**`+1 px`** ve tasarım gerginliğini çizme.
+
+###### Aynı turda kapatılan üç eksik satır
+
+| Ne | Neydi | Ne oldu |
+|----|-------|---------|
+| **Kayış katalog adı** | Künye `GATES 8PK` diyordu; tedarikçiyle konuşurken tek tanımlayıcı olan `8PK1715HD` belgede HİÇ geçmiyordu | `beltType` köprüden geçiyor, künyede `GATES 8PK1715HD` |
+| **Yay ortalama momenti** | Tedarikçi künyesinin *"Spring Mean Load"* satırı belgede yoktu | `M₀ + k·rel` → **22,076 Nm** ↔ Gates 22,07 (%0,027), † ile türev işaretli |
+| **Hazırlayan** | Antet alanı OKUYOR ama hiçbir yüzey YAZMIYORDU → altı sayfada da `Hazırlayan: —` | Panelde alan var; kapı zinciri uçtan uca tutuyor |
+
+**KAYIŞ KİMLİĞİ AYRI SATIR DEĞİL** ve sebebi ölçüldü: ayrı satır sayfa 1'i
+**8 px** taşırıyordu (1131 ↔ tavan 1123) ve katalog adı profili zaten kapsıyor.
+
+**YAY MOMENTİ ÜÇ ONDALIKLA basılır, iki değil:** 22,076 iki ondalıkta
+**22,08**'e yuvarlanıyor ve Gates 22,07 yazdığı için okuyucu bir basamaklık
+HAYALİ bir uyuşmazlık görürdü. İki yol da (çekirdeğin `springTorque`u ve yedek
+`M₀ + k·rel`) aynı sayıyı veriyor ve kapı ikisini birbirine bağlıyor.
+
+###### KK ATALETİ DEĞİŞTİRİLMEDİ — bir "aykırı değer" iddiası ÖLÇÜMLE ÇÜRÜTÜLDÜ
+
+Bir denetim turunda *"Klima kompresörünün ataleti Gates'inkinin 5,85 katı, bir
+aykırı değer"* iddiası çıktı. **Çürütüldü:**
+
+1. **Atalet çapla ölçeklenmiyor** — fixture'ın kendisi gösteriyor:
+   ALT Ø57,4 → 0,014 ama TM31 Ø154,4 → 0,0053. Bunlar kasnak ataleti değil,
+   **sürülen makinenin** ataleti; büyük kasnak küçük atalet taşıyabiliyor.
+2. **Tepe tablosu KK'yı doğrudan yokluyor.** Tarama: en iyi uyum **0,025**
+   (RMS %0,253), bugünkü **0,031** (%0,41), Gates'in ima ettiği **0,0053**
+   (%1,19). RMS < %0,5 bandı KK ∈ **[0,018 – 0,032]** veriyor; Gates'in
+   çapraz-rapor bandı bunun **3–6 katı dışında**.
+
+Yani veri bugünkü değeri destekliyor, iddiayı değil. **Girdi değiştirilmedi.**
+
+> **YÖNTEM NOTU — ölçüm aracının kendisi bir kez sessizce ÖLÜYDÜ.** Atalet
+> yoklaması `n.data.name` üzerinden mutasyon uyguluyordu; örnek düğümleri adı
+> `customName`de taşıyor, dolayısıyla sekiz tarama satırı da **birebir aynı**
+> sayıyı basıyordu ve "duyarsız" diye okunuyordu. Yoklama artık `n.id` ile
+> anahtarlanıyor **ve** mutasyon `node.data`'yı gerçekten değiştirmediyse
+> `MUTASYON ETKİSİZ — ölçüm geçersiz` diye ATIYOR. Kullanıcının uyardığı
+> sınıfın (*"yanlış iteratif değer çıkarma"*) tam örneği.
+
+**FAN ATALETİ DUYARSIZ ve bu çevrim kapanışının KANITI:** FAN'ın kendi
+ataletini değiştirmek tepe tablosunu **%0,413**'te sabit bırakıyor — krankın
+kendi ataleti artık zincire hiç girmiyor, `veFeadPeakInertias` onu aksesuar
+taleplerinin toplamına eşitliyor (bkz. *"TEPE ZİNCİRİNDE ÇEVRİM
+KAPANMIYORDU"*).
+
+**Kapı on üç mutasyonla ölçüldü, on üçü de kırmızı:** kapalı formda işaret ters
+(4 test), satırlarda maks yerine min (3), `max/min` yerine "çıkış hep gergin"
+(1), yük filtresini kaldırma (1), raporun oranı kendi kopyasında tutması (1),
+eşiği hiç hesaplamama (3), çizgiyi %50 / +12 px / **+1 px** kaydırma ve tasarım
+gerginliğini çizme (her biri 1), Gates'in 157,65'ini kopyalama (1), yay
+momentini sabitleme (1), katalog adını düşürme (2), yay momenti satırını
+kaldırma (1), Hazırlayan alanını panelden kaldırma (1), anteti hep `—` bastırma
+(1).
+
 ##### Uydurulmayan şeyler — raporun kendi §9'unda yazılı
 
 | Gates sayfası | Neden yok |
