@@ -157,6 +157,42 @@ describe('zarf — yapısal özdeşlikler', () => {
     });
   });
 
+  // ── RAPOR YOLU: kurulmuş bir çözümden zarfı yeniden üret ─────────────────
+  // Sıcak yol (selectArm:false + memo) taramayı ATLADIĞI için build.envelope
+  // çoğu zaman yok; rapor ise zarf EĞRİSİNİ çizmek zorunda. Ayrı bir giriş
+  // noktası olmasının sebebi bu — ve tek üretici kalması şart, ölçütün ikinci
+  // bir kopyası bu modülün tekrar eden hata sınıfı.
+  test('veFeadEnvelopeOf kurulmuş çözümden zarfı üretir, çözümü BOZMAZ', () => {
+    const pack = veFeadExampleNodes('AG00976_GATES_2025');
+    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
+    ten.data.angleMode = 'envelope';
+    delete ten.data.cenX; delete ten.data.cenY; delete ten.data.armMeanDeg;
+    const b1 = veFeadBuildSystem(pack.nodes, pack.connections);
+    expect(b1.ok).toBe(true);
+
+    // (a) tarama zaten koştuysa AYNI nesne dönüyor — ikinci kez taramıyor
+    expect(veFeadEnvelopeOf(b1)).toBe(b1.envelope);
+
+    // (b) memo yüzünden tarama ATLANMIŞ bir çözümde de zarfı üretiyor
+    const b2 = veFeadBuildSystem(pack.nodes, pack.connections, { selectArm: false });
+    expect(b2.envelope).toBeUndefined();
+    const env = veFeadEnvelopeOf(b2);
+    expect(env).toBeTruthy();
+    expect(env.ok).toBe(true);
+    expect(env.samples.length).toBeGreaterThan(100);
+    expect(Math.abs(env.armAbsDeg - b1.armAbsDeg)).toBeLessThan(0.2);
+
+    // (c) çözümü BOZMUYOR: kayış boyu ve gerginlik aynı kalıyor
+    expect(b2.beltLengthMm).toBeCloseTo(b1.beltLengthMm, 3);
+    expect(b2.springTensionN).toBeCloseTo(b1.springTensionN, 3);
+
+    // (d) yay künyesi eksikse null — uydurma bir eğri çizilmiyor
+    const bad = { cfg: b2.cfg, mount: { relMeanDeg: NaN } };
+    expect(veFeadEnvelopeOf(bad)).toBeNull();
+    expect(veFeadEnvelopeOf(null)).toBeNull();
+  });
+
   test('yay künyesi eksikse zarf SESSİZ kalmaz', () => {
     const { cfg } = gatesCase(S);
     const env = veFeadArmEnvelope(cfg, NaN);

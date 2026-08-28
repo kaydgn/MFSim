@@ -810,6 +810,27 @@ function veFeadArmEnvelope(cfg, relNom, opt){
   return out;
 }
 
+
+// Kurulmuş bir çözümün ZARFINI, çözümü bozmadan yeniden üret.
+//
+// Rapor ve panel zarf EĞRİSİNİ çizmek zorunda; ama sıcak yol (`selectArm:false`
+// + memo) taramayı ATLADIĞI için `build.envelope` çoğu zaman yoktur — orası
+// bilinçli bir hız kararı (kare bütçesi 2,2 ms, genel tarama 84 ms). Rapor bir
+// KARE değil, bir BELGE üretiyor; oraya 84 ms'lik bir tarama girer.
+//
+// Ayrı bir giriş noktası olmasının sebebi de bu: `veFeadBuildSystem`e "her
+// zaman tara" demek sürükleme yolunu 38 kat yavaşlatırdı, taramayı raporun
+// içinde elle kurmak ise ölçütün İKİNCİ BİR KOPYASI olurdu (bu modülün tekrar
+// eden hata sınıfı). Tek üretici, iki çağrı yeri.
+function veFeadEnvelopeOf(build, opt){
+  if(!build || !build.cfg) return null;
+  if(build.envelope && build.envelope.ok && !(opt && opt.force)) return build.envelope;
+  var relNom = build.mount && build.mount.relMeanDeg;
+  if(!Number.isFinite(relNom)) return null;
+  try { return veFeadArmEnvelope(build.cfg, relNom, opt || {}); }
+  catch(e){ return null; }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  KANVAS = KAYIŞ DÜZLEMİ — konum artık FİZİKSEL
 // ═══════════════════════════════════════════════════════════════════════════
@@ -3049,7 +3070,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadGatherPulleys: veFeadGatherPulleys,
     veFeadTensionerMount: veFeadTensionerMount, veFeadArmCheck: veFeadArmCheck,
     veFeadFreeAngleFrom: veFeadFreeAngleFrom, veFeadAngleMode: veFeadAngleMode,
-    veFeadArmEnvelope: veFeadArmEnvelope, _feadEnvSample: _feadEnvSample,
+    veFeadArmEnvelope: veFeadArmEnvelope, veFeadEnvelopeOf: veFeadEnvelopeOf,
+    _feadEnvSample: _feadEnvSample,
     veFeadBeltModeLocked: veFeadBeltModeLocked,
     veFeadBeltDataMode: veFeadBeltDataMode,
     VE_FEAD_BELT_DATA_MODES: VE_FEAD_BELT_DATA_MODES,
