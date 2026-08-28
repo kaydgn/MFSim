@@ -75,7 +75,7 @@ PDF henüz yok.
 | AG0868-6PK | 9.37 | 3 | 1018 | aynı sistem · 6PK · E9843 @19 Nm | **PDF** | `AG0868_6PK1018HD_E9843-19Nm_2022-12-27.pdf` | **TAM** 11/11 |
 | AG0868 | 9.37 | 3 | 1020 | aynı sistem · 8PK · E9843 @22.5 Nm | **PDF** | `AG0868_8PK1020HD_E9843-22.5Nm_2022-12-27.pdf` | **TAM** 11/11 |
 | AG00810 | 4.32 | 4 | 1214 | BMC Otomotiv TTA-6x6 · 250 A alternatör · T38519 · 16.09.2021 | **PDF** | `AG00810_10PK1215HD_T38519-v8_2021-09-16.pdf` | **TAM** 11/11 |
-| AG00879 | 9.40 | 5 | 1392 | Anadolu Isuzu 6x6 Cummins · ikincil alternatör · T38665 @31 Nm · 17.05.2023 | **PDF** | `AG00879_8PK1392HD_T38665-31Nm_2023-05-17.pdf` | alıntı **5/12** |
+| AG00879 | 9.40 | 5 | 1392 | Anadolu Isuzu 6x6 Cummins · ikincil alternatör · T38665 @31 Nm · 17.05.2023 | **PDF** | `AG00879_8PK1392HD_T38665-31Nm_2023-05-17.pdf` | **TAM** 12/12 |
 | AG00686 | 9.40 | 4 | 1475 | BMC 6 sil. · CRK ø160 / A_C ø127 · T38624 @24.6 Nm CW · 07.09.2023 | **PDF** | `AG00686_8PK1475HD_T38624-24.6Nm_2023-09-07.pdf` | **TAM** 11/11 |
 | AG00686-1520 | 9.40 | 4 | 1520 | aynı gergi · CRK ø172 / A_C ø137 · @22.2 Nm · 07.09.2023 | **PDF** | `AG00686_8PK1520HD_T38624-22.2Nm_2023-09-07.pdf` | **TAM** 11/11 |
 | AG00902-1275 | 9.55 | 4 | 1275 | BMC Otomotiv Valeo TM21 · ø127 · 08.12.2023 | **PDF** | `AG00902_8PK1275HD_E9843-22Nm_2023-12-08.pdf` | alıntı 5/11 |
@@ -111,43 +111,41 @@ bölümünün bir mi iki sayfa mı olduğu:
 | 11 | Design Notes | | 11 | System Vibration |
 | | | | 12 | Design Notes |
 
-Sol sütun **ölçüldü** (altı tam rapor, başlık dizisi birebir aynı). Sağ sütunun
-4 · 7 · 9–12. satırları **çıkarım**: o sayfalar elimizdeki alıntılarda yok, ama
-alıntıların taşıdığı sayfa numaraları (`5→Belt Slip 1/2`, `6→Belt Slip 2/2`,
-`8→Hubload Mean`) iki bağımsız raporda da bu haritayla tutarlı.
+**İki sütun da ÖLÇÜLDÜ.** Sol sütun altı tam raporda (AG00686 ×2 · AG00810 ·
+AG0868 ×3), sağ sütun AG00879'da — o rapor on iki sayfasının tamamını taşıyor
+(bkz. bir sonraki bölüm). Bir tur önce sağ sütun *"çıkarım"* diye işaretliydi;
+artık değil.
 
-### DÖRT PDF TAM RAPOR DEĞİL — ALINTI
+### ÜÇ PDF TAM RAPOR DEĞİL — ALINTI
+
+> **DÜZELTME.** Bu bölüm bir tur önce *"DÖRT PDF"* diyor ve AG00879'u da
+> alıntı sayıyordu. **YANLIŞTI**: AG00879'un sayfa AĞACI beş sayfa gösteriyor
+> (pymupdf de öyle sayıyor) ama on iki sayfanın tamamı dosyanın İÇİNDE ve
+> hepsi aynı tasarıma ait — on ikisinin de `Design:` alanı `AG00879_ANADOLU`.
+> Depodaki okuyucu (`tests/helpers/gates-pdf.js`) nesneleri doğrudan
+> gezdiği için onları görüyor.
 
 Kolay kaçırılan ve pahalı bir tuzak: bir bölümü PDF'te bulamamak, o bölümün
 **raporda olmadığı** anlamına gelmiyor. Altbilgideki `Page N of M` bunu ele
-veriyor — dosyadaki sayfa sayısı ile `M` tutmuyorsa belge kırpılmış.
+veriyor.
 
-| Rapor | PDF | Gerçek | Eksik sayfalar |
-|-------|----:|-------:|----------------|
+| Rapor | Okunan | Gerçek | Eksik sayfalar |
+|-------|-------:|-------:|----------------|
 | AG00686 ×2 · AG00810 · AG0868 ×3 | 11 | 11 | **TAM** |
-| AG00879 | 5 | 12 | 4, 5, 7, 9, 10, 11, 12 |
+| AG00879 | 12 | 12 | **TAM** (sayfa ağacı 5 gösteriyor) |
 | AG00894 | 6 | 12 | 4, 7, 9, 10, 11, 12 |
 | AG00902-1275 | 5 | 11 | 4, 6, 8, 9, 10, 11 |
 | AG00902-1300 | 5 | 11 | 4, 6, 7, 9, 10, 11 |
 
-Dördünde de **tepe yük, yorulma, titreşim ve hizalama sayfaları yok**. Bir
-sonraki oturum bu tabloya bakmadan *"AG00879'da tepe tablosu yokmuş"* diye
-yazarsa yanlış bir şey söylemiş olur — eksik olan rapor değil, elimizdeki kopya.
+Üçünde **tepe yük, yorulma, titreşim ve hizalama sayfaları yok**.
 
-Yeni bir PDF eklendiğinde bu denetim koşulmalı:
+Bu denetim artık **testli** (`tests/unit/gates-archive.test.js`) — yeni bir PDF
+eklendiğinde elle koşturulacak bir betik değil, `npm test`'in bir parçası.
 
-```bash
-python3 - <<'EOF'
-import pymupdf, glob, os, re
-for f in sorted(glob.glob("docs/gates-reports/pdf/*.pdf")):
-    d=pymupdf.open(f); nums=[]; total=None
-    for pg in d:
-        m=re.search(r"Page (\d+) of (\d+)", pg.get_text())
-        if m: nums.append(int(m.group(1))); total=int(m.group(2))
-    eksik=[i for i in range(1,(total or 0)+1) if i not in nums]
-    print(os.path.basename(f), d.page_count, "/", total, "eksik:", eksik or "yok")
-EOF
-```
+> **Altbilgi tek satırdır ve parçaları BİRLEŞİK** — ölçüldü:
+> `…18:30:03Page 1 of 119.37.0.0North America`. Yani sayfa toplamı (11) Gates
+> sürümüne (9.37.0.0) yapışıyor ve düz bir kalıp **119** okuyor: rapor
+> "eksik sayfalı" görünür, oysa tamdır. `pageMarker` bunu çözüyor.
 
 ### Fixture kaynağına karşı DOĞRULANDI
 
@@ -173,52 +171,70 @@ tarif ediyor; fixture'dan sayılan kayıt **14** (yedi aile). Aradaki üç rapor
 kısmen çıkarılmış ya da hiç girmemiş. Elindeki PDF'ler geldiğinde bu fark
 kendiliğinden görünür olacak — indeksin ikinci işi bu.
 
-## Arşivin açtığı kapılar (ölçüldü)
+## Arşiv KAPI oldu — testler kaynağı okuyor
 
-### 1 · Tepe yük tablosu artık TEK rapora bağlı değil
+Arşivin asıl karşılığı "PDF'ler duruyor" değil: **testler artık raporları
+doğrudan okuyor.** İkinci bir kopya yok, dolayısıyla ayrışma da yok.
 
-`CLAUDE.md` özet raporun tepe yük tablosunu `KALİBRE DEĞİL` diye damgalıyor:
+| Dosya | Ne yapar |
+|-------|----------|
+| `tests/helpers/gates-pdf.js` | Gates PDF'inden metin okur (saf Node + `zlib`, yeni bağımlılık yok) |
+| `tests/helpers/gates-vibration.js` | "System Vibration Analysis" sayfasındaki girdileri okur |
+| `tests/unit/gates-archive.test.js` | Fixture'ı ve okuyucuyu arşive bağlayan kapı |
 
-> *"doğrulama kümesinde hâlâ tek bir tepe değeri yok, yani tablo TEK bir rapora
-> karşı ölçülebiliyor"* · *"Damganın kalkması için birden çok raporun tepe
-> tablosu gerekir."*
+Okuyucu **doğrulandı**: fixture'ın 284 statik değeri (X · Y · pitch · effective
+· span · wrap · gergi künyesi) on raporun tamamında **0 uyuşmazlıkla** geri
+üretiliyor — ve aynı sonuç ayrıca `pymupdf` ile de alındı.
 
-Tam raporun 6. sayfası (12 sayfalıkta 7.) `Pulley Hubload Analysis (Peak)` ve
-**altı tam raporun altısında da dolu**:
+Üç ayrıntı çözülmek zorunda kaldı, üçü de sessiz kusur üretiyordu:
 
-| Rapor | Kaburga | Tasarım gerginliği |
-|-------|--------:|-------------------:|
-| AG0868-4PK | 4 | 258 N |
-| AG0868-6PK | 6 | 301 N |
-| AG0868 | 8 | 356 N |
-| AG00686 | 8 | 766 N |
-| AG00686-1520 | 8 | 609 N |
-| AG00810 | 10 | 759 N |
+| Ayrıntı | Kaçırılırsa |
+|---------|-------------|
+| Font başına ToUnicode (birleştirme YASAK) | Dört raporda çöp metin — glif 44 → `space`/`A`/`#`/`@`/`G` |
+| Eksi işareti AYRI çizim çağrısı (`["-","72.00"]`) | Koordinat mutlak değeriyle okunur → kasnak aynalanır |
+| Nesne akışları (ObjStm) | AG00894'te tek font bile bulunamıyor |
 
-Örnek (AG0868 8PK1020HD, s6):
+## Ölçülen üç düzeltme — burulma kalibrasyonu
 
-```
-              CRK      A_C      TEN
-Tension  N    724      362      356
-Hubload  N    997.2   1078.1    373.6
-Direction     354/228  194/195  84/63      (yön / sarım °)
-Accel.        1000 RPM/s  (decel de 1000)
-```
+Titreşim sayfası testin **tahmin ettiği** ya da *"bilinmiyor"* dediği şeyleri
+açıkça yazıyor. Üçü de düzeltildi:
 
-Altısı birden 258–766 N gerginlik ve 4–10 kaburga aralığını tarıyor; AG0868'in
-üçü ayrıca **kontrollü bir deney** (aynı kasnaklar, aynı duty, aynı sıcaklık,
-değişen yalnız kaburga ve gerginlik). AG00976'nınkiyle **yedi** eder.
+| # | Neydi | Kaynak ne diyor |
+|---|-------|-----------------|
+| 1 | Krank mili ataleti beş sistem için **0.7'ye sabit** | Sistem başına **0.15 / 0.5 / 0.7** — 0.7 yalnız takımın DIŞINDAKİ AG00810'da doğru. Fixture doğru değeri iki sistemde zaten taşıyordu, test okumuyordu |
+| 2 | AG00810'un gergi kasnak kütlesi **"BİLİNMİYOR"** | Raporun kendi sayfası: **0.80 kg** |
+| 3 | NF referanslarının üçü kaynağıyla uyuşmuyor | `11.87 ↔ 12.61` · `13.35 ↔ 12.61` · `13.29 ↔ 15.05`. Gates SÜRÜM farkı DEĞİL — damgalar birebir aynı (9.37 / 9.40 / 4.32) |
 
-**Alıntı dördünde tepe sayfası YOK** — yani kalibrasyon takımı bu altı raporla
-sınırlı, on rapor değil.
+**KALİBRASYON TAKIMI DEĞİŞMEDİ** ve bu önemli: aynı beş sistem, RMS %5.26 →
+**%6.13**, en kötü %9.73 → **%9.47** (kapı `<8` / `<10`). Yani bu bir köken
+düzeltmesi, model düzeltmesi değil.
 
-### 2 · `Pulley Alignment Sensitivity` — modelde hiç yok
+**AG00810'un gerekçesi DEĞİŞTİ.** Gerçek kütleyle 20.3 → **17.55 Hz**
+(Gates 15.05, +%16.6). Hâlâ bandın dışında ama artık *"veri eksik"* değil,
+**gerçek model sapması**. AG00879 de arşivle ölçülebildi (fixture'da atalet
+verisi HİÇ yoktu): **25.06 ↔ 22.11 Hz**, +%13.4 — o da dışarıda.
 
-Tam raporun 4. sayfası. `CLAUDE.md`: *"Geometri tek düzlemde çözülüyor;
-fleeting açısı ve eksenel offset modelde yok."* Sayfa yatak oturma açısını ve
-fleeting açısını veriyor. Yine yalnız altı tam raporda.
+Kapı **altı mutasyonla** ölçüldü, altısı da kırmızı: krank ataletini yine 0.7'ye
+sabitleme, NF'i yine fixture'dan alma, kasnak kütlesini geçmeme, eksi işaretini
+yutma, ObjStm genişletmesini kapatma, sayfa altbilgisi düzeltmesini geri alma.
 
-İkisi de **bu oturumda yapılmadı**; arşivin gerekçesi olarak buraya yazıldı.
+## Hâlâ açık duran iki kapı
+
+**1 · Tepe yük tablosu — yedi tam rapor.** `CLAUDE.md` özet raporun tepe yük
+tablosunu `KALİBRE DEĞİL` diye damgalıyor; gerekçesi *"kümede tek bir tepe
+değeri yok"*. Tam raporun 6. sayfası (12 sayfalıkta 7.) tam o tablo ve
+**yedisinde de dolu**: AG0868 ×3 (4/6/8 kaburga · 258/301/356 N), AG00686 ×2
+(766 / 609 N), AG00810 (10 kaburga · 759 N), AG00879 (476 N). AG00976'nınkiyle
+sekiz eder. AG0868'in üçü ayrıca **kontrollü bir deney** — aynı kasnaklar, aynı
+duty, aynı sıcaklık; değişen yalnız kaburga ve gerginlik.
+
+**2 · `Pulley Alignment Sensitivity`** — tam raporun 4. sayfası, modelde hiç
+yok. `CLAUDE.md`: *"`alignmentAllowance` VAR ama düz kasnakların açısal
+kaçıklığını (ψ) GİRDİ olarak istiyor ve MFSim o alanı sormuyor."* Rapor ψ'yi
+veriyor (AG00686: fleeting 0.90° · IDR 0.33° · TEN 1.20° · izin verilen eksenel
+offset 3.93 / 1.49 mm).
+
+İkisi de henüz yapılmadı; arşivin gerekçesi olarak burada duruyor.
 
 ## Tedarikçi dosya adı GÖVDEYLE ÇELİŞEBİLİR — AG00810
 
