@@ -10,6 +10,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `build.js` — Build script (`index.html` + `js/` + `css/` → `MFSim_Code.html`)
 - `js/fead-belts.js` — FEAD kayış kataloğu (5 profil, 244 stok boy + otomotiv
   ızgarası). DOM'suz saf veri; ISO 9982 / DIN 7867, üretici kataloglarından çıkarıldı.
+- `js/fead-tensioners.js` — FEAD otomatik gergi künye kütüphanesi (14 kayıt, 2 aile).
+  DOM'suz saf veri; **14 Gates raporundan ölçülerek** çıkarıldı, parça numarası
+  uydurulmadı. Bant kayıtlardan TÜRETİLİR, elle yazılmaz.
 - `js/structural-materials.js` — Yapısal Analiz malzeme kütüphanesi (112 kayıt / 16 aile,
   DOM'suz saf veri + arama). Değerler standartların NOMİNAL değerleridir, sertifika değil.
 - `js/structural-occt-wasm.js` — **Üretilen, git'e DAHİL DEĞİL**: OCCT çekirdeğinin
@@ -22,9 +25,13 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   `.wasm`'ın kendisi de üretilen: `npm run build:tetgen-wasm` (emscripten gerekir,
   kaynak `vendor/tetgen-src/` + `tools/tetgen-wasm-src/`). Aynı bayt-bayt kapısı.
 - `tools/shot.js` — Ekran görüntüsü aracı (İSTEĞE BAĞLI — yalnız kullanıcı isteyince; `npm run shot -- --help`)
-- `docs/gates-reports/` — Gates FEAD raporlarının ham PDF'leri + **künye indeksi**
-  (`README.md`). Bir rapor bir kez konur, sonraki oturumlar yeniden yüklemeden okur.
-  Build/test/Pages'e girmez (ölçüldü). `assets/` DEĞİL, çünkü orası Pages'e kopyalanıyor.
+- `docs/gates-reports/` — **Gates raporlarının ham PDF ARŞİVİ + künye indeksi**
+  (`README.md`: hangi raporda ne var, sayfa haritası, hangileri alıntı). Bir rapor
+  bir kez konur, sonraki oturumlar yeniden yüklemeden okur. Build/Pages'e girmez
+  (ölçüldü); `assets/` DEĞİL, çünkü orası Pages'e kopyalanıyor. **Testler bu
+  PDF'leri OKUYOR** (`tests/helpers/gates-pdf.js`), yani arşiv bir belge yığını
+  değil bir KAPI. **FEAD ile ilgili "bu sayı nereden geldi" sorusunun cevabı
+  büyük olasılıkla buradadır.**
 - `tests/unit/` — Jest birim testleri
 - `tests/e2e/` — Playwright E2E testleri
 - `viewer/` — **Ölçüm Görüntüleyici** (ayrı program, bkz. `viewer/README.md`)
@@ -65,6 +72,13 @@ hatası "testten geçen ama yanlış" bir çekirdek üretir. Uyarlanacak olan
 çekirdeğin ÇEVRESİ (`js/cp-fead.js`), çekirdeğin kendisi değil. Sütun-0'da
 üst-seviye bildirimi yok (IIFE sarmalı) → hijyen kapısına takılmaz; içindeki
 `</script` dizisini build kalkanı (`shieldScriptEnd`) zaten kapsıyor.
+
+> **KAYNAK BELGELER DEPODA:** bu bölümde adı geçen Gates raporlarının onu
+> `docs/gates-reports/pdf/` altında duruyor ve testler onları **doğrudan
+> okuyor**. Bir sayının kökenini merak ettiğinde ya da yeni bir referans değer
+> gerektiğinde önce `docs/gates-reports/README.md`'ye bak — hangi raporda hangi
+> sayfada ne olduğu orada yazılı. Fixture'ın 284 statik değeri kaynağına karşı
+> ölçüldü: **0 uyuşmazlık**.
 
 Doğrulama verisi + koşucu `tests/fixtures/fead-validation.js` içinde, kaynağıyla
 **birebir** (tek yerel fark: `require` yolu — dosyanın başında yazılı).
@@ -2882,6 +2896,16 @@ montaj resmi) mümkün — model kendi kendini doğrulayamaz ve rapor bunu söyl
 
 ##### PİVOT BİR GİRDİ DEĞİL — parça künyesinden TÜRER (2026-08-25)
 
+> **BU BÖLÜM AŞILDI (2026-08-28) — yön TERSİNE çevrildi.** Kullanıcı kararı:
+> *"Kullanıcı ilk olarak KIRMIZI NOKTA olarak OTOMATİK GERGİ MONTAJ
+> KOORDİNATLARInı verecek."* Bugün pivot bir GİRDİ, kasnak merkezi bir ÇIKTI
+> ve kol açısı bir ZARFTAN seçiliyor (bkz. *"PİVOT GİRDİ, KOL AÇISI ZARFTAN"*).
+> Aşağıdaki türetme `angleMode:'mount'` kipinde **aynen duruyor** — kaydedilmiş
+> her proje onu kullanıyor ve tabanı birebir korunuyor. Tautoloji dersi ve
+> "kayış yolu pivota bağlı değil" ölçümü bugün de geçerli; **ölçülen bedeli**
+> ise yeni bölümde: türetilen pivot Gates'in ölçtüğünden 15,45 mm sapıyor ve
+> gerginliği **%7,1** kaydırıyor.
+
 Bir önceki bölüm pivotu Gates raporundan almıştı. Kullanıcı asıl noktayı
 sonra koydu ve **haklıydı**:
 
@@ -3008,6 +3032,335 @@ etrafında döndürülünce sarım `<0,001°` değişiyor ama β `>1°` ve gergi
 (103 test), türetmede işareti çevirme (14), örnekte kol açısı 344 → 348 (8),
 totoloji bayrağını sabitleme (1), sürüklemede pivotu yine yazma (1), raporun
 totoloji uyarısını basmaması (1).
+
+##### PİVOT GİRDİ, KOL AÇISI ZARFTAN SEÇİLİR — yön tersine çevrildi (2026-08-28)
+
+Kullanıcı isteği: *"Kullanıcı ilk olarak KIRMIZI NOKTA olarak OTOMATİK GERGİ
+MONTAJ KOORDİNATLARInı verecek. Daha sonra program OTOMATİK GERGİ ÖZELLİKLERİ
+baz alınarak bir PİVOT NOKTASI ZARFI oluşturacak … bu sonsuz noktalar içinden
+en uygun noktayı seçecek. Bunu Gates'in nasıl yaptığını daha bilmiyoruz.
+Amacımız bunu bulmak zaten."* Ve: *"kayış boyu KESİNLİKLE BİR SONUÇ OLACAK."*
+
+**İkisi TEK değişiklik.** Gergi kasnağının merkezi girdi olmaktan çıkınca kol
+açısını pinleyen şey de kalkıyor; geriye kalan tek serbestlik derecesi zarftan
+seçiliyor ve kayış boyu **yapısal olarak** o seçimin sonucu oluyor.
+
+| | eski (`mount`) | yeni (`envelope`) |
+|---|---|---|
+| Kullanıcı verir | gergi **KASNAĞININ** merkezi (YEŞİL) | gergi **GÖVDESİNİN** montaj noktası = pivot (KIRMIZI) |
+| Program türetir | pivot | kasnak merkezi **ve kayış boyu** |
+| Kayış boyu | GİRDİ (`fixed`) ya da seçilebilir | **her zaman ÇIKTI** — kip kilitli |
+
+###### YÖN DEĞİŞİKLİĞİ BİR KOLAYLIK DEĞİL, ÖLÇÜLMÜŞ BİR HATANIN DÜZELTMESİ
+
+Montajda SABİT olan pivottur; kasnak merkezi kolun o anki açısıyla değişen bir
+konumdur. Eskiden **değişken olanı sorup sabit olanı türetiyorduk**.
+
+**ÖLÇÜLDÜ** (AG00976 · Gates 8PK1715HD raporu, aynı araç):
+
+| | pivot | Gates'e sapma | gerginlik |
+|---|---|---|---|
+| Gates'in ölçtüğü | (−250,00 · 110,00) | — | 544,3 N |
+| BMC örneğinin merkezden **türettiği** | (−256,59 · 123,97) | **15,45 mm** | **505,8 N (−%7,1)** |
+
+Ve bunu **hiçbir şey yakalamıyordu**: `veFeadArmCheck` pivot türetilmişken
+TOTOLOJİK (fark yapısal olarak sıfır) — kodun kendi notu bunu yazıyor.
+
+###### SEÇİM ÖLÇÜTÜ TAHMİN EDİLMEDİ, 14 GATES SİSTEMİNDEN GERİYE ÇÖZÜLDÜ
+
+Altı aday ölçüt, her sistemde zarf 0,25° adımla taranarak Gates'in gerçek
+çalışma açısıyla karşılaştırıldı (**aci farkinin medyani**):
+
+| ölçüt | medyan | ±5° içinde |
+|---|---:|---:|
+| **min take-up EN BÜYÜK** | **4,5°** | **9 / 14** |
+| ortalama konumdaki T en küçük | 10,3° | 2 / 14 |
+| T tepe değeri en küçük | 20,3° | 0 / 14 |
+| T_max / T_min en küçük | 23,5° | 1 / 14 |
+| hubload tepesi en küçük | 30,8° | 0 / 14 |
+| en küçük sarım en büyük | 53,1° | 0 / 14 |
+
+```
+ÖLÇÜT:  max over θ  of  min over rel ∈ [0, 1,5·rel_nom]  of  dL/dθ(θ, rel)
+```
+
+**FİZİKSEL ANLAMI:** `T = M/(dL/dθ)` olduğu için take-up'ın en KÜÇÜK olduğu yer
+gerginliğin en BÜYÜK olduğu yerdir. Ölçüt, kayışın servis zarfı boyunca (yeni/
+uzun kayıştan yıpranmış/kısa kayışa) görülen **tepe gerginliği en küçük** yapan
+montaj saatini seçiyor — klasik gergi yerleşim kuralı.
+
+**β = 90° DEĞİL** (klasik ders kitabı kuralı) ve bu ölçüldü: Gates'in çalışma
+noktalarında β **42,7…59,5°**. sin β büyürken sarım çöküyor, çarpım orta bir
+açıda tepe yapıyor.
+
+**TEPE DÜZ DEĞİL — isabet gerçek.** %1 platosu ortalama **4,9°** (çoğu sistemde
+1,0–2,8°), yani "±5° içinde" ucuz bir isabet olmuyor. Gates'in noktasındaki
+ölçüt cezası medyan **%4,0**, iki sistemde tam **%0,0**.
+
+**1,5 ÇARPANI UYDURULMADI:** 1,0…2,0 tarandı, **1,2–1,6 bir PLATO** (medyan
+3,5–4,5°, 8–9/14 sistem ±5°); 1,0'da 6,5°, 2,0'de 11,5°'e bozuluyor. 1,5
+platonun ortasında ve fiziksel karşılığı var: çalışma açısı + %50 pay.
+
+###### BAĞIMSIZ DOĞRULAMA — KAYIŞ BOYU KAYIŞA HİÇ BAKMADAN GERİ ÜRETİLİYOR
+
+Ölçüt kayış verisine girmiyor (gezinme aralığı yay künyesinden:
+`rel_nom = (M_mean − M₀)/k`). Ölçüldü: kayıştan türeyen aralık (Replace…MinBelt)
+ile künyeden türeyen `[0, 1,5·nom]` **aynı** sonucu veriyor (medyan 4,5° ↔ 4,5°).
+Bu, kayış boyunun çıktı olabilmesinin ön koşulu — yoksa döngü kurulurdu.
+
+Sonuç: program kayışı **hiç görmeden** Gates'in kayışını geri veriyor.
+
+| | sapma |
+|---|---|
+| 11 / 14 sistem | **±%0,35 içinde** |
+| medyan | **%0,21** |
+| en kötü (AG0868-4PK) | %1,98 |
+
+**UÇTAN UCA** (gerçek örnek düğümleri → köprü → çekirdek, AG00976): seçilen kol
+açısı −10,90°, **kayış boyu 1715,39 mm** (Gates REBL 1714,6 → **+%0,05**),
+gerginlik 540,1 N (Gates 544 → −%0,7), sarımlar `156,6 · 52,8 · 198,4 · 64,3 ·
+157,6 · 35,4` (Gates `156,2 · 52,8 · 198,4 · 64,3 · 157,1 · 34,6`, en kötü 0,8°).
+
+###### SINIR: PAKETLEME MODELDE YOK — ve sonuç bunu SÖYLÜYOR
+
+Zarfın hangi yayının motor bloğunda kullanılabilir olduğunu model bilmiyor.
+14 sistemin 13'ünde en iyi nokta Gates'inkine komşu; **AG00879'da 153° uzakta**
+ve orası motorun öteki yanı. Bu yüzden sonuç bir **ÖNERİ**: kullanıcı açıyı
+sabitleyebiliyor (`armPinned`) ve zarf o zaman bir seçici değil bir **TEŞHİS**
+yüzeyi oluyor. Sınır panelde ve raporda **yazılı** — modülün kendi kuralı
+(B10 çap penceresi, tepe yükün *"KALİBRE DEĞİL"* damgası ile aynı gerekçe).
+
+###### KİP ÜÇLÜ, VARSAYILAN GERİYE DÖNÜK
+
+`veFeadAngleMode`: açık seçim kazanır; yoksa `cenX/cenY` → `mount`,
+`freeAngleDeg` → `direct`, `pivotX/pivotY` → **`envelope`**, hiçbiri yoksa
+**`envelope`** (yeni akış). **Geriye dönük etkisi YOK ve ölçüldü:** kaydedilmiş
+her projede bu üç alandan en az biri yazılı, dolayısıyla değişen tek şey
+paletten YENİ konan bir gerginin hangi soruyla açıldığı. Taban birebir
+korunuyor — AG00976 `kol 28,0750° · L 1714,60 · T 544,05`, BMC
+`kol 28,4271° · L 1715,00 · T 532,14`.
+
+**ZARF KİPİNDE PİVOT TÜRETİLMEZ.** Montaj merkezi + kol açısı girilse bile
+köprü onları kullanmıyor ve sebebini adıyla yazıyor. Türetmeye izin verilseydi
+kullanıcı montaj merkezini girip pivotu "girdi" sanabilirdi — düzeltilen sessiz
+hata sınıfının ta kendisi, üstelik ölçülmüş bedeliyle.
+
+**KAYIŞ KİPİ KİLİTLİ ve kilit ÜÇ YÜZEYDE birden.** Zarf kipinde kayış boyu
+yapısal olarak bir çıktı; panel seçici yerine *"SERBEST (kilitli)"* yazıyor,
+kanvas rozeti tıklamayı reddediyor, `veFeadToggleBeltMode` de. Tek yerde
+tutulsaydı panel bir kipi, rozet başkasını gösterirdi — bu modülün tekrar eden
+kuralı (*"panel ile kart AYNI alanı okur"*).
+
+###### KADEMELİ TAZELEME — ÖLÇÜLDÜ
+
+| yol | ne yapar | süre |
+|---|---|---:|
+| genel zarf taraması (360°, kaba 2° + ince 0,1°) | ilk çözüm | **84 ms** |
+| tohumlu **yerel** arama (±6°, 0,5°) | bırakma / yeniden çözüm | **6 ms** |
+| saklanan açı (`selectArm:false`) | **her sürükleme karesi** | **0 ms** |
+
+Kart bütçesi 2,2 ms, yani genel tarama 38 kat aşardı. Sürükleme yolunda kol
+açısı **donuyor** — ve bu yalnız bir hız kararı değil, fiziksel olarak doğrusu:
+kullanıcı alternatörü sürüklerken gerginin montajdaki saati değişmiyor, değişen
+kayış boyu ve gerginlik. Bırakınca `veFeadReselectArm` yeniden iyileştiriyor.
+
+Seçilen açı düğüme **memo** olarak yazılıyor (`armMeanDeg` + `armAuto`) ama
+**`saveState` çağrılmıyor**: bu bir kullanıcı kararı değil, hesabın ara sonucu —
+geri-al yığınına binmesi kartın her tazelenmesinde bir adım eklemek olurdu (yön
+gülü konumundaki kuralın aynısı).
+
+**Kapı 17 mutasyonla ölçüldü, 16'sı kırmızı:** ölçütü ortalamaya çevirme (4
+test), çarpanı 2,6 yapma (5), kayış kipi kilidini kaldırma (3), pivotu yine
+türetme (1), memoyu yazmama (2), sabitlenmiş açıyı yok sayma (1), zarfın üçte
+birini tarama (19), ince taramayı kapatma (3), yeni gerginin varsayılanını mount
+yapma (1), panel kilidini kaldırma (1), rozeti kilitte SABİT yazdırma (1),
+`selectArm:false`'u yutma (2), kart yolunu her karede taratma (1), boşuna
+tazeleme (1), raporda boyu yine GİRDİ tarafına koyma (1), rapordan kol açısını
+düşürme (1), panelden zarf okumasını düşürme (1). On yedincisi (bırakma
+yolundaki `armPinned` kontrolü) **semantik olarak eşdeğer** — köprü katmanı
+sabitlenmiş açıyı zaten aynen döndürüyor, dolayısıyla gözlenebilir bir fark yok.
+
+> İki mutasyon **ilk turda YEŞİL kaldı** ve ikisi de aynı dersi tekrarladı:
+> kapı ÜRETİLEN YÜZEYE bakmalı, üreticiye değil. Rozet tıkı `veFeadToggleBeltMode`
+> üzerinden sınanıyordu (rozetin kendi `onclick` kapısını görmüyordu) ve zarf
+> okuması `veFeadEnvelopeReadout` doğrudan çağrılıyordu (panelden düşürülmesini
+> görmüyordu). Şekil 1'deki *"yay SAYISINA bakan test"* dersinin aynısı.
+
+##### GERGİ KÜNYE KÜTÜPHANESİ — `js/fead-tensioners.js` (14 kayıt, 2 aile)
+
+Kullanıcı isteği: *"Bu otomatik gergi özelliklerini de Gates raporlarından
+kalibre ederek çekeceğiz."* Kalıp `fead-belts.js` ile aynı: DOM'suz saf veri,
+panel yalnız okur.
+
+**PARÇA NUMARASI UYDURULMADI** ve kayıtlar **kaynak raporla** adlandırıldı;
+anahtar hangi ölçümden geldiğini söyler.
+
+> **DÜZELTME — parça numarası RAPORDA VAR.** Bu paragraf bir dönem *"Gates
+> raporları gerginin parça numarasını yazmıyor; tek bilinen `E9843` ve o da tek
+> bir aracın montaj çiziminden geliyor"* diyordu. `docs/gates-reports/pdf/`
+> arşivi kurulunca ÖLÇÜLDÜ ve tutmadı: **on raporun onunda da** kod raporun
+> kendi **Drive Notes** alanında yazıyor, üstelik **dört ayrı kod**:
+>
+> ```
+> Tensioner T38624; CW; 24.6Nm          E9843, 22Nm@27°, CCW@115/260
+> Tensioner Gates T38665; 31Nm          T38519 (29.5Nm): CCW@-303/7
+> ```
+>
+> Kodlar artık `part` alanında. Arşivde PDF'i olmayan **dört AG00976 kaydı
+> `part` TAŞIMIYOR** — doğrulanamayan bir kod yazmak tam da kaçınılmak istenen
+> şey olurdu; kapı bunu ayrıca tutuyor.
+
+Aynı alan bir şey daha ele verdi: Drive Notes **bağıl açıyı** da yazıyor
+(`E9843/16Nm@15°` · `/19Nm@21°` · `/22.5Nm@28°`) ve bunlar künyeden hesaplanan
+`(mean−pre)/rate` ile birebir tutuyor (`15.07 · 20.99 · 27.96`) — künyenin iç
+tutarlılığının **kaynaktan bağımsız** kanıtı.
+
+###### İKİ VERİ KUSURU — arşive karşı ölçülünce çıktı
+
+| Kusur | Neydi | Rapor ne diyor |
+|-------|-------|----------------|
+| `AG00810.ribs` | **8** | **10** (`10PK1215HD`). Alanın kendi tanımı *"künyenin ölçüldüğü kayış genişliği — `meanNm` bunun için geçerli"*, yani yanlış genişlik yanlış çalışma momenti demek |
+| `AG00810.preloadNm` | `11.561`, notu yalnız *"bandın üstünde"* | Raporda **HİÇ YOK** — fixture'ın kendi künyesinde *"mean torktan türetildi"* yazılı. Artık `preloadDerived:true` ile işaretli; işaretsiz hâlinde okuyan kişi onu raporun sayısı sanırdı |
+
+**`ribs` kusuru BUGÜN ÇIKTIYI DEĞİŞTİRMİYOR ve bunu söylemek önemli:** bant
+hesabı (`relNom8PK`) `ribs === 8` süzgecinden sonra bir de `rel < 30` kesiyor
+ve AG00810'un 37.1°'si zaten oradan eleniyor — düzeltmeden önce ve sonra bant
+birebir `27.10–29.62`. Yani `<30` kesmesi, `ribs` alanının yapması gereken işi
+yapıyordu.
+
+###### Kütüphane ARŞİVE bağlı (`tests/unit/gates-archive.test.js`)
+
+Künyeler `tests/fixtures/fead-validation.js`'ten çıkarılmıştı; arşiv kurulunca
+onu da **asıl raporuna** karşı ölçmek mümkün oldu. Kütüphanenin kendi testi iç
+tutarlılığa bakar, bu kapı **kaynağa**: on kaydın kol/oran/moment değerleri
+(30 sayı) birebir, ön yükün dokuzu birebir ve onuncusu türetilmiş diye
+işaretli, kaburga sayısı raporun künyesiyle aynı, parça kodu Drive Notes'ta
+gerçekten geçiyor.
+
+Kapı **altı mutasyonla** ölçüldü, altısı da kırmızı: `ribs`'i 8'e geri alma,
+türetilmiş ön yük işaretini kaldırma, bir parça kodunu yanlış yazma,
+doğrulanamayan kayda kod uydurma, bir yay oranını kaydırma, okuyucudaki
+tire-bölünmesi düzeltmesini kaldırma.
+
+###### HANGİ ALAN PARÇANIN, HANGİSİ MONTAJIN — ÖLÇÜLDÜ
+
+Ayrım tahmin değil: **AG0868 ailesi AYNI gergiyi üç kayış genişliğiyle**
+kullanıyor ve yalnız bir alan değişiyor.
+
+| | ön yük | katsayı | çalışma momenti | nominal dönme |
+|---|---:|---:|---:|---:|
+| 8PK | 8,56 | 0,501 | **22,57** | **27,96°** |
+| 6PK | 8,65 | 0,495 | **19,04** | **20,99°** |
+| 4PK | 8,46 | 0,505 | **16,07** | **15,07°** |
+
+Ön yük ve katsayı **%2 içinde sabit** (aynı yay), çalışma momenti kayış
+genişliğiyle ölçekleniyor. Yani:
+
+| | alanlar |
+|---|---|
+| **PARÇA** | kol boyu · ön yük · yay katsayısı · kasnak çapı · temas tarafı |
+| **MONTAJ** | çalışma momenti — kolun ne kadar kurulduğu, bir TASARIM AYARI |
+
+Künye uygulamak **pivot ve kol açısını YAZMAZ** (testli): ikisi de motorun
+verisi, parçanın değil. Künye pivotu da taşısaydı kullanıcı bir kataloğun
+koordinatını kendi motoruna uygulamış olurdu.
+
+###### İKİ AİLE, VE ~28°'nin RASTLANTI OLMADIĞI
+
+14 kaydın 13'ü tek gövde ailesinden: kol **90 mm**, kasnak **Ø77,2**, sırttan
+temas, katsayı **0,475–0,505** Nm/° (±%3). Tek istisna **AG00879**: kol 56 mm,
+Ø76,2, katsayı 0,409, ön yük 20,05 — belirgin şekilde başka bir parça.
+
+Kol-90 ailesinin tam genişlikli (8PK) **dokuz** kaydında
+`(M_mean − M₀)/k = 27,10 … 29,62°`. Kullanıcının gönderdiği E9843 montaj
+çizimi aynı sayıyı yazıyor: *"PIN POSITION FOR THE 344° MEAN ANGLE AND 22.5 Nm
+SPRING TORQUE @ **28° FREEARM-MEAN ROTATION**"*. Parçanın kendi değişmezi
+**bağıl** dönmedir; mutlak açı montaja aittir ve zarftan seçilir.
+
+###### BANT KAYITLARDAN TÜRETİLİR, ELLE YAZILMAZ
+
+İlk sürüm yuvarlanmış sınırlar taşıyordu ve **kapı bunu yakaladı**:
+`(16,07 − 8,46)/0,505 = 15,0693…`, elle yazılan alt sınır ise `15,07` — yani
+kütüphane **kendi kaydını** "bandın dışında" ilan ediyordu. Elle yazılmış bir
+sınır ayrıca yeni bir kayıt eklendiğinde sessizce eskir (kart ölçüsündeki
+"ikinci kopya" dersinin aynısı).
+
+**Bant bir HÜKÜM değil bir KARŞILAŞTIRMA:** kullanıcının gergisi bu 14 raporun
+dışından olabilir ve bu bir hata değildir. Ama **bir ondalık kayması tam
+buradan görünür** — `rate 0,480 → 0,048` hem katsayı bandını hem nominal
+dönmeyi (280°) düşürüyor, yani iki bağımsız işaret veriyor.
+
+**KAYIT KOPYA OLARAK GİDER:** kütüphane sürümü değişip bir değer düzeltilse
+bile kaydedilmiş proje kendiliğinden değişmez (`tenLib`/`tenLibVer` yalnız İZ
+bırakıyor) — `structural-materials.js`'in kendi kuralı, bu projenin en çok
+kaçındığı hata sınıfı.
+
+**EN KRİTİK KAPI:** kütüphanedeki her sayı `tests/fixtures/fead-validation.js`
+içindeki raporlardan çıkarıldı, yani **ikinci bir kopya**. Ayrışırsa hata
+SESSİZ olur — kullanıcı künye seçer, model çözülür, uyarı çıkmaz, yalnız
+sayılar raporunkinden başkadır. Test 14 kaydın 14'ünü de fixture'la **birebir**
+karşılaştırıyor ve nominal dönmeyi raporun kendi Mean satırıyla (0,2° içinde)
+tutuyor.
+
+Kapı **dokuz mutasyonla** ölçüldü, dokuzu da kırmızı: bir künyeyi fixture'dan
+kaydırma, uygulamada kasnak çapını atlama, bant denetimini boşaltma, listeyi
+referansla döndürme, künyeden pivota yazma, Türkçe katlamayı kaldırma, bandı
+elle yazılmış sınıra döndürme, paneli künye kartını basmaz yapma, seçilen
+künyeyi uygulamama.
+
+> Türkçe katlama kapısı **ilk turda YEŞİL kaldı**: test `AG00976` / `KASNAK`
+> gibi sorgularla koşuyordu ve ikisi de `toLowerCase()` ile de bulunuyor. Kapı
+> artık `DIŞINDA` / `dışında` / `DISINDA` dörtlüsünü koşuyor — JS'te
+> `'I'.toLowerCase() === 'i'` (Türkçe'de `'ı'` olmalı), yani ancak katlamayla
+> bulunuyor.
+
+##### KAYIŞ TİPİNE BAĞLI ÇIKTILAR — ŞİMDİLİK KAPALI (2026-08-28)
+
+Kullanıcı isteği: *"'kayış boyu' kullanılarak yapılan hesaplamalar, diyagramlar
+vb şeyler, yani 'kayış tipi' özelinde gelen profil sabitleri ile hesaplanan
+şeyler olmayacak. ŞİMDİLİK. İlerleyen zamanlarda BELKİ kayış tipi sabit kabul
+ederek bir hesaplama yapabiliriz."*
+
+Zarf kipinde kayış boyu bir ÇIKTI, yani tasarım aşamasında kayış **henüz
+seçilmemiştir**. O aşamada katalog sabitleriyle hesap yapmak olmayan bir seçimi
+varsaymak olurdu — ve bu modülde en pahalı hata sınıfı "makul ama yanlış"
+sayıdır: tablolar dolu görünür, hüküm verilir, okuyucu neyin varsayıldığını
+bilmez.
+
+| kapatılan çıktı | kayış katalogundan gelen |
+|---|---|
+| B10 kayış ömrü | `effLength` · `massPerRibKgM × ribs` · yorulma sabitleri |
+| Kaburga yorulma dağılımı | yorulma sabitleri (PK-2_2p-MT3 / PK-2_2a-MT3) |
+| Açıklık doğal frekansları + çırpınma | birim kütle (`massPerRibKgM × ribs`) |
+| Kol konum tablosunun zarfı | `tolerance` · `wearPct` |
+
+**KAPATILAMAYAN TEK ŞEY: `hb` / `hr`.** Pitch yarıçapı `OD/2 + hb` (kaburgalı)
+ya da `OD/2 + hr` (sırttan); ikisi de profil sabiti. PK'da `hb = 1,2 mm`, yani
+merkez mesafelerinde 2,4 mm'lik fark. Bunlar olmadan **teğet geometrisi
+yoktur** — kapatmak "kayışsız kayış tahriki" demek olurdu. Panel ve rapor bunu
+açıkça yazıyor: kapatılan şey profil değil, profilin **katalog sonuçları**.
+
+**VARSAYILAN VERİDEN ÇÖZÜLÜR** (`veFeadBeltDataMode`): zarf kipinde `none`,
+diğer kiplerde `full` — yani bugüne kadarki her kayıt davranışını birebir
+koruyor (testli). Kullanıcının açık seçimi ikisini de ezer.
+
+**SESSİZ DEĞİL:** kapatılanlar `beltDataOff` olarak sonuca giriyor, panel
+listeliyor, rapor §8'in başında *"Kayış tipine bağlı çıktılar bu belgede YER
+ALMIYOR"* kutusunu basıyor. Bir özet belgenin en pahalı sessiz hatası,
+İÇERMEDİĞİ bir kontrolün yapıldığı izlenimini bırakmasıdır.
+
+Kapı **altı mutasyonla** ölçüldü, altısı da kırmızı: zarf kipinde yine `full`
+verme, kapalıyken ömür/yorulmayı yine üretme, frekansları bırakma, kapatılanlar
+listesini boşaltma, panel anahtarını başlıksız bırakma, rapordan kutuyu düşürme.
+
+> Altıncısı **ilk turda YEŞİL kaldı** — kapı `_frBeltDataBox`'ı doğrudan
+> çağırıyordu, `_frSection8`'in onu BASTIĞINI ölçmüyordu. Aynı oturumda
+> **üçüncü kez** aynı ders: kapı ÜRETİLEN YÜZEYE bakmalı, üreticiye değil.
+
+**Sırada:** kullanıcı kayışı seçtikten sonra anahtarı açıp katalog sonuçlarını
+geri almanın akışı (bugün elle yapılıyor); ve zarf çözümünün Sonuçlar
+sayfasında kanal olarak yayını.
+
 
 
 **Sırada:** Sonuçlar sayfasında FEAD çözüm sekmesi (kanal yayını).
@@ -4490,6 +4843,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/mount-results-tab.test.js` | `js/results.js` + `js/graphics.js` | Takoz çözüm sekmesi, tek X ekseni kuralı, pano uzlaştırma |
 | `tests/unit/mount-results-publish.test.js` | `js/cp-mount.js` | Çözümün panoya yayını; alt-topoloji çökertme regresyonu |
 | `tests/unit/fead-core.test.js` | `js/fead-core.js` + `tests/fixtures/fead-validation.js` | **FEAD çekirdeğinin doğrulama kapısı**: 17 Gates raporu / 2095 değer (çalışma %0.5, Load dahil %1.5, kol açısı 0.2°), 8 koruma mekanizması, SPEC §9 yapısal özdeşlikleri (sarım değişmezi, `L_pitch−L_eff=2π·hb`, çevrim kapanışı, sürücü gücü), UMD tarayıcı köprüsü; **burulma modeli**: yapısal özdeşlikler (tam 1 rijit cisim modu, take-up özdeşliği %0.01, yalnız gergi komşusu spanlar) + Gates "System Resonance (Mode 1)" kalibrasyonu (5 sistem RMS <%8, 4/6/8PK kaburga ölçeklemesi) |
+| `tests/unit/gates-archive.test.js` | `docs/gates-reports/pdf/` + `tests/helpers/gates-pdf.js` + `tests/fixtures/fead-validation.js` | **Arşiv KAPISI — testler Gates PDF'lerini doğrudan okuyor.** Okuyucu saf Node + `zlib` (yeni bağımlılık yok) ve üç sessiz kusuru çözmek zorunda: font BAŞINA ToUnicode (birleştirme dört raporda çöp metin üretiyor — glif 44 → `space`/`A`/`#`/`@`/`G`), eksi işaretinin AYRI çizim çağrısı olması (`["-","72.00"]` → kaçırılırsa kasnak aynalanır), nesne akışları (ObjStm — AG00894'te tek font bile bulunamıyor). Fixture'ın **284** statik değeri (yerleşim · çap · açıklık · sarım · gergi künyesi) on raporun tamamında **0 uyuşmazlıkla** geri üretiliyor. Belge bütünlüğü: `Page N of M` ile alıntı tespiti — üç rapor alıntı, yedisi tam (AG00879'un sayfa AĞACI 5 gösteriyor ama 12 sayfa da içinde). Altbilgi tek satır ve birleşik (`Page 1 of 119.37.0.0`) → düz kalıp **119** okur  Ayrıca **gergi künye kütüphanesini** (`js/fead-tensioners.js`) kaynağına bağlar: on kaydın kol/oran/moment değeri (30 sayı) birebir, ön yükün dokuzu birebir + onuncusu `preloadDerived` ile işaretli (raporda YOK), kaburga sayısı raporun künyesiyle aynı (AG00810 bir dönem 8 yazıyordu, raporu 10PK), parça kodu Drive Notes'ta gerçekten geçiyor ve doğrulanamayan dört kayıt kod TAŞIMIYOR |
 | `tests/unit/fead-canvas-mm.test.js` | `js/fead-model.js` koordinat katmanı + `js/connections.js` imza | **Kanvas = kayış düzlemi**: gidiş-dönüş birebir, Y EKSENİ TERS (kanvasta aşağı = mm'de azalan), kutu ölçüsünün sistematik kayma ÜRETMEMESİ (sol üstten ölçmek 54…72 px arası değişen bir sapma verirdi), 1 px = 1 mm. **Orijin**: sürücü kasnak (rol, tip değil), kendi mm'sinin (0,0) olması, kasnak yoksa senkronun hiç çalışmaması. **Senkron**: sürüklemenin mm'yi o kadar değiştirmesi, ORİJİNİ sürüklemenin diğerlerini karşı yönde kaydırması, araç düğümlerine dokunmaması. **Gergi**: pivot + montaj merkezinin RİJİT taşınması (kol boyu ve montaj açısı korunur, `veFeadArmCheck` geçer) ve ORİJİN sürüklenince gergi pivotunun da tazelenmesi (bu bir KAPI BOŞLUĞUYDU — gergi senkrondan çıkarılınca hiçbir test kırılmıyordu). **Göç**: ötelemenin L_eff/sarım/gerginliği BİREBİR bırakması, göçün krankı (0,0)'a çekmesi, gergi pivotunun da ötelenmesi (kısmi göç modeli bozardı). **İmza**: kasnak mm koordinatı/çapı/temas tarafı imzaya girer, Kayış Yolu kartını taşımak imzayı DEĞİŞTİRMEZ. **Uçtan uca**: alternatörü kanvasta taşımak gereken kayış boyunu gerçekten değiştiriyor |
 | `tests/unit/fead-belts.test.js` | `js/fead-belts.js` + `js/fead-model.js` aday değerlendirmesi | **Kayış kataloğu**: listelerin sıralı/tekil/pozitif olması, aralıkların ContiTech beyanıyla çakışması (bir listenin yanlış profile yapışması ancak böyle yakalanır), en kısa boyun min. kasnak çevresinden büyük olması, `veFeadBeltStock`'un KOPYA döndürmesi. **Izgara bir kural**: en yakın adıma yuvarlama, aralık dışında kenetlenme, ızgarası olmayan profilde sessizce PK ızgarasının kullanılmaması. **Kod**: otomotiv ve endüstriyel yazımın ikisinin de çözülmesi, gidiş-dönüş, kaburga denetiminin yalnız verisi olan profilde hüküm vermesi. **Ölçülmüş boşluk**: 8PK 1715'in endüstriyel listede OLMAMASI (komşuları 65 mm uzakta) — kataloğun iki kümeli olmasının sebebi. **Uçtan uca**: serbest kipin gereken boyu → katalog ızgarası → sabit kip tabanı (kol 28.4271° · T 532.142 · hub 302.125) birebir; sığmayan adayın gerginlik YAZMAMASI (4.05e10 N sızmıyor), boy uzadıkça kol ve gerginliğin düşmesi, aday değerlendirmesinin çalışma noktası önbelleğini kirletmemesi |
 | `tests/unit/fead-belt-mode.test.js` | `js/fead-model.js` kayış kipi + `js/fead-core.js` hoşgörülü geometri | **Kayış boyu sabit değil**: kip çözümü ve geriye dönük uyumluluk (boyu olan eski proje `fixed`, boyu olmayan artık ÇÖZÜLÜYOR); sabit kipte tabanın BİREBİR korunması (kol 28.4271° · L 1715.0000 · T 532.142 · hub 302.125); **nominal kol açısı yay künyesinden, geometriden DEĞİL** — montaj merkezi ya da pivot yokken de türetilir, künye gerçekten eksikse NaN kalır (uydurulmaz) ve `direct` kol açısı kipinde serbest kayış NOMİNALE oturur, aralığın ortasına DEĞİL (eskiden kol 38.1174° · fallback true · uyarı 0); serbest kipte gerginliğin ankraj, boyun ÇIKTI olması ve iki kipin doğru modelde AYNI çalışma noktasına varması; sürüklerken çözümün kopmaması (−200…+40 mm, boy monoton). **Kenetleme**: kuşatılmış hedefte çekirdeğin çözümünün birebir dönmesi, erişilemeyen hedefte istisna yerine sınır + aralığın yazılması, sığmayan kayışta NOMİNAL kol açısına düşülüp ÖNERİLEN boyun serbest kipinkiyle aynı çıkması, kenetlenmişken uyuşmazlık uyarısının İKİNCİ KEZ basılmaması. **Hoşgörülü geometri**: kapanmayan çevrimin çözülüp `geomValid:false` ile yazılması, çekirdek varsayılanının hâlâ ATMASI, çakışan kasnakların tek gerçek durdurucu olması. **Üç sessiz hata**: `feasibleRelMax` ölçütü, `_geomOpt`'un sistem ömrünün başında kurulması, dejenereliğin SARIM değil TAKE-UP ile ölçülmesi |

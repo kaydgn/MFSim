@@ -122,6 +122,10 @@ function veAttachNodeDrag(nodeEl, node) {
   document.addEventListener('mouseup', function() {
     if(!_veNodeDrag.active) return;
     if(typeof showAlignmentGuides === 'function') showAlignmentGuides(null);
+    // FEAD: kare yolunda gergi kol açısı donduruluyor (kart bütçesi 2.2 ms,
+    // zarf taraması 84 ms). Bırakınca yeni yerleşime göre yeniden seçiliyor —
+    // saveState'ten ÖNCE, ki geri-al yığınına oturmuş açı girsin.
+    if(typeof veFeadReselectArm === 'function') veFeadReselectArm();
     if(typeof saveState === 'function') saveState();
     _veNodeDrag.active = false;
     _veNodeDrag.anchor = null;
