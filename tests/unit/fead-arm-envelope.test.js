@@ -871,3 +871,124 @@ describe('montaj koordinatı ↔ kasnak merkezi karışması', () => {
     expect(h).toMatch(/48[,.]6/);                  // ölçülen bedel yazılı
   });
 });
+
+/* ═══ 9) DETAYLI RAPOR ZARFI ANLATIYOR ═══════════════════════════════════ */
+//
+// Kullanıcı isteği (2026-08-28): *"detaylı rapor hesaplarını da bu mentaliteye
+// göre güncelleyelim. Orada pivot zarfından falan detaylı olarak bahsetmemiz
+// gerekiyor."*
+//
+// Bu belge tedarikçiye gidiyor; içinde bugünkü akışın TERSİNİ anlatan bir
+// cümle kalmak, panelde kalan bir hatadan pahalıdır.
+describe('detaylı rapor — zarf kipi', () => {
+  function coz(zarf) {
+    const pack = veFeadExampleNodes(KEY);
+    const ns = pack.nodes.map((n) => ({
+      id: n.id, type: n.type, def: componentDefs[n.type],
+      customName: n.customName, data: JSON.parse(JSON.stringify(n.data)),
+    }));
+    if (zarf) ZARF(ns.find((n) => n.type === 'fead-tensioner').data);
+    const build = veFeadBuildSystem(ns, pack.connections);
+    const solv = ns.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver)[0];
+    const R = veFeadAnalyze(build, {
+      rows: veFeadDutyRows(solv), cylinders: 6, fatigueModel: 'PK-2_2p-MT3',
+    });
+    R.build = build; R.pulleyNames = build.names; R.serviceFact = 1.3;
+    return { R, h: RP._frSection8(R, { id: 'rp', type: 'fead-report', data: {} }) };
+  }
+  let Z = null, Mn = null;
+  beforeAll(() => { Z = coz(true); Mn = coz(false); });
+
+  test('PİVOT BİR GİRDİ diyor — ve eski TERS cümle basılmıyor', () => {
+    expect(Z.h).toMatch(/Pivot bir <b>GİRDİDİR<\/b>/);
+    // Eski mount cümlesi zarf kipinde YER ALMAMALI: "kullanıcıdan istenmez"
+    expect(Z.h).not.toMatch(/Pivot, tedarikçiye giden sayfada <b>bulunmaz<\/b>/);
+    // …ama mount kipinde AYNEN duruyor (orada doğru)
+    expect(Mn.h).toMatch(/Pivot, tedarikçiye giden sayfada <b>bulunmaz<\/b>/);
+    expect(Mn.h).not.toMatch(/Pivot bir <b>GİRDİDİR<\/b>/);
+  });
+
+  test('İKİ NOKTANIN AYRIMI ölçüsüyle yazılı', () => {
+    expect(Z.h).toMatch(/Pivot Point/);
+    expect(Z.h).toMatch(/Idler X\/Y Coordinate/);
+    expect(Z.h).toMatch(/0,065 mm/);                    // ölçülen sapma
+    expect(Z.h).toMatch(/arm direction is from pulley center to pivot/);
+  });
+
+  test('DENKLEM YÖNÜ tersine döndü: c = p + a(cos,sin)', () => {
+    const i = Z.h.indexOf('mathbf{c}');
+    expect(i).toBeGreaterThan(0);
+    const eq = Z.h.slice(i, i + 260);
+    expect(eq).toMatch(/mathbf\{p\}/);
+    expect(eq).toMatch(/\+/);
+    // mount kipinde ters yön korunuyor
+    expect(Mn.h).toMatch(/\\mathbf\{p\} .{0,12}=.{0,12} \\mathbf\{c\}/);
+  });
+
+  test('TOTOLOJİ NÜKSETMİYOR: zarf kipinde "gerçek denetim" DEMİYOR', () => {
+    expect(Z.h).not.toMatch(/gerçek bir denetimdir/);
+    expect(Z.h).toMatch(/DENETİM DEĞİLDİR/);
+    // ve boş bir "(— mm)" denetim sayısı basılmıyor
+    expect(Z.h).not.toMatch(/\(— mm\)/);
+  });
+
+  test('ZARF BÖLÜMÜ var: ölçüt, kalibrasyon tablosu, şekil, sınır', () => {
+    expect(Z.h).toMatch(/Kol açısı zarftan nasıl seçiliyor/);
+    expect(Z.h).toMatch(/arg\\max/);                       // (denklem) ölçütün kendisi
+    expect(Z.h).toMatch(/en küçük take-up EN BÜYÜK/);      // Tablo A kazanan satır
+    expect(Z.h).toMatch(/Zarf haritası/);                  // şekil
+    expect(Z.h).toMatch(/Paketleme modelde YOK/);          // geçerlilik sınırı
+    expect(Z.h).toMatch(/kalibrasyondur, bağımsız doğrulama değil/);
+    expect(Z.h).toMatch(/β = 90° kuralı bu sistemlerde geçerli DEĞİL/);
+    // mount kipinde bölüm HİÇ basılmıyor (yapılmamış bir hesap gösterilmiyor)
+    expect(Mn.h).not.toMatch(/Kol açısı zarftan nasıl seçiliyor/);
+  });
+
+  test('BANT ÇARPANI ikinci kopya değil — ölçütün kendi sabitinden', () => {
+    expect(RP._frEnvMult()).toBe(VE_FEAD_ENV_TRAVEL_MULT);
+    expect(Z.h).toMatch(new RegExp(String(VE_FEAD_ENV_TRAVEL_MULT).replace('.', ',')));
+  });
+
+  test('KAZANAN ÖLÇÜT tabloda, ve gerçekten uygulanan ölçüt', () => {
+    const win = RP.VE_FR_ENV_CRITERIA.filter((c) => c.win);
+    expect(win).toHaveLength(1);
+    // en iyi medyan kazanan satırda olmalı — tablo kendi hükmünü taşısın
+    const best = RP.VE_FR_ENV_CRITERIA.reduce((a, c) => (c.med < a.med ? c : a));
+    expect(best.win).toBe(true);
+  });
+
+  test('SEÇİLEN AÇI ve TÜREYEN sayılar tabloda, sayı olarak', () => {
+    expect(Z.h).toMatch(/Seçilen kol açısı θ\*/);
+    expect(Z.h).toMatch(/Türeyen kasnak merkezi/);
+    expect(Z.h).toMatch(/Türeyen efektif kayış boyu/);
+    expect(Z.h).toMatch(/171[0-9],/);                      // gerçek boy basılı
+    expect(Z.h).not.toMatch(/undefined|\[object/);
+  });
+
+  test('§8.2 efektif boyu GİRDİ diye etiketlemiyor — belge kendiyle çelişmiyor', () => {
+    const i = Z.h.indexOf('Efektif boy L');
+    expect(i).toBeGreaterThan(0);
+    expect(Z.h.slice(i, i + 220)).toMatch(/türev/);
+    // mount + sabit kipte hâlâ girdi
+    const j = Mn.h.indexOf('Efektif boy L');
+    expect(Mn.h.slice(j, j + 220)).toMatch(/girdi/);
+  });
+
+  test('uygunluk kriteri "girilmedi" DEMİYOR, zarfın kendi kriterini soruyor', () => {
+    const u = RP._frCompliance(Z.R);
+    expect(u).not.toMatch(/montaj merkezi girilmedi/);
+    expect(u).toMatch(/zarfın çözülebilen bölgesinde/i);
+    expect(RP._frCompliance(Mn.R)).toMatch(/Kol boyu ↔ montaj merkezi/);
+  });
+
+  test('ŞEKİL GÖRÜNÜR: kullandığı her jeton belgenin CSS’inde tanımlı', () => {
+    const fs = require('fs');
+    const css = fs.readFileSync('tools/report-assets/fead-theory-source.html', 'utf8');
+    const fig = RP._frEnvelopeFigure(Z.R, veFeadEnvelopeOf(Z.R.build));
+    expect(fig).toMatch(/<svg/);
+    const jetonlar = [...new Set([...fig.matchAll(/var\((--[a-z-]+)\)/g)].map((m) => m[1]))];
+    expect(jetonlar.length).toBeGreaterThan(2);
+    const eksik = jetonlar.filter((j) => !new RegExp('\\' + j + '\\s*:').test(css));
+    expect(eksik).toEqual([]);
+  });
+});
