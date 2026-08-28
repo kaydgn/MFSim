@@ -69,65 +69,104 @@ okuması pahalı; fixture okuması bedava ve testli.
 `durum` sütunu: **PDF** = ham belge burada · **veri** = sayıları fixture'da,
 PDF henüz yok.
 
-| Rapor | Gates | Kasnak | L_eff | Sistem | Durum | PDF | Sayfa haritası |
-|-------|-------|-------:|------:|--------|-------|-----|----------------|
-| AG0868-4PK | 9.37 | 3 | 1013 | BMC-Otomotif 6 sil. · ikincil klima (SD7H15) · E9843 @16 Nm | **PDF** | `AG0868_4PK1013HD_E9843-16Nm_2022-12-27.pdf` | 11 sayfa · A |
-| AG0868-6PK | 9.37 | 3 | 1018 | aynı sistem · 6PK · E9843 @19 Nm | **PDF** | `AG0868_6PK1018HD_E9843-19Nm_2022-12-27.pdf` | 11 sayfa · A |
-| AG0868 | 9.37 | 3 | 1020 | aynı sistem · 8PK · E9843 @22.5 Nm | **PDF** | `AG0868_8PK1020HD_E9843-22.5Nm_2022-12-27.pdf` | 11 sayfa · A |
-| AG00810 | 4.32 | 4 | 1214 | BMC TTA-6x6 · 250 A alternatör · 10PK1215HD | veri | — | — |
-| AG00879 | 9.40 | 5 | 1392 | Anadolu Isuzu 6x6 Cummins · 8PK1392HD · gergi T38665 | veri | — | — |
-| AG00686 | 9.40 | 4 | 1475 | BMC 6 sil. · 8PK1475HD · gergi T38624 CW | veri | — | — |
-| AG00686-1520 | 9.40 | 4 | 1520 | aynı gergi · CRK ø172 / A_C ø137 | veri | — | — |
-| AG00902-1275 | 9.55 | 4 | 1275 | BMC Otomotiv Valeo TM21 · ø127 · 08.12.2023 | **PDF** | `AG00902_8PK1275HD_E9843-22Nm_2023-12-08.pdf` | 5 sayfa · B |
-| AG00902-1300 | 10.01 | 4 | 1302 | aynı sistem · TM21 · farklı kasnak çapları · 30.11.2023 | **PDF** | `AG00902_8PK1300HD_E9843-22Nm_2023-11-30.pdf` | 5 sayfa · B |
-| AG00894 | 9.40 | 6 | 1739 | BMC 6 sil. · İKİ klima (TM31 + SD7H15) · alternatör YOK | veri | — | — |
+| Rapor | Gates | Kasnak | L_eff | Sistem | Durum | PDF | Kapsam |
+|-------|-------|-------:|------:|--------|-------|-----|--------|
+| AG0868-4PK | 9.37 | 3 | 1013 | BMC-Otomotif 6 sil. · ikincil klima (SD7H15) · E9843 @16 Nm | **PDF** | `AG0868_4PK1013HD_E9843-16Nm_2022-12-27.pdf` | **TAM** 11/11 |
+| AG0868-6PK | 9.37 | 3 | 1018 | aynı sistem · 6PK · E9843 @19 Nm | **PDF** | `AG0868_6PK1018HD_E9843-19Nm_2022-12-27.pdf` | **TAM** 11/11 |
+| AG0868 | 9.37 | 3 | 1020 | aynı sistem · 8PK · E9843 @22.5 Nm | **PDF** | `AG0868_8PK1020HD_E9843-22.5Nm_2022-12-27.pdf` | **TAM** 11/11 |
+| AG00810 | 4.32 | 4 | 1214 | BMC Otomotiv TTA-6x6 · 250 A alternatör · T38519 · 16.09.2021 | **PDF** | `AG00810_10PK1215HD_T38519-v8_2021-09-16.pdf` | **TAM** 11/11 |
+| AG00879 | 9.40 | 5 | 1392 | Anadolu Isuzu 6x6 Cummins · ikincil alternatör · T38665 @31 Nm · 17.05.2023 | **PDF** | `AG00879_8PK1392HD_T38665-31Nm_2023-05-17.pdf` | alıntı **5/12** |
+| AG00686 | 9.40 | 4 | 1475 | BMC 6 sil. · CRK ø160 / A_C ø127 · T38624 @24.6 Nm CW · 07.09.2023 | **PDF** | `AG00686_8PK1475HD_T38624-24.6Nm_2023-09-07.pdf` | **TAM** 11/11 |
+| AG00686-1520 | 9.40 | 4 | 1520 | aynı gergi · CRK ø172 / A_C ø137 · @22.2 Nm · 07.09.2023 | **PDF** | `AG00686_8PK1520HD_T38624-22.2Nm_2023-09-07.pdf` | **TAM** 11/11 |
+| AG00902-1275 | 9.55 | 4 | 1275 | BMC Otomotiv Valeo TM21 · ø127 · 08.12.2023 | **PDF** | `AG00902_8PK1275HD_E9843-22Nm_2023-12-08.pdf` | alıntı 5/11 |
+| AG00902-1300 | 10.01 | 4 | 1302 | aynı sistem · TM21 · farklı kasnak çapları · 30.11.2023 | **PDF** | `AG00902_8PK1300HD_E9843-22Nm_2023-11-30.pdf` | alıntı 5/11 |
+| AG00894 | 9.40 | 6 | 1739 | BMC Otomotiv · İKİ klima (TM31 + SD7H15) · alternatör YOK · 18.09.2023 | **PDF** | `AG00894_8PK1738HD_E9843-23Nm_2023-09-18.pdf` | alıntı **6/12** |
 | AG00976 1668@-240/115 | 13.02 | 6 | 1667 | BMC Otomotif FEAD 5 · Cummins ikincil tahrik | veri | — | — |
 | AG00976 1655@-250/104 | 13.02 | 6 | 1656 | aynı sistem · revizyon | veri | — | — |
 | AG00976 1705@-250/110 | 13.02 | 6 | 1705 | aynı sistem · revizyon | veri | — | — |
 | AG00976 1715@-250/110 | 13.02 | 6 | 1715 | aynı sistem · **Corrected-IDR1** · 05.06.2025 | veri | — | — |
 
-### Sayfa haritaları
+### Sayfa düzeni — TEK aile, iki varyant
 
-Gates çıktısı iki farklı düzende geliyor. Sayfa numaraları **düzene** bağlı,
-rapora değil — aynı harfi taşıyan her rapor aynı haritayı kullanır.
+> **DÜZELTME.** Bu bölüm bir tur önce *"Gates çıktısı iki düzende geliyor
+> (A: 11 sayfa, B: 5 sayfa)"* diyordu. **İki örnekten yapılmış bir genellemeydi
+> ve yanlıştı**: 5 sayfalık belgeler ayrı bir düzen değil, tam raporun
+> ALINTISI (aşağıya bakınız).
 
-**Düzen A — 11 sayfa** (AG0868 ailesi, Gates 9.37)
+Tam rapor tek bir düzene sahip; tek değişkeni `Belt Slip / Tension Analysis`
+bölümünün bir mi iki sayfa mı olduğu:
 
-| s | Bölüm | s | Bölüm |
-|--:|-------|--:|-------|
-| 1 | Summary of Results | 7 | Pulley Hubload Analysis (**Mean**) |
-| 2 | Geometric Analysis 1/2 — yerleşim · kayış · gergi künyesi · span/sarım/oran | 8 | Belt Rib Fatigue 1/2 |
-| 3 | Geometric Analysis 2/2 — gergi zarfı · take-up · boy eğrisi | 9 | Belt Rib Fatigue 2/2 |
-| 4 | Pulley Alignment Sensitivity | 10 | System Vibration Analysis |
-| 5 | Belt Slip / Tension Analysis | 11 | Design Notes |
-| 6 | Pulley Hubload Analysis (**Peak**) | | |
+| s | 11 sayfalık varyant | | s | 12 sayfalık varyant |
+|--:|---------------------|-|--:|---------------------|
+| 1 | Summary of Results | | 1 | Summary of Results |
+| 2 | Geometric Analysis 1/2 | | 2 | Geometric Analysis 1/2 |
+| 3 | Geometric Analysis 2/2 | | 3 | Geometric Analysis 2/2 |
+| 4 | Pulley Alignment Sensitivity | | 4 | Pulley Alignment Sensitivity |
+| 5 | Belt Slip / Tension | | 5 | Belt Slip / Tension **1/2** |
+| 6 | Pulley Hubload (**Peak**) | | 6 | Belt Slip / Tension **2/2** |
+| 7 | Pulley Hubload (Mean) | | 7 | Pulley Hubload (**Peak**) |
+| 8 | Belt Rib Fatigue 1/2 | | 8 | Pulley Hubload (Mean) |
+| 9 | Belt Rib Fatigue 2/2 | | 9 | Belt Rib Fatigue 1/2 |
+| 10 | System Vibration | | 10 | Belt Rib Fatigue 2/2 |
+| 11 | Design Notes | | 11 | System Vibration |
+| | | | 12 | Design Notes |
 
-**Düzen B — 5 sayfa** (AG00902 ailesi, Gates 9.55 / 10.01)
+Sol sütun **ölçüldü** (altı tam rapor, başlık dizisi birebir aynı). Sağ sütunun
+4 · 7 · 9–12. satırları **çıkarım**: o sayfalar elimizdeki alıntılarda yok, ama
+alıntıların taşıdığı sayfa numaraları (`5→Belt Slip 1/2`, `6→Belt Slip 2/2`,
+`8→Hubload Mean`) iki bağımsız raporda da bu haritayla tutarlı.
 
-| s | Bölüm |
-|--:|-------|
-| 1 | Summary of Results |
-| 2 | Geometric Analysis 1/2 |
-| 3 | Geometric Analysis 2/2 |
-| 4 | Belt Slip / Tension Analysis |
-| 5 | Pulley Hubload Analysis (**Mean**) |
+### DÖRT PDF TAM RAPOR DEĞİL — ALINTI
 
-Düzen B'de **tepe yük ve titreşim sayfaları YOK**; kısa sürüm yalnız ortalama
-yükleri veriyor.
+Kolay kaçırılan ve pahalı bir tuzak: bir bölümü PDF'te bulamamak, o bölümün
+**raporda olmadığı** anlamına gelmiyor. Altbilgideki `Page N of M` bunu ele
+veriyor — dosyadaki sayfa sayısı ile `M` tutmuyorsa belge kırpılmış.
+
+| Rapor | PDF | Gerçek | Eksik sayfalar |
+|-------|----:|-------:|----------------|
+| AG00686 ×2 · AG00810 · AG0868 ×3 | 11 | 11 | **TAM** |
+| AG00879 | 5 | 12 | 4, 5, 7, 9, 10, 11, 12 |
+| AG00894 | 6 | 12 | 4, 7, 9, 10, 11, 12 |
+| AG00902-1275 | 5 | 11 | 4, 6, 8, 9, 10, 11 |
+| AG00902-1300 | 5 | 11 | 4, 6, 7, 9, 10, 11 |
+
+Dördünde de **tepe yük, yorulma, titreşim ve hizalama sayfaları yok**. Bir
+sonraki oturum bu tabloya bakmadan *"AG00879'da tepe tablosu yokmuş"* diye
+yazarsa yanlış bir şey söylemiş olur — eksik olan rapor değil, elimizdeki kopya.
+
+Yeni bir PDF eklendiğinde bu denetim koşulmalı:
+
+```bash
+python3 - <<'EOF'
+import pymupdf, glob, os, re
+for f in sorted(glob.glob("docs/gates-reports/pdf/*.pdf")):
+    d=pymupdf.open(f); nums=[]; total=None
+    for pg in d:
+        m=re.search(r"Page (\d+) of (\d+)", pg.get_text())
+        if m: nums.append(int(m.group(1))); total=int(m.group(2))
+    eksik=[i for i in range(1,(total or 0)+1) if i not in nums]
+    print(os.path.basename(f), d.page_count, "/", total, "eksik:", eksik or "yok")
+EOF
+```
 
 ### Fixture kaynağına karşı DOĞRULANDI
 
-Arşive giren beş rapor `tests/fixtures/fead-validation.js`'te zaten kayıtlıydı.
-PDF'ler geldiğinde çıkarılmış veri kaynağına karşı programatik olarak ölçüldü:
+Arşive giren on rapor `tests/fixtures/fead-validation.js`'te zaten kayıtlıydı,
+ama çıkarma elle yapılmıştı ve hiç doğrulanmamıştı. PDF'ler gelince programatik
+olarak karşılaştırıldı:
 
 ```
-karşılaştırılan değer : 127   (X · Y · pitch · effective · span · wrap
+karşılaştırılan değer : 290   (X · Y · pitch · effective · span · wrap
 uyuşmazlık            :   0    + tasarım gerginliği · kol boyu · yay momenti
                                · yay oranı · boy toleransı)
 ```
 
-Yani elle çıkarılmış fixture, kaynak belgelerine **sadık**. Bu denetim yalnız
-PDF depoya girdiği için mümkün oldu — arşivin ilk somut karşılığı.
+Elle çıkarılmış veri kaynağına **sadık**. Bu denetim yalnız PDF depoda olduğu
+için mümkün oldu — arşivin ilk somut karşılığı.
+
+Denetim `Geometric Analysis, Sheet 1 of 2` sayfasını **başlıktan** buluyor,
+sayfa numarasından değil: alıntılarda o bölüm 2. sayfada ama tam raporlarda da
+2. sayfada olsa bile numaraya güvenmek kırılgan olurdu.
 
 **Ölçülen boşluk:** `CLAUDE.md` doğrulama kapısını *"17 Gates raporu"* diye
 tarif ediyor; fixture'dan sayılan kayıt **14** (yedi aile). Aradaki üç rapor ya
@@ -136,13 +175,27 @@ kendiliğinden görünür olacak — indeksin ikinci işi bu.
 
 ## Arşivin açtığı kapılar (ölçüldü)
 
-**Tepe yük tablosu artık TEK rapora bağlı değil.** `CLAUDE.md` özet raporun tepe
-yük tablosunu `KALİBRE DEĞİL` diye damgalıyor ve gerekçesi şu:
-*"17 rapordan çıkarılmış 2095 değerlik kümede tek bir tepe değeri yok"* ·
-*"Damganın kalkması için birden çok raporun tepe tablosu gerekir."*
+### 1 · Tepe yük tablosu artık TEK rapora bağlı değil
 
-Düzen A'nın **6. sayfası** tam olarak o tablo — ve AG0868'in üç varyantında da
-dolu. Örnek (8PK1020HD, s6):
+`CLAUDE.md` özet raporun tepe yük tablosunu `KALİBRE DEĞİL` diye damgalıyor:
+
+> *"doğrulama kümesinde hâlâ tek bir tepe değeri yok, yani tablo TEK bir rapora
+> karşı ölçülebiliyor"* · *"Damganın kalkması için birden çok raporun tepe
+> tablosu gerekir."*
+
+Tam raporun 6. sayfası (12 sayfalıkta 7.) `Pulley Hubload Analysis (Peak)` ve
+**altı tam raporun altısında da dolu**:
+
+| Rapor | Kaburga | Tasarım gerginliği |
+|-------|--------:|-------------------:|
+| AG0868-4PK | 4 | 258 N |
+| AG0868-6PK | 6 | 301 N |
+| AG0868 | 8 | 356 N |
+| AG00686 | 8 | 766 N |
+| AG00686-1520 | 8 | 609 N |
+| AG00810 | 10 | 759 N |
+
+Örnek (AG0868 8PK1020HD, s6):
 
 ```
               CRK      A_C      TEN
@@ -152,16 +205,34 @@ Direction     354/228  194/195  84/63      (yön / sarım °)
 Accel.        1000 RPM/s  (decel de 1000)
 ```
 
-Üç varyant **kontrollü bir deney**: aynı kasnaklar, aynı duty, aynı sıcaklık;
-değişen yalnız kaburga sayısı ve tasarım gerginliği. Yani tepe zincirini
-gerginlik ekseninde sınayan üç bağımsız nokta. AG00976'nınkiyle birlikte **dört**
-eder — damgayı kaldırmaya yetip yetmediği ölçülmeli.
+Altısı birden 258–766 N gerginlik ve 4–10 kaburga aralığını tarıyor; AG0868'in
+üçü ayrıca **kontrollü bir deney** (aynı kasnaklar, aynı duty, aynı sıcaklık,
+değişen yalnız kaburga ve gerginlik). AG00976'nınkiyle **yedi** eder.
 
-**Düzen A'nın 4. sayfası `Pulley Alignment Sensitivity`** — bugün modelde hiç
-yok (`CLAUDE.md`: *"Geometri tek düzlemde çözülüyor; fleeting açısı ve eksenel
-offset modelde yok"*). Sayfa fleeting açısını ve yatak oturma açısını veriyor.
+**Alıntı dördünde tepe sayfası YOK** — yani kalibrasyon takımı bu altı raporla
+sınırlı, on rapor değil.
+
+### 2 · `Pulley Alignment Sensitivity` — modelde hiç yok
+
+Tam raporun 4. sayfası. `CLAUDE.md`: *"Geometri tek düzlemde çözülüyor;
+fleeting açısı ve eksenel offset modelde yok."* Sayfa yatak oturma açısını ve
+fleeting açısını veriyor. Yine yalnız altı tam raporda.
 
 İkisi de **bu oturumda yapılmadı**; arşivin gerekçesi olarak buraya yazıldı.
+
+## Tedarikçi dosya adı GÖVDEYLE ÇELİŞEBİLİR — AG00810
+
+`AG00810`'un tedarikçiden gelen dosya adı ve raporun `Design:` alanı
+**`12PK1215-Version-8`** diyor. Raporun gövdesi ise iki ayrı yerde 10 diyor:
+
+```
+s2  # of Ribs / Cord Material : 10 / polyester
+s1  Drive Notes               : 10PK1215HD MT610 Polyester
+```
+
+Fixture da 10 taşıyor, yani **doğru**. Arşiv dosyası gövdeye göre adlandırıldı
+(`AG00810_10PK1215HD_…`); `12PK1215` yalnız burada, arama yapan biri bulsun
+diye kayıtlı. Ders: ad dizgisi bir VERİ KAYNAĞI değil, etikettir.
 
 ## Yeni rapor eklerken
 
