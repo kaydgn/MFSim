@@ -948,6 +948,8 @@ function getFeadTensionerPropertiesHTML(node){
         + 'o zaman girilen değer kazanır ve kol boyu çapraz kontrolü gerçek bir denetim olur.'));
   }
 
+  html += veFeadTensionerLibCard(node);
+
   // ── YAY KÜNYESİ — tedarikçi sayfasındaki dört satırın birebir karşılığı ──
   html += _feadCard('Yay Künyesi', 'sayfadaki dört satır', 'var(--accent-success)',
       _feadGrid(node, [
@@ -1013,6 +1015,73 @@ function getFeadTensionerPropertiesHTML(node){
   return html;
 }
 
+
+// ── GERGİ KÜNYE KÜTÜPHANESİ KARTI ──────────────────────────────────────────
+//
+// Kütüphane bir KISIT değil bir ÖNERİ (kayış kataloğuyla aynı kural): kullanıcı
+// her zaman elle girebilir. Kartın iki işi var — hazır bir künyeyi tek tıkla
+// uygulamak, ve elle girilen künyeyi ölçülen bantla KARŞILAŞTIRMAK. İkincisi
+// bir ondalık kaymasını yakalayan tek yüzey.
+function veFeadTensionerLibCard(node){
+  if(typeof veFeadTensionerList !== 'function')
+    return _feadCard('Gergi Künye Kütüphanesi', '', 'var(--text-muted)',
+      _feadHint('Kütüphane yüklenmedi (js/fead-tensioners.js).'));
+  var td = node.data || {};
+  var liste = veFeadTensionerList();
+  var sec = td.tenLib || '';
+  var opts = [['', '— elle gir —']].concat(liste.map(function(r){
+    return [r.key, r.src + '  ·  kol ' + r.armLen + ' · k ' + r.rateNm
+            + ' · rel ' + r.relNomDeg.toFixed(1) + '°'];
+  }));
+  var h = '<div style="display:flex; align-items:center; gap:10px; margin-bottom:9px;">'
+    + '<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">'
+    + 'Ölçülmüş künye</div>'
+    + '<select onchange="veFeadApplyTenLib(\'' + node.id + '\',this.value)"'
+    + ' style="width:230px; ' + _FEAD_INP + ' text-align:left;">';
+  opts.forEach(function(o){
+    h += '<option value="' + _feadEsc(o[0]) + '"' + (o[0] === sec ? ' selected' : '') + '>'
+       + _feadEsc(o[1]) + '</option>';
+  });
+  h += '</select></div>';
+
+  var b = veFeadTensionerBandCheck(td);
+  if(b.outside.length)
+    h += _feadHint('<b style="color:var(--accent-warning);">Ölçülen bandın dışında:</b> '
+      + _feadEsc(b.outside.join('; ')) + '. Bu bir hata DEĞİL — elinizdeki gergi '
+      + 'bu 14 raporun dışından olabilir. Ama bir ondalık kayması da tam burada '
+      + 'görünür.');
+  else if(Number.isFinite(b.relNomDeg))
+    h += _feadHint('Nominal kol dönmesi <b>' + _feadFmt(b.relNomDeg, 2) + '°</b> '
+      + '((M<sub>çalışma</sub> − M<sub>ön</sub>)/k) — ölçülen bandın içinde.');
+
+  h += _feadHint('<b>Kütüphane bir SERTİFİKA değil:</b> 14 Gates raporundan '
+    + 'okunmuş künyeler. Parça numarası <b>uydurulmadı</b> — raporlar yazmıyor, '
+    + 'kayıtlar kaynak raporla adlandırıldı. <b>Kol boyu · ön yük · katsayı · '
+    + 'kasnak çapı</b> parçanın, <b>çalışma momenti</b> ise montajın: aynı gergi '
+    + 'AG0868’de 8PK’da 22,57 · 6PK’da 19,04 · 4PK’da 16,07 Nm ile kuruluyor. '
+    + 'Künye uygulamak <b>pivot ve kol açısını YAZMAZ</b> — ikisi de motorun '
+    + 'verisi, parçanın değil.');
+  return _feadCard('Gergi Künye Kütüphanesi', liste.length + ' ölçülmüş künye',
+    'var(--accent-primary)', h);
+}
+
+// Künyeyi uygula. KOPYA yazılır (kütüphane sürümü değişse bile kaydedilmiş
+// proje kendiliğinden değişmez) ve pivot/kol açısına DOKUNULMAZ.
+function veFeadApplyTenLib(nodeId, key){
+  if(typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n){ return n.id === nodeId; });
+  if(!node) return;
+  if(!node.data) node.data = {};
+  if(!key){ delete node.data.tenLib; delete node.data.tenLibVer; }
+  else {
+    var rec = veFeadTensionerOf(key);
+    if(!rec) return;
+    veFeadTensionerApply(node.data, rec);
+  }
+  if(typeof saveState === 'function') saveState();
+  if(typeof veFeadRefreshLayoutCards === 'function') veFeadRefreshLayoutCards();
+  if(typeof showNodeProperties === 'function') showNodeProperties(node);
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  ZARF OKUMASI — seçilen kol açısı, türeyen kasnak merkezi, ÇIKAN kayış boyu
@@ -3598,6 +3667,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadApplyBeltModeBadge: veFeadApplyBeltModeBadge,
     veFeadSyncDrag: veFeadSyncDrag, veFeadReselectArm: veFeadReselectArm,
     veFeadEnvelopeReadout: veFeadEnvelopeReadout, veFeadSetPinArm: veFeadSetPinArm,
+    veFeadTensionerLibCard: veFeadTensionerLibCard, veFeadApplyTenLib: veFeadApplyTenLib,
     veFeadPlaceFromCoords: veFeadPlaceFromCoords,
     VE_FEAD_COORD_KEYS: VE_FEAD_COORD_KEYS,
     veFeadToggleBeltMode: veFeadToggleBeltMode,

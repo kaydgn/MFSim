@@ -24,6 +24,8 @@ const F = require('../../js/fead-core.js');
 const V = require('../fixtures/fead-validation.js');
 const fead = require('../../js/cp-fead.js');
 const RP = require('../../js/cp-fead-report.js');
+const TEN = require('../../js/fead-tensioners.js');
+Object.keys(TEN).forEach((k) => { global[k] = TEN[k]; });
 
 const stubs = stubGlobals();
 document.body.innerHTML = '<div id="ve-canvas"></div>';
@@ -420,6 +422,24 @@ describe('yüzey — kayış kipi zarf kipinde KİLİTLİ', () => {
     const h2 = fead.getFeadTensionerPropertiesHTML(ten);
     expect(h2).toMatch(/id="ve-fead-cenX-/);
     expect(h2).not.toMatch(/Otomatik Gergi Montaj Koordinatları/);
+  });
+
+  test('gergi paneli KÜNYE KÜTÜPHANESİ kartını basar ve künye uygulanabiliyor', () => {
+    const pack = kanvas();
+    const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
+    const h = fead.getFeadTensionerPropertiesHTML(ten);
+    expect(h).toMatch(/Gergi Künye Kütüphanesi/);
+    expect(h).toMatch(/veFeadApplyTenLib/);
+    expect(h).toMatch(/AG0868/);                     // kayıtlar listede
+    expect(h).toMatch(/SERTİFİKA değil/);            // geçerlilik sınırı kartın İÇİNDE
+    // uygulanınca alanlar yazılıyor, pivot KORUNUYOR
+    const pv = [ten.data.pivotX, ten.data.pivotY];
+    fead.veFeadApplyTenLib(ten.id, 'AG0868-4PK');
+    expect(ten.data.kArm).toBe(0.505);
+    expect(ten.data.meanLoad).toBe(16.07);
+    expect(ten.data.tenLib).toBe('AG0868-4PK');
+    expect([ten.data.pivotX, ten.data.pivotY]).toEqual(pv);
+    expect(stubs.saveState).toHaveBeenCalled();
   });
 
   test('zarf okuması seçilen açıyı, TÜREYEN kasnak merkezini ve ÇIKAN boyu basar', () => {

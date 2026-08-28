@@ -10,6 +10,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `build.js` — Build script (`index.html` + `js/` + `css/` → `MFSim_Code.html`)
 - `js/fead-belts.js` — FEAD kayış kataloğu (5 profil, 244 stok boy + otomotiv
   ızgarası). DOM'suz saf veri; ISO 9982 / DIN 7867, üretici kataloglarından çıkarıldı.
+- `js/fead-tensioners.js` — FEAD otomatik gergi künye kütüphanesi (14 kayıt, 2 aile).
+  DOM'suz saf veri; **14 Gates raporundan ölçülerek** çıkarıldı, parça numarası
+  uydurulmadı. Bant kayıtlardan TÜRETİLİR, elle yazılmaz.
 - `js/structural-materials.js` — Yapısal Analiz malzeme kütüphanesi (112 kayıt / 16 aile,
   DOM'suz saf veri + arama). Değerler standartların NOMİNAL değerleridir, sertifika değil.
 - `js/structural-occt-wasm.js` — **Üretilen, git'e DAHİL DEĞİL**: OCCT çekirdeğinin
@@ -2804,11 +2807,92 @@ sabitlenmiş açıyı zaten aynen döndürüyor, dolayısıyla gözlenebilir bir
 > okuması `veFeadEnvelopeReadout` doğrudan çağrılıyordu (panelden düşürülmesini
 > görmüyordu). Şekil 1'deki *"yay SAYISINA bakan test"* dersinin aynısı.
 
+##### GERGİ KÜNYE KÜTÜPHANESİ — `js/fead-tensioners.js` (14 kayıt, 2 aile)
+
+Kullanıcı isteği: *"Bu otomatik gergi özelliklerini de Gates raporlarından
+kalibre ederek çekeceğiz."* Kalıp `fead-belts.js` ile aynı: DOM'suz saf veri,
+panel yalnız okur.
+
+**PARÇA NUMARASI UYDURULMADI.** Gates raporları gerginin parça numarasını
+yazmıyor; tek bilinen `E9843` ve o da tek bir aracın montaj çiziminden geliyor.
+Kayıtlar **kaynak raporla** adlandırıldı — uydurulmuş bir numara, kullanıcının
+tedarikçiye yanlış bir kod söylemesi demekti.
+
+###### HANGİ ALAN PARÇANIN, HANGİSİ MONTAJIN — ÖLÇÜLDÜ
+
+Ayrım tahmin değil: **AG0868 ailesi AYNI gergiyi üç kayış genişliğiyle**
+kullanıyor ve yalnız bir alan değişiyor.
+
+| | ön yük | katsayı | çalışma momenti | nominal dönme |
+|---|---:|---:|---:|---:|
+| 8PK | 8,56 | 0,501 | **22,57** | **27,96°** |
+| 6PK | 8,65 | 0,495 | **19,04** | **20,99°** |
+| 4PK | 8,46 | 0,505 | **16,07** | **15,07°** |
+
+Ön yük ve katsayı **%2 içinde sabit** (aynı yay), çalışma momenti kayış
+genişliğiyle ölçekleniyor. Yani:
+
+| | alanlar |
+|---|---|
+| **PARÇA** | kol boyu · ön yük · yay katsayısı · kasnak çapı · temas tarafı |
+| **MONTAJ** | çalışma momenti — kolun ne kadar kurulduğu, bir TASARIM AYARI |
+
+Künye uygulamak **pivot ve kol açısını YAZMAZ** (testli): ikisi de motorun
+verisi, parçanın değil. Künye pivotu da taşısaydı kullanıcı bir kataloğun
+koordinatını kendi motoruna uygulamış olurdu.
+
+###### İKİ AİLE, VE ~28°'nin RASTLANTI OLMADIĞI
+
+14 kaydın 13'ü tek gövde ailesinden: kol **90 mm**, kasnak **Ø77,2**, sırttan
+temas, katsayı **0,475–0,505** Nm/° (±%3). Tek istisna **AG00879**: kol 56 mm,
+Ø76,2, katsayı 0,409, ön yük 20,05 — belirgin şekilde başka bir parça.
+
+Kol-90 ailesinin tam genişlikli (8PK) **dokuz** kaydında
+`(M_mean − M₀)/k = 27,10 … 29,62°`. Kullanıcının gönderdiği E9843 montaj
+çizimi aynı sayıyı yazıyor: *"PIN POSITION FOR THE 344° MEAN ANGLE AND 22.5 Nm
+SPRING TORQUE @ **28° FREEARM-MEAN ROTATION**"*. Parçanın kendi değişmezi
+**bağıl** dönmedir; mutlak açı montaja aittir ve zarftan seçilir.
+
+###### BANT KAYITLARDAN TÜRETİLİR, ELLE YAZILMAZ
+
+İlk sürüm yuvarlanmış sınırlar taşıyordu ve **kapı bunu yakaladı**:
+`(16,07 − 8,46)/0,505 = 15,0693…`, elle yazılan alt sınır ise `15,07` — yani
+kütüphane **kendi kaydını** "bandın dışında" ilan ediyordu. Elle yazılmış bir
+sınır ayrıca yeni bir kayıt eklendiğinde sessizce eskir (kart ölçüsündeki
+"ikinci kopya" dersinin aynısı).
+
+**Bant bir HÜKÜM değil bir KARŞILAŞTIRMA:** kullanıcının gergisi bu 14 raporun
+dışından olabilir ve bu bir hata değildir. Ama **bir ondalık kayması tam
+buradan görünür** — `rate 0,480 → 0,048` hem katsayı bandını hem nominal
+dönmeyi (280°) düşürüyor, yani iki bağımsız işaret veriyor.
+
+**KAYIT KOPYA OLARAK GİDER:** kütüphane sürümü değişip bir değer düzeltilse
+bile kaydedilmiş proje kendiliğinden değişmez (`tenLib`/`tenLibVer` yalnız İZ
+bırakıyor) — `structural-materials.js`'in kendi kuralı, bu projenin en çok
+kaçındığı hata sınıfı.
+
+**EN KRİTİK KAPI:** kütüphanedeki her sayı `tests/fixtures/fead-validation.js`
+içindeki raporlardan çıkarıldı, yani **ikinci bir kopya**. Ayrışırsa hata
+SESSİZ olur — kullanıcı künye seçer, model çözülür, uyarı çıkmaz, yalnız
+sayılar raporunkinden başkadır. Test 14 kaydın 14'ünü de fixture'la **birebir**
+karşılaştırıyor ve nominal dönmeyi raporun kendi Mean satırıyla (0,2° içinde)
+tutuyor.
+
+Kapı **dokuz mutasyonla** ölçüldü, dokuzu da kırmızı: bir künyeyi fixture'dan
+kaydırma, uygulamada kasnak çapını atlama, bant denetimini boşaltma, listeyi
+referansla döndürme, künyeden pivota yazma, Türkçe katlamayı kaldırma, bandı
+elle yazılmış sınıra döndürme, paneli künye kartını basmaz yapma, seçilen
+künyeyi uygulamama.
+
+> Türkçe katlama kapısı **ilk turda YEŞİL kaldı**: test `AG00976` / `KASNAK`
+> gibi sorgularla koşuyordu ve ikisi de `toLowerCase()` ile de bulunuyor. Kapı
+> artık `DIŞINDA` / `dışında` / `DISINDA` dörtlüsünü koşuyor — JS'te
+> `'I'.toLowerCase() === 'i'` (Türkçe'de `'ı'` olmalı), yani ancak katlamayla
+> bulunuyor.
+
 **Sırada:** kayış tipi profil sabitlerine bağlı çıktıların ayrılması
 (B10 ömrü · kaburga yorulma dağılımı · açıklık frekansları — üçü de
-`massPerRibKgM × ribs` ve efektif boy üzerinden kayış katalogundan geliyor) ve
-gergi künyelerinin Gates raporlarından kalibre bir kütüphaneye çıkarılması
-(`fead-belts.js` kalıbı).
+`massPerRibKgM × ribs` ve efektif boy üzerinden kayış katalogundan geliyor).
 
 
 
