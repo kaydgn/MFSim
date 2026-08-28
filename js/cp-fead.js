@@ -565,6 +565,7 @@ function veFeadApplyBadge(nodeEl, node){
   if(old) old.remove();
   if(_feadDefOf(node).isFeadBelt) return veFeadApplyBeltModeBadge(nodeEl, node);
   if(_feadDefOf(node).isFeadCoordLink) return veFeadApplyCoordLinkBadge(nodeEl, node);
+  if(_feadDefOf(node).isFeadSpin) return veFeadApplySpinBadge(nodeEl, node);
   if(!_feadIsPulley(node)) return false;
   var back = veFeadContactOf(node) === 'back';
   var drv = !!(node.data && node.data.driver);
@@ -835,6 +836,167 @@ function veFeadCoordLinkAfterDelete(silinen){
     showToast('Konum bağı düğümü silindi — bağ AÇIK; ' + oturan
       + ' kutu koordinatına oturdu', 'info');
   return oturan;
+}
+
+// ── DÖNÜŞ YÖNÜ ROZETİ ───────────────────────────────────────────────────────
+//
+// Rozet bir BAYRAK GÖSTERMİYOR, KABLOLARDAN TÜREYEN yönü gösteriyor:
+// `veFeadNaturalSense` kasnak merkezlerinin kayış gidiş sırasındaki
+// ayakkabı-bağı işaretini okuyor (çekirdeğin `loopSense`'iyle AYNI ölçüt).
+// Tıklamak bir alan yazmıyor, KABLOLARI çeviriyor — tek gerçek kaynak orası.
+//
+// GLİF DURUMU TAŞIR, RENK DEĞİL — ve bu bilinçli. Aynı kanvasta iki rozet daha
+// var (`SABİT/SERBEST`, `AÇIK/KAPALI`) ve ikisinde de renk kanalı
+// "mavi = GİRDİ, amber = TÜRETİLEN" demek. CW ile CCW'nin İKİSİ DE eşit
+// derecede meşru; birine amber vermek "bu yön hesaplanmış, öbürü girilmiş"
+// derdi ve yalan olurdu. Durumu ok (↻ / ↺) taşıyor.
+//
+// RENK BAŞKA BİR ŞEY SÖYLÜYOR — bu yönün ÇALIŞIP ÇALIŞMADIĞINI:
+//   yeşil  gergi kayışın GEVŞEK tarafında (geçerli yerleşim)
+//   kırmızı gergi GERGİN tarafa düştü — span gerilmeleri ankrajın altına iner
+//   nötr   henüz çözüm yok (hüküm verilemez; uydurulmaz)
+// Bu bir üçüncü renk EKSENİ, girdi/türetilen ekseniyle çakışmıyor.
+// YÖN ROTA SIRASINDAN OKUNUR, DÜĞÜM DİZİSİ SIRASINDAN DEĞİL — ve bu ayrım
+// bir kapıyla yakalandı. `nodes` dizisinin sırası kayış yolunu anlatmıyor;
+// örnek yüklenirken tesadüfen örtüşüyor, ama kablolar çevrilince dizi
+// DEĞİŞMİYOR. Diziden okuyan rozet, yön çevrildikten sonra da eski yönü
+// gösteriyordu — sessiz, çünkü sayı makul.
+//
+// TEK NOKTA: rozet de panel de burayı çağırıyor (iki ayrı hesap tutulsaydı
+// biri bayat kalırdı — bu modülün tekrar eden kuralı).
+function veFeadCurrentSpin(){
+  if(typeof nodes === 'undefined' || typeof veFeadNaturalSense !== 'function') return 0;
+  var conn = (typeof connections !== 'undefined' && connections) ? connections : [];
+  var order = (typeof veFeadRouteOrder === 'function')
+    ? veFeadRouteOrder(nodes, conn) : nodes.filter(function(n){ return _feadIsPulley(n); });
+  return veFeadNaturalSense(order);
+}
+
+function veFeadApplySpinBadge(nodeEl, node){
+  var sense = veFeadCurrentSpin();
+  var metin = sense > 0 ? '↺ CCW' : sense < 0 ? '↻ CW' : '—';
+
+  // Hüküm oturumluk sonuçtan okunur; çözüm yoksa rozet renk İDDİA ETMEZ.
+  var _R = (typeof veFeadResults !== 'undefined' && veFeadResults) ? veFeadResults : null;
+  var hkm = (_R && _R.tensionerSide) ? !!_R.tensionerSide.ok : null;
+
+  var bg = (hkm === true) ? 'var(--accent-success, #22c55e)'
+         : (hkm === false) ? 'var(--accent-danger, #ef4444)'
+         : 'var(--text-secondary, #666)';
+  var b = document.createElement('span');
+  b.className = 've-fead-badge';
+  b.textContent = metin;
+  b.title = (sense === 0
+      ? 'Kayış dönüş yönü okunamadı (kasnak koordinatları eksik ya da yol kapanmıyor).'
+      : 'Kayış çevrimi ' + (sense > 0 ? 'CCW (saat yönünün TERSİNE)' : 'CW (saat yönünde)')
+        + ' — motora ÖNDEN bakışta. Yön kablolama sırasından türer; '
+        + 'tıkla → kayış yolunu ters çevir.')
+    + (hkm === false
+        ? '\n\nUYARI: bu yönde gergi kayışın GERGİN tarafına düşüyor; '
+          + 'span gerilmeleri ankrajın altına iniyor.'
+        : hkm === true ? '\n\nGergi gevşek tarafta ✓' : '');
+  b.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; cursor:pointer;'
+    + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
+    + 'padding:2px 4px; border-radius:3px; font-family:ui-monospace, monospace;'
+    + 'color:#fff; background:' + bg + '; border:1px solid var(--bg-primary, #111);';
+  b.onmousedown = function(e){ e.stopPropagation(); };
+  b.ondblclick  = function(e){ e.stopPropagation(); e.preventDefault(); };
+  b.onclick = function(e){
+    e.stopPropagation(); e.preventDefault();
+    veFeadToggleSpin();
+  };
+  var box = nodeEl.querySelector('.ve-node-box') || nodeEl;
+  box.appendChild(b);
+  return true;
+}
+
+// ── YÖNÜ ÇEVİR ──────────────────────────────────────────────────────────────
+//
+// KABLOLAR çevrilir, bir alan yazılmaz. saveState mutasyondan ÖNCE çağrılıyor
+// (geri-al yığınına ÖN durumu koymak için — projenin kendi sözleşmesi), sonra
+// bağlantı katmanı tazeleniyor. Kart tazelemesi için AYRI bir çağrı gerekmiyor:
+// `veFeadTopoSignature` tel uçlarını okuyor, uçlar değişince imza değişiyor ve
+// `updateAllConnections` kartı kendisi yeniden kuruyor. Bayrak yolunda bu
+// bedava olmazdı — araç düğümlerinin `data`'sı imzaya HİÇ girmiyor (ölçüldü),
+// yani geri-al sonrası kart sessizce bayat kalırdı.
+function veFeadToggleSpin(){
+  if(typeof nodes === 'undefined' || typeof connections === 'undefined') return 0;
+  if(typeof veFeadReverseRoute !== 'function') return 0;
+  if(typeof saveState === 'function') saveState();
+  var k = veFeadReverseRoute(nodes, connections);
+  if(typeof updateAllConnections === 'function') updateAllConnections();
+  veFeadRefreshBadges();
+  if(typeof veFeadRefreshLayoutCards === 'function') veFeadRefreshLayoutCards();
+  if(typeof showNodeProperties === 'function'
+     && typeof selectedNode !== 'undefined' && selectedNode)
+    showNodeProperties(selectedNode);
+  if(typeof showToast === 'function'){
+    var sense = veFeadCurrentSpin();
+    showToast(k ? ('Kayış dönüş yönü: ' + (sense > 0 ? 'CCW' : sense < 0 ? 'CW' : '—')
+                   + ' · ' + k + ' bağlantı çevrildi')
+                : 'Çevrilecek kayış bağlantısı yok', k ? 'info' : 'warning');
+  }
+  return k;
+}
+
+// ── DÖNÜŞ YÖNÜ PANELİ ───────────────────────────────────────────────────────
+function getFeadSpinPropertiesHTML(node){
+  if(!node.data) node.data = {};
+  var sense = veFeadCurrentSpin();
+  var metin = sense > 0 ? 'CCW — saat yönünün TERSİNE'
+            : sense < 0 ? 'CW — saat yönünde' : '— (okunamadı)';
+  var R = (typeof veFeadResults !== 'undefined' && veFeadResults) ? veFeadResults : null;
+  var hkm = (R && R.tensionerSide) ? R.tensionerSide : null;
+  var renk = !hkm ? 'var(--text-secondary)'
+           : hkm.ok ? 'var(--accent-success)' : 'var(--accent-danger)';
+
+  var html = '<div class="sw-panel">';
+  html += _feadCard('Kayış Dönüş Yönü', '', renk,
+      '<div style="font-family:ui-monospace,monospace; font-weight:700; '
+    + 'font-size:var(--fs-lg); color:' + renk + '; margin-bottom:9px;">'
+    + _feadEsc(metin) + '</div>'
+    + '<button onclick="veFeadToggleSpin()" style="width:100%; padding:11px 14px; '
+    + 'margin-bottom:9px; border:none; cursor:pointer; border-radius:var(--radius-sm); '
+    + 'color:#fff; font-weight:700; letter-spacing:0.03em; font-size:var(--fs-body); '
+    + 'background:var(--accent-primary);">Yönü çevir</button>'
+    + _feadHint('Yön bir ayar DEĞİL: kasnak merkezlerinin kayış gidiş sırasındaki '
+        + 'dolanım işaretinden türer (<b>motora ÖNDEN bakış</b>). "Yönü çevir" '
+        + 'kayış yolunun bağlantılarını ters çevirir — kanvastaki gidiş okları da '
+        + 'onunla döner.'));
+
+  // GEOMETRİ YÖNDEN BAĞIMSIZ, GERİLME DEĞİL — ve bunu panel SÖYLÜYOR, çünkü
+  // kullanıcı "yönü çevirdim, sarım açıları neden aynı" diye sormasın.
+  html += _feadCard('Neyi değiştirir', '', 'var(--text-muted)',
+      '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.7;">'
+    + '• <b>Değişmez:</b> sarım açıları, açıklıklar, efektif kayış boyu, Σsarım=360 '
+    + '— ölçüldü, kasnak başına fark 2,5e−14°<br>'
+    + '• <b>Değişir:</b> hangi açıklığın GERGİN olduğu — yani span gerilmeleri, '
+    + 'hubload yönleri ve kayma emniyeti<br>'
+    + '• <b>Değişir:</b> kasnakların dönüş yönü ve kanvastaki gidiş okları'
+    + '</div>');
+
+  if(hkm && !hkm.ok){
+    html += _feadCard('Gergi tarafı', 'hüküm', 'var(--accent-danger)',
+        '<div style="font-size:var(--fs-micro); color:var(--text-secondary); line-height:1.7;">'
+      + '<b style="color:var(--accent-danger);">Gergi kayışın GERGİN tarafında.</b> '
+      + 'Ankraj ' + _feadFmt(hkm.anchorN, 1) + ' N, en düşük açıklık '
+      + _feadFmt(hkm.minN, 1) + ' N ("' + _feadEsc(hkm.minName || '—') + '") — '
+      + _feadFmt(hkm.deficitN, 1) + ' N altında. Otomatik gergi tanım gereği '
+      + '<b>gevşek</b> tarafa konur; gergin tarafta tahrik gerginliğinin tamamını '
+      + 'yayla karşılamak zorunda kalır ve durdurucusuna dayanır.<br><br>'
+      + 'Çare: <b>yönü çevirin</b> ya da gergiyi kayış sırasında sürücünün önüne alın. '
+      + 'Tasarım gerginliğini yükseltmek bir seçenek DEĞİL — o değer yay dengesinden '
+      + 'türüyor, panelde girilen bir alan değil.'
+      + '</div>');
+  } else if(hkm && hkm.ok){
+    html += _feadHint('<b style="color:var(--accent-success);">Gergi gevşek tarafta ✓</b> — '
+      + 'ankraj en düşük açıklık, gerilme zinciri bu yönde tutarlı.');
+  } else {
+    html += _feadHint('Gergi tarafı hükmü için önce Çözücü panelinden çözüm koşturun.');
+  }
+
+  html += '</div>';
+  return html;
 }
 
 // Tüm kasnakların rozetini tazele (temas tarafı / sürücü değişince).
@@ -3665,6 +3827,13 @@ function veFeadSolve(nodeId){
   // renklenmiş bir tablo görüyordu.
   res.serviceFact = _feadNum(node && node.data && node.data.serviceFact, 0);
   if(typeof window !== 'undefined') window.veFeadResults = res;
+  // ROZETLER SONUÇTAN SONRA TAZELENİR. Dönüş Yönü rozetinin RENGİ hükmü
+  // taşıyor (gergi gevşek tarafta mı) ve o hüküm ancak çözümle biliniyor.
+  // Tazeleme burada olmasaydı rozet TAM BİR ÇÖZÜM GERİDE kalırdı — ölçüldü
+  // (gerçek tarayıcı): ileri yönde nötr, ters yönde YEŞİL, geri dönünce
+  // KIRMIZI. Yani renk her seferinde bir önceki modelin hükmünü gösteriyordu;
+  // sayı makul olduğu için sessiz.
+  if(typeof veFeadRefreshBadges === 'function') veFeadRefreshBadges();
   if(typeof showToast === 'function')
     showToast(res.ok ? 'FEAD çözüldü — ' + res.duty.length + ' devir noktası'
                      : 'Çözüm hatası: ' + res.error, res.ok ? 'success' : 'error');
@@ -3803,13 +3972,46 @@ function veFeadDutyResultTable(R){
       + 'min SF = ' + _feadFmt(enKucukSF, 2) + (gecti ? '  ✓ GEÇTİ' : '  ✗ KALDI') + '</span></div>';
   }
 
+  // ── TEŞHİS: SEBEBİ SÖYLE, ULAŞILAMAZ BİR ÇARE GÖSTERME ──────────────────
+  //
+  // Buradaki iki metin bir dönem şunu diyordu: "tasarım gerginliğini
+  // yükseltin". Tasarım gerginliği 2026-08-25'te GİRDİ OLMAKTAN ÇIKTI — yay
+  // dengesinden türüyor ve panelde öyle bir alan YOK (`grep designTension
+  // js/cp-fead.js` → sıfır). Yani çare, basılacak düğmesi olmayan bir
+  // denetimi gösteriyordu. CLAUDE.md'de belgelenmiş "kayma hükmü çaresi hükmü
+  // veren kasnakta etki yapmıyordu" sınıfının aynısı, bir adım kötüsü.
+  //
+  // ASIL SEBEP ÖLÇÜLDÜ: gerilme zinciri gergiden ankrajlanıp kayış gidiş
+  // yönünde yürüyor. Kayış ters yönde gezilirse gergi krankın GERGİN tarafına
+  // düşüyor ve spanlar ankrajın altına iniyor (AG00976 ters: 545.4 · 544.0 ·
+  // 67.5 · 66.2 · −290.3 · −291.6). O durumda hüküm gerginlikte değil YÖNDE.
+  var yon = (typeof veFeadResults !== 'undefined' && veFeadResults)
+    ? veFeadResults.tensionerSide : null;
+  var tersYerlesim = !!(yon && yon.ok === false);
   var neg = A.duty.some(function(d){ return d.warnings && d.warnings.length; });
-  var kayma = A.duty.some(function(d){ return d.slip.some(function(x){ return x.SF < 1; }); });
+  // NEGATİF GERİLMEDE KAYMA HÜKMÜ VERİLMEZ. `slipSafety` gevşek tarafı
+  // 1e-9'a kenetliyor (fead-core.js), dolayısıyla çöken bir zincirde SF
+  // −0.00 / 0.00 çıkıyor — o bir emniyet faktörü değil, sayısal gölge.
+  var kayma = !tersYerlesim
+    && A.duty.some(function(d){ return d.slip.some(function(x){ return x.SF < 1; }); });
   var ek = '';
-  if(kayma) ek += _feadHint('<b style="color:var(--accent-danger);">Kayma emniyet faktörü 1\'in altına '
-    + 'iniyor</b> — kayış o devirde kaymaya başlar. Tasarım gerginliğini yükseltin ya da sarım açısını artırın.');
-  if(neg) ek += _feadHint('<b style="color:var(--accent-warning);">Bir spanda negatif gerilme</b> — '
-    + 'kayış gevşiyor: tasarım gerginliği yetersiz.');
+  if(tersYerlesim){
+    ek += _feadHint('<b style="color:var(--accent-danger);">Gergi kayışın GERGİN tarafında</b> — '
+      + 'ankraj ' + _feadFmt(yon.anchorN, 1) + ' N iken ' + yon.drain.length
+      + ' açıklık onun altına iniyor (en düşük ' + _feadFmt(yon.minN, 1) + ' N, "'
+      + _feadEsc(yon.minName || '—') + '"). Otomatik gergi <b>gevşek</b> tarafa konur. '
+      + 'Çare kayış dönüş yönünü çevirmek ya da gergiyi kayış sırasında sürücünün önüne '
+      + 'almaktır; tasarım gerginliği yay dengesinden türediği için yükseltilemez. '
+      + '<b>Bu tabloda kayma emniyet faktörü hüküm vermez.</b>');
+  } else {
+    if(kayma) ek += _feadHint('<b style="color:var(--accent-danger);">Kayma emniyet faktörü 1\'in altına '
+      + 'iniyor</b> — kayış o devirde kaymaya başlar. Sarım açısını artırın (avara ekleyin ya da '
+      + 'kasnak konumlarını değiştirin); gergi künyesi daha yüksek yay momenti veriyorsa o da '
+      + 'ankrajı yükseltir.');
+    if(neg) ek += _feadHint('<b style="color:var(--accent-warning);">Bir spanda negatif gerilme</b> — '
+      + 'kayış gevşiyor. Ankraj (' + _feadFmt(yon && yon.anchorN, 1) + ' N) yay dengesinden '
+      + 'türüyor; çekilen güç bu ankrajın taşıyabileceğinden fazla.');
+  }
 
   // KONUM YAZILIR: gerilme, hubload ve kayma HEP ÇALIŞMA (Mean) konumunda
   // hesaplanır (FEADCore.analyze meanRel'i kullanır), oysa yukarıdaki Geometri
@@ -3913,6 +4115,9 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadToggleBeltMode: veFeadToggleBeltMode,
     veFeadApplyCoordLinkBadge: veFeadApplyCoordLinkBadge,
     veFeadToggleCoordLink: veFeadToggleCoordLink,
+    veFeadCurrentSpin: veFeadCurrentSpin,
+    veFeadApplySpinBadge: veFeadApplySpinBadge, veFeadToggleSpin: veFeadToggleSpin,
+    getFeadSpinPropertiesHTML: getFeadSpinPropertiesHTML,
     veFeadCoordLinkAfterDelete: veFeadCoordLinkAfterDelete,
     getFeadCoordLinkPropertiesHTML: getFeadCoordLinkPropertiesHTML,
     veFeadDerivedLengthHTML: veFeadDerivedLengthHTML,
