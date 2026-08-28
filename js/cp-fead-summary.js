@@ -336,18 +336,32 @@ function _fsrSheet1(R, node){
   // tablosunun görsel karşılığını veriyor.
   h += '<div class="col">' + _fsrLayout(R, 395, 242, { posMode: 'all' }) + '</div>';
   h += '<div class="col">';
-  h += _fsrKV('Kayış', [
-    ['Profil / marka', _frEsc((b.brand ? b.brand + ' ' : '') + (b.ribs || '') + (b.profile || ''))],
+  // KATALOG ADI KÜNYEDE. Tedarikçiyle konuşurken tek tanımlayıcı odur ve Gates
+  // de rapor başlığında basıyor; belgede bir dönem hiç geçmiyordu.
+  // KATALOG ADI PROFİLİ KAPSAR: "8PK1715HD" zaten kaburga sayısını ve profili
+  // taşıyor, ayrı bir satır ikinci kez söylemek olurdu (ve sayfa 1'i 8 px
+  // taşırıyordu — ölçüldü). Ad varsa o basılır, yoksa türetilmiş künye.
+  var kayisAd = b.beltType
+    ? ((b.brand ? b.brand + ' ' : '') + b.beltType)
+    : ((b.brand ? b.brand + ' ' : '') + (b.ribs || '') + (b.profile || ''));
+  var kayisSat = [
+    ['Profil / marka', _frEsc(kayisAd)],
     ['Kaburga sayısı', _frF(b.ribs, 0)],
     ['Efektif boy (ISO 9981)', _frFs(b.effLength, 1) + ' mm'],
     ['Boy toleransı', b.tolerance ? '± ' + _frFs(b.tolerance, 2) + ' mm' : '—'],
     ['Uzama + aşınma payı', _frPct(_frNum(b.wearPct) * 100, 2)]
-  ]);
+  ];
+  h += _fsrKV('Kayış', kayisSat);
   h += _fsrKV('Otomatik gergi', [
     ['Kol boyu', _frFs(t.armLength, 1) + ' mm'],
     ['Yay ön yükü / oranı', _frFs(t.preloadNm, 2) + ' Nm · ' + _frFs(t.rateNmPerDeg, 3) + ' Nm/°'],
     ['Pivot {X, Y}', _frFs(t.pivot && t.pivot[0], 1) + ' , ' + _frFs(t.pivot && t.pivot[1], 1)],
     ['Çalışma kol açısı', _frFs(A.meanRelDeg, 2) + '° (göreli)'],
+    // YAY ORTALAMA MOMENTİ — tedarikçi künyesinin "Spring Mean Load" satırı.
+    // Çekirdek onu ALAN olarak taşımıyor; M = M₀ + k·rel'den TÜRÜYOR ve
+    // ölçüldü: 22,0760 ↔ Gates 22,07 Nm (%0,03). Türev olduğu için † ile
+    // işaretli — girilmiş bir değer sanılmasın.
+    ['Yay ortalama momenti †', _fsrSpringMean(R)],
     ['Take-up oranı', _frFs(A.tensioner && A.tensioner.takeupMmPerDeg, 3) + ' mm/°']
   ]);
   h += '</div></div>';
@@ -503,6 +517,7 @@ function _fsrSheet2(R, node){
 // ═══════════════════ SAYFA 3 — GERGİ ÇALIŞMA ZARFI ══════════════════════════
 function _fsrSheet3(R, node){
   var A = R.analysis || {}, pos = A.positions || [], T = A.tensioner || {};
+  var sys = R.build && R.build.sys;
   var TR = (typeof VE_FEAD_POSITIONS !== 'undefined')
     ? VE_FEAD_POSITIONS.reduce(function(o, p){ o[p.core] = p.label; return o; }, {}) : {};
 
@@ -545,10 +560,19 @@ function _fsrSheet3(R, node){
   // gövde yazısıyla (9,4) aynı bantta. Sütun genişliğini seçseydik ölçek 1
   // kalır ve grafik yazıları gövdeden BÜYÜK görünürdü.
   h += '<div class="cols">';
+  // KAYMA EŞİĞİ KÜNYEDE de yazılı: figür `veFeadFigureRaw` ile numarasız
+  // basıldığı için ayrıntılı raporun kendi künyesi buraya gelmiyor.
+  var esikT = (typeof veFeadSlipThreshold === 'function')
+    ? veFeadSlipThreshold(R.build, (R.analysis && R.analysis.duty) || []) : null;
   h += '<div class="col">' + _fsrBlk('Gerginliğin Kol Açısına Bağımlılığı',
     _fsrFig(typeof _frTensionFigure === 'function' ? _frTensionFigure : null, R, 390, 520),
     'Kalın eğri hesaplanan gerginlik, kesikli eğriler ±%10 bandı. Dikey çizgiler altı kol '
-    + 'konumu.') + '</div>';
+    + 'konumu.'
+    + (esikT ? ' Kırmızı kesikli doğru kayma eşiği (' + _frF(esikT.tensionN, 0)
+               + ' N): yük taşıyan kasnakların emniyet faktörünün 1\'e düştüğü ankraj '
+               + 'gerginliği (' + _frEsc(_fsrKisaAd(sys, esikT.pulley) || esikT.pulley)
+               + ' @ ' + _frF(esikT.engineRpm, 0) + ' d/d). Tasarım gerginliği bunun '
+               + _frFs(esikT.margin, 2) + ' katıdır.' : '')) + '</div>';
   h += '<div class="col">' + _fsrBlk('Kayış Take-up Eğrisi',
     _fsrFig(typeof _frTakeupChartRaw === 'function' ? _frTakeupChartRaw : null, R, 390, 520),
     'Düşey eksen gereken efektif kayış boyu. Take-up oranı, eğrinin çalışma noktasındaki '
@@ -802,6 +826,32 @@ function _fsrVibBlock(R){
 
 // Baskın kasnak ve payı — yorulma dağılımının KENDİSİNDEN. Notlar bölümü bu
 // sayıyı elle yazmıyor; seçilen yorulma modeli değişince not da değişiyor.
+
+// Yay ortalama momenti: M = M₀ + k·rel, çalışma (Mean) kol açısında. Gates
+// künyesinde "Spring Mean Load" olarak GİRDİ görünür; MFSim'de TÜREV — bu yüzden
+// künyede † ile işaretli. Ölçüldü: 22,0760 ↔ 22,07 Nm (%0,03).
+function _fsrSpringMean(R){
+  var sys = R && R.build && R.build.sys;
+  var rel = _frNum(R && R.analysis && R.analysis.meanRelDeg);
+  if(!sys || !Number.isFinite(rel)) return '—';
+  var M = NaN;
+  try {
+    var C = (typeof FEADCore !== 'undefined') ? FEADCore
+          : ((typeof window !== 'undefined') ? window.FEADCore : null);
+    if(C && typeof C.springTorque === 'function') M = C.springTorque(sys, rel);
+  } catch(e){ M = NaN; }
+  if(!Number.isFinite(M)){
+    var t = sys.tensioner || {};
+    var m0 = _frNum(t.preloadNm), k = _frNum(t.rateNmPerDeg);
+    if(Number.isFinite(m0) && Number.isFinite(k)) M = m0 + k * rel;
+  }
+  // ÜÇ ONDALIK, iki değil: değer 22,076 ve iki ondalıkta 22,08'e YUVARLANIYOR
+  // — tedarikçi künyesi 22,07 yazdığı için okuyucu bir basamaklık HAYALİ bir
+  // uyuşmazlık görürdü. Üç ondalıkta sayı olduğu gibi duruyor ve gerçek fark
+  // okunabiliyor: 22,076 ↔ 22,07, yani %0,027 (yuvarlama mertebesinde).
+  return Number.isFinite(M) ? (_frFs(M, 3) + ' Nm') : '—';
+}
+
 function _fsrDominantShare(R){
   var f = R && R.fatigue, sys = R && R.build && R.build.sys;
   var pp = f && f.perPulley;

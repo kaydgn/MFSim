@@ -889,3 +889,166 @@ describe('güzergâh teşhisi', () => {
     expect(veFeadRouteOrder(k.list, []).length).toBe(4);   // hiç tel yokken de dört kasnak
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// KAYMA EŞİĞİ — `veFeadSlipThreshold`
+//
+// Modül kayma hükmünü boyutsuz SF ile veriyordu; "kaymamak için gereken en
+// düşük ankraj gerginliği" N cinsinden HİÇ YOKTU. Tedarikçi çıktısı onu
+// gerginlik grafiğinde yatay bir çizgi olarak basıyor.
+//
+// EN DEĞERLİ KAPI BİRİNCİSİ: kapalı formun cebiri, ÇEKİRDEĞİ baştan koşturan
+// bir iki-bölmeyle karşılaştırılıyor. İkinci yol ankrajı gerçekten değiştirip
+// `veFeadAnalyze`i yeniden çağırıyor, yani kapalı formun Δ cebirini HİÇ
+// kullanmıyor — bir işaret hatası iki yolda birden aynı şekilde çıkamaz.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('veFeadSlipThreshold — kayma eşiği', () => {
+  const kurAG = () => {
+    const pack = veFeadExampleNodes('AG00976_GATES_2025');
+    const ns = pack.nodes.map((n) => ({
+      id: n.id, type: n.type, def: componentDefs[n.type],
+      customName: n.customName, data: JSON.parse(JSON.stringify(n.data))
+    }));
+    const build = veFeadBuildSystem(ns, pack.connections);
+    const solv = ns.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver)[0];
+    const R = veFeadAnalyze(build, {
+      rows: veFeadDutyRows(solv), cylinders: 6,
+      crankInertia: Number(solv.data.crankInertia) || 0
+    });
+    return { build, R, solv, pack, duty: R.analysis.duty };
+  };
+
+  test('KAPALI FORM ↔ çekirdeği baştan koşturan iki-bölme AYNI sayıyı veriyor', () => {
+    const { build, duty, solv, pack } = kurAG();
+    const A = veFeadSlipThreshold(build, duty);
+    expect(A).toBeTruthy();
+
+    // BAĞIMSIZ YOL: ankrajı değiştir, çekirdeği baştan koştur, yük taşıyan
+    // kasnakların EN DÜŞÜK SF'sini ölç. Δ cebiri kullanılmıyor.
+    const rows = veFeadDutyRows(solv);
+    const enDusukYukluSF = (T0) => {
+      const ns2 = pack.nodes.map((n) => ({
+        id: n.id, type: n.type, def: componentDefs[n.type],
+        customName: n.customName, data: JSON.parse(JSON.stringify(n.data))
+      }));
+      const b2 = veFeadBuildSystem(ns2, pack.connections);
+      b2.sys.designTensionN = T0;
+      const R2 = veFeadAnalyze(b2, { rows, cylinders: 6 });
+      let mn = Infinity, nerede = null;
+      R2.analysis.duty.forEach((d) => {
+        (d.slip || []).forEach((s, i) => {
+          if (!(s.tensionRatio > M.VE_FEAD_SLIP_LOADED_RATIO)) return;
+          if (s.SF < mn) { mn = s.SF; nerede = { rpm: d.engineRpm, i }; }
+        });
+      });
+      return { mn, nerede };
+    };
+    let lo = 5, hi = 2000;
+    expect(enDusukYukluSF(lo).mn).toBeLessThan(1);   // kök gerçekten kuşatılıyor
+    expect(enDusukYukluSF(hi).mn).toBeGreaterThan(1);
+    for (let k = 0; k < 60; k++) {
+      const mid = 0.5 * (lo + hi);
+      if (enDusukYukluSF(mid).mn < 1) lo = mid; else hi = mid;
+    }
+    const bolme = 0.5 * (lo + hi);
+    const son = enDusukYukluSF(bolme);
+    expect(son.mn).toBeCloseTo(1, 6);                       // gerçekten SF = 1
+    expect(Math.abs(bolme - A.tensionN)).toBeLessThan(1e-6);
+    expect(build.names[son.nerede.i]).toBe(A.pulley);       // aynı kasnak
+    expect(son.nerede.rpm).toBe(A.engineRpm);               // aynı devir
+  });
+
+  test('ÇIPA: AG00976 eşiği 80,95 N · FAN @ 1000 d/d · tasarım gerginliğinin 6,72 katı', () => {
+    const { build, duty } = kurAG();
+    const A = veFeadSlipThreshold(build, duty);
+    expect(A.tensionN).toBeCloseTo(80.948, 2);
+    expect(A.engineRpm).toBe(1000);
+    expect(A.pulley).toMatch(/FAN/);
+    expect(A.designTensionN).toBeCloseTo(544.05, 1);
+    expect(A.margin).toBeCloseTo(6.721, 2);
+  });
+
+  test('BÜTÜN devir satırlarının EN BÜYÜĞÜ — ilk satır ya da en küçüğü değil', () => {
+    const { build, duty } = kurAG();
+    const A = veFeadSlipThreshold(build, duty);
+    // Satır başına eşiği ayrı ayrı çöz: en büyüğü seçilmiş olmalı.
+    const teker = duty.map((d) => veFeadSlipThreshold(build, [d]))
+      .filter(Boolean).map((r) => r.tensionN);
+    expect(teker.length).toBe(duty.length);
+    expect(A.tensionN).toBeCloseTo(Math.max.apply(null, teker), 9);
+    // Kapı ISIRIYOR: ilk satır ve en küçük satır AÇIKÇA farklı sayılar.
+    expect(teker[0]).not.toBeCloseTo(A.tensionN, 2);
+    expect(Math.min.apply(null, teker)).toBeLessThan(A.tensionN - 30);
+  });
+
+  test('YÜK TAŞIMAYAN kasnak eşiği belirleyemez — kökü daha büyük olsa BİLE', () => {
+    // AG00976'da filtre sayıyı değiştirmiyor (avaraların kökü −856…+5,6 N,
+    // belirleyici 80,95 N) — yani gerçek veriyle bu kapı ısırmaz. Sentetik
+    // kurulum avaranın kökünü belirleyicinin ÜSTÜNE çıkarıyor.
+    const { build } = kurAG();
+    const sys = build.sys, n = sys.pulleys.length, t = sys._tenIdx;
+    const per = [], slip = [];
+    for (let i = 0; i < n; i++) {
+      per.push({ name: sys.pulleys[i].name, exitTensionN: 500 + i * 10 });
+      slip.push({ name: sys.pulleys[i].name, tensionRatio: 1.0002, capstanCapacity: 1.30, SF: 1.3 });
+    }
+    per[t].exitTensionN = 500;
+    per[0].exitTensionN = 900; slip[0].tensionRatio = 2.0; slip[0].capstanCapacity = 10;
+    slip[1].capstanCapacity = 1.02;            // avaranın kökü ≈ 19 490 N
+    const A = veFeadSlipThreshold(build, [{ engineRpm: 1234, perPulley: per, slip: slip }]);
+    expect(A.index).toBe(0);
+    expect(A.tensionN).toBeCloseTo(44.444, 2);
+    expect(A.tensionN).toBeLessThan(100);      // avara seçilseydi 19 490 çıkardı
+  });
+
+  test('GERGİN OLAN AÇIKLIK aranır — SÜRÜLEN kasnakta gergin olan GİRİŞTİR', () => {
+    // Sürücüde çıkış, sürülende GİRİŞ gergindir. Kök bu yüzden max/min ile
+    // kurulur, "çıkış her zaman gergin" diye değil. ÖLÇÜLDÜ (AG00976 @ 1000
+    // d/d): altı kasnağın BEŞİNDE giriş daha gergin, ama belirleyici olan FAN
+    // sürücü olduğu için genel EN BÜYÜK değişmiyor — yani bu kusur toplam
+    // sayıya bakan bir kapıdan SESSİZCE geçer. Kapı bu yüzden tek bir SÜRÜLEN
+    // kasnağı yalıtıyor.
+    const { build, duty } = kurAG();
+    const d = duty.filter((x) => x.engineRpm === 1000)[0];
+    const sys = build.sys, n = sys.pulleys.length;
+    const T0 = d.perPulley[sys._tenIdx].exitTensionN;
+    const D = d.perPulley.map((p) => p.exitTensionN - T0);
+    const alt = build.names.findIndex((x) => /Alternat/.test(x));
+    expect(alt).toBeGreaterThan(0);
+    expect(D[(alt - 1 + n) % n]).toBeGreaterThan(D[alt]);    // girişi GERGİN
+
+    // Yalnız ALT yük taşısın; kalanları filtreye takılacak şekilde 1'e indir.
+    const tek = JSON.parse(JSON.stringify(d));
+    tek.slip.forEach((s2, i) => { if (i !== alt) s2.tensionRatio = 1.0; });
+    const A = veFeadSlipThreshold(build, [tek]);
+    expect(A).toBeTruthy();
+    expect(A.index).toBe(alt);
+    expect(A.tensionN).toBeCloseTo(39.524, 2);
+    // "çıkış her zaman gergin" varsayımı burada −480,98 verir → pozitiflik
+    // koşuluna takılıp null döner.
+  });
+
+  test('eşik TEK KAYNAKTAN: rapor oranı KÖPRÜDEN okuyor (kendi kopyası yok)', () => {
+    // Yedek de 1,01 olduğu için iki sabiti karşılaştırmak YETMEZ — sabitlense
+    // bile eşitlik tutar. Kapı bu yüzden köprünün değerini DEĞİŞTİRİP raporu
+    // yeniden yüklüyor: rapor gerçekten okuyorsa yeni değeri taşır.
+    const eski = global.VE_FEAD_SLIP_LOADED_RATIO;
+    try {
+      global.VE_FEAD_SLIP_LOADED_RATIO = 1.234;
+      let taze = null;
+      jest.isolateModules(() => { taze = require('../../js/cp-fead-report.js'); });
+      expect(taze.VE_FR_SLIP_LOADED_RATIO).toBe(1.234);
+    } finally { global.VE_FEAD_SLIP_LOADED_RATIO = eski; }
+    const RPT = require('../../js/cp-fead-report.js');
+    expect(RPT.VE_FR_SLIP_LOADED_RATIO).toBe(M.VE_FEAD_SLIP_LOADED_RATIO);
+  });
+
+  test('eksik/bozuk girdide SAYI UYDURMUYOR', () => {
+    const { build } = kurAG();
+    expect(veFeadSlipThreshold(build, [])).toBe(null);
+    expect(veFeadSlipThreshold(build, null)).toBe(null);
+    expect(veFeadSlipThreshold(null, [{}])).toBe(null);
+    // slip/perPulley uzunluğu tutmuyorsa o satır atlanır (kırılmaz)
+    expect(veFeadSlipThreshold(build, [{ engineRpm: 1, perPulley: [], slip: [] }])).toBe(null);
+  });
+});

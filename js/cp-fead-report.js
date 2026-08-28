@@ -168,6 +168,10 @@ function _frDocFields(node){
   }
   var h = '<div style="margin:0 0 10px; padding:9px 10px; background:var(--bg-secondary); border:1px solid var(--border-color);">'
     + '<div style="font-size:var(--fs-tiny); font-weight:600; color:var(--text-heading); margin-bottom:6px;">Doküman künyesi</div>';
+  // HAZIRLAYAN — özet raporun anteti bu alanı okuyordu ama HİÇBİR YER onu
+  // yazmıyordu: altı sayfanın altısında da "Hazırlayan: —" basılıyordu.
+  // Tedarikçi çıktısı da aynı satırı taşıyor ("User: ...").
+  h += inp('author', 'Hazırlayan', 'A. Kol');
   h += inp('docNo', 'Doküman no', 'FEAD-2026-001');
   h += inp('revision', 'Revizyon', 'A');
   h += '<div><label style="display:block; font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:2px;">Tasarım notları (her satır bir not)</label>'
@@ -681,7 +685,11 @@ function _frSignedWrap(R){
 //
 // Ayrım gizleme değil: tablo bütün kasnakları ve bütün sayıları basmaya devam
 // eder, yalnız HÜKÜM yük taşıyanlara dayanır ve taşımayanlar ayrıca yazılır.
-var VE_FR_SLIP_LOADED_RATIO = 1.01;   // bu oranın altı "yük taşımıyor" sayılır
+// Ölçüt KÖPRÜDE (js/fead-model.js · VE_FEAD_SLIP_LOADED_RATIO): kayma eşiği
+// hesabı da aynı ayrımı kullanıyor. Yedek yalnız yükleme sırası kalkanı;
+// bir kapı iki sayının eşit kaldığını tutuyor.
+var VE_FR_SLIP_LOADED_RATIO = (typeof VE_FEAD_SLIP_LOADED_RATIO === 'number')
+  ? VE_FEAD_SLIP_LOADED_RATIO : 1.01;   // bu oranın altı "yük taşımıyor" sayılır
 
 function _frSlipStats(R){
   var out = { min: NaN, minName: '', minRpm: NaN, minRatio: NaN,
@@ -2361,6 +2369,27 @@ function _frTensionFigure(R){
                      xDec: 1, yDec: 0, alt: 'Gerginlik kontrol eğrisi' });
   var g = c.svg;
   var icinde = kesik.filter(function(p){ return p.rel <= xMax && p.T <= yMax; });
+
+  // KAYMA EŞİĞİ — "ne kadar aşağı inebilirim". Bu büyüklük modelde bir dönem
+  // HİÇ YOKTU: kayma hükmü yalnız boyutsuz SF ile veriliyordu. Hesap köprüde
+  // (veFeadSlipThreshold), kapalı formda ve iterasyonsuz; iki bağımsız yolla
+  // (kapalı form ↔ iki-bölme) on iki devrin on ikisinde de |Δ| ≤ 1,4e−14 N.
+  //
+  // EĞRİNİN ALTINA ÇİZİLİR ki üstünü örtmesin. Tedarikçi çıktısı da altını
+  // taralı basıyor.
+  var esikTh = (typeof veFeadSlipThreshold === 'function')
+    ? veFeadSlipThreshold(R.build, (R.analysis && R.analysis.duty) || []) : null;
+  if(esikTh && esikTh.tensionN > 0 && esikTh.tensionN < yMax){
+    var yE = c.sy(esikTh.tensionN);
+    g += '<g data-ve="slip-threshold">'
+       + '<rect x="' + c.pad.l + '" y="' + yE.toFixed(1) + '" width="' + (c.W - c.pad.l - c.pad.r)
+       + '" height="' + Math.max(0, (c.H - c.pad.b) - yE).toFixed(1) + '" fill="#9c2b2b" opacity="0.10"/>'
+       + '<line x1="' + c.pad.l + '" y1="' + yE.toFixed(1) + '" x2="' + (c.W - c.pad.r)
+       + '" y2="' + yE.toFixed(1) + '" stroke="#9c2b2b" stroke-width="1.4" stroke-dasharray="6 4"/>'
+       + '<text x="' + (c.pad.l + 6) + '" y="' + (yE - 4).toFixed(1) + '" font-size="10" fill="#9c2b2b">'
+       + 'kayma eşiği ' + _frF(esikTh.tensionN, 0) + ' N</text></g>';
+  }
+
   g += '<g data-ve="band" opacity="0.6">';
   g += _frPolyline(c, icinde.filter(function(p){ return p.T * 1.1 <= yMax; }).map(function(p){ return [p.rel, p.T * 1.1]; }), '#7f9bb5', 1.2, '4 3');
   g += _frPolyline(c, icinde.map(function(p){ return [p.rel, p.T * 0.9]; }), '#7f9bb5', 1.2, '4 3');
@@ -2392,7 +2421,12 @@ function _frTensionFigure(R){
   });
   g += '</g>';
   var kesildi = (kesik.length < sw.pts.length);
-  return _frFigWrap(g, 'Kayış gerginliğinin gergi kol açısına bağımlılığı (4.3). Kesikli mavi eğriler ±%10 '
+  var esikNot = esikTh ? ' Kırmızı kesikli doğru KAYMA EŞİĞİ ('
+      + _frF(esikTh.tensionN, 0) + ' N): yük taşıyan kasnakların en düşük emniyet faktörünün 1\'e '
+      + 'düştüğü ankraj gerginliği (' + _frEsc(esikTh.pulley) + ' @ '
+      + _frF(esikTh.engineRpm, 0) + ' d/d). Tasarım gerginliği bunun '
+      + _frFs(esikTh.margin, 2) + ' katıdır.' : '';
+  return _frFigWrap(g, esikNot + ' Kayış gerginliğinin gergi kol açısına bağımlılığı (4.3). Kesikli mavi eğriler ±%10 '
     + 'bandı, düşey çizgiler kolun çalışma konumlarıdır (§8.8); yeşil olan çalışma (Mean) noktasıdır. '
     + 'Kol açısı büyüdükçe gergi sarımı küçülür ve (4.3)\'ün paydası daralarak gerginliği hızla yükseltir'
     + (kesildi ? '; eğri, çalışma konumlarının ' + _frF(1.6, 1) + ' katını aştığı yerde kesilmiştir '
