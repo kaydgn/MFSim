@@ -379,7 +379,8 @@ function _feadGrid(node, cells, cols){
       + '<span style="font-size:var(--fs-micro); color:var(--text-muted); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + c.label + '</span>'
       + '<input type="number" id="ve-fead-' + c.key + '-' + node.id + '" value="' + _feadEsc(v) + '" step="' + (c.step||'any') + '"'
       + (c.ph ? ' placeholder="' + _feadEsc(c.ph) + '"' : '')
-      + ' onchange="veFeadSet(\'' + node.id + '\',\'' + c.key + '\',this.value)" style="width:100%; ' + _FEAD_INP + '">'
+      + ' onchange="' + (c.setter || 'veFeadSet') + '(\'' + node.id + '\',\'' + c.key
+        + '\',this.value)" style="width:100%; ' + _FEAD_INP + '">'
       + '</label>';
   });
   return h + '</div>';
@@ -1017,6 +1018,35 @@ function veFeadRefreshBadges(){
 
 // Seçim değişince paneli yeniden çiz: temas tarafı rozeti ve şema anında
 // güncellensin (sessiz kalırsa kullanıcı değişikliğin işlendiğini göremez).
+// ── DOĞRULAMA KOORDİNATI — kipi SABİTLEYEREK yazar ─────────────────────────
+//
+// Zarf kipinde tek girdi montaj referans noktasıdır ve program, girilen
+// noktanın gerçekten o mu yoksa kasnağın çalışma merkezi mi olduğunu TEK
+// KOORDİNATLA ayırt EDEMEZ (ölçüldü: kayış yoluna uzaklık ölçütü ayırmıyor —
+// pivot 51,4 mm, merkez 30–37 mm; eşik yanlış alarm üretirdi). Eksik olan şey
+// bir sezgi değil, İKİNCİ SAYI.
+//
+// Tedarikçi raporu o ikinci sayıyı zaten basıyor (`Layout Data` tablosunun
+// gergi satırı = kasnağın çalışma merkezi). Kullanıcı onu buraya girerse
+// `veFeadArmCheck`'in üç bantlı denetimi kendiliğinden ateşleniyor — yeni bir
+// kural yazılmadı, var olan kapı besleniyor.
+//
+// AYRI ANAHTAR (`verifyCenX/verifyCenY`), `cenX/cenY` DEĞİL — ve bu bir
+// isimlendirme tercihi değil, var olan bir kapının gereği:
+//
+//   • `cenX/cenY` zarf kipinde panelde SORULMAZ ve bunun kendi testi var
+//     (fead-arm-envelope.test.js). Gerekçesi belgeli: o alanı zarf kipinde
+//     sormak, kullanıcının pivotu ondan TÜRETİLİYOR sanmasına yol açıyordu.
+//   • `veFeadAngleMode` kip yazılı değilse `cenX` görüp `mount` çözüyor;
+//     doğrulama için o anahtarı kullanmak, bir denetim sayısının çözüm kipini
+//     sessizce değiştirmesi demekti.
+//
+// Ayrı anahtar ikisini birden kapatıyor: bu sayı çözüme HİÇBİR yoldan
+// giremez, yalnız karşılaştırılır.
+function veFeadSetVerifyCen(nodeId, key, val){
+  veFeadSet(nodeId, key, val);
+}
+
 function veFeadSetChoice(nodeId, key, val){
   if(typeof nodes === 'undefined') return;
   var node = nodes.find(function(n){ return n.id === nodeId; });
@@ -1301,6 +1331,7 @@ function getFeadTensionerPropertiesHTML(node){
       + _feadHint('Pivot ile avara kasnağının merkezi arasındaki <b>sabit</b> mesafe; '
           + 'tedarikçi raporunun "Tensioner Data" bölümünde yazar. 56–90 mm aralığında '
           + 'doğrulandı.'));
+    html += veFeadVerifyCard(node);
   } else {
   var _tp = veFeadPivotFromArm(node.data);
   html += _feadCard('Kol Künyesi', 'pivot BURADAN türer', 'var(--text-secondary)',
@@ -1465,6 +1496,100 @@ function veFeadApplyTenLib(nodeId, key){
   if(typeof saveState === 'function') saveState();
   if(typeof veFeadRefreshLayoutCards === 'function') veFeadRefreshLayoutCards();
   if(typeof showNodeProperties === 'function') showNodeProperties(node);
+}
+
+// ── DOĞRULAMA KARTI (yalnız zarf kipi) ─────────────────────────────────────
+//
+// "Doğru noktayı mı girdim?" sorusunun cevabı. İki yüzeyi var ve ikisi de
+// gerekli:
+//   • Girilmiş bir doğrulama koordinatı VARSA → `veFeadArmCheck`'in üç bantlı
+//     denetimi sayısal hüküm verir (aynı nokta / kol boyu tutuyor / tutmuyor).
+//   • YOKSA → program hüküm UYDURMAZ; türeyen kasnak merkezini basar ve
+//     kullanıcının onu raporun `Layout Data` satırıyla karşılaştırmasını ister.
+//
+// İkincisi bir eksiklik değil bir dürüstlük: tek koordinatla ayrım ölçülemez
+// (bkz. veFeadSetVerifyCen), ve olmayan bir kesinlik iddia etmek bu modülün
+// en pahalı hata sınıfı.
+function veFeadVerifyCard(node){
+  var td = node.data || {};
+  var px = _feadNum(td.pivotX, NaN), py = _feadNum(td.pivotY, NaN);
+  var a  = _feadNum(td.armLen, NaN);
+  var cx = _feadNum(td.verifyCenX, NaN), cy = _feadNum(td.verifyCenY, NaN);
+
+  var h = _feadGrid(node, [
+    { key:'verifyCenX', label:'Kasnak merkezi X [mm]', ph:'(opsiyonel)', setter:'veFeadSetVerifyCen' },
+    { key:'verifyCenY', label:'Kasnak merkezi Y [mm]', ph:'(opsiyonel)', setter:'veFeadSetVerifyCen' }
+  ], 2);
+
+  // TÜREYEN MERKEZ — her durumda basılır; karşılaştırılacak sayı budur.
+  var tur = null;
+  try {
+    var b = veFeadBuildFromCanvas();
+    if(b && b.ok && Number.isFinite(b.armAbsDeg) && Number.isFinite(px) && a > 0){
+      var th = b.armAbsDeg * Math.PI / 180;
+      tur = [px + a * Math.cos(th), py + a * Math.sin(th)];
+    }
+  } catch(e){ tur = null; }
+
+  var satir = function(et, deg, renk){
+    return '<div style="display:flex; justify-content:space-between; gap:8px; padding:2px 0;">'
+      + '<span style="color:var(--text-muted);">' + et + '</span>'
+      + '<span style="font-family:ui-monospace,monospace; color:' + (renk || 'var(--text-primary)')
+      + ';">' + deg + '</span></div>';
+  };
+  var kutu = '<div style="font-size:var(--fs-micro); line-height:1.5; padding:7px 9px; '
+    + 'margin-bottom:9px; background:var(--bg-tertiary); border:1px solid var(--border-color); '
+    + 'border-radius:var(--radius-sm);">';
+  kutu += satir('Girilen montaj referans noktası',
+    (Number.isFinite(px) && Number.isFinite(py))
+      ? _feadFmt(px, 2) + ' / ' + _feadFmt(py, 2) : '— (girilmedi)',
+    'var(--accent-primary)');
+  kutu += satir('↳ türeyen kasnak merkezi',
+    tur ? _feadFmt(tur[0], 2) + ' / ' + _feadFmt(tur[1], 2) : '— (model çözülmedi)',
+    'var(--accent-warning)');
+
+  var not = '';
+  if(Number.isFinite(cx) && Number.isFinite(cy)){
+    // İKİNCİ SAYI VAR → sayısal hüküm. Karşılaştırma KARTIN KENDİ hesabı:
+    // `veFeadArmCheck` `cenX/cenY` okuyor ve o alanlar zarf kipinde bilerek
+    // yok, dolayısıyla o kapı burada beslenemez.
+    if(Number.isFinite(px) && Number.isFinite(py) && a > 0){
+      var dp = Math.sqrt((cx - px) * (cx - px) + (cy - py) * (cy - py));
+      var fark = dp - a;
+      if(Math.abs(fark) < 0.005) fark = 0;
+      var tutar = Math.abs(dp - a) <= (typeof VE_FEAD_ARM_TOL_MM === 'number'
+        ? VE_FEAD_ARM_TOL_MM : 0.5);
+      kutu += satir('Girilen iki nokta arası', _feadFmt(dp, 2) + ' mm');
+      kutu += satir(tutar ? '↳ kol boyuyla TUTUYOR' : '↳ kol boyuyla TUTMUYOR',
+        (fark >= 0 ? '+' : '') + _feadFmt(fark, 2) + ' mm',
+        tutar ? 'var(--accent-success)' : 'var(--accent-danger)');
+    }
+    if(tur){
+      var dm = Math.sqrt((tur[0] - cx) * (tur[0] - cx) + (tur[1] - cy) * (tur[1] - cy));
+      kutu += satir('Türeyen merkez ↔ girilen merkez', _feadFmt(dm, 2) + ' mm',
+        dm < 5 ? 'var(--accent-success)' : 'var(--accent-danger)');
+      not += _feadHint(dm < 5
+        ? '<b style="color:var(--accent-success);">Tutarlı.</b> Türeyen kasnak merkezi '
+          + 'raporun yazdığı merkeze oturuyor; montaj referans noktası doğru alana girilmiş.'
+        : '<b style="color:var(--accent-danger);">Ayrışıyor (' + _feadFmt(dm, 1) + ' mm).</b> '
+          + 'İki koordinat ters girilmiş olabilir: montaj referans noktası alanına kasnağın '
+          + 'çalışma merkezi yazılırsa model <b>yine çözülür ve uyarı çıkmaz</b> — ölçüldü, '
+          + 'gerginlik %48 düşüyor.');
+    }
+  } else {
+    not += _feadHint('<b>Bu alan çözüme GİRMEZ</b> — kayış yolu, kol açısı ve gerginlik yine '
+      + 'yalnız montaj referans noktasından kurulur; buraya yazılan sayı sadece '
+      + 'karşılaştırılır.<br><br><b>Doğrulama koordinatı opsiyoneldir</b> ve boş bırakılabilir — model '
+      + 'onsuz da çözülür. Girerseniz program iki noktanın arasındaki mesafeyi kol boyuyla '
+      + 'karşılaştırır ve ters girişi <b>sayısal olarak</b> yakalar.<br><br>'
+      + 'Tedarikçi raporunda bu sayı <i>Layout Data</i> tablosunun gergi satırındadır '
+      + '(montaj referans noktası ise <i>Tensioner Data → Pivot Point</i> satırında). '
+      + 'Girmezseniz yukarıdaki <b>türeyen kasnak merkezini</b> o satırla gözle '
+      + 'karşılaştırın: tutuyorsa doğru alana girmişsinizdir.');
+  }
+  kutu += '</div>';
+  return _feadCard('Doğrulama', 'opsiyonel — ters girişi yakalar', 'var(--accent-success)',
+    h + kutu + not);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -4119,6 +4244,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadPortSideFor: veFeadPortSideFor,
     veFeadApplyBadge: veFeadApplyBadge,
     veFeadApplyBeltModeBadge: veFeadApplyBeltModeBadge,
+    veFeadVerifyCard: veFeadVerifyCard, veFeadSetVerifyCen: veFeadSetVerifyCen,
     veFeadSyncDrag: veFeadSyncDrag, veFeadReselectArm: veFeadReselectArm,
     veFeadEnvelopeReadout: veFeadEnvelopeReadout, veFeadSetPinArm: veFeadSetPinArm,
     veFeadTensionerLibCard: veFeadTensionerLibCard, veFeadApplyTenLib: veFeadApplyTenLib,

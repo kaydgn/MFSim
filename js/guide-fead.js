@@ -412,6 +412,9 @@ function _gfSec7(){
       'Tedarikçiden <em>dönen</em> raporun <em>Pivot Point {X, Y}</em> satırı'],
     ['Kol boyu', 'Pivot ile kasnak merkezi arasındaki sabit mesafe, mm',
       'Raporun <em>Tensioner Data</em> bölümü; 56–90 mm aralığında doğrulandı'],
+    ['<strong>Kasnak merkezi (doğrulama)</strong>', '<em>Opsiyonel</em> — gergi kasnağının '
+      + 'çalışma merkezi', 'Raporun <em>Layout Data</em> tablosundaki gergi satırı. '
+      + 'Girerseniz program ters girişi <strong>sayısal olarak</strong> yakalar'],
     ['Ön yük (Pre-Load)', 'Nm', 'Bilgi sayfasının Tensioner tablosu'],
     ['Yay katsayısı (Rate)', 'Nm/°', 'Aynı tablo'],
     ['Çalışma momenti (Mean Load)', 'Nm', 'Aynı tablo. Kolun montajda ne kadar kurulduğunu '
@@ -433,7 +436,25 @@ function _gfSec7(){
     + 'gerginlik <strong>−%48,6</strong>, sarım açısı en kötü <strong>+27,9°</strong> kayıyor. '
     + 'Her iki koordinatı birlikte girerseniz program aradaki mesafeye bakıp “aynı nokta '
     + 'girilmiş” ya da “biri yanlış okunmuş” diye ayrıca uyarır.');
-  h += '<h3>7.1 Kol açısını program nasıl seçiyor</h3>';
+  h += '<h3>7.1 Doğru noktayı girdiğinizi doğrulamak</h3>';
+  h += '<p>Program, girdiğiniz tek koordinatın montaj referans noktası mı yoksa kasnağın '
+    + 'çalışma merkezi mi olduğunu <strong>kendi başına ayırt edemez</strong> — ikisi de '
+    + 'geçerli bir çözüm üretir. Panelin <strong>Doğrulama</strong> kartı bunu iki şekilde '
+    + 'kapatır:</p>';
+  h += _gfAdimlar([
+    'Kart, girdiğiniz noktadan <strong>türeyen kasnak merkezini</strong> her durumda basar. '
+      + 'Bu sayıyı tedarikçi raporunun <em>Layout Data</em> tablosundaki gergi satırıyla '
+      + 'karşılaştırın — tutuyorsa doğru alana girmişsinizdir.',
+    'İsterseniz o satırı <strong>Kasnak merkezi (doğrulama)</strong> alanlarına girin. '
+      + 'O zaman program iki nokta arasındaki mesafeyi kol boyuyla karşılaştırır ve ters '
+      + 'girişi sayısal olarak yakalar: tutuyorsa <em>“Tutarlı”</em>, ters girilmişse '
+      + '<em>“Ayrışıyor”</em> der.'
+  ]);
+  h += _gfNot('Doğrulama alanı çözüme girmez',
+      'Oraya yazdığınız sayı yalnız <strong>denetim</strong> içindir; kayış yolu, kol açısı '
+    + 've gerginlik hesabı yine <em>yalnız montaj referans noktasından</em> kurulur. Alanı '
+    + 'boş bırakmak modeli değiştirmez.');
+  h += '<h3>7.2 Kol açısını program nasıl seçiyor</h3>';
   h += '<p>Pivot verildikten sonra geriye tek bir serbestlik derecesi kalır: gergi gövdesinin '
     + 'montajdaki saat konumu, yani kolun mutlak açısı. Program 360°’lik zarfı tarar ve '
     + '<strong>en küçük take-up’ı en büyük yapan</strong> açıyı seçer.</p>';
@@ -453,7 +474,7 @@ function _gfSec7(){
     + '<strong>“Kol açısını SABİTLE”</strong> anahtarını açın: zarf o zaman bir seçici değil '
     + 'bir <strong>teşhis</strong> yüzeyi olur — program sizin açınızla çözer, zarf eğrisi '
     + 'yalnız o açının nerede durduğunu gösterir.');
-  h += '<h3>7.2 Panelde ne okuyacaksınız</h3>';
+  h += '<h3>7.3 Panelde ne okuyacaksınız</h3>';
   h += _gfAlanTablo('Gergi panelinin zarf okuması', [
     ['Yay kurulması', '(M<sub>çalışma</sub> − M<sub>ön</sub>) / k — kolun bağıl dönmesi',
       'Salt yay künyesinden; geometriye hiç bakmaz'],
