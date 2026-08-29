@@ -242,6 +242,92 @@ describe('işlenmiş örnek CANLI hesaplanır', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+describe('14.1 — gergi satırı diğerlerinden AYRIŞIR', () => {
+  // KULLANICI BİLDİRİMİ (2026-08-29): "Bu 'otomatik gergi' kısmı hatalı. Oraya
+  // X ve Y olarak 'pivot' değerleri girilmiş. Halbuki oraya montaj referans
+  // noktası girilecek."
+  //
+  // Ölçüldü: DEĞER doğruydu (Gates'in Pivot Point satırı, −250/110 — ve
+  // raporlarda "mounting reference point" diye ayrı bir alan YOK), kusur
+  // SUNUMDAYDI. Tek bir "X [mm]/Y [mm]" sütunu iki farklı noktayı taşıyordu:
+  // beş satırda kasnak merkezi, gergi satırında montaj referans noktası — ve
+  // aradaki fark rastgele değil, TAM KOL BOYU (90 mm). Ayrım X hücresine
+  // sıkıştırılmış "pivot" kelimesiyle anlatılıyordu; Y hücresinde hiçbir işaret
+  // yoktu. Artık koordinatın NE OLDUĞU kendi sütununda.
+  const tablo = (DOC.match(/<caption>Tablo \d+ — Kasnak künyeleri[\s\S]*?<\/table>/) || [''])[0];
+  const satirlar = tablo.match(/<tr>[\s\S]*?<\/tr>/g) || [];
+
+  test('tablo bulunuyor ve yedi sütunlu', () => {
+    expect(tablo.length).toBeGreaterThan(200);
+    expect(tablo).toContain('Koordinat neyi gösteriyor');
+    expect((satirlar[0].match(/<th>/g) || []).length).toBe(7);
+  });
+
+  test('beş kasnak "kasnak merkezi", gergi "montaj referans noktası" der', () => {
+    const govde = satirlar.slice(1);
+    expect(govde.length).toBe(6);
+    const merkez = govde.filter((r) => /kasnak merkezi/.test(r));
+    const montaj = govde.filter((r) => /montaj referans noktası/.test(r));
+    expect(merkez).toHaveLength(5);
+    expect(montaj).toHaveLength(1);
+    expect(montaj[0]).toMatch(/Gergi/i);
+  });
+
+  test('gergi satırı PİVOT koordinatını basar — Layout Data satırını DEĞİL', () => {
+    // İkisi 90 mm apayrı; yanlışını basmak sessizce başka bir sistemi anlatırdı.
+    const g = (tablo.match(/<tr>(?:(?!<\/tr>)[\s\S])*montaj referans noktası[\s\S]*?<\/tr>/) || [''])[0];
+    const P = GF.VE_GUIDE_FEAD_GATES.pivot;
+    expect(g).toContain(RP._frF(P[0], 2));
+    expect(g).toContain(RP._frF(P[1], 2));
+    // Layout Data'daki çalışma merkezi bu satırda GEÇMEMELİ.
+    expect(g).not.toContain(RP._frF(GF.VE_GUIDE_FEAD_GATES.tenXY[0], 2));
+  });
+
+  test('X hücresine sıkıştırılmış "pivot" etiketi KALMADI', () => {
+    expect(tablo).not.toContain('<em>pivot');
+  });
+
+  test('rol sütunu gergiyi ADLANDIRIR — adı değişse de ayırt edilsin', () => {
+    // Bir dönem yalnız `driver`a bakıyordu ve gergi satırında '—' yazıyordu;
+    // o satırı ayırt eden tek şey kasnağın ADIYDI.
+    const g = (tablo.match(/<tr>(?:(?!<\/tr>)[\s\S])*montaj referans noktası[\s\S]*?<\/tr>/) || [''])[0];
+    expect(g).toMatch(/>gergi</);
+    expect(tablo).toContain('>avara<');
+    expect(tablo).toContain('>aksesuar<');
+  });
+
+  test('ayrım UYARI kutusuyla ve ölçülmüş bedeliyle yazılı', () => {
+    expect(DOC).toContain('Gergi satırı diğerlerinden BAŞKA bir noktadır');
+    expect(DOC).toContain('Pivot Point');
+    expect(DOC).toContain('Layout Data');
+    expect(DOC).toContain('−%47,9');       // yanlış nokta girilirse gerginlik
+    expect(DOC).toContain('0,0054 mm');    // iki noktanın kol boyu özdeşliği
+  });
+
+  test('14.2 kasnak merkezinin TÜREYEN olduğunu sayıyla kapatıyor', () => {
+    // Girilen nokta gerçekten pivot olarak kullanılıyorsa, ondan türeyen
+    // kasnak merkezi raporun KENDİ Layout Data satırına oturmalı.
+    const O = GF._gfOrnekCoz();
+    const a = Number(O.gergi.data.armLen);
+    const th = O.build.armAbsDeg * Math.PI / 180;
+    const cx = Number(O.gergi.data.pivotX) + a * Math.cos(th);
+    const cy = Number(O.gergi.data.pivotY) + a * Math.sin(th);
+    const G = GF.VE_GUIDE_FEAD_GATES;
+    const d = Math.sqrt(Math.pow(cx - G.tenXY[0], 2) + Math.pow(cy - G.tenXY[1], 2));
+    expect(d).toBeLessThan(5);                       // raporun satırına oturuyor
+    expect(DOC).toContain('Gergi kasnağının merkezi');
+    expect(DOC).toContain(RP._frFs(d, 2) + ' mm');
+  });
+
+  test('iki koordinat arasındaki mesafe TAM KOL BOYU (çıpa)', () => {
+    const G = GF.VE_GUIDE_FEAD_GATES;
+    const d = Math.sqrt(Math.pow(G.tenXY[0] - G.pivot[0], 2)
+                      + Math.pow(G.tenXY[1] - G.pivot[1], 2));
+    expect(Math.abs(d - G.arm)).toBeLessThan(0.01);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 describe('içerik yönlendirici', () => {
   test('adım listeleri var — kılavuz “şunu yap” diyor', () => {
     expect((DOC.match(/<ol>/g) || []).length).toBeGreaterThan(6);

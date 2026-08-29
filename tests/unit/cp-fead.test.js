@@ -1326,6 +1326,57 @@ describe('veFeadArrangeByCoords — kasnaklar KOORDİNATLARINA yerleşir', () =>
     global.updateAllConnections = jest.fn();
   });
 
+  // D1 KAPISI — ÖLÇÜLMÜŞ BİR SESSİZ KUSURDU.
+  // Yerleştirici gergi için KOŞULSUZ `cenX/cenY` okuyordu; zarf kipinde o
+  // alanlar hiç yazılmıyor, dolayısıyla gergi "koordinatı olmayan kasnak"
+  // sayılıp kümenin ALTINA diziliyordu. ÖLÇÜLDÜ (AG00976, zarf kipi): gergi
+  // kutusu en alttaki kasnaktan 147 px aşağıda, kümenin ortalamasından 343 px
+  // sapmış. Ve `veFeadDragTensioner` zarf kipinde mm'yi MUTLAK yazdığı için
+  // sonraki İLK sürükleme o kaymanın tamamını pivota yazardı.
+  //
+  // Karar TEK YERDE (veFeadTensionerMm, fead-model.js); kapı ÜRETİLEN
+  // YERLEŞİMİ ölçüyor — okuyucuyu doğrudan çağırmak, yerleştiricinin onu
+  // kullanmayı BIRAKMASINI göremezdi.
+  test('gergi ZARF kipinde de kümenin İÇİNE yerleşir', () => {
+    const kurGergi = (kip) => {
+      const tipler = ['fead-crank', 'fead-alternator', 'fead-idler'];
+      const koord = [{ x: 0, y: 0 }, { x: -281, y: 259.5 }, { x: 130, y: 140 }];
+      const ns = koord.map((c, i) => {
+        const t = tipler[i], d = componentDefs[t];
+        return { id: 'r' + i, type: t, def: d, x: 0, y: 0,
+                 width: d.defaultWidth, height: d.defaultHeight,
+                 data: Object.assign({ od: 80 }, c, i === 0 ? { driver: true } : {}) };
+      });
+      const dt = componentDefs['fead-tensioner'];
+      const td = { od: 75, armLen: 90, preload: 8.6, kArm: 0.48, meanLoad: 22.07,
+                   pivotX: -250, pivotY: 110 };
+      if (kip === 'mount') { td.angleMode = 'mount'; td.cenX = -161.97; td.cenY = 91.29; }
+      else td.angleMode = 'envelope';
+      ns.push({ id: 't', type: 'fead-tensioner', def: dt, x: 0, y: 0,
+                width: dt.defaultWidth, height: dt.defaultHeight, data: td });
+      global.nodes = ns; global.connections = [];
+      for (let i = 0; i < ns.length; i++)
+        global.connections.push({ id: 'c' + i, from: ns[i].id,
+          to: ns[(i + 1) % ns.length].id, fromPort: 'output', toPort: 'input' });
+      return ns;
+    };
+    ['envelope', 'mount'].forEach((kip) => {
+      const ns = kurGergi(kip);
+      expect(fead.veFeadArrangeByCoords({ silent: true })).toBe(true);
+      const t = ns[ns.length - 1];
+      const tm = merkez(t);
+      const digerleri = ns.slice(0, 3).map(merkez);
+      const enAlt = Math.max(...digerleri.map((p) => p.y));
+      // Kümenin altındaki "koordinatı yok" sırasına DÜŞMEMELİ.
+      expect(tm.y).toBeLessThan(enAlt);
+      // Ve gerçekten kendi mm noktasında olmalı: krank orijin, Y ters.
+      const om = merkez(ns[0]);
+      const bek = (kip === 'envelope') ? { x: -250, y: 110 } : { x: -161.97, y: 91.29 };
+      expect(tm.x - om.x).toBeCloseTo(bek.x, 0);
+      expect(tm.y - om.y).toBeCloseTo(-bek.y, 0);
+    });
+  });
+
   test('kanvas mesafesi mm mesafesine EŞİT (1 px = 1 mm)', () => {
     const ns = kur([{ x: 0, y: 0 }, { x: 200, y: 0 }, { x: 0, y: 150 }]);
     expect(fead.veFeadArrangeByCoords()).toBe(true);

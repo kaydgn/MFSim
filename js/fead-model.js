@@ -1003,12 +1003,8 @@ function veFeadSyncCanvasFromMm(nodeList, opt){
     // Mount kipinde davranış BİREBİR eski: orada girdi kasnağın montaj
     // merkezidir ve kutu onu gösterir.
     if(_feadDefOf(x).isFeadTensioner){
-      var td = x.data || {};
-      if(veFeadAngleMode(td) === 'envelope'){
-        mmX = _feadNum(td.pivotX, NaN); mmY = _feadNum(td.pivotY, NaN);
-      } else {
-        mmX = _feadNum(td.cenX, NaN); mmY = _feadNum(td.cenY, NaN);
-      }
+      var tm = veFeadTensionerMm(x);
+      mmX = tm.x; mmY = tm.y;
     }
     if(!Number.isFinite(mmX) || !Number.isFinite(mmY)) return;
     var p = veFeadMmToCanvas(mmX, mmY, org, s, veFeadNodeBox(x));
@@ -1021,6 +1017,31 @@ function veFeadSyncCanvasFromMm(nodeList, opt){
     if(x.x !== px || x.y !== py){ x.x = px; x.y = py; n++; }
   });
   return n;
+}
+
+// ── GERGİ KUTUSU HANGİ NOKTAYI GÖSTERİR — TEK OKUYUCU ─────────────────────
+//
+// Gergi, kayış düzleminde İKİ ayrı noktaya sahip ve hangisinin GİRDİ olduğu
+// kipe bağlı:
+//   envelope → montaj referans noktası (pivotX/pivotY) — kolun döndüğü nokta
+//   mount / direct → montaj merkezi (cenX/cenY) — kasnağın çalışma merkezi
+// İkisi arasında tam kol boyu kadar mesafe var (14 Gates sisteminin 81
+// konumunda ölçüldü, sapma ≤0,065 mm), yani karıştırmak 90 mm'lik bir kayma.
+//
+// BU KARAR TEK YERDE DURMAK ZORUNDA. Bir dönem iki kopyası vardı: model
+// katmanı (veFeadSyncCanvasFromMm) kipe göre dallanıyordu, sunum katmanı
+// (veFeadArrangeByCoords) ise KOŞULSUZ `cenX/cenY` okuyordu. Zarf kipinde o
+// alanlar hiç yazılmadığı için "Otomatik Düzenle" gergiyi koordinatı olmayan
+// kasnak sayıp kümenin ALTINA diziyordu — ÖLÇÜLDÜ (AG00976, zarf kipi): gergi
+// kutusu en alttaki kasnaktan 147 px aşağıda, kümenin ortalamasından 343 px
+// sapmış. Ve `veFeadDragTensioner` zarf kipinde mm'yi MUTLAK yazdığı için
+// sonraki İLK sürükleme o kaymanın tamamını pivota yazardı — "Konum Bağı
+// silme" tuzağının (81 mm) aynı sınıfı.
+function veFeadTensionerMm(node){
+  var td = (node && node.data) || {};
+  if(veFeadAngleMode(td) === 'envelope')
+    return { x: _feadNum(td.pivotX, NaN), y: _feadNum(td.pivotY, NaN) };
+  return { x: _feadNum(td.cenX, NaN), y: _feadNum(td.cenY, NaN) };
 }
 
 // ── GERGİ SÜRÜKLEMESİ PİVOTU TAŞIR ─────────────────────────────────────────
@@ -3156,6 +3177,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadBuildSystem: veFeadBuildSystem, veFeadBuildFromCanvas: veFeadBuildFromCanvas,
     veFeadGatherPulleys: veFeadGatherPulleys,
     veFeadTensionerMount: veFeadTensionerMount, veFeadArmCheck: veFeadArmCheck,
+    veFeadTensionerMm: veFeadTensionerMm,
     veFeadFreeAngleFrom: veFeadFreeAngleFrom, veFeadAngleMode: veFeadAngleMode,
     veFeadArmEnvelope: veFeadArmEnvelope, veFeadEnvelopeOf: veFeadEnvelopeOf,
     _feadEnvSample: _feadEnvSample,

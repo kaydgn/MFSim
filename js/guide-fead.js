@@ -805,6 +805,12 @@ function _gfOrnekCoz(){
 // dururlar ve öyle kalmalıdırlar. Model tarafındaki her sayı canlı hesaplanıyor.
 var VE_GUIDE_FEAD_GATES = {
   belt: 1714.6, design: 544, freeAbsDeg: 16.1, NF: 12.52,
+  // Raporun gergi için bastığı İKİ AYRI koordinat. Bunlar aynı şeyin iki
+  // yazımı değil, kolun iki ucu: aralarındaki mesafe 14 sistemin 14'ünde de
+  // tam kol boyu (en büyük sapma 0,0054 mm — basım yuvarlaması).
+  //   pivot  → "Tensioner Data / Pivot Point {X, Y Coordinates} mm"  = GİRDİ
+  //   tenXY  → "Layout Data" tablosunun gergi satırı (çalışma merkezi) = ÇIKTI
+  pivot: [-250, 110], tenXY: [-161.97, 91.29], arm: 90,
   wrap: [156.2, 52.8, 198.4, 64.3, 157.1, 34.6],
   span: [148.0, 141.4, 150.8, 272.7, 194.4, 141.3],
   T880: [1381, 1380, 1023, 1022, 545, 544],
@@ -837,9 +843,15 @@ function _gfSec14(){
 
   // ── 14.1 Girdiler ────────────────────────────────────────────────────────
   h += '<h3>14.1 Elimizdeki veri</h3>';
-  h += '<p>Tedarikçi raporundan okunan koordinat tablosu ve künyeler. Bu tabloya girmeyen '
-    + 'hiçbir şey modele girmez — geri kalan her sayı bunlardan türeyecek.</p>';
+  h += '<p>Tedarikçi raporundan okunan koordinatlar ve künyeler. Bu tabloya girmeyen hiçbir '
+    + 'şey modele girmez — geri kalan her sayı bunlardan türeyecek.</p>';
 
+  // KOORDİNATIN NE OLDUĞU KENDİ SÜTUNUNDA. Gergi satırı diğer beşiyle AYNI
+  // sütunda ama BAŞKA bir noktayı taşıyor: beşi kasnak merkezi, gergininki
+  // montaj referans noktası (kolun döndüğü pivot) — ve aradaki mesafe tam kol
+  // boyu, yani 90 mm. Fark bir dönem X hücresine sıkıştırılmış "pivot"
+  // kelimesiyle anlatılıyordu; tek sütunun iki anlam taşıması bu modülün
+  // "sessiz tuzak" saydığı şeyin ta kendisi. Artık yapısal olarak ayrı.
   var satirlar = [];
   var pulleys = b.order || [];
   pulleys.forEach(function(n, i){
@@ -849,23 +861,46 @@ function _gfSec14(){
     satirlar.push([
       _gfE(ad),
       _gfF(d.od, 0),
-      gergiMi ? '<em>pivot ' + _gfF(d.pivotX, 2) + '</em>' : _gfF(d.x, 1),
-      gergiMi ? '<em>' + _gfF(d.pivotY, 2) + '</em>' : _gfF(d.y, 1),
+      gergiMi ? _gfF(d.pivotX, 2) : _gfF(d.x, 1),
+      gergiMi ? _gfF(d.pivotY, 2) : _gfF(d.y, 1),
+      gergiMi ? '<strong>montaj referans noktası</strong>' : 'kasnak merkezi',
       (typeof veFeadContactOf === 'function' && veFeadContactOf(n) === 'grooved')
         ? 'kaburgalı' : 'sırttan',
-      d.driver ? '<span class="ok">sürücü</span>' : '—'
+      // ROL SÜTUNU GERGİYİ DE ADLANDIRIR. Bir dönem yalnız `driver`a bakıyordu,
+      // yani gergi satırında '—' yazıyordu ve o satırı diğerlerinden ayıran tek
+      // şey kasnağın ADIYDI — kullanıcı düğümü yeniden adlandırınca kaybolan
+      // bir sinyal. Detaylı raporun aynı tablosu orada 'gergi' yazıyor.
+      d.driver ? '<span class="ok">sürücü</span>'
+        : (gergiMi ? 'gergi'
+        : (_feadDefOf(n).isFeadIdler ? 'avara' : 'aksesuar'))
     ]);
   });
   h += _gfTablo('Kasnak künyeleri — girilen değerler',
-    ['Kasnak', 'OD [mm]', 'X [mm]', 'Y [mm]', 'Temas', 'Rol'],
-    satirlar, ['l', '', '', '', 'c', 'c']);
+    ['Kasnak', 'OD [mm]', 'X [mm]', 'Y [mm]', 'Koordinat neyi gösteriyor', 'Temas', 'Rol'],
+    satirlar, ['l', '', '', '', 'l', 'c', 'c']);
+
+  h += _gfUyari('Gergi satırı diğerlerinden BAŞKA bir noktadır',
+      'Beş kasnakta X/Y <strong>kasnağın merkezidir</strong>. Gergide ise girilen koordinat '
+    + '<strong>montaj referans noktasıdır</strong> — gövdenin motora cıvatalandığı, kolun '
+    + 'etrafında döndüğü nokta. Gergi kasnağının merkezi bir girdi değil, bu noktadan '
+    + '<em>türeyen</em> bir sonuçtur (14.2).<br><br>'
+    + 'Tedarikçi raporu ikisini de basar ve <strong>ayrı yerlerde</strong>: montaj referans '
+    + 'noktası <em>Tensioner Data → Pivot Point {X, Y Coordinates}</em> satırında, gergi '
+    + 'kasnağının çalışma merkezi ise <em>Layout Data</em> tablosunun gergi satırında. '
+    + 'Aralarında tam kol boyu kadar mesafe vardır — arşivdeki 14 sistemin 14’ünde de '
+    + 'ölçüldü, en büyük sapma <strong>0,0054 mm</strong> (basım yuvarlaması).<br><br>'
+    + '<strong>Karıştırılırsa model yine çözülür ve uyarı çıkmaz.</strong> Ölçüldü: '
+    + '<em>Layout Data</em> satırı montaj koordinatı sanılıp girilince kol 112,30°’ye '
+    + 'gidiyor, türeyen kasnak merkezi doğrusundan <strong>90,00 mm</strong> sapıyor, '
+    + 'gerginlik <strong>−%47,9</strong> düşüyor.');
 
   h += _gfTablo('Gergi ve kayış künyeleri — girilen değerler',
     ['Alan', 'Değer', 'Nereden'],
     [
-      ['Montaj koordinatı (pivot)',
+      ['Montaj referans noktası',
         _gfF(td.pivotX, 2) + ' / ' + _gfF(td.pivotY, 2) + ' mm',
-        'Raporun <em>Pivot Point</em> satırı'],
+        'Raporun <em>Tensioner Data → Pivot Point</em> satırı — panelde '
+        + '“Otomatik Gergi Montaj Koordinatları”'],
       ['Kol boyu', _gfF(td.armLen, 1) + ' mm', 'Raporun <em>Tensioner Data</em> bölümü'],
       ['Yay ön yükü', _gfF(td.preload, 2) + ' Nm', 'Aynı bölüm'],
       ['Yay katsayısı', _gfF(td.kArm, 3) + ' Nm/°', 'Aynı bölüm'],
@@ -883,7 +918,10 @@ function _gfSec14(){
   // ── 14.2 Zarf çözümü ─────────────────────────────────────────────────────
   h += '<h3>14.2 Program neyi hesapladı</h3>';
   h += '<p>Kasnaklar yerleştirilip kayış yolu kablolandıktan ve gergi künyesi girildikten '
-    + 'sonra gergi panelinin okuduğu değerler:</p>';
+    + 'sonra gergi panelinin okuduğu değerler. Üçüncü satır 14.1’deki ayrımın karşılığıdır: '
+    + '<strong>gergi kasnağının merkezi bir girdi değil, montaj referans noktasından türeyen '
+    + 'bir sonuçtur</strong> — ve tedarikçi raporunun <em>Layout Data</em> satırına '
+    + 'oturur.</p>';
 
   var m = (typeof veFeadTensionerMount === 'function') ? veFeadTensionerMount(td) : {};
   var a = Number(td.armLen), th = Number(b.armAbsDeg) * Math.PI / 180;
@@ -911,20 +949,31 @@ function _gfSec14(){
         'Geçerli geometri veren montaj açıları']
     ], ['l', 'c', 'l']);
 
+  var dMerkez = Math.sqrt(Math.pow(cenX - G.tenXY[0], 2) + Math.pow(cenY - G.tenXY[1], 2));
   h += _gfTablo('Türeyen değerler ↔ tedarikçi raporu',
-    ['Büyüklük', 'MFSim', 'Tedarikçi raporu', 'Sapma'],
+    ['Büyüklük', 'MFSim', 'Tedarikçi raporu', 'Fark'],
     [
       ['Kayış efektif boyu', _gfFs(b.beltLengthMm, 2) + ' mm', _gfFs(G.belt, 1) + ' mm',
         _gfSapma(b.beltLengthMm, G.belt)],
       ['Tasarım gerginliği', _gfFs(b.springTensionN, 2) + ' N', _gfFs(G.design, 0) + ' N',
-        _gfSapma(b.springTensionN, G.design)]
+        _gfSapma(b.springTensionN, G.design)],
+      // Bu satır 14.1'deki uyarının SAYISAL kapanışı: girilen nokta gerçekten
+      // pivot olarak kullanılıyorsa, ondan türeyen kasnak merkezi raporun
+      // KENDİ Layout Data satırına oturmalı. Oturuyor.
+      ['Gergi kasnağının merkezi', _gfFs(cenX, 2) + ' / ' + _gfFs(cenY, 2) + ' mm',
+        _gfFs(G.tenXY[0], 2) + ' / ' + _gfFs(G.tenXY[1], 2) + ' mm',
+        _gfFs(dMerkez, 2) + ' mm']
     ], ['l', '', '', 'c']);
 
-  h += _gfOnay('Bağımsız doğrulama',
-      'Program kayışı <strong>hiç görmeden</strong> tedarikçinin kendi kayışını geri verdi. '
-    + 'Seçim ölçütü kayış verisine girmez — kolun gezinme aralığı yalnız yay künyesinden '
-    + '(M<sub>çalışma</sub>, M<sub>ön</sub>, k) türetilir. Bu, kayış boyunun bir çıktı '
-    + 'olabilmesinin ön koşuludur: aksi hâlde döngü kurulurdu.');
+  h += _gfOnay('İki bağımsız doğrulama',
+      '<strong>Bir:</strong> program kayışı <strong>hiç görmeden</strong> tedarikçinin kendi '
+    + 'kayışını geri verdi. Seçim ölçütü kayış verisine girmez — kolun gezinme aralığı yalnız '
+    + 'yay künyesinden (M<sub>çalışma</sub>, M<sub>ön</sub>, k) türetilir. Bu, kayış boyunun '
+    + 'bir çıktı olabilmesinin ön koşuludur: aksi hâlde döngü kurulurdu.<br><br>'
+    + '<strong>İki:</strong> yalnız montaj referans noktası verilerek türetilen gergi kasnağı '
+    + 'merkezi, raporun <em>Layout Data</em> tablosundaki gergi satırından '
+    + _gfFs(dMerkez, 2) + ' mm uzakta. O satır modele hiç girmedi; girilen noktanın '
+    + 'gerçekten <strong>kolun döndüğü nokta</strong> olarak kullanıldığının kanıtı bu.');
 
   // ── 14.3 Şema ────────────────────────────────────────────────────────────
   var svg = null;

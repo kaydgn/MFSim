@@ -148,7 +148,12 @@ function veFeadArrangeByCoords(opts){
   kasnaklar.forEach(function(n){
     var d = n.data || {};
     var x = _feadNum(d.x, NaN), y = _feadNum(d.y, NaN);
-    if(_feadDefOf(n).isFeadTensioner){ x = _feadNum(d.cenX, NaN); y = _feadNum(d.cenY, NaN); }
+    // Gergi hangi noktayı gösterir: KİPE bağlı ve karar TEK YERDE
+    // (veFeadTensionerMm, fead-model.js). Burada koşulsuz `cenX/cenY` okumak
+    // zarf kipinde gergiyi "koordinatı yok" sayıp kümenin altına diziyordu.
+    if(_feadDefOf(n).isFeadTensioner && typeof veFeadTensionerMm === 'function'){
+      var tm = veFeadTensionerMm(n); x = tm.x; y = tm.y;
+    }
     if(Number.isFinite(x) && Number.isFinite(y)) mm.push({ n: n, x: x, y: y });
     else eksik.push(n);
   });

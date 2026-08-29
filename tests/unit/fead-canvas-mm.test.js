@@ -289,6 +289,48 @@ describe('GERGİ — sürükleme PİVOTU taşır, kol boyu korunur', () => {
   });
 });
 
+describe('gergi kutusu HANGİ noktayı gösterir — tek okuyucu', () => {
+  // Gergi kayış düzleminde İKİ noktaya sahip ve hangisinin GİRDİ olduğu kipe
+  // bağlı. Aralarında tam kol boyu kadar mesafe var (90 mm), yani karar
+  // yanlışsa kutu 90 mm yanlış yerde durur — ve o kutu sürüklenince pivot da
+  // 90 mm yanlış yazılır.
+  const gergi = (ek) => kasnak('t', 'fead-tensioner', 0, 0, Object.assign({
+    pivotX: -250, pivotY: 110, armLen: 90,
+    preload: 8.6, kArm: 0.48, meanLoad: 22.07 }, ek || {}));
+
+  test('zarf kipinde MONTAJ REFERANS NOKTASI (pivot) okunur', () => {
+    const t = gergi({ angleMode: 'envelope' });
+    expect(M.veFeadTensionerMm(t)).toEqual({ x: -250, y: 110 });
+  });
+
+  test('mount kipinde MONTAJ MERKEZİ (cen) okunur', () => {
+    const t = gergi({ angleMode: 'mount', cenX: -161.97, cenY: 91.29 });
+    expect(M.veFeadTensionerMm(t)).toEqual({ x: -161.97, y: 91.29 });
+  });
+
+  test('kip yazılı değilse veFeadAngleMode çözer — ikinci bir kural YOK', () => {
+    // cenX/cenY varsa mount, yalnız pivot varsa envelope.
+    expect(M.veFeadTensionerMm(gergi({ cenX: -161.97, cenY: 91.29 })))
+      .toEqual({ x: -161.97, y: 91.29 });
+    expect(M.veFeadTensionerMm(gergi({}))).toEqual({ x: -250, y: 110 });
+  });
+
+  test('senkron zarf kipinde gergiyi ATLAMAZ', () => {
+    // ÖLÇÜLDÜ: bir dönem bu geçiş `cenX/cenY` arıyordu; zarf kipinde o alanlar
+    // hiç yazılmadığı için gergi kutusu kayış düzleminden KOPUK kalıyordu.
+    const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true, x: 0, y: 0 });
+    const t = gergi({ angleMode: 'envelope' });
+    // Orijin tanım gereği yerinde kalır (yazma olmaz); ölçülen şey GERGİNİN
+    // taşınması ve nereye taşındığı.
+    expect(M.veFeadSyncCanvasFromMm([org, t], { origin: org })).toBeGreaterThanOrEqual(1);
+    // Kutu MERKEZİ pivotun mm konumunda olmalı: krank orijin, Y ters.
+    const om = { x: org.x + org.width / 2, y: org.y + org.height / 2 };
+    const tm = { x: t.x + t.width / 2, y: t.y + t.height / 2 };
+    expect(tm.x - om.x).toBeCloseTo(-250, 0);
+    expect(tm.y - om.y).toBeCloseTo(-110, 0);
+  });
+});
+
 describe('ORİJİN GÖÇÜ — öteleme BEDAVA (ölçüldü)', () => {
   const bmc = (kaydir) => {
     const pack = veFeadExampleNodes('BMC_FEAD_2026');
