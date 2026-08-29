@@ -152,6 +152,72 @@ function veFeadPivotFromArm(td){
   return [cx - a * Math.cos(r), cy - a * Math.sin(r)];
 }
 
+// ── GERGİNİN İKİ NOKTASI — hangi yüzey hangisini okur ──────────────────────
+//
+// Gergi bileşeninin kayış düzleminde İKİ noktası var ve karıştırılmaları bu
+// modülün en pahalı sessiz hata sınıfı (ölçüldü: gerginlik −%48,6):
+//
+//   PİVOT           gövdenin motora cıvatalandığı nokta; kol bunun etrafında döner
+//   KASNAK MERKEZİ  kolun ucu — kol açısıyla GEZER (BMC'de 59,9 mm'lik bir zarf)
+//
+// İki okuyucu AYRI ve birleştirilemez: kanvas KUTUSU zarf kipinde pivotu
+// gösteriyor (sürükleme de onu yazıyor), dolanım yönü (loopSense) ise her
+// zaman KASNAK merkezini istiyor. Tek fonksiyona indirgemek, zarf kipinde
+// yönü kol boyu kadar kaymış bir çokgenden okumak olurdu.
+//
+// ÖLÇÜLDÜ — ikisi de zarf kipinde `cenX/cenY`ye bakan tek bir satırdan
+// kırılmıştı (o alan zarf kipinde HİÇ yazılmıyor):
+//   • veFeadNaturalSense  → 0 döndürüyordu; "Dönüş Yönü" rozeti ve paneli
+//     çözülmüş bir modelde bile "— (okunamadı)" yazıyordu.
+//   • veFeadArrangeByCoords → gergiyi "koordinatı yok" sayıp kümenin ALTINA
+//     diziyordu (AG00976'da kutu 2857,4/3039,0 yerine 2971,0/3277,3) ve
+//     "1 kasnağın koordinatı yok" uyarısı basıyordu — oysa alt topoloji
+//     açılışında veFeadSyncCanvasFromMm onu doğru şekilde pivota oturtuyor.
+//     Yani iki yerleştirme yolu birbirinden habersizdi.
+
+// Gergi KUTUSUNUN gösterdiği mm noktası. Kip başına tek kural, tek yerde:
+// zarf kipinde girdi PİVOTTUR (kasnak merkezi bir çıktı), diğerlerinde girdi
+// montaj merkezidir. Okunamıyorsa null — UYDURULMAZ.
+function veFeadTensionerBoxMm(td){
+  if(!td) return null;
+  if(veFeadAngleMode(td) === 'envelope'){
+    var px = _feadNum(td.pivotX, NaN), py = _feadNum(td.pivotY, NaN);
+    return (Number.isFinite(px) && Number.isFinite(py)) ? [px, py] : null;
+  }
+  var cx = _feadNum(td.cenX, NaN), cy = _feadNum(td.cenY, NaN);
+  return (Number.isFinite(cx) && Number.isFinite(cy)) ? [cx, cy] : null;
+}
+
+// Gergi KASNAĞININ merkezi (mm) — `veFeadPivotFromArm`ın tersi:
+//     c = p + a·(cos θ, sin θ)
+//
+// KAYNAK SIRASI KİPİN KENDİ KURALIYLA AYNI ve bu bilinçli:
+//   • zarf kipinde merkez TÜRETİLİR. `cenX/cenY` varsa bile okunmaz — köprü de
+//     okumuyor (orada o iki alan bir girdi değil, olsa olsa bir uyarı konusu).
+//     Bayat bir merkezi tercih etmek, rozetin çözülen geometriyle çelişen bir
+//     yön göstermesi demek olurdu.
+//   • diğer kiplerde girdi olan montaj merkezidir; yoksa yön OKUNAMAZ (null).
+//     Orada model zaten "montaj merkezi girilmedi" diye duruyor; türetilmiş
+//     bir sayı basmak çözülemeyen bir modele yön uydurmak olurdu.
+//
+// absDeg geçilirse kol açısı ondan alınır (çözümün taze değeri); geçilmezse
+// düğümdeki memodan (`armMeanDeg` — zarfın seçtiği ya da sabitlenen açı).
+function veFeadTensionerCenter(td, absDeg){
+  if(!td) return null;
+  if(veFeadAngleMode(td) !== 'envelope'){
+    var cx = _feadNum(td.cenX, NaN), cy = _feadNum(td.cenY, NaN);
+    return (Number.isFinite(cx) && Number.isFinite(cy)) ? [cx, cy] : null;
+  }
+  var px = _feadNum(td.pivotX, NaN), py = _feadNum(td.pivotY, NaN);
+  var a = _feadNum(td.armLen, NaN);
+  var th = _feadNum(absDeg, NaN);
+  if(!Number.isFinite(th)) th = _feadNum(td.armMeanDeg, NaN);
+  if(!Number.isFinite(px) || !Number.isFinite(py) || !(a > 0) || !Number.isFinite(th))
+    return null;
+  var r = th * Math.PI / 180;
+  return [px + a * Math.cos(r), py + a * Math.sin(r)];
+}
+
 function veFeadTensionerMount(td){
   td = td || {};
   var out = { ok: false, pivot: null, cen: null, armFromCoords: NaN,
@@ -1003,12 +1069,11 @@ function veFeadSyncCanvasFromMm(nodeList, opt){
     // Mount kipinde davranış BİREBİR eski: orada girdi kasnağın montaj
     // merkezidir ve kutu onu gösterir.
     if(_feadDefOf(x).isFeadTensioner){
-      var td = x.data || {};
-      if(veFeadAngleMode(td) === 'envelope'){
-        mmX = _feadNum(td.pivotX, NaN); mmY = _feadNum(td.pivotY, NaN);
-      } else {
-        mmX = _feadNum(td.cenX, NaN); mmY = _feadNum(td.cenY, NaN);
-      }
+      // Kural TEK YERDE (veFeadTensionerBoxMm): "Otomatik Düzenle" ve örnek
+      // kurucusu da aynı okuyucuyu kullanıyor. Satır içi kalsaydı üç yol üç
+      // ayrı kopya taşırdı — nitekim taşıyordu ve ikisi ayrışmıştı.
+      var kutu = veFeadTensionerBoxMm(x.data || {});
+      mmX = kutu ? kutu[0] : NaN; mmY = kutu ? kutu[1] : NaN;
     }
     if(!Number.isFinite(mmX) || !Number.isFinite(mmY)) return;
     var p = veFeadMmToCanvas(mmX, mmY, org, s, veFeadNodeBox(x));
@@ -1850,8 +1915,12 @@ function veFeadRouteDiagnose(nodeList, connList){
 // yön odur; "Dönüş Yönü" düğümü o sırayı TERS yürüterek yönü seçtiriyor.
 //
 // ÖLÇÜT ÇEKİRDEĞİN KENDİSİNDEN — ikinci bir kopya yazılsaydı iki yüzey
-// sessizce ayrışabilirdi. Merkez sözleşmesi de aynı: kasnakta (x, y),
-// gergide MONTAJ merkezi (cenX, cenY).
+// sessizce ayrışabilirdi. Merkez sözleşmesi: kasnakta (x, y), gergide
+// KASNAK MERKEZİ — mount kipinde girilen montaj merkezi, zarf kipinde
+// pivot + kol boyu + kol açısından TÜREYEN merkez (veFeadTensionerCenter).
+// Zarf kipinde `cenX/cenY` hiç yazılmadığı için burada doğrudan o alanı
+// okumak yönü ÖLÇÜLEBİLİR biçimde kaybettiriyordu: çözülmüş bir AG00976
+// modelinde sense 1 yerine 0 çıkıyor, rozet "—" yazıyordu.
 //
 // KOORDİNATI EKSİK MODELDE YÖN YOKTUR (0 döner). Eksik koordinatla geometri
 // zaten çözülemiyor; uydurma bir yön üretip rotayı ters çevirmek, çözülemeyen
@@ -1860,11 +1929,17 @@ function veFeadNaturalSense(order){
   var list = (order || []).filter(_feadIsPulley);
   if(list.length < 3 || typeof FEADCore === 'undefined'
      || typeof FEADCore.loopSense !== 'function') return 0;
-  var c = [], i, d, x, y;
+  var c = [], i, d, x, y, cen;
   for(i = 0; i < list.length; i++){
     d = list[i].data || {};
     if(_feadDefOf(list[i]).isFeadTensioner){
-      x = _feadNum(d.cenX, NaN); y = _feadNum(d.cenY, NaN);
+      // KASNAK MERKEZİ — pivot DEĞİL. Zarf kipinde o merkez bir çıktıdır ve
+      // pivot + kol boyu + seçilen kol açısından türer (veFeadTensionerCenter);
+      // pivotu doğrudan çokgene koymak yönü kol boyu kadar kaymış bir
+      // merkezden okumak olurdu.
+      cen = veFeadTensionerCenter(d);
+      if(!cen) return 0;
+      x = cen[0]; y = cen[1];
     } else {
       x = _feadNum(d.x, NaN); y = _feadNum(d.y, NaN);
     }
@@ -2361,6 +2436,12 @@ function veFeadBuildSystem(nodeList, connList, opt){
     // düzeltiliyor (montaj kipindeki iki-geçiş kalıbının aynısı).
     cfg.tensioner.freeAngleDeg = out.armAbsDeg;
     delete cfg.tensioner.sense;
+    // YÖN BURADA TAZELENİR. Yukarıdaki ilk okuma rota kurulur kurulmaz
+    // yapılıyor; zarf kipinde o an gergi kasnağının merkezi HENÜZ YOKTUR
+    // (pivot + kol açısından türüyor ve açı bu blokta seçiliyor). Tazeleme
+    // olmasaydı ilk çözüm bir adım geride kalırdı: model çözülür, sonuç
+    // doğru, ama `spin` 0 — yani "yön okunamadı".
+    out.spin = veFeadNaturalSense(order);
   }
 
   var sys;
@@ -3192,6 +3273,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadPowerCurve: veFeadPowerCurve, veFeadHasPowerCurve: veFeadHasPowerCurve,
     veFeadInterpKw: veFeadInterpKw,
     veFeadPivotFromArm: veFeadPivotFromArm,
+    veFeadTensionerBoxMm: veFeadTensionerBoxMm,
+    veFeadTensionerCenter: veFeadTensionerCenter,
     VE_FEAD_EXAMPLES: VE_FEAD_EXAMPLES, veFeadExampleKeys: veFeadExampleKeys,
     veFeadRemapDutyKw: veFeadRemapDutyKw,
     veFeadExampleOf: veFeadExampleOf, veFeadExampleNodes: veFeadExampleNodes
