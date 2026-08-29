@@ -3290,11 +3290,108 @@ yazıyordu (aynı sınıfın **dördüncü** tekrarı); §8.2 türetilen efektif
 
 Kapı dokuz mutasyonla ölçüldü, dokuzu da kırmızı.
 
-###### ÖLÇÜLMEDİ (karar buna dayanmıyor)
+###### ~~ÖLÇÜLMEDİ~~ → ÖLÇÜLDÜ (2026-08-29, parça çizimi)
 
-Gergi **gövde cıvatasının** ekseni ile **kol dönme ekseninin** eşeksenli olup
-olmadığı — parça çizimi depoda yok. Model ikisini bir sayıyor; eksantrik bir
-gövdede montaj noktası pivottan bir miktar kaçık olurdu.
+> Bu madde şunu diyordu: *"Gergi gövde cıvatasının ekseni ile kol dönme
+> ekseninin eşeksenli olup olmadığı — parça çizimi depoda yok."* Kullanıcı
+> çizimi gönderdi (*"Genelde hemen hemen tüm otomatik gergilerin görünümü
+> böyle. Yani teknik resimleri bu."*) ve varsayım **ölçüldü**: gövdenin
+> merkezî bağlantı deliği kolun dönme ekseniyle **eşmerkezli**. Yani
+> "girilen montaj koordinatı = pivot" bir varsayım değil artık, okunmuş bir
+> ölçü. Eksantrik gövdeli bir gergide ikisi ayrılırdı; bugün elde öyle bir
+> parça YOK ve model onları bir saymaya devam ediyor.
+
+##### KOL AÇISININ İMALAT KARŞILIĞI — KONUM PİMİ (2026-08-29)
+
+Aynı çizim ikinci bir şey getirdi ve o **yeni bir sonuç**: zarf bir açı
+SEÇİYOR (θ*), ama atölyeye gidecek talimat *"gövdeyi 236,1°'ye kur"* değildir.
+Gövdeyi **merkezî cıvata TUTAR — saatini BELİRLEMEZ**; saati gövdeden bloğa
+giren bir **konum pimi** sabitler. Seçimin imalat karşılığı pim deliğinin
+yeridir.
+
+```
+pim açısı = θ* + Δ_parça          (E9843: Δ = −113,00°, r = 31,00 mm)
+```
+
+**ÖLÇÜLDÜ — çizimin kendi aritmetiği tastamam kapanıyor:**
+
+| ne | hesap | çizimin yazdığı | fark |
+|----|-------|-----------------|------|
+| pim yarıçapı | `√(19,51² + 24,09²)` = 30,9995 | — | — |
+| pim açısı (gövdeye göre) | `atan(24,09/19,51)` = 50,9967° | **51°** | 0,003° |
+| kol çalışma açısı | 360 − 16 | **344°** (MEAN ANGLE) | birebir |
+| pim mutlak (3. bölge) | 180 + 51 | — | — |
+| **Δ_parça** | 231 − 344 | — | **−113,00°** |
+
+**OFSET NEDEN PARÇA SABİTİ:** pim deliği GÖVDEDE, kolun gövdeye göre çalışma
+konumu ise yayla sabitlenmiş. Gövdeyi döndürmek ikisini **birlikte** döndürür
+→ aradaki açı gövdenin saatinden bağımsız.
+
+**ÇİZİM KÜNYENİN KENDİSİNİ DE DOĞRULUYOR — bağımsız kaynak.** Çizim
+*"28° FREEARM-MEAN ROTATION"* yazıyor; **aynı sayı** tedarikçi raporunun yay
+künyesinden `(22,07 − 8,60)/0,480 = 28,0625°` çıkıyor — **0,06°**. İki
+bağımsız belge (parça çizimi ↔ Gates raporu), tek sayı.
+
+**SAYI PARÇAYA AİT, MEKANİZMA GENEL.** Kullanıcının *"hepsi böyle görünür"*
+sözü MEKANİZMA için geçerli (tek merkezî cıvata + saati belirleyen konum
+pimi); yarıçap ve ofset PARÇAYA aittir. Kütüphanenin kendi kuralı burada da
+geçerli: çizimi olmayan parçaya sayı **UYDURULMAZ** — `veFeadPinPlan`
+`ok:false` döner ve sebebi adıyla yazar (`T38624 için parça çizimi yok`).
+Kodu hiç olmayan dört AG00976 kaydında sebep başka: *"parça kodu yok"*.
+
+| Yüzey | Ne | Nerede |
+|-------|-----|--------|
+| Köprü | `veFeadPinPlan(td, armAbsDeg)` — tek üretici | `fead-model.js` |
+| Kütüphane | `VE_FEAD_TEN_PIN` · `veFeadTenPin` · `veFeadTenPinAngle` | `fead-tensioners.js` |
+| Panel | zarf **ve** montaj okumasında iki satır + gerekçe notu | `veFeadPinRows` / `veFeadPinNote` |
+| Rapor | §8.7 içinde `<h4>` + (4.8) + Tablo C satırları | `_frPinBlock` |
+| Teori | §4.5'in son paragrafı + (4.8) + §10'da iki sembol | `fead-theory-source.html` |
+
+**PİM İKİ KİPTE DE KURULUYOR** ve bu bir genişletme değil bir zorunluluk:
+montaj kipinde de kol çalışma açısı bir ÇIKTIDIR (`montajDeg` = pivot →
+girilen merkez). Yalnız zarf kipinde kurulsaydı montaj kipinde hesaplanan
+sayı hiçbir yerden okunmayan **ölü veri** olurdu — bu deponun tekrar eden
+hata sınıfı.
+
+**PARÇA KODU KAYDA KOPYALANIR VE KODSUZ KÜNYEDE SİLİNİR** (`td.tenPart`).
+Silinmeseydi bir künyeden diğerine geçince yeni gerginin pimi ESKİ parçanın
+çizimiyle hesaplanırdı — sayı çıkar, uyarı çıkmaz. Kopya olması ise
+kütüphanenin kendi kuralı (`structural-materials.js` kalıbı): katalog sürümü
+değişse de kaydedilmiş proje kendiliğinden değişmez.
+
+###### AYNI TURDA ÇIKAN SESSİZ KUSUR — LaTeX kaçışı JS'te YUTULUYOR
+
+Pim denklemi yazılırken çıktı ve **önceden de vardı**: rapor üreteci
+denklemleri JS dizgisi olarak kuruyor, orada `'\;'` **tek** ters bölü ile
+yazılırsa JS onu yiyip düz `;` bırakıyor. Belge yine üretiliyor, hata
+çıkmıyor — yalnız denklem **yalan söylüyor**:
+
+| JS kaynağında yazan | KaTeX'in gördüğü | ekranda |
+|---|---|---|
+| `\;` (çift) | `\;` | ince boşluk ✓ |
+| `\;` (tek) | `;` | **noktalı virgül** ✗ |
+| `\\theta` (çift) | `\theta` | θ ✓ |
+| `\theta` (tek) | SEKME + `heta` | **çöp** ✗ |
+
+**ÖLÇÜLDÜ: 21 yerde** (§8.7'nin pivot ve zarf denklemleri). Aynı sınıfın daha
+sert hâli `'	heta'` → **SEKME + "heta"**. Kapı ÜRETİLEN METNE bakıyor
+(`fead-pin.test.js`): her `$$…$$` ve `\(…\)` bloğunda ters bölüsüz `;`,
+sekme ve çıplak komut gövdesi (`theta`, `text`, `Delta`, `frac`, `circ`,
+`big`, `sin`, `cos`) aranıyor. İki mutasyonla ölçüldü — bir `\;`'yi geri
+`\;` yapmak ve pim denkleminin `\theta`'sını tekilleştirmek — ikisi de
+kırmızı.
+
+Kapı **on üç mutasyonla** ölçüldü, on üçü de kırmızı: ofsetin işaretini
+çevirme, yarıçapı kaydırma, kodsuz künyede eski kodu bırakma, kodu hiç
+kopyalamama, çizimi olmayan parçaya E9843'ün sayısını verme, `build.pin`'i
+hiç kurmama, yalnız zarf kipinde kurma, panelin iki okumasından pim satırını
+tek tek düşürme, künye yokken paneli susturma, raporun pim bloğunu düşürme,
+eşmerkezlilik notunu silme, künye yokken rapora sayı uydurtma.
+
+> Bir mutasyon (künye yokken paneli susturma) **ilk turda YEŞİL kaldı** ve
+> aynı dersi tekrarladı: satır ile açıklama notunun İKİSİ de *"Konum pimi"*
+> yazıyor, dolayısıyla yalnız metne bakan kapı satırın düşürülmesini
+> geçiriyordu. Kapı artık satırın kendi işaretine bakıyor.
 
 ##### GERGİ KÜNYE KÜTÜPHANESİ — `js/fead-tensioners.js` (14 kayıt, 2 aile)
 

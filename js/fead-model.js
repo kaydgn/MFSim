@@ -832,6 +832,63 @@ function veFeadEnvelopeOf(build, opt){
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  KOL AÇISININ İMALAT KARŞILIĞI — KONUM PİMİ (`veFeadPinPlan`)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Zarf bir açı SEÇİYOR (θ*), ama montaj atölyesine "gövdeyi 236,1°'ye kur"
+// demek bir talimat değil. Gerçek gergilerde gövdenin saat konumunu bir
+// KONUM PİMİ belirliyor: merkezî cıvata gövdeyi tutuyor, pim onu döndürmüyor.
+// Dolayısıyla seçimin imalat karşılığı pimin nereye açılacağıdır.
+//
+// KULLANICININ GÖNDERDİĞİ PARÇA ÇİZİMİ (E9843) bunu ölçülebilir yaptı:
+// pim deliği merkezden `r` uzakta ve kolun ÇALIŞMA konumuna göre sabit bir
+// `ofset` açısında duruyor. Ofsetin parça sabiti olmasının sebebi mekanik:
+// pim deliği GÖVDEDE, kolun gövdeye göre çalışma konumu ise yay tarafından
+// sabitlenmiş (28° free-arm→mean). Gövdeyi döndürmek ikisini BİRLİKTE
+// döndürür → aradaki açı değişmez.
+//
+//     pim açısı = θ_kol + ofset          (E9843: ofset = −113,00°)
+//
+// SAYI YALNIZ ÇİZİMİ ELDE OLAN PARÇAYA AİT. Mekanizma genel (kullanıcı:
+// "hemen hemen tüm otomatik gergilerin teknik resmi bu"), ama yarıçap ve
+// ofset parçaya özgüdür ve UYDURULMAZ: kodu olmayan ya da çizimi olmayan
+// künyede `ok:false` döner ve sebebi yazılır. Bu, kütüphanenin kendi kuralı
+// (doğrulanamayan dört AG00976 kaydı `part` taşımıyor).
+//
+// GEÇERLİLİK SINIRI SONUCUN İÇİNDE: dönen kayıt kaynağını (`src`) taşıyor.
+function veFeadPinPlan(td, armAbsDeg){
+  var out = { ok:false, part:'', rMm:NaN, offsetDeg:NaN, angleDeg:NaN, src:'', reason:'' };
+  var part = (td && td.tenPart) ? String(td.tenPart) : '';
+  var a = _feadNum(armAbsDeg, NaN);
+  if(!part){
+    out.reason = 'Gergi parça kodu yok — pim künyesi yalnız kütüphaneden '
+               + 'uygulanan ve kodu raporunda geçen künyelerde var.';
+    return out;
+  }
+  out.part = part;
+  if(typeof veFeadTenPinAngle !== 'function'){
+    out.reason = 'Gergi künye kütüphanesi yüklenmedi (js/fead-tensioners.js).';
+    return out;
+  }
+  var pk = veFeadTenPin(part);
+  if(!pk){
+    out.reason = part + ' için parça çizimi yok — pim yarıçapı ve ofseti '
+               + 'UYDURULMAZ.';
+    return out;
+  }
+  out.rMm = pk.rMm; out.offsetDeg = pk.offsetDeg; out.src = pk.src;
+  if(!Number.isFinite(a)){
+    out.reason = 'Kol çalışma açısı henüz çözülmedi.';
+    return out;
+  }
+  var pa = veFeadTenPinAngle(part, a);
+  if(!pa){ out.reason = 'Pim açısı hesaplanamadı.'; return out; }
+  out.angleDeg = pa.angleDeg;
+  out.ok = true;
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 //  KANVAS = KAYIŞ DÜZLEMİ — konum artık FİZİKSEL
 // ═══════════════════════════════════════════════════════════════════════════
 //
@@ -2405,6 +2462,15 @@ function veFeadBuildSystem(nodeList, connList, opt){
     out.freeAngleDeg = cfg.tensioner.freeAngleDeg;
   }
 
+  // ── KOL AÇISININ İMALAT KARŞILIĞI ──────────────────────────────────────
+  // Pim planı İKİ KİPTE DE kuruluyor, çünkü ikisinde de kol çalışma açısı bir
+  // ÇIKTIDIR: zarf kipinde ölçütten seçiliyor, montaj kipinde girilen kasnak
+  // merkezinden türüyor (montajDeg = pivot → merkez). Kolun nasıl bulunduğu
+  // değişse de "gövdeyi bu saate kuran pim nerede" sorusu aynı.
+  var _armWork = Number.isFinite(out.armAbsDeg) ? out.armAbsDeg
+               : (mount && mount.ok ? mount.montajDeg : NaN);
+  out.pin = veFeadPinPlan(td, _armWork);
+
   // GEOMETRİ PROBU — makeSystem YALNIZ YAPIYI doğrular (alanlar var mı, tek
   // krank/gergi var mı); kayış yolunun gerçekten çözülüp çözülmediğine BAKMAZ.
   // O denetimler (sarım değişmezi, teğet çözümü, kasnak çakışması) ancak
@@ -3192,6 +3258,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadPowerCurve: veFeadPowerCurve, veFeadHasPowerCurve: veFeadHasPowerCurve,
     veFeadInterpKw: veFeadInterpKw,
     veFeadPivotFromArm: veFeadPivotFromArm,
+    veFeadPinPlan: veFeadPinPlan,
     VE_FEAD_EXAMPLES: VE_FEAD_EXAMPLES, veFeadExampleKeys: veFeadExampleKeys,
     veFeadRemapDutyKw: veFeadRemapDutyKw,
     veFeadExampleOf: veFeadExampleOf, veFeadExampleNodes: veFeadExampleNodes

@@ -1434,12 +1434,23 @@ function veFeadTensionerLibCard(node){
       + '((M<sub>çalışma</sub> − M<sub>ön</sub>)/k) — ölçülen bandın içinde.');
 
   h += _feadHint('<b>Kütüphane bir SERTİFİKA değil:</b> 14 Gates raporundan '
-    + 'okunmuş künyeler. Parça numarası <b>uydurulmadı</b> — raporlar yazmıyor, '
-    + 'kayıtlar kaynak raporla adlandırıldı. <b>Kol boyu · ön yük · katsayı · '
-    + 'kasnak çapı</b> parçanın, <b>çalışma momenti</b> ise montajın: aynı gergi '
-    + 'AG0868’de 8PK’da 22,57 · 6PK’da 19,04 · 4PK’da 16,07 Nm ile kuruluyor. '
-    + 'Künye uygulamak <b>pivot ve kol açısını YAZMAZ</b> — ikisi de motorun '
-    + 'verisi, parçanın değil.');
+    + 'okunmuş künyeler. Parça kodu <b>uydurulmadı</b> — raporun kendi '
+    + '<i>Drive Notes</i> alanından okundu (E9843 · T38624 · T38665 · T38519); '
+    + 'arşivde raporu olmayan dört kayıt kod <b>taşımıyor</b>. <b>Kol boyu · '
+    + 'ön yük · katsayı · kasnak çapı · parça kodu</b> parçanın, <b>çalışma '
+    + 'momenti</b> ise montajın: aynı gergi AG0868’de 8PK’da 22,57 · 6PK’da '
+    + '19,04 · 4PK’da 16,07 Nm ile kuruluyor. Künye uygulamak <b>pivot ve kol '
+    + 'açısını YAZMAZ</b> — ikisi de motorun verisi, parçanın değil.');
+  var _pk = (typeof veFeadTenPin === 'function' && td.tenPart)
+    ? veFeadTenPin(td.tenPart) : null;
+  if(td.tenPart)
+    h += _feadHint(_pk
+      ? '<b>Pim künyesi VAR</b> (' + _feadEsc(td.tenPart) + '): gövdenin montajdaki '
+        + 'saatini belirleyen konum piminin yarıçapı ve ofseti parça çiziminden '
+        + 'okundu, seçilen kol açısının imalat karşılığı aşağıda basılıyor.'
+      : '<b>Pim künyesi yok</b> (' + _feadEsc(td.tenPart) + '): parça çizimi elde '
+        + 'olmadığı için pim yarıçapı ve ofseti <b>uydurulmuyor</b>. Kol açısı yine '
+        + 'seçiliyor; imalata geçmek için o iki sayı parçanın çiziminden okunmalı.');
   return _feadCard('Gergi Künye Kütüphanesi', liste.length + ' ölçülmüş künye',
     'var(--accent-primary)', h);
 }
@@ -1527,6 +1538,7 @@ function veFeadEnvelopeReadout(node){
       _feadFmt(b.envelope.feasibleDeg, 0) + '° / 360°',
       b.envelope.feasibleDeg < 20 ? 'var(--accent-warning)' : 'var(--text-primary)');
   }
+  h += veFeadPinRows(b.pin, satir);
   h += '</div>';
 
   var not = _feadHint('Seçim ölçütü <b>14 Gates sisteminden geriye çözüldü</b>: kolun '
@@ -1539,9 +1551,45 @@ function veFeadEnvelopeReadout(node){
     + 'YOK. Zarfın hangi yayının motor bloğunda fiziksel olarak kullanılabilir olduğunu '
     + 'program bilmiyor; ölçülen 14 sistemin birinde en iyi nokta motorun öteki yanında '
     + 'kaldı. Sonuç bir <b>öneridir</b> — gövdenin saati belliyse açıyı sabitleyin.');
+  not += veFeadPinNote(b.pin);
   if(b.warnings && b.warnings.length)
     not += _feadHint('<b style="color:var(--accent-warning);">' + _feadEsc(b.warnings[0]) + '</b>');
   return alan + kilit + h + not;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PİM SATIRLARI — seçilen açının İMALAT karşılığı
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Zarf bir açı seçiyor; atölyeye gidecek talimat ise "gövdeyi bu saate kuran
+// pim nerede" sorusunun cevabı. İki okuyucu (zarf ve montaj okuması) AYNI
+// üreticiden besleniyor — ikinci bir kopya, iki yüzeyin sessizce ayrışması
+// demek olurdu (bu modülün tekrar eden hata sınıfı).
+//
+// SAYI YOKSA SESSİZ KALINMIYOR: pim künyesi olmayan parçada satır YAZILIR ve
+// sebebi söylenir. Sessiz bırakılsaydı okuyucu "bu gergide pim yok" sanardı —
+// oysa pim var, ölçüsü bizde yok.
+function veFeadPinRows(pin, satir){
+  if(!pin) return '';
+  if(!pin.ok)
+    return satir('Konum pimi', '— ' + (pin.part || 'künye yok'), 'var(--text-muted)');
+  return satir('Konum pimi · yarıçap', _feadFmt(pin.rMm, 2) + ' mm')
+       + satir('Konum pimi · AÇI (imalat)', _feadFmt(pin.angleDeg, 2) + '°',
+               'var(--accent-warning)');
+}
+
+function veFeadPinNote(pin){
+  if(!pin) return '';
+  if(!pin.ok)
+    return _feadHint('<b>Konum pimi:</b> ' + _feadEsc(pin.reason) + ' Mekanizma genel '
+      + '(merkezî cıvata + saati belirleyen bir konum pimi), ama pim yarıçapı ve '
+      + 'ofseti PARÇAYA özgüdür ve uydurulmaz.');
+  return _feadHint('<b>Seçilen açı böyle GERÇEKLENİYOR:</b> gövdeyi merkezî cıvata '
+    + 'tutar, saatini <b>konum pimi</b> belirler. Pim deliği gövdede, kolun gövdeye '
+    + 'göre çalışma konumu ise yayla sabit → aradaki açı bir <b>parça sabitidir</b> '
+    + '(' + _feadEsc(pin.part) + ': ' + _feadFmt(pin.offsetDeg, 2) + '°). Yani '
+    + '<b>pim açısı = kol açısı ' + (pin.offsetDeg < 0 ? '−' : '+') + ' '
+    + _feadFmt(Math.abs(pin.offsetDeg), 2) + '°</b>. Kaynak: ' + _feadEsc(pin.src) + '.');
 }
 
 // Kol açısı sabitleme anahtarı. SABİTLENİRKEN seçilen açı düğüme YAZILIR —
@@ -1607,11 +1655,18 @@ function veFeadMountReadout(node){
   } else {
     h += satir('Yay kurulması', '— (çalışma momenti girilmedi)', 'var(--accent-warning)');
   }
+  // PİM MONTAJ KİPİNDE DE OKUNUR: kol çalışma açısı burada da bir ÇIKTI
+  // (montajDeg = pivot → girilen merkez), yani "gövdeyi bu saate kuran pim
+  // nerede" sorusu aynen geçerli. Aynı üreticiden besleniyor.
+  var _pinM = (typeof veFeadPinPlan === 'function')
+    ? veFeadPinPlan(td, m.montajDeg) : null;
+  h += veFeadPinRows(_pinM, satir);
   h += '</div>';
 
   var not = _feadHint('Serbest açı iki değerle gösterilir çünkü kolun dönüş yönüne (sense) '
     + 'bağlıdır; hangisinin kullanıldığını çekirdek geometriden bulur ve Çözücü panelindeki '
     + '"Algılanan Model" tablosunda yazar.');
+  not += veFeadPinNote(_pinM);
   if(m.notes.length)
     not += _feadHint('<b style="color:var(--accent-warning);">' + _feadEsc(m.notes.join(' ')) + '</b>');
   return h + not;
@@ -4116,6 +4171,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadApplyBeltModeBadge: veFeadApplyBeltModeBadge,
     veFeadSyncDrag: veFeadSyncDrag, veFeadReselectArm: veFeadReselectArm,
     veFeadEnvelopeReadout: veFeadEnvelopeReadout, veFeadSetPinArm: veFeadSetPinArm,
+    veFeadPinRows: veFeadPinRows, veFeadPinNote: veFeadPinNote,
     veFeadTensionerLibCard: veFeadTensionerLibCard, veFeadApplyTenLib: veFeadApplyTenLib,
     veFeadSet: veFeadSet, veFeadPlaceFromCoords: veFeadPlaceFromCoords,
     VE_FEAD_COORD_KEYS: VE_FEAD_COORD_KEYS,

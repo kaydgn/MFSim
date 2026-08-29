@@ -158,6 +158,87 @@ var VE_FEAD_TEN_BAND = (function(){
   };
 })();
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  PARÇA ÇİZİMİ — MONTAJ CIVATASI, KOL EKSENİ VE KONUM PİMİ
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı (2026-08-29) E9843'ün parça çizimini verdi: *"Genelde hemen hemen
+// tüm otomatik gergilerin görünümü böyle. Yani teknik resimleri bu."*
+//
+// ── AÇIK KALAN SORU KAPANDI: CIVATA İLE PİVOT EŞEKSENLİ ───────────────────
+// Model, gerginin motora bağlandığı noktayı kolun dönme ekseni SAYIYORDU ve bu
+// bir VARSAYIMDI (kanonik kayıtta *"ölçülmedi"* diye işaretliydi): eksantrik
+// bir gövdede montaj noktası pivottan kaçık olurdu ve zarfın merkezi yanlış
+// yere düşerdi. Çizim bunu kapatıyor — gövdenin büyük dairesinin merkezinde
+// eşmerkezli bir delik var ve kol tam o eksende dönüyor. Yani:
+//
+//     montaj cıvatası  ≡  kol dönme ekseni  ≡  pivot
+//
+// Bu, `angleMode:'envelope'` girdisinin tanımının ta kendisi ve artık ölçülü.
+//
+// ── SAAT KONUMUNU PİM BELİRLİYOR — ZARF FİZİKSEL OLARAK GERÇEKLENİYOR ─────
+// Çizimin başlığı doğrudan bunu söylüyor:
+//     "E9843 PIN POSITION FOR THE 344° MEAN ANGLE AND 22.5 Nm SPRING TORQUE
+//      @ 28° FREEARM-MEAN ROTATION"
+// Yani gövdenin montajdaki saati serbest bir tercih DEĞİL, bir KONUM PİMİYLE
+// sabitleniyor — ve çizim, istenen çalışma açısı için pimin nereye konacağını
+// veriyor. Zarf seçimi (θ*) bu yüzden soyut bir optimizasyon değil: imalatta
+// pimin açısı olarak gerçekleniyor.
+//
+// ── ÇİZİMDEN OKUNAN GEOMETRİ — aritmetiği kendi içinde tutuyor ────────────
+//   basılı ölçüler   : yatay 19,51 mm · dikey 24,09 mm · açı 51° · kol 16°
+//   pim yarıçapı     : √(19,51² + 24,09²) = 30,9995 ≈ 31,00 mm
+//   pim açısı        : atan(24,09/19,51) = 50,997° ↔ basılı 51°  (−0,003°)
+//   kol mutlak açısı : 360 − 16 = 344,0° ↔ künyedeki MEAN ANGLE  (birebir)
+//   pim (sol-alt)    : 180 + 51,0 = 231,00°
+//   PİM − KOL(mean)  : 231,00 − 344,00 = −113,00°   ← PARÇA SABİTİ
+//
+// OFSET NEDEN PARÇA SABİTİ: pim deliği GÖVDEDE, kolun çalışma konumu da
+// gövdeye göre yay tarafından sabitlenmiş (28° free-arm→mean). Gövdeyi
+// döndürmek ikisini BİRLİKTE döndürür, dolayısıyla aradaki açı değişmez.
+// Bunun sonucu doğrudan kullanılabilir bir imalat çıktısı:
+//
+//     pim açısı = θ* + ofset
+//
+// ── ÇİZİMİN KENDİ ÇAPRAZ DOĞRULAMASI ─────────────────────────────────────
+// Çizim "28° FREEARM-MEAN ROTATION" diyor; künyeden hesaplanan
+// (M_mean − M₀)/k = (22,07 − 8,60)/0,480 = 28,0625° — **0,06° fark**. İki
+// bağımsız kaynak (parça çizimi ↔ tedarikçi raporunun yay künyesi) aynı sayıyı
+// veriyor. Çizimdeki yay momenti 22,5 Nm ise nominal; raporun künyesi 22,07.
+//
+// ── SAYILAR E9843'E AİT, MEKANİZMA GENEL ─────────────────────────────────
+// Kullanıcının söylediği "hepsi böyle görünür" MEKANİZMA için geçerli (tek
+// merkezî cıvata + saati belirleyen bir konum pimi). Yarıçap ve ofset ise
+// PARÇAYA aittir ve yalnız çizimi elde olan parça için yazılıdır. Elde
+// olmayan parçaya sayı UYDURULMAZ — okuyucular `null` alır ve panel/rapor
+// "pim künyesi yok" der.
+var VE_FEAD_TEN_PIN = {
+  E9843: {
+    rMm: 31.00,
+    offsetDeg: -113.00,
+    src: 'E9843 parça çizimi — "PIN POSITION FOR THE 344° MEAN ANGLE AND '
+       + '22.5 Nm SPRING TORQUE @ 28° FREEARM-MEAN ROTATION"; basılı ölçüler '
+       + '19,51 / 24,09 mm ve 51°'
+  }
+};
+
+// Parçanın pim künyesi — yoksa null (uydurulmaz).
+function veFeadTenPin(part){
+  var r = part && VE_FEAD_TEN_PIN[part];
+  if(!r) return null;
+  return { part: part, rMm: r.rMm, offsetDeg: r.offsetDeg, src: r.src };
+}
+
+// Seçilen çalışma açısını GERÇEKLEYEN pim açısı. Zarf seçiminin imalat
+// karşılığı budur: "θ*'ı istiyorsan pimi buraya koy."
+function veFeadTenPinAngle(part, armAbsDeg){
+  var p = veFeadTenPin(part);
+  if(!p || !Number.isFinite(Number(armAbsDeg))) return null;
+  var a = (Number(armAbsDeg) + p.offsetDeg) % 360;
+  if(a < 0) a += 360;
+  return { part: part, rMm: p.rMm, offsetDeg: p.offsetDeg, angleDeg: a, src: p.src };
+}
+
 // Nominal (çalışma) kol dönmesi — SALT YAY KÜNYESİNDEN.
 function veFeadTenRelNom(rec){
   if(!rec) return NaN;
@@ -220,6 +301,11 @@ function veFeadTensionerApply(td, rec){
   td.od       = rec.od;
   td.contact  = rec.contact;
   if(rec.inertia != null) td.inertia = rec.inertia;
+  // PARÇA KODU DA KOPYALANIR — ve YOKSA SİLİNİR. Kod, pim künyesinin (ve
+  // ileride başka parça verisinin) anahtarıdır; kayıtta yoksa geride bırakmak
+  // bir sonraki künyenin pimini ÖNCEKİ parçanın çizimiyle hesaplatırdı.
+  // Doğrulanamayan dört AG00976 kaydı bilerek kodsuz; silme o boşluğu korur.
+  if(rec.part) td.tenPart = rec.part; else delete td.tenPart;
   td.tenLib    = rec.key;
   td.tenLibVer = VE_FEAD_TEN_LIB_VERSION;
   return td;
@@ -263,6 +349,8 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_TENSIONER_DB: VE_FEAD_TENSIONER_DB,
     VE_FEAD_TEN_BAND: VE_FEAD_TEN_BAND,
     veFeadTenRelNom: veFeadTenRelNom,
+    VE_FEAD_TEN_PIN: VE_FEAD_TEN_PIN,
+    veFeadTenPin: veFeadTenPin, veFeadTenPinAngle: veFeadTenPinAngle,
     veFeadTensionerList: veFeadTensionerList,
     veFeadTensionerOf: veFeadTensionerOf,
     veFeadTensionerFind: veFeadTensionerFind,

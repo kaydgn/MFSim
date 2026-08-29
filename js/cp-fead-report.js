@@ -1554,8 +1554,8 @@ function _frPivotBlock(R){
        + 'FEAD bilgi sayfasında pivot satırı <b>yoktur</b>; oradaki gergi satırı diğer bütün '
        + 'kasnaklarla aynı şeydir — kasnak merkezi.</p>';
     h += '<p>Kasnak merkezi pivottan ve seçilen kol açısından çıkar:</p>';
-    h += '<div class="eq">$$ \\mathbf{c} \;=\; \\mathbf{p} \;+\; a\\,\\big(\\cos\\theta_{\\text{kol}},\\ '
-       + '\\sin\\theta_{\\text{kol}}\\big) \;=\; \\big(' + _frF(px, 2) + ',\\ ' + _frF(py, 2) + '\\big)'
+    h += '<div class="eq">$$ \\mathbf{c} \\;=\\; \\mathbf{p} \\;+\\; a\\,\\big(\\cos\\theta_{\\text{kol}},\\ '
+       + '\\sin\\theta_{\\text{kol}}\\big) \\;=\\; \\big(' + _frF(px, 2) + ',\\ ' + _frF(py, 2) + '\\big)'
        + ' + ' + _frF(a, 1) + '\\big(\\cos ' + _frF(kol360, 2) + '^\\circ,\\ \\sin '
        + _frF(kol360, 2) + '^\\circ\\big) = \\big(' + _frF(cx, 2) + ',\\ ' + _frF(cy, 2) + '\\big)'
        + ' $$<span class="tag">(' + (_frEqRef.pivot = _frEq()) + ')</span></div>';
@@ -1568,8 +1568,8 @@ function _frPivotBlock(R){
   h += '<p>Kapanışı veren sayı, gergi üreticisinin parça çiziminde yazan <b>kolun çalışma '
      + '(Mean) konumundaki mutlak açısıdır</b>. Kol boyu da künyededir; pivot kolun öbür '
      + 'ucudur:</p>';
-  h += '<div class="eq">$$ \\mathbf{p} \;=\; \\mathbf{c} \;-\; a\\,\\big(\\cos\\theta_{\\text{kol}},\\ '
-     + '\\sin\\theta_{\\text{kol}}\\big) \;=\; \\big(' + _frF(cx, 2) + ',\\ ' + _frF(cy, 2) + '\\big)'
+  h += '<div class="eq">$$ \\mathbf{p} \\;=\\; \\mathbf{c} \\;-\\; a\\,\\big(\\cos\\theta_{\\text{kol}},\\ '
+     + '\\sin\\theta_{\\text{kol}}\\big) \\;=\\; \\big(' + _frF(cx, 2) + ',\\ ' + _frF(cy, 2) + '\\big)'
      + ' - ' + _frF(a, 1) + '\\big(\\cos ' + _frF(kol360, 2) + '^\\circ,\\ \\sin '
      + _frF(kol360, 2) + '^\\circ\\big) = \\big(' + _frF(px, 2) + ',\\ ' + _frF(py, 2) + '\\big)'
      + ' $$<span class="tag">(' + (_frEqRef.pivot = _frEq()) + ')</span></div>';
@@ -1701,6 +1701,63 @@ var VE_FR_ENV_CRITERIA = [
   { ad: 'en küçük sarım açısı en büyük',                med: 53.1, hit: 0 }
 ];
 
+// ── θ* NASIL GERÇEKLENİYOR — KONUM PİMİ ────────────────────────────────────
+//
+// Zarf bir açı SEÇİYOR; atölyeye gidecek talimat ise "gövde hangi saate
+// kurulacak" değil, "pim nereye açılacak"tır. Gerçek gergilerde gövdeyi
+// merkezî bir cıvata tutuyor (dolayısıyla cıvata gövdenin saatini
+// BELİRLEMİYOR) ve saati bir KONUM PİMİ sabitliyor.
+//
+// Bölüm bir parça çiziminden ÖLÇÜLDÜ ve sayı yalnız o parçaya ait. Çizimi
+// olmayan künyede blok yine basılıyor ama sayı YERİNE SEBEP yazılıyor —
+// "pim yok" ile "pim ölçüsü bizde yok" apayrı şeyler ve okuyucu ikincisini
+// birincisi sanmamalı.
+function _frPinBlock(R){
+  var b = R.build || {};
+  var pin = b.pin;
+  var h = '<h4>Seçilen açı nasıl gerçekleniyor — konum pimi</h4>';
+  h += '<p>Bir montaj talimatı açı değil <b>delik</b> ister. Otomatik gergilerde gövdeyi '
+     + 'merkezî bir cıvata tutar — o cıvata gövdenin <b>saatini belirlemez</b>, yalnız '
+     + 'bastırır. Saati, gövdeden motor bloğuna giren bir <b>konum pimi</b> sabitler. '
+     + 'Dolayısıyla (' + (_frEqRef.envCrit || '4.7') + ')\'nin seçtiği \\( \\theta^{*} \\) '
+     + 'imalata pim deliğinin yeri olarak geçer.</p>';
+  h += '<p>Pim deliği <b>gövdededir</b>; kolun gövdeye göre çalışma konumu ise yay '
+     + 'tarafından sabitlenmiştir (' + (_frEqRef.envNom || '4.6') + '). Gövdeyi döndürmek '
+     + 'ikisini <b>birlikte</b> döndürür, dolayısıyla aradaki açı gövdenin saatinden '
+     + 'bağımsızdır — bir <b>parça sabiti</b>:</p>';
+  h += '<div class="eq">$$ \\theta_{\\text{pim}} \\;=\\; \\theta^{*} + \\Delta_{\\text{parça}} '
+     + '$$<span class="tag">(' + (_frEqRef.envPin = _frEq()) + ')</span></div>';
+
+  if(pin && pin.ok){
+    h += '<p>Bu sistemin gergisi <b>' + _frEsc(pin.part) + '</b>; parça çiziminden okunan '
+       + 'değerler \\( r = ' + _frFs(pin.rMm, 2) + '\\ \\text{mm} \\), '
+       + '\\( \\Delta_{\\text{parça}} = ' + _frFs(pin.offsetDeg, 2) + '^\\circ \\). '
+       + 'Seçilen \\( \\theta^{*} = ' + _frFs(b.armAbsDeg, 2) + '^\\circ \\) ile pim, pivot '
+       + 'merkezinden <b>' + _frFs(pin.rMm, 2) + ' mm</b> uzakta ve <b>'
+       + _frFs(pin.angleDeg, 2) + '°</b> yönünde durur.</p>';
+    h += '<div class="note"><span class="t">Parça çizimi künyenin kendisini de doğruluyor'
+       + '</span>Çizim <b>“28° FREEARM-MEAN ROTATION”</b> yazıyor; aynı sayı yay '
+       + 'künyesinden \\( (M_{\\text{çalışma}}-M_0)/k \\) ile <b>'
+       + _frFs(b.mount && b.mount.relMeanDeg, 4) + '°</b> çıkıyor. İki <b>bağımsız</b> '
+       + 'kaynak (parça çizimi ↔ tedarikçi raporunun yay künyesi) aynı değeri veriyor — '
+       + '(' + (_frEqRef.envNom || '4.6') + ')\'nın kaynaktan bağımsız kanıtı.</div>';
+  } else {
+    h += '<div class="note warn"><span class="t">Bu gerginin pim künyesi belgede YOK</span>'
+       + (pin && pin.reason ? _frEsc(pin.reason) + ' ' : '')
+       + 'Mekanizma geneldir (merkezî cıvata + saati belirleyen konum pimi), ama pim '
+       + 'yarıçapı ve ofseti <b>parçaya özgüdür</b> ve uydurulmaz. \\( \\theta^{*} \\) '
+       + 'yine geçerlidir; imalata geçmek için gerginin parça çiziminden bu iki sayı '
+       + 'okunmalıdır.</div>';
+  }
+  h += '<div class="note"><span class="t">Cıvata ekseni = kol dönme ekseni</span>'
+     + 'Model, gövdenin montaj cıvatasını kolun dönme ekseniyle <b>aynı yerde</b> sayar. '
+     + 'Parça çiziminde gövdenin merkezî deliği kolun dönme ekseniyle eşmerkezlidir; '
+     + 'yani girilen montaj koordinatı doğrudan <b>pivottur</b>. Eksantrik gövdeli bir '
+     + 'gergide bu iki nokta ayrılırdı ve montaj koordinatı pivota bir miktar kaçık '
+     + 'olurdu.</div>';
+  return h;
+}
+
 function _frEnvelopeBlock(R){
   var b = R.build || {};
   if(b.angleMode !== 'envelope') return '';
@@ -1720,17 +1777,17 @@ function _frEnvelopeBlock(R){
   // ── Kuruluş denklemleri ──
   h += '<p>Kolun nominal (çalışma) dönüşü <b>salt yay künyesinden</b> gelir; geometri bu '
      + 'hesaba hiç girmez:</p>';
-  h += '<div class="eq">$$ \\theta_{\\text{nom}} \;=\; \\frac{M_{\\text{çalışma}} - M_0}{k} '
+  h += '<div class="eq">$$ \\theta_{\\text{nom}} \\;=\\; \\frac{M_{\\text{çalışma}} - M_0}{k} '
      + '$$<span class="tag">(' + (_frEqRef.envNom = _frEq()) + ')</span></div>';
   h += '<p>Servis bandı bu açının etrafında tanımlanır — yeni/uzun kayıştan yıpranmış/kısa '
      + 'kayışa kadar kolun gördüğü aralık:</p>';
-  h += '<div class="eq">$$ \\theta_{\\text{bağıl}} \\in \\big[\\,0,\; '
+  h += '<div class="eq">$$ \\theta_{\\text{bağıl}} \\in \\big[\\,0,\\; '
      + _frF(_frEnvMult(), 1) + '\\cdot\\theta_{\\text{nom}}\\,\\big] '
      + '$$<span class="tag">(' + (_frEqRef.envBand = _frEq()) + ')</span></div>';
   h += '<p>Ölçüt, bu bant boyunca take-up oranının (' + (_frEqRef.takeup || '4.3') + ') '
      + '<b>en küçük</b> değerini <b>en büyük</b> yapan montaj saatini seçer:</p>';
-  h += '<div class="eq">$$ \\theta^{*} \;=\; \\arg\\max_{\\theta}\; '
-     + '\\min_{\\theta_{\\text{bağıl}}}\; \\frac{dL}{d\\theta}\\big(\\theta,\\ '
+  h += '<div class="eq">$$ \\theta^{*} \\;=\\; \\arg\\max_{\\theta}\\; '
+     + '\\min_{\\theta_{\\text{bağıl}}}\\; \\frac{dL}{d\\theta}\\big(\\theta,\\ '
      + '\\theta_{\\text{bağıl}}\\big) '
      + '$$<span class="tag">(' + (_frEqRef.envCrit = _frEq()) + ')</span></div>';
   h += '<p><b>Fiziksel anlamı:</b> \\( T = M/(dL/d\\theta) \\) olduğu için take-up\'ın en '
@@ -1785,10 +1842,19 @@ function _frEnvelopeBlock(R){
         + _frFs(_frEnvCen(R, 1), 2) + '</b>', 'mm');
   h += tr2('<b>Türeyen efektif kayış boyu</b>', '<b>' + _frFs(b.beltLengthMm, 2) + '</b>', 'mm');
   h += tr2('Tasarım gerginliği (ankraj)', _frFs(b.springTensionN, 1), 'N');
+  if(b.pin && b.pin.ok){
+    h += tr2('Konum pimi · yarıçap — ' + _frEsc(b.pin.part), _frFs(b.pin.rMm, 2), 'mm');
+    h += tr2('<b>Konum pimi · açı</b> (θ* ' + (b.pin.offsetDeg < 0 ? '−' : '+') + ' '
+          + _frF(Math.abs(b.pin.offsetDeg), 2) + '°)',
+          '<b>' + _frFs(b.pin.angleDeg, 2) + '</b>', '°');
+  }
   h += '</table>';
 
   // ── Şekil: zarf haritası ──
   h += _frEnvelopeFigure(R, env);
+
+  // ── θ* NASIL GERÇEKLENİYOR — konum pimi ──
+  h += _frPinBlock(R);
 
   // ── Geçerlilik sınırı — BASILMASI ZORUNLU ──
   h += '<div class="note warn"><span class="t">Paketleme modelde YOK — sonuç bir ÖNERİDİR</span>'
@@ -3168,6 +3234,7 @@ if(typeof module !== 'undefined' && module.exports){
     _frTakeupRateFigure: _frTakeupRateFigure,
     _frDesignTensionBlock: _frDesignTensionBlock,
     _frPivotBlock: _frPivotBlock, _frEnvelopeBlock: _frEnvelopeBlock,
+    _frPinBlock: _frPinBlock,
     VE_FR_ENV_CRITERIA: VE_FR_ENV_CRITERIA, _frEnvMult: _frEnvMult,
     _frEnvelopeFigure: _frEnvelopeFigure,
     _frF: _frF, _frFs: _frFs, _frPct: _frPct, _frEsc: _frEsc, _frNum: _frNum,
