@@ -148,6 +148,13 @@ function veSyncSidebarScope() {
   if(typeof veStrStack !== 'undefined' && veStrStack.length) scope = 'structural-analysis';
   veSidebarScope = scope;
   veShowAllSidebarComponents();
+  // ŞERİT DE KAPSAMI GÖRMELİ. Şeritte kapsama bağlı öğeler var — bugün
+  // "Bu Modülün Kılavuzu" (js/guide-kit.js `veGuideCurrentId`, kapsamı buradan
+  // okuyor). Kapsam değişince şerit yeniden çizilmezse o düğüm bir sonraki
+  // rastgele tazelemeye (sekme değişimi, panel aç/kapa) kadar YANLIŞ durumda
+  // kalır: FEAD'e girdiniz, düğme hâlâ yok. Modül aç/kapa bu fonksiyondan
+  // geçen TEK nokta, dolayısıyla tazeleme de buraya ait.
+  if(typeof veRibbonRender === 'function') veRibbonRender();
 }
 
 // Bileşen tanımları (SVG sembolleri)
