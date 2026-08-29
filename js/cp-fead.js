@@ -88,8 +88,9 @@ var VE_FEAD_STARTER_LAYOUT = [
   { type:'fead-belt',    lx:40,  ly:20 },
   { type:'fead-layout',  lx:190, ly:20 },
   { type:'fead-solver',  lx:340, ly:20 },
-  { type:'fead-example', lx:490, ly:20 },
-  { type:'fead-report',  lx:640, ly:20 },
+  { type:'fead-wizard',  lx:490, ly:20 },
+  { type:'fead-example', lx:640, ly:20 },
+  { type:'fead-report',  lx:790, ly:20 },
   // ── Kayış düzlemi: krank altta ortada, aksesuarlar çevresinde ──
   { type:'fead-crank',       name:'Krank Kasnağı', lx:250, ly:330 },
   { type:'fead-tensioner',   name:'Gergi',         lx:140, ly:210 },
@@ -148,11 +149,16 @@ function veFeadArrangeByCoords(opts){
   kasnaklar.forEach(function(n){
     var d = n.data || {};
     var x = _feadNum(d.x, NaN), y = _feadNum(d.y, NaN);
-    // Gergi hangi noktayı gösterir: KİPE bağlı ve karar TEK YERDE
-    // (veFeadTensionerMm, fead-model.js). Burada koşulsuz `cenX/cenY` okumak
-    // zarf kipinde gergiyi "koordinatı yok" sayıp kümenin altına diziyordu.
-    if(_feadDefOf(n).isFeadTensioner && typeof veFeadTensionerMm === 'function'){
-      var tm = veFeadTensionerMm(n); x = tm.x; y = tm.y;
+    // GERGİ KUTUSU KİP BAŞINA BAŞKA BİR NOKTAYI GÖSTERİR — ve okuyucusu
+    // veFeadSyncCanvasFromMm ile AYNI (veFeadTensionerBoxMm). Burada doğrudan
+    // cenX/cenY okunuyordu; zarf kipinde o alan HİÇ yazılmadığı için gergi
+    // "koordinatı yok" sayılıp kümenin altına diziliyordu (ölçüldü: AG00976'da
+    // kutu 2857,4/3039,0 yerine 2971,0/3277,3 + "1 kasnağın koordinatı yok"),
+    // oysa alt topoloji açılışı onu pivota oturtuyordu: iki yol ayrışmıştı.
+    if(_feadDefOf(n).isFeadTensioner){
+      var kutuMm = (typeof veFeadTensionerBoxMm === 'function')
+        ? veFeadTensionerBoxMm(d) : null;
+      x = kutuMm ? kutuMm[0] : NaN; y = kutuMm ? kutuMm[1] : NaN;
     }
     if(Number.isFinite(x) && Number.isFinite(y)) mm.push({ n: n, x: x, y: y });
     else eksik.push(n);
@@ -229,23 +235,31 @@ function veFeadArrangeByCoords(opts){
   return true;
 }
 
-// İlk açılışta iç topolojiye YALNIZ "Başlangıç ve Örnekler" (fead-example)
-// gelir; kullanıcı ya oradaki hazır örneği aktarır ya da sidebar'dan kendi
-// kayış düzenini kurar.
+// İlk açılışta iç topolojiye İKİ açılış yüzeyi gelir: "Başlangıç Sihirbazı"
+// (sıfırdan kurulum — bütün girdileri adım adım sorar) ve "Başlangıç ve
+// Örnekler" (hazır bir düzeni tek tıkla kurar). Kullanıcı ya birinden başlar
+// ya da sidebar'dan kendi kayış düzenini elle kurar.
+//
+// İKİSİ BİRDEN, çünkü ikisi FARKLI soruya cevap: sihirbaz "kendi motorumun
+// verisini nasıl gireceğim", örnek ise "çalışan bir model neye benziyor"
+// diyene. Sihirbazın içinden de örnekle doldurulabiliyor (veFeadWizSeed), ama
+// oradaki yol formu doldurur — kanvasa kurmaz.
 function veFeadPopulateStarter(){
   if(typeof createNode !== 'function') return [];
   var base = (typeof veArrangeModuleBase === 'function')
     ? veArrangeModuleBase(VE_FEAD_STARTER_LAYOUT.map(function(it){ return { lx:it.lx, ly:it.ly }; }))
     : { x:3000, y:3000 };
-  var slot = null;
-  for(var i=0;i<VE_FEAD_STARTER_LAYOUT.length;i++){
-    if(VE_FEAD_STARTER_LAYOUT[i].type === 'fead-example'){ slot = VE_FEAD_STARTER_LAYOUT[i]; break; }
-  }
-  if(!slot) slot = { lx:490, ly:20 };
   var created = [];
-  var before = (typeof nodes !== 'undefined') ? nodes.length : 0;
-  createNode('fead-example', base.x + slot.lx, base.y + slot.ly);
-  if(typeof nodes !== 'undefined' && nodes.length > before) created.push(nodes[nodes.length-1]);
+  ['fead-wizard', 'fead-example'].forEach(function(tip, k){
+    var slot = null;
+    for(var i=0;i<VE_FEAD_STARTER_LAYOUT.length;i++){
+      if(VE_FEAD_STARTER_LAYOUT[i].type === tip){ slot = VE_FEAD_STARTER_LAYOUT[i]; break; }
+    }
+    if(!slot) slot = { lx: 490 + k * 150, ly: 20 };
+    var before = (typeof nodes !== 'undefined') ? nodes.length : 0;
+    createNode(tip, base.x + slot.lx, base.y + slot.ly);
+    if(typeof nodes !== 'undefined' && nodes.length > before) created.push(nodes[nodes.length-1]);
+  });
   if(typeof updateAllConnections === 'function') updateAllConnections();
   return created;
 }
@@ -1470,12 +1484,23 @@ function veFeadTensionerLibCard(node){
       + '((M<sub>çalışma</sub> − M<sub>ön</sub>)/k) — ölçülen bandın içinde.');
 
   h += _feadHint('<b>Kütüphane bir SERTİFİKA değil:</b> 14 Gates raporundan '
-    + 'okunmuş künyeler. Parça numarası <b>uydurulmadı</b> — raporlar yazmıyor, '
-    + 'kayıtlar kaynak raporla adlandırıldı. <b>Kol boyu · ön yük · katsayı · '
-    + 'kasnak çapı</b> parçanın, <b>çalışma momenti</b> ise montajın: aynı gergi '
-    + 'AG0868’de 8PK’da 22,57 · 6PK’da 19,04 · 4PK’da 16,07 Nm ile kuruluyor. '
-    + 'Künye uygulamak <b>pivot ve kol açısını YAZMAZ</b> — ikisi de motorun '
-    + 'verisi, parçanın değil.');
+    + 'okunmuş künyeler. Parça kodu <b>uydurulmadı</b> — raporun kendi '
+    + '<i>Drive Notes</i> alanından okundu (E9843 · T38624 · T38665 · T38519); '
+    + 'arşivde raporu olmayan dört kayıt kod <b>taşımıyor</b>. <b>Kol boyu · '
+    + 'ön yük · katsayı · kasnak çapı · parça kodu</b> parçanın, <b>çalışma '
+    + 'momenti</b> ise montajın: aynı gergi AG0868’de 8PK’da 22,57 · 6PK’da '
+    + '19,04 · 4PK’da 16,07 Nm ile kuruluyor. Künye uygulamak <b>pivot ve kol '
+    + 'açısını YAZMAZ</b> — ikisi de motorun verisi, parçanın değil.');
+  var _pk = (typeof veFeadTenPin === 'function' && td.tenPart)
+    ? veFeadTenPin(td.tenPart) : null;
+  if(td.tenPart)
+    h += _feadHint(_pk
+      ? '<b>Pim künyesi VAR</b> (' + _feadEsc(td.tenPart) + '): gövdenin montajdaki '
+        + 'saatini belirleyen konum piminin yarıçapı ve ofseti parça çiziminden '
+        + 'okundu, seçilen kol açısının imalat karşılığı aşağıda basılıyor.'
+      : '<b>Pim künyesi yok</b> (' + _feadEsc(td.tenPart) + '): parça çizimi elde '
+        + 'olmadığı için pim yarıçapı ve ofseti <b>uydurulmuyor</b>. Kol açısı yine '
+        + 'seçiliyor; imalata geçmek için o iki sayı parçanın çiziminden okunmalı.');
   return _feadCard('Gergi Künye Kütüphanesi', liste.length + ' ölçülmüş künye',
     'var(--accent-primary)', h);
 }
@@ -1642,11 +1667,12 @@ function veFeadEnvelopeReadout(node){
       : _feadHint('Kayış yolu bu montaj noktasıyla çözülemiyor.'));
   }
 
-  var r = m.relMeanDeg * Math.PI / 180, th = b.armAbsDeg * Math.PI / 180;
-  var cenX = px + a * Math.cos(th), cenY = py + a * Math.sin(th);
+  // Merkez TEK FORMÜLDEN: c = p + a·(cosθ, sinθ). Buradaki satır içi kopya,
+  // yön hesabının kullandığı okuyucuyla (veFeadTensionerCenter) ayrışabilirdi.
+  var cen = veFeadTensionerCenter(td, b.armAbsDeg) || [NaN, NaN];
   h += satir(pinned ? 'Kol çalışma açısı (sabitlendi)' : 'Kol çalışma açısı (SEÇİLDİ)',
     _feadFmt(b.armAbsDeg, 2) + '°', pinned ? 'var(--text-primary)' : 'var(--accent-primary)');
-  h += satir('↳ kasnak merkezi (türedi)', _feadFmt(cenX, 2) + ' / ' + _feadFmt(cenY, 2),
+  h += satir('↳ kasnak merkezi (türedi)', _feadFmt(cen[0], 2) + ' / ' + _feadFmt(cen[1], 2),
     'var(--accent-warning)');
   h += satir('Gereken KAYIŞ BOYU (çıktı)', _feadFmt(b.beltLengthMm, 1) + ' mm', 'var(--accent-warning)');
   if(Number.isFinite(b.springTensionN))
@@ -1657,6 +1683,7 @@ function veFeadEnvelopeReadout(node){
       _feadFmt(b.envelope.feasibleDeg, 0) + '° / 360°',
       b.envelope.feasibleDeg < 20 ? 'var(--accent-warning)' : 'var(--text-primary)');
   }
+  h += veFeadPinRows(b.pin, satir);
   h += '</div>';
 
   var not = _feadHint('Seçim ölçütü <b>14 Gates sisteminden geriye çözüldü</b>: kolun '
@@ -1669,9 +1696,45 @@ function veFeadEnvelopeReadout(node){
     + 'YOK. Zarfın hangi yayının motor bloğunda fiziksel olarak kullanılabilir olduğunu '
     + 'program bilmiyor; ölçülen 14 sistemin birinde en iyi nokta motorun öteki yanında '
     + 'kaldı. Sonuç bir <b>öneridir</b> — gövdenin saati belliyse açıyı sabitleyin.');
+  not += veFeadPinNote(b.pin);
   if(b.warnings && b.warnings.length)
     not += _feadHint('<b style="color:var(--accent-warning);">' + _feadEsc(b.warnings[0]) + '</b>');
   return alan + kilit + h + not;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PİM SATIRLARI — seçilen açının İMALAT karşılığı
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Zarf bir açı seçiyor; atölyeye gidecek talimat ise "gövdeyi bu saate kuran
+// pim nerede" sorusunun cevabı. İki okuyucu (zarf ve montaj okuması) AYNI
+// üreticiden besleniyor — ikinci bir kopya, iki yüzeyin sessizce ayrışması
+// demek olurdu (bu modülün tekrar eden hata sınıfı).
+//
+// SAYI YOKSA SESSİZ KALINMIYOR: pim künyesi olmayan parçada satır YAZILIR ve
+// sebebi söylenir. Sessiz bırakılsaydı okuyucu "bu gergide pim yok" sanardı —
+// oysa pim var, ölçüsü bizde yok.
+function veFeadPinRows(pin, satir){
+  if(!pin) return '';
+  if(!pin.ok)
+    return satir('Konum pimi', '— ' + (pin.part || 'künye yok'), 'var(--text-muted)');
+  return satir('Konum pimi · yarıçap', _feadFmt(pin.rMm, 2) + ' mm')
+       + satir('Konum pimi · AÇI (imalat)', _feadFmt(pin.angleDeg, 2) + '°',
+               'var(--accent-warning)');
+}
+
+function veFeadPinNote(pin){
+  if(!pin) return '';
+  if(!pin.ok)
+    return _feadHint('<b>Konum pimi:</b> ' + _feadEsc(pin.reason) + ' Mekanizma genel '
+      + '(merkezî cıvata + saati belirleyen bir konum pimi), ama pim yarıçapı ve '
+      + 'ofseti PARÇAYA özgüdür ve uydurulmaz.');
+  return _feadHint('<b>Seçilen açı böyle GERÇEKLENİYOR:</b> gövdeyi merkezî cıvata '
+    + 'tutar, saatini <b>konum pimi</b> belirler. Pim deliği gövdede, kolun gövdeye '
+    + 'göre çalışma konumu ise yayla sabit → aradaki açı bir <b>parça sabitidir</b> '
+    + '(' + _feadEsc(pin.part) + ': ' + _feadFmt(pin.offsetDeg, 2) + '°). Yani '
+    + '<b>pim açısı = kol açısı ' + (pin.offsetDeg < 0 ? '−' : '+') + ' '
+    + _feadFmt(Math.abs(pin.offsetDeg), 2) + '°</b>. Kaynak: ' + _feadEsc(pin.src) + '.');
 }
 
 // Kol açısı sabitleme anahtarı. SABİTLENİRKEN seçilen açı düğüme YAZILIR —
@@ -1737,11 +1800,18 @@ function veFeadMountReadout(node){
   } else {
     h += satir('Yay kurulması', '— (çalışma momenti girilmedi)', 'var(--accent-warning)');
   }
+  // PİM MONTAJ KİPİNDE DE OKUNUR: kol çalışma açısı burada da bir ÇIKTI
+  // (montajDeg = pivot → girilen merkez), yani "gövdeyi bu saate kuran pim
+  // nerede" sorusu aynen geçerli. Aynı üreticiden besleniyor.
+  var _pinM = (typeof veFeadPinPlan === 'function')
+    ? veFeadPinPlan(td, m.montajDeg) : null;
+  h += veFeadPinRows(_pinM, satir);
   h += '</div>';
 
   var not = _feadHint('Serbest açı iki değerle gösterilir çünkü kolun dönüş yönüne (sense) '
     + 'bağlıdır; hangisinin kullanıldığını çekirdek geometriden bulur ve Çözücü panelindeki '
     + '"Algılanan Model" tablosunda yazar.');
+  not += veFeadPinNote(_pinM);
   if(m.notes.length)
     not += _feadHint('<b style="color:var(--accent-warning);">' + _feadEsc(m.notes.join(' ')) + '</b>');
   return h + not;
@@ -3609,6 +3679,20 @@ function veFeadPositionTable(build){
 function getFeadExamplePropertiesHTML(node){
   if(!node.data) node.data = {};
   var html = '<div class="sw-panel">';
+  // SIFIRDAN KURULUM YOLU BURADA DA DURUYOR: kullanıcı boş bir iç topolojide
+  // önce bu panele bakıyor ("örnekler" en tanıdık kelime), ve kendi motorunu
+  // kuracaksa aradığı şey burada yok. Düğme sihirbaz düğümüne DEĞİL doğrudan
+  // sihirbaza gidiyor — paletten ikinci bir kutu aramak zorunda kalmasın.
+  if(typeof veFeadWizOpen === 'function')
+    html += _feadCard('Kendi Modelimi Kuracağım', 'adım adım', 'var(--accent-primary)',
+        '<button onclick="veFeadWizOpenAny()" style="width:100%; padding:11px 14px; '
+      + 'font-size:var(--fs-body); font-weight:700; border:none; cursor:pointer; '
+      + 'border-radius:var(--radius-sm); background:var(--accent-primary); color:#fff;">'
+      + '🧭 Başlangıç Sihirbazını Aç</button>'
+      + _feadHint('Kasnak koordinatlarından çalışma çevrimine kadar bütün girdileri '
+        + 'yedi adımda sorar ve her adımda modeli <b>canlı çözer</b>. Aşağıdaki hazır '
+        + 'örnekler ise tek tıkla kurulur — sihirbazın ilk adımından da '
+        + 'doldurulabilirler.'));
   veFeadExampleKeys().forEach(function(k){
     var ex = veFeadExampleOf(k);
     var kasnak = ex.pulleys.length;
@@ -3662,6 +3746,26 @@ function getFeadExamplePropertiesHTML(node){
 // yerleştirme var. Kasnaklar kayış düzlemindeki GERÇEK koordinatlarına oranlı
 // yerleştirilir: kanvasta gördüğü şekil sayfadaki yerleşimin ta kendisi olsun.
 // (Kanvas y aşağı doğru artar, kayış düzlemi yukarı — bu yüzden y ters çevrilir.)
+// Sihirbazı düğüm KİMLİĞİ olmadan açar: kanvasta bir sihirbaz düğümü varsa
+// onun taslağı sürer (yarım kalan iş kaybolmaz), yoksa paletten bir tane kurar.
+// Taslağın bir düğümde durması ŞART — kaydedilen proje onu taşıyor.
+function veFeadWizOpenAny(){
+  if(typeof veFeadWizOpen !== 'function' || typeof nodes === 'undefined') return false;
+  var n = nodes.filter(function(x){ return (_feadDefOf(x) || {}).isFeadWizard; })[0];
+  if(!n && typeof createNode === 'function'){
+    var base = (typeof veArrangeModuleBase === 'function')
+      ? veArrangeModuleBase([{ lx: 0, ly: 0 }]) : { x: 3000, y: 3000 };
+    var once = nodes.length;
+    createNode('fead-wizard', base.x, base.y);
+    if(nodes.length > once){
+      n = nodes[nodes.length - 1];
+      if(typeof saveState === 'function') saveState();
+    }
+  }
+  if(!n) return false;
+  return veFeadWizOpen(n.id);
+}
+
 function veFeadLoadExample(key){
   if(typeof createNode !== 'function') return null;
   var pack = veFeadExampleNodes(key);
@@ -3670,8 +3774,12 @@ function veFeadLoadExample(key){
   var xs = [], ys = [];
   pack.example.pulleys.forEach(function(p){
     var d = p.data;
-    var x = (d.x != null) ? _feadNum(d.x, 0) : _feadNum(d.cenX, 0);
-    var y = (d.y != null) ? _feadNum(d.y, 0) : _feadNum(d.cenY, 0);
+    // Gergide kutunun gösterdiği nokta kipe bağlı (veFeadTensionerBoxMm);
+    // bugünkü iki örnek de mount kipinde, ama zarf kipli bir örnek eklenirse
+    // burası sessizce (0,0)'a düşerdi.
+    var kutuMm = (d.x != null) ? null : veFeadTensionerBoxMm(d);
+    var x = (d.x != null) ? _feadNum(d.x, 0) : (kutuMm ? kutuMm[0] : 0);
+    var y = (d.y != null) ? _feadNum(d.y, 0) : (kutuMm ? kutuMm[1] : 0);
     xs.push(x); ys.push(y);
   });
   var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
@@ -4247,6 +4355,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadVerifyCard: veFeadVerifyCard, veFeadSetVerifyCen: veFeadSetVerifyCen,
     veFeadSyncDrag: veFeadSyncDrag, veFeadReselectArm: veFeadReselectArm,
     veFeadEnvelopeReadout: veFeadEnvelopeReadout, veFeadSetPinArm: veFeadSetPinArm,
+    veFeadPinRows: veFeadPinRows, veFeadPinNote: veFeadPinNote,
     veFeadTensionerLibCard: veFeadTensionerLibCard, veFeadApplyTenLib: veFeadApplyTenLib,
     veFeadSet: veFeadSet, veFeadPlaceFromCoords: veFeadPlaceFromCoords,
     VE_FEAD_COORD_KEYS: VE_FEAD_COORD_KEYS,
@@ -4298,6 +4407,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadCurveAdd: veFeadCurveAdd, veFeadCurveRemove: veFeadCurveRemove,
     veFeadCurveSet: veFeadCurveSet, veFeadLoadExample: veFeadLoadExample,
     veFeadArrangeByCoords: veFeadArrangeByCoords,
+    veFeadWizOpenAny: veFeadWizOpenAny,
+    veFeadPopulateStarter: veFeadPopulateStarter,
     getFeadModulePropertiesHTML: getFeadModulePropertiesHTML,
     getFeadPulleyPropertiesHTML: getFeadPulleyPropertiesHTML,
     getFeadTensionerPropertiesHTML: getFeadTensionerPropertiesHTML,

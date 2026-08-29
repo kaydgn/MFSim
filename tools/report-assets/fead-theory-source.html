@@ -244,6 +244,10 @@ $$ \mathbf{c}_{\text{ten}}(\theta) = \mathbf{p} + a\,\big(\cos\theta,\ \sin\thet
 <span class="tag">(4.1)</span>
 </div>
 <p>burada \( \mathbf{p} \) pivot, \( a \) kol boyudur. Kol döndükçe gergi kasnağının merkezi bir yay üzerinde gezer; kayış yolu — ve dolayısıyla tüm sarım açıları, açıklık boyları ve gereken kayış boyu — <strong>her açıda başkadır</strong>. Bu, gergiyi diğer kasnaklardan ayıran şeydir: konumu bir girdi değil, bir <em>çözüm</em>dür.</p>
+<div class="note">
+  <span class="t">Pivot, gövdenin montaj cıvatasıdır</span>
+  Diğer bütün kasnaklarda girilen koordinat kasnağın <em>merkezidir</em>; gergide öyle değildir. Gergi kasnağının merkezi kolun o anki açısıyla <strong>gezer</strong> (yukarıdaki denklem), yani montajda sabit olan nokta o değil <strong>pivottur</strong>. Bir gergi parça çiziminde ölçüldü: gövdenin merkezî bağlantı deliği kolun dönme ekseniyle <strong>eşmerkezlidir</strong>, dolayısıyla montaj cıvatasının koordinatı doğrudan \( \mathbf{p} \)'dir. Eksantrik gövdeli bir gergide bu iki nokta ayrılır ve montaj noktası pivota bir miktar kaçık olurdu; model onları bir sayar.
+</div>
 
 <h3>4.2 Yay momenti ve sanal iş</h3>
 <p>Yayın kola uyguladığı moment, serbest konumdan itibaren lineer artar:</p>
@@ -315,6 +319,12 @@ $$ \theta^{*} \;=\; \arg\max_{\theta}\; \min_{\theta_{\text{bağıl}} \in [0,\,1
   <span class="t">\( \beta = 90^\circ \) kuralı bu sistemlerde geçerli değildir</span>
   Ders kitabı kuralı kolu bileşke kuvvete dik koymayı söyler ve (4.3)'te \( \sin\beta \)'yı azamiye çıkarır. Ölçüldü: tedarikçi raporlarının çalışma noktalarında \( \beta \) <strong>42,7…59,5°</strong> bandındadır. Sebep (4.3)'ün kendisidir — \( \sin\beta \) büyürken gergi sarımı \( \varphi \) çöker ve çarpım <strong>orta</strong> bir açıda tepe yapar.
 </div>
+<p><strong>Seçim imalata nasıl geçer.</strong> Bir montaj talimatı açı değil <strong>delik</strong> ister. Otomatik gergilerde gövdeyi merkezî bir cıvata tutar — o cıvata gövdenin saatini <em>belirlemez</em>, yalnız bastırır — ve saati, gövdeden bloğa giren bir <strong>konum pimi</strong> sabitler. Pim deliği gövdededir; kolun gövdeye göre çalışma konumu ise (4.6) ile yay tarafından sabitlenmiştir. Gövdeyi döndürmek ikisini <strong>birlikte</strong> döndürdüğünden aradaki açı gövdenin saatinden bağımsızdır ve bir <strong>parça sabitidir</strong> \( \Delta_{\text{parça}} \):</p>
+<div class="eqno">
+$$ \theta_{\text{pim}} \;=\; \theta^{*} + \Delta_{\text{parça}} $$
+<span class="tag">(4.8)</span>
+</div>
+<p>Pim yarıçapı ve \( \Delta_{\text{parça}} \) parçaya özgüdür ve <strong>uydurulmaz</strong>: yalnız çizimi elde olan parça için yazılıdır, diğerlerinde belge sayı yerine sebebini basar. Bir parça çiziminde ölçüldü — çizim kolun çalışma konumunu ve o konumdaki pim yerini birlikte veriyor; iki basılı ölçüden çıkan yarıçap ve açı, çizimin kendi yazdığı değerlerle <strong>0,003°</strong> içinde tutuyor. Aynı çizim (4.6)'yı da bağımsız olarak doğruluyor: yazdığı serbest→çalışma dönüşü, yay künyesinden hesaplanan \( \theta_{\text{nom}} \) ile <strong>0,06°</strong> içinde aynıdır.</p>
 <div class="note warn">
   <span class="t">Ölçüt kalibredir; paketleme modelde yoktur</span>
   (4.7) tahmin edilmedi, <strong>14 tedarikçi sisteminden geriye çözüldü</strong>: altı aday ölçüt arasında tedarikçinin gerçek çalışma açısını en iyi tutan odur (açı farkı medyanı 4,5°, sistemlerin dokuzunda ±5° içinde; en yakın rakip 10,3°). <strong>Bu bir kalibrasyondur, bağımsız doğrulama değildir.</strong> Bağımsız olan tek şey şudur: ölçüt kayış verisine hiç girmez — servis bandı yalnız yay künyesinden gelir — yani model kayışı hiç görmeden tedarikçinin kayışını geri verir (14 sistemin 11'inde ±%0,35).<br><br>
@@ -541,6 +551,8 @@ $$ f_{\text{ateşleme}} = \frac{n_{\text{krank}}\cdot N_{\text{sil}}}{120} $$
   <tr><td class="c">\( \mathrm{d}L/\mathrm{d}\theta \)</td><td class="l">Take-up oranı (türev, girdi değil); ayrıca montaj açısı seçim ölçütü — (4.7)</td><td class="c">mm/°</td></tr>
   <tr><td class="c">\( \theta^{*} \)</td><td class="l">Seçilen montaj (kol) açısı — (4.7); kullanıcı sabitleyebilir</td><td class="c">°</td></tr>
   <tr><td class="c">\( \theta_{\text{nom}} \)</td><td class="l">Kolun nominal bağıl dönüşü — (4.6), salt yay künyesinden</td><td class="c">°</td></tr>
+  <tr><td class="c">\( \theta_{\text{pim}} \)</td><td class="l">Gövdenin saatini sabitleyen konum piminin açısı — (4.8)</td><td class="c">°</td></tr>
+  <tr><td class="c">\( \Delta_{\text{parça}} \)</td><td class="l">Pim ile kol çalışma konumu arasındaki açı — <strong>parça sabiti</strong>, çizimden okunur</td><td class="c">°</td></tr>
   <tr><td class="c">\( T_{\text{tasarım}} \)</td><td class="l">Tasarım gerginliği — gerilme zincirinin ankrajı</td><td class="c">N</td></tr>
   <tr><td class="c">\( M_0,\ k \)</td><td class="l">Yay ön yükü ve oranı</td><td class="c">Nm, Nm/°</td></tr>
   <tr><td class="c">\( T \)</td><td class="l">Kayış gerginliği</td><td class="c">N</td></tr>

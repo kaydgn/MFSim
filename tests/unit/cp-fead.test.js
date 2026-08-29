@@ -1408,7 +1408,7 @@ describe('veFeadArrangeByCoords — kasnaklar KOORDİNATLARINA yerleşir', () =>
   // sapmış. Ve `veFeadDragTensioner` zarf kipinde mm'yi MUTLAK yazdığı için
   // sonraki İLK sürükleme o kaymanın tamamını pivota yazardı.
   //
-  // Karar TEK YERDE (veFeadTensionerMm, fead-model.js); kapı ÜRETİLEN
+  // Karar TEK YERDE (veFeadTensionerBoxMm, fead-model.js); kapı ÜRETİLEN
   // YERLEŞİMİ ölçüyor — okuyucuyu doğrudan çağırmak, yerleştiricinin onu
   // kullanmayı BIRAKMASINI göremezdi.
   test('gergi ZARF kipinde de kümenin İÇİNE yerleşir', () => {
@@ -1496,6 +1496,89 @@ describe('veFeadArrangeByCoords — kasnaklar KOORDİNATLARINA yerleşir', () =>
     const layout = ns.find((n) => n.type === 'fead-layout');
     expect(merkez(solver).x).toBeLessThan(Math.min(...kasnak));
     expect(merkez(layout).x).toBeGreaterThan(Math.max(...kasnak));
+  });
+
+  // ── GERGİ KUTUSU: KİP BAŞINA BAŞKA BİR NOKTA ────────────────────────────
+  //
+  // ÖLÇÜLMÜŞ SESSİZLİK: bu yerleştirici gergiyi doğrudan `cenX/cenY`den
+  // okuyordu, oysa zarf kipinde o alan HİÇ yazılmıyor (kasnak merkezi bir
+  // çıktı). Sonuç: gergi "koordinatı yok" sayılıp kümenin ALTINA diziliyor ve
+  // uyarı toast'ı basılıyordu — AG00976'da kutu 2857,4/3039,0 yerine
+  // 2971,0/3277,3. Oysa alt topoloji açılışındaki yol
+  // (veFeadSyncCanvasFromMm) onu PİVOTA oturtuyordu: iki yerleştirme yolu
+  // birbirinden habersizdi ve kutu ilk açılışta yerinden zıplıyordu.
+  const gergili = (tenData) => {
+    const mk = (id, type, data) => {
+      const d = componentDefs[type];
+      return { id, type, def: d, x: 0, y: 0,
+               width: d.defaultWidth || 65, height: d.defaultHeight || 60, data };
+    };
+    const ns = [
+      mk('g0', 'fead-crank',      { driver: true, od: 180, x: 0, y: 0 }),
+      mk('g1', 'fead-alternator', { od: 57, x: -280, y: 60 }),
+      mk('g2', 'fead-idler',      { od: 70, x: -150, y: 150 }),
+      mk('g3', 'fead-tensioner',  tenData)
+    ];
+    global.nodes = ns;
+    global.connections = ns.map((n, i) => ({ id: 'gc' + i, from: n.id,
+      to: ns[(i + 1) % ns.length].id, fromPort: 'output', toPort: 'input' }));
+    return ns;
+  };
+  // Kutunun mm karşılığı: orijin (sürücü) kutusunun merkezine göre, Y TERS.
+  const mmOf = (ns, nd) => ({ x: merkez(nd).x - merkez(ns[0]).x,
+                              y: -(merkez(nd).y - merkez(ns[0]).y) });
+
+  test('zarf kipinde gergi kutusu PİVOTU gösterir', () => {
+    const ns = gergili({ od: 75, angleMode: 'envelope', armLen: 90,
+                         pivotX: -250, pivotY: 110, armMeanDeg: 344,
+                         preload: 8.6, kArm: 0.48, meanLoad: 22.07 });
+    expect(fead.veFeadArrangeByCoords()).toBe(true);
+    const mm = mmOf(ns, ns[3]);
+    expect(mm.x).toBeCloseTo(-250, 1);
+    expect(mm.y).toBeCloseTo(110, 1);
+    // "koordinatı yok" sırasına DÜŞMEDİ: uyarı basılmıyor.
+    const toast = stubs.showToast.mock.calls.map((c) => String(c[0])).join(' | ');
+    expect(toast).not.toContain('koordinatı yok');
+  });
+
+  test('mount kipinde gergi kutusu MONTAJ MERKEZİNİ gösterir (taban değişmedi)', () => {
+    const ns = gergili({ od: 75, angleMode: 'mount', armLen: 90,
+                         cenX: -161.97, cenY: 91.29,
+                         preload: 8.6, kArm: 0.48, meanLoad: 22.07 });
+    expect(fead.veFeadArrangeByCoords()).toBe(true);
+    const mm = mmOf(ns, ns[3]);
+    expect(mm.x).toBeCloseTo(-161.97, 1);
+    expect(mm.y).toBeCloseTo(91.29, 1);
+  });
+
+  test('İKİ YERLEŞTİRME YOLU AYNI YERE KOYAR — sync tek kutuyu bile oynatmaz', () => {
+    // Asıl kapı bu: "Otomatik Düzenle" ile alt topoloji açılışı aynı noktayı
+    // kullanmak ZORUNDA. Ayrıştıklarında hata sessiz — kullanıcı düzenler,
+    // kapatıp açar, kutu yerinden zıplar.
+    [{ od: 75, angleMode: 'envelope', armLen: 90, pivotX: -250, pivotY: 110,
+       armMeanDeg: 344, preload: 8.6, kArm: 0.48, meanLoad: 22.07 },
+     { od: 75, angleMode: 'mount', armLen: 90, cenX: -161.97, cenY: 91.29,
+       preload: 8.6, kArm: 0.48, meanLoad: 22.07 }].forEach((td) => {
+      const ns = gergili(td);
+      fead.veFeadArrangeByCoords({ silent: true });
+      const once = ns.map((n) => [n.x, n.y]);
+      expect(veFeadSyncCanvasFromMm(ns)).toBe(0);
+      ns.forEach((n, i) => {
+        expect(n.x).toBeCloseTo(once[i][0], 6);
+        expect(n.y).toBeCloseTo(once[i][1], 6);
+      });
+    });
+  });
+
+  test('kipin girdisi eksikse gergi yine gizlenmez — kümenin altına dizilir', () => {
+    // Zarf kipinde pivot yoksa okunacak nokta YOKTUR; sessizce (0,0)'a koymak
+    // kasnakları üst üste bindirirdi (koordinatsız kasnak kuralının aynısı).
+    const ns = gergili({ od: 75, angleMode: 'envelope', armLen: 90 });
+    expect(fead.veFeadArrangeByCoords()).toBe(true);
+    expect(Number.isFinite(ns[3].x)).toBe(true);
+    expect(merkez(ns[3]).y).toBeGreaterThan(merkez(ns[0]).y);
+    const toast = stubs.showToast.mock.calls.map((c) => String(c[0])).join(' | ');
+    expect(toast).toContain('koordinatı yok');
   });
 
   test('orijin YOKSA ya da iki kasnaktan az varsa düzen KURULMAZ', () => {

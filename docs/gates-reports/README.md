@@ -236,6 +236,51 @@ offset 3.93 / 1.49 mm).
 
 İkisi de henüz yapılmadı; arşivin gerekçesi olarak burada duruyor.
 
+## ARŞİVDE OLMAYAN BİR KAYNAK — E9843 parça çizimi
+
+Kullanıcı 2026-08-29'da bir gergi **parça çizimi** gönderdi (*"Genelde hemen
+hemen tüm otomatik gergilerin görünümü böyle. Yani teknik resimleri bu."*).
+Çizim `js/fead-tensioners.js` → `VE_FEAD_TEN_PIN` ve `CLAUDE.md` → *"KOL
+AÇISININ İMALAT KARŞILIĞI — KONUM PİMİ"* bölümünün kaynağıdır.
+
+> **GÖRSEL DEPODA DEĞİL.** Sohbete yapıştırılmış bir resimdi; dosya olarak
+> elimize geçmedi ve `pdf/` altına konmadı. Bu bölüm o yüzden var: çıkarılan
+> sayılar burada yazılı olmasa kökenleri hiçbir yerde durmayacaktı.
+> **Çizim yeniden elde edilirse `pdf/` altına konmalı** (ad önerisi:
+> `E9843_parca-cizimi.pdf`) ve bu bölüm indekse taşınmalı.
+
+Çizimin yazısı (aynen):
+
+```
+E9843 PIN POSITION FOR THE 344° MEAN ANGLE AND 22.5 Nm SPRING TORQUE
+@ 28° FREEARM-MEAN ROTATION
+```
+
+Basılı ölçüler: **19,51** ve **24,09 mm** (dik iki ölçü), **51°**, **16°**.
+
+| Çıkarılan | Nasıl | Çizimin yazdığı | Fark |
+|---|---|---|---|
+| pim yarıçapı `r` | `√(19,51² + 24,09²)` = 30,9995 | — | — |
+| pim açısı (gövdeye göre) | `atan(24,09 / 19,51)` = 50,9967° | **51°** | 0,003° |
+| kol çalışma açısı | `360 − 16` | **344°** | birebir |
+| pim mutlak (3. bölge) | `180 + 51` = 231,00° | — | — |
+| **ofset `Δ_parça`** | `231 − 344` | — | **−113,00°** |
+
+**İKİ BAĞIMSIZ ÇAPRAZ DOĞRULAMA — ikisi de tutuyor:**
+
+1. Çizimin *"28° FREEARM-MEAN ROTATION"* satırı ↔ **bu arşivin** yay
+   künyesinden hesaplanan `(22,07 − 8,60)/0,480 = 28,0625°` → **0,06°**.
+   Çizimdeki 22,5 Nm nominal, raporun künyesi 22,07.
+2. Gövdenin merkezî bağlantı deliği kolun dönme ekseniyle **eşmerkezli** →
+   MFSim'in *"girilen montaj koordinatı = pivot"* varsayımı ölçüldü
+   (`CLAUDE.md`'de bir tur önce **ÖLÇÜLMEDİ** diye işaretliydi).
+
+**SAYI PARÇAYA AİT, MEKANİZMA GENEL.** Kullanıcının *"hepsi böyle görünür"*
+sözü mekanizma içindir (tek merkezî cıvata + saati belirleyen konum pimi);
+yarıçap ve ofset parçaya özgüdür. Arşivin diğer üç parça kodunda
+(`T38624` · `T38665` · `T38519`) çizim YOK ve sayı **uydurulmadı** — model
+`ok:false` döndürüp sebebini yazıyor.
+
 ## Tedarikçi dosya adı GÖVDEYLE ÇELİŞEBİLİR — AG00810
 
 `AG00810`'un tedarikçiden gelen dosya adı ve raporun `Design:` alanı

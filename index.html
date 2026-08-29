@@ -718,6 +718,17 @@
 
           <div class="ve-category" data-ve-scope="fead-analysis">
             <div class="ve-category-title">FEAD Araçları</div>
+            <div class="ve-component" draggable="true" data-type="fead-wizard" title="Başlangıç Sihirbazı — bir modeli kurmak için gereken bütün girdileri adım adım sorar; her adımda model canlı çözülür.">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <circle cx="26" cy="26" r="9" fill="none" stroke="currentColor" stroke-width="5"/>
+                <circle cx="26" cy="52" r="9" fill="none" stroke="currentColor" stroke-width="5"/>
+                <circle cx="26" cy="78" r="9" fill="currentColor"/>
+                <line x1="26" y1="35" x2="26" y2="43" stroke="currentColor" stroke-width="4" opacity="0.6"/>
+                <line x1="26" y1="61" x2="26" y2="69" stroke="currentColor" stroke-width="4" opacity="0.6"/>
+                <line x1="44" y1="26" x2="82" y2="26" stroke="currentColor" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
+                <line x1="44" y1="52" x2="74" y2="52" stroke="currentColor" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
+                <path d="M46 78 l8 9 l17 -19" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg> <span class="ve-comp-label">Başlangıç Sihirbazı</span></div>
             <div class="ve-component" draggable="true" data-type="fead-belt" title="Kayış Özellikleri — kayış tipi/kesiti/boyu ve malzeme künyesi. Topolojiye bağlanmaz; iç topolojide tek kopya durur.">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
                 <rect x="14" y="12" width="72" height="76" rx="6" fill="none" stroke="currentColor" stroke-width="5"/>
@@ -1163,6 +1174,7 @@
 <script type="text/x-mfsim-defer" src="js/fead-model.js" data-mfsim-label="FEAD: veri modeli köprüsü..."></script>
 <script type="text/x-mfsim-defer" src="js/fead-core.js" data-mfsim-label="FEAD: hesap çekirdeği (kayış-kasnak)..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead.js" data-mfsim-label="FEAD kayış-kasnak modülü..."></script>
+<script type="text/x-mfsim-defer" src="js/cp-fead-wizard.js" data-mfsim-label="FEAD: başlangıç sihirbazı..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead-report.js" data-mfsim-label="FEAD: rapor üreteci..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead-summary.js" data-mfsim-label="FEAD: özet rapor..."></script>
 <!-- KULLANIM KILAVUZU KİTİ — şeritteki "Kullanım Kılavuzları" grubunu besler.
@@ -1304,6 +1316,25 @@
       <button type="button" class="ve-imp-btn" onclick="veImpCloseModal()">İptal</button>
       <button type="button" class="ve-imp-btn ve-imp-btn-primary" id="ve-import-apply" onclick="veImpConfirm()" disabled>Diyagramlara Aktar</button>
     </div>
+  </div>
+</div>
+
+<!-- ═══ FEAD BAŞLANGIÇ SİHİRBAZI ═══
+     Kabuk Ayarlar/İçe Aktarma modallarıyla ORTAK (.ve-settings-overlay /
+     .ve-settings-modal): üçüncü bir pencere dili kurmanın karşılığı yok.
+     Gövdeyi js/cp-fead-wizard.js çiziyor; buradaki üç kap (nav/body/foot)
+     yalnız iskelet. -->
+<div id="ve-feadwiz-overlay" class="ve-settings-overlay" style="display:none;" onmousedown="if(event.target===this) veFeadWizClose(true)">
+  <div class="ve-settings-modal ve-fw-modal" role="dialog" aria-labelledby="ve-fw-title">
+    <div class="ve-settings-header">
+      <span id="ve-fw-title">🧭 FEAD Başlangıç Sihirbazı</span>
+      <button class="ve-settings-close" onclick="veFeadWizClose(true)" title="Kapat" aria-label="Kapat">✕</button>
+    </div>
+    <div class="ve-fw-shell">
+      <nav class="ve-fw-nav" id="ve-fw-nav"></nav>
+      <div class="ve-fw-body" id="ve-fw-body"></div>
+    </div>
+    <div class="ve-fw-foot" id="ve-fw-foot"></div>
   </div>
 </div>
 

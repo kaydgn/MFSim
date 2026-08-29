@@ -290,6 +290,7 @@ describe('GERGİ — sürükleme PİVOTU taşır, kol boyu korunur', () => {
 });
 
 describe('gergi kutusu HANGİ noktayı gösterir — tek okuyucu', () => {
+  // Okuyucu `veFeadTensionerBoxMm(data)` — dizi ya da null döner.
   // Gergi kayış düzleminde İKİ noktaya sahip ve hangisinin GİRDİ olduğu kipe
   // bağlı. Aralarında tam kol boyu kadar mesafe var (90 mm), yani karar
   // yanlışsa kutu 90 mm yanlış yerde durur — ve o kutu sürüklenince pivot da
@@ -300,19 +301,19 @@ describe('gergi kutusu HANGİ noktayı gösterir — tek okuyucu', () => {
 
   test('zarf kipinde MONTAJ REFERANS NOKTASI (pivot) okunur', () => {
     const t = gergi({ angleMode: 'envelope' });
-    expect(M.veFeadTensionerMm(t)).toEqual({ x: -250, y: 110 });
+    expect(M.veFeadTensionerBoxMm(t.data)).toEqual([-250, 110]);
   });
 
   test('mount kipinde MONTAJ MERKEZİ (cen) okunur', () => {
     const t = gergi({ angleMode: 'mount', cenX: -161.97, cenY: 91.29 });
-    expect(M.veFeadTensionerMm(t)).toEqual({ x: -161.97, y: 91.29 });
+    expect(M.veFeadTensionerBoxMm(t.data)).toEqual([-161.97, 91.29]);
   });
 
   test('kip yazılı değilse veFeadAngleMode çözer — ikinci bir kural YOK', () => {
     // cenX/cenY varsa mount, yalnız pivot varsa envelope.
-    expect(M.veFeadTensionerMm(gergi({ cenX: -161.97, cenY: 91.29 })))
-      .toEqual({ x: -161.97, y: 91.29 });
-    expect(M.veFeadTensionerMm(gergi({}))).toEqual({ x: -250, y: 110 });
+    expect(M.veFeadTensionerBoxMm(gergi({ cenX: -161.97, cenY: 91.29 }).data))
+      .toEqual([-161.97, 91.29]);
+    expect(M.veFeadTensionerBoxMm(gergi({}).data)).toEqual([-250, 110]);
   });
 
   test('senkron zarf kipinde gergiyi ATLAMAZ', () => {

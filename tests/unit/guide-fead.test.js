@@ -350,6 +350,17 @@ describe('içerik yönlendirici', () => {
     expect(DOC).toContain('Buraya kasnak merkezi yazılmaz');
   });
 
+  test('Başlangıç Sihirbazı açılış yolu olarak anlatılıyor', () => {
+    // Modül açılışında İKİ kutu geliyor; kılavuz tek kutu derse ilk ekran
+    // yalanlanmış olur ve kullanıcı sihirbazı hiç bulmaz.
+    expect(DOC).toContain('Başlangıç Sihirbazı');
+    expect(DOC).toContain('iki açılış kutusu');
+    expect(DOC).toContain('Sihirbaz adımları');
+    // Yedi adımın yedisi de bölümlerle eşlenmiş olmalı.
+    ['Kasnaklar', 'Kayış Yolu', 'Otomatik Gergi', 'Motor ve Çevrim', 'Özet ve Kurulum']
+      .forEach((a) => { expect(DOC).toContain(a); });
+  });
+
   test('hızlı başvuru eki alan → panel eşlemesi veriyor', () => {
     expect(DOC).toContain('Alan → Panel Hızlı Başvurusu');
     expect(DOC).toContain('Gergi Künye Kütüphanesi');

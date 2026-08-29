@@ -208,9 +208,37 @@ function _gfSec3(){
     'İç topolojiden çıkmak için aynı çipi ya da çerçevenin alt kenarındaki çıkış düğmesini '
       + 'kullanın. Çıkarken modeliniz alt-sistem kutusunun içine kaydedilir.'
   ]);
-  h += '<p>İç topoloji boşken tuvalde tek bir kutu vardır: <strong>Başlangıç ve Örnekler</strong>. '
-    + 'Buradan iki yol ayrılır.</p>';
-  h += '<h3>3.2 Yol A — hazır bir örnekten başlamak <span class="chip">önerilen</span></h3>';
+  h += '<p>İç topoloji boşken tuvalde <strong>iki açılış kutusu</strong> gelir: '
+    + '<strong>Başlangıç Sihirbazı</strong> ve <strong>Başlangıç ve Örnekler</strong>. '
+    + 'İkisi farklı soruya cevap verir — biri “kendi motorumun verisini nasıl gireceğim”, '
+    + 'öbürü “çalışan bir model neye benziyor”. Buradan üç yol ayrılır.</p>';
+
+  h += '<h3>3.2 Yol A — Başlangıç Sihirbazı <span class="chip">önerilen</span></h3>';
+  h += '<p>Sihirbaz, bir modeli kurmak için gereken bütün girdileri <strong>doğru sırayla</strong> '
+    + 'sorar ve her adımda modeli canlı doğrular. Boş bir iç topolojide “önce ne koyayım” '
+    + 'sorusunu ortadan kaldırır.</p>';
+  h += _gfAdimlar([
+    '<strong>Başlangıç Sihirbazı</strong> kutusuna çift tıklayın.',
+    'Adımları sırayla doldurun. Her adımın rozeti o adımda kalan eksik/uyarı sayısını '
+      + 'gösterir, yani nereye dönmeniz gerektiğini okursunuz.',
+    'Son adımda canlı çözümü ve kayış yolu şemasını görün, sonra <strong>modeli kurun</strong> '
+      + '— sihirbaz kasnakları, kabloları ve künyeleri iç topolojiye bir anda yazar.'
+  ]);
+  h += _gfAlanTablo('Sihirbaz adımları ↔ bu kılavuzun bölümleri', [
+    ['1 · Başlangıç', 'Sistem adı ve gerginin tanım biçimi', '—'],
+    ['2 · Kasnaklar', 'Tip · çap · koordinat · temas tarafı · sürücü', 'Bölüm 4 ve 6'],
+    ['3 · Kayış Yolu', 'Serpantin sırası — kablolamayı bu belirler', 'Bölüm 5'],
+    ['4 · Otomatik Gergi', 'Montaj referans noktası · kol boyu · yay künyesi', 'Bölüm 7'],
+    ['5 · Kayış', 'Profil · kanal sayısı · katalog sonuçları', 'Bölüm 8'],
+    ['6 · Motor ve Çevrim', 'Tahrik oranı · motor künyesi · çalışma çevrimi', 'Bölüm 9'],
+    ['7 · Özet ve Kurulum', 'Canlı çözüm · kayış yolu şeması · modeli kur', 'Bölüm 10 ve 11']
+  ], ['Adım', 'Ne sorar', 'Ayrıntısı']);
+  h += _gfNot('Sihirbaz ayrı bir model kurmaz',
+      'Sorduğu her alan panellerdeki alanların ta kendisidir ve doğrulamayı da aynı çözücü '
+    + 'yapar. Yani sihirbazda gördüğünüz uyarı, panelde göreceğinizin aynısıdır — kurulduktan '
+    + 'sonra her şeyi panellerden düzenlemeye devam edersiniz.');
+
+  h += '<h3>3.3 Yol B — hazır bir örnekten başlamak</h3>';
   h += _gfAdimlar([
     '<strong>Başlangıç ve Örnekler</strong> kutusuna çift tıklayın.',
     'Panelde iki kayıtlı sistem görürsünüz. Birini seçip <strong>“İç topolojiye kur”</strong> '
@@ -231,7 +259,7 @@ function _gfSec3(){
       'Örnek yükleme mevcut kasnakların <strong>üzerine ekler</strong>. Dolu bir tuvale ikinci '
     + 'bir örnek kurmak kasnakları üst üste bindirir. Temiz bir başlangıç için önce '
     + 'tuvali boşaltın.');
-  h += '<h3>3.3 Yol B — sıfırdan kurmak</h3>';
+  h += '<h3>3.4 Yol C — sıfırdan elle kurmak</h3>';
   h += '<p>Sol paletten sürükleyip bırakın. FEAD bileşenleri iki kategoridedir:</p>';
   h += _gfAlanTablo('Palet kategorileri', [
     ['FEAD Kasnakları', 'Krank Kasnağı · Alternatör · Klima Kompresörü · Su Pompası · '
