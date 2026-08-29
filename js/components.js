@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-example','fead-layout','fead-report','fead-coordlink','fead-spin','str-geometry','str-material','str-mesh','str-bc','str-results','arac-performans','mount-analysis','fead-analysis','structural-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-example','fead-layout','fead-report','fead-coordlink','fead-spin','fead-wizard','str-geometry','str-material','str-mesh','str-bc','str-results','arac-performans','mount-analysis','fead-analysis','structural-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -726,6 +726,23 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M50 14 A36 36 0 1 1 14 50" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="6" stroke-linecap="round"/><polygon points="5,55 14,36 23,55" fill="var(--accent-warning, #f59e0b)"/><circle cx="50" cy="50" r="20" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="50" cy="50" r="6" fill="var(--accent-primary, #3b82f6)"/></svg>',
     inputs: 0, outputs: 0, isFeadSpin: true, maxInstances: 1,
     defaultWidth: 54, defaultHeight: 48
+  },
+  // ── BAŞLANGIÇ SİHİRBAZI — adım adım model kurulumu ───────────────────────
+  //
+  // Kullanıcı isteği (2026-08-29): *"Bu bileşene tıkladığımızda adım adım bir
+  // modeli kurmak için gereken tüm girdileri gireceğiz."* Bileşenin çözdüğü
+  // şey bir eksiklik değil bir SIRA sorunu: girdilerin hepsi zaten panellerde
+  // vardı, ama hangi sırayla gireceğini ve hangi alanın hangi belgeden
+  // okunduğunu ancak modülü bilen biri biliyordu.
+  //
+  // maxInstances:1 — iki sihirbaz iki ayrı taslak taşır ve "hangisi kurulacak"
+  // sorusunun cevabı yok. Girişsiz/çıkışsız: zincirin halkası değil, bir ARAÇ.
+  'fead-wizard': {
+    name: 'Başlangıç Sihirbazı',
+    // Numaralı adımlar + son adımda onay işareti: "sırayla doldur, sonunda kur".
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="26" cy="26" r="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="26" cy="52" r="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="26" cy="78" r="9" fill="var(--accent-warning, #f59e0b)"/><line x1="26" y1="35" x2="26" y2="43" stroke="var(--text-muted, #aaa)" stroke-width="4"/><line x1="26" y1="61" x2="26" y2="69" stroke="var(--text-muted, #aaa)" stroke-width="4"/><line x1="44" y1="26" x2="82" y2="26" stroke="var(--text-muted, #aaa)" stroke-width="5" stroke-linecap="round"/><line x1="44" y1="52" x2="74" y2="52" stroke="var(--text-muted, #aaa)" stroke-width="5" stroke-linecap="round"/><path d="M46 78 l8 9 l17 -19" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    inputs: 0, outputs: 0, isFeadWizard: true, maxInstances: 1,
+    defaultWidth: 60, defaultHeight: 56
   },
   'fead-report': {
     name: 'Rapor',

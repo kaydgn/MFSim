@@ -36,6 +36,13 @@ function veAttachNodeDrag(nodeEl, node) {
       veStrOpenEditor(node.id);
       return;
     }
+    // BAŞLANGIÇ SİHİRBAZI — alt topoloji açmıyor ama aynı el alışkanlığını
+    // kullanıyor: kutuya çift tık, iş yapan yüzeyi açar. Tek tık paneli
+    // gösteriyor ve oradaki düğme de aynı yere gidiyor.
+    if(node.type === 'fead-wizard' && typeof veFeadWizOpen === 'function') {
+      veFeadWizOpen(node.id);
+      return;
+    }
     if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
   });
   nodeEl.addEventListener('mousedown', function(e) {

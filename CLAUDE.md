@@ -10,6 +10,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `build.js` — Build script (`index.html` + `js/` + `css/` → `MFSim_Code.html`)
 - `js/fead-belts.js` — FEAD kayış kataloğu (5 profil, 244 stok boy + otomotiv
   ızgarası). DOM'suz saf veri; ISO 9982 / DIN 7867, üretici kataloglarından çıkarıldı.
+- `js/cp-fead-wizard.js` — FEAD **Başlangıç Sihirbazı** (7 adımlık modal). Kendi
+  modelini KURMAZ: durum → `veFeadWizNodes` → köprünün düğüm biçimi; önizleme de
+  kurulum da aynı listeden geçer.
 - `js/fead-tensioners.js` — FEAD otomatik gergi künye kütüphanesi (14 kayıt, 2 aile).
   DOM'suz saf veri; **14 Gates raporundan ölçülerek** çıkarıldı, parça numarası
   uydurulmadı. Bant kayıtlardan TÜRETİLİR, elle yazılmaz.
@@ -3525,6 +3528,120 @@ listesini boşaltma, panel anahtarını başlıksız bırakma, rapordan kutuyu d
 > çağırıyordu, `_frSection8`'in onu BASTIĞINI ölçmüyordu. Aynı oturumda
 > **üçüncü kez** aynı ders: kapı ÜRETİLEN YÜZEYE bakmalı, üreticiye değil.
 
+##### BAŞLANGIÇ SİHİRBAZI — `js/cp-fead-wizard.js` (7 adım, 2026-08-29)
+
+Kullanıcı isteği: *"Bir 'Başlangıç Sihirbazı' bileşeni kuracağız. Bu bileşene
+tıkladığımızda adım adım bir modeli kurmak için gereken tüm girdileri
+gireceğiz. İlk sayfada sihirbaz kullanıcıya kasnak koordinatlarını soracak,
+diğer sayfada diğer girdileri…"*
+
+Çözdüğü şey bir eksiklik DEĞİL bir **SIRA** sorunu: bütün girdiler zaten
+panellerdeydi, ama hangi sırayla girileceğini ve hangi alanın hangi belgeden
+okunduğunu ancak modülü bilen biri biliyordu. Boş bir iç topolojide kullanıcı
+"önce ne koyayım" sorusuyla baş başaydı.
+
+| Adım | Ne sorar |
+|------|----------|
+| 1 Başlangıç | sistem adı · **gerginin tanım biçimi** (zarf / montaj merkezi / serbest açı) · örnekten doldur |
+| 2 Kasnaklar | tip · ad · Ø OD · X/Y · temas tarafı · sürücü rolü · atalet |
+| 3 Kayış Yolu | serpantin sırası (↑↓) · yönü çevir · dönüş yönü okuması |
+| 4 Otomatik Gergi | künye kütüphanesi · kipe göre koordinat · kol · yay künyesi · titreşim girdileri |
+| 5 Kayış | profil/marka/kanal · boy (kipe göre) · katalog önerisi · kayış tipine bağlı çıktılar |
+| 6 Motor ve Çevrim | tahrik oranı · motor künyesi · duty tablosu (devir · %zaman · °C · aksesuar kW) |
+| 7 Özet ve Kurulum | canlı çözüm kartları · **kayış yolu şeması** · uyarılar · Modeli Kur |
+
+###### ÜÇ KURAL — üçü de bu modülün kendi derslerinden
+
+1. **SİHİRBAZ KENDİ MODELİNİ KURMAZ.** Durum → `veFeadWizNodes` → köprünün
+   düğüm biçimi (`veFeadExampleNodes` ile AYNI sözleşme). **Önizleme de kurulum
+   da aynı listeden** geçiyor; ikinci bir kurucu yazmak, önizlemenin kanvasta
+   çıkan modelden sessizce ayrışması demekti.
+2. **DOĞRULAMA DA KÖPRÜDEN.** Her adımda `veFeadBuildSystem` koşuyor ve onun
+   `errors/warnings` listesi adıma süzülüp gösteriliyor (`VE_FW_ERR_STEP`).
+   İkinci bir zorunlu-alan listesi, köprü değişince sessizce eskiyen bir kapı
+   olurdu. Köprü hiçbir durumda istisna atmadığı için sihirbaz İLK adımdan
+   itibaren canlı çalışıyor.
+3. **DURUM OTURUMLUK, KURULUM KALICI.** Kırk alanlık bir formda her tuş vuruşu
+   `saveState()` çağırsaydı geri-al yığını kullanılamaz hale gelirdi (panel
+   alanlarının kuralı burada geçerli DEĞİL: orada bir alan = bir karar). Taslak
+   KAPANIŞTA `node.data.wiz`e yazılıyor; `saveState` yalnız kapanışta ve
+   kurulumda.
+
+###### EN SIKI KAPI BİR EŞİTLİK — sihirbaz iki örneği de BİREBİR geri üretiyor
+
+Sihirbazın durumu bambaşka bir biçim (form satırları, kasnak anahtarları,
+`kwByKey` yerine `kw`) ama çözüm **aynı sayı** olmak zorunda. **ÖLÇÜLDÜ:**
+
+| | sihirbaz | örnek kurucusu |
+|---|---|---|
+| AG00976 | L **1714,6000** · T **544,0497** · rel **28,0750** · spin 1 | birebir aynı |
+| BMC | L **1715,0000** · T **532,1423** · rel **28,4271** · spin 1 | birebir aynı |
+
+Çeviride bir alan düşse (temas tarafı, sürücü rolü, kip, yay künyesi, duty kW)
+sonuç sessizce kayardı — model yine çözülür, yalnız başka bir sistemi anlatır.
+
+###### KİPE GÖRE HANGİ ALAN TAŞINIR — ve ötekiler TAŞINMAZ
+
+`angleMode` **açıkça** yazılıyor (köprü veriden de çözebiliyor ama açık seçim
+her zaman kazanır): yarım doldurulmuş bir formda kip, kullanıcının seçtiğinden
+BAŞKA çıkabilirdi. Zarf kipinde montaj merkezi **yazılmıyor** — yazılsaydı
+köprünün "iki koordinat da var" uyarısı, kullanıcının GİRMEDİĞİ bir alandan
+gelirdi. Kayış boy kipi de zarf kipinde yazılmıyor: orada boy yapısal olarak
+bir çıktı ve köprü kipi zaten kilitliyor.
+
+###### KURULUM: mevcut model SESSİZCE silinmez
+
+Kanvasta kasnak varken kurulum **kapalı** ve sebebi yazılı: üstüne kurmak bir
+kasnaktan iki tel çıkması demekti (çatal → çözüm reddedilir). Açık onay
+kutusu işaretlenince siliniyor ve **geri alınabilir**. Araç düğümleri
+(kayış · çözücü · kart · rapor) silinmiyor, **yeniden kullanılıyor**:
+`fead-belt` zaten `maxInstances:1` ve kullanıcının kart ölçüsü / rapor türü
+gibi tercihlerini çöpe atmanın karşılığı yok.
+
+**SİHİRBAZ DÜĞÜMÜ KURULUMDAN SONRA KALIR** — `fead-example`'ın tersine, ve
+ayrım kullanıcı verisinde: sihirbaz düğümü kullanıcının kendi formunu taşıyor
+(silmek onu çöpe atmak olurdu), örnek düğümü hiçbir şey taşımıyor.
+
+###### İki UI kararı, ikisi de ölçülmüş bir kusurun karşılığı
+
+| Karar | Neyi kapatıyor |
+|-------|----------------|
+| Canlı şerit **yama**, tam yeniden çizim değil (220 ms gecikmeli) | Her tuş vuruşunda panel yeniden kurulsaydı **ODAK düşerdi** — malzeme kütüphanesi aramasında ölçülmüş sınıf. Ayrıca zarf kipinin ilk taraması 84 ms; kol açısı memosu duruma yazıldığı için sonraki çözümler 6 ms |
+| Adım rayı **tıklanabilir** ve rozeti o adımın **hata sayısını** taşıyor | Sihirbaz bir kilit değil bir sıra önerisi; kullanıcı 5. adımda bir kasnağı düzeltmek için 2'ye dönebilmeli ve hangi adıma döneceğini son adımı beklemeden görmeli |
+
+Boş topoloji artık **iki** açılış yüzeyiyle geliyor (sihirbaz + örnekler): ikisi
+farklı soruya cevap veriyor — *"kendi motorumun verisini nasıl gireceğim"* ile
+*"çalışan bir model neye benziyor"*.
+
+###### ÖLÇÜLDÜ — gerçek tarayıcı (6 E2E, ilk turda yeşil)
+
+Çift tık sihirbazı açıyor · yedi adım rayda · örnekten doldurunca şerit
+`✓ model çözülüyor · L 1715.0 mm · T 532.1 N · ↺ CCW` ve **hata rozeti 0** ·
+gerçek klavye girişinde değer modele işliyor ve **odak alanda kalıyor** ·
+özet adımında şema **6 kasnak çemberiyle** çiziliyor · "Modeli Kur" **6 kasnak
++ 6 tel** kuruyor, önizleme ile kurulan model **1e-6 içinde aynı**, sihirbaz
+düğümü kalıyor, örnek düğümü gidiyor · modal ekrana sığıyor ve gövde **yatay
+kaydırmıyor** (tablo kendi kabında kayıyor) · konsol hatası **yok**.
+
+Kozmetik tur ekran görüntüsüyle yapıldı ve dört düzeltme çıkardı: duty kW yer
+tutucusu `0` gerçek bir değer gibi okunuyordu (boş hücre "kasnağın kendi
+eğrisinden gelsin" demek) → tire; özet kartı **mount kipinde olmayan** mutlak
+kol açısını `—` basıyordu → kipe göre *"Kol açısı (mutlak)"* ↔ *"Kol dönmesi
+(göreli)"*; şema 520 px'de etiketleri kayış yolunun üstüne bindiriyordu →
+700×440 (kabı aşmadan); tablo sütunları tip/ad adlarını kırpıyordu → sütun
+alt genişlikleri.
+
+**Kapı on mutasyonla ölçüldü, onu da kırmızı:** duty kW çevirisini kaldırma,
+zarf kipinde montaj merkezini de yazma, kipi veriden çözdürme, zarf kipinde
+kayış boy kipini yazma, kasnak silinince duty sütununu bırakma, kurulum
+kapısını kaldırma, sihirbaz düğümünü de silme, başlangıçta yalnız örnek
+kutusu koyma, `maxInstances`ı kaldırma, form içi düzenlemede `saveState`
+çağırma.
+
+> Onuncusu **ilk turda YEŞİL kaldı**: kapı yalnız satır EKLEME yolunu
+> yokluyordu, oysa asıl risk alan YAZMA yolunda (`_fwSet`). Kapı artık üç
+> yolu birden koşuyor.
+
 **Sırada:** kullanıcı kayışı seçtikten sonra anahtarı açıp katalog sonuçlarını
 geri almanın akışı (bugün elle yapılıyor); ve zarf çözümünün Sonuçlar
 sayfasında kanal olarak yayını.
@@ -5049,6 +5166,8 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/e2e/viewer.spec.js` | `MFSim_Olcum_Goruntuleyici.html` | **Üretilen tek dosya**, `file://` üzerinden: açılış, içe aktarma, sürükle-bırak, birleştirme, tema, sıfır ağ isteği |
 | `tests/e2e/structural-geometry.spec.js` | Geometri bileşeni (uçtan uca) | **GERÇEK tarayıcı**: gömülü 62,8 MB wasm'ın worker'da açılıp derlenmesi → OCCT → **boolean** → panel künyesi → WebGL sahnesi; **7 gövdeli parça TEK KATI olarak geliyor** ve panel bunu yazıyor (worker'da, künyeye de giriyor); fareyle CAD YÜZÜ vurgusu (üçgen değil), ağ inceliği değişince üçgen değişip kimliklerin sabit kalması, STEP olmayan dosyanın sessizce yutulmaması, **ölçüm kaplamasının STEP alanında çekilip asılı kalmaması**; **arayüz donmuyor** — içe aktarma boyunca çizilen kare sayısı ana iş parçacığında ≤3, worker'da >20 (ölçümde 1 ↔ 91), panelin gerçekten worker'a gitmesi ve ilerleme kartının aşama değiştirip iş bitince kapanması; **kanvas rozeti** (boşken `STEP`, doluyken `⬡18`), **CAD yüz listesi** (18 satır; listeden tık → 3B'de vurgu, 3B'de gezinme → listede işaret, 3B'de tık → listede seçim, ikinci tık seçimi kaldırır, DÖNDÜRME seçimi bozmaz), **kaynağın yalnız dosyaya yazılması** (künye ve otomatik yedek kaynaksız); **görüntüleyicinin boyu** — parça yüklenince pencere ekranı kullanıyor, sol ray ile 3B kutusu AYNI yerde bitiyor (boşluk 290.6 → 0 px), kanvas o ölçüde kuruluyor ve içerik kaydırmıyor; **varsayılanlar** — incelik/kenar kontrolü panelde yok ve her içe aktarma 0.0005 ile geliyor, yüz listesi ve fare künyesi kullanıcı açana kadar çıkmıyor, kapatınca hiçbir işaret kalmıyor. Bu halkalar Node'da HİÇ koşmuyor |
 | `tests/e2e/results-txt-page.spec.js` | TXT rapor önizlemesi (yerleşim) | **GERÇEK tarayıcı**: iki bandın AYNI yerde bitmesi (ölçülen eski fark 12 px), başlıkların aynı punto, sayfanın 794 px = A4 olması, metnin tek blok / tek sol kenar kalması (eski: 43 blok, 10 kenar), 119 sütunluk tablonun sayfaya sığması (yatay kaydırma yok) ve dar raporun tavan puntoyla açılması. Rapor METNİ sahte — ölçülen şey kabuk; bu halkalar Node'da HİÇ koşmuyor |
+| `tests/unit/fead-wizard.test.js` | `js/cp-fead-wizard.js` + `js/components.js` + `js/cp-fead.js` | **Başlangıç Sihirbazı**: bileşen sözleşmesi (0/0, `maxInstances:1`, palet + kayıt defteri + panel dağıtımı + çift tık + modal kabuğu + CSS sınıfları), betiğin `cp-fead.js`'ten SONRA yüklenmesi, başlangıçta İKİ açılış yüzeyi; **durum → düğüm çevirisi iki örneği de BİREBİR geri üretiyor** (AG00976 L 1714,6 · T 544,05 · rel 28,075 · BMC L 1715,0 · T 532,142 · rel 28,4271) ve duty kW anahtardan kimliğe çevriliyor — çevrilmezse sonucun gerçekten değiştiği İKİ UÇTAN tutuluyor; kipe göre hangi alanın taşındığı (zarfta montaj merkezi YOK, boy kipi YOK; mount'ta var), kipin AÇIKÇA yazılması; sıra/sürücü/satır kuralları (ilk kasnak sürücü doğar, sürücü tek, gergi sıraya kendiliğinden girer, kasnak silinince duty sütunu da düşer, tip değişince temas tarafı tipin varsayılanına döner, sırayı çevirmek yönü çevirir); kurulum kapısı (mevcut kasnakla kapalı + sebep, onayla açık) ve kurulum (6 kasnak + 6 tel, kW göçü, **kurulan model önizlemeyle birebir**, sihirbaz düğümü KALIR / örnek düğümü GİDER, temizle işaretliyse teller de gider); adım eşlemesi, yedi adımın boş ve dolu durumda `undefined`/`NaN` basmadan çizilmesi, taslağın düğüme yazılıp KALDIĞI YERDEN açılması ve **form içi düzenlemenin `saveState` çağırmaması** |
+| `tests/e2e/fead-wizard.spec.js` | Sihirbaz (uçtan uca) | **GERÇEK tarayıcı**: çift tıkla açılış, yedi adımlık ray, örnekten doldurunca canlı şeridin `✓ model çözülüyor` + L/T/yön basması ve hata rozetinin kalmaması, **gerçek klavye girişinde odağın alanda KALMASI** (canlı şerit yama; tam yeniden çizim odağı düşürürdü), özet adımında kayış yolu şemasının SVG olarak çizilmesi, "Modeli Kur"un kanvasa 6 kasnak + 6 tel kurup **önizlemeyle birebir aynı çözümü** vermesi, modalın ekrana sığması ve gövdenin yatay kaydırmaması. Bu halkalar Node'da HİÇ koşmuyor |
 | `tests/e2e/fead-canvas-drag.spec.js` | FEAD kanvas ↔ mm zinciri (uçtan uca) | **GERÇEK tarayıcı**: fare sürüklemesi → `veAttachNodeDrag` → `veFeadSyncDrag` → mm → topoloji imzası → Kayış Yolu kartının yeniden kurulması → yeni L_eff. Node'da HİÇ koşmayan halkalar: gerçek `mousedown/mousemove/mouseup`, `canvasZoom` bölmesi, DOM'a yazılan `style.left`, kartın `innerHTML` ile kurulması. Kart sürüklerken CANLI tazeleniyor (bırakmayı beklemiyor), kayış kipi rozeti gerçek tıkla değişiyor ve çözüm kipe uyuyor, "Otomatik Düzenle" koordinatları silmiyor. **Dönüş Yönü**: rozet tıklanınca kablolar gerçekten çevriliyor, kanvastaki gidiş okları onunla dönüyor (bayrak yolunda ok yalan söylerdi), kartın `data-fead-anim` künyesindeki `sense` +1 → −1 oluyor ama `loop` ve `L` birebir sabit kalıyor (geometri yönden bağımsız), ikinci tık başa döndürüyor. **Konum Bağı**: rozet tıklanınca kapanıyor (kutu oynuyor, mm ve kartın `L`'si birebir sabit), yeniden açınca kutu koordinatına dönüyor ve `style.left` de tazeleniyor, kapalı bağda kenetleme geri geliyor, kapalı düğümü SİLMEK kutuları oturtuyor ve sonraki 1 px yine 1 mm ediyor (kanca yokken 81 mm ediyordu). **Örneğin yeni hâli**: kesikli çap hayaleti DOM'da HİÇ YOK, sol şerit `Kayış Özellikleri → Çözücü → Rapor` (başlangıç kutusu yok), kart 440×500 ve SVG'si `0 0 440 458`, kayış yolu 400 px'ten geniş — yani yön gülü şeridi AYRILMAMIŞ (ayrılsaydı 350 px olurdu). **Kenetleme kapısı**: `SNAP_ENABLED` açıkken bile kasnak istendiği kadar oynuyor (kapatılmasa 24.514 mm istenirken 3.940 mm olurdu — varsayılan kapalı olduğu için ancak açıkça açılarak yakalanıyor) |
 | `tests/e2e/measure-merge-drop.spec.js` | `js/measure-dropzone.js` + `js/trace-view.js` | MFSim'de sürükle-bırak ve çok eksenli birleştirme — araç performans VE takoz sekmesi |
 

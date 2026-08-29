@@ -152,6 +152,7 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
 // DAR "eylem kartı" + kompakt-sol kimlik (ortalı-simge boşluğu gitsin). Salt sunum.
 var VE_COMPACT_PANEL_TYPES = ['mnt-solver', 'mnt-report', 'mount-analysis',
   'fead-analysis', 'fead-example', 'fead-report', 'fead-coordlink', 'fead-spin',
+  'fead-wizard',
   'structural-analysis',
   'arac-performans', 'terminator', 'sensor', 'scenario', 'coast-down', 'propshaft', 'differential', 'wheel'];
 
@@ -284,6 +285,8 @@ function showNodeProperties(node) {
     html += getFeadCoordLinkPropertiesHTML(node);
   } else if(node.type === 'fead-spin') {
     html += getFeadSpinPropertiesHTML(node);
+  } else if(node.type === 'fead-wizard') {
+    html += getFeadWizardPropertiesHTML(node);
   } else if(node.type === 'solver') {
     html += getSolverPropertiesHTML(node);
   } else if(node.type === 'road') {
