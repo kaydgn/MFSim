@@ -148,7 +148,17 @@ function veFeadArrangeByCoords(opts){
   kasnaklar.forEach(function(n){
     var d = n.data || {};
     var x = _feadNum(d.x, NaN), y = _feadNum(d.y, NaN);
-    if(_feadDefOf(n).isFeadTensioner){ x = _feadNum(d.cenX, NaN); y = _feadNum(d.cenY, NaN); }
+    // GERGİ KUTUSU KİP BAŞINA BAŞKA BİR NOKTAYI GÖSTERİR — ve okuyucusu
+    // veFeadSyncCanvasFromMm ile AYNI (veFeadTensionerBoxMm). Burada doğrudan
+    // cenX/cenY okunuyordu; zarf kipinde o alan HİÇ yazılmadığı için gergi
+    // "koordinatı yok" sayılıp kümenin altına diziliyordu (ölçüldü: AG00976'da
+    // kutu 2857,4/3039,0 yerine 2971,0/3277,3 + "1 kasnağın koordinatı yok"),
+    // oysa alt topoloji açılışı onu pivota oturtuyordu: iki yol ayrışmıştı.
+    if(_feadDefOf(n).isFeadTensioner){
+      var kutuMm = (typeof veFeadTensionerBoxMm === 'function')
+        ? veFeadTensionerBoxMm(d) : null;
+      x = kutuMm ? kutuMm[0] : NaN; y = kutuMm ? kutuMm[1] : NaN;
+    }
     if(Number.isFinite(x) && Number.isFinite(y)) mm.push({ n: n, x: x, y: y });
     else eksik.push(n);
   });
@@ -1512,11 +1522,12 @@ function veFeadEnvelopeReadout(node){
       : _feadHint('Kayış yolu bu montaj noktasıyla çözülemiyor.'));
   }
 
-  var r = m.relMeanDeg * Math.PI / 180, th = b.armAbsDeg * Math.PI / 180;
-  var cenX = px + a * Math.cos(th), cenY = py + a * Math.sin(th);
+  // Merkez TEK FORMÜLDEN: c = p + a·(cosθ, sinθ). Buradaki satır içi kopya,
+  // yön hesabının kullandığı okuyucuyla (veFeadTensionerCenter) ayrışabilirdi.
+  var cen = veFeadTensionerCenter(td, b.armAbsDeg) || [NaN, NaN];
   h += satir(pinned ? 'Kol çalışma açısı (sabitlendi)' : 'Kol çalışma açısı (SEÇİLDİ)',
     _feadFmt(b.armAbsDeg, 2) + '°', pinned ? 'var(--text-primary)' : 'var(--accent-primary)');
-  h += satir('↳ kasnak merkezi (türedi)', _feadFmt(cenX, 2) + ' / ' + _feadFmt(cenY, 2),
+  h += satir('↳ kasnak merkezi (türedi)', _feadFmt(cen[0], 2) + ' / ' + _feadFmt(cen[1], 2),
     'var(--accent-warning)');
   h += satir('Gereken KAYIŞ BOYU (çıktı)', _feadFmt(b.beltLengthMm, 1) + ' mm', 'var(--accent-warning)');
   if(Number.isFinite(b.springTensionN))
@@ -3540,8 +3551,12 @@ function veFeadLoadExample(key){
   var xs = [], ys = [];
   pack.example.pulleys.forEach(function(p){
     var d = p.data;
-    var x = (d.x != null) ? _feadNum(d.x, 0) : _feadNum(d.cenX, 0);
-    var y = (d.y != null) ? _feadNum(d.y, 0) : _feadNum(d.cenY, 0);
+    // Gergide kutunun gösterdiği nokta kipe bağlı (veFeadTensionerBoxMm);
+    // bugünkü iki örnek de mount kipinde, ama zarf kipli bir örnek eklenirse
+    // burası sessizce (0,0)'a düşerdi.
+    var kutuMm = (d.x != null) ? null : veFeadTensionerBoxMm(d);
+    var x = (d.x != null) ? _feadNum(d.x, 0) : (kutuMm ? kutuMm[0] : 0);
+    var y = (d.y != null) ? _feadNum(d.y, 0) : (kutuMm ? kutuMm[1] : 0);
     xs.push(x); ys.push(y);
   });
   var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
