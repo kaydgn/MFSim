@@ -35,6 +35,10 @@ function coz(opts) {
     id: n.id, type: n.type, def: componentDefs[n.type],
     customName: n.customName, data: JSON.parse(JSON.stringify(n.data))
   }));
+  // Ömür/yorulma/frekans katalog sabitlerine bağlı; varsayılan artık 'none'.
+  // Rapor testleri belgenin TAMAMINI ölçtüğü için açıkça açıyor.
+  const _b = ns.find((n) => n.type === 'fead-belt');
+  if (_b) _b.data.beltDataMode = 'full';
   if (opts.mutate) opts.mutate(ns);
   const build = veFeadBuildSystem(ns, pack.connections);
   const solv = ns.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver)[0];
@@ -278,13 +282,14 @@ describe('uygunluk hükmü', () => {
   // "Değerlendirilemedi" uygunluk SAYILMAZ — gizlenirse eksik girdi
   // sessizce "geçti" gibi okunur.
   test('değerlendirilemeyen kriter gizlenmiyor', () => {
+    // Zarf taranamayacak kadar bozuk bir yerleşim: kriter "değerlendirilemedi"
+    // diye BASILIR, sessizce geçmiş sayılmaz.
     const R = coz({ mutate: (ns) => {
       const t = ns.filter((n) => n.type === 'fead-tensioner')[0];
-      delete t.data.cenX; delete t.data.cenY; t.data.angleMode = 'direct'; t.data.freeAngleDeg = 25;
+      delete t.data.meanLoad;
     } });
     const h = RP._frCompliance(R);
     expect(h).toContain('değerlendirilemedi');
-    expect(h).toContain('montaj merkezi girilmedi');
   });
 
   test('servis faktörü hükümde kullanılıyor (sabit 1,3 değil)', () => {
@@ -599,7 +604,7 @@ describe('§8.7 — hangi sayı GİRDİ, hangisi TÜREV', () => {
       expect(j).toBeGreaterThan(-1);
       return blok.slice(j, blok.indexOf('</tr>', j));
     };
-    ['Kol boyu a', 'Yay ön yükü', 'Yay oranı k', 'Gergi pivotu']
+    ['Kol boyu a', 'Yay ön yükü', 'Yay oranı k', 'Otomatik gergi montaj konumu']
       .forEach((ad) => expect(satir(ad)).toContain('<b>girdi</b>'));
     ['Gergi kasnağı sarımı', 'Hubload–kol açısı', 'Take-up oranı', 'Yay momenti']
       .forEach((ad) => expect(satir(ad)).toContain('<b>türev</b>'));
@@ -962,7 +967,7 @@ describe('teori kaynağı — türetme ve ankraj', () => {
     expect(T).toMatch(/servis zarfını/);
     expect(T).toMatch(/montaj zarfıyla/);
     // ve iki zarfın FARKI yazılı (hangisinde ne sabit)
-    expect(T).toMatch(/pivot sabit, kolun saati serbesttir/);
+    expect(T).toMatch(/montaj noktası sabit, kolun saati serbesttir/);
   });
 
   test('§1 dördüncü soruyu — hangi kayışı ısmarlamalıyım — sayıyor', () => {
@@ -1109,10 +1114,10 @@ describe('rapor incelemesi — etiket, bayat metin ve hüküm kapıları', () =>
   });
 
   test('ANTET efektif boyu BİR BASAMAKLA basıyor — 1714,6 ≠ "1715"', () => {
-    // Tam sayıya yuvarlamak katalog adını (8PK1715HD) gerçek efektif boyun
-    // yerine koyuyordu; aradaki 0,4 mm kolu 0,56° döndürüp gerginliği %1,5
-    // kaydırıyor (AG00976'da ölçüldü).
-    expect(RA.build.sys.belt.effLength).toBeCloseTo(1714.6, 3);
+    // Tam sayıya yuvarlamak katalog adını (8PK1715HD) TÜREYEN efektif boyun
+    // yerine koyardı. Boy artık bir ÇIKTI; model 1714,61 mm veriyor ve antet
+    // bunu bir basamakla, yani 1714,6 olarak basıyor.
+    expect(RA.build.sys.belt.effLength).toBeCloseTo(1714.6, 1);
     expect(HA).toMatch(/1714,6 mm/);
     expect(HA).not.toMatch(/8 kaburga · 1715 mm/);
     // İkinci uzunluk (tahrik boyu) da adlandırılmış olmalı: antette iki farklı
@@ -1214,93 +1219,38 @@ describe('rapor incelemesi — etiket, bayat metin ve hüküm kapıları', () =>
 // "Tensioner pivot noktası tedarikçiye girdi olarak gitmeyecek. İlk önce bu
 // hesabın nasıl yapıldığını verelim." Blok pivotun bağımsız OLMADIĞINI kurar:
 // kayış yolu pivota hiç bağlı değil, pivotun tek etkisi β → take-up → gerginlik.
-describe('§8.7 gergi pivotunun kuruluşu', () => {
-  function coz(key) {
-    const pack = veFeadExampleNodes(key);
-    const ns = pack.nodes.map((n) => ({
-      id: n.id, type: n.type, def: componentDefs[n.type],
-      customName: n.customName, data: JSON.parse(JSON.stringify(n.data)),
-    }));
-    const build = veFeadBuildSystem(ns, pack.connections);
-    const solv = ns.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver)[0];
-    const R = veFeadAnalyze(build, { rows: veFeadDutyRows(solv), cylinders: 6, crankInertia: 0.70 });
-    R.build = build; R.pulleyNames = build.names;
-    R.serviceFact = Number(solv.data.serviceFact) || 0;
-    return R;
-  }
-  let HT, HG, RT;
-  beforeAll(() => {
-    RT = coz('BMC_FEAD_2026');            // pivot TÜRETİLİYOR
-    HT = RP._frPivotBlock(RT);
-    HG = RP._frPivotBlock(coz('AG00976_GATES_2025'));   // pivot GİRİLİ
+describe('§8.7 montaj konumu ve avara hareketi', () => {
+  // Kullanıcı kararı (2026-08-29): tek koordinat, doğrulama yok. Bu blok
+  // eskiden pivotun TÜRETİLDİĞİNİ, kol boyu kontrolünün totoloji olduğunu ve
+  // "gerçek denetim" dalını tutuyordu — üçü de kalktı.
+  const R = () => coz();
+
+  test('MONTAJ KONUMU bir GİRDİ, avara merkezi bir ÇIKTI olarak kuruluyor', () => {
+    const h = RP._frPivotBlock(R());
+    expect(h).toMatch(/Otomatik gergi montaj konumu ve avaranın hareketi/);
+    expect(h).toMatch(/tek bir koordinat/);
+    expect(h).toMatch(/bir <b>çıktıdır<\/b>/);
   });
 
-  test('pivotun GİRDİ OLMADIĞINI ve kasnak merkezinden çıktığını kuruyor', () => {
-    expect(HT).toMatch(/kullanıcıdan <b>istenmez<\/b>/);
-    expect(HT).toMatch(/gergi kasnağının merkezi/);
-    // Alternatör satırı, koordinatın GÖVDE değil KASNAK merkezi olduğunun kanıtı.
-    expect(HT).toMatch(/Alternatör satırı/);
-    // Kuruluş denklemi ve parça künyesi kaynağı.
-    expect(HT).toMatch(/parça künyesinden/);
-    expect(HT).toMatch(/MEAN ANGLE/);
+  test('DENKLEM YÖNÜ: c = p + a(cosθ, sinθ) — avaranın hareketinin tanımı', () => {
+    const h = RP._frPivotBlock(R());
+    expect(h).toMatch(/\\mathbf\{c\}[\s\S]{0,40}\\mathbf\{p\}/);
+    expect(h).not.toMatch(/\\mathbf\{p\}\s*\\;=\\;\s*\\mathbf\{c\}/);
   });
 
-  test('TÜRETİLEN pivotta kol boyu kontrolünün TOTOLOJİ olduğunu SÖYLÜYOR', () => {
-    // Bu oturumda aynı hataya iki kez düşüldü (uygunluk #6, ilk pivot bloğu):
-    // yapısal olarak sıfır çıkan bir farkı "denetim" diye basmak.
-    expect(RT.build.pivotDerived).toBe(true);
-    expect(HT).toMatch(/DENETİM DEĞİLDİR/);
-    expect(HT).toMatch(/yapısal olarak/);
+  test('DOĞRULAMA DİLİ YOK — "denetim", "totoloji", "ölçülmüş pivot" geçmiyor', () => {
+    const h = RP._frPivotBlock(R());
+    expect(h).not.toMatch(/DENETİM DEĞİLDİR/);
+    expect(h).not.toMatch(/pivot ÖLÇÜLMÜŞ/);
+    expect(h).not.toMatch(/gerçek bir denetimdir/);
+    expect(h).not.toMatch(/kullanıcıdan <b>istenmez<\/b>/);
   });
 
-  test('GİRİLEN pivotta aynı kontrol GERÇEK denetim olarak sunuluyor', () => {
-    expect(HG).toMatch(/pivot ÖLÇÜLMÜŞ/);
-    expect(HG).toMatch(/gerçek bir denetimdir/);
-    expect(HG).toMatch(/bağımsız/);
-    // Ve totoloji uyarısı ORADA çıkmamalı — iki durum karışmasın.
-    expect(HG).not.toMatch(/DENETİM DEĞİLDİR/);
-  });
-
-  test('BASILAN DENKLEM modelin kendi pivotunu veriyor (elle çalışılabilir)', () => {
-    // Belgenin aritmetiği okunabilir olmalı: c, a ve θ basılıyor, sonuç da.
-    const t = RT.build.sys.tensioner;
-    const say = (x) => x.toFixed(2).replace('.', ',').replace('-', '−');
-    expect(HT).toMatch(new RegExp(say(t.pivot[0]).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-    expect(HT).toMatch(new RegExp(say(t.pivot[1]).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-    // Ve gerçekten de o denklemi sağlıyor.
-    const m = veFeadTensionerMount(
-      veFeadExampleOf('BMC_FEAD_2026').pulleys.find((p) => p.key === 'TEN').data);
-    expect(Math.hypot(m.pivot[0] - t.pivot[0], m.pivot[1] - t.pivot[1])).toBeLessThan(1e-6);
-  });
-
-  test('KAYIŞ YOLUNUN PİVOTA BAĞLI OLMADIĞINI yazıyor — ve bu DOĞRU', () => {
-    expect(HT).toMatch(/Kayış yolu pivota bağlı değildir/);
-    // Ölçüm: pivotu kaydır, geometri DEĞİŞMESİN (yalnız β/gerginlik değişsin).
-    const p = veFeadExampleNodes('AG00976_GATES_2025');
-    p.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    const t = p.nodes.find((n) => n.type === 'fead-tensioner').data;
-    const rel0 = (() => { const b = veFeadBuildSystem(p.nodes, p.connections);
-      return F.tensionerState(b.sys, F.meanRel(b.sys)); })();
-    // Pivotu kolun etrafında döndür: merkez AYNI kalsın, pivot değişsin.
-    const a = t.armLen, th = Math.atan2(t.cenY - t.pivotY, t.cenX - t.pivotX) + 0.15;
-    t.pivotX = t.cenX - a * Math.cos(th); t.pivotY = t.cenY - a * Math.sin(th);
-    const b2 = veFeadBuildSystem(p.nodes, p.connections);
-    const st2 = F.tensionerState(b2.sys, F.meanRel(b2.sys));
-    // Sarım ve açıklıklar AYNI (geometri merkeze bakar). Kalan 3e-5°'lik fark
-    // çözücünün yakınsama gürültüsü: kol açısı yeniden çözülüyor, bulunan
-    // merkez kayan noktada bir tık oynuyor. β'daki 1°+ değişimin yanında yok.
-    expect(Math.abs(st2.wrapDeg - rel0.wrapDeg)).toBeLessThan(1e-3);
-    // …ama β ve gerginlik DEĞİŞTİ (pivot yalnız take-up'ı belirler).
-    expect(Math.abs(st2.betaDeg - rel0.betaDeg)).toBeGreaterThan(1);
-    expect(Math.abs(st2.tensionN - rel0.tensionN) / rel0.tensionN).toBeGreaterThan(0.01);
-  });
-
-  test('§8.7 içinde ve tasarım gerginliği bloğundan ÖNCE geliyor', () => {
-    const h8 = RP._frSection8(RT, NODE);
-    const iP = h8.indexOf('Gergi pivotu nereden geliyor');
-    const iT = h8.indexOf('Tasarım gerginliği nereden geliyor');
-    expect(iP).toBeGreaterThan(-1);
-    expect(iT).toBeGreaterThan(iP);
+  test('SIRA yazılı: montaj konumu → kol açısı → merkez ve kayış boyu', () => {
+    const h = RP._frPivotBlock(R());
+    expect(h).toMatch(/Sıra bu/);
+    expect(h).toMatch(/montaj konumunu<\/b> girer/);
+    expect(h).toMatch(/kayış boyu<\/b> ondan türer/);
   });
 });
 

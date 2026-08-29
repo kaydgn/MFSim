@@ -35,6 +35,10 @@ function coz(anahtar, fatModel) {
     id: n.id, type: n.type, def: componentDefs[n.type],
     customName: n.customName, data: JSON.parse(JSON.stringify(n.data))
   }));
+  // Özet rapor belgenin TAMAMINI ölçüyor; katalog sonuçları (ömür · yorulma ·
+  // açıklık frekansları) varsayılan olarak KAPALI olduğu için açıkça açılıyor.
+  const _b = ns.find((n) => n.type === 'fead-belt');
+  if (_b) _b.data.beltDataMode = 'full';
   const build = veFeadBuildSystem(ns, pack.connections);
   const solv = ns.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver)[0];
   const R = veFeadAnalyze(build, {
@@ -917,6 +921,7 @@ describe('FEAD özet · tepe zincirinde çevrim kapanışı', () => {
 describe('FEAD özet · tepe taramasının girdisi ve etiketleri', () => {
   test('panel ivmesi sonuca TAŞINIYOR ve tabloyu gerçekten değiştiriyor', () => {
     const pack = veFeadExampleNodes('AG00976_GATES_2025');
+    { const b = pack.nodes.find((n) => n.type === 'fead-belt'); if (b) b.data.beltDataMode = 'full'; }
     const ns = pack.nodes.map((n) => ({
       id: n.id, type: n.type, def: componentDefs[n.type],
       customName: n.customName, data: JSON.parse(JSON.stringify(n.data))
@@ -955,6 +960,7 @@ describe('FEAD özet · tepe taramasının girdisi ve etiketleri', () => {
   // ve kazanan dal decel oluyor (ölçüldü: 1/6 kasnak).
   test('basılan ivme, sayıyı ÜRETEN dalın işareti', () => {
     const pack = veFeadExampleNodes('AG00976_GATES_2025');
+    { const b = pack.nodes.find((n) => n.type === 'fead-belt'); if (b) b.data.beltDataMode = 'full'; }
     const ns = pack.nodes.map((n) => ({
       id: n.id, type: n.type, def: componentDefs[n.type],
       customName: n.customName, data: JSON.parse(JSON.stringify(n.data))

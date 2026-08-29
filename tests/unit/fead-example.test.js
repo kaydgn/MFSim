@@ -101,15 +101,6 @@ describe('sayfanın dört çıpası', () => {
     expect(Math.abs(L - SAYFA.beltEffMm) / SAYFA.beltEffMm).toBeLessThan(0.0005);
   });
 
-  test('gergi kol boyu 90.0 mm — montaj merkezi ile pivot arasındaki uzaklık', () => {
-    const ten = veFeadExampleOf('BMC_FEAD_2026').pulleys.find((p) => p.key === 'TEN');
-    const ac = veFeadArmCheck(ten.data);
-    expect(ac.fromCoords).toBeCloseTo(SAYFA.armLenMm, 2);
-    expect(ac.entered).toBe(SAYFA.armLenMm);
-    expect(ac.ok).toBe(true);                       // sapma 0.5 mm kapısının altında
-    expect(Math.abs(ac.deltaMm)).toBeLessThan(0.01);
-  });
-
   test('Spring Mean Load 22.07 Nm — ÇÖZÜLEN nokta ondan ne kadar ayrışıyor', () => {
     // Sayfanın "Spring Mean Load"u kolun NOMİNAL çalışma açısını söyler:
     // rel_nominal = (22,07 − 8,60)/0,480 = 28,06°. Serbest açı buradan türetilir.
@@ -157,32 +148,30 @@ describe('sayfanın dört çıpası', () => {
   //
   // Kapı olmadan bu sessizce yapılırdı: model yine çözülür, hiçbir uyarı
   // çıkmaz, yalnız sonuç Gates'ten uzaklaşır.
-  test('Gates Belt Data BMC\'ye KONMAZ — karıştırmak modeli UZAKLAŞTIRIYOR', () => {
-    const gates = 543.9;                       // AG00976 Mean tasarım gerginliği
-    const bugun = kur().build;
-    const karisik = kur((nodes) => {
-      Object.assign(tipOf(nodes, 'fead-belt'),
-        { effLength: 1714.6, tolerance: 6, wearPct: 0.006 });
-      tipOf(nodes, 'fead-solver').lengthOffsetMm = 1.6;
-    }).build;
-
-    // İkisi de çözülüyor — fark bir hata değil, bir SAPMA.
-    expect(bugun.ok).toBe(true);
-    expect(karisik.ok).toBe(true);
-
-    const sapma = (b) => Math.abs(b.springTensionN - gates) / gates;
-    expect(sapma(bugun)).toBeLessThan(0.03);      // ÖLÇÜLDÜ: %2,2
-    expect(sapma(karisik)).toBeGreaterThan(0.06); // ÖLÇÜLDÜ: %7,4
-    // Yön açık: karıştırmak sapmayı en az iki katına çıkarıyor.
-    expect(sapma(karisik)).toBeGreaterThan(sapma(bugun) * 2);
-
-    // Aynı şey yay momentinde de görünüyor: çözülen nokta nominalden UZAKLAŞIYOR.
-    const nom = (b) => Math.abs(F.springTorque(b.sys, F.meanRel(b.sys))
-      - SAYFA.springMeanNm) / SAYFA.springMeanNm;
-    expect(nom(bugun)).toBeLessThan(0.015);       // ÖLÇÜLDÜ: %0,79
-    expect(nom(karisik)).toBeGreaterThan(0.02);   // ÖLÇÜLDÜ: %2,75
+  test('Gates Belt Data karıştırma TEHLİKESİ ORTADAN KALKTI', () => {
+    // ESKİDEN: BMC (giden sayfa) kayış künyesine AG00976 (dönen rapor) Belt
+    // Data'sını koymak gerginliği −%2,2'den −%7,4'e taşıyordu, çünkü kayış boyu
+    // bir GİRDİYDİ ve kolu oraya oturtuyordu.
+    //
+    // BUGÜN: kayış boyu bir ÇIKTI. Kol açısı montaj konumundan ve yay
+    // künyesinden seçiliyor, kayış künyesi çözüme HİÇ girmiyor — iki belgenin
+    // kayış verisini karıştırmak sonucu DEĞİŞTİRMİYOR. Kapı o değişmezliği
+    // tutuyor: kayış künyesi çözüme geri sızarsa kırmızı.
+    const gates = 543.9;
+    const kur = (mut) => {
+      const pack = veFeadExampleNodes('BMC_FEAD_2026');
+      pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+      if (mut) mut(pack.nodes.find((n) => n.type === 'fead-belt').data);
+      return veFeadBuildSystem(pack.nodes, pack.connections);
+    };
+    const bugun = kur();
+    const karisik = kur((bd) => {
+      bd.effLength = 1714.6; bd.tolerance = 6; bd.wearPct = 0.006; bd.lengthOffsetMm = 1.6;
+    });
+    expect(karisik.springTensionN).toBeCloseTo(bugun.springTensionN, 9);
+    expect(karisik.beltLengthMm).toBeCloseTo(bugun.beltLengthMm, 9);
+    expect(Math.abs(bugun.springTensionN - gates) / gates).toBeLessThan(0.04);
   });
-
   test('tahrik oranı 1.1 — krank/fan çapından', () => {
     const sd = veFeadExampleOf('BMC_FEAD_2026').solver;
     const dr = veFeadDriveRatio(sd);
@@ -216,53 +205,6 @@ describe('sarım değişmezi ve çevrim kapanışı', () => {
 //  MONTAJ MERKEZİ ↔ SERBEST AÇI — bu modülün en pahalı sessizliği
 // ════════════════════════════════════════════════════════════════════════════
 describe('montaj merkezi serbest açı DEĞİLDİR', () => {
-  test('montaj konumundan türetme: serbest açı = montaj açısı − sense × rel_mean', () => {
-    const ten = veFeadExampleOf('BMC_FEAD_2026').pulleys.find((p) => p.key === 'TEN');
-    const m = veFeadTensionerMount(ten.data);
-    expect(m.ok).toBe(true);
-    // Montaj açısı = kolun MUTLAK açısı ve artık PARÇA KÜNYESİNDEN geliyor:
-    // E9843 çizimi "344° MEAN ANGLE" diyor, −16° onun eşdeğeri.
-    expect(m.montajDeg).toBeCloseTo(-16.0, 3);
-    expect(m.pivotDerived).toBe(true);
-    expect(m.relMeanDeg).toBeCloseTo((22.07 - 8.60) / 0.480, 6);   // 28.06°
-    expect(veFeadFreeAngleFrom(m, +1)).toBeCloseTo(m.montajDeg - m.relMeanDeg, 9);
-    expect(veFeadFreeAngleFrom(m, -1)).toBeCloseTo(m.montajDeg + m.relMeanDeg, 9);
-  });
-
-  // KAPININ VARLIK NEDENİ. Yanlış okuma hata VERMEZ; ölçülen fark burada.
-  test('sayfadaki montaj açısı serbest açı diye girilirse gerginlik 2.6 KAT düşer', () => {
-    const pack = veFeadExampleNodes('BMC_FEAD_2026');
-    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    const dogru = veFeadBuildSystem(pack.nodes, pack.connections);
-    expect(dogru.ok).toBe(true);
-    const T_dogru = F.tensionerState(dogru.sys, F.meanRel(dogru.sys)).tensionN;
-
-    // YANLIŞ okuma: montaj açısı doğrudan freeAngleDeg alanına yazılmış.
-    const yanlisNodes = JSON.parse(JSON.stringify(pack.nodes));
-    const ten = yanlisNodes.find((n) => n.type === 'fead-tensioner');
-    const m = veFeadTensionerMount(ten.data);
-    ten.data.angleMode = 'direct';
-    ten.data.freeAngleDeg = m.montajDeg;
-    yanlisNodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    const yanlis = veFeadBuildSystem(yanlisNodes, pack.connections);
-
-    // 1) HATA VERMİYOR — sessizlik tam olarak burada.
-    expect(yanlis.errors).toEqual([]);
-    expect(yanlis.ok).toBe(true);
-
-    // 2) Ama çalışma noktasındaki yay momenti sayfadaki değerin çok altında.
-    const M_yanlis = F.springTorque(yanlis.sys, F.meanRel(yanlis.sys));
-    expect(M_yanlis).toBeLessThan(10);                     // ölçüldü: 8.81 Nm
-    expect(SAYFA.springMeanNm / M_yanlis).toBeGreaterThan(2);
-
-    // 3) Ve gerginlik 2.6 kat düşük (ölçüldü: 650 N ↔ 251 N).
-    const T_yanlis = F.tensionerState(yanlis.sys, F.meanRel(yanlis.sys)).tensionN;
-    // ÖLÇÜLDÜ (türetilen pivotla): 532,1 N ↔ yanlış yol belirgin altında.
-    expect(T_dogru / T_yanlis).toBeGreaterThan(2.2);
-    expect(T_dogru).toBeGreaterThan(500);
-    expect(T_yanlis).toBeLessThan(300);
-  });
-
   test('montaj yolu: eksik çalışma momenti HATA verir (sessizce 0 sayılmaz)', () => {
     const pack = veFeadExampleNodes('BMC_FEAD_2026');
     const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
@@ -273,52 +215,6 @@ describe('montaj merkezi serbest açı DEĞİLDİR', () => {
     expect(build.errors.join(' ')).toMatch(/çalışma momenti|Spring Mean Load/i);
   });
 
-  test('montaj yolu: montaj merkezi girilmeden çözülmez', () => {
-    const pack = veFeadExampleNodes('BMC_FEAD_2026');
-    const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
-    delete ten.data.cenX; delete ten.data.cenY;
-    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    const build = veFeadBuildSystem(pack.nodes, pack.connections);
-    expect(build.ok).toBe(false);
-    expect(build.errors.join(' ')).toMatch(/montaj merkezi/i);
-  });
-
-  // KOL BOYU ÇAPRAZ KONTROLÜ YALNIZ GİRİLMİŞ PİVOTTA BİR ŞEY ÖLÇER.
-  // Pivot türetildiğinde (BMC_FEAD_2026) kontrol TOTOLOJİKTİR: pivot zaten
-  // merkezden tam armLen uzağa konuyor, dolayısıyla fark yapısal olarak sıfır.
-  // Bunu bir "geçti" gibi sunmak, bu oturumda iki kez düzeltilen hatanın
-  // (uygunluk #6, ilk pivot bloğu) tekrarı olurdu — kod bayrakla söylüyor.
-  test('TÜRETİLEN pivotta kol boyu kontrolü TOTOLOJİK ve öyle işaretli', () => {
-    const ten = veFeadExampleOf('BMC_FEAD_2026').pulleys.find((p) => p.key === 'TEN');
-    expect(ten.data.pivotX).toBeUndefined();
-    const ac = veFeadArmCheck(ten.data);
-    expect(ac.ok).toBe(true);
-    expect(ac.tautological).toBe(true);
-    // Kol boyunu değiştirmek pivotu da taşıdığı için fark YİNE sıfır kalır.
-    const ac2 = veFeadArmCheck(Object.assign({}, ten.data, { armLen: 70 }));
-    expect(Math.abs(ac2.deltaMm)).toBeLessThan(1e-9);
-    expect(ac2.tautological).toBe(true);
-  });
-
-  // Pivot GİRİLDİĞİNDE (tedarikçi raporundan gelen ÖLÇÜLMÜŞ pivot) kontrol
-  // gerçek bir denetimdir: iki bağımsız sayı karşılaştırılır.
-  test('GİRİLEN pivotta kol boyu uyuşmazlığı çözümü DURDURUR', () => {
-    const pack = veFeadExampleNodes('AG00976_GATES_2025');
-    const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
-    expect(ten.data.pivotX).toBeDefined();
-    expect(veFeadArmCheck(ten.data).tautological).toBe(false);
-    ten.data.armLen = 70;                     // koordinatlar 90 mm diyor
-    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    const build = veFeadBuildSystem(pack.nodes, pack.connections);
-    expect(build.ok).toBe(false);
-    expect(build.errors.join(' ')).toMatch(/kol boyu tutmuyor/i);
-  });
-
-  test('0.5 mm altındaki sapma kabul edilir (ölçü yuvarlaması)', () => {
-    const ten = veFeadExampleOf('AG00976_GATES_2025').pulleys.find((p) => p.key === 'TEN');
-    expect(veFeadArmCheck(Object.assign({}, ten.data, { armLen: 90.3 })).ok).toBe(true);
-    expect(veFeadArmCheck(Object.assign({}, ten.data, { armLen: 90.8 })).ok).toBe(false);
-  });
 });
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -463,10 +359,10 @@ describe('örnek kaydı ↔ tanım tutarlılığı', () => {
       veFeadExampleOf(k).pulleys.forEach((p) => {
         expect(p.data.od).toBeGreaterThan(0);
         if (p.type === 'fead-tensioner') {
-          // Merkez HER ZAMAN gerekli; pivot ya girilir ya da kol açısından
-          // türetilir — ikisinden biri olmak zorunda.
-          expect(p.data.cenX).toBeDefined();
-          expect(p.data.pivotX !== undefined || p.data.armMeanDeg !== undefined).toBe(true);
+          // TEK KOORDİNAT: montaj konumu. Kasnak merkezi artık bir çıktı.
+          expect(p.data.pivotX).toBeDefined();
+          expect(p.data.pivotY).toBeDefined();
+          expect(p.data.cenX).toBeUndefined();
         } else {
           expect(Number.isFinite(p.data.x)).toBe(true);
           expect(Number.isFinite(p.data.y)).toBe(true);
@@ -565,7 +461,7 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
     //   parça çiziminden TÜREYEN   (−256,59/123,97)  → 532,1 N   (−%2,2)
     // (yüzdeler Gates'in 543,9 N'una göre; o rapor KENDİ kayışıyla koşuyor,
     // bu örnek hâlâ sayfanınkiyle — bkz. "KAYIŞ KÜNYESİ AYRI" testi.)
-    expect(build.springTensionN).toBeCloseTo(532, 0);
+    expect(build.springTensionN).toBeCloseTo(525.5, 1);
     expect(build.sys.designTensionN).toBeCloseTo(build.springTensionN, 9);
     expect(build.cfg.designTensionN).toBeCloseTo(build.springTensionN, 9);
   });
@@ -589,7 +485,7 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
     pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     const build = veFeadBuildSystem(pack.nodes, pack.connections);
     expect(build.ok).toBe(true);
-    expect(build.sys.designTensionN).toBeCloseTo(532, 0);   // 400 DEĞİL
+    expect(build.sys.designTensionN).toBeCloseTo(525.5, 1);   // 400 DEĞİL
     expect(build.warnings).toEqual([]);                     // uyuşmazlık diye bir şey kalmadı
   });
 
@@ -617,49 +513,37 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
   // *"modelin çözülemez olduğu bir küme olmaması gerekiyor"*. Artık kol
   // gerginin NOMİNAL açısına alınıyor, ankraj oradan türüyor ve asıl cevap
   // veriliyor: bu yerleşim hangi kayışı istiyor.
-  test('erişilemeyen kayış boyu ÇÖZÜLÜYOR ve gereken boyu söylüyor', () => {
-    const pack = veFeadExampleNodes('BMC_FEAD_2026');
-    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    pack.nodes.find((n) => n.type === 'fead-belt').data.effLength = 1000;
-    const b = veFeadBuildSystem(pack.nodes, pack.connections);
-
-    expect(b.ok).toBe(true);
-    const al = b.workPoint.atLimit;
-    expect(al).not.toBeNull();
-    expect(al.resolvedAt).toBe('nominalArm');
-    expect(b.warnings.join(' ')).toMatch(/700[.,]4 mm KISA/);
-
-    // Ankraj YİNE türetiliyor — çalışma noktası fiziksel olduğu için.
-    expect(b.sys.designTensionN).toBeGreaterThan(0);
-    expect(b.sys.designTensionN).toBeLessThan(5000);
-
-    // Ve gereken boy, sayfanın kendi kayışını (1715 mm) geri veriyor.
-    expect(al.suggestedBeltMm).toBeCloseTo(SAYFA.beltEffMm, 0);
+  test('GİRİLEN kayış boyu çözümü ETKİLEMEZ — sonuç her zaman GEREKEN boy', () => {
+    // "Çözülemez küme" sorusu yapısal olarak yok: kayış boyu bir girdi
+    // olmadığı için erişilemeyen bir hedef de yok.
+    const kur = (L) => {
+      const pack = veFeadExampleNodes('BMC_FEAD_2026');
+      pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+      if (L !== undefined) pack.nodes.find((n) => n.type === 'fead-belt').data.effLength = L;
+      return veFeadBuildSystem(pack.nodes, pack.connections);
+    };
+    const taban = kur();
+    [1000, 1500, 1715, 2400].forEach((L) => {
+      const b = kur(L);
+      expect(b.ok).toBe(true);
+      expect(b.beltLengthMm).toBeCloseTo(taban.beltLengthMm, 9);
+      expect(b.sys.designTensionN).toBeCloseTo(taban.sys.designTensionN, 9);
+    });
+    expect(taban.beltLengthMm).toBeCloseTo(SAYFA.beltEffMm, 0);
   });
-
-  // TÜRETME YİNE DE BAŞARISIZ OLABİLİR: yay ÖLÜyse (ön yük 0, katsayı 0)
-  // moment sıfırdır, dolayısıyla gerginlik de sıfırdır ve ankraj YOKTUR.
-  // Sessiz geçmek en kötü hâl olurdu: model "çözüldü" görünür, gerilme
-  // tablosu ise boş/çöker.
-  test('ölü yayda ankraj türetilemiyor ve SESSİZ kalınmıyor', () => {
+  test('ölü yayda model ÇÖZÜLMÜYOR ve sebebini adıyla yazıyor', () => {
+    // ESKİDEN build.ok true kalıyordu (kart çizilsin diye) ve gerilme
+    // istendiğinde çekirdek patlıyordu. Tek koordinata geçince nominal kol
+    // açısı SALT yay künyesinden geliyor: künye ölüyse zarf üzerinde
+    // seçilecek nokta da yok. Sessiz yarım çözüm yerine adı konmuş durdurma.
     const pack = veFeadExampleNodes('BMC_FEAD_2026');
     pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
-    ten.data.angleMode = 'direct';
-    ten.data.freeAngleDeg = 3.6;
-    ten.data.preload = 0;
-    ten.data.kArm = 0;
-    delete ten.data.meanLoad;
+    ten.data.preload = 0; ten.data.kArm = 0; delete ten.data.meanLoad;
 
     const b = veFeadBuildSystem(pack.nodes, pack.connections);
-    // Geometri hâlâ çizilebilir olduğu için ok kalır (kayış yolu kartı çalışsın)
-    expect(b.ok).toBe(true);
-    expect(b.sys.designTensionN).toBeUndefined();
-    expect(b.warnings.join(' ')).toMatch(/türetilemedi/);
-    // ve çekirdek gerilme istendiğinde kendi açık hatasını verir
-    expect(() => F.spanTensions(b.sys, { engineRpm: 1000, loadsKw: {} }))
-      .toThrow(/designTensionN veya slackN gerekli/);
-    // hata çevirisi de artık "girilmedi" DEMİYOR
+    expect(b.ok).toBe(false);
+    expect(b.errors.join(' ')).toMatch(/Spring Mean Load|yay katsayısı/i);
     expect(veFeadTranslateError('FEADCore: designTensionN veya slackN gerekli'))
       .toMatch(/türetilemedi/);
   });

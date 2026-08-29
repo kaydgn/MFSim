@@ -826,7 +826,6 @@ function _gfOrnekCoz(){
   });
   if(!gergi || !kayis || !cozucu) return null;
 
-  gergi.data.angleMode = 'envelope';
   delete gergi.data.cenX; delete gergi.data.cenY;
   delete kayis.data.effLength;
 
@@ -972,7 +971,7 @@ function _gfSec14(){
     + 'bir sonuçtur</strong> — ve tedarikçi raporunun <em>Layout Data</em> satırına '
     + 'oturur.</p>';
 
-  var m = (typeof veFeadTensionerMount === 'function') ? veFeadTensionerMount(td) : {};
+  var m = (typeof veFeadSpringSetup === 'function') ? veFeadSpringSetup(td) : {};
   var a = Number(td.armLen), th = Number(b.armAbsDeg) * Math.PI / 180;
   var cenX = Number(td.pivotX) + a * Math.cos(th);
   var cenY = Number(td.pivotY) + a * Math.sin(th);

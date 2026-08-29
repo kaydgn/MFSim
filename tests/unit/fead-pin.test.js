@@ -58,7 +58,6 @@ function ornek(patch) {
 function zarfKur(opt) {
   const o = opt || {};
   const { pack, ten } = ornek((td) => {
-    td.angleMode = 'envelope';
     delete td.cenX; delete td.cenY; delete td.armMeanDeg; delete td.armPinned;
     if (o.part !== undefined) { if (o.part) td.tenPart = o.part; }
     else td.tenPart = 'E9843';
@@ -201,7 +200,6 @@ describe('uçtan uca — zarf → θ* → pim', () => {
   test('AG00976 zarf kipinde çözülüyor ve pim planı BUİLD’de duruyor', () => {
     const { build } = zarfKur();
     expect(build.ok).toBe(true);
-    expect(build.angleMode).toBe('envelope');
     expect(build.pin).toBeTruthy();
     expect(build.pin.ok).toBe(true);
     // (4.8): θ_pim = θ* + Δ_parça, 0…360 bandında
@@ -224,15 +222,16 @@ describe('uçtan uca — zarf → θ* → pim', () => {
     expect(build.pin.reason.length).toBeGreaterThan(10);
   });
 
-  test('MONTAJ kipinde de pim planı kuruluyor (kol açısı orada da ÇIKTI)', () => {
-    // Zarf kipi tek yüzey değil: montaj kipinde de kolun çalışma açısı
-    // girilen kasnak merkezinden TÜRÜYOR, yani aynı soru geçerli.
-    const { pack, ten } = ornek((td) => { td.angleMode = 'mount'; td.tenPart = 'E9843'; });
+  test('SABİTLENMİŞ kol açısında da pim planı kuruluyor', () => {
+    // Kol açısı ister zarftan seçilsin ister kullanıcı sabitlesin, pim aynı
+    // bağıntıdan çıkar. Tek yol kaldı; kapı onu tutuyor.
+    const { pack, ten } = ornek((td) => {
+      td.armPinned = true; td.armMeanDeg = 344; td.tenPart = 'E9843';
+    });
     const b = M.veFeadBuildSystem(pack.nodes, pack.connections);
-    expect(b.angleMode).toBe('mount');
+    expect(b.armPinned).toBe(true);
     expect(b.pin.ok).toBe(true);
-    const m = M.veFeadTensionerMount(ten.data);
-    expect(b.pin.angleDeg).toBeCloseTo(((m.montajDeg - 113) % 360 + 360) % 360, 6);
+    expect(b.pin.angleDeg).toBeCloseTo(231.00, 6);   // 344 − 113
   });
 });
 
@@ -269,12 +268,6 @@ describe('panel yüzeyi', () => {
     expect(h).not.toMatch(/31\.00 mm/);           // ama sayı UYDURULMUYOR
   });
 
-  test('montaj okuması da pim satırını basıyor', () => {
-    const { ten } = ornek((td) => { td.angleMode = 'mount'; td.tenPart = 'E9843'; });
-    const h = fead.veFeadMountReadout(ten);
-    expect(h).toMatch(SATIR('Konum pimi · yarıçap'));
-    expect(h).toMatch(/31\.00 mm/);
-  });
 });
 
 describe('rapor yüzeyi', () => {

@@ -2940,6 +2940,11 @@ bastığı kol açısı, raporun bastığı pivotu **0,11 mm** içinde veriyor.
 
 ###### ÜÇ HİPOTEZ ÇÖZDÜRÜLDÜ — koordinat KASNAK, pivot DEĞİL
 
+> **TERMİNOLOJİ AŞILDI (2026-08-29):** bu bölümdeki *"pivot"*, bugün
+> **otomatik gergi montaj konumu** olarak adlandırılıyor ve gerginin TEK
+> koordinatıdır. Ölçümler geçerli.
+
+
 | hipotez | sarım | T | Gates 543,9 N'a |
 |---|---|---|---|
 | koordinat = kasnak · θ=**344°** (parça çizimi) | 33,0° | **532,1 N** | **−%2,2** |
@@ -3050,7 +3055,116 @@ etrafında döndürülünce sarım `<0,001°` değişiyor ama β `>1°` ve gergi
 totoloji bayrağını sabitleme (1), sürüklemede pivotu yine yazma (1), raporun
 totoloji uyarısını basmaması (1).
 
+##### TEK KOORDİNAT — "PİVOT" TERMİNOLOJİSİ VE KARŞILIKLI DOĞRULAMA KALKTI (2026-08-29)
+
+Kullanıcı kararı: *"Programda hâlâ garip bir ikilik var… Sanırım programda
+hâlâ karşılıklı doğrulama gibi bir kıstas var. ASLA OLMAYACAK. Herhangi bir
+doğrulama gibi bir olay söz konusu değil. Önceki 'pivot nokta' değeri girdi
+olmayacak asla. O terminoloji kalkacak. Artık sadece 'otomatik gergi montaj
+konumu' var. Buradan otomatik gerginin avara kısmının hareketi tanımlanacak
+sadece."*
+
+**İKİLİK GERÇEKTİ ve üç yüzeydeydi:**
+
+| Nerede | Ne vardı |
+|--------|----------|
+| Panel | `angleMode` seçicisi (zarf / montaj merkezi / serbest açı) + ikincil *"Ölçülmüş Pivot"* alanları + *"Doğrulama"* kartı (`verifyCenX/Y`) |
+| Sihirbaz | *"Gergiyi nasıl tanımlayacaksınız?"* adımı — aynı üç kip |
+| Köprü | `veFeadArmCheck` (üç bantlı `\|merkez − pivot\|` ↔ kol boyu hükmü) + zarf kipinde iki koordinat varsa uyarı basan blok |
+
+**HEPSİ KALKTI.** Bugün gergi için girilen tek şey **Otomatik Gergi Montaj
+Konumu**; avara kasnağının merkezi ondan ve kol açısından TÜRER
+(`c = p + a·(cos θ, sin θ)`), ve program hiçbir şeyi hiçbir şeyle
+karşılaştırmıyor.
+
+| Kalkan | Yerine |
+|--------|--------|
+| `veFeadAngleMode` · `veFeadArmCheck` · `veFeadTensionerMount` · `veFeadFreeAngleFrom` · `veFeadPivotFromArm` | `veFeadSpringSetup` (salt yay künyesi) + `veFeadMigrateTensioner` (tek seferlik göç) |
+| `veFeadVerifyCard` · `veFeadSetVerifyCen` · `veFeadMountReadout` | — |
+| `cenX/cenY` · `angleMode` · `freeAngleDeg` · `verifyCenX/Y` | `pivotX/pivotY` (montaj konumu) |
+
+**`veFeadTensionerMount` İKİ İŞ YAPIYORDU** ve ayrılması şarttı: yay
+kurulmasını (`rel_mean = (M_mean − M₀)/k`, geometriye HİÇ bakmaz) hesaplamak
+VE iki koordinat arasındaki geometriyi çözmek. Birincisi zarf ölçütünün
+girdisi olduğu için kalmak zorundaydı; ikincisi kalktı.
+
+###### GÖÇ TEK NOKTADAN, VE KOLU SABİTLİYOR
+
+`veFeadMigrateTensioner` eski kaydı bir KEZ çeviriyor: montaj konumu yazılıysa
+o kazanır, yoksa kasnak merkezi + kol boyu + kol açısından çıkarılır. Sonra
+eski alanlar **silinir**.
+
+**KOL SABİTLENİYOR** (`armPinned`) ve bu göçün asıl işi: eski kayıt kolun
+nerede durduğunu BİLİYORDU (montaj merkezi onu söylüyordu). Sabitlenmezse zarf
+kendi açısını seçer ve kullanıcının kaydettiği model sessizce başka bir yere
+oturur.
+
+**GÖÇ KÖPRÜDE KOŞUYOR**, yalnız panelde değil: kart · rapor · sürükleme hepsi
+`veFeadBuildSystem`'den geçiyor. Panele bağlansaydı, paneli hiç açmadan
+çözülen bir modelde eski alanlar canlı kalırdı.
+
+**İKİNCİ KOORDİNAT TÜRETİLEMESE BİLE SİLİNİR.** Bu, *"kasnak merkezi montaj
+konumu yerine geçemez"* kapısının dayandığı özellik: bırakılsaydı köprüde ona
+düşen bir yedek yol doğabilirdi ve o yolun bedeli ÖLÇÜLÜ — gerginlik
+**−%48,6**, sarım en kötü **+27,9°**.
+
+###### ÖLÇÜLEN BEDEL — iki örneğin tabanı kaydı
+
+Eski `mount` kipi kayış boyunu GİRDİ alıp kolu ona oturtuyordu; bugün kayış
+boyu bir ÇIKTI ve kol nominal yay açısında duruyor.
+
+| | eski (mount) | yeni (tek koordinat) | fark |
+|---|---:|---:|---|
+| AG00976 · kol | −11,9992° | −11,9992° (sabitlendi) | — |
+| AG00976 · L | 1714,6000 (girdi) | **1714,6088** (çıktı) | +0,009 mm |
+| AG00976 · T | 544,0497 | **543,8534** | **−%0,036** |
+| BMC · rel | 28,4271° | **28,0625°** (nominal) | −0,36° |
+| BMC · L | 1715,0000 (girdi) | **1715,2692** (çıktı) | +0,27 mm |
+| BMC · T | 532,142 | **525,511** | **−%1,24** |
+
+AG00976 neredeyse hiç kaymıyor çünkü kayışının gerçek efektif boyunu (1714,6)
+taşıyor. BMC'nin **%1,24**'ü ise kayıştan: *"1715"* YUVARLANMIŞ bir katalog
+adı ve girdi olarak kolu nominalin 0,36° ötesine itiyordu. Bu fark zaten
+belgeliydi (*"İki kip yakınsıyor ama ÖZDEŞ DEĞİL"*); tek kip kalınca
+nominal olan kazandı.
+
+###### İKİ TEHLİKE SINIFI YAPISAL OLARAK YOK OLDU
+
+| Eski sınıf | Neden artık yok |
+|---|---|
+| *"Gates Belt Data BMC'ye KONMAZ"* — iki belgenin kayış verisini karıştırmak gerginliği %2,2'den %7,4'e taşıyordu | Kayış künyesi çözüme HİÇ girmiyor; karıştırmak sonucu **birebir** değiştirmiyor (testli) |
+| *"Erişilemeyen kayış boyu"* — kolun ulaşamadığı hedef, kenetlenme, önerilen boy | Boy bir girdi değil; ne yazılırsa yazılsın çalışma noktası aynı (testli, 4 farklı boy) |
+
+**KAYIŞ VERİSİ VARSAYILANI `none`.** Katalog sabitlerine bağlı çıktılar (B10 ·
+kaburga yorulması · açıklık frekansları) artık varsayılan olarak KAPALI, çünkü
+kayış boyu bir sonuç ve kayış henüz seçilmemiş. Kullanıcı seçtikten sonra
+panelden açıyor; testler de açıkça açıyor.
+
+###### AYNI TURDA ÇIKAN DAVRANIŞ İYİLEŞMELERİ
+
+| Ne | Eskiden | Bugün |
+|----|---------|-------|
+| Yay künyesi eksik | Kol gezinme aralığının ORTASINA düşüyor, panel yine *"tedarikçiye verilecek boy budur"* diyordu | Model çözülmüyor ve *"Spring Mean Load girilmedi"* diyor — nominal açı salt künyeden geldiği için seçilecek nokta YOK |
+| Ölü yay | `build.ok` TRUE kalıyor, gerilme istenince çekirdek patlıyordu | Adı konmuş durdurma |
+
+Kapı **on bir mutasyonla** ölçüldü, on biri de kırmızı: kip seçicisini panele
+geri koyma, ikinci koordinat alanını geri koyma, göçün merkezi silmemesi, göçün
+kolu sabitlememesi, göçün köprüde hiç koşmaması, montaj konumundan pivot
+türetme, kayış boyu kilidini kaldırma, raporda *"gerçek denetim"* dalını geri
+getirme, sihirbaza kip sorusunu geri koyma, pim planını kurmama, ikinci
+koordinatı türetilemediğinde bırakma.
+
+> Bir mutasyon (*"montaj konumundan pivot türetme"*) **semantik olarak
+> eşdeğer**: göç `cenX/cenY`yi her durumda sildiği için köprüde o alanlara
+> düşecek bir yol kalmıyor. Onun dayandığı özellik ayrı bir kapıyla tutuluyor.
+
 ##### PİVOT GİRDİ, KOL AÇISI ZARFTAN SEÇİLİR — yön tersine çevrildi (2026-08-28)
+
+> **BU BÖLÜM AŞILDI (2026-08-29).** Anlatılan üç kipli yapı ve `veFeadArmCheck`
+> çapraz kontrolü kodda YOK — bkz. bir üstteki *"TEK KOORDİNAT"* bölümü. Zarf
+> ölçütü, kalibrasyonu ve *"paketleme modelde yok"* sınırı bugün de geçerli;
+> değişen şey, zarfın artık TEK kip olması ve karşılaştırılacak ikinci bir
+> koordinatın kalmaması.
 
 Kullanıcı isteği: *"Kullanıcı ilk olarak KIRMIZI NOKTA olarak OTOMATİK GERGİ
 MONTAJ KOORDİNATLARInı verecek. Daha sonra program OTOMATİK GERGİ ÖZELLİKLERİ
@@ -3204,6 +3318,13 @@ sabitlenmiş açıyı zaten aynen döndürüyor, dolayısıyla gözlenebilir bir
 > görmüyordu). Şekil 1'deki *"yay SAYISINA bakan test"* dersinin aynısı.
 
 ##### MONTAJ KOORDİNATI ↔ KASNAK MERKEZİ — arşivden ölçüldü (2026-08-28)
+
+> **KISMEN AŞILDI (2026-08-29).** Ölçümler (iki nokta tam kol boyu kadar
+> ayrı, merkez gezer pivot gezmez, raporun kendi tanımı) bugün de geçerli ve
+> tek koordinat kararının dayanağı. Ama artık MFSim iki koordinatı bir arada
+> KABUL ETMİYOR: `veFeadArmCheck`'in üç bantlı hükmü kalktı, çünkü
+> karşılaştırılacak ikinci bir sayı yok. Bkz. *"TEK KOORDİNAT"*.
+
 
 Kullanıcı bildirimi: *"Otomatik gergilerde kasnak merkezi montaj civatasının
 koordinatı olacak. Yani kasnak merkezi ile montaj koordinatı aynı otomatik

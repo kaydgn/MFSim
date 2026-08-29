@@ -159,16 +159,22 @@ describe('durum → düğüm çevirisi: örnekleri BİREBİR geri üretiyor', ()
 
   test('AG00976 — kanonik çıpalar (Gates raporunun kendi sayıları)', () => {
     const { sb } = cift('AG00976_GATES_2025');
-    expect(sb.beltLengthMm).toBeCloseTo(1714.6, 3);
-    expect(sb.springTensionN).toBeCloseTo(544.05, 1);
-    expect(sb.relDeg).toBeCloseTo(28.075, 2);
+    // TEK KOORDİNATA GEÇİŞTEN SONRAKİ TABAN. Kayış boyu artık bir ÇIKTI:
+    // eski değer 1714,6 mm bir GİRDİYDİ ve kolu nominalin 0,0125° ötesine
+    // itiyordu. Ölçülen fark T'de −%0,036.
+    expect(sb.beltLengthMm).toBeCloseTo(1714.609, 2);
+    expect(sb.springTensionN).toBeCloseTo(543.853, 1);
+    expect(sb.relDeg).toBeCloseTo(28.0625, 3);
   });
 
   test('BMC — kanonik taban (CLAUDE.md kaydı)', () => {
     const { sb } = cift('BMC_FEAD_2026');
-    expect(sb.relDeg).toBeCloseTo(28.4271, 3);
-    expect(sb.beltLengthMm).toBeCloseTo(1715.0, 3);
-    expect(sb.springTensionN).toBeCloseTo(532.142, 2);
+    // BMC'nin "1715" boyu YUVARLANMIŞ bir katalog adıydı ve girdi olarak
+    // kolu nominalin 0,36° ötesine itiyordu; boy çıktı olunca kol nominalinde
+    // duruyor. Ölçülen fark −%1,24.
+    expect(sb.relDeg).toBeCloseTo(28.0625, 3);
+    expect(sb.beltLengthMm).toBeCloseTo(1715.266, 2);
+    expect(sb.springTensionN).toBeCloseTo(525.56, 1);
   });
 
   test('duty kW ANAHTARDAN KİMLİĞE çevriliyor — ve çevrilmezse sonuç DEĞİŞİYOR', () => {
@@ -202,47 +208,38 @@ describe('durum → düğüm çevirisi: örnekleri BİREBİR geri üretiyor', ()
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('kipe göre hangi alan taşınır', () => {
-  const durum = (mod) => {
+  const durum = () => {
     kabuk();
     wiz.veFeadWizSeed('AG00976_GATES_2025');
-    const st = wiz.veFeadWizState();
-    st.tenMode = mod;
-    return st;
+    return wiz.veFeadWizState();
   };
   const gergi = (st) => wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-tensioner');
 
-  test('zarf kipinde montaj merkezi TAŞINMAZ', () => {
-    // Taşınsaydı köprü "iki koordinat da var" uyarısını basar ve kullanıcı
-    // GİRMEDİĞİ bir alandan uyarı alırdı (zarf kipi yalnız pivotu kullanıyor).
-    const st = durum('envelope');
-    const t = gergi(st);
-    expect(t.data.angleMode).toBe('envelope');
+  test('sihirbaz TEK koordinat taşır — kasnak merkezi ve kip alanı YOK', () => {
+    const t = gergi(durum());
     expect(t.data.pivotX).toBeCloseTo(-250, 6);
-    expect(t.data.cenX).toBeUndefined();
-    expect(t.data.cenY).toBeUndefined();
+    expect(t.data.pivotY).toBeCloseTo(110, 6);
+    ['cenX', 'cenY', 'angleMode', 'freeAngleDeg', 'verifyCenX', 'verifyCenY']
+      .forEach((k) => expect(t.data[k]).toBeUndefined());
   });
 
-  test('mount kipinde montaj merkezi TAŞINIR', () => {
-    const t = gergi(durum('mount'));
-    expect(t.data.angleMode).toBe('mount');
-    expect(t.data.cenX).toBeCloseTo(-161.97, 6);
-  });
-
-  test('kip AÇIKÇA yazılıyor — veriden çözülmesine bırakılmıyor', () => {
-    // Yarım doldurulmuş bir formda kip, kullanıcının seçtiğinden BAŞKA
-    // çıkabilirdi (veFeadAngleMode veriden çözüyor).
+  test('sihirbazda KİP SORUSU YOK — ikilik ön kapıda da kapalı', () => {
     kabuk();
     wiz.veFeadWizSeed('AG00976_GATES_2025');
+    // Kapı ÜRETİLEN YÜZEYE bakıyor: sihirbazın her adımının HTML'i taranıyor.
     const st = wiz.veFeadWizState();
-    st.tenMode = 'direct';
-    st.ten.freeAngleDeg = 16.1;
-    const t = gergi(st);
-    expect(t.data.angleMode).toBe('direct');
-    expect(M.veFeadAngleMode(t.data)).toBe('direct');
+    const b = wiz.veFeadWizBuild();
+    const hepsi = wiz.VE_FW_STEPS.map((_, i) => wiz.veFeadWizStepHTML(i, b)).join('');
+    expect(hepsi).not.toMatch(/Gergiyi nasıl tanımlayacaksınız/);
+    expect(hepsi).not.toMatch(/tenMode/);
+    // ve gergi adımı TEK koordinat soruyor
+    expect(hepsi).toMatch(/Otomatik Gergi Montaj Konumu/);
+    expect(hepsi).not.toMatch(/ten\.cenX|ten\.freeAngleDeg/);
+    expect(st).toBeTruthy();
   });
 
   test('zarf kipinde kayış BOY KİPİ yazılmaz (yapısal olarak çıktı)', () => {
-    const st = durum('envelope');
+    const st = durum();
     st.belt.lengthMode = 'fixed';           // kullanıcı ısrar etse bile
     const b = wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-belt');
     expect(b.data.lengthMode).toBeUndefined();

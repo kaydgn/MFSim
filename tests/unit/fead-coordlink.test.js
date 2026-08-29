@@ -124,11 +124,11 @@ describe('sürükleme kapısı — veFeadSyncDrag', () => {
     expect(s.alt.data.x).toBeCloseTo(-241, 6);   // +40 px = +40 mm
     expect(s.alt.data.y).toBeCloseTo(284.46, 6); // −25 px (aşağı) = +25 mm (yukarı)
 
-    // Gergi: taşınan şey MONTAJ MERKEZİ (+ pivot, rijit)
+    // Gergi: taşınan şey MONTAJ KONUMU (tek koordinat)
     s.ten.x -= 15; s.ten.y += 10;
     expect(fead.veFeadSyncDrag()).toBe(1);
-    expect(s.ten.data.cenX).toBeCloseTo(-185.08, 6);
-    expect(s.ten.data.cenY).toBeCloseTo(89.16, 6);
+    expect(s.ten.data.pivotX).toBeCloseTo(-271.59, 6);
+    expect(s.ten.data.pivotY).toBeCloseTo(113.97, 6);
 
     // ORİJİNİ sürüklemek diğer HERKESİ karşı yönde kaydırır
     s.org.x += 30;
@@ -139,14 +139,14 @@ describe('sürükleme kapısı — veFeadSyncDrag', () => {
   test('bağ KAPALIYKEN sürükleme mm\'yi HİÇ değiştirmez', () => {
     const s = kur();
     global.nodes.push(bag(false));
-    const once = JSON.stringify([s.alt.data.x, s.alt.data.y, s.ten.data.cenX, s.ten.data.cenY]);
+    const once = JSON.stringify([s.alt.data.x, s.alt.data.y, s.ten.data.pivotX, s.ten.data.pivotY]);
 
     s.alt.x += 40; s.alt.y -= 25;
     s.ten.x -= 15; s.ten.y += 10;
     s.org.x += 30;
     expect(fead.veFeadSyncDrag()).toBe(0);
 
-    expect(JSON.stringify([s.alt.data.x, s.alt.data.y, s.ten.data.cenX, s.ten.data.cenY]))
+    expect(JSON.stringify([s.alt.data.x, s.alt.data.y, s.ten.data.pivotX, s.ten.data.pivotY]))
       .toBe(once);
     // Kutu GERÇEKTEN taşındı — kapatılan şey yazma, hareket değil.
     expect(s.alt.x).toBeCloseTo(2764, 6);

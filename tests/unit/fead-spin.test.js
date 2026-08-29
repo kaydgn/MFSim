@@ -40,6 +40,12 @@ global.FEADCore = F;
 Object.keys(M).forEach((k) => { global[k] = M[k]; });
 Object.keys(fead).forEach((k) => { if (global[k] === undefined) global[k] = fead[k]; });
 
+function _pivotFromArm(td) {
+  const a = Number(td.armLen), th = Number(td.armMeanDeg) * Math.PI / 180;
+  if (!Number.isFinite(Number(td.cenX)) || !Number.isFinite(a) || !Number.isFinite(th)) return null;
+  return [Number(td.cenX) - a * Math.cos(th), Number(td.cenY) - a * Math.sin(th)];
+}
+
 beforeEach(() => {
   resetStubs(stubs);
   global.nodes = [];
@@ -84,21 +90,6 @@ describe('yön NEREDEN geliyor', () => {
     expect(M.veFeadNaturalSense(kur('BMC_FEAD_2026', true).b.order)).toBe(-1);
   });
 
-  test('mount kipinde gergide MONTAJ merkezi kullanılır, kasnakta x/y', () => {
-    const s = kur('AG00976_GATES_2025', false);
-    const ten = s.ns.find((n) => n.type === 'fead-tensioner');
-    expect(Number.isFinite(ten.data.cenX)).toBe(true);
-    const once = M.veFeadNaturalSense(s.b.order);
-    // cenX/cenY silinirse yön OKUNAMAZ (0) — uydurulmaz. Kip AÇIKÇA 'mount'
-    // olduğu için zarf kipinin türetmesine DÜŞÜLMEZ: orada girdi montaj
-    // merkezidir ve model zaten "montaj merkezi girilmedi" diye duruyor;
-    // türetilmiş bir sayı basmak çözülemeyen bir modele yön uydurmak olurdu.
-    delete ten.data.cenX;
-    expect(M.veFeadAngleMode(ten.data)).toBe('mount');
-    expect(M.veFeadNaturalSense(s.b.order)).toBe(0);
-    expect(once).toBe(1);
-  });
-
   test('koordinatı eksik modelde yön 0 — uydurulmaz', () => {
     const s = kur('BMC_FEAD_2026', false);
     delete s.ns.find((n) => n.type === 'fead-alternator').data.x;
@@ -121,10 +112,9 @@ describe('zarf kipinde yön — merkez pivot + kol açısından TÜRER', () => {
     const s = kur(key, false);
     const ten = s.ns.find((n) => n.type === 'fead-tensioner');
     // Zarf kipinin gerçek girdisi: PİVOT. BMC'de pivot künyeden türüyor.
-    const piv = M.veFeadPivotFromArm(ten.data) || [ten.data.pivotX, ten.data.pivotY];
+    const piv = _pivotFromArm(ten.data) || [ten.data.pivotX, ten.data.pivotY];
     delete ten.data.cenX; delete ten.data.cenY;
     delete ten.data.armMeanDeg; delete ten.data.freeAngleDeg;
-    ten.data.angleMode = 'envelope';
     ten.data.pivotX = piv[0]; ten.data.pivotY = piv[1];
     return { ns: s.ns, cs: s.cs, ten, b: M.veFeadBuildSystem(s.ns, s.cs) };
   };
