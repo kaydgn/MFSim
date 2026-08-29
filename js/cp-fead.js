@@ -88,8 +88,9 @@ var VE_FEAD_STARTER_LAYOUT = [
   { type:'fead-belt',    lx:40,  ly:20 },
   { type:'fead-layout',  lx:190, ly:20 },
   { type:'fead-solver',  lx:340, ly:20 },
-  { type:'fead-example', lx:490, ly:20 },
-  { type:'fead-report',  lx:640, ly:20 },
+  { type:'fead-wizard',  lx:490, ly:20 },
+  { type:'fead-example', lx:640, ly:20 },
+  { type:'fead-report',  lx:790, ly:20 },
   // ── Kayış düzlemi: krank altta ortada, aksesuarlar çevresinde ──
   { type:'fead-crank',       name:'Krank Kasnağı', lx:250, ly:330 },
   { type:'fead-tensioner',   name:'Gergi',         lx:140, ly:210 },
@@ -234,23 +235,31 @@ function veFeadArrangeByCoords(opts){
   return true;
 }
 
-// İlk açılışta iç topolojiye YALNIZ "Başlangıç ve Örnekler" (fead-example)
-// gelir; kullanıcı ya oradaki hazır örneği aktarır ya da sidebar'dan kendi
-// kayış düzenini kurar.
+// İlk açılışta iç topolojiye İKİ açılış yüzeyi gelir: "Başlangıç Sihirbazı"
+// (sıfırdan kurulum — bütün girdileri adım adım sorar) ve "Başlangıç ve
+// Örnekler" (hazır bir düzeni tek tıkla kurar). Kullanıcı ya birinden başlar
+// ya da sidebar'dan kendi kayış düzenini elle kurar.
+//
+// İKİSİ BİRDEN, çünkü ikisi FARKLI soruya cevap: sihirbaz "kendi motorumun
+// verisini nasıl gireceğim", örnek ise "çalışan bir model neye benziyor"
+// diyene. Sihirbazın içinden de örnekle doldurulabiliyor (veFeadWizSeed), ama
+// oradaki yol formu doldurur — kanvasa kurmaz.
 function veFeadPopulateStarter(){
   if(typeof createNode !== 'function') return [];
   var base = (typeof veArrangeModuleBase === 'function')
     ? veArrangeModuleBase(VE_FEAD_STARTER_LAYOUT.map(function(it){ return { lx:it.lx, ly:it.ly }; }))
     : { x:3000, y:3000 };
-  var slot = null;
-  for(var i=0;i<VE_FEAD_STARTER_LAYOUT.length;i++){
-    if(VE_FEAD_STARTER_LAYOUT[i].type === 'fead-example'){ slot = VE_FEAD_STARTER_LAYOUT[i]; break; }
-  }
-  if(!slot) slot = { lx:490, ly:20 };
   var created = [];
-  var before = (typeof nodes !== 'undefined') ? nodes.length : 0;
-  createNode('fead-example', base.x + slot.lx, base.y + slot.ly);
-  if(typeof nodes !== 'undefined' && nodes.length > before) created.push(nodes[nodes.length-1]);
+  ['fead-wizard', 'fead-example'].forEach(function(tip, k){
+    var slot = null;
+    for(var i=0;i<VE_FEAD_STARTER_LAYOUT.length;i++){
+      if(VE_FEAD_STARTER_LAYOUT[i].type === tip){ slot = VE_FEAD_STARTER_LAYOUT[i]; break; }
+    }
+    if(!slot) slot = { lx: 490 + k * 150, ly: 20 };
+    var before = (typeof nodes !== 'undefined') ? nodes.length : 0;
+    createNode(tip, base.x + slot.lx, base.y + slot.ly);
+    if(typeof nodes !== 'undefined' && nodes.length > before) created.push(nodes[nodes.length-1]);
+  });
   if(typeof updateAllConnections === 'function') updateAllConnections();
   return created;
 }
@@ -3545,6 +3554,20 @@ function veFeadPositionTable(build){
 function getFeadExamplePropertiesHTML(node){
   if(!node.data) node.data = {};
   var html = '<div class="sw-panel">';
+  // SIFIRDAN KURULUM YOLU BURADA DA DURUYOR: kullanıcı boş bir iç topolojide
+  // önce bu panele bakıyor ("örnekler" en tanıdık kelime), ve kendi motorunu
+  // kuracaksa aradığı şey burada yok. Düğme sihirbaz düğümüne DEĞİL doğrudan
+  // sihirbaza gidiyor — paletten ikinci bir kutu aramak zorunda kalmasın.
+  if(typeof veFeadWizOpen === 'function')
+    html += _feadCard('Kendi Modelimi Kuracağım', 'adım adım', 'var(--accent-primary)',
+        '<button onclick="veFeadWizOpenAny()" style="width:100%; padding:11px 14px; '
+      + 'font-size:var(--fs-body); font-weight:700; border:none; cursor:pointer; '
+      + 'border-radius:var(--radius-sm); background:var(--accent-primary); color:#fff;">'
+      + '🧭 Başlangıç Sihirbazını Aç</button>'
+      + _feadHint('Kasnak koordinatlarından çalışma çevrimine kadar bütün girdileri '
+        + 'yedi adımda sorar ve her adımda modeli <b>canlı çözer</b>. Aşağıdaki hazır '
+        + 'örnekler ise tek tıkla kurulur — sihirbazın ilk adımından da '
+        + 'doldurulabilirler.'));
   veFeadExampleKeys().forEach(function(k){
     var ex = veFeadExampleOf(k);
     var kasnak = ex.pulleys.length;
@@ -3598,6 +3621,26 @@ function getFeadExamplePropertiesHTML(node){
 // yerleştirme var. Kasnaklar kayış düzlemindeki GERÇEK koordinatlarına oranlı
 // yerleştirilir: kanvasta gördüğü şekil sayfadaki yerleşimin ta kendisi olsun.
 // (Kanvas y aşağı doğru artar, kayış düzlemi yukarı — bu yüzden y ters çevrilir.)
+// Sihirbazı düğüm KİMLİĞİ olmadan açar: kanvasta bir sihirbaz düğümü varsa
+// onun taslağı sürer (yarım kalan iş kaybolmaz), yoksa paletten bir tane kurar.
+// Taslağın bir düğümde durması ŞART — kaydedilen proje onu taşıyor.
+function veFeadWizOpenAny(){
+  if(typeof veFeadWizOpen !== 'function' || typeof nodes === 'undefined') return false;
+  var n = nodes.filter(function(x){ return (_feadDefOf(x) || {}).isFeadWizard; })[0];
+  if(!n && typeof createNode === 'function'){
+    var base = (typeof veArrangeModuleBase === 'function')
+      ? veArrangeModuleBase([{ lx: 0, ly: 0 }]) : { x: 3000, y: 3000 };
+    var once = nodes.length;
+    createNode('fead-wizard', base.x, base.y);
+    if(nodes.length > once){
+      n = nodes[nodes.length - 1];
+      if(typeof saveState === 'function') saveState();
+    }
+  }
+  if(!n) return false;
+  return veFeadWizOpen(n.id);
+}
+
 function veFeadLoadExample(key){
   if(typeof createNode !== 'function') return null;
   var pack = veFeadExampleNodes(key);
@@ -4238,6 +4281,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadCurveAdd: veFeadCurveAdd, veFeadCurveRemove: veFeadCurveRemove,
     veFeadCurveSet: veFeadCurveSet, veFeadLoadExample: veFeadLoadExample,
     veFeadArrangeByCoords: veFeadArrangeByCoords,
+    veFeadWizOpenAny: veFeadWizOpenAny,
+    veFeadPopulateStarter: veFeadPopulateStarter,
     getFeadModulePropertiesHTML: getFeadModulePropertiesHTML,
     getFeadPulleyPropertiesHTML: getFeadPulleyPropertiesHTML,
     getFeadTensionerPropertiesHTML: getFeadTensionerPropertiesHTML,
