@@ -215,7 +215,7 @@ describe('kütüphane KURULU MODELDE çalışıyor', () => {
     const td = { pivotX: d.pivot[0], pivotY: d.pivot[1] };
     T.veFeadTensionerApply(td, T.veFeadTensionerOf('AG00976-1715'));
     // Künyeden çıkan yay verisi çekirdeğin beklediği sistemi kurabiliyor mu?
-    const mount = M.veFeadTensionerMount(td);
+    const mount = M.veFeadSpringSetup(td);
     const mean = d.pos.find((p) => p.name === 'Mean');
     expect(Math.abs(mount.relMeanDeg - mean.rel)).toBeLessThan(0.2);
     expect(td.od).toBe(77.2);

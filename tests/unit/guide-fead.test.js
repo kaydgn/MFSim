@@ -201,7 +201,6 @@ describe('işlenmiş örnek CANLI hesaplanır', () => {
 
   test('zarf kipinde çözülüyor — pivot girdi, boy çıktı', () => {
     const O = GF._gfOrnekCoz();
-    expect(O.gergi.data.angleMode).toBe('envelope');
     expect(O.gergi.data.cenX).toBeUndefined();
     expect(O.kayis.data.effLength).toBeUndefined();
     expect(Number.isFinite(O.build.armAbsDeg)).toBe(true);
@@ -227,8 +226,8 @@ describe('işlenmiş örnek CANLI hesaplanır', () => {
     GF.veGuideFeadHTML();
     const ham = veFeadExampleOf('AG00976_GATES_2025');
     const g = ham.pulleys.filter((p) => p.type === 'fead-tensioner')[0];
-    expect(g.data.angleMode).toBe('mount');
-    expect(g.data.cenX).toBeDefined();
+    expect(g.data.pivotX).toBeDefined();
+    expect(g.data.cenX).toBeUndefined();
     const kayis = ham.belt;
     expect(kayis.effLength).toBeDefined();
   });

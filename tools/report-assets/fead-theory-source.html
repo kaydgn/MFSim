@@ -79,7 +79,7 @@ svg{width:100%;height:auto;display:block}
    Tanımsız bir var() "invalid at computed-value time"dır; kalıtılan bir
    özellik olan `stroke` için sonuç `unset` → `none` demektir.
    ÖLÇÜLDÜ (gerçek tarayıcı, BMC raporu): §8.5 şeklinde kayış, altı kasnak
-   çemberi, kaburga dişleri, sarım yayları, gergi kolu ve pivot TAMAMEN
+   çemberi, kaburga dişleri, sarım yayları, gergi kolu ve montaj noktası TAMAMEN
    GÖRÜNMEZDİ — ayakta kalan tek şey etiketler ve merkez noktalarıydı, çünkü
    onlar `fill` kullanıyor. Şeklin künyesi ise olmayan bir çizimi anlatıyordu.
    Uygulamanın jetonları burada raporun baskı paletine bağlanıyor. */
@@ -171,7 +171,7 @@ pre code{background:none;padding:0}
   <li><strong>Kayış uzamaz — geometri çözümünde.</strong> Kayış yolu, verilen kol açısına oturan tek kapalı eğridir. Kayış boyu <em>girdiyse</em> kol açısı ondan çözülür (4.4); <em>değilse</em> kol açısı §4.5'ten seçilir ve boy (4.5) ile ondan çıkar. Her iki durumda da geometri, kol açısı bilindikten sonra tek anlamlıdır. Uzama, kayışın <em>tolerans</em> ve <em>aşınma payı</em> yüzdeleriyle ayrı bir uzunluk değişimi olarak modellenir ve gergi kolunun konumunu kaydırır (§4.4).</li>
   <li><strong>Kayış kasnağa tam sarılır, kaymaz.</strong> Çözüm, kaymayan (rolling without slip) bir kayış varsayar. Kayma <em>ihtimali</em> capstan bağıntısıyla ayrıca denetlenir (§5.4); kayma gerçekleşiyorsa çözüm değil, <strong>uyarı</strong> üretilir.</li>
   <li><strong>Temas tarafı verilidir.</strong> Kayışın kaburgalı yüzünün mü yoksa düz sırtının mı kasnağa değdiği bir <em>girdidir</em>, çıkarsanamaz. Ters verilirse model <strong>geçerli ama başka</strong> bir güzergâh çözer (§3.4).</li>
-  <li><strong>Gergi bir burulma yayıdır.</strong> Otomatik gergi, pivot etrafında dönen bir kol ve momenti açıyla lineer artan bir yay olarak modellenir. Sönüm, sürtünme histerezisi ve dinamik aşım kapsam dışıdır.</li>
+  <li><strong>Gergi bir burulma yayıdır.</strong> Otomatik gergi, montaj noktası etrafında dönen bir kol ve momenti açıyla lineer artan bir yay olarak modellenir. Sönüm, sürtünme histerezisi ve dinamik aşım kapsam dışıdır.</li>
   <li><strong>Yükleme yarı-statiktir.</strong> Her motor devri noktasında aksesuarların çektiği güç sabit kabul edilir; kayış boyunca gerginlik basamak basamak düşer. Atalet momentleri yalnız tepe yük tahmininde kullanılır.</li>
   <li><strong>Sıcaklık yalnız ömre girer.</strong> Kayış sıcaklığı geometriyi ve gerginliği değil, kaburga yorulma hasar hızını etkiler (§6.4).</li>
   <li><strong>Kasnak çapı dış çaptır.</strong> Girdi olarak dış çap (OD) alınır; pitch ve efektif yarıçaplar kayış profilinin \( h_b \) / \( h_r \) sabitlerinden türetilir (§3.1).</li>
@@ -238,15 +238,15 @@ $$ L_{\text{pitch}} - L_{\text{eff}} = 2\pi\,h_b $$
 <h2 id="s4"><span class="no">4</span>Otomatik Gergi ve Kol Dengesi</h2>
 
 <h3>4.1 Kol geometrisi</h3>
-<p>Otomatik gergi, sabit bir <strong>pivot</strong> noktası etrafında dönen, ucunda gergi kasnağı taşıyan bir koldur. Kol açısı \( \theta \) iken kasnak merkezi:</p>
+<p>Otomatik gergi, motora bağlandığı sabit <strong>montaj noktası</strong> etrafında dönen, ucunda avara kasnağı taşıyan bir koldur. Bu nokta bu belgede gerginin <strong>tek</strong> koordinatıdır. Kol açısı \( \theta \) iken kasnak merkezi:</p>
 <div class="eqno">
 $$ \mathbf{c}_{\text{ten}}(\theta) = \mathbf{p} + a\,\big(\cos\theta,\ \sin\theta\big) $$
 <span class="tag">(4.1)</span>
 </div>
-<p>burada \( \mathbf{p} \) pivot, \( a \) kol boyudur. Kol döndükçe gergi kasnağının merkezi bir yay üzerinde gezer; kayış yolu — ve dolayısıyla tüm sarım açıları, açıklık boyları ve gereken kayış boyu — <strong>her açıda başkadır</strong>. Bu, gergiyi diğer kasnaklardan ayıran şeydir: konumu bir girdi değil, bir <em>çözüm</em>dür.</p>
+<p>burada \( \mathbf{p} \) montaj noktası, \( a \) kol boyudur. Kol döndükçe gergi kasnağının merkezi bir yay üzerinde gezer; kayış yolu — ve dolayısıyla tüm sarım açıları, açıklık boyları ve gereken kayış boyu — <strong>her açıda başkadır</strong>. Bu, gergiyi diğer kasnaklardan ayıran şeydir: konumu bir girdi değil, bir <em>çözüm</em>dür.</p>
 <div class="note">
-  <span class="t">Pivot, gövdenin montaj cıvatasıdır</span>
-  Diğer bütün kasnaklarda girilen koordinat kasnağın <em>merkezidir</em>; gergide öyle değildir. Gergi kasnağının merkezi kolun o anki açısıyla <strong>gezer</strong> (yukarıdaki denklem), yani montajda sabit olan nokta o değil <strong>pivottur</strong>. Bir gergi parça çiziminde ölçüldü: gövdenin merkezî bağlantı deliği kolun dönme ekseniyle <strong>eşmerkezlidir</strong>, dolayısıyla montaj cıvatasının koordinatı doğrudan \( \mathbf{p} \)'dir. Eksantrik gövdeli bir gergide bu iki nokta ayrılır ve montaj noktası pivota bir miktar kaçık olurdu; model onları bir sayar.
+  <span class="t">Girilen koordinat gövdenin montaj noktasıdır</span>
+  Diğer bütün kasnaklarda girilen koordinat kasnağın <em>merkezidir</em>; gergide öyle değildir. Gergi kasnağının merkezi kolun o anki açısıyla <strong>gezer</strong> (yukarıdaki denklem), yani montajda sabit olan nokta o değil <strong>montaj noktasıdır</strong>. Bir gergi parça çiziminde ölçüldü: gövdenin merkezî bağlantı deliği kolun dönme ekseniyle <strong>eşmerkezlidir</strong>, dolayısıyla girilen koordinat doğrudan \( \mathbf{p} \)'dir. Model gergi için <strong>ikinci bir koordinat sormaz</strong> ve iki nokta arasında bir tutarlılık denetimi yapmaz — karşılaştırılacak ikinci bir sayı yoktur. Eksantrik gövdeli bir gergide bu iki nokta ayrılır ve montaj noktası montaj noktasına bir miktar kaçık olurdu; model onları bir sayar.
 </div>
 
 <h3>4.2 Yay momenti ve sanal iş</h3>
@@ -280,7 +280,7 @@ $$ \left|\frac{\mathrm{d}L}{\mathrm{d}\theta}\right| = a\,\big|\mathbf{f}\big|\,
 </div>
 <div class="note check">
   <span class="t">Take-up bir girdi değil, bir türevdir</span>
-  Bu zincirde <strong>elle girilen iki büyüklük vardır: kol boyu \( a \) ve pivot \( \mathbf{p} \)</strong> (gerginin motora bağlandığı montaj noktası); \( \varphi \) çözülmüş geometriden, \( \beta \) ise ikisinden birlikte gelir. Pivot bu yüzden take-up zincirinin en duyarlı girdisidir: kasnak merkezi sabit tutulup pivot kol etrafında döndürülünce sarım açıları <strong>değişmez</strong> ama \( \beta \), dolayısıyla \( \mathrm{d}L/\mathrm{d}\theta \) ve gerginlik <strong>değişir</strong>. Dolayısıyla take-up oranı bir katalog değeri gibi girilemez — kol her konuma geldiğinde yeniden hesaplanır. Bölüm 8.7 bu aritmetiği çözülen model için adım adım basar.
+  Bu zincirde <strong>elle girilen iki büyüklük vardır: kol boyu \( a \) ve montaj noktası \( \mathbf{p} \)</strong> (gerginin motora bağlandığı montaj noktası); \( \varphi \) çözülmüş geometriden, \( \beta \) ise ikisinden birlikte gelir. Montaj noktası bu yüzden take-up zincirinin en duyarlı girdisidir: kasnak merkezi sabit tutulup montaj noktası kol etrafında döndürülünce sarım açıları <strong>değişmez</strong> ama \( \beta \), dolayısıyla \( \mathrm{d}L/\mathrm{d}\theta \) ve gerginlik <strong>değişir</strong>. Dolayısıyla take-up oranı bir katalog değeri gibi girilemez — kol her konuma geldiğinde yeniden hesaplanır. Bölüm 8.7 bu aritmetiği çözülen model için adım adım basar.
 </div>
 <div class="note">
   <span class="t">Take-up oranı</span>
@@ -303,12 +303,12 @@ $$ L_{\text{eff}} \;=\; L_{\text{gereken}}(\theta^{*}) $$
 <p>Bu ikinci yönde (4.4) hiç kurulmaz; kök aranmaz. Belgenin geri kalanı — gerginlik, hubload, kayma, ömür — her iki yönde de <strong>aynı</strong> zincirdir: ikisi de bir kol açısı üretir ve zincir oradan başlar.</p>
 
 <h3>4.5 Montaj zarfı ve kol açısının seçimi</h3>
-<p>Pivot \( \mathbf{p} \), kol boyu \( a \) ve yay künyesi verildiğinde kolun <strong>bağıl</strong> dönüşü belirlidir — çalışma momentine kadar kaç derece kurulduğu yalnız yaydan çıkar:</p>
+<p>Montaj noktası \( \mathbf{p} \), kol boyu \( a \) ve yay künyesi verildiğinde kolun <strong>bağıl</strong> dönüşü belirlidir — çalışma momentine kadar kaç derece kurulduğu yalnız yaydan çıkar:</p>
 <div class="eqno">
 $$ \theta_{\text{nom}} \;=\; \frac{M_{\text{çalışma}} - M_0}{k} $$
 <span class="tag">(4.6)</span>
 </div>
-<p>Kolun <strong>mutlak</strong> açısı ise hâlâ serbesttir: gergi gövdesinin montajdaki saat konumu onu belirler. (4.1) gereği gergi kasnağının merkezi bu yüzden pivot etrafında yarıçapı \( a \) olan bir <strong>çember</strong> üzerinde gezinebilir. Bu kümeye bu belgede <strong>montaj zarfı</strong> denir; §4.4'ün <em>servis zarfıyla</em> karıştırılmamalıdır (orada pivot ve saat sabittir, kol yalnız kayış boyu değiştiği için gezer).</p>
+<p>Kolun <strong>mutlak</strong> açısı ise hâlâ serbesttir: gergi gövdesinin montajdaki saat konumu onu belirler. (4.1) gereği gergi kasnağının merkezi bu yüzden montaj noktası etrafında yarıçapı \( a \) olan bir <strong>çember</strong> üzerinde gezinebilir. Bu kümeye bu belgede <strong>montaj zarfı</strong> denir; §4.4'ün <em>servis zarfıyla</em> karıştırılmamalıdır (orada montaj noktası ve saat sabittir, kol yalnız kayış boyu değiştiği için gezer).</p>
 <p>Seçim ölçütü, kolun servis bandı boyunca <strong>en küçük</strong> take-up oranını <strong>en büyük</strong> yapan saati arar:</p>
 <div class="eqno">
 $$ \theta^{*} \;=\; \arg\max_{\theta}\; \min_{\theta_{\text{bağıl}} \in [0,\,1{,}5\,\theta_{\text{nom}}]}\; \frac{\mathrm{d}L}{\mathrm{d}\theta}\big(\theta,\ \theta_{\text{bağıl}}\big) $$
@@ -343,7 +343,7 @@ $$ \theta_{\text{pim}} \;=\; \theta^{*} + \Delta_{\text{parça}} $$
   <tr><td class="l"><strong>Min Belt</strong></td><td class="l">Tolerans alt sınırındaki yeni kayış.</td><td class="l">\( L - \Delta \)</td></tr>
   <tr><td class="l"><strong>Load</strong> (montaj/durdurucu)</td><td class="l">Kolun mekanik durdurucuya dayandığı uç konum. <strong>Çalışma noktası değildir.</strong></td><td class="l">—</td></tr>
 </table>
-<p>\( \tau \) boy toleransı (±mm), \( w \) uzama + aşınma payı (%) olarak girilir. Bu altı konum, kayışın ömrü boyunca gergi kasnağının gezdiği <strong>servis zarfını</strong> tanımlar (§4.5'teki <em>montaj zarfıyla</em> karıştırılmamalıdır: orada pivot sabit, kolun saati serbesttir; burada saat sabit, kol yalnız kayış boyu değiştiği için gezer): her konumda sarım açıları, hubload'lar ve gerginlik farklıdır. Bölüm 8.8'de altısı da tablo hâlinde verilir.</p>
+<p>\( \tau \) boy toleransı (±mm), \( w \) uzama + aşınma payı (%) olarak girilir. Bu altı konum, kayışın ömrü boyunca gergi kasnağının gezdiği <strong>servis zarfını</strong> tanımlar (§4.5'teki <em>montaj zarfıyla</em> karıştırılmamalıdır: orada montaj noktası sabit, kolun saati serbesttir; burada saat sabit, kol yalnız kayış boyu değiştiği için gezer): her konumda sarım açıları, hubload'lar ve gerginlik farklıdır. Bölüm 8.8'de altısı da tablo hâlinde verilir.</p>
 <div class="note warn">
   <span class="t">Load konumunun sayısal hassasiyeti</span>
   Load bir mekanik durdurucudur; orada sarım açısı sıfıra yaklaştığı için (4.3)'ün paydası küçülür ve gerginlik tekilleşmeye başlar. Kol açısındaki <strong>0,1°</strong> mertebesinde bir yuvarlama tek başına gerginlikte %1,4–2,3 fark yaratır. Bu yüzden çekirdeğin doğrulama eşiği çalışma konumlarında %0,5, Load dâhil edildiğinde %1,5 olarak ayrılmıştır.
@@ -378,7 +378,7 @@ $$ P_{\text{sürücü}} = \sum_{\text{aksesuar}} P_i $$
   <br><br>
   Bu değer <strong>sorulmaz, türetilir</strong>: gergi kolunun taşıyabileceği gerginlik yay dengesinden (4.3) zaten belirlidir — \( T_{\text{tasarım}} = M(\theta)/(dL/d\theta) \). Sağdaki büyüklüklerin hiçbiri serbest değildir; kol boyu, <strong>pivot</strong> ve yay künyesi girdidir; sarım ve fark açısı çözülmüş geometriden gelir; kol açısı ise kayış boyu girdiyse (4.4)'ün kökünden, değilse §4.5'in ölçütünden gelir (kullanıcı onu ayrıca sabitleyebilir). Kuruluşu Bölüm 8.7'de adım adım verilir.
   <br><br>
-  Bir zamanlar ayrıca girdi olarak da isteniyordu ve bu, aynı bilgiyi ikinci kez ve <strong>çelişebilir</strong> biçimde sormak anlamına geliyordu: çeliştiğinde zincir girilen değerle ankrajlanır, tüm gerginlikler ile hubload'lar aradaki fark kadar kayar ve hiçbir hata çıkmazdı. Kayma emniyeti bir <em>oran</em> olduğu için (5.6) bu kaymayı ancak kısmen gösterir — yük çekmeyen kasnaklarda gerginlik oranı 1'dir ve emniyet hiç değişmez. On tedarikçi raporunda girilen ile türetilen değer arasındaki fark en çok %0,12 ölçülmüştür; iki kanal zaten tek kanaldı. Farklı bir gerginlik isteniyorsa değiştirilecek olan gergi <strong>künyesi ya da montaj noktasıdır</strong> (yay ön yükü, yay oranı, kol boyu, <strong>pivot</strong>), bir sayı alanı değil. Dördüncüsü en kolay gözden kaçandır ve etkisi küçük değildir: pivot \( \beta \)'yı, \( \beta \) take-up'ı, take-up gerginliği belirler. Ölçüldü — aynı kasnak merkezinde kol açısını 344°'den 348°'ye almak tasarım gerginliğini 532,1 N'dan 561,1 N'a taşıyor (%5,4).
+  Bir zamanlar ayrıca girdi olarak da isteniyordu ve bu, aynı bilgiyi ikinci kez ve <strong>çelişebilir</strong> biçimde sormak anlamına geliyordu: çeliştiğinde zincir girilen değerle ankrajlanır, tüm gerginlikler ile hubload'lar aradaki fark kadar kayar ve hiçbir hata çıkmazdı. Kayma emniyeti bir <em>oran</em> olduğu için (5.6) bu kaymayı ancak kısmen gösterir — yük çekmeyen kasnaklarda gerginlik oranı 1'dir ve emniyet hiç değişmez. On tedarikçi raporunda girilen ile türetilen değer arasındaki fark en çok %0,12 ölçülmüştür; iki kanal zaten tek kanaldı. Farklı bir gerginlik isteniyorsa değiştirilecek olan gergi <strong>künyesi ya da montaj noktasıdır</strong> (yay ön yükü, yay oranı, kol boyu, <strong>pivot</strong>), bir sayı alanı değil. Dördüncüsü en kolay gözden kaçandır ve etkisi küçük değildir: montaj noktası \( \beta \)'yı, \( \beta \) take-up'ı, take-up gerginliği belirler. Ölçüldü — aynı kasnak merkezinde kol açısını 344°'den 348°'ye almak tasarım gerginliğini 532,1 N'dan 561,1 N'a taşıyor (%5,4).
 </div>
 <div class="note check">
   <span class="t">Sürücü gücü girilmez, hesaplanır</span>
@@ -587,7 +587,8 @@ var sys = FEADCore.makeSystem({
   // seçilmemişse bu alan doldurulmaz: kol açısı §4.5'ten seçilir ve boy
   // (4.5) ile ondan TÜRER — köprü katmanı türeyen boyu buraya geri yazar.
   belt: { profile:'PK', ribs:8, effLength:1520, tolerance:6, wearPct:0.7 },
-  // pivot: gerginin motora bağlandığı MONTAJ noktası — kolun dönme ekseni.
+  // pivot: gerginin motora bağlandığı MONTAJ NOKTASI — kolun dönme ekseni.
+  //        Gergide girilen TEK koordinat budur; kasnak merkezi bir çıktıdır.
   // Gergi KASNAĞININ merkezi bir girdi DEĞİLDİR: (4.1) ile buradan türer.
   // freeAngleDeg de kipe bağlıdır: doğrudan girilebilir ya da seçilen
   // çalışma açısından türetilir (free = θ* − sense·θ_nom).

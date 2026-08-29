@@ -166,7 +166,6 @@ describe('zarf — yapısal özdeşlikler', () => {
     const pack = veFeadExampleNodes('AG00976_GATES_2025');
     pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
-    ten.data.angleMode = 'envelope';
     delete ten.data.cenX; delete ten.data.cenY; delete ten.data.armMeanDeg;
     const b1 = veFeadBuildSystem(pack.nodes, pack.connections);
     expect(b1.ok).toBe(true);
@@ -270,56 +269,96 @@ function kur(key, tenPatch) {
   return { pack, ten, build: (opt) => veFeadBuildSystem(pack.nodes, pack.connections, opt) };
 }
 const ZARF = (td) => {
-  td.angleMode = 'envelope';
   delete td.cenX; delete td.cenY; delete td.armMeanDeg;
+  delete td.armPinned;
 };
 const KEY = 'AG00976_GATES_2025';
 const G = V.AG00976['1715@-250/110'];
 
 describe('köprü — zarf kipi', () => {
-  test('kip çözümü: cenX/cenY varsa mount, yalnız pivot varsa envelope, hiçbiri yoksa envelope', () => {
-    expect(veFeadAngleMode({ cenX: 1, cenY: 2 })).toBe('mount');
-    expect(veFeadAngleMode({ freeAngleDeg: 42 })).toBe('direct');
-    expect(veFeadAngleMode({ pivotX: -250, pivotY: 110 })).toBe('envelope');
-    expect(veFeadAngleMode({})).toBe('envelope');
-    expect(veFeadAngleMode({ angleMode: 'mount', pivotX: 1, pivotY: 2 })).toBe('mount');
+  test('ESKİ KAYIT GÖÇÜ: iki koordinatlı gergi tek montaj konumuna iner', () => {
+    // Kip seçicisi kalktı (kullanıcı kararı 2026-08-29). Eski kayıtlar bir
+    // KEZ göç ediyor: montaj konumu ya zaten yazılı, ya da kasnak merkezi +
+    // kol boyu + kol açısından çıkarılıyor; kol da eski yerinde SABİTLENİYOR
+    // ki kullanıcının kaydettiği model sessizce başka bir yere oturmasın.
+    const td = { cenX: -170.08, cenY: 99.16, armLen: 90, armMeanDeg: 344,
+                 angleMode: 'mount', preload: 8.6, kArm: 0.48, meanLoad: 22.07 };
+    expect(veFeadMigrateTensioner(td)).toBe(true);
+    expect(td.pivotX).toBeCloseTo(-256.59, 2);
+    expect(td.pivotY).toBeCloseTo(123.97, 2);
+    expect(td.armPinned).toBe(true);
+    ['cenX', 'cenY', 'angleMode', 'freeAngleDeg', 'verifyCenX', 'verifyCenY']
+      .forEach((k) => expect(td[k]).toBeUndefined());
+    // ikinci kez koşmak bir şey değiştirmez
+    expect(veFeadMigrateTensioner(td)).toBe(false);
   });
 
-  test('PİVOT TÜRETİLMEZ: montaj merkezi + kol açısı verilse bile zarf kipinde pivot GİRDİDİR', () => {
-    const td = { angleMode: 'envelope', cenX: -170.08, cenY: 99.16, armLen: 90, armMeanDeg: 344 };
-    // mount kipinde bu üçlü pivot üretiyor…
-    expect(veFeadPivotFromArm(td)).toBeTruthy();
-    // …ama zarf kipinde köprü onu KULLANMIYOR ve sebebini yazıyor.
-    const { build } = kur(KEY, (d) => { ZARF(d); delete d.pivotX; delete d.pivotY;
-      d.cenX = -170.08; d.cenY = 99.16; d.armMeanDeg = 344; });
-    const b = build();
-    expect(b.ok).toBeFalsy();
-    expect(b.errors.join(' ')).toMatch(/montaj koordinatları/i);
-    expect(b.errors.join(' ')).toMatch(/GİRDİ/);
+  test('ÖLÇÜLMÜŞ montaj konumu KAZANIR — kasnak merkezinden yeniden türetilmez', () => {
+    const td = { pivotX: -250, pivotY: 110, cenX: -161.97, cenY: 91.29,
+                 armLen: 90, angleMode: 'mount' };
+    veFeadMigrateTensioner(td);
+    expect(td.pivotX).toBe(-250);
+    expect(td.pivotY).toBe(110);
+    expect(td.cenX).toBeUndefined();
   });
 
-  test('KAYIŞ BOYU ÇIKTI: lengthMode ne yazarsa yazsın çözüm değişmiyor', () => {
-    const sonuc = ['fixed', 'free', null].map((lm) => {
-      const { pack, build } = kur(KEY, ZARF);
-      const belt = pack.nodes.find((n) => n.type === 'fead-belt');
-      if (lm) belt.data.lengthMode = lm; else delete belt.data.lengthMode;
-      const b = build();
-      expect(b.ok).toBe(true);
-      expect(b.beltMode).toBe('free');
-      return b.beltLengthMm;
-    });
-    expect(sonuc[1]).toBeCloseTo(sonuc[0], 9);
-    expect(sonuc[2]).toBeCloseTo(sonuc[0], 9);
-    // ve girilen efektif boy da sonucu değiştirmiyor
-    const { pack, build } = kur(KEY, ZARF);
-    pack.nodes.find((n) => n.type === 'fead-belt').data.effLength = 1500;
-    expect(build().beltLengthMm).toBeCloseTo(sonuc[0], 6);
+  test('GÖÇ KÖPRÜDE DE KOŞAR — panel hiç açılmadan çözülen model de iner', () => {
+    // Göçü yalnız panele bağlamak, paneli açmadan çözülen bir modelde eski
+    // alanların CANLI kalması demekti (kart · rapor · sürükleme hepsi köprüden
+    // geçiyor). Kapı köprüyü doğrudan koşturuyor.
+    const pack = veFeadExampleNodes(KEY);
+    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
+    delete ten.data.pivotX; delete ten.data.pivotY; delete ten.data.armPinned;
+    ten.data.cenX = -161.97; ten.data.cenY = 91.29;
+    ten.data.armMeanDeg = -11.9992; ten.data.angleMode = 'mount';
+
+    const b = veFeadBuildSystem(pack.nodes, pack.connections);
+    expect(b.ok).toBe(true);
+    expect(ten.data.cenX).toBeUndefined();          // göç KÖPRÜDE koştu
+    expect(ten.data.angleMode).toBeUndefined();
+    expect(ten.data.pivotX).toBeCloseTo(-250, 1);
+    expect(ten.data.armPinned).toBe(true);
+  });
+
+  test('KASNAK MERKEZİ MONTAJ KONUMU YERİNE GEÇEMEZ — sessiz %48 hatası', () => {
+    // Göç türetemiyorsa (kol açısı yok) model ÇÖZÜLMEZ. Merkezi montaj konumu
+    // saymak ölçülmüş sessiz hata: gerginlik −%48,6, sarım en kötü +27,9°.
+    const pack = veFeadExampleNodes(KEY);
+    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
+    delete ten.data.pivotX; delete ten.data.pivotY;
+    delete ten.data.armMeanDeg; delete ten.data.armPinned;
+    ten.data.cenX = -161.97; ten.data.cenY = 91.29;
+
+    const b = veFeadBuildSystem(pack.nodes, pack.connections);
+    expect(b.ok).toBe(false);
+    expect(b.errors.join(' ')).toMatch(/montaj konumu \(X \/ Y\) girilmedi/);
+    expect(b.pivot).toBeNull();                     // merkez pivot yerine GEÇMEDİ
+  });
+
+  test('İKİNCİ KOORDİNAT TÜRETİLEMESE BİLE SİLİNİR', () => {
+    // Bu, "kasnak merkezi pivot yerine geçemez" kapısının dayandığı özellik:
+    // göç türetemediğinde bile cenX/cenY kayıttan çıkıyor, dolayısıyla köprüde
+    // onlara düşebilecek bir yedek yol KALMIYOR. Silmeseydik panelde hiç
+    // sorulmayan, okunmayan ama koda sızabilen ölü bir alan kalırdı.
+    const td = { cenX: -161.97, cenY: 91.29, armLen: 90 };   // kol açısı YOK
+    expect(veFeadMigrateTensioner(td)).toBe(true);
+    expect(td.cenX).toBeUndefined();
+    expect(td.cenY).toBeUndefined();
+    expect(td.pivotX).toBeUndefined();                       // türetilemedi — UYDURULMADI
+  });
+
+  test('KARŞILIKLI DOĞRULAMA API’si YOK', () => {
+    // Kullanıcı kararı: "Herhangi bir doğrulama gibi bir olay söz konusu
+    // değil." Kapı fonksiyonun VARLIĞINI tutuyor — geri gelirse kırmızı.
+    ['veFeadArmCheck', 'veFeadAngleMode', 'veFeadTensionerMount', 'veFeadFreeAngleFrom',
+     'veFeadPivotFromArm'].forEach((k) => expect(M[k]).toBeUndefined());
   });
 
   test('AG00976 zarftan çözülünce Gates’i geri üretiyor', () => {
     const b = kur(KEY, ZARF).build();
     expect(b.ok).toBe(true);
-    expect(b.angleMode).toBe('envelope');
     expect(b.armSelected).toBe(true);
     // KAYIŞ BOYU — raporun REBL sütunu 1714.6 mm; kayış çözüme hiç girmedi.
     expect(Math.abs(b.beltLengthMm - G.belt) / G.belt * 100).toBeLessThan(0.5);
@@ -365,19 +404,6 @@ describe('köprü — zarf kipi', () => {
     expect(Math.abs(b.beltLengthMm - serbest.beltLengthMm)).toBeGreaterThan(1);
   });
 
-  test('GERİYE DÖNÜK: montaj merkezli eski kayıt aynen mount kipinde ve TABAN korunuyor', () => {
-    const b = kur(KEY).build();
-    expect(b.angleMode).toBe('mount');
-    expect(b.beltMode).toBe('fixed');
-    expect(b.relDeg).toBeCloseTo(28.0750, 3);
-    expect(b.beltLengthMm).toBeCloseTo(1714.6, 4);
-    expect(b.springTensionN).toBeCloseTo(544.05, 1);
-    const bmc = kur('BMC_FEAD_2026').build();
-    expect(bmc.ok).toBe(true);
-    expect(bmc.relDeg).toBeCloseTo(28.4271, 3);
-    expect(bmc.beltLengthMm).toBeCloseTo(1715.0, 4);
-    expect(bmc.springTensionN).toBeCloseTo(532.14, 1);
-  });
 });
 
 /* ═══════════════════════ 4) YÜZEY — kip kilidi ve panel ═══════════════ */
@@ -392,10 +418,11 @@ describe('yüzey — kayış kipi zarf kipinde KİLİTLİ', () => {
     return pack;
   }
 
-  test('veFeadBeltModeLocked yalnız zarf kipinde true', () => {
-    const pack = kanvas();
+  test('veFeadBeltModeLocked: gergi varsa TRUE (kayış boyu her zaman çıktı)', () => {
+    kanvas();
     expect(veFeadBeltModeLocked()).toBe(true);
-    pack.nodes.find((n) => n.type === 'fead-tensioner').data.angleMode = 'mount';
+    // gergi YOKSA kilit de yok
+    global.nodes = global.nodes.filter((n) => n.type !== 'fead-tensioner');
     expect(veFeadBeltModeLocked()).toBe(false);
   });
 
@@ -405,9 +432,6 @@ describe('yüzey — kayış kipi zarf kipinde KİLİTLİ', () => {
     const h = fead.getFeadBeltPropertiesHTML(belt);
     expect(h).toMatch(/SERBEST \(kilitli\)/);
     expect(h).not.toMatch(/id="ve-fead-lengthMode-/);
-    // kilit kalkınca seçici geri gelir
-    pack.nodes.find((n) => n.type === 'fead-tensioner').data.angleMode = 'mount';
-    expect(fead.getFeadBeltPropertiesHTML(belt)).toMatch(/id="ve-fead-lengthMode-/);
   });
 
   test('kip ROZETİ kilitliyken tıklansa da yazmıyor (DOM yolu)', () => {
@@ -421,43 +445,13 @@ describe('yüzey — kayış kipi zarf kipinde KİLİTLİ', () => {
       fead.veFeadApplyBadge(d, belt);
       return d.querySelector('.ve-fead-badge');
     };
-    // Kilitliyken rozet SERBEST der ve tık hiçbir şey yazmaz.
+    // Rozet SERBEST der ve tık hiçbir şey yazmaz (kilit koşulsuz).
     const r1 = kutu();
     expect(r1.textContent).toBe('SERBEST');
     r1.onclick({ stopPropagation() {}, preventDefault() {} });
     expect(belt.data.lengthMode).toBe('fixed');
     // Kilit kalkınca aynı tık gerçekten çeviriyor — yani test tıkı ölçüyor,
     // "hiçbir şey olmaması"nı değil.
-    pack.nodes.find((n) => n.type === 'fead-tensioner').data.angleMode = 'mount';
-    const r2 = kutu();
-    expect(r2.textContent).toBe('SABİT');
-    r2.onclick({ stopPropagation() {}, preventDefault() {} });
-    expect(belt.data.lengthMode).toBe('free');
-  });
-
-  test('kip rozeti kilitliyken TIKLAMAYI reddeder', () => {
-    const pack = kanvas();
-    const belt = pack.nodes.find((n) => n.type === 'fead-belt');
-    belt.data.lengthMode = 'fixed';
-    expect(fead.veFeadToggleBeltMode(belt.id)).toBeNull();
-    expect(belt.data.lengthMode).toBe('fixed');       // yazılmadı
-    pack.nodes.find((n) => n.type === 'fead-tensioner').data.angleMode = 'mount';
-    expect(fead.veFeadToggleBeltMode(belt.id)).toBe('free');
-  });
-
-  test('gergi paneli zarf kipinde MONTAJ KOORDİNATLARINI sorar, montaj merkezini sormaz', () => {
-    const pack = kanvas();
-    const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
-    const h = fead.getFeadTensionerPropertiesHTML(ten);
-    expect(h).toMatch(/Otomatik Gergi Montaj Koordinatları/);
-    expect(h).toMatch(/id="ve-fead-pivotX-/);
-    expect(h).not.toMatch(/id="ve-fead-cenX-/);
-    expect(h).not.toMatch(/Türetilen pivot/);
-    // mount kipinde tam tersi
-    ten.data.angleMode = 'mount';
-    const h2 = fead.getFeadTensionerPropertiesHTML(ten);
-    expect(h2).toMatch(/id="ve-fead-cenX-/);
-    expect(h2).not.toMatch(/Otomatik Gergi Montaj Koordinatları/);
   });
 
   test('gergi paneli KÜNYE KÜTÜPHANESİ kartını basar ve künye uygulanabiliyor', () => {
@@ -562,13 +556,6 @@ describe('rapor — zarf kipinde kayış boyu ÇIKTI tarafında', () => {
     return RP._frSection8(R, { id: 'rep1', type: 'fead-report', data: {} });
   }
 
-  test('kip satırı ZARF der, kol açısı basılır', () => {
-    const h = coz(true);
-    expect(h).toMatch(/ZARF çözüldü/);
-    expect(h).toMatch(/Kol çalışma açısı/);
-    expect(h).toMatch(/Zarf ölçütü/);
-  });
-
   test('envanterde kayış boyu GİRDİ değil TÜREV', () => {
     const z = coz(true);
     // "— aşağıdakilerin hiçbiri girilmez —" ayracının ALTINDA olmalı
@@ -577,12 +564,9 @@ describe('rapor — zarf kipinde kayış boyu ÇIKTI tarafında', () => {
     expect(ayrac).toBeGreaterThan(0);
     expect(boy).toBeGreaterThan(ayrac);
     expect(z).not.toMatch(/Kayış efektif boyu[^<]*<\/td>[\s\S]{0,160}girdi<\/b> — kayış künyesi/);
-    // pivot ise GİRDİ tarafında ve adı değişmiş
-    expect(z).toMatch(/Gergi montaj koordinatı \(pivot\)/);
-    // mount kipinde tam tersi: boy GİRDİ, pivot "Gergi pivotu"
-    const m = coz(false);
-    expect(m.indexOf('Kayış efektif boyu')).toBeLessThan(m.indexOf('aşağıdakilerin hiçbiri girilmez'));
-    expect(m).toMatch(/Gergi pivotu/);
+    // montaj konumu GİRDİ tarafında ve adı yeni terminolojide
+    expect(z).toMatch(/Otomatik gergi montaj konumu/);
+    expect(z).not.toMatch(/Gergi pivotu/);
   });
 });
 
@@ -601,14 +585,6 @@ describe('kayış tipine bağlı çıktılar', () => {
     return { build, R: veFeadAnalyze(build, {
       rows: veFeadDutyRows(solv), cylinders: 6, fatigueModel: 'PK-2_2p-MT3' }), ns };
   }
-
-  test('kip çözümü: zarfta none, diğerlerinde full, açık seçim ezer', () => {
-    expect(veFeadBeltDataMode({}, 'envelope')).toBe('none');
-    expect(veFeadBeltDataMode({}, 'mount')).toBe('full');
-    expect(veFeadBeltDataMode({}, 'direct')).toBe('full');
-    expect(veFeadBeltDataMode({ beltDataMode: 'full' }, 'envelope')).toBe('full');
-    expect(veFeadBeltDataMode({ beltDataMode: 'none' }, 'mount')).toBe('none');
-  });
 
   test('KAPALIYKEN ömür, yorulma ve açıklık frekansları ÜRETİLMİYOR', () => {
     const { R } = coz(true);
@@ -641,13 +617,6 @@ describe('kayış tipine bağlı çıktılar', () => {
     expect(R.life).toBeTruthy();
     expect(R.fatigue).toBeTruthy();
     R.analysis.duty.forEach((d) => { expect(d.frequencies).toBeTruthy(); });
-  });
-
-  test('GERİYE DÖNÜK: mount kipindeki eski kayıt full kalıyor', () => {
-    const { R } = coz(false);
-    expect(R.beltDataMode).toBe('full');
-    expect(R.life).toBeTruthy();
-    expect(R.fatigue).toBeTruthy();
   });
 
   test('PROFİL KAPATILMIYOR — geometri hâlâ hb/hr ile çözülüyor', () => {
@@ -765,23 +734,6 @@ describe('kanvas ↔ mm — zarf kipinde gergi kutusu PİVOTU gösterir', () => 
     expect(veFeadDragTensioner(ten, org, VE_FEAD_PX_PER_MM)).toBe(false);
   });
 
-  test('MOUNT kipinde davranış BİREBİR eski — kutu montaj merkezini gösterir', () => {
-    const pack = veFeadExampleNodes(KEY);
-    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
-    const org = veFeadOriginNode(pack.nodes);
-    veFeadSyncCanvasFromMm(pack.nodes);
-    const mm = veFeadCanvasToMm(ten, org, VE_FEAD_PX_PER_MM);
-    expect(mm.x).toBeCloseTo(ten.data.cenX, 2);
-    expect(mm.y).toBeCloseTo(ten.data.cenY, 2);
-    // sürüklemede pivot ve merkez RİJİT taşınıyor (kol boyu korunuyor)
-    const a0 = veFeadArmCheck(ten.data);
-    ten.x += 25;
-    expect(veFeadDragTensioner(ten, org, VE_FEAD_PX_PER_MM)).toBe(true);
-    const a1 = veFeadArmCheck(ten.data);
-    expect(a1.fromCoords).toBeCloseTo(a0.fromCoords, 6);
-  });
-
   test('orijin göçü pivotu da ötelemeye devam ediyor', () => {
     const { pack, ten } = kur();
     const p0 = [ten.data.pivotX, ten.data.pivotY];
@@ -809,12 +761,6 @@ describe('montaj koordinatı ↔ kasnak merkezi karışması', () => {
     return veFeadBuildSystem(pack.nodes, pack.connections);
   }
 
-  test('iki alan AYNI noktadaysa uyarı düşer', () => {
-    const b = kur((d) => { d.cenX = d.pivotX; d.cenY = d.pivotY; });
-    expect(b.ok).toBe(true);                       // model YİNE çözülüyor
-    expect(b.warnings.join(' ')).toMatch(/AYNI\s+noktada/);
-  });
-
   test('mesafe kol boyu KADARSA uyarı YOK (yanlış alarm yok)', () => {
     const b = kur((d) => {
       // gerçek çalışma merkezi: pivottan tam kol boyu kadar uzakta
@@ -824,52 +770,6 @@ describe('montaj koordinatı ↔ kasnak merkezi karışması', () => {
     expect(b.warnings.join(' ')).not.toMatch(/montaj koordinatı/i);
   });
 
-  test('mesafe ne 0 ne kol boyu ise SEBEBİYLE uyarılır', () => {
-    // BMC sayfasının koordinatı ↔ Gates pivotu: ölçülen 80,652 mm, kol 90
-    const b = kur((d) => { d.cenX = -170.08; d.cenY = 99.16; });
-    expect(b.ok).toBe(true);
-    const w = b.warnings.join(' ');
-    expect(w).toMatch(/80[,.]6/);
-    expect(w).toMatch(/yanlış okunmuş/);
-  });
-
-  test('KARIŞTIRMANIN BEDELİ ÖLÇÜLÜ — model çözülür ama sayı kayar', () => {
-    // Doğru: BMC sayfası koordinatı KASNAK MERKEZİDİR (mount kipi).
-    const pm = veFeadExampleNodes('BMC_FEAD_2026');
-    pm.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    const dogru = veFeadBuildSystem(pm.nodes, pm.connections);
-    expect(dogru.ok).toBe(true);
-
-    // Yanlış: aynı sayı pivot alanına yazılıyor, zarf kipi.
-    const py = veFeadExampleNodes('BMC_FEAD_2026');
-    py.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    const t = py.nodes.find((n) => n.type === 'fead-tensioner');
-    const cx = t.data.cenX, cy = t.data.cenY;
-    ZARF(t.data);
-    t.data.pivotX = cx; t.data.pivotY = cy;
-    const yanlis = veFeadBuildSystem(py.nodes, py.connections);
-
-    // MODEL ÇÖZÜLÜYOR — sessizliğin kaynağı bu.
-    expect(yanlis.ok).toBe(true);
-    // …ama gerginlik yarıya iniyor (ölçüldü: 532,1 → 279,4 N).
-    const oran = yanlis.springTensionN / dogru.springTensionN;
-    expect(oran).toBeLessThan(0.6);
-    // ve kayış boyu %1'den fazla kayıyor
-    expect(Math.abs(yanlis.beltLengthMm - dogru.beltLengthMm) / dogru.beltLengthMm)
-      .toBeGreaterThan(0.01);
-  });
-
-  test('panel pivot alanının etiketinde "kasnak merkezi YAZILMAZ" diyor', () => {
-    const pack = veFeadExampleNodes(KEY);
-    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
-    ZARF(ten.data);
-    global.nodes = pack.nodes; global.connections = pack.connections;
-    const h = fead.getFeadTensionerPropertiesHTML(ten);
-    expect(h).toMatch(/kasnak merkezi YAZILMAZ/i);
-    expect(h).toMatch(/Pivot Point/);
-    expect(h).toMatch(/48[,.]6/);                  // ölçülen bedel yazılı
-  });
 });
 
 /* ═══ 9) DETAYLI RAPOR ZARFI ANLATIYOR ═══════════════════════════════════ */
@@ -899,37 +799,11 @@ describe('detaylı rapor — zarf kipi', () => {
   let Z = null, Mn = null;
   beforeAll(() => { Z = coz(true); Mn = coz(false); });
 
-  test('PİVOT BİR GİRDİ diyor — ve eski TERS cümle basılmıyor', () => {
-    expect(Z.h).toMatch(/Pivot bir <b>GİRDİDİR<\/b>/);
-    // Eski mount cümlesi zarf kipinde YER ALMAMALI: "kullanıcıdan istenmez"
-    expect(Z.h).not.toMatch(/Pivot, tedarikçiye giden sayfada <b>bulunmaz<\/b>/);
-    // …ama mount kipinde AYNEN duruyor (orada doğru)
-    expect(Mn.h).toMatch(/Pivot, tedarikçiye giden sayfada <b>bulunmaz<\/b>/);
-    expect(Mn.h).not.toMatch(/Pivot bir <b>GİRDİDİR<\/b>/);
-  });
-
   test('İKİ NOKTANIN AYRIMI ölçüsüyle yazılı', () => {
     expect(Z.h).toMatch(/Pivot Point/);
     expect(Z.h).toMatch(/Idler X\/Y Coordinate/);
     expect(Z.h).toMatch(/0,065 mm/);                    // ölçülen sapma
     expect(Z.h).toMatch(/arm direction is from pulley center to pivot/);
-  });
-
-  test('DENKLEM YÖNÜ tersine döndü: c = p + a(cos,sin)', () => {
-    const i = Z.h.indexOf('mathbf{c}');
-    expect(i).toBeGreaterThan(0);
-    const eq = Z.h.slice(i, i + 260);
-    expect(eq).toMatch(/mathbf\{p\}/);
-    expect(eq).toMatch(/\+/);
-    // mount kipinde ters yön korunuyor
-    expect(Mn.h).toMatch(/\\mathbf\{p\} .{0,12}=.{0,12} \\mathbf\{c\}/);
-  });
-
-  test('TOTOLOJİ NÜKSETMİYOR: zarf kipinde "gerçek denetim" DEMİYOR', () => {
-    expect(Z.h).not.toMatch(/gerçek bir denetimdir/);
-    expect(Z.h).toMatch(/DENETİM DEĞİLDİR/);
-    // ve boş bir "(— mm)" denetim sayısı basılmıyor
-    expect(Z.h).not.toMatch(/\(— mm\)/);
   });
 
   test('ZARF BÖLÜMÜ var: ölçüt, kalibrasyon tablosu, şekil, sınır', () => {
@@ -940,8 +814,6 @@ describe('detaylı rapor — zarf kipi', () => {
     expect(Z.h).toMatch(/Paketleme modelde YOK/);          // geçerlilik sınırı
     expect(Z.h).toMatch(/kalibrasyondur, bağımsız doğrulama değil/);
     expect(Z.h).toMatch(/β = 90° kuralı bu sistemlerde geçerli DEĞİL/);
-    // mount kipinde bölüm HİÇ basılmıyor (yapılmamış bir hesap gösterilmiyor)
-    expect(Mn.h).not.toMatch(/Kol açısı zarftan nasıl seçiliyor/);
   });
 
   test('BANT ÇARPANI ikinci kopya değil — ölçütün kendi sabitinden', () => {
@@ -969,16 +841,6 @@ describe('detaylı rapor — zarf kipi', () => {
     const i = Z.h.indexOf('Efektif boy L');
     expect(i).toBeGreaterThan(0);
     expect(Z.h.slice(i, i + 220)).toMatch(/türev/);
-    // mount + sabit kipte hâlâ girdi
-    const j = Mn.h.indexOf('Efektif boy L');
-    expect(Mn.h.slice(j, j + 220)).toMatch(/girdi/);
-  });
-
-  test('uygunluk kriteri "girilmedi" DEMİYOR, zarfın kendi kriterini soruyor', () => {
-    const u = RP._frCompliance(Z.R);
-    expect(u).not.toMatch(/montaj merkezi girilmedi/);
-    expect(u).toMatch(/zarfın çözülebilen bölgesinde/i);
-    expect(RP._frCompliance(Mn.R)).toMatch(/Kol boyu ↔ montaj merkezi/);
   });
 
   test('ŞEKİL GÖRÜNÜR: kullandığı her jeton belgenin CSS’inde tanımlı', () => {

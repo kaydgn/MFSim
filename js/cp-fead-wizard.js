@@ -80,12 +80,11 @@ function _fwDefName(type){
 
 // ── BOŞ DURUM ──────────────────────────────────────────────────────────────
 // Varsayılan gergi kipi ZARF: köprünün kendi varsayılanıyla aynı (bkz.
-// veFeadAngleMode — hiçbir şey girilmemişse 'envelope'). İki yüzey farklı
+// tek koordinat: montaj konumu). İki yüzey farklı
 // varsayarsa kullanıcı sihirbazda bir soru görür, panelde başkasını.
 function veFeadWizDefault(){
   return {
     ad: 'Yeni FEAD Sistemi',
-    tenMode: 'envelope',
     pulleys: [],
     ten: { od: 75, contact: 'back', armLen: 90, tenLib: '' },
     route: [],
@@ -264,7 +263,6 @@ function veFeadWizSeed(key){
     if((componentDefs[p.type] || {}).isFeadTensioner){
       st.ten = JSON.parse(JSON.stringify(d));
       st.ten.name = p.name;
-      st.tenMode = (typeof veFeadAngleMode === 'function') ? veFeadAngleMode(d) : 'mount';
       keyMap[p.key] = '__ten__';
       return;
     }
@@ -329,11 +327,11 @@ function veFeadWizNodes(st){
   // ── GERGİ ────────────────────────────────────────────────────────────────
   // `angleMode` AÇIKÇA yazılıyor: köprü onu veriden de çözebiliyor ama sihirbaz
   // kullanıcıya hangi soruyu sorduğunu biliyor, ve açık seçim her zaman kazanır
-  // (bkz. veFeadAngleMode). Yazılmasaydı yarım doldurulmuş bir formda kip
+  // Yazılmasaydı yarım doldurulmuş bir formda kip
   // kullanıcının seçtiğinden BAŞKA çıkabilirdi.
   var t = st.ten || {};
   var td = { od: _fwNum(t.od, 75), contact: t.contact || 'back',
-             angleMode: st.tenMode, armLen: _fwNum(t.armLen, NaN) };
+             armLen: _fwNum(t.armLen, NaN) };
   if(!Number.isFinite(td.armLen)) delete td.armLen;
   ['preload', 'kArm', 'meanLoad', 'armInertia', 'pulleyMass', 'loadStopRelDeg',
    'inertia'].forEach(function(a){
@@ -343,23 +341,12 @@ function veFeadWizNodes(st){
   // KİPE GÖRE HANGİ KOORDİNAT TAŞINIR — ve ötekiler TAŞINMAZ. Zarf kipinde
   // montaj merkezini de yazmak, köprünün "iki koordinat da var" uyarısını
   // doğurur ve kullanıcı girmediği bir alandan uyarı alırdı.
-  if(st.tenMode === 'envelope'){
-    if(Number.isFinite(_fwNum(t.pivotX, NaN))) td.pivotX = _fwNum(t.pivotX, NaN);
-    if(Number.isFinite(_fwNum(t.pivotY, NaN))) td.pivotY = _fwNum(t.pivotY, NaN);
-    if(t.armPinned && Number.isFinite(_fwNum(t.armMeanDeg, NaN))){
-      td.armPinned = true; td.armMeanDeg = _fwNum(t.armMeanDeg, NaN);
-    }
-  } else if(st.tenMode === 'mount'){
-    if(Number.isFinite(_fwNum(t.cenX, NaN))) td.cenX = _fwNum(t.cenX, NaN);
-    if(Number.isFinite(_fwNum(t.cenY, NaN))) td.cenY = _fwNum(t.cenY, NaN);
-    if(Number.isFinite(_fwNum(t.armMeanDeg, NaN))) td.armMeanDeg = _fwNum(t.armMeanDeg, NaN);
-    if(Number.isFinite(_fwNum(t.pivotX, NaN))) td.pivotX = _fwNum(t.pivotX, NaN);
-    if(Number.isFinite(_fwNum(t.pivotY, NaN))) td.pivotY = _fwNum(t.pivotY, NaN);
-  } else {
-    if(Number.isFinite(_fwNum(t.freeAngleDeg, NaN))) td.freeAngleDeg = _fwNum(t.freeAngleDeg, NaN);
-    if(Number.isFinite(_fwNum(t.cenX, NaN))) td.cenX = _fwNum(t.cenX, NaN);
-    if(Number.isFinite(_fwNum(t.cenY, NaN))) td.cenY = _fwNum(t.cenY, NaN);
+  if(Number.isFinite(_fwNum(t.pivotX, NaN))) td.pivotX = _fwNum(t.pivotX, NaN);
+  if(Number.isFinite(_fwNum(t.pivotY, NaN))) td.pivotY = _fwNum(t.pivotY, NaN);
+  if(t.armPinned && Number.isFinite(_fwNum(t.armMeanDeg, NaN))){
+    td.armPinned = true; td.armMeanDeg = _fwNum(t.armMeanDeg, NaN);
   }
+
   if(t.tenLib) td.tenLib = t.tenLib;
   if(t.tenLibVer) td.tenLibVer = t.tenLibVer;
   var tenNode = { id: 'wz-ten', type: 'fead-tensioner',
@@ -381,7 +368,7 @@ function veFeadWizNodes(st){
   // KAYIŞ KİPİ ZARF KİPİNDE YAZILMAZ: orada boy yapısal olarak bir ÇIKTI ve
   // köprü kipi zaten kilitliyor (veFeadBeltModeLocked). Yazmak, panelde
   // "SABİT" görünüp serbest koşan bir model üretirdi.
-  if(st.tenMode !== 'envelope' && (b.lengthMode === 'fixed' || b.lengthMode === 'free'))
+  if(false)
     bd.lengthMode = b.lengthMode;
   out.push({ id: 'wz-belt', type: 'fead-belt', data: bd });
 
@@ -749,32 +736,11 @@ function veFeadWizStepHTML(step, b){
 // olduğunu belirliyor (zarf kipinde boy yapısal olarak bir SONUÇ).
 function _fwStepKaynak(){
   var st = _fwState;
-  var kipler = [
-    ['envelope', 'Tasarım yapıyorum — kayışı sonra tedarik edeceğim',
-     'Gerginin <b>montaj cıvatası koordinatını</b> (pivot) verirsiniz; program kol açısını '
-     + 'zarftan seçer, <b>kasnak merkezi ve kayış boyu ÇIKTI</b> olur. Yeni tasarımın yolu budur.'],
-    ['mount', 'Elimde tedarikçiye giden FEAD sayfası var',
-     'Sayfadaki koordinat tablosunda gergi satırı <b>kasnağın merkezidir</b>; pivot ondan ve '
-     + 'parça künyesinden türetilir. Kayış boyu bu kipte bir GİRDİ olabilir.'],
-    ['direct', 'Serbest kol açısını biliyorum',
-     'Kolun kayış TAKILI DEĞİLKEN durduğu açıyı doğrudan girersiniz. Tedarikçi sayfasında '
-     + 'bu değer YOKTUR — yalnız elinizde ölçülmüş bir açı varsa kullanın.']
-  ];
   var h = _fwCard('Sistem', '', 'var(--accent-primary)',
       _fwField('Sistem adı', _fwInp('ad', { text: true, ph: 'Yeni FEAD Sistemi' }))
     + _fwHint('Ad yalnız künyedir; rapor antedinde ve kanvas etiketlerinde görünür.'));
 
-  var kh = '';
-  kipler.forEach(function(k){
-    var on = (st.tenMode === k[0]);
-    kh += '<div class="ve-fw-opt' + (on ? ' on' : '') + '" tabindex="0"'
-      + ' onclick="_fwSetRender(\'tenMode\', \'' + k[0] + '\')"'
-      + ' onkeydown="if(event.key===\'Enter\'){_fwSetRender(\'tenMode\',\'' + k[0] + '\');}">'
-      + '<span class="ve-fw-radio"></span>'
-      + '<span class="ve-fw-opt-t"><b>' + _fwEsc(k[1]) + '</b><em>' + k[2] + '</em></span></div>';
-  });
-  h += _fwCard('Gergiyi nasıl tanımlayacaksınız?', 'sonraki adımların sorularını bu belirler',
-      'var(--accent-warning)', kh);
+
 
   var oh = '';
   if(typeof veFeadExampleKeys === 'function'){
@@ -933,40 +899,14 @@ function _fwStepGergi(b){
         + 'Kütüphane bir sertifika değil: elinizdeki gergi bu 14 raporun dışından olabilir.'));
   }
 
-  // ── KİPE GÖRE KOORDİNAT ──────────────────────────────────────────────────
-  if(st.tenMode === 'envelope'){
-    h += _fwCard('Montaj Koordinatları', 'GİRDİ — pivot', 'var(--accent-danger)',
-        _fwGrid([_fwField('Montaj X [mm]', _fwInp('ten.pivotX', { ph: '-250.00' })),
-                 _fwField('Montaj Y [mm]', _fwInp('ten.pivotY', { ph: '110.00' }))])
-      + _fwHint('Gergi <b>gövdesinin motora cıvatalandığı</b> nokta — kolun döndüğü pivot. '
-        + '<b style="color:var(--accent-danger);">Buraya kasnak merkezi yazılmaz:</b> ikisi '
-        + 'kolun iki ayrı ucudur ve aralarında tam kol boyu kadar mesafe vardır. '
-        + 'Karıştırılırsa model <b>yine çözülür ve uyarı çıkmaz</b> — ölçüldü: gerginlik '
-        + '<b>−%48,6</b>, sarım en kötü <b>+27,9°</b>.'));
-  } else if(st.tenMode === 'mount'){
-    h += _fwCard('Montaj Merkezi', 'GİRDİ — kasnak merkezi', 'var(--accent-danger)',
-        _fwGrid([_fwField('Merkez X [mm]', _fwInp('ten.cenX', { ph: '-170.08' })),
-                 _fwField('Merkez Y [mm]', _fwInp('ten.cenY', { ph: '99.16' })),
-                 _fwField('Kol çalışma açısı (MEAN) [°]', _fwInp('ten.armMeanDeg', { ph: '344', step: '0.1' }))], 3)
-      + _fwHint('Tedarikçi sayfasının koordinat tablosunda gergi satırı budur — diğer '
-        + 'kasnaklarla aynı biçimde. <b>Pivot sorulmaz</b>: kol boyu ve kolun çalışma '
-        + 'açısıyla birlikte buradan hesaplanır (kol açısı gergi üreticisinin parça '
-        + 'çiziminde yazar, ör. E9843 için 344°).'));
-    h += _fwCard('Ölçülmüş Pivot', 'opsiyonel — tedarikçi raporundan', 'var(--text-muted)',
-        _fwGrid([_fwField('Pivot X [mm]', _fwInp('ten.pivotX', { ph: '(türetilir)' })),
-                 _fwField('Pivot Y [mm]', _fwInp('ten.pivotY', { ph: '(türetilir)' }))])
-      + _fwHint('Boş bırakın. Yalnız tedarikçi raporunda <b>ölçülmüş</b> bir pivot varsa '
-        + 'doldurun; o zaman kol boyu çapraz kontrolü gerçek bir denetim olur.'));
-  } else {
-    h += _fwCard('Serbest Kol Açısı', 'GİRDİ', 'var(--accent-danger)',
-        _fwGrid([_fwField('Serbest kol açısı [°]', _fwInp('ten.freeAngleDeg', { ph: '42', step: '0.1' })),
-                 _fwField('Merkez X [mm]', _fwInp('ten.cenX', { ph: '(opsiyonel)' })),
-                 _fwField('Merkez Y [mm]', _fwInp('ten.cenY', { ph: '(opsiyonel)' }))], 3)
-      + _fwHint('<b style="color:var(--accent-danger);">Dikkat:</b> buraya montaj '
-        + 'konumunun açısı yazılırsa çekirdek yayı yalnız ön yükünde bulur — ölçüldü: '
-        + 'moment 22,07 yerine 8,81 Nm, gerginlik 650 yerine <b>251 N</b>, ve geometri '
-        + 'kusursuz çözüldüğü için hiçbir hata çıkmaz.'));
-  }
+  // ── MONTAJ KONUMU — TEK KOORDİNAT ───────────────────────────────────────
+  h += _fwCard('Otomatik Gergi Montaj Konumu', 'tek girdi', 'var(--accent-danger)',
+      _fwGrid([_fwField('Montaj X [mm]', _fwInp('ten.pivotX', { ph: '-250.00' })),
+               _fwField('Montaj Y [mm]', _fwInp('ten.pivotY', { ph: '110.00' }))])
+    + _fwHint('Gergi <b>gövdesinin motora bağlandığı</b> nokta — kolun döndüğü eksen. '
+      + '<b>Avara kasnağının merkezi buradan çıkar</b>: kol bu nokta etrafında kol boyu '
+      + 'yarıçapında dönüyor. Kasnak merkezi bir girdi değildir.'));
+
 
   h += _fwCard('Kol ve Kasnak', 'parça verisi', 'var(--accent-primary)',
       _fwGrid([_fwField('Kol boyu [mm]', _fwInp('ten.armLen', { ph: '90' })),
@@ -993,16 +933,17 @@ function _fwStepGergi(b){
 
   // ── OKUMA — kip ne veriyor ───────────────────────────────────────────────
   var oku = '';
-  var m = (typeof veFeadTensionerMount === 'function')
-    ? veFeadTensionerMount(veFeadWizNodes(st).nodes.filter(function(n){
+  var m = (typeof veFeadSpringSetup === 'function')
+    ? veFeadSpringSetup(veFeadWizNodes(st).nodes.filter(function(n){
         return n.type === 'fead-tensioner'; })[0].data) : null;
   if(m && Number.isFinite(m.relMeanDeg))
     oku += _fwRead('Yay kurulması (Mean−Pre)/Rate', _fwFmt(m.relMeanDeg, 2) + '°');
   if(b && b.ok){
     if(Number.isFinite(b.armAbsDeg))
-      oku += _fwRead(st.tenMode === 'envelope' ? 'Kol çalışma açısı (ZARFTAN SEÇİLDİ)'
-                                               : 'Kol çalışma açısı', _fwFmt(b.armAbsDeg, 2) + '°');
-    if(st.tenMode === 'envelope' && typeof veFeadTensionerCenter === 'function'){
+      oku += _fwRead(b.armPinned ? 'Kol çalışma açısı (sabitlendi)'
+                                 : 'Kol çalışma açısı (ZARFTAN SEÇİLDİ)',
+        _fwFmt(b.armAbsDeg, 2) + '°');
+    if(typeof veFeadTensionerCenter === 'function'){
       var tn = veFeadWizNodes(st).nodes.filter(function(n){ return n.type === 'fead-tensioner'; })[0];
       var cen = veFeadTensionerCenter(tn.data, b.armAbsDeg);
       if(cen) oku += _fwRead('↳ kasnak merkezi (türedi)',
@@ -1018,7 +959,7 @@ function _fwStepGergi(b){
   }
   if(oku) h += _fwCard('Bu künyeden çıkanlar', 'okuma — girdi değil', 'var(--accent-warning)',
       '<div class="ve-fw-reads">' + oku + '</div>'
-    + (st.tenMode === 'envelope'
+    + (true
         ? _fwHint('Kol açısı <b>14 Gates sisteminden geriye çözülmüş</b> bir ölçütle '
           + 'seçiliyor: kolun çalışma aralığı boyunca <b>en küçük take-up en büyük</b> '
           + 'olacak şekilde — yani kayışın servis zarfında görülen tepe gerginliğini en '
@@ -1034,7 +975,7 @@ function _fwRead(et, deg){
 // ── 5 · KAYIŞ ──────────────────────────────────────────────────────────────
 function _fwStepKayis(b){
   var st = _fwState, bl = st.belt || {};
-  var zarf = (st.tenMode === 'envelope');
+  var zarf = true;
   var h = _fwCard('Profil ve Marka', 'h_b / h_r buradan gelir', 'var(--accent-warning)',
       _fwGrid([_fwField('Profil', _fwSelHTML('belt.profile',
                  [['PK','PK'],['PJ','PJ'],['PH','PH'],['PL','PL'],['PM','PM']], bl.profile || 'PK')),
@@ -1439,7 +1380,7 @@ function getFeadWizardPropertiesHTML(node){
   if(!node.data) node.data = {};
   var w = node.data.wiz;
   var kasnak = w && w.pulleys ? w.pulleys.length : 0;
-  var kip = w && w.tenMode ? w.tenMode : 'envelope';
+  var kip = 'envelope';
   var kipAd = { envelope: 'Montaj koordinatından zarf', mount: 'Montaj merkezinden türet',
                 direct: 'Serbest kol açısı' }[kip] || kip;
   var h = '<div class="sw-panel">';

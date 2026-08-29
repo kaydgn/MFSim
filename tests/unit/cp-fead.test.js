@@ -368,7 +368,7 @@ describe('topolojiye bakan paneller', () => {
     const ac = kasnak('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
     const ten = kasnak('fead-tensioner', {
       od: 75, pivotX: -180, pivotY: 100, armLen: 90,
-      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1, loadStopRelDeg: 62.4
+      preload: 8.59, kArm: 0.482, meanLoad: 22.09, sense: 1, loadStopRelDeg: 62.4
     }, 'TEN');
     const belt = kasnak('fead-belt', {
       profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6, wearPct: 0.007
@@ -569,51 +569,67 @@ describe('kayış bağlantısı komşuya bakan kenardan çıkar', () => {
 // kırılgan olurdu (bkz. CLAUDE.md test politikası). Burada test edilen şey
 // etiketler değil, panelin HANGİ ALANLARI SORDUĞU — çünkü yanlış alan setini
 // sormak sessiz bir hesap hatasına dönüşüyor (montaj merkezi ↔ serbest açı).
-describe('gergi paneli sayfanın biçimini soruyor', () => {
-  test('montaj yolunda montaj merkezi sorulur, serbest açı SORULMAZ', () => {
-    const ten = kasnak('fead-tensioner', {
-      angleMode: 'mount', pivotX: -259.94, pivotY: 104.15,
-      cenX: -170.08, cenY: 99.16, armLen: 90, preload: 8.6, kArm: 0.48, meanLoad: 22.07
-    });
-    const html = fead.getFeadTensionerPropertiesHTML(ten);
-    expect(html).toMatch(/veFeadSet\('[^']+','cenX'/);
+describe('gergi paneli TEK koordinat soruyor', () => {
+  // Kullanıcı kararı (2026-08-29): "Artık sadece 'otomatik gergi montaj konumu'
+  // var … Herhangi bir doğrulama gibi bir olay söz konusu değil."
+  //
+  // Bu blok eskiden kipe göre HANGİ ALANIN sorulduğunu tutuyordu (montaj
+  // merkezi ↔ serbest açı). Kipler kalktı; kapı artık ikilik OLMADIĞINI
+  // tutuyor — ikinci bir koordinat alanı geri gelirse kırmızıya döner.
+  const tam = () => kasnak('fead-tensioner', {
+    od: 75, pivotX: -250, pivotY: 110, armLen: 90,
+    preload: 8.6, kArm: 0.48, meanLoad: 22.07,
+  });
+
+  test('montaj konumu sorulur', () => {
+    const html = fead.getFeadTensionerPropertiesHTML(tam());
+    expect(html).toMatch(/veFeadSet\('[^']+','pivotX'/);
+    expect(html).toMatch(/veFeadSet\('[^']+','pivotY'/);
+    expect(html).toMatch(/Otomatik Gergi Montaj Konumu/);
     expect(html).toMatch(/veFeadSet\('[^']+','meanLoad'/);
-    expect(html).not.toMatch(/veFeadSet\('[^']+','freeAngleDeg'/);
   });
 
-  test('elle yolunda serbest açı sorulur, montaj merkezi SORULMAZ', () => {
-    const ten = kasnak('fead-tensioner', { angleMode: 'direct', freeAngleDeg: 42 });
-    const html = fead.getFeadTensionerPropertiesHTML(ten);
-    expect(html).toMatch(/veFeadSet\('[^']+','freeAngleDeg'/);
-    expect(html).not.toMatch(/veFeadSet\('[^']+','cenX'/);
-  });
-
-  // ESKİ KAYIT: yalnız freeAngleDeg taşıyan bir gergi 'direct' modda açılmalı.
-  // Panel 'mount' gösterirse kullanıcı boş bir montaj kutusu görür ve kendi
-  // çalışan modelinin bozulduğunu sanır.
-  test('yalnız serbest açı taşıyan ESKİ kayıt elle modda açılır', () => {
-    const ten = kasnak('fead-tensioner', { pivotX: 0, pivotY: 0, armLen: 90, freeAngleDeg: 42 });
-    const html = fead.getFeadTensionerPropertiesHTML(ten);
-    expect(html).toMatch(/value="direct" selected/);
-    expect(html).toMatch(/veFeadSet\('[^']+','freeAngleDeg'/);
-  });
-
-  test('montaj merkezi taşıyan kayıt montaj modunda açılır', () => {
-    const ten = kasnak('fead-tensioner', { pivotX: -259.94, pivotY: 104.15, cenX: -170.08, cenY: 99.16 });
-    expect(fead.getFeadTensionerPropertiesHTML(ten)).toMatch(/value="mount" selected/);
-  });
-
-  test('kol boyu çapraz kontrolü panelde GÖRÜNÜR', () => {
-    const tam = kasnak('fead-tensioner', {
-      angleMode: 'mount', pivotX: -259.94, pivotY: 104.15,
-      cenX: -170.08, cenY: 99.16, armLen: 90, preload: 8.6, kArm: 0.48, meanLoad: 22.07
+  test('İKİNCİ KOORDİNAT YOK — kasnak merkezi, serbest açı ve doğrulama alanı SORULMAZ', () => {
+    const html = fead.getFeadTensionerPropertiesHTML(tam());
+    ['cenX', 'cenY', 'freeAngleDeg', 'verifyCenX', 'verifyCenY'].forEach((k) => {
+      expect(html).not.toMatch(new RegExp("veFeadSet\\('[^']+','" + k + "'"));
+      expect(html).not.toMatch(new RegExp("'" + k + "'"));
     });
-    expect(fead.getFeadTensionerPropertiesHTML(tam)).toMatch(/tutuyor/);
-    const bozuk = kasnak('fead-tensioner', {
-      angleMode: 'mount', pivotX: -259.94, pivotY: 104.15,
-      cenX: -170.08, cenY: 99.16, armLen: 70, preload: 8.6, kArm: 0.48, meanLoad: 22.07
+  });
+
+  test('KİP SEÇİCİSİ YOK — tek yol var', () => {
+    const html = fead.getFeadTensionerPropertiesHTML(tam());
+    expect(html).not.toMatch(/angleMode/);
+    expect(html).not.toMatch(/Ölçülmüş Pivot/);
+  });
+
+  test('KARŞILIKLI DOĞRULAMA YOK — "tutuyor/TUTMUYOR" hükmü basılmıyor', () => {
+    // Eski panel |merkez − pivot| ile kol boyunu karşılaştırıp hüküm veriyordu.
+    // Kol boyu ne olursa olsun artık böyle bir hüküm çıkmamalı.
+    [90, 70, 120].forEach((armLen) => {
+      const html = fead.getFeadTensionerPropertiesHTML(kasnak('fead-tensioner', {
+        od: 75, pivotX: -250, pivotY: 110, armLen,
+        preload: 8.6, kArm: 0.48, meanLoad: 22.07,
+      }));
+      expect(html).not.toMatch(/TUTMUYOR/);
+      expect(html).not.toMatch(/çapraz kontrol/i);
+      expect(html).not.toMatch(/Doğrulama/);
     });
-    expect(fead.getFeadTensionerPropertiesHTML(bozuk)).toMatch(/TUTMUYOR/);
+  });
+
+  test('ESKİ KAYIT göç eder: iki koordinatlı gergi tek koordinatla açılır', () => {
+    const ten = kasnak('fead-tensioner', {
+      od: 75, cenX: -170.08, cenY: 99.16, armLen: 90, armMeanDeg: 344,
+      angleMode: 'mount', preload: 8.6, kArm: 0.48, meanLoad: 22.07,
+    });
+    const html = fead.getFeadTensionerPropertiesHTML(ten);
+    // göç panelin kendi yolunda koştu
+    expect(ten.data.cenX).toBeUndefined();
+    expect(ten.data.angleMode).toBeUndefined();
+    expect(ten.data.pivotX).toBeCloseTo(-256.59, 2);
+    expect(ten.data.pivotY).toBeCloseTo(123.97, 2);
+    expect(ten.data.armPinned).toBe(true);       // kol eski yerinde SABİTLENDİ
+    expect(html).toMatch(/Otomatik Gergi Montaj Konumu/);
   });
 });
 
@@ -740,7 +756,7 @@ describe('Kayış Yolu kanvas kartı', () => {
     const ac = kasnak('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
     const ten = kasnak('fead-tensioner', {
       od: 75, pivotX: -180, pivotY: 100, armLen: 90,
-      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1
+      preload: 8.59, kArm: 0.482, meanLoad: 22.09, sense: 1
     }, 'TEN');
     const belt = kasnak('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6 });
     const sv = kasnak('fead-solver', { designTensionN: 765.7, driveRatio: 1, lengthOffsetMm: 3.5 });
@@ -814,7 +830,7 @@ describe('Kayış Yolu kanvas kartı', () => {
     delete ten.data.pivotX;                  // pivot eksik
     const html = fead.veFeadLayoutCardHTML(lay);
     expect(html).toMatch(/Şema çizilemiyor/);
-    expect(html).toMatch(/pivot/i);
+    expect(html).toMatch(/montaj konumu/i);
     expect(html).not.toMatch(/data-ve="belt"/);
   });
 
@@ -861,7 +877,7 @@ describe('şema işaretleri', () => {
     const ac = kasnak('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
     const ten = kasnak('fead-tensioner', {
       od: 75, pivotX: -180, pivotY: 100, armLen: 90,
-      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1
+      preload: 8.59, kArm: 0.482, meanLoad: 22.09, sense: 1
     }, 'TEN');
     const belt = kasnak('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6 });
     const sv = kasnak('fead-solver', { designTensionN: 765.7, driveRatio: 1, lengthOffsetMm: 3.5 });
@@ -1046,7 +1062,7 @@ describe('kayış yayları kasnakların ÜZERİNDE (bükülme kapısı)', () => 
     const ac = kasnak('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
     const ten = kasnak('fead-tensioner', {
       od: 75, pivotX: -180, pivotY: 100, armLen: 90,
-      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1
+      preload: 8.59, kArm: 0.482, meanLoad: 22.09, sense: 1
     }, 'TEN');
     const belt = kasnak('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6 });
     const sv = kasnak('fead-solver', { designTensionN: 765.7, driveRatio: 1, lengthOffsetMm: 3.5 });
@@ -1177,7 +1193,7 @@ describe('kol konumu seçimi', () => {
     const ac = kasnak('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
     const ten = kasnak('fead-tensioner', {
       od: 75, pivotX: -180, pivotY: 100, armLen: 90,
-      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1
+      preload: 8.59, kArm: 0.482, meanLoad: 22.09, sense: 1
     }, 'TEN');
     const belt = kasnak('fead-belt', Object.assign(
       { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6 }, beltData || {}));
@@ -1302,67 +1318,29 @@ describe('gergi DOĞRULAMA kartı — ters girişi sayıyla yakalar', () => {
     const pack = veFeadExampleNodes('AG00976_GATES_2025');
     pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     const t = pack.nodes.filter((n) => componentDefs[n.type].isFeadTensioner)[0];
-    t.data.angleMode = 'envelope';
     delete t.data.cenX; delete t.data.cenY;
-    if (cen) { t.data.verifyCenX = cen[0]; t.data.verifyCenY = cen[1]; }
     delete pack.nodes.filter((n) => componentDefs[n.type].isFeadBelt)[0].data.effLength;
     global.nodes = pack.nodes; global.connections = pack.connections;
     return t;
   };
   const duz = (h) => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 
-  test('kart zarf kipindeki gergi panelinde ÇİZİLİYOR', () => {
-    // Kapı ÜRETİLEN YÜZEYE bakar: kartı doğrudan çağırmak, panelden
-    // düşürülmesini göremezdi.
-    const t = kur(null);
-    expect(duz(fead.getFeadTensionerPropertiesHTML(t))).toContain('Doğrulama');
-  });
-
-  test('boşken hüküm UYDURMAZ — türeyen merkezi basıp karşılaştırma ister', () => {
-    const h = duz(fead.veFeadVerifyCard(kur(null)));
-    expect(h).toContain('türeyen kasnak merkezi');
-    expect(h).toContain('-161');                       // türeyen merkez basılı
-    expect(h).toContain('Layout Data');                // nereyle karşılaştırılacağı
-    expect(h).not.toContain('Ayrışıyor');              // olmayan hüküm verilmiyor
-    expect(h).not.toContain('Tutarlı');
-  });
-
-  test('DOĞRU merkez girilince tutarlı der ve kol boyu kapısı geçer', () => {
-    const h = duz(fead.veFeadVerifyCard(kur([-161.97, 91.29])));
-    expect(h).toContain('kol boyuyla TUTUYOR');
-    expect(h).toContain('Tutarlı');
+  test('DOĞRULAMA KARTI YOK — panel hiçbir şeyi karşılaştırmıyor', () => {
+    // Kullanıcı kararı: "Herhangi bir doğrulama gibi bir olay söz konusu
+    // değil." Kapı ÜRETİLEN YÜZEYE bakıyor: kart geri gelirse kırmızı.
+    const h = duz(fead.getFeadTensionerPropertiesHTML(kur(null)));
+    expect(h).not.toContain('Doğrulama');
     expect(h).not.toContain('Ayrışıyor');
+    expect(h).not.toContain('kol boyuyla TUTUYOR');
+    expect(h).not.toContain('Layout Data');
+    expect(typeof fead.veFeadVerifyCard).toBe('undefined');
+    expect(typeof fead.veFeadSetVerifyCen).toBe('undefined');
   });
 
-  test('TERS giriş yakalanıyor — 90 mm ayrışma', () => {
-    // Montaj referans noktası alanına kasnak merkezi yazılırsa model YİNE
-    // çözülür ve uyarı çıkmaz; ölçüldü, gerginlik %48 düşüyor.
-    const h = duz(fead.veFeadVerifyCard(kur([-250, 110])));
-    expect(h).toContain('Ayrışıyor');
-    expect(h).toMatch(/90[.,]0/);
-    expect(h).not.toContain('Tutarlı');
-  });
-
-  test('doğrulama AYRI anahtara yazar — çözüm kipine dokunmaz', () => {
-    // `cenX/cenY` zarf kipinde panelde SORULMAZ (fead-arm-envelope.test.js) ve
-    // veFeadAngleMode onu görürse kipi `mount`a çevirir. Doğrulama sayısı bu
-    // yüzden ayrı anahtarda: bir denetim değeri çözümü değiştiremez.
-    const t = kur(null);
-    global.nodes = [t];
-    fead.veFeadSetVerifyCen(t.id, 'verifyCenX', -161.97);
-    fead.veFeadSetVerifyCen(t.id, 'verifyCenY', 91.29);
-    expect(veFeadAngleMode(t.data)).toBe('envelope');
-    expect(t.data.verifyCenX).toBe(-161.97);
-    // ÇÖZÜM ALANINA yazılmadı: cenX/cenY zarf kipinde bilerek yok.
-    expect(t.data.cenX).toBeUndefined();
-  });
-
-  test('kart yalnız ZARF kipinde çizilir', () => {
-    const t = kur(null);
-    t.data.angleMode = 'mount';
-    t.data.cenX = -161.97; t.data.cenY = 91.29;
-    expect(duz(fead.getFeadTensionerPropertiesHTML(t)))
-      .not.toContain('opsiyonel — ters girişi yakalar');
+  test('avara merkezi yine OKUMA olarak basılıyor — gizlenmiyor', () => {
+    const h = duz(fead.getFeadTensionerPropertiesHTML(kur(null)));
+    expect(h).toContain('kasnak merkezi (türedi)');
+    expect(h).toContain('-161');
   });
 });
 
@@ -1411,7 +1389,7 @@ describe('veFeadArrangeByCoords — kasnaklar KOORDİNATLARINA yerleşir', () =>
   // Karar TEK YERDE (veFeadTensionerBoxMm, fead-model.js); kapı ÜRETİLEN
   // YERLEŞİMİ ölçüyor — okuyucuyu doğrudan çağırmak, yerleştiricinin onu
   // kullanmayı BIRAKMASINI göremezdi.
-  test('gergi ZARF kipinde de kümenin İÇİNE yerleşir', () => {
+  test('gergi kümenin İÇİNE yerleşir (montaj konumundan)', () => {
     const kurGergi = (kip) => {
       const tipler = ['fead-crank', 'fead-alternator', 'fead-idler'];
       const koord = [{ x: 0, y: 0 }, { x: -281, y: 259.5 }, { x: 130, y: 140 }];
@@ -1424,8 +1402,6 @@ describe('veFeadArrangeByCoords — kasnaklar KOORDİNATLARINA yerleşir', () =>
       const dt = componentDefs['fead-tensioner'];
       const td = { od: 75, armLen: 90, preload: 8.6, kArm: 0.48, meanLoad: 22.07,
                    pivotX: -250, pivotY: 110 };
-      if (kip === 'mount') { td.angleMode = 'mount'; td.cenX = -161.97; td.cenY = 91.29; }
-      else td.angleMode = 'envelope';
       ns.push({ id: 't', type: 'fead-tensioner', def: dt, x: 0, y: 0,
                 width: dt.defaultWidth, height: dt.defaultHeight, data: td });
       global.nodes = ns; global.connections = [];
@@ -1445,7 +1421,7 @@ describe('veFeadArrangeByCoords — kasnaklar KOORDİNATLARINA yerleşir', () =>
       expect(tm.y).toBeLessThan(enAlt);
       // Ve gerçekten kendi mm noktasında olmalı: krank orijin, Y ters.
       const om = merkez(ns[0]);
-      const bek = (kip === 'envelope') ? { x: -250, y: 110 } : { x: -161.97, y: 91.29 };
+      const bek = { x: -250, y: 110 };   // kutu MONTAJ KONUMUNU gösterir
       expect(tm.x - om.x).toBeCloseTo(bek.x, 0);
       expect(tm.y - om.y).toBeCloseTo(-bek.y, 0);
     });
@@ -1541,23 +1517,13 @@ describe('veFeadArrangeByCoords — kasnaklar KOORDİNATLARINA yerleşir', () =>
     expect(toast).not.toContain('koordinatı yok');
   });
 
-  test('mount kipinde gergi kutusu MONTAJ MERKEZİNİ gösterir (taban değişmedi)', () => {
-    const ns = gergili({ od: 75, angleMode: 'mount', armLen: 90,
-                         cenX: -161.97, cenY: 91.29,
-                         preload: 8.6, kArm: 0.48, meanLoad: 22.07 });
-    expect(fead.veFeadArrangeByCoords()).toBe(true);
-    const mm = mmOf(ns, ns[3]);
-    expect(mm.x).toBeCloseTo(-161.97, 1);
-    expect(mm.y).toBeCloseTo(91.29, 1);
-  });
-
   test('İKİ YERLEŞTİRME YOLU AYNI YERE KOYAR — sync tek kutuyu bile oynatmaz', () => {
     // Asıl kapı bu: "Otomatik Düzenle" ile alt topoloji açılışı aynı noktayı
     // kullanmak ZORUNDA. Ayrıştıklarında hata sessiz — kullanıcı düzenler,
     // kapatıp açar, kutu yerinden zıplar.
-    [{ od: 75, angleMode: 'envelope', armLen: 90, pivotX: -250, pivotY: 110,
+    [{ od: 75, armLen: 90, pivotX: -250, pivotY: 110,
        armMeanDeg: 344, preload: 8.6, kArm: 0.48, meanLoad: 22.07 },
-     { od: 75, angleMode: 'mount', armLen: 90, cenX: -161.97, cenY: 91.29,
+     { od: 75, armLen: 90, pivotX: -250, pivotY: 110,
        preload: 8.6, kArm: 0.48, meanLoad: 22.07 }].forEach((td) => {
       const ns = gergili(td);
       fead.veFeadArrangeByCoords({ silent: true });
@@ -1826,10 +1792,7 @@ describe('serbest kipte türetilen boyun KÖKENİ', () => {
   // birinci sınıf seçeneği (cp-fead.js: "Serbest kol açısını elle gir").
   const direct = (pack, sil) => {
     const t = pack.nodes.find((n) => n.type === 'fead-tensioner');
-    const mm = M.veFeadTensionerMount(t.data);
-    t.data.angleMode = 'direct';
-    t.data.pivotX = mm.pivot[0]; t.data.pivotY = mm.pivot[1];
-    t.data.freeAngleDeg = 24.88; t.data.sense = -1;
+    t.data.sense = -1;
     delete t.data.cenX; delete t.data.cenY;
     if (sil) delete t.data.meanLoad;
   };
@@ -1846,15 +1809,17 @@ describe('serbest kipte türetilen boyun KÖKENİ', () => {
     expect(duz(fead.getFeadBeltPropertiesHTML(belt))).not.toMatch(/Uyarılar/);
   });
 
-  test('künye EKSİKSE: "tedarikçiye verilecek boy" DEMEZ', () => {
+  test('künye EKSİKSE boy UYDURULMAZ — sebep yazılır', () => {
+    // ESKİDEN: yay künyesi eksikken kol gezinme aralığının ORTASINA düşüyor,
+    // panel yine "tedarikçiye verilecek boy budur" diyordu. Tek koordinata
+    // inince o sessiz yedek kalktı: nominal açı SALT yay künyesinden geldiği
+    // için künye yoksa zarf üzerinde seçilecek bir nokta da yok, ve model
+    // sayı üretmek yerine sebebini yazıyor.
     const belt = bmc((p) => direct(p, true));
-    const h = fead.veFeadDerivedLengthHTML(belt), t = duz(h);
-    expect(t).toMatch(/Gergi künyesi eksik/);
-    expect(t).toMatch(/gezinme aralığının ORTASINDAN/);
-    expect(t).toMatch(/tedarikçiye verilecek boy DEĞİLDİR/);
+    const t = duz(fead.veFeadDerivedLengthHTML(belt));
+    expect(t).toMatch(/Spring Mean Load\) girilmedi/);
     expect(t).not.toMatch(/Tedarikçiye verilecek boy budur/);
-    expect(h).toMatch(/--accent-danger/);            // sayı da işaretli
-    expect(t).toMatch(/mm \?/);
+    expect(t).not.toMatch(/NaN|undefined/);
   });
 
   test('kol KENETLENDİYSE: nominale oturamadığını yazar', () => {
@@ -1896,7 +1861,7 @@ describe('yön gülünün yeri', () => {
     const ac = kasnak('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
     const ten = kasnak('fead-tensioner', {
       od: 75, pivotX: -180, pivotY: 100, armLen: 90,
-      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1
+      preload: 8.59, kArm: 0.482, meanLoad: 22.09, sense: 1
     }, 'TEN');
     const belt = kasnak('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6 });
     const sv = kasnak('fead-solver', { designTensionN: 765.7, driveRatio: 1, lengthOffsetMm: 3.5 });
@@ -2186,7 +2151,7 @@ describe('durum şeridi — aynalanmış çevrim', () => {
     const ac = kasnak('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
     const ten = kasnak('fead-tensioner', {
       od: 75, pivotX: -180, pivotY: 100, armLen: 90,
-      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1
+      preload: 8.59, kArm: 0.482, meanLoad: 22.09, sense: 1
     }, 'TEN');
     const belt = kasnak('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6 });
     const sv = kasnak('fead-solver', { designTensionN: 765.7, driveRatio: 1, lengthOffsetMm: 3.5 });
@@ -2218,7 +2183,7 @@ describe('durum şeridi — aynalanmış çevrim', () => {
       ['fead-ac', { od: 112.6, x: -193.7, y: 39.2, contact: 'grooved' }],
       ['fead-tensioner', { od: 84.1, x: -172.3, y: -124.8, contact: 'back',
         pivotX: -226.2, pivotY: -154, armLen: 61.3, angleMode: 'free',
-        freeAngleDeg: 28.4, preload: 12.05, kArm: 0.696 }]
+        meanLoad: 31.55, preload: 12.05, kArm: 0.696 }]
     ].map(([t, d], i) => kasnak(t, d, 'P' + i));
     const belt = kasnak('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8,
       effLength: 2266.1, tolerance: 3, wearPct: 0.007 });
@@ -2282,39 +2247,24 @@ describe('Çözücü paneli tasarım gerginliği SORMUYOR', () => {
 // ════════════════════════════════════════════════════════════════════════════
 //  GERGİ PANELİ — PİVOT ARTIK SORULMUYOR (kullanıcı kararı, 2026-08-25)
 // ════════════════════════════════════════════════════════════════════════════
-describe('gergi paneli: pivot bir girdi değil', () => {
+describe('gergi paneli: avara hareketi montaj konumundan tanımlanır', () => {
   const ten = (d) => kasnak('fead-tensioner', d);
 
-  test('kol künyesi KOL AÇISINI soruyor ve türetilen pivotu YAZIYOR', () => {
+  test('avara merkezi bir GİRDİ DEĞİL — panel onu okuma olarak basıyor', () => {
     const html = fead.getFeadTensionerPropertiesHTML(ten({
-      od: 75, cenX: -170.08, cenY: 99.16, armLen: 90, armMeanDeg: 344,
+      od: 75, pivotX: -250, pivotY: 110, armLen: 90,
       preload: 8.6, kArm: 0.48, meanLoad: 22.07,
     }));
-    expect(html).toMatch(/armMeanDeg/);
-    expect(html).toMatch(/Pivot sorulmaz/);
-    expect(html).toMatch(/Türetilen pivot/);
-    // pivot = c − 90·(cos344°, sin344°) = (−256.59, 123.97)
-    expect(html).toMatch(/−?-?256\.59/);
-    expect(html).toMatch(/123\.97/);
-  });
-
-  test('ÖLÇÜLMÜŞ pivot ayrı ve opsiyonel bir alan olarak duruyor', () => {
-    // Tedarikçi raporundan gelen pivot kaybolmamalı — ama ikincil olmalı.
-    const html = fead.getFeadTensionerPropertiesHTML(ten({
-      od: 75, cenX: -161.97, cenY: 91.29, armLen: 90,
-      pivotX: -250, pivotY: 110, preload: 8.6, kArm: 0.48, meanLoad: 22.07,
-    }));
-    expect(html).toMatch(/Ölçülmüş Pivot/);
-    expect(html).toMatch(/opsiyonel/);
-    expect(html).toMatch(/türetilir/);
-  });
-
-  test('kol açısı YOKSA türetilen pivot satırı da BASILMIYOR (uydurma yok)', () => {
-    const html = fead.getFeadTensionerPropertiesHTML(ten({
-      od: 75, cenX: -170.08, cenY: 99.16, armLen: 90,
-      preload: 8.6, kArm: 0.48, meanLoad: 22.07,
-    }));
-    expect(html).not.toMatch(/Türetilen pivot/);
+    expect(html).toMatch(/Avara Hareketi/);
+    expect(html).toMatch(/kasnak merkezi \(türedi\)|Avara kasnağının merkezi buradan çıkar/);
     expect(html).not.toMatch(/NaN/);
+  });
+
+  test('kol boyu yine SORULUR — parçanın verisi', () => {
+    const html = fead.getFeadTensionerPropertiesHTML(ten({
+      od: 75, pivotX: -250, pivotY: 110, armLen: 90,
+      preload: 8.6, kArm: 0.48, meanLoad: 22.07,
+    }));
+    expect(html).toMatch(/veFeadSet\('[^']+','armLen'/);
   });
 });
