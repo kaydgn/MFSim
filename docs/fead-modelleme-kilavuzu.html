@@ -1,0 +1,1140 @@
+<title>FEAD Modelleme Kılavuzu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════════
+   FEAD Modelleme Kılavuzu — teknik çizim / veri sayfası dili.
+   Renk kodu MFSim'in KENDİ dilinden geliyor ve kılavuz boyunca sabittir:
+       mavi  = GİRDİ (kullanıcının yazdığı)
+       amber = TÜREYEN (programın hesapladığı)
+       kırmızı = SESSİZ TUZAK (hata vermeden yanlış sonuç üreten alan)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root{
+  --paper:#F4F6F9;
+  --surface:#FFFFFF;
+  --surface-2:#EDF1F6;
+  --ink:#12181F;
+  --ink-2:#414C5A;
+  --ink-3:#6C7889;
+  --rule:#D2D8E2;
+  --rule-soft:#E3E8EF;
+
+  --girdi:#2C5AAF;          /* GİRDİ  */
+  --girdi-bg:#E7EEFA;
+  --turev:#8A5B06;          /* TÜREYEN */
+  --turev-bg:#FAF0DC;
+  --uyari:#A32A22;          /* SESSİZ TUZAK */
+  --uyari-bg:#FBEAE8;
+  --onay:#2C6A4F;
+  --onay-bg:#E4F1EA;
+  --kayis:#C97C0A;          /* kayış yolu — şemada */
+
+  --olcum-bg:#161C24;       /* ölçüm bloğu — her iki temada da koyu */
+  --olcum-ink:#DCE3EC;
+  --olcum-rule:#2E3844;
+  --olcum-girdi:#8FB4F5;
+  --olcum-turev:#EDB258;
+  --olcum-onay:#7FCBA4;
+  --olcum-muted:#8996A6;
+
+  --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --disp:"Archivo","IBM Plex Sans",-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F141A;
+    --surface:#161C24;
+    --surface-2:#1C242E;
+    --ink:#E6EBF2;
+    --ink-2:#B2BDCB;
+    --ink-3:#8593A4;
+    --rule:#2A323D;
+    --rule-soft:#222A34;
+
+    --girdi:#8FB4F5;
+    --girdi-bg:#17233A;
+    --turev:#E7A93F;
+    --turev-bg:#2E2415;
+    --uyari:#F0908A;
+    --uyari-bg:#331A19;
+    --onay:#79C39C;
+    --onay-bg:#152A21;
+    --kayis:#E9A53C;
+
+    --olcum-bg:#0A0E13;
+    --olcum-rule:#232C36;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F141A;
+  --surface:#161C24;
+  --surface-2:#1C242E;
+  --ink:#E6EBF2;
+  --ink-2:#B2BDCB;
+  --ink-3:#8593A4;
+  --rule:#2A323D;
+  --rule-soft:#222A34;
+
+  --girdi:#8FB4F5;
+  --girdi-bg:#17233A;
+  --turev:#E7A93F;
+  --turev-bg:#2E2415;
+  --uyari:#F0908A;
+  --uyari-bg:#331A19;
+  --onay:#79C39C;
+  --onay-bg:#152A21;
+  --kayis:#E9A53C;
+
+  --olcum-bg:#0A0E13;
+  --olcum-rule:#232C36;
+}
+
+*{box-sizing:border-box}
+
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+.wrap{
+  max-width:1180px;
+  margin:0 auto;
+  padding:0 28px 96px;
+  display:grid;
+  grid-template-columns:1fr;
+  gap:0;
+}
+@media (min-width:1080px){
+  .wrap{grid-template-columns:214px minmax(0,1fr); column-gap:52px}
+}
+
+/* ── ANTET ───────────────────────────────────────────────────────── */
+.antet{grid-column:1/-1; padding:56px 0 34px; border-bottom:2px solid var(--ink)}
+.eyebrow{
+  font-family:var(--mono); font-size:11.5px; font-weight:500;
+  letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3);
+  margin:0 0 14px;
+}
+h1{
+  font-family:var(--disp); font-weight:700; font-size:clamp(34px,5.4vw,54px);
+  line-height:1.03; letter-spacing:-.022em; margin:0 0 16px;
+  text-wrap:balance;
+}
+.standfirst{
+  font-size:18.5px; line-height:1.55; color:var(--ink-2);
+  max-width:62ch; margin:0 0 22px; text-wrap:pretty;
+}
+.antet-meta{
+  display:flex; flex-wrap:wrap; gap:8px 22px;
+  font-family:var(--mono); font-size:12px; color:var(--ink-3);
+}
+.antet-meta b{color:var(--ink-2); font-weight:500}
+
+/* ── SOL RAY ─────────────────────────────────────────────────────── */
+.ray{display:none}
+@media (min-width:1080px){
+  .ray{
+    display:block; grid-column:1; align-self:start;
+    position:sticky; top:26px; padding-top:40px;
+  }
+}
+.ray-baslik{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-3); margin:0 0 12px;
+}
+.ray ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+.ray a{
+  display:grid; grid-template-columns:22px 1fr; gap:8px; align-items:baseline;
+  padding:5px 8px 5px 4px; text-decoration:none; color:var(--ink-2);
+  font-size:13.5px; line-height:1.35; border-radius:3px;
+  border-left:2px solid transparent;
+}
+.ray a:hover{background:var(--surface-2); color:var(--ink); border-left-color:var(--girdi)}
+.ray a:focus-visible{outline:2px solid var(--girdi); outline-offset:1px}
+.ray .no{font-family:var(--mono); font-size:11px; color:var(--ink-3)}
+
+/* ── ANA SÜTUN ───────────────────────────────────────────────────── */
+main{grid-column:1/-1; min-width:0}
+@media (min-width:1080px){ main{grid-column:2} }
+
+section{padding-top:40px}
+h2{
+  font-family:var(--disp); font-weight:600; font-size:clamp(23px,2.9vw,30px);
+  line-height:1.15; letter-spacing:-.014em; margin:0 0 6px; text-wrap:balance;
+}
+h2 .adim{
+  font-family:var(--mono); font-size:13px; font-weight:500; color:var(--girdi);
+  letter-spacing:.06em; display:block; margin-bottom:7px;
+}
+h3{
+  font-family:var(--disp); font-weight:600; font-size:17px; letter-spacing:-.005em;
+  margin:30px 0 8px;
+}
+p{margin:0 0 15px; max-width:70ch; text-wrap:pretty}
+main > section > p:first-of-type{color:var(--ink-2)}
+ul,ol.gov{margin:0 0 16px; padding-left:20px; max-width:68ch}
+li{margin:0 0 7px}
+b,strong{font-weight:600}
+a{color:var(--girdi)}
+code{
+  font-family:var(--mono); font-size:.885em;
+  background:var(--surface-2); padding:1px 5px; border-radius:3px;
+  border:1px solid var(--rule-soft);
+}
+
+/* ── ROZETLER (MFSim'in renk dili) ───────────────────────────────── */
+.chip{
+  display:inline-block; font-family:var(--mono); font-size:10.5px; font-weight:600;
+  letter-spacing:.07em; text-transform:uppercase; padding:2px 6px; border-radius:3px;
+  vertical-align:.09em; white-space:nowrap;
+}
+.chip.girdi{background:var(--girdi-bg); color:var(--girdi)}
+.chip.turev{background:var(--turev-bg); color:var(--turev)}
+.chip.uyari{background:var(--uyari-bg); color:var(--uyari)}
+.chip.onay {background:var(--onay-bg);  color:var(--onay)}
+
+/* ── PANEL / ALAN TABLOSU ────────────────────────────────────────── */
+.kart{
+  background:var(--surface); border:1px solid var(--rule);
+  border-left:3px solid var(--girdi);
+  margin:0 0 18px; overflow:hidden;
+}
+.kart.turev{border-left-color:var(--turev)}
+.kart-bas{
+  display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 12px;
+  padding:11px 15px; border-bottom:1px solid var(--rule-soft);
+  background:var(--surface-2);
+}
+.kart-bas h4{
+  font-family:var(--disp); font-weight:600; font-size:14.5px; margin:0;
+  letter-spacing:-.004em;
+}
+.kart-bas .yol{
+  font-family:var(--mono); font-size:11px; color:var(--ink-3);
+}
+.tablo-kap{overflow-x:auto}
+table{
+  width:100%; border-collapse:collapse; font-size:13.5px;
+  font-variant-numeric:tabular-nums;
+}
+th{
+  text-align:left; font-family:var(--mono); font-weight:500; font-size:10.5px;
+  letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3);
+  padding:8px 15px; border-bottom:1px solid var(--rule-soft); white-space:nowrap;
+}
+td{
+  padding:8px 15px; border-bottom:1px solid var(--rule-soft);
+  vertical-align:top; line-height:1.45;
+}
+tr:last-child td{border-bottom:none}
+td.alan{font-family:var(--mono); font-size:12.5px; font-weight:500; white-space:nowrap}
+td.sayi{font-family:var(--mono); text-align:right; white-space:nowrap}
+.serbest{margin:0 0 18px; border:1px solid var(--rule); background:var(--surface)}
+.serbest th{background:var(--surface-2)}
+
+/* ── ÖLÇÜM BLOĞU (işlenmiş örnek) ────────────────────────────────── */
+.olcum{
+  background:var(--olcum-bg); color:var(--olcum-ink);
+  border:1px solid var(--olcum-rule); border-radius:2px;
+  margin:0 0 18px; overflow:hidden;
+}
+.olcum-bas{
+  display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px;
+  padding:9px 15px; border-bottom:1px solid var(--olcum-rule);
+}
+.olcum-bas .etiket{
+  font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.14em;
+  color:#0A0E13; background:var(--olcum-turev); padding:2px 6px; border-radius:2px;
+}
+.olcum-bas .konu{font-family:var(--mono); font-size:11.5px; color:var(--olcum-muted)}
+.olcum-govde{padding:12px 15px 14px; font-family:var(--mono); font-size:12.5px; line-height:1.75}
+.olcum-govde .satir{
+  display:grid; grid-template-columns:1fr auto; gap:16px; align-items:baseline;
+  border-bottom:1px dotted var(--olcum-rule); padding:2px 0;
+}
+.olcum-govde .satir:last-child{border-bottom:none}
+.olcum-govde .k{color:var(--olcum-muted)}
+.olcum-govde .v{text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums}
+.olcum-govde .v.girdi{color:var(--olcum-girdi)}
+.olcum-govde .v.turev{color:var(--olcum-turev)}
+.olcum-govde .v.onay {color:var(--olcum-onay)}
+.olcum-not{
+  padding:10px 15px; border-top:1px solid var(--olcum-rule);
+  font-family:var(--sans); font-size:12.5px; line-height:1.55; color:var(--olcum-muted);
+}
+.olcum-not b{color:var(--olcum-ink); font-weight:600}
+.olcum-tab{width:100%; border-collapse:collapse; font-family:var(--mono); font-size:12px}
+.olcum-tab th{
+  color:var(--olcum-muted); border-bottom:1px solid var(--olcum-rule);
+  padding:5px 15px; font-size:10px;
+}
+.olcum-tab td{
+  border-bottom:1px dotted var(--olcum-rule); padding:4px 15px; color:var(--olcum-ink);
+  font-variant-numeric:tabular-nums;
+}
+.olcum-tab td.s{text-align:right}
+.olcum-tab tr:last-child td{border-bottom:none}
+
+/* ── UYARI KUTUSU ────────────────────────────────────────────────── */
+.tuzak{
+  background:var(--uyari-bg); border:1px solid var(--uyari);
+  border-left-width:3px; padding:12px 15px; margin:0 0 18px;
+}
+.tuzak .bas{
+  font-family:var(--mono); font-size:10.5px; font-weight:600; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--uyari); margin:0 0 6px;
+}
+.tuzak p{margin:0; font-size:14px; line-height:1.55; color:var(--ink)}
+.tuzak p + p{margin-top:9px}
+
+.ipucu{
+  background:var(--surface-2); border-left:3px solid var(--rule);
+  padding:11px 15px; margin:0 0 18px; font-size:14px; line-height:1.55;
+  color:var(--ink-2);
+}
+.ipucu b{color:var(--ink)}
+
+/* ── ŞEMA ────────────────────────────────────────────────────────── */
+figure{margin:0 0 18px}
+.sema{
+  background:var(--surface); border:1px solid var(--rule); padding:14px;
+  overflow-x:auto;
+}
+.sema svg{display:block; width:100%; height:auto; max-width:640px; margin:0 auto}
+figcaption{
+  font-size:12.5px; line-height:1.5; color:var(--ink-3); margin-top:9px;
+  max-width:70ch;
+}
+.gosterge{
+  display:flex; flex-wrap:wrap; gap:6px 20px; margin-top:11px;
+  font-family:var(--mono); font-size:11px; color:var(--ink-3);
+}
+.gosterge span{display:inline-flex; align-items:center; gap:6px}
+.gosterge i{width:16px; height:0; border-top-width:2px; border-top-style:solid; display:inline-block}
+
+/* ── KAPANIŞ ─────────────────────────────────────────────────────── */
+.kapanis{
+  grid-column:1/-1; margin-top:56px; padding-top:20px;
+  border-top:1px solid var(--rule);
+  font-size:12.5px; color:var(--ink-3); max-width:74ch;
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important; animation:none!important}
+}
+</style>
+
+<div class="wrap">
+
+<header class="antet">
+  <p class="eyebrow">MFSim · FEAD (ön uç kayış-kasnak) modülü</p>
+  <h1>FEAD Modelleme Kılavuzu</h1>
+  <p class="standfirst">
+    Bir serpantin kayış tahrikini sıfırdan kurmanın sekiz adımı: hangi sayıyı
+    hangi panele yazarsınız, program hangi sayıyı sizin yerinize hesaplar, ve
+    sonucu nereden okursunuz. Her adım gerçek bir sistem üzerinde yürütülüyor.
+  </p>
+  <div class="antet-meta">
+    <span><b>İşlenmiş örnek:</b> BMC Otomotif FEAD 5 · Cummins</span>
+    <span><b>Karşılaştırma:</b> Gates AG00976, v13.02</span>
+    <span><b>Sayılar:</b> bu kılavuz için koşturularak ölçüldü</span>
+  </div>
+</header>
+
+<nav class="ray" aria-label="Adımlar">
+  <p class="ray-baslik">Sekiz adım</p>
+  <ol>
+    <li><a href="#a0"><span class="no">00</span><span>Bir bakışta</span></a></li>
+    <li><a href="#a1"><span class="no">01</span><span>Modüle gir</span></a></li>
+    <li><a href="#a2"><span class="no">02</span><span>Kasnakları koy</span></a></li>
+    <li><a href="#a3"><span class="no">03</span><span>Kayış yolunu kablola</span></a></li>
+    <li><a href="#a4"><span class="no">04</span><span>Kasnak künyeleri</span></a></li>
+    <li><a href="#a5"><span class="no">05</span><span>Gergiyi tanımla</span></a></li>
+    <li><a href="#a6"><span class="no">06</span><span>Kayışı oku, sonra seç</span></a></li>
+    <li><a href="#a7"><span class="no">07</span><span>Çalışma çevrimi</span></a></li>
+    <li><a href="#a8"><span class="no">08</span><span>Hesapla ve raporla</span></a></li>
+    <li><a href="#okuma"><span class="no">→</span><span>Nereden ne okunur</span></a></li>
+    <li><a href="#tuzak"><span class="no">!</span><span>Sessiz tuzaklar</span></a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="a0">
+  <h2><span class="adim">00 — Yön</span>Ne verirsiniz, ne alırsınız</h2>
+
+  <p>
+    FEAD modülünün son sürümünde girdi kümesi bilinçli olarak küçültüldü.
+    Eskiden aynı bilgiyi iki ayrı yerden soruyorduk (gergi kasnağının merkezi
+    <em>ve</em> pivotu; kayış boyu <em>ve</em> kol açısı; tasarım gerginliği
+    <em>ve</em> yay künyesi) — ikisi çeliştiğinde model yine çözülüyor, sadece
+    yanlış çözülüyordu. Bugün her büyüklüğün tek bir kaynağı var.
+  </p>
+
+  <div class="serbest tablo-kap">
+    <table>
+      <thead>
+        <tr><th>Konu</th><th>Siz verirsiniz <span class="chip girdi">girdi</span></th><th>Program hesaplar <span class="chip turev">türeyen</span></th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="alan">Kasnaklar</td>
+          <td>merkez (X, Y) · dış çap · temas tarafı · sürücü rolü</td>
+          <td>teğet noktaları · sarım açıları · açıklık boyları · hız oranları</td>
+        </tr>
+        <tr>
+          <td class="alan">Gergi</td>
+          <td><b>montaj cıvatası koordinatı (pivot)</b> · kol boyu · yay künyesi</td>
+          <td><b>kol çalışma açısı</b> → kasnak merkezi → <b>kayış boyu</b> → tasarım gerginliği</td>
+        </tr>
+        <tr>
+          <td class="alan">Kayış</td>
+          <td>profil (PK/PJ/…) ve marka</td>
+          <td>gereken efektif boy · katalogdan aday boylar</td>
+        </tr>
+        <tr>
+          <td class="alan">Çevrim</td>
+          <td>devir · %zaman · °C · aksesuar başına kW</td>
+          <td>sürücü gücü · gerilmeler · hubload · kayma emniyeti · titreşim</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="ipucu">
+    <b>Yönün tersine çevrildiği yer burası.</b> Montajda sabit olan
+    <em>pivottur</em>; gergi kasnağının merkezi kolun o anki açısıyla değişen
+    bir konumdur. Program artık sabit olanı soruyor, değişkeni hesaplıyor —
+    ve kayış boyu bu zincirin sonunda bir <b>sonuç</b> olarak çıkıyor.
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="a1">
+  <h2><span class="adim">01</span>Modüle gir</h2>
+
+  <p>
+    Karşılama ekranındaki <b>FEAD</b> kartına tıklayın; ana tuvale tek bir
+    alt-sistem kutusu düşer. O kutuya <b>çift tıklayın</b> — modülün kendi iç
+    topolojisi açılır ve sol palet FEAD bileşenlerine döner.
+  </p>
+
+  <p>
+    İç topoloji boşken tuvalde tek bir kutu vardır: <b>Başlangıç ve Örnekler</b>.
+    Buradan iki yol ayrılır.
+  </p>
+
+  <ul>
+    <li><b>Hazır örnek kur.</b> Kutunun paneli iki kayıtlı sistem sunar:
+      <code>BMC_FEAD_2026</code> (tedarikçiye <em>giden</em> bilgi sayfası) ve
+      <code>AG00976_GATES_2025</code> (tedarikçiden <em>dönen</em> rapor).
+      Örnek kurulunca bu kutu silinir, yerine <b>Rapor</b> kutusu gelir —
+      model kullanıma hazırdır.</li>
+    <li><b>Sıfırdan kur.</b> Paletten sürükleyin. İki kategori var:
+      <b>FEAD Kasnakları</b> (krank, alternatör, klima, su pompası, direksiyon,
+      hava kompresörü, fan, avara, gergi) ve <b>FEAD Araçları</b>
+      (Kayış Özellikleri, Kayış Yolu, Çözücü, Rapor, Dönüş Yönü, Konum Bağı).</li>
+  </ul>
+
+  <div class="ipucu">
+    Bir örnek yükleyip üzerinde oynamak, sıfırdan kurmaktan hızlıdır — ama
+    <b>örnek mevcut kasnakların üzerine eklenir, silmez</b>. İkinci bir örneği
+    dolu bir tuvale kurmak kasnakları üst üste bindirir.
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="a2">
+  <h2><span class="adim">02</span>Kasnakları koy — tuval kayış düzlemidir</h2>
+
+  <p>
+    Bu modülde tuval bir blok diyagramı değil: <b>kayış düzleminin kendisi</b>.
+    Ölçek <b>1 px = 1 mm</b>, orijin <b>sürücü kasnaktır</b>, y ekseni motora
+    önden bakış yönündedir. Bir kutuyu sürüklemek kasnağı gerçekten kaydırır ve
+    Kayış Yolu kartı canlı olarak yeniden çizilir.
+  </p>
+
+  <p>
+    Kasnakları tedarikçi bilgi sayfasındaki koordinat tablosunun sırasına göre
+    bırakın; ince ayarı panelden yaparsınız. Konumu <em>elle</em> girmeyi tercih
+    ediyorsanız paletten <b>Konum Bağı</b> kutusunu bırakıp rozetine tıklayın:
+    <span class="chip girdi">kapalı</span> durumda kutular salt görsel olur,
+    koordinat yalnız panelden gelir.
+  </p>
+
+  <div class="tuzak">
+    <p class="bas">Konum bağı kapalıyken</p>
+    <p>
+      Kasnak panelindeki X/Y alanları modeli değiştirir ama <b>kutu yerinden
+      oynamaz</b>. Panel bunu ayrıca yazar — yazmasaydı kullanıcı alanın bozuk
+      olduğunu sanırdı.
+    </p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="a3">
+  <h2><span class="adim">03</span>Kayış yolunu kablola</h2>
+
+  <p>
+    Kasnaklar arasına çektiğiniz tel <b>kayışın kendisidir</b> ve sırası
+    serpantin sırasıdır: sürücünün çıkışından başlar, halkayı dolaşır, aynı
+    kasnağın girişine döner. <b>Çevrim kapanmak zorundadır.</b>
+  </p>
+
+  <ul>
+    <li>Kopuk bir kasnak, çatal (bir kasnaktan iki tel) veya kapanmayan bir
+      zincir varsa çözücü <b>reddeder ve sebebini adıyla yazar</b> —
+      örneğin <em>“Kayış yoluna bağlı olmayan kasnak var: Avara 2”</em>.</li>
+    <li>Telin ortasındaki ok <b>gidiş yönünü</b> gösterir. Yön, kabloları hangi
+      sırada çektiğinizin sonucudur; ayrı bir ayar değildir.</li>
+    <li>Yönü çevirmek için paletten <b>Dönüş Yönü</b> kutusunu bırakıp rozetine
+      (<code>↺ CCW</code> / <code>↻ CW</code>) tıklayın — kabloları yerinde
+      çevirir.</li>
+  </ul>
+
+  <div class="tuzak">
+    <p class="bas">Rozetin rengi bir hüküm taşır</p>
+    <p>
+      Dönüş Yönü rozeti <span class="chip onay">yeşil</span> ise gergi kayışın
+      <b>gevşek</b> tarafındadır — doğru yerleşim. <span class="chip uyari">kırmızı</span>
+      ise gergi <b>gergin</b> tarafa düşmüştür: geometri kusursuz çözülür,
+      <b>Σsarım yine 360°</b> çıkar, ama açıklık gerilmeleri ankrajın altına
+      iner ve bir kısmı negatife döner. Ölçülen 14 Gates sisteminin
+      <b>14’ünde de</b> gergi gevşek taraftadır; istisna yoktur.
+    </p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="a4">
+  <h2><span class="adim">04</span>Kasnak künyelerini gir</h2>
+
+  <p>
+    Her kasnağa çift tıklayın. Dört kart çıkar; ilki en kritik olanıdır.
+  </p>
+
+  <div class="kart">
+    <div class="kart-bas">
+      <h4>Kasnak paneli</h4>
+      <span class="yol">kasnağa çift tık</span>
+    </div>
+    <div class="tablo-kap">
+      <table>
+        <thead><tr><th>Kart / alan</th><th>Ne yazılır</th><th>Kaynak</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="alan">Temas Tarafı</td>
+            <td>kaburgalı yüzden / sırttan</td>
+            <td>yerleşim çizimi — aksesuarlar kaburgalı, avara ve gergi sırttan</td>
+          </tr>
+          <tr>
+            <td class="alan">Dış çap (OD)</td>
+            <td>kasnağın dış çapı, mm</td>
+            <td>koordinat tablosu; pitch yarıçapını program türetir</td>
+          </tr>
+          <tr>
+            <td class="alan">Konum X / Y</td>
+            <td>kayış düzleminde merkez, mm</td>
+            <td>koordinat tablosu (orijin sürücü kasnak)</td>
+          </tr>
+          <tr>
+            <td class="alan">Sürücü kasnak</td>
+            <td>tek kasnakta işaretlenir</td>
+            <td>bir <b>roldür</b>, tip değil — ikincil tahrikte fan da sürücü olabilir</td>
+          </tr>
+          <tr>
+            <td class="alan">Atalet J</td>
+            <td>kg·m²</td>
+            <td>tepe yük ve burulma modeli için</td>
+          </tr>
+          <tr>
+            <td class="alan">Katalog Modeli</td>
+            <td>alternatör / klima / hava komp. için devir → kW eğrisi</td>
+            <td>Araç Performans modülüyle ortak katalog</td>
+          </tr>
+          <tr>
+            <td class="alan">Güç Eğrisi</td>
+            <td>aksesuar devri → kW tablosu</td>
+            <td>bilgi sayfasındaki grafik; <b>katalogun önüne geçer</b></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tuzak">
+    <p class="bas">Temas tarafı — hata vermeyen alan</p>
+    <p>
+      Ters verirseniz program <b>geçerli ama başka</b> bir kayış yolu çözer.
+      Kapalı çevrim tutar, sarım değişmezi tutar, hiçbir uyarı çıkmaz. Ne kod
+      ne göz yakalar. Bu yüzden hem panelde kendi kartında durur, hem tuvalde
+      rozetle (K/S), hem de Kayış Yolu kartında <b>kayışın kaburgalı yüzü
+      çizilerek</b> gösterilir: kaburgalı temasta dişler kasnağın içine,
+      sırttan temasta dışarı bakar.
+    </p>
+  </div>
+
+  <div class="olcum">
+    <div class="olcum-bas">
+      <span class="etiket">ÖRNEK</span>
+      <span class="konu">altı kasnağın girilen künyesi — BMC / Cummins</span>
+    </div>
+    <div class="tablo-kap">
+      <table class="olcum-tab">
+        <thead><tr><th>Kasnak</th><th class="s">OD</th><th class="s">X</th><th class="s">Y</th><th>Temas</th></tr></thead>
+        <tbody>
+          <tr><td>Sürücü Kasnak (FAN) ★</td><td class="s">162</td><td class="s">0</td><td class="s">0</td><td>kaburgalı</td></tr>
+          <tr><td>Avara 1</td><td class="s">75</td><td class="s">130,1</td><td class="s">139,9</td><td>sırttan</td></tr>
+          <tr><td>Klima Kompresörü</td><td class="s">152</td><td class="s">184,2</td><td class="s">314,5</td><td>kaburgalı</td></tr>
+          <tr><td>Avara 2</td><td class="s">75</td><td class="s">0</td><td class="s">267,4</td><td>sırttan</td></tr>
+          <tr><td>Alternatör (155 A)</td><td class="s">57</td><td class="s">−281,0</td><td class="s">259,5</td><td>kaburgalı</td></tr>
+          <tr><td>Otomatik Gergi (E9843)</td><td class="s">75</td><td class="s" colspan="2">pivot → adım 05</td><td>sırttan</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="olcum-not">
+      ★ Bu sistemde sürücü <b>fan kasnağıdır</b>, krank değil — krank ayrı bir
+      kademeyle fanı döndürüyor. Rolün tipten bağımsız olmasının sebebi tam
+      olarak bu topoloji.
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="a5">
+  <h2><span class="adim">05</span>Gergiyi tanımla — pivot girer, kol açısı çıkar</h2>
+
+  <p>
+    En çok değişen panel burasıdır. Gergiye çift tıkladığınızda varsayılan kip
+    <b>“Montaj koordinatından zarfı çöz”</b>dür ve panel sizden <b>gergi
+    gövdesinin motora cıvatalandığı noktayı</b> ister — kolun etrafında döndüğü
+    pivotu. Kasnağın merkezi bundan <em>çıkar</em>.
+  </p>
+
+  <div class="kart">
+    <div class="kart-bas">
+      <h4>Gergi paneli</h4>
+      <span class="yol">gergiye çift tık</span>
+    </div>
+    <div class="tablo-kap">
+      <table>
+        <thead><tr><th>Kart</th><th>Alan</th><th>Kaynak</th></tr></thead>
+        <tbody>
+          <tr><td class="alan">Temas Tarafı</td><td>genelde sırttan</td><td>yerleşim çizimi</td></tr>
+          <tr><td class="alan">Kasnak</td><td>dış çap · atalet</td><td>parça künyesi</td></tr>
+          <tr>
+            <td class="alan">Montaj Koordinatları <span class="chip girdi">girdi</span></td>
+            <td><b>Montaj X / Y</b> — pivot</td>
+            <td>tedarikçiden <em>dönen</em> raporun <em>Pivot Point {X, Y}</em> satırı</td>
+          </tr>
+          <tr><td class="alan">Kol Künyesi</td><td>kol boyu</td><td>raporun <em>Tensioner Data</em> bölümü (56–90 mm arası doğrulandı)</td></tr>
+          <tr><td class="alan">Künye Kütüphanesi</td><td>14 ölçülmüş künyeden seçim</td><td>kol boyu · ön yük · katsayı · çap · temas tarafını kopya olarak yazar</td></tr>
+          <tr><td class="alan">Yay Künyesi</td><td>ön yük · katsayı · çalışma momenti</td><td>bilgi sayfasının <em>Spring Pre-Load / Rate / Mean Load</em> satırları</td></tr>
+          <tr><td class="alan">Kol Açısı <span class="chip turev">türeyen</span></td><td>alan yok — <b>okuma</b> var</td><td>zarftan seçilir; isterseniz sabitlersiniz</td></tr>
+          <tr><td class="alan">Mekanik Sınır</td><td>load stop · kol ataleti · <b>kasnak kütlesi</b></td><td>raporun <em>Tensioner Data</em> satırları</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tuzak">
+    <p class="bas">Buraya kasnak merkezi yazılmaz</p>
+    <p>
+      İki nokta kolun iki ayrı ucudur ve aralarında tam kol boyu kadar mesafe
+      vardır (14 sistemin 81 konumunda ölçüldü, sapma ≤&nbsp;0,065&nbsp;mm).
+      Tedarikçiye <em>giden</em> bilgi sayfasındaki gergi satırı <b>kasnak
+      merkezidir</b>; pivot yalnız <em>dönen</em> raporda bulunur.
+    </p>
+    <p>
+      Karıştırılırsa model <b>yine çözülür ve uyarı çıkmaz</b> — ölçüldü:
+      gerginlik <b>−%48,6</b>, sarım açısı en kötü <b>+27,9°</b> kayıyor.
+      İki koordinatı birlikte girerseniz program aradaki mesafeye bakıp
+      <em>“aynı nokta girilmiş”</em> ya da <em>“biri yanlış okunmuş”</em>
+      diye ayrıca uyarır.
+    </p>
+  </div>
+
+  <h3>Kol açısını program nasıl seçiyor</h3>
+
+  <p>
+    Pivot verildikten sonra geriye tek bir serbestlik derecesi kalır: kolun
+    montajdaki saat konumu. Program 360°’lik zarfı tarayıp
+    <b>en küçük take-up’ı en büyük yapan</b> açıyı seçer. Fiziksel karşılığı
+    şudur: <code>T = M / (dL/dθ)</code> olduğu için take-up’ın en küçük olduğu
+    yer gerginliğin en büyük olduğu yerdir; ölçüt, kayışın servis zarfı boyunca
+    görülen <b>tepe gerginliği en küçük</b> yapan montajı bulur.
+  </p>
+
+  <p>
+    Bu ölçüt tahminle seçilmedi: altı aday ölçüt 14 Gates sisteminde tarandı ve
+    kazananı bu oldu — açı farkının medyanı <b>4,5°</b>, 14 sistemin
+    <b>9’unda ±5° içinde</b>. Sonuç yine de bir <b>öneridir</b>: zarfın hangi
+    yayının motor bloğunda fiziksel olarak kullanılabilir olduğunu program
+    bilmez. Gövdenin saati belliyse <b>“Kol açısını SABİTLE”</b> anahtarını
+    açın; zarf o zaman bir seçici değil bir teşhis yüzeyi olur.
+  </p>
+
+  <div class="olcum">
+    <div class="olcum-bas">
+      <span class="etiket">ÖRNEK</span>
+      <span class="konu">gergi künyesi girildi → zarf çözüldü</span>
+    </div>
+    <div class="olcum-govde">
+      <div class="satir"><span class="k">Montaj koordinatı (pivot)</span><span class="v girdi">−250,00 / 110,00 mm</span></div>
+      <div class="satir"><span class="k">Kol boyu</span><span class="v girdi">90 mm</span></div>
+      <div class="satir"><span class="k">Yay: ön yük · katsayı · çalışma momenti</span><span class="v girdi">8,60 Nm · 0,480 Nm/° · 22,07 Nm</span></div>
+      <div class="satir"><span class="k">Yay kurulması (M<sub>çalışma</sub>−M<sub>ön</sub>)/k</span><span class="v turev">28,06°</span></div>
+      <div class="satir"><span class="k">Kol çalışma açısı — SEÇİLDİ</span><span class="v turev">−10,90°</span></div>
+      <div class="satir"><span class="k">↳ kasnak merkezi (türedi)</span><span class="v turev">−161,62 / 92,98 mm</span></div>
+      <div class="satir"><span class="k">↳ gereken kayış boyu (çıktı)</span><span class="v turev">1715,39 mm</span></div>
+      <div class="satir"><span class="k">↳ tasarım gerginliği (türedi)</span><span class="v turev">540,05 N</span></div>
+      <div class="satir"><span class="k">Ölçüt · en küçük take-up</span><span class="v">0,564 mm/°</span></div>
+      <div class="satir"><span class="k">Zarfın çözülebilen yayı</span><span class="v">108° / 360°</span></div>
+    </div>
+    <div class="olcum-not">
+      Program kayışı <b>hiç görmeden</b> 1715,39 mm dedi. Gates raporunun kendi
+      kayışı <b>8PK1715HD</b> ve raporun ölçtüğü efektif boy 1714,6 mm —
+      <b>+%0,05</b>. Tasarım gerginliği 540,05 N, raporunki 544 N
+      (<b>−%0,7</b>). Bu iki sayı örnekte <b>yazılı değil</b>; geometriden ve
+      yay künyesinden çıkıyor, yani bağımsız bir doğrulama.
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="a6">
+  <h2><span class="adim">06</span>Kayışı önce oku, sonra seç</h2>
+
+  <p>
+    <b>Kayış Özellikleri</b> panelinde yalnız profil ve marka sorulur — pitch
+    yarıçapı <code>OD/2 + h<sub>b</sub></code> olduğu için teğet geometrisi
+    profil sabitine dayanır ve bu kapatılamaz. Efektif boy alanı zarf kipinde
+    <b>yoktur</b>: yerinde türetilen boyun okuması durur, tuvaldeki rozet de
+    <code>SERBEST (kilitli)</code> yazar.
+  </p>
+
+  <p>
+    Aynı panelde <b>Kayış Tipine Bağlı Çıktılar</b> anahtarı vardır ve zarf
+    kipinde varsayılan olarak <span class="chip uyari">kapalı</span>dır. Kapalıyken
+    dört çıktı <b>üretilmez</b>: B10 kayış ömrü, kaburga yorulma dağılımı,
+    açıklık doğal frekansları ve kol konum tablosunun tolerans/aşınma zarfı.
+    Dördü de katalog sabitlerine dayanır ve kayış henüz seçilmemişken üretilen
+    sayı bir varsayım olurdu. Panel neyin kapalı olduğunu <b>listeleyerek</b>
+    yazar; rapor da aynı kutuyu basar.
+  </p>
+
+  <h3>Katalog kartı — “1690 mı, 1755 mi?”</h3>
+
+  <p>
+    Katalog bir liste değil bir <b>hüküm</b> üretir: her aday boy için kolun
+    nereye oturacağını ve çıkacak gerginliği hesaplar. Sığmayan aday sayı
+    basmaz, <em>“sığmıyor”</em> yazar. Bir satıra tıklamak o boyu seçer ve
+    kip <span class="chip girdi">sabit</span>e döner.
+  </p>
+
+  <div class="olcum">
+    <div class="olcum-bas">
+      <span class="etiket">ÖRNEK</span>
+      <span class="konu">gereken boy 1715,39 mm — katalog ne öneriyor</span>
+    </div>
+    <div class="tablo-kap">
+      <table class="olcum-tab">
+        <thead><tr><th>Boy</th><th class="s">Δ</th><th>Kod</th><th>Küme</th><th class="s">Kol</th><th class="s">Gerginlik</th></tr></thead>
+        <tbody>
+          <tr><td>1655</td><td class="s">−60,4</td><td>8PK1655</td><td>stok</td><td class="s" colspan="2">sığmıyor</td></tr>
+          <tr><td>1690</td><td class="s">−25,4</td><td>8PK1690</td><td>stok</td><td class="s" colspan="2">sığmıyor</td></tr>
+          <tr><td><b>1715</b></td><td class="s">−0,4</td><td><b>8PK1715</b></td><td>◇ otomotiv ızgarası</td><td class="s">28,61°</td><td class="s">548 N</td></tr>
+          <tr><td>1755</td><td class="s">+39,6</td><td>8PK1755</td><td>stok</td><td class="s" colspan="2">sığmıyor</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="olcum-not">
+      <b>8PK 1715 endüstriyel stok listesinde yok</b> — komşuları 1690 ve 1755,
+      arada 65 mm’lik bir boşluk var. Katalog bu yüzden iki kümeli: ISO 9982 /
+      DIN 7867 stok boyları ve <b>◇</b> ile işaretli otomotiv ızgarası (5 mm
+      adım). Aracın gerçek kayışı ızgarada çıkıyor. Katalog bir kısıt değildir:
+      ara boy ısmarlanabilir, boyu elle de girebilirsiniz.
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="a7">
+  <h2><span class="adim">07</span>Çalışma çevrimini gir</h2>
+
+  <p>
+    <b>Çözücü</b> paneli sistemin geri kalanını sorar. Üç kart ve bir tablo:
+  </p>
+
+  <div class="kart">
+    <div class="kart-bas">
+      <h4>Çözücü paneli</h4>
+      <span class="yol">Çözücü kutusuna çift tık</span>
+    </div>
+    <div class="tablo-kap">
+      <table>
+        <thead><tr><th>Kart</th><th>Alan</th><th>Ne yapar</th></tr></thead>
+        <tbody>
+          <tr><td class="alan">Tasarım</td><td>boy ofseti · yorulma modeli</td><td>tasarım başına kalibrasyon; yorulma modeli dağılımı belirler</td></tr>
+          <tr><td class="alan">Birinci Kademe</td><td>krank Ø / fan Ø, ya da oran</td><td><b>bütün aksesuar devirlerini ölçekler</b> — yanlışsa her sonuç aynı oranda kayar</td></tr>
+          <tr><td class="alan">Motor Künyesi</td><td>silindir sayısı · servis faktörü · krank ataleti · ivmelenme/yavaşlama</td><td>ateşleme frekansı · kayma emniyetinin alt sınırı · burulma ve tepe yük</td></tr>
+          <tr><td class="alan">Çalışma Çevrimi</td><td>devir · %zaman · °C · aksesuar başına kW</td><td>bütün duty sonuçlarının girdisi</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <ul>
+    <li><b>Sürücü sütunu yoktur.</b> Sürücünün gücü diğerlerinin toplamı olarak
+      hesaplanır; çevrim ancak böyle kapanır. Elle girilse çekirdek reddederdi.</li>
+    <li><b>Boş bırakılan kW hücresi</b>, o aksesuarda katalog modeli seçiliyse
+      eğriden dolar — ve aksesuar devri <b>kasnak pitch çaplarından</b>
+      hesaplanır, elle oran girilmez.</li>
+    <li><b>%zaman toplamı 100 olmalı.</b> Değilse dağılım yüzdeleri etkilenmez
+      ama mutlak ömür ölçeklenir; panel bunu uyarır.</li>
+  </ul>
+
+  <div class="olcum">
+    <div class="olcum-bas">
+      <span class="etiket">ÖRNEK</span>
+      <span class="konu">12 devir noktası, toplam %100</span>
+    </div>
+    <div class="olcum-govde">
+      <div class="satir"><span class="k">İlk satır</span><span class="v girdi">880 rpm · %25 · 90 °C</span></div>
+      <div class="satir"><span class="k">↳ Klima / Alternatör / üç avara</span><span class="v girdi">2,70 · 3,61 · 0,01 kW</span></div>
+      <div class="satir"><span class="k">Silindir sayısı</span><span class="v girdi">6</span></div>
+      <div class="satir"><span class="k">Servis faktörü</span><span class="v girdi">1,30</span></div>
+      <div class="satir"><span class="k">Tahrik oranı</span><span class="v girdi">1,000 (elle)</span></div>
+    </div>
+    <div class="olcum-not">
+      Bu raporda devir sütunu <b>motor devri değil sürücü kasnağın devridir</b>
+      (raporun kendi satırı: motor 800 × 1,1 = 880). Örnek bu yüzden tahrik
+      oranını 1,000 ile kuruyor. Gerçek motor devriyle çalışacaksanız oranı
+      krank ve fan çaplarından türetin.
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="a8">
+  <h2><span class="adim">08</span>Hesapla, oku, raporla</h2>
+
+  <p>
+    Geometri sonuçları <b>Hesapla’ya basmadan</b> hazırdır — Kayış Yolu kartı,
+    zarf okuması ve gergi konum tablosu çalışma çevrimi gerektirmez.
+    <b>▶ Hesapla</b> düğmesi duty’ye bağlı olanları üretir: gerilmeler,
+    hubload, kayma emniyeti, burulma, yorulma ve ömür.
+  </p>
+
+  <figure>
+    <div class="sema">
+      <svg viewBox="0 0 676 578" role="img"
+           aria-label="AG00976 sisteminin ölçekli kayış yolu şeması: altı kasnak, gergi kolu ve pivot">
+        <g fill="none" stroke="var(--rule)" stroke-width="1">
+          <!-- orijin haçı: sürücü kasnak merkezi -->
+          <path d="M 342.7 443.7 H 382.7 M 362.7 423.7 V 463.7" stroke-dasharray="3 3"/>
+        </g>
+        <!-- kayış yolu — çekirdeğin teğet noktaları + işaretli sarım yayları -->
+        <path d="M 444.73 449 L 454.28 301.31 A 38.60 38.60 0 0 1 471.51 271.6 L 589.48 193.6 A 77.20 77.20 0 0 0 486.18 81.53 L 393.06 200.14 A 38.60 38.60 0 0 1 354.38 213.99 L 88.1 155.2 A 29.70 29.70 0 0 0 64.71 208.56 L 223.16 319.06 A 38.60 38.60 0 0 1 237.42 337.7 L 285.32 471.42 A 82.20 82.20 0 0 0 444.73 449 Z"
+              fill="none" stroke="var(--kayis)" stroke-width="5" stroke-linejoin="round"/>
+        <!-- gergi kolu -->
+        <g stroke="var(--onay)" stroke-width="2.4">
+          <path d="M 112.7 333.7 L 201.08 350.72" stroke-dasharray="7 5"/>
+          <path d="M 104.7 333.7 H 120.7 M 112.7 325.7 V 341.7"/>
+        </g>
+        <!-- kasnaklar: kaburgalı düz, sırttan kesikli -->
+        <g fill="none" stroke="var(--ink-2)" stroke-width="1.8">
+          <circle cx="362.7" cy="443.7" r="82.2"/>
+          <circle cx="546.9" cy="129.2" r="77.2"/>
+          <circle cx="81.7"  cy="184.2" r="29.7"/>
+        </g>
+        <g fill="none" stroke="var(--ink-3)" stroke-width="1.8" stroke-dasharray="6 4">
+          <circle cx="492.8" cy="303.8" r="38.6"/>
+          <circle cx="362.7" cy="176.3" r="38.6"/>
+          <circle cx="201.08" cy="350.72" r="38.6"/>
+        </g>
+        <g fill="var(--ink-2)">
+          <circle cx="362.7" cy="443.7" r="3.2"/><circle cx="492.8" cy="303.8" r="3.2"/>
+          <circle cx="546.9" cy="129.2" r="3.2"/><circle cx="362.7" cy="176.3" r="3.2"/>
+          <circle cx="81.7"  cy="184.2" r="3.2"/><circle cx="201.08" cy="350.72" r="3.2"/>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="14" fill="var(--ink)">
+          <text x="362.7" y="447" text-anchor="middle">FAN</text>
+          <text x="362.7" y="464" text-anchor="middle" font-size="11.5" fill="var(--ink-3)">156,6°</text>
+          <text x="546.9" y="132" text-anchor="middle">KLİMA</text>
+          <text x="546.9" y="149" text-anchor="middle" font-size="11.5" fill="var(--ink-3)">198,4°</text>
+          <text x="81.7" y="152" text-anchor="middle">ALT</text>
+          <text x="81.7" y="137" text-anchor="middle" font-size="11.5" fill="var(--ink-3)">157,6°</text>
+          <text x="492.8" y="359" text-anchor="middle" font-size="12">AVARA 1</text>
+          <text x="362.7" y="129" text-anchor="middle" font-size="12">AVARA 2</text>
+          <text x="201.08" y="406" text-anchor="middle" font-size="12">GERGİ</text>
+          <text x="112.7" y="356" text-anchor="middle" font-size="11.5" fill="var(--onay)">PİVOT</text>
+        </g>
+      </svg>
+    </div>
+    <div class="gosterge">
+      <span><i style="border-top-color:var(--kayis); border-top-width:4px"></i> kayış yolu</span>
+      <span><i style="border-top-color:var(--ink-2)"></i> kaburgalı temas</span>
+      <span><i style="border-top-color:var(--ink-3); border-top-style:dashed"></i> sırttan temas</span>
+      <span><i style="border-top-color:var(--onay); border-top-style:dashed"></i> gergi kolu · pivot</span>
+    </div>
+    <figcaption>
+      Tuvaldeki <b>Kayış Yolu</b> kartının gösterdiği şema. Bu çizim elle
+      yapılmadı: kasnak çemberleri girilen koordinat ve çaplardan, kayış yolu
+      çözücünün teğet noktaları ve işaretli sarım yaylarından üretildi. Gergi
+      kasnağı, pivottan 90 mm uzakta türetilen konumunda duruyor.
+    </figcaption>
+  </figure>
+
+  <div class="olcum">
+    <div class="olcum-bas">
+      <span class="etiket">ÖRNEK</span>
+      <span class="konu">geometri — Kayış Yolu paneli · MFSim ↔ Gates AG00976</span>
+    </div>
+    <div class="tablo-kap">
+      <table class="olcum-tab">
+        <thead><tr><th>Kasnak</th><th class="s">Sarım</th><th class="s">Gates</th><th class="s">Açıklık</th><th class="s">Gates</th></tr></thead>
+        <tbody>
+          <tr><td>Sürücü (FAN)</td><td class="s">156,6°</td><td class="s">156,2°</td><td class="s">148,0</td><td class="s">148,0</td></tr>
+          <tr><td>Avara 1</td><td class="s">52,8°</td><td class="s">52,8°</td><td class="s">141,4</td><td class="s">141,4</td></tr>
+          <tr><td>Klima Komp.</td><td class="s">198,4°</td><td class="s">198,4°</td><td class="s">150,8</td><td class="s">150,8</td></tr>
+          <tr><td>Avara 2</td><td class="s">64,3°</td><td class="s">64,3°</td><td class="s">272,7</td><td class="s">272,7</td></tr>
+          <tr><td>Alternatör</td><td class="s">157,6°</td><td class="s">157,1°</td><td class="s">193,2</td><td class="s">194,4</td></tr>
+          <tr><td>Gergi</td><td class="s">35,4°</td><td class="s">34,6°</td><td class="s">142,0</td><td class="s">141,3</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="olcum-not">
+      Σ işaretli sarım <b>360,00°</b> — çevrim kapandı. Kartın alt şeridi bunu
+      yazar; 360 değilse çizim yine yapılır ama şerit <b>✗</b> der.<br><br>
+      <b>İki ayrı uzunluk vardır ve karıştırılmamalıdır:</b> kayışın kendi
+      efektif boyu <b>1715,39 mm</b>, kayışın bu güzergâhta kat ettiği
+      <em>efektif tahrik boyu</em> ise <b>1717,0 mm</b> — aradaki 1,6 mm
+      Çözücü panelindeki boy ofsetidir.
+    </div>
+  </div>
+
+  <div class="olcum">
+    <div class="olcum-bas">
+      <span class="etiket">ÖRNEK</span>
+      <span class="konu">▶ Hesapla · 880 rpm (12 duty noktasının ilki)</span>
+    </div>
+    <div class="tablo-kap">
+      <table class="olcum-tab">
+        <thead><tr><th>Kasnak</th><th class="s">Çıkış gerilmesi</th><th class="s">Gates</th><th class="s">Hubload</th><th class="s">Gates</th><th class="s">Kayma SF</th></tr></thead>
+        <tbody>
+          <tr><td>Sürücü (FAN)</td><td class="s">1377 N</td><td class="s">1381</td><td class="s">1885 N</td><td class="s">1891</td><td class="s">4,59</td></tr>
+          <tr><td>Avara 1</td><td class="s">1376 N</td><td class="s">1380</td><td class="s">1224 N</td><td class="s">1228</td><td class="s">1,38</td></tr>
+          <tr><td>Klima Komp.</td><td class="s">1019 N</td><td class="s">1023</td><td class="s">2365 N</td><td class="s">2372</td><td class="s">16,72</td></tr>
+          <tr><td>Avara 2</td><td class="s">1018 N</td><td class="s">1022</td><td class="s">1084 N</td><td class="s">1088</td><td class="s">1,48</td></tr>
+          <tr><td>Alternatör</td><td class="s">541 N</td><td class="s">545</td><td class="s">1532 N</td><td class="s">1539</td><td class="s">6,32</td></tr>
+          <tr><td>Gergi</td><td class="s">540 N</td><td class="s">544</td><td class="s">329 N</td><td class="s">324</td><td class="s">1,24</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="olcum-govde" style="border-top:1px solid var(--olcum-rule)">
+      <div class="satir"><span class="k">Kayış hızı</span><span class="v">7,58 m/s</span></div>
+      <div class="satir"><span class="k">Gergi hangi tarafta</span><span class="v onay">gevşek ✓</span></div>
+      <div class="satir"><span class="k">Burulma · 1. elastik mod</span><span class="v">12,95 Hz &nbsp;(Gates 12,52)</span></div>
+      <div class="satir"><span class="k">B10 kayış ömrü</span><span class="v">üretilmedi — kayış verisi kapalı</span></div>
+    </div>
+    <div class="olcum-not">
+      Kayış boyu ve gerginlik zincirin en başında <b>bir çıktı</b> olarak
+      türediği hâlde sonuçlar raporun sayılarına oturuyor: 12 duty noktasının
+      tamamında gerilmelerde en kötü sapma <b>−%0,80</b>, hubload’da
+      <b>+%1,75</b>. Yukarıdaki satırda gerilmeler −%0,29…−%0,73, hubload’lar
+      −%0,29…−%0,43 — tek istisna gergi hubload’u (<b>+%1,48</b>), tablonun en
+      küçük mutlak sayısı.
+    </div>
+  </div>
+
+  <div class="tuzak">
+    <p class="bas">Min SF 1,24 gördüğünüzde önce hangi kasnak olduğuna bakın</p>
+    <p>
+      Panelin “Min SF” sütunu <b>bütün kasnakların en küçüğünü</b> basar ve bu
+      örnekte 1,24 çıkıp servis faktörünün (1,30) altında kalıyor. Ama o sayı
+      <b>gergiye</b> ait ve gergi <b>yük çekmez</b>: gerginlik oranı 1,0024,
+      yani ~1. Oran 1 iken emniyet faktörü bir <b>marj değil, o sarım açısının
+      KAPASİTESİDİR</b>.
+    </p>
+    <p>
+      Yük taşıyan üç kasnakta oran 1,35–2,55 ve SF <b>4,59 / 6,32 / 16,72</b>.
+      Rapor hükmü bu yüzden yalnız yük taşıyanların en küçüğünü kullanır:
+      <b>4,59 ✓</b>. Gates de aynı sistem için hemfikir — <em>“Required
+      Increase Tension or Wrap Angle”</em> sütunu altı kasnağın hiçbirinde
+      dolu değil.
+    </p>
+  </div>
+
+  <h3>Raporu üret</h3>
+
+  <p>
+    <b>Rapor</b> kutusu iki belge sunar; seçim iki kart hâlinde, hangisinin ne
+    olduğu seçim yapılmadan önce okunabilsin diye. Altına hazırlayan, doküman
+    no, revizyon ve tasarım notları girilir — antete ve tasarım notları
+    bölümüne akar.
+  </p>
+
+  <div class="serbest tablo-kap">
+    <table>
+      <thead><tr><th>Tür</th><th>Ne anlatır</th><th>Boy</th></tr></thead>
+      <tbody>
+        <tr><td class="alan">Detaylı</td><td>teori §1–10 + Ek A + çözümün §8’i (18 alt bölüm, denklemler dizili)</td><td class="sayi">~944 KB</td></tr>
+        <tr><td class="alan">Özet</td><td>tedarikçi çıktısının biçiminde 6 sayfa: Genel Bakış · Geometri · Gergi Çalışma Zarfı · Çalışma Çevrimi ve Torklar · Gerginlik ve Hubload · Dayanım ve Titreşim</td><td class="sayi">~340 KB</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    İkisi de tek dosyalık, çevrimdışı açılan HTML’dir ve <b>çözülen modeli</b>
+    anlatır — çözümden sonra değiştirdiğiniz bir alan rapora sızmaz.
+  </p>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="okuma">
+  <h2>Nereden ne okunur</h2>
+
+  <p>
+    Sonuçların üç okuma yüzeyi var. FEAD çözümü henüz uygulamanın
+    <b>Sonuçlar</b> sayfasına kanal olarak yayınlanmıyor.
+  </p>
+
+  <div class="serbest tablo-kap">
+    <table>
+      <thead><tr><th>Yüzey</th><th>Ne okunur</th><th>Hesapla gerekir mi</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="alan">Kayış Yolu kartı<br><span style="font-weight:400; color:var(--ink-3)">tuvalde, canlı</span></td>
+          <td>ölçekli şema · kaburgalı yüz dişleri · gergi kolu ve pivotu · yön gülü · üst künye (konum · kol açısı · gerginlik) · <b>alt şerit: ✓/✗ · kasnak sayısı · L<sub>eff</sub> · Σsarım</b> · kol konumu ve devir seçicileri</td>
+          <td>hayır</td>
+        </tr>
+        <tr>
+          <td class="alan">Tuval rozetleri</td>
+          <td><code>SABİT</code>/<code>SERBEST</code> (kayış kipi) · <code>AÇIK</code>/<code>KAPALI</code> (konum bağı) · <code>↺CCW</code>/<code>↻CW</code> — <b>rengi hüküm taşır</b></td>
+          <td>renk için evet</td>
+        </tr>
+        <tr>
+          <td class="alan">Gergi paneli</td>
+          <td>seçilen kol açısı · türeyen kasnak merkezi · <b>gereken kayış boyu</b> · tasarım gerginliği · ölçüt değeri · zarfın çözülebilen yayı</td>
+          <td>hayır</td>
+        </tr>
+        <tr>
+          <td class="alan">Kayış paneli</td>
+          <td>türetilen boy ve hangi kol açısından geldiği · katalog aday tablosu (boy → kol açısı → gerginlik) · kapatılan çıktıların listesi</td>
+          <td>hayır</td>
+        </tr>
+        <tr>
+          <td class="alan">Kayış Yolu paneli</td>
+          <td>geometri tablosu: kasnak · temas · çıkış açıklığı · sarım · hız oranı; L<sub>eff</sub> / L<sub>pitch</sub> / Σsarım</td>
+          <td>hayır</td>
+        </tr>
+        <tr>
+          <td class="alan">Çözücü paneli</td>
+          <td><b>Algılanan Model</b> (sürücü · gergi · tahrik oranı · türeyen tasarım gerginliği · dönüş yönü) · <b>Gergi Konum Tablosu</b> (6 konum × kol/gerginlik/hubload/yön/β/sarım) · uyarılar</td>
+          <td>hayır</td>
+        </tr>
+        <tr>
+          <td class="alan">Çözücü paneli · alt blok</td>
+          <td>çıkış gerilmeleri + min SF hükmü · hubload · burulma titreşimi · kaburga yorulma dağılımı · B10 ömür · geçerlilik sınırları</td>
+          <td><b>evet</b></td>
+        </tr>
+        <tr>
+          <td class="alan">Rapor kutusu</td>
+          <td>Detaylı ya da Özet HTML belge — indirilir</td>
+          <td><b>evet</b></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="tuzak">
+  <h2>Sessiz tuzaklar</h2>
+
+  <p>
+    Bu modülün en pahalı hata sınıfı çöken model değil, <b>“makul ama yanlış”
+    sayıdır</b>: model çözülür, tablolar dolar, hiçbir uyarı çıkmaz. Aşağıdakiler
+    ölçülmüş bedelleriyle birlikte duruyor.
+  </p>
+
+  <div class="serbest tablo-kap">
+    <table>
+      <thead><tr><th>Alan</th><th>Ters/yanlış verilirse</th><th>Ölçülen bedel</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="alan">Temas tarafı</td>
+          <td>geçerli ama <b>başka</b> bir kayış yolu çözülür; Σsarım yine 360</td>
+          <td>bir sistemde sarım 207,7° yerine 172,2° — <b>−35,5°</b></td>
+        </tr>
+        <tr>
+          <td class="alan">Gergi montaj koordinatı</td>
+          <td>kasnak merkezi pivot sanılırsa model yine çözülür</td>
+          <td>gerginlik <b>−%48,6</b> · sarım en kötü <b>+27,9°</b></td>
+        </tr>
+        <tr>
+          <td class="alan">Kol açısı kipi</td>
+          <td>montaj açısı “serbest kol açısı” alanına yazılırsa yay yalnız ön yükünde bulunur</td>
+          <td>moment 22,07 yerine 8,81 Nm · gerginlik 650 yerine <b>251 N</b></td>
+        </tr>
+        <tr>
+          <td class="alan">Birinci kademe oranı</td>
+          <td>elle yazılmış hız oranı, çaptan hesaplananla çelişir</td>
+          <td>bütün gerilmeler aynı oranda kayar — bir veri setinde <b>%2,7</b></td>
+        </tr>
+        <tr>
+          <td class="alan">Dönüş yönü</td>
+          <td>gergi kayışın gergin tarafına düşer</td>
+          <td>açıklık gerilmeleri ankrajın altına iner, bir kısmı <b>negatife</b> döner</td>
+        </tr>
+        <tr>
+          <td class="alan">Gergi kasnak kütlesi</td>
+          <td>girilmezse nokta kütle terimi eksik kalır</td>
+          <td>1. burulma modu <b>+%32</b> (15,3 yerine 20,3 Hz)</td>
+        </tr>
+        <tr>
+          <td class="alan">Aşınma payı</td>
+          <td><b>oran</b> olarak girilir (0,007), yüzde olarak değil</td>
+          <td>yüz kat sapma</td>
+        </tr>
+        <tr>
+          <td class="alan">Kayış künyesi karışımı</td>
+          <td>gergi koordinatı bir belgeden, kayış künyesi başka belgeden</td>
+          <td>model iki farklı sistemi anlatır — sapma <b>üç katına</b> çıkar</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="ipucu">
+    <b>Ortak kural:</b> geçerlilik sınırı sonucun <b>içinde</b> taşınır. Bir sayı
+    kalibre edilmemişse başlığında damgası, altında ölçülen sapma bandı vardır;
+    kapatılmış bir çıktı listelenerek yazılır. “Boş görünmeyen ama denetlenmemiş”
+    bir tablo bu modülde bilerek bırakılmaz.
+  </div>
+</section>
+
+<div class="kapanis">
+  Bu kılavuzdaki bütün sayılar, MFSim’in kendi zinciri
+  (örnek kaydı → köprü → hesap çekirdeği) koşturularak üretildi; Gates
+  karşılaştırmaları <code>AG00976</code> raporunun doğrulama kaydından okundu.
+  Gergi kol açısı zarftan seçilen bir <b>öneridir</b>: paketleme kısıtı modelde
+  yoktur. Tepe yük tablosu <b>kalibre değildir</b> ve B10 ömür yalnız kasnak
+  çapları 79,6–176 mm aralığındayken geçerlidir — ikisi de sonucun kendi
+  içinde yazılıdır.
+</div>
+
+</main>
+</div>
