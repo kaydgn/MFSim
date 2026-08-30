@@ -470,6 +470,60 @@ describe('kılavuz ↔ program: kart adları', () => {
     expect(DOC).toContain('kasnak merkezi (türedi)');
   });
 
+  test('"pivot" yalnız raporun KENDİ alan adı olarak geçiyor', () => {
+    // PR #831 terminolojiyi emekli etti: programda artık "otomatik gergi montaj
+    // konumu" var. Ama tedarikçi raporunun alanı hâlâ "Pivot Point" adını
+    // taşıyor ve kullanıcı belgeyi elinde tutarken o adı arıyor — dolayısıyla
+    // kelime tümden yasaklanamaz. Kapı ayrımı tutuyor: İngilizce alan adının
+    // dışında kalan her "pivot" bir terminoloji kaçağıdır.
+    // ETİKETLER SOYULUR, çünkü ölçülen şey KULLANICININ OKUDUĞU metin:
+    // şema SVG'si parçalarını `data-ve="pivot"` ile adlandırıyor ve o bir
+    // çizim kimliği, bir terim değil.
+    const govde = DOC
+      .replace(/<style>[\s\S]*?<\/style>/g, '')
+      .replace(/<[^>]+>/g, ' ');
+    const kacak = (govde.match(/[Pp]ivot(?!\s*Point)\w*/g) || []);
+    expect(kacak).toEqual([]);
+    // ...ve raporun alan adı GERÇEKTEN duruyor (kapı boş bir belgeyle de yeşil kalmasın)
+    expect(govde).toContain('Pivot Point');
+  });
+
+  test('§14.2.1 iki kol açısını YAN YANA ölçüyor', () => {
+    // Örnek kolun açısını raporundan BİLİYOR (armPinned). Kılavuzun anlattığı
+    // akış ise zarfın SEÇTİĞİ hâl. İkisi de koşmazsa belge "zarf seçti" derken
+    // aslında girdiyi okur — bu bölümün var olma sebebi o ayrımı ölçmek.
+    // (Bir mutasyon ikinci çözümü düşürdüğünde HİÇBİR kapı kırmızıya dönmedi:
+    // kapı ÜRETİLEN YÜZEYE bakmalı, üreticiye değil.)
+    expect(DOC).toContain('Açıyı zarf seçerse ↔ açı biliniyorsa');
+    const t = (DOC.match(/<caption>Tablo [^<]*Aynı yerleşim, iki kol açısı<\/caption>[\s\S]*?<\/table>/) || [''])[0];
+    expect(t.length).toBeGreaterThan(300);
+
+    // Türkçe biçim: binlik nokta, ondalık virgül, GERÇEK eksi (U+2212).
+    // YALNIZ İLK sayı alınır — hücreler '1715,39 mm  (+%0,05)' gibi İKİ
+    // sayı taşıyor ve hepsini birleştiren bir ayrıştırıcı çöp üretir.
+    const say = (x) => {
+      const m = String(x).match(/\u2212?-?\d[\d.]*(?:,\d+)?/);
+      return m ? Number(m[0].replace(/\./g, '').replace(',', '.').replace('\u2212', '-')) : NaN;
+    };
+    const aci = (t.match(/<tr>(?:(?!<\/tr>)[\s\S])*Kol çalışma açısı[\s\S]*?<\/tr>/) || [''])[0];
+    const h = (aci.match(/<td[^>]*>([\s\S]*?)<\/td>/g) || []).map((c) => c.replace(/<[^>]+>/g, '').trim());
+    const secilen = say(h[1]);
+    const sabit = say(h[2]);
+    expect(Number.isFinite(secilen)).toBe(true);
+    expect(Number.isFinite(sabit)).toBe(true);
+    // İKİSİ AYNI OLMAMALI: aynıysa ya zarf koşmuyor ya sabitleme okunmuyor.
+    expect(Math.abs(secilen - sabit)).toBeGreaterThan(0.2);
+    // ...ama ölçütün ölçülmüş isabet bandının içinde (14 sistem medyanı 4,5°).
+    expect(Math.abs(secilen - sabit)).toBeLessThan(6);
+
+    // RAPORDAN GELEN AÇI RAPORU DAHA İYİ ÜRETMELİ. Tersi çıkıyorsa ya sütunlar
+    // yer değiştirmiştir ya da sabitleme çözüme hiç geçmiyordur.
+    const boy = (t.match(/<tr>(?:(?!<\/tr>)[\s\S])*Kayış efektif boyu[\s\S]*?<\/tr>/) || [''])[0];
+    const bh = (boy.match(/<td[^>]*>([\s\S]*?)<\/td>/g) || []).map((c) => c.replace(/<[^>]+>/g, '').trim());
+    const G = GF.VE_GUIDE_FEAD_GATES.belt;
+    expect(Math.abs(say(bh[2]) - G)).toBeLessThan(Math.abs(say(bh[1]) - G));
+  });
+
   test('kayış boyu alanı zarf kipinde YOK — kılavuz da girmeyi söylemiyor', () => {
     // Kayış boyu bir ÇIKTI; panel o alanı hiç açmıyor. Bir dönem §14.7
     // "efektif boy alanını boşaltın" diyordu — boşaltılacak alan yok.

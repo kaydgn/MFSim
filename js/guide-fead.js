@@ -917,7 +917,7 @@ function _gfSec14(){
 
   // KOORDİNATIN NE OLDUĞU KENDİ SÜTUNUNDA. Gergi satırı diğer beşiyle AYNI
   // sütunda ama BAŞKA bir noktayı taşıyor: beşi kasnak merkezi, gergininki
-  // montaj referans noktası (kolun döndüğü pivot) — ve aradaki mesafe tam kol
+  // montaj konumu (kolun döndüğü eksen) — ve aradaki mesafe tam kol
   // boyu, yani 90 mm. Fark bir dönem X hücresine sıkıştırılmış "pivot"
   // kelimesiyle anlatılıyordu; tek sütunun iki anlam taşıması bu modülün
   // "sessiz tuzak" saydığı şeyin ta kendisi. Artık yapısal olarak ayrı.
@@ -1097,7 +1097,8 @@ function _gfSec14(){
       + 'Programın Kayış Yolu kartında gördüğünüz şemanın aynısı. Çizimde elle yerleştirilmiş '
       + 'tek bir koordinat yoktur: kasnak çemberleri girilen konum ve çaplardan, kayış yolu '
       + 'çözücünün teğet noktaları ve işaretli sarım yaylarından üretilir. Yol üstündeki '
-      + 'dişler kayışın kaburgalı yüzünü gösterir; yeşil artı gergi pivotudur ve kesikli '
+      + 'dişler kayışın kaburgalı yüzünü gösterir; yeşil artı gerginin montaj konumudur '
+      +'ve kesikli '
       + 'çizgi koldur.</figcaption></figure>';
   }
 
