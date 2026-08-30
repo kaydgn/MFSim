@@ -38,7 +38,7 @@
 // tutulur, bayrakta değil) burada da geçerli.
 
 var VE_FW_STEPS = [
-  { key:'kaynak', ad:'Başlangıç',      ipucu:'Sistem adı ve gerginin tanım biçimi' },
+  { key:'kaynak', ad:'Başlangıç',      ipucu:'Sistem adı · örnekten doldur' },
   { key:'kasnak', ad:'Kasnaklar',      ipucu:'Tip · çap · koordinat · temas tarafı · sürücü' },
   { key:'yol',    ad:'Kayış Yolu',     ipucu:'Serpantin sırası — kablolamayı bu belirler' },
   { key:'gergi',  ad:'Otomatik Gergi', ipucu:'Montaj noktası · kol boyu · yay künyesi' },
@@ -731,16 +731,15 @@ function veFeadWizStepHTML(step, b){
 }
 
 // ── 1 · BAŞLANGIÇ ──────────────────────────────────────────────────────────
-// Buradaki tek gerçek karar GERGİNİN TANIM BİÇİMİ ve bilerek en başta: kip
-// hem gerginin sorduğu alanları hem de kayış boyunun girdi mi çıktı mı
-// olduğunu belirliyor (zarf kipinde boy yapısal olarak bir SONUÇ).
+// Adım bir dönem "gerginin tanım biçimi"ni de soruyordu; o kip seçicisi
+// kalktı (tek koordinat kaldı), dolayısıyla burada yalnız künye ve örnekten
+// doldurma var. Adımın kendisi KALDI: örnekten doldurmak, alanların hangi
+// belgeden okunduğunu anlatmanın en kısa yolu.
 function _fwStepKaynak(){
   var st = _fwState;
   var h = _fwCard('Sistem', '', 'var(--accent-primary)',
       _fwField('Sistem adı', _fwInp('ad', { text: true, ph: 'Yeni FEAD Sistemi' }))
     + _fwHint('Ad yalnız künyedir; rapor antedinde ve kanvas etiketlerinde görünür.'));
-
-
 
   var oh = '';
   if(typeof veFeadExampleKeys === 'function'){
@@ -959,13 +958,11 @@ function _fwStepGergi(b){
   }
   if(oku) h += _fwCard('Bu künyeden çıkanlar', 'okuma — girdi değil', 'var(--accent-warning)',
       '<div class="ve-fw-reads">' + oku + '</div>'
-    + (true
-        ? _fwHint('Kol açısı <b>14 Gates sisteminden geriye çözülmüş</b> bir ölçütle '
-          + 'seçiliyor: kolun çalışma aralığı boyunca <b>en küçük take-up en büyük</b> '
-          + 'olacak şekilde — yani kayışın servis zarfında görülen tepe gerginliğini en '
-          + 'küçük yapan montaj saati. <b>Sınır:</b> paketleme modelde yok, sonuç bir '
-          + 'ÖNERİDİR.')
-        : ''));
+    + _fwHint('Kol açısı <b>14 Gates sisteminden geriye çözülmüş</b> bir ölçütle '
+        + 'seçiliyor: kolun çalışma aralığı boyunca <b>en küçük take-up en büyük</b> '
+        + 'olacak şekilde — yani kayışın servis zarfında görülen tepe gerginliğini en '
+        + 'küçük yapan montaj saati. <b>Sınır:</b> paketleme modelde yok, sonuç bir '
+        + 'ÖNERİDİR.'));
   return h;
 }
 function _fwRead(et, deg){
@@ -975,7 +972,6 @@ function _fwRead(et, deg){
 // ── 5 · KAYIŞ ──────────────────────────────────────────────────────────────
 function _fwStepKayis(b){
   var st = _fwState, bl = st.belt || {};
-  var zarf = true;
   var h = _fwCard('Profil ve Marka', 'h_b / h_r buradan gelir', 'var(--accent-warning)',
       _fwGrid([_fwField('Profil', _fwSelHTML('belt.profile',
                  [['PK','PK'],['PJ','PJ'],['PH','PH'],['PL','PL'],['PM','PM']], bl.profile || 'PK')),
@@ -986,16 +982,16 @@ function _fwStepKayis(b){
       + 'yani teğet geometrisi profil sabitine dayanıyor (PK\'da h_b = 1,2 mm → merkez '
       + 'mesafelerinde 2,4 mm fark).'));
 
-  if(zarf){
+  {
     h += _fwCard('Kayış Boyu', 'tasarımdan HESAPLANIR', 'var(--accent-warning)',
         '<div class="ve-fw-reads">'
       + _fwRead('Boy kipi', 'SERBEST (kilitli)')
       + ((b && b.ok && Number.isFinite(b.beltLengthMm))
           ? _fwRead('Gereken boy (çıktı)', _fwFmt(b.beltLengthMm, 1) + ' mm') : '')
       + '</div>'
-      + _fwHint('Gergi <b>montaj koordinatından zarf çözerek</b> çalışıyor; o kipte kayış '
-        + 'boyu bir <b>sonuçtur</b> ve girilemez. Boyu girdi yapmak isterseniz 1. adımdan '
-        + 'gergi tanım biçimini değiştirin.'));
+      + _fwHint('Gergi <b>montaj koordinatından zarf çözerek</b> çalışıyor, dolayısıyla '
+        + 'kayış boyu yapısal olarak bir <b>sonuçtur</b> ve girilemez: kol açısıyla tek '
+        + 'serbestlik derecesini paylaşır, açıyı program seçer.'));
     // KATALOG ÖNERİSİ — boy bir çıktı olduğuna göre sıradaki soru "hangi kayışı
     // ısmarlamalıyım". Katalog bir KISIT değil öneri: ara boy ısmarlanabiliyor.
     if(b && b.ok && Number.isFinite(b.beltLengthMm) && typeof veFeadBeltNearest === 'function'){
@@ -1018,19 +1014,22 @@ function _fwStepKayis(b){
           + 'AYRI kümelerdir ve karıştırılmaz: BMC\'nin kendi kayışı (8PK 1715) stok '
           + 'listesinde YOK — komşuları 1690 ve 1755, yani 65 mm\'lik bir boşluk.'));
     }
-  } else {
-    h += _fwCard('Kayış Künyesi', 'katalogdan SEÇİLİR', 'var(--accent-primary)',
-        _fwGrid([_fwField('Tip / kod', _fwInp('belt.beltType', { text: true, ph: '8PK1715HD' })),
-                 _fwField('Efektif boy [mm]', _fwInp('belt.effLength', { ph: '1715' })),
-                 _fwField('Tolerans ± [mm]', _fwInp('belt.tolerance', { ph: '6' })),
-                 _fwField('Aşınma payı [oran]', _fwInp('belt.wearPct', { ph: '0.007', step: '0.0001' }))], 2)
-      + _fwHint('<b>Efektif boy</b> ISO 9981 boyudur — katalog adındaki sayının ta kendisi '
-        + '(8PK<b>1715</b> → 1715 mm). <b>Aşınma payı ORAN olarak girilir</b> '
-        + '(0.007 = %0,70). Tolerans ve aşınma kolun gezinme ZARFINI açar; sıfır '
-        + 'bırakılırsa dört orta konum tek noktaya çöker.'));
   }
 
-  var bdm = bl.beltDataMode || (zarf ? 'none' : 'full');
+  // KÜNYE — BOY BURADA YOK, gerisi var. Efektif boy zarf kipinde bir ÇIKTI
+  // (yukarıdaki kart onu basıyor); tip/kod, tolerans ve aşınma ise girdidir ve
+  // gerçek Kayış panelinde de sorulur. Bir dönem üçü de kip seçicisiyle
+  // birlikte ölü bir dala düşmüş, yani sihirbazdan sessizce kaybolmuştu.
+  h += _fwCard('Künye', 'tip · gezinme zarfı', 'var(--accent-primary)',
+      _fwGrid([_fwField('Tip / kod', _fwInp('belt.beltType', { text: true, ph: '8PK1715HD' })),
+               _fwField('Tolerans ± [mm]', _fwInp('belt.tolerance', { ph: '6' })),
+               _fwField('Aşınma payı [oran]', _fwInp('belt.wearPct', { ph: '0.007', step: '0.0001' }))], 3)
+    + _fwHint('<b>Tip / kod</b> raporun antedinde basılır (8PK1715HD). <b>Aşınma payı ORAN '
+      + 'olarak girilir</b> (0.007 = %0,70). Tolerans ve aşınma kolun gezinme ZARFINI açar; '
+      + 'sıfır bırakılırsa Replace = Max = Mean = Min olur, yani kolun gezindiği aralık '
+      + 'hiç görünmez — hata da alınmaz.'));
+
+  var bdm = bl.beltDataMode || 'none';
   h += _fwCard('Kayış Tipine Bağlı Çıktılar', bdm === 'none' ? 'KAPALI' : 'açık',
       bdm === 'none' ? 'var(--text-muted)' : 'var(--accent-success)',
       _fwField('Katalog sabitleriyle hesap', _fwSelHTML('belt.beltDataMode',
@@ -1136,10 +1135,10 @@ function _fwStepOzet(b){
   var kartlar = [
     ['Durum', b && b.ok ? '✓ çözülüyor' : '✗ çözülemiyor', b && b.ok ? 'ok' : 'err'],
     ['Kasnak', String((b && b.order ? b.order.length : st.pulleys.length + 1)), ''],
-    // KİPE GÖRE BAŞKA BÜYÜKLÜK: mutlak kol açısı yalnız zarf kipinde var
-    // (orada SEÇİLİYOR); mount kipinde anlamlı sayı kolun GÖRELİ dönmesidir.
-    // İkisini tek etiketin altında göstermek, bu modülün defalarca düzelttiği
-    // "aynı ad iki farklı büyüklük" hatasının ta kendisi olurdu.
+    // ÇÖZÜLMEDİYSE BAŞKA BÜYÜKLÜK: mutlak kol açısı ancak zarf çözülünce
+    // bilinir; çözülemeyen modelde okunabilen tek şey kolun GÖRELİ dönmesidir
+    // (salt yay künyesinden). İkisini tek etiketin altında göstermek, bu
+    // modülün defalarca düzelttiği "aynı ad iki farklı büyüklük" hatası olurdu.
     (b && b.ok && Number.isFinite(b.armAbsDeg))
       ? ['Kol açısı (mutlak)', _fwFmt(b.armAbsDeg, 2) + '°', 'derived']
       : ['Kol dönmesi (göreli)', b && b.ok ? _fwFmt(b.relDeg, 2) + '°' : '—', 'derived'],
@@ -1380,9 +1379,6 @@ function getFeadWizardPropertiesHTML(node){
   if(!node.data) node.data = {};
   var w = node.data.wiz;
   var kasnak = w && w.pulleys ? w.pulleys.length : 0;
-  var kip = 'envelope';
-  var kipAd = { envelope: 'Montaj koordinatından zarf', mount: 'Montaj merkezinden türet',
-                direct: 'Serbest kol açısı' }[kip] || kip;
   var h = '<div class="sw-panel">';
   h += '<div style="padding:10px 12px; margin-bottom:10px; font-size:var(--fs-tiny); '
     + 'line-height:1.6; background:var(--bg-tertiary); border:1px solid var(--border-color); '
@@ -1401,7 +1397,6 @@ function getFeadWizardPropertiesHTML(node){
       + '<b style="color:var(--text-primary);">Kayıtlı taslak</b><br>'
       + 'Sistem: <b>' + _fwEsc(w.ad || '—') + '</b><br>'
       + 'Kasnak: <b>' + kasnak + '</b> (+ gergi)<br>'
-      + 'Gergi kipi: <b>' + _fwEsc(kipAd) + '</b><br>'
       + 'Çalışma çevrimi: <b>' + ((w.solver && w.solver.duty) ? w.solver.duty.length : 0)
       + '</b> devir noktası</div>';
   } else {

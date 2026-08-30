@@ -262,11 +262,11 @@ describe('14.1 — gergi satırı diğerlerinden AYRIŞIR', () => {
     expect((satirlar[0].match(/<th>/g) || []).length).toBe(7);
   });
 
-  test('beş kasnak "kasnak merkezi", gergi "montaj referans noktası" der', () => {
+  test('beş kasnak "kasnak merkezi", gergi "montaj konumu" der', () => {
     const govde = satirlar.slice(1);
     expect(govde.length).toBe(6);
     const merkez = govde.filter((r) => /kasnak merkezi/.test(r));
-    const montaj = govde.filter((r) => /montaj referans noktası/.test(r));
+    const montaj = govde.filter((r) => /montaj konumu/.test(r));
     expect(merkez).toHaveLength(5);
     expect(montaj).toHaveLength(1);
     expect(montaj[0]).toMatch(/Gergi/i);
@@ -274,7 +274,7 @@ describe('14.1 — gergi satırı diğerlerinden AYRIŞIR', () => {
 
   test('gergi satırı PİVOT koordinatını basar — Layout Data satırını DEĞİL', () => {
     // İkisi 90 mm apayrı; yanlışını basmak sessizce başka bir sistemi anlatırdı.
-    const g = (tablo.match(/<tr>(?:(?!<\/tr>)[\s\S])*montaj referans noktası[\s\S]*?<\/tr>/) || [''])[0];
+    const g = (tablo.match(/<tr>(?:(?!<\/tr>)[\s\S])*montaj konumu[\s\S]*?<\/tr>/) || [''])[0];
     const P = GF.VE_GUIDE_FEAD_GATES.pivot;
     expect(g).toContain(RP._frF(P[0], 2));
     expect(g).toContain(RP._frF(P[1], 2));
@@ -289,7 +289,7 @@ describe('14.1 — gergi satırı diğerlerinden AYRIŞIR', () => {
   test('rol sütunu gergiyi ADLANDIRIR — adı değişse de ayırt edilsin', () => {
     // Bir dönem yalnız `driver`a bakıyordu ve gergi satırında '—' yazıyordu;
     // o satırı ayırt eden tek şey kasnağın ADIYDI.
-    const g = (tablo.match(/<tr>(?:(?!<\/tr>)[\s\S])*montaj referans noktası[\s\S]*?<\/tr>/) || [''])[0];
+    const g = (tablo.match(/<tr>(?:(?!<\/tr>)[\s\S])*montaj konumu[\s\S]*?<\/tr>/) || [''])[0];
     expect(g).toMatch(/>gergi</);
     expect(tablo).toContain('>avara<');
     expect(tablo).toContain('>aksesuar<');
@@ -363,5 +363,171 @@ describe('içerik yönlendirici', () => {
   test('hızlı başvuru eki alan → panel eşlemesi veriyor', () => {
     expect(DOC).toContain('Alan → Panel Hızlı Başvurusu');
     expect(DOC).toContain('Gergi Künye Kütüphanesi');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  KILAVUZ ↔ PROGRAM — panel adları GERÇEKTEN programdaki başlıklar mı
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// KAPI BOŞLUĞUYDU VE ISIRDI. Kılavuz Ek A'da şunu YAZIYOR: "Panel adları
+// programdaki başlıklarla birebir aynıdır." Bu bir iddiadır ve bir dönem
+// YANLIŞTI: gergi panelinden kip seçicisi, "Ölçülmüş Pivot" alanları ve
+// "Doğrulama" kartı kaldırıldığında kılavuzun §7'si onları anlatmaya devam
+// etti — 62 kapının hiçbiri kırmızıya dönmedi, çünkü hepsi belgeyi kendi
+// içinde tarıyordu. Belge tutarlıydı; anlattığı program yoktu.
+//
+// Kapı bu yüzden İKİ YÜZEYİ birbirine bağlıyor: Ek A'nın kart adları
+// GERÇEKTEN render edilen panelde geçmeli. Ek A'yı ayrı bir sabit listeye
+// kopyalamak ikinci bir kaynak olurdu (bu deponun tekrar eden hatası);
+// kapı adları belgenin KENDİ tablosundan söküyor.
+describe('kılavuz ↔ program: kart adları', () => {
+  // Panel HTML'i BURADA bir kez alınır ve global'ler GERİ VERİLİR: zarf
+  // okuması veFeadBuildFromCanvas() üzerinden `nodes`/`connections`'ı okuyor,
+  // ama onları kalıcı olarak değiştirmek bu dosyadaki diğer kapıların
+  // gördüğü dünyayı sessizce değiştirirdi.
+  const PANEL = (() => {
+    const pack = veFeadExampleNodes('AG00976_GATES_2025');
+    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    let ten = null;
+    let belt = null;
+    pack.nodes.forEach((n) => {
+      const d = componentDefs[n.type] || {};
+      if (d.isFeadTensioner) ten = n;
+      if (d.isFeadBelt) belt = n;
+    });
+    const eskiN = global.nodes;
+    const eskiC = global.connections;
+    global.nodes = pack.nodes;
+    global.connections = pack.connections;
+    try {
+      return {
+        Gergi: getFeadTensionerPropertiesHTML(ten),
+        'Kayış Özellikleri': getFeadBeltPropertiesHTML(belt),
+      };
+    } finally {
+      global.nodes = eskiN;
+      global.connections = eskiC;
+    }
+  })();
+
+  // Ek A tablosunun satırları: [aradığınız, panel, kart]
+  const ekA = (DOC.match(/<caption>Tablo [^<]*Alan → panel eşlemesi<\/caption>[\s\S]*?<\/table>/) || [''])[0];
+  const satir = (ekA.match(/<tr>[\s\S]*?<\/tr>/g) || []).slice(1);
+  const duz = (x) => x
+    .replace(/<[^>]+>/g, '')
+    .replace(/\([^)]*\)/g, '')       // "(ya da tuvaldeki rozet)" bir kart adı değil
+    .replace(/&[a-z]+;/g, ' ')
+    .trim();
+
+  test('Ek A tablosu sökülebiliyor', () => {
+    expect(ekA.length).toBeGreaterThan(400);
+    expect(satir.length).toBeGreaterThan(15);
+  });
+
+  test('Ek A\'nın adlandırdığı her kart gerçekten o panelde var', () => {
+    const bakilan = [];
+    satir.forEach((r) => {
+      const h = (r.match(/<td[^>]*>([\s\S]*?)<\/td>/g) || []).map(duz);
+      if (h.length < 3) return;
+      const panel = PANEL[h[1]];
+      if (!panel) return;                     // Kasnak/Çözücü/Rapor bu kapının dışında
+      duz(h[2]).split('·').forEach((ad) => {
+        const t = ad.trim();
+        if (!t || t === '—') return;
+        bakilan.push(h[1] + ' / ' + t);
+        expect(panel).toContain(t);
+      });
+    });
+    // Kapının GERÇEKTEN bir şey taradığının kanıtı: boş bir listeyle de yeşil
+    // kalırdı (bu depoda "üreticiyi çağıran ama yüzeyi ölçmeyen kapı" dersi).
+    expect(bakilan.length).toBeGreaterThanOrEqual(9);
+  });
+
+  test('kaldırılan yüzeyler NE panelde NE kılavuzda geçiyor', () => {
+    // PR #831 gergiden şunları kaldırdı: kip seçicisi (zarf/montaj merkezi/
+    // serbest açı), ikincil "Ölçülmüş Pivot" alanları ve karşılıklı doğrulama
+    // kartı. Kılavuz bunları anlatmaya devam ederse kullanıcı olmayan bir
+    // düğmeyi arar — programın kendi içinde ölçülmüş "ULAŞILAMAZ ÇARE" sınıfı.
+    const kalkti = ['Ölçülmüş Pivot', 'verifyCenX', 'verifyCenY', 've-fead-cenX',
+      'freeAngleDeg', 'angleMode'];
+    kalkti.forEach((k) => {
+      expect(PANEL.Gergi).not.toContain(k);
+      expect(DOC).not.toContain(k);
+    });
+    // "Doğrulama kartı" ve "montaj referans noktası" kılavuzdan da çıktı.
+    expect(DOC).not.toContain('Doğrulama</strong> kartı');
+    expect(DOC).not.toContain('Kasnak merkezi (doğrulama)');
+    expect(DOC).not.toContain('montaj referans noktası');
+  });
+
+  test('§7.1 denetim satırını PANELİN gerçekten bastığı adla anlatıyor', () => {
+    // Doğrulama artık tek yerden okunuyor: Avara Hareketi kartının türeyen
+    // kasnak merkezi satırı. Kılavuz o satırı adıyla gösteriyor; ad panelde
+    // değişirse kullanıcı ekranda arayacağı şeyi bulamaz.
+    expect(PANEL.Gergi).toContain('Avara Hareketi');
+    expect(DOC).toContain('Avara Hareketi');
+    expect(DOC).toContain('kasnak merkezi (türedi)');
+  });
+
+  test('"pivot" yalnız raporun KENDİ alan adı olarak geçiyor', () => {
+    // PR #831 terminolojiyi emekli etti: programda artık "otomatik gergi montaj
+    // konumu" var. Ama tedarikçi raporunun alanı hâlâ "Pivot Point" adını
+    // taşıyor ve kullanıcı belgeyi elinde tutarken o adı arıyor — dolayısıyla
+    // kelime tümden yasaklanamaz. Kapı ayrımı tutuyor: İngilizce alan adının
+    // dışında kalan her "pivot" bir terminoloji kaçağıdır.
+    // ETİKETLER SOYULUR, çünkü ölçülen şey KULLANICININ OKUDUĞU metin:
+    // şema SVG'si parçalarını `data-ve="pivot"` ile adlandırıyor ve o bir
+    // çizim kimliği, bir terim değil.
+    const govde = DOC
+      .replace(/<style>[\s\S]*?<\/style>/g, '')
+      .replace(/<[^>]+>/g, ' ');
+    const kacak = (govde.match(/[Pp]ivot(?!\s*Point)\w*/g) || []);
+    expect(kacak).toEqual([]);
+    // ...ve raporun alan adı GERÇEKTEN duruyor (kapı boş bir belgeyle de yeşil kalmasın)
+    expect(govde).toContain('Pivot Point');
+  });
+
+  test('§14.2.1 iki kol açısını YAN YANA ölçüyor', () => {
+    // Örnek kolun açısını raporundan BİLİYOR (armPinned). Kılavuzun anlattığı
+    // akış ise zarfın SEÇTİĞİ hâl. İkisi de koşmazsa belge "zarf seçti" derken
+    // aslında girdiyi okur — bu bölümün var olma sebebi o ayrımı ölçmek.
+    // (Bir mutasyon ikinci çözümü düşürdüğünde HİÇBİR kapı kırmızıya dönmedi:
+    // kapı ÜRETİLEN YÜZEYE bakmalı, üreticiye değil.)
+    expect(DOC).toContain('Açıyı zarf seçerse ↔ açı biliniyorsa');
+    const t = (DOC.match(/<caption>Tablo [^<]*Aynı yerleşim, iki kol açısı<\/caption>[\s\S]*?<\/table>/) || [''])[0];
+    expect(t.length).toBeGreaterThan(300);
+
+    // Türkçe biçim: binlik nokta, ondalık virgül, GERÇEK eksi (U+2212).
+    // YALNIZ İLK sayı alınır — hücreler '1715,39 mm  (+%0,05)' gibi İKİ
+    // sayı taşıyor ve hepsini birleştiren bir ayrıştırıcı çöp üretir.
+    const say = (x) => {
+      const m = String(x).match(/\u2212?-?\d[\d.]*(?:,\d+)?/);
+      return m ? Number(m[0].replace(/\./g, '').replace(',', '.').replace('\u2212', '-')) : NaN;
+    };
+    const aci = (t.match(/<tr>(?:(?!<\/tr>)[\s\S])*Kol çalışma açısı[\s\S]*?<\/tr>/) || [''])[0];
+    const h = (aci.match(/<td[^>]*>([\s\S]*?)<\/td>/g) || []).map((c) => c.replace(/<[^>]+>/g, '').trim());
+    const secilen = say(h[1]);
+    const sabit = say(h[2]);
+    expect(Number.isFinite(secilen)).toBe(true);
+    expect(Number.isFinite(sabit)).toBe(true);
+    // İKİSİ AYNI OLMAMALI: aynıysa ya zarf koşmuyor ya sabitleme okunmuyor.
+    expect(Math.abs(secilen - sabit)).toBeGreaterThan(0.2);
+    // ...ama ölçütün ölçülmüş isabet bandının içinde (14 sistem medyanı 4,5°).
+    expect(Math.abs(secilen - sabit)).toBeLessThan(6);
+
+    // RAPORDAN GELEN AÇI RAPORU DAHA İYİ ÜRETMELİ. Tersi çıkıyorsa ya sütunlar
+    // yer değiştirmiştir ya da sabitleme çözüme hiç geçmiyordur.
+    const boy = (t.match(/<tr>(?:(?!<\/tr>)[\s\S])*Kayış efektif boyu[\s\S]*?<\/tr>/) || [''])[0];
+    const bh = (boy.match(/<td[^>]*>([\s\S]*?)<\/td>/g) || []).map((c) => c.replace(/<[^>]+>/g, '').trim());
+    const G = GF.VE_GUIDE_FEAD_GATES.belt;
+    expect(Math.abs(say(bh[2]) - G)).toBeLessThan(Math.abs(say(bh[1]) - G));
+  });
+
+  test('kayış boyu alanı zarf kipinde YOK — kılavuz da girmeyi söylemiyor', () => {
+    // Kayış boyu bir ÇIKTI; panel o alanı hiç açmıyor. Bir dönem §14.7
+    // "efektif boy alanını boşaltın" diyordu — boşaltılacak alan yok.
+    expect(PANEL['Kayış Özellikleri']).not.toContain('ve-fead-effLength-');
+    expect(DOC).not.toContain('efektif boy alanını boşaltın');
   });
 });
