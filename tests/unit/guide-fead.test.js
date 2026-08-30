@@ -116,6 +116,15 @@ describe('kozmetik raporla aynı', () => {
     expect(dis).toEqual([]);
   });
 
+  test('KAÇIŞLANMIŞ MARKUP sızmıyor — başlıklar kaçışlanır, içlerine etiket yazılmaz', () => {
+    // `_gfTablo` başlıkları güvenli varsayılan olarak KAÇIŞLAR. İçine <sub>
+    // yazmak sayfada harfi harfine "k&lt;sub&gt;stat&lt;/sub&gt;" basar: belge
+    // üretilir, hata çıkmaz, yalnız BAŞLIK ÇÖP GÖRÜNÜR. Takoz kılavuzunda
+    // gerçekten oldu (24 kaçak). Kapı üç kılavuzda da aynı.
+    const kacak = (DOC.match(/&lt;\/?[a-z]+[^&]{0,20}&gt;/g) || []);
+    expect([...new Set(kacak)]).toEqual([]);
+  });
+
   test('sızıntı yok', () => {
     ['undefined', 'NaN', '[object', '@@'].forEach((z) => {
       expect(DOC).not.toContain(z);
