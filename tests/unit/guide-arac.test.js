@@ -97,7 +97,16 @@ describe('belge iskeleti', () => {
     expect((ikinci.match(/<caption>Tablo 1 /g) || []).length).toBe(1);
   });
 
-  test('sızıntı yok — undefined / NaN / [object', () => {
+test('KAÇIŞLANMIŞ MARKUP sızmıyor — başlıklar kaçışlanır, içlerine etiket yazılmaz', () => {
+    // `_g*Tablo` başlıkları güvenli varsayılan olarak KAÇIŞLAR. İçine <sub>
+    // yazmak, sayfada harfi harfine "k&lt;sub&gt;stat&lt;/sub&gt;" basar:
+    // belge üretilir, hata çıkmaz, yalnız BAŞLIK ÇÖP GÖRÜNÜR. Takoz kılavuzunda
+    // gerçekten oldu (24 kaçak). Kapı üç kılavuzda da aynı.
+    const kacak = (DOC.match(/&lt;\/?[a-z]+[^&]{0,20}&gt;/g) || []);
+    expect([...new Set(kacak)]).toEqual([]);
+  });
+
+    test('sızıntı yok — undefined / NaN / [object', () => {
     expect(DOC).not.toContain('undefined');
     expect(DOC).not.toContain('NaN');
     expect(DOC).not.toContain('[object');
