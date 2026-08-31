@@ -3268,11 +3268,14 @@ function veFeadEngineCard(node){
 // kasnak ÇAPLARINDAN gelir, elle oran girilmez), yoksa 0 sayılır.
 function veFeadDutyEditor(node, build){
   var rows = veFeadDutyRows(node);
-  var yuk = build.ok
-    ? build.order.filter(function(n, i){ return !(build.sys.pulleys[i] && build.sys.pulleys[i].crank); })
-    : [];
+  // AKSESUAR SÜTUNLARI ORAN SİSTEMİNDEN DE ÇIKAR. Kapı `build.ok` iken yarım
+  // modelde tabloda HİÇ kW sütunu olmuyordu; oysa hangi kasnağın sürücü
+  // olduğu ve devri koordinatlardan bağımsız (bkz. veFeadRatioSys).
+  var _rsys = build.sys || build.ratioSys;
+  var _crk = _rsys ? (_rsys._crkIdx != null ? _rsys._crkIdx : -1) : -1;
+  var yuk = _rsys ? build.order.filter(function(n, i){ return i !== _crk; }) : [];
   var yukIdx = {};
-  if(build.ok) build.order.forEach(function(n, i){ yukIdx[n.id] = i; });
+  if(_rsys) build.order.forEach(function(n, i){ yukIdx[n.id] = i; });
 
   // ── ÇEVRİM SEÇİCİ — sihirbazdaki kartın AYNI kütüphanesi ────────────────
   // İki yüzey aynı listeyi farklı adlandırsaydı kullanıcı sihirbazda seçtiği
@@ -3319,7 +3322,13 @@ function veFeadDutyEditor(node, build){
     h += '<tr>' + cell('rpm', r.rpm, '10') + cell('dcPct', r.dcPct, '0.1') + cell('degC', r.degC, '1');
     yuk.forEach(function(n){
       var v = (r.kw && r.kw[n.id] != null) ? r.kw[n.id] : '';
-      var oto = (v === '' && build.ok) ? veFeadAutoKw(build.sys, yukIdx[n.id], n, r.rpm) : null;
+      // ORAN SİSTEMİ, ÇÖZÜLMÜŞ SİSTEM DEĞİL: aksesuar devri `driveRatio ·
+      // r_sürücü / r_i`, yani salt çaptan geliyor — koordinatlar girilmeden de
+      // bilinir. Kapı `build.ok` iken yarım modelde katalog değeri HİÇ
+      // görünmüyordu (sihirbazda ölçülmüş sınıfın aynısı). `build.sys` varsa
+      // `ratioSys` ona eşit, yani çözülmüş modelde davranış birebir eski.
+      var _rs = build.sys || build.ratioSys;
+      var oto = (v === '' && _rs) ? veFeadAutoKw(_rs, yukIdx[n.id], n, r.rpm) : null;
       h += '<td style="padding:1px 2px; border:1px solid var(--border-color);">'
         + '<input type="number" value="' + _feadEsc(v) + '" step="0.01"'
         + (oto != null ? ' placeholder="' + _feadFmt(oto, 2) + '"' : ' placeholder="0"')

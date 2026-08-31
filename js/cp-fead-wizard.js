@@ -78,6 +78,20 @@ function _fwDefName(type){
   return d.name || type;
 }
 
+// GERGİNİN SİHİRBAZDAKİ ADI TEK YERDE.
+//
+// Palet adı "Gergi" (`componentDefs['fead-tensioner'].name`) ama sihirbaz baştan
+// beri "Otomatik Gergi" diyor: 4. adımın başlığı, kayış yolu listesi ve
+// kurulan düğümün `customName` yedeği üçü de o. Kullanıcı satırda da onu
+// istedi (2026-08-31): *"orada normal 'Otomatik Gergi' yazacak."*
+//
+// TEK ÜRETİCİ ŞART çünkü satırın YER TUTUCUSU ile kurulan düğümün adı AYNI
+// olmak zorunda: ad boş bırakıldığında kanvasa yazılacak şey budur. İkisi
+// ayrışsaydı kullanıcı "Gergi" yazan bir yer tutucu görüp kanvasta
+// "Otomatik Gergi" bulurdu.
+var VE_FW_TEN_AD = 'Otomatik Gergi';
+function _fwTenAd(){ return VE_FW_TEN_AD; }
+
 // ── BOŞ DURUM ──────────────────────────────────────────────────────────────
 // Varsayılan gergi kipi ZARF: köprünün kendi varsayılanıyla aynı (bkz.
 // tek koordinat: montaj konumu). İki yüzey farklı
@@ -224,20 +238,89 @@ function veFeadWizTenSet(alan, val){
 }
 
 // ── SIRA ───────────────────────────────────────────────────────────────────
+//
+// İKİ SIRA DOLAŞIYORDU — ve bu ÖLÇÜLMÜŞ bir kusurdu.
+//
+// Gergi `st.pulleys` dizisinde değil `st.ten`de duruyor; sıraya `'__ten__'`
+// anahtarını `veFeadWizRoute` **anlık** olarak ekliyor ve `_fwState.route`'a
+// YAZMIYOR. Dolayısıyla iki farklı sıra vardı: OKUNAN (gergi dahil) ve YAZILAN
+// (gergi hariç). Taşıma ile çevirme YAZILAN sırada çalıştığı için:
+//
+//   · `veFeadWizRouteReverse` çevrimi ters yürütmüyor, gerginin halkadaki
+//     YERİNİ değiştiriyordu. ÖLÇÜLDÜ (AG00976, `'__ten__'` sırada yokken):
+//     okunan sıra `p1>p2>p3>p4>p5>__ten__` → `p1>p5>p4>p3>p2>__ten__`, yani
+//     gergi SONDA kaldı. Kayış boyu 1714,61 → **2459,29 mm**, gerginlik
+//     543,85 → **323,41 N**. Model yine "çözülüyor"du — kapanma ve temizlik
+//     ihlalleri UYARI olarak düşüyor (hoşgörülü kip), hata olarak değil.
+//   · `veFeadWizRouteMove('__ten__', ±1)` `indexOf < 0` ile ERKEN DÖNÜYORDU:
+//     3. adımdaki gerginin yukarı/aşağı okları etkin görünüp HİÇBİR ŞEY
+//     yapmıyordu (ölçüldü: sıra değişmedi).
+//
+// Çözüm iki sırayı BİRLEŞTİRMEK: her iki işlem de OKUNAN sırayı alıp geri
+// yazıyor. `veFeadWizRoute` yalnız eksikse eklediği için bu yazma
+// birim işlemdir (idempotent) ve seedlenmiş durumu değiştirmez.
 function veFeadWizRouteMove(key, delta){
   if(!_fwState) return;
-  var r = _fwState.route, i = r.indexOf(key), j = i + delta;
+  var r = veFeadWizRoute(_fwState), i = r.indexOf(key), j = i + delta;
   if(i < 0 || j < 0 || j >= r.length) return;
   var t = r[i]; r[i] = r[j]; r[j] = t;
+  _fwState.route = r;
   veFeadWizRender();
 }
 // Sırayı çevirmek = dönüş yönünü çevirmek. Ayrı bir "yön" alanı YOK; yön
 // kablolamadan türüyor (fead-spin bileşeninin kuralının aynısı).
 function veFeadWizRouteReverse(){
   if(!_fwState) return;
-  var r = _fwState.route.slice();
+  var r = veFeadWizRoute(_fwState);
   if(r.length > 2) _fwState.route = [r[0]].concat(r.slice(1).reverse());
+  else _fwState.route = r;
   veFeadWizRender();
+}
+
+// ── DÖNÜŞ YÖNÜ SEÇİMİ — DURUM TUTMAZ, SIRAYI ÇEVİRİR ──────────────────────
+//
+// Kullanıcı isteği (2026-08-31): *"'Kasnaklar' kısmına 'dönüş yönü' seçmeyi de
+// eklememiz gerekiyor. Dönüş yönünü seçtikten sonra matematik ve topoloji buna
+// göre belirlensin."*
+//
+// `fead-spin` bileşeninin kuralının BİREBİR aynısı: yön bir AYAR değil, rota
+// sırasının sonucudur (`FEADCore.loopSense` kasnak merkezlerinin ayakkabı-bağı
+// işaretli alanına bakar). Duruma bir `dir` alanı koymak İKİNCİ bir gerçek
+// kaynak yaratırdı ve üç yerden ısırırdı: 3. adımın sıra listesi yalan söyler,
+// kurulan kanvasın gidiş okları bayrakla çelişir, bayrak silinince yön sessizce
+// dönerdi. Bu yüzden seçim yalnız ŞUNU yapıyor: istenen yön bugünkünden
+// farklıysa sırayı çevir.
+//
+// İSTENEN YÖN ZATEN GEÇERLİYSE HİÇBİR ŞEY YAPILMAZ — yoksa aynı düğmeye ikinci
+// tık sırayı geri çevirir ve seçici bir aç/kapa gibi davranırdı.
+function veFeadWizSpinSet(dir){
+  if(!_fwState) return false;
+  var istenen = _fwNum(dir, 0);
+  var b = _fwBuild || veFeadWizBuild();
+  var suan = (b && b.spin) ? b.spin : 0;
+  if(!istenen || !suan || istenen === suan){ veFeadWizRender(); return false; }
+  veFeadWizRouteReverse();
+  return true;
+}
+
+// Yön yüzeyi TEK ÜRETİCİDEN: 2. adım (Kasnaklar) ile 3. adım (Kayış Yolu) aynı
+// kontrolü basıyor. İki kopya tutulsaydı biri düzeltilince öbürü sessizce
+// eskirdi — bu deponun tekrar eden kuralı ("panel ile kart AYNI alanı okur").
+function veFeadWizSpinHTML(b){
+  var sp = (b && b.spin) ? b.spin : 0;
+  function dugme(v, glif, ad){
+    return '<button type="button" class="ve-fw-spin' + (sp === v ? ' ve-fw-spin-on' : '')
+      + '"' + (sp ? '' : ' disabled')
+      + ' onclick="veFeadWizSpinSet(' + v + ')" title="' + _fwEsc(ad) + '">'
+      + glif + '</button>';
+  }
+  return '<div class="ve-fw-spinbox">'
+    + dugme(1, '\u21ba CCW', 'Saat yönünün TERSİNE — motora önden bakışta')
+    + dugme(-1, '\u21bb CW', 'Saat yönünde — motora önden bakışta')
+    + '<span class="ve-fw-dim">' + (sp
+        ? 'Sıradan türedi; seçim serpantin sırasını ters yürütür.'
+        : 'Henüz okunamıyor — en az üç kasnak ve koordinatları gerekli.')
+      + '</span></div>';
 }
 
 // ── ÇALIŞMA ÇEVRİMİ ────────────────────────────────────────────────────────
@@ -297,6 +380,31 @@ function veFeadWizDutyKw(i, key, val){
 // Kütüphane bir KISIT değil bir ÖNERİ (kayış kataloğuyla aynı kural): seçim
 // alanları DOLDURUR, kilitlemez. Künye pivot ve kol açısı YAZMAZ — ikisi de
 // motorun verisi, parçanın değil (bkz. fead-tensioners.js).
+// ── KÜNYE SEÇİLİYSE PARÇA ALANLARI KİLİTLİ ────────────────────────────────
+//
+// Kullanıcı isteği (2026-08-31): *"'Otomatik Gergi' kısmında, 'elle gir'
+// haricinde, diğer gergiler seçildiğinde değerler değiştirilmemeli. Eğer illa
+// değiştirilecekse, kullanıcı seçeceği gergiyi seçip, ardından 'elle gir'
+// seçeneğine tıklamalı ve buna tıklayınca önceki seçtiği gergi değerleri
+// gelmeli."*
+//
+// İkinci yarısı BEDAVA ve bilinçli: "elle gir" (`key === ''`) künyeyi
+// UYGULAMIYOR, yalnız `tenLib`i boşaltıyor — dolayısıyla son seçilen künyenin
+// yazdığı sayılar olduğu gibi kalıyor ve düzenlenebilir hâle geliyor. Alanları
+// temizlemek ya da varsayılana döndürmek, kullanıcının "önceki değerler
+// gelmeli" isteğinin tam tersi olurdu.
+//
+// KİLİTLENEN ALAN KÜMESİ `veFeadTensionerApply`'ın YAZDIĞI kümedir
+// (fead-tensioners.js) — ikinci bir liste tutmak, künye bir alan daha yazmaya
+// başladığında o alanın sessizce açık kalması demekti.
+function veFeadWizTenLocked(st){
+  st = st || _fwState;
+  return !!(st && st.ten && st.ten.tenLib);
+}
+var VE_FW_TEN_LOCK_NOTE = 'Künye kütüphaneden seçili — bu alan parçanın verisi. '
+  + 'Değiştirmek için Tip listesinden "elle gir" seçin; seçtiğiniz künyenin '
+  + 'değerleri korunur.';
+
 function veFeadWizTenLib(key){
   if(!_fwState) return;
   _fwState.ten.tenLib = key || '';
@@ -431,7 +539,7 @@ function veFeadWizNodes(st){
   // raporun pim satırı BOŞ kalır — panelden kurulan aynı model onu verirken.
   if(t.tenPart) td.tenPart = t.tenPart;
   var tenNode = { id: 'wz-ten', type: 'fead-tensioner',
-                  customName: t.name || 'Otomatik Gergi', data: td };
+                  customName: t.name || _fwTenAd(), data: td };
   byKey.__ten__ = tenNode;
   out.push(tenNode);
 
@@ -445,7 +553,12 @@ function veFeadWizNodes(st){
     if(Number.isFinite(v)) bd[a] = v;
   });
   if(b.beltType) bd.beltType = b.beltType;
-  if(b.beltDataMode === 'full' || b.beltDataMode === 'none') bd.beltDataMode = b.beltDataMode;
+  // KAYIŞ TİPİNE BAĞLI ÇIKTILAR HER ZAMAN KAPALI (kullanıcı kararı,
+  // 2026-08-31): *"programda SADECE VE SADECE kayış boyunu çıktı olarak
+  // verecek… kayış sabit kalarak program hesap yapmayacak."* Sihirbaz artık
+  // seçenek SUNMUYOR, dolayısıyla kurduğu model de kipi açık bırakamaz —
+  // eskiden bir taslakta 'full' yazılı kalmışsa o sessizce taşınırdı.
+  bd.beltDataMode = 'none';
   // KAYIŞ KİPİ ZARF KİPİNDE YAZILMAZ: orada boy yapısal olarak bir ÇIKTI ve
   // köprü kipi zaten kilitliyor (veFeadBeltModeLocked). Yazmak, panelde
   // "SABİT" görünüp serbest koşan bir model üretirdi.
@@ -461,6 +574,11 @@ function veFeadWizNodes(st){
     if(Number.isFinite(v)) sd[a] = v;
   });
   if(s.fatigueModel) sd.fatigueModel = s.fatigueModel;
+  // ÇEVRİM KAYDININ İZİ DE TAŞINIR: panelin çevrim seçicisi tabloyu
+  // `veFeadDutyMatch` ile tanıyor, yani bu alan hesaba girmiyor — ama
+  // kullanıcının hangi ölçülmüş kaydı seçtiğini söyleyen tek yer burası
+  // (`structural-materials.js`'in `lib`/`libVer` izinin aynı gerekçesi).
+  if(s.dutyLib) sd.dutyLib = s.dutyLib;
   sd.duty = (s.duty || []).map(function(r){
     var row = { rpm: _fwNum(r.rpm, 0), kw: {} };
     if(Number.isFinite(_fwNum(r.dcPct, NaN))) row.dcPct = _fwNum(r.dcPct, NaN);
@@ -639,11 +757,32 @@ function veFeadWizLiveSoon(){
 // TAM YENİDEN ÇİZİM DEĞİL, YAMA. Panel yeniden kurulsaydı yazılan alan DOM'dan
 // silinir ve ODAK her harfte kaybolurdu — malzeme kütüphanesi aramasında
 // ölçülmüş sınıfın aynısı.
+// CANLI YAMA — NE TAZELENİR, NE TAZELENMEZ
+//
+// Kullanıcı bildirimi (2026-08-31): *"Uyarılar kısmı biraz problemli, koordinat
+// girmemize rağmen hemen güncellemiyor. Hata verebiliyor."*
+//
+// ÖLÇÜLDÜ (gerçek tarayıcı, 3 kasnaklı boş model): bir kasnağın X/Y'si
+// doldurulduğunda canlı şerit ve alt çubuk tazeleniyordu (7 → 6 → 4 eksik) ama
+// UYARI KUTUSU 3 satırda ve ADIM RAYI `err:3` rozetinde ÇAKILI kalıyordu —
+// yalnız tam yeniden çizimde düzeliyordu. Yani kullanıcı girdiği koordinatın
+// karşılığını görmüyor, üstelik artık geçerli olmayan bir hatayı okumaya
+// devam ediyordu.
+//
+// TAM YENİDEN ÇİZİM ÇÖZÜM DEĞİL: `veFeadWizRender` gövdeyi innerHTML ile
+// baştan kuruyor ve o an yazılan alanın ODAĞINI düşürüyor — bu deponun
+// ölçülmüş kuralı ve canlı şeridin yama olarak yazılma sebebi. Bu yüzden
+// yama iki hedef daha alıyor; ikisi de form alanlarının DIŞINDA, dolayısıyla
+// odağa dokunmuyorlar.
 function veFeadWizLive(){
   if(typeof document === 'undefined') return;
   var b = veFeadWizBuild();
   var el = document.getElementById('ve-fw-live');
   if(el) el.innerHTML = veFeadWizLiveHTML(b);
+  var uy = document.getElementById('ve-fw-issue');
+  if(uy) uy.innerHTML = veFeadWizIssueHTML(b, _fwStep);
+  var nav = document.getElementById('ve-fw-nav');
+  if(nav) nav.innerHTML = veFeadWizNavHTML(b);
   var f = document.getElementById('ve-fw-foot-state');
   if(f) f.innerHTML = veFeadWizFootStateHTML(b);
   var kur = document.getElementById('ve-fw-create');
@@ -669,14 +808,23 @@ function _fwHint(html){ return '<p class="ve-fw-hint">' + html + '</p>'; }
 function _fwInp(path, opts){
   opts = opts || {};
   var v = _fwGet(path);
+  // KİLİT `readonly`, `disabled` DEĞİL: disabled bir alan gri boşluk gibi
+  // okunur ve içindeki SAYI kaybolur gibi görünür; readonly sayıyı okunur
+  // bırakır, yalnız yazmayı reddeder. Kullanıcının istediği tam olarak bu:
+  // *"değerler değiştirilmemeli"* — gizlenmeli değil.
   return '<input type="' + (opts.text ? 'text' : 'number') + '"'
     + (opts.step ? ' step="' + opts.step + '"' : ' step="any"')
-    + ' class="ve-fw-inp" value="' + _fwEsc(v === undefined || v === null ? '' : v) + '"'
+    + ' class="ve-fw-inp' + (opts.kilit ? ' ve-fw-lock' : '') + '"'
+    + ' value="' + _fwEsc(v === undefined || v === null ? '' : v) + '"'
     + ' placeholder="' + _fwEsc(opts.ph || '') + '"'
+    + (opts.kilit ? ' readonly title="' + _fwEsc(opts.kilitNot || '') + '"' : '')
     + ' oninput="_fwSet(\'' + path + '\', this.value)">';
 }
-function _fwSelHTML(path, secenekler, cur){
-  var h = '<select class="ve-fw-inp" onchange="_fwSetRender(\'' + path + '\', this.value)">';
+function _fwSelHTML(path, secenekler, cur, opts){
+  opts = opts || {};
+  var h = '<select class="ve-fw-inp' + (opts.kilit ? ' ve-fw-lock' : '') + '"'
+    + (opts.kilit ? ' disabled title="' + _fwEsc(opts.kilitNot || '') + '"' : '')
+    + ' onchange="_fwSetRender(\'' + path + '\', this.value)">';
   secenekler.forEach(function(o){
     h += '<option value="' + _fwEsc(o[0]) + '"' + (String(o[0]) === String(cur) ? ' selected' : '')
        + '>' + _fwEsc(o[1]) + '</option>';
@@ -838,7 +986,9 @@ function veFeadWizStepHTML(step, b){
   else if(step === 4) h += _fwStepKayis(b);
   else if(step === 5) h += _fwStepCevrim(b);
   else h += _fwStepOzet(b);
-  if(step !== 6) h += veFeadWizIssueHTML(b, step);
+  // Uyarı kutusu KENDİ KABINDA: canlı yama onu form alanlarına dokunmadan
+  // tazeleyebilsin diye kararlı bir id gerekiyor.
+  if(step !== 6) h += '<div id="ve-fw-issue">' + veFeadWizIssueHTML(b, step) + '</div>';
   return h;
 }
 
@@ -879,7 +1029,7 @@ function veFeadWizReset(){
 }
 
 // ── 2 · KASNAKLAR ──────────────────────────────────────────────────────────
-function _fwStepKasnak(){
+function _fwStepKasnak(b){
   var st = _fwState;
   var ekle = '';
   VE_FW_PULLEY_TYPES.forEach(function(t){
@@ -945,6 +1095,20 @@ function _fwStepKasnak(){
       + 'alanıdır:</b> ters verilirse program <i>geçerli ama başka</i> bir kayış yolu '
       + 'çözer ve hata vermez. Aksesuarlar tipik olarak kaburgalı yüzden, avara ve gergi '
       + 'sırttan temas eder. <b>Atalet</b> yalnız burulma ve tepe yük için, boş bırakılabilir.'));
+
+  // ── DÖNÜŞ YÖNÜ ───────────────────────────────────────────────────────────
+  // Kasnaklar tablosunun hemen altında, çünkü yön kasnak MERKEZLERİNİN
+  // sırasından okunuyor ve kullanıcı koordinatları burada giriyor.
+  h += _fwCard('Dönüş Yönü', 'sıradan türer', 'var(--accent-warning)',
+      veFeadWizSpinHTML(b)
+    + _fwHint('Yön <b>ayrı bir ayar değildir</b>: kasnak merkezlerinin kayış '
+      + 'sırasındaki dolanımından okunur, bu yüzden seçim <b>serpantin sırasını ters '
+      + 'yürütür</b> (3. adımdaki "Yönü çevir" ile aynı işlem, aynı alanı yazar). '
+      + '<b>Geometri değişmez, GERİLME değişir:</b> ters yürütmek sarım açılarını ve '
+      + 'kayış boyunu birebir aynı bırakır (cebirsel özdeşlik) ama gerilme zinciri '
+      + 'gergide ankrajlanıp kayış gidiş yönünde yürüdüğü için span gerilmeleri değişir. '
+      + 'Otomatik gergi kayışın <b>gevşek</b> tarafında olmalıdır — 14 Gates sisteminin '
+      + '14\'ünde de öyle.'));
   return h;
 }
 
@@ -961,8 +1125,22 @@ function _fwStepKasnak(){
 function _fwTenRow(st){
   var t = st.ten || {};
   var kx = veFeadWizTenCoordKeys(st), ad = veFeadWizTenCoordLabel(st);
+  // Künye seçiliyse parça alanları burada da kilitli — 4. adımla AYNI okuyucu
+  // (iki yüzey aynı kaydı yazıyor, biri kilitli öbürü açık olamaz).
+  var kilit = veFeadWizTenLocked(st);
+  // TİP SÜTUNU TİPİ SÖYLER, KÜNYEYİ DEĞİL. Bir dönem burada künye kütüphanesi
+  // açılır listesi vardı ve ilk seçeneği "— elle gir —" olduğu için satır
+  // TİP sütununda "elle gir" yazıyordu; kullanıcı bildirdi (2026-08-31):
+  // *"otomatik gerginin satırında 'elle gir' gibi bir şey var. O olmayacak,
+  // orada normal 'Otomatik Gergi' yazacak."* Diğer beş satırın tip sütunu
+  // bileşenin ADINI yazıyor; gergi satırı da öyle yazmalı.
+  //
+  // Künye seçici SATIRDA KALIYOR ama tipin ALTINDA, ikincil bir kontrol
+  // olarak: kullanıcı isteği *"tipinin seçileceği yeri estetik bir şekilde o
+  // satıra eklememiz gerekiyor."*
   var liste = (typeof veFeadTensionerList === 'function') ? veFeadTensionerList() : [];
-  var tip = '<select class="ve-fw-inp" onchange="veFeadWizTenLib(this.value)">'
+  var kunye = '<select class="ve-fw-inp ve-fw-sub" title="Gergi künyesi — kütüphaneden"'
+    + ' onchange="veFeadWizTenLib(this.value)">'
     + [['', '— elle gir —']].concat(liste.map(function(r){
         return [r.key, (typeof veFeadTenLabel === 'function') ? veFeadTenLabel(r) : r.key];
       })).map(function(o){
@@ -970,26 +1148,36 @@ function _fwTenRow(st){
              + (String(o[0]) === String(t.tenLib || '') ? ' selected' : '') + '>'
              + _fwEsc(o[1]) + '</option>'; }).join('')
     + '</select>';
+  var tip = '<div class="ve-fw-tip-ten"><b>' + _fwEsc(_fwTenAd()) + '</b>'
+    + kunye + '</div>';
 
   return '<tr class="ve-fw-tr-ten">'
     + '<td class="ve-fw-c"><input type="radio" disabled'
       + ' title="Gergi sürücü olamaz — sürücülük bir roldür ve çekirdek onu ayrı sayar."></td>'
     + '<td>' + tip + '</td>'
+    // AD HÜCRESİ DİĞER SATIRLARLA BİREBİR (kullanıcı isteği, 2026-08-31:
+    // *"Ad kısmı da diğerleri gibi olacak."*). Amber çip SİLİNMİYOR —
+    // karıştırmanın ölçülmüş bedeli gerginlikte −%48,6 — yalnız UYARDIĞI
+    // sütuna taşınıyor: çip X sütununun altında.
     + '<td><input type="text" class="ve-fw-inp" value="' + _fwEsc(t.name || '')
-      + '" placeholder="Otomatik Gergi"'
-      + ' oninput="veFeadWizTenSet(\'name\', this.value)">'
+      + '" placeholder="' + _fwEsc(_fwTenAd()) + '"'
+      + ' oninput="veFeadWizTenSet(\'name\', this.value)"></td>'
+    + '<td><input type="number" step="any" class="ve-fw-inp' + (kilit ? ' ve-fw-lock' : '') + '"'
+      + ' value="' + _fwEsc(t.od === undefined ? '' : t.od) + '" placeholder="75"'
+      + (kilit ? ' readonly title="' + _fwEsc(VE_FW_TEN_LOCK_NOTE) + '"' : '')
+      + ' oninput="veFeadWizTenSet(\'od\', this.value)"></td>'
+    + '<td><input type="number" step="any" class="ve-fw-inp" value="'
+      + _fwEsc(t[kx[0]] === undefined ? '' : t[kx[0]])
+      + '" placeholder="-250" oninput="veFeadWizTenSet(\'' + kx[0] + '\', this.value)">'
       + '<span class="ve-fw-tag" title="Gergide bu iki sütun kasnak merkezini DEĞİL, '
       + 'gövdenin motora cıvatalandığı montaj noktasını gösterir — kasnağın merkezini '
       + 'program kol açısıyla birlikte hesaplar.">X/Y = ' + _fwEsc(ad) + '</span></td>'
-    + '<td><input type="number" step="any" class="ve-fw-inp" value="' + _fwEsc(t.od === undefined ? '' : t.od)
-      + '" placeholder="75" oninput="veFeadWizTenSet(\'od\', this.value)"></td>'
-    + '<td><input type="number" step="any" class="ve-fw-inp" value="'
-      + _fwEsc(t[kx[0]] === undefined ? '' : t[kx[0]])
-      + '" placeholder="-250" oninput="veFeadWizTenSet(\'' + kx[0] + '\', this.value)"></td>'
     + '<td><input type="number" step="any" class="ve-fw-inp" value="'
       + _fwEsc(t[kx[1]] === undefined ? '' : t[kx[1]])
       + '" placeholder="110" oninput="veFeadWizTenSet(\'' + kx[1] + '\', this.value)"></td>'
-    + '<td><select class="ve-fw-inp" onchange="veFeadWizTenSet(\'contact\', this.value)">'
+    + '<td><select class="ve-fw-inp' + (kilit ? ' ve-fw-lock' : '') + '"'
+      + (kilit ? ' disabled title="' + _fwEsc(VE_FW_TEN_LOCK_NOTE) + '"' : '')
+      + ' onchange="veFeadWizTenSet(\'contact\', this.value)">'
       + '<option value="back"' + (t.contact !== 'grooved' ? ' selected' : '') + '>Sırttan</option>'
       + '<option value="grooved"' + (t.contact === 'grooved' ? ' selected' : '') + '>Kaburgalı</option>'
       + '</select></td>'
@@ -1007,7 +1195,7 @@ function _fwStepYol(b){
   var sira = veFeadWizRoute(st);
   var ad = {};
   st.pulleys.forEach(function(p){ ad[p.key] = p.name || _fwDefName(p.type); });
-  ad.__ten__ = (st.ten && st.ten.name) || 'Otomatik Gergi';
+  ad.__ten__ = (st.ten && st.ten.name) || _fwTenAd();
 
   var l = '<ol class="ve-fw-route">';
   sira.forEach(function(k, i){
@@ -1024,13 +1212,13 @@ function _fwStepYol(b){
   });
   l += '</ol>';
 
-  var yon = b && b.spin ? (b.spin > 0 ? '↺ CCW — saat yönünün TERSİNE' : '↻ CW — saat yönünde')
-                        : '— (henüz okunamıyor)';
   var h = _fwCard('Serpantin Sırası', sira.length + ' kasnak', 'var(--accent-warning)',
       l
     + '<div class="ve-fw-rowbtns">'
     + '<button type="button" class="ve-fw-btn" onclick="veFeadWizRouteReverse()">⇄ Yönü çevir</button>'
-    + '<span class="ve-fw-dim">Dönüş yönü: <b>' + _fwEsc(yon) + '</b></span></div>'
+    + '</div>'
+    // AYNI ÜRETİCİ, 2. adımdakiyle: iki adım aynı yönü göstermek zorunda.
+    + veFeadWizSpinHTML(b)
     + _fwHint('Sıra, kayışın <b>gidiş yönüdür</b>: listedeki her kasnaktan bir sonrakine '
       + 'tel çekilir ve sonuncudan ilkine dönülür. <b>Dönüş yönü ayrı bir ayar değildir</b> '
       + '— sıradan türer, bu yüzden "Yönü çevir" sırayı ters yürütür.'));
@@ -1046,6 +1234,8 @@ function _fwStepYol(b){
 // ── 4 · OTOMATİK GERGİ ─────────────────────────────────────────────────────
 function _fwStepGergi(b){
   var st = _fwState, t = st.ten || {};
+  var kilit = veFeadWizTenLocked(st);
+  var kn = { kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE };
   var h = '';
 
   // ── GERGİ TİPİ ───────────────────────────────────────────────────────────
@@ -1068,7 +1258,12 @@ function _fwStepGergi(b){
     h += _fwCard('Gergi Tipi', liste.length + ' künye', 'var(--accent-primary)',
         _fwField('Tip', sel)
       + _fwHint('Seçim kol boyu, yay künyesi ve kasnak çapını doldurur; '
-        + '<b>pivot ve kol açısı yazılmaz</b> — ikisi motorun verisi.'));
+        + '<b>montaj konumu ve kol açısı yazılmaz</b> — ikisi motorun verisi.'
+        + (kilit
+            ? '<br><b style="color:var(--accent-warning);">Künye seçili olduğu için '
+              + 'parça alanları kilitli.</b> Değiştirmek için <b>elle gir</b> seçin — '
+              + 'seçtiğiniz künyenin değerleri korunur, yalnız düzenlenebilir olur.'
+            : '')));
   }
 
   // ── MONTAJ KONUMU — TEK KOORDİNAT ───────────────────────────────────────
@@ -1080,16 +1275,18 @@ function _fwStepGergi(b){
       + 'yarıçapında dönüyor. Kasnak merkezi bir girdi değildir.'));
 
 
-  h += _fwCard('Kol ve Kasnak', 'parça verisi', 'var(--accent-primary)',
-      _fwGrid([_fwField('Kol boyu [mm]', _fwInp('ten.armLen', { ph: '90' })),
-               _fwField('Kasnak Ø OD [mm]', _fwInp('ten.od', { ph: '75' })),
+  h += _fwCard('Kol ve Kasnak', kilit ? 'parça verisi — KİLİTLİ' : 'parça verisi',
+      kilit ? 'var(--text-muted)' : 'var(--accent-primary)',
+      _fwGrid([_fwField('Kol boyu [mm]', _fwInp('ten.armLen', { ph: '90', kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE })),
+               _fwField('Kasnak Ø OD [mm]', _fwInp('ten.od', { ph: '75', kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE })),
                _fwField('Temas tarafı', _fwSelHTML('ten.contact',
-                 [['back', 'Sırttan'], ['grooved', 'Kaburgalı']], t.contact || 'back'))], 3));
+                 [['back', 'Sırttan'], ['grooved', 'Kaburgalı']], t.contact || 'back', kn))], 3));
 
-  h += _fwCard('Yay Künyesi', 'sayfadaki üç satır', 'var(--accent-success)',
-      _fwGrid([_fwField('Ön yük — Pre-Load [Nm]', _fwInp('ten.preload', { ph: '8.60' })),
-               _fwField('Yay katsayısı — Rate [Nm/°]', _fwInp('ten.kArm', { ph: '0.480', step: '0.001' })),
-               _fwField('Çalışma momenti — Mean [Nm]', _fwInp('ten.meanLoad', { ph: '22.07' }))], 3)
+  h += _fwCard('Yay Künyesi', kilit ? 'sayfadaki üç satır — KİLİTLİ' : 'sayfadaki üç satır',
+      kilit ? 'var(--text-muted)' : 'var(--accent-success)',
+      _fwGrid([_fwField('Ön yük — Pre-Load [Nm]', _fwInp('ten.preload', { ph: '8.60', kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE })),
+               _fwField('Yay katsayısı — Rate [Nm/°]', _fwInp('ten.kArm', { ph: '0.480', step: '0.001', kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE })),
+               _fwField('Çalışma momenti — Mean [Nm]', _fwInp('ten.meanLoad', { ph: '22.07', kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE }))], 3)
     + _fwHint('Üçü de tedarikçi sayfasının "Tensioner" tablosunda yazar. Kolun nominal '
       + 'çalışma dönmesi bunlardan çıkar: <b>(Mean − Pre) / Rate</b> — ve zarf kipinde '
       + 'kayış boyunu bu belirler, kayışa hiç bakılmadan.'));
@@ -1103,39 +1300,16 @@ function _fwStepGergi(b){
       + 'nokta kütle olarak taşıyor. <b>Load stop</b> bir mekanik sınırdır, çalışma noktası '
       + 'değil.'));
 
-  // ── OKUMA — kip ne veriyor ───────────────────────────────────────────────
-  var oku = '';
-  var m = (typeof veFeadSpringSetup === 'function')
-    ? veFeadSpringSetup(veFeadWizNodes(st).nodes.filter(function(n){
-        return n.type === 'fead-tensioner'; })[0].data) : null;
-  if(m && Number.isFinite(m.relMeanDeg))
-    oku += _fwRead('Yay kurulması (Mean−Pre)/Rate', _fwFmt(m.relMeanDeg, 2) + '°');
-  if(b && b.ok){
-    if(Number.isFinite(b.armAbsDeg))
-      oku += _fwRead(b.armPinned ? 'Kol çalışma açısı (sabitlendi)'
-                                 : 'Kol çalışma açısı (ZARFTAN SEÇİLDİ)',
-        _fwFmt(b.armAbsDeg, 2) + '°');
-    if(typeof veFeadTensionerCenter === 'function'){
-      var tn = veFeadWizNodes(st).nodes.filter(function(n){ return n.type === 'fead-tensioner'; })[0];
-      var cen = veFeadTensionerCenter(tn.data, b.armAbsDeg);
-      if(cen) oku += _fwRead('↳ kasnak merkezi (türedi)',
-        _fwFmt(cen[0], 2) + ' / ' + _fwFmt(cen[1], 2));
-    }
-    if(Number.isFinite(b.beltLengthMm))
-      oku += _fwRead('Gereken kayış boyu' + (b.beltLengthDerived ? ' (ÇIKTI)' : ''),
-        _fwFmt(b.beltLengthMm, 1) + ' mm');
-    if(Number.isFinite(b.springTensionN))
-      oku += _fwRead('Tasarım gerginliği (türedi)', _fwFmt(b.springTensionN, 1) + ' N');
-    if(b.envelope && b.envelope.best)
-      oku += _fwRead('Zarfın çözülebilen yayı', _fwFmt(b.envelope.feasibleDeg, 0) + '° / 360°');
-  }
-  if(oku) h += _fwCard('Bu künyeden çıkanlar', 'okuma — girdi değil', 'var(--accent-warning)',
-      '<div class="ve-fw-reads">' + oku + '</div>'
-    + _fwHint('Kol açısı <b>14 Gates sisteminden geriye çözülmüş</b> bir ölçütle '
-        + 'seçiliyor: kolun çalışma aralığı boyunca <b>en küçük take-up en büyük</b> '
-        + 'olacak şekilde — yani kayışın servis zarfında görülen tepe gerginliğini en '
-        + 'küçük yapan montaj saati. <b>Sınır:</b> paketleme modelde yok, sonuç bir '
-        + 'ÖNERİDİR.'));
+  // "BU KÜNYEDEN ÇIKANLAR" KARTI KALDIRILDI (kullanıcı isteği, 2026-08-31):
+  // *"'Bu künyeden çıkanlar' kısmına gerek yok. Zaten raporda bunları
+  // okuyacağız."* Kart yalnız OKUMA basıyordu, tek bir girdi almıyordu —
+  // sayılar da kaybolmuyor: yay kurulması, seçilen kol açısı, türeyen kasnak
+  // merkezi, gereken kayış boyu ve tasarım gerginliği hem 7. adımın özet
+  // künyelerinde hem raporun §8'inde duruyor.
+  //
+  // OKUMAYI ÜRETEN BLOK DA GİTTİ, yalnız kart değil: `veFeadSpringSetup` ve
+  // `veFeadTensionerCenter` her çizimde koşup hiçbir yere yazmayan bir sonuç
+  // üretirdi — bu deponun kendi adıyla andığı ÖLÜ VERİ sınıfı.
   return h;
 }
 function _fwRead(et, deg){
@@ -1155,58 +1329,46 @@ function _fwStepKayis(b){
       + 'yani teğet geometrisi profil sabitine dayanıyor (PK\'da h_b = 1,2 mm → merkez '
       + 'mesafelerinde 2,4 mm fark).'));
 
-  {
-    h += _fwCard('Kayış Boyu', 'tasarımdan HESAPLANIR', 'var(--accent-warning)',
-        '<div class="ve-fw-reads">'
-      + _fwRead('Boy kipi', 'SERBEST (kilitli)')
-      + ((b && b.ok && Number.isFinite(b.beltLengthMm))
-          ? _fwRead('Gereken boy (çıktı)', _fwFmt(b.beltLengthMm, 1) + ' mm') : '')
-      + '</div>'
-      + _fwHint('Gergi <b>montaj koordinatından zarf çözerek</b> çalışıyor, dolayısıyla '
-        + 'kayış boyu yapısal olarak bir <b>sonuçtur</b> ve girilemez: kol açısıyla tek '
-        + 'serbestlik derecesini paylaşır, açıyı program seçer.<br><br>'
-        + '<b>Katalogdan boy seçimi kurulumdan sonra</b> yapılır: modeli kurunca '
-        + '<b>Kayış Özellikleri</b> paneli, çıkan boya en yakın stok ve ızgara adaylarını '
-        + 'her birinin kol açısı ve gerginliğiyle birlikte listeler.'));
-    // KATALOG ÖNERİSİ KALDIRILDI (kullanıcı isteği, 2026-08-31). Panel
-    // tarafındaki katalog kartı (veFeadBeltCatalogCard, cp-fead.js) AYNEN
-    // duruyor: sihirbaz tasarımı KURAR, katalogdan boy seçmek kurulduktan
-    // sonraki ayrı bir karar. Gereken boy yukarıdaki okumada zaten yazılı,
-    // yani bilgi kaybı yok.
-  }
-
-  // KÜNYE — BOY BURADA YOK, gerisi var. Efektif boy zarf kipinde bir ÇIKTI
-  // (yukarıdaki kart onu basıyor); tip/kod, tolerans ve aşınma ise girdidir ve
-  // gerçek Kayış panelinde de sorulur. Bir dönem üçü de kip seçicisiyle
-  // birlikte ölü bir dala düşmüş, yani sihirbazdan sessizce kaybolmuştu.
-  h += _fwCard('Künye', 'tip · gezinme zarfı', 'var(--accent-primary)',
-      _fwGrid([_fwField('Tip / kod', _fwInp('belt.beltType', { text: true, ph: '8PK1715HD' })),
-               _fwField('Tolerans ± [mm]', _fwInp('belt.tolerance', { ph: '6' })),
-               _fwField('Aşınma payı [oran]', _fwInp('belt.wearPct', { ph: '0.007', step: '0.0001' }))], 3)
-    + _fwHint('<b>Tip / kod</b> raporun antedinde basılır (8PK1715HD). <b>Aşınma payı ORAN '
-      + 'olarak girilir</b> (0.007 = %0,70). Tolerans ve aşınma kolun gezinme ZARFINI açar; '
-      + 'sıfır bırakılırsa Replace = Max = Mean = Min olur, yani kolun gezindiği aralık '
-      + 'hiç görünmez — hata da alınmaz.'));
-
-  var bdm = bl.beltDataMode || 'none';
-  h += _fwCard('Kayış Tipine Bağlı Çıktılar', bdm === 'none' ? 'KAPALI' : 'açık',
-      bdm === 'none' ? 'var(--text-muted)' : 'var(--accent-success)',
-      _fwField('Katalog sabitleriyle hesap', _fwSelHTML('belt.beltDataMode',
-        [['none', 'KAPALI — kayış henüz seçilmedi'],
-         ['full', 'Açık — seçilen kayışın sabitleriyle hesapla']], bdm))
-    + _fwHint(bdm === 'none'
-        ? 'Şunlar <b>üretilmiyor</b>: '
-          + _fwEsc((typeof VE_FEAD_BELT_DATA_OFF !== 'undefined' ? VE_FEAD_BELT_DATA_OFF : []).join(' · '))
-          + '. Dördü de kayış katalogundan gelen sabitlere dayanıyor ve kayış henüz '
-          + 'seçilmemişken üretilen sayı bir <b>varsayım</b> olurdu.'
-        : 'Ömür, yorulma dağılımı, açıklık frekansları ve kol konum zarfı seçilen kayışın '
-          + 'katalog sabitleriyle hesaplanıyor.'));
-
-  h += _fwCard('Malzeme', 'opsiyonel', 'var(--text-secondary)',
-      _fwField('Kaburga başına kütle [kg/m]', _fwInp('belt.massPerRibKgM', { ph: '0.0196', step: '0.0001' }))
-    + _fwHint('Yalnız açıklık frekansı için. Boş bırakılırsa katalog değeri kullanılır — '
-      + 'ama Gates PK kataloğu 0,0144 derken hem kesit tahmini hem ölçülmüş frekans '
-      + 'haritasından geri-hesap <b>0,0196</b> veriyor.'));
+  // ── ÜÇ KART KALDIRILDI (kullanıcı isteği, 2026-08-31) ────────────────────
+  //
+  // *"'Kayış' kısmında, 'Künye' ve 'Malzeme' kısımlarına gerek yok. Bunlar
+  // detay olarak topoloji bileşenlerinde bulunabilir. Otomatik olarak gelsin…
+  // programda SADECE VE SADECE kayış boyunu çıktı olarak verecek. Programa
+  // verilen bir kayış olmayacak, kayış sabit kalarak program hesap yapmayacak.
+  // Ama 'Kayış' penceresindeki 'profil ve marka' kısmı kalsın."*
+  //
+  // KALKAN                       | NEDEN
+  // -----------------------------|--------------------------------------------
+  // Künye (tip/kod·tol·aşınma)   | üçü de kayış SEÇİLDİKTEN sonra anlamlı;
+  //                              | Kayış Özellikleri panelinde aynen duruyor
+  // Malzeme (kaburga kütlesi)    | yalnız açıklık frekansı için — o da kayış
+  //                              | tipine bağlı bir çıktı, yani zaten kapalı
+  // "Kayış Tipine Bağlı Çıktılar"| iki seçenekli bir kip DEĞİL artık: kayış
+  //                              | boyu tek çıktı, katalog sabitleri KAPALI
+  //
+  // VERİ KAYBOLMUYOR: `veFeadWizNodes` durumda ne varsa kayış düğümüne
+  // taşımaya devam ediyor (örnekten doldurulan tip/kod, tolerans, aşınma,
+  // kütle). Sorulmayan alan ile TAŞINMAYAN alan ayrı şeyler — ikincisi
+  // kullanıcının örnekten gelen verisini sessizce yutardı.
+  h += _fwCard('Kayış Boyu', 'tek çıktı', 'var(--accent-warning)',
+      '<div class="ve-fw-reads">'
+    + _fwRead('Boy kipi', 'SERBEST (kilitli)')
+    + ((b && b.ok && Number.isFinite(b.beltLengthMm))
+        ? _fwRead('Gereken boy (çıktı)', _fwFmt(b.beltLengthMm, 1) + ' mm') : '')
+    + _fwRead('Kayış tipine bağlı çıktılar', 'KAPALI')
+    + '</div>'
+    + _fwHint('Gergi <b>montaj koordinatından zarf çözerek</b> çalışıyor, dolayısıyla '
+      + 'kayış boyu yapısal olarak bir <b>sonuçtur</b> ve girilemez: kol açısıyla tek '
+      + 'serbestlik derecesini paylaşır, açıyı program seçer.<br><br>'
+      + '<b>Program bu aşamada kayışın katalog sabitlerini KULLANMAZ.</b> '
+      + 'Üretilmeyenler: '
+      + _fwEsc((typeof VE_FEAD_BELT_DATA_OFF !== 'undefined' ? VE_FEAD_BELT_DATA_OFF : []).join(' · '))
+      + '. Dördü de seçilmiş bir kayışın künyesine dayanıyor; kayış henüz '
+      + 'seçilmemişken üretilen sayı bir <b>varsayım</b> olurdu.<br><br>'
+      + '<b>Katalogdan boy seçimi kurulumdan sonra</b> yapılır: modeli kurunca '
+      + '<b>Kayış Özellikleri</b> paneli, çıkan boya en yakın stok ve ızgara adaylarını '
+      + 'her birinin kol açısı ve gerginliğiyle birlikte listeler — tolerans, aşınma ve '
+      + 'tip/kod alanları da orada.'));
   return h;
 }
 
@@ -1232,7 +1394,7 @@ function _fwStepKayis(b){
 //   BMC     : aksesuarların KENDİ ölçülmüş eğrisi var (12'şer nokta).
 // Bu yüzden kayıtlı kW SİLİNMİYOR, yalnız ELLE GİRİŞ yüzeyi kaldırılıyor.
 function _fwAccIdx(b, key){
-  if(!b || !b.ok || !b.order) return -1;
+  if(!b || !b.order) return -1;
   for(var i = 0; i < b.order.length; i++) if(b.order[i].id === 'wz-' + key) return i;
   return -1;
 }
@@ -1242,17 +1404,23 @@ function _fwKwEff(b, st, rowIdx, p){
   var v = (r && r.kw) ? r.kw[p.key] : undefined;
   if(v !== undefined && v !== null && v !== '')
     return { kw: _fwNum(v, 0), kaynak: 'kayit' };
+  // GEOMETRİ ÇÖZÜLMEDEN DE GÜÇ GELİR — kullanıcı bildirimi (2026-08-31):
+  // *"aksesuarların tiplerini seçtiğimde değerler hala gelmiyor."* Kapı
+  // `b.ok`'tı ve YANLIŞ kapıydı: aksesuar devri `driveRatio · r_sürücü / r_i`,
+  // yani salt ÇAPTAN geliyor. Köprü bunun için `ratioSys`i çözülmemiş modelde
+  // de kuruyor (bkz. veFeadRatioSys) — `sys` varsa o kazanıyor.
+  //
   // İKİ AYRI "değer yok" DURUMU, TEK ETİKETE KATILMAZ:
-  //   · model henüz ÇÖZÜLMÜYOR  → güç HESAPLANAMAZ, çünkü aksesuar devri
-  //     kasnak pitch çaplarından gelir; yarım modelde bilinemez.
-  //   · model çözülüyor ama katalog modeli/eğri yok → gerçekten 0 kW koşar.
+  //   · oran bile kurulamıyor (çap ya da sürücü yok) → HESAPLANAMAZ.
+  //   · oran kurulu ama katalog modeli/eğri yok → gerçekten 0 kW koşar.
   // İkisi bir dönem ikisi de 'yok' diyordu: yarım modelde kart bütün
   // aksesuarları "güç yok" diye uyarıyordu, oysa eksik olan güç değil MODELDİ.
-  if(!b || !b.ok || typeof veFeadAutoKw !== 'function')
+  var rs = b && (b.sys || b.ratioSys);
+  if(!rs || typeof veFeadAutoKw !== 'function')
     return { kw: null, kaynak: 'cozumsuz' };
   var i = _fwAccIdx(b, p.key);
   if(i < 0) return { kw: null, kaynak: 'cozumsuz' };
-  var kw = veFeadAutoKw(b.sys, i, b.order[i], _fwNum(r && r.rpm, 0));
+  var kw = veFeadAutoKw(rs, i, b.order[i], _fwNum(r && r.rpm, 0));
   if(kw === null || kw === undefined) return { kw: null, kaynak: 'yok' };
   return { kw: kw, kaynak: (p.pwrCurve && p.pwrCurve.length) ? 'egri' : 'katalog' };
 }
@@ -1750,6 +1918,8 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizPulleySet: veFeadWizPulleySet, veFeadWizPulleyType: veFeadWizPulleyType,
     veFeadWizDriver: veFeadWizDriver, veFeadWizRouteMove: veFeadWizRouteMove,
     veFeadWizRouteReverse: veFeadWizRouteReverse, veFeadWizTenLib: veFeadWizTenLib,
+    veFeadWizSpinSet: veFeadWizSpinSet, veFeadWizSpinHTML: veFeadWizSpinHTML,
+    veFeadWizTenLocked: veFeadWizTenLocked, _fwTenAd: _fwTenAd,
     veFeadWizDutyAdd: veFeadWizDutyAdd,
     veFeadWizDutyLib: veFeadWizDutyLib, veFeadWizDutyDel: veFeadWizDutyDel,
     veFeadWizDutySet: veFeadWizDutySet, veFeadWizDutyKw: veFeadWizDutyKw,
