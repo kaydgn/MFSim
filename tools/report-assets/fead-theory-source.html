@@ -322,6 +322,24 @@ $$ L_{\text{eff}} \;=\; L_{\text{gereken}}(\theta^{*}) $$
 </div>
 <p>Bu ikinci yönde (4.4) hiç kurulmaz; kök aranmaz. Belgenin geri kalanı — gerginlik, hubload, kayma, ömür — her iki yönde de <strong>aynı</strong> zincirdir: ikisi de bir kol açısı üretir ve zincir oradan başlar.</p>
 
+<h3>4.4 Altı çalışma konumu</h3>
+<p>Kayış boyu üretim toleransı ve servis ömrü boyunca aşınmayla değişir; kol da buna göre yer değiştirir. Tedarikçi raporlarında standartlaşmış altı konum kullanılır:</p>
+<table>
+  <caption>Tablo A — Gergi kolu çalışma konumlarının tanımı</caption>
+  <tr><th>Konum</th><th>Tanım</th><th>Kayış boyu</th></tr>
+  <tr><td class="l"><strong>Free Arm</strong> (serbest kol)</td><td class="l">Yay serbest, kayış takılı değil. Referans açı.</td><td class="l">—</td></tr>
+  <tr><td class="l"><strong>Replace</strong> (değiştirme)</td><td class="l">Aşınma sınırı: kayış bu boya uzadığında değiştirilmelidir.</td><td class="l">\( L(1 + \tau + w) \)</td></tr>
+  <tr><td class="l"><strong>Max Belt</strong></td><td class="l">Tolerans üst sınırındaki yeni kayış.</td><td class="l">\( L + \Delta \)</td></tr>
+  <tr><td class="l"><strong>Mean</strong> (çalışma)</td><td class="l">Nominal boy — <strong>raporun ana çalışma noktası</strong>.</td><td class="l">\( L \)</td></tr>
+  <tr><td class="l"><strong>Min Belt</strong></td><td class="l">Tolerans alt sınırındaki yeni kayış.</td><td class="l">\( L - \Delta \)</td></tr>
+  <tr><td class="l"><strong>Load</strong> (montaj/durdurucu)</td><td class="l">Kolun mekanik durdurucuya dayandığı uç konum. <strong>Çalışma noktası değildir.</strong></td><td class="l">—</td></tr>
+</table>
+<p>\( \tau \) boy toleransı (±mm), \( w \) uzama + aşınma payı (%) olarak girilir. Bu altı konum, kayışın ömrü boyunca gergi kasnağının gezdiği <strong>servis zarfını</strong> tanımlar (§4.5'teki <em>montaj zarfıyla</em> karıştırılmamalıdır: orada montaj noktası sabit, kolun saati serbesttir; burada saat sabit, kol yalnız kayış boyu değiştiği için gezer): her konumda sarım açıları, hubload'lar ve gerginlik farklıdır. Bölüm 8.8'de altısı da tablo hâlinde verilir.</p>
+<div class="note warn">
+  <span class="t">Load konumunun sayısal hassasiyeti</span>
+  Load bir mekanik durdurucudur; orada sarım açısı sıfıra yaklaştığı için (4.3)'ün paydası küçülür ve gerginlik tekilleşmeye başlar. Kol açısındaki <strong>0,1°</strong> mertebesinde bir yuvarlama tek başına gerginlikte %1,4–2,3 fark yaratır. Bu yüzden çekirdeğin doğrulama eşiği çalışma konumlarında %0,5, Load dâhil edildiğinde %1,5 olarak ayrılmıştır.
+</div>
+
 <h3>4.5 Montaj zarfı ve kol açısının seçimi</h3>
 <p>Montaj noktası \( \mathbf{p} \), kol boyu \( a \) ve yay künyesi verildiğinde kolun <strong>bağıl</strong> dönüşü belirlidir — çalışma momentine kadar kaç derece kurulduğu yalnız yaydan çıkar:</p>
 <div class="eqno">
@@ -349,24 +367,6 @@ $$ \theta_{\text{pim}} \;=\; \theta^{*} + \Delta_{\text{parça}} $$
   <span class="t">Ölçüt kalibredir; paketleme modelde yoktur</span>
   (4.7) tahmin edilmedi, <strong>14 tedarikçi sisteminden geriye çözüldü</strong>: altı aday ölçüt arasında tedarikçinin gerçek çalışma açısını en iyi tutan odur (açı farkı medyanı 4,5°, sistemlerin dokuzunda ±5° içinde; en yakın rakip 10,3°). <strong>Bu bir kalibrasyondur, bağımsız doğrulama değildir.</strong> Bağımsız olan tek şey şudur: ölçüt kayış verisine hiç girmez — servis bandı yalnız yay künyesinden gelir — yani model kayışı hiç görmeden tedarikçinin kayışını geri verir (14 sistemin 11'inde ±%0,35).<br><br>
   Zarfın hangi yayının motor bloğunda fiziksel olarak kullanılabilir olduğu <strong>modelde yoktur</strong>: cıvata deseni, gövde gabarisi ve komşu parçalar hesaba girmez. Ölçüldü — 14 sistemin 13'ünde ölçütün en iyi noktası tedarikçinin seçtiğine komşu, birinde <strong>153°</strong> uzakta ve orası motorun öteki yanıdır. Sonuç bu yüzden bir <strong>öneridir</strong>; gövdenin saati imalattan belliyse kol açısı sabitlenmeli ve zarf bir seçici değil bir <strong>teşhis</strong> yüzeyi olarak okunmalıdır.
-</div>
-
-<h3>4.4 Altı çalışma konumu</h3>
-<p>Kayış boyu üretim toleransı ve servis ömrü boyunca aşınmayla değişir; kol da buna göre yer değiştirir. Tedarikçi raporlarında standartlaşmış altı konum kullanılır:</p>
-<table>
-  <caption>Tablo A — Gergi kolu çalışma konumlarının tanımı</caption>
-  <tr><th>Konum</th><th>Tanım</th><th>Kayış boyu</th></tr>
-  <tr><td class="l"><strong>Free Arm</strong> (serbest kol)</td><td class="l">Yay serbest, kayış takılı değil. Referans açı.</td><td class="l">—</td></tr>
-  <tr><td class="l"><strong>Replace</strong> (değiştirme)</td><td class="l">Aşınma sınırı: kayış bu boya uzadığında değiştirilmelidir.</td><td class="l">\( L(1 + \tau + w) \)</td></tr>
-  <tr><td class="l"><strong>Max Belt</strong></td><td class="l">Tolerans üst sınırındaki yeni kayış.</td><td class="l">\( L + \Delta \)</td></tr>
-  <tr><td class="l"><strong>Mean</strong> (çalışma)</td><td class="l">Nominal boy — <strong>raporun ana çalışma noktası</strong>.</td><td class="l">\( L \)</td></tr>
-  <tr><td class="l"><strong>Min Belt</strong></td><td class="l">Tolerans alt sınırındaki yeni kayış.</td><td class="l">\( L - \Delta \)</td></tr>
-  <tr><td class="l"><strong>Load</strong> (montaj/durdurucu)</td><td class="l">Kolun mekanik durdurucuya dayandığı uç konum. <strong>Çalışma noktası değildir.</strong></td><td class="l">—</td></tr>
-</table>
-<p>\( \tau \) boy toleransı (±mm), \( w \) uzama + aşınma payı (%) olarak girilir. Bu altı konum, kayışın ömrü boyunca gergi kasnağının gezdiği <strong>servis zarfını</strong> tanımlar (§4.5'teki <em>montaj zarfıyla</em> karıştırılmamalıdır: orada montaj noktası sabit, kolun saati serbesttir; burada saat sabit, kol yalnız kayış boyu değiştiği için gezer): her konumda sarım açıları, hubload'lar ve gerginlik farklıdır. Bölüm 8.8'de altısı da tablo hâlinde verilir.</p>
-<div class="note warn">
-  <span class="t">Load konumunun sayısal hassasiyeti</span>
-  Load bir mekanik durdurucudur; orada sarım açısı sıfıra yaklaştığı için (4.3)'ün paydası küçülür ve gerginlik tekilleşmeye başlar. Kol açısındaki <strong>0,1°</strong> mertebesinde bir yuvarlama tek başına gerginlikte %1,4–2,3 fark yaratır. Bu yüzden çekirdeğin doğrulama eşiği çalışma konumlarında %0,5, Load dâhil edildiğinde %1,5 olarak ayrılmıştır.
 </div>
 
 <!-- ═══════════ 5 ═══════════ -->

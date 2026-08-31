@@ -1490,3 +1490,58 @@ describe('detay rapor · sayfa numarası, sınırlayıcı, Tablo 9 kuruluşu', (
     expect(RP._frEnvelopeBlock(R8)).toContain('<h5>');
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BAYAT ATIFLAR — belge kendi yol tarifini yalanlamamalı (2026-08-31)
+// ═══════════════════════════════════════════════════════════════════════════
+describe('detay rapor · bölüm atıfları ve sıralama', () => {
+  test('türeyen kayış boyu atfı GERÇEKTEN o bölümde basılıyor', () => {
+    // Atıf bir dönem §8.4'ü (gergi künyesi) gösteriyordu, oysa kayış boyu
+    // orada YOK — okuyucu belgenin kendi yol tarifiyle boşa çıkıyordu.
+    // Kapı sayıyı DEĞİL, sayının işaret ettiği bölümün İÇERİĞİNİ ölçüyor.
+    const no = RP.VE_FR_SEC_BELTLEN;
+    expect(no).toMatch(/^8\.\d+$/);
+    const h8 = RP._frSection8(R8, NODE);
+    // O numaralı h3 var mı?
+    const bas = new RegExp('<h3>' + no.replace('.', '\\.') + ' ');
+    expect(h8).toMatch(bas);
+    // …ve türeyen kayış boyu O bölümün içinde mi (bir sonraki h3'e kadar)?
+    const i = h8.search(bas);
+    const j = h8.indexOf('<h3>', i + 4);
+    const bolum = h8.slice(i, j < 0 ? h8.length : j);
+    expect(bolum).toContain('Türeyen efektif kayış boyu');
+  });
+
+  test('iki atıf da AYNI kaynaktan — ikinci kopya yok', () => {
+    const h8 = RP._frSection8(R8, NODE);
+    const kac = (h8.match(/çözülen kol açısından \(§8\.\d+\)/g) || []);
+    expect(kac.length).toBe(1);
+    expect(kac[0]).toContain('§' + RP.VE_FR_SEC_BELTLEN);
+    // Kapsam kutusu yalnız kayış tipine bağlı çıktılar kapalıyken basılıyor;
+    // basıldığında aynı numarayı taşımalı.
+    const kutu = RP._frBeltDataBox({ beltDataOff: ['X'] });
+    expect(kutu).toContain('(§' + RP.VE_FR_SEC_BELTLEN + ')');
+  });
+
+  test('§4 alt bölümleri ARTAN sırada (teori şablonunda)', () => {
+    // 4.5 bir dönem 4.4'ten ÖNCE geliyordu: okuyucu 4.1·4.2·4.3·4.5·4.4
+    // görüyordu. Atıflar doğruydu, bozuk olan yalnız sıraydı.
+    const fs2 = require('fs');
+    const path2 = require('path');
+    const src = fs2.readFileSync(path2.join(__dirname, '..', '..', 'tools',
+      'report-assets', 'fead-theory-source.html'), 'utf8');
+    const nolar = (src.match(/<h3>(\d+\.\d+)\s/g) || [])
+      .map((x) => /<h3>(\d+\.\d+)\s/.exec(x)[1]);
+    expect(nolar.length).toBeGreaterThan(10);
+    // Her ana bölüm içinde alt numaralar artmalı
+    const grup = {};
+    nolar.forEach((n) => {
+      const [a, b] = n.split('.').map(Number);
+      (grup[a] = grup[a] || []).push(b);
+    });
+    Object.keys(grup).forEach((a) => {
+      const g = grup[a];
+      expect({ bolum: a, sira: g }).toEqual({ bolum: a, sira: g.slice().sort((x, y) => x - y) });
+    });
+  });
+});
