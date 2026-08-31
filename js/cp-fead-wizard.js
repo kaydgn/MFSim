@@ -89,8 +89,14 @@ function veFeadWizDefault(){
     ten: { od: 75, contact: 'back', armLen: 90, tenLib: '' },
     route: [],
     belt: { profile: 'PK', brand: 'GATES', ribs: 8 },
+    // ÇALIŞMA ÇEVRİMİ DOLU AÇILIR. Bir dönem `duty: []` idi ve kullanıcı
+    // bildirdi: aksesuar modeli seçilse bile doldurulacak satır olmadığı için
+    // kW sütunları boş kalıyor, on iki satır elle açılıyordu. Kayıt hangi
+    // ölçümden geldiğini söylüyor ve 6. adımdaki seçiciyle değiştirilebiliyor.
     solver: { ratioMode: 'direct', driveRatio: 1, cylinders: 6, serviceFact: 1.3,
-              duty: [] },
+              dutyLib: (typeof VE_FEAD_DUTY_DEFAULT !== 'undefined') ? VE_FEAD_DUTY_DEFAULT : '',
+              duty: (typeof veFeadDutyRowsOf === 'function')
+                ? veFeadDutyRowsOf(VE_FEAD_DUTY_DEFAULT) : [] },
     temizle: false
   };
 }
@@ -235,6 +241,29 @@ function veFeadWizRouteReverse(){
 }
 
 // ── ÇALIŞMA ÇEVRİMİ ────────────────────────────────────────────────────────
+// ── ÇALIŞMA ÇEVRİMİ KÜTÜPHANEDEN ──────────────────────────────────────────
+//
+// Kullanıcı isteği (2026-08-31): *"Çalışma çevrimi sabit zaten, ona göre
+// tabloyu program otomatik olarak çıkarmalı. El ile girmemeliyiz."*
+//
+// kW TAŞINIR: kullanıcının (ya da yüklenen örneğin) kayıtlı ölçümü, devri
+// tutan satırlara geçirilir. Taşınmasaydı çevrim değiştirmek AG00976'nın
+// rapordan gelen güç tablosunu sessizce silerdi.
+function veFeadWizDutyLib(key){
+  if(!_fwState) return;
+  if(typeof veFeadDutyRowsOf !== 'function') return;
+  var yeni = veFeadDutyRowsOf(key);
+  if(!yeni.length) return;
+  var eski = {};
+  (_fwState.solver.duty || []).forEach(function(r){
+    if(r.kw && Object.keys(r.kw).length) eski[_fwNum(r.rpm, NaN)] = r.kw;
+  });
+  yeni.forEach(function(r){ if(eski[r.rpm]) r.kw = eski[r.rpm]; });
+  _fwState.solver.duty = yeni;
+  _fwState.solver.dutyLib = key;
+  veFeadWizRender();
+}
+
 function veFeadWizDutyAdd(){
   if(!_fwState) return;
   var d = _fwState.solver.duty;
@@ -1213,15 +1242,23 @@ function _fwKwEff(b, st, rowIdx, p){
   var v = (r && r.kw) ? r.kw[p.key] : undefined;
   if(v !== undefined && v !== null && v !== '')
     return { kw: _fwNum(v, 0), kaynak: 'kayit' };
-  if(!b || !b.ok || typeof veFeadAutoKw !== 'function') return { kw: null, kaynak: 'yok' };
+  // İKİ AYRI "değer yok" DURUMU, TEK ETİKETE KATILMAZ:
+  //   · model henüz ÇÖZÜLMÜYOR  → güç HESAPLANAMAZ, çünkü aksesuar devri
+  //     kasnak pitch çaplarından gelir; yarım modelde bilinemez.
+  //   · model çözülüyor ama katalog modeli/eğri yok → gerçekten 0 kW koşar.
+  // İkisi bir dönem ikisi de 'yok' diyordu: yarım modelde kart bütün
+  // aksesuarları "güç yok" diye uyarıyordu, oysa eksik olan güç değil MODELDİ.
+  if(!b || !b.ok || typeof veFeadAutoKw !== 'function')
+    return { kw: null, kaynak: 'cozumsuz' };
   var i = _fwAccIdx(b, p.key);
-  if(i < 0) return { kw: null, kaynak: 'yok' };
+  if(i < 0) return { kw: null, kaynak: 'cozumsuz' };
   var kw = veFeadAutoKw(b.sys, i, b.order[i], _fwNum(r && r.rpm, 0));
   if(kw === null || kw === undefined) return { kw: null, kaynak: 'yok' };
   return { kw: kw, kaynak: (p.pwrCurve && p.pwrCurve.length) ? 'egri' : 'katalog' };
 }
 var VE_FW_KW_SRC = { kayit: 'kayıtlı ölçüm', egri: 'kendi eğrisi',
-                     katalog: 'katalog modeli', yok: 'güç yok' };
+                     katalog: 'katalog modeli', yok: 'güç yok',
+                     cozumsuz: 'model çözülmüyor' };
 
 // Katalog modeli seçimi. SEÇİM, O AKSESUARIN KAYITLI kW'INI TEMİZLER — yoksa
 // köprünün öncelik sırası gereği eski sayı kataloğu SESSİZCE ezerdi
@@ -1302,6 +1339,40 @@ function _fwStepCevrim(b){
   });
   t += '</tbody></table></div>';
 
+  // ── ÇEVRİM SEÇİCİ ────────────────────────────────────────────────────────
+  // Tablo artık BOŞ açılmıyor; hangi ölçülmüş çevrimin yüklü olduğu burada
+  // yazılı ve tek seçimle değişiyor. "Özel" seçeneği bir seçenek DEĞİL, bir
+  // OKUMA: kullanıcı satırları elle düzenlediyse tablo hiçbir kayda uymaz ve
+  // seçici bunu söyler — sessizce en yakın kaydı göstermek, düzenlenmiş bir
+  // tabloyu katalog kaydı gibi okutmak olurdu.
+  var lib = (typeof veFeadDutyList === 'function') ? veFeadDutyList() : [];
+  var suan = (typeof veFeadDutyMatch === 'function') ? veFeadDutyMatch(s.duty) : null;
+  var secili = lib.filter(function(r){ return r.key === suan; })[0] || null;
+  var cevrimKart = '';
+  if(lib.length){
+    var ops = lib.map(function(r){
+      return '<option value="' + _fwEsc(r.key) + '"'
+           + (r.key === suan ? ' selected' : '') + '>'
+           + _fwEsc(veFeadDutyLabel(r)) + '</option>'; }).join('');
+    if(!suan) ops = '<option value="" selected>— özel (elle düzenlendi) —</option>' + ops;
+    cevrimKart = _fwCard('Çalışma Çevrimi Kaydı', lib.length + ' ölçülmüş çevrim',
+        'var(--accent-success)',
+        _fwField('Çevrim', '<select class="ve-fw-inp" onchange="veFeadWizDutyLib(this.value)">'
+          + ops + '</select>')
+      + '<div class="ve-fw-reads">'
+        + _fwRead('Kaynak', secili ? secili.kaynak : 'elle düzenlenmiş tablo')
+        + _fwRead('Devir noktası', String((s.duty || []).length))
+        + _fwRead('%zaman toplamı', _fwFmt((s.duty || []).reduce(function(a, r){
+            return a + _fwNum(r.dcPct, 0); }, 0), 1))
+      + '</div>'
+      + _fwHint(secili
+          ? _fwEsc(secili.not) + ' Aşağıdaki tablo bu kayıttan doldu; satırları '
+            + 'yine de düzenleyebilirsin — düzenlersen seçici <b>özel</b> der.'
+          : 'Tablo kütüphanedeki hiçbir kayda uymuyor, yani elle düzenlenmiş. '
+            + 'Listeden bir çevrim seçmek tabloyu o kayıtla değiştirir.'));
+  }
+
+  h += cevrimKart;
   h += _fwCard('Çalışma Çevrimi', (s.duty || []).length + ' devir noktası', 'var(--accent-primary)',
       t
     + '<div class="ve-fw-rowbtns"><button type="button" class="ve-fw-btn"'
@@ -1340,6 +1411,8 @@ function _fwAccCard(st, b, yuk){
     if(e.kaynak === 'katalog' && p.accPreset && lib && lib[p.accPreset])
       kaynakMetin += ' · ' + (lib[p.accPreset].name || p.accPreset);
     if(e.kaynak === 'egri') kaynakMetin += ' · ' + p.pwrCurve.length + ' nokta';
+    // Uyarı YALNIZ çözülen modelde anlamlı: yarım modelde her aksesuar
+    // "güç yok" görünür ve kart yanlış alarm verirdi.
     if(yukTasir && e.kaynak === 'yok') eksik.push(p.name || _fwDefName(p.type));
 
     var kutu;
@@ -1677,7 +1750,8 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizPulleySet: veFeadWizPulleySet, veFeadWizPulleyType: veFeadWizPulleyType,
     veFeadWizDriver: veFeadWizDriver, veFeadWizRouteMove: veFeadWizRouteMove,
     veFeadWizRouteReverse: veFeadWizRouteReverse, veFeadWizTenLib: veFeadWizTenLib,
-    veFeadWizDutyAdd: veFeadWizDutyAdd, veFeadWizDutyDel: veFeadWizDutyDel,
+    veFeadWizDutyAdd: veFeadWizDutyAdd,
+    veFeadWizDutyLib: veFeadWizDutyLib, veFeadWizDutyDel: veFeadWizDutyDel,
     veFeadWizDutySet: veFeadWizDutySet, veFeadWizDutyKw: veFeadWizDutyKw,
     veFeadWizTenSet: veFeadWizTenSet,
     veFeadWizTenCoordKeys: veFeadWizTenCoordKeys,

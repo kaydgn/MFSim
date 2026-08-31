@@ -43,6 +43,8 @@ global.VE_AIRCOMP_PRESETS = VE_AIRCOMP_PRESETS;
 // fead-model.js) onu global'de arıyor. Yayınlanmazsa katalogdan güç HİÇ
 // gelmez ve preset kapıları "0 kW" ile yanlış sebepten geçerdi.
 global.veAccInterpCurve = veAccInterpCurve;
+const DUTY = require('../../js/fead-duty.js');
+Object.keys(DUTY).forEach((k) => { global[k] = DUTY[k]; });
 const BELTS = require('../../js/fead-belts.js');
 const TENS = require('../../js/fead-tensioners.js');
 Object.keys(BELTS).forEach((k) => { global[k] = BELTS[k]; });
@@ -921,5 +923,118 @@ describe('özet kartı — kol açısı kutusu yok', () => {
     delete st.ten.cenX; delete st.ten.cenY; delete st.ten.armMeanDeg;
     const h = wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild());
     expect(h).toMatch(/Kol çalışma açısı/);
+  });
+});
+
+// ── ÇALIŞMA ÇEVRİMİ TABLO BOŞ AÇILMAZ (kullanıcı isteği, 2026-08-31) ────────
+//
+// *"Motor ve Çevrim kısmında aksesuar seçtiğimizde çalışma çevrimini otomatik
+// olarak hesaplamıyor. El ile girmek gerekiyor. Bu olmamalı."*
+//
+// ÖLÇÜLDÜ (düzeltmeden önce): taze sihirbazda 0 devir noktası; aksesuar modeli
+// seçilse bile doldurulacak satır yoktu.
+describe('çalışma çevrimi — tablo dolu açılır', () => {
+  test('TAZE sihirbaz boş tabloyla açılmıyor', () => {
+    kabuk();
+    wiz.veFeadWizReset();
+    const st = wiz.veFeadWizState();
+    expect(st.solver.duty.length).toBeGreaterThan(0);
+    // ...ve yüklenen çevrim ADIYLA yazılı — hangi ölçümden geldiği kayboluyorsa
+    // tablo "nereden geldiği bilinmeyen sayılar" olurdu.
+    expect(st.solver.dutyLib).toBe(DUTY.VE_FEAD_DUTY_DEFAULT);
+    expect(DUTY.veFeadDutyMatch(st.solver.duty)).toBe(DUTY.VE_FEAD_DUTY_DEFAULT);
+  });
+
+  test('kW sözlüğü BOŞ gelir — güç elle girilmez, hesaplanır', () => {
+    kabuk(); wiz.veFeadWizReset();
+    wiz.veFeadWizState().solver.duty.forEach((r) => expect(r.kw).toEqual({}));
+  });
+
+  test('6. adımda ÇEVRİM SEÇİCİ var ve yüklü kaydı gösteriyor', () => {
+    kabuk(); wiz.veFeadWizReset();
+    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    expect(h).toContain('Çalışma Çevrimi Kaydı');
+    expect(h).toContain('veFeadWizDutyLib');
+    // Yüklü kayıt SEÇİLİ görünmeli.
+    const rec = DUTY.veFeadDutyOf(DUTY.VE_FEAD_DUTY_DEFAULT);
+    expect(h).toContain('value="' + rec.key + '" selected');
+    expect(h).toContain(rec.kaynak);           // kaynağı yazılı
+  });
+
+  test('çevrim değiştirmek tabloyu O KAYITLA değiştiriyor', () => {
+    kabuk(); wiz.veFeadWizReset();
+    wiz.veFeadWizDutyLib('AG00902-4');
+    const st = wiz.veFeadWizState();
+    expect(st.solver.duty.map((r) => r.rpm)).toEqual([700, 1200, 2000, 3000]);
+    expect(st.solver.dutyLib).toBe('AG00902-4');
+  });
+
+  test('çevrim değişince KAYITLI kW devri tutan satırlarda KORUNUR', () => {
+    // Taşınmasaydı çevrim değiştirmek, örneğin rapordan gelen güç tablosunu
+    // sessizce silerdi.
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const st = wiz.veFeadWizState();
+    const alt = st.pulleys.find((p) => p.type === 'fead-alternator');
+    const kw2000 = st.solver.duty.find((r) => r.rpm === 2000).kw[alt.key];
+    expect(kw2000).toBeGreaterThan(0);
+    wiz.veFeadWizDutyLib('AG00686-6');          // 800…2000, yani 2000 ORTAK
+    const s2 = wiz.veFeadWizState();
+    expect(s2.solver.duty.find((r) => r.rpm === 2000).kw[alt.key]).toBe(kw2000);
+    // ...ortak OLMAYAN devirde kW yok — uydurulmuyor.
+    expect(s2.solver.duty.find((r) => r.rpm === 1750).kw).toEqual({});
+  });
+
+  test('elle düzenlenen tablo seçicide ÖZEL diyor — kayıt gibi okutulmuyor', () => {
+    kabuk(); wiz.veFeadWizReset();
+    wiz.veFeadWizDutySet(0, 'rpm', 1234);
+    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    expect(h).toContain('özel (elle düzenlendi)');
+    expect(DUTY.veFeadDutyMatch(wiz.veFeadWizState().solver.duty)).toBeNull();
+  });
+
+  test('ÇÖZÜLEN modelde kW otomatik geliyor — her devir noktasında', () => {
+    // Asıl istek bu: aksesuar modeli seçilince tablo kendiliğinden dolsun.
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const st = wiz.veFeadWizState();
+    const b = wiz.veFeadWizBuild();
+    const alt = st.pulleys.find((p) => p.type === 'fead-alternator');
+    wiz.veFeadWizAccPreset(alt.key, 'tepas_350a');   // kayıtlı ölçümü temizler
+    const s2 = wiz.veFeadWizState(), b2 = wiz.veFeadWizBuild();
+    const p2 = s2.pulleys.find((p) => p.key === alt.key);
+    const kw = s2.solver.duty.map((r, i) => wiz._fwKwEff(b2, s2, i, p2));
+    kw.forEach((e) => {
+      expect(e.kaynak).toBe('katalog');
+      expect(e.kw).toBeGreaterThan(0);
+    });
+    // Devirle ARTIYOR (alternatör eğrisi) — sabit bir sayı basılmıyor.
+    expect(kw[kw.length - 1].kw).toBeGreaterThan(kw[0].kw);
+    // Çevrimi değiştirince YENİ devirlerde yine otomatik.
+    wiz.veFeadWizDutyLib('AG00902-4');
+    const s3 = wiz.veFeadWizState(), b3 = wiz.veFeadWizBuild();
+    const p3 = s3.pulleys.find((p) => p.key === alt.key);
+    s3.solver.duty.forEach((r, i) => {
+      const e = wiz._fwKwEff(b3, s3, i, p3);
+      expect(e.kw).toBeGreaterThan(0);
+    });
+  });
+
+  test('ÇÖZÜLMEYEN model "güç yok" DEMEZ — sebebi ayrı', () => {
+    // İkisi bir dönem aynı etiketti: yarım modelde kart bütün aksesuarları
+    // "güç yok" diye uyarıyordu, oysa eksik olan güç değil MODELDİ.
+    kabuk(); wiz.veFeadWizReset();
+    wiz.veFeadWizPulleyAdd('fead-alternator');
+    const st = wiz.veFeadWizState();
+    const b = wiz.veFeadWizBuild();
+    expect(b.ok).toBe(false);
+    const e = wiz._fwKwEff(b, st, 0, st.pulleys[0]);
+    expect(e.kaynak).toBe('cozumsuz');
+    expect(e.kw).toBeNull();
+  });
+
+  test('örneklerin KENDİ çevrimi korunuyor — tohum onları ezmiyor', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    expect(wiz.veFeadWizState().solver.duty.length).toBe(12);
+    kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
+    expect(wiz.veFeadWizState().solver.duty.length).toBe(9);
   });
 });
