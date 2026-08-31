@@ -605,12 +605,22 @@ function _frSection8(R, node){
 // Bu belge için en pahalı sessiz hata, İÇERMEDİĞİ bir kontrolün yapıldığı
 // izlenimini bırakmasıdır: tablolar dolu görünür, hüküm verilir, okuyucu neyin
 // denetlenmediğini bilmez. Kutu "ne yok ve neden" ikilisini yazıyor.
+// TÜREYEN KAYIŞ BOYUNUN BASILDIĞI BÖLÜM — tek kaynak.
+//
+// İki ayrı yer buna atıf yapıyor: kayış künyesi (§8.2, "türev — çözülen kol
+// açısından") ve aşağıdaki kapsam kutusu. Elle yazıldıklarında ayrıştılar:
+// kutu bir dönem §8.4'ü (gergi künyesi) gösteriyordu, oysa orada kayış boyu
+// YOK. Okuyucu belgenin kendi yol tarifiyle boşa çıkıyordu. Kapı bu sayıyı
+// gerçekten o bölümde basılan başlığa bağlıyor.
+var VE_FR_SEC_BELTLEN = '8.7';
+
 function _frBeltDataBox(R){
   var off = R && R.beltDataOff;
   if(!off || !off.length) return '';
   return '<div class="note" style="border-left:3px solid var(--ink,#333); padding-left:10px;">'
     + '<b>Kayış tipine bağlı çıktılar bu belgede YER ALMIYOR.</b> Tasarım aşamasında '
-    + 'kayış boyu bir <b>sonuçtur</b> (§8.4), yani kayış henüz seçilmemiştir; katalog '
+    + 'kayış boyu bir <b>sonuçtur</b> (§' + VE_FR_SEC_BELTLEN + '), yani kayış henüz '
+    + 'seçilmemiştir; katalog '
     + 'sabitleriyle üretilecek sayı bir varsayım olurdu. Üretilmeyenler: '
     + '<b>' + _frEsc(off.join(' · ')) + '</b>.<br>'
     + 'Profil sabitleri (h<sub>b</sub> / h<sub>r</sub>) <b>kapatılmadı ve kapatılamaz</b>: '
@@ -765,7 +775,7 @@ function _frBeltTable(R){
   var _bd = R.build || {};
   var _boyTurev = true;   // kayış boyu HER ZAMAN bir sonuç
   h += tr('Efektif boy L<sub>eff</sub>', _frFs(b.effLength, 1), 'mm',
-          _boyTurev ? '<b>türev</b> — çözülen kol açısından (§8.7)' : 'girdi');
+          _boyTurev ? '<b>türev</b> — çözülen kol açısından (§' + VE_FR_SEC_BELTLEN + ')' : 'girdi');
   h += tr('Boy toleransı ±', _frFs(b.tolerance, 1), 'mm', 'girdi');
   // BİRİM TUZAĞI: wearPct çekirdekte ORAN (0,007), tedarikçi sayfasında YÜZDE
   // (%0,70). Ham basılsaydı raporda "%0,007" görünür ve okuyan kişi payı
@@ -3228,6 +3238,7 @@ if(typeof module !== 'undefined' && module.exports){
     _frPivotBlock: _frPivotBlock, _frEnvelopeBlock: _frEnvelopeBlock,
     _frPinBlock: _frPinBlock,
     VE_FR_ENV_CRITERIA: VE_FR_ENV_CRITERIA, _frEnvMult: _frEnvMult,
+    VE_FR_SEC_BELTLEN: VE_FR_SEC_BELTLEN,
     _frEnvelopeFigure: _frEnvelopeFigure,
     _frF: _frF, _frFs: _frFs, _frPct: _frPct, _frEsc: _frEsc, _frNum: _frNum,
     _frSlipStats: _frSlipStats,
