@@ -7586,9 +7586,60 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
   border:1px solid var(--accent-warning); border-radius:var(--radius-sm);
 }
 /* Salt okunur hücre: sayı bir GİRDİ değil, seçimin sonucu. Girdi kutusuna
-   benzememeli — kullanıcı tıklayıp yazmayı denemesin. */
+   benzememeli — kullanıcı tıklayıp yazmayı denemesin.
+   `display` BURADA YOK ve olamaz: sınıf hem <td> hem <span> üzerinde
+   kullanılıyor, ve bir <td>'ye `inline-block` vermek onu tablo düzeninden
+   ÇIKARIR — tarayıcı anonim hücre kurar, sütunlar çöker. ÖLÇÜLDÜ (çalışma
+   çevrimi tablosu, 7 sütun): başlık genişlikleri 196·196·196·69·113·88·14
+   iken gövde 196·196·196·14·14·14·113 çıkıyordu, yani üç kW hücresi tek
+   sütuna sıkışıyor ve satır silme ✕'i "Klima Kompresörü" başlığının altına
+   düşüyordu. Kullanıcının bildirdiği "garip yapı" tam olarak buydu. */
 .ve-fw-ro{
   font-family:var(--font-mono); font-size:var(--fs-tiny); color:var(--text-muted);
-  padding:4px 6px; display:inline-block;
+  padding:4px 6px;
 }
+span.ve-fw-ro{ display:inline-block; }
 .ve-fw-ro-err{ color:var(--accent-danger); font-weight:700; }
+
+/* Gergi satırının TİP sütunu: üstte bileşenin adı, altında künye seçici.
+   Kullanıcı bildirimi (2026-08-31): *"otomatik gerginin satırında 'elle gir'
+   gibi bir şey var. O olmayacak, orada normal 'Otomatik Gergi' yazacak."*
+   Diğer beş satırın tip sütunu bir <select> ve içinde bileşenin adı yazıyor;
+   gergide tip DEĞİŞTİRİLEMEZ (her modelde tam bir gergi var), o yüzden ad düz
+   metin. Künye ise gerçek bir seçim ve satırdan çıkarılamazdı — kullanıcı
+   *"tipinin seçileceği yeri estetik bir şekilde o satıra eklememiz
+   gerekiyor"* dedi. İkisi alt alta: ad birinci sınıf, künye ikincil. */
+.ve-fw-tip-ten{ display:flex; flex-direction:column; gap:3px; }
+.ve-fw-tip-ten > b{ font-size:var(--fs-tiny); color:var(--text-primary); }
+.ve-fw-inp.ve-fw-sub{
+  font-size:var(--fs-micro); padding:2px 4px; color:var(--text-secondary);
+}
+
+/* KİLİTLİ ALAN — künye kütüphaneden seçili.
+   `readonly` (input) / `disabled` (select) ile birlikte kullanılıyor ve
+   GÖRÜNÜMÜ SAYIYI GİZLEMİYOR: kullanıcı parçanın değerini okumaya devam
+   ediyor, yalnız yazamıyor. Soluk gri REDDEDİLDİ — "veri yok" gibi okunurdu;
+   kesikli çerçeve "bu alan başka bir yerden geliyor" diyor. */
+.ve-fw-inp.ve-fw-lock{
+  background:var(--bg-tertiary); border-style:dashed;
+  color:var(--text-secondary); cursor:default;
+}
+.ve-fw-inp.ve-fw-lock:focus{ outline:none; border-color:var(--border-color); }
+
+/* DÖNÜŞ YÖNÜ — iki durumlu seçim, aynı üreticiden iki adımda basılıyor.
+   Renk hükmü TAŞIMAZ: CW ile CCW'nin ikisi de eşit meşru (kanvastaki
+   `fead-spin` rozetinin kuralının aynısı) — seçili olan vurgulanır, öteki
+   nötr kalır. */
+.ve-fw-spinbox{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.ve-fw-spin{
+  padding:5px 12px; font-family:var(--font-mono); font-size:var(--fs-tiny);
+  font-weight:600; letter-spacing:var(--tracking-wide); cursor:pointer;
+  background:var(--bg-input); color:var(--text-secondary);
+  border:1px solid var(--border-color); border-radius:var(--radius-sm);
+}
+.ve-fw-spin:hover:not(:disabled){ background:var(--bg-hover); border-color:var(--border-hover); }
+.ve-fw-spin:disabled{ opacity:.45; cursor:not-allowed; }
+.ve-fw-spin-on{
+  background:var(--accent-primary); border-color:var(--accent-primary);
+  color:var(--on-accent);
+}

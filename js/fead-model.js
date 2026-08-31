@@ -1446,6 +1446,29 @@ function veFeadAnimKinematics(build, engineRpm, refRpm){
 // çünkü FEAD kayışının sürücü kasnağı krank milinde DEĞİL: krank ayrı bir
 // kayış/kademeyle fan kasnağını döndürüyor, FEAD kayışı da onun üzerinden
 // tahrik ediliyor. driveRatio = sürücü kasnak devri / motor devri.
+// Oran-için-yeterli sistem: `FEADCore.accessoryRpm`'in okuduğu ÜÇ alanı taşır
+// (driveRatio · pulleys[i].rPitch · _crkIdx) ve başka hiçbir şeyi. Yarıçaplar
+// çekirdeğin kendi yardımcılarından geliyor — ikinci bir formül YOK.
+//
+// Çap ya da profil eksikse `null` döner: uydurulmuş bir yarıçap, uydurulmuş
+// bir devir ve uydurulmuş bir kW demekti.
+function veFeadRatioSys(cfgPulleys, cfgBelt, driveRatio){
+  if(typeof FEADCore === 'undefined' || !cfgPulleys || !cfgPulleys.length) return null;
+  var bp;
+  try { bp = FEADCore.beltProps(cfgBelt || {}); } catch(e){ return null; }
+  var crk = -1, out = [];
+  for(var i = 0; i < cfgPulleys.length; i++){
+    var p = cfgPulleys[i];
+    if(!(p.od > 0)) return null;
+    var r;
+    try { r = FEADCore.radiiFromOD(p.od, p.contact, bp); } catch(e){ return null; }
+    out.push({ name: p.name, rPitch: r.rPitch, rEff: r.rEff });
+    if(p.crank) crk = i;
+  }
+  if(crk < 0) return null;
+  return { driveRatio: (driveRatio > 0) ? driveRatio : 1, pulleys: out, _crkIdx: crk };
+}
+
 function veFeadDriveRatio(sd){
   sd = sd || {};
   var out = { ratio: 1, mode: 'direct', crankOD: NaN, fanOD: NaN, ok: false };
@@ -2273,6 +2296,33 @@ function veFeadBuildSystem(nodeList, connList, opt){
     geomOpt: { tolerant: true }
   };
   out.cfg = cfg;
+
+  // ── ORAN SİSTEMİ — AKSESUAR DEVRİ GEOMETRİYE BAĞLI DEĞİL ─────────────────
+  //
+  // Kullanıcı bildirimi (2026-08-31): *"Motor ve çevrim kısmında aksesuarların
+  // tiplerini seçtiğimde değerler hala gelmiyor."* Ölçüldü ve haklıydı — ama
+  // sebep katalogda değil KAPIDA: `veFeadAutoKw` çözülmüş bir `sys` istiyor,
+  // `sys` ise ancak bütün koordinatlar girildikten sonra kuruluyor. Yarım bir
+  // modelde kullanıcı modeli seçiyor, tablo `—` basıyordu.
+  //
+  // Oysa aksesuar devri çözülmüş geometriye BAĞLI DEĞİL. Çekirdeğin kendi
+  // tanımı (fead-core.js `speedRatio`):
+  //
+  //     oran(i) = driveRatio · rPitch(sürücü) / rPitch(i)
+  //
+  // Üç sayının üçü de ÇAPTAN ve kayış profilinden geliyor; teğet noktası,
+  // sarım açısı, kol açısı hiçbiri girmiyor. Bu yüzden burada oran için
+  // yeterli, ama geometri için yetersiz bir "sys" kuruluyor.
+  //
+  // FİZİK KOPYALANMIYOR: yarıçapı çekirdeğin kendi `beltProps` + `radiiFromOD`
+  // fonksiyonları veriyor ve devri yine çekirdeğin `accessoryRpm`'i okuyor.
+  // İkinci bir formül yazmak, profil sabiti değiştiğinde iki yüzeyin sessizce
+  // ayrışması demekti.
+  //
+  // `out.sys` VARSA O KAZANIR (aşağıda kurulunca `ratioSys` de ona eşitlenir):
+  // çözülmüş model tek bir gerçek kaynak taşımalı.
+  out.ratioSys = veFeadRatioSys(cfgPulleys, cfgBelt, driveRatio);
+
   if(out.errors.length) return out;              // eksik girdiyle çekirdeği çağırma
 
   // ── ZARF ÇÖZÜLÜYOR — kol açısı SEÇİLİYOR ─────────────────────────────────
@@ -2434,6 +2484,7 @@ function veFeadBuildSystem(nodeList, connList, opt){
   } catch(e){ out.geomValid = false; }
 
   out.sys = sys;
+  out.ratioSys = sys;      // çözülmüş model TEK kaynak taşır
   out.ok = true;
 
   // ── ANKRAJ TÜRETİLİYOR — tasarım gerginliği bir GİRDİ DEĞİL ───────────────
@@ -3108,6 +3159,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadUniqueNames: veFeadUniqueNames, veFeadTranslateError: veFeadTranslateError,
     veFeadDutyRows: veFeadDutyRows, veFeadPresetLib: veFeadPresetLib,
     veFeadPresetOf: veFeadPresetOf, veFeadAutoKw: veFeadAutoKw,
+    veFeadRatioSys: veFeadRatioSys,
     veFeadDutyToCore: veFeadDutyToCore, veFeadAnalyze: veFeadAnalyze,
     veFeadDutyDegC: veFeadDutyDegC, veFeadTorsionalOpt: veFeadTorsionalOpt,
     veFeadPeakInertias: veFeadPeakInertias,
