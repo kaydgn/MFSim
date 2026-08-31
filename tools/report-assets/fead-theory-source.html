@@ -17,7 +17,7 @@ html{scroll-behavior:smooth}
 body{margin:0;background:var(--paper);color:var(--ink);
   font-family:'Source Serif 4',Georgia,serif;font-size:15.5px;line-height:1.68;}
 .page{max-width:880px;margin:0 auto;padding:48px 32px 96px}
-h1,h2,h3,h4{font-family:'Archivo',system-ui,sans-serif;color:var(--prusya);line-height:1.25;font-stretch:87%}
+h1,h2,h3,h4,h5{font-family:'Archivo',system-ui,sans-serif;color:var(--prusya);line-height:1.25;font-stretch:87%}
 h1{font-size:27px;font-weight:700;letter-spacing:.2px;margin:0 0 6px}
 h2{font-size:19px;font-weight:700;margin:44px 0 14px;padding-top:14px;border-top:2px solid var(--prusya);
   display:flex;gap:14px;align-items:baseline}
@@ -25,6 +25,12 @@ h2 .no{font-family:var(--mono);font-size:13px;color:var(--paper);background:var(
   padding:2px 8px;border-radius:2px;transform:translateY(-2px)}
 h3{font-size:15.5px;font-weight:600;margin:26px 0 8px;color:var(--ink)}
 h4{font-size:14px;font-weight:600;margin:20px 0 7px;color:var(--ink)}
+/* h5 — h4 bloğunun İÇİNDEKİ ara başlık (ör. bir tablonun kuruluşu). Ayrı bir
+   kural ŞART: stilsiz bırakılırsa tarayıcı varsayılanına düşer, yani belgenin
+   yazı ailesinin ve renginin dışına çıkar. Rapor üreteci alt başlık kullandıkça
+   kuralı buraya yazmak, satır içi stil bırakmanın alternatifi. */
+h5{font-family:'Archivo',system-ui,sans-serif;font-size:12.5px;font-weight:600;
+   margin:18px 0 6px;color:var(--ink);letter-spacing:.1px}
 p{margin:0 0 13px;text-align:justify;hyphens:auto}
 strong{font-weight:600}
 em{font-style:italic}
@@ -104,7 +110,21 @@ pre code{background:none;padding:0}
 .toc .n{font-family:var(--mono);font-size:11.5px;color:var(--prusya);margin-right:8px}
 
 @media print{
-  @page{margin:18mm 16mm}
+  /* SAYFA NUMARASI — belgeye atıf yapabilmek için ("s. 12, §8.7"). Akan bir
+     belgede sayfa ancak baskı/PDF'te oluşur, o yüzden numara da orada çıkar.
+     ÖLÇÜLDÜ (Chromium): `counter(page)`/`counter(pages)` ve kenar kutuları
+     (@bottom-center, @top-*) çalışıyor; `string-set`/`string()` ile AKAN
+     BÖLÜM BAŞLIĞI çalışmıyor — denendi, kenar kutusu boş çıkıyor. Bu yüzden
+     üst kutuda değişken değil SABİT belge adı var.
+     Yazı tipi burada AÇIKÇA yazılı: sayfa kenar kutusu gövdeden ayrı bir
+     kapsam ve `var(--mono)` orada çözülmeyebilir. */
+  @page{
+    margin:18mm 16mm 20mm;
+    @top-right{ content:"FEAD — Aksesuar Kayış Tahrik Sistemi";
+      font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:8pt; color:#6b7480 }
+    @bottom-center{ content:counter(page) " / " counter(pages);
+      font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:8.5pt; color:#5a6270 }
+  }
   .page{max-width:100%;padding:0}
   body{font-size:11pt}
   p{orphans:3;widows:3}

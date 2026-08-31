@@ -1604,13 +1604,29 @@ function _frEnvMult(){
 // ÖLÇÜM KAYDIDIR — tarayıcıda yeniden hesaplanamaz (doğrulama fixture'ı
 // uygulamaya girmiyor), o yüzden sayı olarak duruyor ve testi kaynağına karşı
 // tutuyor. Kazanan satır, `veFeadArmEnvelope`in gerçekten uyguladığı ölçüt.
+//
+// `J` her satırın AMAÇ FONKSİYONU — adın matematik karşılığı, aynı satırda ve
+// TEK KAYNAKTA. Ayrı bir denklem listesi tutulsaydı ad ile formül sessizce
+// ayrışabilirdi (bu belgede aynı sınıf iki kez ısırdı: §8.9'un "take-up"ı ve
+// Not 3'ün elle yazılı payı). `yon` ölçütün en iyilenme yönü: bir ölçütü
+// yanlış yönde okumak sıralamayı tersine çevirir.
+//
+// Büyüklüklerin KENDİ tanımları burada TEKRARLANMIYOR — take-up (4.3),
+// gerginlik (5.1), hubload (5.4) ve sarım (3.3) zaten türetildi; buradaki J
+// yalnız onların bant üzerinde nasıl toplandığını söylüyor.
 var VE_FR_ENV_CRITERIA = [
-  { ad: 'servis bandındaki en küçük take-up EN BÜYÜK', med: 4.5,  hit: 9, win: true },
-  { ad: 'ortalama konumdaki gerginlik en küçük',        med: 10.3, hit: 2 },
-  { ad: 'tepe gerginlik en küçük',                      med: 20.3, hit: 0 },
-  { ad: 'gerginlik oranı T<sub>max</sub>/T<sub>min</sub> en küçük', med: 23.5, hit: 1 },
-  { ad: 'hubload tepesi en küçük',                      med: 30.8, hit: 0 },
-  { ad: 'en küçük sarım açısı en büyük',                med: 53.1, hit: 0 }
+  { ad: 'servis bandındaki en küçük take-up EN BÜYÜK', med: 4.5,  hit: 9, win: true,
+    yon: 'max', J: '\\min_{\\theta_{r}\\in\\Theta}\\ \\dfrac{dL}{d\\theta}' },
+  { ad: 'ortalama konumdaki gerginlik en küçük',        med: 10.3, hit: 2,
+    yon: 'min', J: 'T(\\theta_{\\text{nom}})' },
+  { ad: 'tepe gerginlik en küçük',                      med: 20.3, hit: 0,
+    yon: 'min', J: '\\max_{\\theta_{r}\\in\\Theta}\\ T' },
+  { ad: 'gerginlik oranı T<sub>max</sub>/T<sub>min</sub> en küçük', med: 23.5, hit: 1,
+    yon: 'min', J: '\\dfrac{\\max_{\\Theta} T}{\\min_{\\Theta} T}' },
+  { ad: 'hubload tepesi en küçük',                      med: 30.8, hit: 0,
+    yon: 'min', J: '\\max_{\\theta_{r}\\in\\Theta}\\ F_{\\text{hub}}' },
+  { ad: 'en küçük sarım açısı en büyük',                med: 53.1, hit: 0,
+    yon: 'max', J: '\\min_{\\theta_{r}\\in\\Theta}\\ \\varphi_{\\text{gergi}}' }
 ];
 
 // ── θ* NASIL GERÇEKLENİYOR — KONUM PİMİ ────────────────────────────────────
@@ -1712,20 +1728,81 @@ function _frEnvelopeBlock(R){
      + '\\( \\sin\\beta \\) büyürken gergi sarımı çöküyor ve çarpım <b>orta</b> bir açıda '
      + 'tepe yapıyor.</div>';
 
+  // ── Ölçütlerin karşılaştırılması NASIL YAPILDI ──
+  //
+  // Tablonun üç sütunu da TÜRETİLMİŞ büyüklük; hiçbiri doğrudan okunan bir
+  // sayı değil. Kuruluşları burada yazılı olmazsa tablo "nereden çıktığı
+  // bilinmeyen altı satır" olarak kalır.
+  h += '<h5>Tablo ' + (_frTblNo + 1) + '\'un büyüklükleri nasıl kuruldu</h5>';
+  h += '<p>Altı aday, <b>aynı</b> servis bandı (' + (_frEqRef.envBand || '')
+     + ') üzerinde ve <b>aynı</b> zarf taraması ile karşılaştırıldı; aralarındaki tek fark '
+     + 'amaç fonksiyonu \\( J \\). Bant sürekli değil, dört <b>yoklama noktasında</b> '
+     + 'örneklenir — ölçüt bu kümede toplanır:</p>';
+  h += '<div class="eq">$$ \\Theta \\;=\\; \\big\\{\\, 0,\\;\\tfrac{1}{2}\\theta_{\\text{nom}},'
+     + '\\;\\theta_{\\text{nom}},\\;' + _frF(_frEnvMult(), 1)
+     + '\\,\\theta_{\\text{nom}} \\,\\big\\} '
+     + '$$<span class="tag">(' + (_frEqRef.envProbe = _frEq()) + ')</span></div>';
+  h += '<p>Her aday, montaj saati \\( \\theta \\) boyunca kendi \\( J \\)\'sini en iyileyen '
+     + 'açıyı seçer; tablodaki <b>Amaç fonksiyonu</b> sütunu bunları yazıyor:</p>';
+  h += '<div class="eq">$$ \\theta^{*}(J) \\;=\\; \\operatorname*{arg\\,opt}_{\\theta}\\; '
+     + 'J\\big(\\theta \\mid \\Theta\\big), \\qquad '
+     + '\\operatorname{opt} \\in \\{\\max,\\ \\min\\} '
+     + '$$<span class="tag">(' + (_frEqRef.envArg = _frEq()) + ')</span></div>';
+  h += '<p>Seçilen açı, o sistemin tedarikçi raporundaki gerçek çalışma açısı '
+     + '\\( \\theta_{\\text{ted}} \\) ile karşılaştırılır. Açılar bir <b>çember</b> üzerinde '
+     + 'olduğu için fark sarmalanmış alınır — yoksa 350° ile 10° arasında 340°\'lik '
+     + 'olmayan bir fark okunurdu:</p>';
+  h += '<div class="eq">$$ \\Delta_i \\;=\\; \\big|\\,'
+     + '\\operatorname{wrap}_{\\pm180^\\circ}\\big(\\theta^{*}_i - \\theta_{\\text{ted},i}\\big)'
+     + '\\,\\big|, \\qquad i = 1\\ldots N,\\ \\ N = 14 '
+     + '$$<span class="tag">(' + (_frEqRef.envDelta = _frEq()) + ')</span></div>';
+  h += '<p>Tablonun iki sayısal sütunu doğrudan bu \\( \\Delta_i \\) kümesidir — biri '
+     + 'merkezini, öbürü kaç sistemin kabul bandına düştüğünü verir:</p>';
+  h += '<div class="eq">$$ \\text{medyan} = \\operatorname{med}_{i}\\ \\Delta_i '
+     + '\\qquad\\text{ve}\\qquad '
+     + '\\text{isabet} = \\#\\{\\, i \\;:\\; \\Delta_i \\le 5^\\circ \\,\\} '
+     + '$$<span class="tag">(' + (_frEqRef.envHit = _frEq()) + ')</span></div>';
+  h += '<p><b>Medyan seçildi, ortalama değil</b>: aşağıdaki geçerlilik notunda yazan tek '
+     + 'aykırı sistem (ölçütün en iyi noktası 153° uzakta) ortalamayı tek başına '
+     + '11°\'den fazla kaydırırdı; medyan o sistemi bir oy olarak sayar, bir ağırlık '
+     + 'olarak değil.</p>';
+
   // ── Tablo A: ölçüt neden bu ──
   h += '<table><caption>Tablo ' + _frTbl() + ' — Seçim ölçütü 14 tedarikçi sisteminden '
      + 'geriye çözüldü</caption>';
-  h += '<tr><th class="l">Aday ölçüt</th><th>Açı farkı medyanı</th><th>±5° içinde</th></tr>';
+  h += '<tr><th class="l">Aday ölçüt</th><th class="l">Amaç fonksiyonu \\( J \\)</th>'
+     + '<th>Yön</th><th>Açı farkı medyanı</th><th>±5° içinde</th></tr>';
   VE_FR_ENV_CRITERIA.forEach(function(c){
-    h += '<tr><td class="l">' + (c.win ? '<b>' + c.ad + '</b>' : c.ad) + '</td>'
-       + '<td>' + (c.win ? '<b>' + _frF(c.med, 1) + '°</b>' : _frF(c.med, 1) + '°') + '</td>'
-       + '<td>' + (c.win ? '<b>' + c.hit + ' / 14</b>' : c.hit + ' / 14') + '</td></tr>';
+    var b0 = c.win ? '<b>' : '', b1 = c.win ? '</b>' : '';
+    h += '<tr><td class="l">' + b0 + c.ad + b1 + '</td>'
+       + '<td class="l">\\( ' + c.J + ' \\)</td>'
+       + '<td>' + (c.yon === 'max' ? 'en büyük' : 'en küçük') + '</td>'
+       + '<td>' + b0 + _frF(c.med, 1) + '°' + b1 + '</td>'
+       + '<td>' + b0 + c.hit + ' / 14' + b1 + '</td></tr>';
   });
   h += '</table>';
+  // Notun iki büyüklüğü de TÜRETİLMİŞ: "plato" ve "ceza". İkisi de bir isabetin
+  // UCUZ olup olmadığını ölçüyor — bir ölçüt her açıda hemen hemen aynı değeri
+  // veriyorsa "±5° içinde" bir şey kanıtlamaz. Kuruluşları yazılı olmazsa
+  // okuyucu bu iki sayıyı denetleyemez.
+  h += '<p>Notun iki büyüklüğü de aynı \\( J \\) eğrisinden türer. <b>Plato</b>, ölçütün '
+     + 'en iyisine %1 kadar yaklaşan açıların toplam genişliğidir — tepenin ne kadar '
+     + 'keskin olduğunu, yani isabetin ucuz olup olmadığını söyler:</p>';
+  h += '<div class="eq">$$ P \\;=\\; \\Big|\\big\\{\\, \\theta \\;:\\; '
+     + 'J(\\theta) \\ge 0{,}99\\, J(\\theta^{*}) \\,\\big\\}\\Big| '
+     + '$$<span class="tag">(' + (_frEqRef.envPlateau = _frEq()) + ')</span></div>';
+  h += '<p><b>Ölçüt cezası</b>, tedarikçinin kendi seçtiği açının ölçüte göre en iyisinden '
+     + 'ne kadar geride kaldığıdır; sıfır olması o açının ölçütün tepesine tam oturduğu '
+     + 'anlamına gelir:</p>';
+  h += '<div class="eq">$$ c \\;=\\; 1 - \\frac{J(\\theta_{\\text{ted}})}{J(\\theta^{*})} '
+     + '$$<span class="tag">(' + (_frEqRef.envPenalty = _frEq()) + ')</span></div>';
+  h += '<p>(' + _frEqRef.envPlateau + ') ve (' + _frEqRef.envPenalty + ') en <b>büyüklenen</b> '
+     + 'ölçüt için yazılmıştır; en küçüklenen adaylarda eşitsizlik ve oran ters çevrilir.</p>';
   h += '<div class="note"><span class="t">Tepe düz değil — isabet gerçek</span>'
-     + 'Ölçütün %1 platosu 14 sistemde ortalama <b>4,9°</b> (çoğunda 1,0–2,8°), yani '
-     + '“±5° içinde” ucuz bir isabet değil. Tedarikçinin kendi noktasındaki ölçüt cezası '
-     + 'medyan <b>%4,0</b>; iki sistemde tam <b>%0,0</b>. Bant çarpanı da uydurulmadı: '
+     + 'Ölçütün %1 platosu (' + _frEqRef.envPlateau + ') 14 sistemde ortalama <b>4,9°</b> '
+     + '(çoğunda 1,0–2,8°), yani “±5° içinde” ucuz bir isabet değil. Tedarikçinin kendi '
+     + 'noktasındaki ölçüt cezası (' + _frEqRef.envPenalty + ') medyan <b>%4,0</b>; iki '
+     + 'sistemde tam <b>%0,0</b>. Bant çarpanı da uydurulmadı: '
      + '1,0…2,0 tarandı ve <b>1,2–1,6 bir plato</b> (medyan 3,5–4,5°), 1,0\'da 6,5°, '
      + '2,0\'de 11,5°\'ye bozuluyor.</div>';
 
@@ -1906,8 +1983,16 @@ function _frDesignTensionBlock(R){
      + '\\( T_{\\text{gergi}} = T_{\\text{tasarım}} \\). Bu sayı <b>sorulmaz</b> — gergi kolunun '
      + 'taşıyabileceği gerginlik yay dengesinden zaten belirlidir'
      + (_frEqRef.T ? ' (' + _frEqRef.T + ')' : '') + ':</p>';
-  h += '<div class="eq">\\[ T_{\\text{tasarım}} \\;=\\; \\frac{M(\\theta)}{dL/d\\theta} '
-     + '\\;=\\; \\frac{M_0 + k\\,\\theta}{a\\,\\sin\\beta\\;2\\sin(\\varphi/2)} \\]</div>';
+  // SINIRLAYICI $$…$$ OLMAK ZORUNDA. Otomatik render YALNIZ iki sınırlayıcı
+  // tanıyor (`build-fead-report-template.js`): `$$…$$` (display) ve `\(…\)`
+  // (satır içi). Bu denklem bir dönem köşeli-parantez sınırlayıcısıyla yazılıydı
+  // (LaTeX'in display biçimi) — KaTeX'in KENDİ
+  // varsayılan listesinde o da var ama boot yapılandırması `delimiters`ı
+  // EZDİĞİ için varsayılan hiç kullanılmıyor; sonuç: denklem ham LaTeX olarak,
+  // düz yazı gibi basılıyordu. Belgedeki tek örnekti (ölçüldü), kapısı var.
+  h += '<div class="eq">$$ T_{\\text{tasarım}} \\;=\\; \\frac{M(\\theta)}{dL/d\\theta} '
+     + '\\;=\\; \\frac{M_0 + k\\,\\theta}{a\\,\\sin\\beta\\;2\\sin(\\varphi/2)} '
+     + '$$<span class="tag">(' + (_frEqRef.designT = _frEq()) + ')</span></div>';
   h += '<p>Sağdaki büyüklüklerin hiçbiri serbest değildir: <b>a</b>, <b>M<sub>0</sub></b> ve '
      + '<b>k</b> gergi künyesinden okunur, <b>θ</b>, <b>φ</b> ve <b>β</b> ise çözülmüş '
      + 'geometriden gelir (yukarıdaki envanter). Bu sistemde sonuç '
