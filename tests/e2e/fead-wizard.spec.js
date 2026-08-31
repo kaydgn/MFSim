@@ -83,8 +83,10 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     expect(metin).toMatch(/N/);           // gerginlik
     expect(metin).toMatch(/CCW|CW/);      // dönüş yönü
 
-    // Adım rayında artık hata rozeti YOK (örnek eksiksiz).
-    await expect(page.locator('#ve-fw-nav .ve-fw-step-n')).toHaveCount(0);
+    // Adım rayında artık KIRMIZI adım yok (örnek eksiksiz). Rozet HER adımda
+    // duruyor — tamamlanmışta ✓ — yani ölçüt rozetin varlığı değil DURUMU.
+    await expect(page.locator('#ve-fw-nav .ve-fw-st-err')).toHaveCount(0);
+    await expect(page.locator('#ve-fw-nav .ve-fw-st-ok')).toHaveCount(7);
   });
 
   test('gerçek klavye girişi: değer modele işliyor ve ODAK alanda kalıyor', async ({ page }) => {
@@ -295,5 +297,79 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
       return b.scrollWidth - b.clientWidth;
     });
     expect(t2).toBeLessThanOrEqual(1);
+  });
+
+  // ── KOZMETİK TUR (kullanıcı bildirimi, 2026-08-31) ──────────────────────
+  //
+  // İkisi de yalnız GERÇEK TARAYICIDA ölçülebilir: hesaplanmış yükseklik ve
+  // hesaplanmış renk Node'da YOKTUR. Birim kapıları CSS kuralının metnine
+  // bakabiliyor, sonucuna bakamıyor.
+  test('alt çubuk modalın KENDİ başlığından kalın değil', async ({ page }) => {
+    // *"Yeşil ile çizdiğim yer çok geniş olmuş. Butonlar falan da çok geniş."*
+    // ÖLÇÜLDÜ (öncesi): çubuk 48 px, başlık 39 px — 9 px kalın.
+    await bootApp(page);
+    await openFead(page);
+    await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
+    await page.evaluate(() => { veFeadWizSeed('AG00976_GATES_2025'); veFeadWizGoto(6); });
+
+    const m = await page.evaluate(() => ({
+      foot: document.getElementById('ve-fw-foot').getBoundingClientRect().height,
+      head: document.querySelector('#ve-feadwiz-overlay .ve-settings-header').getBoundingClientRect().height,
+      btn: [...document.querySelectorAll('#ve-fw-foot button')]
+        .map((b) => b.getBoundingClientRect().height),
+    }));
+    // Çubuk başlıkla AYNI bantta (kenarlık payı 2 px).
+    expect(Math.abs(m.foot - m.head)).toBeLessThanOrEqual(2);
+    expect(m.btn.length).toBe(3);
+    m.btn.forEach((h) => {
+      expect(h).toBeLessThanOrEqual(26);   // eskiden 29
+      expect(h).toBeGreaterThanOrEqual(20); // tıklanabilirlik tabanı
+    });
+  });
+
+  test('adım rayı ÜÇ durumu da gerçekten yakıyor — renkle', async ({ page }) => {
+    // *"eksik girdi olduğunda kırmızı, girdiler tam olduğunda belirgin yeşil."*
+    // Kapı sınıf ADINA değil HESAPLANMIŞ RENGE bakıyor: sınıf basılıp CSS
+    // kuralı düşse ray yine sessiz kalırdı (ölçüldü: st-ok kuralını silen
+    // mutasyon yalnız buradan görünür).
+    await bootApp(page);
+    await openFead(page);
+    await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
+
+    const oku = () => [...document.querySelectorAll('#ve-fw-nav .ve-fw-step')].map((li) => {
+      const n = li.querySelector('.ve-fw-step-n');
+      return { durum: (li.className.match(/ve-fw-st-(\w+)/) || [])[1] || null,
+               rozet: n ? n.textContent : null,
+               serit: getComputedStyle(li).borderLeftColor,
+               zemin: n ? getComputedStyle(n).backgroundColor : null };
+    });
+
+    // BOŞ sihirbaz: eksik adımlar KIRMIZI ve sayı taşıyor.
+    const bos = await page.evaluate(oku);
+    expect(bos.length).toBe(7);
+    const kirmizi = bos.filter((r) => r.durum === 'err');
+    expect(kirmizi.length).toBeGreaterThan(0);
+    kirmizi.forEach((r) => {
+      expect(r.serit).toBe(r.zemin);              // şerit ve rozet AYNI renkte
+      expect(Number(r.rozet)).toBeGreaterThan(0); // sayı, ✓ değil
+    });
+    // ...ve renk gerçekten kırmızı ailesinden (R baskın).
+    const rgb = (c) => c.match(/\d+/g).map(Number);
+    const [kr, kg] = rgb(kirmizi[0].zemin);
+    expect(kr).toBeGreaterThan(kg + 60);
+
+    // DOLU örnek: yedisi de YEŞİL ve ✓ taşıyor.
+    await page.evaluate(() => veFeadWizSeed('AG00976_GATES_2025'));
+    const dolu = await page.evaluate(oku);
+    expect(dolu.every((r) => r.durum === 'ok')).toBe(true);
+    expect(dolu.every((r) => r.rozet === '✓')).toBe(true);
+    const [yr, yg] = rgb(dolu[0].zemin);
+    expect(yg).toBeGreaterThan(yr + 60);          // yeşil ailesi
+
+    // ARADA: bir kasnağın çapı silinince O ADIM ayrışıyor, kalanlar yeşil kalır.
+    await page.evaluate(() => { veFeadWizState().pulleys[2].od = ''; veFeadWizRender(); });
+    const eksik = await page.evaluate(oku);
+    expect(eksik[1].durum).not.toBe('ok');
+    expect(eksik.filter((r) => r.durum === 'ok').length).toBe(6);
   });
 });

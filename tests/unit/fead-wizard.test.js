@@ -490,6 +490,97 @@ describe('adım eşlemesi ve yüzeyler', () => {
     expect(kasnakHata).toBeGreaterThan(0);
   });
 
+  // ── ADIM RAYI ÜÇ DURUM YAKIYOR (kullanıcı isteği, 2026-08-31) ────────────
+  //
+  // *"eksik girdi olduğunda kırmızı, girdiler tam olduğunda belirgin yeşil…
+  // kullanıcı yeteri kadar bilgilenemiyor."* — eski rayda tek işaret hata
+  // rozetiydi, yani "sorun yok" ile "buraya hiç bakılmadı" AYIRT EDİLEMİYORDU.
+  describe('adım rayı — üç durum', () => {
+    test('durum köprünün KENDİ listesinden türüyor, ikinci bir liste yok', () => {
+      kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+      const b = wiz.veFeadWizBuild();
+      for (let i = 0; i < wiz.VE_FW_STEPS.length; i++) {
+        const d = wiz.veFeadWizStepState(b, i);
+        const l = wiz.veFeadWizIssues(b, i);
+        expect(d.err).toBe(l.filter((x) => x.tur === 'err').length);
+        expect(d.warn).toBe(l.filter((x) => x.tur === 'warn').length);
+        expect(d.durum).toBe(d.err ? 'err' : (d.warn ? 'warn' : 'ok'));
+      }
+    });
+
+    test('ÜÇ durum da var ve hata UYARIYI bastırır', () => {
+      // İkiye indirilseydi: uyarıyı yeşile katmak "her şey tamam" demek,
+      // kırmızıya katmak çözülen bir modeli bozuk göstermek olurdu.
+      expect(wiz.veFeadWizStepState({ errors: [], warnings: [] }, undefined).durum).toBe('ok');
+      const sadeceUyari = wiz.veFeadWizStepState(
+        { errors: [], warnings: ['Gergi kol boyu girilmedi.'] }, undefined);
+      expect(sadeceUyari.durum).toBe('warn');
+      const ikisi = wiz.veFeadWizStepState(
+        { errors: ['Gergi kol boyu girilmedi.'], warnings: ['Gergi kol boyu girilmedi.'] }, undefined);
+      expect(ikisi.durum).toBe('err');
+    });
+
+    test('BOŞ sihirbazda kırmızı, DOLU örnekte yeşil — ray gerçekten yanıyor', () => {
+      kabuk(); wiz.veFeadWizReset();
+      const bos = wiz.veFeadWizNavHTML(wiz.veFeadWizBuild());
+      expect(bos).toContain('ve-fw-st-err');
+
+      kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+      const dolu = wiz.veFeadWizNavHTML(wiz.veFeadWizBuild());
+      expect(dolu).toContain('ve-fw-st-ok');
+      expect(dolu).not.toContain('ve-fw-st-err');
+      // ...ve TAMAMLANMIŞ adım da rozet taşıyor (✓). Yalnız hata varken
+      // çizilseydi "tamam" hâli sessiz kalırdı — bildirilen eksiklik buydu.
+      expect(dolu).toContain('>✓</span>');
+    });
+
+    test('YEDİ adımın yedisi de durum sınıfı taşıyor — sessiz adım yok', () => {
+      kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
+      const nav = wiz.veFeadWizNavHTML(wiz.veFeadWizBuild());
+      expect((nav.match(/ve-fw-st-(ok|warn|err)/g) || []).length).toBe(wiz.VE_FW_STEPS.length);
+      // `ve-fw-step-n"` — sondaki tırnak ŞART: tırnaksız kalıp numara
+      // dairesini (`ve-fw-step-no`) de sayar ve kapı 14 görür.
+      expect((nav.match(/class="ve-fw-step-n"/g) || []).length).toBe(wiz.VE_FW_STEPS.length);
+    });
+
+    test('DURUM ile ODAK ayrı kanallar — seçili adımın durumu kaybolmuyor', () => {
+      // Tek kanala bindirilseydi (eski `.done` gibi) kullanıcının en çok
+      // baktığı adımın durumu tam da orada görünmezdi.
+      kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+      wiz.veFeadWizGoto(0);
+      const nav = wiz.veFeadWizNavHTML(wiz.veFeadWizBuild());
+      const ilk = nav.slice(nav.indexOf('<li'), nav.indexOf('</li>'));
+      expect(ilk).toContain(' on');
+      expect(ilk).toMatch(/ve-fw-st-(ok|warn|err)/);
+      // KONUMSAL "done" EMEKLİ: üstünden geçilmiş ama eksik bir adım yeşil
+      // halka gösteriyordu, yani ray YANLIŞ bilgi veriyordu.
+      expect(nav).not.toContain('ve-fw-step done');
+      ['.ve-fw-st-ok', '.ve-fw-st-warn', '.ve-fw-st-err'].forEach((c) => {
+        expect(CSS).toContain(c);
+      });
+    });
+  });
+
+  // ── ALT ÇUBUK MODALIN KENDİ BAŞLIĞIYLA AYNI ÖLÇÜDE ──────────────────────
+  //
+  // Kullanıcı bildirimi: *"çok geniş olmuş… butonlar falan da çok geniş
+  // duruyor."* ÖLÇÜLDÜ (gerçek tarayıcı): çubuk 48 px, aynı diyaloğun başlığı
+  // 39 px — alt çubuk kendi üst çubuğundan 9 px KALIN.
+  test('alt çubuk dolgusu modal başlığıyla aynı kaynaktan', () => {
+    const kural = (sec) => {
+      const i = CSS.indexOf(sec + '{');
+      return i < 0 ? '' : CSS.slice(i, CSS.indexOf('}', i));
+    };
+    const foot = kural('.ve-fw-foot');
+    const btn = kural('.ve-fw-btn');
+    // Dikey dolgu 8 px'i AŞMAMALI: aştığı anda çubuk başlığın üstüne çıkıyor.
+    const fpad = (foot.match(/padding:\s*(\d+)px/) || [])[1];
+    expect(Number(fpad)).toBeLessThanOrEqual(8);
+    const bpad = (btn.match(/padding:\s*(\d+)px\s+(\d+)px/) || []);
+    expect(Number(bpad[1])).toBeLessThanOrEqual(5);   // düğme yüksekliği
+    expect(Number(bpad[2])).toBeLessThanOrEqual(11);  // düğme genişliği
+  });
+
   test('panel: taslak varken künyeyi, yokken sebebi yazıyor', () => {
     const bosNode = { id: 'w1', type: 'fead-wizard', data: {} };
     const h1 = wiz.getFeadWizardPropertiesHTML(bosNode);

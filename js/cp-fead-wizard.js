@@ -697,6 +697,31 @@ function veFeadWizFootStateHTML(b){
 
 // Adıma ait uyarı listesi. Boş liste de bir CEVAPTIR ("bu adımda eksik yok");
 // hiç basmamak kullanıcıyı "acaba kontrol edildi mi" sorusuyla bırakırdı.
+// ── ADIM DURUMU — TEK ÜRETİCİ ──────────────────────────────────────────────
+//
+// Kullanıcı bildirimi (2026-08-31): *"eksik girdi olduğunda kırmızı yanmasını,
+// girdiler tam olduğunda ise belirgin bir yeşil yanması… Şu anda kullanıcı
+// yeteri kadar bilgilenemiyor."* Haklıydı ve sebebi yapısaldı: rayda tek
+// işaret hata ROZETİ idi, yani "sorun yok" ile "buraya hiç bakılmadı"
+// AYIRT EDİLEMİYORDU. Üstelik `done` sınıfı GEÇERLİLİĞİ değil KONUMU
+// anlatıyordu (i < _fwStep) — üstünden geçilmiş ama eksik bir adım yeşil
+// halkalı görünüyordu, yani ray YANLIŞ bilgi veriyordu.
+//
+// Durum köprünün kendi listesinden süzülüyor (`veFeadWizIssues` → `b.errors` /
+// `b.warnings`); ikinci bir doğrulama listesi tutmak, köprü değişince sessizce
+// eskiyen bir kapı olurdu — sihirbazın kuruluş kuralının ta kendisi.
+//
+// ÜÇ DURUM, İKİ DEĞİL: bu modülde "çözülüyor ama uyarı taşıyor" gerçek ve
+// sık bir hâl (kalibrasyon dışı çap, türetilemeyen ankraj, kenetlenmiş kol).
+// Onu yeşile katmak "her şey tamam" demek, kırmızıya katmak ise çözülen bir
+// modeli bozuk göstermek olurdu.
+function veFeadWizStepState(b, step){
+  var l = veFeadWizIssues(b, step);
+  var e = 0, w = 0;
+  l.forEach(function(it){ if(it.tur === 'err') e++; else w++; });
+  return { durum: e ? 'err' : (w ? 'warn' : 'ok'), err: e, warn: w };
+}
+
 function veFeadWizIssueHTML(b, step){
   var list = veFeadWizIssues(b, step);
   if(!list.length)
@@ -730,16 +755,22 @@ function veFeadWizNavHTML(b){
   var h = '<div class="ve-fw-brand"><b>Başlangıç Sihirbazı</b><span>FEAD · kayış-kasnak</span></div>';
   h += '<ol class="ve-fw-steps">';
   VE_FW_STEPS.forEach(function(s, i){
-    var durum = (i === _fwStep) ? 'on' : (i < _fwStep ? 'done' : '');
-    // ADIM ROZETİ HATA SAYISI TAŞIR: kullanıcı hangi adıma dönmesi gerektiğini
-    // son adımı beklemeden görür. Sayı köprünün errors[] listesinden süzülüyor
-    // (ikinci bir doğrulama listesi yok).
-    var n = veFeadWizIssues(b, i).filter(function(x){ return x.tur === 'err'; }).length;
-    h += '<li class="ve-fw-step ' + durum + '" onclick="veFeadWizGoto(' + i + ')" tabindex="0"'
+    // İKİ AYRI KANAL, ÇAKIŞMIYOR: zemin tinti + kalın başlık HANGİ ADIMDA
+    // olduğumuzu, renk (sol şerit · numara dairesi · rozet) o adımın DURUMUNU
+    // söylüyor. Tek kanala bindirilseydi seçili adımın durumu görünmezdi —
+    // oysa kullanıcının en çok baktığı adım tam olarak o.
+    var d = veFeadWizStepState(b, i);
+    var sinif = 've-fw-step ve-fw-st-' + d.durum + (i === _fwStep ? ' on' : '');
+    var rozet = (d.durum === 'ok')
+      ? '<span class="ve-fw-step-n" title="Bu adımda eksik girdi yok.">✓</span>'
+      : '<span class="ve-fw-step-n" title="'
+        + (d.err ? d.err + ' eksik girdi' : '') + (d.err && d.warn ? ' · ' : '')
+        + (d.warn ? d.warn + ' uyarı' : '') + '">' + (d.err || d.warn) + '</span>';
+    h += '<li class="' + sinif + '" onclick="veFeadWizGoto(' + i + ')" tabindex="0"'
       + ' onkeydown="if(event.key===\'Enter\'){veFeadWizGoto(' + i + ');}">'
       + '<span class="ve-fw-step-no">' + (i + 1) + '</span>'
       + '<span class="ve-fw-step-t"><b>' + _fwEsc(s.ad) + '</b><em>' + _fwEsc(s.ipucu) + '</em></span>'
-      + (n ? '<span class="ve-fw-step-n">' + n + '</span>' : '')
+      + rozet
       + '</li>';
   });
   return h + '</ol>';
@@ -1653,7 +1684,8 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizTenCoordLabel: veFeadWizTenCoordLabel,
     veFeadWizAccPreset: veFeadWizAccPreset,
     _fwKwEff: _fwKwEff, _fwTenRow: _fwTenRow, _fwAccCard: _fwAccCard,
-    veFeadWizIssues: veFeadWizIssues, veFeadWizStepOf: veFeadWizStepOf,
+    veFeadWizIssues: veFeadWizIssues,
+    veFeadWizStepState: veFeadWizStepState, veFeadWizStepOf: veFeadWizStepOf,
     veFeadWizCanCreate: veFeadWizCanCreate, veFeadWizCreate: veFeadWizCreate,
     veFeadWizOpen: veFeadWizOpen, veFeadWizClose: veFeadWizClose,
     veFeadWizGo: veFeadWizGo, veFeadWizGoto: veFeadWizGoto,
