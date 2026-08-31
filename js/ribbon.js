@@ -123,6 +123,24 @@ var VE_RIBBON_TABS = [
         { size:'lg', icon:'activity', label:'Program\nDurumu', run:'veOpenStatusModal', tip:'Sürüm ve dağıtım durumu',
           badge:function(){ return typeof veStatusUpdatePending === 'function' && veStatusUpdatePending(); } }
       ]},
+      // ── KULLANIM KILAVUZLARI KİTİ ──────────────────────────────────
+      // Her modülün kendi kılavuzu var ve hepsi TEK kayıt defterinden
+      // (VE_GUIDE_KIT, js/guide-kit.js) besleniyor. Şeritte iki yüzey:
+      //   • "Kılavuzlar" — dört modülü birden gösteren seçim penceresi.
+      //     Hangi kılavuzun HAZIR olduğunu orada okunur; yazılmamış olanlar
+      //     gizlenmiyor, "hazırlanıyor" diye yazılıyor.
+      //   • "Bu Modülün Kılavuzu" — kullanıcı bir modülün İÇİNDEYKEN, o
+      //     modülün kılavuzunu tek tıkla açar. Pencereden geçmek, elindeki
+      //     işi bırakıp bir liste okumak demekti.
+      // Grup kendi başına duruyor, "Yardım"ın içinde değil: kılavuz bir
+      // kısayol listesi değil, modülün kullanım belgesi.
+      { label: 'Kullanım Kılavuzları', items: [
+        { size:'lg', icon:'clipboard', label:'Kılavuz\nKiti', run:'veGuideKitOpen',
+          tip:'Modül kullanım kılavuzları — aç ya da indir' },
+        { size:'sm', icon:'file-text', label:'Bu Modülün Kılavuzu', run:'veGuideOpenCurrent',
+          tip:'Şu an içinde olduğunuz modülün kullanım kılavuzunu aç',
+          when:function(){ return typeof veGuideCurrentId === 'function' && !!veGuideCurrentId(); } }
+      ]},
       { label: 'Yardım', items: [
         { size:'sm', icon:'lightbulb', label:'Klavye Kısayolları', run:'veShortcutsHelpOpen' },
         { size:'sm', icon:'search',    label:'Komut Paleti',       run:'veCmdkOpen', tip:'Tüm komutlarda ara (Ctrl+K)' }
@@ -206,9 +224,15 @@ function veRibbonRunnable(item) {
 // PNG gibi komutlar bir işe yaramaz. Şeridin tamamı etkin görünürken sol panel
 // gizleniyordu — tutarsızdı. Bu durumda proje açma/oluşturma ve program
 // komutları dışındaki her şey pasif çizilir.
+// KILAVUZLAR BU LİSTEDE OLMAK ZORUNDA. js/guide-kit.js'in kendi kuralı şunu
+// diyor: "kılavuz çözülmüş model istemez; tuval bomboşken — hatta karşılama
+// ekranındayken — okunabilir olmak zorundadır. Zaten kullanıcının ona en çok
+// ihtiyaç duyduğu an odur." Muafiyet verilmezse tam o anda düğme PASİF çizilir
+// ve kural yüzeyde yazılı, davranışta yok olurdu.
 var VE_RIBBON_ALWAYS_ON = [
   'veNewProject', 'veLoadTopology', 'veOpenSettings', 'veOpenStatusModal',
-  'veShortcutsHelpOpen', 'veCmdkOpen', 'veGame2048Open', 'mfsimLogout'
+  'veShortcutsHelpOpen', 'veCmdkOpen', 'veGame2048Open', 'mfsimLogout',
+  'veGuideKitOpen', 'veGuideOpenCurrent'
 ];
 function veRibbonNoWorkspace() {
   var ov = document.getElementById('ve-module-overlay');

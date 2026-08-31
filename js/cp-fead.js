@@ -393,7 +393,8 @@ function _feadGrid(node, cells, cols){
       + '<span style="font-size:var(--fs-micro); color:var(--text-muted); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + c.label + '</span>'
       + '<input type="number" id="ve-fead-' + c.key + '-' + node.id + '" value="' + _feadEsc(v) + '" step="' + (c.step||'any') + '"'
       + (c.ph ? ' placeholder="' + _feadEsc(c.ph) + '"' : '')
-      + ' onchange="veFeadSet(\'' + node.id + '\',\'' + c.key + '\',this.value)" style="width:100%; ' + _FEAD_INP + '">'
+      + ' onchange="' + (c.setter || 'veFeadSet') + '(\'' + node.id + '\',\'' + c.key
+        + '\',this.value)" style="width:100%; ' + _FEAD_INP + '">'
       + '</label>';
   });
   return h + '</div>';
@@ -560,7 +561,7 @@ function veFeadReselectArm(){
   for(var i = 0; i < nodes.length; i++)
     if(nodes[i] && _feadDefOf(nodes[i]).isFeadTensioner){ ten = nodes[i]; break; }
   if(!ten || !ten.data) return false;
-  if(veFeadAngleMode(ten.data) !== 'envelope' || ten.data.armPinned) return false;
+  if(ten.data.armPinned) return false;
   var onceki = _feadNum(ten.data.armMeanDeg, NaN);
   var b;
   try { b = veFeadBuildFromCanvas(); } catch(e){ return false; }
@@ -813,7 +814,7 @@ function getFeadCoordLinkPropertiesHTML(node){
     + '• ölçek: <b>1 px = ' + _feadFmt(1 / s, 2) + ' mm</b> (hassasiyet zoom\'dan)<br>'
     + '• orijin: <b>' + (org ? _feadEsc(_feadNodeName(org)) : '—')
     + '</b> (sürücü kasnak — bir ROL, tip değil)<br>'
-    + '• kapsam: <b>' + kasnak + ' kasnak</b> · gergide taşınan şey pivot + montaj merkezi'
+    + '• kapsam: <b>' + kasnak + ' kasnak</b> · gergide taşınan şey montaj konumu'
     + '</div>');
 
   html += _feadHint('Bağ kapalıyken de <b>Otomatik Düzenle</b> kutuları '
@@ -1029,8 +1030,6 @@ function veFeadRefreshBadges(){
   return n;
 }
 
-// Seçim değişince paneli yeniden çiz: temas tarafı rozeti ve şema anında
-// güncellensin (sessiz kalırsa kullanıcı değişikliğin işlendiğini göremez).
 function veFeadSetChoice(nodeId, key, val){
   if(typeof nodes === 'undefined') return;
   var node = nodes.find(function(n){ return n.id === nodeId; });
@@ -1252,10 +1251,11 @@ function veFeadCurveSet(nodeId, i, key, val){
 // ════════════════════════════════════════════════════════════════════════════
 //  GERGİ PANELİ
 // ════════════════════════════════════════════════════════════════════════════
-// Gergi bir kasnaktır AMA konumu serbest değildir: pivot etrafında dönen bir
-// kolun ucundadır. Bu yüzden kasnak alanlarına ek olarak pivot + kol + yay
+// Gergi bir kasnaktır AMA konumu serbest değildir: montaj konumu etrafında
+// dönen bir kolun ucundadır. Bu yüzden kasnak alanlarına ek olarak kol + yay
 // alanları taşır; kasnak merkezi çalışma açısından türetilir.
 function getFeadTensionerPropertiesHTML(node){
+  veFeadMigrateNode(node);        // eski kayıt: iki koordinat → tek montaj konumu
   if(!node.data) node.data = {};
   var html = '<div class="sw-panel">';
   html += _feadCard('Temas Tarafı', 'hesap için kritik', 'var(--accent-danger)',
@@ -1271,80 +1271,37 @@ function getFeadTensionerPropertiesHTML(node){
         { key:'inertia', label:'Atalet J [kg·m²]',  ph:'0.001', step:'0.0001' }
       ], 2));
 
-  var mode = veFeadAngleMode(node.data);
-
-  // ── KOL KÜNYESİ — PİVOT ARTIK SORULMUYOR ─────────────────────────────────
+  // ── OTOMATİK GERGİ MONTAJ KONUMU — TEK KOORDİNAT ────────────────────────
   //
-  // Kullanıcı kararı (2026-08-25): "Otomatik gergi bileşeninde kol ve pivot
-  // kısmına kullanıcı girdi girmeyecek. Kullanıcının girdiği koordinat gergi
-  // KASNAĞININ merkezi; pivot noktası sonra hesaplanıyor."
+  // Kullanıcı kararı (2026-08-29): *"Artık sadece 'otomatik gergi montaj
+  // konumu' var. Buradan otomatik gerginin avara kısmının hareketi
+  // tanımlanacak sadece. … Herhangi bir doğrulama gibi bir olay söz konusu
+  // değil."*
   //
-  // Doğru: koordinat tablosundaki gergi satırı diğer kasnaklarla aynı şeydir
-  // (kasnağın merkezi) ve pivot oradan + parça künyesinden çıkar:
-  //     pivot = c − a·(cos θ_kol , sin θ_kol)
-  // θ_kol gergi üreticisinin parça çiziminde yazar (E9843: "344° MEAN ANGLE").
+  // ESKİDEN ÜÇ AYRI YÜZEY VARDI ve hepsi aynı büyüklüğü soruyordu: kip
+  // seçicisi (montaj merkezi / serbest açı / zarf), ikincil "Ölçülmüş Pivot"
+  // alanları, ve ikisini karşılaştıran bir "Doğrulama" kartı. Üçü birden
+  // kalktı — panel tek koordinat soruyor, program hiçbir şeyi hiçbir şeyle
+  // karşılaştırmıyor.
   //
-  // PİVOT ALANLARI YİNE DE DURUYOR ama ikincil: tedarikçi raporundan gelen
-  // ÖLÇÜLMÜŞ bir pivot varsa o kazanır ve kol boyu çapraz kontrolü orada
-  // gerçek bir denetim olur. Boş bırakılırsa türetilir.
-  // ── ZARF KİPİ: PİVOT GİRDİ, KOL AÇISI ÇIKTI ──────────────────────────────
-  //
-  // Yön tersine çevrildi (bkz. fead-model.js "PİVOT BİR GİRDİ"). Panel de aynı
-  // yönü göstermek ZORUNDA: iki yüzey farklı şeyi sorarsa kullanıcı hangisinin
-  // hesaba girdiğini bilemez — bu modülde bir kez ölçülmüş hata sınıfı.
-  if(mode === 'envelope'){
-    html += _feadCard('Otomatik Gergi Montaj Koordinatları', 'GİRDİ — pivot', 'var(--accent-danger)',
-        _feadGrid(node, [
-          { key:'pivotX', label:'Montaj X [mm]', ph:'-250.00' },
-          { key:'pivotY', label:'Montaj Y [mm]', ph:'110.00' }
-        ], 2)
-      + _feadHint('Gergi <b>gövdesinin motora cıvatalandığı</b> nokta — kolun döndüğü '
-          + 'pivot. Kasnak merkezi buradan <b>çıkar</b>, tersi değil: kol bu nokta '
-          + 'etrafında kol boyu yarıçapında dönüyor ve kasnak o çemberin üstünde '
-          + 'gezinen bir konumda.<br><br>'
-          + '<b style="color:var(--accent-danger);">Buraya kasnak merkezi YAZILMAZ.</b> '
-          + 'Tedarikçiye <b>giden</b> FEAD sayfasındaki gergi satırı kasnak merkezidir; '
-          + 'pivot yalnız tedarikçiden <b>dönen</b> raporun '
-          + '<i>Pivot Point {X, Y}</i> satırında bulunur. İkisi kolun iki ayrı ucudur ve '
-          + 'aralarında tam kol boyu kadar mesafe vardır (14 Gates sisteminin 81 '
-          + 'konumunda ölçüldü, sapma ≤0,065 mm). Karıştırılırsa model <b>yine '
-          + 'çözülür</b> ve uyarı çıkmaz — ölçüldü: gerginlik <b>−%48,6</b>, sarım '
-          + 'en kötü <b>+27,9°</b>.'));
-    html += _feadCard('Kol Künyesi', 'parça verisi', 'var(--text-secondary)',
-        _feadGrid(node, [{ key:'armLen', label:'Kol boyu (Arm Length) [mm]', ph:'90' }], 1)
-      + _feadHint('Pivot ile avara kasnağının merkezi arasındaki <b>sabit</b> mesafe; '
-          + 'tedarikçi raporunun "Tensioner Data" bölümünde yazar. 56–90 mm aralığında '
-          + 'doğrulandı.'));
-  } else {
-  var _tp = veFeadPivotFromArm(node.data);
-  html += _feadCard('Kol Künyesi', 'pivot BURADAN türer', 'var(--text-secondary)',
+  // Kasnağın merkezi bir GİRDİ DEĞİL: montaj konumu etrafında kol boyu
+  // yarıçapında dönen avaranın hareketi buradan tanımlanıyor.
+  html += _feadCard('Otomatik Gergi Montaj Konumu', 'tek girdi', 'var(--accent-danger)',
       _feadGrid(node, [
-        { key:'armLen',     label:'Kol boyu (Arm Length) [mm]', ph:'90' },
-        { key:'armMeanDeg', label:'Kol çalışma açısı (MEAN) [°]', ph:'344', step:'0.1' }
+        { key:'pivotX', label:'Montaj X [mm]', ph:'-250.00' },
+        { key:'pivotY', label:'Montaj Y [mm]', ph:'110.00' }
       ], 2)
-    + (_tp
-        ? '<div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">'
-          + '<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">'
-          + 'Türetilen pivot</div><div style="width:150px; text-align:center; '
-          + 'font-family:ui-monospace, monospace; font-weight:700; font-size:var(--fs-body); '
-          + 'color:var(--accent-warning);">' + _feadEsc(_tp[0].toFixed(2) + ' / ' + _tp[1].toFixed(2))
-          + '</div></div>'
-        : '')
-    + _feadHint('<b>Pivot sorulmaz.</b> Kasnak merkezi (aşağıdaki montaj konumu) ile kol boyu ve '
-        + 'kolun çalışma açısı verilince pivot bunlardan <b>hesaplanır</b>. Kol açısı gergi '
-        + 'üreticisinin parça çiziminde yazar (ör. E9843 için <b>344°</b>). Kol boyu 56–90 mm '
+    + _feadHint('Gergi <b>gövdesinin motora bağlandığı</b> nokta — kolun döndüğü '
+        + 'eksen. Parça çiziminde gövdenin merkezî bağlantı deliği kolun dönme '
+        + 'ekseniyle eşmerkezli olduğu için girilen koordinat doğrudan bu eksendir. '
+        + '<b>Avara kasnağının merkezi buradan çıkar</b>: kol bu nokta etrafında kol '
+        + 'boyu yarıçapında dönüyor, kasnak o çemberin üstünde geziniyor.'));
+
+  html += _feadCard('Kol Künyesi', 'parça verisi', 'var(--text-secondary)',
+      _feadGrid(node, [{ key:'armLen', label:'Kol boyu (Arm Length) [mm]', ph:'90' }], 1)
+    + _feadHint('Montaj konumu ile avara kasnağının merkezi arasındaki <b>sabit</b> '
+        + 'mesafe; tedarikçi raporunun "Tensioner Data" bölümünde yazar. 56–90 mm '
         + 'aralığında doğrulandı.'));
-
-  // Ölçülmüş pivot (tedarikçi raporu) varsa girilebilsin — ikincil yol.
-  html += _feadCard('Ölçülmüş Pivot', 'opsiyonel — tedarikçi raporundan', 'var(--text-muted)',
-      _feadGrid(node, [
-        { key:'pivotX', label:'Pivot X [mm]', ph:'(türetilir)' },
-        { key:'pivotY', label:'Pivot Y [mm]', ph:'(türetilir)' }
-      ], 2)
-    + _feadHint('Boş bırakın — normalde pivot yukarıdaki künyeden türetilir. Yalnız '
-        + 'tedarikçi raporunda ya da montaj resminde <b>ölçülmüş</b> bir pivot varsa doldurun; '
-        + 'o zaman girilen değer kazanır ve kol boyu çapraz kontrolü gerçek bir denetim olur.'));
-  }
 
   html += veFeadTensionerLibCard(node);
 
@@ -1359,37 +1316,13 @@ function getFeadTensionerPropertiesHTML(node){
         + 'Spring Rate · Spring Mean Load). <b>Çalışma momenti</b> kolun montajda ne kadar '
         + 'kurulduğunu söyler: göreli açı = (Mean − Pre) / Rate.'));
 
-  // ── MONTAJ KONUMU — bu modülün en tehlikeli girdisi ──
-  // Sayfa serbest açıyı VERMİYOR; gergi kasnağının montaj merkezini veriyor.
-  // İkisi karıştırılırsa gerginlik 2.6 kat düşük çıkıyor ve hata verilmiyor
-  // (ölçüm aşağıdaki uyarının içinde). Bu yüzden varsayılan yol montaj konumu.
-  html += _feadCard('Kol Açısı', 'hesap için kritik', 'var(--accent-danger)',
-      // Varsayılan ÇÖZÜLEN moddur, sabit 'mount' değil: eski bir kayıt yalnız
-      // serbest açı taşıyorsa liste de 'direct' göstermeli, yoksa panel bir
-      // şey söyler hesap başka şey yapardı.
-      _feadSelect(node, 'Kol açısı nereden gelsin', 'angleMode',
-        [['envelope', 'Montaj koordinatından ZARFI ÇÖZ (önerilen)'],
-         ['mount', 'Montaj merkezinden türet (sayfanın biçimi)'],
-         ['direct', 'Serbest kol açısını elle gir']], mode,
-        '<b>Montaj merkezi</b> = gergi kasnağının kayış takılıyken durduğu yer; koordinat '
-        + 'tablosunda diğer kasnaklarla aynı biçimde yazar. <b>Serbest kol açısı</b> ise kolun '
-        + 'kayış TAKILI DEĞİLKEN durduğu açıdır — sayfada YOKTUR. İkisi aynı şey değil: '
-        + 'montaj konumunda yay çalışma momentine kadar kurulmuştur.')
-    + (mode === 'envelope'
-        ? veFeadEnvelopeReadout(node)
-        : mode === 'mount'
-        ? _feadGrid(node, [
-            { key:'cenX', label:'Montaj merkezi X', ph:'-170.08' },
-            { key:'cenY', label:'Montaj merkezi Y', ph:'99.16' }
-          ], 2)
-          + veFeadMountReadout(node)
-        : _feadGrid(node, [
-            { key:'freeAngleDeg', label:'Serbest kol açısı [°]', ph:'42' }
-          ], 1)
-          + _feadHint('<b style="color:var(--accent-danger);">Dikkat:</b> buraya montaj '
-            + 'konumunun açısı yazılırsa çekirdek çalışma noktasında yayı yalnız ön yükünde '
-            + 'bulur. PDF sistemiyle ölçüldü: moment 22.07 Nm yerine 8.81 Nm, gerginlik '
-            + '650 N yerine <b>251 N</b> — geometri kusursuz çözülür, hiçbir hata çıkmaz.'))
+  // ── AVARANIN HAREKETİ — montaj konumundan tanımlanıyor ──────────────────
+  // Kol açısı bir GİRDİ DEĞİL: montaj konumu + yay künyesi verildiğinde
+  // program kolun hangi saatte durduğunu zarftan seçiyor. Kullanıcı bilgisi
+  // varsa sabitleyebilir (okumanın içindeki anahtar) — ama bu ikinci bir
+  // koordinat değil, aynı tek girdinin üstüne binen bir karar.
+  html += _feadCard('Avara Hareketi', 'montaj konumundan çözülür', 'var(--accent-primary)',
+      veFeadEnvelopeReadout(node)
     + _feadSelect(node, 'Kol dönüş yönü (sense)', 'sense',
         [['', 'Otomatik bul'], ['1', '+1'], ['-1', '−1']], '',
         'Göreli açı sıfırda serbest koldur ve artan yön yaya yüklenme yönüdür: '
@@ -1462,7 +1395,7 @@ function veFeadTensionerLibCard(node){
     + 'arşivde raporu olmayan dört kayıt kod <b>taşımıyor</b>. <b>Kol boyu · '
     + 'ön yük · katsayı · kasnak çapı · parça kodu</b> parçanın, <b>çalışma '
     + 'momenti</b> ise montajın: aynı gergi AG0868’de 8PK’da 22,57 · 6PK’da '
-    + '19,04 · 4PK’da 16,07 Nm ile kuruluyor. Künye uygulamak <b>pivot ve kol '
+    + '19,04 · 4PK’da 16,07 Nm ile kuruluyor. Künye uygulamak <b>montaj konumunu ve kol '
     + 'açısını YAZMAZ</b> — ikisi de motorun verisi, parçanın değil.');
   var _pk = (typeof veFeadTenPin === 'function' && td.tenPart)
     ? veFeadTenPin(td.tenPart) : null;
@@ -1479,7 +1412,7 @@ function veFeadTensionerLibCard(node){
 }
 
 // Künyeyi uygula. KOPYA yazılır (kütüphane sürümü değişse bile kaydedilmiş
-// proje kendiliğinden değişmez) ve pivot/kol açısına DOKUNULMAZ.
+// proje kendiliğinden değişmez) ve montaj konumu/kol açısına DOKUNULMAZ.
 function veFeadApplyTenLib(nodeId, key){
   if(typeof nodes === 'undefined') return;
   var node = nodes.find(function(n){ return n.id === nodeId; });
@@ -1496,6 +1429,7 @@ function veFeadApplyTenLib(nodeId, key){
   if(typeof showNodeProperties === 'function') showNodeProperties(node);
 }
 
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  ZARF OKUMASI — seçilen kol açısı, türeyen kasnak merkezi, ÇIKAN kayış boyu
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1506,7 +1440,7 @@ function veFeadApplyTenLib(nodeId, key){
 // taşınır (B10 çap penceresi, tepe yükün "KALİBRE DEĞİL" damgası ile aynı).
 function veFeadEnvelopeReadout(node){
   var td = node.data || {};
-  var m = veFeadTensionerMount(td);
+  var m = veFeadSpringSetup(td);
   var px = _feadNum(td.pivotX, NaN), py = _feadNum(td.pivotY, NaN);
   var a  = _feadNum(td.armLen, NaN);
   var pinned = !!td.armPinned;
@@ -1638,63 +1572,6 @@ function veFeadSetPinArm(nodeId, on){
   if(typeof showNodeProperties === 'function') showNodeProperties(node);
 }
 
-// Montaj konumundan çıkan sayılar + KOL BOYU ÇAPRAZ KONTROLÜ.
-// Kontrol bedava: |montaj merkezi − pivot| ile Arm Length aynı sayfada yazar,
-// uyuşmuyorsa biri yanlış okunmuştur. PDF'te 89.998 ↔ 90.0 ile tutuyor.
-function veFeadMountReadout(node){
-  var td = node.data || {};
-  var m = veFeadTensionerMount(td);
-  if(!m.ok)
-    return _feadHint('Montaj merkezi ve pivot girilince kol açısı burada türetilir.');
-
-  var ac = veFeadArmCheck(td);
-  var satir = function(et, deg, not){
-    return '<div style="display:flex; justify-content:space-between; gap:8px; padding:2px 0;">'
-      + '<span style="color:var(--text-muted);">' + et + '</span>'
-      + '<span style="font-family:ui-monospace,monospace; color:' + (not || 'var(--text-primary)') + ';">' + deg + '</span></div>';
-  };
-  var h = '<div style="font-size:var(--fs-micro); line-height:1.5; padding:7px 9px; margin-bottom:9px; '
-        + 'background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
-  h += satir('Montaj açısı (pivot → merkez)', _feadFmt(m.montajDeg, 2) + '°');
-  h += satir('Kol boyu · koordinattan', _feadFmt(m.armFromCoords, 2) + ' mm');
-
-  if(Number.isFinite(ac.deltaMm)){
-    h += satir('Kol boyu · girilen', _feadFmt(ac.entered, 2) + ' mm');
-    // 0.005 mm altındaki fark yuvarlanınca "−0.00" gibi görünüyordu; iki
-    // basamakta ayırt edilemeyen bir sapmayı eksi işaretiyle göstermek
-    // "tutuyor" satırıyla çelişiyor.
-    var d = (Math.abs(ac.deltaMm) < 0.005) ? 0 : ac.deltaMm;
-    h += satir(ac.ok ? '↳ fark — tutuyor' : '↳ fark — TUTMUYOR',
-      (d >= 0 ? '+' : '') + _feadFmt(d, 2) + ' mm',
-      ac.ok ? 'var(--accent-success)' : 'var(--accent-danger)');
-  } else {
-    h += satir('Kol boyu · girilen', '— (girilmedi)', 'var(--accent-warning)');
-  }
-
-  if(Number.isFinite(m.relMeanDeg)){
-    h += satir('Yay kurulması (Mean−Pre)/Rate', _feadFmt(m.relMeanDeg, 2) + '°');
-    h += satir('Serbest kol açısı (türetildi)',
-      _feadFmt(veFeadFreeAngleFrom(m, 1), 2) + '° / ' + _feadFmt(veFeadFreeAngleFrom(m, -1), 2) + '°',
-      'var(--accent-primary)');
-  } else {
-    h += satir('Yay kurulması', '— (çalışma momenti girilmedi)', 'var(--accent-warning)');
-  }
-  // PİM MONTAJ KİPİNDE DE OKUNUR: kol çalışma açısı burada da bir ÇIKTI
-  // (montajDeg = pivot → girilen merkez), yani "gövdeyi bu saate kuran pim
-  // nerede" sorusu aynen geçerli. Aynı üreticiden besleniyor.
-  var _pinM = (typeof veFeadPinPlan === 'function')
-    ? veFeadPinPlan(td, m.montajDeg) : null;
-  h += veFeadPinRows(_pinM, satir);
-  h += '</div>';
-
-  var not = _feadHint('Serbest açı iki değerle gösterilir çünkü kolun dönüş yönüne (sense) '
-    + 'bağlıdır; hangisinin kullanıldığını çekirdek geometriden bulur ve Çözücü panelindeki '
-    + '"Algılanan Model" tablosunda yazar.');
-  not += veFeadPinNote(_pinM);
-  if(m.notes.length)
-    not += _feadHint('<b style="color:var(--accent-warning);">' + _feadEsc(m.notes.join(' ')) + '</b>');
-  return h + not;
-}
 
 // ════════════════════════════════════════════════════════════════════════════
 //  KAYIŞ ÖZELLİKLERİ PANELİ (iç topolojide tek kopya)
@@ -1775,8 +1652,7 @@ function getFeadBeltPropertiesHTML(node){
 
   // ── KAYIŞ TİPİNE BAĞLI ÇIKTILAR ANAHTARI ────────────────────────────────
   var _bdm = (typeof veFeadBeltDataMode === 'function')
-    ? veFeadBeltDataMode(node.data, (typeof veFeadBeltModeLocked === 'function'
-        && veFeadBeltModeLocked()) ? 'envelope' : 'mount') : 'full';
+    ? veFeadBeltDataMode(node.data) : 'none';
   var _kapali = (_bdm === 'none');
   html += _feadCard('Kayış Tipine Bağlı Çıktılar',
       _kapali ? 'KAPALI' : 'açık',
@@ -3483,14 +3359,13 @@ function veFeadModelTable(build){
   // TÜRETİLEN GERGİ AÇISI burada görünür: kullanıcı montaj merkezi girdi, hesaba
   // giren serbest açı bu. Görünmezse "hangi sayı kullanıldı" sorusu panelde
   // cevapsız kalırdı — bu modülde en pahalı sessizlik tam olarak orada.
-  if(build.angleMode === 'mount' && build.mount && build.mount.ok){
-    h += satir('Gergi kol açısı', 'montaj merkezinden türetildi', true);
+  if(Number.isFinite(build.armAbsDeg)){
+    h += satir('Gergi kol açısı', _feadFmt(build.armAbsDeg, 2) + '° · '
+      + (build.armPinned ? 'sabitlendi' : 'montaj zarfından seçildi'), true);
     if(Number.isFinite(build.freeAngleDeg))
       h += satir('↳ serbest açı (hesaba giren)', _feadFmt(build.freeAngleDeg, 2) + '°', true);
     if(build.ok && build.sys)
       h += satir('↳ dönüş yönü (sense)', (build.sys.tensioner.sense > 0 ? '+1' : '−1'), true);
-  } else if(build.angleMode === 'direct'){
-    h += satir('Gergi kol açısı', 'elle girildi (serbest açı)', true);
   }
   if(build.drive)
     h += satir('Tahrik oranı', _feadFmt(build.drive.ratio, 4)
@@ -3604,7 +3479,7 @@ function getFeadExamplePropertiesHTML(node){
       + _feadEsc(ex.note) + '</div>'
       + '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.6; margin-bottom:10px;">'
       + '• kasnak koordinatları + çaplar + temas tarafı<br>'
-      + '• gergi: pivot, kol boyu, montaj merkezi, yay künyesi<br>'
+      + '• gergi: montaj konumu, kol boyu, yay künyesi<br>'
       + '• ' + kayis + '<br>'
       + '• ' + (egri ? egri + ' aksesuarın devir → kW eğrisi'
                      : dutyKw + ' aksesuarın kW\'ı duty satırında') + '<br>'
@@ -4280,7 +4155,6 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadFatigueTable: veFeadFatigueTable, veFeadLifeCard: veFeadLifeCard,
     veFeadTorsionalCard: veFeadTorsionalCard,
     veFeadDriveCard: veFeadDriveCard, veFeadEngineCard: veFeadEngineCard,
-    veFeadMountReadout: veFeadMountReadout,
     veFeadPowerCurveCard: veFeadPowerCurveCard,
     veFeadCurveAdd: veFeadCurveAdd, veFeadCurveRemove: veFeadCurveRemove,
     veFeadCurveSet: veFeadCurveSet, veFeadLoadExample: veFeadLoadExample,

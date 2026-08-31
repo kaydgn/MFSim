@@ -171,16 +171,22 @@ describe('durum → düğüm çevirisi: örnekleri BİREBİR geri üretiyor', ()
 
   test('AG00976 — kanonik çıpalar (Gates raporunun kendi sayıları)', () => {
     const { sb } = cift('AG00976_GATES_2025');
-    expect(sb.beltLengthMm).toBeCloseTo(1714.6, 3);
-    expect(sb.springTensionN).toBeCloseTo(544.05, 1);
-    expect(sb.relDeg).toBeCloseTo(28.075, 2);
+    // TEK KOORDİNATA GEÇİŞTEN SONRAKİ TABAN. Kayış boyu artık bir ÇIKTI:
+    // eski değer 1714,6 mm bir GİRDİYDİ ve kolu nominalin 0,0125° ötesine
+    // itiyordu. Ölçülen fark T'de −%0,036.
+    expect(sb.beltLengthMm).toBeCloseTo(1714.609, 2);
+    expect(sb.springTensionN).toBeCloseTo(543.853, 1);
+    expect(sb.relDeg).toBeCloseTo(28.0625, 3);
   });
 
   test('BMC — kanonik taban (CLAUDE.md kaydı)', () => {
     const { sb } = cift('BMC_FEAD_2026');
-    expect(sb.relDeg).toBeCloseTo(28.4271, 3);
-    expect(sb.beltLengthMm).toBeCloseTo(1715.0, 3);
-    expect(sb.springTensionN).toBeCloseTo(532.142, 2);
+    // BMC'nin "1715" boyu YUVARLANMIŞ bir katalog adıydı ve girdi olarak
+    // kolu nominalin 0,36° ötesine itiyordu; boy çıktı olunca kol nominalinde
+    // duruyor. Ölçülen fark −%1,24.
+    expect(sb.relDeg).toBeCloseTo(28.0625, 3);
+    expect(sb.beltLengthMm).toBeCloseTo(1715.266, 2);
+    expect(sb.springTensionN).toBeCloseTo(525.56, 1);
   });
 
   test('duty kW ANAHTARDAN KİMLİĞE çevriliyor — ve çevrilmezse sonuç DEĞİŞİYOR', () => {
@@ -214,47 +220,38 @@ describe('durum → düğüm çevirisi: örnekleri BİREBİR geri üretiyor', ()
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('kipe göre hangi alan taşınır', () => {
-  const durum = (mod) => {
+  const durum = () => {
     kabuk();
     wiz.veFeadWizSeed('AG00976_GATES_2025');
-    const st = wiz.veFeadWizState();
-    st.tenMode = mod;
-    return st;
+    return wiz.veFeadWizState();
   };
   const gergi = (st) => wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-tensioner');
 
-  test('zarf kipinde montaj merkezi TAŞINMAZ', () => {
-    // Taşınsaydı köprü "iki koordinat da var" uyarısını basar ve kullanıcı
-    // GİRMEDİĞİ bir alandan uyarı alırdı (zarf kipi yalnız pivotu kullanıyor).
-    const st = durum('envelope');
-    const t = gergi(st);
-    expect(t.data.angleMode).toBe('envelope');
+  test('sihirbaz TEK koordinat taşır — kasnak merkezi ve kip alanı YOK', () => {
+    const t = gergi(durum());
     expect(t.data.pivotX).toBeCloseTo(-250, 6);
-    expect(t.data.cenX).toBeUndefined();
-    expect(t.data.cenY).toBeUndefined();
+    expect(t.data.pivotY).toBeCloseTo(110, 6);
+    ['cenX', 'cenY', 'angleMode', 'freeAngleDeg', 'verifyCenX', 'verifyCenY']
+      .forEach((k) => expect(t.data[k]).toBeUndefined());
   });
 
-  test('mount kipinde montaj merkezi TAŞINIR', () => {
-    const t = gergi(durum('mount'));
-    expect(t.data.angleMode).toBe('mount');
-    expect(t.data.cenX).toBeCloseTo(-161.97, 6);
-  });
-
-  test('kip AÇIKÇA yazılıyor — veriden çözülmesine bırakılmıyor', () => {
-    // Yarım doldurulmuş bir formda kip, kullanıcının seçtiğinden BAŞKA
-    // çıkabilirdi (veFeadAngleMode veriden çözüyor).
+  test('sihirbazda KİP SORUSU YOK — ikilik ön kapıda da kapalı', () => {
     kabuk();
     wiz.veFeadWizSeed('AG00976_GATES_2025');
+    // Kapı ÜRETİLEN YÜZEYE bakıyor: sihirbazın her adımının HTML'i taranıyor.
     const st = wiz.veFeadWizState();
-    st.tenMode = 'direct';
-    st.ten.freeAngleDeg = 16.1;
-    const t = gergi(st);
-    expect(t.data.angleMode).toBe('direct');
-    expect(M.veFeadAngleMode(t.data)).toBe('direct');
+    const b = wiz.veFeadWizBuild();
+    const hepsi = wiz.VE_FW_STEPS.map((_, i) => wiz.veFeadWizStepHTML(i, b)).join('');
+    expect(hepsi).not.toMatch(/Gergiyi nasıl tanımlayacaksınız/);
+    expect(hepsi).not.toMatch(/tenMode/);
+    // ve gergi adımı TEK koordinat soruyor
+    expect(hepsi).toMatch(/Otomatik Gergi Montaj Konumu/);
+    expect(hepsi).not.toMatch(/ten\.cenX|ten\.freeAngleDeg/);
+    expect(st).toBeTruthy();
   });
 
   test('zarf kipinde kayış BOY KİPİ yazılmaz (yapısal olarak çıktı)', () => {
-    const st = durum('envelope');
+    const st = durum();
     st.belt.lengthMode = 'fixed';           // kullanıcı ısrar etse bile
     const b = wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-belt');
     expect(b.data.lengthMode).toBeUndefined();
@@ -576,34 +573,34 @@ describe('gergi satırı — Kasnaklar tablosunda, silinemez, tek kaynak', () =>
     expect(r).toMatch(/class="ve-fw-x" disabled/);
   });
 
-  test('X/Y KİPE GÖRE başka alana yazar ve satır bunu ADIYLA söyler', () => {
-    // Bu modülün en pahalı sessiz hatası: kasnak merkezi ↔ pivot karışması
-    // (ölçüldü: gerginlik −%48,6, sarım en kötü +27,9°, model YİNE çözülür).
-    const st = kur('AG00976_GATES_2025');
-    st.tenMode = 'mount';
-    expect(wiz.veFeadWizTenCoordKeys(st)).toEqual(['cenX', 'cenY']);
-    let r = tenSatiri(kasnakHTML());
-    expect(r).toContain("veFeadWizTenSet('cenX'");
-    expect(r).toMatch(/X\/Y = montaj merkezi/);
-
-    st.tenMode = 'envelope';
-    expect(wiz.veFeadWizTenCoordKeys(st)).toEqual(['pivotX', 'pivotY']);
-    r = tenSatiri(kasnakHTML());
+  test('X/Y KASNAK MERKEZİ DEĞİL montaj noktası — satır bunu ADIYLA söylüyor', () => {
+    // Bu modülün en pahalı sessiz hatası: kasnak merkezi ↔ montaj noktası
+    // karışması (ölçüldü: gerginlik −%48,6, sarım en kötü +27,9°, model YİNE
+    // çözülür ve uyarı çıkmaz). Diğer beş satırın X/Y'si kasnak merkezi
+    // olduğu için gergi satırı farkı SÖYLEMEK zorunda.
+    kur('AG00976_GATES_2025');
+    expect(wiz.veFeadWizTenCoordKeys()).toEqual(['pivotX', 'pivotY']);
+    const r = tenSatiri(kasnakHTML());
     expect(r).toContain("veFeadWizTenSet('pivotX'");
-    expect(r).toMatch(/X\/Y = pivot/);
+    expect(r).toContain("veFeadWizTenSet('pivotY'");
+    expect(r).toMatch(/X\/Y = montaj noktası/);
+    // ...ve kasnak merkezi alanına ASLA yazmıyor: montaj konumu TEK girdidir,
+    // merkez ondan türer. Satırın merkeze yazması, kullanıcının girdiği sayıyı
+    // 90 mm ötedeki bir noktaya koymak olurdu.
+    expect(r).not.toContain("veFeadWizTenSet('cenX'");
+    expect(r).not.toContain("veFeadWizTenSet('cenY'");
   });
 
   test('tablodan yazılan değer GERGİ ADIMINDA görünür — tek kayıt', () => {
     // İki yüzey ikinci bir durum kopyası tutsaydı biri ötekini sessizce
     // eskitirdi ("panel ile kart AYNI alanı okur").
     const st = kur('AG00976_GATES_2025');
-    st.tenMode = 'mount';
-    wiz.veFeadWizTenSet('cenX', -165.5);
-    expect(st.ten.cenX).toBe(-165.5);
-    expect(wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild())).toContain('-165.5');
+    wiz.veFeadWizTenSet('pivotX', -248.5);
+    expect(st.ten.pivotX).toBe(-248.5);
+    expect(wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild())).toContain('-248.5');
     // ve çözüme de gidiyor
     const t = wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-tensioner');
-    expect(t.data.cenX).toBe(-165.5);
+    expect(t.data.pivotX).toBe(-248.5);
   });
 
   test('gergi st.pulleys dizisine GİRMEZ — duty sütunu açılmaz, sürücü olamaz', () => {
@@ -620,12 +617,16 @@ describe('gergi satırı — Kasnaklar tablosunda, silinemez, tek kaynak', () =>
 
   test('gergi künyesi TABLODAN seçilebiliyor ve alanları dolduruyor', () => {
     const st = kur('BMC_FEAD_2026');
+    const oncePivotX = st.ten.pivotX, oncePivotY = st.ten.pivotY;
     wiz.veFeadWizTenLib('AG0868-4PK');
     expect(st.ten.tenLib).toBe('AG0868-4PK');
     expect(st.ten.armLen).toBe(90);
     expect(st.ten.meanLoad).toBeCloseTo(16.07, 3);
-    // Künye MOTORUN verisini yazmaz: pivot ve kol açısı elde kalır.
-    expect(st.ten.pivotX).toBeUndefined();
+    // Künye MOTORUN verisini yazmaz: montaj konumu ve kol açısı DEĞİŞMEDEN
+    // kalır (kütüphane bir katalogdur; bir katalogun koordinatını kullanıcının
+    // motoruna uygulamak sessizce başka bir sistemi anlatmak olurdu).
+    expect(st.ten.pivotX).toBe(oncePivotX);
+    expect(st.ten.pivotY).toBe(oncePivotY);
   });
 });
 
