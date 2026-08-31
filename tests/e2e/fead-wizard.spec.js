@@ -83,8 +83,10 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     expect(metin).toMatch(/N/);           // gerginlik
     expect(metin).toMatch(/CCW|CW/);      // dönüş yönü
 
-    // Adım rayında artık hata rozeti YOK (örnek eksiksiz).
-    await expect(page.locator('#ve-fw-nav .ve-fw-step-n')).toHaveCount(0);
+    // Adım rayında artık KIRMIZI adım yok (örnek eksiksiz). Rozet HER adımda
+    // duruyor — tamamlanmışta ✓ — yani ölçüt rozetin varlığı değil DURUMU.
+    await expect(page.locator('#ve-fw-nav .ve-fw-st-err')).toHaveCount(0);
+    await expect(page.locator('#ve-fw-nav .ve-fw-st-ok')).toHaveCount(7);
   });
 
   test('gerçek klavye girişi: değer modele işliyor ve ODAK alanda kalıyor', async ({ page }) => {
@@ -183,6 +185,88 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     expect(hatalar).toEqual([]);
   });
 
+  test('gergi satırı Kasnaklar tablosunda — silinemez ve odak DÜŞMÜYOR', async ({ page }) => {
+    // Mevcut odak kapısı bir KASNAK satırını ölçüyor; gergi satırı ayrı bir
+    // kod yolu (veFeadWizTenSet) ve tam yeniden çizim tetiklerse orada odak
+    // düşerdi — bu regresyon kasnak satırından GÖRÜNMEZ.
+    await bootApp(page);
+    await openFead(page);
+    await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
+    await page.locator('#ve-fw-body .ve-fw-btn-wide').first().click();
+    await page.locator('#ve-fw-nav .ve-fw-step').nth(1).click();
+
+    const ten = page.locator('#ve-fw-body tr.ve-fw-tr-ten');
+    await expect(ten).toHaveCount(1);
+    await expect(ten.locator('button.ve-fw-x')).toBeDisabled();
+    await expect(ten.locator('input[type="radio"]')).toBeDisabled();
+
+    // X hücresine gerçek klavyeyle yaz — değer modele işlemeli, odak kalmalı.
+    const x = ten.locator('input[type="number"]').nth(1);
+    await x.click();
+    await x.fill('-168.4');
+    await page.waitForTimeout(450);
+    const odak = await page.evaluate(() => document.activeElement && document.activeElement.value);
+    expect(odak).toBe('-168.4');
+    const st = await page.evaluate(() => {
+      const s = veFeadWizState();
+      const k = veFeadWizTenCoordKeys(s);
+      return { mod: s.tenMode, deger: s.ten[k[0]], anahtar: k[0] };
+    });
+    expect(String(st.deger)).toBe('-168.4');
+
+    // Aynı değer 4. adımın ALANINDA da duruyor (tek kayıt, iki yüzey).
+    // toContainText KULLANILMAZ: input DEĞERİ metin içeriği değildir, o kapı
+    // kod doğruyken bile kırmızı verir.
+    await page.locator('#ve-fw-nav .ve-fw-step').nth(3).click();
+    const dortAdim = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('#ve-fw-body input'))
+        .map((i) => i.value).filter((v) => v === '-168.4').length);
+    expect(dortAdim).toBeGreaterThan(0);
+  });
+
+  test('aksesuar modeli açılır pencereden seçilir, kW elle GİRİLMEZ', async ({ page }) => {
+    await bootApp(page);
+    await openFead(page);
+    await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
+    // AG00976: gücü duty kW'da duran örnek (aksesuarların eğrisi yok)
+    await page.locator('#ve-fw-body .ve-fw-btn-wide').nth(1).click();
+    await page.locator('#ve-fw-nav .ve-fw-step').nth(5).click();
+
+    await expect(page.locator('#ve-fw-body')).toContainText('Aksesuar Modelleri');
+    // Duty tablosunda kW artık GİRDİ değil
+    const kwInput = await page.evaluate(() =>
+      document.querySelectorAll('#ve-fw-body [oninput*="veFeadWizDutyKw"]').length);
+    expect(kwInput).toBe(0);
+
+    const sec = page.locator('#ve-fw-body select[onchange*="veFeadWizAccPreset"]');
+    expect(await sec.count()).toBeGreaterThanOrEqual(1);
+    const once = await page.evaluate(() => {
+      const s = veFeadWizState();
+      const alt = s.pulleys.find((p) => p.type === 'fead-alternator');
+      return { kayit: s.solver.duty[0].kw[alt.key], preset: alt.accPreset };
+    });
+    expect(once.preset).toBeUndefined();
+    expect(once.kayit).toBeGreaterThan(0);
+
+    // Alternatör modelini seç → kayıtlı kW temizlenir, katalog devreye girer
+    const altSec = page.locator('#ve-fw-body tr', { hasText: 'Alternatör' })
+      .locator('select[onchange*="veFeadWizAccPreset"]').first();
+    await altSec.selectOption({ index: 1 });
+    await page.waitForTimeout(400);
+    const sonra = await page.evaluate(() => {
+      const s = veFeadWizState();
+      const alt = s.pulleys.find((p) => p.type === 'fead-alternator');
+      const b = veFeadWizBuild();
+      return { kayit: s.solver.duty[0].kw[alt.key], preset: alt.accPreset,
+               dugum: veFeadWizNodes(s).nodes.find((n) => n.id === 'wz-' + alt.key).data.accPreset,
+               ok: b.ok };
+    });
+    expect(sonra.preset).toBeTruthy();
+    expect(sonra.kayit).toBeUndefined();      // kayıtlı kW temizlendi
+    expect(sonra.dugum).toBe(sonra.preset);   // çözüme gidiyor
+    expect(sonra.ok).toBe(true);
+  });
+
   test('yerleşim: modal ekrana sığıyor, gövde yatay KAYDIRMIYOR', async ({ page }) => {
     await bootApp(page);
     await openFead(page);
@@ -213,5 +297,79 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
       return b.scrollWidth - b.clientWidth;
     });
     expect(t2).toBeLessThanOrEqual(1);
+  });
+
+  // ── KOZMETİK TUR (kullanıcı bildirimi, 2026-08-31) ──────────────────────
+  //
+  // İkisi de yalnız GERÇEK TARAYICIDA ölçülebilir: hesaplanmış yükseklik ve
+  // hesaplanmış renk Node'da YOKTUR. Birim kapıları CSS kuralının metnine
+  // bakabiliyor, sonucuna bakamıyor.
+  test('alt çubuk modalın KENDİ başlığından kalın değil', async ({ page }) => {
+    // *"Yeşil ile çizdiğim yer çok geniş olmuş. Butonlar falan da çok geniş."*
+    // ÖLÇÜLDÜ (öncesi): çubuk 48 px, başlık 39 px — 9 px kalın.
+    await bootApp(page);
+    await openFead(page);
+    await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
+    await page.evaluate(() => { veFeadWizSeed('AG00976_GATES_2025'); veFeadWizGoto(6); });
+
+    const m = await page.evaluate(() => ({
+      foot: document.getElementById('ve-fw-foot').getBoundingClientRect().height,
+      head: document.querySelector('#ve-feadwiz-overlay .ve-settings-header').getBoundingClientRect().height,
+      btn: [...document.querySelectorAll('#ve-fw-foot button')]
+        .map((b) => b.getBoundingClientRect().height),
+    }));
+    // Çubuk başlıkla AYNI bantta (kenarlık payı 2 px).
+    expect(Math.abs(m.foot - m.head)).toBeLessThanOrEqual(2);
+    expect(m.btn.length).toBe(3);
+    m.btn.forEach((h) => {
+      expect(h).toBeLessThanOrEqual(26);   // eskiden 29
+      expect(h).toBeGreaterThanOrEqual(20); // tıklanabilirlik tabanı
+    });
+  });
+
+  test('adım rayı ÜÇ durumu da gerçekten yakıyor — renkle', async ({ page }) => {
+    // *"eksik girdi olduğunda kırmızı, girdiler tam olduğunda belirgin yeşil."*
+    // Kapı sınıf ADINA değil HESAPLANMIŞ RENGE bakıyor: sınıf basılıp CSS
+    // kuralı düşse ray yine sessiz kalırdı (ölçüldü: st-ok kuralını silen
+    // mutasyon yalnız buradan görünür).
+    await bootApp(page);
+    await openFead(page);
+    await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
+
+    const oku = () => [...document.querySelectorAll('#ve-fw-nav .ve-fw-step')].map((li) => {
+      const n = li.querySelector('.ve-fw-step-n');
+      return { durum: (li.className.match(/ve-fw-st-(\w+)/) || [])[1] || null,
+               rozet: n ? n.textContent : null,
+               serit: getComputedStyle(li).borderLeftColor,
+               zemin: n ? getComputedStyle(n).backgroundColor : null };
+    });
+
+    // BOŞ sihirbaz: eksik adımlar KIRMIZI ve sayı taşıyor.
+    const bos = await page.evaluate(oku);
+    expect(bos.length).toBe(7);
+    const kirmizi = bos.filter((r) => r.durum === 'err');
+    expect(kirmizi.length).toBeGreaterThan(0);
+    kirmizi.forEach((r) => {
+      expect(r.serit).toBe(r.zemin);              // şerit ve rozet AYNI renkte
+      expect(Number(r.rozet)).toBeGreaterThan(0); // sayı, ✓ değil
+    });
+    // ...ve renk gerçekten kırmızı ailesinden (R baskın).
+    const rgb = (c) => c.match(/\d+/g).map(Number);
+    const [kr, kg] = rgb(kirmizi[0].zemin);
+    expect(kr).toBeGreaterThan(kg + 60);
+
+    // DOLU örnek: yedisi de YEŞİL ve ✓ taşıyor.
+    await page.evaluate(() => veFeadWizSeed('AG00976_GATES_2025'));
+    const dolu = await page.evaluate(oku);
+    expect(dolu.every((r) => r.durum === 'ok')).toBe(true);
+    expect(dolu.every((r) => r.rozet === '✓')).toBe(true);
+    const [yr, yg] = rgb(dolu[0].zemin);
+    expect(yg).toBeGreaterThan(yr + 60);          // yeşil ailesi
+
+    // ARADA: bir kasnağın çapı silinince O ADIM ayrışıyor, kalanlar yeşil kalır.
+    await page.evaluate(() => { veFeadWizState().pulleys[2].od = ''; veFeadWizRender(); });
+    const eksik = await page.evaluate(oku);
+    expect(eksik[1].durum).not.toBe('ok');
+    expect(eksik.filter((r) => r.durum === 'ok').length).toBe(6);
   });
 });

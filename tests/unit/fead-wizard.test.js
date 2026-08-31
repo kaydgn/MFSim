@@ -31,6 +31,18 @@ eval(loadSource('components.js'));
 // Yazılmazsa hata ReferenceError olur — sessiz değil ama kurulum hatası.
 global.componentDefs = componentDefs;
 global.VE_MODULES = VE_MODULES;
+// Aksesuar katalogları (Araç Performans modülüyle ORTAK kaynak) — sihirbazın
+// "Aksesuar Modelleri" kartı bunları okuyor. Yüklenmezse kart "katalog yok"
+// der ve preset kapıları DOĞRU SEBEPTEN DEĞİL, kütüphane eksik olduğu için
+// geçerdi.
+eval(loadSource('cp-accessories.js'));
+global.VE_ALTERNATOR_PRESETS = VE_ALTERNATOR_PRESETS;
+global.VE_AC_PRESETS = VE_AC_PRESETS;
+global.VE_AIRCOMP_PRESETS = VE_AIRCOMP_PRESETS;
+// Eğri ara değerleyicisi de GLOBAL olmalı: veFeadAutoKw (require ile yüklenen
+// fead-model.js) onu global'de arıyor. Yayınlanmazsa katalogdan güç HİÇ
+// gelmez ve preset kapıları "0 kW" ile yanlış sebepten geçerdi.
+global.veAccInterpCurve = veAccInterpCurve;
 const BELTS = require('../../js/fead-belts.js');
 const TENS = require('../../js/fead-tensioners.js');
 Object.keys(BELTS).forEach((k) => { global[k] = BELTS[k]; });
@@ -478,6 +490,97 @@ describe('adım eşlemesi ve yüzeyler', () => {
     expect(kasnakHata).toBeGreaterThan(0);
   });
 
+  // ── ADIM RAYI ÜÇ DURUM YAKIYOR (kullanıcı isteği, 2026-08-31) ────────────
+  //
+  // *"eksik girdi olduğunda kırmızı, girdiler tam olduğunda belirgin yeşil…
+  // kullanıcı yeteri kadar bilgilenemiyor."* — eski rayda tek işaret hata
+  // rozetiydi, yani "sorun yok" ile "buraya hiç bakılmadı" AYIRT EDİLEMİYORDU.
+  describe('adım rayı — üç durum', () => {
+    test('durum köprünün KENDİ listesinden türüyor, ikinci bir liste yok', () => {
+      kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+      const b = wiz.veFeadWizBuild();
+      for (let i = 0; i < wiz.VE_FW_STEPS.length; i++) {
+        const d = wiz.veFeadWizStepState(b, i);
+        const l = wiz.veFeadWizIssues(b, i);
+        expect(d.err).toBe(l.filter((x) => x.tur === 'err').length);
+        expect(d.warn).toBe(l.filter((x) => x.tur === 'warn').length);
+        expect(d.durum).toBe(d.err ? 'err' : (d.warn ? 'warn' : 'ok'));
+      }
+    });
+
+    test('ÜÇ durum da var ve hata UYARIYI bastırır', () => {
+      // İkiye indirilseydi: uyarıyı yeşile katmak "her şey tamam" demek,
+      // kırmızıya katmak çözülen bir modeli bozuk göstermek olurdu.
+      expect(wiz.veFeadWizStepState({ errors: [], warnings: [] }, undefined).durum).toBe('ok');
+      const sadeceUyari = wiz.veFeadWizStepState(
+        { errors: [], warnings: ['Gergi kol boyu girilmedi.'] }, undefined);
+      expect(sadeceUyari.durum).toBe('warn');
+      const ikisi = wiz.veFeadWizStepState(
+        { errors: ['Gergi kol boyu girilmedi.'], warnings: ['Gergi kol boyu girilmedi.'] }, undefined);
+      expect(ikisi.durum).toBe('err');
+    });
+
+    test('BOŞ sihirbazda kırmızı, DOLU örnekte yeşil — ray gerçekten yanıyor', () => {
+      kabuk(); wiz.veFeadWizReset();
+      const bos = wiz.veFeadWizNavHTML(wiz.veFeadWizBuild());
+      expect(bos).toContain('ve-fw-st-err');
+
+      kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+      const dolu = wiz.veFeadWizNavHTML(wiz.veFeadWizBuild());
+      expect(dolu).toContain('ve-fw-st-ok');
+      expect(dolu).not.toContain('ve-fw-st-err');
+      // ...ve TAMAMLANMIŞ adım da rozet taşıyor (✓). Yalnız hata varken
+      // çizilseydi "tamam" hâli sessiz kalırdı — bildirilen eksiklik buydu.
+      expect(dolu).toContain('>✓</span>');
+    });
+
+    test('YEDİ adımın yedisi de durum sınıfı taşıyor — sessiz adım yok', () => {
+      kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
+      const nav = wiz.veFeadWizNavHTML(wiz.veFeadWizBuild());
+      expect((nav.match(/ve-fw-st-(ok|warn|err)/g) || []).length).toBe(wiz.VE_FW_STEPS.length);
+      // `ve-fw-step-n"` — sondaki tırnak ŞART: tırnaksız kalıp numara
+      // dairesini (`ve-fw-step-no`) de sayar ve kapı 14 görür.
+      expect((nav.match(/class="ve-fw-step-n"/g) || []).length).toBe(wiz.VE_FW_STEPS.length);
+    });
+
+    test('DURUM ile ODAK ayrı kanallar — seçili adımın durumu kaybolmuyor', () => {
+      // Tek kanala bindirilseydi (eski `.done` gibi) kullanıcının en çok
+      // baktığı adımın durumu tam da orada görünmezdi.
+      kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+      wiz.veFeadWizGoto(0);
+      const nav = wiz.veFeadWizNavHTML(wiz.veFeadWizBuild());
+      const ilk = nav.slice(nav.indexOf('<li'), nav.indexOf('</li>'));
+      expect(ilk).toContain(' on');
+      expect(ilk).toMatch(/ve-fw-st-(ok|warn|err)/);
+      // KONUMSAL "done" EMEKLİ: üstünden geçilmiş ama eksik bir adım yeşil
+      // halka gösteriyordu, yani ray YANLIŞ bilgi veriyordu.
+      expect(nav).not.toContain('ve-fw-step done');
+      ['.ve-fw-st-ok', '.ve-fw-st-warn', '.ve-fw-st-err'].forEach((c) => {
+        expect(CSS).toContain(c);
+      });
+    });
+  });
+
+  // ── ALT ÇUBUK MODALIN KENDİ BAŞLIĞIYLA AYNI ÖLÇÜDE ──────────────────────
+  //
+  // Kullanıcı bildirimi: *"çok geniş olmuş… butonlar falan da çok geniş
+  // duruyor."* ÖLÇÜLDÜ (gerçek tarayıcı): çubuk 48 px, aynı diyaloğun başlığı
+  // 39 px — alt çubuk kendi üst çubuğundan 9 px KALIN.
+  test('alt çubuk dolgusu modal başlığıyla aynı kaynaktan', () => {
+    const kural = (sec) => {
+      const i = CSS.indexOf(sec + '{');
+      return i < 0 ? '' : CSS.slice(i, CSS.indexOf('}', i));
+    };
+    const foot = kural('.ve-fw-foot');
+    const btn = kural('.ve-fw-btn');
+    // Dikey dolgu 8 px'i AŞMAMALI: aştığı anda çubuk başlığın üstüne çıkıyor.
+    const fpad = (foot.match(/padding:\s*(\d+)px/) || [])[1];
+    expect(Number(fpad)).toBeLessThanOrEqual(8);
+    const bpad = (btn.match(/padding:\s*(\d+)px\s+(\d+)px/) || []);
+    expect(Number(bpad[1])).toBeLessThanOrEqual(5);   // düğme yüksekliği
+    expect(Number(bpad[2])).toBeLessThanOrEqual(11);  // düğme genişliği
+  });
+
   test('panel: taslak varken künyeyi, yokken sebebi yazıyor', () => {
     const bosNode = { id: 'w1', type: 'fead-wizard', data: {} };
     const h1 = wiz.getFeadWizardPropertiesHTML(bosNode);
@@ -524,5 +627,299 @@ describe('adım eşlemesi ve yüzeyler', () => {
     wiz.veFeadWizPulleyAdd('fead-idler');
     const k = wiz.veFeadWizState().pulleys.map((p) => p.key);
     expect(new Set(k).size).toBe(3);
+  });
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  KULLANICI DÜZELTMELERİ (2026-08-31) — beş madde
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── 1 · GERGİ SATIRI "Kasnaklar" TABLOSUNDA ────────────────────────────────
+//
+// Kullanıcı isteği: *"'Kasnaklar' kısmında otomatik gergi eklenmiyor/
+// çıkarılmıyor. Kasnaklar kısmına otomatik olarak eklensin. Koordinatları
+// oraya el ile girelim, bu sayfadan gerginin tipini seçelim. Bu girdiler
+// sihirbazın 'Otomatik Gergi' sayfasına gitsin."*
+describe('gergi satırı — Kasnaklar tablosunda, silinemez, tek kaynak', () => {
+  const kur = (key) => { kabuk(); wiz.veFeadWizSeed(key); return wiz.veFeadWizState(); };
+  const kasnakHTML = () => wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
+  const tenSatiri = (h) => {
+    const i = h.indexOf('ve-fw-tr-ten');
+    return i < 0 ? '' : h.slice(i, h.indexOf('</tr>', i));
+  };
+
+  test('satır HER ZAMAN var — kasnak yokken bile', () => {
+    // Çekirdek tam bir gergi istiyor; gergi bir SEÇENEK değil modelin parçası.
+    kabuk(); wiz.veFeadWizReset();
+    expect(tenSatiri(kasnakHTML())).toContain('veFeadWizTenLib');
+    kur('AG00976_GATES_2025');
+    expect(tenSatiri(kasnakHTML())).toContain('veFeadWizTenLib');
+  });
+
+  test('silinemez ve SÜRÜCÜ OLAMAZ — iki düğme de devre dışı', () => {
+    kur('AG00976_GATES_2025');
+    const r = tenSatiri(kasnakHTML());
+    expect(r).toMatch(/<input type="radio" disabled/);
+    expect(r).toMatch(/class="ve-fw-x" disabled/);
+  });
+
+  test('X/Y KASNAK MERKEZİ DEĞİL montaj noktası — satır bunu ADIYLA söylüyor', () => {
+    // Bu modülün en pahalı sessiz hatası: kasnak merkezi ↔ montaj noktası
+    // karışması (ölçüldü: gerginlik −%48,6, sarım en kötü +27,9°, model YİNE
+    // çözülür ve uyarı çıkmaz). Diğer beş satırın X/Y'si kasnak merkezi
+    // olduğu için gergi satırı farkı SÖYLEMEK zorunda.
+    kur('AG00976_GATES_2025');
+    expect(wiz.veFeadWizTenCoordKeys()).toEqual(['pivotX', 'pivotY']);
+    const r = tenSatiri(kasnakHTML());
+    expect(r).toContain("veFeadWizTenSet('pivotX'");
+    expect(r).toContain("veFeadWizTenSet('pivotY'");
+    expect(r).toMatch(/X\/Y = montaj noktası/);
+    // ...ve kasnak merkezi alanına ASLA yazmıyor: montaj konumu TEK girdidir,
+    // merkez ondan türer. Satırın merkeze yazması, kullanıcının girdiği sayıyı
+    // 90 mm ötedeki bir noktaya koymak olurdu.
+    expect(r).not.toContain("veFeadWizTenSet('cenX'");
+    expect(r).not.toContain("veFeadWizTenSet('cenY'");
+  });
+
+  test('tablodan yazılan değer GERGİ ADIMINDA görünür — tek kayıt', () => {
+    // İki yüzey ikinci bir durum kopyası tutsaydı biri ötekini sessizce
+    // eskitirdi ("panel ile kart AYNI alanı okur").
+    const st = kur('AG00976_GATES_2025');
+    wiz.veFeadWizTenSet('pivotX', -248.5);
+    expect(st.ten.pivotX).toBe(-248.5);
+    expect(wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild())).toContain('-248.5');
+    // ve çözüme de gidiyor
+    const t = wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-tensioner');
+    expect(t.data.pivotX).toBe(-248.5);
+  });
+
+  test('gergi st.pulleys dizisine GİRMEZ — duty sütunu açılmaz, sürücü olamaz', () => {
+    // Diziye gerçek satır olarak konsaydı: (a) duty tablosunda gergiye kW
+    // sütunu açılır ve çekirdeğe güç yazılırdı, (b) sürücü radyosu onu
+    // seçebilirdi. İkisi de sessizce yanlış model üretir.
+    const st = kur('AG00976_GATES_2025');
+    expect(st.pulleys.some((p) => p.type === 'fead-tensioner')).toBe(false);
+    const h6 = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    expect(h6).not.toContain('Otomatik Gergi (E9843)<em>kW');
+    // sıra yine gergiyi taşıyor (kablolama)
+    expect(wiz.veFeadWizRoute(st)).toContain('__ten__');
+  });
+
+  test('gergi künyesi TABLODAN seçilebiliyor ve alanları dolduruyor', () => {
+    const st = kur('BMC_FEAD_2026');
+    const oncePivotX = st.ten.pivotX, oncePivotY = st.ten.pivotY;
+    wiz.veFeadWizTenLib('AG0868-4PK');
+    expect(st.ten.tenLib).toBe('AG0868-4PK');
+    expect(st.ten.armLen).toBe(90);
+    expect(st.ten.meanLoad).toBeCloseTo(16.07, 3);
+    // Künye MOTORUN verisini yazmaz: montaj konumu ve kol açısı DEĞİŞMEDEN
+    // kalır (kütüphane bir katalogdur; bir katalogun koordinatını kullanıcının
+    // motoruna uygulamak sessizce başka bir sistemi anlatmak olurdu).
+    expect(st.ten.pivotX).toBe(oncePivotX);
+    expect(st.ten.pivotY).toBe(oncePivotY);
+  });
+});
+
+// ── PARÇA KODU — künye uygulanınca taşınır, kodsuzda SİLİNİR ───────────────
+describe('gergi parça kodu (tenPart) — pim künyesinin anahtarı', () => {
+  test('kodlu künye: kod taşınır, düğüme gider, pim planı çözülür', () => {
+    kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
+    const st = wiz.veFeadWizState();
+    wiz.veFeadWizTenLib('AG0868-8PK');
+    expect(st.ten.tenPart).toBe('E9843');
+    expect(st.ten.inertia).toBeCloseTo(0.0009, 6);     // kasnak ataleti de gelir
+    const t = wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-tensioner');
+    expect(t.data.tenPart).toBe('E9843');
+    const b = wiz.veFeadWizBuild();
+    expect(b.pin && b.pin.ok).toBe(true);
+    expect(b.pin.angleDeg).toBeCloseTo(231.0, 1);      // E9843 çizimi: 231°
+  });
+
+  test('kodsuz künyeye geçince kod SİLİNİR — eski parçanın pimi kalmaz', () => {
+    kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
+    const st = wiz.veFeadWizState();
+    wiz.veFeadWizTenLib('AG0868-8PK');
+    expect(st.ten.tenPart).toBe('E9843');
+    wiz.veFeadWizTenLib('AG00976-1715');               // bu kayıtta part YOK
+    expect(st.ten.tenPart).toBeUndefined();
+    const t = wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-tensioner');
+    expect(t.data.tenPart).toBeUndefined();
+    const b = wiz.veFeadWizBuild();
+    expect(b.pin && b.pin.ok).toBe(false);
+    expect(String(b.pin.reason)).toMatch(/parça kodu yok/i);
+  });
+});
+
+// ── 2 · KÜNYE ETİKETİ: yalnız kol boyu + çalışma momenti ───────────────────
+describe('gergi künye etiketi — rapor adı YOK', () => {
+  const liste = () => TENS.veFeadTensionerList();
+
+  test('etiket kol boyu ve çalışma momentini yazar, rapor adını YAZMAZ', () => {
+    liste().forEach((r) => {
+      const et = TENS.veFeadTenLabel(r);
+      expect(et).toContain(String(r.armLen));
+      expect(et).toContain(r.meanNm.toFixed(2));
+      expect(et).not.toContain(r.src);
+      expect(et).not.toMatch(/AG0\d|Ten@|8PK1715HD/);
+    });
+  });
+
+  test('14 etiketin 14\'ü TEKİL — iki ondalık ZORUNLU', () => {
+    // ÖLÇÜLDÜ: bir ondalığa düşürülürse iki çakışma doğuyor
+    // (22,07↔22,15 ve 22,21↔22,20) ve kullanıcı hangi künyeyi seçtiğini
+    // bilemez — model yine çözülür, hata çıkmaz, yalnız künye başkasıdır.
+    const et = liste().map(TENS.veFeadTenLabel);
+    expect(new Set(et).size).toBe(et.length);
+    const tek = liste().map((r) => 'kol ' + r.armLen + ' mm · ' + r.meanNm.toFixed(1) + ' Nm');
+    expect(new Set(tek).size).toBeLessThan(tek.length);   // 1 ondalık ÇAKIŞIYOR
+    et.forEach((e) => expect(e).toMatch(/^kol \d+(\.\d+)? mm · \d+\.\d{2} Nm$/));
+  });
+
+  test('sayı UYDURULMAZ: eksik kayıtta NaN/undefined basılmaz', () => {
+    expect(TENS.veFeadTenLabel(null)).toBe('');
+    expect(TENS.veFeadTenLabel({ key: 'x' })).not.toMatch(/NaN|undefined/);
+  });
+
+  test('İKİ YÜZEY AYRIŞMAZ — sihirbaz ve panel aynı etiket kümesini basar', () => {
+    // Etiket bir dönem iki dosyada iki ayrı ifadeyle üretiliyordu ve ZATEN
+    // ayrışmıştı (biri birimleri yazıyor, öteki yazmıyordu). Tek üretici.
+    kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
+    const h = wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild());
+    const panel = fead.veFeadTensionerLibCard({ id: 'n1', data: {} });
+    const cek = (s) => (s.match(/>kol [^<]*<\/option>/g) || []).map((x) => x.slice(1, -10));
+    const a = cek(h), bb = cek(panel);
+    expect(a.length).toBe(14);
+    expect(new Set(a)).toEqual(new Set(bb));
+    // <option value> hâlâ ANAHTAR — etiket kimlik taşımıyor
+    expect(h).toContain('value="AG0868-8PK"');
+  });
+});
+
+// ── 3 · KATALOG ÖNERİSİ SİHİRBAZDAN KALKTI ─────────────────────────────────
+describe('kayış adımı — katalog önerisi yok, gereken boy okuması var', () => {
+  test('zarf kipinde katalog önerisi basılmaz ama gereken boy DURUR', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const st = wiz.veFeadWizState();
+    st.tenMode = 'envelope';
+    delete st.ten.cenX; delete st.ten.cenY; delete st.ten.armMeanDeg;
+    const b = wiz.veFeadWizBuild();
+    expect(b.ok).toBe(true);
+    const h = wiz.veFeadWizStepHTML(4, b);
+    expect(h).not.toMatch(/Katalog önerisi|ISO 9982 stok|Otomotiv ızgarası/);
+    expect(h).toMatch(/Gereken boy/);                 // bilgi kaybı YOK
+  });
+
+  test('PANELİN katalog kartı aynen duruyor — kaldırma yalnız sihirbazda', () => {
+    // Kullanıcı yalnız sihirbazdan kaldırılmasını istedi; panel tarafındaki
+    // katalog kartı (kayış seçme yüzeyi) bambaşka bir iş yapıyor: aday boyu
+    // çözüp kolun nereye oturacağını ve gerginliği veriyor.
+    //
+    // KAPI ÜRETİLEN YÜZEYE BAKAR, kaynak metnine değil — fonksiyonun VAR
+    // olması onun ÇAĞRILDIĞI anlamına gelmiyor (ölçüldü: bugün panelden
+    // çağrıldığını tutan başka hiçbir test yok).
+    const h = fead.getFeadBeltPropertiesHTML({
+      id: 'b1', type: 'fead-belt',
+      data: { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1715, lengthMode: 'fixed' }
+    });
+    // Kart künyesi ÇÖZÜMDEN BAĞIMSIZ basılıyor (aday listesi çözüm ister,
+    // başlık istemez) — kapı bu yüzden başlığa bakıyor.
+    expect(h).toContain('ISO 9982');
+    expect(h).toContain('Katalog');
+  });
+});
+
+// ── 4 · AKSESUAR GÜCÜ: model seçilir, değer OTOMATİK gelir ─────────────────
+describe('aksesuar modelleri — elle kW girişi YOK', () => {
+  const kur = (key) => { kabuk(); wiz.veFeadWizSeed(key); return wiz.veFeadWizState(); };
+
+  test('duty tablosunda kW GİRDİSİ yok, salt okunur değer var', () => {
+    kur('AG00976_GATES_2025');
+    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    expect(h).not.toContain('veFeadWizDutyKw(');       // elle giriş kalktı
+    expect(h).toContain('ve-fw-ro');                   // okuma hücresi
+    expect(h).toContain('Aksesuar Modelleri');
+  });
+
+  test('katalogu olan aksesuarda açılır pencere, olmayanda "katalog yok"', () => {
+    const st = kur('AG00976_GATES_2025');
+    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    // ALT ve KK katalogu var (Araç Performans ile ORTAK kaynak)
+    expect((h.match(/veFeadWizAccPreset/g) || []).length).toBe(2);
+    expect(h).toContain('katalog yok');                // avaralar
+    expect(st.pulleys.filter((p) => veFeadPresetLib(p.type)).length).toBe(2);
+  });
+
+  test('model seçimi KAYITLI kW\'ı TEMİZLER — yoksa eski sayı kataloğu sessizce ezer', () => {
+    // veFeadDutyToCore'un öncelik sırası: açıkça yazılı kW > kendi eğrisi >
+    // katalog. Temizlenmezse kullanıcı model seçer, tablo değişmez, sebebi
+    // görünmez.
+    const st = kur('AG00976_GATES_2025');
+    const alt = st.pulleys.find((p) => p.type === 'fead-alternator');
+    expect(st.solver.duty[0].kw[alt.key]).toBeCloseTo(3.61, 2);
+    wiz.veFeadWizAccPreset(alt.key, 'tepas_350a');
+    expect(alt.accPreset).toBe('tepas_350a');
+    st.solver.duty.forEach((r) => expect(r.kw[alt.key]).toBeUndefined());
+  });
+
+  test('seçilen model DÜĞÜME gider ve kW\'ı gerçekten değiştirir', () => {
+    const st = kur('AG00976_GATES_2025');
+    const alt = st.pulleys.find((p) => p.type === 'fead-alternator');
+    const b0 = wiz.veFeadWizBuild();
+    const kw0 = wiz._fwKwEff(b0, st, 0, alt).kw;
+    wiz.veFeadWizAccPreset(alt.key, 'tepas_350a');
+    const b1 = wiz.veFeadWizBuild();
+    const t = wiz.veFeadWizNodes(st).nodes.find((n) => n.id === 'wz-' + alt.key);
+    expect(t.data.accPreset).toBe('tepas_350a');
+    const kw1 = wiz._fwKwEff(b1, st, 0, alt).kw;
+    expect(kw1).not.toBeCloseTo(kw0, 3);               // katalog gerçekten devrede
+    expect(kw1).toBeGreaterThan(0);
+  });
+
+  test('kW KAYNAĞI doğru sırayla çözülür (köprünün sırasının aynısı)', () => {
+    const st = kur('BMC_FEAD_2026');                   // aksesuarların KENDİ eğrisi var
+    const b = wiz.veFeadWizBuild();
+    const alt = st.pulleys.find((p) => p.type === 'fead-alternator');
+    expect(wiz._fwKwEff(b, st, 0, alt).kaynak).toBe('egri');
+    const st2 = kur('AG00976_GATES_2025');             // güç yalnız duty kW'da
+    const b2 = wiz.veFeadWizBuild();
+    const alt2 = st2.pulleys.find((p) => p.type === 'fead-alternator');
+    expect(wiz._fwKwEff(b2, st2, 0, alt2).kaynak).toBe('kayit');
+  });
+
+  test('GÜCÜ OLMAYAN aksesuar uyarılır; avara/gergi uyarılmaz', () => {
+    // Sessiz sıfır sınıfı: gücü hiçbir kaynaktan gelmeyen aksesuar 0 kW ile
+    // koşar, model yine çözülür ve bütün açıklık gerilmeleri tasarım
+    // gerginliğine düzleşir.
+    const st = kur('AG00976_GATES_2025');
+    const alt = st.pulleys.find((p) => p.type === 'fead-alternator');
+    st.solver.duty.forEach((r) => { delete r.kw[alt.key]; });   // gücünü kes
+    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    expect(h).toMatch(/0 kW.*ile koşacak|gücü hiçbir/i);
+    expect(h).toContain('Alternatör');
+    // avaralar uyarıda GEÇMEZ (güç çekmemeleri doğru davranış)
+    const uyari = h.slice(h.indexOf('ve-fw-issue-warn'));
+    expect(uyari.slice(0, 400)).not.toMatch(/Avara/);
+  });
+});
+
+// ── 5 · ÖZET: kol açısı kutusu kalktı ──────────────────────────────────────
+describe('özet kartı — kol açısı kutusu yok', () => {
+  test('kol açısı/dönmesi kutusu basılmaz, kalan beş kutu durur', () => {
+    kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
+    const h = wiz.veFeadWizStepHTML(6, wiz.veFeadWizBuild());
+    expect(h).not.toMatch(/Kol açısı|Kol dönmesi/);
+    expect((h.match(/class="ve-fw-stat/g) || []).length).toBe(5);
+    ['Durum', 'Kasnak', 'Kayış boyu', 'Tasarım gerginliği', 'Dönüş yönü']
+      .forEach((k) => expect(h).toContain(k));
+  });
+
+  test('sayı KAYBOLMUYOR — gergi adımının okuması hâlâ basıyor', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const st = wiz.veFeadWizState();
+    st.tenMode = 'envelope';
+    delete st.ten.cenX; delete st.ten.cenY; delete st.ten.armMeanDeg;
+    const h = wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild());
+    expect(h).toMatch(/Kol çalışma açısı/);
   });
 });

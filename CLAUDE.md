@@ -3760,12 +3760,12 @@ okunduğunu ancak modülü bilen biri biliyordu. Boş bir iç topolojide kullan�
 
 | Adım | Ne sorar |
 |------|----------|
-| 1 Başlangıç | sistem adı · **gerginin tanım biçimi** (zarf / montaj merkezi / serbest açı) · örnekten doldur |
-| 2 Kasnaklar | tip · ad · Ø OD · X/Y · temas tarafı · sürücü rolü · atalet |
+| 1 Başlangıç | sistem adı · örnekten doldur |
+| 2 Kasnaklar | tip · ad · Ø OD · X/Y · temas tarafı · sürücü rolü · atalet — **gergi de burada** (künye + montaj konumu) |
 | 3 Kayış Yolu | serpantin sırası (↑↓) · yönü çevir · dönüş yönü okuması |
-| 4 Otomatik Gergi | künye kütüphanesi · kipe göre koordinat · kol · yay künyesi · titreşim girdileri |
-| 5 Kayış | profil/marka/kanal · boy (kipe göre) · katalog önerisi · kayış tipine bağlı çıktılar |
-| 6 Motor ve Çevrim | tahrik oranı · motor künyesi · duty tablosu (devir · %zaman · °C · aksesuar kW) |
+| 4 Otomatik Gergi | künye kütüphanesi · montaj konumu · kol · yay künyesi · titreşim girdileri |
+| 5 Kayış | profil/marka/kanal · kayış tipine bağlı çıktılar (boy bir ÇIKTI) |
+| 6 Motor ve Çevrim | tahrik oranı · motor künyesi · **aksesuar modelleri** · duty tablosu (devir · %zaman · °C · aksesuar kW **okuması**) |
 | 7 Özet ve Kurulum | canlı çözüm kartları · **kayış yolu şeması** · uyarılar · Modeli Kur |
 
 ###### ÜÇ KURAL — üçü de bu modülün kendi derslerinden
@@ -3798,14 +3798,14 @@ Sihirbazın durumu bambaşka bir biçim (form satırları, kasnak anahtarları,
 Çeviride bir alan düşse (temas tarafı, sürücü rolü, kip, yay künyesi, duty kW)
 sonuç sessizce kayardı — model yine çözülür, yalnız başka bir sistemi anlatır.
 
-###### KİPE GÖRE HANGİ ALAN TAŞINIR — ve ötekiler TAŞINMAZ
+###### GERGİ TEK KOORDİNAT TAŞIR — ve ötekiler TAŞINMAZ
 
 `angleMode` **açıkça** yazılıyor (köprü veriden de çözebiliyor ama açık seçim
 her zaman kazanır): yarım doldurulmuş bir formda kip, kullanıcının seçtiğinden
-BAŞKA çıkabilirdi. Zarf kipinde montaj merkezi **yazılmıyor** — yazılsaydı
-köprünün "iki koordinat da var" uyarısı, kullanıcının GİRMEDİĞİ bir alandan
-gelirdi. Kayış boy kipi de zarf kipinde yazılmıyor: orada boy yapısal olarak
-bir çıktı ve köprü kipi zaten kilitliyor.
+BAŞKA çıkabilirdi. Kasnak merkezi **yazılmıyor** — yazılsaydı köprünün "iki
+koordinat da var" uyarısı, kullanıcının GİRMEDİĞİ bir alandan gelirdi; merkez
+zaten montaj konumu + kol açısından TÜREYEN bir çıktı. Kayış boy kipi de
+yazılmıyor: boy yapısal olarak bir çıktı ve köprü kipi zaten kilitliyor.
 
 ###### KURULUM: mevcut model SESSİZCE silinmez
 
@@ -3859,6 +3859,240 @@ kutusu koyma, `maxInstances`ı kaldırma, form içi düzenlemede `saveState`
 > Onuncusu **ilk turda YEŞİL kaldı**: kapı yalnız satır EKLEME yolunu
 > yokluyordu, oysa asıl risk alan YAZMA yolunda (`_fwSet`). Kapı artık üç
 > yolu birden koşuyor.
+
+###### BEŞ DÜZELTME — kullanıcı turu (2026-08-31)
+
+Kullanıcı sihirbazı kullanıp beş madde bildirdi. Üçü eksiltme, ikisi ekleme; ama
+ikisinin altından **sessiz birer kusur** çıktı.
+
+| # | İstek | Ne yapıldı |
+|---|-------|------------|
+| 1 | *"'Kasnaklar' kısmında otomatik gergi eklenmiyor/çıkarılmıyor… koordinatları oraya el ile girelim, bu sayfadan gerginin tipini seçelim"* | Gergi 2. adımda **sanal satır** olarak duruyor (`_fwTenRow`) |
+| 2 | *"Otomatik gergi tiplerinde Gates raporları yazıyor… sadece kol uzunluğu ve çalışma momenti yazsın"* | `veFeadTenLabel` — **tek üretici**, panel de onu kullanıyor |
+| 3 | *"Sihirbaz içinde 'Katalog Önerisi' kısmı var. Onu kaldıralım."* | Blok kalktı, yerine Kayış Özellikleri paneline yönlendiren tek satır |
+| 4 | *"Kullanıcı alternatör ve klima kompresörü tipini tıpkı bileşenindeki gibi açılır pencere ile seçecek… El ile değer girmeyeceğiz."* | **Aksesuar Modelleri** kartı + duty kW hücreleri **salt okuma** |
+| 5 | *"Sonuçlar kısmından 'kol açısı' açıklamasını kaldıralım."* | Özet 6 → **5 künye** |
+
+###### 1 · GERGİ SATIRI SANAL — silinemez, sürücü olamaz, koordinatı KİPE bağlı
+
+Gergi bir kasnak listesi ögesi değil (`st.ten` ayrı bir alan, `st.pulleys`
+dizisinde yeri yok) ve öyle KALIYOR: onu diziye almak sürücü seçimi, silme,
+sıralama ve duty sütunu yollarının hepsine "ama gergi hariç" istisnası eklemek
+olurdu. Satır **sanal**: tabloya çiziliyor, yazdığı yer `st.ten`.
+
+| Ne | Karar |
+|----|-------|
+| Sürücü radyosu | **kapalı** — gergi güç çekmez, çeviremez |
+| Silme düğmesi | **kapalı** — gergi zincirin yapısal parçası, sıraya kendiliğinden giriyor |
+| Koordinat alanları | **montaj konumu** (`pivotX/pivotY`) — kasnak merkezine ASLA yazmaz |
+| Hangi nokta olduğu | Satırın kendi **amber çipinde** yazılı: `X/Y = montaj noktası` |
+
+Çip bir süs değil: bu modülün **ölçülmüş en pahalı karışıklığı** tam bu iki
+noktanın karıştırılması (montaj noktası sanılan kasnak merkezi → T **−%48,6**,
+en kötü sarım **+%27,9**, model yine çözülür ve uyarı çıkmaz). Diğer beş satırın
+X/Y'si her zaman kasnak merkezi olduğu için gergi satırı bunu **söylemek
+zorunda** — ve kapı yalnız doğru alana yazdığını değil, `cenX/cenY`'ye
+yazMADIĞINI da tutuyor (o alana yazmak kullanıcının sayısını 90 mm ötedeki bir
+noktaya koymak olurdu).
+
+> Alan adı `pivotX/pivotY` olarak KALDI (veri biçimi), yüzeydeki ad ise
+> **montaj konumu** — PR #831'in terminoloji kararı. İkisini tek yerde
+> (`veFeadWizTenCoordKeys` / `veFeadWizTenCoordLabel`) tutmak, satırın ve 4.
+> adımın aynı alanı yazmasının garantisi.
+
+**AYNI DURUM, İKİ YÜZEY.** `veFeadWizTenSet` doğrudan `st.ten`'e yazıyor — 4.
+adımın okuduğu alanın ta kendisi. İkinci bir kopya tutulsaydı iki sayfa sessizce
+ayrışırdı (bu modülün tekrar eden kuralı: *"panel ile kart AYNI alanı okur"*).
+Aynı gerekçeyle 2. adımdaki künye seçicisi de 4. adımdakiyle **aynı fonksiyona**
+(`veFeadWizTenLib`) gidiyor.
+
+Kart alt başlığı da düzeldi: `6 kasnak (gergi dahil)` — eskiden 5 diyordu ve
+kullanıcının bildirdiği *"gergi eklenmiyor"* algısını besliyordu.
+
+###### 2 · ETİKET TEK ÜRETİCİDEN — ve 14 kayıt 14 AYRI etiket veriyor
+
+```js
+veFeadTenLabel(rec)  →  'kol 90 mm · 22.07 Nm'
+```
+
+Eski etiket kayıt anahtarını (`AG00976-1715`) ve raporun adını taşıyordu; o
+anahtar künyenin **hangi ölçümden çıkarıldığını** söyler, kullanıcıya ise
+parçanın ne olduğunu söylemez.
+
+**TEKİLLİK ÖLÇÜLDÜ: 14 kayıt → 14 ayrı etiket.** Kol boyu ikiye ayırıyor
+(90 mm ×13, 56 mm ×1), çalışma momenti geri kalanı: `16,07 · 19,04 · 22,07 ·
+22,15 · 22,20 · 22,21 · 22,43 · 22,54 · 22,57 · 22,66 · 23,00 · 24,54 · 29,48 ·
+31,14`. Yani sadeleşme bir **çakışma** üretmiyor — üretseydi kullanıcı iki
+farklı künyeyi ayırt edemezdi.
+
+Üretici `js/fead-tensioners.js`'te ve **panel de onu kullanıyor**
+(`veFeadTensionerLibCard`): iki yüzey aynı listeyi farklı adlandırsaydı
+kullanıcı sihirbazda seçtiği künyeyi panelde bulamazdı.
+
+**BEDELİ YAZILI:** etiket artık parça kimliğini taşımıyor. Parça kodu kayıtların
+**10'unda var** (`E9843` ×6, `T38624` ×2, `T38665`, `T38519`) ve istenirse
+etikete eklenebilir; bugün kullanıcının açık isteği *"diğer açıklamalara gerek
+yok"* olduğu için eklenmedi. Sihirbazın gergi kartı da geçerlilik satırını
+(*"kütüphane bir sertifika değil"*) artık basmıyor; panel basmaya devam ediyor.
+
+###### KÜNYE UYGULAMASINDA SESSİZ KUSUR — beyaz liste `tenPart`'ı YUTUYORDU
+
+Kapıyı yazarken çıktı. Sihirbaz künyeyi kendi **beyaz listesiyle** kopyalıyordu
+(kol · ön yük · katsayı · moment · çap · temas) ve iki alan listede yoktu:
+`tenPart` (parça kodu) ile `inertia`. Üstelik kodu OLMAYAN bir künyeye
+geçildiğinde eski kod **silinmiyordu** — yani bir sonraki gerginin pimi ESKİ
+parçanın çizimiyle hesaplanırdı; `veFeadTensionerApply`'ın kendi kuralı tam
+olarak bunu yasaklıyor.
+
+**ÖLÇÜLDÜ** (AG00976 durumuna kütüphaneden künye uygulanınca):
+
+| uygulanan kayıt | `tenPart` | `build.pin` |
+|---|---|---|
+| beyaz liste (eski) | **yok** | `ok:false` · *"Gergi parça kodu yok"* — **yanlış sebep** |
+| AG00894 (E9843) | `E9843` | `ok:true` · **235,00°** · r 31 mm · ofset −113° |
+| AG00686 (T38624) | `T38624` | `ok:false` · *"T38624 için parça çizimi yok"* — **doğru sebep** |
+
+Yani kullanıcı kodu olan bir künye seçiyor, sihirbaz *"kod yok"* diyordu.
+Düzeltme yeni bir kural değil, **ikinci kopyanın kaldırılması**: satır artık
+doğrudan `veFeadTensionerApply(st.ten, rec)` çağırıyor — panelin kullandığı
+yolun ta kendisi.
+
+###### 4 · AKSESUAR MODELİ SEÇİLİR, kW ELLE GİRİLMEZ
+
+Duty tablosunun kW hücreleri **girdi olmaktan çıktı**, okuma oldu
+(`.ve-fw-ro`). Değer nereden gelirse gelsin aynı hücrede görünüyor ve **kaynağı
+ayrı bir sütunda yazılı** (`katalog` · `kasnak eğrisi` · `kayıtlı ölçüm` ·
+`güç yok`).
+
+**ÖNCELİK KÖPRÜDEN KOPYALANMADI, AYNADI.** `_fwKwEff` köprünün
+(`veFeadDutyToCore` → `veFeadAutoKw`) sırasını birebir izliyor: duty kW →
+kasnağın kendi `pwrCurve`'ü → `accPreset` kataloğu → 0. Ayrışsaydı sihirbaz bir
+sayı gösterir, çözüm başkasıyla koşardı.
+
+**MODEL SEÇMEK KAYITLI kW'ı TEMİZLER** ve bu, isteğin çalışabilmesinin şartı:
+`AG00976_GATES_2025`'in gücü **yalnız duty kW'ında** yazılı, yani temizlenmezse
+kayıtlı sayı katalogu her zaman yener ve açılır pencere hiçbir şey yapmamış
+görünürdü.
+
+**ÖLÇÜLDÜ (alternatör, 880 → 2750 d/dk):**
+
+| kaynak | kW |
+|---|---|
+| kayıtlı ölçüm (Gates AG00976, 155 A) | 3,61 · 3,78 · … · 4,02 |
+| katalog `tepas_350a` seçilince | **7,62 · 9,08 · … · 15,13** |
+
+880 d/dk'da **2,1 kat** — çünkü katalogun en küçük alternatörü **180 A**, raporun
+alternatörü 155 A. Seçim kozmetik değil; fark da uydurma değil, katalogun kendi
+eğrisi. Katalog **Araç Performans modülüyle ORTAK** (`VE_ALTERNATOR_PRESETS` /
+`VE_AC_PRESETS` / `VE_AIRCOMP_PRESETS`) — ikinci bir kopya yok — ve aksesuar
+devri her zaman **kasnak pitch çaplarından** hesaplanıyor, preset'in kendi
+`driveRatio`'sundan değil (spesifikasyon §2.3'ün *"Excel'in en ciddi hatası elle
+yazılmış hız oranlarıydı"* maddesi).
+
+**SESSİZ SIFIR ARANIYOR:** yük taşıyabilecek bir aksesuarın ne modeli ne kayıtlı
+ölçümü varsa kart onu **adıyla** listeliyor. Sessiz bırakılsaydı o aksesuar
+0 kW ile koşar, gerilmeler tasarım gerginliğine düzleşirdi — bu deponun
+belgelenmiş `544·6` sınıfı (bkz. *"KÖK NEDEN: duty kW'ı çözüme HİÇ
+ULAŞMIYORDU"*).
+
+Avara ve gergi satırları tabloda **duruyor** (`katalog yok` yazıyor): AG00976'da
+onların da kayıtlı 0,01 kW'ı var; satırı gizlemek o ölçümü görünmez yapardı.
+Sürücü kasnak listede YOK — gücü diğerlerinin toplamı, elle girilirse çekirdek
+zaten reddediyor.
+
+###### 5 · ÖZETTEN KOL AÇISI KALKTI — geriye BEŞ künye kaldı
+
+`Durum · Kasnak · Kayış boyu · Tasarım gerginliği · Dönüş yönü`. Kol açısı
+kaldırıldı; sayı kaybolmuyor, 4. adımın kendi kartında ve raporda duruyor.
+
+###### Kapı **on beş mutasyonla** ölçüldü, on beşi de kırmızı
+
+Gergi satırını tablodan düşürme · sürücü radyosunu açma · silme düğmesini açma ·
+satırı kasnak merkezine yazdırma · X/Y çipini düşürme · `veFeadWizTenSet`'i
+ayrı bir kopyaya yazdırma · etiketi yine anahtarla basma · panelin kendi etiket
+kopyasını tutması · `tenPart`'ı yine beyaz listeyle yutma · kodsuz künyede eski
+kodu bırakma · katalog önerisi bloğunu geri koyma · duty kW hücresini yine girdi
+yapma · `_fwKwEff` önceliğini köprüden ayırma · model seçince kayıtlı kW'ı
+bırakma · özete kol açısı künyesini geri koyma.
+
+**ÖLÇÜLDÜ — gerçek tarayıcı (8 E2E):** 2. adımda gergi satırı altıncı sırada,
+künye açılır penceresi ve amber çip yerinde, sürücü radyosu ile silme düğmesi
+`disabled`; koordinat alanına gerçek klavye girişi **odağı düşürmeden** modele
+işliyor ve 4. adımda aynı sayı görünüyor; 6. adımda alternatör modeli seçilince
+duty hücreleri katalog sayısına dönüyor ve kaynak sütunu `katalog` yazıyor;
+7. adımda beş künye var, `kol açısı` **yok**.
+
+###### KOZMETİK TUR — alt çubuk ve adım rayı (2026-08-31)
+
+Aynı gün iki bildirim daha geldi ve ikisinin de cevabı **ölçümden** çıktı.
+
+**1 · ALT ÇUBUK KENDİ BAŞLIĞINDAN KALINDI.** *"Yeşil ile çizdiğim yer çok geniş
+olmuş. Oradaki butonlar falan da çok geniş duruyor… orantısız duruyor."*
+Sayı seçilmedi, **modalın kendi üst çubuğundan okundu**:
+
+| | önce | sonra | çıpa |
+|---|---:|---:|---|
+| alt çubuk | **48 px** | **40 px** | `.ve-settings-header` = **39 px** |
+| düğme | 29 px | **25 px** | uygulamanın `.ve-trace-btn`'ü 22 px |
+| düğme genişliği | 62 · 67 · 104 | **56 · 61 · 98** | — |
+| gövdeye kalan yer | — | **+8 px** | — |
+
+Yani çubuk keyfî olarak küçültülmedi: **aynı diyaloğun iki çubuğu artık aynı
+bantta**. Orantısızlığın kaynağı da buydu — alt çubuk üst çubuğundan 9 px
+kalındı.
+
+**2 · ADIM RAYI ÜÇ DURUM YAKIYOR.** *"Eksik girdi olduğunda kırmızı, girdiler
+tam olduğunda ise belirgin bir yeşil… Şu anda kullanıcı yeteri kadar
+bilgilenemiyor."* Eksiklik yapısaldı ve **iki katmanlıydı**:
+
+| Eski davranış | Neden yetersiz |
+|---|---|
+| Tek işaret **hata rozeti** idi (yalnız hata varken çiziliyor) | *"sorun yok"* ile *"buraya hiç bakılmadı"* AYIRT EDİLEMİYORDU |
+| `done` sınıfı **konumu** anlatıyordu (`i < _fwStep`) | Üstünden geçilmiş ama EKSİK bir adım yeşil halkalı görünüyordu — ray **yanlış bilgi** veriyordu |
+
+Durum `veFeadWizStepState(b, step)` ile **tek yerden** üretiliyor ve kaynağı
+köprünün kendi listesi (`b.errors` / `b.warnings`); ikinci bir doğrulama
+listesi, köprü değişince sessizce eskiyen bir kapı olurdu — sihirbazın kuruluş
+kuralının ta kendisi.
+
+**ÜÇ DURUM, İKİ DEĞİL:** bu modülde *"çözülüyor ama uyarı taşıyor"* gerçek ve
+sık bir hâl (kalibrasyon dışı çap, türetilemeyen ankraj, kenetlenmiş kol). Onu
+yeşile katmak *"her şey tamam"* demek, kırmızıya katmak çözülen bir modeli
+bozuk göstermek olurdu.
+
+**İKİ KANAL, ÇAKIŞMADAN** — ve bu bir incelik değil, eski `done`un düştüğü
+tuzağın kapatılması:
+
+| Kanal | Ne söylüyor |
+|-------|-------------|
+| Zemin tinti + kalın başlık + kalın şerit | **HANGİ** adımdayız (`.on`) |
+| Renk (sol şerit · numara dairesi · rozet) | O adımın **DURUMU** (`.ve-fw-st-*`) |
+
+Tek kanala bindirilseydi **seçili adımın durumu görünmezdi** — oysa
+kullanıcının en çok baktığı adım tam olarak o. Seçili adımda daire *dolar*
+(aynı renk, ters kontrast), yani "buradasın" okunurken durum kaybolmuyor.
+
+**ÖLÇÜLDÜ (gerçek tarayıcı, hesaplanmış RENK — sınıf adı değil):**
+
+| durum | Başlangıç | Kasnaklar | Kayış Yolu | Otomatik Gergi | Kayış | Motor | Özet |
+|---|---|---|---|---|---|---|---|
+| boş sihirbaz | ✓ yeşil | **1 kırmızı** | **1 kırmızı** | **4 kırmızı** | ✓ | ✓ | ✓ |
+| AG00976 örneği | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| bir kasnağın çapı silinince | ✓ | **1 amber** | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+Üçüncü satır üç durumun da ayrı ayrı yandığının kanıtı: eksik çap köprüde bir
+UYARI (varsayılana düşüyor), hata değil — amber onu doğru anlatıyor.
+
+**Kapı yedi mutasyonla ölçüldü, yedisi de kırmızı:** uyarıyı yeşile katma,
+rozeti yalnız hata varken basma, durum sınıfını hiç basmama, konumsal `done`a
+geri dönme, CSS'ten `st-ok` kuralını silme, alt çubuk dolgusunu 9 px'e geri
+alma, düğme dolgusunu `6px 13px`'e geri alma.
+
+Beşincisi **yalnız E2E'den** görünüyor ve sebebi öğretici: sınıf basılmaya
+devam ediyor, yalnız kuralı yok — ray yine sessiz kalıyor. Bu yüzden gerçek
+tarayıcı kapısı sınıf ADINA değil **hesaplanmış renge** bakıyor (şerit ile
+rozetin aynı renkte olması, kırmızıda R'nin G'den ≥60 baskın olması, yeşilde
+tersi).
 
 **Sırada:** kullanıcı kayışı seçtikten sonra anahtarı açıp katalog sonuçlarını
 geri almanın akışı (bugün elle yapılıyor); ve zarf çözümünün Sonuçlar
@@ -5384,8 +5618,8 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/e2e/viewer.spec.js` | `MFSim_Olcum_Goruntuleyici.html` | **Üretilen tek dosya**, `file://` üzerinden: açılış, içe aktarma, sürükle-bırak, birleştirme, tema, sıfır ağ isteği |
 | `tests/e2e/structural-geometry.spec.js` | Geometri bileşeni (uçtan uca) | **GERÇEK tarayıcı**: gömülü 62,8 MB wasm'ın worker'da açılıp derlenmesi → OCCT → **boolean** → panel künyesi → WebGL sahnesi; **7 gövdeli parça TEK KATI olarak geliyor** ve panel bunu yazıyor (worker'da, künyeye de giriyor); fareyle CAD YÜZÜ vurgusu (üçgen değil), ağ inceliği değişince üçgen değişip kimliklerin sabit kalması, STEP olmayan dosyanın sessizce yutulmaması, **ölçüm kaplamasının STEP alanında çekilip asılı kalmaması**; **arayüz donmuyor** — içe aktarma boyunca çizilen kare sayısı ana iş parçacığında ≤3, worker'da >20 (ölçümde 1 ↔ 91), panelin gerçekten worker'a gitmesi ve ilerleme kartının aşama değiştirip iş bitince kapanması; **kanvas rozeti** (boşken `STEP`, doluyken `⬡18`), **CAD yüz listesi** (18 satır; listeden tık → 3B'de vurgu, 3B'de gezinme → listede işaret, 3B'de tık → listede seçim, ikinci tık seçimi kaldırır, DÖNDÜRME seçimi bozmaz), **kaynağın yalnız dosyaya yazılması** (künye ve otomatik yedek kaynaksız); **görüntüleyicinin boyu** — parça yüklenince pencere ekranı kullanıyor, sol ray ile 3B kutusu AYNI yerde bitiyor (boşluk 290.6 → 0 px), kanvas o ölçüde kuruluyor ve içerik kaydırmıyor; **varsayılanlar** — incelik/kenar kontrolü panelde yok ve her içe aktarma 0.0005 ile geliyor, yüz listesi ve fare künyesi kullanıcı açana kadar çıkmıyor, kapatınca hiçbir işaret kalmıyor. Bu halkalar Node'da HİÇ koşmuyor |
 | `tests/e2e/results-txt-page.spec.js` | TXT rapor önizlemesi (yerleşim) | **GERÇEK tarayıcı**: iki bandın AYNI yerde bitmesi (ölçülen eski fark 12 px), başlıkların aynı punto, sayfanın 794 px = A4 olması, metnin tek blok / tek sol kenar kalması (eski: 43 blok, 10 kenar), 119 sütunluk tablonun sayfaya sığması (yatay kaydırma yok) ve dar raporun tavan puntoyla açılması. Rapor METNİ sahte — ölçülen şey kabuk; bu halkalar Node'da HİÇ koşmuyor |
-| `tests/unit/fead-wizard.test.js` | `js/cp-fead-wizard.js` + `js/components.js` + `js/cp-fead.js` | **Başlangıç Sihirbazı**: bileşen sözleşmesi (0/0, `maxInstances:1`, palet + kayıt defteri + panel dağıtımı + çift tık + modal kabuğu + CSS sınıfları), betiğin `cp-fead.js`'ten SONRA yüklenmesi, başlangıçta İKİ açılış yüzeyi; **durum → düğüm çevirisi iki örneği de BİREBİR geri üretiyor** (AG00976 L 1714,6 · T 544,05 · rel 28,075 · BMC L 1715,0 · T 532,142 · rel 28,4271) ve duty kW anahtardan kimliğe çevriliyor — çevrilmezse sonucun gerçekten değiştiği İKİ UÇTAN tutuluyor; kipe göre hangi alanın taşındığı (zarfta montaj merkezi YOK, boy kipi YOK; mount'ta var), kipin AÇIKÇA yazılması; sıra/sürücü/satır kuralları (ilk kasnak sürücü doğar, sürücü tek, gergi sıraya kendiliğinden girer, kasnak silinince duty sütunu da düşer, tip değişince temas tarafı tipin varsayılanına döner, sırayı çevirmek yönü çevirir); kurulum kapısı (mevcut kasnakla kapalı + sebep, onayla açık) ve kurulum (6 kasnak + 6 tel, kW göçü, **kurulan model önizlemeyle birebir**, sihirbaz düğümü KALIR / örnek düğümü GİDER, temizle işaretliyse teller de gider); adım eşlemesi, yedi adımın boş ve dolu durumda `undefined`/`NaN` basmadan çizilmesi, taslağın düğüme yazılıp KALDIĞI YERDEN açılması ve **form içi düzenlemenin `saveState` çağırmaması** |
-| `tests/e2e/fead-wizard.spec.js` | Sihirbaz (uçtan uca) | **GERÇEK tarayıcı**: çift tıkla açılış, yedi adımlık ray, örnekten doldurunca canlı şeridin `✓ model çözülüyor` + L/T/yön basması ve hata rozetinin kalmaması, **gerçek klavye girişinde odağın alanda KALMASI** (canlı şerit yama; tam yeniden çizim odağı düşürürdü), özet adımında kayış yolu şemasının SVG olarak çizilmesi, "Modeli Kur"un kanvasa 6 kasnak + 6 tel kurup **önizlemeyle birebir aynı çözümü** vermesi, modalın ekrana sığması ve gövdenin yatay kaydırmaması. Bu halkalar Node'da HİÇ koşmuyor |
+| `tests/unit/fead-wizard.test.js` | `js/cp-fead-wizard.js` + `js/components.js` + `js/cp-fead.js` | **Başlangıç Sihirbazı**: bileşen sözleşmesi (0/0, `maxInstances:1`, palet + kayıt defteri + panel dağıtımı + çift tık + modal kabuğu + CSS sınıfları), betiğin `cp-fead.js`'ten SONRA yüklenmesi, başlangıçta İKİ açılış yüzeyi; **durum → düğüm çevirisi iki örneği de BİREBİR geri üretiyor** (AG00976 L 1714,6 · T 544,05 · rel 28,075 · BMC L 1715,0 · T 532,142 · rel 28,4271) ve duty kW anahtardan kimliğe çevriliyor — çevrilmezse sonucun gerçekten değiştiği İKİ UÇTAN tutuluyor; gerginin TEK koordinat taşıması (kasnak merkezi ve kip alanı YOK, kayış boy kipi yazılmaz — boy yapısal olarak çıktı); sıra/sürücü/satır kuralları (ilk kasnak sürücü doğar, sürücü tek, gergi sıraya kendiliğinden girer, kasnak silinince duty sütunu da düşer, tip değişince temas tarafı tipin varsayılanına döner, sırayı çevirmek yönü çevirir); kurulum kapısı (mevcut kasnakla kapalı + sebep, onayla açık) ve kurulum (6 kasnak + 6 tel, kW göçü, **kurulan model önizlemeyle birebir**, sihirbaz düğümü KALIR / örnek düğümü GİDER, temizle işaretliyse teller de gider); adım eşlemesi, yedi adımın boş ve dolu durumda `undefined`/`NaN` basmadan çizilmesi, taslağın düğüme yazılıp KALDIĞI YERDEN açılması ve **form içi düzenlemenin `saveState` çağırmaması**; **gergi satırı** (2. adımda sanal olarak var, sürücü olamaz ve silinemez, X/Y'si gerginin **montaj konumu** — `cenX/cenY`'ye ASLA yazmıyor — ve hangi nokta olduğu çipte yazılı, satırın yazdığı yer 4. adımın okuduğu `st.ten`'in ta kendisi); **künye etiketi** tek üreticiden (`veFeadTenLabel` → `kol 90 mm · 22.07 Nm`), 14 kayıt 14 AYRI etiket, panel de aynı üreticiyi kullanıyor ve künye uygulaması `veFeadTensionerApply`'a devrediyor — kendi beyaz listesi `tenPart`/`inertia`'yı yutuyor ve kodsuz künyede eski kodu bırakıyordu (pim *"kod yok"* diyordu, oysa kayıtta kod VAR); **katalog önerisi** bloğunun bulunmaması; **aksesuar modelleri** (duty kW hücresi GİRDİ değil okuma, `_fwKwEff` önceliği köprüyle aynı — duty kW > kasnak eğrisi > katalog > 0 — model seçince kayıtlı kW'ın TEMİZLENMESİ ki katalog devreye girsin, ölçüldü: ALT 3,61 → 7,62 kW, ve güç kaynağı olmayan yük taşıyıcının adıyla uyarılması); **özette kol açısı künyesinin OLMAMASI**; **adım rayının üç durumu** (`veFeadWizStepState` köprünün KENDİ listesinden türüyor, hata uyarıyı bastırıyor, boş sihirbazda `st-err` / dolu örnekte yedi `st-ok` + `✓` rozeti, yedi adımın yedisi de durum sınıfı ve rozet taşıyor — sessiz adım yok — ve DURUM ile ODAK ayrı kanallar: konumsal `done` emekli); **alt çubuk dolgusunun** modal başlığının bandını aşmaması |
+| `tests/e2e/fead-wizard.spec.js` | Sihirbaz (uçtan uca) | **GERÇEK tarayıcı**: çift tıkla açılış, yedi adımlık ray, örnekten doldurunca canlı şeridin `✓ model çözülüyor` + L/T/yön basması ve hata rozetinin kalmaması, **gerçek klavye girişinde odağın alanda KALMASI** (canlı şerit yama; tam yeniden çizim odağı düşürürdü), özet adımında kayış yolu şemasının SVG olarak çizilmesi, "Modeli Kur"un kanvasa 6 kasnak + 6 tel kurup **önizlemeyle birebir aynı çözümü** vermesi, modalın ekrana sığması ve gövdenin yatay kaydırmaması; **gergi satırı** 2. adımda altıncı sırada — künye seçicisi ve amber X/Y çipi yerinde, sürücü radyosu ile silme düğmesi `disabled`, koordinat alanına gerçek klavye girişi odağı düşürmeden modele işliyor ve 4. adımda aynı sayı görünüyor; **aksesuar modeli** seçilince duty hücreleri katalog sayısına dönüyor ve kaynak sütunu `katalog` yazıyor; **alt çubuk** modalın kendi başlığıyla aynı bantta (48 → 40 px, başlık 39) ve düğmeler ≤26 px; **adım rayı** üç durumu HESAPLANMIŞ RENKLE yakıyor (sınıf adı değil — `st-ok` CSS kuralını silen mutasyon yalnız buradan görünür): boş sihirbazda kırmızı + sayı, örnekte yedi yeşil + ✓, bir çap silinince o adım ayrışıyor ve kalan altısı yeşil kalıyor. Bu halkalar Node'da HİÇ koşmuyor |
 | `tests/e2e/fead-canvas-drag.spec.js` | FEAD kanvas ↔ mm zinciri (uçtan uca) | **GERÇEK tarayıcı**: fare sürüklemesi → `veAttachNodeDrag` → `veFeadSyncDrag` → mm → topoloji imzası → Kayış Yolu kartının yeniden kurulması → yeni L_eff. Node'da HİÇ koşmayan halkalar: gerçek `mousedown/mousemove/mouseup`, `canvasZoom` bölmesi, DOM'a yazılan `style.left`, kartın `innerHTML` ile kurulması. Kart sürüklerken CANLI tazeleniyor (bırakmayı beklemiyor), kayış kipi rozeti gerçek tıkla değişiyor ve çözüm kipe uyuyor, "Otomatik Düzenle" koordinatları silmiyor. **Dönüş Yönü**: rozet tıklanınca kablolar gerçekten çevriliyor, kanvastaki gidiş okları onunla dönüyor (bayrak yolunda ok yalan söylerdi), kartın `data-fead-anim` künyesindeki `sense` +1 → −1 oluyor ama `loop` ve `L` birebir sabit kalıyor (geometri yönden bağımsız), ikinci tık başa döndürüyor. **Konum Bağı**: rozet tıklanınca kapanıyor (kutu oynuyor, mm ve kartın `L`'si birebir sabit), yeniden açınca kutu koordinatına dönüyor ve `style.left` de tazeleniyor, kapalı bağda kenetleme geri geliyor, kapalı düğümü SİLMEK kutuları oturtuyor ve sonraki 1 px yine 1 mm ediyor (kanca yokken 81 mm ediyordu). **Örneğin yeni hâli**: kesikli çap hayaleti DOM'da HİÇ YOK, sol şerit `Kayış Özellikleri → Çözücü → Rapor` (başlangıç kutusu yok), kart 440×500 ve SVG'si `0 0 440 458`, kayış yolu 400 px'ten geniş — yani yön gülü şeridi AYRILMAMIŞ (ayrılsaydı 350 px olurdu). **Kenetleme kapısı**: `SNAP_ENABLED` açıkken bile kasnak istendiği kadar oynuyor (kapatılmasa 24.514 mm istenirken 3.940 mm olurdu — varsayılan kapalı olduğu için ancak açıkça açılarak yakalanıyor) |
 | `tests/e2e/measure-merge-drop.spec.js` | `js/measure-dropzone.js` + `js/trace-view.js` | MFSim'de sürükle-bırak ve çok eksenli birleştirme — araç performans VE takoz sekmesi |
 
