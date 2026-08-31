@@ -3134,6 +3134,11 @@ function veFeadWarningBox(build){
 // oranı, boy ofseti.
 function getFeadSolverPropertiesHTML(node){
   if(!node.data) node.data = {};
+  // ÇEVRİM TOHUMU PANEL KURULURKEN ATILIR, eylem yolunda değil: tohum yalnız
+  // `_feadSolverNode`'a bağlansaydı tablo İLK açılışta yine boş görünür,
+  // ancak kullanıcı bir düğmeye bastıktan sonra dolardı.
+  if(!Array.isArray(node.data.duty)) node.data.duty = [];
+  veFeadDutySeed(node);
   var build = veFeadBuildFromCanvas();
   var html = '<div class="sw-panel">';
   // TASARIM GERGİNLİĞİ ALANI KALDIRILDI. Bağımsız bir veri değildi: gergi
@@ -3269,7 +3274,27 @@ function veFeadDutyEditor(node, build){
   var yukIdx = {};
   if(build.ok) build.order.forEach(function(n, i){ yukIdx[n.id] = i; });
 
-  var h = '<table style="width:100%; font-size:var(--fs-micro); border-collapse:collapse; border:1px solid var(--border-color);">';
+  // ── ÇEVRİM SEÇİCİ — sihirbazdaki kartın AYNI kütüphanesi ────────────────
+  // İki yüzey aynı listeyi farklı adlandırsaydı kullanıcı sihirbazda seçtiği
+  // çevrimi panelde bulamazdı (gergi künyesi turunda ölçülmüş sınıf).
+  var dLib = (typeof veFeadDutyList === 'function') ? veFeadDutyList() : [];
+  var dSuan = (typeof veFeadDutyMatch === 'function') ? veFeadDutyMatch(rows) : null;
+  var dSec = '';
+  if(dLib.length){
+    var dOps = dLib.map(function(r){
+      return '<option value="' + _feadEsc(r.key) + '"' + (r.key === dSuan ? ' selected' : '')
+        + '>' + _feadEsc(veFeadDutyLabel(r)) + '</option>'; }).join('');
+    // "Özel" bir seçenek değil bir OKUMA: tablo elle düzenlenmişse hiçbir
+    // kayda uymaz ve seçici bunu söyler.
+    if(!dSuan) dOps = '<option value="" selected>&mdash; özel (elle düzenlendi) &mdash;</option>' + dOps;
+    dSec = '<div style="margin-bottom:7px;">'
+      + '<label style="display:block; font-size:var(--fs-micro); color:var(--text-secondary); margin-bottom:3px;">'
+      + 'Çevrim kaydı</label>'
+      + '<select onchange="if(this.value) veFeadDutyLib(\'' + node.id + '\', this.value)"'
+      + ' style="width:100%; ' + _FEAD_INP + ' height:24px;">' + dOps + '</select></div>';
+  }
+
+  var h = dSec + '<table style="width:100%; font-size:var(--fs-micro); border-collapse:collapse; border:1px solid var(--border-color);">';
   h += '<tr style="background:var(--bg-tertiary);">'
      + ['Devir', '%zaman', '°C'].map(function(t){
          return '<th style="padding:3px 4px; border:1px solid var(--border-color); font-weight:600; color:var(--text-secondary);">' + t + '</th>';
@@ -3721,7 +3746,57 @@ function _feadSolverNode(nodeId){
   if(!n) return null;
   if(!n.data) n.data = {};
   if(!Array.isArray(n.data.duty)) n.data.duty = [];
+  veFeadDutySeed(n);
   return n;
+}
+
+// ── ÇALIŞMA ÇEVRİMİ BOŞ AÇILMAZ ────────────────────────────────────────────
+//
+// Kullanıcı bildirimi (2026-08-31): *"…çalışma çevrimini otomatik olarak
+// hesaplamıyor. El ile girmek gerekiyor. Bu olmamalı."* Tablo boş açıldığı
+// için aksesuar modeli seçilse bile doldurulacak satır yoktu.
+//
+// TEK SEFERLİK ve YALNIZ BOŞ TABLOYA: `dutySeeded` bayrağı olmadan, kullanıcı
+// bütün satırları bilerek sildiğinde tablo her panel açılışında geri gelirdi.
+// Dolu bir tabloya HİÇ dokunulmuyor — kaydedilmiş her proje birebir eski
+// davranışını sürdürüyor.
+function veFeadDutySeed(n){
+  if(!n || !n.data) return false;
+  // Diziyi BURADA normalleştiriyoruz: fonksiyon iki ayrı yerden çağrılıyor
+  // (panel kurulumu ve eylem yolu) ve dışarıdan da çağrılabiliyor; normalleşme
+  // çağıranlara bırakılsaydı biri unutulduğunda sessiz bir TypeError olurdu.
+  if(!Array.isArray(n.data.duty)) n.data.duty = [];
+  if(n.data.dutySeeded) return false;
+  n.data.dutySeeded = true;
+  if(n.data.duty.length) return false;
+  if(typeof veFeadDutyRowsOf !== 'function') return false;
+  var key = n.data.dutyLib || (typeof VE_FEAD_DUTY_DEFAULT !== 'undefined'
+    ? VE_FEAD_DUTY_DEFAULT : '');
+  var rows = veFeadDutyRowsOf(key);
+  if(!rows.length) return false;
+  n.data.duty = rows;
+  n.data.dutyLib = key;
+  return true;
+}
+
+// Kütüphaneden çevrim uygula. kW TAŞINIR: devri tutan satırların kayıtlı
+// ölçümü korunur, yoksa çevrim değiştirmek rapordan gelen güç tablosunu
+// sessizce silerdi.
+function veFeadDutyLib(nodeId, key){
+  var n = _feadSolverNode(nodeId); if(!n) return;
+  if(typeof veFeadDutyRowsOf !== 'function') return;
+  var rows = veFeadDutyRowsOf(key);
+  if(!rows.length) return;
+  var eski = {};
+  n.data.duty.forEach(function(r){
+    if(r.kw && Object.keys(r.kw).length) eski[_feadNum(r.rpm, NaN)] = r.kw;
+  });
+  rows.forEach(function(r){ if(eski[r.rpm]) r.kw = eski[r.rpm]; });
+  n.data.duty = rows;
+  n.data.dutyLib = key;
+  if(typeof showToast === 'function')
+    showToast(rows.length + ' devir noktası yüklendi', 'success');
+  _feadRedraw(n);
 }
 function _feadRedraw(node){
   if(typeof saveState === 'function') saveState();
@@ -4149,6 +4224,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadWarningBox: veFeadWarningBox,
     veFeadDutyEditor: veFeadDutyEditor, veFeadSolve: veFeadSolve,
     veFeadDutyAdd: veFeadDutyAdd, veFeadDutyRemove: veFeadDutyRemove,
+    veFeadDutySeed: veFeadDutySeed, veFeadDutyLib: veFeadDutyLib,
     veFeadDutySet: veFeadDutySet, veFeadDutyFillCatalog: veFeadDutyFillCatalog,
     veFeadResultBlock: veFeadResultBlock, _feadForgetResults: _feadForgetResults,
     veFeadDutyResultTable: veFeadDutyResultTable, veFeadHubTable: veFeadHubTable,

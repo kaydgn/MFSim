@@ -13,6 +13,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/cp-fead-wizard.js` — FEAD **Başlangıç Sihirbazı** (7 adımlık modal). Kendi
   modelini KURMAZ: durum → `veFeadWizNodes` → köprünün düğüm biçimi; önizleme de
   kurulum da aynı listeden geçer.
+- `js/fead-duty.js` — FEAD **çalışma çevrimi** kütüphanesi (7 ölçülmüş çevrim).
+  DOM'suz saf veri; altısı Gates arşivinden, biri BMC tedarikçi sayfasından.
+  **Tek bir "standart" çevrim YOK** — arşivde altı ayrı desen ölçüldü.
 - `js/fead-tensioners.js` — FEAD otomatik gergi künye kütüphanesi (14 kayıt, 2 aile).
   DOM'suz saf veri; **14 Gates raporundan ölçülerek** çıkarıldı, parça numarası
   uydurulmadı. Bant kayıtlardan TÜRETİLİR, elle yazılmaz.
@@ -2508,6 +2511,120 @@ Gerilme, hubload, kayma ve frekans **HEP ÇALIŞMA (Mean) KONUMUNDA** hesaplanı
 konumunu gösterebiliyor. Sarım açısı konumla değiştiği için hubload da değişir;
 bu yüzden iki sonuç kartının künyesinde konum **yazılı** — yoksa yan yana okuyan
 kullanıcı Min konumun geometrisiyle Mean konumun hubload'unu eşleştirirdi.
+
+##### ÇALIŞMA ÇEVRİMİ BOŞ AÇILMAZ — `js/fead-duty.js` (2026-08-31)
+
+Kullanıcı bildirimi: *"Motor ve Çevrim kısmında aksesuar seçtiğimizde çalışma
+çevrimini otomatik olarak hesaplamıyor. El ile girmek gerekiyor. Bu olmamalı.
+Programın içinde aksesuarların devirlere göre güç değerleri mevcut olmalı.
+Çalışma çevrimi sabit zaten, ona göre tabloyu program otomatik olarak
+çıkarmalı."*
+
+**Bildirimin bir yarısı TUTTU, öbür yarısı ÖLÇÜMLE DÜŞTÜ.**
+
+| İddia | Hüküm |
+|-------|-------|
+| *"tabloyu el ile girmek gerekiyor"* | **DOĞRU** — ÖLÇÜLDÜ: taze sihirbazda **0 devir noktası**; aksesuar modeli seçilse bile doldurulacak satır yok. Panel de aynı: `duty: []` ve *"Henüz devir noktası yok."* |
+| *"aksesuar güç değerleri programda mevcut olmalı"* | **ZATEN VAR** — `VE_ALTERNATOR_PRESETS` / `VE_AC_PRESETS` / `VE_AIRCOMP_PRESETS` (Araç Performans'la ORTAK). Eksik olan güç değil, o gücün yazılacağı SATIRDI |
+| *"çalışma çevrimi sabit zaten"* | **TUTMADI** — arşivdeki 14 sistemde **ALTI ayrı** devir/%zaman deseni var |
+
+###### TEK BİR "STANDART" ÇEVRİM YOK — ölçüldü
+
+`tests/fixtures/fead-validation.js` taranınca:
+
+| desen | sistem | devir bandı | %zaman |
+|-------|-------:|-------------|--------|
+| 12 nokta (AG00976) | 4 | 800–2750 | 25·4·4,5·5·5,5·6·7,5·9·0,5·12·16·5 |
+| 6 nokta (AG00686 / AG0868) | **5** | 800–2000 | 27·10·13·18·19·13 |
+| 10 nokta, ara noktalar sıfır (AG00810) | 1 | 600–2000 | 27·0·10·13·0·18·0·19·0·13 |
+| 10 nokta, düşük devir (AG00894) | 1 | 519–2077 | 26,6·10·13·17·18·8·4·3·0,3·0,1 |
+| 5 nokta (AG00879) | 1 | 600–2200 | 5·35·35·20·5 |
+| 4 nokta (AG00902) | 2 | 700–3000 | 35·45·19·1 |
+
+Yedincisi tedarikçiye GİDEN sayfada (`BMC_FEAD_2026`): 9 nokta, 800–2750.
+
+Yani çevrim **motorun/aracın verisidir**, evrensel bir sabit değil. Tek bir
+deseni "standart" diye gömmek, arşivin gösterdiği altı deseni yok saymak
+olurdu — bu deponun `sayı UYDURULMAZ` kuralının tam karşılığı. Kütüphane bu
+yüzden bir **liste**: yedi ölçülmüş kayıt, her biri kaynağıyla adlandırılmış.
+
+###### VARSAYILAN BİR İDDİA DEĞİL, BİR BAŞLANGIÇ
+
+`VE_FEAD_DUTY_DEFAULT = 'AG00686-6'` ve gerekçesi arşivden: 14 sistemin
+**5'i** (en çoğu) bu çevrimi paylaşıyor, bandı (800–2000) ağır ticari bir
+motorun rölanti–anma aralığı, ve altı satır gözle denetlenebilecek kadar kısa.
+Seçici hemen üstünde duruyor ve kart hangi kaydın yüklü olduğunu **kaynağıyla**
+yazıyor — yani "bu senin motorunun çevrimi" iddiası hiçbir yerde yok.
+
+###### İKİ YÜZEY, TEK KÜTÜPHANE
+
+| Yüzey | Nerede |
+|-------|--------|
+| Sihirbaz 6. adım — *"Çalışma Çevrimi Kaydı"* kartı | `_fwStepCevrim` → `veFeadWizDutyLib` |
+| Çözücü paneli — *"Çevrim kaydı"* seçicisi | `veFeadDutyEditor` → `veFeadDutyLib` |
+
+Etiket **tek üreticiden** (`veFeadDutyLabel`): iki yüzey aynı listeyi farklı
+adlandırsaydı kullanıcı sihirbazda seçtiği çevrimi panelde bulamazdı (gergi
+künyesi turunda ölçülmüş sınıf).
+
+**"ÖZEL" BİR SEÇENEK DEĞİL, BİR OKUMA.** Kullanıcı satırları elle düzenlerse
+tablo hiçbir kayda uymaz (`veFeadDutyMatch` → `null`) ve seçici bunu söyler.
+Sessizce en yakın kaydı göstermek, düzenlenmiş bir tabloyu katalog kaydı gibi
+okutmak olurdu. Eşleme **kW'a BAKMAZ**: güç girilmiş olması çevrimi değiştirmez.
+
+###### TOHUM TEK SEFERLİK VE YALNIZ BOŞ TABLOYA
+
+`veFeadDutySeed` bir `dutySeeded` bayrağı yazıyor. Bayrak olmasaydı, kullanıcı
+satırları **bilerek** sildiğinde tablo her panel açılışında geri gelirdi. Dolu
+bir tabloya hiç dokunulmuyor → **kaydedilmiş her proje birebir eski davranışını
+sürdürüyor** (testli: kendi çevrimi olan bir düğüm ezilmiyor, örneklerin 12 ve
+9 satırı korunuyor).
+
+Tohum **panel kurulurken** atılıyor, eylem yolunda değil: yalnız
+`_feadSolverNode`'a bağlansaydı tablo İLK açılışta yine boş görünür, ancak
+kullanıcı bir düğmeye bastıktan sonra dolardı.
+
+###### ÇEVRİM DEĞİŞİNCE kW TAŞINIR
+
+Devri tutan satırların kayıtlı ölçümü korunuyor; ortak olmayan devirde kW
+**uydurulmuyor** (boş kalıp katalogdan hesaplanıyor). Taşınmasaydı çevrim
+değiştirmek AG00976'nın rapordan gelen güç tablosunu sessizce silerdi.
+
+###### AYNI TURDA ÇIKAN SESSİZ KUSUR — "güç yok" ile "model yok" aynı etiketti
+
+`_fwKwEff` iki bambaşka durumu tek `yok` etiketine katıyordu:
+
+| durum | doğru anlamı |
+|-------|--------------|
+| model henüz **çözülmüyor** | güç **hesaplanamaz** — aksesuar devri kasnak pitch çaplarından gelir, yarım modelde bilinemez |
+| model çözülüyor, katalog/eğri yok | gerçekten **0 kW ile koşar** |
+
+Yarım modelde kart bütün aksesuarları *"güç yok"* diye uyarıyordu; oysa eksik
+olan güç değil MODELDİ. Ayrı etiket: `cozumsuz` → *"model çözülmüyor"*.
+
+###### ÖLÇÜLDÜ — uçtan uca
+
+| | önce | sonra |
+|---|---:|---:|
+| taze sihirbaz duty satırı | **0** | **6** (`AG00686-6`) |
+| çözücü paneli duty satırı | **0** + *"Henüz devir noktası yok."* | **6** + çevrim seçicisi |
+| aksesuar modeli seçilince ALT kW (12 nokta) | elle | **7,62 … 15,13 kW** (katalog) |
+| çevrim `AG00902-4`'e çevrilince | — | devir 700·1200·2000·3000, kW **4,99 · 10,74 · 13,68 · 15,40** |
+
+Son satır asıl kazanç: çevrim değişince kW **yeni devir noktalarında yeniden
+hesaplanıyor** — hiçbir yerde elle giriş yok.
+
+**GERÇEK TARAYICI:** sihirbaz taze açılışta 6 satır · açılır pencereden gerçek
+seçim `700·1200·2000·3000` veriyor · kW hücreleri `kayıtlı ölçüm` / `2.70` /
+`3.61` basıyor; panel 6 satır ve seçiciyle açılıyor, *"Henüz devir noktası
+yok."* mesajı **yok**; konsol temiz.
+
+Kapı **on üç mutasyonla** ölçüldü, on üçü de kırmızı: sihirbazı yine boş
+tabloyla açma, panel tohumunu kaldırma, tohumun dolu tabloyu da ezmesi,
+tek-seferlik bayrağını kaldırma, kW taşımayı iki yüzeyden tek tek düşürme,
+kütüphaneye uydurma bir "standart" çevrim ekleme, bir kaydın %zamanını
+kaynaktan kaydırma, listeyi referansla döndürme, eşlemenin kW'a bakması,
+`cozumsuz`u yine `yok` yapma, çevrim seçicisini iki yüzeyden tek tek düşürme.
 
 ##### Duty sıcaklığı: satır başına °C → çekirdeğin istediği TEK °C
 
@@ -5582,6 +5699,8 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/fead-core.test.js` | `js/fead-core.js` + `tests/fixtures/fead-validation.js` | **FEAD çekirdeğinin doğrulama kapısı**: 17 Gates raporu / 2095 değer (çalışma %0.5, Load dahil %1.5, kol açısı 0.2°), 8 koruma mekanizması, SPEC §9 yapısal özdeşlikleri (sarım değişmezi, `L_pitch−L_eff=2π·hb`, çevrim kapanışı, sürücü gücü), UMD tarayıcı köprüsü; **burulma modeli**: yapısal özdeşlikler (tam 1 rijit cisim modu, take-up özdeşliği %0.01, yalnız gergi komşusu spanlar) + Gates "System Resonance (Mode 1)" kalibrasyonu (5 sistem RMS <%8, 4/6/8PK kaburga ölçeklemesi) |
 | `tests/unit/gates-archive.test.js` | `docs/gates-reports/pdf/` + `tests/helpers/gates-pdf.js` + `tests/fixtures/fead-validation.js` | **Arşiv KAPISI — testler Gates PDF'lerini doğrudan okuyor.** Okuyucu saf Node + `zlib` (yeni bağımlılık yok) ve üç sessiz kusuru çözmek zorunda: font BAŞINA ToUnicode (birleştirme dört raporda çöp metin üretiyor — glif 44 → `space`/`A`/`#`/`@`/`G`), eksi işaretinin AYRI çizim çağrısı olması (`["-","72.00"]` → kaçırılırsa kasnak aynalanır), nesne akışları (ObjStm — AG00894'te tek font bile bulunamıyor). Fixture'ın **284** statik değeri (yerleşim · çap · açıklık · sarım · gergi künyesi) on raporun tamamında **0 uyuşmazlıkla** geri üretiliyor. Belge bütünlüğü: `Page N of M` ile alıntı tespiti — üç rapor alıntı, yedisi tam (AG00879'un sayfa AĞACI 5 gösteriyor ama 12 sayfa da içinde). Altbilgi tek satır ve birleşik (`Page 1 of 119.37.0.0`) → düz kalıp **119** okur  Ayrıca **gergi künye kütüphanesini** (`js/fead-tensioners.js`) kaynağına bağlar: on kaydın kol/oran/moment değeri (30 sayı) birebir, ön yükün dokuzu birebir + onuncusu `preloadDerived` ile işaretli (raporda YOK), kaburga sayısı raporun künyesiyle aynı (AG00810 bir dönem 8 yazıyordu, raporu 10PK), parça kodu Drive Notes'ta gerçekten geçiyor ve doğrulanamayan dört kayıt kod TAŞIMIYOR |
 | `tests/unit/fead-canvas-mm.test.js` | `js/fead-model.js` koordinat katmanı + `js/connections.js` imza | **Kanvas = kayış düzlemi**: gidiş-dönüş birebir, Y EKSENİ TERS (kanvasta aşağı = mm'de azalan), kutu ölçüsünün sistematik kayma ÜRETMEMESİ (sol üstten ölçmek 54…72 px arası değişen bir sapma verirdi), 1 px = 1 mm. **Orijin**: sürücü kasnak (rol, tip değil), kendi mm'sinin (0,0) olması, kasnak yoksa senkronun hiç çalışmaması. **Senkron**: sürüklemenin mm'yi o kadar değiştirmesi, ORİJİNİ sürüklemenin diğerlerini karşı yönde kaydırması, araç düğümlerine dokunmaması. **Gergi**: pivot + montaj merkezinin RİJİT taşınması (kol boyu ve montaj açısı korunur, `veFeadArmCheck` geçer) ve ORİJİN sürüklenince gergi pivotunun da tazelenmesi (bu bir KAPI BOŞLUĞUYDU — gergi senkrondan çıkarılınca hiçbir test kırılmıyordu). **Göç**: ötelemenin L_eff/sarım/gerginliği BİREBİR bırakması, göçün krankı (0,0)'a çekmesi, gergi pivotunun da ötelenmesi (kısmi göç modeli bozardı). **İmza**: kasnak mm koordinatı/çapı/temas tarafı imzaya girer, Kayış Yolu kartını taşımak imzayı DEĞİŞTİRMEZ. **Uçtan uca**: alternatörü kanvasta taşımak gereken kayış boyunu gerçekten değiştiriyor |
+| `tests/unit/fead-duty.test.js` | `js/fead-duty.js` + `js/cp-fead.js` + `index.html` | **Çalışma çevrimi kütüphanesi**: yedi kaydın yedisi de kaynağında (fixture + BMC örneği) BİREBİR var — ikinci kopya sessizce ayrışırsa kullanıcı çevrim seçer, model çözülür, uyarı çıkmaz, yalnız ömür ve yorulma payları raporundan başka çıkar; arşivin TEK çevrim göstermediği (≥6 desen) — kütüphanenin var olma sebebi; Σ%zaman = 100, devir dizisi artan, anahtarlar tekil, künyede kaynak YAZILI; liste KOPYA döner (katalog güncellemesi eski projeyi bozmaz), satırlar kW'ı BOŞ üretir (güç hesaplanır), bilinmeyen anahtar uydurma kayıt üretmez; eşleme gidiş-dönüş tutar, tek devir değişince NULL döner ve kW'a BAKMAZ; etiket tek üreticiden ve iki yüzey de onu çağırıyor; betik `index.html`'de cp-fead ve sihirbazdan ÖNCE (çıpa script etiketi — çıplak dosya adı bir YORUMU bulup sırayı yanlış okuyor), tohum panel KURULURKEN atılıyor |
+| `tests/e2e/fead-duty.spec.js` | Çalışma çevrimi (uçtan uca) | **GERÇEK tarayıcı**: sihirbaz taze açılışta dolu tabloyla geliyor ve çevrim seçicisi yerinde, açılır pencereden GERÇEK seçim (`selectOption`) tabloyu o kayıtla değiştiriyor (700·1200·2000·3000), kW hücreleri kaynağıyla birlikte basılıyor; **panel** de `showNodeProperties` ile 6 satır ve seçiciyle kuruluyor ve *"Henüz devir noktası yok."* mesajı YOK. Panel yolu Node'da HİÇ koşmuyor |
 | `tests/unit/fead-belts.test.js` | `js/fead-belts.js` + `js/fead-model.js` aday değerlendirmesi | **Kayış kataloğu**: listelerin sıralı/tekil/pozitif olması, aralıkların ContiTech beyanıyla çakışması (bir listenin yanlış profile yapışması ancak böyle yakalanır), en kısa boyun min. kasnak çevresinden büyük olması, `veFeadBeltStock`'un KOPYA döndürmesi. **Izgara bir kural**: en yakın adıma yuvarlama, aralık dışında kenetlenme, ızgarası olmayan profilde sessizce PK ızgarasının kullanılmaması. **Kod**: otomotiv ve endüstriyel yazımın ikisinin de çözülmesi, gidiş-dönüş, kaburga denetiminin yalnız verisi olan profilde hüküm vermesi. **Ölçülmüş boşluk**: 8PK 1715'in endüstriyel listede OLMAMASI (komşuları 65 mm uzakta) — kataloğun iki kümeli olmasının sebebi. **Uçtan uca**: serbest kipin gereken boyu → katalog ızgarası → sabit kip tabanı (kol 28.4271° · T 532.142 · hub 302.125) birebir; sığmayan adayın gerginlik YAZMAMASI (4.05e10 N sızmıyor), boy uzadıkça kol ve gerginliğin düşmesi, aday değerlendirmesinin çalışma noktası önbelleğini kirletmemesi |
 | `tests/unit/fead-belt-mode.test.js` | `js/fead-model.js` kayış kipi + `js/fead-core.js` hoşgörülü geometri | **Kayış boyu sabit değil**: kip çözümü ve geriye dönük uyumluluk (boyu olan eski proje `fixed`, boyu olmayan artık ÇÖZÜLÜYOR); sabit kipte tabanın BİREBİR korunması (kol 28.4271° · L 1715.0000 · T 532.142 · hub 302.125); **nominal kol açısı yay künyesinden, geometriden DEĞİL** — montaj merkezi ya da pivot yokken de türetilir, künye gerçekten eksikse NaN kalır (uydurulmaz) ve `direct` kol açısı kipinde serbest kayış NOMİNALE oturur, aralığın ortasına DEĞİL (eskiden kol 38.1174° · fallback true · uyarı 0); serbest kipte gerginliğin ankraj, boyun ÇIKTI olması ve iki kipin doğru modelde AYNI çalışma noktasına varması; sürüklerken çözümün kopmaması (−200…+40 mm, boy monoton). **Kenetleme**: kuşatılmış hedefte çekirdeğin çözümünün birebir dönmesi, erişilemeyen hedefte istisna yerine sınır + aralığın yazılması, sığmayan kayışta NOMİNAL kol açısına düşülüp ÖNERİLEN boyun serbest kipinkiyle aynı çıkması, kenetlenmişken uyuşmazlık uyarısının İKİNCİ KEZ basılmaması. **Hoşgörülü geometri**: kapanmayan çevrimin çözülüp `geomValid:false` ile yazılması, çekirdek varsayılanının hâlâ ATMASI, çakışan kasnakların tek gerçek durdurucu olması. **Üç sessiz hata**: `feasibleRelMax` ölçütü, `_geomOpt`'un sistem ömrünün başında kurulması, dejenereliğin SARIM değil TAKE-UP ile ölçülmesi |
 | `tests/unit/fead-model.test.js` | `js/fead-model.js` | **Köprü kapısı**: AG00686 MFSim KANVAS DÜĞÜMÜ olarak kurulup Gates sayılarını üretiyor mu (span %0.5, sarım 0.2°, Mean kol açısı 0.2°); temas tarafı üç katmanlı çözümü, sürücü rolü, `dia→od` göçü, ad tekilleştirme, hata çevirisi. **Güzergâh teşhisi**: tel silinince çözüm ARTIK aynı kalmıyor (eskiden kopuk kasnak sıraya sessizce ekleniyordu), kopuk kasnak adıyla bildiriliyor, kapanmayan zincir ve çatal (bir kasnaktan iki tel) sebebiyle yazılıyor, `veFeadRouteOrder` sözleşmesi (yerleştirici için bütün kasnaklar) korunuyor. Ayrıca **ters temas tarafının hata VERMEDİĞİNİ** belgeler (rozetin varlık nedeni). **Duty kapısı**: AG00686 duty tablosunun çıkış gerilmeleri ve hubload'ları %0.5 içinde; kW'ın kimlikle anahtarlanması (yeniden adlandırmada kaybolmuyor), sürücü gücünün toplamdan hesaplanması, ateşleme frekansı, yorulma dağılımının çapa bağlı olması, katalog oranının ÇAPTAN hesaplanması. **Sıcaklık kapısı**: satır başına °C → tek °C indirgemesi hasar-eşdeğer (tek sıcaklıkta birebir aynı, dağılımda aritmetik ortalamanın üstünde), ağırlık `dc·v`, açıkça girilen %0 sıfır ağırlıklı; **yorulma modeli** seçimi dağılıma geçer, mutlak ömre geçemez ve bu yazılır. **Burulma köprüsü**: gergi kasnak kütlesi ve KRANK MİLİ ataleti çekirdeğe geçiyor (ölü girdiydi), krank adla anahtarlanır, `analyze()` içindeki çift hesap kapalı, eksik atalet sessiz değil |

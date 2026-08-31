@@ -28,6 +28,20 @@ global.nodes = [];
 global.connections = [];
 eval(loadSource('components.js'));
 eval(loadSource('fead-belts.js'));
+eval(loadSource('fead-duty.js'));
+// GLOBAL'E YAZILMASI ŞART: cp-fead.js `require` ile yükleniyor, dolayısıyla
+// çıplak `veFeadDutyRowsOf` referansı bu dosyanın kapsamını DEĞİL global'i
+// arar. Yazılmazsa tohum sessizce false döner ve kapı "doğru sebepten değil,
+// kütüphane hiç görünmediği için" kırmızı olurdu.
+[VE_FEAD_DUTY_DEFAULT, VE_FEAD_DUTY_DEGC].forEach(() => {});
+global.VE_FEAD_DUTY_DEFAULT = VE_FEAD_DUTY_DEFAULT;
+global.VE_FEAD_DUTY_DEGC = VE_FEAD_DUTY_DEGC;
+global.VE_FEAD_DUTY_DB = VE_FEAD_DUTY_DB;
+global.veFeadDutyList = veFeadDutyList;
+global.veFeadDutyOf = veFeadDutyOf;
+global.veFeadDutyLabel = veFeadDutyLabel;
+global.veFeadDutyRowsOf = veFeadDutyRowsOf;
+global.veFeadDutyMatch = veFeadDutyMatch;
 // Model katmanı ayrı dosyada; tarayıcıda ikisi de global kapsamda yüklenir,
 // testte de öyle kurulur (cp-fead.js bu adları çağırıyor).
 global.FEADCore = F;
@@ -2266,5 +2280,70 @@ describe('gergi paneli: avara hareketi montaj konumundan tanımlanır', () => {
       preload: 8.6, kArm: 0.48, meanLoad: 22.07,
     }));
     expect(html).toMatch(/veFeadSet\('[^']+','armLen'/);
+  });
+});
+
+// ── ÇALIŞMA ÇEVRİMİ PANELDE DE BOŞ AÇILMAZ (2026-08-31) ────────────────────
+//
+// Kullanıcı sihirbazı işaret etti ama kusur asıl modelin yaşadığı yerde de
+// vardı: Çözücü paneli `duty: []` ile açılıyor ve "Henüz devir noktası yok."
+// diyordu. İki yüzey AYNI kütüphaneden besleniyor — ayrı listeler tutsalardı
+// kullanıcı sihirbazda seçtiği çevrimi panelde bulamazdı.
+describe('çözücü paneli — çalışma çevrimi', () => {
+  const cozucu = (data) => ({ id: 'slv1', type: 'fead-solver', data: data || {} });
+
+  test('BOŞ tablo tohumlanıyor ve hangi kayıt olduğu YAZILIYOR', () => {
+    const n = cozucu();
+    expect(fead.veFeadDutySeed(n)).toBe(true);
+    expect(n.data.duty.length).toBeGreaterThan(0);
+    expect(n.data.dutyLib).toBe(VE_FEAD_DUTY_DEFAULT);
+    expect(veFeadDutyMatch(n.data.duty)).toBe(VE_FEAD_DUTY_DEFAULT);
+  });
+
+  test('DOLU tabloya DOKUNULMUYOR — kaydedilmiş proje birebir korunur', () => {
+    const kendi = [{ rpm: 950, dcPct: 100, degC: 85, kw: { x: 2 } }];
+    const n = cozucu({ duty: kendi.map((r) => Object.assign({}, r)) });
+    fead.veFeadDutySeed(n);
+    expect(n.data.duty.length).toBe(1);
+    expect(n.data.duty[0].rpm).toBe(950);
+    expect(n.data.duty[0].degC).toBe(85);
+  });
+
+  test('TEK SEFERLİK: kullanıcı satırları silerse geri gelmiyor', () => {
+    // Bayrak olmasaydı, bilerek boşaltılan tablo her panel açılışında dolardı.
+    const n = cozucu();
+    fead.veFeadDutySeed(n);
+    n.data.duty = [];
+    expect(fead.veFeadDutySeed(n)).toBe(false);
+    expect(n.data.duty.length).toBe(0);
+  });
+
+  test('kütüphaneden çevrim uygulanıyor ve kW devri tutan satırda KORUNUYOR', () => {
+    global.nodes = [cozucu({ duty: [{ rpm: 2000, dcPct: 100, degC: 90, kw: { alt: 3.9 } }],
+                             dutySeeded: true })];
+    fead.veFeadDutyLib('slv1', 'AG00686-6');
+    const d = global.nodes[0].data;
+    expect(d.duty.map((r) => r.rpm)).toEqual([800, 1000, 1250, 1500, 1750, 2000]);
+    expect(d.dutyLib).toBe('AG00686-6');
+    expect(d.duty.find((r) => r.rpm === 2000).kw.alt).toBe(3.9);   // taşındı
+    expect(d.duty.find((r) => r.rpm === 800).kw).toEqual({});      // uydurulmadı
+  });
+
+  test('panelde ÇEVRİM SEÇİCİ basılıyor ve yüklü kaydı gösteriyor', () => {
+    global.nodes = [cozucu()];
+    const h = fead.getFeadSolverPropertiesHTML(global.nodes[0]);
+    expect(h).toContain('Çevrim kaydı');
+    expect(h).toContain('veFeadDutyLib(');
+    const rec = veFeadDutyOf(VE_FEAD_DUTY_DEFAULT);
+    expect(h).toContain('value="' + rec.key + '" selected');
+    // ...ve tablo artık "Henüz devir noktası yok." demiyor.
+    expect(h).not.toContain('Henüz devir noktası yok');
+  });
+
+  test('elle düzenlenmiş tablo seçicide ÖZEL diyor', () => {
+    global.nodes = [cozucu({ duty: [{ rpm: 1234, dcPct: 100, degC: 90, kw: {} }],
+                             dutySeeded: true })];
+    const h = fead.getFeadSolverPropertiesHTML(global.nodes[0]);
+    expect(h).toContain('özel (elle düzenlendi)');
   });
 });
