@@ -7538,3 +7538,26 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
   .ve-fw-step.on{ border-bottom-color:var(--accent-primary); }
   .ve-fw-brand{ display:none; }
 }
+
+/* Sihirbaz — gergi satırı ve salt-okunur hücreler ------------------------- */
+/* Gergi satırı tabloya OTOMATİK gelir ve silinemez: çekirdek her modelde tam
+   bir gergi istiyor. Zemin farkı bunu söylüyor — kullanıcı neden silemediğini
+   satıra bakınca anlıyor. */
+.ve-fw-tbl tr.ve-fw-tr-ten td{ background:var(--accent-tint-6); }
+.ve-fw-tbl tr.ve-fw-tr-ten:hover td{ background:var(--accent-tint-10); }
+/* X/Y sütununun gergide BAŞKA bir noktayı gösterdiğini söyleyen çip.
+   Karıştırmanın ölçülmüş bedeli gerginlikte −%48,6, yani bu etiket bir süs
+   değil bir kapı. */
+.ve-fw-tag{
+  display:inline-block; margin-top:3px; padding:1px 5px;
+  font-size:var(--fs-micro); font-weight:600; letter-spacing:var(--tracking-wide);
+  color:var(--accent-warning); background:var(--bg-tertiary);
+  border:1px solid var(--accent-warning); border-radius:var(--radius-sm);
+}
+/* Salt okunur hücre: sayı bir GİRDİ değil, seçimin sonucu. Girdi kutusuna
+   benzememeli — kullanıcı tıklayıp yazmayı denemesin. */
+.ve-fw-ro{
+  font-family:var(--font-mono); font-size:var(--fs-tiny); color:var(--text-muted);
+  padding:4px 6px; display:inline-block;
+}
+.ve-fw-ro-err{ color:var(--accent-danger); font-weight:700; }

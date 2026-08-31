@@ -255,6 +255,27 @@ function veFeadTensionerList(){
   });
 }
 
+// ── SEÇİM ETİKETİ — TEK ÜRETİCİ ────────────────────────────────────────────
+//
+// Kullanıcı isteği (2026-08-31): *"Otomatik gergi tiplerinde Gates raporları
+// yazıyor. Bunu kaldıralım, sadece kol uzunluğu ve çalışma momenti yazsın."*
+//
+// Etiket iki yüzeyde birden basılıyor (Çözücü/Gergi paneli ve sihirbazın gergi
+// adımı). İki kopya tutmak, birinin sessizce eskimesi demekti — bu deponun
+// tekrar eden kuralı: aynı listeyi gösteren iki yüzey TEK üreticiden beslenir.
+//
+// `src` (kaynak rapor adı) DÜŞÜYOR ve bu ayrımı bozmuyor — ÖLÇÜLDÜ: 14 kaydın
+// 14'ü de "kol X mm · Y Nm" ile TEKİL; en yakın iki kayıt 22,20 ↔ 22,21 Nm.
+// İki ondalık ŞART: bire indirilirse o çift çakışır ve kullanıcı iki farklı
+// künyeyi ayırt edemez. Kaynak rapor kayıtta (`key`, `src`) DURUYOR — düşen
+// yalnız seçim listesinin metni.
+function veFeadTenLabel(rec){
+  if(!rec) return '';
+  var a = Number(rec.armLen), m = Number(rec.meanNm);
+  if(!Number.isFinite(a) || !Number.isFinite(m)) return String(rec.key || '');
+  return 'kol ' + a + ' mm · ' + m.toFixed(2) + ' Nm';
+}
+
 function veFeadTensionerOf(key){
   var l = veFeadTensionerList();
   for(var i = 0; i < l.length; i++) if(l[i].key === key) return l[i];
@@ -352,6 +373,7 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_TEN_PIN: VE_FEAD_TEN_PIN,
     veFeadTenPin: veFeadTenPin, veFeadTenPinAngle: veFeadTenPinAngle,
     veFeadTensionerList: veFeadTensionerList,
+    veFeadTenLabel: veFeadTenLabel,
     veFeadTensionerOf: veFeadTensionerOf,
     veFeadTensionerFind: veFeadTensionerFind,
     veFeadTensionerApply: veFeadTensionerApply,

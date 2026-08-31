@@ -183,6 +183,88 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     expect(hatalar).toEqual([]);
   });
 
+  test('gergi satırı Kasnaklar tablosunda — silinemez ve odak DÜŞMÜYOR', async ({ page }) => {
+    // Mevcut odak kapısı bir KASNAK satırını ölçüyor; gergi satırı ayrı bir
+    // kod yolu (veFeadWizTenSet) ve tam yeniden çizim tetiklerse orada odak
+    // düşerdi — bu regresyon kasnak satırından GÖRÜNMEZ.
+    await bootApp(page);
+    await openFead(page);
+    await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
+    await page.locator('#ve-fw-body .ve-fw-btn-wide').first().click();
+    await page.locator('#ve-fw-nav .ve-fw-step').nth(1).click();
+
+    const ten = page.locator('#ve-fw-body tr.ve-fw-tr-ten');
+    await expect(ten).toHaveCount(1);
+    await expect(ten.locator('button.ve-fw-x')).toBeDisabled();
+    await expect(ten.locator('input[type="radio"]')).toBeDisabled();
+
+    // X hücresine gerçek klavyeyle yaz — değer modele işlemeli, odak kalmalı.
+    const x = ten.locator('input[type="number"]').nth(1);
+    await x.click();
+    await x.fill('-168.4');
+    await page.waitForTimeout(450);
+    const odak = await page.evaluate(() => document.activeElement && document.activeElement.value);
+    expect(odak).toBe('-168.4');
+    const st = await page.evaluate(() => {
+      const s = veFeadWizState();
+      const k = veFeadWizTenCoordKeys(s);
+      return { mod: s.tenMode, deger: s.ten[k[0]], anahtar: k[0] };
+    });
+    expect(String(st.deger)).toBe('-168.4');
+
+    // Aynı değer 4. adımın ALANINDA da duruyor (tek kayıt, iki yüzey).
+    // toContainText KULLANILMAZ: input DEĞERİ metin içeriği değildir, o kapı
+    // kod doğruyken bile kırmızı verir.
+    await page.locator('#ve-fw-nav .ve-fw-step').nth(3).click();
+    const dortAdim = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('#ve-fw-body input'))
+        .map((i) => i.value).filter((v) => v === '-168.4').length);
+    expect(dortAdim).toBeGreaterThan(0);
+  });
+
+  test('aksesuar modeli açılır pencereden seçilir, kW elle GİRİLMEZ', async ({ page }) => {
+    await bootApp(page);
+    await openFead(page);
+    await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
+    // AG00976: gücü duty kW'da duran örnek (aksesuarların eğrisi yok)
+    await page.locator('#ve-fw-body .ve-fw-btn-wide').nth(1).click();
+    await page.locator('#ve-fw-nav .ve-fw-step').nth(5).click();
+
+    await expect(page.locator('#ve-fw-body')).toContainText('Aksesuar Modelleri');
+    // Duty tablosunda kW artık GİRDİ değil
+    const kwInput = await page.evaluate(() =>
+      document.querySelectorAll('#ve-fw-body [oninput*="veFeadWizDutyKw"]').length);
+    expect(kwInput).toBe(0);
+
+    const sec = page.locator('#ve-fw-body select[onchange*="veFeadWizAccPreset"]');
+    expect(await sec.count()).toBeGreaterThanOrEqual(1);
+    const once = await page.evaluate(() => {
+      const s = veFeadWizState();
+      const alt = s.pulleys.find((p) => p.type === 'fead-alternator');
+      return { kayit: s.solver.duty[0].kw[alt.key], preset: alt.accPreset };
+    });
+    expect(once.preset).toBeUndefined();
+    expect(once.kayit).toBeGreaterThan(0);
+
+    // Alternatör modelini seç → kayıtlı kW temizlenir, katalog devreye girer
+    const altSec = page.locator('#ve-fw-body tr', { hasText: 'Alternatör' })
+      .locator('select[onchange*="veFeadWizAccPreset"]').first();
+    await altSec.selectOption({ index: 1 });
+    await page.waitForTimeout(400);
+    const sonra = await page.evaluate(() => {
+      const s = veFeadWizState();
+      const alt = s.pulleys.find((p) => p.type === 'fead-alternator');
+      const b = veFeadWizBuild();
+      return { kayit: s.solver.duty[0].kw[alt.key], preset: alt.accPreset,
+               dugum: veFeadWizNodes(s).nodes.find((n) => n.id === 'wz-' + alt.key).data.accPreset,
+               ok: b.ok };
+    });
+    expect(sonra.preset).toBeTruthy();
+    expect(sonra.kayit).toBeUndefined();      // kayıtlı kW temizlendi
+    expect(sonra.dugum).toBe(sonra.preset);   // çözüme gidiyor
+    expect(sonra.ok).toBe(true);
+  });
+
   test('yerleşim: modal ekrana sığıyor, gövde yatay KAYDIRMIYOR', async ({ page }) => {
     await bootApp(page);
     await openFead(page);

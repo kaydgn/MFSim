@@ -1427,9 +1427,13 @@ function veFeadTensionerLibCard(node){
   var td = node.data || {};
   var liste = veFeadTensionerList();
   var sec = td.tenLib || '';
+  // ETİKET TEK ÜRETİCİDEN (veFeadTenLabel, fead-tensioners.js) — sihirbazın
+  // gergi adımı da aynı listeyi basıyor. İki kopya tutulsaydı biri sessizce
+  // eskirdi. Kullanıcı isteği (2026-08-31): etikette kaynak rapor adı DEĞİL,
+  // yalnız kol boyu ve çalışma momenti.
   var opts = [['', '— elle gir —']].concat(liste.map(function(r){
-    return [r.key, r.src + '  ·  kol ' + r.armLen + ' · k ' + r.rateNm
-            + ' · rel ' + r.relNomDeg.toFixed(1) + '°'];
+    return [r.key, (typeof veFeadTenLabel === 'function') ? veFeadTenLabel(r)
+                   : ('kol ' + r.armLen + ' mm · ' + r.meanNm + ' Nm')];
   }));
   var h = '<div style="display:flex; align-items:center; gap:10px; margin-bottom:9px;">'
     + '<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">'
