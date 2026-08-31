@@ -1339,3 +1339,154 @@ describe('gerginlik grafiği · kayma eşiği çizgisi', () => {
     expect(panel).toContain("veFeadSet('r1','author',this.value)");
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SAYFA NUMARASI · MATEMATİK SINIRLAYICISI · TABLO 9'UN KURULUŞU (2026-08-28)
+//
+// Üçü de kullanıcı bildiriminden doğdu. Ortak yanları: belge YİNE üretiliyor,
+// hata çıkmıyor, yalnız okunamıyor ya da doğrulanamıyor oluyor.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('detay rapor · sayfa numarası, sınırlayıcı, Tablo 9 kuruluşu', () => {
+  const fs2 = require('fs');
+  const path2 = require('path');
+  const kok = path2.join(__dirname, '..', '..');
+  const sablon = () => {
+    const tpl = fs2.readFileSync(path2.join(kok, 'js', 'fead-report-template.js'), 'utf8');
+    const b64 = /window\.FEAD_REPORT_TEMPLATE_B64 = "([^"]+)"/.exec(tpl)[1];
+    return Buffer.from(b64, 'base64').toString('utf8');
+  };
+
+  // ── 1) SAYFA NUMARASI ────────────────────────────────────────────────────
+  test('BASKI sayfa numarası şablonda — @page kenar kutusunda counter(page)', () => {
+    const css = sablon();
+    // @page bloğu ve içindeki alt-orta kenar kutusu
+    expect(css).toMatch(/@page\s*\{[^]*?@bottom-center\s*\{[^]*?counter\(page\)/);
+    expect(css).toMatch(/counter\(pages\)/);
+    // ÖLÇÜLDÜ (Chromium): kenar kutuları ve sayaçlar çalışıyor, `string()`
+    // ÇALIŞMIYOR — akan bölüm başlığı denendi, kutu BOŞ çıkıyor. Kapı bunu
+    // kilitliyor ki biri "bölüm adı da yazsın" diye sessizce ekleyip
+    // üstbilgiyi boşaltmasın.
+    expect(css).not.toMatch(/@page[^]*?string\(/);
+    expect(css).not.toMatch(/string-set\s*:/);
+  });
+
+  test('sayfa numarası YALNIZ baskıda — ekranda kutu yok', () => {
+    const css = sablon();
+    const i = css.indexOf('@media print');
+    expect(i).toBeGreaterThan(0);
+    // @page kuralı baskı bloğunun İÇİNDE olmalı
+    expect(css.indexOf('@bottom-center')).toBeGreaterThan(i);
+  });
+
+  // ── 2) MATEMATİK SINIRLAYICISI ───────────────────────────────────────────
+  test('TANIMSIZ sınırlayıcı YOK: \\[…\\] hiçbir üretecin çıktısında geçmiyor', () => {
+    // Otomatik render YALNIZ iki sınırlayıcı tanıyor ve boot yapılandırması
+    // KaTeX'in kendi varsayılan listesini EZİYOR. `\[…\]` ile yazılan bir
+    // denklem ham LaTeX olarak, düz yazı gibi basılır — sessiz, çünkü belge
+    // yine üretilir ve hata çıkmaz. Bir kez tam olarak öyle oldu (§8.7).
+    const boot = fs2.readFileSync(path2.join(kok, 'tools', 'report-assets',
+      'build-fead-report-template.js'), 'utf8');
+    // Boot'un TANIDIĞI sınırlayıcılar — tek kaynak, kapı buradan okuyor.
+    expect(boot).toMatch(/left:"\$\$",right:"\$\$"/);
+    expect(boot).toMatch(/left:"\\\\\\\\\(",right:"\\\\\\\\\)"/);
+    expect(boot).not.toMatch(/left:"\\\\\\\\\[/);      // \[ KAYITLI DEĞİL
+
+    ['js/cp-fead-report.js', 'js/cp-fead-summary.js',
+     'tools/report-assets/fead-theory-source.html'].forEach((f) => {
+      const src = fs2.readFileSync(path2.join(kok, f), 'utf8');
+      expect({ dosya: f, adet: (src.match(/\\\[/g) || []).length })
+        .toEqual({ dosya: f, adet: 0 });
+    });
+  });
+
+  test('tasarım gerginliği denklemi $$…$$ ile ve NUMARALI', () => {
+    const blok = RP._frDesignTensionBlock(R8);
+    expect(blok).toContain('$$');
+    expect(blok).not.toContain('\\[');
+    expect(blok).toMatch(/T_\{\\text\{tasarım\}\}/);
+    // Numarası var (atıf yapılabilsin) ve sayaçtan geliyor
+    expect(blok).toMatch(/<span class="tag">\(8\.\d+\)<\/span>/);
+  });
+
+  test('ÜRETİLEN §8 + Uygunluk gövdesinde ham LaTeX kalmıyor', () => {
+    // Yalnız ÜRETEÇ çıktısı taranır. Tam belge şablonu da içeriyor ve gömülü
+    // KaTeX paketi kendi varsayılan sınırlayıcı listesinde o diziyi taşıyor —
+    // o bizim metnimiz değil, taransaydı kapı yanlış yerden kırmızı olurdu.
+    const s8 = RP._frSection8(R8, NODE) + RP._frCompliance(R8);
+    expect((s8.match(/\\\[/g) || []).length).toBe(0);
+    expect((s8.match(/\\\]/g) || []).length).toBe(0);
+  });
+
+  // ── 3) TABLO 9'UN KURULUŞU ───────────────────────────────────────────────
+  test('Tablo 9 · her ölçüt AMAÇ FONKSİYONUNU ve YÖNÜNÜ taşıyor (tek kaynak)', () => {
+    RP.VE_FR_ENV_CRITERIA.forEach((c) => {
+      expect(typeof c.J).toBe('string');
+      expect(c.J.length).toBeGreaterThan(3);
+      expect(['max', 'min']).toContain(c.yon);
+    });
+    // Kazanan ölçüt EN BÜYÜKLENEN take-up minimumu — (4.x)'in ta kendisi
+    const win = RP.VE_FR_ENV_CRITERIA.filter((c) => c.win)[0];
+    expect(win.yon).toBe('max');
+    expect(win.J).toMatch(/\\min/);
+    expect(win.J).toMatch(/dL/);
+  });
+
+  test('Tablo 9 · formüller TABLODA basılıyor, ikinci kopyadan değil', () => {
+    const env = RP._frEnvelopeBlock(R8);
+    RP.VE_FR_ENV_CRITERIA.forEach((c) => {
+      expect(env).toContain(c.J);          // satırın kendi J'si belgede
+      expect(env).toContain(c.ad);
+    });
+    expect(env).toContain('Amaç fonksiyonu');
+  });
+
+  test('Tablo 9 · üç sütunun da KURULUŞU denklemle yazılı', () => {
+    const env = RP._frEnvelopeBlock(R8);
+    // yoklama kümesi Θ — bant sürekli değil, dört noktada örnekleniyor
+    expect(env).toMatch(/\\Theta\s*\\;=\\;/);
+    expect(env).toMatch(/\\tfrac\{1\}\{2\}\\theta_\{\\text\{nom\}\}/);
+    // argopt
+    expect(env).toMatch(/arg\\,opt/);
+    // Δ SARMALANMIŞ — çember üzerinde fark başka türlü tanımsız
+    expect(env).toMatch(/\\operatorname\{wrap\}/);
+    expect(env).toMatch(/N = 14/);
+    // medyan ve isabet sayımı
+    expect(env).toMatch(/\\operatorname\{med\}/);
+    expect(env).toMatch(/\\le 5\^\\circ/);
+    // plato ve ceza
+    expect(env).toMatch(/0\{,\}99\\,\s*J\(\\theta\^\{\*\}\)/);
+    expect(env).toMatch(/1 - \\frac\{J\(\\theta_\{\\text\{ted\}\}\)\}/);
+  });
+
+  test('Tablo 9 · yoklama kümesi BANT ÇARPANINDAN, elle yazılmıyor', () => {
+    // Yalnız "1,5 basılıyor mu" diye bakmak YETMEZ: sabit elle yazılsaydı da
+    // aynı dizgi çıkardı (mutasyonla ölçüldü, kapı geçiyordu). Kapı bu yüzden
+    // ÇARPANI DEĞİŞTİRİP çıktının onu izlediğini ölçüyor.
+    const env = RP._frEnvelopeBlock(R8);
+    expect(env).toContain(String(RP._frEnvMult()).replace('.', ',')
+      + '\\,\\theta_{\\text{nom}}');
+    const eski = global.VE_FEAD_ENV_TRAVEL_MULT;
+    try {
+      global.VE_FEAD_ENV_TRAVEL_MULT = 1.9;
+      expect(RP._frEnvMult()).toBe(1.9);
+      const e2 = RP._frEnvelopeBlock(R8);
+      expect(e2).toContain('1,9\\,\\theta_{\\text{nom}}');       // yoklama kümesi
+      expect(e2).toContain('1,9\\cdot\\theta_{\\text{nom}}');    // servis bandı
+    } finally { global.VE_FEAD_ENV_TRAVEL_MULT = eski; }
+  });
+
+  test('Tablo 9 · kuruluş bloğu TABLODAN ÖNCE geliyor', () => {
+    const env = RP._frEnvelopeBlock(R8);
+    const iK = env.indexOf('büyüklükleri nasıl kuruldu');
+    const iT = env.indexOf('Seçim ölçütü 14 tedarikçi');
+    expect(iK).toBeGreaterThan(-1);
+    expect(iT).toBeGreaterThan(iK);
+  });
+
+  test('h5 ara başlığı şablon CSS\'inde tanımlı (varsayılana düşmüyor)', () => {
+    const css = sablon();
+    expect(css).toMatch(/h5\{[^}]*font-size/);
+    expect(css).toMatch(/h1,h2,h3,h4,h5\{font-family/);
+    expect(RP._frEnvelopeBlock(R8)).toContain('<h5>');
+  });
+});
