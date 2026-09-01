@@ -1109,10 +1109,92 @@ function getFeadPulleyPropertiesHTML(node){
           + '<b>pitch çaplarından</b> gelir, elle oran girilmez.'));
   }
 
+  if(!isIdler) html += veFeadAccLimitCard(node);
   if(!isIdler) html += veFeadPowerCurveCard(node);
 
   html += '</div>';
   return html;
+}
+
+// ── BMC AKSESUAR KÜNYESİ + DEVİR SINIRLARI ─────────────────────────────────
+//
+// Üç devir alanı ÖLÜ DEĞİL: ikisi doğrudan bir kapı besliyor
+// (js/fead-checks.js — devir penceresi ve devir sınırı). MFSim'de zaten olan
+// "Katalog Modeli" kartıyla karıştırılmasın diye ayrı duruyor ve ne getirdiği
+// yazılı: o kart yalnız devir→kW eğrisi verir, bu kart SINIR verir.
+//
+// KATALOG SEÇİCİ yalnız defterde karşılığı olan iki tipte (alternatör, klima)
+// çıkar; SINIR ALANLARI her aksesuarda durur — kullanıcı su pompasının ya da
+// hava kompresörünün sınırını biliyorsa kapı onda da çalışsın. Elle girilen
+// değer katalogtan ÜSTÜNDÜR (veFeadAccLimits).
+function veFeadAccLimitCard(node){
+  var h = '';
+  var tip = (typeof VE_FEAD_ACC_TYPE !== 'undefined') ? VE_FEAD_ACC_TYPE[node.type] : null;
+
+  if(tip && typeof veFeadAccList === 'function'){
+    var liste = veFeadAccList(node.type);
+    var sec = (node.data && node.data.accLib) || '';
+    h += '<div style="display:flex; align-items:center; gap:10px; margin-bottom:9px;">'
+      + '<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">'
+      + 'BMC künyesi</div>'
+      + '<select onchange="veFeadApplyAccLib(\'' + node.id + '\',this.value)"'
+      + ' style="width:230px; ' + _FEAD_INP + ' text-align:left;">'
+      + '<option value="">— elle gir —</option>';
+    liste.forEach(function(r){
+      h += '<option value="' + _feadEsc(r.key) + '"' + (r.key === sec ? ' selected' : '') + '>'
+         + _feadEsc(r.label) + '</option>';
+    });
+    h += '</select></div>';
+  }
+
+  h += _feadGrid(node, [
+      { key:'optimumRpm', label:'Optimum [d/dk]',       ph:'6000',  step:'50' },
+      { key:'maxContRpm', label:'Maks. sürekli [d/dk]', ph:'8000',  step:'50' },
+      { key:'maxPeakRpm', label:'Maks. anlık [d/dk]',   ph:'12000', step:'50' }
+    ], 3);
+
+  // Katalog seçiliyken hangi alanın nereden geldiği YAZILI: elle girilen bir
+  // değer katalogu ezer ve bunu görmeden fark etmek zor olurdu.
+  var lim = (typeof veFeadAccLimits === 'function') ? veFeadAccLimits(node) : null;
+  if(lim && lim.key){
+    var elle = ['optimum','maxCont','maxPeak'].filter(function(k){
+      return lim[k] && lim[k].kaynak === 'elle'; });
+    h += _feadHint(elle.length
+      ? '<b>' + _feadEsc(lim.ad) + '</b> seçili; <b style="color:var(--accent-warning);">'
+        + elle.length + ' alan elle girilmiş</b> ve katalog değerinin yerine geçiyor.'
+      : '<b>' + _feadEsc(lim.ad) + '</b> — üç sınır da katalogdan.');
+  }
+
+  h += _feadHint('<b>Optimum</b> ile <b>maksimum sürekli</b> arası, aksesuarın çalışmasının '
+    + 'istendiği banttır: motor <i>governed</i> devrindeyken aksesuar devri bu banda düşmüyorsa '
+    + 'panel <b>kasnak çapı küçültülmeli / büyütülmeli</b> der. <b>Maksimum anlık</b> ise motor '
+    + '<i>overspeed</i>\'e çıktığında aşılmaması gereken sınırdır. Üçü de boşsa o kasnak için '
+    + 'kapı <b>değerlendirilemedi</b> olur — uygun sayılmaz.');
+
+  return _feadCard('Devir Sınırları', tip ? 'BMC kataloğu + kapı girdisi' : 'kapı girdisi',
+                   'var(--accent-primary)', h);
+}
+
+// Aksesuar künyesini uygula. Boş değer yalnız BAĞI çözer (alanlar kalır);
+// dolu değer sınırları ve — varsa — devir/kW eğrisini yazar.
+function veFeadApplyAccLib(nodeId, key){
+  if(typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n){ return n.id === nodeId; });
+  if(!node) return;
+  if(!node.data) node.data = {};
+  if(!key){
+    if(typeof veFeadAccUnlink === 'function') veFeadAccUnlink(node);
+  } else if(typeof veFeadAccApply === 'function'){
+    if(!veFeadAccOf(key)) return;
+    veFeadAccApply(node, key);
+    var rec = veFeadAccOf(key);
+    if(typeof showToast === 'function')
+      showToast(rec.ad + ' künyesi yüklendi'
+        + (rec.curve && rec.curve.length ? ' (' + rec.curve.length + ' noktalı eğriyle)'
+                                         : ' — defterde eğrisi yok, kW tablosu korundu'), 'success');
+  }
+  if(typeof saveState === 'function') saveState();
+  if(typeof showNodeProperties === 'function') showNodeProperties(node);
 }
 
 // ── AKSESUAR GÜÇ EĞRİSİ (devir → kW) ────────────────────────────────────────
@@ -3137,6 +3219,7 @@ function getFeadSolverPropertiesHTML(node){
     html += veFeadWarningBox(build);
   }
 
+  html += veFeadChecksCard(node, build);
   html += veFeadDutyEditor(node, build);
 
   var hazir = build.ok && veFeadDutyRows(node).length > 0;
@@ -3152,6 +3235,121 @@ function getFeadSolverPropertiesHTML(node){
   html += veFeadResultBlock(node);
   html += '</div>';
   return html;
+}
+
+// ── UYGUNLUK KAPILARI KARTI ────────────────────────────────────────────────
+//
+// BMC hesap defterinden gelen üç kapı (js/fead-checks.js), HESAPLAMADAN ÖNCE
+// görünür. Sebep: üçü de yerleşim ve künye verisiyle çözülüyor — çalışma
+// çevrimi ya da gerginlik gerekmiyor. Kullanıcı "Hesapla"ya basmadan kasnak
+// çapını düzeltebilsin diye burada duruyor, sonuç bloğunda değil.
+//
+// ÜÇ DURUM VAR, İKİ DEĞİL: 'wait' (veri yok) uygun SAYILMAZ ve gizlenmez.
+function veFeadChecksCard(node, build){
+  if(typeof veFeadChecks !== 'function')
+    return _feadCard('Uygunluk Kapıları', '', 'var(--text-muted)',
+      _feadHint('Kapılar yüklenmedi (js/fead-checks.js).'));
+
+  var opt = veFeadCheckOpt(node.data || {}, veFeadDutyRows(node));
+  var R = veFeadChecks(build, opt);
+  var h = '';
+
+  function rozet(durum){
+    if(durum === 'ok')   return '<span style="color:var(--accent-success); font-weight:700;">✓ uygun</span>';
+    if(durum === 'warn') return '<span style="color:var(--accent-warning); font-weight:700;">⚠ sınırda</span>';
+    if(durum === 'no')   return '<span style="color:var(--accent-danger); font-weight:700;">✗ kontrol</span>';
+    return '<span style="color:var(--text-muted);">— değerlendirilemedi</span>';
+  }
+  function baslik(ad, durum, ek){
+    return '<div style="display:flex; align-items:baseline; gap:8px; margin:8px 0 4px;">'
+      + '<span style="font-size:var(--fs-micro); font-weight:700; color:var(--text-secondary);">' + ad + '</span>'
+      + '<span style="flex:1; font-size:var(--fs-micro); color:var(--text-muted);">' + (ek || '') + '</span>'
+      + '<span style="font-size:var(--fs-micro);">' + rozet(durum) + '</span></div>';
+  }
+  var TD = ' style="padding:2px 5px; border-bottom:1px solid var(--border-color);"';
+  var TDR = ' style="padding:2px 5px; border-bottom:1px solid var(--border-color); text-align:right; font-family:ui-monospace,monospace;"';
+  function tablo(inner){
+    return '<table style="width:100%; font-size:var(--fs-micro); border-collapse:collapse; margin-bottom:6px;">'
+      + inner + '</table>';
+  }
+  function pay(p){
+    var renk = !Number.isFinite(p) ? 'var(--text-muted)'
+             : p < 0  ? 'var(--accent-danger)'
+             : p < 10 ? 'var(--accent-warning)' : 'var(--text-secondary)';
+    return '<span style="color:' + renk + ';">' + (Number.isFinite(p) ? _feadFmt(p, 1) + '%' : '—') + '</span>';
+  }
+
+  // 1 — merkez mesafesi
+  var c = R.centerDistance;
+  h += baslik('Kasnak merkez mesafesi', c.durum,
+        '0,7·(d₁+d₂) ≤ a ≤ 2·(d₁+d₂)' + (c.note ? ' — ' + _feadEsc(c.note) : ''));
+  if(c.rows.length){
+    var t = '<tr><th' + TD + '>çift</th><th' + TDR + '>alt</th><th' + TDR + '>a</th>'
+          + '<th' + TDR + '>üst</th><th' + TDR + '>pay</th></tr>';
+    c.rows.forEach(function(r){
+      t += '<tr><td' + TD + '>' + _feadEsc(r.cift) + '</td>'
+        + '<td' + TDR + '>' + _feadFmt(r.lo, 1) + '</td>'
+        + '<td' + TDR + '>' + _feadFmt(r.a, 1) + '</td>'
+        + '<td' + TDR + '>' + _feadFmt(r.hi, 1) + '</td>'
+        + '<td' + TDR + '>' + pay(r.payPct) + '</td></tr>';
+    });
+    h += tablo(t);
+  }
+
+  // 2 — çevrim oranı penceresi
+  var w = R.ratioWindow;
+  h += baslik('Çevrim oranı penceresi', w.durum,
+        (w.governedRpm > 0 ? 'governed ' + _feadFmt(w.governedRpm, 0) + ' d/dk' : '')
+        + (w.note ? ' — ' + _feadEsc(w.note) : ''));
+  if(w.rows.length){
+    var t2 = '<tr><th' + TD + '>aksesuar</th><th' + TDR + '>optimum</th><th' + TDR + '>devir</th>'
+           + '<th' + TDR + '>sürekli</th><th' + TD + '>hüküm</th></tr>';
+    w.rows.forEach(function(r){
+      t2 += '<tr><td' + TD + '>' + _feadEsc(r.ad) + '</td>'
+        + '<td' + TDR + '>' + _feadFmt(r.optimumRpm, 0) + '</td>'
+        + '<td' + TDR + '>' + _feadFmt(r.accRpm, 0) + '</td>'
+        + '<td' + TDR + '>' + _feadFmt(r.maxContRpm, 0) + '</td>'
+        + '<td' + TD + '><span style="color:' + (r.ok ? 'var(--accent-success)' : 'var(--accent-danger)')
+        + ';">' + _feadEsc(r.metin) + '</span></td></tr>';
+    });
+    h += tablo(t2);
+  }
+
+  // 3 — devir sınırı
+  var s = R.speedLimit;
+  h += baslik('Aksesuar devir sınırı', s.durum,
+        'sürekli ve anlık maksimum' + (s.note ? ' — ' + _feadEsc(s.note) : ''));
+  if(s.rows.length){
+    var t3 = '<tr><th' + TD + '>aksesuar</th><th' + TD + '>nokta</th><th' + TDR + '>devir</th>'
+           + '<th' + TDR + '>sınır</th><th' + TDR + '>pay</th></tr>';
+    s.rows.forEach(function(r){
+      r.noktalar.forEach(function(p, k){
+        t3 += '<tr><td' + TD + '>' + (k === 0 ? _feadEsc(r.ad) : '') + '</td>'
+          + '<td' + TD + '>' + _feadEsc(p.ad) + '</td>'
+          + '<td' + TDR + '>' + _feadFmt(p.accRpm, 0) + '</td>'
+          + '<td' + TDR + '>' + _feadFmt(p.limit, 0) + ' <span style="color:var(--text-muted);">'
+          + _feadEsc(p.limitAd) + '</span></td>'
+          + '<td' + TDR + '>' + pay(p.payPct) + '</td></tr>';
+      });
+    });
+    h += tablo(t3);
+  }
+
+  h += _feadHint('Üçü de BMC\'nin kendi FEAD hesap defterinden. <b>Merkez mesafesi kuralı iki '
+    + 'kasnaklı V-kayış tahrikleri için yazılmıştır</b>; serpantinde açıklığı bütün yerleşim '
+    + 'belirlediği için ihlali <b>uyarı</b> sayılır, hüküm değil — pay yüzdesi sınıra ne kadar '
+    + 'kaldığını söyler. Diğer ikisi <b>hüküm</b>dür.');
+
+  var kotu = [c.durum, w.durum, s.durum];
+  var renk = kotu.indexOf('no') >= 0 ? 'var(--accent-danger)'
+           : kotu.indexOf('warn') >= 0 ? 'var(--accent-warning)'
+           : kotu.indexOf('wait') >= 0 ? 'var(--text-muted)' : 'var(--accent-success)';
+  // Kararlı tutamak: kartın gövdesi bir öznitelikle işaretli. E2E testi kartı
+  // metinden aramak zorunda kalsaydı dış sarmalları da yakalar ve "üç tablo"
+  // gibi bir ölçüt sessizce yanlış sayardı (ölçüldü: 6 tablo).
+  return _feadCard('Uygunluk Kapıları', 'BMC hesap defteri', renk,
+    '<div data-ve-fead-checks="1" data-ve-fead-checks-durum="'
+      + _feadEsc(c.durum + '/' + w.durum + '/' + s.durum) + '">' + h + '</div>');
 }
 
 // ── BİRİNCİ KADEME (krank → sürücü kasnak) ──────────────────────────────────
@@ -3204,12 +3402,23 @@ function veFeadDriveCard(node){
 // AÇIKÇA YAZILI: model yarı-statiktir, ivmelenme/yavaşlama ve krank ataleti
 // geçici rejim girdileridir ve bu çekirdek onları KULLANMIYOR. Sessizce alan
 // açıp "girdim, hesaba girdi" izlenimi vermek, hiç sormamaktan kötü olurdu.
+//
+// DÖRT DEVİR SINIRI 2026-09-01'DE EKLENDİ ve ölü alan DEĞİL: `governedRpm` ve
+// `overspeedRpm` iki uygunluk kapısını besliyor (js/fead-checks.js). Boş
+// bırakılırsa kapılar "değerlendirilemedi" der — uygun saymaz.
 function veFeadEngineCard(node){
   return _feadCard('Motor Künyesi', 'sayfadaki Engine Info', 'var(--text-secondary)',
-      _feadGrid(node, [
+      veFeadEngineLibRow(node)
+    + _feadGrid(node, [
         { key:'cylinders',   label:'Silindir sayısı [—]', ph:'6', step:'1' },
         { key:'serviceFact', label:'Servis faktörü [—]',  ph:'1.3', step:'0.01' }
       ], 2)
+    + _feadGrid(node, [
+        { key:'idleRpm',           label:'Rölanti [d/dk]',   ph:'700',  step:'10' },
+        { key:'governedRpm',       label:'Governed [d/dk]',  ph:'2100', step:'10' },
+        { key:'noLoadGovernedRpm', label:'No load gov.',     ph:'2330', step:'10' },
+        { key:'overspeedRpm',      label:'Overspeed',        ph:'2900', step:'10' }
+      ], 4)
     + _feadGrid(node, [
         { key:'crankInertia', label:'Krank ataleti [kg·m²]', ph:'0.70', step:'0.01' },
         { key:'accelRpmS',    label:'İvmelenme [RPM/s]',     ph:'1000', step:'10' },
@@ -3218,8 +3427,61 @@ function veFeadEngineCard(node){
     + _feadHint('<b>Silindir sayısı</b> ateşleme frekansını verir (f = devir/60 × silindir/2, '
         + 'dört zamanlı) ve span rezonans kontrolünde KULLANILIR. <b>Servis faktörü</b> kayma '
         + 'emniyeti için istenen alt sınır olarak sonuç sekmesinde karşılaştırılır. '
-        + '<b>Krank ataleti · ivmelenme · yavaşlama</b> geçici rejim girdileridir; bu çekirdek '
-        + 'yarı-statiktir ve onları <b>hesaba katmaz</b> — modelin künyesinde kayıtlı kalırlar.'));
+        + '<b>Governed</b> ve <b>Overspeed</b> devirleri aksesuar devir penceresi ve devir '
+        + 'sınırı kapılarını besler. <b>Krank ataleti · ivmelenme · yavaşlama</b> geçici rejim '
+        + 'girdileridir; bu çekirdek yarı-statiktir ve onları <b>hesaba katmaz</b> — modelin '
+        + 'künyesinde kayıtlı kalırlar.'));
+}
+
+// ── MOTOR KATALOĞU SATIRI ───────────────────────────────────────────────────
+// Katalog bir KISIT değil bir ÖNERİ (kayış ve gergi kütüphaneleriyle aynı
+// kural): seçim yapmak alanları doldurur, ama kullanıcı sonra hepsini elle
+// değiştirebilir. Değiştirdiğinde SUSMUYORUZ — `veFeadEngineDrift` sapan
+// alanları sayar ve satır bunu yazar; sessiz kalmak "katalogdan geldi"
+// izlenimi bırakırdı.
+function veFeadEngineLibRow(node){
+  if(typeof veFeadEngineList !== 'function')
+    return _feadHint('Motor kataloğu yüklenmedi (js/fead-engines.js).');
+  var sd = node.data || {};
+  var liste = veFeadEngineList();
+  var sec = sd.engineLib || '';
+  var h = '<div style="display:flex; align-items:center; gap:10px; margin-bottom:9px;">'
+    + '<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">'
+    + 'BMC motor kataloğu</div>'
+    + '<select onchange="veFeadApplyEngineLib(\'' + node.id + '\',this.value)"'
+    + ' style="width:260px; ' + _FEAD_INP + ' text-align:left;">'
+    + '<option value="">— elle gir —</option>';
+  liste.forEach(function(r){
+    h += '<option value="' + _feadEsc(r.key) + '"' + (r.key === sec ? ' selected' : '') + '>'
+       + _feadEsc(r.label) + '</option>';
+  });
+  h += '</select></div>';
+
+  var d = (typeof veFeadEngineDrift === 'function') ? veFeadEngineDrift(sd) : null;
+  if(d && d.drift.length)
+    h += _feadHint('<b style="color:var(--accent-warning);">Katalogdan sapıldı:</b> '
+      + _feadEsc(d.drift.join('; ')) + '. Bu bir hata değil — kayıt varyanta göre '
+      + 'değişebilir; ama bir yazım hatası da tam burada görünür.');
+  else if(d)
+    h += _feadHint('Alanlar <b>' + _feadEsc(d.ad) + '</b> kaydıyla birebir.');
+  return h + _feadHint('Yirmi dört motor, BMC\'nin kendi FEAD hesap defterinin '
+    + '<i>Motor Bilgileri</i> sayfasından. Seçim <b>silindir sayısını, dört devir sınırını ve '
+    + 'birinci kademe çaplarını</b> yazar; kasnak koordinatlarına ve kayışa <b>dokunmaz</b>.');
+}
+
+// Katalogdan motor uygula. Boş değer bağı çözer, alanları SİLMEZ — kullanıcı
+// katalog değerinden başlayıp üstünde oynamak isteyebilir.
+function veFeadApplyEngineLib(nodeId, key){
+  var n = _feadSolverNode(nodeId); if(!n) return;
+  if(!n.data) n.data = {};
+  if(!key){ delete n.data.engineLib; delete n.data.engineLibVer; }
+  else if(typeof veFeadEngineApply === 'function'){
+    if(!veFeadEngineOf(key)) return;
+    veFeadEngineApply(n.data, key);
+    if(typeof showToast === 'function')
+      showToast(veFeadEngineOf(key).ad + ' künyesi yüklendi', 'success');
+  }
+  _feadRedraw(n);
 }
 
 // ── ÇALIŞMA ÇEVRİMİ TABLOSU ─────────────────────────────────────────────────
@@ -3873,6 +4135,15 @@ function veFeadSolve(nodeId){
   // tesadüftü; farklı bir servis faktörü giren kullanıcı yine 1.3'e göre
   // renklenmiş bir tablo görüyordu.
   res.serviceFact = _feadNum(node && node.data && node.data.serviceFact, 0);
+  // UYGUNLUK KAPILARI ÇÖZÜM ANINDA HESAPLANIR VE SONUCA TAŞINIR. Rapor onları
+  // yeniden hesaplasaydı, çözümden sonra değiştirilen bir devir sınırı belgeye
+  // sızar ve rapor kendi modelinden başka bir şeyi denetlerdi — `res.build`'in
+  // taşınma gerekçesinin aynısı. Panel kartı canlı hesaplar (henüz çözüm yok),
+  // rapor ÇÖZÜLEN modelin kapılarını basar.
+  res.checkOpt = (typeof veFeadCheckOpt === 'function')
+    ? veFeadCheckOpt(node && node.data, veFeadDutyRows(node)) : null;
+  res.checks = (typeof veFeadChecks === 'function')
+    ? veFeadChecks(build, res.checkOpt) : null;
   if(typeof window !== 'undefined') window.veFeadResults = res;
   // ROZETLER SONUÇTAN SONRA TAZELENİR. Dönüş Yönü rozetinin RENGİ hükmü
   // taşıyor (gergi gevşek tarafta mı) ve o hüküm ancak çözümle biliniyor.
@@ -4158,6 +4429,9 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadArmReadout: veFeadArmReadout, veFeadMountReadout: veFeadMountReadout,
     veFeadPinRows: veFeadPinRows, veFeadPinNote: veFeadPinNote,
     veFeadTensionerLibCard: veFeadTensionerLibCard, veFeadApplyTenLib: veFeadApplyTenLib,
+    veFeadEngineLibRow: veFeadEngineLibRow, veFeadApplyEngineLib: veFeadApplyEngineLib,
+    veFeadAccLimitCard: veFeadAccLimitCard, veFeadApplyAccLib: veFeadApplyAccLib,
+    veFeadChecksCard: veFeadChecksCard,
     veFeadSet: veFeadSet, veFeadPlaceFromCoords: veFeadPlaceFromCoords,
     VE_FEAD_COORD_KEYS: VE_FEAD_COORD_KEYS,
     veFeadToggleBeltMode: veFeadToggleBeltMode,

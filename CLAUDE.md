@@ -41,6 +41,18 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/fead-tensioners.js` — FEAD otomatik gergi künye kütüphanesi (14 kayıt, 2 aile).
   DOM'suz saf veri; **14 Gates raporundan ölçülerek** çıkarıldı, parça numarası
   uydurulmadı. Bant kayıtlardan TÜRETİLİR, elle yazılmaz.
+- `js/fead-engines.js` — FEAD **motor kataloğu** (24 kayıt). DOM'suz saf veri;
+  BMC'nin KIRPI II FEAD hesap defterinin "Motor Bilgileri" sayfasından çıkarıldı:
+  dört devir sınırı, FEAD kasnak çapları, tam yük tork/güç eğrisi. Eksik alan
+  `null` — sıfır yazmak olmayan bir kasnak iddia etmek olurdu.
+- `js/fead-accessories.js` — FEAD **aksesuar kataloğu** (10 alternatör + 4 klima
+  kompresörü). DOM'suz saf veri; güç eğrisi MFSim'de zaten vardı, bu kataloğun
+  getirdiği asıl şey **devir sınırları** (optimum · maksimum sürekli · anlık
+  maksimum) — aşağıdaki iki kapı onlarsız kurulamaz.
+- `js/fead-checks.js` — FEAD **uygunluk kapıları**: kasnak merkez mesafesi,
+  çevrim oranı penceresi, aksesuar devir sınırı. DOM'suz; **panel ve rapor AYNI
+  çağrıyı paylaşır** (`veFeadChecks`), rapor onu çözüm anında yazılan
+  `R.checks`'ten okur ve yeniden hesaplamaz.
 - `js/structural-materials.js` — Yapısal Analiz malzeme kütüphanesi (112 kayıt / 16 aile,
   DOM'suz saf veri + arama). Değerler standartların NOMİNAL değerleridir, sertifika değil.
 - `js/structural-occt-wasm.js` — **Üretilen, git'e DAHİL DEĞİL**: OCCT çekirdeğinin

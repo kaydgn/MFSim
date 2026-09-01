@@ -63,6 +63,19 @@ olurdu.
 12. Oturumluk sonuç globali **`window.veFeadResults` proje değişince
     temizlenmeli** (`_feadForgetResults`) — yoksa yeni projede önceki projenin
     tabloları durur.
+13. **Uygunluk kapıları TEK ÇAĞRIDAN** (`js/fead-checks.js` · `veFeadChecks`):
+    panel canlı hesaplar, rapor ise çözüm anında yazılan `R.checks`'i OKUR —
+    yeniden hesaplasaydı çözümden sonra değiştirilen bir devir sınırı belgeye
+    sızardı. Üç kural: merkez mesafesi kuralı **iki kasnaklı** V-kayış
+    tahriklerinden geldiği için ihlali `'warn'` (tasarımı reddetmez, payı
+    yazılır); çevrim oranı **pitch çapından** gelir (defterin dış çaplı ve elle
+    yazılmış oranları %2,2 ve %27,8 sapıyor); eksik veri `'wait'`'tir ve
+    **uygun sayılmaz**. Kapı: `tests/unit/fead-checks.test.js`.
+14. **Katalog bir KISIT değil bir ÖNERİ** — kayış, gergi, motor ve aksesuar
+    kütüphanelerinin dördünde de aynı kural. Elle girilen değer katalogtan
+    üstündür; "elle" demek için değerin katalogtan FARKLI olması gerekir
+    (yalnız "dolu mu" bakan bir tespit, katalogun kendi yazdığı alanları
+    kullanıcıya mal ediyordu). Kapı: `tests/unit/fead-catalogs.test.js`.
 
 ## Referans dosyaları
 

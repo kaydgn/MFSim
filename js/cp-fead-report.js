@@ -2715,6 +2715,72 @@ function _frFreqFigure(R){
     + 'titreşimini gösterir; sistem burulma modları 8.18\'de ayrı tablodadır.');
 }
 
+// ── BMC HESAP DEFTERİNDEN GELEN ÜÇ KAPI — uygunluk tablosunun 11–13. satırları
+//
+// Kapılar burada HESAPLANMAZ, `R.checks`ten okunur (çözüm anında yazılıyor).
+// Yeniden hesaplamak, çözümden sonra değiştirilen bir devir sınırının belgeye
+// sızması demekti; rapor ÇÖZÜLEN modeli anlatır.
+//
+// Bulgu sütunu her zaman PAYI da taşır: "uygun" demek sınıra ne kadar
+// kalındığını gizlememeli — defterin kendi tasarımında bir çift üst sınıra
+// %1,8 kala duruyordu ve bu ancak payla görülüyor.
+function _frCheckRows(R, ekle){
+  var K = R && R.checks;
+  if(!K){
+    ekle('Kasnak merkez mesafesi (§ BMC defteri)', '0,7·(d₁+d₂) ≤ a ≤ 2·(d₁+d₂)', '—', 'wait');
+    ekle('Aksesuar çevrim oranı penceresi', 'governed devirde optimum bandında', '—', 'wait');
+    ekle('Aksesuar devir sınırı', 'sürekli ve anlık maksimumun altında', '—', 'wait');
+    return;
+  }
+
+  // 11 — kasnak merkez mesafesi
+  var c = K.centerDistance || {};
+  var cBulgu;
+  if(!c.rows || !c.rows.length) cBulgu = _frEsc(c.note || 'değerlendirilemedi');
+  else if(c.ok) cBulgu = c.rows.length + ' çiftin hepsi aralıkta; en dar pay '
+      + _frF(c.worst.payPct, 1) + '% (' + _frEsc(c.worst.cift) + ')';
+  else cBulgu = c.rows.filter(function(r){ return !r.ok; })
+      .map(function(r){ return _frEsc(r.cift) + ' a=' + _frF(r.a, 1)
+        + ' ∉ [' + _frF(r.lo, 1) + ', ' + _frF(r.hi, 1) + ']'; }).join('; ');
+  ekle('Kasnak merkez mesafesi', '0,7·(d₁+d₂) ≤ a ≤ 2·(d₁+d₂), pitch çapıyla',
+       cBulgu, c.durum || 'wait');
+
+  // 12 — çevrim oranı penceresi
+  var w = K.ratioWindow || {};
+  var wBulgu;
+  if(!w.rows || !w.rows.length) wBulgu = _frEsc(w.note || 'değerlendirilemedi');
+  else if(w.ok) wBulgu = w.rows.map(function(r){
+      return _frEsc(r.ad) + ' ' + _frF(r.accRpm, 0) + ' d/dk ∈ ['
+        + _frF(r.optimumRpm, 0) + ', ' + _frF(r.maxContRpm, 0) + ']'; }).join('; ');
+  else wBulgu = w.rows.filter(function(r){ return !r.ok; })
+      .map(function(r){ return _frEsc(r.ad) + ': ' + _frEsc(r.metin)
+        + ' (' + _frF(r.accRpm, 0) + ' d/dk)'; }).join('; ');
+  ekle('Aksesuar çevrim oranı penceresi',
+       (w.governedRpm > 0 ? 'governed ' + _frF(w.governedRpm, 0) + ' d/dk\'da optimum bandında'
+                          : 'governed devirde optimum bandında'),
+       wBulgu, w.durum || 'wait');
+
+  // 13 — devir sınırı
+  var s = K.speedLimit || {};
+  var sBulgu;
+  if(!s.rows || !s.rows.length) sBulgu = _frEsc(s.note || 'değerlendirilemedi');
+  else if(s.ok) sBulgu = s.rows.map(function(r){
+      return _frEsc(r.ad) + ' en dar pay ' + _frF(r.kritik.payPct, 1) + '% ('
+        + _frEsc(r.kritik.ad) + ')'; }).join('; ');
+  else {
+    var ihlal = [];
+    s.rows.forEach(function(r){
+      r.noktalar.forEach(function(p){
+        if(!p.ok) ihlal.push(_frEsc(r.ad) + ' @' + _frEsc(p.ad) + ': '
+          + _frF(p.accRpm, 0) + ' > ' + _frF(p.limit, 0) + ' d/dk (' + _frEsc(p.limitAd) + ')');
+      });
+    });
+    sBulgu = ihlal.join('; ');
+  }
+  ekle('Aksesuar devir sınırı', 'çevrim tepesi ve governed ≤ sürekli · overspeed ≤ anlık',
+       sBulgu, s.durum || 'wait');
+}
+
 // ═══════════════════ UYGUNLUK HÜKMÜ ════════════════════════════════════════
 // Rapor bir sonuç listesi değil, bir HÜKÜM belgesidir: her kriter için hedef,
 // bulgu ve karar aynı satırda durur. "bekliyor" hâli, veri olmadığı için
@@ -2725,8 +2791,13 @@ function _frCompliance(R){
   try { bp = (C && C.beltProps && sys) ? C.beltProps(sys.belt) : null; } catch(e){}
   var satirlar = [];
   function ekle(kriter, hedef, bulgu, durum){ satirlar.push([kriter, hedef, bulgu, durum]); }
+  // DÖRT DURUM: 'warn' 2026-09-01'de eklendi ve bir incelik değil. Kasnak
+  // merkez mesafesi kuralı İKİ KASNAKLI V-kayış tahrikleri için yazılmıştır;
+  // serpantinde ihlali "tasarım onaylanmamalı" demek olmaz ama sessiz de
+  // geçilmemeli. 'warn' genel hükmü kırmıyor, satırı işaretliyor.
   function rozet(d){
     if(d === 'ok')   return '<span class="ok">✓ Uygun</span>';
+    if(d === 'warn') return '<b style="color:#8a5a10;">⚠ Sınırda</b>';
     if(d === 'wait') return '<span style="color:#5a6270;">— değerlendirilemedi</span>';
     return '<b style="color:#a8321f;">✗ Kontrol</b>';
   }
@@ -2833,8 +2904,15 @@ function _frCompliance(R){
   ekle('Çalışma çevrimi kapsamı', 'Σ süre payı ≈ %100',
        _frPct(dc, 1), (dc >= 95 && dc <= 105) ? 'ok' : (dc > 0 ? 'no' : 'wait'));
 
+  // 11–13 — BMC HESAP DEFTERİNDEN GELEN ÜÇ KAPI
+  // Kapılar çözüm anında hesaplanıp `R.checks`'e yazılıyor (js/cp-fead.js
+  // veFeadSolve); rapor onları yeniden hesaplamaz. Eski bir sonuç nesnesinde
+  // alan olmayabilir — o zaman üç satır da 'wait' olur, hata değil.
+  _frCheckRows(R, ekle);
+
   var nOK = satirlar.filter(function(s){ return s[3] === 'ok'; }).length;
   var nNo = satirlar.filter(function(s){ return s[3] === 'no'; }).length;
+  var nWa = satirlar.filter(function(s){ return s[3] === 'warn'; }).length;
   var nW  = satirlar.filter(function(s){ return s[3] === 'wait'; }).length;
 
   var h = _frH2(1);
@@ -2848,11 +2926,17 @@ function _frCompliance(R){
       + '<td class="c">' + rozet(s[3]) + '</td></tr>';
   });
   h += '</table>';
+  // GENEL HÜKMÜ YALNIZ 'no' KIRAR. 'warn' (bugün yalnız merkez mesafesi
+  // kuralı) sayılır ve yazılır ama tasarımı reddetmez — gerekçesi kuralın
+  // kendi satırında ve js/fead-checks.js başlığında.
   h += '<div class="note ' + (nNo === 0 ? 'check' : 'warn') + '"><span class="t">Genel hüküm</span>'
-     + nOK + ' kriter uygun · ' + nNo + ' kriter kontrol istiyor · ' + nW + ' kriter değerlendirilemedi. '
+     + nOK + ' kriter uygun · ' + nNo + ' kriter kontrol istiyor · '
+     + (nWa ? nWa + ' kriter sınırda · ' : '')
+     + nW + ' kriter değerlendirilemedi. '
      + (nNo === 0
         ? 'Modelde kapıya takılan bir bulgu yok; Bölüm 9\'daki geçerlilik sınırları geçerlidir.'
         : 'Kontrol isteyen kriterler giderilmeden tasarım onaylanmamalıdır.')
+     + (nWa ? ' Sınırdaki kriter tasarımı reddetmez; payı satırında yazılıdır.' : '')
      + '</div>';
   if((R.limits || []).length){
     h += '<div class="note"><span class="t">Çekirdeğin bildirdiği sınırlar</span><ul style="margin:4px 0 0 18px;">';
@@ -2876,7 +2960,7 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadGenerateReport: veFeadGenerateReport,
     _frBuildReportHTML: _frBuildReportHTML,
     _frSection8: _frSection8, _frBeltDataBox: _frBeltDataBox,
-    _frCompliance: _frCompliance,
+    _frCompliance: _frCompliance, _frCheckRows: _frCheckRows,
     _frAntet: _frAntet,
     _frEnsureAssets: _frEnsureAssets,
     _frConceptFigure: _frConceptFigure,
