@@ -515,6 +515,30 @@ function _gfSec7(){
       'Kol çalışma açısı girilmemişse model <strong>çözülmez</strong> ve sebebini adıyla '
     + 'yazar. β = 90° gibi “makul ama yanlış” bir varsayılan, gerginliği ölçülebilir biçimde '
     + 'kaydırıp <em>sessiz</em> kalırdı — bu modülün en pahalı hata sınıfı tam olarak odur.');
+  h += '<h3>7.2.1 Program yine de yalnız bırakmıyor: bant ve eğri</h3>';
+  h += '<p>Açıyı seçmiyor ama iki şey söylüyor ve ikisi de <strong>sizin kendi '
+    + 'verinizden</strong> hesaplanıyor — tedarikçi raporlarından türetilmiş hiçbir sabit '
+    + 'yok:</p>';
+  h += _gfAlanTablo('Avara Hareketi kartının bant okuması', [
+    ['<strong>Kol açısı olanaklı bantta</strong>', 'Girdiğiniz açı fiziksel olarak '
+      + 'kullanılabilir mi? Tek soru: kol, kayışın servis aralığının iki ucuna da '
+      + '(Değiştirme ↔ Min) ulaşabiliyor mu', 'Kullanılamıyorsa <strong>sebebi '
+      + 'yazılır</strong>'],
+    ['Kullanılabilir yay', 'Bandın 360°’nin kaçında açık olduğu', 'Tipik olarak ~190°'],
+    ['<strong>T(θ) eğrisi</strong>', 'Her montaj saatinde çıkan gerginlik; sizin açınız '
+      + 'amber çizgiyle işaretli, kullanılamaz açılar kırmızı taralı',
+      'Ölçülen sistemlerde ±20°’de <strong>%47…101</strong> oynuyor — seçim ucuz değil']
+  ], ['Satır', 'Ne gösterir', 'Not']);
+  h += _gfUyari('Bant bir ÖNERİ DEĞİL, bir KAPIDIR',
+      'Bandın içinden bir nokta seçilmez. <strong>Ölçüldü</strong> (14 tedarikçi sistemi, '
+    + 'bu ölçütün kendisiyle): tedarikçinin gerçek çalışma açısı bandın içinde '
+    + '<strong>14/14</strong> — yani ölçüt hiçbir gerçek tasarımı yanlışlıkla reddetmiyor — '
+    + 'ama bant <strong>96…218°</strong> geniş (medyan 189°) ve ortasını seçseydik medyan '
+    + 'hata <strong>96°</strong> olurdu.<br><br>'
+    + 'Fizik hangi açıların <strong>imkânsız</strong> olduğunu söylüyor, hangisinin '
+    + '<strong>doğru</strong> olduğunu söylemiyor. O bilgi motor bloğunun paketlemesinde — '
+    + 'cıvata deseni, gövde gabarisi, komşu parçalar — ve programda yok. Eğri seçimin '
+    + '<em>bedelini</em> yazar, seçimi sizin yerinize yapmaz.');
   h += '<h3>7.3 Panelde ne okuyacaksınız</h3>';
   h += _gfAlanTablo('Avara Hareketi kartının okuması', [
     ['Yay kurulması', '(M<sub>çalışma</sub> − M<sub>ön</sub>) / k — kolun bağıl dönmesi',
@@ -529,7 +553,10 @@ function _gfSec7(){
     ['Tasarım gerginliği (türedi)', 'Yay dengesinden türeyen ankraj gerginliği',
       'Bütün gerilme zinciri bu değerden kurulur'],
     ['Konum pimi', 'Kol açısının imalat karşılığı: pim deliğinin yarıçapı ve açısı',
-      'Yalnız parça çizimi olan künyelerde; yoksa sebebi yazılır']
+      'Yalnız parça çizimi olan künyelerde; yoksa sebebi yazılır'],
+    ['Kol açısı olanaklı bantta', 'Girilen açının fiziksel olarak kullanılabilirliği',
+      '§7.2.1 — kullanılamıyorsa sebebiyle'],
+    ['T(θ) eğrisi', 'Her montaj saatinin gerginlik bedeli', '§7.2.1 — bir öneri değil']
   ], ['Satır', 'Ne gösterir', 'Not']);
   return h;
 }
