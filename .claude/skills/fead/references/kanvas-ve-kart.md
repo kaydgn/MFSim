@@ -16,7 +16,7 @@ Kayış Yolu kartının kopyasına döndü) ve **tamamen geri alındı**. Deği�
 | Port KOMŞUYA BAKAN kenardan çıkar | `veFeadPortSideFor` (cp-fead.js) → `defaultPortSide` (components.js) | Klasik kural (giriş solda / çıkış sağda) bir ÇEVRİMDE yolun yarısında ters düşüyor: kayış sağdan sola dönerken tel düğümün ÜSTÜNDEN geri geçiyordu |
 | Kontrol kolu uzunluğun **%42**'si (26–96 px) | `connections.js` `curve` dalı, yalnız kayış bağlantısında | Sabit 40 px kısa açıklıkta kutunun dibinde kıvrım, uzun açıklıkta ortada köşelenme veriyordu |
 | Amber, 2.5 px | `.ve-connection-fead-belt` | Bu tel "iki bileşen ilişkili" demiyor, "kayış buradan geçiyor" diyor |
-| Telin ortasında **gidiş yönü oku** | `veConnDirMark` (connections.js), `.ve-conn-dir` | Aynı halka iki yönde de gezilebilir ve **sarım açıları buna göre değişir**; yön topolojiden okunamıyordu |
+| Telin ortasında **gidiş yönü oku** | `veConnDirMark` (connections.js), `.ve-conn-dir` | Aynı halka iki yönde de gezilebilir ve **hangi açıklığın GERGİN olduğu buna göre değişir**; yön topolojiden okunamıyordu |
 
 ##### Port DAİRESİ de aynı karede tazelenir (`veSyncPortDom`)
 
@@ -279,6 +279,131 @@ varsayılanı ters çevirme (11 test), ters yön kapısını silme, `saveState`'
 kaldırma, açarken mm←kutu yazma, KAPALI rozetini soluk griye çevirme,
 kenetlemeyi bağdan koparma, silme kancasını kaldırma, kasnak paneli uyarısını
 yutma, çok kopyada İLKİNİ kazandırma.
+
+##### DÖNÜŞ YÖNÜ — `fead-spin` "Dönüş Yönü" (2026-08-28)
+
+Kullanıcı sorusu: *"kayışın dönüş yönü neye göre belirleniyor? Bu dönüş yönünü
+de CW veya CCW olacak şekilde ayarlayacak bir bileşen kuralım yine bir önceki
+gibi. Buna göre de matematiği ayarlayalım (eğer değişiyorsa)."*
+
+**YÖN BİR AYAR DEĞİL, ROTA SIRASININ SONUCU.** `FEADCore.loopSense`
+(fead-core.js) kasnak merkezlerinin kayış gidiş sırasındaki **ayakkabı bağı
+(shoelace) işaretli alanına** bakıyor: `+1` = CCW, `−1` = CW — **motora ÖNDEN
+bakışta**. Yani kabloları hangi sırada çektiysen yön odur; `solveGeometry`
+onu okuyup her kasnağa `d = (grooved ? s : −s)` veriyor.
+
+###### MATEMATİK: GEOMETRİ DEĞİŞMEZ, GERİLME DEĞİŞİR
+
+| | İleri | Ters | Fark |
+|---|---|---|---|
+| kasnak başına sarım | — | — | **2,5e−14 °** |
+| L_eff (AG00976) | 1716,200 | 1716,200 | **0,000000000 mm** |
+| Σ işaretli sarım | 360,00 | 360,00 | 0 |
+| kol açısı (meanRel) | 28,075036° | 28,075036° | 0 |
+| **span gerilmeleri** | 1381,0 · 1379,7 · 1023,3 · 1021,9 · 545,4 · **544,0** | 545,4 · 544,0 · 67,5 · 66,2 · **−290,3** · **−291,6** | **NEGATİF** |
+
+Geometrinin değişmemesi bir yaklaşıklık değil **cebirsel özdeşlik**: ters
+yürütmek hem `s`yi (dolayısıyla her `d`yi) hem de giriş/çıkış teğetlerini
+takas ediyor, `(−d)·(θ_giriş − θ_çıkış) = d·(θ_çıkış − θ_giriş)` — iki işaret
+birbirini götürüyor. **Hesap katmanına tek satır dokunulmadı.**
+
+Gerilmenin değişmesi de fizik: `spanTensions` ankrajı gergiye yazıp
+(`T[gergi] = designTensionN`) kayış gidiş yönünde yürüyor — sürücüde `+P/v`,
+aksesuarlarda `−P/v`.
+
+###### GERGİ GEVŞEK TARAFTA OLMALI — 14 Gates sisteminin 14'ünde de öyle
+
+Ters yönde gergi krankın **GERGİN** tarafına düşüyor ve spanlar ankrajın
+altına iniyor. Bu bir modelleme kusuru değil, gerçek bir tasarım kuralı:
+otomatik gergi gevşek tarafa konur, gergin tarafta tahrik gerginliğinin
+tamamını yayla karşılamak zorunda kalır ve durdurucusuna dayanır.
+
+**ÖLÇÜLDÜ:** doğrulama fixture'ındaki 14 kurulabilir sistemin **14'ünde de**
+ankraj GLOBAL MİNİMUM, üstelik gergi sıranın SON kasnağı. İstisna yok.
+
+Ölçüt **EŞİKSİZ** (`veFeadTensionerSide`): *"ankrajın altına inen span var
+mı"*. Negatif sayı ARAMAZ — negatiflik o durumun yalnız uç hâli.
+*"Gergi kranka komşu olmalı"* gibi bir KONUM kuralı yanlış olurdu: aralarında
+güç çekmeyen bir avara bulunabilir ve bu geçerlidir (sentetik olarak ölçüldü).
+Sayılan şey komşuluk değil, **GÜÇ**.
+
+###### ÜÇ SESSİZ KUSUR — üçü de bu turda çıktı
+
+| Kusur | Belirti | Kök neden |
+|-------|---------|-----------|
+| **Ters kablolama sessizce kabul ediliyordu** | `route.ok`, `build.ok`, `build.warnings = []`; Kayış Yolu kartı **YEŞİL** (Σ=360, L geçerli) — ve gerilmeler negatif | Gerginin hangi tarafta olduğunu soran tek satır yoktu |
+| **Panel ULAŞILAMAZ bir çare gösteriyordu** | *"kayış gevşiyor: tasarım gerginliği yetersiz"* + *"Tasarım gerginliğini yükseltin"* | O alan 2026-08-25'te **girdi olmaktan çıktı** (yay dengesinden türüyor). `grep designTension js/cp-fead.js` → **sıfır eşleşme**. Aritmetik olarak işe yarardı (544 → 900 N negatifleri kaldırıyor) ama basılacak düğme yok |
+| **Uyarı raporlara HİÇ ULAŞMIYORDU** | 12 duty satırının 10'u uyarı taşırken `R.warnings = null`; iki raporun da "Çözümün taşıdığı uyarılar" kutusu **BOŞ** | Çekirdeğin uyarısı `analysis.duty[i].warnings` içindeydi; `_frWarnBox` / `_fsrWarnBox` yalnız üst seviyeye bakıyor |
+
+**KAYMA HÜKMÜ DE BASTIRILDI.** `slipSafety` gevşek tarafı `1e-9`'a
+kenetliyor, dolayısıyla çöken bir zincirde `SF = −0,00` çıkıyor ve panel onu
+`✗ KALDI` diye basıyordu. Negatif bir emniyet faktörü fiziksel olarak
+anlamsız — o sayı kayma değil, çöken gerilme zincirinin sayısal gölgesi.
+Ters yerleşimde kayma hükmü artık **verilmiyor** ve bu yazılı.
+
+###### BİLEŞEN DURUM TUTMUYOR — KABLOLARI ÇEVİRİYOR
+
+| Ne | Karar | Nerede |
+|----|-------|--------|
+| Ad / tip | **Dönüş Yönü** · `fead-spin` · 54×48 · 0/0 · `maxInstances:1` | `components.js` |
+| Durum | **YOK** — yön kabloların kendisinde | `veFeadReverseRoute` |
+| Okuma | **TEK NOKTA** `veFeadCurrentSpin` (rozet + panel) | `cp-fead.js` |
+| Rozet | `↺ CCW` ↔ `↻ CW` — **glif durumu, RENK hükmü taşır** | `veFeadApplySpinBadge` |
+
+Düğüme `data.dir` gibi bir alan koymak ikinci bir gerçek kaynağı yaratırdı ve
+**üç yerden ısırırdı**:
+
+1. Kanvastaki gidiş oku (`veConnDirMark`) telin from→to yönünü çiziyor —
+   bayrakla ok **yalan söylerdi**.
+2. `veFeadTopoSignature` tel uçlarını okuyor ama araç düğümlerinin `data`'sını
+   **OKUMUYOR** (ölçüldü). Bayrak imzaya girmezdi → rozete tıklayınca kart
+   doğrudan çağrıyla tazelenir ama **GERİ AL sonrası bayat kalırdı**.
+3. Bayrak silinince yön sessizce dönerdi → ayrı bir silme kancası gerekirdi.
+
+Kabloyu çevirmek üçünü birden yok ediyor. **ÖLÇÜLDÜ:** kablo çevirmenin
+verdiği sıra, *"krank sabit + kalanı ters"* kuralının verdiği sırayla birebir
+aynı — yani bayrak yolunun tek iddia edilen üstünlüğü (kabloya dokunmamak)
+karşılıksız. Takas **YERİNDE**: `createConnection` kimliği `'conn-' +
+Date.now()` ile ürettiği için altı teli yeniden kurmak altı ÖZDEŞ kimlik
+verirdi.
+
+**RENK ÜÇÜNCÜ BİR EKSEN.** Aynı kanvasta iki rozet daha var (`SABİT/SERBEST`,
+`AÇIK/KAPALI`) ve ikisinde de renk *"mavi = GİRDİ, amber = TÜRETİLEN"* demek.
+CW ile CCW'nin **ikisi de eşit meşru**; birine amber vermek *"bu yön
+hesaplanmış, öbürü girilmiş"* derdi ve yalan olurdu. Durumu **ok** taşıyor,
+renk ise bu yönün **çalışıp çalışmadığını**: yeşil = gergi gevşek tarafta,
+kırmızı = gergin tarafta, nötr = henüz çözüm yok (hüküm uydurulmaz).
+
+###### İKİ ÖLÇÜLMÜŞ KUSUR — ikisi de kapı yazılırken çıktı
+
+**1 · YÖN DÜĞÜM DİZİSİ SIRASINDAN OKUNUYORDU.** Rozet
+`nodes.filter(isPulley)` sırasını `loopSense`'e veriyordu. O sıra kayış yolunu
+anlatmıyor: örnek yüklenirken tesadüfen örtüşüyor, ama **kablolar çevrilince
+dizi değişmiyor** — rozet çevirdikten sonra da eski yönü gösteriyordu. Okuma
+artık `veFeadRouteOrder`'dan.
+
+**2 · ROZET BİR ÇÖZÜM GERİDE KALIYORDU.** Rozetin RENGİ hükmü taşıyor ve hüküm
+ancak çözümle biliniyor; `veFeadSolve` rozetleri tazelemiyordu. **ÖLÇÜLDÜ
+(gerçek tarayıcı):** ileri yönde nötr, ters yönde **YEŞİL**, geri dönünce
+**KIRMIZI** — renk her seferinde bir önceki modelin hükmünü gösteriyordu.
+
+**ÖLÇÜLDÜ (gerçek tarayıcı, tek dosya `file://`, AG00976):**
+
+| | rozet | renk | yön | gergi | min T |
+|---|---|---|---|---|---|
+| ileri | `↺ CCW` | yeşil | +1 | gevşek ✓ | **544,0 N** |
+| ters | `↻ CW` | **kırmızı** | −1 | **gergin ✗** | **−291,6 N** |
+| geri | `↺ CCW` | yeşil | +1 | gevşek ✓ | 544,0 N |
+
+Gidiş-dönüş birebir (`1381 · 1379,7 · 1023,3 · 1021,9 · 545,4 · 544`), konsol
+hatası yok.
+
+Kapı **on bir mutasyonla** ölçüldü, on biri de kırmızı: doğal yön işaretini
+çevirme, gergide `cenX` yerine `x` kullanma, araç tellerini de çevirme, yönü
+düğüm dizisinden okuma, hükmü yalnız negatif sayıya bağlama, uyarıyı üst
+seviyeye yükseltmeme, panelde eski yanlış teşhise dönme, CW/CCW'yi farklı
+renklendirme, çevirmede `saveState`'i kaldırma, port yazmayı atlama, çözüm
+sonrası rozet tazelemesini kaldırma.
 
 ##### Gerçek çap hayaleti — KALDIRILDI (2026-08-26)
 

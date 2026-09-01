@@ -16,10 +16,11 @@ Bir karar kaydı üç parçadır ve üçü de kısadır: **hüküm + tek satır 
 kapının testi.** Kanıt testin kendisidir; belgede ikinci kez anlatılması
 gereken bir şey yoktur.
 
-**Bu dosya bir kez 4.511 satıra çıktı** (%63'ü tek bir modülün ölçüm defteri)
-ve her oturumun bağlam penceresinin büyük kısmını baştan işgal ediyordu.
-Sebebi bir kural değil **biçim taklidiydi**: dosyayı okuyan her oturum
-üslubunu sürdürdü. Yukarıdaki tablo o döngünün sönümleyicisidir.
+**Bu dosya bir kez 6.052 satıra çıktı** — %71'i tek bir modülün (FEAD) ölçüm
+defteriydi ve her oturumun bağlam penceresinin büyük kısmını baştan işgal
+ediyordu. Sebebi bir kural değil **biçim taklidiydi**: dosyayı okuyan her
+oturum üslubunu sürdürdü, dosya büyüdü, desen güçlendi. Yukarıdaki tablo o
+döngünün sönümleyicisidir; olmadan yeni yapı da aynı şekilde şişer.
 
 ## Proje Yapısı
 Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framework yok).
@@ -31,6 +32,15 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `build.js` — Build script (`index.html` + `js/` + `css/` → `MFSim_Code.html`)
 - `js/fead-belts.js` — FEAD kayış kataloğu (5 profil, 244 stok boy + otomotiv
   ızgarası). DOM'suz saf veri; ISO 9982 / DIN 7867, üretici kataloglarından çıkarıldı.
+- `js/cp-fead-wizard.js` — FEAD **Başlangıç Sihirbazı** (7 adımlık modal). Kendi
+  modelini KURMAZ: durum → `veFeadWizNodes` → köprünün düğüm biçimi; önizleme de
+  kurulum da aynı listeden geçer.
+- `js/fead-duty.js` — FEAD **çalışma çevrimi** kütüphanesi (7 ölçülmüş çevrim).
+  DOM'suz saf veri; altısı Gates arşivinden, biri BMC tedarikçi sayfasından.
+  **Tek bir "standart" çevrim YOK** — arşivde altı ayrı desen ölçüldü.
+- `js/fead-tensioners.js` — FEAD otomatik gergi künye kütüphanesi (14 kayıt, 2 aile).
+  DOM'suz saf veri; **14 Gates raporundan ölçülerek** çıkarıldı, parça numarası
+  uydurulmadı. Bant kayıtlardan TÜRETİLİR, elle yazılmaz.
 - `js/structural-materials.js` — Yapısal Analiz malzeme kütüphanesi (112 kayıt / 16 aile,
   DOM'suz saf veri + arama). Değerler standartların NOMİNAL değerleridir, sertifika değil.
 - `js/structural-occt-wasm.js` — **Üretilen, git'e DAHİL DEĞİL**: OCCT çekirdeğinin
@@ -43,16 +53,20 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   `.wasm`'ın kendisi de üretilen: `npm run build:tetgen-wasm` (emscripten gerekir,
   kaynak `vendor/tetgen-src/` + `tools/tetgen-wasm-src/`). Aynı bayt-bayt kapısı.
 - `tools/shot.js` — Ekran görüntüsü aracı (İSTEĞE BAĞLI — yalnız kullanıcı isteyince; `npm run shot -- --help`)
-- `docs/gates-reports/` — Gates FEAD raporlarının ham PDF'leri + **künye indeksi**
-  (`README.md`). Bir rapor bir kez konur, sonraki oturumlar yeniden yüklemeden okur.
-  Build/test/Pages'e girmez (ölçüldü). `assets/` DEĞİL, çünkü orası Pages'e kopyalanıyor.
+- `docs/gates-reports/` — **Gates raporlarının ham PDF ARŞİVİ + künye indeksi**
+  (`README.md`: hangi raporda ne var, sayfa haritası, hangileri alıntı). Bir rapor
+  bir kez konur, sonraki oturumlar yeniden yüklemeden okur. Build/Pages'e girmez
+  (ölçüldü); `assets/` DEĞİL, çünkü orası Pages'e kopyalanıyor. **Testler bu
+  PDF'leri OKUYOR** (`tests/helpers/gates-pdf.js`), yani arşiv bir belge yığını
+  değil bir KAPI. **FEAD ile ilgili "bu sayı nereden geldi" sorusunun cevabı
+  büyük olasılıkla buradadır.**
 - `tests/unit/` — Jest birim testleri
 - `tests/e2e/` — Playwright E2E testleri
 - `viewer/` — **Ölçüm Görüntüleyici** (ayrı program, bkz. `viewer/README.md`)
 - `MFSim_Olcum_Goruntuleyici.html` — Görüntüleyicinin tek dosya çıktısı (`npm run build:viewer` üretir; MFSim_Code.html'in aksine **git'e dahil** — dağıtımı bu dosyanın indirilmesiyle oluyor)
+
 - `.claude/skills/` — modüllere özgü karar kayıtları (koşullu yüklenir; aşağıya bak)
 - `docs/decisions/` — ortak yüzey kararları + tam test dosyası tablosu
-
 **ÖNEMLİ:** Kod değişiklikleri **yalnızca** `js/` ve `css/` klasörlerindeki modüler dosyalara ve `index.html`'e yapılır. `MFSim_Code.html` dosyası **elle düzenlenmez** — `npm run build` ile otomatik üretilir.
 
 ### Dört ana modül (alt-sistem kartı → kendi iç topolojisi)
@@ -84,14 +98,13 @@ kuralıdır: FEAD'e dokunmayan bir oturum FEAD kayıtlarını ödemez.
 
 | Modül | Skill | Ne zaman çağrılır |
 |-------|-------|-------------------|
-| FEAD (kayış-kasnak) | `fead` | `js/fead-*.js`, `js/cp-fead*.js` ya da FEAD testlerine dokunmadan **ÖNCE** |
+| FEAD (kayış-kasnak) | `fead` | `js/fead-*.js`, `js/cp-fead*.js`, `js/guide-fead.js` ya da FEAD testlerine dokunmadan **ÖNCE** |
 | Yapısal Analiz (FEA) | `structural` | `js/structural-*.js`, `js/cp-structural*.js`, gömülü OCCT/TetGen varlıkları ya da Yapısal testlere dokunmadan **ÖNCE** |
 
 **Bu bir nezaket değil kapıdır.** İki modülün de hata sınıfı sessizdir — sayı
 yanlış çıkar, program çalışmaya devam eder, uyarı verilmez. Skill'i okumadan
-yapılan bir "iyileştirme" (çekirdeği proje stiline çevirmek, tasarım
-gerginliğini yine girdi yapmak, tet4'e düşmek) testten geçebilir ve yine yanlış
-olabilir.
+yapılan bir "iyileştirme" (çekirdeği proje stiline çevirmek, gerginin tanımını
+eski yönüne döndürmek, tet4'e düşmek) testten geçebilir ve yine yanlış olabilir.
 
 Takoz ve Araç Performans modüllerinin ayrı karar kaydı **yok**; kuralları kendi
 test dosyalarında ve kodun yorumlarında duruyor.

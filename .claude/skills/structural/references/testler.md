@@ -1,4 +1,4 @@
-# Yapısal Analiz test dosyaları — hangi test neyi kolluyor
+# Yapısal Analiz test dosyaları
 
 > Kök `CLAUDE.md`'nin "Test Dosyaları" tablosundan taşındı; satırlar
 > birebir korunmuştur. Tam tablo: `docs/decisions/testler.md`.

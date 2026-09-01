@@ -30,6 +30,13 @@ hatası "testten geçen ama yanlış" bir çekirdek üretir. Uyarlanacak olan
 üst-seviye bildirimi yok (IIFE sarmalı) → hijyen kapısına takılmaz; içindeki
 `</script` dizisini build kalkanı (`shieldScriptEnd`) zaten kapsıyor.
 
+> **KAYNAK BELGELER DEPODA:** bu bölümde adı geçen Gates raporlarının onu
+> `docs/gates-reports/pdf/` altında duruyor ve testler onları **doğrudan
+> okuyor**. Bir sayının kökenini merak ettiğinde ya da yeni bir referans değer
+> gerektiğinde önce `docs/gates-reports/README.md`'ye bak — hangi raporda hangi
+> sayfada ne olduğu orada yazılı. Fixture'ın 284 statik değeri kaynağına karşı
+> ölçüldü: **0 uyuşmazlık**.
+
 Doğrulama verisi + koşucu `tests/fixtures/fead-validation.js` içinde, kaynağıyla
 **birebir** (tek yerel fark: `require` yolu — dosyanın başında yazılı).
 `tests/unit/fead-core.test.js` onu koşturup eşiklere bakar. `tests/` altında
@@ -99,6 +106,7 @@ ile kapatıyor: panelde tek frekans olsun, iki farklı cevap değil.
 kol ataleti (0.004) çekirdeğin ölçülmüş iki gergisinden hiçbiri değil, yani
 kasnak kütlesi bilinmiyor → nokta kütle terimi eksik → 20.3 Hz (Gates 13.29).
 Testi bunu belgeliyor ki biri "AG00810 tutmuyor" diye modeli suçlamasın.
+
 #### Üç yapısal kural (iskeletten farkı, hepsi testli)
 
 1. **Sürücülük ROL, tip değil** (`node.data.driver`). Gates AG00976'da sürücü

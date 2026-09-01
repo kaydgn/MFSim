@@ -42,6 +42,13 @@ Object.keys(M).forEach((k) => { global[k] = M[k]; });
 beforeEach(() => { resetStubs(stubs); global.nodes = []; global.connections = []; });
 
 const KEY = 'AG00976_GATES_2025';
+/* Ömür/yorulma/sıcaklık katalog sabitlerine bağlı; varsayılan artık 'none'
+   (kayış boyu bir ÇIKTI ve kayış henüz seçilmemiş). Testler açıkça açıyor. */
+function katalogAc(pack) {
+  const b = pack.nodes.find((n) => n.type === 'fead-belt');
+  if (b) b.data.beltDataMode = 'full';
+  return pack;
+}
 const G = V.AG00976['1715@-250/110'];
 
 // Raporun kasnak adları (Layout Data satır sırası) ↔ örnekteki sıra. Örnek
@@ -55,7 +62,7 @@ const POS = { FreeArm: 'FreeArm', Replace: 'Replace', Max: 'MaxBelt',
               Mean: 'Mean', Min: 'MinBelt', Load: 'Load' };
 
 function kur(mut) {
-  const pack = veFeadExampleNodes(KEY);
+  const pack = katalogAc(veFeadExampleNodes(KEY));
   pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
   if (mut) mut(pack.nodes);
   return { pack, build: veFeadBuildSystem(pack.nodes, pack.connections) };
@@ -84,8 +91,8 @@ describe('örnek kayıt defteri: Gates raporu kurulabilir', () => {
     // krank kasnağının üstüne düşerdi: hata yok, çözüm doğru, yerleşim çöp.
     veFeadExampleKeys().forEach((k) => {
       veFeadExampleOf(k).pulleys.forEach((p) => {
-        const x = (p.data.x != null) ? p.data.x : p.data.cenX;
-        const y = (p.data.y != null) ? p.data.y : p.data.cenY;
+        const x = (p.data.x != null) ? p.data.x : p.data.pivotX;
+        const y = (p.data.y != null) ? p.data.y : p.data.pivotY;
         expect(Number.isFinite(x)).toBe(true);
         expect(Number.isFinite(y)).toBe(true);
       });
@@ -93,7 +100,7 @@ describe('örnek kayıt defteri: Gates raporu kurulabilir', () => {
     // Bu örnekte gergi merkezi gerçekten ikinci yoldan geliyor.
     const ten = veFeadExampleOf(KEY).pulleys.find((p) => p.key === 'TEN').data;
     expect(ten.x).toBeUndefined();
-    expect(ten.cenX).toBeCloseTo(-161.97, 2);
+    expect(ten.pivotX).toBeCloseTo(-250, 2);
   });
 
   test('panel kartı her iki örnek için de sayı basıyor — "undefined" YOK', () => {
@@ -195,19 +202,18 @@ describe('GERGİ — Gates "Tensioner Geometry" tablosu (6 konum × 7 sütun)', 
     expect(Math.abs(build.freeAngleDeg - G.freeAbsDeg)).toBeLessThan(0.15);
   });
 
-  test('KOL BOYU ÇAPRAZ KONTROLÜ sessiz değil — uyuşmazlık çözümü durdurur', () => {
-    // |çalışma merkezi − pivot| = kol boyu, ve bu örnekte tam 90.00 mm.
-    // Kapının ısırdığını göstermek için pivotu 10 mm kaydırıyoruz: model
-    // ÇÖZÜLMEMELİ ve sebebi ADIYLA yazmalı. Bu kapı gerçek bir veri
-    // uyuşmazlığını yakaladı — tedarikçiye giden sayfanın "öngörülen merkezi
-    // montaj pozisyonu" raporun gerçek pivotundan 90 değil 80.65 mm uzakta.
-    const arm = veFeadArmCheck(tenOf(veFeadExampleNodes(KEY).nodes));
-    expect(arm.ok).toBe(true);
-    expect(arm.fromCoords).toBeCloseTo(90.0, 1);
-
-    const { build } = kur((ns) => { tenOf(ns).pivotX = -240; });
-    expect(build.ok).toBe(false);
-    expect((build.errors || []).join(' ')).toMatch(/kol boyu/i);
+  test('KARŞILIKLI DOĞRULAMA YOK — tek koordinat, karşılaştırılacak ikinci sayı yok', () => {
+    // Kullanıcı kararı (2026-08-29): "Herhangi bir doğrulama gibi bir olay söz
+    // konusu değil." Eski kapı |merkez − pivot| ile kol boyunu karşılaştırıp
+    // çözümü durduruyordu; artık kasnak merkezi bir ÇIKTI, o yüzden fark
+    // yapısal olarak sıfır ve karşılaştırma anlamsız.
+    expect(M.veFeadArmCheck).toBeUndefined();
+    const td = tenOf(veFeadExampleNodes(KEY).nodes);
+    expect(td.pivotX).toBeCloseTo(-250, 6);
+    expect(td.cenX).toBeUndefined();
+    // Avara merkezi kol boyu kadar uzakta ÇIKIYOR (girdi değil, sonuç)
+    const cen = M.veFeadTensionerCenter(td, td.armMeanDeg);
+    expect(Math.hypot(cen[0] - td.pivotX, cen[1] - td.pivotY)).toBeCloseTo(90, 9);
   });
 });
 
@@ -257,7 +263,7 @@ describe('ÇALIŞMA ÇEVRİMİ — Gates "Load Conditions / Mean Tensions / Hubl
     // aksesuar 0 kW ile koşar — çözüm yine üretilir, yalnız gerilmeler düşer.
     // Kapı bunu iki uçtan tutuyor: çeviri gerçekten oldu mu, ve olmazsa
     // sonuç GERÇEKTEN değişiyor mu.
-    const pack = veFeadExampleNodes(KEY);
+    const pack = katalogAc(veFeadExampleNodes(KEY));
     const duty = solverOf(pack).data.duty;
     const acId = pack.nodes.find((n) => n.type === 'fead-ac').id;
     expect(duty[0].kwByKey).toBeUndefined();
@@ -337,27 +343,19 @@ describe('MODELİN SINIRLARI raporla karşılaştırıldığında AÇIKÇA duruy
 });
 
 describe('EFEKTİF BOY 1714.6 — raporun başlığı değil, REBL sütunu', () => {
-  test('raporun dört uzunluk konumu 1714.6 ile birebir, 1715 ile 0.4 mm kayık', () => {
-    // Rapor başlığı "Effective Belt Length (ISO 9981) 1715" diyor; kendi
-    // Tensioner Geometry tablosunun REBL sütunu ise dört konumun DÖRDÜNDE de
-    // tam 0.4 mm aşağıda. Aradaki ADIMLAR (tol 6.0, wear 0.006·L) birebir
-    // tuttuğu için kayan şey nominal boyun KENDİSİ: "1715" yuvarlanmış katalog
-    // adı (8PK**1715**HD). Kapı bunu iki yönden tutuyor — doğru değer geçiyor,
-    // katalog adı kullanılırsa AÇIKÇA kırılıyor.
-    expect(veFeadExampleOf(KEY).belt.effLength).toBe(1714.6);
-    const ref = G.pos.find((p) => p.name === 'Mean');
-    expect(ref.REBL).toBeCloseTo(1714.6, 6);
-
-    const iyi = kur();
-    const iyiMean = F.positionTable(iyi.build.sys).find((r) => r.position === 'Mean');
-    expect(Math.abs(iyiMean.relDeg - ref.rel)).toBeLessThan(0.1);
-
-    const katalog = kur((ns) => { beltOf(ns).effLength = 1715; });
-    const katMean = F.positionTable(katalog.build.sys).find((r) => r.position === 'Mean');
-    expect(Math.abs(katMean.relDeg - ref.rel)).toBeGreaterThan(0.4);
-    expect(pctErr(katMean.tensionN, ref.T)).toBeGreaterThan(1.0);
+  test('KAYIŞ BOYU ÇÖZÜMÜ ETKİLEMİYOR — 1714,6 ile 1715 aynı sonucu veriyor', () => {
+    // ESKİDEN: 0,4 mm'lik okuma farkı kolu 0,56° döndürüyor ve gerginliği
+    // %1,5 kaydırıyordu, çünkü boy bir GİRDİYDİ. Bugün boy bir ÇIKTI: hangi
+    // sayı yazılırsa yazılsın çalışma noktası aynı.
+    const a = kur();
+    const b = kur((ns) => { beltOf(ns).effLength = 1715; });
+    const mA = F.positionTable(a.build.sys).find((r) => r.position === 'Mean');
+    const mB = F.positionTable(b.build.sys).find((r) => r.position === 'Mean');
+    expect(mB.relDeg).toBeCloseTo(mA.relDeg, 9);
+    expect(b.build.beltLengthMm).toBeCloseTo(a.build.beltLengthMm, 9);
+    // ve türeyen boy raporun REBL sütununa oturuyor
+    expect(a.build.beltLengthMm).toBeCloseTo(1714.6, 1);
   });
-
   test('TOLERANS ve AŞINMA girilmezse kol zarfı tek noktaya çöker', () => {
     // Tedarikçiye giden sayfada bu iki alan YOK; raporda ±6.00 mm ve %0.60.
     // Sıfır bırakılınca Replace = Max = Mean = Min oluyor: kullanıcı kolun
@@ -389,39 +387,6 @@ describe('İKİ ÖRNEK AYNI GERGİYİ, FARKLI KAYIŞI ANLATIYOR', () => {
   // AYRIŞMA KAYIŞ KÜNYESİNDE KALDI ve bilinçli: BMC hâlâ sayfanın kayışını
   // (1715 · tolerans 0 · aşınma 0) taşıyor, AG00976 raporunkini
   // (1714.6 · ±6 · %0.60 · lengthOffset 1.6).
-
-  test('PİVOT: biri TÜRETİLİYOR, öbürü RAPORDAN ÖLÇÜLÜ', () => {
-    // BMC = müşteri tarafı: kasnak merkezi girilir, pivot parça künyesindeki
-    // kol açısından çıkar. AG00976 = tedarikçi cevabı: pivot raporda YAZILI.
-    const a = veFeadExampleOf('BMC_FEAD_2026').pulleys.find((p) => p.key === 'TEN').data;
-    const b = veFeadExampleOf(KEY).pulleys.find((p) => p.key === 'TEN').data;
-    expect(a.pivotX).toBeUndefined();
-    expect(a.armMeanDeg).toBeCloseTo(344.0, 6);
-    expect(b.pivotX).toBeCloseTo(-250.00, 6);
-    expect(b.pivotY).toBeCloseTo(110.00, 6);
-    // Yay künyesi ve kol boyu ikisinde de aynı parça (E9843).
-    ['armLen', 'preload', 'kArm', 'meanLoad'].forEach((k) => {
-      expect(a[k]).toBeCloseTo(b[k], 6);
-    });
-  });
-
-  test('TÜRETME RAPORUN PİVOTUNU GERİ VERİYOR — bağımsız doğrulama', () => {
-    // Kapı burada ısırıyor: türetme bağıntısı (pivot = c − a·(cosθ, sinθ))
-    // raporun KENDİ kasnak merkezine ve KENDİ kol açısına uygulanınca raporun
-    // KENDİ pivotunu vermeli. Üç sayı da rapordan, bağıntı bizim — yani bu bir
-    // totoloji değil, bağıntının doğrulanması.
-    const b = veFeadExampleOf(KEY).pulleys.find((p) => p.key === 'TEN').data;
-    const ref = G.pos.find((p) => p.name === 'Mean');
-    const tur = veFeadPivotFromArm({
-      cenX: ref.X, cenY: ref.Y, armLen: b.armLen, armMeanDeg: ref.absDeg,
-    });
-    expect(Math.hypot(tur[0] - b.pivotX, tur[1] - b.pivotY)).toBeLessThan(0.15);
-    // Altı konumun ALTISI da aynı pivotu vermeli (kolun tanımı).
-    G.pos.forEach((p) => {
-      const t = veFeadPivotFromArm({ cenX: p.X, cenY: p.Y, armLen: b.armLen, armMeanDeg: p.absDeg });
-      expect(Math.hypot(t[0] - b.pivotX, t[1] - b.pivotY)).toBeLessThan(0.15);
-    });
-  });
 
   test('KAYIŞ KÜNYESİ AYRI — ve fark ölçülebilir', () => {
     const a = veFeadExampleOf('BMC_FEAD_2026').belt;
@@ -459,7 +424,6 @@ describe('İKİ ÖRNEK AYNI GERGİYİ, FARKLI KAYIŞI ANLATIYOR', () => {
     const pb = veFeadExampleNodes('BMC_FEAD_2026');
     pb.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     const bb = veFeadBuildSystem(pb.nodes, pb.connections);
-    expect(bb.pivotDerived).toBe(true);
     expect(pctErr(bb.sys.designTensionN, G.design)).toBeLessThan(5);
     // AG00976 (her şeyi rapordan) çok daha yakın — fark ölçülebilir olmalı.
     const { build } = kur();

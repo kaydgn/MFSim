@@ -1,8 +1,8 @@
 # FEAD — EMEKLİ yönler (kodda YOK)
 
-> Bu dosya arşivdir: anlatılan yüzeyler bugün kodda yok. Aynı yön yeniden
-> denenirse nelerin ÖLÇÜLMÜŞ olduğunu bilmek için duruyor. Bugün geçerli
-> olan karşılığı `kanvas-ve-kart.md` içindedir.
+> Arşiv: anlatılan yüzeyler bugün kodda yok. Aynı yön yeniden denenirse
+> nelerin ÖLÇÜLMÜŞ olduğunu bilmek için duruyor. Bugün geçerli karşılığı
+> `kanvas-ve-kart.md` içindedir.
 
 #### İKİ YÜZEY — graf GİRDİ, kart ÇIKTI (`js/fead-graph.js`)
 
