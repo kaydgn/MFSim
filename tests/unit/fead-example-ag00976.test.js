@@ -86,21 +86,21 @@ describe('örnek kayıt defteri: Gates raporu kurulabilir', () => {
   test('KANVAS YERLEŞİMİ için her kasnağın sonlu koordinatı var', () => {
     // veFeadLoadExample kasnakları kayış düzlemindeki gerçek koordinatlarına
     // oranlı yerleştiriyor ve gergiyi `cenX/cenY`den okuyor — gerginin `x/y`si
-    // YOKTUR (merkezi pivot + kol + açıdan çözülür). Bir örnek gergiyi yalnız
-    // `angleMode:'direct'` ile tanımlasaydı burada 0 okunur ve kutu SESSİZCE
-    // krank kasnağının üstüne düşerdi: hata yok, çözüm doğru, yerleşim çöp.
+    // YOKTUR. Bir örnek gergiyi koordinatsız tanımlasaydı burada 0 okunur ve
+    // kutu SESSİZCE krank kasnağının üstüne düşerdi: hata yok, çözüm doğru,
+    // yerleşim çöp.
     veFeadExampleKeys().forEach((k) => {
       veFeadExampleOf(k).pulleys.forEach((p) => {
-        const x = (p.data.x != null) ? p.data.x : p.data.pivotX;
-        const y = (p.data.y != null) ? p.data.y : p.data.pivotY;
+        const x = (p.data.x != null) ? p.data.x : p.data.cenX;
+        const y = (p.data.y != null) ? p.data.y : p.data.cenY;
         expect(Number.isFinite(x)).toBe(true);
         expect(Number.isFinite(y)).toBe(true);
       });
     });
-    // Bu örnekte gergi merkezi gerçekten ikinci yoldan geliyor.
+    // Bu örnekte gergi koordinatı gerçekten ikinci yoldan geliyor.
     const ten = veFeadExampleOf(KEY).pulleys.find((p) => p.key === 'TEN').data;
     expect(ten.x).toBeUndefined();
-    expect(ten.pivotX).toBeCloseTo(-250, 2);
+    expect(ten.cenX).toBeCloseTo(-161.97, 2);
   });
 
   test('panel kartı her iki örnek için de sayı basıyor — "undefined" YOK', () => {
@@ -205,15 +205,19 @@ describe('GERGİ — Gates "Tensioner Geometry" tablosu (6 konum × 7 sütun)', 
   test('KARŞILIKLI DOĞRULAMA YOK — tek koordinat, karşılaştırılacak ikinci sayı yok', () => {
     // Kullanıcı kararı (2026-08-29): "Herhangi bir doğrulama gibi bir olay söz
     // konusu değil." Eski kapı |merkez − pivot| ile kol boyunu karşılaştırıp
-    // çözümü durduruyordu; artık kasnak merkezi bir ÇIKTI, o yüzden fark
+    // çözümü durduruyordu; artık montaj konumu bir ÇIKTI, o yüzden fark
     // yapısal olarak sıfır ve karşılaştırma anlamsız.
     expect(M.veFeadArmCheck).toBeUndefined();
     const td = tenOf(veFeadExampleNodes(KEY).nodes);
-    expect(td.pivotX).toBeCloseTo(-250, 6);
-    expect(td.cenX).toBeUndefined();
-    // Avara merkezi kol boyu kadar uzakta ÇIKIYOR (girdi değil, sonuç)
-    const cen = M.veFeadTensionerCenter(td, td.armMeanDeg);
-    expect(Math.hypot(cen[0] - td.pivotX, cen[1] - td.pivotY)).toBeCloseTo(90, 9);
+    expect(td.cenX).toBeCloseTo(-161.97, 6);
+    expect(td.pivotX).toBeUndefined();
+    // Montaj konumu kol boyu kadar uzakta ÇIKIYOR (girdi değil, sonuç)
+    const p = M.veFeadTensionerPivot(td);
+    expect(Math.hypot(p[0] - td.cenX, p[1] - td.cenY)).toBeCloseTo(90, 9);
+    // BAĞIMSIZ ÖLÇÜ, KAPI DEĞİL: raporun kendi "Tensioner Data → Pivot Point"
+    // satırı (−250 / 110) modele HİÇ girmiyor; türev ona 0,0035 mm uzakta.
+    // Program bu karşılaştırmayı YAPMAZ — test onu bir kez ölçüyor.
+    expect(Math.hypot(p[0] + 250, p[1] - 110)).toBeLessThan(0.01);
   });
 });
 

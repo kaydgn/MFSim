@@ -10,16 +10,17 @@ uyarı verilmez. Aşağısı o sınıfa karşı kurulmuş kapılardır.
 
 ## Önce şunu bil: gergi tanımı OYNAK bir alan
 
-**Gerginin nasıl tanımlandığı 2026-08-25 → 08-29 arasında birden çok kez yön
-değiştirdi** (kasnak merkezi girdi → pivot girdi + zarf → tek koordinat,
-"pivot" terminolojisinin kalkması, kayış boyunun kipe bağlı olmaktan çıkması).
-Bu yüzden **bu dosya o alanın kuralını yeniden yazmaz** — burada yazılı bir
-özet, bir sonraki dönüşte sessizce yanlış olurdu.
+**Gerginin nasıl tanımlandığı 2026-08-25 → 09-01 arasında DÖRT KEZ yön
+değiştirdi** (kasnak merkezi girdi → pivot girdi + zarf → tek koordinat →
+avara merkezi girdi + kol açısı girdi). Bu yüzden **bu dosya o alanın kuralını
+yeniden yazmaz** — burada yazılı bir özet, bir sonraki dönüşte sessizce yanlış
+olurdu.
 
-> Gergi tanımına, kol açısına, zarfa ya da kayış boyu kipine dokunacaksan
-> **`references/cozum-ornekler-ve-ankraj.md`'yi aç ve *"TEK KOORDİNAT"*
-> bölümünü oku.** Ondan önceki pivot bölümleri kendi başlıklarında AŞILDI diye
-> işaretlidir; sırayla oku, atlama. Kodun kendisi (`js/cp-fead.js` gergi kartı,
+> Gergi tanımına, kol açısına ya da kayış boyu kipine dokunacaksan
+> **`references/cozum-ornekler-ve-ankraj.md`'yi aç ve *"AVARA MERKEZİ GİRDİ,
+> MONTAJ KONUMU ÇIKTI"* bölümünü oku.** Ondan sonraki bölümler kendi
+> başlıklarında AŞILDI diye işaretlidir ve yalnız ÖLÇÜMLERİ için duruyorlar;
+> sırayla oku, atlama. Kodun kendisi (`js/cp-fead.js` gergi kartı,
 > `js/fead-model.js`) belgeden daha günceldir — ikisi ayrışıyorsa kod kazanır
 > ve kaydı düzeltmek işin parçasıdır.
 

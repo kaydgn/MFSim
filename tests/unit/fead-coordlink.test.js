@@ -124,11 +124,11 @@ describe('sürükleme kapısı — veFeadSyncDrag', () => {
     expect(s.alt.data.x).toBeCloseTo(-241, 6);   // +40 px = +40 mm
     expect(s.alt.data.y).toBeCloseTo(284.46, 6); // −25 px (aşağı) = +25 mm (yukarı)
 
-    // Gergi: taşınan şey MONTAJ KONUMU (tek koordinat)
+    // Gergi: taşınan şey AVARA MERKEZİ (tek koordinat)
     s.ten.x -= 15; s.ten.y += 10;
     expect(fead.veFeadSyncDrag()).toBe(1);
-    expect(s.ten.data.pivotX).toBeCloseTo(-271.59, 6);
-    expect(s.ten.data.pivotY).toBeCloseTo(113.97, 6);
+    expect(s.ten.data.cenX).toBeCloseTo(-185.08, 6);
+    expect(s.ten.data.cenY).toBeCloseTo(89.16, 6);
 
     // ORİJİNİ sürüklemek diğer HERKESİ karşı yönde kaydırır
     s.org.x += 30;

@@ -419,69 +419,73 @@ function _gfSec6(){
 
 function _gfSec7(){
   var h = _gfH2(6);
-  h += '<p>Otomatik gergi, modelin en çok girdi isteyen ve en dikkat gerektiren bileşenidir. '
-    + 'Gergiye çift tıklayın. Panelin sorduğu <strong>tek konum girdisi</strong> vardır: '
-    + 'gergi gövdesinin motora bağlandığı nokta. Kasnağın merkezi, kolun açısı ve kayış '
-    + 'boyu bundan <strong>türer</strong>.</p>';
+  h += '<p>Otomatik gergi, modelin en çok girdi isteyen bileşenidir. Gergiye çift tıklayın. '
+    + 'Panelin sorduğu <strong>tek konum girdisi</strong> vardır ve diğer bütün kasnaklarla '
+    + 'aynı şeydir: <strong>avara kasnağının merkezi</strong>. Gövdenin montaj konumu, '
+    + 'serbest kol açısı ve kayış boyu bundan <strong>türer</strong>.</p>';
   h += _gfAdimlar([
     'Önce <strong>Gergi Künye Kütüphanesi</strong> kartına bakın: elinizdeki gergi bu 14 '
       + 'ölçülmüş künyeden biriyse seçin, kol boyu · ön yük · yay katsayısı · kasnak çapı · '
       + 'temas tarafı bir anda dolar.',
     'Kütüphanede yoksa <strong>Yay Künyesi</strong> kartına üç sayıyı elle girin: ön yük, '
       + 'yay katsayısı, çalışma momenti.',
-    '<strong>Kol Künyesi</strong> kartına kol boyunu yazın.',
-    '<strong>Otomatik Gergi Montaj Konumu</strong> kartına gergi gövdesinin motora '
-      + 'cıvatalandığı noktanın X ve Y’sini yazın.',
-    '<strong>Avara Hareketi</strong> kartındaki okumaya bakın: program hangi kol açısını '
-      + 'seçti, kasnak merkezi nereye düştü, gereken kayış boyu ne çıktı.'
+    '<strong>Avara Kasnağının Merkezi</strong> kartına gergi kasnağının merkez X ve Y’sini '
+      + 'yazın — bilgi sayfasının koordinat tablosundaki gergi satırı budur.',
+    '<strong>Kol Künyesi</strong> kartına kol boyunu ve <strong>kol çalışma açısını</strong> '
+      + 'yazın. Kartın altında gövdenin montaj konumu türetilmiş olarak görünür.',
+    '<strong>Avara Hareketi</strong> kartındaki okumaya bakın: serbest kol açısı, gereken '
+      + 'kayış boyu ve tasarım gerginliği orada.'
   ]);
   h += _gfAlanTablo('Gergi paneli — alanlar', [
     ['Temas Tarafı', 'Genelde “Sırttan değiyor”', 'Yerleşim çizimi'],
     ['Dış çap (OD)', 'Gergi kasnağının dış çapı, mm', 'Parça künyesi'],
     ['Atalet J', 'kg·m²', 'Parça künyesi; burulma modeline girer'],
-    ['<strong>Montaj X / Y</strong>', 'Gergi <strong>gövdesinin</strong> motora bağlandığı '
-      + 'nokta — kolun döndüğü eksen. Programın sorduğu <strong>tek</strong> konum girdisi',
-      'Tedarikçiden <em>dönen</em> raporun <em>Tensioner Data → Pivot Point {X, Y}</em> satırı'],
-    ['Kol boyu (Arm Length)', 'Montaj konumu ile kasnak merkezi arasındaki sabit mesafe, mm',
+    ['<strong>Merkez X / Y</strong>', 'Gergi <strong>avarasının</strong> merkezi — kayış '
+      + 'yolu buradan geçer. Programın sorduğu <strong>tek</strong> konum girdisi',
+      'Bilgi sayfasının koordinat tablosu, gergi satırı; dönen raporda <em>Layout Data</em>'],
+    ['Kol boyu (Arm Length)', 'Montaj ekseni ile kasnak merkezi arasındaki sabit mesafe, mm',
       'Raporun <em>Tensioner Data</em> bölümü; 56–90 mm aralığında doğrulandı'],
+    ['<strong>Kol çalışma açısı</strong>', 'Kolun çalışma konumundaki <strong>mutlak</strong> '
+      + 'açısı (+X’ten CCW) — gergi gövdesinin montajdaki saat konumu',
+      'Gerginin parça/montaj çizimi (E9843: <em>“344° MEAN ANGLE”</em>)'],
     ['Ön yük (Pre-Load)', 'Nm', 'Bilgi sayfasının Tensioner tablosu'],
     ['Yay katsayısı (Rate)', 'Nm/°', 'Aynı tablo'],
     ['Çalışma momenti (Mean Load)', 'Nm', 'Aynı tablo. Kolun montajda ne kadar kurulduğunu '
       + 'söyler: göreli açı = (Mean − Pre) / Rate'],
     ['Kol dönüş yönü (sense)', 'Yaya yüklenme yönü: +1 / −1 / otomatik',
       'Varsayılan <em>Otomatik bul</em>; çekirdek kayışın kısaldığı yönden kendisi bulur'],
-    ['Kol açısı', '<strong>Alan yok</strong> — program zarftan seçer',
-      '“Kol açısını SABİTLE” anahtarını açarsanız alan çıkar ve açıyı siz verirsiniz'],
     ['Load stop', 'Mekanik durdurucunun göreli açısı, °', 'Raporun Tensioner Data satırı; '
       + 'boş bırakılabilir'],
     ['Kol ataleti', 'kg·m²', 'Burulma modeline girer'],
     ['Kasnak kütlesi', 'kg', 'Burulma modeline girer — <strong>girilmezse birinci mod '
       + 'belirgin şekilde yüksek çıkar</strong>']
   ]);
-  h += _gfUyari('Buraya kasnak merkezi yazılmaz',
-      'Gergi kasnağının merkezi ile gövdenin montaj konumu kolun <strong>iki ayrı ucudur</strong> '
-    + 've aralarında tam kol boyu kadar mesafe vardır (14 sistemin 81 konumunda ölçüldü, sapma '
-    + '≤ 0,065 mm). Tedarikçiye <em>giden</em> bilgi sayfasındaki gergi satırı '
-    + '<strong>kasnak merkezidir</strong> ve montaj konumunu <strong>hiç taşımaz</strong>; '
-    + 'o satır yalnız <em>dönen</em> raporda bulunur.<br><br>'
-    + 'İkisi karıştırılırsa model <strong>yine çözülür ve uyarı çıkmaz</strong> — ölçüldü: '
-    + 'gerginlik <strong>−%48,6</strong>, sarım açısı en kötü <strong>+27,9°</strong> kayıyor. '
+  h += _gfUyari('Buraya montaj konumu yazılmaz',
+      'Gergi kasnağının merkezi ile gövdenin montaj konumu kolun <strong>iki ayrı '
+    + 'ucudur</strong> ve aralarında tam kol boyu kadar mesafe vardır (14 sistemin 81 '
+    + 'konumunda ölçüldü, sapma ≤ 0,065 mm). Panelin istediği <strong>merkezdir</strong>; '
+    + 'montaj konumu yalnız tedarikçiden <em>dönen</em> raporda bulunur ve modele '
+    + '<strong>girmez</strong> — program onu türetir.<br><br>'
+    + 'İkisi karıştırılırsa model <strong>yine çözülür</strong> — ölçüldü: '
+    + '14 tedarikçi sisteminin <strong>14’ü de çözülüyor</strong>, gerginlik sapması '
+    + 'medyan <strong>+%1526</strong> (en kötü +%4518) ve <strong>beşinde hiçbir uyarı '
+    + 'çıkmıyor</strong>.<br><br>'
     + 'Program bu iki noktayı <strong>birbiriyle karşılaştırmaz</strong>: ikinci bir koordinat '
     + 'sormaz, dolayısıyla ters girişi kendiliğinden yakalayamaz. Denetimi siz yaparsınız — '
     + 'nasıl olduğu bir sonraki başlıkta.');
   h += '<h3>7.1 Doğru noktayı girdiğinizi doğrulamak</h3>';
-  h += '<p>Program, girdiğiniz koordinatın montaj konumu mu yoksa kasnağın çalışma merkezi mi '
-    + 'olduğunu <strong>kendi başına ayırt edemez</strong> — ikisi de geçerli bir çözüm üretir. '
-    + 'Ama denetimi yapmanız için gereken sayıyı <strong>her durumda basar</strong>.</p>';
+  h += '<p>Program, girdiğiniz koordinatın kasnak merkezi mi yoksa gövdenin montaj konumu mu '
+    + 'olduğunu <strong>kendi başına ayırt edemez</strong> — ikisi de geçerli bir çözüm '
+    + 'üretir. Ama denetimi yapmanız için gereken sayıyı <strong>her durumda basar</strong>.</p>';
   h += _gfAdimlar([
-    '<strong>Avara Hareketi</strong> kartındaki <em>“↳ kasnak merkezi (türedi)”</em> satırına '
-      + 'bakın. Bu, girdiğiniz noktadan kol boyu ve seçilen açıyla türetilen kasnak '
-      + 'merkezidir — yani programın kayışı hangi çemberin üstünde gezdirdiğini söyler.',
-    'O sayıyı tedarikçi raporunun <em>Layout Data</em> tablosundaki gergi satırıyla '
-      + 'karşılaştırın. Tutuyorsa doğru alana girmişsinizdir.',
-    'Elinizde yalnız tedarikçiye <em>giden</em> bilgi sayfası varsa (yani montaj konumu '
-      + 'yazmıyorsa) o sayfanın gergi satırı <strong>kasnak merkezidir</strong>. Montaj '
-      + 'konumunu doğrudan giremezsiniz; bölüm 13’teki listeye bakın.'
+    '<strong>Kol Künyesi</strong> kartındaki <em>“↳ gövdenin montaj konumu (türedi)”</em> '
+      + 'satırına bakın. Bu, girdiğiniz merkezden kol boyu ve kol açısıyla türetilen '
+      + 'montaj eksenidir.',
+    'Elinizde tedarikçiden dönen rapor varsa o sayıyı <em>Tensioner Data → Pivot Point '
+      + '{X, Y Coordinates}</em> satırıyla karşılaştırın. Tutuyorsa doğru alana '
+      + 'girmişsinizdir.',
+    'Elinizde yalnız tedarikçiye <em>giden</em> bilgi sayfası varsa, o sayfanın gergi satırı '
+      + 'zaten <strong>kasnak merkezidir</strong> — doğrudan panele yazılır, çevirme gerekmez.'
   ]);
   h += _gfNot('Doğrulama sizin işiniz, programın değil',
       'Bu bilinçli bir tercihtir: <strong>programda karşılıklı doğrulama yoktur</strong>. '
@@ -489,43 +493,42 @@ function _gfSec7(){
     + 'koordinat sorulup ikisi karşılaştırılsaydı aynı büyüklük iki yerden alınmış olurdu — '
     + 'bölüm 2’de anlatılan “tek kaynak” kuralının ihlali. Denetim için gereken türev sayı '
     + 'ekranda durur; karşılaştırmayı belgeyle siz yaparsınız.');
-  h += '<h3>7.2 Kol açısını program nasıl seçiyor</h3>';
-  h += '<p>Montaj konumu verildikten sonra geriye tek bir serbestlik derecesi kalır: gergi '
-    + 'gövdesinin montajdaki saat konumu, yani kolun mutlak açısı. Program 360°’lik zarfı '
-    + 'tarar ve <strong>en küçük take-up’ı en büyük yapan</strong> açıyı seçer.</p>';
-  h += '<p>Fiziksel karşılığı şudur: kolun taşıdığı gerginlik <em>T = M / (dL/dθ)</em> '
-    + 'olduğundan, take-up oranının en küçük olduğu yer gerginliğin en büyük olduğu yerdir. '
-    + 'Ölçüt, kayışın servis zarfı boyunca (yeni ve uzun kayıştan yıpranmış ve kısa kayışa) '
-    + 'görülen <strong>tepe gerginliği en küçük</strong> yapan montaj konumunu bulur — klasik '
-    + 'gergi yerleşim kuralı.</p>';
-  h += '<p>Ölçüt tahminle seçilmedi: altı aday ölçüt 14 tedarikçi sisteminde tarandı, kazananı '
-    + 'bu oldu. Açı farkının medyanı <strong>4,5°</strong>, 14 sistemin <strong>9’unda ±5° '
-    + 'içinde</strong>; aynı ölçüt kayış boyunu 11 sistemde <strong>±%0,35 içinde</strong> '
-    + 'geri veriyor.</p>';
-  h += _gfNot('Sonuç bir öneridir — paketleme modelde yok',
-      'Zarfın hangi yayının motor bloğunda fiziksel olarak kullanılabilir olduğunu program '
-    + 'bilmez. Ölçülen 14 sistemin birinde en iyi nokta motorun öteki yanında kaldı. Gövdenin '
-    + 'montajdaki saati bir imalat kararıysa (konum pimi, cıvata deseni) panelde '
-    + '<strong>“Kol açısını SABİTLE”</strong> anahtarını açın: zarf o zaman bir seçici değil '
-    + 'bir <strong>teşhis</strong> yüzeyi olur — program sizin açınızla çözer, zarf eğrisi '
-    + 'yalnız o açının nerede durduğunu gösterir. Bölüm 14’ün örneği ikisini yan yana ölçer.');
+  h += '<h3>7.2 Kol çalışma açısını program neden SEÇMİYOR</h3>';
+  h += '<p>Avara merkezi verildikten sonra kayış yolu tamamen belirlidir: teğet noktaları, '
+    + 'sarım açıları ve efektif boy kolun saatinden <strong>bağımsızdır</strong> — geometri '
+    + 'yalnız kasnak merkezlerinin farklarından kurulur. Kolun mutlak açısını değiştirmek '
+    + 'yalnız <em>gövdenin nereye cıvatalandığını</em>, dolayısıyla yalnız β’yı, yani '
+    + 'take-up’ı ve gerginliği oynatır.</p>';
+  h += '<p>Bu bir <strong>paketleme</strong> kararıdır ve kayış fiziğinden çıkarılamaz. '
+    + 'Program bir dönem onu bir ölçütten seçiyordu (girdi montaj konumuyken bu işe '
+    + 'yarıyordu: 14 tedarikçi sisteminin 8’inde ±5° içinde, medyan 4,0°). Girdi avara '
+    + 'merkezine dönünce ölçüt çöktü — ölçüldü: aynı ölçüt <strong>2/14</strong>, medyan '
+    + '<strong>20,7°</strong>, dört sistemde sapma 90°’nin üstünde; ±10° bandında da yine '
+    + '2/14, yani ara bir bant yok. Sekiz aday ölçüt tarandı, en iyisi yine 2/14.</p>';
+  h += '<p>Sebep, ölçütün <em>yanlış</em> bir yeri seçmesi değil, <strong>hiçbir yeri '
+    + 'seçememesidir</strong>. Merkez sabitken çalışma noktasındaki kayış yolu kol '
+    + 'açısından bağımsız olduğu için — ölçüldü: altı sistemde 548’er açı boyunca sarım, '
+    + 'açıklıklar ve efektif boy en fazla <strong>4,55·10<sup>−13</sup> mm</strong> '
+    + 'oynuyor, yani makine hassasiyeti — ölçüt eğrisi <strong>düzleşiyor</strong>: '
+    + '%1 platosu 2,1°’den <strong>24,1°</strong>’ye genişliyor (11,5 kat).</p>';
+  h += _gfNot('Uydurulmuş varsayılan yok',
+      'Kol çalışma açısı girilmemişse model <strong>çözülmez</strong> ve sebebini adıyla '
+    + 'yazar. β = 90° gibi “makul ama yanlış” bir varsayılan, gerginliği ölçülebilir biçimde '
+    + 'kaydırıp <em>sessiz</em> kalırdı — bu modülün en pahalı hata sınıfı tam olarak odur.');
   h += '<h3>7.3 Panelde ne okuyacaksınız</h3>';
   h += _gfAlanTablo('Avara Hareketi kartının okuması', [
     ['Yay kurulması', '(M<sub>çalışma</sub> − M<sub>ön</sub>) / k — kolun bağıl dönmesi',
       'Salt yay künyesinden; geometriye hiç bakmaz'],
-    ['Kol çalışma açısı', 'Zarftan <strong>seçilen</strong> mutlak açı',
-      'Sabitlerseniz sizin verdiğiniz açı'],
-    ['↳ kasnak merkezi (türedi)', 'Montaj konumundan kol boyu kadar uzakta, seçilen açıda',
-      '<strong>Türeyen</strong> — bu bir girdi değildir; §7.1’in denetim sayısı'],
+    ['Kol çalışma açısı', 'Girdiğiniz mutlak açı', 'Bir <strong>girdi</strong>'],
+    ['↳ gövdenin montaj konumu (türedi)', 'Merkezden kol boyu kadar geride, çalışma açısında',
+      '<strong>Türeyen</strong> — atölyeye giden sayı; §7.1’in denetim sayısı'],
+    ['Serbest kol açısı (türedi)', 'θ<sub>çalışma</sub> − sense × yay kurulması',
+      'Çekirdeğe giren açı'],
     ['Gereken KAYIŞ BOYU (çıktı)', 'Bu yerleşim için ısmarlanması gereken efektif boy',
       'Bölüm 8’de katalogla eşleştirilir'],
     ['Tasarım gerginliği (türedi)', 'Yay dengesinden türeyen ankraj gerginliği',
       'Bütün gerilme zinciri bu değerden kurulur'],
-    ['Ölçüt · en küçük take-up', 'Seçimi yapan büyüklüğün seçilen açıdaki değeri, mm/°',
-      'Karşılaştırma içindir; hüküm taşımaz'],
-    ['Zarfın ÇÖZÜLEBİLEN yayı', '360°’nin kaç derecesinde geçerli geometri çıkıyor',
-      'Çok küçükse (< 20°) yerleşimi gözden geçirin'],
-    ['Konum pimi', 'Seçilen açının imalat karşılığı: pim deliğinin yarıçapı ve açısı',
+    ['Konum pimi', 'Kol açısının imalat karşılığı: pim deliğinin yarıçapı ve açısı',
       'Yalnız parça çizimi olan künyelerde; yoksa sebebi yazılır']
   ], ['Satır', 'Ne gösterir', 'Not']);
   return h;
@@ -555,11 +558,10 @@ function _gfSec8(){
     ['SABİT', 'Girilen boy kullanılır; kol o boya oturan açıya gider, gerginlik oradan çıkar',
       '“Elimdeki bu kayış bu düzene uyar mı?”']
   ], ['Kip', 'Ne yapar', 'Hangi soruya cevap verir']);
-  h += _gfNot('Zarf kipinde kayış kipi kilitlidir',
-      'Gergi montaj koordinatından zarf çözerek çalışıyorsa kayış boyu <strong>yapısal '
-    + 'olarak</strong> bir sonuçtur ve seçilemez. Panel bunu “SERBEST (kilitli)” diye yazar, '
-    + 'tuvaldeki rozet de tıklamayı reddeder. Kayış boyunu girdi yapmak isterseniz gergi '
-    + 'panelinden kol açısı kipini değiştirin.');
+  h += _gfNot('Kayış kipi kilitlidir',
+      'Gergi avara merkezinden çözülüyorsa kayış boyu <strong>yapısal olarak</strong> bir '
+    + 'sonuçtur ve seçilemez. Panel bunu “SERBEST (kilitli)” diye yazar, tuvaldeki rozet de '
+    + 'tıklamayı reddeder.');
   h += '<h3>8.2 Katalog bir kısıt değil, bir öneridir</h3>';
   h += '<p>Katalog iki ayrı küme gösterir ve bunları karıştırmaz:</p>';
   h += _gfAlanTablo('Katalog kümeleri', [
@@ -575,7 +577,7 @@ function _gfSec8(){
     + 'kenetlendiği noktada gerginlik matematiksel olarak tekilleşir ve oradan okunan sayı '
     + 'fiziksel değildir.</p>';
   h += '<h3>8.3 Kayış tipine bağlı çıktılar anahtarı</h3>';
-  h += '<p>Aynı panelde bir anahtar daha vardır ve gergi zarf kipindeyken varsayılan olarak '
+  h += '<p>Aynı panelde bir anahtar daha vardır ve varsayılan olarak '
     + '<strong>kapalıdır</strong>. Kapalıyken şu dört çıktı <strong>üretilmez</strong>:</p>';
   h += '<ul>'
     + '<li>B10 kayış ömrü</li>'
@@ -648,7 +650,8 @@ function _gfSec9(){
 function _gfSec10(){
   var h = _gfH2(9);
   h += '<p>Geometri sonuçları <strong>Hesapla’ya basmadan</strong> hazırdır. Kayış Yolu kartı, '
-    + 'gergi panelindeki zarf okuması ve gergi konum tablosu çalışma çevrimi gerektirmez — '
+    + 'gergi panelindeki avara hareketi okuması ve gergi konum tablosu çalışma çevrimi '
+    + 'gerektirmez — '
     + 'geometriden ve yay dengesinden gelirler.</p>';
   h += _gfAdimlar([
     'Çözücü panelinde <strong>Algılanan Model</strong> tablosuna bakın: kasnak sayısı, sürücü, '
@@ -707,7 +710,7 @@ function _gfSec11(){
   h += '<h3>11.2 Tuval rozetleri</h3>';
   h += _gfAlanTablo('Rozetler', [
     ['Kayış kutusu', '<code>SABİT</code> (mavi) ↔ <code>SERBEST</code> (amber)',
-      'Tıklanabilir; zarf kipinde kilitli'],
+      'Tıklanabilir; avara merkezi girdiyken kilitli'],
     ['Konum Bağı kutusu', '<code>AÇIK</code> (amber) ↔ <code>KAPALI</code> (mavi)',
       'Tıklanabilir'],
     ['Dönüş Yönü kutusu', '<code>↺ CCW</code> ↔ <code>↻ CW</code>',
@@ -717,8 +720,8 @@ function _gfSec11(){
   ], ['Nerede', 'Ne yazar', 'Not']);
   h += '<h3>11.3 Paneller</h3>';
   h += _gfAlanTablo('Hangi sonuç hangi panelde', [
-    ['Gergi paneli', 'Seçilen kol açısı · türeyen kasnak merkezi · gereken kayış boyu · '
-      + 'tasarım gerginliği · ölçüt değeri · zarfın çözülebilen yayı', 'Hayır'],
+    ['Gergi paneli', 'Türeyen montaj konumu · serbest kol açısı · gereken kayış boyu · '
+      + 'tasarım gerginliği · konum pimi', 'Hayır'],
     ['Kayış paneli', 'Türetilen boy ve hangi kol açısından geldiği · katalog aday tablosu · '
       + 'kapatılan çıktıların listesi', 'Hayır'],
     ['Kayış Yolu paneli', 'Geometri tablosu: kasnak · temas · çıkış açıklığı · sarım · hız '
@@ -785,7 +788,7 @@ function _gfSec13(){
         + 'yine 360 çıkar', 'Bir sistemde sarım 207,7° yerine 172,2° — <strong>−35,5°</strong>'],
       ['Gergi montaj konumu', 'Kasnak merkezi montaj konumu sanılırsa model yine çözülür; '
         + 'program iki noktayı karşılaştırmadığı için uyarı da çıkmaz',
-        'Gerginlik <strong>−%48,6</strong> · sarım en kötü <strong>+27,9°</strong>'],
+        'Gerginlik medyan <strong>+%1526</strong> · 5/14 sistemde uyarı YOK'],
       ['Kol boyu', 'Yanlış girilirse türeyen kasnak merkezi kol boyu kadar kayar; kayış yolu '
         + 'yine kapanır', 'Bu örnekte 90 mm’lik bir kayma — kasnak sürücünün içine düşebilir'],
       ['Birinci kademe oranı', 'Elle yazılmış hız oranı çaptan hesaplananla çelişir',
@@ -815,12 +818,16 @@ function _gfSec13(){
 // `veFeadExampleNodes` düz nesne olarak üretiyor ve `veFeadBuildSystem` açık
 // liste kabul ediyor (global `nodes` okuyan `veFeadBuildFromCanvas` DEĞİL).
 //
-// KAYIŞ BOYU SİLİNİR ve KOL SERBEST BIRAKILIR. Örnek, kolun nerede durduğunu
-// raporundan BİLİYOR (armMeanDeg + armPinned — eski kaydın göçünden geliyor);
-// kılavuzun anlattığı akış ise sıfırdan tasarım, yani kolun açısını zarfın
-// SEÇTİĞİ hâl. İkisi de bırakılsaydı belge "program şunu hesaplıyor" derken
-// aslında girdiyi okuyor olurdu. Sabitlenmiş hâli kaybolmuyor: ikinci bir
-// çözüm olarak koşup 14.2'de yan yana basılıyor.
+// KAYIŞ BOYU SİLİNİR. Örnek onu kendi kaydında taşımıyor zaten (boy bir
+// ÇIKTI), ama silmek kılavuzun iddiasını yapısal olarak garantiliyor: belge
+// "program bu boyu buldu" derken girdiyi okuyor olamaz.
+//
+// KOL ÇALIŞMA AÇISI SİLİNMEZ ve bu 2026-09-01'de değişti. Bir dönem burada
+// açı da siliniyordu, çünkü program onu bir MONTAJ ZARFINDAN seçiyordu ve
+// kılavuz "sıfırdan tasarım" akışını anlatıyordu. Girdi avara merkezine
+// dönünce o zarf çöktü (bkz. fead-model.js "MONTAJ ZARFI KALKTI") — kol
+// çalışma açısı artık kol boyu ve yay künyesiyle aynı sınıftan, gerginin
+// montaj verisinden okunan bir GİRDİ. Silmek modeli çözülemez yapardı.
 function _gfOrnekCoz(){
   if(typeof veFeadExampleNodes !== 'function' || typeof veFeadBuildSystem !== 'function'
      || typeof componentDefs === 'undefined')
@@ -841,14 +848,6 @@ function _gfOrnekCoz(){
 
   delete kayis.data.effLength;
 
-  // SABİT KOL — örneğin kendi kaydı (açı raporundan biliniyor)
-  var sabit = null;
-  try { sabit = veFeadBuildSystem(pack.nodes, pack.connections); } catch(e){ sabit = null; }
-  if(sabit && !sabit.ok) sabit = null;
-
-  // SERBEST KOL — zarf açıyı kendisi seçiyor; kılavuzun anlattığı akış bu
-  delete gergi.data.armPinned; delete gergi.data.armMeanDeg;
-
   var build;
   try { build = veFeadBuildSystem(pack.nodes, pack.connections); } catch(e){ return null; }
   if(!build || !build.ok) return null;
@@ -865,7 +864,7 @@ function _gfOrnekCoz(){
     });
   } catch(e){ R = null; }
 
-  return { pack: pack, build: build, sabit: sabit, R: R,
+  return { pack: pack, build: build, R: R,
            gergi: gergi, kayis: kayis, cozucu: cozucu };
 }
 
@@ -877,8 +876,9 @@ var VE_GUIDE_FEAD_GATES = {
   // Raporun gergi için bastığı İKİ AYRI koordinat. Bunlar aynı şeyin iki
   // yazımı değil, kolun iki ucu: aralarındaki mesafe 14 sistemin 14'ünde de
   // tam kol boyu (en büyük sapma 0,0054 mm — basım yuvarlaması).
-  //   pivot  → "Tensioner Data / Pivot Point {X, Y Coordinates} mm"  = GİRDİ
-  //   tenXY  → "Layout Data" tablosunun gergi satırı (çalışma merkezi) = ÇIKTI
+  //   tenXY  → "Layout Data" tablosunun gergi satırı (çalışma merkezi) = GİRDİ
+  //   pivot  → "Tensioner Data / Pivot Point {X, Y Coordinates} mm"  = modelin
+  //            TÜRETTİĞİ sayı; modele hiç girmiyor, karşılaştırma için burada
   pivot: [-250, 110], tenXY: [-161.97, 91.29], arm: 90,
   wrap: [156.2, 52.8, 198.4, 64.3, 157.1, 34.6],
   span: [148.0, 141.4, 150.8, 272.7, 194.4, 141.3],
@@ -930,9 +930,9 @@ function _gfSec14(){
     satirlar.push([
       _gfE(ad),
       _gfF(d.od, 0),
-      gergiMi ? _gfF(d.pivotX, 2) : _gfF(d.x, 1),
-      gergiMi ? _gfF(d.pivotY, 2) : _gfF(d.y, 1),
-      gergiMi ? '<strong>montaj konumu</strong>' : 'kasnak merkezi',
+      gergiMi ? _gfF(d.cenX, 2) : _gfF(d.x, 1),
+      gergiMi ? _gfF(d.cenY, 2) : _gfF(d.y, 1),
+      gergiMi ? 'avara kasnağının merkezi' : 'kasnak merkezi',
       (typeof veFeadContactOf === 'function' && veFeadContactOf(n) === 'grooved')
         ? 'kaburgalı' : 'sırttan',
       // ROL SÜTUNU GERGİYİ DE ADLANDIRIR. Bir dönem yalnız `driver`a bakıyordu,
@@ -948,29 +948,27 @@ function _gfSec14(){
     ['Kasnak', 'OD [mm]', 'X [mm]', 'Y [mm]', 'Koordinat neyi gösteriyor', 'Temas', 'Rol'],
     satirlar, ['l', '', '', '', 'l', 'c', 'c']);
 
-  h += _gfUyari('Gergi satırı diğerlerinden BAŞKA bir noktadır',
-      'Beş kasnakta X/Y <strong>kasnağın merkezidir</strong>. Gergide ise girilen koordinat '
-    + '<strong>montaj konumudur</strong> — gövdenin motora cıvatalandığı, kolun '
-    + 'etrafında döndüğü nokta. Gergi kasnağının merkezi bir girdi değil, bu noktadan '
-    + '<em>türeyen</em> bir sonuçtur (14.2).<br><br>'
-    + 'Tedarikçi raporu ikisini de basar ve <strong>ayrı yerlerde</strong>: montaj konumu '
-    + '<em>Tensioner Data → Pivot Point {X, Y Coordinates}</em> satırında, gergi '
-    + 'kasnağının çalışma merkezi ise <em>Layout Data</em> tablosunun gergi satırında. '
-    + 'Aralarında tam kol boyu kadar mesafe vardır — arşivdeki 14 sistemin 14’ünde de '
-    + 'ölçüldü, en büyük sapma <strong>0,0054 mm</strong> (basım yuvarlaması).<br><br>'
-    + '<strong>Karıştırılırsa model yine çözülür ve uyarı çıkmaz.</strong> Ölçüldü: '
-    + '<em>Layout Data</em> satırı montaj koordinatı sanılıp girilince kol 112,30°’ye '
-    + 'gidiyor, türeyen kasnak merkezi doğrusundan <strong>90,00 mm</strong> sapıyor, '
-    + 'gerginlik <strong>−%47,9</strong> düşüyor.');
+  h += _gfOnay('Gergi satırı da bir KASNAK MERKEZİDİR',
+      'Altı satırın altısında da X/Y aynı şeydir: <strong>kasnağın merkezi</strong>. '
+    + 'Gerginin farkı koordinatında değil, kasnağının bir <em>kolun ucunda</em> '
+    + 'olmasında — kol gezindikçe o merkez bir yay çiziyor ve tabloya giren, '
+    + 'çalışma (Mean) konumundaki hâlidir.<br><br>'
+    + 'Tedarikçiye giden FEAD bilgi sayfası da, tedarikçiden dönen raporun '
+    + '<em>Layout Data</em> tablosu da gergi satırında bunu veriyor. Gövdenin motora '
+    + 'cıvatalandığı nokta (<em>Tensioner Data → Pivot Point</em>) <strong>modele hiç '
+    + 'girmiyor</strong>: program onu kol boyu ve kol çalışma açısından türetiyor ve '
+    + '14.2’de raporun kendi satırıyla karşılaştırıyor.');
 
   h += _gfTablo('Gergi ve kayış künyeleri — girilen değerler',
     ['Alan', 'Değer', 'Nereden'],
     [
-      ['Montaj konumu',
-        _gfF(td.pivotX, 2) + ' / ' + _gfF(td.pivotY, 2) + ' mm',
-        'Raporun <em>Tensioner Data → Pivot Point</em> satırı — panelde '
-        + '“Otomatik Gergi Montaj Konumu”'],
+      ['Avara kasnağının merkezi',
+        _gfF(td.cenX, 2) + ' / ' + _gfF(td.cenY, 2) + ' mm',
+        'Raporun <em>Layout Data</em> tablosunun gergi satırı — panelde '
+        + '“Avara Kasnağının Merkezi”'],
       ['Kol boyu', _gfF(td.armLen, 1) + ' mm', 'Raporun <em>Tensioner Data</em> bölümü'],
+      ['Kol çalışma açısı', _gfFs(td.armMeanDeg, 2) + '°',
+        'Gerginin parça/montaj çizimi — gövdenin montajdaki saat konumu'],
       ['Yay ön yükü', _gfF(td.preload, 2) + ' Nm', 'Aynı bölüm'],
       ['Yay katsayısı', _gfF(td.kArm, 3) + ' Nm/°', 'Aynı bölüm'],
       ['Çalışma momenti', _gfF(td.meanLoad, 2) + ' Nm', 'Aynı bölüm'],
@@ -980,45 +978,42 @@ function _gfSec14(){
     ], ['l', 'c', 'l']);
 
   h += _gfOnay('Kayış boyu bilerek boş bırakıldı',
-      'Bu örnek gergi <strong>zarf kipinde</strong> kuruluyor: montaj koordinatı bir girdi, '
-    + 'kayış boyu bir çıktı. Boy girilseydi program onu kullanır ve aşağıdaki karşılaştırma '
-    + 'anlamını yitirirdi — model, bulması gereken sayıyı zaten okumuş olurdu.');
+      'Kayış boyu bu modülde bir <strong>çıktıdır</strong>: kasnak merkezleri ve gergi '
+    + 'künyesi verildiğinde kolun nominal yay yükünde oturduğu yer bellidir, kapanan '
+    + 'kayış yolunun boyu da onunla. Boy girilseydi program onu kullanır ve aşağıdaki '
+    + 'karşılaştırma anlamını yitirirdi — model, bulması gereken sayıyı zaten okumuş '
+    + 'olurdu.');
 
-  // ── 14.2 Zarf çözümü ─────────────────────────────────────────────────────
+  // ── 14.2 Türeyen değerler ────────────────────────────────────────────────
   h += '<h3>14.2 Program neyi hesapladı</h3>';
   h += '<p>Kasnaklar yerleştirilip kayış yolu kablolandıktan ve gergi künyesi girildikten '
     + 'sonra <strong>Avara Hareketi</strong> kartının okuduğu değerler. Üçüncü satır '
-    + '14.1’deki ayrımın karşılığıdır: <strong>gergi kasnağının merkezi bir girdi değil, '
-    + 'montaj konumundan türeyen bir sonuçtur</strong> — ve tedarikçi raporunun '
-    + '<em>Layout Data</em> satırına oturur.</p>';
+    + '14.1’deki ayrımın karşılığıdır: <strong>gergi gövdesinin montaj konumu bir girdi '
+    + 'değil, avara merkezinden ve kol çalışma açısından türeyen bir sonuçtur</strong> — '
+    + 've tedarikçi raporunun <em>Tensioner Data</em> satırına oturur.</p>';
 
   var m = (typeof veFeadSpringSetup === 'function') ? veFeadSpringSetup(td) : {};
-  var a = Number(td.armLen), th = Number(b.armAbsDeg) * Math.PI / 180;
-  var cenX = Number(td.pivotX) + a * Math.cos(th);
-  var cenY = Number(td.pivotY) + a * Math.sin(th);
-  var env = b.envelope || {};
+  var piv = (typeof veFeadTensionerPivot === 'function') ? veFeadTensionerPivot(td) : null;
+  var pX = piv ? piv[0] : NaN, pY = piv ? piv[1] : NaN;
 
-  h += _gfTablo('Zarf çözümü — gergi panelindeki okuma',
+  h += _gfTablo('Çözüm — gergi panelindeki okuma',
     ['Büyüklük', 'Değer', 'Nasıl çıktı'],
     [
       ['Yay kurulması', _gfFs(m.relMeanDeg, 2) + '°',
         '(M<sub>çalışma</sub> − M<sub>ön</sub>) / k — salt yay künyesinden'],
-      ['<strong>Kol çalışma açısı</strong>', '<strong>' + _gfFs(b.armAbsDeg, 2) + '°</strong>',
-        '360°’lik zarf tarandı; en küçük take-up’ı en büyük yapan açı seçildi'],
-      ['Gergi kasnağının merkezi', _gfFs(cenX, 2) + ' / ' + _gfFs(cenY, 2) + ' mm',
-        'Montaj konumundan kol boyu kadar uzakta, seçilen açıda'],
+      ['<strong>Gövdenin montaj konumu</strong>',
+        '<strong>' + _gfFs(pX, 2) + ' / ' + _gfFs(pY, 2) + ' mm</strong>',
+        'p = c − a·(cos θ, sin θ) — avara merkezi, kol boyu ve kol çalışma açısından'],
+      ['Serbest kol açısı', _gfFs(b.freeAngleDeg, 2) + '°',
+        'θ<sub>çalışma</sub> − sense × yay kurulması'],
       ['<strong>Gereken kayış boyu</strong>',
         '<strong>' + _gfFs(b.beltLengthMm, 2) + ' mm</strong>',
-        'Seçilen kol açısında kapanan kayış yolunun efektif boyu'],
+        'Kolun nominal yay yükünde kapanan kayış yolunun efektif boyu'],
       ['Tasarım gerginliği', _gfFs(b.springTensionN, 2) + ' N',
-        'Yay dengesinden: T = M / (dL/dθ)'],
-      ['Ölçüt değeri', _gfFs(env.best && env.best.takeupMin, 4) + ' mm/°',
-        'Servis zarfı boyunca görülen en küçük take-up'],
-      ['Zarfın çözülebilen yayı', _gfFs(env.feasibleDeg, 0) + '° / 360°',
-        'Geçerli geometri veren montaj açıları']
+        'Yay dengesinden: T = M / (dL/dθ)']
     ], ['l', 'c', 'l']);
 
-  var dMerkez = Math.sqrt(Math.pow(cenX - G.tenXY[0], 2) + Math.pow(cenY - G.tenXY[1], 2));
+  var dPivot = Math.sqrt(Math.pow(pX - G.pivot[0], 2) + Math.pow(pY - G.pivot[1], 2));
   h += _gfTablo('Türeyen değerler ↔ tedarikçi raporu',
     ['Büyüklük', 'MFSim', 'Tedarikçi raporu', 'Fark'],
     [
@@ -1026,64 +1021,41 @@ function _gfSec14(){
         _gfSapma(b.beltLengthMm, G.belt)],
       ['Tasarım gerginliği', _gfFs(b.springTensionN, 2) + ' N', _gfFs(G.design, 0) + ' N',
         _gfSapma(b.springTensionN, G.design)],
-      // Bu satır 14.1'deki uyarının SAYISAL kapanışı: girilen nokta gerçekten
-      // pivot olarak kullanılıyorsa, ondan türeyen kasnak merkezi raporun
-      // KENDİ Layout Data satırına oturmalı. Oturuyor.
-      ['Gergi kasnağının merkezi', _gfFs(cenX, 2) + ' / ' + _gfFs(cenY, 2) + ' mm',
-        _gfFs(G.tenXY[0], 2) + ' / ' + _gfFs(G.tenXY[1], 2) + ' mm',
-        _gfFs(dMerkez, 2) + ' mm']
+      ['Serbest kol açısı', _gfFs(b.freeAngleDeg, 2) + '°', _gfFs(G.freeAbsDeg, 1) + '°',
+        _gfFs(Math.abs(b.freeAngleDeg - G.freeAbsDeg), 2) + '°'],
+      // Bu satır 14.1'deki kutunun SAYISAL kapanışı: girilen nokta gerçekten
+      // avara merkezi olarak kullanılıyorsa, ondan türeyen montaj konumu
+      // raporun KENDİ Tensioner Data satırına oturmalı. Oturuyor.
+      ['Gövdenin montaj konumu', _gfFs(pX, 2) + ' / ' + _gfFs(pY, 2) + ' mm',
+        _gfFs(G.pivot[0], 2) + ' / ' + _gfFs(G.pivot[1], 2) + ' mm',
+        _gfFs(dPivot, 3) + ' mm']
     ], ['l', '', '', 'c']);
 
   h += _gfOnay('İki bağımsız doğrulama',
       '<strong>Bir:</strong> program kayışı <strong>hiç görmeden</strong> tedarikçinin kendi '
-    + 'kayışını geri verdi. Seçim ölçütü kayış verisine girmez — kolun gezinme aralığı yalnız '
-    + 'yay künyesinden (M<sub>çalışma</sub>, M<sub>ön</sub>, k) türetilir. Bu, kayış boyunun '
-    + 'bir çıktı olabilmesinin ön koşuludur: aksi hâlde döngü kurulurdu.<br><br>'
-    + '<strong>İki:</strong> yalnız montaj konumu verilerek türetilen gergi kasnağı '
-    + 'merkezi, raporun <em>Layout Data</em> tablosundaki gergi satırından '
-    + _gfFs(dMerkez, 2) + ' mm uzakta. O satır modele hiç girmedi; girilen noktanın '
-    + 'gerçekten <strong>kolun döndüğü nokta</strong> olarak kullanıldığının kanıtı bu.');
+    + 'kayışını geri verdi. Kolun oturduğu yer yalnız yay künyesinden türüyor '
+    + '(M<sub>çalışma</sub>, M<sub>ön</sub>, k); kayış verisi hesaba hiç girmiyor. Bu, kayış '
+    + 'boyunun bir çıktı olabilmesinin ön koşuludur — aksi hâlde döngü kurulurdu.<br><br>'
+    + '<strong>İki:</strong> yalnız avara merkezi, kol boyu ve kol açısından türetilen '
+    + '<em>montaj konumu</em>, raporun <em>Tensioner Data → Pivot Point</em> satırından '
+    + '<strong>' + _gfFs(dPivot, 3) + ' mm</strong> uzakta. O satır modele hiç girmedi. '
+    + 'Aradaki mesafe basım yuvarlaması düzeyinde — girilen noktanın gerçekten '
+    + '<strong>avara kasnağının merkezi</strong> olarak kullanıldığının kanıtı bu.');
 
-  // ── AÇI SEÇİLDİ Mİ, BİLİNİYOR MU — iki ayrı soru, iki ayrı sayı ──────────
-  // Yukarıdaki tablo TASARIM durumudur: açıyı zarf seçti. Bu örneğin kendi
-  // kaydı ise kolun nerede durduğunu raporundan BİLİYOR ve açıyı sabitliyor.
-  // İkisini yan yana basmak, zarf ölçütünün bu sistemdeki isabetini
-  // doğrudan ölçülebilir yapıyor — ve panelde "Kol açısını SABİTLE"
-  // anahtarının ne değiştirdiğini sayıyla gösteriyor.
-  if(O.sabit && O.sabit.ok && Number.isFinite(O.sabit.armAbsDeg)){
-    var S = O.sabit;
-    var sa = Number(td.armLen), sth = Number(S.armAbsDeg) * Math.PI / 180;
-    var sX = Number(td.pivotX) + sa * Math.cos(sth);
-    var sY = Number(td.pivotY) + sa * Math.sin(sth);
-    var sD = Math.sqrt(Math.pow(sX - G.tenXY[0], 2) + Math.pow(sY - G.tenXY[1], 2));
-    h += '<h3>14.2.1 Açıyı zarf seçerse ↔ açı biliniyorsa</h3>';
-    h += '<p>Yukarıdaki sayılar <strong>tasarım</strong> durumundandır: elde yalnız montaj '
-      + 'konumu ve yay künyesi var, kolun saatini program seçiyor. Elinizde tedarikçi raporu '
-      + 'varsa kolun nerede durduğu <em>bilinir</em>; o zaman panelde <strong>“Kol açısını '
-      + 'SABİTLE”</strong> anahtarını açarsınız ve zarf bir seçici olmaktan çıkıp '
-      + '<strong>teşhis</strong> yüzeyine döner. Bu örneğin kayıtlı hâli tam olarak öyledir '
-      + '— aşağıda ikisi yan yana.</p>';
-    h += _gfTablo('Aynı yerleşim, iki kol açısı',
-      ['Büyüklük', 'Zarf seçti (tasarım)', 'Rapordan sabit (doğrulama)', 'Tedarikçi raporu'],
-      [
-        ['Kol çalışma açısı', _gfFs(b.armAbsDeg, 2) + '°', _gfFs(S.armAbsDeg, 2) + '°', '—'],
-        ['Kayış efektif boyu', _gfFs(b.beltLengthMm, 2) + ' mm  (' + _gfSapma(b.beltLengthMm, G.belt) + ')',
-          _gfFs(S.beltLengthMm, 2) + ' mm  (' + _gfSapma(S.beltLengthMm, G.belt) + ')',
-          _gfFs(G.belt, 1) + ' mm'],
-        ['Tasarım gerginliği', _gfFs(b.springTensionN, 1) + ' N  (' + _gfSapma(b.springTensionN, G.design) + ')',
-          _gfFs(S.springTensionN, 1) + ' N  (' + _gfSapma(S.springTensionN, G.design) + ')',
-          _gfFs(G.design, 0) + ' N'],
-        ['Kasnak merkezinin <em>Layout Data</em>’ya uzaklığı',
-          _gfFs(dMerkez, 3) + ' mm', _gfFs(sD, 3) + ' mm', '0']
-      ], ['l', 'c', 'c', 'c']);
-    h += _gfNot('Fark ölçütün isabetidir, bir hata değil',
-        'İki sütun arasındaki <strong>' + _gfFs(Math.abs(b.armAbsDeg - S.armAbsDeg), 2)
-      + '°</strong>, zarf ölçütünün bu sistemdeki sapmasıdır — 14 tedarikçi sistemi üzerinde '
-      + 'ölçülen medyan 4,5°’in oldukça altında. Kayış boyuna yansıması '
-      + '<strong>' + _gfSapma(b.beltLengthMm, S.beltLengthMm) + '</strong> kadardır, yani '
-      + 'katalogdan aynı kayışı seçtirir. Kolun saati bir imalat kararıysa (konum pimi, '
-      + 'cıvata deseni) sabitleyin; yoksa zarfın önerisi bir başlangıç noktasıdır.');
-  }
+  h += _gfNot('Kol çalışma açısını program SEÇMEZ',
+      'Avara merkezi verildikten sonra kayış yolu tamamen belirlidir: teğet noktaları, '
+    + 'sarımlar ve efektif boy kolun saatinden <em>bağımsızdır</em>. Geriye kalan tek '
+    + 'serbestlik derecesi gövdenin montajdaki saat konumudur ve o bir '
+    + '<strong>paketleme</strong> kararıdır — motor bloğunda cıvata deliğinin nereye '
+    + 'açıldığı. Bir dönem program bunu bir ölçütten seçiyordu; girdi montaj konumundan '
+    + 'avara merkezine dönünce ölçüt çöktü. Ölçüldü: 14 tedarikçi sistemi üzerinde sekiz '
+    + 'aday ölçütün en iyisi bile yalnız <strong>2/14</strong> sistemi ±5° içinde buluyor '
+    + '(aci farkinin medyani 20,7°). Sebep ölçütün yanlış yeri seçmesi değil, '
+    + '<strong>hiçbir yeri seçememesi</strong>: merkez sabitken çalışma noktasındaki '
+    + 'kayış yolu kol açısından bağımsız (ölçüldü: <strong>4,55e−13 mm</strong>, '
+    + '6 sistem × 548 açı) ve ölçüt eğrisi düzleşiyor — %1 platosu '
+    + '2,1° → <strong>24,1°</strong>. Bu yüzden açı bir girdidir ve uydurulmuş bir '
+    + 'varsayılanı yoktur.');
 
   // ── 14.3 Şema ────────────────────────────────────────────────────────────
   var svg = null;
@@ -1235,7 +1207,7 @@ function _gfSec14(){
       h += _gfTablo('Katalog adayları', ['Boy [mm]', 'Δ [mm]', 'Kod', 'Küme', 'Kol açısı',
         'Gerginlik'], ksat, ['', '', 'c', 'c', '', '']);
       h += _gfNot('Üç bağımsız yol tek noktada buluşuyor',
-          'Zarf çözümü geometriden bir boy söyledi, katalog o boya en yakın adayı önerdi, ve '
+          'Çözüm geometriden bir boy söyledi, katalog o boya en yakın adayı önerdi, ve '
         + 'önerilen kod tedarikçinin sisteme gerçekten taktığı kayıştır. Üç yol da aynı yere '
         + 'çıkmasaydı biri sessizce yanlış olurdu.');
     }
@@ -1246,11 +1218,12 @@ function _gfSec14(){
     'FEAD modülünün iç topolojisinde <strong>Başlangıç ve Örnekler</strong> kutusunu açın.',
     '<code>AG00976_GATES_2025</code> örneğini <strong>“İç topolojiye kur”</strong> ile '
       + 'yükleyin.',
-    'Gergiye çift tıklayın. <strong>Otomatik Gergi Montaj Konumu</strong> kartında '
-      + '−250,00 / 110,00 yazdığını doğrulayın — örnek bu değeri raporundan taşır.',
-    'Aynı panelde <strong>“Kol açısını SABİTLE”</strong> anahtarı açıktır: örnek kolun '
-      + 'nerede durduğunu raporundan biliyor. Yukarıdaki <em>tasarım</em> sütununu görmek '
-      + 'için anahtarı kapatın; zarf o zaman açıyı kendisi seçer.',
+    'Gergiye çift tıklayın. <strong>Avara Kasnağının Merkezi</strong> kartında '
+      + '−161,97 / 91,29 yazdığını doğrulayın — örnek bu değeri raporun <em>Layout Data</em> '
+      + 'tablosundan taşır.',
+    '<strong>Kol Künyesi</strong> kartının altındaki türeyen montaj konumunun '
+      + '−250,00 / 110,00 çıktığını görün: raporun <em>Tensioner Data → Pivot Point</em> '
+      + 'satırı budur ve modele hiç girmedi.',
     'Çözücüde <strong>▶ Hesapla</strong>’ya basın ve yukarıdaki sayıları karşılaştırın.'
   ]);
   return h;
@@ -1266,12 +1239,12 @@ function _gfEkA(){
       ['Kasnak çapı, konumu, temas tarafı', 'Kasnak', 'Temas Tarafı · Kasnak Geometrisi'],
       ['Sürücü kasnak seçimi', 'Kasnak', 'Rol'],
       ['Aksesuar güç eğrisi', 'Kasnak', 'Katalog Modeli · Güç Eğrisi'],
-      ['Gergi montaj konumu', 'Gergi', 'Otomatik Gergi Montaj Konumu'],
-      ['Kol boyu', 'Gergi', 'Kol Künyesi'],
+      ['Gergi avarasının merkezi', 'Gergi', 'Avara Kasnağının Merkezi'],
+      ['Kol boyu · kol çalışma açısı · türeyen montaj konumu', 'Gergi', 'Kol Künyesi'],
       ['Yay ön yükü, katsayısı, çalışma momenti', 'Gergi', 'Yay Künyesi'],
       ['Hazır gergi künyeleri', 'Gergi', 'Gergi Künye Kütüphanesi'],
-      ['Kol açısını sabitleme · seçilen açı · türeyen kasnak merkezi', 'Gergi',
-        'Avara Hareketi'],
+      ['Serbest kol açısı · gereken kayış boyu · tasarım gerginliği · konum pimi',
+        'Gergi', 'Avara Hareketi'],
       ['Gergi kasnak kütlesi, kol ataleti, load stop', 'Gergi', 'Mekanik Sınır ve Atalet'],
       ['Kayış profili ve markası', 'Kayış Özellikleri', 'Profil ve Marka'],
       ['Kanal sayısı, tolerans, aşınma payı', 'Kayış Özellikleri', 'Künye'],

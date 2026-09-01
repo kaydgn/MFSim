@@ -114,12 +114,12 @@ koordinatlarını yalnız panelden okuyordu. Artık ikisi TEK BİR ŞEY.
 | Orijin | **Sürücü kasnak** (rol, tip değil) | `veFeadOriginNode` |
 | Ölçek | **1 px = 1 mm**, hassasiyet zoom'dan | `VE_FEAD_PX_PER_MM` |
 | Y ekseni | Kanvasta aşağı, mm'de **yukarı** | `veFeadCanvasToMm` |
-| Gergi sürüklemesi | **Pivot** taşınır, montaj merkezi rijit takip eder | `veFeadDragTensioner` |
+| Gergi sürüklemesi | **Avara merkezi** taşınır, gövdenin montaj konumu rijit takip eder (kol boyu ve açısı dokunulmadığı için türev aynı kadar ötelenir) | `veFeadDragTensioner` |
 | "Otomatik Düzenle" | Halka değil, **koordinata yerleştir** | `veFeadArrangeByCoords` |
 
 **ÖTELEME BEDAVA — ÖLÇÜLDÜ.** Bütün geometri merkez FARKLARINDAN kuruluyor
 (`tangent`: `w = c_j − c_i`), dolayısıyla krankı orijine almak ücretsiz. BMC'nin
-altı kasnağı + gergi pivotu + montaj merkezi birlikte `(+500, −300)` ötelenince
+altı kasnağı + gerginin avara merkezi birlikte `(+500, −300)` ötelenince
 `ΔL_eff = 0.00e+0`, altı sarım açısında `Δ = 0.00e+0`, gerginlik
 `532.142 → 532.142 N` — kayan nokta hassasiyetinde **birebir**. Eski projeler bu
 yüzden sessizce göç edebiliyor (`veFeadNormalizeOrigin`, alt topoloji açılışında).
@@ -130,7 +130,7 @@ yüzden sessizce göç edebiliyor (`veFeadNormalizeOrigin`, alt topoloji açıl�
 |-------|------------------|--------------|
 | **Y ekseni** | Bütün topoloji aynalanır | TAM ayna bütün skalerleri BİREBİR aynı bırakıyor (fizik ayna simetrik); hata sayılardan görünmez, yalnız çizimden |
 | **Kutu merkezi** | Her kasnağa kendi kutu yarısı kadar kayma | Kutu ölçüleri 54…72 px arasında değiştiği için kayma kasnaktan kasnağa farklı — tek bir ofsetle yakalanamaz |
-| **Gergi** | Pivot bayat kalır, gergi yanlış yerde çözülür | Kol boyu TUTAR (`veFeadArmCheck` geçer), yalnız yerleşim yanlış |
+| **Gergi** | Koordinatı bayat kalır, gergi yanlış yerde çözülür | Kol boyu TUTAR (türev merkezi rijit takip ediyor), yalnız yerleşim yanlış |
 
 Üçüncüsü **kapı boşluğuydu**: gergi senkrondan çıkarılınca hiçbir test
 kırılmıyordu. Orijin sürüklendiğinde krank-göreli HER koordinat aynı karede

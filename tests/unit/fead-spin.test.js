@@ -99,98 +99,91 @@ describe('yön NEREDEN geliyor', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ZARF KİPİNDE MERKEZ TÜRETİLİR — ölçülmüş bir SESSİZLİĞİN kapısı
+// YÖN AVARA MERKEZİNDEN OKUNUR — MONTAJ KONUMUNDAN DEĞİL
 //
-// Zarf kipinde gergi kasnağının merkezi bir GİRDİ DEĞİL, çıktı: `cenX/cenY`
-// hiç yazılmıyor. `veFeadNaturalSense` doğrudan o alanı okuduğu için ÇÖZÜLEN
-// bir modelde bile 0 döndürüyordu — "Dönüş Yönü" rozeti ve paneli
-// "— (okunamadı)" yazıyor, kullanıcı yönü göremiyordu. Hesap etkilenmiyordu
-// (çekirdek yönü çözülmüş geometriden buluyor), yani hata SESSİZ: sayılar
-// doğru, yüzey boş.
-describe('zarf kipinde yön — merkez pivot + kol açısından TÜRER', () => {
-  const zarfaCevir = (key) => {
+// Gerginin kayış düzleminde iki noktası var ve aralarında tam kol boyu kadar
+// mesafe (90 mm). Dolanım yönü (loopSense) kasnak MERKEZLERİNİN çokgenine
+// bakıyor; oraya montaj konumunu koymak yönü kol boyu kadar kaymış bir
+// çokgenden okumak olurdu. Hesap etkilenmez (çekirdek yönü çözülmüş
+// geometriden buluyor), yani hata SESSİZ olurdu: sayılar doğru, rozet yanlış.
+describe('yön AVARA MERKEZİNDEN okunur', () => {
+  const kanvas = (key) => {
     const s = kur(key, false);
     const ten = s.ns.find((n) => n.type === 'fead-tensioner');
-    // Zarf kipinin gerçek girdisi: PİVOT. BMC'de pivot künyeden türüyor.
-    const piv = _pivotFromArm(ten.data) || [ten.data.pivotX, ten.data.pivotY];
-    delete ten.data.cenX; delete ten.data.cenY;
-    delete ten.data.armMeanDeg; delete ten.data.freeAngleDeg;
-    ten.data.pivotX = piv[0]; ten.data.pivotY = piv[1];
     return { ns: s.ns, cs: s.cs, ten, b: M.veFeadBuildSystem(s.ns, s.cs) };
   };
 
-  test('AG00976 zarf kipinde ÇÖZÜLÜYOR ve yön okunuyor (eskiden 0)', () => {
-    const z = zarfaCevir('AG00976_GATES_2025');
+  test('AG00976 çözülüyor ve yön okunuyor', () => {
+    const z = kanvas('AG00976_GATES_2025');
     expect(z.b.ok).toBe(true);
-    expect(M.veFeadNaturalSense(z.b.order)).toBe(1);          // ← eskiden 0
+    expect(M.veFeadNaturalSense(z.b.order)).toBe(1);
     // Çekirdeğin ÇÖZDÜĞÜ yönle aynı olmak zorunda: rozet bir hüküm taşıyor,
     // geometriden bağımsız bir ikinci yön kaynağı olamaz.
     expect(F.geometryAt(z.b.sys, z.b.relDeg).sense).toBe(1);
   });
 
-  test('build.spin bir ÇÖZÜM GERİDE kalmıyor', () => {
-    // İlk okuma rota kurulur kurulmaz yapılıyor; o an kol açısı HENÜZ
-    // SEÇİLMEMİŞ, yani merkez de yok. Zarf çözüldükten sonra tazelenmezse
-    // ilk çözümde spin 0 kalırdı — model doğru, yüzey yanlış.
-    const z = zarfaCevir('AG00976_GATES_2025');
+  test('build.spin çözümle tutarlı', () => {
+    const z = kanvas('AG00976_GATES_2025');
     expect(z.b.spin).toBe(1);
-    expect(z.ten.data.armMeanDeg).toBeCloseTo(z.b.armAbsDeg, 6);
   });
 
-  test('BMC de zarfa çevrilince çözülüyor ve yön okunuyor', () => {
-    const z = zarfaCevir('BMC_FEAD_2026');
+  test('BMC de çözülüyor ve yön okunuyor', () => {
+    const z = kanvas('BMC_FEAD_2026');
     expect(z.b.ok).toBe(true);
     expect(z.b.spin).toBe(1);
     expect(F.geometryAt(z.b.sys, z.b.relDeg).sense).toBe(1);
   });
 
-  test('türetilen merkez, çekirdeğin ÇALIŞMA merkeziyle birebir', () => {
-    // Kapının asıl gücü burada: merkez "yaklaşık" değil, çözümün kendisi.
-    // Kol açısı memosu zarfın seçtiği çalışma açısı olduğu için
-    // c = p + a·(cosθ, sinθ) tam olarak çekirdeğin çalışma merkezini veriyor.
-    const z = zarfaCevir('AG00976_GATES_2025');
+  test('okunan merkez, çekirdeğin ÇALIŞMA merkeziyle BİREBİR', () => {
+    // Kapının asıl gücü burada: girilen merkez "yaklaşık" değil, çözümün
+    // kendisi. Kol nominal yay yüküne oturduğu için çekirdek tam o noktayı
+    // veriyor — girdi ile çıktı aynı sayı.
+    const z = kanvas('AG00976_GATES_2025');
     const cen = M.veFeadTensionerCenter(z.ten.data, z.b.armAbsDeg);
     const ts = F.tensionerState(z.b.sys, z.b.relDeg);
     expect(cen[0]).toBeCloseTo(ts.center[0], 3);
     expect(cen[1]).toBeCloseTo(ts.center[1], 3);
-    // ve PİVOT DEĞİL: tam kol boyu kadar uzakta.
-    expect(Math.hypot(cen[0] - z.ten.data.pivotX, cen[1] - z.ten.data.pivotY))
+    // ve MONTAJ KONUMU DEĞİL: tam kol boyu kadar uzakta.
+    const p = M.veFeadTensionerPivot(z.ten.data);
+    expect(Math.hypot(cen[0] - p[0], cen[1] - p[1]))
       .toBeCloseTo(z.ten.data.armLen, 6);
   });
 
-  test('PİVOTU çokgene koymak yönü ÇEVİREBİLİR — sentetik kapı', () => {
-    // İki gerçek örnekte pivot ile merkez AYNI işareti veriyor (ölçüldü), yani
-    // yalnız onlara bakan bir test "pivotu kullan" mutasyonundan sağ çıkardı.
-    // Burada merkez doğrunun ÜSTÜNDE, pivot ALTINDA: işaret çevriliyor.
+  test('MONTAJ KONUMUNU çokgene koymak yönü ÇEVİREBİLİR — sentetik kapı', () => {
+    // İki gerçek örnekte iki nokta AYNI işareti veriyor (ölçüldü), yani yalnız
+    // onlara bakan bir test "montaj konumunu kullan" mutasyonundan sağ
+    // çıkardı. Burada merkez doğrunun ÜSTÜNDE, montaj konumu ALTINDA.
     const P = (id, type, data) => ({ id, type, def: componentDefs[type], data });
     const ns = [
       P('p1', 'fead-crank',     { driver: true, od: 80, x: 0,   y: 0 }),
       P('p2', 'fead-alternator', { od: 60, x: 100, y: 0 }),
-      P('p3', 'fead-tensioner',  { od: 75, angleMode: 'envelope',
-                                   pivotX: 50, pivotY: -10, armLen: 20, armMeanDeg: 90 })
+      P('p3', 'fead-tensioner',  { od: 75, cenX: 50, cenY: 10, armLen: 20,
+                                   armMeanDeg: 90 })
     ];
     const merkez = M.veFeadTensionerCenter(ns[2].data);
     expect(merkez[0]).toBeCloseTo(50, 9);
-    expect(merkez[1]).toBeCloseTo(10, 9);                       // pivot + 20 mm yukarı
+    expect(merkez[1]).toBeCloseTo(10, 9);
+    const p = M.veFeadTensionerPivot(ns[2].data);
+    expect(p[0]).toBeCloseTo(50, 9);
+    expect(p[1]).toBeCloseTo(-10, 9);                           // 20 mm aşağı
     expect(M.veFeadNaturalSense(ns)).toBe(1);                   // merkezle CCW
-    expect(F.loopSense([[0, 0], [100, 0], [50, -10]])).toBe(-1); // pivotla CW
+    expect(F.loopSense([[0, 0], [100, 0], [50, -10]])).toBe(-1); // montajla CW
   });
 
-  test('kol açısı YOKSA yön uydurulmaz (0)', () => {
-    const z = zarfaCevir('AG00976_GATES_2025');
+  test('merkez YOKSA yön uydurulmaz (0)', () => {
+    const z = kanvas('AG00976_GATES_2025');
     expect(M.veFeadNaturalSense(z.b.order)).toBe(1);
-    delete z.ten.data.armMeanDeg;
+    delete z.ten.data.cenX;
     expect(M.veFeadTensionerCenter(z.ten.data)).toBe(null);
     expect(M.veFeadNaturalSense(z.b.order)).toBe(0);
   });
 
-  test('zarf kipinde BAYAT cenX/cenY okunmaz — köprü de okumuyor', () => {
-    // Mount'tan zarfa geçen bir kayıtta cenX/cenY yazılı KALABİLİR. Köprü
-    // onları girdi saymıyor (olsa olsa uyarı konusu); rozet sayarsa çözülen
-    // geometriyle çelişen bir yön gösterebilirdi.
-    const z = zarfaCevir('AG00976_GATES_2025');
+  test('BAYAT pivotX/pivotY okunmaz — göç onları zaten siliyor', () => {
+    // Eski bir kayıttan gelen montaj konumu yazılı KALAMAZ: göç onu siliyor.
+    // Elle düzenlenmiş bir dosya taşısa bile okuyucu ona hiç bakmıyor.
+    const z = kanvas('AG00976_GATES_2025');
     const dogru = M.veFeadTensionerCenter(z.ten.data);
-    z.ten.data.cenX = 9999; z.ten.data.cenY = -9999;
+    z.ten.data.pivotX = 9999; z.ten.data.pivotY = -9999;
     const sonra = M.veFeadTensionerCenter(z.ten.data);
     expect(sonra[0]).toBeCloseTo(dogru[0], 9);
     expect(sonra[1]).toBeCloseTo(dogru[1], 9);

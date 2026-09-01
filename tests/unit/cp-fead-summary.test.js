@@ -170,6 +170,54 @@ describe('Gates çıpaları — tedarikçi sayfası geri üretiliyor', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// ── GERGİNİN İKİ NOKTASI ÖZET RAPORDA DA AYRI ────────────────────────────
+// Avara merkezi bir GİRDİ, gövdenin montaj konumu bir ÇIKTI ve aralarında tam
+// kol boyu (90 mm) var. Bir dönem belge yalnız montaj konumunu ("Pivot")
+// basıyordu ve o bir GİRDİ sanılıyordu. İkisini karıştırmanın ölçülmüş bedeli
+// gerginlikte medyan +%1526 — kapı bu yüzden HANGİ satırın HANGİ sayıyı
+// taşıdığını tutuyor, ikisinin var olduğunu değil.
+describe('gergi künyesi — merkez GİRDİ, montaj konumu TÜREV', () => {
+  const satirlar = () => {
+    const s1 = SU._fsrSheet1(R, NODE);
+    const al = (et) => {
+      const i = s1.indexOf(et);
+      expect(i).toBeGreaterThan(-1);
+      return s1.slice(i, i + 220).replace(/<[^>]+>/g, ' ');
+    };
+    return { al };
+  };
+
+  test('iki satır da basılıyor ve DOĞRU sayıları taşıyor', () => {
+    const { al } = satirlar();
+    // Girdi: raporun Layout Data satırı
+    expect(al('Avara merkezi {X, Y}')).toMatch(/−161[,.]\d/);
+    expect(al('Avara merkezi {X, Y}')).toMatch(/91[,.]\d/);
+    // Türev: raporun Tensioner Data satırı — MODELE HİÇ GİRMEDİ
+    expect(al('Gövde montaj konumu')).toMatch(/−250[,.]\d/);
+    expect(al('Gövde montaj konumu')).toMatch(/110[,.]\d/);
+    // ve türev olduğu † ile işaretli
+    expect(al('Gövde montaj konumu')).toMatch(/†/);
+  });
+
+  test('iki satır AYNI sayıyı basmıyor — 90 mm apayrılar', () => {
+    // Mutasyonla ölçüldü: merkez satırına pivotu yazmak HİÇBİR kapıyı
+    // kırmıyordu. Kapı artık ikisinin farkını sayıyla tutuyor.
+    const { al } = satirlar();
+    const say = (x) => (String(x).match(/−?\d+,\d+/g) || [])
+      .map((v) => Number(v.replace('−', '-').replace(',', '.')));
+    const c = say(al('Avara merkezi {X, Y}')).slice(0, 2);
+    const p = say(al('Gövde montaj konumu')).slice(0, 2);
+    expect(c.length).toBe(2);
+    expect(p.length).toBe(2);
+    expect(Math.hypot(c[0] - p[0], c[1] - p[1])).toBeCloseTo(90, 0);
+  });
+
+  test('kol çalışma açısı da künyede — montaj konumunu o belirliyor', () => {
+    const { al } = satirlar();
+    expect(al('Kol çalışma açısı (mutlak)')).toMatch(/−12,00°/);
+  });
+});
+
 describe('tepe yük tablosu', () => {
   // Tepe, ORTALAMANIN ALTINA düşemez. İlk sürümde düşüyordu: kW sözlüğü ikinci
   // kez veFeadDutyToCore'dan geçiriliyor, anahtarlar tutmuyor ve BÜTÜN
