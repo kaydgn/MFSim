@@ -7601,20 +7601,6 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
 span.ve-fw-ro{ display:inline-block; }
 .ve-fw-ro-err{ color:var(--accent-danger); font-weight:700; }
 
-/* Gergi satırının TİP sütunu: üstte bileşenin adı, altında künye seçici.
-   Kullanıcı bildirimi (2026-08-31): *"otomatik gerginin satırında 'elle gir'
-   gibi bir şey var. O olmayacak, orada normal 'Otomatik Gergi' yazacak."*
-   Diğer beş satırın tip sütunu bir <select> ve içinde bileşenin adı yazıyor;
-   gergide tip DEĞİŞTİRİLEMEZ (her modelde tam bir gergi var), o yüzden ad düz
-   metin. Künye ise gerçek bir seçim ve satırdan çıkarılamazdı — kullanıcı
-   *"tipinin seçileceği yeri estetik bir şekilde o satıra eklememiz
-   gerekiyor"* dedi. İkisi alt alta: ad birinci sınıf, künye ikincil. */
-.ve-fw-tip-ten{ display:flex; flex-direction:column; gap:3px; }
-.ve-fw-tip-ten > b{ font-size:var(--fs-tiny); color:var(--text-primary); }
-.ve-fw-inp.ve-fw-sub{
-  font-size:var(--fs-micro); padding:2px 4px; color:var(--text-secondary);
-}
-
 /* KİLİTLİ ALAN — künye kütüphaneden seçili.
    `readonly` (input) / `disabled` (select) ile birlikte kullanılıyor ve
    GÖRÜNÜMÜ SAYIYI GİZLEMİYOR: kullanıcı parçanın değerini okumaya devam
@@ -7642,4 +7628,43 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-spin-on{
   background:var(--accent-primary); border-color:var(--accent-primary);
   color:var(--on-accent);
+}
+
+/* Sütun genişlikleri İÇERİKTEN değil ORANDAN. `table-layout` varsayılanı auto
+   ve o, hücre metni değiştikçe sütunları yeniden bölüştürüyor: aksesuar
+   modelini seçmek "Güç kaynağı" hücresini uzatıyor, uzayan pay Model
+   sütunundan çalınıyor ve tablo gözle görülür biçimde yana kayıyordu
+   (ölçüldü: açılır liste 362 → 283 px). Sabit düzende seçim sütunları
+   oynatmıyor. `min-width` KORUNUYOR — dar ekranda tablo kendi kabında kayar,
+   sütunlar ezilmez. */
+.ve-fw-tbl.ve-fw-tbl-fixed{ table-layout:fixed; }
+.ve-fw-tbl.ve-fw-tbl-fixed select.ve-fw-inp{ min-width:0; width:100%; }
+.ve-fw-tbl.ve-fw-tbl-fixed td{ overflow:hidden; text-overflow:ellipsis; }
+
+/* Gergi satırının TİP hücresi: düz metin, açılır liste değil — gergi tipi
+   değiştirilemez. Diğer satırlarda o hücrede bir <select> var, o yüzden
+   dikey hizası ve punto ONUNLA aynı olmalı; yoksa satır "eksik" görünür. */
+.ve-fw-tip-ten{
+  display:inline-block; padding:3px 1px; font-size:var(--fs-tiny);
+  color:var(--text-primary); font-weight:600;
+}
+
+/* Örnek kartı SEÇİLİ hâli. Kart bir eylem düğmesi olduğu için işaret
+   "yüklendi" der, "seçili" değil. Renk yerine GÖLGE + sol şerit: kartlar
+   zaten nötr yüzeyler ve dolu bir vurgu rengi onları "birincil eylem" gibi
+   gösterirdi — oysa üçü de eşit meşru. */
+.ve-fw-btn-wide{ position:relative; transition:box-shadow .12s, border-color .12s; }
+.ve-fw-btn-wide.ve-fw-btn-on{
+  border-color:var(--accent-success);
+  box-shadow:0 0 0 1px var(--accent-success), 0 2px 8px rgba(0,0,0,.14);
+  background:var(--bg-secondary);
+}
+.ve-fw-btn-wide.ve-fw-btn-on::before{
+  content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+  background:var(--accent-success);
+}
+.ve-fw-btn-mark{
+  position:absolute; right:10px; top:50%; transform:translateY(-50%);
+  font-size:var(--fs-micro); font-weight:700; letter-spacing:var(--tracking-wide);
+  color:var(--accent-success);
 }

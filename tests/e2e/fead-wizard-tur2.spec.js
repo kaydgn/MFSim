@@ -60,11 +60,10 @@ test('tur2 — gergi satırı · yön · kilit · kayış · kW', async ({ page 
     const tr = document.querySelector('tr.ve-fw-tr-ten');
     const tip = tr.children[1];
     return {
-      ad: (tip.querySelector('b') || {}).textContent,
+      ad: (tip.querySelector('.ve-fw-tip-ten') || {}).textContent,
+      // Künye seçicisi ÜÇÜNCÜ turda satırdan 4. adıma taşındı (kullanıcı
+      // isteği: *"Otomatik gergi tipini 'otomatik gergi' kısmında seçeriz"*).
       kunye: !!tip.querySelector('select'),
-      kunyeSecili: (tip.querySelector('select') || {}).value,
-      sub: !!tip.querySelector('.ve-fw-sub'),
-      // TİP hücresinde "elle gir" düz metin olarak GÖRÜNMÜYOR
       gorunen: tip.innerText.trim().split('\n')[0],
       surucu: tr.querySelector('input[type=radio]').disabled,
       sil: tr.querySelector('button.ve-fw-x').disabled,
@@ -79,8 +78,7 @@ test('tur2 — gergi satırı · yön · kilit · kayış · kW', async ({ page 
   });
   console.log('SATIR', JSON.stringify(satir));
   expect(satir.ad).toBe('Otomatik Gergi');
-  expect(satir.kunye).toBe(true);
-  expect(satir.sub).toBe(true);
+  expect(satir.kunye).toBe(false);
   expect(satir.gorunen).toBe('Otomatik Gergi');
   expect(satir.surucu).toBe(true);
   expect(satir.sil).toBe(true);
@@ -116,6 +114,8 @@ test('tur2 — gergi satırı · yön · kilit · kayış · kW', async ({ page 
   // ── 4. ADIM: künye kilidi ────────────────────────────────────────────
   await page.evaluate(() => veFeadWizGoto(3));
   await page.waitForTimeout(250);
+  // Künye seçicisi ARTIK YALNIZ BURADA — satırdan kalktı.
+  expect(await page.locator('select[onchange*="veFeadWizTenLib"]').count()).toBe(1);
   const acik = await page.evaluate(() => ({
     ro: [...document.querySelectorAll('.ve-fw-inp')].filter(e => e.readOnly).length,
     kilit: document.querySelectorAll('.ve-fw-lock').length
