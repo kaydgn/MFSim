@@ -1488,7 +1488,35 @@ function veFeadArmReadout(node){
   if(Number.isFinite(b.springTensionN))
     h += satir('Tasarım gerginliği (türedi)', _feadFmt(b.springTensionN, 1) + ' N');
   h += veFeadPinRows(b.pin, satir);
+
+  // ── OLANAKLI BANT: KAPI ─────────────────────────────────────────────────
+  // Program açıyı SEÇMİYOR ama girilen açının fiziksel olarak kullanılabilir
+  // olup olmadığını SÖYLÜYOR. Ölçüt kullanıcının kendi girdilerinden (kayış
+  // tolerans+aşınma bandı, load stop, sarım); Gates verisi yok.
+  var bant = null;
+  try { bant = veFeadArmBand(b); } catch(e){ bant = null; }
+  if(bant && bant.ok){
+    h += satir(bant.userOk ? 'Kol açısı olanaklı bantta' : 'Kol açısı bandın DIŞINDA',
+      (bant.userOk ? '✓ ' : '✗ ') + _feadFmt(bant.arcDeg, 0) + '° / 360° kullanılabilir',
+      bant.userOk ? 'var(--accent-success)' : 'var(--accent-danger)');
+  }
   h += '</div>';
+
+  if(bant && bant.ok){
+    if(!bant.userOk && bant.userWhy)
+      h += _feadHint('<b style="color:var(--accent-danger);">Bu açı kullanılamaz:</b> '
+        + _feadEsc(bant.userWhy) + '. Kayış servis ömrü boyunca kol bu yerleşimi '
+        + 'taşıyamıyor — gövdenin montaj saatini değiştirin.');
+    var fig = veFeadBandSVG(bant, 320, 132);
+    if(fig) h += '<div style="margin:2px 0 8px;">' + fig + '</div>'
+      + _feadHint('Eğri, kolun her montaj saatinde çıkan <b>gerginliği</b> gösterir; '
+        + 'kırmızı taralı açılar fiziksel olarak kullanılamaz (servis aralığı sığmıyor, '
+        + 'sarım çöküyor ya da load stop aşılıyor). Amber çizgi sizin açınız. '
+        + '<b>Bu bir öneri değildir</b> — bandın hangi noktasının motor bloğunda '
+        + 'kullanılabilir olduğunu program bilmez; şekil yalnız seçimin bedelini yazar.');
+  } else if(bant && bant.note){
+    h += _feadHint('<b style="color:var(--accent-warning);">' + _feadEsc(bant.note) + '</b>');
+  }
 
   var not = _feadHint('Kol çalışma açısı <b>girilen</b> bir sayıdır ve program onu '
     + 'seçmez: avara merkezi verildikten sonra kayış yolu tamamen belirlidir, geriye '
@@ -1504,6 +1532,125 @@ function veFeadArmReadout(node){
   if(b.warnings && b.warnings.length)
     not += _feadHint('<b style="color:var(--accent-warning);">' + _feadEsc(b.warnings[0]) + '</b>');
   return h + not;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  KOL AÇISI BANDI — ŞEKİL (`veFeadBandSVG`)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Yatay eksen kolun çalışma açısı, dikey eksen o açıdaki gerginlik. Fiziksel
+// olarak kullanılamayan açılar taralı; kullanıcının noktası işaretli.
+//
+// BU BİR SEÇİCİ DEĞİL. Eğri bir "en iyi" göstermiyor — sadece seçimin bedelini
+// gösteriyor. Bandın kendisi ~190° geniş (ölçüldü), yani karar hâlâ
+// paketlemenin; şekil o kararı BİLGİYLE almayı sağlıyor.
+//
+// TEK ÜRETİCİ, İKİ ÇAĞRI YERİ: rapor da bunu çağırıyor (`opt.print` ile basım
+// paletine geçerek). Raporun kendi kopyasını çizmesi, iki yüzeyin sessizce
+// ayrışması demekti — `veFeadLayoutSVG`'de kurulmuş olan kalıbın aynısı.
+//
+// TEPE KIRPILIYOR VE BU YAZILIYOR: sarım sıfıra giderken T tekilleşiyor
+// (ölçüldü: bir örnekte 5223 N). Kırpılmasaydı eğrinin okunur bölgesi tek bir
+// piksele çökerdi. Kırpma çizgisi kesikli basılıyor ki "eğri burada bitiyor"
+// sanılmasın.
+function veFeadBandSVG(band, W, H, opt){
+  opt = opt || {};
+  if(!band || !band.ok || !band.samples || band.samples.length < 8) return '';
+  var ok = band.samples.filter(function(x){ return x.ok && Number.isFinite(x.tensionN); });
+  if(ok.length < 4) return '';
+  var pr = !!opt.print;
+  var C = pr ? { ink:'#1b1e24', grid:'#e4e6e9', mut:'#5a6270', ana:'#24425f',
+                 uy:'#c8781e', kot:'#9c2b2b' }
+             : { ink:'var(--text-primary)', grid:'var(--border-color)',
+                 mut:'var(--text-muted)', ana:'var(--accent-primary)',
+                 uy:'var(--accent-warning)', kot:'var(--accent-danger)' };
+  var L = pr ? 58 : 42, R = 10, T = 10, B = pr ? 34 : 24;
+  var x0 = -180, x1 = 180;
+  var X = function(v){ return L + (v - x0) / (x1 - x0) * (W - L - R); };
+
+  // Y TAVANI: kullanıcının noktasının 3 katı ya da bandın en büyüğü —
+  // hangisi küçükse. Tekillik eğriyi ezmesin.
+  var Tu = _feadNum(band.userTensionN, NaN);
+  var Tmax = Math.max.apply(null, ok.map(function(x){ return x.tensionN; }));
+  var tavan = Number.isFinite(Tu) ? Math.min(Tmax, Tu * 3) : Tmax;
+  var kirpik = tavan < Tmax - 1e-6;
+  var yMax = Math.ceil(tavan / 100) * 100 || 100;
+  var Y = function(v){ return T + (1 - Math.min(v, yMax) / yMax) * (H - T - B); };
+
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img"'
+    + ' aria-label="Kol çalışma açısına göre gerginlik ve olanaklı bant"'
+    + ' style="display:block; width:100%; height:auto;">';
+  // ızgara
+  for(var g = 0; g <= 4; g++){
+    var yv = yMax * g / 4, y = Y(yv);
+    s += '<line x1="' + L + '" y1="' + y.toFixed(1) + '" x2="' + (W - R)
+      + '" y2="' + y.toFixed(1) + '" stroke="' + C.grid + '" stroke-width="1"/>'
+      + '<text x="' + (L - 5) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end"'
+      + ' font-size="' + (pr ? 10 : 8) + '" fill="' + C.mut + '">' + Math.round(yv) + '</text>';
+  }
+  [-180, -90, 0, 90, 180].forEach(function(v){
+    s += '<text x="' + X(v).toFixed(1) + '" y="' + (H - B + 12)
+      + '" text-anchor="middle" font-size="' + (pr ? 10 : 8) + '" fill="' + C.mut + '">'
+      + v + '</text>';
+  });
+  // KULLANILAMAYAN AÇILAR taralı
+  var st = band.step;
+  band.samples.forEach(function(x){
+    if(x.ok) return;
+    s += '<rect data-ve="band-block" x="' + X(x.deg - st / 2).toFixed(1) + '" y="' + T
+      + '" width="' + Math.max(1, X(st) - X(0)).toFixed(1) + '" height="' + (H - T - B)
+      + '" fill="' + C.kot + '" opacity="0.10"/>';
+  });
+  // T(θ) EĞRİSİ — YALNIZ KULLANILABİLİR AÇILAR, kopukluklar KORUNUYOR.
+  //
+  // `x.ok` KOŞULU ŞART: kullanılamaz örneklerin bir kısmının gerginliği YİNE DE
+  // hesaplanmış oluyor (çalışma noktası çözülüp servis ucu çözülemediğinde —
+  // AG00976'da 21 örnek). Yalnız `Number.isFinite(tensionN)`e bakmak onları da
+  // çizerdi ve eğri taralı bölgenin İÇİNE uzanırdı: "burada bir gerginlik var"
+  // diye okunur, oysa o açı kullanılamaz.
+  //
+  // ESKİ ATLAMA DALI KALDIRILDI (ölçüldü, ölü): örnekler 360°'yi bitişik
+  // tarıyor, dolayısıyla iki olanaklı koşu arasında MUTLAKA bir olanaksız
+  // örnek var ve kopmayı zaten aşağıdaki `else` yapıyor. Dal, örneklerin
+  // seyrek olabildiği eski zarf çiziciden kalmıştı.
+  var seg = [], segs = [];
+  band.samples.forEach(function(x){
+    if(x.ok && Number.isFinite(x.tensionN)){
+      seg.push(X(x.deg).toFixed(1) + ',' + Y(x.tensionN).toFixed(1));
+    } else if(seg.length){ segs.push(seg); seg = []; }
+  });
+  if(seg.length) segs.push(seg);
+  segs.forEach(function(q){
+    if(q.length > 1) s += '<polyline data-ve="band-curve" points="' + q.join(' ')
+      + '" fill="none" stroke="' + C.ana + '" stroke-width="' + (pr ? 1.8 : 1.5) + '"/>';
+  });
+  if(kirpik)
+    s += '<line data-ve="band-clip" x1="' + L + '" y1="' + Y(yMax).toFixed(1)
+      + '" x2="' + (W - R) + '" y2="' + Y(yMax).toFixed(1) + '" stroke="' + C.mut
+      + '" stroke-width="1" stroke-dasharray="3 3"/>';
+  // KULLANICININ NOKTASI
+  var u = _feadNum(band.userDeg, NaN);
+  if(Number.isFinite(u)){
+    var uu = ((u + 180) % 360 + 360) % 360 - 180, ux = X(uu);
+    s += '<line data-ve="band-user" x1="' + ux.toFixed(1) + '" y1="' + T + '" x2="'
+      + ux.toFixed(1) + '" y2="' + (H - B) + '" stroke="' + C.uy
+      + '" stroke-width="1.4" stroke-dasharray="4 3"/>';
+    if(Number.isFinite(Tu))
+      s += '<circle cx="' + ux.toFixed(1) + '" cy="' + Y(Tu).toFixed(1) + '" r="'
+        + (pr ? 4 : 3) + '" fill="' + C.uy + '"/>';
+  }
+  s += '<line x1="' + L + '" y1="' + T + '" x2="' + L + '" y2="' + (H - B)
+    + '" stroke="' + C.ink + '" stroke-width="1"/>'
+    + '<line x1="' + L + '" y1="' + (H - B) + '" x2="' + (W - R) + '" y2="' + (H - B)
+    + '" stroke="' + C.ink + '" stroke-width="1"/>'
+    + '<text x="' + ((L + W - R) / 2).toFixed(0) + '" y="' + (H - 2)
+    + '" text-anchor="middle" font-size="' + (pr ? 11 : 8) + '" fill="' + C.mut + '">'
+    + 'kol çalışma açısı [°]</text>'
+    + '<text transform="translate(' + (pr ? 13 : 10) + ',' + (H / 2).toFixed(0)
+    + ') rotate(-90)" text-anchor="middle" font-size="' + (pr ? 11 : 8) + '" fill="'
+    + C.mut + '">gerginlik [N]</text>';
+  s += '</svg>';
+  return s;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -4156,6 +4303,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadApplyBeltModeBadge: veFeadApplyBeltModeBadge,
     veFeadSyncDrag: veFeadSyncDrag,
     veFeadArmReadout: veFeadArmReadout, veFeadMountReadout: veFeadMountReadout,
+    veFeadBandSVG: veFeadBandSVG,
     veFeadPinRows: veFeadPinRows, veFeadPinNote: veFeadPinNote,
     veFeadTensionerLibCard: veFeadTensionerLibCard, veFeadApplyTenLib: veFeadApplyTenLib,
     veFeadSet: veFeadSet, veFeadPlaceFromCoords: veFeadPlaceFromCoords,

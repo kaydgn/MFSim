@@ -1470,6 +1470,7 @@ function _frOperatingPoint(R){
   h += '</table>';
 
   h += _frPivotBlock(R);
+  h += _frBandBlock(R);
   h += _frPinBlock(R);
   h += _frDesignTensionBlock(R);
   h += _frTensionFigure(R);
@@ -1580,6 +1581,66 @@ function _frPivotBlock(R){
      + 'karşılaştırılabilir, <b>ama program bu karşılaştırmayı yapmaz</b>: ikinci bir '
      + 'koordinat sorulmaz, dolayısıyla ortada denetlenecek iki kanal yoktur. Sayı '
      + 'basılıyor ki denetimi belgeyle siz yapabilesiniz.</div>';
+  return h;
+}
+
+// ── OLANAKLI KOL AÇISI BANDI — KAPI, SEÇİCİ DEĞİL ─────────────────────────
+//
+// Kol açısı bir girdi; bu blok onun fiziksel olarak kullanılabilir olup
+// olmadığını gösteriyor ve bedelini yazıyor. Ölçüt tamamen okuyucunun kendi
+// verisinden (kayış tolerans + aşınma bandı, gerginin load stop'u, sarım) —
+// tedarikçi raporlarından TÜRETİLMİŞ hiçbir sabit yok. Gerekçesi ve 14
+// sisteme karşı ölçümü `js/fead-model.js`in "OLANAKLI KOL AÇISI BANDI"
+// blokunda.
+function _frBandBlock(R){
+  var b = R.build || {};
+  var band = null;
+  try { if(typeof veFeadArmBand === 'function') band = veFeadArmBand(b, { stepDeg: 2 }); }
+  catch(e){ band = null; }
+  if(!band || !band.ok) return '';
+
+  var h = '<h4>Kol açısı fiziksel olarak kullanılabilir mi</h4>';
+  h += '<p>Kol çalışma açısı bir <b>girdidir</b> ve program onu seçmez — ama girilen '
+     + 'her açı kullanılabilir değildir. Aşağıdaki bant tek bir soruyu soruyor: '
+     + '<b>kol, kayışın servis aralığının iki ucuna da (Replace ↔ Min) ulaşabiliyor '
+     + 'mu?</b> Bu soru <b>load stop</b>’u ve sarım çöküşünü de içeriyor — kolun '
+     + 'erişim sınırı ikisini de gözetiyor, dolayısıyla ayrı bir denetime gerek '
+     + 'yok.</p>';
+
+  h += '<table><caption>Tablo ' + _frTbl() + ' — Kol açısı bandı</caption>';
+  h += '<tr><th>Büyüklük</th><th>Değer</th><th>Birim</th></tr>';
+  function tr(k, v, u){ return '<tr><td class="l">' + k + '</td><td>' + v
+    + '</td><td class="c">' + (u || '—') + '</td></tr>'; }
+  h += tr('Girilen kol çalışma açısı', _frFs(band.userDeg, 2), '°');
+  h += tr('<b>Bu açı kullanılabilir mi</b>',
+    band.userOk ? '<b>evet</b>' : '<b>HAYIR — ' + _frEsc(band.userWhy) + '</b>', '—');
+  h += tr('Fiziksel olarak kullanılabilir yay', _frF(band.arcDeg, 0) + ' / 360', '°');
+  if(Number.isFinite(band.userWrapMinDeg))
+    h += tr('Servis aralığındaki en küçük gergi sarımı', _frFs(band.userWrapMinDeg, 1), '°');
+  if(Number.isFinite(band.userRelMaxDeg)){
+    var stop = _frNum(b.cfg && b.cfg.tensioner && b.cfg.tensioner.loadStopRelDeg);
+    h += tr('Kolun en kısa kayıştaki dönmesi', _frFs(band.userRelMaxDeg, 1)
+      + (Number.isFinite(stop) ? ' / ' + _frFs(stop, 1) + ' (load stop)' : ''), '°');
+  }
+  h += '</table>';
+
+  var fig = null;
+  try { if(typeof veFeadBandSVG === 'function') fig = veFeadBandSVG(band, 760, 280, { print: true }); }
+  catch(e){ fig = null; }
+  if(fig) h += _frFigWrap(fig, 'Kol açısı bandı — her montaj saatinde çıkan gerginlik. '
+    + 'Taralı açılar fiziksel olarak kullanılamaz; kesikli amber çizgi bu modelin '
+    + 'açısı. Eğri okunur kalsın diye tepe kırpılmıştır (sarım sıfıra giderken '
+    + 'gerginlik tekilleşir).');
+
+  h += '<div class="note warn"><span class="t">Bu bir SEÇİCİ değil, bir KAPIDIR</span>'
+     + 'Bant fiziksel olarak <b>çok geniştir</b> ve içinden bir nokta seçmez. '
+     + 'ÖLÇÜLDÜ (14 tedarikçi sistemi, bu kodun kendisiyle): tedarikçinin gerçek '
+     + 'çalışma açısı bandın içinde <b>14/14</b> — yani ölçüt hiçbir gerçek '
+     + 'tasarımı yanlışlıkla reddetmiyor — ama bandın genişliği <b>96…218°</b> '
+     + '(medyan 189°) ve ortasını seçseydik medyan hata <b>96°</b> olurdu. Kalan serbestlik motor bloğunun <b>paketlemesidir</b> — cıvata '
+     + 'deseni, gövde gabarisi, komşu parçalar — ve o bilgi bu modelde yoktur. '
+     + 'Şekil bu yüzden bir öneri sunmaz; yalnız seçimin bedelini ve nerede '
+     + 'imkânsız olduğunu yazar.</div>';
   return h;
 }
 
@@ -2892,6 +2953,7 @@ if(typeof module !== 'undefined' && module.exports){
     _frTakeupRateFigure: _frTakeupRateFigure,
     _frDesignTensionBlock: _frDesignTensionBlock,
     _frPivotBlock: _frPivotBlock, _frPinBlock: _frPinBlock,
+    _frBandBlock: _frBandBlock,
     VE_FR_SEC_BELTLEN: VE_FR_SEC_BELTLEN,
     _frF: _frF, _frFs: _frFs, _frPct: _frPct, _frEsc: _frEsc, _frNum: _frNum,
     _frSlipStats: _frSlipStats,

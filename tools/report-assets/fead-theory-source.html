@@ -362,7 +362,24 @@ $$ \mathbf{p} \;=\; \mathbf{c} \;-\; a\,\big(\cos\theta_{\text{kol}},\ \sin\thet
   <span class="t">\( \beta = 90^\circ \) kuralı bu sistemlerde geçerli değildir</span>
   Ders kitabı kuralı kolu bileşke kuvvete dik koymayı söyler ve (4.3)'te \( \sin\beta \)'yı azamiye çıkarır. Ölçüldü: tedarikçi raporlarının çalışma noktalarında \( \beta \) <strong>42,5…60,1°</strong> bandındadır. Sebep (4.3)'ün kendisidir — \( \sin\beta \) büyürken gergi sarımı \( \varphi \) çöker ve çarpım <strong>orta</strong> bir açıda tepe yapar. Bu, yukarıdaki dejenerasyonun da niçin bir model kusuru olmadığını açıklar: ölçüt matematiksel olarak doğru çalışıyor, ama kayış fiziği o soruyu cevaplayamıyor.
 </div>
-<p><strong>Kol açısı imalata nasıl geçer.</strong> Bir montaj talimatı açı değil <strong>delik</strong> ister. Otomatik gergilerde gövdeyi merkezî bir cıvata tutar — o cıvata gövdenin saatini <em>belirlemez</em>, yalnız bastırır — ve saati, gövdeden bloğa giren bir <strong>konum pimi</strong> sabitler. Pim deliği gövdededir; kolun gövdeye göre çalışma konumu ise (4.6) ile yay tarafından sabitlenmiştir. Gövdeyi döndürmek ikisini <strong>birlikte</strong> döndürdüğünden aradaki açı gövdenin saatinden bağımsızdır ve bir <strong>parça sabitidir</strong> \( \Delta_{\text{parça}} \):</p>
+<h3>4.6 Olanaklı kol açısı bandı — bir kapı, bir seçici değil</h3>
+<p>\( \theta_{\text{kol}} \) bir girdidir ama girilen her açı fiziksel olarak kullanılabilir değildir. Model tek bir soru soruyor: <strong>kol, kayışın servis aralığının iki ucuna da ulaşabiliyor mu?</strong></p>
+<div class="eqno">
+$$ \Theta_{\text{olanaklı}} \;=\; \Big\{\theta \;:\; \exists\,\theta_{r}\in[0,\ \theta_{\text{erişim}}]\ \text{öyle ki}\ L_{\text{gereken}}(\theta,\theta_{r}) = L_{k},\quad k \in \{\text{Replace},\ \text{Min}\}\Big\} $$
+<span class="tag">(4.9)</span>
+</div>
+<p>Servis uçlarını §4.4'ün tablosu tanımlıyor: \( L_{\text{Replace}} = L(1+\tau+w) \), \( L_{\text{Min}} = L - \Delta \). Erişim sınırı \( \theta_{\text{erişim}} \) kolun geçerli geometri verdiği en büyük dönmedir ve <strong>load stop'u da, sarım çöküşünü de kapsar</strong> — bu yüzden (4.9)'un yanına ayrı bir durdurucu ya da sarım koşulu eklenmez; eklenseydi ölü bir denetim olurdu.</p>
+<div class="note warn">
+  <span class="t">(4.9) bir SEÇİCİ değildir — ölçüldü</span>
+  Bu ölçüt tamamen kullanıcının kendi verisinden kurulur (kayış toleransı ve aşınma payı, gerginin erişim sınırı); tedarikçi raporlarından türetilmiş <strong>hiçbir sabit içermez</strong>. On dört tedarikçi sistemine karşı koşturuldu ve iki şeyi birden gösterdi:<br><br>
+  <strong>Yanlış red yok:</strong> tedarikçinin gerçek çalışma açısı bandın içinde <strong>14/14</strong>.<br>
+  <strong>Ama daraltmıyor:</strong> bandın genişliği <strong>96…218°</strong> (medyan 189°), ve ortasını seçmek medyan <strong>96°</strong> hata verirdi.<br><br>
+  Yani fizik hangi açıların <em>imkânsız</em> olduğunu söylüyor, hangisinin <em>doğru</em> olduğunu söylemiyor. Kalan serbestlik motor bloğunun paketlemesidir — cıvata deseni, gövde gabarisi, komşu parçalar — ve o bilgi bu modelde yoktur. Belge bu yüzden bir öneri sunmaz; bandı ve \( T(\theta) \) eğrisini basar, seçim okuyucunundur.
+</div>
+<p>Eğri boş bir süs değildir: merkez sabitken (4.3)'ten \( T(\theta) = M_{\text{çalışma}} \big/ \big(a\,2\sin(\varphi/2)\,\lvert\sin(\theta-\theta_f)\rvert\big) \) çıkar ve ölçülen sistemlerde \( \pm 20^\circ \)'lik bir bantta <strong>%47…101</strong> oynar. Montaj saatinin bedeli okunabilir bir büyüklüktür.</p>
+
+<h3>4.7 Kol açısı imalata nasıl geçer — konum pimi</h3>
+<p>Bir montaj talimatı açı değil <strong>delik</strong> ister. Otomatik gergilerde gövdeyi merkezî bir cıvata tutar — o cıvata gövdenin saatini <em>belirlemez</em>, yalnız bastırır — ve saati, gövdeden bloğa giren bir <strong>konum pimi</strong> sabitler. Pim deliği gövdededir; kolun gövdeye göre çalışma konumu ise (4.6) ile yay tarafından sabitlenmiştir. Gövdeyi döndürmek ikisini <strong>birlikte</strong> döndürdüğünden aradaki açı gövdenin saatinden bağımsızdır ve bir <strong>parça sabitidir</strong> \( \Delta_{\text{parça}} \):</p>
 <div class="eqno">
 $$ \theta_{\text{pim}} \;=\; \theta_{\text{kol}} + \Delta_{\text{parça}} $$
 <span class="tag">(4.8)</span>

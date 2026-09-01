@@ -835,6 +835,67 @@ Birinci ile ikincisi AYNI ŞEY DEĞİL ve mutasyon bunu ölçtü: Kol Künyesi'n
 okuma yalnız üç alandan hesaplanıyor, dolayısıyla **kayış yolu çözülemese de**
 duruyor — ki ters koordinat girişinin en olası sonucu tam olarak odur.
 
+###### AÇIYI SEÇMİYORUZ AMA YALNIZ DA BIRAKMIYORUZ — BANT + T(θ)
+
+Kullanıcı sordu: *"Açıyı bilmiyoruz ama otomatik gerginin geometrisinden bir
+açı tayin edemiyor muyuz? … Sanırım programın açıyı seçmesinin sebebi Gates
+raporları değil mi? Bunu raporlardan bağımsız bir metod haline getirmemiz
+gerekiyor."* Haklıydı ve cevabı **hayır** — ama gerekçesi ölçülerek bulundu.
+
+**GEOMETRİ θ'YI VEREMEZ, CEBİRSEL OLARAK.** Merkez sabitken bileşke kuvvet
+**f** de sabit, dolayısıyla
+
+    T(θ) = M_mean / (a · 2sin(φ/2) · |sin(θ − θ_f)|)
+
+Bunu en küçük yapmak **β = 90°** verir — ders kitabı kuralı — ve Gates bunu
+HİÇ yapmıyor (42,5…60,1°). Parça da montaj ekseni etrafında serbest: aynı
+E9843 bir motorda 344°, başkasında 348°. **θ bir BLOK özelliği, gergi özelliği
+değil.**
+
+**DEĞİŞMEZ ARANDI, BULUNAMADI.** 14 sistemde Gates'in noktasında sabit olan
+büyüklük yok: gerginlik CV %33 · gerginlik/kanal %25 · take-up %26 · sarım %41
+· hub/T %38. En sıkısı **β: CV %9,6** (42,5…60,1°) ve o bile ±%10'luk bir
+bant — kural değil, alışkanlık. Kayma emniyeti de sürücü DEĞİL: gerginlik duty
+yüküyle gitmiyor (AG00686 8,2 kW → 944 N; AG00879 14,8 kW → 478 N).
+
+**RAPORDAN BAĞIMSIZ OLAN ŞEY BİR BANT, BİR SAYI DEĞİL.** `veFeadArmBand` tek
+soru soruyor — *kol, kayışın servis aralığının iki ucuna da ulaşabiliyor mu* —
+ve girdilerin tamamı kullanıcının kendi verisi. **ÖLÇÜLDÜ (bu kodun kendisiyle,
+14 sistem):**
+
+| | |
+|---|---|
+| Gates'in noktası bandın içinde | **14/14** ← yanlış red YOK |
+| bandın genişliği | **96…218°**, medyan 189° |
+| bandın ortasını seçseydik | medyan hata **96°** |
+
+Yani ölçüt **doğru ama daraltmıyor**. Eski montaj zarfının 4,0°'lik isabetinin
+~%98'i Gates kalibrasyonundan geliyordu, ~%2'si fizikten.
+
+**LOAD STOP VE SARIM İÇİN AYRI KAPI YOK** ve bu bilinçli: çekirdeğin erişim
+sınırı (`feasibleRelMax`) ikisini de zaten kapsıyor. Bir dönem burada iki `if`
+daha vardı; **mutasyon ikisini de sessizce geçirdi** (kaldırılınca hiçbir test
+kırılmadı) ve sebebi buydu — ölü daldılar. Ölçüldü: load stop 60,4° → 32°
+yapılınca olanaklı örnek 107 → 0 ve reddi **çekirdek** veriyor.
+
+**T(θ) EĞRİSİ SÜS DEĞİL:** ölçülen sistemlerde ±20°'lik bir bantta %47…101
+oynuyor. Kullanıcı montaj saatinin bedelini okuyabiliyor.
+
+**TEK ÜRETİCİ, İKİ ÇAĞRI YERİ:** `veFeadBandSVG` (cp-fead.js) hem paneli hem
+raporu çiziyor (`opt.print` paleti değiştiriyor) — `veFeadLayoutSVG`'de kurulan
+kalıbın aynısı. Bant hesabı `veFeadArmBand`'de tek yerde.
+
+**SICAK YOLDA ÇAĞRILMAZ:** tarama 90 örnek × (makeSystem + positionTable) ≈
+350 ms; kanvas kare bütçesi 2,2 ms. Panel ve rapor çağırıyor,
+`veFeadLayoutCardHTML` çağırmıyor. **Tek girişlik memo** ikinci çağrıyı 4 ms'ye
+indiriyor ve anahtarında `armAbsDeg` YOK — bant açıdan bağımsız, kullanıcının
+noktası memodan sonra ayrıca örnekleniyor.
+
+> **ARAÇ UYARISI.** Mutasyon betiği zaman aşımıyla öldürülünce `.bak` geri
+> yüklenmedi ve mutasyon (memo anahtarından `build.center` düşmesi) KAYNAKTA
+> KALDI. Betik artık bir `.bak` varsa hiç başlamıyor; bir tur sonra `ls
+> js/*.bak` bakmak da alışkanlık olmalı.
+
 ###### KALKAN YÜZEYLER
 
 | Kalkan | Yerine |
@@ -844,7 +905,7 @@ duruyor — ki ters koordinat girişinin en olası sonucu tam olarak odur.
 | `_frEnvelopeBlock` · `_frEnvelopeFigure` · `_frEnvCen` · `_frEnvMult` · `VE_FR_ENV_CRITERIA` | — (rapordan Tablo 9 ve zarf haritası kalktı) |
 | `armPinned` · `armAuto` · `opt.selectArm` | — (seçilecek bir şey yok) |
 | teori §4.5'in montaj zarfı ve (4.7) `argmax` ölçütü | (4.7) artık `p = c − a·u(θ)` |
-| `tests/unit/fead-arm-envelope.test.js` | `tests/unit/fead-arm-input.test.js` |
+| `tests/unit/fead-arm-envelope.test.js` | `tests/unit/fead-arm-input.test.js` + `tests/unit/fead-arm-band.test.js` |
 
 **GÖÇ TERSİNE ÇEVRİLDİ ve üç yazımı birden indiriyor:** ① `cenX/cenY`
 (+ `angleMode:'mount'`, 2026-08-29 öncesi) → bugünkü biçimin kendisi,

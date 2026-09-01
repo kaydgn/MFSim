@@ -1727,6 +1727,182 @@ function veFeadRouteDiagnose(nodeList, connList){
   return out;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  OLANAKLI KOL AÇISI BANDI + T(θ) — SEÇMEZ; KAPI VE OKUMA
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kol çalışma açısı bir GİRDİ (bkz. "MONTAJ ZARFI KALKTI"). Ama girilen her açı
+// fiziksel olarak KULLANILABİLİR değil, ve hangi açının ne kadara mal olduğu da
+// görülebilir. Bu blok o iki şeyi veriyor — bir seçici DEĞİL:
+//
+//   BANT   θ'nın fiziksel olarak olanaklı olduğu yay. Ölçüt kullanıcının KENDİ
+//          girdilerinden: kayışın tolerans + aşınma bandı, gerginin load stop'u,
+//          sarımın ayakta kalması. Gates verisi HİÇ girmiyor.
+//   EĞRİ   T(θ) — o açının gerginlik karşılığı, kullanıcının noktası işaretli.
+//
+// NEDEN BİR SEÇİCİ DEĞİL — ÖLÇÜLDÜ (14 Gates sistemi, bu kodun kendisiyle):
+//     Gates'in noktası bandın İÇİNDE                14/14  ← yanlış red YOK
+//     bandın genişliği                        96…218°, medyan 189°
+//     bandın ORTASINI seçseydik            medyan hata 96°
+// Yani ölçüt gerçek hiçbir tedarikçi tasarımını reddetmiyor ama 180 örneğin
+// 47…84'ünü eliyor — boş bir kapı değil, sadece dar bir kapı değil.
+// Yani fizik doğruluyor ama daraltmıyor: bant yarım çemberden geniş. Kalan
+// serbestlik motor bloğunun paketlemesi ve o bilgi bu modelde YOK. Eski montaj
+// zarfının 4,0°'lik isabetinin ~%98'i Gates kalibrasyonundan geliyordu.
+//
+// EĞRİNİN BİLGİ TAŞIDIĞI DA ÖLÇÜLDÜ: merkez sabitken T(θ) kapalı formda
+//     T(θ) = M_mean / (a · 2sin(φ/2) · |sin(θ − θ_f)|)
+// ve ±20°'lik bir bantta %47…101 oynuyor. Yani okuma boş bir süs değil.
+//
+// FORMÜL BURAYA YAZILMIYOR, ÇEKİRDEK ÇAĞRILIYOR: yukarıdaki kapalı form
+// gerekçedir, hesap değil. İkinci bir kopya yazmak, profil sabiti ya da teğet
+// çözümü değişince iki yüzeyin sessizce ayrışması demekti.
+// TARAMA ADIMI 4° VE SEBEBİ ÖLÇÜLDÜ: maliyetin tamamı `positionTable`'da
+// (180 örnekte 1217 ms; makeSystem yalnız 52 ms, tensionerState 15 ms) çünkü
+// her OLANAKLI örnek altı servis konumunu çözüyor. 2°'de tarama ~700 ms,
+// 4°'de ~350 ms. Izgara çözünürlüğü KAPIYI etkilemiyor — kullanıcının kendi
+// açısı ayrıca ve TAM olarak örnekleniyor; adım yalnız çizilen eğriyi ve
+// bildirilen yay genişliğini kuantalıyor. Rapor daha ince adım geçebilir.
+var VE_FEAD_BAND_STEP_DEG = 4;      // tarama adımı
+
+// Tek örnek. `base` çekirdek yapılandırması, `c` avara merkezi (SABİT — girdi),
+// `absDeg` denenen kol çalışma açısı.
+//
+// ÖLÇÜT TEK BİR SORU: kol, kayışın SERVİS ARALIĞININ iki ucuna da ulaşabiliyor
+// mu? Servis uçlarını çekirdek tanımlıyor (`positionTable`): Replace =
+// L+tol+w·L, MinBelt = L−tol. Burada yeniden yazılsaydı kayış kipi kuralının
+// ikinci kopyası olurdu.
+//
+// LOAD STOP VE SARIM ÇÖKÜŞÜ İÇİN AYRI KAPI YOK — ve bu bir eksiklik değil:
+// çekirdeğin kendi erişim sınırı (`feasibleRelMax`) ikisini de zaten içeriyor,
+// dolayısıyla ayrı bir denetim ÖLÜ DAL olurdu. ÖLÇÜLDÜ:
+//   • load stop 60,4° → 32°'ye indirilince olanaklı örnek 107 → 0; hepsi
+//     "servis ucu çözülemiyor" diyor, yani reddi ÇEKİRDEK veriyor.
+//   • olanaklı örneklerde servis aralığının en küçük sarımı 26,8…28,0° —
+//     hiçbir makul zeminin altına inmiyor, çünkü inen örnek zaten çözülmüyor.
+// Bir dönem burada iki `if` daha vardı; mutasyon ikisini de SESSİZCE geçirdi
+// (kaldırıldıklarında hiçbir test kırılmadı) ve sebebi buydu.
+function _feadBandSample(base, c, a, absDeg, relNom){
+  var out = { deg: absDeg, ok: false, why: '', tensionN: NaN, betaDeg: NaN,
+              wrapMinDeg: NaN, relMaxDeg: NaN, meanBeltMm: NaN };
+  var r = absDeg * Math.PI / 180;
+  var c2 = Object.assign({}, base);
+  c2.tensioner = Object.assign({}, base.tensioner);
+  c2.tensioner.pivot = [c[0] - a * Math.cos(r), c[1] - a * Math.sin(r)];
+  c2.tensioner.freeAngleDeg = absDeg;
+  delete c2.tensioner.sense;                       // çekirdek kendi bulsun
+  var sys;
+  try { sys = FEADCore.makeSystem(c2); }
+  catch(e){ out.why = 'kayış yolu kurulamıyor'; return out; }
+  // armAbs = free + sense·rel_nom  →  free = armAbs − sense·rel_nom
+  sys.tensioner.freeAngleDeg = absDeg - sys.tensioner.sense * relNom;
+  sys._cache = {};
+  var tbl;
+  try { tbl = FEADCore.positionTable(sys); }
+  catch(e){ out.why = 'kayış yolu çözülemiyor'; return out; }
+  var by = {}; tbl.forEach(function(x){ by[x.position] = x; });
+  var mean = by.Mean;
+  // GEREKÇE KISA VE KENDİMİZİN: çekirdeğin ham metni arama aralığını ve
+  // fonksiyon adını taşıyor ("[-1713.51 .. -1704.51] (arama araligi 0..60.4)").
+  // Bu bir HATA kanalı değil bir TEŞHİS yüzeyi; okunacak şey sebep, iz değil.
+  if(!mean || mean.error || !Number.isFinite(mean.relDeg)){
+    out.why = 'bu açıda kayış yolu kapanmıyor'; return out;
+  }
+  out.tensionN = mean.tensionN;
+  out.betaDeg = mean.betaDeg;
+  // ÇALIŞMA NOKTASINDAKİ GEREKEN BOY — bandın taşıdığı EN ÖNEMLİ değişmez:
+  // merkez sabitken bu sayı θ'dan BAĞIMSIZ olmalı (yönün bütün gerekçesi bu).
+  // Örneğe yazılıyor ki kapı onu ölçebilsin; başka hiçbir yerde okunmuyor.
+  out.meanBeltMm = mean.requiredBeltMm;
+  // ── (a) SERVİS BANDININ İKİ UCU DA ÇÖZÜLMELİ ─────────────────────────────
+  var uclar = ['Replace', 'MinBelt'], wraps = [mean.wrapDeg], relMax = mean.relDeg;
+  for(var i = 0; i < uclar.length; i++){
+    var q = by[uclar[i]];
+    if(!q || q.error || !Number.isFinite(q.relDeg)){
+      out.why = 'servis aralığının ucu (' + uclar[i] + ') çözülemiyor';
+      return out;
+    }
+    wraps.push(q.wrapDeg);
+    if(q.relDeg > relMax) relMax = q.relDeg;
+  }
+  // Bu ikisi HÜKÜM DEĞİL, OKUMA: rapor basıyor, kapı kullanmıyor (sebebi
+  // fonksiyonun başındaki nota bak).
+  out.wrapMinDeg = Math.min.apply(null, wraps.filter(Number.isFinite));
+  out.relMaxDeg = relMax;
+  out.ok = true;
+  return out;
+}
+
+// Kurulmuş bir çözümün kol açısı bandını ve T(θ) eğrisini üret.
+//
+// SICAK YOLDA ÇAĞIRILMAZ: tarama 180 örnek × (makeSystem + positionTable).
+// Ölçüldü — kanvas sürükleme karesinin bütçesi 2,2 ms, bu tarama iki
+// mertebe üstünde. Panel (kullanıcı eylemi) ve rapor (belge) çağırır;
+// `veFeadLayoutCardHTML` ÇAĞIRMAZ.
+//
+// TEK GİRİŞLİK MEMO: panel her alan düzenlemesinde yeniden çiziliyor ve
+// taramanın ~350 ms'ini ikinci kez ödemenin karşılığı yok. Anahtar, bandı
+// GERÇEKTEN belirleyen her şey — kasnak merkezleri/çapları/temas tarafı, avara
+// merkezi, kol boyu, yay künyesi, kayış bandı, load stop. Adı değişince
+// yeniden hesaplanmıyor; merkez 0,001 mm oynayınca hesaplanıyor.
+//
+// `armAbsDeg` ANAHTARDA YOK ve bu bilerek: bant kol açısından BAĞIMSIZ (merkez
+// sabitken kayış yolu da öyle — ölçüldü, 4,55e−13 mm). Anahtara koymak memoyu
+// her açı düzenlemesinde çöpe atardı. Kullanıcının noktası zaten memodan
+// SONRA, ayrıca örnekleniyor.
+var _feadBandMemo = null;
+function _feadBandKey(build, step){
+  var t = build.cfg.tensioner || {}, b = build.cfg.belt || {};
+  return JSON.stringify([step, build.center, t.armLength, t.preloadNm,
+    t.rateNmPerDeg, t.loadStopRelDeg, build.spring && build.spring.relMeanDeg,
+    b.effLength, b.tolerance, b.wearPct, b.profile, b.ribs,
+    (build.cfg.pulleys || []).map(function(q){
+      return [q.name, q.rPitch, q.rEff, q.contact, q.x, q.y, !!q.tensioner]; })]);
+}
+
+// Döner: { ok, step, samples[], userDeg, userOk, userWhy, arcDeg, note }
+function veFeadArmBand(build, opt){
+  opt = opt || {};
+  var out = { ok: false, step: _feadNum(opt.stepDeg, VE_FEAD_BAND_STEP_DEG),
+              samples: [], userDeg: NaN, userOk: false, userWhy: '',
+              arcDeg: 0, note: '' };
+  if(typeof FEADCore === 'undefined' || !build || !build.cfg || !build.center){
+    out.note = 'Model çözülmeden bant hesaplanamaz.'; return out;
+  }
+  var a = _feadNum(build.cfg.tensioner && build.cfg.tensioner.armLength, NaN);
+  var relNom = _feadNum(build.spring && build.spring.relMeanDeg, NaN);
+  if(!(a > 0) || !Number.isFinite(relNom)){
+    out.note = 'Kol boyu ve yay künyesi olmadan bant hesaplanamaz.'; return out;
+  }
+  out.userDeg = _feadNum(build.armAbsDeg, NaN);
+  var c = build.center, s = out.step, i, x;
+  var key = null;
+  try { key = _feadBandKey(build, s); } catch(e){ key = null; }
+  if(key && _feadBandMemo && _feadBandMemo.key === key){
+    out.samples = _feadBandMemo.samples;
+    out.arcDeg = _feadBandMemo.arcDeg;
+    out.memo = true;
+  } else {
+    for(i = 0; i * s < 360; i++){
+      x = _feadBandSample(build.cfg, c, a, -180 + i * s, relNom);
+      out.samples.push(x);
+      if(x.ok) out.arcDeg += s;
+    }
+    if(key) _feadBandMemo = { key: key, samples: out.samples, arcDeg: out.arcDeg };
+  }
+  // KULLANICININ NOKTASI AYRICA ÖRNEKLENİR — ızgaraya yuvarlamak, tam sınırda
+  // duran bir açıyı yanlış tarafta gösterebilirdi.
+  if(Number.isFinite(out.userDeg)){
+    var u = _feadBandSample(build.cfg, c, a, out.userDeg, relNom);
+    out.userOk = u.ok; out.userWhy = u.why;
+    out.userTensionN = u.tensionN; out.userWrapMinDeg = u.wrapMinDeg;
+    out.userRelMaxDeg = u.relMaxDeg;
+  }
+  out.ok = out.arcDeg > 0;
+  if(!out.ok) out.note = 'Bu yerleşimde kolun hiçbir açısı servis aralığını taşıyamıyor.';
+  return out;
+}
+
 // ── KAYIŞ DÖNÜŞ YÖNÜ (CW / CCW) ────────────────────────────────────────────
 //
 // YÖN BİR AYAR DEĞİL, ROTA SIRASININ SONUCUDUR. Çekirdek `loopSense`
@@ -2975,6 +3151,9 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadSpringSetup: veFeadSpringSetup,
     veFeadMigrateTensioner: veFeadMigrateTensioner,
     veFeadTensionerPivot: veFeadTensionerPivot,
+    veFeadArmBand: veFeadArmBand, _feadBandSample: _feadBandSample,
+    VE_FEAD_BAND_STEP_DEG: VE_FEAD_BAND_STEP_DEG,
+    _feadBandForget: function(){ _feadBandMemo = null; },
     veFeadBeltModeLocked: veFeadBeltModeLocked,
     veFeadBeltDataMode: veFeadBeltDataMode,
     VE_FEAD_BELT_DATA_MODES: VE_FEAD_BELT_DATA_MODES,
