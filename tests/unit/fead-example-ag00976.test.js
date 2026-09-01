@@ -21,7 +21,7 @@
  * TUTULMUYOR. Fixture dışarıdan gelen birebir bir kopya; sayıları buraya elle
  * çekmek, ikisi ayrıştığında hangisinin doğru olduğunu belirsiz bırakırdı.
  *
- * EŞİKLER projenin kendi ölçütleri (bkz. CLAUDE.md): çalışma konumları %0.5,
+ * EŞİKLER projenin kendi ölçütleri (bkz. .claude/skills/fead/SKILL.md): çalışma konumları %0.5,
  * Load dahil %1.5, kol açısı 0.2°. Burada ölçülen değerler bunların çok
  * altında ve testler ÖLÇÜLENE göre sıkılaştırıldı — gevşek bir eşik geçerken
  * sessizce bozulmayı kaçırır.
@@ -327,7 +327,7 @@ describe('MODELİN SINIRLARI raporla karşılaştırıldığında AÇIKÇA duruy
 
   test('gergi kasnak KÜTLESİ kol ataletine nokta kütle olarak giriyor', () => {
     // J_kullanılan = J_kol + m·a² = 0.0009 + 0.80 × 0.090² = 0.00738.
-    // Kütle ihmal edilirse 1. mod belirgin yükselir (CLAUDE.md: +%32).
+    // Kütle ihmal edilirse 1. mod belirgin yükselir (skills/fead references/uc-katman-ve-cekirdek.md: +%32).
     const { pack, build } = kur();
     const res = veFeadAnalyze(build, {
       rows: veFeadDutyRows(solverOf(pack)), cylinders: 6, crankInertia: 0.70,
