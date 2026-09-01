@@ -7682,6 +7682,18 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
 .ve-fw-foot-state{ flex:1; font-size:var(--fs-tiny); }
 .ve-fw-ok{ color:var(--accent-success); }
 .ve-fw-err{ color:var(--accent-danger); }
+/* Üçüncü durum — uygunluk kapılarının 'warn' seviyesi. 'ok' ile 'err' arasında
+   bir hüküm var ve rengi de öyle olmalı: merkez mesafesi ihlali tasarımı
+   reddetmiyor ama sessiz de geçilmiyor (js/fead-checks.js). */
+.ve-fw-warn{ color:var(--accent-warning); }
+/* Kapı başlığı: ad · ölçüt · rozet tek satırda, rozet SAĞA yaslı — üç kapı alt
+   alta gelince rozetler tek sütunda hizalanıyor ve durum tek bakışta okunuyor. */
+.ve-fw-gate-h{
+  display:flex; align-items:baseline; gap:8px; margin:9px 0 4px;
+  font-size:var(--fs-tiny);
+}
+.ve-fw-gate-h b{ color:var(--text-primary); font-weight:700; }
+.ve-fw-gate-h em{ flex:1; font-style:normal; color:var(--text-muted); }
 .ve-fw-btn{
   padding:4px 10px; cursor:pointer; font-size:var(--fs-md); font-weight:600;
   background:var(--bg-secondary); color:var(--text-primary);

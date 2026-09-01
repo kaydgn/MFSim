@@ -219,3 +219,135 @@ test('katalog seçimi ve üç kapı — panel, çözüm ve rapor', async ({ page
 
   expect(hatalar).toEqual([]);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SİHİRBAZ — aynı kataloglar, aynı kapılar, kurulmadan ÖNCE
+// ═══════════════════════════════════════════════════════════════════════════
+// Birim testler durum → düğüm çevirisini Node'da doğruluyor. Buradaki soru
+// yine YÜZEY: 6. adımdaki iki açılır listenin DOM'a basılması ve GERÇEK
+// `selectOption` ile durumun yazılması, 7. adımdaki kapı kartının çizilmesi,
+// ve "Modeli Kur"un altı yeni alanı kanvasa taşıması.
+test('sihirbaz — kataloglar, kapılar ve kurulan modele taşınma', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(page);
+  await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
+  await page.waitForFunction(() => Array.isArray(window.nodes) && window.nodes.length > 0,
+    null, { timeout: 20000 });
+
+  const wizId = await page.evaluate(() => window.nodes.find((n) => n.type === 'fead-wizard').id);
+  await page.dblclick('#' + wizId);
+  await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();
+
+  // Örnekten doldur — kapıların üstünde koşacağı gerçek bir düzen.
+  await page.evaluate(() => veFeadWizSeed('BMC_FEAD_2026'));
+  await page.evaluate(() => veFeadWizGoto(5));            // 6 · Motor ve Çevrim
+  await page.waitForTimeout(600);
+
+  // ── MOTOR KATALOĞU: GERÇEK SEÇİM ──────────────────────────────────────
+  const motor = page.locator('#ve-fw-body select[onchange*="veFeadWizEngineLib"]');
+  await expect(motor).toHaveCount(1);
+  await motor.selectOption('57RS303234');
+  await page.waitForTimeout(500);
+
+  const s1 = await page.evaluate(() => {
+    const s = veFeadWizState().solver;
+    return { lib: s.engineLib, cyl: s.cylinders, gov: s.governedRpm,
+             over: s.overspeedRpm, crank: s.crankOD, fan: s.fanOD };
+  });
+  expect(s1.lib).toBe('57RS303234');
+  expect(s1.cyl).toBe(6);
+  expect(s1.gov).toBe(2100);
+  expect(s1.over).toBe(2900);
+  expect(s1.crank).toBe(218.3);
+  expect(s1.fan).toBe(179.62);
+
+  // Dört devir alanı DOM'da ve dolu.
+  const devirler = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('#ve-fw-body input'))
+      .filter((i) => /idleRpm|governedRpm|noLoadGovernedRpm|overspeedRpm/.test(i.outerHTML))
+      .map((i) => i.value));
+  expect(devirler).toEqual(['700', '2100', '2330', '2900']);
+
+  // ── AKSESUAR KÜNYELERİ: GERÇEK SEÇİM ──────────────────────────────────
+  const kunye = page.locator('#ve-fw-body select[onchange*="veFeadWizAccLib"]');
+  expect(await kunye.count()).toBe(2);                 // alternatör + klima
+  // SATIR SIRASINA GÜVENİLMİYOR: hangi seçicinin hangi aksesuara ait olduğu,
+  // TAŞIDIĞI SEÇENEKLERDEN okunuyor — alternatör listesinde klima künyesi yok.
+  await kunye.filter({ has: page.locator('option[value="57RS309348"]') })
+    .selectOption('57RS309348');
+  await page.waitForTimeout(400);
+  await page.locator('#ve-fw-body select[onchange*="veFeadWizAccLib"]')
+    .filter({ has: page.locator('option[value="57RS322530"]') })
+    .selectOption('57RS322530');
+  await page.waitForTimeout(400);
+
+  const p1 = await page.evaluate(() => {
+    const p = veFeadWizState().pulleys.find((x) => x.type === 'fead-alternator');
+    return { lib: p.accLib, opt: p.optimumRpm, cont: p.maxContRpm,
+             peak: p.maxPeakRpm, egri: (p.pwrCurve || []).length };
+  });
+  expect(p1.lib).toBe('57RS309348');
+  expect(p1.opt).toBe(6000);
+  expect(p1.cont).toBe(8000);
+  expect(p1.peak).toBe(12000);
+  expect(p1.egri).toBe(16);
+
+  // ── 7. ADIM: ÜÇ KAPI ──────────────────────────────────────────────────
+  await page.evaluate(() => veFeadWizGoto(6));
+  await page.waitForTimeout(700);
+  const kart = await page.evaluate(() => {
+    const el = document.querySelector('[data-ve-fw-checks]');
+    if (!el) return null;
+    const t = el.textContent || '';
+    return {
+      durum: el.getAttribute('data-ve-fw-checks-durum'),
+      merkez: /Kasnak merkez mesafesi/.test(t),
+      oran: /Çevrim oranı penceresi/.test(t),
+      devir: /Aksesuar devir sınırı/.test(t),
+      tablo: el.querySelectorAll('table').length,
+      bos: /undefined|NaN/.test(t),
+    };
+  });
+  expect(kart).not.toBeNull();
+  expect(kart.merkez).toBe(true);
+  expect(kart.oran).toBe(true);
+  expect(kart.devir).toBe(true);
+  expect(kart.tablo).toBe(3);
+  expect(kart.bos).toBe(false);
+  // Ölçülen hüküm: merkez mesafesi sınırda, oran uygun, devir sınırı kontrol
+  // istiyor (çevrimin 2750 d/dk tepesi). Panel tarafıyla AYNI sonuç.
+  expect(kart.durum).toBe('warn/ok/no');
+
+  // ── "MODELİ KUR": ALTI ALAN KANVASA TAŞINIYOR MU ──────────────────────
+  await page.evaluate(() => veFeadWizCreate());
+  await page.waitForTimeout(800);
+  const kanvas = await page.evaluate(() => {
+    const alt = window.nodes.find((n) => n.type === 'fead-alternator');
+    const sv = window.nodes.find((n) => n.type === 'fead-solver');
+    return {
+      accLib: alt && alt.data.accLib, cont: alt && alt.data.maxContRpm,
+      peak: alt && alt.data.maxPeakRpm,
+      engineLib: sv && sv.data.engineLib, gov: sv && sv.data.governedRpm,
+      over: sv && sv.data.overspeedRpm, cyl: sv && sv.data.cylinders,
+    };
+  });
+  expect(kanvas.accLib).toBe('57RS309348');
+  expect(kanvas.cont).toBe(8000);
+  expect(kanvas.peak).toBe(12000);
+  expect(kanvas.engineLib).toBe('57RS303234');
+  expect(kanvas.gov).toBe(2100);
+  expect(kanvas.over).toBe(2900);
+  expect(kanvas.cyl).toBe(6);
+
+  // KURULAN MODELİN KAPILARI SİHİRBAZINKİYLE AYNI — taşımanın asıl ölçümü.
+  const kurulan = await page.evaluate(() => {
+    const sv = window.nodes.find((n) => n.type === 'fead-solver');
+    const b = veFeadBuildFromCanvas();
+    const R = veFeadChecks(b, veFeadCheckOpt(sv.data, veFeadDutyRows(sv)));
+    return [R.centerDistance.durum, R.ratioWindow.durum, R.speedLimit.durum].join('/');
+  });
+  expect(kurulan).toBe(kart.durum);
+
+  expect(hatalar).toEqual([]);
+});
