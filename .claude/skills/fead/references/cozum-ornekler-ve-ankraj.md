@@ -2,9 +2,10 @@
 
 > Kök `CLAUDE.md`'den taşındı. Metin birebir korunmuştur.
 
-> **Bu dosyanın gergi bölümü 2026-08-28…29'da TERSİNE ÇEVRİLDİ.** Güncel
-> kural *"TEK KOORDİNAT"* bölümündedir; ondan önceki pivot bölümleri kendi
-> başlıklarında AŞILDI diye işaretlidir. Sırayla oku, atlama.
+> **Bu dosyanın gergi bölümü ÜÇ KEZ tersine çevrildi (2026-08-28 · 08-29 ·
+> 09-01).** Güncel kural *"AVARA MERKEZİ GİRDİ, MONTAJ KONUMU ÇIKTI"*
+> bölümündedir; ondan önceki bölümler kendi başlıklarında AŞILDI diye
+> işaretlidir ve ÖLÇÜMLERİ için duruyorlar. Sırayla oku, atlama.
 
 #### Çalışma çevrimi ve çözüm
 
@@ -703,7 +704,181 @@ etrafında döndürülünce sarım `<0,001°` değişiyor ama β `>1°` ve gergi
 totoloji bayrağını sabitleme (1), sürüklemede pivotu yine yazma (1), raporun
 totoloji uyarısını basmaması (1).
 
+##### AVARA MERKEZİ GİRDİ, MONTAJ KONUMU ÇIKTI — yön yeniden çevrildi (2026-09-01)
+
+Kullanıcı kararı: *"biz otomatik gergi için normalde 'otomatik gerginin montaj
+noktasını' veriyorduk. Bu daha mantıklı oluyordu fakat şimdi 'otomatik gergi
+avarasının orta noktasını' vereceğiz. Matematiği buna göre kurgulayalım,
+değişiklikleri yapalım, 'başlangıç sihirbazı' kısmında değişiklikleri yapalım,
+rapor kısmında değişiklikleri yapalım."*
+
+Bir önceki karar (2026-08-29, *"TEK KOORDİNAT"*) yürürlükte kalıyor — tek
+girdi, doğrulama yok — değişen yalnız o tek koordinatın HANGİSİ olduğu.
+
+| | eski (2026-08-28…09-01) | **bugün** |
+|---|---|---|
+| Kullanıcı verir | gövdenin **montaj konumu** (pivot) | **avara kasnağının merkezi** (`cenX/cenY`) |
+| Program türer | kasnak merkezi | **gövdenin montaj konumu** `p = c − a·(cos θ, sin θ)` |
+| Kol çalışma açısı | montaj zarfından **SEÇİLİR** | bir **GİRDİ** (`armMeanDeg`) |
+| Kayış boyu | ÇIKTI | ÇIKTI (değişmedi) |
+
+**GEREKÇE KULLANICININ İŞ AKIŞI:** tedarikçiye GİDEN FEAD bilgi sayfası bütün
+kasnaklar için AYNI sütunda merkez koordinatı veriyor — gergi satırı dahil.
+Montaj konumu yalnız tedarikçiden DÖNEN raporda (*Tensioner Data → Pivot
+Point*) bulunuyor. Yani bugünkü girdi, tasarımcının elinde gerçekten olan
+sayı.
+
+###### ÇEVİRME CEBİRSEL OLARAK TAM — ÖLÇÜLDÜ
+
+`p = c − a·(cos θ, sin θ)` ile `c = p + a·(cos θ, sin θ)` aynı denklemin iki
+yüzü. 14 Gates sisteminde merkez + kol açısından montaj konumu geri üretilip
+sistem yeniden kuruldu:
+
+| | en büyük |
+|---|---|
+| \|Δp\| | **4,263e−14 mm** |
+| ΔL_eff | 1,137e−13 mm |
+| ΔT | 1,494e−13 % |
+| Δsarım | 5,684e−14° |
+
+Yani yön değişikliği bir yaklaşıklık değil; doğrulama kümesi hiç kaymıyor.
+
+###### KAYIŞ YOLU KOL AÇISINDAN TAM BAĞIMSIZ OLDU — ve bu ölçütü ÖLDÜRDÜ
+
+Merkez sabitken çalışma (Mean) konumundaki kayış yolunun tamamı — kasnak
+başına sarım, altı açıklık, L_eff, Σsarım — kol açısından bağımsız.
+**ÖLÇÜLDÜ (6 Gates sistemi × 548 kol açısı):** en büyük fark **4,55e−13 mm** /
+**1,71e−13°**, yani makine hassasiyeti (1716 mm'de çift duyarlıklı ULP ≈
+2,3e−13 mm). Aynı ızgarada MONTAJ KONUMU girdiyken L_eff **122–294 mm**
+oynuyordu — **15 büyüklük mertebesi**.
+
+Bunun bedeli montaj zarfı oldu. Ölçüt (`max_θ min_rel dL/dθ`) pivot girdiyken
+çalışıyordu çünkü θ'yı değiştirmek YERLEŞİMİ değiştiriyordu. Merkez sabitken
+değiştirmiyor; geriye ölçütün tutunacağı yalnız sinβ ve servis bandının
+ucundaki sarım kaybı kalıyor.
+
+**ÖLÇÜLDÜ (aynı 14 sistem, aynı harness):**
+
+| | pivot girdi | **merkez girdi** |
+|---|---:|---:|
+| medyan \|Δθ\| | 4,0° | **20,7°** |
+| ±5° içinde | 8/14 | **2/14** |
+| ±10° içinde | — | **2/14** ← ara bant YOK |
+| ölçüt eğrisinin %1 platosu | 2,1° | **24,1°** (11,5 kat) |
+| >90° sapan sistem | 1 | **4** |
+
+**GEREKÇE "β 90°'ye ÇAKILIYOR" DEĞİL** ve bu ayrım ölçüldü: seçilen β'nın
+medyanı **63,2°** (tam dejenerasyon kontrol koşusu 90,0° veriyor). Ölçüt
+yanlış bir yeri seçmiyor — **hiçbir yeri seçemiyor**, çünkü eğri düz. Sekiz
+aday ölçüt tarandı (tepe gerginlik, T_max/T_min, hubload tepesi, ortalama T,
+en küçük sarım …); en iyisi yine 2/14.
+
+Bu bir ÖLÇÜT sorunu değil **SERBESTLİK DERECESİ** sorunu: merkez verildikten
+sonra pivotun nereye düştüğü bir PAKETLEME kararıdır (gövde motor bloğunda
+nereye cıvatalanıyor) ve kayış fiziğinden çıkarılamaz.
+
+**KOL ÇALIŞMA AÇISI ARTIK BİR GİRDİ** — kol boyu, yay ön yükü ve yay
+katsayısıyla aynı sınıftan, gerginin parça/montaj çiziminden okunuyor
+(E9843: *"344° MEAN ANGLE"*). Girilmezse model **çözülmez** ve sebebini adıyla
+yazar; β = 90° gibi "makul ama yanlış" bir varsayılan gerginliği ölçülebilir
+biçimde kaydırıp SESSİZ kalırdı.
+
+**MUTLAK AÇI KÜNYE KÜTÜPHANESİNE YAZILMAZ:** aynı E9843 bir araçta 344°,
+başka birinde 348°. Parçanın kendi değişmezi BAĞIL dönme (28,06° ↔ yay
+künyesinden `(22,07−8,60)/0,480`).
+
+###### İKİ ÖRNEĞİN TABANI — belgelerin kendi satırlarına oturdu
+
+Örnekler artık ikinci el sayı taşımıyor:
+
+| | girdi (merkez) | türeyen montaj konumu | belgenin yazdığı |
+|---|---|---|---|
+| `BMC_FEAD_2026` | −170,080 / 99,160 (bilgi sayfası) | −256,594 / 123,967 | — (sayfa taşımıyor) |
+| `AG00976_GATES_2025` | −161,97 / 91,29 (Layout Data) | **−250,0035 / 110,0008** | **−250,00 / 110,00** (Tensioner Data) |
+
+İkincisi **bağımsız bir ölçü**: raporun *Tensioner Data* satırı modele HİÇ
+girmiyor ve türev ona **0,0035 mm** uzakta. Program bu karşılaştırmayı
+YAPMIYOR — sayı basılıyor ki okuyucu denetimi kendisi yapabilsin.
+
+Taban kayması ihmal edilebilir (örnekler artık sayfanın kendi koordinatını
+taşıdığı için 0,004 mm'lik bir yuvarlama farkı):
+
+| | önce | sonra |
+|---|---:|---:|
+| BMC · L | 1715,2692 | **1715,2666** |
+| BMC · T | 525,511 | **525,554** (+%0,008) |
+| AG00976 · L | 1714,6088 | **1714,6075** |
+| AG00976 · T | 543,853 | **543,875** (+%0,004) |
+
+###### KARIŞTIRMANIN BEDELİ BÜYÜDÜ VE SESSİZLEŞTİ — ölçüldü
+
+Montaj konumunu merkez alanına yazmak:
+
+| | eski yön | **bugün** |
+|---|---|---|
+| model çözülüyor mu | 5/14 (9'unda duruyordu) | **14/14** |
+| gerginlik sapması | −%48,6 | **medyan +%1526**, en kötü +%4518 |
+| hiçbir uyarı çıkmayan | — | **5/14** |
+
+Sayı artık çok daha gürültülü ama **uyarı daha sessiz**. Bu yüzden türeyen
+montaj konumu bir OKUMA olarak dört yüzeyde birden basılıyor ve bu bir süs
+değil, tek teşhis yüzeyi:
+
+| Yüzey | Nerede |
+|-------|--------|
+| Panel · Kol Künyesi kartı | `veFeadMountReadout` — **SAF**, çözüme hiç bakmaz |
+| Panel · Avara Hareketi kartı | `veFeadArmReadout` — yalnız model çözülünce |
+| Sihirbaz · 4. adım | `Gövdenin Montaj Konumu` kartı |
+| Rapor · §8.7 · özet s1 | `_frPivotBlock` · `_fsrSheet1` |
+
+Birinci ile ikincisi AYNI ŞEY DEĞİL ve mutasyon bunu ölçtü: Kol Künyesi'ndeki
+okuma yalnız üç alandan hesaplanıyor, dolayısıyla **kayış yolu çözülemese de**
+duruyor — ki ters koordinat girişinin en olası sonucu tam olarak odur.
+
+###### KALKAN YÜZEYLER
+
+| Kalkan | Yerine |
+|--------|--------|
+| `veFeadArmEnvelope` · `veFeadEnvelopeOf` · `_feadEnvSample` · `VE_FEAD_ENV_*` | — (kol açısı bir girdi) |
+| `veFeadEnvelopeReadout` · `veFeadSetPinArm` · `veFeadReselectArm` | `veFeadArmReadout` + `veFeadMountReadout` |
+| `_frEnvelopeBlock` · `_frEnvelopeFigure` · `_frEnvCen` · `_frEnvMult` · `VE_FR_ENV_CRITERIA` | — (rapordan Tablo 9 ve zarf haritası kalktı) |
+| `armPinned` · `armAuto` · `opt.selectArm` | — (seçilecek bir şey yok) |
+| teori §4.5'in montaj zarfı ve (4.7) `argmax` ölçütü | (4.7) artık `p = c − a·u(θ)` |
+| `tests/unit/fead-arm-envelope.test.js` | `tests/unit/fead-arm-input.test.js` |
+
+**GÖÇ TERSİNE ÇEVRİLDİ ve üç yazımı birden indiriyor:** ① `cenX/cenY`
+(+ `angleMode:'mount'`, 2026-08-29 öncesi) → bugünkü biçimin kendisi,
+alan olduğu gibi kalıyor; ② `pivotX/pivotY` + `armMeanDeg` (zarf kipi) →
+merkez TÜRETİLİYOR; ③ yalnız `freeAngleDeg` → çevrilecek koordinat yok, model
+sebebini yazıyor. **İkisi birden varsa MERKEZ kazanır** (girdi odur).
+`armPinned`/`armAuto` da siliniyor: kol açısı artık her zaman bir girdi.
+
+**ORİJİN GÖÇÜ ESKİ `pivotX/pivotY`Yİ DE ÖTELEMEYE DEVAM EDİYOR** ve bu ölü kod
+DEĞİL: `veFeadNormalizeOrigin` alt topoloji açılışında `veFeadMigrateTensioner`
+DEN ÖNCE koşabiliyor. Ötelenmemiş bir montaj konumundan türetilen merkez
+krankın ofseti kadar yanlış yere düşerdi — sessiz, çünkü model yine çözülür.
+
+**Kapı 24 mutasyonla ölçüldü, 24'ü de kırmızı.** Üçü ilk turda YEŞİL kaldı ve
+üçü de aynı dersi tekrarladı — *kapı ÜRETİLEN YÜZEYE bakmalı, üreticiye
+değil*: panelin montaj okumasını Kol Künyesi kartından düşürme (`veFeadArmReadout`
+aynı metni bastığı için görünmüyordu), `_frPivotBlock`'u §8'den düşürme (kapı
+bloğu doğrudan çağırıyordu), özet raporun merkez satırına pivotu yazma (özet
+raporun gergi künyesinin hiç kapısı yoktu).
+
+> **AYNI TURDA ÇIKAN İKİ YAN İŞ.** (a) `\;` LaTeX kaçışı yeni pivot
+> denkleminde bir kez daha yutuldu (JS dizgisinde tek ters bölü) — kapı
+> (`fead-pin.test.js`) artık §8.7'nin İKİ alt bloğunu birden tarıyor, çünkü
+> yalnız pim bloğuna bakan hâli bunu SESSİZCE geçiriyordu. (b) `tests/e2e/
+> fead-canvas-drag.spec.js`'in kayış rozeti testi **taban commit'te de
+> kırmızıydı**: kilit PR #831'de gelmişti ama test hâlâ `SABİT → SERBEST`
+> geçişini bekliyordu. Bugün kilidin kendisini tutuyor.
+
 ##### TEK KOORDİNAT — "PİVOT" TERMİNOLOJİSİ VE KARŞILIKLI DOĞRULAMA KALKTI (2026-08-29)
+
+> **KISMEN AŞILDI (2026-09-01).** *"Tek girdi, doğrulama yok"* kuralı
+> yürürlükte; değişen o tek girdinin HANGİSİ olduğu — bugün **avara merkezi**,
+> montaj konumu değil (bkz. bir üstteki bölüm). Aşağıdaki `p`↔`c` yönü,
+> `armPinned` göçü ve zarf gerekçeleri o tarihin hâlini anlatıyor.
 
 Kullanıcı kararı: *"Programda hâlâ garip bir ikilik var… Sanırım programda
 hâlâ karşılıklı doğrulama gibi bir kıstas var. ASLA OLMAYACAK. Herhangi bir

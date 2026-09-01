@@ -359,10 +359,12 @@ describe('örnek kaydı ↔ tanım tutarlılığı', () => {
       veFeadExampleOf(k).pulleys.forEach((p) => {
         expect(p.data.od).toBeGreaterThan(0);
         if (p.type === 'fead-tensioner') {
-          // TEK KOORDİNAT: montaj konumu. Kasnak merkezi artık bir çıktı.
-          expect(p.data.pivotX).toBeDefined();
-          expect(p.data.pivotY).toBeDefined();
-          expect(p.data.cenX).toBeUndefined();
+          // TEK KOORDİNAT: avara merkezi. Montaj konumu artık bir çıktı.
+          expect(p.data.cenX).toBeDefined();
+          expect(p.data.cenY).toBeDefined();
+          expect(p.data.pivotX).toBeUndefined();
+          // Kol çalışma açısı da ZORUNLU bir girdi (montaj konumu ondan türer).
+          expect(Number.isFinite(p.data.armMeanDeg)).toBe(true);
         } else {
           expect(Number.isFinite(p.data.x)).toBe(true);
           expect(Number.isFinite(p.data.y)).toBe(true);
@@ -461,7 +463,7 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
     //   parça çiziminden TÜREYEN   (−256,59/123,97)  → 532,1 N   (−%2,2)
     // (yüzdeler Gates'in 543,9 N'una göre; o rapor KENDİ kayışıyla koşuyor,
     // bu örnek hâlâ sayfanınkiyle — bkz. "KAYIŞ KÜNYESİ AYRI" testi.)
-    expect(build.springTensionN).toBeCloseTo(525.5, 1);
+    expect(build.springTensionN).toBeCloseTo(525.55, 1);
     expect(build.sys.designTensionN).toBeCloseTo(build.springTensionN, 9);
     expect(build.cfg.designTensionN).toBeCloseTo(build.springTensionN, 9);
   });
@@ -485,7 +487,7 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
     pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     const build = veFeadBuildSystem(pack.nodes, pack.connections);
     expect(build.ok).toBe(true);
-    expect(build.sys.designTensionN).toBeCloseTo(525.5, 1);   // 400 DEĞİL
+    expect(build.sys.designTensionN).toBeCloseTo(525.55, 1); // 400 DEĞİL
     expect(build.warnings).toEqual([]);                     // uyuşmazlık diye bir şey kalmadı
   });
 

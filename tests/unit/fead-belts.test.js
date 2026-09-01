@@ -224,11 +224,12 @@ describe('katalog + çözücü: üç bağımsız yol tek noktada buluşuyor', ()
     const f = o.grid.fit;                            // 3 · çözücüden
     expect(f.ok).toBe(true);
     expect(f.fits).toBe(true);
-    // Sabit kip tabanı (bkz. fead-belt-mode.test.js TABAN). Gergi künyesi
-    // Gates raporunun Tensioner Data bloğundan geldiğinden beri bu değerler.
-    expect(f.relDeg).toBeCloseTo(28.4306, 3);
-    expect(f.tensionN).toBeCloseTo(532.161, 2);
-    expect(f.hubloadN).toBeCloseTo(302.136, 2);
+    // Sabit kip tabanı (bkz. fead-belt-mode.test.js TABAN). Girdi avara
+    // merkezine dönünce (2026-09-01) örnek sayfanın kendi koordinatını
+    // taşımaya başladı; ölçülen kayma L −0,0025 mm · T +%0,008.
+    expect(f.relDeg).toBeCloseTo(28.4271, 3);
+    expect(f.tensionN).toBeCloseTo(532.142, 1);
+    expect(f.hubloadN).toBeCloseTo(302.136, 1);
   });
 
   // SIĞMAYAN ADAY BİR SAYI DEĞİL, BİR HÜKÜM. Kenetlenme kolun uç konumuna

@@ -211,19 +211,22 @@ function veFeadWizPulleyType(key, type){
 // ötekini sessizce eskitirdi (bu modülün tekrar eden kuralı: "panel ile kart
 // AYNI alanı okur").
 //
-// VE O ALAN DİĞER BEŞ SATIRINKİYLE AYNI ŞEY DEĞİL: kasnak satırlarının X/Y'si
-// kasnağın MERKEZİ, gergininki gövdenin motora cıvatalandığı MONTAJ NOKTASI.
-// İkisini karıştırmanın ölçülmüş bedeli gerginlikte −%48,6, en kötü sarımda
-// +%27,9 — ve model yine çözülür, uyarı çıkmaz. Satır bu yüzden hangi noktayı
-// istediğini ADIYLA yazıyor.
+// VE O ALAN DİĞER BEŞ SATIRINKİYLE AYNI ŞEYDİR: altı satırın altısında da
+// kasnağın MERKEZİ isteniyor. Gerginin farkı, merkezin çalışma (Mean)
+// konumundaki hâli olması ve gövdenin montaj konumunun ondan TÜREMESİ.
+//
+// Buraya montaj konumu yazmanın ölçülmüş bedeli 14 Gates sisteminde gerginlikte
+// medyan +%1526 (en kötü +%4518) — ve 14/14 sistem YİNE ÇÖZÜLÜYOR, 5'inde
+// hiçbir uyarı çıkmıyor. Satır bu yüzden hangi noktayı istediğini ADIYLA
+// yazıyor, ve 4. adım türeyen montaj konumunu okutuyor.
 //
 // İKİ FONKSİYON, ÇÜNKÜ İKİ YÜZEY AYNI ALANI YAZMAK ZORUNDA: alan adı burada
 // TEK yerde duruyor; satır da 4. adımın koordinat kartı da buradan okuyor.
 function veFeadWizTenCoordKeys(){
-  return ['pivotX', 'pivotY'];
+  return ['cenX', 'cenY'];
 }
 function veFeadWizTenCoordLabel(){
-  return 'montaj noktası';
+  return 'avara merkezi';
 }
 // Gergi alanı yazıcısı — st.ten TEK GERÇEK KAYNAK olarak kalıyor (gergi
 // st.pulleys dizisine GİRMİYOR). Diziye gerçek bir satır olarak koymak
@@ -510,10 +513,7 @@ function veFeadWizNodes(st){
   });
 
   // ── GERGİ ────────────────────────────────────────────────────────────────
-  // `angleMode` AÇIKÇA yazılıyor: köprü onu veriden de çözebiliyor ama sihirbaz
-  // kullanıcıya hangi soruyu sorduğunu biliyor, ve açık seçim her zaman kazanır
-  // Yazılmasaydı yarım doldurulmuş bir formda kip
-  // kullanıcının seçtiğinden BAŞKA çıkabilirdi.
+  // Kip alanı YOK: tek yol var (avara merkezi girdi, montaj konumu türev).
   var t = st.ten || {};
   var td = { od: _fwNum(t.od, 75), contact: t.contact || 'back',
              armLen: _fwNum(t.armLen, NaN) };
@@ -523,14 +523,12 @@ function veFeadWizNodes(st){
     var v = _fwNum(t[a], NaN);
     if(Number.isFinite(v)) td[a] = v;
   });
-  // KİPE GÖRE HANGİ KOORDİNAT TAŞINIR — ve ötekiler TAŞINMAZ. Zarf kipinde
-  // montaj merkezini de yazmak, köprünün "iki koordinat da var" uyarısını
-  // doğurur ve kullanıcı girmediği bir alandan uyarı alırdı.
-  if(Number.isFinite(_fwNum(t.pivotX, NaN))) td.pivotX = _fwNum(t.pivotX, NaN);
-  if(Number.isFinite(_fwNum(t.pivotY, NaN))) td.pivotY = _fwNum(t.pivotY, NaN);
-  if(t.armPinned && Number.isFinite(_fwNum(t.armMeanDeg, NaN))){
-    td.armPinned = true; td.armMeanDeg = _fwNum(t.armMeanDeg, NaN);
-  }
+  // TEK KOORDİNAT: avara merkezi. Kol çalışma açısı da bir GİRDİ ve zorunlu —
+  // yazılmazsa köprü modeli çözmez ve sebebini adıyla yazar (kullanıcı onu
+  // 4. adımda görür).
+  if(Number.isFinite(_fwNum(t.cenX, NaN))) td.cenX = _fwNum(t.cenX, NaN);
+  if(Number.isFinite(_fwNum(t.cenY, NaN))) td.cenY = _fwNum(t.cenY, NaN);
+  if(Number.isFinite(_fwNum(t.armMeanDeg, NaN))) td.armMeanDeg = _fwNum(t.armMeanDeg, NaN);
 
   if(t.tenLib) td.tenLib = t.tenLib;
   if(t.tenLibVer) td.tenLibVer = t.tenLibVer;
@@ -622,10 +620,6 @@ function veFeadWizRoute(st){
 }
 
 // ── CANLI ÇÖZÜM ────────────────────────────────────────────────────────────
-//
-// KOL AÇISI MEMOSU DURUMDA TUTULUYOR ve sebebi ölçülmüş: zarf kipinin genel
-// taraması 84 ms, tohumlu yerel araması 6 ms (bkz. veFeadArmEnvelope). Memo
-// yazılmazsa her tuş vuruşu genel taramayı yeniden koşardı.
 function veFeadWizBuild(){
   if(!_fwState) return null;
   if(typeof veFeadBuildSystem !== 'function') return null;
@@ -638,10 +632,6 @@ function veFeadWizBuild(){
   var b;
   try { b = veFeadBuildSystem(pack.nodes, pack.connections); }
   catch(e){ return null; }
-  // Seçilen açıyı duruma NOT DÜŞ (karar değil, hesabın ara sonucu — köprünün
-  // kendi memo kuralının aynısı; saveState çağrılmıyor).
-  if(b && b.ok && b.armSelected && Number.isFinite(b.armAbsDeg) && !st.ten.armPinned)
-    st.ten.armMeanDeg = Math.round(b.armAbsDeg * 1000) / 1000;
   _fwBuild = b;
   return b;
 }
@@ -652,7 +642,7 @@ function veFeadWizBuild(){
 var VE_FW_ERR_STEP = [
   { re: /kasnağının konumu|dış çapı|Sürücü kasnak|kasnak gerekli|hiç kasnak/i, step: 1 },
   { re: /Kayış yolu kapanmıyor|bağlı olmayan kasnak|kayış çıkıyor|kayış giriyor/i, step: 2 },
-  { re: /[Gg]ergi|pivot|montaj koordinat|yay|kol boyu|zarf/i, step: 3 },
+  { re: /[Gg]ergi|avara|montaj konumu|yay|kol boyu|kol(un)? çalışma açısı/i, step: 3 },
   { re: /[Kk]ayış (efektif boyu|kanal|profil)|Kayış Özellikleri/i, step: 4 },
   { re: /tahrik oranı|Çözücü|devir/i, step: 5 }
 ];
@@ -746,9 +736,8 @@ function veFeadWizGoto(i){
 }
 
 // ── CANLI ŞERİT — gecikmeli ────────────────────────────────────────────────
-// Tuş vuruşu başına çözüm koşturmak zarf kipinde 84 ms'lik genel taramayı
-// tetikleyebiliyor (ilk çözümde memo yok). 220 ms'lik gecikme yazarken akıcı
-// kalmayı, memo da sonraki çözümlerin 6 ms'de bitmesini sağlıyor.
+// Tuş vuruşu başına tam bir köprü çözümü koşturmak yazmayı tökezletiyor;
+// 220 ms'lik gecikme akıcı kalmayı sağlıyor.
 function veFeadWizLiveSoon(){
   if(typeof setTimeout !== 'function') return;
   if(_fwLiveTimer) clearTimeout(_fwLiveTimer);
@@ -1086,11 +1075,12 @@ function _fwStepKasnak(b){
   h += _fwCard('Kasnaklar', (st.pulleys.length + 1) + ' kasnak (gergi dahil)',
       'var(--accent-primary)', t
     + _fwHint('<b>Gergi satırı her modelde vardır</b> — eklenmez, silinmez. Onun '
-      + 'X/Y sütunu diğer kasnaklardan FARKLI bir noktayı gösterir ve satırdaki etiket '
-      + 'bunu yazar: gerginin <b>montaj noktası</b>, yani gövdenin motora cıvatalandığı '
-      + 'yer. Kasnağın merkezini program kol açısıyla birlikte hesaplar; ikisini '
-      + 'karıştırmanın ölçülmüş bedeli gerginlikte <b>−%48,6</b>. Aynı alanlar 4. adımda '
-      + 'da düzenlenebilir; ikisi tek kaydı yazar.')
+      + 'X/Y sütunu da diğer beşiyle AYNI şeydir: <b>avara kasnağının merkezi</b>, kolun '
+      + 'çalışma konumundaki hâli. Buraya gövdenin montaj noktasını yazmanın ölçülmüş '
+      + 'bedeli gerginlikte <b>medyan +%1526</b> ve model yine çözülür, çoğu zaman '
+      + 'uyarı da çıkmaz. Montaj '
+      + 'noktasını program 4. adımda kol boyu ve kol açısından türetiyor. Aynı alanlar '
+      + '4. adımda da düzenlenebilir; ikisi tek kaydı yazar.')
     + _fwHint('<b style="color:var(--accent-danger);">Temas tarafı hesabın en kritik '
       + 'alanıdır:</b> ters verilirse program <i>geçerli ama başka</i> bir kayış yolu '
       + 'çözer ve hata vermez. Aksesuarlar tipik olarak kaburgalı yüzden, avara ve gergi '
@@ -1157,7 +1147,7 @@ function _fwTenRow(st){
     + '<td>' + tip + '</td>'
     // AD HÜCRESİ DİĞER SATIRLARLA BİREBİR (kullanıcı isteği, 2026-08-31:
     // *"Ad kısmı da diğerleri gibi olacak."*). Amber çip SİLİNMİYOR —
-    // karıştırmanın ölçülmüş bedeli gerginlikte −%48,6 — yalnız UYARDIĞI
+    // karıştırmanın ölçülmüş bedeli gerginlikte medyan +%1526 — yalnız UYARDIĞI
     // sütuna taşınıyor: çip X sütununun altında.
     + '<td><input type="text" class="ve-fw-inp" value="' + _fwEsc(t.name || '')
       + '" placeholder="' + _fwEsc(_fwTenAd()) + '"'
@@ -1168,13 +1158,13 @@ function _fwTenRow(st){
       + ' oninput="veFeadWizTenSet(\'od\', this.value)"></td>'
     + '<td><input type="number" step="any" class="ve-fw-inp" value="'
       + _fwEsc(t[kx[0]] === undefined ? '' : t[kx[0]])
-      + '" placeholder="-250" oninput="veFeadWizTenSet(\'' + kx[0] + '\', this.value)">'
-      + '<span class="ve-fw-tag" title="Gergide bu iki sütun kasnak merkezini DEĞİL, '
-      + 'gövdenin motora cıvatalandığı montaj noktasını gösterir — kasnağın merkezini '
-      + 'program kol açısıyla birlikte hesaplar.">X/Y = ' + _fwEsc(ad) + '</span></td>'
+      + '" placeholder="-161.97" oninput="veFeadWizTenSet(\'' + kx[0] + '\', this.value)">'
+      + '<span class="ve-fw-tag" title="Gergide de bu iki sütun kasnağın MERKEZİDİR '
+      + '(kolun çalışma konumunda). Gövdenin montaj noktası bir girdi değil, ondan '
+      + 'türeyen bir sonuçtur.">X/Y = ' + _fwEsc(ad) + '</span></td>'
     + '<td><input type="number" step="any" class="ve-fw-inp" value="'
       + _fwEsc(t[kx[1]] === undefined ? '' : t[kx[1]])
-      + '" placeholder="110" oninput="veFeadWizTenSet(\'' + kx[1] + '\', this.value)"></td>'
+      + '" placeholder="91.29" oninput="veFeadWizTenSet(\'' + kx[1] + '\', this.value)"></td>'
     + '<td><select class="ve-fw-inp' + (kilit ? ' ve-fw-lock' : '') + '"'
       + (kilit ? ' disabled title="' + _fwEsc(VE_FW_TEN_LOCK_NOTE) + '"' : '')
       + ' onchange="veFeadWizTenSet(\'contact\', this.value)">'
@@ -1266,21 +1256,27 @@ function _fwStepGergi(b){
             : '')));
   }
 
-  // ── MONTAJ KONUMU — TEK KOORDİNAT ───────────────────────────────────────
-  h += _fwCard('Otomatik Gergi Montaj Konumu', 'tek girdi', 'var(--accent-danger)',
-      _fwGrid([_fwField('Montaj X [mm]', _fwInp('ten.pivotX', { ph: '-250.00' })),
-               _fwField('Montaj Y [mm]', _fwInp('ten.pivotY', { ph: '110.00' }))])
-    + _fwHint('Gergi <b>gövdesinin motora bağlandığı</b> nokta — kolun döndüğü eksen. '
-      + '<b>Avara kasnağının merkezi buradan çıkar</b>: kol bu nokta etrafında kol boyu '
-      + 'yarıçapında dönüyor. Kasnak merkezi bir girdi değildir.'));
+  // ── AVARA MERKEZİ — TEK KOORDİNAT ───────────────────────────────────────
+  h += _fwCard('Avara Kasnağının Merkezi', 'tek girdi', 'var(--accent-danger)',
+      _fwGrid([_fwField('Merkez X [mm]', _fwInp('ten.cenX', { ph: '-161.97' })),
+               _fwField('Merkez Y [mm]', _fwInp('ten.cenY', { ph: '91.29' }))])
+    + _fwHint('Gergi <b>avarasının merkezi</b> — kayış yolu buradan geçer, diğer bütün '
+      + 'kasnaklarla aynı sütun. Kolun çalışma (Mean) konumundaki merkezdir. '
+      + '<b>Gövdenin montaj konumu buradan çıkar</b>, bir girdi değildir.'));
 
-
-  h += _fwCard('Kol ve Kasnak', kilit ? 'parça verisi — KİLİTLİ' : 'parça verisi',
+  h += _fwCard('Kol ve Kasnak', kilit ? 'parça verisi — KİLİTLİ' : 'parça + montaj verisi',
       kilit ? 'var(--text-muted)' : 'var(--accent-primary)',
       _fwGrid([_fwField('Kol boyu [mm]', _fwInp('ten.armLen', { ph: '90', kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE })),
+               _fwField('Kol çalışma açısı (mutlak) [°]', _fwInp('ten.armMeanDeg', { ph: '344', step: '0.1' })),
                _fwField('Kasnak Ø OD [mm]', _fwInp('ten.od', { ph: '75', kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE })),
                _fwField('Temas tarafı', _fwSelHTML('ten.contact',
-                 [['back', 'Sırttan'], ['grooved', 'Kaburgalı']], t.contact || 'back', kn))], 3));
+                 [['back', 'Sırttan'], ['grooved', 'Kaburgalı']], t.contact || 'back', kn))], 4)
+    + _fwHint('<b>Kol çalışma açısı</b> gergi gövdesinin montajdaki saat konumudur '
+      + '(+X’ten CCW) ve parça/montaj çiziminde yazar — E9843’ün çizimi '
+      + '<i>“344° MEAN ANGLE”</i> diyor. <b>Kilitli değildir</b>: mutlak açı parçaya değil '
+      + 'MONTAJA aittir (aynı E9843 başka bir motorda 348°), o yüzden künye kütüphanesinden '
+      + 'gelmez. Program bu açıyı seçmez — avara merkezi verildikten sonra kayış yolu '
+      + 'zaten belirlidir, geriye kalan tek serbestlik derecesi bir paketleme kararıdır.'));
 
   h += _fwCard('Yay Künyesi', kilit ? 'sayfadaki üç satır — KİLİTLİ' : 'sayfadaki üç satır',
       kilit ? 'var(--text-muted)' : 'var(--accent-success)',
@@ -1288,8 +1284,8 @@ function _fwStepGergi(b){
                _fwField('Yay katsayısı — Rate [Nm/°]', _fwInp('ten.kArm', { ph: '0.480', step: '0.001', kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE })),
                _fwField('Çalışma momenti — Mean [Nm]', _fwInp('ten.meanLoad', { ph: '22.07', kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE }))], 3)
     + _fwHint('Üçü de tedarikçi sayfasının "Tensioner" tablosunda yazar. Kolun nominal '
-      + 'çalışma dönmesi bunlardan çıkar: <b>(Mean − Pre) / Rate</b> — ve zarf kipinde '
-      + 'kayış boyunu bu belirler, kayışa hiç bakılmadan.'));
+      + 'çalışma dönmesi bunlardan çıkar: <b>(Mean − Pre) / Rate</b> — ve kayış boyunu bu '
+      + 'belirler, kayışa hiç bakılmadan.'));
 
   h += _fwCard('Titreşim Girdileri', 'burulma modeli — opsiyonel', 'var(--text-secondary)',
       _fwGrid([_fwField('Kol ataleti [kg·m²]', _fwInp('ten.armInertia', { ph: '0.0009', step: '0.0001' })),
@@ -1300,16 +1296,30 @@ function _fwStepGergi(b){
       + 'nokta kütle olarak taşıyor. <b>Load stop</b> bir mekanik sınırdır, çalışma noktası '
       + 'değil.'));
 
+  // TÜREYEN MONTAJ KONUMU — TEK SATIR, çünkü ATÖLYEYE GİDEN SAYI BUDUR.
+  // Panelin "Kol Künyesi" kartındaki okumanın aynısı ve AYNI üreticiden
+  // (`veFeadTensionerPivot`); ikinci bir formül yazmak iki yüzeyi sessizce
+  // ayrıştırırdı.
+  //
   // "BU KÜNYEDEN ÇIKANLAR" KARTI KALDIRILDI (kullanıcı isteği, 2026-08-31):
   // *"'Bu künyeden çıkanlar' kısmına gerek yok. Zaten raporda bunları
-  // okuyacağız."* Kart yalnız OKUMA basıyordu, tek bir girdi almıyordu —
-  // sayılar da kaybolmuyor: yay kurulması, seçilen kol açısı, türeyen kasnak
-  // merkezi, gereken kayış boyu ve tasarım gerginliği hem 7. adımın özet
-  // künyelerinde hem raporun §8'inde duruyor.
-  //
-  // OKUMAYI ÜRETEN BLOK DA GİTTİ, yalnız kart değil: `veFeadSpringSetup` ve
-  // `veFeadTensionerCenter` her çizimde koşup hiçbir yere yazmayan bir sonuç
-  // üretirdi — bu deponun kendi adıyla andığı ÖLÜ VERİ sınıfı.
+  // okuyacağız."* Yay kurulması, gereken kayış boyu ve tasarım gerginliği hem
+  // 7. adımın özet künyelerinde hem raporun §8'inde duruyor. Montaj konumu
+  // orada YOK ve bir okuma değil bir ÇIKTI: girdiyi doğru alana yazıp
+  // yazmadığınızı denetleyen tek sayı odur (bkz. kılavuz §7.1).
+  var _piv = (typeof veFeadTensionerPivot === 'function')
+    ? veFeadTensionerPivot({ cenX: _fwNum(t.cenX, NaN), cenY: _fwNum(t.cenY, NaN),
+                             armLen: _fwNum(t.armLen, NaN),
+                             armMeanDeg: _fwNum(t.armMeanDeg, NaN) })
+    : null;
+  if(_piv)
+    h += _fwCard('Gövdenin Montaj Konumu', 'türedi', 'var(--accent-warning)',
+        _fwRead('p = c − a·(cos θ, sin θ)',
+          _piv[0].toFixed(2) + ' / ' + _piv[1].toFixed(2) + ' mm')
+      + _fwHint('Bir girdi <b>değildir</b> — avara merkezinden, kol boyundan ve kol '
+        + 'çalışma açısından türüyor. Motor bloğundaki cıvata/boss deliğinin yeri budur; '
+        + 'tedarikçiden dönen raporun <i>Tensioner Data → Pivot Point</i> satırıyla '
+        + 'karşılaştırarak doğru alana girdiğinizi denetleyebilirsiniz.'));
   return h;
 }
 function _fwRead(et, deg){
@@ -1357,9 +1367,10 @@ function _fwStepKayis(b){
         ? _fwRead('Gereken boy (çıktı)', _fwFmt(b.beltLengthMm, 1) + ' mm') : '')
     + _fwRead('Kayış tipine bağlı çıktılar', 'KAPALI')
     + '</div>'
-    + _fwHint('Gergi <b>montaj koordinatından zarf çözerek</b> çalışıyor, dolayısıyla '
-      + 'kayış boyu yapısal olarak bir <b>sonuçtur</b> ve girilemez: kol açısıyla tek '
-      + 'serbestlik derecesini paylaşır, açıyı program seçer.<br><br>'
+    + _fwHint('Gergi <b>avara merkezinden</b> çözülüyor, dolayısıyla kayış boyu yapısal '
+      + 'olarak bir <b>sonuçtur</b> ve girilemez: kasnak merkezleri ve yay künyesi '
+      + 'verildiğinde kolun oturduğu yer bellidir, kapanan kayış yolunun boyu da onunla.'
+      + '<br><br>'
       + '<b>Program bu aşamada kayışın katalog sabitlerini KULLANMAZ.</b> '
       + 'Üretilmeyenler: '
       + _fwEsc((typeof VE_FEAD_BELT_DATA_OFF !== 'undefined' ? VE_FEAD_BELT_DATA_OFF : []).join(' · '))
@@ -1634,8 +1645,8 @@ function _fwStepOzet(b){
     ['Durum', b && b.ok ? '✓ çözülüyor' : '✗ çözülemiyor', b && b.ok ? 'ok' : 'err'],
     ['Kasnak', String((b && b.order ? b.order.length : st.pulleys.length + 1)), ''],
     // KOL AÇISI KUTUSU KALDIRILDI (kullanıcı isteği, 2026-08-31). Sayı
-    // kaybolmuyor: 4. adımdaki "Bu künyeden çıkanlar" okuması seçilen mutlak
-    // kol açısını basmaya devam ediyor, rapor da öyle. Özette onun yeri yoktu:
+    // kaybolmuyor: kol çalışma açısı 4. adımın kendi ALANINDA duruyor (artık
+    // bir girdi), türeyen montaj konumu da onun altında. Özette yeri yoktu:
     // çözülmemiş modelde etiket başka bir büyüklüğe (göreli dönme) düşüyordu,
     // yani tek ad altında iki farklı sayı — bu modülün defalarca düzelttiği
     // kalıp. Kaldırınca sorun da kalkıyor.

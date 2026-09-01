@@ -196,24 +196,29 @@ describe('senkron — kanvas ↔ mm', () => {
   });
 });
 
-describe('GERGİ — sürükleme PİVOTU taşır, kol boyu korunur', () => {
+describe('GERGİ — sürükleme AVARA MERKEZİNİ taşır, montaj konumu RİJİT takip eder', () => {
   const gergi = (px, py) => kasnak('t', 'fead-tensioner', px, py, {
-    pivotX: -259.94, pivotY: 104.15, armLen: 90.0,
+    cenX: -170.08, cenY: 99.16, armLen: 90.0, armMeanDeg: 344,
     preload: 8.6, kArm: 0.48, meanLoad: 22.07 });
 
-  test('ORİJİN sürüklenince gerginin pivotu da tazelenir', () => {
+  test('ORİJİN sürüklenince gerginin merkezi de tazelenir', () => {
     const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true, x: 0, y: 0 });
     const t = gergi(0, 0);
     const list = [org, t];
     M.veFeadSyncCanvasFromMm(list, { origin: org });
-    const oncePivot = t.data.pivotX;
+    const onceCen = t.data.cenX;
+    const oncePiv = M.veFeadTensionerPivot(t.data)[0];
 
     org.x += 70;                                  // KRANK sağa sürüklendi
     expect(M.veFeadSyncMmFromCanvas(list, { origin: org })).toBeGreaterThan(0);
 
     // Krank-göreli olarak gergi 70 mm SOLA kaymış olmalı.
-    expect(t.data.pivotX).toBeCloseTo(oncePivot - 70, 2);
-    expect(t.data.cenX).toBeUndefined();          // ikinci koordinat YOK
+    expect(t.data.cenX).toBeCloseTo(onceCen - 70, 2);
+    expect(t.data.pivotX).toBeUndefined();        // ikinci koordinat YOK
+    // MONTAJ KONUMU RİJİT TAKİP EDER: kol boyu ve açı dokunulmadığı için
+    // türev aynı kadar ötelenir. Ayrı bir yazma yolu GEREKMİYOR ve olmamalı
+    // (olsaydı montaj konumu sessizce bir GİRDİYE dönerdi).
+    expect(M.veFeadTensionerPivot(t.data)[0]).toBeCloseTo(oncePiv - 70, 2);
   });
 
   test('gergi düğümü olmayan girdide sessizce false', () => {
@@ -230,27 +235,28 @@ describe('gergi kutusu HANGİ noktayı gösterir — tek okuyucu', () => {
   // yanlışsa kutu 90 mm yanlış yerde durur — ve o kutu sürüklenince pivot da
   // 90 mm yanlış yazılır.
   const gergi = (ek) => kasnak('t', 'fead-tensioner', 0, 0, Object.assign({
-    pivotX: -250, pivotY: 110, armLen: 90,
+    cenX: -161.97, cenY: 91.29, armLen: 90, armMeanDeg: -11.9992,
     preload: 8.6, kArm: 0.48, meanLoad: 22.07 }, ek || {}));
 
-  test('zarf kipinde MONTAJ REFERANS NOKTASI (pivot) okunur', () => {
-    const t = gergi({ angleMode: 'envelope' });
-    expect(M.veFeadTensionerBoxMm(t.data)).toEqual([-250, 110]);
+  test('kutu AVARA MERKEZİNİ okur — montaj konumunu DEĞİL', () => {
+    const t = gergi();
+    expect(M.veFeadTensionerBoxMm(t.data)).toEqual([-161.97, 91.29]);
+    // Montaj konumu 90 mm ötede ve AYRI bir okuyucudan geliyor.
+    const p = M.veFeadTensionerPivot(t.data);
+    expect(Math.hypot(p[0] - (-161.97), p[1] - 91.29)).toBeCloseTo(90, 6);
   });
 
-  test('senkron zarf kipinde gergiyi ATLAMAZ', () => {
-    // ÖLÇÜLDÜ: bir dönem bu geçiş `cenX/cenY` arıyordu; zarf kipinde o alanlar
-    // hiç yazılmadığı için gergi kutusu kayış düzleminden KOPUK kalıyordu.
+  test('senkron gergiyi ATLAMAZ', () => {
     const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true, x: 0, y: 0 });
-    const t = gergi({ angleMode: 'envelope' });
+    const t = gergi();
     // Orijin tanım gereği yerinde kalır (yazma olmaz); ölçülen şey GERGİNİN
     // taşınması ve nereye taşındığı.
     expect(M.veFeadSyncCanvasFromMm([org, t], { origin: org })).toBeGreaterThanOrEqual(1);
-    // Kutu MERKEZİ pivotun mm konumunda olmalı: krank orijin, Y ters.
+    // Kutu MERKEZİ avara merkezinin mm konumunda olmalı: krank orijin, Y ters.
     const om = { x: org.x + org.width / 2, y: org.y + org.height / 2 };
     const tm = { x: t.x + t.width / 2, y: t.y + t.height / 2 };
-    expect(tm.x - om.x).toBeCloseTo(-250, 0);
-    expect(tm.y - om.y).toBeCloseTo(-110, 0);
+    expect(tm.x - om.x).toBeCloseTo(-161.97, 0);
+    expect(tm.y - om.y).toBeCloseTo(-91.29, 0);
   });
 });
 
@@ -262,7 +268,7 @@ describe('ORİJİN GÖÇÜ — öteleme BEDAVA (ölçüldü)', () => {
       pack.nodes.forEach((n) => {
         const d = n.data || {};
         if (Number.isFinite(d.x)) { d.x += kaydir[0]; d.y += kaydir[1]; }
-        if (Number.isFinite(d.pivotX)) { d.pivotX += kaydir[0]; d.pivotY += kaydir[1]; }
+        if (Number.isFinite(d.cenX)) { d.cenX += kaydir[0]; d.cenY += kaydir[1]; }
       });
     }
     return pack;
@@ -297,15 +303,30 @@ describe('ORİJİN GÖÇÜ — öteleme BEDAVA (ölçüldü)', () => {
     expect(b.T).toBeCloseTo(a.T, 6);
   });
 
-  test('gerginin MONTAJ KONUMU da ötelenir — KISMİ göç modeli bozardı', () => {
+  test('gerginin AVARA MERKEZİ de ötelenir — KISMİ göç modeli bozardı', () => {
     const pack = bmc([500, -300]);
     const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
-    const once = [ten.data.pivotX, ten.data.pivotY];
+    const once = [ten.data.cenX, ten.data.cenY];
     M.veFeadNormalizeOrigin(pack.nodes);
     // Gergi TEK koordinat taşıyor ve göç onu da 500/−300 kadar geri alıyor.
-    expect(ten.data.pivotX).toBeCloseTo(once[0] - 500, 6);
-    expect(ten.data.pivotY).toBeCloseTo(once[1] + 300, 6);
-    expect(ten.data.cenX).toBeUndefined();
+    expect(ten.data.cenX).toBeCloseTo(once[0] - 500, 6);
+    expect(ten.data.cenY).toBeCloseTo(once[1] + 300, 6);
+    expect(ten.data.pivotX).toBeUndefined();
+  });
+
+  // ESKİ `pivotX/pivotY` DE ÖTELENİR ve bu ölü kod DEĞİL: göç
+  // (veFeadMigrateTensioner) alt topoloji açılışında bu fonksiyondan SONRA
+  // koşabiliyor. Ötelenmemiş bir montaj konumundan türetilen merkez krankın
+  // ofseti kadar yanlış yere düşerdi — sessiz, çünkü model yine çözülür.
+  test('göç EDİLMEMİŞ eski kayıtta montaj konumu da ötelenir', () => {
+    const eski = [
+      kasnak('c', 'fead-crank', 0, 0, { driver: true, x: 500, y: -300, od: 172 }),
+      kasnak('t', 'fead-tensioner', 0, 0, { pivotX: 243.41, pivotY: -176.03,
+        armLen: 90, armMeanDeg: 344 })
+    ];
+    expect(M.veFeadNormalizeOrigin(eski)).toBeGreaterThan(0);
+    expect(eski[1].data.pivotX).toBeCloseTo(-256.59, 6);
+    expect(eski[1].data.pivotY).toBeCloseTo(123.97, 6);
   });
   test('krank zaten (0,0) ise göç HİÇBİR ŞEY yapmaz', () => {
     expect(M.veFeadNormalizeOrigin(bmc(null).nodes)).toBe(0);

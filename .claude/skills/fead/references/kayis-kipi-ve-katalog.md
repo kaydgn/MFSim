@@ -77,6 +77,12 @@ sürükleme aralığında **3.5 kat**.
 **yuvarlanmış bir katalog boyu** olmasından. Özdeş olmalarını beklemek katalog
 yuvarlamasını yok saymak olurdu.
 
+> **BU BÖLÜM TARİHÎ (2026-08-26).** Anlattığı üç kipli yapı (`angleMode`
+> mount/direct/envelope) kodda YOK — bkz. `cozum-ornekler-ve-ankraj.md`'nin
+> *"AVARA MERKEZİ GİRDİ, MONTAJ KONUMU ÇIKTI"* bölümü. Bugün tek kip var ve
+> nominal kol açısı zaten salt yay künyesinden geliyor. Ölçümleri, aynı hata
+> sınıfı yeniden doğarsa tanınsın diye duruyor.
+
 ##### İŞLEVSEL DENETİM — iki sessiz kusur (2026-08-26)
 
 Kullanıcı sordu: *"Kayış ya sabit oluyordu… veya serbest oluyordu… Bu programda
