@@ -220,13 +220,13 @@ function veFeadWizPulleyType(key, type){
 // hiçbir uyarı çıkmıyor. Satır bu yüzden hangi noktayı istediğini ADIYLA
 // yazıyor, ve 4. adım türeyen montaj konumunu okutuyor.
 //
-// İKİ FONKSİYON, ÇÜNKÜ İKİ YÜZEY AYNI ALANI YAZMAK ZORUNDA: alan adı burada
-// TEK yerde duruyor; satır da 4. adımın koordinat kartı da buradan okuyor.
+// ALAN ADI BURADA TEK YERDE: satır da 4. adımın koordinat kartı da buradan
+// okuyor. (Bir dönem bir de `veFeadWizTenCoordLabel` vardı; satırdaki amber
+// çip kullanıcı isteğiyle kalkınca onu okuyan tek yüzey de kalktı ve ölü
+// export olarak kalmasın diye silindi. Uyarı kaybolmadı: alanların `title`
+// ipucuna ve tablonun altındaki karta taşındı.)
 function veFeadWizTenCoordKeys(){
   return ['cenX', 'cenY'];
-}
-function veFeadWizTenCoordLabel(){
-  return 'avara merkezi';
 }
 // Gergi alanı yazıcısı — st.ten TEK GERÇEK KAYNAK olarak kalıyor (gergi
 // st.pulleys dizisine GİRMİYOR). Diziye gerçek bir satır olarak koymak
@@ -476,6 +476,10 @@ function veFeadWizSeed(key){
     delete r.kwByKey;
   });
   st.temizle = false;
+  // HANGİ ÖRNEKTEN DOLDURULDUĞUNUN İZİ. Hesaba girmiyor; 1. adımdaki kartın
+  // "yüklendi" işaretini besliyor ve taslakla birlikte düğümde kalıyor, yani
+  // kullanıcı geri döndüğünde hangi örnekle başladığını görüyor.
+  st.seededFrom = key;
   _fwState = st;
   _fwStep = 0;
   veFeadWizRender();
@@ -728,11 +732,19 @@ function veFeadWizGo(delta){
   if(i < 0 || i >= VE_FW_STEPS.length) return;
   _fwStep = i;
   veFeadWizRender();
+  _fwStepScrollReset();
+}
+// ADIM DEĞİŞTİRMEK KONUMU SIFIRLAR — yeni adım baştan okunur.
+function _fwStepScrollReset(){
+  if(typeof document === 'undefined') return;
+  var body = document.getElementById('ve-fw-body');
+  if(body) body.scrollTop = 0;
 }
 function veFeadWizGoto(i){
   if(i < 0 || i >= VE_FW_STEPS.length) return;
   _fwStep = i;
   veFeadWizRender();
+  _fwStepScrollReset();
 }
 
 // ── CANLI ŞERİT — gecikmeli ────────────────────────────────────────────────
@@ -903,6 +915,20 @@ function veFeadWizIssueHTML(b, step){
 // ════════════════════════════════════════════════════════════════════════════
 //  ÇİZİM
 // ════════════════════════════════════════════════════════════════════════════
+// KAYDIRMA KONUMU KORUNUR — ama YALNIZ aynı adımda.
+//
+// Kullanıcı bildirimi (2026-08-31): *"'Çalışma çevrimi' kısmında 'çevrim'
+// seçtiğim zaman, sayfa en tepeye atıyor. Seçtiğim yerde kalmıyor yani."*
+// ÖLÇÜLDÜ (gerçek tarayıcı): gövdenin `scrollTop`'u 900 → **0**.
+//
+// Sebep `body.scrollTop = 0`'ın KOŞULSUZ olmasıydı. O satır ADIM DEĞİŞİMİNDE
+// doğru — yeni bir adım baştan okunur — ama aynı adımı yerinde yeniden
+// çizerken (çevrim seçmek, aksesuar modeli seçmek, temas tarafını değiştirmek)
+// kullanıcıyı bulunduğu yerden koparıyordu.
+//
+// KONUM SAKLANMIYOR, OKUNUYOR: gövde elemanı yeniden çizimler arasında AYNI
+// kalıyor, dolayısıyla `scrollTop`'u kendisi taşıyor. Adım başına bir bellek
+// tutmak ölü veri olurdu — yazılır, hiçbir yerden okunmazdı.
 function veFeadWizRender(){
   if(typeof document === 'undefined' || !_fwState) return;
   var b = veFeadWizBuild();
@@ -910,8 +936,12 @@ function veFeadWizRender(){
   if(nav) nav.innerHTML = veFeadWizNavHTML(b);
   var body = document.getElementById('ve-fw-body');
   if(body){
+    var y = body.scrollTop;
     body.innerHTML = veFeadWizStepHTML(_fwStep, b);
-    body.scrollTop = 0;
+    // İçerik kısaldıysa (satır silindi, kart kalktı) eski konum artık yok —
+    // kırpılmazsa tarayıcı sessizce dibe yapıştırır.
+    var enFazla = Math.max(0, body.scrollHeight - body.clientHeight);
+    body.scrollTop = Math.min(y, enFazla);
   }
   var foot = document.getElementById('ve-fw-foot');
   if(foot) foot.innerHTML = veFeadWizFootHTML(b);
@@ -992,18 +1022,32 @@ function _fwStepKaynak(){
       _fwField('Sistem adı', _fwInp('ad', { text: true, ph: 'Yeni FEAD Sistemi' }))
     + _fwHint('Ad yalnız künyedir; rapor antedinde ve kanvas etiketlerinde görünür.'));
 
+  // SEÇİLİ KART BELİRGİN — kullanıcı isteği (2026-08-31): *"buradan bir
+  // seçenek seçtiğimizde seçtiğimiz seçeneğin belirgin olmasını istiyorum."*
+  //
+  // Etiket "SEÇİLİ" değil **"YÜKLENDİ"**: kart bir seçim kutusu değil, bir
+  // EYLEM düğmesi — formu dolduruyor ve kullanıcı sonra her alanı
+  // değiştirebiliyor. "Seçili" demek, formun hâlâ o örneğe EŞİT olduğunu
+  // iddia etmek olurdu; kütüphane bunu bilmiyor (duty seçicisindeki "özel"
+  // okumasının aynı gerekçesi).
+  var yuklu = (st.seededFrom === undefined) ? null : st.seededFrom;
+  function kart(k, ad, alt){
+    var secili = (yuklu !== null && String(yuklu) === String(k));
+    return '<button type="button" class="ve-fw-btn ve-fw-btn-wide'
+      + (secili ? ' ve-fw-btn-on' : '') + '"'
+      + ' onclick="' + (k ? 'veFeadWizSeed(\'' + k + '\')' : 'veFeadWizReset()') + '">'
+      + '<b>' + _fwEsc(ad) + '</b><em>' + _fwEsc(alt) + '</em>'
+      + (secili ? '<span class="ve-fw-btn-mark">✓ yüklendi</span>' : '') + '</button>';
+  }
   var oh = '';
   if(typeof veFeadExampleKeys === 'function'){
     veFeadExampleKeys().forEach(function(k){
       var ex = veFeadExampleOf(k);
-      oh += '<button type="button" class="ve-fw-btn ve-fw-btn-wide"'
-         + ' onclick="veFeadWizSeed(\'' + k + '\')">'
-         + '<b>' + _fwEsc(ex.name) + '</b><em>' + ex.pulleys.length + ' kasnak · '
-         + (ex.solver.duty || []).length + ' devir noktası</em></button>';
+      oh += kart(k, ex.name, ex.pulleys.length + ' kasnak · '
+        + (ex.solver.duty || []).length + ' devir noktası');
     });
   }
-  oh += '<button type="button" class="ve-fw-btn ve-fw-btn-wide" onclick="veFeadWizReset()">'
-     + '<b>Boş başla</b><em>bütün alanları temizler</em></button>';
+  oh += kart('', 'Boş başla', 'bütün alanları temizler');
   h += _fwCard('Örnekten doldur', 'isteğe bağlı', 'var(--accent-success)', oh
     + _fwHint('Doğru doldurulmuş bir formu görmek, alanların hangi belgeden okunduğunu '
       + 'anlatmanın en kısa yolu. Doldurduktan sonra her alanı değiştirebilirsiniz — '
@@ -1013,6 +1057,7 @@ function _fwStepKaynak(){
 
 function veFeadWizReset(){
   _fwState = veFeadWizDefault();
+  _fwState.seededFrom = '';          // "Boş başla" da bir SEÇİMDİR
   _fwStep = 0;
   veFeadWizRender();
 }
@@ -1074,13 +1119,14 @@ function _fwStepKasnak(b){
 
   h += _fwCard('Kasnaklar', (st.pulleys.length + 1) + ' kasnak (gergi dahil)',
       'var(--accent-primary)', t
-    + _fwHint('<b>Gergi satırı her modelde vardır</b> — eklenmez, silinmez. Onun '
-      + 'X/Y sütunu da diğer beşiyle AYNI şeydir: <b>avara kasnağının merkezi</b>, kolun '
-      + 'çalışma konumundaki hâli. Buraya gövdenin montaj noktasını yazmanın ölçülmüş '
-      + 'bedeli gerginlikte <b>medyan +%1526</b> ve model yine çözülür, çoğu zaman '
-      + 'uyarı da çıkmaz. Montaj '
-      + 'noktasını program 4. adımda kol boyu ve kol açısından türetiyor. Aynı alanlar '
-      + '4. adımda da düzenlenebilir; ikisi tek kaydı yazar.')
+    + _fwHint('<b>Gergi satırı her modelde vardır</b> — eklenmez, silinmez, tipi '
+      + 'değiştirilmez. <b>Gergi satırında X/Y de diğer beşiyle AYNI şeydir</b>: '
+      + 'avara kasnağının merkezi, kolun çalışma konumundaki hâli. Buraya gövdenin '
+      + 'montaj noktasını yazmanın ölçülmüş bedeli gerginlikte <b>medyan +%1526</b> ve '
+      + 'model yine çözülür, çoğu zaman uyarı da çıkmaz — montaj noktasını program '
+      + '4. adımda kol boyu ve kol açısından türetip okutuyor. Gerginin künyesi ve yay '
+      + 'verisi <b>4. adımda</b> seçilir; aynı alanlar orada da düzenlenebilir, ikisi '
+      + 'tek kaydı yazar.')
     + _fwHint('<b style="color:var(--accent-danger);">Temas tarafı hesabın en kritik '
       + 'alanıdır:</b> ters verilirse program <i>geçerli ama başka</i> bir kayış yolu '
       + 'çözer ve hata vermez. Aksesuarlar tipik olarak kaburgalı yüzden, avara ve gergi '
@@ -1114,41 +1160,26 @@ function _fwStepKasnak(b){
 // modelin çözülemez olduğu bir düğme sunmak olurdu.
 function _fwTenRow(st){
   var t = st.ten || {};
-  var kx = veFeadWizTenCoordKeys(st), ad = veFeadWizTenCoordLabel(st);
+  var kx = veFeadWizTenCoordKeys(st);
   // Künye seçiliyse parça alanları burada da kilitli — 4. adımla AYNI okuyucu
   // (iki yüzey aynı kaydı yazıyor, biri kilitli öbürü açık olamaz).
   var kilit = veFeadWizTenLocked(st);
-  // TİP SÜTUNU TİPİ SÖYLER, KÜNYEYİ DEĞİL. Bir dönem burada künye kütüphanesi
-  // açılır listesi vardı ve ilk seçeneği "— elle gir —" olduğu için satır
-  // TİP sütununda "elle gir" yazıyordu; kullanıcı bildirdi (2026-08-31):
-  // *"otomatik gerginin satırında 'elle gir' gibi bir şey var. O olmayacak,
-  // orada normal 'Otomatik Gergi' yazacak."* Diğer beş satırın tip sütunu
-  // bileşenin ADINI yazıyor; gergi satırı da öyle yazmalı.
+  // TİP SÜTUNU DÜZ METİN: gergi tipi DEĞİŞTİRİLEMEZ (her FEAD modelinde tam
+  // bir gergi var), o yüzden diğer satırlardaki gibi bir açılır liste yok.
   //
-  // Künye seçici SATIRDA KALIYOR ama tipin ALTINDA, ikincil bir kontrol
-  // olarak: kullanıcı isteği *"tipinin seçileceği yeri estetik bir şekilde o
-  // satıra eklememiz gerekiyor."*
-  var liste = (typeof veFeadTensionerList === 'function') ? veFeadTensionerList() : [];
-  var kunye = '<select class="ve-fw-inp ve-fw-sub" title="Gergi künyesi — kütüphaneden"'
-    + ' onchange="veFeadWizTenLib(this.value)">'
-    + [['', '— elle gir —']].concat(liste.map(function(r){
-        return [r.key, (typeof veFeadTenLabel === 'function') ? veFeadTenLabel(r) : r.key];
-      })).map(function(o){
-        return '<option value="' + _fwEsc(o[0]) + '"'
-             + (String(o[0]) === String(t.tenLib || '') ? ' selected' : '') + '>'
-             + _fwEsc(o[1]) + '</option>'; }).join('')
-    + '</select>';
-  var tip = '<div class="ve-fw-tip-ten"><b>' + _fwEsc(_fwTenAd()) + '</b>'
-    + kunye + '</div>';
+  // KÜNYE SEÇİCİSİ SATIRDAN KALKTI — kullanıcı isteği (2026-08-31):
+  // *"Otomatik gergi tipini 'otomatik gergi' kısmında seçeriz. Otomatik gergi
+  // satırı da diğerleri gibi olsun."* Seçici 4. adımda AYNEN duruyor; iki
+  // yüzeyde birden sunmak, aynı kaydı iki yerden yazan bir kontrolü
+  // gereksiz yere ikiye katlıyordu.
+  var mnt = 'Gergide de X/Y kasnağın MERKEZİDİR (kolun çalışma konumunda). '
+    + 'Gövdenin montaj noktası bir girdi değil, ondan ve kol açısından türeyen '
+    + 'bir sonuçtur — 4. adımda okunur.';
 
   return '<tr class="ve-fw-tr-ten">'
     + '<td class="ve-fw-c"><input type="radio" disabled'
       + ' title="Gergi sürücü olamaz — sürücülük bir roldür ve çekirdek onu ayrı sayar."></td>'
-    + '<td>' + tip + '</td>'
-    // AD HÜCRESİ DİĞER SATIRLARLA BİREBİR (kullanıcı isteği, 2026-08-31:
-    // *"Ad kısmı da diğerleri gibi olacak."*). Amber çip SİLİNMİYOR —
-    // karıştırmanın ölçülmüş bedeli gerginlikte medyan +%1526 — yalnız UYARDIĞI
-    // sütuna taşınıyor: çip X sütununun altında.
+    + '<td><span class="ve-fw-tip-ten">' + _fwEsc(_fwTenAd()) + '</span></td>'
     + '<td><input type="text" class="ve-fw-inp" value="' + _fwEsc(t.name || '')
       + '" placeholder="' + _fwEsc(_fwTenAd()) + '"'
       + ' oninput="veFeadWizTenSet(\'name\', this.value)"></td>'
@@ -1156,15 +1187,12 @@ function _fwTenRow(st){
       + ' value="' + _fwEsc(t.od === undefined ? '' : t.od) + '" placeholder="75"'
       + (kilit ? ' readonly title="' + _fwEsc(VE_FW_TEN_LOCK_NOTE) + '"' : '')
       + ' oninput="veFeadWizTenSet(\'od\', this.value)"></td>'
-    + '<td><input type="number" step="any" class="ve-fw-inp" value="'
-      + _fwEsc(t[kx[0]] === undefined ? '' : t[kx[0]])
-      + '" placeholder="-161.97" oninput="veFeadWizTenSet(\'' + kx[0] + '\', this.value)">'
-      + '<span class="ve-fw-tag" title="Gergide de bu iki sütun kasnağın MERKEZİDİR '
-      + '(kolun çalışma konumunda). Gövdenin montaj noktası bir girdi değil, ondan '
-      + 'türeyen bir sonuçtur.">X/Y = ' + _fwEsc(ad) + '</span></td>'
-    + '<td><input type="number" step="any" class="ve-fw-inp" value="'
-      + _fwEsc(t[kx[1]] === undefined ? '' : t[kx[1]])
-      + '" placeholder="91.29" oninput="veFeadWizTenSet(\'' + kx[1] + '\', this.value)"></td>'
+    + '<td><input type="number" step="any" class="ve-fw-inp" title="' + _fwEsc(mnt) + '"'
+      + ' value="' + _fwEsc(t[kx[0]] === undefined ? '' : t[kx[0]]) + '"'
+      + ' placeholder="-161.97" oninput="veFeadWizTenSet(\'' + kx[0] + '\', this.value)"></td>'
+    + '<td><input type="number" step="any" class="ve-fw-inp" title="' + _fwEsc(mnt) + '"'
+      + ' value="' + _fwEsc(t[kx[1]] === undefined ? '' : t[kx[1]]) + '"'
+      + ' placeholder="91.29" oninput="veFeadWizTenSet(\'' + kx[1] + '\', this.value)"></td>'
     + '<td><select class="ve-fw-inp' + (kilit ? ' ve-fw-lock' : '') + '"'
       + (kilit ? ' disabled title="' + _fwEsc(VE_FW_TEN_LOCK_NOTE) + '"' : '')
       + ' onchange="veFeadWizTenSet(\'contact\', this.value)">'
@@ -1207,8 +1235,10 @@ function _fwStepYol(b){
     + '<div class="ve-fw-rowbtns">'
     + '<button type="button" class="ve-fw-btn" onclick="veFeadWizRouteReverse()">⇄ Yönü çevir</button>'
     + '</div>'
-    // AYNI ÜRETİCİ, 2. adımdakiyle: iki adım aynı yönü göstermek zorunda.
-    + veFeadWizSpinHTML(b)
+    // CCW/CW SEÇİCİSİ BURADA YOK — kullanıcı isteği (2026-08-31):
+    // *"'kayış yolu' kısmında CCW ve CW butonlarına gerek yok. Zaten dönüş
+    // yönünü 'kasnaklar' kısmında hallediyoruz."* Yön okuması kaybolmuyor:
+    // adımın tepesindeki canlı şerit onu her adımda basıyor.
     + _fwHint('Sıra, kayışın <b>gidiş yönüdür</b>: listedeki her kasnaktan bir sonrakine '
       + 'tel çekilir ve sonuncudan ilkine dönülür. <b>Dönüş yönü ayrı bir ayar değildir</b> '
       + '— sıradan türer, bu yüzden "Yönü çevir" sırayı ters yürütür.'));
@@ -1612,7 +1642,21 @@ function _fwAccCard(st, b, yuk){
       + _fwEsc(kaynakMetin) + '</td></tr>';
   });
 
-  var h = '<div class="ve-fw-tblwrap"><table class="ve-fw-tbl"><thead><tr>'
+  // SÜTUN GENİŞLİKLERİ SABİT — kullanıcı bildirimi (2026-08-31):
+  // *"alternatör tiplerini seçtiğimde, tablo garip bir şekilde kayıyor, yana
+  // çekiliyor."* ÖLÇÜLDÜ (gerçek tarayıcı): model seçilince açılır listenin
+  // genişliği **362 → 283 px**. Sebep içerik: `table-layout` varsayılanı AUTO,
+  // yani sütunlar hücrelerin metnine göre bölüşülüyor; "Güç kaynağı" hücresi
+  // `kayıtlı ölçüm` iken kısa, `katalog modeli · Valeo TM31` iken uzun oluyor
+  // ve aradaki farkı Model sütunundan çalıyor. Tablo bir seçimle YENİDEN
+  // BÖLÜŞÜYOR — kullanıcının gördüğü "yana çekilme" bu.
+  //
+  // `table-layout:fixed` + colgroup bunu yapısal olarak kapatıyor: genişlikler
+  // artık içerikten değil oranlardan geliyor, dolayısıyla hangi model seçilirse
+  // seçilsin sütunlar YERİNDE kalıyor.
+  var h = '<div class="ve-fw-tblwrap"><table class="ve-fw-tbl ve-fw-tbl-fixed">'
+    + '<colgroup><col style="width:34%"><col style="width:36%"><col style="width:30%"></colgroup>'
+    + '<thead><tr>'
     + '<th>Aksesuar</th><th>Model (katalog)</th><th>Güç kaynağı</th></tr></thead><tbody>'
     + (satir || '<tr><td colspan="3" class="ve-fw-ro">Henüz aksesuar yok.</td></tr>')
     + '</tbody></table></div>';
@@ -1936,7 +1980,6 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizDutySet: veFeadWizDutySet, veFeadWizDutyKw: veFeadWizDutyKw,
     veFeadWizTenSet: veFeadWizTenSet,
     veFeadWizTenCoordKeys: veFeadWizTenCoordKeys,
-    veFeadWizTenCoordLabel: veFeadWizTenCoordLabel,
     veFeadWizAccPreset: veFeadWizAccPreset,
     _fwKwEff: _fwKwEff, _fwTenRow: _fwTenRow, _fwAccCard: _fwAccCard,
     veFeadWizIssues: veFeadWizIssues,

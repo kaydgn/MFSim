@@ -2119,6 +2119,90 @@ taşımama · üç CSS sınıfını tek tek düşürme · çevirmeyi ve taşıma
 sıraya bağlama · çevirmede ilk ögeyi de çevirme · çipi AD hücresinde bırakma ·
 çipi tamamen silme · gergi adını palet adına döndürme.
 
+###### BEŞ DÜZELTME — üçüncü kullanıcı turu (2026-08-31)
+
+Kozmetik istekler; ama ikisinin altından **ölçülmüş birer kusur** çıktı ve
+biri de bu turda üretilmiş bayat bir CSS kuralıydı.
+
+| # | İstek | Ne yapıldı |
+|---|-------|------------|
+| 1 | *"'örnekten doldur'… seçtiğimiz seçeneğin belirgin olmasını istiyorum"* | Yüklenen kart **gölge + sol şerit + "✓ yüklendi"** |
+| 2 | *"'otomatik gergi' olmamış… diğerleri gibi yapalım… 'X/Y = montaj noktası' gibi garip belirteçlere gerek yok"* | Künye seçicisi 4. adıma taşındı, çip kalktı, satır diğerleriyle **birebir** |
+| 3 | *"'kayış yolu' kısmında CCW ve CW butonlarına gerek yok"* | Kalktı; "⇄ Yönü çevir" ve canlı şeritteki yön okuması duruyor |
+| 4 | *"alternatör tiplerini seçtiğimde tablo… yana çekiliyor"* | Sabit sütun düzeni |
+| 5 | *"'çevrim' seçtiğim zaman sayfa en tepeye atıyor"* | Kaydırma konumu aynı adımda korunuyor |
+
+###### 1 · KART "YÜKLENDİ" DER, "SEÇİLİ" DEMEZ
+
+Kart bir seçim kutusu değil bir **EYLEM** düğmesi: formu dolduruyor ve
+kullanıcı sonra her alanı değiştirebiliyor. *"Seçili"* demek formun hâlâ o
+örneğe EŞİT olduğunu iddia etmek olurdu — kütüphane bunu bilmiyor (duty
+seçicisindeki *"özel"* okumasının aynı gerekçesi).
+
+**RENK YERİNE GÖLGE + ŞERİT:** üç kart da eşit meşru, dolu bir vurgu rengi
+birini *"birincil eylem"* gibi gösterirdi. İz `st.seededFrom`'da ve **çözüme
+girmiyor** — düğüm verisinde hiçbir yerde geçmiyor (testli). *"Boş başla"* da
+bir seçimdir ve işaretleniyor.
+
+###### 2 · SATIR DİĞERLERİYLE BİREBİR — ve bilgi KAYBOLMADI
+
+Künye seçicisi satırdan kalktı, 4. adımda AYNEN duruyor: aynı kaydı yazan bir
+kontrolü iki yüzeyde birden sunmanın karşılığı yoktu. Amber çip de kalktı.
+
+**AMA UYARI KALDIRILMADI, YER DEĞİŞTİRDİ.** Kasnak merkezi ↔ montaj noktası
+karışması bu modülün en pahalı sessiz hatası (gerginlik **−%48,6**, sarım en
+kötü **+%27,9**, model YİNE çözülür ve uyarı çıkmaz). Bilgi iki yerde:
+X/Y alanlarının kendi `title` ipucunda ve tablonun altındaki kartta, ölçülmüş
+bedeliyle birlikte. Kapı ikisini birden arıyor — yoksa bir gün
+*"sadeleştirme"* diye tamamen silinirdi.
+
+**ÖLÇÜLDÜ (gerçek tarayıcı):** satırın sütun hizası tutuyor ve **yükseklik
+farkı 0 px** — iki katmanlı tip hücresi + çip satırı şişiriyordu.
+
+###### 4 · SÜTUNLAR İÇERİKTEN DEĞİL ORANDAN
+
+**ÖLÇÜLDÜ:** aksesuar modeli seçilince açılır listenin genişliği
+**362 → 283 px**. Sebep `table-layout` varsayılanının **auto** olması:
+*"Güç kaynağı"* hücresi `kayıtlı ölçüm` iken kısa, `katalog modeli · Valeo
+TM31` iken uzun ve aradaki farkı Model sütunundan çalıyor. Tablo bir seçimle
+yeniden bölüşüyordu — kullanıcının gördüğü *"yana çekilme"* buydu.
+
+`table-layout:fixed` + oranlı `colgroup` bunu yapısal olarak kapatıyor.
+Açılır listenin kendi `min-width`'i sabit düzeni ezeceği için sıfırlanıyor.
+**ÖLÇÜLDÜ (sonra):** başlık genişlikleri `297·314·262` ve açılır liste
+`306 px` — seçimden önce ve sonra **birebir aynı**.
+
+###### 5 · KAYDIRMA AYNI ADIMDA KORUNUR, ADIM DEĞİŞİNCE SIFIRLANIR
+
+`veFeadWizRender` içindeki `body.scrollTop = 0` **KOŞULSUZDU**. O satır adım
+değişiminde doğru — yeni adım baştan okunur — ama aynı adımı yerinde yeniden
+çizerken (çevrim seçmek, aksesuar modeli seçmek, temas tarafını değiştirmek)
+kullanıcıyı bulunduğu yerden koparıyordu. **ÖLÇÜLDÜ:** `scrollTop` 900 → **0**;
+düzeltmeden sonra gerçek tarayıcıda **548 → 548**, adım değişiminde **0**.
+
+**KONUM SAKLANMIYOR, OKUNUYOR.** İlk yazımda adım başına bir bellek
+(`_fwScroll`) tutuluyordu ve mutasyon onu **yeşil geçirdi**: yazılıyor, hiçbir
+yerden okunmuyordu — bu deponun kendi adıyla andığı **ölü veri** sınıfı.
+Gövde elemanı yeniden çizimler arasında aynı kaldığı için `scrollTop`'u
+kendisi taşıyor. **Kırpma şart:** içerik kısaldıysa (satır silindi, kart
+kalktı) eski konum artık yok ve tarayıcı sessizce dibe yapıştırır.
+
+###### AYNI TURDA ÇIKAN BAYAT KURAL
+
+`.ve-fw-tip-ten` **iki kez** tanımlıydı: bir önceki turun iki katmanlı hücresi
+için yazılmış `display:flex` kuralı, satır düz metne dönünce geride kalmıştı.
+Aynı sınıfa iki farklı düzen dayatan bir kural sessiz kalır — hücre hizasız
+görünür, hata çıkmaz. Kullanılmayan `.ve-fw-sub` ile birlikte silindi ve kapı
+artık kuralın **tek kez** tanımlı olmasını arıyor.
+
+Kapı **20 mutasyonla** ölçüldü, 20'si de kırmızı: kaydırmayı yine koşulsuz
+sıfırlama, adım değişiminde konumu koruma, kırpmayı kaldırma, seçili kart
+işaretini düşürme, işareti her karta verme, seed izini yazmama, "Boş başla"
+izini yazmama, izi düğüm verisine sızdırma, sabit tablo düzenini kaldırma,
+colgroup oranlarını 100'den kaydırma, satıra künye seçicisini geri koyma,
+X/Y ipucunu düşürme, kart ipucundan ölçülmüş bedeli silme, Kayış Yolu'na
+CCW/CW'yi geri koyma, beş CSS kuralını tek tek düşürme.
+
 **Sırada:** kullanıcı kayışı seçtikten sonra katalog sonuçlarını geri almanın
 akışı (bugün Kayış Özellikleri panelinden elle yapılıyor); ve zarf çözümünün
 Sonuçlar sayfasında kanal olarak yayını.
