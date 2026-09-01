@@ -604,8 +604,11 @@ describe('§8.7 — hangi sayı GİRDİ, hangisi TÜREV', () => {
       expect(j).toBeGreaterThan(-1);
       return blok.slice(j, blok.indexOf('</tr>', j));
     };
-    ['Kol boyu a', 'Yay ön yükü', 'Yay oranı k', 'Otomatik gergi montaj konumu']
+    ['Kol boyu a', 'Yay ön yükü', 'Yay oranı k', 'Gergi avarasının merkezi',
+     'Kol çalışma açısı']
       .forEach((ad) => expect(satir(ad)).toContain('<b>girdi</b>'));
+    // GÖVDENİN MONTAJ KONUMU TÜREV TARAFINDA: yön 2026-09-01'de çevrildi.
+    expect(satir('Gövdenin montaj konumu')).toContain('<b>türev</b>');
     ['Gergi kasnağı sarımı', 'Hubload–kol açısı', 'Take-up oranı', 'Yay momenti']
       .forEach((ad) => expect(satir(ad)).toContain('<b>türev</b>'));
     // Tasarım gerginliği ARTIK TÜREV: alan kaldırıldı, yay dengesinden geliyor.
@@ -947,27 +950,33 @@ describe('teori kaynağı — türetme ve ankraj', () => {
     expect(T).toMatch(/tek bir serbestlik derecesini paylaşır/);
     expect(T).toMatch(/Kayış seçilmişse/);
     expect(T).toMatch(/Kayış henüz seçilmemişse/);
-    expect(T).toMatch(/L_\{\\text\{eff\}\} \\;=\\; L_\{\\text\{gereken\}\}\(\\theta\^\{\*\}\)/);
+    expect(T).toMatch(/L_\{\\text\{eff\}\} \\;=\\; L_\{\\text\{gereken\}\}\(\\theta_\{\\text\{nom\}\}\)/);
     expect(T).toMatch(/\(4\.5\)/);
   });
 
-  test('§4.5 MONTAJ ZARFI bölümü var ve ölçütü denklemle veriyor', () => {
-    expect(T).toMatch(/4\.5 Montaj zarfı ve kol açısının seçimi/);
-    expect(T).toMatch(/\\arg\\max/);
+  test('§4.5 montaj konumunun TÜREVİNİ denklemle veriyor', () => {
+    expect(T).toMatch(/4\.5 Kolun çalışma açısı ve gövdenin montaj konumu/);
     expect(T).toMatch(/\(4\.6\)/);
     expect(T).toMatch(/\(4\.7\)/);
+    // (4.7) YÖNÜ: p = c − a(cosθ, sinθ) — TERSİ değil
+    expect(T).toMatch(/\\mathbf\{p\} \\;=\\; \\mathbf\{c\} \\;-\\;/);
     // fiziksel gerekçe ve ölçülen sınır BASILMAK ZORUNDA
-    expect(T).toMatch(/tepe gerginliği en küçük/);
-    expect(T).toMatch(/42,7…59,5/);                       // β bandı
-    expect(T).toMatch(/kalibrasyondur, bağımsız doğrulama değildir/);
-    expect(T).toMatch(/153/);                             // paketleme aykırısı
+    expect(T).toMatch(/paketleme/);
+    expect(T).toMatch(/42,5…60,1/);                       // β bandı
+    expect(T).toMatch(/2<\/strong> ±5° içinde|<strong>ikisini<\/strong>/);  // ölçütün çöküşü
+    expect(T).toMatch(/20,7/);
+    expect(T).toMatch(/24,1/);                            // platonun genişlemesi
   });
 
-  test('AD ÇAKIŞMASI kapandı: servis zarfı ↔ montaj zarfı ayrı adlandırılıyor', () => {
+  test('MONTAJ ZARFI KALKTI — belge artık bir seçim ölçütü anlatmıyor', () => {
+    // Ölçüt girdi montaj konumuyken çalışıyordu; avara merkezine dönünce
+    // eğrisi düzleşti (%1 platosu 2,1° → 24,1°). Belgede kalsaydı okuyucu yapılmayan
+    // bir hesabı yapıyor sanırdı — bu deponun "ULAŞILAMAZ ÇARE" sınıfı.
+    expect(T).not.toMatch(/montaj zarfı/i);
+    expect(T).not.toMatch(/\\arg\\max/);
+    expect(T).not.toMatch(/theta\^\{\*\}/);
+    // ...ama SERVİS zarfı duruyor: o kayış boyunun açtığı zarf, ayrı şey.
     expect(T).toMatch(/servis zarfını/);
-    expect(T).toMatch(/montaj zarfıyla/);
-    // ve iki zarfın FARKI yazılı (hangisinde ne sabit)
-    expect(T).toMatch(/montaj noktası sabit, kolun saati serbesttir/);
   });
 
   test('§1 dördüncü soruyu — hangi kayışı ısmarlamalıyım — sayıyor', () => {
@@ -1225,17 +1234,17 @@ describe('§8.7 montaj konumu ve avara hareketi', () => {
   // "gerçek denetim" dalını tutuyordu — üçü de kalktı.
   const R = () => coz();
 
-  test('MONTAJ KONUMU bir GİRDİ, avara merkezi bir ÇIKTI olarak kuruluyor', () => {
+  test('AVARA MERKEZİ bir GİRDİ, montaj konumu bir ÇIKTI olarak kuruluyor', () => {
     const h = RP._frPivotBlock(R());
-    expect(h).toMatch(/Otomatik gergi montaj konumu ve avaranın hareketi/);
-    expect(h).toMatch(/tek bir koordinat/);
-    expect(h).toMatch(/bir <b>çıktıdır<\/b>/);
+    expect(h).toMatch(/Gergi gövdesinin montaj konumu ve avaranın hareketi/);
+    expect(h).toMatch(/<b>tek<\/b> koordinatı/);
+    expect(h).toMatch(/bir girdi <b>değildir<\/b>/);
   });
 
-  test('DENKLEM YÖNÜ: c = p + a(cosθ, sinθ) — avaranın hareketinin tanımı', () => {
+  test('DENKLEM YÖNÜ: p = c − a(cosθ, sinθ) — montaj konumunun tanımı', () => {
     const h = RP._frPivotBlock(R());
-    expect(h).toMatch(/\\mathbf\{c\}[\s\S]{0,40}\\mathbf\{p\}/);
-    expect(h).not.toMatch(/\\mathbf\{p\}\s*\\;=\\;\s*\\mathbf\{c\}/);
+    expect(h).toMatch(/\\mathbf\{p\} \\;=\\; \\mathbf\{c\} \\;-\\;/);
+    expect(h).not.toMatch(/\\mathbf\{c\} \\;=\\; \\mathbf\{p\} \\;\+\\;/);
   });
 
   test('DOĞRULAMA DİLİ YOK — "denetim", "totoloji", "ölçülmüş pivot" geçmiyor', () => {
@@ -1246,11 +1255,21 @@ describe('§8.7 montaj konumu ve avara hareketi', () => {
     expect(h).not.toMatch(/kullanıcıdan <b>istenmez<\/b>/);
   });
 
-  test('SIRA yazılı: montaj konumu → kol açısı → merkez ve kayış boyu', () => {
+  // ÜRETİLEN YÜZEYDEN: bloğu doğrudan çağıran testler, onu §8'den DÜŞÜREN
+  // mutasyondan sağ çıkıyordu (ölçüldü). Kapı §8'in kendisine bakıyor.
+  test('blok §8’in İÇİNDE basılıyor — doğrudan çağrı yetmez', () => {
+    const h8 = RP._frSection8(R8, NODE);
+    expect(h8).toMatch(/Gergi gövdesinin montaj konumu ve avaranın hareketi/);
+    expect(h8).toMatch(/Avara merkezinden montaj konumunun kuruluşu/);
+    expect(h8).toContain('\\mathbf{p} \\;=\\; \\mathbf{c} \\;-\\;');
+  });
+
+  test('SIRA yazılı: avara merkezi → kayış boyu → montaj konumu', () => {
     const h = RP._frPivotBlock(R());
     expect(h).toMatch(/Sıra bu/);
-    expect(h).toMatch(/montaj konumunu<\/b> girer/);
+    expect(h).toMatch(/avara kasnağının merkezini<\/b> girer/);
     expect(h).toMatch(/kayış boyu<\/b> ondan türer/);
+    expect(h).toMatch(/gövdenin montaj konumu<\/b> türer/);
   });
 });
 
@@ -1417,77 +1436,24 @@ describe('detay rapor · sayfa numarası, sınırlayıcı, Tablo 9 kuruluşu', (
     expect((s8.match(/\\\]/g) || []).length).toBe(0);
   });
 
-  // ── 3) TABLO 9'UN KURULUŞU ───────────────────────────────────────────────
-  test('Tablo 9 · her ölçüt AMAÇ FONKSİYONUNU ve YÖNÜNÜ taşıyor (tek kaynak)', () => {
-    RP.VE_FR_ENV_CRITERIA.forEach((c) => {
-      expect(typeof c.J).toBe('string');
-      expect(c.J.length).toBeGreaterThan(3);
-      expect(['max', 'min']).toContain(c.yon);
-    });
-    // Kazanan ölçüt EN BÜYÜKLENEN take-up minimumu — (4.x)'in ta kendisi
-    const win = RP.VE_FR_ENV_CRITERIA.filter((c) => c.win)[0];
-    expect(win.yon).toBe('max');
-    expect(win.J).toMatch(/\\min/);
-    expect(win.J).toMatch(/dL/);
-  });
-
-  test('Tablo 9 · formüller TABLODA basılıyor, ikinci kopyadan değil', () => {
-    const env = RP._frEnvelopeBlock(R8);
-    RP.VE_FR_ENV_CRITERIA.forEach((c) => {
-      expect(env).toContain(c.J);          // satırın kendi J'si belgede
-      expect(env).toContain(c.ad);
-    });
-    expect(env).toContain('Amaç fonksiyonu');
-  });
-
-  test('Tablo 9 · üç sütunun da KURULUŞU denklemle yazılı', () => {
-    const env = RP._frEnvelopeBlock(R8);
-    // yoklama kümesi Θ — bant sürekli değil, dört noktada örnekleniyor
-    expect(env).toMatch(/\\Theta\s*\\;=\\;/);
-    expect(env).toMatch(/\\tfrac\{1\}\{2\}\\theta_\{\\text\{nom\}\}/);
-    // argopt
-    expect(env).toMatch(/arg\\,opt/);
-    // Δ SARMALANMIŞ — çember üzerinde fark başka türlü tanımsız
-    expect(env).toMatch(/\\operatorname\{wrap\}/);
-    expect(env).toMatch(/N = 14/);
-    // medyan ve isabet sayımı
-    expect(env).toMatch(/\\operatorname\{med\}/);
-    expect(env).toMatch(/\\le 5\^\\circ/);
-    // plato ve ceza
-    expect(env).toMatch(/0\{,\}99\\,\s*J\(\\theta\^\{\*\}\)/);
-    expect(env).toMatch(/1 - \\frac\{J\(\\theta_\{\\text\{ted\}\}\)\}/);
-  });
-
-  test('Tablo 9 · yoklama kümesi BANT ÇARPANINDAN, elle yazılmıyor', () => {
-    // Yalnız "1,5 basılıyor mu" diye bakmak YETMEZ: sabit elle yazılsaydı da
-    // aynı dizgi çıkardı (mutasyonla ölçüldü, kapı geçiyordu). Kapı bu yüzden
-    // ÇARPANI DEĞİŞTİRİP çıktının onu izlediğini ölçüyor.
-    const env = RP._frEnvelopeBlock(R8);
-    expect(env).toContain(String(RP._frEnvMult()).replace('.', ',')
-      + '\\,\\theta_{\\text{nom}}');
-    const eski = global.VE_FEAD_ENV_TRAVEL_MULT;
-    try {
-      global.VE_FEAD_ENV_TRAVEL_MULT = 1.9;
-      expect(RP._frEnvMult()).toBe(1.9);
-      const e2 = RP._frEnvelopeBlock(R8);
-      expect(e2).toContain('1,9\\,\\theta_{\\text{nom}}');       // yoklama kümesi
-      expect(e2).toContain('1,9\\cdot\\theta_{\\text{nom}}');    // servis bandı
-    } finally { global.VE_FEAD_ENV_TRAVEL_MULT = eski; }
-  });
-
-  test('Tablo 9 · kuruluş bloğu TABLODAN ÖNCE geliyor', () => {
-    const env = RP._frEnvelopeBlock(R8);
-    const iK = env.indexOf('büyüklükleri nasıl kuruldu');
-    const iT = env.indexOf('Seçim ölçütü 14 tedarikçi');
-    expect(iK).toBeGreaterThan(-1);
-    expect(iT).toBeGreaterThan(iK);
+  // ── 3) TABLO 9 (ADAY ÖLÇÜTLER) KALKTI ────────────────────────────────────
+  // Girdi montaj konumundan avara merkezine dönünce seçim ölçütü çöktü
+  // (β→90° dejenerasyonu, 2/14) ve belgeden kalktı. Kapı geriye dönüşü
+  // tutuyor: ölçüt tablosu geri gelirse kırmızı.
+  test('aday ölçüt tablosu ve zarf bloğu belgede YOK', () => {
+    expect(RP.VE_FR_ENV_CRITERIA).toBeUndefined();
+    expect(RP._frEnvelopeBlock).toBeUndefined();
+    expect(RP._frEnvMult).toBeUndefined();
+    const s8 = RP._frSection8(R8, NODE);
+    expect(s8).not.toMatch(/Amaç fonksiyonu/);
+    expect(s8).not.toMatch(/arg\\,opt/);
+    expect(s8).not.toMatch(/montaj zarf/i);
   });
 
   test('h5 ara başlığı şablon CSS\'inde tanımlı (varsayılana düşmüyor)', () => {
     const css = sablon();
     expect(css).toMatch(/h5\{[^}]*font-size/);
     expect(css).toMatch(/h1,h2,h3,h4,h5\{font-family/);
-    expect(RP._frEnvelopeBlock(R8)).toContain('<h5>');
   });
 });
 
@@ -1509,7 +1475,9 @@ describe('detay rapor · bölüm atıfları ve sıralama', () => {
     const i = h8.search(bas);
     const j = h8.indexOf('<h3>', i + 4);
     const bolum = h8.slice(i, j < 0 ? h8.length : j);
-    expect(bolum).toContain('Türeyen efektif kayış boyu');
+    // Türeyen boy O bölümde ve TÜREV olarak işaretli.
+    const satir = bolum.slice(bolum.indexOf('Kayış efektif boyu'));
+    expect(satir.slice(0, satir.indexOf('</tr>'))).toContain('<b>türev</b>');
   });
 
   test('iki atıf da AYNI kaynaktan — ikinci kopya yok', () => {

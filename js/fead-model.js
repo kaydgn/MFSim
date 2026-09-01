@@ -85,12 +85,15 @@ function veFeadRadius(node){ return veFeadOD(node) / 2; }
 function veFeadMigrateNode(node){
   if(!node || !node.data) return false;
   var d = false;
-  // Gergi: iki koordinatlı eski kayıt → tek montaj konumu (bkz.
-  // veFeadMigrateTensioner). Tip denetimi `_feadDefOf` ile değil ALANLA
+  // Gergi: eski yazımlar → tek koordinat (AVARA MERKEZİ). Bkz.
+  // veFeadMigrateTensioner. Tip denetimi `_feadDefOf` ile değil ALANLA
   // yapılıyor: göç, düğüm tanımları yüklenmeden de (saf Node yolu) koşuyor.
-  if(node.data.cenX !== undefined || node.data.cenY !== undefined
+  // `cenX/cenY` TETİKLEYİCİ DEĞİL — o zaten bugünkü biçim; tetikleyici, artık
+  // bulunmaması gereken alanlardır.
+  if(node.data.pivotX !== undefined || node.data.pivotY !== undefined
      || node.data.angleMode !== undefined || node.data.freeAngleDeg !== undefined
-     || node.data.verifyCenX !== undefined || node.data.verifyCenY !== undefined)
+     || node.data.verifyCenX !== undefined || node.data.verifyCenY !== undefined
+     || node.data.armPinned !== undefined || node.data.armAuto !== undefined)
     d = veFeadMigrateTensioner(node.data) || d;
   if(node.data.dia === undefined) return d;
   if(node.data.od === undefined || node.data.od === null || node.data.od === '') {
@@ -108,52 +111,91 @@ function veFeadMigrateAll(nodeList){
 // ── GERGİNİN İKİ NOKTASI — hangi yüzey hangisini okur ──────────────────────
 //
 // Gergi bileşeninin kayış düzleminde İKİ noktası var ve karıştırılmaları bu
-// modülün en pahalı sessiz hata sınıfı (ölçüldü: gerginlik −%48,6):
+// modülün en pahalı hata sınıfı. YÖN ÇEVRİLİNCE BEDELİ BÜYÜDÜ ve ÖLÇÜLDÜ
+// (14 Gates sistemi, montaj konumu merkez alanına yazılırsa):
+//     14/14 sistem yine ÇÖZÜLÜYOR · gerginlik sapması medyan +%1526,
+//     en kötü +%4518 · ve 5/14 sistemde HİÇBİR geometri ihlali çıkmıyor.
+// Eski yönde aynı karışıklık −%48,6 veriyordu ve 9/14 sistemde modeli
+// durduruyordu. Yani sayı artık daha gürültülü ama uyarı daha SESSİZ —
+// teşhis yüzeyi (türeyen montaj konumu okuması) bu yüzden zorunlu:
 //
-//   MONTAJ KONUMU   gövdenin motora bağlandığı nokta — TEK GİRDİ, sabit
-//   KASNAK MERKEZİ  kolun ucu — kol açısıyla GEZER (BMC'de 59,9 mm'lik bir zarf),
-//                   yani bir ÇIKTI; avara kasnağının hareketi tam olarak budur
+//   AVARA MERKEZİ   kolun ucundaki kasnağın merkezi — TEK GİRDİ. Kullanıcının
+//                   girdiği koordinat budur ve tedarikçiye giden FEAD bilgi
+//                   sayfası bütün kasnaklar için AYNI sütunda tam olarak bunu
+//                   veriyor (BMC: −170,080 / 99,160).
+//   MONTAJ KONUMU   gövdenin motora bağlandığı nokta = kolun dönme ekseni —
+//                   bir ÇIKTI. Avara merkezinden ve kolun çalışma açısından
+//                   türer: p = c − a·(cos θ, sin θ).
 //
-// İki okuyucu AYRI ve birleştirilemez: kanvas KUTUSU montaj konumunu
-// gösteriyor (sürükleme de onu yazıyor), dolanım yönü (loopSense) ise her
-// zaman KASNAK merkezini istiyor. Tek fonksiyona indirgemek yönü kol boyu
-// kadar kaymış bir çokgenden okumak olurdu.
+// YÖN TERSİNE ÇEVRİLDİ (2026-09-01, kullanıcı kararı): *"biz otomatik gergi
+// için normalde 'otomatik gerginin montaj noktasını' veriyorduk. Bu daha
+// mantıklı oluyordu fakat şimdi 'otomatik gergi avarasının orta noktasını'
+// vereceğiz."* Karşılaştırma YOK, doğrulama YOK — tek girdi, tek anlam.
 //
-// ÖLÇÜLDÜ — ikisi de (o zamanki) `cenX/cenY`ye bakan tek bir satırdan
-// kırılmıştı (o alan zarf kipinde HİÇ yazılmıyor):
-//   • veFeadNaturalSense  → 0 döndürüyordu; "Dönüş Yönü" rozeti ve paneli
-//     çözülmüş bir modelde bile "— (okunamadı)" yazıyordu.
-//   • veFeadArrangeByCoords → gergiyi "koordinatı yok" sayıp kümenin ALTINA
-//     diziyordu (AG00976'da kutu 2857,4/3039,0 yerine 2971,0/3277,3) ve
-//     "1 kasnağın koordinatı yok" uyarısı basıyordu — oysa alt topoloji
-//     açılışında veFeadSyncCanvasFromMm onu doğru şekilde pivota oturtuyor.
-//     Yani iki yerleştirme yolu birbirinden habersizdi.
+// ÇEVİRME CEBİRSEL OLARAK TAM — ÖLÇÜLDÜ (14 Gates sistemi): merkez + kol
+// açısından pivotu geri üretip sistemi yeniden kurunca
+//   |Δp| ≤ 4,263e−14 mm · ΔL_eff ≤ 1,137e−13 mm · ΔT ≤ 1,494e−13 % ·
+//   Δsarım ≤ 5,684e−14°
+// Yani yön değişikliği bir yaklaşıklık değil, aynı denklemin öteki yüzü.
+//
+// İKİ OKUYUCU AYRI ve birleştirilemez: kanvas KUTUSU avara merkezini gösteriyor
+// (sürükleme de onu yazıyor), gerginin YAY DENGESİ ise pivotu istiyor. Tek
+// fonksiyona indirgemek birini kol boyu kadar kaymış bir noktadan okumak olurdu.
 
-// Gergi KUTUSUNUN gösterdiği mm noktası — MONTAJ KONUMU. Tek kural, tek yer.
+// Gergi KUTUSUNUN gösterdiği mm noktası — AVARA MERKEZİ. Tek kural, tek yer.
 // Okunamıyorsa null; UYDURULMAZ.
 function veFeadTensionerBoxMm(td){
   if(!td) return null;
-  var px = _feadNum(td.pivotX, NaN), py = _feadNum(td.pivotY, NaN);
-  return (Number.isFinite(px) && Number.isFinite(py)) ? [px, py] : null;
+  var cx = _feadNum(td.cenX, NaN), cy = _feadNum(td.cenY, NaN);
+  return (Number.isFinite(cx) && Number.isFinite(cy)) ? [cx, cy] : null;
 }
-// Gergi KASNAĞININ merkezi — bir GİRDİ DEĞİL, montaj konumundan ve kol
-// açısından TÜREYEN bir sonuç. Avara kasnağının hareketi tam olarak bu
-// çemberdir: c = p + a·(cos θ, sin θ).
+
+// Gergi GÖVDESİNİN montaj konumu (= kolun dönme ekseni) — bir GİRDİ DEĞİL,
+// avara merkezinden ve kolun çalışma açısından TÜREYEN bir sonuç:
 //
-// Kutu okuyucusuyla birleştirilemez: kanvas kutusu montaj konumunu gösterir,
-// dolanım yönü (loopSense) ise kasnak merkezini ister. Tek fonksiyona
-// indirgemek yönü kol boyu kadar kaymış bir çokgenden okumak olurdu —
-// ölçüldü, sentetik bir düzende işareti ÇEVİRİYOR.
-function veFeadTensionerCenter(td, absDeg){
+//     p = c − a·(cos θ_çalışma , sin θ_çalışma)
+//
+// Atölyeye giden sayı budur (gövde cıvatasının/boss'un yeri). Girdi olarak
+// SORULMAZ: sorulsaydı aynı büyüklüğü iki yoldan isteyip aralarında bir
+// karşılaştırma doğardı — kullanıcının açıkça kaldırttığı şey.
+//
+// EŞMERKEZLİLİK ÖLÇÜLDÜ (E9843 parça çizimi, 2026-08-29): gövdenin merkezî
+// bağlantı deliği kolun dönme ekseniyle eşmerkezli. Eksantrik gövdeli bir
+// gergide ikisi ayrılırdı; bugün elde öyle bir parça YOK.
+function veFeadTensionerPivot(td){
   if(!td) return null;
-  var px = _feadNum(td.pivotX, NaN), py = _feadNum(td.pivotY, NaN);
+  var cx = _feadNum(td.cenX, NaN), cy = _feadNum(td.cenY, NaN);
   var a = _feadNum(td.armLen, NaN);
-  var th = _feadNum(absDeg, NaN);
-  if(!Number.isFinite(th)) th = _feadNum(td.armMeanDeg, NaN);
-  if(!Number.isFinite(px) || !Number.isFinite(py) || !(a > 0) || !Number.isFinite(th))
+  var th = _feadNum(td.armMeanDeg, NaN);
+  if(!Number.isFinite(cx) || !Number.isFinite(cy) || !(a > 0) || !Number.isFinite(th))
     return null;
   var r = th * Math.PI / 180;
-  return [px + a * Math.cos(r), py + a * Math.sin(r)];
+  return [cx - a * Math.cos(r), cy - a * Math.sin(r)];
+}
+
+// Gergi AVARASININ merkezi. Çalışma (nominal) açısında bu doğrudan GİRDİNİN
+// kendisidir; başka bir kol açısı sorulursa pivot türetilip oradan dönülür.
+//
+//   c(θ) = p + a·(cos θ, sin θ),   p = c_girdi − a·(cos θ_çalışma, sin θ_çalışma)
+//
+// Çalışma açısı YUVARLAK DÖNÜLÜR (girdi birebir), türetip geri dönmez: aradaki
+// ~1e−14'lük kayan nokta artığı hiçbir şeyi değiştirmez ama "girilen sayı
+// çıkmıyor" diye okunacak bir fark bırakırdı.
+//
+// Kutu okuyucusuyla birleştirilemez (bkz. yukarıdaki not).
+function veFeadTensionerCenter(td, absDeg){
+  if(!td) return null;
+  var cx = _feadNum(td.cenX, NaN), cy = _feadNum(td.cenY, NaN);
+  if(!Number.isFinite(cx) || !Number.isFinite(cy)) return null;
+  var th = _feadNum(absDeg, NaN);
+  var thMean = _feadNum(td.armMeanDeg, NaN);
+  if(!Number.isFinite(th) || (Number.isFinite(thMean) && Math.abs(th - thMean) < 1e-9))
+    return [cx, cy];
+  var p = veFeadTensionerPivot(td);
+  var a = _feadNum(td.armLen, NaN);
+  if(!p || !(a > 0)) return [cx, cy];
+  var r = th * Math.PI / 180;
+  return [p[0] + a * Math.cos(r), p[1] + a * Math.sin(r)];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -162,10 +204,10 @@ function veFeadTensionerCenter(td, absDeg){
 //
 // rel_mean: kol, yay ÇALIŞMA momentine kadar kaç derece kurulmuş.
 //     rel_mean = (M_mean − M₀) / k
-// Üç sayı da SALT YAY KÜNYESİNDEN gelir; montaj konumu, kol boyu ve kayış
-// yolu bu hesaba HİÇ girmez. Bu ayrım özelliğin şartı: kol açısı zarftan
-// seçilirken ölçüt bu bandı kullanıyor, dolayısıyla geometriye bağlansaydı
-// döngü kurulurdu.
+// Üç sayı da SALT YAY KÜNYESİNDEN gelir; avara merkezi, kol boyu ve kayış
+// yolu bu hesaba HİÇ girmez. Bu ayrım özelliğin şartı: kayış boyu bir ÇIKTI
+// ve kolun oturduğu yeri bu sayı belirliyor — geometriye bağlansaydı döngü
+// kurulurdu.
 //
 // ESKİDEN BU FONKSİYON İKİ İŞ YAPIYORDU (`veFeadTensionerMount`): yay
 // kurulmasını hesaplamak VE gergi kasnağının girilen montaj merkezi ile
@@ -176,72 +218,56 @@ function veFeadTensionerCenter(td, absDeg){
 //  TEK KOORDİNAT — ESKİ KAYITLARIN GÖÇÜ (`veFeadMigrateTensioner`)
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// Kullanıcı kararı (2026-08-29): *"Artık sadece 'otomatik gergi montaj konumu'
-// var. Buradan otomatik gerginin avara kısmının hareketi tanımlanacak sadece.
-// … Herhangi bir doğrulama gibi bir olay söz konusu değil."*
+// Kullanıcı kararı (2026-08-29): *"Herhangi bir doğrulama gibi bir olay söz
+// konusu değil."* — gergide TEK koordinat var ve karşılaştırılacak ikinci bir
+// nokta yok. Kararı (2026-09-01) o tek koordinatın HANGİSİ olduğunu değiştirdi:
+// artık AVARA MERKEZİ (`cenX/cenY`), montaj konumu değil.
 //
-// ESKİDEN ÜÇ KİP VARDI ve her biri gergiyi başka bir soruyla açıyordu:
-//   • 'mount'    → gergi KASNAĞININ montaj merkezi (cenX/cenY) girilir,
-//                  montaj noktası ondan TÜRETİLİRDİ
-//   • 'direct'   → serbest kol açısı elle girilirdi
-//   • 'envelope' → montaj noktası girilir, kol açısı zarftan seçilir
-// Üçü aynı büyüklüğü üç ayrı yoldan istediği için panel iki koordinat alanı
-// birden taşıyordu ve aralarında bir ÇAPRAZ KONTROL vardı. Kullanıcı ikisini
-// de kaldırttı: tek girdi, tek anlam, doğrulama yok.
+// GEÇMİŞTE ÜÇ AYRI YAZIM DOLAŞTI ve göç üçünü de tek biçime indiriyor:
 //
-// GÖÇ TEK SEFERLİK VE YERİNDE. Eski kayıtta montaj noktası zaten yazılıysa
-// (tedarikçi raporundan okunmuş) o kazanır; yoksa kasnak merkezinden, kol
-// boyundan ve kolun çalışma açısından çıkarılır — göç ANINDA bir kez, sonra
-// bir daha bakılmaz. Eski alanlar SİLİNİR: kalsalardı panel onları
-// göstermese de ileride bir okuyucu sessizce onlara dönebilirdi (bu deponun
-// tekrar eden hata sınıfı).
+//   ① `cenX/cenY` (+ `angleMode:'mount'`)   → BUGÜNKÜ BİÇİMİN KENDİSİ.
+//      2026-08-29 öncesindeki her kayıt böyleydi; alan olduğu gibi kalıyor.
+//   ② `pivotX/pivotY` + `armMeanDeg`        → 2026-08-28…09-01 arası zarf
+//      kipi. Merkez TÜRETİLİR: c = p + a·(cos θ, sin θ).
+//   ③ yalnız `freeAngleDeg`                 → kalkmış "serbest açı" kipi.
+//      Çevrilecek koordinat YOK; model çözülmez ve sebebini adıyla yazar.
 //
-// KOL AÇISI SABİTLENİR ve bu göçün asıl işi: eski kayıt kolun nerede
-// durduğunu BİLİYORDU (montaj merkezi onu söylüyordu). Sabitlenmezse zarf
-// kendi açısını seçer ve kullanıcının kaydettiği model sessizce başka bir
-// yere oturur. Kullanıcı sabitlemeyi panelden kaldırıp zarfa bırakabilir.
+// İKİSİ BİRDEN VARSA MERKEZ KAZANIR — çünkü girdi odur. Elle düzenlenmiş bir
+// dosya ikisini birden taşıyabilir; pivotu kazandırmak kullanıcının girdiği
+// sayıyı sessizce yok saymak olurdu.
 //
-// ÖLÇÜLDÜ (göçten sonra, aynı model): AG00976 T 544,05 → 543,85 (−%0,036),
-// BMC 532,14 → 525,55 (−%1,24). İkinci fark kayışın kendisinden: BMC'nin
-// "1715" boyu YUVARLANMIŞ bir katalog adı, eski kip kolu o boya oturtmak
-// için nominalin 0,36° ötesine itiyordu. Kayış boyu artık bir SONUÇ olduğu
-// için kol nominalinde duruyor.
+// ESKİ ALANLAR SİLİNİR. Bırakılsalardı panelde hiç sorulmayan, hiçbir yüzeyin
+// okumadığı ama koda sızabilen ölü alanlar kalırdı — ve tam oradan "montaj
+// konumunu avara merkezi say" yedeği doğardı; ölçülmüş bedeli gerginlikte
+// medyan +%1526 (5/14 sistemde hiçbir uyarı çıkmadan).
+//
+// `armPinned` / `armAuto` DA SİLİNİR: kol çalışma açısı artık her zaman bir
+// GİRDİ, seçilen bir şey değil. "Sabitlendi mi" sorusunun karşılığı kalmadı.
+//
+// ÖLÇÜLDÜ (② → ①, iki örnek): türetilen merkez belgenin kendi koordinatına
+// BMC'de 0,0036 mm, AG00976'da 0,0035 mm uzakta — yani iki belgenin (giden
+// bilgi sayfası ↔ dönen Gates raporu) yazdığı iki nokta gerçekten aynı kolun
+// iki ucu. Çözüm birebir korunuyor: ΔL ≤ 0,0025 mm, ΔT ≤ %0,0083.
 function veFeadMigrateTensioner(td){
   if(!td) return false;
   var degisti = false;
-  var px = _feadNum(td.pivotX, NaN), py = _feadNum(td.pivotY, NaN);
   var cx = _feadNum(td.cenX, NaN),   cy = _feadNum(td.cenY, NaN);
+  var px = _feadNum(td.pivotX, NaN), py = _feadNum(td.pivotY, NaN);
 
-  // Montaj noktası yoksa eski kasnak merkezinden çıkar (bir kez).
-  if((!Number.isFinite(px) || !Number.isFinite(py))
-     && Number.isFinite(cx) && Number.isFinite(cy)){
+  // Avara merkezi yoksa eski montaj konumundan çıkar (bir kez).
+  if((!Number.isFinite(cx) || !Number.isFinite(cy))
+     && Number.isFinite(px) && Number.isFinite(py)){
     var a = _feadNum(td.armLen, NaN), th = _feadNum(td.armMeanDeg, NaN);
-    if(Number.isFinite(a) && a > 0 && Number.isFinite(th)){
+    if(a > 0 && Number.isFinite(th)){
       var r = th * Math.PI / 180;
-      td.pivotX = cx - a * Math.cos(r);
-      td.pivotY = cy - a * Math.sin(r);
-      px = td.pivotX; py = td.pivotY;
+      td.cenX = Math.round((px + a * Math.cos(r)) * 1000) / 1000;
+      td.cenY = Math.round((py + a * Math.sin(r)) * 1000) / 1000;
       degisti = true;
     }
   }
-  // Kolun durduğu yer biliniyorduysa SABİTLENİR — yoksa model sessizce kayar.
-  if(Number.isFinite(px) && Number.isFinite(py)
-     && Number.isFinite(cx) && Number.isFinite(cy)
-     && !Number.isFinite(_feadNum(td.armMeanDeg, NaN))){
-    var d = Math.atan2(cy - py, cx - px) * 180 / Math.PI;
-    if(Number.isFinite(d)){ td.armMeanDeg = d; degisti = true; }
-  }
-  // İKİNCİ KOORDİNAT TÜRETİLEMESE BİLE SİLİNİR. Bırakılsaydı panelde hiç
-  // sorulmayan, hiçbir yüzeyin okumadığı ama koda sızabilen ölü bir alan
-  // kalırdı — ve tam oradan "kasnak merkezini montaj konumu say" yedeği
-  // doğardı (ölçülmüş bedeli: gerginlik −%48,6, sarım en kötü +27,9°).
-  // Türetilemediğinde model çözülmez ve sebebini adıyla yazar.
-  if(Number.isFinite(cx) && Number.isFinite(cy)){
-    if(td.armPinned === undefined){ td.armPinned = true; degisti = true; }
-    delete td.cenX; delete td.cenY; degisti = true;
-  }
-  // Kip seçicisi ve elle serbest açı yüzeyleri kalktı; alanları da kalkıyor.
-  ['angleMode', 'freeAngleDeg', 'verifyCenX', 'verifyCenY'].forEach(function(k){
+  // MONTAJ KONUMU TÜRETİLEMESE BİLE SİLİNİR (bkz. yukarıdaki gerekçe).
+  ['pivotX', 'pivotY', 'angleMode', 'freeAngleDeg', 'verifyCenX', 'verifyCenY',
+   'armPinned', 'armAuto'].forEach(function(k){
     if(td[k] !== undefined){ delete td[k]; degisti = true; }
   });
   return degisti;
@@ -598,230 +624,57 @@ function veFeadWorkingPoint(sys, mode, nominalRelDeg){
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  PİVOT BİR GİRDİ — KOL AÇISI BİR ZARFTAN SEÇİLİR
+//  MONTAJ ZARFI KALKTI — KOL ÇALIŞMA AÇISI BİR GİRDİ
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// Kullanıcı isteği (2026-08-28): *"Kullanıcı ilk olarak KIRMIZI NOKTA olarak
-// OTOMATİK GERGİ MONTAJ KOORDİNATLARInı verecek. Daha sonra program OTOMATİK
-// GERGİ ÖZELLİKLERİ baz alınarak bir PİVOT NOKTASI ZARFI oluşturacak … program
-// bu sonsuz noktalar içinden (zarf) en uygun noktayı seçecek."*
+// Bir dönem gergi MONTAJ KONUMU girdiydi ve kolun mutlak çalışma açısı bir
+// ZARFTAN seçiliyordu (ölçüt: `max over θ of min over rel of dL/dθ`, 14 Gates
+// sisteminden geriye çözülmüştü, medyan sapma 4,5° · 9/14 sistem ±5° içinde).
 //
-// ── YÖN TERSİNE ÇEVRİLİYOR ────────────────────────────────────────────────
-// Eski akış: kullanıcı gergi KASNAĞININ merkezini verir (YEŞİL nokta), pivot
-// ondan TÜRER (`veFeadPivotFromArm`). Yeni akış bunun tersi: pivot GİRİLİR
-// (KIRMIZI nokta — montaj cıvatası), kasnak merkezi bir ÇIKTIDIR.
+// GİRDİ AVARA MERKEZİNE DÖNÜNCE O ÖLÇÜT ÇÖKÜYOR ve sebebi fiziksel:
 //
-// Bu bir kolaylık değil, ÖLÇÜLMÜŞ bir hatanın düzeltmesi. Otomatik gergi iki
-// parçadır: gövde motora cıvatalanır (pivot), kol o pivot etrafında döner ve
-// ucunda avara kasnağı taşır. Montajda SABİT olan pivottur; kasnak merkezi
-// kolun o anki açısıyla değişen bir konumdur. Eskiden değişken olanı sorup
-// sabit olanı türetiyorduk.
+//   • Merkez SABİTKEN çalışma noktasındaki kayış yolu kol açısından TAMAMEN
+//     BAĞIMSIZDIR ve bu bir yaklaşıklık değil: ÖLÇÜLDÜ (6 Gates sistemi ×
+//     548 kol açısı) — sarım, altı açıklık, L_eff ve Σsarım en fazla
+//     4,55e−13 mm / 1,71e−13° oynuyor, yani makine hassasiyeti (1716 mm'de
+//     çift duyarlıklı ULP ≈ 2,3e−13 mm). PİVOT girdiyken aynı ızgarada
+//     L_eff 122–294 mm oynuyordu: **15 büyüklük mertebesi**.
+//   • Geriye ölçütün tutunacağı tek şey kalıyor: `T = M/(a·sinβ·2sin(φ/2))`
+//     içindeki sinβ, ve servis bandının ucundaki sarım kaybı. Sonuç, ölçüt
+//     eğrisinin DÜZLEŞMESİ — %1 platosu 2,1° → 24,1° (11,5 KAT).
 //
-//     ÖLÇÜLDÜ (AG00976 · Gates 8PK1715HD raporu):
-//       Gates'in ölçtüğü pivot            (−250.00, 110.00)
-//       BMC örneğinin merkezden türettiği (−256.59, 123.97)   → 15.45 mm sapma
-//       gerginlik                          544.3 N ↔ 505.8 N  → %7.1
-//     ve bunu HİÇBİR ŞEY yakalamıyordu: `veFeadArmCheck` pivot türetilmişken
-//     TOTOLOJİK (fark yapısal olarak sıfır) — kodun kendi notu bunu yazıyor.
+// GEREKÇE "β 90°'ye ÇAKILIYOR" DEĞİL ve bu ayrım ölçüldü: seçilen β'nın
+// medyanı 63,2° (tam dejenerasyon kontrol koşusu 90,0° veriyor). Ölçüt
+// yanlış bir yeri seçmiyor — HİÇBİR yeri seçemiyor, çünkü eğri düz.
 //
-// ── ZARF: BİR SERBESTLİK DERECESİ KALIYOR ─────────────────────────────────
-// Pivot, kol boyu ve yay künyesi verildiğinde kolun MUTLAK açısı hâlâ serbest:
-// gövdenin montajdaki saat konumu (indeksi) onu belirler. Kasnak merkezi
-// pivot etrafında `armLength` yarıçaplı bir ÇEMBER üzerinde gezer — kullanıcının
-// "sonsuz nokta" dediği zarf budur. Kolun kendi gezinme aralığı (yay künyesinden
-// `rel_nom = (M_mean − M₀)/k`, ölçülen sistemlerde 15–37°) bu seçimin ÜSTÜNE
-// biner; zarf o aralığın nereye oturacağını seçer.
+// ÖLÇÜLDÜ (aynı 14 sistem, merkez girdi):
 //
-// ── SEÇİM ÖLÇÜTÜ TAHMİN DEĞİL, 14 GATES SİSTEMİNDEN GERİYE ÇÖZÜLDÜ ────────
-// Altı aday ölçüt, her sistemde zarf 0.25° adımla taranarak Gates'in gerçek
-// çalışma noktasıyla karşılaştırıldı (aci farkinin medyani):
+//     medyan sapma          20,7°   (pivot girdiyken 4,0°, aynı harness)
+//     ±5° içinde             2/14   (pivot girdiyken 8/14)
+//     ±10° içinde            2/14   ← ara bant YOK: ya isabet ya kopuş
+//     %1 platosu            24,1°   (pivot girdiyken 2,1°)
+//     dört sistemde sapma  >90°     (AG00879 138,4° · AG00894 113,6° ·
+//                                    AG00686 102,5° · AG00810 93,9°)
 //
-//     min take-up EN BÜYÜK          4.5°   ← 9/14 sistem ±5° içinde
-//     ortalama konumdaki T en küçük 10.3°
-//     Tmax en küçük                 20.3°
-//     T_max/T_min oranı en küçük    23.5°
-//     hubload tepe değeri en küçük  30.8°
-//     en küçük sarım en büyük       53.1°  ← ölçüt DEĞİL
+// Sekiz aday ölçüt tarandı (tepe gerginlik, T_max/T_min, hubload tepesi,
+// ortalama T, en küçük sarım …); en iyisi yine 2/14. Ölçüt sorunu değil,
+// SERBESTLİK DERECESİ sorunu: merkez verildikten sonra pivotun nereye
+// düştüğü bir PAKETLEME kararıdır (gövde motor bloğunda nereye cıvatalanıyor)
+// ve kayış fiziğinden çıkarılamaz.
 //
-// Kazanan ölçüt KESKİN: eğrinin %1 platosu ortalama 4.9° (çoğu sistemde
-// 1.0–2.8°), yani "±5° içinde" ucuz bir isabet değil. Gates'in noktasındaki
-// ceza medyan %4.0; iki sistemde tam 0.0%.
+// Bu yüzden kolun çalışma açısı (`armMeanDeg`) bir GİRDİDİR — kol boyu, yay
+// ön yükü ve yay katsayısıyla aynı yerden, gerginin montaj/parça verisinden
+// okunur. E9843'ün parça çizimi onu birebir yazıyor:
+//   "PIN POSITION FOR THE 344° MEAN ANGLE AND 22.5 Nm SPRING TORQUE
+//    @ 28° FREEARM-MEAN ROTATION"
+// ve aynı çizim, parçanın kendi değişmezinin MUTLAK açı değil BAĞIL dönme
+// olduğunu da gösteriyor (28° ↔ yay künyesinden (22,07−8,60)/0,480 = 28,06°).
+// Bu yüzden mutlak açı künye kütüphanesine YAZILMAZ: aynı E9843 BMC'de 344°,
+// AG00976'da 348° ile monte edilmiş.
 //
-//     ÖLÇÜT:  max over θ  of  min over rel∈[0, 1.5·rel_nom]  of  dL/dθ(θ, rel)
-//
-// FİZİKSEL ANLAMI: `T = M/(dL/dθ)` olduğu için take-up'ın EN KÜÇÜK olduğu yer
-// gerginliğin EN BÜYÜK olduğu yerdir. Ölçüt, kayışın servis zarfı boyunca
-// (yeni/uzun kayıştan yıpranmış/kısa kayışa) görülen TEPE GERGİNLİĞİ en küçük
-// yapan montaj saatini seçiyor — klasik gergi yerleşim kuralı.
-//
-// 1.5 ÇARPANI UYDURULMADI: 1.0…2.0 arası tarandı, 1.2–1.6 bandı bir PLATO
-// (medyan 3.5–4.5°, 8–9/14 sistem ±5°); 1.0'da 6.5°, 2.0'de 11.5°'e bozuluyor.
-// 1.5 platonun ortasında ve fiziksel karşılığı var: çalışma açısı + %50 pay.
-//
-// ── ÖLÇÜT KAYIŞ VERİSİNDEN BAĞIMSIZ ───────────────────────────────────────
-// Gezinme aralığı kayışın tolerans/aşınma zarfından DEĞİL, gerginin kendi yay
-// künyesinden geliyor. Ölçüldü: kayıştan türeyen aralık (Replace…MinBelt) ile
-// künyeden türeyen [0, 1.5·nom] aynı sonucu veriyor (medyan 4.5° ↔ 4.5°,
-// 8/14 ↔ 9/14). Bu, kayış boyunun bir ÇIKTI olmasının ön koşulu: seçim kayışı
-// bilmeden yapılabilmeli, yoksa döngü kurulurdu.
-//
-// ── SINIR: PAKETLEME MODELDE YOK ──────────────────────────────────────────
-// Zarfın hangi yayının motor bloğunda fiziksel olarak KULLANILABİLİR olduğunu
-// model bilmiyor. Ölçülen 14 sistemin 13'ünde en iyi nokta Gates'inkine komşu;
-// AG00879'da 153° uzakta ve orası motorun öteki yanı. Sonuç bu yüzden bir
-// ÖNERİDİR: kullanıcı açıyı sabitleyebilir (`armPinned`) ve zarf o zaman bir
-// seçici değil bir TEŞHİS yüzeyi olur.
-var VE_FEAD_ENV_TRAVEL_MULT = 1.5;   // ölçülmüş plato 1.2–1.6
-var VE_FEAD_ENV_COARSE_DEG  = 2;     // kaba tarama adımı
-var VE_FEAD_ENV_FINE_DEG    = 0.1;   // tepe çevresinde ince adım
-var VE_FEAD_ENV_FINE_SPAN   = 3;     // ince taramanın yarı genişliği (derece)
-var VE_FEAD_ENV_MIN_WRAP    = 1.0;   // bunun altında sarım = teğet kaybı
-
-// Zarfın TEK bir örneği. `cfg` çekirdeğe giden yapılandırma; `absDeg` kolun
-// çalışma (nominal yay yükü) konumundaki MUTLAK açısı.
-//
-// Her örnekte sistem YENİDEN KURULUYOR (`makeSystem`) — `sense` (kolun hangi
-// yöne dönünce kayışı kısalttığı) zarf boyunca değişebilir ve onu köprüde
-// yeniden yazmak çekirdeğin kuralını İKİNCİ KEZ yazmak olurdu. Ölçüldü:
-// örnek başına 0.25 ms, kaba+ince tarama toplam ~50 ms — bu bir TASARIM
-// hesabı, kare başına koşan bir şey değil.
-function _feadEnvSample(cfg, absDeg, relNom, mult){
-  var probes = [0, 0.5 * relNom, relNom, mult * relNom];
-  var out = { absDeg: absDeg, ok: false, why: '', takeupMin: NaN, takeupWork: NaN,
-              tensionMax: NaN, tensionWork: NaN, hubloadWork: NaN,
-              wrapWork: NaN, betaWork: NaN, beltMm: NaN };
-  var c2 = Object.assign({}, cfg);
-  c2.tensioner = Object.assign({}, cfg.tensioner);
-  delete c2.tensioner.sense;                       // çekirdek kendi bulsun
-  c2.tensioner.freeAngleDeg = absDeg;              // geçici; sense bulunduktan sonra düzeltilir
-  var sys;
-  try { sys = FEADCore.makeSystem(c2); }
-  catch(e){ out.why = veFeadTranslateError(e && e.message); return out; }
-  // sense belli — serbest açıyı, rel_nom'da mutlak açı `absDeg` olacak şekilde kur
-  sys.tensioner.freeAngleDeg = absDeg - sys.tensioner.sense * relNom;
-  sys._cache = {};
-  out.sense = sys.tensioner.sense;
-  var tks = [], Ts = [];
-  for(var i = 0; i < probes.length; i++){
-    var st;
-    try { st = FEADCore.tensionerState(sys, probes[i]); }
-    catch(e){ out.why = veFeadTranslateError(e && e.message); return out; }
-    if(!st || !Number.isFinite(st.tensionN) || !(st.tensionN > 0)){
-      out.why = 'gerginlik çözülemedi'; return out;
-    }
-    if(!(st.wrapDeg > VE_FEAD_ENV_MIN_WRAP)){
-      out.why = 'gergi sarımı ' + st.wrapDeg.toFixed(1) + '° (teğet kayboluyor)';
-      return out;
-    }
-    var viol = (st.geom && st.geom.violations) || [];
-    if(viol.length){ out.why = veFeadViolationText(viol[0]); return out; }
-    tks.push(st.takeupMmPerDeg); Ts.push(st.tensionN);
-    if(probes[i] === relNom){
-      out.takeupWork = st.takeupMmPerDeg; out.tensionWork = st.tensionN;
-      out.hubloadWork = st.hubloadN; out.wrapWork = st.wrapDeg;
-      out.betaWork = st.betaDeg; out.beltMm = st.requiredBeltMm;
-      out.center = st.center;
-    }
-  }
-  out.takeupMin = Math.min.apply(null, tks);
-  out.tensionMax = Math.max.apply(null, Ts);
-  out.ok = true;
-  return out;
-}
-
-// Zarfı tara ve en uygun kol açısını seç.
-//
-//   cfg     : `veFeadBuildSystem`in kurduğu çekirdek yapılandırması
-//   relNom  : kolun nominal çalışma dönmesi (M_mean − M₀)/k — SALT YAY KÜNYESİ
-//
-// Döner: { ok, armAbsDeg, best, samples[], feasibleDeg, blocked[], note }
-// `samples` panelin zarf eğrisini çizebilmesi için ham kaba tarama; ince
-// tarama yalnız tepeyi keskinleştirir, eğriyi değiştirmez.
-function veFeadArmEnvelope(cfg, relNom, opt){
-  opt = opt || {};
-  var mult = _feadNum(opt.travelMult, VE_FEAD_ENV_TRAVEL_MULT);
-  var step = _feadNum(opt.coarseDeg, VE_FEAD_ENV_COARSE_DEG);
-  var out = { ok: false, armAbsDeg: NaN, best: null, samples: [],
-              feasibleDeg: 0, blocked: [], note: '' };
-  if(!cfg || !cfg.tensioner){ out.note = 'Gergi yapılandırması yok.'; return out; }
-  if(!Number.isFinite(relNom)){
-    out.note = 'Kolun nominal çalışma açısı türetilemedi (yay ön yükü, katsayısı '
-      + 've çalışma momenti gerekli); zarf üzerinde bir nokta seçilemez.';
-    return out;
-  }
-  // TOHUMLU YEREL ARAMA: bir önceki çözümün açısı verilmişse zarfın tamamı
-  // yeniden taranmaz, o açının çevresi taranır. Kullanıcı bir aksesuarı
-  // sürüklerken tepe de biraz kayıyor; 360°'yi baştan taramak (ölçüldü: 25 ms)
-  // kare bütçesini 10 kat aşardı, yerel arama 6 ms. Yerel arama pencerenin
-  // KENARINDA bitiyorsa tepe dışarıda demektir; o zaman genel taramaya düşülür.
-  var seed = _feadNum(opt.seedDeg, NaN);
-  var loc = _feadNum(opt.localSpan, 0);
-  var i, s;
-  if(Number.isFinite(seed) && loc > 0){
-    var lstep = Math.min(step, 0.5);
-    for(i = 0; ; i++){
-      var dd = -loc + i * lstep;
-      if(dd > loc + 1e-9) break;
-      s = _feadEnvSample(cfg, seed + dd, relNom, mult);
-      out.samples.push(s);
-      if(s.ok) out.feasibleDeg += lstep;
-    }
-    out.local = true;
-    var lb = null;
-    out.samples.forEach(function(x){ if(x.ok && (!lb || x.takeupMin > lb.takeupMin)) lb = x; });
-    if(lb && Math.abs(lb.absDeg - seed) < loc - 1e-9){
-      out.ok = true; out.best = lb; out.armAbsDeg = lb.absDeg;
-      return out;
-    }
-    out.samples = []; out.feasibleDeg = 0; out.local = false;   // tepe dışarıda: genel tarama
-  }
-  for(i = 0; i * step < 360; i++){
-    s = _feadEnvSample(cfg, -180 + i * step, relNom, mult);
-    out.samples.push(s);
-    if(s.ok) out.feasibleDeg += step;
-    else if(s.why && out.blocked.indexOf(s.why) < 0 && out.blocked.length < 4)
-      out.blocked.push(s.why);
-  }
-  var best = null;
-  out.samples.forEach(function(x){ if(x.ok && (!best || x.takeupMin > best.takeupMin)) best = x; });
-  if(!best){
-    out.note = 'Zarfın hiçbir noktasında geçerli bir kayış yolu çözülemedi'
-      + (out.blocked.length ? ' (' + out.blocked[0] + ')' : '') + '.';
-    return out;
-  }
-  // İNCE TARAMA: kaba adım 2°, ölçülen %1 platosu ise çoğu sistemde 1.0–2.8°.
-  // Yalnız kaba ızgarayla seçilen açı plato dışına düşebilirdi.
-  var fine = _feadNum(opt.fineDeg, VE_FEAD_ENV_FINE_DEG);
-  var span = _feadNum(opt.fineSpan, VE_FEAD_ENV_FINE_SPAN);
-  for(var d = -span; d <= span + 1e-9; d += fine){
-    if(Math.abs(d) < 1e-9) continue;
-    s = _feadEnvSample(cfg, best.absDeg + d, relNom, mult);
-    if(s.ok && s.takeupMin > best.takeupMin) best = s;
-  }
-  out.ok = true; out.best = best; out.armAbsDeg = best.absDeg;
-  return out;
-}
-
-
-// Kurulmuş bir çözümün ZARFINI, çözümü bozmadan yeniden üret.
-//
-// Rapor ve panel zarf EĞRİSİNİ çizmek zorunda; ama sıcak yol (`selectArm:false`
-// + memo) taramayı ATLADIĞI için `build.envelope` çoğu zaman yoktur — orası
-// bilinçli bir hız kararı (kare bütçesi 2,2 ms, genel tarama 84 ms). Rapor bir
-// KARE değil, bir BELGE üretiyor; oraya 84 ms'lik bir tarama girer.
-//
-// Ayrı bir giriş noktası olmasının sebebi de bu: `veFeadBuildSystem`e "her
-// zaman tara" demek sürükleme yolunu 38 kat yavaşlatırdı, taramayı raporun
-// içinde elle kurmak ise ölçütün İKİNCİ BİR KOPYASI olurdu (bu modülün tekrar
-// eden hata sınıfı). Tek üretici, iki çağrı yeri.
-function veFeadEnvelopeOf(build, opt){
-  if(!build || !build.cfg) return null;
-  if(build.envelope && build.envelope.ok && !(opt && opt.force)) return build.envelope;
-  var relNom = build.spring && build.spring.relMeanDeg;
-  if(!Number.isFinite(relNom)) return null;
-  try { return veFeadArmEnvelope(build.cfg, relNom, opt || {}); }
-  catch(e){ return null; }
-}
+// UYDURULMUŞ BİR VARSAYILAN KONMUYOR. Açı girilmemişse model çözülmez ve
+// sebebini adıyla yazar; β = 90° gibi "makul ama yanlış" bir varsayılan,
+// gerginliği ölçülebilir biçimde kaydırıp sessiz kalırdı.
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  KOL AÇISININ İMALAT KARŞILIĞI — KONUM PİMİ (`veFeadPinPlan`)
@@ -1038,19 +891,13 @@ function veFeadSyncCanvasFromMm(nodeList, opt){
     var mmX = _feadNum(x.data && x.data.x, NaN), mmY = _feadNum(x.data && x.data.y, NaN);
     // ── GERGİNİN KUTUSU HANGİ NOKTAYI GÖSTERİR ────────────────────────────
     //
-    // Kullanıcı kararı (2026-08-28): *"Otomatik gergilerde kasnak merkezi
-    // montaj cıvatasının koordinatı olacak."* Yani MFSim'de gergi bileşeninin
-    // koordinatı, diğer kasnaklardan FARKLI olarak, kasnağın merkezi değil
-    // gövdenin motora cıvatalandığı noktadır — kolun dönme ekseni.
+    // AVARA MERKEZİ — yani gerginin TEK koordinatı ve kayış yolunun gerçekten
+    // geçtiği nokta. Diğer kasnaklarda kutu zaten merkezi gösteriyor; gergiyi
+    // istisna yapmanın karşılığı yok.
     //
-    // Bu zarf kipinin zaten tek girdisi; kutuyu oraya oturtmak kanvası yine
-    // fiziksel yapıyor. ÖLÇÜLDÜ — eskiden yapmıyordu: zarf kipinde `cenX/cenY`
-    // hiç yazılmadığı için bu geçiş gergiyi ATLIYOR (6 kasnaklı AG00976'da 4
-    // düğüme dokunup gergiyi bırakıyordu) ve kutu kayış düzleminden KOPUK
-    // kalıyordu.
-    //
-    // Mount kipinde davranış BİREBİR eski: orada girdi kasnağın montaj
-    // merkezidir ve kutu onu gösterir.
+    // Gövdenin montaj konumu bir ÇIKTI (p = c − a·(cos θ, sin θ)) ve kutu onu
+    // GÖSTERMEZ: kutuyu türetilmiş bir noktaya oturtmak, kullanıcının
+    // sürükleyerek doğrudan yazamayacağı bir yüzey demekti.
     if(_feadDefOf(x).isFeadTensioner){
       // Kural TEK YERDE (veFeadTensionerBoxMm): "Otomatik Düzenle" ve örnek
       // kurucusu da aynı okuyucuyu kullanıyor. Satır içi kalsaydı üç yol üç
@@ -1071,48 +918,41 @@ function veFeadSyncCanvasFromMm(nodeList, opt){
   return n;
 }
 
-// ── GERGİ SÜRÜKLEMESİ PİVOTU TAŞIR ─────────────────────────────────────────
+// ── GERGİ SÜRÜKLEMESİ AVARA MERKEZİNİ TAŞIR ────────────────────────────────
 //
-// Gergi kasnağının merkezi bir GİRDİ DEĞİL: çekirdek onu pivot + kol boyu +
-// yay dengesinden çözüyor ve kol konumuna göre ALTI ayrı yerde durabiliyor
-// (BMC'de 59.9 mm'lik bir zarf). Dolayısıyla "gergi düğümünü sürükledim"
-// cümlesinin tek başına karşılığı yok — hangi merkezin taşındığı söylenmeli.
+// Kutu avara merkezini gösteriyor (bkz. veFeadSyncCanvasFromMm), dolayısıyla
+// sürükleme de doğrudan onu yazar. Gövdenin montaj konumu türetilmiş olduğu
+// için kolu koruyarak RİJİT takip ediyor: kol boyu ve kol çalışma açısı
+// dokunulmadan kaldığından p = c − a·(cos θ, sin θ) kendiliğinden aynı kadar
+// ötelenir.
 //
-// PİVOT taşınıyor: fiziksel bağlantı noktası odur, ve montaj merkezi kol
-// boyunu koruyarak rijit takip ettiği için `veFeadArmCheck`'in 0.5 mm kapısı
-// kendiliğinden sağlanıyor. Montaj merkezini taşımak o kapıyı kırar ve
-// kullanıcı sebebini anlamaz.
+// ARACI BİR NOKTADAN GEÇİLMEZ. Montaj konumunu yazıp merkezi ondan geri
+// türetmek aynı sayıyı iki kez yuvarlar ve montaj konumunu sessizce bir
+// GİRDİYE çevirirdi — kullanıcının açıkça kaldırttığı şey.
 function veFeadDragTensioner(node, originNode, scale){
   if(!node || !_feadDefOf(node).isFeadTensioner || !originNode) return false;
   if(!node.data) node.data = {};
   var td = node.data;
   var s0 = _feadNum(scale, 0) || VE_FEAD_PX_PER_MM;
-
-  // ── ZARF KİPİ: SÜRÜKLENEN ŞEY PİVOTUN KENDİSİ ─────────────────────────
-  //
-  // Orada montaj merkezi diye bir girdi YOK — kasnak merkezi bir çıktı. Kutu
-  // pivotu gösteriyor (bkz. veFeadSyncCanvasFromMm), dolayısıyla sürükleme de
-  // doğrudan pivotu yazar. Aracı bir "montaj merkezi" üzerinden geçmek onu
-  // sessizce GİRDİ yapardı ve zarf kipinin kendi kuralını (pivot türetilmez)
-  // bozardı.
-  //
-  // ÖLÇÜLDÜ — eskiden bu yol HİÇ ÇALIŞMIYORDU: `veFeadTensionerMount` zarf
-  // kipinde `ok:false` döndüğü için fonksiyon erken çıkıyor, gergi kutusunu
-  // sürüklemek modeli değiştirmiyordu (sessiz: hata yok, sayı oynamıyor).
-  var px0 = _feadNum(td.pivotX, NaN), py0 = _feadNum(td.pivotY, NaN);
-  if(!Number.isFinite(px0) || !Number.isFinite(py0)) return false;
-  var yeniP = veFeadCanvasToMm(node, originNode, s0);
-  var nx0 = Math.round(yeniP.x * 1000) / 1000, ny0 = Math.round(yeniP.y * 1000) / 1000;
-  if(nx0 === px0 && ny0 === py0) return false;
-  td.pivotX = nx0; td.pivotY = ny0;
+  var cx0 = _feadNum(td.cenX, NaN), cy0 = _feadNum(td.cenY, NaN);
+  if(!Number.isFinite(cx0) || !Number.isFinite(cy0)) return false;
+  var yeni = veFeadCanvasToMm(node, originNode, s0);
+  var nx = Math.round(yeni.x * 1000) / 1000, ny = Math.round(yeni.y * 1000) / 1000;
+  if(nx === cx0 && ny === cy0) return false;
+  td.cenX = nx; td.cenY = ny;
   return true;
 }
 
 // ── ORİJİN GÖÇÜ ────────────────────────────────────────────────────────────
 // Krank (0,0) değilse bütün koordinatlardan onunkini çıkar. Bu TANIM GEREĞİ
 // bir öteleme, dolayısıyla geometriye etkisi YOK (yukarıda ölçüldü) — eski
-// projeler sessizce göç edebilir. Gergi pivotu ve montaj merkezi de ötelenir;
-// yalnız kasnakları ötelemek KISMİ bir öteleme olurdu ve modeli bozardı.
+// projeler sessizce göç edebilir. Gerginin avara merkezi de ötelenir; yalnız
+// kasnakları ötelemek KISMİ bir öteleme olurdu ve modeli bozardı.
+//
+// ESKİ `pivotX/pivotY` DE ÖTELENİYOR ve bu ölü kod DEĞİL: bu fonksiyon alt
+// topoloji açılışında, `veFeadMigrateTensioner`den ÖNCE koşabiliyor. Ötelenmemiş
+// bir montaj konumundan sonra türetilen merkez krankın ofseti kadar yanlış
+// yere düşerdi — sessiz, çünkü model yine çözülür.
 function veFeadNormalizeOrigin(nodeList){
   var org = veFeadOriginNode(nodeList);
   if(!org || !org.data) return 0;
@@ -1572,29 +1412,22 @@ var VE_FEAD_EXAMPLES = {
                //   koordinat = kasnak · θ=348° (Gates)  → T 561,1 N  (+%3,2)
                //   koordinat = PİVOT (zarf kipi)        → T 279,4 N  (−%48,6) ✘
                //
-               // ÜÇÜNCÜ SATIRIN GEREKÇESİ 2026-08-28'de DEĞİŞTİ. Bir dönem
-               // "HİÇ ÇÖZÜLMÜYOR — kasnak sürücünün içine düşüyor" yazıyordu ve
-               // o eleme kol açısını 344°'de SABİT tutuyordu, yani bir MODEL
-               // sınırıydı. Zarf kipinde kol açısı serbest ve model ÇÖZÜLÜYOR:
-               // 360 açının 280'i geçerli geometri veriyor. Eleme artık
-               // sayısal ve daha güçlü:
+               // ÜÇÜNCÜ SATIR bir dönem GİRDİ BİÇİMİYDİ (2026-08-28…09-01,
+               // "zarf kipi") ve bugün elenmiş durumda; ölçümü duruyor çünkü
+               // aynı yön yeniden denenirse bedeli budur:
                //   zarfın seçtiği θ=114,6° → T 279,4 N · L 1738,2 mm (+%1,36)
                //   sarım sapması RMS 15,4°, en kötü +27,9° (ALT), TEN +25,1°
                //   360°'in TAMAMI tarandı: boyu ve gerginliği BİRLİKTE tutan
                //   açı YOK (gevşek pencerede kalan 2 açıda sarım çöküyor)
-               // KONTROL: aynı yerleşime AG00976'nın gerçek pivotu (−250,110)
-               // verilince zarf θ=−10,9° seçiyor → L 1716,96 (+%0,14),
-               // T 539,9 N (−%0,76), sarım en kötü 0,81°.
                //
-               // Ve asıl doğrudan kanıt: mount kipinde ÇÖZÜLEN çalışma merkezi
-               // (−170,240 / 98,610) sayfanın koordinatına yalnız 0,57 mm
-               // uzakta. Koordinat pivot olsaydı merkez ondan tam kol boyu
-               // (90 mm) uzakta olurdu.
-               //
-               // İlk iki satırın sarımı AYNI (33,0°): kasnak merkezi ikisinde de
-               // aynı, değişen yalnız β — yani take-up, yani gerginlik.
-               pivotX:-256.59, pivotY:123.97, armLen:90.0,
-               armMeanDeg:344.0, armPinned:true,
+               // ÖRNEK ARTIK SAYFANIN KENDİ KOORDİNATINI TAŞIYOR. Bir dönem
+               // buraya o koordinattan TÜRETİLMİŞ montaj konumu (−256,59 /
+               // 123,97) yazılıydı; girdi yönü çevrilince ikinci el sayı
+               // gereksiz kaldı. ÖLÇÜLDÜ — çevrimin bedeli yok:
+               //   türeyen montaj konumu −256,5936 / 123,9674  (Δ 0,0044 mm)
+               //   L 1715,2692 → 1715,2666 mm  ·  T 525,511 → 525,554 N (+%0,008)
+               cenX:-170.080, cenY:99.160, armLen:90.0,
+               armMeanDeg:344.0,
                preload:8.60, kArm:0.480, meanLoad:22.07,
                armInertia:0.0009, pulleyMass:0.80 } }
     ],
@@ -1705,14 +1538,20 @@ var VE_FEAD_EXAMPLES = {
       { key:'ALT',  type:'fead-alternator',  name:'Alternatör (155 A)',
         data:{ od:57,  x:-281.00,  y:259.50, contact:'grooved', inertia:0.0144 } },
       { key:'TEN',  type:'fead-tensioner',   name:'Otomatik Gergi (E9843)',
-        // "Tensioner Data": pivot RAPORDA YAZILI (dosya adı da söylüyor:
-        // Ten@-250/110). Merkez, Layout Data'nın TEN satırı — yani çözülmüş
-        // ÇALIŞMA merkezi, ve pivottan uzaklığı tam 90.00 mm: kol boyu çapraz
-        // kontrolü kendiliğinden geçiyor. Serbest açı buradan türetilince
-        // 16.07° çıkıyor, raporun "Free Arm" satırı 16.1° — 0.03°.
+        // Merkez = "Layout Data"nın TEN satırı (−161,97 / 91,29), yani diğer
+        // beş kasnakla AYNI sütun: çalışma konumundaki kasnak merkezi.
+        //
+        // BAĞIMSIZ DOĞRULAMA — rapor gerginin montaj konumunu da AYRI bir
+        // alanda yazıyor ("Tensioner Data", dosya adında da: Ten@-250/110) ve
+        // model onu bu iki satırdan TÜRETİYOR:
+        //   p = c − a·(cos θ, sin θ) = −250,0035 / 110,0008   → Δ 0,0035 mm
+        // İki nokta arasındaki uzaklık tam kol boyu (90,00 mm). Bu bir kapı
+        // DEĞİL (karşılaştırma yapılmıyor), raporun kendi iki satırının aynı
+        // kolun iki ucu olduğunun ölçüsü. Serbest açı buradan 16,07° çıkıyor,
+        // raporun "Free Arm" satırı 16,1° — 0,03°.
         data:{ od:75, contact:'back', inertia:0.00087,
-               pivotX:-250.00, pivotY:110.00, armLen:90.0,
-               armMeanDeg:-11.9992, armPinned:true,
+               cenX:-161.97, cenY:91.29, armLen:90.0,
+               armMeanDeg:-11.9992,
                preload:8.60, kArm:0.480, meanLoad:22.07,
                // Gates E9843 — çekirdeğin kendi ölçülmüş gergi künyesi
                // (CALIBRATION.tensionerArmInertiaKgM2.measured.E9843).
@@ -1898,11 +1737,12 @@ function veFeadRouteDiagnose(nodeList, connList){
 //
 // ÖLÇÜT ÇEKİRDEĞİN KENDİSİNDEN — ikinci bir kopya yazılsaydı iki yüzey
 // sessizce ayrışabilirdi. Merkez sözleşmesi: kasnakta (x, y), gergide
-// KASNAK MERKEZİ — mount kipinde girilen montaj merkezi, zarf kipinde
-// pivot + kol boyu + kol açısından TÜREYEN merkez (veFeadTensionerCenter).
-// Zarf kipinde `cenX/cenY` hiç yazılmadığı için burada doğrudan o alanı
-// okumak yönü ÖLÇÜLEBİLİR biçimde kaybettiriyordu: çözülmüş bir AG00976
-// modelinde sense 1 yerine 0 çıkıyor, rozet "—" yazıyordu.
+// AVARA MERKEZİ (`veFeadTensionerCenter`) — gövdenin montaj konumu DEĞİL.
+// İkisi kol boyu kadar (90 mm) ayrı; montaj konumunu çokgene koymak yönü
+// kaymış bir çokgenden okumak olurdu ve ölçüldü: merkezin doğrunun ÜSTÜNDE,
+// montaj konumunun ALTINDA kaldığı üç kasnaklı sentetik bir düzende işaret
+// ÇEVRİLİYOR (+1 ↔ −1). İki gerçek örnekte ikisi aynı işareti verdiği için
+// kapı SENTETİK olmak zorunda.
 //
 // KOORDİNATI EKSİK MODELDE YÖN YOKTUR (0 döner). Eksik koordinatla geometri
 // zaten çözülemiyor; uydurma bir yön üretip rotayı ters çevirmek, çözülemeyen
@@ -1915,10 +1755,7 @@ function veFeadNaturalSense(order){
   for(i = 0; i < list.length; i++){
     d = list[i].data || {};
     if(_feadDefOf(list[i]).isFeadTensioner){
-      // KASNAK MERKEZİ — pivot DEĞİL. Zarf kipinde o merkez bir çıktıdır ve
-      // pivot + kol boyu + seçilen kol açısından türer (veFeadTensionerCenter);
-      // pivotu doğrudan çokgene koymak yönü kol boyu kadar kaymış bir
-      // merkezden okumak olurdu.
+      // AVARA MERKEZİ — gövdenin montaj konumu DEĞİL (bkz. yukarıdaki not).
       cen = veFeadTensionerCenter(d);
       if(!cen) return 0;
       x = cen[0]; y = cen[1];
@@ -2226,40 +2063,56 @@ function veFeadBuildSystem(nodeList, connList, opt){
   if(mpr > 0) cfgBelt.massPerRibKgM = mpr;
 
   // ── Gergi ──
-  // TEK KOORDİNAT: montaj konumu. Gergi kasnağının merkezi bir girdi DEĞİL,
-  // bu noktadan ve kol açısından TÜREYEN bir sonuçtur; avara kasnağının
-  // hareketi de tam olarak bu çemberdir. Karşılaştırılacak ikinci bir nokta
-  // olmadığı için doğrulama da yoktur.
-  var pivotX = _feadNum(td.pivotX, NaN), pivotY = _feadNum(td.pivotY, NaN);
+  // TEK KOORDİNAT: AVARA MERKEZİ (`cenX/cenY`), diğer bütün kasnaklarla aynı
+  // sütundan. Gövdenin montaj konumu bir girdi DEĞİL, bu noktadan ve kolun
+  // çalışma açısından TÜREYEN bir sonuçtur (p = c − a·(cos θ, sin θ)) —
+  // atölyeye giden sayı odur. Karşılaştırılacak ikinci bir nokta olmadığı
+  // için doğrulama da YOKTUR.
+  var cenX = _feadNum(td.cenX, NaN), cenY = _feadNum(td.cenY, NaN);
   var armLen = _feadNum(td.armLen, 0);
+  var armAbs = _feadNum(td.armMeanDeg, NaN);
   var preload = _feadNum(td.preload, NaN);
   var rate = _feadNum(td.kArm, NaN);
   var spring = veFeadSpringSetup(td);
   out.spring = spring;
-  out.pivot = (Number.isFinite(pivotX) && Number.isFinite(pivotY)) ? [pivotX, pivotY] : null;
+  out.center = (Number.isFinite(cenX) && Number.isFinite(cenY)) ? [cenX, cenY] : null;
+  var _piv = veFeadTensionerPivot(td);
+  out.pivot = _piv;
+  out.armAbsDeg = armAbs;
   if(tensNodes.length === 1){
-    if(!Number.isFinite(pivotX) || !Number.isFinite(pivotY))
-      out.errors.push('Otomatik gergi montaj konumu (X / Y) girilmedi. Gergi '
-        + 'gövdesinin motora bağlandığı nokta budur; avara kasnağının merkezi '
-        + 'ondan çıkar.');
+    if(!Number.isFinite(cenX) || !Number.isFinite(cenY))
+      out.errors.push('Otomatik gergi avarasının merkez koordinatı (X / Y) '
+        + 'girilmedi. Kayış yolu bu noktadan geçiyor; gövdenin montaj konumu '
+        + 'ondan ve kol çalışma açısından türer.');
     if(!(armLen > 0)) out.errors.push('Gergi kol boyu girilmedi.');
+    // KOL ÇALIŞMA AÇISI BİR GİRDİ ve varsayılanı YOK. Avara merkezi
+    // verildikten sonra kayış yolu tamamen belirli; geriye kalan tek
+    // serbestlik derecesi gövdenin montajdaki saat konumudur ve o bir
+    // PAKETLEME kararıdır — kayış fiziğinden çıkarılamaz (ölçüldü: en iyi
+    // aday ölçüt bile 14 Gates sisteminin yalnız 2'sini ±5° içinde buluyor,
+    // medyan sapma 15,9°). Uydurulmuş bir varsayılan sessizce yanlış
+    // gerginlik üretirdi.
+    if(!Number.isFinite(armAbs))
+      out.errors.push('Gergi kolunun çalışma açısı (mutlak, +X\'ten CCW) '
+        + 'girilmedi. Gergi gövdesinin montajdaki saat konumu budur ve '
+        + 'gerginin parça/montaj çiziminde yazar (E9843: 344°). Avara merkezi '
+        + 'ile birlikte gövdenin montaj konumunu ve take-up yönünü belirler.');
     if(!Number.isFinite(preload)) out.errors.push('Gergi yay ön yük momenti girilmedi.');
     if(!Number.isFinite(rate)) out.errors.push('Gergi yay katsayısı (Nm/°) girilmedi.');
     if(!Number.isFinite(spring.relMeanDeg))
       out.errors.push('Yay çalışma momenti (Spring Mean Load) girilmedi; kolun '
-        + 'nominal çalışma açısı (M_mean − M₀)/k onsuz türetilemez ve montaj '
-        + 'zarfı üzerinde bir nokta seçilemez.');
+        + 'nominal dönmesi (M_mean − M₀)/k onsuz türetilemez ve serbest kol '
+        + 'açısı kurulamaz.');
     spring.notes.forEach(function(n){ out.warnings.push(n); });
   }
-  // Serbest açı bir GİRDİ DEĞİL: seçilen çalışma açısından türeyecek. Çekirdek
-  // alanı zorunlu tuttuğu için geçici bir değer konuyor; gerçek değer zarf
-  // çözüldükten sonra yazılıyor.
-  var freeAng = NaN;
-  var _pinned = _feadNum(td.armMeanDeg, NaN);
-  freeAng = Number.isFinite(_pinned) ? _pinned : 0;
+  // Serbest açı bir GİRDİ DEĞİL: kol çalışma açısından türüyor
+  // (armAbs = free + sense·rel_nom). `sense`i çekirdek bulduğu için burada
+  // geçici olarak çalışma açısı yazılıyor; gerçek değer aşağıdaki İKİNCİ
+  // GEÇİŞ blokunda düzeltiliyor.
   var cfgTen = {
-    pivot: [pivotX, pivotY], armLength: armLen,
-    preloadNm: preload, rateNmPerDeg: rate, freeAngleDeg: freeAng
+    pivot: _piv || [NaN, NaN], armLength: armLen,
+    preloadNm: preload, rateNmPerDeg: rate,
+    freeAngleDeg: Number.isFinite(armAbs) ? armAbs : 0
   };
   if(td.sense === 1 || td.sense === -1 || td.sense === '1' || td.sense === '-1')
     cfgTen.sense = _feadNum(td.sense, 1) >= 0 ? 1 : -1;
@@ -2325,63 +2178,13 @@ function veFeadBuildSystem(nodeList, connList, opt){
 
   if(out.errors.length) return out;              // eksik girdiyle çekirdeği çağırma
 
-  // ── ZARF ÇÖZÜLÜYOR — kol açısı SEÇİLİYOR ─────────────────────────────────
-  //
-  // Pivot girdi, kol boyu künye; geriye kolun MUTLAK açısı kalıyor ve onu
-  // gergi gövdesinin montajdaki saat konumu belirliyor. Zarf o saati seçiyor:
-  //     max over θ of  min over rel∈[0, 1.5·rel_nom] of dL/dθ
-  // (gerekçesi ve 14 Gates sistemine karşı ölçümü `veFeadArmEnvelope`ta).
-  //
-  // NE ZAMAN KOŞAR: kullanıcı açıyı SABİTLEMİŞSE (armPinned) hiç koşmaz —
-  // seçim artık kullanıcınındır ve zarf bir seçici değil TEŞHİS yüzeyidir.
-  // Sabitlenmemişse `opt.selectArm === false` ile atlanabilir; sürükleme yolu
-  // bunu kullanıp saklanan açıyla koşar (ölçüldü: genel tarama 25 ms, kare
-  // bütçesi 2.2 ms). Saklanan açı TOHUM olarak geçiyor, yani yeniden çözüm
-  // yerel aramaya düşüyor.
-  {
-    var _pin = _feadNum(td.armMeanDeg, NaN);
-    var _pinnedFlag = !!(td.armPinned && Number.isFinite(_pin));
-    out.armPinned = _pinnedFlag;
-    if(_pinnedFlag){
-      out.armAbsDeg = _pin;
-    } else if(opt && opt.selectArm === false && Number.isFinite(_pin)){
-      out.armAbsDeg = _pin; out.armFromCache = true;
-    } else {
-      var _envOpt = {};
-      if(Number.isFinite(_pin)){ _envOpt.seedDeg = _pin; _envOpt.localSpan = 6; }
-      var _env = veFeadArmEnvelope(cfg, spring.relMeanDeg, _envOpt);
-      out.envelope = _env;
-      if(!_env.ok){ out.errors.push(_env.note); return out; }
-      out.armAbsDeg = _env.armAbsDeg;
-      out.armSelected = true;
-      // ── SEÇİLEN AÇI DÜĞÜME NOT DÜŞÜLÜR (memo, karar değil) ──────────────
-      // Sebebi ölçülmüş: genel tarama 84 ms, kanvas sürükleme karesinin
-      // bütçesi 2.2 ms. Not düşülmezse HER kare zarfı baştan tarardı. Not
-      // düşülünce sürükleme yolu `selectArm:false` ile saklanan açıyı
-      // kullanıyor (0 ms) ve yeniden çözüm bu açıyı TOHUM alıp yerel aramaya
-      // düşüyor (6 ms).
-      //
-      // `saveState` ÇAĞRILMIYOR: bu bir kullanıcı kararı değil, hesabın kendi
-      // ara sonucu. Geri-al yığınına binmesi, kartın her tazelenmesinde bir
-      // adım eklemek olurdu (yön gülü konumundaki kuralın aynısı).
-      if(tensNodes[0] && tensNodes[0].data){
-        tensNodes[0].data.armMeanDeg = Math.round(_env.armAbsDeg * 1000) / 1000;
-        tensNodes[0].data.armAuto = true;
-      }
-    }
-    // Seçilen çalışma açısından serbest açı: armAbs = free + sense·rel_nom.
-    // sense'i çekirdek buluyor, o yüzden burada geçici olarak çalışma açısı
-    // yazılıyor ve aşağıdaki İKİNCİ GEÇİŞ blokunda sense bulunduktan sonra
-    // düzeltiliyor (montaj kipindeki iki-geçiş kalıbının aynısı).
-    cfg.tensioner.freeAngleDeg = out.armAbsDeg;
-    delete cfg.tensioner.sense;
-    // YÖN BURADA TAZELENİR. Yukarıdaki ilk okuma rota kurulur kurulmaz
-    // yapılıyor; zarf kipinde o an gergi kasnağının merkezi HENÜZ YOKTUR
-    // (pivot + kol açısından türüyor ve açı bu blokta seçiliyor). Tazeleme
-    // olmasaydı ilk çözüm bir adım geride kalırdı: model çözülür, sonuç
-    // doğru, ama `spin` 0 — yani "yön okunamadı".
-    out.spin = veFeadNaturalSense(order);
-  }
+  // Kol çalışma açısı bir GİRDİ (yukarıda zorunlu tutuldu); zarf seçimi ve
+  // ona ait memo/sabitleme yüzeyleri kalktı (gerekçesi ve ölçümü
+  // "MONTAJ ZARFI KALKTI" bloğunda). Serbest açı ondan türeyecek:
+  // armAbs = free + sense·rel_nom — `sense`i çekirdek bulduğu için şimdilik
+  // çalışma açısı yazılı, İKİNCİ GEÇİŞ blokunda düzeltiliyor.
+  cfg.tensioner.freeAngleDeg = out.armAbsDeg;
+  delete cfg.tensioner.sense;
 
   var sys;
   try {
@@ -3171,14 +2974,11 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadGatherPulleys: veFeadGatherPulleys,
     veFeadSpringSetup: veFeadSpringSetup,
     veFeadMigrateTensioner: veFeadMigrateTensioner,
-    veFeadArmEnvelope: veFeadArmEnvelope, veFeadEnvelopeOf: veFeadEnvelopeOf,
-    _feadEnvSample: _feadEnvSample,
+    veFeadTensionerPivot: veFeadTensionerPivot,
     veFeadBeltModeLocked: veFeadBeltModeLocked,
     veFeadBeltDataMode: veFeadBeltDataMode,
     VE_FEAD_BELT_DATA_MODES: VE_FEAD_BELT_DATA_MODES,
     VE_FEAD_BELT_DATA_OFF: VE_FEAD_BELT_DATA_OFF,
-    VE_FEAD_ENV_TRAVEL_MULT: VE_FEAD_ENV_TRAVEL_MULT,
-    VE_FEAD_ENV_COARSE_DEG: VE_FEAD_ENV_COARSE_DEG,
     VE_FEAD_BELT_MODES: VE_FEAD_BELT_MODES, veFeadBeltMode: veFeadBeltMode,
     VE_FEAD_MIN_TAKEUP_RATIO: VE_FEAD_MIN_TAKEUP_RATIO,
     veFeadBeltFit: veFeadBeltFit, veFeadBeltOptions: veFeadBeltOptions,

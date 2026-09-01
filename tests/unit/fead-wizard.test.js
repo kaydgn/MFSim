@@ -236,12 +236,13 @@ describe('kipe göre hangi alan taşınır', () => {
   };
   const gergi = (st) => wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-tensioner');
 
-  test('sihirbaz TEK koordinat taşır — kasnak merkezi ve kip alanı YOK', () => {
+  test('sihirbaz TEK koordinat taşır — montaj konumu ve kip alanı YOK', () => {
     const t = gergi(durum());
-    expect(t.data.pivotX).toBeCloseTo(-250, 6);
-    expect(t.data.pivotY).toBeCloseTo(110, 6);
-    ['cenX', 'cenY', 'angleMode', 'freeAngleDeg', 'verifyCenX', 'verifyCenY']
-      .forEach((k) => expect(t.data[k]).toBeUndefined());
+    expect(t.data.cenX).toBeCloseTo(-161.97, 6);
+    expect(t.data.cenY).toBeCloseTo(91.29, 6);
+    expect(t.data.armMeanDeg).toBeCloseTo(-11.9992, 6);   // ZORUNLU girdi
+    ['pivotX', 'pivotY', 'angleMode', 'freeAngleDeg', 'verifyCenX', 'verifyCenY',
+     'armPinned'].forEach((k) => expect(t.data[k]).toBeUndefined());
   });
 
   test('sihirbazda KİP SORUSU YOK — ikilik ön kapıda da kapalı', () => {
@@ -254,8 +255,8 @@ describe('kipe göre hangi alan taşınır', () => {
     expect(hepsi).not.toMatch(/Gergiyi nasıl tanımlayacaksınız/);
     expect(hepsi).not.toMatch(/tenMode/);
     // ve gergi adımı TEK koordinat soruyor
-    expect(hepsi).toMatch(/Otomatik Gergi Montaj Konumu/);
-    expect(hepsi).not.toMatch(/ten\.cenX|ten\.freeAngleDeg/);
+    expect(hepsi).toMatch(/Avara Kasnağının Merkezi/);
+    expect(hepsi).not.toMatch(/ten\.pivotX|ten\.freeAngleDeg/);
     expect(st).toBeTruthy();
   });
 
@@ -673,46 +674,47 @@ describe('gergi satırı — Kasnaklar tablosunda, silinemez, tek kaynak', () =>
     expect(r).toMatch(/class="ve-fw-x" disabled/);
   });
 
-  test('X/Y KASNAK MERKEZİ DEĞİL montaj noktası — bilgi KAYBOLMADI', () => {
-    // Bu modülün en pahalı sessiz hatası: kasnak merkezi ↔ montaj noktası
-    // karışması (ölçüldü: gerginlik −%48,6, sarım en kötü +27,9°, model YİNE
-    // çözülür ve uyarı çıkmaz).
+  test('X/Y AVARA MERKEZİ — satır bunu ADIYLA söylüyor', () => {
+    // Bu modülün en pahalı sessiz hatası: avara merkezi ↔ montaj konumu
+    // karışması (ölçüldü: gerginlik medyan +%1526, 14/14 sistem YİNE çözülür,
+    // 5'inde hiçbir uyarı çıkmaz). Satır hangi noktayı istediğini SÖYLEMEK
+    // zorunda — beş kasnakla aynı şeyi istese bile.
     //
     // Kullanıcı satırdaki amber çipi kaldırttı (*"garip belirteçlere gerek
     // yok"*) — ama UYARI kaldırılmadı, YER değiştirdi: alanın kendi ipucu
     // metnine (`title`) ve tablonun altındaki karta. Kapı ikisini birden
-    // arıyor, yoksa çip bir gün "sadeleştirme" diye tamamen silinirdi.
+    // arıyor, yoksa uyarı bir gün "sadeleştirme" diye tamamen silinirdi.
     kur('AG00976_GATES_2025');
-    expect(wiz.veFeadWizTenCoordKeys()).toEqual(['pivotX', 'pivotY']);
+    expect(wiz.veFeadWizTenCoordKeys()).toEqual(['cenX', 'cenY']);
     const r = tenSatiri(kasnakHTML());
-    expect(r).toContain("veFeadWizTenSet('pivotX'");
-    expect(r).toContain("veFeadWizTenSet('pivotY'");
+    expect(r).toContain("veFeadWizTenSet('cenX'");
+    expect(r).toContain("veFeadWizTenSet('cenY'");
     // Amber çip GİTTİ (kullanıcı isteği) — satır diğerleriyle birebir.
     expect(r).not.toContain('ve-fw-tag');
     // Uyarı, X ve Y alanlarının KENDİ ipucunda.
-    const xy = r.match(/<input[^>]*veFeadWizTenSet\('pivot[XY]'/g) || [];
+    const xy = r.match(/<input[^>]*veFeadWizTenSet\('cen[XY]'/g) || [];
     expect(xy.length).toBe(2);
-    xy.forEach((alan) => expect(alan).toMatch(/title="[^"]*montaj noktas/));
+    xy.forEach((alan) => expect(alan).toMatch(/title="[^"]*MERKEZ/));
     // ...ve tablonun altındaki kartta, gözle okunur biçimde.
-    expect(kasnakHTML()).toMatch(/montaj noktasıdır/);
-    expect(kasnakHTML()).toMatch(/−%48,6/);
-    // ...ve kasnak merkezi alanına ASLA yazmıyor: montaj konumu TEK girdidir,
-    // merkez ondan türer. Satırın merkeze yazması, kullanıcının girdiği sayıyı
-    // 90 mm ötedeki bir noktaya koymak olurdu.
-    expect(r).not.toContain("veFeadWizTenSet('cenX'");
-    expect(r).not.toContain("veFeadWizTenSet('cenY'");
+    expect(kasnakHTML()).toMatch(/AYNI şeydir/);
+    expect(kasnakHTML()).toMatch(/\+%1526/);
+    // ...ve montaj konumu alanına ASLA yazmıyor: o bir ÇIKTI. Satırın oraya
+    // yazması, kullanıcının girdiği sayıyı 90 mm ötedeki bir noktaya koymak
+    // olurdu.
+    expect(r).not.toContain("veFeadWizTenSet('pivotX'");
+    expect(r).not.toContain("veFeadWizTenSet('pivotY'");
   });
 
   test('tablodan yazılan değer GERGİ ADIMINDA görünür — tek kayıt', () => {
     // İki yüzey ikinci bir durum kopyası tutsaydı biri ötekini sessizce
     // eskitirdi ("panel ile kart AYNI alanı okur").
     const st = kur('AG00976_GATES_2025');
-    wiz.veFeadWizTenSet('pivotX', -248.5);
-    expect(st.ten.pivotX).toBe(-248.5);
-    expect(wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild())).toContain('-248.5');
+    wiz.veFeadWizTenSet('cenX', -160.5);
+    expect(st.ten.cenX).toBe(-160.5);
+    expect(wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild())).toContain('-160.5');
     // ve çözüme de gidiyor
     const t = wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-tensioner');
-    expect(t.data.pivotX).toBe(-248.5);
+    expect(t.data.cenX).toBe(-160.5);
   });
 
   test('gergi st.pulleys dizisine GİRMEZ — duty sütunu açılmaz, sürücü olamaz', () => {
@@ -819,11 +821,8 @@ describe('gergi künye etiketi — rapor adı YOK', () => {
 
 // ── 3 · KATALOG ÖNERİSİ SİHİRBAZDAN KALKTI ─────────────────────────────────
 describe('kayış adımı — katalog önerisi yok, gereken boy okuması var', () => {
-  test('zarf kipinde katalog önerisi basılmaz ama gereken boy DURUR', () => {
+  test('katalog önerisi basılmaz ama gereken boy DURUR', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
-    const st = wiz.veFeadWizState();
-    st.tenMode = 'envelope';
-    delete st.ten.cenX; delete st.ten.cenY; delete st.ten.armMeanDeg;
     const b = wiz.veFeadWizBuild();
     expect(b.ok).toBe(true);
     const h = wiz.veFeadWizStepHTML(4, b);
@@ -944,10 +943,13 @@ describe('özet kartı — kol açısı kutusu yok', () => {
     const b = wiz.veFeadWizBuild();
     const h = wiz.veFeadWizStepHTML(3, b);
     expect(h).not.toMatch(/Bu künyeden çıkanlar/);
-    expect(h).not.toMatch(/Kol çalışma açısı|Yay kurulması|kasnak merkezi \(türedi\)/);
+    expect(h).not.toMatch(/Yay kurulması|Gereken KAYIŞ BOYU/);
+    // MONTAJ KONUMU BUNUN DIŞINDA ve bilerek: bir okuma değil bir ÇIKTI —
+    // atölyeye giden sayı ve girdiyi denetleyen tek sayı odur.
+    expect(h).toMatch(/Gövdenin Montaj Konumu/);
     // Çözüm çıpası birebir: kaldırılan şey bir GÖRÜNÜM, bir hesap değil.
-    expect(b.beltLengthMm).toBeCloseTo(1714.6088, 3);
-    expect(b.springTensionN).toBeCloseTo(543.8534, 3);
+    expect(b.beltLengthMm).toBeCloseTo(1714.6075, 3);
+    expect(b.springTensionN).toBeCloseTo(543.8750, 3);
     // Sayılar RAPORDA duruyor — kullanıcının kendi gerekçesi.
     const RS = fs.readFileSync(path.join(__dirname, '../../js/cp-fead-report.js'), 'utf8');
     expect(RS).toMatch(/Kol açısı|armAbsDeg|kol açısı/i);
@@ -1152,7 +1154,9 @@ describe('gergi satırı — TİP sütunu tipi söyler', () => {
 
   test('SATIR diğerleriyle BİREBİR — sütun sayısı ve hücre biçimleri', () => {
     // *"Otomatik gergi satırı da diğerleri gibi olsun. Örneğin 'X/Y = montaj
-    // noktası' gibi garip belirteçlere gerek yok."*
+    // noktası' gibi garip belirteçlere gerek yok."* Çip SİLİNDİ ama UYARI
+    // silinmedi: alanların `title`ına ve tablonun altındaki karta taşındı
+    // (karıştırmanın ölçülmüş bedeli gerginlikte medyan +%1526).
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const tam = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
     const gergi = wiz._fwTenRow(wiz.veFeadWizState());
@@ -1517,13 +1521,13 @@ describe('sihirbaz girdisi → topoloji bileşeni', () => {
     wiz.veFeadWizCreate();
 
     const ten = nodes.find((n) => n.type === 'fead-tensioner');
-    // Gergi TEK koordinat taşır ve kasnak merkezi ASLA yazılmaz.
-    expect(ten.data.pivotX).toBeCloseTo(-250, 6);
-    expect(ten.data.pivotY).toBeCloseTo(110, 6);
-    expect(ten.data.cenX).toBeUndefined();
-    expect(ten.data.cenY).toBeUndefined();
-    ['armLen', 'preload', 'kArm', 'meanLoad', 'armInertia', 'pulleyMass',
-     'loadStopRelDeg', 'inertia', 'od'].forEach((a) => {
+    // Gergi TEK koordinat taşır ve montaj konumu ASLA yazılmaz.
+    expect(ten.data.cenX).toBeCloseTo(-161.97, 6);
+    expect(ten.data.cenY).toBeCloseTo(91.29, 6);
+    expect(ten.data.pivotX).toBeUndefined();
+    expect(ten.data.pivotY).toBeUndefined();
+    ['armLen', 'armMeanDeg', 'preload', 'kArm', 'meanLoad', 'armInertia',
+     'pulleyMass', 'loadStopRelDeg', 'inertia', 'od'].forEach((a) => {
       expect(Number.isFinite(ten.data[a])).toBe(true);
     });
 

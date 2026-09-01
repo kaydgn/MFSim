@@ -153,7 +153,8 @@ function _fsrIdLines(R, node){
          + ' + ' + _frFs(t.rateNmPerDeg, 3) + ' Nm/°');
   L.push((b.brand ? b.brand + ' ' : '') + (b.ribs ? b.ribs : '') + (b.profile || '')
        + (b.effLength ? ' · ' + _frFs(b.effLength, 1) + ' mm' : ''));
-  if(t.pivot) L.push('Pivot @ ' + _frF(t.pivot[0], 0) + ' / ' + _frF(t.pivot[1], 0)
+  if(R.build && R.build.center)
+    L.push('Gergi avarası @ ' + _frF(R.build.center[0], 0) + ' / ' + _frF(R.build.center[1], 0)
        + (d.docNo ? ' · ' + d.docNo : '') + (d.revision ? ' rev ' + d.revision : ''));
   return L;
 }
@@ -355,7 +356,18 @@ function _fsrSheet1(R, node){
   h += _fsrKV('Otomatik gergi', [
     ['Kol boyu', _frFs(t.armLength, 1) + ' mm'],
     ['Yay ön yükü / oranı', _frFs(t.preloadNm, 2) + ' Nm · ' + _frFs(t.rateNmPerDeg, 3) + ' Nm/°'],
-    ['Pivot {X, Y}', _frFs(t.pivot && t.pivot[0], 1) + ' , ' + _frFs(t.pivot && t.pivot[1], 1)],
+    // AVARA MERKEZİ GİRDİ, MONTAJ KONUMU TÜREV — ikisi de basılıyor ve hangisinin
+    // hangisi olduğu † ile ayrılıyor. Bir dönem yalnız montaj konumu ("Pivot")
+    // basılıyordu ve o bir GİRDİ sanılıyordu; bugün girdi merkezdir.
+    // İKİ ONDALIK: tedarikçi raporu gerginin koordinatlarını iki ondalıkla
+    // basıyor (−161,97 / −250,00). Bir ondalığa yuvarlamak −162,0 veriyor ve
+    // belgeyi yan yana okuyan kişi hayalî bir uyuşmazlık görüyordu — yay
+    // ortalama momentindeki üç-ondalık kararının aynı gerekçesi.
+    ['Avara merkezi {X, Y}', _frFs(R.build && R.build.center && R.build.center[0], 2)
+      + ' , ' + _frFs(R.build && R.build.center && R.build.center[1], 2)],
+    ['Gövde montaj konumu † {X, Y}', _frFs(t.pivot && t.pivot[0], 2)
+      + ' , ' + _frFs(t.pivot && t.pivot[1], 2)],
+    ['Kol çalışma açısı (mutlak)', _frFs(R.build && R.build.armAbsDeg, 2) + '°'],
     ['Çalışma kol açısı', _frFs(A.meanRelDeg, 2) + '° (göreli)'],
     // YAY ORTALAMA MOMENTİ — tedarikçi künyesinin "Spring Mean Load" satırı.
     // Çekirdek onu ALAN olarak taşımıyor; M = M₀ + k·rel'den TÜRÜYOR ve

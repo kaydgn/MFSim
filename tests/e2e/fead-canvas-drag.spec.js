@@ -130,7 +130,18 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
     expect(Math.abs(Lsurukle - L0)).toBeGreaterThan(1);
   });
 
-  test('kayış boyu kipi rozeti TIKLANINCA değişiyor ve çözüm kipe uyuyor', async ({ page }) => {
+  // KAYIŞ KİPİ ROZETİ KİLİTLİ — ve kilit KANVASTA da geçerli.
+  //
+  // Kayış boyu bu modülde bir ÇIKTIDIR (kasnak merkezleri + gergi künyesi kolun
+  // oturduğu yeri belirliyor, boy o konumun sonucu). Kilit ÜÇ YÜZEYDE birden
+  // olmak zorunda: köprü, panel ve rozet. Tek yerde tutulsaydı panel bir kipi,
+  // rozet başkasını gösterirdi.
+  //
+  // BU TEST BİR DÖNEM BAYATTI: kilit PR #831'de geldi ama test hâlâ rozetin
+  // 'SABİT'ten 'SERBEST'e geçmesini bekliyordu ve E2E takımı rutin olarak
+  // koşmadığı için kırmızı kaldığı fark edilmedi (2026-09-01'de ölçüldü:
+  // değişiklikten ÖNCEKİ commit'te de kırmızı).
+  test('kayış boyu kipi rozeti KİLİTLİ — tıklamak kipi değiştirmiyor', async ({ page }) => {
     await bootApp(page);
     await openFeadWithExample(page);
 
@@ -152,15 +163,21 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
     await page.waitForTimeout(200);
 
     const rozet = page.locator('#' + beltId + ' .ve-fead-badge');
-    await expect(rozet).toHaveText('SABİT');
+    await expect(rozet).toHaveText('SERBEST');
+    // Boy TÜRETİLMİŞ ve gergi var → kip kilitli
+    expect(await page.evaluate(() => ({
+      turetildi: veFeadBuildFromCanvas().beltLengthDerived,
+      kilit: veFeadBeltModeLocked(window.nodes),
+    }))).toEqual({ turetildi: true, kilit: true });
 
+    // GERÇEK TIK — rozet reddetmeli: ne metin ne de düğüm verisi değişir.
     await rozet.click();
+    await page.waitForTimeout(150);
     await expect(page.locator('#' + beltId + ' .ve-fead-badge')).toHaveText('SERBEST');
-
-    // Serbest kipte boy TÜRETİLMİŞ olmalı
-    const turetildi = await page.evaluate(() =>
-      veFeadBuildFromCanvas().beltLengthDerived);
-    expect(turetildi).toBe(true);
+    expect(await page.evaluate((id) => {
+      const n = window.nodes.find((x) => x.id === id);
+      return { kip: n.data.lengthMode, turetildi: veFeadBuildFromCanvas().beltLengthDerived };
+    }, beltId)).toEqual({ kip: undefined, turetildi: true });
   });
 
   // ── HİZALAMA KENETLEMESİ KOORDİNATI YEMİYOR ─────────────────────────────

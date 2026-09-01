@@ -82,11 +82,13 @@ const coz = (k) => {
 
 // Değişiklikten ÖNCE ölçülen taban. Bunlar Gates/tedarikçi çıpaları değil,
 // "sabit kip birebir eski davranışını koruyor mu" kapısı.
-// PİVOT ARTIK GİRDİ DEĞİL: gergi KASNAĞININ merkezi (−170.080 / 99.160) ile
-// parça künyesinin kol açısından (E9843 çizimi: 344° mean) türetiliyor.
-// Kayış boyu çıpaları geometriden geldiği için DEĞİŞMEDİ; değişen gerginlik
-// tarafı (β başka çıkıyor).
-const TABAN = { rel: 28.0625, L: 1715.2692, T: 525.511, hub: 297.44 };
+//
+// GERGİNİN TEK KOORDİNATI AVARA MERKEZİ (2026-09-01): örnek artık tedarikçi
+// sayfasının kendi satırını (−170,080 / 99,160) taşıyor ve gövdenin montaj
+// konumu ondan + kol çalışma açısından (E9843 çizimi: 344° mean) TÜREYOR.
+// Bir dönem buraya o türevden geriye yuvarlanmış montaj konumu yazılıydı;
+// ölçülen kayma L −0,0025 mm · T +%0,008 — yani taban pratik olarak aynı.
+const TABAN = { rel: 28.0625, L: 1715.2666, T: 525.554, hub: 297.44 };
 
 describe('kip çözümü — geriye dönük uyumluluk', () => {
   test('kip yazılı değilse ve boy varsa SABİT — eski her proje aynen çalışır', () => {

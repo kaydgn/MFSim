@@ -45,8 +45,8 @@ Object.keys(fead).forEach((k) => { global[k] = fead[k]; });
 
 beforeEach(() => { resetStubs(stubs); global.nodes = []; global.connections = []; });
 
-/* AG00976 örneğini ZARF kipinde kanvasa kur (pivot girdi, kasnak merkezi
-   çıktı). Örneğin kendi pivotu zaten (−250, 110) — rapordan okunmuş. */
+/* AG00976 örneğini kanvasa kur. Örneğin gergi koordinatı avara merkezi
+   (−161,97 / 91,29) — raporun Layout Data satırı; montaj konumu ondan türer. */
 function ornek(patch) {
   const pack = M.veFeadExampleNodes('AG00976_GATES_2025');
   pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
@@ -55,11 +55,10 @@ function ornek(patch) {
   global.nodes = pack.nodes; global.connections = pack.connections;
   return { pack, ten };
 }
-function zarfKur(opt) {
+function kanvasKur(opt) {
   const o = opt || {};
   const { pack, ten } = ornek((td) => {
-    delete td.cenX; delete td.cenY; delete td.armMeanDeg; delete td.armPinned;
-    if (o.part !== undefined) { if (o.part) td.tenPart = o.part; }
+    if (o.part !== undefined) { if (o.part) td.tenPart = o.part; else delete td.tenPart; }
     else td.tenPart = 'E9843';
   });
   return { pack, ten, build: M.veFeadBuildSystem(pack.nodes, pack.connections) };
@@ -196,19 +195,19 @@ describe('parça kodu KOPYA olarak gider, kodsuz künyede SİLİNİR', () => {
 /* ═══════════════════════════════════════════════════════════════════════════
    4 · UÇTAN UCA — zarf çözümü pim açısını gerçekten üretiyor
    ═══════════════════════════════════════════════════════════════════════════ */
-describe('uçtan uca — zarf → θ* → pim', () => {
-  test('AG00976 zarf kipinde çözülüyor ve pim planı BUİLD’de duruyor', () => {
-    const { build } = zarfKur();
+describe('uçtan uca — kol açısı → pim', () => {
+  test('AG00976 çözülüyor ve pim planı BUİLD’de duruyor', () => {
+    const { build } = kanvasKur();
     expect(build.ok).toBe(true);
     expect(build.pin).toBeTruthy();
     expect(build.pin.ok).toBe(true);
-    // (4.8): θ_pim = θ* + Δ_parça, 0…360 bandında
+    // (4.8): θ_pim = θ_kol + Δ_parça, 0…360 bandında
     const bekle = ((build.armAbsDeg - 113) % 360 + 360) % 360;
     expect(build.pin.angleDeg).toBeCloseTo(bekle, 6);
   });
 
-  test('θ* değişince pim açısı AYNI KADAR kayıyor (ofset sabit)', () => {
-    const { build } = zarfKur();
+  test('kol açısı değişince pim açısı AYNI KADAR kayıyor (ofset sabit)', () => {
+    const { build } = kanvasKur();
     const d = 12.5;
     const p2 = M.veFeadPinPlan({ tenPart: 'E9843' }, build.armAbsDeg + d);
     const fark = ((p2.angleDeg - build.pin.angleDeg) % 360 + 360) % 360;
@@ -216,20 +215,18 @@ describe('uçtan uca — zarf → θ* → pim', () => {
   });
 
   test('parça kodu olmayan modelde build.pin SESSİZ değil', () => {
-    const { build } = zarfKur({ part: '' });
+    const { build } = kanvasKur({ part: '' });
     expect(build.ok).toBe(true);
     expect(build.pin.ok).toBe(false);
     expect(build.pin.reason.length).toBeGreaterThan(10);
   });
 
-  test('SABİTLENMİŞ kol açısında da pim planı kuruluyor', () => {
-    // Kol açısı ister zarftan seçilsin ister kullanıcı sabitlesin, pim aynı
-    // bağıntıdan çıkar. Tek yol kaldı; kapı onu tutuyor.
-    const { pack, ten } = ornek((td) => {
-      td.armPinned = true; td.armMeanDeg = 344; td.tenPart = 'E9843';
-    });
+  test('BAŞKA bir kol açısında da pim planı kuruluyor', () => {
+    // Kol açısı bir GİRDİ; pim planı ondan çıkıyor ve açı ne olursa olsun
+    // aynı bağıntıyı izliyor.
+    const { pack } = ornek((td) => { td.armMeanDeg = 344; td.tenPart = 'E9843'; });
     const b = M.veFeadBuildSystem(pack.nodes, pack.connections);
-    expect(b.armPinned).toBe(true);
+    expect(b.armAbsDeg).toBe(344);
     expect(b.pin.ok).toBe(true);
     expect(b.pin.angleDeg).toBeCloseTo(231.00, 6);   // 344 − 113
   });
@@ -249,9 +246,9 @@ describe('panel yüzeyi', () => {
   const SATIR = (et) => new RegExp('<span style="color:var\\(--text-muted\\);">'
     + et + '</span>');
 
-  test('zarf okuması pim yarıçapını, açısını ve ofsetini BASIYOR', () => {
-    const { ten, build } = zarfKur();
-    const h = fead.veFeadEnvelopeReadout(ten);
+  test('avara hareketi okuması pim yarıçapını, açısını ve ofsetini BASIYOR', () => {
+    const { ten, build } = kanvasKur();
+    const h = fead.veFeadArmReadout(ten);
     expect(h).toMatch(SATIR('Konum pimi · yarıçap'));
     expect(h).toMatch(SATIR('Konum pimi · AÇI \\(imalat\\)'));
     expect(h).toMatch(/31\.00 mm/);
@@ -261,8 +258,8 @@ describe('panel yüzeyi', () => {
   });
 
   test('pim künyesi yoksa panel SATIRI YİNE BASIYOR — sayı yerine sebep', () => {
-    const { ten } = zarfKur({ part: '' });
-    const h = fead.veFeadEnvelopeReadout(ten);
+    const { ten } = kanvasKur({ part: '' });
+    const h = fead.veFeadArmReadout(ten);
     expect(h).toMatch(SATIR('Konum pimi'));       // satır DÜŞMÜYOR
     expect(h).toMatch(/uydurulmaz/i);             // sebep de yazılı
     expect(h).not.toMatch(/31\.00 mm/);           // ama sayı UYDURULMUYOR
@@ -271,12 +268,16 @@ describe('panel yüzeyi', () => {
 });
 
 describe('rapor yüzeyi', () => {
+  // §8.7'nin İKİ alt bloğu birden: montaj konumunun kuruluşu ve pim planı.
+  // Kaçış kapısı ikisini de taramalı — ölçüldü, `\;` yutulması ilk kez
+  // pivot bloğunun denkleminde çıktı (yalnız pim bloğuna bakan bir kapı onu
+  // SESSİZCE geçiriyordu).
   function raporBolumu(opt) {
-    const { build } = zarfKur(opt);
-    return RP._frEnvelopeBlock({ build });
+    const { build } = kanvasKur(opt);
+    return RP._frPivotBlock({ build }) + RP._frPinBlock({ build });
   }
 
-  test('§8.7 zarf bölümü pim alt başlığını, (4.8)’i ve sayıyı BASIYOR', () => {
+  test('§8.7 pim bloğu alt başlığını, denklemi ve sayıyı BASIYOR', () => {
     const h = raporBolumu();
     expect(h).toMatch(/konum pimi/i);
     expect(h).toMatch(/\\theta_\{\\text\{pim\}\}/);     // KaTeX denklemi
@@ -297,7 +298,7 @@ describe('rapor yüzeyi', () => {
   test('denklemlerde YUTULMUŞ LaTeX kaçışı yok', () => {
     const h = raporBolumu();
     const eq = h.match(/\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]/g) || [];
-    expect(eq.length).toBeGreaterThan(3);
+    expect(eq.length).toBeGreaterThan(1);
     eq.forEach((e) => {
       // ters bölüsüz noktalı virgül = yenmiş \; (ince boşluk)
       expect(e.replace(/\\;/g, '')).not.toMatch(/;/);

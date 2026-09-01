@@ -208,9 +208,10 @@ describe('işlenmiş örnek CANLI hesaplanır', () => {
     expect(DOC).toContain(RP._frFs(O.build.springTensionN, 2) + ' N');
   });
 
-  test('zarf kipinde çözülüyor — pivot girdi, boy çıktı', () => {
+  test('çözülüyor — avara merkezi girdi, boy çıktı', () => {
     const O = GF._gfOrnekCoz();
-    expect(O.gergi.data.cenX).toBeUndefined();
+    expect(O.gergi.data.pivotX).toBeUndefined();
+    expect(Number.isFinite(O.gergi.data.cenX)).toBe(true);
     expect(O.kayis.data.effLength).toBeUndefined();
     expect(Number.isFinite(O.build.armAbsDeg)).toBe(true);
   });
@@ -229,14 +230,14 @@ describe('işlenmiş örnek CANLI hesaplanır', () => {
   });
 
   test('örnek KAYIT DEFTERİ bozulmuyor', () => {
-    // Kılavuz örneği zarf kipine alıyor. `veFeadExampleNodes` `data`yı derin
-    // kopyalıyor, ama ham kayda yazılsaydı fead-example-ag00976.test.js'in
-    // tabanı (kol 28,0750° · L 1714,60 · T 544,05) SESSİZCE kayardı.
+    // Kılavuz örneğin kayış boyunu siliyor. `veFeadExampleNodes` `data`yı
+    // derin kopyalıyor, ama ham kayda yazılsaydı fead-example-ag00976
+    // tabanı SESSİZCE kayardı.
     GF.veGuideFeadHTML();
     const ham = veFeadExampleOf('AG00976_GATES_2025');
     const g = ham.pulleys.filter((p) => p.type === 'fead-tensioner')[0];
-    expect(g.data.pivotX).toBeDefined();
-    expect(g.data.cenX).toBeUndefined();
+    expect(g.data.cenX).toBeDefined();
+    expect(g.data.pivotX).toBeUndefined();
     const kayis = ham.belt;
     expect(kayis.effLength).toBeDefined();
   });
@@ -271,24 +272,21 @@ describe('14.1 — gergi satırı diğerlerinden AYRIŞIR', () => {
     expect((satirlar[0].match(/<th>/g) || []).length).toBe(7);
   });
 
-  test('beş kasnak "kasnak merkezi", gergi "montaj konumu" der', () => {
+  test('altı satırın altısı da "kasnak merkezi" der', () => {
     const govde = satirlar.slice(1);
     expect(govde.length).toBe(6);
-    const merkez = govde.filter((r) => /kasnak merkezi/.test(r));
-    const montaj = govde.filter((r) => /montaj konumu/.test(r));
-    expect(merkez).toHaveLength(5);
-    expect(montaj).toHaveLength(1);
-    expect(montaj[0]).toMatch(/Gergi/i);
+    expect(govde.filter((r) => /kasnak merkezi/.test(r))).toHaveLength(5);
+    expect(govde.filter((r) => /avara kasnağının merkezi/i.test(r))).toHaveLength(1);
   });
 
-  test('gergi satırı PİVOT koordinatını basar — Layout Data satırını DEĞİL', () => {
+  test('gergi satırı LAYOUT DATA koordinatını basar — Pivot Point\'i DEĞİL', () => {
     // İkisi 90 mm apayrı; yanlışını basmak sessizce başka bir sistemi anlatırdı.
-    const g = (tablo.match(/<tr>(?:(?!<\/tr>)[\s\S])*montaj konumu[\s\S]*?<\/tr>/) || [''])[0];
-    const P = GF.VE_GUIDE_FEAD_GATES.pivot;
-    expect(g).toContain(RP._frF(P[0], 2));
-    expect(g).toContain(RP._frF(P[1], 2));
-    // Layout Data'daki çalışma merkezi bu satırda GEÇMEMELİ.
-    expect(g).not.toContain(RP._frF(GF.VE_GUIDE_FEAD_GATES.tenXY[0], 2));
+    const g = (tablo.match(/<tr>(?:(?!<\/tr>)[\s\S])*avara kasnağının merkezi[\s\S]*?<\/tr>/i) || [''])[0];
+    const C = GF.VE_GUIDE_FEAD_GATES.tenXY;
+    expect(g).toContain(RP._frF(C[0], 2));
+    expect(g).toContain(RP._frF(C[1], 2));
+    // Tensioner Data'daki montaj konumu bu satırda GEÇMEMELİ.
+    expect(g).not.toContain(RP._frF(GF.VE_GUIDE_FEAD_GATES.pivot[0], 2));
   });
 
   test('X hücresine sıkıştırılmış "pivot" etiketi KALMADI', () => {
@@ -298,33 +296,31 @@ describe('14.1 — gergi satırı diğerlerinden AYRIŞIR', () => {
   test('rol sütunu gergiyi ADLANDIRIR — adı değişse de ayırt edilsin', () => {
     // Bir dönem yalnız `driver`a bakıyordu ve gergi satırında '—' yazıyordu;
     // o satırı ayırt eden tek şey kasnağın ADIYDI.
-    const g = (tablo.match(/<tr>(?:(?!<\/tr>)[\s\S])*montaj konumu[\s\S]*?<\/tr>/) || [''])[0];
+    const g = (tablo.match(/<tr>(?:(?!<\/tr>)[\s\S])*avara kasnağının merkezi[\s\S]*?<\/tr>/i) || [''])[0];
     expect(g).toMatch(/>gergi</);
     expect(tablo).toContain('>avara<');
     expect(tablo).toContain('>aksesuar<');
   });
 
-  test('ayrım UYARI kutusuyla ve ölçülmüş bedeliyle yazılı', () => {
-    expect(DOC).toContain('Gergi satırı diğerlerinden BAŞKA bir noktadır');
+  test('ayrım kutuyla ve ölçülmüş bedeliyle yazılı', () => {
+    expect(DOC).toContain('Gergi satırı da bir KASNAK MERKEZİDİR');
     expect(DOC).toContain('Pivot Point');
     expect(DOC).toContain('Layout Data');
-    expect(DOC).toContain('−%47,9');       // yanlış nokta girilirse gerginlik
-    expect(DOC).toContain('0,0054 mm');    // iki noktanın kol boyu özdeşliği
+    expect(DOC).toContain('+%1526');       // yanlış nokta girilirse gerginlik
+    expect(DOC).toContain('0,065 mm');     // iki noktanın kol boyu özdeşliği
   });
 
-  test('14.2 kasnak merkezinin TÜREYEN olduğunu sayıyla kapatıyor', () => {
-    // Girilen nokta gerçekten pivot olarak kullanılıyorsa, ondan türeyen
-    // kasnak merkezi raporun KENDİ Layout Data satırına oturmalı.
+  test('14.2 montaj konumunun TÜREYEN olduğunu sayıyla kapatıyor', () => {
+    // Girilen nokta gerçekten avara merkezi olarak kullanılıyorsa, ondan
+    // türeyen montaj konumu raporun KENDİ Tensioner Data satırına oturmalı.
+    // O satır modele HİÇ girmiyor — bağımsız ölçü, kapı değil.
     const O = GF._gfOrnekCoz();
-    const a = Number(O.gergi.data.armLen);
-    const th = O.build.armAbsDeg * Math.PI / 180;
-    const cx = Number(O.gergi.data.pivotX) + a * Math.cos(th);
-    const cy = Number(O.gergi.data.pivotY) + a * Math.sin(th);
+    const p = M.veFeadTensionerPivot(O.gergi.data);
     const G = GF.VE_GUIDE_FEAD_GATES;
-    const d = Math.sqrt(Math.pow(cx - G.tenXY[0], 2) + Math.pow(cy - G.tenXY[1], 2));
-    expect(d).toBeLessThan(5);                       // raporun satırına oturuyor
-    expect(DOC).toContain('Gergi kasnağının merkezi');
-    expect(DOC).toContain(RP._frFs(d, 2) + ' mm');
+    const d = Math.sqrt(Math.pow(p[0] - G.pivot[0], 2) + Math.pow(p[1] - G.pivot[1], 2));
+    expect(d).toBeLessThan(0.05);                    // raporun satırına oturuyor
+    expect(DOC).toContain('Gövdenin montaj konumu');
+    expect(DOC).toContain(RP._frFs(d, 3) + ' mm');
   });
 
   test('iki koordinat arasındaki mesafe TAM KOL BOYU (çıpa)', () => {
@@ -343,8 +339,9 @@ describe('içerik yönlendirici', () => {
 
   test('sessiz tuzaklar bölümü ölçülmüş bedelleri yazıyor', () => {
     expect(DOC).toContain('Temas tarafı');
-    expect(DOC).toContain('−%48,6');
-    expect(DOC).toContain('+27,9°');
+    expect(DOC).toContain('+%1526');
+    // ...ve karışıklığın SESSİZ kalabildiği yazılı: sayı büyük ama uyarı yok.
+    expect(DOC).toContain('5/14 sistemde uyarı YOK');
   });
 
   test('kayma emniyetinin yük taşıyan ayrımı anlatılıyor', () => {
@@ -354,8 +351,8 @@ describe('içerik yönlendirici', () => {
     expect(DOC).toMatch(/gerginlik oranı/i);
   });
 
-  test('pivot ile kasnak merkezi ayrımı yazılı', () => {
-    expect(DOC).toContain('Buraya kasnak merkezi yazılmaz');
+  test('montaj konumu ile avara merkezi ayrımı yazılı', () => {
+    expect(DOC).toContain('Buraya montaj konumu yazılmaz');
   });
 
   test('Başlangıç Sihirbazı açılış yolu olarak anlatılıyor', () => {
@@ -458,8 +455,8 @@ describe('kılavuz ↔ program: kart adları', () => {
     // serbest açı), ikincil "Ölçülmüş Pivot" alanları ve karşılıklı doğrulama
     // kartı. Kılavuz bunları anlatmaya devam ederse kullanıcı olmayan bir
     // düğmeyi arar — programın kendi içinde ölçülmüş "ULAŞILAMAZ ÇARE" sınıfı.
-    const kalkti = ['Ölçülmüş Pivot', 'verifyCenX', 'verifyCenY', 've-fead-cenX',
-      'freeAngleDeg', 'angleMode'];
+    const kalkti = ['Ölçülmüş Pivot', 'verifyCenX', 'verifyCenY', 've-fead-pivotX',
+      'freeAngleDeg', 'angleMode', 'armPinned'];
     kalkti.forEach((k) => {
       expect(PANEL.Gergi).not.toContain(k);
       expect(DOC).not.toContain(k);
@@ -471,12 +468,13 @@ describe('kılavuz ↔ program: kart adları', () => {
   });
 
   test('§7.1 denetim satırını PANELİN gerçekten bastığı adla anlatıyor', () => {
-    // Doğrulama artık tek yerden okunuyor: Avara Hareketi kartının türeyen
-    // kasnak merkezi satırı. Kılavuz o satırı adıyla gösteriyor; ad panelde
+    // Denetim tek yerden okunuyor: Kol Künyesi kartındaki türeyen montaj
+    // konumu satırı. Kılavuz o satırı adıyla gösteriyor; ad panelde
     // değişirse kullanıcı ekranda arayacağı şeyi bulamaz.
     expect(PANEL.Gergi).toContain('Avara Hareketi');
     expect(DOC).toContain('Avara Hareketi');
-    expect(DOC).toContain('kasnak merkezi (türedi)');
+    expect(PANEL.Gergi).toContain('montaj konumu (türedi)');
+    expect(DOC).toContain('montaj konumu (türedi)');
   });
 
   test('"pivot" yalnız raporun KENDİ alan adı olarak geçiyor', () => {
@@ -497,43 +495,21 @@ describe('kılavuz ↔ program: kart adları', () => {
     expect(govde).toContain('Pivot Point');
   });
 
-  test('§14.2.1 iki kol açısını YAN YANA ölçüyor', () => {
-    // Örnek kolun açısını raporundan BİLİYOR (armPinned). Kılavuzun anlattığı
-    // akış ise zarfın SEÇTİĞİ hâl. İkisi de koşmazsa belge "zarf seçti" derken
-    // aslında girdiyi okur — bu bölümün var olma sebebi o ayrımı ölçmek.
-    // (Bir mutasyon ikinci çözümü düşürdüğünde HİÇBİR kapı kırmızıya dönmedi:
-    // kapı ÜRETİLEN YÜZEYE bakmalı, üreticiye değil.)
-    expect(DOC).toContain('Açıyı zarf seçerse ↔ açı biliniyorsa');
-    const t = (DOC.match(/<caption>Tablo [^<]*Aynı yerleşim, iki kol açısı<\/caption>[\s\S]*?<\/table>/) || [''])[0];
-    expect(t.length).toBeGreaterThan(300);
-
-    // Türkçe biçim: binlik nokta, ondalık virgül, GERÇEK eksi (U+2212).
-    // YALNIZ İLK sayı alınır — hücreler '1715,39 mm  (+%0,05)' gibi İKİ
-    // sayı taşıyor ve hepsini birleştiren bir ayrıştırıcı çöp üretir.
-    const say = (x) => {
-      const m = String(x).match(/\u2212?-?\d[\d.]*(?:,\d+)?/);
-      return m ? Number(m[0].replace(/\./g, '').replace(',', '.').replace('\u2212', '-')) : NaN;
-    };
-    const aci = (t.match(/<tr>(?:(?!<\/tr>)[\s\S])*Kol çalışma açısı[\s\S]*?<\/tr>/) || [''])[0];
-    const h = (aci.match(/<td[^>]*>([\s\S]*?)<\/td>/g) || []).map((c) => c.replace(/<[^>]+>/g, '').trim());
-    const secilen = say(h[1]);
-    const sabit = say(h[2]);
-    expect(Number.isFinite(secilen)).toBe(true);
-    expect(Number.isFinite(sabit)).toBe(true);
-    // İKİSİ AYNI OLMAMALI: aynıysa ya zarf koşmuyor ya sabitleme okunmuyor.
-    expect(Math.abs(secilen - sabit)).toBeGreaterThan(0.2);
-    // ...ama ölçütün ölçülmüş isabet bandının içinde (14 sistem medyanı 4,5°).
-    expect(Math.abs(secilen - sabit)).toBeLessThan(6);
-
-    // RAPORDAN GELEN AÇI RAPORU DAHA İYİ ÜRETMELİ. Tersi çıkıyorsa ya sütunlar
-    // yer değiştirmiştir ya da sabitleme çözüme hiç geçmiyordur.
-    const boy = (t.match(/<tr>(?:(?!<\/tr>)[\s\S])*Kayış efektif boyu[\s\S]*?<\/tr>/) || [''])[0];
-    const bh = (boy.match(/<td[^>]*>([\s\S]*?)<\/td>/g) || []).map((c) => c.replace(/<[^>]+>/g, '').trim());
-    const G = GF.VE_GUIDE_FEAD_GATES.belt;
-    expect(Math.abs(say(bh[2]) - G)).toBeLessThan(Math.abs(say(bh[1]) - G));
+  // §14.2.1 KALKTI (2026-09-01): iki kol açısını yan yana ölçüyordu — biri
+  // zarfın seçtiği, biri rapordan sabitlenen. Girdi avara merkezine dönünce
+  // zarf seçici olmaktan çıktı ve kol açısı TEK bir GİRDİ oldu; yan yana
+  // konacak ikinci bir sütun kalmadı. Yerine geçen kapı: §14.2'nin türeyen
+  // montaj konumunu raporun kendi satırıyla SAYIYLA kapatması (yukarıda).
+  test('kol açısının bir GİRDİ olduğu ve seçilmediği yazılı', () => {
+    expect(DOC).not.toContain('Açıyı zarf seçerse');
+    expect(DOC).toContain('Kol çalışma açısını program SEÇMEZ');
+    // Gerekçe SAYIYLA duruyor — "öylesine bir tercih" gibi okunmasın.
+    expect(DOC).toContain('2/14');
+    expect(DOC).toContain('20,7');
+    expect(DOC).toContain('24,1');
   });
 
-  test('kayış boyu alanı zarf kipinde YOK — kılavuz da girmeyi söylemiyor', () => {
+  test('kayış boyu alanı YOK — kılavuz da girmeyi söylemiyor', () => {
     // Kayış boyu bir ÇIKTI; panel o alanı hiç açmıyor. Bir dönem §14.7
     // "efektif boy alanını boşaltın" diyordu — boşaltılacak alan yok.
     expect(PANEL['Kayış Özellikleri']).not.toContain('ve-fead-effLength-');

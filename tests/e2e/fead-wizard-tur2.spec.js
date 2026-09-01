@@ -127,7 +127,8 @@ test('tur2 — gergi satırı · yön · kilit · kayış · kW', async ({ page 
     return {
       kilit: document.querySelectorAll('.ve-fw-lock').length,
       armLen: { v: g('ten.armLen').value, ro: g('ten.armLen').readOnly },
-      pivotX: { v: g('ten.pivotX').value, ro: g('ten.pivotX').readOnly }
+      cenX: { v: g('ten.cenX').value, ro: g('ten.cenX').readOnly },
+      armMeanDeg: { ro: g('ten.armMeanDeg').readOnly }
     };
   });
   console.log('KİLİT açık:', JSON.stringify(acik), 'sonra:', JSON.stringify(kilitli));
@@ -135,7 +136,11 @@ test('tur2 — gergi satırı · yön · kilit · kayış · kW', async ({ page 
   expect(kilitli.kilit).toBeGreaterThan(4);
   expect(kilitli.armLen.v).toBe('56');
   expect(kilitli.armLen.ro).toBe(true);
-  expect(kilitli.pivotX.ro).toBe(false);      // montaj konumu motorun verisi
+  expect(kilitli.cenX.ro).toBe(false);        // avara merkezi MOTORUN verisi
+  // KOL ÇALIŞMA AÇISI DA KİLİTLENMEZ: mutlak açı parçaya değil MONTAJA ait
+  // (aynı E9843 bir araçta 344°, başka birinde 348°), o yüzden künye
+  // kütüphanesinden gelmez.
+  expect(kilitli.armMeanDeg.ro).toBe(false);
 
   // "elle gir" → kilit açılır, DEĞER KORUNUR
   await page.selectOption('select[onchange*="veFeadWizTenLib"]', '');
