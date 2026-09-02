@@ -388,11 +388,24 @@ programı göremiyor. Çalışan tek kanal claude.ai. Bu yüzden kullanıcı zam
 tek dosyayı DOĞRUDAN sohbete istiyor. İstek geldiğinde sıra:
 
 ```bash
-git checkout main && git pull origin main   # BAYAT DOSYA GÖNDERME
-npm run build                                # MFSim_Code.html
+git fetch origin main && git checkout -B main origin/main   # BAYAT DOSYA GÖNDERME
+npm run build                                               # MFSim_Code.html
+git rev-parse --short origin/main                           # build çıktısındaki künye ile AYNI olmalı
 ```
 sonra gerçek tarayıcıda aç ve **0 ağ isteği / 0 konsol hatası** olduğunu ölç,
 ardından dosyayı SendUserFile ile bırak.
+
+**PULL BİR NEZAKET DEĞİL KAPIDIR — ÖLÇÜLDÜ.** Oturum konteyneri depoyu bir
+ANLIK GÖRÜNTÜDEN klonluyor: bu oturum `d99ae2d`de (PR #848) açıldı, `main` ise
+`f820711`deydi (PR #851) — üç PR geride. `MFSim_Code.html` git'e dahil olmadığı
+için her oturum onu yeniden üretir; pull atlanırsa üretilen dosya anlık
+görüntünün commit'inden gelir ve **kullanıcı eski programı alır**. Kullanıcı
+bildirimi (2026-09-02): *"güncel programı aldığım zaman eski program geliyor."*
+
+Kapı iki uçlu: build çıktısı `Sürüm künyesi göm: <sha> · PR #<n>` satırını basar
+ve aynı künye dosyaya gömülür — kullanıcı da **Araçlar → Program Durumu**'ndan
+(ya da yeşil noktanın üstüne gelerek) hangi kopyayı tuttuğunu ÇEVRİMDIŞI
+görebilir. Gönderirken bu satırı durum özetine yaz.
 
 **Gönderilen dosya `MFSim_Code.html`** — tam belge, çift tıkla açılır.
 

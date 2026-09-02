@@ -95,7 +95,8 @@ function _veStatusRender() {
     've-deploy-error':             'Deploy başarısız',
     've-deploy-unknown':           'Henüz kontrol edilmedi',
     've-deploy-offline':           'Çevrimdışı',
-    've-deploy-ratelimit':         'API limiti aşıldı'
+    've-deploy-ratelimit':         'API limiti aşıldı',
+    've-deploy-local':             'Bu kopya (çevrimdışı künye)'
   };
   var statusLbl = labels[dotClass] || 'Bilinmiyor';
   var updateAvailable = dotClass === 've-deploy-update-available';
@@ -146,13 +147,57 @@ function _veStatusRender() {
   _veStatusLoadCommits();
 }
 
+// Gömülü künyeyi (window.__MFSIM_BUILD — build.js yazar) GitHub'ın commit
+// biçimine çevirir; böylece tek çizici iki kaynağı da basar.
+function _veStatusEmbeddedCommits() {
+  var b = (typeof window !== 'undefined') ? window.__MFSIM_BUILD : null;
+  if(!b || !b.changes || !b.changes.length) return [];
+  return b.changes.map(function(c) {
+    return {
+      sha: c.sha || '',
+      html_url: c.url || '',
+      commit: {
+        message: (c.message || '') + (c.title ? '\n\n' + c.title : ''),
+        author: { name: c.author || '', date: c.date || '' }
+      }
+    };
+  });
+}
+
 function _veStatusLoadCommits() {
+  // ÖNCE gömülü künye — ağ olmasa da liste DOLU gelir. İndirilen tek dosyada
+  // bu bölüm "Yükleniyor..."da kalıp hataya düşüyordu: api.github.com
+  // kullanıcının ağından erişilemiyor ve version.json dosyanın yanında yok.
+  var gomulu = _veStatusEmbeddedCommits();
+  if(gomulu.length) _veStatusRenderCommits(gomulu);
+
+  // file:// → yoklanacak uç yok; gömülü liste NİHAİ.
+  if(typeof location !== 'undefined' && location.protocol === 'file:') {
+    if(!gomulu.length) {
+      var bos = document.getElementById('ve-status-commits');
+      if(bos) bos.innerHTML = '<div style="color:var(--text-muted);font-size:var(--fs-body);padding:10px 0;">Bu kopyada sürüm künyesi yok.</div>';
+    }
+    return;
+  }
+
   fetch('https://api.github.com/repos/kaydgn/MFSim/commits?per_page=10')
     .then(function(r) {
       if(!r.ok) throw new Error('HTTP ' + r.status + (r.status === 403 ? ' (API limiti)' : ''));
       return r.json();
     })
     .then(function(commits) {
+      if(Array.isArray(commits) && commits.length) _veStatusRenderCommits(commits);
+    })
+    .catch(function(e) {
+      // Gömülü liste basıldıysa onu SİLME: bayat ama gerçek bir liste, bir
+      // hata satırından iyidir.
+      if(gomulu.length) return;
+      var el = document.getElementById('ve-status-commits');
+      if(el) el.innerHTML = '<div style="color:var(--accent-warning);font-size:var(--fs-body);padding:10px 0;">Güncellemeler alınamadı: ' + _veStatusEsc(e.message) + '</div>';
+    });
+}
+
+function _veStatusRenderCommits(commits) {
       var el = document.getElementById('ve-status-commits');
       if(!el) return;
       if(!Array.isArray(commits) || !commits.length) {
@@ -220,11 +265,6 @@ function _veStatusLoadCommits() {
         html += '</ul>';
       });
       el.innerHTML = html;
-    })
-    .catch(function(e) {
-      var el = document.getElementById('ve-status-commits');
-      if(el) el.innerHTML = '<div style="color:var(--accent-warning);font-size:var(--fs-body);padding:10px 0;">Güncellemeler alınamadı: ' + _veStatusEsc(e.message) + '</div>';
-    });
 }
 
 function _veStatusToggleCommit(sha) {
