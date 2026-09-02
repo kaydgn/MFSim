@@ -429,13 +429,29 @@ npm test          # tüm birim testleri
 1. `npm run build` + `npm test` **ikisi de yeşil** olmadan commit YOK.
 2. Commit → `git push -u origin <dal>`
 3. PR aç (gövdede: sorun, kök neden, ölçüm, test, doğrulama)
-4. **Merge et** (`merge` yöntemi — depo geçmişi merge commit'i kullanıyor)
-5. CI'ı izle ve sonucu kullanıcıya bildir. CI artık **PR'da da koşar** (yalnız
-   `test` job'u; `build`/`deploy` PR'da atlanır) — yani kırık kod merge'den ÖNCE
-   yakalanır. `main`'e push'ta üç job da koşar ve Pages'e yayınlar.
-   `test` job'u ayrıca iki kapı içerir: görüntüleyici senkronu
-   (`npm run sync:viewer -- --check`) ve `MFSim_Olcum_Goruntuleyici.html`'in
-   kaynaklarla taze olması (yeniden üretip `git diff --exit-code`).
+4. **PR koşusunu bekle** — kırık kodu merge'den önce yakalayan kapı budur.
+   PR'da yalnız `test` + `e2e-urun` koşar (`build`/`deploy` atlanır);
+   `test` ayrıca görüntüleyici senkronunu (`npm run sync:viewer -- --check`) ve
+   `MFSim_Olcum_Goruntuleyici.html`'in tazeliğini (yeniden üretip
+   `git diff --exit-code`) tutar.
+5. **Merge et** (`merge` yöntemi — depo geçmişi merge commit'i kullanıyor)
+6. **MERGE SONRASI main KOŞUSU BEKLENMEZ.** Aynı ağaçta aynı `test` +
+   `e2e-urun` bir kez daha koşar; yeni bilgi getirmez. Tek farkı Pages
+   yayını, o da kullanıcının erişemediği bir kanal. Sonucu kullanıcıya PR
+   koşusundan bildir, main koşusunu izlemek için bekleme.
+
+**BEKLEMENİN ÖLÇÜSÜ** (koşu 755, 2026-09-02): `test` 2 dk 09 sn ·
+`e2e-urun` 2 dk 27 sn (paralel) · `build` 21 sn · `deploy` 15 sn ·
+toplam 3 dk 14 sn. Yani merge sonrası bekleme **tur başına 3 dk 14 sn**
+ve karşılığı sıfır. Kullanıcı bildirimi (2026-09-02): *"merge edildikten
+sonra neyi bu kadar bekliyoruz?"*
+
+**PR'I API İLE AÇMAK CI'I TETİKLEMEZ.** Ölçüldü (PR #848): dala push edip
+SONRA PR açınca hiçbir koşu başlamadı — GitHub, App jetonuyla açılan PR'ın
+`opened` olayında iş akışı başlatmıyor. Tetikleyen şey dala gelen bir
+push'un `synchronize` olayı. Yani sıra **push → PR** ise CI koşmaz; PR
+açıldıktan sonra bir push gerekir. Boş commit ATILMAZ — o pushu gerçek bir
+iş yapsın (ör. `main`'i dala birleştirmek, ki zaten gerekiyorsa).
 
 **Kapı kuralı:** testler kırmızıysa ya da build patlıyorsa merge etme —
 durumu kullanıcıya söyle. "Otomatik merge" testleri atlamak demek değil;
