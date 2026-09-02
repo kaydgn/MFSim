@@ -20,32 +20,32 @@ const n = (labelPos) => ({ x: 100, y: 200, data: labelPos ? { labelPos } : {} })
 
 describe('veNodeLabelAnchor', () => {
   test('varsayılan ALT; taban çizgisi uzaklığı çiziciden geliyor', () => {
-    expect(veNodeLabelAnchor(n(), 65, 60, 14)).toEqual({ x: 132.5, y: 274, anchor: 'middle', pos: 'bottom' });
+    expect(veNodeLabelAnchor(n(), 65, 60, 16)).toEqual({ x: 132.5, y: 276, anchor: 'middle', pos: 'bottom' });
     expect(veNodeLabelAnchor(n('bottom'), 65, 60, 13).y).toBe(273);
   });
 
-  test('gap verilmezse 14 varsayılıyor', () => {
-    expect(veNodeLabelAnchor(n(), 65, 60).y).toBe(274);
-    expect(veNodeLabelAnchor(n(), 65, 60, NaN).y).toBe(274);
+  test('gap verilmezse 16 varsayılıyor', () => {
+    expect(veNodeLabelAnchor(n(), 65, 60).y).toBe(276);
+    expect(veNodeLabelAnchor(n(), 65, 60, NaN).y).toBe(276);
   });
 
   test('üst / sol / sağ — CSS .lbl-* ile aynı taraf ve hizalama', () => {
-    // css/styles.css: .lbl-top{bottom:100%; margin-bottom:4px}
+    // css/styles.css: .lbl-top{bottom:100%; margin-bottom:6px}
     //                 .lbl-left{right:100%; margin-right:7px; text-align:right}
     //                 .lbl-right{left:100%; margin-left:7px; text-align:left}
-    expect(veNodeLabelAnchor(n('top'), 65, 60, 14)).toEqual({ x: 132.5, y: 195, anchor: 'middle', pos: 'top' });
-    expect(veNodeLabelAnchor(n('left'), 65, 60, 14)).toEqual({ x: 93, y: 234, anchor: 'end', pos: 'left' });
-    expect(veNodeLabelAnchor(n('right'), 65, 60, 14)).toEqual({ x: 172, y: 234, anchor: 'start', pos: 'right' });
+    expect(veNodeLabelAnchor(n('top'), 65, 60, 16)).toEqual({ x: 132.5, y: 193, anchor: 'middle', pos: 'top' });
+    expect(veNodeLabelAnchor(n('left'), 65, 60, 16)).toEqual({ x: 93, y: 234, anchor: 'end', pos: 'left' });
+    expect(veNodeLabelAnchor(n('right'), 65, 60, 16)).toEqual({ x: 172, y: 234, anchor: 'start', pos: 'right' });
   });
 
   test('tanınmayan değer ALTA düşüyor (eski/bozuk kayıt sessizce patlamasın)', () => {
-    expect(veNodeLabelAnchor(n('yok-böyle'), 65, 60, 14).pos).toBe('bottom');
-    expect(veNodeLabelAnchor({ x: 0, y: 0 }, 65, 60, 14).pos).toBe('bottom');
+    expect(veNodeLabelAnchor(n('yok-böyle'), 65, 60, 16).pos).toBe('bottom');
+    expect(veNodeLabelAnchor({ x: 0, y: 0 }, 65, 60, 16).pos).toBe('bottom');
   });
 
   test('ölçü çıpayı gerçekten kaydırıyor (motor 66×76)', () => {
-    expect(veNodeLabelAnchor(n('top'), 66, 76, 14).x).toBe(133);
-    expect(veNodeLabelAnchor(n(), 66, 76, 14).y).toBe(290);       // 200 + 76 + 14
+    expect(veNodeLabelAnchor(n('top'), 66, 76, 16).x).toBe(133);
+    expect(veNodeLabelAnchor(n(), 66, 76, 16).y).toBe(292);       // 200 + 76 + 16
   });
 });
 
@@ -56,9 +56,9 @@ describe('çiziciler bu çıpadan okuyor', () => {
 
   test('export-topology.js sabit "kutunun altı" yerine çıpayı kullanıyor', () => {
     const s = src('export-topology.js');
-    expect(s).toContain('veNodeLabelAnchor(n, w, h, 14)');
-    // ESKİ kusurun kapısı: sabit ly = n.y + h + 14 ile yazılmıyor.
-    expect(s).not.toMatch(/ly\s*=\s*n\.y\s*\+\s*h\s*\+\s*14/);
+    expect(s).toContain('veNodeLabelAnchor(n, w, h, 16)');
+    // ESKİ kusurun kapısı: sabit ly = n.y + h + 16 ile yazılmıyor.
+    expect(s).not.toMatch(/ly\s*=\s*n\.y\s*\+\s*h\s*\+\s*16/);
     expect(s).toContain("text-anchor=\"' + _la.anchor + '\"");
   });
 
