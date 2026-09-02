@@ -326,7 +326,7 @@ describe('index.html modül satırı sembolü kendi çizmez', () => {
 });
 
 // ── veArrangeModuleBase ölçü duyarlı ────────────────────────────────────────
-// FEAD "Kayış Yolu" düğümü kanvasta 420×340'lık canlı şema kartı. Yerleşim
+// FEAD "Kayış Yolu" düğümü kanvasta 440×500'lük canlı şema kartı. Yerleşim
 // hesabı herkese 65×60 sayarsa grubun genişliği eksik çıkar, ortalama kayar ve
 // kart görünür alanın sağından taşar (gerçek tarayıcıda ölçüldü).
 describe('veArrangeModuleBase — büyük kart grubun ölçüsüne katılır', () => {

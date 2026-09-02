@@ -130,25 +130,18 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
     expect(Math.abs(Lsurukle - L0)).toBeGreaterThan(1);
   });
 
-  test('gerçek çap hayaleti kutunun arkasında ve ÇAPA göre ölçekli', async ({ page }) => {
-    await bootApp(page);
-    await openFeadWithExample(page);
-    const olcu = await page.evaluate(() => {
-      const out = [];
-      window.nodes.forEach((n) => {
-        if (!n.data || !n.data.od) return;
-        const el = document.getElementById(n.id);
-        const g = el && el.querySelector('.ve-fead-dia');
-        if (g) out.push({ od: n.data.od, w: Math.round(parseFloat(g.style.width)) });
-      });
-      return out;
-    });
-    expect(olcu.length).toBeGreaterThanOrEqual(5);
-    // 1 px = 1 mm → hayaletin genişliği dış çapın ta kendisi
-    olcu.forEach((o) => expect(o.w).toBe(Math.round(o.od)));
-  });
-
-  test('kayış boyu kipi rozeti TIKLANINCA değişiyor ve çözüm kipe uyuyor', async ({ page }) => {
+  // KAYIŞ KİPİ ROZETİ KİLİTLİ — ve kilit KANVASTA da geçerli.
+  //
+  // Kayış boyu bu modülde bir ÇIKTIDIR (kasnak merkezleri + gergi künyesi kolun
+  // oturduğu yeri belirliyor, boy o konumun sonucu). Kilit ÜÇ YÜZEYDE birden
+  // olmak zorunda: köprü, panel ve rozet. Tek yerde tutulsaydı panel bir kipi,
+  // rozet başkasını gösterirdi.
+  //
+  // BU TEST BİR DÖNEM BAYATTI: kilit PR #831'de geldi ama test hâlâ rozetin
+  // 'SABİT'ten 'SERBEST'e geçmesini bekliyordu ve E2E takımı rutin olarak
+  // koşmadığı için kırmızı kaldığı fark edilmedi (2026-09-01'de ölçüldü:
+  // değişiklikten ÖNCEKİ commit'te de kırmızı).
+  test('kayış boyu kipi rozeti KİLİTLİ — tıklamak kipi değiştirmiyor', async ({ page }) => {
     await bootApp(page);
     await openFeadWithExample(page);
 
@@ -170,15 +163,21 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
     await page.waitForTimeout(200);
 
     const rozet = page.locator('#' + beltId + ' .ve-fead-badge');
-    await expect(rozet).toHaveText('SABİT');
+    await expect(rozet).toHaveText('SERBEST');
+    // Boy TÜRETİLMİŞ ve gergi var → kip kilitli
+    expect(await page.evaluate(() => ({
+      turetildi: veFeadBuildFromCanvas().beltLengthDerived,
+      kilit: veFeadBeltModeLocked(window.nodes),
+    }))).toEqual({ turetildi: true, kilit: true });
 
+    // GERÇEK TIK — rozet reddetmeli: ne metin ne de düğüm verisi değişir.
     await rozet.click();
+    await page.waitForTimeout(150);
     await expect(page.locator('#' + beltId + ' .ve-fead-badge')).toHaveText('SERBEST');
-
-    // Serbest kipte boy TÜRETİLMİŞ olmalı
-    const turetildi = await page.evaluate(() =>
-      veFeadBuildFromCanvas().beltLengthDerived);
-    expect(turetildi).toBe(true);
+    expect(await page.evaluate((id) => {
+      const n = window.nodes.find((x) => x.id === id);
+      return { kip: n.data.lengthMode, turetildi: veFeadBuildFromCanvas().beltLengthDerived };
+    }, beltId)).toEqual({ kip: undefined, turetildi: true });
   });
 
   // ── HİZALAMA KENETLEMESİ KOORDİNATI YEMİYOR ─────────────────────────────
@@ -217,6 +216,53 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
     expect(sonra.x).toBeCloseTo(once.x, 1);
   });
 
+  // ── ÖRNEK "KULLANIMA HAZIR" GELİYOR ─────────────────────────────────────
+  //
+  // Kullanıcı isteği (2026-08-26): kesikli çap daireleri kalksın; "Başlangıç ve
+  // Örnekler" kutusu örnek kurulduktan sonra kalmasın; "Rapor" kutusu Çözücü'nün
+  // altında gelsin; kart daha büyük olsun ve yön gülü ana şekle yaklaşsın.
+  //
+  // Node bunların hiçbirini GÖREMEZ: kutu DOM'da mı, kart gerçekten o ölçüde mi
+  // kuruldu, SVG viewBox'ı ne — hepsi gerçek tarayıcının işi.
+  test('örnek kurulunca: hayalet YOK, başlangıç kutusu YOK, Rapor VAR', async ({ page }) => {
+    await bootApp(page);
+    await openFeadWithExample(page);
+
+    const r = await page.evaluate(() => {
+      const araclar = window.nodes
+        .filter((n) => {
+          const d = (window.componentDefs || {})[n.type] || {};
+          return d.isFeadExample || d.isFeadBelt || d.isFeadSolver || d.isFeadReport;
+        })
+        .slice().sort((a, b) => a.y - b.y).map((n) => n.type);
+      const lay = window.nodes.find((n) => n.type === 'fead-layout');
+      const svg = document.querySelector('svg[data-fead-node]');
+      const belt = svg && svg.querySelector('path[data-ve="belt"]');
+      const bb = belt ? belt.getBBox() : null;
+      return {
+        araclar,
+        // Kesikli çap hayaleti DOM'dan tamamen kalkmalı
+        hayalet: window.nodes.filter((n) => {
+          const el = document.getElementById(n.id);
+          return el && el.querySelector('.ve-fead-dia');
+        }).length,
+        kart: lay ? { w: lay.width, h: lay.height } : null,
+        viewBox: svg ? svg.getAttribute('viewBox') : null,
+        beltW: bb ? +bb.width.toFixed(1) : null
+      };
+    });
+
+    // Sol şerit: Kayış Özellikleri → Çözücü → Rapor, başlangıç kutusu YOK
+    expect(r.araclar).toEqual(['fead-belt', 'fead-solver', 'fead-report']);
+    expect(r.hayalet).toBe(0);
+    // Kart yeni varsayılan ölçüde ve SVG'si kartın kendi genişliğinde
+    expect(r.kart).toEqual({ w: 440, h: 500 });
+    expect(r.viewBox).toBe('0 0 440 458');
+    // ŞERİT AYRILMADI: çizim 18 px payın dışında kalan TAM genişliği kullanıyor.
+    // Şerit ayrılsaydı 440−36−54 = 350 px olurdu (eski davranış, ölçüldü).
+    expect(r.beltW).toBeGreaterThan(400);
+  });
+
   test('"Otomatik Düzenle" koordinatları SİLMİYOR, kutuları yerine koyuyor', async ({ page }) => {
     await bootApp(page);
     await openFeadWithExample(page);
@@ -243,5 +289,298 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
     });
     expect(kontrol.dxPx).toBeCloseTo(kontrol.dxMm, 0);
     expect(kontrol.dyPx).toBeCloseTo(-kontrol.dyMm, 0);      // Y TERS
+  });
+
+  // ── KONUM BAĞI (fead-coordlink) ─────────────────────────────────────────
+  //
+  // Kullanıcı isteği (2026-08-28): *"ufak, böyle açılıp kapanabilen bir
+  // bileşen… topolojiye çekip açtığımız kapattığımız zaman [koordinatın
+  // değişmesi] devreye girsin veya devreden çıksın."*
+  //
+  // Node bunu göremiyor: rozete GERÇEK bir fare tıklaması, gerçek
+  // `mousedown/mousemove/mouseup` dizisi, DOM'a yazılan `style.left` ve
+  // kenetlemenin gerçekten ateşlenmesi — dördü de yalnız tarayıcıda koşuyor.
+
+  // Düğümü kanvasın açık ortasına al: rozet sidebar'ın altında kalırsa
+  // gerçek fare olayı oraya hiç gitmez (kayış kipi rozetindeki dersin aynısı).
+  async function bagiKur(page) {
+    const id = await page.evaluate(() => {
+      const n = createNode('fead-coordlink', 0, 0);
+      const c = document.getElementById('ve-canvas').getBoundingClientRect();
+      const k = (typeof canvasZoom !== 'undefined' ? canvasZoom : 1);
+      const off = (typeof canvasOffset !== 'undefined') ? canvasOffset : { x: 0, y: 0 };
+      n.x = (c.width * 0.55 - off.x) / k;
+      n.y = (c.height * 0.5 - off.y) / k;
+      const el = document.getElementById(n.id);
+      el.style.left = n.x + 'px'; el.style.top = n.y + 'px';
+      if (typeof updateAllConnections === 'function') updateAllConnections();
+      return n.id;
+    });
+    await page.waitForTimeout(150);
+    // Rozet YERLEŞENE KADAR bekle. Tazeleme (saveState → veFeadRefreshBadges)
+    // rozeti DOM'dan söküp yeniden kuruyor; beklemeden tıklamak bayat bir
+    // öğeye gidiyor ve tık sessizce kayboluyor (ölçüldü).
+    await expect(page.locator('#' + id + ' .ve-fead-badge')).toHaveText('AÇIK');
+    return id;
+  }
+
+  const rozet = (page, id) => page.locator('#' + id + ' .ve-fead-badge');
+
+  test('rozet TIKLANINCA bağ kapanıyor: kutu oynuyor, mm oynamıyor', async ({ page }) => {
+    await bootApp(page);
+    await openFeadWithExample(page);
+    const bagId = await bagiKur(page);
+
+    // Paletten bırakmak tek başına HİÇBİR ŞEYİ değiştirmemeli: AÇIK doğar.
+    await expect(rozet(page, bagId)).toHaveText('AÇIK');
+
+    await rozet(page, bagId).click();
+    await expect(rozet(page, bagId)).toHaveText('KAPALI');
+
+    const altId = await page.evaluate(() =>
+      window.nodes.find((n) => n.type === 'fead-alternator').id);
+    const once = await mmOf(page, altId);
+    const L0 = await readL(page);
+
+    const box = await page.locator('#' + altId).boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 - 60, box.y + box.height / 2 - 40, { steps: 8 });
+    await page.mouse.up();
+
+    const sonra = await mmOf(page, altId);
+    const z = await zoomOf(page);
+    // MODEL DEĞİŞMEDİ…
+    expect(sonra.x).toBeCloseTo(once.x, 6);
+    expect(sonra.y).toBeCloseTo(once.y, 6);
+    // …KUTU DEĞİŞTİ (kapatılan şey yazma, hareket değil)
+    expect(sonra.px - once.px).toBeCloseTo(-60 / z, 0);
+    expect(sonra.py - once.py).toBeCloseTo(-40 / z, 0);
+    // Kayış Yolu kartı da aynı kaldı — geometri değişmedi, çizim değişmemeli.
+    expect(await readL(page)).toBeCloseTo(L0, 6);
+  });
+
+  test('bağı YENİDEN AÇMAK kutuyu koordinata döndürür, koordinatı kutuya YAZMAZ',
+    async ({ page }) => {
+      await bootApp(page);
+      await openFeadWithExample(page);
+      const bagId = await bagiKur(page);
+      const altId = await page.evaluate(() =>
+        window.nodes.find((n) => n.type === 'fead-alternator').id);
+      const once = await mmOf(page, altId);
+
+      await rozet(page, bagId).click();                       // KAPAT
+      await expect(rozet(page, bagId)).toHaveText('KAPALI');
+
+      const box = await page.locator('#' + altId).boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width / 2 - 70, box.y + box.height / 2, { steps: 8 });
+      await page.mouse.up();
+      const serbest = await mmOf(page, altId);
+      expect(Math.abs(serbest.px - once.px)).toBeGreaterThan(20);
+
+      await rozet(page, bagId).click();                       // AÇ
+      await expect(rozet(page, bagId)).toHaveText('AÇIK');
+      await page.waitForTimeout(200);
+
+      const geri = await mmOf(page, altId);
+      expect(geri.x).toBeCloseTo(once.x, 6);       // model hiç değişmedi
+      expect(geri.y).toBeCloseTo(once.y, 6);
+      expect(geri.px).toBeCloseTo(once.px, 1);     // kutu koordinatına döndü
+      expect(geri.py).toBeCloseTo(once.py, 1);
+      // DOM da tazelendi — dizi güncellenip elemanın style'ı eski kalsaydı
+      // kutu ekranda serbest yerinde görünmeye devam ederdi.
+      const domX = await page.evaluate((id) =>
+        parseFloat(document.getElementById(id).style.left), altId);
+      expect(domX).toBeCloseTo(geri.px, 1);
+    });
+
+  // KENETLEME İSTİSNASI BAĞA BAĞLI. Kasnak sürüklenirken hizalama kenetlemesi
+  // KAPALI, çünkü kutu kenarlarını yapıştırmak koordinatı sessizce yutuyordu
+  // (ölçüldü: 24.514 mm istenirken 3.940 mm). Bağ kapalıyken o gerekçe yok —
+  // kutu salt görsel, yani kenetleme klasik topolojilerdeki anlamına dönüyor.
+  test('bağ KAPALIYKEN kenetleme geri geliyor (yutacak bir mm yok)', async ({ page }) => {
+    await bootApp(page);
+    await openFeadWithExample(page);
+    const bagId = await bagiKur(page);
+    await rozet(page, bagId).click();                          // KAPAT
+    await expect(rozet(page, bagId)).toHaveText('KAPALI');
+    // Kullanıcının kenetlemeyi AÇTIĞI durum (varsayılan kapalı).
+    await page.evaluate(() => { window.SNAP_ENABLED = true; });
+
+    const altId = await page.evaluate(() =>
+      window.nodes.find((n) => n.type === 'fead-alternator').id);
+    const once = await mmOf(page, altId);
+
+    // Kardeş testteki HEDEFİN AYNISI: Avara 2 kayış düzleminde 7.94 mm
+    // yukarıda, yani 8 px kenetleme eşiğinin tam içinde.
+    const box = await page.locator('#' + altId).boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 8; i++)
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 - i * 2, { steps: 2 });
+    await page.mouse.up();
+
+    const sonra = await mmOf(page, altId);
+    const z = await zoomOf(page);
+    // KENETLEME ATEŞLENDİ: kutu istenen 16/z px'in belirgin ALTINDA kaldı.
+    // (Kardeş test aynı hareketle bağ AÇIKKEN 16/z'yi birebir alıyor.)
+    expect(Math.abs(sonra.py - once.py)).toBeLessThan((16 / z) * 0.75);
+    // …ve yutulan şey bir mm DEĞİL: model kılı kıpırdamadı.
+    expect(sonra.x).toBeCloseTo(once.x, 6);
+    expect(sonra.y).toBeCloseTo(once.y, 6);
+  });
+
+  // BAĞ DÜĞÜMÜNÜ SİLMEK = BAĞI AÇMAK. Silme gerçek `deleteSelectedNodes`
+  // yolundan geçiyor (map.js) ve DOM'a da yazması gerekiyor; Node bunu görmüyor.
+  //
+  // ÖLÇÜLDÜ (kanca YOKKEN, BMC, kapalıyken alternatör dizilmiş, sonra düğüm
+  // silinmiş): sonraki 1 px sürükleme alternatörü mm'de 81 mm sıçratıyordu.
+  test('kapalı bağ düğümünü SİLMEK kutuları koordinata oturtur', async ({ page }) => {
+    await bootApp(page);
+    await openFeadWithExample(page);
+    const bagId = await bagiKur(page);
+    await rozet(page, bagId).click();
+    await expect(rozet(page, bagId)).toHaveText('KAPALI');
+
+    const altId = await page.evaluate(() =>
+      window.nodes.find((n) => n.type === 'fead-alternator').id);
+    const once = await mmOf(page, altId);
+
+    const box = await page.locator('#' + altId).boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 80, box.y + box.height / 2 - 50, { steps: 8 });
+    await page.mouse.up();
+    expect(Math.abs((await mmOf(page, altId)).px - once.px)).toBeGreaterThan(20);
+
+    // Düğümü GERÇEK silme yolundan sil.
+    await page.evaluate((id) => {
+      window.selectedNodes = [window.nodes.find((n) => n.id === id)];
+      deleteSelectedNodes();
+    }, bagId);
+    await page.waitForTimeout(200);
+
+    const sonra = await mmOf(page, altId);
+    expect(sonra.px).toBeCloseTo(once.px, 1);     // kutu koordinatına oturdu
+    expect(sonra.py).toBeCloseTo(once.py, 1);
+    expect(sonra.x).toBeCloseTo(once.x, 6);       // model hiç değişmedi
+    const domX = await page.evaluate((id) =>
+      parseFloat(document.getElementById(id).style.left), altId);
+    expect(domX).toBeCloseTo(sonra.px, 1);
+
+    // …ve bundan sonra 1 px, 1 mm eder — 81 mm değil.
+    const b2 = await page.locator('#' + altId).boundingBox();
+    await page.mouse.move(b2.x + b2.width / 2, b2.y + b2.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(b2.x + b2.width / 2 + 10, b2.y + b2.height / 2, { steps: 4 });
+    await page.mouse.up();
+    const z = await zoomOf(page);
+    expect((await mmOf(page, altId)).x - once.x).toBeCloseTo(10 / z, 0);
+  });
+
+  // ── DÖNÜŞ YÖNÜ (fead-spin) ──────────────────────────────────────────────
+  //
+  // Kullanıcı sorusu (2026-08-28): *"kayışın dönüş yönü neye göre
+  // belirleniyor? Bu dönüş yönünü de CW veya CCW olacak şekilde ayarlayacak
+  // bir bileşen kuralım."*
+  //
+  // Node bunların hiçbirini göremiyor: rozete gerçek tık, kabloların DOM'da
+  // gerçekten çevrilmesi, kanvastaki gidiş oklarının dönmesi ve Kayış Yolu
+  // kartının imzadan tazelenmesi — dördü de yalnız tarayıcıda koşuyor.
+  test('rozet TIKLANINCA yön çevriliyor: kablolar, oklar ve kart takip ediyor',
+    async ({ page }) => {
+      await bootApp(page);
+      await openFeadWithExample(page);
+
+      const spinId = await page.evaluate(() => {
+        const n = createNode('fead-spin', 0, 0);
+        const c = document.getElementById('ve-canvas').getBoundingClientRect();
+        const k = (typeof canvasZoom !== 'undefined' ? canvasZoom : 1);
+        const off = (typeof canvasOffset !== 'undefined') ? canvasOffset : { x: 0, y: 0 };
+        n.x = (c.width * 0.55 - off.x) / k;
+        n.y = (c.height * 0.5 - off.y) / k;
+        const el = document.getElementById(n.id);
+        el.style.left = n.x + 'px'; el.style.top = n.y + 'px';
+        if (typeof updateAllConnections === 'function') updateAllConnections();
+        return n.id;
+      });
+      await page.waitForTimeout(150);
+      const rz = page.locator('#' + spinId + ' .ve-fead-badge');
+      await expect(rz).toHaveText('↺ CCW');
+
+      const oku = () => page.evaluate(() => ({
+        // Kayış yolunun kablo sırası
+        teller: window.connections
+          .filter((c) => {
+            const d = (window.componentDefs || {})[
+              (window.nodes.find((n) => n.id === c.from) || {}).type] || {};
+            return !!d.isFeadPulley;
+          })
+          .map((c) => c.from + '>' + c.to).join(','),
+        // Kanvastaki gidiş okları
+        oklar: Array.from(document.querySelectorAll('.ve-conn-dir'))
+          .map((p) => p.getAttribute('d')).join('|'),
+        // Kartın KENDİ kinematik künyesi. Kasnak dönüş okları animasyon
+        // açıkken çizilmiyor (yerlerine kol/`spoke` geliyor) ve o yollar her
+        // karede değiştiği için kapı olamaz; `data-fead-anim` ise kartın
+        // çözümü: `sense` çevrimin yönü, `loop` kayış çevresi.
+        anim: (function () {
+          const svg = document.querySelector('svg[data-fead-node]');
+          const a = svg && svg.getAttribute('data-fead-anim');
+          if (!a) return null;
+          try { const j = JSON.parse(a); return { sense: j.sense, loop: j.loop }; }
+          catch (e) { return null; }
+        })(),
+        // Geometri: yön DEĞİŞTİRMEMELİ
+        L: (function () {
+          const svg = document.querySelector('svg[data-fead-node]');
+          const strip = svg && svg.parentElement.parentElement
+            .querySelector('div:last-child');
+          const m = strip && strip.textContent.match(/L\s+([\d.]+)\s*mm/);
+          return m ? Number(m[1]) : null;
+        })(),
+      }));
+
+      const once = await oku();
+      expect(once.teller.length).toBeGreaterThan(10);
+      expect(once.oklar.length).toBeGreaterThan(10);
+      expect(once.L).toBeGreaterThan(1000);
+
+      await rz.click();
+      await expect(rz).toHaveText('↻ CW');
+      await page.waitForTimeout(300);
+      const sonra = await oku();
+
+      // KABLOLAR gerçekten çevrildi
+      expect(sonra.teller).not.toBe(once.teller);
+      // GİDİŞ OKLARI onunla döndü — bayrak yolunda bu ok YALAN söylerdi
+      expect(sonra.oklar).not.toBe(once.oklar);
+      // KART tazelendi ve çevrimin yönü çevrildi
+      expect(once.anim).not.toBeNull();
+      expect(once.anim.sense).toBe(1);
+      expect(sonra.anim.sense).toBe(-1);
+      // …ama GEOMETRİ BİREBİR aynı (yönden bağımsız) — kayış çevresi de,
+      // durum şeridindeki L_eff de kılı kıpırdamıyor.
+      expect(sonra.anim.loop).toBeCloseTo(once.anim.loop, 3);
+      expect(sonra.L).toBeCloseTo(once.L, 3);
+
+      // İkinci tık başa döndürür
+      await rz.click();
+      await expect(rz).toHaveText('↺ CCW');
+      await page.waitForTimeout(300);
+      expect((await oku()).teller).toBe(once.teller);
+    });
+
+  test('düğüm YOKKEN davranış birebir eski — bağ varsayılan AÇIK', async ({ page }) => {
+    await bootApp(page);
+    await openFeadWithExample(page);
+    // Bu, bugüne kadar kaydedilmiş HER projenin durumu: bağ düğümü yok.
+    const acik = await page.evaluate(() => veFeadCoordLinkOn(window.nodes));
+    expect(acik).toBe(true);
+    const bagVar = await page.evaluate(() =>
+      window.nodes.some((n) => n.type === 'fead-coordlink'));
+    expect(bagVar).toBe(false);
   });
 });

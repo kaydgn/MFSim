@@ -8,7 +8,7 @@
  * EN DEĞERLİ TEST BU DOSYANIN SONUNDA: BMC tedarikçi sayfasının kendi kayışı
  * (8PK 1715) katalogdan GERİ ÇIKIYOR mu? Serbest kip boyu hiç görmeden
  * 1715.27 mm hesaplıyor; katalog buna en yakın boyu öneriyor; o boy seçilince
- * çözüm sabit kipin tabanına (kol 28.5090° · T 649.986 N) BİREBİR oturuyor.
+ * çözüm sabit kipin tabanına (kol 28.4271° · T 532.142 N) BİREBİR oturuyor.
  * Üç bağımsız yol tek noktada buluşuyor.
  *
  * ── İKİ KÜME KARIŞTIRILMAMALI ──────────────────────────────────────────────
@@ -224,11 +224,12 @@ describe('katalog + çözücü: üç bağımsız yol tek noktada buluşuyor', ()
     const f = o.grid.fit;                            // 3 · çözücüden
     expect(f.ok).toBe(true);
     expect(f.fits).toBe(true);
-    // Sabit kip tabanı (bkz. fead-belt-mode.test.js TABAN). Gergi künyesi
-    // Gates raporunun Tensioner Data bloğundan geldiğinden beri bu değerler.
+    // Sabit kip tabanı (bkz. fead-belt-mode.test.js TABAN). Girdi avara
+    // merkezine dönünce (2026-09-01) örnek sayfanın kendi koordinatını
+    // taşımaya başladı; ölçülen kayma L −0,0025 mm · T +%0,008.
     expect(f.relDeg).toBeCloseTo(28.4271, 3);
-    expect(f.tensionN).toBeCloseTo(532.142, 2);
-    expect(f.hubloadN).toBeCloseTo(302.125, 2);
+    expect(f.tensionN).toBeCloseTo(532.142, 1);
+    expect(f.hubloadN).toBeCloseTo(302.136, 1);
   });
 
   // SIĞMAYAN ADAY BİR SAYI DEĞİL, BİR HÜKÜM. Kenetlenme kolun uç konumuna
@@ -263,15 +264,19 @@ describe('katalog + çözücü: üç bağımsız yol tek noktada buluşuyor', ()
     expect(c.tensionN).toBeLessThan(a.tensionN);
   });
 
-  test('sabit kipte de katalog çalışır — hedef girilen boydur', () => {
-    const o = veFeadBeltOptions(bmc('fixed'), { count: 3 });
-    expect(o.ok).toBe(true);
-    expect(o.targetMm).toBeCloseTo(1715, 3);
+  test('katalog hedefi TÜREYEN boydur — girilen boy hedefi değiştirmez', () => {
+    // Kayış boyu artık bir ÇIKTI: katalog adayları o çıktının etrafında
+    // aranıyor, kullanıcının yazdığı boyun etrafında değil.
+    const kur = (L) => {
+      const pack = veFeadExampleNodes('BMC_FEAD_2026');
+      pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+      pack.nodes.find((n) => n.type === 'fead-belt').data.effLength = L;
+      return veFeadBeltOptions(veFeadBuildSystem(pack.nodes, pack.connections));
+    };
+    const a1 = kur(1715), a2 = kur(1600);
+    expect(a1.targetMm).toBeCloseTo(a2.targetMm, 9);
+    expect(a1.targetMm).toBeCloseTo(1715.269, 2);
   });
-
-  // Adaylar sistemin ÇALIŞMA NOKTASINI bozmamalı: her aday kendi bisect'ini
-  // koşuyor ama hepsi aynı `sys` üzerinde. Önbellek kirlenirse sonraki her
-  // hesap sessizce yanlış açıdan okunurdu.
   test('aday değerlendirmesi çalışma noktasını KİRLETMİYOR', () => {
     const b = bmc('fixed');
     const once = F.meanRel(b.sys);

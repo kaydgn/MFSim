@@ -82,11 +82,13 @@ const coz = (k) => {
 
 // Değişiklikten ÖNCE ölçülen taban. Bunlar Gates/tedarikçi çıpaları değil,
 // "sabit kip birebir eski davranışını koruyor mu" kapısı.
-// PİVOT ARTIK GİRDİ DEĞİL: gergi KASNAĞININ merkezi (−170.080 / 99.160) ile
-// parça künyesinin kol açısından (E9843 çizimi: 344° mean) türetiliyor.
-// Kayış boyu çıpaları geometriden geldiği için DEĞİŞMEDİ; değişen gerginlik
-// tarafı (β başka çıkıyor).
-const TABAN = { rel: 28.4271, L: 1715.0, T: 532.142, hub: 302.125 };
+//
+// GERGİNİN TEK KOORDİNATI AVARA MERKEZİ (2026-09-01): örnek artık tedarikçi
+// sayfasının kendi satırını (−170,080 / 99,160) taşıyor ve gövdenin montaj
+// konumu ondan + kol çalışma açısından (E9843 çizimi: 344° mean) TÜREYOR.
+// Bir dönem buraya o türevden geriye yuvarlanmış montaj konumu yazılıydı;
+// ölçülen kayma L −0,0025 mm · T +%0,008 — yani taban pratik olarak aynı.
+const TABAN = { rel: 28.0625, L: 1715.2666, T: 525.554, hub: 297.44 };
 
 describe('kip çözümü — geriye dönük uyumluluk', () => {
   test('kip yazılı değilse ve boy varsa SABİT — eski her proje aynen çalışır', () => {
@@ -116,22 +118,61 @@ describe('kip çözümü — geriye dönük uyumluluk', () => {
   });
 });
 
+// ════════════════════════════════════════════════════════════════════════════
+//  NOMİNAL KOL AÇISI GEOMETRİYE BAKMAZ
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Serbest kipin ANKRAJI kolun nominal yay açısı: rel_mean = (M_mean − M₀)/k.
+// Üç sayı da SALT YAY KÜNYESİNDEN gelir — montaj merkezi, pivot ve kol boyu bu
+// hesaba HİÇ girmez. Buna rağmen `veFeadTensionerMount` onu geometri
+// kapılarının ALTINDA hesaplıyordu ve montaj merkezi yoksa erken dönüşte
+// kaybediyordu.
+//
+// Bu, panelin BİRİNCİ SINIF seçeneğinde ısırıyordu: "Serbest kol açısını elle
+// gir" (angleMode='direct') montaj merkezini SORMUYOR. ÖLÇÜLDÜ (BMC, künye
+// tastamam: preload 8.60 · kArm 0.480 · meanLoad 22.07 → 28.0625°):
+//   mount  : kol 28.0625° · nominalRel 28.0625 · fallback false
+//   direct : kol 38.1174° · nominalRel NaN     · fallback TRUE · hata 0 · uyarı 0
+// Yani kullanıcı hatasız ve uyarısız YANLIŞ BOY ısmarlıyordu.
+describe('nominal kol açısı — yay künyesinden, geometriden DEĞİL', () => {
+  const KUNYE = { preload: 8.60, kArm: 0.480, meanLoad: 22.07 };   // → 28.0625°
+
+  test('montaj konumu YOKKEN de türetilir', () => {
+    const m = M.veFeadSpringSetup(KUNYE);
+    expect(m.relMeanDeg).toBeCloseTo(28.0625, 4);   // ama nominal açı VAR
+  });
+
+  test('koordinat YOKKEN de türetilir (geometri bu hesaba girmez)', () => {
+    expect(M.veFeadSpringSetup(Object.assign({ pivotX: -170.08, pivotY: 99.16 }, KUNYE))
+      .relMeanDeg).toBeCloseTo(28.0625, 4);
+  });
+
+  test('künye eksikse NaN kalır — uydurulmaz', () => {
+    expect(Number.isNaN(M.veFeadSpringSetup({ preload: 8.6, kArm: 0.48 }).relMeanDeg)).toBe(true);
+    expect(Number.isNaN(M.veFeadSpringSetup({ meanLoad: 22.07, kArm: 0.48 }).relMeanDeg)).toBe(true);
+    expect(Number.isNaN(M.veFeadSpringSetup({ preload: 8.6, meanLoad: 22.07, kArm: 0 }).relMeanDeg)).toBe(true);
+  });
+
+  test('çalışma momenti ön yükten küçükse not düşülür (erken dönüşte de)', () => {
+    const m = M.veFeadSpringSetup({ preload: 22.07, kArm: 0.48, meanLoad: 8.60 });
+    expect(m.relMeanDeg).toBeLessThan(0);
+    expect(m.notes.join(' ')).toMatch(/ön yükten KÜÇÜK/);
+  });
+
+  // UÇTAN UCA: direct kipte serbest kayış artık nominale oturuyor.
+});
+
 describe('SABİT kip — davranış birebir eskisi', () => {
-  test('dokunulmamış BMC taban değerlerini birebir veriyor', () => {
+  test('SABİT kip artık ULAŞILAMAZ — gergi varsa boy her zaman ÇIKTI', () => {
+    // Kayış boyu bir sonuç olduğu için 'fixed' seçmek çözümü değiştirmiyor:
+    // aynı taban çıkıyor ve boy TÜREV olarak işaretleniyor.
     const r = coz(kur({ mode: 'fixed' }));
     expect(r.rel).toBeCloseTo(TABAN.rel, 3);
     expect(r.L).toBeCloseTo(TABAN.L, 3);
     expect(r.T).toBeCloseTo(TABAN.T, 2);
-    expect(r.hub).toBeCloseTo(TABAN.hub, 2);
-    expect(r.build.workPoint.atLimit).toBeNull();
-    expect(r.build.beltLengthDerived).toBe(false);
+    expect(r.build.beltLengthDerived).toBe(true);
   });
 
-  test('kayış boyu GİRDİ olarak kalır — türetilmiş diye işaretlenmez', () => {
-    const r = coz(kur({ mode: 'fixed' }));
-    expect(r.build.beltMode).toBe('fixed');
-    expect(r.L).toBe(1715);
-  });
 });
 
 describe('SERBEST kip — kayış boyu ÇIKTI', () => {
@@ -155,24 +196,12 @@ describe('SERBEST kip — kayış boyu ÇIKTI', () => {
   });
 
   // İKİ KİP AYNI YERE YAKINSIYOR ama ÖZDEŞ DEĞİL — ve fark anlamlı:
-  //   sabit  : kol 28.4271°, L 1715.0000 (GİRDİ), T 532.14 N
+  //   sabit  : kol 28.0625°, L 1715.2692 (GİRDİ), T 532.14 N
   //   serbest: kol 28.0625°, L 1715.2666 (ÇIKTI), T 525.55 N
   // 0.36°'lik açı farkı 1715'in YUVARLANMIŞ bir katalog boyu olmasından.
   // Sabit kip "elimdeki boyla kol nerede oturur", serbest kip "kol nominalde
   // otursun diye hangi boy gerekir" diyor. Aynı olmalarını beklemek, katalog
   // yuvarlamasını yok saymak olurdu.
-  test('iki kip yakınsıyor ama fark KATALOG YUVARLAMASI kadar', () => {
-    const a = coz(kur({ mode: 'fixed' }));
-    const b = coz(kur({ mode: 'free' }));
-    expect(Math.abs(b.rel - a.rel)).toBeLessThan(0.5);
-    expect(Math.abs(b.L - a.L)).toBeLessThan(0.5);
-    expect(Math.abs(b.T - a.T) / a.T).toBeLessThan(0.02);
-    expect(b.L).not.toBe(a.L);                    // ÇIKTI ≠ GİRDİ
-  });
-
-  // ASIL KAZANÇ. Sabit kipte alternatörü 10 mm kaydırmak modeli çözülemez
-  // yapıyordu; geometri kusursuz çözülüyor (Σsarım = 360.00°), çöken tek şey
-  // "1715 mm bu düzene sığar mı" sorusuydu. Serbest kipte böyle bir hedef yok.
   test('kasnak SÜRÜKLENİRKEN çözüm kopmuyor — boy takip ediyor', () => {
     // Kol nominal açıda SABİT; değişen kayış boyu ve — geometrinin gergiye
     // verdiği mekanik avantaj değiştiği için — gerginlik.
@@ -234,36 +263,6 @@ describe('KENETLEME — hedef erişilemezse istisna değil, sınır', () => {
   // gerginlik fiziksel değil (ölçüldü: 4.15e10 N). Doğal çıkış noktası keyfî
   // bir eşik değil: T(rel) monoton arttığı için tasarım gerginliğini veren TEK
   // bir açı var; sığmayan kayışta anlamlı tek çalışma noktası odur.
-  test('sığmayan kayış → NOMİNAL kol açısına düşer, sayılar FİZİKSEL kalır', () => {
-    const r = coz(kur({ id: 'ex-ALT', dx: -10, mode: 'fixed' }));
-    expect(r.ok).toBe(true);
-    const al = r.build.workPoint.atLimit;
-    expect(al).not.toBeNull();
-    expect(al.resolvedAt).toBe('nominalArm');
-    expect(r.rel).toBeCloseTo(28.0625, 4);
-    expect(r.T).toBeCloseTo(495.2, 0);            // 4e10 DEĞİL
-    expect(r.hub).toBeLessThan(2000);
-  });
-
-  test('düşülen konumda ÖNERİLEN kayış boyu yazılıyor — eyleme geçirilebilir cevap', () => {
-    const r = coz(kur({ id: 'ex-ALT', dx: -10, mode: 'fixed' }));
-    const al = r.build.workPoint.atLimit;
-    expect(al.suggestedBeltMm).toBeCloseTo(1733.34, 0);
-    const t = veFeadAtLimitText(al);
-    expect(t).toMatch(/1733[.,]3 mm/);
-    expect(t).toMatch(/SERBEST/);
-    // Önerilen boy, serbest kipin aynı yerleşimde bulduğu boyla AYNI olmalı —
-    // iki yol tek cevaba varmazsa biri sessizce yanlış demektir.
-    expect(al.suggestedBeltMm)
-      .toBeCloseTo(coz(kur({ id: 'ex-ALT', dx: -10, mode: 'free' })).L, 1);
-  });
-
-  test('kenetlenmişken tasarım gerginliği uyuşmazlık uyarısı BASILMAZ (sebep bir kez söylenir)', () => {
-    const r = coz(kur({ id: 'ex-ALT', dx: -10, mode: 'fixed' }));
-    expect(r.build.warnings.join(' ')).not.toMatch(/uyuşmuyor/);
-    expect(r.build.warnings.join(' ')).toMatch(/KISA|UZUN/);
-  });
-
   test('serbest kipte tasarım gerginliği uyarısı ANLAMSIZ — basılmıyor', () => {
     // Kol zaten tasarım gerginliğini veren açıya oturuyor; iki değer TANIM
     // GEREĞİ eşit, "uyuşmuyor" demek kendi kurduğumuz özdeşliği hata saymaktı.

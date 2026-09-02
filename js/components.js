@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-example','fead-layout','fead-report','str-geometry','str-material','str-mesh','str-bc','str-results','arac-performans','mount-analysis','fead-analysis','structural-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-example','fead-layout','fead-report','fead-coordlink','fead-spin','fead-wizard','str-geometry','str-material','str-mesh','str-bc','str-results','arac-performans','mount-analysis','fead-analysis','structural-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -148,6 +148,13 @@ function veSyncSidebarScope() {
   if(typeof veStrStack !== 'undefined' && veStrStack.length) scope = 'structural-analysis';
   veSidebarScope = scope;
   veShowAllSidebarComponents();
+  // ŞERİT DE KAPSAMI GÖRMELİ. Şeritte kapsama bağlı öğeler var — bugün
+  // "Bu Modülün Kılavuzu" (js/guide-kit.js `veGuideCurrentId`, kapsamı buradan
+  // okuyor). Kapsam değişince şerit yeniden çizilmezse o düğüm bir sonraki
+  // rastgele tazelemeye (sekme değişimi, panel aç/kapa) kadar YANLIŞ durumda
+  // kalır: FEAD'e girdiniz, düğme hâlâ yok. Modül aç/kapa bu fonksiyondan
+  // geçen TEK nokta, dolayısıyla tazeleme de buraya ait.
+  if(typeof veRibbonRender === 'function') veRibbonRender();
 }
 
 // Bileşen tanımları (SVG sembolleri)
@@ -678,6 +685,72 @@ var componentDefs = {
     // Ölçü BURADA YOK: Kayış Yolu düğümü kanvasta CANLI ŞEMA kartıdır ve
     // ölçüsü tek yerden gelir (VE_FEAD_LAYOUT_W/H → aşağıdaki döngü).
   },
+  // ── KONUM BAĞI — kanvas konumu ile mm koordinatı arasındaki bağ ────────────
+  //
+  // Bu modülde kanvas KAYIŞ DÜZLEMİDİR: bir kasnağı sürüklemek onu kayış
+  // düzleminde taşımak demek (1 px = 1 mm, orijin sürücü kasnak). O bağ
+  // 2026-08-25'te kullanıcının kendi isteğiyle kuruldu ve VARSAYILAN olarak
+  // açık kalıyor.
+  //
+  // Ama bağ açıkken kanvas bir BLOK DİYAGRAMI olmaktan çıkıyor: kutular
+  // fiziksel yerlerinde durmak zorunda, yani okunurluk için kaydırılamıyorlar.
+  // Bu düğüm o bağı KAPATILABİLİR yapıyor — kapalıyken kutu salt görsel,
+  // koordinat salt panel girdisi.
+  //
+  // DÜĞÜM YOKKEN BAĞ AÇIK. Bugüne kadar kaydedilmiş her proje davranışını
+  // birebir korur; paletten sürükleyip bırakmak da tek başına hiçbir şeyi
+  // değiştirmez (düğüm AÇIK doğar). Değişen tek şey rozete tıklamak.
+  //
+  // maxInstances:1 — iki kopya iki farklı durum taşıyabilirdi ve "hangisi
+  // geçerli" sorusunun cevabı yok. Yine de okuyucu (veFeadCoordLinkOn) çok
+  // kopyaya karşı dayanıklı: KAPALI diyen varsa o kazanır (bkz. fead-model.js).
+  'fead-coordlink': {
+    name: 'Konum Bağı',
+    // Koordinat düzlemi (gri eksenler) + kasnak (mavi) + aradaki zincir halkası
+    // (amber): "kutunun yeri ile koordinat aynı şey".
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><g stroke="var(--text-muted, #888)" stroke-width="4" stroke-linecap="round" fill="none"><path d="M20 84 H86"/><path d="M20 84 V18"/></g><polygon points="92,84 80,78.5 80,89.5" fill="var(--text-muted, #888)"/><polygon points="20,12 14.5,24 25.5,24" fill="var(--text-muted, #888)"/><line x1="22" y1="82" x2="60" y2="44" stroke="var(--text-muted, #888)" stroke-width="2.5" stroke-dasharray="5 4"/><circle cx="66" cy="38" r="17" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="66" cy="38" r="5" fill="var(--accent-primary, #3b82f6)"/><g transform="rotate(-45 42 62)" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5"><rect x="24" y="55" width="22" height="14" rx="7"/><rect x="38" y="55" width="22" height="14" rx="7"/></g></svg>',
+    inputs: 0, outputs: 0, isFeadCoordLink: true, maxInstances: 1,
+    defaultWidth: 54, defaultHeight: 48
+  },
+  // ── DÖNÜŞ YÖNÜ — kayış çevriminin CW / CCW seçimi ─────────────────────────
+  //
+  // Yön normalde bir AYAR DEĞİL: `loopSense` kasnak merkezlerinin kayış gidiş
+  // sırasındaki ayakkabı-bağı işaretinden okur, yani kabloları hangi sırada
+  // çektiysen yön odur. Bu düğüm o sırayı TERS YÜRÜTEREK yönü seçtiriyor —
+  // kabloya dokunmadan.
+  //
+  // GEOMETRİ YÖNDEN BAĞIMSIZ (ölçüldü: sarım kümesi, span kümesi ve L_eff
+  // birebir aynı), GERİLME ZİNCİRİ DEĞİL: gergi ankrajı gidiş yönünde
+  // yürüdüğü için ters yön gergiyi GERGİN tarafa düşürebiliyor ve span
+  // gerilmeleri negatife iniyor. O bir hata değil, geçersiz bir tasarımın
+  // işareti — panel sebebi adıyla yazıyor.
+  //
+  // DÜĞÜM YOKSA YÖN DOĞALDIR (kablolamadan). maxInstances:1 — iki kopya iki
+  // farklı yön isteyebilirdi.
+  'fead-spin': {
+    name: 'Dönüş Yönü',
+    // Kasnak (mavi) + çevresinde dönüş oku (amber): "bu halka hangi yöne gider".
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M50 14 A36 36 0 1 1 14 50" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="6" stroke-linecap="round"/><polygon points="5,55 14,36 23,55" fill="var(--accent-warning, #f59e0b)"/><circle cx="50" cy="50" r="20" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="50" cy="50" r="6" fill="var(--accent-primary, #3b82f6)"/></svg>',
+    inputs: 0, outputs: 0, isFeadSpin: true, maxInstances: 1,
+    defaultWidth: 54, defaultHeight: 48
+  },
+  // ── BAŞLANGIÇ SİHİRBAZI — adım adım model kurulumu ───────────────────────
+  //
+  // Kullanıcı isteği (2026-08-29): *"Bu bileşene tıkladığımızda adım adım bir
+  // modeli kurmak için gereken tüm girdileri gireceğiz."* Bileşenin çözdüğü
+  // şey bir eksiklik değil bir SIRA sorunu: girdilerin hepsi zaten panellerde
+  // vardı, ama hangi sırayla gireceğini ve hangi alanın hangi belgeden
+  // okunduğunu ancak modülü bilen biri biliyordu.
+  //
+  // maxInstances:1 — iki sihirbaz iki ayrı taslak taşır ve "hangisi kurulacak"
+  // sorusunun cevabı yok. Girişsiz/çıkışsız: zincirin halkası değil, bir ARAÇ.
+  'fead-wizard': {
+    name: 'Başlangıç Sihirbazı',
+    // Numaralı adımlar + son adımda onay işareti: "sırayla doldur, sonunda kur".
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="26" cy="26" r="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="26" cy="52" r="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="26" cy="78" r="9" fill="var(--accent-warning, #f59e0b)"/><line x1="26" y1="35" x2="26" y2="43" stroke="var(--text-muted, #aaa)" stroke-width="4"/><line x1="26" y1="61" x2="26" y2="69" stroke="var(--text-muted, #aaa)" stroke-width="4"/><line x1="44" y1="26" x2="82" y2="26" stroke="var(--text-muted, #aaa)" stroke-width="5" stroke-linecap="round"/><line x1="44" y1="52" x2="74" y2="52" stroke="var(--text-muted, #aaa)" stroke-width="5" stroke-linecap="round"/><path d="M46 78 l8 9 l17 -19" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    inputs: 0, outputs: 0, isFeadWizard: true, maxInstances: 1,
+    defaultWidth: 60, defaultHeight: 56
+  },
   'fead-report': {
     name: 'Rapor',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><path d="M60 12 v16 h16" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="60" width="8" height="18" fill="var(--accent-primary, #3b82f6)"/><rect x="47" y="50" width="8" height="28" fill="var(--accent-primary, #3b82f6)"/><rect x="60" y="42" width="8" height="36" fill="var(--accent-primary, #3b82f6)"/><line x1="34" y1="40" x2="66" y2="40" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg>',
@@ -791,17 +864,37 @@ var VE_MODULE_LEGACY_H = 66;
 // koordinat/çap/temas girdilerini değiştirdikçe yeniden çizilir, yani
 // modelinin tutarlı olup olmadığını PANEL AÇMADAN görür.
 //
-// Ölçü ÖLÇÜLDÜ, keyfî değil: FEAD_INFORMATION düzeninin en-boy oranı
-// (465 × 315 mm ≈ 1.48) ve okunabilir en küçük kasnak adı (8px) birlikte
-// 420×340'ta oturuyor; daha darda alternatör dairesi (Ø57) 6px'in altına
-// düşüp ad etiketleri üst üste biniyor.
-var VE_FEAD_LAYOUT_W = 420;
-var VE_FEAD_LAYOUT_H = 340;
-// Kart öncesi varsayılan (Aşama 0–3 kayıtları). BİREBİR bu ölçüdeyse — yani
-// kullanıcı hiç dokunmamışsa — kart ölçüsüne yükseltilir; bilerek verilmiş her
-// ölçü korunur. Modül kartındaki kuralın aynısı, bkz. veModuleSizeFor.
-var VE_FEAD_LAYOUT_LEGACY_W = 60;
-var VE_FEAD_LAYOUT_LEGACY_H = 56;
+// Ölçü ÖLÇÜLDÜ, keyfî değil. İlk ölçü 420×340'tı: FEAD_INFORMATION düzeninin
+// en-boy oranı (465 × 315 mm ≈ 1.48) ve okunabilir en küçük kasnak adı (8px)
+// orada oturuyordu — yani bu bir ALT SINIRDI, hedef değil.
+//
+// Kullanıcı isteği (2026-08-26): *"Kanvas biraz boyuna geniş [olsun]"*.
+// ÖLÇÜLDÜ (BMC örneği, 420×340): şemaya kalan alan 330 × 262 px (420−54 şerit
+// −36 pay · 298−36) ve kayış yolu 316.3 × 262 ile YÜKSEKLİĞE dayanıyordu —
+// yani kart, çizimin istediği yeri veremiyordu.
+//
+// 440×500'de aynı içerik 404 × 334.7 px'e çıkıyor (yön gülü şeridi de artık
+// koşullu, bkz. cp-fead.js). Kazanç TEK BİR ÖLÇEK ÇARPANI, altı kasnakta da
+// aynı: **1.277, yani +%27.7** — yarıçaplar 45.5→58.0 · 42.7→54.5 ·
+// 21.3→27.3 (×3) · **16.4→21.0** (alternatör Ø57, en küçüğü). Dikeyde kalan
+// 87 px boşluk da gülün oturduğu ölü alan oluyor (458 − 334.7 − 2·18 = 87.3).
+//
+// Sabit şeritlerin (SER 20 + SEC 22 = 42 px) yüksekliğe maliyeti de düşüyor:
+// %12.4 → %8.4, yani büyüme SVG'ye orantısından FAZLA geçiyor.
+var VE_FEAD_LAYOUT_W = 440;
+var VE_FEAD_LAYOUT_H = 500;
+// AŞILMIŞ VARSAYILANLAR — biri BİREBİR duruyorsa (yani kullanıcı hiç
+// dokunmamışsa) güncel ölçüye yükseltilir; bilerek verilmiş her ölçü korunur.
+// Modül kartındaki kuralın aynısı, bkz. veModuleSizeFor.
+//
+// LİSTE, TEK ÇİFT DEĞİL: 60×56 kart-öncesi (Aşama 0–3) ölçüydü, 420×340 ise
+// kartın ilk ölçüsü. İkincisi listeye alınmasaydı bugüne kadar kaydedilmiş
+// HER proje eski küçük kartla açılır, yeni ölçü yalnız yeni kartlarda görünür
+// ve aynı sürümde iki farklı kart ölçüsü dolaşırdı.
+var VE_FEAD_LAYOUT_LEGACY = [ { w: 60, h: 56 }, { w: 420, h: 340 } ];
+// Geriye dönük adlar (dışarıdan okuyan bir yer kalırsa bozulmasın).
+var VE_FEAD_LAYOUT_LEGACY_W = VE_FEAD_LAYOUT_LEGACY[0].w;
+var VE_FEAD_LAYOUT_LEGACY_H = VE_FEAD_LAYOUT_LEGACY[0].h;
 
 function veIsFeadLayoutNode(node) {
   if(!node || !node.type) return false;
@@ -813,8 +906,11 @@ function veIsFeadLayoutNode(node) {
 // aynı: sekme önizlemesi düğümü DEĞİŞTİRMEDEN ölçüye ihtiyaç duyuyor.
 function veFeadLayoutSizeFor(node) {
   var w = (node && node.width) || 65, h = (node && node.height) || 60;
-  if(veIsFeadLayoutNode(node) && w === VE_FEAD_LAYOUT_LEGACY_W && h === VE_FEAD_LAYOUT_LEGACY_H) {
-    return { w: VE_FEAD_LAYOUT_W, h: VE_FEAD_LAYOUT_H, changed: true };
+  if(veIsFeadLayoutNode(node)) {
+    for(var i = 0; i < VE_FEAD_LAYOUT_LEGACY.length; i++) {
+      if(w === VE_FEAD_LAYOUT_LEGACY[i].w && h === VE_FEAD_LAYOUT_LEGACY[i].h)
+        return { w: VE_FEAD_LAYOUT_W, h: VE_FEAD_LAYOUT_H, changed: true };
+    }
   }
   return { w: w, h: h, changed: false };
 }

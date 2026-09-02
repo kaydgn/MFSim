@@ -89,11 +89,29 @@ function _frH2(idx){
 }
 
 // ═══════════════════ BİLEŞEN PANELİ ═════════════════════════════════════════
+// RAPOR TÜRÜ. İki belge AYNI çözümden üretilir, farkı OKUYUCUSU:
+//   detailed  teoriyi anlatır (§1-10 + Ek A) — nasıl hesaplandığını gösterir
+//   summary   yalnız sonuç sayfaları — tedarikçi çıktısının beş sayfası
+// Varsayılan `detailed`: alanı olmayan eski projeler bugüne kadarki
+// davranışlarını birebir korusun.
+var VE_FEAD_REPORT_KINDS = [
+  { key: 'detailed', ad: 'Detaylı Rapor',
+    aciklama: 'Teori + türetme + bu modelin çözümü. Akademik biçim, KaTeX matematik.' },
+  { key: 'summary',  ad: 'Özet Rapor',
+    aciklama: 'Beş sonuç sayfası: özet, geometri, gergi zarfı, kayma, hubload.' }
+];
+function veFeadReportKind(node){
+  var k = node && node.data && node.data.reportKind;
+  return (k === 'summary') ? 'summary' : 'detailed';
+}
+
 function getFeadReportPropertiesHTML(node){
   if(!node.data) node.data = {};
   var R = _frResults();
   var solved = !!(R && R.ok);
+  var kind = veFeadReportKind(node);
   var html = '<div class="sw-panel">';
+  html += _frKindPicker(node, kind);
   if(solved){
     var nP = (R.pulleyNames || []).length;
     var nD = (R.duty || []).length;
@@ -101,7 +119,8 @@ function getFeadReportPropertiesHTML(node){
           + '<span style="color:var(--accent-success); font-weight:700;">✓ Model çözüldü</span> — '
           + nP + ' kasnak · ' + nD + ' devir noktası. Rapor güncel çözüme göre üretilir.</div>';
     html += _frDocFields(node);
-    html += '<button onclick="veFeadGenerateReport(\'' + node.id + '\')" style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:var(--radius-sm);" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 Raporu Oluştur ve İndir</button>';
+    var kAd = (kind === 'summary') ? 'Özet Raporu' : 'Detaylı Raporu';
+    html += '<button onclick="veFeadGenerateReport(\'' + node.id + '\')" style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:var(--radius-sm);" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 ' + kAd + ' Oluştur ve İndir</button>';
   } else {
     html += '<div style="padding:10px 12px; margin-bottom:10px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:var(--fs-body); line-height:1.5;">'
           + '<b>Model çözülmedi.</b> Rapor, Çözücü sonuçlarından üretilir.</div>';
@@ -110,6 +129,30 @@ function getFeadReportPropertiesHTML(node){
   html += '<div id="ve-fead-report-status" style="margin-top:8px; font-size:var(--fs-tiny); color:var(--text-muted);"></div>';
   html += '</div>';
   return html;
+}
+
+// Rapor türü seçici. İki durumlu bir anahtar değil İKİ KART: her türün ne
+// olduğu seçim yapılmadan ÖNCE okunabilsin. Seçim `saveState` çağırır ve
+// paneli yeniden çizer (veFeadSetChoice kalıbı) — tür bir görünüm tercihi
+// değil, hangi belgenin indirileceğini belirleyen bir karar.
+function _frKindPicker(node, kind){
+  var h = '<div style="margin:0 0 10px;">'
+    + '<div style="font-size:var(--fs-tiny); font-weight:600; color:var(--text-heading); margin-bottom:5px;">Rapor türü</div>';
+  VE_FEAD_REPORT_KINDS.forEach(function(k){
+    var on = (k.key === kind);
+    h += '<div onclick="veFeadSetChoice(\'' + node.id + '\',\'reportKind\',\'' + k.key + '\')"'
+      + ' style="cursor:pointer; margin-bottom:5px; padding:7px 9px; border:1px solid '
+      + (on ? 'var(--accent-primary)' : 'var(--border-color)') + '; background:'
+      + (on ? 'rgba(59,130,246,0.10)' : 'var(--bg-secondary)') + ';">'
+      + '<div style="display:flex; align-items:center; gap:7px;">'
+      + '<span style="width:11px; height:11px; flex:none; border-radius:50%; border:2px solid '
+      + (on ? 'var(--accent-primary)' : 'var(--text-muted)') + '; background:'
+      + (on ? 'var(--accent-primary)' : 'transparent') + ';"></span>'
+      + '<b style="font-size:var(--fs-tiny); color:var(--text-heading);">' + k.ad + '</b></div>'
+      + '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:3px; line-height:1.4;">'
+      + k.aciklama + '</div></div>';
+  });
+  return h + '</div>';
 }
 
 // Doküman künyesi — antete ve §8.18'e akan üç alan. Tedarikçi sayfasının
@@ -125,11 +168,15 @@ function _frDocFields(node){
   }
   var h = '<div style="margin:0 0 10px; padding:9px 10px; background:var(--bg-secondary); border:1px solid var(--border-color);">'
     + '<div style="font-size:var(--fs-tiny); font-weight:600; color:var(--text-heading); margin-bottom:6px;">Doküman künyesi</div>';
+  // HAZIRLAYAN — özet raporun anteti bu alanı okuyordu ama HİÇBİR YER onu
+  // yazmıyordu: altı sayfanın altısında da "Hazırlayan: —" basılıyordu.
+  // Tedarikçi çıktısı da aynı satırı taşıyor ("User: ...").
+  h += inp('author', 'Hazırlayan', 'A. Kol');
   h += inp('docNo', 'Doküman no', 'FEAD-2026-001');
   h += inp('revision', 'Revizyon', 'A');
   h += '<div><label style="display:block; font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:2px;">Tasarım notları (her satır bir not)</label>'
      + '<textarea rows="3" oninput="veFeadSet(\'' + node.id + '\',\'notes\',this.value)"'
-     + ' placeholder="2026-08-18 | Gergi pivotu 5 mm sola alındı"'
+     + ' placeholder="2026-08-18 | Gergi montaj konumu 5 mm sola alındı"'
      + ' style="width:100%; padding:5px 7px; font-size:var(--fs-tiny); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); resize:vertical;">'
      + _frEsc(d.notes == null ? '' : d.notes) + '</textarea></div>';
   h += '</div>';
@@ -190,6 +237,7 @@ function _frFindReportNode(nodeId){
 function veFeadGenerateReport(nodeId){
   var node = _frFindReportNode(nodeId);
   var R = _frResults();
+  var kind = veFeadReportKind(node);
   // ÇÖZÜLMEMİŞ MODELDE İNDİRME YOK. Boş/yarım bir belge indirmek, kullanıcıya
   // "rapor üretildi" izlenimi verip içinde hiçbir sayı olmayan bir dosya
   // bırakırdı — sessiz başarısızlığın ders kitabı hâli.
@@ -208,14 +256,15 @@ function veFeadGenerateReport(nodeId){
     }
     var html;
     try {
-      html = _frBuildReportHTML(R, node);
+      html = (kind === 'summary') ? veFeadSummaryHTML(R, node) : _frBuildReportHTML(R, node);
     } catch(e){
       _frStatus('Rapor üretilemedi: ' + (e && e.message ? e.message : e), 'var(--accent-danger)');
       if(typeof showToast === 'function') showToast('Rapor üretilemedi.', 'error');
       return;
     }
-    var ad = 'MFSim_FEAD_Raporu';
-    if(node && node.data && node.data.docNo) ad = String(node.data.docNo).replace(/[^\w.-]+/g, '_');
+    var ad = (kind === 'summary') ? 'MFSim_FEAD_Ozet' : 'MFSim_FEAD_Raporu';
+    if(node && node.data && node.data.docNo) ad = String(node.data.docNo).replace(/[^\w.-]+/g, '_')
+      + (kind === 'summary' ? '_Ozet' : '');
     _frDownload(html, ad + '_' + _frDateStamp() + '.html');
     _frStatus('Rapor indirildi (' + Math.round(html.length / 1024) + ' KB).', 'var(--accent-success)');
     if(typeof showToast === 'function') showToast('FEAD raporu indirildi.', 'success');
@@ -528,6 +577,7 @@ function _frSection8(R, node){
      + 'emniyeti, kaburga yorulması ve ömür bu modelin gerçek değerleriyle çözülür. Uzunluk mm, '
      + 'kuvvet N, güç kW, açı derece.</p>';
   h += _frWarnBox(R);
+  h += _frBeltDataBox(R);
   h += _frSummary(R);
   h += _frBeltTable(R);
   h += _frPulleyTable(R);
@@ -548,6 +598,34 @@ function _frSection8(R, node){
   h += _frTorsionalSection(R);
   h += _frNotesSection(node);
   return h;
+}
+
+// KAYIŞ TİPİNE BAĞLI ÇIKTILAR KAPALIYSA SEBEBİ BURADA YAZAR.
+//
+// Bu belge için en pahalı sessiz hata, İÇERMEDİĞİ bir kontrolün yapıldığı
+// izlenimini bırakmasıdır: tablolar dolu görünür, hüküm verilir, okuyucu neyin
+// denetlenmediğini bilmez. Kutu "ne yok ve neden" ikilisini yazıyor.
+// TÜREYEN KAYIŞ BOYUNUN BASILDIĞI BÖLÜM — tek kaynak.
+//
+// İki ayrı yer buna atıf yapıyor: kayış künyesi (§8.2, "türev — çözülen kol
+// açısından") ve aşağıdaki kapsam kutusu. Elle yazıldıklarında ayrıştılar:
+// kutu bir dönem §8.4'ü (gergi künyesi) gösteriyordu, oysa orada kayış boyu
+// YOK. Okuyucu belgenin kendi yol tarifiyle boşa çıkıyordu. Kapı bu sayıyı
+// gerçekten o bölümde basılan başlığa bağlıyor.
+var VE_FR_SEC_BELTLEN = '8.7';
+
+function _frBeltDataBox(R){
+  var off = R && R.beltDataOff;
+  if(!off || !off.length) return '';
+  return '<div class="note" style="border-left:3px solid var(--ink,#333); padding-left:10px;">'
+    + '<b>Kayış tipine bağlı çıktılar bu belgede YER ALMIYOR.</b> Tasarım aşamasında '
+    + 'kayış boyu bir <b>sonuçtur</b> (§' + VE_FR_SEC_BELTLEN + '), yani kayış henüz '
+    + 'seçilmemiştir; katalog '
+    + 'sabitleriyle üretilecek sayı bir varsayım olurdu. Üretilmeyenler: '
+    + '<b>' + _frEsc(off.join(' · ')) + '</b>.<br>'
+    + 'Profil sabitleri (h<sub>b</sub> / h<sub>r</sub>) <b>kapatılmadı ve kapatılamaz</b>: '
+    + 'pitch yarıçapı <i>OD/2 + h<sub>b</sub></i>, yani teğet geometrisi onlara dayanır. '
+    + 'Kapatılan şey profil değil, profilin <b>katalog sonuçları</b>.</div>';
 }
 
 // 8.0 — çözümün taşıdığı uyarılar
@@ -636,7 +714,11 @@ function _frSignedWrap(R){
 //
 // Ayrım gizleme değil: tablo bütün kasnakları ve bütün sayıları basmaya devam
 // eder, yalnız HÜKÜM yük taşıyanlara dayanır ve taşımayanlar ayrıca yazılır.
-var VE_FR_SLIP_LOADED_RATIO = 1.01;   // bu oranın altı "yük taşımıyor" sayılır
+// Ölçüt KÖPRÜDE (js/fead-model.js · VE_FEAD_SLIP_LOADED_RATIO): kayma eşiği
+// hesabı da aynı ayrımı kullanıyor. Yedek yalnız yükleme sırası kalkanı;
+// bir kapı iki sayının eşit kaldığını tutuyor.
+var VE_FR_SLIP_LOADED_RATIO = (typeof VE_FEAD_SLIP_LOADED_RATIO === 'number')
+  ? VE_FEAD_SLIP_LOADED_RATIO : 1.01;   // bu oranın altı "yük taşımıyor" sayılır
 
 function _frSlipStats(R){
   var out = { min: NaN, minName: '', minRpm: NaN, minRatio: NaN,
@@ -680,13 +762,20 @@ function _frBeltTable(R){
   var b = sys.belt || {}, C = _frCore(), bp = null;
   try { bp = C && C.beltProps ? C.beltProps(b) : null; } catch(e){}
   var h = '<h3>8.2 Kayış künyesi</h3>';
-  h += '<table><caption>Tablo ' + _frTbl() + ' — Kayış özellikleri (girdi ve profil sabitleri)</caption>';
+  h += '<table><caption>Tablo ' + _frTbl() + ' — Kayış özellikleri (kaynak sütununa bakınız)</caption>';
   h += '<tr><th>Büyüklük</th><th>Değer</th><th>Birim</th><th>Kaynak</th></tr>';
   function tr(k, v, u, src){ return '<tr><td class="l">' + k + '</td><td>' + v + '</td><td class="c">' + (u || '—') + '</td><td class="l">' + src + '</td></tr>'; }
   h += tr('Profil', _frEsc(b.profile || '—'), '—', 'girdi');
   h += tr('Marka / tip', _frEsc((b.brand || '—') + (b.beltType ? ' · ' + b.beltType : '')), '—', 'girdi');
   h += tr('Kaburga (kanal) sayısı', _frF(b.ribs, 0), '—', 'girdi');
-  h += tr('Efektif boy L<sub>eff</sub>', _frFs(b.effLength, 1), 'mm', 'girdi');
+  // TÜRETİLEN BİR SAYIYA "girdi" DEMEK, bu belgede iki kez düzeltilmiş hatanın
+  // (tasarım gerginliği; uygunluk #6) üçüncüsü olurdu — üstelik §8.7'nin
+  // envanteri aynı sayıyı "türev" diye basıyor, yani belge kendi içinde
+  // çelişirdi. Kaynak, kipten TÜRETİLİYOR.
+  var _bd = R.build || {};
+  var _boyTurev = true;   // kayış boyu HER ZAMAN bir sonuç
+  h += tr('Efektif boy L<sub>eff</sub>', _frFs(b.effLength, 1), 'mm',
+          _boyTurev ? '<b>türev</b> — çözülen kol açısından (§' + VE_FR_SEC_BELTLEN + ')' : 'girdi');
   h += tr('Boy toleransı ±', _frFs(b.tolerance, 1), 'mm', 'girdi');
   // BİRİM TUZAĞI: wearPct çekirdekte ORAN (0,007), tedarikçi sayfasında YÜZDE
   // (%0,70). Ham basılsaydı raporda "%0,007" görünür ve okuyan kişi payı
@@ -758,18 +847,16 @@ function _frTensionerTable(R){
   h += '<table><caption>Tablo ' + _frTbl() + ' — Gergi parametreleri</caption>';
   h += '<tr><th>Büyüklük</th><th>Değer</th><th>Birim</th></tr>';
   function tr(k, v, u){ return '<tr><td class="l">' + k + '</td><td>' + v + '</td><td class="c">' + (u || '—') + '</td></tr>'; }
-  h += tr('Pivot X / Y', _frFs(t.pivot && t.pivot[0], 2) + ' / ' + _frFs(t.pivot && t.pivot[1], 2), 'mm');
+  h += tr('Avara merkezi X / Y (girdi)',
+    _frFs(b.center && b.center[0], 2) + ' / ' + _frFs(b.center && b.center[1], 2), 'mm');
+  h += tr('Gövde montaj konumu X / Y (türev)',
+    _frFs(t.pivot && t.pivot[0], 2) + ' / ' + _frFs(t.pivot && t.pivot[1], 2), 'mm');
   h += tr('Kol boyu a', _frFs(t.armLength, 1), 'mm');
   h += tr('Yay ön yükü M<sub>0</sub>', _frFs(t.preloadNm, 2), 'Nm');
   h += tr('Yay oranı k', _frFs(t.rateNmPerDeg, 3), 'Nm/°');
   h += tr('Serbest kol açısı θ<sub>serbest</sub>', _frFs(t.freeAngleDeg, 2), '°');
   h += tr('Sarım yönü (sense)', (t.sense > 0 ? '+1 (CCW)' : '−1 (CW)'), '—');
-  if(b.angleMode)
-    h += tr('Açı kipi', b.angleMode === 'mount' ? 'montaj merkezinden türetildi' : 'serbest açı doğrudan girildi', '—');
-  if(b.mount && b.mount.ok){
-    h += tr('Montaj merkezi (girdi)', _frFs(b.mount.cen[0], 2) + ' / ' + _frFs(b.mount.cen[1], 2), 'mm');
-    h += tr('Koordinatlardan kol boyu', _frFs(b.mount.armFromCoords, 3), 'mm');
-  }
+  h += tr('Kol çalışma açısı θ<sub>kol</sub>', _frFs(b.armAbsDeg, 2) + ' (girdi)', '°');
   if(A.tensioner) h += tr('Çalışma noktası yay momenti', _frFs(A.tensioner.springNm, 2), 'Nm');
   h += '</table>';
   return h;
@@ -788,7 +875,7 @@ function _frLayoutFigure(R){
   // baskı paletine bağlıyor. Sınıf düşerse çizim görünmez olur (testi var).
   return '<h3>8.5 Çözülmüş kayış yolu</h3>'
     + '<figure class="appfig">' + svg + '<figcaption><b>Şekil ' + _frFig() + ' —</b> Çalışma (Mean) konumunda çözülmüş kayış yolu: '
-    + 'teğet noktaları, işaretli sarım yayları, gergi pivotu ve kolu, dönüş yönleri. Yol üstündeki dişler '
+    + 'teğet noktaları, işaretli sarım yayları, gergi montaj konumu ve kolu, dönüş yönleri. Yol üstündeki dişler '
     + 'kayışın kaburgalı yüzünü gösterir — kaburgalı temas eden kasnakta içeri, sırttan temas edende dışarı bakar. '
     + 'Çizim mm ölçeğindedir ve kanvastaki düğüm konumlarından bağımsızdır.</figcaption></figure>';
 }
@@ -1251,7 +1338,7 @@ function _frBetaFigure(R){
   g += '<line x1="' + (pad.l - 22) + '" y1="16" x2="' + (pad.l - 22) + '" y2="' + (Hd - 16)
      + '" stroke="#e4e6e9" stroke-width="1"/>';
   g += _frLegend(14, 14, pad.l - 46, [
-    ['a — gergi kol boyu', 'Pivottan kasnak merkezine. Bu zincirdeki TEK girdi.', '#2e7d4f'],
+    ['a — gergi kol boyu', 'Montaj konumundan avara merkezine. Bu zincirdeki TEK girdi.', '#2e7d4f'],
     ['t — merkezin hareket yönü', 'Kola dik. Kol dθ dönünce merkez t yönünde a·dθ yol alır.', '#2e7d4f'],
     ['u_giriş · u_çıkış — açıklık doğrultuları', 'Kayışın kasnağı çektiği iki birim vektör.', '#5a6270'],
     ['f — bileşke', 'f = u_çıkış − u_giriş. Hem hubload doğrultusu (5.4) hem take-up\'ın '
@@ -1260,7 +1347,7 @@ function _frBetaFigure(R){
     ['β — bileşke ile kol arasındaki açı', 'f\'nin hareket yönü t üzerindeki izdüşümü '
       + '|f|·sin β olur; take-up oranı bunun a ile çarpımıdır.', '#a8321f']
   ], 10.2);
-  return _frFigWrap(g, 'Take-up oranının ve β açısının kuruluşu. Gergi kasnağı, pivot etrafında dönen '
+  return _frFigWrap(g, 'Take-up oranının ve β açısının kuruluşu. Gergi kasnağı, montaj konumu etrafında dönen '
     + '<b>a</b> boyundaki kolun ucundadır; kol \\( \\mathrm{d}\\theta \\) kadar dönerse merkez, kola '
     + '<b>dik</b> olan <b>t</b> yönünde \\( a\\,\\mathrm{d}\\theta \\) kadar yol alır (yeşil kesikli ok). '
     + 'Kayışın kasnağı çektiği iki doğrultu <b>−u<sub>giriş</sub></b> ve <b>u<sub>çıkış</sub></b>; '
@@ -1304,17 +1391,25 @@ function _frOperatingPoint(R){
       + '</td><td class="l">' + src + '</td></tr>';
   }
   h += gr('Kasnak merkezleri ve dış çapları', '§8.3', '—', '<b>girdi</b> — yerleşim çizimi');
-  h += gr('Kayış efektif boyu L<sub>eff</sub>', _frFs(sys && sys.belt && sys.belt.effLength, 1), 'mm', '<b>girdi</b> — kayış künyesi');
-  h += gr('Gergi pivotu', _frFs(t.pivot && t.pivot[0], 2) + ' / ' + _frFs(t.pivot && t.pivot[1], 2), 'mm', '<b>girdi</b>');
-  h += gr('Kol boyu a', _frFs(t.armLength, 1), 'mm', '<b>girdi</b>'
-        + (b.mount && b.mount.ok ? ' — montaj merkezi ile denetlendi (§8.4)' : ''));
+  // KAYIŞ BOYU ENVANTERİN GİRDİ YARISINDA DURAMAZ: bu modelde bir ÇIKTIDIR.
+  h += gr('<b>Gergi avarasının merkezi</b>',
+          _frFs(b.center && b.center[0], 2) + ' / ' + _frFs(b.center && b.center[1], 2), 'mm',
+          '<b>girdi</b> — gerginin TEK koordinatı');
+  h += gr('Kol boyu a', _frFs(t.armLength, 1), 'mm', '<b>girdi</b>');
+  h += gr('Kol çalışma açısı θ<sub>kol</sub> (mutlak)', _frFs(b.armAbsDeg, 2), '°',
+          '<b>girdi</b> — gövdenin montajdaki saat konumu (parça/montaj çizimi)');
   h += gr('Yay ön yükü M<sub>0</sub>', _frFs(t.preloadNm, 2), 'Nm', '<b>girdi</b>');
   h += gr('Yay oranı k', _frFs(t.rateNmPerDeg, 3), 'Nm/°', '<b>girdi</b>');
   h += gr('Serbest kol açısı θ<sub>serbest</sub>', _frFs(t.freeAngleDeg, 2), '°',
-          b.angleMode === 'mount' ? '<b>türev</b> — montaj merkezinden (§8.4)' : '<b>girdi</b>');
+          '<b>türev</b> — kol çalışma açısından: θ<sub>kol</sub> − sense·θ<sub>nom</sub>');
   h += '<tr class="sum"><td class="l" colspan="4">— aşağıdakilerin hiçbiri girilmez —</td></tr>';
+  h += gr('<b>Gövdenin montaj konumu</b>',
+          _frFs(t.pivot && t.pivot[0], 2) + ' / ' + _frFs(t.pivot && t.pivot[1], 2), 'mm',
+          '<b>türev</b> — (4.7): c − a·(cos θ<sub>kol</sub>, sin θ<sub>kol</sub>)');
+  h += gr('<b>Kayış efektif boyu L<sub>eff</sub></b>', '<b>' + _frFs(b.beltLengthMm, 1) + '</b>', 'mm',
+          '<b>türev</b> — kol nominal yay yükünde iken gereken boy');
   h += gr('Kol açısı θ (göreli / mutlak)', _frFs(A.meanRelDeg, 2) + ' / ' + _frFs(A.meanAbsDeg, 2), '°',
-          '<b>türev</b> — (4.4) kökü: L<sub>gereken</sub>(θ) = L<sub>eff</sub>');
+          '<b>türev</b> — (4.6): kol nominal yay yüküne oturur');
   h += gr('Gergi kasnağı sarımı φ', _frFs(T.wrapDeg, 2), '°', '<b>türev</b> — (3.3), teğet noktalarından');
   h += gr('Hubload–kol açısı β', _frFs(T.betaDeg, 2), '°', '<b>türev</b> — bileşke f ile kol arasındaki açı');
   h += gr('Take-up oranı dL/dθ', _frFs(T.takeupMmPerDeg, 4), 'mm/°', '<b>türev</b> — a·sinβ·2sin(φ/2)');
@@ -1375,6 +1470,8 @@ function _frOperatingPoint(R){
   h += '</table>';
 
   h += _frPivotBlock(R);
+  h += _frBandBlock(R);
+  h += _frPinBlock(R);
   h += _frDesignTensionBlock(R);
   h += _frTensionFigure(R);
   return h;
@@ -1391,101 +1488,217 @@ function _frOperatingPoint(R){
 // Gates raporu): girilen ile türeyen arasındaki fark en çok %0.12, RMS %0.08 —
 // tamamı yuvarlama, çünkü Gates tam sayı basıyor (766 ↔ 765.9). İki kanal
 // zaten tek kanaldı. Artık bölüm karşılaştırma değil KURULUŞ anlatıyor.
-// ─── Gergi PİVOTU nereden geliyor ───────────────────────────────────────────
+// ─── Gergi gövdesinin MONTAJ KONUMU nereden geliyor ────────────────────────
 //
-// Kullanıcı bildirimi (2026-08-25): "Otomatik gergi bileşeninde kol ve pivot
-// kısmına kullanıcı girdi girmeyecek. Kullanıcının girdiği koordinat gergi
-// KASNAĞININ merkezi; pivot noktası sonra hesaplanıyor."
+// Kullanıcı kararı (2026-09-01): *"biz otomatik gergi için normalde 'otomatik
+// gerginin montaj noktasını' veriyorduk. Bu daha mantıklı oluyordu fakat şimdi
+// 'otomatik gergi avarasının orta noktasını' vereceğiz."*
 //
-// Doğru ve zincir kapanıyor. Kapanışı gerginin PARÇA ÇİZİMİ veriyor:
+// Girdi avara merkezi (c), kol boyu (a) ve kolun ÇALIŞMA konumundaki MUTLAK
+// açısı (θ_kol); gövdenin montaj konumu onlardan çıkar:
+//
+//     p = c − a·(cos θ_kol , sin θ_kol)
+//
+// θ_kol'un bir parça/montaj künyesi olduğunu gerginin PARÇA ÇİZİMİ söylüyor:
 //   "E9843 PIN POSITION FOR THE 344° MEAN ANGLE AND 22.5 Nm SPRING TORQUE
 //    @ 28° FREEARM-MEAN ROTATION"
-// yani kolun ÇALIŞMA konumundaki MUTLAK açısı bir parça künyesidir.
 //
-//     pivot = c − a·(cos θ_kol , sin θ_kol)
-//
-// İKİ AYRI DURUM VE İKİSİ AYNI ŞEY DEĞİL:
-//   • pivot TÜRETİLDİ  → blok kuruluşu anlatır; kol boyu çapraz kontrolü
-//                         TOTOLOJİKTİR ve blok bunu SÖYLER
-//   • pivot GİRİLDİ    → (tedarikçi raporundan ölçülmüş) türetme bağımsız bir
-//                         DENETİM olur: iki ayrı kaynak aynı noktayı vermeli
+// KARŞILAŞTIRMA YOK. Blok, türeyen montaj konumunu tedarikçi raporunun kendi
+// "Tensioner Data → Pivot Point" satırıyla DENETLEMEZ — o satır modele hiç
+// girmiyor ve program hiçbir şeyi hiçbir şeyle karşılaştırmıyor (kullanıcı
+// kararı, 2026-08-29). Sayı basılıyor ki okuyucu denetimi KENDİSİ yapabilsin.
 function _frPivotBlock(R){
-  var sys = R.build && R.build.sys, A = R.analysis || {}, T = A.tensioner || {};
+  var sys = R.build && R.build.sys, A = R.analysis || {};
   if(!sys || !sys.tensioner) return '';
   var t = sys.tensioner, b = R.build || {};
   var a = _frNum(t.armLength);
-  var C = _frCore(), cen = [];
-  try { cen = C.tensionerState(sys, _frNum(A.meanRelDeg)).center || []; } catch(e){ cen = []; }
+  var cen = (b.center || []);
   var cx = _frNum(cen[0]), cy = _frNum(cen[1]);
   var px = _frNum(t.pivot && t.pivot[0]), py = _frNum(t.pivot && t.pivot[1]);
-  if(![a, cx, cy, px, py].every(Number.isFinite)) return '';
+  var kol = _frNum(b.armAbsDeg);
+  if(![a, cx, cy, px, py, kol].every(Number.isFinite)) return '';
+  var kol360 = ((kol % 360) + 360) % 360;
+  var relMean = _frNum(b.spring && b.spring.relMeanDeg);
 
-  var D = Math.PI / 180;
-  // Kolun MUTLAK açısı: pivottan merkeze bakan doğrultu.
-  var kolDeg = Math.atan2(cy - py, cx - px) / D;
-  var kol360 = (kolDeg % 360 + 360) % 360;
-  var turev = !!b.pivotDerived;
-  var mount = b.mount || {};
-  var relMean = _frNum(mount.relMeanDeg);
-
-  var h = '<h4>Gergi pivotu nereden geliyor</h4>';
-  h += '<p>Pivot, tedarikçiye giden sayfada <b>bulunmaz</b> ve kullanıcıdan <b>istenmez</b>. '
-     + 'Koordinat tablosunda gerginin satırı da diğer bütün kasnaklarla aynı şeydir: '
-     + '<b>gergi kasnağının merkezi</b>. (Alternatör satırı bunun en açık örneğidir — orada da '
-     + 'alternatör gövdesinin değil, ona takılı küçük kasnağın merkezi yazar.) Pivot bu '
-     + 'merkezden ve gerginin <b>parça künyesinden</b> çıkar.</p>';
-  h += '<p>Kapanışı veren sayı, gergi üreticisinin parça çiziminde yazan <b>kolun çalışma '
-     + '(Mean) konumundaki mutlak açısıdır</b>. Kol boyu da künyededir; pivot kolun öbür '
-     + 'ucudur:</p>';
-  h += '<div class="eq">$$ \\mathbf{p} \;=\; \\mathbf{c} \;-\; a\\,\\big(\\cos\\theta_{\\text{kol}},\\ '
-     + '\\sin\\theta_{\\text{kol}}\\big) \;=\; \\big(' + _frF(cx, 2) + ',\\ ' + _frF(cy, 2) + '\\big)'
+  var h = '<h4>Gergi gövdesinin montaj konumu ve avaranın hareketi</h4>';
+  h += '<p>Gerginin bu modelde <b>tek</b> koordinatı vardır: <b>avara kasnağının merkezi</b> '
+     + '\\( \\mathbf{c} \\). Diğer beş kasnakla aynı sütundan okunur ve tedarikçiye giden '
+     + 'bilgi sayfası ile dönen raporun <i>Layout Data</i> tablosu onu verir. Gövdenin '
+     + 'motora bağlandığı nokta — kolun döndüğü eksen — bir girdi <b>değildir</b>; kol '
+     + 'boyundan ve kolun çalışma konumundaki mutlak açısından türer:</p>';
+  h += '<div class="eq">$$ \\mathbf{p} \\;=\\; \\mathbf{c} \\;-\\; a\\,\\big(\\cos\\theta_{\\text{kol}},\\ '
+     + '\\sin\\theta_{\\text{kol}}\\big) \\;=\\; \\big(' + _frF(cx, 2) + ',\\ ' + _frF(cy, 2) + '\\big)'
      + ' - ' + _frF(a, 1) + '\\big(\\cos ' + _frF(kol360, 2) + '^\\circ,\\ \\sin '
      + _frF(kol360, 2) + '^\\circ\\big) = \\big(' + _frF(px, 2) + ',\\ ' + _frF(py, 2) + '\\big)'
      + ' $$<span class="tag">(' + (_frEqRef.pivot = _frEq()) + ')</span></div>';
 
-  h += '<table><caption>Tablo ' + _frTbl() + ' — Pivotun kuruluşu</caption>';
+  h += '<table><caption>Tablo ' + _frTbl() + ' — Avara merkezinden montaj konumunun kuruluşu</caption>';
   h += '<tr><th>Büyüklük</th><th>Değer</th><th>Birim</th><th>Kaynak</th></tr>';
   function tr(k, v, u, src){ return '<tr><td class="l">' + k + '</td><td>' + v + '</td><td class="c">'
     + (u || '—') + '</td><td class="l">' + src + '</td></tr>'; }
-  h += tr('Gergi <b>kasnağının</b> merkezi <b>c</b>', _frFs(cx, 2) + ' / ' + _frFs(cy, 2), 'mm',
-          '<b>girdi</b> — koordinat tablosu, diğer kasnaklarla aynı');
+  h += tr('<b>Avara kasnağının merkezi c</b>', '<b>' + _frFs(cx, 2) + ' / ' + _frFs(cy, 2) + '</b>', 'mm',
+          '<b>girdi</b> — bu modelde gerginin TEK koordinatı');
   h += tr('Kol boyu a', _frFs(a, 1), 'mm', '<b>girdi</b> — gergi parça künyesi');
   h += tr('Kolun çalışma açısı θ<sub>kol</sub>', _frFs(kol360, 2), '°',
-          turev ? '<b>girdi</b> — gergi parça çizimi (MEAN ANGLE)'
-                : 'türev — girilen pivottan geri okundu');
+          '<b>girdi</b> — gövdenin montajdaki saat konumu; parça/montaj çizimi');
   if(Number.isFinite(relMean))
     h += tr('Serbest→çalışma dönüşü', _frFs(relMean, 2), '°',
             'türev — (M<sub>çalışma</sub> − M<sub>ön</sub>)/k, parça çizimiyle karşılaştırılabilir');
-  h += tr('<b>Gergi pivotu p</b>', '<b>' + _frFs(px, 2) + ' / ' + _frFs(py, 2) + '</b>', 'mm',
-          turev ? '<b>türev</b> — (' + _frEqRef.pivot + ')' : '<b>girdi</b> — ölçülmüş/raporlanmış');
+  h += tr('<b>Gövdenin montaj konumu p</b>', '<b>' + _frFs(px, 2) + ' / ' + _frFs(py, 2) + '</b>', 'mm',
+          '<b>türev</b> — (' + _frEqRef.pivot + ')');
   h += '</table>';
 
-  if(turev){
-    h += '<div class="note"><span class="t">Kol boyu çapraz kontrolü burada bir DENETİM DEĞİLDİR</span>'
-       + 'Pivot, merkezden tam kol boyu kadar uzağa <b>konularak</b> hesaplandığı için '
-       + '|merkez − pivot| = kol boyu <b>yapısal olarak</b> sağlanır; sıfır sapma bir şey '
-       + 'ölçmez. Bu kontrol ancak pivot <b>ayrıca ölçülmüş</b>se (tedarikçi raporu, montaj '
-       + 'resmi) anlam taşır — o zaman iki bağımsız sayı karşılaştırılıyordur.</div>';
-    h += '<div class="note check"><span class="t">Sıra bu</span>'
-       + 'Kullanıcı yalnız gergi <b>kasnağının</b> merkezini girer → parça künyesindeki kol boyu '
-       + 've kol açısıyla <b>pivot hesaplanır</b> → kol açısı kayış boyundan çözülür → kayış yolu, '
-       + 'gerginlik, hubload ve ömür bu pivota göre kurulur. Belgedeki bütün sayılar bu zincirin '
-       + 'sonucudur.</div>';
-  } else {
-    h += '<div class="note check"><span class="t">Bu modelde pivot ÖLÇÜLMÜŞ</span>'
-       + 'Pivot burada bir tedarikçi raporundan geliyor, yani türetilmedi. O yüzden kol boyu '
-       + 'çapraz kontrolü <b>gerçek bir denetimdir</b>: koordinatlardan çıkan kol boyu '
-       + '(' + _frFs(_frNum(mount.armFromCoords), 3) + ' mm) ile künyedeki kol boyu '
-       + '(' + _frFs(a, 1) + ' mm) iki <b>bağımsız</b> sayıdır ve tutmak zorundadır.</div>';
-  }
+  h += '<div class="note check"><span class="t">Sıra bu</span>'
+     + 'Kullanıcı <b>avara kasnağının merkezini</b> girer → kayış yolu (teğetler, sarımlar, '
+     + 'açıklıklar) yalnız kasnak merkezlerinden çözülür → gergi künyesinden nominal dönüş '
+     + '\\( \\theta_{\\text{nom}} = (M_{\\text{çalışma}} - M_{\\text{ön}})/k \\) çıkar ve kol '
+     + 'oraya oturur → <b>kayış boyu</b> ondan türer → kol çalışma açısıyla birlikte '
+     + '<b>gövdenin montaj konumu</b> türer → \\( \\beta \\), take-up, gerginlik, hubload ve '
+     + 'ömür bu zincirin sonucudur. Belgedeki bütün sayılar bu sırayla kurulmuştur.</div>';
 
-  // KAYIŞ YOLU PİVOTA BAĞLI DEĞİL — bu, pivotun neden ayrı çözülebildiğinin sebebi.
-  h += '<p><b>Kayış yolu pivota bağlı değildir.</b> Geometri yalnız gergi <b>kasnağının</b> '
-     + 'merkezine bakar (§3.2\'nin teğet çözümü merkez farklarından kurulur): sarım açıları, '
-     + 'açıklıklar ve kayış boyu pivot kaydırılsa da <b>değişmez</b>. Pivotun tek etkisi kolun '
-     + 'hangi yönde hareket ettiğidir — yani \\( \\beta \\), yani take-up, yani gerginlik '
-     + '(§8.7\'nin geri kalanı). Zincirin bu şekilde ayrılabilmesi, pivotun ayrı bir adımda '
-     + 'çözülebilmesinin sebebidir.</p>';
+  h += '<p><b>Kayış yolu montaj konumuna bağlı değildir.</b> Geometri yalnız kasnak '
+     + '<b>merkezlerine</b> bakar (§3.2\'nin teğet çözümü merkez farklarından kurulur): '
+     + 'sarım açıları, açıklıklar ve kayış boyu \\( \\theta_{\\text{kol}} \\) değiştikçe '
+     + '<b>değişmez</b> — çünkü \\( \\mathbf{c} \\) sabittir, hareket eden yalnız '
+     + '\\( \\mathbf{p} \\)\'dir. Montaj konumunun tek etkisi kolun hangi yönde hareket '
+     + 'ettiğidir: yani \\( \\beta \\), yani take-up, yani gerginlik.</p>';
+
+  h += '<div class="note"><span class="t">Kol çalışma açısını program seçmez</span>'
+     + 'Avara merkezi verildikten sonra geriye tek bir serbestlik derecesi kalır — gövdenin '
+     + 'montajdaki saat konumu — ve bu bir <b>paketleme</b> kararıdır: motor bloğunda cıvata '
+     + 'deliğinin nereye açıldığı. Kayış fiziğinden çıkarılamaz. Ölçüldü: 14 tedarikçi '
+     + 'sistemine karşı sekiz aday ölçütün en iyisi bile yalnız <b>2/14</b> sistemi ±5° '
+     + 'içinde buluyor (aci farkinin medyani 20,7°). Sebep ölçütün <i>yanlış yeri</i> '
+     + 'seçmesi değil, <b>hiçbir yeri seçememesi</b>: merkez sabitken çalışma '
+     + 'noktasındaki kayış yolu \\( \\theta_{\\text{kol}} \\)\'dan bağımsızdır '
+     + '(ölçüldü: 4,55e−13 mm) ve ölçüt eğrisi düzleşir — %1 platosu '
+     + '<b>2,1° → 24,1°</b>. Bu yüzden açı bir <b>girdidir</b> ve uydurulmuş bir '
+     + 'varsayılanı yoktur: girilmezse model çözülmez ve sebebini adıyla yazar.</div>';
+
+  h += '<div class="note"><span class="t">Denetim okuyucunundur</span>'
+     + 'Tedarikçiden dönen rapor gövdenin montaj konumunu ayrı bir alanda basar '
+     + '(<i>Tensioner Data → Pivot Point {X, Y Coordinates}</i>). Yukarıdaki türev o alanla '
+     + 'karşılaştırılabilir, <b>ama program bu karşılaştırmayı yapmaz</b>: ikinci bir '
+     + 'koordinat sorulmaz, dolayısıyla ortada denetlenecek iki kanal yoktur. Sayı '
+     + 'basılıyor ki denetimi belgeyle siz yapabilesiniz.</div>';
+  return h;
+}
+
+// ── OLANAKLI KOL AÇISI BANDI — KAPI, SEÇİCİ DEĞİL ─────────────────────────
+//
+// Kol açısı bir girdi; bu blok onun fiziksel olarak kullanılabilir olup
+// olmadığını gösteriyor ve bedelini yazıyor. Ölçüt tamamen okuyucunun kendi
+// verisinden (kayış tolerans + aşınma bandı, gerginin load stop'u, sarım) —
+// tedarikçi raporlarından TÜRETİLMİŞ hiçbir sabit yok. Gerekçesi ve 14
+// sisteme karşı ölçümü `js/fead-model.js`in "OLANAKLI KOL AÇISI BANDI"
+// blokunda.
+function _frBandBlock(R){
+  var b = R.build || {};
+  var band = null;
+  try { if(typeof veFeadArmBand === 'function') band = veFeadArmBand(b, { stepDeg: 2 }); }
+  catch(e){ band = null; }
+  if(!band || !band.ok) return '';
+
+  var h = '<h4>Kol açısı fiziksel olarak kullanılabilir mi</h4>';
+  h += '<p>Kol çalışma açısı bir <b>girdidir</b> ve program onu seçmez — ama girilen '
+     + 'her açı kullanılabilir değildir. Aşağıdaki bant tek bir soruyu soruyor: '
+     + '<b>kol, kayışın servis aralığının iki ucuna da (Replace ↔ Min) ulaşabiliyor '
+     + 'mu?</b> Bu soru <b>load stop</b>’u ve sarım çöküşünü de içeriyor — kolun '
+     + 'erişim sınırı ikisini de gözetiyor, dolayısıyla ayrı bir denetime gerek '
+     + 'yok.</p>';
+
+  h += '<table><caption>Tablo ' + _frTbl() + ' — Kol açısı bandı</caption>';
+  h += '<tr><th>Büyüklük</th><th>Değer</th><th>Birim</th></tr>';
+  function tr(k, v, u){ return '<tr><td class="l">' + k + '</td><td>' + v
+    + '</td><td class="c">' + (u || '—') + '</td></tr>'; }
+  h += tr('Girilen kol çalışma açısı', _frFs(band.userDeg, 2), '°');
+  h += tr('<b>Bu açı kullanılabilir mi</b>',
+    band.userOk ? '<b>evet</b>' : '<b>HAYIR — ' + _frEsc(band.userWhy) + '</b>', '—');
+  h += tr('Fiziksel olarak kullanılabilir yay', _frF(band.arcDeg, 0) + ' / 360', '°');
+  if(Number.isFinite(band.userWrapMinDeg))
+    h += tr('Servis aralığındaki en küçük gergi sarımı', _frFs(band.userWrapMinDeg, 1), '°');
+  if(Number.isFinite(band.userRelMaxDeg)){
+    var stop = _frNum(b.cfg && b.cfg.tensioner && b.cfg.tensioner.loadStopRelDeg);
+    h += tr('Kolun en kısa kayıştaki dönmesi', _frFs(band.userRelMaxDeg, 1)
+      + (Number.isFinite(stop) ? ' / ' + _frFs(stop, 1) + ' (load stop)' : ''), '°');
+  }
+  h += '</table>';
+
+  var fig = null;
+  try { if(typeof veFeadBandSVG === 'function') fig = veFeadBandSVG(band, 760, 280, { print: true }); }
+  catch(e){ fig = null; }
+  if(fig) h += _frFigWrap(fig, 'Kol açısı bandı — her montaj saatinde çıkan gerginlik. '
+    + 'Taralı açılar fiziksel olarak kullanılamaz; kesikli amber çizgi bu modelin '
+    + 'açısı. Eğri okunur kalsın diye tepe kırpılmıştır (sarım sıfıra giderken '
+    + 'gerginlik tekilleşir).');
+
+  h += '<div class="note warn"><span class="t">Bu bir SEÇİCİ değil, bir KAPIDIR</span>'
+     + 'Bant fiziksel olarak <b>çok geniştir</b> ve içinden bir nokta seçmez. '
+     + 'ÖLÇÜLDÜ (14 tedarikçi sistemi, bu kodun kendisiyle): tedarikçinin gerçek '
+     + 'çalışma açısı bandın içinde <b>14/14</b> — yani ölçüt hiçbir gerçek '
+     + 'tasarımı yanlışlıkla reddetmiyor — ama bandın genişliği <b>96…218°</b> '
+     + '(medyan 189°) ve ortasını seçseydik medyan hata <b>96°</b> olurdu. Kalan serbestlik motor bloğunun <b>paketlemesidir</b> — cıvata '
+     + 'deseni, gövde gabarisi, komşu parçalar — ve o bilgi bu modelde yoktur. '
+     + 'Şekil bu yüzden bir öneri sunmaz; yalnız seçimin bedelini ve nerede '
+     + 'imkânsız olduğunu yazar.</div>';
+  return h;
+}
+
+// ── KOL AÇISI NASIL GERÇEKLENİYOR — KONUM PİMİ ─────────────────────────────
+//
+// Kol çalışma açısı bir GİRDİ; atölyeye gidecek talimat ise "gövde hangi saate
+// kurulacak" değil, "pim nereye açılacak"tır. Gerçek gergilerde gövdeyi
+// merkezî bir cıvata tutuyor (dolayısıyla cıvata gövdenin saatini
+// BELİRLEMİYOR) ve saati bir KONUM PİMİ sabitliyor.
+//
+// Bölüm bir parça çiziminden ÖLÇÜLDÜ ve sayı yalnız o parçaya ait. Çizimi
+// olmayan künyede blok yine basılıyor ama sayı YERİNE SEBEP yazılıyor —
+// "pim yok" ile "pim ölçüsü bizde yok" apayrı şeyler ve okuyucu ikincisini
+// birincisi sanmamalı.
+function _frPinBlock(R){
+  var b = R.build || {};
+  var pin = b.pin;
+  var h = '<h4>Kol açısı nasıl gerçekleniyor — konum pimi</h4>';
+  h += '<p>Bir montaj talimatı açı değil <b>delik</b> ister. Otomatik gergilerde gövdeyi '
+     + 'merkezî bir cıvata tutar — o cıvata gövdenin <b>saatini belirlemez</b>, yalnız '
+     + 'bastırır. Saati, gövdeden motor bloğuna giren bir <b>konum pimi</b> sabitler. '
+     + 'Dolayısıyla kolun çalışma açısı \\( \\theta_{\\text{kol}} \\) imalata pim '
+     + 'deliğinin yeri olarak geçer.</p>';
+  h += '<p>Pim deliği <b>gövdededir</b>; kolun gövdeye göre çalışma konumu ise yay '
+     + 'tarafından sabitlenmiştir. Gövdeyi döndürmek ikisini <b>birlikte</b> döndürür, '
+     + 'dolayısıyla aradaki açı gövdenin saatinden bağımsızdır — bir '
+     + '<b>parça sabiti</b>:</p>';
+  h += '<div class="eq">$$ \\theta_{\\text{pim}} \\;=\\; \\theta_{\\text{kol}} '
+     + '+ \\Delta_{\\text{parça}} '
+     + '$$<span class="tag">(' + (_frEqRef.envPin = _frEq()) + ')</span></div>';
+
+  if(pin && pin.ok){
+    h += '<p>Bu sistemin gergisi <b>' + _frEsc(pin.part) + '</b>; parça çiziminden okunan '
+       + 'değerler \\( r = ' + _frFs(pin.rMm, 2) + '\\ \\text{mm} \\), '
+       + '\\( \\Delta_{\\text{parça}} = ' + _frFs(pin.offsetDeg, 2) + '^\\circ \\). '
+       + 'Girilen \\( \\theta_{\\text{kol}} = ' + _frFs(b.armAbsDeg, 2) + '^\\circ \\) ile pim, montaj konumu '
+       + 'merkezinden <b>' + _frFs(pin.rMm, 2) + ' mm</b> uzakta ve <b>'
+       + _frFs(pin.angleDeg, 2) + '°</b> yönünde durur.</p>';
+    h += '<div class="note"><span class="t">Parça çizimi künyenin kendisini de doğruluyor'
+       + '</span>Çizim <b>“28° FREEARM-MEAN ROTATION”</b> yazıyor; aynı sayı yay '
+       + 'künyesinden \\( (M_{\\text{çalışma}}-M_0)/k \\) ile <b>'
+       + _frFs(b.spring && b.spring.relMeanDeg, 4) + '°</b> çıkıyor. İki <b>bağımsız</b> '
+       + 'kaynak (parça çizimi ↔ tedarikçi raporunun yay künyesi) aynı değeri veriyor.</div>';
+  } else {
+    h += '<div class="note warn"><span class="t">Bu gerginin pim künyesi belgede YOK</span>'
+       + (pin && pin.reason ? _frEsc(pin.reason) + ' ' : '')
+       + 'Mekanizma geneldir (merkezî cıvata + saati belirleyen konum pimi), ama pim '
+       + 'yarıçapı ve ofseti <b>parçaya özgüdür</b> ve uydurulmaz. '
+       + '\\( \\theta_{\\text{kol}} \\) yine geçerlidir; imalata geçmek için gerginin '
+       + 'parça çiziminden bu iki sayı '
+       + 'okunmalıdır.</div>';
+  }
+  h += '<div class="note"><span class="t">Cıvata ekseni = kol dönme ekseni</span>'
+     + 'Model, gövdenin montaj cıvatasını kolun dönme ekseniyle <b>aynı yerde</b> sayar. '
+     + 'Parça çiziminde gövdenin merkezî deliği kolun dönme ekseniyle eşmerkezlidir; '
+     + 'yani girilen koordinat doğrudan <b>kolun dönme eksenidir</b>. Eksantrik gövdeli bir '
+     + 'gergide bu iki nokta ayrılırdı ve montaj koordinatı pivota bir miktar kaçık '
+     + 'olurdu.</div>';
   return h;
 }
 
@@ -1499,8 +1712,16 @@ function _frDesignTensionBlock(R){
      + '\\( T_{\\text{gergi}} = T_{\\text{tasarım}} \\). Bu sayı <b>sorulmaz</b> — gergi kolunun '
      + 'taşıyabileceği gerginlik yay dengesinden zaten belirlidir'
      + (_frEqRef.T ? ' (' + _frEqRef.T + ')' : '') + ':</p>';
-  h += '<div class="eq">\\[ T_{\\text{tasarım}} \\;=\\; \\frac{M(\\theta)}{dL/d\\theta} '
-     + '\\;=\\; \\frac{M_0 + k\\,\\theta}{a\\,\\sin\\beta\\;2\\sin(\\varphi/2)} \\]</div>';
+  // SINIRLAYICI $$…$$ OLMAK ZORUNDA. Otomatik render YALNIZ iki sınırlayıcı
+  // tanıyor (`build-fead-report-template.js`): `$$…$$` (display) ve `\(…\)`
+  // (satır içi). Bu denklem bir dönem köşeli-parantez sınırlayıcısıyla yazılıydı
+  // (LaTeX'in display biçimi) — KaTeX'in KENDİ
+  // varsayılan listesinde o da var ama boot yapılandırması `delimiters`ı
+  // EZDİĞİ için varsayılan hiç kullanılmıyor; sonuç: denklem ham LaTeX olarak,
+  // düz yazı gibi basılıyordu. Belgedeki tek örnekti (ölçüldü), kapısı var.
+  h += '<div class="eq">$$ T_{\\text{tasarım}} \\;=\\; \\frac{M(\\theta)}{dL/d\\theta} '
+     + '\\;=\\; \\frac{M_0 + k\\,\\theta}{a\\,\\sin\\beta\\;2\\sin(\\varphi/2)} '
+     + '$$<span class="tag">(' + (_frEqRef.designT = _frEq()) + ')</span></div>';
   h += '<p>Sağdaki büyüklüklerin hiçbiri serbest değildir: <b>a</b>, <b>M<sub>0</sub></b> ve '
      + '<b>k</b> gergi künyesinden okunur, <b>θ</b>, <b>φ</b> ve <b>β</b> ise çözülmüş '
      + 'geometriden gelir (yukarıdaki envanter). Bu sistemde sonuç '
@@ -1524,15 +1745,22 @@ function _frDesignTensionBlock(R){
 // raporunun "Belt Takeup / Tensioner Arm Ratio" satırı ANLIK türevdir; iki
 // farklı sayının aynı adı taşıması raporun kendi içinde çelişmesi demekti.
 function _frTakeupFigure(R){
+  var ç = _frTakeupChart(R);
+  if(!ç) return '';
+  var sw = ç.sw, K = ç.K, g = ç.g, anlik = ç.anlik, ort = ç.ort;
+  return _frTakeupSection(R, sw, K, g, anlik, ort);
+}
+// Yalnız GRAFİK — iki belge de bunu çizer, ikinci bir çizici yok.
+function _frTakeupChart(R){
   var sw = _frArmSweep(R);
-  if(!sw) return '';
+  if(!sw) return null;
   var K = _frTenConstruct(R);
   var Ls = sw.pts.map(function(p){ return p.L; });
   var lo = Math.min.apply(null, Ls), hi = Math.max.apply(null, Ls);
   var pad = (hi - lo) * 0.08 || 1;
   var c = _frChart({ xMin: 0, xMax: sw.relMax, yMin: lo - pad, yMax: hi + pad,
                      xLabel: 'Gergi kol açısı — göreli [°]', yLabel: 'Gereken tahrik boyu [mm]',
-                     xDec: 0, yDec: 1, H: 280, alt: 'Kayış take-up eğrisi' });
+                     xDec: 0, yDec: 1, H: (_FR_RAW ? _FR_H : 280), alt: 'Kayış take-up eğrisi' });
   var g = c.svg;
   g += '<g data-ve="takeup-curve">' + _frPolyline(c, sw.pts.map(function(p){ return [p.rel, p.L]; }), '#24425f', 2.4) + '</g>';
   var t0 = sw.pts[0], t1 = sw.pts[sw.pts.length - 1];
@@ -1557,6 +1785,13 @@ function _frTakeupFigure(R){
        + _frEsc(et) + '</text>';
     g += '<text x="' + (XM + 6).toFixed(1) + '" y="' + (c.pad.t + 12) + '" font-size="11" fill="#2e7d4f">Mean</text>';
   }
+  return { g: g, sw: sw, K: K, anlik: anlik, ort: ort };
+}
+function _frTakeupChartRaw(R){
+  var ç = _frTakeupChart(R);
+  return ç ? (ç.g + '</svg>') : '';
+}
+function _frTakeupSection(R, sw, K, g, anlik, ort){
   var h = '<h3>8.9 Kayış take-up</h3>';
   h += '<p>Kol açısı arttıkça gergi kasnağı kayışı içeri alır ve gereken tahrik boyu azalır. '
      + '<b>Take-up oranı, bu eğrinin çalışma noktasındaki ANLIK eğimidir</b> (mm/°) — '
@@ -2147,26 +2382,73 @@ function _frNotesSection(node){
 // global); burada yalnız geometri var. Eksen etiketleri her zaman basılır —
 // birimsiz bir eğri okunamaz.
 var _FR_W = 820, _FR_H = 300;
+// ── EKSEN BÖLMESİ YUVARLAK SAYIYA OTURUR ────────────────────────────────────
+// Eskiden aralık beşe/dörde eşit bölünüyordu ve bölmeler ham veri ucundan
+// türüyordu: gerginlik grafiğinde X `0 · 12,1 · 24,2 · 36,2 · 48,3 · 60,4`,
+// Y `0 · 293 · 585 · 878 · 1170` çıkıyordu (ÖLÇÜLDÜ). `36,2` bir bölme değil,
+// 12,08'lik adımın yuvarlama artığı — okuyucu ondan bir değer okuyamıyor,
+// üstelik iki komşu etiket arasındaki fark her seferinde başka.
+//
+// Adım 1 · 2 · 2,5 · 5 × 10ⁿ kümesinden seçilir ve aralık ADIMA GÖRE DIŞA
+// yuvarlanır (veriye kırpılmaz) — böylece hem etiketler okunur sayılar olur
+// hem de eğrinin uçları eksene yapışmaz.
+// EN YAKIN aday seçilir, YUKARI yuvarlanmaz. Yukarı yuvarlama bir kez denendi
+// ve ÖLÇÜLDÜ: 0…60,4 aralığı (ham adım 12,08) adımı 20'ye çıkarıyor, eksen
+// 0…80 oluyordu — verinin bittiği yerden sonra çizim alanının dörtte biri boş.
+// En yakın aday 10 veriyor, eksen 0…70 oluyor.
+function _frNiceStep(ham){
+  if(!(ham > 0) || !Number.isFinite(ham)) return 1;
+  var us = Math.pow(10, Math.floor(Math.log10(ham))), k = ham / us;
+  var aday = [1, 2, 2.5, 5, 10], en = aday[0], d = Infinity;
+  aday.forEach(function(a){
+    var q = Math.abs(Math.log(k / a));          // ORANSAL yakınlık: 1↔2 ile 5↔10 eşit uzak
+    if(q < d){ d = q; en = a; }
+  });
+  return en * us;
+}
+function _frNiceAxis(v0, v1, hedef){
+  if(!(v1 > v0)) v1 = v0 + 1;
+  var n = Math.max(2, hedef || 5);
+  var st = _frNiceStep((v1 - v0) / n);
+  var a = Math.floor(v0 / st) * st, b = Math.ceil(v1 / st) * st;
+  // Kayan nokta artığı: 0.30000000000000004 gibi bir bölme etiketi basılmasın.
+  var ond = Math.max(0, -Math.floor(Math.log10(st)) + 1);
+  var t = [];
+  for(var v = a; v <= b + st * 1e-6; v += st) t.push(Number(v.toFixed(ond)));
+  return { min: a, max: b, step: st, ticks: t };
+}
+
 function _frChart(opt){
-  var pad = { l: 62, r: 18, t: 16, b: 42 };
+  // SAĞ PAY ÇAĞIRANDAN GELEBİLİR: göstergesi olan bir grafikte gösterge çizim
+  // alanının DIŞINDA durmalı. İçeride durduğunda eğrilerin üstüne biniyordu —
+  // ÖLÇÜLDÜ (doğal frekans haritası): yedi girdilik gösterge çizim alanının
+  // %42'sini kaplıyor ve altı eğrinin dördünü kesiyordu.
+  var pad = { l: 62, r: (opt.padR || 18), t: 16, b: 42 };
   var W = opt.W || _FR_W, H = opt.H || _FR_H;
   var x0 = opt.xMin, x1 = opt.xMax, y0 = opt.yMin, y1 = opt.yMax;
   if(!(x1 > x0)) x1 = x0 + 1;
   if(!(y1 > y0)) y1 = y0 + 1;
+  // `nice:false` ham aralığı korur (kalibrasyon çizimleri için kaçış kapağı).
+  var axX = null, axY = null;
+  if(opt.nice !== false){
+    axX = _frNiceAxis(x0, x1, opt.nX || 6); x0 = axX.min; x1 = axX.max;
+    axY = _frNiceAxis(y0, y1, opt.nY || 5); y0 = axY.min; y1 = axY.max;
+  }
   var sx = function(v){ return pad.l + (v - x0) / (x1 - x0) * (W - pad.l - pad.r); };
   var sy = function(v){ return H - pad.b - (v - y0) / (y1 - y0) * (H - pad.t - pad.b); };
   var g = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + _frEsc(opt.alt || '') + '">';
   // ızgara + eksen
-  var nX = 5, nY = 4, i;
+  var tX = axX ? axX.ticks : null, tY = axY ? axY.ticks : null;
+  var nX = tX ? tX.length - 1 : 5, nY = tY ? tY.length - 1 : 4, i;
   for(i = 0; i <= nX; i++){
-    var xv = x0 + (x1 - x0) * i / nX, X = sx(xv);
+    var xv = tX ? tX[i] : x0 + (x1 - x0) * i / nX, X = sx(xv);
     g += '<line x1="' + X.toFixed(1) + '" y1="' + pad.t + '" x2="' + X.toFixed(1) + '" y2="' + (H - pad.b)
        + '" stroke="#e4e6e9" stroke-width="1"/>';
     g += '<text x="' + X.toFixed(1) + '" y="' + (H - pad.b + 15) + '" text-anchor="middle" font-size="11" fill="#5a6270">'
        + _frF(xv, opt.xDec == null ? 0 : opt.xDec) + '</text>';
   }
   for(i = 0; i <= nY; i++){
-    var yv = y0 + (y1 - y0) * i / nY, Y = sy(yv);
+    var yv = tY ? tY[i] : y0 + (y1 - y0) * i / nY, Y = sy(yv);
     g += '<line x1="' + pad.l + '" y1="' + Y.toFixed(1) + '" x2="' + (W - pad.r) + '" y2="' + Y.toFixed(1)
        + '" stroke="#e4e6e9" stroke-width="1"/>';
     g += '<text x="' + (pad.l - 7) + '" y="' + (Y + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="#5a6270">'
@@ -2187,7 +2469,18 @@ function _frPolyline(c, pts, renk, kal, dash){
     + '"' + (dash ? ' stroke-dasharray="' + dash + '"' : '') + ' stroke-linejoin="round"/>';
 }
 function _frFigWrap(svg, caption){
+  if(_FR_RAW) return svg + '</svg>';        // özet rapor: numarasız ham SVG
   return '<figure>' + svg + '</svg><figcaption><b>Şekil ' + _frFig() + ' —</b> ' + caption + '</figcaption></figure>';
+}
+var _FR_RAW = false;
+// Aynı figür işlevini KÜÇÜK ölçüde ve numarasız çalıştırır. Sayaçlara
+// dokunmaz: özet rapor ayrıntılı raporun şekil numaralandırmasını kaydırmamalı.
+function veFeadFigureRaw(fn, R, W, H, extra){
+  var oW = _FR_W, oH = _FR_H, oR = _FR_RAW;
+  _FR_W = W; _FR_H = H; _FR_RAW = true;
+  try { return fn(R, extra); }
+  catch(e){ return ''; }
+  finally { _FR_W = oW; _FR_H = oH; _FR_RAW = oR; }
 }
 
 // Gergi kolu taraması — Belt Tension Control ve Take-up grafiklerinin ortak verisi.
@@ -2223,7 +2516,8 @@ function _frTensionFigure(R){
   var sw = _frArmSweep(R);
   if(!sw) return '';
   var pos = ((R.analysis && R.analysis.positions) || []).filter(function(p){ return !p.error; });
-  var konumT = pos.map(function(p){ return _frNum(p.tensionN); }).filter(Number.isFinite);
+  var konumT = pos.filter(function(p){ return p.position !== 'Load'; })
+                  .map(function(p){ return _frNum(p.tensionN); }).filter(Number.isFinite);
   var tasarim = _frNum(R.build && R.build.sys && R.build.sys.designTensionN);
   var taban = Math.max.apply(null, konumT.concat([Number.isFinite(tasarim) ? tasarim : 0, 1]));
   var yMax = taban * 1.6;
@@ -2243,6 +2537,27 @@ function _frTensionFigure(R){
                      xDec: 1, yDec: 0, alt: 'Gerginlik kontrol eğrisi' });
   var g = c.svg;
   var icinde = kesik.filter(function(p){ return p.rel <= xMax && p.T <= yMax; });
+
+  // KAYMA EŞİĞİ — "ne kadar aşağı inebilirim". Bu büyüklük modelde bir dönem
+  // HİÇ YOKTU: kayma hükmü yalnız boyutsuz SF ile veriliyordu. Hesap köprüde
+  // (veFeadSlipThreshold), kapalı formda ve iterasyonsuz; iki bağımsız yolla
+  // (kapalı form ↔ iki-bölme) on iki devrin on ikisinde de |Δ| ≤ 1,4e−14 N.
+  //
+  // EĞRİNİN ALTINA ÇİZİLİR ki üstünü örtmesin. Tedarikçi çıktısı da altını
+  // taralı basıyor.
+  var esikTh = (typeof veFeadSlipThreshold === 'function')
+    ? veFeadSlipThreshold(R.build, (R.analysis && R.analysis.duty) || []) : null;
+  if(esikTh && esikTh.tensionN > 0 && esikTh.tensionN < yMax){
+    var yE = c.sy(esikTh.tensionN);
+    g += '<g data-ve="slip-threshold">'
+       + '<rect x="' + c.pad.l + '" y="' + yE.toFixed(1) + '" width="' + (c.W - c.pad.l - c.pad.r)
+       + '" height="' + Math.max(0, (c.H - c.pad.b) - yE).toFixed(1) + '" fill="#9c2b2b" opacity="0.10"/>'
+       + '<line x1="' + c.pad.l + '" y1="' + yE.toFixed(1) + '" x2="' + (c.W - c.pad.r)
+       + '" y2="' + yE.toFixed(1) + '" stroke="#9c2b2b" stroke-width="1.4" stroke-dasharray="6 4"/>'
+       + '<text x="' + (c.pad.l + 6) + '" y="' + (yE - 4).toFixed(1) + '" font-size="10" fill="#9c2b2b">'
+       + 'kayma eşiği ' + _frF(esikTh.tensionN, 0) + ' N</text></g>';
+  }
+
   g += '<g data-ve="band" opacity="0.6">';
   g += _frPolyline(c, icinde.filter(function(p){ return p.T * 1.1 <= yMax; }).map(function(p){ return [p.rel, p.T * 1.1]; }), '#7f9bb5', 1.2, '4 3');
   g += _frPolyline(c, icinde.map(function(p){ return [p.rel, p.T * 0.9]; }), '#7f9bb5', 1.2, '4 3');
@@ -2274,7 +2589,12 @@ function _frTensionFigure(R){
   });
   g += '</g>';
   var kesildi = (kesik.length < sw.pts.length);
-  return _frFigWrap(g, 'Kayış gerginliğinin gergi kol açısına bağımlılığı (4.3). Kesikli mavi eğriler ±%10 '
+  var esikNot = esikTh ? ' Kırmızı kesikli doğru KAYMA EŞİĞİ ('
+      + _frF(esikTh.tensionN, 0) + ' N): yük taşıyan kasnakların en düşük emniyet faktörünün 1\'e '
+      + 'düştüğü ankraj gerginliği (' + _frEsc(esikTh.pulley) + ' @ '
+      + _frF(esikTh.engineRpm, 0) + ' d/d). Tasarım gerginliği bunun '
+      + _frFs(esikTh.margin, 2) + ' katıdır.' : '';
+  return _frFigWrap(g, esikNot + ' Kayış gerginliğinin gergi kol açısına bağımlılığı (4.3). Kesikli mavi eğriler ±%10 '
     + 'bandı, düşey çizgiler kolun çalışma konumlarıdır (§8.8); yeşil olan çalışma (Mean) noktasıdır. '
     + 'Kol açısı büyüdükçe gergi sarımı küçülür ve (4.3)\'ün paydası daralarak gerginliği hızla yükseltir'
     + (kesildi ? '; eğri, çalışma konumlarının ' + _frF(1.6, 1) + ' katını aştığı yerde kesilmiştir '
@@ -2294,18 +2614,64 @@ function _frSlipFigure(R, esik){
     });
     return m;
   });
+  // YÜK TAŞIYAN ↔ TAŞIMAYAN AYRIMI GRAFİKTE DE GEÇERLİ. Kırmızı çubuk
+  // "eşiğin altında kaldı" demek; ama gerginlik oranı 1,00 olan bir kasnakta
+  // (avara, gergi) o sayı bir MARJ değil o sarım açısının KAPASİTESİDİR ve
+  // tasarım gerginliğini yükseltmek onu değiştirmez. Ayrım yapılmayınca
+  // grafik, aynı sayfadaki hükmün TERSİNİ söylüyordu (ölçüldü: AG00976'da
+  // üç kasnak kırmızı, oysa hükmü veren 4,51 ile FAN).
+  var esk = (typeof VE_FR_SLIP_LOADED_RATIO === 'number') ? VE_FR_SLIP_LOADED_RATIO : 1.01;
+  var yukTasir = isim.map(function(n){
+    var t = false;
+    duty.forEach(function(d){
+      (d.slip || []).forEach(function(x){
+        if(x.name === n && _frNum(x.tensionRatio) >= esk) t = true;
+      });
+    });
+    return t;
+  });
+  // Etiket KISA KOD: tam ad sol payı 190 px'e zorluyor ve çubuklara yer
+  // bırakmıyor. Kod → ad künyesi belgede aynı sayfada duruyor.
+  var kodF = (typeof veFeadPulleyCodes === 'function' && R.build && R.build.sys)
+    ? veFeadPulleyCodes(R.build.sys) : null;
+  var ps = (R.build && R.build.sys && R.build.sys.pulleys) || [];
+  var etAd = isim.map(function(n){
+    if(!kodF) return n;
+    for(var i = 0; i < ps.length; i++) if(ps[i].name === n) return kodF[i];
+    return n;
+  });
   var maxV = Math.max.apply(null, mins.concat([Number.isFinite(esik) ? esik * 1.4 : 2]));
-  var W = _FR_W, satir = 30, H = 34 + isim.length * satir + 34;
-  var L = 190, R2 = 30;
+  // Boy çubuk SAYISINDAN türüyor (sabit bir H anlamsız olurdu); RAW kipte
+  // satır aralığı daralıyor — özet raporda şekil küçük basılıyor.
+  var W = _FR_W, satir = (_FR_RAW ? 19 : 30), H = 26 + isim.length * satir + 30;
+  // SAĞ PAY DEĞER ETİKETİNİ SIĞDIRMAK ZORUNDA. Sabit 30 px, "14,95" gibi beş
+  // karakterlik bir etiketi kesiyordu — ÖLÇÜLDÜ (özet rapor, sayfa 5):
+  // yazı viewBox'ı 10 px aşıyor ve kırpılıyordu. Pay artık en uzun etiketin
+  // ölçülen genişliğinden türüyor (_frTxtW, eş aralıklı 0,6 em).
+  var enSol = 0;
+  etAd.forEach(function(t){ enSol = Math.max(enSol, _frTxtW(t, 12)); });
+  var L = Math.min(190, Math.ceil(enSol) + 16);
+  var enGenis = 0;
+  mins.forEach(function(v){ enGenis = Math.max(enGenis, _frTxtW(_frFs(v, 2), 11.5)); });
+  var R2 = Math.max(30, Math.ceil(enGenis) + 10);
+  // ALT ŞERİT KUTUYA SIĞMAK ZORUNDA. Uzun hâli 780 birimlik kutuda sığıyor,
+  // 390 birimlik (yarım sütun) kutuda viewBox'ı 209 px aşıyordu — ÖLÇÜLDÜ.
+  // Sığmayan ikinci cümle DÜŞER; aynı bilgi bloğun kendi notunda zaten var.
+  var uzunAlt = 'çubuk boyu = SF · SF = 1 kayma eşiği · soluk çubuk = yük taşımayan kasnak (kapasite)';
+  var kisaAlt = 'çubuk boyu = SF · SF = 1 kayma eşiği';
+  var altYazi = (L + _frTxtW(uzunAlt, 11) <= W - 4) ? uzunAlt : kisaAlt;
   var g = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Kayma emniyet faktörü">';
   isim.forEach(function(n, i){
     var y = 24 + i * satir;
     var w = (mins[i] / maxV) * (W - L - R2);
-    var kotu = Number.isFinite(esik) && mins[i] < esik;
-    g += '<text x="' + (L - 8) + '" y="' + (y + 13) + '" text-anchor="end" font-size="12" fill="#1b1e24">' + _frEsc(n) + '</text>';
+    var kotu = yukTasir[i] && Number.isFinite(esik) && mins[i] < esik;
+    var dolgu = kotu ? '#a8321f' : (yukTasir[i] ? '#24425f' : '#9aa3ad');
+    g += '<text x="' + (L - 8) + '" y="' + (y + 13) + '" text-anchor="end" font-size="12" fill="'
+       + (yukTasir[i] ? '#1b1e24' : '#5a6270') + '">' + _frEsc(etAd[i]) + '</text>';
     g += '<rect data-ve="sf-bar" x="' + L + '" y="' + y + '" width="' + Math.max(1, w).toFixed(1) + '" height="18" '
-       + 'fill="' + (kotu ? '#a8321f' : '#24425f') + '" opacity="0.82"/>';
-    g += '<text x="' + (L + w + 6).toFixed(1) + '" y="' + (y + 13) + '" font-size="11.5" fill="#1b1e24">' + _frFs(mins[i], 2) + '</text>';
+       + 'fill="' + dolgu + '" opacity="' + (yukTasir[i] ? '0.82' : '0.55') + '"/>';
+    var etX = Math.min(L + w + 6, W - R2 + 4);
+    g += '<text x="' + etX.toFixed(1) + '" y="' + (y + 13) + '" font-size="11.5" fill="#1b1e24">' + _frFs(mins[i], 2) + '</text>';
   });
   if(Number.isFinite(esik) && esik > 0){
     var X = L + (esik / maxV) * (W - L - R2);
@@ -2316,7 +2682,7 @@ function _frSlipFigure(R, esik){
     g += '<text x="' + (X + 4).toFixed(1) + '" y="12" font-size="11" fill="#a8321f">servis faktörü '
        + _frF(esik, 2) + '</text>';
   }
-  g += '<text x="' + L + '" y="' + (H - 12) + '" font-size="11" fill="#5a6270">çubuk boyu = SF · SF = 1 kayma eşiği</text>';
+  g += '<text x="' + L + '" y="' + (H - 12) + '" font-size="11" fill="#5a6270">' + _frEsc(altYazi) + '</text>';
   return _frFigWrap(g, 'Kasnak başına EN DÜŞÜK kayma emniyet faktörü (tüm devir noktaları üzerinden). '
     + 'Kesikli kırmızı çizgi istenen servis faktörüdür; altında kalan çubuk kırmızı basılır.');
 }
@@ -2356,9 +2722,28 @@ function _frFreqFigure(R){
   });
   if(!tumF.length) return '';
   var yMax = Math.max.apply(null, tumF) * 1.1;
-  var c = _frChart({ xMin: rpmLo, xMax: rpmHi, yMin: 0, yMax: yMax,
+  // AÇIKLIK ADI KISALTILIR. Ham ad "Sürücü Kasnak (FAN)->Avara 1" = 28 karakter;
+  // yedi girdilik bir gösterge o adlarla 262 px'e çıkıyor ve grafiği yiyordu.
+  // Kısa kod köprü katmanının kendi kuralı (veFeadPulleyCodes); burada yoksa
+  // ham ada düşülür — grafik yine çizilir, yalnız gösterge genişler.
+  var kod = (typeof veFeadPulleyCodes === 'function' && R.build && R.build.sys)
+    ? veFeadPulleyCodes(R.build.sys) : null;
+  var adlar = (R.build && R.build.sys && R.build.sys.pulleys) || [];
+  function kisaSpan(sp){
+    var t = String(sp);
+    if(kod) adlar.forEach(function(p, i){ t = t.split(p.name).join(kod[i]); });
+    return t.replace(/\s*->\s*/g, ' → ');
+  }
+  var etiket = spans.map(kisaSpan).concat(['ateşleme frekansı']);
+  var gW = 0;
+  etiket.forEach(function(t){ gW = Math.max(gW, _frTxtW(t, 9.5)); });
+  var padR = Math.ceil(gW) + 34;                      // çizgi örneği + boşluk
+  var c = _frChart({ xMin: rpmLo, xMax: rpmHi, yMin: 0, yMax: yMax, padR: padR,
                      xLabel: 'Motor devri [d/d]', yLabel: 'Frekans [Hz]', xDec: 0, yDec: 0,
-                     H: 300, alt: 'Doğal frekans haritası' });
+                     // RAW kipte (özet rapor) istenen boy geçerli: orada şekil
+                     // küçük basılıyor. Sabit 300 yazmak _FR_H'yi sessizce
+                     // yutuyordu — özet raporda sayfa taşıyordu (ölçüldü).
+                     H: (_FR_RAW ? _FR_H : 300), alt: 'Doğal frekans haritası' });
   var g = c.svg;
   var renk = ['#24425f', '#8a5a1e', '#2e7d4f', '#a8321f', '#5a6270', '#7a4fa8'];
   spans.forEach(function(sp, si){
@@ -2372,19 +2757,89 @@ function _frFreqFigure(R){
   var fire = duty.map(function(d){ return [_frNum(d.engineRpm), _frNum(d.firingHz)]; })
                  .filter(function(p){ return Number.isFinite(p[1]); });
   g += '<g data-ve="firing-line">' + _frPolyline(c, fire, '#a8321f', 2.2, '6 4') + '</g>';
-  // gösterge
-  var lx = c.pad.l + 8, ly = c.pad.t + 12;
+  // GÖSTERGE ÇİZİM ALANININ DIŞINDA — sağ payda, dikey liste.
+  var lx = c.W - c.pad.r + 6, ly = c.pad.t + 10;
+  var adim = Math.min(13, (c.H - c.pad.t - c.pad.b) / (spans.length + 1));
   spans.forEach(function(sp, si){
-    g += '<line x1="' + lx + '" y1="' + (ly + si * 13 - 4) + '" x2="' + (lx + 16) + '" y2="' + (ly + si * 13 - 4)
+    var y = ly + si * adim;
+    g += '<line x1="' + lx + '" y1="' + (y - 4).toFixed(1) + '" x2="' + (lx + 16) + '" y2="' + (y - 4).toFixed(1)
        + '" stroke="' + renk[si % renk.length] + '" stroke-width="2"/>';
-    g += '<text x="' + (lx + 21) + '" y="' + (ly + si * 13) + '" font-size="9.5" fill="#5a6270">' + _frEsc(sp) + '</text>';
+    g += '<text x="' + (lx + 21) + '" y="' + y.toFixed(1) + '" font-size="9.5" fill="#5a6270">'
+       + _frEsc(etiket[si]) + '</text>';
   });
-  g += '<line x1="' + lx + '" y1="' + (ly + spans.length * 13 - 4) + '" x2="' + (lx + 16) + '" y2="' + (ly + spans.length * 13 - 4)
+  var yf = ly + spans.length * adim;
+  g += '<line x1="' + lx + '" y1="' + (yf - 4).toFixed(1) + '" x2="' + (lx + 16) + '" y2="' + (yf - 4).toFixed(1)
      + '" stroke="#a8321f" stroke-width="2" stroke-dasharray="6 4"/>';
-  g += '<text x="' + (lx + 21) + '" y="' + (ly + spans.length * 13) + '" font-size="9.5" fill="#a8321f">ateşleme frekansı</text>';
+  g += '<text x="' + (lx + 21) + '" y="' + yf.toFixed(1) + '" font-size="9.5" fill="#a8321f">ateşleme frekansı</text>';
   return _frFigWrap(g, 'Açıklıkların temel enine titreşim frekansı ve motorun ateşleme frekansı (7.2)–(7.3). '
     + 'İki eğri kesişirse o devirde ilgili açıklık rezonansa girer. Bu grafik yalnız AÇIKLIK '
     + 'titreşimini gösterir; sistem burulma modları 8.18\'de ayrı tablodadır.');
+}
+
+// ── BMC HESAP DEFTERİNDEN GELEN ÜÇ KAPI — uygunluk tablosunun 11–13. satırları
+//
+// Kapılar burada HESAPLANMAZ, `R.checks`ten okunur (çözüm anında yazılıyor).
+// Yeniden hesaplamak, çözümden sonra değiştirilen bir devir sınırının belgeye
+// sızması demekti; rapor ÇÖZÜLEN modeli anlatır.
+//
+// Bulgu sütunu her zaman PAYI da taşır: "uygun" demek sınıra ne kadar
+// kalındığını gizlememeli — defterin kendi tasarımında bir çift üst sınıra
+// %1,8 kala duruyordu ve bu ancak payla görülüyor.
+function _frCheckRows(R, ekle){
+  var K = R && R.checks;
+  if(!K){
+    ekle('Kasnak merkez mesafesi (§ BMC defteri)', '0,7·(d₁+d₂) ≤ a ≤ 2·(d₁+d₂)', '—', 'wait');
+    ekle('Aksesuar çevrim oranı penceresi', 'governed devirde optimum bandında', '—', 'wait');
+    ekle('Aksesuar devir sınırı', 'sürekli ve anlık maksimumun altında', '—', 'wait');
+    return;
+  }
+
+  // 11 — kasnak merkez mesafesi
+  var c = K.centerDistance || {};
+  var cBulgu;
+  if(!c.rows || !c.rows.length) cBulgu = _frEsc(c.note || 'değerlendirilemedi');
+  else if(c.ok) cBulgu = c.rows.length + ' çiftin hepsi aralıkta; en dar pay '
+      + _frF(c.worst.payPct, 1) + '% (' + _frEsc(c.worst.cift) + ')';
+  else cBulgu = c.rows.filter(function(r){ return !r.ok; })
+      .map(function(r){ return _frEsc(r.cift) + ' a=' + _frF(r.a, 1)
+        + ' ∉ [' + _frF(r.lo, 1) + ', ' + _frF(r.hi, 1) + ']'; }).join('; ');
+  ekle('Kasnak merkez mesafesi', '0,7·(d₁+d₂) ≤ a ≤ 2·(d₁+d₂), pitch çapıyla',
+       cBulgu, c.durum || 'wait');
+
+  // 12 — çevrim oranı penceresi
+  var w = K.ratioWindow || {};
+  var wBulgu;
+  if(!w.rows || !w.rows.length) wBulgu = _frEsc(w.note || 'değerlendirilemedi');
+  else if(w.ok) wBulgu = w.rows.map(function(r){
+      return _frEsc(r.ad) + ' ' + _frF(r.accRpm, 0) + ' d/dk ∈ ['
+        + _frF(r.optimumRpm, 0) + ', ' + _frF(r.maxContRpm, 0) + ']'; }).join('; ');
+  else wBulgu = w.rows.filter(function(r){ return !r.ok; })
+      .map(function(r){ return _frEsc(r.ad) + ': ' + _frEsc(r.metin)
+        + ' (' + _frF(r.accRpm, 0) + ' d/dk)'; }).join('; ');
+  ekle('Aksesuar çevrim oranı penceresi',
+       (w.governedRpm > 0 ? 'governed ' + _frF(w.governedRpm, 0) + ' d/dk\'da optimum bandında'
+                          : 'governed devirde optimum bandında'),
+       wBulgu, w.durum || 'wait');
+
+  // 13 — devir sınırı
+  var s = K.speedLimit || {};
+  var sBulgu;
+  if(!s.rows || !s.rows.length) sBulgu = _frEsc(s.note || 'değerlendirilemedi');
+  else if(s.ok) sBulgu = s.rows.map(function(r){
+      return _frEsc(r.ad) + ' en dar pay ' + _frF(r.kritik.payPct, 1) + '% ('
+        + _frEsc(r.kritik.ad) + ')'; }).join('; ');
+  else {
+    var ihlal = [];
+    s.rows.forEach(function(r){
+      r.noktalar.forEach(function(p){
+        if(!p.ok) ihlal.push(_frEsc(r.ad) + ' @' + _frEsc(p.ad) + ': '
+          + _frF(p.accRpm, 0) + ' > ' + _frF(p.limit, 0) + ' d/dk (' + _frEsc(p.limitAd) + ')');
+      });
+    });
+    sBulgu = ihlal.join('; ');
+  }
+  ekle('Aksesuar devir sınırı', 'çevrim tepesi ve governed ≤ sürekli · overspeed ≤ anlık',
+       sBulgu, s.durum || 'wait');
 }
 
 // ═══════════════════ UYGUNLUK HÜKMÜ ════════════════════════════════════════
@@ -2397,8 +2852,13 @@ function _frCompliance(R){
   try { bp = (C && C.beltProps && sys) ? C.beltProps(sys.belt) : null; } catch(e){}
   var satirlar = [];
   function ekle(kriter, hedef, bulgu, durum){ satirlar.push([kriter, hedef, bulgu, durum]); }
+  // DÖRT DURUM: 'warn' 2026-09-01'de eklendi ve bir incelik değil. Kasnak
+  // merkez mesafesi kuralı İKİ KASNAKLI V-kayış tahrikleri için yazılmıştır;
+  // serpantinde ihlali "tasarım onaylanmamalı" demek olmaz ama sessiz de
+  // geçilmemeli. 'warn' genel hükmü kırmıyor, satırı işaretliyor.
   function rozet(d){
     if(d === 'ok')   return '<span class="ok">✓ Uygun</span>';
+    if(d === 'warn') return '<b style="color:#8a5a10;">⚠ Sınırda</b>';
     if(d === 'wait') return '<span style="color:#5a6270;">— değerlendirilemedi</span>';
     return '<b style="color:#a8321f;">✗ Kontrol</b>';
   }
@@ -2468,13 +2928,22 @@ function _frCompliance(R){
                      : 'türetilemedi'),
        uy.length ? 'no' : ((Number.isFinite(ankraj) && ankraj > 0) ? 'ok' : 'no'));
 
-  // 7 — kol boyu ↔ montaj merkezi
-  var m = R.build && R.build.mount;
-  if(m && m.ok && Number.isFinite(_frNum(m.armFromCoords)) && sys && sys.tensioner){
-    var fark = Math.abs(_frNum(m.armFromCoords) - _frNum(sys.tensioner.armLength));
-    ekle('Kol boyu ↔ montaj merkezi tutarlılığı', '|fark| ≤ 0,5 mm',
-         _frFs(fark, 3) + ' mm', fark <= 0.5 ? 'ok' : 'no');
-  } else ekle('Kol boyu ↔ montaj merkezi tutarlılığı', '|fark| ≤ 0,5 mm', 'montaj merkezi girilmedi', 'wait');
+  // 7 — gövdenin montaj konumu türetilebildi mi
+  //
+  // TOTOLOJİ DEĞİL ve bu ayrım önemli: kriter türeyen sayıyı GİRİLEN bir
+  // sayıyla karşılaştırmıyor (öyle bir sayı yok — program hiçbir şeyi hiçbir
+  // şeyle karşılaştırmıyor). Sorduğu şey, türetmenin girdisi olan üç alanın
+  // (avara merkezi · kol boyu · kol çalışma açısı) tamam olup olmadığı; biri
+  // eksikse atölyeye gidecek nokta ÜRETİLEMEZ.
+  {
+    var _piv = R.build && R.build.pivot;
+    var _pOk = !!(_piv && Number.isFinite(_piv[0]) && Number.isFinite(_piv[1]));
+    ekle('Gövdenin montaj konumu türetilebildi',
+         'avara merkezi + kol boyu + kol açısı',
+         _pOk ? (_frF(_piv[0], 2) + ' / ' + _frF(_piv[1], 2) + ' mm')
+              : 'türetilemedi — üç girdiden biri eksik',
+         _pOk ? 'ok' : 'no');
+  }
 
   // 8 — span gerginliği pozitif
   var negatif = false;
@@ -2496,8 +2965,15 @@ function _frCompliance(R){
   ekle('Çalışma çevrimi kapsamı', 'Σ süre payı ≈ %100',
        _frPct(dc, 1), (dc >= 95 && dc <= 105) ? 'ok' : (dc > 0 ? 'no' : 'wait'));
 
+  // 11–13 — BMC HESAP DEFTERİNDEN GELEN ÜÇ KAPI
+  // Kapılar çözüm anında hesaplanıp `R.checks`'e yazılıyor (js/cp-fead.js
+  // veFeadSolve); rapor onları yeniden hesaplamaz. Eski bir sonuç nesnesinde
+  // alan olmayabilir — o zaman üç satır da 'wait' olur, hata değil.
+  _frCheckRows(R, ekle);
+
   var nOK = satirlar.filter(function(s){ return s[3] === 'ok'; }).length;
   var nNo = satirlar.filter(function(s){ return s[3] === 'no'; }).length;
+  var nWa = satirlar.filter(function(s){ return s[3] === 'warn'; }).length;
   var nW  = satirlar.filter(function(s){ return s[3] === 'wait'; }).length;
 
   var h = _frH2(1);
@@ -2511,11 +2987,17 @@ function _frCompliance(R){
       + '<td class="c">' + rozet(s[3]) + '</td></tr>';
   });
   h += '</table>';
+  // GENEL HÜKMÜ YALNIZ 'no' KIRAR. 'warn' (bugün yalnız merkez mesafesi
+  // kuralı) sayılır ve yazılır ama tasarımı reddetmez — gerekçesi kuralın
+  // kendi satırında ve js/fead-checks.js başlığında.
   h += '<div class="note ' + (nNo === 0 ? 'check' : 'warn') + '"><span class="t">Genel hüküm</span>'
-     + nOK + ' kriter uygun · ' + nNo + ' kriter kontrol istiyor · ' + nW + ' kriter değerlendirilemedi. '
+     + nOK + ' kriter uygun · ' + nNo + ' kriter kontrol istiyor · '
+     + (nWa ? nWa + ' kriter sınırda · ' : '')
+     + nW + ' kriter değerlendirilemedi. '
      + (nNo === 0
         ? 'Modelde kapıya takılan bir bulgu yok; Bölüm 9\'daki geçerlilik sınırları geçerlidir.'
         : 'Kontrol isteyen kriterler giderilmeden tasarım onaylanmamalıdır.')
+     + (nWa ? ' Sınırdaki kriter tasarımı reddetmez; payı satırında yazılıdır.' : '')
      + '</div>';
   if((R.limits || []).length){
     h += '<div class="note"><span class="t">Çekirdeğin bildirdiği sınırlar</span><ul style="margin:4px 0 0 18px;">';
@@ -2528,10 +3010,18 @@ function _frCompliance(R){
 if(typeof module !== 'undefined' && module.exports){
   module.exports = {
     getFeadReportPropertiesHTML: getFeadReportPropertiesHTML,
+    veFeadReportKind: veFeadReportKind,
+    veFeadFigureRaw: veFeadFigureRaw,
+    _frTakeupChartRaw: _frTakeupChartRaw,
+    _frTensionFigure: _frTensionFigure, _frFreqFigure: _frFreqFigure,
+    _frTakeupFigure: _frTakeupFigure, _frSlipFigure: _frSlipFigure,
+    _frArmSweep: _frArmSweep,
+    VE_FEAD_REPORT_KINDS: VE_FEAD_REPORT_KINDS,
+    _frKindPicker: _frKindPicker,
     veFeadGenerateReport: veFeadGenerateReport,
     _frBuildReportHTML: _frBuildReportHTML,
-    _frSection8: _frSection8,
-    _frCompliance: _frCompliance,
+    _frSection8: _frSection8, _frBeltDataBox: _frBeltDataBox,
+    _frCompliance: _frCompliance, _frCheckRows: _frCheckRows,
     _frAntet: _frAntet,
     _frEnsureAssets: _frEnsureAssets,
     _frConceptFigure: _frConceptFigure,
@@ -2546,8 +3036,13 @@ if(typeof module !== 'undefined' && module.exports){
     _frLabels: _frLabels,
     _frTakeupRateFigure: _frTakeupRateFigure,
     _frDesignTensionBlock: _frDesignTensionBlock,
-    _frPivotBlock: _frPivotBlock,
-    _frF: _frF, _frFs: _frFs, _frPct: _frPct, _frEsc: _frEsc,
+    _frPivotBlock: _frPivotBlock, _frPinBlock: _frPinBlock,
+    _frBandBlock: _frBandBlock,
+    VE_FR_SEC_BELTLEN: VE_FR_SEC_BELTLEN,
+    _frF: _frF, _frFs: _frFs, _frPct: _frPct, _frEsc: _frEsc, _frNum: _frNum,
+    _frSlipStats: _frSlipStats,
+    _frNiceStep: _frNiceStep, _frNiceAxis: _frNiceAxis,
+    VE_FR_SLIP_LOADED_RATIO: VE_FR_SLIP_LOADED_RATIO,
     VE_FEAD_REP_SECTIONS: VE_FEAD_REP_SECTIONS
   };
 }

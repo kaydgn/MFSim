@@ -10,7 +10,7 @@
  * ------------------------------------------------------------------
  * occt-import-js npm'den HAZIR .wasm olarak geldi — MFSim onu derlemedi,
  * yalnız gömdü (bkz. build-occt-wasm-asset.js). TetGen için hazır bir WASM
- * paketi YOK (npm/CDN'de arandı, bulunamadı — CLAUDE.md). Bu script o eksik
+ * paketi YOK (npm/CDN'de arandı, bulunamadı — .claude/skills/structural/references/ag.md). Bu script o eksik
  * halkayı dolduruyor: gerçek TetGen 1.6 kaynağını (PyPI'daki `tetgen` Python
  * paketinin vendored kopyası, WIAS'ın kendi sitesiyle aynı sürüm) emscripten
  * ile derliyor.

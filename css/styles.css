@@ -7256,3 +7256,473 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
   border-left:3px solid var(--accent-warning, #f59e0b);border-radius:var(--radius-sm);
 }
 .ve-str-dia-note b{ color:var(--text-secondary); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FEAD BAŞLANGIÇ SİHİRBAZI  (js/cp-fead-wizard.js)
+   ───────────────────────────────────────────────────────────────────────────
+   Kabuk Ayarlar/İçe Aktarma modallarıyla ORTAK (.ve-settings-overlay /
+   .ve-settings-modal); buradaki kurallar yalnız gövdeyi biçimlendiriyor.
+
+   İKİ KOZMETİK KARAR, ikisi de bu arayüzün kendi diliyle:
+   • YARIÇAP YOK. Tasarım sistemi --radius-sm'yi 2px'e indirmiş (keskin,
+     teknik); sihirbazda yuvarlak kartlar kullanmak onu bir "kurulum
+     asistanı"na benzetirdi. Ölçüler sisteme bağlı, elle px yazılmıyor.
+   • PUNTO BİR BASAMAK YUKARI. Uygulama varsayılanı 11px ve yoğun panellerde
+     doğru; ama sihirbaz tam ekran bir FORM ve kullanıcı burada okuyarak
+     karar veriyor. Gövde --fs-md (12px), başlıklar --fs-lg/--fs-title.
+     Yeni bir punto EKLENMEDİ, ölçekten bir basamak seçildi.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.ve-fw-modal{ max-width:1180px; height:94vh; max-height:none; position:relative; }
+
+.ve-fw-shell{ flex:1; display:grid; grid-template-columns:238px 1fr; min-height:0; }
+
+/* ── SOL RAY: adım göstergesi ─────────────────────────────────────────────
+   Adımlar TIKLANABİLİR ve bu bilinçli: sihirbaz bir kilit değil bir sıra
+   önerisi. Kullanıcı 5. adımda bir kasnağı düzeltmek isterse 2'ye dönebilmeli;
+   "İleri" düğmesini zorunlu tutmak onu formun içinde hapsederdi. */
+.ve-fw-nav{
+  background:var(--bg-tertiary); border-right:1px solid var(--border-color);
+  display:flex; flex-direction:column; overflow-y:auto; padding:0 0 10px;
+}
+.ve-fw-brand{
+  padding:12px 14px 10px; border-bottom:1px solid var(--border-color);
+  display:flex; flex-direction:column; gap:2px;
+}
+.ve-fw-brand b{ font-size:var(--fs-lg); color:var(--text-heading); font-weight:700; }
+.ve-fw-brand span{ font-size:var(--fs-micro); color:var(--text-muted); letter-spacing:var(--tracking-wide); text-transform:uppercase; }
+
+.ve-fw-steps{ list-style:none; margin:0; padding:8px 0 0; counter-reset:none; }
+.ve-fw-step{
+  position:relative; display:flex; align-items:flex-start; gap:9px;
+  padding:8px 12px 8px 12px; cursor:pointer; border-left:2px solid transparent;
+  transition:background .12s, border-color .12s;
+}
+.ve-fw-step:hover{ background:var(--accent-tint-6); }
+.ve-fw-step:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+
+/* İKİ KANAL, ÇAKIŞMADAN:
+     · ZEMİN + kalın başlık  → HANGİ adımdayız (.on)
+     · RENK (sol şerit · daire · rozet) → o adımın DURUMU (.ve-fw-st-*)
+   Tek kanala bindirilseydi SEÇİLİ adımın durumu görünmezdi — oysa kullanıcının
+   en çok baktığı adım tam olarak o. Bir dönem tek işaret hata rozetiydi, yani
+   "sorun yok" ile "buraya hiç bakılmadı" ayırt edilemiyordu; `.done` sınıfı da
+   geçerliliği değil KONUMU (i < adım) anlatıyordu. */
+.ve-fw-step.on{ background:var(--accent-tint-10); }
+.ve-fw-step.on .ve-fw-step-t b{ color:var(--text-heading); font-weight:700; }
+.ve-fw-st-ok   { border-left-color:var(--accent-success); }
+.ve-fw-st-warn { border-left-color:var(--accent-warning); }
+.ve-fw-st-err  { border-left-color:var(--accent-danger); }
+/* Seçili adımda şerit KALINLAŞIR — renk yine durumun, ağırlık odağın. */
+.ve-fw-step.on{ border-left-width:3px; padding-left:11px; }
+
+.ve-fw-step-no{
+  flex:none; width:20px; height:20px; border-radius:var(--radius-pill);
+  border:1.5px solid var(--border-hover); color:var(--text-muted);
+  font-size:var(--fs-micro); font-weight:700; display:flex; align-items:center; justify-content:center;
+  background:var(--bg-secondary); transition:background .12s, border-color .12s, color .12s;
+}
+.ve-fw-st-ok   .ve-fw-step-no{ border-color:var(--accent-success); color:var(--accent-success); }
+.ve-fw-st-warn .ve-fw-step-no{ border-color:var(--accent-warning); color:var(--accent-warning); }
+.ve-fw-st-err  .ve-fw-step-no{ border-color:var(--accent-danger);  color:var(--accent-danger); }
+/* Seçili adımda daire DOLAR: aynı renk, ters kontrast — durum kaybolmadan
+   "buradasın" okunuyor. */
+.ve-fw-step.on.ve-fw-st-ok   .ve-fw-step-no{ background:var(--accent-success); color:var(--on-accent); }
+.ve-fw-step.on.ve-fw-st-warn .ve-fw-step-no{ background:var(--accent-warning); color:var(--on-accent); }
+.ve-fw-step.on.ve-fw-st-err  .ve-fw-step-no{ background:var(--accent-danger);  color:#fff; }
+
+.ve-fw-step-t{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+.ve-fw-step-t b{ font-size:var(--fs-md); font-weight:600; color:var(--text-primary); }
+.ve-fw-step-t em{ font-size:var(--fs-micro); font-style:normal; color:var(--text-muted); line-height:1.4; }
+
+/* Rozet HER ADIMDA var: tamamlanmışta ✓, aksi hâlde eksik/uyarı SAYISI.
+   Yalnız hata varken çizilseydi "tamam" hâli sessiz kalırdı — kullanıcının
+   bildirdiği eksiklik buydu. */
+.ve-fw-step-n{
+  margin-left:auto; flex:none; min-width:16px; height:16px; padding:0 4px;
+  border-radius:var(--radius-pill); background:var(--border-hover); color:var(--text-primary);
+  font-size:var(--fs-micro); font-weight:700; display:flex; align-items:center; justify-content:center;
+  line-height:1;
+}
+.ve-fw-st-ok   .ve-fw-step-n{ background:var(--accent-success); color:var(--on-accent); }
+.ve-fw-st-warn .ve-fw-step-n{ background:var(--accent-warning); color:var(--on-accent); }
+.ve-fw-st-err  .ve-fw-step-n{ background:var(--accent-danger);  color:#fff; }
+
+/* ── GÖVDE ────────────────────────────────────────────────────────────── */
+.ve-fw-body{ overflow-y:auto; padding:16px 20px 22px; min-height:0; background:var(--bg-secondary); }
+.ve-fw-head{ margin:0 0 12px; }
+.ve-fw-head h2{
+  margin:0 0 3px; font-size:var(--fs-title); font-weight:700; color:var(--text-heading);
+  letter-spacing:-0.01em;
+}
+.ve-fw-head p{ margin:0; font-size:var(--fs-md); color:var(--text-muted); }
+
+/* Canlı şerit — sihirbazın en değerli yüzeyi: kullanıcı "İleri" demeden
+   modelin çözülüp çözülmediğini görüyor. */
+.ve-fw-live{ display:flex; flex-wrap:wrap; gap:6px; margin:0 0 14px; }
+.ve-fw-pill{
+  display:inline-flex; align-items:center; gap:5px; padding:3px 9px;
+  font-size:var(--fs-tiny); color:var(--text-secondary);
+  background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm);
+}
+.ve-fw-pill b{ color:var(--text-heading); font-family:var(--font-mono); font-weight:700; }
+.ve-fw-pill em{ font-style:normal; color:var(--accent-warning); font-size:var(--fs-micro); }
+.ve-fw-pill-ok{ border-color:var(--accent-success); color:var(--accent-success); }
+.ve-fw-pill-err{ border-color:var(--accent-danger); color:var(--accent-danger); }
+.ve-fw-pill-dim{ color:var(--text-muted); }
+
+/* Kart — panel kartlarının (_feadCard) aynı dili: sol aksan çubuğu + başlık
+   satırında birim/gerekçe. İki yüzey aynı şeyi farklı gösterirse kullanıcı
+   sihirbazdan panele geçince yeniden öğrenmek zorunda kalır. */
+.ve-fw-card{
+  margin:0 0 12px; background:var(--bg-primary); border:1px solid var(--border-color);
+  border-left:2px solid var(--fw-accent, var(--accent-primary)); border-radius:var(--radius-sm);
+}
+.ve-fw-card-h{
+  display:flex; align-items:baseline; gap:8px; padding:7px 12px;
+  border-bottom:1px solid var(--border-color); background:var(--bg-tertiary);
+}
+.ve-fw-card-h span{ font-size:var(--fs-lg); font-weight:700; color:var(--text-heading); }
+.ve-fw-card-h em{ font-style:normal; font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto; }
+.ve-fw-card-b{ padding:11px 12px; }
+.ve-fw-hint{
+  margin:9px 0 0; font-size:var(--fs-tiny); line-height:1.65; color:var(--text-muted);
+}
+.ve-fw-hint b{ color:var(--text-secondary); }
+.ve-fw-hint code{ font-family:var(--font-mono); font-size:var(--fs-micro); }
+
+/* ── ALANLAR ──────────────────────────────────────────────────────────── */
+.ve-fw-grid{ display:grid; grid-template-columns:repeat(var(--fw-cols,2), minmax(0,1fr)); gap:9px; }
+.ve-fw-field{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+.ve-fw-lbl{ font-size:var(--fs-tiny); font-weight:600; color:var(--text-secondary); }
+.ve-fw-unit{ font-size:var(--fs-micro); color:var(--text-muted); font-style:normal; }
+.ve-fw-inp{
+  width:100%; box-sizing:border-box; padding:5px 7px;
+  background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm);
+  color:var(--text-primary); font-size:var(--fs-md); font-family:var(--font-mono);
+}
+.ve-fw-inp:focus{ outline:none; border-color:var(--accent-primary); box-shadow:var(--focus-ring); }
+select.ve-fw-inp{ font-family:var(--font-sans); }
+
+/* Seçenek kartı — iki durumlu bir anahtar DEĞİL, kartlar: her seçeneğin ne
+   olduğu SEÇİM YAPILMADAN ÖNCE okunabilsin (rapor türü seçicisinin kuralı). */
+.ve-fw-opt{
+  display:flex; align-items:flex-start; gap:9px; padding:9px 11px; margin-bottom:7px;
+  border:1px solid var(--border-color); background:var(--bg-secondary); cursor:pointer;
+  border-radius:var(--radius-sm); transition:border-color .12s, background .12s;
+}
+.ve-fw-opt:hover{ border-color:var(--border-hover); background:var(--accent-tint-6); }
+.ve-fw-opt:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-fw-opt.on{ border-color:var(--accent-primary); background:var(--accent-tint-10); }
+.ve-fw-radio{
+  flex:none; width:12px; height:12px; margin-top:2px; border-radius:var(--radius-pill);
+  border:2px solid var(--text-muted); background:transparent;
+}
+.ve-fw-opt.on .ve-fw-radio{ border-color:var(--accent-primary); background:var(--accent-primary); }
+.ve-fw-opt-t{ display:flex; flex-direction:column; gap:3px; }
+.ve-fw-opt-t b{ font-size:var(--fs-md); color:var(--text-heading); font-weight:600; }
+.ve-fw-opt-t em{ font-style:normal; font-size:var(--fs-tiny); color:var(--text-muted); line-height:1.6; }
+
+/* ── ÇİPLER (kasnak ekleme) ───────────────────────────────────────────── */
+.ve-fw-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+.ve-fw-chip{
+  padding:5px 10px; font-size:var(--fs-tiny); font-weight:600; cursor:pointer;
+  background:var(--bg-tertiary); color:var(--text-secondary);
+  border:1px solid var(--border-color); border-radius:var(--radius-sm);
+}
+.ve-fw-chip:hover{ border-color:var(--accent-primary); color:var(--accent-primary); background:var(--accent-tint-8); }
+
+/* ── TABLOLAR ─────────────────────────────────────────────────────────── */
+.ve-fw-tblwrap{ overflow-x:auto; }
+.ve-fw-tbl{ width:100%; border-collapse:collapse; font-size:var(--fs-tiny); }
+.ve-fw-tbl th{
+  position:sticky; top:0; z-index:1; padding:5px 6px; text-align:left; white-space:nowrap;
+  background:var(--bg-tertiary); color:var(--text-secondary); font-weight:600;
+  border-bottom:1px solid var(--border-color);
+}
+.ve-fw-tbl th em{ display:block; font-style:normal; font-size:var(--fs-micro); color:var(--text-muted); font-weight:400; }
+.ve-fw-tbl td{ padding:3px 4px; border-bottom:1px solid var(--border-color); vertical-align:middle; }
+.ve-fw-tbl tr:hover td{ background:var(--accent-tint-6); }
+.ve-fw-tbl .ve-fw-c{ text-align:center; }
+.ve-fw-tbl .ve-fw-inp{ padding:4px 6px; }
+/* Sütun genişlikleri: dar kapta tip/ad kırpılıyordu ("Klima Komp…" ile
+   "Krank Kasn…" bakışta ayırt edilemiyor). Taşarsa tablo KENDİ kabında kayar
+   (.ve-fw-tblwrap), gövde değil — E2E gövdenin yatay kaymadığını ölçüyor. */
+.ve-fw-tbl select.ve-fw-inp{ min-width:124px; }
+.ve-fw-tbl input[type="text"].ve-fw-inp{ min-width:126px; }
+.ve-fw-tbl input[type="number"].ve-fw-inp{ min-width:76px; }
+.ve-fw-x{
+  width:20px; height:20px; padding:0; cursor:pointer; line-height:1;
+  background:transparent; border:1px solid transparent; color:var(--text-muted);
+  border-radius:var(--radius-sm);
+}
+.ve-fw-x:hover{ border-color:var(--accent-danger); color:var(--accent-danger); background:var(--bg-input); }
+
+/* ── KAYIŞ YOLU SIRASI ────────────────────────────────────────────────── */
+.ve-fw-route{ list-style:none; margin:0 0 9px; padding:0; }
+.ve-fw-route li{
+  display:flex; align-items:center; gap:9px; padding:5px 8px; margin-bottom:3px;
+  background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm);
+}
+.ve-fw-route-n{
+  flex:none; width:18px; height:18px; display:flex; align-items:center; justify-content:center;
+  background:var(--bg-tertiary); border:1px solid var(--border-color);
+  font-size:var(--fs-micro); font-weight:700; color:var(--text-muted); font-family:var(--font-mono);
+}
+.ve-fw-route-t{ flex:1; font-size:var(--fs-md); color:var(--text-primary); }
+.ve-fw-route-t em{ font-style:normal; font-size:var(--fs-micro); color:var(--accent-success); margin-left:6px; }
+.ve-fw-route-b{ display:flex; gap:3px; }
+.ve-fw-mini{
+  width:22px; height:20px; padding:0; cursor:pointer; line-height:1;
+  background:var(--bg-tertiary); border:1px solid var(--border-color);
+  color:var(--text-secondary); border-radius:var(--radius-sm); font-size:var(--fs-tiny);
+}
+.ve-fw-mini:hover:not(:disabled){ border-color:var(--accent-primary); color:var(--accent-primary); }
+.ve-fw-mini:disabled{ opacity:.35; cursor:not-allowed; }
+.ve-fw-rowbtns{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.ve-fw-dim{ font-size:var(--fs-tiny); color:var(--text-muted); }
+.ve-fw-dim b{ color:var(--text-secondary); font-family:var(--font-mono); }
+
+/* ── OKUMALAR (girdi değil, çıktı) ────────────────────────────────────── */
+.ve-fw-reads{
+  background:var(--bg-tertiary); border:1px solid var(--border-color);
+  border-radius:var(--radius-sm); padding:6px 9px;
+}
+.ve-fw-read{ display:flex; justify-content:space-between; gap:10px; padding:2px 0; font-size:var(--fs-tiny); }
+.ve-fw-read span{ color:var(--text-muted); }
+.ve-fw-read b{ font-family:var(--font-mono); color:var(--accent-warning); font-weight:700; }
+
+/* ── UYARI LİSTESİ ────────────────────────────────────────────────────── */
+.ve-fw-issues{ margin-top:12px; display:flex; flex-direction:column; gap:4px; }
+.ve-fw-issues-ok{
+  font-size:var(--fs-tiny); color:var(--accent-success); padding:6px 9px;
+  background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm);
+}
+.ve-fw-issue{
+  font-size:var(--fs-tiny); line-height:1.55; padding:6px 9px; border-radius:var(--radius-sm);
+  border:1px solid var(--border-color); background:var(--bg-tertiary); color:var(--text-secondary);
+}
+.ve-fw-issue-err{ border-color:var(--accent-danger); color:var(--accent-danger); }
+.ve-fw-issue-warn{ border-color:var(--accent-warning); color:var(--accent-warning); }
+
+/* ── ÖZET KARTLARI ───────────────────────────────────────────────────── */
+.ve-fw-cards{ display:grid; grid-template-columns:repeat(auto-fit, minmax(120px,1fr)); gap:8px; }
+.ve-fw-stat{
+  padding:8px 10px; background:var(--bg-tertiary);
+  border:1px solid var(--border-color); border-radius:var(--radius-sm);
+  display:flex; flex-direction:column; gap:3px;
+}
+.ve-fw-stat em{ font-style:normal; font-size:var(--fs-micro); color:var(--text-muted); text-transform:uppercase; letter-spacing:var(--tracking-wide); }
+.ve-fw-stat b{ font-size:var(--fs-lg); font-family:var(--font-mono); color:var(--text-heading); }
+.ve-fw-stat-ok b{ color:var(--accent-success); }
+.ve-fw-stat-err b{ color:var(--accent-danger); }
+/* Amber = TÜRETİLEN. Modülün kendi renk dili (kanvas rozetleri: mavi girdi,
+   amber çıktı) sihirbazda da geçerli — kullanıcı hangi sayının kendi girdisi
+   olduğunu renkten okuyor. */
+.ve-fw-stat-derived b{ color:var(--accent-warning); }
+.ve-fw-fig{ display:flex; justify-content:center; }
+.ve-fw-fig svg{ max-width:100%; height:auto; }
+.ve-fw-check{
+  display:flex; align-items:flex-start; gap:8px; margin-top:9px; padding:8px 10px;
+  font-size:var(--fs-tiny); line-height:1.6; color:var(--text-secondary); cursor:pointer;
+  background:var(--bg-tertiary); border:1px solid var(--accent-warning); border-radius:var(--radius-sm);
+}
+.ve-fw-check input{ margin-top:2px; }
+
+/* ── ALT ÇUBUK ───────────────────────────────────────────────────────── */
+/* YÜKSEKLİK MODALIN KENDİ BAŞLIĞINDAN GELİR, seçilmiş bir sayıdan değil:
+   dolgu `.ve-settings-header` ile aynı (6px 14px) ve düğme yüksekliği o
+   çubuğu başlığın hizasına oturtacak kadar. Bir dönem 9px dolgu + 29px düğme
+   vardı; ÖLÇÜLDÜ, çubuk 48 px'e çıkıyordu — aynı diyaloğun başlığı 39 px, yani
+   alt çubuk kendi üst çubuğundan 9 px KALINDI ve kullanıcı bunu "orantısız"
+   diye bildirdi. */
+.ve-fw-foot{
+  display:flex; align-items:center; gap:7px; padding:7px 14px;
+  border-top:1px solid var(--border-color); background:var(--bg-tertiary);
+}
+.ve-fw-foot-state{ flex:1; font-size:var(--fs-tiny); }
+.ve-fw-ok{ color:var(--accent-success); }
+.ve-fw-err{ color:var(--accent-danger); }
+/* Üçüncü durum — uygunluk kapılarının 'warn' seviyesi. 'ok' ile 'err' arasında
+   bir hüküm var ve rengi de öyle olmalı: merkez mesafesi ihlali tasarımı
+   reddetmiyor ama sessiz de geçilmiyor (js/fead-checks.js). */
+.ve-fw-warn{ color:var(--accent-warning); }
+/* Kapı başlığı: ad · ölçüt · rozet tek satırda, rozet SAĞA yaslı — üç kapı alt
+   alta gelince rozetler tek sütunda hizalanıyor ve durum tek bakışta okunuyor. */
+.ve-fw-gate-h{
+  display:flex; align-items:baseline; gap:8px; margin:9px 0 4px;
+  font-size:var(--fs-tiny);
+}
+.ve-fw-gate-h b{ color:var(--text-primary); font-weight:700; }
+.ve-fw-gate-h em{ flex:1; font-style:normal; color:var(--text-muted); }
+.ve-fw-btn{
+  padding:4px 10px; cursor:pointer; font-size:var(--fs-md); font-weight:600;
+  background:var(--bg-secondary); color:var(--text-primary);
+  border:1px solid var(--border-color); border-radius:var(--radius-sm);
+}
+.ve-fw-btn:hover:not(:disabled){ background:var(--bg-hover); border-color:var(--border-hover); }
+.ve-fw-btn:disabled{ opacity:.45; cursor:not-allowed; }
+.ve-fw-btn-primary{ background:var(--accent-primary); border-color:var(--accent-primary); color:var(--on-accent); }
+.ve-fw-btn-primary:hover:not(:disabled){ filter:brightness(1.12); background:var(--accent-primary); }
+.ve-fw-btn-go{ background:var(--accent-warning); border-color:var(--accent-warning); color:var(--on-accent); font-weight:700; }
+.ve-fw-btn-go:hover:not(:disabled){ filter:brightness(1.12); background:var(--accent-warning); }
+.ve-fw-btn-wide{
+  display:flex; flex-direction:column; align-items:flex-start; gap:2px;
+  width:100%; margin-bottom:6px; text-align:left; padding:8px 11px;
+}
+.ve-fw-btn-wide em{ font-style:normal; font-size:var(--fs-micro); color:var(--text-muted); font-weight:400; }
+
+/* Dar ekran: sol ray üste alınır (adımlar yatay şerit olur). */
+@media (max-width: 900px){
+  .ve-fw-shell{ grid-template-columns:1fr; grid-template-rows:auto 1fr; }
+  .ve-fw-nav{ border-right:none; border-bottom:1px solid var(--border-color); max-height:126px; }
+  .ve-fw-steps{ display:flex; overflow-x:auto; padding:6px; gap:4px; }
+  .ve-fw-step{ flex:none; border-left:none; border-bottom:2px solid transparent; }
+  .ve-fw-step.on{ border-bottom-color:var(--accent-primary); }
+  .ve-fw-brand{ display:none; }
+}
+
+/* Sihirbaz — gergi satırı ve salt-okunur hücreler ------------------------- */
+/* Gergi satırı tabloya OTOMATİK gelir ve silinemez: çekirdek her modelde tam
+   bir gergi istiyor. Zemin farkı bunu söylüyor — kullanıcı neden silemediğini
+   satıra bakınca anlıyor. */
+.ve-fw-tbl tr.ve-fw-tr-ten td{ background:var(--accent-tint-6); }
+.ve-fw-tbl tr.ve-fw-tr-ten:hover td{ background:var(--accent-tint-10); }
+/* X/Y sütununun gergide BAŞKA bir noktayı gösterdiğini söyleyen çip.
+   Karıştırmanın ölçülmüş bedeli gerginlikte −%48,6, yani bu etiket bir süs
+   değil bir kapı. */
+.ve-fw-tag{
+  display:inline-block; margin-top:3px; padding:1px 5px;
+  font-size:var(--fs-micro); font-weight:600; letter-spacing:var(--tracking-wide);
+  color:var(--accent-warning); background:var(--bg-tertiary);
+  border:1px solid var(--accent-warning); border-radius:var(--radius-sm);
+}
+/* Salt okunur hücre: sayı bir GİRDİ değil, seçimin sonucu. Girdi kutusuna
+   benzememeli — kullanıcı tıklayıp yazmayı denemesin.
+   `display` BURADA YOK ve olamaz: sınıf hem <td> hem <span> üzerinde
+   kullanılıyor, ve bir <td>'ye `inline-block` vermek onu tablo düzeninden
+   ÇIKARIR — tarayıcı anonim hücre kurar, sütunlar çöker. ÖLÇÜLDÜ (çalışma
+   çevrimi tablosu, 7 sütun): başlık genişlikleri 196·196·196·69·113·88·14
+   iken gövde 196·196·196·14·14·14·113 çıkıyordu, yani üç kW hücresi tek
+   sütuna sıkışıyor ve satır silme ✕'i "Klima Kompresörü" başlığının altına
+   düşüyordu. Kullanıcının bildirdiği "garip yapı" tam olarak buydu. */
+.ve-fw-ro{
+  font-family:var(--font-mono); font-size:var(--fs-tiny); color:var(--text-muted);
+  padding:4px 6px;
+}
+span.ve-fw-ro{ display:inline-block; }
+.ve-fw-ro-err{ color:var(--accent-danger); font-weight:700; }
+
+/* KİLİTLİ ALAN — künye kütüphaneden seçili.
+   `readonly` (input) / `disabled` (select) ile birlikte kullanılıyor ve
+   GÖRÜNÜMÜ SAYIYI GİZLEMİYOR: kullanıcı parçanın değerini okumaya devam
+   ediyor, yalnız yazamıyor. Soluk gri REDDEDİLDİ — "veri yok" gibi okunurdu;
+   kesikli çerçeve "bu alan başka bir yerden geliyor" diyor. */
+.ve-fw-inp.ve-fw-lock{
+  background:var(--bg-tertiary); border-style:dashed;
+  color:var(--text-secondary); cursor:default;
+}
+.ve-fw-inp.ve-fw-lock:focus{ outline:none; border-color:var(--border-color); }
+
+/* DÖNÜŞ YÖNÜ — iki durumlu seçim, aynı üreticiden iki adımda basılıyor.
+   Renk hükmü TAŞIMAZ: CW ile CCW'nin ikisi de eşit meşru (kanvastaki
+   `fead-spin` rozetinin kuralının aynısı) — seçili olan vurgulanır, öteki
+   nötr kalır. */
+.ve-fw-spinbox{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.ve-fw-spin{
+  padding:5px 12px; font-family:var(--font-mono); font-size:var(--fs-tiny);
+  font-weight:600; letter-spacing:var(--tracking-wide); cursor:pointer;
+  background:var(--bg-input); color:var(--text-secondary);
+  border:1px solid var(--border-color); border-radius:var(--radius-sm);
+}
+.ve-fw-spin:hover:not(:disabled){ background:var(--bg-hover); border-color:var(--border-hover); }
+.ve-fw-spin:disabled{ opacity:.45; cursor:not-allowed; }
+.ve-fw-spin-on{
+  background:var(--accent-primary); border-color:var(--accent-primary);
+  color:var(--on-accent);
+}
+
+/* Sütun genişlikleri İÇERİKTEN değil ORANDAN. `table-layout` varsayılanı auto
+   ve o, hücre metni değiştikçe sütunları yeniden bölüştürüyor: aksesuar
+   modelini seçmek "Güç kaynağı" hücresini uzatıyor, uzayan pay Model
+   sütunundan çalınıyor ve tablo gözle görülür biçimde yana kayıyordu
+   (ölçüldü: açılır liste 362 → 283 px). Sabit düzende seçim sütunları
+   oynatmıyor. `min-width` KORUNUYOR — dar ekranda tablo kendi kabında kayar,
+   sütunlar ezilmez. */
+.ve-fw-tbl.ve-fw-tbl-fixed{ table-layout:fixed; }
+.ve-fw-tbl.ve-fw-tbl-fixed select.ve-fw-inp{ min-width:0; width:100%; }
+.ve-fw-tbl.ve-fw-tbl-fixed td{ overflow:hidden; text-overflow:ellipsis; }
+
+/* Gergi satırının TİP hücresi: düz metin, açılır liste değil — gergi tipi
+   değiştirilemez. Diğer satırlarda o hücrede bir <select> var, o yüzden
+   dikey hizası ve punto ONUNLA aynı olmalı; yoksa satır "eksik" görünür. */
+.ve-fw-tip-ten{
+  display:inline-block; padding:3px 1px; font-size:var(--fs-tiny);
+  color:var(--text-primary); font-weight:600;
+}
+
+/* Örnek kartı SEÇİLİ hâli. Kart bir eylem düğmesi olduğu için işaret
+   "yüklendi" der, "seçili" değil. Renk yerine GÖLGE + sol şerit: kartlar
+   zaten nötr yüzeyler ve dolu bir vurgu rengi onları "birincil eylem" gibi
+   gösterirdi — oysa üçü de eşit meşru. */
+.ve-fw-btn-wide{ position:relative; transition:box-shadow .12s, border-color .12s; }
+.ve-fw-btn-wide.ve-fw-btn-on{
+  border-color:var(--accent-success);
+  box-shadow:0 0 0 1px var(--accent-success), 0 2px 8px rgba(0,0,0,.14);
+  background:var(--bg-secondary);
+}
+.ve-fw-btn-wide.ve-fw-btn-on::before{
+  content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+  background:var(--accent-success);
+}
+.ve-fw-btn-mark{
+  position:absolute; right:10px; top:50%; transform:translateY(-50%);
+  font-size:var(--fs-micro); font-weight:700; letter-spacing:var(--tracking-wide);
+  color:var(--accent-success);
+}
+
+/* Kasnak satırındaki sıra düğmeleri — ↑ ↓ ✕ tek hücrede, sabit genişlik.
+   Silme düğmesi tek başınayken hücre dar; üç düğme sığmayınca satır kayar. */
+.ve-fw-rowops{ white-space:nowrap; }
+.ve-fw-rowops > button{ margin:0 1px; }
+
+/* Kol yönü alanı: giriş + seçici düğmesi yan yana, alanın tamamını kaplar. */
+.ve-fw-ang-cell{ display:flex; gap:4px; align-items:stretch; }
+.ve-fw-ang-cell > input{ flex:1; min-width:0; }
+.ve-fw-ang-btn{ flex:none; padding:0 8px; font-size:var(--fs-tiny); }
+
+/* Otomatik gerginin ZORUNLU olduğunu söyleyen kontur.
+   Satırın kendisi artık diğerleriyle aynı görünüyor (kullanıcı isteği), o
+   yüzden hüküm listenin altında kendi kutusunda duruyor — bilgi kaybolmasın
+   diye renk konturu taşıyor, dolgu değil: dolu bir kutu "uyarı" gibi okunur,
+   oysa bu bir KURAL. */
+.ve-fw-note-req{
+  margin-top:8px; padding:7px 10px; font-size:var(--fs-micro); line-height:1.6;
+  color:var(--text-secondary); background:transparent;
+  border:1px solid var(--accent-primary); border-left-width:3px;
+  border-radius:var(--radius-sm);
+}
+.ve-fw-note-req b{ color:var(--text-primary); }
+
+/* ── KOL AÇISI SEÇİCİ ────────────────────────────────────────────────────
+   Sihirbaz modalının İÇİNDE duran ikinci kaplama. `position:absolute` +
+   `inset:0`: kabın dışına taşmıyor, dolayısıyla sihirbaz kapanınca o da
+   gidiyor ve ayrı bir z düzeni yönetimi gerekmiyor. */
+.ve-fw-ang{
+  position:absolute; inset:0; z-index:5;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.42);
+}
+.ve-fw-ang-box{
+  width:min(460px, 92%); background:var(--bg-secondary);
+  border:1px solid var(--border-color); border-radius:var(--radius-sm);
+  box-shadow:0 8px 30px rgba(0,0,0,.35);
+}
+.ve-fw-ang-wrap{
+  background:var(--bg-primary); border:1px solid var(--border-color);
+  border-radius:var(--radius-sm); cursor:crosshair; touch-action:none;
+}
+.ve-fw-ang-svg{ display:block; }
+.ve-fw-ang-row{ display:flex; gap:6px; align-items:center; margin-top:8px; }
+.ve-fw-ang-row .ve-fw-lbl{ flex:none; }
+.ve-fw-ang-row input{ flex:1; min-width:0; }

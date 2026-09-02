@@ -42,6 +42,14 @@ const G = V.AG_MISC.AG00879;
 const POS = { FreeArm: 'FreeArm', Replace: 'Replace', Max: 'MaxBelt',
               Mean: 'Mean', Min: 'MinBelt', Load: 'Load' };
 
+/* Ömür/yorulma katalog sabitlerine bağlı; varsayılan 'none' (kayış boyu bir
+   ÇIKTI ve kayış henüz seçilmemiş sayılıyor). Testler açıkça açıyor. */
+function katalogAc(pack) {
+  const b = pack.nodes.find((n) => n.type === 'fead-belt');
+  if (b) b.data.beltDataMode = 'full';
+  return pack;
+}
+
 function kur(mut) {
   const pack = veFeadExampleNodes(KEY);
   pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
@@ -153,14 +161,16 @@ describe('gergi konum tablosu — altı konum × altı sütun', () => {
     expect(norm).toBeCloseTo(G.freeAbsDeg, 1);
   });
 
-  test('kol boyu çapraz kontrolü GERÇEK denetim (pivot GİRİLİ)', () => {
-    // BMC_FEAD_2026'da pivot TÜRETİLİYOR ve kontrol tautolojik; burada pivot
-    // raporda ölçülü, merkez de ayrı bir satır → iki BAĞIMSIZ sayı.
-    const ac = veFeadArmCheck(tenOf(kur().pack.nodes));
-    expect(ac.tautological).toBeFalsy();
-    expect(ac.entered).toBe(G.arm);
-    expect(ac.fromCoords).toBeCloseTo(G.arm, 1);
-    expect(ac.ok).toBe(true);
+  test('TÜRETİLEN pivot raporun AYRI sayfada bastığı pivotu geri veriyor', () => {
+    // Pivot bir GİRDİ DEĞİL — kasnak merkezi + kol açısından türüyor. Ama
+    // rapor onu ayrıca "Tensioner Data" bloğunda basıyor, yani üç sayı
+    // (merkez · kol açısı · pivot) BAĞIMSIZ okunmuş. Türetme onları
+    // birbirine bağlıyor ve tutuyor: bu bir eko değil, ölçüm.
+    const t = tenOf(kur().pack.nodes);
+    expect(t.pivotX).toBeUndefined();          // girilmiyor
+    expect(t.armMeanDeg).toBeCloseTo(225.0, 6);
+    const p = M.veFeadTensionerPivot(t);
+    expect(Math.hypot(p[0] - G.pivot[0], p[1] - G.pivot[1])).toBeLessThan(0.05);
   });
 });
 
@@ -207,8 +217,11 @@ describe('modelin KENDİ İLAN ETTİĞİ sınırlar', () => {
     // Üç kasnak 79.6 mm tabanının altında (IDR/TEN 78.6, ALT 58.8). Model
     // sayıyı gizlemiyor, sınırı sonucun İÇİNDE taşıyor — düzeltilmiş değer
     // raporun 5632 saatine %1 içinde oturuyor.
-    const { pack, build } = kur();
-    const A = veFeadAnalyze(build, { rows: solverOf(pack.nodes).duty });
+    const pack = katalogAc(veFeadExampleNodes(KEY));
+    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const build = veFeadBuildSystem(pack.nodes, pack.connections);
+    const solverNode = pack.nodes.find((n) => n.type === 'fead-solver');
+    const A = veFeadAnalyze(build, { rows: veFeadDutyRows(solverNode) });
     const life = A.life;
     expect(life.inValidRange).toBe(false);
     expect(life.outOfRange.length).toBe(3);
@@ -224,7 +237,8 @@ describe('modelin KENDİ İLAN ETTİĞİ sınırlar', () => {
     const ex = veFeadExampleOf(KEY);
     ex.pulleys.forEach((p) => expect(p.data.inertia).toBeUndefined());
     const { pack, build } = kur();
-    const A = veFeadAnalyze(build, { rows: solverOf(pack.nodes).duty });
+    const solverNode = pack.nodes.find((n) => n.type === 'fead-solver');
+    const A = veFeadAnalyze(build, { rows: veFeadDutyRows(solverNode) });
     expect(A.ok).toBe(true);
     expect(A.warnings.join(' ')).toMatch(/atalet/i);
   });

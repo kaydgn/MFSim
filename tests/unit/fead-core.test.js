@@ -166,37 +166,41 @@ describe('tarayıcı köprüsü', () => {
 // zincire bakıyor. Burada besleniyorlar.
 describe('torsionalModel — burulma modeli', () => {
   const V = require('../fixtures/fead-validation.js');
-  const MEAS = F.CALIBRATION.tensionerArmInertiaKgM2.measured;
+  const { vibrationOf } = require('../helpers/gates-vibration.js');
 
-  // Gergi kasnak KÜTLESİ fixture'da yok (fixture birebir dış kopya, dokunulmaz);
-  // çekirdeğin kendi ölçülmüş gergi künyesinden çözülür: kol ataleti hangi
-  // gergiye aitse onun kasnak kütlesi.
-  const massOf = (armJ) => {
-    const k = Object.keys(MEAS).filter((x) => Math.abs(MEAS[x].armKgM2 - armJ) < 1e-9)[0];
-    return k ? MEAS[k].pulleyKg : null;
-  };
-  // Krank serbestliğinin ataleti kasnağın değil KRANK MİLİNİN ataletidir.
-  const CRANK_J = 0.7;
-
+  // GİRDİLER DE REFERANS DA KAYNAĞINDAN OKUNUR — `docs/gates-reports/pdf/`
+  // altındaki raporun "System Vibration Analysis" sayfasından. Teste elle
+  // yazılsalardı ikinci bir kopya doğardı; kaynağından sessizce ayrışması bu
+  // projenin en pahalı hata sınıfı. Arşiv depoda olduğu için okumak mümkün
+  // (10 PDF 261 ms, modül önbellekli).
+  //
+  // BU ÜÇ KUSURU KAPATTI — üçü de ölçüldü, üçü de sessizdi:
+  //   1. Krank mili ataleti BEŞ sistem için 0.7'ye SABİTLENMİŞTİ; raporlar
+  //      sistem başına 0.15 / 0.5 / 0.7 diyor ve 0.7 yalnız takımın DIŞINDAKİ
+  //      AG00810'da doğru. Fixture doğru değeri iki sistemde zaten taşıyordu.
+  //   2. Gergi kasnak kütlesi çekirdeğin künyesinden TÜRETİLİYORDU ve
+  //      AG00810'da null dönüyordu ("kütle bilinmiyor"); raporunun kendi
+  //      sayfası 0.80 kg yazıyor.
+  //   3. NF referanslarının üçü kaynağıyla uyuşmuyordu (11.87 ↔ 12.61 ·
+  //      13.35 ↔ 12.61 · 13.29 ↔ 15.05). Gates SÜRÜM farkı değil: damgalar
+  //      birebir aynı (9.37 / 9.40 / 4.32) ve tasarım adları doğru sistemler.
   const kurTors = (key) => {
-    const d = V.AG_MISC[key];
+    const v = vibrationOf(key);
     const sys = V.buildMisc(key);
     sys.pulleys.forEach((p) => {
-      p.inertiaKgM2 = p.crank ? CRANK_J
-        : (d.inertia[p.name] != null ? d.inertia[p.name] : 0.0002);
+      p.inertiaKgM2 = p.crank ? v.crankInertiaKgM2
+        : (v.accessoryInertia[p.name] != null ? v.accessoryInertia[p.name] : 0.0002);
     });
-    sys.tensioner.armInertiaKgM2 = d.armInertia;
-    const m = massOf(d.armInertia);
-    if (m != null) sys.tensioner.pulleyMassKg = m;
+    sys.tensioner.armInertiaKgM2 = v.armInertiaKgM2;
+    sys.tensioner.pulleyMassKg = v.pulleyMassKg;
     sys._cache = {};
-    return { sys, ref: d.NF };
+    return { sys, ref: v.mode1Hz };
   };
 
-  // Gates raporunda kol ataleti YAZAN sistemler = kalibrasyon takımı.
-  // AG00810 dışarıda: gergisi (kol 0.004) çekirdeğin ölçülmüş iki gergisinden
-  // hiçbiri değil, yani kasnak kütlesi BİLİNMİYOR. Kütlesiz koşunca 20.3 Hz
-  // çıkıyor (Gates 13.29) — bu modelin değil, EKSİK VERİNİN sonucu ve aşağıda
-  // ayrıca belgeleniyor.
+  // KALİBRASYON TAKIMI — %10 bandına düşen sistemler. Arşivde titreşim sayfası
+  // olan YEDİ raporun tamamı kaynak girdileriyle koşuldu; beşi banda düşüyor.
+  // Dışarıda kalan ikisi (AG00810 %16.6, AG00879 %13.4) aşağıda ayrıca
+  // belgeleniyor — ikisi de artık GERÇEK model sapması, "veri eksik" değil.
   const TAKIM = ['AG00686', 'AG00686-1520', 'AG0868-4PK', 'AG0868-6PK', 'AG0868'];
 
   describe('YAPISAL — kalibrasyondan bağımsız', () => {
@@ -307,15 +311,25 @@ describe('torsionalModel — burulma modeli', () => {
         .toBeLessThan(Math.abs(T.firstElasticHz / ref - 1));
     });
 
-    test('[BİLİNEN SINIR] AG00810 kalibrasyon takımının DIŞINDA', () => {
-      // Gergisinin kol ataleti (0.004) çekirdeğin ölçülmüş iki gergisinden
-      // hiçbiri değil → kasnak kütlesi bilinmiyor → nokta kütle terimi eksik
-      // kalıyor ve mod yüksek çıkıyor. Model hatası DEĞİL, veri eksiği; testi
-      // bunu belgeliyor ki biri "AG00810 tutmuyor" diye modeli suçlamasın.
-      expect(massOf(V.AG_MISC.AG00810.armInertia)).toBeNull();
-      const { sys, ref } = kurTors('AG00810');
-      const f = F.torsionalModel(sys, {}).firstElasticHz;
-      expect(f).toBeGreaterThan(ref * 1.4);        // ölçüldü: 20.3 vs 13.29
+    test('[BİLİNEN SINIR] AG00810 ve AG00879 takımın DIŞINDA — VERİ EKSİĞİ DEĞİL', () => {
+      // ESKİ GEREKÇE ÇÜRÜTÜLDÜ. Bu test bir dönem AG00810'un dışarıda
+      // kalmasını "gergi kasnak kütlesi BİLİNMİYOR" diye açıklıyordu; raporun
+      // kendi titreşim sayfası o kütleyi (0.80 kg) YAZIYOR. Gerçek kütleyle
+      // koşunca 20.3 → 17.55 Hz (Gates 15.05) — yani eksik veri sapmanın bir
+      // KISMIYDI, tamamı değil. Kalan fark modelin kendi sınırı.
+      //
+      // AG00879 de arşive girince ölçülebildi (fixture'da atalet verisi HİÇ
+      // yoktu): 25.06 ↔ 22.11 Hz. İkisi de banda düşmüyor ama ikisi de
+      // eskiden sanıldığından çok daha yakın.
+      const olc = (k) => {
+        const { sys, ref } = kurTors(k);
+        return F.torsionalModel(sys, {}).firstElasticHz / ref;
+      };
+      expect(vibrationOf('AG00810').pulleyMassKg).toBeCloseTo(0.80, 5);
+      expect(olc('AG00810')).toBeGreaterThan(1.10);   // ölçüldü: 1.166
+      expect(olc('AG00810')).toBeLessThan(1.25);
+      expect(olc('AG00879')).toBeGreaterThan(1.08);   // ölçüldü: 1.133
+      expect(olc('AG00879')).toBeLessThan(1.20);
     });
   });
 });
