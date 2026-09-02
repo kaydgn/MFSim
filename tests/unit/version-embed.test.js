@@ -71,17 +71,17 @@ describe('tools/version-info.js — gerçek depo üzerinde', () => {
   afterAll(() => { if (depo) fs.rmSync(depo.dir, { recursive: true, force: true }); });
 
   test('changelog YALNIZ merge-PR commit\'lerini alır, en yeniden eskiye', () => {
-    const info = versionInfo.collect({ cwd: depo.dir, repo: 'kaydgn/MFSim' });
+    const info = versionInfo.collect({ cwd: depo.dir, repo: 'kaydgn/MFSim', env: {} });
     expect(info.changes.map((c) => c.prNumber)).toEqual([102, 101]);
   });
 
   test('ÇOK SATIRLI gövdeden başlık doğru çıkar — kayıt ayırıcı kapısı', () => {
-    const info = versionInfo.collect({ cwd: depo.dir, repo: 'kaydgn/MFSim' });
+    const info = versionInfo.collect({ cwd: depo.dir, repo: 'kaydgn/MFSim', env: {} });
     expect(info.changes.map((c) => c.title)).toEqual(['İkinci özellik', 'İlk özellik: iki satırlı']);
   });
 
   test('HEAD merge commit ise PR künyesi doldurulur', () => {
-    const info = versionInfo.collect({ cwd: depo.dir, repo: 'kaydgn/MFSim' });
+    const info = versionInfo.collect({ cwd: depo.dir, repo: 'kaydgn/MFSim', env: {} });
     expect(info.prNumber).toBe(102);
     expect(info.prTitle).toBe('İkinci özellik');
     expect(info.prUrl).toBe('https://github.com/kaydgn/MFSim/pull/102');
@@ -90,7 +90,7 @@ describe('tools/version-info.js — gerçek depo üzerinde', () => {
   });
 
   test('maxChanges changelog\'u kırpar', () => {
-    const info = versionInfo.collect({ cwd: depo.dir, maxChanges: 1 });
+    const info = versionInfo.collect({ cwd: depo.dir, maxChanges: 1, env: {} });
     expect(info.changes).toHaveLength(1);
     expect(info.changes[0].prNumber).toBe(102);
   });
@@ -98,12 +98,49 @@ describe('tools/version-info.js — gerçek depo üzerinde', () => {
   test('git OLMAYAN dizinde patlamaz — alanlar boş döner', () => {
     const bos = fs.mkdtempSync(path.join(os.tmpdir(), 'mfsim-nogit-'));
     try {
-      const info = versionInfo.collect({ cwd: bos });
+      const info = versionInfo.collect({ cwd: bos, env: {} });
       expect(info.sha).toBe('');
       expect(info.changes).toEqual([]);
       expect(info.source).toBe('embedded');
     } finally {
       fs.rmSync(bos, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('ortam sözleşmesi — CI değişkenleri sessizce kazanmaz', () => {
+  // CI'da GITHUB_SHA/GITHUB_REF_NAME/GITHUB_RUN_ID tanımlıdır. Bunlar
+  // koşulsuz kazansaydı `cwd` başka bir dizini gösterdiğinde fonksiyon
+  // İNCELENEN DİZİNİ değil KOŞUCUYU anlatırdı. Tam olarak bu oldu: git'siz
+  // bir dizin için toplanan künye runner'ın SHA'sını döndürdü ve bu dosya
+  // CI'da kırmızıya döndü (yerelde o değişkenler yok, yerelde yeşildi).
+  test('env verilirse SADECE o okunur — process.env sızmaz', () => {
+    const eski = process.env.GITHUB_SHA;
+    process.env.GITHUB_SHA = 'f'.repeat(40);
+    try {
+      const bos = fs.mkdtempSync(path.join(os.tmpdir(), 'mfsim-env-'));
+      try {
+        expect(versionInfo.collect({ cwd: bos, env: {} }).sha).toBe('');
+      } finally {
+        fs.rmSync(bos, { recursive: true, force: true });
+      }
+    } finally {
+      if (eski === undefined) delete process.env.GITHUB_SHA; else process.env.GITHUB_SHA = eski;
+    }
+  });
+
+  test('env verilmezse process.env kullanılır — deploy yolu korunur', () => {
+    const eski = process.env.GITHUB_SHA;
+    process.env.GITHUB_SHA = 'a'.repeat(40);
+    try {
+      const bos = fs.mkdtempSync(path.join(os.tmpdir(), 'mfsim-env2-'));
+      try {
+        expect(versionInfo.collect({ cwd: bos }).sha).toBe('a'.repeat(40));
+      } finally {
+        fs.rmSync(bos, { recursive: true, force: true });
+      }
+    } finally {
+      if (eski === undefined) delete process.env.GITHUB_SHA; else process.env.GITHUB_SHA = eski;
     }
   });
 });
@@ -122,7 +159,7 @@ describe('künye tek dosyaya gömülebilir', () => {
   });
 
   test('gerçek depo künyesi de temiz', () => {
-    const info = versionInfo.collect({ cwd: ROOT });
+    const info = versionInfo.collect({ cwd: ROOT, env: {} });
     expect(JSON.stringify(info).replace(/</g, '\\u003c')).not.toMatch(/<\/script/i);
   });
 });

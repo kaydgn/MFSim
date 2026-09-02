@@ -61,16 +61,25 @@ function govdedenBaslik(govde) {
  * @param {string} [opt.repo]     "sahip/depo" (PR bağlantıları için)
  * @param {number} [opt.maxChanges] changelog uzunluğu (varsayılan 10)
  * @param {string} [opt.source]   'embedded' | 'pages'
+ * @param {object} [opt.env]      ortam değişkenleri (varsayılan process.env)
  */
 function collect(opt) {
   opt = opt || {};
   const cwd = opt.cwd || process.cwd();
-  const repo = opt.repo || process.env.GITHUB_REPOSITORY || 'kaydgn/MFSim';
+  const repo = opt.repo || (opt.env || process.env).GITHUB_REPOSITORY || 'kaydgn/MFSim';
   const maxChanges = opt.maxChanges || 10;
 
-  const runId = process.env.GITHUB_RUN_ID || '';
-  const sha = process.env.GITHUB_SHA || gitOut('git rev-parse HEAD', cwd);
-  const branch = process.env.GITHUB_REF_NAME || gitOut('git rev-parse --abbrev-ref HEAD', cwd);
+  // ORTAM AÇIKÇA GEÇİLEBİLİR. Varsayılan process.env: CI'da GITHUB_SHA zaten
+  // checkout edilmiş commit'tir, yani `cwd` ile aynı şeyi söyler. Ama `cwd`
+  // BAŞKA bir dizini gösterdiğinde process.env'in kazanması sessiz bir yalan
+  // olur — fonksiyon incelemesi istenen dizini değil koşucuyu anlatır.
+  // CI'da tam olarak bu oldu: git'siz bir dizin için toplanan künye runner'ın
+  // SHA'sını döndürdü ve test kırmızıya döndü (yerelde o değişkenler yok, bu
+  // yüzden yerelde yeşildi). Testler `env: {}` geçerek DİZİNİ ölçer.
+  const env = opt.env || process.env;
+  const runId = env.GITHUB_RUN_ID || '';
+  const sha = env.GITHUB_SHA || gitOut('git rev-parse HEAD', cwd);
+  const branch = env.GITHUB_REF_NAME || gitOut('git rev-parse --abbrev-ref HEAD', cwd);
   const subject = gitOut('git log -1 --format=%s', cwd);
   const body = gitOut('git log -1 --format=%b', cwd);
   const author = gitOut('git log -1 --format=%an', cwd);
