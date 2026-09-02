@@ -395,7 +395,34 @@ function _veToggleAutoCheck(on) {
   localStorage.setItem('ve-deploy-autocheck', on ? 'on' : 'off');
 }
 
+// OTOMATİK KONTROL file:// ÜZERİNDE KAPALI — ölçülmüş kusur (2026-09-02).
+//
+// MFSim'in asıl dağıtım biçimi TEK DOSYA: kullanıcı MFSim_Code.html'i indirip
+// çift tıklıyor, `file://` üzerinde ve çoğu zaman ağsız çalışıyor (kökteki
+// "AĞIR VARLIKLAR GÖMÜLÜR" kararının sebebi de bu). Orada `version.json`
+// göreli bir yol olarak çözülüyor ve fetch CORS'a takılıyor:
+//
+//   Access to fetch at 'file:///…/version.json' from origin 'null' has been
+//   blocked by CORS policy
+//
+// ÖLÇÜLDÜ: açılıştan 2 sn sonra 1 ağ isteği + 3 konsol hatası. Program
+// çalışmaya devam ediyor — yani hata SESSİZ DEĞİL ama ZARARSIZ da değil:
+// projenin kendi teslim kapısı ("0 ağ isteği / 0 konsol hatası", kökteki
+// "Güncel programı alayım" bölümü) bu yüzden geçmiyordu.
+//
+// Kapatılan yalnız OTOMATİK kontrol. 🔄 düğmesi kullanıcının kendi eylemi;
+// orada bir hata görmek beklenen ve bilgilendirici.
+// Protokol PARAMETRE olarak da alınabiliyor: jsdom `location`'ı yeniden
+// tanımlatmıyor ve `file://` bir jsdom ortamı kurmak ortak test kurulumunu
+// kırıyor (opak origin → localStorage yok). Argümanlı biçim yüklemi SAF
+// yapıyor, yani karşılaştırmanın kendisi ölçülebiliyor — mutasyonla görüldü:
+// argümansız sürümde `'file:'` → `'https:'` bütün testlerden geçiyordu.
+function _veIsLocalFile(proto) {
+  try { return (proto || location.protocol) === 'file:'; } catch (e) { return false; }
+}
+
 function _veAutoCheckEnabled() {
+  if (_veIsLocalFile()) return false;
   return localStorage.getItem('ve-deploy-autocheck') !== 'off';
 }
 
