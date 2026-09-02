@@ -6326,6 +6326,14 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   box-shadow:none;
   opacity:0.5;
 }
+/* Gömülü künye: elindeki kopyanın kimliği. YEŞİL DEĞİL — yeşil 'yayın güncel'
+   demek ve çevrimdışı bir kopya bunu bilemez; iddia edilmeyen bir bilgi
+   renkle iddia edilmesin. */
+.ve-deploy-local {
+  background:var(--accent-primary);
+  box-shadow:none;
+  opacity:0.75;
+}
 @keyframes deployPulse {
   0%, 100% { opacity:1; transform:scale(1); }
   50% { opacity:0.5; transform:scale(0.8); }

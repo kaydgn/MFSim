@@ -94,6 +94,28 @@ function shield(js, label) {
   }
 }
 
+// ── 1b) Favicon: <link rel="icon" href="pwa/icon.svg"> → data URI
+// İndirilen tek dosyanın yanında pwa/ klasörü OLMAZ. Ölçüldü (gerçek Chrome,
+// file://): pwa/icon.svg → net::ERR_FILE_NOT_FOUND + konsol hatası, her
+// açılışta. Gömülünce hem indirilen dosyanın hem Pages kopyasının ikonu olur.
+// (manifest LİNKİ dokunulmadan kalır: aynı ölçümde file:// üzerinde HİÇ
+// istenmedi — ne başsız ne başlı tarayıcıda — ve Pages'te PWA kurulumu ona
+// bağlı.)
+var ICON_PATH = path.join(ROOT, 'pwa', 'icon.svg');
+if (fs.existsSync(ICON_PATH)) {
+  var iconB64 = fs.readFileSync(ICON_PATH).toString('base64');
+  var iconOnce = html;
+  html = html.replace(
+    /<link\s+rel="icon"\s+type="image\/svg\+xml"\s+href="pwa\/icon\.svg"\s*\/?>/,
+    '<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,' + iconB64 + '" />'
+  );
+  if (html === iconOnce) {
+    console.error('HATA: favicon <link> bulunamadı — index.html değişmiş olabilir.');
+    process.exit(1);
+  }
+  console.log('  Favicon inline: pwa/icon.svg (' + iconB64.length + ' karakter base64)');
+}
+
 // ── 2a) Vendor JS: <script ... src="vendor/..." ...></script> → inline.
 // Three.js (Takoz 3D görüntüleyici için) gibi 3. parti kütüphaneler. js/
 // deseninden ÖNCE işlenir; sıralama korunur.
@@ -152,8 +174,23 @@ if (fs.existsSync(examplesDir)) {
     }
   });
 }
+// ── 2c-2) SÜRÜM KÜNYESİ — indirilen dosyanın "hangi sürümüm ben" cevabı.
+// Yerel build'de `__DEPLOY_RUN_ID__` yer tutucusu OLDUĞU GİBİ kalıyordu
+// (yalnız CI'da GITHUB_RUN_ID ile doluyor) ve version.json yalnız Pages'te
+// üretiliyor. Sonuç: indirilen dosyada sürümü söyleyen HİÇBİR şey yoktu —
+// bayat bir kopya ile güncel olanı ayırt etmenin yolu bulunmuyordu. Künye
+// git'ten toplanıp gömülüyor; ağ gerekmiyor (bkz. tools/version-info.js).
+var VERSION_INFO = require('./tools/version-info.js').collect({ cwd: ROOT, source: 'embedded' });
+console.log('  Sürüm künyesi göm: ' + (VERSION_INFO.shortSha || '(git yok)') +
+  (VERSION_INFO.prNumber ? ' · PR #' + VERSION_INFO.prNumber : '') +
+  ' · ' + VERSION_INFO.changes.length + ' changelog girdisi');
+
 // '<' → <: JSON içindeki olası "</script>" script tag'ini kırmasın.
-var embedScript = '<script>window.__MNT_TOPOLOGIES = ' + JSON.stringify(embedded).replace(/</g, '\\u003c') + ';</script>';
+// TEK <script> bloğu: aşağıdaki yapısal doğrulama "index.html'in script'leri + 1"
+// sayıyor; ikinci bir blok o aritmetiği kaydırırdı.
+var embedScript = '<script>window.__MNT_TOPOLOGIES = ' +
+  JSON.stringify(embedded).replace(/</g, '\\u003c') + ';\n' +
+  'window.__MFSIM_BUILD = ' + JSON.stringify(VERSION_INFO).replace(/</g, '\\u003c') + ';</script>';
 // FONKSİYON replacer ŞART: String.replace'in İKİNCİ argümanı dizge olursa
 // içindeki '$1'..'$9', '$&', "$'", '$`' ve '$$' ÖZEL DİZİ sayılıp genişletilir.
 // Örnek topolojilerinde '$' geçen herhangi bir metin (customName, not metni,
@@ -193,8 +230,8 @@ console.log('  Yapısal doğrulama: ' + intendedScripts + ' script + ' + intende
 // kopyalar (bkz. .github/workflows/ci-deploy.yml). Bunların dışında kalan
 // göreli her başvuru Pages'te 404 verir ve program sessizce yarım açılır.
 var IZINLI_DIS_KAYNAK = [
-  'pwa/manifest.json',   // _site/pwa/manifest.json olarak kopyalanır
-  'pwa/icon.svg'         // _site/pwa/icon.svg
+  'pwa/manifest.json'    // _site/pwa/manifest.json olarak kopyalanır
+  // NOT: ikon ARTIK BURADA DEĞİL — yukarıda data URI olarak gömülüyor.
 ];
 var kalan = SHIELD.leftoverRefs(html, IZINLI_DIS_KAYNAK);
 if (kalan.attrs.length || kalan.cssUrls.length) {
