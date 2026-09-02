@@ -788,45 +788,6 @@
       flex-direction: column;
       overflow: hidden;
     }
-
-    /* ── MODAL AÇILIŞI ────────────────────────────────────────────────────
-       Dört modal da (Ayarlar · Program Durumu · Ölçüm İçe Aktarma · FEAD
-       Başlangıç Sihirbazı) bu iki sınıfı paylaşıyor; giriş hareketi de tek
-       yerde. Sihirbaza özel bir açılış yazmak onu programın geri kalanından
-       ayırırdı.
-
-       BEKLEME EKRANI DEĞİL. Ölçüldü (gerçek tarayıcı): sihirbazın ilk açılışı
-       224 ms, sonrakiler 7–10 ms. Beklenecek bir iş yok; olan şey modalın
-       `display:flex` ile ekrana ÇARPMASIYDI. Hareket o 224 ms'nin üstüne süre
-       EKLEMİYOR — zaten harcanan aralığı dolduruyor.
-
-       `animation` (transition değil): `display` none↔flex geçişi animasyonu
-       yeniden tetikler, transition ise display değişiminde çalışmaz. Bu yüzden
-       JS'e hiç dokunulmadı; dört modalın da açma yolu birebir eskisi.
-
-       Kapanış BİLEREK ani: `display:none` anında uygulanıyor ve geciktirmek
-       dört ayrı kapatma yolunu (biri onay soran) JS'te değiştirmek demekti.
-       Giden içerik gelen içerik kadar göze çarpmıyor. */
-    .ve-settings-overlay { animation: veModalOverlayIn 160ms var(--ease-out) both; }
-    .ve-settings-overlay > .ve-settings-modal {
-      animation: veModalIn 240ms cubic-bezier(0.22,0.61,0.36,1) both;
-      transform-origin: center 45%;
-    }
-    @keyframes veModalOverlayIn{
-      /* background DEĞİL background-color: kısayol, kuraldaki diğer background
-         alanlarını da sıfırlardı. */
-      from{ background-color: rgba(0,0,0,0); }
-      to{ background-color: rgba(0,0,0,0.6); }
-    }
-    @keyframes veModalIn{
-      from{ opacity: 0; transform: translateY(10px) scale(0.985); }
-      to{ opacity: 1; transform: none; }
-    }
-    @media (prefers-reduced-motion: reduce){
-      .ve-settings-overlay,
-      .ve-settings-overlay > .ve-settings-modal{ animation: none; }
-    }
-
     .ve-settings-header {
       display: flex;
       align-items: center;
