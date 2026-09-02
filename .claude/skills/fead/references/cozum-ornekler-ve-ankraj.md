@@ -2356,6 +2356,93 @@ Kapı **27 mutasyonla** ölçüldü, 27'si de kırmızı. Bir mutasyon önce ye�
 geçti (*"Uygula'yı yazmadan kapat"*) ve kapının **totolojik** olduğunu ortaya
 çıkardı: seçilen açı örneğin zaten taşıdığı 344° ile aynıydı.
 
+##### ÜÇÜNCÜ ÖRNEK: `AG00879_GATES_2023` — BAŞKA araç, BAŞKA gergi (2026-09-02)
+
+`BMC_FEAD_2026` ile `AG00976_GATES_2025` **aynı aracın iki belgesi** (giden
+sayfa ↔ dönen rapor) ve aynı gergiyi (E9843, kol 90 mm) paylaşıyor. İkisi de
+geçse köprünün o araca özel bir varsayım taşıyıp taşımadığı görünmüyor.
+`AG00879_GATES_2023` onu ayırt ediyor: *"AG00879 ANADOLU-ISUZU 6x6 Truck
+Secondary ALT Drive · 8PK1392HD · Gates T38665 31Nm · 17.05.2023"*, Gates
+v9.40 — **başka araç, başka gergi (T38665, kol 56 mm), BEŞ kasnak, tamamen
+farklı çaplar.**
+
+Rapor `tests/fixtures/fead-validation.js` içinde `AG_MISC.AG00879` olarak ve
+PDF'i `docs/gates-reports/pdf/` arşivinde **zaten vardı**; eksik olan onu
+kanvasa **kurulabilir** yapmaktı. `tests/unit/fead-example-ag00879.test.js`
+referansları fixture'dan okuyor — **ikinci kopya yok**.
+
+###### UÇTAN UCA ÖLÇÜLDÜ
+
+Doğrulama harness'ı `makeSystem()`i doğrudan çağırıp köprüyü ATLIYOR; bu
+örnek zincirin tamamını koşturuyor (örnek tanımı → düğüm dizisi →
+`veFeadBuildSystem` → çekirdek):
+
+| Ne | Kaç değer | Sapma |
+|----|----------:|-------|
+| span + sarım + hız oranı | 15 | **birebir** |
+| gergi konum tablosu (6 × 6) | 36 | kol **0,06°** · T/hub **%0,04** |
+| duty gerilme + hubload | 25 + 25 | **birebir** |
+| sürücü kW | 5 | **birebir** (4,92 … 14,82) |
+| take-up | 1 | 1,1428 ↔ 1,143 |
+| **tasarım gerginliği (TÜRETİLEN)** | 1 | 475,5 ↔ 476 (**%0,1**) |
+| **serbest kol açısı (TÜRETİLEN)** | 1 | 252,11° ↔ 252,1° |
+
+Son iki satır bedava değil, **bağımsız doğrulama**: ikisi de örnekte YAZILI
+DEĞİL, geometri + yay künyesinden çıkıyor, ve rapor ikisini de ayrıca basıyor.
+
+###### TÜRETİLEN MONTAJ KONUMU RAPORUN KENDİ SATIRINI GERİ VERİYOR
+
+Örnek gergiyi bugünkü kalıpta tanımlıyor: **avara merkezi girdi** (Layout
+Data'nın TEN satırı, 143,40 / 52,55), **kol açısı** raporun Tensioner Geometry
+tablosunun Mean sütunundan (**225,0°**), montaj konumu ÇIKTI. Rapor montaj
+konumunu ayrıca *"Tensioner Data"* bloğunda basıyor (183,00 / 92,15) ve türev
+ona **0,0029 mm** uzakta — AG00976'da aynı ölçü 0,0035 mm. Bu bir **kapı
+değil** (karşılaştırma yapılmıyor), raporun üç ayrı satırının aynı kolun tarifi
+olduğunun ölçüsü.
+
+Gergi künyesi `js/fead-tensioners.js`'teki `AG00879` kaydıyla da birebir
+(kol 56 · ön yük 20,05 · katsayı 0,409 · ortalama 31,14) — kütüphane raporun
+kendisinden çıkarıldığı için bu bir eko, ama ayrışırlarsa biri yanlış demektir.
+
+###### BAŞLIK ↔ REBL TUZAĞI HER RAPORDA ISIRMIYOR
+
+AG00976'da rapor başlığı (1715) ile REBL sütunu (1714,6) ayrışıyordu ve
+katalog adını boy sanmak **0,56°**'lik bir kol hatası veriyordu. Burada ikisi
+de **1392**. Yani o ayrışma bir kural değil; hangisinin geçerli olduğunu her
+zaman **REBL sütunu** söyler, başlık değil.
+
+Aynı sınıfta ikinci rastlantı: AG00976'da FAN'ın Effective çapı yuvarlak bir
+sayıydı (162,00) ve dış çapla çakışıyordu. Burada **149,61** — çakışmanın
+rastlantı olduğu ancak ikinci bir raporla görülüyor.
+
+###### RAPORUN VERMEDİĞİ ŞEY UYDURULMADI — ve model bunu SÖYLÜYOR
+
+Silindir sayısı, krank ataleti, kasnak ataletleri ve servis faktörü bu belgede
+**yok** (AG00976'da onlar tedarikçiye giden sayfadan geliyordu; bu örneğin öyle
+bir sayfası yok). Yazılmadılar. Sonuç **sessiz değil**: burulma modeli
+*"Sürücü Kasnak (FAN) kasnağının atalet momenti yok"* diye adıyla uyarıyor ve
+testi bunu ölçüyor.
+
+###### B10 YİNE ARALIK DIŞINDA, YİNE MODELİN KENDİ BEYANI
+
+Üç kasnak 79,6 mm tabanının altında (IDR/TEN 78,6 · ALT 58,8) →
+`inValidRange: false` + `outOfRange` üç adı da yazıyor. Ham **3076 s**,
+düzeltilmiş **5592 s**, rapor **5632 s** — **%0,7**.
+
+###### Kapı dokuz mutasyonla ölçüldü, dokuzu da kırmızı
+
+tolerans/aşınma → 0 (1 test), FAN çapı Effective → Pitch (8), kol boyu 56 → 90
+(14), `lengthOffset` 0,7 → 0 (2), avara teması back → grooved (7), kayış
+sırasını takas (7), yay katsayısı 0,409 → 0,480 (2), tek satırda ALT kW → 0
+(2), **kW kimlik göçünü kaldırma (2)**.
+
+Sonuncusu ayrı bir kapı: diğer bütün testler `veFeadExampleNodes`'u DOĞRUDAN
+kullanıyor, yani kimlikler `ex-*` kalıyor ve eşleşme **tesadüfen** tutuyor —
+*"duty kW çözüme HİÇ ULAŞMIYORDU"* vakasında yakalanan kör noktanın ta
+kendisi. Bu yüzden ayrı bir blok gerçek yükleyiciyi (`veFeadLoadExample`)
+koşturuyor ve göç geri alınınca beş kasnağın beşinin de ankraja düzleştiğini
+SAYIYLA gösteriyor.
+
 **Sırada:** kullanıcı kayışı seçtikten sonra katalog sonuçlarını geri almanın
 akışı (bugün Kayış Özellikleri panelinden elle yapılıyor); ve zarf çözümünün
 Sonuçlar sayfasında kanal olarak yayını.
