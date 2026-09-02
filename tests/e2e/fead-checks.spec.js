@@ -270,16 +270,23 @@ test('sihirbaz — kataloglar, kapılar ve kurulan modele taşınma', async ({ p
   expect(devirler).toEqual(['700', '2100', '2330', '2900']);
 
   // ── AKSESUAR KÜNYELERİ: GERÇEK SEÇİM ──────────────────────────────────
-  const kunye = page.locator('#ve-fw-body select[onchange*="veFeadWizAccLib"]');
+  //
+  // DÜZELTME (2026-09-02): seçici `veFeadWizAccLib`i DEĞİL `veFeadWizAccModel`i
+  // çağırıyor ve seçenek değerleri katalog ön ekli (`bmc:` / `ap:`). İki
+  // katalog tek seçicide birleşince (BMC künyeleri + Araç Performans
+  // preset'leri) yazıcı da tekleşti; bu spec eski adla arıyordu ve
+  // `count()` 0 dönüyordu. Birim testler bu seçiciyi hiç kullanmadığı için
+  // ayrışma YALNIZ burada görünüyor — kapının değeri de bu.
+  const kunye = page.locator('#ve-fw-body select[onchange*="veFeadWizAccModel"]');
   expect(await kunye.count()).toBe(2);                 // alternatör + klima
   // SATIR SIRASINA GÜVENİLMİYOR: hangi seçicinin hangi aksesuara ait olduğu,
   // TAŞIDIĞI SEÇENEKLERDEN okunuyor — alternatör listesinde klima künyesi yok.
-  await kunye.filter({ has: page.locator('option[value="57RS309348"]') })
-    .selectOption('57RS309348');
+  await kunye.filter({ has: page.locator('option[value="bmc:57RS309348"]') })
+    .selectOption('bmc:57RS309348');
   await page.waitForTimeout(400);
-  await page.locator('#ve-fw-body select[onchange*="veFeadWizAccLib"]')
-    .filter({ has: page.locator('option[value="57RS322530"]') })
-    .selectOption('57RS322530');
+  await page.locator('#ve-fw-body select[onchange*="veFeadWizAccModel"]')
+    .filter({ has: page.locator('option[value="bmc:57RS322530"]') })
+    .selectOption('bmc:57RS322530');
   await page.waitForTimeout(400);
 
   const p1 = await page.evaluate(() => {

@@ -232,15 +232,34 @@ describe('katalog + çözücü: üç bağımsız yol tek noktada buluşuyor', ()
     expect(f.hubloadN).toBeCloseTo(302.136, 1);
   });
 
-  // SIĞMAYAN ADAY BİR SAYI DEĞİL, BİR HÜKÜM. Kenetlenme kolun uç konumuna
-  // oturuyor ve orası take-up tekilliğine komşu; ölçüldü: 1690 mm denenince
-  // 4.05e10 N çıkıyor. Böyle bir sayıyı tabloya basmak yalan olurdu.
-  test('sığmayan aday gerginlik YAZMIYOR — tekillik sızmıyor', () => {
+  // SIĞMAYAN ADAY BİR SAYI DEĞİL, BİR HÜKÜM — ama YALNIZ kenetlenme take-up
+  // TEKİLLİĞİNE oturduğunda. Ayrım fizikte: kol MEKANİK BİR DURDURUCUYA
+  // dayandığında ürettiği gerginlik gerçek ve basılabilir bir sayıdır;
+  // tekilliğe dayandığında (dL/dθ → 0) değildir — ölçüldü: durdurucusuz
+  // BMC'ye 1690 mm denenince 4.05e10 N çıkıyor.
+  //
+  // 2026-09-02'den beri durdurucu girilmemişse arşivden VARSAYILIYOR, yani
+  // ikinci hâl artık varsayılan yol. Bu yüzden test iki dalı da ölçüyor.
+  test('sığmayan aday: DURDURUCUYA dayanınca gerginlik GERÇEK', () => {
     const b = bmc('free');
+    expect(b.sys.tensioner.loadStopRelDeg).toBeGreaterThan(0);   // varsayılan geldi
     const kisa = veFeadBeltFit(b.sys, 1690);
     expect(kisa.ok).toBe(true);                      // cevap var
     expect(kisa.fits).toBe(false);                   // ama sığmıyor
     expect(kisa.atLimit).not.toBeNull();
+    expect(kisa.atLimit.degenerate).toBeFalsy();     // tekillik DEĞİL, stop
+    expect(Number.isFinite(kisa.tensionN)).toBe(true);
+    expect(kisa.tensionN).toBeLessThan(5000);        // 4e10 DEĞİL, fiziksel
+  });
+
+  test('sığmayan aday: TEKİLLİĞE dayanınca gerginlik YAZILMIYOR', () => {
+    const b = bmc('free');
+    delete b.sys.tensioner.loadStopRelDeg;           // durdurucusuz gergi
+    b.sys._cache = {};
+    const kisa = veFeadBeltFit(b.sys, 1690);
+    expect(kisa.ok).toBe(true);
+    expect(kisa.fits).toBe(false);
+    expect(kisa.atLimit.degenerate).toBe(true);
     expect(Number.isFinite(kisa.tensionN)).toBe(false);   // 4e10 DEĞİL
     expect(Number.isFinite(kisa.hubloadN)).toBe(false);
   });

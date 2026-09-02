@@ -3354,13 +3354,51 @@ function veFeadProblemBox(build){
   return h + '</ul></div>';
 }
 
-function veFeadWarningBox(build){
-  if(!build || !build.warnings || !build.warnings.length) return '';
-  var h = '<div style="padding:10px 12px; margin-bottom:9px; background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-warning); border-radius:var(--radius-sm);">'
-    + '<div style="font-size:var(--fs-tiny); font-weight:700; color:var(--text-heading); margin-bottom:6px;">Uyarılar</div>'
+// GİRİLMEMİŞ ALANLAR İÇİN ARŞİVDEN ALINAN DEĞERLER — bir uyarı DEĞİL, bir
+// künye. Kutunun tamamı `build.defaults` listesinden üretilir (köprü katmanı,
+// bkz. VE_FEAD_DEFAULTS); panel kendi varsayılanını tutmaz, yoksa iki yüzey
+// sessizce ayrışırdı.
+//
+// NEDEN GÖRÜNÜR OLMAK ZORUNDA: varsayılan düğüme YAZILMIYOR, yani alan boş
+// kalıyor ve kullanıcı panele baktığında "girilmemiş" görüyor — ama hesap o
+// sayıyla koşuyor. İkisi arasındaki köprü bu kutu; olmasaydı model
+// bilinmeyen bir sayıyla çözülür ve hiçbir yerde yazmazdı.
+function veFeadDefaultsBox(build){
+  var d = (build && build.defaults) || [];
+  if(!d.length) return '';
+  var h = '<div data-ve="fead-defaults" style="padding:10px 12px; margin-bottom:9px; '
+    + 'background:var(--bg-secondary); border:1px solid var(--border-color); '
+    + 'border-left:3px solid var(--accent-primary); border-radius:var(--radius-sm);">'
+    + '<div style="font-size:var(--fs-tiny); font-weight:700; color:var(--text-heading); margin-bottom:6px;">'
+    + 'Girilmeyen ' + d.length + ' alan Gates arşivinden varsayıldı</div>'
     + '<ul style="margin:0; padding-left:18px; font-size:var(--fs-micro); line-height:1.6; color:var(--text-secondary);">';
-  build.warnings.forEach(function(w){ h += '<li>' + _feadEsc(w) + '</li>'; });
-  return h + '</ul></div>';
+  d.forEach(function(r){
+    h += '<li><b>' + _feadEsc(r.field) + '</b> = ' + _feadFmt(r.value, 4)
+      + (r.unit ? ' ' + _feadEsc(r.unit) : '')
+      + (r.source ? ' <span style="color:var(--text-muted);">— ' + _feadEsc(r.source) + '</span>' : '')
+      + '</li>';
+  });
+  return h + '</ul>'
+    + '<div style="margin-top:6px; font-size:var(--fs-micro); color:var(--text-muted);">'
+    + 'Bunlar ÖLÇÜLMÜŞ MEDYANLAR, bu sistemin değerleri değil — elinizdeki '
+    + 'tedarikçi raporundaki sayıları girerseniz varsayılan devreden çıkar.'
+    + '</div></div>';
+}
+
+// TEK ÜRETİCİ: uyarı kutusu ve varsayılan künyesi AYNI çağrıdan çıkar. Üç
+// panel (Kayış Yolu · Çözücü · Kayış Özellikleri) bu fonksiyonu çağırıyor;
+// varsayılan kutusunu ayrı bir çağrı olarak eklemek üçünden birinin
+// unutulması demekti (modülün 9. kuralı).
+function veFeadWarningBox(build){
+  var uyari = '';
+  if(build && build.warnings && build.warnings.length){
+    uyari = '<div style="padding:10px 12px; margin-bottom:9px; background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-warning); border-radius:var(--radius-sm);">'
+      + '<div style="font-size:var(--fs-tiny); font-weight:700; color:var(--text-heading); margin-bottom:6px;">Uyarılar</div>'
+      + '<ul style="margin:0; padding-left:18px; font-size:var(--fs-micro); line-height:1.6; color:var(--text-secondary);">';
+    build.warnings.forEach(function(w){ uyari += '<li>' + _feadEsc(w) + '</li>'; });
+    uyari += '</ul></div>';
+  }
+  return uyari + veFeadDefaultsBox(build);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -3556,15 +3594,32 @@ function veFeadChecksCard(node, build){
 function veFeadDriveCard(node){
   var sd = node.data || {};
   var dr = veFeadDriveRatio(sd);
-  var elle = (sd.ratioMode === 'direct');
 
   var inner = _feadSelect(node, 'Tahrik oranı nereden gelsin', 'ratioMode',
       [['derive', 'Krank ve fan kasnağı çapından türet'],
+       ['unity',  'Kademe yok — sürücü kasnak motor devrinde'],
        ['direct', 'Oranı elle gir']], 'derive',
       'Oran = sürücü kasnak devri / motor devri. Krank kasnağı fan kasnağından büyükse '
       + 'sürücü kasnak motordan HIZLI döner (oran &gt; 1).');
 
-  if(elle){
+  // ALANLAR SEÇİLEN KİPTEN GELİR, ÇÖZÜLEN KİPTEN DEĞİL. `veFeadDriveRatio`
+  // çaplar boşken 'derive'ı 'direct'e düşürüyor (oran hâlâ okunabilsin diye);
+  // kart o düşüşü izleseydi "çaplardan türet" seçili ama daha hiçbir çap
+  // girilmemişken çap alanları KAYBOLURDU ve kullanıcı onları bir daha
+  // giremezdi. `unity` bunun dışında: orada düşüş yok, kip kesin.
+  var kip = (sd.ratioMode === 'unity' || sd.ratioMode === 'direct')
+    ? sd.ratioMode : 'derive';
+
+  // ÜÇÜNCÜ KİPTE HİÇBİR ALAN YOK — sorulacak bir şey de yok. Fan kavraması
+  // krankın hemen önündeyse sürücü kasnak motorla aynı devirde döner ve oran
+  // tanımı gereği 1'dir; çap sormak kullanıcıyı var olmayan bir kademeyi
+  // tarif etmeye zorlardı.
+  if(kip === 'unity'){
+    inner += _feadHint('Bu düzende fan kavraması krank kasnağının hemen önünde: '
+      + 'sürücü kasnak krankla aynı milde ve aynı devirde döner. Oran <b>1,0000</b> — '
+      + 'türetilecek bir çap yok. Aksesuar devri = motor devri × '
+      + '(sürücü kasnak pitch çapı / aksesuar pitch çapı).');
+  } else if(kip === 'direct'){
     inner += _feadGrid(node, [
       { key:'driveRatio', label:'Tahrik oranı [—]', ph:'1', step:'0.0001' }
     ], 1);
@@ -3582,6 +3637,7 @@ function veFeadDriveCard(node){
     + '<span style="font-family:ui-monospace,monospace; font-weight:700; color:'
     + (dr.ok ? 'var(--accent-primary)' : 'var(--accent-warning)') + ';">'
     + _feadFmt(dr.ratio, 4) + (dr.mode === 'derive' ? '  (' + _feadFmt(dr.crankOD, 2) + ' / ' + _feadFmt(dr.fanOD, 2) + ')' : '')
+    + '  <span style="font-weight:400; color:var(--text-muted);">' + veFeadDriveModeLabel(dr.mode) + '</span>'
     + '</span></div>';
 
   return _feadCard('Birinci Kademe', 'krank → sürücü kasnak', 'var(--accent-warning)',
@@ -3823,7 +3879,7 @@ function veFeadModelTable(build){
   }
   if(build.drive)
     h += satir('Tahrik oranı', _feadFmt(build.drive.ratio, 4)
-      + (build.drive.mode === 'derive' ? ' (çaplardan)' : ' (elle)'), build.drive.ok);
+      + ' (' + veFeadDriveModeLabel(build.drive.mode) + ')', build.drive.ok);
 
   // TÜRETİLEN TASARIM GERGİNLİĞİ. Panelde artık alan yok; kullanıcının hesabın
   // hangi ankrajla kurulduğunu okuyacağı tek yer burası. Görünmezse "gerginlik
@@ -4664,7 +4720,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadPositionTable: veFeadPositionTable,
     veFeadGeometryTable: veFeadGeometryTable,
     veFeadProblemBox: veFeadProblemBox,
-    veFeadWarningBox: veFeadWarningBox,
+    veFeadWarningBox: veFeadWarningBox, veFeadDefaultsBox: veFeadDefaultsBox,
     veFeadDutyEditor: veFeadDutyEditor, veFeadSolve: veFeadSolve,
     veFeadDutyAdd: veFeadDutyAdd, veFeadDutyRemove: veFeadDutyRemove,
     veFeadDutySeed: veFeadDutySeed, veFeadDutyLib: veFeadDutyLib,

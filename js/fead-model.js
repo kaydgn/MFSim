@@ -78,6 +78,113 @@ function veFeadHasOD(node){ return _feadNum(node && node.data && node.data.od, 0
 // Şema önizlemesi için etkin yarıçap (çekirdek çözülemediğinde kullanılır).
 function veFeadRadius(node){ return veFeadOD(node) / 2; }
 
+// ════════════════════════════════════════════════════════════════════════════
+//  GATES ARŞİVİNDEN ÖLÇÜLEN VARSAYILANLAR
+// ════════════════════════════════════════════════════════════════════════════
+// Kullanıcı isteği (2026-09-02): *"Atalet momentlerini ben girmedim fakat
+// Gates raporlarındaki değerleri default olarak kullanabilirsin. Aynı şekilde
+// tolerans/aşınma, load stop, boy ofseti gibi değerleri Gates raporlarından
+// default olarak kullanırsın. Çünkü bunları el ile girmek zor."*
+//
+// ── ÜÇ KURAL, ÜÇÜ DE BU MODÜLÜN SESSİZ HATA SINIFINA KARŞI ─────────────────
+// 1. VARSAYILAN DÜĞÜME YAZILMAZ. Yalnız çözüm anında doldurulur; kullanıcının
+//    modeli boş kalır. Düğüme yazsaydık "girdim" ile "varsayıldı" bir daha
+//    ayrılamazdı ve varsayılan sonraki oturumlarda GİRDİ gibi görünürdü.
+// 2. BOŞ İLE SIFIR AYRI. `0` geçerli bir kullanıcı değeridir (tolerans 0 =
+//    "zarfı kapat"); yalnız null/undefined/'' varsayılana düşer. `_feadNum(x,0)`
+//    ikisini ayırt ETMİYOR — bu yüzden `_feadBlank` var.
+// 3. HANGİSİNİN VARSAYILDIĞI SONUCUN İÇİNDE TAŞINIR (`build.defaults`), panelde
+//    ve raporda basılır. Modülün 8. kuralı: sayı gizlenmez, sınırı yanında
+//    yazılır.
+//
+// ── SAYILAR NEREDEN ────────────────────────────────────────────────────────
+// `tests/fixtures/fead-validation.js` + `docs/gates-reports/pdf/` — yani
+// doğrulama kapısının kullandığı AYNI 14 sistem. Uydurma yok; örneklem sayısı
+// her satırda yazılı. `tests/unit/fead-defaults.test.js` bu tabloyu kaynağına
+// karşı denetliyor, yani buradaki bir sayı arşivden ayrışırsa test kırılır.
+var VE_FEAD_DEFAULTS = {
+  // AŞINMA + UZAMA PAYI — 14 sistemin 10'unda tam 0,70; kalan dördü 0,59–0,65
+  // (AG00976'nın üç revizyonu + AG00810). En büyük ve en sık değer seçildi:
+  // sapanların hepsi ALTINDA kaldığı için 0,70 aynı zamanda emniyetli yön.
+  wearPct: 0.007,
+
+  // BOY TOLERANSI — arşivde İKİ BASAMAK ve ayrım tam olarak kayış boyunda:
+  //   1013 · 1018 · 1020 · 1214 · 1275 · 1302 · 1392 mm → ±5   (7/7)
+  //   1475 · 1520 · 1656 · 1667 · 1705 · 1715 · 1739 mm → ±6   (7/7)
+  // Basamak 1392 ile 1475 ARASINDA bir yerde; arşiv nereye düştüğünü
+  // söylemiyor, 1400 seçildi. 1392–1475 aralığındaki bir kayışta varsayılan
+  // ±1 mm yanılabilir — bu yüzden panelde "varsayıldı" damgası var.
+  beltTolBreakMm: 1400,
+  beltTolShortMm: 5,
+  beltTolLongMm: 6,
+
+  // MEKANİK DURDURUCU (load stop) — parçaya özgü ve bu yüzden ÖNCE künye
+  // kütüphanesinden okunur (js/fead-tensioners.js → loadStopRelDeg, 12 kayıt
+  // ölçüldü). Künye uygulanmamışsa geriye kalan tek yol nominal dönüşle
+  // ölçeklemek: arşivde stop/nominal oranı 12 kayıtta 1,44 … 2,15
+  // (medyan 1,76 · ortalama 1,80 — ortalama alındı). Kaba bir sayı ama 89°'lik
+  // yedeğinden ÇOK daha iyi — 89° gerçek bir gerginin iki katı kadar geniş bir
+  // bant açıyor ve Load sütununu tekilliğe kadar sürüyor.
+  loadStopFactor: 1.8,
+
+  // BOY OFSETİ — `requiredBeltMm = driveLenMm − lengthOffsetMm`. Fiziksel bir
+  // sabit DEĞİL: Gates'in çözdüğü geometrik boy ile SİPARİŞ EDİLEN katalog
+  // boyu arasındaki yuvarlama artığı. Ölçülen beş değer 0,4 · 0,7 · 1,6 · 1,9
+  // · 2,0 mm (AG00976 ×4 + AG00879) ve aynı sistemin dört revizyonunda bile
+  // 0,4 ↔ 2,0 arasında zıplıyor — yani kural YOK, dağılım [0, 2] üstünde
+  // hemen hemen düz. Ortalama alındı. Etkisi ±1 mm mertebesinde, yani boy
+  // toleransının (±5) beşte biri.
+  lengthOffsetMm: 1.3,
+
+  // ATALET MOMENTLERİ [kg·m²] — Gates "System Vibration Analysis" sayfasının
+  // Accessory Data satırı; arşivdeki YEDİ raporun tamamı okundu
+  // (tests/helpers/gates-vibration.js kaynağından çekiyor). Her tip için
+  // MEDYAN alındı; örneklem küçük ve dağılım geniş olduğu için bu bir
+  // MERTEBE göstergesidir — burulma modeli zaten kalibre bir modeldir (§9.2).
+  inertiaKgM2: {
+    'fead-idler':      0.0003,  // 0.0001 · 0.0002 · 0.0004 · 0.0004   (n=4)
+    'fead-ac':         0.0034,  // 0.0030 · 0.0034 ×3 · 0.0050 · 0.0060 (n=6)
+    'fead-alternator': 0.01125, // 0.0085 · 0.0140                     (n=2)
+    'fead-tensioner':  0.0009   // 0.0004 · 0.0006 · 0.0009 ×3 · 0.0076 ×2 (n=7)
+  },
+  // SÜRÜCÜ KASNAK ayrı: Gates'in Accessory Data satırında krank kasnağı YOK,
+  // çünkü o zincirin ucu değil başı. Burulma modeli sürücü düğümünde
+  // KRANK MİLİ ataletini bekliyor (doğrulama harness'i de öyle besliyor:
+  // `p.crank ? crankInertiaKgM2`). Engine Data satırı: 0,15 ×3 · 0,50 ×3 ·
+  // 0,70 ×1 → medyan 0,50.
+  crankInertiaKgM2: 0.50,
+  // Gergi kolunun kendi ataleti + kasnağın kol ucundaki NOKTA KÜTLESİ.
+  // Çekirdek ikisini J = armInertia + pulleyMass·a² olarak birleştiriyor,
+  // yani kütle terimi ihmal edilemez (AG0868'de kol ataletinin 7 katı).
+  // Arşiv: kol 0,0009 ×3 · 0,0040 · 0,0060 · 0,0076 ×2 → medyan 0,0040
+  //        kütle 0,50 ×3 · 0,80 ×4                     → medyan 0,80
+  tenArmInertiaKgM2: 0.0040,
+  tenPulleyMassKg: 0.80
+};
+
+// ATALET VARSAYILANI OLMAYAN TİPLER BİLEREK BOŞ: su pompası, direksiyon
+// pompası, hava kompresörü ve aksesuar olarak kullanılan fan kasnağı arşivin
+// yedi raporunun HİÇBİRİNDE geçmiyor. Bir aksesuarın ataletini kasnak çapından
+// uydurmak bu modülün yasak ettiği türden bir sayı olurdu: rotorun ataleti
+// kasnağınkinden bir-iki mertebe büyüktür ve oranı makineye özgüdür. Bu
+// tiplerden biri modeldeyse burulma modeli KURULMAZ ve sebebini adıyla yazar.
+function veFeadDefaultInertia(type, isDriver){
+  if(isDriver) return VE_FEAD_DEFAULTS.crankInertiaKgM2;
+  var v = VE_FEAD_DEFAULTS.inertiaKgM2[type];
+  return (v > 0) ? v : NaN;
+}
+
+// Efektif boya göre tolerans basamağı (yukarıdaki ölçüm).
+function veFeadDefaultBeltTol(effLengthMm){
+  var L = _feadNum(effLengthMm, NaN);
+  if(!Number.isFinite(L) || L <= 0) return VE_FEAD_DEFAULTS.beltTolShortMm;
+  return (L < VE_FEAD_DEFAULTS.beltTolBreakMm)
+    ? VE_FEAD_DEFAULTS.beltTolShortMm : VE_FEAD_DEFAULTS.beltTolLongMm;
+}
+
+// "Alan boş mu" — `0` BOŞ DEĞİLDİR. Bütün varsayılan kapıları bundan geçer.
+function _feadBlank(v){ return v === undefined || v === null || v === ''; }
+
 // ─── Eski kayıt göçü: data.dia → data.od ────────────────────────────────────
 // Aşama 0'daki iskelet 'dia' yazıyordu. Kayıtlı projeler açılınca sessizce
 // dönüşür; 'od' zaten varsa dokunulmaz (kullanıcının yeni değeri kazanır).
@@ -1354,9 +1461,34 @@ function veFeadRatioSys(cfgPulleys, cfgBelt, driveRatio){
   return { driveRatio: (driveRatio > 0) ? driveRatio : 1, pulleys: out, _crkIdx: crk };
 }
 
+// ── ÜÇ KİP, ÇÜNKÜ İKİ FARKLI FİZİKSEL DÜZEN VAR ─────────────────────────────
+//
+// Kullanıcı bildirimi (2026-09-02): *"Bazen fan kavraması krank kasnağının
+// hemen önünde oluyor ve krank kasnağı ile aynı devirde dönüyor. Böyle
+// olduğunda tahrik oranı 1 oluyor doğal olarak. Bazen de farklı bir yerde
+// oluyor. Bunu seçenek haline getirmemiz lazım."*
+//
+// `unity` kipi `direct` + 1 ile SAYISAL OLARAK aynı sonucu verir ama aynı şey
+// değildir ve ayrılması gereken şey NİYET: `direct`, oranı bilen ve elle yazan
+// kullanıcıdır; `unity`, "böyle bir kademe YOK" diyen düzendir. İkisini tek
+// alanda tutmak iki sessiz kusur üretiyordu:
+//   • boş bırakılmış `driveRatio` 1'e düşüyordu, yani "girmedim" ile
+//     "kademe yok" ayırt edilemiyordu — panel ikisinde de 1,0000 basıyordu;
+//   • ÖLÇÜLDÜ (AG00879, tedarikçi raporuyla karşılaştırma): tek kademeli bir
+//     sisteme `derive` kipinden kalmış 1,430 oranı sızmış ve BÜTÜN aksesuar
+//     devirlerini %43 kaydırmıştı (kayış hızı 17,5 → 25,0 m/s). Hata sessizdi
+//     çünkü çaplar geçerli sayılardı; yanlış olan kipti.
+//
+// Bu yüzden `unity` kipinde ÇAP DA ORAN DA SORULMAZ: sorulacak bir şey yok.
 function veFeadDriveRatio(sd){
   sd = sd || {};
   var out = { ratio: 1, mode: 'direct', crankOD: NaN, fanOD: NaN, ok: false };
+  // TEK KADEMELİ DÜZEN: fan kavraması krankın hemen önünde, sürücü kasnak
+  // motorla aynı devirde. Oran tanımı gereği 1 — türetilecek bir şey yok.
+  if(sd.ratioMode === 'unity'){
+    out.mode = 'unity'; out.ratio = 1; out.ok = true;
+    return out;
+  }
   var crank = _feadNum(sd.crankOD, NaN), fan = _feadNum(sd.fanOD, NaN);
   out.crankOD = crank; out.fanOD = fan;
   if(sd.ratioMode !== 'direct' && crank > 0 && fan > 0){
@@ -1366,6 +1498,11 @@ function veFeadDriveRatio(sd){
   var r = _feadNum(sd.driveRatio, NaN);
   if(Number.isFinite(r) && r > 0){ out.ratio = r; out.ok = true; }
   return out;
+}
+function veFeadDriveModeLabel(mode){
+  return mode === 'unity' ? 'tek kademe (1:1)'
+       : mode === 'derive' ? 'çaplardan türetildi'
+       : 'elle girildi';
 }
 
 // ─── ÖRNEK KAYIT DEFTERİ ────────────────────────────────────────────────────
@@ -1655,6 +1792,8 @@ var VE_FEAD_EXAMPLES = {
              accelRpmS:1000, decelRpmS:1000,
              // EDL(Mean) 1392.7 − L_nominal 1392.0.
              lengthOffsetMm:0.7,
+             // "Engine Data": 6 silindir · krank mili ataleti 0.1500 kg·m².
+             cylinders:6, crankInertia:0.1500,
              // "Load Conditions kW for DC 95%" sayfası; hepsi 80 °C.
              // Sürücü (FAN) sütunu YOK — çekirdek onu toplamdan hesaplar ve
              // raporun kendi değerlerini veriyor (4.92 / 6.72 / 9.52 / 12.42 /
@@ -1674,15 +1813,27 @@ var VE_FEAD_EXAMPLES = {
     // AG00976'da FAN'ın Effective'i yuvarlak bir sayıydı (162.00) ve dış çapla
     // çakışıyordu; burada 149.61 — çakışmanın bir kural değil rastlantı olduğu
     // buradan görünüyor.
+    //
+    // ── ATALETLER RAPORUN 11. SAYFASINDAN ────────────────────────────────
+    // "System Vibration Analysis" sayfası dört aksesuarın ataletini, gergi
+    // kolununkini, gergi kasnağının kütlesini VE krank mili ataletini
+    // basıyor. Bir dönem bu örnek onları taşımıyordu ve gerekçesi
+    // *"rapor kasnak ataletlerini basmıyor"* diye yazılıydı — ÖLÇÜLDÜ ve
+    // tutmadı: arşivdeki PDF'in kendisinde duruyorlar ve
+    // `tests/helpers/gates-vibration.js` onları KAYNAĞINDAN okuyor.
+    // Sürücü düğümüne KRANK MİLİ ataleti giriyor: burulma modelinin sürücü
+    // serbestliği krank milidir, doğrulama harness'i de öyle besliyor
+    // (`p.crank ? crankInertiaKgM2`).
     pulleys: [
       { key:'FAN', type:'fead-fan',         name:'Sürücü Kasnak (FAN)',
-        data:{ od:149.61, x:0,      y:0,      contact:'grooved', driver:true } },
+        data:{ od:149.61, x:0,      y:0,      contact:'grooved', driver:true,
+               inertia:0.1500 } },
       { key:'IDR', type:'fead-idler',       name:'Avara',
-        data:{ od:74.00,  x:140.00, y:-45.00, contact:'back' } },
+        data:{ od:74.00,  x:140.00, y:-45.00, contact:'back', inertia:0.0001 } },
       { key:'A_C', type:'fead-ac',          name:'Klima Kompresörü',
-        data:{ od:127.00, x:265.00, y:-40.00, contact:'grooved' } },
+        data:{ od:127.00, x:265.00, y:-40.00, contact:'grooved', inertia:0.0060 } },
       { key:'ALT', type:'fead-alternator',  name:'Alternatör',
-        data:{ od:58.80,  x:320.00, y:200.00, contact:'grooved' } },
+        data:{ od:58.80,  x:320.00, y:200.00, contact:'grooved', inertia:0.0085 } },
       { key:'TEN', type:'fead-tensioner',   name:'Otomatik Gergi (T38665)',
         // Merkez = "Layout Data"nın TEN satırı (143,40 / 52,55), yani diğer
         // dört kasnakla AYNI sütun: çalışma konumundaki kasnak merkezi.
@@ -1700,6 +1851,8 @@ var VE_FEAD_EXAMPLES = {
                cenX:143.40, cenY:52.55, armLen:56.0,
                armMeanDeg:225.0,
                preload:20.05, kArm:0.409, meanLoad:31.14,
+               // Raporun 11. sayfası: kasnak 0.0006 · kol 0.0060 · kütle 0.50.
+               inertia:0.0006, armInertia:0.0060, pulleyMass:0.50,
                // "Tensioner Geometry" tablosunun Load sütunu: mekanik stop.
                loadStopRelDeg:39.0 } }
     ],
@@ -2323,6 +2476,14 @@ function veFeadBuildSystem(nodeList, connList, opt){
   var sd = (solvNode && solvNode.data) || {};
   var td = (tensNodes[0] && tensNodes[0].data) || {};
 
+  // VARSAYILAN DEFTERİ — hangi alanın arşivden doldurulduğu sonucun içinde
+  // taşınır (panel · rapor · özet aynı listeyi okur). Bkz. VE_FEAD_DEFAULTS.
+  out.defaults = [];
+  function _varsay(alan, deger, birim, kaynak){
+    out.defaults.push({ field: alan, value: deger, unit: birim || '', source: kaynak || '' });
+    return deger;
+  }
+
   // ── Kasnaklar ──
   var cfgPulleys = order.map(function(n, i){
     var isTen = !!_feadDefOf(n).isFeadTensioner;
@@ -2337,6 +2498,19 @@ function veFeadBuildSystem(nodeList, connList, opt){
     if(driver && n.id === driver.id) p.crank = true;
     var J = _feadNum(n.data && n.data.inertia, 0);
     if(J > 0) p.inertiaKgM2 = J;
+    else if(_feadBlank(n.data && n.data.inertia)){
+      // SÜRÜCÜ DÜĞÜMÜNDE ÖNCE ÇÖZÜCÜNÜN KRANK MİLİ ALANI: kullanıcı orada bir
+      // sayı verdiyse burulma modeli de onu görmeli, ikinci bir yerde ayrı bir
+      // varsayılana düşmemeli.
+      var isDrv = !!(driver && n.id === driver.id);
+      var Jd = isDrv ? _feadNum(sd.crankInertia, NaN) : NaN;
+      if(!(Jd > 0)) Jd = veFeadDefaultInertia(n.type, isDrv);
+      if(Jd > 0){
+        p.inertiaKgM2 = Jd;
+        _varsay('atalet · ' + un.names[i], Jd, 'kg·m²',
+          isDrv ? 'Gates Engine Data (krank mili) medyanı' : 'Gates Accessory Data medyanı');
+      }
+    }
     if(!veFeadHasOD(n))
       out.warnings.push('"' + un.names[i] + '" dış çapı girilmedi; tipe göre '
         + VE_FEAD_DEFAULT_DIA[n.type] + ' mm varsayıldı.');
@@ -2378,6 +2552,20 @@ function veFeadBuildSystem(nodeList, connList, opt){
     tolerance: _feadNum(bd.tolerance, 0),
     wearPct: _feadNum(bd.wearPct, 0)
   };
+  // TOLERANS + AŞINMA PAYI — boş bırakılmışsa arşivden. Bu ikisi konum
+  // tablosunun ZARFINI kuruyor (Replace = L+tol+w·L … Min = L−tol); sıfır
+  // kalınca dört sütun aynı açıya çöküyor ve tablo tek anlamlı sütuna iniyor.
+  // ÖLÇÜLDÜ (AG00879 denetimi): kullanıcı alanları boş bıraktığı için rapor
+  // "Zarf daralmış" notuyla çıkmıştı.
+  //
+  // TOLERANS BASAMAĞI BOYA BAĞLI, boy ise SERBEST KİPTE henüz belli değil —
+  // bu yüzden burada bir ilk değer konuyor, çalışma noktası çözülünce
+  // türetilen boya göre AŞAĞIDA düzeltiliyor (`_tolVarsayildi`).
+  var _tolVarsayildi = _feadBlank(bd.tolerance);
+  if(_tolVarsayildi) cfgBelt.tolerance = veFeadDefaultBeltTol(effLength);
+  if(_feadBlank(bd.wearPct))
+    cfgBelt.wearPct = _varsay('kayış uzama + aşınma payı',
+      VE_FEAD_DEFAULTS.wearPct, 'oran', '14 Gates sisteminin 10\'u: %0,70');
   var mpr = _feadNum(bd.massPerRibKgM, 0);
   if(mpr > 0) cfgBelt.massPerRibKgM = mpr;
 
@@ -2437,14 +2625,26 @@ function veFeadBuildSystem(nodeList, connList, opt){
     cfgTen.sense = _feadNum(td.sense, 1) >= 0 ? 1 : -1;
   var stop = _feadNum(td.loadStopRelDeg, NaN);
   if(Number.isFinite(stop) && stop > 0) cfgTen.loadStopRelDeg = stop;
+  // Durdurucu VARSAYILANI burada DEĞİL, sistem kurulduktan sonra uygulanıyor
+  // (aşağıdaki "DURDURUCU VARSAYILANI" bloğu) — çünkü yalnız DARALTMASINA izin
+  // veriliyor ve neyi daralttığı ancak çekirdeğin kendi erişim sınırı
+  // hesaplandıktan sonra bilinebiliyor.
   var armJ = _feadNum(td.armInertia, 0);
   if(armJ > 0) cfgTen.armInertiaKgM2 = armJ;
+  else if(_feadBlank(td.armInertia))
+    cfgTen.armInertiaKgM2 = _varsay('gergi kolu ataleti',
+      VE_FEAD_DEFAULTS.tenArmInertiaKgM2, 'kg·m²',
+      'Gates System Vibration medyanı (n=7)');
   // Kol, kasnağı kol boyu yarıçapında nokta kütle olarak taşır. Burulma
   // modelinde bu terim ihmal edilirse 1. mod belirgin şekilde yüksek çıkar
   // (kalibrasyonda RMS %28 -> %17 fark etti). Gates raporunun "Tensioner
   // Pulley Mass" satırı tam olarak bu.
   var armM = _feadNum(td.pulleyMass, 0);
   if(armM > 0) cfgTen.pulleyMassKg = armM;
+  else if(_feadBlank(td.pulleyMass))
+    cfgTen.pulleyMassKg = _varsay('gergi kasnağı kütlesi',
+      VE_FEAD_DEFAULTS.tenPulleyMassKg, 'kg',
+      'Gates System Vibration medyanı (n=7)');
 
   // ── Çözücü / tasarım ──
   // TASARIM GERGİNLİĞİ ARTIK SORULMUYOR. Bağımsız bir veri değil: geometri ve
@@ -2460,7 +2660,12 @@ function veFeadBuildSystem(nodeList, connList, opt){
     pulleys: cfgPulleys, belt: cfgBelt, tensioner: cfgTen,
     designTensionN: undefined,          // aşağıda türetilir
     driveRatio: driveRatio,
-    lengthOffsetMm: _feadNum(sd.lengthOffsetMm, 0),
+    // BOY OFSETİ — girilmemişse arşiv ortalaması. Fiziksel bir sabit değil,
+    // Gates'in katalog yuvarlama artığı (bkz. VE_FEAD_DEFAULTS).
+    lengthOffsetMm: _feadBlank(sd.lengthOffsetMm)
+      ? _varsay('kayış boyu ofseti', VE_FEAD_DEFAULTS.lengthOffsetMm, 'mm',
+                '5 Gates raporunun ortalaması (0,4 … 2,0)')
+      : _feadNum(sd.lengthOffsetMm, 0),
     // Kapanma ve temizlik ihlalleri artık istisna DEĞİL, taşınan birer ihlal.
     // Sürüklerken kullanıcı çözüm uzayına dışarıdan giriyor; ara karelerde
     // "model çözülemez" demek yerine sayıyı verip yolun neden geçersiz
@@ -2531,6 +2736,42 @@ function veFeadBuildSystem(nodeList, connList, opt){
   }
 
 
+  // ── DURDURUCU VARSAYILANI — YALNIZ DARALTIR ───────────────────────────
+  //
+  // Mekanik durdurucu girilmemişse nominal dönüşten ölçekleniyor (arşiv:
+  // stop/nominal 1,44 … 2,15). Ama bu varsayılan çekirdeğin kendi erişim
+  // sınırından BÜYÜK olamaz, ve bu bir incelik değil ÖLÇÜLMÜŞ bir tuzak:
+  //
+  //   İlk sürüm varsayılanı koşulsuz yazıyordu. Yay katsayısı yanlış girilmiş
+  //   bir modelde (k = 0,048 yerine 0,480 — bir ondalık kayması) nominal dönüş
+  //   280,6° çıkıyor, varsayılan da 505°'ye kuruluyordu. Çekirdeğin 89°'lik
+  //   yedeği o modeli KENETLİYOR ve panel "kol nominal açısına oturamadı"
+  //   diyordu; 505°'lik sınırla kenetlenme kalkıyor, kol tam bir turun
+  //   ötesine gidiyor ve `feasibleRelMax`in bisect'i monoton olmayan bir
+  //   fonksiyonda çözülebilir BAŞKA bir dala oturuyordu. Sonuç: uyarı
+  //   kayboluyor, model saçma bir kol açısıyla "çözülmüş" görünüyordu.
+  //
+  // Bu yüzden karşılaştırma çekirdeğin KENDİ sınırına karşı yapılıyor
+  // (mirror bir sabit tutmuyoruz) ve varsayılan ancak onu daraltıyorsa
+  // uygulanıyor. Daraltmıyorsa hiçbir şey değişmez — eski davranış birebir.
+  if(_feadBlank(td.loadStopRelDeg) && spring && spring.relMeanDeg > 0){
+    var _stopAday = spring.relMeanDeg * VE_FEAD_DEFAULTS.loadStopFactor;
+    var _stopCek = NaN;
+    try { _stopCek = FEADCore.feasibleRelMax(sys); } catch(e){ _stopCek = NaN; }
+    if(Number.isFinite(_stopCek) && _stopAday > 0 && _stopAday < _stopCek){
+      // İKİSİNE DE yazılıyor: `sys` hesabın kendisi, `cfg` ise dışarıya
+      // verilen kayıt (rapor, bant önbelleğinin anahtarı, testler). cfg
+      // güncellenmezse kurulan sistem ile onun künyesi ayrışırdı.
+      // (`sys._cache` burada BOŞ — makeSystem onu sıfırlıyor ve meanRel ancak
+      // çalışma noktası çözüldükten SONRA tohumlanıyor; temizlemek ölü koddu.)
+      sys.tensioner.loadStopRelDeg = _stopAday;
+      cfgTen.loadStopRelDeg = _stopAday;
+      _varsay('gergi mekanik durdurucu (load stop)', _stopAday, '° (bağıl)',
+        'nominal dönüş × ' + VE_FEAD_DEFAULTS.loadStopFactor
+        + ' — 12 ölçülmüş gergi künyesinin ortalaması');
+    }
+  }
+
   // ── KOL AÇISININ İMALAT KARŞILIĞI ──────────────────────────────────────
   // Pim planı İKİ KİPTE DE kuruluyor, çünkü ikisinde de kol çalışma açısı bir
   // ÇIKTIDIR: zarf kipinde ölçütten seçiliyor, montaj kipinde girilen kasnak
@@ -2582,6 +2823,17 @@ function veFeadBuildSystem(nodeList, connList, opt){
     // aşağıdaki hiçbir hesap kipten haberdar olmak zorunda kalmıyor.
     sys.belt.effLength = wp.effLengthMm;
     cfgBelt.effLength = wp.effLengthMm;
+  }
+  // TOLERANS BASAMAĞI ARTIK BOYU BİLİYOR. Serbest kipte boy buraya kadar
+  // belli değildi; varsayılan basamak ancak şimdi doğru seçilebilir. Sabit
+  // kipte de aynı satırdan geçiyor — iki kip için iki ayrı kod yolu tutmak
+  // bu modülde tam olarak sessiz ayrışmanın kaynağı olurdu.
+  if(_tolVarsayildi){
+    var tolD = veFeadDefaultBeltTol(sys.belt.effLength);
+    sys.belt.tolerance = tolD; cfgBelt.tolerance = tolD;
+    _varsay('kayış boy toleransı ±', tolD, 'mm',
+      'Gates basamağı: boy < ' + VE_FEAD_DEFAULTS.beltTolBreakMm + ' mm → ±'
+      + VE_FEAD_DEFAULTS.beltTolShortMm + ', üstü → ±' + VE_FEAD_DEFAULTS.beltTolLongMm);
   }
   // meanRel ÖNCEDEN TOHUMLANIR. Kenetlenmiş bir çalışma noktasında çekirdeğin
   // kendi meanRel'i yine bisect'e girip atardı; önbelleğe yazınca zincirin
@@ -3266,6 +3518,8 @@ if (typeof module !== 'undefined' && module.exports) {
     _feadNum: _feadNum, _feadDefOf: _feadDefOf, _feadNodeName: _feadNodeName,
     _feadIsPulley: _feadIsPulley,
     VE_FEAD_DEFAULT_DIA: VE_FEAD_DEFAULT_DIA, VE_FEAD_ERROR_MAP: VE_FEAD_ERROR_MAP,
+    VE_FEAD_DEFAULTS: VE_FEAD_DEFAULTS, veFeadDefaultInertia: veFeadDefaultInertia,
+    veFeadDefaultBeltTol: veFeadDefaultBeltTol,
     // Paylaşılan saf yardımcılar. Tarayıcıda global oldukları için cp-fead.js,
     // connections.js ve cp-fead.js doğrudan çağırıyor;
     // testte de aynı adlarla kurulabilsinler diye dışa veriliyorlar.
@@ -3319,7 +3573,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadWorkingPoint: veFeadWorkingPoint,
     veFeadAtLimitText: veFeadAtLimitText, veFeadViolationText: veFeadViolationText,
     VE_FEAD_TENSION_TOL: VE_FEAD_TENSION_TOL,
-    veFeadDriveRatio: veFeadDriveRatio,
+    veFeadDriveRatio: veFeadDriveRatio, veFeadDriveModeLabel: veFeadDriveModeLabel,
     VE_FEAD_POSITIONS: VE_FEAD_POSITIONS, VE_FEAD_POS_TOL_DEG: VE_FEAD_POS_TOL_DEG,
     veFeadPositionRows: veFeadPositionRows, veFeadPosMode: veFeadPosMode,
     veFeadPosSelection: veFeadPosSelection,

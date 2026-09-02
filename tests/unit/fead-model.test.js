@@ -809,7 +809,10 @@ describe('burulma modeli köprüsü', () => {
     expect(R.torsional.firstElasticHz).toBeGreaterThan(0);
   });
 
-  test('atalet eksikse SESSİZ değil: uyarı taşınır, çözüm devam eder', () => {
+  // 2026-09-02'den beri girilmemiş atalet SESSİZCE 0 sayılmıyor ama BOŞ da
+  // bırakılmıyor: arşiv medyanı iniyor ve hangi alanın varsayıldığı
+  // `build.defaults` ile taşınıyor. İki kapı da burada.
+  test('atalet girilmemişse arşiv varsayılanı iner ve KÜNYEYE yazılır', () => {
     const ex = veFeadExampleNodes('BMC_FEAD_2026');
     ex.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     ex.nodes.filter((n) => n.type === 'fead-ac').forEach((n) => { delete n.data.inertia; });
@@ -817,8 +820,32 @@ describe('burulma modeli köprüsü', () => {
     const solv = ex.nodes.find((n) => n.type === 'fead-solver');
     const R = veFeadAnalyze(build, { rows: veFeadDutyRows(solv), crankInertia: 0.70 });
     expect(R.ok).toBe(true);                      // gerilme/ömür etkilenmez
+    expect(R.torsional.firstElasticHz).toBeGreaterThan(0);   // model KURULUYOR
+    const d = build.defaults.filter((x) => /^atalet · /.test(x.field));
+    expect(d).toHaveLength(1);
+    expect(d[0].value).toBe(M.VE_FEAD_DEFAULTS.inertiaKgM2['fead-ac']);
+    // ve düğüm BOŞ KALIYOR — varsayılan modele yazılmıyor
+    expect(ex.nodes.find((n) => n.type === 'fead-ac').data.inertia).toBeUndefined();
+  });
+
+  // ÖLÇÜLMÜŞ VARSAYILANI OLMAYAN TİP hâlâ SESSİZ DEĞİL. Su pompası, direksiyon
+  // pompası ve hava kompresörü arşivin yedi raporunun hiçbirinde geçmiyor;
+  // rotor ataletini kasnak çapından uydurmak "makul ama yanlış" bir sayı
+  // olurdu. Bu tiplerde burulma modeli kurulmuyor ve sebebini yazıyor.
+  test('varsayılanı OLMAYAN tipte burulma modeli kurulmuyor, sebep yazılıyor', () => {
+    const ex = veFeadExampleNodes('BMC_FEAD_2026');
+    ex.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const ac = ex.nodes.find((n) => n.type === 'fead-ac');
+    ac.type = 'fead-waterpump'; ac.def = componentDefs['fead-waterpump'];
+    delete ac.data.inertia;
+    const build = veFeadBuildSystem(ex.nodes, ex.connections);
+    const solv = ex.nodes.find((n) => n.type === 'fead-solver');
+    const R = veFeadAnalyze(build, { rows: veFeadDutyRows(solv), crankInertia: 0.70 });
+    expect(R.ok).toBe(true);                      // gerilme/ömür etkilenmez
     expect(R.torsional).toBeNull();
     expect(R.warnings.join(' ')).toMatch(/[Bb]urulma modeli/);
+    expect(build.defaults.some((x) => /^atalet · /.test(x.field))).toBe(false);
+    expect(M.veFeadDefaultInertia('fead-waterpump', false)).toBeNaN();
   });
 });
 

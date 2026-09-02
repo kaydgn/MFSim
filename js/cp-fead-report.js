@@ -577,6 +577,7 @@ function _frSection8(R, node){
      + 'emniyeti, kaburga yorulması ve ömür bu modelin gerçek değerleriyle çözülür. Uzunluk mm, '
      + 'kuvvet N, güç kW, açı derece.</p>';
   h += _frWarnBox(R);
+  h += _frDefaultsBox(R);
   h += _frBeltDataBox(R);
   h += _frSummary(R);
   h += _frBeltTable(R);
@@ -639,6 +640,30 @@ function _frWarnBox(R){
   w.forEach(function(x){ h += '<li>' + _frEsc(x) + '</li>'; });
   h += '</ul></div>';
   return h;
+}
+
+// 8.0 — GİRİLMEYEN ALANLARIN ARŞİVDEN DOLDURULDUĞU KÜNYESİ
+//
+// Bir mühendislik raporunda hangi sayının ölçüldüğü, hangisinin varsayıldığı
+// belgenin kendisinden okunabilmek zorundadır. Bu kutu `build.defaults`
+// listesini olduğu gibi basar: panelde gösterilen künyenin AYNISI, çünkü ikisi
+// de aynı listeden üretiliyor (modülün 8. kuralı — geçerlilik sınırı sonucun
+// İÇİNDE taşınır).
+function _frDefaultsBox(R){
+  var d = (R && R.build && R.build.defaults) || [];
+  if(!d.length) return '';
+  var h = '<div class="note" data-ve="fr-defaults" style="border-left:3px solid var(--ink,#333); padding-left:10px;">'
+    + '<b>Girilmeyen ' + d.length + ' alan Gates arşivinden varsayıldı.</b> '
+    + 'Aşağıdakiler bu sistemin ölçülmüş değerleri DEĞİL, on dört tedarikçi '
+    + 'raporundan çıkarılmış medyanlardır; mertebe göstergesidir. Elinizdeki '
+    + 'raporun kendi sayıları girilirse varsayılan devreden çıkar.'
+    + '<ul style="margin:4px 0 0 18px;">';
+  d.forEach(function(r){
+    h += '<li><b>' + _frEsc(r.field) + '</b> = ' + _frF(r.value, 4)
+      + (r.unit ? ' ' + _frEsc(r.unit) : '')
+      + (r.source ? ' — ' + _frEsc(r.source) : '') + '</li>';
+  });
+  return h + '</ul></div>';
 }
 
 // 8.1 — kritik sonuç özeti
@@ -3021,6 +3046,7 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadGenerateReport: veFeadGenerateReport,
     _frBuildReportHTML: _frBuildReportHTML,
     _frSection8: _frSection8, _frBeltDataBox: _frBeltDataBox,
+    _frDefaultsBox: _frDefaultsBox,
     _frCompliance: _frCompliance, _frCheckRows: _frCheckRows,
     _frAntet: _frAntet,
     _frEnsureAssets: _frEnsureAssets,

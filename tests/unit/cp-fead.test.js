@@ -1307,12 +1307,19 @@ describe('kol konumu seçimi', () => {
 
   // TOLERANS 0 → dört orta konum AYNI açıya oturuyor. Üst üste çizilseydi dört
   // özdeş eğri binerdi ve çizim hatası gibi görünürdü.
+  //
+  // TOLERANS/AŞINMA AÇIKÇA 0 VERİLİYOR ve varsayılan onu EZMEMELİ: `0` geçerli
+  // bir kullanıcı değeridir ("zarfı kapat"), boş bırakmakla aynı şey değil.
+  // Arşiv varsayılanı yalnız BOŞ alana iner (bkz. fead-defaults.test.js).
   test('tolerans 0 ise özdeş konumlar TEKİLLEŞİR ve sebep yazılır', () => {
     const { build } = kur({ tolerance: 0, wearPct: 0 });
+    expect(build.sys.belt.tolerance).toBe(0);          // varsayılan EZMEDİ
+    expect(build.sys.belt.wearPct).toBe(0);
     const sel = veFeadPosSelection(build, 'all');
-    // Serbest kol ayrı bir açı; Replace/Max/Mean/Min aynı → tek hayalet kalır.
-    expect(sel.ghosts.length).toBe(1);
-    expect(sel.ghosts[0].key).toBe('free');
+    // Replace/Max/Mean/Min aynı açıya oturuyor → tek hayalet. Serbest kol ve
+    // (durdurucu varsayılanı geldiği için) Load ayrı açılarda.
+    const keys = sel.ghosts.map((g) => g.key).sort();
+    expect(keys).toEqual(['free', 'load']);
   });
 
   test('tek konum kipinde hayalet YOK', () => {
@@ -1323,10 +1330,28 @@ describe('kol konumu seçimi', () => {
     });
   });
 
-  // Load stop girilmemişse listede yok; seçiliyse şema BOŞ KALMAZ, Mean'e düşer
-  // ve sebep note'a yazılır.
-  test('çözülemeyen konum seçilirse çalışma konumuna düşer + sebep', () => {
+  // DURDURUCU ARTIK VARSAYILAN ALIYOR (2026-09-02): girilmemiş bir stop
+  // nominal dönüşten ölçekleniyor, dolayısıyla Load konumu normalde ÇÖZÜLÜR.
+  test('durdurucu girilmemişse arşiv varsayılanı gelir ve Load çözülür', () => {
     const { build } = kur();
+    const sel = veFeadPosSelection(build, 'load');
+    expect(sel.primary.key).toBe('load');
+    const d = build.defaults.filter((x) => /load stop/i.test(x.field));
+    expect(d).toHaveLength(1);
+    // Varsayılan = nominal dönüş × katsayı, ve çekirdeğin sınırından KÜÇÜK.
+    const nom = build.spring.relMeanDeg;
+    expect(d[0].value).toBeCloseTo(nom * M.VE_FEAD_DEFAULTS.loadStopFactor, 9);
+  });
+
+  // Şema yine de BOŞ KALMAZ: listede olmayan bir konum seçilirse çalışma
+  // konumuna düşer ve sebebini yazar. Kapı duruyor; yalnız "stop yok" durumu
+  // artık varsayılan devreye girdiği için ELLE kuruluyor (yay künyesi eksik
+  // bir modelde hâlâ böyle oluyor — nominal dönüş türetilemeyince varsayılan
+  // da kurulmuyor).
+  test('konum tabloda yoksa çalışma konumuna düşer + sebep', () => {
+    const { build } = kur();
+    delete build.sys.tensioner.loadStopRelDeg;
+    build.sys._cache = {};
     const sel = veFeadPosSelection(build, 'load');
     expect(sel.primary.key).toBe('mean');
     expect(sel.note).toMatch(/Load stop|çözülemedi/i);

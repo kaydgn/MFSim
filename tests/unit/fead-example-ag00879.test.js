@@ -23,6 +23,7 @@
 const M = require('../../js/fead-model.js');
 const F = require('../../js/fead-core.js');
 const V = require('../fixtures/fead-validation.js');
+const { vibrationOf } = require('../helpers/gates-vibration.js');
 
 const stubs = stubGlobals();
 document.body.innerHTML = '<div id="ve-canvas"></div>';
@@ -230,23 +231,43 @@ describe('modelin KENDİ İLAN ETTİĞİ sınırlar', () => {
     expect(life.hoursB10).toBeLessThan(life.hoursB10Corrected * 0.8);
   });
 
-  test('ATALET YOK ve bu SESSİZ DEĞİL', () => {
-    // Rapor kasnak ataletlerini basmıyor, örnek de uydurmuyor. Burulma modeli
-    // bunu adıyla söylüyor. Sessiz kalsaydı kullanıcı bir frekans görür ve
-    // onu ölçülmüş sanardı.
+  // ── DÜZELTME (2026-09-02) ────────────────────────────────────────────────
+  // Bu iki test bir dönem ataletlerin YOKLUĞUNU çıpalıyordu ve gerekçesi
+  // *"rapor kasnak ataletlerini basmıyor"* diye yazılıydı. ÖLÇÜLDÜ ve tutmadı:
+  // raporun 11. sayfası ("System Vibration Analysis") dört aksesuarın
+  // ataletini, gergi kolununkini, gergi kasnağının kütlesini ve krank mili
+  // ataletini BASIYOR — arşivdeki PDF'in içinde duruyorlar. Örnek artık
+  // onları taşıyor ve testler KAYNAĞA karşı denetliyor: teste elle yazılmış
+  // bir kopya, kaynağından sessizce ayrışabilecek ikinci bir doğru olurdu.
+  test('ataletler raporun KENDİ titreşim sayfasından geliyor', () => {
+    const v = vibrationOf('AG00879');
     const ex = veFeadExampleOf(KEY);
-    ex.pulleys.forEach((p) => expect(p.data.inertia).toBeUndefined());
-    const { pack, build } = kur();
-    const solverNode = pack.nodes.find((n) => n.type === 'fead-solver');
-    const A = veFeadAnalyze(build, { rows: veFeadDutyRows(solverNode) });
-    expect(A.ok).toBe(true);
-    expect(A.warnings.join(' ')).toMatch(/atalet/i);
+    const g = (k) => ex.pulleys.find((p) => p.key === k).data;
+    // Aksesuarlar: rapor adı → örnek anahtarı
+    expect(g('IDR').inertia).toBe(v.accessoryInertia.IDR);
+    expect(g('A_C').inertia).toBe(v.accessoryInertia.A_C);
+    expect(g('ALT').inertia).toBe(v.accessoryInertia.ALT);
+    expect(g('TEN').inertia).toBe(v.accessoryInertia.TEN);
+    // Gergi kolu + kasnak kütlesi ayrı alanlarda
+    expect(g('TEN').armInertia).toBe(v.armInertiaKgM2);
+    expect(g('TEN').pulleyMass).toBe(v.pulleyMassKg);
+    // Sürücü düğümü KRANK MİLİ ataletini taşır (burulma modelinin sürücü
+    // serbestliği krank milidir; doğrulama harness'i de öyle besliyor).
+    expect(g('FAN').inertia).toBe(v.crankInertiaKgM2);
+    expect(ex.solver.crankInertia).toBe(v.crankInertiaKgM2);
   });
 
-  test('gergi T38665 çekirdeğin ölçülmüş listesinde YOK — künye uydurulmadı', () => {
-    const t = veFeadExampleOf(KEY).pulleys.find((p) => p.key === 'TEN').data;
-    expect(t.armInertia).toBeUndefined();
-    expect(t.pulleyMass).toBeUndefined();
+  test('burulma modeli KURULUYOR ve sapması BELGELİ', () => {
+    const { build } = kur();
+    // Örnek kendi sayılarını taşıdığı için arşiv varsayılanı İNMEZ.
+    expect(build.defaults.some((d) => /atalet|kütle/.test(d.field))).toBe(false);
+    const T = F.torsionalModel(build.sys, {});
+    const ref = vibrationOf('AG00879').mode1Hz;      // 22.11 Hz
+    // Bu sistem burulma KALİBRASYON TAKIMININ DIŞINDA ve sapması ölçülü
+    // (bkz. fead-core.test.js): sayı bir mertebe göstergesidir.
+    const sapma = Math.abs(T.firstElasticHz / ref - 1) * 100;
+    expect(sapma).toBeGreaterThan(10);
+    expect(sapma).toBeLessThan(16);
   });
 });
 
