@@ -2367,6 +2367,35 @@ function veFeadCompassReset(nodeId){
 //   .inline   kanvas kartı için: dış çerçeve/arkaplan yok, boy %100
 // Varsayılan (opts verilmezse) hepsi AÇIK: tedarikçi sayfasının çıktısı da bu
 // işaretleri taşıyor ve panelde de aynı dili konuşmak doğrusu.
+// ── KAYIŞ YOLUNUN SVG YOLU — TEK ÜRETİCİ ──────────────────────────────────
+//
+// Çözülmüş geometriden (`FEADCore.geometryAt`) kayışın kapalı yolunu kuruyor:
+// teğet doğrusu → sarım yayı → teğet doğrusu … İki tüketicisi var ve ikisi de
+// AYNI yolu çizmek zorunda: yerleşim şeması (`veFeadLayoutSVG`, kart/rapor) ve
+// sihirbazın kol açısı seçicisi. İkinci bir çizici sessizce ayrışırdı — biri
+// sarım yönünü ötekinden başka okusa kullanıcı iki yüzeyde iki farklı kayış
+// görürdü ve hangisinin doğru olduğunu söyleyecek bir şey olmazdı.
+//
+// `tx`/`ty` mm → görünüm dönüşümü, `sc` ölçek, `f` yuvarlayıcı: hepsi
+// ÇAĞIRANDAN geliyor, çünkü iki yüzeyin kabı ve yakınlaştırması farklı.
+function veFeadBeltPathD(g, tx, ty, sc, f){
+  if(!g || !g.pulleys || !g.spans) return '';
+  var q = g.pulleys, n = q.length, d = '';
+  // BOŞ GEOMETRİ BOŞ YOL DEMEK, kapalı bir "Z" değil: `' Z'` bir yol dizesi
+  // olarak DOĞRU görünür, tüketici onu çizmeye kalkar ve ekranda görünmeyen
+  // ama VAR olan bir kayış üretilir — bu modülün sessiz sınıfı.
+  if(!n || g.spans.length !== n) return '';
+  for(var i = 0; i < n; i++){
+    var sp = g.spans[i], p = q[(i + 1) % n], spN = g.spans[(i + 1) % n];
+    if(i === 0) d += 'M' + f(tx(sp.Pi[0])) + ' ' + f(ty(sp.Pi[1]));
+    d += ' L' + f(tx(sp.Pj[0])) + ' ' + f(ty(sp.Pj[1]));
+    var R = f(p.rPitch * sc), wrap = g.wraps[(i + 1) % n];
+    d += ' A' + R + ' ' + R + ' 0 ' + (wrap > Math.PI ? 1 : 0) + ' ' + (p.d > 0 ? 0 : 1)
+       + ' ' + f(tx(spN.Pi[0])) + ' ' + f(ty(spN.Pi[1]));
+  }
+  return d + ' Z';
+}
+
 function veFeadLayoutSVG(build, W, H, opts){
   W = W || 320; H = H || 240;
   opts = opts || {};
@@ -2654,18 +2683,7 @@ function veFeadLayoutSVG(build, W, H, opts){
   //
   // TEK FONKSİYON: hayalet konumlar da aynı yoldan çizilir, yoksa iki ayrı
   // çizici sessizce ayrışırdı.
-  function beltPath(g){
-    var q = g.pulleys, n = q.length, d = '';
-    for(var i=0;i<n;i++){
-      var sp = g.spans[i], p = q[(i+1)%n], spN = g.spans[(i+1)%n];
-      if(i === 0) d += 'M' + f(tx(sp.Pi[0])) + ' ' + f(ty(sp.Pi[1]));
-      d += ' L' + f(tx(sp.Pj[0])) + ' ' + f(ty(sp.Pj[1]));
-      var R = f(p.rPitch * s), wrap = g.wraps[(i+1)%n];
-      d += ' A' + R + ' ' + R + ' 0 ' + (wrap > Math.PI ? 1 : 0) + ' ' + (p.d > 0 ? 0 : 1)
-         + ' ' + f(tx(spN.Pi[0])) + ' ' + f(ty(spN.Pi[1]));
-    }
-    return d + ' Z';
-  }
+  function beltPath(g){ return veFeadBeltPathD(g, tx, ty, s, f); }
   // ── KAYIŞIN KABURGALI YÜZÜ — hangi kasnağa hangi yüzüyle değiyor ────────
   // Temas tarafı bu modülün en pahalı sessiz hatası: ters verilirse çekirdek
   // GEÇERLİ ama BAŞKA bir güzergâh çözer, hata vermez. Şemada bunu şimdiye
@@ -4597,6 +4615,7 @@ function veFeadLimitsBox(R){
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VE_FEAD_STARTER_LAYOUT: VE_FEAD_STARTER_LAYOUT,
+    veFeadBeltPathD: veFeadBeltPathD,
     veFeadLayoutSVG: veFeadLayoutSVG,
     veFeadPortSideFor: veFeadPortSideFor,
     veFeadApplyBadge: veFeadApplyBadge,

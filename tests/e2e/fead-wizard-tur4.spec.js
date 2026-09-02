@@ -61,17 +61,17 @@ test('tur4 — gergi satırı · taşıma · virgül · açı seçici · nispi a
       bicimAyni: JSON.stringify(bicim(ten)) === JSON.stringify(bicim(ilk)),
       zemin: getComputedStyle(ten.children[3]).backgroundColor
              === getComputedStyle(ilk.children[3]).backgroundColor,
-      kontur: !!document.querySelector('.ve-fw-note-req'),
-      konturKenar: document.querySelector('.ve-fw-note-req')
-        ? getComputedStyle(document.querySelector('.ve-fw-note-req')).borderLeftWidth : ''
+      // AÇIKLAMA YÜZEYİ YOK (kullanıcı isteği, 2026-09-02).
+      hint: document.querySelectorAll('.ve-fw-hint').length,
+      gozKirpma: [...document.querySelectorAll('.ve-fw-card-h em')].length
     };
   });
   console.log('SATIR', JSON.stringify(satir));
   expect(satir.hiza).toBe(true);
   expect(satir.dhFark).toBeLessThanOrEqual(2);
   expect(satir.bicimAyni).toBe(true);
-  expect(satir.kontur).toBe(true);
-  expect(satir.konturKenar).toBe('3px');
+  expect(satir.hint).toBe(0);
+  expect(satir.gozKirpma).toBe(0);
 
   // ── 2 · SATIR TAŞIMA — GERÇEK TIK ──────────────────────────────────────
   const adlar = () => page.evaluate(() =>
@@ -129,6 +129,42 @@ test('tur4 — gergi satırı · taşıma · virgül · açı seçici · nispi a
   });
   console.log('SEÇİCİ', JSON.stringify(acik));
   expect(acik.gorunur).toBe(true);
+  // KAYIŞ + YEŞİL OK + YAKINLAŞTIRMA (kullanıcı isteği, 2026-09-02)
+  const cizim = await page.evaluate(() => {
+    const s = document.querySelector('#ve-fw-ang-plot svg');
+    const yol = [...s.querySelectorAll('path')]
+      .find(p => (p.getAttribute('stroke') || '').includes('accent-warning'));
+    const ok = [...s.querySelectorAll('line')]
+      .find(l => (l.getAttribute('stroke') || '').includes('accent-success'));
+    const uc = [...s.querySelectorAll('path')]
+      .find(p => (p.getAttribute('fill') || '').includes('accent-success'));
+    return { kayis: !!yol, kayisUzunluk: yol ? Math.round(yol.getTotalLength()) : 0,
+             yesilOk: !!ok, okUcu: !!uc,
+             okRengi: ok ? getComputedStyle(ok).stroke : '',
+             yazi: [...s.querySelectorAll('text')].map(t => t.textContent),
+             zoomDugme: document.querySelectorAll('.ve-fw-ang-zoom button').length,
+             k: +s.getAttribute('data-k') };
+  });
+  console.log('ÇİZİM', JSON.stringify(cizim));
+  expect(cizim.kayis).toBe(true);
+  expect(cizim.kayisUzunluk).toBeGreaterThan(300);      // gerçek bir yol
+  expect(cizim.yesilOk).toBe(true);
+  expect(cizim.okUcu).toBe(true);
+  expect(cizim.okRengi).not.toBe('');
+  // Kasnak ADI yok — yalnız eksen etiketleri ve açı sayısı.
+  cizim.yazi.forEach(t => expect(t).toMatch(/^-?\d+(\.\d+)?°$/));
+  expect(cizim.zoomDugme).toBe(3);
+
+  // YAKINLAŞTIRMA gerçek tıkla ölçeği büyütüyor
+  await page.locator('.ve-fw-ang-zoom button[title="Yakınlaş"]').click();
+  await page.waitForTimeout(250);
+  const k2 = await page.evaluate(() => +document.querySelector('#ve-fw-ang-plot svg').getAttribute('data-k'));
+  console.log('ZOOM', cizim.k, '→', k2);
+  expect(k2).toBeGreaterThan(cizim.k);
+  await page.locator('.ve-fw-ang-zoom button[title="Sığdır"]').click();
+  await page.waitForTimeout(250);
+  expect(await page.evaluate(() => +document.querySelector('#ve-fw-ang-plot svg').getAttribute('data-k')))
+    .toBeCloseTo(cizim.k, 5);
   expect(acik.svg).toBe(true);
   expect(acik.kutu).toBe(true);
   expect(Number(acik.baslangic)).toBeCloseTo(164, 3);
@@ -145,14 +181,14 @@ test('tur4 — gergi satırı · taşıma · virgül · açı seçici · nispi a
              sy: r.top + (oy - cy * k) * r.height / +vb[3],
              pxPerMm: k * r.width / +vb[2] };
   });
-  await page.mouse.move(merkez.sx + merkez.pxPerMm * 40, merkez.sy);
+  await page.mouse.move(merkez.sx + merkez.pxPerMm * 85, merkez.sy);
   await page.waitForTimeout(200);
   const sifir = await page.evaluate(() => VE_FW_ANG.shown);
   console.log('FARE sağda →', sifir.toFixed(3), '°');
   expect(Math.abs(sifir)).toBeLessThan(2);
 
   // TIK: kutuya yazılmalı
-  await page.mouse.click(merkez.sx, merkez.sy - merkez.pxPerMm * 40);
+  await page.mouse.click(merkez.sx, merkez.sy - merkez.pxPerMm * 85);
   await page.waitForTimeout(250);
   const tik = await page.evaluate(() => ({
     kutu: document.getElementById('ve-fw-ang-in').value,
