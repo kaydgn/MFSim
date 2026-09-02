@@ -1607,6 +1607,104 @@ var VE_FEAD_EXAMPLES = {
     ],
     // Raporun kasnak sırası (Layout Data satır sırası = kayış gidiş yönü).
     route: ['FAN', 'IDR1', 'A_C', 'IDR2', 'ALT', 'TEN']
+  },
+
+  // ── AG00879 — ANADOLU ISUZU 6x6, İKİNCİ BİR GATES RAPORU ───────────────────
+  //
+  // "AG00879 ANADOLU-ISUZU 6x6 Truck Secondary ALT Drive · 8PK1392HD ·
+  // Gates T38665 31Nm · 17 Mayıs 2023", Gates v9.40, 12 sayfa.
+  //
+  // NEDEN ÜÇÜNCÜ ÖRNEK: yukarıdaki ikisi AYNI aracın iki belgesi (giden sayfa ↔
+  // dönen rapor) ve aynı gergiyi (E9843) paylaşıyor. Bu ise BAŞKA bir araç,
+  // BAŞKA bir gergi (T38665, kol 56 mm — E9843'ün 90 mm'sinin üçte ikisi),
+  // BEŞ kasnak ve tamamen farklı çaplar. Fixture'ın kendi notu da bunu
+  // söylüyor: "modelin evrenselligini sinar".
+  //
+  // ── REFERANS DEĞERLER ZATEN DEPODA ─────────────────────────────────────────
+  // Rapor tests/fixtures/fead-validation.js içinde AG_MISC.AG00879 olarak
+  // duruyor (2095 değerlik doğrulama kapısının parçası). Eksik olan onu kanvasa
+  // KURULABİLİR yapmaktı. Test referansları fixture'dan okur — İKİNCİ KOPYA YOK.
+  //
+  // ── EFEKTİF BOY BURADA TUZAK DEĞİL ─────────────────────────────────────────
+  // AG00976'da rapor başlığı (1715) ile REBL sütunu (1714.6) AYRIŞIYORDU ve
+  // katalog adını boy sanmak 0.56°'lik bir kol hatası veriyordu. Burada ikisi
+  // AYNI: başlık "Effective Belt Length (ISO 9981) 1392", REBL(Mean) 1392.0.
+  // Yani o tuzak her raporda ısırmıyor — ama hangisinin geçerli olduğunu
+  // REBL sütunu söyler, başlık değil.
+  //
+  // ── RAPORUN VERMEDİĞİ ŞEYLER UYDURULMADI ───────────────────────────────────
+  // Silindir sayısı, krank ataleti, kasnak ataletleri ve servis faktörü bu
+  // belgede YOK (AG00976'da onlar tedarikçiye giden sayfadan geliyordu; bu
+  // örneğin öyle bir sayfası yok). Yazılmadılar. Sonuç sessiz değil: burulma
+  // modeli "FAN kasnağının atalet momenti yok" diye ADIYLA uyarıyor.
+  // Gergi T38665 de çekirdeğin ölçülmüş listesinde DEĞİL (orada T38624 ve
+  // E9843 var) → armInertia/pulleyMass de yazılmadı.
+  'AG00879_GATES_2023': {
+    name: 'Anadolu Isuzu 6x6 — Gates AG00879 raporu',
+    note: 'Cummins ikincil ALT&AC tahriki, 5 kasnak (FAN · Avara · Klima · '
+        + 'Alternatör · Gergi). Gates 8PK1392HD, gergi T38665 (kol 56 mm). '
+        + 'Farklı araç, farklı gergi ve farklı çaplarla modelin '
+        + 'evrenselliğini sınar; raporun sonuç sayfalarını geri üretir.',
+    // Başlık ve REBL(Mean) burada aynı fikirde: 1392.
+    belt:  { profile:'PK', brand:'GATES', beltType:'8PK1392HD', ribs:8,
+             effLength:1392, tolerance:5, wearPct:0.007 },
+    solver:{ ratioMode:'direct', driveRatio:1,
+             // "Speed Ratio (Ref. Engine) FAN = 1.000" → duty tablosunun
+             // "Eng. RPM" sütunu SÜRÜCÜ KASNAK devri (AG00976 ile aynı kural).
+             // Peak Tension sayfasının Accel. sütunu: 1000 RPM/s.
+             accelRpmS:1000, decelRpmS:1000,
+             // EDL(Mean) 1392.7 − L_nominal 1392.0.
+             lengthOffsetMm:0.7,
+             // "Load Conditions kW for DC 95%" sayfası; hepsi 80 °C.
+             // Sürücü (FAN) sütunu YOK — çekirdek onu toplamdan hesaplar ve
+             // raporun kendi değerlerini veriyor (4.92 / 6.72 / 9.52 / 12.42 /
+             // 14.82 kW), testi bunu ölçüyor.
+             duty:[
+               { rpm:600,  dcPct:5,  degC:80, kwByKey:{ A_C:1.40, ALT:3.50, IDR:0.01, TEN:0.01 } },
+               { rpm:800,  dcPct:35, degC:80, kwByKey:{ A_C:1.90, ALT:4.80, IDR:0.01, TEN:0.01 } },
+               { rpm:1200, dcPct:35, degC:80, kwByKey:{ A_C:3.00, ALT:6.50, IDR:0.01, TEN:0.01 } },
+               { rpm:1700, dcPct:20, degC:80, kwByKey:{ A_C:4.20, ALT:8.20, IDR:0.01, TEN:0.01 } },
+               { rpm:2200, dcPct:5,  degC:80, kwByKey:{ A_C:6.00, ALT:8.80, IDR:0.01, TEN:0.01 } }
+             ] },
+    // "Layout Data mm" sayfası. MFSim DIŞ ÇAP ister; raporun Pitch/Effective
+    // sütunlarını çekirdek hb/hr ile türetir ve birebir tutturur:
+    //   grooved od = Effective  → pitch = od + 2·hb   (FAN 149.61 → 152.01)
+    //   back    od = Flat       → pitch = od + 2·hr, eff = od + 2·hr + 2·hb
+    //                                                (IDR  74.00 →  76.20 / 78.60)
+    // AG00976'da FAN'ın Effective'i yuvarlak bir sayıydı (162.00) ve dış çapla
+    // çakışıyordu; burada 149.61 — çakışmanın bir kural değil rastlantı olduğu
+    // buradan görünüyor.
+    pulleys: [
+      { key:'FAN', type:'fead-fan',         name:'Sürücü Kasnak (FAN)',
+        data:{ od:149.61, x:0,      y:0,      contact:'grooved', driver:true } },
+      { key:'IDR', type:'fead-idler',       name:'Avara',
+        data:{ od:74.00,  x:140.00, y:-45.00, contact:'back' } },
+      { key:'A_C', type:'fead-ac',          name:'Klima Kompresörü',
+        data:{ od:127.00, x:265.00, y:-40.00, contact:'grooved' } },
+      { key:'ALT', type:'fead-alternator',  name:'Alternatör',
+        data:{ od:58.80,  x:320.00, y:200.00, contact:'grooved' } },
+      { key:'TEN', type:'fead-tensioner',   name:'Otomatik Gergi (T38665)',
+        // Merkez = "Layout Data"nın TEN satırı (143,40 / 52,55), yani diğer
+        // dört kasnakla AYNI sütun: çalışma konumundaki kasnak merkezi.
+        // Kol açısı da raporun kendi "Tensioner Geometry" tablosundan: Mean
+        // sütununun "Arm Position" satırı 225,0°.
+        //
+        // BAĞIMSIZ DOĞRULAMA — rapor gergi PİVOTUNU da ayrı bir alanda yazıyor
+        // ("Tensioner Data": 183,00 / 92,15) ve model onu bu iki satırdan
+        // TÜRETİYOR:
+        //   p = c − a·(cos 225°, sin 225°) = 182,9980 / 92,1480  → Δ 0,0029 mm
+        // Bu bir kapı DEĞİL (karşılaştırma yapılmıyor); raporun üç ayrı
+        // satırının (merkez · kol açısı · pivot) aynı kolun tarifi olduğunun
+        // ölçüsü. AG00976'da aynı ölçü 0,0035 mm.
+        data:{ od:74.00, contact:'back',
+               cenX:143.40, cenY:52.55, armLen:56.0,
+               armMeanDeg:225.0,
+               preload:20.05, kArm:0.409, meanLoad:31.14,
+               // "Tensioner Geometry" tablosunun Load sütunu: mekanik stop.
+               loadStopRelDeg:39.0 } }
+    ],
+    // Raporun kasnak sırası (Layout Data satır sırası = kayış gidiş yönü).
+    route: ['FAN', 'IDR', 'A_C', 'ALT', 'TEN']
   }
 };
 function veFeadExampleKeys(){ return Object.keys(VE_FEAD_EXAMPLES); }
