@@ -835,13 +835,27 @@ function veFeadWizLive(){
 // ════════════════════════════════════════════════════════════════════════════
 //  GÖVDE — ortak parçalar
 // ════════════════════════════════════════════════════════════════════════════
-function _fwCard(baslik, unit, accent, inner){
+// KART: BAŞLIK VE GÖVDE. Üçüncü bir şey YOK.
+//
+// Kullanıcı isteği (2026-09-02): *"garip açıklamalar… Pencerenin sağ üst
+// köşesine baksana, 'fareyle' yazıyor… Bu tarz garip açıklamaları lütfen
+// 'Başlangıç Sihirbazı' kısmından TAMAMEN kaldıralım."*
+//
+// Kartın başlığında bir "göz kırpma" alanı (`unit`) ve gövdesinin altında bir
+// açıklama paragrafı üreteci (`_fwHint`) vardı; ikisi de KALDIRILDI —
+// parametre ve fonksiyon olarak, bırakılmış bir kanal olarak değil. Bırakmak
+// yeterli olmazdı: her turda yeniden dolduruluyorlardı, çünkü yüzey oradaydı.
+// `tests/unit/fead-wizard.test.js` bunu kapı olarak tutuyor.
+//
+// Alan başına açıklama gerekiyorsa `title` ipucu kullanılır (üzerine gelince
+// çıkar, yüzeyi doldurmaz); modelin durumuyla ilgili bir şey söylenecekse
+// `ve-fw-issue` kutusu kullanılır — o bir açıklama değil, canlı doğrulama
+// çıktısıdır.
+function _fwCard(baslik, accent, inner){
   return '<section class="ve-fw-card" style="--fw-accent:' + (accent || 'var(--accent-primary)') + ';">'
-    + '<header class="ve-fw-card-h"><span>' + _fwEsc(baslik) + '</span>'
-    + (unit ? '<em>' + _fwEsc(unit) + '</em>' : '') + '</header>'
+    + '<header class="ve-fw-card-h"><span>' + _fwEsc(baslik) + '</span></header>'
     + '<div class="ve-fw-card-b">' + inner + '</div></section>';
 }
-function _fwHint(html){ return '<p class="ve-fw-hint">' + html + '</p>'; }
 
 // Alan üreteci. `oninput` YALNIZ durumu yazar ve canlı şeridi gecikmeli
 // tazeler — tam yeniden çizim odağı düşürürdü.
@@ -1074,9 +1088,9 @@ function veFeadWizStepHTML(step, b){
 // belgeden okunduğunu anlatmanın en kısa yolu.
 function _fwStepKaynak(){
   var st = _fwState;
-  var h = _fwCard('Sistem', '', 'var(--accent-primary)',
+  var h = _fwCard('Sistem', 'var(--accent-primary)',
       _fwField('Sistem adı', _fwInp('ad', { text: true, ph: 'Yeni FEAD Sistemi' }))
-    + _fwHint('Ad yalnız künyedir; rapor antedinde ve kanvas etiketlerinde görünür.'));
+    );
 
   // SEÇİLİ KART BELİRGİN — kullanıcı isteği (2026-08-31): *"buradan bir
   // seçenek seçtiğimizde seçtiğimiz seçeneğin belirgin olmasını istiyorum."*
@@ -1104,10 +1118,8 @@ function _fwStepKaynak(){
     });
   }
   oh += kart('', 'Boş başla', 'bütün alanları temizler');
-  h += _fwCard('Örnekten doldur', 'isteğe bağlı', 'var(--accent-success)', oh
-    + _fwHint('Doğru doldurulmuş bir formu görmek, alanların hangi belgeden okunduğunu '
-      + 'anlatmanın en kısa yolu. Doldurduktan sonra her alanı değiştirebilirsiniz — '
-      + 'örnek bir KISIT değil, başlangıç noktası.'));
+  h += _fwCard('Örnekten doldur', 'var(--accent-success)', oh
+    );
   return h;
 }
 
@@ -1127,23 +1139,9 @@ function _fwStepKasnak(b){
          + '+ ' + _fwEsc(_fwDefName(t)) + '</button>';
   });
 
-  var h = _fwCard('Kasnak Ekle', 'gergi kendiliğinden gelir', 'var(--accent-primary)',
+  var h = _fwCard('Kasnak Ekle', 'var(--accent-primary)',
       '<div class="ve-fw-chips">' + ekle + '</div>'
-    // ZORUNLULUK BURADA SÖYLENİYOR, SATIRDA DEĞİL — kullanıcı isteği
-    // (2026-09-01): *"otomatik gerginin zorunda olduğunu 'kasnak eklediğimiz'
-    // üst kısımda bir renk konturu ile belirginleştirelim."* Satırın kendisi
-    // artık diğerleriyle aynı görünüyor; bilgi kaybolmasın diye hüküm listenin
-    // hemen altına, konturlu bir kutuya taşındı.
-    + '<div class="ve-fw-note-req"><b>Otomatik Gergi listede yok, çünkü zorunludur.</b>'
-      + ' Her FEAD modelinde tam bir gergi vardır — çekirdek gergisiz bir modeli'
-      + ' <b>çözmez</b>, ikinci bir gergiyi de reddeder. Bu yüzden aşağıdaki tabloya'
-      + ' kendiliğinden gelir; eklenmez, silinmez, tipi değiştirilmez. Künyesi ve yay'
-      + ' verisi <b>4. adımda</b> girilir.</div>'
-    + _fwHint('<b>Koordinatlar kayış düzlemindedir</b> (motora önden bakış, mm) ve '
-      + '<b>sürücü kasnak orijindir</b> — onun X/Y\'si 0/0 olabilir, gerisi ona göre '
-      + 'ölçülür. Kanvasta 1 px = 1 mm, yani kutuları sürüklemek bu sayıları da '
-      + 'değiştirir. <b>Satırlar ↑ ↓ ile taşınabilir</b> — bu yalnız tablonun '
-      + 'okuma düzenidir, kayış yolunu <b>değiştirmez</b> (o 3. adımda).'));
+    );
 
   // KASNAK YOKKEN DE TABLO ÇİZİLİR: gergi satırı her zaman orada ve kullanıcı
   // onu oradan tanıyor. Erken dönüş, "gergiyi 4. adımda tanımlayacaksınız"
@@ -1189,33 +1187,17 @@ function _fwStepKasnak(b){
   t += _fwTenRow(st);
   t += '</tbody></table></div>';
 
-  h += _fwCard('Kasnaklar', (st.pulleys.length + 1) + ' kasnak (gergi dahil)',
+  h += _fwCard('Kasnaklar',
       'var(--accent-primary)', t
-    + _fwHint('<b>Gergi satırında X/Y de diğer beşiyle AYNI şeydir</b>: '
-      + 'avara kasnağının merkezi, kolun çalışma konumundaki hâli. Buraya gövdenin '
-      + 'montaj noktasını yazmanın ölçülmüş bedeli gerginlikte <b>medyan +%1526</b> ve '
-      + 'model yine çözülür, çoğu zaman uyarı da çıkmaz — montaj noktasını program '
-      + '4. adımda kol boyu ve kol açısından türetip okutuyor. Gerginin künyesi ve yay '
-      + 'verisi <b>4. adımda</b> seçilir; aynı alanlar orada da düzenlenebilir, ikisi '
-      + 'tek kaydı yazar.')
-    + _fwHint('<b style="color:var(--accent-danger);">Temas tarafı hesabın en kritik '
-      + 'alanıdır:</b> ters verilirse program <i>geçerli ama başka</i> bir kayış yolu '
-      + 'çözer ve hata vermez. Aksesuarlar tipik olarak kaburgalı yüzden, avara ve gergi '
-      + 'sırttan temas eder. <b>Atalet</b> yalnız burulma ve tepe yük için, boş bırakılabilir.'));
+    
+    );
 
   // ── DÖNÜŞ YÖNÜ ───────────────────────────────────────────────────────────
   // Kasnaklar tablosunun hemen altında, çünkü yön kasnak MERKEZLERİNİN
   // sırasından okunuyor ve kullanıcı koordinatları burada giriyor.
-  h += _fwCard('Dönüş Yönü', 'sıradan türer', 'var(--accent-warning)',
+  h += _fwCard('Dönüş Yönü', 'var(--accent-warning)',
       veFeadWizSpinHTML(b)
-    + _fwHint('Yön <b>ayrı bir ayar değildir</b>: kasnak merkezlerinin kayış '
-      + 'sırasındaki dolanımından okunur, bu yüzden seçim <b>serpantin sırasını ters '
-      + 'yürütür</b> (3. adımdaki "Yönü çevir" ile aynı işlem, aynı alanı yazar). '
-      + '<b>Geometri değişmez, GERİLME değişir:</b> ters yürütmek sarım açılarını ve '
-      + 'kayış boyunu birebir aynı bırakır (cebirsel özdeşlik) ama gerilme zinciri '
-      + 'gergide ankrajlanıp kayış gidiş yönünde yürüdüğü için span gerilmeleri değişir. '
-      + 'Otomatik gergi kayışın <b>gevşek</b> tarafında olmalıdır — 14 Gates sisteminin '
-      + '14\'ünde de öyle.'));
+    );
   return h;
 }
 
@@ -1253,9 +1235,11 @@ function _fwTenRow(st){
     + ' her FEAD modelinde tam bir gergi vardır.">'
     + '<option selected>' + _fwEsc(_fwTenAd()) + '</option></select>';
 
-  var mnt = 'Gergide de X/Y kasnağın MERKEZİDİR (kolun çalışma konumunda). '
-    + 'Gövdenin montaj noktası bir girdi değil, ondan ve kol açısından türeyen '
-    + 'bir sonuçtur — 4. adımda okunur.';
+  var mnt = 'Gergide de X/Y kasnağın MERKEZİDİR (kolun çalışma konumunda), '
+    + 'diğer beş satırla aynı şey. Gövdenin montaj noktası bir girdi değil, '
+    + 'ondan ve kol açısından türeyen bir sonuçtur — 4. adımda okunur. '
+    + 'Karıştırmanın ölçülmüş bedeli gerginlikte medyan +%1526 ve model yine '
+    + 'çözülür.';
 
   return '<tr class="ve-fw-tr-ten">'
     + '<td class="ve-fw-c"><input type="radio" disabled'
@@ -1316,7 +1300,7 @@ function _fwStepYol(b){
   });
   l += '</ol>';
 
-  var h = _fwCard('Serpantin Sırası', sira.length + ' kasnak', 'var(--accent-warning)',
+  var h = _fwCard('Serpantin Sırası', 'var(--accent-warning)',
       l
     + '<div class="ve-fw-rowbtns">'
     + '<button type="button" class="ve-fw-btn" onclick="veFeadWizRouteReverse()">⇄ Yönü çevir</button>'
@@ -1325,15 +1309,8 @@ function _fwStepYol(b){
     // *"'kayış yolu' kısmında CCW ve CW butonlarına gerek yok. Zaten dönüş
     // yönünü 'kasnaklar' kısmında hallediyoruz."* Yön okuması kaybolmuyor:
     // adımın tepesindeki canlı şerit onu her adımda basıyor.
-    + _fwHint('Sıra, kayışın <b>gidiş yönüdür</b>: listedeki her kasnaktan bir sonrakine '
-      + 'tel çekilir ve sonuncudan ilkine dönülür. <b>Dönüş yönü ayrı bir ayar değildir</b> '
-      + '— sıradan türer, bu yüzden "Yönü çevir" sırayı ters yürütür.'));
+    );
 
-  h += _fwCard('Gergi nerede olmalı', 'tasarım kuralı', 'var(--text-secondary)',
-      _fwHint('Otomatik gergi kayışın <b>GEVŞEK</b> tarafına konur — 14 Gates sisteminin '
-        + '14\'ünde de öyle. Gergin tarafa düşerse tahrik gerginliğinin tamamını yayla '
-        + 'karşılamak zorunda kalır; program bu durumu çözüm sonrası ayrıca bildirir. '
-        + 'Pratikte gergi, kayış sırasında sürücü kasnaktan hemen ÖNCE gelir.'));
   return h;
 }
 
@@ -1361,59 +1338,38 @@ function _fwStepGergi(b){
           return '<option value="' + _fwEsc(o[0]) + '"'
                + (String(o[0]) === String(t.tenLib || '') ? ' selected' : '') + '>'
                + _fwEsc(o[1]) + '</option>'; }).join('') + '</select>';
-    h += _fwCard('Gergi Tipi', liste.length + ' künye', 'var(--accent-primary)',
+    h += _fwCard('Gergi Tipi', 'var(--accent-primary)',
         _fwField('Tip', sel)
-      + _fwHint('Seçim kol boyu, yay künyesi ve kasnak çapını doldurur; '
-        + '<b>montaj konumu ve kol açısı yazılmaz</b> — ikisi motorun verisi.'
-        + (kilit
-            ? '<br><b style="color:var(--accent-warning);">Künye seçili olduğu için '
-              + 'parça alanları kilitli.</b> Değiştirmek için <b>elle gir</b> seçin — '
-              + 'seçtiğiniz künyenin değerleri korunur, yalnız düzenlenebilir olur.'
-            : '')));
+      );
   }
 
   // ── AVARA MERKEZİ — TEK KOORDİNAT ───────────────────────────────────────
-  h += _fwCard('Avara Kasnağının Merkezi', 'tek girdi', 'var(--accent-danger)',
+  h += _fwCard('Avara Kasnağının Merkezi', 'var(--accent-danger)',
       _fwGrid([_fwField('Merkez X [mm]', _fwInp('ten.cenX', { ph: '-161.97' })),
                _fwField('Merkez Y [mm]', _fwInp('ten.cenY', { ph: '91.29' }))])
-    + _fwHint('Gergi <b>avarasının merkezi</b> — kayış yolu buradan geçer, diğer bütün '
-      + 'kasnaklarla aynı sütun. Kolun çalışma (Mean) konumundaki merkezdir. '
-      + '<b>Gövdenin montaj konumu buradan çıkar</b>, bir girdi değildir.'));
+    );
 
-  h += _fwCard('Kol ve Kasnak', kilit ? 'parça verisi — KİLİTLİ' : 'parça + montaj verisi',
+  h += _fwCard('Kol ve Kasnak',
       kilit ? 'var(--text-muted)' : 'var(--accent-primary)',
       _fwGrid([_fwField('Kol boyu [mm]', _fwInp('ten.armLen', { ph: '90', kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE })),
                _fwField('Kol yönü [°]', _fwArmAngleField(t)),
                _fwField('Kasnak Ø OD [mm]', _fwInp('ten.od', { ph: '75', kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE })),
                _fwField('Temas tarafı', _fwSelHTML('ten.contact',
                  [['back', 'Sırttan'], ['grooved', 'Kaburgalı']], t.contact || 'back', kn))], 4)
-    + _fwHint('<b>Kol yönü</b>, gövdenin montaj noktasının avara merkezine göre nerede '
-      + 'durduğudur: <b>0° sağda, saat yönünün tersi artı</b> ve değer işaretli '
-      + '(−180…+180) — programın yön gülüyle aynı dil. <b>Kilitli değildir</b>: yön '
-      + 'parçaya değil MONTAJA aittir (aynı E9843 başka bir motorda başka açıda), o '
-      + 'yüzden künye kütüphanesinden gelmez. Program bu yönü SEÇMEZ — avara merkezi '
-      + 'verildikten sonra kayış yolu zaten belirlidir ve <b>kol yönü onu değiştirmez</b>; '
-      + 'geriye kalan tek serbestlik derecesi bir paketleme kararıdır. '
-      + '<b>📐 düğmesi</b> küçük bir koordinat düzlemi açar: fareyle yönü gösterip '
-      + 'gövdenin nereye düştüğünü aynı anda görürsünüz.'));
+    );
 
-  h += _fwCard('Yay Künyesi', kilit ? 'sayfadaki üç satır — KİLİTLİ' : 'sayfadaki üç satır',
+  h += _fwCard('Yay Künyesi',
       kilit ? 'var(--text-muted)' : 'var(--accent-success)',
       _fwGrid([_fwField('Ön yük — Pre-Load [Nm]', _fwInp('ten.preload', { ph: '8.60', kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE })),
                _fwField('Yay katsayısı — Rate [Nm/°]', _fwInp('ten.kArm', { ph: '0.480', step: '0.001', kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE })),
                _fwField('Çalışma momenti — Mean [Nm]', _fwInp('ten.meanLoad', { ph: '22.07', kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE }))], 3)
-    + _fwHint('Üçü de tedarikçi sayfasının "Tensioner" tablosunda yazar. Kolun nominal '
-      + 'çalışma dönmesi bunlardan çıkar: <b>(Mean − Pre) / Rate</b> — ve kayış boyunu bu '
-      + 'belirler, kayışa hiç bakılmadan.'));
+    );
 
-  h += _fwCard('Titreşim Girdileri', 'burulma modeli — opsiyonel', 'var(--text-secondary)',
+  h += _fwCard('Titreşim Girdileri', 'var(--text-secondary)',
       _fwGrid([_fwField('Kol ataleti [kg·m²]', _fwInp('ten.armInertia', { ph: '0.0009', step: '0.0001' })),
                _fwField('Kasnak kütlesi [kg]', _fwInp('ten.pulleyMass', { ph: '0.80', step: '0.01' })),
                _fwField('Load stop (göreli) [°]', _fwInp('ten.loadStopRelDeg', { ph: '62.4', step: '0.1' }))], 3)
-    + _fwHint('<b>Kasnak kütlesi girilmezse birinci burulma modu belirgin şekilde YÜKSEK '
-      + 'çıkar</b> (ölçüldü: 15,3 yerine 20,3 Hz, +%32) — kol, kasnağı kol boyu yarıçapında '
-      + 'nokta kütle olarak taşıyor. <b>Load stop</b> bir mekanik sınırdır, çalışma noktası '
-      + 'değil.'));
+    );
 
   // TÜREYEN MONTAJ KONUMU — TEK SATIR, çünkü ATÖLYEYE GİDEN SAYI BUDUR.
   // Panelin "Kol Künyesi" kartındaki okumanın aynısı ve AYNI üreticiden
@@ -1432,13 +1388,10 @@ function _fwStepGergi(b){
                              armMeanDeg: _fwNum(t.armMeanDeg, NaN) })
     : null;
   if(_piv)
-    h += _fwCard('Gövdenin Montaj Konumu', 'türedi', 'var(--accent-warning)',
+    h += _fwCard('Gövdenin Montaj Konumu', 'var(--accent-warning)',
         _fwRead('p = c − a·(cos θ, sin θ)',
           _piv[0].toFixed(2) + ' / ' + _piv[1].toFixed(2) + ' mm')
-      + _fwHint('Bir girdi <b>değildir</b> — avara merkezinden, kol boyundan ve kol '
-        + 'çalışma açısından türüyor. Motor bloğundaki cıvata/boss deliğinin yeri budur; '
-        + 'tedarikçiden dönen raporun <i>Tensioner Data → Pivot Point</i> satırıyla '
-        + 'karşılaştırarak doğru alana girdiğinizi denetleyebilirsiniz.'));
+      );
   return h;
 }
 // KOL YÖNÜ ALANI — nispi/işaretli gösterim + seçici düğmesi.
@@ -1496,8 +1449,18 @@ function _fwRead(et, deg){
 // ÇİZİM SAF FONKSİYON: DOM'a dokunmuyor, bu yüzden Node'da ölçülebiliyor.
 var VE_FW_ANG = null;          // { key:'ten', shown:Number } — açık pencere
 
-// Kasnakları ve gergiyi mm olarak toplar. ÇÖZÜLMÜŞ MODEL GEREKMEZ: seçici
-// yarım modelde de çalışmalı, çünkü kullanıcı tam da o sırada açıyı arıyor.
+// SAHNE: kasnaklar, gergi ve — çözülüyorsa — GERÇEK KAYIŞ YOLU.
+//
+// Kullanıcı isteği (2026-09-02): *"Kayış görünsün, tıpkı topoloji üzerindeki
+// kanvas gibi olsun. Ama yazılar olmadan tabiki."*
+//
+// KAYIŞ YOLU KOL AÇISINDAN BAĞIMSIZ (ölçüldü: 6 sistem × 548 açı, en büyük
+// fark 4,55e−13 mm) — avara merkezi sabit olduğu için. Bu yüzden yol BİR KEZ
+// çözülüp saklanıyor; fare gezerken yalnız kol yeniden çiziliyor. Her karede
+// yeniden çözmek 6 ms'lik bir çözümü fare hızında koşturmak olurdu.
+//
+// ÇÖZÜM YOKSA sahne yine kuruluyor (çemberler + kol çemberi): kullanıcı açıyı
+// tam da model yarımken arıyor olabilir ve pencereyi hiç açamamak daha kötü.
 function veFeadWizAngScene(st){
   st = st || _fwState;
   if(!st) return null;
@@ -1509,90 +1472,116 @@ function veFeadWizAngScene(st){
   (st.pulleys || []).forEach(function(p){
     var x = _fwNum(p.x, NaN), y = _fwNum(p.y, NaN);
     if(Number.isFinite(x) && Number.isFinite(y))
-      digerleri.push({ x: x, y: y, r: _fwNum(p.od, 80) / 2,
-                       ad: p.name || _fwDefName(p.type) });
+      digerleri.push({ x: x, y: y, r: _fwNum(p.od, 80) / 2 });
   });
-  return { cx: cx, cy: cy, armLen: a, r: od / 2, others: digerleri };
+
+  // GERÇEK KAYIŞ — çözülmüş geometriden, çizici kartla AYNI (veFeadBeltPathD).
+  var geom = null;
+  var b = _fwBuild || veFeadWizBuild();
+  if(b && b.ok && b.sys && typeof FEADCore !== 'undefined'){
+    try {
+      var rel = FEADCore.meanRel ? FEADCore.meanRel(b.sys) : 0;
+      geom = FEADCore.tensionerState(b.sys, rel).geom;
+    } catch(e){ geom = null; }
+  }
+  return { cx: cx, cy: cy, armLen: a, r: od / 2, others: digerleri, geom: geom };
 }
 
 // mm → SVG. +Y mm'de YUKARI, SVG'de aşağı → çevrilir (kanvasın kuralının
-// aynısı). Ölçek bütün sahneyi kabına oturtur; kol dairesi HER ZAMAN sığar.
-function veFeadWizAngSVG(sc, shownDeg, W, H){
+// aynısı). Ölçek bütün sahneyi kabına oturtur; `zoom` onu çarpar.
+function veFeadWizAngSVG(sc, shownDeg, zoom, W, H){
   if(!sc) return '';
-  W = W || 380; H = H || 300;
-  var pad = 26;
+  W = W || 420; H = H || 320;
+  var z = (_fwNum(zoom, 1) > 0) ? _fwNum(zoom, 1) : 1;
+  var pad = 22;
   var minX = sc.cx - sc.armLen, maxX = sc.cx + sc.armLen;
   var minY = sc.cy - sc.armLen, maxY = sc.cy + sc.armLen;
   sc.others.forEach(function(o){
     minX = Math.min(minX, o.x - o.r); maxX = Math.max(maxX, o.x + o.r);
     minY = Math.min(minY, o.y - o.r); maxY = Math.max(maxY, o.y + o.r);
   });
-  var sx = (W - 2 * pad) / Math.max(1e-6, maxX - minX);
-  var sy = (H - 2 * pad) / Math.max(1e-6, maxY - minY);
-  var k = Math.min(sx, sy);
-  var ox = pad + (W - 2 * pad - (maxX - minX) * k) / 2 - minX * k;
-  var oy = pad + (H - 2 * pad - (maxY - minY) * k) / 2 + maxY * k;
+  var k = Math.min((W - 2 * pad) / Math.max(1e-6, maxX - minX),
+                   (H - 2 * pad) / Math.max(1e-6, maxY - minY)) * z;
+  // Sahnenin ORTASI kabın ortasına oturur — yakınlaştırma merkeze doğru olur,
+  // sol üste doğru değil.
+  var ox = W / 2 - ((minX + maxX) / 2) * k;
+  var oy = H / 2 + ((minY + maxY) / 2) * k;
   function X(mm){ return ox + mm * k; }
   function Y(mm){ return oy - mm * k; }
   function f(v){ return Math.round(v * 100) / 100; }
 
+  // ÖLÇEK KÜNYESİ ÇİZİM YUVARLAMASINDAN AYRI: `f` iki ondalığa yuvarlıyor
+  // (çizim için yeter) ama fare→açı çevirisi bu sayılarla mm'ye dönüyor —
+  // iki ondalık, yakınlaştırılmış bir sahnede gözle görülür bir kayma demek.
+  function g(v){ return Math.round(v * 1e6) / 1e6; }
   var h = '<svg class="ve-fw-ang-svg" viewBox="0 0 ' + W + ' ' + H + '" width="100%"'
-    + ' data-k="' + f(k) + '" data-ox="' + f(ox) + '" data-oy="' + f(oy) + '"'
-    + ' data-cx="' + f(sc.cx) + '" data-cy="' + f(sc.cy) + '">';
+    + ' data-k="' + g(k) + '" data-ox="' + g(ox) + '" data-oy="' + g(oy) + '"'
+    + ' data-cx="' + g(sc.cx) + '" data-cy="' + g(sc.cy) + '">';
 
-  // Öteki kasnaklar — bağlam. Soluk, çünkü seçilen şey onlar değil.
+  // ── KASNAKLAR — kanvastaki gibi dolgulu daireler, ADSIZ ────────────────
   sc.others.forEach(function(o){
     h += '<circle cx="' + f(X(o.x)) + '" cy="' + f(Y(o.y)) + '" r="' + f(o.r * k) + '"'
-      + ' fill="none" stroke="var(--border-color)" stroke-width="1"/>';
+      + ' fill="var(--bg-tertiary)" stroke="var(--border-hover)" stroke-width="1.2"/>';
   });
 
+  // ── KAYIŞ — kart ve raporla AYNI üreticiden ────────────────────────────
+  if(sc.geom && typeof veFeadBeltPathD === 'function'){
+    var d = veFeadBeltPathD(sc.geom, X, Y, k, f);
+    if(d) h += '<path d="' + d + '" fill="none" stroke="var(--accent-warning)"'
+      + ' stroke-width="2.4" stroke-linejoin="round"/>';
+  }
+
   var C = [X(sc.cx), Y(sc.cy)], R = sc.armLen * k;
-  // Kolun gezinme çemberi + eksenler: YÖN GÜLÜYLE AYNI DİL (0 sağda, CCW).
+
+  // ── AÇI EKSENLERİ — kolun gezinme çemberi üzerinde, soluk ──────────────
   h += '<circle cx="' + f(C[0]) + '" cy="' + f(C[1]) + '" r="' + f(R) + '"'
-    + ' fill="none" stroke="var(--border-color)" stroke-dasharray="3 3"/>';
-  h += '<line x1="' + f(C[0] - R - 10) + '" y1="' + f(C[1]) + '" x2="' + f(C[0] + R + 10)
-    + '" y2="' + f(C[1]) + '" stroke="var(--text-muted)" stroke-width="0.8"/>'
-    + '<line x1="' + f(C[0]) + '" y1="' + f(C[1] - R - 10) + '" x2="' + f(C[0])
-    + '" y2="' + f(C[1] + R + 10) + '" stroke="var(--text-muted)" stroke-width="0.8"/>';
-  [['0', C[0] + R + 13, C[1] + 3, 'start'], ['90', C[0], C[1] - R - 13, 'middle'],
-   ['180', C[0] - R - 13, C[1] + 3, 'end'], ['-90', C[0], C[1] + R + 17, 'middle']]
-    .forEach(function(t){
-      h += '<text x="' + f(t[1]) + '" y="' + f(t[2]) + '" text-anchor="' + t[3]
-        + '" font-size="9" fill="var(--text-muted)">' + t[0] + '°</text>';
+    + ' fill="none" stroke="var(--border-color)" stroke-dasharray="3 4"/>'
+    + '<line x1="' + f(C[0] - R - 8) + '" y1="' + f(C[1]) + '" x2="' + f(C[0] + R + 8)
+    + '" y2="' + f(C[1]) + '" stroke="var(--border-color)" stroke-width="0.8"/>'
+    + '<line x1="' + f(C[0]) + '" y1="' + f(C[1] - R - 8) + '" x2="' + f(C[0])
+    + '" y2="' + f(C[1] + R + 8) + '" stroke="var(--border-color)" stroke-width="0.8"/>';
+  [['0', C[0] + R + 11, C[1] + 3, 'start'], ['90', C[0], C[1] - R - 11, 'middle'],
+   ['180', C[0] - R - 11, C[1] + 3, 'end'], ['-90', C[0], C[1] + R + 15, 'middle']]
+    .forEach(function(e){
+      h += '<text x="' + f(e[1]) + '" y="' + f(e[2]) + '" text-anchor="' + e[3]
+        + '" font-size="9" fill="var(--text-muted)">' + e[0] + '°</text>';
     });
 
-  // Avara kasnağı — seçimin döndüğü nokta.
+  // ── GERGİ AVARASI — seçimin döndüğü nokta ──────────────────────────────
   h += '<circle cx="' + f(C[0]) + '" cy="' + f(C[1]) + '" r="' + f(sc.r * k) + '"'
-    + ' fill="var(--accent-tint-10)" stroke="var(--accent-primary)" stroke-width="1.5"/>';
+    + ' fill="var(--accent-tint-10)" stroke="var(--accent-primary)" stroke-width="1.6"/>';
 
-  var d = _fwNum(shownDeg, NaN);
-  if(Number.isFinite(d)){
-    var rad = d * Math.PI / 180;
-    var P = [C[0] + R * Math.cos(rad), C[1] - R * Math.sin(rad)];
-    // KOL: merkezden pivota. Kullanıcının seçtiği yön bu.
-    h += '<line x1="' + f(C[0]) + '" y1="' + f(C[1]) + '" x2="' + f(P[0]) + '" y2="' + f(P[1])
-      + '" stroke="var(--accent-warning)" stroke-width="2.5" stroke-linecap="round"/>';
-    // PİVOT — artı işareti, panelin ve raporun kullandığı simgeyle aynı.
-    h += '<g stroke="var(--accent-danger)" stroke-width="1.6">'
-      + '<line x1="' + f(P[0] - 6) + '" y1="' + f(P[1]) + '" x2="' + f(P[0] + 6) + '" y2="' + f(P[1]) + '"/>'
-      + '<line x1="' + f(P[0]) + '" y1="' + f(P[1] - 6) + '" x2="' + f(P[0]) + '" y2="' + f(P[1] + 6) + '"/></g>';
-    // Açı yayı 0°'den seçime — işaretin yönünü gözle gösteriyor.
-    var ry = Math.min(R * 0.42, 46);
-    var buyuk = (Math.abs(d) > 180) ? 1 : 0;
+  // ── KOL: YEŞİL OK ──────────────────────────────────────────────────────
+  // Kullanıcı isteği (2026-09-02): *"Kol açısını seçtiğimizde de ekranda yeşil
+  // bir ok olarak görünsün."* Ok ucu MERKEZDEN PİVOTA bakıyor, yani seçilen
+  // yönü gösteriyor — kolun kendi çizgisi değil, SEÇİM bu.
+  var deg = _fwNum(shownDeg, NaN);
+  if(Number.isFinite(deg)){
+    var rad = deg * Math.PI / 180;
+    var ux = Math.cos(rad), uy = -Math.sin(rad);           // SVG'de y aşağı
+    var P = [C[0] + R * ux, C[1] + R * uy];
+    var uc = 11, gen = 4.6;                                 // ok ucu
+    var G = [P[0] - uc * ux, P[1] - uc * uy];               // gövdenin bittiği yer
+    h += '<line x1="' + f(C[0]) + '" y1="' + f(C[1]) + '" x2="' + f(G[0]) + '" y2="' + f(G[1])
+      + '" stroke="var(--accent-success)" stroke-width="3" stroke-linecap="round"/>'
+      + '<path d="M' + f(P[0]) + ' ' + f(P[1])
+      + ' L' + f(G[0] - gen * uy) + ' ' + f(G[1] + gen * ux)
+      + ' L' + f(G[0] + gen * uy) + ' ' + f(G[1] - gen * ux) + ' Z"'
+      + ' fill="var(--accent-success)"/>';
+    // Açı yayı ve sayısı — seçimin işaretini gözle gösteriyor.
+    var ry = Math.min(R * 0.4, 44);
     h += '<path d="M' + f(C[0] + ry) + ' ' + f(C[1]) + ' A' + f(ry) + ' ' + f(ry) + ' 0 '
-      + buyuk + ' ' + (d >= 0 ? 0 : 1) + ' ' + f(C[0] + ry * Math.cos(rad)) + ' '
-      + f(C[1] - ry * Math.sin(rad)) + '" fill="none" stroke="var(--accent-warning)"'
-      + ' stroke-width="1.2" stroke-dasharray="2 2"/>';
-    h += '<text x="' + f(C[0] + ry * 0.62 * Math.cos(rad / 2))
-      + '" y="' + f(C[1] - ry * 0.62 * Math.sin(rad / 2) - 3) + '" text-anchor="middle"'
-      + ' font-size="11" font-weight="700" fill="var(--accent-warning)">'
-      + _fwFmt(d, 1) + '°</text>';
+      + (Math.abs(deg) > 180 ? 1 : 0) + ' ' + (deg >= 0 ? 0 : 1) + ' '
+      + f(C[0] + ry * Math.cos(rad)) + ' ' + f(C[1] - ry * Math.sin(rad)) + '"'
+      + ' fill="none" stroke="var(--accent-success)" stroke-width="1.2" stroke-dasharray="2 2"/>'
+      + '<text x="' + f(C[0] + ry * 0.66 * Math.cos(rad / 2))
+      + '" y="' + f(C[1] - ry * 0.66 * Math.sin(rad / 2) - 4) + '" text-anchor="middle"'
+      + ' font-size="12" font-weight="700" fill="var(--accent-success)">'
+      + _fwFmt(deg, 1) + '°</text>';
   }
   return h + '</svg>';
 }
 
-// Pencere gövdesi. Okuma satırı MONTAJ KONUMUNU da basıyor: kullanıcı açıyı
-// seçerken pivotun nereye düştüğünü aynı anda görüyor.
 function veFeadWizAngHTML(){
   var sc = veFeadWizAngScene();
   if(!sc)
@@ -1605,7 +1594,16 @@ function veFeadWizAngHTML(){
      && typeof veFeadTensionerPivot === 'function')
     piv = veFeadTensionerPivot({ cenX: sc.cx, cenY: sc.cy, armLen: sc.armLen,
                                  armMeanDeg: veFeadArmFromShown(d) });
-  return '<div class="ve-fw-ang-wrap" id="ve-fw-ang-plot">' + veFeadWizAngSVG(sc, d) + '</div>'
+  var z = VE_FW_ANG ? VE_FW_ANG.zoom : 1;
+  return '<div class="ve-fw-ang-wrap" id="ve-fw-ang-plot">' + veFeadWizAngSVG(sc, d, z)
+      + '<div class="ve-fw-ang-zoom">'
+        + '<button type="button" class="ve-fw-mini" title="Uzaklaş"'
+          + ' onclick="event.stopPropagation(); veFeadWizAngZoom(-1)">−</button>'
+        + '<button type="button" class="ve-fw-mini" title="Sığdır"'
+          + ' onclick="event.stopPropagation(); veFeadWizAngZoom(0)">⤢</button>'
+        + '<button type="button" class="ve-fw-mini" title="Yakınlaş"'
+          + ' onclick="event.stopPropagation(); veFeadWizAngZoom(1)">+</button>'
+      + '</div></div>'
     + '<div class="ve-fw-reads">'
       + _fwRead('Kol yönü (merkezden pivota)', Number.isFinite(d) ? _fwFmt(d, 2) + '°' : '—')
       + _fwRead('Gövdenin montaj konumu',
@@ -1620,10 +1618,7 @@ function veFeadWizAngHTML(){
       + '<button type="button" class="ve-fw-btn ve-fw-btn-primary" onclick="veFeadWizAngOk()">Uygula</button>'
       + '<button type="button" class="ve-fw-btn" onclick="veFeadWizAngClose()">Vazgeç</button>'
     + '</div>'
-    + _fwHint('Fareyi düzlemde gezdirin — kol onu izler. <b>Sol tık</b> açıyı kutuya '
-      + 'yazar; kutuyu elle de düzenleyebilirsiniz. <b>0° sağda, saat yönünün tersi '
-      + 'artı</b> — yön gülüyle aynı dil. Kol açısı <b>kayış yolunu değiştirmez</b>; '
-      + 'seçtiğiniz şey gövdenin motor bloğuna nereden cıvatalanacağı.');
+    ;
 }
 
 function veFeadWizAngOpen(){
@@ -1631,10 +1626,33 @@ function veFeadWizAngOpen(){
   var t = _fwState.ten || {};
   var d = (typeof veFeadArmShownDeg === 'function')
     ? veFeadArmShownDeg(_fwNum(t.armMeanDeg, NaN)) : NaN;
-  VE_FW_ANG = { shown: Number.isFinite(d) ? d : 0 };
+  VE_FW_ANG = { shown: Number.isFinite(d) ? d : 0, zoom: 1 };
   veFeadWizAngRender();
 }
 function veFeadWizAngClose(){ VE_FW_ANG = null; veFeadWizAngRender(); }
+
+// ── YAKINLAŞTIRMA ────────────────────────────────────────────────────────
+// Kullanıcı isteği (2026-09-02). Ölçek sahneye oturan otomatik değeri ÇARPAR
+// (1 = sığdır), bu yüzden yakınlaştırma sahnenin ORTASINA doğru oluyor ve
+// fare→açı çevirisi kendiliğinden doğru kalıyor: çeviri ölçeği SVG'nin kendi
+// `data-*` künyesinden okuyor, ayrı bir hesap tutmuyor.
+var VE_FW_ANG_ZOOM = [0.6, 0.8, 1, 1.35, 1.8, 2.4, 3.2];
+function veFeadWizAngZoom(yon){
+  if(!VE_FW_ANG) return 1;
+  if(!yon){ VE_FW_ANG.zoom = 1; veFeadWizAngPatch(); return 1; }
+  var z = _fwNum(VE_FW_ANG.zoom, 1), i = 0;
+  for(var j = 0; j < VE_FW_ANG_ZOOM.length; j++)
+    if(Math.abs(VE_FW_ANG_ZOOM[j] - z) < Math.abs(VE_FW_ANG_ZOOM[i] - z)) i = j;
+  i = Math.max(0, Math.min(VE_FW_ANG_ZOOM.length - 1, i + (yon > 0 ? 1 : -1)));
+  VE_FW_ANG.zoom = VE_FW_ANG_ZOOM[i];
+  veFeadWizAngPatch();
+  return VE_FW_ANG.zoom;
+}
+function veFeadWizAngWheel(ev){
+  if(!VE_FW_ANG) return;
+  if(ev && ev.preventDefault) ev.preventDefault();
+  veFeadWizAngZoom(ev.deltaY < 0 ? 1 : -1);
+}
 
 // Fare hareketi: SVG'nin kendi ölçek künyesinden mm'ye dönüp açıyı okuyor.
 // Ölçek DOM'a yazılı (data-*), çünkü çizim saf ve kabın ölçüsünü bilmiyor.
@@ -1693,7 +1711,14 @@ function veFeadWizAngPatch(){
   var kap = document.getElementById('ve-fw-ang-body');
   if(!kap) return;
   var plot = document.getElementById('ve-fw-ang-plot');
-  if(plot) plot.innerHTML = veFeadWizAngSVG(veFeadWizAngScene(), VE_FW_ANG && VE_FW_ANG.shown);
+  if(plot){
+    // YALNIZ SVG değişir; yakınlaştırma düğmeleri yerinde kalır (yeniden
+    // kurulsalardı basılı tutulan düğme her karede DOM'dan silinirdi).
+    var eski = plot.querySelector('svg');
+    var yeni = veFeadWizAngSVG(veFeadWizAngScene(), VE_FW_ANG && VE_FW_ANG.shown,
+                               VE_FW_ANG && VE_FW_ANG.zoom);
+    if(eski) eski.outerHTML = yeni; else plot.insertAdjacentHTML('afterbegin', yeni);
+  }
   var oku = kap.querySelector('.ve-fw-reads');
   if(oku){
     var sc = veFeadWizAngScene(), d = VE_FW_ANG ? VE_FW_ANG.shown : NaN, piv = null;
@@ -1719,21 +1744,20 @@ function veFeadWizAngRender(){
   if(plot){
     plot.onmousemove = veFeadWizAngHover;
     plot.onclick = veFeadWizAngPick;
+    plot.onwheel = veFeadWizAngWheel;
   }
 }
 
 // ── 5 · KAYIŞ ──────────────────────────────────────────────────────────────
 function _fwStepKayis(b){
   var st = _fwState, bl = st.belt || {};
-  var h = _fwCard('Profil ve Marka', 'h_b / h_r buradan gelir', 'var(--accent-warning)',
+  var h = _fwCard('Profil ve Marka', 'var(--accent-warning)',
       _fwGrid([_fwField('Profil', _fwSelHTML('belt.profile',
                  [['PK','PK'],['PJ','PJ'],['PH','PH'],['PL','PL'],['PM','PM']], bl.profile || 'PK')),
                _fwField('Marka', _fwSelHTML('belt.brand',
                  [['GATES','Gates'],['OPTIBELT','Optibelt'],['CONTITECH','ContiTech']], bl.brand || 'GATES')),
                _fwField('Kanal (kaburga) sayısı', _fwInp('belt.ribs', { ph: '8', step: '1' }))], 3)
-    + _fwHint('Profil <b>kapatılamaz bir girdidir</b>: pitch yarıçapı <code>OD/2 + h_b</code>, '
-      + 'yani teğet geometrisi profil sabitine dayanıyor (PK\'da h_b = 1,2 mm → merkez '
-      + 'mesafelerinde 2,4 mm fark).'));
+    );
 
   // ── ÜÇ KART KALDIRILDI (kullanıcı isteği, 2026-08-31) ────────────────────
   //
@@ -1756,26 +1780,16 @@ function _fwStepKayis(b){
   // taşımaya devam ediyor (örnekten doldurulan tip/kod, tolerans, aşınma,
   // kütle). Sorulmayan alan ile TAŞINMAYAN alan ayrı şeyler — ikincisi
   // kullanıcının örnekten gelen verisini sessizce yutardı.
-  h += _fwCard('Kayış Boyu', 'tek çıktı', 'var(--accent-warning)',
+  h += _fwCard('Kayış Boyu', 'var(--accent-warning)',
       '<div class="ve-fw-reads">'
     + _fwRead('Boy kipi', 'SERBEST (kilitli)')
     + ((b && b.ok && Number.isFinite(b.beltLengthMm))
         ? _fwRead('Gereken boy (çıktı)', _fwFmt(b.beltLengthMm, 1) + ' mm') : '')
     + _fwRead('Kayış tipine bağlı çıktılar', 'KAPALI')
+    + _fwRead('Üretilmeyenler',
+        (typeof VE_FEAD_BELT_DATA_OFF !== 'undefined' ? VE_FEAD_BELT_DATA_OFF : []).join(' · '))
     + '</div>'
-    + _fwHint('Gergi <b>avara merkezinden</b> çözülüyor, dolayısıyla kayış boyu yapısal '
-      + 'olarak bir <b>sonuçtur</b> ve girilemez: kasnak merkezleri ve yay künyesi '
-      + 'verildiğinde kolun oturduğu yer bellidir, kapanan kayış yolunun boyu da onunla.'
-      + '<br><br>'
-      + '<b>Program bu aşamada kayışın katalog sabitlerini KULLANMAZ.</b> '
-      + 'Üretilmeyenler: '
-      + _fwEsc((typeof VE_FEAD_BELT_DATA_OFF !== 'undefined' ? VE_FEAD_BELT_DATA_OFF : []).join(' · '))
-      + '. Dördü de seçilmiş bir kayışın künyesine dayanıyor; kayış henüz '
-      + 'seçilmemişken üretilen sayı bir <b>varsayım</b> olurdu.<br><br>'
-      + '<b>Katalogdan boy seçimi kurulumdan sonra</b> yapılır: modeli kurunca '
-      + '<b>Kayış Özellikleri</b> paneli, çıkan boya en yakın stok ve ızgara adaylarını '
-      + 'her birinin kol açısı ve gerginliğiyle birlikte listeler — tolerans, aşınma ve '
-      + 'tip/kod alanları da orada.'));
+    );
   return h;
 }
 
@@ -1952,8 +1966,10 @@ function veFeadWizAccLib(key, libKey){
 // alanları doldurur, kullanıcı sonra hepsini elle değiştirebilir. Değiştirince
 // SUSULMUYOR — `veFeadEngineDrift` sapan alanları sayar ve satır bunu yazar.
 function _fwEngineLibRow(s){
+  // KÜTÜPHANE YOKSA SESSİZ KALINMAZ — bu bir açıklama değil, bir HATA DURUMU.
   if(typeof veFeadEngineList !== 'function')
-    return _fwHint('Motor kataloğu yüklenmedi (js/fead-engines.js).');
+    return '<div class="ve-fw-issue ve-fw-issue-err">✗ Motor kataloğu yüklenmedi '
+      + '(js/fead-engines.js).</div>';
   var liste = veFeadEngineList(), sec = (s && s.engineLib) || '';
   var sel = '<select class="ve-fw-inp" onchange="veFeadWizEngineLib(this.value)">'
     + '<option value="">— elle gir —</option>'
@@ -1963,15 +1979,15 @@ function _fwEngineLibRow(s){
       }).join('') + '</select>';
   var h = _fwField('BMC motor kataloğu', sel);
   var d = (typeof veFeadEngineDrift === 'function') ? veFeadEngineDrift(s) : null;
+  // KATALOGDAN SAPMA BİR OKUMADIR, açıklama değil: alanlar seçilen kayıtla
+  // birebir mi, değilse HANGİ alan ayrışmış — ikisi de modelin durumu.
   if(d && d.drift.length)
     h += '<div class="ve-fw-issue ve-fw-issue-warn">! <b>Katalogdan sapıldı:</b> '
-       + _fwEsc(d.drift.join('; ')) + '. Bu bir hata değil — kayıt varyanta göre '
-       + 'değişebilir; ama bir yazım hatası da tam burada görünür.</div>';
+       + _fwEsc(d.drift.join('; ')) + '</div>';
   else if(d)
-    h += _fwHint('Alanlar <b>' + _fwEsc(d.ad) + '</b> kaydıyla birebir.');
-  return h + _fwHint('Yirmi dört motor, BMC\'nin kendi FEAD hesap defterinin '
-    + '<i>Motor Bilgileri</i> sayfasından. Seçim <b>silindir sayısını, dört devir sınırını '
-    + 've birinci kademe çaplarını</b> yazar; kasnaklara ve kayışa <b>dokunmaz</b>.');
+    h += '<div class="ve-fw-reads">'
+       + _fwRead('Katalog kaydı', _fwEsc(d.ad) + ' — alanlar birebir') + '</div>';
+  return h;
 }
 
 // ── 6 · MOTOR VE ÇALIŞMA ÇEVRİMİ ───────────────────────────────────────────
@@ -1994,7 +2010,7 @@ function _fwStepCevrim(b){
   // yüzden aşağıda adıyla uyarılıyor.
   var _cOD = _fwNum(s.crankOD, NaN), _fOD = _fwNum(s.fanOD, NaN);
   var _yarim = (Number.isFinite(_cOD) && _cOD > 0) !== (Number.isFinite(_fOD) && _fOD > 0);
-  var h = _fwCard('Birinci Kademe', 'krank → sürücü kasnak', 'var(--accent-warning)',
+  var h = _fwCard('Birinci Kademe', 'var(--accent-warning)',
       _fwGrid([_fwField('Krank kasnağı Ø [mm]', _fwInp('solver.crankOD', { ph: '197.32' })),
                _fwField('Fan / sürücü kasnağı Ø [mm]', _fwInp('solver.fanOD', { ph: '179.62' }))])
     + '<div class="ve-fw-reads">'
@@ -2008,14 +2024,9 @@ function _fwStepCevrim(b){
           + 'çapın hiç kullanılmadığı anlamına gelir. İkincisini de girin ya da ikisini '
           + 'de boşaltın.</div>'
         : '')
-    + _fwHint('Oran = sürücü kasnak devri / motor devri ve <b>yalnız bu iki çaptan '
-      + 'türer</b> — elle girilemez. <b>Aksesuar devirlerinin TAMAMINI ölçekler</b>, '
-      + 'yanlış girilirse bütün güç ve gerilme sonuçları aynı oranda kayar. FEAD '
-      + 'kayışının sürücüsü krank milinde olmak zorunda değil: tipik ağır ticari düzende '
-      + 'krank ayrı bir kademeyle fan kasnağını döndürür. <b>İkisi de boşsa oran 1:1</b> '
-      + '— yani kayışı doğrudan krank döndürüyor.'));
+    );
 
-  h += _fwCard('Motor Künyesi', 'sayfadaki Engine Info', 'var(--text-secondary)',
+  h += _fwCard('Motor Künyesi', 'var(--text-secondary)',
       _fwEngineLibRow(s)
     + _fwGrid([_fwField('Silindir sayısı [—]', _fwInp('solver.cylinders', { ph: '6', step: '1' })),
                _fwField('Servis faktörü [—]', _fwInp('solver.serviceFact', { ph: '1.3', step: '0.01' })),
@@ -2027,12 +2038,7 @@ function _fwStepCevrim(b){
     + _fwGrid([_fwField('İvmelenme [RPM/s]', _fwInp('solver.accelRpmS', { ph: '1000', step: '10' })),
                _fwField('Yavaşlama [RPM/s]', _fwInp('solver.decelRpmS', { ph: '1000', step: '10' })),
                _fwField('Boy ofseti [mm]', _fwInp('solver.lengthOffsetMm', { ph: '0', step: '0.01' }))], 3)
-    + _fwHint('<b>Silindir sayısı</b> ateşleme frekansını verir ve açıklık rezonans '
-      + 'kontrolüne girer. <b>Servis faktörü</b> kayma emniyetinin istenen alt sınırıdır. '
-      + '<b>Governed</b> ve <b>Overspeed</b> devirleri 7. adımdaki uygunluk kapılarını '
-      + 'besler — boş bırakılırsa iki kapı <b>değerlendirilemedi</b> der ve uygun sayılmaz. '
-      + '<b>Krank MİLİ ataleti</b> (kasnağınki değil) burulma modeline girer — geçilmezse '
-      + 'birinci mod ölçülü biçimde kayar. <b>İvme</b> yalnız tepe yük taramasında kullanılır.'));
+    );
 
   // ── DUTY TABLOSU ─────────────────────────────────────────────────────────
   // SÜRÜCÜ SÜTUNU YOK: gücü çekirdek diğerlerinin toplamı olarak hesaplıyor,
@@ -2085,7 +2091,7 @@ function _fwStepCevrim(b){
            + (r.key === suan ? ' selected' : '') + '>'
            + _fwEsc(veFeadDutyLabel(r)) + '</option>'; }).join('');
     if(!suan) ops = '<option value="" selected>— özel (elle düzenlendi) —</option>' + ops;
-    cevrimKart = _fwCard('Çalışma Çevrimi Kaydı', lib.length + ' ölçülmüş çevrim',
+    cevrimKart = _fwCard('Çalışma Çevrimi Kaydı',
         'var(--accent-success)',
         _fwField('Çevrim', '<select class="ve-fw-inp" onchange="veFeadWizDutyLib(this.value)">'
           + ops + '</select>')
@@ -2095,27 +2101,15 @@ function _fwStepCevrim(b){
         + _fwRead('%zaman toplamı', _fwFmt((s.duty || []).reduce(function(a, r){
             return a + _fwNum(r.dcPct, 0); }, 0), 1))
       + '</div>'
-      + _fwHint(secili
-          ? _fwEsc(secili.not) + ' Aşağıdaki tablo bu kayıttan doldu; satırları '
-            + 'yine de düzenleyebilirsin — düzenlersen seçici <b>özel</b> der.'
-          : 'Tablo kütüphanedeki hiçbir kayda uymuyor, yani elle düzenlenmiş. '
-            + 'Listeden bir çevrim seçmek tabloyu o kayıtla değiştirir.'));
+      );
   }
 
   h += cevrimKart;
-  h += _fwCard('Çalışma Çevrimi', (s.duty || []).length + ' devir noktası', 'var(--accent-primary)',
+  h += _fwCard('Çalışma Çevrimi', 'var(--accent-primary)',
       t
     + '<div class="ve-fw-rowbtns"><button type="button" class="ve-fw-btn"'
       + ' onclick="veFeadWizDutyAdd()">+ Devir noktası ekle</button></div>'
-    + _fwHint('<b>Sürücü kasnak sütunu YOKTUR</b> — gücünü çekirdek diğerlerinin toplamı '
-      + 'olarak hesaplar; elle girilirse çevrim kapanmaz ve çözüm reddedilir. '
-      + '<b>%zaman</b> ömür hesabının ağırlığıdır (toplamı 100 olmalı); boş bırakılırsa '
-      + 'mutlak ömür hesaplanamaz ama yorulma DAĞILIMI yine geçerlidir. '
-      + '<b>kW sütunları salt okunurdur:</b> değer yukarıdaki aksesuar modelinden ya da '
-      + 'kayıtlı ölçümden gelir, elle girilmez. <b>—</b> o aksesuarın o devirde gücü '
-      + 'olmadığını söyler ve <b>0 kW ile koşar</b>. '
-      + '<b>°C</b> satır başına girilir ve çekirdeğin istediği tek sıcaklığa '
-      + 'hasar-eşdeğer olarak indirgenir — aritmetik ortalama değil.'));
+    );
   return h;
 }
 
@@ -2200,13 +2194,8 @@ function _fwAccCard(st, b, yuk){
       + '</b>. Model yine çözülür ama açıklık gerilmeleri tasarım gerginliğine '
       + 'düzleşir — bir model seçin.</div>';
 
-  return _fwCard('Aksesuar Modelleri', 'değerler otomatik gelir', 'var(--accent-success)', h
-    + _fwHint('Model seçilince güç, o aksesuarın <b>devir→kW eğrisinden</b> okunur; '
-      + 'aksesuar devri kasnak <b>pitch çaplarından</b> hesaplanır, katalogdaki oran '
-      + 'kullanılmaz. <b>Liste iki kataloğun birleşimidir:</b> BMC hesap defteri '
-      + '(parça numarasıyla — devir sınırlarını da getirir) ve Araç Performans '
-      + 'modülünün kataloğu. <b>Kayıtlı ölçüm</b> yazan satırlarda güç örneğin kendi '
-      + 'tablosundan geliyor; model seçmek o kaydı temizler ve katalog devreye girer.'));
+  return _fwCard('Aksesuar Modelleri', 'var(--accent-success)', h
+    );
 }
 
 // ── AKSESUAR DEVİR SINIRLARI — KAPI GİRDİSİ ────────────────────────────────
@@ -2225,8 +2214,9 @@ function _fwAccCard(st, b, yuk){
 // 155A · 57RS309348" hücresi uzuyor ve farkı öbür sütunlardan çalıyor.
 function _fwAccLimitCard(st, yuk){
   if(typeof veFeadAccLimits !== 'function')
-    return _fwCard('Aksesuar Devir Sınırları', '', 'var(--text-muted)',
-      _fwHint('Aksesuar kataloğu yüklenmedi (js/fead-accessories.js).'));
+    return _fwCard('Aksesuar Devir Sınırları', 'var(--text-muted)',
+      '<div class="ve-fw-issue ve-fw-issue-err">✗ Aksesuar kataloğu yüklenmedi '
+      + '(js/fead-accessories.js).</div>');
 
   var tasiyan = yuk.filter(function(p){
     var def = (typeof componentDefs !== 'undefined' && componentDefs[p.type]) || {};
@@ -2272,17 +2262,10 @@ function _fwAccLimitCard(st, yuk){
        + 'sınırı yok; 7. adımdaki iki kapı onlar için <b>değerlendirilemedi</b> der ve '
        + '<b>uygun sayılmaz</b>. Künye seçin ya da sınırları elle girin.</div>';
 
-  return _fwCard('Aksesuar Devir Sınırları', 'uygunluk kapılarının girdisi',
+  return _fwCard('Aksesuar Devir Sınırları',
     'var(--accent-primary)', h
-    + _fwHint('<b>Künye yukarıdaki "Aksesuar Modelleri" kartında seçilir</b> — buradaki '
-      + 'sütun onun okumasıdır. BMC defterindeki bir künye seçilince üç sınır da '
-      + 'kendiliğinden dolar; başka bir katalogdan model seçildiyse sınırlar boş kalır '
-      + 've elle girilir.')
-    + _fwHint('<b>Optimum</b> ile <b>maksimum sürekli</b> arası, aksesuarın çalışmasının '
-      + 'istendiği banttır: motor <i>governed</i> devrindeyken aksesuar devri bu banda '
-      + 'düşmüyorsa 7. adım <b>kasnak çapı küçültülmeli / büyütülmeli</b> der. '
-      + '<b>Maksimum anlık</b> ise motor <i>overspeed</i>\'e çıktığında aşılmaması gereken '
-      + 'sınırdır. Katalog bir <b>öneri</b>dir — elle yazdığınız değer onun yerine geçer.'));
+    
+    );
 }
 
 // ── 7 · ÖZET VE KURULUM ────────────────────────────────────────────────────
@@ -2311,10 +2294,8 @@ function _fwStepOzet(b){
        + '<em>' + _fwEsc(k[0]) + '</em><b>' + _fwEsc(k[1]) + '</b></div>';
   });
   kh += '</div>';
-  h += _fwCard('Çözüm Önizlemesi', 'kurulmadan ÖNCE', 'var(--accent-success)', kh
-    + _fwHint('Bu sayılar kurulacak modelin ta kendisinden geliyor: sihirbaz aynı düğüm '
-      + 'listesini hem önizlemede hem kurulumda kullanıyor, yani burada gördüğünüz çözüm '
-      + 'kanvasta çıkacak çözümdür.'));
+  h += _fwCard('Çözüm Önizlemesi', 'var(--accent-success)', kh
+    );
 
   // Kayış yolu şeması — çizici tek kaynak (veFeadLayoutSVG).
   if(b && b.ok && typeof veFeadLayoutSVG === 'function'){
@@ -2326,11 +2307,9 @@ function _fwStepOzet(b){
     // küçültülür ve kullanıcı birimindeki YAZILAR da onunla küçülür.
     try { svg = veFeadLayoutSVG(b, 700, 440, { posMode: 'mean', compass: true, pivot: true, arrows: true }); }
     catch(e){ svg = null; }
-    if(svg) h += _fwCard('Kayış Yolu', 'ölçekli şema', 'var(--accent-warning)',
+    if(svg) h += _fwCard('Kayış Yolu', 'var(--accent-warning)',
         '<div class="ve-fw-fig">' + svg + '</div>'
-      + _fwHint('Şema kasnakların <b>kayış düzlemindeki</b> koordinatlarından çiziliyor — '
-        + 'kanvastaki kutu yerlerinden değil. Kesikli çember kayışın o kasnağa '
-        + '<b>sırttan</b> değdiğini, yol üstündeki dişler kayışın kaburgalı yüzünü gösterir.'));
+      );
   }
 
   h += _fwChecksCard(b);
@@ -2342,11 +2321,11 @@ function _fwStepOzet(b){
       ih += '<div class="ve-fw-issue ve-fw-issue-' + it.tur + '">'
          + (it.tur === 'err' ? '✗' : '!') + ' ' + _fwEsc(it.m) + '</div>';
     });
-    h += _fwCard('Çözümün taşıdığı uyarılar', list.length + ' satır',
+    h += _fwCard('Çözümün taşıdığı uyarılar',
       (b && b.ok) ? 'var(--accent-warning)' : 'var(--accent-danger)', ih);
   } else {
-    h += _fwCard('Çözümün taşıdığı uyarılar', 'yok', 'var(--accent-success)',
-      _fwHint('✓ Eksik girdi ve uyarı yok.'));
+    h += _fwCard('Çözümün taşıdığı uyarılar', 'var(--accent-success)',
+      '<div class="ve-fw-issues ve-fw-issues-ok">✓ Uyarı yok.</div>');
   }
 
   // ── KURULUM KAPISI ───────────────────────────────────────────────────────
@@ -2364,12 +2343,10 @@ function _fwStepOzet(b){
       + ' onchange="_fwSetRender(\'temizle\', this.checked)">'
       + '<span>Kanvastaki <b>' + kur.varOlan + ' kasnağı ve kayış bağlantılarını sil</b>, '
       + 'modeli yeniden kur</span></label>';
-    kh2 += _fwHint('İç topolojide zaten bir kayış düzeni var. Üstüne kurmak, bir kasnaktan '
-      + 'iki tel çıkması demek olurdu ve çözüm reddedilirdi. Silme işlemi <b>geri '
-      + 'alınabilir</b> (Ctrl+Z).');
+    kh2 += '';
   }
   if(!kur.ok) kh2 += '<div class="ve-fw-issue ve-fw-issue-err">✗ ' + _fwEsc(kur.sebep) + '</div>';
-  h += _fwCard('Modeli Kur', '', 'var(--accent-primary)', kh2);
+  h += _fwCard('Modeli Kur', 'var(--accent-primary)', kh2);
   return h;
 }
 
@@ -2384,8 +2361,9 @@ function _fwStepOzet(b){
 // hesap iki yüzeyin sessizce ayrışması olurdu (modülün tekrar eden kuralı).
 function _fwChecksCard(b){
   if(typeof veFeadChecks !== 'function')
-    return _fwCard('Uygunluk Kapıları', '', 'var(--text-muted)',
-      _fwHint('Kapılar yüklenmedi (js/fead-checks.js).'));
+    return _fwCard('Uygunluk Kapıları', 'var(--text-muted)',
+      '<div class="ve-fw-issue ve-fw-issue-err">✗ Uygunluk kapıları yüklenmedi '
+      + '(js/fead-checks.js).</div>');
   var st = _fwState, s = (st && st.solver) || {};
   var R = veFeadChecks(b, veFeadCheckOpt(s, s.duty || []));
 
@@ -2455,16 +2433,13 @@ function _fwChecksCard(b){
     h += tablo('<th>Aksesuar</th><th>nokta</th><th>devir</th><th>sınır</th><th>pay</th>', g);
   }
 
-  h += _fwHint('Üçü de BMC\'nin kendi FEAD hesap defterinden. <b>Merkez mesafesi kuralı iki '
-    + 'kasnaklı V-kayış tahrikleri için yazılmıştır</b>; serpantinde açıklığı bütün yerleşim '
-    + 'belirlediği için ihlali <b>uyarı</b> sayılır, hüküm değil — pay yüzdesi sınıra ne kadar '
-    + 'kaldığını söyler. Diğer ikisi <b>hüküm</b>dür ve kurmadan önce düzeltilmelidir.');
+  h += '';
 
   var d = [c.durum, w.durum, sp.durum];
   var renk = d.indexOf('no') >= 0 ? 'var(--accent-danger)'
            : d.indexOf('warn') >= 0 ? 'var(--accent-warning)'
            : d.indexOf('wait') >= 0 ? 'var(--text-muted)' : 'var(--accent-success)';
-  return _fwCard('Uygunluk Kapıları', 'BMC hesap defteri', renk,
+  return _fwCard('Uygunluk Kapıları', renk,
     '<div data-ve-fw-checks="1" data-ve-fw-checks-durum="' + _fwEsc(d.join('/')) + '">'
       + h + '</div>');
 }
@@ -2688,6 +2663,7 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizAngOk: veFeadWizAngOk, veFeadWizAngType: veFeadWizAngType,
     veFeadWizAngScene: veFeadWizAngScene, veFeadWizAngSVG: veFeadWizAngSVG,
     veFeadWizAngHTML: veFeadWizAngHTML, veFeadWizAngFromPoint: veFeadWizAngFromPoint,
+    veFeadWizAngZoom: veFeadWizAngZoom, VE_FW_ANG_ZOOM: VE_FW_ANG_ZOOM,
     veFeadWizAngState: function(){ return VE_FW_ANG; },
     veFeadWizDutyAdd: veFeadWizDutyAdd,
     veFeadWizDutyLib: veFeadWizDutyLib, veFeadWizDutyDel: veFeadWizDutyDel,

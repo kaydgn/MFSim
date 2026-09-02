@@ -2356,6 +2356,73 @@ Kapı **27 mutasyonla** ölçüldü, 27'si de kırmızı. Bir mutasyon önce ye�
 geçti (*"Uygula'yı yazmadan kapat"*) ve kapının **totolojik** olduğunu ortaya
 çıkardı: seçilen açı örneğin zaten taşıdığı 344° ile aynıydı.
 
+###### SİHİRBAZDA AÇIKLAMA YÜZEYİ YOK (2026-09-02)
+
+Kullanıcı bildirimi: *"her güncellemeden sonra nedense programa garip
+açıklamalar geliyor… Pencerenin sağ üst köşesine baksana, 'fareyle' yazıyor…
+Bu tarz garip açıklamaları lütfen 'Başlangıç Sihirbazı' kısmından TAMAMEN
+kaldıralım."*
+
+**KUSUR BİR METİN DEĞİL, BİR YÜZEYDİ.** Sihirbazda iki kanal vardı ve her tur
+yeniden dolduruluyorlardı — çünkü orada duruyorlardı:
+
+| Kanal | Nerede görünüyordu |
+|-------|--------------------|
+| `_fwCard(baslik, **GÖZ_KIRPMA**, accent, inner)` | kart başlığının sağ ucu |
+| `_fwHint(html)` | kart gövdesinin altındaki paragraf |
+
+Metinleri boşaltmak yetmezdi: bir sonraki oturum boş kanalı görür ve yeniden
+doldururdu. İkisi de **parametre ve fonksiyon olarak** kaldırıldı — 34 çağrı,
+29 göz kırpma. CSS kuralları (`.ve-fw-hint`, `.ve-fw-card-h em`) da silindi;
+ölü bir kural sınıfı sessizce geri davet ediyor.
+
+**KALAN YÜZEYLER — ve neden kaldıkları:**
+
+| Yüzey | Neden |
+|-------|-------|
+| `title` ipucu | üzerine gelince çıkar, ekranı doldurmaz |
+| `ve-fw-issue` | canlı **doğrulama çıktısı**, açıklama değil |
+| `ve-fw-reads` | sayı okuması |
+| adım alt başlığı | bölüm etiketi ("Tip · çap · koordinat · …") |
+
+**BİLGİ SİLİNMEDİ, TAŞINDI.** Avara merkezi ↔ montaj konumu karışmasının
+ölçülmüş bedeli (**medyan +%1526**) alanın kendi `title` ipucuna; kayış
+tipine bağlı üretilmeyenlerin listesi okuma satırına; motor kataloğundan sapma
+uyarı kutusuna. Kütüphane yüklenmemesi bir açıklama değil **hata durumu** —
+o da uyarı kutusuna alındı.
+
+###### AÇI SEÇİCİSİ: GERÇEK KAYIŞ, YEŞİL OK, YAKINLAŞTIRMA
+
+Kullanıcı isteği: *"Kayış görünsün, tıpkı topoloji üzerindeki kanvas gibi
+olsun. Ama yazılar olmadan tabiki. Kol açısını seçtiğimizde de ekranda yeşil
+bir ok olarak görünsün."* ve *"yakınlaşma/uzaklaşma özelliği de ekleyelim."*
+
+**KAYIŞ YOLU TEK ÜRETİCİDEN.** `veFeadBeltPathD` `js/cp-fead.js`'te modül
+düzeyine çıkarıldı; iki tüketicisi var ve ikisi de AYNI yolu çizmek zorunda:
+yerleşim şeması (kart/rapor) ve açı seçicisi. İkinci bir çizici iki yüzeyde
+iki farklı kayış demekti.
+
+**YOL BİR KEZ ÇÖZÜLÜYOR:** kayış yolu kol açısından bağımsız (belgeli ölçüm:
+4,55e−13 mm), dolayısıyla fare gezerken yalnız ok yeniden çiziliyor.
+
+**BOŞ GEOMETRİ BOŞ YOL DEMEK.** `veFeadBeltPathD` artık kasnaksız geometride
+`''` döndürüyor: `' Z'` geçerli bir yol dizesi gibi görünür, tüketici onu
+çizmeye kalkar ve **görünmeyen ama var olan** bir kayış üretilirdi.
+
+**ÖLÇEK KÜNYESİ ÇİZİM YUVARLAMASINDAN AYRI:** çizim iki ondalığa yuvarlanıyor
+(yeter), ama `data-k/ox/oy` fare→açı çevirisine giriyor ve iki ondalık
+yakınlaştırılmış sahnede gözle görülür kayma demek — 1e−6'ya yuvarlanıyor.
+
+**ÖLÇÜLDÜ (gerçek tarayıcı):** kayış yolu **1012 px** uzunluğunda gerçek bir
+yol; ok `rgb(22,163,74)` ve doldurulmuş ucu var; çizimdeki **tek metin**
+eksen etiketleri ve açı sayısı (kasnak adı yok); yakınlaştırma `0,585 → 0,790`
+ve **⤢** sığdırmaya geri döndürüyor.
+
+Kapı **19 mutasyonla** ölçüldü, 19'u da kırmızı. İkisi önce yeşil geçti:
+biri sözdizimi bozduğu için kapı YANLIŞ sebepten kırmızıydı (geçerli
+biçimiyle yeniden koşuldu), öteki **gerçek bir boşluk** gösterdi — boş
+geometrinin `' Z'` üretmesi hiçbir kapıda yakalanmıyordu.
+
 **Sırada:** kullanıcı kayışı seçtikten sonra katalog sonuçlarını geri almanın
 akışı (bugün Kayış Özellikleri panelinden elle yapılıyor); ve zarf çözümünün
 Sonuçlar sayfasında kanal olarak yayını.

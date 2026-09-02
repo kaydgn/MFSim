@@ -7383,13 +7383,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
   border-bottom:1px solid var(--border-color); background:var(--bg-tertiary);
 }
 .ve-fw-card-h span{ font-size:var(--fs-lg); font-weight:700; color:var(--text-heading); }
-.ve-fw-card-h em{ font-style:normal; font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto; }
 .ve-fw-card-b{ padding:11px 12px; }
-.ve-fw-hint{
-  margin:9px 0 0; font-size:var(--fs-tiny); line-height:1.65; color:var(--text-muted);
-}
-.ve-fw-hint b{ color:var(--text-secondary); }
-.ve-fw-hint code{ font-family:var(--font-mono); font-size:var(--fs-micro); }
 
 /* ── ALANLAR ──────────────────────────────────────────────────────────── */
 .ve-fw-grid{ display:grid; grid-template-columns:repeat(var(--fw-cols,2), minmax(0,1fr)); gap:9px; }
@@ -7691,19 +7685,6 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-ang-cell > input{ flex:1; min-width:0; }
 .ve-fw-ang-btn{ flex:none; padding:0 8px; font-size:var(--fs-tiny); }
 
-/* Otomatik gerginin ZORUNLU olduğunu söyleyen kontur.
-   Satırın kendisi artık diğerleriyle aynı görünüyor (kullanıcı isteği), o
-   yüzden hüküm listenin altında kendi kutusunda duruyor — bilgi kaybolmasın
-   diye renk konturu taşıyor, dolgu değil: dolu bir kutu "uyarı" gibi okunur,
-   oysa bu bir KURAL. */
-.ve-fw-note-req{
-  margin-top:8px; padding:7px 10px; font-size:var(--fs-micro); line-height:1.6;
-  color:var(--text-secondary); background:transparent;
-  border:1px solid var(--accent-primary); border-left-width:3px;
-  border-radius:var(--radius-sm);
-}
-.ve-fw-note-req b{ color:var(--text-primary); }
-
 /* ── KOL AÇISI SEÇİCİ ────────────────────────────────────────────────────
    Sihirbaz modalının İÇİNDE duran ikinci kaplama. `position:absolute` +
    `inset:0`: kabın dışına taşmıyor, dolayısıyla sihirbaz kapanınca o da
@@ -7726,3 +7707,16 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-ang-row{ display:flex; gap:6px; align-items:center; margin-top:8px; }
 .ve-fw-ang-row .ve-fw-lbl{ flex:none; }
 .ve-fw-ang-row input{ flex:1; min-width:0; }
+
+/* Açı seçicisinin yakınlaştırma düğmeleri — çizimin sağ üstünde, üstünde
+   yüzüyor. `pointer-events` yalnız düğmelerde: kapsayıcı saydam kalırsa
+   altındaki fare→açı okuması kesilmez. */
+.ve-fw-ang-wrap{ position:relative; }
+.ve-fw-ang-zoom{
+  position:absolute; top:6px; right:6px; display:flex; gap:3px;
+  pointer-events:none;
+}
+.ve-fw-ang-zoom > button{
+  pointer-events:auto; min-width:24px; padding:2px 6px;
+  background:var(--bg-secondary); opacity:.9;
+}

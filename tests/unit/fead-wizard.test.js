@@ -687,10 +687,11 @@ describe('gergi satırı — Kasnaklar tablosunda, silinemez, tek kaynak', () =>
     // 5'inde hiçbir uyarı çıkmaz). Satır hangi noktayı istediğini SÖYLEMEK
     // zorunda — beş kasnakla aynı şeyi istese bile.
     //
-    // Kullanıcı satırdaki amber çipi kaldırttı (*"garip belirteçlere gerek
-    // yok"*) — ama UYARI kaldırılmadı, YER değiştirdi: alanın kendi ipucu
-    // metnine (`title`) ve tablonun altındaki karta. Kapı ikisini birden
-    // arıyor, yoksa uyarı bir gün "sadeleştirme" diye tamamen silinirdi.
+    // Uyarı iki kez taşındı ve İKİSİ DE kullanıcı isteğiydi: önce satırdaki
+    // amber çipten kart açıklamasına, sonra (2026-09-02, açıklamalar tümden
+    // kalkınca) alanın kendi `title` ipucuna. İpucu üzerine gelince çıkıyor,
+    // yüzeyi doldurmuyor — ve ÖLÇÜLMÜŞ BEDELİ de taşıyor, yoksa bir gün
+    // "sadeleştirme" diye tamamen silinirdi.
     kur('AG00976_GATES_2025');
     expect(wiz.veFeadWizTenCoordKeys()).toEqual(['cenX', 'cenY']);
     const r = tenSatiri(kasnakHTML());
@@ -701,10 +702,10 @@ describe('gergi satırı — Kasnaklar tablosunda, silinemez, tek kaynak', () =>
     // Uyarı, X ve Y alanlarının KENDİ ipucunda.
     const xy = r.match(/<input[^>]*veFeadWizTenSet\('cen[XY]'/g) || [];
     expect(xy.length).toBe(2);
-    xy.forEach((alan) => expect(alan).toMatch(/title="[^"]*MERKEZ/));
-    // ...ve tablonun altındaki kartta, gözle okunur biçimde.
-    expect(kasnakHTML()).toMatch(/AYNI şeydir/);
-    expect(kasnakHTML()).toMatch(/\+%1526/);
+    xy.forEach((alan) => {
+      expect(alan).toMatch(/title="[^"]*MERKEZ/);
+      expect(alan).toMatch(/title="[^"]*\+%1526/);      // bedel de ipucunda
+    });
     // ...ve montaj konumu alanına ASLA yazmıyor: o bir ÇIKTI. Satırın oraya
     // yazması, kullanıcının girdiği sayıyı 90 mm ötedeki bir noktaya koymak
     // olurdu.
@@ -1532,6 +1533,10 @@ describe('kayış adımı — tek çıktı, profil kalır', () => {
     // Ne kapandığı ADIYLA yazılı — bir özet yüzeyin en pahalı sessiz hatası,
     // İÇERMEDİĞİ bir hesabın yapıldığı izlenimini bırakmasıdır.
     expect(h).toMatch(/KAPALI/);
+    // Üretilmeyenlerin listesi bir AÇIKLAMA değil, bir OKUMA satırı — kartın
+    // altındaki paragraflar kalktığı için (kullanıcı isteği, 2026-09-02)
+    // sayısal okumaların yanına taşındı.
+    expect(h).toContain('Üretilmeyenler');
     (VE_FEAD_BELT_DATA_OFF || []).forEach((ad) => expect(h).toContain(ad));
   });
 
@@ -1828,17 +1833,13 @@ describe('gergi satırı — biçim diğerleriyle aynı, hüküm üst kartta', (
     expect((ten.match(/<td/g) || []).length).toBe((ilk.match(/<td/g) || []).length);
   });
 
-  test('ZORUNLULUK "Kasnak Ekle" kartında, konturlu kutuda', () => {
+  test('ZORUNLULUK kutusu da KALKTI — açıklama yüzeyi kalmadı', () => {
+    // Kutu bir önceki turda eklenmişti; kullanıcı (2026-09-02) sihirbazdaki
+    // açıklamaların TAMAMINI kaldırttı ve bu da onlardan biriydi.
     kabuk(); wiz.veFeadWizReset();
-    const h = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
-    const ust = h.slice(0, h.indexOf('Kasnaklar</span>'));
-    expect(ust).toContain('ve-fw-note-req');
-    expect(ust).toMatch(/zorunlu/i);
-    expect(ust).toMatch(/çözmez/);
-    expect(CSS).toMatch(/\.ve-fw-note-req\s*\{/);
-    // Kontur, DOLGU değil: dolu kutu "uyarı" gibi okunur, bu bir KURAL.
-    const k = CSS.slice(CSS.indexOf('.ve-fw-note-req{'));
-    expect(k.slice(0, k.indexOf('}'))).toMatch(/border:1px solid var\(--accent-primary\)/);
+    expect(wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild())).not.toContain('ve-fw-note-req');
+    expect(WIZ_SRC).not.toContain('ve-fw-note-req');
+    expect(CSS).not.toContain('ve-fw-note-req');
   });
 
   test('satır YİNE silinemez ve sürücü olamaz — biçim değişti, kural değil', () => {
@@ -2060,16 +2061,101 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
     expect(wiz.veFeadWizAngHTML()).toMatch(/avara merkezi/i);
   });
 
-  test('SVG kolu, pivotu ve yön gülü eksenlerini çiziyor', () => {
+  test('SVG kayışı, YEŞİL OKU ve eksenleri çiziyor', () => {
     const sc = sahne();
     const svg = wiz.veFeadWizAngSVG(sc, 164);
     expect(svg).toContain('<svg');
     expect(svg).toContain('data-k=');            // ölçek künyesi — fare için
     ['0°', '90°', '180°', '-90°'].forEach((e) => expect(svg).toContain('>' + e + '<'));
     expect(svg).toContain('164.0°');             // seçili açı yazılı
-    expect(svg).toContain('var(--accent-danger)');   // pivot artısı
-    // Öteki kasnaklar bağlam olarak çizili.
+    // KOL YEŞİL OK (kullanıcı isteği, 2026-09-02): gövde + doldurulmuş uç.
+    expect(svg).toMatch(/<line[^>]*stroke="var\(--accent-success\)"/);
+    expect(svg).toMatch(/<path d="M[^"]*Z"\s+fill="var\(--accent-success\)"/);
+    // Öteki kasnaklar bağlam olarak çizili, ADSIZ.
     expect((svg.match(/<circle/g) || []).length).toBeGreaterThan(3);
+    expect(svg).not.toMatch(/Alternatör|Klima|Avara|Krank/);
+  });
+
+  test('GERÇEK KAYIŞ YOLU çiziliyor — kartla AYNI üreticiden', () => {
+    // Kullanıcı isteği: *"Kayış görünsün, tıpkı topoloji üzerindeki kanvas
+    // gibi olsun."* İkinci bir çizici iki yüzeyde iki farklı kayış demekti.
+    const sc = sahne();
+    expect(sc.geom).toBeTruthy();
+    const svg = wiz.veFeadWizAngSVG(sc, 164);
+    expect(svg).toMatch(/<path d="M[^"]*A[^"]*Z"[^>]*stroke="var\(--accent-warning\)"/);
+    // YOL ÜRETİCİSİ TEK — seçici kendi çizicisini kurmuyor. Kapı hem çağrıyı
+    // hem yolun ŞEKLİNİ tutuyor: kasnak sayısı kadar teğet + sarım yayı.
+    expect(WIZ_SRC).toContain('veFeadBeltPathD(');
+    const d = /<path d="(M[^"]*Z)"[^>]*accent-warning/.exec(svg)[1];
+    expect((d.match(/ A/g) || []).length).toBe(sc.geom.pulleys.length);
+    expect((d.match(/ L/g) || []).length).toBe(sc.geom.pulleys.length);
+    // ...ve üreticinin kendisi aynı sahnede aynı sayıda parça veriyor.
+    const bag = fead.veFeadBeltPathD(sc.geom, (mm) => mm, (mm) => mm, 1,
+      (v) => Math.round(v * 100) / 100);
+    expect((bag.match(/ A/g) || []).length).toBe((d.match(/ A/g) || []).length);
+  });
+
+  test('ÇÖZÜM YOKSA kayış yok ama sahne yine kuruluyor', () => {
+    kabuk(); wiz.veFeadWizReset();
+    const st = wiz.veFeadWizState();
+    st.ten.cenX = 0; st.ten.cenY = 0; st.ten.armLen = 90;
+    const sc = wiz.veFeadWizAngScene();
+    expect(sc).toBeTruthy();
+    expect(sc.geom).toBeNull();
+    const svg = wiz.veFeadWizAngSVG(sc, 45);
+    expect(svg).toContain('<svg');
+    expect(svg).not.toContain('var(--accent-warning)');   // kayış UYDURULMUYOR
+    // ...ve BOŞ bir geometri de kayış saymıyor: `' Z'` geçerli bir yol dizesi
+    // gibi görünür ve görünmeyen ama VAR olan bir kayış üretirdi.
+    expect(fead.veFeadBeltPathD({ pulleys: [], spans: [], wraps: [] },
+      (v) => v, (v) => v, 1, (v) => v)).toBe('');
+    expect(fead.veFeadBeltPathD({ pulleys: [1, 2], spans: [1], wraps: [] },
+      (v) => v, (v) => v, 1, (v) => v)).toBe('');
+    expect(svg).toMatch(/stroke="var\(--accent-success\)"/);  // kol yine var
+  });
+
+  test('YAKINLAŞTIRMA ölçeği çarpıyor ve fare çevirisi bozulmuyor', () => {
+    const sc = sahne();
+    const oku = (svg, a) => Number(new RegExp(a + '="([-\\d.]+)"').exec(svg)[1]);
+    const k1 = oku(wiz.veFeadWizAngSVG(sc, 0, 1), 'data-k');
+    const k2 = oku(wiz.veFeadWizAngSVG(sc, 0, 2), 'data-k');
+    expect(k2 / k1).toBeCloseTo(2, 4);   // künye 1e−6'ya yuvarlı
+    // Fare→açı çevirisi ölçeği SVG'DEN okuduğu için yakınlaştırmadan bağımsız.
+    [1, 2, 0.6].forEach((z) => {
+      const svg = wiz.veFeadWizAngSVG(sc, 0, z);
+      const el = { getAttribute: (n) => new RegExp(n + '="([-\\d.]+)"').exec(svg)[1] };
+      const k = oku(svg, 'data-k'), ox = oku(svg, 'data-ox'), oy = oku(svg, 'data-oy');
+      expect(wiz.veFeadWizAngFromPoint(el, ox + (sc.cx + 30) * k, oy - sc.cy * k))
+        .toBeCloseTo(0, 5);
+      expect(wiz.veFeadWizAngFromPoint(el, ox + sc.cx * k, oy - (sc.cy + 30) * k))
+        .toBeCloseTo(90, 5);
+    });
+  });
+
+  test('yakınlaştırma basamakları uçlarda DURUYOR, ⤢ sığdırıyor', () => {
+    sahne();
+    wiz.veFeadWizAngOpen();
+    const Z = wiz.VE_FW_ANG_ZOOM;
+    expect(wiz.veFeadWizAngState().zoom).toBe(1);
+    for (let i = 0; i < 20; i++) wiz.veFeadWizAngZoom(1);
+    expect(wiz.veFeadWizAngState().zoom).toBe(Z[Z.length - 1]);
+    for (let i = 0; i < 40; i++) wiz.veFeadWizAngZoom(-1);
+    expect(wiz.veFeadWizAngState().zoom).toBe(Z[0]);
+    expect(wiz.veFeadWizAngZoom(0)).toBe(1);
+    expect(wiz.veFeadWizAngState().zoom).toBe(1);
+    // Pencere kapalıyken çağrılsa da patlamıyor.
+    wiz.veFeadWizAngClose();
+    expect(wiz.veFeadWizAngZoom(1)).toBe(1);
+  });
+
+  test('yakınlaştırma düğmeleri pencerede VAR', () => {
+    sahne();
+    wiz.veFeadWizAngOpen();
+    const h = wiz.veFeadWizAngHTML();
+    expect(h).toContain('veFeadWizAngZoom(1)');
+    expect(h).toContain('veFeadWizAngZoom(-1)');
+    expect(h).toContain('veFeadWizAngZoom(0)');
+    expect(CSS).toMatch(/\.ve-fw-ang-zoom\s*\{/);
   });
 
   test('fare → açı çevirisi ölçek künyesinden okunuyor', () => {
@@ -2135,5 +2221,91 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
     expect(IDX).toContain('id="ve-fw-ang"');
     expect(CSS).toMatch(/\.ve-fw-ang\s*\{/);
     expect(CSS).toMatch(/\.ve-fw-ang-box\s*\{/);
+  });
+});
+
+
+// ════════════════════════════════════════════════════════════════════════════
+//  AÇIKLAMA YÜZEYİ YOK — ve geri gelemez
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı isteği (2026-09-02): *"her güncellemeden sonra nedense programa
+// garip açıklamalar geliyor… Pencerenin sağ üst köşesine baksana, 'fareyle'
+// yazıyor… Bu tarz garip açıklamaları lütfen 'Başlangıç Sihirbazı' kısmından
+// TAMAMEN kaldıralım."*
+//
+// KUSUR BİR METİN DEĞİL, BİR YÜZEYDİ. Sihirbazda iki kanal vardı ve her tur
+// yeniden dolduruluyorlardı, çünkü orada duruyorlardı:
+//
+//   `_fwCard(baslik, GÖZ_KIRPMA, accent, inner)`  → kart başlığının sağ ucu
+//   `_fwHint(html)`                               → kart gövdesinin altı
+//
+// Metinleri boşaltmak yetmezdi — bir sonraki oturum boş kanalı görüp yeniden
+// doldururdu. İkisi de PARAMETRE ve FONKSİYON olarak kaldırıldı; bu kapı da
+// geri gelmelerini tutuyor.
+//
+// KALAN YÜZEYLER (ve neden kaldıkları):
+//   · `title` ipucu   — üzerine gelince çıkar, ekranı doldurmaz
+//   · `ve-fw-issue`   — canlı doğrulama çıktısı, açıklama değil
+//   · `ve-fw-reads`   — sayı okuması
+//   · adım alt başlığı — bölüm etiketi ("Tip · çap · koordinat · …")
+describe('sihirbazda açıklama yüzeyi YOK', () => {
+  test('`_fwHint` ne fonksiyon ne çağrı olarak var', () => {
+    // ÇAĞRI/TANIM biçimi aranıyor (`_fwHint(`), çıplak ad değil: kaldırma
+    // kararını anlatan yorum onu adıyla anıyor ve anmalı da.
+    expect(WIZ_SRC).not.toMatch(/_fwHint\s*\(/);
+    expect(CSS).not.toContain('ve-fw-hint');
+  });
+
+  test('`_fwCard` ÜÇ argümanlı — göz kırpma kanalı kapalı', () => {
+    expect(WIZ_SRC).toMatch(/function _fwCard\(baslik, accent, inner\)/);
+    // Üreticinin GÖVDESİNDE `<em>` yok ve kuralı da kalmadı.
+    const govde = WIZ_SRC.slice(WIZ_SRC.indexOf('function _fwCard(baslik'));
+    expect(govde.slice(0, govde.indexOf('\n}'))).not.toContain('<em>');
+    expect(CSS).not.toMatch(/\.ve-fw-card-h em/);
+  });
+
+  test('YEDİ ADIMIN hiçbiri açıklama paragrafı basmıyor', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const b = wiz.veFeadWizBuild();
+    for (let i = 0; i < 7; i++) {
+      const h = wiz.veFeadWizStepHTML(i, b);
+      expect(h).not.toContain('ve-fw-hint');
+      // Kart başlığında göz kırpma yok: `<span>Ad</span>` hemen `</header>`.
+      const basliklar = h.match(/<header class="ve-fw-card-h">[\s\S]*?<\/header>/g) || [];
+      expect(basliklar.length).toBeGreaterThan(0);
+      basliklar.forEach((x) => expect(x).not.toContain('<em>'));
+    }
+  });
+
+  test('BOŞ sihirbazda da temiz — ve kart gövdesi boş kalmıyor', () => {
+    kabuk(); wiz.veFeadWizReset();
+    const b = wiz.veFeadWizBuild();
+    for (let i = 0; i < 7; i++) {
+      const h = wiz.veFeadWizStepHTML(i, b);
+      expect(h).not.toContain('ve-fw-hint');
+      // Gövdesi TAMAMEN boş bir kart, açıklaması sökülmüş bir karttır —
+      // ya içerik ya da kartın kendisi gitmeliydi.
+      expect(h).not.toMatch(/<div class="ve-fw-card-b"><\/div>/);
+    }
+  });
+
+  test('açı seçici penceresinde de yok', () => {
+    kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
+    wiz.veFeadWizAngOpen();
+    const h = wiz.veFeadWizAngHTML();
+    expect(h).not.toContain('ve-fw-hint');
+    expect(h).not.toMatch(/Fareyi düzlemde gezdirin/);
+  });
+
+  test('DURUM ÇIKTILARI kalıyor — sansür değil, sadeleştirme', () => {
+    // Uyarı kutuları ve sayı okumaları bir açıklama değil; onları da silmek
+    // kullanıcıyı modelin durumundan mahrum bırakırdı.
+    kabuk(); wiz.veFeadWizReset();
+    expect(wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild())).toContain('ve-fw-issue');
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    expect(wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild())).toContain('ve-fw-reads');
+    // Alan başına ipucu da duruyor (üzerine gelince çıkar).
+    expect(wiz._fwTenRow(wiz.veFeadWizState())).toMatch(/title="[^"]*MERKEZ/);
   });
 });
