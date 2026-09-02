@@ -446,12 +446,17 @@ toplam 3 dk 14 sn. Yani merge sonrası bekleme **tur başına 3 dk 14 sn**
 ve karşılığı sıfır. Kullanıcı bildirimi (2026-09-02): *"merge edildikten
 sonra neyi bu kadar bekliyoruz?"*
 
-**PR'I API İLE AÇMAK CI'I TETİKLEMEZ.** Ölçüldü (PR #848): dala push edip
-SONRA PR açınca hiçbir koşu başlamadı — GitHub, App jetonuyla açılan PR'ın
-`opened` olayında iş akışı başlatmıyor. Tetikleyen şey dala gelen bir
-push'un `synchronize` olayı. Yani sıra **push → PR** ise CI koşmaz; PR
-açıldıktan sonra bir push gerekir. Boş commit ATILMAZ — o pushu gerçek bir
-iş yapsın (ör. `main`'i dala birleştirmek, ki zaten gerekiyorsa).
+**PR AÇILDI DİYE KOŞU BAŞLADI SAYILMAZ — BAK.** PR #848'de PR açılışı
+hiçbir koşu tetiklemedi (beş dakika boyunca ne `queued` ne `in_progress`);
+koşu ancak dala gelen bir sonraki push'la başladı. Aynı yol PR #850'de
+sorunsuz tetikledi. Yani **sebep ÖLÇÜLMEDİ** ve buradan bir kural
+çıkarılmıyor — "App jetonuyla açılan PR tetiklemez" bir hipotezdi ve bir
+sonraki denemede çürüdü.
+
+Kural sebep hakkında değil DAVRANIŞ hakkında: PR açtıktan sonra koşunun
+gerçekten başladığını **doğrula**. Başlamadıysa boş commit ATMA, close/reopen
+YAPMA — o pushu gerçek bir iş taşısın (ör. `main`'i dala birleştirmek, ki
+çoğu zaman zaten gerekiyor).
 
 **Kapı kuralı:** testler kırmızıysa ya da build patlıyorsa merge etme —
 durumu kullanıcıya söyle. "Otomatik merge" testleri atlamak demek değil;
