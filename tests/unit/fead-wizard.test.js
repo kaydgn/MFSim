@@ -1936,24 +1936,48 @@ describe('ondalık ayırıcı — virgül de nokta da', () => {
   });
 });
 
-// ── 6 · ORAN YALNIZ ÇAPLARDAN ──────────────────────────────────────────────
+// ── 6 · ORAN YALNIZ ÇAPLARDAN ya da KADEME YOK ────────────────────────────
+//
+// 2026-09-02: ara kademenin VARLIĞI artık bir SEÇİM. Öncesinde "kademe yok"
+// durumu iki çapı da boş bırakmakla ifade ediliyordu ve bu bir SESSİZLİKTİ —
+// "kademe yok" ile "çapları henüz girmedim" aynı görünüyordu. Elle oran alanı
+// hâlâ YOK (spesifikasyon §2.3'ün ölçülmüş bulgusu: elle yazılmış hız oranları
+// bütün gerilmeleri %17 düşürüyordu).
 describe('tahrik oranı — elle girilemez', () => {
-  test('kip seçicisi ve oran alanı YOK, iki çap VAR', () => {
+  test('KADEME seçicisi var, elle oran alanı YOK', () => {
     kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
     const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
-    expect(h).not.toContain('solver.ratioMode');
+    expect(h).toContain('solver.ratioMode');
+    expect(h).toContain('value="derive"');
+    expect(h).toContain('value="unity"');
+    expect(h).not.toContain('value="direct"');            // elle oran YOK
     expect(h).not.toContain("_fwSet('solver.driveRatio'");
     expect(h).toContain("_fwSet('solver.crankOD'");
     expect(h).toContain("_fwSet('solver.fanOD'");
-    expect(h).toMatch(/türedi/);
   });
 
-  test('kurulan model kipi KOŞULSUZ derive yazar', () => {
+  test('KADEME YOK seçilince çap alanları kalkıyor ve oran 1', () => {
+    kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
+    wiz.veFeadWizState().solver.ratioMode = 'unity';
+    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    expect(h).not.toContain("_fwSet('solver.crankOD'");
+    expect(h).not.toContain("_fwSet('solver.fanOD'");
+    const b = wiz.veFeadWizBuild();
+    expect(b.drive.mode).toBe('unity');
+    expect(b.drive.ratio).toBe(1);
+    // BMC'nin çapları durumda DURUYOR ama kullanılmıyor — seçim onları eziyor
+    expect(Number(wiz.veFeadWizState().solver.crankOD)).toBeGreaterThan(0);
+  });
+
+  test('kurulan model kipi taşıyor — elle oran ise DÜŞÜRÜLÜYOR', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const st = wiz.veFeadWizState();
     st.solver.ratioMode = 'direct';                 // eski taslak
-    const sd = wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-solver').data;
-    expect(sd.ratioMode).toBe('derive');
+    expect(wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-solver')
+      .data.ratioMode).toBe('derive');
+    st.solver.ratioMode = 'unity';
+    expect(wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-solver')
+      .data.ratioMode).toBe('unity');
   });
 
   test('iki çap da boşken oran 1 — ve çözüm BOZULMUYOR', () => {
@@ -1969,6 +1993,16 @@ describe('tahrik oranı — elle girilemez', () => {
     const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
     expect(h).toMatch(/Yalnız bir çap girildi/);
     expect(wiz.veFeadWizBuild().drive.ratio).toBeCloseTo(1, 9);
+  });
+
+  // "Kademe yok" seçiliyken yarım çap uyarısı ÇIKMAMALI: orada çap zaten
+  // sorulmuyor, uyarı kullanıcıyı olmayan bir alana yönlendirirdi.
+  test('kademe yokken yarım-çap uyarısı çıkmıyor', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const s = wiz.veFeadWizState().solver;
+    s.crankOD = 197.32; s.ratioMode = 'unity';
+    expect(wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild()))
+      .not.toMatch(/Yalnız bir çap girildi/);
   });
 
   test('iki çap doluyken oran onlardan çıkıyor', () => {

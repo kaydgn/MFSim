@@ -81,50 +81,57 @@ var VE_FEAD_TEN_LIB_SOURCE  = 'Gates ABDS raporları (14 sistem), '
 // od       : gergi kasnağı dış çapı [mm]  (PARÇA)
 // contact  : kayışın hangi yüzüne değiyor  (PARÇA)
 // inertia  : kasnak ataleti [kg·m²] — raporunda varsa
+// loadStopRelDeg : mekanik durdurucu, kolun serbestten itibaren dönebildiği
+//            EN BÜYÜK bağıl açı [°]  (PARÇA) — raporun "Tensioner Geometry"
+//            tablosundaki Load sütununun Arm Position satırı, Mean sütunundan
+//            olan farkı. 14 kaydın 12'sinde ölçüldü; AG00976'nın 1705 ve 1655
+//            revizyonlarının tablosunda Load satırı YOK, o yüzden onlar
+//            taşımıyor — uydurulmuş bir stop, kolun erişim sınırını (ve
+//            dolayısıyla olanaklı açı bandını) sessizce kaydırırdı.
 // ribs     : künyenin ölçüldüğü kayış genişliği (meanNm bunun için geçerli)
 var VE_FEAD_TENSIONER_DB = [
   { key:'AG00976-1715', src:'AG00976 · 8PK1715HD · Ten@-250/110',
     armLen:90, preloadNm:8.60, rateNm:0.480, meanNm:22.07, od:77.2, contact:'back',
-    inertia:null, ribs:8, note:'E9843 (montaj çizimi: 28° FreeArm–Mean)' },
+    loadStopRelDeg:60.4, inertia:null, ribs:8, note:'E9843 (montaj çizimi: 28° FreeArm–Mean)' },
   { key:'AG00976-1705', src:'AG00976 · 1705 mm · Ten@-250/110',
     armLen:90, preloadNm:9.11, rateNm:0.483, meanNm:22.66, od:77.2, contact:'back',
     inertia:null, ribs:8, note:'' },
   { key:'AG00976-1668', src:'AG00976 · 1668 mm · Ten@-240/115',
     armLen:90, preloadNm:8.87, rateNm:0.484, meanNm:22.43, od:77.2, contact:'back',
-    inertia:null, ribs:8, note:'' },
+    loadStopRelDeg:48.3, inertia:null, ribs:8, note:'' },
   { key:'AG00976-1655', src:'AG00976 · 1655 mm · Ten@-250/104',
     armLen:90, preloadNm:8.99, rateNm:0.484, meanNm:22.54, od:77.2, contact:'back',
     inertia:null, ribs:8, note:'' },
   { key:'AG00879', part:'T38665', src:'AG00879 · 5 kasnak · kol 56 mm',
     armLen:56, preloadNm:20.05, rateNm:0.409, meanNm:31.14, od:76.2, contact:'back',
-    inertia:null, ribs:8, note:'Bandın DIŞINDA: kısa kollu ayrı bir gövde' },
+    loadStopRelDeg:39.0, inertia:null, ribs:8, note:'Bandın DIŞINDA: kısa kollu ayrı bir gövde' },
   { key:'AG00894', part:'E9843', src:'AG00894 · 6 kasnak',
     armLen:90, preloadNm:8.93, rateNm:0.475, meanNm:23.00, od:77.2, contact:'back',
-    inertia:0.0002, ribs:8, note:'' },
+    loadStopRelDeg:60.7, inertia:0.0002, ribs:8, note:'' },
   { key:'AG00902-1300', part:'E9843', src:'AG00902 · 1300 mm · 4 kasnak',
     armLen:90, preloadNm:9.31, rateNm:0.476, meanNm:22.21, od:77.2, contact:'back',
-    inertia:0.0004, ribs:8, note:'' },
+    loadStopRelDeg:57.4, inertia:0.0004, ribs:8, note:'' },
   { key:'AG00902-1275', part:'E9843', src:'AG00902 · 1275 mm · 4 kasnak',
     armLen:90, preloadNm:9.13, rateNm:0.480, meanNm:22.15, od:77.2, contact:'back',
-    inertia:0.0004, ribs:8, note:'' },
+    loadStopRelDeg:45.2, inertia:0.0004, ribs:8, note:'' },
   { key:'AG00686', part:'T38624', src:'AG00686 · 8PK1475 · 4 kasnak',
     armLen:90, preloadNm:8.59, rateNm:0.482, meanNm:24.54, od:77.2, contact:'back',
-    inertia:0.0076, ribs:8, note:'Nominal dönme 33.1° — banttan yüksek ayar' },
+    loadStopRelDeg:62.4, inertia:0.0076, ribs:8, note:'Nominal dönme 33.1° — banttan yüksek ayar' },
   { key:'AG00686-1520', part:'T38624', src:'AG00686 · 1520 mm',
     armLen:90, preloadNm:8.86, rateNm:0.476, meanNm:22.20, od:77.2, contact:'back',
-    inertia:0.0076, ribs:8, note:'' },
+    loadStopRelDeg:54.5, inertia:0.0076, ribs:8, note:'' },
   { key:'AG0868-8PK', part:'E9843', src:'AG0868 · 3 kasnak · 8PK',
     armLen:90, preloadNm:8.56, rateNm:0.501, meanNm:22.57, od:77.2, contact:'back',
-    inertia:0.0009, ribs:8, note:'' },
+    loadStopRelDeg:48.4, inertia:0.0009, ribs:8, note:'' },
   { key:'AG0868-6PK', part:'E9843', src:'AG0868 · 3 kasnak · 6PK',
     armLen:90, preloadNm:8.65, rateNm:0.495, meanNm:19.04, od:77.2, contact:'back',
-    inertia:0.0009, ribs:6, note:'Aynı gövde, dar kayış → düşük ayar' },
+    loadStopRelDeg:32.6, inertia:0.0009, ribs:6, note:'Aynı gövde, dar kayış → düşük ayar' },
   { key:'AG0868-4PK', part:'E9843', src:'AG0868 · 3 kasnak · 4PK',
     armLen:90, preloadNm:8.46, rateNm:0.505, meanNm:16.07, od:77.2, contact:'back',
-    inertia:0.0009, ribs:4, note:'Aynı gövde, dar kayış → düşük ayar' },
+    loadStopRelDeg:24.1, inertia:0.0009, ribs:4, note:'Aynı gövde, dar kayış → düşük ayar' },
   { key:'AG00810', src:'AG00810 · 4 kasnak',
     armLen:90, preloadNm:11.561, preloadDerived:true, rateNm:0.483, meanNm:29.48,
-    od:77.2, contact:'back', inertia:0.0004, ribs:10, part:'T38519',
+    od:77.2, contact:'back', loadStopRelDeg:66.5, inertia:0.0004, ribs:10, part:'T38519',
     note:'Ön yük RAPORDA YOK — mean torktan türetildi (11.561). Ayar bandın üstünde.' }
 ];
 
@@ -342,6 +349,13 @@ function veFeadTensionerApply(td, rec){
   td.od       = rec.od;
   td.contact  = rec.contact;
   if(rec.inertia != null) td.inertia = rec.inertia;
+  // MEKANİK DURDURUCU PARÇAYA AİT: kol boyu ve yay künyesiyle aynı sınıftan,
+  // gövdenin kendi dayamasıdır. Künye uygulanınca yazılır, YOKSA SİLİNİR —
+  // eski künyeden kalan bir stop yeni parçanın erişim sınırı sanılırdı ve
+  // bu tam olarak sessiz hata sınıfı (Load sütunu ve olanaklı açı bandı ondan
+  // türüyor).
+  if(rec.loadStopRelDeg != null) td.loadStopRelDeg = rec.loadStopRelDeg;
+  else delete td.loadStopRelDeg;
   // PARÇA KODU DA KOPYALANIR — ve YOKSA SİLİNİR. Kod, pim künyesinin (ve
   // ileride başka parça verisinin) anahtarıdır; kayıtta yoksa geride bırakmak
   // bir sonraki künyenin pimini ÖNCEKİ parçanın çizimiyle hesaplatırdı.

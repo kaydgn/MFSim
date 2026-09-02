@@ -628,17 +628,30 @@ function _gfSec9(){
   h += '<p>FEAD kayışının sürücü kasnağı krank milinde olmak zorunda değildir: yaygın bir '
     + 'düzende krank ayrı bir kademeyle fan kasnağını döndürür, FEAD kayışı da onun üzerinden '
     + 'tahrik edilir.</p>';
+  h += '<p>Üç kip var ve seçim <em>düzene</em> göre yapılır, kolaylığa göre değil:</p>';
+  h += _gfAlanTablo('Tahrik oranı kipleri', [
+    ['Krank ve fan kasnağı çapından türet', 'Ayrı bir kademe VAR',
+      'Krank ayrı bir kayış/dişli kademesiyle fan kasnağını döndürüyor ve FEAD kayışı '
+      + 'onun üzerinde. İki çapı yazın; oran = krank Ø / fan Ø'],
+    ['Kademe yok — sürücü kasnak motor devrinde', 'Fan kavraması krankın hemen önünde',
+      'Sürücü kasnak krankla <strong>aynı milde ve aynı devirde</strong> dönüyor. Oran '
+      + 'tanımı gereği <strong>1</strong>; çap da oran da sorulmaz'],
+    ['Oranı elle gir', 'Oranı biliyorsunuz, çapları bilmiyorsunuz',
+      'Tedarikçi sayfası tek bir sayı veriyorsa bu kip']
+  ]);
   h += _gfAdimlar([
-    'Tedarikçi sayfanız oranı <strong>iki çapla</strong> veriyorsa “Krank ve fan kasnağı '
-      + 'çapından türet” seçin ve iki çapı yazın.',
-    'Tek kademeli bir sistemse (kayış doğrudan krank kasnağından tahrikli) “Oranı elle gir” '
-      + 'seçip <strong>1</strong> yazın.',
-    'Kartın altındaki “Kullanılan tahrik oranı” satırından doğruladığınız değeri okuyun.'
+    'Düzeninize uyan kipi seçin.',
+    'Kartın altındaki “Kullanılan tahrik oranı” satırından hem sayıyı hem de hangi kipten '
+      + 'geldiğini okuyun.'
   ]);
   h += _gfUyari('Bu oran bütün sonuçları ölçekler',
       'Aksesuar devri = motor devri × <strong>tahrik oranı</strong> × (sürücü kasnak pitch '
     + 'çapı / aksesuar pitch çapı). Yanlış girilirse bütün güç ve gerilme sonuçları aynı '
-    + 'oranda kayar ve hiçbir uyarı çıkmaz.');
+    + 'oranda kayar ve hiçbir uyarı çıkmaz. <strong>Ölçüldü:</strong> tek kademeli bir '
+    + 'sisteme çap kipinden kalmış 1,430 oranı sızdığında bütün aksesuar devirleri %43 '
+    + 'kaymış, kayış hızı 17,5 yerine 25,0 m/s çıkmıştı. Hata sessizdi çünkü çaplar '
+    + 'geçerli sayılardı; yanlış olan <em>kipti</em>. “Kademe yok” kipi tam bunun için var: '
+    + 'düzeni ilan ediyorsunuz, sayı üretmiyorsunuz.');
   h += '<h3>9.2 Motor künyesi</h3>';
   h += _gfAlanTablo('Motor Künyesi kartı', [
     ['Silindir sayısı', 'Adet', 'Ateşleme frekansını verir (dört zamanlıda '
@@ -703,6 +716,46 @@ function _gfSec10(){
     ['Tasarım gerginliği türetilemedi', 'Kayış, gergi kolunun erişemeyeceği kadar kısa/uzun',
       'Yerleşimi ya da kayış boyunu gözden geçirin']
   ], ['Belirti', 'Sebep', 'Ne yapmalı']);
+
+  h += '<h3>9.4 Girilmeyen alanlar — Gates arşivinden varsayılan</h3>';
+  h += '<p>Bazı alanları elle girmek zordur: kasnak atalet momentleri, gergi kolunun '
+    + 'ataleti ve kasnak kütlesi, kayış boy toleransı, uzama+aşınma payı, gerginin mekanik '
+    + 'durdurucusu, kayış boyu ofseti. Bunlar <strong>boş bırakılırsa</strong> program '
+    + 'onları on dört tedarikçi raporundan çıkarılmış ölçümlerle doldurur ve '
+    + '<strong>hangilerini doldurduğunu yazar</strong>.</p>';
+  h += _gfAlanTablo('Varsayılanın kaynağı', [
+    ['Atalet momentleri', 'Aksesuar tipine göre medyan',
+      'Gates “System Vibration Analysis” sayfası, yedi rapor. Avara · klima · alternatör · '
+      + 'gergi kasnağı · gergi kolu · kasnak kütlesi · krank mili'],
+    ['Kayış boy toleransı ±', 'Boya göre iki basamak',
+      'Arşivde temiz bir ayrım var: 1013–1392 mm’lik yedi kayışın hepsi ±5, 1475–1739 mm’lik '
+      + 'yedisinin hepsi ±6 mm'],
+    ['Uzama + aşınma payı', '%0,70',
+      'On dört sistemin onunda tam bu değer; sapanların hepsi ALTINDA, yani %0,70 aynı '
+      + 'zamanda emniyetli yön'],
+    ['Mekanik durdurucu', 'Nominal dönüş × 1,8',
+      'Önce gergi künye kütüphanesinden okunur (12 künye ölçülmüş değerini taşıyor). Künye '
+      + 'uygulanmamışsa ölçeklenir — ve <strong>yalnız daraltır</strong>: çekirdeğin kendi '
+      + 'erişim sınırından büyük çıkarsa hiç uygulanmaz'],
+    ['Kayış boyu ofseti', '1,3 mm',
+      'Fiziksel bir sabit değil; tedarikçinin çözdüğü geometrik boy ile sipariş edilen '
+      + '<em>katalog</em> boyu arasındaki yuvarlama artığı. Ölçülen beş değer 0,4 … 2,0 mm']
+  ], ['Alan', 'Varsayılan', 'Nereden']);
+  h += _gfUyari('Varsayılan bu sistemin değeri DEĞİL',
+      'Bunlar başka araçların raporlarından çıkarılmış <strong>medyanlardır</strong> ve bir '
+    + 'mertebe göstergesidir. Elinizdeki tedarikçi raporunda karşılığı varsa onu girin — '
+    + 'varsayılan o anda devreden çıkar. Program varsayılanı <strong>modelinize yazmaz</strong>: '
+    + 'alan boş kalır, böylece “girdim” ile “varsayıldı” bir daha karışmaz. Hangi alanın '
+    + 'varsayıldığı Kayış Yolu · Çözücü · Kayış Özellikleri panellerinde ve ayrıntılı raporun '
+    + '§8 girişinde listelenir.');
+  h += _gfNot('Sıfır girmek, boş bırakmak DEĞİLDİR',
+      'Toleransa <strong>0</strong> yazmak “zarfı kapat” demektir ve geçerli bir seçimdir; '
+    + 'varsayılan onu ezmez. Varsayılan yalnız <em>hiç dokunulmamış</em> alana iner.');
+  h += _gfNot('Her tipin varsayılanı yok',
+      'Su pompası, direksiyon pompası ve hava kompresörü arşivdeki yedi raporun hiçbirinde '
+    + 'geçmiyor. Bu tiplerin ataleti <strong>uydurulmuyor</strong> — rotorun ataleti kasnak '
+    + 'çapından türetilemez ve “makul ama yanlış” bir sayı burulma frekansını sessizce '
+    + 'kaydırırdı. Böyle bir kasnak modeldeyse burulma modeli kurulmaz ve sebebini yazar.');
   return h;
 }
 

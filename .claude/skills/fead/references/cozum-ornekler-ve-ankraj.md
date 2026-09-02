@@ -2451,3 +2451,62 @@ Sonuçlar sayfasında kanal olarak yayını.
 
 **Sırada:** Sonuçlar sayfasında FEAD çözüm sekmesi (kanal yayını).
 
+
+##### GİRİLMEYEN ALANLAR GATES ARŞİVİNDEN VARSAYILIYOR (2026-09-02)
+
+Kullanıcı kararı: *"Atalet momentlerini ben girmedim fakat Gates raporlarındaki
+değerleri default olarak kullanabilirsin. Aynı şekilde tolerans/aşınma, load
+stop, boy ofseti gibi değerleri Gates raporlarından default olarak
+kullanırsın. Çünkü bunları el ile girmek zor."*
+
+Tablo `VE_FEAD_DEFAULTS` (`js/fead-model.js`); her değer doğrulama fixture'ı ve
+`docs/gates-reports/pdf/` arşivinden **testin içinde yeniden hesaplanıyor**
+(`tests/unit/fead-defaults.test.js`), yani elle yazılmış bir sayı arşivden
+ayrışırsa kırmızı.
+
+**Dört kural, dördü de sessiz hata sınıfına karşı:**
+
+1. **Varsayılan düğüme YAZILMAZ** — yalnız çözüm anında doldurulur. Yazsaydık
+   "girdim" ile "varsayıldı" bir daha ayrılmazdı.
+2. **Boş ile sıfır AYRI** (`_feadBlank`) — tolerans `0` geçerli bir kullanıcı
+   kararıdır ("zarfı kapat"), boş bırakmak değil.
+3. **Künye sonucun içinde taşınır** (`build.defaults`) ve panel + rapor onu
+   basar (`veFeadDefaultsBox` · `_frDefaultsBox`). Tek üretici: uyarı kutusunu
+   basan her panel künyeyi de basıyor.
+4. **Ölçülmemiş tipe varsayılan uydurulmaz** — su pompası, direksiyon pompası,
+   hava kompresörü arşivde yok; `veFeadDefaultInertia` NaN döner ve burulma
+   modeli sebebini yazar.
+
+**ÖLÇÜLMÜŞ TUZAK — durdurucu varsayılanı YALNIZ DARALTIR.** İlk sürüm onu
+koşulsuz yazıyordu; yay katsayısı bir ondalık kaymış modelde (k=0,048) nominal
+dönüş 280,6°, varsayılan 505° oluyor, çekirdeğin 89°'lik yedeği devre dışı
+kalıyor ve `feasibleRelMax`in bisect'i monoton olmayan bir fonksiyonda başka
+bir dala oturuyordu — kenetlenme uyarısı kayboluyor, model saçma bir açıyla
+"çözülmüş" görünüyordu. Karşılaştırma artık çekirdeğin KENDİ sınırına karşı
+(mirror sabit yok) ve varsayılan ancak onu daraltıyorsa uygulanıyor.
+
+**Gergi künye kütüphanesi `loadStopRelDeg` taşıyor** — 14 kaydın 12'si
+ölçülmüş; AG00976'nın 1705/1655 revizyonlarının tablosunda Load satırı yok, o
+ikisi boş. Künye uygulanınca yazılır, **taşımayan künye eskisini SİLER**.
+
+##### TAHRİK ORANI ÜÇ KİP OLDU (2026-09-02)
+
+Kullanıcı bildirimi: *"Bazen fan kavraması krank kasnağının hemen önünde oluyor
+ve krank kasnağı ile aynı devirde dönüyor… Bazen de farklı bir yerde. Bunu
+seçenek haline getirmemiz lazım."*
+
+`derive` (çaplardan) · **`unity` (kademe yok → oran 1, çap da oran da
+sorulmaz)** · `direct` (elle). `unity` ile `direct`+1 sayıca aynı ama **niyet
+ayrı**, ve ayrım ölçülmüş bir kusurdan geliyor: AG00879 denetiminde tek
+kademeli bir sisteme `derive` kipinden kalmış 1,430 oranı sızmış, bütün
+aksesuar devirlerini %43, kayış hızını 17,5 → 25,0 m/s kaydırmıştı. Hata
+sessizdi çünkü çaplar geçerli sayılardı; yanlış olan kipti.
+
+**Sihirbazda da seçim var** ama yalnız iki kip (`derive`/`unity`) — elle oran
+hâlâ yok (spesifikasyon §2.3: elle yazılmış hız oranları bütün gerilmeleri %17
+düşürüyordu).
+
+**Panel kartı SEÇİLEN kipi izler, ÇÖZÜLEN kipi değil.** `veFeadDriveRatio`
+çaplar boşken `derive`ı `direct`e düşürüyor; kart o düşüşü izlerse "çaplardan
+türet" seçili ama hiç çap girilmemişken çap alanları kaybolur ve kullanıcı
+onları bir daha giremez (mutasyonla ölçüldü).

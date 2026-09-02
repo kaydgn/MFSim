@@ -601,7 +601,9 @@ function veFeadWizNodes(st){
   // KİP KOŞULSUZ `derive`: sihirbaz artık elle oran sormuyor (kullanıcı kararı,
   // 2026-09-01), dolayısıyla kurduğu model de elle oran taşıyamaz. Eski bir
   // taslakta `direct` yazılı kalmışsa sessizce taşınırdı.
-  var sd = { ratioMode: 'derive' };
+  // İKİ KİP TAŞINIR: `derive` (ayrı kademe var, çaplardan türe) ve `unity`
+  // (kademe yok — sürücü kasnak motor devrinde). Elle oran hâlâ YOK.
+  var sd = { ratioMode: (s.ratioMode === 'unity') ? 'unity' : 'derive' };
   // Dört motor devri (`idleRpm` … `overspeedRpm`) ÖLÜ ALAN DEĞİL: ikisi
   // uygunluk kapılarını besliyor (js/fead-checks.js). Taşınmazsa sihirbazda
   // hüküm veren kapılar kurulan modelde "değerlendirilemedi" derdi.
@@ -1992,28 +1994,47 @@ function _fwStepCevrim(b){
   // doğrudan krank döndürüyor demektir (ara kademe yok). Köprü de aynı yola
   // düşüyor. TEK ÇAP GİRİLİRSE oran yine 1 kalır ve bu SESSİZ olurdu — o
   // yüzden aşağıda adıyla uyarılıyor.
+  // ── KİP BİR SEÇİM OLDU (2026-09-02) ────────────────────────────────────
+  // Kullanıcı bildirimi: *"Bazen fan kavraması krank kasnağının hemen önünde
+  // oluyor ve krank kasnağı ile aynı devirde dönüyor… Bazen de farklı bir
+  // yerde. Bunu seçenek haline getirmemiz lazım."*
+  //
+  // ÖNCESİNDE "kademe yok" durumu İKİ ÇAPI DA BOŞ BIRAKMAKLA ifade ediliyordu
+  // ve o bir SESSİZLİKTİ: "kademe yok" ile "çapları henüz girmedim" aynı
+  // görünüyor, ikisi de 1:1 veriyordu. Artık düzen ilan ediliyor.
+  //
+  // ELLE ORAN YİNE YOK ve bu kasıtlı: spesifikasyon §2.3'ün en ciddi bulgusu
+  // Excel'de elle yazılmış hız oranlarıydı (bütün gerilmeleri %17 düşürüyordu).
+  var _kademe = (s.ratioMode === 'unity') ? 'unity' : 'derive';
   var _cOD = _fwNum(s.crankOD, NaN), _fOD = _fwNum(s.fanOD, NaN);
-  var _yarim = (Number.isFinite(_cOD) && _cOD > 0) !== (Number.isFinite(_fOD) && _fOD > 0);
+  var _yarim = _kademe === 'derive'
+    && (Number.isFinite(_cOD) && _cOD > 0) !== (Number.isFinite(_fOD) && _fOD > 0);
+  var _kademeSec = _fwField('Ara kademe',
+      _fwSelHTML('solver.ratioMode',
+        [['derive', 'Var — krank ayrı bir kademeyle sürücü kasnağı döndürüyor'],
+         ['unity',  'Yok — sürücü kasnak motor devrinde']], _kademe));
   var h = _fwCard('Birinci Kademe', 'krank → sürücü kasnak', 'var(--accent-warning)',
-      _fwGrid([_fwField('Krank kasnağı Ø [mm]', _fwInp('solver.crankOD', { ph: '197.32' })),
-               _fwField('Fan / sürücü kasnağı Ø [mm]', _fwInp('solver.fanOD', { ph: '179.62' }))])
+      _fwGrid([_kademeSec], 1)
+    + (_kademe === 'derive'
+        ? _fwGrid([_fwField('Krank kasnağı Ø [mm]', _fwInp('solver.crankOD', { ph: '197.32' })),
+                   _fwField('Fan / sürücü kasnağı Ø [mm]', _fwInp('solver.fanOD', { ph: '179.62' }))])
+        : '')
     + '<div class="ve-fw-reads">'
-      + _fwRead('Tahrik oranı (türedi)', _fwFmt(dr.ratio, 4))
-      + _fwRead('Kaynak', dr.mode === 'derive' ? 'krank Ø / fan Ø'
-                                               : 'ara kademe yok — krank doğrudan sürücü')
+      + _fwRead('Tahrik oranı', _fwFmt(dr.ratio, 4))
+      + _fwRead('Kaynak', veFeadDriveModeLabel(dr.mode))
     + '</div>'
     + (_yarim
         ? '<div class="ve-fw-issue ve-fw-issue-warn">! <b>Yalnız bir çap girildi.</b> '
           + 'Oran iki çaptan türüyor; biri boşken <b>1:1</b> alınır ve bu, girdiğiniz '
-          + 'çapın hiç kullanılmadığı anlamına gelir. İkincisini de girin ya da ikisini '
-          + 'de boşaltın.</div>'
+          + 'çapın hiç kullanılmadığı anlamına gelir. İkincisini de girin, ya da ara '
+          + 'kademe gerçekten yoksa üstteki seçimi değiştirin.</div>'
         : '')
-    + _fwHint('Oran = sürücü kasnak devri / motor devri ve <b>yalnız bu iki çaptan '
-      + 'türer</b> — elle girilemez. <b>Aksesuar devirlerinin TAMAMINI ölçekler</b>, '
-      + 'yanlış girilirse bütün güç ve gerilme sonuçları aynı oranda kayar. FEAD '
-      + 'kayışının sürücüsü krank milinde olmak zorunda değil: tipik ağır ticari düzende '
-      + 'krank ayrı bir kademeyle fan kasnağını döndürür. <b>İkisi de boşsa oran 1:1</b> '
-      + '— yani kayışı doğrudan krank döndürüyor.'));
+    + _fwHint('Oran = sürücü kasnak devri / motor devri ve <b>elle girilemez</b>: ya iki '
+      + 'çaptan türer ya da kademe yoktur ve tanımı gereği 1’dir. <b>Aksesuar devirlerinin '
+      + 'TAMAMINI ölçekler</b>, yanlış olursa bütün güç ve gerilme sonuçları aynı oranda '
+      + 'kayar ve hiçbir uyarı çıkmaz. FEAD kayışının sürücüsü krank milinde olmak zorunda '
+      + 'değil: tipik ağır ticari düzende krank ayrı bir kademeyle fan kasnağını döndürür. '
+      + 'Fan kavraması krankın hemen önündeyse böyle bir kademe yoktur.'));
 
   h += _fwCard('Motor Künyesi', 'sayfadaki Engine Info', 'var(--text-secondary)',
       _fwEngineLibRow(s)
