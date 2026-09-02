@@ -595,13 +595,18 @@ describe('gergi paneli TEK koordinat soruyor', () => {
     preload: 8.6, kArm: 0.48, meanLoad: 22.07,
   });
 
-  test('avara merkezi ve kol çalışma açısı sorulur', () => {
+  test('avara merkezi ve kol YÖNÜ sorulur', () => {
     const html = fead.getFeadTensionerPropertiesHTML(tam());
     expect(html).toMatch(/veFeadSet\('[^']+','cenX'/);
     expect(html).toMatch(/veFeadSet\('[^']+','cenY'/);
-    expect(html).toMatch(/veFeadSet\('[^']+','armMeanDeg'/);
     expect(html).toMatch(/Avara Kasnağının Merkezi/);
     expect(html).toMatch(/veFeadSet\('[^']+','meanLoad'/);
+    // KOL YÖNÜ NİSPİ GÖSTERİLİYOR (kullanıcı, 2026-09-01) — alan mutlak
+    // `armMeanDeg`i DOĞRUDAN yazmıyor, çeviriciden geçiyor. Saklanan alan
+    // değişmedi; değişen tek şey ekranda konuşulan dil.
+    expect(html).toMatch(/veFeadSetArmShown\('[^']+'/);
+    expect(html).toMatch(/Kol yönü/);
+    expect(html).not.toMatch(/veFeadSet\('[^']+','armMeanDeg'/);
   });
 
   test('İKİNCİ KOORDİNAT YOK — montaj konumu, serbest açı ve doğrulama alanı SORULMAZ', () => {

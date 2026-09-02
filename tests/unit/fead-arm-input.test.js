@@ -334,7 +334,10 @@ describe('yüzey — kayış kipi KİLİTLİ', () => {
     const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
     const h = fead.getFeadTensionerPropertiesHTML(ten);
     expect(h).toMatch(/veFeadSet\('[^']+','cenX'/);
-    expect(h).toMatch(/veFeadSet\('[^']+','armMeanDeg'/);
+    // Kol YÖNÜ nispi gösteriliyor: alan mutlak `armMeanDeg`i doğrudan değil,
+    // tek üreticili çeviriciden geçerek yazıyor (kullanıcı isteği, 2026-09-01).
+    expect(h).toMatch(/veFeadSetArmShown\('[^']+'/);
+    expect(h).not.toMatch(/veFeadSet\('[^']+','armMeanDeg'/);
     expect(h).not.toMatch(/veFeadSet\('[^']+','pivotX'/);
     expect(h).toMatch(/montaj konumu \(türedi\)/);
     expect(h).toMatch(/-250\.00 \/ 110\.00/);

@@ -7412,7 +7412,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
      Yeni bir punto EKLENMEDİ, ölçekten bir basamak seçildi.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-.ve-fw-modal{ max-width:1180px; height:94vh; max-height:none; }
+.ve-fw-modal{ max-width:1180px; height:94vh; max-height:none; position:relative; }
 
 .ve-fw-shell{ flex:1; display:grid; grid-template-columns:238px 1fr; min-height:0; }
 
@@ -7819,6 +7819,52 @@ span.ve-fw-ro{ display:inline-block; }
   font-size:var(--fs-micro); font-weight:700; letter-spacing:var(--tracking-wide);
   color:var(--accent-success);
 }
+
+/* Kasnak satırındaki sıra düğmeleri — ↑ ↓ ✕ tek hücrede, sabit genişlik.
+   Silme düğmesi tek başınayken hücre dar; üç düğme sığmayınca satır kayar. */
+.ve-fw-rowops{ white-space:nowrap; }
+.ve-fw-rowops > button{ margin:0 1px; }
+
+/* Kol yönü alanı: giriş + seçici düğmesi yan yana, alanın tamamını kaplar. */
+.ve-fw-ang-cell{ display:flex; gap:4px; align-items:stretch; }
+.ve-fw-ang-cell > input{ flex:1; min-width:0; }
+.ve-fw-ang-btn{ flex:none; padding:0 8px; font-size:var(--fs-tiny); }
+
+/* Otomatik gerginin ZORUNLU olduğunu söyleyen kontur.
+   Satırın kendisi artık diğerleriyle aynı görünüyor (kullanıcı isteği), o
+   yüzden hüküm listenin altında kendi kutusunda duruyor — bilgi kaybolmasın
+   diye renk konturu taşıyor, dolgu değil: dolu bir kutu "uyarı" gibi okunur,
+   oysa bu bir KURAL. */
+.ve-fw-note-req{
+  margin-top:8px; padding:7px 10px; font-size:var(--fs-micro); line-height:1.6;
+  color:var(--text-secondary); background:transparent;
+  border:1px solid var(--accent-primary); border-left-width:3px;
+  border-radius:var(--radius-sm);
+}
+.ve-fw-note-req b{ color:var(--text-primary); }
+
+/* ── KOL AÇISI SEÇİCİ ────────────────────────────────────────────────────
+   Sihirbaz modalının İÇİNDE duran ikinci kaplama. `position:absolute` +
+   `inset:0`: kabın dışına taşmıyor, dolayısıyla sihirbaz kapanınca o da
+   gidiyor ve ayrı bir z düzeni yönetimi gerekmiyor. */
+.ve-fw-ang{
+  position:absolute; inset:0; z-index:5;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.42);
+}
+.ve-fw-ang-box{
+  width:min(460px, 92%); background:var(--bg-secondary);
+  border:1px solid var(--border-color); border-radius:var(--radius-sm);
+  box-shadow:0 8px 30px rgba(0,0,0,.35);
+}
+.ve-fw-ang-wrap{
+  background:var(--bg-primary); border:1px solid var(--border-color);
+  border-radius:var(--radius-sm); cursor:crosshair; touch-action:none;
+}
+.ve-fw-ang-svg{ display:block; }
+.ve-fw-ang-row{ display:flex; gap:6px; align-items:center; margin-top:8px; }
+.ve-fw-ang-row .ve-fw-lbl{ flex:none; }
+.ve-fw-ang-row input{ flex:1; min-width:0; }
 
 </style>
 

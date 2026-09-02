@@ -141,7 +141,8 @@ describe('okuyucular', () => {
   test('etiket TEK üreticiden ve kayıtları ayırt ediyor', () => {
     const et = D.veFeadDutyList().map(D.veFeadDutyLabel);
     expect(new Set(et).size).toBe(et.length);
-    et.forEach((x) => expect(x).toMatch(/\d+ nokta · \d+–\d+ d\/dk/));
+    // Motor devri birimi RPM (kullanıcı isteği, 2026-09-01).
+    et.forEach((x) => expect(x).toMatch(/\d+ nokta · \d+–\d+ RPM/));
     // İki yüzey de AYNI üreticiyi çağırıyor; kendi kopyasını kurmuyor.
     expect(WIZ_SRC).toContain('veFeadDutyLabel');
     expect(PANEL_SRC).toContain('veFeadDutyLabel');

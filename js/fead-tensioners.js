@@ -269,11 +269,31 @@ function veFeadTensionerList(){
 // İki ondalık ŞART: bire indirilirse o çift çakışır ve kullanıcı iki farklı
 // künyeyi ayırt edemez. Kaynak rapor kayıtta (`key`, `src`) DURUYOR — düşen
 // yalnız seçim listesinin metni.
+// ── ETİKET PARÇA NUMARASIYLA BAŞLAR ───────────────────────────────────────
+//
+// Kullanıcı bildirimi (2026-09-01): *"Şu anda bir sürü 90mm otomatik gergi var
+// fakat bazı gates raporlarında 56mm gergiler de var. Buna tekrardan bir
+// bakalım."*
+//
+// KÜTÜPHANE DOĞRU ÇIKTI — arşivdeki on raporun onu da kapıdan geçiyor
+// (`tests/unit/gates-archive.test.js`): dokuz rapor 90 mm, biri (AG00879 ·
+// T38665) 56 mm diyor ve kayıtlar birebir öyle. Yani "bir sürü 90 mm" bir veri
+// hatası değil, ARŞİVİN KENDİSİ.
+//
+// Kusur ETİKETTEYDİ: on dört kaydın on üçü *"kol 90 mm · … Nm"* diye
+// okunuyordu ve liste on dört ayrı gergi varmış gibi görünüyordu. Oysa ortada
+// DÖRT parça var — E9843 altı sistemde, T38624 ikisinde, T38519 ve T38665
+// birer — ve kayıtları ayıran şey parça değil MONTAJ ayarı (yay çalışma
+// momenti). Parça numarasını öne almak bunu tek bakışta gösteriyor.
+//
+// Parça numarası olmayan dört AG00976 kaydı `?` ile işaretli: kodu
+// doğrulanamadı (rapor arşivde yok) ve uydurulmuş bir kod yazmak, tam da
+// kaçınılmak istenen şey olurdu.
 function veFeadTenLabel(rec){
   if(!rec) return '';
   var a = Number(rec.armLen), m = Number(rec.meanNm);
   if(!Number.isFinite(a) || !Number.isFinite(m)) return String(rec.key || '');
-  return 'kol ' + a + ' mm · ' + m.toFixed(2) + ' Nm';
+  return (rec.part || '?') + ' · kol ' + a + ' mm · ' + m.toFixed(2) + ' Nm';
 }
 
 function veFeadTensionerOf(key){

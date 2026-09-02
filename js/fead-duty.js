@@ -13,7 +13,7 @@
 // ÖLÇÜLDÜ ve bildirimin yarısı tutmadı: **tek bir "sabit" çalışma çevrimi
 // YOK.** `tests/fixtures/fead-validation.js` içindeki 14 Gates sisteminde
 // ALTI ayrı devir/%zaman deseni var (aşağıda), üstelik devir bantları da
-// ayrışıyor (519…3000 d/dk). Yani çevrim motorun/aracın verisidir, evrensel
+// ayrışıyor (519…3000 RPM). Yani çevrim motorun/aracın verisidir, evrensel
 // bir sabit değil — tek bir deseni "standart" diye gömmek, arşivin gösterdiği
 // beş deseni yok saymak olurdu.
 //
@@ -55,7 +55,7 @@ var VE_FEAD_DUTY_DB = [
     ad: 'BMC 6 silindir — tedarikçi sayfası',
     kaynak: 'FEAD_INFORMATION (BMC, 26.05.2025)',
     not: 'Tedarikçiye GİDEN sayfanın kendi çevrimi. Rölanti ağırlıklı (%25) ' +
-         've 2750 d/dk\'ya kadar uzanıyor.',
+         've 2750 RPM\'ya kadar uzanıyor.',
     rpm:   [800, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750],
     dcPct: [25,     4,    5,    6,    9,   12,   18,   16,    5]
   },
@@ -90,8 +90,8 @@ var VE_FEAD_DUTY_DB = [
     key: 'AG00894-10',
     ad: 'Düşük devirli — Gates AG00894',
     kaynak: 'Gates AG00894',
-    not: 'Devir noktaları eşit aralıklı değil, 519 d/dk\'dan başlıyor; ' +
-         'ağırlığın %85\'i 1400 d/dk altında.',
+    not: 'Devir noktaları eşit aralıklı değil, 519 RPM\'dan başlıyor; ' +
+         'ağırlığın %85\'i 1400 RPM altında.',
     rpm:   [519, 693, 1000, 1039, 1212, 1385, 1558, 1731, 1904, 2077],
     dcPct: [26.6, 10,   13,   17,   18,    8,    4,    3,  0.3,  0.1]
   },
@@ -99,16 +99,16 @@ var VE_FEAD_DUTY_DB = [
     key: 'AG00879-5',
     ad: 'Beş noktalı — Gates AG00879',
     kaynak: 'Gates AG00879',
-    not: 'Ağırlığın %70\'i 800–1200 d/dk arasında toplanmış.',
+    not: 'Ağırlığın %70\'i 800–1200 RPM arasında toplanmış.',
     rpm:   [600, 800, 1200, 1700, 2200],
     dcPct: [5,    35,   35,   20,    5]
   },
   {
     key: 'AG00902-4',
-    ad: 'Dört noktalı, 3000 d/dk\'ya kadar — Gates AG00902',
+    ad: 'Dört noktalı, 3000 RPM\'ya kadar — Gates AG00902',
     kaynak: 'Gates AG00902 (2 sistem: 1300/1275)',
     not: 'Arşivin en kaba çevrimi ve en yüksek devri; ağırlığın %80\'i ' +
-         '700–1200 d/dk arasında.',
+         '700–1200 RPM arasında.',
     rpm:   [700, 1200, 2000, 3000],
     dcPct: [35,    45,   19,    1]
   }
@@ -152,7 +152,7 @@ function veFeadDutyLabel(rec){
   var n = rec.rpm ? rec.rpm.length : 0;
   if(!n) return String(rec.ad || rec.key || '');
   return rec.ad + '  ·  ' + n + ' nokta · '
-       + rec.rpm[0] + '–' + rec.rpm[n - 1] + ' d/dk';
+       + rec.rpm[0] + '–' + rec.rpm[n - 1] + ' RPM';
 }
 
 // Kayıt → duty satırları. Satır biçimi hem çözücü düğümünün (`node.data.duty`)

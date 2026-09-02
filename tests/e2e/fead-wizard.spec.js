@@ -100,8 +100,10 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     const satir = page.locator('#ve-fw-body .ve-fw-tbl tbody tr');
     expect(await satir.count()).toBeGreaterThan(3);
 
-    // Alternatörün X'ini elle değiştir (5. sütun = Konum X)
-    const hucre = satir.nth(1).locator('input[type="number"]').nth(1);
+    // Alternatörün X'ini elle değiştir (5. sütun = Konum X).
+    // ALAN ARTIK `type="text" inputmode="decimal"` — `type="number"` virgülü
+    // yutuyordu (kullanıcı isteği, 2026-09-01), o yüzden seçici de değişti.
+    const hucre = satir.nth(1).locator('input[inputmode="decimal"]').nth(1);
     await hucre.click();
     await hucre.fill('-300');
     // Canlı şerit gecikmeli tazeleniyor (220 ms); odak DÜŞMEMELİ.
@@ -201,7 +203,7 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     await expect(ten.locator('input[type="radio"]')).toBeDisabled();
 
     // X hücresine gerçek klavyeyle yaz — değer modele işlemeli, odak kalmalı.
-    const x = ten.locator('input[type="number"]').nth(1);
+    const x = ten.locator('input[inputmode="decimal"]').nth(1);
     await x.click();
     await x.fill('-168.4');
     await page.waitForTimeout(450);
@@ -238,7 +240,8 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
       document.querySelectorAll('#ve-fw-body [oninput*="veFeadWizDutyKw"]').length);
     expect(kwInput).toBe(0);
 
-    const sec = page.locator('#ve-fw-body select[onchange*="veFeadWizAccPreset"]');
+    // TEK YAZICI (2026-09-01): iki katalog tek seçicide birleşti.
+    const sec = page.locator('#ve-fw-body select[onchange*="veFeadWizAccModel"]');
     expect(await sec.count()).toBeGreaterThanOrEqual(1);
     const once = await page.evaluate(() => {
       const s = veFeadWizState();
@@ -250,8 +253,12 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
 
     // Alternatör modelini seç → kayıtlı kW temizlenir, katalog devreye girer
     const altSec = page.locator('#ve-fw-body tr', { hasText: 'Alternatör' })
-      .locator('select[onchange*="veFeadWizAccPreset"]').first();
-    await altSec.selectOption({ index: 1 });
+      .locator('select[onchange*="veFeadWizAccModel"]').first();
+    // Araç Performans kataloğundan bir kayıt seç (`ap:` ön ekli) — `accPreset`
+    // yolunu ölçmek için; BMC kayıtları `accLib` + eğri yazıyor, o ayrı kapıda.
+    const apDeger = await altSec.evaluate((e) =>
+      [...e.options].map((o) => o.value).find((v) => v.indexOf('ap:') === 0));
+    await altSec.selectOption(apDeger);
     await page.waitForTimeout(400);
     const sonra = await page.evaluate(() => {
       const s = veFeadWizState();

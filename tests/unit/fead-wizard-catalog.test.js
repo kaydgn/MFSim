@@ -174,19 +174,28 @@ describe('Sihirbaz — BMC aksesuar künyesi ve devir sınırları', () => {
     expect(A.veFeadAccLimits(p).maxCont).toEqual({ rpm: 7500, kaynak: 'elle' });
   });
 
-  test('kart: seçici yalnız defterde karşılığı olan tipte, sınır alanları hepsinde', () => {
+  test('kart: künye OKUNUR (seçim yukarıda), sınır alanları hepsinde', () => {
+    // İKİNCİ SEÇİCİ KALKTI (kullanıcı, 2026-09-01): aynı aksesuarın modeli iki
+    // ayrı kartta seçilebiliyordu. Seçim artık YALNIZ "Aksesuar Modelleri"
+    // kartında; burası onun okuması.
     bmcKur();
     const yuk = wiz.veFeadWizState().pulleys.filter((p) => !p.driver);
     const h = wiz._fwAccLimitCard(wiz.veFeadWizState(), yuk);
-    expect(h).toContain('veFeadWizAccLib');
+    expect(h).not.toContain('veFeadWizAccLib');
+    expect(h).not.toContain('<select');
     expect(h).toContain('maxContRpm');
     // Avara kasnak yük taşımaz — satırı olmamalı.
     expect(h).not.toMatch(/Avara/);
-    // Su pompası gibi defterde OLMAYAN bir tipte seçici yok ama sınır alanı var.
+    // Seçim yapılınca künye BURADA görünüyor.
+    const alt = wiz.veFeadWizState().pulleys.find((p) => p.type === 'fead-alternator');
+    const k = A.veFeadAccList('fead-alternator')[0].key;
+    wiz.veFeadWizAccModel(alt.key, 'bmc:' + k);
+    expect(wiz._fwAccLimitCard(wiz.veFeadWizState(),
+      wiz.veFeadWizState().pulleys.filter((p) => !p.driver))).toContain(k);
+    // Defterde OLMAYAN bir tipte sınır alanı yine var.
     wiz.veFeadWizPulleyAdd('fead-waterpump');
     const yuk2 = wiz.veFeadWizState().pulleys.filter((p) => !p.driver);
     const h2 = wiz._fwAccLimitCard(wiz.veFeadWizState(), yuk2);
-    expect(h2).toContain('defterde yok');
     expect((h2.match(/maxContRpm/g) || []).length).toBeGreaterThan(2);
   });
 
