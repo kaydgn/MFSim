@@ -1326,6 +1326,213 @@ function veFeadAnimKinematics(build, engineRpm, refRpm){
   };
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+//  TİTREŞİM ANİMASYONU — GENLİK BİR SONUÇ DEĞİLDİR
+// ════════════════════════════════════════════════════════════════════════════
+// Kayış-kasnak tahriki çalışırken çırpar: açıklıklar enine savrulur, gergi kolu
+// dans eder. Çekirdek bunun İKİ ayrı olayını da ZATEN çözüyor —
+// `spanFrequencies()` (enine açıklık titreşimi, eksenel hareketli tel) ve
+// `torsionalModel()` (N kasnak + kol serbestliği, özdeğer). Buradaki iş fizik
+// ÜRETMEK değil, o iki sonucu çizilebilir bir yüke çevirmek. Çekirdeğe
+// dokunulmuyor (modülün 1. dokunulmazı).
+//
+// ÖLÇÜLDÜ (BMC AG00686, Gates fixture'ı, gerçek ataletlerle):
+//   açıklık f₁ = 150–190 Hz   ·   burulma modları 12.0 · 62.5 · 123.4 · 279.5 Hz
+//   ateşleme 40 Hz @800 dev/dk  ·  137.5 Hz @2750 dev/dk
+//   1. mod şekli: ARM −1.000 · TEN −0.909 · IDR +0.364 · A_C +0.314 · CRK +0.082
+//   yani gözle görülen "kol dansı" birebir 1. mod; krank neredeyse duruyor.
+//
+// ÜÇ SINIR — üçü de yükün İÇİNDE taşınır, gizlenmez (modülün 8. kuralı):
+//
+// 1. GENLİK BİR SONUÇ DEĞİL. İkisi de özdeğer problemi; özvektör yalnız GÖRELİ
+//    genlik verir. Mutlak genlik için krank torkunun HARMONİK İÇERİĞİ ve kayış
+//    SÖNÜMÜ gerekir — MFSim'de ikisi de yok (motor kataloğunda tam yük tork
+//    EĞRİSİ var, harmonikleri değil). Ekrandaki genlik bu yüzden ilan edilmiş
+//    bir GÖSTERİM KAZANCIDIR, kullanıcı kaydırıcısına bağlıdır ve künyede
+//    yazılıdır. Zaten olmak zorunda: kartta ölçek ~0.71 px/mm, yani gerçek
+//    3 mm'lik bir açıklık sapması ekranda 2 piksel — görünmez.
+//
+// 2. AÇIKLIK ŞEKLİ v=0 YAKLAŞIMIDIR. Çekirdeğin FREKANS formülü eksenel hızı
+//    hesaba katıyor (f = (c²−v²)/(2Lc)) ama çizdiğimiz yarım sinüs DURAN telin
+//    şeklidir. BMC'de 2750 dev/dk'da v/c = 0.287, yani gerçek şekil akış
+//    yönünde çarpıktır. Frekans doğru, şekil yaklaşık.
+//
+// 3. MOD ŞEKLİNİN ZAMAN TABANI YOKTUR. Bir özvektör "şu hızda salınır" demez;
+//    ölçek de tanımı gereği keyfîdir. Ekran frekansı bu yüzden SABİT
+//    (VE_FEAD_VIB_SCREEN_HZ) ve gerçek Hz künyeye yazılır. Kinematiğin ağır
+//    çekim katsayısı burada KULLANILAMAZ: ölçüldü, BMC'de slow = 1/139 ve
+//    1. mod 12 Hz → ekranda 0.086 Hz, yani çevrim başına 11.6 saniye — bu bir
+//    salınım değil, sürüklenme. İki animasyonun ayrı zaman tabanı olmasının
+//    sebebi budur, tercih değil ölçüm.
+
+var VE_FEAD_VIB_GAIN_MIN = 1;
+var VE_FEAD_VIB_GAIN_MAX = 20;
+// VARSAYILAN ÖLÇÜLDÜ, seçilmedi. Gerçek tarayıcıda (BMC örneği, 440×458 kart,
+// 0.706 px/mm) bir çevrim taranarak yolun titreşimsiz hâlinden en büyük sapması:
+//   kazanç  ×3   ×6   ×10   ×14   ×20
+//   çırpma 2.9  5.7   9.5  13.3  19.0 px
+//   mod 1  4.1  8.5  14.8  21.6  22.8 px   (14'ten sonra açı tavanı ısırıyor)
+// ×6'da çırpma kartın %1.2'si — hareket hâlinde seçiliyor ama ilk bakışta
+// "düz" okunuyordu (ölçüldü: tek karelik ekran görüntüsünde açıklıklar düz
+// görünüyor). ×10 ilk açılışta okunur ve kaydırıcı hâlâ iki yöne de açık.
+var VE_FEAD_VIB_GAIN_DEF = 10;
+// İlan edilmiş sönüm oranı. KALİBRE DEĞİL — yalnız açıklıkların BİRBİRİNE göre
+// genliğini (rezonansa yakın olan daha çok savrulsun) üretmek için var.
+var VE_FEAD_VIB_ZETA = 0.06;
+// 1× kazançta, rezonanstaki bir açıklığın tepe genliği [mm].
+var VE_FEAD_VIB_SPAN_MM = 0.35;
+// 1× kazançta, mod şeklinde en büyük serbestliğin tepe açısı [°].
+var VE_FEAD_VIB_MODE_DEG = 1.5;
+// Mod şekli animasyonunun EKRAN frekansı [Hz] — gerçek frekansla ilgisi yok.
+var VE_FEAD_VIB_SCREEN_HZ = 0.75;
+// Çırpma ekranda bunu aşarsa EK ağır çekim uygulanır (60 Hz'de çevrim başına
+// 10 kareden az kalmasın) ve katsayı künyeye yazılır.
+var VE_FEAD_VIB_MAX_SCREEN_HZ = 6;
+// Ateşlemenin kaçıncı mertebesine kadar bakılacağı. Yüksek mertebeler 1/k ile
+// zayıflatılır — bir mertebe ağırlık modeli değil, sıralama ölçütü.
+var VE_FEAD_VIB_ORDERS = 6;
+// Mod şeklinde toplam açı tavanı [°] — kaydırıcı sonuna dayandığında kol
+// kayışın içinden geçmesin.
+var VE_FEAD_VIB_MODE_MAX_DEG = 22;
+
+// Kaydırıcının değeri. Düğümde saklanır; PANEL DE aynı alanı okur (modülün
+// 7. kuralı: iki ayrı ayar tutmak iki yüzeyin sessizce ayrışması demek).
+function veFeadVibGainOf(node){
+  var v = _feadNum(node && node.data && node.data.vibGain, NaN);
+  if(!Number.isFinite(v)) return VE_FEAD_VIB_GAIN_DEF;
+  return Math.min(VE_FEAD_VIB_GAIN_MAX, Math.max(VE_FEAD_VIB_GAIN_MIN, v));
+}
+
+// Kartın titreşim seçimi: 'off' | 'span' | 'mode:<k>'
+function veFeadVibModeOf(node){
+  var v = node && node.data && node.data.vibMode;
+  if(v === 'span') return 'span';
+  if(typeof v === 'string' && /^mode:\d+$/.test(v)) return v;
+  return 'off';
+}
+
+// SDOF büyütme çarpanı. r = uyarma/doğal.
+function _feadVibMag(r, zeta){
+  var a = 1 - r*r, b = 2*zeta*r;
+  var d = Math.sqrt(a*a + b*b);
+  return d > 1e-9 ? 1/d : 1/(2*zeta);
+}
+
+// Bir açıklığın ateşleme mertebelerine karşı en büyük büyütmesi.
+// Mertebe k'nin uyarma frekansı k·f_ateşleme; katkısı 1/k ile zayıflatılır.
+function _feadVibSpanMag(fSpan, fFire, zeta){
+  if(!(fSpan > 0) || !(fFire > 0)) return 1;
+  var cap = 1/(2*zeta), best = 0;
+  for(var k=1;k<=VE_FEAD_VIB_ORDERS;k++){
+    var m = Math.min(cap, _feadVibMag(k*fFire/fSpan, zeta)) / k;
+    if(m > best) best = m;
+  }
+  return best;
+}
+
+// ── AÇIKLIK ÇIRPMASI YÜKÜ ───────────────────────────────────────────────────
+// Frekans ÇEKİRDEKTEN (spanFrequencies), genlik ilan edilmiş kazançtan.
+// `slow` kinematiğin ağır çekim katsayısı: aynı katsayı kullanılır ki
+// "bir kayış turunda kaç çırpma" oranı ekranda BİREBİR kalsın.
+function veFeadVibSpanPayload(build, engineRpm, slow, gain, relDeg){
+  if(!build || !build.ok || !build.sys || typeof FEADCore === 'undefined') return null;
+  var rpm = _feadNum(engineRpm, NaN);
+  if(!(rpm > 0)) return null;
+  var g = Math.min(VE_FEAD_VIB_GAIN_MAX, Math.max(VE_FEAD_VIB_GAIN_MIN, _feadNum(gain, VE_FEAD_VIB_GAIN_DEF)));
+  var sys = build.sys, st, T, fr, fFire, cyl;
+  try {
+    var rel = Number.isFinite(_feadNum(relDeg, NaN)) ? _feadNum(relDeg, NaN) : FEADCore.meanRel(sys);
+    st = FEADCore.tensionerState(sys, rel);
+    T  = FEADCore.spanTensions(sys, { engineRpm: rpm, loadsKw: {} });
+    fr = FEADCore.spanFrequencies(sys, st.geom, T.spanN, { engineRpm: rpm, modes: 1 });
+    cyl = _feadNum(build.solver && build.solver.data && build.solver.data.cylinders, 6);
+    if(!(cyl > 0)) cyl = 6;
+    fFire = FEADCore.firingFrequencyHz(rpm, cyl, 4);
+  } catch(e){ return null; }
+
+  var sl = (_feadNum(slow, NaN) > 0) ? _feadNum(slow, NaN) : 1;
+  var fMax = 0;
+  fr.forEach(function(s){
+    var f = (s.fHz && s.fHz.length) ? s.fHz[0] : 0;
+    if(s.flutter || !(f > 0)) f = fFire;
+    if(f > fMax) fMax = f;
+  });
+  // EK AĞIR ÇEKİM — yalnız gerekiyorsa. Uygulanınca kinematikle olan oran
+  // bozulur, o yüzden katsayı künyeye yazılıyor (extra > 1 ise).
+  var extra = 1;
+  if(fMax * sl > VE_FEAD_VIB_MAX_SCREEN_HZ && fMax > 0)
+    extra = (fMax * sl) / VE_FEAD_VIB_MAX_SCREEN_HZ;
+  var vs = sl / extra;
+
+  var cap = 1/(2*VE_FEAD_VIB_ZETA), varCirp = false;
+  var spans = fr.map(function(s, i){
+    var f = (s.fHz && s.fHz.length) ? s.fHz[0] : 0;
+    var fl = !!s.flutter || !(f > 0);
+    if(fl){ varCirp = true; f = fFire; }              // duran dalga yok — akıp giden dalga
+    var mag = fl ? cap : _feadVibSpanMag(f, fFire, VE_FEAD_VIB_ZETA);
+    return {
+      f: f, fScreen: f * vs, ampMm: VE_FEAD_VIB_SPAN_MM * g * mag,
+      // Faz açıklıktan açıklığa kaydırılır: hepsi aynı anda tepeye çıksaydı
+      // kayış nefes alıyormuş gibi görünürdü, oysa açıklıklar bağımsız.
+      ph: (i * 2*Math.PI / Math.max(1, fr.length)),
+      mag: mag, flutter: fl, LMm: s.LMm, TN: s.TN
+    };
+  });
+  return { kind: 'span', gain: g, zeta: VE_FEAD_VIB_ZETA, extraSlow: extra,
+           firingHz: fFire, cylinders: cyl, engineRpm: rpm, anyFlutter: varCirp,
+           spans: spans };
+}
+
+// ── MOD ŞEKLİ YÜKÜ ──────────────────────────────────────────────────────────
+// Şekil BİR SONUÇTUR (özvektör); yalnız ÖLÇEĞİ gösterim kazancıdır — bir
+// özvektörün ölçeği zaten tanımsızdır, dolayısıyla burada uydurulan bir şey
+// yok. Kol dönüşü kasnak merkezini pivot etrafında KATI CİSİM olarak döndürür;
+// teğet noktalarının kayması ihmal edilir (küçük açıda O(δ²)).
+function veFeadVibModeList(build, opts){
+  if(!build || !build.ok || !build.sys || typeof FEADCore === 'undefined') return null;
+  try {
+    var T = FEADCore.torsionalModel(build.sys, veFeadTorsionalOpt(build, opts || {}));
+    return T.modes.filter(function(m){ return m.fHz > 1e-6; }).map(function(m){ return m.fHz; });
+  } catch(e){ return null; }
+}
+
+function veFeadVibModePayload(build, modeIdx, gain, opts, relDeg){
+  if(!build || !build.ok || !build.sys || typeof FEADCore === 'undefined') return null;
+  var sys = build.sys, n = sys.pulleys.length, t = sys._tenIdx;
+  if(!(t >= 0)) return null;
+  var g = Math.min(VE_FEAD_VIB_GAIN_MAX, Math.max(VE_FEAD_VIB_GAIN_MIN, _feadNum(gain, VE_FEAD_VIB_GAIN_DEF)));
+  var T, st;
+  try {
+    var rel = Number.isFinite(_feadNum(relDeg, NaN)) ? _feadNum(relDeg, NaN) : FEADCore.meanRel(sys);
+    T  = FEADCore.torsionalModel(sys, veFeadTorsionalOpt(build, opts || {}));
+    st = FEADCore.tensionerState(sys, rel);
+  } catch(e){ return null; }
+  var elastic = T.modes.filter(function(m){ return m.fHz > 1e-6; });
+  var k = Math.max(0, Math.min(elastic.length - 1, Math.round(_feadNum(modeIdx, 0))));
+  var m = elastic[k];
+  if(!m) return null;
+
+  var mx = 0;
+  m.shape.forEach(function(s){ var a = Math.abs(s.amp); if(a > mx) mx = a; });
+  if(!(mx > 0)) return null;
+  var degTop = Math.min(VE_FEAD_VIB_MODE_MAX_DEG, VE_FEAD_VIB_MODE_DEG * g);
+  var sc = (degTop * Math.PI/180) / mx;
+
+  var spin = [];
+  for(var i=0;i<n;i++) spin.push((m.shape[i] ? m.shape[i].amp : 0) * sc);
+  var armRad = (m.shape[n] ? m.shape[n].amp : 0) * sc;
+
+  var pv = null;
+  try { pv = sys.tensioner.pivot ? [sys.tensioner.pivot[0], sys.tensioner.pivot[1]] : null; } catch(e){ pv = null; }
+  var tc = st.geom.pulleys[t] ? [st.geom.pulleys[t].c[0], st.geom.pulleys[t].c[1]] : null;
+  if(!pv || !tc) return null;
+
+  return { kind: 'mode', gain: g, idx: k, fHz: m.fHz, modeCount: elastic.length,
+           screenHz: VE_FEAD_VIB_SCREEN_HZ, spin: spin, armRad: armRad,
+           tenIdx: t, pivot: pv, tenC: tc, topDeg: degTop,
+           elasticHz: elastic.map(function(x){ return x.fHz; }) };
+}
+
 // ─── Tahrik oranı: krank kasnağı → sürücü (fan) kasnağı ─────────────────────
 // Sayfa oranı iki ÇAPLA veriyor (krank 197.32 / fan 179.62 = 1.0985 ≈ 1.1),
 // çünkü FEAD kayışının sürücü kasnağı krank milinde DEĞİL: krank ayrı bir
@@ -3327,6 +3534,15 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_ANIM_FALLBACK_RPM: VE_FEAD_ANIM_FALLBACK_RPM,
     veFeadAnimRpmChoices: veFeadAnimRpmChoices, veFeadAnimRpmOf: veFeadAnimRpmOf,
     veFeadAnimKinematics: veFeadAnimKinematics,
+    VE_FEAD_VIB_GAIN_MIN: VE_FEAD_VIB_GAIN_MIN, VE_FEAD_VIB_GAIN_MAX: VE_FEAD_VIB_GAIN_MAX,
+    VE_FEAD_VIB_GAIN_DEF: VE_FEAD_VIB_GAIN_DEF, VE_FEAD_VIB_ZETA: VE_FEAD_VIB_ZETA,
+    VE_FEAD_VIB_SPAN_MM: VE_FEAD_VIB_SPAN_MM, VE_FEAD_VIB_MODE_DEG: VE_FEAD_VIB_MODE_DEG,
+    VE_FEAD_VIB_SCREEN_HZ: VE_FEAD_VIB_SCREEN_HZ,
+    VE_FEAD_VIB_MAX_SCREEN_HZ: VE_FEAD_VIB_MAX_SCREEN_HZ,
+    VE_FEAD_VIB_MODE_MAX_DEG: VE_FEAD_VIB_MODE_MAX_DEG,
+    veFeadVibGainOf: veFeadVibGainOf, veFeadVibModeOf: veFeadVibModeOf,
+    veFeadVibSpanPayload: veFeadVibSpanPayload,
+    veFeadVibModeList: veFeadVibModeList, veFeadVibModePayload: veFeadVibModePayload,
     veFeadPowerCurve: veFeadPowerCurve, veFeadHasPowerCurve: veFeadHasPowerCurve,
     veFeadInterpKw: veFeadInterpKw,
     veFeadPinPlan: veFeadPinPlan,

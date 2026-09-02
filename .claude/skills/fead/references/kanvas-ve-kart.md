@@ -838,6 +838,43 @@ edenler ters yönde), diş sayısı faz boyunca sabit (136).
 Animasyon **yalnız kanvas kartında**: panel, HTML rapor §8.5 ve SVG/PNG dışa
 aktarma aynı çiziciyi kullanıyor ama `animate` geçirmiyor → statik kalıyorlar.
 
+##### Titreşim animasyonu — çırpma ve mod şekli (2026-09-02)
+
+Kart iki titreşimi de oynatabiliyor; kaynak **çekirdek**, dokunulmadı
+(`spanFrequencies` + `torsionalModel`). Hükümler:
+
+- **Genlik BİR SONUÇ DEĞİLDİR** — ikisi de özdeğer problemi; mutlak genlik için
+  krank torkunun harmonik içeriği ve kayış sönümü gerekir, ikisi de MFSim'de
+  yok. Ekrandaki genlik ilan edilmiş bir **gösterim kazancıdır** (kullanıcı
+  kaydırıcısı) ve künyede `KALİBRE DEĞİL` ile yazılır. Zaten zorunlu: kartta
+  ölçek ~0,71 px/mm, gerçek 3 mm'lik sapma ekranda 2 piksel.
+- **İki animasyonun zaman tabanı AYRIDIR ve bu bir ölçümdür.** Çırpma
+  kinematiğin ağır çekim katsayısını paylaşır (oran birebir kalsın); mod şeklinin
+  **zaman tabanı yoktur** — aynı katsayıyla 12 Hz'lik 1. mod ekranda çevrim
+  başına 11,6 saniye sürerdi, yani salınım değil sürüklenme.
+- **Açıklık şekli v=0 yaklaşımıdır**: frekans eksenel hızı içeriyor
+  (`(c²−v²)/2Lc`), çizilen yarım sinüs duran telin şeklidir.
+- **Kayış kasnakta KAYMAZ.** Mod şeklinde yay üstündeki her nokta kasnakla
+  birlikte döner, açıklık iki ucunun kaymasını doğrusal taşır. Yalnız kolları
+  döndürüp kayışı yerinde bırakmak, V kaburgalı sürtünmeli bir tahrikte
+  **olmayan** bir şeyi öğretirdi.
+- **Donuk kare, animasyonun İLK KARESİDİR** (`vibDef` t=0 ile çizilir): çırpmada
+  açıklıklar arası faz kayması var; deformasyonsuz çizilseydi animasyon
+  başlarken kayış sıçrardı ve `prefers-reduced-motion` açık kullanıcı titreşimi
+  hiç görmezdi.
+- **Üç çizici (kayış yolu · dişler · kollar) TEK deformasyon nesnesini paylaşır**
+  (`_feadVibDef` → `disp`/`spin`). Ayrı olsalardı dişler kayıştan kopardı.
+- **Burulma modeli çözülemezse `null`** — sessizce sıfır şekil göstermek, iki
+  sessiz girdisi olan (gergi kasnak kütlesi +%32, krank mili ataleti +%40) bir
+  modelde kendinden emin biçimde yanlış bir frekans göstermek olurdu. Kart
+  sebebini yazar.
+- **Kazanç şeridi yalnız titreşim AÇIKKEN belirir** — kapalıyken kart bugünkü
+  hâlinin birebir aynısı; 22 px'i isteyen öder.
+
+Kapı: `tests/unit/fead-vibration.test.js` (30 test; dört mutasyonla ölçüldü —
+çırpma normalini açıklık yönüne çevirmek, kol kaymasını düşürmek, açıklık ucu
+rampasını ters çevirmek, çözülemeyen modeli sıfır şekle çevirmek).
+
 ##### Yön gülünün ŞERİDİ artık ÖLÇÜLMÜŞ bir çarpışmaya bağlı (2026-08-26)
 
 Gül varsayılan yerinde (sağ alt) dururken şemadan **54 px'lik bir sağ şerit**
