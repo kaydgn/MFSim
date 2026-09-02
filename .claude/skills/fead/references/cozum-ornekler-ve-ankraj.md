@@ -2264,6 +2264,98 @@ colgroup oranlarını 100'den kaydırma, satıra künye seçicisini geri koyma,
 X/Y ipucunu düşürme, kart ipucundan ölçülmüş bedeli silme, Kayış Yolu'na
 CCW/CW'yi geri koyma, beş CSS kuralını tek tek düşürme.
 
+###### DOKUZ DÜZELTME — dördüncü kullanıcı turu (2026-09-01)
+
+| # | İstek | Ne yapıldı |
+|---|-------|------------|
+| 1 | *"'otomatik gergi' kısmı diğer satırlar gibi olmamış"* | Satır biçimi birebir aynı; **zorunluluk üst karta**, renk konturuna taşındı |
+| 2 | *"kasnakları tutup yukarı, aşağı çekelim"* | Satır başına ↑ ↓ — **tablo düzeni, kayış yolu DEĞİL** |
+| 3 | *"Virgülü de tanısın"* | Sayı alanları `type="number"` olmaktan çıktı |
+| 4 | *"gergileri tekrardan kalibre edelim… 56mm gergiler de var"* | Veri DOĞRU çıktı; kusur **etiketteydi** |
+| 5 | *"ufak bir koordinat düzlemi… fareyle açı tayin edecek"* | Açı seçici penceresi |
+| 6 | *"oran sadece kasnak çaplarından türeyecek"* | Kip seçicisi ve oran alanı kalktı |
+| 7 | *"motor devirleri RPM olarak görünsün"* | `d/dk` → `RPM` |
+| 8 | *"alternatör ve kompresör seçenekleri eksik gibi duruyor"* | İki katalog **tek seçicide birleşti** |
+| 9 | *"Mutlak değil, nispi bir açı değeri tanımı olsun"* | Kol yönü işaretli ve merkezden pivota |
+
+###### 3 · VİRGÜL OKUYUCUDA DEĞİL ALANDA TAKILIYORDU
+
+`_fwNum` virgülü **zaten** çeviriyordu. Kusur `<input type="number">`'daydı:
+tarayıcı belgesi ondalık ayırıcı olarak yalnız noktayı kabul ediyor, virgül
+yazılınca alan GEÇERSİZ oluyor ve `input.value` **boş string** dönüyor. Yani
+program virgülü tanımıyor değildi, virgülü hiç **görmüyordu**.
+
+Alanlar `type="text" inputmode="decimal"` oldu (telefonda sayı tuş takımı yine
+açılıyor). Ok tuşlarıyla artırma gitti — kabul edilen bedel, çünkü virgül
+yazamamak bir sayının HİÇ girilememesi demekti.
+
+###### 4 · KÜTÜPHANE DOĞRU, ETİKET EKSİKTİ
+
+Arşivdeki **on raporun onu da** kapıdan geçiyor: dokuzu 90 mm, biri (AG00879 ·
+T38665) 56 mm ve kayıtlar birebir öyle. *"Bir sürü 90 mm"* bir veri hatası
+değil, **arşivin kendisi**.
+
+Kusur şuydu: on dört kaydın on üçü *"kol 90 mm · … Nm"* diye okunuyor ve on
+dört ayrı gergi varmış gibi görünüyordu. Oysa **dört parça** var — E9843 altı
+sistemde, T38624 ikisinde, T38519 ve T38665 birer — ve kayıtları ayıran şey
+parça değil **montaj ayarı** (yay çalışma momenti). Etiket artık parça
+numarasıyla başlıyor; doğrulanamayan dört AG00976 kaydı `?` taşıyor.
+
+###### 8 · SEÇENEKLER EKSİK DEĞİL, GÖRÜNMÜYORDU
+
+İki katalog vardı ve **aynı aksesuarın modeli iki ayrı kartta seçiliyordu**:
+
+| Katalog | Alternatör | Klima | Nerede sunuluyordu |
+|---|---:|---:|---|
+| Araç Performans (`veFeadPresetLib`) | 2 | 2 | "Aksesuar Modelleri" |
+| BMC defteri (`veFeadAccList`) | **10** | **4** | "Aksesuar Devir Sınırları" |
+
+Tek seçici kaldı ve listesi **birleşim**; değer ön ekli (`bmc:` / `ap:`) çünkü
+iki katalog ayrı anahtar uzayları kullanıyor. Sınır kartı artık künyeyi
+**okuyor**, seçmiyor.
+
+**AYNI TURDA ÇIKAN SESSİZ KUSUR:** BMC künyesinden başka bir katalog modeline
+geçince güç **hâlâ eski künyenin eğrisinden** geliyordu — öncelik
+`duty kW > düğümün kendi eğrisi > katalog` ve künyenin yazdığı eğri "düğümün
+kendi eğrisi" sayılıyor. `veFeadAccUnlink` bilerek alanları bırakıyor (o yol
+*"elle gir"*dir), o yüzden ayrı bir üretici kondu: `veFeadAccClearWritten`
+yalnız künyenin yazdığıyla **hâlâ birebir aynı** olan alanı siliyor —
+kullanıcının elle değiştirdiği tek bir sayı varsa tablo korunuyor.
+
+###### 5 + 9 · KOL YÖNÜ: NİSPİ DİL VE GÖRSEL SEÇİCİ
+
+İki ayrı şey karışıyordu. **Saklanan** `armMeanDeg` kolun yönü, *pivottan
+avara merkezine*, 0–360 mutlak (Gates çizimi böyle yazıyor) — çekirdek, rapor
+ve doğrulama kümesi buna dayanıyor ve **değişmedi**. **Gösterilen** ise ters
+yön: kullanıcının elinde avara merkezi var ve pivotun ona göre nerede olduğunu
+seçiyor. Mutlak 344° bu yüzden *"parçanın solunda bir sıfır ekseni"* gibi
+okunuyordu.
+
+Gösterim artık **işaretli** ve (−180, +180]: 344 → **164**. Aralık kozmetik
+değil — 0–360'ta küçük bir negatif dönme 359 gibi görünür. Çevirici tek yerde
+(`veFeadArmShownDeg` / `veFeadArmFromShown`) ve **panel de aynı çeviriden
+geçiyor**; ikinci bir çevirici iki yüzeyin sessizce ayrışması demekti.
+
+Seçici penceresi avara merkezini orijin alıp yön gülünün dilini konuşuyor
+(0 sağda, CCW artı) ve **montaj konumunu canlı okutuyor** — kullanıcının
+*"muhtemel bir pivot noktası belirlemiş olacak"* dediği şey bu. Çözülmüş model
+İSTEMİYOR: kullanıcı açıyı tam da model yarımken arıyor.
+
+**NEDEN GÜVENLİ:** kol yönü, avara merkezi girildikten sonra kalan tek
+serbestlik derecesi ve kayış yolunu hiç değiştirmiyor (ölçüldü: 6 sistem × 548
+açı, en büyük fark 4,55e−13 mm). Doğru cevabı hesap veremez; bir paketleme
+kararıdır.
+
+**ÖLÇÜLDÜ (gerçek tarayıcı):** fare merkezin sağında → `0,09°`; tık kutuyu
+`90,61°` ile dolduruyor; "Uygula" `−30` yazınca saklanan alan `150` oluyor ve
+alan `−30` gösteriyor. **Aynı turda çıkan kusur:** "Uygula" yazıyor ama
+pencere KAPANMIYORDU — `veFeadWizRender` kaplamanın durumunu izlemiyordu;
+artık her çizimde izliyor.
+
+Kapı **27 mutasyonla** ölçüldü, 27'si de kırmızı. Bir mutasyon önce yeşil
+geçti (*"Uygula'yı yazmadan kapat"*) ve kapının **totolojik** olduğunu ortaya
+çıkardı: seçilen açı örneğin zaten taşıdığı 344° ile aynıydı.
+
 **Sırada:** kullanıcı kayışı seçtikten sonra katalog sonuçlarını geri almanın
 akışı (bugün Kayış Özellikleri panelinden elle yapılıyor); ve zarf çözümünün
 Sonuçlar sayfasında kanal olarak yayını.

@@ -60,10 +60,12 @@ test('tur2 — gergi satırı · yön · kilit · kayış · kW', async ({ page 
     const tr = document.querySelector('tr.ve-fw-tr-ten');
     const tip = tr.children[1];
     return {
-      ad: (tip.querySelector('.ve-fw-tip-ten') || {}).textContent,
+      // TİP hücresi ÜÇÜNCÜ turda tek seçenekli bir <select> oldu: diğer beş
+      // satırda da orada bir açılır liste var ve hücrenin hizasını o belirler.
+      ad: (tip.querySelector('select option') || {}).textContent,
       // Künye seçicisi ÜÇÜNCÜ turda satırdan 4. adıma taşındı (kullanıcı
       // isteği: *"Otomatik gergi tipini 'otomatik gergi' kısmında seçeriz"*).
-      kunye: !!tip.querySelector('select'),
+      kunye: (tip.querySelectorAll('option').length > 1),
       gorunen: tip.innerText.trim().split('\n')[0],
       surucu: tr.querySelector('input[type=radio]').disabled,
       sil: tr.querySelector('button.ve-fw-x').disabled,
@@ -128,7 +130,10 @@ test('tur2 — gergi satırı · yön · kilit · kayış · kW', async ({ page 
       kilit: document.querySelectorAll('.ve-fw-lock').length,
       armLen: { v: g('ten.armLen').value, ro: g('ten.armLen').readOnly },
       cenX: { v: g('ten.cenX').value, ro: g('ten.cenX').readOnly },
-      armMeanDeg: { ro: g('ten.armMeanDeg').readOnly }
+      // KOL YÖNÜ artık nispi çeviriciden geçiyor (`veFeadWizArmShown`) ve
+      // MONTAJA ait olduğu için künye onu KİLİTLEMEZ.
+      kolYonu: { ro: [...document.querySelectorAll('input')]
+        .find(e => (e.getAttribute('oninput')||'').includes('veFeadWizArmShown')).readOnly }
     };
   });
   console.log('KİLİT açık:', JSON.stringify(acik), 'sonra:', JSON.stringify(kilitli));
@@ -140,7 +145,7 @@ test('tur2 — gergi satırı · yön · kilit · kayış · kW', async ({ page 
   // KOL ÇALIŞMA AÇISI DA KİLİTLENMEZ: mutlak açı parçaya değil MONTAJA ait
   // (aynı E9843 bir araçta 344°, başka birinde 348°), o yüzden künye
   // kütüphanesinden gelmez.
-  expect(kilitli.armMeanDeg.ro).toBe(false);
+  expect(kilitli.kolYonu.ro).toBe(false);
 
   // "elle gir" → kilit açılır, DEĞER KORUNUR
   await page.selectOption('select[onchange*="veFeadWizTenLib"]', '');
@@ -189,7 +194,13 @@ test('tur2 — gergi satırı · yön · kilit · kayış · kW', async ({ page 
   console.log('ÇEVRİM0 hiza', k0.hiza, 'sütun', k0.sutun, 'kW', JSON.stringify(k0.kw));
   expect(k0.hiza).toBe(true);
 
-  await page.selectOption('select[onchange*="veFeadWizAccPreset"]', { index: 1 });
+  // TEK YAZICI (2026-09-01). Araç Performans kaydı (`ap:`) seçiliyor: BMC
+  // kaydı düğüme EĞRİ yazıyor ve kaynak sütunu "kendi eğrisi" derdi, oysa
+  // burada ölçülen şey katalog yolunun kW'ı değiştirmesi.
+  const accSec = page.locator('select[onchange*="veFeadWizAccModel"]').first();
+  const apVal = await accSec.evaluate((e) =>
+    [...e.options].map((o) => o.value).find((v) => v.indexOf('ap:') === 0));
+  await accSec.selectOption(apVal);
   await page.waitForTimeout(400);
   const k1 = await oku();
   console.log('ÇEVRİM1 kW', JSON.stringify(k1.kw));

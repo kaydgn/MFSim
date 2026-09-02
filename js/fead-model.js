@@ -162,6 +162,51 @@ function veFeadTensionerBoxMm(td){
 // EŞMERKEZLİLİK ÖLÇÜLDÜ (E9843 parça çizimi, 2026-08-29): gövdenin merkezî
 // bağlantı deliği kolun dönme ekseniyle eşmerkezli. Eksantrik gövdeli bir
 // gergide ikisi ayrılırdı; bugün elde öyle bir parça YOK.
+// ── KOL AÇISININ GÖSTERİM DİLİ — TEK ÜRETİCİ ──────────────────────────────
+//
+// Kullanıcı bildirimi (2026-09-01): *"'Otomatik gergi kol açısı' kısmının açı
+// koordinat tanımı genel programda gösterilen ufak açı koordinat tanımlarından
+// farklı… 0 ekseni parçanın solunda kalıyor. Mutlak değil, nispi bir açı
+// değeri tanımı olsun."*
+//
+// İKİ AYRI ŞEY VARDI ve karışıyorlardı:
+//
+//   SAKLANAN  `armMeanDeg` = kolun yönü, **pivottan avara merkezine** bakarak,
+//             0–360 mutlak (Gates çizimi böyle yazıyor: "344° MEAN ANGLE").
+//             Çekirdek, rapor ve doğrulama kümesi buna dayanıyor — DEĞİŞMEDİ.
+//   GÖSTERİLEN Kullanıcının ekranda gördüğü şey ise ters yön: elinde avara
+//             MERKEZİ var (onu 2. adımda girdi) ve pivotun ona göre NEREDE
+//             olduğunu seçiyor. Yani merkezden pivota, yani `θ + 180`.
+//
+// Mutlak 344° bu yüzden "parçanın solunda bir sıfır ekseni" gibi okunuyordu:
+// çizilen ok pivottan çıkıyordu, oysa kullanıcı merkeze bakıyor.
+//
+// GÖSTERİM İŞARETLİ ve (−180, +180] aralığında — programın yön gülüyle aynı
+// dil (0 = +X, CCW artı) ve 344 yerine −16 okunuyor. Aralık seçimi kozmetik
+// değil: 0–360'ta küçük bir negatif dönme 359 gibi görünür ve kullanıcı
+// "neredeyse tam tur" sanır.
+//
+// İKİ FONKSİYON DA TEK YERDE, çünkü sihirbaz da panel de aynı alanı yazıyor;
+// ikinci bir çevirici iki yüzeyin sessizce ayrışması demekti.
+function veFeadWrap180(deg){
+  var d = _feadNum(deg, NaN);
+  if(!Number.isFinite(d)) return NaN;
+  d = ((d + 180) % 360 + 360) % 360 - 180;
+  return (d === -180) ? 180 : d;
+}
+// SAKLANAN → GÖSTERİLEN (merkezden pivota, işaretli)
+function veFeadArmShownDeg(armMeanDeg){
+  var d = _feadNum(armMeanDeg, NaN);
+  return Number.isFinite(d) ? veFeadWrap180(d + 180) : NaN;
+}
+// GÖSTERİLEN → SAKLANAN (pivottan merkeze, 0–360)
+function veFeadArmFromShown(shownDeg){
+  var d = _feadNum(shownDeg, NaN);
+  if(!Number.isFinite(d)) return NaN;
+  var a = (d + 180) % 360;
+  return (a < 0) ? a + 360 : a;
+}
+
 function veFeadTensionerPivot(td){
   if(!td) return null;
   var cx = _feadNum(td.cenX, NaN), cy = _feadNum(td.cenY, NaN);
@@ -3150,6 +3195,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadGatherPulleys: veFeadGatherPulleys,
     veFeadSpringSetup: veFeadSpringSetup,
     veFeadMigrateTensioner: veFeadMigrateTensioner,
+    veFeadWrap180: veFeadWrap180, veFeadArmShownDeg: veFeadArmShownDeg,
+    veFeadArmFromShown: veFeadArmFromShown,
     veFeadTensionerPivot: veFeadTensionerPivot,
     veFeadArmBand: veFeadArmBand, _feadBandSample: _feadBandSample,
     VE_FEAD_BAND_STEP_DEG: VE_FEAD_BAND_STEP_DEG,

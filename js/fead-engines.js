@@ -269,7 +269,7 @@ function veFeadEngineList(){
 function veFeadEngineLabel(e){
   if(!e) return '';
   return e.ad + '  ·  ' + e.key
-    + (e.governedRpm > 0 ? '  ·  ' + e.governedRpm + ' d/dk' : '');
+    + (e.governedRpm > 0 ? '  ·  ' + e.governedRpm + ' RPM' : '');
 }
 
 function veFeadEngineOf(key){

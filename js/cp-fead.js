@@ -1352,21 +1352,36 @@ function getFeadTensionerPropertiesHTML(node){
         + 'çevresinde bir yay çiziyor. <b>Gövdenin montaj konumu buradan çıkar</b> '
         + '(aşağıda).'));
 
+  // KOL YÖNÜ SİHİRBAZLA AYNI DİLDE — kullanıcı isteği (2026-09-01): *"0 ekseni
+  // parçanın solunda kalıyor. Mutlak değil, nispi bir açı değeri tanımı
+  // olsun."* Alan artık MERKEZDEN PİVOTA bakan işaretli açıyı gösteriyor
+  // (0 = +X, CCW artı — yön gülüyle aynı); saklanan alan mutlak kalıyor ve
+  // çeviri TEK üreticiden (veFeadArmShownDeg / veFeadArmFromShown). Panel ile
+  // sihirbaz aynı alanı yazıyor, ikisi ayrı dil konuşamaz.
+  var _armAbs = _feadNum(node.data && node.data.armMeanDeg, NaN);
+  var _armGos = (typeof veFeadArmShownDeg === 'function') ? veFeadArmShownDeg(_armAbs) : NaN;
   html += _feadCard('Kol Künyesi', 'parça + montaj verisi', 'var(--text-secondary)',
       _feadGrid(node, [
-        { key:'armLen',     label:'Kol boyu (Arm Length) [mm]', ph:'90' },
-        { key:'armMeanDeg', label:'Kol çalışma açısı (mutlak) [°]', ph:'344', step:'0.1' }
+        { key:'armLen', label:'Kol boyu (Arm Length) [mm]', ph:'90' }
       ], 2)
+    + '<label style="display:block; margin-top:6px;">'
+      + '<span style="display:block; font-size:var(--fs-micro); color:var(--text-secondary); margin-bottom:2px;">'
+      + 'Kol yönü (merkezden pivota, işaretli) [°]</span>'
+      + '<input type="text" inputmode="decimal" value="'
+      + _feadEsc(Number.isFinite(_armGos) ? Math.round(_armGos * 10000) / 10000 : '')
+      + '" placeholder="164" style="width:100%; ' + _FEAD_INP + '"'
+      + ' onchange="veFeadSetArmShown(\'' + node.id + '\', this.value)"></label>'
     + veFeadMountReadout(node)
     + _feadHint('<b>Kol boyu</b>: montaj ekseni ile avara merkezi arasındaki sabit '
         + 'mesafe; tedarikçi raporunun "Tensioner Data" bölümünde yazar (56–90 mm '
-        + 'aralığında doğrulandı).<br><b>Kol çalışma açısı</b>: kolun çalışma '
-        + 'konumundaki MUTLAK açısı (+X’ten CCW), yani gergi gövdesinin montajdaki '
-        + 'saat konumu. Parça/montaj çiziminde yazar — E9843’ün çizimi '
-        + '<i>"344° MEAN ANGLE"</i> diyor. Aynı parça başka bir motorda başka bir '
-        + 'açıda durabilir (AG00976’da 348°), bu yüzden künye kütüphanesine '
-        + '<b>yazılmaz</b>: parçanın kendi değişmezi mutlak açı değil, göreli dönme '
-        + '(28°) — o da yay künyesinden çıkıyor.'));
+        + 'aralığında doğrulandı).<br><b>Kol yönü</b>: gövdenin montaj noktasının '
+        + 'avara merkezine göre yönü — <b>0° sağda, saat yönünün tersi artı</b>, '
+        + 'değer işaretli (−180…+180). Programın yön gülüyle aynı dil. Parça/montaj '
+        + 'çizimi bunu ters yönden, mutlak olarak yazar (E9843’ün çizimi '
+        + '<i>"344° MEAN ANGLE"</i> diyor — burada <b>164°</b> okunur). Aynı parça '
+        + 'başka bir motorda başka bir yönde durabilir, bu yüzden künye '
+        + 'kütüphanesine <b>yazılmaz</b>: parçanın kendi değişmezi yön değil, göreli '
+        + 'dönme (28°) — o da yay künyesinden çıkıyor.'));
 
   html += veFeadTensionerLibCard(node);
 
@@ -1504,6 +1519,20 @@ function veFeadApplyTenLib(nodeId, key){
 //
 // SAF: yalnız düğüm verisinden hesaplanır, çözüme HİÇ bakmaz. Kayış yolu
 // çözülemese de bu üç sayı geçerlidir — geometri onlara bakmıyor.
+// Panelin kol yönü yazıcısı — sihirbazdakiyle AYNI çeviriden geçiyor.
+function veFeadSetArmShown(nodeId, val){
+  var node = (typeof nodes !== 'undefined' && nodes)
+    ? nodes.filter(function(n){ return n.id === nodeId; })[0] : null;
+  if(!node) return;
+  if(!node.data) node.data = {};
+  var d = _feadNum(val, NaN);
+  if(!Number.isFinite(d)) delete node.data.armMeanDeg;
+  else node.data.armMeanDeg = Math.round(veFeadArmFromShown(d) * 10000) / 10000;
+  if(typeof saveState === 'function') saveState();
+  if(typeof showNodeProperties === 'function') showNodeProperties(node);
+  if(typeof veFeadRefreshBadges === 'function') veFeadRefreshBadges();
+}
+
 function veFeadMountReadout(node){
   var td = (node && node.data) || {};
   var p = veFeadTensionerPivot(td);

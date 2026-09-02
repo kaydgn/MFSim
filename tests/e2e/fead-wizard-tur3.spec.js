@@ -85,7 +85,10 @@ test('tur3 — seçili kart · gergi satırı · yön · tablo hizası · kaydı
     return {
       hiza: x(ten).length === x(ilk).length && x(ten).every((v, i) => Math.abs(v - x(ilk)[i]) <= 1),
       tipMetni: ten.children[1].innerText.trim(),
+      // DÖRDÜNCÜ tur: hücre tek seçenekli bir <select> — diğer satırlarla aynı
+      // biçim. Kilit görünümle değil SEÇENEK KÜMESİYLE kuruluyor.
       tipSelect: !!ten.children[1].querySelector('select'),
+      tipSecenek: ten.children[1].querySelectorAll('option').length,
       cip: !!ten.querySelector('.ve-fw-tag'),
       yukseklikFarki: Math.abs(Math.round(ten.getBoundingClientRect().height
                               - ilk.getBoundingClientRect().height)),
@@ -95,7 +98,8 @@ test('tur3 — seçili kart · gergi satırı · yön · tablo hizası · kaydı
   console.log('SATIR', JSON.stringify(satir));
   expect(satir.hiza).toBe(true);
   expect(satir.tipMetni).toBe('Otomatik Gergi');
-  expect(satir.tipSelect).toBe(false);
+  expect(satir.tipSelect).toBe(true);
+  expect(satir.tipSecenek).toBe(1);
   expect(satir.cip).toBe(false);
   expect(satir.yukseklikFarki).toBeLessThanOrEqual(2);   // satır artık şişmiyor
   expect(satir.xIpucu).toMatch(/montaj noktas/);
@@ -122,7 +126,8 @@ test('tur3 — seçili kart · gergi satırı · yön · tablo hizası · kaydı
              sel: [...t.querySelectorAll('select')].map(e => Math.round(e.getBoundingClientRect().width)) };
   });
   const s0 = await sutun();
-  const sel = page.locator('select[onchange*="veFeadWizAccPreset"]').first();
+  // TEK YAZICI (2026-09-01): iki katalog tek seçicide birleşti.
+  const sel = page.locator('select[onchange*="veFeadWizAccModel"]').first();
   const opts = await sel.evaluate(e => [...e.options].map(o => o.value));
   await sel.selectOption(opts[opts.length - 1]);
   await page.waitForTimeout(400);

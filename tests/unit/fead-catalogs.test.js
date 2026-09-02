@@ -326,12 +326,59 @@ describe('Aksesuar kataloğu — uygulama sözleşmesi', () => {
   });
 
   test('unlink: bağ çözülür, ALANLAR KALIR', () => {
+    // "— elle gir —" yolu: kullanıcı künyenin değerlerini alıp düzenlemek
+    // istiyor (gergi künyesi kilidinin aynı kuralı).
     const n = { data: {} };
     A.veFeadAccApply(n, '57RS309348');
     A.veFeadAccUnlink(n);
     expect(n.data.accLib).toBeUndefined();
     expect(n.data.maxContRpm).toBe(8000);
     expect(n.data.pwrCurve.length).toBe(16);
+  });
+
+  // ── BAŞKA MODELE GEÇİŞ AYRI BİR YOLDUR (2026-09-01) ─────────────────────
+  // ÖLÇÜLDÜ: bırakılan eğri yeni seçimi SESSİZCE eziyordu — güç önceliği
+  // `duty kW > düğümün kendi eğrisi > katalog` ve künyenin yazdığı eğri
+  // "düğümün kendi eğrisi" sayılıyor.
+  describe('clearWritten: künyenin yazdığını siler, kullanıcınınkini KORUR', () => {
+    test('künyenin yazdığı eğri ve üç sınır gider', () => {
+      const n = { data: {} };
+      A.veFeadAccApply(n, '57RS309348');
+      A.veFeadAccClearWritten(n);
+      expect(n.data.accLib).toBeUndefined();
+      expect(n.data.accLibVer).toBeUndefined();
+      expect(n.data.pwrCurve).toBeUndefined();
+      expect(n.data.optimumRpm).toBeUndefined();
+      expect(n.data.maxContRpm).toBeUndefined();
+      expect(n.data.maxPeakRpm).toBeUndefined();
+    });
+
+    test('ELLE değiştirilen eğri ve sınır KALIR', () => {
+      const n = { data: {} };
+      A.veFeadAccApply(n, '57RS309348');
+      n.data.pwrCurve = [{ rpm: 1000, kw: 1 }, { rpm: 2000, kw: 2 }];
+      n.data.maxContRpm = 12345;
+      A.veFeadAccClearWritten(n);
+      expect(n.data.pwrCurve.length).toBe(2);
+      expect(n.data.maxContRpm).toBe(12345);
+      expect(n.data.maxPeakRpm).toBeUndefined();      // dokunulmayan gider
+    });
+
+    test('TEK BİR SAYI değişmişse eğri kullanıcınındır', () => {
+      const n = { data: {} };
+      A.veFeadAccApply(n, '57RS309348');
+      const uzun = n.data.pwrCurve.length;
+      n.data.pwrCurve[0].kw += 0.001;
+      A.veFeadAccClearWritten(n);
+      expect(n.data.pwrCurve.length).toBe(uzun);
+    });
+
+    test('künyesiz düğümde HİÇBİR ŞEYE dokunmaz', () => {
+      const n = { data: { pwrCurve: [{ rpm: 1, kw: 1 }], maxContRpm: 5 } };
+      A.veFeadAccClearWritten(n);
+      expect(n.data.pwrCurve.length).toBe(1);
+      expect(n.data.maxContRpm).toBe(5);
+    });
   });
 
   test('tip eşlemesi tek kaynaktan', () => {

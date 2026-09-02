@@ -214,6 +214,40 @@ function veFeadAccUnlink(node){
   return node;
 }
 
+// ── BAŞKA BİR MODELE GEÇERKEN: KÜNYENİN YAZDIĞINI TEMİZLE ─────────────────
+//
+// `veFeadAccUnlink` bilerek ALANLARI BIRAKIYOR — o yol *"elle gir"*dir ve
+// kullanıcı künyenin değerlerini alıp düzenlemek ister (gergi künyesindeki
+// kilidin aynı kuralı). Ama BAŞKA bir katalogdan model seçmek başka bir
+// şeydir: orada bırakılan eğri yeni seçimi SESSİZCE eziyor, çünkü güç
+// önceliği `duty kW > düğümün kendi eğrisi > katalog` ve künyenin yazdığı
+// eğri "düğümün kendi eğrisi" sayılıyor. ÖLÇÜLDÜ (2026-09-01): BMC künyesinden
+// Araç Performans modeline geçince kW hâlâ eski künyeden geliyordu.
+//
+// KULLANICININ KENDİ TABLOSU KORUNUR: alan yalnız künyenin yazdığıyla HÂLÂ
+// BİREBİR aynıysa siliniyor. Tek bir sayı elle değiştirildiyse o artık
+// künyenin verisi değildir ve silmek kullanıcının ölçümünü çöpe atmak olurdu.
+function _faSameCurve(a, b){
+  if(!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+  for(var i = 0; i < a.length; i++){
+    if(_faNum(a[i] && a[i].rpm) !== _faNum(b[i] && b[i].rpm)) return false;
+    if(_faNum(a[i] && a[i].kw) !== _faNum(b[i] && b[i].kw)) return false;
+  }
+  return true;
+}
+function veFeadAccClearWritten(node){
+  if(!node || !node.data) return node;
+  var d = node.data, a = veFeadAccOf(d.accLib);
+  if(a){
+    if(_faSameCurve(d.pwrCurve, a.curve)) delete d.pwrCurve;
+    ['optimumRpm', 'maxContRpm', 'maxPeakRpm'].forEach(function(k){
+      if(a[k] != null && _faNum(d[k]) === _faNum(a[k])) delete d[k];
+    });
+  }
+  delete d.accLib; delete d.accLibVer;
+  return node;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VE_FEAD_ACC_LIB_VERSION: VE_FEAD_ACC_LIB_VERSION,
@@ -225,6 +259,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadAccOf: veFeadAccOf,
     veFeadAccLimits: veFeadAccLimits,
     veFeadAccApply: veFeadAccApply,
+    veFeadAccClearWritten: veFeadAccClearWritten,
     veFeadAccUnlink: veFeadAccUnlink
   };
 }
