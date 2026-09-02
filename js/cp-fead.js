@@ -2903,13 +2903,19 @@ function veFeadLayoutSVG(build, W, H, opts){
   // mu" değil, "kare başına yazacak bir şey var mı".
   var animPay = null;
   var _akis = !!(opts.animate && opts.animate.dispMmS > 0);
-  if(_akis || opts.vib){
+  if(_akis || opts.vib || opts.scn){
     var r4 = function(v){ return Math.round(v*1e4)/1e4; };
     animPay = {
       s: r4(s), ox: r4(offX), oy: r4(offY), mx: r4(minX), my: r4(maxY),
       step: r4(stepMm), tooth: r4(toothMm), sense: (geom.sense < 0 ? -1 : 1),
       loop: r4(walk.l), mmS: _akis ? r4(opts.animate.dispMmS) : 0,
       vib: opts.vib || null,
+      // SENARYO: devir zamanın fonksiyonu, dolayısıyla kayış hızı da öyle.
+      // `slow` ağır çekim katsayısı; animatör kare başına mmS'i
+      //   beltMs(t)·1000·slow
+      // diye kendisi kuruyor — sabit bir mmS senaryoda yanlış olurdu.
+      scn: opts.scn ? _feadScnSlim(opts.scn) : null,
+      slow: (opts.animate && opts.animate.slow > 0) ? r4(opts.animate.slow) : 0,
       segs: walk.segs.map(function(sg){
         return (sg.a === 0)
           ? { a:0, x:r4(sg.x), y:r4(sg.y), ux:r4(sg.ux), uy:r4(sg.uy), l:r4(sg.l) }
@@ -2917,10 +2923,20 @@ function veFeadLayoutSVG(build, W, H, opts){
       })
     };
   }
-  // JSON yalnız sayı ve sabit anahtar taşıdığı için tek tırnaklı attribute
-  // içinde güvenli (içinde tek tırnak geçemez).
+  // ── YÜK ARTIK METİN DE TAŞIYOR — ATTRIBUTE KAÇIŞLANMAK ZORUNDA ──────────
+  // Burada eskiden şu yazıyordu: "JSON yalnız sayı ve sabit anahtar taşıdığı
+  // için TEK TIRNAKLI attribute içinde güvenli (içinde tek tırnak geçemez)."
+  // Senaryo geldiğinde o ilan YANLIŞ hâle geldi: faz adları, açıklık adları ve
+  // notlar metin ve Türkçe metinde kesme işareti geçiyor ("MFSim'de").
+  // ÖLÇÜLDÜ (gerçek tarayıcı): tek tırnak attribute'ü 7573. karakterde kapattı,
+  // JSON.parse "Unterminated string" attı ve animasyon SESSİZCE hiç kurulmadı —
+  // kart donuk kaldı, konsola tek satır düşmedi.
+  //
+  // Çare tırnağı değiştirmek DEĞİL (aynı tuzağın aynası olurdu): çift tırnak
+  // + `_feadEsc`, yani & < > " kaçışlanıyor ve `getAttribute` okurken geri
+  // çözüyor. Böylece yükün ne taşıdığı artık bir varsayım olmaktan çıkıyor.
   var animAttr = animPay
-    ? " data-fead-anim='" + JSON.stringify(animPay) + "'"
+    ? ' data-fead-anim="' + _feadEsc(JSON.stringify(animPay)) + '"'
       + (opts.nodeId ? ' data-fead-node="' + _feadEsc(opts.nodeId) + '"' : '')
     : '';
 
@@ -3083,6 +3099,17 @@ function veFeadLayoutSVG(build, W, H, opts){
       });
       y2 = 22 + opts.animate.label.split('\n').length * 9 + 1;
     }
+    // SENARYO GÖSTERGESİ — animatörün kare başına yazdığı TEK canlı satır.
+    // Donuk hâli senaryonun t=0 durumunu gösterir ki animasyon başlamadan da
+    // (prefers-reduced-motion) ne anlatıldığı okunsun.
+    if(animPay && opts.scn){
+      var s0 = (typeof veFeadScnStateAt === 'function')
+        ? veFeadScnStateAt(opts.scn, 0) : null;
+      svg += '<text data-ve="scn-label" x="' + f(pad - 6) + '" y="' + y2
+          + '" font-size="7.5" fill="var(--accent-warning)">'
+          + _feadEsc(s0 ? _feadScnHud(opts.scn, s0) : 'senaryo') + '</text>';
+      y2 += 10;
+    }
     if(hayalet.length)
       svg += '<text x="' + f(pad - 6) + '" y="' + y2 + '" font-size="7" fill="var(--text-muted)">'
           + hayalet.length + ' konum daha (soluk) — kolun gezdiği aralık</text>';
@@ -3196,9 +3223,31 @@ function veFeadLayoutCardHTML(node){
   // 'Durgun' seçiliyse animasyon YÜKÜ HİÇ ÜRETİLMEZ: kart bugünkü donuk
   // şemasıyla (dönüş okları geri gelir) kalır, rAF döngüsü de başlamaz.
   var rpmSel = veFeadAnimRpmOf(build, node);
-  var kin = (rpmSel === 'off') ? null : veFeadAnimKinematics(build, rpmSel);
-  var secim = null;
-  if(kin) veFeadAnimRpmChoices(build).forEach(function(c){ if(c.rpm === rpmSel) secim = c; });
+
+  // Kol konumu HER ŞEYE geçer: şema hangi konumu çiziyorsa gerginlik, açıklık
+  // frekansı ve senaryo da o konumdan gelmeli.
+  var vibRel = null;
+  if(typeof veFeadPosSelection === 'function'){
+    var vsel0 = veFeadPosSelection(build, mode || 'mean');
+    if(vsel0 && vsel0.primary && Number.isFinite(vsel0.primary.relDeg)) vibRel = vsel0.primary.relDeg;
+  }
+
+  // ── SENARYO: motor çevrimi ────────────────────────────────────────────────
+  // Devir artık sabit değil, zamanın fonksiyonu. Ağır çekim katsayısı TEPE
+  // devre göre bir kez sabitlenir (mevcut kural: katsayı seçili devre göre
+  // normalize edilseydi her devirde ekrandaki hız aynı çıkardı ve devir
+  // değişimi görünmezdi — senaryoda görünmesi gereken TAM OLARAK O).
+  var scn = null;
+  var kin = null, secim = null;
+  if(rpmSel === 'scn'){
+    if(typeof veFeadScenarioBuild === 'function')
+      scn = veFeadScenarioBuild(build, { relDeg: vibRel });
+    if(scn) kin = veFeadAnimKinematics(build, scn.peak, scn.peak);
+    if(!scn) rpmSel = 'off';                        // kurulamadıysa sessizce akmasın
+  } else if(rpmSel !== 'off'){
+    kin = veFeadAnimKinematics(build, rpmSel);
+    veFeadAnimRpmChoices(build).forEach(function(c){ if(c.rpm === rpmSel) secim = c; });
+  }
 
   // ── TİTREŞİM ──────────────────────────────────────────────────────────────
   // Seçim kartta duruyor (node.data.vibMode / vibGain) ve panel de AYNI alanı
@@ -3211,25 +3260,28 @@ function veFeadLayoutCardHTML(node){
   var vibOpts = { crankInertia: _feadNum(build.solver && build.solver.data
                                          && build.solver.data.crankInertia, 0) };
   var vibModes = (vibSel === 'off') ? null : veFeadVibModeList(build, vibOpts);
-  var vibRel = null;
-  if(vibSel !== 'off' && typeof veFeadPosSelection === 'function'){
-    var vsel = veFeadPosSelection(build, mode || 'mean');
-    if(vsel && vsel.primary && Number.isFinite(vsel.primary.relDeg)) vibRel = vsel.primary.relDeg;
-  }
   var vib = null;
-  if(vibSel === 'span' && kin)
+  if(vibSel === 'span' && scn && kin){
+    // SENARYODA ÇIRPMA CANLIDIR: frekans ve genlik kare başına senaryonun o
+    // andaki gerginliğinden gelir. Donmuş bir yük, süpürme sırasında geçilen
+    // rezonansları gösteremezdi — oysa görülecek olay tam olarak o.
+    vib = veFeadVibSpanPayload(build, scn.idle, kin.slow, vibGain, vibRel);
+    if(vib) vib.live = 1;
+  } else if(vibSel === 'span' && kin){
     vib = veFeadVibSpanPayload(build, rpmSel, kin.slow, vibGain, vibRel);
-  else if(vibSel !== 'off' && vibSel !== 'span')
+  } else if(vibSel !== 'off' && vibSel !== 'span'){
     vib = veFeadVibModePayload(build, parseInt(vibSel.slice(5), 10) || 0, vibGain, vibOpts, vibRel);
+  }
 
   var SVIB = (vibSel === 'off') ? 0 : 20;          // kazanç şeridi — yalnız açıkken
   var svg = veFeadLayoutSVG(build, Math.max(120, W), Math.max(90, H - SER - SEC - SVIB),
                             { inline: true, posMode: mode, nodeId: node.id,
                               compassPos: node.data && node.data.compassPos,
-                              vib: vib,
-                              animate: kin ? { dispMmS: kin.dispMmS,
+                              vib: vib, scn: scn,
+                              animate: kin ? { dispMmS: scn ? 0 : kin.dispMmS,
+                                               slow: kin.slow,
                                                label: _feadAnimLabel(kin, secim && secim.fallback,
-                                                                     vib) }
+                                                                     vib, scn) }
                                            : (vib ? { dispMmS: 0, label: _feadAnimLabel(null, false, vib) } : null) });
 
   var h = '<div style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center;">';
@@ -3287,7 +3339,10 @@ function veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes){
   // şerit 22 px alıyor ve o piksel çizimden gidiyordu (ölçüldü: iki şeritle
   // şema 276 px'e düşüyor, alternatör dairesi 13 px'in altına iniyor).
   var rpm = (rpmSel === undefined) ? veFeadAnimRpmOf(build, node) : rpmSel;
-  var rOpt = '<option value="off"' + (rpm === 'off' ? ' selected' : '') + '>Durgun</option>';
+  // SENARYO ilk sırada, Durgun'un hemen ardında: "kart ne gösteriyor"
+  // sorusunun cevabı tek seçicide kalsın (ikinci bir şerit 22 px demekti).
+  var rOpt = '<option value="off"' + (rpm === 'off' ? ' selected' : '') + '>Durgun</option>'
+           + '<option value="scn"' + (rpm === 'scn' ? ' selected' : '') + '>Senaryo — motor çevrimi</option>';
   veFeadAnimRpmChoices(build).forEach(function(c){
     rOpt += '<option value="' + c.rpm + '"' + (rpm === c.rpm ? ' selected' : '') + '>'
          + c.rpm + ' dev/dk'
@@ -3354,6 +3409,8 @@ function veFeadVibStrip(node, build, vib, vibSel){
   } else if(vib.kind === 'mode'){
     not = 'mod ' + (vib.idx+1) + ' · ' + _feadFmt(vib.fHz, 1) + ' Hz gerçek · '
         + 'şekil ölçeği ' + _feadFmt(vib.topDeg, 0) + '° · zaman tabanı YOK';
+  } else if(vib.live){
+    not = 'senaryo boyunca CANLI — frekans ve genlik o andaki gerginlikten';
   } else {
     not = _feadFmt(vib.firingHz, 0) + ' Hz ateşleme · en çok savrulan ×'
         + _feadFmt(Math.max.apply(null, vib.spans.map(function(x){ return x.mag; })), 1)
@@ -3377,8 +3434,17 @@ function veFeadVibStrip(node, build, vib, vibSel){
 // AĞIR ÇEKİM KATSAYISI YAZILI: ekranda görülen hız gerçek hız DEĞİL (gerçek
 // zamanda 60 Hz ekranda strob oluyor, bkz. fead-model.js), oranlar ise birebir.
 // Katsayı gizlenseydi kullanıcı ekrandan devir okumaya kalkardı.
-function _feadAnimLabel(kin, fallback, vib){
+function _feadAnimLabel(kin, fallback, vib, scn){
   var alt = '';
+  if(scn){
+    // İKİ HIZ TEK SATIRDA. Senaryo saati gerçek, dönüş ağır çekimde — bu
+    // yazılmazsa kullanıcı ekrandan devir okumaya kalkar.
+    var kat0 = (kin && kin.slow < 0.999) ? '×1/' + Math.round(1/kin.slow) : '×1';
+    return 'senaryo ' + _feadFmt(scn.T, 1) + ' s (gerçek zaman)  ·  dönüş ' + kat0
+         + ' ağır çekim  ·  tepe ' + scn.peak + ' dev/dk'
+         + (scn.egri ? '  ·  rampa tork eğrisinden' : '  ·  rampa DOĞRUSAL')
+         + (vib ? '\nçırpma canlı · genlik ×' + _feadFmt(vib.gain, 0) + ' (KALİBRE DEĞİL)' : '');
+  }
   if(vib){
     // GENLİK KAZANCI KÜNYEDE. Gizlenseydi kullanıcı ekrandan mm okumaya
     // kalkardı — oysa o sayı ölçülmedi (bkz. fead-model.js, 1. sınır).
@@ -3478,6 +3544,73 @@ function veFeadRefreshLayoutCards(){
 // KARE BAŞINA İŞ: kart başına bir diş yolu (~140 kısa parça) + kasnak başına
 // bir kol yolu (3 parça). Hepsi attribute yazımı; yeniden düzen (layout)
 // tetiklemez.
+// Yükün taşıdığı senaryo: `notlar` DÜŞÜRÜLÜR. Notlar kullanıcıya yazılan
+// metin (şeritte ve panelde duruyor), animatörün kare başına bakacağı bir şey
+// değil — yükte durması hem gereksiz hem de en uzun metin alanı.
+function _feadScnSlim(scn){
+  var o = {};
+  Object.keys(scn).forEach(function(k){ if(k !== 'notlar') o[k] = scn[k]; });
+  return o;
+}
+
+// ── SENARYO GÖSTERGESİ ─────────────────────────────────────────────────────
+// Kare başına yazılan TEK satır. Faz adı, devir, kayış hızı, gerginlik bandı
+// ve — varsa — o anda geçilen rezonans. Rezonans yazılmasaydı süpürmenin asıl
+// olayı yalnız "bir açıklık daha çok sallanıyor" olarak kalırdı; hangi
+// mertebenin hangi açıklığı uyardığı okunamazdı.
+var VE_FEAD_SCN_REZ_TOL = 0.04;        // |k·f_ateşleme − f| / f eşiği
+var VE_FEAD_SCN_REZ_ORDERS = 4;
+function _feadScnRezonans(st){
+  if(!st || !(st.firingHz > 0)) return null;
+  var en = null;
+  for(var i=0;i<st.spanF.length;i++){
+    var f = st.spanF[i];
+    if(!(f > 0)) continue;
+    for(var k=1;k<=VE_FEAD_SCN_REZ_ORDERS;k++){
+      var d = Math.abs(k*st.firingHz - f) / f;
+      if(d < VE_FEAD_SCN_REZ_TOL && (!en || d < en.d)) en = { i:i, k:k, d:d, f:f };
+    }
+  }
+  return en;
+}
+function _feadScnHud(scn, st){
+  if(!st) return '';
+  var h = st.fazAd + '  ·  ' + Math.round(st.rpm) + ' dev/dk'
+        + '  ·  kayış ' + _feadFmt(st.beltMs, 1) + ' m/s';
+  h += '  ·  T ' + Math.round(st.Tmin)
+     + (Math.round(st.Tmax) !== Math.round(st.Tmin) ? '–' + Math.round(st.Tmax) : '') + ' N';
+  var r = _feadScnRezonans(st);
+  if(r) h += '   ⚠ REZONANS ' + ((scn && scn.adlar && scn.adlar[r.i]) ? scn.adlar[r.i] : ('açıklık ' + (r.i+1)))
+           + ' × ' + r.k + '. mertebe';
+  return h;
+}
+
+// Senaryonun O ANKİ durumundan çırpma yükü. Donmuş yükün aynısı, ama frekans
+// ve genlik canlı gerginlikten geliyor — süpürmede geçilen rezonanslar ancak
+// böyle görünür.
+function _feadScnVibLive(spec, st, vib){
+  var g = vib.gain, z = vib.zeta || 0.06;
+  var cap = 1/(2*z), taban = (typeof VE_FEAD_VIB_SPAN_MM === 'number') ? VE_FEAD_VIB_SPAN_MM : 0.35;
+  var out = { kind: 'span', gain: g, zeta: z, spans: [] };
+  for(var i=0;i<st.spanF.length;i++){
+    var f = st.spanF[i], fl = !(f > 0);
+    var mag;
+    // UYARMA YOKSA TİTREŞİM DE YOK: durgun kayış çırpmaz. Ateşleme frekansı
+    // sıfırken SDOF büyütmesi 1 döner ve kayış sebepsiz sallanırdı.
+    if(!(st.firingHz > 0)) mag = 0;
+    else if(fl) mag = cap;                      // duran dalga yok → akan dalga
+    else mag = (typeof _feadVibSpanMag === 'function')
+      ? _feadVibSpanMag(f, st.firingHz, z) : 1;
+    out.spans.push({
+      f: fl ? st.firingHz : f,
+      fScreen: (fl ? st.firingHz : f) * (spec.slow > 0 ? spec.slow : 1),
+      ampMm: taban * g * mag, mag: mag, flutter: fl,
+      ph: (vib.spans && vib.spans[i]) ? vib.spans[i].ph : 0
+    });
+  }
+  return out;
+}
+
 var VE_FEAD_ANIM_ATTR = 'data-fead-anim';
 var VE_FEAD_ANIM_MAX_DT = 0.1;          // s — sekme geri gelince kayış fırlamasın
 var _feadAnimPhase = {};                // düğüm kimliği → mm cinsinden faz
@@ -3518,7 +3651,18 @@ function _feadAnimSpec(el){
 function veFeadAnimApply(el, phaseMm, tau){
   var spec = _feadAnimSpec(el);
   if(!spec) return false;
-  var def = spec.vib ? _feadVibDef(spec.vib, tau || 0, spec.walk) : null;
+  var t = tau || 0, vib = spec.vib;
+  // SENARYO: devir zamanın fonksiyonu. Durum SAF SAYIDAN çözülüyor
+  // (js/fead-transient.js), yani animatör kare başına çekirdeğe dokunmuyor.
+  if(spec.scn && typeof veFeadScnStateAt === 'function'){
+    var st = veFeadScnStateAt(spec.scn, t);
+    if(st){
+      if(vib && vib.live) vib = _feadScnVibLive(spec, st, vib);
+      var hud = el.querySelector('[data-ve="scn-label"]');
+      if(hud) hud.textContent = _feadScnHud(spec.scn, st);
+    }
+  }
+  var def = vib ? _feadVibDef(vib, t, spec.walk) : null;
   var rib = el.querySelector('[data-ve="rib"]');
   if(rib) rib.setAttribute('d',
     _feadTeethPath(spec.walk, spec.sense, spec.step, spec.tooth, phaseMm, spec.T, def));
@@ -3544,7 +3688,7 @@ function veFeadAnimApply(el, phaseMm, tau){
     var dxp =  def.armOff[0] * spec.T.s;
     var dyp = -def.armOff[1] * spec.T.s;              // ty() y'yi çevirir
     var tr = 'translate(' + _feadR(dxp) + ' ' + _feadR(dyp) + ')';
-    var ti = spec.vib.tenIdx;
+    var ti = vib.tenIdx;
     var kutu = el.querySelectorAll('[data-pi="' + ti + '"]');
     for(var m=0;m<kutu.length;m++) kutu[m].setAttribute('transform', tr);
     var kol = el.querySelector('[data-ve="arm"]');
@@ -3576,17 +3720,32 @@ function veFeadAnimTick(now){
     var el = els[i], spec = _feadAnimSpec(el);
     // Kayış akmıyor OLABİLİR (mod şekli durgun kayışta oynar); o hâlde bile
     // yazacak bir şey varsa döngü canlıdır.
-    if(!spec || (!(spec.mmS > 0) && !spec.vib)) continue;
+    if(!spec || (!(spec.mmS > 0) && !spec.vib && !spec.scn)) continue;
     var key = el.getAttribute('data-fead-node') || '?';
-    var p = (_feadAnimPhase[key] || 0) + spec.mmS * dt;
-    if(spec.loop > 0) p = p % spec.loop;                 // faz çevrimde kalır
-    _feadAnimPhase[key] = p;
     var tau = 0;
-    if(spec.vib){
-      // Kayan noktada uzun oturumda hassasiyet kaybolmasın diye sarılır.
-      tau = ((_feadVibTime[key] || 0) + dt) % VE_FEAD_VIB_TIME_WRAP;
+    if(spec.vib || spec.scn){
+      // TEK SAAT, İKİ HIZ. tau gerçek saniyedir: senaryo onu doğrudan okur
+      // (motor çevrimi gerçek zamanda geçer), titreşim ise ağır çekim
+      // katsayısıyla ölçeklenmiş fScreen ile okur. İki ayrı sayaç tutmak
+      // ikisinin sessizce ayrışması demekti.
+      // Kayan noktada uzun oturumda hassasiyet kaybolmasın diye sarılır;
+      // senaryo döngüsel olduğu için sarma sınırı çevrim süresinin katı olmalı
+      // ki sarmada faz atlamasın.
+      var wrap = VE_FEAD_VIB_TIME_WRAP;
+      if(spec.scn && spec.scn.T > 0)
+        wrap = Math.max(spec.scn.T, Math.floor(VE_FEAD_VIB_TIME_WRAP / spec.scn.T) * spec.scn.T);
+      tau = ((_feadVibTime[key] || 0) + dt) % wrap;
       _feadVibTime[key] = tau;
     }
+    // Senaryoda kayış hızı devirle değişir; sabit mmS yanlış olurdu.
+    var mmS = spec.mmS;
+    if(spec.scn && spec.slow > 0 && typeof veFeadScnStateAt === 'function'){
+      var sq = veFeadScnStateAt(spec.scn, tau);
+      mmS = sq ? sq.beltMs * 1000 * spec.slow : 0;
+    }
+    var p = (_feadAnimPhase[key] || 0) + mmS * dt;
+    if(spec.loop > 0) p = ((p % spec.loop) + spec.loop) % spec.loop;
+    _feadAnimPhase[key] = p;
     veFeadAnimApply(el, p, tau);
     canli++;
   }
@@ -5080,6 +5239,9 @@ if (typeof module !== 'undefined' && module.exports) {
     _feadSpokePath: _feadSpokePath, _feadToothStep: _feadToothStep,
     _feadXform: _feadXform, _feadAnimLabel: _feadAnimLabel,
     _feadVibDef: _feadVibDef, _feadWalkPath: _feadWalkPath,
+    _feadScnHud: _feadScnHud, _feadScnRezonans: _feadScnRezonans,
+    _feadScnSlim: _feadScnSlim,
+    _feadScnVibLive: _feadScnVibLive,
     _feadSegSpan: _feadSegSpan, _feadSegPulley: _feadSegPulley,
     veFeadVibStrip: veFeadVibStrip,
     VE_FEAD_VIB_SPAN_PTS: VE_FEAD_VIB_SPAN_PTS,

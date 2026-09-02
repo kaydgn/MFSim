@@ -871,6 +871,44 @@ Kart iki titreşimi de oynatabiliyor; kaynak **çekirdek**, dokunulmadı
 - **Kazanç şeridi yalnız titreşim AÇIKKEN belirir** — kapalıyken kart bugünkü
   hâlinin birebir aynısı; 22 px'i isteyen öder.
 
+##### Motor çevrimi senaryosu — geçici rejim (2026-09-02)
+
+`js/fead-transient.js`. Kart tek bir çalışma noktası yerine bütün çevrimi
+oynatabiliyor: durgun → marş → ateşleme → rölanti → hızlanma → tepe →
+yavaşlama → stop. Hükümler:
+
+- **Devir geçmişi DAYATILIR, SİMÜLE EDİLMEZ.** `J·dω/dt = T_motor − T_yük`
+  kurulamaz çünkü J yok: modeldeki "Krank ataleti" **burulma modelinin**
+  ataletidir (BMC 0,70 kg·m²), volan değil. Onunla integre etmek 15.000 d/dk/s
+  verirdi; gerçeği 1000–2000. Rampa bu yüzden MFSim'in **zaten sorduğu**
+  `accelRpmS`/`decelRpmS` alanlarından gelir — `peakEstimate`'in kullandığı
+  aynı sayı, yani animasyon ile tepe yük tablosu aynı şeyi anlatır.
+- **TÜRETİLEN yalnız rampanın ŞEKLİ**: α(N) ∝ T_motor(N) − T_aksesuar(N),
+  **mutlak Nm** olarak. İlk yazımda oran (`(Tm−Tacc)/Tm`) kullanılmıştı ve
+  sessizce etkisizdi — ölçüldü, faz içi α oranı 1,00 idi; mutlak torkla 1,46.
+  Eğri yoksa rampa doğrusal ve kart bunu yazar.
+- **Gerilme ivmede TAM doğrusal** (`T(N,α) = A(N) + α·B(N)`, ölçülen sapma
+  0,00 N). Dayanağı: animatörün kare başına çözücü koşturması yasak. İki devir
+  ızgarası yüke konur, animatör herhangi bir α için gerilmeyi yeniden kurar.
+- **Rölanti altında aksesuar yükü (N/N_rölanti)² ile ölçeklenir** (T ∝ N ⇒
+  kuvvet ∝ N). Üç aday ölçüldü: sabit güç kuvveti sonsuza götürüyor (41.927 N),
+  sabit tork duran motorda 1350 N iddia ediyor, seçilen kural sıfır devirde
+  sıfır veriyor. Izgaranın altında gerilme tasarım gerginliğine harmanlanır.
+- **İki hız, tek saat.** Senaryo saati gerçek saniyedir (12,7 s çevrim 12,7 s
+  oynar); dönüş ve titreşim mevcut ağır çekimde kalır (×1/139). Künye ikisini
+  de yazar.
+- **Çırpma senaryoda CANLIDIR**: frekans ve genlik o andaki gerginlikten. Donmuş
+  bir yük süpürmede geçilen rezonansları gösteremezdi — oysa görülecek olay o.
+  **Uyarma yoksa titreşim de yok** (durgun kayış çırpmaz).
+- **Animasyon yükü artık METİN taşıyor**, dolayısıyla attribute çift tırnak +
+  `_feadEsc` ile kaçışlanır. Eski tek tırnaklı biçimin dayandığı "yalnız sayı
+  taşır" varsayımı senaryoyla YANLIŞ hâle geldi ve ölçüldü: `MFSim'de`
+  içindeki kesme işareti attribute'ü 7573. karakterde kapatıyor, `JSON.parse`
+  patlıyor ve animasyon **sessizce hiç kurulmuyor**. `notlar` yüke girmez.
+
+Kapı: `tests/unit/fead-transient.test.js` (26 test; altı mutasyonla ölçüldü) +
+`tests/unit/fead-anim.test.js`'in yük sözleşmesi.
+
 Kapı: `tests/unit/fead-vibration.test.js` (30 test; dört mutasyonla ölçüldü —
 çırpma normalini açıklık yönüne çevirmek, kol kaymasını düşürmek, açıklık ucu
 rampasını ters çevirmek, çözülemeyen modeli sıfır şekle çevirmek).
