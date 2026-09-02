@@ -1388,6 +1388,7 @@ function veFeadAnimRpmChoices(build){
 function veFeadAnimRpmOf(build, node){
   var v = node && node.data && node.data.animRpm;
   if(v === 'off') return 'off';
+  if(v === 'scn') return 'scn';                      // motor çevrimi senaryosu
   var list = veFeadAnimRpmChoices(build);
   var n = _feadNum(v, NaN);
   for(var i=0;i<list.length;i++) if(list[i].rpm === n) return n;
@@ -3795,6 +3796,7 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_VIB_MAX_SCREEN_HZ: VE_FEAD_VIB_MAX_SCREEN_HZ,
     VE_FEAD_VIB_MODE_MAX_DEG: VE_FEAD_VIB_MODE_MAX_DEG,
     veFeadVibGainOf: veFeadVibGainOf, veFeadVibModeOf: veFeadVibModeOf,
+    _feadVibSpanMag: _feadVibSpanMag, _feadVibMag: _feadVibMag,
     veFeadVibSpanPayload: veFeadVibSpanPayload,
     veFeadVibModeList: veFeadVibModeList, veFeadVibModePayload: veFeadVibModePayload,
     veFeadPowerCurve: veFeadPowerCurve, veFeadHasPowerCurve: veFeadHasPowerCurve,

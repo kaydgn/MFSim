@@ -49,6 +49,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   kompresörü). DOM'suz saf veri; güç eğrisi MFSim'de zaten vardı, bu kataloğun
   getirdiği asıl şey **devir sınırları** (optimum · maksimum sürekli · anlık
   maksimum) — aşağıdaki iki kapı onlarsız kurulamaz.
+- `js/fead-transient.js` — FEAD **geçici rejim**: motor çevrimi senaryosu
+  (durgun → marş → ateşleme → rölanti → hızlanma → yavaşlama → stop). DOM'suz;
+  çekirdeğe dokunmaz. **Devir geçmişi DAYATILIR, simüle edilmez** — MFSim'de
+  volan ataleti yok, modeldeki krank ataleti burulma modelininki. Rampa
+  kullanıcının ivme alanından, şekli motorun tork eğrisinden.
 - `js/fead-checks.js` — FEAD **uygunluk kapıları**: kasnak merkez mesafesi,
   çevrim oranı penceresi, aksesuar devir sınırı. DOM'suz; **panel ve rapor AYNI
   çağrıyı paylaşır** (`veFeadChecks`), rapor onu çözüm anında yazılan
