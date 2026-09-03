@@ -25,6 +25,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '../..');
 const JS_DIR = path.join(ROOT, 'js');
 const VIEWER_JS_DIR = path.join(ROOT, 'viewer/js');
+const CAN_JS_DIR = path.join(ROOT, 'candbc/js');
 const CSS_DIR = path.join(ROOT, 'css');
 
 function jsFiles(dir) {
@@ -75,6 +76,13 @@ describe('üst-seviye bildirim çakışması yok', () => {
     const report = duplicateReport(collectDeclarations(jsFiles(VIEWER_JS_DIR)));
     expect(report).toBe('');
   });
+
+  // CAN Çözümleyici de tek dosyaya gömülen ayrı bir programdır ve modülleri
+  // aynı global kapsamı paylaşır; kapı burada da geçerli.
+  test('candbc/js/ — CAN Çözümleyici kendi kapsamında çakışmasız', () => {
+    const report = duplicateReport(collectDeclarations(jsFiles(CAN_JS_DIR)));
+    expect(report).toBe('');
+  });
 });
 
 describe('kaynak dosyalarda kontrol karakteri yok', () => {
@@ -85,9 +93,11 @@ describe('kaynak dosyalarda kontrol karakteri yok', () => {
   const targets = [
     ...jsFiles(JS_DIR),
     ...jsFiles(VIEWER_JS_DIR),
+    ...jsFiles(CAN_JS_DIR),
     ...fs.readdirSync(CSS_DIR).filter(f => f.endsWith('.css')).sort()
       .map(f => ({ rel: path.relative(ROOT, path.join(CSS_DIR, f)), abs: path.join(CSS_DIR, f) })),
     { rel: 'index.html', abs: path.join(ROOT, 'index.html') },
+    { rel: 'candbc/index.html', abs: path.join(ROOT, 'candbc/index.html') },
   ];
 
   test.each(targets.map(t => [t.rel, t.abs]))('%s temiz', (rel, abs) => {

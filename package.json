@@ -6,11 +6,12 @@
   "scripts": {
     "build": "node tools/build-occt-wasm-asset.js && node build.js",
     "build:viewer": "node viewer/build.js",
+    "build:can": "node candbc/build.js",
     "build:fead-report": "node tools/report-assets/build-fead-report-template.js",
     "build:occt-wasm": "node tools/build-occt-wasm-asset.js",
     "build:tetgen-wasm": "node tools/build-tetgen-wasm.js",
     "build:tetgen-wasm-asset": "node tools/build-tetgen-wasm-asset.js",
-    "build:all": "npm run build && node viewer/build.js",
+    "build:all": "npm run build && node viewer/build.js && node candbc/build.js",
     "shot": "node tools/shot.js",
     "sync:viewer": "node viewer/sync.js",
     "test": "jest",
