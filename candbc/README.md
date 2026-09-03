@@ -43,7 +43,9 @@ gömülüyor.
 | Dosya | İş | DOM? |
 |-------|-----|------|
 | `js/can-dbc.js` | DBC ayrıştırıcı: `BO_`, `SG_`, `VAL_`, `CM_`, `BA_`, `SIG_VALTYPE_`, `SG_MUL_VAL_` | hayır |
+| `js/can-j1939.js` | 29 bitlik kimlik → PGN / kaynak / hedef adresi | hayır |
 | `js/can-log.js` | Kayıt biçimleri + kare deposu (tipli diziler) | hayır |
+| `js/can-match.js` | **Kanal çözümlemesi**: kayıttaki kimlik ↔ DBC mesajı | hayır |
 | `js/can-decode.js` | Bit çıkarma, işaret, IEEE float, çoklama, seri kurma | hayır |
 | `js/can-chart.js` | Şerit grafiği (canvas), seyreltme, imleç | evet |
 | `js/can-tree.js` | Sinyal gezgini (`vsig-*`) | evet |
@@ -51,7 +53,7 @@ gömülüyor.
 | `js/can-example.js` | Üretilmiş gösteri veritabanı + kaydı | hayır |
 | `js/can-theme.js` | Tema (Sistem/Açık/Koyu) | evet |
 
-İlk üçü ve `can-example.js` saf: testleri Node'da doğrudan koşuyor.
+İlk beşi ve `can-example.js` saf: testleri Node'da doğrudan koşuyor.
 
 ---
 
@@ -66,6 +68,61 @@ Bunlar tercih değil, **ölçülmüş hata sınıflarının kapısıdır.**
 sessizce bozar; program çalışmaya devam eder, sayı yanlış çıkar. Referans
 değerler `tests/unit/can-decode.test.js`'te **elle hesaplandı** ve yorumda
 gösteriliyor — "kodun bugün ürettiği değer" altın kabul edilmedi.
+
+### 1b. Eşleştirme J1939'da PGN ÜZERİNDENDİR — ve bu SÖYLENİR
+
+Bir J1939 DBC'sindeki mesaj kimliği **kaynak adresi içerir** ve o adres,
+veritabanını yazanın seçtiği rastgele bir değerdir. Gerçek otobüste aynı mesaj
+başka bir adresten gelir. Kullanıcının veritabanı (950 mesaj) ve gerçek araç
+kaydı (81 ayrı kimlik) karşılaştırıldığında **ölçüldü**:
+
+| Eşleştirme | Sonuç |
+|-----------|-------|
+| Tam kimlik | **1 / 81** |
+| J1939 PGN (kaynak adresi yok sayılarak) | **66 / 81** |
+| Hiç eşleşmeyen | 14 / 81 (hepsi üretici tanımlı PGN) |
+
+Yani kimliği bire bir karşılaştıran bir çözümleyici gerçek bir J1939 kaydında
+pratikte **hiçbir şey çözemez** — ve patlamaz da, sadece boş bir ağaç gösterir.
+
+Dolayısıyla: tam eşleşme yoksa, 29 bitlik çerçevelerde kaynak adresi (PDU1'de
+hedef adresi de) yok sayılıp PGN eşleştirilir. Ama bu bir **varsayımdır** ve
+körü körüne yapılmaz:
+
+* ağaçta satırın kendisinde **PGN** rozeti durur,
+* kaynak adresi kanalın **adının parçasıdır** (`EEC1 · SA 0x00`),
+* Tanı sekmesi kaç tanesinin hangi yolla eşleştiğini sayar,
+* üst banttaki **J1939 PGN** düğmesiyle kapatılabilir.
+
+**PDU1/PDU2 ayrımı atlanamaz:** PF < 240 ise PS alanı *hedef adrestir* ve
+PGN'e girmez. Atlanırsa TSC1 gibi adresli mesajlar her hedef için ayrı bir
+PGN'e düşer ve hiçbiri bulunamaz.
+
+`VECTOR__INDEPENDENT_SIG_MSG` eşleştirmeye **girmez**: CANdb++'ın sahipsiz
+sinyalleri topladığı kaptır, kimliği `0xC0000000` → PGN 0, ve eşleştirmeye
+sokulursa gerçek TSC1'i gölgeler.
+
+### 1c. Aynı mesajı iki kaynak gönderiyorsa BİRLEŞTİRİLMEZ
+
+Ölçüldü: kullanıcının kaydında TSC1 **yedi ayrı kaynak adresinden** geliyor.
+Tek bir "TSC1" satırında toplamak yedi ECU'nun isteğini tek eğriye karıştırmak
+olurdu — makul görünen, yanlış bir eğri. Her kaynak kendi satırında durur ve
+adresiyle etiketlenir. Bu yüzden programın çalışma birimi DBC mesajı değil
+**kanaldır**: kayıtta gerçekten geçen bir kimlik + çözüldüğü tanım.
+
+Aynı sebeple **ağaç DBC'den değil kayıttan sürülür.** 950 mesajlı bir
+veritabanında kayıtta 81 kimlik geçiyor; ağacı DBC'den sürmek 869 satırı
+boşuna göstermek demek.
+
+### 1d. Aynı PGN'i birden fazla tanım paylaşıyorsa seçim GÖRÜNÜR
+
+Ölçüldü: kullanıcının veritabanında 7 PGN'i birden fazla mesaj paylaşıyor
+(`CCVS1` / `CCVS1_J3` / `CCVS1_Trip_Recorder`). Seçim öncelik, DLC, adın kopya
+olup olmaması ve ad uzunluğuna göre puanlanır; **adaylar ve seçilen** Tanı
+sekmesinde yazılır. Orada asıl soru da cevaplanır: adayların sinyal yerleşimi
+birebir aynı mı? Kullanıcının dosyasında 13 belirsizliğin **13'ü de aynıydı**
+— yani seçim sayıyı değiştirmiyordu, ve bunu söylemek "belirsizlik var"
+demekten çok daha kullanışlı.
 
 ### 2. Değer tablosu HAM değere göre aranır
 
@@ -129,7 +186,14 @@ eğrilerin üstüne biniyor (orada ölçülmüş).
 | candump (okunur) | `can0 123 [8] DE AD BE EF 00 11 22 33` | s |
 | Vector ASC | `0.000000 1 100 Rx d 8 01 02 …` (+ CAN FD) | s |
 | PEAK PCAN-Trace | `1) 1000.0 0018 8 01 02 …` (v1.x ve v2.x) | ms |
-| BusMaster | `20:16:19:0246 Rx 1 0x18fef100 x 8 01 02 …` | ss:dd:sn:ms |
+| BusMaster | `20:16:19:0246 Rx 1 0x18fef100 x 8 01 02 …` | ss:dd:sn:**kesir** |
+
+> **BusMaster'ın zaman kesri milisaniye DEĞİLDİR.** Alan sabit genişliktedir ve
+> kullanıcının kaydında ölçüldü: dört haneli, en büyük değeri 9999, saniye tam
+> ondan sonra artıyor (`0:0:0:9998` → `0:0:1:0004`). Yani birim saniyenin on
+> binde biri. 1000'e bölen bir okuma ekseni on kat uzatır **ve** her saniye
+> sınırında zamanı geriye atar. Bölen bu yüzden alanın **yazılı
+> genişliğinden** türetiliyor, sabit yazılmıyor.
 
 Otomatik algılama yanılırsa üst banttaki **Biçim** listesinden elle seçilir.
 Yeni bir biçim eklemek: `CDB_LOG_FORMATS`'a bir eşleyici + `tests/unit/can-log.test.js`'e
@@ -145,4 +209,5 @@ değiştirir.
 | `tests/unit/can-decode.test.js` | **Bit düzeni** (Intel/Motorola, elle hesaplanmış referanslar), işaret, IEEE float, çoklama, kısa kare |
 | `tests/unit/can-log.test.js` | Beş biçim + biçim yarışı + kare deposu + çözülemeyen satır sayacı |
 | `tests/unit/can-chart.test.js` | Eksen adımı, imleç örneklemesi, ondalık türetme + **gidiş-dönüş** (üret → yaz → ayrıştır → çöz → karşılaştır) |
+| `tests/unit/can-j1939.test.js` | PDU1/PDU2 ayrımı, PGN çıkarma, eşleştirme sırası (tam → PGN → yok), Vector kabının dışlanması, belirsizlik puanlaması, aynı mesajın iki kaynağının BİRLEŞTİRİLMEMESİ |
 | `tests/unit/source-hygiene.test.js` | `candbc/js/` üst-seviye ad çakışması ve kontrol karakteri |

@@ -10,7 +10,9 @@
  * "kodun bugün ürettiği değer" altın kabul edilmedi.
  */
 eval(loadCanSource('can-dbc.js'));
+eval(loadCanSource('can-j1939.js'));
 eval(loadCanSource('can-log.js'));      // kare deposu (cdbNewStore/…)
+eval(loadCanSource('can-match.js'));   // kanal (cdbBuildChannels)
 eval(loadCanSource('can-decode.js'));
 
 // Referans kare: her baytı kendi indeksinden ayırt edilebilir.
@@ -184,7 +186,7 @@ describe('cdbIsDiscrete — basamaklı çizim ölçütü', () => {
   });
 });
 
-describe('cdbBuildSeries — mesajın kendi kareleri üzerinde çözer', () => {
+describe('cdbBuildSeries — KANALIN kendi kareleri üzerinde çözer', () => {
   // İki mesajlı küçük bir depo elle kurulur.
   function store() {
     const st = cdbNewStore();
@@ -202,15 +204,19 @@ describe('cdbBuildSeries — mesajın kendi kareleri üzerinde çözer', () => {
     ' SG_ Hata m1 : 8|16@1+ (1,0) [0|65535] "" X\n'
   );
   const msg = db.byKey[cdbMsgKey(0x100, false)];
+  // Seri artık KANAL üzerinden kurulur (bkz. can-match.js): aynı mesajı iki
+  // kaynak gönderebildiği için mesaj tek başına "hangi kareler" sorusunu
+  // cevaplamıyor.
+  const kanal = (st) => cdbBuildChannels(db, st, {}).channels.filter(c => c.key === cdbMsgKey(0x100, false))[0];
 
   test('yalnız kendi kimliğinin kareleri okunur', () => {
-    const s = cdbBuildSeries(store(), msg, msg.sigByName['Mux']);
+    const s = (function(){var st=store();return cdbBuildSeries(st, kanal(st), msg.sigByName['Mux']);})();
     expect(s.n).toBe(3);
     expect(Array.from(s.t)).toEqual([0, 0.2, 0.3]);
   });
 
   test('çoklanmış sinyal, çoklayıcı uyuşmayan kareyi ATLAR', () => {
-    const s = cdbBuildSeries(store(), msg, msg.sigByName['Basinc']);
+    const s = (function(){var st=store();return cdbBuildSeries(st, kanal(st), msg.sigByName['Basinc']);})();
     expect(s.n).toBe(2);                     // mux=0 olan iki kare
     expect(Array.from(s.t)).toEqual([0, 0.3]);
     expect(s.v[0]).toBeCloseTo(1.6, 9);      // 0x0010 * 0.1
@@ -219,14 +225,15 @@ describe('cdbBuildSeries — mesajın kendi kareleri üzerinde çözer', () => {
   });
 
   test('öteki çoklayıcı dalı ayrı seri verir', () => {
-    const s = cdbBuildSeries(store(), msg, msg.sigByName['Hata']);
+    const s = (function(){var st=store();return cdbBuildSeries(st, kanal(st), msg.sigByName['Hata']);})();
     expect(s.n).toBe(1);
     expect(s.v[0]).toBe(0x0020);
   });
 
   test('kayıtta hiç geçmeyen mesaj boş seri verir, patlamaz', () => {
     const yok = cdbParseDbc('BO_ 999 Yok: 8 X\n SG_ A : 0|8@1+ (1,0) [0|255] "" X\n');
-    const s = cdbBuildSeries(store(), yok.messages[0], yok.messages[0].signals[0]);
+    const sahteKanal = { key: cdbMsgKey(999, false), msg: yok.messages[0] };
+    const s = cdbBuildSeries(store(), sahteKanal, yok.messages[0].signals[0]);
     expect(s.n).toBe(0);
   });
 
@@ -235,7 +242,7 @@ describe('cdbBuildSeries — mesajın kendi kareleri üzerinde çözer', () => {
     cdbStorePush(st, { t: 0, id: 0x100, ext: false, dlc: 1, bytes: [0] });        // kısa
     cdbStorePush(st, { t: 1, id: 0x100, ext: false, dlc: 4, bytes: [0, 0x10, 0, 0] });
     cdbStoreFinalize(st, { relativeTime: false });
-    const s = cdbBuildSeries(st, msg, msg.sigByName['Basinc']);
+    const s = cdbBuildSeries(st, kanal(st), msg.sigByName['Basinc']);
     expect(s.n).toBe(1);
     expect(s.skipped).toBe(1);
     expect(s.t[0]).toBe(1);

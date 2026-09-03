@@ -13,9 +13,22 @@
 var cdbState = {
   db: null, dbcName: '', dbcWarnCount: 0,
   store: null, logName: '', logDetect: null,
+  channels: [], match: null,     // bkz. can-match.js
+  j1939: true,                   // PGN yedek eşleştirmesi açık mı
   tab: 'chart',
-  framesMsgKey: null, framesPage: 0
+  framesChKey: null, framesPage: 0
 };
+
+// DBC ya da kayıt değiştiğinde kanallar YENİDEN kurulur. Tek giriş noktası:
+// iki yerde ayrı ayrı kurulsaydı biri unutulur ve ağaç eski eşleşmeyi
+// gösterirdi.
+function cdbRebuildChannels() {
+  var r = cdbBuildChannels(cdbState.db, cdbState.store, { j1939: cdbState.j1939 });
+  cdbState.channels = r.channels;
+  cdbState.match = r.report;
+  cdbSeriesCache = {};
+  return r.report;
+}
 
 // ── Küçük yardımcılar ─────────────────────────────────────────────────────
 
@@ -94,9 +107,10 @@ function cdbApplyDbc(db, name) {
   var sigs = 0;
   for (var i = 0; i < db.messages.length; i++) sigs += db.messages[i].signals.length;
   cdbSetChip('cdb-chip-dbc', name + ' · ' + db.messages.length + ' mesaj / ' + sigs + ' sinyal');
+  var rep = cdbRebuildChannels();
   if (!db.messages.length) cdbToast('Bu DBC dosyasında hiç mesaj tanımı bulunamadı.', 'err');
-  else if (db.warnings.length) cdbToast(db.messages.length + ' mesaj okundu · ' + db.warnings.length + ' uyarı var (Tanı sekmesine bakın).', 'warn');
-  else cdbToast(db.messages.length + ' mesaj, ' + sigs + ' sinyal okundu.');
+  else if (cdbState.store) cdbToast(cdbMatchSummary(rep));
+  else cdbToast(db.messages.length + ' mesaj, ' + sigs + ' sinyal okundu. Şimdi bir CAN kaydı yükleyin.');
   cdbRefreshTree();
   cdbRenderTab();
   cdbUpdateStatus();
@@ -130,9 +144,9 @@ function cdbApplyStore(store, name, detect) {
   cdbState.store = store;
   cdbState.logName = name;
   cdbState.logDetect = detect;
-  cdbSeriesCache = {};                       // seriler eski kayda aitti
-  cdbState.framesMsgKey = null;
+  cdbState.framesChKey = null;
   cdbState.framesPage = 0;
+  var rep = cdbRebuildChannels();            // seriler eski kayda aitti
   cdbSetChip('cdb-chip-log', name + ' · ' + cdbThousands(store.n) + ' kare · ' + store.formatName);
   cdbChartFitAll(true);
   cdbChartLayout();
@@ -142,8 +156,20 @@ function cdbApplyStore(store, name, detect) {
   var msg = cdbThousands(store.n) + ' kare okundu (' + store.formatName + ').';
   if (store.skipped) msg += ' ' + cdbThousands(store.skipped) + ' satır çözülemedi.';
   if (!store.timeMonotonic) msg += ' Zaman damgaları artan sırada DEĞİL.';
-  cdbToast(msg, store.skipped ? 'warn' : '');
+  if (cdbState.db) msg += ' ' + cdbMatchSummary(rep);
+  cdbToast(msg, (store.skipped || !store.timeMonotonic) ? 'warn' : '');
   if (!store.n) cdbToast('Dosya okundu ama hiç CAN karesi çözülemedi. Tanı sekmesine bakın.', 'err');
+}
+
+// Eşleştirmenin bir cümlelik özeti. PGN eşleşmesi bir VARSAYIMDIR — kaç
+// tanesinin öyle kurulduğu söylenmezse kullanıcı hepsini tam eşleşme sanar.
+function cdbMatchSummary(rep) {
+  if (!rep || !rep.total) return '';
+  var p = [];
+  p.push(rep.total + ' kanal: ' + rep.exact + ' tam kimlik');
+  if (rep.pgn) p.push(rep.pgn + ' J1939 PGN (kaynak adresi yok sayıldı)');
+  if (rep.unmatched) p.push(rep.unmatched + ' tanımsız');
+  return p.join(' · ') + '.';
 }
 
 function cdbSetChip(id, text) {
@@ -224,9 +250,9 @@ function cdbRenderTab() {
   if (cdbState.tab === 'frames') host.innerHTML = cdbRenderFrames();
   else if (cdbState.tab === 'stats') host.innerHTML = cdbRenderStats();
   else host.innerHTML = cdbRenderDiag();
-  host.querySelectorAll('[data-frames-msg]').forEach(function(el) {
+  host.querySelectorAll('[data-frames-ch]').forEach(function(el) {
     el.addEventListener('change', function() {
-      cdbState.framesMsgKey = el.value || null;
+      cdbState.framesChKey = el.value || null;
       cdbState.framesPage = 0;
       cdbRenderTab();
     });
@@ -241,31 +267,36 @@ function cdbRenderTab() {
 
 var CDB_PAGE = 200;
 
+// Kanal anahtarı → kanal (sekmelerin hızlı erişimi için)
+function cdbChanByKey(key) {
+  var c = cdbState.channels || [];
+  for (var i = 0; i < c.length; i++) if (c[i].key === key) return c[i];
+  return null;
+}
+
 function cdbRenderFrames() {
-  var st = cdbState.store, db = cdbState.db;
+  var st = cdbState.store;
   if (!st || !st.n) return cdbAltEmpty('Kare listesi için önce bir CAN kaydı yükleyin.');
 
-  // Mesaj seçici — kayıtta GERÇEKTEN geçen kimlikler, kare sayısına göre.
+  // Seçici KANALLARDAN kurulur: kayıtta gerçekten geçen kimlikler, çözülmüş
+  // adlarıyla ve kaynak adresleriyle.
+  var chans = cdbState.channels || [];
   var opts = '<option value="">Tüm kareler (' + cdbThousands(st.n) + ')</option>';
-  var keys = Object.keys(st.counts).sort(function(a, b) { return st.counts[b] - st.counts[a]; });
-  for (var i = 0; i < keys.length; i++) {
-    var k = keys[i];
-    var m = db && db.byKey[k];
-    var ext = k.charAt(0) === 'E';
-    var id = parseInt(k.slice(1), 16);
-    opts += '<option value="' + k + '"' + (cdbState.framesMsgKey === k ? ' selected' : '') + '>' +
-            cdbEsc((m ? m.name + '  ' : '') + cdbFmtId(id, ext)) + '  (' + cdbThousands(st.counts[k]) + ')</option>';
+  for (var i = 0; i < chans.length; i++) {
+    var c = chans[i];
+    opts += '<option value="' + cdbEsc(c.key) + '"' + (cdbState.framesChKey === c.key ? ' selected' : '') + '>' +
+            cdbEsc(c.label + '  ' + cdbFmtId(c.id, c.ext)) + '  (' + cdbThousands(c.count) + ')</option>';
   }
 
-  var idx = cdbState.framesMsgKey ? st.byKey[cdbState.framesMsgKey] : null;
+  var idx = cdbState.framesChKey ? st.byKey[cdbState.framesChKey] : null;
   var total = idx ? idx.length : st.n;
   var pages = Math.max(1, Math.ceil(total / CDB_PAGE));
   var page = Math.min(cdbState.framesPage, pages - 1);
   var from = page * CDB_PAGE, to = Math.min(total, from + CDB_PAGE);
 
   var h = '<div class="cdb-alt-bar">';
-  h += '<span class="cdb-alt-lbl">Mesaj</span>';
-  h += '<select class="cdb-sel" data-frames-msg>' + opts + '</select>';
+  h += '<span class="cdb-alt-lbl">Kanal</span>';
+  h += '<select class="cdb-sel" data-frames-ch>' + opts + '</select>';
   h += '<span class="cdb-alt-lbl">' + cdbThousands(total) + ' kare · sayfa ' + (page + 1) + '/' + pages + '</span>';
   h += '<span style="flex:1"></span>';
   if (page > 0) h += '<button class="ve-trace-btn" data-page="' + (page - 1) + '">◀ Önceki</button>';
@@ -274,21 +305,20 @@ function cdbRenderFrames() {
 
   h += '<table class="cdb-table"><thead><tr>' +
        '<th style="width:92px">Zaman (s)</th><th style="width:96px">Kimlik</th>' +
-       '<th style="width:130px">Mesaj</th><th style="width:34px">DLC</th>' +
+       '<th style="width:150px">Kanal</th><th style="width:34px">DLC</th>' +
        '<th style="width:186px">Ham veri</th><th>Çözülen sinyaller</th></tr></thead><tbody>';
 
   for (var r = from; r < to; r++) {
     var fi = idx ? idx[r] : r;
-    var key = cdbMsgKey(st.id[fi], st.ext[fi] === 1);
-    var msg = db && db.byKey[key];
+    var ch = cdbChanByKey(cdbMsgKey(st.id[fi], st.ext[fi] === 1));
     var hex = '';
     for (var b = 0; b < st.len[fi]; b++) {
       var v = st.data[st.off[fi] + b].toString(16).toUpperCase();
       hex += (v.length < 2 ? '0' + v : v) + ' ';
     }
     var dec = '';
-    if (msg) {
-      var rows = cdbDecodeFrame(st, msg, fi);
+    if (ch && ch.msg) {
+      var rows = cdbDecodeFrame(st, ch.msg, fi);
       var parts = [];
       for (var q = 0; q < rows.length && q < 10; q++) {
         parts.push('<b>' + cdbEsc(rows[q].sig.name) + '</b>=' +
@@ -301,7 +331,7 @@ function cdbRenderFrames() {
     }
     h += '<tr><td class="num">' + st.t[fi].toFixed(6) + '</td>' +
          '<td class="mono">' + cdbFmtId(st.id[fi], st.ext[fi] === 1) + '</td>' +
-         '<td>' + cdbEsc(msg ? msg.name : '—') + '</td>' +
+         '<td>' + cdbEsc(ch ? ch.label : '—') + '</td>' +
          '<td class="num">' + st.len[fi] + '</td>' +
          '<td class="mono">' + hex.trim() + '</td>' +
          '<td>' + dec + '</td></tr>';
@@ -311,23 +341,20 @@ function cdbRenderFrames() {
 }
 
 function cdbRenderStats() {
-  var st = cdbState.store, db = cdbState.db;
+  var st = cdbState.store;
   if (!st || !st.n) return cdbAltEmpty('İstatistik için önce bir CAN kaydı yükleyin.');
-  var keys = Object.keys(st.counts).sort(function(a, b) { return st.counts[b] - st.counts[a]; });
-  var h = '<div class="cdb-alt-bar"><span class="cdb-alt-lbl">' + keys.length +
-          ' ayrı kimlik · ' + cdbThousands(st.n) + ' kare · ' +
+  var chans = cdbState.channels || [];
+  var h = '<div class="cdb-alt-bar"><span class="cdb-alt-lbl">' + chans.length +
+          ' kanal · ' + cdbThousands(st.n) + ' kare · ' +
           (st.t1 - st.t0).toFixed(3) + ' s</span></div>';
   h += '<table class="cdb-table"><thead><tr>' +
-       '<th style="width:96px">Kimlik</th><th style="width:160px">Mesaj</th>' +
-       '<th style="width:70px">Kare</th><th style="width:86px">Ort. periyot</th>' +
-       '<th style="width:86px">En kısa</th><th style="width:86px">En uzun</th>' +
-       '<th style="width:92px">DBC çevrimi</th><th>Durum</th></tr></thead><tbody>';
-  for (var i = 0; i < keys.length; i++) {
-    var k = keys[i];
-    var idx = st.byKey[k];
-    var msg = db && db.byKey[k];
-    var ext = k.charAt(0) === 'E';
-    var id = parseInt(k.slice(1), 16);
+       '<th style="width:96px">Kimlik</th><th style="width:170px">Kanal</th>' +
+       '<th style="width:66px">Kare</th><th style="width:84px">Ort. periyot</th>' +
+       '<th style="width:80px">En kısa</th><th style="width:80px">En uzun</th>' +
+       '<th style="width:88px">DBC çevrimi</th><th>Durum</th></tr></thead><tbody>';
+  for (var i = 0; i < chans.length; i++) {
+    var ch = chans[i];
+    var idx = st.byKey[ch.key];
     var lo = Infinity, hi = 0, sum = 0, n = 0;
     for (var j = 1; j < idx.length; j++) {
       var d = st.t[idx[j]] - st.t[idx[j - 1]];
@@ -338,16 +365,21 @@ function cdbRenderStats() {
     }
     var avg = n ? sum / n : 0;
     var ms = function(v) { return n ? (v * 1000).toFixed(1) + ' ms' : '—'; };
-    var durum = msg ? (msg.signals.length + ' sinyal' + (msg.multiplexed ? ' · MUX' : '')) :
-                      '<span class="cdb-warn">DBC\'de tanımsız</span>';
-    if (msg && msg.cycleTime && n && Math.abs(avg * 1000 - msg.cycleTime) > msg.cycleTime * 0.25)
-      durum += ' <span class="cdb-warn">· ölçülen periyot DBC çevriminden sapıyor</span>';
-    h += '<tr><td class="mono">' + cdbFmtId(id, ext) + '</td>' +
-         '<td>' + cdbEsc(msg ? msg.name : '—') + '</td>' +
-         '<td class="num">' + cdbThousands(idx.length) + '</td>' +
+    var durum;
+    if (!ch.msg) durum = '<span class="cdb-warn">DBC\'de tanımsız</span>' +
+      (ch.ext && cdbJ1939Proprietary(ch.id) ? ' <span class="cdb-dim">· üretici tanımlı PGN</span>' : '');
+    else {
+      durum = ch.msg.signals.length + ' sinyal' + (ch.msg.multiplexed ? ' · MUX' : '');
+      if (ch.match === 'pgn') durum += ' <span class="cdb-dim">· PGN eşleşmesi</span>';
+      if (ch.msg.cycleTime && n && Math.abs(avg * 1000 - ch.msg.cycleTime) > ch.msg.cycleTime * 0.25)
+        durum += ' <span class="cdb-warn">· ölçülen periyot DBC çevriminden sapıyor</span>';
+    }
+    h += '<tr><td class="mono">' + cdbFmtId(ch.id, ch.ext) + '</td>' +
+         '<td>' + cdbEsc(ch.label) + '</td>' +
+         '<td class="num">' + cdbThousands(ch.count) + '</td>' +
          '<td class="num">' + ms(avg) + '</td><td class="num">' + ms(lo === Infinity ? 0 : lo) + '</td>' +
          '<td class="num">' + ms(hi) + '</td>' +
-         '<td class="num">' + (msg && msg.cycleTime ? msg.cycleTime + ' ms' : '—') + '</td>' +
+         '<td class="num">' + (ch.msg && ch.msg.cycleTime ? ch.msg.cycleTime + ' ms' : '—') + '</td>' +
          '<td>' + durum + '</td></tr>';
   }
   h += '</tbody></table>';
@@ -356,15 +388,15 @@ function cdbRenderStats() {
 
 function cdbRenderDiag() {
   var h = '';
-  var st = cdbState.store, det = cdbState.logDetect, db = cdbState.db;
+  var st = cdbState.store, det = cdbState.logDetect, db = cdbState.db, rep = cdbState.match;
 
   h += '<div class="cdb-diag-sec"><h3>Kayıt dosyası</h3>';
   if (!st && !det) h += '<p class="cdb-dim">Henüz kayıt yüklenmedi.</p>';
   else {
     if (st) {
       h += '<table class="cdb-kv">';
-      h += cdbKv('Dosya', cdbState.logName);
-      h += cdbKv('Seçilen biçim', st.formatName);
+      h += cdbKv('Dosya', cdbEsc(cdbState.logName));
+      h += cdbKv('Seçilen biçim', cdbEsc(st.formatName));
       h += cdbKv('Okunan satır', cdbThousands(st.lines));
       h += cdbKv('Çözülen kare', cdbThousands(st.n));
       h += cdbKv('Çözülemeyen satır', st.skipped ? '<span class="cdb-warn">' + cdbThousands(st.skipped) + '</span>' : '0');
@@ -377,29 +409,99 @@ function cdbRenderDiag() {
     if (det && det.scores) {
       h += '<h4>Biçim yarışı (ilk 400 satır üzerinde)</h4>';
       h += '<table class="cdb-table"><thead><tr><th>Biçim</th><th style="width:110px">Çözülen / denenen</th><th style="width:70px">Oran</th></tr></thead><tbody>';
-      det.scores.slice().sort(function(a, b) { return b.hit - a.hit; }).forEach(function(s) {
-        h += '<tr><td>' + cdbEsc(s.name) + '</td><td class="num">' + s.hit + ' / ' + s.seen +
-             '</td><td class="num">%' + Math.round(s.ratio * 100) + '</td></tr>';
+      det.scores.slice().sort(function(a, b) { return b.hit - a.hit; }).forEach(function(sc) {
+        h += '<tr><td>' + cdbEsc(sc.name) + '</td><td class="num">' + sc.hit + ' / ' + sc.seen +
+             '</td><td class="num">%' + Math.round(sc.ratio * 100) + '</td></tr>';
       });
       h += '</tbody></table>';
     }
     if (st && st.skippedSamples.length) {
       h += '<h4>Çözülemeyen satırlardan örnekler</h4><pre class="cdb-pre">';
-      st.skippedSamples.forEach(function(s) { h += cdbEsc(s.line + ': ' + s.text) + '\n'; });
+      st.skippedSamples.forEach(function(sm) { h += cdbEsc(sm.line + ': ' + sm.text) + '\n'; });
       h += '</pre>';
     }
   }
   h += '</div>';
 
+  // ── Eşleştirme ──
+  if (rep && rep.total) {
+    h += '<div class="cdb-diag-sec"><h3>Kimlik eşleştirmesi</h3>';
+    h += '<table class="cdb-kv">';
+    h += cdbKv('Kayıttaki ayrı kimlik', rep.total);
+    h += cdbKv('Tam kimlik eşleşmesi', rep.exact);
+    h += cdbKv('J1939 PGN eşleşmesi', rep.pgn +
+          (cdbState.j1939 ? ' <span class="cdb-dim">(kaynak adresi yok sayıldı)</span>'
+                          : ' <span class="cdb-dim">(kapalı)</span>'));
+    h += cdbKv('Eşleşmeyen', rep.unmatched ? '<span class="cdb-warn">' + rep.unmatched + '</span>' +
+          (rep.proprietary ? ' <span class="cdb-dim">· ' + rep.proprietary + ' tanesi üretici tanımlı PGN</span>' : '') : '0');
+    h += '</table>';
+    h += '<p class="cdb-dim">J1939\'da bir DBC mesajının kimliği KAYNAK ADRESİ içerir ve o adres veritabanını ' +
+         'yazanın seçimidir; gerçek otobüste aynı mesaj başka adresten gelir. Bu yüzden tam eşleşme bulunamayan ' +
+         '29 bitlik çerçevelerde kaynak adresi (PDU1\'de hedef adresi de) yok sayılıp PGN eşleştirilir. ' +
+         'Bu bir VARSAYIMDIR — üst banttaki <b>PGN</b> düğmesiyle kapatabilirsiniz.</p>';
+
+    if (rep.ambiguous.length) {
+      h += '<h4>Aynı PGN\'i birden fazla tanım paylaşıyor (' + rep.ambiguous.length + ')</h4>';
+      h += '<p class="cdb-dim">Seçim öncelik, DLC, adın kopya olup olmaması ve ad uzunluğuna göre puanlandı. ' +
+           'Seçilen <b>kalın</b>. Son sütun asıl soruyu cevaplıyor: seçim SAYIYI değiştiriyor mu?</p>';
+      h += '<table class="cdb-table"><thead><tr><th style="width:110px">Kimlik</th><th style="width:80px">PGN</th>' +
+           '<th>Adaylar</th><th style="width:190px">Sonuç</th></tr></thead><tbody>';
+      rep.ambiguous.slice(0, 40).forEach(function(a) {
+        var names = a.cands.map(function(m) {
+          return m === a.ch.msg ? '<b>' + cdbEsc(m.name) + '</b>' : cdbEsc(m.name);
+        }).join(', ');
+        var sonuc = a.identical
+          ? '<span class="cdb-dim">Yerleşim birebir aynı — sayı değişmez</span>'
+          : '<span class="cdb-warn">Tanımlar FARKLI — seçim sayıyı etkiler</span>';
+        h += '<tr><td class="mono">' + cdbFmtId(a.ch.id, a.ch.ext) + '</td>' +
+             '<td class="num">' + a.ch.j.pgn + '</td><td>' + names + '</td><td>' + sonuc + '</td></tr>';
+      });
+      h += '</tbody></table>';
+    }
+
+    if (rep.multiSource.length) {
+      h += '<h4>Aynı mesajı birden fazla kaynak gönderiyor (' + rep.multiSource.length + ')</h4>';
+      h += '<p class="cdb-dim">BİRLEŞTİRİLMEDİ: her kaynak ağaçta kendi satırında durur. Tek eğriye toplamak ' +
+           'ayrı ECU\'ların değerlerini karıştırmak olurdu.</p>';
+      h += '<table class="cdb-table"><thead><tr><th style="width:170px">Mesaj</th><th>Kaynaklar</th></tr></thead><tbody>';
+      rep.multiSource.slice(0, 40).forEach(function(m) {
+        h += '<tr><td>' + cdbEsc(m.name) + '</td><td class="mono">' +
+             m.chans.map(function(c) {
+               return cdbFmtId(c.id, c.ext) + (c.j ? ' (SA ' + cdbFmtAddr(c.j.sa) + ')' : '') +
+                      ' · ' + cdbThousands(c.count);
+             }).join('<span class="cdb-sep">·</span>') + '</td></tr>';
+      });
+      h += '</tbody></table>';
+    }
+
+    var yok = (cdbState.channels || []).filter(function(c) { return !c.msg; });
+    if (yok.length) {
+      h += '<h4>DBC\'de tanımı olmayan kimlikler (' + yok.length + ')</h4>';
+      h += '<p class="cdb-dim">Bu kareler okundu ama çözülemedi. Yanlış veritabanı yüklendiyse belirti tam olarak budur.</p>';
+      h += '<table class="cdb-table"><thead><tr><th style="width:110px">Kimlik</th><th style="width:90px">PGN</th>' +
+           '<th style="width:80px">Kare</th><th style="width:70px">Payı</th><th>Not</th></tr></thead><tbody>';
+      yok.slice(0, 60).forEach(function(c) {
+        h += '<tr><td class="mono">' + cdbFmtId(c.id, c.ext) + '</td>' +
+             '<td class="num">' + (c.j ? c.j.pgn : '—') + '</td>' +
+             '<td class="num">' + cdbThousands(c.count) + '</td>' +
+             '<td class="num">%' + (c.count / st.n * 100).toFixed(1) + '</td>' +
+             '<td class="cdb-dim">' + (c.ext && cdbJ1939Proprietary(c.id) ? 'üretici tanımlı (proprietary) PGN' : '') + '</td></tr>';
+      });
+      h += '</tbody></table>';
+    }
+    h += '</div>';
+  }
+
+  // ── DBC ──
   h += '<div class="cdb-diag-sec"><h3>DBC dosyası</h3>';
   if (!db) h += '<p class="cdb-dim">Henüz DBC yüklenmedi.</p>';
   else {
     var sigs = 0;
     for (var i = 0; i < db.messages.length; i++) sigs += db.messages[i].signals.length;
     h += '<table class="cdb-kv">';
-    h += cdbKv('Dosya', cdbState.dbcName);
-    h += cdbKv('Sürüm', db.version || '—');
-    h += cdbKv('Düğüm', db.nodes.length ? cdbEsc(db.nodes.join(', ')) : '—');
+    h += cdbKv('Dosya', cdbEsc(cdbState.dbcName));
+    h += cdbKv('Sürüm', cdbEsc(db.version) || '—');
+    h += cdbKv('Düğüm', db.nodes.length ? db.nodes.length + ' adet' : '—');
     h += cdbKv('Mesaj / sinyal', db.messages.length + ' / ' + sigs);
     h += cdbKv('Uyarı', db.warnings.length ? '<span class="cdb-warn">' + db.warnings.length + '</span>' : '0');
     h += '</table>';
@@ -411,20 +513,6 @@ function cdbRenderDiag() {
     }
   }
   h += '</div>';
-
-  var orphans = cdbOrphanIds();
-  if (orphans.length) {
-    h += '<div class="cdb-diag-sec"><h3>Kayıtta olup DBC\'de tanımı olmayan kimlikler (' + orphans.length + ')</h3>';
-    h += '<p class="cdb-dim">Bu kareler okundu ama çözülemedi — yüklü DBC bu kimlikleri tanımlamıyor. ' +
-         'Yanlış veritabanı yüklendiyse belirti tam olarak budur.</p>';
-    h += '<table class="cdb-table"><thead><tr><th style="width:120px">Kimlik</th><th style="width:90px">Kare</th><th>Payı</th></tr></thead><tbody>';
-    var tot = cdbState.store ? cdbState.store.n : 1;
-    orphans.slice(0, 80).forEach(function(o) {
-      h += '<tr><td class="mono">' + cdbEsc(o.label) + '</td><td class="num">' + cdbThousands(o.count) +
-           '</td><td class="num">%' + (o.count / tot * 100).toFixed(1) + '</td></tr>';
-    });
-    h += '</tbody></table></div>';
-  }
   return h || cdbAltEmpty('Gösterilecek tanı bilgisi yok.');
 }
 
@@ -465,6 +553,25 @@ function cdbToggleYScope() {
   var b = document.getElementById('cdb-yscope');
   if (b) b.textContent = cdbChart.yScope === 'window' ? 'Y: pencere' : 'Y: tüm kayıt';
   cdbChartRedraw();
+}
+
+// PGN yedek eşleştirmesini aç/kapat. J1939 OLMAYAN ama 29 bit kullanan bir
+// otobüste PGN yorumu anlamsız eşleşmeler üretebilir; kapatılabilir olması
+// bu yüzden.
+function cdbToggleJ1939() {
+  cdbState.j1939 = !cdbState.j1939;
+  var b = document.getElementById('cdb-j1939');
+  if (b) {
+    b.setAttribute('aria-pressed', cdbState.j1939 ? 'true' : 'false');
+    b.title = cdbState.j1939
+      ? 'J1939 PGN eşleştirmesi AÇIK — tam kimlik bulunamazsa kaynak adresi yok sayılarak PGN eşleştirilir'
+      : 'J1939 PGN eşleştirmesi KAPALI — yalnız birebir kimlik eşleşmesi';
+  }
+  cdbChartClear();
+  var rep = cdbRebuildChannels();
+  cdbRefreshTree();
+  cdbRenderTab();
+  cdbToast(cdbMatchSummary(rep));
 }
 
 function cdbToggleTimeRel(btn) {
@@ -540,14 +647,13 @@ function cdbExportPng() {
 // 'MesajAdi.SinyalAdi' → { msg, sig }. Yalnız örnek yükleyicinin işine yarar;
 // ağaç, anahtar tabanlı cdbFindSignal'i (can-tree.js) kullanır.
 function cdbFindByNames(path) {
-  var db = cdbState.db;
-  if (!db) return null;
+  var chans = cdbState.channels || [];
   var dot = path.indexOf('.');
   var mn = path.slice(0, dot), sn = path.slice(dot + 1);
-  for (var i = 0; i < db.messages.length; i++) {
-    if (db.messages[i].name !== mn) continue;
-    var sg = db.messages[i].sigByName[sn];
-    if (sg) return { msg: db.messages[i], sig: sg };
+  for (var i = 0; i < chans.length; i++) {
+    if (!chans[i].msg || chans[i].msg.name !== mn) continue;
+    var sg = chans[i].msg.sigByName[sn];
+    if (sg) return { ch: chans[i], sig: sg };
   }
   return null;
 }
@@ -570,8 +676,8 @@ function cdbLoadExample() {
      'SanzimanDurumu.Vites', 'SanzimanDurumu.HatBasinci'].forEach(function(ad) {
       var found = cdbFindByNames(ad);
       if (!found) return;
-      cdbTree.open[cdbMsgKey(found.msg.id, found.msg.extended)] = true;
-      cdbChartAddSignal(found.msg, found.sig);
+      cdbTree.open[found.ch.key] = true;
+      cdbChartAddSignal(found.ch, found.sig);
     });
     cdbRefreshTree();
     cdbToast('Örnek yüklendi: gerçek bir araç kaydı değil, gösteri için üretilmiş veridir.');
@@ -584,7 +690,7 @@ function cdbInit() {
   cdbInitTheme();
   cdbChartBindEvents();
   cdbInitDropzone();
-  cdbSetTreeFilter('log');
+  cdbSetTreeFilter('all');
   cdbRefreshTree();
   cdbChartLayout();
   cdbSetTab('chart');

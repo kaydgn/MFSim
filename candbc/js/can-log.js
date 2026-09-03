@@ -214,22 +214,54 @@ function cdbMatchTrc(line) {
 
 // 5) BusMaster .log
 //      20:16:19:0246 Rx 1 0x18fef100 x 8 01 02 …
-//    Zaman ss:dd:sn:ms ya da göreli 0000:00:00:0246.
+//      0:4:20:7502   Rx 1 18FED917   x 8 FC FF 00 FF FF FF FF FF
+//
+// ── ZAMANIN SON ALANI MİLİSANİYE DEĞİL ───────────────────────────────────
+// BusMaster zamanı <sa>:<dk>:<sn>:<kesir> yazar ve KESİR SABİT GENİŞLİKTEDİR.
+// Kullanıcının kaydında ölçüldü: alan dört haneli ve en büyük değeri 9999;
+// saniye tam da 9999'dan sonra artıyor. Yani birim 0,1 ms — saniyenin
+// ON BİNDE BİRİ, binde biri değil.
+//
+//     0:0:0:9998  →  0:0:1:0004        (199.664 satırda doğrulandı)
+//
+// 1000'e bölen bir okuma iki hata birden yapardı: eksen on kat uzar ve her
+// saniye sınırında zaman ~9 saniye GERİYE atlar. İkincisi grafiği sessizce
+// karıştırır. Bu yüzden bölen alanın YAZILI GENİŞLİĞİNDEN türetiliyor:
+// dört hane → 10000, üç hane → 1000. Sabit bir sayı yazmak, kesri
+// milisaniye yazan bir BusMaster sürümünde aynı hatayı ters yönde yapardı.
 var CDB_RE_BUSMASTER = /^\s*(\d+):(\d+):(\d+):(\d+)\s+(Rx|Tx)\s+(\d+)\s+(?:0x)?([0-9A-Fa-f]+)\s+([sx])\s+(\d+)\s*([0-9A-Fa-f\s]*?)\s*$/i;
 
-function cdbMatchBusmaster(line) {
+function cdbMatchBusmaster(line, ctx) {
   var m = CDB_RE_BUSMASTER.exec(line);
   if (!m) return null;
+  var frac = m[4];
   var t = parseInt(m[1], 10) * 3600 + parseInt(m[2], 10) * 60 + parseInt(m[3], 10) +
-          parseInt(m[4], 10) / 1000;
-  var id = parseInt(m[7], 16);
+          parseInt(frac, 10) / Math.pow(10, frac.length);
+  // BusMaster başlıkta ***HEX*** ya da ***DEC*** yazar. Taban yanlış okunursa
+  // kimlik de veri de bambaşka çıkar ve hiçbir mesaj eşleşmez.
+  var radix = (ctx && ctx.bmBase === 'dec') ? 10 : 16;
+  var id = parseInt(m[7], radix);
+  if (!isFinite(id)) return null;
+  var bytes = radix === 10 ? cdbDecBytes(m[10]) : cdbHexPairs(m[10]);
   return {
     t: t,
     id: id,
     ext: m[8].toLowerCase() === 'x' || id > 0x7FF,
     dlc: parseInt(m[9], 10),
-    bytes: cdbHexPairs(m[10])
+    bytes: bytes
   };
+}
+
+// Onluk kipte veri baytları boşlukla ayrılmış ondalık sayılardır.
+function cdbDecBytes(s) {
+  var out = [], toks = String(s || '').trim().split(/\s+/);
+  for (var i = 0; i < toks.length; i++) {
+    if (!/^\d{1,3}$/.test(toks[i])) break;
+    var v = parseInt(toks[i], 10);
+    if (v > 255) break;
+    out.push(v);
+  }
+  return out;
 }
 
 // ── Biçim kayıt defteri ───────────────────────────────────────────────────
@@ -282,10 +314,13 @@ function cdbDetectLogFormat(lines, ctx) {
 
 // Dosya başlığından biçim bağlamını toplar (şimdilik yalnız ASC'nin tabanı).
 function cdbLogContext(lines) {
-  var ctx = { ascBase: 'hex' };
+  var ctx = { ascBase: 'hex', bmBase: 'hex' };
   for (var i = 0; i < lines.length && i < 60; i++) {
     var m = /^\s*base\s+(hex|dec)\b/i.exec(lines[i]);
     if (m) ctx.ascBase = m[1].toLowerCase();
+    // BusMaster: ***HEX*** / ***DEC***
+    var b = /^\s*\*\*\*(HEX|DEC)\*\*\*/i.exec(lines[i]);
+    if (b) ctx.bmBase = b[1].toLowerCase();
   }
   return ctx;
 }
@@ -466,6 +501,7 @@ if (typeof module !== 'undefined' && module.exports) {
     cdbMatchAsc: cdbMatchAsc,
     cdbMatchTrc: cdbMatchTrc,
     cdbMatchBusmaster: cdbMatchBusmaster,
+    cdbDecBytes: cdbDecBytes,
     cdbDetectLogFormat: cdbDetectLogFormat,
     cdbLogContext: cdbLogContext,
     cdbIsNoise: cdbIsNoise,

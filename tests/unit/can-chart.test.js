@@ -14,7 +14,9 @@
  *     buradan geçemez.
  */
 eval(loadCanSource('can-dbc.js'));
+eval(loadCanSource('can-j1939.js'));
 eval(loadCanSource('can-log.js'));
+eval(loadCanSource('can-match.js'));
 eval(loadCanSource('can-decode.js'));
 eval(loadCanSource('can-example.js'));
 
@@ -142,6 +144,11 @@ describe('GİDİŞ-DÖNÜŞ — üret, yaz, ayrıştır, çöz, karşılaştır'
     });
     return cdbStoreFinalize(st, { relativeTime: false });
   }
+  // Kanal çözümlemesi: seri artık kanal üzerinden kuruluyor.
+  function kanal(st, id, ext) {
+    const k = cdbMsgKey(id, ext);
+    return cdbBuildChannels(db, st, {}).channels.filter(c => c.key === k)[0];
+  }
   function hex(bytes) {
     return bytes.map(b => (b & 255).toString(16).toUpperCase().padStart(2, '0')).join('');
   }
@@ -151,7 +158,8 @@ describe('GİDİŞ-DÖNÜŞ — üret, yaz, ayrıştır, çöz, karşılaştır'
     cdbExPutLE(b, 24, 16, 1450.5 / 0.125);
     const st = kayit(['(0.000000) can0 0CF004FE#' + hex(b)]);
     const msg = db.byKey[cdbMsgKey(0x0CF004FE, true)];
-    const s = cdbBuildSeries(st, msg, msg.sigByName['MotorDevri']);
+    const ch = kanal(st, 0x0CF004FE, true);
+    const s = cdbBuildSeries(st, ch, msg.sigByName['MotorDevri']);
     expect(s.n).toBe(1);
     expect(s.v[0]).toBeCloseTo(1450.5, 6);
   });
@@ -161,7 +169,7 @@ describe('GİDİŞ-DÖNÜŞ — üret, yaz, ayrıştır, çöz, karşılaştır'
     cdbExPutLE(b, 8, 8, 0 + 125);
     const st = kayit(['(0.000000) can0 0CF004FE#' + hex(b)]);
     const msg = db.byKey[cdbMsgKey(0x0CF004FE, true)];
-    expect(cdbBuildSeries(st, msg, msg.sigByName['SurucuTalebi']).v[0]).toBeCloseTo(0, 9);
+    expect(cdbBuildSeries(st, kanal(st, 0x0CF004FE, true), msg.sigByName['SurucuTalebi']).v[0]).toBeCloseTo(0, 9);
   });
 
   test('MOTOROLA (@0) işaretli sinyal: −128,5 Nm gidip geliyor', () => {
@@ -173,7 +181,8 @@ describe('GİDİŞ-DÖNÜŞ — üret, yaz, ayrıştır, çöz, karşılaştır'
     cdbExPutBE(b, 7, 16, raw);
     const st = kayit(['(0.000000) can0 200#' + hex(b)]);
     const msg = db.byKey[cdbMsgKey(0x200, false)];
-    const s = cdbBuildSeries(st, msg, msg.sigByName['BuyukUcluDeger']);
+    const ch = kanal(st, 0x200, false);
+    const s = cdbBuildSeries(st, ch, msg.sigByName['BuyukUcluDeger']);
     expect(s.v[0]).toBeCloseTo(-128.5, 6);
   });
 
@@ -182,7 +191,8 @@ describe('GİDİŞ-DÖNÜŞ — üret, yaz, ayrıştır, çöz, karşılaştır'
     cdbExPutBE(b1, 23, 1, 1);
     const st = kayit(['(0.000000) can0 200#' + hex(b0), '(0.100000) can0 200#' + hex(b1)]);
     const msg = db.byKey[cdbMsgKey(0x200, false)];
-    const s = cdbBuildSeries(st, msg, msg.sigByName['Bayrak']);
+    const ch = kanal(st, 0x200, false);
+    const s = cdbBuildSeries(st, ch, msg.sigByName['Bayrak']);
     expect(Array.from(s.v)).toEqual([0, 1]);
   });
 
@@ -192,19 +202,20 @@ describe('GİDİŞ-DÖNÜŞ — üret, yaz, ayrıştır, çöz, karşılaştır'
     cdbExPutLE(p1, 0, 2, 1); cdbExPutLE(p1, 2, 4, 3); cdbExPutLE(p1, 8, 16, 519);
     const st = kayit(['(0.000000) can0 100#' + hex(p0), '(0.100000) can0 100#' + hex(p1)]);
     const msg = db.byKey[cdbMsgKey(0x100, false)];
+    const ch = kanal(st, 0x100, false);
 
-    const bas = cdbBuildSeries(st, msg, msg.sigByName['HatBasinci']);
+    const bas = cdbBuildSeries(st, ch, msg.sigByName['HatBasinci']);
     expect(bas.n).toBe(1);
     expect(bas.t[0]).toBe(0);
     expect(bas.v[0]).toBeCloseTo(12.7, 6);
 
-    const hata = cdbBuildSeries(st, msg, msg.sigByName['HataKodu']);
+    const hata = cdbBuildSeries(st, ch, msg.sigByName['HataKodu']);
     expect(hata.n).toBe(1);
     expect(hata.t[0]).toBeCloseTo(0.1, 9);
     expect(hata.v[0]).toBe(519);
 
     // Vites çoklanmamış: HER İKİ karede de okunur.
-    const vites = cdbBuildSeries(st, msg, msg.sigByName['Vites']);
+    const vites = cdbBuildSeries(st, ch, msg.sigByName['Vites']);
     expect(vites.n).toBe(2);
     expect(Array.from(vites.v)).toEqual([3, 3]);
     expect(cdbValueText(msg.sigByName['Vites'], 3)).toBe('3. vites');
@@ -222,7 +233,9 @@ describe('GİDİŞ-DÖNÜŞ — üret, yaz, ayrıştır, çöz, karşılaştır'
       // değiştiğinde bu bant kırmızıya döner ve "eğri neden düz" sorusu
       // gözle değil testle sorulur.
       const msg = db.byKey[cdbMsgKey(0x0CF004FE, true)];
-      const s = cdbBuildSeries(res.store, msg, msg.sigByName['MotorDevri']);
+      const ch = cdbBuildChannels(db, res.store, {}).channels
+                   .filter(c => c.key === cdbMsgKey(0x0CF004FE, true))[0];
+      const s = cdbBuildSeries(res.store, ch, msg.sigByName['MotorDevri']);
       expect(s.n).toBeGreaterThan(1900);
       expect(s.min).toBeGreaterThan(650);
       expect(s.max).toBeLessThan(2450);

@@ -163,10 +163,44 @@ describe('cdbMatchTrc — PEAK PCAN-Trace', () => {
 describe('cdbMatchBusmaster — BusMaster .log', () => {
   test('mutlak zaman + uzatılmış çerçeve', () => {
     const f = cdbMatchBusmaster('20:16:19:0246 Rx 1 0x18fef100 x 8 01 02 03 04 05 06 07 08');
-    expect(f.t).toBeCloseTo(20 * 3600 + 16 * 60 + 19 + 0.246, 6);
+    // Kesir SABİT GENİŞLİKTE: dört hane → saniyenin on binde biri (0,1 ms).
+    expect(f.t).toBeCloseTo(20 * 3600 + 16 * 60 + 19 + 0.0246, 6);
     expect(f.id).toBe(0x18FEF100);
     expect(f.ext).toBe(true);
     expect(f.bytes).toHaveLength(8);
+  });
+
+  test('ZAMAN BİRİMİ kesir alanının GENİŞLİĞİNDEN türer', () => {
+    // Kullanıcının gerçek kaydında ölçüldü (199.664 satır): dört haneli alan
+    // en fazla 9999 oluyor ve saniye tam ondan sonra artıyor. 1000'e bölen bir
+    // okuma ekseni on kat uzatır VE her saniye sınırında zamanı geriye atardı.
+    const a = cdbMatchBusmaster('0:0:0:9998 Rx 1 ABC x 1 00');
+    const b = cdbMatchBusmaster('0:0:1:0004 Rx 1 ABC x 1 00');
+    expect(a.t).toBeCloseTo(0.9998, 9);
+    expect(b.t).toBeCloseTo(1.0004, 9);
+    expect(b.t).toBeGreaterThan(a.t);          // saniye sınırında GERİYE ATLAMAZ
+    // Üç haneli yazan bir sürümde aynı alan milisaniyedir
+    expect(cdbMatchBusmaster('0:0:0:250 Rx 1 ABC x 1 00').t).toBeCloseTo(0.250, 9);
+  });
+
+  test('0x öneksiz kimlik ve x/s bayrağı — gerçek BusMaster satırı', () => {
+    const f = cdbMatchBusmaster('0:4:20:7502 Rx 1 18FED917 x 8 FC FF 00 FF FF FF FF FF');
+    expect(f.id).toBe(0x18FED917);
+    expect(f.ext).toBe(true);
+    expect(f.t).toBeCloseTo(4 * 60 + 20 + 0.7502, 6);
+    // Üç haneli kısa kimlik de 'x' ile uzatılmış olabilir
+    expect(cdbMatchBusmaster('0:0:0:0497 Rx 1 ABC x 8 00 00 01 00 00 00 00 00').ext).toBe(true);
+  });
+
+  test('***DEC*** başlığı kimliği ve baytları ONLUK okutur', () => {
+    const dec = cdbMatchBusmaster('0:0:0:0100 Rx 1 256 s 2 10 20', { bmBase: 'dec' });
+    expect(dec.id).toBe(256);
+    expect(dec.bytes).toEqual([10, 20]);
+    const hex = cdbMatchBusmaster('0:0:0:0100 Rx 1 256 s 2 10 20', { bmBase: 'hex' });
+    expect(hex.id).toBe(0x256);
+    expect(hex.bytes).toEqual([0x10, 0x20]);
+    expect(cdbLogContext(['***BUSMASTER Ver 3.2.2***', '***DEC***']).bmBase).toBe('dec');
+    expect(cdbLogContext(['***HEX***']).bmBase).toBe('hex');
   });
   test("standart çerçeve 's' ile işaretlenir", () => {
     const f = cdbMatchBusmaster('0000:00:01:0500 Tx 1 0x123 s 3 11 22 33');

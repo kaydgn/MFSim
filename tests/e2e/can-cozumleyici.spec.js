@@ -66,7 +66,10 @@ test('örnek yükleme: DBC + kayıt çözülür, şeritler çizilir', async ({ p
     atlanan: cdbState.store.skipped,
     mesaj: cdbState.db.messages.length,
     uyari: cdbState.db.warnings.length,
-    oksuz: cdbOrphanIds().length,
+    kanal: cdbState.channels.length,
+    tam: cdbState.match.exact,
+    pgn: cdbState.match.pgn,
+    yok: cdbState.match.unmatched,
     serit: cdbChart.lanes.length
   }));
   expect(s.bicim).toBe('candump');
@@ -76,7 +79,10 @@ test('örnek yükleme: DBC + kayıt çözülür, şeritler çizilir', async ({ p
   expect(s.uyari).toBe(0);
   // Örneğin DBC'si kendi kaydını TAM karşılamalı: tek bir tanımsız kimlik bile
   // "örnek bozuk" demektir ve kullanıcı ilk açılışta boş şerit görür.
-  expect(s.oksuz).toBe(0);
+  expect(s.kanal).toBe(5);
+  expect(s.tam).toBe(5);
+  expect(s.pgn).toBe(0);
+  expect(s.yok).toBe(0);
   expect(s.serit).toBe(5);
 
   // Canvas GERÇEKTEN boyandı mı? Şerit sayısı yeterli kanıt değil: geometrisi
@@ -125,6 +131,19 @@ test('sekmeler: kare listesi, istatistik ve tanı dolu gelir', async ({ page }) 
   expect(metin).toContain('MotorDevri');
   expect(metin).toContain('rpm');
   expect(errors).toEqual([]);
+});
+
+test('J1939 PGN düğmesi eşleştirmeyi yeniden kurar', async ({ page }) => {
+  await open(page);
+  await page.click('#cdb-topbar button[title^="Elinizde dosya yoksa"]');
+  await page.waitForFunction(() => cdbState.store && cdbState.store.n > 0, null, { timeout: 20000 });
+  // Örnekte her kimlik TAM eşleşiyor; PGN kapatmak sonucu DEĞİŞTİRMEMELİ.
+  // (Değişseydi, tam eşleşme yerine PGN'e düşen bir yol var demektir.)
+  const once = await page.evaluate(() => cdbState.match.exact);
+  await page.click('#cdb-j1939');
+  const sonra = await page.evaluate(() => ({ exact: cdbState.match.exact, pressed: document.getElementById('cdb-j1939').getAttribute('aria-pressed') }));
+  expect(sonra.exact).toBe(once);
+  expect(sonra.pressed).toBe('false');
 });
 
 test('tema düğmesi üç durumu dolaşır ve grafiği yeniden çizer', async ({ page }) => {
