@@ -599,6 +599,131 @@
       --ink-danger: var(--accent-danger);
     }
 
+    /* Tema: Yüksek Kontrast — saf siyah zemin, azami okunurluk
+       Diğer on bir koyu temanın metin kontrastı 15,17'de tavan yapıyordu ve
+       hiçbiri saf siyah kullanmıyordu (en koyusu #0a0c10). Bu tema o boşluk
+       için: zemin #000, başlık saf beyaz.
+       Gövde metni BİLEREK #f2f2f2 — saf beyaz gövdede halation yapıyor (metin
+       siyah zeminde taşıyormuş gibi görünür, astigmatta belirgin). 16,01:1
+       hâlâ diğer bütün koyu temalardan yüksek.
+       Kenarlıklar da bilerek parlak (#3a3a3a+): saf siyahta olağan koyu
+       kenarlık HİÇ görünmüyor, paneller birbirine akıyordu. */
+    [data-theme="contrast"] {
+      color-scheme: dark;
+      --bg-primary: #000000;
+      --bg-secondary: #0a0a0a;
+      --bg-tertiary: #171717;
+      --bg-input: #000000;
+      --border-color: #3a3a3a;
+      --border-light: #4d4d4d;
+      --border-hover: #757575;
+      --text-primary: #f2f2f2;
+      --text-secondary: #d4d4d4;
+      --text-muted: #ababab;
+      --text-heading: #ffffff;
+      --accent-primary: #4db8ff;
+      --accent-success: #00e676;
+      --accent-warning: #ffd400;
+      --accent-danger: #ff5252;
+      --shadow-color: rgba(0, 0, 0, 0.85);
+      /* Aksan ZEMİNİNİN üstünde okunacak renk. Beyaz her aksanda
+         yetmiyor: kehribar uyarı çipinde 2,3:1e kadar iniyordu. */
+      --on-accent: #001b33;
+      --on-success: #00220f;
+      --on-warning: #332a00;
+      --on-danger: #2b0000;
+      /* Aksanın METİN sürümü: zeminin üstünde okunacak kadar açık/koyu.
+         Aksanın kendisi zemin, kenarlık ve gösterge olarak kullanılmaya devam
+         eder — orada 3:1 yeter, metinde 4,5:1 gerekiyor. Aksan zaten yetiyorsa
+         belirteç doğrudan ona bağlanır, yani görünüm hiç değişmez. */
+      --ink-accent: var(--accent-primary);
+      --ink-success: var(--accent-success);
+      --ink-warning: var(--accent-warning);
+      --ink-danger: var(--accent-danger);
+    }
+
+    /* Tema: Fosfor Kehribar — P3 kehribar CRT
+       Tasarım sistemi köşe yarıçapını "ölçüm yazılımı keskinliği —
+       CANoe/osiloskop geleneği" diye gerekçelendiriyor; bu tema o geleneğin
+       renk karşılığı. Metnin ÜÇ kademesi de kehribar: monokrom karakter
+       nötrlerde değil, YAZININ kendisinde.
+       Durum renkleri monokroma feda EDİLMEDİ (mono temasının kararı): uyarı
+       ve tehlike sıcak rampada ayrışıyor — kehribar 41° → turuncu 26° →
+       kırmızı 4°. Aksan kehribarla uyarı turuncusu bilerek ayrı tonda,
+       yoksa uyarı çipi seçim vurgusundan ayırt edilemezdi. */
+    [data-theme="amber"] {
+      color-scheme: dark;
+      --bg-primary: #0a0705;
+      --bg-secondary: #120d08;
+      --bg-tertiary: #1c150d;
+      --bg-input: #050403;
+      --border-color: #2e2214;
+      --border-light: #3d2e1b;
+      --border-hover: #5a4426;
+      --text-primary: #ffb000;
+      --text-secondary: #d99422;
+      --text-muted: #b3761a;
+      --text-heading: #ffd27a;
+      --accent-primary: #ffb000;
+      --accent-success: #8a9c4f;
+      --accent-warning: #ff7518;
+      --accent-danger: #ff4033;
+      --shadow-color: rgba(0, 0, 0, 0.7);
+      /* Aksan ZEMİNİNİN üstünde okunacak renk. Beyaz her aksanda
+         yetmiyor: kehribar uyarı çipinde 2,3:1e kadar iniyordu. */
+      --on-accent: #241500;
+      --on-success: #0d1005;
+      --on-warning: #2b0f00;
+      --on-danger: #2e0300;
+      /* Aksanın METİN sürümü: zeminin üstünde okunacak kadar açık/koyu.
+         Aksanın kendisi zemin, kenarlık ve gösterge olarak kullanılmaya devam
+         eder — orada 3:1 yeter, metinde 4,5:1 gerekiyor. Aksan zaten yetiyorsa
+         belirteç doğrudan ona bağlanır, yani görünüm hiç değişmez. */
+      --ink-accent: var(--accent-primary);
+      --ink-success: #a3b862;
+      --ink-warning: #ff8f42;
+      --ink-danger: #ff6b60;
+    }
+
+    /* Tema: Osiloskop — fosfor camgöbeği iz, graticule koyusu
+       Kehribarın soğuk kardeşi: zemin skop ekranı gibi mavi-siyah, yazı
+       fosfor izi. Aksan camgöbeği olduğu için durum renkleri (yeşil/kehribar/
+       kırmızı) tonca uzakta kalıyor — kehribar temasındaki rampa sıkışması
+       burada YOK, üçü de doğal hâllerinde durabiliyor. */
+    [data-theme="scope"] {
+      color-scheme: dark;
+      --bg-primary: #05070a;
+      --bg-secondary: #0a0e14;
+      --bg-tertiary: #121821;
+      --bg-input: #030507;
+      --border-color: #1e2a38;
+      --border-light: #2a3a4c;
+      --border-hover: #3f5a72;
+      --text-primary: #7ceaff;
+      --text-secondary: #5cc4dd;
+      --text-muted: #4a9cb5;
+      --text-heading: #c4f4ff;
+      --accent-primary: #7ceaff;
+      --accent-success: #4fd18a;
+      --accent-warning: #ffc233;
+      --accent-danger: #ff5c5c;
+      --shadow-color: rgba(0, 0, 0, 0.75);
+      /* Aksan ZEMİNİNİN üstünde okunacak renk. Beyaz her aksanda
+         yetmiyor: kehribar uyarı çipinde 2,3:1e kadar iniyordu. */
+      --on-accent: #00212b;
+      --on-success: #00190e;
+      --on-warning: #2b2000;
+      --on-danger: #2b0000;
+      /* Aksanın METİN sürümü: zeminin üstünde okunacak kadar açık/koyu.
+         Aksanın kendisi zemin, kenarlık ve gösterge olarak kullanılmaya devam
+         eder — orada 3:1 yeter, metinde 4,5:1 gerekiyor. Aksan zaten yetiyorsa
+         belirteç doğrudan ona bağlanır, yani görünüm hiç değişmez. */
+      --ink-accent: var(--accent-primary);
+      --ink-success: var(--accent-success);
+      --ink-warning: var(--accent-warning);
+      --ink-danger: var(--accent-danger);
+    }
+
     /* ========== TASARIM SİSTEMİ ÖLÇEKLERİ (tema-bağımsız) ==========
        Renkler temaya göre değişir; aşağıdaki ölçekler tüm temalarda ortaktır.
        Amaç: köşe/derinlik/boşluk/hareket tutarlılığı — "tasarlanmış" his. */
