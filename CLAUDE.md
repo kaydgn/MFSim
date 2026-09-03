@@ -559,6 +559,58 @@ araç düğümlerini kümenin dışındaki iki şeride koyuyor ve örnek kurucus
 devrediyor (bkz. *"örnek kurucusu kutuyu koordinatın SÖYLEMEDİĞİ yere
 koyuyordu"*).
 
+#### ÇİZİMLER ÖN GÖRÜNÜŞ — veri Gates düzleminde KALIR (2026-08-28)
+
+Kullanıcı kararı: *"MFSim için de kayışın dönüş yönünü default olarak saat
+yönünde yapacağız."*
+
+**ÖLÇÜLDÜ** (`docs/gates-reports/README.md` → *"Dönüş yönü konvansiyonu"*): on
+Gates raporunun ONUNDA DA kayış, raporun kendi çizim düzleminde **CCW**
+dolanıyor (`Σ işaretli sarım = +360`, hiç `−360` yok). Motorlar ön taraftan
+bakıldığında CW döndüğü için o düzlem **ön görünüşün AYNASI** gibi davranıyor.
+
+**YALNIZ ÇİZİM AYNALANIR.** Saklanan mm, çözücü ve bütün sayısal çıktılar Gates
+düzleminde kalır — arşivle satır satır karşılaştırılabilirlik bu modülün en
+değerli özelliği ve bir görünüm tercihi için feda edilmez. Aynalama **X**
+ekseninde: karşı taraftan bakınca sol-sağ yer değiştirir, YUKARI yukarı kalır.
+
+| Ne | Nerede |
+|----|--------|
+| Bayrak | `VE_FEAD_VIEW_FRONT` (varsayılan `true`) · `js/fead-model.js` |
+| Aynalama | `veFeadMirrorGeomX(geom)` — DOM'suz, SAF (girdiyi değiştirmez) |
+| Bağlandığı TEK nokta | `veFeadLayoutSVG` → `geomAt()` |
+
+**TEK NOKTA ŞART:** çizimin okuduğu her geometri (ana konum + hayalet konumlar)
+oradan geçiyor, dolayısıyla sarım yayları · kaburga dişleri · dönüş okları · kol
+çizimi birlikte dönüyor. Yirmi ayrı yere serpiştirmek, biri unutulduğunda yalnız
+O ögenin ters kalması demekti. Pivot ayrıca çevriliyor (`build.sys`'ten okunuyor,
+geometriden değil).
+
+**`d` İŞARETİ DE ÇEVRİLİR.** Aynalama el yönünü ters çevirir; `d` çevrilmezse
+sarım yayları kasnağın İÇİNDEN geçer — kartta bir kez ölçülmüş *"sweep
+bayrağı"* hatasının aynı sınıfı. Aynalama **tam simetri**: `L_eff`, sarımlar,
+gerginlikler BİREBİR aynı kalır (testli).
+
+**YÖN GÜLÜ DE TAKİP EDER.** Aynalı çizimde veri düzleminin `0°`'si ekranda
+**SOLA** bakar; gül eski yerinde bırakılsaydı resim aynalı, açı okuması aynalı
+DEĞİL olurdu — kullanıcı `0°`'yi yanlış tarafta arardı. Gülün `0/180` etiketleri
+ve artış yayı bayrakla birlikte dönüyor, başlığı da durumu yazıyor.
+
+##### Gergi serpantinde SON SIRADA — UYARI, zorlama değil
+
+On raporun onunda da sıra gergiyle bitip sürücüyle başlıyor: gergi, kayışın
+sürücüye **dönüş açıklığındadır**, yani GEVŞEK tarafta (AG00686'da ölçüldü:
+`T = 1209.95 · 1208.48 · 767.47 · TEN 766.00` — en düşük, ankrajın kendisi).
+
+**AMA MATEMATİK BU KONUMDAN BAĞIMSIZ.** Gerilme zinciri `T[t] = ankraj` ile
+başlayıp `(t+j) % n` ile dolaşıyor. ÖLÇÜLDÜ — AG00686 çevrimsel olarak dört
+konuma da döndürüldü: `ΔT = 0.0e+0 · ΔH = 0.0e+0 · L_eff birebir aynı`.
+
+Bu yüzden kural bir **uyarı** (`veFeadBuildSystem` → `out.warnings`): yanlış
+yere kablolanmış bir gergi doğru sonuç üretmeye devam eder, yalnız yerleşim
+tedarikçi konvansiyonuna uymaz. Çözümü durdurmak, DOĞRU bir modeli reddetmek
+olurdu.
+
 #### KANVAS = KAYIŞ DÜZLEMİ — konum artık FİZİKSEL
 
 Kullanıcı isteği (2026-08-25): *"Krank kasnağına koordinatları girdiğimiz zaman,

@@ -1777,6 +1777,53 @@ function veFeadResolveDriver(pulleys){
   return list.length ? list[0] : null;
 }
 
+// ─── ÖN GÖRÜNÜŞ — çizim aynalanır, VERİ ASLA ────────────────────────────────
+//
+// Kullanıcı kararı (2026-08-28): *"MFSim için de kayışın dönüş yönünü default
+// olarak saat yönünde yapacağız."*
+//
+// ÖLÇÜLDÜ (bkz. docs/gates-reports/README.md → "Dönüş yönü konvansiyonu"):
+// on Gates raporunun ONUNDA DA kayış, raporun kendi çizim düzleminde CCW
+// dolanıyor (Σ işaretli sarım = +360, hiç −360 yok). Motorlar ön taraftan
+// (aksesuar tahrik ucundan) bakıldığında CW döndüğü için o düzlem ÖN
+// GÖRÜNÜŞÜN AYNASI gibi davranıyor.
+//
+// KARAR: yalnız ÇİZİM aynalanır. Saklanan mm koordinatları, çözücü ve bütün
+// sayısal çıktılar Gates düzleminde KALIR — arşivle satır satır
+// karşılaştırılabilirlik bu modülün en değerli özelliği ve onu bir görünüm
+// tercihi için feda etmek olmaz. Aynalama X ekseninde: karşı taraftan bakınca
+// sol-sağ yer değiştirir, YUKARI yukarı kalır.
+//
+// AYNALAMA TAM SİMETRİDİR — bütün skalerler (sarım, açıklık, L_eff, gerginlik)
+// BİREBİR aynı kalır; değişen yalnız el yönü. Bu yüzden burada `d` işareti de
+// çevriliyor: çevrilmezse sarım yayları kasnağın İÇİNDEN geçer (kartta bir kez
+// ölçülmüş "sweep bayrağı" hatasının aynısı).
+var VE_FEAD_VIEW_FRONT = true;      // çizimler ÖN GÖRÜNÜŞ mü
+
+function _feadMirrorPt(q){ return (q && q.length >= 2) ? [-q[0], q[1]] : q; }
+
+// Geometriyi X'te aynalar. SAF: girdiyi değiştirmez, kopya döndürür.
+function veFeadMirrorGeomX(geom){
+  if(!geom) return geom;
+  var out = {};
+  Object.keys(geom).forEach(function(k){ out[k] = geom[k]; });
+  out.pulleys = (geom.pulleys||[]).map(function(p){
+    var q = {}; Object.keys(p).forEach(function(k){ q[k] = p[k]; });
+    q.c = _feadMirrorPt(p.c);
+    if(typeof p.d === 'number') q.d = -p.d;     // el yönü çevrilir
+    return q;
+  });
+  out.spans = (geom.spans||[]).map(function(sp){
+    var q = {}; Object.keys(sp).forEach(function(k){ q[k] = sp[k]; });
+    q.Pi = _feadMirrorPt(sp.Pi); q.Pj = _feadMirrorPt(sp.Pj);
+    if(sp.u) q.u = _feadMirrorPt(sp.u);
+    return q;
+  });
+  if(typeof geom.signedWrapDeg === 'number') out.signedWrapDeg = -geom.signedWrapDeg;
+  if(typeof geom.sense === 'number') out.sense = -geom.sense;
+  return out;
+}
+
 // ─── Ad tekilleştirme ───────────────────────────────────────────────────────
 // ÇEKİRDEK ADLARI ANAHTAR OLARAK KULLANIYOR (loadsKw sözlüğü, sonuç satırları).
 // İki "Avara Kasnak" aynı adı taşırsa güçleri sessizce BİRLEŞİR ve sonuç yanlış
@@ -1896,6 +1943,30 @@ function veFeadBuildSystem(nodeList, connList, opt){
   out.solver = solvNode;
   if(!beltNode) out.errors.push('Kayış Özellikleri bileşeni yok. Sol paletten ekleyin.');
   if(!solvNode) out.warnings.push('Çözücü bileşeni yok; tasarım gerginliği ve tahrik oranı varsayılanla alınır.');
+
+  // ── GERGİ SERPANTİNDE SON SIRADA MI ─────────────────────────────────────
+  // On Gates raporunun ONUNDA DA sıra gergiyle bitip sürücüyle başlıyor: gergi,
+  // kayışın sürücüye DÖNÜŞ açıklığındadır, yani GEVŞEK tarafta (ölçüldü,
+  // AG00686: T = 1209.95 · 1208.48 · 767.47 · TEN 766.00 — en düşük).
+  //
+  // UYARI, ZORLAMA DEĞİL. Matematik bu konumdan BAĞIMSIZ: gerilme zinciri
+  // T[t] = ankraj ile başlayıp (t+j) % n ile dolaşıyor. Ölçüldü — AG00686
+  // çevrimsel olarak dört konuma da döndürüldü, ΔT = 0.0e+0, ΔH = 0.0e+0,
+  // L_eff birebir aynı. Yani yanlış yere kablolanmış bir gergi SONUCU
+  // değiştirmiyor; değiştirdiği şey yerleşimin tedarikçi konvansiyonuna
+  // uyup uymadığı. Çözümü durdurmak, doğru bir modeli reddetmek olurdu.
+  (function(){
+    var seq = out.order || [];
+    if(seq.length < 3) return;
+    var ti = -1;
+    for(var i=0;i<seq.length;i++) if(_feadDefOf(seq[i]).isFeadTensioner) ti = i;
+    if(ti < 0 || ti === seq.length - 1) return;
+    out.warnings.push('Serpantin sırasında gergi son sırada değil ("'
+      + _feadNodeName(seq[ti]) + '" ' + (ti+1) + '/' + seq.length + '). Gates '
+      + 'konvansiyonunda gergi, kayışın sürücüye dönüş açıklığındadır — yani '
+      + 'GEVŞEK tarafta. Hesap bundan etkilenmez (sonuç birebir aynı), ama '
+      + 'yerleşim tedarikçi raporlarıyla satır satır karşılaştırılamaz.');
+  }());
 
   var bd = (beltNode && beltNode.data) || {};
   var sd = (solvNode && solvNode.data) || {};
@@ -2857,6 +2928,7 @@ function veFeadPulleyCodes(sys){
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     veFeadPulleyCodes: veFeadPulleyCodes,
+    VE_FEAD_VIEW_FRONT: VE_FEAD_VIEW_FRONT, veFeadMirrorGeomX: veFeadMirrorGeomX,
     _feadNum: _feadNum, _feadDefOf: _feadDefOf, _feadNodeName: _feadNodeName,
     _feadIsPulley: _feadIsPulley,
     VE_FEAD_DEFAULT_DIA: VE_FEAD_DEFAULT_DIA, VE_FEAD_ERROR_MAP: VE_FEAD_ERROR_MAP,
