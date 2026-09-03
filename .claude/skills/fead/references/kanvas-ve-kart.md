@@ -136,6 +136,29 @@ gerginlikler BİREBİR aynı kalır (testli).
 DEĞİL olurdu — kullanıcı `0°`'yi yanlış tarafta arardı. Gülün `0/180` etiketleri
 ve artış yayı bayrakla birlikte dönüyor, başlığı da durumu yazıyor.
 
+##### YÖN ETİKETLERİ DE AYNALANIR — yoksa kart ile rozet ters düşer
+
+Aynalama bir sessiz kusur DOĞURDU ve kapı onu yakaladı: `out.spin`
+(`FEADCore.loopSense`) **veri düzleminde** ölçülür, ama altı yüzey onu
+*"motora önden bakışta CCW"* diye basıyordu. Çizim aynalandığı için ekranda
+görülen yön onun **tersi**; çevrilmeden basılan etiket kartla çelişiyordu —
+sessiz, çünkü ikisi de ayrı ayrı makul görünür.
+
+Çeviri **tek üreticiden** (`js/fead-model.js`):
+
+| Ne | Sözleşme |
+|----|----------|
+| `veFeadSpinToFront(spin)` | veri ↔ ön görünüş. **İnvolusyon** (kendi tersi) → seçim de aynı fonksiyondan geçer |
+| `veFeadSpinLabel(spin)` | `{sense, glif, kisa, uzun}` — rozet · panel · toast · sihirbazın üç yüzeyi aynı metni okur |
+
+**SEÇİCİ DE BU BOUNDARY'DEN GEÇER.** Sihirbazın yön düğmeleri artık ön
+görünüşte konuşuyor; `veFeadWizSpinSet` gelen değeri veri düzlemine çeviriyor.
+Çevrilmeseydi *"CW"* düğmesi kartta CCW'ye giden bir model kurardı.
+
+**ÖLÇÜLDÜ:** AG00976 ve BMC, veri düzleminde `spin = +1` (CCW — Gates'in kendi
+düzlemi, on raporun onunda da öyle), **ön görünüşte `−1` (CW)** — yani
+kullanıcının istediği varsayılan, hiçbir veriye dokunmadan.
+
 ##### Gergi serpantinde SON SIRADA — UYARI, zorlama değil
 
 On raporun onunda da sıra gergiyle bitip sürücüyle başlıyor: gergi, kayışın
@@ -146,10 +169,36 @@ sürücüye **dönüş açıklığındadır**, yani GEVŞEK tarafta (AG00686'da 
 başlayıp `(t+j) % n` ile dolaşıyor. ÖLÇÜLDÜ — AG00686 çevrimsel olarak dört
 konuma da döndürüldü: `ΔT = 0.0e+0 · ΔH = 0.0e+0 · L_eff birebir aynı`.
 
-Bu yüzden kural bir **uyarı** (`veFeadBuildSystem` → `out.warnings`): yanlış
-yere kablolanmış bir gergi doğru sonuç üretmeye devam eder, yalnız yerleşim
-tedarikçi konvansiyonuna uymaz. Çözümü durdurmak, DOĞRU bir modeli reddetmek
-olurdu.
+Bu yüzden kural bir **uyarı** (`veFeadBuildSystem` → `out.warnings` +
+`out.tensionerOrder`): yanlış yere kablolanmış bir gergi doğru sonuç üretmeye
+devam eder, yalnız yerleşim tedarikçi konvansiyonuna uymaz. Çözümü durdurmak,
+DOĞRU bir modeli reddetmek olurdu.
+
+**`veFeadTensionerSide` HÜKMÜNÜN İKİNCİ KOPYASI DEĞİL** — iki AYRI soru, ve
+ölçüldü ki gerçekten ayrışıyorlar:
+
+| | `tensionerSide` (analiz) | `tensionerOrder` (kurulum) |
+|---|---|---|
+| Sorduğu | span gerilmesi ankrajın ALTINA iniyor mu | sıra tedarikçi konvansiyonuna uyuyor mu |
+| Kanıtı | duty satırlarının gerilmeleri | `out.order` içindeki konum |
+| Yanlışsa | model **fiziksel olarak geçersiz** | model geçerli, yalnız arşivle satır satır karşılaştırılamaz |
+
+**ÖLÇÜLDÜ:** sihirbazın *"⇄ Yönü çevir"*i AG00976'yı `p1>ten>p5>p4>p3>p2`
+yapıyor → `tensionerOrder.last = false` (uyarı düşüyor) ama
+`tensionerSide.ok = true`, `beltLengthMm` ve `springTensionN` **altı ondalığa
+kadar birebir aynı**. Biri ötekinin kopyası olsaydı ayrışamazlardı.
+
+**ÇEVİRME GERGİYİ KAÇINILMAZ OLARAK TAŞIR** ve sıra döndürülerek
+düzeltilemez: halkada gerginin komşusu iki yanda da sürücüdür, ters yürütünce
+*"sürücüden ÖNCE"* olan *"sürücüden SONRA"* olur. Gergiyi sona almak sürücüyü
+baştan düşürür — ikisi aynı anda sağlanamaz. Bu yüzden uyarı *"şunu yap"*
+demiyor, **farkın ne olduğunu** söylüyor.
+
+**HÜKÜM SIRANIN YANINDA DURUR** (sihirbaz 3. adım, `_fwStepYol`): kullanıcının
+elindeki iki kaldıraç da o kartta (satır okları ve *"⇄ Yönü çevir"*). Genel
+uyarı kutusuna bırakılsaydı sebep adımın tepesinde, çare adımın içinde kalırdı.
+Alan **iki yönde de yazılır** (`last: true` da) ki *"denetlendi ve uygun"* ile
+*"hiç denetlenmedi"* ayırt edilebilsin.
 
 #### KANVAS = KAYIŞ DÜZLEMİ — konum artık FİZİKSEL
 

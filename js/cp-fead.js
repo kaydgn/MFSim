@@ -867,8 +867,11 @@ function veFeadCurrentSpin(){
 }
 
 function veFeadApplySpinBadge(nodeEl, node){
+  // ETİKET ÖN GÖRÜNÜŞTE — `veFeadCurrentSpin` VERİ düzlemini ölçüyor, kart ise
+  // aynalı çiziyor. Çevirmeden basmak, kartla rozeti ters düşürürdü.
   var sense = veFeadCurrentSpin();
-  var metin = sense > 0 ? '↺ CCW' : sense < 0 ? '↻ CW' : '—';
+  var lbl = veFeadSpinLabel(sense);
+  var metin = lbl.kisa;
 
   // Hüküm oturumluk sonuçtan okunur; çözüm yoksa rozet renk İDDİA ETMEZ.
   var _R = (typeof veFeadResults !== 'undefined' && veFeadResults) ? veFeadResults : null;
@@ -882,8 +885,8 @@ function veFeadApplySpinBadge(nodeEl, node){
   b.textContent = metin;
   b.title = (sense === 0
       ? 'Kayış dönüş yönü okunamadı (kasnak koordinatları eksik ya da yol kapanmıyor).'
-      : 'Kayış çevrimi ' + (sense > 0 ? 'CCW (saat yönünün TERSİNE)' : 'CW (saat yönünde)')
-        + ' — motora ÖNDEN bakışta. Yön kablolama sırasından türer; '
+      : 'Kayış çevrimi ' + lbl.uzun
+        + '. Yön kablolama sırasından türer; '
         + 'tıkla → kayış yolunu ters çevir.')
     + (hkm === false
         ? '\n\nUYARI: bu yönde gergi kayışın GERGİN tarafına düşüyor; '
@@ -926,7 +929,7 @@ function veFeadToggleSpin(){
     showNodeProperties(selectedNode);
   if(typeof showToast === 'function'){
     var sense = veFeadCurrentSpin();
-    showToast(k ? ('Kayış dönüş yönü: ' + (sense > 0 ? 'CCW' : sense < 0 ? 'CW' : '—')
+    showToast(k ? ('Kayış dönüş yönü: ' + veFeadSpinLabel(sense).kisa
                    + ' · ' + k + ' bağlantı çevrildi')
                 : 'Çevrilecek kayış bağlantısı yok', k ? 'info' : 'warning');
   }
@@ -937,8 +940,7 @@ function veFeadToggleSpin(){
 function getFeadSpinPropertiesHTML(node){
   if(!node.data) node.data = {};
   var sense = veFeadCurrentSpin();
-  var metin = sense > 0 ? 'CCW — saat yönünün TERSİNE'
-            : sense < 0 ? 'CW — saat yönünde' : '— (okunamadı)';
+  var metin = sense ? veFeadSpinLabel(sense).uzun : '— (okunamadı)';
   var R = (typeof veFeadResults !== 'undefined' && veFeadResults) ? veFeadResults : null;
   var hkm = (R && R.tensionerSide) ? R.tensionerSide : null;
   var renk = !hkm ? 'var(--text-secondary)'

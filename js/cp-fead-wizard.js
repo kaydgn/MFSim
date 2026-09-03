@@ -317,9 +317,16 @@ function veFeadWizRouteReverse(){
 //
 // İSTENEN YÖN ZATEN GEÇERLİYSE HİÇBİR ŞEY YAPILMAZ — yoksa aynı düğmeye ikinci
 // tık sırayı geri çevirir ve seçici bir aç/kapa gibi davranırdı.
-function veFeadWizSpinSet(dir){
+//
+// DÜĞMELER ÖN GÖRÜNÜŞTE KONUŞUR, KARŞILAŞTIRMA VERİ DÜZLEMİNDE YAPILIR.
+// `b.spin` `FEADCore.loopSense`'ten geliyor ve VERİ düzlemini ölçüyor; çizim
+// aynalı (`VE_FEAD_VIEW_FRONT`). Çeviri tek boundary'de — `veFeadSpinToFront`
+// bir involusyon olduğu için aynı fonksiyon iki yönde de kullanılıyor.
+// Çevrilmeseydi "CW" düğmesi kartta CCW'ye giden bir model kurardı: sessiz,
+// çünkü sayılar makul kalır.
+function veFeadWizSpinSet(dirFront){
   if(!_fwState) return false;
-  var istenen = _fwNum(dir, 0);
+  var istenen = veFeadSpinToFront(_fwNum(dirFront, 0));
   var b = _fwBuild || veFeadWizBuild();
   var suan = (b && b.spin) ? b.spin : 0;
   if(!istenen || !suan || istenen === suan){ veFeadWizRender(); return false; }
@@ -331,7 +338,7 @@ function veFeadWizSpinSet(dir){
 // kontrolü basıyor. İki kopya tutulsaydı biri düzeltilince öbürü sessizce
 // eskirdi — bu deponun tekrar eden kuralı ("panel ile kart AYNI alanı okur").
 function veFeadWizSpinHTML(b){
-  var sp = (b && b.spin) ? b.spin : 0;
+  var sp = veFeadSpinToFront((b && b.spin) || 0);   // ÖN GÖRÜNÜŞ
   function dugme(v, glif, ad){
     return '<button type="button" class="ve-fw-spin' + (sp === v ? ' ve-fw-spin-on' : '')
       + '"' + (sp ? '' : ' disabled')
@@ -340,7 +347,7 @@ function veFeadWizSpinHTML(b){
   }
   return '<div class="ve-fw-spinbox">'
     + dugme(1, '\u21ba CCW', 'Saat yönünün TERSİNE — motora önden bakışta')
-    + dugme(-1, '\u21bb CW', 'Saat yönünde — motora önden bakışta')
+    + dugme(-1, '\u21bb CW', 'Saat yönünde — motora önden bakışta')  // ön görünüş
     + '<span class="ve-fw-dim">' + (sp
         ? 'Sıradan türedi; seçim serpantin sırasını ters yürütür.'
         : 'Henüz okunamıyor — en az üç kasnak ve koordinatları gerekli.')
@@ -927,7 +934,7 @@ function veFeadWizLiveHTML(b){
     if(Number.isFinite(b.armAbsDeg))
       h += '<span class="ve-fw-pill">kol <b>' + _fwFmt(b.armAbsDeg, 2) + '°</b></span>';
     if(b.spin)
-      h += '<span class="ve-fw-pill">' + (b.spin > 0 ? '↺ CCW' : '↻ CW') + '</span>';
+      h += '<span class="ve-fw-pill">' + veFeadSpinLabel(b.spin).kisa + '</span>';
   } else {
     h += '<span class="ve-fw-pill ve-fw-pill-err">✗ çözülemiyor</span>';
     h += '<span class="ve-fw-pill ve-fw-pill-dim">' + _fwEsc((b.errors || [])[0] || '') + '</span>';
@@ -1302,8 +1309,32 @@ function _fwStepYol(b){
   });
   l += '</ol>';
 
+  // ── GERGİ SONDA MI — HÜKÜM SIRANIN YANINDA DURUR ───────────────────────
+  //
+  // Köprü bu hükmü `build.tensionerOrder` ile TAŞIYOR; sihirbaz onu yeniden
+  // hesaplamıyor. İkinci bir sayaç tutulsaydı "⇄ Yönü çevir" sonrası liste bir
+  // şey, uyarı kutusu başka bir şey derdi (bu modülün tekrar eden kuralı:
+  // panel ile kart AYNI alanı okur).
+  //
+  // HÜKÜM TAM BURADA, çünkü kullanıcının elindeki iki kaldıraç da bu kartta:
+  // satır okları ve "⇄ Yönü çevir". Genel uyarı kutusuna bırakılsaydı sebep
+  // adımın tepesinde, çare adımın içinde kalırdı.
+  var tord = b && b.tensionerOrder;
+  var hkm = '';
+  if(tord && tord.last){
+    hkm = '<p class="ve-fw-dim">Gergi sırada <strong>son</strong> — Gates '
+      + 'konvansiyonu (sıra sürücüyle başlar, gergiyle biter).</p>';
+  } else if(tord){
+    hkm = '<p class="ve-fw-warn">⚠ Gergi sırada son değil (' + (tord.index + 1)
+      + '/' + tord.count + '). Gates konvansiyonunda gergi kayışın sürücüye '
+      + '<strong>dönüş</strong> açıklığındadır. <span class="ve-fw-dim">Sayılar '
+      + 'bundan etkilenmez; etkilenen tedarikçi raporlarıyla satır satır '
+      + 'karşılaştırılabilirlik.</span></p>';
+  }
+
   var h = _fwCard('Serpantin Sırası', 'var(--accent-warning)',
       l
+    + hkm
     + '<div class="ve-fw-rowbtns">'
     + '<button type="button" class="ve-fw-btn" onclick="veFeadWizRouteReverse()">⇄ Yönü çevir</button>'
     + '</div>'
@@ -2301,7 +2332,7 @@ function _fwStepOzet(b){
     ['Kayış boyu', b && b.ok ? _fwFmt(b.beltLengthMm, 1) + ' mm' : '—',
      b && b.beltLengthDerived ? 'derived' : ''],
     ['Tasarım gerginliği', b && b.ok ? _fwFmt(b.springTensionN, 1) + ' N' : '—', 'derived'],
-    ['Dönüş yönü', b && b.spin ? (b.spin > 0 ? '↺ CCW' : '↻ CW') : '—', '']
+    ['Dönüş yönü', b && b.spin ? veFeadSpinLabel(b.spin).kisa : '—', '']
   ];
   var kh = '<div class="ve-fw-cards">';
   kartlar.forEach(function(k){

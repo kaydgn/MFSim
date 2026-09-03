@@ -1131,7 +1131,13 @@ describe('gergi serpantin konumu — uyarı', () => {
   test('gergi ORTADAYSA uyarır ama çözümü DURDURMAZ', () => {
     const r = kur(['a', 'b', 'c', 'd']);          // gergi 2/4
     expect(gergiUyarisi(r).length).toBe(1);
-    expect(gergiUyarisi(r)[0]).toMatch(/gevşek/i);
+    expect(gergiUyarisi(r)[0]).toMatch(/2\/4/);              // konumu YAZIYOR
+    expect(gergiUyarisi(r)[0]).toMatch(/DÖNÜŞ açıklığında/);  // konvansiyonu yazıyor
+    // ÇARE UYDURULMUYOR: sayıların etkilenmediği aynı cümlede duruyor, yoksa
+    // okuyucu bunu bir hesap hatası sanar ve olmayan bir şeyi düzeltmeye çalışır.
+    expect(gergiUyarisi(r)[0]).toMatch(/Sayılar bundan etkilenmiyor/);
+    // HÜKÜM ALAN OLARAK DA TAŞINIR — yüzeyler metni ayrıştırmasın diye.
+    expect(r.tensionerOrder).toEqual({ index: 1, count: 4, last: false });
     // uyarı bir HATA değil: sıra kuruldu, kasnak sayısı doğru
     expect(r.order.map((n) => n.id)).toEqual(['a', 'b', 'c', 'd']);
     // Konum kuralı bir HATA olarak görünmemeli — sentetik gerginin künyesi
@@ -1139,7 +1145,11 @@ describe('gergi serpantin konumu — uyarı', () => {
     expect((r.errors || []).filter((e) => /son sırada/i.test(e)).length).toBe(0);
   });
 
-  test('gergi SONDAYSA hiç uyarı yok', () => {
-    expect(gergiUyarisi(kur(['a', 'c', 'd', 'b'])).length).toBe(0);
+  test('gergi SONDAYSA hiç uyarı yok — ama hüküm YİNE yazılır', () => {
+    const r = kur(['a', 'c', 'd', 'b']);
+    expect(gergiUyarisi(r).length).toBe(0);
+    // "denetlendi ve uygun" ile "hiç denetlenmedi" ayırt edilebilmeli: alan
+    // yalnız kötü durumda yazılsaydı yüzey `!tord` ile ikisini karıştırırdı.
+    expect(r.tensionerOrder).toEqual({ index: 3, count: 4, last: true });
   });
 });

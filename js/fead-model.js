@@ -2575,6 +2575,38 @@ var VE_FEAD_VIEW_FRONT = true;      // çizimler ÖN GÖRÜNÜŞ mü
 
 function _feadMirrorPt(q){ return (q && q.length >= 2) ? [-q[0], q[1]] : q; }
 
+// ── VERİ DÜZLEMİ ↔ ÖN GÖRÜNÜŞ: DÖNÜŞ YÖNÜNÜN ÇEVİRİSİ ──────────────────────
+//
+// `out.spin` (`veFeadNaturalSense` → `FEADCore.loopSense`) VERİ DÜZLEMİNDE
+// ölçülür. Çizim aynalandığı için ekranda görülen yön onun TERSİDİR — X
+// aynalaması ayakkabı-bağı işaretini çevirir (`veFeadMirrorGeomX` içinde
+// `sense` ve `d` de bu yüzden çevriliyor).
+//
+// BU ÇEVİRİ OLMADAN YÜZEYLER YALAN SÖYLER — ve sessizce: kart kayışı bir yöne
+// akıtırken rozet "↺ CCW", sihirbazın düğmesi de "CCW — motora önden bakışta"
+// derdi. İkisi de makul görünür, biri yanlıştır.
+//
+// İNVOLUSYON (kendi tersi): ön görünüşte seçilen bir yönü veri düzlemine
+// çevirmek için de aynı fonksiyon kullanılır — sihirbazın yön düğmeleri bu
+// yüzden tek boundary'den geçiyor.
+function veFeadSpinToFront(spin){
+  var v = Number(spin) || 0;
+  return VE_FEAD_VIEW_FRONT ? -v : v;
+}
+
+// Etiket TEK ÜRETİCİDEN. Rozet · panel · toast · sihirbazın üç yüzeyi aynı
+// metni basıyor; altı kopya tutulsaydı biri düzeltilince ötekiler sessizce
+// eskirdi (bu modülün tekrar eden kuralı).
+function veFeadSpinLabel(spin){
+  var f = veFeadSpinToFront(spin);
+  if(!f) return { sense: 0, glif: '—', kisa: '—', uzun: '—' };
+  return f > 0
+    ? { sense: 1, glif: '\u21ba', kisa: '\u21ba CCW',
+        uzun: 'CCW (saat yönünün TERSİNE) — motora önden bakışta' }
+    : { sense: -1, glif: '\u21bb', kisa: '\u21bb CW',
+        uzun: 'CW (saat yönünde) — motora önden bakışta' };
+}
+
 // Geometriyi X'te aynalar. SAF: girdiyi değiştirmez, kopya döndürür.
 function veFeadMirrorGeomX(geom){
   if(!geom) return geom;
@@ -2727,28 +2759,50 @@ function veFeadBuildSystem(nodeList, connList, opt){
   if(!beltNode) out.errors.push('Kayış Özellikleri bileşeni yok. Sol paletten ekleyin.');
   if(!solvNode) out.warnings.push('Çözücü bileşeni yok; tasarım gerginliği ve tahrik oranı varsayılanla alınır.');
 
-  // ── GERGİ SERPANTİNDE SON SIRADA MI ─────────────────────────────────────
-  // On Gates raporunun ONUNDA DA sıra gergiyle bitip sürücüyle başlıyor: gergi,
-  // kayışın sürücüye DÖNÜŞ açıklığındadır, yani GEVŞEK tarafta (ölçüldü,
-  // AG00686: T = 1209.95 · 1208.48 · 767.47 · TEN 766.00 — en düşük).
+  // ── GERGİ SERPANTİNDE SON SIRADA MI — KARŞILAŞTIRILABİLİRLİK ÖLÇÜTÜ ─────
   //
-  // UYARI, ZORLAMA DEĞİL. Matematik bu konumdan BAĞIMSIZ: gerilme zinciri
-  // T[t] = ankraj ile başlayıp (t+j) % n ile dolaşıyor. Ölçüldü — AG00686
-  // çevrimsel olarak dört konuma da döndürüldü, ΔT = 0.0e+0, ΔH = 0.0e+0,
-  // L_eff birebir aynı. Yani yanlış yere kablolanmış bir gergi SONUCU
-  // değiştirmiyor; değiştirdiği şey yerleşimin tedarikçi konvansiyonuna
-  // uyup uymadığı. Çözümü durdurmak, doğru bir modeli reddetmek olurdu.
+  // On Gates raporunun ONUNDA DA sıra sürücüyle başlayıp gergiyle bitiyor:
+  // gergi, kayışın sürücüye DÖNÜŞ açıklığındadır (ölçüldü, AG00686:
+  // T = 1209.95 · 1208.48 · 767.47 · TEN 766.00 — en düşük, ankrajın kendisi).
+  //
+  // BU, `veFeadTensionerSide` HÜKMÜNÜN İKİNCİ KOPYASI DEĞİL — iki AYRI soru:
+  //
+  //   | | `tensionerSide` (analiz) | buradaki ölçüt (kurulum) |
+  //   |---|---|---|
+  //   | Sorduğu | span gerilmesi ankrajın ALTINA iniyor mu | sıra tedarikçi
+  //     konvansiyonuna uyuyor mu |
+  //   | Kanıtı | duty satırlarının gerilmeleri | `out.order` içindeki konum |
+  //   | Yanlışsa | model FİZİKSEL olarak geçersiz | model geçerli, yalnız
+  //     arşivle satır satır karşılaştırılamaz |
+  //
+  // ÖLÇÜLDÜ ve ikisi GERÇEKTEN ayrışıyor: sihirbazın "⇄ Yönü çevir"i AG00976'yı
+  // `p1>ten>p5>p4>p3>p2` yapıyor — burada uyarı düşüyor ama `tensionerSide.ok`
+  // hâlâ `true`, `beltLengthMm` ve `springTensionN` altı ondalığa kadar
+  // BİREBİR aynı. Zincir gergide ankrajlı olduğu için ters yürütme fiziği
+  // bozmuyor; bozduğu tek şey yerleşimin okunma sırası.
+  //
+  // UYARI, ZORLAMA DEĞİL — çözümü durdurmak doğru bir modeli reddetmek olurdu.
+  // Sıranın ÇEVRİMSEL döndürülmesi zaten bedava (ölçüldü, AG00686 dört konuma
+  // da döndürüldü: ΔT = 0.0e+0 · ΔH = 0.0e+0 · L_eff birebir); gerginin halkada
+  // sürücünün ÖBÜR yanına alınması ise bedava DEĞİL, başka bir yerleşimdir
+  // (ölçüldü: L 1714.61 → 2459.29 mm). Uyarı bu yüzden "şunu yap" demiyor,
+  // farkın ne olduğunu söylüyor.
   (function(){
     var seq = out.order || [];
     if(seq.length < 3) return;
     var ti = -1;
     for(var i=0;i<seq.length;i++) if(_feadDefOf(seq[i]).isFeadTensioner) ti = i;
-    if(ti < 0 || ti === seq.length - 1) return;
+    if(ti < 0) return;
+    // HÜKÜM HER İKİ YÖNDE DE YAZILIR: "denetlendi ve uygun" ile "hiç
+    // denetlenmedi" ayırt edilebilsin (rozetin renk İDDİA ETMEME kuralının
+    // aynısı — alan yoksa yüzey hüküm veremez).
+    out.tensionerOrder = { index: ti, count: seq.length, last: ti === seq.length - 1 };
+    if(out.tensionerOrder.last) return;
     out.warnings.push('Serpantin sırasında gergi son sırada değil ("'
       + _feadNodeName(seq[ti]) + '" ' + (ti+1) + '/' + seq.length + '). Gates '
-      + 'konvansiyonunda gergi, kayışın sürücüye dönüş açıklığındadır — yani '
-      + 'GEVŞEK tarafta. Hesap bundan etkilenmez (sonuç birebir aynı), ama '
-      + 'yerleşim tedarikçi raporlarıyla satır satır karşılaştırılamaz.');
+      + 'konvansiyonunda sıra sürücüyle başlar, gergiyle biter — gergi kayışın '
+      + 'sürücüye DÖNÜŞ açıklığındadır. Sayılar bundan etkilenmiyor; etkilenen '
+      + 'yerleşimin tedarikçi raporlarıyla satır satır karşılaştırılabilirliği.');
   }());
 
   var bd = (beltNode && beltNode.data) || {};
@@ -3810,6 +3864,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadMigrateNode: veFeadMigrateNode, veFeadMigrateAll: veFeadMigrateAll,
     veFeadRouteOrder: veFeadRouteOrder, veFeadRouteDiagnose: veFeadRouteDiagnose,
     veFeadNaturalSense: veFeadNaturalSense, veFeadReverseRoute: veFeadReverseRoute,
+    veFeadSpinToFront: veFeadSpinToFront, veFeadSpinLabel: veFeadSpinLabel,
     veFeadTensionerSide: veFeadTensionerSide,
     veFeadResolveDriver: veFeadResolveDriver,
     veFeadUniqueNames: veFeadUniqueNames, veFeadTranslateError: veFeadTranslateError,
