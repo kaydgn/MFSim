@@ -2225,14 +2225,19 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
     const k2 = oku(wiz.veFeadWizAngSVG(sc, 0, 2), 'data-k');
     expect(k2 / k1).toBeCloseTo(2, 4);   // künye 1e−6'ya yuvarlı
     // Fare→açı çevirisi ölçeği SVG'DEN okuduğu için yakınlaştırmadan bağımsız.
+    // ÇAPA SAHNENİN KENDİ KÜNYESİ (`data-cx`), `sc.cx` DEĞİL: sahne aynalı
+    // çizildiğinde merkezin EKRANDAKİ mm'si işaret değiştiriyor.
     [1, 2, 0.6].forEach((z) => {
       const svg = wiz.veFeadWizAngSVG(sc, 0, z);
       const el = { getAttribute: (n) => new RegExp(n + '="([-\\d.]+)"').exec(svg)[1] };
       const k = oku(svg, 'data-k'), ox = oku(svg, 'data-ox'), oy = oku(svg, 'data-oy');
-      expect(wiz.veFeadWizAngFromPoint(el, ox + (sc.cx + 30) * k, oy - sc.cy * k))
-        .toBeCloseTo(0, 5);
-      expect(wiz.veFeadWizAngFromPoint(el, ox + sc.cx * k, oy - (sc.cy + 30) * k))
-        .toBeCloseTo(90, 5);
+      const cx = oku(svg, 'data-cx'), cy = oku(svg, 'data-cy');
+      const mir = oku(svg, 'data-mir');
+      // Ekranda SAĞ = veri düzleminde 0° ya da 180° (aynaya göre). Karşılaştırma
+      // MOD 360: ±180 aynı yöndür, belli bir gösterimi dayatmak fazla olurdu.
+      const esit = (a, b) => expect(((a - b + 540) % 360) - 180).toBeCloseTo(0, 5);
+      esit(wiz.veFeadWizAngFromPoint(el, ox + (cx + 30) * k, oy - cy * k), mir < 0 ? 180 : 0);
+      esit(wiz.veFeadWizAngFromPoint(el, ox + cx * k, oy - (cy + 30) * k), 90);
     });
   });
 
@@ -2267,15 +2272,46 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
     const svg = wiz.veFeadWizAngSVG(sc, 0);
     const oku = (a) => (new RegExp(a + '="([-\\d.]+)"').exec(svg) || [])[1];
     const k = Number(oku('data-k')), ox = Number(oku('data-ox')), oy = Number(oku('data-oy'));
+    const cx = Number(oku('data-cx')), cy = Number(oku('data-cy'));
+    const mir = Number(oku('data-mir'));
     const el = { getAttribute: (n) => oku(n) };
-    // Merkezin TAM SAĞINDA bir nokta → 0°, TAM ÜSTÜNDE → +90°
     const X = (mm) => ox + mm * k, Y = (mm) => oy - mm * k;
-    expect(wiz.veFeadWizAngFromPoint(el, X(sc.cx + 50), Y(sc.cy))).toBeCloseTo(0, 6);
-    expect(wiz.veFeadWizAngFromPoint(el, X(sc.cx), Y(sc.cy + 50))).toBeCloseTo(90, 6);
-    expect(wiz.veFeadWizAngFromPoint(el, X(sc.cx - 50), Y(sc.cy))).toBeCloseTo(180, 6);
-    expect(wiz.veFeadWizAngFromPoint(el, X(sc.cx), Y(sc.cy - 50))).toBeCloseTo(-90, 6);
+
+    // ASIL KAPI GİDİŞ-DÖNÜŞ: çizim veri açısını ekrana koyuyor, ters çevirici
+    // ekrandan aynı veri açısını geri veriyor. Tek yönü ölçen bir kapı, iki
+    // yönde birden yapılmış bir işaret hatasını GÖREMEZ.
+    [0, 37.5, 90, 143.25, -90, -161].forEach((veri) => {
+      const ek = (mir < 0 ? 180 - veri : veri) * Math.PI / 180;
+      const geri = wiz.veFeadWizAngFromPoint(
+        el, X(cx + 50 * Math.cos(ek)), Y(cy + 50 * Math.sin(ek)));
+      expect(((geri - veri + 540) % 360) - 180).toBeCloseTo(0, 6);
+    });
+
+    // Ekranın dört yönü — aynalıysa sağ/sol takas olur, yukarı/aşağı ASLA.
+    const esit = (a, b) => expect(((a - b + 540) % 360) - 180).toBeCloseTo(0, 6);
+    esit(wiz.veFeadWizAngFromPoint(el, X(cx + 50), Y(cy)), mir < 0 ? 180 : 0);
+    esit(wiz.veFeadWizAngFromPoint(el, X(cx - 50), Y(cy)), mir < 0 ? 0 : 180);
+    expect(wiz.veFeadWizAngFromPoint(el, X(cx), Y(cy + 50))).toBeCloseTo(90, 6);
+    expect(wiz.veFeadWizAngFromPoint(el, X(cx), Y(cy - 50))).toBeCloseTo(-90, 6);
     // Tam merkezde açı YOK — uydurulmuyor.
-    expect(Number.isNaN(wiz.veFeadWizAngFromPoint(el, X(sc.cx), Y(sc.cy)))).toBe(true);
+    expect(Number.isNaN(wiz.veFeadWizAngFromPoint(el, X(cx), Y(cy)))).toBe(true);
+  });
+
+  // Kartın aynalanması bir SESSİZ kusur doğurmuştu: seçici mm düzleminde
+  // çiziyordu, yani aynı sihirbazın iki resmi BİRBİRİNİN AYNASI oluyordu.
+  test('SEÇİCİ ile KART aynı elde — sahne aynalı, çapa künyede', () => {
+    const sc = sahne();
+    const svg = wiz.veFeadWizAngSVG(sc, 0);
+    const cx = Number((/data-cx="([-\d.]+)"/.exec(svg) || [])[1]);
+    const mir = Number((/data-mir="([-\d.]+)"/.exec(svg) || [])[1]);
+    expect(mir).toBe(M.veFeadSpinToFront(1));            // TEK kaynaktan
+    expect(mir).toBe(-1);                                 // bugünkü varsayılan
+    // Çizilen merkez VERİ merkezinin AYNASI — seçici artık kartla aynı elde.
+    expect(cx).toBeCloseTo(-sc.cx, 6);
+    // 0° etiketi SOLA geçmiş olmalı: resim aynalı, okuma aynalı değilse
+    // kullanıcı 0°'yi yanlış tarafta arar.
+    const sag = /<text x="([-\d.]+)"[^>]*text-anchor="start"[^>]*>([-\d]+)°/.exec(svg);
+    expect(sag && sag[2]).toBe('180');
   });
 
   test('"Uygula" seçilen açıyı SAKLANAN alana çeviriyor', () => {

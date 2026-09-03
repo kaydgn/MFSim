@@ -1520,11 +1520,40 @@ function veFeadWizAngScene(st){
   return { cx: cx, cy: cy, armLen: a, r: od / 2, others: digerleri, geom: geom };
 }
 
+// AÇI SEÇİCİSİ DE ÖN GÖRÜNÜŞTE ÇİZER — yoksa aynı sihirbazın iki resmi ters.
+//
+// Bu, kartın (`veFeadLayoutSVG`) aynalanmasının doğurduğu SESSİZ bir kusurdu:
+// seçici kendi çizicisi ve mm düzleminde çiziyordu, yani 6. adımın açı
+// seçicisiyle hemen altındaki "Kayış Yolu" kartı BİRBİRİNİN AYNASI oluyordu.
+// İkisi de ayrı ayrı makul görünür; hata ancak yan yana konunca fark edilir.
+//
+// SAHNE AYNALANIR, AÇI VERİ DÜZLEMİNDE KALIR. Ayna faktörü `data-mir` ile
+// DOM'a yazılıyor ve ters çevirici (`veFeadWizAngFromPoint`) onu okuyup
+// ekrandan okunan açıyı veri düzlemine geri çeviriyor. Yazılmasaydı fareyle
+// seçilen açı çizilenin AYNASI olurdu — sessiz, çünkü sayı makul kalır.
+//
+// Kayış için `veFeadMirrorGeomX` kullanılıyor (kartın kullandığı AYNI saf
+// fonksiyon): `d` işaretini de çevirdiği için sarım yayları kasnağın içinden
+// geçmiyor. İkinci bir aynalama yazmak, kartla seçicinin sessizce ayrışacağı
+// tek yer olurdu.
+function _fwMir(){
+  return (typeof veFeadSpinToFront === 'function') ? veFeadSpinToFront(1) : 1;
+}
+
 // mm → SVG. +Y mm'de YUKARI, SVG'de aşağı → çevrilir (kanvasın kuralının
 // aynısı). Ölçek bütün sahneyi kabına oturtur; `zoom` onu çarpar.
 function veFeadWizAngSVG(sc, shownDeg, zoom, W, H){
   if(!sc) return '';
   W = W || 420; H = H || 320;
+  var mir = _fwMir();
+  if(mir < 0){
+    sc = { cx: -sc.cx, cy: sc.cy, armLen: sc.armLen, r: sc.r,
+           others: sc.others.map(function(o){
+             return { x: -o.x, y: o.y, r: o.r };
+           }),
+           geom: (typeof veFeadMirrorGeomX === 'function')
+                 ? veFeadMirrorGeomX(sc.geom) : sc.geom };
+  }
   var z = (_fwNum(zoom, 1) > 0) ? _fwNum(zoom, 1) : 1;
   var pad = 22;
   var minX = sc.cx - sc.armLen, maxX = sc.cx + sc.armLen;
@@ -1549,7 +1578,7 @@ function veFeadWizAngSVG(sc, shownDeg, zoom, W, H){
   function g(v){ return Math.round(v * 1e6) / 1e6; }
   var h = '<svg class="ve-fw-ang-svg" viewBox="0 0 ' + W + ' ' + H + '" width="100%"'
     + ' data-k="' + g(k) + '" data-ox="' + g(ox) + '" data-oy="' + g(oy) + '"'
-    + ' data-cx="' + g(sc.cx) + '" data-cy="' + g(sc.cy) + '">';
+    + ' data-cx="' + g(sc.cx) + '" data-cy="' + g(sc.cy) + '" data-mir="' + mir + '">';
 
   // ── KASNAKLAR — kanvastaki gibi dolgulu daireler, ADSIZ ────────────────
   sc.others.forEach(function(o){
@@ -1573,8 +1602,12 @@ function veFeadWizAngSVG(sc, shownDeg, zoom, W, H){
     + '" y2="' + f(C[1]) + '" stroke="var(--border-color)" stroke-width="0.8"/>'
     + '<line x1="' + f(C[0]) + '" y1="' + f(C[1] - R - 8) + '" x2="' + f(C[0])
     + '" y2="' + f(C[1] + R + 8) + '" stroke="var(--border-color)" stroke-width="0.8"/>';
-  [['0', C[0] + R + 11, C[1] + 3, 'start'], ['90', C[0], C[1] - R - 11, 'middle'],
-   ['180', C[0] - R - 11, C[1] + 3, 'end'], ['-90', C[0], C[1] + R + 15, 'middle']]
+  // ETİKETLER DE AYNALANIR: aynada veri düzleminin 0°'si ekranda SOLA bakar.
+  // Bırakılsaydı resim aynalı, açı okuması aynalı DEĞİL olurdu — kullanıcı
+  // 0°'yi yanlış tarafta arardı (yön gülünde ölçülmüş sınıfın aynısı).
+  var sag = (mir < 0) ? '180' : '0', sol = (mir < 0) ? '0' : '180';
+  [[sag, C[0] + R + 11, C[1] + 3, 'start'], ['90', C[0], C[1] - R - 11, 'middle'],
+   [sol, C[0] - R - 11, C[1] + 3, 'end'], ['-90', C[0], C[1] + R + 15, 'middle']]
     .forEach(function(e){
       h += '<text x="' + f(e[1]) + '" y="' + f(e[2]) + '" text-anchor="' + e[3]
         + '" font-size="9" fill="var(--text-muted)">' + e[0] + '°</text>';
@@ -1590,7 +1623,10 @@ function veFeadWizAngSVG(sc, shownDeg, zoom, W, H){
   // yönü gösteriyor — kolun kendi çizgisi değil, SEÇİM bu.
   var deg = _fwNum(shownDeg, NaN);
   if(Number.isFinite(deg)){
-    var rad = deg * Math.PI / 180;
+    // ÇİZİM EKRAN AÇISIYLA — aynada θ, 180°−θ olarak görünür. Sayı etiketi
+    // yine VERİ düzlemindeki açıyı basıyor (kullanıcının girdiği değer odur).
+    var ekran = (mir < 0) ? (180 - deg) : deg;
+    var rad = ekran * Math.PI / 180;
     var ux = Math.cos(rad), uy = -Math.sin(rad);           // SVG'de y aşağı
     var P = [C[0] + R * ux, C[1] + R * uy];
     var uc = 11, gen = 4.6;                                 // ok ucu
@@ -1603,12 +1639,14 @@ function veFeadWizAngSVG(sc, shownDeg, zoom, W, H){
       + ' fill="var(--accent-success)"/>';
     // Açı yayı ve sayısı — seçimin işaretini gözle gösteriyor.
     var ry = Math.min(R * 0.4, 44);
-    h += '<path d="M' + f(C[0] + ry) + ' ' + f(C[1]) + ' A' + f(ry) + ' ' + f(ry) + ' 0 '
-      + (Math.abs(deg) > 180 ? 1 : 0) + ' ' + (deg >= 0 ? 0 : 1) + ' '
+    h += '<path d="M' + f(C[0] + ry * (mir < 0 ? -1 : 1)) + ' ' + f(C[1])
+      + ' A' + f(ry) + ' ' + f(ry) + ' 0 '
+      + (Math.abs(deg) > 180 ? 1 : 0) + ' ' + (deg >= 0 ? (mir < 0 ? 1 : 0) : (mir < 0 ? 0 : 1)) + ' '
       + f(C[0] + ry * Math.cos(rad)) + ' ' + f(C[1] - ry * Math.sin(rad)) + '"'
       + ' fill="none" stroke="var(--accent-success)" stroke-width="1.2" stroke-dasharray="2 2"/>'
-      + '<text x="' + f(C[0] + ry * 0.66 * Math.cos(rad / 2))
-      + '" y="' + f(C[1] - ry * 0.66 * Math.sin(rad / 2) - 4) + '" text-anchor="middle"'
+      + '<text x="' + f(C[0] + ry * 0.66 * Math.cos((rad + (mir < 0 ? Math.PI : 0)) / 2))
+      + '" y="' + f(C[1] - ry * 0.66 * Math.sin((rad + (mir < 0 ? Math.PI : 0)) / 2) - 4)
+      + '" text-anchor="middle"'
       + ' font-size="12" font-weight="700" fill="var(--accent-success)">'
       + _fwFmt(deg, 1) + '°</text>';
   }
@@ -1694,11 +1732,19 @@ function veFeadWizAngFromPoint(svg, px, py){
   var k = Number(svg.getAttribute('data-k'));
   var ox = Number(svg.getAttribute('data-ox')), oy = Number(svg.getAttribute('data-oy'));
   var cx = Number(svg.getAttribute('data-cx')), cy = Number(svg.getAttribute('data-cy'));
+  var mir = Number(svg.getAttribute('data-mir')) < 0 ? -1 : 1;
   if(!(k > 0)) return NaN;
   var mx = (px - ox) / k, my = (oy - py) / k;
   var dx = mx - cx, dy = my - cy;
   if(Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return NaN;
-  return Math.atan2(dy, dx) * 180 / Math.PI;
+  var a = Math.atan2(dy, dx) * 180 / Math.PI;
+  // EKRAN → VERİ. Sahne aynalıysa okunan açı ekranın açısıdır; saklanan alan
+  // veri düzleminde kalmak ZORUNDA (çözücü orayı okuyor).
+  // NORMALLEŞTİRME KAYAN NOKTAYA DAYANIKLI OLMALI: `if(a > 180)` biçimi, ekranın
+  // tam sağındaki bir noktada atan2'nin −1e−17 döndürmesiyle sonucu 180 ↔ −180
+  // arasında zıplatıyordu. Aynı yön, ama saklanan sayı karadan karaya değişir.
+  if(mir < 0) a = (180 - a) - 360 * Math.floor(((180 - a) + 180) / 360);
+  return a;
 }
 function veFeadWizAngHover(ev){
   if(!VE_FW_ANG || typeof document === 'undefined') return;
