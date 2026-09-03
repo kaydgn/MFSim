@@ -224,22 +224,42 @@ describe('katalog + çözücü: üç bağımsız yol tek noktada buluşuyor', ()
     const f = o.grid.fit;                            // 3 · çözücüden
     expect(f.ok).toBe(true);
     expect(f.fits).toBe(true);
-    // Sabit kip tabanı (bkz. fead-belt-mode.test.js TABAN). Gergi künyesi
-    // Gates raporunun Tensioner Data bloğundan geldiğinden beri bu değerler.
+    // Sabit kip tabanı (bkz. fead-belt-mode.test.js TABAN). Girdi avara
+    // merkezine dönünce (2026-09-01) örnek sayfanın kendi koordinatını
+    // taşımaya başladı; ölçülen kayma L −0,0025 mm · T +%0,008.
     expect(f.relDeg).toBeCloseTo(28.4271, 3);
-    expect(f.tensionN).toBeCloseTo(532.142, 2);
-    expect(f.hubloadN).toBeCloseTo(302.125, 2);
+    expect(f.tensionN).toBeCloseTo(532.142, 1);
+    expect(f.hubloadN).toBeCloseTo(302.136, 1);
   });
 
-  // SIĞMAYAN ADAY BİR SAYI DEĞİL, BİR HÜKÜM. Kenetlenme kolun uç konumuna
-  // oturuyor ve orası take-up tekilliğine komşu; ölçüldü: 1690 mm denenince
-  // 4.05e10 N çıkıyor. Böyle bir sayıyı tabloya basmak yalan olurdu.
-  test('sığmayan aday gerginlik YAZMIYOR — tekillik sızmıyor', () => {
+  // SIĞMAYAN ADAY BİR SAYI DEĞİL, BİR HÜKÜM — ama YALNIZ kenetlenme take-up
+  // TEKİLLİĞİNE oturduğunda. Ayrım fizikte: kol MEKANİK BİR DURDURUCUYA
+  // dayandığında ürettiği gerginlik gerçek ve basılabilir bir sayıdır;
+  // tekilliğe dayandığında (dL/dθ → 0) değildir — ölçüldü: durdurucusuz
+  // BMC'ye 1690 mm denenince 4.05e10 N çıkıyor.
+  //
+  // 2026-09-02'den beri durdurucu girilmemişse arşivden VARSAYILIYOR, yani
+  // ikinci hâl artık varsayılan yol. Bu yüzden test iki dalı da ölçüyor.
+  test('sığmayan aday: DURDURUCUYA dayanınca gerginlik GERÇEK', () => {
     const b = bmc('free');
+    expect(b.sys.tensioner.loadStopRelDeg).toBeGreaterThan(0);   // varsayılan geldi
     const kisa = veFeadBeltFit(b.sys, 1690);
     expect(kisa.ok).toBe(true);                      // cevap var
     expect(kisa.fits).toBe(false);                   // ama sığmıyor
     expect(kisa.atLimit).not.toBeNull();
+    expect(kisa.atLimit.degenerate).toBeFalsy();     // tekillik DEĞİL, stop
+    expect(Number.isFinite(kisa.tensionN)).toBe(true);
+    expect(kisa.tensionN).toBeLessThan(5000);        // 4e10 DEĞİL, fiziksel
+  });
+
+  test('sığmayan aday: TEKİLLİĞE dayanınca gerginlik YAZILMIYOR', () => {
+    const b = bmc('free');
+    delete b.sys.tensioner.loadStopRelDeg;           // durdurucusuz gergi
+    b.sys._cache = {};
+    const kisa = veFeadBeltFit(b.sys, 1690);
+    expect(kisa.ok).toBe(true);
+    expect(kisa.fits).toBe(false);
+    expect(kisa.atLimit.degenerate).toBe(true);
     expect(Number.isFinite(kisa.tensionN)).toBe(false);   // 4e10 DEĞİL
     expect(Number.isFinite(kisa.hubloadN)).toBe(false);
   });
@@ -263,15 +283,19 @@ describe('katalog + çözücü: üç bağımsız yol tek noktada buluşuyor', ()
     expect(c.tensionN).toBeLessThan(a.tensionN);
   });
 
-  test('sabit kipte de katalog çalışır — hedef girilen boydur', () => {
-    const o = veFeadBeltOptions(bmc('fixed'), { count: 3 });
-    expect(o.ok).toBe(true);
-    expect(o.targetMm).toBeCloseTo(1715, 3);
+  test('katalog hedefi TÜREYEN boydur — girilen boy hedefi değiştirmez', () => {
+    // Kayış boyu artık bir ÇIKTI: katalog adayları o çıktının etrafında
+    // aranıyor, kullanıcının yazdığı boyun etrafında değil.
+    const kur = (L) => {
+      const pack = veFeadExampleNodes('BMC_FEAD_2026');
+      pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+      pack.nodes.find((n) => n.type === 'fead-belt').data.effLength = L;
+      return veFeadBeltOptions(veFeadBuildSystem(pack.nodes, pack.connections));
+    };
+    const a1 = kur(1715), a2 = kur(1600);
+    expect(a1.targetMm).toBeCloseTo(a2.targetMm, 9);
+    expect(a1.targetMm).toBeCloseTo(1715.269, 2);
   });
-
-  // Adaylar sistemin ÇALIŞMA NOKTASINI bozmamalı: her aday kendi bisect'ini
-  // koşuyor ama hepsi aynı `sys` üzerinde. Önbellek kirlenirse sonraki her
-  // hesap sessizce yanlış açıdan okunurdu.
   test('aday değerlendirmesi çalışma noktasını KİRLETMİYOR', () => {
     const b = bmc('fixed');
     const once = F.meanRel(b.sys);

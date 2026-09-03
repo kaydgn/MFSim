@@ -143,3 +143,49 @@ describe('_veDismissPopup', () => {
     expect(localStorage.getItem('ve-deploy-last-seen-pr')).toBeNull();
   });
 });
+
+// ── Cevrimdisi kapisinin KARSI kapisi ───────────────────────────────────────
+// tests/unit/deploy-status-offline.test.js "file:// uzerinde aga cikilmaz"i
+// olcuyor. Tek basina yeterli degil: agi TAMAMEN kapatan bir degisiklik de
+// oradan gecerdi. Bu blok http(s) uzerinde yoklamanin hala yapildigini tutar.
+describe('http(s) — ag yolu HALA calisiyor', () => {
+  test('protokol kapisi kapali (jsdom varsayilani http)', () => {
+    expect(location.protocol).toBe('http:');
+    expect(_veOfflineOnly()).toBe(false);
+  });
+
+  test('_veCheckDeploy once kendi version.json\'unu ceker', () => {
+    var kunye = { runId: '7', status: 'completed', conclusion: 'success', date: new Date().toISOString() };
+    global.fetch = jest.fn(function() {
+      return Promise.resolve({ ok: true, json: function() { return Promise.resolve(kunye); } });
+    });
+
+    return new Promise(function(cozul) {
+      _veCheckDeploy(function(info) {
+        expect(fetch).toHaveBeenCalledTimes(1);
+        expect(String(fetch.mock.calls[0][0])).toContain('version.json');
+        expect(info.runId).toBe('7');
+        cozul();
+      });
+    });
+  });
+
+  test('gomulu kunye VARSA bile http yolunda ag tercih edilir', () => {
+    // Pages kopyasi gomulu kunyeyi degil YAYINI gostermeli: gomulu olan
+    // dosyanin kendi kimligi, yayin ise "guncel mi" sorusunun cevabi.
+    window.__MFSIM_BUILD = { sha: 'abc1234', shortSha: 'abc1234', changes: [], source: 'embedded' };
+    global.fetch = jest.fn(function() {
+      return Promise.resolve({ ok: true, json: function() { return Promise.resolve({ runId: '9', status: 'completed', conclusion: 'success', date: new Date().toISOString() }); } });
+    });
+
+    return new Promise(function(cozul) {
+      _veCheckDeploy(function(info) {
+        expect(fetch).toHaveBeenCalled();
+        expect(info.runId).toBe('9');
+        expect(info.source).toBeUndefined();
+        delete window.__MFSIM_BUILD;
+        cozul();
+      });
+    });
+  });
+});

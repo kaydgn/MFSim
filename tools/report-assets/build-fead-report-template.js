@@ -54,6 +54,22 @@ for (const tag of ['script', 'style']) {
   if (ac !== kap) { console.error(tag + ': ' + ac + ' açılış, ' + kap + ' kapanış'); process.exit(1); }
 }
 
+// ── 4b) <style> SAYISI BİR SÖZLEŞMEDİR ─────────────────────────────────────
+// js/guide-kit.js `_gkReportCss` bu şablonun İKİNCİ <style> bloğunu kozmetik
+// blok sayıp Kullanım Kılavuzu belgesine aynen taşıyor — böylece kılavuz
+// raporla aynı görünüyor ve CSS'in ikinci bir kopyası tutulmuyor.
+//
+// Kaynağa üçüncü bir <style> eklenirse ya da sıra değişirse kılavuz YANLIŞ
+// bloğu alır. Çalışma anındaki koruma (--prusya + .antet aranması) bunu
+// yakalar ve açık hata verir — ama DERLEME anında yakalamak daha ucuz:
+// hatayı kılavuzu üreten kullanıcı değil, şablonu değiştiren geliştirici görür.
+const styleSay = (h.match(/<style[\s>]/gi) || []).length;
+if (styleSay !== 2) {
+  console.error('<style> bloğu ' + styleSay + ' adet (2 olmalı: 1=@@ASSETS_CSS@@, '
+    + '2=kozmetik). js/guide-kit.js `_gkReportCss` ikinci bloğu kılavuza taşıyor.');
+  process.exit(1);
+}
+
 // ── 5) base64 modül ────────────────────────────────────────────────────────
 const b64 = Buffer.from(h, 'utf8').toString('base64');
 const js = '// AUTO-GENERATED — FEAD raporu teori şablonu (self-contained, çevrimdışı).\n'
@@ -64,4 +80,4 @@ const js = '// AUTO-GENERATED — FEAD raporu teori şablonu (self-contained, ç
 fs.writeFileSync(OUT, js, 'utf8');
 console.log('kaynak ' + n0 + 'B → şablon ' + h.length + 'B → ' + OUT
   + ' (' + (fs.statSync(OUT).size / 1024 | 0) + 'KB)');
-console.log('token ✓  çevrimdışı ✓  yapı ✓');
+console.log('token ✓  çevrimdışı ✓  yapı ✓  <style> 2 ✓');

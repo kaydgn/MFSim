@@ -282,12 +282,24 @@ describe('Yayın sözleşmesi — animasyon YALNIZ kanvas kartında', () => {
     expect(html).toMatch(/value="off" selected/);
   });
 
+  // ATTRIBUTE BİÇİMİ DEĞİŞTİ (2026-09-02) ve bu kapı onu yakaladı — doğru
+  // davranış. Yük eskiden TEK TIRNAKLI bir attribute'a ham JSON olarak
+  // yazılıyordu; kodda "yalnız sayı taşır, tek tırnak geçemez" diye yazılı bir
+  // varsayım vardı. Senaryo METİN getirince ("MFSim'de marş...") o tırnak
+  // attribute'ü kapattı ve animasyon SESSİZCE hiç kurulmadı. Yeni biçim çift
+  // tırnak + HTML kaçışlaması; okuyan taraf varlıkları geri çözer.
+  const yukuCoz = (html) => {
+    const m = /data-fead-anim="([^"]*)"/.exec(html);
+    if (!m) return null;
+    return JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&lt;/g, '<')
+                          .replace(/&gt;/g, '>').replace(/&amp;/g, '&'));
+  };
+
   test('yük geçerli JSON ve ekran hızı kinematikle aynı sayı', () => {
     const { build, layout } = kurBMC();
     const html = fead.veFeadLayoutCardHTML(layout);
-    const raw = /data-fead-anim='([^']+)'/.exec(html);
-    expect(raw).not.toBeNull();
-    const pay = JSON.parse(raw[1]);
+    const pay = yukuCoz(html);
+    expect(pay).not.toBeNull();
     const kin = veFeadAnimKinematics(build, veFeadAnimRpmOf(build, layout));
     expect(pay.mmS).toBeCloseTo(kin.dispMmS, 3);
     expect(pay.segs.length).toBe(2 * build.order.length);   // açıklık + yay

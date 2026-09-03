@@ -269,7 +269,7 @@ describe('paneller üretiliyor ve sızıntı yok', () => {
   });
 
   // Boş panel SESSİZ olmamalı: kullanıcı bileşenin kullanıma açık olmadığını
-  // görmeli. (cp-fead.js _feadPending ile aynı gerekçe — CLAUDE.md'de yazılı.)
+  // görmeli. (cp-fead.js _feadPending ile aynı gerekçe — .claude/skills/structural/SKILL.md'de yazılı.)
   // Metin DURUM bildirir; ne kullanım anlatır ne de geliştirme planı duyurur.
   // Geometri (STEP içe aktarma) ve Hesaplama Ağı (TetGen) ARTIK DOLU →
   // listeden çıkarıldılar; kalan ikisi hâlâ iskelet ve eksiğini söylemek ZORUNDA.

@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-example','fead-layout','fead-report','fead-coordlink','str-geometry','str-material','str-mesh','str-bc','str-results','arac-performans','mount-analysis','fead-analysis','structural-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-example','fead-layout','fead-report','fead-coordlink','fead-spin','fead-wizard','str-geometry','str-material','str-mesh','str-bc','str-results','arac-performans','mount-analysis','fead-analysis','structural-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -148,6 +148,13 @@ function veSyncSidebarScope() {
   if(typeof veStrStack !== 'undefined' && veStrStack.length) scope = 'structural-analysis';
   veSidebarScope = scope;
   veShowAllSidebarComponents();
+  // ŞERİT DE KAPSAMI GÖRMELİ. Şeritte kapsama bağlı öğeler var — bugün
+  // "Bu Modülün Kılavuzu" (js/guide-kit.js `veGuideCurrentId`, kapsamı buradan
+  // okuyor). Kapsam değişince şerit yeniden çizilmezse o düğüm bir sonraki
+  // rastgele tazelemeye (sekme değişimi, panel aç/kapa) kadar YANLIŞ durumda
+  // kalır: FEAD'e girdiniz, düğme hâlâ yok. Modül aç/kapa bu fonksiyondan
+  // geçen TEK nokta, dolayısıyla tazeleme de buraya ait.
+  if(typeof veRibbonRender === 'function') veRibbonRender();
 }
 
 // Bileşen tanımları (SVG sembolleri)
@@ -705,6 +712,45 @@ var componentDefs = {
     inputs: 0, outputs: 0, isFeadCoordLink: true, maxInstances: 1,
     defaultWidth: 54, defaultHeight: 48
   },
+  // ── DÖNÜŞ YÖNÜ — kayış çevriminin CW / CCW seçimi ─────────────────────────
+  //
+  // Yön normalde bir AYAR DEĞİL: `loopSense` kasnak merkezlerinin kayış gidiş
+  // sırasındaki ayakkabı-bağı işaretinden okur, yani kabloları hangi sırada
+  // çektiysen yön odur. Bu düğüm o sırayı TERS YÜRÜTEREK yönü seçtiriyor —
+  // kabloya dokunmadan.
+  //
+  // GEOMETRİ YÖNDEN BAĞIMSIZ (ölçüldü: sarım kümesi, span kümesi ve L_eff
+  // birebir aynı), GERİLME ZİNCİRİ DEĞİL: gergi ankrajı gidiş yönünde
+  // yürüdüğü için ters yön gergiyi GERGİN tarafa düşürebiliyor ve span
+  // gerilmeleri negatife iniyor. O bir hata değil, geçersiz bir tasarımın
+  // işareti — panel sebebi adıyla yazıyor.
+  //
+  // DÜĞÜM YOKSA YÖN DOĞALDIR (kablolamadan). maxInstances:1 — iki kopya iki
+  // farklı yön isteyebilirdi.
+  'fead-spin': {
+    name: 'Dönüş Yönü',
+    // Kasnak (mavi) + çevresinde dönüş oku (amber): "bu halka hangi yöne gider".
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M50 14 A36 36 0 1 1 14 50" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="6" stroke-linecap="round"/><polygon points="5,55 14,36 23,55" fill="var(--accent-warning, #f59e0b)"/><circle cx="50" cy="50" r="20" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="50" cy="50" r="6" fill="var(--accent-primary, #3b82f6)"/></svg>',
+    inputs: 0, outputs: 0, isFeadSpin: true, maxInstances: 1,
+    defaultWidth: 54, defaultHeight: 48
+  },
+  // ── BAŞLANGIÇ SİHİRBAZI — adım adım model kurulumu ───────────────────────
+  //
+  // Kullanıcı isteği (2026-08-29): *"Bu bileşene tıkladığımızda adım adım bir
+  // modeli kurmak için gereken tüm girdileri gireceğiz."* Bileşenin çözdüğü
+  // şey bir eksiklik değil bir SIRA sorunu: girdilerin hepsi zaten panellerde
+  // vardı, ama hangi sırayla gireceğini ve hangi alanın hangi belgeden
+  // okunduğunu ancak modülü bilen biri biliyordu.
+  //
+  // maxInstances:1 — iki sihirbaz iki ayrı taslak taşır ve "hangisi kurulacak"
+  // sorusunun cevabı yok. Girişsiz/çıkışsız: zincirin halkası değil, bir ARAÇ.
+  'fead-wizard': {
+    name: 'Başlangıç Sihirbazı',
+    // Numaralı adımlar + son adımda onay işareti: "sırayla doldur, sonunda kur".
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="26" cy="26" r="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="26" cy="52" r="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="26" cy="78" r="9" fill="var(--accent-warning, #f59e0b)"/><line x1="26" y1="35" x2="26" y2="43" stroke="var(--text-muted, #aaa)" stroke-width="4"/><line x1="26" y1="61" x2="26" y2="69" stroke="var(--text-muted, #aaa)" stroke-width="4"/><line x1="44" y1="26" x2="82" y2="26" stroke="var(--text-muted, #aaa)" stroke-width="5" stroke-linecap="round"/><line x1="44" y1="52" x2="74" y2="52" stroke="var(--text-muted, #aaa)" stroke-width="5" stroke-linecap="round"/><path d="M46 78 l8 9 l17 -19" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    inputs: 0, outputs: 0, isFeadWizard: true, maxInstances: 1,
+    defaultWidth: 60, defaultHeight: 56
+  },
   'fead-report': {
     name: 'Rapor',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><path d="M60 12 v16 h16" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="60" width="8" height="18" fill="var(--accent-primary, #3b82f6)"/><rect x="47" y="50" width="8" height="28" fill="var(--accent-primary, #3b82f6)"/><rect x="60" y="42" width="8" height="36" fill="var(--accent-primary, #3b82f6)"/><line x1="34" y1="40" x2="66" y2="40" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg>',
@@ -1073,13 +1119,16 @@ function vePortBoxStyle(node, portType){
 // kusuru gösteriyordu. Üç çizici (export-topology.js, topo-mini.js,
 // topology.js şerit paneli) artık buradan okuyor.
 // gap: 'bottom' için taban çizgisinin kutu altından uzaklığı (çiziciye göre
-// 13–14 px). Yanlar CSS ile aynı: 7 px; üst 5 px.
+// 15–16 px). Yanlar CSS ile aynı: 7 px; üst 7 px.
+// DİKEY boşluk CSS'teki .ve-node-label margin'iyle (VE_LABEL_GAP_V) birlikte
+// hareket eder: ekranda açılan aralık dışa aktarılan SVG/PNG'de de açılmalı,
+// yoksa çıktı ekrandan daha sıkı görünür. Yatay 7 px'e dokunulmadı.
 function veNodeLabelAnchor(node, w, h, gap){
   var pos = (node && node.data && node.data.labelPos) || 'bottom';
-  var g = (typeof gap === 'number' && isFinite(gap)) ? gap : 14;
+  var g = (typeof gap === 'number' && isFinite(gap)) ? gap : 16;
   var x = node.x, y = node.y;
   switch(pos){
-    case 'top':   return { x: x + w / 2, y: y - 5,          anchor: 'middle', pos: 'top' };
+    case 'top':   return { x: x + w / 2, y: y - 7,          anchor: 'middle', pos: 'top' };
     case 'left':  return { x: x - 7,     y: y + h / 2 + 4,  anchor: 'end',    pos: 'left' };
     case 'right': return { x: x + w + 7, y: y + h / 2 + 4,  anchor: 'start',  pos: 'right' };
     default:      return { x: x + w / 2, y: y + h + g,      anchor: 'middle', pos: 'bottom' };

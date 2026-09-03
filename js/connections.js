@@ -855,8 +855,8 @@ function veFeadTopoSignature() {
     if(typeof _feadIsPulley !== 'function' || !_feadIsPulley(n)) continue;
     var d = n.data || {};
     s += n.id + '@' + d.x + ',' + d.y + ',' + d.od + ',' + d.contact
-       + (d.pivotX !== undefined ? ':' + d.pivotX + ',' + d.pivotY : '')
-       + (d.cenX !== undefined ? '/' + d.cenX + ',' + d.cenY : '') + ';';
+       + (d.cenX !== undefined ? '/' + d.cenX + ',' + d.cenY : '')
+       + (d.armLen !== undefined ? '~' + d.armLen + ',' + d.armMeanDeg : '') + ';';
   }
   return s;
 }

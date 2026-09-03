@@ -130,7 +130,18 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
     expect(Math.abs(Lsurukle - L0)).toBeGreaterThan(1);
   });
 
-  test('kayış boyu kipi rozeti TIKLANINCA değişiyor ve çözüm kipe uyuyor', async ({ page }) => {
+  // KAYIŞ KİPİ ROZETİ KİLİTLİ — ve kilit KANVASTA da geçerli.
+  //
+  // Kayış boyu bu modülde bir ÇIKTIDIR (kasnak merkezleri + gergi künyesi kolun
+  // oturduğu yeri belirliyor, boy o konumun sonucu). Kilit ÜÇ YÜZEYDE birden
+  // olmak zorunda: köprü, panel ve rozet. Tek yerde tutulsaydı panel bir kipi,
+  // rozet başkasını gösterirdi.
+  //
+  // BU TEST BİR DÖNEM BAYATTI: kilit PR #831'de geldi ama test hâlâ rozetin
+  // 'SABİT'ten 'SERBEST'e geçmesini bekliyordu ve E2E takımı rutin olarak
+  // koşmadığı için kırmızı kaldığı fark edilmedi (2026-09-01'de ölçüldü:
+  // değişiklikten ÖNCEKİ commit'te de kırmızı).
+  test('kayış boyu kipi rozeti KİLİTLİ — tıklamak kipi değiştirmiyor', async ({ page }) => {
     await bootApp(page);
     await openFeadWithExample(page);
 
@@ -152,15 +163,21 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
     await page.waitForTimeout(200);
 
     const rozet = page.locator('#' + beltId + ' .ve-fead-badge');
-    await expect(rozet).toHaveText('SABİT');
+    await expect(rozet).toHaveText('SERBEST');
+    // Boy TÜRETİLMİŞ ve gergi var → kip kilitli
+    expect(await page.evaluate(() => ({
+      turetildi: veFeadBuildFromCanvas().beltLengthDerived,
+      kilit: veFeadBeltModeLocked(window.nodes),
+    }))).toEqual({ turetildi: true, kilit: true });
 
+    // GERÇEK TIK — rozet reddetmeli: ne metin ne de düğüm verisi değişir.
     await rozet.click();
+    await page.waitForTimeout(150);
     await expect(page.locator('#' + beltId + ' .ve-fead-badge')).toHaveText('SERBEST');
-
-    // Serbest kipte boy TÜRETİLMİŞ olmalı
-    const turetildi = await page.evaluate(() =>
-      veFeadBuildFromCanvas().beltLengthDerived);
-    expect(turetildi).toBe(true);
+    expect(await page.evaluate((id) => {
+      const n = window.nodes.find((x) => x.id === id);
+      return { kip: n.data.lengthMode, turetildi: veFeadBuildFromCanvas().beltLengthDerived };
+    }, beltId)).toEqual({ kip: undefined, turetildi: true });
   });
 
   // ── HİZALAMA KENETLEMESİ KOORDİNATI YEMİYOR ─────────────────────────────
@@ -462,6 +479,99 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
     const z = await zoomOf(page);
     expect((await mmOf(page, altId)).x - once.x).toBeCloseTo(10 / z, 0);
   });
+
+  // ── DÖNÜŞ YÖNÜ (fead-spin) ──────────────────────────────────────────────
+  //
+  // Kullanıcı sorusu (2026-08-28): *"kayışın dönüş yönü neye göre
+  // belirleniyor? Bu dönüş yönünü de CW veya CCW olacak şekilde ayarlayacak
+  // bir bileşen kuralım."*
+  //
+  // Node bunların hiçbirini göremiyor: rozete gerçek tık, kabloların DOM'da
+  // gerçekten çevrilmesi, kanvastaki gidiş oklarının dönmesi ve Kayış Yolu
+  // kartının imzadan tazelenmesi — dördü de yalnız tarayıcıda koşuyor.
+  test('rozet TIKLANINCA yön çevriliyor: kablolar, oklar ve kart takip ediyor',
+    async ({ page }) => {
+      await bootApp(page);
+      await openFeadWithExample(page);
+
+      const spinId = await page.evaluate(() => {
+        const n = createNode('fead-spin', 0, 0);
+        const c = document.getElementById('ve-canvas').getBoundingClientRect();
+        const k = (typeof canvasZoom !== 'undefined' ? canvasZoom : 1);
+        const off = (typeof canvasOffset !== 'undefined') ? canvasOffset : { x: 0, y: 0 };
+        n.x = (c.width * 0.55 - off.x) / k;
+        n.y = (c.height * 0.5 - off.y) / k;
+        const el = document.getElementById(n.id);
+        el.style.left = n.x + 'px'; el.style.top = n.y + 'px';
+        if (typeof updateAllConnections === 'function') updateAllConnections();
+        return n.id;
+      });
+      await page.waitForTimeout(150);
+      const rz = page.locator('#' + spinId + ' .ve-fead-badge');
+      await expect(rz).toHaveText('↺ CCW');
+
+      const oku = () => page.evaluate(() => ({
+        // Kayış yolunun kablo sırası
+        teller: window.connections
+          .filter((c) => {
+            const d = (window.componentDefs || {})[
+              (window.nodes.find((n) => n.id === c.from) || {}).type] || {};
+            return !!d.isFeadPulley;
+          })
+          .map((c) => c.from + '>' + c.to).join(','),
+        // Kanvastaki gidiş okları
+        oklar: Array.from(document.querySelectorAll('.ve-conn-dir'))
+          .map((p) => p.getAttribute('d')).join('|'),
+        // Kartın KENDİ kinematik künyesi. Kasnak dönüş okları animasyon
+        // açıkken çizilmiyor (yerlerine kol/`spoke` geliyor) ve o yollar her
+        // karede değiştiği için kapı olamaz; `data-fead-anim` ise kartın
+        // çözümü: `sense` çevrimin yönü, `loop` kayış çevresi.
+        anim: (function () {
+          const svg = document.querySelector('svg[data-fead-node]');
+          const a = svg && svg.getAttribute('data-fead-anim');
+          if (!a) return null;
+          try { const j = JSON.parse(a); return { sense: j.sense, loop: j.loop }; }
+          catch (e) { return null; }
+        })(),
+        // Geometri: yön DEĞİŞTİRMEMELİ
+        L: (function () {
+          const svg = document.querySelector('svg[data-fead-node]');
+          const strip = svg && svg.parentElement.parentElement
+            .querySelector('div:last-child');
+          const m = strip && strip.textContent.match(/L\s+([\d.]+)\s*mm/);
+          return m ? Number(m[1]) : null;
+        })(),
+      }));
+
+      const once = await oku();
+      expect(once.teller.length).toBeGreaterThan(10);
+      expect(once.oklar.length).toBeGreaterThan(10);
+      expect(once.L).toBeGreaterThan(1000);
+
+      await rz.click();
+      await expect(rz).toHaveText('↻ CW');
+      await page.waitForTimeout(300);
+      const sonra = await oku();
+
+      // KABLOLAR gerçekten çevrildi
+      expect(sonra.teller).not.toBe(once.teller);
+      // GİDİŞ OKLARI onunla döndü — bayrak yolunda bu ok YALAN söylerdi
+      expect(sonra.oklar).not.toBe(once.oklar);
+      // KART tazelendi ve çevrimin yönü çevrildi
+      expect(once.anim).not.toBeNull();
+      expect(once.anim.sense).toBe(1);
+      expect(sonra.anim.sense).toBe(-1);
+      // …ama GEOMETRİ BİREBİR aynı (yönden bağımsız) — kayış çevresi de,
+      // durum şeridindeki L_eff de kılı kıpırdamıyor.
+      expect(sonra.anim.loop).toBeCloseTo(once.anim.loop, 3);
+      expect(sonra.L).toBeCloseTo(once.L, 3);
+
+      // İkinci tık başa döndürür
+      await rz.click();
+      await expect(rz).toHaveText('↺ CCW');
+      await page.waitForTimeout(300);
+      expect((await oku()).teller).toBe(once.teller);
+    });
 
   test('düğüm YOKKEN davranış birebir eski — bağ varsayılan AÇIK', async ({ page }) => {
     await bootApp(page);

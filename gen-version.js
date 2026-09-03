@@ -3,16 +3,20 @@
 // CI deploy sirasinda _site/version.json ureten script.
 // Kullanim: node gen-version.js [outDir=_site]
 // GitHub API'ye istek atmadan kendi Pages'ten servis edilir → rate-limit yok.
+//
+// Kunyeyi KENDISI toplamaz: tools/version-info.js toplar, build.js de AYNI
+// modulu kullanip ayni kunyeyi tek dosyaya gomer. Iki uretici olsaydi bicim
+// sessizce ayrisirdi (okuyucu tek: js/deploy-status.js).
+//
+// gh API burada bir ZENGINLESTIRME katmani, temel degil: PR govdesi ve
+// (gerekirse) baslik/URL duzeltmesi. API dusserse git'ten gelen baslıklar
+// kalir — changelog BOSALMAZ.
 // ============================================================================
 
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-
-function gitOut(cmd) {
-  try { return execSync(cmd, { encoding: 'utf8' }).trim(); }
-  catch { return ''; }
-}
+const versionInfo = require('./tools/version-info.js');
 
 function ghApi(endpoint) {
   try {
@@ -25,93 +29,47 @@ function ghApi(endpoint) {
 }
 
 const repo = process.env.GITHUB_REPOSITORY || 'kaydgn/MFSim';
-const runId = process.env.GITHUB_RUN_ID || '';
-const sha = process.env.GITHUB_SHA || gitOut('git rev-parse HEAD');
-const branch = process.env.GITHUB_REF_NAME || gitOut('git rev-parse --abbrev-ref HEAD');
-const subject = gitOut('git log -1 --format=%s');
-const author = gitOut('git log -1 --format=%an');
-const date = gitOut('git log -1 --format=%cI');
-const runUrl = runId ? 'https://github.com/' + repo + '/actions/runs/' + runId : '';
+const out = versionInfo.collect({ cwd: __dirname, repo, source: 'pages' });
 
-// Aktif commit icin PR bilgisi
-let prNumber = 0, prTitle = '', prBody = '', prUrl = '';
-const prMatch = subject.match(/Merge pull request #(\d+)/);
-if (prMatch) {
-  prNumber = parseInt(prMatch[1], 10);
-  const pr = ghApi('repos/' + repo + '/pulls/' + prNumber);
+// Aktif commit icin PR govdesi (git'te yok — yalnizca API'de).
+if (out.prNumber) {
+  const pr = ghApi('repos/' + repo + '/pulls/' + out.prNumber);
   if (pr) {
-    prTitle = pr.title || '';
-    prBody = pr.body || '';
-    prUrl = pr.html_url || '';
+    out.prTitle = pr.title || out.prTitle;
+    out.prBody = pr.body || '';
+    out.prUrl = pr.html_url || out.prUrl;
   }
 }
 
-// Changelog: son merge commit'leri (en yeniden eskiye, maks 10)
-const recent = gitOut("git log -50 --format=%H%x1f%s%x1f%an%x1f%cI");
-const changes = [];
-for (const line of recent.split('\n')) {
-  if (!line) continue;
-  const parts = line.split('\x1f');
-  if (parts.length < 4) continue;
-  const [csha, cmsg, cauthor, cdate] = parts;
-  const m = cmsg.match(/Merge pull request #(\d+)/);
-  if (!m) continue;
-  changes.push({
-    sha: csha.slice(0, 7),
-    prNumber: parseInt(m[1], 10),
-    message: cmsg,
-    author: cauthor,
-    date: cdate,
-    title: '',
-    url: ''
-  });
-  if (changes.length >= 10) break;
-}
-
-// Her changelog girisi icin PR basligi/url'sini cek (aktif PR zaten cekildi)
-for (const c of changes) {
-  if (c.prNumber === prNumber) {
-    c.title = prTitle;
-    c.url = prUrl;
+// Changelog basliklarini API ile DOGRULA (git'ten gelen baslik zaten dolu;
+// API dusserse oldugu gibi kalir).
+for (const c of out.changes) {
+  if (c.prNumber === out.prNumber) {
+    c.title = out.prTitle || c.title;
+    c.url = out.prUrl || c.url;
     continue;
   }
   const pr = ghApi('repos/' + repo + '/pulls/' + c.prNumber);
   if (pr) {
-    c.title = pr.title || '';
-    c.url = pr.html_url || '';
+    c.title = pr.title || c.title;
+    c.url = pr.html_url || c.url;
   }
 }
 
-const out = {
-  runId,
-  sha,
-  branch,
-  message: subject,
-  author,
-  date,
-  url: runUrl,
-  prNumber,
-  prTitle,
-  prBody,
-  prUrl,
-  changes,
-  status: 'completed',
-  conclusion: 'success',
-  generatedAt: new Date().toISOString()
-};
+out.generatedAt = new Date().toISOString();
 
 const outDir = process.argv[2] || '_site';
 fs.mkdirSync(outDir, { recursive: true });
 const outPath = path.join(outDir, 'version.json');
 fs.writeFileSync(outPath, JSON.stringify(out, null, 2));
-console.log('✓ ' + outPath + ' yazildi (runId=' + (runId || 'N/A') + ', changes=' + changes.length + ')');
+console.log('✓ ' + outPath + ' yazildi (runId=' + (out.runId || 'N/A') + ', changes=' + out.changes.length + ')');
 
 // Service Worker icindeki __DEPLOY_SHA__ placeholder'ini gercek SHA ile degistir.
 // Her deploy'da SW dosyasi degisir → tarayici yeni SW tetikler → eski cache silinir.
 // SW kok dizindedir (kapsam <site>/ olsun diye — bkz. sw.js basligi).
 const swPath = path.join(outDir, 'sw.js');
-if (fs.existsSync(swPath) && sha) {
-  const shortSha = sha.slice(0, 7);
+if (fs.existsSync(swPath) && out.sha) {
+  const shortSha = out.sha.slice(0, 7);
   const swContent = fs.readFileSync(swPath, 'utf8').replace(/__DEPLOY_SHA__/g, shortSha);
   fs.writeFileSync(swPath, swContent);
   console.log('✓ ' + swPath + ' icindeki __DEPLOY_SHA__ → ' + shortSha);

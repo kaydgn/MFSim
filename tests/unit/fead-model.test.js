@@ -217,10 +217,12 @@ describe('uçtan uca: AG00686 kanvas düğümlerinden Gates sayıları', () => {
     const ac = nd('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
     const ten = nd('fead-tensioner', {
       od: 75, pivotX: -180, pivotY: 100, armLen: 90,
-      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1, loadStopRelDeg: 62.4
+      preload: 8.59, kArm: 0.482, meanLoad: 24.5442, sense: 1, loadStopRelDeg: 62.4,
+      armMeanDeg: 75.1, armPinned: true
     }, 'TEN');
     const belt = nd('fead-belt', {
-      profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6, wearPct: 0.007
+      profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6, wearPct: 0.007,
+      beltDataMode: 'full'
     });
     // lengthOffsetMm TASARIM BAŞINA kalibrasyon girdisidir (SPEC §3.6): kuralı
     // bilinmiyor, EDL(Mean) − L_nominal olarak bulunur. AG00686 için 3.50 mm.
@@ -347,14 +349,19 @@ describe('uçtan uca: AG00686 kanvas düğümlerinden Gates sayıları', () => {
   // Boy ofseti neden bir GİRDİ: sıfır bırakılırsa kol açısı 6.5° kayıyor.
   // Kuralı bilinmediği için uydurulmuyor, kullanıcıdan alınıyor (SPEC §3.6) —
   // ve çekirdek onu bilinen bir referanstan kalibre edebiliyor.
-  test('boy ofseti sıfırken kol açısı kayar; kalibrasyon 3.50 mm buluyor', () => {
+  test('boy ofseti kolu değil TÜREYEN BOYU kaydırır (kol sabitlendi)', () => {
+    // Kayış boyu artık bir ÇIKTI ve bu modelde kol raporun kendi açısına
+    // sabitli; dolayısıyla lengthOffsetMm kol açısını değil, aynı açıda
+    // GEREKEN boyu kaydırır. Kalibrasyonun anlamı da bu yönde okunur.
     const b = kur();
+    const ile = veFeadBuildSystem(b.list, b.conns);
     const sifir = b.list.map((n) => (n.type === 'fead-solver'
       ? Object.assign({}, n, { data: Object.assign({}, n.data, { lengthOffsetMm: 0 }) }) : n));
-    const sysSifir = veFeadBuildSystem(sifir, b.conns).sys;
-    expect(Math.abs(F.meanRel(sysSifir) - REF.relMean)).toBeGreaterThan(5);
-    expect(F.calibrateLengthOffset(sysSifir, { relDeg: REF.relMean, beltLengthMm: 1475 }))
-      .toBeCloseTo(3.5, 2);
+    const siz = veFeadBuildSystem(sifir, b.conns);
+    expect(ile.ok && siz.ok).toBe(true);
+    expect(Math.abs(ile.beltLengthMm - siz.beltLengthMm)).toBeCloseTo(3.5, 6);
+    // kol açısı ise DEĞİŞMEZ — sabitlenmiş
+    expect(ile.armAbsDeg).toBeCloseTo(siz.armAbsDeg, 9);
   });
 });
 
@@ -386,10 +393,12 @@ describe('duty cycle → çekirdek: AG00686 gerilme tablosu', () => {
     const ac = nd('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
     const ten = nd('fead-tensioner', {
       od: 75, pivotX: -180, pivotY: 100, armLen: 90,
-      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1, loadStopRelDeg: 62.4
+      preload: 8.59, kArm: 0.482, meanLoad: 24.5442, sense: 1, loadStopRelDeg: 62.4,
+      armMeanDeg: 75.1, armPinned: true
     }, 'TEN');
     const belt = nd('fead-belt', {
-      profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6, wearPct: 0.007
+      profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6, wearPct: 0.007,
+      beltDataMode: 'full'
     });
     const sv = nd('fead-solver', {
       designTensionN: 765.7, driveRatio: 1, lengthOffsetMm: 3.5, cylinders: 6,
@@ -554,9 +563,10 @@ describe('katalog bağı — oran çaptan hesaplanır', () => {
     const alt = nd('fead-alternator', { od: 60, x: -72, y: 267, accPreset: 'test_alt' }, 'ALT');
     const ten = nd('fead-tensioner', {
       od: 75, pivotX: -180, pivotY: 100, armLen: 90,
-      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1
+      preload: 8.59, kArm: 0.482, meanLoad: 24.5442, sense: 1,
+      armMeanDeg: 75.1, armPinned: true
     }, 'TEN');
-    const belt = nd('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 900, tolerance: 6 });
+    const belt = nd('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 900, tolerance: 6, beltDataMode: 'full' });
     const sv = nd('fead-solver', { designTensionN: 700, driveRatio: 1 });
     const build = veFeadBuildSystem([crk, alt, ten, belt, sv],
       [link(crk, alt), link(alt, ten), link(ten, crk)]);
@@ -594,6 +604,9 @@ describe('veFeadDutyDegC — hasar-eşdeğer sıcaklık', () => {
   const bmc = () => {
     const ex = veFeadExampleNodes('BMC_FEAD_2026');
     ex.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    // Ömür/yorulma katalog sabitlerine bağlı → AÇIKÇA açılıyor (varsayılan
+    // artık 'none', çünkü kayış boyu bir ÇIKTI ve kayış henüz seçilmemiş).
+    ex.nodes.find((n) => n.type === 'fead-belt').data.beltDataMode = 'full';
     const build = veFeadBuildSystem(ex.nodes, ex.connections);
     expect(build.ok).toBe(true);
     const solv = ex.nodes.find((n) => n.type === 'fead-solver');
@@ -694,6 +707,9 @@ describe('B10 ömrü ↔ seçili yorulma modeli', () => {
   const bmc = () => {
     const ex = veFeadExampleNodes('BMC_FEAD_2026');
     ex.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    // Ömür/yorulma katalog sabitlerine bağlı → AÇIKÇA açılıyor (varsayılan
+    // artık 'none', çünkü kayış boyu bir ÇIKTI ve kayış henüz seçilmemiş).
+    ex.nodes.find((n) => n.type === 'fead-belt').data.beltDataMode = 'full';
     const build = veFeadBuildSystem(ex.nodes, ex.connections);
     const solv = ex.nodes.find((n) => n.type === 'fead-solver');
     return { build, rows: veFeadDutyRows(solv) };
@@ -743,6 +759,9 @@ describe('burulma modeli köprüsü', () => {
   const bmc = () => {
     const ex = veFeadExampleNodes('BMC_FEAD_2026');
     ex.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    // Ömür/yorulma katalog sabitlerine bağlı → AÇIKÇA açılıyor (varsayılan
+    // artık 'none', çünkü kayış boyu bir ÇIKTI ve kayış henüz seçilmemiş).
+    ex.nodes.find((n) => n.type === 'fead-belt').data.beltDataMode = 'full';
     const build = veFeadBuildSystem(ex.nodes, ex.connections);
     expect(build.ok).toBe(true);
     const solv = ex.nodes.find((n) => n.type === 'fead-solver');
@@ -790,7 +809,10 @@ describe('burulma modeli köprüsü', () => {
     expect(R.torsional.firstElasticHz).toBeGreaterThan(0);
   });
 
-  test('atalet eksikse SESSİZ değil: uyarı taşınır, çözüm devam eder', () => {
+  // 2026-09-02'den beri girilmemiş atalet SESSİZCE 0 sayılmıyor ama BOŞ da
+  // bırakılmıyor: arşiv medyanı iniyor ve hangi alanın varsayıldığı
+  // `build.defaults` ile taşınıyor. İki kapı da burada.
+  test('atalet girilmemişse arşiv varsayılanı iner ve KÜNYEYE yazılır', () => {
     const ex = veFeadExampleNodes('BMC_FEAD_2026');
     ex.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     ex.nodes.filter((n) => n.type === 'fead-ac').forEach((n) => { delete n.data.inertia; });
@@ -798,8 +820,32 @@ describe('burulma modeli köprüsü', () => {
     const solv = ex.nodes.find((n) => n.type === 'fead-solver');
     const R = veFeadAnalyze(build, { rows: veFeadDutyRows(solv), crankInertia: 0.70 });
     expect(R.ok).toBe(true);                      // gerilme/ömür etkilenmez
+    expect(R.torsional.firstElasticHz).toBeGreaterThan(0);   // model KURULUYOR
+    const d = build.defaults.filter((x) => /^atalet · /.test(x.field));
+    expect(d).toHaveLength(1);
+    expect(d[0].value).toBe(M.VE_FEAD_DEFAULTS.inertiaKgM2['fead-ac']);
+    // ve düğüm BOŞ KALIYOR — varsayılan modele yazılmıyor
+    expect(ex.nodes.find((n) => n.type === 'fead-ac').data.inertia).toBeUndefined();
+  });
+
+  // ÖLÇÜLMÜŞ VARSAYILANI OLMAYAN TİP hâlâ SESSİZ DEĞİL. Su pompası, direksiyon
+  // pompası ve hava kompresörü arşivin yedi raporunun hiçbirinde geçmiyor;
+  // rotor ataletini kasnak çapından uydurmak "makul ama yanlış" bir sayı
+  // olurdu. Bu tiplerde burulma modeli kurulmuyor ve sebebini yazıyor.
+  test('varsayılanı OLMAYAN tipte burulma modeli kurulmuyor, sebep yazılıyor', () => {
+    const ex = veFeadExampleNodes('BMC_FEAD_2026');
+    ex.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const ac = ex.nodes.find((n) => n.type === 'fead-ac');
+    ac.type = 'fead-waterpump'; ac.def = componentDefs['fead-waterpump'];
+    delete ac.data.inertia;
+    const build = veFeadBuildSystem(ex.nodes, ex.connections);
+    const solv = ex.nodes.find((n) => n.type === 'fead-solver');
+    const R = veFeadAnalyze(build, { rows: veFeadDutyRows(solv), crankInertia: 0.70 });
+    expect(R.ok).toBe(true);                      // gerilme/ömür etkilenmez
     expect(R.torsional).toBeNull();
     expect(R.warnings.join(' ')).toMatch(/[Bb]urulma modeli/);
+    expect(build.defaults.some((x) => /^atalet · /.test(x.field))).toBe(false);
+    expect(M.veFeadDefaultInertia('fead-waterpump', false)).toBeNaN();
   });
 });
 
@@ -823,9 +869,10 @@ describe('güzergâh teşhisi', () => {
     const ac = nd('fead-ac', { od: 127, x: -224, y: 448 }, 'A_C');
     const ten = nd('fead-tensioner', {
       od: 75, pivotX: -180, pivotY: 100, armLen: 90,
-      preload: 8.59, kArm: 0.482, freeAngleDeg: 42, sense: 1
+      preload: 8.59, kArm: 0.482, meanLoad: 24.5442, sense: 1,
+      armMeanDeg: 75.1, armPinned: true
     }, 'TEN');
-    const belt = nd('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6 });
+    const belt = nd('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6, beltDataMode: 'full' });
     const sv = nd('fead-solver', { designTensionN: 765.7, driveRatio: 1, lengthOffsetMm: 3.5 });
     return {
       list: [crk, idr, ac, ten, belt, sv], crk, idr, ac, ten,
@@ -958,14 +1005,14 @@ describe('veFeadSlipThreshold — kayma eşiği', () => {
     expect(son.nerede.rpm).toBe(A.engineRpm);               // aynı devir
   });
 
-  test('ÇIPA: AG00976 eşiği 80,95 N · FAN @ 1000 d/d · tasarım gerginliğinin 6,72 katı', () => {
+  test('ÇIPA: AG00976 eşiği 80,94 N · FAN @ 1000 d/d · tasarım gerginliğinin 6,72 katı', () => {
     const { build, duty } = kurAG();
     const A = veFeadSlipThreshold(build, duty);
-    expect(A.tensionN).toBeCloseTo(80.948, 2);
+    expect(A.tensionN).toBeCloseTo(80.942, 2);
     expect(A.engineRpm).toBe(1000);
     expect(A.pulley).toMatch(/FAN/);
-    expect(A.designTensionN).toBeCloseTo(544.05, 1);
-    expect(A.margin).toBeCloseTo(6.721, 2);
+    expect(A.designTensionN).toBeCloseTo(543.85, 1);
+    expect(A.margin).toBeCloseTo(6.722, 2);
   });
 
   test('BÜTÜN devir satırlarının EN BÜYÜĞÜ — ilk satır ya da en küçüğü değil', () => {

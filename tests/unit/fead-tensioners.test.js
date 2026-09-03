@@ -215,10 +215,63 @@ describe('kütüphane KURULU MODELDE çalışıyor', () => {
     const td = { pivotX: d.pivot[0], pivotY: d.pivot[1] };
     T.veFeadTensionerApply(td, T.veFeadTensionerOf('AG00976-1715'));
     // Künyeden çıkan yay verisi çekirdeğin beklediği sistemi kurabiliyor mu?
-    const mount = M.veFeadTensionerMount(td);
+    const mount = M.veFeadSpringSetup(td);
     const mean = d.pos.find((p) => p.name === 'Mean');
     expect(Math.abs(mount.relMeanDeg - mean.rel)).toBeLessThan(0.2);
     expect(td.od).toBe(77.2);
     expect(F.beltProps({ profile: 'PK', brand: 'GATES' })).toBeTruthy();
   });
 });
+
+// ── ETİKET PARÇAYI SÖYLER (kullanıcı, 2026-09-01) ──────────────────────────
+//
+// *"Şu anda bir sürü 90mm otomatik gergi var fakat bazı gates raporlarında
+// 56mm gergiler de var."* Veri doğruydu (arşiv kapısı bunu ölçüyor); kusur
+// etiketteydi — on üç kayıt aynı metni basıyordu.
+describe('künye etiketi — parça numarasıyla', () => {
+  const DB = T.VE_FEAD_TENSIONER_DB;
+
+  test('etiket parça koduyla BAŞLIYOR, kodsuz kayıt "?" ile işaretli', () => {
+    DB.forEach((r) => {
+      const et = T.veFeadTenLabel(r);
+      expect(et.indexOf(r.part || '?')).toBe(0);
+      expect(et).toContain('kol ' + r.armLen + ' mm');
+    });
+    expect(DB.filter((r) => !r.part).length).toBe(4);      // AG00976 · kodsuz
+  });
+
+  test('parça sayısı kayıt sayısından AZ — asıl anlatılan bu', () => {
+    // On dört kayıt, dört parça: E9843 altı sistemde, T38624 ikisinde.
+    // Kayıtları ayıran şey parça değil MONTAJ ayarı (yay çalışma momenti).
+    const kodlu = DB.filter((r) => r.part);
+    const parca = new Set(kodlu.map((r) => r.part));
+    expect(parca.size).toBeLessThan(kodlu.length);
+    expect(parca.size).toBe(4);
+  });
+
+  test('AYNI PARÇANIN kol boyu ve yay katsayısı TUTARLI', () => {
+    // Parça verisi montajdan bağımsızdır; ayrışması bir veri hatası olurdu.
+    const grup = {};
+    DB.filter((r) => r.part).forEach((r) => { (grup[r.part] = grup[r.part] || []).push(r); });
+    Object.keys(grup).forEach((k) => {
+      expect(new Set(grup[k].map((r) => r.armLen)).size).toBe(1);
+      expect(new Set(grup[k].map((r) => r.od)).size).toBe(1);
+    });
+  });
+
+  test('56 mm kayıt GERÇEKTEN var ve ayrı bir parça', () => {
+    const kisa = DB.filter((r) => r.armLen === 56);
+    expect(kisa.length).toBe(1);
+    expect(kisa[0].part).toBe('T38665');
+    expect(T.veFeadTenLabel(kisa[0])).toContain('56 mm');
+    // ...ve gövdesi de başka: yay katsayısı ve ön yükü bandın DIŞINDA.
+    expect(kisa[0].rateNm).toBeLessThan(0.45);
+    expect(kisa[0].preloadNm).toBeGreaterThan(15);
+  });
+
+  test('etiketler HÂLÂ tekil — parça eklemek ayırt ediciliği bozmadı', () => {
+    const et = DB.map(T.veFeadTenLabel);
+    expect(new Set(et).size).toBe(et.length);
+  });
+});
+
