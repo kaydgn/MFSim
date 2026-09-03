@@ -1199,16 +1199,55 @@ describe('kayış yayları kasnakların ÜZERİNDE (bükülme kapısı)', () => 
 
   // Sweep bayrağı TERS olsaydı yay aynalanmış çemberde kalırdı: aşağıdaki
   // ölçüm o hâlde 6.7–42.7 px sapma veriyordu. Kuralı doğrudan kilitliyoruz.
-  test('sweep kuralı: d > 0 → 0, d < 0 → 1', () => {
+  //
+  // ÖN GÖRÜNÜŞ: çizim X'te aynalandığı için `d` işareti de çevriliyor
+  // (fead-model.js → veFeadMirrorGeomX). Beklenti bu yüzden ÇİZİMİN gördüğü
+  // geometriden türetiliyor, ham sistemden değil — yoksa test aynalamayı bir
+  // hata sanardı. Kapı yine ısırıyor: sweep'i sabitleyen bir mutasyon burada
+  // kırmızı olur, çünkü ölçüt hâlâ "yay o kasnağın el yönüyle uyumlu mu".
+  test('sweep kuralı: çizimdeki d > 0 → 0, d < 0 → 1', () => {
     const build = kurCozulur();
     const svg = fead.veFeadLayoutSVG(build, 420, 320);
     const yaylar = yaylariCoz(svg, 'belt');
-    const geom = F.tensionerState(build.sys, F.meanRel(build.sys)).geom;
+    let geom = F.tensionerState(build.sys, F.meanRel(build.sys)).geom;
+    if (M.VE_FEAD_VIEW_FRONT) geom = M.veFeadMirrorGeomX(geom);
     // Yaylar kayış sırasında: i. yay (i+1). kasnağın etrafında.
     yaylar.forEach((a, i) => {
       const p = geom.pulleys[(i + 1) % geom.pulleys.length];
       expect(a.fS).toBe(p.d > 0 ? 0 : 1);
     });
+  });
+
+  // ÖN GÖRÜNÜŞ AYNALAMASI: veri değil YALNIZ çizim döner.
+  test('aynalama çizimi çevirir, sistemi ASLA', () => {
+    const build = kurCozulur();
+    const once = JSON.stringify(build.sys.pulleys.map((p) => p.c || [p.x, p.y]));
+    const g = F.tensionerState(build.sys, F.meanRel(build.sys)).geom;
+    const m = M.veFeadMirrorGeomX(g);
+    // skalerler BİREBİR: aynalama tam simetri
+    expect(m.LeffMm).toBe(g.LeffMm);
+    expect(m.wraps).toEqual(g.wraps);
+    // el yönü çevrilir
+    expect(m.signedWrapDeg).toBeCloseTo(-g.signedWrapDeg, 9);
+    m.pulleys.forEach((p, i) => {
+      expect(p.d).toBe(-g.pulleys[i].d);
+      expect(p.c[0]).toBeCloseTo(-g.pulleys[i].c[0], 9);
+      expect(p.c[1]).toBeCloseTo(g.pulleys[i].c[1], 9);   // YUKARI yukarı kalır
+    });
+    // SAF: girdi değişmedi
+    expect(JSON.stringify(build.sys.pulleys.map((p) => p.c || [p.x, p.y]))).toBe(once);
+  });
+
+  // Gül çizimi takip etmek ZORUNDA: aynalı resim + aynalanmamış açı okuması,
+  // kullanıcıya 0°'yi yanlış tarafta aratırdı.
+  test('yön gülü çizimle aynı yöne bakar', () => {
+    const svg = fead.veFeadLayoutSVG(kurCozulur(), 420, 320, { compass: true });
+    const et = [...svg.matchAll(/<text x="([-\d.]+)"[^>]*>(0|180)<\/text>/g)]
+      .map((m) => ({ x: parseFloat(m[1]), t: m[2] }));
+    expect(et.length).toBe(2);
+    const sifir = et.find((e) => e.t === '0'), yuz80 = et.find((e) => e.t === '180');
+    if (M.VE_FEAD_VIEW_FRONT) expect(sifir.x).toBeLessThan(yuz80.x);   // 0 SOLDA
+    else expect(sifir.x).toBeGreaterThan(yuz80.x);
   });
 
   test('hayalet konumların yayları da kasnakların üzerinde', () => {

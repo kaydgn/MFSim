@@ -867,8 +867,11 @@ function veFeadCurrentSpin(){
 }
 
 function veFeadApplySpinBadge(nodeEl, node){
+  // ETİKET ÖN GÖRÜNÜŞTE — `veFeadCurrentSpin` VERİ düzlemini ölçüyor, kart ise
+  // aynalı çiziyor. Çevirmeden basmak, kartla rozeti ters düşürürdü.
   var sense = veFeadCurrentSpin();
-  var metin = sense > 0 ? '↺ CCW' : sense < 0 ? '↻ CW' : '—';
+  var lbl = veFeadSpinLabel(sense);
+  var metin = lbl.kisa;
 
   // Hüküm oturumluk sonuçtan okunur; çözüm yoksa rozet renk İDDİA ETMEZ.
   var _R = (typeof veFeadResults !== 'undefined' && veFeadResults) ? veFeadResults : null;
@@ -882,8 +885,8 @@ function veFeadApplySpinBadge(nodeEl, node){
   b.textContent = metin;
   b.title = (sense === 0
       ? 'Kayış dönüş yönü okunamadı (kasnak koordinatları eksik ya da yol kapanmıyor).'
-      : 'Kayış çevrimi ' + (sense > 0 ? 'CCW (saat yönünün TERSİNE)' : 'CW (saat yönünde)')
-        + ' — motora ÖNDEN bakışta. Yön kablolama sırasından türer; '
+      : 'Kayış çevrimi ' + lbl.uzun
+        + '. Yön kablolama sırasından türer; '
         + 'tıkla → kayış yolunu ters çevir.')
     + (hkm === false
         ? '\n\nUYARI: bu yönde gergi kayışın GERGİN tarafına düşüyor; '
@@ -926,7 +929,7 @@ function veFeadToggleSpin(){
     showNodeProperties(selectedNode);
   if(typeof showToast === 'function'){
     var sense = veFeadCurrentSpin();
-    showToast(k ? ('Kayış dönüş yönü: ' + (sense > 0 ? 'CCW' : sense < 0 ? 'CW' : '—')
+    showToast(k ? ('Kayış dönüş yönü: ' + veFeadSpinLabel(sense).kisa
                    + ' · ' + k + ' bağlantı çevrildi')
                 : 'Çevrilecek kayış bağlantısı yok', k ? 'info' : 'warning');
   }
@@ -937,8 +940,7 @@ function veFeadToggleSpin(){
 function getFeadSpinPropertiesHTML(node){
   if(!node.data) node.data = {};
   var sense = veFeadCurrentSpin();
-  var metin = sense > 0 ? 'CCW — saat yönünün TERSİNE'
-            : sense < 0 ? 'CW — saat yönünde' : '— (okunamadı)';
+  var metin = sense ? veFeadSpinLabel(sense).uzun : '— (okunamadı)';
   var R = (typeof veFeadResults !== 'undefined' && veFeadResults) ? veFeadResults : null;
   var hkm = (R && R.tensionerSide) ? R.tensionerSide : null;
   var renk = !hkm ? 'var(--text-secondary)'
@@ -2586,8 +2588,22 @@ function veFeadLayoutSVG(build, W, H, opts){
   // eskiden bu durumda kart yalnız "Kayış yolu henüz kurulamadı" diyordu —
   // yani kullanıcı NEDEN olduğunu göremiyordu. Sebep build üzerinde taşınıyor;
   // kart ve panel onu basıyor.
+  // ÖN GÖRÜNÜŞ TEK NOKTADAN: çizimin okuduğu HER geometri buradan geçiyor
+  // (ana konum + hayalet konumlar), dolayısıyla aynalamayı buraya koymak
+  // sarım yaylarını, kaburga dişlerini, dönüş oklarını ve kol çizimini
+  // birlikte çeviriyor. Yirmi ayrı yere serpiştirmek, birinin unutulduğunda
+  // yalnız O ögenin ters kalması demekti.
+  //
+  // VERİ AYNALANMIYOR: build.sys ve bütün sayısal çıktılar Gates düzleminde
+  // kalıyor (bkz. fead-model.js → VE_FEAD_VIEW_FRONT).
+  var _onGor = (typeof VE_FEAD_VIEW_FRONT !== 'undefined') && VE_FEAD_VIEW_FRONT
+               && (typeof veFeadMirrorGeomX === 'function')
+               && !(opts && opts.rawFrame === true);
   function geomAt(rel){
-    try { return FEADCore.tensionerState(build.sys, rel).geom; }
+    try {
+      var g = FEADCore.tensionerState(build.sys, rel).geom;
+      return _onGor ? veFeadMirrorGeomX(g) : g;
+    }
     catch(e){
       if(!build.geomError)
         build.geomError = (typeof veFeadTranslateError === 'function')
@@ -2624,6 +2640,9 @@ function veFeadLayoutSVG(build, W, H, opts){
   // kalıyor (BMC'de −259.94 mm, en soldaki kasnaktan 20 mm daha solda). Sınırlara
   // katılmazsa artı işareti çerçevenin dışına düşüp görünmez olur.
   var pv = wantPivot && build.sys.tensioner && build.sys.tensioner.pivot;
+  // Pivot geometriden DEĞİL sistemden okunuyor; aynalanmazsa kol çizimi
+  // kasnaktan kopar (çizim aynalı, pivot değil).
+  if(pv && _onGor) pv = [-pv[0], pv[1]];
   if(pv){
     minX=Math.min(minX,pv[0]); maxX=Math.max(maxX,pv[0]);
     minY=Math.min(minY,pv[1]); maxY=Math.max(maxY,pv[1]);
@@ -3132,21 +3151,29 @@ function veFeadLayoutSVG(build, W, H, opts){
     if(opts.nodeId)
       svg += '<rect x="' + f(cx - VE_FEAD_ROSE_HALF) + '" y="' + f(cy - VE_FEAD_ROSE_HALF) + '" width="'
           + (2*VE_FEAD_ROSE_HALF) + '" height="' + (2*VE_FEAD_ROSE_HALF) + '" fill="transparent">'
-          + '<title>Yön gülü — sürükle ile taşınır, çift tık varsayılan yerine döndürür</title></rect>';
+          + '<title>Yön gülü — sürükle ile taşınır, çift tık varsayılan yerine döndürür.'
+          + (_onGor ? ' ÇİZİM ÖN GÖRÜNÜŞTÜR: Gates düzleminin X aynası; koordinatlar ve açı DEĞERLERİ Gates düzleminde kalır.' : '') + '</title></rect>';
     svg += '<g data-ve="compass" stroke="var(--text-muted)" stroke-width="1" fill="none">'
         + '<circle cx="' + f(cx) + '" cy="' + f(cy) + '" r="' + f(r) + '"/>'
         + '<line x1="' + f(cx-r-4) + '" y1="' + f(cy) + '" x2="' + f(cx+r+4) + '" y2="' + f(cy) + '"/>'
         + '<line x1="' + f(cx) + '" y1="' + f(cy-r-4) + '" x2="' + f(cx) + '" y2="' + f(cy+r+4) + '"/></g>';
-    var et = [['0', cx+r+7, cy+3, 'start'], ['90', cx, cy-r-7, 'middle'],
-              ['180', cx-r-7, cy+3, 'end'], ['270', cx, cy+r+11, 'middle']];
+    // GÜL ÇİZİMİ TAKİP ETMEK ZORUNDA. Çizim ön görünüş için X'te aynalandığında
+    // veri düzleminin 0°'si ekranda SOLA bakar. Gül eski yerinde bırakılırsa
+    // resim aynalı, açı okuması aynalı DEĞİL olur — kullanıcı 0°'yi yanlış
+    // tarafta arar. Bu, düzeltilen "sweep bayrağı" hatasının aynı sınıfı.
+    var ay = _onGor ? -1 : +1;
+    var et = [['0', cx + ay*(r+7), cy+3, ay>0?'start':'end'], ['90', cx, cy-r-7, 'middle'],
+              ['180', cx - ay*(r+7), cy+3, ay>0?'end':'start'], ['270', cx, cy+r+11, 'middle']];
     et.forEach(function(t){
       svg += '<text x="' + f(t[1]) + '" y="' + f(t[2]) + '" text-anchor="' + t[3]
           + '" font-size="7" fill="var(--text-muted)">' + t[0] + '</text>';
     });
-    // CCW yönünü gösteren küçük yay (0°'den 90°'ye).
-    svg += '<path d="M' + f(cx + r*0.6) + ' ' + f(cy) + ' A' + f(r*0.6) + ' ' + f(r*0.6)
-        + ' 0 0 0 ' + f(cx) + ' ' + f(cy - r*0.6) + '" fill="none" stroke="var(--text-muted)" stroke-width="0.9"/>'
-        + '<path d="M' + f(cx) + ' ' + f(cy - r*0.6) + ' l2.6 2.4 l-3.4 1.1 Z" fill="var(--text-muted)"/>';
+    // Açının ARTIŞ yönünü gösteren küçük yay (0°'den 90°'ye). Aynalı çizimde
+    // bu yay ekranda saat yönünde görünür — doğrusu budur.
+    svg += '<path d="M' + f(cx + ay*r*0.6) + ' ' + f(cy) + ' A' + f(r*0.6) + ' ' + f(r*0.6)
+        + ' 0 0 ' + (ay>0 ? '0' : '1') + ' ' + f(cx) + ' ' + f(cy - r*0.6)
+        + '" fill="none" stroke="var(--text-muted)" stroke-width="0.9"/>'
+        + '<path d="M' + f(cx) + ' ' + f(cy - r*0.6) + ' l' + f(ay*2.6) + ' 2.4 l' + f(-ay*3.4) + ' 1.1 Z" fill="var(--text-muted)"/>';
     svg += '</g>';
   }
   return svg + '</svg>';

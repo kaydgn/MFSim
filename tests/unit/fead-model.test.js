@@ -1099,3 +1099,57 @@ describe('veFeadSlipThreshold — kayma eşiği', () => {
     expect(veFeadSlipThreshold(build, [{ engineRpm: 1, perPulley: [], slip: [] }])).toBe(null);
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════════
+//  GERGİ SERPANTİNDE SON SIRADA — UYARI, ZORLAMA DEĞİL
+// ══════════════════════════════════════════════════════════════════════════
+// On Gates raporunun onunda da sıra gergiyle bitip sürücüyle başlıyor: gergi,
+// kayışın sürücüye DÖNÜŞ açıklığındadır (gevşek taraf). Ama matematik bu
+// konumdan BAĞIMSIZ — ölçüldü, çevrimsel döndürme ΔT = ΔH = 0.0e+0 veriyor
+// (tests/unit/gates-archive.test.js). Bu yüzden kural bir UYARI: yanlış yere
+// kablolanmış bir gergi doğru sonuç üretmeye devam eder, yalnız yerleşim
+// tedarikçi konvansiyonuna uymaz. Çözümü durdurmak, doğru bir modeli
+// reddetmek olurdu.
+describe('gergi serpantin konumu — uyarı', () => {
+  const mk = (id, type, x, y, od) => ({
+    id, type, def: componentDefs[type], data: { cenX: x, cenY: y, od },
+  });
+  const kur = (sira) => {
+    const P = {
+      a: mk('a', 'fead-crank', 0, 0, 160),
+      b: mk('b', 'fead-tensioner', 120, 60, 77),
+      c: mk('c', 'fead-idler', -72, 267, 79),
+      d: mk('d', 'fead-ac', -224, 448, 127),
+    };
+    const ns = sira.map((k) => P[k]);
+    const cs = sira.map((k, i) => ({ from: k, to: sira[(i + 1) % sira.length] }));
+    return M.veFeadBuildSystem(ns, cs, {});
+  };
+  const gergiUyarisi = (r) =>
+    (r.warnings || []).filter((w) => /son sırada değil/.test(w));
+
+  test('gergi ORTADAYSA uyarır ama çözümü DURDURMAZ', () => {
+    const r = kur(['a', 'b', 'c', 'd']);          // gergi 2/4
+    expect(gergiUyarisi(r).length).toBe(1);
+    expect(gergiUyarisi(r)[0]).toMatch(/2\/4/);              // konumu YAZIYOR
+    expect(gergiUyarisi(r)[0]).toMatch(/DÖNÜŞ açıklığında/);  // konvansiyonu yazıyor
+    // ÇARE UYDURULMUYOR: sayıların etkilenmediği aynı cümlede duruyor, yoksa
+    // okuyucu bunu bir hesap hatası sanar ve olmayan bir şeyi düzeltmeye çalışır.
+    expect(gergiUyarisi(r)[0]).toMatch(/Sayılar bundan etkilenmiyor/);
+    // HÜKÜM ALAN OLARAK DA TAŞINIR — yüzeyler metni ayrıştırmasın diye.
+    expect(r.tensionerOrder).toEqual({ index: 1, count: 4, last: false });
+    // uyarı bir HATA değil: sıra kuruldu, kasnak sayısı doğru
+    expect(r.order.map((n) => n.id)).toEqual(['a', 'b', 'c', 'd']);
+    // Konum kuralı bir HATA olarak görünmemeli — sentetik gerginin künyesi
+    // eksik olduğu için başka hatalar var, ama hiçbiri KONUMLA ilgili değil.
+    expect((r.errors || []).filter((e) => /son sırada/i.test(e)).length).toBe(0);
+  });
+
+  test('gergi SONDAYSA hiç uyarı yok — ama hüküm YİNE yazılır', () => {
+    const r = kur(['a', 'c', 'd', 'b']);
+    expect(gergiUyarisi(r).length).toBe(0);
+    // "denetlendi ve uygun" ile "hiç denetlenmedi" ayırt edilebilmeli: alan
+    // yalnız kötü durumda yazılsaydı yüzey `!tord` ile ikisini karıştırırdı.
+    expect(r.tensionerOrder).toEqual({ index: 3, count: 4, last: true });
+  });
+});

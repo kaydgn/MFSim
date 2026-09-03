@@ -1275,13 +1275,19 @@ describe('dönüş yönü — Kasnaklar adımında seçilir', () => {
     const y0 = b.spin, r0 = st.route.slice();
     expect(y0).not.toBe(0);
 
+    // DÜĞMELER ÖN GÖRÜNÜŞTE KONUŞUR. `b.spin` veri düzlemini ölçüyor, çizim
+    // aynalı; ikisi TERS. Bu satır o çeviriyi ölçüyor — düğmeye veri düzlemi
+    // değeri geçmek "aynı yönü seçtim" derken TERSİNİ seçmek olurdu.
+    const f0 = M.veFeadSpinToFront(y0);
+    expect(f0).toBe(-y0);
+
     // AYNI yön seçilirse HİÇBİR ŞEY olmaz (aksi hâlde bir aç/kapa gibi
     // davranır ve ikinci tık sırayı geri çevirirdi).
-    expect(wiz.veFeadWizSpinSet(y0)).toBe(false);
+    expect(wiz.veFeadWizSpinSet(f0)).toBe(false);
     expect(st.route).toEqual(r0);
 
     // TERS yön: sıra çevrilir, yön çevrilir.
-    expect(wiz.veFeadWizSpinSet(-y0)).toBe(true);
+    expect(wiz.veFeadWizSpinSet(-f0)).toBe(true);
     expect(st.route).not.toEqual(r0);
     b = wiz.veFeadWizBuild();
     expect(b.spin).toBe(-y0);
@@ -1290,9 +1296,35 @@ describe('dönüş yönü — Kasnaklar adımında seçilir', () => {
     expect(JSON.stringify(st)).not.toMatch(/"spin"|"dir"|"yon"/);
 
     // Geri dönüş BİREBİR.
-    expect(wiz.veFeadWizSpinSet(y0)).toBe(true);
+    expect(wiz.veFeadWizSpinSet(f0)).toBe(true);
     expect(st.route).toEqual(r0);
     expect(wiz.veFeadWizBuild().spin).toBe(y0);
+  });
+
+  // Kullanıcı kararı (2026-08-28): *"kayışın dönüş yönünü default olarak saat
+  // yönünde yapacağız."* Bu, veri düzlemini DEĞİL görüneni bağlar — Gates
+  // düzleminde on raporun onu da CCW ve arşivle karşılaştırılabilirlik oradan
+  // geliyor. Kapı bu yüzden ÖN GÖRÜNÜŞÜ ölçüyor.
+  test('VARSAYILAN ÖN GÖRÜNÜŞTE SAAT YÖNÜ — iki örnekte de', () => {
+    ['AG00976_GATES_2025', 'BMC_FEAD_2026'].forEach((k) => {
+      kabuk(); wiz.veFeadWizSeed(k);
+      const b = wiz.veFeadWizBuild();
+      expect(b.spin).toBe(1);                       // veri düzleminde CCW
+      expect(M.veFeadSpinToFront(b.spin)).toBe(-1); // ÖN GÖRÜNÜŞTE CW
+      expect(M.veFeadSpinLabel(b.spin).kisa).toContain('CW');
+      expect(M.veFeadSpinLabel(b.spin).kisa).not.toContain('CCW');
+    });
+  });
+
+  // Düğmenin BASILI görüneni ile modelin gerçekte kurduğu yön ayrışırsa hata
+  // SESSİZDİR: sayılar makul kalır, yalnız seçici yalan söyler.
+  test('BASILI DÜĞME ÖN GÖRÜNÜŞÜ İZLER', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const b = wiz.veFeadWizBuild();
+    const h = wiz.veFeadWizSpinHTML(b);
+    const acik = h.split('<button').filter((x) => /ve-fw-spin-on/.test(x));
+    expect(acik).toHaveLength(1);
+    expect(acik[0]).toMatch(/veFeadWizSpinSet\(-1\)/);   // CW düğmesi
   });
 
   test('GEOMETRİ DEĞİŞMEZ — cebirsel özdeşlik', () => {
@@ -1379,7 +1411,42 @@ describe('serpantin sırası — iki sıra birleşti', () => {
     expect(b1.beltLengthMm).toBeCloseTo(b0.beltLengthMm, 6);
     expect(b1.springTensionN).toBeCloseTo(b0.springTensionN, 6);
     expect(b1.spin).toBe(-b0.spin);
-    expect(b1.warnings).toEqual([]);
+
+    // ÇEVİRME GERGİYİ SÜRÜCÜNÜN ÖBÜR YANINA GEÇİRİR — ve bu kaçınılmaz.
+    // Halkada gerginin komşusu iki yanda da sürücü; ters yürütünce "sürücüden
+    // ÖNCE" olan "sürücüden SONRA" oluyor. Sıra ÇEVRİMSEL döndürülerek
+    // düzeltilemez: gergiyi sona almak sürücüyü baştan düşürür.
+    expect(b0.tensionerOrder).toEqual({ index: 5, count: 6, last: true });
+    expect(b1.tensionerOrder).toEqual({ index: 1, count: 6, last: false });
+    expect(b0.warnings).toEqual([]);
+    expect(b1.warnings.filter((w) => /son sırada değil/.test(w))).toHaveLength(1);
+
+    // AMA FİZİK BOZULMUYOR — ve bu ayrım, uyarının neden bir ZORLAMA
+    // olmadığının kendisi. `tensionerSide` span gerilmelerinin ankrajın altına
+    // inip inmediğine bakıyor; zincir gergide ankrajlı olduğu için ters
+    // yürütme onu değiştirmiyor. İki ölçüt AYRI sorular soruyor ve burada
+    // GERÇEKTEN ayrışıyorlar (biri ötekinin kopyası olsaydı ayrışamazlardı).
+    expect(veFeadAnalyze(b0).tensionerSide).toEqual({ ok: true });
+    expect(veFeadAnalyze(b1).tensionerSide).toEqual({ ok: true });
+  });
+
+  // Hüküm ÜRETİLEN YÜZEYDEN ölçülüyor, üreticiden değil — bu depoda üç kez
+  // aynı ders çıktı: `veFeadWizRouteReverse`'i doğrudan çağıran bir kapı,
+  // kartın onu BASMADIĞINI göremez.
+  test('SIRA KARTI HÜKMÜ BASAR — iki durumda da', () => {
+    const st = elleKur();
+    const iyi = wiz.veFeadWizStepHTML(2, wiz.veFeadWizBuild());
+    expect(iyi).toMatch(/Gergi sırada <strong>son<\/strong>/);
+    expect(iyi).not.toMatch(/son değil/);
+
+    wiz.veFeadWizRouteReverse();
+    const kotu = wiz.veFeadWizStepHTML(2, wiz.veFeadWizBuild());
+    expect(kotu).toMatch(/son değil \(2\/6\)/);
+    // ÇARE UYDURULMUYOR: sayıların etkilenmediği AYNI cümlede yazılı, yoksa
+    // okuyucu bunu bir hesap hatası sanardı.
+    expect(kotu).toMatch(/Sayılar bundan etkilenmez/);
+    expect(kotu).not.toMatch(/undefined|NaN|\[object/);
+    void st;
   });
 
   test('GERGİ SATIRI TAŞINABİLİYOR — oklar artık ölü değil', () => {
@@ -1406,11 +1473,14 @@ describe('serpantin sırası — iki sıra birleşti', () => {
   test('YÖN SEÇİCİSİ de bu yoldan geçiyor — elle kurulmuş modelde', () => {
     const st = elleKur();
     const b0 = wiz.veFeadWizBuild();
-    expect(wiz.veFeadWizSpinSet(-b0.spin)).toBe(true);
+    expect(wiz.veFeadWizSpinSet(-M.veFeadSpinToFront(b0.spin))).toBe(true);
     const b1 = wiz.veFeadWizBuild();
     expect(b1.spin).toBe(-b0.spin);
     expect(b1.beltLengthMm).toBeCloseTo(b0.beltLengthMm, 6);
-    expect(b1.warnings).toEqual([]);
+    // Yön seçicisi çevirmeye devrettiği için gergi de sürücünün öbür yanına
+    // geçiyor; hüküm sıranın yanında basılıyor (bkz. yukarıdaki test).
+    expect(b1.tensionerOrder.last).toBe(false);
+    expect(b1.warnings.filter((w) => !/son sırada değil/.test(w))).toEqual([]);
   });
 });
 
