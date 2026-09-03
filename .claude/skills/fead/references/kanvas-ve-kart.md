@@ -159,6 +159,32 @@ görünüşte konuşuyor; `veFeadWizSpinSet` gelen değeri veri düzlemine çevi
 düzlemi, on raporun onunda da öyle), **ön görünüşte `−1` (CW)** — yani
 kullanıcının istediği varsayılan, hiçbir veriye dokunmadan.
 
+##### AÇI SEÇİCİSİ DE AYNALANIR — yoksa aynı sihirbazın iki resmi ters
+
+Aynalamanın **ikinci** sessiz kusuru: sihirbazın kol açısı seçicisi (6. adım)
+kendi çizicisiyle ve mm düzleminde çiziyordu, yani hemen altındaki *"Kayış
+Yolu"* kartıyla **birbirinin aynası** oluyordu. İkisi de ayrı ayrı makul
+görünür; hata ancak yan yana konunca fark edilir.
+
+| Ne | Karar |
+|----|-------|
+| Sahne | aynalanır (`_fwMir()` → `veFeadSpinToFront(1)`) |
+| Kayış | kartın kullandığı **aynı** `veFeadMirrorGeomX` — `d` de çevrildiği için sarım yayları kasnağın içinden geçmiyor |
+| Saklanan açı | **veri düzleminde KALIR** — çözücü orayı okuyor |
+| Ayna faktörü | `data-mir` ile DOM'a yazılır; ters çevirici onu okuyup ekran açısını veri düzlemine geri çevirir |
+| `0/180` etiketleri | takas edilir — resim aynalı, okuma aynalı değilse kullanıcı `0°`'yi yanlış tarafta arar |
+
+**ASIL KAPI GİDİŞ-DÖNÜŞ:** altı veri açısı ekrana konup geri okunuyor. Tek
+yönü ölçen bir kapı, iki yönde birden yapılmış bir işaret hatasını göremez.
+
+**NORMALLEŞTİRME KAYAN NOKTAYA DAYANIKLI:** `if(a > 180) a -= 360` biçimi,
+ekranın tam sağındaki bir noktada `atan2`'nin `−1e−17` döndürmesiyle sonucu
+`180 ↔ −180` arasında zıplatıyordu — aynı yön, ama saklanan sayı kareden kareye
+değişir. Yerine `a − 360·floor((a+180)/360)`.
+
+Dört mutasyonla ölçüldü, dördü de kırmızı: sahneyi aynalamama, `data-mir`'i
+yazmama, ters çevirmede aynayı yok sayma, `0/180` takasını kaldırma.
+
 ##### Gergi serpantinde SON SIRADA — UYARI, zorlama değil
 
 On raporun onunda da sıra gergiyle bitip sürücüyle başlıyor: gergi, kayışın
