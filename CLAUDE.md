@@ -81,6 +81,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `tests/e2e/` — Playwright E2E testleri
 - `viewer/` — **Ölçüm Görüntüleyici** (ayrı program, bkz. `viewer/README.md`)
 - `MFSim_Olcum_Goruntuleyici.html` — Görüntüleyicinin tek dosya çıktısı (`npm run build:viewer` üretir; MFSim_Code.html'in aksine **git'e dahil** — dağıtımı bu dosyanın indirilmesiyle oluyor)
+- `candbc/` — **CAN Çözümleyici** (ayrı program, bkz. `candbc/README.md`)
+- `MFSim_CAN_Cozumleyici.html` — CAN Çözümleyici'nin tek dosya çıktısı (`npm run build:can` üretir; görüntüleyici gibi **git'e dahil**)
 - `.claude/skills/` — modüllere özgü karar kayıtları (koşullu yüklenir; aşağıya bak)
 - `docs/decisions/` — ortak yüzey kararları + tam test dosyası tablosu
 
@@ -232,6 +234,25 @@ kez yanlış yapıldı (görüntüleyici açılışta hata veriyordu). Farkları
 `viewer/js/theme.js`, `board.js`, `app.js` görüntüleyiciye özgüdür, kopya
 değildir — MFSim'den taşınmaz.
 
+### CAN Çözümleyici (`candbc/`)
+
+CAN kayıtlarını DBC'ye göre çözüp diyagrama döken **üçüncü program**. Karar
+kaydı ve dokunulmazlıkları `candbc/README.md` içinde; `candbc/js/*`,
+`candbc/index.html` ya da CAN testlerine dokunmadan önce oku.
+
+**`js/` ve `viewer/js/` ile HİÇBİR dosya paylaşmaz** — senkron kapısı yok,
+`sync:viewer` bu klasöre bakmaz. Ortak olan tek şey `css/`, o da build'de
+gömülüyor. Bu yüzden görüntüleyicideki tuzağın AYNISI burada da geçerli:
+
+```bash
+# css/ VEYA candbc/ dokunulduysa, commit'ten önce:
+npm run build:can        # ve üretilen MFSim_CAN_Cozumleyici.html'i commit'e kat
+```
+
+`css/styles.css`'te yapılan bir rötuş `candbc/` altında hiçbir şeye
+dokunmadığı için başka hiçbir kapı görmez; CI'daki tazelik kapısı
+(`build:can` + `git diff --exit-code`) görür ve kırmızıya döner.
+
 **`css/` DE GÖRÜNTÜLEYİCİYE GİRİYOR — kolay kaçırılan kapı.** `viewer/build.js`
 `../css/*.css` dosyalarını da inline ediyor. Yani `css/styles.css`'te yapılan
 HERHANGİ bir değişiklik `MFSim_Olcum_Goruntuleyici.html`'i BAYATLATIR; dosya
@@ -377,7 +398,8 @@ npm run build:occt-wasm     # vendor/opencascade.wasm.gz → js/structural-occt-
 npm run build:tetgen-wasm       # vendor/tetgen-src/ → vendor/tetgen-wasm.{js,wasm}  (emscripten GEREKİR, nadiren)
 npm run build:tetgen-wasm-asset # vendor/tetgen-wasm.wasm → js/structural-tetgen-wasm.js (gömülü ağ üreteci)
 npm run build:viewer        # MFSim_Olcum_Goruntuleyici.html üret (Ölçüm Görüntüleyici)
-npm run build:all           # ikisi birden (monolit + görüntüleyici)
+npm run build:can           # MFSim_CAN_Cozumleyici.html üret (CAN Çözümleyici)
+npm run build:all           # üçü birden (monolit + görüntüleyici + CAN Çözümleyici)
 npm run shot -- --help      # ekran görüntüsü — İSTEĞE BAĞLI, yalnız kullanıcı isteyince
 npm run test:e2e            # E2E testleri (Chromium gerekli)
 npm run test:all            # birim + E2E
@@ -450,8 +472,8 @@ npm test          # tüm birim testleri
 4. **PR koşusunu bekle** — kırık kodu merge'den önce yakalayan kapı budur.
    PR'da yalnız `test` + `e2e-urun` koşar (`build`/`deploy` atlanır);
    `test` ayrıca görüntüleyici senkronunu (`npm run sync:viewer -- --check`) ve
-   `MFSim_Olcum_Goruntuleyici.html`'in tazeliğini (yeniden üretip
-   `git diff --exit-code`) tutar.
+   git'e dâhil İKİ üretilen dosyanın tazeliğini (`MFSim_Olcum_Goruntuleyici.html`,
+   `MFSim_CAN_Cozumleyici.html` — yeniden üretip `git diff --exit-code`) tutar.
 5. **Merge et** (`merge` yöntemi — depo geçmişi merge commit'i kullanıyor)
 6. **MERGE SONRASI main KOŞUSU BEKLENMEZ.** Aynı ağaçta aynı `test` +
    `e2e-urun` bir kez daha koşar; yeni bilgi getirmez. Tek farkı Pages
