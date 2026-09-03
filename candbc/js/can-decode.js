@@ -118,16 +118,22 @@ function cdbMuxMatches(sig, muxRaw) {
 /**
  * Bir sinyalin ZAMAN SERİSİNİ kurar.
  *
- * Seri TALEP ÜZERİNE kurulur, kayıt yüklenirken değil: 300 mesajlı bir DBC ile
- * 2 milyon kareli bir kayıtta bütün sinyalleri önden çözmek onlarca saniye ve
+ * Girdi bir KANALDIR (bkz. can-match.js), DBC mesajı değil: seri kayıtta
+ * gerçekten geçen TEK bir kimliğin kareleri üzerinde kurulur. Aynı mesajı iki
+ * ECU gönderiyorsa iki ayrı seri çıkar — birleştirmek iki isteği tek eğriye
+ * karıştırmak olurdu.
+ *
+ * Seri TALEP ÜZERİNE kurulur, kayıt yüklenirken değil: 950 mesajlı bir DBC ile
+ * 200 bin kareli bir kayıtta bütün sinyalleri önden çözmek onlarca saniye ve
  * yüzlerce MB demek. Onay kutusu işaretlenince yalnız O sinyal, yalnız KENDİ
- * mesajının kareleri üzerinde çözülür (store.byKey dizini).
+ * kanalının kareleri üzerinde çözülür (store.byKey dizini).
  *
  * @returns {{t:Float64Array, v:Float64Array, n, min, max, skipped}}
  */
-function cdbBuildSeries(store, msg, sig) {
-  var idx = store.byKey[cdbMsgKey(msg.id, msg.extended)];
-  if (!idx || !idx.length) return { t: new Float64Array(0), v: new Float64Array(0), n: 0, min: 0, max: 0, skipped: 0 };
+function cdbBuildSeries(store, ch, sig) {
+  var idx = store.byKey[ch.key];
+  var msg = ch.msg;
+  if (!idx || !idx.length || !msg) return { t: new Float64Array(0), v: new Float64Array(0), n: 0, min: 0, max: 0, skipped: 0 };
 
   var muxor = (sig.muxValue !== null) ? msg.muxor : null;
   var t = new Float64Array(idx.length);
@@ -237,8 +243,12 @@ function cdbIsDiscrete(sig) {
 
 // Sinyalin benzersiz anahtarı — ağaç, grafik ve dışa aktarım aynı anahtarı
 // kullanır; ayrışmasınlar.
-function cdbSigKey(msg, sig) {
-  return cdbMsgKey(msg.id, msg.extended) + '.' + sig.name;
+//
+// Anahtar KANALDAN türer, DBC mesajından değil: aynı mesajı iki kaynak
+// gönderiyorsa iki ayrı sinyal vardır ve ikisi de çizilebilmelidir. Mesaj
+// kimliğinden türeseydi ikisi tek anahtara düşer, biri ötekini gizlerdi.
+function cdbSigKey(ch, sig) {
+  return ch.key + '.' + sig.name;
 }
 
 if (typeof module !== 'undefined' && module.exports) {

@@ -72,7 +72,7 @@ function cdbSeriesOf(key) {
   if (cdbSeriesCache[key]) return cdbSeriesCache[key];
   var m = cdbSigMeta[key];
   if (!m || !cdbState.store) return null;
-  cdbSeriesCache[key] = cdbBuildSeries(cdbState.store, m.msg, m.sig);
+  cdbSeriesCache[key] = cdbBuildSeries(cdbState.store, m.ch, m.sig);
   return cdbSeriesCache[key];
 }
 
@@ -84,10 +84,10 @@ function cdbChartHasSignal(key) {
   return false;
 }
 
-function cdbChartAddSignal(msg, sig) {
-  var key = cdbSigKey(msg, sig);
+function cdbChartAddSignal(ch, sig) {
+  var key = cdbSigKey(ch, sig);
   if (cdbChartHasSignal(key)) return;
-  if (!cdbSigMeta[key]) cdbSigMeta[key] = { msg: msg, sig: sig, colorIx: cdbColorSeq++ };
+  if (!cdbSigMeta[key]) cdbSigMeta[key] = { ch: ch, msg: ch.msg, sig: sig, colorIx: cdbColorSeq++ };
   cdbChart.lanes.push({ keys: [key], h: CDB_TR.LANE_DEF_H });
   if (cdbChart.lanes.length === 1) cdbChartFitAll(true);
   cdbChartLayout();
@@ -327,8 +327,23 @@ function cdbGutter(ctx, w) {
   return { nameX: 4, nameW: nameW, plotX: plotX, plotW: Math.max(20, w - plotX - CDB_TR.PAD_RIGHT) };
 }
 
+// Şerit adı. Aynı sinyal adı BİRDEN FAZLA kanaldan gelebiliyor (aynı mesajı
+// iki ECU gönderiyor); ad tek başına hangi eğrinin hangisi olduğunu söylemez.
+// Bu yüzden birden fazla kaynak varsa kaynak adresi de ada girer.
 function cdbLaneTitle(meta) {
-  return meta.sig.name + (meta.sig.unit ? ' [' + meta.sig.unit + ']' : '');
+  var base = meta.sig.name + (meta.sig.unit ? ' [' + meta.sig.unit + ']' : '');
+  if (meta.ch && meta.ch.j && cdbSigNameShared(meta)) base += ' · SA ' + cdbFmtAddr(meta.ch.j.sa);
+  return base;
+}
+
+// Grafikte aynı sinyal adı başka bir kanaldan da çizili mi?
+function cdbSigNameShared(meta) {
+  for (var k in cdbSigMeta) {
+    if (!cdbSigMeta.hasOwnProperty(k) || !cdbChartHasSignal(k)) continue;
+    var o = cdbSigMeta[k];
+    if (o !== meta && o.sig.name === meta.sig.name) return true;
+  }
+  return false;
 }
 
 // Şeritte TEK sinyal varsa ve o sinyalin VAL_ tablosu varsa Y ekseninde sayı

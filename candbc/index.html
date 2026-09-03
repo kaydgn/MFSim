@@ -179,6 +179,13 @@
     }
     .cdb-prog-text { font-size:var(--fs-md); color:var(--text-secondary); font-variant-numeric:tabular-nums; }
 
+    /* Basılı durum: J1939 düğmesi açık/kapalıyı SATIRDA göstermeli, yoksa
+       kullanıcı hangi kipte olduğunu ipucuna bakmadan bilemez. */
+    .ve-imp-tool[aria-pressed="true"] {
+      background:var(--accent-primary); color:var(--on-accent);
+      border-color:var(--accent-primary);
+    }
+
     /* ── Sürükle-bırak kaplaması ──
        pointer-events:none KRİTİK: kaplama fare hedefi olursa altındaki
        öğelerle arasında dragenter/dragleave çifti üretir ve sürükleme
@@ -226,6 +233,10 @@
     <span class="mf-ico mf-ico-upload"></span> Kayıt
   </button>
   <select class="cdb-sel" id="cdb-fmt-select" title="Kayıt biçimi — otomatik algılama yanılırsa elle seçin"></select>
+  <button type="button" class="ve-imp-tool" id="cdb-j1939" aria-pressed="true" onclick="cdbToggleJ1939()"
+          title="J1939 PGN eşleştirmesi AÇIK — tam kimlik bulunamazsa kaynak adresi yok sayılarak PGN eşleştirilir">
+    <span class="mf-ico mf-ico-link"></span> J1939 PGN
+  </button>
 
   <span style="margin-left:auto"></span>
   <span class="cdb-sub cdb-hint" style="border:0">Dosyaları sürükleyip bırakabilirsiniz · veri bilgisayarınızdan çıkmaz</span>
@@ -257,9 +268,9 @@
     <div class="vsig-toolbar">
       <div class="vsig-tl-row">
         <div class="vsig-seg wide" id="cdb-tree-filter">
-          <button type="button" data-f="log" aria-pressed="true"  onclick="cdbSetTreeFilter('log')" title="Yalnız kayıtta geçen mesajlar">Kayıtta</button>
-          <button type="button" data-f="all" aria-pressed="false" onclick="cdbSetTreeFilter('all')" title="DBC'deki bütün mesajlar">Tümü</button>
-          <button type="button" data-f="on"  aria-pressed="false" onclick="cdbSetTreeFilter('on')"  title="Yalnız grafikte çizili olanlar">Çizili</button>
+          <button type="button" data-f="all"   aria-pressed="true"  onclick="cdbSetTreeFilter('all')"   title="Kayıtta geçen bütün kimlikler — DBC'de karşılığı olmayanlar dâhil">Tümü</button>
+          <button type="button" data-f="known" aria-pressed="false" onclick="cdbSetTreeFilter('known')" title="Yalnız DBC'de tanımı bulunan kanallar">Çözülen</button>
+          <button type="button" data-f="on"    aria-pressed="false" onclick="cdbSetTreeFilter('on')"    title="Yalnız grafikte çizili olanlar">Çizili</button>
         </div>
       </div>
     </div>
@@ -321,7 +332,8 @@
           <div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-activity"></span></div>
           <div class="ve-trace-empty-title">Henüz çizili sinyal yok</div>
           <div class="ve-trace-empty-sub">
-            Soldaki <b>Sinyal Gezgini</b>'nden bir sinyal işaretleyin. Elinizde dosya yoksa
+            Soldaki <b>Sinyal Gezgini</b>'nden bir sinyal işaretleyin — ağaç kayıtta gerçekten
+            geçen kimliklerden kurulur, DBC'nin tamamından değil. Elinizde dosya yoksa
             üst bandın sağındaki <b>Örnek</b> düğmesi çalışan bir kurulum yükler.<br><br>
             Diyagramda: <b>tekerlek</b> yakınlaştırır · <b>sürükle</b> kaydırır ·
             <b>Shift+sürükle</b> kutu seçer · <b>çift tık</b> sığdırır ·
@@ -369,7 +381,9 @@
      hepsinin globallerine çalışma anında bakıyor. -->
 <script src="js/can-theme.js"></script>
 <script src="js/can-dbc.js"></script>
+<script src="js/can-j1939.js"></script>
 <script src="js/can-log.js"></script>
+<script src="js/can-match.js"></script>
 <script src="js/can-decode.js"></script>
 <script src="js/can-chart.js"></script>
 <script src="js/can-tree.js"></script>
