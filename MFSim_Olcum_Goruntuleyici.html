@@ -285,37 +285,46 @@
       --ink-danger: #aa3434;
     }
 
-    /* Tema: Claude — Claude Code koyu sıcak kahve */
+    /* Tema: Claude — Anthropic marka paleti
+       ÇIPALAR BELGELENMİŞ marka değerleridir, claude.ai'den örneklenmiş
+       DEĞİL: koyu #141413, krem #faf9f5, imza turuncu #d97757, imza yeşil
+       #788c5d, Cloudy #B1ADA1. Anthropic koyu mod tasarım jetonlarını
+       yayınlamıyor; aradaki yüzeyler (bg-secondary/tertiary, kenarlıklar)
+       bu çıpalardan TÜRETİLDİ — "canlı arayüzün rengi" diye sunulmuyor.
+       Uyarı ve tehlike marka paletinde YOK; ikisi de önceki Claude
+       temasının işlevsel değerleri, çünkü kırmızı/kehribar sinyalinin
+       turuncu aksandan ayrışması markadan önce gelir.
+       Kontrast: tests/unit/theme-contrast.test.js (dört zeminde AA). */
     [data-theme="claude"] {
       color-scheme: dark;
-      --bg-primary: #2b2520;
-      --bg-secondary: #231e1a;
-      --bg-tertiary: #342e28;
-      --bg-input: #1c1815;
-      --border-color: #3d352e;
-      --border-light: #453c34;
-      --border-hover: #5a4f44;
-      --text-primary: #e0d6ca;
-      --text-secondary: #beb6ab;
-      --text-muted: #a19589;
-      --text-heading: #f0e8dc;
-      --accent-primary: #d4835e;
-      --accent-success: #5a9a6a;
-      --accent-warning: #c89545;
+      --bg-primary: #141413;
+      --bg-secondary: #1c1b19;
+      --bg-tertiary: #252420;
+      --bg-input: #0e0e0d;
+      --border-color: #2b2a26;
+      --border-light: #35332e;
+      --border-hover: #4a4841;
+      --text-primary: #ebe9e2;
+      --text-secondary: #b1ada1;
+      --text-muted: #918d82;
+      --text-heading: #faf9f5;
+      --accent-primary: #d97757;
+      --accent-success: #788c5d;
+      --accent-warning: #c9973f;
       --accent-danger: #c45a4a;
-      --shadow-color: rgba(0, 0, 0, 0.4);
+      --shadow-color: rgba(0, 0, 0, 0.5);
       /* Aksan ZEMİNİNİN üstünde okunacak renk. Beyaz her aksanda
          yetmiyor: kehribar uyarı çipinde 2,3:1e kadar iniyordu. */
-      --on-accent: #452212;
-      --on-success: #152419;
-      --on-warning: #402f13;
+      --on-accent: #2b1006;
+      --on-success: #0d1408;
+      --on-warning: #3a2a08;
       --on-danger: #070302;
       /* Aksanın METİN sürümü: zeminin üstünde okunacak kadar açık/koyu.
          Aksanın kendisi zemin, kenarlık ve gösterge olarak kullanılmaya devam
          eder — orada 3:1 yeter, metinde 4,5:1 gerekiyor. Aksan zaten yetiyorsa
          belirteç doğrudan ona bağlanır, yani görünüm hiç değişmez. */
-      --ink-accent: #d58561;
-      --ink-success: #68a778;
+      --ink-accent: var(--accent-primary);
+      --ink-success: #9bb37a;
       --ink-warning: var(--accent-warning);
       --ink-danger: #d38579;
     }
