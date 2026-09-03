@@ -66,8 +66,8 @@ const ZEMIN = ['bg-primary', 'bg-secondary', 'bg-tertiary', 'bg-input'];
 const temalar = temalariOku();
 
 describe('tema paleti — metin kontrastı (WCAG AA)', () => {
-  test('on altı tema da okunabiliyor', () => {
-    expect(temalar).toHaveLength(16);
+  test('on dokuz tema da okunabiliyor', () => {
+    expect(temalar).toHaveLength(19);
   });
 
   temalar.forEach((t) => {
