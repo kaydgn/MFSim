@@ -81,7 +81,7 @@ function _veSettingsRenderAppearance() {
   var dark = [
     { id: 'slate',  name: 'Midnight',        swatch: ['#0a0c10', '#151a22', '#2563eb'] },
     { id: 'cream',  name: 'Carbon',          swatch: ['#161616', '#222222', '#e05020'] },
-    { id: 'claude', name: 'Claude',          swatch: ['#2b2520', '#342e28', '#d4835e'] },
+    { id: 'claude', name: 'Claude',          swatch: ['#141413', '#252420', '#d97757'] },
     { id: 'navy',   name: 'Donanma Mavisi',  swatch: ['#0a1728', '#17324f', '#d9b25a'] }
   ];
   var pro = [
