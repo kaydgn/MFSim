@@ -185,3 +185,100 @@ test('künyenin erişebildiği açı bandı seçicide çiziliyor', async ({ page
   expect(r.secici.kumeAyni).toBe(true);
   expect(r.secici.ilkFark).toBeLessThan(0.75);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AÇI SEÇİCİSİ: HAYALET ↔ SEÇİM AYRIMI (gerçek tarayıcı)
+//
+// Kullanıcı bildirimi (2026-09-04): *"diyagram üzerinde bir yere tıkladığımda
+// ok hayalet şekilde görülmüyor"* ve *"açı değerini girip tamam dediğimde
+// pencere otomatik kapanıyor. Kapanmasın."*
+//
+// KÖK NEDEN ölçülerek bulundu: `veFeadWizAngHover` SEÇİMİ (`shown`) doğrudan
+// yazıyordu. İki sonucu vardı — (1) ok zaten farenin peşinde olduğu için
+// tıklamanın izi kalmıyordu, (2) kutuya yazılan değer fare düzlemin üstünden
+// geçer geçmez siliniyordu. Kullanıcının resmi ikisini birden gösteriyor:
+// ok 35,80° iken kutu 48,74.
+//
+// Bu halkalar Node'da HİÇ koşmuyor: gerçek `mousemove`/`click` gerekiyor.
+test('açı seçici: fare HAYALETİ oynatır, seçimi EZMEZ', async ({ page }) => {
+  await sahneAng(page);
+  const kutu = await page.locator('#ve-fw-ang-plot svg').boundingBox();
+
+  await page.mouse.move(kutu.x + kutu.width * 0.78, kutu.y + kutu.height * 0.30);
+  const gez = await page.evaluate(() => ({
+    hayalet: document.querySelectorAll('#ve-fw-ang-plot [data-ve="arm-ghost"]').length,
+    shown: VE_FW_ANG.shown, hover: VE_FW_ANG.hover
+  }));
+  console.log('GEZ ' + JSON.stringify(gez));
+  expect(gez.hayalet).toBe(1);                       // aday görünür
+  expect(gez.hover).not.toBeNull();
+  expect(gez.shown).not.toBeCloseTo(gez.hover, 1);   // SEÇİM DEĞİŞMEDİ
+
+  // TIK seçimi sabitler ve kutuya yazar.
+  await page.mouse.click(kutu.x + kutu.width * 0.78, kutu.y + kutu.height * 0.30);
+  const tik = await page.evaluate(() => ({
+    shown: VE_FW_ANG.shown, kutu: document.getElementById('ve-fw-ang-in').value }));
+  expect(tik.shown).toBeCloseTo(gez.hover, 2);
+  expect(parseFloat(tik.kutu)).toBeCloseTo(gez.hover, 2);
+
+  // SONRA FARE OYNASA DA seçim ve kutu yerinde kalır — eski kusur buydu.
+  await page.mouse.move(kutu.x + kutu.width * 0.30, kutu.y + kutu.height * 0.70);
+  const sonra = await page.evaluate(() => ({
+    shown: VE_FW_ANG.shown, hover: VE_FW_ANG.hover,
+    kutu: document.getElementById('ve-fw-ang-in').value }));
+  console.log('SONRA ' + JSON.stringify(sonra));
+  expect(sonra.shown).toBeCloseTo(tik.shown, 4);
+  expect(sonra.kutu).toBe(tik.kutu);
+  expect(sonra.hover).not.toBeCloseTo(sonra.shown, 1);   // hayalet ayrı yerde
+
+  // Fare düzlemden çıkınca hayalet gider. TEK sıçrayışta değil, ARADAN
+  // geçerek: tarayıcı enter/leave'i konum DEĞİŞİMİNDEN türetiyor ve tek
+  // adımda ışınlanan fare kenarı hiç kesmeyebiliyor (ölçüldü — `hover`
+  // −98,99'da kalmıştı).
+  await page.mouse.move(kutu.x + 5, kutu.y + 5);
+  await page.mouse.move(kutu.x - 30, kutu.y - 30, { steps: 8 });
+  await page.waitForFunction(() => VE_FW_ANG && VE_FW_ANG.hover === null, null, { timeout: 3000 });
+  const cikis = await page.evaluate(() => ({
+    hover: VE_FW_ANG.hover,
+    hayalet: document.querySelectorAll('#ve-fw-ang-plot [data-ve="arm-ghost"]').length }));
+  expect(cikis.hover).toBeNull();
+  expect(cikis.hayalet).toBe(0);
+});
+
+test('"Uygula" pencereyi KAPATMIYOR ve uygulandığını okutuyor', async ({ page }) => {
+  await sahneAng(page);
+  const r = await page.evaluate(() => {
+    veFeadWizAngType('-30');
+    const ok = veFeadWizAngOk();
+    const ov = document.getElementById('ve-fw-ang');
+    return { ok, acik: !!(ov && ov.style.display !== 'none'),
+             shown: VE_FW_ANG && VE_FW_ANG.shown,
+             okumalar: [...document.querySelectorAll('#ve-fw-ang .ve-fw-reads > *')]
+               .map((e) => e.textContent.trim()) };
+  });
+  console.log('UYGULA ' + JSON.stringify(r));
+  expect(r.ok).toBe(true);
+  expect(r.acik).toBe(true);                 // ESKİDEN kapanıyordu
+  expect(r.shown).toBeCloseTo(-30, 4);       // seçim de unutulmadı
+  // "İşledi mi?" sorusunun ekranda cevabı var: modele yazılan açı okunuyor.
+  expect(r.okumalar.join(' | ')).toMatch(/Modele işlenen açı✓\s*-30\.00°/);
+});
+
+async function sahneAng(page) {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/index.html');
+  await page.evaluate(() => { if (window.MFSimLoader && window.MFSimLoader.start) window.MFSimLoader.start(); });
+  await page.waitForFunction(() => typeof window.createNode === 'function' &&
+    typeof window.veFeadOpenEditor === 'function' && typeof window.veFeadWizOpen === 'function',
+    null, { timeout: 60000 });
+  await page.evaluate(() => { if (typeof veSelectModuleFromOverlay === 'function') veSelectModuleFromOverlay('arac-performans'); });
+  await page.waitForFunction(() => { const s = document.getElementById('mfsim-loading-screen'); return !s || s.style.display === 'none'; },
+    null, { timeout: 60000 });
+  await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
+  await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-wizard'), null, { timeout: 20000 });
+  await page.evaluate(() => {
+    const w = window.nodes.find((n) => n.type === 'fead-wizard');
+    veFeadWizOpen(w.id); veFeadWizSeed('AG00976_GATES_2025'); veFeadWizGoto(3);
+    veFeadWizAngOpen(); veFeadWizAngRender();
+  });
+}

@@ -2457,7 +2457,13 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
     wiz.veFeadWizAngType('-30');                        // 330 mutlak
     expect(wiz.veFeadWizAngOk()).toBe(true);
     expect(st.ten.armMeanDeg).toBeCloseTo(150, 4);
-    expect(wiz.veFeadWizAngState()).toBeNull();          // pencere kapandı
+    // PENCERE AÇIK KALIR — kullanıcı isteği (2026-09-04): *"açı değerini girip
+    // tamam dediğimde pencere otomatik kapanıyor. Kapanmasın."* Açık kalması
+    // aynı pencerede birkaç açı denemeyi mümkün kılıyor; kapatma yolu
+    // "Vazgeç" ve modalın ✕'i (ikisinin de kendi kapıları var).
+    expect(wiz.veFeadWizAngState()).toBeTruthy();
+    // VE SEÇİM KORUNUYOR: kapanmayan bir pencere seçimini de unutmamalı.
+    expect(wiz.veFeadWizAngState().shown).toBeCloseTo(-30, 4);
     // Geçersiz değerle "Uygula" HİÇBİR ŞEY yazmıyor.
     wiz.veFeadWizAngOpen();
     wiz.veFeadWizAngType('abc');
@@ -2521,6 +2527,106 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
 //   · `ve-fw-issue`   — canlı doğrulama çıktısı, açıklama değil
 //   · `ve-fw-reads`   — sayı okuması
 //   · adım alt başlığı — bölüm etiketi ("Tip · çap · koordinat · …")
+describe('örnekler arasında ↑ ↓ gezinme', () => {
+  // Kullanıcı isteği (2026-09-04): *"örnekleri seçtiğimiz yerin uygun bir
+  // altına böyle yukarı aşağı oklar koyalım… tüm örnekleri ve tüm tasarımları
+  // görme şansı olur."*
+  test('adımlayıcı seçicinin KENDİ listesinden gidiyor, ikinci sıra yok', () => {
+    kabuk();
+    const k = veFeadExampleKeys();
+    expect(k.length).toBeGreaterThan(2);
+    wiz.veFeadWizSeed(k[0]);
+    expect(wiz.veFeadWizSeedStep(1)).toBe(k[1]);
+    expect(wiz.veFeadWizState().seededFrom).toBe(k[1]);
+    expect(wiz.veFeadWizSeedStep(-1)).toBe(k[0]);
+    expect(wiz.veFeadWizState().seededFrom).toBe(k[0]);
+  });
+
+  test('UÇLARDA DURUYOR — sarma YOK', () => {
+    kabuk();
+    const k = veFeadExampleKeys();
+    wiz.veFeadWizSeed(k[0]);
+    // Sarsaydı son örneğe atlardı ve kullanıcı listenin başında olduğunu
+    // anlamazdı; düğme uçlarda `disabled` ve adımlayıcı da null dönüyor.
+    expect(wiz.veFeadWizSeedStep(-1)).toBeNull();
+    expect(wiz.veFeadWizState().seededFrom).toBe(k[0]);
+    wiz.veFeadWizSeed(k[k.length - 1]);
+    expect(wiz.veFeadWizSeedStep(1)).toBeNull();
+    expect(wiz.veFeadWizState().seededFrom).toBe(k[k.length - 1]);
+  });
+
+  test('ÖRNEK YÜKLÜ DEĞİLKEN ↓ ilkini, ↑ sonuncusunu açıyor', () => {
+    const k = veFeadExampleKeys();
+    kabuk(); wiz.veFeadWizReset();          // "Boş başla"
+    expect(wiz.veFeadWizSeedStep(1)).toBe(k[0]);
+    kabuk(); wiz.veFeadWizReset();
+    expect(wiz.veFeadWizSeedStep(-1)).toBe(k[k.length - 1]);
+  });
+
+  test('"Boş başla" adımlamaya GİRMİYOR — ok bütün formu silmemeli', () => {
+    kabuk();
+    const k = veFeadExampleKeys();
+    // Bütün örnekleri baştan sona yürü: hiçbir adımda seededFrom boşalmamalı.
+    wiz.veFeadWizSeed(k[0]);
+    for (let i = 1; i < k.length; i++) {
+      wiz.veFeadWizSeedStep(1);
+      expect(wiz.veFeadWizState().seededFrom).toBeTruthy();
+    }
+    expect(wiz.veFeadWizState().seededFrom).toBe(k[k.length - 1]);
+  });
+
+  test('düğmeler ve sayaç 1. adımda basılıyor, uçlarda devre dışı', () => {
+    const k = veFeadExampleKeys();
+    kabuk(); wiz.veFeadWizSeed(k[0]);
+    let h = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
+    expect(h).toContain('veFeadWizSeedStep(-1)');
+    expect(h).toContain('veFeadWizSeedStep(1)');
+    expect(h).toContain('1 / ' + k.length);
+    // İlk örnekte ↑ kapalı
+    expect(h).toMatch(/veFeadWizSeedStep\(-1\)[\s\S]{0,0}|disabled[\s\S]{0,120}veFeadWizSeedStep\(-1\)/);
+    kabuk(); wiz.veFeadWizSeed(k[k.length - 1]);
+    h = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
+    expect(h).toContain(k.length + ' / ' + k.length);
+  });
+});
+
+describe('Sistem adı kartı YALNIZ boş başlangıçta', () => {
+  // Kullanıcı isteği (2026-09-04): *"bu 'sistem adı' kısmı sadece boş örnek
+  // seçildiğinde gelsin… örneklerde sistem adı sabit."*
+  const sistemKartiVar = (h) => {
+    const d = document.createElement('div');
+    d.innerHTML = h;
+    return [...d.querySelectorAll('.ve-fw-card-h span')]
+      .some((e) => e.textContent.trim() === 'Sistem');
+  };
+
+  test('örnek yüklüyken kart YOK, boş başlangıçta VAR', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    expect(sistemKartiVar(wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild()))).toBe(false);
+    kabuk(); wiz.veFeadWizReset();
+    expect(sistemKartiVar(wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild()))).toBe(true);
+    kabuk();                                  // taze sihirbaz (hiç seçim yok)
+    expect(sistemKartiVar(wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild()))).toBe(true);
+  });
+
+  test('ALAN gizleniyor, DEĞER değil — ad durumda ve taslak künyesinde', () => {
+    // Kartı basmamak adı SİLMEK olsaydı, kayıtlı taslak "—" gösterirdi.
+    //
+    // ÖLÇÜLDÜ VE BİR VARSAYIMIM DÜŞTÜ: adın kurulan DÜĞÜMLERE gittiğini
+    // sanıyordum, gitmiyor — `veFeadWizNodes()` çıktısında sistem adı için
+    // bir alan yok. Ad `_fwState.ad`'da yaşıyor ve bileşenin panelindeki
+    // "Kayıtlı taslak" künyesinde okunuyor. Kapı gerçekten var olan yola
+    // bağlandı; olmayan bir yolu tutan bir kapı hiçbir şey ölçmezdi.
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const st = wiz.veFeadWizState();
+    expect(String(st.ad || '')).not.toBe('');
+    expect(st.ad).toContain('AG00976');
+    // Kart basılmıyor ama değer duruyor: bir sonraki çizimde de orada.
+    wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
+    expect(wiz.veFeadWizState().ad).toBe(st.ad);
+  });
+});
+
 describe('kasnak tablosu SIĞAR — yatay kaydırma yok', () => {
   // Kullanıcı bildirimi (2026-09-02): tablo sağa sola kayıyordu.
   // ÖLÇÜLDÜ (gerçek tarayıcı, 1280×900): kapsayıcı 873 px, tablo 1058 px →
