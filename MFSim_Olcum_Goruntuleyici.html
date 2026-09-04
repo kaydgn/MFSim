@@ -7814,6 +7814,21 @@ span.ve-fw-ro{ display:inline-block; }
   color:var(--accent-success);
 }
 
+/* ÖRNEK SEÇİCİSİNİN DURUM SATIRI. Kart yığını açılır listeye dönünce
+   (kullanıcı: "pencereyi uzatmasaydın... aşağıya indirilebilir bir pencere")
+   "✓ yüklendi" rozeti kartla birlikte gitti. Ayrım kaybolmamalı: <select>
+   "seçili" ima eder, oysa örnek formu DOLDURAN bir eylemdir ve kullanıcı
+   sonra her alanı değiştirebilir. Satır o farkı yazıyor. Sol şerit kartın
+   ::before'undan devralındı — aynı dil, sabit yükseklik. */
+.ve-fw-seeded{
+  position:relative; margin-top:8px; padding:7px 10px 7px 13px;
+  border:1px solid var(--border-subtle); border-left:3px solid var(--accent-success);
+  background:var(--bg-secondary);
+  font-size:var(--fs-micro); line-height:1.5; color:var(--text-secondary);
+}
+.ve-fw-seeded b{ color:var(--text-primary); }
+.ve-fw-seeded em{ font-style:normal; color:var(--text-muted); }
+
 /* Kasnak satırındaki sıra düğmeleri — ↑ ↓ ✕ tek hücrede, sabit genişlik.
    Silme düğmesi tek başınayken hücre dar; üç düğme sığmayınca satır kayar. */
 .ve-fw-rowops{ white-space:nowrap; }
