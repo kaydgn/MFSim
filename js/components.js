@@ -1335,10 +1335,33 @@ function veSyncModuleShell() {
   // ekranında ray da gizlensin: proje yokken "Sonuçlar" gidilecek yer değil.
   var shell = document.getElementById('sayfa2-content');
   if(shell) shell.classList.toggle('ve-no-module', visible);
+  // ŞERİT: #ve-ribbon .ve-main'in de #sayfa2-content'in de DIŞINDA (position:fixed,
+  // belgenin tepesinde) — sınıfın gövdeye de yazılması bu yüzden. CSS orada hem
+  // şeridi gizler hem --chrome-h'ı sıfırlar; belge bandı (.ve-doc-dock) .ve-main
+  // içinde olduğu için yukarıdaki sınıftan besleniyor.
+  if(document.body) document.body.classList.toggle('ve-no-module', visible);
   // Şerit de aynı duruma uysun: çalışma alanı yokken Kaydet/Doğrula/
   // Çalıştır gibi komutlar pasif çizilir (sol panel zaten gizleniyordu,
   // şeridin etkin görünmesi tutarsızdı).
   if(typeof veRibbonRender === 'function') veRibbonRender();
+}
+
+// Karşılama ekranındaki sürüm künyesi. Kaynağı build.js'in gövdenin başına
+// yazdığı window.__MFSIM_BUILD — bir MODÜL değil, satır içi veri; bu yüzden
+// yükleme sırasından bağımsız, ilk çağrıda okunabiliyor. (deploy-status.js'in
+// _veBuildInfo'su aynı nesneyi okur ama o dosya components.js'ten SONRA
+// yükleniyor: ona bağlanan ilk sürüm künyeyi hiç yazamıyordu.)
+// Modüler index.html'de künye YOKTUR → düğme `hidden` kalır; boş bir çip
+// göstermek "sürümü bilmiyorum"u sürüm gibi gösterirdi.
+function veFillWelcomeStamp() {
+  if(typeof document === 'undefined') return false;
+  var el = document.getElementById('ve-welcome-stamp');
+  if(!el) return false;                          // markup henüz yok — çağıran tekrar dener
+  var b = (typeof window !== 'undefined') ? window.__MFSIM_BUILD : null;
+  if(!b || !b.shortSha) { el.hidden = true; return true; }
+  el.textContent = b.shortSha + (b.prNumber ? ' \u00b7 PR #' + b.prNumber : '');
+  el.hidden = false;
+  return true;
 }
 
 (function veObserveModuleOverlay() {
@@ -1347,6 +1370,7 @@ function veSyncModuleShell() {
     var main = document.querySelector('.ve-main');
     if(!overlay || !main) { setTimeout(attach, 50); return; }
     veSyncModuleShell();
+    veFillWelcomeStamp();
     new MutationObserver(veSyncModuleShell).observe(overlay, { attributes: true, attributeFilter: ['style', 'class'] });
   }
   attach();
