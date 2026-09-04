@@ -383,12 +383,16 @@ describe('kanvasa kurma — gerçek yükleyici', () => {
   });
 });
 
-describe('sihirbaz kartı', () => {
-  test('kart üretiliyor ve undefined/NaN basmıyor', () => {
-    const html = fead.getFeadExamplePropertiesHTML({ data: {} });
-    expect(html).toContain('Anadolu Isuzu 6x6');
-    expect(html).toContain('8PK1392HD');
-    expect(html).toContain(KEY);
-    expect(html).not.toMatch(/undefined|NaN|\[object/);
+describe('örnek paneli', () => {
+  test('listede duruyor ve seçilince künyesi undefined/NaN basmıyor', () => {
+    // Panel açılır listeye döndü: ad her zaman listede, künye ise SEÇİLİYKEN.
+    const liste = fead.getFeadExamplePropertiesHTML({ data: {} });
+    expect(liste).toContain('Anadolu Isuzu 6x6');
+    expect(liste).toContain(KEY);
+
+    const secili = fead.getFeadExamplePropertiesHTML({ data: { pick: KEY } });
+    expect(secili).toContain('8PK1392HD');
+    expect(secili).toMatch(new RegExp("veFeadLoadExample\\('" + KEY + "'\\)"));
+    expect(secili).not.toMatch(/undefined|NaN|\[object/);
   });
 });

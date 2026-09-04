@@ -755,12 +755,40 @@ describe('güç eğrisi kartı', () => {
 });
 
 describe('örnek paneli: tedarikçi sayfası kurulabilir', () => {
-  test('kayıt defterindeki her örnek için kurma düğmesi var', () => {
+  test('kayıt defterindeki her örnek ERİŞİLEBİLİR — açılır listede', () => {
+    // YÜZEY DEĞİŞTİ: örnek başına bir kart+düğme yerine tek bir açılır liste
+    // (kullanıcı, 2026-09-02: *"pencereyi uzatmasaydın... aşağıya indirilebilir
+    // bir pencere yapsaydın"*). Kapının tuttuğu şey aynı: HİÇBİR ÖRNEK
+    // listeden düşmemeli. Kurma düğmesi artık SEÇİLİ örneğe bakıyor.
     const html = fead.getFeadExamplePropertiesHTML(kasnak('fead-example', {}));
     veFeadExampleKeys().forEach((k) => {
-      expect(html).toMatch(new RegExp("veFeadLoadExample\\('" + k + "'\\)"));
+      expect(html).toMatch(new RegExp('<option value="' + k + '"'));
     });
+    expect(html).toMatch(/veFeadLoadExample\('/);            // kurma yolu duruyor
     expect(html).not.toMatch(/Hesap çekirdeği bekleniyor/);   // artık boş değil
+  });
+
+  test('PANEL ÖRNEK SAYISIYLA BÜYÜMÜYOR — asıl kazanç bu', () => {
+    // Sorun buydu: on iki örnek → 12 kart · ~21 KB · 60 satır. Kapı sayıya
+    // değil BİÇİME bakıyor — örnek başına bir kurma düğmesi üretilirse panel
+    // yine uzar. Künye YALNIZ seçili örnek için basılıyor.
+    const html = fead.getFeadExamplePropertiesHTML(kasnak('fead-example', {}));
+    expect(veFeadExampleKeys().length).toBeGreaterThan(10);
+    expect((html.match(/veFeadLoadExample\('/g) || [])).toHaveLength(1);
+    expect((html.match(/<select/g) || [])).toHaveLength(1);
+  });
+
+  test('seçim DÜĞÜMDE duruyor ve künye onunla değişiyor', () => {
+    // Seçmek KURMAK değil; ayrıca panel yeniden çizilince seçim kaybolmamalı.
+    const keys = veFeadExampleKeys();
+    const n = kasnak('fead-example', { pick: keys[2] });
+    const html = fead.getFeadExamplePropertiesHTML(n);
+    expect(html).toMatch(new RegExp('<option value="' + keys[2] + '" selected'));
+    // Künye SEÇİLİ örneğin: kayış tipi örnek başına tekil ve kaçışlanmadan
+    // geçiyor (not metni `&` içerebildiği için doğrudan karşılaştırılmaz).
+    expect(html).toContain(veFeadExampleOf(keys[2]).belt.beltType);
+    // Başka bir örneğin künyesi BASILMIYOR — on iki kez tekrar kalktı.
+    expect(html).not.toContain(veFeadExampleOf(keys[0]).belt.beltType);
   });
 });
 

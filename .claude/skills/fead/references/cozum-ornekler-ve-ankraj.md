@@ -2583,6 +2583,40 @@ görmez), ve silindir sayısını 6→4 çevirmek. Sonuncusu için
 `tests/helpers/gates-vibration.js` genişletildi: `# of Cylinders` de artık
 kaynağından okunuyor.
 
+###### ÖRNEK SEÇİCİSİ AÇILIR LİSTE — pencere örnek sayısıyla büyümez (2026-09-02)
+
+Kullanıcı, arşivin tamamı örnek olduktan hemen sonra: *"pencereyi uzatmasaydın
+keşke, böyle aşağıya indirilebilir bir pencere yapsaydın."* Haklıydı: her iki
+yüzey de **üç örnek için** tasarlanmış tam genişlik kart yığınıydı.
+
+| Yüzey | Önce | Sonra |
+|---|---|---|
+| Sihirbaz 1. adım (`cp-fead-wizard.js`) | 12 kart, modal aşağı büyüyor | tek `<select>` · **765 px, kaydırmasız** |
+| Örnek paneli (`cp-fead.js`) | 12 kart · 21 KB · 60 satır | tek `<select>` · **304 px** |
+
+**Künye kaybolmadı, TEKRARI kayboldu:** panelde kayış/tahrik oranı/aksesuar
+satırları artık on iki kez değil **yalnız seçili örnek** için basılıyor. Seçim
+düğümde durur (`node.data.pick`), yani panel yeniden çizilince kullanıcının
+baktığı örnek yerinde kalır. **Seçmek KURMAK değildir** — kurma ayrı düğmede.
+
+Sihirbazda korunması gereken iki kayıtlı karar vardı ve ikisi de korundu:
+
+* **"YÜKLENDİ", "seçili" değil.** `<select>` doğası gereği "seçili" ima eder;
+  oysa örnek formu DOLDURAN bir eylemdir ve kullanıcı sonra her alanı
+  değiştirebilir. Ayrımı `.ve-fw-seeded` durum satırı taşıyor.
+* **`_fwHint` yok.** Sihirbazda açıklama yüzeyi kaldırılmıştı ve kapısı da var;
+  ilk denemede yeniden çağrıldı ve üç ilgisiz test kırmızıya döndü. Durum
+  satırı bir açıklama değil, hangi örneğin yüklendiğinin kaydı.
+
+Ayrıca açılır listenin kart yığınında olmayan bir riski var ve kapısı yazıldı:
+**başlık satırı (`__`) bir seçim DEĞİL** — listeyi açıp kapatmak yüklü örneği
+sessizce silmemeli. `''` ise gerçek eylem ("Boş başla"), ve o da kayıtlı
+davranışa uygun olarak **işaretleniyor**.
+
+Kapılar sayıya değil **biçime** bakıyor (`ve-fw-btn-wide` yok · tek `<select>` ·
+tek kurma düğmesi): kayıt defterine örnek eklemek bu iki yüzeyin yüksekliğini
+değiştirmemeli.
+
 **Sırada:** kullanıcı kayışı seçtikten sonra katalog sonuçlarını geri almanın
 akışı (bugün Kayış Özellikleri panelinden elle yapılıyor); ve zarf çözümünün
 Sonuçlar sayfasında kanal olarak yayını.

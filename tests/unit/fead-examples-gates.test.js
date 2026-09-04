@@ -302,13 +302,17 @@ describe('kayıt defteri ve sihirbaz', () => {
     expect(new Set(adlar).size).toBe(adlar.length);
   });
 
-  test('sihirbaz kartı HEPSİNİ listeliyor ve undefined/NaN basmıyor', () => {
-    const html = CP.getFeadExamplePropertiesHTML({ data: {} });
+  test('örnek paneli HEPSİNİ listeliyor; künye seçiliyken temiz', () => {
+    const liste = CP.getFeadExamplePropertiesHTML({ data: {} });
     veFeadExampleKeys().forEach((k) => {
-      expect(html).toContain(k);
-      expect(html).toContain(veFeadExampleOf(k).name);
+      expect(liste).toMatch(new RegExp('<option value="' + k + '"'));
+      expect(liste).toContain(veFeadExampleOf(k).name);
     });
-    expect(html).not.toMatch(/undefined|NaN|\[object/);
+    // Künye yalnız seçili örnek için basıldığından her biri ayrı çizdiriliyor.
+    veFeadExampleKeys().forEach((k) => {
+      const h = CP.getFeadExamplePropertiesHTML({ data: { pick: k } });
+      expect(h).not.toMatch(/undefined|NaN|\[object/);
+    });
   });
 });
 

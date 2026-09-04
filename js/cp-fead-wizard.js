@@ -1103,26 +1103,60 @@ function _fwStepKaynak(){
   // iddia etmek olurdu; kütüphane bunu bilmiyor (duty seçicisindeki "özel"
   // okumasının aynı gerekçesi).
   var yuklu = (st.seededFrom === undefined) ? null : st.seededFrom;
-  function kart(k, ad, alt){
-    var secili = (yuklu !== null && String(yuklu) === String(k));
-    return '<button type="button" class="ve-fw-btn ve-fw-btn-wide'
-      + (secili ? ' ve-fw-btn-on' : '') + '"'
-      + ' onclick="' + (k ? 'veFeadWizSeed(\'' + k + '\')' : 'veFeadWizReset()') + '">'
-      + '<b>' + _fwEsc(ad) + '</b><em>' + _fwEsc(alt) + '</em>'
-      + (secili ? '<span class="ve-fw-btn-mark">✓ yüklendi</span>' : '') + '</button>';
-  }
-  var oh = '';
+
+  // AÇILIR LİSTE, YAN YANA KART DEĞİL — kullanıcı isteği (2026-09-02):
+  // *"pencereyi uzatmasaydın keşke, böyle aşağıya indirilebilir bir pencere
+  // yapsaydın."* Liste üç örnek için tasarlanmıştı; arşivin tamamı örnek
+  // olunca ON İKİ tam genişlik kartı modalı aşağı doğru büyüttü ve 1. adım
+  // kaydırmasız okunamaz oldu. Açılır liste sabit yükseklik demek: örnek
+  // sayısı artmaya devam edebilir, pencere büyümez.
+  //
+  // "YÜKLENDİ" SÖZCÜĞÜ KALIYOR — kart düğmesinden devraldığımız ayrım bu:
+  // seçim formu DOLDURAN bir eylemdir, forma EŞİT olduğu iddiası değil.
+  // Kullanıcı sonra her alanı değiştirebiliyor ve kütüphane bunu bilmiyor;
+  // <select>'in kendisi "seçili" ima ettiği için durum satırı ayrıca yazılıyor.
+  var secenekler = '<option value="__">' + (yuklu === null ? '— örnek seç —' : '— değiştir —')
+    + '</option>';
+  var yukluAd = '', yukluAlt = '';
   if(typeof veFeadExampleKeys === 'function'){
+    secenekler += '<optgroup label="Gates raporları ve tedarikçi sayfası">';
     veFeadExampleKeys().forEach(function(k){
       var ex = veFeadExampleOf(k);
-      oh += kart(k, ex.name, ex.pulleys.length + ' kasnak · '
-        + (ex.solver.duty || []).length + ' devir noktası');
+      var alt = ex.pulleys.length + ' kasnak · ' + (ex.solver.duty || []).length + ' devir';
+      var se = (yuklu !== null && String(yuklu) === String(k));
+      if(se){ yukluAd = ex.name; yukluAlt = alt; }
+      secenekler += '<option value="' + _fwEsc(k) + '"' + (se ? ' selected' : '') + '>'
+        + _fwEsc(ex.name + '  ·  ' + alt) + '</option>';
     });
+    secenekler += '</optgroup>';
   }
-  oh += kart('', 'Boş başla', 'bütün alanları temizler');
-  h += _fwCard('Örnekten doldur', 'var(--accent-success)', oh
-    );
+  // "BOŞ BAŞLA" DA BİR SEÇİM ve işaretleniyor — kayıtlı davranış: temizlemek
+  // de bir başlangıç kararıdır, "hiçbiri seçilmemiş" hâlinden (taze sihirbaz)
+  // ayrı durmalı.
+  var bosSecili = (yuklu !== null && String(yuklu) === '');
+  if(bosSecili) yukluAd = 'Boş başla';
+  secenekler += '<option value=""' + (bosSecili ? ' selected' : '') + '>'
+    + 'Boş başla — bütün alanları temizler</option>';
+
+  var sel = '<select class="ve-fw-inp" onchange="veFeadWizSeedPick(this.value)">'
+    + secenekler + '</select>';
+  // Durum satırı bir AÇIKLAMA değil, bir DURUM: sihirbazda açıklama yüzeyi
+  // yok (`_fwHint` kaldırıldı, kapısı da var). Burada yalnız hangi örneğin
+  // yüklendiği yazılı — <select>'in "seçili"si tek başına o ayrımı taşımıyor.
+  var durum = yuklu === null ? ''
+    : '<div class="ve-fw-seeded">✓ <b>' + _fwEsc(yukluAd || 'Boş başla') + '</b> yüklendi'
+      + (yukluAlt ? ' <em>' + _fwEsc(yukluAlt) + '</em>' : '') + '</div>';
+  h += _fwCard('Örnekten doldur', 'var(--accent-success)', _fwField('Örnek', sel) + durum);
   return h;
+}
+
+// AÇILIR LİSTENİN EYLEMİ. Üç durum var ve üçü de ayrı: başlık satırı ('__')
+// bir seçim DEĞİL — seçilirse hiçbir şey yapılmamalı, yoksa listeyi açıp
+// kapatmak yüklü örneği sessizce silerdi. '' gerçek bir eylem (temizle).
+function veFeadWizSeedPick(v){
+  if(v === '__') return;
+  if(v === '') return veFeadWizReset();
+  return veFeadWizSeed(v);
 }
 
 function veFeadWizReset(){
@@ -2693,6 +2727,7 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizStepState: veFeadWizStepState, veFeadWizStepOf: veFeadWizStepOf,
     veFeadWizCanCreate: veFeadWizCanCreate, veFeadWizCreate: veFeadWizCreate,
     veFeadWizOpen: veFeadWizOpen, veFeadWizClose: veFeadWizClose,
+    veFeadWizSeedPick: veFeadWizSeedPick,
     veFeadWizGo: veFeadWizGo, veFeadWizGoto: veFeadWizGoto,
     veFeadWizRender: veFeadWizRender, veFeadWizStepHTML: veFeadWizStepHTML,
     veFeadWizNavHTML: veFeadWizNavHTML, veFeadWizFootHTML: veFeadWizFootHTML,

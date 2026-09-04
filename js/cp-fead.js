@@ -4332,18 +4332,26 @@ function getFeadExamplePropertiesHTML(node){
         + 'yedi adımda sorar ve her adımda modeli <b>canlı çözer</b>. Aşağıdaki hazır '
         + 'örnekler ise tek tıkla kurulur — sihirbazın ilk adımından da '
         + 'doldurulabilirler.'));
-  veFeadExampleKeys().forEach(function(k){
-    var ex = veFeadExampleOf(k);
-    var kasnak = ex.pulleys.length;
+  // AÇILIR LİSTE, ON İKİ KART DEĞİL — kullanıcı isteği (2026-09-02):
+  // *"pencereyi uzatmasaydın keşke, böyle aşağıya indirilebilir bir pencere
+  // yapsaydın."* Sihirbazın 1. adımında yapılan değişikliğin aynısı; sebep de
+  // aynı: liste üç örnek için tasarlanmıştı, arşivin tamamı örnek olunca panel
+  // 12 kart / 21 KB / 60 satır oldu.
+  //
+  // AYRINTI KAYBOLMUYOR, TEKRARI KAYBOLUYOR: künye satırları (kayış · tahrik
+  // oranı · aksesuar · devir noktası) artık on iki kez değil YALNIZ SEÇİLİ
+  // örnek için basılıyor. Seçim düğümde durur (`node.data.pick`) — panel her
+  // yeniden çizildiğinde kullanıcının baktığı örnek yerinde kalsın.
+  function _exOzet(ex){
     var egri = ex.pulleys.filter(function(p){ return p.data && p.data.pwrCurve; }).length;
     // Aksesuar gücü İKİ YOLDAN gelebiliyor: kasnağın kendi devir→kW eğrisinden
     // (tedarikçi sayfasının biçimi) ya da duty satırına doğrudan yazılmış kW'dan
-    // (Gates raporunun biçimi). Kart yalnız eğriyi sayarsa raporlu örnek
-    // "0 aksesuar" der ve boş görünür; ikisi ayrı ayrı yazılıyor.
+    // (Gates raporunun biçimi). Yalnız eğriyi saymak raporlu örneği "0 aksesuar"
+    // gösterirdi; ikisi ayrı ayrı yazılıyor.
     var dutyKw = 0;
     (ex.solver.duty || []).forEach(function(r){
       var m = r && (r.kwByKey || r.kw);
-      if(m) dutyKw = Math.max(dutyKw, Object.keys(m).filter(function(k){ return m[k] > 0.05; }).length);
+      if(m) dutyKw = Math.max(dutyKw, Object.keys(m).filter(function(x){ return m[x] > 0.05; }).length);
     });
     // Birinci kademe SATIRI koşullu: 'derive' kipinde iki çap yazılır, 'direct'
     // kipinde o iki alan YOKTUR ve ham basmak "undefined / undefined mm"
@@ -4359,23 +4367,39 @@ function getFeadExamplePropertiesHTML(node){
       + ' · ' + b.effLength + ' mm'
       + ' · tolerans ' + (b.tolerance > 0 ? '±' + b.tolerance + ' mm' : 'YOK')
       + ' · aşınma ' + (b.wearPct > 0 ? '%' + (b.wearPct * 100).toFixed(2) : 'YOK');
-    html += _feadCard(_feadEsc(ex.name), kasnak + ' kasnak', 'var(--accent-success)',
-        '<div style="font-size:var(--fs-micro); color:var(--text-secondary); line-height:1.5; margin-bottom:9px;">'
+    return '<div style="font-size:var(--fs-micro); color:var(--text-secondary); line-height:1.5; margin-bottom:9px;">'
       + _feadEsc(ex.note) + '</div>'
       + '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.6; margin-bottom:10px;">'
-      + '• kasnak koordinatları + çaplar + temas tarafı<br>'
-      + '• gergi: avara merkezi, kol boyu + çalışma açısı, yay künyesi<br>'
+      + '• ' + ex.pulleys.length + ' kasnak: koordinat + çap + temas tarafı<br>'
+      + '• gergi: montaj merkezi, kol boyu ve açısı, yay künyesi<br>'
       + '• ' + kayis + '<br>'
       + '• ' + (egri ? egri + ' aksesuarın devir → kW eğrisi'
                      : dutyKw + ' aksesuarın kW\'ı duty satırında') + '<br>'
       + '• çalışma çevrimi: ' + ex.solver.duty.length + ' devir noktası<br>'
-      + '• ' + kademe + '</div>'
-      + '<button onclick="veFeadLoadExample(\'' + _feadEsc(k) + '\')" style="width:100%; padding:11px 16px; '
-      + 'font-size:var(--fs-body); font-weight:700; letter-spacing:0.02em; border:none; cursor:pointer; '
-      + 'background:var(--accent-success); color:#fff;">İç topolojiye kur</button>'
-      + _feadHint('<b>Mevcut kasnakların üzerine eklenir</b>, silinmez — boş bir iç topolojide '
-        + 'kurmak en temizidir.'));
+      + '• ' + kademe + '</div>';
+  }
+
+  var keys = veFeadExampleKeys();
+  var secili = (node.data.pick && veFeadExampleOf(node.data.pick)) ? node.data.pick : keys[0];
+  var sec = '<select onchange="veFeadExamplePick(this.value)" style="width:100%; '
+    + 'padding:8px 10px; font-size:var(--fs-body); background:var(--bg-input); '
+    + 'color:var(--text-primary); border:1px solid var(--border-subtle);">';
+  keys.forEach(function(k){
+    var ex = veFeadExampleOf(k);
+    sec += '<option value="' + _feadEsc(k) + '"' + (k === secili ? ' selected' : '') + '>'
+      + _feadEsc(ex.name + '  ·  ' + ex.pulleys.length + ' kasnak') + '</option>';
   });
+  sec += '</select>';
+
+  var ex = veFeadExampleOf(secili);
+  html += _feadCard('Hazır Örnekler', keys.length + ' örnek', 'var(--accent-success)',
+      sec
+    + '<div style="margin-top:10px;">' + _exOzet(ex) + '</div>'
+    + '<button onclick="veFeadLoadExample(\'' + _feadEsc(secili) + '\')" style="width:100%; padding:11px 16px; '
+    + 'font-size:var(--fs-body); font-weight:700; letter-spacing:0.02em; border:none; cursor:pointer; '
+    + 'background:var(--accent-success); color:#fff;">İç topolojiye kur</button>'
+    + _feadHint('<b>Mevcut kasnakların üzerine eklenir</b>, silinmez — boş bir iç topolojide '
+      + 'kurmak en temizidir.'));
   html += '</div>';
   return html;
 }
@@ -4403,6 +4427,20 @@ function veFeadWizOpenAny(){
   }
   if(!n) return false;
   return veFeadWizOpen(n.id);
+}
+
+// AÇILIR LİSTENİN SEÇİMİ. Seçim DÜĞÜMDE durur, modülde değil: panel her
+// yeniden çizildiğinde (başka bir düğüme tıklayıp geri dönmek, undo/redo)
+// kullanıcının baktığı örnek yerinde kalsın. Seçmek KURMAK DEĞİL — kurma
+// eylemi ayrı düğmede; liste yalnız hangi künyeye baktığını değiştiriyor.
+function veFeadExamplePick(key){
+  var n = (typeof getSelectedNode === 'function') ? getSelectedNode() : null;
+  if(!n && typeof nodes !== 'undefined' && Array.isArray(nodes))
+    n = nodes.filter(function(x){ return x.type === 'fead-example'; })[0];
+  if(!n) return;
+  if(!n.data) n.data = {};
+  n.data.pick = key;
+  if(typeof showNodeProperties === 'function') showNodeProperties(n);
 }
 
 function veFeadLoadExample(key){
@@ -5112,6 +5150,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadPowerCurveCard: veFeadPowerCurveCard,
     veFeadCurveAdd: veFeadCurveAdd, veFeadCurveRemove: veFeadCurveRemove,
     veFeadCurveSet: veFeadCurveSet, veFeadLoadExample: veFeadLoadExample,
+    veFeadExamplePick: veFeadExamplePick,
     veFeadArrangeByCoords: veFeadArrangeByCoords,
     veFeadWizOpenAny: veFeadWizOpenAny,
     veFeadPopulateStarter: veFeadPopulateStarter,
