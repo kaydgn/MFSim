@@ -401,6 +401,37 @@ function veFeadWizDutySet(i, alan, val){
   r[alan] = val;
   veFeadWizLiveSoon();
 }
+// ── MOTOR ODASI SICAKLIĞI — TEK ALAN, BÜTÜN SATIRLARA ────────────────────
+//
+// Kullanıcı isteği (2026-09-04): *"buradaki 'C' sütununa da gerek yok. Üst
+// tarafa … 'motor odası sıcaklığı' tarzı bir ifade… Oraya sadece bir değer
+// gireriz."*
+//
+// VERİ MODELİ DEĞİŞMEDİ: sıcaklık satır başına saklanmaya devam ediyor,
+// çünkü köprü ondan bir HASAR-EŞDEĞER sıcaklık türetiyor
+//   degC_eş = 80 + ΔT · log2( Σ wᵢ · 2^((Tᵢ−80)/ΔT) )
+// ve satırlar farklıysa B10 ömrü gerçekten değişir. Kaldırılan şey SÜTUN,
+// alan değil.
+//
+// ÖLÇÜLDÜ: on iki örneğin HEPSİNDE tablo içi sıcaklık tek (90 · 80 · 92 · 70),
+// yani tek alan pratikte hiçbir şey kaybettirmiyor. Yine de satırlar farklıysa
+// alan bunu SESSİZCE düzlemez — okuma "satır başına farklı" der ve yazma
+// ancak kullanıcı alana dokununca olur.
+function veFeadWizDutyTemp(val){
+  if(!_fwState || !_fwState.solver) return;
+  (_fwState.solver.duty || []).forEach(function(r){ r.degC = val; });
+  veFeadWizLiveSoon();
+}
+// Tablodaki sıcaklıkların ortak değeri; satırlar ayrışıksa null.
+function veFeadWizDutyTempOf(duty){
+  var v = null;
+  for(var i = 0; i < (duty || []).length; i++){
+    var t = String(duty[i].degC === undefined || duty[i].degC === null ? '' : duty[i].degC);
+    if(i === 0) v = t; else if(t !== v) return null;
+  }
+  return v;
+}
+
 function veFeadWizDutyKw(i, key, val){
   if(!_fwState) return;
   var r = _fwState.solver.duty[i];
@@ -1562,11 +1593,72 @@ function _fwStepGergi(b){
     : null;
   if(_piv)
     h += _fwCard('Gövdenin Montaj Konumu', 'var(--accent-warning)',
-        _fwRead('p = c − a·(cos θ, sin θ)',
+        _fwReadHTML(_fwTeX('\\vec{p} = \\vec{c} - a\\,(\\cos\\theta,\\ \\sin\\theta)',
+                           'p = c − a·(cos θ, sin θ)'),
           _piv[0].toFixed(2) + ' / ' + _piv[1].toFixed(2) + ' mm')
       );
   return h;
 }
+// ── DENKLEM DİZGİSİ (KaTeX) ───────────────────────────────────────────────
+//
+// Kullanıcı isteği (2026-09-04): *"'gövdenin montaj konumu' kısmında alt
+// tarafta yazan denklem KaTeX formatında olsun. Çok amatör duruyor."*
+//
+// KaTeX PROGRAMIN İÇİNDE GÖMÜLÜ ama TALEP ÜZERİNE açılıyor (~1 MB, rapor
+// varlıklarıyla ORTAK — `window.MNT_REPORT_ASSETS`). Sihirbaz açılırken o
+// megabaytı ödemek, tek bir denklem için bütün adımları yavaşlatmak olurdu.
+// Bu yüzden:
+//   · HTML her zaman düz metin YEDEĞİYLE basılıyor (yükleme başarısız olsa
+//     ya da hiç gelmese bile denklem OKUNUR kalır — boş bir kutu değil),
+//   · varlık geldiğinde `veFeadWizTeXPaint` yerinde dizip yedeği değiştiriyor.
+// Yani KaTeX bir SÜS değil bir YÜKSELTME: yokluğunda yüzey çalışmaya devam
+// ediyor.
+function _fwTeX(tex, duz){
+  return '<span class="ve-fw-tex" data-tex="' + _fwEsc(tex) + '">' + _fwEsc(duz) + '</span>';
+}
+
+var _fwTeXYukleniyor = false;
+// Sayfadaki dizilmemiş denklemleri dizer; varlık yoksa bir kez yüklemeyi dener.
+function veFeadWizTeXPaint(){
+  if(typeof document === 'undefined') return;
+  var hedef = document.querySelectorAll('.ve-fw-tex[data-tex]:not([data-tex-ok])');
+  if(!hedef.length) return;
+  if(typeof katex === 'undefined' || !katex.render){
+    if(_fwTeXYukleniyor || typeof _frEnsureAssets !== 'function') return;
+    _fwTeXYukleniyor = true;
+    try {
+      _frEnsureAssets(function(ok){
+        _fwTeXYukleniyor = false;
+        if(!ok || typeof window === 'undefined' || !window.MNT_REPORT_ASSETS) return;
+        _fwTeXInject(window.MNT_REPORT_ASSETS);
+        veFeadWizTeXPaint();
+      });
+    } catch(e){ _fwTeXYukleniyor = false; }
+    return;
+  }
+  Array.prototype.forEach.call(hedef, function(el){
+    try {
+      katex.render(el.getAttribute('data-tex'), el,
+                   { throwOnError: false, displayMode: false });
+      el.setAttribute('data-tex-ok', '1');
+    } catch(e){ /* yedek metin yerinde kalır */ }
+  });
+}
+// KaTeX'in CSS'i ve betiği sayfaya BİR KEZ enjekte edilir. Fontlar da rapor
+// varlığından geliyor — ağdan hiçbir şey çekilmiyor (çevrimdışı kuralı).
+function _fwTeXInject(A){
+  if(typeof document === 'undefined' || document.getElementById('ve-fw-katex')) return;
+  var st = document.createElement('style');
+  st.id = 've-fw-katex';
+  st.textContent = (A.fontsCss || '') + '\n' + (A.katexCss || '');
+  document.head.appendChild(st);
+  if(typeof katex === 'undefined' && A.katexJs){
+    var sc = document.createElement('script');
+    sc.textContent = A.katexJs;
+    document.head.appendChild(sc);
+  }
+}
+
 // KOL YÖNÜ ALANI — nispi/işaretli gösterim + seçici düğmesi.
 //
 // Alan SAKLANANI DEĞİL GÖSTERİLENİ tutuyor (bkz. veFeadArmShownDeg): kullanıcı
@@ -1594,7 +1686,17 @@ function veFeadWizArmShown(v){
 }
 
 function _fwRead(et, deg){
-  return '<div class="ve-fw-read"><span>' + _fwEsc(et) + '</span><b>' + _fwEsc(deg) + '</b></div>';
+  return _fwReadHTML(_fwEsc(et), deg);
+}
+// ETİKETİ KAÇIŞLAMAYAN sürüm — adı bunu SÖYLÜYOR. `_fwRead` kaçışlamaya devam
+// ediyor ve varsayılan o; bu üretici yalnız etiketi PROGRAMIN KENDİSİ ürettiği
+// yerde çağrılıyor (bugün tek yer: KaTeX denklemi). Sessizce kaçışsız bir
+// `_fwRead` yapmak, kullanıcı metni taşıyan onlarca okumayı da açardı.
+//
+// ÖLÇÜLDÜ: denklem ilk denemede hiç görünmedi — `_fwRead(_fwTeX(...))` çağrısı
+// span'i metne çeviriyordu ve ekranda ham etiket bile çıkmıyordu.
+function _fwReadHTML(etHtml, deg){
+  return '<div class="ve-fw-read"><span>' + etHtml + '</span><b>' + _fwEsc(deg) + '</b></div>';
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1934,6 +2036,8 @@ function veFeadWizAngOpen(){
     ? veFeadArmShownDeg(_fwNum(t.armMeanDeg, NaN)) : NaN;
   VE_FW_ANG = { shown: Number.isFinite(d) ? d : 0, hover: null, zoom: 1 };
   veFeadWizAngRender();
+  veFeadWizEngRender();   // künye penceresi de kaplamanın durumunu izliyor
+  veFeadWizTeXPaint();    // denklemler dizilir (varlık gelmişse)
 }
 function veFeadWizAngClose(){ VE_FW_ANG = null; veFeadWizAngRender(); }
 
@@ -2336,6 +2440,98 @@ function _fwEngineLibRow(s){
   return h;
 }
 
+// Sıcaklık alanı: satırlar ortaksa değeri gösterir, ayrışıksa BOŞ kalır ve
+// yer tutucusu durumu söyler — dolu göstermek, olmayan bir ortak değeri
+// iddia etmek olurdu (bu modülün sessiz sınıfı).
+function _sicaklikAlani(duty){
+  var ortak = veFeadWizDutyTempOf(duty);
+  var ayrisik = (ortak === null) && (duty || []).length > 0;
+  return '<input type="text" inputmode="decimal" class="ve-fw-inp"'
+    + ' value="' + _fwEsc(ortak === null ? '' : ortak) + '"'
+    + ' placeholder="' + (ayrisik ? 'satır başına farklı' : '90') + '"'
+    + ' title="Kayışın gördüğü ortam sıcaklığı. Bütün devir noktalarına yazılır;'
+    + ' ömür hesabı satır başına saklanan sıcaklıklardan hasar-eşdeğer bir'
+    + ' sıcaklık türetiyor."'
+    + ' oninput="veFeadWizDutyTemp(this.value)">';
+}
+
+// ── MOTOR KÜNYESİ ÖZETİ VE PENCERESİ ──────────────────────────────────────
+//
+// ALAN LİSTESİ TEK YERDE: özet, pencere ve "katalogdan mı geldi" ayrımı aynı
+// diziden okuyor. İkinci bir liste, pencereye eklenen bir alanın özette
+// görünmemesi demekti.
+//
+// `kat: true` → motor kataloğunun YAZDIĞI alan (`veFeadEngineApply`).
+// `kat: false` → katalogda KARŞILIĞI OLMAYAN alan; motordan gelemez, elle
+// girilir. Ayrımı gizlemek, kullanıcının "motoru seçtim, hepsi doldu" diye
+// düşünüp boş bir servis faktörüyle devam etmesi demekti.
+var VE_FW_ENG_FIELDS = [
+  { yol: 'solver.cylinders',         ad: 'Silindir sayısı',      br: '—',      ph: '6',    kat: true  },
+  { yol: 'solver.idleRpm',           ad: 'Rölanti',              br: 'RPM',    ph: '700',  kat: true  },
+  { yol: 'solver.governedRpm',       ad: 'Governed',             br: 'RPM',    ph: '2100', kat: true  },
+  { yol: 'solver.noLoadGovernedRpm', ad: 'No load governed',     br: 'RPM',    ph: '2330', kat: true  },
+  { yol: 'solver.overspeedRpm',      ad: 'Overspeed',            br: 'RPM',    ph: '2900', kat: true  },
+  { yol: 'solver.serviceFact',       ad: 'Servis faktörü',       br: '—',      ph: '1.3',  kat: false },
+  { yol: 'solver.crankInertia',      ad: 'Krank mili ataleti',   br: 'kg·m²',  ph: '0.70', kat: false },
+  { yol: 'solver.accelRpmS',         ad: 'İvmelenme',            br: 'RPM/s',  ph: '1000', kat: false },
+  { yol: 'solver.decelRpmS',         ad: 'Yavaşlama',            br: 'RPM/s',  ph: '1000', kat: false },
+  { yol: 'solver.lengthOffsetMm',    ad: 'Boy ofseti',           br: 'mm',     ph: '0',    kat: false }
+];
+
+function _fwEngVal(s, f){
+  var v = s ? s[f.yol.replace('solver.', '')] : undefined;
+  return (v === undefined || v === null || v === '') ? null : v;
+}
+
+// Sayfadaki ÖZET: dört devir sınırı + silindir. Girilmemiş alan "—" ile
+// görünür; yer tutucuyu değermiş gibi basmak boş bir künyeyi dolu gösterirdi.
+function _fwEngineOzet(s){
+  var say = 0, bos = 0;
+  VE_FW_ENG_FIELDS.forEach(function(f){ if(_fwEngVal(s, f) === null) bos++; else say++; });
+  var d = VE_FW_ENG_FIELDS.filter(function(f){ return /Rpm$/.test(f.yol.split('.')[1]); });
+  var devir = d.map(function(f){
+    var v = _fwEngVal(s, f);
+    return v === null ? '—' : String(v);
+  }).join(' · ');
+  return _fwRead('Devir sınırları (rölanti · gov · no-load · overspeed)', devir + ' RPM')
+    + _fwRead('Silindir', (function(){ var v = _fwEngVal(s, VE_FW_ENG_FIELDS[0]); return v === null ? '—' : String(v); })())
+    + _fwRead('Künye alanları', say + ' / ' + VE_FW_ENG_FIELDS.length
+        + (bos ? ' — ' + bos + ' alan boş' : ' — tamam'));
+}
+
+var VE_FW_ENG_OPEN = false;
+function veFeadWizEngOpen(){ VE_FW_ENG_OPEN = true;  veFeadWizEngRender(); }
+function veFeadWizEngClose(){ VE_FW_ENG_OPEN = false; veFeadWizEngRender(); }
+
+function veFeadWizEngHTML(){
+  var s = (_fwState && _fwState.solver) || {};
+  var kat = VE_FW_ENG_FIELDS.filter(function(f){ return f.kat; });
+  var elle = VE_FW_ENG_FIELDS.filter(function(f){ return !f.kat; });
+  function alanlar(liste){
+    return _fwGrid(liste.map(function(f){
+      return _fwField(f.ad + ' [' + f.br + ']', _fwInp(f.yol, { ph: f.ph }));
+    }), Math.min(3, liste.length));
+  }
+  return _fwEngineLibRow(s)
+    + _fwCard('Motordan gelen', 'var(--accent-success)', alanlar(kat))
+    + _fwCard('Motora bağlı olmayan', 'var(--accent-warning)', alanlar(elle))
+    + '<div class="ve-fw-ang-row"><span class="ve-fw-lbl">'
+      + 'Motor kataloğu bu ikinci grubu yazmaz — hiçbir kayıt taşımıyor.</span>'
+      + '<button type="button" class="ve-fw-btn ve-fw-btn-primary"'
+        + ' onclick="veFeadWizEngClose()">Kapat</button></div>';
+}
+
+function veFeadWizEngRender(){
+  if(typeof document === 'undefined') return;
+  var ov = document.getElementById('ve-fw-eng');
+  if(!ov) return;
+  if(!VE_FW_ENG_OPEN){ ov.style.display = 'none'; ov.innerHTML = ''; return; }
+  ov.style.display = 'flex';
+  ov.innerHTML = '<div class="ve-fw-ang-box"><header class="ve-fw-card-h">'
+    + '<span>Motor Künyesi</span></header>'
+    + '<div class="ve-fw-card-b" id="ve-fw-eng-body">' + veFeadWizEngHTML() + '</div></div>';
+}
+
 // ── 6 · MOTOR VE ÇALIŞMA ÇEVRİMİ ───────────────────────────────────────────
 function _fwStepCevrim(b){
   var st = _fwState, s = st.solver || {};
@@ -2385,18 +2581,28 @@ function _fwStepCevrim(b){
         : '')
     );
 
+  // ── MOTOR KÜNYESİ: ON ALAN SAYFADAN KALKTI ──────────────────────────────
+  //
+  // Kullanıcı bildirimi (2026-09-04): *"bunların girdi olmasına bile gerek
+  // yok. Seçilen motor için otomatik gelecek… tıklanır bir buton ve açılır
+  // bir pencere ile bu işi halledelim. Çok kalabalık duruyor."*
+  //
+  // ÖLÇÜLDÜ VE İSTEĞİN YARISI ZATEN DOĞRUYDU: `veFeadEngineApply` katalogdan
+  // BEŞ alanı yazıyor (silindir · rölanti · governed · no-load governed ·
+  // overspeed) artı iki çapı. Kalan beş alan (servis faktörü, krank mili
+  // ataleti, ivmelenme, yavaşlama, boy ofseti) motor kataloğunda HİÇ YOK —
+  // hiçbir kayıt taşımıyor, dolayısıyla motordan "otomatik gelemezler".
+  // Onlara katalogdan bir değer uydurmak bu modülün sessiz hata sınıfı olurdu.
+  //
+  // Bu yüzden sayfada KATALOG SEÇİCİSİ + ÖZET OKUMA + bir düğme duruyor;
+  // alanların kendisi pencerede. Elle giriş KALDIRILMADI: "katalog bir KISIT
+  // değil bir ÖNERİ" kuralı, kullanıcının motoru katalogda olmadığında tek
+  // çıkış yolu.
   h += _fwCard('Motor Künyesi', 'var(--text-secondary)',
       _fwEngineLibRow(s)
-    + _fwGrid([_fwField('Silindir sayısı [—]', _fwInp('solver.cylinders', { ph: '6', step: '1' })),
-               _fwField('Servis faktörü [—]', _fwInp('solver.serviceFact', { ph: '1.3', step: '0.01' })),
-               _fwField('Krank mili ataleti [kg·m²]', _fwInp('solver.crankInertia', { ph: '0.70', step: '0.01' }))], 3)
-    + _fwGrid([_fwField('Rölanti [RPM]', _fwInp('solver.idleRpm', { ph: '700', step: '10' })),
-               _fwField('Governed [RPM]', _fwInp('solver.governedRpm', { ph: '2100', step: '10' })),
-               _fwField('No load governed [RPM]', _fwInp('solver.noLoadGovernedRpm', { ph: '2330', step: '10' })),
-               _fwField('Overspeed [RPM]', _fwInp('solver.overspeedRpm', { ph: '2900', step: '10' }))], 4)
-    + _fwGrid([_fwField('İvmelenme [RPM/s]', _fwInp('solver.accelRpmS', { ph: '1000', step: '10' })),
-               _fwField('Yavaşlama [RPM/s]', _fwInp('solver.decelRpmS', { ph: '1000', step: '10' })),
-               _fwField('Boy ofseti [mm]', _fwInp('solver.lengthOffsetMm', { ph: '0', step: '0.01' }))], 3)
+    + '<div class="ve-fw-reads">' + _fwEngineOzet(s) + '</div>'
+    + '<div class="ve-fw-rowbtns"><button type="button" class="ve-fw-btn"'
+      + ' onclick="veFeadWizEngOpen()">⚙ Künye alanlarını düzenle</button></div>'
     );
 
   // ── DUTY TABLOSU ─────────────────────────────────────────────────────────
@@ -2412,7 +2618,7 @@ function _fwStepCevrim(b){
   // daha kolay olurdu ama kullanıcı hangi devirde ne çekildiğini GÖRMELİ —
   // çekilen güç bütün gerilme zincirini belirliyor.
   var t = '<div class="ve-fw-tblwrap"><table class="ve-fw-tbl"><thead><tr>'
-    + '<th>Devir [RPM]</th><th>%zaman</th><th>°C</th>'
+    + '<th>Devir [RPM]</th><th>%zaman</th>'
     + yuk.map(function(p){
         return '<th>' + _fwEsc(p.name || _fwDefName(p.type)) + '<em>kW · okuma</em></th>'; }).join('')
     + '<th></th></tr></thead><tbody>';
@@ -2422,8 +2628,6 @@ function _fwStepCevrim(b){
         + '" oninput="veFeadWizDutySet(' + i + ',\'rpm\',this.value)"></td>'
       + '<td><input type="text" inputmode="decimal" class="ve-fw-inp" value="' + _fwEsc(r.dcPct === undefined ? '' : r.dcPct)
         + '" placeholder="—" oninput="veFeadWizDutySet(' + i + ',\'dcPct\',this.value)"></td>'
-      + '<td><input type="text" inputmode="decimal" class="ve-fw-inp" value="' + _fwEsc(r.degC === undefined ? '' : r.degC)
-        + '" placeholder="90" oninput="veFeadWizDutySet(' + i + ',\'degC\',this.value)"></td>'
       + yuk.map(function(p){
           var e = _fwKwEff(b, st, i, p);
           return '<td class="ve-fw-ro" title="' + _fwEsc(VE_FW_KW_SRC[e.kaynak] || '') + '">'
@@ -2452,8 +2656,11 @@ function _fwStepCevrim(b){
     if(!suan) ops = '<option value="" selected>— özel (elle düzenlendi) —</option>' + ops;
     cevrimKart = _fwCard('Çalışma Çevrimi Kaydı',
         'var(--accent-success)',
-        _fwField('Çevrim', '<select class="ve-fw-inp" onchange="veFeadWizDutyLib(this.value)">'
-          + ops + '</select>')
+        _fwGrid([
+          _fwField('Çevrim', '<select class="ve-fw-inp" onchange="veFeadWizDutyLib(this.value)">'
+            + ops + '</select>'),
+          _fwField('Motor odası sıcaklığı [°C]', _sicaklikAlani(s.duty))
+        ], 2)
       + '<div class="ve-fw-reads">'
         + _fwRead('Kaynak', secili ? secili.kaynak : 'elle düzenlenmiş tablo')
         + _fwRead('Devir noktası', String((s.duty || []).length))
@@ -3010,6 +3217,11 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizDefault: veFeadWizDefault, veFeadWizState: veFeadWizState,
     veFeadWizNodes: veFeadWizNodes, veFeadWizRoute: veFeadWizRoute,
     veFeadWizBuild: veFeadWizBuild, veFeadWizSeed: veFeadWizSeed,
+    _fwTeX: _fwTeX, veFeadWizTeXPaint: veFeadWizTeXPaint,
+    veFeadWizEngOpen: veFeadWizEngOpen, veFeadWizEngClose: veFeadWizEngClose,
+    veFeadWizEngHTML: veFeadWizEngHTML, veFeadWizEngRender: veFeadWizEngRender,
+    VE_FW_ENG_FIELDS: VE_FW_ENG_FIELDS, _fwEngineOzet: _fwEngineOzet,
+    veFeadWizDutyTemp: veFeadWizDutyTemp, veFeadWizDutyTempOf: veFeadWizDutyTempOf,
     veFeadWizSeedStep: veFeadWizSeedStep,
     veFeadWizPulleyAdd: veFeadWizPulleyAdd, veFeadWizPulleyDel: veFeadWizPulleyDel,
     veFeadWizPulleySet: veFeadWizPulleySet, veFeadWizPulleyType: veFeadWizPulleyType,

@@ -169,3 +169,45 @@ describe('bağlanma', () => {
     expect(govde).toContain('veFeadDutySeed(node)');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ETİKET KULLANICIYA DÖNÜK, KÜNYEYE DEĞİL
+//
+// Kullanıcı isteği (2026-09-04): *"motor çalışma çevrimi seçeneklerini Gates
+// referanslı verme. Buraya daha kullanıcının anlayabileceği şekilde yap."*
+describe('çevrim etiketleri kullanıcıya dönük', () => {
+  const D = require('../../js/fead-duty.js');
+
+  test('hiçbir etikette rapor numarası GEÇMİYOR', () => {
+    D.veFeadDutyList().forEach((r) => {
+      const et = D.veFeadDutyLabel(D.veFeadDutyOf(r.key));
+      expect(et).not.toMatch(/AG\d{4,}/);       // Gates rapor numarası
+      expect(et).not.toMatch(/Gates/i);
+    });
+  });
+
+  test('AMA İZ KAYBOLMUYOR — kaynak alanı duruyor ve rapor numarasını taşıyor', () => {
+    // Seçicinin hemen altındaki "Kaynak" okuması bunu basıyor; etiketten
+    // çıkarmak, ekrandan çıkarmak DEĞİL.
+    const kaynakli = D.veFeadDutyList()
+      .map((r) => D.veFeadDutyOf(r.key).kaynak || '')
+      .filter((k) => /AG\d{4,}/.test(k));
+    expect(kaynakli.length).toBeGreaterThan(4);
+  });
+
+  test('her kaydın kullanıcı başlığı VAR ve hepsi ayrı', () => {
+    const bas = D.veFeadDutyList().map((r) => D.veFeadDutyOf(r.key).baslik);
+    bas.forEach((b) => { expect(typeof b).toBe('string'); expect(b.length).toBeGreaterThan(3); });
+    expect(new Set(bas).size).toBe(bas.length);
+  });
+
+  test('KOPYALAYICI yeni alanı YUTMUYOR — sessiz sınıf', () => {
+    // ÖLÇÜLDÜ: `_fdDutyDeep` beyaz liste ve `baslik` eklendiğinde listeye
+    // yazılmamıştı; kayıt kaynakta duruyordu ama kopyada YOKTU, etiket sessizce
+    // eski `ad`a düşüyordu. Kapı kopyanın alan kümesini tutuyor.
+    const ham = D.veFeadDutyOf('BMC-9');
+    ['key', 'baslik', 'ad', 'kaynak', 'not', 'rpm', 'dcPct'].forEach((k) => {
+      expect(ham[k]).toBeDefined();
+    });
+  });
+});

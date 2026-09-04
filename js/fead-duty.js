@@ -52,6 +52,7 @@ var VE_FEAD_DUTY_DEGC = 90;
 var VE_FEAD_DUTY_DB = [
   {
     key: 'BMC-9',
+    baslik: 'Rölanti ağırlıklı ağır ticari',
     ad: 'BMC 6 silindir — tedarikçi sayfası',
     kaynak: 'FEAD_INFORMATION (BMC, 26.05.2025)',
     not: 'Tedarikçiye GİDEN sayfanın kendi çevrimi. Rölanti ağırlıklı (%25) ' +
@@ -61,6 +62,7 @@ var VE_FEAD_DUTY_DB = [
   },
   {
     key: 'AG00976-12',
+    baslik: 'İnce çözünürlüklü — orta devir bandı ayrıntılı',
     ad: 'Cummins ALT&AC — Gates AG00976',
     kaynak: 'Gates AG00976 (4 sistem: 1715/1705/1668/1655)',
     not: 'Arşivin en ince çözünürlüklü çevrimi; 1400–1800 bandını altı ' +
@@ -70,6 +72,7 @@ var VE_FEAD_DUTY_DB = [
   },
   {
     key: 'AG00686-6',
+    baslik: 'Genel amaçlı ağır ticari',
     ad: 'Altı noktalı ağır ticari — Gates AG00686',
     kaynak: 'Gates AG00686 / AG0868 ailesi (5 sistem)',
     not: 'Arşivde EN ÇOK sistemin paylaştığı çevrim: rölantiden anma ' +
@@ -79,6 +82,7 @@ var VE_FEAD_DUTY_DB = [
   },
   {
     key: 'AG00810-10',
+    baslik: 'Uç noktalarda yoğun — ara devirler ağırlıksız',
     ad: 'Ara noktaları sıfır ağırlıklı — Gates AG00810',
     kaynak: 'Gates AG00810',
     not: 'AG00686 ile aynı ağırlıklar, araya SIFIR ağırlıklı devir noktaları ' +
@@ -88,6 +92,7 @@ var VE_FEAD_DUTY_DB = [
   },
   {
     key: 'AG00894-10',
+    baslik: 'Düşük devirli çalışma',
     ad: 'Düşük devirli — Gates AG00894',
     kaynak: 'Gates AG00894',
     not: 'Devir noktaları eşit aralıklı değil, 519 RPM\'dan başlıyor; ' +
@@ -97,6 +102,7 @@ var VE_FEAD_DUTY_DB = [
   },
   {
     key: 'AG00879-5',
+    baslik: 'Kaba kademeli — beş nokta',
     ad: 'Beş noktalı — Gates AG00879',
     kaynak: 'Gates AG00879',
     not: 'Ağırlığın %70\'i 800–1200 RPM arasında toplanmış.',
@@ -105,6 +111,7 @@ var VE_FEAD_DUTY_DB = [
   },
   {
     key: 'AG00902-4',
+    baslik: 'Yüksek devire uzanan — dört nokta',
     ad: 'Dört noktalı, 3000 RPM\'ya kadar — Gates AG00902',
     kaynak: 'Gates AG00902 (2 sistem: 1300/1275)',
     not: 'Arşivin en kaba çevrimi ve en yüksek devri; ağırlığın %80\'i ' +
@@ -125,9 +132,13 @@ var VE_FEAD_DUTY_DEFAULT = 'AG00686-6';
 
 // ── OKUYUCULAR ─────────────────────────────────────────────────────────────
 
+// BEYAZ LİSTE: yeni bir alan buraya EKLENMEZSE kopyada YOK olur ve çağıran
+// onu `undefined` görür — sessiz, çünkü kod çalışmaya devam eder. `baslik`
+// eklenirken tam olarak bu oldu (etiket eski `ad`a düşüyordu); kapısı
+// tests/unit/fead-duty.test.js'te.
 function _fdDutyDeep(rec){
   return {
-    key: rec.key, ad: rec.ad, kaynak: rec.kaynak, not: rec.not,
+    key: rec.key, baslik: rec.baslik, ad: rec.ad, kaynak: rec.kaynak, not: rec.not,
     rpm: rec.rpm.slice(), dcPct: rec.dcPct.slice()
   };
 }
@@ -147,11 +158,20 @@ function veFeadDutyOf(key){
 // TEK ETİKET ÜRETECİ — panel de sihirbaz da buradan okur. İki yüzey aynı
 // listeyi farklı adlandırsaydı kullanıcı sihirbazda seçtiğini panelde
 // bulamazdı (gergi künyesi turunda ölçülmüş sınıf).
+// ETİKET KULLANICIYA DÖNÜK, KÜNYEYE DEĞİL — kullanıcı isteği (2026-09-04):
+// *"motor çalışma çevrimi seçeneklerini Gates referanslı verme. Buraya daha
+// kullanıcının anlayabileceği şekilde yap."*
+//
+// İZ KAYBOLMUYOR: `kaynak` alanı duruyor ve iki yüzeyde de seçicinin HEMEN
+// ALTINDA okuma olarak basılıyor ("Kaynak: Gates AG00976 …"). Yani rapor
+// numarası ekrandan kalkmadı, ETİKETTEN kalktı — seçim yaparken okunan şey
+// çevrimin ne olduğu, nereden geldiği değil.
 function veFeadDutyLabel(rec){
   if(!rec) return '';
+  var ad = rec.baslik || rec.ad || rec.key || '';
   var n = rec.rpm ? rec.rpm.length : 0;
-  if(!n) return String(rec.ad || rec.key || '');
-  return rec.ad + '  ·  ' + n + ' nokta · '
+  if(!n) return String(ad);
+  return ad + '  ·  ' + n + ' nokta · '
        + rec.rpm[0] + '–' + rec.rpm[n - 1] + ' RPM';
 }
 
