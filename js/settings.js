@@ -81,8 +81,14 @@ function _veSettingsRenderAppearance() {
   var dark = [
     { id: 'slate',  name: 'Midnight',        swatch: ['#0a0c10', '#151a22', '#2563eb'] },
     { id: 'cream',  name: 'Carbon',          swatch: ['#161616', '#222222', '#e05020'] },
-    { id: 'claude', name: 'Claude',          swatch: ['#2b2520', '#342e28', '#d4835e'] },
+    { id: 'claude', name: 'Claude',          swatch: ['#141413', '#252420', '#d97757'] },
     { id: 'navy',   name: 'Donanma Mavisi',  swatch: ['#0a1728', '#17324f', '#d9b25a'] }
+  ];
+  // Yüksek kontrast ailesi — saf siyah zemin + fosfor ekran geleneği
+  var kontrast = [
+    { id: 'contrast', name: 'Yüksek Kontrast', swatch: ['#000000', '#171717', '#4db8ff'] },
+    { id: 'amber',    name: 'Fosfor Kehribar', swatch: ['#0a0705', '#1c150d', '#ffb000'] },
+    { id: 'scope',    name: 'Osiloskop',       swatch: ['#05070a', '#121821', '#7ceaff'] }
   ];
   var pro = [
     { id: 'ansys',  name: 'ANSYS',           swatch: ['#1a2632', '#2a3d4f', '#ffb71b'] },
@@ -117,6 +123,9 @@ function _veSettingsRenderAppearance() {
     'gözü yormaz; renk yalnız seçim ve durum bildirir.');
   html += group('Sade — Açık', sadeLight);
   html += group('Koyu', dark);
+  html += group('Yüksek Kontrast', kontrast,
+    'Saf siyah zemin ve fosfor ekran geleneği. Diğer koyu temaların metin ' +
+    'kontrastı 15,2\'de tavan yapıyor; bu aile 16–18 arasında.');
   html += group('Profesyonel', pro);
   html += group('Açık', light);
   return html;

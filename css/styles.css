@@ -146,37 +146,46 @@
       --ink-danger: #aa3434;
     }
 
-    /* Tema: Claude — Claude Code koyu sıcak kahve */
+    /* Tema: Claude — Anthropic marka paleti
+       ÇIPALAR BELGELENMİŞ marka değerleridir, claude.ai'den örneklenmiş
+       DEĞİL: koyu #141413, krem #faf9f5, imza turuncu #d97757, imza yeşil
+       #788c5d, Cloudy #B1ADA1. Anthropic koyu mod tasarım jetonlarını
+       yayınlamıyor; aradaki yüzeyler (bg-secondary/tertiary, kenarlıklar)
+       bu çıpalardan TÜRETİLDİ — "canlı arayüzün rengi" diye sunulmuyor.
+       Uyarı ve tehlike marka paletinde YOK; ikisi de önceki Claude
+       temasının işlevsel değerleri, çünkü kırmızı/kehribar sinyalinin
+       turuncu aksandan ayrışması markadan önce gelir.
+       Kontrast: tests/unit/theme-contrast.test.js (dört zeminde AA). */
     [data-theme="claude"] {
       color-scheme: dark;
-      --bg-primary: #2b2520;
-      --bg-secondary: #231e1a;
-      --bg-tertiary: #342e28;
-      --bg-input: #1c1815;
-      --border-color: #3d352e;
-      --border-light: #453c34;
-      --border-hover: #5a4f44;
-      --text-primary: #e0d6ca;
-      --text-secondary: #beb6ab;
-      --text-muted: #a19589;
-      --text-heading: #f0e8dc;
-      --accent-primary: #d4835e;
-      --accent-success: #5a9a6a;
-      --accent-warning: #c89545;
+      --bg-primary: #141413;
+      --bg-secondary: #1c1b19;
+      --bg-tertiary: #252420;
+      --bg-input: #0e0e0d;
+      --border-color: #2b2a26;
+      --border-light: #35332e;
+      --border-hover: #4a4841;
+      --text-primary: #ebe9e2;
+      --text-secondary: #b1ada1;
+      --text-muted: #918d82;
+      --text-heading: #faf9f5;
+      --accent-primary: #d97757;
+      --accent-success: #788c5d;
+      --accent-warning: #c9973f;
       --accent-danger: #c45a4a;
-      --shadow-color: rgba(0, 0, 0, 0.4);
+      --shadow-color: rgba(0, 0, 0, 0.5);
       /* Aksan ZEMİNİNİN üstünde okunacak renk. Beyaz her aksanda
          yetmiyor: kehribar uyarı çipinde 2,3:1e kadar iniyordu. */
-      --on-accent: #452212;
-      --on-success: #152419;
-      --on-warning: #402f13;
+      --on-accent: #2b1006;
+      --on-success: #0d1408;
+      --on-warning: #3a2a08;
       --on-danger: #070302;
       /* Aksanın METİN sürümü: zeminin üstünde okunacak kadar açık/koyu.
          Aksanın kendisi zemin, kenarlık ve gösterge olarak kullanılmaya devam
          eder — orada 3:1 yeter, metinde 4,5:1 gerekiyor. Aksan zaten yetiyorsa
          belirteç doğrudan ona bağlanır, yani görünüm hiç değişmez. */
-      --ink-accent: #d58561;
-      --ink-success: #68a778;
+      --ink-accent: var(--accent-primary);
+      --ink-success: #9bb37a;
       --ink-warning: var(--accent-warning);
       --ink-danger: #d38579;
     }
@@ -587,6 +596,131 @@
       --ink-accent: var(--accent-primary);
       --ink-success: var(--accent-success);
       --ink-warning: #845c20;
+      --ink-danger: var(--accent-danger);
+    }
+
+    /* Tema: Yüksek Kontrast — saf siyah zemin, azami okunurluk
+       Diğer on bir koyu temanın metin kontrastı 15,17'de tavan yapıyordu ve
+       hiçbiri saf siyah kullanmıyordu (en koyusu #0a0c10). Bu tema o boşluk
+       için: zemin #000, başlık saf beyaz.
+       Gövde metni BİLEREK #f2f2f2 — saf beyaz gövdede halation yapıyor (metin
+       siyah zeminde taşıyormuş gibi görünür, astigmatta belirgin). 16,01:1
+       hâlâ diğer bütün koyu temalardan yüksek.
+       Kenarlıklar da bilerek parlak (#3a3a3a+): saf siyahta olağan koyu
+       kenarlık HİÇ görünmüyor, paneller birbirine akıyordu. */
+    [data-theme="contrast"] {
+      color-scheme: dark;
+      --bg-primary: #000000;
+      --bg-secondary: #0a0a0a;
+      --bg-tertiary: #171717;
+      --bg-input: #000000;
+      --border-color: #3a3a3a;
+      --border-light: #4d4d4d;
+      --border-hover: #757575;
+      --text-primary: #f2f2f2;
+      --text-secondary: #d4d4d4;
+      --text-muted: #ababab;
+      --text-heading: #ffffff;
+      --accent-primary: #4db8ff;
+      --accent-success: #00e676;
+      --accent-warning: #ffd400;
+      --accent-danger: #ff5252;
+      --shadow-color: rgba(0, 0, 0, 0.85);
+      /* Aksan ZEMİNİNİN üstünde okunacak renk. Beyaz her aksanda
+         yetmiyor: kehribar uyarı çipinde 2,3:1e kadar iniyordu. */
+      --on-accent: #001b33;
+      --on-success: #00220f;
+      --on-warning: #332a00;
+      --on-danger: #2b0000;
+      /* Aksanın METİN sürümü: zeminin üstünde okunacak kadar açık/koyu.
+         Aksanın kendisi zemin, kenarlık ve gösterge olarak kullanılmaya devam
+         eder — orada 3:1 yeter, metinde 4,5:1 gerekiyor. Aksan zaten yetiyorsa
+         belirteç doğrudan ona bağlanır, yani görünüm hiç değişmez. */
+      --ink-accent: var(--accent-primary);
+      --ink-success: var(--accent-success);
+      --ink-warning: var(--accent-warning);
+      --ink-danger: var(--accent-danger);
+    }
+
+    /* Tema: Fosfor Kehribar — P3 kehribar CRT
+       Tasarım sistemi köşe yarıçapını "ölçüm yazılımı keskinliği —
+       CANoe/osiloskop geleneği" diye gerekçelendiriyor; bu tema o geleneğin
+       renk karşılığı. Metnin ÜÇ kademesi de kehribar: monokrom karakter
+       nötrlerde değil, YAZININ kendisinde.
+       Durum renkleri monokroma feda EDİLMEDİ (mono temasının kararı): uyarı
+       ve tehlike sıcak rampada ayrışıyor — kehribar 41° → turuncu 26° →
+       kırmızı 4°. Aksan kehribarla uyarı turuncusu bilerek ayrı tonda,
+       yoksa uyarı çipi seçim vurgusundan ayırt edilemezdi. */
+    [data-theme="amber"] {
+      color-scheme: dark;
+      --bg-primary: #0a0705;
+      --bg-secondary: #120d08;
+      --bg-tertiary: #1c150d;
+      --bg-input: #050403;
+      --border-color: #2e2214;
+      --border-light: #3d2e1b;
+      --border-hover: #5a4426;
+      --text-primary: #ffb000;
+      --text-secondary: #d99422;
+      --text-muted: #b3761a;
+      --text-heading: #ffd27a;
+      --accent-primary: #ffb000;
+      --accent-success: #8a9c4f;
+      --accent-warning: #ff7518;
+      --accent-danger: #ff4033;
+      --shadow-color: rgba(0, 0, 0, 0.7);
+      /* Aksan ZEMİNİNİN üstünde okunacak renk. Beyaz her aksanda
+         yetmiyor: kehribar uyarı çipinde 2,3:1e kadar iniyordu. */
+      --on-accent: #241500;
+      --on-success: #0d1005;
+      --on-warning: #2b0f00;
+      --on-danger: #2e0300;
+      /* Aksanın METİN sürümü: zeminin üstünde okunacak kadar açık/koyu.
+         Aksanın kendisi zemin, kenarlık ve gösterge olarak kullanılmaya devam
+         eder — orada 3:1 yeter, metinde 4,5:1 gerekiyor. Aksan zaten yetiyorsa
+         belirteç doğrudan ona bağlanır, yani görünüm hiç değişmez. */
+      --ink-accent: var(--accent-primary);
+      --ink-success: #a3b862;
+      --ink-warning: #ff8f42;
+      --ink-danger: #ff6b60;
+    }
+
+    /* Tema: Osiloskop — fosfor camgöbeği iz, graticule koyusu
+       Kehribarın soğuk kardeşi: zemin skop ekranı gibi mavi-siyah, yazı
+       fosfor izi. Aksan camgöbeği olduğu için durum renkleri (yeşil/kehribar/
+       kırmızı) tonca uzakta kalıyor — kehribar temasındaki rampa sıkışması
+       burada YOK, üçü de doğal hâllerinde durabiliyor. */
+    [data-theme="scope"] {
+      color-scheme: dark;
+      --bg-primary: #05070a;
+      --bg-secondary: #0a0e14;
+      --bg-tertiary: #121821;
+      --bg-input: #030507;
+      --border-color: #1e2a38;
+      --border-light: #2a3a4c;
+      --border-hover: #3f5a72;
+      --text-primary: #7ceaff;
+      --text-secondary: #5cc4dd;
+      --text-muted: #4a9cb5;
+      --text-heading: #c4f4ff;
+      --accent-primary: #7ceaff;
+      --accent-success: #4fd18a;
+      --accent-warning: #ffc233;
+      --accent-danger: #ff5c5c;
+      --shadow-color: rgba(0, 0, 0, 0.75);
+      /* Aksan ZEMİNİNİN üstünde okunacak renk. Beyaz her aksanda
+         yetmiyor: kehribar uyarı çipinde 2,3:1e kadar iniyordu. */
+      --on-accent: #00212b;
+      --on-success: #00190e;
+      --on-warning: #2b2000;
+      --on-danger: #2b0000;
+      /* Aksanın METİN sürümü: zeminin üstünde okunacak kadar açık/koyu.
+         Aksanın kendisi zemin, kenarlık ve gösterge olarak kullanılmaya devam
+         eder — orada 3:1 yeter, metinde 4,5:1 gerekiyor. Aksan zaten yetiyorsa
+         belirteç doğrudan ona bağlanır, yani görünüm hiç değişmez. */
+      --ink-accent: var(--accent-primary);
+      --ink-success: var(--accent-success);
+      --ink-warning: var(--accent-warning);
       --ink-danger: var(--accent-danger);
     }
 
@@ -2986,7 +3120,7 @@
   top:100%;
   left:50%;
   transform:translateX(-50%);
-  margin-top:4px;
+  margin-top:6px;
   font-size:var(--fs-body);
   color:var(--text-primary);
   text-align:center;
@@ -2996,7 +3130,7 @@
   transition:transform var(--dur-fast) var(--ease-out);
 }
 /* Etiket konumu — sağ-tık menüsüyle taşınır (node.data.labelPos). Varsayılan alt. */
-.ve-node-label.lbl-top{ top:auto; bottom:100%; margin-top:0; margin-bottom:4px; }
+.ve-node-label.lbl-top{ top:auto; bottom:100%; margin-top:0; margin-bottom:6px; }
 .ve-node-label.lbl-left{ top:50%; left:auto; right:100%; transform:translateY(-50%); margin-top:0; margin-right:7px; text-align:right; }
 .ve-node-label.lbl-right{ top:50%; left:100%; right:auto; transform:translateY(-50%); margin-top:0; margin-left:7px; text-align:left; }
 
@@ -6186,6 +6320,14 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   background:#f59e0b;
   box-shadow:none;
   opacity:0.5;
+}
+/* Gömülü künye: elindeki kopyanın kimliği. YEŞİL DEĞİL — yeşil 'yayın güncel'
+   demek ve çevrimdışı bir kopya bunu bilemez; iddia edilmeyen bir bilgi
+   renkle iddia edilmesin. */
+.ve-deploy-local {
+  background:var(--accent-primary);
+  box-shadow:none;
+  opacity:0.75;
 }
 @keyframes deployPulse {
   0%, 100% { opacity:1; transform:scale(1); }

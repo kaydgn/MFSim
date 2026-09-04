@@ -310,3 +310,126 @@ describe('gergi künye kütüphanesi — arşive karşı', () => {
     });
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════════
+//  DÖNÜŞ YÖNÜ KONVANSİYONU
+// ══════════════════════════════════════════════════════════════════════════
+// Raporlar dönüş yönünü ÇİZMİYOR ve YAZMIYOR; sıradan çıkarılıyor. Bu blok
+// ölçülen konvansiyonu kilitliyor — ayrıntısı docs/gates-reports/README.md.
+describe('Gates arşivi — dönüş yönü konvansiyonu', () => {
+  const F = require('../../js/fead-core.js');
+  const TL = require('../../js/fead-tensioners.js');
+  const KEY = {
+    'AG00686': 'AG00686', 'AG00686-1520': 'AG00686-1520', 'AG0868': 'AG0868-8PK',
+    'AG0868-6PK': 'AG0868-6PK', 'AG0868-4PK': 'AG0868-4PK', 'AG00810': 'AG00810',
+    'AG00879': 'AG00879', 'AG00894': 'AG00894',
+    'AG00902-1300': 'AG00902-1300', 'AG00902-1275': 'AG00902-1275',
+  };
+  // Ayakkabı bağı: kayış sırasındaki merkezlerin dolanma yönü. +1 = CCW.
+  const loopSense = (c) => {
+    let s = 0;
+    for (let i = 0; i < c.length; i++) {
+      const a = c[i], b = c[(i + 1) % c.length];
+      s += a[0] * b[1] - b[0] * a[1];
+    }
+    return s >= 0 ? +1 : -1;
+  };
+
+  test('kayış yolu ON RAPORUN ONUNDA DA çizim düzleminde CCW', () => {
+    Object.keys(KEY).forEach((k) => {
+      const d = V.AG_MISC[k];
+      expect(loopSense(d.order.map((p) => d.xy[p]))).toBe(+1);
+      // Kapalı çevrim değişmezi de aynı şeyi söyler: −360 hiç görülmüyor.
+      const g = F.geometryAt(V.buildMisc(k), F.meanRel(V.buildMisc(k)));
+      expect(g.signedWrapDeg).toBeCloseTo(360, 1);
+    });
+  });
+
+  test('kaburgalı halkayla AYNI, sırttan temas TERS döner — istisnasız', () => {
+    Object.keys(KEY).forEach((k) => {
+      const sys = V.buildMisc(k);
+      const g = F.geometryAt(sys, F.meanRel(sys));
+      g.pulleys.forEach((p) => {
+        expect(p.d > 0).toBe(p.contact === 'grooved');
+      });
+    });
+  });
+
+  // EN PAHALI TUZAK: tedarikçinin CW/CCW harfi, çizim düzlemindeki kol yönünün
+  // TERSİ. Katalog bir gün o harfi doğrudan `sense`'e yazarsa kol ters döner —
+  // model yine çözülür, uyarı çıkmaz, yalnız gerginlik kayar.
+  test('Drive Notes CW/CCW, çizim düzlemindeki kol yönünün TERSİ', () => {
+    const bad = [];
+    let n = 0;
+    Object.entries(KEY).forEach(([fx, libKey]) => {
+      const rec = TL.veFeadTensionerOf(libKey);
+      if (!rec || !rec.part) return;
+      const not = (sayfa(STATIK[fx], 'Geometric Analysis, Sheet 1 of 2')
+        .match(/\b(CCW|CW)\b/) || [])[1];
+      if (!not) return;                       // ALTI raporda not var, dördünde yok
+      n++;
+      const sense = V.buildMisc(fx).tensioner.sense;   // +1 = çizimde CCW
+      const cizim = sense > 0 ? 'CCW' : 'CW';
+      if (not === cizim) bad.push(`${fx}: not ${not} ile çizim ${cizim} AYNI (ters olmalı)`);
+    });
+    expect(bad).toEqual([]);
+    expect(n).toBe(6);
+  });
+
+  // Parça harfi bir PARÇA özelliği: aynı kod her raporda aynı harfi taşır.
+  test('CW/CCW parça başına tutarlı — T38624 CW, E9843/T38519 CCW', () => {
+    const byPart = {};
+    Object.entries(KEY).forEach(([fx, libKey]) => {
+      const rec = TL.veFeadTensionerOf(libKey);
+      if (!rec || !rec.part) return;
+      const not = (sayfa(STATIK[fx], 'Geometric Analysis, Sheet 1 of 2')
+        .match(/\b(CCW|CW)\b/) || [])[1];
+      if (not) (byPart[rec.part] = byPart[rec.part] || new Set()).add(not);
+    });
+    expect(Array.from(byPart['T38624'])).toEqual(['CW']);
+    expect(Array.from(byPart['E9843'])).toEqual(['CCW']);
+    expect(Array.from(byPart['T38519'])).toEqual(['CCW']);
+  });
+
+  // Gergi serpantinde EN SONDA ve krankla başlıyor → gergi, kayışın kranka
+  // dönüş açıklığında, yani GEVŞEK tarafta.
+  test('gergi son sırada, krank ilk — on raporun onunda da', () => {
+    Object.keys(KEY).forEach((k) => {
+      const d = V.AG_MISC[k];
+      const son = d.order[d.order.length - 1];
+      expect(d.pulley[son].ten).toBeTruthy();
+      expect(d.pulley[d.order[0]].crank).toBeTruthy();
+    });
+  });
+
+  // ...ama MATEMATİK bu konumdan BAĞIMSIZ: zincir T[t]=ankraj ile başlayıp
+  // (t+j)%n dolaşıyor. Çevrimsel döndürme sonucu DEĞİŞTİRMEZ. Bu test "gergi
+  // en sonda" kuralının bir YAZIM konvansiyonu olduğunu belgeliyor.
+  test('çevrimsel döndürme sonucu değiştirmez — konum bir yazım kuralı', () => {
+    const d = V.AG_MISC['AG00686'];
+    const kur = (rot) => {
+      const o = d.order.slice(rot).concat(d.order.slice(0, rot));
+      const sys = F.makeSystem({
+        pulleys: o.map((nm) => { const q = d.pulley[nm]; return Object.assign(
+          { name: nm, rPitch: q.p / 2, rEff: q.e / 2, contact: q.c },
+          q.ten ? { tensioner: true } : { x: d.xy[nm][0], y: d.xy[nm][1] },
+          q.crank ? { crank: true } : {}); }),
+        belt: { profile: 'PK', brand: 'GATES', ribs: d.ribs || 8, effLength: d.belt,
+                tolerance: d.tol, wearPct: d.wear / 100 },
+        tensioner: { pivot: d.pivot, armLength: d.arm, preloadNm: d.preload,
+                     rateNmPerDeg: d.rate,
+                     freeAngleDeg: d.freeAbsDeg > 180 ? d.freeAbsDeg - 360 : d.freeAbsDeg },
+        designTensionN: d.design, driveRatio: 1, lengthOffsetMm: 0 });
+      const g = F.geometryAt(sys, F.meanRel(sys));
+      const st = F.spanTensions(sys, { engineRpm: 800, loadsKw: d.duty[0].kw });
+      const m = {};
+      st.perPulley.forEach((p) => { m[p.name] = p.exitTensionN; });
+      return { L: g.LeffMm, m: m };
+    };
+    const R = [0, 1, 2, 3].map(kur);
+    R.forEach((r) => {
+      expect(r.L).toBeCloseTo(R[0].L, 9);
+      Object.keys(R[0].m).forEach((nm) => expect(r.m[nm]).toBeCloseTo(R[0].m[nm], 9));
+    });
+  });
+});

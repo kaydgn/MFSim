@@ -1119,13 +1119,16 @@ function vePortBoxStyle(node, portType){
 // kusuru gösteriyordu. Üç çizici (export-topology.js, topo-mini.js,
 // topology.js şerit paneli) artık buradan okuyor.
 // gap: 'bottom' için taban çizgisinin kutu altından uzaklığı (çiziciye göre
-// 13–14 px). Yanlar CSS ile aynı: 7 px; üst 5 px.
+// 15–16 px). Yanlar CSS ile aynı: 7 px; üst 7 px.
+// DİKEY boşluk CSS'teki .ve-node-label margin'iyle (VE_LABEL_GAP_V) birlikte
+// hareket eder: ekranda açılan aralık dışa aktarılan SVG/PNG'de de açılmalı,
+// yoksa çıktı ekrandan daha sıkı görünür. Yatay 7 px'e dokunulmadı.
 function veNodeLabelAnchor(node, w, h, gap){
   var pos = (node && node.data && node.data.labelPos) || 'bottom';
-  var g = (typeof gap === 'number' && isFinite(gap)) ? gap : 14;
+  var g = (typeof gap === 'number' && isFinite(gap)) ? gap : 16;
   var x = node.x, y = node.y;
   switch(pos){
-    case 'top':   return { x: x + w / 2, y: y - 5,          anchor: 'middle', pos: 'top' };
+    case 'top':   return { x: x + w / 2, y: y - 7,          anchor: 'middle', pos: 'top' };
     case 'left':  return { x: x - 7,     y: y + h / 2 + 4,  anchor: 'end',    pos: 'left' };
     case 'right': return { x: x + w + 7, y: y + h / 2 + 4,  anchor: 'start',  pos: 'right' };
     default:      return { x: x + w / 2, y: y + h + g,      anchor: 'middle', pos: 'bottom' };

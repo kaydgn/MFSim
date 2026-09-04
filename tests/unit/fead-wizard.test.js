@@ -1275,13 +1275,19 @@ describe('dönüş yönü — Kasnaklar adımında seçilir', () => {
     const y0 = b.spin, r0 = st.route.slice();
     expect(y0).not.toBe(0);
 
+    // DÜĞMELER ÖN GÖRÜNÜŞTE KONUŞUR. `b.spin` veri düzlemini ölçüyor, çizim
+    // aynalı; ikisi TERS. Bu satır o çeviriyi ölçüyor — düğmeye veri düzlemi
+    // değeri geçmek "aynı yönü seçtim" derken TERSİNİ seçmek olurdu.
+    const f0 = M.veFeadSpinToFront(y0);
+    expect(f0).toBe(-y0);
+
     // AYNI yön seçilirse HİÇBİR ŞEY olmaz (aksi hâlde bir aç/kapa gibi
     // davranır ve ikinci tık sırayı geri çevirirdi).
-    expect(wiz.veFeadWizSpinSet(y0)).toBe(false);
+    expect(wiz.veFeadWizSpinSet(f0)).toBe(false);
     expect(st.route).toEqual(r0);
 
     // TERS yön: sıra çevrilir, yön çevrilir.
-    expect(wiz.veFeadWizSpinSet(-y0)).toBe(true);
+    expect(wiz.veFeadWizSpinSet(-f0)).toBe(true);
     expect(st.route).not.toEqual(r0);
     b = wiz.veFeadWizBuild();
     expect(b.spin).toBe(-y0);
@@ -1290,9 +1296,35 @@ describe('dönüş yönü — Kasnaklar adımında seçilir', () => {
     expect(JSON.stringify(st)).not.toMatch(/"spin"|"dir"|"yon"/);
 
     // Geri dönüş BİREBİR.
-    expect(wiz.veFeadWizSpinSet(y0)).toBe(true);
+    expect(wiz.veFeadWizSpinSet(f0)).toBe(true);
     expect(st.route).toEqual(r0);
     expect(wiz.veFeadWizBuild().spin).toBe(y0);
+  });
+
+  // Kullanıcı kararı (2026-08-28): *"kayışın dönüş yönünü default olarak saat
+  // yönünde yapacağız."* Bu, veri düzlemini DEĞİL görüneni bağlar — Gates
+  // düzleminde on raporun onu da CCW ve arşivle karşılaştırılabilirlik oradan
+  // geliyor. Kapı bu yüzden ÖN GÖRÜNÜŞÜ ölçüyor.
+  test('VARSAYILAN ÖN GÖRÜNÜŞTE SAAT YÖNÜ — iki örnekte de', () => {
+    ['AG00976_GATES_2025', 'BMC_FEAD_2026'].forEach((k) => {
+      kabuk(); wiz.veFeadWizSeed(k);
+      const b = wiz.veFeadWizBuild();
+      expect(b.spin).toBe(1);                       // veri düzleminde CCW
+      expect(M.veFeadSpinToFront(b.spin)).toBe(-1); // ÖN GÖRÜNÜŞTE CW
+      expect(M.veFeadSpinLabel(b.spin).kisa).toContain('CW');
+      expect(M.veFeadSpinLabel(b.spin).kisa).not.toContain('CCW');
+    });
+  });
+
+  // Düğmenin BASILI görüneni ile modelin gerçekte kurduğu yön ayrışırsa hata
+  // SESSİZDİR: sayılar makul kalır, yalnız seçici yalan söyler.
+  test('BASILI DÜĞME ÖN GÖRÜNÜŞÜ İZLER', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const b = wiz.veFeadWizBuild();
+    const h = wiz.veFeadWizSpinHTML(b);
+    const acik = h.split('<button').filter((x) => /ve-fw-spin-on/.test(x));
+    expect(acik).toHaveLength(1);
+    expect(acik[0]).toMatch(/veFeadWizSpinSet\(-1\)/);   // CW düğmesi
   });
 
   test('GEOMETRİ DEĞİŞMEZ — cebirsel özdeşlik', () => {
@@ -1379,7 +1411,42 @@ describe('serpantin sırası — iki sıra birleşti', () => {
     expect(b1.beltLengthMm).toBeCloseTo(b0.beltLengthMm, 6);
     expect(b1.springTensionN).toBeCloseTo(b0.springTensionN, 6);
     expect(b1.spin).toBe(-b0.spin);
-    expect(b1.warnings).toEqual([]);
+
+    // ÇEVİRME GERGİYİ SÜRÜCÜNÜN ÖBÜR YANINA GEÇİRİR — ve bu kaçınılmaz.
+    // Halkada gerginin komşusu iki yanda da sürücü; ters yürütünce "sürücüden
+    // ÖNCE" olan "sürücüden SONRA" oluyor. Sıra ÇEVRİMSEL döndürülerek
+    // düzeltilemez: gergiyi sona almak sürücüyü baştan düşürür.
+    expect(b0.tensionerOrder).toEqual({ index: 5, count: 6, last: true });
+    expect(b1.tensionerOrder).toEqual({ index: 1, count: 6, last: false });
+    expect(b0.warnings).toEqual([]);
+    expect(b1.warnings.filter((w) => /son sırada değil/.test(w))).toHaveLength(1);
+
+    // AMA FİZİK BOZULMUYOR — ve bu ayrım, uyarının neden bir ZORLAMA
+    // olmadığının kendisi. `tensionerSide` span gerilmelerinin ankrajın altına
+    // inip inmediğine bakıyor; zincir gergide ankrajlı olduğu için ters
+    // yürütme onu değiştirmiyor. İki ölçüt AYRI sorular soruyor ve burada
+    // GERÇEKTEN ayrışıyorlar (biri ötekinin kopyası olsaydı ayrışamazlardı).
+    expect(veFeadAnalyze(b0).tensionerSide).toEqual({ ok: true });
+    expect(veFeadAnalyze(b1).tensionerSide).toEqual({ ok: true });
+  });
+
+  // Hüküm ÜRETİLEN YÜZEYDEN ölçülüyor, üreticiden değil — bu depoda üç kez
+  // aynı ders çıktı: `veFeadWizRouteReverse`'i doğrudan çağıran bir kapı,
+  // kartın onu BASMADIĞINI göremez.
+  test('SIRA KARTI HÜKMÜ BASAR — iki durumda da', () => {
+    const st = elleKur();
+    const iyi = wiz.veFeadWizStepHTML(2, wiz.veFeadWizBuild());
+    expect(iyi).toMatch(/Gergi sırada <strong>son<\/strong>/);
+    expect(iyi).not.toMatch(/son değil/);
+
+    wiz.veFeadWizRouteReverse();
+    const kotu = wiz.veFeadWizStepHTML(2, wiz.veFeadWizBuild());
+    expect(kotu).toMatch(/son değil \(2\/6\)/);
+    // ÇARE UYDURULMUYOR: sayıların etkilenmediği AYNI cümlede yazılı, yoksa
+    // okuyucu bunu bir hesap hatası sanardı.
+    expect(kotu).toMatch(/Sayılar bundan etkilenmez/);
+    expect(kotu).not.toMatch(/undefined|NaN|\[object/);
+    void st;
   });
 
   test('GERGİ SATIRI TAŞINABİLİYOR — oklar artık ölü değil', () => {
@@ -1406,11 +1473,14 @@ describe('serpantin sırası — iki sıra birleşti', () => {
   test('YÖN SEÇİCİSİ de bu yoldan geçiyor — elle kurulmuş modelde', () => {
     const st = elleKur();
     const b0 = wiz.veFeadWizBuild();
-    expect(wiz.veFeadWizSpinSet(-b0.spin)).toBe(true);
+    expect(wiz.veFeadWizSpinSet(-M.veFeadSpinToFront(b0.spin))).toBe(true);
     const b1 = wiz.veFeadWizBuild();
     expect(b1.spin).toBe(-b0.spin);
     expect(b1.beltLengthMm).toBeCloseTo(b0.beltLengthMm, 6);
-    expect(b1.warnings).toEqual([]);
+    // Yön seçicisi çevirmeye devrettiği için gergi de sürücünün öbür yanına
+    // geçiyor; hüküm sıranın yanında basılıyor (bkz. yukarıdaki test).
+    expect(b1.tensionerOrder.last).toBe(false);
+    expect(b1.warnings.filter((w) => !/son sırada değil/.test(w))).toEqual([]);
   });
 });
 
@@ -2190,14 +2260,19 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
     const k2 = oku(wiz.veFeadWizAngSVG(sc, 0, 2), 'data-k');
     expect(k2 / k1).toBeCloseTo(2, 4);   // künye 1e−6'ya yuvarlı
     // Fare→açı çevirisi ölçeği SVG'DEN okuduğu için yakınlaştırmadan bağımsız.
+    // ÇAPA SAHNENİN KENDİ KÜNYESİ (`data-cx`), `sc.cx` DEĞİL: sahne aynalı
+    // çizildiğinde merkezin EKRANDAKİ mm'si işaret değiştiriyor.
     [1, 2, 0.6].forEach((z) => {
       const svg = wiz.veFeadWizAngSVG(sc, 0, z);
       const el = { getAttribute: (n) => new RegExp(n + '="([-\\d.]+)"').exec(svg)[1] };
       const k = oku(svg, 'data-k'), ox = oku(svg, 'data-ox'), oy = oku(svg, 'data-oy');
-      expect(wiz.veFeadWizAngFromPoint(el, ox + (sc.cx + 30) * k, oy - sc.cy * k))
-        .toBeCloseTo(0, 5);
-      expect(wiz.veFeadWizAngFromPoint(el, ox + sc.cx * k, oy - (sc.cy + 30) * k))
-        .toBeCloseTo(90, 5);
+      const cx = oku(svg, 'data-cx'), cy = oku(svg, 'data-cy');
+      const mir = oku(svg, 'data-mir');
+      // Ekranda SAĞ = veri düzleminde 0° ya da 180° (aynaya göre). Karşılaştırma
+      // MOD 360: ±180 aynı yöndür, belli bir gösterimi dayatmak fazla olurdu.
+      const esit = (a, b) => expect(((a - b + 540) % 360) - 180).toBeCloseTo(0, 5);
+      esit(wiz.veFeadWizAngFromPoint(el, ox + (cx + 30) * k, oy - cy * k), mir < 0 ? 180 : 0);
+      esit(wiz.veFeadWizAngFromPoint(el, ox + cx * k, oy - (cy + 30) * k), 90);
     });
   });
 
@@ -2232,15 +2307,46 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
     const svg = wiz.veFeadWizAngSVG(sc, 0);
     const oku = (a) => (new RegExp(a + '="([-\\d.]+)"').exec(svg) || [])[1];
     const k = Number(oku('data-k')), ox = Number(oku('data-ox')), oy = Number(oku('data-oy'));
+    const cx = Number(oku('data-cx')), cy = Number(oku('data-cy'));
+    const mir = Number(oku('data-mir'));
     const el = { getAttribute: (n) => oku(n) };
-    // Merkezin TAM SAĞINDA bir nokta → 0°, TAM ÜSTÜNDE → +90°
     const X = (mm) => ox + mm * k, Y = (mm) => oy - mm * k;
-    expect(wiz.veFeadWizAngFromPoint(el, X(sc.cx + 50), Y(sc.cy))).toBeCloseTo(0, 6);
-    expect(wiz.veFeadWizAngFromPoint(el, X(sc.cx), Y(sc.cy + 50))).toBeCloseTo(90, 6);
-    expect(wiz.veFeadWizAngFromPoint(el, X(sc.cx - 50), Y(sc.cy))).toBeCloseTo(180, 6);
-    expect(wiz.veFeadWizAngFromPoint(el, X(sc.cx), Y(sc.cy - 50))).toBeCloseTo(-90, 6);
+
+    // ASIL KAPI GİDİŞ-DÖNÜŞ: çizim veri açısını ekrana koyuyor, ters çevirici
+    // ekrandan aynı veri açısını geri veriyor. Tek yönü ölçen bir kapı, iki
+    // yönde birden yapılmış bir işaret hatasını GÖREMEZ.
+    [0, 37.5, 90, 143.25, -90, -161].forEach((veri) => {
+      const ek = (mir < 0 ? 180 - veri : veri) * Math.PI / 180;
+      const geri = wiz.veFeadWizAngFromPoint(
+        el, X(cx + 50 * Math.cos(ek)), Y(cy + 50 * Math.sin(ek)));
+      expect(((geri - veri + 540) % 360) - 180).toBeCloseTo(0, 6);
+    });
+
+    // Ekranın dört yönü — aynalıysa sağ/sol takas olur, yukarı/aşağı ASLA.
+    const esit = (a, b) => expect(((a - b + 540) % 360) - 180).toBeCloseTo(0, 6);
+    esit(wiz.veFeadWizAngFromPoint(el, X(cx + 50), Y(cy)), mir < 0 ? 180 : 0);
+    esit(wiz.veFeadWizAngFromPoint(el, X(cx - 50), Y(cy)), mir < 0 ? 0 : 180);
+    expect(wiz.veFeadWizAngFromPoint(el, X(cx), Y(cy + 50))).toBeCloseTo(90, 6);
+    expect(wiz.veFeadWizAngFromPoint(el, X(cx), Y(cy - 50))).toBeCloseTo(-90, 6);
     // Tam merkezde açı YOK — uydurulmuyor.
-    expect(Number.isNaN(wiz.veFeadWizAngFromPoint(el, X(sc.cx), Y(sc.cy)))).toBe(true);
+    expect(Number.isNaN(wiz.veFeadWizAngFromPoint(el, X(cx), Y(cy)))).toBe(true);
+  });
+
+  // Kartın aynalanması bir SESSİZ kusur doğurmuştu: seçici mm düzleminde
+  // çiziyordu, yani aynı sihirbazın iki resmi BİRBİRİNİN AYNASI oluyordu.
+  test('SEÇİCİ ile KART aynı elde — sahne aynalı, çapa künyede', () => {
+    const sc = sahne();
+    const svg = wiz.veFeadWizAngSVG(sc, 0);
+    const cx = Number((/data-cx="([-\d.]+)"/.exec(svg) || [])[1]);
+    const mir = Number((/data-mir="([-\d.]+)"/.exec(svg) || [])[1]);
+    expect(mir).toBe(M.veFeadSpinToFront(1));            // TEK kaynaktan
+    expect(mir).toBe(-1);                                 // bugünkü varsayılan
+    // Çizilen merkez VERİ merkezinin AYNASI — seçici artık kartla aynı elde.
+    expect(cx).toBeCloseTo(-sc.cx, 6);
+    // 0° etiketi SOLA geçmiş olmalı: resim aynalı, okuma aynalı değilse
+    // kullanıcı 0°'yi yanlış tarafta arar.
+    const sag = /<text x="([-\d.]+)"[^>]*text-anchor="start"[^>]*>([-\d]+)°/.exec(svg);
+    expect(sag && sag[2]).toBe('180');
   });
 
   test('"Uygula" seçilen açıyı SAKLANAN alana çeviriyor', () => {

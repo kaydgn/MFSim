@@ -295,6 +295,105 @@ Fixture da 10 taşıyor, yani **doğru**. Arşiv dosyası gövdeye göre adland�
 (`AG00810_10PK1215HD_…`); `12PK1215` yalnız burada, arama yapan biri bulsun
 diye kayıtlı. Ders: ad dizgisi bir VERİ KAYNAĞI değil, etikettir.
 
+## DÖNÜŞ YÖNÜ KONVANSİYONU — ölçüldü (2026-08-28)
+
+Kullanıcı sorusu: *"Kayış-kasnak sistemine ön taraftan baktığımızda dönüş yönü
+nasıl tanımlanmış?"* On rapor uçtan uca ölçüldü. Kısa cevap: **açıkça hiç
+tanımlanmamış** — dönüş yönü şemaya çizilmiyor, metinde yazılmıyor; tablodaki
+SIRADAN çıkarılıyor.
+
+### 1 · Düzlem ve açı konvansiyonu — bu YAZILI
+
+Şemanın yanındaki yön gülü: `0` sağ · `90` üst · `180` sol · `270` alt, içinde
+CCW yönlü bir yay. Yani **X sağa, Y YUKARI, açılar +X'ten CCW**. Yaydaki ok bir
+DÖNÜŞ işareti değil, açının hangi yönde arttığını söylüyor.
+
+Sayısal olarak da doğrulandı: raporun `Hubload Direction °` sütunu modelin
+`atan2(Fy,Fx)`'iyle örtüşüyor — AG0868'de büyüklükler `814↔813 · 883↔882 ·
+373↔371 N`, açılar `350↔354 · 195↔194 · 83↔84°`.
+
+### 2 · Dönüş yönü ÇİZİLMİYOR — üç ölçülmüş yokluk
+
+| Ne | Bulgu |
+|----|-------|
+| Şemada dönüş oku | **yok** (iki raporun şeması yakınlaştırılarak incelendi) |
+| `front` / `rear` / `view` / `rotation` beyanı | **on raporun hiçbirinde yok** |
+| Hız oranı işareti | **işaretsiz** (`1.000 · 1.473 · 2.298`) — ters dönen sırt kasnakları ayırt edilmiyor |
+
+### 3 · Yön, tablonun SIRASIYLA örtük olarak tanımlı
+
+Kasnak tablosu kayışın gidiş sırasında yazılıyor ve o sıra, çizim düzleminde
+**on raporun onunda da CCW** dolanıyor (`Σ işaretli sarım = +360`, hiç `−360`
+yok). Sıra + temas tarafı her kasnağın yönünü belirliyor:
+
+```
+kaburgalı temas → halkayla AYNI yön (CCW)
+sırttan temas   → TERS (CW)
+```
+
+**ÖLÇÜLDÜ:** ters dönenlerin hepsi sırttan temas edenler — istisna yok.
+
+### 4 · Not alanındaki `CW`/`CCW` sistemin yönü DEĞİL, gerginin EL YÖNÜ
+
+**Altı raporun** Drive Notes alanında `Tensioner T38624; CW` gibi bir işaret
+var (dördünde yok). Bu bir **parça özelliği**, sistemin dönüşü değil:
+
+| Parça | Not | Notu taşıyan rapor | `sense` |
+|-------|-----|------------------:|---------|
+| T38624 | `CW` | 2 (AG00686 ×2) | +1 |
+| E9843 | `CCW` | 3 (AG00894 · AG00902 ×2) | −1 |
+| T38519 | `CCW` | 1 (AG00810) | −1 |
+
+Sıfır çelişki: aynı parça her raporda aynı harfi taşıyor. Notu OLMAYAN dört
+rapor (AG0868 ×3 · AG00879) da parçalarının harfiyle uyumlu `sense` taşıyor —
+yani harf gerçekten parçaya ait, rapora değil.
+
+### 5 · VE O HARF ÇİZİM DÜZLEMİNİN TERSİ — en pahalı tuzak
+
+Basılı kanıt: gerginlik grafiğinin altında kol açısı **hem bağıl hem mutlak**
+ölçekle veriliyor.
+
+| Rapor | Not | Relative | Absolute | Çizimde kol |
+|-------|-----|----------|----------|-------------|
+| AG00686 | **CW** | `0.0 → 62.4` | `42.0 → 104.4` ↑ | **CCW** |
+| AG0868 | (E9843 ⇒ `CCW`) | `0.0 → 48.4` | `248.0 → 199.6` ↓ | **CW** |
+
+MFSim'in `sense`i çizim düzlemindeki kol yönüdür (`+1 = CCW`). Tedarikçinin
+harfi onun **TERSİ**. Katalog bir gün tedarikçi sayfasından `CW/CCW` alanı alıp
+doğrudan `sense`'e yazarsa **kol ters döner** — model yine çözülür, uyarı
+çıkmaz, yalnız gerginlik kayar. `tests/unit/gates-archive.test.js` bu ters
+ilişkiyi kilitliyor.
+
+### 6 · "Ön taraftan bakınca" — burada ölçüm biter, ÇIKARIM başlar
+
+Raporlar hangi taraftan bakıldığını **söylemiyor** (yukarıda ölçülü). Veriyle
+tutarlı tek okuma: çizim ile parça harfi karşılıklı iki taraftan ifade edilmiş.
+Motorlar geleneksel olarak ön taraftan (aksesuar tahrik ucundan) bakıldığında
+CW döner; çizim ise kayışı CCW gösteriyor — bu ikisi birlikte **çizimin ön
+görünüşün aynası gibi davrandığına** işaret eder.
+
+**AMA bu son adım dışarıdan gelen bir bilgi, bu raporlarda YAZMIYOR.** Kesin
+konuşmak için montaj resmi ya da tedarikçinin konvansiyon notu gerekir. Bu
+ayrım korunmalı: modülün kuralı geçerlilik sınırını sonucun İÇİNDE taşımak.
+
+### 7 · Gergi serpantinde EN SONDA — ve bu fiziksel
+
+On raporun onunda da sıra gergiyle bitiyor ve krankla başlıyor, yani **gergi,
+kayışın kranka dönüş açıklığındadır**. Bu bir liste düzeni değil, yerleşim
+kuralı: o açıklık GEVŞEK taraftır. AG00686'da ölçüldü — `T`: CRK 1209.95 ·
+IDR 1208.48 · A_C 767.47 · **TEN 766.00** (en düşük, ankrajın kendisi).
+
+**MATEMATİK BU KONUMDAN BAĞIMSIZ — ölçüldü.** Gerilme zinciri `T[t] = ankraj`
+ile başlayıp `(t+j) % n` ile dolaştığı için gerginin listedeki yeri sonucu
+değiştirmiyor. AG00686 çevrimsel olarak dört konuma da döndürüldü:
+
+```
+TEN 4/4 · 3/4 · 2/4 · 1/4  →  ΔT = 0.0e+0 · ΔH = 0.0e+0 · L_eff birebir aynı
+```
+
+Yani "gergi en sonda" bir **yazım konvansiyonu**, hesap gereği değil. Değeri
+tedarikçi tablolarıyla satır satır karşılaştırılabilirlik.
+
 ## Yeni rapor eklerken
 
 1. PDF'i `pdf/` altına, ad kuralına uyarak koy.

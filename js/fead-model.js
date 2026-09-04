@@ -1388,6 +1388,7 @@ function veFeadAnimRpmChoices(build){
 function veFeadAnimRpmOf(build, node){
   var v = node && node.data && node.data.animRpm;
   if(v === 'off') return 'off';
+  if(v === 'scn') return 'scn';                      // motor çevrimi senaryosu
   var list = veFeadAnimRpmChoices(build);
   var n = _feadNum(v, NaN);
   for(var i=0;i<list.length;i++) if(list[i].rpm === n) return n;
@@ -2882,6 +2883,85 @@ function veFeadResolveDriver(pulleys){
   return list.length ? list[0] : null;
 }
 
+// ─── ÖN GÖRÜNÜŞ — çizim aynalanır, VERİ ASLA ────────────────────────────────
+//
+// Kullanıcı kararı (2026-08-28): *"MFSim için de kayışın dönüş yönünü default
+// olarak saat yönünde yapacağız."*
+//
+// ÖLÇÜLDÜ (bkz. docs/gates-reports/README.md → "Dönüş yönü konvansiyonu"):
+// on Gates raporunun ONUNDA DA kayış, raporun kendi çizim düzleminde CCW
+// dolanıyor (Σ işaretli sarım = +360, hiç −360 yok). Motorlar ön taraftan
+// (aksesuar tahrik ucundan) bakıldığında CW döndüğü için o düzlem ÖN
+// GÖRÜNÜŞÜN AYNASI gibi davranıyor.
+//
+// KARAR: yalnız ÇİZİM aynalanır. Saklanan mm koordinatları, çözücü ve bütün
+// sayısal çıktılar Gates düzleminde KALIR — arşivle satır satır
+// karşılaştırılabilirlik bu modülün en değerli özelliği ve onu bir görünüm
+// tercihi için feda etmek olmaz. Aynalama X ekseninde: karşı taraftan bakınca
+// sol-sağ yer değiştirir, YUKARI yukarı kalır.
+//
+// AYNALAMA TAM SİMETRİDİR — bütün skalerler (sarım, açıklık, L_eff, gerginlik)
+// BİREBİR aynı kalır; değişen yalnız el yönü. Bu yüzden burada `d` işareti de
+// çevriliyor: çevrilmezse sarım yayları kasnağın İÇİNDEN geçer (kartta bir kez
+// ölçülmüş "sweep bayrağı" hatasının aynısı).
+var VE_FEAD_VIEW_FRONT = true;      // çizimler ÖN GÖRÜNÜŞ mü
+
+function _feadMirrorPt(q){ return (q && q.length >= 2) ? [-q[0], q[1]] : q; }
+
+// ── VERİ DÜZLEMİ ↔ ÖN GÖRÜNÜŞ: DÖNÜŞ YÖNÜNÜN ÇEVİRİSİ ──────────────────────
+//
+// `out.spin` (`veFeadNaturalSense` → `FEADCore.loopSense`) VERİ DÜZLEMİNDE
+// ölçülür. Çizim aynalandığı için ekranda görülen yön onun TERSİDİR — X
+// aynalaması ayakkabı-bağı işaretini çevirir (`veFeadMirrorGeomX` içinde
+// `sense` ve `d` de bu yüzden çevriliyor).
+//
+// BU ÇEVİRİ OLMADAN YÜZEYLER YALAN SÖYLER — ve sessizce: kart kayışı bir yöne
+// akıtırken rozet "↺ CCW", sihirbazın düğmesi de "CCW — motora önden bakışta"
+// derdi. İkisi de makul görünür, biri yanlıştır.
+//
+// İNVOLUSYON (kendi tersi): ön görünüşte seçilen bir yönü veri düzlemine
+// çevirmek için de aynı fonksiyon kullanılır — sihirbazın yön düğmeleri bu
+// yüzden tek boundary'den geçiyor.
+function veFeadSpinToFront(spin){
+  var v = Number(spin) || 0;
+  return VE_FEAD_VIEW_FRONT ? -v : v;
+}
+
+// Etiket TEK ÜRETİCİDEN. Rozet · panel · toast · sihirbazın üç yüzeyi aynı
+// metni basıyor; altı kopya tutulsaydı biri düzeltilince ötekiler sessizce
+// eskirdi (bu modülün tekrar eden kuralı).
+function veFeadSpinLabel(spin){
+  var f = veFeadSpinToFront(spin);
+  if(!f) return { sense: 0, glif: '—', kisa: '—', uzun: '—' };
+  return f > 0
+    ? { sense: 1, glif: '\u21ba', kisa: '\u21ba CCW',
+        uzun: 'CCW (saat yönünün TERSİNE) — motora önden bakışta' }
+    : { sense: -1, glif: '\u21bb', kisa: '\u21bb CW',
+        uzun: 'CW (saat yönünde) — motora önden bakışta' };
+}
+
+// Geometriyi X'te aynalar. SAF: girdiyi değiştirmez, kopya döndürür.
+function veFeadMirrorGeomX(geom){
+  if(!geom) return geom;
+  var out = {};
+  Object.keys(geom).forEach(function(k){ out[k] = geom[k]; });
+  out.pulleys = (geom.pulleys||[]).map(function(p){
+    var q = {}; Object.keys(p).forEach(function(k){ q[k] = p[k]; });
+    q.c = _feadMirrorPt(p.c);
+    if(typeof p.d === 'number') q.d = -p.d;     // el yönü çevrilir
+    return q;
+  });
+  out.spans = (geom.spans||[]).map(function(sp){
+    var q = {}; Object.keys(sp).forEach(function(k){ q[k] = sp[k]; });
+    q.Pi = _feadMirrorPt(sp.Pi); q.Pj = _feadMirrorPt(sp.Pj);
+    if(sp.u) q.u = _feadMirrorPt(sp.u);
+    return q;
+  });
+  if(typeof geom.signedWrapDeg === 'number') out.signedWrapDeg = -geom.signedWrapDeg;
+  if(typeof geom.sense === 'number') out.sense = -geom.sense;
+  return out;
+}
+
 // ─── Ad tekilleştirme ───────────────────────────────────────────────────────
 // ÇEKİRDEK ADLARI ANAHTAR OLARAK KULLANIYOR (loadsKw sözlüğü, sonuç satırları).
 // İki "Avara Kasnak" aynı adı taşırsa güçleri sessizce BİRLEŞİR ve sonuç yanlış
@@ -3011,6 +3091,52 @@ function veFeadBuildSystem(nodeList, connList, opt){
   out.solver = solvNode;
   if(!beltNode) out.errors.push('Kayış Özellikleri bileşeni yok. Sol paletten ekleyin.');
   if(!solvNode) out.warnings.push('Çözücü bileşeni yok; tasarım gerginliği ve tahrik oranı varsayılanla alınır.');
+
+  // ── GERGİ SERPANTİNDE SON SIRADA MI — KARŞILAŞTIRILABİLİRLİK ÖLÇÜTÜ ─────
+  //
+  // On Gates raporunun ONUNDA DA sıra sürücüyle başlayıp gergiyle bitiyor:
+  // gergi, kayışın sürücüye DÖNÜŞ açıklığındadır (ölçüldü, AG00686:
+  // T = 1209.95 · 1208.48 · 767.47 · TEN 766.00 — en düşük, ankrajın kendisi).
+  //
+  // BU, `veFeadTensionerSide` HÜKMÜNÜN İKİNCİ KOPYASI DEĞİL — iki AYRI soru:
+  //
+  //   | | `tensionerSide` (analiz) | buradaki ölçüt (kurulum) |
+  //   |---|---|---|
+  //   | Sorduğu | span gerilmesi ankrajın ALTINA iniyor mu | sıra tedarikçi
+  //     konvansiyonuna uyuyor mu |
+  //   | Kanıtı | duty satırlarının gerilmeleri | `out.order` içindeki konum |
+  //   | Yanlışsa | model FİZİKSEL olarak geçersiz | model geçerli, yalnız
+  //     arşivle satır satır karşılaştırılamaz |
+  //
+  // ÖLÇÜLDÜ ve ikisi GERÇEKTEN ayrışıyor: sihirbazın "⇄ Yönü çevir"i AG00976'yı
+  // `p1>ten>p5>p4>p3>p2` yapıyor — burada uyarı düşüyor ama `tensionerSide.ok`
+  // hâlâ `true`, `beltLengthMm` ve `springTensionN` altı ondalığa kadar
+  // BİREBİR aynı. Zincir gergide ankrajlı olduğu için ters yürütme fiziği
+  // bozmuyor; bozduğu tek şey yerleşimin okunma sırası.
+  //
+  // UYARI, ZORLAMA DEĞİL — çözümü durdurmak doğru bir modeli reddetmek olurdu.
+  // Sıranın ÇEVRİMSEL döndürülmesi zaten bedava (ölçüldü, AG00686 dört konuma
+  // da döndürüldü: ΔT = 0.0e+0 · ΔH = 0.0e+0 · L_eff birebir); gerginin halkada
+  // sürücünün ÖBÜR yanına alınması ise bedava DEĞİL, başka bir yerleşimdir
+  // (ölçüldü: L 1714.61 → 2459.29 mm). Uyarı bu yüzden "şunu yap" demiyor,
+  // farkın ne olduğunu söylüyor.
+  (function(){
+    var seq = out.order || [];
+    if(seq.length < 3) return;
+    var ti = -1;
+    for(var i=0;i<seq.length;i++) if(_feadDefOf(seq[i]).isFeadTensioner) ti = i;
+    if(ti < 0) return;
+    // HÜKÜM HER İKİ YÖNDE DE YAZILIR: "denetlendi ve uygun" ile "hiç
+    // denetlenmedi" ayırt edilebilsin (rozetin renk İDDİA ETMEME kuralının
+    // aynısı — alan yoksa yüzey hüküm veremez).
+    out.tensionerOrder = { index: ti, count: seq.length, last: ti === seq.length - 1 };
+    if(out.tensionerOrder.last) return;
+    out.warnings.push('Serpantin sırasında gergi son sırada değil ("'
+      + _feadNodeName(seq[ti]) + '" ' + (ti+1) + '/' + seq.length + '). Gates '
+      + 'konvansiyonunda sıra sürücüyle başlar, gergiyle biter — gergi kayışın '
+      + 'sürücüye DÖNÜŞ açıklığındadır. Sayılar bundan etkilenmiyor; etkilenen '
+      + 'yerleşimin tedarikçi raporlarıyla satır satır karşılaştırılabilirliği.');
+  }());
 
   var bd = (beltNode && beltNode.data) || {};
   var sd = (solvNode && solvNode.data) || {};
@@ -4055,6 +4181,7 @@ function veFeadPulleyCodes(sys){
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     veFeadPulleyCodes: veFeadPulleyCodes,
+    VE_FEAD_VIEW_FRONT: VE_FEAD_VIEW_FRONT, veFeadMirrorGeomX: veFeadMirrorGeomX,
     _feadNum: _feadNum, _feadDefOf: _feadDefOf, _feadNodeName: _feadNodeName,
     _feadIsPulley: _feadIsPulley,
     VE_FEAD_DEFAULT_DIA: VE_FEAD_DEFAULT_DIA, VE_FEAD_ERROR_MAP: VE_FEAD_ERROR_MAP,
@@ -4070,6 +4197,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadMigrateNode: veFeadMigrateNode, veFeadMigrateAll: veFeadMigrateAll,
     veFeadRouteOrder: veFeadRouteOrder, veFeadRouteDiagnose: veFeadRouteDiagnose,
     veFeadNaturalSense: veFeadNaturalSense, veFeadReverseRoute: veFeadReverseRoute,
+    veFeadSpinToFront: veFeadSpinToFront, veFeadSpinLabel: veFeadSpinLabel,
     veFeadTensionerSide: veFeadTensionerSide,
     veFeadResolveDriver: veFeadResolveDriver,
     veFeadUniqueNames: veFeadUniqueNames, veFeadTranslateError: veFeadTranslateError,
@@ -4128,6 +4256,7 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_VIB_MAX_SCREEN_HZ: VE_FEAD_VIB_MAX_SCREEN_HZ,
     VE_FEAD_VIB_MODE_MAX_DEG: VE_FEAD_VIB_MODE_MAX_DEG,
     veFeadVibGainOf: veFeadVibGainOf, veFeadVibModeOf: veFeadVibModeOf,
+    _feadVibSpanMag: _feadVibSpanMag, _feadVibMag: _feadVibMag,
     veFeadVibSpanPayload: veFeadVibSpanPayload,
     veFeadVibModeList: veFeadVibModeList, veFeadVibModePayload: veFeadVibModePayload,
     veFeadPowerCurve: veFeadPowerCurve, veFeadHasPowerCurve: veFeadHasPowerCurve,

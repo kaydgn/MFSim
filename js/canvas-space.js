@@ -157,9 +157,9 @@ var VE_CHIP_INSET = 10;              // görünüm kenarına en yakın duruş (e
 // 50px'lik kutuda ~140px, yani her yandan ~45px. O da sayılmıyordu.
 //
 // Boşluk ölçüleri CSS'ten OKUNMUYOR, elle eşleniyor (.ve-node-label margin
-// 4px alt/üst · .lbl-left/right margin 7px yan) — ikisi ayrışırsa çerçeve adı
+// 6px alt/üst · .lbl-left/right margin 7px yan) — ikisi ayrışırsa çerçeve adı
 // yine keser; testi bu iki sayıyı çiviliyor.
-var VE_LABEL_GAP_V = 4;              // css .ve-node-label margin-top / .lbl-top margin-bottom
+var VE_LABEL_GAP_V = 6;              // css .ve-node-label margin-top / .lbl-top margin-bottom
 var VE_LABEL_GAP_H = 7;              // css .lbl-left margin-right / .lbl-right margin-left
 
 // SAF: adın kutu DIŞINA taştığı miktar, dört yönde ayrı ayrı (px).

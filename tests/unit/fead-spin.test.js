@@ -368,7 +368,12 @@ describe('rozet ve panel', () => {
     let a = el();
     expect(fead.veFeadApplyBadge(a, b)).toBe(true);
     let r = a.querySelector('.ve-fead-badge');
-    expect(r.textContent).toBe('↺ CCW');
+    // ROZET ÖN GÖRÜNÜŞÜ BASAR. Veri düzleminde AG00976 CCW (Gates'in kendi
+    // düzlemi; on raporun onu da öyle), çizim aynalı olduğu için ekranda CW.
+    // Çevirmeden basmak kartla rozeti ters düşürürdü — sessiz, çünkü ikisi de
+    // ayrı ayrı makul görünür.
+    expect(M.veFeadNaturalSense(s.b.order)).toBe(1);        // veri düzlemi
+    expect(r.textContent).toBe('↻ CW');                      // ÖN GÖRÜNÜŞ
     expect(r.style.cssText).toContain('--text-secondary');
 
     // Gergi gevşek tarafta → yeşil
@@ -415,8 +420,9 @@ describe('rozet ve panel', () => {
     const a2 = el(); fead.veFeadApplyBadge(a2, b);
     const cw = a2.querySelector('.ve-fead-badge');
 
-    expect(ccw.textContent).toBe('↺ CCW');
-    expect(cw.textContent).toBe('↻ CW');
+    // Adlar ÖN GÖRÜNÜŞE göre: `ccw` değişkeni aynalamadan sonra CW basıyor.
+    expect(ccw.textContent).toBe('↻ CW');
+    expect(cw.textContent).toBe('↺ CCW');
     expect(cw.style.background).toBe(ccw.style.background);   // AYNI renk
     expect(ccw.style.cssText).not.toContain('--accent-warning');
     expect(ccw.style.cssText).not.toContain('--accent-primary');
@@ -444,7 +450,10 @@ describe('rozet ve panel', () => {
     const once = JSON.stringify(b.data);
 
     let h = fead.getFeadSpinPropertiesHTML(b);
-    expect(h).toContain('CCW');
+    // PANEL DE ÖN GÖRÜNÜŞTE. Rozet ile panel aynı üreticiden besleniyor
+    // (`veFeadSpinLabel`); ikisi ayrışsaydı biri sessizce eskirdi.
+    expect(h).toContain('CW (saat yönünde)');
+    expect(h).not.toContain('CCW');
     expect(h).toContain('veFeadToggleSpin()');
     expect(h).toContain('ÖNDEN bakış');            // bakış açısı YAZILI olmalı
     expect(h).toContain('Değişmez');               // geometri yönden bağımsız

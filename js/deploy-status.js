@@ -7,6 +7,29 @@
 var DEPLOY_REPO = 'kaydgn/MFSim';
 var DEPLOY_RUN_ID = '__DEPLOY_RUN_ID__'; // Workflow sırasında run ID ile değiştirilir
 
+// ═══ GÖMÜLÜ SÜRÜM KÜNYESİ ═══
+// build.js tek dosyaya yazar (window.__MFSIM_BUILD): commit, tarih, PR ve son
+// on değişiklik. Kaynağı git — ağ değil. Modüler index.html'de YOKTUR; o
+// durumda aşağıdaki yollar eski davranışa düşer.
+function _veBuildInfo() {
+  var b = (typeof window !== 'undefined') ? window.__MFSIM_BUILD : null;
+  return (b && b.sha) ? b : null;
+}
+
+// ═══ ÇEVRİMDIŞI KAPISI ═══
+// İndirilen tek dosya file:// ile açılıyor. ÖLÇÜLDÜ (gerçek Chrome, yanında
+// pwa/ olmayan bir kopya): version.json → ERR_FAILED (file:// CORS), ardından
+// yedek yol api.github.com'a çıkıyor ve kullanıcının ağı GitHub'a çıkamadığı
+// için o da düşüyor. Sonuç her açılışta 2 başarısız istek + 2 konsol hatası,
+// ve nokta kalıcı olarak "Bağlantı yok". Üstelik 15 dakikada bir tekrar.
+//
+// file:// üzerinde ağda ARANACAK BİR ŞEY YOK: version.json deploy ürünüdür,
+// dosyanın yanında hiçbir zaman bulunmaz. Bu yüzden ağ hiç denenmez; künye
+// gömülü olandan okunur.
+function _veOfflineOnly() {
+  return (typeof location !== 'undefined') && location.protocol === 'file:';
+}
+
 // ═══ 🔄 REFRESH BUTONU ═══
 function veRefreshApp() {
   var btn = document.getElementById('ve-deploy-refresh');
@@ -16,6 +39,13 @@ function veRefreshApp() {
   _veCheckDeploy(function(info) {
     if(btn) btn.style.animation = '';
     if(!info || !dot) return;
+
+    // Gömülü künyede karşılaştırılacak bir "yayın" yok; elindeki kopya
+    // gösterilir, güncellik iddiası edilmez.
+    if(info.source === 'embedded') {
+      _veShowPopup(dot, info, 'Bu Kopya', false);
+      return;
+    }
 
     if(info.status === 'completed' && info.conclusion === 'success') {
       // Bu sayfa hangi workflow run'dan deploy edildi?
@@ -60,6 +90,16 @@ function veShowDeployDetails() {
 // ═══ DOT DURUM YARDIMCISI ═══
 function _veApplyDotState(dot, info) {
   if(!dot || !info) return;
+  // Gömülü künye "yayın güncel mi" sorusunu YANITLAMAZ — yalnız elindeki
+  // kopyanın ne olduğunu söyler. "Güncel" demek olmayan bir bilgiyi iddia
+  // etmek olurdu; ayrı bir durum kullanılır.
+  if(info.source === 'embedded') {
+    dot.className = 've-deploy-dot ve-deploy-local';
+    dot.title = 'Bu kopya: ' + (info.shortSha || '') +
+      (info.prNumber ? ' · PR #' + info.prNumber : '') +
+      (info.date ? ' · ' + new Date(info.date).toLocaleDateString('tr-TR') : '');
+    return;
+  }
   if(info.status === 'in_progress' || info.status === 'queued') {
     dot.className = 've-deploy-dot ve-deploy-pending';
     dot.title = '⏳ Deploy devam ediyor...';
@@ -76,6 +116,15 @@ function _veApplyDotState(dot, info) {
 function _veCheckDeploy(callback) {
   var dot = document.getElementById('ve-deploy-dot');
 
+  // file:// → ağa HİÇ çıkma; gömülü künyeyi kullan (bkz. _veOfflineOnly).
+  if(_veOfflineOnly()) {
+    var gomulu = _veBuildInfo();
+    if(!gomulu) { callback(null); return; }
+    _veApplyDotState(dot, gomulu);
+    if(dot) dot.setAttribute('data-deploy-info', JSON.stringify(gomulu));
+    callback(gomulu);
+    return;
+  }
 
   // Cache-buster: SW veya tarayıcı bayat sürüm tutmasın
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
@@ -243,12 +292,14 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
   html += '<br><span class="mf-ico mf-ico-git-branch"></span> ' + _veEscHtml(info.branch);
   html += '</div>';
 
-  // Otomatik kontrol ayarı
+  // Otomatik kontrol ayarı — yoklanacak uç yoksa gösterilmez.
   var autoOn = _veAutoCheckEnabled();
+  if(!_veOfflineOnly()) {
   html += '<label style="margin-top:10px; display:flex; align-items:center; gap:6px; font-size:var(--fs-body); color:var(--text-muted); cursor:pointer; user-select:none;">';
   html += '<input type="checkbox"' + (autoOn ? ' checked' : '') + ' onchange="_veToggleAutoCheck(this.checked)" style="margin:0; cursor:pointer;">';
   html += 'Otomatik kontrol (15 dk)';
   html += '</label>';
+  }
 
   // Son değişiklikler (changelog)
   if(info.changes && info.changes.length > 1) {
@@ -439,6 +490,19 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       _veShowRefreshedPopup();
     }, 1000);
+    return;
+  }
+
+  // file:// → yoklanacak bir uç yok. Künye BİR KEZ uygulanır, zamanlayıcı
+  // hiç kurulmaz: 15 dakikada bir tekrarlanan başarısız istek buradan
+  // çıkıyordu.
+  if(_veOfflineOnly()) {
+    var gomulu = _veBuildInfo();
+    if(gomulu) {
+      var dotEl = document.getElementById('ve-deploy-dot');
+      _veApplyDotState(dotEl, gomulu);
+      if(dotEl) dotEl.setAttribute('data-deploy-info', JSON.stringify(gomulu));
+    }
     return;
   }
 
