@@ -108,12 +108,17 @@ describe('örnek kayıt defteri: Gates raporu kurulabilir', () => {
     // Gates örneği tahrik oranını doğrudan veriyor (ratioMode 'direct'), yani
     // o iki alan YOK: satır "undefined / undefined mm" çıkıyordu. Bu, kullanıcı
     // gözüne çarpan tek işaretti ve bir sayı gibi okunuyordu.
-    const html = fead.getFeadExamplePropertiesHTML({ data: {} });
+    // PANEL AÇILIR LİSTEYE DÖNDÜ (2026-09-02): künye artık on iki kez değil
+    // YALNIZ seçili örnek için basılıyor. Kapının niyeti değişmedi, kapsamı
+    // korunuyor: her örnek SIRAYLA seçili yapılıp ayrı ayrı çizdiriliyor —
+    // yoksa kusur yalnız varsayılan seçimde aranırdı.
     veFeadExampleKeys().forEach((k) => {
+      const html = fead.getFeadExamplePropertiesHTML({ data: { pick: k } });
+      expect(html).toMatch(new RegExp('<option value="' + k + '" selected'));
       expect(html).toMatch(new RegExp("veFeadLoadExample\\('" + k + "'\\)"));
+      expect(html).not.toMatch(/undefined/);
+      expect(html).not.toMatch(/NaN/);
     });
-    expect(html).not.toMatch(/undefined/);
-    expect(html).not.toMatch(/NaN/);
   });
 });
 

@@ -446,6 +446,11 @@ function _veToggleAutoCheck(on) {
   localStorage.setItem('ve-deploy-autocheck', on ? 'on' : 'off');
 }
 
+// TEK ÇEVRİMDIŞI YÜKLEMİ VAR: `_veOfflineOnly` (dosyanın başında). Bu satırda
+// bir dönem ikinci bir tane (`_veIsLocalFile`) duruyordu — aynı kuralı iki
+// yerden okumak bu depoda kusur sayılıyor ve ikincisi ÖLÜ koddu: açılış
+// handler'ı file:// üzerinde `_veOfflineOnly` ile zaten daha yukarıda
+// dönüyor, buraya hiç gelinmiyordu.
 function _veAutoCheckEnabled() {
   return localStorage.getItem('ve-deploy-autocheck') !== 'off';
 }

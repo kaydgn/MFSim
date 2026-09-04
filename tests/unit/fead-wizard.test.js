@@ -1723,45 +1723,80 @@ describe('sihirbaz girdisi → topoloji bileşeni', () => {
 // ── 1 · YÜKLENEN ÖRNEK KARTI BELİRGİN ──────────────────────────────────────
 // *"Başlangıç kısmında 'örnekten doldur' kategorisi var. Buradan bir seçenek
 // seçtiğimizde seçtiğimiz seçeneğin belirgin olmasını istiyorum."*
-describe('örnekten doldur — yüklenen kart belirgin', () => {
-  const kartlar = () => {
+describe('örnekten doldur — AÇILIR LİSTE, yüklenen belirgin', () => {
+  // YÜZEY DEĞİŞTİ, ANLAM DEĞİŞMEDİ. Kart yığını açılır listeye döndü
+  // (kullanıcı, 2026-09-02: *"pencereyi uzatmasaydın keşke, böyle aşağıya
+  // indirilebilir bir pencere yapsaydın"*) — üç örnek için tasarlanmış liste
+  // arşivin tamamı girince ON İKİ tam genişlik kartı oldu ve 1. adım
+  // kaydırmasız okunamaz hâle geldi. Aşağıdaki dört kapı ESKİSİYLE AYNI
+  // ayrımları tutuyor, yalnız işareti <option selected> üzerinden okuyor.
+  const secenekler = () => {
     const h = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
-    return (h.match(/<button[^>]*ve-fw-btn-wide[^>]*>[\s\S]*?<\/button>/g) || []);
+    return (h.match(/<option[^>]*>[^<]*<\/option>/g) || []);
   };
+  const secili = () => secenekler().filter((x) => /\sselected/.test(x));
 
-  test('taze sihirbazda HİÇBİRİ işaretli değil — iddia uydurulmuyor', () => {
+  test('taze sihirbazda HİÇBİR ÖRNEK seçili değil — iddia uydurulmuyor', () => {
     kabuk();
     _fwSifirla();
-    const k = kartlar();
-    expect(k.length).toBeGreaterThan(1);
-    expect(k.filter((x) => x.includes('ve-fw-btn-on')).length).toBe(0);
+    const o = secenekler();
+    expect(o.length).toBeGreaterThan(2);
+    // Yalnız başlık satırı işaretsiz duruyor; hiçbir örnek "yüklendi" demiyor.
+    expect(secili()).toHaveLength(0);
+    expect(wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild())).not.toContain('ve-fw-seeded');
   });
 
-  test('örnek yüklenince YALNIZ o kart işaretli', () => {
+  test('örnek yüklenince YALNIZ o seçenek işaretli', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
-    const k = kartlar();
-    const isaretli = k.filter((x) => x.includes('ve-fw-btn-on'));
-    expect(isaretli.length).toBe(1);
-    expect(isaretli[0]).toContain(veFeadExampleOf('AG00976_GATES_2025').name);
-    expect(isaretli[0]).toContain('✓ yüklendi');
+    const i = secili();
+    expect(i).toHaveLength(1);
+    expect(i[0]).toContain(veFeadExampleOf('AG00976_GATES_2025').name);
+    // "Yüklendi" ayrımı <select>'in kendisinde YOK — durum satırı taşıyor.
+    const h = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
+    expect(h).toContain('ve-fw-seeded');
+    expect(h).toContain('yüklendi');
+    expect(h).toContain(veFeadExampleOf('AG00976_GATES_2025').name);
   });
 
-  test('işaret KARTTAN KARTA geçiyor, birikmiyOR', () => {
+  test('işaret SEÇENEKTEN SEÇENEĞE geçiyor, birikmiyor', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     wiz.veFeadWizSeed('BMC_FEAD_2026');
-    const k = kartlar();
-    expect(k.filter((x) => x.includes('ve-fw-btn-on')).length).toBe(1);
-    expect(k.find((x) => x.includes('ve-fw-btn-on')))
-      .toContain(veFeadExampleOf('BMC_FEAD_2026').name);
+    const i = secili();
+    expect(i).toHaveLength(1);
+    expect(i[0]).toContain(veFeadExampleOf('BMC_FEAD_2026').name);
   });
 
   test('"Boş başla" da bir SEÇİMDİR ve işaretleniyor', () => {
     kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
     wiz.veFeadWizReset();
-    const k = kartlar();
-    const isaretli = k.filter((x) => x.includes('ve-fw-btn-on'));
-    expect(isaretli.length).toBe(1);
-    expect(isaretli[0]).toContain('Boş başla');
+    const i = secili();
+    expect(i).toHaveLength(1);
+    expect(i[0]).toContain('Boş başla');
+  });
+
+  test('BAŞLIK SATIRI bir seçim DEĞİL — listeyi açıp kapatmak silmiyor', () => {
+    // Açılır listenin kart yığınında olmayan riski: kullanıcı listeyi açıp
+    // başlık satırına dönerse yüklü örnek SESSİZCE silinirdi.
+    kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
+    wiz.veFeadWizSeedPick('__');
+    expect(wiz.veFeadWizState().seededFrom).toBe('BMC_FEAD_2026');
+    // '' ise gerçek eylem: temizle.
+    wiz.veFeadWizSeedPick('');
+    expect(wiz.veFeadWizState().seededFrom).toBe('');
+  });
+
+  test('PENCERE ÖRNEK SAYISIYLA BÜYÜMÜYOR — asıl kazanç bu', () => {
+    // Kullanıcının bildirdiği sorun buydu. Kapı sayıya değil BİÇİME bakıyor:
+    // örnek başına bir blok eleman üretilirse (kart/düğme) liste yine uzar.
+    // Kayıt defterine örnek eklemek 1. adımın yüksekliğini DEĞİŞTİRMEMELİ.
+    kabuk(); _fwSifirla();
+    const h = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
+    const n = veFeadExampleKeys().length;
+    expect(n).toBeGreaterThan(10);                       // arşivin tamamı
+    expect((h.match(/<option[^>]*>/g) || []).length).toBeGreaterThanOrEqual(n);
+    // Örnek başına tam genişlik düğme YOK.
+    expect(h).not.toContain('ve-fw-btn-wide');
+    expect((h.match(/<select/g) || []).length).toBe(1);  // tek denetim
   });
 
   test('iz TASLAKLA birlikte kalıyor — kullanıcı neyle başladığını görüyor', () => {

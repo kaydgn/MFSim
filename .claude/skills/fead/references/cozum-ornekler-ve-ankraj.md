@@ -2510,6 +2510,113 @@ kendisi. Bu yüzden ayrı bir blok gerçek yükleyiciyi (`veFeadLoadExample`)
 koşturuyor ve göç geri alınınca beş kasnağın beşinin de ankraja düzleştiğini
 SAYIYLA gösteriyor.
 
+##### ARŞİVİN TAMAMI ÖRNEK — on rapor, dokuzu ÜRETİLMİŞ (2026-09-02)
+
+Kullanıcı isteği: *"GitHub'da olan tüm Gates raporlarını programa örnek olarak
+tanımlayalım. Yani, başlangıç sihirbazına."* `docs/gates-reports/pdf/`
+altındaki **on raporun onu da** artık sihirbazda; üçü elle yazıldı
+(`BMC_FEAD_2026` sayfası + `AG00976` + `AG00879`), **dokuzu üretildi**.
+
+###### NEDEN ÜRETİLDİ — ikinci kopya olurdu
+
+Her raporun referans değerleri `tests/fixtures/fead-validation.js` içinde
+(`AG_MISC`) **zaten duruyor**; doğrulama kapısının kendisi orada koşuyor.
+Dokuz bloğu elle yazmak o sayıların ikinci kopyası olurdu — rapor başına ~40
+sayı ve ayrışması **sessiz**. `tools/build-fead-gates-examples.js` blokları
+fixture'dan + arşivin PDF'lerinden üretiyor; dört çevrim orada **tek yerde**
+yazılı:
+
+| Çevrim | Kural |
+|---|---|
+| pitch/effective → dış çap | grooved `od = e` · back `od = p − 2·h_r` |
+| kayış boyu | REBL(Mean) — **başlıktaki katalog adı DEĞİL** |
+| `lengthOffsetMm` | EDL(Mean) − REBL(Mean) |
+| kol açısı | konum tablosunun Mean satırındaki mutlak açı |
+| gergi merkezi | **Layout Data** satırı (iki ondalık), konum tablosunun bire yuvarlanmış Mean'i değil |
+
+**Üreteç bir build adımı DEĞİL, bir iskele.** Doğruluğun ölçüsü
+`tests/unit/fead-examples-gates.test.js`: her örneği kurup raporun kendi
+sayılarına karşı uçtan uca koşturuyor. Bir sayı kayarsa üreteci yeniden
+koşturmak değil, **o test** kırmızıya döner.
+
+###### ÖLÇÜLDÜ — dokuzunun dokuzu da raporunu geri üretiyor
+
+En kötü sapmalar (dokuz rapor, tümü): span **0,06 mm** · sarım **0,05°** ·
+hız oranı **0,000** · kol açısı **0,14°** · konum gerginliği **%0,73** ·
+hubload **%0,20** · duty gerilme/hubload **%0,29** · sürücü kW **birebir**.
+Tasarım gerginliği ve serbest kol açısı **türetiliyor** (örnekte yazılı değil)
+ve dokuz raporun dokuzunda da raporun kendi satırına oturuyor.
+
+###### AG00902-1300 AYRIŞIYOR — ve ayrışan RAPOR
+
+Duty karşılaştırması orada **%430** sapıyor. Sebep modelde değil: fixture o
+raporun kusurunu zaten teşhis edip **ispatlamış** — Gates tasarım gerginliğini
+gergi çıkış spanı yerine **krank** çıkış spanına ankrajlamış ve zincir
+kapanmıyor. Kapı bunu `tensionTableValid: false` **bayrağından okuyor**, eşiği
+gevşetmiyor; ayrıca farkın gerçekten büyük olduğunu ve kardeş revizyonun
+(1275, aynı sistem, sağlam rapor) **tuttuğunu** sayıyla gösteriyor — yoksa
+bayrak boş bir muafiyet olurdu.
+
+###### ATALET: yedisinde rapordan, üçünde VARSAYIM
+
+Üç PDF **alıntı** (AG00894 · AG00902 ×2) ve "System Vibration Analysis"
+sayfaları eksik. Oralarda atalet yazılmadı; köprü arşiv medyanına düşüyor ama
+bunu `defaults` listesine **kaydediyor** — sayı uydurulmuş değil, varsayıldığı
+yazılı. Kapı ikisini birden tutuyor: alıntıda kayıt VAR, tam raporda YOK.
+
+> **`AG00879` bloğundaki "ataletler yazılmadı" notu YANLIŞTI ve düzeltildi.**
+> Dördü de (silindir · krank ataleti · kasnak ataletleri · kol künyesi)
+> raporun 11. sayfasında duruyor. Yanlış olan belge değil, o sayfanın hiç
+> açılmamış olmasıydı.
+
+###### Kapı on iki mutasyonla ölçüldü — DÖRDÜ ÖNCE YEŞİL GEÇTİ
+
+Kırmızıya döndürenler: dış çap eff→pitch, kol açısı Mean→FreeArm,
+`lengthOffset` sıfırlama, kayış sırası takası, gergi teması back→grooved.
+
+**Yeşil geçen dördü kapının gerçek boşluklarıydı** ve her biri için yapısal
+bir kapı eklendi: kayış boyunu REBL yerine **katalog adına** çekmek (0,4 mm,
+konum tablosunun yuvarlama payına sığıyor — AG00976'da 0,56°'lik kol hatası
+veren tuzağın aynısı), gergi merkezini Layout yerine yuvarlanmış Mean'den
+almak, aksesuar ataletini **×100** yapmak (burulma kalibre bir model, kimse
+görmez), ve silindir sayısını 6→4 çevirmek. Sonuncusu için
+`tests/helpers/gates-vibration.js` genişletildi: `# of Cylinders` de artık
+kaynağından okunuyor.
+
+###### ÖRNEK SEÇİCİSİ AÇILIR LİSTE — pencere örnek sayısıyla büyümez (2026-09-02)
+
+Kullanıcı, arşivin tamamı örnek olduktan hemen sonra: *"pencereyi uzatmasaydın
+keşke, böyle aşağıya indirilebilir bir pencere yapsaydın."* Haklıydı: her iki
+yüzey de **üç örnek için** tasarlanmış tam genişlik kart yığınıydı.
+
+| Yüzey | Önce | Sonra |
+|---|---|---|
+| Sihirbaz 1. adım (`cp-fead-wizard.js`) | 12 kart, modal aşağı büyüyor | tek `<select>` · **765 px, kaydırmasız** |
+| Örnek paneli (`cp-fead.js`) | 12 kart · 21 KB · 60 satır | tek `<select>` · **304 px** |
+
+**Künye kaybolmadı, TEKRARI kayboldu:** panelde kayış/tahrik oranı/aksesuar
+satırları artık on iki kez değil **yalnız seçili örnek** için basılıyor. Seçim
+düğümde durur (`node.data.pick`), yani panel yeniden çizilince kullanıcının
+baktığı örnek yerinde kalır. **Seçmek KURMAK değildir** — kurma ayrı düğmede.
+
+Sihirbazda korunması gereken iki kayıtlı karar vardı ve ikisi de korundu:
+
+* **"YÜKLENDİ", "seçili" değil.** `<select>` doğası gereği "seçili" ima eder;
+  oysa örnek formu DOLDURAN bir eylemdir ve kullanıcı sonra her alanı
+  değiştirebilir. Ayrımı `.ve-fw-seeded` durum satırı taşıyor.
+* **`_fwHint` yok.** Sihirbazda açıklama yüzeyi kaldırılmıştı ve kapısı da var;
+  ilk denemede yeniden çağrıldı ve üç ilgisiz test kırmızıya döndü. Durum
+  satırı bir açıklama değil, hangi örneğin yüklendiğinin kaydı.
+
+Ayrıca açılır listenin kart yığınında olmayan bir riski var ve kapısı yazıldı:
+**başlık satırı (`__`) bir seçim DEĞİL** — listeyi açıp kapatmak yüklü örneği
+sessizce silmemeli. `''` ise gerçek eylem ("Boş başla"), ve o da kayıtlı
+davranışa uygun olarak **işaretleniyor**.
+
+Kapılar sayıya değil **biçime** bakıyor (`ve-fw-btn-wide` yok · tek `<select>` ·
+tek kurma düğmesi): kayıt defterine örnek eklemek bu iki yüzeyin yüksekliğini
+değiştirmemeli.
+
 **Sırada:** kullanıcı kayışı seçtikten sonra katalog sonuçlarını geri almanın
 akışı (bugün Kayış Özellikleri panelinden elle yapılıyor); ve zarf çözümünün
 Sonuçlar sayfasında kanal olarak yayını.
