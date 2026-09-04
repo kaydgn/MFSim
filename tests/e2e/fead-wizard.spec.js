@@ -317,7 +317,7 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     await bootApp(page);
     await openFead(page);
     await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
-    await page.evaluate(() => { veFeadWizSeed('AG00976_GATES_2025'); veFeadWizGoto(6); });
+    await page.evaluate(() => { veFeadWizSeed('AG00976_GATES_2025'); veFeadWizGoto(5); });
 
     const m = await page.evaluate(() => ({
       foot: document.getElementById('ve-fw-foot').getBoundingClientRect().height,

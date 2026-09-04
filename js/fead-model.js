@@ -1693,8 +1693,25 @@ function veFeadDriveRatio(sd){
   var out = { ratio: 1, mode: 'direct', crankOD: NaN, fanOD: NaN, ok: false };
   // TEK KADEMELİ DÜZEN: fan kavraması krankın hemen önünde, sürücü kasnak
   // motorla aynı devirde. Oran tanımı gereği 1 — türetilecek bir şey yok.
-  if(sd.ratioMode === 'unity'){
-    out.mode = 'unity'; out.ratio = 1; out.ok = true;
+  // ── ÜÇ DÜZEN, İKİ ORAN ───────────────────────────────────────────────────
+  // Kullanıcı tarifi (2026-09-04):
+  //   (a) "direk krank kasnağı tahrik kasnağı oluyor" → FEAD'i krank kasnağı
+  //       tahrik ediyor, oran 1. Kasnaklar tablosundaki sürücü çapı = krank
+  //       kasnağının çapı.
+  //   (b) "onun önüne … krank kasnağına bağlı olduğu için aynı devirde dönen
+  //       (tahrik oranı 1 olan) başka bir SÜRÜCÜ KASNAK" → oran YİNE 1; değişen
+  //       tek şey, FEAD'i tahrik eden ÇAP. O çap zaten Kasnaklar tablosunda,
+  //       sürücü satırında duruyor. Krank kasnağının kendi çapı bir MOTOR
+  //       VERİSİDİR ve orana girmez.
+  //   (c) Gerçek ara kademe: krank ile sürücü kasnak FARKLI devirde
+  //       (BMC_FEAD_2026: tedarikçi sayfasının kendi değeri 197,32/179,62 =
+  //       1,0985). Oran ancak burada 1'den farklı.
+  //
+  // (a) ve (b) SAYISAL OLARAK aynı orana (1) çıkar ama aynı şey değildir ve
+  // ayrılması gereken şey yine NİYET: (b)'de krank çapı KAYITLIDIR ve rapora
+  // girer, (a)'da diye bir çap yoktur. `crankDirect` bu ayrımı taşıyor.
+  if(sd.ratioMode === 'unity' || sd.ratioMode === 'crankDirect'){
+    out.mode = sd.ratioMode; out.ratio = 1; out.ok = true;
     return out;
   }
   var crank = _feadNum(sd.crankOD, NaN), fan = _feadNum(sd.fanOD, NaN);
@@ -1708,8 +1725,9 @@ function veFeadDriveRatio(sd){
   return out;
 }
 function veFeadDriveModeLabel(mode){
-  return mode === 'unity' ? 'tek kademe (1:1)'
-       : mode === 'derive' ? 'çaplardan türetildi'
+  return mode === 'crankDirect' ? 'krank kasnağı doğrudan sürücü (1:1)'
+       : mode === 'unity' ? 'kranka bağlı ayrı sürücü kasnak (1:1)'
+       : mode === 'derive' ? 'ara kademe — çaplardan türetildi'
        : 'elle girildi';
 }
 

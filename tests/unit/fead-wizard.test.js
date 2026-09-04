@@ -468,15 +468,18 @@ describe('kurulum kapısı ve kurulum', () => {
 describe('adım eşlemesi ve yüzeyler', () => {
   test('hata mesajı ait olduğu adıma düşüyor', () => {
     expect(wiz.veFeadWizStepOf('"Alternatör" kasnağının konumu (X / Y) girilmedi.')).toBe(1);
-    expect(wiz.veFeadWizStepOf('Kayış yolu kapanmıyor: …')).toBe(2);
-    expect(wiz.veFeadWizStepOf('Gergi kol boyu girilmedi.')).toBe(3);
-    expect(wiz.veFeadWizStepOf('Kayış kanal (kaburga) sayısı girilmedi.')).toBe(4);
+    // KAYIŞ YOLU HATALARI DA KASNAKLAR ADIMINA: sıra artık orada düzenleniyor
+    // (Kayış Yolu adımı kaldırıldı, yeteneği tabloya taşındı). Hata mesajının
+    // kullanıcıyı GÖTÜRECEĞİ yer, çarenin bulunduğu yerdir.
+    expect(wiz.veFeadWizStepOf('Kayış yolu kapanmıyor: …')).toBe(1);
+    expect(wiz.veFeadWizStepOf('Gergi kol boyu girilmedi.')).toBe(2);
+    expect(wiz.veFeadWizStepOf('Kayış kanal (kaburga) sayısı girilmedi.')).toBe(3);
     // Eşleşmeyen mesaj ÖZET adımında toplanıyor: bilinmeyen bir hatayı
     // gizlemek, yanlış yere koymaktan kötüdür.
-    expect(wiz.veFeadWizStepOf('bilinmeyen bir şey oldu')).toBe(6);
+    expect(wiz.veFeadWizStepOf('bilinmeyen bir şey oldu')).toBe(wiz.VE_FW_STEPS.length - 1);
   });
 
-  test('yedi adımın yedisi de patlamadan çiziliyor (boş durumda bile)', () => {
+  test('altı adımın altısı da patlamadan çiziliyor (boş durumda bile)', () => {
     kabuk();
     wiz.veFeadWizReset();
     const b = wiz.veFeadWizBuild();
@@ -490,7 +493,7 @@ describe('adım eşlemesi ve yüzeyler', () => {
     }
   });
 
-  test('dolu durumda da yedi adım temiz', () => {
+  test('dolu durumda da altı adım temiz', () => {
     kabuk();
     wiz.veFeadWizSeed('AG00976_GATES_2025');
     const b = wiz.veFeadWizBuild();
@@ -723,7 +726,7 @@ describe('gergi satırı — Kasnaklar tablosunda, silinemez, tek kaynak', () =>
     const st = kur('AG00976_GATES_2025');
     wiz.veFeadWizTenSet('cenX', -160.5);
     expect(st.ten.cenX).toBe(-160.5);
-    expect(wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild())).toContain('-160.5');
+    expect(wiz.veFeadWizStepHTML(2, wiz.veFeadWizBuild())).toContain('-160.5');
     // ve çözüme de gidiyor
     const t = wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-tensioner');
     expect(t.data.cenX).toBe(-160.5);
@@ -735,7 +738,7 @@ describe('gergi satırı — Kasnaklar tablosunda, silinemez, tek kaynak', () =>
     // seçebilirdi. İkisi de sessizce yanlış model üretir.
     const st = kur('AG00976_GATES_2025');
     expect(st.pulleys.some((p) => p.type === 'fead-tensioner')).toBe(false);
-    const h6 = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    const h6 = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
     expect(h6).not.toContain('Otomatik Gergi (E9843)<em>kW');
     // sıra yine gergiyi taşıyor (kablolama)
     expect(wiz.veFeadWizRoute(st)).toContain('__ten__');
@@ -821,7 +824,7 @@ describe('gergi künye etiketi — rapor adı YOK', () => {
     // Etiket bir dönem iki dosyada iki ayrı ifadeyle üretiliyordu ve ZATEN
     // ayrışmıştı (biri birimleri yazıyor, öteki yazmıyordu). Tek üretici.
     kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
-    const h = wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild());
+    const h = wiz.veFeadWizStepHTML(2, wiz.veFeadWizBuild());
     const panel = fead.veFeadTensionerLibCard({ id: 'n1', data: {} });
     const cek = (s) => (s.match(/>[^<>]* · kol [^<]*<\/option>/g) || []).map((x) => x.slice(1, -10));
     const a = cek(h), bb = cek(panel);
@@ -838,7 +841,7 @@ describe('kayış adımı — katalog önerisi yok, gereken boy okuması var', (
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const b = wiz.veFeadWizBuild();
     expect(b.ok).toBe(true);
-    const h = wiz.veFeadWizStepHTML(4, b);
+    const h = wiz.veFeadWizStepHTML(3, b);
     expect(h).not.toMatch(/Katalog önerisi|ISO 9982 stok|Otomotiv ızgarası/);
     expect(h).toMatch(/Gereken boy/);                 // bilgi kaybı YOK
   });
@@ -868,7 +871,7 @@ describe('aksesuar modelleri — elle kW girişi YOK', () => {
 
   test('duty tablosunda kW GİRDİSİ yok, salt okunur değer var', () => {
     kur('AG00976_GATES_2025');
-    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
     expect(h).not.toContain('veFeadWizDutyKw(');       // elle giriş kalktı
     expect(h).toContain('ve-fw-ro');                   // okuma hücresi
     expect(h).toContain('Aksesuar Modelleri');
@@ -876,7 +879,7 @@ describe('aksesuar modelleri — elle kW girişi YOK', () => {
 
   test('katalogu olan aksesuarda açılır pencere, olmayanda "katalog yok"', () => {
     const st = kur('AG00976_GATES_2025');
-    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
     // ALT ve KK katalogu var; seçici TEK yazıcıdan geçiyor.
     expect((h.match(/veFeadWizAccModel\(/g) || []).length).toBe(2);
     expect(h).toContain('katalog yok');                // avaralar
@@ -992,7 +995,7 @@ describe('aksesuar modelleri — elle kW girişi YOK', () => {
     const st = kur('AG00976_GATES_2025');
     const alt = st.pulleys.find((p) => p.type === 'fead-alternator');
     st.solver.duty.forEach((r) => { delete r.kw[alt.key]; });   // gücünü kes
-    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
     expect(h).toMatch(/0 kW.*ile koşacak|gücü hiçbir/i);
     expect(h).toContain('Alternatör');
     // avaralar uyarıda GEÇMEZ (güç çekmemeleri doğru davranış)
@@ -1005,7 +1008,7 @@ describe('aksesuar modelleri — elle kW girişi YOK', () => {
 describe('özet kartı — kol açısı kutusu yok', () => {
   test('kol açısı/dönmesi kutusu basılmaz, kalan beş kutu durur', () => {
     kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
-    const h = wiz.veFeadWizStepHTML(6, wiz.veFeadWizBuild());
+    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
     expect(h).not.toMatch(/Kol açısı|Kol dönmesi/);
     expect((h.match(/class="ve-fw-stat/g) || []).length).toBe(5);
     ['Durum', 'Kasnak', 'Kayış boyu', 'Tasarım gerginliği', 'Dönüş yönü']
@@ -1019,7 +1022,7 @@ describe('özet kartı — kol açısı kutusu yok', () => {
   test('gergi adımı OKUMA kartı basmıyor — ve model DEĞİŞMİYOR', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const b = wiz.veFeadWizBuild();
-    const h = wiz.veFeadWizStepHTML(3, b);
+    const h = wiz.veFeadWizStepHTML(2, b);
     expect(h).not.toMatch(/Bu künyeden çıkanlar/);
     expect(h).not.toMatch(/Yay kurulması|Gereken KAYIŞ BOYU/);
     // MONTAJ KONUMU BUNUN DIŞINDA ve bilerek: bir okuma değil bir ÇIKTI —
@@ -1060,7 +1063,7 @@ describe('çalışma çevrimi — tablo dolu açılır', () => {
 
   test('6. adımda ÇEVRİM SEÇİCİ var ve yüklü kaydı gösteriyor', () => {
     kabuk(); wiz.veFeadWizReset();
-    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
     expect(h).toContain('Çalışma Çevrimi Kaydı');
     expect(h).toContain('veFeadWizDutyLib');
     // Yüklü kayıt SEÇİLİ görünmeli.
@@ -1095,7 +1098,7 @@ describe('çalışma çevrimi — tablo dolu açılır', () => {
   test('elle düzenlenen tablo seçicide ÖZEL diyor — kayıt gibi okutulmuyor', () => {
     kabuk(); wiz.veFeadWizReset();
     wiz.veFeadWizDutySet(0, 'rpm', 1234);
-    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
     expect(h).toContain('özel (elle düzenlendi)');
     expect(DUTY.veFeadDutyMatch(wiz.veFeadWizState().solver.duty)).toBeNull();
   });
@@ -1221,7 +1224,7 @@ describe('gergi satırı — TİP sütunu tipi söyler', () => {
     expect(h).not.toContain('veFeadWizTenLib');
     expect(h).not.toMatch(/elle gir/);
     // Ama 4. ADIMDA duruyor — seçim kaybolmadı, yer değiştirdi.
-    const g = wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild());
+    const g = wiz.veFeadWizStepHTML(2, wiz.veFeadWizBuild());
     expect(g).toContain('veFeadWizTenLib(this.value)');
     expect(g).toMatch(/elle gir/);
   });
@@ -1354,20 +1357,27 @@ describe('dönüş yönü — Kasnaklar adımında seçilir', () => {
     expect(b1.relDeg).toBeCloseTo(rel0, 6);
   });
 
-  test('YALNIZ Kasnaklar adımında — Kayış Yolu\'nda CCW/CW düğmesi YOK', () => {
+  test('CCW/CW seçicisi TEK YERDE — Kasnaklar adımında', () => {
     // Kullanıcı isteği (2026-08-31): *"'kayış yolu' kısmında CCW ve CW
     // butonlarına gerek yok. Zaten dönüş yönünü 'kasnaklar' kısmında
-    // hallediyoruz."* Yön OKUMASI kaybolmuyor: canlı şerit her adımda basıyor.
+    // hallediyoruz."*
+    //
+    // KURALIN İKİNCİ YARISI ARTIK KONUSUZ: Kayış Yolu adımı 2026-09-04'te
+    // kaldırıldı (yeteneği Kasnaklar tablosuna taşındı). Hüküm "öteki adımda
+    // yok"tan "BÜTÜN adımlar içinde TEK yerde"ye çevrildi — ikinci bir kopya
+    // yine iki yüzeyin sessizce ayrışması demek.
     kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
     const b = wiz.veFeadWizBuild();
     const kontrol = wiz.veFeadWizSpinHTML(b);
     expect(wiz.veFeadWizStepHTML(1, b)).toContain(kontrol);
-    expect(wiz.veFeadWizStepHTML(2, b)).not.toContain('ve-fw-spinbox');
-    expect(wiz.veFeadWizStepHTML(2, b)).not.toContain('veFeadWizSpinSet');
-    // Sıra çevirme düğmesi KALIYOR — adımın konusu serpantin sırası.
-    expect(wiz.veFeadWizStepHTML(2, b)).toContain('veFeadWizRouteReverse()');
-    // Yön yine görünüyor (canlı şerit).
-    expect(wiz.veFeadWizStepHTML(2, b)).toMatch(/CCW|CW/);
+    let say = 0;
+    for (let i = 0; i < wiz.VE_FW_STEPS.length; i++)
+      say += (wiz.veFeadWizStepHTML(i, b).match(/veFeadWizSpinSet/g) || []).length;
+    // İki düğme (CCW + CW), TEK kartta.
+    expect(say).toBe(2);
+    // Sıra çevirme düğmesi de aynı kartta — sıra artık orada düzenleniyor.
+    expect(wiz.veFeadWizStepHTML(1, b)).toContain('veFeadWizRouteReverse()');
+    expect(wiz.veFeadWizStepHTML(1, b)).toMatch(/CCW|CW/);
     expect(kontrol).toContain('ve-fw-spin-on');
   });
 
@@ -1449,12 +1459,12 @@ describe('serpantin sırası — iki sıra birleşti', () => {
   // kartın onu BASMADIĞINI göremez.
   test('SIRA KARTI HÜKMÜ BASAR — iki durumda da', () => {
     const st = elleKur();
-    const iyi = wiz.veFeadWizStepHTML(2, wiz.veFeadWizBuild());
+    const iyi = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
     expect(iyi).toMatch(/Gergi sırada <strong>son<\/strong>/);
     expect(iyi).not.toMatch(/son değil/);
 
     wiz.veFeadWizRouteReverse();
-    const kotu = wiz.veFeadWizStepHTML(2, wiz.veFeadWizBuild());
+    const kotu = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
     expect(kotu).toMatch(/son değil \(2\/6\)/);
     // ÇARE UYDURULMUYOR: sayıların etkilenmediği AYNI cümlede yazılı, yoksa
     // okuyucu bunu bir hesap hatası sanardı.
@@ -1510,7 +1520,7 @@ describe('gergi künyesi — seçiliyken parça alanları kilitli', () => {
     kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
     wiz.veFeadWizTenLib('AG00894');
     expect(wiz.veFeadWizTenLocked()).toBe(true);
-    const h = wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild());
+    const h = wiz.veFeadWizStepHTML(2, wiz.veFeadWizBuild());
     KILITLI.forEach((yol) => {
       const i = h.indexOf("_fwSet('" + yol + "'");
       expect(i).toBeGreaterThan(-1);
@@ -1542,7 +1552,7 @@ describe('gergi künyesi — seçiliyken parça alanları kilitli', () => {
     Object.keys(kunye).forEach((k) => expect(t2[k]).toEqual(kunye[k]));
     expect(t2.tenLib).toBe('');
 
-    const h = wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild());
+    const h = wiz.veFeadWizStepHTML(2, wiz.veFeadWizBuild());
     KILITLI.forEach((yol) => {
       const i = h.indexOf("_fwSet('" + yol + "'");
       expect(h.slice(h.lastIndexOf('<input', i), i)).not.toContain('readonly');
@@ -1564,7 +1574,7 @@ describe('gergi künyesi — seçiliyken parça alanları kilitli', () => {
     // değiştirilmemeli"* dedi, *"görünmesin"* değil.
     kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
     wiz.veFeadWizTenLib('AG00879');
-    const h = wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild());
+    const h = wiz.veFeadWizStepHTML(2, wiz.veFeadWizBuild());
     const i = h.indexOf("_fwSet('ten.armLen'");
     const alan = h.slice(h.lastIndexOf('<input', i), i);
     expect(alan).toContain('value="56"');
@@ -1591,7 +1601,7 @@ describe('gergi künyesi — seçiliyken parça alanları kilitli', () => {
 describe('kayış adımı — tek çıktı, profil kalır', () => {
   test('üç kart da YOK, "Profil ve Marka" DURUYOR', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
-    const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
+    const h = wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild());
     expect(h).toContain('Profil ve Marka');
     expect(h).toContain("_fwSetRender('belt.profile'");
     expect(h).toContain("_fwSetRender('belt.brand'");
@@ -1610,7 +1620,7 @@ describe('kayış adımı — tek çıktı, profil kalır', () => {
   test('boy bir ÇIKTI ve katalog sabitleri KAPALI diye YAZILI', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const b = wiz.veFeadWizBuild();
-    const h = wiz.veFeadWizStepHTML(4, b);
+    const h = wiz.veFeadWizStepHTML(3, b);
     expect(h).toContain('SERBEST (kilitli)');
     expect(h).toMatch(/Gereken boy \(çıktı\)/);
     expect(h).toContain('1714.6');
@@ -1973,7 +1983,7 @@ describe('kaydırma konumu — aynı adımda korunur, adım değişince sıfırl
   test('AYNI adımda yeniden çizim konumu KORUYOR', () => {
     const b = sahne(2000);
     wiz.veFeadWizSeed('AG00976_GATES_2025');
-    wiz.veFeadWizGoto(5);
+    wiz.veFeadWizGoto(4);
     b.scrollTop = 900;
     wiz.veFeadWizDutyLib('AG00902-4');          // kullanıcının bildirdiği eylem
     expect(b.scrollTop).toBe(900);
@@ -1991,19 +2001,19 @@ describe('kaydırma konumu — aynı adımda korunur, adım değişince sıfırl
   test('ADIM DEĞİŞİNCE sıfırlanır — yeni adım baştan okunur', () => {
     const b = sahne(2000);
     wiz.veFeadWizSeed('AG00976_GATES_2025');
-    wiz.veFeadWizGoto(5);
+    wiz.veFeadWizGoto(4);
     b.scrollTop = 900;
     wiz.veFeadWizGo(-1);
     expect(b.scrollTop).toBe(0);
     b.scrollTop = 500;
-    wiz.veFeadWizGoto(6);
+    wiz.veFeadWizGoto(5);
     expect(b.scrollTop).toBe(0);
   });
 
   test('İÇERİK KISALINCA konum KIRPILIR — dibe yapışmaz', () => {
     const b = sahne(2000);
     wiz.veFeadWizSeed('AG00976_GATES_2025');
-    wiz.veFeadWizGoto(5);
+    wiz.veFeadWizGoto(4);
     b.scrollTop = 1500;
     Object.defineProperty(b, 'scrollHeight', { value: 600, configurable: true });
     wiz.veFeadWizDutyLib('AG00902-4');
@@ -2048,31 +2058,50 @@ describe('gergi satırı — biçim diğerleriyle aynı, hüküm üst kartta', (
 });
 
 // ── 2 · KASNAK SATIRLARI TAŞINABİLİR ───────────────────────────────────────
-describe('kasnak satırı taşıma — tablo düzeni, kayış yolu DEĞİL', () => {
-  test('↑ ↓ sırayı değiştiriyor, uçlarda duruyor', () => {
+describe('kasnak satırı taşıma — TABLO SIRASI = KAYIŞ SIRASI', () => {
+  // KURAL TERSİNE ÇEVRİLDİ (2026-09-04) ve bu bilinçli. Eskiden tablo sırası
+  // ile kayış sırası AYRIYDI; gerekçesi "tabloyu düzenlemek gerilmeyi SESSİZCE
+  // değiştirmesin"di. Kullanıcı Kayış Yolu adımının kaldırılmasını istedi
+  // (*"O işi zaten 'kasnaklar' kısmından yapıyoruz"*) — ölçüldü, o an doğru
+  // değildi. Adımı silmek sırayı düzenlenemez bırakacağı için yetenek buraya
+  // TAŞINDI: tablo artık sıranın kendisi ve değişiklik SESSİZ DEĞİL (kartın
+  // başlığı "Kasnaklar — kayış sırasıyla", hükmü ve "⇄ Kayış yönünü çevir"
+  // düğmesi aynı kartta).
+  test('↑ ↓ KAYIŞ SIRASINI değiştiriyor, uçlarda duruyor', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const st = wiz.veFeadWizState();
-    const anahtar = () => st.pulleys.map((p) => p.key).join(',');
-    const a0 = anahtar();
+    const yol = () => wiz.veFeadWizRoute(st).join(',');
+    const y0 = yol();
     expect(wiz.veFeadWizPulleyMove(st.pulleys[1].key, -1)).toBe(true);
-    expect(anahtar()).not.toBe(a0);
-    expect(wiz.veFeadWizPulleyMove(st.pulleys[0].key, -1)).toBe(false);   // tepe
-    expect(wiz.veFeadWizPulleyMove(st.pulleys[st.pulleys.length - 1].key, 1)).toBe(false);
+    expect(yol()).not.toBe(y0);
+    const s0 = wiz.veFeadWizRoute(st);
+    expect(wiz.veFeadWizPulleyMove(s0[0], -1)).toBe(false);                 // tepe
+    expect(wiz.veFeadWizPulleyMove(s0[s0.length - 1], 1)).toBe(false);      // dip
     expect(wiz.veFeadWizPulleyMove('yok-boyle', 1)).toBe(false);
   });
 
-  test('KAYIŞ YOLUNU ve ÇÖZÜMÜ değiştirmiyor — sıra yalnız tablonun', () => {
-    // Bağlansaydı tabloyu düzenlemek gerilmeyi sessizce değiştirirdi.
+  test('ÇÖZÜMÜ DEĞİŞTİRİYOR — sıra kayışın kendisi', () => {
+    // Eski kapı bunun TERSİNİ tutuyordu. Değişikliğin gerçekten çözüme
+    // ulaştığı ölçülüyor: ulaşmasaydı tablo "kayış sırası" diye adlandırılmış
+    // ama hiçbir şeye bağlanmamış olurdu — sessiz yanlışın ta kendisi.
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const st = wiz.veFeadWizState();
     const b0 = wiz.veFeadWizBuild();
-    const yol0 = st.route.slice();
+    const yol0 = wiz.veFeadWizRoute(st).slice();
     wiz.veFeadWizPulleyMove(st.pulleys[2].key, -1);
     const b1 = wiz.veFeadWizBuild();
-    expect(st.route).toEqual(yol0);
-    expect(b1.beltLengthMm).toBeCloseTo(b0.beltLengthMm, 9);
-    expect(b1.springTensionN).toBeCloseTo(b0.springTensionN, 9);
-    expect(b1.spin).toBe(b0.spin);
+    expect(wiz.veFeadWizRoute(st)).not.toEqual(yol0);
+    expect(b1.beltLengthMm).not.toBeCloseTo(b0.beltLengthMm, 6);
+  });
+
+  test('GERGİ SATIRI da taşınabiliyor — okları artık ölü değil', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const st = wiz.veFeadWizState();
+    const yer = () => wiz.veFeadWizRoute(st).indexOf('__ten__');
+    const y0 = yer();
+    expect(y0).toBeGreaterThan(0);
+    expect(wiz.veFeadWizPulleyMove('__ten__', -1)).toBe(true);
+    expect(yer()).toBe(y0 - 1);
   });
 
   test('düğmeler satırda ve uçlarda KAPALI', () => {
@@ -2144,7 +2173,7 @@ describe('ondalık ayırıcı — virgül de nokta da', () => {
 describe('tahrik oranı — elle girilemez', () => {
   test('KADEME seçicisi var, elle oran alanı YOK', () => {
     kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
-    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
     expect(h).toContain('solver.ratioMode');
     expect(h).toContain('value="derive"');
     expect(h).toContain('value="unity"');
@@ -2154,17 +2183,58 @@ describe('tahrik oranı — elle girilemez', () => {
     expect(h).toContain("_fwSet('solver.fanOD'");
   });
 
-  test('KADEME YOK seçilince çap alanları kalkıyor ve oran 1', () => {
+  // ── ÜÇ DÜZEN (2026-09-04) ────────────────────────────────────────────────
+  // Kullanıcı tarifi: (a) krank kasnağı doğrudan FEAD'i tahrik ediyor,
+  // (b) kranka BAĞLI ayrı bir sürücü kasnak — aynı devir, farklı çap,
+  // (c) gerçek ara kademe — farklı devir. (a) ve (b) oran 1 verir; aralarındaki
+  // fark ÇAPTA ve KAYITTA, oranda değil.
+  test('KRANK DOĞRUDAN SÜRÜCÜ — hiç çap sorulmuyor, oran 1', () => {
     kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
-    wiz.veFeadWizState().solver.ratioMode = 'unity';
-    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    wiz.veFeadWizState().solver.ratioMode = 'crankDirect';
+    const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
     expect(h).not.toContain("_fwSet('solver.crankOD'");
     expect(h).not.toContain("_fwSet('solver.fanOD'");
     const b = wiz.veFeadWizBuild();
-    expect(b.drive.mode).toBe('unity');
+    expect(b.drive.mode).toBe('crankDirect');
     expect(b.drive.ratio).toBe(1);
-    // BMC'nin çapları durumda DURUYOR ama kullanılmıyor — seçim onları eziyor
+    // BMC'nin çapları durumda DURUYOR ama kullanılmıyor.
     expect(Number(wiz.veFeadWizState().solver.crankOD)).toBeGreaterThan(0);
+  });
+
+  test('KRANKA BAĞLI AYRI SÜRÜCÜ — oran YİNE 1, krank çapı MOTOR VERİSİ', () => {
+    // Bu düzende krank çapı orana GİRMEZ ama kaydedilir: FEAD'i tahrik eden
+    // çap Kasnaklar tablosundaki sürücü satırındadır, krank çapı motorun
+    // kendi verisidir. İkisini karıştırmak, bağlı bir kasnağı ayrı devirde
+    // dönüyormuş gibi hesaplamak olurdu.
+    kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
+    wiz.veFeadWizState().solver.ratioMode = 'unity';
+    const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
+    expect(h).toContain("_fwSet('solver.crankOD'");        // motor verisi olarak SORULUYOR
+    expect(h).not.toContain("_fwSet('solver.fanOD'");      // kademe yok, sürülen kasnak yok
+    const b = wiz.veFeadWizBuild();
+    expect(b.drive.mode).toBe('unity');
+    expect(b.drive.ratio).toBe(1);                          // ÇAP FARKI ORANA GİRMİYOR
+  });
+
+  test('ARA KADEME — BMC tedarikçi sayfasının kendi oranı korunuyor', () => {
+    // ÇIPA: sayfanın kendi değeri 197,32 / 179,62 = 1,0985. Bu düzen gerçek
+    // ve oran 1'den farklı; üç düzeni tek "1:1" kuralına indirmek bu örneği
+    // %9,85 kaydırırdı.
+    kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
+    const b = wiz.veFeadWizBuild();
+    expect(b.drive.mode).toBe('derive');
+    expect(b.drive.ratio).toBeCloseTo(197.32 / 179.62, 9);
+    expect(b.drive.ratio).toBeCloseTo(1.0985, 4);
+  });
+
+  test('FEAD\'i tahrik eden çap KASNAKLAR TABLOSUNDAN okunuyor', () => {
+    // İkinci kez sorulsaydı iki çap sessizce ayrışabilirdi.
+    kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
+    const st = wiz.veFeadWizState();
+    const src = st.pulleys.find((p) => p.driver);
+    const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
+    expect(h).toContain('FEAD');
+    expect(h).toContain(String(src.od));
   });
 
   test('kurulan model kipi taşıyor — elle oran ise DÜŞÜRÜLÜYOR', () => {
@@ -2187,8 +2257,9 @@ describe('tahrik oranı — elle girilemez', () => {
 
   test('TEK çap girilirse SESSİZ kalmıyor', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
-    wiz.veFeadWizState().solver.crankOD = 197.32;   // fanOD boş
-    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    wiz.veFeadWizState().solver.ratioMode = 'derive';   // uyarı yalnız bu düzende anlamlı
+    wiz.veFeadWizState().solver.crankOD = 197.32;       // fanOD boş
+    const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
     expect(h).toMatch(/Yalnız bir çap girildi/);
     expect(wiz.veFeadWizBuild().drive.ratio).toBeCloseTo(1, 9);
   });
@@ -2199,7 +2270,7 @@ describe('tahrik oranı — elle girilemez', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const s = wiz.veFeadWizState().solver;
     s.crankOD = 197.32; s.ratioMode = 'unity';
-    expect(wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild()))
+    expect(wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild()))
       .not.toMatch(/Yalnız bir çap girildi/);
   });
 
@@ -2214,7 +2285,7 @@ describe('tahrik oranı — elle girilemez', () => {
 // ── 7 · MOTOR DEVİRLERİ RPM ────────────────────────────────────────────────
 test('motor devirleri RPM yazıyor, "d/dk" kalmadı', () => {
   kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
-  const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+  const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
   expect(h).not.toContain('d/dk');
   expect(h).toContain('Devir [RPM]');
   // KÜNYE ALANLARI ARTIK PENCEREDE (kullanıcı: "çok kalabalık duruyor").
@@ -2232,7 +2303,7 @@ describe('motor künyesi PENCEREDE — sayfa sadeleşti', () => {
   // yok… tıklanır bir buton ve açılır bir pencere ile bu işi halledelim."*
   test('on alanın hiçbiri 6. adımın gövdesinde DEĞİL', () => {
     kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
-    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
     wiz.VE_FW_ENG_FIELDS.forEach((f) => {
       expect(h).not.toContain("'" + f.yol + "'");
     });
@@ -2275,7 +2346,7 @@ describe('motor odası sıcaklığı — TEK alan, °C sütunu yok', () => {
   // ÖLÇÜLDÜ: on iki örneğin hepsinde tablo içi sıcaklık TEK.
   test('duty tablosunda °C sütunu YOK', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
-    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
     expect(h).not.toContain('<th>°C</th>');
     expect(h).not.toContain("'degC'");
     expect(h).toContain('Motor odası sıcaklığı');
@@ -2297,7 +2368,7 @@ describe('motor odası sıcaklığı — TEK alan, °C sütunu yok', () => {
     expect(wiz.veFeadWizDutyTempOf(st.solver.duty)).toBe('90');
     st.solver.duty[0].degC = 70;                 // elle ayrıştır
     expect(wiz.veFeadWizDutyTempOf(st.solver.duty)).toBeNull();
-    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
     expect(h).toContain('satır başına farklı');
     // Ve değerler DURUYOR — çizim onları ezmiyor.
     expect(st.solver.duty[0].degC).toBe(70);
@@ -2324,7 +2395,7 @@ describe('kol yönü — nispi gösterim', () => {
     kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
     const st = wiz.veFeadWizState();
     st.ten.armMeanDeg = 344;
-    const h = wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild());
+    const h = wiz.veFeadWizStepHTML(2, wiz.veFeadWizBuild());
     expect(h).toContain('value="164"');
     expect(h).toContain('veFeadWizArmShown(this.value)');
     expect(h).toContain('Kol yönü');
@@ -2578,7 +2649,7 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
 
   test('4. adımda 📐 düğmesi var ve pencere kabı index.html\'de', () => {
     sahne();
-    expect(wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild())).toContain('veFeadWizAngOpen()');
+    expect(wiz.veFeadWizStepHTML(2, wiz.veFeadWizBuild())).toContain('veFeadWizAngOpen()');
     expect(IDX).toContain('id="ve-fw-ang"');
     expect(CSS).toMatch(/\.ve-fw-ang\s*\{/);
     expect(CSS).toMatch(/\.ve-fw-ang-box\s*\{/);
@@ -2767,10 +2838,10 @@ describe('sihirbazda açıklama yüzeyi YOK', () => {
     expect(CSS).not.toMatch(/\.ve-fw-card-h em/);
   });
 
-  test('YEDİ ADIMIN hiçbiri açıklama paragrafı basmıyor', () => {
+  test('ALTI ADIMIN hiçbiri açıklama paragrafı basmıyor', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const b = wiz.veFeadWizBuild();
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 6; i++) {
       const h = wiz.veFeadWizStepHTML(i, b);
       expect(h).not.toContain('ve-fw-hint');
       // Kart başlığında göz kırpma yok: `<span>Ad</span>` hemen `</header>`.
@@ -2783,7 +2854,7 @@ describe('sihirbazda açıklama yüzeyi YOK', () => {
   test('BOŞ sihirbazda da temiz — ve kart gövdesi boş kalmıyor', () => {
     kabuk(); wiz.veFeadWizReset();
     const b = wiz.veFeadWizBuild();
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 6; i++) {
       const h = wiz.veFeadWizStepHTML(i, b);
       expect(h).not.toContain('ve-fw-hint');
       // Gövdesi TAMAMEN boş bir kart, açıklaması sökülmüş bir karttır —
@@ -2817,7 +2888,7 @@ describe('sihirbazda açıklama yüzeyi YOK', () => {
     // uymayan" bir markup'tı.
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const b = wiz.veFeadWizBuild();
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 6; i++) {
       const d = document.createElement('div');
       d.innerHTML = wiz.veFeadWizStepHTML(i, b);
       expect(d.querySelectorAll('.ve-fw-card-h em').length).toBe(0);
@@ -2831,8 +2902,75 @@ describe('sihirbazda açıklama yüzeyi YOK', () => {
     kabuk(); wiz.veFeadWizReset();
     expect(wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild())).toContain('ve-fw-issue');
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
-    expect(wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild())).toContain('ve-fw-reads');
+    expect(wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild())).toContain('ve-fw-reads');
     // Alan başına ipucu da duruyor (üzerine gelince çıkar).
     expect(wiz._fwTenRow(wiz.veFeadWizState())).toMatch(/title="[^"]*MERKEZ/);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KAYIŞ YOLU ADIMI KALKTI — YETENEĞİ KASNAKLAR'A TAŞINDI
+//
+// Kullanıcı isteği (2026-09-04): *"Kayış yolu kısmını kaldıralım. Gerek yok.
+// O işi zaten 'kasnaklar' kısmından yapıyoruz."*
+//
+// ÖLÇÜLDÜ ve "zaten yapıyoruz" O AN DOĞRU DEĞİLDİ: `veFeadWizPulleyMove`
+// yalnız `st.pulleys`i takas ediyordu. Adımı silmek sırayı DÜZENLENEMEZ
+// bırakırdı; bu yüzden yetenek taşındı ve kapılar yeni yere bakıyor.
+describe('adım listesi ve taşınan yetenek', () => {
+  test('ALTI adım — "Kayış Yolu" yok', () => {
+    expect(wiz.VE_FW_STEPS.length).toBe(6);
+    const adlar = wiz.VE_FW_STEPS.map((s) => s.ad);
+    expect(adlar).toEqual(['Başlangıç', 'Kasnaklar', 'Otomatik Gergi',
+                           'Kayış', 'Motor ve Çevrim', 'Özet ve Kurulum']);
+  });
+
+  test('SIRA DÜZENLEME Kasnaklar kartında — ok, hüküm ve yön çevirme', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const h = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
+    expect(h).toContain('Kasnaklar — kayış sırasıyla');
+    expect(h).toContain('veFeadWizRouteReverse()');
+    expect(h).toContain("veFeadWizPulleyMove('__ten__'");   // gergi de taşınabiliyor
+    expect(h).toMatch(/Gergi sırada/);                       // hüküm sıranın yanında
+  });
+
+  test('TABLO SIRASI SIRANIN KENDİSİ — satır sayısı = rota uzunluğu', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const st = wiz.veFeadWizState();
+    const d = document.createElement('div');
+    d.innerHTML = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
+    const satir = d.querySelectorAll('.ve-fw-tbl-kasnak tbody tr').length;
+    expect(satir).toBe(wiz.veFeadWizRoute(st).length);
+  });
+
+  test('GERGİ SATIRI ROTADAKİ YERİNDE — sona sabitlenmiş değil', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const st = wiz.veFeadWizState();
+    wiz.veFeadWizPulleyMove('__ten__', -1);                  // gergiyi bir yukarı al
+    const yer = wiz.veFeadWizRoute(st).indexOf('__ten__');
+    const d = document.createElement('div');
+    d.innerHTML = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
+    const satirlar = [...d.querySelectorAll('.ve-fw-tbl-kasnak tbody tr')];
+    const tenSatir = satirlar.findIndex((tr) => tr.classList.contains('ve-fw-tr-ten'));
+    expect(tenSatir).toBe(yer);
+  });
+});
+
+describe('açı seçici — yeşil yayın ne olduğu YAZILI', () => {
+  // Kullanıcı sordu (2026-09-04): *"kasnağın etrafında yeşil yaylar çıkıyor.
+  // Bunun anlamı ne?"* Cevap bir açıklama paragrafı değil bir GÖSTERGE.
+  test('bant varken gösterge basılıyor, yokken basılmıyor', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    wiz.veFeadWizAngOpen();
+    const h = wiz.veFeadWizAngHTML();
+    expect(h).toContain('ve-fw-legend');
+    expect(h).toMatch(/Yeşil yay/);
+    // Bant yoksa gösterge de yok: açıklanacak bir şey kalmıyor.
+    kabuk(); wiz.veFeadWizReset();
+    const st = wiz.veFeadWizState();
+    st.ten = { cenX: 0, cenY: 0, armLen: 90, od: 75 };
+    wiz.veFeadWizAngOpen();
+    const h2 = wiz.veFeadWizAngHTML();
+    expect(h2).not.toContain('ve-fw-legend');
   });
 });
