@@ -2617,6 +2617,30 @@ Kapılar sayıya değil **biçime** bakıyor (`ve-fw-btn-wide` yok · tek `<sele
 tek kurma düğmesi): kayıt defterine örnek eklemek bu iki yüzeyin yüksekliğini
 değiştirmemeli.
 
+##### SEÇİLEN ÖRNEĞİN KÜNYESİ + ŞEMASI (2026-09-04)
+
+Kullanıcı isteği: *"kullanıcı örnek seçtiğinde, hemen altında seçilen
+konfigürasyonun kullanıcıyı bilgilendiren bir özeti olsun. Şemayı çizdir…
+Kullanıcı seçtiği örneğin ne olduğunu anlasın."* Açılır liste tek satıra
+indirdi ama tek satır **ne seçildiğini** anlatmıyordu; künye o boşluğu
+dolduruyor.
+
+Üç hüküm:
+
+* **Künye TEK örnek için basılır**, liste için değil — yoksa kart yığınına,
+  üstelik şemalarla birlikte geri dönerdik. Kapı biçime bakıyor
+  (`ve-fw-exspec` **1 adet**, `<svg>` en çok 1).
+* **Şemayı sunum ÇİZMEZ**, tek üreticiden ister: `veFeadLayoutSVG` — 7. adımın
+  kullandığının aynısı. Çözüm yoksa şema da yok; sebebi zaten uyarı kutusunda.
+* **Seçim yoksa künye de yok.** "Boş başla" (`''`) bir seçimdir ama gösterilecek
+  bir örnek değildir; `'__'` (başlık satırı) hiçbir şeyi silmez.
+
+**ÖLÇÜLMÜŞ TUZAK — "künyede geçiyor mu" YETMİYOR.** Sekiz mutasyonun ikisi
+yeşil geçti: (a) gergi satırı tümüyle `'—'` olduğunda, çünkü gergi adı
+*Kasnaklar* satırında da geçiyor; (b) `effLength` künyeden düştüğünde, çünkü
+`8PK1392HD` adı zaten "1392" içeriyor. Kapı artık ızgarayı **dt→dd** okuyor ve
+sayıyı **birimiyle** arıyor (`'1392 mm'`).
+
 **Sırada:** kullanıcı kayışı seçtikten sonra katalog sonuçlarını geri almanın
 akışı (bugün Kayış Özellikleri panelinden elle yapılıyor); ve zarf çözümünün
 Sonuçlar sayfasında kanal olarak yayını.

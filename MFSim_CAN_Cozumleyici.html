@@ -7971,6 +7971,21 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-seeded b{ color:var(--text-primary); }
 .ve-fw-seeded em{ font-style:normal; color:var(--text-muted); }
 
+/* SEÇİLEN ÖRNEĞİN KÜNYESİ — açılır liste tek satıra indi, ama tek satır
+   seçilenin NE olduğunu anlatmıyor (kullanıcı: "seçtiği örneğin ne olduğunu
+   anlasın"). Künye yalnız BİR örnek için basılır, yani örnek sayısı arttıkça
+   pencere yine büyümez. */
+.ve-fw-exnote{
+  font-size:var(--fs-micro); line-height:1.55; color:var(--text-secondary);
+  margin-bottom:10px;
+}
+.ve-fw-exspec{
+  display:grid; grid-template-columns:auto 1fr; gap:5px 12px;
+  margin:0 0 10px; font-size:var(--fs-micro); line-height:1.5;
+}
+.ve-fw-exspec dt{ color:var(--text-muted); white-space:nowrap; }
+.ve-fw-exspec dd{ margin:0; color:var(--text-primary); }
+
 /* Kasnak satırındaki sıra düğmeleri — ↑ ↓ ✕ tek hücrede, sabit genişlik.
    Silme düğmesi tek başınayken hücre dar; üç düğme sığmayınca satır kayar. */
 .ve-fw-rowops{ white-space:nowrap; }

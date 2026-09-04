@@ -1723,6 +1723,18 @@ describe('sihirbaz girdisi → topoloji bileşeni', () => {
 // ── 1 · YÜKLENEN ÖRNEK KARTI BELİRGİN ──────────────────────────────────────
 // *"Başlangıç kısmında 'örnekten doldur' kategorisi var. Buradan bir seçenek
 // seçtiğimizde seçtiğimiz seçeneğin belirgin olmasını istiyorum."*
+// Künye ızgarasını dt→dd olarak okur. Metne değil YAPIYA bakmak şart: bir
+// satırın değeri düşse bile aynı sözcük başka satırda geçebiliyor.
+function _fwKunyeOku(h) {
+  const m = h.match(/<dl class="ve-fw-exspec">([\s\S]*?)<\/dl>/);
+  if (!m) return {};
+  const cift = {};
+  const re = /<dt>([\s\S]*?)<\/dt><dd>([\s\S]*?)<\/dd>/g;
+  let x;
+  while ((x = re.exec(m[1]))) cift[x[1]] = x[2];
+  return cift;
+}
+
 describe('örnekten doldur — AÇILIR LİSTE, yüklenen belirgin', () => {
   // YÜZEY DEĞİŞTİ, ANLAM DEĞİŞMEDİ. Kart yığını açılır listeye döndü
   // (kullanıcı, 2026-09-02: *"pencereyi uzatmasaydın keşke, böyle aşağıya
@@ -1783,6 +1795,72 @@ describe('örnekten doldur — AÇILIR LİSTE, yüklenen belirgin', () => {
     // '' ise gerçek eylem: temizle.
     wiz.veFeadWizSeedPick('');
     expect(wiz.veFeadWizState().seededFrom).toBe('');
+  });
+
+  test('SEÇİLEN ÖRNEĞİN KÜNYESİ basılıyor — şema dahil', () => {
+    // Kullanıcı isteği (2026-09-02): açılır liste tek satıra indi ama tek satır
+    // seçilenin NE olduğunu anlatmıyor; künye + kayış yolu şeması o boşluğu
+    // dolduruyor. Kapı içeriğe bakıyor, yerleşime değil.
+    kabuk(); wiz.veFeadWizSeed('AG00879_GATES_2023');
+    const b = wiz.veFeadWizBuild();
+    const h = wiz.veFeadWizStepHTML(0, b);
+    const ex = veFeadExampleOf('AG00879_GATES_2023');
+
+    expect(h).toContain('Seçilen Örnek');
+    // Not KAÇIŞLANARAK basılıyor (doğru davranış); karşılaştırma bu yüzden
+    // `&` öncesindeki parçayla yapılıyor.
+    expect(h).toContain(ex.note.split('&')[0].slice(0, 30));
+    ex.pulleys.forEach((p) => expect(h).toContain(p.name));   // kasnaklar
+
+    // SATIR SATIR — dt→dd eşleşmesi. Yalnız "künyede geçiyor mu" diye baksaydık
+    // bir satır sessizce "—" olabilirdi: ÖLÇÜLDÜ, `['Gergi', tenP ? …]` koşulu
+    // false'a çevrildiğinde 161 testin HEPSİ yeşil kaldı, çünkü gergi adı
+    // Kasnaklar satırında da geçiyor. Kapı artık DEĞERE bakıyor.
+    const kunye = _fwKunyeOku(h);
+    expect(Object.keys(kunye)).toEqual(['Kasnaklar', 'Kayış', 'Gergi', 'Çalışma çevrimi']);
+
+    const ten = ex.pulleys.filter((p) => (componentDefs[p.type] || {}).isFeadTensioner)[0];
+    expect(kunye['Gergi']).toContain(ten.name);
+    expect(kunye['Gergi']).toContain(String(ten.data.armLen));
+    expect(kunye['Gergi']).toContain(String(ten.data.meanLoad));
+    expect(kunye['Gergi']).toContain(String(ten.data.armMeanDeg));
+    expect(kunye['Gergi']).not.toBe('—');
+
+    expect(kunye['Kayış']).toContain(ex.belt.beltType);
+    // BİRİMLE BİRLİKTE: çıplak sayı TESADÜFEN geçiyordu — 8PK1392HD adı zaten
+    // "1392" içeriyor, dolayısıyla `effLength` alanı künyeden tamamen düşse de
+    // iddia yeşil kalıyordu (mutasyonla ölçüldü).
+    expect(kunye['Kayış']).toContain(String(ex.belt.effLength) + ' mm');
+    expect(kunye['Çalışma çevrimi'])
+      .toContain(String(ex.solver.duty.length) + ' devir noktası');
+    // Kasnak adları KASNAKLAR satırında — başka satıra saçılmıyor.
+    ex.pulleys.forEach((p) => expect(kunye['Kasnaklar']).toContain(p.name));
+    // ŞEMA: çizici TEK KAYNAK (veFeadLayoutSVG) — sunum kendi geometrisini
+    // hesaplamıyor. Çözülen modelde şema VAR.
+    expect(b.ok).toBe(true);
+    expect(h).toContain('ve-fw-fig');
+    expect(h).toContain('<svg');
+  });
+
+  test('taze sihirbazda künye YOK — boş örnek için iddia uydurulmuyor', () => {
+    kabuk(); _fwSifirla();
+    const h = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
+    expect(h).not.toContain('Seçilen Örnek');
+    // "Boş başla" da bir seçim ama gösterilecek bir örnek YOK.
+    wiz.veFeadWizReset();
+    expect(wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild())).not.toContain('Seçilen Örnek');
+  });
+
+  test('KÜNYE TEK ÖRNEK İÇİN — liste değil, yani pencere yine büyümüyor', () => {
+    // Asıl risk: künyeyi her örnek için basmak. O zaman kart yığınına geri
+    // dönmüş olurduk, üstelik şemalarla birlikte.
+    kabuk(); wiz.veFeadWizSeed('AG00879_GATES_2023');
+    const h = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
+    expect((h.match(/ve-fw-exspec/g) || [])).toHaveLength(1);
+    expect((h.match(/<svg/g) || []).length).toBeLessThanOrEqual(1);
+    // Başka bir örneğin notu basılmıyor.
+    const baska = veFeadExampleOf('AG0868_4PK_GATES_2022');
+    expect(h).not.toContain(baska.note.split('&')[0].slice(0, 30));
   });
 
   test('PENCERE ÖRNEK SAYISIYLA BÜYÜMÜYOR — asıl kazanç bu', () => {
