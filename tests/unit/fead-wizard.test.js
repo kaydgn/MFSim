@@ -82,7 +82,11 @@ const _fwSifirla = () => {
 const kabuk = () => {
   document.body.innerHTML = '<div id="ve-canvas"></div>'
     + '<div id="ve-feadwiz-overlay" style="display:none;">'
-    + '<div id="ve-fw-nav"></div><div id="ve-fw-body"></div><div id="ve-fw-foot"></div></div>';
+    + '<div id="ve-fw-nav"></div><div id="ve-fw-body"></div><div id="ve-fw-foot"></div></div>'
+    // Açı seçicisinin kaplaması: `veFeadWizAngRender` onu id ile arıyor ve
+    // bulamazsa SESSİZCE dönüyor — kabukta olmasaydı DOM kapısı hiçbir şey
+    // ölçmezdi (boş bir pencerede de `em` sayısı sıfırdır).
+    + '<div id="ve-fw-ang" style="display:none;"></div>';
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2424,6 +2428,47 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
 //   · `ve-fw-issue`   — canlı doğrulama çıktısı, açıklama değil
 //   · `ve-fw-reads`   — sayı okuması
 //   · adım alt başlığı — bölüm etiketi ("Tip · çap · koordinat · …")
+describe('kasnak tablosu SIĞAR — yatay kaydırma yok', () => {
+  // Kullanıcı bildirimi (2026-09-02): tablo sağa sola kayıyordu.
+  // ÖLÇÜLDÜ (gerçek tarayıcı, 1280×900): kapsayıcı 873 px, tablo 1058 px →
+  // 185 px taşma. Sebep sütun genişliklerinin İÇERİKLE İLGİSİZ olmasıydı:
+  // "263" yazan X ile "Klima Kompresörü" yazan Ad ikisi de 134 px, çünkü
+  // otomatik yerleşimde hücrenin en küçük genişliğini içindeki <input>'un
+  // tarayıcı varsayılanı belirliyor.
+  //
+  // Buradaki kapı YERLEŞİMİ ölçmüyor (jsdom düzen hesaplamaz) — sığmanın
+  // YAPISAL koşulunu tutuyor: sabit yerleşim + genişlikleri toplamı %100.
+  // Gerçek piksel ölçümü tests/e2e/fead-wizard-tablo.spec.js'te.
+  test('tablo sabit yerleşimli ve kendi sınıfını taşıyor', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const h = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
+    expect(h).toMatch(/class="ve-fw-tbl ve-fw-tbl-fixed ve-fw-tbl-kasnak"/);
+  });
+
+  test('SÜTUN SAYISI ile genişlik kuralı sayısı AYNI — ve toplam %100', () => {
+    // Onuncu bir sütun eklenirse kural eksik kalır ve kaydırma SESSİZCE geri
+    // gelir; sessiz olan tam da bu yüzden kapıya bağlı.
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const d = document.createElement('div');
+    d.innerHTML = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
+    const tbl = [...d.querySelectorAll('.ve-fw-tbl-kasnak')][0];
+    expect(tbl).toBeTruthy();
+
+    const th = tbl.querySelectorAll('thead th').length;
+    const satirlar = [...tbl.querySelectorAll('tbody tr')];
+    expect(satirlar.length).toBeGreaterThan(1);
+    // Her satır başlıkla AYNI hücre sayısını taşımalı — gergi satırı dahil.
+    satirlar.forEach((tr) => expect(tr.children.length).toBe(th));
+
+    const kural = [...CSS.matchAll(/\.ve-fw-tbl-kasnak th:nth-child\((\d+)\)[^{]*\{[^}]*width:\s*([\d.]+)%/g)]
+      .map((m) => ({ i: +m[1], w: +m[2] }));
+    expect(kural.length).toBe(th);
+    expect(kural.map((k) => k.i).sort((a, b) => a - b)).toEqual(
+      Array.from({ length: th }, (_, i) => i + 1));
+    expect(kural.reduce((a, k) => a + k.w, 0)).toBe(100);
+  });
+});
+
 describe('sihirbazda açıklama yüzeyi YOK', () => {
   test('`_fwHint` ne fonksiyon ne çağrı olarak var', () => {
     // ÇAĞRI/TANIM biçimi aranıyor (`_fwHint(`), çıplak ad değil: kaldırma
@@ -2465,12 +2510,37 @@ describe('sihirbazda açıklama yüzeyi YOK', () => {
     }
   });
 
-  test('açı seçici penceresinde de yok', () => {
+  test('açı seçici penceresinde de yok — ÜRETİLEN DOM\'dan ölçülüyor', () => {
+    // BU KAPI BİR KEZ KAÇIRDI ve sebebi öğretici: eski hâli
+    // `veFeadWizAngHTML()`i, yani pencerenin GÖVDE üreticisini yokluyordu.
+    // Göz kırpma ise BAŞKA bir üreticinin (`veFeadWizAngRender`) elle yazdığı
+    // BAŞLIKTAYDI — `<em>fareyle</em>` — ve kullanıcı onu ekranda gördü.
+    // Ders: bir üreticiyi yoklamak yüzeyi yoklamak değildir.
     kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
     wiz.veFeadWizAngOpen();
-    const h = wiz.veFeadWizAngHTML();
-    expect(h).not.toContain('ve-fw-hint');
-    expect(h).not.toMatch(/Fareyi düzlemde gezdirin/);
+    wiz.veFeadWizAngRender();
+    const ov = document.getElementById('ve-fw-ang');
+    expect(ov).not.toBeNull();
+    expect(ov.style.display).not.toBe('none');
+    // Pencerenin TAMAMINDA: ne açıklama paragrafı ne göz kırpma.
+    expect(ov.querySelectorAll('.ve-fw-hint').length).toBe(0);
+    expect(ov.querySelectorAll('.ve-fw-card-h em').length).toBe(0);
+    expect(ov.querySelector('.ve-fw-card-h').textContent.trim()).toBe('Kol Açısını Seç');
+    expect(ov.innerHTML).not.toMatch(/Fareyi düzlemde gezdirin/);
+  });
+
+  test('YEDİ ADIM da ÜRETİLEN DOM\'da göz kırpma taşımıyor', () => {
+    // Kaynak metnine bakan kardeş test duruyor; bu onu DOM tarafından
+    // tekrarlıyor, çünkü kaçan şey tam olarak "kaynakta aradığım kalıba
+    // uymayan" bir markup'tı.
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const b = wiz.veFeadWizBuild();
+    for (let i = 0; i < 7; i++) {
+      const d = document.createElement('div');
+      d.innerHTML = wiz.veFeadWizStepHTML(i, b);
+      expect(d.querySelectorAll('.ve-fw-card-h em').length).toBe(0);
+      expect(d.querySelectorAll('.ve-fw-hint').length).toBe(0);
+    }
   });
 
   test('DURUM ÇIKTILARI kalıyor — sansür değil, sadeleştirme', () => {

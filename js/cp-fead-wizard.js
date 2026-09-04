@@ -1190,7 +1190,12 @@ function _fwStepKasnak(b){
   // onu oradan tanıyor. Erken dönüş, "gergiyi 4. adımda tanımlayacaksınız"
   // diyordu — artık burada tanımlanıyor.
 
-  var t = '<div class="ve-fw-tblwrap"><table class="ve-fw-tbl"><thead><tr>'
+  // SABİT YERLEŞİM: sütun genişlikleri CSS'te (.ve-fw-tbl-kasnak) ve toplamı
+  // %100 — yani tablo kapsayıcısını yapısal olarak AŞAMAZ. Otomatik yerleşimde
+  // her hücrenin en küçük genişliğini içindeki <input>'un tarayıcı varsayılanı
+  // belirliyordu; ÖLÇÜLDÜ: "263" yazan X sütunu ile "Klima Kompresörü" yazan Ad
+  // sütunu ikisi de 134 px, tablo 1058 px, kapsayıcı 873 px → 185 px taşma.
+  var t = '<div class="ve-fw-tblwrap"><table class="ve-fw-tbl ve-fw-tbl-fixed ve-fw-tbl-kasnak"><thead><tr>'
     + '<th>Sürücü</th><th>Tip</th><th>Ad</th><th>Ø OD [mm]</th><th>X [mm]</th><th>Y [mm]</th>'
     + '<th>Temas</th><th>J [kg·m²]</th><th></th></tr></thead><tbody>';
   st.pulleys.forEach(function(p, i){
@@ -1850,8 +1855,12 @@ function veFeadWizAngRender(){
   if(!ov) return;
   if(!VE_FW_ANG){ ov.style.display = 'none'; ov.innerHTML = ''; return; }
   ov.style.display = 'flex';
+  // BAŞLIK VE GÖVDE, ÜÇÜNCÜ BİR ŞEY YOK — `_fwCard` ile aynı kural. Bu başlık
+  // ELLE yazıldığı için #848'in temizliğinden kaçmıştı: `<em>fareyle</em>`
+  // burada duruyordu ve kullanıcı onu ekranda gördü. Kapı artık üretilen
+  // yüzeye bakıyor, tek bir üreticiye değil.
   ov.innerHTML = '<div class="ve-fw-ang-box"><header class="ve-fw-card-h">'
-    + '<span>Kol Açısını Seç</span><em>fareyle</em></header>'
+    + '<span>Kol Açısını Seç</span></header>'
     + '<div class="ve-fw-card-b" id="ve-fw-ang-body">' + veFeadWizAngHTML() + '</div></div>';
   var plot = document.getElementById('ve-fw-ang-plot');
   if(plot){
@@ -2789,6 +2798,9 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizAngOk: veFeadWizAngOk, veFeadWizAngType: veFeadWizAngType,
     veFeadWizAngScene: veFeadWizAngScene, veFeadWizAngSVG: veFeadWizAngSVG,
     veFeadWizAngHTML: veFeadWizAngHTML, veFeadWizAngFromPoint: veFeadWizAngFromPoint,
+    // Kapı ÜRETİLEN DOM'a bakabilsin diye: gövde üreticisini yoklamak
+    // pencereyi yoklamak değil (bkz. `<em>fareyle</em>` kaçağı).
+    veFeadWizAngRender: veFeadWizAngRender,
     veFeadWizAngZoom: veFeadWizAngZoom, VE_FW_ANG_ZOOM: VE_FW_ANG_ZOOM,
     veFeadWizAngState: function(){ return VE_FW_ANG; },
     veFeadWizDutyAdd: veFeadWizDutyAdd,
