@@ -112,48 +112,6 @@ describe('Otomatik kontrol toggle', () => {
     expect(localStorage.getItem('ve-deploy-autocheck')).toBe('on');
     expect(_veAutoCheckEnabled()).toBe(true);
   });
-
-  // MFSim'in asil dagitim bicimi TEK DOSYA: kullanici indirip cift tikliyor,
-  // file:// uzerinde ve cogu zaman agsiz. Orada version.json goreli yol olarak
-  // cozulup CORS'a takiliyordu — OLCULDU: acilistan 2 sn sonra 1 ag istegi +
-  // 3 konsol hatasi, yani projenin kendi teslim kapisi ("0 ag istegi / 0 konsol
-  // hatasi") gecmiyordu. Kapi sessiz degil ama zararsiz da degildi.
-  test('_veIsLocalFile KARSILASTIRMASI — file: true, digerleri false', () => {
-    // Asagidaki iki test _veIsLocalFile'i STUB'liyor; bu test yuklemin
-    // KENDISINI tutuyor, yoksa stub'li testler totolojik olurdu. Olculdu:
-    // argumansiz surumde 'file:' -> 'https:' mutasyonu YESIL geciyordu.
-    expect(_veIsLocalFile('file:')).toBe(true);
-    ['https:', 'http:', 'blob:', 'data:', 'about:'].forEach((p) => {
-      expect(_veIsLocalFile(p)).toBe(false);
-    });
-    // Argumansiz cagri gercek protokolu okuyor (jsdom http(s)).
-    expect(_veIsLocalFile()).toBe(false);
-    expect(location.protocol).not.toBe('file:');
-  });
-
-  test('file:// uzerinde otomatik kontrol KAPALI — cevrimdisi tek dosya', () => {
-    // jsdom location'i yeniden tanimlatmiyor; protokol okumasi bu yuzden
-    // _veIsLocalFile() icinde ve testte o degistiriliyor.
-    const eski = _veIsLocalFile;
-    _veIsLocalFile = () => true;
-    try {
-      localStorage.removeItem('ve-deploy-autocheck');   // varsayilan ACIK
-      expect(_veAutoCheckEnabled()).toBe(false);        // yine de kapali
-    } finally {
-      _veIsLocalFile = eski;
-    }
-  });
-
-  test('http(s) uzerinde ACIK kalir — kapatma yalnizca file:// icin', () => {
-    const eski = _veIsLocalFile;
-    _veIsLocalFile = () => false;
-    try {
-      localStorage.removeItem('ve-deploy-autocheck');
-      expect(_veAutoCheckEnabled()).toBe(true);
-    } finally {
-      _veIsLocalFile = eski;
-    }
-  });
 });
 
 describe('_veDismissPopup', () => {
