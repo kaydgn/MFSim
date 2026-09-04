@@ -2216,9 +2216,92 @@ test('motor devirleri RPM yazıyor, "d/dk" kalmadı', () => {
   kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
   const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
   expect(h).not.toContain('d/dk');
-  expect(h).toContain('Rölanti [RPM]');
   expect(h).toContain('Devir [RPM]');
+  // KÜNYE ALANLARI ARTIK PENCEREDE (kullanıcı: "çok kalabalık duruyor").
+  // Kural değişmedi, YERİ değişti — kapı da oraya bakıyor. Yalnız adımın
+  // gövdesine bakan bir kapı, alan taşınınca "RPM kayboldu" derdi.
+  const p = wiz.veFeadWizEngHTML();
+  expect(p).not.toContain('d/dk');
+  expect(p).toContain('Rölanti [RPM]');
+  expect(p).toContain('Overspeed [RPM]');
   expect(WIZ_SRC).not.toContain('d/dk');
+});
+
+describe('motor künyesi PENCEREDE — sayfa sadeleşti', () => {
+  // Kullanıcı bildirimi (2026-09-04): *"bunların girdi olmasına bile gerek
+  // yok… tıklanır bir buton ve açılır bir pencere ile bu işi halledelim."*
+  test('on alanın hiçbiri 6. adımın gövdesinde DEĞİL', () => {
+    kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
+    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    wiz.VE_FW_ENG_FIELDS.forEach((f) => {
+      expect(h).not.toContain("'" + f.yol + "'");
+    });
+    // Yerine: özet okuma + düğme.
+    expect(h).toContain('veFeadWizEngOpen()');
+    expect(h).toContain('Devir sınırları');
+  });
+
+  test('ON ALANIN HEPSİ pencerede ve tek listeden', () => {
+    kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
+    const p = wiz.veFeadWizEngHTML();
+    expect(wiz.VE_FW_ENG_FIELDS.length).toBe(10);
+    wiz.VE_FW_ENG_FIELDS.forEach((f) => {
+      expect(p).toContain("'" + f.yol + "'");
+      expect(p).toContain(f.ad);
+    });
+  });
+
+  test('KATALOGDAN GELEN ile GELMEYEN ayrı — ve ayrım kataloğun KENDİSİNDEN', () => {
+    // `veFeadEngineApply`'ın yazdığı alanlar `kat:true` olmalı. Listeyi elle
+    // işaretlemek, katalog bir alan yazmayı bırakınca yüzeyin "motordan gelir"
+    // demeye devam etmesi demekti.
+    const yazilan = new Set();
+    const sd = {};
+    const k = veFeadEngineList()[0].key;
+    veFeadEngineApply(sd, k);
+    Object.keys(sd).forEach((x) => yazilan.add(x));
+    wiz.VE_FW_ENG_FIELDS.forEach((f) => {
+      const alan = f.yol.replace('solver.', '');
+      expect(f.kat).toBe(yazilan.has(alan));
+    });
+    // Ve gerçekten iki grup da dolu: hepsi tek grupta olsaydı ayrım yok demekti.
+    expect(wiz.VE_FW_ENG_FIELDS.some((f) => f.kat)).toBe(true);
+    expect(wiz.VE_FW_ENG_FIELDS.some((f) => !f.kat)).toBe(true);
+  });
+});
+
+describe('motor odası sıcaklığı — TEK alan, °C sütunu yok', () => {
+  // Kullanıcı isteği (2026-09-04): *"buradaki 'C' sütununa da gerek yok."*
+  // ÖLÇÜLDÜ: on iki örneğin hepsinde tablo içi sıcaklık TEK.
+  test('duty tablosunda °C sütunu YOK', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    expect(h).not.toContain('<th>°C</th>');
+    expect(h).not.toContain("'degC'");
+    expect(h).toContain('Motor odası sıcaklığı');
+  });
+
+  test('tek alan BÜTÜN satırlara yazıyor — veri modeli satır başına KALIYOR', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const st = wiz.veFeadWizState();
+    expect(st.solver.duty.length).toBeGreaterThan(5);
+    wiz.veFeadWizDutyTemp('105');
+    st.solver.duty.forEach((r) => expect(String(r.degC)).toBe('105'));
+    // Satır başına saklama ŞART: köprü ondan hasar-eşdeğer sıcaklık türetiyor.
+    expect(Object.keys(st.solver.duty[0])).toContain('degC');
+  });
+
+  test('SATIRLAR AYRIŞIKSA alan sessizce düzlemez', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const st = wiz.veFeadWizState();
+    expect(wiz.veFeadWizDutyTempOf(st.solver.duty)).toBe('90');
+    st.solver.duty[0].degC = 70;                 // elle ayrıştır
+    expect(wiz.veFeadWizDutyTempOf(st.solver.duty)).toBeNull();
+    const h = wiz.veFeadWizStepHTML(5, wiz.veFeadWizBuild());
+    expect(h).toContain('satır başına farklı');
+    // Ve değerler DURUYOR — çizim onları ezmiyor.
+    expect(st.solver.duty[0].degC).toBe(70);
+  });
 });
 
 // ── 5 + 9 · KOL AÇISI: NİSPİ DİL VE GÖRSEL SEÇİCİ ─────────────────────────

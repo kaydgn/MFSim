@@ -282,3 +282,77 @@ async function sahneAng(page) {
     veFeadWizAngOpen(); veFeadWizAngRender();
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DENKLEM KaTeX İLE DİZİLİYOR — ve varlık gelmeden de OKUNUR
+//
+// Kullanıcı isteği (2026-09-04): *"'gövdenin montaj konumu' kısmında … denklem
+// KaTeX formatında olsun."* KaTeX programın içinde gömülü ama TALEP ÜZERİNE
+// açılıyor (~1 MB, raporla ortak). Node'da hiç koşmayan halka bu: varlığın
+// yüklenmesi, betiğin çalışması ve yerinde dizgi.
+test('montaj konumu denklemi KaTeX ile diziliyor', async ({ page }) => {
+  await sahneAng(page);
+  await page.evaluate(() => veFeadWizAngClose());
+
+  // Yedek metin ÖNCE orada: varlık hiç gelmese bile denklem okunur kalmalı.
+  const once = await page.evaluate(() => {
+    const el = document.querySelector('#ve-fw-body .ve-fw-tex');
+    return { var: !!el, tex: el && el.getAttribute('data-tex'),
+             dizildi: el ? el.hasAttribute('data-tex-ok') : null };
+  });
+  expect(once.var).toBe(true);
+  expect(once.tex).toMatch(/\\vec\{p\}/);
+
+  // Varlık yüklenince yerinde dizilir.
+  const sonra = await page.evaluate(async () => {
+    const bek = (ms) => new Promise((r) => setTimeout(r, ms));
+    for (let i = 0; i < 40 && typeof katex === 'undefined'; i++) { veFeadWizTeXPaint(); await bek(250); }
+    veFeadWizTeXPaint(); await bek(400); veFeadWizTeXPaint(); await bek(300);
+    const el = document.querySelector('#ve-fw-body .ve-fw-tex');
+    return { katex: typeof katex !== 'undefined', dizildi: el.hasAttribute('data-tex-ok'),
+             mathml: /class="katex"/.test(el.innerHTML) };
+  });
+  console.log('KATEX ' + JSON.stringify(sonra));
+  expect(sonra.katex).toBe(true);
+  expect(sonra.dizildi).toBe(true);
+  expect(sonra.mathml).toBe(true);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. ADIM SADELEŞTİ — ölçülen yerleşim
+test('motor künyesi sayfadan pencereye taşındı, satır aralığı açıldı', async ({ page }) => {
+  await sahneAng(page);
+  await page.evaluate(() => { veFeadWizAngClose(); veFeadWizGoto(5); });
+  const r = await page.evaluate(() => {
+    const body = document.getElementById('ve-fw-body');
+    const gs = [...body.querySelectorAll('.ve-fw-grid')];
+    let ara = null;
+    for (let i = 1; i < gs.length; i++) {
+      if (gs[i - 1].parentElement !== gs[i].parentElement) continue;
+      ara = Math.round(gs[i].getBoundingClientRect().top - gs[i - 1].getBoundingClientRect().bottom);
+      break;
+    }
+    const kart = [...body.querySelectorAll('.ve-fw-card')].find((c) => /Motor Künyesi/.test(c.textContent));
+    const tb = [...body.querySelectorAll('.ve-fw-tbl')].find((t) => /Devir \[RPM\]/.test(t.textContent));
+    veFeadWizEngOpen();
+    const ov = document.getElementById('ve-fw-eng');
+    const p = { acik: ov.style.display !== 'none', girdi: ov.querySelectorAll('input').length };
+    veFeadWizEngClose();
+    return {
+      izgaraArasi: ara,
+      kartGirdi: kart ? kart.querySelectorAll('input').length : -1,
+      dugme: kart ? /Künye alanlarını düzenle/.test(kart.textContent) : false,
+      dutyBaslik: tb ? [...tb.querySelectorAll('thead th')].map((x) => x.textContent.trim()) : null,
+      sicaklik: /Motor odası sıcaklığı/.test(body.textContent),
+      pencere: p
+    };
+  });
+  console.log('SADELEŞME ' + JSON.stringify(r));
+  expect(r.izgaraArasi).toBeGreaterThanOrEqual(10);   // ESKİDEN 0 px
+  expect(r.kartGirdi).toBe(0);                        // ESKİDEN 10 girdi
+  expect(r.dugme).toBe(true);
+  expect(r.pencere.acik).toBe(true);
+  expect(r.pencere.girdi).toBe(10);                   // hepsi pencerede
+  expect(r.dutyBaslik).not.toContain('°C');           // sütun kalktı
+  expect(r.sicaklik).toBe(true);                      // tek alan üstte
+});
