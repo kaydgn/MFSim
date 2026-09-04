@@ -1,0 +1,74 @@
+[
+  {
+    "fixture": "AG0868-4PK",
+    "id": "AG0868_4PK_GATES_2022",
+    "beltType": "4PK1013HD",
+    "tenName": "Otomatik Gergi (E9843)",
+    "name": "BMC 6 silindir — Gates AG0868 raporu (4PK)",
+    "note": "Üç kasnaklı en küçük düzen: krank · klima (SD7H15) · gergi. AYNI sistemin üç kaburga sayısındaki üç raporundan biri (4PK · E9843 @16 Nm) — kaburga ölçeklemesini yan yana görmek için üçü de duruyor."
+  },
+  {
+    "fixture": "AG0868-6PK",
+    "id": "AG0868_6PK_GATES_2022",
+    "beltType": "6PK1018HD",
+    "tenName": "Otomatik Gergi (E9843)",
+    "name": "BMC 6 silindir — Gates AG0868 raporu (6PK)",
+    "note": "4PK kardeşiyle AYNI geometri, farklı kaburga sayısı ve yay momenti (6PK · E9843 @19 Nm). Kayış kütlesi ve gerginlik kaburgayla ölçekleniyor; üç rapor bunun ölçüsü."
+  },
+  {
+    "fixture": "AG0868",
+    "id": "AG0868_8PK_GATES_2022",
+    "beltType": "8PK1020HD",
+    "tenName": "Otomatik Gergi (E9843)",
+    "name": "BMC 6 silindir — Gates AG0868 raporu (8PK)",
+    "note": "Üçlünün en güçlüsü (8PK · E9843 @22.5 Nm). Aynı üç kasnak, aynı koordinatlar; değişen yalnız kayış ve yay künyesi."
+  },
+  {
+    "fixture": "AG00810",
+    "id": "AG00810_GATES_2021",
+    "beltType": "10PK1215HD",
+    "tenName": "Otomatik Gergi (T38519)",
+    "name": "BMC Otomotiv TTA-6x6 — Gates AG00810 raporu",
+    "note": "250 A alternatör tahriki, 10PK — arşivin EN GENİŞ kayışı. Gergi T38519. Raporda yay ÖN YÜKÜ yok; ortalama momentten türetilmiş ve künyede öyle işaretli."
+  },
+  {
+    "fixture": "AG00686",
+    "id": "AG00686_1475_GATES_2023",
+    "beltType": "8PK1475HD",
+    "tenName": "Otomatik Gergi (T38624)",
+    "name": "BMC 6 silindir — Gates AG00686 raporu (1475)",
+    "note": "Dört kasnak: krank ø160 · avara · klima ø127 · gergi T38624 @24.6 Nm. Doğrulama kapısının en çok değer taşıyan raporu; 1520'lik kardeşiyle birlikte KASNAK ÇAPI değişiminin etkisini gösteriyor."
+  },
+  {
+    "fixture": "AG00686-1520",
+    "id": "AG00686_1520_GATES_2023",
+    "beltType": "8PK1520HD",
+    "tenName": "Otomatik Gergi (T38624)",
+    "name": "BMC 6 silindir — Gates AG00686 raporu (1520)",
+    "note": "AYNI gergi, BÜYÜTÜLMÜŞ kasnaklar (krank ø172 · klima ø137) ve buna bağlı uzayan kayış. 1475'lik kardeşiyle çift olarak okunur — eğilme terimi için kritik ikili."
+  },
+  {
+    "fixture": "AG00902-1275",
+    "id": "AG00902_1275_GATES_2023",
+    "beltType": "8PK1275HD",
+    "tenName": "Otomatik Gergi (E9843)",
+    "name": "BMC Otomotiv Valeo TM21 — Gates AG00902 raporu (1275)",
+    "note": "Dört kasnaklı klima tahriki (TM21 ø127). PDF'i ALINTI (11 sayfanın 5'i); geometri ve gergi tam, eksik sayfalar sonuç tabloları."
+  },
+  {
+    "fixture": "AG00902-1300",
+    "id": "AG00902_1300_GATES_2023",
+    "beltType": "8PK1300HD",
+    "tenName": "Otomatik Gergi (E9843)",
+    "name": "BMC Otomotiv Valeo TM21 — Gates AG00902 raporu (1300)",
+    "note": "1275'in kardeşi: aynı sistem, FARKLI kasnak çapları (krank 159→146, klima 137→127). PDF'i ALINTI (11 sayfanın 5'i)."
+  },
+  {
+    "fixture": "AG00894",
+    "id": "AG00894_GATES_2023",
+    "beltType": "8PK1738HD",
+    "tenName": "Otomatik Gergi (E9843)",
+    "name": "BMC Otomotiv — Gates AG00894 raporu (iki klima)",
+    "note": "Altı kasnaklı FARKLI TOPOLOJİ: İKİ klima kompresörü (TM31 + SD7H15), alternatör YOK. Arşivdeki tek çift-kompresör düzeni. PDF'i ALINTI (12 sayfanın 6'sı)."
+  }
+]

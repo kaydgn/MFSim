@@ -72,6 +72,9 @@ function vibrationOf(key) {
 
   cache[key] = {
     file: file,
+    // "Engine Data" bloğu krank ataletiyle AYNI sayfada; silindir sayısı
+    // ateşleme frekansına giriyor ve örnek tanımları onu da rapordan alıyor.
+    cylinders:        numbersAfter(page, '# of Cylinders', 1)[0],
     crankInertiaKgM2: numbersAfter(page, 'Crankshaft Moment of Inertia kg m^2', 1)[0],
     armInertiaKgM2:   numbersAfter(page, 'Inertia of the Tensioner Arm Kg', 1)[0],
     pulleyMassKg:     numbersAfter(page, 'Tensioner Pulley Mass kg', 1)[0],

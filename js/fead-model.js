@@ -1976,13 +1976,15 @@ var VE_FEAD_EXAMPLES = {
   // Yani o tuzak her raporda ısırmıyor — ama hangisinin geçerli olduğunu
   // REBL sütunu söyler, başlık değil.
   //
-  // ── RAPORUN VERMEDİĞİ ŞEYLER UYDURULMADI ───────────────────────────────────
-  // Silindir sayısı, krank ataleti, kasnak ataletleri ve servis faktörü bu
-  // belgede YOK (AG00976'da onlar tedarikçiye giden sayfadan geliyordu; bu
-  // örneğin öyle bir sayfası yok). Yazılmadılar. Sonuç sessiz değil: burulma
-  // modeli "FAN kasnağının atalet momenti yok" diye ADIYLA uyarıyor.
-  // Gergi T38665 de çekirdeğin ölçülmüş listesinde DEĞİL (orada T38624 ve
-  // E9843 var) → armInertia/pulleyMass de yazılmadı.
+  // ── ATALETLER RAPORDAN GELİYOR — İLK KAYIT YANILIYORDU ────────────────────
+  // Bu blok bir dönem "silindir sayısı, krank ataleti, kasnak ataletleri bu
+  // belgede YOK, yazılmadılar" diyordu. TUTMADI: dördü de raporun 11. sayfasında
+  // ("System Vibration Analysis") duruyor ve `tests/helpers/gates-vibration.js`
+  // onları KAYNAĞINDAN okuyor. Yanlış olan belge değil, o sayfanın hiç
+  // açılmamış olmasıydı.
+  //
+  // Sürücü düğümüne KRANK MİLİ ataleti giriyor: burulma modelinin sürücü
+  // serbestliği krank milidir (doğrulama harness'i de öyle besliyor).
   'AG00879_GATES_2023': {
     name: 'Anadolu Isuzu 6x6 — Gates AG00879 raporu',
     note: 'Cummins ikincil ALT&AC tahriki, 5 kasnak (FAN · Avara · Klima · '
@@ -2065,6 +2067,337 @@ var VE_FEAD_EXAMPLES = {
     ],
     // Raporun kasnak sırası (Layout Data satır sırası = kayış gidiş yönü).
     route: ['FAN', 'IDR', 'A_C', 'ALT', 'TEN']
+  },
+
+  // ══ ARŞİVİN GERİ KALANI — dokuz rapor, ÜRETİLMİŞ tanımlar ═══════════════════
+  //
+  // Kullanıcı isteği: "GitHub'da olan tüm Gates raporlarını programa örnek
+  // olarak tanımlayalım." `docs/gates-reports/pdf/` altındaki on raporun
+  // hepsi artık sihirbazda; yukarıdaki üçü elle, aşağıdaki dokuzu ÜRETİLDİ.
+  //
+  // NEDEN ÜRETİLDİ: her raporun referans değerleri
+  // `tests/fixtures/fead-validation.js` içinde ZATEN duruyor (doğrulama
+  // kapısının kendisi, 2095 değer). Aşağıdaki blokları elle yazmak o sayıların
+  // İKİNCİ KOPYASI olurdu — dokuz rapor × ~40 sayı, ve ayrışması SESSİZ.
+  // `tools/build-fead-gates-examples.js` onları fixture'dan + arşivin
+  // PDF'lerinden üretiyor; çevrimler (pitch/effective → dış çap, REBL → kayış
+  // boyu, Mean kol açısı, EDL−REBL → lengthOffset) o betikte TEK YERDE yazılı.
+  //
+  // ÜRETEÇ BİR BUILD ADIMI DEĞİL — bir iskele. Kaynak doğruluğun ölçüsü
+  // `tests/unit/fead-examples-gates.test.js`: her örneği kurup fixture'a karşı
+  // UÇTAN UCA koşturuyor (span · sarım · oran · konum tablosu · duty · ankraj).
+  // Bir sayı kayarsa üreteci yeniden koşturmak değil, O TEST kırmızıya döner.
+  //
+  // ATALET ÜÇ ALINTI RAPORDA YOK: AG00894 ve AG00902 ×2'nin PDF'i tam rapor
+  // değil ve "System Vibration Analysis" sayfası eksik. Oralarda atalet
+  // YAZILMAZ; burulma modeli eksikliği kendisi söylüyor.
+
+  'AG0868_4PK_GATES_2022': {
+    name: "BMC 6 silindir — Gates AG0868 raporu (4PK)",
+    note: "Üç kasnaklı en küçük düzen: krank · klima (SD7H15) · gergi. AYNI sistemin üç kaburga sayısındaki üç raporundan biri (4PK · E9843 @16 Nm) — kaburga ölçeklemesini yan yana görmek için üçü de duruyor.",
+    belt:  { profile:'PK', brand:'GATES', beltType:"4PK1013HD", ribs:4,
+             effLength:1013.4, tolerance:5, wearPct:0.007 },
+    solver:{ ratioMode:'direct', driveRatio:1,
+             cylinders:6,
+             crankInertia:0.5,
+             lengthOffsetMm:0.8,
+             duty:[
+               { rpm:800, dcPct:27, degC:90, kwByKey:{ A_C:1.3, TEN:0.01 } },
+               { rpm:1000, dcPct:10, degC:90, kwByKey:{ A_C:1.5, TEN:0.01 } },
+               { rpm:1250, dcPct:13, degC:90, kwByKey:{ A_C:4, TEN:0.01 } },
+               { rpm:1500, dcPct:18, degC:90, kwByKey:{ A_C:4.6, TEN:0.01 } },
+               { rpm:1750, dcPct:19, degC:90, kwByKey:{ A_C:4.7, TEN:0.01 } },
+               { rpm:2000, dcPct:13, degC:90, kwByKey:{ A_C:4.7, TEN:0.01 } }
+             ] },
+    pulleys: [
+      { key:'CRK', type:'fead-crank', name:"Krank Kasnağı",
+        data:{ od:175.01, x:0, y:0, contact:'grooved', driver:true, inertia:0.5 } },
+      { key:'A_C', type:'fead-ac', name:"Klima Kompresörü",
+        data:{ od:118.01, x:263, y:15, contact:'grooved', inertia:0.0034 } },
+      { key:'TEN', type:'fead-tensioner', name:"Otomatik Gergi (E9843)",
+        data:{ od:75, contact:'back',
+               cenX:121.28, cenY:68.38, armLen:90,
+               armMeanDeg:215,
+               preload:8.46, kArm:0.505, meanLoad:16.07,
+               inertia:0.0009, armInertia:0.0009, pulleyMass:0.8,
+               loadStopRelDeg:24.1 } }
+    ],
+    route: ['CRK', 'A_C', 'TEN']
+  },
+
+  'AG0868_6PK_GATES_2022': {
+    name: "BMC 6 silindir — Gates AG0868 raporu (6PK)",
+    note: "4PK kardeşiyle AYNI geometri, farklı kaburga sayısı ve yay momenti (6PK · E9843 @19 Nm). Kayış kütlesi ve gerginlik kaburgayla ölçekleniyor; üç rapor bunun ölçüsü.",
+    belt:  { profile:'PK', brand:'GATES', beltType:"6PK1018HD", ribs:6,
+             effLength:1018, tolerance:5, wearPct:0.007 },
+    solver:{ ratioMode:'direct', driveRatio:1,
+             cylinders:6,
+             crankInertia:0.5,
+             lengthOffsetMm:0,
+             duty:[
+               { rpm:800, dcPct:27, degC:90, kwByKey:{ A_C:1.3, TEN:0.01 } },
+               { rpm:1000, dcPct:10, degC:90, kwByKey:{ A_C:1.5, TEN:0.01 } },
+               { rpm:1250, dcPct:13, degC:90, kwByKey:{ A_C:4, TEN:0.01 } },
+               { rpm:1500, dcPct:18, degC:90, kwByKey:{ A_C:4.6, TEN:0.01 } },
+               { rpm:1750, dcPct:19, degC:90, kwByKey:{ A_C:4.7, TEN:0.01 } },
+               { rpm:2000, dcPct:13, degC:90, kwByKey:{ A_C:4.7, TEN:0.01 } }
+             ] },
+    pulleys: [
+      { key:'CRK', type:'fead-crank', name:"Krank Kasnağı",
+        data:{ od:175.01, x:0, y:0, contact:'grooved', driver:true, inertia:0.5 } },
+      { key:'A_C', type:'fead-ac', name:"Klima Kompresörü",
+        data:{ od:118.01, x:263, y:15, contact:'grooved', inertia:0.0034 } },
+      { key:'TEN', type:'fead-tensioner', name:"Otomatik Gergi (E9843)",
+        data:{ od:75, contact:'back',
+               cenX:124.57, cenY:63.97, armLen:90,
+               armMeanDeg:218.5,
+               preload:8.65, kArm:0.495, meanLoad:19.04,
+               inertia:0.0009, armInertia:0.0009, pulleyMass:0.8,
+               loadStopRelDeg:32.6 } }
+    ],
+    route: ['CRK', 'A_C', 'TEN']
+  },
+
+  'AG0868_8PK_GATES_2022': {
+    name: "BMC 6 silindir — Gates AG0868 raporu (8PK)",
+    note: "Üçlünün en güçlüsü (8PK · E9843 @22.5 Nm). Aynı üç kasnak, aynı koordinatlar; değişen yalnız kayış ve yay künyesi.",
+    belt:  { profile:'PK', brand:'GATES', beltType:"8PK1020HD", ribs:8,
+             effLength:1020, tolerance:5, wearPct:0.007 },
+    solver:{ ratioMode:'direct', driveRatio:1,
+             cylinders:6,
+             crankInertia:0.5,
+             lengthOffsetMm:-0.3,
+             duty:[
+               { rpm:800, dcPct:27, degC:90, kwByKey:{ A_C:1.3, TEN:0.01 } },
+               { rpm:1000, dcPct:10, degC:90, kwByKey:{ A_C:1.5, TEN:0.01 } },
+               { rpm:1250, dcPct:13, degC:90, kwByKey:{ A_C:4, TEN:0.01 } },
+               { rpm:1500, dcPct:18, degC:90, kwByKey:{ A_C:4.6, TEN:0.01 } },
+               { rpm:1750, dcPct:19, degC:90, kwByKey:{ A_C:4.7, TEN:0.01 } },
+               { rpm:2000, dcPct:13, degC:90, kwByKey:{ A_C:4.7, TEN:0.01 } }
+             ] },
+    pulleys: [
+      { key:'CRK', type:'fead-crank', name:"Krank Kasnağı",
+        data:{ od:175.01, x:0, y:0, contact:'grooved', driver:true, inertia:0.5 } },
+      { key:'A_C', type:'fead-ac', name:"Klima Kompresörü",
+        data:{ od:118.01, x:263, y:15, contact:'grooved', inertia:0.0034 } },
+      { key:'TEN', type:'fead-tensioner', name:"Otomatik Gergi (E9843)",
+        data:{ od:75, contact:'back',
+               cenX:126.06, cenY:62.15, armLen:90,
+               armMeanDeg:220,
+               preload:8.56, kArm:0.501, meanLoad:22.57,
+               inertia:0.0009, armInertia:0.0009, pulleyMass:0.8,
+               loadStopRelDeg:48.4 } }
+    ],
+    route: ['CRK', 'A_C', 'TEN']
+  },
+
+  'AG00810_GATES_2021': {
+    name: "BMC Otomotiv TTA-6x6 — Gates AG00810 raporu",
+    note: "250 A alternatör tahriki, 10PK — arşivin EN GENİŞ kayışı. Gergi T38519. Raporda yay ÖN YÜKÜ yok; ortalama momentten türetilmiş ve künyede öyle işaretli.",
+    belt:  { profile:'PK', brand:'GATES', beltType:"10PK1215HD", ribs:10,
+             effLength:1214.3, tolerance:5, wearPct:0.006 },
+    solver:{ ratioMode:'direct', driveRatio:1,
+             cylinders:6,
+             crankInertia:0.7,
+             lengthOffsetMm:1.6,
+             duty:[
+               { rpm:600, dcPct:27, degC:90, kwByKey:{ IDR:0.01, ALT:9, TEN:0.01 } },
+               { rpm:900, dcPct:0, degC:90, kwByKey:{ IDR:0.01, ALT:12.5, TEN:0.01 } },
+               { rpm:1000, dcPct:10, degC:90, kwByKey:{ IDR:0.01, ALT:13, TEN:0.01 } },
+               { rpm:1200, dcPct:13, degC:90, kwByKey:{ IDR:0.01, ALT:14.5, TEN:0.01 } },
+               { rpm:1400, dcPct:0, degC:90, kwByKey:{ IDR:0.01, ALT:16.5, TEN:0.01 } },
+               { rpm:1500, dcPct:18, degC:90, kwByKey:{ IDR:0.01, ALT:17, TEN:0.01 } },
+               { rpm:1600, dcPct:0, degC:90, kwByKey:{ IDR:0.01, ALT:17.5, TEN:0.01 } },
+               { rpm:1800, dcPct:19, degC:90, kwByKey:{ IDR:0.01, ALT:18, TEN:0.01 } },
+               { rpm:1900, dcPct:0, degC:90, kwByKey:{ IDR:0.01, ALT:18.5, TEN:0.01 } },
+               { rpm:2000, dcPct:13, degC:90, kwByKey:{ IDR:0.01, ALT:19, TEN:0.01 } }
+             ] },
+    pulleys: [
+      { key:'CRK', type:'fead-crank', name:"Krank Kasnağı",
+        data:{ od:176, x:0, y:0, contact:'grooved', driver:true, inertia:0.7 } },
+      { key:'IDR', type:'fead-idler', name:"Avara",
+        data:{ od:75, x:-200, y:150, contact:'back', inertia:0.0002 } },
+      { key:'ALT', type:'fead-alternator', name:"Alternatör",
+        data:{ od:55, x:-391, y:131, contact:'grooved', inertia:0.014 } },
+      { key:'TEN', type:'fead-tensioner', name:"Otomatik Gergi (T38519)",
+        data:{ od:75, contact:'back',
+               cenX:-217.41, cenY:34.81, armLen:90,
+               armMeanDeg:18,
+               preload:11.561, kArm:0.483, meanLoad:29.48,
+               inertia:0.0004, armInertia:0.004, pulleyMass:0.8,
+               loadStopRelDeg:66.5 } }
+    ],
+    route: ['CRK', 'IDR', 'ALT', 'TEN']
+  },
+
+  'AG00686_1475_GATES_2023': {
+    name: "BMC 6 silindir — Gates AG00686 raporu (1475)",
+    note: "Dört kasnak: krank ø160 · avara · klima ø127 · gergi T38624 @24.6 Nm. Doğrulama kapısının en çok değer taşıyan raporu; 1520'lik kardeşiyle birlikte KASNAK ÇAPI değişiminin etkisini gösteriyor.",
+    belt:  { profile:'PK', brand:'GATES', beltType:"8PK1475HD", ribs:8,
+             effLength:1475, tolerance:6, wearPct:0.007 },
+    solver:{ ratioMode:'direct', driveRatio:1,
+             cylinders:6,
+             crankInertia:0.15,
+             lengthOffsetMm:3.5,
+             duty:[
+               { rpm:800, dcPct:27, degC:92, kwByKey:{ IDR:0.01, A_C:3, TEN:0.01 } },
+               { rpm:1000, dcPct:10, degC:92, kwByKey:{ IDR:0.01, A_C:4, TEN:0.01 } },
+               { rpm:1250, dcPct:13, degC:92, kwByKey:{ IDR:0.01, A_C:5, TEN:0.01 } },
+               { rpm:1500, dcPct:18, degC:92, kwByKey:{ IDR:0.01, A_C:5.5, TEN:0.01 } },
+               { rpm:1750, dcPct:19, degC:92, kwByKey:{ IDR:0.01, A_C:6.8, TEN:0.01 } },
+               { rpm:2000, dcPct:13, degC:92, kwByKey:{ IDR:0.01, A_C:8.2, TEN:0.01 } }
+             ] },
+    pulleys: [
+      { key:'CRK', type:'fead-crank', name:"Krank Kasnağı",
+        data:{ od:160, x:0, y:0, contact:'grooved', driver:true, inertia:0.15 } },
+      { key:'IDR', type:'fead-idler', name:"Avara",
+        data:{ od:75, x:-72, y:267, contact:'back', inertia:0.0004 } },
+      { key:'A_C', type:'fead-ac', name:"Klima Kompresörü",
+        data:{ od:127, x:-224, y:448, contact:'grooved', inertia:0.005 } },
+      { key:'TEN', type:'fead-tensioner', name:"Otomatik Gergi (T38624)",
+        data:{ od:75, contact:'back',
+               cenX:-156.85, cenY:186.97, armLen:90,
+               armMeanDeg:75.1,
+               preload:8.59, kArm:0.482, meanLoad:24.54,
+               inertia:0.0076, armInertia:0.0076, pulleyMass:0.5,
+               loadStopRelDeg:62.4 } }
+    ],
+    route: ['CRK', 'IDR', 'A_C', 'TEN']
+  },
+
+  'AG00686_1520_GATES_2023': {
+    name: "BMC 6 silindir — Gates AG00686 raporu (1520)",
+    note: "AYNI gergi, BÜYÜTÜLMÜŞ kasnaklar (krank ø172 · klima ø137) ve buna bağlı uzayan kayış. 1475'lik kardeşiyle çift olarak okunur — eğilme terimi için kritik ikili.",
+    belt:  { profile:'PK', brand:'GATES', beltType:"8PK1520HD", ribs:8,
+             effLength:1519.6, tolerance:6, wearPct:0.007 },
+    solver:{ ratioMode:'direct', driveRatio:1,
+             cylinders:6,
+             crankInertia:0.15,
+             lengthOffsetMm:2.1,
+             duty:[
+               { rpm:800, dcPct:27, degC:92, kwByKey:{ IDR:0.01, A_C:3, TEN:0.01 } },
+               { rpm:1000, dcPct:10, degC:92, kwByKey:{ IDR:0.01, A_C:4, TEN:0.01 } },
+               { rpm:1250, dcPct:13, degC:92, kwByKey:{ IDR:0.01, A_C:5, TEN:0.01 } },
+               { rpm:1500, dcPct:18, degC:92, kwByKey:{ IDR:0.01, A_C:5.5, TEN:0.01 } },
+               { rpm:1750, dcPct:19, degC:92, kwByKey:{ IDR:0.01, A_C:6.8, TEN:0.01 } },
+               { rpm:2000, dcPct:13, degC:92, kwByKey:{ IDR:0.01, A_C:8.2, TEN:0.01 } }
+             ] },
+    pulleys: [
+      { key:'CRK', type:'fead-crank', name:"Krank Kasnağı",
+        data:{ od:172, x:0, y:0, contact:'grooved', driver:true, inertia:0.15 } },
+      { key:'IDR', type:'fead-idler', name:"Avara",
+        data:{ od:75, x:-72, y:267, contact:'back', inertia:0.0004 } },
+      { key:'A_C', type:'fead-ac', name:"Klima Kompresörü",
+        data:{ od:137, x:-224, y:448, contact:'grooved', inertia:0.003 } },
+      { key:'TEN', type:'fead-tensioner', name:"Otomatik Gergi (T38624)",
+        data:{ od:75, contact:'back',
+               cenX:-149.27, cenY:184.59, armLen:90,
+               armMeanDeg:70,
+               preload:8.86, kArm:0.476, meanLoad:22.2,
+               inertia:0.0076, armInertia:0.0076, pulleyMass:0.5,
+               loadStopRelDeg:54.5 } }
+    ],
+    route: ['CRK', 'IDR', 'A_C', 'TEN']
+  },
+
+  'AG00902_1275_GATES_2023': {
+    name: "BMC Otomotiv Valeo TM21 — Gates AG00902 raporu (1275)",
+    note: "Dört kasnaklı klima tahriki (TM21 ø127). PDF'i ALINTI (11 sayfanın 5'i); geometri ve gergi tam, eksik sayfalar sonuç tabloları.",
+    belt:  { profile:'PK', brand:'GATES', beltType:"8PK1275HD", ribs:8,
+             effLength:1274.7, tolerance:5, wearPct:0.007 },
+    solver:{ ratioMode:'direct', driveRatio:1,
+             lengthOffsetMm:0.7,
+             duty:[
+               { rpm:700, dcPct:35, degC:70, kwByKey:{ IDR:0.8, A_C:1.7, TEN:0.01 } },
+               { rpm:1200, dcPct:45, degC:70, kwByKey:{ IDR:2, A_C:3, TEN:0.01 } },
+               { rpm:2000, dcPct:19, degC:70, kwByKey:{ IDR:3.6, A_C:4.6, TEN:0.01 } },
+               { rpm:3000, dcPct:1, degC:70, kwByKey:{ IDR:4, A_C:7.2, TEN:0.01 } }
+             ] },
+    pulleys: [
+      { key:'CRK', type:'fead-crank', name:"Krank Kasnağı",
+        data:{ od:146, x:0, y:0, contact:'grooved', driver:true } },
+      { key:'IDR', type:'fead-idler', name:"Avara",
+        data:{ od:75, x:190, y:80, contact:'back' } },
+      { key:'A_C', type:'fead-ac', name:"Klima Kompresörü",
+        data:{ od:127, x:284.5, y:297.7, contact:'grooved' } },
+      { key:'TEN', type:'fead-tensioner', name:"Otomatik Gergi (E9843)",
+        data:{ od:75, contact:'back',
+               cenX:99.37, cenY:171.37, armLen:90,
+               armMeanDeg:260,
+               preload:9.13, kArm:0.48, meanLoad:22.15,
+               loadStopRelDeg:45.2 } }
+    ],
+    route: ['CRK', 'IDR', 'A_C', 'TEN']
+  },
+
+  'AG00902_1300_GATES_2023': {
+    name: "BMC Otomotiv Valeo TM21 — Gates AG00902 raporu (1300)",
+    note: "1275'in kardeşi: aynı sistem, FARKLI kasnak çapları (krank 159→146, klima 137→127). PDF'i ALINTI (11 sayfanın 5'i).",
+    belt:  { profile:'PK', brand:'GATES', beltType:"8PK1300HD", ribs:8,
+             effLength:1301.8, tolerance:5, wearPct:0.007 },
+    solver:{ ratioMode:'direct', driveRatio:1,
+             lengthOffsetMm:1.7,
+             duty:[
+               { rpm:700, dcPct:35, degC:70, kwByKey:{ IDR:0.8, A_C:1.7, TEN:0.01 } },
+               { rpm:1200, dcPct:45, degC:70, kwByKey:{ IDR:2, A_C:3, TEN:0.01 } },
+               { rpm:2000, dcPct:19, degC:70, kwByKey:{ IDR:3.6, A_C:4.6, TEN:0.01 } },
+               { rpm:3000, dcPct:1, degC:70, kwByKey:{ IDR:4, A_C:7.2, TEN:0.01 } }
+             ] },
+    pulleys: [
+      { key:'CRK', type:'fead-crank', name:"Krank Kasnağı",
+        data:{ od:159, x:0, y:0, contact:'grooved', driver:true } },
+      { key:'IDR', type:'fead-idler', name:"Avara",
+        data:{ od:75, x:219.2, y:78.5, contact:'back' } },
+      { key:'A_C', type:'fead-ac', name:"Klima Kompresörü",
+        data:{ od:137, x:284.5, y:297.7, contact:'grooved' } },
+      { key:'TEN', type:'fead-tensioner', name:"Otomatik Gergi (E9843)",
+        data:{ od:75, contact:'back',
+               cenX:89.56, cenY:182.04, armLen:90,
+               armMeanDeg:265,
+               preload:9.31, kArm:0.476, meanLoad:22.21,
+               loadStopRelDeg:57.4 } }
+    ],
+    route: ['CRK', 'IDR', 'A_C', 'TEN']
+  },
+
+  'AG00894_GATES_2023': {
+    name: "BMC Otomotiv — Gates AG00894 raporu (iki klima)",
+    note: "Altı kasnaklı FARKLI TOPOLOJİ: İKİ klima kompresörü (TM31 + SD7H15), alternatör YOK. Arşivdeki tek çift-kompresör düzeni. PDF'i ALINTI (12 sayfanın 6'sı).",
+    belt:  { profile:'PK', brand:'GATES', beltType:"8PK1738HD", ribs:8,
+             effLength:1738.7, tolerance:6, wearPct:0.007 },
+    solver:{ ratioMode:'direct', driveRatio:1,
+             lengthOffsetMm:0.9,
+             duty:[
+               { rpm:519, dcPct:26.6, degC:90, kwByKey:{ IDR1:0.01, TM31:1.4, IDR2:0.01, SD7H15:0.9, TEN:0.01 } },
+               { rpm:693, dcPct:10, degC:90, kwByKey:{ IDR1:0.01, TM31:1.7, IDR2:0.01, SD7H15:1.7, TEN:0.01 } },
+               { rpm:1000, dcPct:13, degC:90, kwByKey:{ IDR1:0.01, TM31:2.1, IDR2:0.01, SD7H15:3, TEN:0.01 } },
+               { rpm:1039, dcPct:17, degC:90, kwByKey:{ IDR1:0.01, TM31:2.5, IDR2:0.01, SD7H15:3.2, TEN:0.01 } },
+               { rpm:1212, dcPct:18, degC:90, kwByKey:{ IDR1:0.01, TM31:3, IDR2:0.01, SD7H15:4, TEN:0.01 } },
+               { rpm:1385, dcPct:8, degC:90, kwByKey:{ IDR1:0.01, TM31:3.5, IDR2:0.01, SD7H15:5, TEN:0.01 } },
+               { rpm:1558, dcPct:4, degC:90, kwByKey:{ IDR1:0.01, TM31:4, IDR2:0.01, SD7H15:6, TEN:0.01 } },
+               { rpm:1731, dcPct:3, degC:90, kwByKey:{ IDR1:0.01, TM31:4.4, IDR2:0.01, SD7H15:7, TEN:0.01 } },
+               { rpm:1904, dcPct:0.3, degC:90, kwByKey:{ IDR1:0.01, TM31:4.75, IDR2:0.01, SD7H15:7.5, TEN:0.01 } },
+               { rpm:2077, dcPct:0.1, degC:90, kwByKey:{ IDR1:0.01, TM31:5, IDR2:0.01, SD7H15:7.75, TEN:0.01 } }
+             ] },
+    pulleys: [
+      { key:'CRK', type:'fead-crank', name:"Krank Kasnağı",
+        data:{ od:159, x:0, y:0, contact:'grooved', driver:true } },
+      { key:'IDR1', type:'fead-idler', name:"Avara 1",
+        data:{ od:75, x:143, y:140, contact:'back' } },
+      { key:'TM31', type:'fead-ac', name:"Klima Kompresörü (TM31)",
+        data:{ od:152, x:184, y:314.6, contact:'grooved' } },
+      { key:'IDR2', type:'fead-idler', name:"Avara 2",
+        data:{ od:75, x:0, y:272.5, contact:'back' } },
+      { key:'SD7H15', type:'fead-ac', name:"Klima Kompresörü (SD7H15)",
+        data:{ od:119, x:-267.4, y:241, contact:'grooved' } },
+      { key:'TEN', type:'fead-tensioner', name:"Otomatik Gergi (E9843)",
+        data:{ od:75, contact:'back',
+               cenX:-174.47, cenY:86.93, armLen:90,
+               armMeanDeg:353,
+               preload:8.93, kArm:0.475, meanLoad:23,
+               loadStopRelDeg:60.7 } }
+    ],
+    route: ['CRK', 'IDR1', 'TM31', 'IDR2', 'SD7H15', 'TEN']
   }
 };
 function veFeadExampleKeys(){ return Object.keys(VE_FEAD_EXAMPLES); }
