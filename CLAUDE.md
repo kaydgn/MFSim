@@ -261,9 +261,19 @@ git'e dahil olduğu için CI'daki "Dağıtım dosyası taze mi" kapısı
 değişmediğinden `sync:viewer --check` bunu YAKALAMAZ ve `npm test` de yeşil
 kalır — bir kez tam olarak böyle kaçtı. Kural:
 
+**AYNI KAPI CAN ÇÖZÜMLEYİCİDE DE VAR — `css/` artık ÜÇ ürüne giriyor.**
+`candbc/build.js` de `../css/*.css`'i inline ediyor. Yani `css/styles.css`'e
+dokunmak `MFSim_Olcum_Goruntuleyici.html` ile `MFSim_CAN_Cozumleyici.html`'in
+**ikisini birden** bayatlatıyor; ikisi de git'e dahil, ikisinin de ayrı bir CI
+kapısı var ve `npm test` **ikisini de yakalamıyor**. Bir kez görüntüleyicide,
+bir kez de CAN'da tam olarak böyle kaçtı. Kural (ürün sayısı arttıkça bu liste
+uzar — `package.json`'daki `build:*` betiklerine bak):
+
 ```bash
-# css/ VEYA viewer/js/ dokunulduysa, commit'ten önce:
-npm run build:viewer     # ve üretilen HTML'i commit'e dahil et
+# css/ dokunulduysa, commit'ten önce İKİSİ BİRDEN:
+npm run build:viewer     # MFSim_Olcum_Goruntuleyici.html
+npm run build:can        # MFSim_CAN_Cozumleyici.html
+# (viewer/js/ dokunulduysa önce: npm run sync:viewer)
 ```
 
 
