@@ -1241,7 +1241,12 @@ function _fwStepKasnak(b){
   // onu oradan tanıyor. Erken dönüş, "gergiyi 4. adımda tanımlayacaksınız"
   // diyordu — artık burada tanımlanıyor.
 
-  var t = '<div class="ve-fw-tblwrap"><table class="ve-fw-tbl"><thead><tr>'
+  // SABİT YERLEŞİM: sütun genişlikleri CSS'te (.ve-fw-tbl-kasnak) ve toplamı
+  // %100 — yani tablo kapsayıcısını yapısal olarak AŞAMAZ. Otomatik yerleşimde
+  // her hücrenin en küçük genişliğini içindeki <input>'un tarayıcı varsayılanı
+  // belirliyordu; ÖLÇÜLDÜ: "263" yazan X sütunu ile "Klima Kompresörü" yazan Ad
+  // sütunu ikisi de 134 px, tablo 1058 px, kapsayıcı 873 px → 185 px taşma.
+  var t = '<div class="ve-fw-tblwrap"><table class="ve-fw-tbl ve-fw-tbl-fixed ve-fw-tbl-kasnak"><thead><tr>'
     + '<th>Sürücü</th><th>Tip</th><th>Ad</th><th>Ø OD [mm]</th><th>X [mm]</th><th>Y [mm]</th>'
     + '<th>Temas</th><th>J [kg·m²]</th><th></th></tr></thead><tbody>';
   st.pulleys.forEach(function(p, i){
@@ -1602,7 +1607,22 @@ function veFeadWizAngScene(st){
       geom = FEADCore.tensionerState(b.sys, rel).geom;
     } catch(e){ geom = null; }
   }
-  return { cx: cx, cy: cy, armLen: a, r: od / 2, others: digerleri, geom: geom };
+  // OLANAKLI AÇI BANDI — künyenin KENDİ verisinden türüyor.
+  // Kullanıcı isteği (2026-09-04): *"katalogdan seçtiğimiz gergi tipleri için
+  // de, diyagramdan otomatik olarak konumu görünsün."* Künye bir KONUM
+  // yazmıyor (`veFeadTensionerApply` kol boyunu, yayı ve kasnağı yazar; montaj
+  // açısı tasarımcının kararıdır) — ama kol boyu + yay künyesi, kolun fiziksel
+  // olarak HANGİ açılarda durabileceğini belirliyor. Diyagramda görünmesi
+  // gereken şey bu: künyenin erişebildiği yay.
+  //
+  // Bant KÖPRÜDEN geliyor (`veFeadArmBand`), burada yeniden hesaplanmıyor —
+  // ikinci bir ölçüt iki yüzeyin sessizce ayrışması demekti.
+  var bant = null;
+  if(b && b.ok && typeof veFeadArmBand === 'function'){
+    try { bant = veFeadArmBand(b); } catch(e){ bant = null; }
+    if(bant && !bant.ok) bant = null;
+  }
+  return { cx: cx, cy: cy, armLen: a, r: od / 2, others: digerleri, geom: geom, band: bant };
 }
 
 // AÇI SEÇİCİSİ DE ÖN GÖRÜNÜŞTE ÇİZER — yoksa aynı sihirbazın iki resmi ters.
@@ -1637,7 +1657,11 @@ function veFeadWizAngSVG(sc, shownDeg, zoom, W, H){
              return { x: -o.x, y: o.y, r: o.r };
            }),
            geom: (typeof veFeadMirrorGeomX === 'function')
-                 ? veFeadMirrorGeomX(sc.geom) : sc.geom };
+                 ? veFeadMirrorGeomX(sc.geom) : sc.geom,
+           // BANT AYNALANMAZ, TAŞINIR: örnekler VERİ düzlemindeki açıyı taşıyor
+           // ve ekran açısına çeviri aşağıda `mir` ile zaten yapılıyor. Burada
+           // ikinci kez çevirmek bandı yanlış yarıya oturturdu.
+           band: sc.band };
   }
   var z = (_fwNum(zoom, 1) > 0) ? _fwNum(zoom, 1) : 1;
   var pad = 22;
@@ -1698,6 +1722,39 @@ function veFeadWizAngSVG(sc, shownDeg, zoom, W, H){
         + '" font-size="9" fill="var(--text-muted)">' + e[0] + '°</text>';
     });
 
+  // ── OLANAKLI AÇI BANDI — künyenin erişebildiği yay ─────────────────────
+  // Kullanıcı isteği (2026-09-04): künye seçilince konumun diyagramdan
+  // görünmesi. Künye bir KONUM yazmıyor; kol boyunu ve yayı yazıyor, ve
+  // kolun hangi açılarda durabileceği ONLARDAN türüyor. Çizilen şey bu:
+  // yeşil yaylar = servis aralığını taşıyabilen açılar.
+  //
+  // ÖRNEKLER KÖPRÜDEN (`veFeadArmBand`) — burada ölçüt YENİDEN KURULMUYOR.
+  // Örnek `deg`i MUTLAK açı (pivottan merkeze); gösterim nispi, o yüzden
+  // `veFeadArmShownDeg` ile çevrilip sonra ekran açısına gidiyor.
+  if(sc.band && sc.band.samples && sc.band.samples.length
+     && typeof veFeadArmShownDeg === 'function'){
+    var adim = _fwNum(sc.band.step, 5);
+    var Rb = R + 5;
+    var yay = '';
+    sc.band.samples.forEach(function(x){
+      if(!x || !x.ok) return;
+      var d0 = veFeadArmShownDeg(x.deg);
+      if(!Number.isFinite(d0)) return;
+      // Örnek bir NOKTA değil bir ARALIK temsil ediyor (genişliği `step`);
+      // nokta olarak çizmek bandı olduğundan dar gösterirdi.
+      var e0 = (mir < 0) ? (180 - d0) : d0;
+      var e1 = e0 + ((mir < 0) ? -adim : adim);
+      var r0 = e0 * Math.PI / 180, r1 = e1 * Math.PI / 180;
+      yay += '<path data-ve="band-arc" d="M' + f(C[0] + Rb * Math.cos(r0)) + ' '
+          + f(C[1] - Rb * Math.sin(r0)) + ' A' + f(Rb) + ' ' + f(Rb) + ' 0 0 '
+          + ((mir < 0) ? 1 : 0) + ' '
+          + f(C[0] + Rb * Math.cos(r1)) + ' ' + f(C[1] - Rb * Math.sin(r1)) + '"'
+          + ' fill="none" stroke="var(--accent-success)" stroke-width="3.4"'
+          + ' stroke-linecap="butt" opacity="0.32"/>';
+    });
+    h += yay;
+  }
+
   // ── GERGİ AVARASI — seçimin döndüğü nokta ──────────────────────────────
   h += '<circle cx="' + f(C[0]) + '" cy="' + f(C[1]) + '" r="' + f(sc.r * k) + '"'
     + ' fill="var(--accent-tint-10)" stroke="var(--accent-primary)" stroke-width="1.6"/>';
@@ -1714,14 +1771,12 @@ function veFeadWizAngSVG(sc, shownDeg, zoom, W, H){
     var rad = ekran * Math.PI / 180;
     var ux = Math.cos(rad), uy = -Math.sin(rad);           // SVG'de y aşağı
     var P = [C[0] + R * ux, C[1] + R * uy];
-    var uc = 11, gen = 4.6;                                 // ok ucu
-    var G = [P[0] - uc * ux, P[1] - uc * uy];               // gövdenin bittiği yer
-    h += '<line x1="' + f(C[0]) + '" y1="' + f(C[1]) + '" x2="' + f(G[0]) + '" y2="' + f(G[1])
-      + '" stroke="var(--accent-success)" stroke-width="3" stroke-linecap="round"/>'
-      + '<path d="M' + f(P[0]) + ' ' + f(P[1])
-      + ' L' + f(G[0] - gen * uy) + ' ' + f(G[1] + gen * ux)
-      + ' L' + f(G[0] + gen * uy) + ' ' + f(G[1] - gen * ux) + ' Z"'
-      + ' fill="var(--accent-success)"/>';
+    // OK TEK ÜRETİCİDEN (`veFeadArmArrowSVG`, js/cp-fead.js): özet şeması da
+    // aynı çağrıyı yapıyor. İki ayrı çizim, iki ayrı dil demekti ve tam olarak
+    // öyle olmuştu — kullanıcı seçimini şemada tanıyamadı.
+    h += (typeof veFeadArmArrowSVG === 'function')
+      ? veFeadArmArrowSVG(C, P, { f: f, kalinlik: 3, ucBoy: 11, ucGen: 4.6 })
+      : '';
     // Açı yayı ve sayısı — seçimin işaretini gözle gösteriyor.
     var ry = Math.min(R * 0.4, 44);
     h += '<path d="M' + f(C[0] + ry * (mir < 0 ? -1 : 1)) + ' ' + f(C[1])
@@ -1901,8 +1956,12 @@ function veFeadWizAngRender(){
   if(!ov) return;
   if(!VE_FW_ANG){ ov.style.display = 'none'; ov.innerHTML = ''; return; }
   ov.style.display = 'flex';
+  // BAŞLIK VE GÖVDE, ÜÇÜNCÜ BİR ŞEY YOK — `_fwCard` ile aynı kural. Bu başlık
+  // ELLE yazıldığı için #848'in temizliğinden kaçmıştı: `<em>fareyle</em>`
+  // burada duruyordu ve kullanıcı onu ekranda gördü. Kapı artık üretilen
+  // yüzeye bakıyor, tek bir üreticiye değil.
   ov.innerHTML = '<div class="ve-fw-ang-box"><header class="ve-fw-card-h">'
-    + '<span>Kol Açısını Seç</span><em>fareyle</em></header>'
+    + '<span>Kol Açısını Seç</span></header>'
     + '<div class="ve-fw-card-b" id="ve-fw-ang-body">' + veFeadWizAngHTML() + '</div></div>';
   var plot = document.getElementById('ve-fw-ang-plot');
   if(plot){
@@ -2840,6 +2899,9 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizAngOk: veFeadWizAngOk, veFeadWizAngType: veFeadWizAngType,
     veFeadWizAngScene: veFeadWizAngScene, veFeadWizAngSVG: veFeadWizAngSVG,
     veFeadWizAngHTML: veFeadWizAngHTML, veFeadWizAngFromPoint: veFeadWizAngFromPoint,
+    // Kapı ÜRETİLEN DOM'a bakabilsin diye: gövde üreticisini yoklamak
+    // pencereyi yoklamak değil (bkz. `<em>fareyle</em>` kaçağı).
+    veFeadWizAngRender: veFeadWizAngRender,
     veFeadWizAngZoom: veFeadWizAngZoom, VE_FW_ANG_ZOOM: VE_FW_ANG_ZOOM,
     veFeadWizAngState: function(){ return VE_FW_ANG; },
     veFeadWizDutyAdd: veFeadWizDutyAdd,

@@ -7928,6 +7928,48 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-tbl.ve-fw-tbl-fixed select.ve-fw-inp{ min-width:0; width:100%; }
 .ve-fw-tbl.ve-fw-tbl-fixed td{ overflow:hidden; text-overflow:ellipsis; }
 
+/* KASNAK TABLOSU SIĞAR — yatay kaydırma YOK (kullanıcı isteği 2026-09-02:
+   "bu tablonun fit olmasını sağlayalım, sağa sola kaydırma olmasın").
+
+   ÖLÇÜLDÜ (gerçek tarayıcı, 1280×900, AG00976 örneği): kapsayıcı 873 px,
+   tablo 1058 px → 185 px taşma. Sütunlar: Sürücü 46 · Tip 132 · Ad 134 ·
+   Ø OD 134 · X 134 · Y 134 · Temas 132 · J 134 · ops 78. Yani genişlik
+   İÇERİKLE İLGİSİZDİ: "263" yazan X ile "Klima Kompresörü" yazan Ad aynı
+   134 px'i alıyordu, çünkü otomatik yerleşimde hücrenin en küçük genişliğini
+   içindeki <input>'un tarayıcı varsayılanı (~20 karakter) belirliyor.
+
+   YÜZDE, PİKSEL DEĞİL: toplam %100 olduğu için tablo kapsayıcısını
+   AŞAMAZ — modal genişliği değişse de kaydırma çıkmaz. Sabit px verilseydi
+   dar pencerede taşma geri gelirdi.
+
+   Genişlikler içeriğin kendisinden: sayı sütunları (Ø OD · X · Y · J) bir
+   ondalıklı sayı kadar, metin sütunları (Tip · Ad · Temas) en uzun kasnak
+   adı kadar, radyo ve düğme sütunları kendi öğeleri kadar. */
+.ve-fw-tbl-kasnak th:nth-child(1), .ve-fw-tbl-kasnak td:nth-child(1){ width:6%; }   /* Sürücü (radyo) */
+.ve-fw-tbl-kasnak th:nth-child(2), .ve-fw-tbl-kasnak td:nth-child(2){ width:16%; }  /* Tip */
+.ve-fw-tbl-kasnak th:nth-child(3), .ve-fw-tbl-kasnak td:nth-child(3){ width:17%; }  /* Ad */
+.ve-fw-tbl-kasnak th:nth-child(4), .ve-fw-tbl-kasnak td:nth-child(4){ width:10%; }  /* Ø OD */
+.ve-fw-tbl-kasnak th:nth-child(5), .ve-fw-tbl-kasnak td:nth-child(5){ width:9%; }   /* X */
+.ve-fw-tbl-kasnak th:nth-child(6), .ve-fw-tbl-kasnak td:nth-child(6){ width:9%; }   /* Y */
+.ve-fw-tbl-kasnak th:nth-child(7), .ve-fw-tbl-kasnak td:nth-child(7){ width:12%; }  /* Temas */
+.ve-fw-tbl-kasnak th:nth-child(8), .ve-fw-tbl-kasnak td:nth-child(8){ width:10%; }  /* J */
+.ve-fw-tbl-kasnak th:nth-child(9), .ve-fw-tbl-kasnak td:nth-child(9){ width:11%; }  /* ↑ ↓ ✕ */
+
+/* Sayı alanları daralınca yazı tipi hücreyi zorlamasın; hizalama sağda kalsın
+   ki ondalıklar alt alta okunabilsin. */
+.ve-fw-tbl-kasnak td:nth-child(4) .ve-fw-inp,
+.ve-fw-tbl-kasnak td:nth-child(5) .ve-fw-inp,
+.ve-fw-tbl-kasnak td:nth-child(6) .ve-fw-inp,
+.ve-fw-tbl-kasnak td:nth-child(8) .ve-fw-inp{ padding-left:5px; padding-right:5px; }
+
+/* Başlık da sığmalı: nowrap + sabit genişlik, sığmayan başlığı GÖRÜNMEDEN
+   kırpardı. Kırpma yerine bir tık küçük punto — kapı bunu ölçüyor. */
+.ve-fw-tbl-kasnak th{ font-size:calc(var(--fs-tiny) - 1px); padding-left:4px; padding-right:4px; }
+
+/* Satır işlemleri sütunu üç düğme taşıyor; aralarındaki boşluk daralan
+   sütunda taşmanın ilk sebebiydi. */
+.ve-fw-tbl-kasnak td:nth-child(9){ padding-left:2px; padding-right:2px; }
+
 /* Gergi satırının TİP hücresi: düz metin, açılır liste değil — gergi tipi
    değiştirilemez. Diğer satırlarda o hücrede bir <select> var, o yüzden
    dikey hizası ve punto ONUNLA aynı olmalı; yoksa satır "eksik" görünür. */

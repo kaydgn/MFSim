@@ -2553,6 +2553,48 @@ function veFeadCompassReset(nodeId){
 //
 // `tx`/`ty` mm → görünüm dönüşümü, `sc` ölçek, `f` yuvarlayıcı: hepsi
 // ÇAĞIRANDAN geliyor, çünkü iki yüzeyin kabı ve yakınlaştırması farklı.
+// ── KOL OKU — TEK ÜRETİCİ ──────────────────────────────────────────────────
+//
+// Kullanıcı bildirimi (2026-09-04): *"'özet ve kurulum' kısmındaki diyagramda
+// belirlediğimiz nokta görünmüyor."* ÖLÇÜLDÜ: nokta ÇİZİLİYORDU, ama iki yüzey
+// aynı seçimi iki ayrı dille anlatıyordu —
+//   seçici : 3 px düz çizgi + dolu üçgen uç, yanında açı sayısı
+//   şema   : 1,6 px KESİKLİ çizgi, %85 saydam, OK UCU YOK, 6 px'lik artı
+// 56 öğelik bir şemada ikincisi tanınmıyor. Bu deponun kuralı: aynı şeyi
+// gösteren iki yüzey aynı üreticiden geçer (bkz. `veFeadBeltPathD`).
+//
+// YÖN: ok ucu PİVOTTA. Kullanıcı açıyı "merkezden pivota" seçiyor (nispi
+// gösterim), dolayısıyla okun gösterdiği şey SEÇİMİN KENDİSİ. Ters çizmek
+// kolun fiziksel yönünü (pivot→merkez) gösterirdi ve seçiciyle çelişirdi.
+//
+// C ve P EKRAN koordinatıdır: bu üretici mm→px çevirisi YAPMAZ, çağıran
+// yüzey kendi ölçeğini uygular (sunum katmanı kendi geometrisini hesaplamaz).
+function veFeadArmArrowSVG(C, P, opt){
+  opt = opt || {};
+  var f = opt.f || function(v){ return Math.round(v * 100) / 100; };
+  if(!C || !P) return '';
+  var dx = P[0] - C[0], dy = P[1] - C[1];
+  var L = Math.sqrt(dx * dx + dy * dy);
+  // SIFIR UZUNLUK OK ÇİZDİRMEZ: normalleştirme NaN üretir ve SVG'ye NaN yazmak
+  // öğeyi sessizce yok eder — çizim "başarılı" görünür, ekranda hiçbir şey olmaz.
+  if(!(L > 0.5)) return '';
+  var ux = dx / L, uy = dy / L;
+  var kal = opt.kalinlik || 3;
+  var uc  = opt.ucBoy  || 11;
+  var gen = opt.ucGen  || 4.6;
+  // OK UCU GÖVDEDEN UZUN OLAMAZ: kısa kolda (yakınlaştırılmış şema) uç
+  // gövdeyi aşar ve ok ters dönmüş gibi görünürdü.
+  if(uc > L * 0.6){ uc = L * 0.6; gen = uc * 0.42; }
+  var renk = opt.renk || 'var(--accent-success)';
+  var G = [P[0] - uc * ux, P[1] - uc * uy];
+  return '<line data-ve="arm" x1="' + f(C[0]) + '" y1="' + f(C[1]) + '" x2="' + f(G[0])
+      + '" y2="' + f(G[1]) + '" stroke="' + renk + '" stroke-width="' + kal
+      + '" stroke-linecap="round"/>'
+    + '<path data-ve="arm-head" d="M' + f(P[0]) + ' ' + f(P[1])
+      + ' L' + f(G[0] - gen * uy) + ' ' + f(G[1] + gen * ux)
+      + ' L' + f(G[0] + gen * uy) + ' ' + f(G[1] - gen * ux) + ' Z" fill="' + renk + '"/>';
+}
+
 function veFeadBeltPathD(g, tx, ty, sc, f){
   if(!g || !g.pulleys || !g.spans) return '';
   var q = g.pulleys, n = q.length, d = '';
@@ -2978,9 +3020,11 @@ function veFeadLayoutSVG(build, W, H, opts){
     var ti = build.sys._tenIdx;
     var tp = (ti >= 0 && ps[ti]) ? ps[ti] : null;
     if(tp){
-      svg += '<line data-ve="arm" x1="' + f(tx(pv[0])) + '" y1="' + f(ty(pv[1])) + '" x2="' + f(tx(tp.c[0]))
-          + '" y2="' + f(ty(tp.c[1])) + '" stroke="var(--accent-success)" stroke-width="1.6"'
-          + ' stroke-dasharray="5 3" opacity="0.85"/>';
+      // SEÇİCİYLE AYNI DİL: merkezden pivota bakan dolu uçlu yeşil ok.
+      // Eskiden 1,6 px kesikli, %85 saydam, uçsuz bir çizgiydi ve 56 öğelik
+      // şemada kullanıcının seçtiği nokta TANINMIYORDU (ölçüldü).
+      svg += veFeadArmArrowSVG([tx(tp.c[0]), ty(tp.c[1])], [tx(pv[0]), ty(pv[1])],
+                               { f: f, kalinlik: 2.4, ucBoy: 9, ucGen: 3.8 });
     }
     var px = f(tx(pv[0])), py = f(ty(pv[1])), a = 6;
     svg += '<g data-ve="pivot" stroke="var(--accent-success)" stroke-width="1.8">'
@@ -5274,7 +5318,7 @@ function veFeadLimitsBox(R){
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VE_FEAD_STARTER_LAYOUT: VE_FEAD_STARTER_LAYOUT,
-    veFeadBeltPathD: veFeadBeltPathD,
+    veFeadBeltPathD: veFeadBeltPathD, veFeadArmArrowSVG: veFeadArmArrowSVG,
     veFeadLayoutSVG: veFeadLayoutSVG,
     veFeadPortSideFor: veFeadPortSideFor,
     veFeadApplyBadge: veFeadApplyBadge,
