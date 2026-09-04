@@ -7970,6 +7970,14 @@ span.ve-fw-ro{ display:inline-block; }
    sütunda taşmanın ilk sebebiydi. */
 .ve-fw-tbl-kasnak td:nth-child(9){ padding-left:2px; padding-right:2px; }
 
+/* ÖRNEK GEZİNME — açılır listenin hemen altında, kasnak satırlarının ↑ ↓
+   diliyle aynı düğmeler. Sayaç sağda: kaçıncı örnekte olduğun bir okuma. */
+.ve-fw-seednav{ display:flex; align-items:center; gap:4px; margin-top:6px; }
+.ve-fw-seednav-n{
+  margin-left:2px; font-size:var(--fs-tiny); color:var(--text-muted);
+  font-variant-numeric:tabular-nums;
+}
+
 /* Gergi satırının TİP hücresi: düz metin, açılır liste değil — gergi tipi
    değiştirilemez. Diğer satırlarda o hücrede bir <select> var, o yüzden
    dikey hizası ve punto ONUNLA aynı olmalı; yoksa satır "eksik" görünür. */

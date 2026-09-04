@@ -1100,7 +1100,16 @@ function veFeadWizStepHTML(step, b){
 // belgeden okunduğunu anlatmanın en kısa yolu.
 function _fwStepKaynak(b){
   var st = _fwState;
-  var h = _fwCard('Sistem', 'var(--accent-primary)',
+  // SİSTEM ADI YALNIZ BOŞ BAŞLANGIÇTA — kullanıcı isteği (2026-09-04):
+  // *"bu 'sistem adı' kısmı sadece boş örnek seçildiğinde gelsin… Çünkü
+  // örneklerde sistem adı sabit. Belli yani."*
+  //
+  // ALAN GİZLENİYOR, DEĞER DEĞİL: örnekten gelen ad `st.ad`'da duruyor ve
+  // kurulan modele gidiyor. Kaldırmak, örneğin kendi adını sessizce silerdi.
+  // Ad, hemen aşağıdaki "Seçilen Örnek" kartında zaten okunuyor.
+  var ornekYuklu = !!(st.seededFrom !== undefined && st.seededFrom !== ''
+                      && st.seededFrom !== null);
+  var h = ornekYuklu ? '' : _fwCard('Sistem', 'var(--accent-primary)',
       _fwField('Sistem adı', _fwInp('ad', { text: true, ph: 'Yeni FEAD Sistemi' }))
     );
 
@@ -1148,6 +1157,30 @@ function _fwStepKaynak(b){
   secenekler += '<option value=""' + (bosSecili ? ' selected' : '') + '>'
     + 'Boş başla — bütün alanları temizler</option>';
 
+  // ÖRNEKLER ARASINDA ↑ ↓ — kullanıcı isteği (2026-09-04): *"örnekleri
+  // seçtiğimiz yerin uygun bir altına böyle yukarı aşağı oklar koyalım…
+  // tüm örnekleri ve tüm tasarımları görme şansı olur."*
+  //
+  // KASNAK SATIRLARININ DİLİYLE AYNI: uçlarda `disabled`, sarma YOK. Sarma
+  // son örnekten ilkine atlardı ve kullanıcı listeyi bitirdiğini anlamazdı;
+  // devre dışı düğme sınırı GÖSTERİYOR. Sayaç bir açıklama değil, kaçıncı
+  // örnekte olduğunu söyleyen bir okuma.
+  var anahtarlar = (typeof veFeadExampleKeys === 'function') ? veFeadExampleKeys() : [];
+  var sira = anahtarlar.indexOf(String(yuklu));
+  var gezinme = '';
+  if(anahtarlar.length > 1){
+    gezinme = '<div class="ve-fw-seednav">'
+      + '<button type="button" class="ve-fw-mini"' + (sira <= 0 ? ' disabled' : '')
+        + ' title="Önceki örnek" onclick="veFeadWizSeedStep(-1)">↑</button>'
+      + '<button type="button" class="ve-fw-mini"'
+        + ((sira < 0 || sira >= anahtarlar.length - 1) ? ' disabled' : '')
+        + ' title="Sonraki örnek" onclick="veFeadWizSeedStep(1)">↓</button>'
+      + '<span class="ve-fw-seednav-n">'
+        + (sira >= 0 ? (sira + 1) + ' / ' + anahtarlar.length
+                     : '— / ' + anahtarlar.length)
+      + '</span></div>';
+  }
+
   var sel = '<select class="ve-fw-inp" onchange="veFeadWizSeedPick(this.value)">'
     + secenekler + '</select>';
   // Durum satırı bir AÇIKLAMA değil, bir DURUM: sihirbazda açıklama yüzeyi
@@ -1156,7 +1189,8 @@ function _fwStepKaynak(b){
   var durum = yuklu === null ? ''
     : '<div class="ve-fw-seeded">✓ <b>' + _fwEsc(yukluAd || 'Boş başla') + '</b> yüklendi'
       + (yukluAlt ? ' <em>' + _fwEsc(yukluAlt) + '</em>' : '') + '</div>';
-  h += _fwCard('Örnekten doldur', 'var(--accent-success)', _fwField('Örnek', sel) + durum);
+  h += _fwCard('Örnekten doldur', 'var(--accent-success)',
+      _fwField('Örnek', sel) + gezinme + durum);
 
   // SEÇİLEN ÖRNEĞİN NE OLDUĞU — kullanıcı isteği (2026-09-02): *"kullanıcı
   // örnek seçtiğinde, hemen altında seçilen konfigürasyonun kullanıcıyı
@@ -1211,6 +1245,22 @@ function _fwStepKaynak(b){
 // AÇILIR LİSTENİN EYLEMİ. Üç durum var ve üçü de ayrı: başlık satırı ('__')
 // bir seçim DEĞİL — seçilirse hiçbir şey yapılmamalı, yoksa listeyi açıp
 // kapatmak yüklü örneği sessizce silerdi. '' gerçek bir eylem (temizle).
+// ÖRNEK ADIMLAYICI — seçicinin KENDİ listesinden, ikinci bir sıra yok.
+// Yalnız örnekler arasında gezer: "Boş başla" bir örnek değil, bir SİLME
+// eylemi; oka basarken üstüne düşmek kullanıcının bütün formunu temizlerdi.
+function veFeadWizSeedStep(yon){
+  if(typeof veFeadExampleKeys !== 'function') return null;
+  var k = veFeadExampleKeys();
+  if(!k.length) return null;
+  var st = _fwState || {};
+  var i = k.indexOf(String(st.seededFrom === undefined ? '' : st.seededFrom));
+  // Örnek yüklü DEĞİLSE (taze ya da "Boş başla"): ↓ ilkini, ↑ sonuncusunu açar.
+  var j = (i < 0) ? (yon > 0 ? 0 : k.length - 1) : i + (yon > 0 ? 1 : -1);
+  if(j < 0 || j >= k.length) return null;
+  veFeadWizSeed(k[j]);
+  return k[j];
+}
+
 function veFeadWizSeedPick(v){
   if(v === '__') return;
   if(v === '') return veFeadWizReset();
@@ -1647,7 +1697,12 @@ function _fwMir(){
 
 // mm → SVG. +Y mm'de YUKARI, SVG'de aşağı → çevrilir (kanvasın kuralının
 // aynısı). Ölçek bütün sahneyi kabına oturtur; `zoom` onu çarpar.
-function veFeadWizAngSVG(sc, shownDeg, zoom, W, H){
+// `hoverDeg` HAYALET: farenin gösterdiği aday açı. `shownDeg` SEÇİLEN açı.
+// İkisinin AYRI olması bu turun asıl düzeltmesi — eskiden fare `shown`'ı
+// doğrudan eziyordu, yani tıklamanın izi kalmıyor ve kutuya yazılan değer
+// fare oynayınca sessizce siliniyordu (kullanıcı ölçtü: ok 35,80° iken kutu
+// 48,74 yazıyordu).
+function veFeadWizAngSVG(sc, shownDeg, zoom, W, H, hoverDeg){
   if(!sc) return '';
   W = W || 420; H = H || 320;
   var mir = _fwMir();
@@ -1759,6 +1814,26 @@ function veFeadWizAngSVG(sc, shownDeg, zoom, W, H){
   h += '<circle cx="' + f(C[0]) + '" cy="' + f(C[1]) + '" r="' + f(sc.r * k) + '"'
     + ' fill="var(--accent-tint-10)" stroke="var(--accent-primary)" stroke-width="1.6"/>';
 
+  // ── HAYALET OK — farenin gösterdiği aday ───────────────────────────────
+  // Kullanıcı isteği (2026-09-04): *"diyagram üzerinde bir yere tıkladığımda
+  // ok hayalet şekilde görülmüyor."* Aday ile seçim artık AYRI: hayalet soluk
+  // ve ince, seçim dolu ve kalın. Aday seçimle çakışıyorsa çizilmez — üst
+  // üste iki ok "iki seçim var" gibi okunurdu.
+  var hov = _fwNum(hoverDeg, NaN);
+  if(Number.isFinite(hov) && Math.abs(hov - _fwNum(shownDeg, NaN)) > 0.25
+     && typeof veFeadArmArrowSVG === 'function'){
+    var he = (mir < 0) ? (180 - hov) : hov;
+    var hr = he * Math.PI / 180;
+    var HP = [C[0] + R * Math.cos(hr), C[1] - R * Math.sin(hr)];
+    h += '<g data-ve="arm-ghost" opacity="0.38">'
+      + veFeadArmArrowSVG(C, HP, { f: f, kalinlik: 2, ucBoy: 9, ucGen: 3.6 })
+      + '</g>'
+      + '<text x="' + f(C[0] + (R + 16) * Math.cos(hr)) + '" y="'
+      + f(C[1] - (R + 16) * Math.sin(hr) + 4) + '" text-anchor="middle"'
+      + ' font-size="10" fill="var(--accent-success)" opacity="0.6">'
+      + _fwFmt(hov, 1) + '°</text>';
+  }
+
   // ── KOL: YEŞİL OK ──────────────────────────────────────────────────────
   // Kullanıcı isteği (2026-09-02): *"Kol açısını seçtiğimizde de ekranda yeşil
   // bir ok olarak görünsün."* Ok ucu MERKEZDEN PİVOTA bakıyor, yani seçilen
@@ -1806,7 +1881,8 @@ function veFeadWizAngHTML(){
     piv = veFeadTensionerPivot({ cenX: sc.cx, cenY: sc.cy, armLen: sc.armLen,
                                  armMeanDeg: veFeadArmFromShown(d) });
   var z = VE_FW_ANG ? VE_FW_ANG.zoom : 1;
-  return '<div class="ve-fw-ang-wrap" id="ve-fw-ang-plot">' + veFeadWizAngSVG(sc, d, z)
+  return '<div class="ve-fw-ang-wrap" id="ve-fw-ang-plot">'
+      + veFeadWizAngSVG(sc, d, z, undefined, undefined, VE_FW_ANG ? VE_FW_ANG.hover : null)
       + '<div class="ve-fw-ang-zoom">'
         + '<button type="button" class="ve-fw-mini" title="Uzaklaş"'
           + ' onclick="event.stopPropagation(); veFeadWizAngZoom(-1)">−</button>'
@@ -1815,11 +1891,7 @@ function veFeadWizAngHTML(){
         + '<button type="button" class="ve-fw-mini" title="Yakınlaş"'
           + ' onclick="event.stopPropagation(); veFeadWizAngZoom(1)">+</button>'
       + '</div></div>'
-    + '<div class="ve-fw-reads">'
-      + _fwRead('Kol yönü (merkezden pivota)', Number.isFinite(d) ? _fwFmt(d, 2) + '°' : '—')
-      + _fwRead('Gövdenin montaj konumu',
-          piv ? _fwFmt(piv[0], 2) + ' / ' + _fwFmt(piv[1], 2) + ' mm' : '—')
-    + '</div>'
+    + '<div class="ve-fw-reads">' + _fwAngReads(sc, d) + '</div>'
     + '<div class="ve-fw-ang-row">'
       + '<label class="ve-fw-lbl" for="ve-fw-ang-in">Tam açı [°]</label>'
       + '<input id="ve-fw-ang-in" type="text" inputmode="decimal" class="ve-fw-inp"'
@@ -1832,12 +1904,35 @@ function veFeadWizAngHTML(){
     ;
 }
 
+// OKUMALAR TEK ÜRETİCİDEN — ilk çizim ve canlı yama aynı satırları basıyor.
+// İkinci bir kopya, yamanın ilk çizimden sessizce ayrışması demekti.
+//
+// ÜÇÜNCÜ SATIR "MODELE İŞLENEN": Uygula pencereyi artık kapatmadığı için
+// "işledi mi?" sorusunun ekranda bir cevabı olmalı. Seçili açı ile modeldeki
+// açı aynıysa satır işaretli; farklıysa kullanıcı Uygula'ya basmadığını
+// GÖRÜYOR. Bir açıklama değil, bir DURUM.
+function _fwAngReads(sc, d){
+  var piv = null;
+  if(sc && Number.isFinite(d) && typeof veFeadTensionerPivot === 'function')
+    piv = veFeadTensionerPivot({ cenX: sc.cx, cenY: sc.cy, armLen: sc.armLen,
+                                 armMeanDeg: veFeadArmFromShown(d) });
+  var uyg = NaN;
+  if(_fwState && _fwState.ten && typeof veFeadArmShownDeg === 'function')
+    uyg = veFeadArmShownDeg(_fwNum(_fwState.ten.armMeanDeg, NaN));
+  var ayni = Number.isFinite(uyg) && Number.isFinite(d) && Math.abs(uyg - d) < 0.005;
+  return _fwRead('Kol yönü (merkezden pivota)', Number.isFinite(d) ? _fwFmt(d, 2) + '°' : '—')
+    + _fwRead('Gövdenin montaj konumu',
+        piv ? _fwFmt(piv[0], 2) + ' / ' + _fwFmt(piv[1], 2) + ' mm' : '—')
+    + _fwRead('Modele işlenen açı',
+        Number.isFinite(uyg) ? (ayni ? '✓ ' : '') + _fwFmt(uyg, 2) + '°' : '— (henüz uygulanmadı)');
+}
+
 function veFeadWizAngOpen(){
   if(!_fwState) return;
   var t = _fwState.ten || {};
   var d = (typeof veFeadArmShownDeg === 'function')
     ? veFeadArmShownDeg(_fwNum(t.armMeanDeg, NaN)) : NaN;
-  VE_FW_ANG = { shown: Number.isFinite(d) ? d : 0, zoom: 1 };
+  VE_FW_ANG = { shown: Number.isFinite(d) ? d : 0, hover: null, zoom: 1 };
   veFeadWizAngRender();
 }
 function veFeadWizAngClose(){ VE_FW_ANG = null; veFeadWizAngRender(); }
@@ -1886,6 +1981,13 @@ function veFeadWizAngFromPoint(svg, px, py){
   if(mir < 0) a = (180 - a) - 360 * Math.floor(((180 - a) + 180) / 360);
   return a;
 }
+// FARE YALNIZ HAYALETİ OYNATIR — SEÇİMİ DEĞİL.
+//
+// Eskiden `shown`ı doğrudan yazıyordu ve iki şeyi birden bozuyordu:
+// (1) tıklamanın hiçbir izi kalmıyordu, çünkü ok zaten farenin peşindeydi;
+// (2) kutuya elle yazılan değer, fare düzlemin üstünden geçer geçmez
+//     sessizce siliniyordu. Kullanıcı ikisini birden ölçtü: ok 35,80°
+//     gösterirken kutuda 48,74 yazıyordu.
 function veFeadWizAngHover(ev){
   if(!VE_FW_ANG || typeof document === 'undefined') return;
   var svg = document.querySelector('#ve-fw-ang-plot svg');
@@ -1896,13 +1998,25 @@ function veFeadWizAngHover(ev){
   var d = veFeadWizAngFromPoint(svg, (ev.clientX - r.left) * W / r.width,
                                      (ev.clientY - r.top) * H / r.height);
   if(!Number.isFinite(d)) return;
-  VE_FW_ANG.shown = Math.round(d * 100) / 100;
+  VE_FW_ANG.hover = Math.round(d * 100) / 100;
   veFeadWizAngPatch();
 }
-// SOL TIK açıyı KUTUYA yazar ve kutuya odaklanır — kullanıcı isteği: tıkta
-// "tam açı değerini soran ufak bir doldurulabilir kutucuk".
+// Fare düzlemden çıkınca hayalet de gider — kalsaydı ekranda sahibi olmayan
+// bir aday dururdu.
+function veFeadWizAngLeave(){
+  if(!VE_FW_ANG || VE_FW_ANG.hover == null) return;
+  VE_FW_ANG.hover = null;
+  veFeadWizAngPatch();
+}
+// SOL TIK SEÇİMİ SABİTLER: hayaletin durduğu açı `shown` olur, kutuya yazılır
+// ve kutuya odaklanılır — kullanıcı isteği: tıkta "tam açı değerini soran ufak
+// bir doldurulabilir kutucuk".
 function veFeadWizAngPick(ev){
+  if(!VE_FW_ANG) return;
   veFeadWizAngHover(ev);
+  if(!Number.isFinite(_fwNum(VE_FW_ANG.hover, NaN))) return;
+  VE_FW_ANG.shown = VE_FW_ANG.hover;
+  veFeadWizAngPatch();
   if(typeof document === 'undefined') return;
   var el = document.getElementById('ve-fw-ang-in');
   if(el){ el.value = _fwFmt(VE_FW_ANG.shown, 2); el.focus(); el.select(); }
@@ -1914,14 +2028,24 @@ function veFeadWizAngType(v){
   VE_FW_ANG.shown = d;
   veFeadWizAngPatch();          // KUTUYA DOKUNMAZ — yazarken odak düşmesin
 }
+// UYGULA PENCEREYİ KAPATMAZ — kullanıcı isteği (2026-09-04): *"açı değerini
+// girip tamam dediğimde pencere otomatik kapanıyor. Kapanmasın."* Açık kalınca
+// aynı pencerede birkaç açı denenebiliyor; kapatma yolu "Vazgeç" ve modalın
+// kendi ✕'i.
+//
+// UYGULANAN DEĞER OKUNUYOR: pencere açık kaldığı için "işledi mi?" sorusunun
+// ekranda bir cevabı olmalı — okumalar satırı modele YAZILAN açıyı da basıyor
+// (bkz. `veFeadWizAngPatch`). Bu bir açıklama değil bir DURUM.
 function veFeadWizAngOk(){
   if(!VE_FW_ANG || !_fwState) return false;
   var d = _fwNum(VE_FW_ANG.shown, NaN);
   if(!Number.isFinite(d)) return false;
   if(!_fwState.ten) _fwState.ten = {};
   _fwState.ten.armMeanDeg = Math.round(veFeadArmFromShown(d) * 10000) / 10000;
-  VE_FW_ANG = null;
+  // Arkadaki sihirbaz tazelenir (şerit, uyarılar, 4. adımın alanı); pencere
+  // `VE_FW_ANG` null OLMADIĞI için açık kalır.
   veFeadWizRender();
+  veFeadWizAngRender();
   return true;
 }
 // Yalnız çizimi ve okumaları tazeler; kutuya dokunmaz (odak kuralı).
@@ -1935,7 +2059,8 @@ function veFeadWizAngPatch(){
     // kurulsalardı basılı tutulan düğme her karede DOM'dan silinirdi).
     var eski = plot.querySelector('svg');
     var yeni = veFeadWizAngSVG(veFeadWizAngScene(), VE_FW_ANG && VE_FW_ANG.shown,
-                               VE_FW_ANG && VE_FW_ANG.zoom);
+                               VE_FW_ANG && VE_FW_ANG.zoom, undefined, undefined,
+                               VE_FW_ANG && VE_FW_ANG.hover);
     if(eski) eski.outerHTML = yeni; else plot.insertAdjacentHTML('afterbegin', yeni);
   }
   var oku = kap.querySelector('.ve-fw-reads');
@@ -1944,10 +2069,7 @@ function veFeadWizAngPatch(){
     if(sc && Number.isFinite(d))
       piv = veFeadTensionerPivot({ cenX: sc.cx, cenY: sc.cy, armLen: sc.armLen,
                                    armMeanDeg: veFeadArmFromShown(d) });
-    oku.innerHTML = _fwRead('Kol yönü (merkezden pivota)',
-                      Number.isFinite(d) ? _fwFmt(d, 2) + '°' : '—')
-      + _fwRead('Gövdenin montaj konumu',
-          piv ? _fwFmt(piv[0], 2) + ' / ' + _fwFmt(piv[1], 2) + ' mm' : '—');
+    oku.innerHTML = _fwAngReads(sc, d);
   }
 }
 function veFeadWizAngRender(){
@@ -1966,6 +2088,7 @@ function veFeadWizAngRender(){
   var plot = document.getElementById('ve-fw-ang-plot');
   if(plot){
     plot.onmousemove = veFeadWizAngHover;
+    plot.onmouseleave = veFeadWizAngLeave;   // hayalet fareyle birlikte gider
     plot.onclick = veFeadWizAngPick;
     plot.onwheel = veFeadWizAngWheel;
   }
@@ -2887,6 +3010,7 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizDefault: veFeadWizDefault, veFeadWizState: veFeadWizState,
     veFeadWizNodes: veFeadWizNodes, veFeadWizRoute: veFeadWizRoute,
     veFeadWizBuild: veFeadWizBuild, veFeadWizSeed: veFeadWizSeed,
+    veFeadWizSeedStep: veFeadWizSeedStep,
     veFeadWizPulleyAdd: veFeadWizPulleyAdd, veFeadWizPulleyDel: veFeadWizPulleyDel,
     veFeadWizPulleySet: veFeadWizPulleySet, veFeadWizPulleyType: veFeadWizPulleyType,
     veFeadWizPulleyMove: veFeadWizPulleyMove,
@@ -2903,6 +3027,8 @@ if(typeof module !== 'undefined' && module.exports){
     // pencereyi yoklamak değil (bkz. `<em>fareyle</em>` kaçağı).
     veFeadWizAngRender: veFeadWizAngRender,
     veFeadWizAngZoom: veFeadWizAngZoom, VE_FW_ANG_ZOOM: VE_FW_ANG_ZOOM,
+    veFeadWizAngHover: veFeadWizAngHover, veFeadWizAngPick: veFeadWizAngPick,
+    veFeadWizAngLeave: veFeadWizAngLeave, _fwAngReads: _fwAngReads,
     veFeadWizAngState: function(){ return VE_FW_ANG; },
     veFeadWizDutyAdd: veFeadWizDutyAdd,
     veFeadWizDutyLib: veFeadWizDutyLib, veFeadWizDutyDel: veFeadWizDutyDel,
