@@ -72,3 +72,116 @@ for (const w of [1280, 1600, 1100]) {
     expect(px('Sürücü')).toBeLessThan(px('Ø OD [mm]'));
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KOL OKU İKİ YÜZEYDE DE AYNI DİL (gerçek tarayıcı)
+//
+// Kullanıcı bildirimi (2026-09-04): *"'özet ve kurulum' kısmındaki diyagramda
+// belirlediğimiz nokta görünmüyor."* ÖLÇÜLDÜ: nokta çiziliyordu, ama
+//   seçici : 3 px düz çizgi + dolu üçgen uç
+//   şema   : 1,6 px KESİKLİ, %85 saydam, OK UCU YOK
+// 56 öğelik bir şemada ikincisi tanınmıyordu. Kapı, iki yüzeyin AYNI
+// üreticiden (`veFeadArmArrowSVG`) geçtiğini HESAPLANMIŞ renk ve dolu uçla
+// ölçüyor — sınıf adıyla değil.
+async function sahne(page) {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/index.html');
+  await page.evaluate(() => { if (window.MFSimLoader && window.MFSimLoader.start) window.MFSimLoader.start(); });
+  await page.waitForFunction(() => typeof window.createNode === 'function' &&
+    typeof window.veFeadOpenEditor === 'function' && typeof window.veFeadWizOpen === 'function',
+    null, { timeout: 60000 });
+  await page.evaluate(() => { if (typeof veSelectModuleFromOverlay === 'function') veSelectModuleFromOverlay('arac-performans'); });
+  await page.waitForFunction(() => { const s = document.getElementById('mfsim-loading-screen'); return !s || s.style.display === 'none'; },
+    null, { timeout: 60000 });
+  await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
+  await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-wizard'), null, { timeout: 20000 });
+  return page.evaluate(() => {
+    const out = {};
+    const w = window.nodes.find((n) => n.type === 'fead-wizard');
+    veFeadWizOpen(w.id); veFeadWizSeed('AG00976_GATES_2025');
+    const stil = (e) => { const cs = getComputedStyle(e); return { stroke: cs.stroke, fill: cs.fill, w: parseFloat(cs.strokeWidth) }; };
+
+    veFeadWizGoto(3); veFeadWizAngOpen(); veFeadWizAngRender();
+    const a = document.getElementById('ve-fw-ang').querySelector('svg');
+    out.secici = {
+      govde: [...a.querySelectorAll('[data-ve="arm"]')].map(stil),
+      uc:    [...a.querySelectorAll('[data-ve="arm-head"]')].map(stil),
+      bant:  a.querySelectorAll('[data-ve="band-arc"]').length,
+      // BANDIN YERİ de ölçülüyor, sayısı değil: örnekler MUTLAK açı taşıyor,
+      // gösterim nispi. Çeviri atlanırsa bant yine 53 yay çizer ama YANLIŞ
+      // yarıya oturur — yalnız SAYAN bir kapı bunu görmez (ölçüldü: sayan
+      // kapı bu mutasyondan sağ çıktı, çünkü 265°'lik bir bantta "en yakın
+      // yay" her yönde birkaç derece uzakta).
+      //
+      // Bu yüzden karşılaştırma KÜME karşılaştırması: köprünün kendi
+      // örneklerinden beklenen EKRAN açıları ile çizilen yayların başlangıç
+      // açıları. Test çeviriyi kendisi yapıyor — bağımsız tanık.
+      ...(function(){
+        const kol = a.querySelector('[data-ve="arm"]');
+        const cx = +kol.getAttribute('x1'), cy = +kol.getAttribute('y1');
+        const norm = (d) => ((d % 360) + 360) % 360;
+        const ac = (x, y) => norm(Math.atan2(cy - y, x - cx) * 180 / Math.PI);
+
+        const cizilen = [...a.querySelectorAll('[data-ve="band-arc"]')].map((pth) => {
+          const m = /^M([-\d.]+) ([-\d.]+)/.exec(pth.getAttribute('d'));
+          return m ? ac(+m[1], +m[2]) : null;
+        }).filter((x) => x !== null).sort((p, q) => p - q);
+
+        const b = veFeadWizBuild();
+        const bant = veFeadArmBand(b);
+        const mir = +a.getAttribute('data-mir');
+        const beklenen = bant.samples.filter((x) => x.ok).map((x) => {
+          const d0 = veFeadArmShownDeg(x.deg);
+          return norm(mir < 0 ? (180 - d0) : d0);
+        }).sort((p, q) => p - q);
+
+        const esles = (u, v) => u.length === v.length
+          && u.every((x, n) => Math.abs(((x - v[n] + 540) % 360) - 180) < 0.75);
+        return { cizilenAdet: cizilen.length, beklenenAdet: beklenen.length,
+                 kumeAyni: esles(cizilen, beklenen),
+                 ilkFark: cizilen.length && beklenen.length
+                   ? +Math.abs(((cizilen[0] - beklenen[0] + 540) % 360) - 180).toFixed(2) : null };
+      })()
+    };
+    veFeadWizAngClose();
+
+    veFeadWizGoto(6);
+    const s2 = document.getElementById('ve-fw-body').querySelector('svg');
+    out.ozet = {
+      govde: [...s2.querySelectorAll('[data-ve="arm"]')].map(stil),
+      uc:    [...s2.querySelectorAll('[data-ve="arm-head"]')].map(stil),
+      pivot: s2.querySelectorAll('[data-ve="pivot"]').length
+    };
+    return out;
+  });
+}
+
+test('kol oku: seçici ve özet AYNI dili konuşuyor', async ({ page }) => {
+  const r = await sahne(page);
+  console.log('OK ' + JSON.stringify(r));
+
+  // İKİ YÜZEYDE DE: gövde + DOLU uç, ikisi de aynı yeşil.
+  for (const y of ['secici', 'ozet']) {
+    expect(r[y].govde.length).toBe(1);
+    expect(r[y].uc.length).toBe(1);                       // eski şemada 0'dı
+    expect(r[y].govde[0].stroke).toBe('rgb(22, 163, 74)');
+    expect(r[y].uc[0].fill).toBe('rgb(22, 163, 74)');     // uç DOLU
+    expect(r[y].govde[0].w).toBeGreaterThanOrEqual(2);    // eski şemada 1.6'ydı
+  }
+  expect(r.ozet.pivot).toBe(1);
+});
+
+test('künyenin erişebildiği açı bandı seçicide çiziliyor', async ({ page }) => {
+  const r = await sahne(page);
+  // Bant künyenin KENDİ verisinden (kol boyu + yay) türüyor ve köprüden
+  // (`veFeadArmBand`) geliyor. Sıfır yay = ya bant hiç hesaplanmadı ya da
+  // hiçbir açı olanaklı değil; ikisi de bu örnekte YANLIŞ.
+  expect(r.secici.bant).toBeGreaterThan(10);
+  // 360°'nin tamamı olanaklı OLAMAZ — kayışın kendisi bir kısmını kapatıyor.
+  expect(r.secici.bant).toBeLessThan(360 / 5);
+
+  // ÇİZİLEN YAYLAR ↔ KÖPRÜNÜN ÖRNEKLERİ: küme olarak aynı olmalı.
+  expect(r.secici.beklenenAdet).toBe(r.secici.cizilenAdet);
+  expect(r.secici.kumeAyni).toBe(true);
+  expect(r.secici.ilkFark).toBeLessThan(0.75);
+});

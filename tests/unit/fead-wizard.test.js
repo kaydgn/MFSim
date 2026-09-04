@@ -2212,8 +2212,11 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
     ['0°', '90°', '180°', '-90°'].forEach((e) => expect(svg).toContain('>' + e + '<'));
     expect(svg).toContain('164.0°');             // seçili açı yazılı
     // KOL YEŞİL OK (kullanıcı isteği, 2026-09-02): gövde + doldurulmuş uç.
-    expect(svg).toMatch(/<line[^>]*stroke="var\(--accent-success\)"/);
-    expect(svg).toMatch(/<path d="M[^"]*Z"\s+fill="var\(--accent-success\)"/);
+    // İŞARETÇİYE bakıyor, nitelik SIRASINA değil: ok artık ortak üreticiden
+    // (`veFeadArmArrowSVG`) geliyor ve `data-ve` niteliğini önce basıyor.
+    // Konumsal bir regex "ok kayboldu" derdi, oysa yalnız sıra değişmişti.
+    expect(svg).toMatch(/<line data-ve="arm"[^>]*stroke="var\(--accent-success\)"/);
+    expect(svg).toMatch(/<path data-ve="arm-head"[^>]*fill="var\(--accent-success\)"/);
     // Öteki kasnaklar bağlam olarak çizili, ADSIZ.
     expect((svg.match(/<circle/g) || []).length).toBeGreaterThan(3);
     expect(svg).not.toMatch(/Alternatör|Klima|Avara|Krank/);
