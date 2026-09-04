@@ -1627,6 +1627,26 @@
    DIŞINDA olduğu için sınıf kabına da yazılır. */
 #sayfa2-content.ve-no-module .ve-nav-rail{ display:none; }
 
+/* ═══ KARŞILAMA EKRANINDA ŞERİT DE GİZLİ ═══
+   Modül seçilmeden çalışma alanı yok: Kaydet / Doğrula / Çözücü / PNG hiçbir
+   şeye dokunmuyor. Şerit bu durumu zaten biliyordu ama yalnız PASİF çiziyordu
+   (js/ribbon.js › veRibbonNoWorkspace) — sol panel ile ray gizliyken on dört
+   ölü komutun ekranda durması tutarsızdı. Aynı anahtar (veSyncModuleShell)
+   artık şeridi ve belge bandını da kapatıyor.
+
+   İki ayrı kural gerekiyor çünkü iki eleman AYRI kaplarda:
+   • #ve-ribbon  → .ve-main'in DIŞINDA, position:fixed → sınıf GÖVDEYE yazılır
+     (buraya gövde etiketini AÇIK YAZMA: build.js gömülü topoloji betiğini
+      belgedeki İLK eşleşmenin ardına koyuyor, stil satır içine alındığı
+      için bu yorum o eşleşme olurdu — betik <style>'ın içine düşerdi)
+   • .ve-doc-dock → .ve-main'in İÇİNDE → sınıf oradan okunur
+   --chrome-h sıfırlanmazsa sayfa şerit yokken de 116px aşağıda dururdu
+   (#sayfa2.active { top:var(--chrome-h) }); geçişi o kuralın kendi
+   transition'ı yumuşatıyor. */
+body.ve-no-module{ --chrome-h:0px; }
+body.ve-no-module #ve-ribbon{ display:none; }
+.ve-main.ve-no-module .ve-doc-dock{ display:none; }
+
 .ve-nav-item{
   position:relative;
   display:flex;
@@ -2451,18 +2471,19 @@
 .ve-snapshot-pane .ve-node-port{display:none;}
 .ve-snapshot-pane .ve-node-label{pointer-events:none;}
 
-/* ═══ Modül Seçim / Karşılama Ekranı ═══
-   Program açılışında (modül seçilmeden) gösterilen ana karşılama paneli.
-   Login/loading kartlarıyla aynı dili konuşur: keskin köşe, 1px kenar,
-   shadow-xl, tema değişkenleriyle sürülür → 9 temanın tümünde tutarlı. */
+/* ═══ Modül Seçim / Karşılama Ekranı — ATÖLYE DÜZENİ ═══
+   Solda kimlik + proje yolları (opak panel), sağda tuval ızgarasının üstünde
+   dört modül. Karşılama bir iletişim kutusu DEĞİL, ekranın kendisi.
+   Modül seçilmeden çalışma alanı olmadığı için şerit ve belge bandı da bu
+   ekranda gizlenir — kuralları `.ve-no-module` başlığı altında (yukarıda),
+   anahtarı js/components.js › veSyncModuleShell.
+   Ölçüler ve renkler tema değişkenlerinden sürülür → 10 temada da tutarlı. */
 .ve-module-overlay{
   position:absolute;
   inset:0;
   z-index:100;
   display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:24px;
+  align-items:stretch;
   /* Taban: ince teknik ızgara (color-mix desteklenmezse bu geçerli kalır) */
   background:
     linear-gradient(var(--border-color) 1px, transparent 1px),
@@ -2483,80 +2504,211 @@
   background-size:34px 34px, 34px 34px, auto;
 }
 
-/* Kart taşarsa KIRPILMASIN. Kapsayıcı `align-items:center` ile ortalıyor; kart
-   kapsayıcıdan uzunsa (üç modül kartı + kayıtlı proje düğmesi kısa bir tuval
-   alanında bunu yapabilir) merkezleme taşmayı YUKARI atar ve kaydırılamaz —
-   hero ile ilk kart ekranın dışında kalırdı. Standart çözüm: kapsayıcıda
-   overflow, kartta `margin:auto` (flex'te auto margin, align-items'a baskındır
-   ve taşmayı iki uca eşit dağıtmaz — kaydırılabilir bırakır). */
+/* İçerik KIRPILMASIN: kısa/dar pencerede (ör. 900×500) iki sütun da sığmayınca
+   kaydırılabilir kalır. Eski kart düzeninde bu `margin:auto` ile çözülüyordu;
+   tam-en düzende kap zaten stretch, tek gereken taşmanın kaydırılabilmesi. */
 .ve-module-overlay{ overflow:auto; }
 
 .ve-welcome{
-  width:100%;
-  max-width:410px;
-  margin:auto;
-  padding:34px 36px 28px;
-  background:var(--bg-secondary);
-  border:1px solid var(--border-color);
-  box-shadow:var(--shadow-xl);
+  flex:1;
+  min-width:0;
   display:flex;
-  flex-direction:column;
+  align-items:stretch;
   animation:ve-welcome-in var(--dur-slow) var(--ease-out) both;
 }
 @keyframes ve-welcome-in{
-  from{ opacity:0; transform:translateY(10px); }
+  from{ opacity:0; }
+  to{ opacity:1; }
+}
+@keyframes ve-welcome-rise{
+  from{ opacity:0; transform:translateY(8px); }
   to{ opacity:1; transform:translateY(0); }
 }
 
-.ve-welcome-hero{
-  text-align:center;
-  margin-bottom:20px;
+/* ── Sol sütun: kimlik + proje yolları ─────────────────────────────────── */
+.ve-welcome-id{
+  flex:0 0 auto;
+  width:clamp(300px, 30%, 420px);
+  display:flex;
+  flex-direction:column;
+  padding:42px 38px 26px;
+  background:var(--bg-secondary);
+  border-right:1px solid var(--border-color);
 }
 .ve-welcome-logo{
   display:inline-flex;
   align-items:center;
-  gap:10px;
+  gap:11px;
   font-size:var(--fs-h1);
   font-weight:700;
   letter-spacing:0.5px;
   color:var(--text-heading);
 }
 .ve-welcome-logo-ico{
-  width:1.4rem;
-  height:1.4rem;
+  width:1.15em;
+  height:1.15em;
   color:var(--accent-primary);
 }
 .ve-welcome-tagline{
   margin-top:8px;
-  font-size:var(--fs-body);
+  font-size:var(--fs-md);
   letter-spacing:0.4px;
   color:var(--text-muted);
 }
 .ve-welcome-sep{
   height:1px;
   background:var(--border-color);
-  margin:0 -36px 18px;
+  margin:22px 0 18px;
 }
+.ve-welcome-note{
+  margin:0;
+  max-width:36ch;
+  font-size:var(--fs-body);
+  line-height:1.7;
+  color:var(--text-secondary);
+}
+/* Kimliği yukarıda, eylemleri aşağıda tutan boşluk. Dar pencerede sütunlar
+   üst üste bindiği için kapatılır (aşağıdaki medya kuralı). */
+.ve-welcome-spacer{
+  flex:1 1 auto;
+  min-height:24px;
+}
+.ve-welcome-open{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:10px 14px;
+  font-family:var(--font-sans);
+  font-size:var(--fs-md);
+  font-weight:500;
+  color:var(--text-primary);
+  background:var(--bg-tertiary);
+  border:1px solid var(--border-color);
+  border-radius:var(--radius-sm);
+  cursor:pointer;
+  transition:color var(--dur-base) var(--ease-out),
+             border-color var(--dur-base) var(--ease-out),
+             background var(--dur-base) var(--ease-out);
+}
+.ve-welcome-open:hover,
+.ve-welcome-open:focus-visible{
+  color:var(--text-heading);
+  border-color:var(--accent-primary);
+  background:color-mix(in srgb, var(--accent-primary) 10%, var(--bg-tertiary));
+}
+.ve-welcome-open .mf-ico{
+  width:0.95rem;
+  height:0.95rem;
+  opacity:0.85;
+}
+.ve-welcome-links{
+  display:flex;
+  gap:2px;
+  margin-top:8px;
+}
+.ve-welcome-link{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 9px;
+  font-family:var(--font-sans);
+  font-size:var(--fs-body);
+  color:var(--text-muted);
+  background:transparent;
+  border:1px solid transparent;
+  border-radius:var(--radius-sm);
+  cursor:pointer;
+  transition:color var(--dur-base) var(--ease-out),
+             border-color var(--dur-base) var(--ease-out),
+             background var(--dur-base) var(--ease-out);
+}
+.ve-welcome-link:hover,
+.ve-welcome-link:focus-visible{
+  color:var(--text-heading);
+  border-color:var(--border-color);
+  background:var(--bg-tertiary);
+}
+.ve-welcome-link .mf-ico{
+  width:0.85rem;
+  height:0.85rem;
+  opacity:0.85;
+}
+/* Sürüm künyesi — şerit bu ekranda gizli olduğu için Program Durumu'na TEK
+   giriş. Künye yoksa (modüler index.html) düğme `hidden` kalır. */
+.ve-welcome-meta{
+  margin-top:22px;
+  padding-top:14px;
+  border-top:1px solid var(--border-color);
+}
+.ve-welcome-stamp{
+  padding:3px 7px;
+  margin-left:-7px;
+  font-family:var(--font-mono);
+  font-size:var(--fs-micro);
+  letter-spacing:0.05em;
+  color:var(--text-muted);
+  background:transparent;
+  border:1px solid transparent;
+  border-radius:var(--radius-sm);
+  cursor:pointer;
+  transition:color var(--dur-base) var(--ease-out),
+             border-color var(--dur-base) var(--ease-out);
+}
+.ve-welcome-stamp:hover,
+.ve-welcome-stamp:focus-visible{
+  color:var(--text-secondary);
+  border-color:var(--border-color);
+}
+.ve-welcome-stamp[hidden]{ display:none; }
 
-.ve-module-overlay-grid{
+/* ── Sağ sütun: modüller ───────────────────────────────────────────────── */
+.ve-welcome-work{
+  flex:1 1 auto;
+  min-width:0;
   display:flex;
   flex-direction:column;
-  gap:9px;
+  align-items:center;
+  justify-content:center;
+  padding:40px;
+}
+/* Izgara ve etiketi AYNI ölçüde: geniş ekranda kutular sonsuza kadar
+   büyümesin, ikisi birlikte ortalansın. */
+.ve-welcome-eyebrow,
+.ve-module-overlay-grid{
+  width:100%;
+  max-width:1000px;
+}
+.ve-welcome-eyebrow{
+  margin-bottom:14px;
+  font-size:var(--fs-tiny);
+  font-weight:600;
+  letter-spacing:var(--tracking-wider);
+  text-transform:uppercase;
+  color:var(--text-muted);
+}
+.ve-module-overlay-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:14px;
 }
 .ve-module-card{
   display:flex;
-  align-items:center;
-  gap:14px;
-  padding:13px 15px;
-  background:var(--bg-tertiary);
+  flex-direction:column;
+  padding:18px 18px 14px;
+  background:var(--bg-secondary);
   border:1px solid var(--border-color);
   border-radius:var(--radius-lg);
   cursor:pointer;
   text-align:left;
+  animation:ve-welcome-rise var(--dur-slow) var(--ease-out) both;
   transition:border-color var(--dur-base) var(--ease-out),
              transform var(--dur-base) var(--ease-out),
              box-shadow var(--dur-base) var(--ease-out);
 }
+.ve-module-card:nth-child(2){ animation-delay:40ms; }
+.ve-module-card:nth-child(3){ animation-delay:80ms; }
+.ve-module-card:nth-child(4){ animation-delay:120ms; }
 .ve-module-card:hover,
 .ve-module-card:focus-visible{
   border-color:var(--accent-primary);
@@ -2566,8 +2718,10 @@
 }
 .ve-module-card-icon{
   flex-shrink:0;
-  width:48px;
-  height:48px;
+  width:50px;
+  height:50px;
+  padding:6px;
+  margin-bottom:13px;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -2577,13 +2731,19 @@
   transition:border-color var(--dur-base) var(--ease-out),
              background var(--dur-base) var(--ease-out);
 }
+/* Simgeler markup'ta 38px genişlik/yükseklik NİTELİĞİYLE geliyor (kutu
+   ölçüsü buradan sürülür, dosyadan değil). */
+.ve-module-card-icon svg{
+  width:100%;
+  height:100%;
+}
 .ve-module-card:hover .ve-module-card-icon,
 .ve-module-card:focus-visible .ve-module-card-icon{
   border-color:var(--accent-primary);
   background:color-mix(in srgb, var(--accent-primary) 14%, var(--bg-input));
 }
 .ve-module-card-text{
-  flex:1;
+  display:block;
   min-width:0;
 }
 .ve-module-card-name{
@@ -2592,16 +2752,35 @@
   font-weight:600;
   color:var(--text-heading);
   letter-spacing:-0.01em;
-  margin-bottom:3px;
+  margin-bottom:4px;
 }
 .ve-module-card-desc{
   display:block;
   font-size:var(--fs-body);
   color:var(--text-secondary);
-  line-height:1.5;
+  line-height:1.55;
+}
+/* Künye satırı: modülün ne olduğunu adından fazlasıyla söyler (çözücü /
+   standart / katalog). Değerler kod tarafındaki gerçek kaynaklardan:
+   js/numerics.js, js/mount-core.js, js/fead-belts.js, js/structural-*.js. */
+.ve-module-card-foot{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:auto;
+  padding-top:12px;
+  border-top:1px solid var(--border-color);
+}
+.ve-module-card-spec{
+  font-family:var(--font-mono);
+  font-size:var(--fs-micro);
+  letter-spacing:0.05em;
+  text-transform:uppercase;
+  color:var(--text-muted);
 }
 .ve-module-card-arrow{
   flex-shrink:0;
+  margin-left:auto;
   display:flex;
   align-items:center;
   color:var(--text-muted);
@@ -2614,35 +2793,32 @@
   transform:translateX(4px);
 }
 
-.ve-welcome-open{
-  margin-top:18px;
-  align-self:center;
-  display:inline-flex;
-  align-items:center;
-  gap:7px;
-  padding:7px 12px;
-  font-family:var(--font-sans);
-  font-size:var(--fs-body);
-  font-weight:500;
-  color:var(--text-secondary);
-  background:transparent;
-  border:1px solid transparent;
-  border-radius:var(--radius-sm);
-  cursor:pointer;
-  transition:color var(--dur-base) var(--ease-out),
-             border-color var(--dur-base) var(--ease-out),
-             background var(--dur-base) var(--ease-out);
+/* Dar pencere: iki sütun üst üste. Sol panel bir başlık bandına dönüşür;
+   açıklama metni ve boşluk kalkar, eylemler ve künye kalır. */
+@media (max-width:1100px){
+  .ve-welcome{ flex-direction:column; }
+  .ve-welcome-id{
+    width:auto;
+    padding:24px 26px 18px;
+    border-right:none;
+    border-bottom:1px solid var(--border-color);
+  }
+  .ve-welcome-note,
+  .ve-welcome-spacer{ display:none; }
+  .ve-welcome-sep{ margin:16px 0 14px; }
+  .ve-welcome-open{ align-self:flex-start; }
+  .ve-welcome-meta{ margin-top:14px; padding-top:10px; }
+  .ve-welcome-work{ padding:26px; justify-content:flex-start; }
 }
-.ve-welcome-open:hover{
-  color:var(--text-heading);
-  border-color:var(--border-color);
-  background:var(--bg-tertiary);
+@media (max-width:640px){
+  .ve-module-overlay-grid{ grid-template-columns:1fr; }
+  .ve-welcome-work{ padding:18px; }
 }
-.ve-welcome-open .mf-ico{
-  width:0.9rem;
-  height:0.9rem;
-  opacity:0.85;
+@media (prefers-reduced-motion: reduce){
+  .ve-welcome,
+  .ve-module-card{ animation:none; }
 }
+
 .ve-canvas-wrapper{
   flex:1;
   overflow:hidden;
