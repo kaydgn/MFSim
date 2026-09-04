@@ -1275,11 +1275,13 @@ describe('dönüş yönü — Kasnaklar adımında seçilir', () => {
     const y0 = b.spin, r0 = st.route.slice();
     expect(y0).not.toBe(0);
 
-    // DÜĞMELER ÖN GÖRÜNÜŞTE KONUŞUR. `b.spin` veri düzlemini ölçüyor, çizim
-    // aynalı; ikisi TERS. Bu satır o çeviriyi ölçüyor — düğmeye veri düzlemi
-    // değeri geçmek "aynı yönü seçtim" derken TERSİNİ seçmek olurdu.
+    // DÜĞMELER ÇİZİM DÜZLEMİNDE KONUŞUR. `b.spin` VERİ düzlemini ölçüyor;
+    // çizim aynalıysa ikisi ters, aynasızsa aynı. Kapı bayrağa değil ÇEVİRİNİN
+    // KENDİSİNE bakıyor — düğmeye yanlış düzlemin değerini geçmek "aynı yönü
+    // seçtim" derken tersini seçmek olurdu.
     const f0 = M.veFeadSpinToFront(y0);
-    expect(f0).toBe(-y0);
+    expect(f0).toBe(M.VE_FEAD_VIEW_FRONT ? -y0 : y0);
+    expect(M.veFeadSpinToFront(f0)).toBe(y0);       // İNVOLUSYON — kendi tersi
 
     // AYNI yön seçilirse HİÇBİR ŞEY olmaz (aksi hâlde bir aç/kapa gibi
     // davranır ve ikinci tık sırayı geri çevirirdi).
@@ -1301,30 +1303,38 @@ describe('dönüş yönü — Kasnaklar adımında seçilir', () => {
     expect(wiz.veFeadWizBuild().spin).toBe(y0);
   });
 
-  // Kullanıcı kararı (2026-08-28): *"kayışın dönüş yönünü default olarak saat
-  // yönünde yapacağız."* Bu, veri düzlemini DEĞİL görüneni bağlar — Gates
-  // düzleminde on raporun onu da CCW ve arşivle karşılaştırılabilirlik oradan
-  // geliyor. Kapı bu yüzden ÖN GÖRÜNÜŞÜ ölçüyor.
-  test('VARSAYILAN ÖN GÖRÜNÜŞTE SAAT YÖNÜ — iki örnekte de', () => {
+  // VERİ DÜZLEMİ KİLİTLİ, GÖRÜNEN DÜZLEME BAĞLI. Eski kapı "ön görünüşte CW"
+  // diye SABİT yazıyordu (2026-08-28 kararı) ve varsayılan düzlem 2026-09-04'te
+  // rapor düzlemine dönünce yanlış beklentiyi kilitledi. Asıl ölçülmüş olan
+  // şudur ve o değişmedi: **Gates düzleminde on raporun onu da CCW**.
+  test('VERİ DÜZLEMİNDE CCW — arşivle karşılaştırılabilirliğin dayanağı', () => {
     ['AG00976_GATES_2025', 'BMC_FEAD_2026'].forEach((k) => {
       kabuk(); wiz.veFeadWizSeed(k);
       const b = wiz.veFeadWizBuild();
-      expect(b.spin).toBe(1);                       // veri düzleminde CCW
-      expect(M.veFeadSpinToFront(b.spin)).toBe(-1); // ÖN GÖRÜNÜŞTE CW
-      expect(M.veFeadSpinLabel(b.spin).kisa).toContain('CW');
-      expect(M.veFeadSpinLabel(b.spin).kisa).not.toContain('CCW');
+      expect(b.spin).toBe(1);                       // veri düzleminde CCW — ÖLÇÜLÜ
+      // Etiket ÇİZİM düzlemini basar; ikisinin ilişkisi bayrakla belirli.
+      const gorunen = M.veFeadSpinToFront(b.spin);
+      expect(gorunen).toBe(M.VE_FEAD_VIEW_FRONT ? -1 : 1);
+      expect(M.veFeadSpinLabel(b.spin).kisa)
+        .toBe(gorunen > 0 ? '\u21ba CCW' : '\u21bb CW');
+      // Düzlem adı etiketin İÇİNDE — "CW" tek başına hiçbir şey söylemez.
+      expect(M.veFeadSpinLabel(b.spin).uzun).toContain(M._feadPlaneName());
     });
   });
 
   // Düğmenin BASILI görüneni ile modelin gerçekte kurduğu yön ayrışırsa hata
   // SESSİZDİR: sayılar makul kalır, yalnız seçici yalan söyler.
-  test('BASILI DÜĞME ÖN GÖRÜNÜŞÜ İZLER', () => {
+  test('BASILI DÜĞME ÇİZİM DÜZLEMİNİ İZLER', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const b = wiz.veFeadWizBuild();
     const h = wiz.veFeadWizSpinHTML(b);
     const acik = h.split('<button').filter((x) => /ve-fw-spin-on/.test(x));
     expect(acik).toHaveLength(1);
-    expect(acik[0]).toMatch(/veFeadWizSpinSet\(-1\)/);   // CW düğmesi
+    // Basılı olan, ÇİZİLEN yönün düğmesi olmalı — veri düzleminin değil.
+    const gorunen = M.veFeadSpinToFront(b.spin);
+    expect(acik[0]).toContain('veFeadWizSpinSet(' + gorunen + ')');
+    // İPUCU METNİ DE TEK ÜRETİCİDEN: düzlem adı düğmenin title'ında geçiyor.
+    expect(acik[0]).toContain(M._feadPlaneName());
   });
 
   test('GEOMETRİ DEĞİŞMEZ — cebirsel özdeşlik', () => {
@@ -2418,13 +2428,15 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
     const cx = Number((/data-cx="([-\d.]+)"/.exec(svg) || [])[1]);
     const mir = Number((/data-mir="([-\d.]+)"/.exec(svg) || [])[1]);
     expect(mir).toBe(M.veFeadSpinToFront(1));            // TEK kaynaktan
-    expect(mir).toBe(-1);                                 // bugünkü varsayılan
-    // Çizilen merkez VERİ merkezinin AYNASI — seçici artık kartla aynı elde.
-    expect(cx).toBeCloseTo(-sc.cx, 6);
-    // 0° etiketi SOLA geçmiş olmalı: resim aynalı, okuma aynalı değilse
+    expect(mir).toBe(M.VE_FEAD_VIEW_FRONT ? -1 : 1);     // bayrakla belirli
+    // ASIL KAPI: seçici ile kart AYNI ELDE. Çizilen merkez, aynada aynanın,
+    // aynasızda verinin merkezi — iki resmin ters düşmesi tam olarak
+    // buradan yakalanıyor.
+    expect(cx).toBeCloseTo(mir * sc.cx, 6);
+    // 0/180 etiketleri de aynayı izler: resim aynalı, okuma aynalı değilse
     // kullanıcı 0°'yi yanlış tarafta arar.
     const sag = /<text x="([-\d.]+)"[^>]*text-anchor="start"[^>]*>([-\d]+)°/.exec(svg);
-    expect(sag && sag[2]).toBe('180');
+    expect(sag && sag[2]).toBe(mir < 0 ? '180' : '0');
   });
 
   test('"Uygula" seçilen açıyı SAKLANAN alana çeviriyor', () => {

@@ -346,8 +346,11 @@ function veFeadWizSpinHTML(b){
       + glif + '</button>';
   }
   return '<div class="ve-fw-spinbox">'
-    + dugme(1, '\u21ba CCW', 'Saat yönünün TERSİNE — motora önden bakışta')
-    + dugme(-1, '\u21bb CW', 'Saat yönünde — motora önden bakışta')  // ön görünüş
+    // İPUCU METNİ DE TEK ÜRETİCİDEN. Düzlem adı burada İKİNCİ KEZ yazılsaydı,
+    // ayna bayrağı değişince bu iki düğme sessizce eskirdi — tam olarak bir
+    // kez olan şey (metin koşulsuz "önden bakışta" diyordu).
+    + dugme(1, '\u21ba CCW', veFeadSpinLabel(veFeadSpinToFront(1)).uzun)
+    + dugme(-1, '\u21bb CW', veFeadSpinLabel(veFeadSpinToFront(-1)).uzun)
     + '<span class="ve-fw-dim">' + (sp
         ? 'Sıradan türedi; seçim serpantin sırasını ters yürütür.'
         : 'Henüz okunamıyor — en az üç kasnak ve koordinatları gerekli.')

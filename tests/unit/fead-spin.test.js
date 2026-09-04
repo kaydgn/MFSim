@@ -71,6 +71,14 @@ const dutyRows = (ns) => (ns.find((n) => n.type === 'fead-solver').data.duty) ||
 const coz = (s) => M.veFeadAnalyze(s.b, { rows: dutyRows(s.ns) });
 const kisa = (nm) => String(nm).replace(/ .*/, '');
 
+// ÇİZİM DÜZLEMİNİN YÖNÜ — kapılar BAYRAĞA değil İLİŞKİYE baksın diye.
+// Rozet/panel "kullanıcının GÖRDÜĞÜ yönü" basmak zorunda; gördüğü yön ise
+// çizim düzlemine bağlı (`VE_FEAD_VIEW_FRONT`). Beklentiyi buradan türetmek,
+// varsayılan düzlem bir daha değiştiğinde bu testlerin sessizce yanlış
+// beklenti kilitlemesini önler — 2026-09-04'te tam olarak bu oldu.
+const cizimYonu = (veriYonu) => (M.VE_FEAD_VIEW_FRONT ? -veriYonu : veriYonu);
+const cizimGlifi = (veriYonu) => (cizimYonu(veriYonu) > 0 ? '\u21ba CCW' : '\u21bb CW');
+
 // ─────────────────────────────────────────────────────────────────────────────
 describe('yön NEREDEN geliyor', () => {
   test('rota sırasının dolanım işaretinden — çekirdeğin loopSense ölçütü', () => {
@@ -368,12 +376,12 @@ describe('rozet ve panel', () => {
     let a = el();
     expect(fead.veFeadApplyBadge(a, b)).toBe(true);
     let r = a.querySelector('.ve-fead-badge');
-    // ROZET ÖN GÖRÜNÜŞÜ BASAR. Veri düzleminde AG00976 CCW (Gates'in kendi
-    // düzlemi; on raporun onu da öyle), çizim aynalı olduğu için ekranda CW.
-    // Çevirmeden basmak kartla rozeti ters düşürürdü — sessiz, çünkü ikisi de
-    // ayrı ayrı makul görünür.
+    // ROZET ÇİZİM DÜZLEMİNİ BASAR. Veri düzleminde AG00976 CCW (Gates'in kendi
+    // düzlemi; on raporun onu da öyle). Çizim aynalıysa ekranda CW, aynasızsa
+    // CCW — rozet HANGİSİ çiziliyorsa onu söylemek zorunda; ayrışırsa sessiz
+    // kalır, çünkü ikisi de ayrı ayrı makul görünür.
     expect(M.veFeadNaturalSense(s.b.order)).toBe(1);        // veri düzlemi
-    expect(r.textContent).toBe('↻ CW');                      // ÖN GÖRÜNÜŞ
+    expect(r.textContent).toBe(cizimGlifi(1));              // ÇİZİM DÜZLEMİ
     expect(r.style.cssText).toContain('--text-secondary');
 
     // Gergi gevşek tarafta → yeşil
@@ -420,9 +428,11 @@ describe('rozet ve panel', () => {
     const a2 = el(); fead.veFeadApplyBadge(a2, b);
     const cw = a2.querySelector('.ve-fead-badge');
 
-    // Adlar ÖN GÖRÜNÜŞE göre: `ccw` değişkeni aynalamadan sonra CW basıyor.
-    expect(ccw.textContent).toBe('↻ CW');
-    expect(cw.textContent).toBe('↺ CCW');
+    // Değişken adları VERİ düzlemine göre; basılan metin ÇİZİM düzlemine göre.
+    // İkisi ayna açıkken birbirinin tersi, kapalıyken aynısı.
+    expect(ccw.textContent).toBe(cizimGlifi(1));
+    expect(cw.textContent).toBe(cizimGlifi(-1));
+    expect(ccw.textContent).not.toBe(cw.textContent);   // ters çevirmek İŞE YARADI
     expect(cw.style.background).toBe(ccw.style.background);   // AYNI renk
     expect(ccw.style.cssText).not.toContain('--accent-warning');
     expect(ccw.style.cssText).not.toContain('--accent-primary');
@@ -450,12 +460,15 @@ describe('rozet ve panel', () => {
     const once = JSON.stringify(b.data);
 
     let h = fead.getFeadSpinPropertiesHTML(b);
-    // PANEL DE ÖN GÖRÜNÜŞTE. Rozet ile panel aynı üreticiden besleniyor
+    // PANEL DE ÇİZİM DÜZLEMİNDE. Rozet ile panel aynı üreticiden besleniyor
     // (`veFeadSpinLabel`); ikisi ayrışsaydı biri sessizce eskirdi.
-    expect(h).toContain('CW (saat yönünde)');
-    expect(h).not.toContain('CCW');
+    const yon = cizimYonu(1);
+    expect(h).toContain(yon > 0 ? 'CCW (saat yönünün TERSİNE)' : 'CW (saat yönünde)');
+    if (yon < 0) expect(h).not.toContain('CCW');
     expect(h).toContain('veFeadToggleSpin()');
-    expect(h).toContain('ÖNDEN bakış');            // bakış açısı YAZILI olmalı
+    // DÜZLEM YAZILI OLMALI — hangi taraftan bakıldığı belirtilmeden CW/CCW
+    // hiçbir şey söylemez. Metin tek üreticiden (`_feadPlaneName`) geliyor.
+    expect(h).toContain(M._feadPlaneName());
     expect(h).toContain('Değişmez');               // geometri yönden bağımsız
     expect(JSON.stringify(b.data)).toBe(once);
 

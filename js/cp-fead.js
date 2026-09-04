@@ -955,8 +955,12 @@ function getFeadSpinPropertiesHTML(node){
     + 'margin-bottom:9px; border:none; cursor:pointer; border-radius:var(--radius-sm); '
     + 'color:#fff; font-weight:700; letter-spacing:0.03em; font-size:var(--fs-body); '
     + 'background:var(--accent-primary);">Yönü çevir</button>'
+    // DÜZLEM ADI TEK ÜRETİCİDEN (`_feadPlaneName`). Burada ikinci kez
+    // yazılsaydı, ayna bayrağı değişince panel sessizce eskirdi.
     + _feadHint('Yön bir ayar DEĞİL: kasnak merkezlerinin kayış gidiş sırasındaki '
-        + 'dolanım işaretinden türer (<b>motora ÖNDEN bakış</b>). "Yönü çevir" '
+        + 'dolanım işaretinden türer (<b>' + _feadEsc(
+            (typeof _feadPlaneName === 'function') ? _feadPlaneName() : 'çizim düzlemi')
+        + '</b>). "Yönü çevir" '
         + 'kayış yolunun bağlantılarını ters çevirir — kanvastaki gidiş okları da '
         + 'onunla döner.'));
 
