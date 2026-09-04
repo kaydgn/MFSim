@@ -2883,16 +2883,32 @@ function veFeadResolveDriver(pulleys){
   return list.length ? list[0] : null;
 }
 
-// ─── ÖN GÖRÜNÜŞ — çizim aynalanır, VERİ ASLA ────────────────────────────────
+// ─── ÇİZİM DÜZLEMİ — VARSAYILAN: RAPOR DÜZLEMİ (ayna KAPALI) ────────────────
 //
-// Kullanıcı kararı (2026-08-28): *"MFSim için de kayışın dönüş yönünü default
-// olarak saat yönünde yapacağız."*
+// KULLANICI KARARI (2026-09-04) — ÖNCEKİNİ DEĞİŞTİRİR: *"gergi ve kasnak
+// konumları programda yanlış çıkıyor. Ters çıkıyor… Gates raporlarının PDF ilk
+// sayfasında kasnak konumları var."*
 //
-// ÖLÇÜLDÜ (bkz. docs/gates-reports/README.md → "Dönüş yönü konvansiyonu"):
-// on Gates raporunun ONUNDA DA kayış, raporun kendi çizim düzleminde CCW
-// dolanıyor (Σ işaretli sarım = +360, hiç −360 yok). Motorlar ön taraftan
-// (aksesuar tahrik ucundan) bakıldığında CW döndüğü için o düzlem ÖN
-// GÖRÜNÜŞÜN AYNASI gibi davranıyor.
+// ÖLÇÜLDÜ (12 örneğin 12'si, gerçek tarayıcıda, çizilen SVG'den okunarak):
+// ekrandaki soldan-sağa sıra raporun 1. sayfasındaki şemanın TAM TERSİYDİ.
+// Sebebi bir hesap hatası değil, bu bayrağın kendisiydi: `true` iken çizim X'te
+// aynalanıyor, yani resim raporun aynası oluyordu. Örnek: AG0868'de rapor
+// CRK'yı SOLDA, A_C'yi SAĞDA gösterirken program tersini çiziyordu.
+//
+// ÖNCEKİ VARSAYILAN (`true`) BİR ÇIKARIMA DAYANIYORDU ve çıkarım silinmiyor,
+// yalnız VARSAYILAN OLMAKTAN çıkıyor:
+//   • ÖLÇÜLÜ: on raporun onunda da kayış, raporun kendi düzleminde CCW dolanıyor
+//     (Σ işaretli sarım = +360). Tedarikçinin gergi künyesindeki CW/CCW harfi de
+//     o düzlemin TERSİ (docs/gates-reports/README.md §5).
+//   • ÇIKARIM: motorlar ön taraftan bakıldığında CW döndüğü için rapor düzlemi
+//     ön görünüşün aynası gibi davranıyor. Raporların HİÇBİRİNDE hangi taraftan
+//     bakıldığı YAZMIYOR (aynı README §6: "burada ölçüm biter, çıkarım başlar").
+//
+// Yani bayrak `true` iken program fiziksel olarak savunulabilir ama ARŞİVLE
+// KARŞILAŞTIRILAMAZ bir resim çiziyordu. Bu modülün en değerli özelliği satır
+// satır karşılaştırılabilirlik; varsayılan artık onu koruyor. Ayna makinesi
+// (`veFeadMirrorGeomX`, `veFeadSpinToFront`, kapıları) OLDUĞU GİBİ DURUYOR —
+// ölçülmüş bir ilişkiyi silmek, bir görünüm tercihi için kanıt atmak olurdu.
 //
 // KARAR: yalnız ÇİZİM aynalanır. Saklanan mm koordinatları, çözücü ve bütün
 // sayısal çıktılar Gates düzleminde KALIR — arşivle satır satır
@@ -2904,7 +2920,7 @@ function veFeadResolveDriver(pulleys){
 // BİREBİR aynı kalır; değişen yalnız el yönü. Bu yüzden burada `d` işareti de
 // çevriliyor: çevrilmezse sarım yayları kasnağın İÇİNDEN geçer (kartta bir kez
 // ölçülmüş "sweep bayrağı" hatasının aynısı).
-var VE_FEAD_VIEW_FRONT = true;      // çizimler ÖN GÖRÜNÜŞ mü
+var VE_FEAD_VIEW_FRONT = false;     // çizim düzlemi: false = RAPOR (Gates) · true = ön görünüş (ayna)
 
 function _feadMirrorPt(q){ return (q && q.length >= 2) ? [-q[0], q[1]] : q; }
 
@@ -2930,14 +2946,25 @@ function veFeadSpinToFront(spin){
 // Etiket TEK ÜRETİCİDEN. Rozet · panel · toast · sihirbazın üç yüzeyi aynı
 // metni basıyor; altı kopya tutulsaydı biri düzeltilince ötekiler sessizce
 // eskirdi (bu modülün tekrar eden kuralı).
+// DÜZLEMİ ADIYLA SÖYLER. Eskiden metin KOŞULSUZ *"motora önden bakışta"*
+// diyordu; ayna kapanınca o cümle ölçülmemiş bir iddiaya dönüşür (hangi
+// taraftan bakıldığı raporların HİÇBİRİNDE yazmıyor — README §6). Artık etiket
+// çizimin düzlemini adıyla söylüyor, yani kullanıcının GÖRDÜĞÜ resimle aynı
+// cümleyi kuruyor.
+function _feadPlaneName(){
+  return VE_FEAD_VIEW_FRONT
+    ? 'motora önden bakışta (aynalı görünüş)'
+    : 'şemadaki yön — Gates rapor düzlemi';
+}
+
 function veFeadSpinLabel(spin){
   var f = veFeadSpinToFront(spin);
   if(!f) return { sense: 0, glif: '—', kisa: '—', uzun: '—' };
   return f > 0
     ? { sense: 1, glif: '\u21ba', kisa: '\u21ba CCW',
-        uzun: 'CCW (saat yönünün TERSİNE) — motora önden bakışta' }
+        uzun: 'CCW (saat yönünün TERSİNE) — ' + _feadPlaneName() }
     : { sense: -1, glif: '\u21bb', kisa: '\u21bb CW',
-        uzun: 'CW (saat yönünde) — motora önden bakışta' };
+        uzun: 'CW (saat yönünde) — ' + _feadPlaneName() };
 }
 
 // Geometriyi X'te aynalar. SAF: girdiyi değiştirmez, kopya döndürür.
@@ -4198,6 +4225,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadRouteOrder: veFeadRouteOrder, veFeadRouteDiagnose: veFeadRouteDiagnose,
     veFeadNaturalSense: veFeadNaturalSense, veFeadReverseRoute: veFeadReverseRoute,
     veFeadSpinToFront: veFeadSpinToFront, veFeadSpinLabel: veFeadSpinLabel,
+    _feadPlaneName: _feadPlaneName,
     veFeadTensionerSide: veFeadTensionerSide,
     veFeadResolveDriver: veFeadResolveDriver,
     veFeadUniqueNames: veFeadUniqueNames, veFeadTranslateError: veFeadTranslateError,

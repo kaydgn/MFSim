@@ -346,8 +346,11 @@ function veFeadWizSpinHTML(b){
       + glif + '</button>';
   }
   return '<div class="ve-fw-spinbox">'
-    + dugme(1, '\u21ba CCW', 'Saat yönünün TERSİNE — motora önden bakışta')
-    + dugme(-1, '\u21bb CW', 'Saat yönünde — motora önden bakışta')  // ön görünüş
+    // İPUCU METNİ DE TEK ÜRETİCİDEN. Düzlem adı burada İKİNCİ KEZ yazılsaydı,
+    // ayna bayrağı değişince bu iki düğme sessizce eskirdi — tam olarak bir
+    // kez olan şey (metin koşulsuz "önden bakışta" diyordu).
+    + dugme(1, '\u21ba CCW', veFeadSpinLabel(veFeadSpinToFront(1)).uzun)
+    + dugme(-1, '\u21bb CW', veFeadSpinLabel(veFeadSpinToFront(-1)).uzun)
     + '<span class="ve-fw-dim">' + (sp
         ? 'Sıradan türedi; seçim serpantin sırasını ters yürütür.'
         : 'Henüz okunamıyor — en az üç kasnak ve koordinatları gerekli.')
@@ -1095,7 +1098,7 @@ function veFeadWizStepHTML(step, b){
 // kalktı (tek koordinat kaldı), dolayısıyla burada yalnız künye ve örnekten
 // doldurma var. Adımın kendisi KALDI: örnekten doldurmak, alanların hangi
 // belgeden okunduğunu anlatmanın en kısa yolu.
-function _fwStepKaynak(){
+function _fwStepKaynak(b){
   var st = _fwState;
   var h = _fwCard('Sistem', 'var(--accent-primary)',
       _fwField('Sistem adı', _fwInp('ad', { text: true, ph: 'Yeni FEAD Sistemi' }))
@@ -1154,6 +1157,54 @@ function _fwStepKaynak(){
     : '<div class="ve-fw-seeded">✓ <b>' + _fwEsc(yukluAd || 'Boş başla') + '</b> yüklendi'
       + (yukluAlt ? ' <em>' + _fwEsc(yukluAlt) + '</em>' : '') + '</div>';
   h += _fwCard('Örnekten doldur', 'var(--accent-success)', _fwField('Örnek', sel) + durum);
+
+  // SEÇİLEN ÖRNEĞİN NE OLDUĞU — kullanıcı isteği (2026-09-02): *"kullanıcı
+  // örnek seçtiğinde, hemen altında seçilen konfigürasyonun kullanıcıyı
+  // bilgilendiren bir özeti olsun. Şemayı çizdir, gerekli bilgileri ver.
+  // Kullanıcı seçtiği örneğin ne olduğunu anlasın."*
+  //
+  // Açılır liste tek satıra indi ve kazanç buydu; ama tek satır ne olduğunu
+  // ANLATMIYOR. Özet o boşluğu dolduruyor ve pencereyi yine büyütmüyor:
+  // yalnız BİR örnek için basılıyor (liste değil), yani örnek sayısı arttıkça
+  // sabit kalıyor.
+  //
+  // ÜST BANTLA ÇAKIŞMIYOR: `veFeadWizLiveHTML` zaten L_eff · T · kol · yön
+  // basıyor. Buradaki künye onların TAŞIMADIĞI şeyi taşıyor — örneğin kimliği:
+  // hangi kasnaklar, hangi kayış, hangi gergi parçası, çevrim kaç nokta.
+  var exSec = (yuklu !== null && yuklu !== '') ? veFeadExampleOf(yuklu) : null;
+  if(exSec){
+    var tenP = exSec.pulleys.filter(function(p){
+      return (componentDefs[p.type] || {}).isFeadTensioner; })[0];
+    var bd = exSec.belt || {};
+    var kunye = [
+      ['Kasnaklar', exSec.pulleys.map(function(p){ return _fwEsc(p.name); }).join(' · ')],
+      ['Kayış', _fwEsc(bd.beltType || ((bd.ribs || '?') + bd.profile)) + ' · '
+        + bd.effLength + ' mm · tolerans ' + (bd.tolerance > 0 ? '±' + bd.tolerance + ' mm' : 'YOK')
+        + ' · aşınma ' + (bd.wearPct > 0 ? '%' + (bd.wearPct * 100).toFixed(2) : 'YOK')],
+      ['Gergi', tenP ? (_fwEsc(tenP.name) + ' · kol ' + tenP.data.armLen + ' mm · yay '
+        + tenP.data.meanLoad + ' Nm @ ' + tenP.data.armMeanDeg + '°') : '—'],
+      ['Çalışma çevrimi', (exSec.solver.duty || []).length + ' devir noktası'
+        + ((exSec.solver.duty || [])[0] ? ' · ' + exSec.solver.duty[0].degC + ' °C' : '')]
+    ];
+    var ih = '<div class="ve-fw-exnote">' + _fwEsc(exSec.note) + '</div>'
+           + '<dl class="ve-fw-exspec">';
+    kunye.forEach(function(k){
+      ih += '<dt>' + _fwEsc(k[0]) + '</dt><dd>' + k[1] + '</dd>';
+    });
+    ih += '</dl>';
+
+    // ŞEMA ÇİZİCİ TEK KAYNAK (`veFeadLayoutSVG`) — 7. adımın kullandığının
+    // aynısı. Sunum kendi geometrisini HESAPLAMAZ; çözüm yoksa şema da yok
+    // ve sebebi zaten uyarı kutusunda yazılı.
+    if(b && b.ok && typeof veFeadLayoutSVG === 'function'){
+      var svg = null;
+      try { svg = veFeadLayoutSVG(b, 700, 380,
+        { posMode: 'mean', compass: true, pivot: true, arrows: true }); }
+      catch(e){ svg = null; }
+      if(svg) ih += '<div class="ve-fw-fig">' + svg + '</div>';
+    }
+    h += _fwCard('Seçilen Örnek', 'var(--accent-primary)', ih);
+  }
   return h;
 }
 
