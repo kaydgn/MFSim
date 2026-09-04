@@ -82,7 +82,11 @@ const _fwSifirla = () => {
 const kabuk = () => {
   document.body.innerHTML = '<div id="ve-canvas"></div>'
     + '<div id="ve-feadwiz-overlay" style="display:none;">'
-    + '<div id="ve-fw-nav"></div><div id="ve-fw-body"></div><div id="ve-fw-foot"></div></div>';
+    + '<div id="ve-fw-nav"></div><div id="ve-fw-body"></div><div id="ve-fw-foot"></div></div>'
+    // Açı seçicisinin kaplaması: `veFeadWizAngRender` onu id ile arıyor ve
+    // bulamazsa SESSİZCE dönüyor — kabukta olmasaydı DOM kapısı hiçbir şey
+    // ölçmezdi (boş bir pencerede de `em` sayısı sıfırdır).
+    + '<div id="ve-fw-ang" style="display:none;"></div>';
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1275,11 +1279,13 @@ describe('dönüş yönü — Kasnaklar adımında seçilir', () => {
     const y0 = b.spin, r0 = st.route.slice();
     expect(y0).not.toBe(0);
 
-    // DÜĞMELER ÖN GÖRÜNÜŞTE KONUŞUR. `b.spin` veri düzlemini ölçüyor, çizim
-    // aynalı; ikisi TERS. Bu satır o çeviriyi ölçüyor — düğmeye veri düzlemi
-    // değeri geçmek "aynı yönü seçtim" derken TERSİNİ seçmek olurdu.
+    // DÜĞMELER ÇİZİM DÜZLEMİNDE KONUŞUR. `b.spin` VERİ düzlemini ölçüyor;
+    // çizim aynalıysa ikisi ters, aynasızsa aynı. Kapı bayrağa değil ÇEVİRİNİN
+    // KENDİSİNE bakıyor — düğmeye yanlış düzlemin değerini geçmek "aynı yönü
+    // seçtim" derken tersini seçmek olurdu.
     const f0 = M.veFeadSpinToFront(y0);
-    expect(f0).toBe(-y0);
+    expect(f0).toBe(M.VE_FEAD_VIEW_FRONT ? -y0 : y0);
+    expect(M.veFeadSpinToFront(f0)).toBe(y0);       // İNVOLUSYON — kendi tersi
 
     // AYNI yön seçilirse HİÇBİR ŞEY olmaz (aksi hâlde bir aç/kapa gibi
     // davranır ve ikinci tık sırayı geri çevirirdi).
@@ -1301,30 +1307,38 @@ describe('dönüş yönü — Kasnaklar adımında seçilir', () => {
     expect(wiz.veFeadWizBuild().spin).toBe(y0);
   });
 
-  // Kullanıcı kararı (2026-08-28): *"kayışın dönüş yönünü default olarak saat
-  // yönünde yapacağız."* Bu, veri düzlemini DEĞİL görüneni bağlar — Gates
-  // düzleminde on raporun onu da CCW ve arşivle karşılaştırılabilirlik oradan
-  // geliyor. Kapı bu yüzden ÖN GÖRÜNÜŞÜ ölçüyor.
-  test('VARSAYILAN ÖN GÖRÜNÜŞTE SAAT YÖNÜ — iki örnekte de', () => {
+  // VERİ DÜZLEMİ KİLİTLİ, GÖRÜNEN DÜZLEME BAĞLI. Eski kapı "ön görünüşte CW"
+  // diye SABİT yazıyordu (2026-08-28 kararı) ve varsayılan düzlem 2026-09-04'te
+  // rapor düzlemine dönünce yanlış beklentiyi kilitledi. Asıl ölçülmüş olan
+  // şudur ve o değişmedi: **Gates düzleminde on raporun onu da CCW**.
+  test('VERİ DÜZLEMİNDE CCW — arşivle karşılaştırılabilirliğin dayanağı', () => {
     ['AG00976_GATES_2025', 'BMC_FEAD_2026'].forEach((k) => {
       kabuk(); wiz.veFeadWizSeed(k);
       const b = wiz.veFeadWizBuild();
-      expect(b.spin).toBe(1);                       // veri düzleminde CCW
-      expect(M.veFeadSpinToFront(b.spin)).toBe(-1); // ÖN GÖRÜNÜŞTE CW
-      expect(M.veFeadSpinLabel(b.spin).kisa).toContain('CW');
-      expect(M.veFeadSpinLabel(b.spin).kisa).not.toContain('CCW');
+      expect(b.spin).toBe(1);                       // veri düzleminde CCW — ÖLÇÜLÜ
+      // Etiket ÇİZİM düzlemini basar; ikisinin ilişkisi bayrakla belirli.
+      const gorunen = M.veFeadSpinToFront(b.spin);
+      expect(gorunen).toBe(M.VE_FEAD_VIEW_FRONT ? -1 : 1);
+      expect(M.veFeadSpinLabel(b.spin).kisa)
+        .toBe(gorunen > 0 ? '\u21ba CCW' : '\u21bb CW');
+      // Düzlem adı etiketin İÇİNDE — "CW" tek başına hiçbir şey söylemez.
+      expect(M.veFeadSpinLabel(b.spin).uzun).toContain(M._feadPlaneName());
     });
   });
 
   // Düğmenin BASILI görüneni ile modelin gerçekte kurduğu yön ayrışırsa hata
   // SESSİZDİR: sayılar makul kalır, yalnız seçici yalan söyler.
-  test('BASILI DÜĞME ÖN GÖRÜNÜŞÜ İZLER', () => {
+  test('BASILI DÜĞME ÇİZİM DÜZLEMİNİ İZLER', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const b = wiz.veFeadWizBuild();
     const h = wiz.veFeadWizSpinHTML(b);
     const acik = h.split('<button').filter((x) => /ve-fw-spin-on/.test(x));
     expect(acik).toHaveLength(1);
-    expect(acik[0]).toMatch(/veFeadWizSpinSet\(-1\)/);   // CW düğmesi
+    // Basılı olan, ÇİZİLEN yönün düğmesi olmalı — veri düzleminin değil.
+    const gorunen = M.veFeadSpinToFront(b.spin);
+    expect(acik[0]).toContain('veFeadWizSpinSet(' + gorunen + ')');
+    // İPUCU METNİ DE TEK ÜRETİCİDEN: düzlem adı düğmenin title'ında geçiyor.
+    expect(acik[0]).toContain(M._feadPlaneName());
   });
 
   test('GEOMETRİ DEĞİŞMEZ — cebirsel özdeşlik', () => {
@@ -1723,6 +1737,18 @@ describe('sihirbaz girdisi → topoloji bileşeni', () => {
 // ── 1 · YÜKLENEN ÖRNEK KARTI BELİRGİN ──────────────────────────────────────
 // *"Başlangıç kısmında 'örnekten doldur' kategorisi var. Buradan bir seçenek
 // seçtiğimizde seçtiğimiz seçeneğin belirgin olmasını istiyorum."*
+// Künye ızgarasını dt→dd olarak okur. Metne değil YAPIYA bakmak şart: bir
+// satırın değeri düşse bile aynı sözcük başka satırda geçebiliyor.
+function _fwKunyeOku(h) {
+  const m = h.match(/<dl class="ve-fw-exspec">([\s\S]*?)<\/dl>/);
+  if (!m) return {};
+  const cift = {};
+  const re = /<dt>([\s\S]*?)<\/dt><dd>([\s\S]*?)<\/dd>/g;
+  let x;
+  while ((x = re.exec(m[1]))) cift[x[1]] = x[2];
+  return cift;
+}
+
 describe('örnekten doldur — AÇILIR LİSTE, yüklenen belirgin', () => {
   // YÜZEY DEĞİŞTİ, ANLAM DEĞİŞMEDİ. Kart yığını açılır listeye döndü
   // (kullanıcı, 2026-09-02: *"pencereyi uzatmasaydın keşke, böyle aşağıya
@@ -1783,6 +1809,72 @@ describe('örnekten doldur — AÇILIR LİSTE, yüklenen belirgin', () => {
     // '' ise gerçek eylem: temizle.
     wiz.veFeadWizSeedPick('');
     expect(wiz.veFeadWizState().seededFrom).toBe('');
+  });
+
+  test('SEÇİLEN ÖRNEĞİN KÜNYESİ basılıyor — şema dahil', () => {
+    // Kullanıcı isteği (2026-09-02): açılır liste tek satıra indi ama tek satır
+    // seçilenin NE olduğunu anlatmıyor; künye + kayış yolu şeması o boşluğu
+    // dolduruyor. Kapı içeriğe bakıyor, yerleşime değil.
+    kabuk(); wiz.veFeadWizSeed('AG00879_GATES_2023');
+    const b = wiz.veFeadWizBuild();
+    const h = wiz.veFeadWizStepHTML(0, b);
+    const ex = veFeadExampleOf('AG00879_GATES_2023');
+
+    expect(h).toContain('Seçilen Örnek');
+    // Not KAÇIŞLANARAK basılıyor (doğru davranış); karşılaştırma bu yüzden
+    // `&` öncesindeki parçayla yapılıyor.
+    expect(h).toContain(ex.note.split('&')[0].slice(0, 30));
+    ex.pulleys.forEach((p) => expect(h).toContain(p.name));   // kasnaklar
+
+    // SATIR SATIR — dt→dd eşleşmesi. Yalnız "künyede geçiyor mu" diye baksaydık
+    // bir satır sessizce "—" olabilirdi: ÖLÇÜLDÜ, `['Gergi', tenP ? …]` koşulu
+    // false'a çevrildiğinde 161 testin HEPSİ yeşil kaldı, çünkü gergi adı
+    // Kasnaklar satırında da geçiyor. Kapı artık DEĞERE bakıyor.
+    const kunye = _fwKunyeOku(h);
+    expect(Object.keys(kunye)).toEqual(['Kasnaklar', 'Kayış', 'Gergi', 'Çalışma çevrimi']);
+
+    const ten = ex.pulleys.filter((p) => (componentDefs[p.type] || {}).isFeadTensioner)[0];
+    expect(kunye['Gergi']).toContain(ten.name);
+    expect(kunye['Gergi']).toContain(String(ten.data.armLen));
+    expect(kunye['Gergi']).toContain(String(ten.data.meanLoad));
+    expect(kunye['Gergi']).toContain(String(ten.data.armMeanDeg));
+    expect(kunye['Gergi']).not.toBe('—');
+
+    expect(kunye['Kayış']).toContain(ex.belt.beltType);
+    // BİRİMLE BİRLİKTE: çıplak sayı TESADÜFEN geçiyordu — 8PK1392HD adı zaten
+    // "1392" içeriyor, dolayısıyla `effLength` alanı künyeden tamamen düşse de
+    // iddia yeşil kalıyordu (mutasyonla ölçüldü).
+    expect(kunye['Kayış']).toContain(String(ex.belt.effLength) + ' mm');
+    expect(kunye['Çalışma çevrimi'])
+      .toContain(String(ex.solver.duty.length) + ' devir noktası');
+    // Kasnak adları KASNAKLAR satırında — başka satıra saçılmıyor.
+    ex.pulleys.forEach((p) => expect(kunye['Kasnaklar']).toContain(p.name));
+    // ŞEMA: çizici TEK KAYNAK (veFeadLayoutSVG) — sunum kendi geometrisini
+    // hesaplamıyor. Çözülen modelde şema VAR.
+    expect(b.ok).toBe(true);
+    expect(h).toContain('ve-fw-fig');
+    expect(h).toContain('<svg');
+  });
+
+  test('taze sihirbazda künye YOK — boş örnek için iddia uydurulmuyor', () => {
+    kabuk(); _fwSifirla();
+    const h = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
+    expect(h).not.toContain('Seçilen Örnek');
+    // "Boş başla" da bir seçim ama gösterilecek bir örnek YOK.
+    wiz.veFeadWizReset();
+    expect(wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild())).not.toContain('Seçilen Örnek');
+  });
+
+  test('KÜNYE TEK ÖRNEK İÇİN — liste değil, yani pencere yine büyümüyor', () => {
+    // Asıl risk: künyeyi her örnek için basmak. O zaman kart yığınına geri
+    // dönmüş olurduk, üstelik şemalarla birlikte.
+    kabuk(); wiz.veFeadWizSeed('AG00879_GATES_2023');
+    const h = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
+    expect((h.match(/ve-fw-exspec/g) || [])).toHaveLength(1);
+    expect((h.match(/<svg/g) || []).length).toBeLessThanOrEqual(1);
+    // Başka bir örneğin notu basılmıyor.
+    const baska = veFeadExampleOf('AG0868_4PK_GATES_2022');
+    expect(h).not.toContain(baska.note.split('&')[0].slice(0, 30));
   });
 
   test('PENCERE ÖRNEK SAYISIYLA BÜYÜMÜYOR — asıl kazanç bu', () => {
@@ -2208,8 +2300,11 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
     ['0°', '90°', '180°', '-90°'].forEach((e) => expect(svg).toContain('>' + e + '<'));
     expect(svg).toContain('164.0°');             // seçili açı yazılı
     // KOL YEŞİL OK (kullanıcı isteği, 2026-09-02): gövde + doldurulmuş uç.
-    expect(svg).toMatch(/<line[^>]*stroke="var\(--accent-success\)"/);
-    expect(svg).toMatch(/<path d="M[^"]*Z"\s+fill="var\(--accent-success\)"/);
+    // İŞARETÇİYE bakıyor, nitelik SIRASINA değil: ok artık ortak üreticiden
+    // (`veFeadArmArrowSVG`) geliyor ve `data-ve` niteliğini önce basıyor.
+    // Konumsal bir regex "ok kayboldu" derdi, oysa yalnız sıra değişmişti.
+    expect(svg).toMatch(/<line data-ve="arm"[^>]*stroke="var\(--accent-success\)"/);
+    expect(svg).toMatch(/<path data-ve="arm-head"[^>]*fill="var\(--accent-success\)"/);
     // Öteki kasnaklar bağlam olarak çizili, ADSIZ.
     expect((svg.match(/<circle/g) || []).length).toBeGreaterThan(3);
     expect(svg).not.toMatch(/Alternatör|Klima|Avara|Krank/);
@@ -2340,13 +2435,15 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
     const cx = Number((/data-cx="([-\d.]+)"/.exec(svg) || [])[1]);
     const mir = Number((/data-mir="([-\d.]+)"/.exec(svg) || [])[1]);
     expect(mir).toBe(M.veFeadSpinToFront(1));            // TEK kaynaktan
-    expect(mir).toBe(-1);                                 // bugünkü varsayılan
-    // Çizilen merkez VERİ merkezinin AYNASI — seçici artık kartla aynı elde.
-    expect(cx).toBeCloseTo(-sc.cx, 6);
-    // 0° etiketi SOLA geçmiş olmalı: resim aynalı, okuma aynalı değilse
+    expect(mir).toBe(M.VE_FEAD_VIEW_FRONT ? -1 : 1);     // bayrakla belirli
+    // ASIL KAPI: seçici ile kart AYNI ELDE. Çizilen merkez, aynada aynanın,
+    // aynasızda verinin merkezi — iki resmin ters düşmesi tam olarak
+    // buradan yakalanıyor.
+    expect(cx).toBeCloseTo(mir * sc.cx, 6);
+    // 0/180 etiketleri de aynayı izler: resim aynalı, okuma aynalı değilse
     // kullanıcı 0°'yi yanlış tarafta arar.
     const sag = /<text x="([-\d.]+)"[^>]*text-anchor="start"[^>]*>([-\d]+)°/.exec(svg);
-    expect(sag && sag[2]).toBe('180');
+    expect(sag && sag[2]).toBe(mir < 0 ? '180' : '0');
   });
 
   test('"Uygula" seçilen açıyı SAKLANAN alana çeviriyor', () => {
@@ -2424,6 +2521,47 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
 //   · `ve-fw-issue`   — canlı doğrulama çıktısı, açıklama değil
 //   · `ve-fw-reads`   — sayı okuması
 //   · adım alt başlığı — bölüm etiketi ("Tip · çap · koordinat · …")
+describe('kasnak tablosu SIĞAR — yatay kaydırma yok', () => {
+  // Kullanıcı bildirimi (2026-09-02): tablo sağa sola kayıyordu.
+  // ÖLÇÜLDÜ (gerçek tarayıcı, 1280×900): kapsayıcı 873 px, tablo 1058 px →
+  // 185 px taşma. Sebep sütun genişliklerinin İÇERİKLE İLGİSİZ olmasıydı:
+  // "263" yazan X ile "Klima Kompresörü" yazan Ad ikisi de 134 px, çünkü
+  // otomatik yerleşimde hücrenin en küçük genişliğini içindeki <input>'un
+  // tarayıcı varsayılanı belirliyor.
+  //
+  // Buradaki kapı YERLEŞİMİ ölçmüyor (jsdom düzen hesaplamaz) — sığmanın
+  // YAPISAL koşulunu tutuyor: sabit yerleşim + genişlikleri toplamı %100.
+  // Gerçek piksel ölçümü tests/e2e/fead-wizard-tablo.spec.js'te.
+  test('tablo sabit yerleşimli ve kendi sınıfını taşıyor', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const h = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
+    expect(h).toMatch(/class="ve-fw-tbl ve-fw-tbl-fixed ve-fw-tbl-kasnak"/);
+  });
+
+  test('SÜTUN SAYISI ile genişlik kuralı sayısı AYNI — ve toplam %100', () => {
+    // Onuncu bir sütun eklenirse kural eksik kalır ve kaydırma SESSİZCE geri
+    // gelir; sessiz olan tam da bu yüzden kapıya bağlı.
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const d = document.createElement('div');
+    d.innerHTML = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
+    const tbl = [...d.querySelectorAll('.ve-fw-tbl-kasnak')][0];
+    expect(tbl).toBeTruthy();
+
+    const th = tbl.querySelectorAll('thead th').length;
+    const satirlar = [...tbl.querySelectorAll('tbody tr')];
+    expect(satirlar.length).toBeGreaterThan(1);
+    // Her satır başlıkla AYNI hücre sayısını taşımalı — gergi satırı dahil.
+    satirlar.forEach((tr) => expect(tr.children.length).toBe(th));
+
+    const kural = [...CSS.matchAll(/\.ve-fw-tbl-kasnak th:nth-child\((\d+)\)[^{]*\{[^}]*width:\s*([\d.]+)%/g)]
+      .map((m) => ({ i: +m[1], w: +m[2] }));
+    expect(kural.length).toBe(th);
+    expect(kural.map((k) => k.i).sort((a, b) => a - b)).toEqual(
+      Array.from({ length: th }, (_, i) => i + 1));
+    expect(kural.reduce((a, k) => a + k.w, 0)).toBe(100);
+  });
+});
+
 describe('sihirbazda açıklama yüzeyi YOK', () => {
   test('`_fwHint` ne fonksiyon ne çağrı olarak var', () => {
     // ÇAĞRI/TANIM biçimi aranıyor (`_fwHint(`), çıplak ad değil: kaldırma
@@ -2465,12 +2603,37 @@ describe('sihirbazda açıklama yüzeyi YOK', () => {
     }
   });
 
-  test('açı seçici penceresinde de yok', () => {
+  test('açı seçici penceresinde de yok — ÜRETİLEN DOM\'dan ölçülüyor', () => {
+    // BU KAPI BİR KEZ KAÇIRDI ve sebebi öğretici: eski hâli
+    // `veFeadWizAngHTML()`i, yani pencerenin GÖVDE üreticisini yokluyordu.
+    // Göz kırpma ise BAŞKA bir üreticinin (`veFeadWizAngRender`) elle yazdığı
+    // BAŞLIKTAYDI — `<em>fareyle</em>` — ve kullanıcı onu ekranda gördü.
+    // Ders: bir üreticiyi yoklamak yüzeyi yoklamak değildir.
     kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
     wiz.veFeadWizAngOpen();
-    const h = wiz.veFeadWizAngHTML();
-    expect(h).not.toContain('ve-fw-hint');
-    expect(h).not.toMatch(/Fareyi düzlemde gezdirin/);
+    wiz.veFeadWizAngRender();
+    const ov = document.getElementById('ve-fw-ang');
+    expect(ov).not.toBeNull();
+    expect(ov.style.display).not.toBe('none');
+    // Pencerenin TAMAMINDA: ne açıklama paragrafı ne göz kırpma.
+    expect(ov.querySelectorAll('.ve-fw-hint').length).toBe(0);
+    expect(ov.querySelectorAll('.ve-fw-card-h em').length).toBe(0);
+    expect(ov.querySelector('.ve-fw-card-h').textContent.trim()).toBe('Kol Açısını Seç');
+    expect(ov.innerHTML).not.toMatch(/Fareyi düzlemde gezdirin/);
+  });
+
+  test('YEDİ ADIM da ÜRETİLEN DOM\'da göz kırpma taşımıyor', () => {
+    // Kaynak metnine bakan kardeş test duruyor; bu onu DOM tarafından
+    // tekrarlıyor, çünkü kaçan şey tam olarak "kaynakta aradığım kalıba
+    // uymayan" bir markup'tı.
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const b = wiz.veFeadWizBuild();
+    for (let i = 0; i < 7; i++) {
+      const d = document.createElement('div');
+      d.innerHTML = wiz.veFeadWizStepHTML(i, b);
+      expect(d.querySelectorAll('.ve-fw-card-h em').length).toBe(0);
+      expect(d.querySelectorAll('.ve-fw-hint').length).toBe(0);
+    }
   });
 
   test('DURUM ÇIKTILARI kalıyor — sansür değil, sadeleştirme', () => {

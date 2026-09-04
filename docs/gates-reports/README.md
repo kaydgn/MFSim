@@ -376,6 +376,14 @@ görünüşün aynası gibi davrandığına** işaret eder.
 konuşmak için montaj resmi ya da tedarikçinin konvansiyon notu gerekir. Bu
 ayrım korunmalı: modülün kuralı geçerlilik sınırını sonucun İÇİNDE taşımak.
 
+**VE MFSim ARTIK BU ÇIKARIMI VARSAYILAN OLARAK KULLANMIYOR (2026-09-04).**
+Çizim bir dönem X'te aynalanıyordu (`VE_FEAD_VIEW_FRONT = true`), yani program
+bu sayfadaki şemanın AYNASINI gösteriyordu. Kullanıcı bildirdi, ölçüldü: 12
+örneğin 12'sinde de sol-sağ düzeni raporun tersiydi. Varsayılan rapor düzlemine
+döndü; ayna bir bayrak olarak duruyor, çünkü §5'teki ilişki ÖLÇÜLÜ. Kapı:
+`tests/unit/fead-layout-plane.test.js` — çizilen SVG'nin kasnak merkezleri bu
+klasördeki raporların "Layout Data" koordinatlarıyla karşılaştırılıyor.
+
 ### 7 · Gergi serpantinde EN SONDA — ve bu fiziksel
 
 On raporun onunda da sıra gergiyle bitiyor ve krankla başlıyor, yani **gergi,

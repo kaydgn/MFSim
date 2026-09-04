@@ -99,7 +99,39 @@ araç düğümlerini kümenin dışındaki iki şeride koyuyor ve örnek kurucus
 devrediyor (bkz. *"örnek kurucusu kutuyu koordinatın SÖYLEMEDİĞİ yere
 koyuyordu"*).
 
-#### ÇİZİMLER ÖN GÖRÜNÜŞ — veri Gates düzleminde KALIR (2026-08-28)
+#### ÇİZİM DÜZLEMİ — VARSAYILAN RAPOR DÜZLEMİ (2026-09-04, öncekini DEĞİŞTİRİR)
+
+**HÜKÜM: `VE_FEAD_VIEW_FRONT = false`.** Çizim, Gates raporunun 1. sayfasındaki
+şemayla AYNI düzende; ayna makinesi duruyor ama varsayılan değil.
+
+Kullanıcı bildirimi: *"gergi ve kasnak konumları programda yanlış çıkıyor. Ters
+çıkıyor… Gates raporlarının PDF ilk sayfasında kasnak konumları var."* Doğruydu
+ve **7011 testin hiçbiri görmüyordu** — mevcut kapılar aynanın KENDİ
+tutarlılığını ölçüyordu, "resim raporun resmi mi" diye soran yoktu.
+
+**İKİNCİ, BAĞIMSIZ KUSUR — kayıtta hiç yoktu:** `veFeadMmToCanvas` X'i hiç
+çevirmiyor (yalnız Y'yi ters alıyor), yani **kanvas her zaman rapor
+düzlemindeydi**. Kart aynalıyken kullanıcı aynı modelin iki resmini ters
+görüyordu. *"Her şey karıştı"* bildiriminin büyük olasılıkla asıl kaynağı bu.
+
+Kapı: `tests/unit/fead-layout-plane.test.js` — on rapor için çizilen SVG'nin
+`circle[data-pi]` merkezleri, raporun kendi "Layout Data" koordinatlarıyla ÇİFT
+ÇİFT karşılaştırılıyor (sıralama değil çift, çünkü iki kasnak aynı X'i
+paylaşabiliyor), artı kanvas ↔ kart bağı. Beş mutasyonun beşi de kırmızı;
+eski davranışta 48 testin 26'sı düşüyor.
+
+**AYNA SİLİNMEDİ.** `veFeadMirrorGeomX` · `veFeadSpinToFront` ve kapıları
+duruyor: tedarikçinin gergi künyesindeki CW/CCW harfinin çizim düzleminin
+TERSİ olduğu ÖLÇÜLMÜŞ bir ilişki (`docs/gates-reports/README.md` §5) ve bir
+görünüm tercihi için kanıt atılmaz. Değişen yalnız varsayılan.
+
+**ETİKETLER DÜZLEMİ ADIYLA SÖYLER** (`_feadPlaneName`, tek üretici). Eskiden
+metin KOŞULSUZ *"motora önden bakışta"* diyordu; ayna kapanınca o cümle
+ölçülmemiş bir iddiaya dönüşürdü (hangi taraftan bakıldığı raporların
+hiçbirinde yazmıyor — README §6). Rozet · panel · toast · sihirbazın yön
+düğmeleri dördü de aynı üreticiden besleniyor.
+
+##### Önceki karar — ÖLÇÜMLERİ için duruyor (2026-08-28)
 
 Kullanıcı kararı: *"MFSim için de kayışın dönüş yönünü default olarak saat
 yönünde yapacağız."*
