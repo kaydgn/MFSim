@@ -14,11 +14,11 @@
     "build:all": "npm run build && node viewer/build.js && node candbc/build.js",
     "shot": "node tools/shot.js",
     "sync:viewer": "node viewer/sync.js",
-    "test": "jest",
-    "test:unit": "jest",
+    "test": "jest --maxWorkers=100%",
+    "test:unit": "jest --maxWorkers=100%",
     "test:watch": "jest --watch",
     "test:changed": "jest -o",
-    "test:ci": "jest --verbose --ci",
+    "test:ci": "jest --verbose --ci --maxWorkers=100%",
     "test:e2e": "npx playwright test",
     "test:all": "jest && npx playwright test"
   },
@@ -35,8 +35,5 @@
     "jest-environment-jsdom": "^30.3.0",
     "jsdom": "^28.1.0",
     "serve": "14.2.6"
-  },
-  "dependencies": {
-    "three": "^0.149.0"
   }
 }

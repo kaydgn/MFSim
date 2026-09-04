@@ -253,24 +253,20 @@ npm run build:can        # ve üretilen MFSim_CAN_Cozumleyici.html'i commit'e ka
 dokunmadığı için başka hiçbir kapı görmez; CI'daki tazelik kapısı
 (`build:can` + `git diff --exit-code`) görür ve kırmızıya döner.
 
-**`css/` DE GÖRÜNTÜLEYİCİYE GİRİYOR — kolay kaçırılan kapı.** `viewer/build.js`
-`../css/*.css` dosyalarını da inline ediyor. Yani `css/styles.css`'te yapılan
-HERHANGİ bir değişiklik `MFSim_Olcum_Goruntuleyici.html`'i BAYATLATIR; dosya
-git'e dahil olduğu için CI'daki "Dağıtım dosyası taze mi" kapısı
-(`build:viewer` + `git diff --exit-code`) kırmızıya döner. `viewer/js/` hiç
-değişmediğinden `sync:viewer --check` bunu YAKALAMAZ ve `npm test` de yeşil
-kalır — bir kez tam olarak böyle kaçtı. Kural:
+**`css/` ÜÇ ÜRÜNE BİRDEN GİRİYOR.** `viewer/build.js` ve `candbc/build.js` de
+`../css/*.css`'i inline ediyor; `css/styles.css`'e dokunmak
+`MFSim_Olcum_Goruntuleyici.html` ile `MFSim_CAN_Cozumleyici.html`'i **birden**
+bayatlatıyor ve ikisi de git'e dâhil.
 
-**AYNI KAPI CAN ÇÖZÜMLEYİCİDE DE VAR — `css/` artık ÜÇ ürüne giriyor.**
-`candbc/build.js` de `../css/*.css`'i inline ediyor. Yani `css/styles.css`'e
-dokunmak `MFSim_Olcum_Goruntuleyici.html` ile `MFSim_CAN_Cozumleyici.html`'in
-**ikisini birden** bayatlatıyor; ikisi de git'e dahil, ikisinin de ayrı bir CI
-kapısı var ve `npm test` **ikisini de yakalamıyor**. Bir kez görüntüleyicide,
-bir kez de CAN'da tam olarak böyle kaçtı. Kural (ürün sayısı arttıkça bu liste
-uzar — `package.json`'daki `build:*` betiklerine bak):
+Bu bir kez görüntüleyicide, bir kez CAN'da kaçtı — çünkü kapı YALNIZ CI'daydı ve
+her kaçış bir CI turu + bir düzeltme commit'i + bir tur daha demekti. **Kapı artık
+`npm test` içinde**: `tests/unit/build-freshness.test.js` üretilen dosyayı geçici
+bir yola derleyip depodakiyle karşılaştırıyor (1 sn) ve bayat dosyayı adıyla, ilk
+fark satırıyla ve çalıştırılacak komutla söylüyor. Ürün sayısı artarsa o testin
+tablosuna bir satır eklenir — `package.json`'daki `build:*` betiklerine bak.
 
 ```bash
-# css/ dokunulduysa, commit'ten önce İKİSİ BİRDEN:
+# npm test "BAYAT" derse:
 npm run build:viewer     # MFSim_Olcum_Goruntuleyici.html
 npm run build:can        # MFSim_CAN_Cozumleyici.html
 # (viewer/js/ dokunulduysa önce: npm run sync:viewer)
@@ -278,6 +274,21 @@ npm run build:can        # MFSim_CAN_Cozumleyici.html
 
 
 ## Çalışma Akışı (hızlı döngü)
+
+### ÖNCE: bağımlılıklar kurulu mu?
+
+`node_modules/` git'e dâhil DEĞİL ve uzak oturum konteyneri depoyu her seferinde
+temiz klonluyor. Kurulum yoksa `npm test` **koşmaz**: `npx` jest'i ağdan
+indirmeye kalkar ve ölçülen sonuç 3 dk 52 sn sonra
+"jest-environment-jsdom bulunamadı" — yani dört dakika sonra hiçbir test
+koşmamış olur.
+
+`.claude/hooks/session-start.sh` bunu oturum başında yapıyor (`npm install`,
+`ci` DEĞİL — konteyner durumu hook'tan sonra önbelleğe alınıyor). Elle kontrol:
+
+```bash
+[ -d node_modules/jest-environment-jsdom ] || npm install
+```
 
 Amaç: her küçük değişikliği build+tüm-test töreni yapmadan geliştirmek.
 Önemli gerçek: **birim testler build'e ihtiyaç duymaz** — testler doğrudan
@@ -386,6 +397,7 @@ FEAD ve Yapısal Analiz satırları modül skill'lerine taşındı
 | `tests/unit/measure-dropzone.test.js` | `js/measure-dropzone.js` | Sürükle-bırak uzantı süzgeci (sessiz yanlış çıktıya karşı); **yerel bırakma alanı** (`data-ve-dropzone`) kaplamayı devralıyor — alan içine bırakılan dosya ölçüm sihirbazını açmıyor, alan dışı davranış korunuyor |
 | `tests/unit/simulation-engine-grade.test.js` | `js/simulation-engine.js` | Yol eğimi işaret konvansiyonu (harita ↔ fizik çevirisi) + dinamiğin değişmediğini bağlayan altın değerler |
 | `tests/unit/shot-tool.test.js` | `tools/shot.js` | Ekran görüntüsü aracının ayrıştırma çekirdeği: bilinmeyen bayrağın SESSİZCE yutulmaması (yanlış ekranın görüntüsü alınırdı), hedef takma adları, PNG ölçüsü, karşılaştırmanın İKİ GÖRÜNTÜYÜ TEK ÖLÇEKLE küçültmesi |
+| `tests/unit/build-freshness.test.js` | `viewer/build.js` + `candbc/build.js` + `package.json` | **Git'e dâhil üretilen dosyalar taze mi**: `css/` üç ürüne birden girdiği için bir tema rötuşu `MFSim_Olcum_Goruntuleyici.html` ve `MFSim_CAN_Cozumleyici.html`'i birden bayatlatıyor ve kapı eskiden YALNIZ CI'daydı. Derleme geçici yola yapılır (`MFSIM_BUILD_OUT`) — test çalışma ağacını kirletmez. Ayrıca `three` köken kapısı: npm bağımlılığı kaldırıldı (kullanılmıyordu, kurulum başına 30,1 MB), sürüm izi `index.html` ile `vendor/three.min.js` arasında bağlı |
 | `tests/unit/source-hygiene.test.js` | `js/`, `viewer/js/`, `css/`, `index.html` | **Yapısal kapılar**: üst-seviye bildirim çakışması yok, kaynakta kontrol karakteri yok |
 | `tests/unit/results-txt-preview-download.test.js` | `js/results.js` | TXT önizlemesinin "HTML İndir" yolu — iki rapor üreticisinin ayrı kaldığı; düğme kablolaması artık ÜRETİLEN YÜZEYDEN ölçülüyor (kopya sayısı değil: bandı tek üretici kuruyor) ve dört panelin de aynı kabuğa gittiği |
 | `tests/unit/results-txt-page.test.js` | `js/results.js` + `css/styles.css` | **TXT raporunun görünümü**: üst bandın soldaki "Veri Gezgini" bandıyla TEK ölçü kaynağından beslenmesi (yükseklik, alt çizgi, başlık puntosu, zemin, düğme sınıfı), sayfanın A4 olması ve içeriğe göre DARALMAMASI, gövdenin tek `<pre>` kalması (blok blok ortalama yok) ve metnin bire bir korunup kaçışlanması, font ölçüsünün sayfaya sığmaktan türemesi + okunur tavan, karakter oranının ölçülemeyince GÜVENLİ tarafa düşmesi, indirilen belgenin aynı sayfayı açıp `@page{size:A4}` ile basması |
@@ -490,11 +502,16 @@ npm test          # tüm birim testleri
    yayını, o da kullanıcının erişemediği bir kanal. Sonucu kullanıcıya PR
    koşusundan bildir, main koşusunu izlemek için bekleme.
 
-**BEKLEMENİN ÖLÇÜSÜ** (koşu 755, 2026-09-02): `test` 2 dk 09 sn ·
-`e2e-urun` 2 dk 27 sn (paralel) · `build` 21 sn · `deploy` 15 sn ·
-toplam 3 dk 14 sn. Yani merge sonrası bekleme **tur başına 3 dk 14 sn**
-ve karşılığı sıfır. Kullanıcı bildirimi (2026-09-02): *"merge edildikten
-sonra neyi bu kadar bekliyoruz?"*
+**BEKLEMENİN ÖLÇÜSÜ** (koşu 787–796, 2026-09-04): PR koşusu **ortalama
+7 dk 19 sn**, ve o pencerede iptal edilmeyen sekiz koşunun **beşi kırmızıydı**.
+Yani merge sonrası main koşusunu ayrıca beklemenin karşılığı sıfır — ama asıl
+maliyet burada değil: bir CI kırmızısı bir düzeltme commit'i + bir tur daha
+demek. **CI'nın gördüğü her şeyi yerelde de gören bir kapı, bir CI turundan
+ucuzdur.** Kullanıcı bildirimi (2026-09-04): *"bir promt için en az 15-20
+dakika bekliyorum."*
+
+(Eski kayıt 3 dk 14 sn diyordu — koşu 755, 2026-09-02. Ölçüm bayatladı;
+sayıyı güncellerken koşu numarasını da yaz.)
 
 **PR AÇILDI DİYE KOŞU BAŞLADI SAYILMAZ — BAK.** PR #848'de PR açılışı
 hiçbir koşu tetiklemedi (beş dakika boyunca ne `queued` ne `in_progress`);
