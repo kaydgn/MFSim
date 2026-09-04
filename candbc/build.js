@@ -24,7 +24,8 @@ var SHIELD = require('../build-shield.js');
 var DIR = __dirname;
 var ROOT = path.join(DIR, '..');
 var INDEX = path.join(DIR, 'index.html');
-var OUTPUT = path.join(ROOT, 'MFSim_CAN_Cozumleyici.html');
+// Çıktı yolu ezilebilir — gerekçe viewer/build.js'teki ile aynı.
+var OUTPUT = process.env.MFSIM_BUILD_OUT || path.join(ROOT, 'MFSim_CAN_Cozumleyici.html');
 
 // ── 0) Syntax kontrolü: bozuk bir modül tek dosyaya gömülmesin ────────────
 var jsDir = path.join(DIR, 'js');

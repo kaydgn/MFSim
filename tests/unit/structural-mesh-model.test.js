@@ -199,10 +199,15 @@ describe('künye (node.data\'ya yazılan)', () => {
 
 // ── 5) PLC kurulumu ─────────────────────────────────────────────────────────
 describe('PLC kurulumu', () => {
+  // AYNI çağrı iki kapıda da gerekiyordu ve iki kez koşuyordu (ölçüldü:
+  // 7,6 sn × 2). PLC saf bir dönüşüm — aynı girdi aynı çıktı — ve kapılar
+  // yalnız OKUYOR, o yüzden bir kez kurulup paylaşılıyor.
+  let plc;
+  beforeAll(() => { plc = meshModel.veStrBuildPLC(geom.meshes, { targetLen: 3 }); }, 300000);
+
   test('CAD yüzü kimliği TAMSAYI işaretçiye eşleniyor ve TERS TABLO dönüyor', () => {
     // TetGen işaretçisi `int`; kimlik `m<i>/f<j>` dizgisi. Ters tablo dönmeseydi
     // çıktıdaki 17 numaralı işaretçinin hangi CAD yüzü olduğu KAYBOLURDU.
-    const plc = meshModel.veStrBuildPLC(geom.meshes, { targetLen: 3 });
     expect(plc.ok).toBe(true);
     const markerlar = [...new Set(Array.from(plc.triMarkers))];
     expect(markerlar.length).toBe(geom.stats.faceCount);
@@ -212,7 +217,6 @@ describe('PLC kurulumu', () => {
   });
 
   test('PLC üçgen/işaretçi dizileri UYUMLU uzunlukta', () => {
-    const plc = meshModel.veStrBuildPLC(geom.meshes, { targetLen: 3 });
     expect(plc.triangles.length).toBe(plc.triMarkers.length * 3);
     expect(plc.report.surfaceTris).toBe(plc.triMarkers.length);
   });

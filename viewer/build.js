@@ -26,7 +26,10 @@ var SHIELD = require('../build-shield.js');
 var VIEWER = __dirname;
 var ROOT = path.join(VIEWER, '..');
 var INDEX = path.join(VIEWER, 'index.html');
-var OUTPUT = path.join(ROOT, 'MFSim_Olcum_Goruntuleyici.html');
+// Çıktı yolu ezilebilir: tazelik kapısı (tests/unit/build-freshness.test.js)
+// derlemeyi GEÇİCİ bir dosyaya yapıp depodakiyle karşılaştırıyor — testin
+// çalışma ağacını kirletmemesi için.
+var OUTPUT = process.env.MFSIM_BUILD_OUT || path.join(ROOT, 'MFSim_Olcum_Goruntuleyici.html');
 
 // ── 0) Syntax kontrolü: bozuk bir modül tek dosyaya gömülmesin ────────────
 // Kök build.js'teki kapının aynısı. Görüntüleyicinin kendi js/ klasörü
