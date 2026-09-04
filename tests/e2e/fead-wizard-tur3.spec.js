@@ -105,7 +105,7 @@ test('tur3 — seçili kart · gergi satırı · yön · tablo hizası · kaydı
   expect(satir.xIpucu).toMatch(/montaj noktas/);
 
   // ── 3 · KAYIŞ YOLU'NDA CCW/CW YOK ──────────────────────────────────────
-  await page.evaluate(() => veFeadWizGoto(2));
+  await page.evaluate(() => veFeadWizGoto(1));
   await page.waitForTimeout(300);
   const yol = await page.evaluate(() => ({
     spin: document.querySelectorAll('.ve-fw-spin').length,
@@ -118,7 +118,7 @@ test('tur3 — seçili kart · gergi satırı · yön · tablo hizası · kaydı
   expect(yol.seritYon).toMatch(/CCW|CW/);   // yön okuması KAYBOLMADI
 
   // ── 4 · AKSESUAR TABLOSU SEÇİMLE KAYMIYOR ──────────────────────────────
-  await page.evaluate(() => veFeadWizGoto(5));
+  await page.evaluate(() => veFeadWizGoto(4));
   await page.waitForTimeout(400);
   const sutun = () => page.evaluate(() => {
     const t = document.querySelector('.ve-fw-tbl-fixed');

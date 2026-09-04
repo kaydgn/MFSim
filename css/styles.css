@@ -8121,6 +8121,17 @@ span.ve-fw-ro{ display:inline-block; }
 
 /* ÖRNEK GEZİNME — açılır listenin hemen altında, kasnak satırlarının ↑ ↓
    diliyle aynı düğmeler. Sayaç sağda: kaçıncı örnekte olduğun bir okuma. */
+/* AÇI SEÇİCİ GÖSTERGESİ — renk ile anlamı eşler. Kullanıcı yeşil yayların ne
+   olduğunu sordu; cevap bir paragraf değil bir legend. */
+.ve-fw-legend{
+  display:flex; align-items:flex-start; gap:7px;
+  font-size:var(--fs-tiny); color:var(--text-muted); line-height:1.5;
+}
+.ve-fw-legend-arc{
+  flex:0 0 auto; width:22px; height:4px; margin-top:5px; border-radius:2px;
+  background:var(--accent-success); opacity:0.32;
+}
+
 .ve-fw-seednav{ display:flex; align-items:center; gap:4px; margin-top:6px; }
 /* Denklem: KaTeX gelmeden ÖNCE de okunur dursun — yedek metin matematiksel
    bir dizgiyle yazılır, ham `p = c − a·(...)` gibi görünmez. */

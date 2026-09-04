@@ -108,7 +108,7 @@ test('tur4 — gergi satırı · taşıma · virgül · açı seçici · nispi a
   expect(virgul.modele).toBeCloseTo(123.45, 9);    // model DOĞRU sayıyı aldı
 
   // ── 9 · NİSPİ AÇI ──────────────────────────────────────────────────────
-  await page.evaluate(() => { veFeadWizState().ten.armMeanDeg = 344; veFeadWizGoto(3); });
+  await page.evaluate(() => { veFeadWizState().ten.armMeanDeg = 344; veFeadWizGoto(2); });
   await page.waitForTimeout(300);
   const alanDeg = await page.evaluate(() =>
     [...document.querySelectorAll('input')].find(e =>

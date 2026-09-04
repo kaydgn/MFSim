@@ -39,8 +39,21 @@
 
 var VE_FW_STEPS = [
   { key:'kaynak', ad:'Başlangıç',      ipucu:'Sistem adı · örnekten doldur' },
-  { key:'kasnak', ad:'Kasnaklar',      ipucu:'Tip · çap · koordinat · temas tarafı · sürücü' },
-  { key:'yol',    ad:'Kayış Yolu',     ipucu:'Serpantin sırası — kablolamayı bu belirler' },
+  // KAYIŞ YOLU ADIMI KALDIRILDI (kullanıcı isteği, 2026-09-04): *"Kayış yolu
+  // kısmını kaldıralım. Gerek yok. O işi zaten 'kasnaklar' kısmından
+  // yapıyoruz."*
+  //
+  // ÖLÇÜLDÜ: "zaten yapıyoruz" O AN DOĞRU DEĞİLDİ — `veFeadWizPulleyMove`
+  // yalnız `st.pulleys`i takas ediyordu, `st.route`a HİÇ dokunmuyordu (kodun
+  // kendi yorumu: "BU SIRA KAYIŞ YOLU DEĞİLDİR"). Adımı olduğu gibi silmek
+  // serpantin sırasını DÜZENLENEMEZ bırakırdı.
+  //
+  // Bu yüzden adım silinmedi, YETENEĞİ TAŞINDI: Kasnaklar tablosu artık
+  // kayış sırasının KENDİSİ (gergi satırı da kendi sırasında) ve ↑ ↓ rotayı
+  // taşıyor. Tablo sırası ile kayış sırası ARTIK AYNI ŞEY — eski ayrım
+  // "tabloyu düzenlemek gerilmeyi sessizce değiştirmesin" diyeydi; şimdi
+  // değiştirmesi SESSİZ değil, kartın konusu.
+  { key:'kasnak', ad:'Kasnaklar',      ipucu:'Kayış sırası · tip · çap · koordinat · sürücü' },
   { key:'gergi',  ad:'Otomatik Gergi', ipucu:'Montaj noktası · kol boyu · yay künyesi' },
   { key:'kayis',  ad:'Kayış',          ipucu:'Profil · kanal sayısı · katalog sonuçları' },
   { key:'cevrim', ad:'Motor ve Çevrim',ipucu:'Tahrik oranı · motor künyesi · çalışma çevrimi' },
@@ -250,15 +263,16 @@ function veFeadWizTenSet(alan, val){
 // kW sütunlarının okuma sırası — yani kullanıcının kendi düzeni. İkisini
 // birbirine bağlamak, tabloyu düzenlemenin kayış yolunu sessizce değiştirmesi
 // demekti; ÖLÇÜLEBİLİR bir fark olurdu, çünkü yol gerilmeyi belirliyor.
+// TABLO SIRASI = KAYIŞ SIRASI (2026-09-04). Eskiden bu iki sıra AYRIYDI ve
+// ayrılığın gerekçesi "tabloyu düzenlemek gerilmeyi sessizce değiştirmesin"di.
+// Kayış Yolu adımı kalkınca sıra düzenlemenin tek yeri burası oldu; artık
+// değişiklik sessiz DEĞİL — kartın başlığı ve hükmü bunu söylüyor.
+//
+// Taşıma `veFeadWizRouteMove`a devrediyor: gergi (`__ten__`) `st.pulleys`te
+// DEĞİL `st.ten`de duruyor ve yalnız o fonksiyon okunan sırayı geri yazmayı
+// biliyor. İkinci bir taşıyıcı yazmak, gerginin satırını yine ölü bırakırdı.
 function veFeadWizPulleyMove(key, delta){
-  if(!_fwState) return false;
-  var a = _fwState.pulleys, i = -1;
-  for(var k = 0; k < a.length; k++) if(a[k].key === key) i = k;
-  var j = i + delta;
-  if(i < 0 || j < 0 || j >= a.length) return false;
-  var t = a[i]; a[i] = a[j]; a[j] = t;
-  veFeadWizRender();
-  return true;
+  return veFeadWizRouteMove(key, delta);
 }
 
 // ── SIRA ───────────────────────────────────────────────────────────────────
@@ -283,13 +297,16 @@ function veFeadWizPulleyMove(key, delta){
 // Çözüm iki sırayı BİRLEŞTİRMEK: her iki işlem de OKUNAN sırayı alıp geri
 // yazıyor. `veFeadWizRoute` yalnız eksikse eklediği için bu yazma
 // birim işlemdir (idempotent) ve seedlenmiş durumu değiştirmez.
+// BAŞARIYI DÖNDÜRÜYOR: satır okları artık bunun üstünde duruyor ve "taşındı
+// mı?" sorusunun bir cevabı olmalı (uçta duran ok sessizce hiçbir şey yapar).
 function veFeadWizRouteMove(key, delta){
-  if(!_fwState) return;
+  if(!_fwState) return false;
   var r = veFeadWizRoute(_fwState), i = r.indexOf(key), j = i + delta;
-  if(i < 0 || j < 0 || j >= r.length) return;
+  if(i < 0 || j < 0 || j >= r.length) return false;
   var t = r[i]; r[i] = r[j]; r[j] = t;
   _fwState.route = r;
   veFeadWizRender();
+  return true;
 }
 // Sırayı çevirmek = dönüş yönünü çevirmek. Ayrı bir "yön" alanı YOK; yön
 // kablolamadan türüyor (fead-spin bileşeninin kuralının aynısı).
@@ -642,9 +659,13 @@ function veFeadWizNodes(st){
   // KİP KOŞULSUZ `derive`: sihirbaz artık elle oran sormuyor (kullanıcı kararı,
   // 2026-09-01), dolayısıyla kurduğu model de elle oran taşıyamaz. Eski bir
   // taslakta `direct` yazılı kalmışsa sessizce taşınırdı.
-  // İKİ KİP TAŞINIR: `derive` (ayrı kademe var, çaplardan türe) ve `unity`
-  // (kademe yok — sürücü kasnak motor devrinde). Elle oran hâlâ YOK.
-  var sd = { ratioMode: (s.ratioMode === 'unity') ? 'unity' : 'derive' };
+  // ÜÇ KİP TAŞINIR (2026-09-04): `crankDirect` (krank kasnağı doğrudan FEAD'i
+  // tahrik ediyor), `unity` (kranka bağlı ayrı sürücü kasnak — aynı devir) ve
+  // `derive` (gerçek ara kademe, çaplardan türe). Elle oran (`direct`) hâlâ
+  // YOK ve eski taslaklardan taşınmıyor: `derive`a düşer, çünkü elle yazılmış
+  // bir oran spesifikasyon §2.3'ün en ciddi bulgusuydu.
+  var _kip = (s.ratioMode === 'unity' || s.ratioMode === 'crankDirect') ? s.ratioMode : 'derive';
+  var sd = { ratioMode: _kip };
   // Dört motor devri (`idleRpm` … `overspeedRpm`) ÖLÜ ALAN DEĞİL: ikisi
   // uygunluk kapılarını besliyor (js/fead-checks.js). Taşınmazsa sihirbazda
   // hüküm veren kapılar kurulan modelde "değerlendirilemedi" derdi.
@@ -727,15 +748,16 @@ function veFeadWizBuild(){
 // hatayı gizlemek, yanlış yere koymaktan kötüdür.
 var VE_FW_ERR_STEP = [
   { re: /kasnağının konumu|dış çapı|Sürücü kasnak|kasnak gerekli|hiç kasnak/i, step: 1 },
-  { re: /Kayış yolu kapanmıyor|bağlı olmayan kasnak|kayış çıkıyor|kayış giriyor/i, step: 2 },
-  { re: /[Gg]ergi|avara|montaj konumu|yay|kol boyu|kol(un)? çalışma açısı/i, step: 3 },
-  { re: /[Kk]ayış (efektif boyu|kanal|profil)|Kayış Özellikleri/i, step: 4 },
-  { re: /tahrik oranı|Çözücü|devir/i, step: 5 }
+  // Kayış yolu hataları da KASNAKLAR adımına gidiyor: sıra artık orada.
+  { re: /Kayış yolu kapanmıyor|bağlı olmayan kasnak|kayış çıkıyor|kayış giriyor/i, step: 1 },
+  { re: /[Gg]ergi|avara|montaj konumu|yay|kol boyu|kol(un)? çalışma açısı/i, step: 2 },
+  { re: /[Kk]ayış (efektif boyu|kanal|profil)|Kayış Özellikleri/i, step: 3 },
+  { re: /tahrik oranı|Çözücü|devir/i, step: 4 }
 ];
 function veFeadWizStepOf(msg){
   for(var i = 0; i < VE_FW_ERR_STEP.length; i++)
     if(VE_FW_ERR_STEP[i].re.test(String(msg))) return VE_FW_ERR_STEP[i].step;
-  return 6;
+  return VE_FW_STEPS.length - 1;
 }
 function veFeadWizIssues(b, step){
   var out = [];
@@ -1113,14 +1135,13 @@ function veFeadWizStepHTML(step, b){
   h += '<div id="ve-fw-live">' + veFeadWizLiveHTML(b) + '</div>';
   if(step === 0) h += _fwStepKaynak(b);
   else if(step === 1) h += _fwStepKasnak(b);
-  else if(step === 2) h += _fwStepYol(b);
-  else if(step === 3) h += _fwStepGergi(b);
-  else if(step === 4) h += _fwStepKayis(b);
-  else if(step === 5) h += _fwStepCevrim(b);
+  else if(step === 2) h += _fwStepGergi(b);
+  else if(step === 3) h += _fwStepKayis(b);
+  else if(step === 4) h += _fwStepCevrim(b);
   else h += _fwStepOzet(b);
   // Uyarı kutusu KENDİ KABINDA: canlı yama onu form alanlarına dokunmadan
   // tazeleyebilsin diye kararlı bir id gerekiyor.
-  if(step !== 6) h += '<div id="ve-fw-issue">' + veFeadWizIssueHTML(b, step) + '</div>';
+  if(step !== VE_FW_STEPS.length - 1) h += '<div id="ve-fw-issue">' + veFeadWizIssueHTML(b, step) + '</div>';
   return h;
 }
 
@@ -1263,10 +1284,28 @@ function _fwStepKaynak(b){
     // ve sebebi zaten uyarı kutusunda yazılı.
     if(b && b.ok && typeof veFeadLayoutSVG === 'function'){
       var svg = null;
+      // DÖNÜŞ ANİMASYONU — kullanıcı isteği (2026-09-04): *"örnek şekillerine
+      // dönüş animasyonu ekleyelim. En azından sistemin dönüş yönü belli
+      // olur."*
+      //
+      // `dispMmS` adı gereği bir GÖSTERİM hızı: kayışın gerçek hızı devirden
+      // gelir ve devir bu kartta yok. Sabit bir görsel hız, uydurulmuş bir
+      // fizik sayısı DEĞİL — okunan şey yön, büyüklük değil. Yönü çekirdeğin
+      // kendi `geom.sense`i taşıyor (yükün içinde), yani ok ve akış aynı
+      // kaynaktan.
+      //
+      // `prefers-reduced-motion` açıksa animatör HİÇ başlamaz (kendi kapısı
+      // var) ve şema donuk, okları ve etiketleriyle okunur kalır.
       try { svg = veFeadLayoutSVG(b, 700, 380,
-        { posMode: 'mean', compass: true, pivot: true, arrows: true }); }
+        { posMode: 'mean', compass: true, pivot: true, arrows: true,
+          nodeId: 've-fw-example', animate: { dispMmS: 260 } }); }
       catch(e){ svg = null; }
-      if(svg) ih += '<div class="ve-fw-fig">' + svg + '</div>';
+      if(svg){
+        ih += '<div class="ve-fw-fig">' + svg + '</div>';
+        // Animatör küresel olarak `svg[data-fead-anim]` tarıyor; sihirbaz
+        // kendi karesini kurduktan sonra döngünün canlı olduğundan emin oluyor.
+        if(typeof veFeadAnimEnsure === 'function') setTimeout(veFeadAnimEnsure, 0);
+      }
     }
     h += _fwCard('Seçilen Örnek', 'var(--accent-primary)', ih);
   }
@@ -1330,7 +1369,17 @@ function _fwStepKasnak(b){
   var t = '<div class="ve-fw-tblwrap"><table class="ve-fw-tbl ve-fw-tbl-fixed ve-fw-tbl-kasnak"><thead><tr>'
     + '<th>Sürücü</th><th>Tip</th><th>Ad</th><th>Ø OD [mm]</th><th>X [mm]</th><th>Y [mm]</th>'
     + '<th>Temas</th><th>J [kg·m²]</th><th></th></tr></thead><tbody>';
-  st.pulleys.forEach(function(p, i){
+  // SATIRLAR KAYIŞ SIRASINDA — gergi de kendi sırasında, sonda değil.
+  // Eskiden tablo `st.pulleys` sırasını basıyor ve gergi satırı HER ZAMAN
+  // sona ekleniyordu; sıra ile tablo ayrı olduğu için bu tutarlıydı. Artık
+  // tablo sıranın KENDİSİ, dolayısıyla gergi nerede sıradaysa orada.
+  var _sira = veFeadWizRoute(st);
+  var _byKey = {};
+  st.pulleys.forEach(function(p){ _byKey[p.key] = p; });
+  _sira.forEach(function(_k, i){
+    if(_k === '__ten__'){ t += _fwTenRow(st, i, _sira.length); return; }
+    var p = _byKey[_k];
+    if(!p) return;
     var tipler = VE_FW_PULLEY_TYPES.map(function(x){ return [x, _fwDefName(x)]; });
     t += '<tr>'
       + '<td class="ve-fw-c"><input type="radio" name="ve-fw-driver"' + (p.driver ? ' checked' : '')
@@ -1357,19 +1406,37 @@ function _fwStepKasnak(b){
         + '" placeholder="—" oninput="veFeadWizPulleySet(\'' + p.key + '\',\'inertia\',this.value)"></td>'
       + '<td class="ve-fw-c ve-fw-rowops">'
         + '<button type="button" class="ve-fw-mini"' + (i === 0 ? ' disabled' : '')
-          + ' title="Yukarı taşı" onclick="veFeadWizPulleyMove(\'' + p.key + '\',-1)">↑</button>'
-        + '<button type="button" class="ve-fw-mini"' + (i === st.pulleys.length - 1 ? ' disabled' : '')
-          + ' title="Aşağı taşı" onclick="veFeadWizPulleyMove(\'' + p.key + '\',1)">↓</button>'
+          + ' title="Kayış sırasında yukarı" onclick="veFeadWizPulleyMove(\'' + p.key + '\',-1)">↑</button>'
+        + '<button type="button" class="ve-fw-mini"' + (i === _sira.length - 1 ? ' disabled' : '')
+          + ' title="Kayış sırasında aşağı" onclick="veFeadWizPulleyMove(\'' + p.key + '\',1)">↓</button>'
         + '<button type="button" class="ve-fw-x" title="Sil"'
           + ' onclick="veFeadWizPulleyDel(\'' + p.key + '\')">✕</button></td>'
       + '</tr>';
   });
-  t += _fwTenRow(st);
   t += '</tbody></table></div>';
 
-  h += _fwCard('Kasnaklar',
+  // GERGİ SONDA MI — hüküm sıranın YANINDA. Köprü bunu `build.tensionerOrder`
+  // ile TAŞIYOR; sihirbaz yeniden hesaplamıyor (ikinci bir sayaç, "⇄ Yönü
+  // çevir" sonrası listeyle uyarının ayrışması demekti).
+  var _tord = b && b.tensionerOrder;
+  var _hkm = '';
+  if(_tord && _tord.last){
+    _hkm = '<p class="ve-fw-dim">Gergi sırada <strong>son</strong> — Gates '
+      + 'konvansiyonu (sıra sürücüyle başlar, gergiyle biter).</p>';
+  } else if(_tord){
+    _hkm = '<p class="ve-fw-warn">⚠ Gergi sırada son değil (' + (_tord.index + 1)
+      + '/' + _tord.count + '). Gates konvansiyonunda gergi kayışın sürücüye '
+      + '<strong>dönüş</strong> açıklığındadır. <span class="ve-fw-dim">Sayılar '
+      + 'bundan etkilenmez; etkilenen tedarikçi raporlarıyla satır satır '
+      + 'karşılaştırılabilirlik.</span></p>';
+  }
+
+  h += _fwCard('Kasnaklar — kayış sırasıyla',
       'var(--accent-primary)', t
-    
+    + _hkm
+    + '<div class="ve-fw-rowbtns">'
+      + '<button type="button" class="ve-fw-btn" onclick="veFeadWizRouteReverse()">'
+      + '⇄ Kayış yönünü çevir</button></div>'
     );
 
   // ── DÖNÜŞ YÖNÜ ───────────────────────────────────────────────────────────
@@ -1391,7 +1458,15 @@ function _fwStepKasnak(b){
 // SÜRÜCÜ RADYOSU DEVRE DIŞI: sürücülük bir ROL ve gergi o rolü alamaz
 // (çekirdek kranki ayrı, gergiyi ayrı işaretliyor). Etkin bırakmak, seçilince
 // modelin çözülemez olduğu bir düğme sunmak olurdu.
-function _fwTenRow(st){
+// `ix`/`n`: gerginin KAYIŞ SIRASINDAKİ yeri. Verilmezse SIRADAN okunur —
+// tek kaynak; çağıranın ikinci bir sıra hesabı tutması, gerginin satırdaki
+// yeriyle kayıştaki yerinin sessizce ayrışması demekti.
+function _fwTenRow(st, ix, n){
+  if(ix === undefined || n === undefined){
+    var _s = veFeadWizRoute(st);
+    n = _s.length; ix = _s.indexOf('__ten__');
+    if(ix < 0) ix = n - 1;
+  }
   var t = st.ten || {};
   var kx = veFeadWizTenCoordKeys(st);
   // Künye seçiliyse parça alanları burada da kilitli — 4. adımla AYNI okuyucu
@@ -1447,78 +1522,25 @@ function _fwTenRow(st){
     + '<td><input type="text" inputmode="decimal" class="ve-fw-inp" value="'
       + _fwEsc(t.inertia === undefined ? '' : t.inertia)
       + '" placeholder="—" oninput="veFeadWizTenSet(\'inertia\', this.value)"></td>'
+    // OK DÜĞMELERİ ARTIK CANLI: Kayış Yolu adımı kalkınca gerginin sıradaki
+    // yerini düzenlemenin tek yeri bu satır oldu. Eskiden devre dışıydılar ve
+    // ipucu "3. adımda düzenlenir" diyordu — o adım artık yok.
     + '<td class="ve-fw-c ve-fw-rowops">'
-      + '<button type="button" class="ve-fw-mini" disabled'
-        + ' title="Gergi satırı taşınmaz: kayış yolundaki yeri 3. adımda düzenlenir.">↑</button>'
-      + '<button type="button" class="ve-fw-mini" disabled'
-        + ' title="Gergi satırı taşınmaz: kayış yolundaki yeri 3. adımda düzenlenir.">↓</button>'
+      + '<button type="button" class="ve-fw-mini"' + (ix === 0 ? ' disabled' : '')
+        + ' title="Kayış sırasında yukarı"'
+        + ' onclick="veFeadWizPulleyMove(\'__ten__\',-1)">↑</button>'
+      + '<button type="button" class="ve-fw-mini"' + (ix >= n - 1 ? ' disabled' : '')
+        + ' title="Kayış sırasında aşağı"'
+        + ' onclick="veFeadWizPulleyMove(\'__ten__\',1)">↓</button>'
       + '<button type="button" class="ve-fw-x" disabled'
         + ' title="Gergi silinemez: her FEAD modelinde tam bir gergi vardır.">✕</button></td>'
     + '</tr>';
 }
 
-// ── 3 · KAYIŞ YOLU ─────────────────────────────────────────────────────────
-function _fwStepYol(b){
-  var st = _fwState;
-  var sira = veFeadWizRoute(st);
-  var ad = {};
-  st.pulleys.forEach(function(p){ ad[p.key] = p.name || _fwDefName(p.type); });
-  ad.__ten__ = (st.ten && st.ten.name) || _fwTenAd();
 
-  var l = '<ol class="ve-fw-route">';
-  sira.forEach(function(k, i){
-    var son = (i === sira.length - 1);
-    l += '<li><span class="ve-fw-route-n">' + (i + 1) + '</span>'
-      + '<span class="ve-fw-route-t">' + _fwEsc(ad[k] || k)
-      + (k === '__ten__' ? ' <em>gergi</em>' : '') + '</span>'
-      + '<span class="ve-fw-route-b">'
-      + '<button type="button" class="ve-fw-mini"' + (i === 0 ? ' disabled' : '')
-        + ' onclick="veFeadWizRouteMove(\'' + k + '\',-1)" title="Yukarı">↑</button>'
-      + '<button type="button" class="ve-fw-mini"' + (son ? ' disabled' : '')
-        + ' onclick="veFeadWizRouteMove(\'' + k + '\',1)" title="Aşağı">↓</button>'
-      + '</span></li>';
-  });
-  l += '</ol>';
+// (Kayış Yolu adımı KALDIRILDI — yeteneği Kasnaklar tablosuna taşındı;
+//  gerekçesi VE_FW_STEPS'in yanında yazılı.)
 
-  // ── GERGİ SONDA MI — HÜKÜM SIRANIN YANINDA DURUR ───────────────────────
-  //
-  // Köprü bu hükmü `build.tensionerOrder` ile TAŞIYOR; sihirbaz onu yeniden
-  // hesaplamıyor. İkinci bir sayaç tutulsaydı "⇄ Yönü çevir" sonrası liste bir
-  // şey, uyarı kutusu başka bir şey derdi (bu modülün tekrar eden kuralı:
-  // panel ile kart AYNI alanı okur).
-  //
-  // HÜKÜM TAM BURADA, çünkü kullanıcının elindeki iki kaldıraç da bu kartta:
-  // satır okları ve "⇄ Yönü çevir". Genel uyarı kutusuna bırakılsaydı sebep
-  // adımın tepesinde, çare adımın içinde kalırdı.
-  var tord = b && b.tensionerOrder;
-  var hkm = '';
-  if(tord && tord.last){
-    hkm = '<p class="ve-fw-dim">Gergi sırada <strong>son</strong> — Gates '
-      + 'konvansiyonu (sıra sürücüyle başlar, gergiyle biter).</p>';
-  } else if(tord){
-    hkm = '<p class="ve-fw-warn">⚠ Gergi sırada son değil (' + (tord.index + 1)
-      + '/' + tord.count + '). Gates konvansiyonunda gergi kayışın sürücüye '
-      + '<strong>dönüş</strong> açıklığındadır. <span class="ve-fw-dim">Sayılar '
-      + 'bundan etkilenmez; etkilenen tedarikçi raporlarıyla satır satır '
-      + 'karşılaştırılabilirlik.</span></p>';
-  }
-
-  var h = _fwCard('Serpantin Sırası', 'var(--accent-warning)',
-      l
-    + hkm
-    + '<div class="ve-fw-rowbtns">'
-    + '<button type="button" class="ve-fw-btn" onclick="veFeadWizRouteReverse()">⇄ Yönü çevir</button>'
-    + '</div>'
-    // CCW/CW SEÇİCİSİ BURADA YOK — kullanıcı isteği (2026-08-31):
-    // *"'kayış yolu' kısmında CCW ve CW butonlarına gerek yok. Zaten dönüş
-    // yönünü 'kasnaklar' kısmında hallediyoruz."* Yön okuması kaybolmuyor:
-    // adımın tepesindeki canlı şerit onu her adımda basıyor.
-    );
-
-  return h;
-}
-
-// ── 4 · OTOMATİK GERGİ ─────────────────────────────────────────────────────
 function _fwStepGergi(b){
   var st = _fwState, t = st.ten || {};
   var kilit = veFeadWizTenLocked(st);
@@ -1993,6 +2015,18 @@ function veFeadWizAngHTML(){
         + '<button type="button" class="ve-fw-mini" title="Yakınlaş"'
           + ' onclick="event.stopPropagation(); veFeadWizAngZoom(1)">+</button>'
       + '</div></div>'
+    // YAYIN NE OLDUĞU DİYAGRAMIN YANINDA YAZILI — kullanıcı sordu
+    // (2026-09-04): *"kasnağın etrafında yeşil yaylar çıkıyor. Bunun anlamı
+    // ne?"* Bir açıklama paragrafı değil, bir GÖSTERGE (legend): renk ile
+    // anlamı eşleyen tek satır. Bant yoksa satır da yok.
+    + (sc.band && sc.band.samples && sc.band.samples.length
+        ? '<div class="ve-fw-legend">'
+          + '<span class="ve-fw-legend-arc"></span>'
+          + 'Yeşil yay: kolun bu açıda durabildiği aralık — kayış sarımı ve '
+          + 'yay servis aralığı birlikte sağlanıyor. Boşluklar, kolun oraya '
+          + 'gelemediği ya da gelirse çözümün servis aralığından çıktığı açılar.'
+          + '</div>'
+        : '')
     + '<div class="ve-fw-reads">' + _fwAngReads(sc, d) + '</div>'
     + '<div class="ve-fw-ang-row">'
       + '<label class="ve-fw-lbl" for="ve-fw-ang-in">Tam açı [°]</label>'
@@ -2556,19 +2590,35 @@ function _fwStepCevrim(b){
   // TEK ÇAP GİRİLİRSE oran yine 1 kalır ve bu SESSİZ olurdu — o yüzden
   // aşağıda adıyla uyarılıyor (ama yalnız kademe VARKEN; kademe yokken
   // uyarı kullanıcıyı olmayan bir alana yönlendirirdi).
-  var _kademe = (s.ratioMode === 'unity') ? 'unity' : 'derive';
+  var _kademe = (s.ratioMode === 'unity' || s.ratioMode === 'crankDirect' || s.ratioMode === 'derive')
+              ? s.ratioMode : 'crankDirect';
   var _cOD = _fwNum(s.crankOD, NaN), _fOD = _fwNum(s.fanOD, NaN);
   var _yarim = _kademe === 'derive'
     && (Number.isFinite(_cOD) && _cOD > 0) !== (Number.isFinite(_fOD) && _fOD > 0);
-  var h = _fwCard('Birinci Kademe', 'var(--accent-warning)',
-      _fwGrid([_fwField('Ara kademe',
+  // ── FEAD'İ NE TAHRİK EDİYOR ─────────────────────────────────────────────
+  // Kullanıcı tarifi (2026-09-04) üç düzen ayırıyor; ikisi oran 1 veriyor ve
+  // aralarındaki fark ÇAPTA, oranda değil. Sürücü kasnağın çapı ZATEN
+  // Kasnaklar tablosunda (sürücü satırı) — buraya ikinci kez sorulmuyor;
+  // sorulan şey yalnız KRANK ile o kasnak arasındaki ilişki.
+  var _srcOD = null;
+  (st.pulleys || []).forEach(function(p){ if(p.driver) _srcOD = _fwNum(p.od, null); });
+  var h = _fwCard('FEAD Tahriki', 'var(--accent-warning)',
+      _fwGrid([_fwField('Düzen',
         _fwSelHTML('solver.ratioMode',
-          [['derive', 'Var — krank ayrı bir kademeyle sürücü kasnağı döndürüyor'],
-           ['unity',  'Yok — sürücü kasnak motor devrinde']], _kademe))], 1)
+          [['crankDirect', 'Krank kasnağı doğrudan FEAD\'i tahrik ediyor (1:1)'],
+           ['unity',       'Kranka bağlı ayrı bir sürücü kasnak — aynı devir (1:1)'],
+           ['derive',      'Ara kademe — krank ve sürücü kasnak farklı devirde']], _kademe))], 1)
     + (_kademe === 'derive'
         ? _fwGrid([_fwField('Krank kasnağı Ø [mm]', _fwInp('solver.crankOD', { ph: '197.32' })),
-                   _fwField('Fan / sürücü kasnağı Ø [mm]', _fwInp('solver.fanOD', { ph: '179.62' }))])
-        : '')
+                   _fwField('Kademenin sürülen kasnağı Ø [mm]', _fwInp('solver.fanOD', { ph: '179.62' }))])
+        : (_kademe === 'unity'
+            ? _fwGrid([_fwField('Krank kasnağı Ø [mm] — motor verisi',
+                _fwInp('solver.crankOD', { ph: '197.32' }))], 1)
+            : ''))
+    + '<div class="ve-fw-reads">'
+      + _fwRead('FEAD\'i tahrik eden çap (Kasnaklar tablosundan)',
+          _srcOD === null ? '— (sürücü kasnak seçilmedi)' : _fwFmt(_srcOD, 2) + ' mm')
+    + '</div>'
     + '<div class="ve-fw-reads">'
       + _fwRead('Tahrik oranı', _fwFmt(dr.ratio, 4))
       + _fwRead('Kaynak', veFeadDriveModeLabel(dr.mode))

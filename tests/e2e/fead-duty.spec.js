@@ -35,7 +35,7 @@ test('çalışma çevrimi otomatik gelir — sihirbaz ve panel', async ({ page }
   // ── SİHİRBAZ ────────────────────────────────────────────────────────────
   const id = await page.evaluate(() => window.nodes.find((x) => x.type === 'fead-wizard').id);
   await page.dblclick('#' + id);
-  await page.evaluate(() => veFeadWizGoto(5));
+  await page.evaluate(() => veFeadWizGoto(4));
   await page.waitForTimeout(600);
 
   const w1 = await page.evaluate(() => ({
@@ -58,7 +58,7 @@ test('çalışma çevrimi otomatik gelir — sihirbaz ve panel', async ({ page }
   expect(w2).toEqual([700, 1200, 2000, 3000]);
 
   // Örnek + aksesuar modeli → kW otomatik
-  await page.evaluate(() => { veFeadWizSeed('AG00976_GATES_2025'); veFeadWizGoto(5); });
+  await page.evaluate(() => { veFeadWizSeed('AG00976_GATES_2025'); veFeadWizGoto(4); });
   await page.waitForTimeout(600);
   const kwHam = await page.evaluate(() =>
     [...document.querySelectorAll('#ve-fw-body td.ve-fw-ro')].slice(0, 8).map((t) => t.textContent.trim()));

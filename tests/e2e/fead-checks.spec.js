@@ -241,7 +241,7 @@ test('sihirbaz — kataloglar, kapılar ve kurulan modele taşınma', async ({ p
 
   // Örnekten doldur — kapıların üstünde koşacağı gerçek bir düzen.
   await page.evaluate(() => veFeadWizSeed('BMC_FEAD_2026'));
-  await page.evaluate(() => veFeadWizGoto(5));            // 6 · Motor ve Çevrim
+  await page.evaluate(() => veFeadWizGoto(4));            // 6 · Motor ve Çevrim
   await page.waitForTimeout(600);
 
   // ── MOTOR KATALOĞU: GERÇEK SEÇİM ──────────────────────────────────────
@@ -301,7 +301,7 @@ test('sihirbaz — kataloglar, kapılar ve kurulan modele taşınma', async ({ p
   expect(p1.egri).toBe(16);
 
   // ── 7. ADIM: ÜÇ KAPI ──────────────────────────────────────────────────
-  await page.evaluate(() => veFeadWizGoto(6));
+  await page.evaluate(() => veFeadWizGoto(5));
   await page.waitForTimeout(700);
   const kart = await page.evaluate(() => {
     const el = document.querySelector('[data-ve-fw-checks]');

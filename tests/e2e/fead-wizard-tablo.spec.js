@@ -101,7 +101,7 @@ async function sahne(page) {
     veFeadWizOpen(w.id); veFeadWizSeed('AG00976_GATES_2025');
     const stil = (e) => { const cs = getComputedStyle(e); return { stroke: cs.stroke, fill: cs.fill, w: parseFloat(cs.strokeWidth) }; };
 
-    veFeadWizGoto(3); veFeadWizAngOpen(); veFeadWizAngRender();
+    veFeadWizGoto(2); veFeadWizAngOpen(); veFeadWizAngRender();
     const a = document.getElementById('ve-fw-ang').querySelector('svg');
     out.secici = {
       govde: [...a.querySelectorAll('[data-ve="arm"]')].map(stil),
@@ -145,7 +145,7 @@ async function sahne(page) {
     };
     veFeadWizAngClose();
 
-    veFeadWizGoto(6);
+    veFeadWizGoto(5);
     const s2 = document.getElementById('ve-fw-body').querySelector('svg');
     out.ozet = {
       govde: [...s2.querySelectorAll('[data-ve="arm"]')].map(stil),
@@ -278,7 +278,7 @@ async function sahneAng(page) {
   await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-wizard'), null, { timeout: 20000 });
   await page.evaluate(() => {
     const w = window.nodes.find((n) => n.type === 'fead-wizard');
-    veFeadWizOpen(w.id); veFeadWizSeed('AG00976_GATES_2025'); veFeadWizGoto(3);
+    veFeadWizOpen(w.id); veFeadWizSeed('AG00976_GATES_2025'); veFeadWizGoto(2);
     veFeadWizAngOpen(); veFeadWizAngRender();
   });
 }
@@ -322,15 +322,23 @@ test('montaj konumu denklemi KaTeX ile diziliyor', async ({ page }) => {
 // 6. ADIM SADELEŞTİ — ölçülen yerleşim
 test('motor künyesi sayfadan pencereye taşındı, satır aralığı açıldı', async ({ page }) => {
   await sahneAng(page);
-  await page.evaluate(() => { veFeadWizAngClose(); veFeadWizGoto(5); });
+  await page.evaluate(() => { veFeadWizAngClose(); veFeadWizGoto(4); });
   const r = await page.evaluate(() => {
     const body = document.getElementById('ve-fw-body');
-    const gs = [...body.querySelectorAll('.ve-fw-grid')];
+    // ÖLÇÜLEN KURAL `.ve-fw-card-b > * + *` — yani kart gövdesindeki KARDEŞ
+    // blokların arası. Eskiden ölçüm iki `.ve-fw-grid` kardeşi arıyordu; künye
+    // alanları pencereye taşınınca o çift kalmadı ve ölçüm `null` döndü.
+    // Kapı kuralın KENDİSİNE bağlandı: hangi blok olursa olsun kardeş arası.
     let ara = null;
-    for (let i = 1; i < gs.length; i++) {
-      if (gs[i - 1].parentElement !== gs[i].parentElement) continue;
-      ara = Math.round(gs[i].getBoundingClientRect().top - gs[i - 1].getBoundingClientRect().bottom);
-      break;
+    for (const kap of body.querySelectorAll('.ve-fw-card-b')) {
+      const c = [...kap.children];
+      for (let i = 1; i < c.length; i++) {
+        const a = c[i - 1].getBoundingClientRect(), b2 = c[i].getBoundingClientRect();
+        if (a.height === 0 || b2.height === 0) continue;
+        ara = Math.round(b2.top - a.bottom);
+        break;
+      }
+      if (ara !== null) break;
     }
     const kart = [...body.querySelectorAll('.ve-fw-card')].find((c) => /Motor Künyesi/.test(c.textContent));
     const tb = [...body.querySelectorAll('.ve-fw-tbl')].find((t) => /Devir \[RPM\]/.test(t.textContent));
@@ -355,4 +363,61 @@ test('motor künyesi sayfadan pencereye taşındı, satır aralığı açıldı'
   expect(r.pencere.girdi).toBe(10);                   // hepsi pencerede
   expect(r.dutyBaslik).not.toContain('°C');           // sütun kalktı
   expect(r.sicaklik).toBe(true);                      // tek alan üstte
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ÖRNEK ŞEMASI DÖNÜYOR (gerçek tarayıcı)
+//
+// Kullanıcı isteği (2026-09-04): *"örnek şekillerine dönüş animasyonu
+// ekleyelim. En azından sistemin dönüş yönü belli olur."*
+//
+// Node'da HİÇ koşmayan halka: requestAnimationFrame döngüsünün gerçekten
+// kareyi DEĞİŞTİRMESİ. Yükün varlığını saymak yetmez — animatör hiç
+// başlamasa da öznitelik orada durur.
+test('başlangıç adımındaki örnek şeması gerçekten dönüyor', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/index.html');
+  await page.evaluate(() => { if (window.MFSimLoader && window.MFSimLoader.start) window.MFSimLoader.start(); });
+  await page.waitForFunction(() => typeof window.createNode === 'function' &&
+    typeof window.veFeadOpenEditor === 'function' && typeof window.veFeadWizOpen === 'function',
+    null, { timeout: 60000 });
+  await page.evaluate(() => { if (typeof veSelectModuleFromOverlay === 'function') veSelectModuleFromOverlay('arac-performans'); });
+  await page.waitForFunction(() => { const s = document.getElementById('mfsim-loading-screen'); return !s || s.style.display === 'none'; },
+    null, { timeout: 60000 });
+  await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
+  await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-wizard'), null, { timeout: 20000 });
+  await page.evaluate(() => {
+    const w = window.nodes.find((n) => n.type === 'fead-wizard');
+    veFeadWizOpen(w.id); veFeadWizSeed('BMC_FEAD_2026'); veFeadWizGoto(0);
+  });
+  await page.waitForTimeout(500);
+
+  const r = await page.evaluate(async () => {
+    const bek = (ms) => new Promise((res) => setTimeout(res, ms));
+    const svg = document.querySelector('#ve-fw-body svg[data-fead-anim]');
+    if (!svg) return { yuk: false };
+    const ham = svg.getAttribute('data-fead-anim').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+    const j = JSON.parse(ham);
+    const k1 = svg.innerHTML;
+    await bek(700);
+    return { yuk: true, mmS: j.mmS, sense: j.sense, degisti: svg.innerHTML !== k1 };
+  });
+  console.log('ANIM ' + JSON.stringify(r));
+  expect(r.yuk).toBe(true);
+  expect(r.mmS).toBeGreaterThan(0);
+  expect([1, -1]).toContain(r.sense);      // yön ÇEKİRDEKTEN, uydurulmuş değil
+  expect(r.degisti).toBe(true);            // ASIL KAPI: kare gerçekten değişiyor
+});
+
+test('adım listesi ALTI — "Kayış Yolu" yüzeyde de yok', async ({ page }) => {
+  await sahneAng(page);
+  const r = await page.evaluate(() => {
+    veFeadWizAngClose();
+    return { adimlar: VE_FW_STEPS.map((s) => s.ad),
+             raydaki: [...document.querySelectorAll('#ve-fw-nav .ve-fw-step-t b')].map((e) => e.textContent.trim()) };
+  });
+  console.log('ADIMLAR ' + JSON.stringify(r));
+  expect(r.adimlar.length).toBe(6);
+  expect(r.adimlar).not.toContain('Kayış Yolu');
+  expect(r.raydaki).not.toContain('Kayış Yolu');
 });

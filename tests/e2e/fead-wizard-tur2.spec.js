@@ -114,7 +114,7 @@ test('tur2 — gergi satırı · yön · kilit · kayış · kW', async ({ page 
   expect(await page.evaluate(() => veFeadWizBuild().spin)).toBe(yon0.spin);
 
   // ── 4. ADIM: künye kilidi ────────────────────────────────────────────
-  await page.evaluate(() => veFeadWizGoto(3));
+  await page.evaluate(() => veFeadWizGoto(2));
   await page.waitForTimeout(250);
   // Künye seçicisi ARTIK YALNIZ BURADA — satırdan kalktı.
   expect(await page.locator('select[onchange*="veFeadWizTenLib"]').count()).toBe(1);
@@ -161,7 +161,7 @@ test('tur2 — gergi satırı · yön · kilit · kayış · kW', async ({ page 
   expect(elle.ro).toBe(false);
 
   // ── 5. ADIM: kayış ───────────────────────────────────────────────────
-  await page.evaluate(() => veFeadWizGoto(4));
+  await page.evaluate(() => veFeadWizGoto(3));
   await page.waitForTimeout(250);
   const kayis = await page.evaluate(() => {
     const g = document.getElementById('ve-fw-body').innerText;
@@ -178,7 +178,7 @@ test('tur2 — gergi satırı · yön · kilit · kayış · kW', async ({ page 
   expect(kayis.kapali).toBe(true);
 
   // ── 6. ADIM: aksesuar modeli → kW hücreleri ──────────────────────────
-  await page.evaluate(() => veFeadWizGoto(5));
+  await page.evaluate(() => veFeadWizGoto(4));
   await page.waitForTimeout(300);
   const oku = () => page.evaluate(() => {
     const tbl = [...document.querySelectorAll('.ve-fw-tbl')].pop();
