@@ -21,7 +21,18 @@ module.exports = defineConfig({
     command: 'npx serve -l 8080 -s .',
     port: 8080,
     reuseExistingServer: true,
-    timeout: 10000
+    // BÜTÇE 10 sn DEĞİL 60 sn — ÖLÇÜLDÜ (CI koşusu 789, e2e-urun):
+    //   [WebServer] npm warn exec The following package was not found and
+    //                            will be installed: serve@14.2.6
+    //   Error: Timed out waiting 10000ms from config.webServer.
+    // `serve` bir bağımlılık DEĞİL; `npx` onu her temiz runner'da İNDİRİYOR ve
+    // indirme tek başına ~10 sn sürüyor. Yani bütçe, sunucunun açılmasına değil
+    // paketin ağdan gelmesine harcanıyordu ve kapı test gövdesi HİÇ KOŞMADAN
+    // düşüyordu — sonucu rastgele, sebebi ürünle ilgisiz.
+    //
+    // Bağımlılığa eklemek de bir seçenekti (indirme tamamen kalkardı); bu
+    // turda kapsam dışı bırakıldı, çünkü ölçülen sorun süre bütçesi.
+    timeout: 60000
   },
   projects: [
     {
