@@ -1357,43 +1357,56 @@
       cursor:pointer; user-select:none;
     }
 
-    /* ===== YUKLEME EKRANI (SPLASH / LOADING SCREEN) ===== */
+    /* ===== YUKLEME EKRANI (SPLASH / LOADING SCREEN) =====
+       Panel, KARSILAMA KARTININ (.ve-welcome) IKIZIDIR: ayni 410 px, ayni ic
+       bosluk, ayni kenar/golge, ayni hero. Zemin de ayni: ince izgara, %55
+       tonda, ISILTI YOK. Eskiden buradaki zemin tam tonda izgara + accent
+       isiltisiydi; karsilama ekrani isiltiyi "renk veriye ayrilir" gerekcesiyle
+       birakmisti ve iki ekran ayrismisti — acilis kapanirken zemin gozle
+       gorulur sekilde degisiyordu. Ikisi artik ayni; kapanista yalniz kartin
+       govdesi eriyor. */
     .mfsim-loading-screen{
       position:fixed; inset:0; z-index:calc(var(--z-boot) + 1);
       display:none;            /* JS show ile flex olur */
       align-items:center; justify-content:center;
+      padding:24px; overflow:auto;
       font-family:var(--font-sans);
       opacity:1;               /* INSTANT goster — fade yalniz hide icin */
-      /* Karşılama ekranıyla aynı zemin: ince teknik ızgara + accent ışıltı.
-         İlk katman görünmez radial → color-mix desteklenmese bile ızgara bozulmaz. */
+      /* Taban: color-mix desteklenmezse bu gecerli kalir (karsilama ile ayni kalip) */
       background:
-        radial-gradient(135% 100% at 50% -20%, transparent, transparent),
         linear-gradient(var(--border-color) 1px, transparent 1px),
         linear-gradient(90deg, var(--border-color) 1px, transparent 1px),
         var(--bg-primary);
-      background-size:auto, 34px 34px, 34px 34px, auto;
+      background-size:34px 34px, 34px 34px, auto;
     }
     .mfsim-loading-screen{
       background:
-        radial-gradient(135% 100% at 50% -20%, color-mix(in srgb, var(--accent-primary) 9%, transparent), transparent 58%),
-        linear-gradient(var(--border-color) 1px, transparent 1px),
-        linear-gradient(90deg, var(--border-color) 1px, transparent 1px),
+        linear-gradient(color-mix(in srgb, var(--border-color) 55%, transparent) 1px, transparent 1px),
+        linear-gradient(90deg, color-mix(in srgb, var(--border-color) 55%, transparent) 1px, transparent 1px),
         var(--bg-primary);
-      background-size:auto, 34px 34px, 34px 34px, auto;
+      background-size:34px 34px, 34px 34px, auto;
     }
     .mfsim-loading-screen.mfsim-fading-out{
-      transition:opacity 0.18s ease;
+      transition:opacity 0.34s var(--ease-out);
       opacity:0;
       pointer-events:none;
     }
-    .mfsim-loading-card{
-      width:410px; padding:40px 40px 34px;
+    /* Kart zeminden ONCE erir: karsilama karti tam olarak ayni yerde durdugu
+       icin goz "kart kayboldu" degil "kartin ici degisti" gorur. */
+    .mfsim-loading-screen.mfsim-fading-out .mfsim-loading-panel{
+      transition:opacity 0.16s var(--ease-out), transform 0.34s var(--ease-out);
+      opacity:0;
+      transform:translateY(-4px);
+    }
+
+    .mfsim-loading-panel{
+      width:100%; max-width:410px; margin:auto;
+      padding:34px 36px 24px;
       background:var(--bg-secondary);
       border:1px solid var(--border-color);
-      border-radius:var(--radius-lg);
       box-shadow:var(--shadow-xl);
-      text-align:center;
     }
+    .mfsim-loading-hero{ text-align:center; }
     .mfsim-loading-logo{
       display:inline-flex;
       align-items:center;
@@ -1401,7 +1414,6 @@
       font-size:var(--fs-h1); font-weight:700;
       color:var(--text-heading);
       letter-spacing:0.5px;
-      margin-bottom:8px;
     }
     .mfsim-loading-logo-ico{
       width:1.4rem; height:1.4rem;
@@ -1409,15 +1421,73 @@
       animation:mfsim-loading-spin 4.5s linear infinite;
     }
     .mfsim-loading-subtitle{
+      margin-top:8px;
       font-size:var(--fs-body);
       color:var(--text-muted);
       letter-spacing:0.4px;
-      margin-bottom:22px;
     }
     .mfsim-loading-sep{
       height:1px;
       background:var(--border-color);
-      margin:0 -40px 22px;
+      margin:18px -36px;
+    }
+
+    /* ── Asama listesi ────────────────────────────────────────────────────
+       91 modul adi tek tek akmiyor; yukleme sirasindaki yedi obek duruyor ve
+       icinde kacinci modulde olundugu sayiyla goruluyor. Isaret sutunu sabit
+       genislikte (14px) — asamalar bittikce ad kaymaz. */
+    .mfsim-loading-stages{
+      list-style:none; margin:0; padding:0;
+      font-size:var(--fs-md);
+    }
+    .mfsim-loading-stage{
+      display:grid; grid-template-columns:14px 1fr auto;
+      align-items:center; gap:9px;
+      line-height:22px;
+      color:var(--text-muted);
+    }
+    .mfsim-loading-stage-nm{
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .mfsim-loading-stage-mk{
+      text-align:center;
+      font-size:var(--fs-body);
+    }
+    .mfsim-loading-stage-ct{
+      font-size:var(--fs-tiny);
+      font-variant-numeric:tabular-nums;
+      letter-spacing:0.3px;
+    }
+    .mfsim-loading-stage.is-done{ color:var(--text-secondary); }
+    .mfsim-loading-stage.is-done .mfsim-loading-stage-mk{ color:var(--accent-success); }
+    .mfsim-loading-stage.is-active{ color:var(--text-heading); }
+    .mfsim-loading-stage.is-active .mfsim-loading-stage-mk,
+    .mfsim-loading-stage.is-active .mfsim-loading-stage-ct{ color:var(--accent-primary); }
+    /* Atlanan modul barindiran asama: isaret kehribara doner ve OYLE KALIR —
+       asama "tamam" gorunumune yukselmez. */
+    .mfsim-loading-stage.has-skip .mfsim-loading-stage-mk{ color:var(--accent-warning); }
+
+    /* ── Atlanan modul uyarisi ────────────────────────────────────────────
+       Bir modul zaman asimina ugrar ya da yuklenemezse loader onu ATLAR ve
+       uygulama acilir. Eskiden bu yalniz konsola yazilirdi: kullanici eksik
+       bir programla calismaya devam ederdi. Artik acilista gorunur. */
+    .mfsim-loading-skips{
+      margin-top:10px;
+      padding:6px 9px;
+      border-left:2px solid var(--accent-warning);
+      background:color-mix(in srgb, var(--accent-warning) 10%, transparent);
+      font-size:var(--fs-tiny);
+      line-height:1.5;
+      color:var(--ink-warning);
+    }
+
+    .mfsim-loading-message{
+      margin-top:12px;
+      min-height:16px;
+      font-size:var(--fs-body);
+      color:var(--text-secondary);
+      letter-spacing:0.3px;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
     }
     .mfsim-loading-bar-wrap{
       position:relative;
@@ -1426,7 +1496,7 @@
       border:1px solid var(--border-color);
       border-radius:var(--radius-pill);
       overflow:hidden;
-      margin-bottom:14px;
+      margin:10px 0;
     }
     .mfsim-loading-bar{
       position:absolute; top:0; left:0; bottom:0;
@@ -1444,20 +1514,18 @@
       animation:mfsim-loading-shimmer 1.4s ease-in-out infinite;
     }
     .mfsim-loading-meta{
-      display:flex; align-items:center; justify-content:space-between;
+      display:flex; align-items:baseline; justify-content:space-between;
+      gap:12px;
       font-size:var(--fs-tiny);
-      color:var(--text-secondary);
       letter-spacing:0.3px;
     }
-    .mfsim-loading-message{
-      flex:1;
-      text-align:left;
-      color:var(--text-secondary);
-      overflow:hidden;
-      text-overflow:ellipsis;
-      white-space:nowrap;
-      padding-right:12px;
+    .mfsim-loading-tip{
+      flex:1; min-width:0;
+      color:var(--text-muted);
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      transition:opacity var(--dur-slow) var(--ease-out);
     }
+    .mfsim-loading-tip.is-swapping{ opacity:0; }
     .mfsim-loading-percent{
       color:var(--accent-primary);
       font-weight:600;
@@ -1465,6 +1533,21 @@
       min-width:40px;
       text-align:right;
     }
+    /* Surum kunyesi: hangi kopyanin acildigi PROGRAM ACILMADAN gorunur.
+       Modüler index.html'de window.__MFSIM_BUILD yoktur → eleman bos kalir ve
+       :empty ile hic yer kaplamaz. */
+    .mfsim-loading-stamp{
+      margin-top:14px;
+      padding-top:10px;
+      border-top:1px solid var(--border-color);
+      font-size:var(--fs-micro);
+      letter-spacing:0.6px;
+      color:var(--text-muted);
+      text-align:right;
+      font-variant-numeric:tabular-nums;
+    }
+    .mfsim-loading-stamp:empty{ display:none; }
+
     @keyframes mfsim-loading-spin{
       from { transform:rotate(0deg); }
       to   { transform:rotate(360deg); }
@@ -1473,6 +1556,22 @@
       0%   { opacity:0; transform:translateX(-30px); }
       50%  { opacity:1; }
       100% { opacity:0; transform:translateX(0); }
+    }
+    /* Hareket azaltma: donen disli, parildayan cubuk ve kapanis gecisi durur.
+       Ilerleme BILGISI kalir (sayi, doluluk, asama isaretleri) — kapatilan
+       yalniz suslemedir. */
+    @media (prefers-reduced-motion: reduce){
+      .mfsim-loading-logo-ico{ animation:none; }
+      .mfsim-loading-bar{ transition:none; }
+      .mfsim-loading-bar::after{ animation:none; opacity:0; }
+      .mfsim-loading-tip{ transition:none; }
+      .mfsim-loading-screen.mfsim-fading-out,
+      .mfsim-loading-screen.mfsim-fading-out .mfsim-loading-panel{
+        transition:none;
+      }
+      .mfsim-loading-screen.mfsim-fading-out .mfsim-loading-panel{
+        transform:none;
+      }
     }
 
     * {

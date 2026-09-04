@@ -16,7 +16,7 @@
        sonsuza takiliyordu; program hic acilmiyordu. Ayrica pwa/sw.js
        cross-origin opaque yanitlari (status 0) onbellege alamadigi icin bu
        ikisi cevrimdisi hicbir zaman hazir olmuyordu. -->
-  <script type="text/x-mfsim-defer" src="vendor/leaflet.js" data-mfsim-label="Harita kütüphanesi (Leaflet)..."></script>
+  <script type="text/x-mfsim-defer" src="vendor/leaflet.js" data-mfsim-stage="Çekirdek" data-mfsim-label="Harita kütüphanesi (Leaflet)..."></script>
   <script type="text/x-mfsim-defer" src="vendor/plotly-gl3d.min.js" data-mfsim-label="Grafik kütüphanesi (Plotly)..."></script>
   <link rel="stylesheet" href="css/fonts.css" />
   <link rel="stylesheet" href="css/icons.css" />
@@ -37,19 +37,37 @@
 </head>
 <body>
 
-<!-- ═══ LOADING SCREEN (login sonrasi modul yuklenirken gosterilir) ═══ -->
+<!-- ═══ LOADING SCREEN (login sonrasi modul yuklenirken gosterilir) ═══
+     GOVDE, KARSILAMA KARTININ (.ve-welcome) IKIZI: ayni 410 px, ayni ic
+     bosluk, ayni kenar/golge, ayni hero (logo + slogan). Acilis ekrani
+     kapanirken ikisi ust uste erir; kart yerinde durur, yalniz govdesi
+     degisir. Ikisinin ZEMINI de ayni (ince izgara) — bkz. css/styles.css.
+
+     91 modul etiketi tek tek akmiyor: yukleme sirasindaki YEDI obek
+     gosteriliyor (bkz. data-mfsim-stage isaretleri). Listeyi js/loader.js
+     kurar; burada bos durur.
+
+     KIMLIKLER SABIT: #mfsim-loading-screen 19 E2E beklemesinde geciyor,
+     #mfsim-loading-bar / -percent / -message js/loader.js'teki ELS
+     haritasindan okunuyor. Ic yapi serbest, bu dort kimlik degil. -->
 <div id="mfsim-loading-screen" class="mfsim-loading-screen">
-  <div class="mfsim-loading-card">
-    <div class="mfsim-loading-logo"><span class="mf-ico mf-ico-settings mfsim-loading-logo-ico"></span><span>MFSim</span></div>
-    <div class="mfsim-loading-subtitle">Araç Performans Simülasyon Yazılımı</div>
+  <div class="mfsim-loading-panel">
+    <div class="mfsim-loading-hero">
+      <div class="mfsim-loading-logo"><span class="mf-ico mf-ico-settings mfsim-loading-logo-ico"></span><span>MFSim</span></div>
+      <div class="mfsim-loading-subtitle">Araç Performans Simülasyon Yazılımı</div>
+    </div>
     <div class="mfsim-loading-sep"></div>
+    <ul id="mfsim-loading-stages" class="mfsim-loading-stages"></ul>
+    <div id="mfsim-loading-skips" class="mfsim-loading-skips" hidden></div>
+    <div id="mfsim-loading-message" class="mfsim-loading-message">Başlatılıyor...</div>
     <div class="mfsim-loading-bar-wrap">
       <div id="mfsim-loading-bar" class="mfsim-loading-bar"></div>
     </div>
     <div class="mfsim-loading-meta">
-      <div id="mfsim-loading-message" class="mfsim-loading-message">Başlatılıyor...</div>
+      <div id="mfsim-loading-tip" class="mfsim-loading-tip"></div>
       <div id="mfsim-loading-percent" class="mfsim-loading-percent">%0</div>
     </div>
+    <div id="mfsim-loading-stamp" class="mfsim-loading-stamp"></div>
   </div>
 </div>
 
@@ -1156,20 +1174,20 @@
 <script type="text/x-mfsim-defer" src="js/ui-core.js" data-mfsim-label="Kullanıcı arayüzü..."></script>
 <script type="text/x-mfsim-defer" src="js/panel-chart.js" data-mfsim-label="Panel grafiği etkileşim katmanı..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-core.js" data-mfsim-label="Bileşen panelleri..."></script>
-<script type="text/x-mfsim-defer" src="js/cp-engine.js" data-mfsim-label="Motor modülü..."></script>
+<script type="text/x-mfsim-defer" src="js/cp-engine.js" data-mfsim-stage="Araç Performans" data-mfsim-label="Motor modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-accessories.js" data-mfsim-label="Aksesuarlar (klima/alternatör/hava komp.)..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-gearbox.js" data-mfsim-label="Vites kutusu modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-matching.js" data-mfsim-label="Eşleştirme algoritmaları..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-torque-converter.js" data-mfsim-label="Tork konvertörü modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-drivetrain.js" data-mfsim-label="Aktarma organları..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-solver.js" data-mfsim-label="Çözücü panelleri..."></script>
-<script type="text/x-mfsim-defer" src="js/mount-core.js" data-mfsim-label="Takoz: hesap çekirdeği (6 SD)..."></script>
+<script type="text/x-mfsim-defer" src="js/mount-core.js" data-mfsim-stage="Takoz" data-mfsim-label="Takoz: hesap çekirdeği (6 SD)..."></script>
 <script type="text/x-mfsim-defer" src="js/mount-brief.js" data-mfsim-label="Takoz: diyagram yorumu..."></script>
 <script type="text/x-mfsim-defer" src="js/mount-signals.js" data-mfsim-label="Takoz: sonuç kanalları (FRF / F-δ / ivme süpürmesi)..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-mount.js" data-mfsim-label="Takoz çökme-titreşim modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-mount-viewer.js" data-mfsim-label="Takoz: 3D görüntüleyici..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-mount-report.js" data-mfsim-label="Takoz: rapor üreteci..."></script>
-<script type="text/x-mfsim-defer" src="js/fead-belts.js" data-mfsim-label="FEAD: kayış kataloğu..."></script>
+<script type="text/x-mfsim-defer" src="js/fead-belts.js" data-mfsim-stage="FEAD" data-mfsim-label="FEAD: kayış kataloğu..."></script>
 <script type="text/x-mfsim-defer" src="js/fead-tensioners.js" data-mfsim-label="FEAD: gergi künye kütüphanesi..."></script>
 <script type="text/x-mfsim-defer" src="js/fead-duty.js" data-mfsim-label="FEAD: çalışma çevrimi kütüphanesi..."></script>
 <script type="text/x-mfsim-defer" src="js/fead-engines.js" data-mfsim-label="FEAD: motor kataloğu..."></script>
@@ -1188,7 +1206,7 @@
      üreticileri kabuğun yardımcılarını (veGuideDocHTML, veGuideH2…) çağırıyor.
      Kabuk raporun kozmetiğini gömülü şablondan ÇIKARIYOR, bu yüzden
      fead-report-template.js yer tutucusundan sonra gelmeleri de doğaldır. -->
-<script type="text/x-mfsim-defer" src="js/guide-kit.js" data-mfsim-label="Kullanım kılavuzu kiti..."></script>
+<script type="text/x-mfsim-defer" src="js/guide-kit.js" data-mfsim-stage="Kılavuzlar" data-mfsim-label="Kullanım kılavuzu kiti..."></script>
 <script type="text/x-mfsim-defer" src="js/guide-fead.js" data-mfsim-label="FEAD kullanım kılavuzu..."></script>
 <script type="text/x-mfsim-defer" src="js/guide-arac.js" data-mfsim-label="Araç Performans kullanım kılavuzu..."></script>
 <script type="text/x-mfsim-defer" src="js/guide-mount.js" data-mfsim-label="Takoz kullanım kılavuzu..."></script>
@@ -1200,7 +1218,7 @@
      boolean'i (BRepAlgoAPI_Fuse + ShapeUpgrade_UnifySameDomain) da bu
      cekirdekte. Lisans LGPL-2.1: vendor/license.occt.txt,
      vendor/license.opencascade-js.txt. -->
-<script type="text/x-mfsim-defer" src="vendor/opencascade.js" data-mfsim-occt-glue data-mfsim-label="OCCT cekirdegi (OpenCascade)..."></script>
+<script type="text/x-mfsim-defer" src="vendor/opencascade.js" data-mfsim-occt-glue data-mfsim-stage="Yapısal Analiz" data-mfsim-label="OCCT cekirdegi (OpenCascade)..."></script>
 <!-- OCCT'nin .wasm'i, GOMULU (gzip+base64, 17.5 MB — ham 62.8 MB).
      type="text/x-mfsim-asset" → ne tarayici ne MFSimLoader calistirir; ILK STEP
      ice aktarmasinda js/structural-model.js talep uzerine calistirir.
@@ -1233,7 +1251,7 @@
 <script type="text/x-mfsim-report" src="js/mount-report-template.js"></script>
 <script type="text/x-mfsim-report" src="js/fead-report-template.js"></script>
 <script type="text/x-mfsim-report" src="js/mount-report-assets.js"></script>
-<script type="text/x-mfsim-defer" src="js/cp-arac-performans.js" data-mfsim-label="Araç Performans: alt-sistem topolojisi..."></script>
+<script type="text/x-mfsim-defer" src="js/cp-arac-performans.js" data-mfsim-stage="Araçlar & ölçüm" data-mfsim-label="Araç Performans: alt-sistem topolojisi..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-arac-example.js" data-mfsim-label="Araç Performans: örnek araçlar..."></script>
 <!-- Three.js (UMD, vendored from npm three@0.149.0) — Takoz 3D görüntüleyici için -->
 <script type="text/x-mfsim-defer" src="vendor/three.min.js" data-mfsim-label="3D kütüphanesi (Three.js)..."></script>
