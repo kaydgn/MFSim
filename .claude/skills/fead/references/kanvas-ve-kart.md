@@ -99,11 +99,23 @@ araç düğümlerini kümenin dışındaki iki şeride koyuyor ve örnek kurucus
 devrediyor (bkz. *"örnek kurucusu kutuyu koordinatın SÖYLEMEDİĞİ yere
 koyuyordu"*).
 
-#### ÇİZİM DÜZLEMİ — VARSAYILAN RAPOR DÜZLEMİ (2026-09-07 ikinci tur, SON HÜKÜM)
+#### ÇİZİM DÜZLEMİ — VARSAYILAN ÖN GÖRÜNÜŞ (2026-09-07 üçüncü tur, SON HÜKÜM)
 
-**HÜKÜM: `VE_FEAD_VIEW_FRONT = false`, okuma tek noktadan
-(`veFeadViewFront()` / `veFeadSetViewFront()`).** Konumlar Gates raporunun 1.
-sayfasıyla aynı; şemada kayış CCW dolanıyor.
+**HÜKÜM: `VE_FEAD_VIEW_FRONT = true`, okuma tek noktadan
+(`veFeadViewFront()` / `veFeadSetViewFront()`).** Krank saat yönünde döner;
+sol-sağ düzeni Gates sayfasının **tersi**dir ve bu kullanıcının bilerek verdiği
+karardır (üç yol resimle yan yana gösterildi, *"B — motora önden bakış"*
+seçildi).
+
+**AYNALANAN YALNIZ RESİM.** Saklanan mm, çözücü ve basılan SAYILAR Gates
+çerçevesinde kalır — rapordan veri girip PDF'le satır satır karşılaştırmak bu
+modülün taşıdığı asıl değer. Basıldıkları yer bunu söyler (`veFeadPlaneNote`).
+
+**KARARI VEREN ÖLÇÜM — raporun KENDİ iki sütunu** (AG00686): koordinatlarda
+gergi krankın solunda (−157 / 0), span gerilmelerinde kranktan çıkan span en
+gergin (1210) ve kranka dönen en gevşek (766). O sırayı o koordinatlarda
+dolaştırınca halka CCW kapanıyor → Gates sayfasında krank CCW döner. Yani
+*"krank CW"* ile *"düzen sayfayla aynı"* tek bir seçimin iki yüzü.
 
 **ÜÇ YOLUN DA BEDELİ ÖLÇÜLDÜ — "aynalamadan CW" KAPALI:**
 

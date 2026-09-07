@@ -464,7 +464,11 @@ describe('rozet ve panel', () => {
     // (`veFeadSpinLabel`); ikisi ayrışsaydı biri sessizce eskirdi.
     const yon = cizimYonu(1);
     expect(h).toContain(yon > 0 ? 'CCW (saat yönünün TERSİNE)' : 'CW (saat yönünde)');
-    if (yon < 0) expect(h).not.toContain('CCW');
+    // ÇELİŞEN BAŞLIK YASAK — ama ETİKETLİ karşı yön serbest. Uzun metin
+    // 2026-09-07'den beri öbür bakışı da adıyla veriyor ("… · Gates rapor
+    // düzleminde CCW"); körlemesine `not.toContain('CCW')` onu da yakalıyordu
+    // ve ölçtüğü şey artık yanlıştı. Ölçülen: BAŞLIK tek ve çizimle aynı.
+    expect(h).not.toContain(yon > 0 ? 'CW (saat yönünde) —' : 'CCW (saat yönünün TERSİNE) —');
     expect(h).toContain('veFeadToggleSpin()');
     // DÜZLEM YAZILI OLMALI — hangi taraftan bakıldığı belirtilmeden CW/CCW
     // hiçbir şey söylemez. Metin tek üreticiden (`_feadPlaneName`) geliyor.
