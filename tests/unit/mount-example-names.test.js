@@ -175,12 +175,17 @@ describe('TULGA ön takoz çifti — düzeltmenin kilidi', () => {
     expect(sag.name).toBe('Sağ Ön Takoz');
   });
 
-  test('konum ve rijitlik DEĞİŞMEDİ — yalnız etiket düzeltildi', () => {
-    // Düzeltme bir veri değişikliği değil; sayılar kaynak kayıtla birebir kalmalı.
+  test('konum ve STATİK rijitlik DEĞİŞMEDİ — o düzeltme yalnız etiketti', () => {
+    // Ad düzeltmesi bir veri değişikliği değildi; konum ve k_stat kaynak kayıtla
+    // birebir kalmalı.
     const sol = tulga.model.mounts.find((m) => m.name === 'Sol Ön Takoz');
     expect(sol.pos).toEqual([439.961, -355.957, 499.855]);
     expect(sol.kstat).toEqual([515, 260, 242]);
-    expect(sol.kdyn).toEqual([335, 355, 740]);
+    // k_dyn AYRI ve SONRAKİ bir düzeltmeyle değişti (2026-09-07): bu takoz TK040
+    // (57RS329001M) ve kataloğu dx 740 · dy 355 · dz 335 diyor; örnekte X ile Z
+    // takas girilmişti (335/355/740). Bu satır eskiden takaslı değeri çiviliyordu
+    // — yani yanlışı koruyordu. Kapısı: mount-example-library-match.test.js.
+    expect(sol.kdyn).toEqual([740, 355, 335]);
 
     const t = jsonTakozlari('tulga_topoloji.json').find((x) => x.ad === 'Sol Ön Takoz');
     const d = JSON.parse(fs.readFileSync(path.join(JSON_DIR, 'tulga_topoloji.json'), 'utf8'));
