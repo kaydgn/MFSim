@@ -119,14 +119,23 @@ kuralıdır: FEAD'e dokunmayan bir oturum FEAD kayıtlarını ödemez.
 |-------|-------|-------------------|
 | FEAD (kayış-kasnak) | `fead` | `js/fead-*.js`, `js/cp-fead*.js`, `js/guide-fead.js` ya da FEAD testlerine dokunmadan **ÖNCE** |
 | Yapısal Analiz (FEA) | `structural` | `js/structural-*.js`, `js/cp-structural*.js`, gömülü OCCT/TetGen varlıkları ya da Yapısal testlere dokunmadan **ÖNCE** |
+| Araç Performans (tam gaz) | `arac-performans` | `js/ft-performance.js`, `js/simulation-engine.js`, `js/numerics.js`, `js/cp-arac-*.js`, `js/cp-engine.js`, `js/cp-gearbox.js`, `js/cp-torque-converter.js`, `js/cp-matching.js`, `js/ft-obstacle.js`, `js/ft-segment-drive.js`, `assets/examples/ap_*.json` ya da Araç Performans testlerine dokunmadan **ÖNCE** |
 
 **Bu bir nezaket değil kapıdır.** İki modülün de hata sınıfı sessizdir — sayı
 yanlış çıkar, program çalışmaya devam eder, uyarı verilmez. Skill'i okumadan
 yapılan bir "iyileştirme" (çekirdeği proje stiline çevirmek, gerginin tanımını
 eski yönüne döndürmek, tet4'e düşmek) testten geçebilir ve yine yanlış olabilir.
 
-Takoz ve Araç Performans modüllerinin ayrı karar kaydı **yok**; kuralları kendi
-test dosyalarında ve kodun yorumlarında duruyor.
+Takoz modülünün ayrı karar kaydı **yok**; kuralları kendi test dosyalarında ve
+kodun yorumlarında duruyor.
+
+Araç Performans'ın kaydı 2026-09-07'de **açıldı** — o güne kadar yoktu. Sebep
+bir düzen değişikliği değil, bir ölçüm: `ft-performance.js`'in PCHIP uç eğim
+kelepçesi referansın hatalı çevirisiydi (`< 0` yerine `<= 0` olmalıydı), düz uç
+aralıklı her tabloda şekil koruma garantisini bozuyordu ve **sevk edilen veride
+canlıydı**. Yani modül, FEAD ile Yapısal'ın skill'e sahip olma gerekçesi olan
+sessiz hata sınıfını gösterdi. Kayıt o turda çıkan kararları ve kapatılmamış üç
+ayrışmayı taşıyor.
 
 ### Üç katman kalıbı (dışarıdan gelen çekirdekli modüller)
 
