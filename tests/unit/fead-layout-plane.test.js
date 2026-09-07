@@ -244,50 +244,124 @@ describe('KANVAS ile KART aynı elde — ikinci, bağımsız kusur', () => {
   });
 });
 
-describe('DÖNÜŞ YÖNÜ — krank saat yönünde (kullanıcı konvansiyonu, 2026-09-07)', () => {
-  // Kullanıcı bildirimi: *"Sihirbaz içinde yüklü olan tüm örnekler CCW dönüyor.
-  // Normalde krank kasnağı (yani sürücü kasnak) saat yönünde dönmesi lazım."*
-  test('varsayılan ÖN GÖRÜNÜŞ', () => {
-    expect(M.VE_FEAD_VIEW_FRONT).toBe(true);
+describe('DÖNÜŞ YÖNÜ — üç yolun da bedeli ÖLÇÜLDÜ (2026-09-07)', () => {
+  // Kullanıcı iki kez, iki ayrı şey istedi ve İKİSİ BİRDEN OLMUYOR:
+  //   (1) 2026-09-04: *"gergi krank kasnağının sol tarafında olmalı"* — yani
+  //       düzen Gates raporunun 1. sayfasındaki gibi.
+  //   (2) 2026-09-07: *"krank kasnağı saat yönünde dönmeli, sistem
+  //       aynalanmayacak."*
+  //
+  // ÖLÇÜLDÜ — üç yol var, üçünün de bedeli burada kayıtlı:
+  //
+  //   | yol                | konumlar        | krank | fizik           |
+  //   |--------------------|-----------------|-------|-----------------|
+  //   | rapor düzlemi (bu) | sayfayla AYNI   | CCW   | sağlam          |
+  //   | ayna (PR #875)     | TERS            | CW    | sağlam (simetri)|
+  //   | rotayı yerinde çev | sayfayla AYNI   | CW    | KIRIK           |
+  //
+  // Varsayılan birinci satır: kullanıcının konum bildirimi ölçülebilir bir
+  // referansa (raporun sayfası) dayanıyor, dönüş yönü isteği ise raporların
+  // HİÇBİRİNDE yazmayan bir bakış yönüne. Ölçülebilir olan kazanıyor.
+  test('varsayılan RAPOR düzlemi — konumlar Gates sayfasıyla aynı', () => {
+    expect(M.VE_FEAD_VIEW_FRONT).toBe(false);
   });
 
-  test('ONİKİ ÖRNEĞİN ONİKİSİ DE CW — rozet, etiket ve sihirbaz aynı üreticiden', () => {
+  test('ONİKİ ÖRNEĞİN ONİKİSİ DE bu düzlemde CCW — ölçülmüş durum', () => {
     const anahtarlar = M.veFeadExampleKeysAll();
     expect(anahtarlar.length).toBeGreaterThanOrEqual(12);
     anahtarlar.forEach((id) => {
       const b = kur(id);
       expect(b.ok).toBe(true);
-      // VERİ düzlemi ölçülmüş olarak CCW (+1); on rapor, Σ işaretli sarım = +360.
-      expect(b.spin).toBe(1);
-      // EKRANDA görülen yön bunun tersi: CW.
-      const et = M.veFeadSpinLabel(b.spin);
-      expect(et.sense).toBe(-1);
-      expect(et.kisa).toContain('CW');
-      expect(et.kisa).not.toContain('CCW');
-      expect(et.uzun).toContain('saat yönünde');
+      expect(b.spin).toBe(1);                       // veri düzlemi: Σ işaretli sarım = +360
+      expect(M.veFeadSpinLabel(b.spin).kisa).toContain('CCW');
     });
   });
 
-  test('ÇİZİM DE CW: kayış animasyonunun yönü etiketle AYNI işarette', () => {
-    // Rozet ile kartın ayrışması bu modülün ölçülmüş hata sınıfı ("kart kayışı
-    // bir yöne akıtırken rozet öbür yönü yazıyor"). Animasyon `geom.sense`'ten
-    // besleniyor; burada onu ETİKETLE bağlıyoruz.
-    const b = kur('AG0868_4PK_GATES_2022');
-    const g = F.tensionerState(b.sys, F.meanRel(b.sys)).geom;
-    const ekran = M.veFeadMirrorGeomX(g);          // ön görünüş = aynalı
-    expect(isaret(ekran.sense)).toBe(M.veFeadSpinLabel(b.spin).sense);
-    expect(isaret(ekran.sense)).toBe(-isaret(g.sense));
+  test('ROTAYI YERİNDE ÇEVİRMEK KRANKI CW YAPAR — ve FİZİĞİ KIRAR', () => {
+    // Bu kapı bir DAVRANIŞI değil bir BEDELİ kilitliyor: "aynalamadan krankı
+    // CW yap" isteğinin tek mekanik karşılığı rotayı ters yürütmek, ve o
+    // gergiyi kayışın GERGİN tarafına atıyor. Ölçüldü (BMC, güç akan tek
+    // örnek): en düşük span 526 N → −196 N. Negatif gerilme fiziksel olarak
+    // yok; model yine "çözülüyor" der, uyarı vermez — bu modülün sessiz hata
+    // sınıfının tam örneği.
+    //
+    // Kayıt burada duruyor ki bir sonraki oturum "yalnız yönü çevirelim"
+    // dediğinde bedeli yeniden ölçmek zorunda kalmasın.
+    const key = 'BMC_FEAD_2026';
+    const ex = M.veFeadExampleOf(key);
+    const rows = (ex && ex.solver && ex.solver.duty) || [];
+    expect(rows.length).toBeGreaterThan(0);
+
+    const enDusukSpan = (ters) => {
+      const pack = M.veFeadExampleNodes(key);
+      const ns = pack.nodes.map((n) => {
+        const d = componentDefs[n.type] || {};
+        return { id: n.id, type: n.type, customName: n.customName || null, def: d,
+                 x: 0, y: 0, width: d.defaultWidth || 65, height: d.defaultHeight || 60,
+                 data: JSON.parse(JSON.stringify(n.data || {})) };
+      });
+      let cs = pack.connections.map((c) => Object.assign({}, c));
+      // Modelin kendi yolu: yön kablolarda durur, bir bayrakta değil.
+      if (ters) cs = cs.map((c) => Object.assign({}, c, { from: c.to, to: c.from }));
+      global.nodes = ns; global.connections = cs;
+      const b = M.veFeadBuildSystem(ns, cs);
+      expect(b.ok).toBe(true);
+      const R = M.veFeadAnalyze(b, { rows: rows, cylinders: 6 });
+      expect(R.ok).toBe(true);
+      let en = Infinity;
+      ((R.analysis && R.analysis.duty) || []).forEach((d) => {
+        (d.perPulley || []).forEach((x) => {
+          const t = Number(x.exitTensionN);
+          if (Number.isFinite(t) && t < en) en = t;
+        });
+      });
+      return { spin: b.spin, enDusuk: en };
+    };
+
+    const ileri = enDusukSpan(false);
+    const geri = enDusukSpan(true);
+
+    expect(ileri.spin).toBe(1);                     // şemada CCW
+    expect(geri.spin).toBe(-1);                     // şemada CW — istenen yön
+    expect(ileri.enDusuk).toBeGreaterThan(0);       // sağlam yük yolu
+    expect(geri.enDusuk).toBeLessThan(0);           // ...ve ters yürütünce NEGATİF
+    expect(ileri.enDusuk).toBeCloseTo(526, 0);
+    expect(geri.enDusuk).toBeCloseTo(-196, 0);
   });
 
-  test('BAYRAK KAPANINCA ETİKET DE DÖNER — iki düzlem tek üreticiden', () => {
+  test('KRANK YÖNÜ AYNALAMADAN SÖYLENİYOR — etiket İKİ BAKIŞI da adıyla verir', () => {
+    // Kullanıcının asıl istediği bilgi buydu ve aynalamadan verilebiliyor:
+    // CW/CCW bir dönüş değil bir BAKIŞ YÖNÜ ifadesi. Rozet ÇİZİLEN yönü basar
+    // (yoksa resimle çelişirdi), uzun metin ikisini de söyler.
+    const et = M.veFeadSpinLabel(1);
+    expect(et.kisa).toBe('\u21ba CCW');                 // şemadaki yön
+    expect(et.uzun).toContain('Gates rapor düzlemi');   // ...ve hangi düzlemde
+    expect(et.uzun).toContain('önden bakışta CW');      // KRANK YÖNÜ, adıyla
+    expect(et.karsi).toContain('önden bakışta CW');
+
+    // Ayna açıkken ilişki TERSİNE döner — tek üreticiden, iki kopya yok.
     const eski = M.VE_FEAD_VIEW_FRONT;
     try {
-      M.veFeadSetViewFront(false);
-      expect(M.veFeadSpinLabel(1).kisa).toContain('CCW');
-      expect(M.veFeadSpinLabel(1).uzun).toContain('Gates rapor düzlemi');
+      M.veFeadSetViewFront(true);
+      const f = M.veFeadSpinLabel(1);
+      expect(f.kisa).toBe('\u21bb CW');
+      expect(f.uzun).toContain('Gates rapor düzleminde CCW');
+      expect(f.karsi).toContain('Gates rapor düzleminde CCW');
+    } finally { M.veFeadSetViewFront(eski); }
+
+    // Yön okunamadığında iddia da yok.
+    expect(M.veFeadSpinLabel(0).karsi).toBe('—');
+  });
+
+  test('AYNA hâlâ çalışır durumda — istendiğinde CW verir, fiziği bozmadan', () => {
+    const eski = M.VE_FEAD_VIEW_FRONT;
+    try {
       M.veFeadSetViewFront(true);
       expect(M.veFeadSpinLabel(1).kisa).toBe('\u21bb CW');
       expect(M.veFeadSpinLabel(1).uzun).toContain('önden');
+      M.veFeadSetViewFront(false);
+      expect(M.veFeadSpinLabel(1).kisa).toContain('CCW');
+      expect(M.veFeadSpinLabel(1).uzun).toContain('Gates rapor düzlemi');
     } finally { M.veFeadSetViewFront(eski); }
   });
 });

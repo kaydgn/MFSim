@@ -376,7 +376,17 @@ görünüşün aynası gibi davrandığına** işaret eder.
 konuşmak için montaj resmi ya da tedarikçinin konvansiyon notu gerekir. Bu
 ayrım korunmalı: modülün kuralı geçerlilik sınırını sonucun İÇİNDE taşımak.
 
-**VE EKSİK ADIM 2026-09-07'DE GELDİ — modelin sahibi konvansiyonu BEYAN ETTİ:**
+**2026-09-07 — KONVANSİYON BEYAN EDİLDİ, AMA VARSAYILAN DEĞİŞMEDİ.** Program
+bu sayfadaki düzeni birebir çiziyor (`VE_FEAD_VIEW_FRONT = false`), yani şemada
+kayış CCW dolanıyor. Ön görünüş bir bayrakla açılabiliyor ama varsayılan değil:
+aynalama kasnak ve gergi konumlarını da çeviriyor ve kullanıcı bunu geri
+aldırdı. *"Aynalamadan krankı CW yap"* yolu ise ÖLÇÜLEREK kapandı — rotayı ters
+yürütmek gergiyi gergin tarafa atıyor ve span gerilmeleri negatife düşüyor
+(BMC: 526 N → −196 N). Kapı: `tests/unit/fead-layout-plane.test.js`.
+
+Aşağıdaki kayıt o turun gerekçesi:
+
+**modelin sahibi konvansiyonu BEYAN ETTİ:**
 *"Normalde krank kasnağı (yani sürücü kasnak) saat yönünde dönmesi lazım."*
 Yukarıda "kesin konuşmak için gerekir" denen şey buydu; çıkarım artık kural.
 MFSim'in varsayılanı ön görünüş (`VE_FEAD_VIEW_FRONT = true`), yani program bu
