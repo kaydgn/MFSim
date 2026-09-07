@@ -376,13 +376,23 @@ görünüşün aynası gibi davrandığına** işaret eder.
 konuşmak için montaj resmi ya da tedarikçinin konvansiyon notu gerekir. Bu
 ayrım korunmalı: modülün kuralı geçerlilik sınırını sonucun İÇİNDE taşımak.
 
-**VE MFSim ARTIK BU ÇIKARIMI VARSAYILAN OLARAK KULLANMIYOR (2026-09-04).**
-Çizim bir dönem X'te aynalanıyordu (`VE_FEAD_VIEW_FRONT = true`), yani program
-bu sayfadaki şemanın AYNASINI gösteriyordu. Kullanıcı bildirdi, ölçüldü: 12
-örneğin 12'sinde de sol-sağ düzeni raporun tersiydi. Varsayılan rapor düzlemine
-döndü; ayna bir bayrak olarak duruyor, çünkü §5'teki ilişki ÖLÇÜLÜ. Kapı:
+**VE EKSİK ADIM 2026-09-07'DE GELDİ — modelin sahibi konvansiyonu BEYAN ETTİ:**
+*"Normalde krank kasnağı (yani sürücü kasnak) saat yönünde dönmesi lazım."*
+Yukarıda "kesin konuşmak için gerekir" denen şey buydu; çıkarım artık kural.
+MFSim'in varsayılanı ön görünüş (`VE_FEAD_VIEW_FRONT = true`), yani program bu
+sayfadaki şemanın X AYNASINI çiziyor ve krank saat yönünde dönüyor.
+
+**BUNUN BEDELİ BİLİNİYOR VE KABUL EDİLDİ:** ekrandaki sol-sağ düzeni bu
+sayfadakinin tersidir — gergi, kranka göre raporun gösterdiği yanın KARŞISINDA
+çıkar. İki istek birbirinin aynası olduğu için üçüncü bir seçenek yok
+(rapor düzleminde kayış ÖLÇÜLMÜŞ olarak CCW dolanıyor, §3).
+
+Bir dönem varsayılan rapor düzlemiydi (2026-09-04 → 2026-09-07): kullanıcı
+aynalı düzeni bildirmişti ve o zaman elde bu beyan yoktu. Kapı:
 `tests/unit/fead-layout-plane.test.js` — çizilen SVG'nin kasnak merkezleri bu
-klasördeki raporların "Layout Data" koordinatlarıyla karşılaştırılıyor.
+klasördeki raporların "Layout Data" koordinatlarıyla karşılaştırılıyor ve o
+karşılaştırma **rapor düzlemini kendisi kuruyor** (`veFeadSetViewFront(false)`),
+yani varsayılan ne olursa olsun ölçmeye devam ediyor.
 
 ### 7 · Gergi serpantinde EN SONDA — ve bu fiziksel
 

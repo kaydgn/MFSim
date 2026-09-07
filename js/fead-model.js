@@ -949,11 +949,25 @@ function veFeadOriginNode(nodeList){
   return veFeadResolveDriver(pulleys);
 }
 
-// Kanvas px → kayış düzlemi mm. Y TERS.
+// EKRAN X'İNİN İŞARETİ — ÇİZİM DÜZLEMİNDEN, tek noktadan.
+//
+// KANVAS DA BİR ÇİZİMDİR. Kayış yolu kartı ön görünüşte X'te aynalanırken
+// kanvas kutuları rapor düzleminde kalırsa kullanıcı AYNI modelin İKİ resmini
+// ters el ile görür — ölçülmüş bir kusur ve kaydın hiçbir yerinde yoktu
+// (`tests/unit/fead-layout-plane.test.js` → "KANVAS ile KART aynı elde").
+// 2026-09-04'te ayna kapatılarak giderilmişti; ayna 2026-09-07'de kullanıcının
+// dönüş yönü konvansiyonuyla geri açıldığı için kusur artık BURADAN kapanıyor.
+//
+// SAKLANAN mm DEĞİŞMEZ: iki fonksiyon da bu tek işaretten beslendiği için
+// birbirinin tam tersi olmayı sürdürüyor; kaydedilen koordinat, çözücü ve
+// bütün sayısal çıktılar Gates düzleminde kalıyor (CLAUDE.md kuralı).
+function _feadPlaneSx(){ return veFeadViewFront() ? -1 : 1; }
+
+// Kanvas px → kayış düzlemi mm. Y TERS, X çizim düzlemine göre.
 function veFeadCanvasToMm(node, originNode, scale){
   var s = _feadNum(scale, 0) || VE_FEAD_PX_PER_MM;
   var c = veFeadNodeCenter(node), o = veFeadNodeCenter(originNode);
-  return { x: (c.x - o.x) / s, y: -(c.y - o.y) / s };
+  return { x: _feadPlaneSx() * (c.x - o.x) / s, y: -(c.y - o.y) / s };
 }
 
 // Kayış düzlemi mm → kanvas px (kutunun SOL ÜSTÜ, DOM'a yazılacak değer).
@@ -961,7 +975,7 @@ function veFeadMmToCanvas(mmX, mmY, originNode, scale, box){
   var s = _feadNum(scale, 0) || VE_FEAD_PX_PER_MM;
   var o = veFeadNodeCenter(originNode);
   var b = box || { w: 65, h: 60 };
-  return { x: o.x + _feadNum(mmX, 0) * s - b.w / 2,
+  return { x: o.x + _feadPlaneSx() * _feadNum(mmX, 0) * s - b.w / 2,
            y: o.y - _feadNum(mmY, 0) * s - b.h / 2 };
 }
 
@@ -2924,9 +2938,39 @@ function veFeadResolveDriver(pulleys){
   return list.length ? list[0] : null;
 }
 
-// ─── ÇİZİM DÜZLEMİ — VARSAYILAN: RAPOR DÜZLEMİ (ayna KAPALI) ────────────────
+// ─── ÇİZİM DÜZLEMİ — VARSAYILAN: ÖN GÖRÜNÜŞ (ayna AÇIK) ────────────────
 //
-// KULLANICI KARARI (2026-09-04) — ÖNCEKİNİ DEĞİŞTİRİR: *"gergi ve kasnak
+// KULLANICI KONVANSİYONU (2026-09-07) — SON KARAR, aşağıdaki her şeyi değiştirir:
+// *"Sihirbaz içinde yüklü olan tüm örnekler CCW dönüyor. Normalde krank kasnağı
+// (yani sürücü kasnak) saat yönünde dönmesi lazım."*
+//
+// BU, ÖLÇÜMÜN BİTTİĞİ YERE GELEN BİLGİ. `docs/gates-reports/README.md` §6 tam
+// olarak bunu eksik bırakıyordu: *"Kesin konuşmak için montaj resmi ya da
+// tedarikçinin konvansiyon notu gerekir."* Konvansiyonu artık modelin sahibi
+// beyan etti; çıkarım bir varsayım olmaktan çıkıp KURAL oldu.
+//
+// İKİ BİLDİRİM BİRBİRİNİN AYNASI — ÜÇÜNCÜ SEÇENEK YOK. Rapor düzleminde kayış
+// ÖLÇÜLMÜŞ olarak CCW dolanıyor (on rapor, Σ işaretli sarım = +360); dolayısıyla
+// "krank CW" ile "kasnak düzeni raporun sayfasıyla aynı" AYNI ANDA SAĞLANAMAZ —
+// biri ötekinin X aynasıdır. Kullanıcı 2026-09-04'te sayfayı, 2026-09-07'de dönüş
+// yönünü seçti; geçerli olan sonuncusu.
+//
+// BEKLENEN VE KABUL EDİLEN SONUÇ: gergi, kranka göre raporun sayfasındakinin
+// KARŞI tarafında çıkar. Bu bir regresyon değil, seçilen bakış yönünün kendisi —
+// aynı makineye öbür taraftan bakılıyor.
+//
+// SAYILAR DOKUNULMADI: aynalama TAM SİMETRİ (sarım, açıklık, L_eff, gerginlik,
+// hub yükü büyüklüğü birebir aynı), yani 17 rapor / 2095 doğrulama değerinin
+// hiçbiri bu bayraktan etkilenmiyor.
+//
+// ARŞİVLE KARŞILAŞTIRMA KAYBOLMADI: kapı artık rapor düzlemini KENDİSİ kuruyor
+// (`veFeadSetViewFront(false)`) ve kasnak merkezlerini raporların "Layout Data"
+// koordinatlarıyla karşılaştırmaya devam ediyor — 2026-09-04'te yakalanan hata
+// sınıfı (çizicinin işaret hatası) hiçbir düzlemde sessiz kalamaz.
+//
+// ─── ÖNCEKİ KAYIT (2026-09-04) — tarihçe, artık VARSAYILAN DEĞİL ───────────
+//
+// KULLANICI BİLDİRİMİ (2026-09-04): *"gergi ve kasnak
 // konumları programda yanlış çıkıyor. Ters çıkıyor… Gates raporlarının PDF ilk
 // sayfasında kasnak konumları var."*
 //
@@ -2961,7 +3005,17 @@ function veFeadResolveDriver(pulleys){
 // BİREBİR aynı kalır; değişen yalnız el yönü. Bu yüzden burada `d` işareti de
 // çevriliyor: çevrilmezse sarım yayları kasnağın İÇİNDEN geçer (kartta bir kez
 // ölçülmüş "sweep bayrağı" hatasının aynısı).
-var VE_FEAD_VIEW_FRONT = false;     // çizim düzlemi: false = RAPOR (Gates) · true = ön görünüş (ayna)
+var VE_FEAD_VIEW_FRONT = true;      // çizim düzlemi: true = ÖN GÖRÜNÜŞ (ayna) · false = RAPOR (Gates)
+
+// TEK OKUMA NOKTASI, VE AYARLANABİLİR. Bayrak eskiden doğrudan okunuyordu ve
+// `module.exports` onu KOPYA olarak veriyordu — yani hiçbir test düzlemi
+// DEĞİŞTİREMİYOR, yalnız varsayılanı doğrulayabiliyordu. Arşiv kapısı rapor
+// düzlemini AÇIKÇA kurup karşılaştırabilsin diye erişimci kondu: varsayılan bir
+// daha değişse bile o kapı düzlemi kendisi seçtiği için ÖLÇTÜĞÜ İLİŞKİYİ ölçmeye
+// devam eder. Önceki sürümünde bayrağın kendisi kilitliydi; varsayılan değişince
+// kapı ölçtüğü şeyi değil, bir tercihi savunuyordu.
+function veFeadViewFront(){ return VE_FEAD_VIEW_FRONT === true; }
+function veFeadSetViewFront(v){ VE_FEAD_VIEW_FRONT = (v === true); return VE_FEAD_VIEW_FRONT; }
 
 function _feadMirrorPt(q){ return (q && q.length >= 2) ? [-q[0], q[1]] : q; }
 
@@ -2981,7 +3035,7 @@ function _feadMirrorPt(q){ return (q && q.length >= 2) ? [-q[0], q[1]] : q; }
 // yüzden tek boundary'den geçiyor.
 function veFeadSpinToFront(spin){
   var v = Number(spin) || 0;
-  return VE_FEAD_VIEW_FRONT ? -v : v;
+  return veFeadViewFront() ? -v : v;
 }
 
 // Etiket TEK ÜRETİCİDEN. Rozet · panel · toast · sihirbazın üç yüzeyi aynı
@@ -2993,9 +3047,25 @@ function veFeadSpinToFront(spin){
 // çizimin düzlemini adıyla söylüyor, yani kullanıcının GÖRDÜĞÜ resimle aynı
 // cümleyi kuruyor.
 function _feadPlaneName(){
-  return VE_FEAD_VIEW_FRONT
-    ? 'motora önden bakışta (aynalı görünüş)'
+  return veFeadViewFront()
+    ? 'motora önden bakışta (aksesuar tahrik ucu)'
     : 'şemadaki yön — Gates rapor düzlemi';
+}
+
+// AÇI DEĞERLERİNİN DÜZLEMİ — TEK ÜRETİCİDEN, ve yalnız gerektiğinde.
+//
+// Çizim ön görünüşte aynalı, AMA basılan açılar (hubload yönü, kol açısı,
+// koordinatlar) VERİ düzleminde kalıyor — Gates raporlarıyla satır satır
+// karşılaştırılabilirlik bu modülün en değerli özelliği. İkisi bir arada
+// sessiz bir yanlış okuma üretebilir: kullanıcı "Yön 350°" okur, aynalı
+// resimde oku 190°'de arar. Bu not o boşluğu kapatıyor.
+//
+// Ayna KAPALIYKEN boş dönüyor: söylenecek bir fark yok ve koşulsuz basılan
+// bir uyarı gürültüden ibaret olurdu.
+function veFeadPlaneNote(){
+  return veFeadViewFront()
+    ? ' · açı ve koordinat DEĞERLERİ Gates düzleminde (çizim ön görünüş: X aynası)'
+    : '';
 }
 
 function veFeadSpinLabel(spin){
@@ -4250,6 +4320,8 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     veFeadPulleyCodes: veFeadPulleyCodes,
     VE_FEAD_VIEW_FRONT: VE_FEAD_VIEW_FRONT, veFeadMirrorGeomX: veFeadMirrorGeomX,
+    veFeadViewFront: veFeadViewFront, veFeadSetViewFront: veFeadSetViewFront,
+    veFeadPlaneNote: veFeadPlaneNote,
     _feadNum: _feadNum, _feadDefOf: _feadDefOf, _feadNodeName: _feadNodeName,
     _feadIsPulley: _feadIsPulley,
     VE_FEAD_DEFAULT_DIA: VE_FEAD_DEFAULT_DIA, VE_FEAD_ERROR_MAP: VE_FEAD_ERROR_MAP,
@@ -4301,6 +4373,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadNodeBox: veFeadNodeBox, veFeadNodeCenter: veFeadNodeCenter,
     veFeadOriginNode: veFeadOriginNode,
     veFeadCanvasToMm: veFeadCanvasToMm, veFeadMmToCanvas: veFeadMmToCanvas,
+    _feadPlaneSx: _feadPlaneSx,
     veFeadCoordLinkNode: veFeadCoordLinkNode, veFeadCoordLinkOn: veFeadCoordLinkOn,
     veFeadSyncMmFromCanvas: veFeadSyncMmFromCanvas,
     veFeadSyncCanvasFromMm: veFeadSyncCanvasFromMm,
@@ -4338,4 +4411,10 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadRemapDutyKw: veFeadRemapDutyKw,
     veFeadExampleOf: veFeadExampleOf, veFeadExampleNodes: veFeadExampleNodes
   };
+  // CANLI OKUMA — kopya DEĞİL. Nesne değişmezindeki `VE_FEAD_VIEW_FRONT` satırı
+  // bayrağın O ANKİ değerini donduruyor; beş test dosyası beklentisini o alandan
+  // türettiği için düzlem koşu sırasında değişince hepsi sessizce ESKİ düzlemi
+  // savunurdu (yeşil kalır, ölçtüğü şey artık yoktur). Erişimciye bağlanıyor.
+  Object.defineProperty(module.exports, 'VE_FEAD_VIEW_FRONT',
+    { get: veFeadViewFront, enumerable: true, configurable: true });
 }

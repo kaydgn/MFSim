@@ -6,11 +6,31 @@
  *
  * Node'da HİÇ koşmayan halkalar: modal kabuğunun gerçekten açılması, adım
  * rayının tıklanabilirliği, gerçek klavye girişi (ve odağın alanda KALMASI —
- * canlı şerit her tuşta tam yeniden çizim yapsaydı odak düşerdi), Kayış Yolu
+ * canlı şerit her tuşta tam yeniden çizim yapsaydı odak düşerdi), kayış yolu
  * şemasının SVG olarak çizilmesi, ve "Modeli Kur" düğmesinin kanvasa gerçek
  * düğüm kurması.
+ *
+ * ── 2026-09-07: BU DOSYA İKİ TURDUR BAYATTI, SESSİZCE ────────────────────
+ *
+ * CI'daki `e2e-urun` işi yalnız üç ÜRÜN spec'ini koşturuyor (published ·
+ * viewer · can-cozumleyici), yani buradaki kırılma hiçbir kapıdan görünmedi.
+ * İki kaynağı vardı ve ikisi de kendi turunda güncellenmeliydi:
+ *
+ *   • ADIM SAYISI 7 → 6 (PR #872): "Kayış Yolu" adımı kaldırıldı, yeteneği
+ *     Kasnaklar tablosuna taşındı. Eski → yeni indeks: 0→0 · 1→1 ·
+ *     2 (yol) silindi · 3→2 · 4→3 · 5→4 · 6→5.
+ *   • ÖRNEK SEÇİCİ (PR #868): kart düğmeleri (`.ve-fw-btn-wide`) yerine
+ *     <select> + ↑↓ gezinme geldi. Konumsal tıklama zaten kırılgandı; seçim
+ *     artık ÜRETİCİDEN yapılıyor (`veFeadWizSeed`), yeni spec'lerin yolu.
  */
 const { test, expect } = require('@playwright/test');
+
+// ÖRNEK SEÇİMİ ÜRETİCİDEN, konumdan DEĞİL. Anahtar verilmezse listenin ilki —
+// kaldırılan kart düğmelerinin `.first()` davranışının birebir karşılığı.
+const ornekKur = (page, key) => page.evaluate((k) => {
+  veFeadWizSeed(k || veFeadExampleKeys()[0]);
+  veFeadWizRender();
+}, key || null);
 
 async function bootApp(page) {
   await page.goto('/index.html');
@@ -59,7 +79,7 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();
 
     // Yedi adım rayda duruyor.
-    await expect(page.locator('#ve-fw-nav .ve-fw-step')).toHaveCount(7);
+    await expect(page.locator('#ve-fw-nav .ve-fw-step')).toHaveCount(6);
     await expect(page.locator('#ve-fw-nav .ve-fw-step.on')).toHaveCount(1);
     expect(hatalar).toEqual([]);
   });
@@ -74,7 +94,7 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();
 
     // "Örnekten doldur" kartındaki ilk düğme
-    await page.locator('#ve-fw-body .ve-fw-btn-wide').first().click();
+    await ornekKur(page);
     await expect(page.locator('#ve-fw-live .ve-fw-pill-ok')).toBeVisible();
 
     const pills = await page.locator('#ve-fw-live .ve-fw-pill').allTextContents();
@@ -86,14 +106,14 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     // Adım rayında artık KIRMIZI adım yok (örnek eksiksiz). Rozet HER adımda
     // duruyor — tamamlanmışta ✓ — yani ölçüt rozetin varlığı değil DURUMU.
     await expect(page.locator('#ve-fw-nav .ve-fw-st-err')).toHaveCount(0);
-    await expect(page.locator('#ve-fw-nav .ve-fw-st-ok')).toHaveCount(7);
+    await expect(page.locator('#ve-fw-nav .ve-fw-st-ok')).toHaveCount(6);
   });
 
   test('gerçek klavye girişi: değer modele işliyor ve ODAK alanda kalıyor', async ({ page }) => {
     await bootApp(page);
     await openFead(page);
     await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
-    await page.locator('#ve-fw-body .ve-fw-btn-wide').first().click();
+    await ornekKur(page);
 
     // 2. adım: kasnaklar
     await page.locator('#ve-fw-nav .ve-fw-step').nth(1).click();
@@ -121,8 +141,8 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     await bootApp(page);
     await openFead(page);
     await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
-    await page.locator('#ve-fw-body .ve-fw-btn-wide').first().click();
-    await page.locator('#ve-fw-nav .ve-fw-step').nth(6).click();
+    await ornekKur(page);
+    await page.locator('#ve-fw-nav .ve-fw-step').nth(5).click();   // Özet ve Kurulum
 
     // Şema gerçekten SVG olarak var ve kasnak çemberleri çizili.
     const svg = page.locator('#ve-fw-body .ve-fw-fig svg');
@@ -143,14 +163,14 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     await bootApp(page);
     await openFead(page);
     await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
-    await page.locator('#ve-fw-body .ve-fw-btn-wide').first().click();
+    await ornekKur(page);
 
     const beklenen = await page.evaluate(() => {
       const b = veFeadWizBuild();
       return { L: b.beltLengthMm, T: b.springTensionN, spin: b.spin };
     });
 
-    await page.locator('#ve-fw-nav .ve-fw-step').nth(6).click();
+    await page.locator('#ve-fw-nav .ve-fw-step').nth(5).click();   // Özet ve Kurulum
     await page.locator('#ve-fw-create').click();
     await expect(page.locator('#ve-feadwiz-overlay')).toBeHidden();
 
@@ -194,7 +214,7 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     await bootApp(page);
     await openFead(page);
     await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
-    await page.locator('#ve-fw-body .ve-fw-btn-wide').first().click();
+    await ornekKur(page);
     await page.locator('#ve-fw-nav .ve-fw-step').nth(1).click();
 
     const ten = page.locator('#ve-fw-body tr.ve-fw-tr-ten');
@@ -216,10 +236,10 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     });
     expect(String(st.deger)).toBe('-168.4');
 
-    // Aynı değer 4. adımın ALANINDA da duruyor (tek kayıt, iki yüzey).
-    // toContainText KULLANILMAZ: input DEĞERİ metin içeriği değildir, o kapı
-    // kod doğruyken bile kırmızı verir.
-    await page.locator('#ve-fw-nav .ve-fw-step').nth(3).click();
+    // Aynı değer Otomatik Gergi adımının ALANINDA da duruyor (tek kayıt, iki
+    // yüzey). toContainText KULLANILMAZ: input DEĞERİ metin içeriği değildir,
+    // o kapı kod doğruyken bile kırmızı verir.
+    await page.locator('#ve-fw-nav .ve-fw-step').nth(2).click();   // Otomatik Gergi
     const dortAdim = await page.evaluate(() =>
       Array.from(document.querySelectorAll('#ve-fw-body input'))
         .map((i) => i.value).filter((v) => v === '-168.4').length);
@@ -231,8 +251,8 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     await openFead(page);
     await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
     // AG00976: gücü duty kW'da duran örnek (aksesuarların eğrisi yok)
-    await page.locator('#ve-fw-body .ve-fw-btn-wide').nth(1).click();
-    await page.locator('#ve-fw-nav .ve-fw-step').nth(5).click();
+    await ornekKur(page, 'AG00976_GATES_2025');
+    await page.locator('#ve-fw-nav .ve-fw-step').nth(4).click();   // Motor ve Çevrim
 
     await expect(page.locator('#ve-fw-body')).toContainText('Aksesuar Modelleri');
     // Duty tablosunda kW artık GİRDİ değil
@@ -278,7 +298,7 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     await bootApp(page);
     await openFead(page);
     await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
-    await page.locator('#ve-fw-body .ve-fw-btn-wide').first().click();
+    await ornekKur(page);
 
     const olcum = await page.evaluate(() => {
       const m = document.querySelector('.ve-fw-modal');
@@ -297,8 +317,8 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     expect(olcum.nav).toBeGreaterThan(180);          // adım rayı görünür
     expect(olcum.foot).toBeGreaterThan(20);
 
-    // Tablo taşıyorsa KENDİ kabında kayar (gövde değil) — 6. adım en geniş tablo.
-    await page.locator('#ve-fw-nav .ve-fw-step').nth(5).click();
+    // Tablo taşıyorsa KENDİ kabında kayar (gövde değil) — Motor ve Çevrim en geniş tablo.
+    await page.locator('#ve-fw-nav .ve-fw-step').nth(4).click();   // Motor ve Çevrim
     const t2 = await page.evaluate(() => {
       const b = document.getElementById('ve-fw-body');
       return b.scrollWidth - b.clientWidth;
@@ -353,7 +373,7 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
 
     // BOŞ sihirbaz: eksik adımlar KIRMIZI ve sayı taşıyor.
     const bos = await page.evaluate(oku);
-    expect(bos.length).toBe(7);
+    expect(bos.length).toBe(6);
     const kirmizi = bos.filter((r) => r.durum === 'err');
     expect(kirmizi.length).toBeGreaterThan(0);
     kirmizi.forEach((r) => {
@@ -365,7 +385,7 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     const [kr, kg] = rgb(kirmizi[0].zemin);
     expect(kr).toBeGreaterThan(kg + 60);
 
-    // DOLU örnek: yedisi de YEŞİL ve ✓ taşıyor.
+    // DOLU örnek: altısı da YEŞİL ve ✓ taşıyor.
     await page.evaluate(() => veFeadWizSeed('AG00976_GATES_2025'));
     const dolu = await page.evaluate(oku);
     expect(dolu.every((r) => r.durum === 'ok')).toBe(true);
@@ -377,6 +397,6 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     await page.evaluate(() => { veFeadWizState().pulleys[2].od = ''; veFeadWizRender(); });
     const eksik = await page.evaluate(oku);
     expect(eksik[1].durum).not.toBe('ok');
-    expect(eksik.filter((r) => r.durum === 'ok').length).toBe(6);
+    expect(eksik.filter((r) => r.durum === 'ok').length).toBe(eksik.length - 1);
   });
 });

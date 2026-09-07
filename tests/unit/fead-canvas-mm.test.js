@@ -41,6 +41,13 @@ beforeEach(() => { resetStubs(stubs); global.nodes = []; global.connections = []
 
 const P = (o) => JSON.parse(JSON.stringify(o));
 
+// EKRAN X İŞARETİ — beklentiler bayraktan TÜRETİLİR, sabitlenmez.
+// Kanvas da bir çizimdir ve çizim düzlemi ön görünüşe alınınca (2026-09-07,
+// krank CW konvansiyonu) kanvasın X'i de aynalanır. Bu dosya X'in İŞARETİNİ
+// değil, kanvas ↔ mm bağının KENDİSİNİ ölçüyor; işaret düzlemden okunuyor
+// (fead-spin.test.js'teki `cizimYonu` ile aynı kalıp).
+const SX = () => (M.VE_FEAD_VIEW_FRONT ? -1 : 1);
+
 // Kanvas düğümü: mm koordinatı data'da, piksel konumu üstte.
 const kasnak = (id, type, px, py, data) => {
   const d = componentDefs[type];
@@ -67,10 +74,31 @@ describe('dönüşüm — Y ters, merkezden ölçülür', () => {
     expect(M.veFeadCanvasToMm(yukari, org, 1).y).toBeGreaterThan(0);
   });
 
-  test('X aynen: kanvasta SAĞ = mm\'de ARTAN', () => {
+  test('X ÇİZİM DÜZLEMİNDEN: kanvasta SAĞ = mm\'de artan/azalan (bayrağa göre)', () => {
     const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true });
     const sag = kasnak('a', 'fead-alternator', 1200, 1000, {});
-    expect(M.veFeadCanvasToMm(sag, org, 1).x).toBeGreaterThan(0);
+    expect(SX() * M.veFeadCanvasToMm(sag, org, 1).x).toBeGreaterThan(0);
+  });
+
+  // İKİ DÜZLEMDE DE GİDİŞ-DÖNÜŞ BİREBİR. Aynalama iki fonksiyondan yalnız
+  // birine konsaydı kanvas ↔ mm çifti birbirinin tersi olmaktan çıkardı:
+  // kutu her senkronda biraz daha kayar, hiçbir sayı "yanlış" görünmezdi.
+  test('gidiş-dönüş İKİ DÜZLEMDE de birebir — aynalama tek işaretten', () => {
+    const varsayilan = M.VE_FEAD_VIEW_FRONT;
+    try {
+      [true, false].forEach((on) => {
+        M.veFeadSetViewFront(on);
+        const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true, x: 0, y: 0 });
+        const n = kasnak('a', 'fead-alternator', 1234, 876, {});
+        const mm = M.veFeadCanvasToMm(n, org, 1);
+        const px = M.veFeadMmToCanvas(mm.x, mm.y, org, 1, M.veFeadNodeBox(n));
+        expect(px.x).toBeCloseTo(n.x, 9);
+        expect(px.y).toBeCloseTo(n.y, 9);
+        // Ve iki düzlem birbirinin X aynası — ilişki gerçekten kuruldu.
+        const dx = M.veFeadNodeCenter(n).x - M.veFeadNodeCenter(org).x;
+        expect(M.veFeadCanvasToMm(n, org, 1).x).toBeCloseTo((on ? -1 : 1) * dx, 9);
+      });
+    } finally { M.veFeadSetViewFront(varsayilan); }
   });
 
   // KUTU ÖLÇÜSÜ SONUCU ETKİLEMEMELİ. Sol üstten ölçen bir dönüşümde 72×66'lık
@@ -95,7 +123,7 @@ describe('dönüşüm — Y ters, merkezden ölçülür', () => {
     const n = kasnak('a', 'fead-alternator', 1000, 1000, {});
     const once = M.veFeadCanvasToMm(n, org, 1).x;
     n.x += 250;
-    expect(M.veFeadCanvasToMm(n, org, 1).x - once).toBeCloseTo(250, 9);
+    expect(M.veFeadCanvasToMm(n, org, 1).x - once).toBeCloseTo(SX() * 250, 9);
   });
 });
 
@@ -135,7 +163,7 @@ describe('senkron — kanvas ↔ mm', () => {
   test('mm → kanvas: mesafeler birebir, Y ters', () => {
     const { org, alt } = kurum();
     const mo = M.veFeadNodeCenter(org), ma = M.veFeadNodeCenter(alt);
-    expect(ma.x - mo.x).toBeCloseTo(-200, 6);
+    expect(ma.x - mo.x).toBeCloseTo(SX() * -200, 6);
     expect(ma.y - mo.y).toBeCloseTo(-150, 6);        // mm +150 → kanvas −150
   });
 
@@ -153,7 +181,7 @@ describe('senkron — kanvas ↔ mm', () => {
     const { list, alt } = kurum();
     alt.x += 37; alt.y -= 22;                        // kanvasta sağa ve YUKARI
     M.veFeadSyncMmFromCanvas(list);
-    expect(alt.data.x).toBeCloseTo(-200 + 37, 3);
+    expect(alt.data.x).toBeCloseTo(-200 + SX() * 37, 3);
     expect(alt.data.y).toBeCloseTo(150 + 22, 3);     // yukarı → mm ARTAR
   });
 
@@ -164,7 +192,7 @@ describe('senkron — kanvas ↔ mm', () => {
     org.x += 50;                                     // krank sağa
     M.veFeadSyncMmFromCanvas(list);
     expect(org.data.x).toBe(0);                      // orijin hep (0,0)
-    expect(alt.data.x).toBeCloseTo(-200 - 50, 3);    // ötekiler göreli sola
+    expect(alt.data.x).toBeCloseTo(-200 - SX() * 50, 3);   // ötekiler göreli karşı yöne
   });
 
   test('araç düğümlerine DOKUNMAZ', () => {
@@ -212,13 +240,13 @@ describe('GERGİ — sürükleme AVARA MERKEZİNİ taşır, montaj konumu RİJİ
     org.x += 70;                                  // KRANK sağa sürüklendi
     expect(M.veFeadSyncMmFromCanvas(list, { origin: org })).toBeGreaterThan(0);
 
-    // Krank-göreli olarak gergi 70 mm SOLA kaymış olmalı.
-    expect(t.data.cenX).toBeCloseTo(onceCen - 70, 2);
+    // Krank-göreli olarak gergi 70 mm karşı yöne kaymış olmalı (yön çizim düzleminden).
+    expect(t.data.cenX).toBeCloseTo(onceCen - SX() * 70, 2);
     expect(t.data.pivotX).toBeUndefined();        // ikinci koordinat YOK
     // MONTAJ KONUMU RİJİT TAKİP EDER: kol boyu ve açı dokunulmadığı için
     // türev aynı kadar ötelenir. Ayrı bir yazma yolu GEREKMİYOR ve olmamalı
     // (olsaydı montaj konumu sessizce bir GİRDİYE dönerdi).
-    expect(M.veFeadTensionerPivot(t.data)[0]).toBeCloseTo(oncePiv - 70, 2);
+    expect(M.veFeadTensionerPivot(t.data)[0]).toBeCloseTo(oncePiv - SX() * 70, 2);
   });
 
   test('gergi düğümü olmayan girdide sessizce false', () => {
@@ -255,7 +283,7 @@ describe('gergi kutusu HANGİ noktayı gösterir — tek okuyucu', () => {
     // Kutu MERKEZİ avara merkezinin mm konumunda olmalı: krank orijin, Y ters.
     const om = { x: org.x + org.width / 2, y: org.y + org.height / 2 };
     const tm = { x: t.x + t.width / 2, y: t.y + t.height / 2 };
-    expect(tm.x - om.x).toBeCloseTo(-161.97, 0);
+    expect(tm.x - om.x).toBeCloseTo(SX() * -161.97, 0);
     expect(tm.y - om.y).toBeCloseTo(-91.29, 0);
   });
 });
@@ -352,9 +380,11 @@ describe('sürükleme çözümü GERÇEKTEN değiştiriyor', () => {
 
     const once = veFeadBuildSystem(pack.nodes, pack.connections).beltLengthMm;
 
-    // Alternatörü kanvasta 40 px SOLA sürükle → mm'de −40
+    // Alternatörü kanvasta 40 px sürükle; YÖN çizim düzleminden, çünkü ölçülen
+    // şey X'in işareti değil "kanvas sürüklemesi çözümü değiştiriyor mu".
+    // mm'de her iki düzlemde de −40 (kranktan UZAĞA) olmalı.
     const alt = pack.nodes.find((n) => n.id === 'ex-ALT');
-    alt.x -= 40;
+    alt.x -= SX() * 40;
     M.veFeadSyncMmFromCanvas(pack.nodes, { origin: org });
     expect(alt.data.x).toBeCloseTo(-281 - 40, 1);
 

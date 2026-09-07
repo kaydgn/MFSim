@@ -170,10 +170,16 @@ function veFeadArrangeByCoords(opts){
   var maxY = Math.max.apply(null, mm.map(function(o){ return o.y; }));
   var ortX = (minX + maxX) / 2, ortY = (minY + maxY) / 2;
 
+  // ÇİZİM DÜZLEMİ BURADA DA GEÇERLİ. Bu, mm → px'in İKİNCİ yolu (küme
+  // ORTALANIR, orijine oturmaz — bu yüzden veFeadMmToCanvas kullanılamıyor).
+  // İşaret oradan alınmazsa "Otomatik Düzenle" ile alt topoloji açılışı ters el
+  // ile yerleştirir: kutu, kapatıp açınca X'te zıplar (kapı:
+  // cp-fead.test.js → "İKİ YERLEŞTİRME YOLU AYNI YERE KOYAR").
+  var sx = (typeof _feadPlaneSx === 'function') ? _feadPlaneSx() : 1;
   var yer = {};
   mm.forEach(function(o){
     var b = veFeadNodeBox(o.n);
-    yer[o.n.id] = { x: CX + (o.x - ortX) * s - b.w / 2,
+    yer[o.n.id] = { x: CX + sx * (o.x - ortX) * s - b.w / 2,
                     y: CY - (o.y - ortY) * s - b.h / 2 };   // Y TERS
   });
 
@@ -1075,7 +1081,8 @@ function getFeadPulleyPropertiesHTML(node){
       ], 3)
     + _feadHint('<b>Dış çap</b> girilir; pitch ve efektif yarıçapları çekirdek kayış profilinden '
         + 'türetir (kaburgalı: r<sub>pitch</sub>=OD/2+h<sub>b</sub>, r<sub>eff</sub>=OD/2). '
-        + 'Konum, kayış düzleminde (motor önden görünüş) kasnak merkezidir.'
+        + 'Konum, kayış düzleminde (Gates rapor düzlemi) kasnak merkezidir'
+        + ((typeof veFeadPlaneNote === 'function') ? _feadEsc(veFeadPlaneNote()) : '') + '.'
         // BAĞ KAPALIYKEN KUTU OYNAMAZ VE BUNU BURADA SÖYLER. Normalde bu üç
         // alan kanvastaki kutuyu da taşıyor (VE_FEAD_COORD_KEYS →
         // veFeadPlaceFromCoords); bağ kapalıyken taşımıyor. Sessiz bırakılsaydı
@@ -2642,7 +2649,7 @@ function veFeadLayoutSVG(build, W, H, opts){
   //
   // VERİ AYNALANMIYOR: build.sys ve bütün sayısal çıktılar Gates düzleminde
   // kalıyor (bkz. fead-model.js → VE_FEAD_VIEW_FRONT).
-  var _onGor = (typeof VE_FEAD_VIEW_FRONT !== 'undefined') && VE_FEAD_VIEW_FRONT
+  var _onGor = (typeof veFeadViewFront === 'function') && veFeadViewFront()
                && (typeof veFeadMirrorGeomX === 'function')
                && !(opts && opts.rawFrame === true);
   function geomAt(rel){
@@ -5254,7 +5261,9 @@ function veFeadHubTable(R){
         }).join('') + '</tr>';
   });
   h += '</table></div>';
-  return _feadCard('Hubload', 'çalışma (Mean) konumunda · büyüklük [N] / yön [°]', 'var(--accent-primary)', h);
+  return _feadCard('Hubload', 'çalışma (Mean) konumunda · büyüklük [N] / yön [°]'
+    + ((typeof veFeadPlaneNote === 'function') ? veFeadPlaneNote() : ''),
+    'var(--accent-primary)', h);
 }
 
 function veFeadFatigueTable(R){

@@ -62,12 +62,17 @@ function kur() {
   const org = M.veFeadOriginNode(ns);
   org.x = 3000; org.y = 3000;
   M.veFeadSyncCanvasFromMm(ns, { origin: org });
-  return {
-    nodes: ns, org,
-    alt: ns.find((n) => n.type === 'fead-alternator'),
-    ten: ns.find((n) => n.type === 'fead-tensioner'),
-  };
+  const alt = ns.find((n) => n.type === 'fead-alternator');
+  const ten = ns.find((n) => n.type === 'fead-tensioner');
+  // BAŞLANGIÇ PİKSEL KONUMU KAYIT ALTINDA. Kutuların mutlak px değeri çizim
+  // düzlemine bağlı (ön görünüşte X aynalanıyor, 2026-09-07); bu dosyanın
+  // ölçtüğü şey ise KONUM BAĞI — "sürükleme mm'ye yazıldı mı, kutu koordinata
+  // oturdu mu". Beklentiler mutlak sayı yerine bu tabana göre yazılıyor.
+  return { nodes: ns, org, alt, ten, alt0x: alt.x, alt0y: alt.y };
 }
+
+// Ekran X işareti: kanvas sürüklemesinin mm'ye hangi işaretle geçtiği.
+const SX = () => (M.VE_FEAD_VIEW_FRONT ? -1 : 1);
 
 const bag = (linked) => {
   const d = componentDefs['fead-coordlink'];
@@ -121,19 +126,20 @@ describe('sürükleme kapısı — veFeadSyncDrag', () => {
 
     s.alt.x += 40; s.alt.y -= 25;
     expect(fead.veFeadSyncDrag()).toBe(1);
-    expect(s.alt.data.x).toBeCloseTo(-241, 6);   // +40 px = +40 mm
+    expect(s.alt.data.x).toBeCloseTo(-281 + SX() * 40, 6);   // 40 px = 40 mm
     expect(s.alt.data.y).toBeCloseTo(284.46, 6); // −25 px (aşağı) = +25 mm (yukarı)
 
     // Gergi: taşınan şey AVARA MERKEZİ (tek koordinat)
+    const tenX0 = s.ten.data.cenX;
     s.ten.x -= 15; s.ten.y += 10;
     expect(fead.veFeadSyncDrag()).toBe(1);
-    expect(s.ten.data.cenX).toBeCloseTo(-185.08, 6);
+    expect(s.ten.data.cenX).toBeCloseTo(tenX0 - SX() * 15, 6);
     expect(s.ten.data.cenY).toBeCloseTo(89.16, 6);
 
     // ORİJİNİ sürüklemek diğer HERKESİ karşı yönde kaydırır
     s.org.x += 30;
     expect(fead.veFeadSyncDrag()).toBe(5);
-    expect(s.alt.data.x).toBeCloseTo(-271, 6);
+    expect(s.alt.data.x).toBeCloseTo(-281 + SX() * 10, 6);
   });
 
   test('bağ KAPALIYKEN sürükleme mm\'yi HİÇ değiştirmez', () => {
@@ -149,7 +155,7 @@ describe('sürükleme kapısı — veFeadSyncDrag', () => {
     expect(JSON.stringify([s.alt.data.x, s.alt.data.y, s.ten.data.pivotX, s.ten.data.pivotY]))
       .toBe(once);
     // Kutu GERÇEKTEN taşındı — kapatılan şey yazma, hareket değil.
-    expect(s.alt.x).toBeCloseTo(2764, 6);
+    expect(s.alt.x).toBeCloseTo(s.alt0x + 40, 6);
   });
 
   test('bağ AÇIK yazılı bir düğümle davranış tabanla AYNI', () => {
@@ -157,7 +163,7 @@ describe('sürükleme kapısı — veFeadSyncDrag', () => {
     global.nodes.push(bag(true));
     s.alt.x += 40; s.alt.y -= 25;
     expect(fead.veFeadSyncDrag()).toBe(1);
-    expect(s.alt.data.x).toBeCloseTo(-241, 6);
+    expect(s.alt.data.x).toBeCloseTo(-281 + SX() * 40, 6);
   });
 
   test('kapı SAF fonksiyonun içinde DEĞİL: veFeadSyncMmFromCanvas doğrudan çalışır', () => {
@@ -168,7 +174,7 @@ describe('sürükleme kapısı — veFeadSyncDrag', () => {
     global.nodes.push(bag(false));
     s.alt.x += 40;
     expect(M.veFeadSyncMmFromCanvas(global.nodes, { origin: s.org })).toBe(1);
-    expect(s.alt.data.x).toBeCloseTo(-241, 6);
+    expect(s.alt.data.x).toBeCloseTo(-281 + SX() * 40, 6);
   });
 });
 
@@ -178,7 +184,7 @@ describe('bağımsızlık SİMETRİK — veFeadPlaceFromCoords', () => {
     const s = kur();
     s.alt.x += 40; s.alt.y -= 25;
     expect(fead.veFeadPlaceFromCoords()).toBeGreaterThan(0);
-    expect(s.alt.x).toBeCloseTo(2724, 6);   // kur()'daki yerine döndü
+    expect(s.alt.x).toBeCloseTo(s.alt0x, 6);   // kur()'daki yerine döndü
     expect(s.alt.y).toBeCloseTo(2744.54, 6);
   });
 
@@ -189,8 +195,8 @@ describe('bağımsızlık SİMETRİK — veFeadPlaceFromCoords', () => {
     global.nodes.push(bag(false));
     s.alt.x += 40; s.alt.y -= 25;
     expect(fead.veFeadPlaceFromCoords()).toBe(0);
-    expect(s.alt.x).toBeCloseTo(2764, 6);
-    expect(s.alt.y).toBeCloseTo(2719.54, 6);
+    expect(s.alt.x).toBeCloseTo(s.alt0x + 40, 6);
+    expect(s.alt.y).toBeCloseTo(s.alt0y - 25, 6);
   });
 
   test('panelden koordinat yazmak da kutuyu KAPALIYKEN oynatmaz', () => {
@@ -225,7 +231,7 @@ describe('rozeti çevirmek', () => {
 
     expect(fead.veFeadToggleCoordLink(b.id)).toBe(true);
     expect([s.alt.data.x, s.alt.data.y]).toEqual(mmOnce);  // MODEL değişmedi
-    expect(s.alt.x).toBeCloseTo(2724, 6);                  // kutu geri oturdu
+    expect(s.alt.x).toBeCloseTo(s.alt0x, 6);               // kutu geri oturdu
     expect(s.alt.y).toBeCloseTo(2744.54, 6);
   });
 
@@ -256,7 +262,7 @@ describe('düğümü SİLMEK bağı açar — ve uzlaştırır', () => {
     expect(M.veFeadCoordLinkOn(global.nodes)).toBe(true);   // bağ AÇILDI
 
     expect(fead.veFeadCoordLinkAfterDelete(silinen)).toBeGreaterThan(0);
-    expect(s.alt.x).toBeCloseTo(2724, 6);         // kutu koordinatına oturdu
+    expect(s.alt.x).toBeCloseTo(s.alt0x, 6);      // kutu koordinatına oturdu
     expect(s.alt.y).toBeCloseTo(2744.54, 6);
     expect(s.alt.data.x).toBeCloseTo(-281, 6);    // model hiç değişmedi
   });
@@ -272,7 +278,7 @@ describe('düğümü SİLMEK bağı açar — ve uzlaştırır', () => {
 
     s.alt.x += 1;
     fead.veFeadSyncDrag();
-    expect(s.alt.data.x).toBeCloseTo(-280, 6);    // −281 + 1
+    expect(s.alt.data.x).toBeCloseTo(-281 + SX() * 1, 6);   // 1 px = 1 mm
   });
 
   test('AÇIK düğümü silmek bir şey oynatmaz (kutu ile mm zaten uyuşuyor)', () => {
@@ -290,7 +296,7 @@ describe('düğümü SİLMEK bağı açar — ve uzlaştırır', () => {
     s.alt.x += 80;
     global.nodes = global.nodes.filter((n) => n.id !== a.id);
     expect(fead.veFeadCoordLinkAfterDelete([a])).toBe(0);
-    expect(s.alt.x).toBeCloseTo(2804, 6);         // kutu yerinde kaldı
+    expect(s.alt.x).toBeCloseTo(s.alt0x + 80, 6);  // kutu yerinde kaldı
   });
 
   test('bağ düğümü OLMAYAN bir silme bedavadır', () => {
@@ -298,7 +304,7 @@ describe('düğümü SİLMEK bağı açar — ve uzlaştırır', () => {
     s.alt.x += 80;
     expect(fead.veFeadCoordLinkAfterDelete([s.ten])).toBe(0);
     expect(fead.veFeadCoordLinkAfterDelete([])).toBe(0);
-    expect(s.alt.x).toBeCloseTo(2804, 6);
+    expect(s.alt.x).toBeCloseTo(s.alt0x + 80, 6);
   });
 
   test('silme yolu bu kancayı GERÇEKTEN çağırıyor (js/map.js)', () => {
