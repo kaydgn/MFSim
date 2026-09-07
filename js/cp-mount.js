@@ -3206,6 +3206,11 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
   R.loadShares = (stat && stat.res && C.mountLoadShares) ? C.mountLoadShares(stat.res, prep.si.g) : null;
   R.damping    = (R.loadShares && C.mountDamping) ? C.mountDamping(prep.mounts, R.loadShares, prep.zeta, prep.kBasis) : null;
   R.kBasisTangent = !!prep.kBasis;                         // rapor notu: c hangi k'den türedi
+  R.kBasis     = prep.kBasis || null;                      // takoz başına dinamik tanjant [kx,ky,kz]
+  // Statik denge — geçici rejimin (şok) etrafında çözüldüğü çalışma noktası.
+  // Nonlineer yasada süperpozisyon geçmediği için kuvvet TOPLAM sehimde
+  // okunmalı; ±15 mm durdurucu boşluğu da yüksüz konumdan ölçülür.
+  R.qStatic    = (stat && stat.res) ? stat.res.q : null;
   R.components = prep.si.components;                       // modal enerji gövde dağılımı için
   // ── Sönümlü modal + modal enerji ──────────────────────────────────────────
   // Modları üreten AYNI M6/K ile hesaplanır (prep.solveModes bunları saklar).

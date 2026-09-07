@@ -261,18 +261,42 @@ var veMountCore = (function() {
   }
 
   // Rijitlik matrisi (SPEC 4.2): K = Σ Aᵢᵀ·kᵢ·Aᵢ (6×6, simetrik, poz. tanımlı).
-  // useDynamic=false → K_stat (statik çözümler), true → K_dyn (yalnız modal).
-  function buildK(mounts, cg, useDynamic){
+  //
+  // TEK ASSEMBLER. Rijitlik matrisini kuran üç yol vardı (buildK, buildKtangentDyn
+  // ve FRF/şok içindeki yerel kurulumlar) ve üçü ayrı ayrı yazılmıştı; biri
+  // nominal k_dyn'den, biri statik dengedeki tanjanttan besleniyordu → aynı
+  // panoda modal frekans ile FRF tepesi AYRIŞIYORDU (ölçüldü: 14,317 Hz'lik mod,
+  // 13,958 Hz'de tepe yapan eğri). Artık matrisi kuran tek fonksiyon budur ve
+  // farkı taşıyan tek şey TABANDIR (takoz başına [kx,ky,kz]).
+  function buildKfromBasis(mounts, cg, kb){
     const K=zeros(6,6);
-    for(const mnt of mounts){
+    (mounts||[]).forEach(function(mnt, i){
       const d=[mnt.pos[0]-cg[0], mnt.pos[1]-cg[1], mnt.pos[2]-cg[2]];
       const A=makeA(d);
-      const k = useDynamic ? mnt.kdyn : mnt.kstat;
+      const k=(kb && kb[i]) ? kb[i] : [0,0,0];
       const Ki=[[k[0],0,0],[0,k[1],0],[0,0,k[2]]];
-      const AtKiAi=matMul(matMul(matT(A),Ki),A);
-      addInPlace(K, AtKiAi);
-    }
+      addInPlace(K, matMul(matMul(matT(A),Ki),A));
+    });
     return K;
+  }
+
+  // Dinamik rijitlik TABANI — takoz başına [kx,ky,kz].
+  // kBasis verilmişse o (mountTangentKdyn çıktısı: statik dengedeki dinamik
+  // tanjant), yoksa nominal mnt.kdyn. K6, takoz başına kuvvet geri kazanımı ve
+  // sönüm katsayıları AYNI diziden beslenmek zorundadır — yoksa sistem toplamı
+  // ile parçaları, ya da modal frekans ile FRF tepesi sessizce ayrışır.
+  function dynStiffBasis(mounts, kBasis){
+    return (mounts||[]).map(function(mnt, i){
+      const kb = kBasis && kBasis[i];
+      return (kb && kb.length===3) ? kb : (mnt.kdyn || [0,0,0]);
+    });
+  }
+
+  // useDynamic=false → K_stat (statik çözümler), true → K_dyn (nominal).
+  function buildK(mounts, cg, useDynamic){
+    return buildKfromBasis(mounts, cg, (mounts||[]).map(function(mnt){
+      return (useDynamic ? mnt.kdyn : mnt.kstat) || [0,0,0];
+    }));
   }
 
   // Kütle matrisi (SPEC 4.1): M6 = blockdiag(m·E3, I_G).
@@ -537,6 +561,11 @@ var veMountCore = (function() {
   // Dönüş biçimi solveCaseStop ile AYNI + checks.converged (Newton) & checks.newtonIters.
   const NL_NEWTON_MAXITER = 60;
   const NL_RTOL = 1e-9;
+  // Geçici rejimde adım başına Newton üst sınırı. Statiktekinden (60) küçük:
+  // her adım bir öncekinin çözümünden başlıyor, yani başlangıç tahmini çok iyi
+  // — tipik 2-3 iterasyon. 20'yi aşan bir adım yakınsama sorununun işaretidir
+  // ve out.converged=false ile SÖYLENİR (sessizce kırpılmaz).
+  const SHOCK_NEWTON_MAXITER = 20;
   function solveCaseNL(mounts, cg, m, g, lc, opts){
     opts = opts || {};
     const gap   = (opts.gap != null)        ? opts.gap        : STOP_GAP_M;
@@ -781,6 +810,14 @@ var veMountCore = (function() {
   // fonksiyon: c = 2ζ√(k·m) bağıntısındaki k, modal frekansı üreten k ile aynı
   // olmalıdır; yoksa ζ_mod tutarsız bir tabana oturur (nonlineer takozlarda
   // nominal k_dyn ile tanjant arasında kat farkı olabilir).
+  // Dinamik/statik rijitlik oranı (eksen başına). mountTangentKdyn (modal) ile
+  // mountDynamicLaws (geçici rejim) AYNI orandan beslenir — biri ölçeklerken
+  // öteki ölçeklemezse şok çözümü modal frekansa oturmaz.
+  function dynRatio(mnt, ax){
+    const ks = mnt && mnt.kstat && mnt.kstat[ax];
+    const kd = mnt && mnt.kdyn  && mnt.kdyn[ax];
+    return (ks > 0 && Number.isFinite(kd)) ? (kd/ks) : 1;
+  }
   function mountTangentKdyn(mounts, cg, qStatic){
     return (mounts||[]).map(function(mnt){
       const d=[mnt.pos[0]-cg[0], mnt.pos[1]-cg[1], mnt.pos[2]-cg[2]];
@@ -788,23 +825,28 @@ var veMountCore = (function() {
       const laws=mountStaticLaws(mnt);
       return [0,1,2].map(function(ax){
         const dax = qStatic ? A[ax].reduce((s,a,j)=>s+a*qStatic[j],0) : 0;
-        const kStat = laws[ax].tangent(dax);                           // statik tanjant @ δ
-        const ratio = (mnt.kstat && mnt.kstat[ax]>0) ? (mnt.kdyn[ax]/mnt.kstat[ax]) : 1;
-        return kStat * ratio;                                          // dinamik tanjant
+        return laws[ax].tangent(dax) * dynRatio(mnt, ax);              // dinamik tanjant @ δ
       });
     });
   }
   function buildKtangentDyn(mounts, cg, qStatic){
-    const K=zeros(6,6);
-    const kts=mountTangentKdyn(mounts, cg, qStatic);
-    mounts.forEach(function(mnt, i){
-      const d=[mnt.pos[0]-cg[0], mnt.pos[1]-cg[1], mnt.pos[2]-cg[2]];
-      const A=makeA(d);
-      const kt=kts[i];
-      const Ki=[[kt[0],0,0],[0,kt[1],0],[0,0,kt[2]]];
-      addInPlace(K, matMul(matMul(matT(A),Ki),A));
+    return buildKfromBasis(mounts, cg, mountTangentKdyn(mounts, cg, qStatic));
+  }
+
+  // Takozun DİNAMİK eksen yasaları: statik yasa × (k_dyn/k_stat).
+  // Lineer takozda φ_dyn = k_stat·δ·(k_dyn/k_stat) = k_dyn·δ → mevcut lineer
+  // geçici rejim yolu ile BİREBİR aynı. Eğrili takozda tanjantı tam olarak
+  // mountTangentKdyn'in verdiği değerdir (aynı dynRatio) — yani şok çözümünün
+  // küçük genlik limiti modal frekansa oturur.
+  function mountDynamicLaws(mount){
+    const laws=mountStaticLaws(mount);
+    return laws.map(function(law, ax){
+      const r=dynRatio(mount, ax);
+      if(r===1) return law;
+      return { force:function(d){ return r*law.force(d); },
+               tangent:function(d){ return r*law.tangent(d); },
+               k0:r*law.k0, curve:law.curve };
     });
-    return K;
   }
 
   // Statik denge (qStatic) çevresinde dinamik tanjant rijitlikle modal analiz.
@@ -1106,7 +1148,11 @@ var veMountCore = (function() {
   // Takoz başına değer aynı çözüm vektöründen çıkar: ek denklem çözülmez,
   // maliyeti sıfırdır. Ayrı bir yol yazılsaydı toplam ile parçalar sessizce
   // ayrışabilirdi.
-  function frfForces(mounts, cg, M6, K6, C6, cList, w, dir){
+  // kb (ops.): takoz başına dinamik rijitlik tabanı [kx,ky,kz] — K6'yı kuran
+  // TABANIN AYNISI olmalıdır. Verilmezse nominal mnt.kdyn. Sistem toplamı K6'dan,
+  // takoz başına kuvvet buradan çıktığı için ikisi farklı tabandan beslenirse
+  // Σ|Fᵢ| ile sistem yanıtı sessizce ayrışır.
+  function frfForces(mounts, cg, M6, K6, C6, cList, w, dir, kb){
     const n = 6, N = 12;
     const S = zeros(N,N), rhs = Array(N).fill(0);
     for(let i=0;i<n;i++) for(let j=0;j<n;j++){
@@ -1119,13 +1165,14 @@ var veMountCore = (function() {
     const x = solveLinear(S, rhs);
     if(!x) return null;
     const QR = x.slice(0,6), QI = x.slice(6,12);
+    const kbase = dynStiffBasis(mounts, kb);
     let trR = 0, trI = 0;
     const per = [];
     for(let i=0;i<mounts.length;i++){
       const mnt = mounts[i];
       const d = [mnt.pos[0]-cg[0], mnt.pos[1]-cg[1], mnt.pos[2]-cg[2]];
       const A = makeA(d);
-      const k = (mnt.kdyn && mnt.kdyn[dir] > 0) ? mnt.kdyn[dir] : 0;
+      const k = (kbase[i][dir] > 0) ? kbase[i][dir] : 0;
       const c = (cList && cList[i] && cList[i][dir] > 0) ? cList[i][dir] : 0;
       let dR = 0, dI = 0;
       for(let j=0;j<6;j++){ dR += A[dir][j]*QR[j]; dI += A[dir][j]*QI[j]; }
@@ -1137,9 +1184,24 @@ var veMountCore = (function() {
     return { total: Math.sqrt(trR*trR + trI*trI), per: per };   // |F₀| = 1
   }
 
-  function frfPoint(mounts, cg, M6, K6, C6, cList, w, dir){
-    const r = frfForces(mounts, cg, M6, K6, C6, cList, w, dir);
+  function frfPoint(mounts, cg, M6, K6, C6, cList, w, dir, kb){
+    const r = frfForces(mounts, cg, M6, K6, C6, cList, w, dir, kb);
     return r ? r.total : NaN;
+  }
+
+  // Rijitlik tabanının TEK çözümü. Öncelik: açık opts.kBasis → damping
+  // kayıtlarının taşıdığı kBasis (mountDamping onu saklar) → nominal k_dyn.
+  //
+  // NEDEN damping'ten de okunuyor: c = 2ζ√(k·m) bağıntısındaki k ile K6'yı
+  // kuran k AYNI olmak zorunda. Sönümü tanjanttan, rijitliği nominalden almak
+  // tam olarak düzeltilen hataydı; tabanı damping'ten türetmek çağıran her
+  // yerin ayrıca parametre geçmesini gereksiz kılar (unutulamaz).
+  function resolveKBasis(mounts, damping, explicit){
+    if(explicit) return explicit;
+    if(damping && damping.length && damping.some(function(d){ return d && d.kBasis; }))
+      return (mounts||[]).map(function(_, i){
+        return (damping[i] && damping[i].kBasis) ? damping[i].kBasis : null; });
+    return null;
   }
 
   // Frekans taraması. opts: { fMin=0.1, fMax=100, nPts=240, dir=2 (düşey),
@@ -1153,7 +1215,8 @@ var veMountCore = (function() {
     const nPts = (opts.nPts > 1) ? Math.floor(opts.nPts) : 240;
     const dir  = (opts.dir === 0 || opts.dir === 1) ? opts.dir : 2;
     if(!mounts || !mounts.length || !M6) return null;
-    const K6 = buildK(mounts, cg, true);                       // dinamik rijitlik
+    const kb = dynStiffBasis(mounts, resolveKBasis(mounts, damping, opts.kBasis));
+    const K6 = buildKfromBasis(mounts, cg, kb);                // dinamik rijitlik (tanjant tabanı)
     const C6 = buildCdamp(mounts, cg, damping);
     const Z6 = zeros(6,6);                                     // sönümsüz karşılaştırma
     const cList = (mounts).map(function(_, i){
@@ -1166,10 +1229,10 @@ var veMountCore = (function() {
       const ff = Math.pow(10, lo + (hi-lo)*i/(nPts-1));
       const w = 2*Math.PI*ff;
       f.push(ff);
-      const r = frfForces(mounts, cg, M6, K6, C6, cList, w, dir);
+      const r = frfForces(mounts, cg, M6, K6, C6, cList, w, dir, kb);
       T.push(r ? r.total : NaN);
       if(Tm) mounts.forEach(function(_, k){ Tm[k].push(r ? r.per[k] : NaN); });
-      T0.push(frfPoint(mounts, cg, M6, K6, Z6, zeroC, w, dir));
+      T0.push(frfPoint(mounts, cg, M6, K6, Z6, zeroC, w, dir, kb));
     }
     const out = { f:f, T:T, T0:T0, dir:dir };
     if(Tm) out.Tm = Tm;
@@ -1178,14 +1241,18 @@ var veMountCore = (function() {
 
   // Taramadan tek frekansta değer (ör. f_ateş) — logaritmik ara değerleme.
   // Izgara dışında uçtaki değere kırpılır.
-  function frfAt(mounts, cg, M6, damping, fHz, dir){
+  // kBasis (ops.): damping null geçilse bile (sönümsüz karşılaştırma eğrisi)
+  // rijitlik tabanı korunsun diye AÇIK parametre. Verilmezse damping'ten,
+  // o da yoksa nominal k_dyn'den çözülür.
+  function frfAt(mounts, cg, M6, damping, fHz, dir, kBasis){
     if(!(fHz > 0)) return NaN;
-    const K6 = buildK(mounts, cg, true);
+    const kb = dynStiffBasis(mounts, resolveKBasis(mounts, damping, kBasis));
+    const K6 = buildKfromBasis(mounts, cg, kb);
     const C6 = buildCdamp(mounts, cg, damping);
     const cList = (mounts || []).map(function(_, i){
       return (damping && damping[i] && damping[i].c) ? damping[i].c : [0,0,0]; });
     return frfPoint(mounts, cg, M6, K6, C6, cList, 2*Math.PI*fHz,
-                    (dir === 0 || dir === 1) ? dir : 2);
+                    (dir === 0 || dir === 1) ? dir : 2, kb);
   }
 
   // ═══════════ Şok / geçici rejim yanıtı ═══════════
@@ -1221,13 +1288,34 @@ var veMountCore = (function() {
   //   • M, C, K sabit → etkin matris BİR KEZ kurulur, her adımda yalnız 6×6
   //     çözüm yapılır.
   //
-  // LİNEER ÇÖZÜM: dinamik rijitlik (kdyn) kullanılır, nonlineer eğri ve
-  // metal-metal durdurucu DEVREDE DEĞİLDİR — frekans yanıtıyla aynı varsayım.
-  // Genlik durdurucu boşluğunu aşarsa çözüm oradan sonra geçersizdir ve yorum
-  // katmanı bunu SÖYLER (uydurma bir sınır uygulamak yerine).
+  // NONLİNEER ÇÖZÜM — ADIM BAŞINA NEWTON. Eskiden burası tümüyle lineerdi:
+  // sabit K_dyn, adım başına tek doğrudan çözüm, nonlineer eğri de metal-metal
+  // durdurucu da devre dışı. Statik çözücü aynı modeli Newton ile çözerken
+  // (solveCaseNL) geçici rejim çözmüyordu; ölçülen fark 3,5 g'de %32 idi
+  // (sertleşen takozda lineer yol çökmeyi bu kadar FAZLA gösteriyor). Adams'ın
+  // her Δt'de koştuğu Newton–Raphson'ın karşılığı artık burada:
+  //
+  //   r(q) = Ψ(q) + M[a₀(q−qₙ) − a₂q̇ₙ − a₃q̈ₙ] + C[a₁(q−qₙ) − a₄q̇ₙ − a₅q̈ₙ] − F(t)
+  //   Ψ(q) = g(q₀+q) − g(q₀)          (statik dengeye GÖRE iç kuvvet artışı)
+  //   J    = K_T(q) + a₀M + a₁C ,   J·Δq = −r
+  //
+  // NEDEN q₀ (statik denge) GEREKİYOR: q bu çözümde statik dengeden sapmadır,
+  // yerçekimi süperpozisyonla düşürülmüştür. Nonlineer yasada süperpozisyon
+  // GEÇMEZ — kuvvet TOPLAM sehimde (δ = A·(q₀+q)) değerlendirilmeli, yoksa
+  // önyüklü takoz eğrinin yanlış yerinden okunur. Aynı gerekçe durdurucu için
+  // de geçerli: ±15 mm boşluk yüksüz konumdan ölçülür.
+  //
+  // Durdurucu burada NOKTASAL (aktif-küme dış döngüsü YOK): temas kuvveti
+  // doğrudan yasanın parçası. solveCaseStop'un dış döngüsü statikte tek bir
+  // dengeyi arar; burada zaten adım başına Newton var, aynı işi o yapıyor.
+  // Yakınsamada ikisi aynı sonucu verir.
+  //
+  // GERİYE UYUM: eğrisiz takoz + useStop kapalı → Ψ(q)=K_dyn·q, tanjant sabit
+  // → Newton'a hiç girilmez, ESKİ lineer yol (bir kez kurulan K_eff) korunur.
   //
   // Dönüş: { t:[s], a:[g], q:[[6]], qd:[[6]], per:[{f:[N], fz:[N], d:[mm]}],
-  //          dMax:[mm], dir, aPeak, dur }
+  //          dMax:[mm], dTotMax:[mm], dir, aPeak, dur,
+  //          nonlinear, useStop, stopHit, converged, newtonIters }
   function shockResponse(mounts, cg, M6, damping, opts){
     opts = opts || {};
     if(!mounts || !mounts.length || !M6) return null;
@@ -1235,8 +1323,25 @@ var veMountCore = (function() {
     const g   = (opts.g > 0) ? opts.g : 9.81;
     const A   = (opts.aG > 0) ? opts.aG : 3;          // darbe tepe ivmesi [g]
     const tau = (opts.dur > 0) ? opts.dur : 0.020;    // darbe süresi [s]
-    const K6 = buildK(mounts, cg, true);              // dinamik rijitlik
+    const gap   = (opts.gap != null)        ? opts.gap        : STOP_GAP_M;
+    const ratio = (opts.stiffRatio != null) ? opts.stiffRatio : STOP_STIFF_RATIO;
+    const wantStop = !!opts.useStop;                  // çekirdek varsayılanı KAPALI
+                                                      // (solveAllCases ile aynı kural)
+    // Rijitlik tabanı: FRF ve modal ile AYNI kaynaktan (statik dengedeki dinamik
+    // tanjant). Verilmezse nominal k_dyn → eski davranış.
+    const kb = dynStiffBasis(mounts, resolveKBasis(mounts, damping, opts.kBasis));
+    const K6 = buildKfromBasis(mounts, cg, kb);       // dinamik rijitlik
     const C6 = buildCdamp(mounts, cg, damping);
+    // q₀: statik denge (solveCase*'ın q'su). Yoksa sıfır → yüksüz konum çevresi.
+    const q0 = (opts.q0 && opts.q0.length === 6) ? opts.q0 : [0,0,0,0,0,0];
+    // Newton yolu YALNIZ gerekiyorsa: eğrili takoz ya da durdurucu istendiğinde.
+    const nl = (opts.nonlinear != null) ? !!opts.nonlinear : (anyCurve(mounts) || wantStop);
+    // Durdurucu ancak Newton yolunda çözülebilir (temas kuvveti yasanın parçası).
+    // nonlinear:false + useStop:true çelişkili bir istektir; bayrak SOLDUĞU
+    // hâliyle döner ki yorum katmanı modellenmemiş bir temastan söz etmesin —
+    // "durdurucu modelde var" diyen bir cümlenin arkasında gerçekten temas
+    // olmalı, bayrağın kendisi değil.
+    const useStop = wantStop && nl;
 
     // Kayıt süresi: darbe + en yavaş modun birkaç çevrimi. Sabit bir süre
     // (ör. 1 s) yumuşak montajda salınımın başını, sert montajda saatlerce
@@ -1267,15 +1372,73 @@ var veMountCore = (function() {
     const a0 = 1/(beta*dt*dt), a1 = gamma/(beta*dt), a2 = 1/(beta*dt);
     const a3 = 1/(2*beta) - 1, a4 = gamma/beta - 1, a5 = dt*(gamma/(2*beta) - 1);
 
-    const Keff = zeros(6,6);
-    for(let i=0;i<6;i++) for(let j=0;j<6;j++) Keff[i][j] = K6[i][j] + a0*M6[i][j] + a1*C6[i][j];
-
-    // Takoz geometrisi bir kez
+    // Takoz geometrisi + dinamik yasalar bir kez
     const AA = mounts.map(function(mnt){
       return makeA([mnt.pos[0]-cg[0], mnt.pos[1]-cg[1], mnt.pos[2]-cg[2]]);
     });
     const cList = mounts.map(function(_, i){
       return (damping && damping[i] && damping[i].c) ? damping[i].c : [0,0,0]; });
+    const laws = nl ? mounts.map(mountDynamicLaws) : null;
+
+    // Statik dengedeki takoz sehimi (m) — nonlineer yasa ve durdurucu TOPLAM
+    // sehimden okunmak zorunda; ayrıca kuvvet artışının referansı budur.
+    const d0 = AA.map(function(Ai){
+      return [0,1,2].map(function(r){
+        let v=0; for(let c=0;c<6;c++) v += Ai[r][c]*q0[c]; return v; });
+    });
+
+    // Takozun z eksenindeki metal-metal temas kuvveti ve tanjant katkısı.
+    // Statik çözücüyle AYNI tanım: k_stop = STOP_STIFF_RATIO · k_stat,z
+    // (temas çeliktir — dinamik/statik oranı uygulanmaz).
+    function stopForce(i, dz){
+      if(!useStop) return 0;
+      const kS = ((mounts[i].kstat ? mounts[i].kstat[2] : 0) || 0) * ratio;
+      if(dz >  gap) return kS*(dz - gap);
+      if(dz < -gap) return kS*(dz + gap);
+      return 0;
+    }
+    function stopTangent(i, dz){
+      if(!useStop || Math.abs(dz) <= gap) return 0;
+      return ((mounts[i].kstat ? mounts[i].kstat[2] : 0) || 0) * ratio;
+    }
+
+    // TOPLAM yer değiştirmede iç genelleştirilmiş kuvvet (+ tanjant).
+    function internal(x, wantK){
+      const g6=[0,0,0,0,0,0];
+      const KT=wantK?zeros(6,6):null;
+      for(let i=0;i<mounts.length;i++){
+        const Ai=AA[i], law=laws[i];
+        const d=[0,0,0];
+        for(let r=0;r<3;r++){ let v=0; for(let c=0;c<6;c++) v += Ai[r][c]*x[c]; d[r]=v; }
+        const f=[law[0].force(d[0]), law[1].force(d[1]), law[2].force(d[2]) + stopForce(i, d[2])];
+        for(let a=0;a<6;a++) g6[a] += Ai[0][a]*f[0] + Ai[1][a]*f[1] + Ai[2][a]*f[2];
+        if(wantK){
+          const kt=[law[0].tangent(d[0]), law[1].tangent(d[1]),
+                    law[2].tangent(d[2]) + stopTangent(i, d[2])];
+          for(let ax=0;ax<3;ax++){ const kk=kt[ax], row=Ai[ax];
+            for(let a=0;a<6;a++){ const t=kk*row[a]; for(let b=0;b<6;b++) KT[a][b]+=t*row[b]; } }
+        }
+      }
+      return {g6, KT};
+    }
+    // Statik dengedeki iç kuvvet — Ψ(0)=0 olsun diye bir kez.
+    const gStat = nl ? internal(q0, false).g6 : null;
+    // Statik takoz kuvveti (dinamik yasadan) — kuvvet ARTIŞININ referansı.
+    const fStat = nl ? mounts.map(function(_, i){
+      const law=laws[i], dd=d0[i];
+      return [law[0].force(dd[0]), law[1].force(dd[1]), law[2].force(dd[2]) + stopForce(i, dd[2])];
+    }) : null;
+
+    // Lineer yolda etkin matris BİR KEZ kurulur; Newton yolunda her adımda
+    // tanjanttan yeniden (K_T değişiyor — değişmediğini varsaymak tam olarak
+    // düzeltilen hataydı).
+    const Keff = nl ? null : (function(){
+      const E = zeros(6,6);
+      for(let i=0;i<6;i++) for(let j=0;j<6;j++) E[i][j] = K6[i][j] + a0*M6[i][j] + a1*C6[i][j];
+      return E;
+    })();
+    const tol = NL_RTOL * (M6[0][0]*A*g + 1);
+    let newtonIters = 0, converged = true, stopHit = false;
 
     // a(t): yarım sinüs [m/s²]
     const aOf = function(t){
@@ -1293,52 +1456,121 @@ var veMountCore = (function() {
     // kalsın diye çözülür (başka darbe biçimi eklenirse doğru başlar).
     let qdd = solveLinear(M6, Fof(0)) || [0,0,0,0,0,0];
 
-    const out = { t: [], a: [], q: [], qd: [], dMax: [],
+    const out = { t: [], a: [], q: [], qd: [], dMax: [], dTotMax: [],
                   per: mounts.map(function(){ return { f: [], fz: [], d: [] }; }),
-                  dir: dir, aPeak: A, dur: tau, dt: dt, tEnd: tEnd };
+                  dir: dir, aPeak: A, dur: tau, dt: dt, tEnd: tEnd,
+                  nonlinear: nl, useStop: useStop, q0: q0.slice(),
+                  d0: d0.map(function(d){
+                    return Math.sqrt(d[0]*d[0]+d[1]*d[1]+d[2]*d[2])*1000; }) };
 
     const record = function(t, q_, qd_){
       out.t.push(t);
       out.a.push(aOf(t)/g);                       // kayıtta [g]
       out.q.push(q_.slice());
       out.qd.push(qd_.slice());
-      let worst = 0;
+      let worst = 0, worstTot = 0;
       for(let i=0;i<mounts.length;i++){
         const Ai = AA[i];
         let dR=[0,0,0], vR=[0,0,0];
         for(let r=0;r<3;r++){
-          let s=0, sv=0;
-          for(let c=0;c<6;c++){ s += Ai[r][c]*q_[c]; sv += Ai[r][c]*qd_[c]; }
-          dR[r]=s; vR[r]=sv;
+          let sv=0, svv=0;
+          for(let c=0;c<6;c++){ sv += Ai[r][c]*q_[c]; svv += Ai[r][c]*qd_[c]; }
+          dR[r]=sv; vR[r]=svv;
         }
-        const k = mounts[i].kdyn || [0,0,0], cc = cList[i];
-        const fv = [k[0]*dR[0] + cc[0]*vR[0],
-                    k[1]*dR[1] + cc[1]*vR[1],
-                    k[2]*dR[2] + cc[2]*vR[2]];
+        const cc = cList[i];
+        // Kuvvet, statik dengeye GÖRE artıştır (kanalın bugünkü anlamı korunur:
+        // statik pay Sonuçlar'ın yük durumu tablosunda zaten var). Lineer
+        // takozda φ(δ₀+δ)−φ(δ₀) = k·δ → eski değerle BİREBİR aynı.
+        let fv;
+        if(nl){
+          const law=laws[i], dd=d0[i], fs=fStat[i];
+          const tz = dd[2]+dR[2];
+          fv = [law[0].force(dd[0]+dR[0]) - fs[0] + cc[0]*vR[0],
+                law[1].force(dd[1]+dR[1]) - fs[1] + cc[1]*vR[1],
+                law[2].force(tz) + stopForce(i, tz) - fs[2] + cc[2]*vR[2]];
+          if(useStop && Math.abs(tz) > gap) stopHit = true;
+        } else {
+          const k = kb[i];
+          fv = [k[0]*dR[0] + cc[0]*vR[0],
+                k[1]*dR[1] + cc[1]*vR[1],
+                k[2]*dR[2] + cc[2]*vR[2]];
+        }
         out.per[i].f.push(Math.sqrt(fv[0]*fv[0]+fv[1]*fv[1]+fv[2]*fv[2]));
         out.per[i].fz.push(fv[2]);
         const dm = Math.sqrt(dR[0]*dR[0]+dR[1]*dR[1]+dR[2]*dR[2])*1000;
         out.per[i].d.push(dm);
         if(dm > worst) worst = dm;
+        // TOPLAM sehim (statik + darbe) — ±15 mm durdurucu boşluğu YÜKSÜZ
+        // konumdan ölçülür, dolayısıyla sınırla karşılaştırılacak büyüklük budur.
+        const dd0 = d0[i];
+        const tx = dd0[0]+dR[0], ty = dd0[1]+dR[1], tz2 = dd0[2]+dR[2];
+        const dt2 = Math.sqrt(tx*tx + ty*ty + tz2*tz2)*1000;
+        if(dt2 > worstTot) worstTot = dt2;
       }
       out.dMax.push(worst);
+      out.dTotMax.push(worstTot);
     };
 
     record(0, q, qd);
     for(let n=1;n<=nStep;n++){
       const t = n*dt;
       const F = Fof(t);
-      const rhs = [0,0,0,0,0,0];
-      for(let i=0;i<6;i++){
-        let mTerm=0, cTerm=0;
-        for(let j=0;j<6;j++){
-          mTerm += M6[i][j]*(a0*q[j] + a2*qd[j] + a3*qdd[j]);
-          cTerm += C6[i][j]*(a1*q[j] + a4*qd[j] + a5*qdd[j]);
+      let qn;
+      if(!nl){
+        // ── Lineer yol (ESKİ): sabit K_eff, adım başına tek çözüm ──
+        const rhs = [0,0,0,0,0,0];
+        for(let i=0;i<6;i++){
+          let mTerm=0, cTerm=0;
+          for(let j=0;j<6;j++){
+            mTerm += M6[i][j]*(a0*q[j] + a2*qd[j] + a3*qdd[j]);
+            cTerm += C6[i][j]*(a1*q[j] + a4*qd[j] + a5*qdd[j]);
+          }
+          rhs[i] = F[i] + mTerm + cTerm;
         }
-        rhs[i] = F[i] + mTerm + cTerm;
+        qn = solveLinear(Keff, rhs);
+        if(!qn) return null;
+      } else {
+        // ── Newton yolu: adım başına denge iterasyonu ──
+        const qP=q, qdP=qd, qddP=qdd;
+        const evalR = function(x, wantK){
+          const tot = [0,0,0,0,0,0];
+          for(let i=0;i<6;i++) tot[i] = q0[i] + x[i];
+          const asm = internal(tot, wantK);
+          const r=[0,0,0,0,0,0];
+          for(let i=0;i<6;i++){
+            let mT=0, cT=0;
+            for(let j=0;j<6;j++){
+              mT += M6[i][j]*(a0*(x[j]-qP[j]) - a2*qdP[j] - a3*qddP[j]);
+              cT += C6[i][j]*(a1*(x[j]-qP[j]) - a4*qdP[j] - a5*qddP[j]);
+            }
+            r[i] = asm.g6[i] - gStat[i] + mT + cT - F[i];
+          }
+          return {r:r, KT:asm.KT};
+        };
+        let x = q.slice(), ok = false;
+        for(let it=0; it<SHOCK_NEWTON_MAXITER; it++){
+          newtonIters++;
+          const e = evalR(x, true);
+          const rn = norm(e.r);
+          if(rn <= tol){ ok = true; break; }
+          const J = zeros(6,6);
+          for(let i=0;i<6;i++) for(let j=0;j<6;j++)
+            J[i][j] = e.KT[i][j] + a0*M6[i][j] + a1*C6[i][j];
+          const dq = solveLinear(J, e.r.map(function(v){ return -v; }));
+          if(!dq) return null;
+          // Geri-izlemeli sönüm — solveCaseNL ile aynı: adım artığı büyütürse yarıla.
+          let lam=1, xn=x.map(function(v,i){ return v+dq[i]; });
+          let rnn=norm(evalR(xn,false).r), bt=0;
+          while(rnn>rn && bt<12){
+            lam*=0.5; xn=x.map(function(v,i){ return v+lam*dq[i]; });
+            rnn=norm(evalR(xn,false).r); bt++;
+          }
+          x = xn;
+          if(rnn <= tol){ ok = true; break; }
+        }
+        if(!ok) converged = false;
+        qn = x;
       }
-      const qn = solveLinear(Keff, rhs);
-      if(!qn) return null;
       const qddN = [], qdN = [];
       for(let i=0;i<6;i++){
         qddN.push(a0*(qn[i]-q[i]) - a2*qd[i] - a3*qdd[i]);
@@ -1347,6 +1579,9 @@ var veMountCore = (function() {
       q = qn; qd = qdN; qdd = qddN;
       if(n % every === 0 || n === nStep) record(t, q, qd);
     }
+    out.stopHit = stopHit;
+    out.converged = converged;
+    out.newtonIters = newtonIters;
     return out;
   }
 
@@ -2039,7 +2274,7 @@ var veMountCore = (function() {
 
   return {
     // Model
-    combineMassProps, buildK, buildM6, buildModel,
+    combineMassProps, buildK, buildKfromBasis, dynStiffBasis, buildM6, buildModel,
     solveCase, solveCaseStop, solveCaseNL, solveAllCases, solveModal,
     buildKtangentDyn, mountTangentKdyn, solveModalAtState,
     transmissibility, bounceFrequency,
@@ -2055,7 +2290,8 @@ var veMountCore = (function() {
     // Birim dönüşümleri (UI katmanı için)
     mmToM, nPerMmToNPerM,
     // Constitutive — takoz kuvvet yasası (Newton çözücüsü + testler için)
-    buildMonotoneCubic, makeAxisLaw, mountStaticLaws, mountHasCurve, anyCurve,
+    buildMonotoneCubic, makeAxisLaw, mountStaticLaws, mountDynamicLaws,
+    mountHasCurve, anyCurve,
     // Numerik yardımcılar (test/ileri kullanım)
     solveLinear, cholesky, jacobiEigenSym, generalizedEigenSym,
     // Sabitler

@@ -450,8 +450,12 @@ function _mntRepNLNote(R){
     + '<b>Nonlineer çözüm.</b> '+nl.length+' takoz ('+names+') nonlineer kuvvet–sehim yasası taşır; '
     + 'denge doğrudan lineer ters-çözüm yerine <b>Newton-Raphson</b> ile bulunmuştur '
     + '(tanjant rijitlik K<sub>T</sub> = Σ&nbsp;Aᵀ&nbsp;φ′(δ)&nbsp;A). Lineer ve nonlineer takozlar tek bağlı '
-    + 'sistemde birlikte çözülür; modal analiz statik dengedeki tanjant rijitlikle yapılır '
-    + '(önyüklü çalışma noktası). Yakınsama: '+conv+'.</div>';
+    + 'sistemde birlikte çözülür. <b>Modal analiz, frekans yanıtı ve geçici rejim aynı '
+    + 'tabandan beslenir:</b> statik dengedeki dinamik tanjant rijitlik (önyüklü çalışma '
+    + 'noktası) — doğal frekans, iletilebilirlik tepesi ve şok salınımı böylece aynı '
+    + 'frekansı gösterir. Geçici rejimde denge <b>her zaman adımında</b> yeniden '
+    + 'iterasyonla bulunur (Newmark-β + Newton); metal-metal durdurucu temas kuvveti '
+    + 'yasanın parçasıdır. Yakınsama: '+conv+'.</div>';
 }
 
 // ─── Geometri (mm) — R.gather'dan sayısal; birleşik CG R.mp'den (otorite) ────
@@ -1369,7 +1373,10 @@ function _mntRepFRF(R, opts){
   // ── SDOF kestirimi ile karşılaştırma: kestirim ne kadar iyi? ──
   if(Number.isFinite(fFire)){
     var Td=C.frfAt(R.mounts, R.mp.cg, M6, R.damping, fFire, 2);
-    var Tu=C.frfAt(R.mounts, R.mp.cg, M6, null,       fFire, 2);
+    // Sönümsüz eğri AYNI rijitlik tabanından okunmalı: damping null geçildiği
+    // için taban ondan çözülemez, açıkça verilir. Yoksa iki sütun (sönümlü /
+    // sönümsüz) farklı K'dan gelir ve fark sönüme değil tabana yazılır.
+    var Tu=C.frfAt(R.mounts, R.mp.cg, M6, null,       fFire, 2, R.kBasis||null);
     h+='<table><caption>Tablo '+_rTbl()+' — Ateşleme frekansında iletilebilirlik: tam çözüm ve tek-serbestlik kestirimi</caption>';
     h+='<tr><th>Yöntem</th><th>Sönümlü</th><th>Sönümsüz</th></tr>';
     h+='<tr><td class="l">Tam frekans yanıtı (6 SD)</td><td>'+_rF(Td*100,1)+'%</td><td>'+_rF(Tu*100,1)+'%</td></tr>';
