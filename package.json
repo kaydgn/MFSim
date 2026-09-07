@@ -18,6 +18,12 @@
     "test:unit": "jest --maxWorkers=100%",
     "test:watch": "jest --watch",
     "test:changed": "jest -o",
+    "test:fead": "jest --maxWorkers=100% \"unit/(fead-|cp-fead|gates-archive|guide-fead)\"",
+    "test:arac": "jest --maxWorkers=100% \"unit/(arac-|gear-|matching-selection|simulation-engine-grade|pchip-uc-kopya|guide-arac)\"",
+    "test:takoz": "jest --maxWorkers=100% \"unit/mount-\"",
+    "test:yapisal": "jest --maxWorkers=100% \"unit/(structural-|cp-structural)\"",
+    "test:urun": "npx playwright test tests/e2e/published.spec.js tests/e2e/viewer.spec.js tests/e2e/can-cozumleyici.spec.js",
+    "hazir": "npm run build && npm test",
     "test:ci": "jest --verbose --ci --maxWorkers=100%",
     "test:e2e": "npx playwright test",
     "test:all": "jest && npx playwright test"

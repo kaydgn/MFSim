@@ -304,6 +304,38 @@ Amaç: her küçük değişikliği build+tüm-test töreni yapmadan geliştirmek
 `js/` dosyalarını yükler, `MFSim_Code.html`'e dokunmaz. Build yalnızca
 E2E ve deploy için gerekir.
 
+### NEREYE VAKİT GİDİYOR — ÖLÇÜLDÜ (2026-09-07, 4 çekirdek)
+
+Kullanıcı bildirimi: *"bir PR ve merge için en az 30-40 dakika bekliyoruz."*
+Ölçüldü, ve suçlu tahmin edilenler değildi:
+
+| İş | Süre | Not |
+|----|------|-----|
+| `npm run build` | **1 sn** | bedava, hiç kaçınma |
+| tek test dosyası | **3 sn** | |
+| `npm run test:takoz` | **8 sn** | 21 dosya |
+| `npm run test:fead` | **20 sn** | 30 dosya / 1432 test |
+| `npm run test:arac` | **46 sn** | |
+| `npm run test:yapisal` | **59 sn** | tek başına tabanı belirliyor |
+| `npm test` (tam) | **96 sn** | 167 dosya, 330 sn CPU |
+| tarayıcı doğrulaması | **8–17 sn** | loader beklenmezse 8 |
+
+**TAM TESTİN TABANI TEK BİR DOSYA:** `structural-remesh.test.js` 55 sn CPU
+yiyor, yani 4 çekirdekle bile `npm test` ~55 sn'nin altına inmiyor. FEAD turunda
+o dosyanın hiçbir işi yok.
+
+**KURAL: DÖNGÜDE MODÜL TESTİ, COMMIT'TEN ÖNCE TAM TEST — bir kez.**
+Bir turda `npm test`'i beş kez koşturmak 8 dakika demek; aynı işi
+`npm run test:fead` ile yapmak 100 saniye. Ölçülen kaçak buydu.
+
+```bash
+npm run test:fead     # ya da :arac · :takoz · :yapisal — döngü boyunca
+npm run hazir         # build + tam test — commit'ten ÖNCE, TEK SEFER
+npm run test:urun     # üç ürün spec'i (CI'nın e2e işi) — UI kabuğuna dokunduysan
+```
+
+Mutasyon testleri de modül testiyle koşar; tam testle değil.
+
 ### Geliştirirken: watch modu (döngünün merkezi)
 ```bash
 npm run test:watch      # arka planda açık kalsın; kaydettikçe İLGİLİ testler <1s'de koşar
@@ -424,7 +456,13 @@ FEAD ve Yapısal Analiz satırları modül skill'lerine taşındı
 ```bash
 npm run test:watch          # ★ geliştirme döngüsü — kaydettikçe ilgili testler koşar
 npm run test:changed        # git'te değişen dosyalarla ilgili testler (jest -o)
-npm test                    # tüm birim testleri (sessiz) — commit öncesi
+npm run test:fead           # ★ FEAD modülü — 20 sn (tam testin yerine, DÖNGÜDE)
+npm run test:arac           # Araç Performans — 46 sn
+npm run test:takoz          # Takoz — 8 sn
+npm run test:yapisal        # Yapısal Analiz — 59 sn
+npm run hazir               # ★ build + tam test — COMMIT ÖNCESİ tek komut
+npm run test:urun           # üç ürün spec'i (CI'nın e2e-urun işinin aynısı)
+npm test                    # tüm birim testleri (sessiz) — 96 sn
 npm run test:ci             # tüm birim testleri (--verbose --ci) — CI logları için
 npm run build               # MFSim_Code.html üret (modüler → monolitik) — commit/deploy öncesi
 npm run sync:viewer         # js/ → viewer/js/ (yedi kopya + iki yerel fark)
