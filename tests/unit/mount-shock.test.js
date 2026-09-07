@@ -236,15 +236,36 @@ describe('Sonuçlar kümeleri ve yorum', () => {
     expect(t).toContain((ts * 1000).toFixed(ts * 1000 >= 100 ? 0 : 1).replace('.', ','));
   });
 
-  test('genlik durdurucuyu aşarsa yorum ÇÖZÜMÜ GEÇERSİZ İLAN EDER', () => {
-    // Şok çözümü lineerdir; durdurucu devrede değildir. Sessizce geçmek,
-    // gerçekte çelikten geçen bir yükü kauçuktan geçiyormuş gibi raporlamaktır.
+  test('genlik durdurucuyu aşarsa TEMAS MODELLENİR — "geçersiz" demek yerine', () => {
+    // ESKİDEN: şok çözümü lineerdi, durdurucu devrede değildi ve yorum katmanı
+    // "bu genlikten sonrası geçerli değildir" demek zorundaydı. ARTIK temas
+    // modelde: pano hangi fiziği çözdüğünü söyler ve sayı gerçekten temaslı
+    // çözümün sayısıdır.
     const R3 = Object.assign({}, R, { shock: { aG: 60, ms: 20 } });
     const d3 = S.build(R3, {}).find((d) => d.key === 'shockz');
-    const worst = Math.max(...d3.channels.find((c) => c.id === 'dmax').data);
-    expect(worst).toBeGreaterThan(B.STOP_MM);
+    expect(d3.meta.useStop).toBe(true);
+    expect(d3.meta.stopHit).toBe(true);          // gerçekten oturdu
+    expect(d3.meta.converged).toBe(true);        // ve Newton yakınsadı
     const t = B.forLane(d3, R3, d3.channels.map((c) => c.id)).paras.join(' ');
-    expect(t).toContain('geçerli değildir');
+    expect(t).toContain('durdurucuya (±15 mm) oturuyor');
+    expect(t).not.toContain('geçerli değildir');
+  });
+
+  test('durdurucu GERÇEKTEN sınırlıyor: daha az yol, daha çok kuvvet', () => {
+    // Bir bayrak açıp sayıyı değiştirmemek en sinsi hata olurdu. Ölçülen şey
+    // temasın fiziği: k_stop = 100·k_z devreye girince takoz daha az eziliyor
+    // ama şasiye daha çok kuvvet geçiyor.
+    const o = { dir: 2, aG: 60, dur: 0.020, g: G };
+    const free = core.shockResponse(MOUNTS, MP.cg, M6, DAMP, o);
+    const hit  = core.shockResponse(MOUNTS, MP.cg, M6, DAMP,
+      Object.assign({ useStop: true }, o));
+    expect(free.nonlinear).toBe(false);          // lineer yol: temas devrede değil
+    expect(free.stopHit).toBe(false);
+    expect(hit.stopHit).toBe(true);
+    const peak = (r) => Math.max(...r.dMax);
+    const fPk  = (r) => Math.max(...r.per.map((p) => Math.max(...p.f)));
+    expect(peak(hit)).toBeLessThan(peak(free));
+    expect(fPk(hit)).toBeGreaterThan(fPk(free));
   });
 
   test('işaretler: darbenin bitişi ve durdurucu sınırı', () => {

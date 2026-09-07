@@ -901,10 +901,18 @@ var veMntBrief = (function() {
   }
 
   // Metal-metal durdurucu boşluğu (js/mount-signals.js FD_LIM_MM ile aynı).
-  // Şok çözümü LİNEERDİR: durdurucu devrede değildir. Genlik bu değeri aşarsa
-  // çözüm oradan sonra geçersizdir ve bunu SÖYLEMEK zorundayız — sessizce
-  // geçmek, gerçekte çelikten geçen bir yükü kauçuktan geçiyormuş gibi
-  // raporlamak olurdu.
+  //
+  // Şok çözümü artık ADIM BAŞINA NEWTON koşuyor ve durdurucu modelde VAR
+  // (mount-core shockResponse, useStop). Bu yüzden eski "bu genlikten sonrası
+  // geçersiz" uyarısı iki hâle ayrıldı: temas modelleniyorsa gerçekten olan
+  // şey yazılır (oturdu / pay kaldı), modellenmiyorsa (eski kayıt, sönüm yok)
+  // eski uyarı olduğu gibi kalır — hangi fiziğin çözüldüğünü söylemeden sayı
+  // basmak, çelikten geçen yükü kauçuktan geçiyormuş gibi raporlamak olurdu.
+  //
+  // KARŞILAŞTIRILAN BÜYÜKLÜK: boşluk YÜKSÜZ konumdan ölçülür, dolayısıyla
+  // sınırla karşılaştırılacak olan TOPLAM sehimdir (statik önyük + darbe) —
+  // meta.dTotPeak. Kanallar darbenin kendi hareketini gösterir; ikisi ayrı
+  // büyüklüktür ve eskiden yalnız ikincisi 15 ile karşılaştırılıyordu.
   var STOP_MM = 15;
   var SHOCK_KEYS = ['shockz', 'shocky', 'shockx'];
 
@@ -954,15 +962,37 @@ var veMntBrief = (function() {
       if(worst > 0) {
         var s = (dmax ? 'Darbe boyunca en çok yüklenen takoz ' : b(worstName) + ' takozu ') +
           b(na(worst) + ' mm') + ' eziliyor';
-        if(worst >= STOP_MM) {
+        // Toplam sehim = statik önyük + darbe. meta yoksa (eski kayıt) darbenin
+        // kendi genliğine düşülür — eski davranış.
+        var tot = isFinite(meta.dTotPeak) ? meta.dTotPeak : worst;
+        var pre = isFinite(meta.preloadMm) ? meta.preloadMm : NaN;
+        if(meta.nonlinear && meta.useStop) {
+          s += '; statik önyükle birlikte toplam sehim ' + b(na(tot) + ' mm') +
+               (isFinite(pre) ? ' (önyük ' + b(na(pre) + ' mm') + ')' : '');
+          if(meta.stopHit) {
+            s += ' — ' + b('metal-metal durdurucuya (±' + STOP_MM + ' mm) oturuyor') +
+                 '. Temas modelde var: o andan sonra takoz kauçuk rijitliğiyle değil ' +
+                 b('temas rijitliğiyle') + ' çalışır ve fazla yük komşu takozlara dağılır.';
+          } else {
+            s += '; ' + b('±' + STOP_MM + ' mm') + ' durdurucu sınırına ' +
+                 b(na(STOP_MM - tot) + ' mm') + ' pay kalıyor.';
+          }
+        } else if(worst >= STOP_MM) {
           s += ' — ' + b('metal-metal durdurucu boşluğunu (±' + STOP_MM + ' mm) aşıyor') +
-               '. Şok çözümü lineerdir, durdurucu modelde yoktur: bu genlikten sonrası ' +
+               '. Bu çözüm lineerdir, durdurucu modelde yoktur: bu genlikten sonrası ' +
                b('geçerli değildir') + '.';
         } else {
           s += '; ' + b('±' + STOP_MM + ' mm') + ' durdurucu sınırına ' +
                b(na(STOP_MM - worst) + ' mm') + ' pay kalıyor.';
         }
         paras.push(s);
+      }
+      // Yakınsamama SESSİZ KALMAZ: sayı yine basılır ama güvenilmez olduğu
+      // söylenir. Sessizce makul görünen bir eğri, bu modülün en pahalı hatası.
+      if(meta.nonlinear && meta.converged === false) {
+        paras.push('⚠ ' + b('Newton iterasyonu bazı zaman adımlarında yakınsamadı') +
+          '. Eğri çizilmiştir ama sayısal olarak güvenilmez: darbe genliğini ya da ' +
+          'süresini değiştirip yeniden çözün.');
       }
     }
 

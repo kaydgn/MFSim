@@ -485,10 +485,15 @@ var veMntSignals = (function() {
     var M6 = C.buildM6(R.mp.m, R.mp.I_G);
     if(!M6) return null;
 
+    // Çözücünün YOLUYLA aynı: statik taraf hangi fiziği çözüyorsa geçici rejim
+    // de onu çözer. useStop, cp-mount.js'teki statik çağrıyla AYNI (hep açık);
+    // q0 statik denge; kBasis (modal frekansı üreten dinamik tanjant) zaten
+    // R.damping kayıtlarında taşınıyor ve çekirdek onu oradan çözüyor.
     var res;
     try {
       res = C.shockResponse(R.mounts, R.mp.cg, M6, R.damping, {
-        dir: def.dir, aG: opts.aG, dur: opts.dur, g: R.g || 9.81
+        dir: def.dir, aG: opts.aG, dur: opts.dur, g: R.g || 9.81,
+        useStop: true, q0: R.qStatic || null, kBasis: R.kBasis || null
       });
     } catch(e) { res = null; }
     if(!res || !res.t || res.t.length < 2) return null;
@@ -517,7 +522,17 @@ var veMntSignals = (function() {
       icon: def.icon,
       x: { id: 't', name: 'Zaman', unit: 's', data: res.t },
       channels: chans,
-      meta: { dir: def.dir, aPeak: res.aPeak, dur: res.dur, ax: def.ax }
+      // meta.dTotPeak: TOPLAM sehimin (statik önyük + darbe) tepe değeri.
+      // Kanallar bugünkü anlamlarını korur (darbenin kendi hareketi); ±15 mm
+      // durdurucu boşluğu YÜKSÜZ konumdan ölçüldüğü için sınırla
+      // karşılaştırılacak büyüklük bu skalerdir (js/mount-brief.js okur).
+      meta: { dir: def.dir, aPeak: res.aPeak, dur: res.dur, ax: def.ax,
+              nonlinear: !!res.nonlinear, useStop: !!res.useStop,
+              stopHit: !!res.stopHit, converged: res.converged !== false,
+              newtonIters: res.newtonIters || 0,
+              preloadMm: Math.max.apply(null, res.d0 || [0]),
+              dTotPeak: (res.dTotMax && res.dTotMax.length)
+                        ? Math.max.apply(null, res.dTotMax) : NaN }
     };
   }
 
