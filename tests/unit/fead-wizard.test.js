@@ -1795,11 +1795,15 @@ describe('örnekten doldur — AÇILIR LİSTE, yüklenen belirgin', () => {
   });
 
   test('işaret SEÇENEKTEN SEÇENEĞE geçiyor, birikmiyor', () => {
-    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
-    wiz.veFeadWizSeed('BMC_FEAD_2026');
+    // İKİ GÖRÜNÜR örnek: BMC artık kullanıcı listesinde yok (gizli fixture),
+    // dolayısıyla <select>'te bir seçeneği de yok — onunla ölçmek "işaret
+    // taşınmadı" derdi, oysa taşınacak seçenek hiç basılmıyor.
+    const gk = veFeadExampleKeys();
+    kabuk(); wiz.veFeadWizSeed(gk[0]);
+    wiz.veFeadWizSeed(gk[1]);
     const i = secili();
     expect(i).toHaveLength(1);
-    expect(i[0]).toContain(veFeadExampleOf('BMC_FEAD_2026').name);
+    expect(i[0]).toContain(veFeadExampleOf(gk[1]).name);
   });
 
   test('"Boş başla" da bir SEÇİMDİR ve işaretleniyor', () => {
@@ -2972,5 +2976,86 @@ describe('açı seçici — yeşil yayın ne olduğu YAZILI', () => {
     wiz.veFeadWizAngOpen();
     const h2 = wiz.veFeadWizAngHTML();
     expect(h2).not.toContain('ve-fw-legend');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ÖRNEK GEZİNME OKLARI — YÜKLÜ ÖRNEK YOKKEN DE ÇALIŞIR
+//
+// Kullanıcı bildirimi (2026-09-04): *"'— değiştir —' ve ya '— boş başla —'
+// kısımları geldiğinde, ok tuşları çalışmıyor."*
+//
+// KUSUR İKİ PARÇA ARASINDAKİ TUTARSIZLIKTI: `veFeadWizSeedStep` `i < 0`
+// durumunu ZATEN karşılıyordu (↓ ilkini, ↑ sonuncusunu açar) ama düğmeler
+// `sira < 0` iken İKİSİ BİRDEN kapanıyordu. Eski kapı FONKSİYONU yokluyordu,
+// DÜĞME DURUMUNU değil — bu blok o boşluğu kapatıyor.
+describe('örnek gezinme düğmeleri — durum', () => {
+  const nav = () => {
+    const d = document.createElement('div');
+    d.innerHTML = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
+    return [...d.querySelectorAll('.ve-fw-seednav .ve-fw-mini')]
+      .map((b) => ({ ok: b.textContent.trim(), kapali: b.hasAttribute('disabled') }));
+  };
+
+  test('ÖRNEK YOKKEN iki ok da AÇIK — ikisi de bir yere götürüyor', () => {
+    kabuk(); wiz.veFeadWizReset();                 // "Boş başla"
+    const b = nav();
+    expect(b).toHaveLength(2);
+    expect(b[0].kapali).toBe(false);               // ↑ → sonuncu
+    expect(b[1].kapali).toBe(false);               // ↓ → ilk
+    // Ve gerçekten götürüyorlar.
+    const k = veFeadExampleKeys();
+    kabuk(); wiz.veFeadWizReset();
+    expect(wiz.veFeadWizSeedStep(1)).toBe(k[0]);
+    kabuk(); wiz.veFeadWizReset();
+    expect(wiz.veFeadWizSeedStep(-1)).toBe(k[k.length - 1]);
+  });
+
+  test('HİÇ SEÇİM YAPILMAMIŞ durumda da açık', () => {
+    // `kabuk()` DURUMU SIFIRLAMIYOR — bir önceki testin örneği kalıyor; ilk
+    // yazışımda öncül buydu ve test haklı olarak kırıldı. "Hiç seçim yok"
+    // hâli `seededFrom === undefined`, o yüzden doğrudan kuruluyor.
+    kabuk(); wiz.veFeadWizReset();
+    delete wiz.veFeadWizState().seededFrom;
+    const b = nav();
+    expect(b[0].kapali).toBe(false);
+    expect(b[1].kapali).toBe(false);
+  });
+
+  test('UÇLARDA yine kapalı — sarma yok', () => {
+    const k = veFeadExampleKeys();
+    kabuk(); wiz.veFeadWizSeed(k[0]);
+    expect(nav()[0].kapali).toBe(true);            // ilk örnekte ↑ kapalı
+    expect(nav()[1].kapali).toBe(false);
+    kabuk(); wiz.veFeadWizSeed(k[k.length - 1]);
+    expect(nav()[0].kapali).toBe(false);
+    expect(nav()[1].kapali).toBe(true);            // son örnekte ↓ kapalı
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BMC ÖRNEĞİ KULLANICI LİSTESİNDE YOK — AMA KAYIT DURUYOR
+describe('gizli örnek kaydı', () => {
+  test('BMC kullanıcıya gösterilen listede YOK', () => {
+    expect(veFeadExampleKeys()).not.toContain('BMC_FEAD_2026');
+    kabuk(); wiz.veFeadWizSeed(veFeadExampleKeys()[0]);
+    const h = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
+    expect(h).not.toContain('BMC_FEAD_2026');
+  });
+
+  test('KAYIT DURUYOR — çıpalar ve tek `derive` düzeni onda', () => {
+    // Silmek 24 test dosyasını ve arşivdeki TEK ara-kademe örneğini götürürdü.
+    expect(veFeadExampleKeysAll()).toContain('BMC_FEAD_2026');
+    const ex = veFeadExampleOf('BMC_FEAD_2026');
+    expect(ex).toBeTruthy();
+    expect(ex.solver.ratioMode).toBe('derive');
+    expect(ex.solver.crankOD / ex.solver.fanOD).toBeCloseTo(1.0985, 4);
+    // Ve hâlâ yüklenebiliyor (gizli ≠ kırık).
+    kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
+    expect(wiz.veFeadWizBuild().ok).toBe(true);
+  });
+
+  test('GÖRÜNÜR liste kayıt defterinden TAM BİR eksik', () => {
+    expect(veFeadExampleKeysAll().length - veFeadExampleKeys().length).toBe(1);
   });
 });
