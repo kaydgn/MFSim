@@ -1221,12 +1221,25 @@ function _fwStepKaynak(b){
   var sira = anahtarlar.indexOf(String(yuklu));
   var gezinme = '';
   if(anahtarlar.length > 1){
+    // ÖRNEK YÜKLÜ DEĞİLKEN İKİ OK DA AÇIK — kullanıcı bildirimi (2026-09-04):
+    // *"'— değiştir —' ve ya '— boş başla —' kısımları geldiğinde, ok tuşları
+    // çalışmıyor."*
+    //
+    // KUSUR BENDEYDİ ve iki parça arasındaki tutarsızlıktı:
+    // `veFeadWizSeedStep` `i < 0` durumunu ZATEN karşılıyor (↓ ilkini, ↑
+    // sonuncusunu açar) ama düğmeler `sira < 0` iken İKİSİ BİRDEN kapanıyordu.
+    // Birim testi fonksiyonu yokluyordu, DÜĞME DURUMUNU değil — bu turda kapı
+    // da eklendi.
+    var yok = (sira < 0);
+    var ustKapali = !yok && sira <= 0;
+    var altKapali = !yok && sira >= anahtarlar.length - 1;
     gezinme = '<div class="ve-fw-seednav">'
-      + '<button type="button" class="ve-fw-mini"' + (sira <= 0 ? ' disabled' : '')
-        + ' title="Önceki örnek" onclick="veFeadWizSeedStep(-1)">↑</button>'
-      + '<button type="button" class="ve-fw-mini"'
-        + ((sira < 0 || sira >= anahtarlar.length - 1) ? ' disabled' : '')
-        + ' title="Sonraki örnek" onclick="veFeadWizSeedStep(1)">↓</button>'
+      + '<button type="button" class="ve-fw-mini"' + (ustKapali ? ' disabled' : '')
+        + ' title="' + (yok ? 'Son örnek' : 'Önceki örnek')
+        + '" onclick="veFeadWizSeedStep(-1)">↑</button>'
+      + '<button type="button" class="ve-fw-mini"' + (altKapali ? ' disabled' : '')
+        + ' title="' + (yok ? 'İlk örnek' : 'Sonraki örnek')
+        + '" onclick="veFeadWizSeedStep(1)">↓</button>'
       + '<span class="ve-fw-seednav-n">'
         + (sira >= 0 ? (sira + 1) + ' / ' + anahtarlar.length
                      : '— / ' + anahtarlar.length)

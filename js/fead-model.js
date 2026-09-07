@@ -1746,6 +1746,9 @@ function veFeadDriveModeLabel(mode){
 // Dördü de tests/unit/fead-example.test.js'te çıpa; biri kayarsa test kırılır.
 var VE_FEAD_EXAMPLES = {
   'BMC_FEAD_2026': {
+    // KULLANICI LİSTESİNDE YOK (2026-09-04 isteği) ama kayıt DURUYOR: doğrulama
+    // çıpaları ve arşivdeki tek `derive` düzeni bu kayıtta.
+    hidden: true,
     name: 'BMC 6 silindir — FEAD (tedarikçi sayfası)',
     note: 'FEAD_INFORMATION sayfasındaki 6 kasnaklı düzen: fan tahrikli sürücü '
         + 'kasnak, iki avara, klima kompresörü, alternatör ve otomatik gergi. '
@@ -2419,7 +2422,27 @@ var VE_FEAD_EXAMPLES = {
     route: ['CRK', 'IDR1', 'TM31', 'IDR2', 'SD7H15', 'TEN']
   }
 };
-function veFeadExampleKeys(){ return Object.keys(VE_FEAD_EXAMPLES); }
+// ── GÖRÜNÜR ÖRNEKLER ile KAYIT DEFTERİ AYRI ─────────────────────────────────
+//
+// Kullanıcı isteği (2026-09-04): *"Başlangıç sihirbazından 'BMC 6 silindir —
+// FEAD (tedarikçi sayfası)' örneğini kaldıralım. Gerek yok."*
+//
+// KAYIT SİLİNMEDİ, GİZLENDİ — ve fark önemli: BMC bu deponun test iş atı.
+// ÖLÇÜLDÜ: 24 test dosyası ona dayanıyor ve `tests/unit/fead-example.test.js`
+// dört değeri ondan ÇIPALIYOR (kayış boyu 1715 mm · kol 90 mm · yay 22,07 Nm ·
+// tahrik oranı 197,32/179,62 = 1,0985). Ayrıca arşivdeki TEK `derive` örneği
+// odur: kaydı silmek, oranı 1'den farklı olan düzenin tek çalışan örneğini de
+// silerdi.
+//
+// `veFeadExampleKeys` KULLANICIYA GÖSTERİLEN listedir (sihirbaz + kanvas
+// bileşeni); `veFeadExampleKeysAll` kayıt defterinin tamamıdır ve testler
+// onu kullanır.
+function veFeadExampleKeys(){
+  return Object.keys(VE_FEAD_EXAMPLES).filter(function(k){
+    return !VE_FEAD_EXAMPLES[k].hidden;
+  });
+}
+function veFeadExampleKeysAll(){ return Object.keys(VE_FEAD_EXAMPLES); }
 function veFeadExampleOf(key){ return VE_FEAD_EXAMPLES[key] || null; }
 
 // Örneği DOM'suz düğüm/bağlantı dizisine çevir. Kanvas kurulumu da AYNI
@@ -4311,6 +4334,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadTensionerBoxMm: veFeadTensionerBoxMm,
     veFeadTensionerCenter: veFeadTensionerCenter,
     VE_FEAD_EXAMPLES: VE_FEAD_EXAMPLES, veFeadExampleKeys: veFeadExampleKeys,
+    veFeadExampleKeysAll: veFeadExampleKeysAll,
     veFeadRemapDutyKw: veFeadRemapDutyKw,
     veFeadExampleOf: veFeadExampleOf, veFeadExampleNodes: veFeadExampleNodes
   };
