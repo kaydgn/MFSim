@@ -489,12 +489,10 @@ yolunu izledi ve sıçramaların hepsi gömülen WASM'lardan: OCCT STEP okuyucus
 (+3,96 MB), TetGen (+0,24 MB), boolean'lı OCCT çekirdeği (12,6 → 26,8 MB).
 Sebepsiz bir büyüme bir regresyon işaretidir; sayıyı çıplak basmak onu gizler.
 
-## Teslim Akışı — PR + merge OTOMATİK
+## Teslim Akışı — PR + merge OTOMATİK, **CI BEKLENMEZ**
 
 Kullanıcı talimatı (2026-07-31): **her güncellemeden sonra PR aç ve merge et.**
 Ayrıca sorma, ayrıca onay bekleme.
-
-Sıra — her adım bir öncekine KAPI:
 
 ```bash
 npm run build     # MFSim_Code.html üret
@@ -502,45 +500,48 @@ npm test          # tüm birim testleri
 ```
 
 1. `npm run build` + `npm test` **ikisi de yeşil** olmadan commit YOK.
-2. Commit → `git push -u origin <dal>`
-3. PR aç (gövdede: sorun, kök neden, ölçüm, test, doğrulama)
-4. **PR koşusunu bekle** — kırık kodu merge'den önce yakalayan kapı budur.
-   PR'da yalnız `test` + `e2e-urun` koşar (`build`/`deploy` atlanır);
-   `test` ayrıca görüntüleyici senkronunu (`npm run sync:viewer -- --check`) ve
-   git'e dâhil İKİ üretilen dosyanın tazeliğini (`MFSim_Olcum_Goruntuleyici.html`,
-   `MFSim_CAN_Cozumleyici.html` — yeniden üretip `git diff --exit-code`) tutar.
-5. **Merge et** (`merge` yöntemi — depo geçmişi merge commit'i kullanıyor)
-6. **MERGE SONRASI main KOŞUSU BEKLENMEZ.** Aynı ağaçta aynı `test` +
-   `e2e-urun` bir kez daha koşar; yeni bilgi getirmez. Tek farkı Pages
-   yayını, o da kullanıcının erişemediği bir kanal. Sonucu kullanıcıya PR
-   koşusundan bildir, main koşusunu izlemek için bekleme.
+2. UI kabuğuna dokunduysan üç ürün spec'ini de yerelde koştur (aşağıda).
+3. Commit → `git push -u origin <dal>` → PR aç → **MERGE ET.**
+4. Merge'den sonra koşuya bir kez bak. Kırmızıysa ileri doğru düzelt.
 
-**BEKLEMENİN ÖLÇÜSÜ** (koşu 787–796, 2026-09-04): PR koşusu **ortalama
-7 dk 19 sn**, ve o pencerede iptal edilmeyen sekiz koşunun **beşi kırmızıydı**.
-Yani merge sonrası main koşusunu ayrıca beklemenin karşılığı sıfır — ama asıl
-maliyet burada değil: bir CI kırmızısı bir düzeltme commit'i + bir tur daha
-demek. **CI'nın gördüğü her şeyi yerelde de gören bir kapı, bir CI turundan
-ucuzdur.** Kullanıcı bildirimi (2026-09-04): *"bir promt için en az 15-20
-dakika bekliyorum."*
+### CI BEKLEMEK YASAK — ölçüldü, sıfır bilgi getiriyor
 
-(Eski kayıt 3 dk 14 sn diyordu — koşu 755, 2026-09-02. Ölçüm bayatladı;
-sayıyı güncellerken koşu numarasını da yaz.)
+**Kullanıcı bildirimi (2026-09-07):** *"Ya neden beklediğini de anlamıyorum ki?
+10 dakika boyunca CI bekliyorsun abi. Gerçekten kafayı yiyeceğim."* Ve haklı:
 
-**PR AÇILDI DİYE KOŞU BAŞLADI SAYILMAZ — BAK.** PR #848'de PR açılışı
-hiçbir koşu tetiklemedi (beş dakika boyunca ne `queued` ne `in_progress`);
-koşu ancak dala gelen bir sonraki push'la başladı. Aynı yol PR #850'de
-sorunsuz tetikledi. Yani **sebep ÖLÇÜLMEDİ** ve buradan bir kural
-çıkarılmıyor — "App jetonuyla açılan PR tetiklemez" bir hipotezdi ve bir
-sonraki denemede çürüdü.
+CI'daki `test` işi **tam olarak** şunu koşuyor (`.github/workflows/ci-deploy.yml`):
 
-Kural sebep hakkında değil DAVRANIŞ hakkında: PR açtıktan sonra koşunun
-gerçekten başladığını **doğrula**. Başlamadıysa boş commit ATMA, close/reopen
-YAPMA — o pushu gerçek bir iş taşısın (ör. `main`'i dala birleştirmek, ki
-çoğu zaman zaten gerekiyor).
+| CI adımı | Yereldeki karşılığı |
+|----------|---------------------|
+| `npm run build` | `npm run build` |
+| `npm run test:ci` | `npm test` |
+| `npm run sync:viewer -- --check` | `npm test` → `viewer-sync.test.js` |
+| iki dağıtım dosyası tazelik kapısı | `npm test` → `build-freshness.test.js` |
+
+Yani `npm test` yeşilse o iş **kesinlikle** yeşil. Onu beklemek, bilinen bir
+sonucu iki buçuk dakika daha beklemektir.
+
+Geriye yalnız `e2e-urun` kalıyor ve o da üç ÜRÜN spec'i:
+
+```bash
+npx playwright test tests/e2e/published.spec.js tests/e2e/viewer.spec.js \
+    tests/e2e/can-cozumleyici.spec.js      # ~2 dk · MFSIM_CHROMIUM gerekli
+```
+
+Yerelde koşturmak bir CI turundan hızlı. **Ürün kabuğuna dokunan bir turda
+koştur; dokunmayan turda ne koştur ne bekle.**
+
+### VE ASLA `sleep` DÖNGÜSÜYLE BEKLEME
+
+Bir koşunun sonucu gerçekten gerekiyorsa **durumunu sor** (`actions_list` /
+`list_workflow_jobs`) — körlemesine uyuma. Ölçülen kaçak: koşu 2 dk 30 sn
+sürerken 5–8 dakikalık `sleep` döngüleri kuruldu ve kullanıcı boşuna bekledi.
+Bir tur içinde en fazla BİR durum sorgusu; cevap "hâlâ koşuyor" ise iş biter,
+sonuç bir sonraki turda görülür.
 
 **Kapı kuralı:** testler kırmızıysa ya da build patlıyorsa merge etme —
 durumu kullanıcıya söyle. "Otomatik merge" testleri atlamak demek değil;
-tören kısaltılıyor, doğrulama kısaltılmıyor.
+**beklemek kısaltılıyor, doğrulama kısaltılmıyor.**
 
 Yeşil testler tek başına "düzeldi" demek değildir: kullanıcının bildirdiği
 senaryo birebir yeniden üretilip ESKİ kodda kırıldığı, YENİ kodda geçtiği

@@ -376,7 +376,27 @@ görünüşün aynası gibi davrandığına** işaret eder.
 konuşmak için montaj resmi ya da tedarikçinin konvansiyon notu gerekir. Bu
 ayrım korunmalı: modülün kuralı geçerlilik sınırını sonucun İÇİNDE taşımak.
 
-**VE EKSİK ADIM 2026-09-07'DE GELDİ — modelin sahibi konvansiyonu BEYAN ETTİ:**
+**2026-09-07 — VARSAYILAN ÖN GÖRÜNÜŞ (`VE_FEAD_VIEW_FRONT = true`).** Program
+bu sayfanın X AYNASINI çiziyor: krank saat yönünde döner, gergi krankın karşı
+yanında çıkar. Kullanıcı üç yolu yan yana görüp seçti.
+
+**BU SAYFA HÂLÂ REFERANS.** Aynalanan yalnız RESİM; saklanan koordinatlar ve
+basılan sayılar buradaki çerçevede kalıyor, dolayısıyla rapordan veri girmek ve
+satır satır karşılaştırmak birebir çalışmaya devam ediyor.
+
+**KARARI VEREN ÖLÇÜM BU KLASÖRDE:** AG00686'nın koordinat ve span-gerilme
+sütunları birlikte, kayışın hangi yöne gittiğini söylüyor — kranktan ÇIKAN span
+1210 N (gergin), kranka DÖNEN 766 N (gevşek). O sırayı raporun koordinatlarında
+dolaştırınca halka CCW kapanıyor; yani bu sayfada krank CCW döner ve "krank CW"
+demek öbür taraftan bakmak demektir.
+
+*"Aynalamadan krankı CW yap"* yolu ÖLÇÜLEREK kapandı — rotayı ters yürütmek
+gergiyi gergin tarafa atıyor ve span gerilmeleri negatife düşüyor (BMC:
+526 N → −196 N). Kapı: `tests/unit/fead-layout-plane.test.js`.
+
+Aşağıdaki kayıt o turun gerekçesi:
+
+**modelin sahibi konvansiyonu BEYAN ETTİ:**
 *"Normalde krank kasnağı (yani sürücü kasnak) saat yönünde dönmesi lazım."*
 Yukarıda "kesin konuşmak için gerekir" denen şey buydu; çıkarım artık kural.
 MFSim'in varsayılanı ön görünüş (`VE_FEAD_VIEW_FRONT = true`), yani program bu

@@ -99,10 +99,47 @@ araç düğümlerini kümenin dışındaki iki şeride koyuyor ve örnek kurucus
 devrediyor (bkz. *"örnek kurucusu kutuyu koordinatın SÖYLEMEDİĞİ yere
 koyuyordu"*).
 
-#### ÇİZİM DÜZLEMİ — VARSAYILAN ÖN GÖRÜNÜŞ (2026-09-07, SON HÜKÜM)
+#### ÇİZİM DÜZLEMİ — VARSAYILAN ÖN GÖRÜNÜŞ (2026-09-07 üçüncü tur, SON HÜKÜM)
 
-**HÜKÜM: `VE_FEAD_VIEW_FRONT = true`, ve okuma tek noktadan
-(`veFeadViewFront()` / `veFeadSetViewFront()`).** Krank saat yönünde döner.
+**HÜKÜM: `VE_FEAD_VIEW_FRONT = true`, okuma tek noktadan
+(`veFeadViewFront()` / `veFeadSetViewFront()`).** Krank saat yönünde döner;
+sol-sağ düzeni Gates sayfasının **tersi**dir ve bu kullanıcının bilerek verdiği
+karardır (üç yol resimle yan yana gösterildi, *"B — motora önden bakış"*
+seçildi).
+
+**AYNALANAN YALNIZ RESİM.** Saklanan mm, çözücü ve basılan SAYILAR Gates
+çerçevesinde kalır — rapordan veri girip PDF'le satır satır karşılaştırmak bu
+modülün taşıdığı asıl değer. Basıldıkları yer bunu söyler (`veFeadPlaneNote`).
+
+**KARARI VEREN ÖLÇÜM — raporun KENDİ iki sütunu** (AG00686): koordinatlarda
+gergi krankın solunda (−157 / 0), span gerilmelerinde kranktan çıkan span en
+gergin (1210) ve kranka dönen en gevşek (766). O sırayı o koordinatlarda
+dolaştırınca halka CCW kapanıyor → Gates sayfasında krank CCW döner. Yani
+*"krank CW"* ile *"düzen sayfayla aynı"* tek bir seçimin iki yüzü.
+
+**ÜÇ YOLUN DA BEDELİ ÖLÇÜLDÜ — "aynalamadan CW" KAPALI:**
+
+| yol | konumlar | krank | fizik |
+|-----|----------|-------|-------|
+| rapor düzlemi (varsayılan) | sayfayla AYNI | CCW | sağlam |
+| ayna (`setViewFront(true)`) | TERS | CW | sağlam (tam simetri) |
+| **rotayı yerinde çevir** | sayfayla AYNI | CW | **KIRIK** |
+
+Üçüncüsü kullanıcının istediği şeydi. Ölçüldü: rotayı ters yürütmek gergiyi
+kayışın **gergin** tarafına atıyor, span gerilmeleri negatife düşüyor (BMC —
+güç akan tek örnek — en düşük span **526 N → −196 N**) ve model yine
+"çözülüyor" deyip uyarı vermiyor. Kapı: `fead-layout-plane.test.js` →
+*"ROTAYI YERİNDE ÇEVİRMEK ... FİZİĞİ KIRAR"*. Sebep: bu 12 düzen, kayışın o
+yönde döndüğü varsayımıyla tasarlanmış gerçek sistemler.
+
+Yani **"krank CW" ile "konumlar Gates sayfasıyla aynı" aynı anda sağlanamaz** —
+aradaki fark bir tercih değil bir AYNA.
+
+> **Bir tur boyunca varsayılan ön görünüştü** (aynı gün, PR #875) ve kullanıcı
+> geri aldırdı: *"tüm örnekleri aynalamışsın… gergi konumları değişmiş. Bu
+> böyle olmayacak."* Ayna makinesi silinmedi, yalnız varsayılan değil.
+
+##### Geri alınan turun kaydı (PR #875) — ölçümleri için duruyor
 
 Kullanıcı konvansiyonu: *"Sihirbaz içinde yüklü olan tüm örnekler CCW dönüyor.
 Normalde krank kasnağı (yani sürücü kasnak) saat yönünde dönmesi lazım."*

@@ -2938,9 +2938,72 @@ function veFeadResolveDriver(pulleys){
   return list.length ? list[0] : null;
 }
 
-// ─── ÇİZİM DÜZLEMİ — VARSAYILAN: ÖN GÖRÜNÜŞ (ayna AÇIK) ────────────────
+// ─── ÇİZİM DÜZLEMİ — VARSAYILAN: ÖN GÖRÜNÜŞ (krank CW) ─────────────────
 //
-// KULLANICI KONVANSİYONU (2026-09-07) — SON KARAR, aşağıdaki her şeyi değiştirir:
+// ── 2026-09-07, ÜÇÜNCÜ TUR: KULLANICI SEÇTİ — ÖN GÖRÜNÜŞ ──────────────────
+//
+// Üç yol yan yana ÇİZİLİP gösterildi (aynı sistem, iki taraftan bakış) ve
+// kullanıcı seçti: *"B — motora önden bakış (krank CW)."*
+//
+// SEÇİM BİLEREK YAPILDI, bedeli görülerek: sol-sağ düzeni Gates sayfasının
+// tersine düşer, gergi krankın KARŞI yanında çıkar. Bu bir regresyon değil,
+// seçilen bakış yönünün kendisi.
+//
+// KARARI VEREN ÖLÇÜM — raporun KENDİ iki sütunu, bizim varsayımımız değil
+// (AG00686):
+//   • koordinatlar: krank (0,0) · gergi (−157, 187) → gergi krankın SOLUNDA
+//   • span gerilmeleri, kayış sırasıyla @800 rpm:
+//       krank 1210 → avara 1208 → klima 767 → gergi 766
+//     Kranktan ÇIKAN span en gergin, kranka DÖNEN en gevşek — bir sürücü
+//     kasnak tam olarak böyle davranır. Yani rapor, kayışın hangi yöne
+//     gittiğini kendi tablosunda söylüyor.
+//   O sırayı o koordinatlar üzerinde dolaştırınca halka CCW kapanıyor →
+//   Gates sayfasında krank CCW döner. "Krank CW" demek öbür taraftan bakmak
+//   demek; ikisi tek seçim, iki ayrı ayar değil.
+//
+// AYNALANAN YALNIZ RESİM. Saklanan mm koordinatları, çözücü ve basılan
+// SAYILAR Gates çerçevesinde KALIYOR — rapordan veri girip PDF'le satır satır
+// karşılaştırmak bu modülün taşıdığı asıl değer (CLAUDE.md kuralı) ve bir
+// bakış tercihi için feda edilmiyor. Basıldıkları yer bunu söylüyor
+// (`veFeadPlaneNote`), yani ekranda hiçbir sayı sessizce başka çerçevede
+// durmuyor.
+//
+// ÜÇÜNCÜ YOL — "aynalamadan krankı CW yap" — ÖLÇÜLEREK KAPANDI; kaydı aşağıda
+// duruyor ve kapısı `fead-layout-plane.test.js` içinde.
+//
+// ── 2026-09-07, İKİNCİ TUR: AYNA BİR KEZ GERİ ALINMIŞTI ───────────────────
+//
+// Kullanıcı bildirimi (aynı gün, aynalı sürümü gördükten sonra): *"Program
+// içindeki tüm örnekleri aynalamışsın. Otomatik gergi konumları değişmiş,
+// kasnakların konumları değişmiş. Bu böyle olmayacak. Sadece krank kasnağı
+// default olarak saat yönünde dönecek, sistem aynalanmayacak."*
+//
+// ÜÇ YOL VAR VE ÜÇÜNÜN DE BEDELİ ÖLÇÜLDÜ:
+//
+//   | yol                   | konumlar      | krank | fizik            |
+//   |-----------------------|---------------|-------|------------------|
+//   | rapor düzlemi (BU)    | sayfayla AYNI | CCW   | sağlam           |
+//   | ayna (bir tur denendi)| TERS          | CW    | sağlam (simetri) |
+//   | rotayı yerinde çevir  | sayfayla AYNI | CW    | KIRIK            |
+//
+// ÜÇÜNCÜ SATIR İSTENEN ŞEYDİ VE KAPALI — ölçüldü: rotayı ters yürütmek gergiyi
+// kayışın GERGİN tarafına atıyor ve span gerilmeleri negatife düşüyor (BMC,
+// güç akan tek örnek: en düşük span 526 N → −196 N). Negatif gerilme fiziksel
+// olarak yok; model yine "çözülüyor" der ve uyarı vermez. Kapı:
+// `tests/unit/fead-layout-plane.test.js` → "ROTAYI YERİNDE ÇEVİRMEK ... FİZİĞİ
+// KIRAR". Sebep basit: bu 12 düzen, kayışın BU yönde döndüğü varsayımıyla
+// tasarlanmış gerçek sistemler; gerginin nereye konduğu o yöne bağlı.
+//
+// Yani "krank CW" ile "konumlar Gates sayfasıyla aynı" AYNI ANDA SAĞLANAMAZ,
+// ve aradaki fark bir tercih değil bir AYNA. Varsayılan ölçülebilir olana
+// bağlandı: kullanıcının konum bildirimi raporun sayfasına dayanıyor, dönüş
+// yönü isteği ise raporların HİÇBİRİNDE yazmayan bir bakış yönüne (README §6).
+//
+// AYNA MAKİNESİ DURUYOR ve çalışır durumda (`veFeadSetViewFront(true)`): ön
+// görünüş istendiğinde fiziği bozmadan CW veriyor. Silinmedi, varsayılan değil.
+//
+// ── ÖNCEKİ TUR (aynı gün, geri alındı) ────────────────────────────────────
+//
 // *"Sihirbaz içinde yüklü olan tüm örnekler CCW dönüyor. Normalde krank kasnağı
 // (yani sürücü kasnak) saat yönünde dönmesi lazım."*
 //
@@ -3005,7 +3068,7 @@ function veFeadResolveDriver(pulleys){
 // BİREBİR aynı kalır; değişen yalnız el yönü. Bu yüzden burada `d` işareti de
 // çevriliyor: çevrilmezse sarım yayları kasnağın İÇİNDEN geçer (kartta bir kez
 // ölçülmüş "sweep bayrağı" hatasının aynısı).
-var VE_FEAD_VIEW_FRONT = true;      // çizim düzlemi: true = ÖN GÖRÜNÜŞ (ayna) · false = RAPOR (Gates)
+var VE_FEAD_VIEW_FRONT = true;     // çizim düzlemi: true = ÖN GÖRÜNÜŞ (krank CW) · false = RAPOR (Gates)
 
 // TEK OKUMA NOKTASI, VE AYARLANABİLİR. Bayrak eskiden doğrudan okunuyordu ve
 // `module.exports` onu KOPYA olarak veriyordu — yani hiçbir test düzlemi
@@ -3068,14 +3131,37 @@ function veFeadPlaneNote(){
     : '';
 }
 
+// ── KRANK YÖNÜ KONVANSİYONU — AYNALAMADAN SÖYLENİR ─────────────────────────
+//
+// Kullanıcı iki kez söyledi: *"krank kasnağı (sürücü kasnak) saat yönünde
+// dönmeli."* Doğru — ve bu, şemayı aynalamadan da söylenebilir, çünkü CW/CCW
+// bir DÖNÜŞ değil bir BAKIŞ YÖNÜ ifadesidir: aynı mil, karşı taraftan bakınca
+// ters görünür.
+//
+// Rozet ÇİZİLEN yönü basar (yoksa resimle çelişirdi ve bu modülün en pahalı
+// hata sınıfı tam olarak "iki yüzey iki şey söylüyor"). Uzun metin İKİSİNİ DE
+// söyler ve hangisinin hangi taraftan olduğunu adıyla verir.
+//
+// KARŞI YÖN ÖLÇÜLÜ BİR İLİŞKİDEN GELİYOR, uydurulmuyor: tedarikçinin gergi
+// künyesindeki CW/CCW harfi çizim düzleminin TERSİ (docs/gates-reports/README.md
+// §5, altı raporda sıfır çelişkiyle ölçüldü) ve motorlar aksesuar tahrik
+// ucundan bakıldığında CW döner (kullanıcı konvansiyonu, 2026-09-07).
+function _feadKarsiYon(f){
+  return veFeadViewFront()
+    ? (f > 0 ? 'Gates rapor düzleminde CW' : 'Gates rapor düzleminde CCW')
+    : (f > 0 ? 'motora önden bakışta CW (krank yönü)' : 'motora önden bakışta CCW');
+}
+
 function veFeadSpinLabel(spin){
   var f = veFeadSpinToFront(spin);
-  if(!f) return { sense: 0, glif: '—', kisa: '—', uzun: '—' };
+  if(!f) return { sense: 0, glif: '—', kisa: '—', uzun: '—', karsi: '—' };
   return f > 0
-    ? { sense: 1, glif: '\u21ba', kisa: '\u21ba CCW',
-        uzun: 'CCW (saat yönünün TERSİNE) — ' + _feadPlaneName() }
-    : { sense: -1, glif: '\u21bb', kisa: '\u21bb CW',
-        uzun: 'CW (saat yönünde) — ' + _feadPlaneName() };
+    ? { sense: 1, glif: '\u21ba', kisa: '\u21ba CCW', karsi: _feadKarsiYon(1),
+        uzun: 'CCW (saat yönünün TERSİNE) — ' + _feadPlaneName()
+              + ' · ' + _feadKarsiYon(1) }
+    : { sense: -1, glif: '\u21bb', kisa: '\u21bb CW', karsi: _feadKarsiYon(-1),
+        uzun: 'CW (saat yönünde) — ' + _feadPlaneName()
+              + ' · ' + _feadKarsiYon(-1) };
 }
 
 // Geometriyi X'te aynalar. SAF: girdiyi değiştirmez, kopya döndürür.
