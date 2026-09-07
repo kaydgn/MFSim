@@ -822,6 +822,21 @@
       --dur-slow: 0.18s;
       --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
       --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+      /* Karşılama koreografisinin omurgası — perde süresi ve kart temposu tek
+         yerden; ara gecikmeler bu ikisinden okunur. */
+      --dur-enter: 420ms;
+      --dur-step:   70ms;
+      --dur-fly:   460ms;
+      --ease-fly: cubic-bezier(.4, 0, .2, 1);
+      --ease-settle: cubic-bezier(.34, 1.2, .64, 1);
+
+      /* Kâğıt taneciği — açılış ekranı ile karşılama ekranı AYNI zemini
+         paylaşıyor; doku tek yerde durmazsa kapanış geçişinde zemin sıçrar.
+         feTurbulence renksiz (saturate 0), yani 15 temada da aynı.
+         İç filtre başvurusunun PARANTEZLERİ de kaçışlı (url%28%23g%29):
+         çıplak yazılırsa build kalkanı onu gömülmemiş bir varlık sanıp
+         derlemeyi durduruyor (build-shield.js › leftoverRefs). */
+      --paper-grain:url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'160'%20height%3D'160'%3E%3Cfilter%20id%3D'g'%3E%3CfeTurbulence%20type%3D'fractalNoise'%20baseFrequency%3D'.9'%20numOctaves%3D'3'%20stitchTiles%3D'stitch'%2F%3E%3CfeColorMatrix%20type%3D'saturate'%20values%3D'0'%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D'160'%20height%3D'160'%20filter%3D'url%28%23g%29'%20opacity%3D'.22'%2F%3E%3C%2Fsvg%3E");
 
       /* ── TİPOGRAFİ ÖLÇEĞİ ────────────────────────────────────────────────
          Öncesinde --text-xs..2xl tanımlıydı ve HİÇBİR YERDE kullanılmıyordu
@@ -1220,12 +1235,13 @@
 
     /* ===== YUKLEME EKRANI (SPLASH / LOADING SCREEN) =====
        Panel, KARSILAMA KARTININ (.ve-welcome) IKIZIDIR: ayni 410 px, ayni ic
-       bosluk, ayni kenar/golge, ayni hero. Zemin de ayni: ince izgara, %55
-       tonda, ISILTI YOK. Eskiden buradaki zemin tam tonda izgara + accent
-       isiltisiydi; karsilama ekrani isiltiyi "renk veriye ayrilir" gerekcesiyle
-       birakmisti ve iki ekran ayrismisti — acilis kapanirken zemin gozle
-       gorulur sekilde degisiyordu. Ikisi artik ayni; kapanista yalniz kartin
-       govdesi eriyor. */
+       bosluk, ayni kenar/golge, ayni hero. Zemin de ayni: KAGIT dokusu
+       (--paper-grain + iki uclu ton). Eskiden buradaki zemin tam tonda izgara
+       + accent isiltisiydi; karsilama ekrani isiltiyi "renk veriye ayrilir"
+       gerekcesiyle birakmisti ve iki ekran ayrismisti — acilis kapanirken
+       zemin gozle gorulur sekilde degisiyordu. Karsilama izgaradan kagida
+       dondugunde bu blok da onunla birlikte dondu; ikisi ayrilirsa ayni
+       sicrama geri gelir. Kapanista yalniz kartin govdesi eriyor. */
     .mfsim-loading-screen{
       position:fixed; inset:0; z-index:calc(var(--z-boot) + 1);
       display:none;            /* JS show ile flex olur */
@@ -1235,17 +1251,17 @@
       opacity:1;               /* INSTANT goster — fade yalniz hide icin */
       /* Taban: color-mix desteklenmezse bu gecerli kalir (karsilama ile ayni kalip) */
       background:
-        linear-gradient(var(--border-color) 1px, transparent 1px),
-        linear-gradient(90deg, var(--border-color) 1px, transparent 1px),
-        var(--bg-primary);
-      background-size:34px 34px, 34px 34px, auto;
+        var(--paper-grain),
+        linear-gradient(180deg, var(--bg-secondary), var(--bg-primary));
+      background-size:160px 160px, auto;
     }
     .mfsim-loading-screen{
       background:
-        linear-gradient(color-mix(in srgb, var(--border-color) 55%, transparent) 1px, transparent 1px),
-        linear-gradient(90deg, color-mix(in srgb, var(--border-color) 55%, transparent) 1px, transparent 1px),
-        var(--bg-primary);
-      background-size:34px 34px, 34px 34px, auto;
+        var(--paper-grain),
+        linear-gradient(180deg,
+          color-mix(in srgb, var(--bg-secondary) 55%, var(--bg-primary)),
+          var(--bg-primary));
+      background-size:160px 160px, auto;
     }
     .mfsim-loading-screen.mfsim-fading-out{
       transition:opacity 0.34s var(--ease-out);
@@ -2444,24 +2460,35 @@ body.ve-no-module #ve-ribbon{ display:none; }
   z-index:100;
   display:flex;
   align-items:stretch;
-  /* Taban: ince teknik ızgara (color-mix desteklenmezse bu geçerli kalır) */
+  /* Taban: düz kâğıt (color-mix desteklenmezse bu geçerli kalır) */
   background:
-    linear-gradient(var(--border-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-color) 1px, transparent 1px),
-    var(--bg-primary);
-  background-size:34px 34px, 34px 34px, auto;
+    var(--paper-grain),
+    linear-gradient(180deg, var(--bg-secondary), var(--bg-primary));
+  background-size:160px 160px, auto;
 }
-/* Izgara YARI SAYDAM tona indi ve üstündeki accent ışıltısı kaldırıldı.
-   Karşılama ekranının baskın dokusu bu ızgaraydı; ışıltı da kabukta rengin
-   dekoratif kullanımıydı (renk veriye ayrılır). Not: TUVAL ızgarası
-   (#ve-canvas) varsayılan KAPALI — gözle görülen ızgara buydu; ikisi de aynı
-   tona çekildi ki kullanıcı tuval ızgarasını açtığında dil bozulmasın. */
+/* Zemin ızgaradan KÂĞIDA döndü: ızgara ekranın baskın dokusuydu ve tuvalin
+   kendi ızgarasıyla aynı dili konuşuyordu — karşılama bir çalışma alanı değil,
+   bir kapak. Kâğıt tonu iki uçtan sürülür (bg-secondary → bg-primary), yani
+   tema neyse doku da o.
+   Not: bu ikinci blok bilinçli bir FALLBACK katıdır, kopya değil — color-mix
+   desteklenmeyen tarayıcıda bildirimi tümüyle düşer ve üstteki taban blok
+   yürürlükte kalır. İkisini birleştirmek zemini tamamen düşürür. */
 .ve-module-overlay{
   background:
-    linear-gradient(color-mix(in srgb, var(--border-color) 55%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--border-color) 55%, transparent) 1px, transparent 1px),
-    var(--bg-primary);
-  background-size:34px 34px, 34px 34px, auto;
+    var(--paper-grain),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--bg-secondary) 55%, var(--bg-primary)),
+      var(--bg-primary));
+  background-size:160px 160px, auto;
+}
+/* Kâğıdın kenar gölgesi — yalnız ZEMİNDE; içerik (.ve-welcome) üstünde kalır
+   ki panel ve kart metinleri kararmasın. */
+.ve-module-overlay::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  box-shadow:inset 0 0 140px color-mix(in srgb, var(--text-heading) 6%, transparent);
 }
 
 /* İçerik KIRPILMASIN: kısa/dar pencerede (ör. 900×500) iki sütun da sığmayınca
@@ -2474,6 +2501,9 @@ body.ve-no-module #ve-ribbon{ display:none; }
   min-width:0;
   display:flex;
   align-items:stretch;
+  /* Kenar gölgesinin (overlay::after) ÜSTÜNDE: gölge zemine ait, metne değil. */
+  position:relative;
+  z-index:1;
   animation:ve-welcome-in var(--dur-slow) var(--ease-out) both;
 }
 @keyframes ve-welcome-in{
@@ -2527,6 +2557,105 @@ body.ve-no-module #ve-ribbon{ display:none; }
   line-height:1.7;
   color:var(--text-secondary);
 }
+
+/* ── Son değişiklikler paneli + güncellik satırı ────────────────────────
+   Şerit bu ekranda gizli olduğu için "elimdeki kopya ne?" sorusunun cevabı
+   yalnız burada duruyor. İçeriği js/components.js doldurur
+   (veFillWelcomeChanges / veSyncWelcomeFreshness). */
+.ve-welcome-panel{
+  margin-top:20px;
+  max-width:36ch;
+}
+.ve-welcome-panel-title{
+  font-size:var(--fs-tiny);
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  color:var(--text-muted);
+}
+.ve-welcome-change{
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+  padding:6px 0;
+  border-top:1px solid var(--border-light);
+}
+.ve-welcome-change:first-child{ margin-top:6px; }
+.ve-welcome-change-k{
+  flex:0 0 66px;
+  font-size:var(--fs-micro);
+  letter-spacing:0.04em;
+  font-variant-numeric:tabular-nums;
+  color:var(--text-muted);
+}
+/* Uzun başlık satırı boyu uzatmasın: iki satırda kesilir. */
+.ve-welcome-change-v{
+  min-width:0;
+  font-size:var(--fs-body);
+  line-height:1.5;
+  color:var(--text-primary);
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+}
+.ve-welcome-more{
+  display:inline-block;
+  margin-top:8px;
+  padding:0;
+  font-family:var(--font-sans);
+  font-size:var(--fs-tiny);
+  color:var(--text-muted);
+  background:none;
+  border:none;
+  text-decoration:none;
+  cursor:pointer;
+  transition:color var(--dur-base) var(--ease-out);
+}
+.ve-welcome-more:hover,
+.ve-welcome-more:focus-visible{ color:var(--text-heading); }
+/* Güncellik satırı — gömülü künye YALNIZ elimizdeki kopyayı söyler; "yayın
+   güncel mi" sorusunu yanıtlamaz (bkz. js/deploy-status.js). Bu yüzden yeşil
+   nokta yalnız `ok` durumuna ait; çevrimdışı kopya nötr kalır. */
+.ve-welcome-fresh{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin-top:10px;
+  padding-top:8px;
+  border-top:1px solid var(--border-light);
+  font-size:var(--fs-micro);
+  color:var(--text-muted);
+}
+/* display:flex, tarayıcının [hidden]{display:none} kuralını YENER — satır
+   gizlenmiş sayılırken boş bir çizgi olarak kalıyordu. */
+.ve-welcome-fresh[hidden]{ display:none; }
+.ve-welcome-fresh-dot{
+  flex:0 0 auto;
+  width:7px;
+  height:7px;
+  border-radius:var(--radius-pill);
+  background:var(--text-muted);
+}
+.ve-welcome-fresh-text{
+  min-width:0;
+  color:var(--text-muted);
+}
+.ve-welcome-fresh[data-state="ok"] .ve-welcome-fresh-dot{ background:var(--accent-success); }
+.ve-welcome-fresh[data-state="ok"] .ve-welcome-fresh-text{ color:var(--ink-success); }
+.ve-welcome-fresh[data-state="update"] .ve-welcome-fresh-dot{ background:var(--accent-warning); }
+.ve-welcome-fresh[data-state="update"] .ve-welcome-fresh-text{ color:var(--ink-warning); }
+.ve-welcome-fresh[data-state="pending"] .ve-welcome-fresh-dot{ background:var(--accent-primary); }
+.ve-welcome-fresh[data-state="pending"] .ve-welcome-fresh-text{ color:var(--ink-accent); }
+/* local ve unknown: nötr — "Çevrimdışı kopya" bir başarı bildirimi DEĞİL. */
+.ve-welcome-fresh[data-state="local"] .ve-welcome-fresh-dot,
+.ve-welcome-fresh[data-state="unknown"] .ve-welcome-fresh-dot{
+  background:var(--text-muted);
+  opacity:0.75;
+}
+.ve-welcome-fresh[data-state="local"] .ve-welcome-fresh-text,
+.ve-welcome-fresh[data-state="unknown"] .ve-welcome-fresh-text{ color:var(--text-muted); }
+
 /* Kimliği yukarıda, eylemleri aşağıda tutan boşluk. Dar pencerede sütunlar
    üst üste bindiği için kapatılır (aşağıdaki medya kuralı). */
 .ve-welcome-spacer{
@@ -2601,12 +2730,16 @@ body.ve-no-module #ve-ribbon{ display:none; }
   padding-top:14px;
   border-top:1px solid var(--border-color);
 }
+/* TEK YAZI TİPİ: bu ekranda mono yok. Künyenin rakam hizası mono'dan değil
+   tabular-nums'tan gelir (açılış künyesiyle aynı çare). */
 .ve-welcome-stamp{
   padding:3px 7px;
   margin-left:-7px;
-  font-family:var(--font-mono);
+  font-family:var(--font-sans);
   font-size:var(--fs-micro);
-  letter-spacing:0.05em;
+  font-weight:500;
+  letter-spacing:0.09em;
+  font-variant-numeric:tabular-nums;
   color:var(--text-muted);
   background:transparent;
   border:1px solid transparent;
@@ -2661,14 +2794,37 @@ body.ve-no-module #ve-ribbon{ display:none; }
   border-radius:var(--radius-lg);
   cursor:pointer;
   text-align:left;
+  /* isolation: ışık katmanı (::before) kartın KENDİ yığın bağlamında kalsın —
+     yoksa z-index:-1 kartın zemininin de altına düşer ve hiç görünmez. */
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
   animation:ve-welcome-rise var(--dur-slow) var(--ease-out) both;
   transition:border-color var(--dur-base) var(--ease-out),
              transform var(--dur-base) var(--ease-out),
              box-shadow var(--dur-base) var(--ease-out);
 }
-.ve-module-card:nth-child(2){ animation-delay:40ms; }
-.ve-module-card:nth-child(3){ animation-delay:80ms; }
-.ve-module-card:nth-child(4){ animation-delay:120ms; }
+/* Kart temposu tek jetondan (--dur-step); açılış koreografisi aynı adımı
+   --dur-enter perdesinin ardından tekrarlar. */
+.ve-module-card:nth-child(2){ animation-delay:var(--dur-step); }
+.ve-module-card:nth-child(3){ animation-delay:calc(var(--dur-step) * 2); }
+.ve-module-card:nth-child(4){ animation-delay:calc(var(--dur-step) * 3); }
+/* İmleç ışığı: --mx/--my kart üzerinde JS'ten gelir; gelmezse ışık kartın
+   ortasında durur (hover yine çalışır). */
+.ve-module-card::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  opacity:0;
+  background:radial-gradient(240px 180px at var(--mx, 50%) var(--my, 50%),
+    color-mix(in srgb, var(--accent-primary) 13%, transparent),
+    transparent 72%);
+  transition:opacity 220ms var(--ease-out);
+}
+.ve-module-card:hover::before,
+.ve-module-card:focus-visible::before{ opacity:1; }
 .ve-module-card:hover,
 .ve-module-card:focus-visible{
   border-color:var(--accent-primary);
@@ -2724,6 +2880,7 @@ body.ve-no-module #ve-ribbon{ display:none; }
    standart / katalog). Değerler kod tarafındaki gerçek kaynaklardan:
    js/numerics.js, js/mount-core.js, js/fead-belts.js, js/structural-*.js. */
 .ve-module-card-foot{
+  position:relative;
   display:flex;
   align-items:center;
   gap:8px;
@@ -2731,10 +2888,28 @@ body.ve-no-module #ve-ribbon{ display:none; }
   padding-top:12px;
   border-top:1px solid var(--border-color);
 }
+/* Künye çizgisi hover'da SOLDAN SAĞA aksana boyanır — kartın "açılıyor"
+   yönünü ok ile aynı yöne gösterir. */
+.ve-module-card-foot::before{
+  content:'';
+  position:absolute;
+  top:-1px;
+  left:0;
+  right:0;
+  height:1px;
+  background:var(--accent-primary);
+  transform:scaleX(0);
+  transform-origin:left center;
+  transition:transform 320ms var(--ease-out);
+}
+.ve-module-card:hover .ve-module-card-foot::before,
+.ve-module-card:focus-visible .ve-module-card-foot::before{ transform:scaleX(1); }
 .ve-module-card-spec{
-  font-family:var(--font-mono);
+  font-family:var(--font-sans);
   font-size:var(--fs-micro);
-  letter-spacing:0.05em;
+  font-weight:500;
+  letter-spacing:0.09em;
+  font-variant-numeric:tabular-nums;
   text-transform:uppercase;
   color:var(--text-muted);
 }
@@ -2753,6 +2928,127 @@ body.ve-no-module #ve-ribbon{ display:none; }
   transform:translateX(4px);
 }
 
+/* ═══ AÇILIŞ KOREOGRAFİSİ ═══
+   Sınıfı js/components.js › veWelcomeEnterReplay ekler ve bitince alır; tek
+   seferlik bir perdedir. Omurga iki jeton: --dur-enter (perde) ve --dur-step
+   (kart temposu); ara gecikmeler o omurganın üstüne okunur.
+   Kurallar kart bloğundan SONRA duruyor — `.ve-module-card:nth-child(n)`
+   ile aynı özgüllükte olsalardı kaynak sırası kazanır ve gecikmeler eskiye
+   döner (sessiz: animasyon yine oynar, yalnız yanlış anda). */
+@keyframes ve-welcome-slide{
+  from{ opacity:0; transform:translateX(-16px); }
+  to{ opacity:1; transform:translateX(0); }
+}
+@keyframes ve-welcome-lift{
+  from{ opacity:0; transform:translateY(14px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+@keyframes ve-welcome-gear{
+  from{ transform:rotate(-75deg); }
+  to{ transform:rotate(0deg); }
+}
+@keyframes ve-welcome-draw{
+  from{ opacity:0; transform:scaleX(0); }
+  to{ opacity:1; transform:scaleX(1); }
+}
+/* Perde koreografiden gelir; kabın kendi kısa fade'i iki kez oynamasın. */
+.ve-welcome.ve-welcome-enter{ animation:none; }
+.ve-welcome-enter .ve-welcome-work{
+  animation:ve-welcome-in var(--dur-enter) var(--ease-out) both;
+}
+.ve-welcome-enter .ve-welcome-id{
+  animation:ve-welcome-slide 380ms var(--ease-out) both;
+}
+.ve-welcome-enter .ve-welcome-logo{
+  animation:ve-welcome-lift 460ms var(--ease-out) 120ms both;
+}
+.ve-welcome-enter .ve-welcome-logo-ico{
+  animation:ve-welcome-gear 460ms var(--ease-out) 120ms both;
+}
+.ve-welcome-enter .ve-welcome-tagline{
+  animation:ve-welcome-rise 460ms var(--ease-out) 180ms both;
+}
+.ve-welcome-enter .ve-welcome-sep{
+  transform-origin:left center;
+  animation:ve-welcome-draw 320ms var(--ease-out) 260ms both;
+}
+.ve-welcome-enter .ve-welcome-note{
+  animation:ve-welcome-rise 380ms var(--ease-out) 320ms both;
+}
+.ve-welcome-enter .ve-welcome-panel{
+  animation:ve-welcome-rise 380ms var(--ease-out) 340ms both;
+}
+.ve-welcome-enter .ve-welcome-eyebrow{
+  animation:ve-welcome-rise 380ms var(--ease-out) 360ms both;
+}
+.ve-welcome-enter .ve-module-card{
+  animation:ve-welcome-rise 380ms var(--ease-out) var(--dur-enter) both;
+}
+.ve-welcome-enter .ve-module-card:nth-child(2){
+  animation-delay:calc(var(--dur-enter) + var(--dur-step));
+}
+.ve-welcome-enter .ve-module-card:nth-child(3){
+  animation-delay:calc(var(--dur-enter) + 2 * var(--dur-step));
+}
+.ve-welcome-enter .ve-module-card:nth-child(4){
+  animation-delay:calc(var(--dur-enter) + 3 * var(--dur-step));
+}
+.ve-welcome-enter .ve-welcome-open{
+  animation:ve-welcome-rise 320ms var(--ease-out) 640ms both;
+}
+.ve-welcome-enter .ve-welcome-links{
+  animation:ve-welcome-rise 320ms var(--ease-out) 700ms both;
+}
+.ve-welcome-enter .ve-welcome-meta{
+  animation:ve-welcome-rise 320ms var(--ease-out) 760ms both;
+}
+
+/* ═══ MODÜLE GEÇİŞ ═══
+   Kabuk (şerit + belge bandı) karşılamada `display:none`; geçiş DEĞİL animasyon
+   gerekiyor, çünkü display:none'dan gelen elemanın başlangıç stili yok ve
+   `transition` sessizce hiç koşmaz. Sınıfı js/components.js ekleyip bitince
+   alır; #ve-ribbon'ın taban transform'u -140%, `.visible` onu 0'a getiriyor —
+   keyframe de 0'da bitiyor ki sınıf kalkınca kayma olmasın. */
+@keyframes ve-chrome-drop{
+  from{ transform:translateY(-100%); }
+  to{ transform:translateY(0); }
+}
+body.ve-chrome-enter #ve-ribbon,
+body.ve-chrome-enter .ve-doc-dock{
+  animation:ve-chrome-drop var(--dur-enter) var(--ease-out) both;
+}
+
+/* Uçan kart kopyası: karşılama kartından yeni düğüme. body çocuğudur ve
+   position:fixed — tuvalin transform'lu uzayına girerse hesap tutmaz.
+   Kalıtsal `ve-welcome-rise` bastırılır (klon gecikmesiz yeniden koşar ve
+   uçarken yerinden zıplardı); pointer-events yok, yoksa tıklamayı yutar. */
+.ve-welcome-flyer{
+  position:fixed;
+  /* İnen şeridin (krom, 1000) ÜSTÜNDE, pencerelerin (modal, 4000) altında. */
+  z-index:var(--z-widget);
+  margin:0;
+  pointer-events:none;
+  animation:none;
+  transform-origin:0 0;
+  will-change:transform, opacity;
+  box-shadow:var(--shadow-lg);
+  transition:transform var(--dur-fly) var(--ease-fly),
+             opacity var(--dur-fly) var(--ease-fly);
+}
+/* Klondaki imleç ışığı kalkışta sıçrama üretir — sönük doğar. */
+.ve-welcome-flyer::before{ animation:none; opacity:0; }
+
+/* Marka devamlılığı: açılış logosunun body'ye taşınan kopyası. Splash'in
+   İÇİNDE değil (orada panelle birlikte 160 ms'de sönerdi), bu yüzden seçici
+   doğrudan gövde çocuğu. Konumu JS yazar; burada yalnız kopyanın HEDEF
+   ölçüsü ve durmuş çarkı var — dönen çark klonda 0°'den yeniden başlardı. */
+body > .mfsim-loading-logo{ pointer-events:none; }
+body > .mfsim-loading-logo .mfsim-loading-logo-ico{
+  width:1.15em;
+  height:1.15em;
+  animation:none;
+}
+
 /* Dar pencere: iki sütun üst üste. Sol panel bir başlık bandına dönüşür;
    açıklama metni ve boşluk kalkar, eylemler ve künye kalır. */
 @media (max-width:1100px){
@@ -2765,6 +3061,18 @@ body.ve-no-module #ve-ribbon{ display:none; }
   }
   .ve-welcome-note,
   .ve-welcome-spacer{ display:none; }
+  /* Panelin GÖVDESİ kalkar, GÜNCELLİK SATIRI kalır: değişiklik listesi burada
+     sol sütunu uzatıp modül ızgarasını ekrandan aşağı iterdi (overlay
+     kaydırılabilir olduğu için hata "kırılma" değil sessiz uzama olurdu),
+     ama "elimdeki kopya ne?" satırının başka yeri yok. */
+  .ve-welcome-panel-title,
+  .ve-welcome-change,
+  .ve-welcome-more{ display:none; }
+  .ve-welcome-panel{ margin-top:12px; }
+  /* Alt boşluk ŞART: dar yerleşimde esneme payı (.ve-welcome-spacer) kalkıyor
+     ve satır "Kayıtlı proje aç" düğmesine yapışıp onun alt yazısı gibi
+     okunuyordu. */
+  .ve-welcome-fresh{ margin:0 0 14px; padding-top:0; border-top:none; }
   .ve-welcome-sep{ margin:16px 0 14px; }
   .ve-welcome-open{ align-self:flex-start; }
   .ve-welcome-meta{ margin-top:14px; padding-top:10px; }
@@ -2774,9 +3082,31 @@ body.ve-no-module #ve-ribbon{ display:none; }
   .ve-module-overlay-grid{ grid-template-columns:1fr; }
   .ve-welcome-work{ padding:18px; }
 }
+/* Hareket azaltma: koreografi, kabuk inişi, uçuş ve imleç ışığı DURUR —
+   bilgi ve hover vurgusu kalır, kapatılan yalnız hareket. */
 @media (prefers-reduced-motion: reduce){
   .ve-welcome,
-  .ve-module-card{ animation:none; }
+  .ve-module-card,
+  .ve-welcome-enter .ve-welcome-work,
+  .ve-welcome-enter .ve-welcome-id,
+  .ve-welcome-enter .ve-welcome-logo,
+  .ve-welcome-enter .ve-welcome-logo-ico,
+  .ve-welcome-enter .ve-welcome-tagline,
+  .ve-welcome-enter .ve-welcome-sep,
+  .ve-welcome-enter .ve-welcome-note,
+  .ve-welcome-enter .ve-welcome-panel,
+  .ve-welcome-enter .ve-welcome-eyebrow,
+  .ve-welcome-enter .ve-module-card,
+  .ve-welcome-enter .ve-welcome-open,
+  .ve-welcome-enter .ve-welcome-links,
+  .ve-welcome-enter .ve-welcome-meta,
+  body.ve-chrome-enter #ve-ribbon,
+  body.ve-chrome-enter .ve-doc-dock{ animation:none; }
+  /* Uçuş JS'te hiç başlatılmıyor (js/components.js matchMedia kapısı); bu
+     satır klon yine de doğarsa asılı kalmasın diye emniyet. */
+  .ve-welcome-flyer{ transition:none; }
+  .ve-module-card::before,
+  .ve-module-card-foot::before{ transition:none; }
 }
 
 .ve-canvas-wrapper{
