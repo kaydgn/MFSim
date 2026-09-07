@@ -119,14 +119,23 @@ kuralıdır: FEAD'e dokunmayan bir oturum FEAD kayıtlarını ödemez.
 |-------|-------|-------------------|
 | FEAD (kayış-kasnak) | `fead` | `js/fead-*.js`, `js/cp-fead*.js`, `js/guide-fead.js` ya da FEAD testlerine dokunmadan **ÖNCE** |
 | Yapısal Analiz (FEA) | `structural` | `js/structural-*.js`, `js/cp-structural*.js`, gömülü OCCT/TetGen varlıkları ya da Yapısal testlere dokunmadan **ÖNCE** |
+| Araç Performans (tam gaz) | `arac-performans` | `js/ft-performance.js`, `js/simulation-engine.js`, `js/numerics.js`, `js/cp-arac-*.js`, `js/cp-engine.js`, `js/cp-gearbox.js`, `js/cp-torque-converter.js`, `js/cp-matching.js`, `js/ft-obstacle.js`, `js/ft-segment-drive.js`, `assets/examples/ap_*.json` ya da Araç Performans testlerine dokunmadan **ÖNCE** |
 
 **Bu bir nezaket değil kapıdır.** İki modülün de hata sınıfı sessizdir — sayı
 yanlış çıkar, program çalışmaya devam eder, uyarı verilmez. Skill'i okumadan
 yapılan bir "iyileştirme" (çekirdeği proje stiline çevirmek, gerginin tanımını
 eski yönüne döndürmek, tet4'e düşmek) testten geçebilir ve yine yanlış olabilir.
 
-Takoz ve Araç Performans modüllerinin ayrı karar kaydı **yok**; kuralları kendi
-test dosyalarında ve kodun yorumlarında duruyor.
+Takoz modülünün ayrı karar kaydı **yok**; kuralları kendi test dosyalarında ve
+kodun yorumlarında duruyor.
+
+Araç Performans'ın kaydı 2026-09-07'de **açıldı** — o güne kadar yoktu. Sebep
+bir düzen değişikliği değil, bir ölçüm: `ft-performance.js`'in PCHIP uç eğim
+kelepçesi referansın hatalı çevirisiydi (`< 0` yerine `<= 0` olmalıydı), düz uç
+aralıklı her tabloda şekil koruma garantisini bozuyordu ve **sevk edilen veride
+canlıydı**. Yani modül, FEAD ile Yapısal'ın skill'e sahip olma gerekçesi olan
+sessiz hata sınıfını gösterdi. Kayıt o turda çıkan kararları ve kapatılmamış üç
+ayrışmayı taşıyor.
 
 ### Üç katman kalıbı (dışarıdan gelen çekirdekli modüller)
 
@@ -400,6 +409,7 @@ FEAD ve Yapısal Analiz satırları modül skill'lerine taşındı
 | `tests/unit/shot-tool.test.js` | `tools/shot.js` | Ekran görüntüsü aracının ayrıştırma çekirdeği: bilinmeyen bayrağın SESSİZCE yutulmaması (yanlış ekranın görüntüsü alınırdı), hedef takma adları, PNG ölçüsü, karşılaştırmanın İKİ GÖRÜNTÜYÜ TEK ÖLÇEKLE küçültmesi |
 | `tests/unit/build-freshness.test.js` | `viewer/build.js` + `candbc/build.js` + `package.json` | **Git'e dâhil üretilen dosyalar taze mi**: `css/` üç ürüne birden girdiği için bir tema rötuşu `MFSim_Olcum_Goruntuleyici.html` ve `MFSim_CAN_Cozumleyici.html`'i birden bayatlatıyor ve kapı eskiden YALNIZ CI'daydı. Derleme geçici yola yapılır (`MFSIM_BUILD_OUT`) — test çalışma ağacını kirletmez. Ayrıca `three` köken kapısı: npm bağımlılığı kaldırıldı (kullanılmıyordu, kurulum başına 30,1 MB), sürüm izi `index.html` ile `vendor/three.min.js` arasında bağlı |
 | `tests/unit/source-hygiene.test.js` | `js/`, `viewer/js/`, `css/`, `index.html` | **Yapısal kapılar**: üst-seviye bildirim çakışması yok, kaynakta kontrol karakteri yok |
+| `tests/unit/pchip-uc-kopya.test.js` | `js/numerics.js` + `js/ft-performance.js` + `js/mount-core.js` | **Tek PCHIP algoritmasının ÜÇ ayrı yazımı aynı eğriyi verir**: `assets/examples`'taki her sayısal tablo üç kopyada karşılaştırılır — ayrışma sessizdi, çünkü her dosya kendi başına doğru. **Bilerek ayrık üç nokta ÇİVİLİ**: tablo dışı (A/B düz — C doğrusal, gerekçesi `mount-core.js`), n=2 (A `null` döner, `veEvalPchip` sessizce `0` verir), geçersiz girdi (yalnız `ft-performance.js` adresli hata atar) |
 | `tests/unit/loader-splash.test.js` | `js/loader.js` + `index.html` açılış ekranı | **Açılış ekranı**: splash gövdesi ↔ `ELS` kimlik sözleşmesi (bir yeniden adlandırma çubuğu sessizce durdururdu), `data-mfsim-stage` işaretlerinden aşama öbeklerinin kurulması (işaretsiz script bir öncekine yazılır; ad `&` içerebilir), atlanan modülün GÖRÜNÜR olması + yüklemenin devam etmesi, sürüm künyesi (modüler kopyada boş kalır), ipucu döngüsünün kapanışta DURMASI |
 | `tests/unit/results-txt-preview-download.test.js` | `js/results.js` | TXT önizlemesinin "HTML İndir" yolu — iki rapor üreticisinin ayrı kaldığı; düğme kablolaması artık ÜRETİLEN YÜZEYDEN ölçülüyor (kopya sayısı değil: bandı tek üretici kuruyor) ve dört panelin de aynı kabuğa gittiği |
 | `tests/unit/results-txt-page.test.js` | `js/results.js` + `css/styles.css` | **TXT raporunun görünümü**: üst bandın soldaki "Veri Gezgini" bandıyla TEK ölçü kaynağından beslenmesi (yükseklik, alt çizgi, başlık puntosu, zemin, düğme sınıfı), sayfanın A4 olması ve içeriğe göre DARALMAMASI, gövdenin tek `<pre>` kalması (blok blok ortalama yok) ve metnin bire bir korunup kaçışlanması, font ölçüsünün sayfaya sığmaktan türemesi + okunur tavan, karakter oranının ölçülemeyince GÜVENLİ tarafa düşmesi, indirilen belgenin aynı sayfayı açıp `@page{size:A4}` ile basması |

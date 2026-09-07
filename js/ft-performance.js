@@ -80,9 +80,29 @@ var FT_SOLVER = (function() {
     return { xs: xs, ys: ys, ds: ds };
   }
 
+  // Uç düğüm türevi (MATLAB/SLATEC "pchipend"): üç noktalı merkezsiz karesel,
+  // ardından şekil koruma kısıtı.
+  //
+  // KELEPÇE KOŞULU `<=` OLMAK ZORUNDA. Referans testi `sign(d) ~= sign(del1)`
+  // ve `sign(0) = 0` olduğu için uç aralık DÜZ iken (del1 == 0, d != 0) ateşler.
+  // Burada uzun süre `d * del1 < 0` yazıyordu — kesin `<`, çarpım tam sıfır
+  // olduğu için o durumu KAÇIRIYORDU: düz plato ile biten her tabloda uç eğim
+  // sıfırlanmıyor ve eğri platonun altına sarkıyordu, yani PCHIP'in var oluş
+  // sebebi olan şekil koruma garantisi bozuluyordu.
+  //   400.000 rastgele girdide referanstan sapma: numerics.js 0 · mount-core.js 0
+  //   · bu dosya 58.797 — hepsi del_uç == 0 iken.
+  //   Sevk edilen veride: ap_isb340_tc411 konvertörünün tau(SR) tablosu son
+  //   aralığı düz (0,975-0,99'da tau = 0,985) → uç eğim 0,015 yerine 0 olmalı.
+  // Kapısı: tests/unit/pchip-uc-kopya.test.js
+  //
+  // İkinci daldaki `del1 * del2 < 0` kapısı DAVRANIŞSAL OLARAK ÖLÜ, o yüzden
+  // numerics.js/mount-core.js'teki kapısız yazımla uyuşuyor: del1*del2 > 0 iken
+  // d/del1 = (2h1 + h2 - h1*(del2/del1))/(h1+h2) < 2 < 3, yani kelepçe zaten
+  // ateşleyemez; d/del1 < -3 durumu ise ilk dala düşer. (400.000 örnekte
+  // ayrışma: 0.) Üç yazım da aynı sonucu verdiği için olduğu gibi bırakıldı.
   function _pchipEndSlope(h1, h2, del1, del2) {
     var d = ((2 * h1 + h2) * del1 - h1 * del2) / (h1 + h2);
-    if(d * del1 < 0) d = 0;
+    if(d * del1 <= 0) d = 0;
     else if(del1 * del2 < 0 && Math.abs(d) > 3 * Math.abs(del1)) d = 3 * del1;
     return d;
   }
