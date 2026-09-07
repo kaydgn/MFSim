@@ -36,6 +36,13 @@ async function bootApp(page) {
   }, null, { timeout: 60000 });
 }
 
+// EKRAN X İŞARETİ — çizim düzleminden, sayfanın KENDİ erişimcisinden.
+// Ön görünüşte (varsayılan, 2026-09-07 krank CW konvansiyonu) kanvas X'te
+// aynalı; bu dosyanın ölçtüğü şey işaretin kendisi değil ZİNCİRİN ayakta
+// olması (sürükleme → mm → imza → kart → yeni L_eff).
+const sxOf = (page) => page.evaluate(() =>
+  (typeof veFeadViewFront === 'function' && veFeadViewFront()) ? -1 : 1);
+
 // FEAD alt topolojisini aç ve BMC örneğini kur.
 async function openFeadWithExample(page) {
   await page.evaluate(() => {
@@ -89,12 +96,15 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
     const Lonce = await readL(page);
     expect(Lonce).toBeGreaterThan(1000);
 
-    // Kutunun ekran merkezinden tut, 60 px SOLA sürükle.
+    // Kutunun ekran merkezinden tut, 60 px sürükle. YÖN çizim düzleminden:
+    // ölçülen şey X'in işareti değil, "sürükleme çözümü değiştiriyor mu" —
+    // yani alternatör mm'de HER İKİ düzlemde de kranktan UZAKLAŞMALI (−60).
+    const sx = await sxOf(page);
     const box = await page.locator('#' + altId).boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2 - 30, box.y + box.height / 2, { steps: 5 });
-    await page.mouse.move(box.x + box.width / 2 - 60, box.y + box.height / 2, { steps: 5 });
+    await page.mouse.move(box.x + box.width / 2 - sx * 30, box.y + box.height / 2, { steps: 5 });
+    await page.mouse.move(box.x + box.width / 2 - sx * 60, box.y + box.height / 2, { steps: 5 });
     await page.mouse.up();
 
     const sonra = await mmOf(page, altId);
@@ -287,7 +297,7 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
       return { dxPx: c(b).x - c(a).x, dxMm: b.data.x - a.data.x,
                dyPx: c(b).y - c(a).y, dyMm: b.data.y - a.data.y };
     });
-    expect(kontrol.dxPx).toBeCloseTo(kontrol.dxMm, 0);
+    expect((await sxOf(page)) * kontrol.dxPx).toBeCloseTo(kontrol.dxMm, 0);
     expect(kontrol.dyPx).toBeCloseTo(-kontrol.dyMm, 0);      // Y TERS
   });
 
@@ -477,7 +487,7 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
     await page.mouse.move(b2.x + b2.width / 2 + 10, b2.y + b2.height / 2, { steps: 4 });
     await page.mouse.up();
     const z = await zoomOf(page);
-    expect((await mmOf(page, altId)).x - once.x).toBeCloseTo(10 / z, 0);
+    expect((await mmOf(page, altId)).x - once.x).toBeCloseTo((await sxOf(page)) * 10 / z, 0);
   });
 
   // ── DÖNÜŞ YÖNÜ (fead-spin) ──────────────────────────────────────────────
@@ -508,7 +518,17 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
       });
       await page.waitForTimeout(150);
       const rz = page.locator('#' + spinId + ' .ve-fead-badge');
-      await expect(rz).toHaveText('↺ CCW');
+      // BEKLENEN METİN ETİKET ÜRETİCİSİNDEN. Sabit yazılsaydı çizim düzlemi
+      // değişince (2026-09-07: ön görünüş, krank CW) kapı, ölçtüğü ilişkiyi
+      // değil bir düzlem tercihini savunurdu. Örnek VERİ düzleminde +1 kurulu;
+      // rozet tıklanınca sıra ters yürüyor, yani veri yönü −1 oluyor.
+      const et = await page.evaluate(() => ({
+        bas: veFeadSpinLabel(1).kisa, tersi: veFeadSpinLabel(-1).kisa,
+        basSense: veFeadSpinLabel(1).sense, tersSense: veFeadSpinLabel(-1).sense,
+      }));
+      expect(et.bas).not.toBe(et.tersi);
+      expect(et.basSense).toBe(-et.tersSense);
+      await expect(rz).toHaveText(et.bas);
 
       const oku = () => page.evaluate(() => ({
         // Kayış yolunun kablo sırası
@@ -549,7 +569,7 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
       expect(once.L).toBeGreaterThan(1000);
 
       await rz.click();
-      await expect(rz).toHaveText('↻ CW');
+      await expect(rz).toHaveText(et.tersi);
       await page.waitForTimeout(300);
       const sonra = await oku();
 
@@ -559,8 +579,8 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
       expect(sonra.oklar).not.toBe(once.oklar);
       // KART tazelendi ve çevrimin yönü çevrildi
       expect(once.anim).not.toBeNull();
-      expect(once.anim.sense).toBe(1);
-      expect(sonra.anim.sense).toBe(-1);
+      expect(once.anim.sense).toBe(et.basSense);
+      expect(sonra.anim.sense).toBe(et.tersSense);
       // …ama GEOMETRİ BİREBİR aynı (yönden bağımsız) — kayış çevresi de,
       // durum şeridindeki L_eff de kılı kıpırdamıyor.
       expect(sonra.anim.loop).toBeCloseTo(once.anim.loop, 3);
@@ -568,7 +588,7 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
 
       // İkinci tık başa döndürür
       await rz.click();
-      await expect(rz).toHaveText('↺ CCW');
+      await expect(rz).toHaveText(et.bas);
       await page.waitForTimeout(300);
       expect((await oku()).teller).toBe(once.teller);
     });

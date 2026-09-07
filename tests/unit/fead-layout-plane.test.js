@@ -20,10 +20,23 @@
  * Bu dosya yalnız onu soruyor ve cevabı raporun KENDİ "Layout Data"
  * koordinatlarından alıyor (doğrulama fixture'ı → `docs/gates-reports/pdf/`).
  *
- * KAPI BAYRAKTAN BAĞIMSIZ DEĞİL, BİLEREK: varsayılan bir daha ters çevrilirse
- * bu dosya kırmızıya döner. Ayna makinesi silinmedi (ölçülmüş bir ilişkiyi
- * taşıyor, bkz. docs/gates-reports/README.md §5-6); yalnız VARSAYILAN artık
- * rapor düzlemi ve kapısı burada.
+ * ── 2026-09-07: KAPI DÜZLEMİ ARTIK KENDİSİ KURUYOR ────────────────────────
+ *
+ * Kullanıcı konvansiyonu (2026-09-07): *"Normalde krank kasnağı (yani sürücü
+ * kasnak) saat yönünde dönmesi lazım."* Rapor düzleminde kayış ÖLÇÜLMÜŞ olarak
+ * CCW dolanıyor, dolayısıyla "krank CW" ile "düzen raporun sayfasıyla aynı"
+ * AYNI ANDA SAĞLANAMAZ — biri ötekinin X aynası. Varsayılan ön görünüşe döndü.
+ *
+ * KAPININ ÖLÇTÜĞÜ ŞEY DEĞİŞMEDİ, YALNIZ DÜZLEMİ KENDİSİ SEÇİYOR. Eski sürümü
+ * bayrağın DEĞERİNİ kilitliyordu (`expect(...VIEW_FRONT).toBe(false)`); o kilit
+ * bir tercihi savunuyordu, ölçtüğü ilişkiyi değil. Artık karşılaştırma
+ * `veFeadSetViewFront(false)` ile rapor düzleminde yapılıyor: 2026-09-04'te
+ * yakalanan hata sınıfı (çizicinin son adımındaki bir işaret hatası) hangi
+ * varsayılanda olursak olalım kırmızıya döner.
+ *
+ * VE İKİ DÜZLEM BİRBİRİNE BAĞLANDI (aşağıdaki son öbek): ön görünüş, rapor
+ * düzleminin TAM X aynası olmak zorunda — yani bir düzlemde düzeltilen bir
+ * işaret hatası ötekinde sessizce kalamaz.
  */
 const fead = require('../../js/cp-fead.js');
 const M = require('../../js/fead-model.js');
@@ -69,9 +82,10 @@ function kur(key) {
  * örnekte KIRMIZI verdi — sebebi çizim değil ölçüm hatasıydı: Ø172 krank ile
  * Ø137 klima yan yanayken etiket sırası merkez sırasından farklı çıkıyor.
  */
-function ekranKonumlari(build, adet) {
+function ekranKonumlari(build, adet, opt) {
   const svg = fead.veFeadLayoutSVG(build, 700, 380,
-    { posMode: 'mean', compass: false, pivot: true, arrows: false });
+    Object.assign({ posMode: 'mean', compass: false, pivot: true, arrows: false },
+                  opt || {}));
   expect(svg).toBeTruthy();
   const box = document.createElement('div');
   box.innerHTML = svg;
@@ -85,6 +99,13 @@ function ekranKonumlari(build, adet) {
 }
 
 const isaret = (v) => (Math.abs(v) < 1e-9 ? 0 : (v > 0 ? 1 : -1));
+
+// Karşılaştırma RAPOR düzleminde yapılır — varsayılan ne olursa olsun.
+const VARSAYILAN_DUZLEM = M.VE_FEAD_VIEW_FRONT;
+const raporDuzleminde = (fn) => {
+  M.veFeadSetViewFront(false);
+  try { return fn(); } finally { M.veFeadSetViewFront(VARSAYILAN_DUZLEM); }
+};
 
 // Jeneratörün ürettiği dokuz örnek + elle yazılmış AG00879: hepsinin fixture
 // karşılığı var, yani raporun Layout Data'sı okunabiliyor.
@@ -112,7 +133,7 @@ describe('çizilen resim = RAPORUN resmi (Gates Layout Data)', () => {
       test('SOL-SAĞ DÜZENİ RAPORLA AYNI — aynalanmış resim burada kırmızıya döner', () => {
         const b = kur(id);
         expect(b.ok).toBe(true);
-        const scr = ekranKonumlari(b, adlar.length);
+        const scr = raporDuzleminde(() => ekranKonumlari(b, adlar.length));
 
         // Her kasnak ÇİFTİ için: raporda solda olan ekranda da solda olmalı.
         // Sıralama yerine ÇİFT karşılaştırması, çünkü iki kasnak aynı X'i
@@ -133,7 +154,7 @@ describe('çizilen resim = RAPORUN resmi (Gates Layout Data)', () => {
 
       test('ALT-ÜST DÜZENİ RAPORLA AYNI — Y ekranda AŞAĞI, raporda YUKARI', () => {
         const b = kur(id);
-        const scr = ekranKonumlari(b, adlar.length);
+        const scr = raporDuzleminde(() => ekranKonumlari(b, adlar.length));
         let bakilan = 0;
         o.order.forEach((k1, i) => {
           o.order.forEach((k2, j) => {
@@ -152,7 +173,7 @@ describe('çizilen resim = RAPORUN resmi (Gates Layout Data)', () => {
         // Bildirim birebir buydu: *"Otomatik gergi krank kasnağının sol
         // tarafında olması gerekirken, sağ tarafında çıkıyor."*
         const b = kur(id);
-        const scr = ekranKonumlari(b, adlar.length);
+        const scr = raporDuzleminde(() => ekranKonumlari(b, adlar.length));
         const tenIdx = o.order.indexOf('TEN');
         const krkIdx = o.order.findIndex((k) => /^(CRK|FAN)$/.test(k));
         expect(tenIdx).toBeGreaterThanOrEqual(0);
@@ -178,7 +199,15 @@ describe('KANVAS ile KART aynı elde — ikinci, bağımsız kusur', () => {
                  'AG00902_1275_GATES_2023', 'BMC_FEAD_2026'];
 
   ORNEK.forEach((id) => {
-    test(id + ' — kanvas X sırası ile kart X sırası AYNI', () => {
+    // İKİ DÜZLEMDE DE. Aynalama iki yüzeyden yalnız birine konsaydı (2026-09-04'te
+    // tam olarak bu olmuştu: kart aynalı, kanvas değil) kullanıcı aynı modelin
+    // iki resmini ters el ile görürdü ve hiçbir sayı yanlış görünmezdi.
+    [true, false].forEach((onGorunus) => {
+    test(id + ' — kanvas X sırası ile kart X sırası AYNI (' +
+         (onGorunus ? 'ön görünüş' : 'rapor düzlemi') + ')', () => {
+      const eski = M.VE_FEAD_VIEW_FRONT;
+      M.veFeadSetViewFront(onGorunus);
+      try {
       const b = kur(id);
       expect(b.ok).toBe(true);
       const ex = M.veFeadExampleOf(id);
@@ -209,13 +238,118 @@ describe('KANVAS ile KART aynı elde — ikinci, bağımsız kusur', () => {
         });
       });
       expect(bakilan).toBeGreaterThan(0);
+      } finally { M.veFeadSetViewFront(eski); }
+    });
     });
   });
 });
 
-describe('ayna makinesi DURUYOR — silinmedi, yalnız varsayılan değil', () => {
-  test('varsayılan RAPOR düzlemi', () => {
-    expect(M.VE_FEAD_VIEW_FRONT).toBe(false);
+describe('DÖNÜŞ YÖNÜ — krank saat yönünde (kullanıcı konvansiyonu, 2026-09-07)', () => {
+  // Kullanıcı bildirimi: *"Sihirbaz içinde yüklü olan tüm örnekler CCW dönüyor.
+  // Normalde krank kasnağı (yani sürücü kasnak) saat yönünde dönmesi lazım."*
+  test('varsayılan ÖN GÖRÜNÜŞ', () => {
+    expect(M.VE_FEAD_VIEW_FRONT).toBe(true);
+  });
+
+  test('ONİKİ ÖRNEĞİN ONİKİSİ DE CW — rozet, etiket ve sihirbaz aynı üreticiden', () => {
+    const anahtarlar = M.veFeadExampleKeysAll();
+    expect(anahtarlar.length).toBeGreaterThanOrEqual(12);
+    anahtarlar.forEach((id) => {
+      const b = kur(id);
+      expect(b.ok).toBe(true);
+      // VERİ düzlemi ölçülmüş olarak CCW (+1); on rapor, Σ işaretli sarım = +360.
+      expect(b.spin).toBe(1);
+      // EKRANDA görülen yön bunun tersi: CW.
+      const et = M.veFeadSpinLabel(b.spin);
+      expect(et.sense).toBe(-1);
+      expect(et.kisa).toContain('CW');
+      expect(et.kisa).not.toContain('CCW');
+      expect(et.uzun).toContain('saat yönünde');
+    });
+  });
+
+  test('ÇİZİM DE CW: kayış animasyonunun yönü etiketle AYNI işarette', () => {
+    // Rozet ile kartın ayrışması bu modülün ölçülmüş hata sınıfı ("kart kayışı
+    // bir yöne akıtırken rozet öbür yönü yazıyor"). Animasyon `geom.sense`'ten
+    // besleniyor; burada onu ETİKETLE bağlıyoruz.
+    const b = kur('AG0868_4PK_GATES_2022');
+    const g = F.tensionerState(b.sys, F.meanRel(b.sys)).geom;
+    const ekran = M.veFeadMirrorGeomX(g);          // ön görünüş = aynalı
+    expect(isaret(ekran.sense)).toBe(M.veFeadSpinLabel(b.spin).sense);
+    expect(isaret(ekran.sense)).toBe(-isaret(g.sense));
+  });
+
+  test('BAYRAK KAPANINCA ETİKET DE DÖNER — iki düzlem tek üreticiden', () => {
+    const eski = M.VE_FEAD_VIEW_FRONT;
+    try {
+      M.veFeadSetViewFront(false);
+      expect(M.veFeadSpinLabel(1).kisa).toContain('CCW');
+      expect(M.veFeadSpinLabel(1).uzun).toContain('Gates rapor düzlemi');
+      M.veFeadSetViewFront(true);
+      expect(M.veFeadSpinLabel(1).kisa).toBe('\u21bb CW');
+      expect(M.veFeadSpinLabel(1).uzun).toContain('önden');
+    } finally { M.veFeadSetViewFront(eski); }
+  });
+});
+
+describe('AÇI DEĞERLERİ HANGİ DÜZLEMDE — basılan yüzeyler söylüyor', () => {
+  // Sessiz yanlış okuma sınıfı: çizim aynalı, açı DEĞERİ veri düzleminde.
+  // Kullanıcı "Yön 350°" okuyup aynalı resimde oku 190°'de arayabilir.
+  test('not TEK ÜRETİCİDEN ve yalnız ayna açıkken', () => {
+    const eski = M.VE_FEAD_VIEW_FRONT;
+    try {
+      M.veFeadSetViewFront(false);
+      expect(M.veFeadPlaneNote()).toBe('');
+      M.veFeadSetViewFront(true);
+      expect(M.veFeadPlaneNote()).toContain('Gates düzleminde');
+    } finally { M.veFeadSetViewFront(eski); }
+  });
+
+  test('KASNAK PANELİ notu GERÇEKTEN basıyor — üretilen HTML\'den ölçülüyor', () => {
+    // Üreticiyi değil YÜZEYİ ölçüyoruz: bu deponun tekrar eden kaçağı, kapının
+    // üreticiyi doğrulayıp yüzeyin sessizce eski metni basmasıydı.
+    kur('AG0868_4PK_GATES_2022');
+    const nd = global.nodes.filter((n) => M._feadIsPulley(n))[0];
+    expect(nd).toBeTruthy();
+    const eski = M.VE_FEAD_VIEW_FRONT;
+    try {
+      M.veFeadSetViewFront(true);
+      const on = fead.getFeadPulleyPropertiesHTML(nd);
+      expect(on).toContain('Gates rapor düzlemi');
+      expect(on).toContain('çizim ön görünüş');
+      M.veFeadSetViewFront(false);
+      const rapor = fead.getFeadPulleyPropertiesHTML(nd);
+      expect(rapor).toContain('Gates rapor düzlemi');
+      expect(rapor).not.toContain('çizim ön görünüş');
+    } finally { M.veFeadSetViewFront(eski); }
+  });
+});
+
+describe('ayna makinesi — iki düzlem BİRBİRİNE BAĞLI', () => {
+  test('ön görünüş, rapor düzleminin TAM X aynası — çizilen SVG\'den', () => {
+    // Kapı ilişkiyi bağlıyor, bir düzlemi değil: birinde düzeltilen bir işaret
+    // hatası ötekinde sessizce kalamaz.
+    const id = 'AG0868_4PK_GATES_2022';
+    const b = kur(id);
+    const n = M.veFeadExampleOf(id).pulleys.length;
+    const eski = M.VE_FEAD_VIEW_FRONT;
+    let on, rapor;
+    try {
+      M.veFeadSetViewFront(true);  on = ekranKonumlari(b, n);
+      M.veFeadSetViewFront(false); rapor = ekranKonumlari(b, n);
+    } finally { M.veFeadSetViewFront(eski); }
+    // Aynı çerçeve, aynı ölçek → X sırası TERS, Y birebir aynı.
+    let bakilan = 0;
+    for (let i = 0; i < n; i++) {
+      expect(on[i].y).toBeCloseTo(rapor[i].y, 6);
+      for (let j = i + 1; j < n; j++) {
+        const d = rapor[i].x - rapor[j].x;
+        if (Math.abs(d) < 1) continue;
+        bakilan++;
+        expect(isaret(on[i].x - on[j].x)).toBe(-isaret(d));
+      }
+    }
+    expect(bakilan).toBeGreaterThan(0);
   });
 
   test('`veFeadMirrorGeomX` hâlâ tam simetri — ölçülmüş ilişki korunuyor', () => {
@@ -230,17 +364,17 @@ describe('ayna makinesi DURUYOR — silinmedi, yalnız varsayılan değil', () =
     g.wraps.forEach((w, i) => expect(m.wraps[i]).toBeCloseTo(w, 12));
   });
 
-  test('`rawFrame` çizimi aynasız ister — varsayılanla AYNI resmi verir', () => {
+  test('`rawFrame` çizimi aynasız ister — BAYRAKTAN BAĞIMSIZ, hep rapor düzlemi', () => {
     const b = kur('AG0868_4PK_GATES_2022');
-    const adlar = M.veFeadExampleOf('AG0868_4PK_GATES_2022').pulleys.map((p) => p.name);
-    const a = ekranKonumlari(b, adlar.length);
-    const svg = fead.veFeadLayoutSVG(b, 700, 380,
-      { posMode: 'mean', compass: false, pivot: true, arrows: false, rawFrame: true });
-    const box = document.createElement('div'); box.innerHTML = svg;
-    const ham = [];
-    Array.from(box.querySelectorAll('circle[data-pi]')).forEach((e) => {
-      ham[Number(e.getAttribute('data-pi'))] = parseFloat(e.getAttribute('cx'));
-    });
-    a.forEach((q, i) => expect(ham[i]).toBeCloseTo(q.x, 6));
+    const n = M.veFeadExampleOf('AG0868_4PK_GATES_2022').pulleys.length;
+    const rapor = raporDuzleminde(() => ekranKonumlari(b, n));
+    const eski = M.VE_FEAD_VIEW_FRONT;
+    try {
+      [true, false].forEach((on) => {
+        M.veFeadSetViewFront(on);
+        const ham = ekranKonumlari(b, n, { rawFrame: true });
+        rapor.forEach((q, i) => expect(ham[i].x).toBeCloseTo(q.x, 6));
+      });
+    } finally { M.veFeadSetViewFront(eski); }
   });
 });

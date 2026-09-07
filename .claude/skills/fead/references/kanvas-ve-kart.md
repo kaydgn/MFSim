@@ -99,10 +99,41 @@ araç düğümlerini kümenin dışındaki iki şeride koyuyor ve örnek kurucus
 devrediyor (bkz. *"örnek kurucusu kutuyu koordinatın SÖYLEMEDİĞİ yere
 koyuyordu"*).
 
-#### ÇİZİM DÜZLEMİ — VARSAYILAN RAPOR DÜZLEMİ (2026-09-04, öncekini DEĞİŞTİRİR)
+#### ÇİZİM DÜZLEMİ — VARSAYILAN ÖN GÖRÜNÜŞ (2026-09-07, SON HÜKÜM)
 
-**HÜKÜM: `VE_FEAD_VIEW_FRONT = false`.** Çizim, Gates raporunun 1. sayfasındaki
-şemayla AYNI düzende; ayna makinesi duruyor ama varsayılan değil.
+**HÜKÜM: `VE_FEAD_VIEW_FRONT = true`, ve okuma tek noktadan
+(`veFeadViewFront()` / `veFeadSetViewFront()`).** Krank saat yönünde döner.
+
+Kullanıcı konvansiyonu: *"Sihirbaz içinde yüklü olan tüm örnekler CCW dönüyor.
+Normalde krank kasnağı (yani sürücü kasnak) saat yönünde dönmesi lazım."*
+Bu, `docs/gates-reports/README.md` §6'nın açıkça EKSİK bıraktığı bilgi —
+konvansiyonu modelin sahibi beyan etti, çıkarım kural oldu.
+
+**İKİ BİLDİRİM BİRBİRİNİN AYNASI, ÜÇÜNCÜ SEÇENEK YOK.** Rapor düzleminde kayış
+ölçülmüş olarak CCW dolanıyor; dolayısıyla *"krank CW"* ile *"düzen raporun
+sayfasıyla aynı"* aynı anda sağlanamaz. Beklenen ve kabul edilen sonuç: gergi,
+kranka göre raporun sayfasındakinin KARŞI tarafında çıkar. Bu bir regresyon
+değil, seçilen bakış yönünün kendisi.
+
+**KANVAS DA AYNALANIR** (`_feadPlaneSx()` → `veFeadCanvasToMm` /
+`veFeadMmToCanvas` / `veFeadArrangeByCoords`). Aşağıdaki "ikinci, bağımsız
+kusur" 2026-09-04'te ayna KAPATILARAK giderilmişti; ayna geri açıldığı için
+artık buradan kapanıyor. Üç yol da tek işaretten besleniyor — biri unutulsaydı
+kutu, kapatıp açınca X'te zıplardı.
+
+**AÇI DEĞERLERİ VERİ DÜZLEMİNDE KALIR** ve basıldıkları yer bunu SÖYLER
+(`veFeadPlaneNote()`, tek üretici; ayna kapalıyken boş): kullanıcı *"Yön 350°"*
+okuyup aynalı resimde oku 190°'de aramasın.
+
+**KAPI ARTIK DÜZLEMİ KENDİSİ KURUYOR.** `fead-layout-plane.test.js` eskiden
+bayrağın DEĞERİNİ kilitliyordu (`toBe(false)`) — o kilit bir tercihi
+savunuyordu, ölçtüğü ilişkiyi değil. Artık arşiv karşılaştırması
+`veFeadSetViewFront(false)` ile rapor düzleminde yapılıyor, kanvas ↔ kart bağı
+İKİ düzlemde de koşuyor ve iki düzlemin birbirinin tam X aynası olduğu ayrıca
+bağlanıyor. Varsayılan bir daha değişirse yalnız dönüş yönü kapıları düşer,
+arşiv kapısı ölçmeye devam eder (mutasyonla doğrulandı: 3 kırmızı / 55 yeşil).
+
+##### Önceki hüküm — RAPOR DÜZLEMİ (2026-09-04), tarihçe
 
 Kullanıcı bildirimi: *"gergi ve kasnak konumları programda yanlış çıkıyor. Ters
 çıkıyor… Gates raporlarının PDF ilk sayfasında kasnak konumları var."* Doğruydu
@@ -120,10 +151,10 @@ Kapı: `tests/unit/fead-layout-plane.test.js` — on rapor için çizilen SVG'ni
 paylaşabiliyor), artı kanvas ↔ kart bağı. Beş mutasyonun beşi de kırmızı;
 eski davranışta 48 testin 26'sı düşüyor.
 
-**AYNA SİLİNMEDİ.** `veFeadMirrorGeomX` · `veFeadSpinToFront` ve kapıları
-duruyor: tedarikçinin gergi künyesindeki CW/CCW harfinin çizim düzleminin
-TERSİ olduğu ÖLÇÜLMÜŞ bir ilişki (`docs/gates-reports/README.md` §5) ve bir
-görünüm tercihi için kanıt atılmaz. Değişen yalnız varsayılan.
+**AYNA SİLİNMEMİŞTİ** — ve iyi ki: 2026-09-07'de varsayılan olarak geri
+döndü. `veFeadMirrorGeomX` · `veFeadSpinToFront` bir ÖLÇÜLMÜŞ ilişkiyi taşıyor
+(tedarikçinin gergi künyesindeki CW/CCW harfi çizim düzleminin TERSİ —
+`docs/gates-reports/README.md` §5) ve bir görünüm tercihi için kanıt atılmaz.
 
 **ETİKETLER DÜZLEMİ ADIYLA SÖYLER** (`_feadPlaneName`, tek üretici). Eskiden
 metin KOŞULSUZ *"motora önden bakışta"* diyordu; ayna kapanınca o cümle
@@ -148,7 +179,7 @@ ekseninde: karşı taraftan bakınca sol-sağ yer değiştirir, YUKARI yukarı k
 
 | Ne | Nerede |
 |----|--------|
-| Bayrak | `VE_FEAD_VIEW_FRONT` (varsayılan `true`) · `js/fead-model.js` |
+| Bayrak | `VE_FEAD_VIEW_FRONT` (varsayılan `true`) · okuma `veFeadViewFront()` · `js/fead-model.js` |
 | Aynalama | `veFeadMirrorGeomX(geom)` — DOM'suz, SAF (girdiyi değiştirmez) |
 | Bağlandığı TEK nokta | `veFeadLayoutSVG` → `geomAt()` |
 

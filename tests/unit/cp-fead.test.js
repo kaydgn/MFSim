@@ -65,6 +65,12 @@ const kasnak = (type, data, name) => ({
   def: componentDefs[type], data: data || {}
 });
 
+// EKRAN X İŞARETİ — kanvas kutularının mm ile ilişkisi çizim düzleminden okunur.
+// Ön görünüşte (varsayılan, 2026-09-07 krank CW konvansiyonu) kanvas da X'te
+// aynalanıyor; bu dosyanın ölçtüğü şey işaretin KENDİSİ değil "kutu, mm'sinin
+// gösterdiği yerde mi".
+const SX = () => (M.VE_FEAD_VIEW_FRONT ? -1 : 1);
+
 describe('Alt-sistem sözleşmesi', () => {
   test('modül paneli "Alt Topolojiyi Aç" kancasını düğümün id\'siyle kurar', () => {
     const html = fead.getFeadModulePropertiesHTML({ id: 'comp-3', type: 'fead-analysis', data: {} });
@@ -1585,7 +1591,7 @@ describe('veFeadArrangeByCoords — kasnaklar KOORDİNATLARINA yerleşir', () =>
       // Ve gerçekten kendi mm noktasında olmalı: krank orijin, Y ters.
       const om = merkez(ns[0]);
       const bek = { x: -161.97, y: 91.29 };   // kutu AVARA MERKEZİNİ gösterir
-      expect(tm.x - om.x).toBeCloseTo(bek.x, 0);
+      expect(SX() * (tm.x - om.x)).toBeCloseTo(bek.x, 0);
       expect(tm.y - om.y).toBeCloseTo(-bek.y, 0);
     });
   });
@@ -1594,7 +1600,7 @@ describe('veFeadArrangeByCoords — kasnaklar KOORDİNATLARINA yerleşir', () =>
     const ns = kur([{ x: 0, y: 0 }, { x: 200, y: 0 }, { x: 0, y: 150 }]);
     expect(fead.veFeadArrangeByCoords()).toBe(true);
     const a = merkez(ns[0]), b = merkez(ns[1]), c = merkez(ns[2]);
-    expect(b.x - a.x).toBeCloseTo(200, 0);
+    expect(SX() * (b.x - a.x)).toBeCloseTo(200, 0);
     expect(c.y - a.y).toBeCloseTo(-150, 0);      // ← Y TERS
   });
 
@@ -1663,8 +1669,9 @@ describe('veFeadArrangeByCoords — kasnaklar KOORDİNATLARINA yerleşir', () =>
       to: ns[(i + 1) % ns.length].id, fromPort: 'output', toPort: 'input' }));
     return ns;
   };
-  // Kutunun mm karşılığı: orijin (sürücü) kutusunun merkezine göre, Y TERS.
-  const mmOf = (ns, nd) => ({ x: merkez(nd).x - merkez(ns[0]).x,
+  // Kutunun mm karşılığı: orijin (sürücü) kutusunun merkezine göre, Y TERS,
+  // X çizim düzleminden (ön görünüşte kanvas da aynalanıyor — 2026-09-07).
+  const mmOf = (ns, nd) => ({ x: SX() * (merkez(nd).x - merkez(ns[0]).x),
                               y: -(merkez(nd).y - merkez(ns[0]).y) });
 
   test('gergi kutusu AVARA MERKEZİNİ gösterir', () => {
@@ -1736,7 +1743,7 @@ describe('veFeadArrangeByCoords — kasnaklar KOORDİNATLARINA yerleşir', () =>
     expect(fead.veFeadArrangeByCoords({ silent: true })).toBe(true);
     expect(global.saveState).not.toHaveBeenCalled();
     expect(global.showToast).not.toHaveBeenCalled();
-    expect(merkez(ns[1]).x - merkez(ns[0]).x).toBeCloseTo(200, 6);
+    expect(SX() * (merkez(ns[1]).x - merkez(ns[0]).x)).toBeCloseTo(200, 6);
   });
 
   // TAM SAYIYA YUVARLAMA KUANTALARDI. 1 px = 1 mm olduğu için Math.round
@@ -1745,7 +1752,7 @@ describe('veFeadArrangeByCoords — kasnaklar KOORDİNATLARINA yerleşir', () =>
   test('kutu konumu 1 mm\'ye KUANTALANMAZ (kesirli mm korunur)', () => {
     const ns = kur([{ x: 0, y: 0 }, { x: 130.08, y: 139.92 }]);
     fead.veFeadArrangeByCoords();
-    expect(merkez(ns[1]).x - merkez(ns[0]).x).toBeCloseTo(130.08, 1);
+    expect(SX() * (merkez(ns[1]).x - merkez(ns[0]).x)).toBeCloseTo(130.08, 1);
     expect(merkez(ns[1]).y - merkez(ns[0]).y).toBeCloseTo(-139.92, 1);
   });
 
@@ -1891,7 +1898,7 @@ describe('veFeadLoadExample — kutu konumu mm koordinatını YALANLAMAZ', () =>
       if (!Number.isFinite(mx) || !Number.isFinite(my)) return;
       const c = merkez(n);
       enBuyukSapma = Math.max(enBuyukSapma,
-        Math.abs((c.x - o.x) - mx), Math.abs((c.y - o.y) - (-my)));   // Y TERS
+        Math.abs(SX() * (c.x - o.x) - mx), Math.abs((c.y - o.y) - (-my)));   // Y TERS
     });
     // Eski ölçekli yerleşimde bu sayı 38.108 idi.
     expect(enBuyukSapma).toBeLessThan(0.05);
@@ -1905,7 +1912,8 @@ describe('veFeadLoadExample — kutu konumu mm koordinatını YALANLAMAZ', () =>
     const once = alt.data.x;
     alt.x -= 60;                                   // kanvasta 60 px sola
     M.veFeadSyncMmFromCanvas(global.nodes);
-    expect(alt.data.x).toBeCloseTo(once - 60, 2);  // ← eskiden −98.1 oynuyordu
+    expect(alt.data.x).toBeCloseTo(once - (M.VE_FEAD_VIEW_FRONT ? -1 : 1) * 60, 2);
+    //                                    ↑ eskiden −98.1 oynuyordu
   });
 
   test('kurulan her örnekte aynı kapı — kasnak sayısı ve bağlantılar da yerinde', () => {
@@ -1920,7 +1928,7 @@ describe('veFeadLoadExample — kutu konumu mm koordinatını YALANLAMAZ', () =>
         const my = M._feadDefOf(n).isFeadTensioner ? d.cenY : d.y;
         if (!Number.isFinite(mx) || !Number.isFinite(my)) return;
         const c = merkez(n);
-        expect(c.x - o.x).toBeCloseTo(mx, 1);
+        expect(SX() * (c.x - o.x)).toBeCloseTo(mx, 1);
         expect(c.y - o.y).toBeCloseTo(-my, 1);
       });
     });
