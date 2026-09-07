@@ -72,6 +72,13 @@ function veSelectModuleFromOverlay(mode) {
 // Not: veSelectModuleFromOverlay testlerce doğrulanan sözleşmeyi korur; bu ayrı
 // fonksiyon yalnızca karşılama kartlarına bağlıdır.
 function veStartModule(type) {
+  // Uçuşun kalkış dikdörtgeni: overlay GİZLENMEDEN ölçülür — gizli kart 0x0'dır.
+  var kart = null, kartRect = null;
+  try {
+    if(/^[a-z-]+$/.test(String(type))) kart = document.querySelector('.ve-module-card[data-module="' + type + '"]');
+    if(kart && typeof kart.getBoundingClientRect === 'function') kartRect = kart.getBoundingClientRect();
+  } catch(e) {}
+
   var overlay = document.getElementById('ve-module-overlay');
   if(overlay) overlay.style.display = 'none';
 
@@ -81,6 +88,15 @@ function veStartModule(type) {
   // ölçüsüyle okuduğu için, panel/ray henüz gizliyken kanvas 284px FAZLA geniş
   // görünür; blok da "ortaya" değil yarım-panel (142px) sağa düşerdi.
   if(typeof veSyncModuleShell === 'function') veSyncModuleShell();
+
+  // Şerit + belge bandı display:none'dan geliyor → transition ÇALIŞMAZ; iniş
+  // @keyframes ile, bu geçici sınıftan sürülür (CSS: body.ve-chrome-enter).
+  try {
+    if(!_veWelcomeReducedMotion() && document.body && document.body.classList) {
+      document.body.classList.add('ve-chrome-enter');
+      setTimeout(function() { document.body.classList.remove('ve-chrome-enter'); }, 500);
+    }
+  } catch(e) {}
 
   veActiveModule = 'full-throttle';
   if(typeof veSubTabDegistir === 'function') {
@@ -100,6 +116,7 @@ function veStartModule(type) {
 
   // Seçilen modül bloğunu görünür alanın ortasına oluştur.
   // Canvas CSS'te -3000px offset'li → görünür merkez ≈ 3000 + yarı-genişlik.
+  var yeni = null;
   if(typeof createNode === 'function' && componentDefs[type]) {
     var def = componentDefs[type];
     var w = def.defaultWidth || 80, h = def.defaultHeight || 60;
@@ -110,8 +127,15 @@ function veStartModule(type) {
       cx = (r.width / 2 - canvasOffset.x) / canvasZoom + 3000 - w / 2;
       cy = (r.height / 2 - canvasOffset.y) / canvasZoom + 3000 - h / 2;
     }
-    createNode(type, cx, cy);
+    yeni = createNode(type, cx, cy);
   }
+
+  // Uçuş yalnız DEKOR: createNode NESNE döndürür (DOM elemanı değil), eleman
+  // id'den bulunur; buradaki bir hata modül açılışını ASLA engellemez.
+  try {
+    var nodeEl = (yeni && yeni.id) ? document.getElementById(yeni.id) : null;
+    if(kart && nodeEl) veWelcomeFlyToNode(kart, nodeEl, kartRect);
+  } catch(e) {}
 
   var label = (componentDefs[type] && componentDefs[type].name) ? componentDefs[type].name : type;
   if(typeof showToast === 'function') showToast(label + ' eklendi', 'info');
@@ -1321,6 +1345,10 @@ var VE_STANDALONE_TYPES = ['ap-example','vehicle','road','sensor','sensor-wizard
 // kod (veStartModule) panel/ray hâlâ gizliyken ölçerdi: kanvas 284px fazla
 // geniş görünür, kamera ve bırakılan blok o kadar sağa kayardı. O yüzden
 // fonksiyon dışarıdan da çağrılabilir; idempotenttir.
+// Karşılamanın bir önceki görünürlüğü; ilk turda BİLİNMİYOR (null) — açılış
+// koreografisini splash devri tetikler, bu bayrak yalnız geri dönüşü yakalar.
+var _veWelcomeShellVisible = null;
+
 function veSyncModuleShell() {
   if(typeof document === 'undefined') return;
   var overlay = document.getElementById('ve-module-overlay');
@@ -1344,6 +1372,10 @@ function veSyncModuleShell() {
   // Çalıştır gibi komutlar pasif çizilir (sol panel zaten gizleniyordu,
   // şeridin etkin görünmesi tutarsızdı).
   if(typeof veRibbonRender === 'function') veRibbonRender();
+  // Karşılama GİZLİDEN GÖRÜNÜRE geçtiyse koreografi bir kez daha oynasın — her
+  // senkronda değil (ilk açılışı splash devri tetikler: veWelcomeAdoptSplashLogo).
+  if(visible && _veWelcomeShellVisible === false) veWelcomeEnterReplay();
+  _veWelcomeShellVisible = visible;
 }
 
 // Karşılama ekranındaki sürüm künyesi. Kaynağı build.js'in gövdenin başına
@@ -1364,6 +1396,292 @@ function veFillWelcomeStamp() {
   return true;
 }
 
+// ─── Karşılama ekranı: son değişiklikler · güncellik · hareket ────────────
+// Hepsi GÖRSEL KATMAN: buradaki bir hata modül açılışını ya da künyeyi
+// engellemez. Ölçüler DOM'dan okunur; alınamazsa (jsdom, gizli eleman)
+// hareket sessizce atlanır.
+
+// prefers-reduced-motion kapısı. matchMedia jsdom'da TANIMSIZ — doğrudan
+// çağrı TypeError atardı (kalıp: js/topology.js › veAnimateCanvasTransition).
+function _veWelcomeReducedMotion() {
+  if(typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  try { return !!window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e) { return false; }
+}
+
+// Süre jetonunu CSS'ten oku — WAAPI var() çözemez, süre tek yerden gelsin.
+function _veWelcomeDur(ad, varsayilan) {
+  if(typeof document === 'undefined' || typeof getComputedStyle !== 'function') return varsayilan;
+  var v = '';
+  try { v = (getComputedStyle(document.documentElement).getPropertyValue(ad) || '').trim(); } catch(e) {}
+  if(/^[\d.]+ms$/.test(v)) return parseFloat(v);
+  if(/^[\d.]+s$/.test(v)) return parseFloat(v) * 1000;
+  return varsayilan;
+}
+
+// Son değişiklikler paneli (en fazla 3 kayıt). Kaynak künyeyle AYNI:
+// window.__MFSIM_BUILD — satır içi veri, yükleme sırasından bağımsız.
+// Künye ya da changes yoksa panel HIDDEN kalır: boş bir panel "bilmiyorum"u
+// bilgi gibi gösterirdi. Commit başlığı SERBEST METİN → textContent ile konur.
+function veFillWelcomeChanges() {
+  if(typeof document === 'undefined') return false;
+  var panel = document.getElementById('ve-welcome-changes');
+  var liste = document.getElementById('ve-welcome-changes-list');
+  if(!panel || !liste) return false;             // markup henüz yok — çağıran tekrar dener
+  var b = (typeof window !== 'undefined') ? window.__MFSIM_BUILD : null;
+  var kayitlar = (b && b.changes && b.changes.length) ? b.changes.slice(0, 3) : [];
+  liste.innerHTML = '';
+  if(!kayitlar.length) { panel.hidden = true; return true; }
+  kayitlar.forEach(function(c) {
+    var satir = document.createElement('div');
+    satir.className = 've-welcome-change';
+    var k = document.createElement('span');
+    k.className = 've-welcome-change-k';
+    k.textContent = c.sha || c.shortSha || '';
+    var v = document.createElement('span');
+    v.className = 've-welcome-change-v';
+    v.textContent = c.title || c.message || '';
+    satir.appendChild(k);
+    satir.appendChild(v);
+    liste.appendChild(satir);
+  });
+  panel.hidden = false;
+  return true;
+}
+
+// Yayın noktasının sınıfı → karşılama güncellik satırı. DÜRÜSTLÜK: gömülü künye
+// "yayın güncel mi" sorusunu YANITLAMAZ, o yüzden 'local' durumu "Güncel"
+// DEMEZ (aynı ayrım: js/deploy-status.js › _veApplyDotState).
+var VE_WELCOME_FRESH = [
+  ['ve-deploy-update-available', 'update',  'Güncelleme var'],
+  ['ve-deploy-success',          'ok',      'Güncel'],
+  ['ve-deploy-local',            'local',   'Çevrimdışı kopya'],
+  ['ve-deploy-pending',          'pending', 'Yayın sürüyor']
+];
+
+// file:// üzerinde aranacak bir yayın YOK: gömülü künye varsa elimizdeki
+// kopyanın ne olduğu bellidir (aynı hüküm: js/deploy-status.js › _veOfflineOnly).
+function _veWelcomeGomuluKopya() {
+  if(typeof location === 'undefined' || location.protocol !== 'file:') return false;
+  var b = (typeof window !== 'undefined') ? window.__MFSIM_BUILD : null;
+  return !!(b && b.sha);
+}
+
+function veSyncWelcomeFreshness() {
+  if(typeof document === 'undefined') return false;
+  var satir = document.getElementById('ve-welcome-fresh');
+  if(!satir) return false;                       // markup henüz yok — çağıran tekrar dener
+  var dot = document.getElementById('ve-deploy-dot');
+  var durum = '', metin = '';
+  if(dot && dot.classList) {
+    for(var i = 0; i < VE_WELCOME_FRESH.length; i++) {
+      if(dot.classList.contains(VE_WELCOME_FRESH[i][0])) {
+        durum = VE_WELCOME_FRESH[i][1];
+        metin = VE_WELCOME_FRESH[i][2];
+        break;
+      }
+    }
+  }
+  // Noktanın açılış sınıfı 've-deploy-unknown' ve ağ hataları (error / offline /
+  // ratelimit) da buraya düşer; gömülü künye o boşluğu file://'de kapatır.
+  if(!durum && _veWelcomeGomuluKopya()) { durum = 'local'; metin = 'Çevrimdışı kopya'; }
+  // Cevap YOKSA satır da yok: "Yayın durumu bilinmiyor" bir bilgi değil,
+  // bilginin yokluğu — künyesiz modüler kopyada kalıcı bir yalancı satır olurdu.
+  if(!durum) { satir.setAttribute('data-state', 'unknown'); satir.hidden = true; return true; }
+  satir.setAttribute('data-state', durum);
+  var t = satir.querySelector('.ve-welcome-fresh-text');
+  if(t) t.textContent = metin;
+  if(dot && dot.title) satir.setAttribute('title', dot.title); else satir.removeAttribute('title');
+  satir.hidden = false;
+  return true;
+}
+
+// Nokta SONRADAN yazılıyor (deploy-status.js ağdan ya da gömülü künyeden) →
+// sınıf değişimini izle. Kalıp: js/status.js › _veStatusInitBadgeWatcher.
+function _veWelcomeWatchDeployDot() {
+  if(typeof document === 'undefined' || typeof MutationObserver !== 'function') return;
+  var kalan = 60;                                // ~15 sn; sonra sessizce vazgeç
+  function bagla() {
+    var dot = document.getElementById('ve-deploy-dot');
+    if(!dot) { if(--kalan > 0) setTimeout(bagla, 250); return; }
+    veSyncWelcomeFreshness();
+    new MutationObserver(veSyncWelcomeFreshness)
+      .observe(dot, { attributes: true, attributeFilter: ['class', 'title'] });
+  }
+  bagla();
+}
+
+// Açılış koreografisini yeniden tetikle: sınıfı kaldır → reflow → ekle.
+// Reflow ŞART; yoksa aynı animasyon ikinci kez hiç oynamaz.
+function veWelcomeEnterReplay() {
+  if(typeof document === 'undefined' || typeof document.querySelector !== 'function') return;
+  if(_veWelcomeReducedMotion()) return;
+  var w = document.querySelector('.ve-welcome');
+  if(!w || !w.classList) return;
+  w.classList.remove('ve-welcome-enter');
+  void w.offsetWidth;
+  w.classList.add('ve-welcome-enter');
+}
+
+// Kart yüzeyi — imleç ışığı. Konum kartın KENDİ kutusuna göre yüzdeyle
+// --mx/--my'ye yazılır; yazma rAF'a kısılır (her mousemove'da stil yazmak dört
+// kartı birden yeniden boyatırdı). Dinleyici ızgaraya BİR KEZ kurulur.
+function _veWelcomeInstallCardSheen() {
+  if(typeof document === 'undefined' || typeof document.querySelector !== 'function') return false;
+  if(_veWelcomeReducedMotion()) return true;     // hareket kapalı → ışık da yok
+  var grid = document.querySelector('.ve-module-overlay-grid');
+  if(!grid || typeof grid.addEventListener !== 'function') return false;
+  if(grid.getAttribute('data-ve-sheen')) return true;
+  grid.setAttribute('data-ve-sheen', '1');
+  var bekleyen = null, kare = 0;
+  grid.addEventListener('mousemove', function(e) {
+    var kart = (e.target && typeof e.target.closest === 'function') ? e.target.closest('.ve-module-card') : null;
+    if(!kart) return;
+    bekleyen = { kart: kart, x: e.clientX, y: e.clientY };
+    if(kare) return;
+    kare = 1;
+    var boya = function() {
+      kare = 0;
+      var b = bekleyen;
+      bekleyen = null;
+      if(!b) return;
+      var r = b.kart.getBoundingClientRect();
+      if(!r.width || !r.height) return;
+      b.kart.style.setProperty('--mx', (((b.x - r.left) / r.width) * 100).toFixed(1) + '%');
+      b.kart.style.setProperty('--my', (((b.y - r.top) / r.height) * 100).toFixed(1) + '%');
+    };
+    if(typeof requestAnimationFrame === 'function') requestAnimationFrame(boya); else setTimeout(boya, 16);
+  });
+  return true;
+}
+
+// Uçan kart kopyası. Klon body'ye eklenir: #ve-canvas'ın transform'u
+// position:fixed'i kendi kutusuna bağlar, konum ve ölçek yanlış çıkardı.
+function _veWelcomeMakeFlyer(kartEl, s) {
+  var klon = kartEl.cloneNode(true);
+  klon.classList.add('ve-welcome-flyer');
+  klon.removeAttribute('onclick');               // klon tıklamayı YUTMASIN
+  klon.removeAttribute('onkeydown');
+  klon.removeAttribute('tabindex');
+  klon.removeAttribute('role');
+  klon.setAttribute('aria-hidden', 'true');
+  klon.style.position = 'fixed';
+  klon.style.left = s.left + 'px';
+  klon.style.top = s.top + 'px';
+  klon.style.width = s.width + 'px';
+  klon.style.height = s.height + 'px';
+  klon.style.margin = '0';
+  klon.style.transformOrigin = '0 0';
+  klon.style.pointerEvents = 'none';
+  klon.style.animation = 'none';                 // kartın giriş animasyonu klonda yeniden koşardı
+  return klon;
+}
+
+// Kart → yeni blok uçuşu. Dekoratiftir: düğüm zaten yerinde ve seçili.
+// kaynakRect DIŞARIDAN gelir — kart o an gizli (overlay kapandı) ve kendi
+// dikdörtgeni 0×0 olurdu.
+function veWelcomeFlyToNode(kartEl, nodeEl, kaynakRect) {
+  if(typeof document === 'undefined' || !kartEl || !nodeEl) return;
+  if(_veWelcomeReducedMotion()) return;
+  if(typeof kartEl.animate !== 'function') return;          // WAAPI yok (jsdom dâhil) → sessizce çık
+  var s = kaynakRect ||
+    (typeof kartEl.getBoundingClientRect === 'function' ? kartEl.getBoundingClientRect() : null);
+  if(!s || !s.width || !s.height) return;                   // ölçü yok → uçuş yanlış yere iner
+  var klon = _veWelcomeMakeFlyer(kartEl, s);
+  document.body.appendChild(klon);
+  var sure = _veWelcomeDur('--dur-fly', 460);
+  var temizle = function() { if(klon.parentNode) klon.parentNode.removeChild(klon); };
+  // Kabuk inerken #sayfa2'nin top'u --dur-fast boyunca kayıyor: hedef AYNI turda
+  // ölçülürse düğüm şerit yüksekliği kadar yukarıda görünür. Klon o aralıkta
+  // kartın yerinde durur, kabuk oturunca uçar.
+  setTimeout(function() {
+    var t = nodeEl.getBoundingClientRect();
+    if(!t.width || !t.height) { temizle(); return; }
+    var o = Math.min(t.width / s.width, t.height / s.height);   // tek ölçek — kart oranı korunur
+    var dx = t.left - s.left + (t.width - s.width * o) / 2;
+    var dy = t.top - s.top + (t.height - s.height * o) / 2;
+    var anim = null;
+    try {
+      anim = klon.animate([
+        { transform: 'translate(0px, 0px) scale(1)', opacity: 1, offset: 0 },
+        { opacity: 1, offset: 0.62 },              // sönme sona bırakılır: öne yüklü eğride uçuş görünmüyor
+        { transform: 'translate(' + dx + 'px, ' + dy + 'px) scale(' + o + ')', opacity: 0, offset: 1 }
+      ], { duration: sure, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards' });
+    } catch(e) {}
+    if(anim) anim.onfinish = temizle;
+    setTimeout(temizle, sure + 120);               // olay gelmezse (arka plan sekmesi) klon asılı kalmasın
+  }, _veWelcomeDur('--dur-fast', 120) + 30);
+}
+
+var _veWelcomeSplashKlon = null;
+var _veWelcomeSplashGizli = [];
+
+// Marka devamlılığı temizliği: iki yoldan da (onfinish + emniyet zamanlayıcısı)
+// çağrılabilir, idempotenttir. Hiç çağrılmazsa karşılama MARKASIZ kalırdı.
+function _veWelcomeSplashRestore() {
+  if(_veWelcomeSplashKlon && _veWelcomeSplashKlon.parentNode) {
+    _veWelcomeSplashKlon.parentNode.removeChild(_veWelcomeSplashKlon);
+  }
+  _veWelcomeSplashKlon = null;
+  _veWelcomeSplashGizli.forEach(function(el) { if(el && el.style) el.style.visibility = ''; });
+  _veWelcomeSplashGizli = [];
+}
+
+// Yükleme markası → karşılama markası. js/loader.js hideSplash içinden, splash
+// SÖNMEDEN önce çağırır; klon body'de yaşar (splash 340 ms'de display:none
+// olur, uçuş ondan uzun sürer). Ölçek 1: iki logonun yazı metriği BİREBİR aynı,
+// yalnız ikon kutusu farklı — klon hedef ikon ölçüsüyle doğar; dikdörtgen
+// oranından türetilen bir ölçek yazıyı büyütüp inişte sıçratırdı.
+function veWelcomeAdoptSplashLogo(splashEl) {
+  if(typeof document === 'undefined' || !splashEl) return;
+  _veWelcomeSplashRestore();                     // ikinci çağrı: önceki uçuşu topla
+  veWelcomeEnterReplay();                        // koreografi splash sönerken başlar
+  var kaynak = (typeof splashEl.querySelector === 'function')
+    ? splashEl.querySelector('.mfsim-loading-logo') : null;
+  var hedef = (typeof document.querySelector === 'function')
+    ? document.querySelector('.ve-welcome-logo') : null;
+  if(!kaynak || !hedef) return;
+  if(_veWelcomeReducedMotion() || typeof kaynak.animate !== 'function') return;
+  var s = kaynak.getBoundingClientRect(), t = hedef.getBoundingClientRect();
+  if(!s.width || !s.height || !t.width || !t.height) return;   // ölçü yok → sessizce çık
+  var klon = kaynak.cloneNode(true);
+  klon.removeAttribute('id');
+  klon.setAttribute('aria-hidden', 'true');
+  klon.style.position = 'fixed';
+  klon.style.left = s.left + 'px';
+  klon.style.top = s.top + 'px';
+  klon.style.margin = '0';
+  klon.style.transformOrigin = '0 0';
+  klon.style.pointerEvents = 'none';
+  klon.style.zIndex = 'calc(var(--z-boot) + 2)'; // splash'ın (boot+1) üstünde; bant jetondan
+  var ico = klon.querySelector('.mf-ico');
+  if(ico) {
+    ico.style.animation = 'none';                // dönen dişli klonda 0°'den başlardı
+    ico.style.width = '1.15em';                  // hedef logonun ikon kutusu
+    ico.style.height = '1.15em';
+  }
+  document.body.appendChild(klon);
+  _veWelcomeSplashKlon = klon;
+  // İki marka aynı pikselde durmasın (splash paneli 160 ms daha görünür).
+  // visibility — display:none satırı toplar, hedef dikdörtgeni geçersizleşirdi.
+  [kaynak, hedef].forEach(function(el) {
+    if(el && el.style) { el.style.visibility = 'hidden'; _veWelcomeSplashGizli.push(el); }
+  });
+  var dx = t.left - s.left;
+  var dy = (t.top + t.height / 2) - (s.top + s.height / 2);
+  var sure = 520;                                // splash 340 ms'de gider; uçuş ondan uzun yaşar
+  var anim = null;
+  try {
+    anim = klon.animate([
+      { transform: 'translate(0px, 0px)' },
+      { transform: 'translate(' + dx + 'px, ' + dy + 'px)' }
+    ], { duration: sure, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' });
+  } catch(e) {}
+  if(anim) anim.onfinish = _veWelcomeSplashRestore;
+  setTimeout(_veWelcomeSplashRestore, sure + 60);  // olay gelmezse marka geri gelsin
+}
+// Loader tek bir global ad biliyor; eval ile yüklenen kapsamlarda da bulunsun.
+if(typeof window !== 'undefined') window.veWelcomeAdoptSplashLogo = veWelcomeAdoptSplashLogo;
+
 (function veObserveModuleOverlay() {
   function attach() {
     var overlay = document.getElementById('ve-module-overlay');
@@ -1371,6 +1689,9 @@ function veFillWelcomeStamp() {
     if(!overlay || !main) { setTimeout(attach, 50); return; }
     veSyncModuleShell();
     veFillWelcomeStamp();
+    veFillWelcomeChanges();
+    _veWelcomeInstallCardSheen();
+    _veWelcomeWatchDeployDot();          // güncellik satırı: nokta yazılınca senkronlanır
     new MutationObserver(veSyncModuleShell).observe(overlay, { attributes: true, attributeFilter: ['style', 'class'] });
   }
   attach();

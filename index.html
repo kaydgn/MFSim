@@ -932,6 +932,19 @@
                     <p class="ve-welcome-note">Bir modül seçerek başla. Modüller aynı tuvali paylaşır:
                       bir projede birden fazla alt-sistem yan yana durabilir, her biri çift tıkla kendi
                       iç topolojisini açar.</p>
+                    <!-- Son değişiklikler + güncellik satırı — veri window.__MFSIM_BUILD.changes
+                         ile #ve-deploy-dot durumundan gelir (js/components.js › veFillWelcomeChanges,
+                         veSyncWelcomeFreshness). İkisi de HIDDEN başlar: modüler index.html'de künye
+                         yoktur ve boş bir panel "bilmiyorum"u bilgi gibi gösterirdi. -->
+                    <div class="ve-welcome-panel" id="ve-welcome-changes" hidden>
+                      <div class="ve-welcome-panel-title">Son değişiklikler</div>
+                      <div id="ve-welcome-changes-list"></div>
+                      <button type="button" class="ve-welcome-more" onclick="veOpenStatusModal && veOpenStatusModal()">Hepsi — Program Durumu</button>
+                    </div>
+                    <div class="ve-welcome-fresh" id="ve-welcome-fresh" hidden data-state="unknown">
+                      <span class="ve-welcome-fresh-dot" aria-hidden="true"></span>
+                      <span class="ve-welcome-fresh-text"></span>
+                    </div>
                     <div class="ve-welcome-spacer"></div>
                     <button type="button" class="ve-welcome-open" onclick="veLoadTopology && veLoadTopology()">
                       <span class="mf-ico mf-ico-folder-open"></span> Kayıtlı proje aç
@@ -954,7 +967,7 @@
                   <div class="ve-welcome-work">
                     <div class="ve-welcome-eyebrow">Modül seç</div>
                     <div class="ve-module-overlay-grid">
-                    <div class="ve-module-card" onclick="veStartModule('arac-performans')" tabindex="0" role="button"
+                    <div class="ve-module-card" data-module="arac-performans" onclick="veStartModule('arac-performans')" tabindex="0" role="button"
                          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();veStartModule('arac-performans');}">
                       <span class="ve-module-card-icon">
                         <svg viewBox="0 0 100 100" width="38" height="38" aria-hidden="true">
@@ -978,7 +991,7 @@
                         </span>
                       </span>
                     </div>
-                    <div class="ve-module-card" onclick="veStartModule('mount-analysis')" tabindex="0" role="button"
+                    <div class="ve-module-card" data-module="mount-analysis" onclick="veStartModule('mount-analysis')" tabindex="0" role="button"
                          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();veStartModule('mount-analysis');}">
                       <span class="ve-module-card-icon">
                         <svg viewBox="0 0 100 100" width="38" height="38" aria-hidden="true">
@@ -1001,7 +1014,7 @@
                         </span>
                       </span>
                     </div>
-                    <div class="ve-module-card" onclick="veStartModule('fead-analysis')" tabindex="0" role="button"
+                    <div class="ve-module-card" data-module="fead-analysis" onclick="veStartModule('fead-analysis')" tabindex="0" role="button"
                          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();veStartModule('fead-analysis');}">
                       <span class="ve-module-card-icon">
                         <!-- İki kasnağı saran GERÇEK kayış çevresi: dış teğetler + sarım
@@ -1028,7 +1041,7 @@
                         </span>
                       </span>
                     </div>
-                    <div class="ve-module-card" onclick="veStartModule('structural-analysis')" tabindex="0" role="button"
+                    <div class="ve-module-card" data-module="structural-analysis" onclick="veStartModule('structural-analysis')" tabindex="0" role="button"
                          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();veStartModule('structural-analysis');}">
                       <span class="ve-module-card-icon">
                         <!-- Ankastre duvara bağlı L braket + üstünde mesh çizgileri +

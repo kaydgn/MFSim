@@ -20,6 +20,20 @@
  * 3) Şerit gizlenince oradaki komutlara TEK giriş karşılama ekranı olur.
  *    Kayıtlı proje aç / Kılavuzlar / Ayarlar / Program Durumu düğmelerinden
  *    biri silinirse o komut programda ULAŞILAMAZ hâle gelir.
+ *
+ * ─── KARŞILAMA TASARIMI (2026-09-07) ────────────────────────────────────────
+ * Ekran yeniden tasarlandı; buradaki yeni kapılar o kararların KODDAKİ
+ * karşılığını tutuyor. Hepsinin ortak yanı sessiz olmaları: bozulunca program
+ * çalışmaya devam eder, hiçbir uyarı çıkmaz.
+ *
+ *  1) Zemin ızgaradan kâğıda döndü — ızgara geri gelse ekran yine açılır.
+ *  2) Tek yazı tipi (T1): bu ekranda mono YOK; rakam hizası tabular-nums'tan.
+ *  3) Son değişiklikler paneli commit BAŞLIĞI basıyor — serbest metin, kaçış
+ *     düşerse ham HTML çalışır.
+ *  4) Güncellik satırı DÜRÜSTLÜK kapısı: gömülü künye "yayın güncel mi"yi
+ *     yanıtlamaz, bu yüzden 'local' durumu "Güncel" DEMEZ.
+ *  5) Açılış koreografisi CSS'te, tetikleyicisi JS'te — ikisi ayrı dosya.
+ *  6) Uçuş ve marka devri DEKOR: eksikliği modül açılışını engellemez.
  */
 
 const fs = require('fs');
@@ -29,22 +43,50 @@ const ROOT = path.join(__dirname, '../..');
 const CSS = fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8');
 const HTML = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
+const LOADER_SRC = loadSource('loader.js');
+
 // Karşılama bloğu: overlay'in açılışından tuval seçim kutusuna kadar.
 const WELCOME = HTML.slice(
   HTML.indexOf('<div class="ve-module-overlay"'),
   HTML.indexOf('<div class="ve-selection-box"')
 );
 
+// Karşılama ekranının CSS bölümü — bir sonraki bölümün (tuval kabı) başına
+// kadar. Kurallar BURADA aranır: "mono yok" gibi hükümler yalnız bu ekran
+// için geçerli, dosyanın tamamı için değil.
+const CSS_WELCOME = (function () {
+  const a = CSS.indexOf('/* \u2550\u2550\u2550 Modül Seçim / Karşılama Ekranı');
+  const b = CSS.indexOf('.ve-canvas-wrapper{');
+  if (a < 0 || b < 0 || b < a) throw new Error('css/styles.css: karşılama bölümü bulunamadı');
+  return CSS.slice(a, b);
+})();
+
+// :root'taki süre jetonunu ms olarak okur (jetonlar TEK kaynak; koreografinin
+// gecikmeleri bunların üstüne calc ile yazılıyor).
+function jetonMs(ad) {
+  const m = CSS.match(new RegExp(ad + ':\\s*([\\d.]+)ms'));
+  if (!m) throw new Error('css/styles.css: ' + ad + ' jetonu yok');
+  return parseFloat(m[1]);
+}
+
+// _veWelcomeGomuluKopya çıplak `location` okur; eval bu modül kapsamında
+// koştuğu için buradaki gölge değişken o okumanın tek kapısıdır (jsdom'da
+// window.location salt okunur — spyOn da defineProperty de reddediliyor).
+var location = window.location;
+const GERCEK_LOCATION = location;
+
 function setupDOM() {
   document.body.className = '';
+  // Karşılama markup'ı index.html'den BİREBİR alınır (elle kopya değil):
+  // panel/güncellik/kart sözleşmesi gövdeyle ayrışırsa buradan kırmızı döner.
   document.body.innerHTML =
     '<div id="ve-ribbon"></div>' +
+    '<span id="ve-deploy-dot" class="ve-deploy-dot ve-deploy-unknown"></span>' +
     '<div id="sayfa2-content">' +
     '  <div class="ve-main">' +
     '    <div class="ve-doc-dock"></div>' +
-    '    <div class="ve-module-overlay" id="ve-module-overlay">' +
-    '      <button id="ve-welcome-stamp" hidden></button>' +
-    '    </div>' +
+    '    <div class="ve-canvas-wrapper" id="ve-canvas-wrapper"></div>' +
+    WELCOME +
     '  </div>' +
     '</div>';
 }
@@ -52,6 +94,8 @@ function setupDOM() {
 setupDOM();
 eval(loadSource('canvas-space.js'));
 eval(loadSource('components.js'));
+
+afterEach(() => { location = GERCEK_LOCATION; });
 
 describe('Karşılama ekranı — kabuk kapanışı', () => {
   beforeEach(setupDOM);
@@ -160,5 +204,564 @@ describe('Karşılama ekranı — markup sözleşmesi', () => {
   test('klavye erişimi korunuyor: her kutu odaklanabilir ve Enter/Space ile açılır', () => {
     expect((WELCOME.match(/tabindex="0"/g) || []).length).toBe(4);
     expect((WELCOME.match(/event\.key==='Enter'/g) || []).length).toBe(4);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 1) ZEMİN — kâğıt dokusu (ızgara kalktı)
+//    Izgara geri gelse ekran yine açılır: hata sessizdir, yalnız karşılama
+//    tuvalin diliyle konuşmaya döner.
+describe('Karşılama zemini — kâğıt dokusu', () => {
+  test('.ve-module-overlay ızgara gradyanı TANIMLAMIYOR', () => {
+    expect(CSS_WELCOME).not.toMatch(/repeating-linear-gradient/);
+  });
+
+  test('zemin --paper-grain jetonundan sürülür — İKİ katmanda da', () => {
+    // İkinci blok bilinçli bir fallback katı (color-mix'siz tarayıcı); biri
+    // dokusuz kalırsa o tarayıcıda zemin sessizce düz renge düşer.
+    const bloklar = (CSS_WELCOME.match(/\.ve-module-overlay\{[^}]*\}/g) || [])
+      .filter((b) => /background:/.test(b));
+    expect(bloklar.length).toBeGreaterThanOrEqual(2);
+    bloklar.forEach((b) => expect(b).toContain('var(--paper-grain)'));
+  });
+
+  test('--paper-grain gerçek bir gürültü dokusu: feTurbulence data-URI', () => {
+    const m = CSS.match(/--paper-grain:\s*url\("([^"]+)"\)/);
+    expect(m).toBeTruthy();
+    const svg = decodeURIComponent(m[1]);
+    expect(svg.indexOf('data:image/svg+xml')).toBe(0);
+    expect(svg).toContain('feTurbulence');
+    expect(svg).toContain('fractalNoise');
+    // Döşeme ölçüsü background-size ile AYNI olmak zorunda: ayrışırsa doku
+    // ölçeklenir ve kâğıt yerine bulanık leke çıkar (uyarı yok).
+    const w = svg.match(/width='(\d+)'/);
+    expect(w).toBeTruthy();
+    const doseme = (CSS_WELCOME.match(/background-size:[^;]+;/g) || []);
+    expect(doseme.length).toBeGreaterThanOrEqual(2);      // taban + fallback katı
+    doseme.forEach((d) => expect(d).toContain(w[1] + 'px ' + w[1] + 'px'));
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 2) TİPOGRAFİ (T1) — bu ekranda mono YOK
+//    Rakam hizası mono'dan değil tabular-nums'tan gelir; mono geri gelirse
+//    ekran iki yazı tipiyle konuşur ama hiçbir şey kırılmaz.
+describe('Karşılama tipografisi — tek yazı tipi', () => {
+  test('karşılama bölümünde tek bir mono kural bile yok', () => {
+    expect(CSS_WELCOME).not.toMatch(/--font-mono/);
+    expect(CSS_WELCOME).not.toMatch(/monospace/);
+  });
+
+  test('künye ve kart künyesi sans + tabular-nums', () => {
+    ['.ve-module-card-spec', '.ve-welcome-stamp'].forEach(function (sec) {
+      const m = CSS_WELCOME.match(new RegExp(sec.replace('.', '\\.') + '\\{[^}]*\\}'));
+      expect(m).toBeTruthy();
+      expect(m[0]).toContain('font-family:var(--font-sans)');
+      expect(m[0]).toContain('font-variant-numeric:tabular-nums');
+    });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 3) SON DEĞİŞİKLİKLER PANELİ — veFillWelcomeChanges
+//    Commit başlığı SERBEST METİN: kaçış düşerse panel ham HTML çalıştırır.
+describe('Son değişiklikler paneli — veFillWelcomeChanges', () => {
+  beforeEach(() => { setupDOM(); delete window.__MFSIM_BUILD; });
+
+  const panel = () => document.getElementById('ve-welcome-changes');
+  const satirlar = () =>
+    Array.from(document.querySelectorAll('#ve-welcome-changes-list .ve-welcome-change'));
+  const anahtar = (i) => satirlar()[i].querySelector('.ve-welcome-change-k').textContent;
+  const govde = (i) => satirlar()[i].querySelector('.ve-welcome-change-v');
+
+  test('künye yoksa panel GİZLİ kalır (boş panel "bilmiyorum"u bilgi gibi gösterirdi)', () => {
+    expect(veFillWelcomeChanges()).toBe(true);
+    expect(panel().hidden).toBe(true);
+    expect(satirlar().length).toBe(0);
+  });
+
+  test('künye var ama kayıt yoksa da panel gizli', () => {
+    window.__MFSIM_BUILD = { sha: 'abc1234def', shortSha: 'abc1234', changes: [] };
+    veFillWelcomeChanges();
+    expect(panel().hidden).toBe(true);
+  });
+
+  test('beş kayıt verilse de EN FAZLA üç satır çizilir', () => {
+    window.__MFSIM_BUILD = {
+      changes: [1, 2, 3, 4, 5].map((n) => ({ sha: 'sha' + n, title: 'başlık ' + n }))
+    };
+    veFillWelcomeChanges();
+    expect(panel().hidden).toBe(false);
+    expect(satirlar().length).toBe(3);
+    expect([anahtar(0), anahtar(1), anahtar(2)]).toEqual(['sha1', 'sha2', 'sha3']);
+  });
+
+  test('ikinci çağrı listeyi ÇOĞALTMAZ', () => {
+    window.__MFSIM_BUILD = { changes: [{ sha: 'a1', title: 'bir' }, { sha: 'a2', title: 'iki' }] };
+    veFillWelcomeChanges();
+    veFillWelcomeChanges();
+    expect(satirlar().length).toBe(2);
+  });
+
+  test('commit başlığı HTML olarak değil METİN olarak konur', () => {
+    const ham = '<img src=x onerror="alert(1)"> & <b>kalın</b>';
+    window.__MFSIM_BUILD = { changes: [{ sha: 'a1b2c3', title: ham }] };
+    veFillWelcomeChanges();
+    const v = govde(0);
+    expect(v.querySelector('img')).toBeNull();
+    expect(v.innerHTML).not.toContain('<img');
+    expect(v.innerHTML).toContain('&lt;img');
+    expect(v.textContent).toBe(ham);
+  });
+
+  test('sha/title eksikse yedeklere düşer (shortSha · message)', () => {
+    window.__MFSIM_BUILD = { changes: [{ shortSha: 'ee9d501', message: 'gövde metni' }] };
+    veFillWelcomeChanges();
+    expect(anahtar(0)).toBe('ee9d501');
+    expect(govde(0).textContent).toBe('gövde metni');
+  });
+
+  test('markup henüz yoksa FALSE döner (çağıran tekrar dener)', () => {
+    document.body.innerHTML = '';
+    expect(veFillWelcomeChanges()).toBe(false);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 4) GÜNCELLİK SATIRI — veSyncWelcomeFreshness
+//    DÜRÜSTLÜK KAPISI: gömülü künye "yayın güncel mi" sorusunu YANITLAMAZ,
+//    yalnız elindeki kopyayı söyler (aynı ayrım: js/deploy-status.js).
+describe('Güncellik satırı — veSyncWelcomeFreshness', () => {
+  const BEKLENEN = [
+    ['ve-deploy-success', 'ok', 'Güncel'],
+    ['ve-deploy-update-available', 'update', 'Güncelleme var'],
+    ['ve-deploy-local', 'local', 'Çevrimdışı kopya'],
+    ['ve-deploy-pending', 'pending', 'Yayın sürüyor']
+  ];
+
+  beforeEach(() => { setupDOM(); delete window.__MFSIM_BUILD; });
+
+  function nokta(sinif, baslik) {
+    const d = document.getElementById('ve-deploy-dot');
+    d.className = 've-deploy-dot ' + sinif;
+    if (baslik) d.title = baslik;
+    return d;
+  }
+  const satir = () => document.getElementById('ve-welcome-fresh');
+  const metin = () => satir().querySelector('.ve-welcome-fresh-text').textContent;
+
+  BEKLENEN.forEach(function (k) {
+    test(k[0] + ' → data-state="' + k[1] + '" · "' + k[2] + '"', () => {
+      nokta(k[0]);
+      expect(veSyncWelcomeFreshness()).toBe(true);
+      expect(satir().hidden).toBe(false);
+      expect(satir().getAttribute('data-state')).toBe(k[1]);
+      expect(metin()).toBe(k[2]);
+    });
+  });
+
+  test('DÜRÜSTLÜK: yerel kopya "Güncel" DEMEZ', () => {
+    nokta('ve-deploy-local');
+    veSyncWelcomeFreshness();
+    expect(metin()).toBe('Çevrimdışı kopya');
+    expect(metin()).not.toMatch(/Güncel/);
+  });
+
+  test('beşinci durum — cevap yoksa satır data-state="unknown" ve GİZLİ', () => {
+    nokta('ve-deploy-unknown');
+    expect(veSyncWelcomeFreshness()).toBe(true);
+    expect(satir().getAttribute('data-state')).toBe('unknown');
+    expect(satir().hidden).toBe(true);
+  });
+
+  test('ağ hatası da bilinmeyene düşer — yalancı satır kalmaz', () => {
+    nokta('ve-deploy-error');
+    veSyncWelcomeFreshness();
+    expect(satir().hidden).toBe(true);
+  });
+
+  test('nokta hiç yoksa satır gizli kalır', () => {
+    document.getElementById('ve-deploy-dot').remove();
+    expect(veSyncWelcomeFreshness()).toBe(true);
+    expect(satir().hidden).toBe(true);
+  });
+
+  test('file:// + gömülü künye → satır "Çevrimdışı kopya"ya yükselir', () => {
+    location = { protocol: 'file:' };
+    window.__MFSIM_BUILD = { sha: 'abc1234def', shortSha: 'abc1234' };
+    nokta('ve-deploy-unknown');
+    veSyncWelcomeFreshness();
+    expect(satir().hidden).toBe(false);
+    expect(satir().getAttribute('data-state')).toBe('local');
+    expect(metin()).toBe('Çevrimdışı kopya');
+  });
+
+  test('http kopyada aynı künye satırı AÇMAZ — orada yayın gerçekten sorulabilir', () => {
+    window.__MFSIM_BUILD = { sha: 'abc1234def', shortSha: 'abc1234' };
+    nokta('ve-deploy-unknown');
+    veSyncWelcomeFreshness();
+    expect(satir().hidden).toBe(true);
+  });
+
+  test('noktanın açıklaması (title) satıra taşınır', () => {
+    nokta('ve-deploy-local', 'Bu kopya: abc1234 · PR #872');
+    veSyncWelcomeFreshness();
+    expect(satir().getAttribute('title')).toBe('Bu kopya: abc1234 · PR #872');
+  });
+
+  test('[hidden] CSS ile de gizlenir — display:flex tarayıcı kuralını yenerdi', () => {
+    expect(CSS_WELCOME).toMatch(/\.ve-welcome-fresh\[hidden\]\{\s*display:none/);
+  });
+
+  test('markup henüz yoksa FALSE döner', () => {
+    document.body.innerHTML = '';
+    expect(veSyncWelcomeFreshness()).toBe(false);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 5) AÇILIŞ KOREOGRAFİSİ — tetikleyici JS'te, tempo CSS'te (İKİ AYRI DOSYA)
+describe('Açılış koreografisi', () => {
+  beforeEach(() => { setupDOM(); });
+
+  function goster(v) {
+    document.getElementById('ve-module-overlay').style.display = v ? '' : 'none';
+    veSyncModuleShell();
+  }
+  const enterVar = () =>
+    document.querySelector('.ve-welcome').classList.contains('ve-welcome-enter');
+
+  test('karşılama GİZLİDEN görünüre dönünce .ve-welcome-enter yazılır', () => {
+    goster(false);
+    expect(enterVar()).toBe(false);
+    goster(true);
+    expect(enterVar()).toBe(true);
+  });
+
+  test('her senkronda değil — görünür kalırken sınıf yeniden yazılmaz', () => {
+    goster(false);
+    goster(true);
+    document.querySelector('.ve-welcome').classList.remove('ve-welcome-enter');
+    veSyncModuleShell();                       // durum DEĞİŞMEDİ
+    expect(enterVar()).toBe(false);
+  });
+
+  test('reduced-motion: sınıf hiç yazılmaz', () => {
+    goster(false);
+    window.matchMedia = () => ({ matches: true });
+    try { goster(true); } finally { delete window.matchMedia; }
+    expect(enterVar()).toBe(false);
+  });
+
+  test('kart gecikmeleri jetonlardan türer: 420 + n × 70 ms', () => {
+    const perde = jetonMs('--dur-enter');
+    const adim = jetonMs('--dur-step');
+    expect([perde, adim]).toEqual([420, 70]);
+
+    // 1. kart: gecikme doğrudan --dur-enter
+    const ilk = CSS_WELCOME.match(/\.ve-welcome-enter \.ve-module-card\{([^}]*)\}/);
+    expect(ilk).toBeTruthy();
+    expect(ilk[1]).toContain('var(--dur-enter)');
+
+    // 2-4: calc jetonların ÜSTÜNE yazılır → 490 · 560 · 630
+    [2, 3, 4].forEach(function (n) {
+      const m = CSS_WELCOME.match(new RegExp(
+        '\\.ve-welcome-enter \\.ve-module-card:nth-child\\(' + n + '\\)\\{[^}]*animation-delay:([^;]+);'
+      ));
+      expect(m).toBeTruthy();
+      const ifade = m[1]
+        .replace(/var\(--dur-enter\)/g, String(perde))
+        .replace(/var\(--dur-step\)/g, String(adim))
+        .replace(/calc/g, '');
+      // eslint-disable-next-line no-new-func
+      expect(Function('return ' + ifade)()).toBe(perde + (n - 1) * adim);
+    });
+  });
+
+  test('koreografi kuralları taban kart kurallarından SONRA gelir', () => {
+    // Aynı özgüllük → kaynak sırası kazanır. Önce gelselerdi animasyon yine
+    // oynardı, yalnız YANLIŞ anda: perde düşer, dördü birden girer.
+    expect(CSS_WELCOME.indexOf('.ve-welcome-enter .ve-module-card:nth-child(2)'))
+      .toBeGreaterThan(CSS_WELCOME.indexOf('.ve-module-card:nth-child(2)'));
+  });
+
+  test('reduced-motion bloğu koreografiyi, kabuk inişini ve uçuşu durdurur', () => {
+    const blok = CSS_WELCOME.slice(CSS_WELCOME.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
+    expect(blok).toContain('.ve-welcome-enter .ve-module-card');
+    expect(blok).toContain('body.ve-chrome-enter #ve-ribbon');
+    expect(blok).toMatch(/\.ve-welcome-flyer\{\s*transition:none/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 6) UÇAN KART KOPYASI — veWelcomeFlyToNode
+//    DEKOR: düğüm zaten yerinde. Buradaki her yol "sessizce çık" ile biter;
+//    tek gerçek risk klonun DOM'da asılı kalması (tıklamayı yutar).
+describe('Uçan kart kopyası — veWelcomeFlyToNode', () => {
+  const KART_R = { left: 100, top: 200, width: 400, height: 160 };
+  const NODE_R = { left: 700, top: 500, width: 120, height: 60 };
+  let anims;
+
+  beforeEach(() => {
+    setupDOM();
+    jest.useFakeTimers();
+    anims = [];
+    delete Element.prototype.animate;
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+    delete Element.prototype.animate;
+  });
+
+  function waapiKur() {
+    Element.prototype.animate = function (kareler, ayar) {
+      const a = { kareler: kareler, ayar: ayar, onfinish: null };
+      anims.push(a);
+      return a;
+    };
+  }
+  function kart() {
+    const k = document.querySelector('.ve-module-card[data-module="fead-analysis"]');
+    k.getBoundingClientRect = () => KART_R;
+    return k;
+  }
+  function dugum(r) {
+    const n = document.createElement('div');
+    document.body.appendChild(n);
+    n.getBoundingClientRect = () => (r || NODE_R);
+    return n;
+  }
+  const klonlar = () => document.querySelectorAll('body > .ve-welcome-flyer');
+
+  test('WAAPI yoksa sessizce çıkar — ne hata ne klon', () => {
+    const k = kart();
+    expect(typeof k.animate).not.toBe('function');
+    expect(() => veWelcomeFlyToNode(k, dugum(), KART_R)).not.toThrow();
+    expect(klonlar().length).toBe(0);          // klon HİÇ doğmamalı (sonra toplanmış olması yetmez)
+    jest.advanceTimersByTime(2000);
+    expect(klonlar().length).toBe(0);
+  });
+
+  test('reduced-motion altında uçuş HİÇ başlamaz', () => {
+    waapiKur();
+    window.matchMedia = () => ({ matches: true });
+    try { veWelcomeFlyToNode(kart(), dugum(), KART_R); } finally { delete window.matchMedia; }
+    jest.advanceTimersByTime(2000);
+    expect(klonlar().length).toBe(0);
+    expect(anims.length).toBe(0);
+  });
+
+  test('kalkış ölçüsü yoksa (kart gizli, 0×0) uçuş kurulmaz', () => {
+    waapiKur();
+    veWelcomeFlyToNode(kart(), dugum(), { left: 0, top: 0, width: 0, height: 0 });
+    expect(klonlar().length).toBe(0);          // klon HİÇ doğmamalı: 0×0'dan uçan kopya yanlış yere iner
+    jest.advanceTimersByTime(2000);
+    expect(klonlar().length).toBe(0);
+  });
+
+  test('klon body\'nin DOĞRUDAN çocuğu, sabit konumlu ve tıklamayı yutmuyor', () => {
+    waapiKur();
+    veWelcomeFlyToNode(kart(), dugum(), KART_R);
+    const k = klonlar();
+    expect(k.length).toBe(1);
+    expect(k[0].parentNode).toBe(document.body);      // tuvalin transform'lu uzayı DEĞİL
+    expect(k[0].style.position).toBe('fixed');
+    expect(k[0].style.pointerEvents).toBe('none');
+    expect(k[0].style.left).toBe(KART_R.left + 'px');
+    expect(k[0].getAttribute('onclick')).toBeNull();
+    expect(k[0].getAttribute('tabindex')).toBeNull();
+    expect(k[0].getAttribute('aria-hidden')).toBe('true');
+  });
+
+  test('animasyon bitince klon KALDIRILIR', () => {
+    waapiKur();
+    veWelcomeFlyToNode(kart(), dugum(), KART_R);
+    jest.advanceTimersByTime(200);                    // kabuk otursun diye beklenen aralık
+    expect(anims.length).toBe(1);
+    expect(anims[0].ayar.duration).toBe(460);         // --dur-fly
+    expect(typeof anims[0].onfinish).toBe('function');
+    anims[0].onfinish();
+    expect(klonlar().length).toBe(0);
+  });
+
+  test('bitiş olayı hiç gelmezse emniyet zamanlayıcısı klonu toplar', () => {
+    waapiKur();
+    veWelcomeFlyToNode(kart(), dugum(), KART_R);
+    jest.advanceTimersByTime(200);
+    expect(klonlar().length).toBe(1);
+    jest.advanceTimersByTime(600);
+    expect(klonlar().length).toBe(0);
+  });
+
+  test('hedef ölçülemezse (0×0 düğüm) klon asılı kalmaz', () => {
+    waapiKur();
+    veWelcomeFlyToNode(kart(), dugum({ left: 0, top: 0, width: 0, height: 0 }), KART_R);
+    jest.advanceTimersByTime(200);
+    expect(anims.length).toBe(0);
+    expect(klonlar().length).toBe(0);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 7) MODÜLE GEÇİŞ — uçuş + kabuk inişi EKLENDİ, merkez sözleşmesi DURUYOR
+//    (tests/unit/module-start-center.test.js aynı sözleşmeyi uçuşsuz tutuyor;
+//    buradaki kapı yeni katmanların o hesabı bozmadığını ölçer.)
+describe('Modüle geçiş — uçuş/kabuk eklendikten sonra da blok tam ortada', () => {
+  const FULL_W = 1920, SHELL_W = 284, VIEW_H = 935;
+
+  function olcuKur() {
+    const wrap = document.getElementById('ve-canvas-wrapper');
+    const gen = () =>
+      document.querySelector('.ve-main').classList.contains('ve-no-module') ? FULL_W : FULL_W - SHELL_W;
+    wrap.getBoundingClientRect = () => ({
+      width: gen(), height: VIEW_H, left: FULL_W - gen(), top: 0, right: FULL_W, bottom: VIEW_H
+    });
+    Object.defineProperty(wrap, 'clientWidth', { configurable: true, get: gen });
+    Object.defineProperty(wrap, 'clientHeight', { configurable: true, get: () => VIEW_H });
+  }
+  function kartOlc(tip) {
+    document.querySelector('.ve-module-card[data-module="' + tip + '"]')
+      .getBoundingClientRect = () => ({ left: 100, top: 200, width: 400, height: 160 });
+  }
+  const ekranX = (n) => (n.x + n.width / 2 - 3000) * canvasZoom + canvasOffset.x;
+  const ekranY = (n) => (n.y + n.height / 2 - 3000) * canvasZoom + canvasOffset.y;
+
+  beforeEach(() => {
+    setupDOM();
+    jest.useFakeTimers();
+    olcuKur();
+    global.nodes = [];
+    global.connections = [];
+    global.compCounter = 0;
+    global.canvasZoom = 1;
+    global.canvasOffset = { x: 3000, y: 3000 };
+    global.updateCanvasTransform = jest.fn();
+    global.showToast = jest.fn();
+    global.createNode = jest.fn(function (type, x, y) {
+      const def = componentDefs[type] || {};
+      const n = { id: 'comp-' + (++global.compCounter), type: type, x: x, y: y,
+                  width: def.defaultWidth || 65, height: def.defaultHeight || 60, data: {} };
+      const el = document.createElement('div');
+      el.id = n.id;
+      el.getBoundingClientRect = () => ({ left: 700, top: 400, width: n.width, height: n.height });
+      document.body.appendChild(el);
+      global.nodes.push(n);
+      return n;
+    });
+    document.getElementById('ve-module-overlay').style.display = '';
+    veSyncModuleShell();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+    delete Element.prototype.animate;
+  });
+
+  test('uçuş GERÇEKTEN kurulurken bile blok yatayda ve dikeyde ortada', () => {
+    Element.prototype.animate = function () { return {}; };
+    kartOlc('fead-analysis');
+    veStartModule('fead-analysis');
+
+    expect(document.querySelectorAll('body > .ve-welcome-flyer').length).toBe(1);
+    const W = FULL_W - SHELL_W;
+    expect(nodes.length).toBe(1);
+    expect(Math.abs(ekranX(nodes[0]) - W / 2)).toBeLessThanOrEqual(1);
+    expect(Math.abs(ekranY(nodes[0]) - VIEW_H / 2)).toBeLessThanOrEqual(1);
+  });
+
+  test('kabuk inişi: body.ve-chrome-enter eklenir ve 500 ms sonra kalkar', () => {
+    veStartModule('mount-analysis');
+    expect(document.body.classList.contains('ve-chrome-enter')).toBe(true);
+    jest.advanceTimersByTime(600);
+    expect(document.body.classList.contains('ve-chrome-enter')).toBe(false);
+  });
+
+  test('reduced-motion: kabuk sınıfı hiç eklenmez, modül yine açılır', () => {
+    window.matchMedia = () => ({ matches: true });
+    try { veStartModule('mount-analysis'); } finally { delete window.matchMedia; }
+    expect(document.body.classList.contains('ve-chrome-enter')).toBe(false);
+    expect(nodes.length).toBe(1);
+    expect(document.getElementById('ve-module-overlay').style.display).toBe('none');
+  });
+
+  test('uçuş PATLASA bile modül açılır — dekor bir kapı değildir', () => {
+    const gercek = veWelcomeFlyToNode;
+    veWelcomeFlyToNode = function () { throw new Error('uçuş bozuk'); };
+    try {
+      kartOlc('structural-analysis');
+      expect(() => veStartModule('structural-analysis')).not.toThrow();
+    } finally {
+      veWelcomeFlyToNode = gercek;
+    }
+    expect(nodes.length).toBe(1);
+    expect(nodes[0].type).toBe('structural-analysis');
+    expect(document.getElementById('ve-module-overlay').style.display).toBe('none');
+    expect(showToast).toHaveBeenCalled();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 8) YÜKLEME → KARŞILAMA MARKA DEVRİ — js/loader.js kancası
+//    Kanca splash SÖNMEDEN önce çağrılmalı (sonrası ölçülemez); ama kanca yoksa
+//    ya da patlarsa kapanış AYNEN sürmeli — asılı splash "program hiç açılmadı".
+describe('Marka devri kancası — js/loader.js › hideSplash', () => {
+  const SPLASH = (function () {
+    const a = HTML.indexOf('<div id="mfsim-loading-screen"');
+    const b = HTML.indexOf('<script src="js/loader.js">');
+    if (a < 0 || b < 0 || b < a) throw new Error('index.html: açılış ekranı bloğu bulunamadı');
+    return HTML.slice(a, b).trim();
+  })();
+
+  let gercekKanca;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    gercekKanca = window.veWelcomeAdoptSplashLogo;
+    document.body.className = '';
+    // Defer script YOK → yükleyicinin en kısa yolu: 250 ms sonra hideSplash.
+    document.body.innerHTML = SPLASH + '<div id="mfsim-login-overlay" style="display:block"></div>';
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+    window.veWelcomeAdoptSplashLogo = gercekKanca;
+    setupDOM();
+  });
+
+  function kostur() {
+    // Her senaryo için TAZE bir IIFE: `started` bayrağı testler arasında taşınmasın.
+    // eslint-disable-next-line no-eval
+    eval(LOADER_SRC);
+    window.MFSimLoader.start();
+    jest.advanceTimersByTime(1000);            // 250 ms bekleme + 340 ms sönme
+  }
+  const splash = () => document.getElementById('mfsim-loading-screen');
+
+  test('kanca tanımlıysa splash SÖNMEDEN önce çağrılır', () => {
+    let sinifCagriAninda = null;
+    const kanca = jest.fn(function (el) { sinifCagriAninda = el.className; });
+    window.veWelcomeAdoptSplashLogo = kanca;
+    kostur();
+
+    expect(kanca).toHaveBeenCalledTimes(1);
+    expect(kanca.mock.calls[0][0]).toBe(splash());
+    expect(sinifCagriAninda).not.toContain('mfsim-fading-out');
+    expect(splash().style.display).toBe('none');
+  });
+
+  test('kanca YOKSA splash yine kapanır', () => {
+    delete window.veWelcomeAdoptSplashLogo;
+    kostur();
+    expect(splash().style.display).toBe('none');
+  });
+
+  test('kanca PATLASA bile splash kapanır', () => {
+    window.veWelcomeAdoptSplashLogo = function () { throw new Error('marka devri bozuk'); };
+    kostur();
+    expect(splash().style.display).toBe('none');
+  });
+
+  test('kancanın adı iki dosya arasında ORTAK — yeniden adlandırma sessizce keserdi', () => {
+    expect(LOADER_SRC).toContain('window.veWelcomeAdoptSplashLogo');
+    expect(loadSource('components.js'))
+      .toContain('window.veWelcomeAdoptSplashLogo = veWelcomeAdoptSplashLogo');
   });
 });

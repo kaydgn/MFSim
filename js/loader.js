@@ -315,6 +315,11 @@
     stopTips();
     var splash = $(ELS.splash);
     if (splash) {
+      // Marka devamlılığı: karşılama ekranı splash logosunu SÖNMEDEN önce devralır
+      // (sonrası ölçülemez). Kanca yoksa/patlarsa kapanış aynen sürer — splash asılı kalamaz.
+      if (typeof window.veWelcomeAdoptSplashLogo === 'function') {
+        try { window.veWelcomeAdoptSplashLogo(splash); } catch (e) {}
+      }
       splash.classList.add('mfsim-fading-out');
       setTimeout(function() {
         splash.style.display = 'none';
