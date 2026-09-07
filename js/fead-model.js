@@ -2938,9 +2938,40 @@ function veFeadResolveDriver(pulleys){
   return list.length ? list[0] : null;
 }
 
-// ─── ÇİZİM DÜZLEMİ — VARSAYILAN: RAPOR DÜZLEMİ (ayna KAPALI) ───────────
+// ─── ÇİZİM DÜZLEMİ — VARSAYILAN: ÖN GÖRÜNÜŞ (krank CW) ─────────────────
 //
-// ── 2026-09-07, İKİNCİ TUR: AYNA GERİ ALINDI ──────────────────────────────
+// ── 2026-09-07, ÜÇÜNCÜ TUR: KULLANICI SEÇTİ — ÖN GÖRÜNÜŞ ──────────────────
+//
+// Üç yol yan yana ÇİZİLİP gösterildi (aynı sistem, iki taraftan bakış) ve
+// kullanıcı seçti: *"B — motora önden bakış (krank CW)."*
+//
+// SEÇİM BİLEREK YAPILDI, bedeli görülerek: sol-sağ düzeni Gates sayfasının
+// tersine düşer, gergi krankın KARŞI yanında çıkar. Bu bir regresyon değil,
+// seçilen bakış yönünün kendisi.
+//
+// KARARI VEREN ÖLÇÜM — raporun KENDİ iki sütunu, bizim varsayımımız değil
+// (AG00686):
+//   • koordinatlar: krank (0,0) · gergi (−157, 187) → gergi krankın SOLUNDA
+//   • span gerilmeleri, kayış sırasıyla @800 rpm:
+//       krank 1210 → avara 1208 → klima 767 → gergi 766
+//     Kranktan ÇIKAN span en gergin, kranka DÖNEN en gevşek — bir sürücü
+//     kasnak tam olarak böyle davranır. Yani rapor, kayışın hangi yöne
+//     gittiğini kendi tablosunda söylüyor.
+//   O sırayı o koordinatlar üzerinde dolaştırınca halka CCW kapanıyor →
+//   Gates sayfasında krank CCW döner. "Krank CW" demek öbür taraftan bakmak
+//   demek; ikisi tek seçim, iki ayrı ayar değil.
+//
+// AYNALANAN YALNIZ RESİM. Saklanan mm koordinatları, çözücü ve basılan
+// SAYILAR Gates çerçevesinde KALIYOR — rapordan veri girip PDF'le satır satır
+// karşılaştırmak bu modülün taşıdığı asıl değer (CLAUDE.md kuralı) ve bir
+// bakış tercihi için feda edilmiyor. Basıldıkları yer bunu söylüyor
+// (`veFeadPlaneNote`), yani ekranda hiçbir sayı sessizce başka çerçevede
+// durmuyor.
+//
+// ÜÇÜNCÜ YOL — "aynalamadan krankı CW yap" — ÖLÇÜLEREK KAPANDI; kaydı aşağıda
+// duruyor ve kapısı `fead-layout-plane.test.js` içinde.
+//
+// ── 2026-09-07, İKİNCİ TUR: AYNA BİR KEZ GERİ ALINMIŞTI ───────────────────
 //
 // Kullanıcı bildirimi (aynı gün, aynalı sürümü gördükten sonra): *"Program
 // içindeki tüm örnekleri aynalamışsın. Otomatik gergi konumları değişmiş,
@@ -3037,7 +3068,7 @@ function veFeadResolveDriver(pulleys){
 // BİREBİR aynı kalır; değişen yalnız el yönü. Bu yüzden burada `d` işareti de
 // çevriliyor: çevrilmezse sarım yayları kasnağın İÇİNDEN geçer (kartta bir kez
 // ölçülmüş "sweep bayrağı" hatasının aynısı).
-var VE_FEAD_VIEW_FRONT = false;    // çizim düzlemi: false = RAPOR (Gates) · true = ön görünüş (ayna)
+var VE_FEAD_VIEW_FRONT = true;     // çizim düzlemi: true = ÖN GÖRÜNÜŞ (krank CW) · false = RAPOR (Gates)
 
 // TEK OKUMA NOKTASI, VE AYARLANABİLİR. Bayrak eskiden doğrudan okunuyordu ve
 // `module.exports` onu KOPYA olarak veriyordu — yani hiçbir test düzlemi
