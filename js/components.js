@@ -1368,6 +1368,12 @@ function veSyncModuleShell() {
   // şeridi gizler hem --chrome-h'ı sıfırlar; belge bandı (.ve-doc-dock) .ve-main
   // içinde olduğu için yukarıdaki sınıftan besleniyor.
   if(document.body) document.body.classList.toggle('ve-no-module', visible);
+  // Slayt yalnız karşılama ekrandayken döner: modül seçilince zamanlayıcı
+  // boşuna çalışmasın (kap görünmüyor, kare değiştirmenin karşılığı yok).
+  if(typeof veWelcomeSlaytBaslat === 'function') {
+    if(visible && !_veSlaytZaman) veWelcomeSlaytBaslat();
+    else if(!visible) veWelcomeSlaytDurdur();
+  }
   // Şerit de aynı duruma uysun: çalışma alanı yokken Kaydet/Doğrula/
   // Çalıştır gibi komutlar pasif çizilir (sol panel zaten gizleniyordu,
   // şeridin etkin görünmesi tutarsızdı).
@@ -1463,6 +1469,71 @@ function veFillWelcomeChanges() {
     dugme.onclick = veToggleWelcomeChanges;      // her çizimde aynı işlev — çoğalmaz
   }
   panel.hidden = false;
+  return true;
+}
+
+// ═══ KARŞILAMA SLAYTI ═══
+// Modüllerin arkasında karışık sırayla dönen kareler. Süsleme olduğu için
+// üç yerde SESSİZCE vazgeçer: kare listesi yoksa, kap yoksa, hareket kapalıysa
+// (sonuncuda tek kare durur — resim kalır, hareket kalkar).
+var VE_SLAYT_BEKLEME = 7000;                  // bir karenin ekranda durduğu süre
+var _veSlaytZaman = null;                     // tek zamanlayıcı — çoğalmasın
+
+// Kare kaynağı: gömülü data URI (tek dosya) → yoksa dosya yolu (modüler kopya).
+function veSlaytKaynak(ad) {
+  var g = (typeof window !== 'undefined') ? window.__MFSIM_KARSILAMA : null;
+  return (g && g[ad]) ? g[ad] : 'assets/karsilama/' + ad;
+}
+
+function _veSlaytKarilmis() {
+  var liste = (typeof VE_KARSILAMA_GORSELLER !== 'undefined' && VE_KARSILAMA_GORSELLER)
+    ? VE_KARSILAMA_GORSELLER.slice() : [];
+  for(var i = liste.length - 1; i > 0; i--) {   // Fisher-Yates
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = liste[i]; liste[i] = liste[j]; liste[j] = t;
+  }
+  return liste;
+}
+
+function veWelcomeSlaytDurdur() {
+  if(_veSlaytZaman) { clearInterval(_veSlaytZaman); _veSlaytZaman = null; }
+}
+
+function veWelcomeSlaytBaslat() {
+  if(typeof document === 'undefined') return false;
+  var kap = document.getElementById('ve-welcome-slayt');
+  if(!kap) return false;
+  var kareler = _veSlaytKarilmis();
+  veWelcomeSlaytDurdur();
+  if(!kareler.length) { kap.innerHTML = ''; return false; }
+
+  // İki katman: biri görünür, öteki sıradakini taşır; her adımda yer değiştirirler.
+  kap.innerHTML = '';
+  var katman = [document.createElement('div'), document.createElement('div')];
+  katman.forEach(function(el) { el.className = 've-welcome-kare'; kap.appendChild(el); });
+
+  var i = 0, aktif = 0;
+  katman[0].style.backgroundImage = 'url("' + veSlaytKaynak(kareler[0]) + '")';
+  katman[0].classList.add('is-on');
+
+  if(kareler.length < 2 || (typeof matchMedia === 'function' &&
+     matchMedia('(prefers-reduced-motion: reduce)').matches)) return true;
+
+  // Sıradaki kareyi ÖNCEDEN indir: geçiş anında boş kare görünmesin.
+  function onYukle(ad) { if(typeof Image === 'function') { var im = new Image(); im.src = veSlaytKaynak(ad); } }
+  onYukle(kareler[1]);
+
+  _veSlaytZaman = setInterval(function() {
+    i = (i + 1) % kareler.length;
+    var sonraki = 1 - aktif;
+    katman[sonraki].classList.remove('is-on');
+    katman[sonraki].style.backgroundImage = 'url("' + veSlaytKaynak(kareler[i]) + '")';
+    void katman[sonraki].offsetWidth;            // Ken Burns baştan koşsun
+    katman[sonraki].classList.add('is-on');
+    katman[aktif].classList.remove('is-on');
+    aktif = sonraki;
+    onYukle(kareler[(i + 1) % kareler.length]);
+  }, VE_SLAYT_BEKLEME);
   return true;
 }
 

@@ -236,9 +236,16 @@ describe('Karşılama zemini — kâğıt dokusu', () => {
     // ölçeklenir ve kâğıt yerine bulanık leke çıkar (uyarı yok).
     const w = svg.match(/width='(\d+)'/);
     expect(w).toBeTruthy();
-    const doseme = (CSS_WELCOME.match(/background-size:[^;]+;/g) || []);
-    expect(doseme.length).toBeGreaterThanOrEqual(2);      // taban + fallback katı
-    doseme.forEach((d) => expect(d).toContain(w[1] + 'px ' + w[1] + 'px'));
+    // Yalnız DOKUYU KULLANAN kurallara bakılır: karşılama bloğunda başka
+    // background-size'lar da var (slayt kareleri `cover` ile örtüyor) ve
+    // onların döşemeyle ilgisi yok.
+    const dokuKurallari = (CSS_WELCOME.match(/\{[^{}]*var\(--paper-grain\)[^{}]*\}/g) || []);
+    expect(dokuKurallari.length).toBeGreaterThanOrEqual(2);   // taban + fallback katı
+    dokuKurallari.forEach((kural) => {
+      const d = kural.match(/background-size:[^;]+;/);
+      expect(d).toBeTruthy();
+      expect(d[0]).toContain(w[1] + 'px ' + w[1] + 'px');
+    });
   });
 });
 
