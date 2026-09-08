@@ -5,9 +5,10 @@ tasarım örnekleri — programın konusuyla ilgili olan ama programın **içine
 resimler.
 
 > **Karşılama slaytı buradan besleniyor.** Bu klasördeki kareler
-> `assets/karsilama/` altına 1280 px / q0.60 WebP olarak indirgenmiş hâlleriyle
-> girdi; programın içinde görünen kopya odur, build onu gömer. Ayarı değiştirmek
-> gerekirse kaynak burada duruyor.
+> `assets/karsilama/` altına **bayt bayt aynı** kopyalanır (yalnız adları
+> düzenlenir) ve build onları gömer. Küçültme denendi, geri alındı: 1280 px'e
+> indirmek görünür biçimde bulanıklaştırıyordu, yeniden kodlamak ise ikinci bir
+> kayıp olurdu — bu dosyalar zaten WebP %82.
 
 ## Kurallar
 

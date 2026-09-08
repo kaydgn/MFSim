@@ -176,9 +176,9 @@ if (fs.existsSync(examplesDir)) {
 }
 // ── 2c-3) KARŞILAMA SLAYTI — assets/karsilama/*.webp tek dosyaya göm.
 // Program file:// ile açılıyor: gömülmeyen resim orada YOK demek. Kareler
-// bulanık ve örtü altında çizildiği için 1280 px / q0.60'a indirildi —
-// ölçüldü: 1600 px q0.72 ile sunum koşullarında ayırt edilemiyor, base64
-// maliyeti ise 4,68 MB yerine 2,93 MB.
+// ÖZGÜN ölçülerinde (yüklendikleri hâlde) duruyor: 1280 px'e küçültmek görünür
+// biçimde bulanıklaştırıyordu, yeniden kodlamak da ikinci bir kayıp olurdu.
+// Boyut karşılığı kabul edildi — dosya gzip'lenerek gönderiliyor (CLAUDE.md).
 var karsilamaDir = path.join(ROOT, 'assets', 'karsilama');
 var karsilama = {};
 if (fs.existsSync(karsilamaDir)) {

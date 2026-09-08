@@ -966,7 +966,8 @@
       --dur-enter: 420ms;
       --dur-slayt-gecis: 1600ms;  /* çapraz geçiş — uzun, göz yormasın */
       --dur-slayt-kb: 13s;        /* Ken Burns: kare durduğu sürece çok yavaş yaklaşır */
-      --slayt-opaklik: 0.46;      /* örtünün altında kalan resim payı */
+      --slayt-opaklik: 0.72;      /* örtünün altında kalan resim payı */
+      --slayt-bulanik: 0px;       /* bulanıklık KAPALI: kareyi siliyordu, okunurluğu örtü sağlıyor */
       --dur-step:   70ms;
       --dur-fly:   460ms;
       --ease-fly: cubic-bezier(.4, 0, .2, 1);
@@ -2954,7 +2955,7 @@ body.ve-no-module #ve-ribbon{ display:none; }
   background-size:cover;
   background-position:center;
   opacity:0;
-  filter:blur(2px);
+  filter:blur(var(--slayt-bulanik, 0px));
   transform:scale(1.05);
   transition:opacity var(--dur-slayt-gecis, 1600ms) linear;
   will-change:opacity, transform;
@@ -2976,14 +2977,14 @@ body.ve-no-module #ve-ribbon{ display:none; }
      genelde oralarda ve kutuların arkasında bir yığın istemiyoruz. */
   background:
     linear-gradient(180deg,
-      color-mix(in srgb, var(--bg-primary) 55%, transparent) 0%,
-      transparent 22%,
-      transparent 62%,
-      color-mix(in srgb, var(--bg-primary) 45%, transparent) 100%),
+      color-mix(in srgb, var(--bg-primary) 42%, transparent) 0%,
+      transparent 20%,
+      transparent 66%,
+      color-mix(in srgb, var(--bg-primary) 34%, transparent) 100%),
     linear-gradient(90deg,
       var(--bg-primary) 0%,
-      color-mix(in srgb, var(--bg-primary) 74%, transparent) 30%,
-      color-mix(in srgb, var(--bg-primary) 62%, transparent) 100%);
+      color-mix(in srgb, var(--bg-primary) 58%, transparent) 26%,
+      color-mix(in srgb, var(--bg-primary) 40%, transparent) 100%);
 }
 /* İçerik slaytın ÜSTÜNDE: kutular opak, aralarındaki boşlukta resim görünür. */
 .ve-welcome-eyebrow,
@@ -3003,6 +3004,14 @@ body.ve-no-module #ve-ribbon{ display:none; }
   max-width:1000px;
 }
 .ve-welcome-eyebrow{
+  /* Etiket doğrudan fotoğrafın üstünde: kendi zeminini taşımazsa kadraja göre
+     okunurluğu değişir (kutular opak, bu değil). */
+  align-self:flex-start;
+  width:auto;                      /* ortak kuraldaki %100'ü ez: çip metin kadar olsun */
+  padding:3px 9px;
+  background:color-mix(in srgb, var(--bg-primary) 72%, transparent);
+  border:1px solid color-mix(in srgb, var(--border-color) 55%, transparent);
+  border-radius:2px;
   margin-bottom:14px;
   font-size:var(--fs-tiny);
   font-weight:600;

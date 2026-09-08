@@ -31,8 +31,12 @@ const CSS = fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8');
 const BUILD = fs.readFileSync(path.join(ROOT, 'build.js'), 'utf8');
 const LISTE = require('../../js/karsilama-gorseller.js').VE_KARSILAMA_GORSELLER;
 
-const KARE_TAVAN = 260 * 1024;        // kare başına (ölçülen en büyük: 160 KB)
-const TOPLAM_TAVAN = 3 * 1024 * 1024; // klasör toplamı (ölçülen: 2,19 MB)
+// Kareler ÖZGÜN ölçülerinde duruyor (1015–1920 px). Küçültme denendi ve geri
+// alındı: 1280 px'e indirmek görünür biçimde bulanıklaştırıyordu ve kullanıcı
+// boyut için kaliteden ödün vermeme kararını verdi (CLAUDE.md › teslim kuralı:
+// dosya gzip'lenerek gönderiliyor). Tavanlar buna göre.
+const KARE_TAVAN = 560 * 1024;          // kare başına (ölçülen en büyük: 519 KB)
+const TOPLAM_TAVAN = 6.5 * 1024 * 1024; // klasör toplamı (ölçülen: 5,80 MB)
 
 function setupDOM() {
   document.body.innerHTML =
@@ -86,7 +90,7 @@ describe('Kare listesi ile klasör ayrışamaz', () => {
 
 // ═══ 2) BOYUT KAPISI ═══════════════════════════════════════════════════════
 describe('Boyut — kareler tek dosyaya base64 gömülüyor', () => {
-  test('hiçbir kare 260 KB\'ı geçmiyor', () => {
+  test('hiçbir kare 560 KB\'ı geçmiyor', () => {
     const buyuk = LISTE
       .map((f) => ({ f, b: fs.statSync(path.join(DIR, f)).size }))
       .filter((x) => x.b > KARE_TAVAN)
@@ -94,7 +98,7 @@ describe('Boyut — kareler tek dosyaya base64 gömülüyor', () => {
     expect(buyuk).toEqual([]);
   });
 
-  test('klasör toplamı 3 MB\'ı geçmiyor', () => {
+  test('klasör toplamı 6,5 MB\'ı geçmiyor', () => {
     const toplam = LISTE
       .reduce((t, f) => t + fs.statSync(path.join(DIR, f)).size, 0);
     expect(toplam).toBeLessThanOrEqual(TOPLAM_TAVAN);
