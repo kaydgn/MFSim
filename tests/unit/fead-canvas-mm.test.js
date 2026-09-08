@@ -46,7 +46,8 @@ const P = (o) => JSON.parse(JSON.stringify(o));
 // krank CW konvansiyonu) kanvasın X'i de aynalanır. Bu dosya X'in İŞARETİNİ
 // değil, kanvas ↔ mm bağının KENDİSİNİ ölçüyor; işaret düzlemden okunuyor
 // (fead-spin.test.js'teki `cizimYonu` ile aynı kalıp).
-const SX = () => (M.VE_FEAD_VIEW_FRONT ? -1 : 1);
+// ÇİZİM AYNALANMAZ — X işareti sabit (bkz. fead-model.js, "TEK ÇERÇEVE VAR").
+const SX = () => 1;
 
 // Kanvas düğümü: mm koordinatı data'da, piksel konumu üstte.
 const kasnak = (id, type, px, py, data) => {
@@ -80,29 +81,19 @@ describe('dönüşüm — Y ters, merkezden ölçülür', () => {
     expect(SX() * M.veFeadCanvasToMm(sag, org, 1).x).toBeGreaterThan(0);
   });
 
-  // İKİ DÜZLEMDE DE GİDİŞ-DÖNÜŞ BİREBİR. Aynalama iki fonksiyondan yalnız
-  // birine konsaydı kanvas ↔ mm çifti birbirinin tersi olmaktan çıkardı:
-  // kutu her senkronda biraz daha kayar, hiçbir sayı "yanlış" görünmezdi.
-  test('gidiş-dönüş İKİ DÜZLEMDE de birebir — aynalama tek işaretten', () => {
-    const varsayilan = M.VE_FEAD_VIEW_FRONT;
-    try {
-      [true, false].forEach((on) => {
-        M.veFeadSetViewFront(on);
-        const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true, x: 0, y: 0 });
-        const n = kasnak('a', 'fead-alternator', 1234, 876, {});
-        const mm = M.veFeadCanvasToMm(n, org, 1);
-        const px = M.veFeadMmToCanvas(mm.x, mm.y, org, 1, M.veFeadNodeBox(n));
-        expect(px.x).toBeCloseTo(n.x, 9);
-        expect(px.y).toBeCloseTo(n.y, 9);
-        // Ve iki düzlem birbirinin X aynası — ilişki gerçekten kuruldu.
-        const dx = M.veFeadNodeCenter(n).x - M.veFeadNodeCenter(org).x;
-        expect(M.veFeadCanvasToMm(n, org, 1).x).toBeCloseTo((on ? -1 : 1) * dx, 9);
-      });
-    } finally { M.veFeadSetViewFront(varsayilan); }
+  // GİDİŞ-DÖNÜŞ BİREBİR — iki fonksiyon birbirinin tam tersi.
+  test('gidiş-dönüş birebir ve X AYNEN taşınıyor', () => {
+    const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true, x: 0, y: 0 });
+    const n = kasnak('a', 'fead-alternator', 1234, 876, {});
+    const mm = M.veFeadCanvasToMm(n, org, 1);
+    const px = M.veFeadMmToCanvas(mm.x, mm.y, org, 1, M.veFeadNodeBox(n));
+    expect(px.x).toBeCloseTo(n.x, 9);
+    expect(px.y).toBeCloseTo(n.y, 9);
+    // Aynalama YOK: mm farkı kutu merkezleri farkının kendisi.
+    const dx = M.veFeadNodeCenter(n).x - M.veFeadNodeCenter(org).x;
+    expect(mm.x).toBeCloseTo(dx, 9);
   });
 
-  // KUTU ÖLÇÜSÜ SONUCU ETKİLEMEMELİ. Sol üstten ölçen bir dönüşümde 72×66'lık
-  // krank ile 54×50'lik avara arasında 9 px'lik sahte bir fark çıkardı.
   test('farklı kutu ölçüleri sistematik kayma ÜRETMEZ', () => {
     const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true });
     // İki farklı tipte kasnağı AYNI merkeze koy → mm'leri aynı olmalı

@@ -1282,13 +1282,9 @@ describe('dönüş yönü — Kasnaklar adımında seçilir', () => {
     const y0 = b.spin, r0 = st.route.slice();
     expect(y0).not.toBe(0);
 
-    // DÜĞMELER ÇİZİM DÜZLEMİNDE KONUŞUR. `b.spin` VERİ düzlemini ölçüyor;
-    // çizim aynalıysa ikisi ters, aynasızsa aynı. Kapı bayrağa değil ÇEVİRİNİN
-    // KENDİSİNE bakıyor — düğmeye yanlış düzlemin değerini geçmek "aynı yönü
-    // seçtim" derken tersini seçmek olurdu.
-    const f0 = M.veFeadSpinToFront(y0);
-    expect(f0).toBe(M.VE_FEAD_VIEW_FRONT ? -y0 : y0);
-    expect(M.veFeadSpinToFront(f0)).toBe(y0);       // İNVOLUSYON — kendi tersi
+    // DÜĞME İLE KART AYNI ÇERÇEVEDE: çizim aynalanmadığı için düğmeye geçen
+    // değer `b.spin`'in kendisi. (Bir dönem burada bir ayna çevirisi vardı.)
+    const f0 = y0;
 
     // AYNI yön seçilirse HİÇBİR ŞEY olmaz (aksi hâlde bir aç/kapa gibi
     // davranır ve ikinci tık sırayı geri çevirirdi).
@@ -1319,9 +1315,9 @@ describe('dönüş yönü — Kasnaklar adımında seçilir', () => {
       kabuk(); wiz.veFeadWizSeed(k);
       const b = wiz.veFeadWizBuild();
       expect(b.spin).toBe(1);                       // veri düzleminde CCW — ÖLÇÜLÜ
-      // Etiket ÇİZİM düzlemini basar; ikisinin ilişkisi bayrakla belirli.
-      const gorunen = M.veFeadSpinToFront(b.spin);
-      expect(gorunen).toBe(M.VE_FEAD_VIEW_FRONT ? -1 : 1);
+      // Etiket ÇİZİLEN yönü basar ve çizim aynalanmaz → veriyle aynı.
+      const gorunen = b.spin;
+      expect(gorunen).toBe(1);
       expect(M.veFeadSpinLabel(b.spin).kisa)
         .toBe(gorunen > 0 ? '\u21ba CCW' : '\u21bb CW');
       // Düzlem adı etiketin İÇİNDE — "CW" tek başına hiçbir şey söylemez.
@@ -1337,8 +1333,9 @@ describe('dönüş yönü — Kasnaklar adımında seçilir', () => {
     const h = wiz.veFeadWizSpinHTML(b);
     const acik = h.split('<button').filter((x) => /ve-fw-spin-on/.test(x));
     expect(acik).toHaveLength(1);
-    // Basılı olan, ÇİZİLEN yönün düğmesi olmalı — veri düzleminin değil.
-    const gorunen = M.veFeadSpinToFront(b.spin);
+    // Basılı olan, ÇİZİLEN yönün düğmesi olmalı — çizim aynalanmadığı için
+    // bu, verinin dolanım işaretinin kendisi.
+    const gorunen = b.spin;
     expect(acik[0]).toContain('veFeadWizSpinSet(' + gorunen + ')');
     // İPUCU METNİ DE TEK ÜRETİCİDEN: düzlem adı düğmenin title'ında geçiyor.
     expect(acik[0]).toContain(M._feadPlaneName());
@@ -1497,7 +1494,7 @@ describe('serpantin sırası — iki sıra birleşti', () => {
   test('YÖN SEÇİCİSİ de bu yoldan geçiyor — elle kurulmuş modelde', () => {
     const st = elleKur();
     const b0 = wiz.veFeadWizBuild();
-    expect(wiz.veFeadWizSpinSet(-M.veFeadSpinToFront(b0.spin))).toBe(true);
+    expect(wiz.veFeadWizSpinSet(-b0.spin)).toBe(true);
     const b1 = wiz.veFeadWizBuild();
     expect(b1.spin).toBe(-b0.spin);
     expect(b1.beltLengthMm).toBeCloseTo(b0.beltLengthMm, 6);
@@ -2592,8 +2589,7 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
     const svg = wiz.veFeadWizAngSVG(sc, 0);
     const cx = Number((/data-cx="([-\d.]+)"/.exec(svg) || [])[1]);
     const mir = Number((/data-mir="([-\d.]+)"/.exec(svg) || [])[1]);
-    expect(mir).toBe(M.veFeadSpinToFront(1));            // TEK kaynaktan
-    expect(mir).toBe(M.VE_FEAD_VIEW_FRONT ? -1 : 1);     // bayrakla belirli
+    expect(mir).toBe(1);            // ÇİZİM AYNALANMAZ — sahne aynen çiziliyor
     // ASIL KAPI: seçici ile kart AYNI ELDE. Çizilen merkez, aynada aynanın,
     // aynasızda verinin merkezi — iki resmin ters düşmesi tam olarak
     // buradan yakalanıyor.

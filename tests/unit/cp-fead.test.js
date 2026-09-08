@@ -69,7 +69,8 @@ const kasnak = (type, data, name) => ({
 // Ön görünüşte (varsayılan, 2026-09-07 krank CW konvansiyonu) kanvas da X'te
 // aynalanıyor; bu dosyanın ölçtüğü şey işaretin KENDİSİ değil "kutu, mm'sinin
 // gösterdiği yerde mi".
-const SX = () => (M.VE_FEAD_VIEW_FRONT ? -1 : 1);
+// ÇİZİM AYNALANMAZ — X işareti sabit (bkz. fead-model.js, "TEK ÇERÇEVE VAR").
+const SX = () => 1;
 
 describe('Alt-sistem sözleşmesi', () => {
   test('modül paneli "Alt Topolojiyi Aç" kancasını düğümün id\'siyle kurar', () => {

@@ -961,13 +961,11 @@ function veFeadOriginNode(nodeList){
 // SAKLANAN mm DEĞİŞMEZ: iki fonksiyon da bu tek işaretten beslendiği için
 // birbirinin tam tersi olmayı sürdürüyor; kaydedilen koordinat, çözücü ve
 // bütün sayısal çıktılar Gates düzleminde kalıyor (CLAUDE.md kuralı).
-function _feadPlaneSx(){ return veFeadViewFront() ? -1 : 1; }
-
-// Kanvas px → kayış düzlemi mm. Y TERS, X çizim düzlemine göre.
+// Kanvas px → kayış düzlemi mm. Y TERS, X AYNEN (çizim aynalanmaz).
 function veFeadCanvasToMm(node, originNode, scale){
   var s = _feadNum(scale, 0) || VE_FEAD_PX_PER_MM;
   var c = veFeadNodeCenter(node), o = veFeadNodeCenter(originNode);
-  return { x: _feadPlaneSx() * (c.x - o.x) / s, y: -(c.y - o.y) / s };
+  return { x: (c.x - o.x) / s, y: -(c.y - o.y) / s };
 }
 
 // Kayış düzlemi mm → kanvas px (kutunun SOL ÜSTÜ, DOM'a yazılacak değer).
@@ -975,7 +973,7 @@ function veFeadMmToCanvas(mmX, mmY, originNode, scale, box){
   var s = _feadNum(scale, 0) || VE_FEAD_PX_PER_MM;
   var o = veFeadNodeCenter(originNode);
   var b = box || { w: 65, h: 60 };
-  return { x: o.x + _feadPlaneSx() * _feadNum(mmX, 0) * s - b.w / 2,
+  return { x: o.x + _feadNum(mmX, 0) * s - b.w / 2,
            y: o.y - _feadNum(mmY, 0) * s - b.h / 2 };
 }
 
@@ -2938,230 +2936,52 @@ function veFeadResolveDriver(pulleys){
   return list.length ? list[0] : null;
 }
 
-// ─── ÇİZİM DÜZLEMİ — VARSAYILAN: ÖN GÖRÜNÜŞ (krank CW) ─────────────────
+// ─── ÇİZİM DÜZLEMİ YOKTUR — TEK ÇERÇEVE VAR ────────────────────────────────
 //
-// ── 2026-09-07, ÜÇÜNCÜ TUR: KULLANICI SEÇTİ — ÖN GÖRÜNÜŞ ──────────────────
+// KURAL (2026-09-07, kullanıcı kararı, ÖNCEKİ HER ŞEYİ DEĞİŞTİRİR):
+// **ÇİZİM ASLA AYNALANMAZ.** Kasnak konumları Gates raporunun "Layout Data"
+// sayfasındaki koordinatların KENDİSİDİR; ekranda da öyle görünür.
 //
-// Üç yol yan yana ÇİZİLİP gösterildi (aynı sistem, iki taraftan bakış) ve
-// kullanıcı seçti: *"B — motora önden bakış (krank CW)."*
+// Kullanıcı bunu üç kez bildirdi ve üçüncüsünde dört ayrı kaynakla gösterdi:
+// Gates AG00976 raporunun kendi şeması, aynı raporun Layout Data tablosu,
+// sistemin CAD görüntüsü ve mühendisin Excel tasarımı. Dördü de aynı düzeni
+// veriyor — ALT ve gergi SOLDA, klima SAĞDA:
 //
-// SEÇİM BİLEREK YAPILDI, bedeli görülerek: sol-sağ düzeni Gates sayfasının
-// tersine düşer, gergi krankın KARŞI yanında çıkar. Bu bir regresyon değil,
-// seçilen bakış yönünün kendisi.
+//     FAN (0, 0) · IDR (130,1 · 139,9) · A_C (184,2 · 314,5)
+//     IDR (0 · 267,4) · ALT (−281 · 259,5) · TEN (−161,97 · 91,29)
 //
-// KARARI VEREN ÖLÇÜM — raporun KENDİ iki sütunu, bizim varsayımımız değil
-// (AG00686):
-//   • koordinatlar: krank (0,0) · gergi (−157, 187) → gergi krankın SOLUNDA
-//   • span gerilmeleri, kayış sırasıyla @800 rpm:
-//       krank 1210 → avara 1208 → klima 767 → gergi 766
-//     Kranktan ÇIKAN span en gergin, kranka DÖNEN en gevşek — bir sürücü
-//     kasnak tam olarak böyle davranır. Yani rapor, kayışın hangi yöne
-//     gittiğini kendi tablosunda söylüyor.
-//   O sırayı o koordinatlar üzerinde dolaştırınca halka CCW kapanıyor →
-//   Gates sayfasında krank CCW döner. "Krank CW" demek öbür taraftan bakmak
-//   demek; ikisi tek seçim, iki ayrı ayar değil.
+// Depodaki örnek bu sayıların birebir aynısını taşıyor; VERİ HİÇ YANLIŞ
+// DEĞİLDİ. Yanlış olan, çizim anında X'i çeviren bir bayraktı.
 //
-// AYNALANAN YALNIZ RESİM. Saklanan mm koordinatları, çözücü ve basılan
-// SAYILAR Gates çerçevesinde KALIYOR — rapordan veri girip PDF'le satır satır
-// karşılaştırmak bu modülün taşıdığı asıl değer (CLAUDE.md kuralı) ve bir
-// bakış tercihi için feda edilmiyor. Basıldıkları yer bunu söylüyor
-// (`veFeadPlaneNote`), yani ekranda hiçbir sayı sessizce başka çerçevede
-// durmuyor.
+// BAYRAK KALDIRILDI, geri gelme yolu bırakılmadı. `VE_FEAD_VIEW_FRONT`,
+// `veFeadViewFront`, `veFeadSetViewFront`, `_feadPlaneSx`, `veFeadPlaneNote`
+// ve `veFeadSpinToFront` SİLİNDİ. Bir bayrak dururken bir sonraki oturum onu
+// yine çevirebilirdi; bu kayıt üç turda üç kez oldu ve maliyeti kullanıcının
+// güveniydi. Artık aynalanacak bir yer yok.
 //
-// ÜÇÜNCÜ YOL — "aynalamadan krankı CW yap" — ÖLÇÜLEREK KAPANDI; kaydı aşağıda
-// duruyor ve kapısı `fead-layout-plane.test.js` içinde.
+// `veFeadMirrorGeomX` DURUYOR ama yalnız kendi testinde: X aynasının tam
+// simetri olduğu (sarım · açıklık · L_eff · gerginlik birebir aynı, değişen
+// yalnız el yönü) ÖLÇÜLMÜŞ bir ilişki ve kanıt atılmaz. ÇİZİM YOLUNDAN
+// ÇAĞRILMAZ.
 //
-// ── 2026-09-07, İKİNCİ TUR: AYNA BİR KEZ GERİ ALINMIŞTI ───────────────────
-//
-// Kullanıcı bildirimi (aynı gün, aynalı sürümü gördükten sonra): *"Program
-// içindeki tüm örnekleri aynalamışsın. Otomatik gergi konumları değişmiş,
-// kasnakların konumları değişmiş. Bu böyle olmayacak. Sadece krank kasnağı
-// default olarak saat yönünde dönecek, sistem aynalanmayacak."*
-//
-// ÜÇ YOL VAR VE ÜÇÜNÜN DE BEDELİ ÖLÇÜLDÜ:
-//
-//   | yol                   | konumlar      | krank | fizik            |
-//   |-----------------------|---------------|-------|------------------|
-//   | rapor düzlemi (BU)    | sayfayla AYNI | CCW   | sağlam           |
-//   | ayna (bir tur denendi)| TERS          | CW    | sağlam (simetri) |
-//   | rotayı yerinde çevir  | sayfayla AYNI | CW    | KIRIK            |
-//
-// ÜÇÜNCÜ SATIR İSTENEN ŞEYDİ VE KAPALI — ölçüldü: rotayı ters yürütmek gergiyi
-// kayışın GERGİN tarafına atıyor ve span gerilmeleri negatife düşüyor (BMC,
-// güç akan tek örnek: en düşük span 526 N → −196 N). Negatif gerilme fiziksel
-// olarak yok; model yine "çözülüyor" der ve uyarı vermez. Kapı:
-// `tests/unit/fead-layout-plane.test.js` → "ROTAYI YERİNDE ÇEVİRMEK ... FİZİĞİ
-// KIRAR". Sebep basit: bu 12 düzen, kayışın BU yönde döndüğü varsayımıyla
-// tasarlanmış gerçek sistemler; gerginin nereye konduğu o yöne bağlı.
-//
-// Yani "krank CW" ile "konumlar Gates sayfasıyla aynı" AYNI ANDA SAĞLANAMAZ,
-// ve aradaki fark bir tercih değil bir AYNA. Varsayılan ölçülebilir olana
-// bağlandı: kullanıcının konum bildirimi raporun sayfasına dayanıyor, dönüş
-// yönü isteği ise raporların HİÇBİRİNDE yazmayan bir bakış yönüne (README §6).
-//
-// AYNA MAKİNESİ DURUYOR ve çalışır durumda (`veFeadSetViewFront(true)`): ön
-// görünüş istendiğinde fiziği bozmadan CW veriyor. Silinmedi, varsayılan değil.
-//
-// ── ÖNCEKİ TUR (aynı gün, geri alındı) ────────────────────────────────────
-//
-// *"Sihirbaz içinde yüklü olan tüm örnekler CCW dönüyor. Normalde krank kasnağı
-// (yani sürücü kasnak) saat yönünde dönmesi lazım."*
-//
-// BU, ÖLÇÜMÜN BİTTİĞİ YERE GELEN BİLGİ. `docs/gates-reports/README.md` §6 tam
-// olarak bunu eksik bırakıyordu: *"Kesin konuşmak için montaj resmi ya da
-// tedarikçinin konvansiyon notu gerekir."* Konvansiyonu artık modelin sahibi
-// beyan etti; çıkarım bir varsayım olmaktan çıkıp KURAL oldu.
-//
-// İKİ BİLDİRİM BİRBİRİNİN AYNASI — ÜÇÜNCÜ SEÇENEK YOK. Rapor düzleminde kayış
-// ÖLÇÜLMÜŞ olarak CCW dolanıyor (on rapor, Σ işaretli sarım = +360); dolayısıyla
-// "krank CW" ile "kasnak düzeni raporun sayfasıyla aynı" AYNI ANDA SAĞLANAMAZ —
-// biri ötekinin X aynasıdır. Kullanıcı 2026-09-04'te sayfayı, 2026-09-07'de dönüş
-// yönünü seçti; geçerli olan sonuncusu.
-//
-// BEKLENEN VE KABUL EDİLEN SONUÇ: gergi, kranka göre raporun sayfasındakinin
-// KARŞI tarafında çıkar. Bu bir regresyon değil, seçilen bakış yönünün kendisi —
-// aynı makineye öbür taraftan bakılıyor.
-//
-// SAYILAR DOKUNULMADI: aynalama TAM SİMETRİ (sarım, açıklık, L_eff, gerginlik,
-// hub yükü büyüklüğü birebir aynı), yani 17 rapor / 2095 doğrulama değerinin
-// hiçbiri bu bayraktan etkilenmiyor.
-//
-// ARŞİVLE KARŞILAŞTIRMA KAYBOLMADI: kapı artık rapor düzlemini KENDİSİ kuruyor
-// (`veFeadSetViewFront(false)`) ve kasnak merkezlerini raporların "Layout Data"
-// koordinatlarıyla karşılaştırmaya devam ediyor — 2026-09-04'te yakalanan hata
-// sınıfı (çizicinin işaret hatası) hiçbir düzlemde sessiz kalamaz.
-//
-// ─── ÖNCEKİ KAYIT (2026-09-04) — tarihçe, artık VARSAYILAN DEĞİL ───────────
-//
-// KULLANICI BİLDİRİMİ (2026-09-04): *"gergi ve kasnak
-// konumları programda yanlış çıkıyor. Ters çıkıyor… Gates raporlarının PDF ilk
-// sayfasında kasnak konumları var."*
-//
-// ÖLÇÜLDÜ (12 örneğin 12'si, gerçek tarayıcıda, çizilen SVG'den okunarak):
-// ekrandaki soldan-sağa sıra raporun 1. sayfasındaki şemanın TAM TERSİYDİ.
-// Sebebi bir hesap hatası değil, bu bayrağın kendisiydi: `true` iken çizim X'te
-// aynalanıyor, yani resim raporun aynası oluyordu. Örnek: AG0868'de rapor
-// CRK'yı SOLDA, A_C'yi SAĞDA gösterirken program tersini çiziyordu.
-//
-// ÖNCEKİ VARSAYILAN (`true`) BİR ÇIKARIMA DAYANIYORDU ve çıkarım silinmiyor,
-// yalnız VARSAYILAN OLMAKTAN çıkıyor:
-//   • ÖLÇÜLÜ: on raporun onunda da kayış, raporun kendi düzleminde CCW dolanıyor
-//     (Σ işaretli sarım = +360). Tedarikçinin gergi künyesindeki CW/CCW harfi de
-//     o düzlemin TERSİ (docs/gates-reports/README.md §5).
-//   • ÇIKARIM: motorlar ön taraftan bakıldığında CW döndüğü için rapor düzlemi
-//     ön görünüşün aynası gibi davranıyor. Raporların HİÇBİRİNDE hangi taraftan
-//     bakıldığı YAZMIYOR (aynı README §6: "burada ölçüm biter, çıkarım başlar").
-//
-// Yani bayrak `true` iken program fiziksel olarak savunulabilir ama ARŞİVLE
-// KARŞILAŞTIRILAMAZ bir resim çiziyordu. Bu modülün en değerli özelliği satır
-// satır karşılaştırılabilirlik; varsayılan artık onu koruyor. Ayna makinesi
-// (`veFeadMirrorGeomX`, `veFeadSpinToFront`, kapıları) OLDUĞU GİBİ DURUYOR —
-// ölçülmüş bir ilişkiyi silmek, bir görünüm tercihi için kanıt atmak olurdu.
-//
-// KARAR: yalnız ÇİZİM aynalanır. Saklanan mm koordinatları, çözücü ve bütün
-// sayısal çıktılar Gates düzleminde KALIR — arşivle satır satır
-// karşılaştırılabilirlik bu modülün en değerli özelliği ve onu bir görünüm
-// tercihi için feda etmek olmaz. Aynalama X ekseninde: karşı taraftan bakınca
-// sol-sağ yer değiştirir, YUKARI yukarı kalır.
-//
-// AYNALAMA TAM SİMETRİDİR — bütün skalerler (sarım, açıklık, L_eff, gerginlik)
-// BİREBİR aynı kalır; değişen yalnız el yönü. Bu yüzden burada `d` işareti de
-// çevriliyor: çevrilmezse sarım yayları kasnağın İÇİNDEN geçer (kartta bir kez
-// ölçülmüş "sweep bayrağı" hatasının aynısı).
-var VE_FEAD_VIEW_FRONT = true;     // çizim düzlemi: true = ÖN GÖRÜNÜŞ (krank CW) · false = RAPOR (Gates)
-
-// TEK OKUMA NOKTASI, VE AYARLANABİLİR. Bayrak eskiden doğrudan okunuyordu ve
-// `module.exports` onu KOPYA olarak veriyordu — yani hiçbir test düzlemi
-// DEĞİŞTİREMİYOR, yalnız varsayılanı doğrulayabiliyordu. Arşiv kapısı rapor
-// düzlemini AÇIKÇA kurup karşılaştırabilsin diye erişimci kondu: varsayılan bir
-// daha değişse bile o kapı düzlemi kendisi seçtiği için ÖLÇTÜĞÜ İLİŞKİYİ ölçmeye
-// devam eder. Önceki sürümünde bayrağın kendisi kilitliydi; varsayılan değişince
-// kapı ölçtüğü şeyi değil, bir tercihi savunuyordu.
-function veFeadViewFront(){ return VE_FEAD_VIEW_FRONT === true; }
-function veFeadSetViewFront(v){ VE_FEAD_VIEW_FRONT = (v === true); return VE_FEAD_VIEW_FRONT; }
+// DÖNÜŞ YÖNÜ DE BU ÇERÇEVEDE OKUNUR: `spin` kasnak merkezlerinin kayış gidiş
+// sırasındaki dolanım işareti (`FEADCore.loopSense`), ve ekranda görünen yön
+// onunla AYNIDIR — arada çeviri yoktur.
 
 function _feadMirrorPt(q){ return (q && q.length >= 2) ? [-q[0], q[1]] : q; }
 
-// ── VERİ DÜZLEMİ ↔ ÖN GÖRÜNÜŞ: DÖNÜŞ YÖNÜNÜN ÇEVİRİSİ ──────────────────────
-//
-// `out.spin` (`veFeadNaturalSense` → `FEADCore.loopSense`) VERİ DÜZLEMİNDE
-// ölçülür. Çizim aynalandığı için ekranda görülen yön onun TERSİDİR — X
-// aynalaması ayakkabı-bağı işaretini çevirir (`veFeadMirrorGeomX` içinde
-// `sense` ve `d` de bu yüzden çevriliyor).
-//
-// BU ÇEVİRİ OLMADAN YÜZEYLER YALAN SÖYLER — ve sessizce: kart kayışı bir yöne
-// akıtırken rozet "↺ CCW", sihirbazın düğmesi de "CCW — motora önden bakışta"
-// derdi. İkisi de makul görünür, biri yanlıştır.
-//
-// İNVOLUSYON (kendi tersi): ön görünüşte seçilen bir yönü veri düzlemine
-// çevirmek için de aynı fonksiyon kullanılır — sihirbazın yön düğmeleri bu
-// yüzden tek boundary'den geçiyor.
-function veFeadSpinToFront(spin){
-  var v = Number(spin) || 0;
-  return veFeadViewFront() ? -v : v;
-}
-
-// Etiket TEK ÜRETİCİDEN. Rozet · panel · toast · sihirbazın üç yüzeyi aynı
-// metni basıyor; altı kopya tutulsaydı biri düzeltilince ötekiler sessizce
-// eskirdi (bu modülün tekrar eden kuralı).
-// DÜZLEMİ ADIYLA SÖYLER. Eskiden metin KOŞULSUZ *"motora önden bakışta"*
-// diyordu; ayna kapanınca o cümle ölçülmemiş bir iddiaya dönüşür (hangi
-// taraftan bakıldığı raporların HİÇBİRİNDE yazmıyor — README §6). Artık etiket
-// çizimin düzlemini adıyla söylüyor, yani kullanıcının GÖRDÜĞÜ resimle aynı
-// cümleyi kuruyor.
-function _feadPlaneName(){
-  return veFeadViewFront()
-    ? 'motora önden bakışta (aksesuar tahrik ucu)'
-    : 'şemadaki yön — Gates rapor düzlemi';
-}
-
-// AÇI DEĞERLERİNİN DÜZLEMİ — TEK ÜRETİCİDEN, ve yalnız gerektiğinde.
-//
-// Çizim ön görünüşte aynalı, AMA basılan açılar (hubload yönü, kol açısı,
-// koordinatlar) VERİ düzleminde kalıyor — Gates raporlarıyla satır satır
-// karşılaştırılabilirlik bu modülün en değerli özelliği. İkisi bir arada
-// sessiz bir yanlış okuma üretebilir: kullanıcı "Yön 350°" okur, aynalı
-// resimde oku 190°'de arar. Bu not o boşluğu kapatıyor.
-//
-// Ayna KAPALIYKEN boş dönüyor: söylenecek bir fark yok ve koşulsuz basılan
-// bir uyarı gürültüden ibaret olurdu.
-function veFeadPlaneNote(){
-  return veFeadViewFront()
-    ? ' · açı ve koordinat DEĞERLERİ Gates düzleminde (çizim ön görünüş: X aynası)'
-    : '';
-}
-
-// ── KRANK YÖNÜ KONVANSİYONU — AYNALAMADAN SÖYLENİR ─────────────────────────
-//
-// Kullanıcı iki kez söyledi: *"krank kasnağı (sürücü kasnak) saat yönünde
-// dönmeli."* Doğru — ve bu, şemayı aynalamadan da söylenebilir, çünkü CW/CCW
-// bir DÖNÜŞ değil bir BAKIŞ YÖNÜ ifadesidir: aynı mil, karşı taraftan bakınca
-// ters görünür.
-//
-// Rozet ÇİZİLEN yönü basar (yoksa resimle çelişirdi ve bu modülün en pahalı
-// hata sınıfı tam olarak "iki yüzey iki şey söylüyor"). Uzun metin İKİSİNİ DE
-// söyler ve hangisinin hangi taraftan olduğunu adıyla verir.
-//
-// KARŞI YÖN ÖLÇÜLÜ BİR İLİŞKİDEN GELİYOR, uydurulmuyor: tedarikçinin gergi
-// künyesindeki CW/CCW harfi çizim düzleminin TERSİ (docs/gates-reports/README.md
-// §5, altı raporda sıfır çelişkiyle ölçüldü) ve motorlar aksesuar tahrik
-// ucundan bakıldığında CW döner (kullanıcı konvansiyonu, 2026-09-07).
-function _feadKarsiYon(f){
-  return veFeadViewFront()
-    ? (f > 0 ? 'Gates rapor düzleminde CW' : 'Gates rapor düzleminde CCW')
-    : (f > 0 ? 'motora önden bakışta CW (krank yönü)' : 'motora önden bakışta CCW');
-}
+// Etiket TEK ÜRETİCİDEN: rozet · panel · toast · sihirbazın yön düğmeleri.
+// ÇİZİLEN yönü basar ve başka hiçbir çerçeveden söz etmez — tek çerçeve var.
+function _feadPlaneName(){ return 'şemadaki yön — Gates rapor düzlemi'; }
 
 function veFeadSpinLabel(spin){
-  var f = veFeadSpinToFront(spin);
-  if(!f) return { sense: 0, glif: '—', kisa: '—', uzun: '—', karsi: '—' };
+  var f = Number(spin) || 0;
+  if(!f) return { sense: 0, glif: '—', kisa: '—', uzun: '—' };
   return f > 0
-    ? { sense: 1, glif: '\u21ba', kisa: '\u21ba CCW', karsi: _feadKarsiYon(1),
-        uzun: 'CCW (saat yönünün TERSİNE) — ' + _feadPlaneName()
-              + ' · ' + _feadKarsiYon(1) }
-    : { sense: -1, glif: '\u21bb', kisa: '\u21bb CW', karsi: _feadKarsiYon(-1),
-        uzun: 'CW (saat yönünde) — ' + _feadPlaneName()
-              + ' · ' + _feadKarsiYon(-1) };
+    ? { sense: 1, glif: '\u21ba', kisa: '\u21ba CCW',
+        uzun: 'CCW (saat yönünün TERSİNE) — ' + _feadPlaneName() }
+    : { sense: -1, glif: '\u21bb', kisa: '\u21bb CW',
+        uzun: 'CW (saat yönünde) — ' + _feadPlaneName() };
 }
 
 // Geometriyi X'te aynalar. SAF: girdiyi değiştirmez, kopya döndürür.
@@ -4405,9 +4225,7 @@ function veFeadPulleyCodes(sys){
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     veFeadPulleyCodes: veFeadPulleyCodes,
-    VE_FEAD_VIEW_FRONT: VE_FEAD_VIEW_FRONT, veFeadMirrorGeomX: veFeadMirrorGeomX,
-    veFeadViewFront: veFeadViewFront, veFeadSetViewFront: veFeadSetViewFront,
-    veFeadPlaneNote: veFeadPlaneNote,
+    veFeadMirrorGeomX: veFeadMirrorGeomX,
     _feadNum: _feadNum, _feadDefOf: _feadDefOf, _feadNodeName: _feadNodeName,
     _feadIsPulley: _feadIsPulley,
     VE_FEAD_DEFAULT_DIA: VE_FEAD_DEFAULT_DIA, VE_FEAD_ERROR_MAP: VE_FEAD_ERROR_MAP,
@@ -4423,7 +4241,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadMigrateNode: veFeadMigrateNode, veFeadMigrateAll: veFeadMigrateAll,
     veFeadRouteOrder: veFeadRouteOrder, veFeadRouteDiagnose: veFeadRouteDiagnose,
     veFeadNaturalSense: veFeadNaturalSense, veFeadReverseRoute: veFeadReverseRoute,
-    veFeadSpinToFront: veFeadSpinToFront, veFeadSpinLabel: veFeadSpinLabel,
+    veFeadSpinLabel: veFeadSpinLabel,
     _feadPlaneName: _feadPlaneName,
     veFeadTensionerSide: veFeadTensionerSide,
     veFeadResolveDriver: veFeadResolveDriver,
@@ -4459,7 +4277,6 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadNodeBox: veFeadNodeBox, veFeadNodeCenter: veFeadNodeCenter,
     veFeadOriginNode: veFeadOriginNode,
     veFeadCanvasToMm: veFeadCanvasToMm, veFeadMmToCanvas: veFeadMmToCanvas,
-    _feadPlaneSx: _feadPlaneSx,
     veFeadCoordLinkNode: veFeadCoordLinkNode, veFeadCoordLinkOn: veFeadCoordLinkOn,
     veFeadSyncMmFromCanvas: veFeadSyncMmFromCanvas,
     veFeadSyncCanvasFromMm: veFeadSyncCanvasFromMm,
@@ -4497,10 +4314,4 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadRemapDutyKw: veFeadRemapDutyKw,
     veFeadExampleOf: veFeadExampleOf, veFeadExampleNodes: veFeadExampleNodes
   };
-  // CANLI OKUMA — kopya DEĞİL. Nesne değişmezindeki `VE_FEAD_VIEW_FRONT` satırı
-  // bayrağın O ANKİ değerini donduruyor; beş test dosyası beklentisini o alandan
-  // türettiği için düzlem koşu sırasında değişince hepsi sessizce ESKİ düzlemi
-  // savunurdu (yeşil kalır, ölçtüğü şey artık yoktur). Erişimciye bağlanıyor.
-  Object.defineProperty(module.exports, 'VE_FEAD_VIEW_FRONT',
-    { get: veFeadViewFront, enumerable: true, configurable: true });
 }

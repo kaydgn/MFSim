@@ -376,43 +376,18 @@ görünüşün aynası gibi davrandığına** işaret eder.
 konuşmak için montaj resmi ya da tedarikçinin konvansiyon notu gerekir. Bu
 ayrım korunmalı: modülün kuralı geçerlilik sınırını sonucun İÇİNDE taşımak.
 
-**2026-09-07 — VARSAYILAN ÖN GÖRÜNÜŞ (`VE_FEAD_VIEW_FRONT = true`).** Program
-bu sayfanın X AYNASINI çiziyor: krank saat yönünde döner, gergi krankın karşı
-yanında çıkar. Kullanıcı üç yolu yan yana görüp seçti.
+**2026-09-07 — ÇİZİM AYNALANMAZ, BAYRAK KALDIRILDI.** Program bu sayfadaki
+düzeni birebir çiziyor. Kullanıcı bunu üç kez bildirdi ve üçüncüsünde dört
+kaynakla gösterdi (bu raporun şeması, Layout Data tablosu, sistemin CAD
+görüntüsü, mühendisin Excel tasarımı) — dördü de aynı: ALT ve gergi solda,
+klima sağda. `VE_FEAD_VIEW_FRONT` ve bütün ayna yolu silindi; geri gelme yolu
+bırakılmadı.
 
-**BU SAYFA HÂLÂ REFERANS.** Aynalanan yalnız RESİM; saklanan koordinatlar ve
-basılan sayılar buradaki çerçevede kalıyor, dolayısıyla rapordan veri girmek ve
-satır satır karşılaştırmak birebir çalışmaya devam ediyor.
-
-**KARARI VEREN ÖLÇÜM BU KLASÖRDE:** AG00686'nın koordinat ve span-gerilme
-sütunları birlikte, kayışın hangi yöne gittiğini söylüyor — kranktan ÇIKAN span
-1210 N (gergin), kranka DÖNEN 766 N (gevşek). O sırayı raporun koordinatlarında
-dolaştırınca halka CCW kapanıyor; yani bu sayfada krank CCW döner ve "krank CW"
-demek öbür taraftan bakmak demektir.
-
-*"Aynalamadan krankı CW yap"* yolu ÖLÇÜLEREK kapandı — rotayı ters yürütmek
+*"Aynalamadan krankı CW yap"* yolu da ÖLÇÜLEREK kapandı — rotayı ters yürütmek
 gergiyi gergin tarafa atıyor ve span gerilmeleri negatife düşüyor (BMC:
 526 N → −196 N). Kapı: `tests/unit/fead-layout-plane.test.js`.
 
-Aşağıdaki kayıt o turun gerekçesi:
-
-**modelin sahibi konvansiyonu BEYAN ETTİ:**
-*"Normalde krank kasnağı (yani sürücü kasnak) saat yönünde dönmesi lazım."*
-Yukarıda "kesin konuşmak için gerekir" denen şey buydu; çıkarım artık kural.
-MFSim'in varsayılanı ön görünüş (`VE_FEAD_VIEW_FRONT = true`), yani program bu
-sayfadaki şemanın X AYNASINI çiziyor ve krank saat yönünde dönüyor.
-
-**BUNUN BEDELİ BİLİNİYOR VE KABUL EDİLDİ:** ekrandaki sol-sağ düzeni bu
-sayfadakinin tersidir — gergi, kranka göre raporun gösterdiği yanın KARŞISINDA
-çıkar. İki istek birbirinin aynası olduğu için üçüncü bir seçenek yok
-(rapor düzleminde kayış ÖLÇÜLMÜŞ olarak CCW dolanıyor, §3).
-
-Bir dönem varsayılan rapor düzlemiydi (2026-09-04 → 2026-09-07): kullanıcı
-aynalı düzeni bildirmişti ve o zaman elde bu beyan yoktu. Kapı:
-`tests/unit/fead-layout-plane.test.js` — çizilen SVG'nin kasnak merkezleri bu
-klasördeki raporların "Layout Data" koordinatlarıyla karşılaştırılıyor ve o
-karşılaştırma **rapor düzlemini kendisi kuruyor** (`veFeadSetViewFront(false)`),
-yani varsayılan ne olursa olsun ölçmeye devam ediyor.
+**§6'daki çıkarım bir ÇIKARIM olarak kalıyor** ve program onu KULLANMIYOR.
 
 ### 7 · Gergi serpantinde EN SONDA — ve bu fiziksel
 
