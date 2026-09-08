@@ -283,6 +283,51 @@ describe('ÇİZİM AYNALANMAZ — konumlar raporun Layout Data\'sıdır', () => 
     });
   });
 
+  // ── HEPSİ, TEK TEK ────────────────────────────────────────────────────
+  //
+  // Kullanıcı sordu: *"Sadece bu örnek için mi yaptın?"* Haklı bir şüpheydi —
+  // önceki sürümde bu öbek YALNIZ AG00976'yı çiviliyordu. Aynalama global
+  // olarak kalktı ama KAPI tek örneğe bakıyordu; bir kapı ölçmediği yerde
+  // yoktur. Artık ONİKİ ÖRNEĞİN ONİKİSİ de burada.
+  const ORNEKLER = M.veFeadExampleKeysAll();
+
+  const mmOf = (pu) => {
+    const d = pu.data || {};
+    let x = Number(d.x), y = Number(d.y);
+    if (!Number.isFinite(x)) {
+      const k = M.veFeadTensionerBoxMm(d);
+      if (k) { x = k[0]; y = k[1]; }
+    }
+    return { x: x, y: y };
+  };
+
+  test('kapı boş değil — en az oniki örnek ölçülüyor', () => {
+    expect(ORNEKLER.length).toBeGreaterThanOrEqual(12);
+  });
+
+  ORNEKLER.forEach((key) => {
+    test(key + ' — ÇİZİLEN X sırası saklanan mm ile AYNI (ayna yok)', () => {
+      const b = kur(key);
+      expect(b.ok).toBe(true);
+      const ex = M.veFeadExampleOf(key);
+      const scr = ekranKonumlari(b, ex.pulleys.length);
+
+      // ÇİFT ÇİFT: iki kasnak aynı X'i paylaşabiliyor (AG00976'da FAN ile
+      // IDR2, ikisi de x = 0) ve sıralama orada keyfi bir tie-break üretir.
+      let bakilan = 0;
+      ex.pulleys.forEach((p1, i) => {
+        ex.pulleys.forEach((p2, j) => {
+          if (j <= i) return;
+          const dmm = mmOf(p1).x - mmOf(p2).x;
+          if (!Number.isFinite(dmm) || Math.abs(dmm) < 1) return;
+          bakilan++;
+          expect(isaret(scr[i].x - scr[j].x)).toBe(isaret(dmm));
+        });
+      });
+      expect(bakilan).toBeGreaterThan(0);
+    });
+  });
+
   test('ÇİZİLEN RESİM de aynı — ALT ve gergi SOLDA, klima SAĞDA', () => {
     // Kullanıcının bildirdiği belirtinin birebir kendisi. Aynalı bir çizimde
     // bu kapı kırmızıya döner; ölçülen şey etiket değil SVG'nin cx'i.
