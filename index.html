@@ -939,7 +939,11 @@
                     <div class="ve-welcome-panel" id="ve-welcome-changes" hidden>
                       <div class="ve-welcome-panel-title">Son değişiklikler</div>
                       <div id="ve-welcome-changes-list"></div>
-                      <button type="button" class="ve-welcome-more" onclick="veOpenStatusModal && veOpenStatusModal()">Hepsi — Program Durumu</button>
+                      <!-- Kalan künye kayıtlarını YERİNDE açar; pencere AÇMAZ. Etiketi ve
+                           görünürlüğü js/components.js yazar (kaç kayıt gizli olduğunu ancak
+                           künye okunduğunda bilir). Program Durumu'na giriş sürüm künyesinde. -->
+                      <button type="button" class="ve-welcome-more" id="ve-welcome-changes-toggle"
+                              aria-expanded="false" aria-controls="ve-welcome-changes-list" hidden></button>
                     </div>
                     <div class="ve-welcome-fresh" id="ve-welcome-fresh" hidden data-state="unknown">
                       <span class="ve-welcome-fresh-dot" aria-hidden="true"></span>

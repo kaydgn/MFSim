@@ -286,14 +286,72 @@ describe('Son değişiklikler paneli — veFillWelcomeChanges', () => {
     expect(panel().hidden).toBe(true);
   });
 
-  test('beş kayıt verilse de EN FAZLA üç satır çizilir', () => {
+  const dugme = () => document.getElementById('ve-welcome-changes-toggle');
+  const gorunur = () => satirlar().filter((el) => !el.hidden);
+  const besKayit = () => {
     window.__MFSIM_BUILD = {
       changes: [1, 2, 3, 4, 5].map((n) => ({ sha: 'sha' + n, title: 'başlık ' + n }))
     };
     veFillWelcomeChanges();
+  };
+
+  test('duruşta ÜÇ satır görünür, kalanı gizli çizilir', () => {
+    besKayit();
     expect(panel().hidden).toBe(false);
-    expect(satirlar().length).toBe(3);
+    expect(satirlar().length).toBe(5);            // hepsi DOM'da
+    expect(gorunur().length).toBe(3);             // üçü görünür
     expect([anahtar(0), anahtar(1), anahtar(2)]).toEqual(['sha1', 'sha2', 'sha3']);
+  });
+
+  // Düğme PENCERE AÇMAZ (kullanıcı isteği): kalanlar aynı listenin altına gelir.
+  test('düğme kalanları YERİNDE açar, ikinci tıkta kapatır', () => {
+    besKayit();
+    expect(dugme().hidden).toBe(false);
+    expect(dugme().textContent).toBe('Daha eskiler · 2');
+    expect(dugme().getAttribute('aria-expanded')).toBe('false');
+
+    veToggleWelcomeChanges();
+    expect(gorunur().length).toBe(5);
+    expect(dugme().getAttribute('aria-expanded')).toBe('true');
+    expect(dugme().textContent).toBe('Daha az');
+    expect(panel().classList.contains('is-open')).toBe(true);
+
+    veToggleWelcomeChanges();
+    expect(gorunur().length).toBe(3);
+    expect(dugme().textContent).toBe('Daha eskiler · 2');
+    expect(panel().classList.contains('is-open')).toBe(false);
+  });
+
+  test('düğme pencere açan komuta BAĞLI DEĞİL (onclick yerinde açar)', () => {
+    besKayit();
+    // index.html'deki markup'ta artık veOpenStatusModal çağrısı yok; kanca JS'te.
+    expect(dugme().getAttribute('onclick')).toBeNull();
+    expect(typeof dugme().onclick).toBe('function');
+  });
+
+  test('üç ya da daha az kayıtta düğme HİÇ görünmez', () => {
+    window.__MFSIM_BUILD = { changes: [{ sha: 'a1', title: 'bir' }, { sha: 'a2', title: 'iki' }] };
+    veFillWelcomeChanges();
+    expect(dugme().hidden).toBe(true);
+    expect(gorunur().length).toBe(2);
+  });
+
+  test('yeniden çizim açık listeyi KAPALI duruma döndürür', () => {
+    besKayit();
+    veToggleWelcomeChanges();
+    expect(gorunur().length).toBe(5);
+    veFillWelcomeChanges();                       // ör. künye yeniden okundu
+    expect(gorunur().length).toBe(3);
+    expect(dugme().getAttribute('aria-expanded')).toBe('false');
+    expect(panel().classList.contains('is-open')).toBe(false);
+  });
+
+  // SESSİZ HATA SINIFI: .ve-welcome-change display:flex, .ve-welcome-more
+  // inline-block bildiriyor — [hidden] bunları EZEMEZ. Kural düşerse "gizli"
+  // satırlar görünür kalır ve panel hep açık görünür.
+  test('CSS [hidden] kuralı duruyor (display bildirimi hidden\'ı ezmesin)', () => {
+    expect(CSS).toMatch(/\.ve-welcome-change\[hidden\][\s\S]{0,80}display:\s*none/);
+    expect(CSS).toMatch(/\.ve-welcome-more\[hidden\][\s\S]{0,80}display:\s*none/);
   });
 
   test('ikinci çağrı listeyi ÇOĞALTMAZ', () => {

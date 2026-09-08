@@ -1422,18 +1422,30 @@ function _veWelcomeDur(ad, varsayilan) {
 // window.__MFSIM_BUILD — satır içi veri, yükleme sırasından bağımsız.
 // Künye ya da changes yoksa panel HIDDEN kalır: boş bir panel "bilmiyorum"u
 // bilgi gibi gösterirdi. Commit başlığı SERBEST METİN → textContent ile konur.
+// Karşılamada duran kayıt sayısı; kalanı YERİNDE açılır. Pencere açmak bir
+// satır listeyi görmek için fazla bir tören — kullanıcı isteği (2026-09-08).
+var VE_WELCOME_CHANGE_ILK = 3;
+
 function veFillWelcomeChanges() {
   if(typeof document === 'undefined') return false;
   var panel = document.getElementById('ve-welcome-changes');
   var liste = document.getElementById('ve-welcome-changes-list');
   if(!panel || !liste) return false;             // markup henüz yok — çağıran tekrar dener
+  var dugme = document.getElementById('ve-welcome-changes-toggle');
   var b = (typeof window !== 'undefined') ? window.__MFSIM_BUILD : null;
-  var kayitlar = (b && b.changes && b.changes.length) ? b.changes.slice(0, 3) : [];
+  var kayitlar = (b && b.changes && b.changes.length) ? b.changes : [];
   liste.innerHTML = '';
+  panel.classList.remove('is-open');
+  if(dugme) { dugme.hidden = true; dugme.setAttribute('aria-expanded', 'false'); }
   if(!kayitlar.length) { panel.hidden = true; return true; }
-  kayitlar.forEach(function(c) {
+  kayitlar.forEach(function(c, i) {
+    var fazla = i >= VE_WELCOME_CHANGE_ILK;
     var satir = document.createElement('div');
-    satir.className = 've-welcome-change';
+    satir.className = 've-welcome-change' + (fazla ? ' ve-welcome-change--extra' : '');
+    if(fazla) {
+      satir.hidden = true;
+      satir.style.setProperty('--i', i - VE_WELCOME_CHANGE_ILK);   // sırayla belirsinler
+    }
     var k = document.createElement('span');
     k.className = 've-welcome-change-k';
     k.textContent = c.sha || c.shortSha || '';
@@ -1444,8 +1456,30 @@ function veFillWelcomeChanges() {
     satir.appendChild(v);
     liste.appendChild(satir);
   });
+  var gizli = kayitlar.length - VE_WELCOME_CHANGE_ILK;
+  if(dugme && gizli > 0) {
+    dugme.hidden = false;
+    dugme.textContent = 'Daha eskiler \u00b7 ' + gizli;
+    dugme.onclick = veToggleWelcomeChanges;      // her çizimde aynı işlev — çoğalmaz
+  }
   panel.hidden = false;
   return true;
+}
+
+// Kalan kayıtları yerinde açar/kapatır. Etiket iki durumu da söyler;
+// aria-expanded aynı şeyi ekran okuyucuya bildirir.
+function veToggleWelcomeChanges() {
+  if(typeof document === 'undefined') return false;
+  var panel = document.getElementById('ve-welcome-changes');
+  var dugme = document.getElementById('ve-welcome-changes-toggle');
+  if(!panel || !dugme) return false;
+  var acik = dugme.getAttribute('aria-expanded') === 'true';
+  var fazlalar = panel.querySelectorAll('.ve-welcome-change--extra');
+  Array.prototype.forEach.call(fazlalar, function(el) { el.hidden = acik; });
+  dugme.setAttribute('aria-expanded', acik ? 'false' : 'true');
+  dugme.textContent = acik ? ('Daha eskiler \u00b7 ' + fazlalar.length) : 'Daha az';
+  panel.classList.toggle('is-open', !acik);
+  return !acik;
 }
 
 // Yayın noktasının sınıfı → karşılama güncellik satırı. DÜRÜSTLÜK: gömülü künye
