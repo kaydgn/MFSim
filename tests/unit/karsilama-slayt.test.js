@@ -43,9 +43,10 @@ function setupDOM() {
     '<div id="sayfa2-content"><div class="ve-main">' +
     '  <div class="ve-doc-dock"></div>' +
     '  <div class="ve-module-overlay" id="ve-module-overlay">' +
-    '    <div class="ve-welcome"><div class="ve-welcome-work">' +
+    '    <div class="ve-welcome">' +
     '      <div class="ve-welcome-slayt" id="ve-welcome-slayt"></div>' +
-    '    </div></div>' +
+    '      <div class="ve-welcome-id"></div>' +
+    '    </div>' +
     '  </div>' +
     '</div></div>';
 }
@@ -206,15 +207,44 @@ describe('Zamanlayıcı — sızıntı ve gereksiz koşu yok', () => {
 
 // ═══ 6) GÖRSEL KATMAN KURALLARI ════════════════════════════════════════════
 describe('CSS — okunurluk ve kırpma', () => {
-  test('sağ sütun konumlanmış ve taşmayı kırpıyor (Ken Burns sızmasın)', () => {
-    const blok = CSS.slice(CSS.indexOf('.ve-welcome-work{'), CSS.indexOf('.ve-welcome-slayt{'));
+  // Slayt artık SAĞ SÜTUNUN değil, karşılamanın kendi çocuğu (P4): fotoğraf
+  // sol panelin de altından geçiyor. Kırpma kabın kendisine düştü — düşerse
+  // Ken Burns kareyi ekranın dışına taşırır ve kaydırma çubuğu açar.
+  test('karşılama kabı konumlanmış ve taşmayı kırpıyor (Ken Burns sızmasın)', () => {
+    const blok = CSS.slice(CSS.indexOf('.ve-welcome{'), CSS.indexOf('@keyframes ve-welcome-in'));
     expect(blok).toMatch(/position:\s*relative/);
     expect(blok).toMatch(/overflow:\s*hidden/);
   });
 
-  test('içerik slaytın ÜSTÜNDE çiziliyor', () => {
-    const m = CSS.match(/\.ve-welcome-eyebrow,\s*\n\.ve-module-overlay-grid\{[^}]*\}/g) || [];
-    expect(m.join('')).toMatch(/z-index:\s*1/);
+  test('panel slaytın ÜSTÜNDE çiziliyor', () => {
+    const blok = CSS.slice(CSS.indexOf('.ve-welcome-id{'), CSS.indexOf('.ve-welcome-logo{'));
+    expect(blok).toMatch(/z-index:\s*1/);
+    expect(blok).toMatch(/position:\s*relative/);
+  });
+
+  // Reçete (kullanıcı, 2026-09-08): "örtü %0 · resim %100 · keskin ·
+  // cam %25 / net". Dördü de tek jetondan sürülüyor; biri elle ezilirse
+  // ekran yine açılır, yalnız başka bir ekran olur.
+  test('reçete jetonları: örtü 0, resim tam, bulanıklık yok, cam %25', () => {
+    // Satır başına ÇİVİLİ + noktalı virgülle biter: gevşek desen aynı adı
+    // geçiren bir YORUMU da yakalıyor ve kapı sessizce kapanıyordu.
+    expect(CSS).toMatch(/^\s*--slayt-ortu:\s*0%;/m);
+    expect(CSS).toMatch(/^\s*--slayt-opaklik:\s*1;/m);
+    expect(CSS).toMatch(/^\s*--slayt-bulanik:\s*0px;/m);
+    expect(CSS).toMatch(/^\s*--karsilama-cam:\s*25%;/m);
+  });
+
+  test('panel camı: OPAK yedek önce, cam payı sonra; backdrop-filter YOK (net)', () => {
+    const blok = CSS.slice(CSS.indexOf('.ve-welcome-id{'), CSS.indexOf('.ve-welcome-logo{'));
+    // color-mix desteklenmeyen tarayıcıda panel opak kalmalı — yoksa metin
+    // fotoğrafın üstünde çıplak kalır.
+    const yedek = blok.indexOf('background:var(--bg-secondary);');
+    const cam = blok.indexOf('background:color-mix(');
+    expect(yedek).toBeGreaterThan(-1);
+    expect(cam).toBeGreaterThan(yedek);
+    expect(blok).toContain('var(--karsilama-cam)');
+    // "net" = camın arkası bulanmıyor. blur(0) bile bedava değil (readback).
+    expect(blok).not.toMatch(/backdrop-filter/);
   });
 
   test('örtü TEMA JETONUNDAN türer — sabit renk yazılmaz', () => {
