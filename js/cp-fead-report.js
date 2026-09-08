@@ -825,7 +825,9 @@ function _frPulleyTable(R){
   var h = '<h3>8.3 Kasnak yerleşimi ve temas tarafı</h3>';
   h += '<p>Konumlar kayış düzleminde, kasnak merkezlerinin koordinatlarıdır. <b>Temas tarafı bir GİRDİDİR</b> '
      +'ve ters verilirse model geçerli ama başka bir güzergâh çözer (§3.4) — bu yüzden burada tekrar basılır.</p>';
-  h += '<table><caption>Tablo ' + _frTbl() + ' — Kasnak yerleşim verisi (kayış gidiş sırasında)</caption>';
+  // SATIRLAR GATES TABLO SIRASINDA — kayışın gidişinin TERSİ (fead-model.js →
+  // veFeadRouteFlip). Raporla satır satır karşılaştırılabilirlik bu sırayı ister.
+  h += '<table><caption>Tablo ' + _frTbl() + ' — Kasnak yerleşim verisi (Gates tablo sırasında; kayışın gidişinin tersi)</caption>';
   h += '<tr><th>#</th><th>Kasnak</th><th>X</th><th>Y</th><th>Dış çap</th><th>Pitch Ø</th><th>Efektif Ø</th><th>Temas</th><th>Rol</th><th>Atalet</th></tr>';
   // GERGİ SATIRININ X/Y'Sİ "—" BASILIYORDU ve tablo o yüzden yarım okunuyordu:
   // gergi kasnağının konumu bir GİRDİ değil ama BİLİNMEYEN de değil — çözülmüş
@@ -1901,7 +1903,7 @@ function _frGeometryTable(R){
   try { bp = (C && C.beltProps && b) ? C.beltProps(b) : null; } catch(e){}
   var sigma = _frSignedWrap(R);
   var h = '<h3>8.6 Çözülmüş geometri: açıklık, sarım, hız oranı</h3>';
-  h += '<table><caption>Tablo ' + _frTbl() + ' — Kayış gidiş sırasında geometri</caption>';
+  h += '<table><caption>Tablo ' + _frTbl() + ' — Gates tablo sırasında geometri (kayışın gidişinin tersi; "çıkış açıklığı" bu sıraya göredir)</caption>';
   h += '<tr><th>Kasnak</th><th>Çıkış açıklığı</th><th>Sarım</th><th>İşaret</th><th>Hız oranı</th></tr>';
   var sumSpan = 0, sumArc = 0;
   g.forEach(function(row, i){

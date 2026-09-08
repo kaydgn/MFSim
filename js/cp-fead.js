@@ -835,8 +835,8 @@ function veFeadCoordLinkAfterDelete(silinen){
 // ── DÖNÜŞ YÖNÜ ROZETİ ───────────────────────────────────────────────────────
 //
 // Rozet bir BAYRAK GÖSTERMİYOR, KABLOLARDAN TÜREYEN yönü gösteriyor:
-// `veFeadNaturalSense` kasnak merkezlerinin kayış gidiş sırasındaki
-// ayakkabı-bağı işaretini okuyor (çekirdeğin `loopSense`'iyle AYNI ölçüt).
+// `veFeadSpinOf` kabloların (gidiş) sırasını çekirdek sırasına çevirip
+// `veFeadNaturalSense` ile okuyor (çekirdeğin `loopSense`'iyle AYNI ölçüt).
 // Tıklamak bir alan yazmıyor, KABLOLARI çeviriyor — tek gerçek kaynak orası.
 //
 // GLİF DURUMU TAŞIR, RENK DEĞİL — ve bu bilinçli. Aynı kanvasta iki rozet daha
@@ -859,11 +859,12 @@ function veFeadCoordLinkAfterDelete(silinen){
 // TEK NOKTA: rozet de panel de burayı çağırıyor (iki ayrı hesap tutulsaydı
 // biri bayat kalırdı — bu modülün tekrar eden kuralı).
 function veFeadCurrentSpin(){
-  if(typeof nodes === 'undefined' || typeof veFeadNaturalSense !== 'function') return 0;
+  if(typeof nodes === 'undefined' || typeof veFeadSpinOf !== 'function') return 0;
   var conn = (typeof connections !== 'undefined' && connections) ? connections : [];
-  var order = (typeof veFeadRouteOrder === 'function')
-    ? veFeadRouteOrder(nodes, conn) : nodes.filter(function(n){ return _feadIsPulley(n); });
-  return veFeadNaturalSense(order);
+  // Kablolar GİDİŞ sırasında; çekirdek sırasına çevirmeyi veFeadSpinOf yapar.
+  // Buradan doğrudan veFeadNaturalSense(veFeadRouteOrder(…)) çağırmak
+  // işareti ters çevirirdi (fead-model.js → veFeadRouteFlip).
+  return veFeadSpinOf(nodes, conn);
 }
 
 function veFeadApplySpinBadge(nodeEl, node){
@@ -960,10 +961,11 @@ function getFeadSpinPropertiesHTML(node){
     // yazılsaydı, ayna bayrağı değişince panel sessizce eskirdi.
     + _feadHint('Yön bir ayar DEĞİL: kablolama sırasından türer (<b>' + _feadEsc(
             (typeof _feadPlaneName === 'function') ? _feadPlaneName() : 'çizim düzlemi')
-        + '</b>). Kablolar Gates tablosu gibi kayışın gidişinin TERSİ sırada '
-        + 'yürür; sürücü kayışı kendine çektiği için gergin taraf ona GİREN '
-        + 'açıklıktır. "Yönü çevir" kayış yolunun bağlantılarını ters çevirir — '
-        + 'kanvastaki gidiş okları da onunla döner.'));
+        + '</b>). Kablolar kayışın GİDİŞ sırasındadır (tel from → to, kayış o '
+        + 'yöne akar); Gates tabloları bunun tersi sırada yazılıdır ve köprü '
+        + 'çekirdeğe o sırayı verir. Sürücü kayışı kendine çektiği için gergin '
+        + 'taraf ona GİREN açıklıktır. "Yönü çevir" kayış yolunun bağlantılarını '
+        + 'ters çevirir — kanvastaki gidiş okları da onunla döner.'));
 
   // GEOMETRİ YÖNDEN BAĞIMSIZ, GERİLME DEĞİL — ve bunu panel SÖYLÜYOR, çünkü
   // kullanıcı "yönü çevirdim, sarım açıları neden aynı" diye sormasın.

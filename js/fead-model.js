@@ -2504,9 +2504,15 @@ function veFeadExampleNodes(key){
   // Özellikleri → Çözücü → Rapor sırası istenen sıradır; rapor solver'dan önce
   // push edilseydi şeritte de onun üstünde çıkardı.
   nodesOut.push({ id:'ex-report',  type:'fead-report',  data:{} });
-  var conns = [];
-  ex.route.forEach(function(k, i){
-    var next = ex.route[(i + 1) % ex.route.length];
+  // KABLOLAR KAYIŞIN GİDİŞ SIRASINDA (2026-09-08). `ex.route` Gates TABLO
+  // sırasıdır (rapordaki gibi durur; testler onu raporla satır satır
+  // karşılaştırır) ve o sıra kayışın gidişinin TERSİDİR. Kanvasta tel = gidiş
+  // olduğu için burada çevrilir (krank sabit, kalanı ters — veFeadRouteFlip);
+  // köprü kurarken aynı çevirmeyi geri uygular ve çekirdek yine tablo
+  // sırasını görür. Kapı: fead-spin.test.js → "kablolar GİDİŞ sırasında".
+  var conns = [], gidis = veFeadRouteFlip(ex.route);
+  gidis.forEach(function(k, i){
+    var next = gidis[(i + 1) % gidis.length];
     if(byKey[k] && byKey[next]) conns.push({ from: byKey[k].id, to: byKey[next].id });
   });
   return { nodes: nodesOut, connections: conns, solverId: 'ex-solver', example: ex };
@@ -2817,9 +2823,13 @@ function veFeadArmBand(build, opt){
 // ('Sağ' = saat yönü) ve sistemin CAD'i de aynı sonucu veriyor.
 //
 // Bu yüzden 2095 doğrulanmış sayının hiçbirine dokunulmadı; değişen yalnız
-// işaretin OKUNUŞU. Liste sırasını çekirdeğe gidiş sırasında vermek (köprüde
-// çevirmek) ayrı bir iş — sihirbaz tablosu, örnek kabloları ve Gates
-// tablosuyla satır satır karşılaştırma ona bağlı; kayıt skill'de.
+// işaretin OKUNUŞU.
+//
+// GİRDİ ÇEKİRDEK (LİSTE) SIRASIDIR — `build.order`. Kanvas kabloları ise
+// 2026-09-08'den beri kayışın GİDİŞ sırasında; köprü (veFeadBuildSystem) onları
+// `veFeadRouteFlip` ile çekirdek sırasına çevirir. Kablolamadan yön okumak
+// için `veFeadSpinOf` — çevirmeyi o yapar; buraya gidiş sırası vermek işareti
+// sessizce ters çevirirdi.
 //
 // ÖLÇÜT ÇEKİRDEĞİN KENDİSİNDEN — ikinci bir kopya yazılsaydı iki yüzey
 // sessizce ayrışabilirdi. Merkez sözleşmesi: kasnakta (x, y), gergide
@@ -2899,6 +2909,22 @@ function veFeadReverseRoute(nodeList, connList){
   return k;
 }
 
+// ── ESKİ KAYIT GÖÇÜ: KABLOLAR TABLO SIRASINDAN GİDİŞ SIRASINA ────────────
+//
+// Şema sürümü 3'ten önce kaydedilen projelerde kayış telleri çekirdeğin LİSTE
+// (Gates tablo) sırasındaydı; köprü artık telleri gidiş sırası sayıp çeviriyor
+// (veFeadRouteFlip). Eski bir kayıt çevrilmeden açılsaydı çekirdek tersine
+// dönmüş bir listeyle koşar, gergi gergin tarafa düşer ve span gerilmeleri
+// negatife inerdi — model yine "çözülüyor" derdi (ölçüldü: BMC 526 → −196 N).
+// Göç bir kez, kayıt yüklenirken: iki ucu da kasnak olan her telin uçları takas
+// edilir (Dönüş Yönü düğümünün yaptığının aynısı). Sürüm kapısı ve gömülü alt
+// topolojilere iniş state.js'te (veApplyLegacyMigrations); burası yalnız işi
+// yapar ve kaç tel çevirdiğini döndürür. Kapı: fead-wire-order-migration.test.js.
+function veFeadMigrateWireOrder(state){
+  if(!state || !Array.isArray(state.nodes)) return 0;
+  return veFeadReverseRoute(state.nodes, state.connections || []);
+}
+
 // ── GERGİ GEVŞEK SPANDA MI? ────────────────────────────────────────────────
 //
 // Çekirdek ankrajı gergiye yazıyor (`spanTensions`: T[gergi] = designTensionN)
@@ -2945,8 +2971,39 @@ function veFeadTensionerSide(row, tensionerName){
 }
 
 // Yalnız sırayı isteyen çağrılar için ince sarmal (yerleştirici, testler).
+// DÖNEN SIRA KABLOLARIN SIRASIDIR = kayışın GİDİŞİ (2026-09-08). Çekirdek
+// sırası için veFeadRouteFlip.
 function veFeadRouteOrder(nodeList, connList){
   return veFeadRouteDiagnose(nodeList, connList).order;
+}
+
+// ── GİDİŞ SIRASI ↔ ÇEKİRDEK (LİSTE) SIRASI ────────────────────────────────
+//
+// KANVAS KABLOLARI KAYIŞIN GİDİŞ SIRASINDADIR (2026-09-08, kullanıcı: "Düzelt
+// işte, şu işi çözelim"): tel from → to, kayış o yöne akar; kanvastaki gidiş
+// oku telin yönünde, sihirbaz tablosu "kayış sırasıyla", portlar adıyla
+// doğru (çıkış = kayışın çıktığı port). Çekirdek ise listeyi gidişin TERSİ
+// sırada bekler — `spanTensions` sürücüde +P/v yazar (bkz. veFeadNaturalSense)
+// ve 2095 doğrulanmış sayı o sıraya bağlı. İki dünya BURADA çevrilir: krank
+// sabit, kalanı ters. Bu bir İNVOLÜSYON (iki kez uygulamak kimlik), yani Gates
+// tablo sırası → gidiş sırası da aynı fonksiyondur; örnek kurucu ve sihirbaz
+// tohumu onu öyle kullanır. ÖLÇÜLDÜ (2026-08-28): "krank sabit + kalanı ters"
+// ile bütün tellerin uçlarını takas etmek aynı sırayı verir — Dönüş Yönü
+// düğümü bu yüzden telleri çevirmekle yetiniyor.
+//
+// Ters çevrilen liste kopuk kasnakları da taşıyabilir (veFeadRouteDiagnose
+// sırayı BÜTÜN kasnaklarla döndürür); geçersiz topolojide çekirdek zaten
+// koşmaz, yerleştirici ve rozetler için sıra yeterlidir.
+function veFeadRouteFlip(order){
+  var r = (order || []).slice();
+  return r.length > 2 ? [r[0]].concat(r.slice(1).reverse()) : r;
+}
+
+// KABLOLAMADAN KAYIŞIN DÖNÜŞÜ — rozet · panel · toast TEK bu noktadan.
+// Gidiş sırasını çekirdek sırasına çevirip `veFeadNaturalSense`'e verir;
+// doğrudan vermek işareti ters çevirirdi (ölçüldü, kapı fead-spin.test.js).
+function veFeadSpinOf(nodeList, connList){
+  return veFeadNaturalSense(veFeadRouteFlip(veFeadRouteOrder(nodeList, connList)));
 }
 
 // Sürücü kasnağı çöz (ROL): açık işaret → tip → ilk kasnak.
@@ -3119,7 +3176,10 @@ function veFeadBuildSystem(nodeList, connList, opt){
   }
 
   var teshis = veFeadRouteDiagnose(all, connList);
-  var order = teshis.order;
+  // KABLOLAR GİDİŞ SIRASINDA, ÇEKİRDEK LİSTEYİ TERS BEKLER — çevirme burada,
+  // tek noktada (bkz. veFeadRouteFlip). `build.order` böylece Gates tablo
+  // sırasıdır: raporlar, kart ve fixture karşılaştırmaları ona göre okur.
+  var order = veFeadRouteFlip(teshis.order);
   out.order = order;
   out.route = teshis;
   // DÖNÜŞ YÖNÜ: rota sırasının SONUCU, ayrı bir bayrak DEĞİL (bkz.
@@ -3160,11 +3220,16 @@ function veFeadBuildSystem(nodeList, connList, opt){
   if(!beltNode) out.errors.push('Kayış Özellikleri bileşeni yok. Sol paletten ekleyin.');
   if(!solvNode) out.warnings.push('Çözücü bileşeni yok; tasarım gerginliği ve tahrik oranı varsayılanla alınır.');
 
-  // ── GERGİ SERPANTİNDE SON SIRADA MI — KARŞILAŞTIRILABİLİRLİK ÖLÇÜTÜ ─────
+  // ── GERGİ KRANKIN ÇIKIŞINDA MI — KARŞILAŞTIRILABİLİRLİK ÖLÇÜTÜ ──────────
   //
-  // On Gates raporunun ONUNDA DA sıra sürücüyle başlayıp gergiyle bitiyor:
-  // gergi, kayışın sürücüye DÖNÜŞ açıklığındadır (ölçüldü, AG00686:
-  // T = 1209.95 · 1208.48 · 767.47 · TEN 766.00 — en düşük, ankrajın kendisi).
+  // On Gates raporunun ONUNDA DA tablo sürücüyle başlayıp gergiyle bitiyor;
+  // tablo kayışın gidişinin TERSİ olduğu için bu, gergi kayışın sürücüden
+  // ÇIKAN açıklığında demek — gevşek taraf (ölçüldü, AG00686: T = 1209.95 ·
+  // 1208.48 · 767.47 · TEN 766.00 — en düşük, ankrajın kendisi). Hüküm KAYIŞ
+  // SIRASINDA yazılır (2026-09-08): kanvas ve sihirbaz o sırayı gösteriyor,
+  // "sırada son" demek kullanıcının gördüğü tabloyla çelişirdi. `index` kayış
+  // sırasındaki 0 tabanlı konum (krank 0), doğru yer 1; `last` çekirdek
+  // (tablo) sırasındaki karşılığı — ikisi aynı hükümdür.
   //
   // BU, `veFeadTensionerSide` HÜKMÜNÜN İKİNCİ KOPYASI DEĞİL — iki AYRI soru:
   //
@@ -3197,12 +3262,17 @@ function veFeadBuildSystem(nodeList, connList, opt){
     // HÜKÜM HER İKİ YÖNDE DE YAZILIR: "denetlendi ve uygun" ile "hiç
     // denetlenmedi" ayırt edilebilsin (rozetin renk İDDİA ETMEME kuralının
     // aynısı — alan yoksa yüzey hüküm veremez).
-    out.tensionerOrder = { index: ti, count: seq.length, last: ti === seq.length - 1 };
-    if(out.tensionerOrder.last) return;
-    out.warnings.push('Serpantin sırasında gergi son sırada değil ("'
-      + _feadNodeName(seq[ti]) + '" ' + (ti+1) + '/' + seq.length + '). Gates '
-      + 'konvansiyonunda sıra sürücüyle başlar, gergiyle biter — gergi kayışın '
-      + 'sürücüye DÖNÜŞ açıklığındadır. Sayılar bundan etkilenmiyor; etkilenen '
+    // Çekirdek sırası kayış sırasının çevrilmişi (veFeadRouteFlip): çekirdekte
+    // i. sıradaki kasnak kayış sırasında (n − i). sıradadır (krank sabit).
+    var pos = (ti === 0) ? 0 : seq.length - ti;
+    out.tensionerOrder = { index: pos, count: seq.length,
+                           afterDriver: pos === 1, last: ti === seq.length - 1 };
+    if(out.tensionerOrder.afterDriver) return;
+    out.warnings.push('Kayış sırasında gergi krankın çıkışında değil ("'
+      + _feadNodeName(seq[ti]) + '" ' + (pos+1) + '/' + seq.length + '). Otomatik '
+      + 'gergi kayışın kranktan ÇIKAN (gevşek) açıklığında durur, yani kayış '
+      + 'sırasında krankın hemen ardında; Gates tablolarında bu, sıranın SONU '
+      + 'demektir (tablo gidişin tersi). Sayılar bundan etkilenmiyor; etkilenen '
       + 'yerleşimin tedarikçi raporlarıyla satır satır karşılaştırılabilirliği.');
   }());
 
@@ -4265,6 +4335,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadMigrateNode: veFeadMigrateNode, veFeadMigrateAll: veFeadMigrateAll,
     veFeadRouteOrder: veFeadRouteOrder, veFeadRouteDiagnose: veFeadRouteDiagnose,
     veFeadNaturalSense: veFeadNaturalSense, veFeadReverseRoute: veFeadReverseRoute,
+    veFeadRouteFlip: veFeadRouteFlip, veFeadSpinOf: veFeadSpinOf,
+    veFeadMigrateWireOrder: veFeadMigrateWireOrder,
     veFeadSpinLabel: veFeadSpinLabel,
     _feadPlaneName: _feadPlaneName,
     veFeadTensionerSide: veFeadTensionerSide,

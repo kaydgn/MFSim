@@ -228,8 +228,10 @@ describe('uçtan uca: AG00686 kanvas düğümlerinden Gates sayıları', () => {
     // bilinmiyor, EDL(Mean) − L_nominal olarak bulunur. AG00686 için 3.50 mm.
     const solver = nd('fead-solver', { designTensionN: REF.designN, driveRatio: 1, lengthOffsetMm: 3.5 });
     const list = [crk, idr, ac, ten, belt, solver];
-    // Kayış yolu: bağlantılar. Sıra kanvasta kullanıcının çizdiği yol.
-    const conns = [link(crk, idr), link(idr, ac), link(ac, ten), link(ten, crk)];
+    // Kayış yolu: bağlantılar = kayışın GİDİŞİ (2026-09-08). Gates tablosu
+    // CRK → IDR → A_C → TEN, gidiş onun tersi: CRK → TEN → A_C → IDR. Köprü
+    // çekirdeğe tablo sırasını verir (veFeadRouteFlip) — `names` onu söyler.
+    const conns = [link(crk, ten), link(ten, ac), link(ac, idr), link(idr, crk)];
     return { list, conns, crk, idr, ac, ten };
   }
 
@@ -247,9 +249,14 @@ describe('uçtan uca: AG00686 kanvas düğümlerinden Gates sayıları', () => {
     expect(r.route.isolated).toEqual([]);
   });
 
-  test('kayış sırası CRK → IDR → A_C → TEN', () => {
+  test('çekirdek (Gates tablo) sırası CRK → IDR → A_C → TEN — kablolar gidiş sırasındayken', () => {
     const b = kur();
-    expect(veFeadBuildSystem(b.list, b.conns).names).toEqual(['CRK', 'IDR', 'A_C', 'TEN']);
+    const r = veFeadBuildSystem(b.list, b.conns);
+    expect(r.names).toEqual(['CRK', 'IDR', 'A_C', 'TEN']);
+    // Kablolar gidiş: CRK → TEN → A_C → IDR.
+    expect(veFeadRouteOrder(b.list, b.conns).map((n) => n.customName))
+      .toEqual(['CRK', 'TEN', 'A_C', 'IDR']);
+    expect(r.spin).toBe(-1);                                 // krank CW
   });
 
   test('dış çaplardan türeyen yarıçaplar Gates Layout Data ile aynı', () => {
@@ -408,7 +415,8 @@ describe('duty cycle → çekirdek: AG00686 gerilme tablosu', () => {
       }))
     });
     const list = [crk, idr, ac, ten, belt, sv];
-    const conns = [[crk, idr], [idr, ac], [ac, ten], [ten, crk]].map(([a, b]) => link(a, b));
+    // Kablolar kayışın gidişinde (Gates tablosunun tersi; bkz. yukarıdaki kur).
+    const conns = [[crk, ten], [ten, ac], [ac, idr], [idr, crk]].map(([a, b]) => link(a, b));
     return { list, conns, sv, ac, idr, ten, crk };
   }
 
@@ -1126,30 +1134,37 @@ describe('gergi serpantin konumu — uyarı', () => {
     return M.veFeadBuildSystem(ns, cs, {});
   };
   const gergiUyarisi = (r) =>
-    (r.warnings || []).filter((w) => /son sırada değil/.test(w));
+    (r.warnings || []).filter((w) => /krankın çıkışında değil/.test(w));
 
-  test('gergi ORTADAYSA uyarır ama çözümü DURDURMAZ', () => {
-    const r = kur(['a', 'b', 'c', 'd']);          // gergi 2/4
+  // KABLOLAR KAYIŞIN GİDİŞİ (2026-09-08): `kur(['a','c','d','b'])` gergiyi kayış
+  // sırasında SONA, yani krankın GİRİŞİNE (gergin taraf) koyar; `kur(['a','b',
+  // 'c','d'])` krankın ÇIKIŞINA (gevşek taraf). Eski kapı tablo sırasında
+  // düşünüyordu ve ikisinin hükmü tersti.
+  test('gergi krankın GİRİŞİNDEYSE uyarır ama çözümü DURDURMAZ', () => {
+    const r = kur(['a', 'c', 'd', 'b']);          // gergi kayış sırasında 4/4
     expect(gergiUyarisi(r).length).toBe(1);
-    expect(gergiUyarisi(r)[0]).toMatch(/2\/4/);              // konumu YAZIYOR
-    expect(gergiUyarisi(r)[0]).toMatch(/DÖNÜŞ açıklığında/);  // konvansiyonu yazıyor
+    expect(gergiUyarisi(r)[0]).toMatch(/4\/4/);              // konumu YAZIYOR (kayış sırasında)
+    expect(gergiUyarisi(r)[0]).toMatch(/ÇIKAN \(gevşek\) açıklığında/);  // konvansiyonu yazıyor
     // ÇARE UYDURULMUYOR: sayıların etkilenmediği aynı cümlede duruyor, yoksa
     // okuyucu bunu bir hesap hatası sanar ve olmayan bir şeyi düzeltmeye çalışır.
     expect(gergiUyarisi(r)[0]).toMatch(/Sayılar bundan etkilenmiyor/);
     // HÜKÜM ALAN OLARAK DA TAŞINIR — yüzeyler metni ayrıştırmasın diye.
-    expect(r.tensionerOrder).toEqual({ index: 1, count: 4, last: false });
-    // uyarı bir HATA değil: sıra kuruldu, kasnak sayısı doğru
-    expect(r.order.map((n) => n.id)).toEqual(['a', 'b', 'c', 'd']);
+    // `index` kayış sırasında (0 tabanlı), `last` çekirdek (tablo) sırasında.
+    expect(r.tensionerOrder).toEqual({ index: 3, count: 4, afterDriver: false, last: false });
+    // uyarı bir HATA değil: sıra kuruldu, kasnak sayısı doğru — çekirdek sırası
+    // kablo sırasının çevrilmişi (krank sabit, kalanı ters).
+    expect(r.order.map((n) => n.id)).toEqual(['a', 'b', 'd', 'c']);
     // Konum kuralı bir HATA olarak görünmemeli — sentetik gerginin künyesi
     // eksik olduğu için başka hatalar var, ama hiçbiri KONUMLA ilgili değil.
-    expect((r.errors || []).filter((e) => /son sırada/i.test(e)).length).toBe(0);
+    expect((r.errors || []).filter((e) => /çıkışında/i.test(e)).length).toBe(0);
   });
 
-  test('gergi SONDAYSA hiç uyarı yok — ama hüküm YİNE yazılır', () => {
-    const r = kur(['a', 'c', 'd', 'b']);
+  test('gergi krankın ÇIKIŞINDAYSA hiç uyarı yok — ama hüküm YİNE yazılır', () => {
+    const r = kur(['a', 'b', 'c', 'd']);          // gergi kayış sırasında 2/4
     expect(gergiUyarisi(r).length).toBe(0);
     // "denetlendi ve uygun" ile "hiç denetlenmedi" ayırt edilebilmeli: alan
     // yalnız kötü durumda yazılsaydı yüzey `!tord` ile ikisini karıştırırdı.
-    expect(r.tensionerOrder).toEqual({ index: 3, count: 4, last: true });
+    expect(r.tensionerOrder).toEqual({ index: 1, count: 4, afterDriver: true, last: true });
+    expect(r.order.map((n) => n.id)).toEqual(['a', 'd', 'c', 'b']);   // çekirdek: gergi sonda
   });
 });

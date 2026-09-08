@@ -160,9 +160,12 @@ dönüşü `spin = −loopSense(liste)`; gerekçesi hemen aşağıda.
 
 ###### LİSTE SIRASI KAYIŞIN GİDİŞİNİN TERSİ (2026-09-08, NİHAİ)
 
-**HÜKÜM: kanvas kabloları ve `build.order`, Gates tablosuyla aynı sırada —
-kayışın gidişinin TERSİ. Kayışın dönüşü `spin = −loopSense(liste)`; Gates
-sırasında kurulan her modelde krank SAAT YÖNÜNDE döner.**
+**HÜKÜM: kanvas kabloları ve sihirbaz sırası kayışın GİDİŞ sırasındadır
+(tel from → to = akış). `build.order` (çekirdek listesi) Gates tablo sırasıdır
+= gidişin TERSİ; ikisini köprü çevirir (`veFeadRouteFlip`: krank sabit, kalanı
+ters — kendi tersi). Kayışın dönüşü `spin = −loopSense(çekirdek listesi) =
+loopSense(kablo sırası)`; Gates raporundan kurulan her modelde krank SAAT
+YÖNÜNDE döner.**
 
 Kullanıcı dört kez *"krank saat yönünde dönmüyor"* dedi ve haklıydı. Hata bir
 fizik varsayımındaydı: *"sürücünün çıkışı gergin"* sanılıyordu. Sürücü kayışı
@@ -177,7 +180,11 @@ rapor kanıtı `docs/gates-reports/README.md` §3'te (AG00976'nın kendi okları
 | `spin` (rozet · panel · sihirbaz düğmesi · özet) | `−loopSense` | `veFeadNaturalSense` |
 | Kasnak dönüş oku | `cw = (d > 0)` (`d` süpürme, dönüş onun tersi) | `veFeadLayoutSVG` |
 | Animasyon | faz yürüyüşe göre **azalır**; yük `spin` taşır (= `−sense`) | `veFeadAnimTick` · yük |
-| Kanvas tel oku | telin **tersine** bakar (tel liste sırası, ok gidiş) | `connections.js` |
+| Kanvas tel oku | telin **yönünde** — tel kayışın gidişi (ilk turda tel liste sırasındaydı ve ok tersine çizilmişti; köprü çevirince kalktı) | `connections.js` |
+| Köprü | kablo sırası → çekirdek sırası: `veFeadRouteFlip` (`veFeadBuildSystem`, `veFeadSpinOf`) | `fead-model.js` |
+| Örnek kurucu · sihirbaz tohumu | `ex.route` Gates tablo sırası kalır (raporla satır satır), kablolar/sıra ondan çevrilir | `veFeadExampleNodes` · `veFeadWizSeed` |
+| Sihirbazda gergi varsayılanı | krankın hemen ardına (`veFeadWizRoute`); hüküm kayış sırasında: *"Gergi krankın çıkışında (2/n)"* — `tensionerOrder = { index (kayış sırası), count, afterDriver, last (çekirdek) }` | `cp-fead-wizard.js` · `veFeadBuildSystem` |
+| **Eski kayıtlar** | **şema sürümü 3**: sürüm < 3 damgalı her durumda (gömülü alt topolojiler dahil, damgalanarak) iki ucu kasnak olan teller bir kez çevrilir (`veFeadMigrateWireOrder`); düğüm verisi migrasyonu yalnız sürümsüz dosyalara — kapı kademeli | `state.js` `veApplyLegacyMigrations` |
 | Konumlar · sarım · L_eff · gerilme · 2095 doğrulanmış sayı | **dokunulmadı** | — |
 
 **Yolda bulunan ikinci kusur:** animasyon yükü üç sayıyı bağımsız yuvarlıyordu
@@ -186,18 +193,24 @@ rapor kanıtı `docs/gates-reports/README.md` §3'te (AG00976'nın kendi okları
 `_feadAnimSpec` adımı parça toplamına yeniden oturtuyor; kapı pencerenin
 içindeki fazlarda sayıyor.
 
-**AÇIK İŞ (bu turda BİLEREK yapılmadı):** tel ve sihirbaz tablosu hâlâ liste
-sırasında, yani *"Kasnaklar — kayış sırasıyla"* başlığı ve kılavuzun *"çıkış
-portundan, sonra gelen kasnağın girişine"* tarifi gidişin tersini anlatıyor;
-tel oku bu yüzden telin tersine çizildi. Kalıcı çözüm köprüde: kabloları gidiş
-sırasında tanımlayıp çekirdeğe *"krank sabit + kalanı ters"* ile vermek. Bedeli
-on iki örneğin kablolarını, sihirbaz tablosunu ve Gates tablosuyla satır satır
-karşılaştırmayı birlikte değiştirmek — ayrı bir tur.
+**İKİNCİ TUR, AYNI GÜN (kullanıcı: *"Düzelt işte. Şu işi çözelim."*):** ilk
+tur tel ve sihirbaz tablosunu liste sırasında bırakıp tel okunu telin tersine
+çizmişti; kabloların gidiş sırasına alınması yukarıdaki tabloda. Gates tablosuyla
+satır satır karşılaştırma **kaybolmadı**: `build.order`, raporlar ve fixture
+karşılaştırmaları hâlâ tablo sırasında; yalnız kanvas ve sihirbaz kayış sırasını
+gösteriyor ve tablo bunu yazıyor (*"Gates tabloları bunun tersi sırada yazar"*).
+Göç ATLANSAYDI eski kayıtlarda gergi gergin tarafa düşerdi — ölçüldü, kapı
+`fead-wire-order-migration.test.js`.
 
 **Kapılar:** `tests/unit/fead-spin.test.js` → *"LİSTE SIRASI KAYIŞIN GİDİŞİNİN
 TERSİ"* (çekirdek zinciri · PDF okları · PDF gerilme satırı · sürücü oku · yük
-`spin`), `fead-anim.test.js` (faz azalır · pencere), `fead-layout-plane.test.js`
-(oniki örnekte CW), `port-geometry.test.js` (tel oku), e2e `fead-canvas-drag`.
+`spin`) ve *"KABLOLAR GİDİŞ SIRASINDA"* (involüsyon · oniki örnekte tel
+çokgeninin dolanımı = spin · `build.order` = Gates tablosu · çevirmeden vermek
+işareti ters çevirir), `fead-wire-order-migration.test.js` (şema 2 → 3 göçü),
+`fead-anim.test.js` (faz azalır · pencere), `fead-layout-plane.test.js` (oniki
+örnekte CW), `fead-model.test.js` (gergi krankın çıkışında — kayış sırasında
+hüküm), `fead-wizard.test.js` (gergi varsayılanı krankın ardında · kart hükmü),
+`port-geometry.test.js` (tel oku telin yönünde), e2e `fead-canvas-drag`.
 
 ###### MATEMATİK: GEOMETRİ DEĞİŞMEZ, GERİLME DEĞİŞİR
 

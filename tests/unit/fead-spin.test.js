@@ -469,7 +469,7 @@ describe('rozet ve panel', () => {
 
     const once = M.veFeadNaturalSense(s.b.order);
     r.onclick({ stopPropagation() {}, preventDefault() {} });
-    const sonra = M.veFeadNaturalSense(M.veFeadRouteOrder(global.nodes, global.connections));
+    const sonra = M.veFeadSpinOf(global.nodes, global.connections);
     expect(sonra).toBe(-once);
     expect(stubs.saveState).toHaveBeenCalled();
   });
@@ -563,7 +563,7 @@ describe('bileşen sözleşmesi', () => {
     const s = kur('AG00976_GATES_2025', true);
     const once = M.veFeadNaturalSense(s.b.order);
     global.nodes = global.nodes.filter((n) => n.type !== 'fead-spin');
-    expect(M.veFeadNaturalSense(M.veFeadRouteOrder(global.nodes, global.connections)))
+    expect(M.veFeadSpinOf(global.nodes, global.connections))
       .toBe(once);                                 // yön DEĞİŞMEDİ
   });
 });
@@ -680,5 +680,64 @@ describe('LİSTE SIRASI KAYIŞIN GİDİŞİNİN TERSİ', () => {
     expect(spec.spin).toBe(fead.veFeadCurrentSpin());
     expect(spec.spin).toBe(ORNEK_SPIN);
     expect(spec.sense).toBe(-spec.spin);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KABLOLAR KAYIŞIN GİDİŞ SIRASINDA, ÇEKİRDEK LİSTEYİ TERS ALIR (2026-09-08)
+//
+// Kullanıcı: *"Düzelt işte. Şu işi çözelim."* Bir önceki tur (PR #895) yalnız
+// işaretin okunuşunu düzeltmiş, kabloları Gates tablo sırasında bırakmış ve
+// tel okunu telin tersine çizmişti. Artık tel = gidiş; çevirme köprüde
+// (`veFeadRouteFlip`, krank sabit + kalanı ters, kendi tersi). Sayılar birebir:
+// `build.order` yine Gates tablo sırası.
+describe('KABLOLAR GİDİŞ SIRASINDA — köprü çekirdeğe tablo sırasını verir', () => {
+  const ORNEKLER = M.veFeadExampleKeysAll();
+
+  test('veFeadRouteFlip: krank sabit + kalanı ters, kendi tersi (involüsyon)', () => {
+    const f = M.veFeadRouteFlip;
+    expect(f(['c', 'a', 'b', 'd'])).toEqual(['c', 'd', 'b', 'a']);
+    expect(f(f(['c', 'a', 'b', 'd', 'e']))).toEqual(['c', 'a', 'b', 'd', 'e']);
+    expect(f(['c', 'a'])).toEqual(['c', 'a']);
+    expect(f([])).toEqual([]);
+    // Bütün tellerin uçlarını takas etmekle AYNI sıra (Dönüş Yönü düğümü buna
+    // dayanıyor): ölçülmüş ilişki, burada kilitli.
+    const s = kur('AG00976_GATES_2025', false);
+    const once = M.veFeadRouteOrder(global.nodes, global.connections).map((n) => n.id);
+    M.veFeadReverseRoute(global.nodes, global.connections);
+    const sonra = M.veFeadRouteOrder(global.nodes, global.connections).map((n) => n.id);
+    expect(sonra).toEqual(f(once));
+    expect(s.b.ok).toBe(true);
+  });
+
+  ORNEKLER.forEach((key) => {
+    test(key + ' — teller GİDİŞ sırasında: tel çokgeninin dolanımı = spin; build.order = Gates tablosu', () => {
+      const s = kur(key, false);
+      expect(s.b.ok).toBe(true);
+      const ex = M.veFeadExampleOf(key);
+      // Köprünün çekirdeğe verdiği sıra = örneğin (Gates) tablo sırası — 2095
+      // doğrulanmış sayı bu satıra bağlı.
+      expect(s.b.order.map((n) => n.id)).toEqual(ex.route.map((k) => 'ex-' + k));
+      // Kablo sırası = tablo sırasının çevrilmişi = gidiş.
+      const teller = M.veFeadRouteOrder(global.nodes, global.connections).map((n) => n.id);
+      expect(teller).toEqual(M.veFeadRouteFlip(ex.route.map((k) => 'ex-' + k)));
+      // Gidiş sırasındaki merkezlerin dolanımı kayışın dönüşünün KENDİSİ:
+      // çekirdek listesinin el yönünün tersi, rozetle aynı işaret.
+      const g = F.geometryAt(s.b.sys, s.b.relDeg || 0);
+      const cById = {};
+      s.b.order.forEach((n, i) => { cById[n.id] = g.pulleys[i].c; });
+      expect(F.loopSense(teller.map((id) => cById[id]))).toBe(s.b.spin);
+      expect(s.b.spin).toBe(-g.sense);
+      expect(s.b.spin).toBe(ORNEK_SPIN);
+      expect(M.veFeadSpinOf(global.nodes, global.connections)).toBe(s.b.spin);
+      expect(fead.veFeadCurrentSpin()).toBe(s.b.spin);
+    });
+  });
+
+  test('gidiş sırasını çevirmeden çekirdeğe vermek işareti ters çevirirdi — kapı', () => {
+    const s = kur('AG00976_GATES_2025', false);
+    const teller = M.veFeadRouteOrder(global.nodes, global.connections);
+    expect(M.veFeadNaturalSense(teller)).toBe(-s.b.spin);          // YANLIŞ okuma
+    expect(M.veFeadNaturalSense(M.veFeadRouteFlip(teller))).toBe(s.b.spin);
   });
 });

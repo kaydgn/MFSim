@@ -12,7 +12,13 @@ var MAX_UNDO_STEPS = 50;
 // değerlere yükseltilir (bkz. veMigrateNodeData). Sürümlü state'lerde
 // migrasyon ÇALIŞMAZ — böylece kullanıcının bilerek girdiği değerler
 // (ör. Cd=0.75) "eski varsayılan" sanılıp 0.90'a ezilmez.
-var VE_SCHEMA_VERSION = 2;
+//
+// SÜRÜM 3 (2026-09-08): FEAD kayış telleri artık kayışın GİDİŞ sırasında
+// (eskiden çekirdeğin liste = Gates tablo sırasında). 2 damgalı kayıtların
+// kayış telleri bir kez çevrilir (veFeadMigrateWireOrder); düğüm verisi
+// migrasyonu (veMigrateNodeData) yalnız SÜRÜMSÜZ dosyalara uygulanmaya devam
+// eder — sürüm kapısı kademelidir, "eskiyse hepsini koştur" değil.
+var VE_SCHEMA_VERSION = 3;
 
 function saveState() {
   var state = {
@@ -125,10 +131,24 @@ function veMigrateNodeData(node) {
 // günceller ve state'i döndürür.
 function veApplyLegacyMigrations(state) {
   if(!state || !state.nodes) return state;
-  if(typeof state.schemaVersion === 'number' && state.schemaVersion >= VE_SCHEMA_VERSION) {
-    return state; // Sürümlü/güncel → migrasyon yok
-  }
-  state.nodes.forEach(veMigrateNodeData);
+  var v = (typeof state.schemaVersion === 'number') ? state.schemaVersion : 0;
+  if(v >= VE_SCHEMA_VERSION) return state;           // güncel → migrasyon yok
+  // KADEMELİ KAPI: her adım yalnız kendi sürümünden eski dosyalara. Sürüm 2
+  // damgalı bir dosyaya düğüm verisi migrasyonunu yeniden uygulamak,
+  // kullanıcının kasıtlı Cd=0.75'ini 0.90'a ezerdi — tam da bu damganın
+  // önlediği hata.
+  if(v < 2) state.nodes.forEach(veMigrateNodeData);
+  if(v < 3 && typeof veFeadMigrateWireOrder === 'function') veFeadMigrateWireOrder(state);
+  // GÖMÜLÜ ALT TOPOLOJİLER de aynı kapıdan geçer ve DAMGALANIR: FEAD kanvası
+  // `fead-analysis` düğümünün data.subTopology'sinde yaşıyor; editör açılınca
+  // veLoadTabState → restoreState onu ikinci kez bu kapıdan geçirir ve damga
+  // yoksa teller İKİNCİ kez çevrilirdi (ölçüldü — kapı testte).
+  // (Özyineleme alt durumu aşağıdaki satırla kendisi damgalar.)
+  state.nodes.forEach(function(n){
+    var sub = n && n.data && n.data.subTopology;
+    if(sub && Array.isArray(sub.nodes)) veApplyLegacyMigrations(sub);
+  });
+  state.schemaVersion = VE_SCHEMA_VERSION;
   return state;
 }
 
