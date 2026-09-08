@@ -84,7 +84,7 @@ PDF henüz yok.
 | AG00976 1668@-240/115 | 13.02 | 6 | 1667 | BMC Otomotif FEAD 5 · Cummins ikincil tahrik | veri | — | — |
 | AG00976 1655@-250/104 | 13.02 | 6 | 1656 | aynı sistem · revizyon | veri | — | — |
 | AG00976 1705@-250/110 | 13.02 | 6 | 1705 | aynı sistem · revizyon | veri | — | — |
-| AG00976 1715@-250/110 | 13.02 | 6 | 1715 | aynı sistem · **Corrected-IDR1** · 05.06.2025 | veri | — | — |
+| AG00976 1715@-250/110 | 13.02 | 6 | 1715 | aynı sistem · **Corrected-IDR1** · 05.06.2025 | **PDF** | `AG00976_8PK1715HD_Ten-250-110_2025-06-05.pdf` | alıntı **5/12** |
 
 ### Sayfa düzeni — TEK aile, iki varyant
 
@@ -116,7 +116,7 @@ AG0868 ×3), sağ sütun AG00879'da — o rapor on iki sayfasının tamamını t
 (bkz. bir sonraki bölüm). Bir tur önce sağ sütun *"çıkarım"* diye işaretliydi;
 artık değil.
 
-### ÜÇ PDF TAM RAPOR DEĞİL — ALINTI
+### ÜÇ PDF TAM RAPOR DEĞİL — ALINTI (2026-09-08'den beri DÖRT: AG00976 da 5/12)
 
 > **DÜZELTME.** Bu bölüm bir tur önce *"DÖRT PDF"* diyor ve AG00879'u da
 > alıntı sayıyordu. **YANLIŞTI**: AG00879'un sayfa AĞACI beş sayfa gösteriyor
@@ -136,6 +136,7 @@ veriyor.
 | AG00894 | 6 | 12 | 4, 7, 9, 10, 11, 12 |
 | AG00902-1275 | 5 | 11 | 4, 6, 8, 9, 10, 11 |
 | AG00902-1300 | 5 | 11 | 4, 6, 7, 9, 10, 11 |
+| AG00976-1715 | 5 | 12 | 4, 5, 7, 9, 10, 11, 12 — s.1 özet (duty + gerilme satırı), s.2–3 geometri, s.6 kayma/gerginlik 2/2, s.8 kaburga yorulması; **"Adjacent Grooved Pulleys" okları s.4'te** (dosyanın 4. sayfası = raporun 6.) |
 
 Üçünde **tepe yük, yorulma, titreşim ve hizalama sayfaları yok**.
 
@@ -320,18 +321,32 @@ Sayısal olarak da doğrulandı: raporun `Hubload Direction °` sütunu modelin
 | `front` / `rear` / `view` / `rotation` beyanı | **on raporun hiçbirinde yok** |
 | Hız oranı işareti | **işaretsiz** (`1.000 · 1.473 · 2.298`) — ters dönen sırt kasnakları ayırt edilmiyor |
 
-### 3 · Yön, tablonun SIRASIYLA örtük olarak tanımlı
+### 3 · Yön, tablonun SIRASIYLA örtük olarak tanımlı — ve tablo GİDİŞİN TERSİ
 
-Kasnak tablosu kayışın gidiş sırasında yazılıyor ve o sıra, çizim düzleminde
-**on raporun onunda da CCW** dolanıyor (`Σ işaretli sarım = +360`, hiç `−360`
-yok). Sıra + temas tarafı her kasnağın yönünü belirliyor:
+Kasnak tablosu on raporun onunda da çizim düzleminde **CCW dolanan** bir sırada
+yazılı (`Σ işaretli sarım = +360`, hiç `−360` yok). Ama bu sıra kayışın gidiş
+sırası DEĞİL, **tersi** — 2026-09-08'e kadar burada *"kayışın gidiş sırasında
+yazılıyor"* deniyordu ve yanlıştı. İki kanıt, ikisi de raporun kendisinden ve
+ikisi de testte PDF'ten okunuyor:
+
+| Kanıt | Rapor | Ne diyor |
+|-------|-------|----------|
+| Gerilme sütunu | AG00976 s.1 (AG00686'da da aynı) | Tablo sırasında **FAN 1585 → A_C 1177 → ALT 546 → TEN 544**: aksesuarda DÜŞÜYOR, sürücüde YÜKSELİYOR. Sürülen kasnak kayışı frenler (çıkışı gergin), sürücü onu çeker (girişi gergin) — gidiş yönünde okunsaydı tersi olurdu |
+| "Adjacent Grooved Pulleys" okları | AG00976 s.4 | `A_C -> FAN · ALT -> A_C · FAN -> ALT` — üçü de tablo sırasının tersi |
+
+Yani çizim düzleminde kayış **CW akar, krank CW döner**; kullanıcının, mühendisin
+Excel'inin (`Sağ`) ve sistemin CAD'inin dediği bu. Sıra + temas tarafı her
+kasnağın yönünü belirliyor:
 
 ```
-kaburgalı temas → halkayla AYNI yön (CCW)
-sırttan temas   → TERS (CW)
+kaburgalı temas → kayışla AYNI yön (CW)
+sırttan temas   → TERS (CCW)
 ```
 
 **ÖLÇÜLDÜ:** ters dönenlerin hepsi sırttan temas edenler — istisna yok.
+MFSim listeyi tablo sırasında tutar (2095 doğrulanmış sayı buna bağlı) ve
+işareti `veFeadNaturalSense`'te çevirir. Kapı: `tests/unit/fead-spin.test.js`
+→ *"LİSTE SIRASI KAYIŞIN GİDİŞİNİN TERSİ"*.
 
 ### 4 · Not alanındaki `CW`/`CCW` sistemin yönü DEĞİL, gerginin EL YÖNÜ
 
@@ -366,15 +381,20 @@ ilişkiyi kilitliyor.
 
 ### 6 · "Ön taraftan bakınca" — burada ölçüm biter, ÇIKARIM başlar
 
-Raporlar hangi taraftan bakıldığını **söylemiyor** (yukarıda ölçülü). Veriyle
-tutarlı tek okuma: çizim ile parça harfi karşılıklı iki taraftan ifade edilmiş.
-Motorlar geleneksel olarak ön taraftan (aksesuar tahrik ucundan) bakıldığında
-CW döner; çizim ise kayışı CCW gösteriyor — bu ikisi birlikte **çizimin ön
-görünüşün aynası gibi davrandığına** işaret eder.
+Raporlar hangi taraftan bakıldığını **söylemiyor** (yukarıda ölçülü). §3'e göre
+çizim düzleminde kayış CW akıyor ve krank CW dönüyor; motorlar geleneksel
+olarak ön taraftan (aksesuar tahrik ucundan) bakıldığında CW döner. Yani çizim
+ön görünüşle **tutarlı** — aynası değil.
 
-**AMA bu son adım dışarıdan gelen bir bilgi, bu raporlarda YAZMIYOR.** Kesin
-konuşmak için montaj resmi ya da tedarikçinin konvansiyon notu gerekir. Bu
-ayrım korunmalı: modülün kuralı geçerlilik sınırını sonucun İÇİNDE taşımak.
+> Bu bölüm bir tur boyunca (2026-09-04 → 09-08) *"çizim ön görünüşün aynası
+> gibi davranıyor"* diyordu. O çıkarım tablo sırasını gidiş sırası sanmaktan
+> türemişti ve programı üç kez aynalattı; kullanıcı üçünü de reddetti.
+> Kaldırıldı — bkz. §3.
+
+**AMA "hangi taraftan bakılıyor" hâlâ dışarıdan gelen bir bilgi, bu raporlarda
+YAZMIYOR.** Kesin konuşmak için montaj resmi ya da tedarikçinin konvansiyon
+notu gerekir. Program bu çıkarımı KULLANMIYOR: yön düzlem adıyla basılır
+(*"şemadaki yön — Gates rapor düzlemi"*).
 
 **2026-09-07 — ÇİZİM AYNALANMAZ, BAYRAK KALDIRILDI.** Program bu sayfadaki
 düzeni birebir çiziyor. Kullanıcı bunu üç kez bildirdi ve üçüncüsünde dört
@@ -383,17 +403,20 @@ görüntüsü, mühendisin Excel tasarımı) — dördü de aynı: ALT ve gergi 
 klima sağda. `VE_FEAD_VIEW_FRONT` ve bütün ayna yolu silindi; geri gelme yolu
 bırakılmadı.
 
-*"Aynalamadan krankı CW yap"* yolu da ÖLÇÜLEREK kapandı — rotayı ters yürütmek
-gergiyi gergin tarafa atıyor ve span gerilmeleri negatife düşüyor (BMC:
-526 N → −196 N). Kapı: `tests/unit/fead-layout-plane.test.js`.
+**2026-09-08 — KRANK CW İÇİN NE AYNA NE TERS ROTA GEREKTİ.** Liste zaten
+gidişin tersi (§3); yalnız işaretin okunuşu çevrildi (`veFeadNaturalSense`).
+Rotayı ters yürütmek CCW verir ve bedeli ölçülü: gergi gergin tarafa düşer,
+span gerilmeleri negatife iner (BMC: 526 N → −196 N). Kapı:
+`tests/unit/fead-layout-plane.test.js`.
 
 **§6'daki çıkarım bir ÇIKARIM olarak kalıyor** ve program onu KULLANMIYOR.
 
 ### 7 · Gergi serpantinde EN SONDA — ve bu fiziksel
 
 On raporun onunda da sıra gergiyle bitiyor ve krankla başlıyor, yani **gergi,
-kayışın kranka dönüş açıklığındadır**. Bu bir liste düzeni değil, yerleşim
-kuralı: o açıklık GEVŞEK taraftır. AG00686'da ölçüldü — `T`: CRK 1209.95 ·
+tablo sırasında kranka dönen açıklıktadır** — gidiş yönünde okununca bu,
+**kranktan ÇIKAN** açıklıktır (§3: tablo gidişin tersi). Bu bir liste düzeni
+değil, yerleşim kuralı: sürücünün çıkışı GEVŞEK taraftır ve gergi oraya konur. AG00686'da ölçüldü — `T`: CRK 1209.95 ·
 IDR 1208.48 · A_C 767.47 · **TEN 766.00** (en düşük, ankrajın kendisi).
 
 **MATEMATİK BU KONUMDAN BAĞIMSIZ — ölçüldü.** Gerilme zinciri `T[t] = ankraj`

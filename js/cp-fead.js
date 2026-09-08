@@ -867,8 +867,9 @@ function veFeadCurrentSpin(){
 }
 
 function veFeadApplySpinBadge(nodeEl, node){
-  // ETİKET ÖN GÖRÜNÜŞTE — `veFeadCurrentSpin` VERİ düzlemini ölçüyor, kart ise
-  // aynalı çiziyor. Çevirmeden basmak, kartla rozeti ters düşürürdü.
+  // ROZET KAYIŞIN GERÇEK DÖNÜŞÜNÜ BASAR: `veFeadCurrentSpin` liste sırasının
+  // dolanımını okuyup işaretini çeviriyor (liste gidişin tersi — fead-model.js
+  // → veFeadNaturalSense). Kart da aynı işaretten çiziyor; ikisi tek kaynak.
   var sense = veFeadCurrentSpin();
   var lbl = veFeadSpinLabel(sense);
   var metin = lbl.kisa;
@@ -957,12 +958,12 @@ function getFeadSpinPropertiesHTML(node){
     + 'background:var(--accent-primary);">Yönü çevir</button>'
     // DÜZLEM ADI TEK ÜRETİCİDEN (`_feadPlaneName`). Burada ikinci kez
     // yazılsaydı, ayna bayrağı değişince panel sessizce eskirdi.
-    + _feadHint('Yön bir ayar DEĞİL: kasnak merkezlerinin kayış gidiş sırasındaki '
-        + 'dolanım işaretinden türer (<b>' + _feadEsc(
+    + _feadHint('Yön bir ayar DEĞİL: kablolama sırasından türer (<b>' + _feadEsc(
             (typeof _feadPlaneName === 'function') ? _feadPlaneName() : 'çizim düzlemi')
-        + '</b>). "Yönü çevir" '
-        + 'kayış yolunun bağlantılarını ters çevirir — kanvastaki gidiş okları da '
-        + 'onunla döner.'));
+        + '</b>). Kablolar Gates tablosu gibi kayışın gidişinin TERSİ sırada '
+        + 'yürür; sürücü kayışı kendine çektiği için gergin taraf ona GİREN '
+        + 'açıklıktır. "Yönü çevir" kayış yolunun bağlantılarını ters çevirir — '
+        + 'kanvastaki gidiş okları da onunla döner.'));
 
   // GEOMETRİ YÖNDEN BAĞIMSIZ, GERİLME DEĞİL — ve bunu panel SÖYLÜYOR, çünkü
   // kullanıcı "yönü çevirdim, sarım açıları neden aynı" diye sormasın.
@@ -2962,6 +2963,11 @@ function veFeadLayoutSVG(build, W, H, opts){
     animPay = {
       s: r4(s), ox: r4(offX), oy: r4(offY), mx: r4(minX), my: r4(maxY),
       step: r4(stepMm), tooth: r4(toothMm), sense: (geom.sense < 0 ? -1 : 1),
+      // `sense` YÜRÜYÜŞÜN el yönü (liste sırası; kaburga normalleri ondan),
+      // `spin` KAYIŞIN GERÇEK dönüşü — liste gidişin tersi olduğu için
+      // işareti ters (fead-model.js → veFeadNaturalSense). Animatör fazı
+      // `spin` ile değil bu ilişkiyle sürüyor: faz yürüyüşe göre AZALIR.
+      spin: (geom.sense < 0 ? 1 : -1),
       loop: r4(walk.l), mmS: _akis ? r4(opts.animate.dispMmS) : 0,
       vib: opts.vib || null,
       // SENARYO: devir zamanın fonksiyonu, dolayısıyla kayış hızı da öyle.
@@ -3100,13 +3106,17 @@ function veFeadLayoutSVG(build, W, H, opts){
     // DÖNÜŞ YÖNÜ OKU — kasnağın içinde, yarıçapın %55'inde bir yay + uç oku.
     // Tedarikçi çıktısındaki dönüş okunun karşılığı: bütün kasnaklar aynı yöne
     // dönmüyorsa (sırttan temas) bu gözle görünür.
-    // YÖN: d > 0 mm düzleminde CCW, yerleşim yönelimi korunduğu için ekranda da
-    // CCW — yani SAAT YÖNÜNÜN TERSİ. Bu da bir kez ters yazılmıştı (kayış
-    // yayıyla aynı hata); ok kasnağın gerçek dönüşünün tersini gösteriyordu.
+    // YÖN: `d` sarım yayının LİSTE sırasındaki süpürme işareti (d > 0 = mm
+    // düzleminde CCW; yerleşim yönelimi korunduğu için ekranda da CCW). Liste
+    // kayışın gidişinin TERSİ olduğu için kasnağın GERÇEK dönüşü −d: d > 0
+    // olan kasnak SAAT YÖNÜNDE döner (fead-model.js → veFeadNaturalSense).
+    // İki kez ters yazıldı: önce kayış yayıyla aynı işaret hatasıyla, sonra
+    // `d`yi dönüşün kendisi sanarak (2026-09-08'e kadar oklar CCW'ydi ve
+    // kullanıcı "krank saat yönünde dönmüyor" diye bildirdi).
     // Animasyon açıkken ok ÇİZİLMEZ: dönüş yönünü artık kolların kendisi
     // gösteriyor ve iki işaret üst üste binerdi (ok 0.55R'de, kollar 0.26–0.86R).
     if(wantArrows && !animPay && R > 9){
-      var rr = R * 0.55, cw = (p.d < 0);
+      var rr = R * 0.55, cw = (p.d > 0);
       var a0 = cw ? -2.3 : -0.85, a1 = cw ? 0.85 : 2.3;
       var x0 = X + rr*Math.cos(a0), y0 = Y + rr*Math.sin(a0);
       var x1 = X + rr*Math.cos(a1), y1 = Y + rr*Math.sin(a1);
@@ -3701,7 +3711,18 @@ function _feadAnimSpec(el){
   if(!spec || !Array.isArray(spec.segs)) return null;
   spec._raw = raw;
   spec.T = _feadXform(spec.s, spec.ox, spec.oy, spec.mx, spec.my);
-  spec.walk = { segs: spec.segs, l: spec.loop };
+  // ADIM ÇEVREYİ YÜKTE DE TAM BÖLMELİ. `_feadToothStep` adımı çevreye tam
+  // oturtuyor ama yük üç sayıyı BİRBİRİNDEN BAĞIMSIZ yuvarlıyor (parça boyları,
+  // `loop`, `step` — dört basamak). Yuvarlanmış parçaların toplamı ile
+  // yuvarlanmış adımın katı artık eşit değil; ölçüldü (BMC): 174 adım çevreden
+  // 0,0023 mm uzun. Faz her adımda bir kez o 0,0023 mm'lik pencereden geçiyor
+  // ve o an diş sayısı 174 → 173 düşüyor — "diş belirip kaybolur" sınıfının
+  // ta kendisi, yalnız daha dar. Çevre parçaların toplamı olarak alınır ve
+  // adım ona yeniden oturtulur; `loop` (JSON) dışarıya künye olarak kalır.
+  var L = 0;
+  spec.segs.forEach(function(sg){ L += (sg.l > 0) ? sg.l : 0; });
+  if(L > 0 && spec.step > 0) spec.step = L / Math.max(1, Math.round(L / spec.step));
+  spec.walk = { segs: spec.segs, l: (L > 0) ? L : spec.loop };
   el.__feadAnim = spec;
   return spec;
 }
@@ -3804,8 +3825,16 @@ function veFeadAnimTick(now){
       var sq = veFeadScnStateAt(spec.scn, tau);
       mmS = sq ? sq.beltMs * 1000 * spec.slow : 0;
     }
-    var p = (_feadAnimPhase[key] || 0) + mmS * dt;
-    if(spec.loop > 0) p = ((p % spec.loop) + spec.loop) % spec.loop;
+    // FAZ YÜRÜYÜŞE GÖRE AZALIR. Dişler ve kollar fazı yürüyüş (liste) sırasında
+    // sayıyor; liste kayışın gidişinin TERSİ (fead-model.js → veFeadNaturalSense),
+    // dolayısıyla kayışın gerçek akışı fazın azalmasıdır. Tek işaret, tek
+    // sayaç: dişler de kollar da aynı fazdan sürüldüğü için kasnakta kayma
+    // görünmez. Kapı: fead-anim.test.js → "faz kayışın GERÇEK gidişinde".
+    var p = (_feadAnimPhase[key] || 0) - mmS * dt;
+    // Sarma çevresi YÜRÜYÜŞÜN çevresi (parça toplamı) — `loop` künyesi değil;
+    // ikisi yuvarlamadan ötürü 1e-4 mm ayrışabiliyor (bkz. _feadAnimSpec).
+    var L = (spec.walk && spec.walk.l > 0) ? spec.walk.l : spec.loop;
+    if(L > 0) p = ((p % L) + L) % L;
     _feadAnimPhase[key] = p;
     veFeadAnimApply(el, p, tau);
     canli++;
@@ -5347,6 +5376,7 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_VIB_SPAN_PTS: VE_FEAD_VIB_SPAN_PTS,
     veFeadAnimTick: veFeadAnimTick, veFeadAnimEnsure: veFeadAnimEnsure,
     veFeadAnimApply: veFeadAnimApply,
+    _feadForgetResults: _feadForgetResults,           // test: animatör fazını sıfırla
     veFeadCompassPlace: veFeadCompassPlace, veFeadCompassReset: veFeadCompassReset,
     veFeadCompassDragStart: veFeadCompassDragStart,
     VE_FEAD_ROSE_W: VE_FEAD_ROSE_W, VE_FEAD_ROSE_HALF: VE_FEAD_ROSE_HALF,

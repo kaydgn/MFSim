@@ -880,7 +880,9 @@ function _frTensionerTable(R){
   h += tr('Yay ön yükü M<sub>0</sub>', _frFs(t.preloadNm, 2), 'Nm');
   h += tr('Yay oranı k', _frFs(t.rateNmPerDeg, 3), 'Nm/°');
   h += tr('Serbest kol açısı θ<sub>serbest</sub>', _frFs(t.freeAngleDeg, 2), '°');
-  h += tr('Sarım yönü (sense)', (t.sense > 0 ? '+1 (CCW)' : '−1 (CW)'), '—');
+  // Bu satır GERGİ KOLUNUN dönüş işaretidir (çizim düzleminde, +1 = CCW),
+  // kayışın dönüşü DEĞİL — o, geometri bölümünde `Dönüş yönü` olarak ayrı.
+  h += tr('Kol dönüş işareti (sense)', (t.sense > 0 ? '+1 (CCW)' : '−1 (CW)'), '—');
   h += tr('Kol çalışma açısı θ<sub>kol</sub>', _frFs(b.armAbsDeg, 2) + ' (girdi)', '°');
   if(A.tensioner) h += tr('Çalışma noktası yay momenti', _frFs(A.tensioner.springNm, 2), 'Nm');
   h += '</table>';

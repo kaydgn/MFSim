@@ -509,10 +509,19 @@ function updateAllConnections() {
 
     // GİDİŞ YÖNÜ — kayışın hangi tarafa aktığı. Serpantin bir ÇEVRİM olduğu
     // için yön topolojiden okunamıyor: aynı halka iki yönde de gezilebilir ve
-    // sarım açıları buna göre değişiyor. Ok telin ORTASINDA, teğetine bakar.
+    // gerilme zinciri buna göre değişiyor. Ok telin ORTASINDA, teğetine bakar.
     // Kısa açıklıkta çizilmez (46 px altında oku sığdırmak teli kalabalıklaştırır).
+    //
+    // OK TELİN TERSİNE BAKAR (2026-09-08). Kayış telleri çekirdeğin LİSTE
+    // sırasında kurulu (Gates tablosuyla aynı: from → to) ve o sıra kayışın
+    // gidişinin TERSİ — sürücü kayışı kendine çeker, gergin taraf ona giren
+    // açıklıktır (fead-model.js → veFeadNaturalSense). Ok "kayış nereye
+    // akıyor" sorusunun cevabıdır, "tel hangi porttan çıktı"nın değil; from → to
+    // çizilseydi kart CW dönerken kanvas CCW gösterirdi. Köprü bir gün listeyi
+    // gidiş sırasında verirse bu çevirme onunla birlikte kalkar.
     if(_feadBelt && typeof veConnDirMark === 'function') {
-      var mk = veConnDirMark(lineType, x1, y1, x2, y2, _bezCp);
+      var _tersCp = _bezCp ? [_bezCp[2], _bezCp[3], _bezCp[0], _bezCp[1]] : null;
+      var mk = veConnDirMark(lineType, x2, y2, x1, y1, _tersCp);
       if(mk) svg.appendChild(mk);
     }
     
