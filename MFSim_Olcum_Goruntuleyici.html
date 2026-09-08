@@ -964,8 +964,12 @@
       /* Karşılama koreografisinin omurgası — perde süresi ve kart temposu tek
          yerden; ara gecikmeler bu ikisinden okunur. */
       --dur-enter: 420ms;
-      --dur-slayt-gecis: 1600ms;  /* çapraz geçiş — uzun, göz yormasın */
-      --dur-slayt-kb: 13s;        /* Ken Burns: kare durduğu sürece çok yavaş yaklaşır */
+      /* Slayt temposu (kullanıcı: "geçişler çok hızlı"). Üçü BİRLİKTE okunur ve
+         bekleme süresi js/components.js › VE_SLAYT_BEKLEME'de; geçiş beklemeden
+         KISA olmak zorunda, yoksa kare tam oturmadan bir sonraki başlar
+         (kapısı: tests/unit/karsilama-slayt.test.js). */
+      --dur-slayt-gecis: 2600ms;  /* çapraz geçiş */
+      --dur-slayt-kb: 18s;        /* Ken Burns: kare durduğu sürece çok yavaş yaklaşır */
       --slayt-opaklik: 1;         /* resim tam payla çiziliyor (kullanıcı kararı) */
       --slayt-bulanik: 0px;       /* bulanıklık KAPALI: kareyi siliyordu */
       --slayt-ortu: 0%;           /* ÖRTÜ KAPALI (kullanıcı reçetesi): fotoğrafın üstünde
@@ -2957,22 +2961,45 @@ body.ve-no-module #ve-ribbon{ display:none; }
 }
 .ve-welcome-kare{
   position:absolute;
-  inset:-3%;                        /* Ken Burns'ün payı: kenar boşluğu açılmasın */
+  /* inset:0 — eskiden -3%'ti, "Ken Burns'ün payı" diye. GEREKSİZDİ: yakınlaşma
+     merkeze göre ve ölçek her an ≥ 1, yani kenarda boşluk açılamıyor. Bedeli
+     ölçüldü: kareyi %6 fazladan büyütüyor ve o kadar yumuşatıyordu — kaldırınca
+     netlik (Laplace varyansı) 1859 → 2125, yani %14,3 arttı. */
+  inset:0;
   background-size:cover;
   background-position:center;
   opacity:0;
   filter:blur(var(--slayt-bulanik, 0px));
-  transform:scale(1.05);
-  transition:opacity var(--dur-slayt-gecis, 1600ms) linear;
+  transform:scale(1);
+  transition:opacity var(--dur-slayt-gecis, 2600ms) linear;
   will-change:opacity, transform;
 }
 .ve-welcome-kare.is-on{
   opacity:var(--slayt-opaklik, 0.46);
-  animation:ve-slayt-kb var(--dur-slayt-kb, 13s) linear forwards;
+  animation:ve-slayt-kb var(--dur-slayt-kb, 18s) linear forwards;
 }
+/* Ken Burns TERSİNE döndü: eskiden 1.05'ten 1'e iniyordu, yani kare tam
+   göründüğü anda EN BÜYÜTÜLMÜŞ — yani en yumuşak — hâlindeydi. Artık 1'den
+   başlıyor: kare geldiği an kaynağın izin verdiği kadar net, sonra çok yavaş
+   yaklaşıyor. Kare ekranda ~13,6 sn kalıyor (11 sn bekleme + 2,6 sn geçiş),
+   yani 18 sn'lik yolun %4,5'i kullanılıyor.
+
+   SVG KESKİNLEŞTİRME SÜZGECİ DENENDİ VE GERİ ALINDI (2026-09-08). Görüntüde
+   işe yarıyordu (en zor karede Laplace varyansı ×3,4; halesiz), ama bedeli
+   ölçüldü — 1600×900, ortanca kare süresi:
+
+     süzgeç + herhangi bir animasyon .... ~295 ms   (≈3 fps)
+     süzgeçsiz .......................... 16,7 ms   (60 fps)
+
+   Chromium feConvolveMatrix'i her karede yeniden koşturuyor ve YALNIZ Ken
+   Burns değil, çapraz geçiş (opacity) de bunu tetikliyor; süzgeci iç katmana
+   alıp animasyonu dışa taşımak da kurtarmadı (304 ms). Yani süzgeç ancak
+   TAMAMEN durgun bir slaytta bedava — o da slayt olmaktan çıkardı.
+   Netliğin gerçek yolu daha büyük kaynak: 24 karenin 14'ü 1015–1600 px ve
+   1600 px'lik kutuda büyütülüyor. */
 @keyframes ve-slayt-kb{
-  from{ transform:scale(1.05); }
-  to{ transform:scale(1); }
+  from{ transform:scale(1); }
+  to{ transform:scale(1.06); }
 }
 /* Örtü TEK jetondan sürülür ve bugün SIFIR: yönlü gradyan, resmi panelin
    dibinden silmek içindi — P4'te panel zaten saydam, silinecek yer yok.

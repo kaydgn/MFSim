@@ -1476,7 +1476,11 @@ function veFillWelcomeChanges() {
 // Modüllerin arkasında karışık sırayla dönen kareler. Süsleme olduğu için
 // üç yerde SESSİZCE vazgeçer: kare listesi yoksa, kap yoksa, hareket kapalıysa
 // (sonuncuda tek kare durur — resim kalır, hareket kalkar).
-var VE_SLAYT_BEKLEME = 7000;                  // bir karenin ekranda durduğu süre
+// Bir karenin ekranda durduğu süre. 7000'di; kullanıcı "geçişler çok hızlı"
+// dedi (2026-09-08). Çapraz geçiş css'te (--dur-slayt-gecis) ve bu sayıdan
+// KISA olmak zorunda: eşit ya da uzun olsa kare tam oturmadan bir sonraki
+// başlar ve slayt sürekli iki resmin ortasında görünür.
+var VE_SLAYT_BEKLEME = 11000;
 var _veSlaytZaman = null;                     // tek zamanlayıcı — çoğalmasın
 
 // Kare kaynağı: gömülü data URI (tek dosya) → yoksa dosya yolu (modüler kopya).
