@@ -29,6 +29,7 @@ const ROOT = path.join(__dirname, '../..');
 const DIR = path.join(ROOT, 'assets/karsilama');
 const CSS = fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8');
 const BUILD = fs.readFileSync(path.join(ROOT, 'build.js'), 'utf8');
+const COMP = fs.readFileSync(path.join(ROOT, 'js/components.js'), 'utf8');
 const LISTE = require('../../js/karsilama-gorseller.js').VE_KARSILAMA_GORSELLER;
 
 // Kareler ÖZGÜN ölçülerinde duruyor (1015–1920 px). Küçültme denendi ve geri
@@ -202,6 +203,73 @@ describe('Zamanlayıcı — sızıntı ve gereksiz koşu yok', () => {
     veSyncModuleShell();                      // modül seçildi → durmalı
     expect(temizle).toHaveBeenCalled();
     temizle.mockRestore();
+  });
+});
+
+// ═══ 6) NETLİK VE TEMPO ════════════════════════════════════════════════════
+// Kullanıcı iki kez "resimler orijinal kalitesinde değil" dedi. Ölçüldü:
+// boru hattı KAYIPSIZ (24 karenin tamamı docs/gorseller ile bayt bayt aynı,
+// build.js yeniden kodlamıyor) — yumuşama iki yerden geliyor:
+//   (a) kaynak çözünürlüğü: 24 karenin 14'ü 1015–1600 px, kutu 1600 px+
+//   (b) CSS'in KENDİ eklediği büyütme — tek düzeltilebilir olan bu
+// Buradaki kapılar (b)'yi tutuyor. Bozulunca ekran yine açılır, resim yalnız
+// yumuşar; hiçbir uyarı çıkmaz.
+// Yorumları at: bu bölümdeki gerekçeler kuralların KENDİ değerlerini metin
+// olarak anıyor ("eskiden -3%'ti", "feConvolveMatrix denendi") ve çıplak bir
+// desen yorumu bildirim sanıp kapıyı sessizce kapatıyor.
+const yorumsuz = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '');
+const CSS_Y = yorumsuz(CSS);
+
+describe('CSS — kareyi gereksiz büyütmüyor', () => {
+  const KARE = yorumsuz(CSS.slice(CSS.indexOf('.ve-welcome-kare{'), CSS.indexOf('.ve-welcome-kare.is-on{')));
+
+  test('kare kutusundan BÜYÜK değil (inset negatif olamaz)', () => {
+    // inset:-3% "Ken Burns'ün payı" diye konmuştu ama gereksizdi: yakınlaşma
+    // merkeze göre ve ölçek her an >= 1, kenarda boşluk açılamıyor. Bedeli
+    // ölçüldü: %6 fazladan büyütme, netlikte (Laplace varyansı) %14,3 kayıp.
+    const m = KARE.match(/inset:\s*([^;]+);/);
+    expect(m).toBeTruthy();
+    expect(m[1].trim()).toBe('0');
+  });
+
+  test('Ken Burns 1\'den BAŞLAR — kare geldiği an en net hâlinde', () => {
+    // Ters yönde (1.05 -> 1) kare tam göründüğü anda en büyütülmüş, yani en
+    // yumuşak hâlindeydi; en net anına ancak kaybolurken ulaşıyordu.
+    const i = CSS_Y.indexOf('@keyframes ve-slayt-kb{');
+    expect(i).toBeGreaterThan(-1);
+    const kb = CSS_Y.slice(i, CSS_Y.indexOf('\n}', i));
+    const bas = kb.match(/from\{\s*transform:scale\(([\d.]+)\)/);
+    const bit = kb.match(/to\{\s*transform:scale\(([\d.]+)\)/);
+    expect(parseFloat(bas[1])).toBe(1);
+    expect(parseFloat(bit[1])).toBeGreaterThan(1);
+  });
+
+  test('kareye SVG süzgeci bağlanmamış — ölçülmüş bir REDDEDİŞ', () => {
+    // feConvolveMatrix ile keskinleştirme denendi: görüntüde işe yarıyordu
+    // (en zor karede Laplace varyansı x3,4, halesiz) ama Chromium süzgeci HER
+    // karede yeniden koşturuyor. Ortanca kare süresi 16,7 ms -> ~295 ms, yani
+    // 60 fps -> ~3 fps; yalnız Ken Burns değil çapraz geçiş de tetikliyor.
+    expect(KARE).not.toMatch(/filter:[^;]*url\(/);
+    expect(CSS_Y).not.toContain('feConvolveMatrix');
+  });
+});
+
+describe('Tempo — bekleme (js) ile geçiş (css) tutarlı', () => {
+  const bekleme = parseInt(COMP.match(/var VE_SLAYT_BEKLEME = (\d+);/)[1], 10);
+  const gecis = parseInt(CSS_Y.match(/--dur-slayt-gecis:\s*(\d+)ms/)[1], 10);
+  const kb = parseInt(CSS_Y.match(/--dur-slayt-kb:\s*(\d+)s/)[1], 10) * 1000;
+
+  test('geçiş beklemeden KISA — yoksa kare oturmadan bir sonraki başlar', () => {
+    // İkisi AYRI dosyada: biri değişip öteki unutulursa slayt sürekli iki
+    // resmin ortasında görünür. Bugün 11000 > 2600.
+    expect(gecis).toBeLessThan(bekleme);
+    expect(bekleme - gecis).toBeGreaterThanOrEqual(4000);   // kare gerçekten dursun
+  });
+
+  test('Ken Burns karenin ömründen UZUN — yakınlaşma bitip donmaz', () => {
+    // Kare ekranda bekleme + geçiş kadar kalıyor; animasyon `forwards` olduğu
+    // için daha kısa olsaydı son saniyeler donmuş bir yakın plan olurdu.
+    expect(kb).toBeGreaterThan(bekleme + gecis);
   });
 });
 
