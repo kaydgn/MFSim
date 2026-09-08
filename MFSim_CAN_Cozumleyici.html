@@ -2753,6 +2753,31 @@ body.ve-no-module #ve-ribbon{ display:none; }
 }
 .ve-welcome-more:hover,
 .ve-welcome-more:focus-visible{ color:var(--text-heading); }
+/* [hidden] display bildirimini EZEMEZ: satır flex, düğme inline-block olduğu
+   için ikisine de açık kural gerekiyor — yoksa "gizli" kayıtlar görünür kalır. */
+.ve-welcome-change[hidden],
+.ve-welcome-more[hidden]{ display:none; }
+/* Yön oku düğmenin ne yapacağını söyler; açıkken ters döner. */
+.ve-welcome-more::after{
+  content:'\25be';
+  margin-left:6px;
+  display:inline-block;
+  transition:transform var(--dur-base) var(--ease-out);
+}
+.ve-welcome-more[aria-expanded="true"]::after{ transform:rotate(180deg); }
+/* Açılan kayıtlar sırayla belirir — sıra, listenin uzadığını okutur. */
+.ve-welcome-panel.is-open .ve-welcome-change--extra{
+  animation:ve-welcome-change-in var(--dur-base) var(--ease-out) both;
+  animation-delay:calc(var(--i, 0) * 28ms);
+}
+@keyframes ve-welcome-change-in{
+  from{ opacity:0; transform:translateY(-4px); }
+  to{ opacity:1; transform:none; }
+}
+@media (prefers-reduced-motion: reduce){
+  .ve-welcome-panel.is-open .ve-welcome-change--extra{ animation:none; }
+  .ve-welcome-more::after{ transition:none; }
+}
 /* Güncellik satırı — gömülü künye YALNIZ elimizdeki kopyayı söyler; "yayın
    güncel mi" sorusunu yanıtlamaz (bkz. js/deploy-status.js). Bu yüzden yeşil
    nokta yalnız `ok` durumuna ait; çevrimdışı kopya nötr kalır. */
