@@ -827,7 +827,7 @@
       --dur-enter: 420ms;
       --dur-slayt-gecis: 1600ms;  /* çapraz geçiş — uzun, göz yormasın */
       --dur-slayt-kb: 13s;        /* Ken Burns: kare durduğu sürece çok yavaş yaklaşır */
-      --slayt-opaklik: 0.72;      /* örtünün altında kalan resim payı */
+      --slayt-opaklik: 1;         /* resim tam payla çiziliyor (kullanıcı kararı) */
       --slayt-bulanik: 0px;       /* bulanıklık KAPALI: kareyi siliyordu, okunurluğu örtü sağlıyor */
       --dur-step:   70ms;
       --dur-fly:   460ms;
@@ -2836,16 +2836,18 @@ body.ve-no-module #ve-ribbon{ display:none; }
   /* İki bileşen: YATAY olan resmi panelin dibinden siler (orada hiç görünmez),
      DİKEY olan üst ve alt kenarı yumuşatır — kadrajın kalabalık olduğu yerler
      genelde oralarda ve kutuların arkasında bir yığın istemiyoruz. */
+  /* Örtü %20'ye indi (kullanıcı kararı): resim tam payla, örtü yalnız panelin
+     dibinde ve kenarlarda — metnin oturduğu yerde biraz nefes bıraksın diye. */
   background:
     linear-gradient(180deg,
-      color-mix(in srgb, var(--bg-primary) 42%, transparent) 0%,
-      transparent 20%,
-      transparent 66%,
-      color-mix(in srgb, var(--bg-primary) 34%, transparent) 100%),
+      color-mix(in srgb, var(--bg-primary) 22%, transparent) 0%,
+      transparent 18%,
+      transparent 74%,
+      color-mix(in srgb, var(--bg-primary) 18%, transparent) 100%),
     linear-gradient(90deg,
-      var(--bg-primary) 0%,
-      color-mix(in srgb, var(--bg-primary) 58%, transparent) 26%,
-      color-mix(in srgb, var(--bg-primary) 40%, transparent) 100%);
+      color-mix(in srgb, var(--bg-primary) 88%, transparent) 0%,
+      color-mix(in srgb, var(--bg-primary) 30%, transparent) 22%,
+      color-mix(in srgb, var(--bg-primary) 20%, transparent) 100%);
 }
 /* İçerik slaytın ÜSTÜNDE: kutular opak, aralarındaki boşlukta resim görünür. */
 .ve-welcome-eyebrow,
