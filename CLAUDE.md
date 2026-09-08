@@ -496,6 +496,20 @@ git rev-parse --short origin/main                           # build çıktısın
 sonra gerçek tarayıcıda aç ve **0 ağ isteği / 0 konsol hatası** olduğunu ölç,
 ardından dosyayı SendUserFile ile bırak.
 
+**DOSYA SIKIŞTIRILARAK GÖNDERİLİR — 30 MiB SINIRI AŞILDI (2026-09-08).**
+Karşılama slaytının 24 görseli (`assets/karsilama/`, 2,3 MB) data URI olarak
+gömülünce tek dosya **30,8 MiB** oldu ve SendUserFile'ın **30 MiB** sınırını
+aştı: gönderim REDDEDİLDİ. Ölçüldü — `gzip -9` ile **18,9 MiB**, rahat geçiyor:
+
+```bash
+gzip -9 -c MFSim_Code.html > MFSim_Code.html.gz   # gönderilen bu
+```
+Kullanıcı sağ tık → çıkart ile açıyor. Küçültme önerildi (görselleri 1200 px /
+kalite 75 webp'e indirmek 2,3 MB → ~700 KB yapardı); kullanıcı REDDETTİ:
+*"Yok, dosya boyutu büyüyecek zaten. Zipleyip atmaya devam."* Yani sıkıştırma
+geçici bir çare değil, **kalıcı teslim biçimi** — dosya büyümeye devam edecek.
+Geçici `.gz` gönderimden sonra silinir (çalışma ağacı temiz kalsın).
+
 **PULL BİR NEZAKET DEĞİL KAPIDIR — ÖLÇÜLDÜ.** Oturum konteyneri depoyu bir
 ANLIK GÖRÜNTÜDEN klonluyor: bu oturum `d99ae2d`de (PR #848) açıldı, `main` ise
 `f820711`deydi (PR #851) — üç PR geride. `MFSim_Code.html` git'e dahil olmadığı
