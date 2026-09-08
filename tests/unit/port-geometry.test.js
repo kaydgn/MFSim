@@ -359,3 +359,74 @@ describe('veSyncPortDom — port DOM\'u telin ucuyla aynı karede tazelenir', ()
     expect(yazma).toBe(0);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KAYIŞ TELİNİN GİDİŞ OKU TELİN TERSİNE BAKAR (2026-09-08)
+//
+// Kayış telleri çekirdeğin LİSTE sırasında kurulu (from → to, Gates tablosuyla
+// aynı) ve o sıra kayışın gidişinin TERSİ (fead-model.js → veFeadNaturalSense;
+// kapı fead-spin.test.js). Ok "kayış nereye akıyor" sorusunun cevabı: from → to
+// çizilseydi kart CW dönerken kanvas CCW gösterirdi — kullanıcının gördüğü
+// çelişki tam buydu. Sıradan (kayış olmayan) tellerde ok zaten çizilmiyor.
+describe('kayış telinin gidiş oku — telin TERSİNE', () => {
+  const uc = (p) => {
+    const n = p.getAttribute('d').match(/-?[\d.]+/g).map(Number);
+    return { kuyruk1: [n[0], n[1]], tip: [n[2], n[3]], kuyruk2: [n[4], n[5]] };
+  };
+  const kutu = (n) => {
+    const el = document.createElement('div');
+    el.id = n.id;
+    el.innerHTML = '<div class="ve-node-box">'
+      + '<div class="ve-node-port input" data-port="input" style="' + vePortStyleAttr(n, 'input') + '"></div>'
+      + '<div class="ve-node-port output" data-port="output" style="' + vePortStyleAttr(n, 'output') + '"></div>'
+      + '</div>';
+    document.body.appendChild(el);
+    return el;
+  };
+  let eskiPulley;
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="ve-canvas"></div><svg id="ve-connections-layer"></svg>';
+    global.isConnecting = false;
+    global.veUpdateBoundary = () => {};
+    global.veMinimapUpdate = () => {};
+    if (!componentDefs['fead-crank'])
+      componentDefs['fead-crank'] = { name: 'Krank Kasnağı', inputs: 1, outputs: 1, isFeadPulley: true };
+    if (!componentDefs['fead-alternator'])
+      componentDefs['fead-alternator'] = { name: 'Alternatör', inputs: 1, outputs: 1, isFeadPulley: true };
+    eskiPulley = global._feadIsPulley;
+    global._feadIsPulley = (n) => !!(n && componentDefs[n.type] && componentDefs[n.type].isFeadPulley);
+    global.nodes = []; global.connections = [];
+  });
+  afterEach(() => { global._feadIsPulley = eskiPulley; });
+
+  test('ok from → to yönünün TERSİNE bakar; ters kablolamada döner', () => {
+    const a = node({ id: 'a', type: 'fead-crank', x: 0, y: 0 });
+    const b = node({ id: 'b', type: 'fead-alternator', x: 400, y: 0 });
+    global.nodes = [a, b];
+    kutu(a); kutu(b);
+    global.connections = [{ id: 'c', from: 'a', to: 'b', fromPort: 'output', toPort: 'input' }];
+    updateAllConnections();
+    const ok = document.querySelector('.ve-conn-dir');
+    expect(ok).not.toBeNull();
+    const p = uc(ok);
+    const orta = (p.kuyruk1[0] + p.kuyruk2[0]) / 2;
+    // a solda, b sağda; tel a → b. Kayış b → a akar: ok SOLA bakar.
+    expect(p.tip[0]).toBeLessThan(orta);
+
+    // Kablolar çevrilince (Dönüş Yönü düğümü) ok onunla döner.
+    global.connections = [{ id: 'c', from: 'b', to: 'a', fromPort: 'output', toPort: 'input' }];
+    updateAllConnections();
+    const q = uc(document.querySelector('.ve-conn-dir'));
+    expect(q.tip[0]).toBeGreaterThan((q.kuyruk1[0] + q.kuyruk2[0]) / 2);
+  });
+
+  test('kayış olmayan telde ok yok', () => {
+    const a = node({ id: 'a', type: 'gearbox', x: 0, y: 0 });
+    const b = node({ id: 'b', type: 'gearbox', x: 400, y: 0 });
+    global.nodes = [a, b];
+    kutu(a); kutu(b);
+    global.connections = [{ id: 'c', from: 'a', to: 'b', fromPort: 'output', toPort: 'input' }];
+    updateAllConnections();
+    expect(document.querySelector('.ve-conn-dir')).toBeNull();
+  });
+});

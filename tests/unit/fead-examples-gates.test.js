@@ -289,9 +289,9 @@ describe('kayıt defteri ve sihirbaz', () => {
     const path = require('path');
     const pdf = fs.readdirSync(path.join(__dirname, '../../docs/gates-reports/pdf'))
       .filter((f) => f.endsWith('.pdf'));
-    expect(pdf).toHaveLength(10);
+    // On tam/alıntı rapor + AG00976 (2026-09-08'de kullanıcı yükledi; 5 sayfalık alıntı).
+    expect(pdf).toHaveLength(11);
     const gates = veFeadExampleKeys().filter((k) => /GATES/.test(k));
-    // On arşiv raporu + AG00976 (PDF'i yok, veri olarak fixture'da).
     expect(gates).toHaveLength(11);
   });
 

@@ -42,9 +42,9 @@ const sayfa = (file, baslik) => {
 };
 
 describe('Gates arşivi — okuyucu', () => {
-  test('on raporun onu da okunuyor ve metin üretiyor', () => {
+  test('on bir raporun on biri de okunuyor ve metin üretiyor', () => {
     const list = pdfs();
-    expect(list.length).toBe(10);
+    expect(list.length).toBe(11);                  // 10 + AG00976 (2026-09-08)
     list.forEach((f) => {
       const pages = gatesPdfPages(path.join(DIR, f));
       expect(pages.length).toBeGreaterThan(0);
@@ -189,7 +189,11 @@ describe('Gates arşivi — belge bütünlüğü', () => {
       'AG00894_8PK1738HD_E9843-23Nm_2023-09-18.pdf',
       'AG00902_8PK1275HD_E9843-22Nm_2023-12-08.pdf',
       'AG00902_8PK1300HD_E9843-22Nm_2023-11-30.pdf',
+      'AG00976_8PK1715HD_Ten-250-110_2025-06-05.pdf',
     ]);
+    // AG00976: on iki sayfanın 1 · 2 · 3 · 6 · 8'i (ölçüldü) — özet, geometri
+    // ×2, kayma/gerginlik 2/2, kaburga yorulması 1/2.
+    expect(eksik['AG00976_8PK1715HD_Ten-250-110_2025-06-05.pdf']).toEqual([4, 5, 7, 9, 10, 11, 12]);
   });
 
   test('tam raporlar tepe yük tablosunu taşıyor (kalibre edilmemiş tablonun kaynağı)', () => {
@@ -210,7 +214,8 @@ describe('Gates arşivi — belge bütünlüğü', () => {
 // bakıyor; BURASI kaynağa bakıyor.
 describe('gergi künye kütüphanesi — arşive karşı', () => {
   const TL = require('../../js/fead-tensioners.js');
-  // Kütüphane anahtarı → arşiv dosyası. AG00976'nın dördü arşivde YOK.
+  // Kütüphane anahtarı → arşiv dosyası. AG00976'nın üçü arşivde YOK; 1715
+  // revizyonunun PDF'i var (2026-09-08) ama künye kapısı yalnız on rapora bakıyor.
   const ARSIV = {
     'AG00879':      STATIK['AG00879'],
     'AG00894':      STATIK['AG00894'],
@@ -325,7 +330,9 @@ describe('Gates arşivi — dönüş yönü konvansiyonu', () => {
     'AG00879': 'AG00879', 'AG00894': 'AG00894',
     'AG00902-1300': 'AG00902-1300', 'AG00902-1275': 'AG00902-1275',
   };
-  // Ayakkabı bağı: kayış sırasındaki merkezlerin dolanma yönü. +1 = CCW.
+  // Ayakkabı bağı: TABLO sırasındaki merkezlerin dolanma yönü. +1 = CCW.
+  // Tablo sırası kayışın gidişinin TERSİ (fead-spin.test.js → "LİSTE SIRASI
+  // KAYIŞIN GİDİŞİNİN TERSİ"): dolanım CCW ise kayış CW akar, krank CW döner.
   const loopSense = (c) => {
     let s = 0;
     for (let i = 0; i < c.length; i++) {
@@ -335,7 +342,7 @@ describe('Gates arşivi — dönüş yönü konvansiyonu', () => {
     return s >= 0 ? +1 : -1;
   };
 
-  test('kayış yolu ON RAPORUN ONUNDA DA çizim düzleminde CCW', () => {
+  test('TABLO SIRASI on raporun onunda da CCW dolanıyor — kayış CW, krank CW', () => {
     Object.keys(KEY).forEach((k) => {
       const d = V.AG_MISC[k];
       expect(loopSense(d.order.map((p) => d.xy[p]))).toBe(+1);

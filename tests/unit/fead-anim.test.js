@@ -168,7 +168,12 @@ describe('Faz — dişler kayış boyunca yürür', () => {
     expect(b).toBe(a);
   });
 
-  test('faz artınca dişler kayışın GİDİŞ yönünde ilerler (geriye değil)', () => {
+  // YÜRÜYÜŞ YÖNÜ ≠ KAYIŞIN GİDİŞİ. `_feadBeltWalk` çekirdeğin LİSTE sırasını
+  // izler ve o sıra kayışın gidişinin TERSİDİR (fead-model.js →
+  // veFeadNaturalSense). Bu test fonksiyonun kendi sözleşmesini ölçer: faz
+  // artınca dişler yürüyüş yönünde ilerler. Kayışın GERÇEK gidişi için
+  // animatör fazı AZALTIR — o kapı aşağıda ("faz kayışın GERÇEK gidişinde").
+  test('faz artınca dişler YÜRÜYÜŞ yönünde ilerler (liste sırası)', () => {
     const { build } = kurBMC();
     const geom = geomOf(build), walk = fead._feadBeltWalk(geom), T = xformOf(build);
     const step = fead._feadToothStep(walk.l, 7 / T.s);
@@ -328,6 +333,18 @@ describe('Animatör — durum DOM\'da değil, döngü kendini durdurur', () => {
     return document.querySelector('svg[data-fead-anim]');
   }
 
+  // ANİMATÖRÜN DURUMU MODÜLDE, TESTLER ARASINDA SIZAR: faz düğüm kimliğinde
+  // (`_feadAnimPhase`, örnek paketi her seferinde AYNI kimliği veriyor) ve saat
+  // (`_feadAnimLast`) modül değişkeninde. Ölçüldü: sıfırlanmadan koşan iki
+  // test aynı fazı bir öncekinden devralıyor ve "ilerleme" kapıları rastgele
+  // fazlardan ölçüyordu. Faz haritası `_feadForgetResults` ile, saat ise
+  // kartsız bir tick ile (kart yok → saat 0) sıfırlanır.
+  beforeEach(() => {
+    fead._feadForgetResults();
+    document.body.innerHTML = '<div id="ve-canvas"></div>';
+    fead.veFeadAnimTick(0);
+  });
+
   test('kart yokken tick hiçbir şey yapmaz ve döngü biter', () => {
     document.body.innerHTML = '<div id="ve-canvas"></div>';
     expect(fead.veFeadAnimTick(1000)).toBe(0);
@@ -350,26 +367,95 @@ describe('Animatör — durum DOM\'da değil, döngü kendini durdurur', () => {
 
   test('faz DÜĞÜM KİMLİĞİNDE durur: kart yeniden kurulunca kayış zıplamaz', () => {
     const { layout } = kurBMC();
-    kartKur(layout);
-    fead.veFeadAnimTick(0);
-    fead.veFeadAnimTick(400);
-    const oncesi = document.querySelector('[data-ve="rib"]').getAttribute('d');
+    let el = kartKur(layout);
+    // İLK KARE 0 DEĞİL 1: `_feadAnimLast > 0` saati "kurulmuş" sayıyor, yani
+    // 0 damgalı ilk kare saati kurmuyor ve ikinci karede dt = 0 kalıyordu. Eski
+    // sürüm bu yüzden fazı HİÇ ilerletmeden karşılaştırıyordu (ölçüldü: her
+    // iki rib de faz 0'daydı) — kapı boştu.
+    fead.veFeadAnimTick(1);
+    fead.veFeadAnimTick(401);               // dt → 0,1 s (kırpma), faz ilerledi
+    const oncesi = el.querySelector('[data-ve="rib"]').getAttribute('d');
+    fead.veFeadAnimApply(el, 0);
+    expect(oncesi).not.toBe(el.querySelector('[data-ve="rib"]').getAttribute('d'));
+
     kartKur(layout);                        // saveState → innerHTML yeniden kuruldu
-    const el = document.querySelector('svg[data-fead-anim]');
+    el = document.querySelector('svg[data-fead-anim]');
     fead.veFeadAnimApply(el, 0);            // yeniden kurulan kart faz 0'da
-    fead.veFeadAnimTick(400.0001);          // dt≈0 → kayıtlı faz geri gelmeli
+    fead.veFeadAnimTick(401);               // dt = 0 → kayıtlı faz geri gelmeli
     expect(el.querySelector('[data-ve="rib"]').getAttribute('d')).toBe(oncesi);
+  });
+
+  // FAZ KAYIŞIN GERÇEK GİDİŞİNDE İLERLER — yürüyüşün TERSİNE. Yürüyüş (liste
+  // sırası) kayışın gidişinin tersi olduğu için (fead-model.js →
+  // veFeadNaturalSense) animatör fazı AZALTIR. 2026-09-08'e kadar artırıyordu:
+  // kayış kartta CCW akıyor, kollar CCW dönüyordu; kullanıcı "krank saat
+  // yönünde dönmüyor" diye bildirdi. Ölçülen şey işaretin kendisi: kırpılmış
+  // bir karede faz tam −mmS·MAX_DT olmalı, +mmS·MAX_DT DEĞİL.
+  test('faz kayışın GERÇEK gidişinde: yürüyüşe göre AZALIR', () => {
+    const { layout } = kurBMC();
+    const el = kartKur(layout);
+    fead.veFeadAnimTick(1);
+    fead.veFeadAnimTick(101);               // dt = 0,1 s
+    const spec = JSON.parse(el.getAttribute('data-fead-anim'));
+    const a = el.querySelector('[data-ve="rib"]').getAttribute('d');
+    fead.veFeadAnimApply(el, -spec.mmS * 0.1);
+    expect(el.querySelector('[data-ve="rib"]').getAttribute('d')).toBe(a);
+    fead.veFeadAnimApply(el, +spec.mmS * 0.1);
+    expect(el.querySelector('[data-ve="rib"]').getAttribute('d')).not.toBe(a);
   });
 
   test('uzun duraklamadan sonra kayış FIRLAMAZ (dt sınırlı)', () => {
     const { layout } = kurBMC();
     const el = kartKur(layout);
-    fead.veFeadAnimTick(0);
-    fead.veFeadAnimTick(60000);             // sekme bir dakika gizli kaldı
+    fead.veFeadAnimTick(1);
+    fead.veFeadAnimTick(60001);             // sekme bir dakika gizli kaldı
     const spec = JSON.parse(el.getAttribute('data-fead-anim'));
     const a = el.querySelector('[data-ve="rib"]').getAttribute('d');
-    // En fazla VE_FEAD_ANIM_MAX_DT kadar ilerlemiş olmalı
-    fead.veFeadAnimApply(el, spec.mmS * 0.1);
+    // En fazla VE_FEAD_ANIM_MAX_DT kadar ilerlemiş olmalı — gidiş yönünde
+    fead.veFeadAnimApply(el, -spec.mmS * 0.1);
     expect(el.querySelector('[data-ve="rib"]').getAttribute('d')).toBe(a);
+  });
+
+  // YÜKTEKİ ADIM ÇEVREYİ TAM BÖLMELİ. Yük üç sayıyı birbirinden bağımsız
+  // yuvarlıyor (parça boyları · loop · step, dört basamak); ölçüldü (BMC):
+  // 174 yuvarlanmış adım, yuvarlanmış parçaların toplamından 0,0023 mm uzun.
+  // Faz her adımda bir kez o pencereden geçiyor ve diş sayısı 174 → 173
+  // düşüyordu — yalnız fazın azaldığı yönde, çevrenin hemen altında yakalandı.
+  // `_feadAnimSpec` adımı parça toplamına yeniden oturtuyor; kapı pencerenin
+  // İÇİNDEKİ fazlarda sayıyor.
+  test('yükten okunan adım çevreyi TAM böler — diş sayısı pencerede de sabit', () => {
+    const { layout } = kurBMC();
+    const el = kartKur(layout);
+    const spec = JSON.parse(el.getAttribute('data-fead-anim'));
+    const say = (ph) => {
+      fead.veFeadAnimApply(el, ph);
+      return (el.querySelector('[data-ve="rib"]').getAttribute('d').match(/M/g) || []).length;
+    };
+    const n0 = say(0);
+    expect(n0).toBeGreaterThan(100);
+    [1e-6, 1e-4, 1e-3, 2e-3, 3e-3, 0.5, spec.step / 2, spec.step - 1e-3]
+      .forEach((r) => {
+        expect(say(spec.loop - r)).toBe(n0);
+        expect(say(-r)).toBe(n0);
+      });
+  });
+
+  // KART KAYIŞIN GERÇEK DÖNÜŞÜNÜ KÜNYESİNDE TAŞIR. `sense` yürüyüşün el yönü
+  // (kaburga normalleri ondan), `spin` kayışın gerçek dönüşü = modelin
+  // `build.spin`'i. İkisi ters işaretli — liste gidişin tersi.
+  test('yükteki spin = build.spin = −sense (BMC + AG00976)', () => {
+    ['BMC_FEAD_2026', 'AG00976_GATES_2025'].forEach((key) => {
+      const pack = veFeadExampleNodes(key);
+      pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+      global.nodes = pack.nodes; global.connections = pack.connections;
+      const build = veFeadBuildSystem(pack.nodes, pack.connections);
+      const layout = pack.nodes.find((n) => n.type === 'fead-layout');
+      const el = kartKur(layout);
+      const spec = JSON.parse(el.getAttribute('data-fead-anim'));
+      expect([1, -1]).toContain(spec.sense);
+      expect(spec.spin).toBe(-spec.sense);
+      expect(spec.spin).toBe(build.spin);
+      expect(build.spin).toBe(-1);                    // krank saat yönünde
+    });
   });
 });

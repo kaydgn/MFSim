@@ -518,14 +518,16 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
       });
       await page.waitForTimeout(150);
       const rz = page.locator('#' + spinId + ' .ve-fead-badge');
-      // BEKLENEN METİN ETİKET ÜRETİCİSİNDEN. Sabit yazılsaydı çizim düzlemi
-      // değişince (2026-09-07: ön görünüş, krank CW) kapı, ölçtüğü ilişkiyi
-      // değil bir düzlem tercihini savunurdu. Örnek VERİ düzleminde +1 kurulu;
-      // rozet tıklanınca sıra ters yürüyor, yani veri yönü −1 oluyor.
-      const et = await page.evaluate(() => ({
-        bas: veFeadSpinLabel(1).kisa, tersi: veFeadSpinLabel(-1).kisa,
-        basSense: veFeadSpinLabel(1).sense, tersSense: veFeadSpinLabel(-1).sense,
-      }));
+      // BEKLENEN YÖN CANLI MODELDEN, METİN ETİKET ÜRETİCİSİNDEN. Sabit
+      // yazılsaydı kapı, ölçtüğü ilişkiyi değil bir yön tercihini savunurdu.
+      // Örnek Gates tablo sırasında kurulu → kayış CW, krank CW (spin −1;
+      // fead-spin.test.js). Rozet tıklanınca sıra ters yürüyor → +1.
+      const et = await page.evaluate(() => {
+        const s = veFeadCurrentSpin();
+        return { spin: s, bas: veFeadSpinLabel(s).kisa, tersi: veFeadSpinLabel(-s).kisa,
+                 basSense: veFeadSpinLabel(s).sense, tersSense: veFeadSpinLabel(-s).sense };
+      });
+      expect(et.spin).toBe(-1);                       // krank saat yönünde
       expect(et.bas).not.toBe(et.tersi);
       expect(et.basSense).toBe(-et.tersSense);
       await expect(rz).toHaveText(et.bas);
@@ -545,12 +547,13 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
         // Kartın KENDİ kinematik künyesi. Kasnak dönüş okları animasyon
         // açıkken çizilmiyor (yerlerine kol/`spoke` geliyor) ve o yollar her
         // karede değiştiği için kapı olamaz; `data-fead-anim` ise kartın
-        // çözümü: `sense` çevrimin yönü, `loop` kayış çevresi.
+        // çözümü: `spin` kayışın gerçek dönüşü (rozetle aynı işaret), `sense`
+        // yürüyüşün el yönü (onun tersi), `loop` kayış çevresi.
         anim: (function () {
           const svg = document.querySelector('svg[data-fead-node]');
           const a = svg && svg.getAttribute('data-fead-anim');
           if (!a) return null;
-          try { const j = JSON.parse(a); return { sense: j.sense, loop: j.loop }; }
+          try { const j = JSON.parse(a); return { spin: j.spin, sense: j.sense, loop: j.loop }; }
           catch (e) { return null; }
         })(),
         // Geometri: yön DEĞİŞTİRMEMELİ
@@ -577,10 +580,13 @@ test.describe('FEAD kanvas = kayış düzlemi', () => {
       expect(sonra.teller).not.toBe(once.teller);
       // GİDİŞ OKLARI onunla döndü — bayrak yolunda bu ok YALAN söylerdi
       expect(sonra.oklar).not.toBe(once.oklar);
-      // KART tazelendi ve çevrimin yönü çevrildi
+      // KART tazelendi ve çevrimin yönü çevrildi — kartın künyesi rozetle
+      // AYNI işareti taşıyor (spin), yürüyüş el yönü onun tersi (sense).
       expect(once.anim).not.toBeNull();
-      expect(once.anim.sense).toBe(et.basSense);
-      expect(sonra.anim.sense).toBe(et.tersSense);
+      expect(once.anim.spin).toBe(et.basSense);
+      expect(once.anim.sense).toBe(-et.basSense);
+      expect(sonra.anim.spin).toBe(et.tersSense);
+      expect(sonra.anim.sense).toBe(-et.tersSense);
       // …ama GEOMETRİ BİREBİR aynı (yönden bağımsız) — kayış çevresi de,
       // durum şeridindeki L_eff de kılı kıpırdamıyor.
       expect(sonra.anim.loop).toBeCloseTo(once.anim.loop, 3);

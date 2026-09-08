@@ -60,7 +60,7 @@
   const NL = String.fromCharCode(10);
 
   const AG00686 = {
- "note": "Gates AG00686, BMC 6 sil., 8PK1475HD. Kayis gidis sirasi: CRK->IDR->A_C->TEN->CRK.",
+ "note": "Gates AG00686, BMC 6 sil., 8PK1475HD. Tablo sirasi CRK->IDR->A_C->TEN (kayisin gidisinin TERSI; bkz. fead-spin.test.js).",
  "pulleys": [
   {
    "name": "CRK",
@@ -298,7 +298,9 @@
    *   pitch 77.20 (=OD/2+hr) / eff 79.60 (=OD/2+hr+hb), hb=1.2 hr=1.1  */
   const AG00976_OD = { FAN: 162.00, A_C: 152.00, ALT: 57.00, IDR1: 75, IDR2: 75, TEN: 75 };
   const AG00976_CONTACT = { FAN:'grooved', IDR1:'back', A_C:'grooved', IDR2:'back', ALT:'grooved', TEN:'back' };
-  const AG00976_ORDER = ['FAN','IDR1','A_C','IDR2','ALT','TEN'];   // kayış gidiş yönü
+  // Gates TABLO sırası — kayışın gidişinin TERSİ (raporun kendi okları
+  // `FAN -> ALT · ALT -> A_C · A_C -> FAN`; kapı fead-spin.test.js).
+  const AG00976_ORDER = ['FAN','IDR1','A_C','IDR2','ALT','TEN'];
   const AG00976 = {
  "1668@-240/115": {
   "belt": 1667,

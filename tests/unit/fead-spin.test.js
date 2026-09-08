@@ -15,19 +15,39 @@
  *   ÖLÇÜLDÜ: kasnak başına sarım farkı 2,5e−14°, L_eff farkı 0,000000000 mm.
  *
  *   GERİLME ZİNCİRİ BAĞIMSIZ DEĞİL — ve bu FİZİK. `spanTensions` ankrajı
- *   gergiye yazıp kayış gidiş yönünde yürüyor (sürücüde +P/v, aksesuarlarda
+ *   gergiye yazıp LİSTE sırasında yürüyor (sürücüde +P/v, aksesuarlarda
  *   −P/v). Ters yönde gergi krankın GERGİN tarafına düşüyor ve spanlar
  *   ankrajın altına iniyor. Otomatik gergi tanım gereği GEVŞEK tarafa konur —
  *   14 Gates sisteminin 14'ünde de öyle.
+ *
+ * ── 2026-09-08: LİSTE SIRASI KAYIŞIN GİDİŞİNİN TERSİDİR ───────────────────
+ *
+ * Kullanıcı bildirimi (dört kez): *"krank kasnağı saat yönünde dönmüyor"*.
+ * Haklıydı ve hata bir fizik varsayımındaydı: "sürücünün çıkışı gergin"
+ * sanılıyordu. Sürücü kayışı kendine ÇEKER — gergin taraf sürücüye GİREN
+ * açıklıktır, çıkan gevşektir (bisikletin dişlisi üst zinciri çeker, alt
+ * zincir gevşektir). Çekirdek listeyi yürürken sürücüde `+P/v` yazdığına
+ * göre liste = gidişin TERSİ; Gates de tablosunu böyle yazıyor ve AG00976
+ * raporunun kendi okları (`A_C -> FAN · ALT -> A_C · FAN -> ALT`, üçü de
+ * tablonun tersi) ile gerilme satırı (tablo sırasında FAN 1585 → A_C 1177 →
+ * ALT 546: aksesuarda DÜŞÜYOR) bunu doğruluyor. Liste CCW dolanıyor → kayış
+ * CW akıyor → krank CW. `veFeadNaturalSense` işareti çevirir; konumlara ve
+ * 2095 doğrulanmış sayıya dokunulmadı. Kapılar aşağıda, "LİSTE SIRASI
+ * KAYIŞIN GİDİŞİNİN TERSİ" öbeğinde — ikisi raporun PDF'inden okuyor.
  *
  * Bu dosyanın kilitlediği üçüncü şey, panelin bir dönem verdiği YANLIŞ
  * TEŞHİS: "tasarım gerginliğini yükseltin". O alan 2026-08-25'te girdi
  * olmaktan çıktı (yay dengesinden türüyor), yani çare basılacak düğmesi
  * olmayan bir denetimi gösteriyordu.
  */
+const path = require('path');
 const fead = require('../../js/cp-fead.js');
 const M = require('../../js/fead-model.js');
 const F = require('../../js/fead-core.js');
+const V = require('../fixtures/fead-validation.js');
+const { gatesPdfPages, gatesPdfText } = require('../helpers/gates-pdf.js');
+const AG00976_PDF = path.join(__dirname,
+  '../../docs/gates-reports/pdf/AG00976_8PK1715HD_Ten-250-110_2025-06-05.pdf');
 
 const stubs = stubGlobals();
 document.body.innerHTML = '<div id="ve-canvas"></div>';
@@ -71,29 +91,32 @@ const dutyRows = (ns) => (ns.find((n) => n.type === 'fead-solver').data.duty) ||
 const coz = (s) => M.veFeadAnalyze(s.b, { rows: dutyRows(s.ns) });
 const kisa = (nm) => String(nm).replace(/ .*/, '');
 
-// ÇİZİM AYNALANMAZ (2026-09-07): ekranda görülen yön, verinin dolanım
-// işaretinin KENDİSİ. Arada çeviri yok, bayrak yok — `cizimYonu` kimliktir ve
-// yalnız okunabilirlik için duruyor.
-const cizimYonu = (veriYonu) => veriYonu;
-const cizimGlifi = (veriYonu) => (cizimYonu(veriYonu) > 0 ? '\u21ba CCW' : '\u21bb CW');
+// ÇİZİM AYNALANMAZ (2026-09-07): ekranda görülen yön, modelin `spin`'inin
+// KENDİSİ. Ve `spin` kayışın GERÇEK dönüşüdür (2026-09-08): Gates tablo
+// sırasında kurulu bütün örneklerde liste CCW dolanır, kayış CW akar, krank
+// CW döner. `ORNEK_SPIN` bu sabittir; glif ondan basılır.
+const ORNEK_SPIN = -1;
+const glif = (spin) => (spin > 0 ? '\u21ba CCW' : '\u21bb CW');
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('yön NEREDEN geliyor', () => {
-  test('rota sırasının dolanım işaretinden — çekirdeğin loopSense ölçütü', () => {
+  test('rota sırasının dolanım işaretinden — çekirdeğin loopSense ölçütü, TERS işaretle', () => {
     const s = kur('AG00976_GATES_2025', false);
     const kasnak = s.ns.filter((n) => M._feadIsPulley(n));
-    expect(M.veFeadNaturalSense(s.b.order)).toBe(1);        // +1 = CCW
-    // İkinci kopya YOK: köprü çekirdeğin kendi fonksiyonunu çağırıyor.
+    expect(M.veFeadNaturalSense(s.b.order)).toBe(ORNEK_SPIN);   // −1 = CW
+    // İkinci kopya YOK: köprü çekirdeğin kendi fonksiyonunu çağırıyor. Çekirdeğin
+    // `sense`i LİSTENİN el yönü (+1, CCW); kayışın dönüşü onun tersi.
     const g = F.geometryAt(s.b.sys, s.b.relDeg || 0);
-    expect(g.sense).toBe(M.veFeadNaturalSense(s.b.order));
+    expect(g.sense).toBe(1);
+    expect(M.veFeadNaturalSense(s.b.order)).toBe(-g.sense);
     expect(kasnak.length).toBe(6);
   });
 
   test('ters kablolama işareti ÇEVİRİYOR', () => {
-    expect(M.veFeadNaturalSense(kur('AG00976_GATES_2025', false).b.order)).toBe(1);
-    expect(M.veFeadNaturalSense(kur('AG00976_GATES_2025', true).b.order)).toBe(-1);
-    expect(M.veFeadNaturalSense(kur('BMC_FEAD_2026', false).b.order)).toBe(1);
-    expect(M.veFeadNaturalSense(kur('BMC_FEAD_2026', true).b.order)).toBe(-1);
+    expect(M.veFeadNaturalSense(kur('AG00976_GATES_2025', false).b.order)).toBe(ORNEK_SPIN);
+    expect(M.veFeadNaturalSense(kur('AG00976_GATES_2025', true).b.order)).toBe(-ORNEK_SPIN);
+    expect(M.veFeadNaturalSense(kur('BMC_FEAD_2026', false).b.order)).toBe(ORNEK_SPIN);
+    expect(M.veFeadNaturalSense(kur('BMC_FEAD_2026', true).b.order)).toBe(-ORNEK_SPIN);
   });
 
   test('koordinatı eksik modelde yön 0 — uydurulmaz', () => {
@@ -122,22 +145,22 @@ describe('yön AVARA MERKEZİNDEN okunur', () => {
   test('AG00976 çözülüyor ve yön okunuyor', () => {
     const z = kanvas('AG00976_GATES_2025');
     expect(z.b.ok).toBe(true);
-    expect(M.veFeadNaturalSense(z.b.order)).toBe(1);
-    // Çekirdeğin ÇÖZDÜĞÜ yönle aynı olmak zorunda: rozet bir hüküm taşıyor,
-    // geometriden bağımsız bir ikinci yön kaynağı olamaz.
-    expect(F.geometryAt(z.b.sys, z.b.relDeg).sense).toBe(1);
+    expect(M.veFeadNaturalSense(z.b.order)).toBe(ORNEK_SPIN);
+    // Çekirdeğin ÇÖZDÜĞÜ el yönüyle bağlı olmak zorunda (ters işaret): rozet
+    // bir hüküm taşıyor, geometriden bağımsız bir ikinci yön kaynağı olamaz.
+    expect(F.geometryAt(z.b.sys, z.b.relDeg).sense).toBe(-ORNEK_SPIN);
   });
 
   test('build.spin çözümle tutarlı', () => {
     const z = kanvas('AG00976_GATES_2025');
-    expect(z.b.spin).toBe(1);
+    expect(z.b.spin).toBe(ORNEK_SPIN);
   });
 
   test('BMC de çözülüyor ve yön okunuyor', () => {
     const z = kanvas('BMC_FEAD_2026');
     expect(z.b.ok).toBe(true);
-    expect(z.b.spin).toBe(1);
-    expect(F.geometryAt(z.b.sys, z.b.relDeg).sense).toBe(1);
+    expect(z.b.spin).toBe(ORNEK_SPIN);
+    expect(F.geometryAt(z.b.sys, z.b.relDeg).sense).toBe(-ORNEK_SPIN);
   });
 
   test('okunan merkez, çekirdeğin ÇALIŞMA merkeziyle BİREBİR', () => {
@@ -172,13 +195,14 @@ describe('yön AVARA MERKEZİNDEN okunur', () => {
     const p = M.veFeadTensionerPivot(ns[2].data);
     expect(p[0]).toBeCloseTo(50, 9);
     expect(p[1]).toBeCloseTo(-10, 9);                           // 20 mm aşağı
-    expect(M.veFeadNaturalSense(ns)).toBe(1);                   // merkezle CCW
-    expect(F.loopSense([[0, 0], [100, 0], [50, -10]])).toBe(-1); // montajla CW
+    expect(F.loopSense([[0, 0], [100, 0], [50, 10]])).toBe(1);   // merkezle liste CCW
+    expect(M.veFeadNaturalSense(ns)).toBe(-1);                  // → kayış CW
+    expect(F.loopSense([[0, 0], [100, 0], [50, -10]])).toBe(-1); // montajla liste CW → +1 çıkardı
   });
 
   test('merkez YOKSA yön uydurulmaz (0)', () => {
     const z = kanvas('AG00976_GATES_2025');
-    expect(M.veFeadNaturalSense(z.b.order)).toBe(1);
+    expect(M.veFeadNaturalSense(z.b.order)).toBe(ORNEK_SPIN);
     delete z.ten.data.cenX;
     expect(M.veFeadTensionerCenter(z.ten.data)).toBe(null);
     expect(M.veFeadNaturalSense(z.b.order)).toBe(0);
@@ -358,12 +382,12 @@ describe('rozet ve panel', () => {
     // dizi DEĞİŞMİYOR, dolayısıyla rozet çevirdikten sonra da eski yönü
     // gösteriyordu. Sessiz, çünkü sayı makul.
     const s = kur('AG00976_GATES_2025', false);
-    expect(fead.veFeadCurrentSpin()).toBe(1);
+    expect(fead.veFeadCurrentSpin()).toBe(ORNEK_SPIN);
     M.veFeadReverseRoute(global.nodes, global.connections);
     // Düğüm dizisi hiç değişmedi…
-    expect(M.veFeadNaturalSense(global.nodes.filter((n) => M._feadIsPulley(n)))).toBe(1);
+    expect(M.veFeadNaturalSense(global.nodes.filter((n) => M._feadIsPulley(n)))).toBe(ORNEK_SPIN);
     // …ama rota çevrildi, ve okunan yön rotayı izliyor.
-    expect(fead.veFeadCurrentSpin()).toBe(-1);
+    expect(fead.veFeadCurrentSpin()).toBe(-ORNEK_SPIN);
   });
 
   test('rozet GLİFLE durumu, RENKLE hükmü taşır', () => {
@@ -374,12 +398,12 @@ describe('rozet ve panel', () => {
     let a = el();
     expect(fead.veFeadApplyBadge(a, b)).toBe(true);
     let r = a.querySelector('.ve-fead-badge');
-    // ROZET ÇİZİM DÜZLEMİNİ BASAR. Veri düzleminde AG00976 CCW (Gates'in kendi
-    // düzlemi; on raporun onu da öyle). Çizim aynalıysa ekranda CW, aynasızsa
-    // CCW — rozet HANGİSİ çiziliyorsa onu söylemek zorunda; ayrışırsa sessiz
-    // kalır, çünkü ikisi de ayrı ayrı makul görünür.
-    expect(M.veFeadNaturalSense(s.b.order)).toBe(1);        // veri düzlemi
-    expect(r.textContent).toBe(cizimGlifi(1));              // ÇİZİM DÜZLEMİ
+    // ROZET KAYIŞIN GERÇEK DÖNÜŞÜNÜ BASAR: AG00976 Gates sırasında kurulu →
+    // liste CCW, kayış CW, krank CW. Rozet modelin `spin`'ini basmak zorunda;
+    // ayrışırsa sessiz kalır, çünkü ikisi de ayrı ayrı makul görünür.
+    expect(M.veFeadNaturalSense(s.b.order)).toBe(ORNEK_SPIN);
+    expect(r.textContent).toBe(glif(ORNEK_SPIN));
+    expect(r.textContent).toBe('\u21bb CW');
     expect(r.style.cssText).toContain('--text-secondary');
 
     // Gergi gevşek tarafta → yeşil
@@ -420,20 +444,18 @@ describe('rozet ve panel', () => {
     const b = spinNode(); global.nodes.push(b);
     global.veFeadResults = { tensionerSide: { ok: true } };
     const a1 = el(); fead.veFeadApplyBadge(a1, b);
-    const ccw = a1.querySelector('.ve-fead-badge');
+    const ilk = a1.querySelector('.ve-fead-badge');         // Gates sırası → CW
 
     M.veFeadReverseRoute(global.nodes, global.connections);
     const a2 = el(); fead.veFeadApplyBadge(a2, b);
-    const cw = a2.querySelector('.ve-fead-badge');
+    const ters = a2.querySelector('.ve-fead-badge');        // çevrilmiş → CCW
 
-    // Değişken adları VERİ düzlemine göre; basılan metin ÇİZİM düzlemine göre.
-    // İkisi ayna açıkken birbirinin tersi, kapalıyken aynısı.
-    expect(ccw.textContent).toBe(cizimGlifi(1));
-    expect(cw.textContent).toBe(cizimGlifi(-1));
-    expect(ccw.textContent).not.toBe(cw.textContent);   // ters çevirmek İŞE YARADI
-    expect(cw.style.background).toBe(ccw.style.background);   // AYNI renk
-    expect(ccw.style.cssText).not.toContain('--accent-warning');
-    expect(ccw.style.cssText).not.toContain('--accent-primary');
+    expect(ilk.textContent).toBe(glif(ORNEK_SPIN));
+    expect(ters.textContent).toBe(glif(-ORNEK_SPIN));
+    expect(ilk.textContent).not.toBe(ters.textContent);  // ters çevirmek İŞE YARADI
+    expect(ters.style.background).toBe(ilk.style.background);   // AYNI renk
+    expect(ilk.style.cssText).not.toContain('--accent-warning');
+    expect(ilk.style.cssText).not.toContain('--accent-primary');
   });
 
   test('rozet mousedown\'ı durdurur ve tık yönü çevirir', () => {
@@ -458,9 +480,9 @@ describe('rozet ve panel', () => {
     const once = JSON.stringify(b.data);
 
     let h = fead.getFeadSpinPropertiesHTML(b);
-    // PANEL DE ÇİZİM DÜZLEMİNDE. Rozet ile panel aynı üreticiden besleniyor
-    // (`veFeadSpinLabel`); ikisi ayrışsaydı biri sessizce eskirdi.
-    const yon = cizimYonu(1);
+    // PANEL DE KAYIŞIN GERÇEK DÖNÜŞÜNÜ BASAR. Rozet ile panel aynı üreticiden
+    // besleniyor (`veFeadSpinLabel`); ikisi ayrışsaydı biri sessizce eskirdi.
+    const yon = ORNEK_SPIN;
     expect(h).toContain(yon > 0 ? 'CCW (saat yönünün TERSİNE)' : 'CW (saat yönünde)');
     // ÇELİŞEN BAŞLIK YASAK — ama ETİKETLİ karşı yön serbest. Uzun metin
     // 2026-09-07'den beri öbür bakışı da adıyla veriyor ("… · Gates rapor
@@ -543,5 +565,120 @@ describe('bileşen sözleşmesi', () => {
     global.nodes = global.nodes.filter((n) => n.type !== 'fead-spin');
     expect(M.veFeadNaturalSense(M.veFeadRouteOrder(global.nodes, global.connections)))
       .toBe(once);                                 // yön DEĞİŞMEDİ
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LİSTE SIRASI KAYIŞIN GİDİŞİNİN TERSİ (2026-09-08)
+//
+// Dört kapı, dördü de aynı hükmü başka bir kaynaktan ölçüyor:
+//   1. çekirdeğin gerilme zinciri (liste sırasında sürücüde ARTIYOR),
+//   2. AG00976 raporunun kendi okları (PDF'ten okunur, üçü de tablonun tersi),
+//   3. AG00976 raporunun gerilme satırı (PDF'ten okunur, tablo sırasında
+//      aksesuarda DÜŞÜYOR — gidiş yönünde okunsaydı yükselirdi),
+//   4. ekrana basılan sürücü oku (oniki örnekte de saat yönü).
+// Fizik: sürücü kayışı kendine çeker → gergin taraf sürücüye GİREN açıklık.
+// Dolayısıyla "liste sırasında sürücüde artan" bir zincir ancak liste gidişin
+// TERSİ ise fizikle bağdaşır. Kullanıcı dört kez "krank saat yönünde dönmüyor"
+// dedi; sebep buydu ve bir çizim düzlemi meselesi DEĞİLDİ.
+describe('LİSTE SIRASI KAYIŞIN GİDİŞİNİN TERSİ', () => {
+  const tabloSistemi = () => V.buildAG00976('1715@-250/110');
+
+  test('çekirdek zinciri: LİSTE sırasında sürücüde +P/v, aksesuarda −P/v → liste = gidişin tersi', () => {
+    const s = kur('AG00976_GATES_2025', false);
+    const R = coz(s);
+    expect(R.ok).toBe(true);
+    const rows = (R.analysis && R.analysis.duty) || [];
+    // En yüklü devir satırı: aksesuar güçleri sıfır olmasın.
+    const row = rows.reduce((a, b) => {
+      const g = (r) => (r.perPulley || []).reduce((t, p) => t + (Number(p.powerKw) || 0), 0);
+      return g(b) > g(a) ? b : a;
+    }, rows[0]);
+    let yuklu = 0;
+    row.perPulley.forEach((p, i) => {
+      const dT = Number(p.exitTensionN) - Number(p.entryTensionN);     // liste sırasında
+      const crank = !!(s.b.sys.pulleys[i] && s.b.sys.pulleys[i].crank);
+      if (crank) expect(dT).toBeGreaterThan(50);                        // liste çıkışı GERGİN
+      else if ((Number(p.powerKw) || 0) > 0.05) { yuklu++; expect(dT).toBeLessThan(-5); }
+      else expect(Math.abs(dT)).toBeLessThan(5);                        // avara: kayıpsız
+    });
+    expect(yuklu).toBeGreaterThanOrEqual(2);
+    // Sürücü kayışı çeker: gergin taraf ona GİREN açıklıktır. Liste çıkışı
+    // gergin çıktığına göre liste gidişin tersi → dönüş = −loopSense(liste).
+    const g = F.geometryAt(s.b.sys, s.b.relDeg || 0);
+    expect(F.loopSense(g.pulleys.map((p) => p.c))).toBe(1);
+    expect(s.b.spin).toBe(-F.loopSense(g.pulleys.map((p) => p.c)));
+    expect(s.b.spin).toBe(ORNEK_SPIN);
+  });
+
+  test('AG00976 raporunun kendi okları: düz kasnak komşuları TABLONUN TERSİ yönde', () => {
+    const txt = gatesPdfText(AG00976_PDF).replace(/\s+/g, ' ');
+    const m = /Adjacent Grooved Pulleys((?: [A-Z_0-9]+ - >[A-Z_0-9]+){3})/.exec(txt);
+    expect(m).not.toBeNull();
+    const oklar = [];
+    m[1].replace(/([A-Z_0-9]+) - >([A-Z_0-9]+)/g, (_, a, b) => { oklar.push([a, b]); return ''; });
+    expect(oklar).toHaveLength(3);
+
+    const sys = tabloSistemi();
+    const ad = sys.pulleys.map((p) => p.name);                 // Gates tablo sırası
+    const oluklu = (i) => sys.pulleys[i].contact !== 'back';
+    const n = ad.length;
+    const geri = (i) => { for (let k = 1; k < n; k++) { const j = (i - k + n) % n; if (oluklu(j)) return ad[j]; } return null; };
+    const ileri = (i) => { for (let k = 1; k < n; k++) { const j = (i + k) % n; if (oluklu(j)) return ad[j]; } return null; };
+    const duzler = ad.map((_, i) => i).filter((i) => !oluklu(i));
+    expect(duzler).toHaveLength(3);                            // IDR1 · IDR2 · TEN
+    duzler.forEach((i, k) => {
+      // Gates "X -> Y": kayış X'ten gelip bu düz kasnağı geçerek Y'ye gidiyor.
+      // Tablo sırasında bu kasnağın önceki oluklusu Y, sonrakisi X — yani ok
+      // tablonun TERSİ. Üçünde de.
+      expect(oklar[k]).toEqual([ileri(i), geri(i)]);
+      expect(oklar[k]).not.toEqual([geri(i), ileri(i)]);
+    });
+    expect(oklar.map((o) => o.join('>'))).toEqual(['A_C>FAN', 'ALT>A_C', 'FAN>ALT']);
+  });
+
+  test('AG00976 raporunun gerilme satırı: tablo sırasında aksesuarda DÜŞÜYOR, sürücüde YÜKSELİYOR', () => {
+    const sayfa = gatesPdfPages(AG00976_PDF).find((t) => t.indexOf('Belt Life B10') >= 0);
+    expect(sayfa).toBeDefined();
+    const m = /Tension((?: \d+){6}) Hubload/.exec(sayfa.replace(/\s+/g, ' '));
+    expect(m).not.toBeNull();
+    const T = m[1].trim().split(' ').map(Number);
+    expect(T).toEqual([1585, 1582, 1177, 1174, 546, 544]);      // FAN IDR A_C IDR ALT TEN
+
+    const sys = tabloSistemi();
+    sys.pulleys.forEach((p, i) => {
+      const dT = T[i] - T[(i - 1 + sys.pulleys.length) % sys.pulleys.length];
+      if (p.crank) expect(dT).toBeGreaterThan(500);             // 544 → 1585
+      else if (p.contact !== 'back') expect(dT).toBeLessThan(-300); // A_C · ALT
+      else expect(Math.abs(dT)).toBeLessThanOrEqual(3);          // avara / gergi
+    });
+    // Gidiş yönünde aksesuar gerginliği ARTIRIR (sürülen kasnak kayışı
+    // frenler: çıkışı gergin). Tablo sırasında düştüğüne göre tablo = tersi.
+  });
+
+  test('ekrandaki SÜRÜCÜ OKU saat yönünde — oniki örnekte, sırttan temas edenler ters', () => {
+    M.veFeadExampleKeysAll().forEach((key) => {
+      const s = kur(key, false);
+      expect(s.b.ok).toBe(true);
+      const svg = fead.veFeadLayoutSVG(s.b, 420, 320, { arrows: true });
+      expect(svg).toBeTruthy();
+      // Oklar: A rr rr 0 <büyük-yay> <sweep> — sweep 1 = ekranda saat yönü.
+      const sweeps = [];
+      svg.replace(/<path data-ve="spin" d="[^"]*?A[\d.]+ [\d.]+ 0 1 (\d) /g, (_, sw) => { sweeps.push(Number(sw)); return ''; });
+      expect(sweeps.length).toBeGreaterThanOrEqual(2);
+      expect(sweeps[0]).toBe(1);                                 // sürücü (sıranın başı) CW
+      expect(sweeps).toContain(0);                               // sırttan temas eden CCW
+    });
+  });
+
+  test('yükteki `spin` rozetle AYNI işaret, `sense` tersi — kart ile rozet ayrışamaz', () => {
+    const s = kur('AG00976_GATES_2025', false);
+    const svg = fead.veFeadLayoutSVG(s.b, 420, 320, { animate: { dispMmS: 40 } });
+    const m = /data-fead-anim="([^"]*)"/.exec(svg);
+    expect(m).not.toBeNull();
+    const spec = JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&'));
+    expect(spec.spin).toBe(fead.veFeadCurrentSpin());
+    expect(spec.spin).toBe(ORNEK_SPIN);
+    expect(spec.sense).toBe(-spec.spin);
   });
 });

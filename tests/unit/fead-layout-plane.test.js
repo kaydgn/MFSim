@@ -20,23 +20,23 @@
  * Bu dosya yalnız onu soruyor ve cevabı raporun KENDİ "Layout Data"
  * koordinatlarından alıyor (doğrulama fixture'ı → `docs/gates-reports/pdf/`).
  *
- * ── 2026-09-07: KAPI DÜZLEMİ ARTIK KENDİSİ KURUYOR ────────────────────────
+ * ── 2026-09-07 → 09-08: AYNA KALKTI, YÖN DÜZELDİ ──────────────────────────
  *
  * Kullanıcı konvansiyonu (2026-09-07): *"Normalde krank kasnağı (yani sürücü
- * kasnak) saat yönünde dönmesi lazım."* Rapor düzleminde kayış ÖLÇÜLMÜŞ olarak
- * CCW dolanıyor, dolayısıyla "krank CW" ile "düzen raporun sayfasıyla aynı"
- * AYNI ANDA SAĞLANAMAZ — biri ötekinin X aynası. Varsayılan ön görünüşe döndü.
+ * kasnak) saat yönünde dönmesi lazım."* Bir tur boyunca bu, "rapor düzleminde
+ * kayış CCW dolanıyor, dolayısıyla krank CW ile raporun düzeni aynı anda
+ * sağlanamaz" diye okundu ve çizim X'te AYNALANDI. Kullanıcı üç kez reddetti
+ * ve haklıydı: ayna kaldırıldı (bu dosyanın "ÇİZİM AYNALANMAZ" öbeği).
  *
- * KAPININ ÖLÇTÜĞÜ ŞEY DEĞİŞMEDİ, YALNIZ DÜZLEMİ KENDİSİ SEÇİYOR. Eski sürümü
- * bayrağın DEĞERİNİ kilitliyordu (`expect(...VIEW_FRONT).toBe(false)`); o kilit
- * bir tercihi savunuyordu, ölçtüğü ilişkiyi değil. Artık karşılaştırma
- * `veFeadSetViewFront(false)` ile rapor düzleminde yapılıyor: 2026-09-04'te
- * yakalanan hata sınıfı (çizicinin son adımındaki bir işaret hatası) hangi
- * varsayılanda olursak olalım kırmızıya döner.
- *
- * VE İKİ DÜZLEM BİRBİRİNE BAĞLANDI (aşağıdaki son öbek): ön görünüş, rapor
- * düzleminin TAM X aynası olmak zorunda — yani bir düzlemde düzeltilen bir
- * işaret hatası ötekinde sessizce kalamaz.
+ * ÇELİŞKİ YOKTU — YANLIŞ OLAN OKUMAYDI. Gates'in kasnak tablosu (ve ondan
+ * kurulan liste) kayışın gidişinin TERSİ sırada yazılı: çekirdeğin gerilme
+ * zinciri listeyi yürürken sürücüde `+P/v` yazıyor, oysa sürücü kayışı
+ * kendine ÇEKER (gergin taraf ona giren açıklık). İkisi ancak liste = gidişin
+ * tersi ise bağdaşır; AG00976 raporunun kendi okları (`FAN -> ALT`) ve gerilme
+ * satırı (tablo sırasında aksesuarda DÜŞÜYOR) bunu doğruluyor. Liste CCW
+ * dolanıyor → kayış CW akıyor → krank CW. Aynı çizim, aynı sayılar, doğru
+ * işaret. Kapı: `tests/unit/fead-spin.test.js` → "LİSTE SIRASI KAYIŞIN
+ * GİDİŞİNİN TERSİ"; bu dosyadaki oniki-örnek öbeği de artık CW'yi kilitliyor.
  */
 const fead = require('../../js/cp-fead.js');
 const M = require('../../js/fead-model.js');
@@ -351,16 +351,20 @@ describe('ÇİZİM AYNALANMAZ — konumlar raporun Layout Data\'sıdır', () => 
     expect(fan.y).toBeGreaterThan(alt.y);
   });
 
-  test('ONİKİ ÖRNEĞİN ONİKİSİ DE şemada CCW — verinin dolanımıyla AYNI', () => {
+  test('ONİKİ ÖRNEĞİN ONİKİSİNDE DE KRANK SAAT YÖNÜNDE — liste CCW, gidiş tersi', () => {
     const anahtarlar = M.veFeadExampleKeysAll();
     expect(anahtarlar.length).toBeGreaterThanOrEqual(12);
     anahtarlar.forEach((id) => {
       const b = kur(id);
       expect(b.ok).toBe(true);
-      expect(b.spin).toBe(1);                     // Σ işaretli sarım = +360
+      // Liste (Gates tablo) sırasının dolanımı CCW — Σ işaretli sarım = +360.
+      const g = F.tensionerState(b.sys, b.relDeg || F.meanRel(b.sys)).geom;
+      expect(g.sense).toBe(1);
+      // Kayışın gerçek dönüşü onun TERSİ: krank saat yönünde.
+      expect(b.spin).toBe(-1);
       const et = M.veFeadSpinLabel(b.spin);
-      expect(et.sense).toBe(1);                   // ARADA ÇEVİRİ YOK
-      expect(et.kisa).toBe('\u21ba CCW');
+      expect(et.sense).toBe(-1);                  // etiket çizilen yönü basar
+      expect(et.kisa).toBe('\u21bb CW');
       expect(et.uzun).toContain('Gates rapor düzlemi');
     });
   });
@@ -368,6 +372,9 @@ describe('ÇİZİM AYNALANMAZ — konumlar raporun Layout Data\'sıdır', () => 
   test('ROTAYI YERİNDE ÇEVİRMEK FİZİĞİ KIRAR — ölçülmüş bedel, kayıt için', () => {
     // "Konumlar dursun, kayış ters yürüsün" yolunun bedeli. Kayıt burada
     // duruyor ki bir sonraki oturum yeniden ölçmek zorunda kalmasın.
+    // 2026-09-08: krank CW için bu yola GEREK KALMADI — liste zaten gidişin
+    // tersi, dolayısıyla ileri kablolama CW demek. Kabloları çevirmek CCW
+    // verir ve bedeli aşağıdaki gibi: gergi gergin tarafa düşer.
     const key = 'BMC_FEAD_2026';
     const rows = (M.veFeadExampleOf(key).solver || {}).duty || [];
     expect(rows.length).toBeGreaterThan(0);
@@ -399,8 +406,8 @@ describe('ÇİZİM AYNALANMAZ — konumlar raporun Layout Data\'sıdır', () => 
 
     const ileri = enDusukSpan(false);
     const geri = enDusukSpan(true);
-    expect(ileri.spin).toBe(1);
-    expect(geri.spin).toBe(-1);
+    expect(ileri.spin).toBe(-1);                   // Gates sırası → krank CW
+    expect(geri.spin).toBe(1);                     // çevrilmiş → CCW, ve bedeli:
     expect(ileri.enDusuk).toBeCloseTo(526, 0);
     expect(geri.enDusuk).toBeCloseTo(-196, 0);     // NEGATİF — fiziksel olarak yok
   });

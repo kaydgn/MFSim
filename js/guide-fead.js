@@ -323,14 +323,18 @@ function _gfSec4(){
 function _gfSec5(){
   var h = _gfH2(4);
   h += '<p>Kasnaklar arasına çektiğiniz tel <strong>kayışın kendisidir</strong> ve sırası '
-    + 'serpantin sırasıdır: sürücü kasnağın çıkışından başlar, halkayı dolaşır, aynı kasnağın '
-    + 'girişine döner. Çevrim <strong>kapanmak zorundadır</strong>.</p>';
+    + 'tedarikçi tablosunun sırasıdır: sürücü kasnağın çıkışından başlar, halkayı dolaşır, aynı '
+    + 'kasnağın girişine döner. Çevrim <strong>kapanmak zorundadır</strong>. Gates tabloları '
+    + 'kasnakları kayışın gidişinin <strong>tersi</strong> sırada yazar ve program bu sırayı '
+    + 'bekler; bu sırada kurulan modelde krank kasnağı <strong>saat yönünde</strong> döner.</p>';
   h += _gfAdimlar([
-    'Bir kasnağın <strong>çıkış portuna</strong> tıklayın, sonra kayış sırasında ondan sonra '
+    'Bir kasnağın <strong>çıkış portuna</strong> tıklayın, sonra tedarikçi tablosunda ondan sonra '
       + 'gelen kasnağın <strong>giriş portuna</strong> tıklayın. Tel kurulur.',
     'Bunu halka kapanana kadar sürdürün: son kasnağın çıkışı ilk kasnağın girişine bağlanmalı.',
-    'Telin ortasındaki ok <strong>gidiş yönünü</strong> gösterir. Yön, kabloları hangi sırada '
-      + 'çektiğinizin sonucudur; ayrı bir ayar değildir.',
+    'Telin ortasındaki ok kayışın <strong>gerçek gidiş yönünü</strong> gösterir — telin kendisinin '
+      + 'tersine, çünkü tablo sırası gidişin tersidir. Yön, kabloları hangi sırada çektiğinizin '
+      + 'sonucudur; ayrı bir ayar değildir. Rozet kırmızıysa (gergi gergin tarafta) '
+      + 'Dönüş Yönü kutusundan çevirin.',
     'Bir teli silmek için üzerine sağ tıklayın.'
   ]);
   h += _gfNot('Port kenarları komşuya bakar',

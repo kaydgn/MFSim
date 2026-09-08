@@ -2797,9 +2797,29 @@ function veFeadArmBand(build, opt){
 //
 // YÖN BİR AYAR DEĞİL, ROTA SIRASININ SONUCUDUR. Çekirdek `loopSense`
 // (fead-core.js) kasnak merkezlerinin AYAKKABI BAĞI işaretli alanına bakıyor:
-// merkezleri kayış gidiş sırasında dolaşınca saat yönünün TERSİNE dönüyorsa
-// +1 (CCW), saat yönündeyse −1 (CW). Yani kabloları hangi sırada çektiysen
-// yön odur; "Dönüş Yönü" düğümü o sırayı TERS yürüterek yönü seçtiriyor.
+// merkezleri LİSTE sırasında dolaşınca saat yönünün tersine dönüyorsa +1,
+// saat yönündeyse −1. Kabloları hangi sırada çektiysen liste odur; "Dönüş
+// Yönü" düğümü o sırayı TERS yürüterek yönü seçtiriyor.
+//
+// LİSTE SIRASI KAYIŞIN GİDİŞİNİN TERSİDİR — `spin = −loopSense(liste)`.
+// (2026-09-08, kullanıcı bildirimi: *"krank kasnağı saat yönünde dönmüyor"*.)
+// Sebep çekirdeğin gerilme zincirinde: `spanTensions` listeyi gergiden
+// başlayarak yürüyor ve SÜRÜCÜDE `+P/v`, aksesuarda `−P/v` yazıyor — yani
+// sürücünün LİSTEDEKİ çıkışı gergin. Fizikte sürücü kayışı ÇEKER: gergin
+// taraf sürücüye GİREN açıklıktır, çıkan açıklık gevşektir (bisiklette
+// aynası: dişli üst zinciri kendine çeker, gevşek alt zincirdir). İkisi
+// ancak liste = gidişin tersi ise bağdaşır. Gates de tablosunu böyle
+// yazıyor ve AG00976 raporu bunu kendi okuyla söylüyor: düz kasnakların
+// komşuları `A_C -> FAN · ALT -> A_C · FAN -> ALT`, üçü de tablo sırasının
+// TERSİ. Aynı raporun gerilme satırı da öyle: tablo sırasında FAN 1585 →
+// A_C 1177 → ALT 546 → TEN 544, yani aksesuarda DÜŞÜYOR, sürücüde
+// YÜKSELİYOR — gidiş yönünde okunsaydı tersi olurdu. Mühendisin Excel'i
+// ('Sağ' = saat yönü) ve sistemin CAD'i de aynı sonucu veriyor.
+//
+// Bu yüzden 2095 doğrulanmış sayının hiçbirine dokunulmadı; değişen yalnız
+// işaretin OKUNUŞU. Liste sırasını çekirdeğe gidiş sırasında vermek (köprüde
+// çevirmek) ayrı bir iş — sihirbaz tablosu, örnek kabloları ve Gates
+// tablosuyla satır satır karşılaştırma ona bağlı; kayıt skill'de.
 //
 // ÖLÇÜT ÇEKİRDEĞİN KENDİSİNDEN — ikinci bir kopya yazılsaydı iki yüzey
 // sessizce ayrışabilirdi. Merkez sözleşmesi: kasnakta (x, y), gergide
@@ -2831,7 +2851,9 @@ function veFeadNaturalSense(order){
     if(!Number.isFinite(x) || !Number.isFinite(y)) return 0;
     c.push([x, y]);
   }
-  return FEADCore.loopSense(c);
+  // Liste = gidişin tersi (yukarıdaki not) → kayışın gerçek dönüşü işaretin
+  // tersi. Kapı: fead-spin.test.js → "LİSTE SIRASI KAYIŞIN GİDİŞİNİN TERSİ".
+  return -FEADCore.loopSense(c);
 }
 
 // ── ROTAYI TERS YÜRÜT — KABLOLARI ÇEVİREREK ────────────────────────────────
@@ -2964,9 +2986,10 @@ function veFeadResolveDriver(pulleys){
 // yalnız el yönü) ÖLÇÜLMÜŞ bir ilişki ve kanıt atılmaz. ÇİZİM YOLUNDAN
 // ÇAĞRILMAZ.
 //
-// DÖNÜŞ YÖNÜ DE BU ÇERÇEVEDE OKUNUR: `spin` kasnak merkezlerinin kayış gidiş
-// sırasındaki dolanım işareti (`FEADCore.loopSense`), ve ekranda görünen yön
-// onunla AYNIDIR — arada çeviri yoktur.
+// DÖNÜŞ YÖNÜ DE BU ÇERÇEVEDE OKUNUR: `spin` kayışın bu düzlemdeki GERÇEK
+// dönüşüdür ve ekranda görünen yön onunla AYNIDIR — çizimde çeviri yoktur.
+// Tek işaret çevirisi `veFeadNaturalSense`'in içindedir (liste sırası gidişin
+// tersi; gerekçesi orada) ve bir çizim düzlemi meselesi DEĞİLDİR.
 
 function _feadMirrorPt(q){ return (q && q.length >= 2) ? [-q[0], q[1]] : q; }
 
@@ -3100,8 +3123,9 @@ function veFeadBuildSystem(nodeList, connList, opt){
   out.order = order;
   out.route = teshis;
   // DÖNÜŞ YÖNÜ: rota sırasının SONUCU, ayrı bir bayrak DEĞİL (bkz.
-  // veFeadNaturalSense). "Dönüş Yönü" düğümü kabloları çeviriyor; buradan
-  // okunan sıra zaten çevrilmiş sıradır.
+  // veFeadNaturalSense — liste gidişin tersi, işaret orada çevriliyor).
+  // "Dönüş Yönü" düğümü kabloları çeviriyor; buradan okunan sıra zaten
+  // çevrilmiş sıradır.
   out.spin = veFeadNaturalSense(order);
   if(!order.length){ out.errors.push('İç topolojide hiç kasnak yok.'); return out; }
   // TOPOLOJİ GEÇERLİ DEĞİLSE ÇÖZÜLMEZ. Eskiden kopuk kasnak sıraya sessizce

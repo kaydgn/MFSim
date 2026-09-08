@@ -344,8 +344,8 @@ describe('sıra, sürücü ve satır düzenleme', () => {
     const once = wiz.veFeadWizBuild().spin;
     wiz.veFeadWizRouteReverse();
     const sonra = wiz.veFeadWizBuild().spin;
-    expect(once).toBe(1);
-    expect(sonra).toBe(-1);
+    expect(once).toBe(-1);                        // Gates sırası → krank CW
+    expect(sonra).toBe(1);
   });
 });
 
@@ -1306,20 +1306,18 @@ describe('dönüş yönü — Kasnaklar adımında seçilir', () => {
     expect(wiz.veFeadWizBuild().spin).toBe(y0);
   });
 
-  // VERİ DÜZLEMİ KİLİTLİ, GÖRÜNEN DÜZLEME BAĞLI. Eski kapı "ön görünüşte CW"
-  // diye SABİT yazıyordu (2026-08-28 kararı) ve varsayılan düzlem 2026-09-04'te
-  // rapor düzlemine dönünce yanlış beklentiyi kilitledi. Asıl ölçülmüş olan
-  // şudur ve o değişmedi: **Gates düzleminde on raporun onu da CCW**.
-  test('VERİ DÜZLEMİNDE CCW — arşivle karşılaştırılabilirliğin dayanağı', () => {
+  // KRANK SAAT YÖNÜNDE. Eski kapı "veri düzleminde CCW" diye kilitliyordu:
+  // Gates tablo sırasının dolanımı gerçekten CCW ama o sıra kayışın gidişinin
+  // TERSİ (fead-spin.test.js → "LİSTE SIRASI KAYIŞIN GİDİŞİNİN TERSİ"), yani
+  // kayış CW akıyor ve krank CW dönüyor. Kullanıcı bunu üç turda dört kez
+  // bildirdi; sihirbazın basılı düğmesi artık CW.
+  test('SİHİRBAZDA KRANK CW — Gates sırası kurulunca basılı düğme ↻', () => {
     ['AG00976_GATES_2025', 'BMC_FEAD_2026'].forEach((k) => {
       kabuk(); wiz.veFeadWizSeed(k);
       const b = wiz.veFeadWizBuild();
-      expect(b.spin).toBe(1);                       // veri düzleminde CCW — ÖLÇÜLÜ
-      // Etiket ÇİZİLEN yönü basar ve çizim aynalanmaz → veriyle aynı.
-      const gorunen = b.spin;
-      expect(gorunen).toBe(1);
-      expect(M.veFeadSpinLabel(b.spin).kisa)
-        .toBe(gorunen > 0 ? '\u21ba CCW' : '\u21bb CW');
+      expect(b.spin).toBe(-1);                      // krank saat yönünde
+      expect(M.veFeadSpinLabel(b.spin).kisa).toBe('\u21bb CW');
+      expect(wiz.veFeadWizSpinHTML(b)).toMatch(/ve-fw-spin-on"[^>]*onclick="veFeadWizSpinSet\(-1\)"/);
       // Düzlem adı etiketin İÇİNDE — "CW" tek başına hiçbir şey söylemez.
       expect(M.veFeadSpinLabel(b.spin).uzun).toContain(M._feadPlaneName());
     });

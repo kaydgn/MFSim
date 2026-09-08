@@ -126,15 +126,16 @@ ALT ve gergi **solda**, klima **sağda**. Depodaki örnek bu sayıların birebir
 aynısını taşıyor — **veri hiç yanlış değildi**, yanlış olan çizim anındaki
 aynaydı.
 
-**DÖNÜŞ YÖNÜ DE BU ÇERÇEVEDE:** `spin` kasnak merkezlerinin kayış gidiş
-sırasındaki dolanım işareti ve ekranda görünen yön onunla AYNI — arada çeviri
-yok. Bu düzende kayış CCW dolanıyor; raporun kendi gerilme sütunu da bunu
-doğruluyor (FAN 1585 → … → TEN 544: kranktan çıkan span en gergin, dönen en
-gevşek).
+**DÖNÜŞ YÖNÜ DE BU ÇERÇEVEDE:** `spin` kayışın bu düzlemdeki GERÇEK dönüşüdür
+ve ekranda görünen yön onunla AYNI — çizimde çeviri yok. Bu düzende liste
+(Gates tablo sırası) CCW dolanır ama **kayış CW akar, krank CW döner**; tek
+işaret çevirisi `veFeadNaturalSense`'in içindedir ve bir çizim düzlemi meselesi
+DEĞİLDİR (aşağıda *"LİSTE SIRASI KAYIŞIN GİDİŞİNİN TERSİ"*).
 
-**"Konumlar dursun, kayış ters yürüsün" YOLU KAPALI** — ölçüldü: gergi kayışın
-gergin tarafına düşüyor ve span gerilmeleri negatife iniyor (BMC 526 N →
-−196 N), model yine "çözülüyor" deyip uyarı vermiyor.
+**"Konumlar dursun, kayış ters yürüsün" YOLUNA GEREK YOK** — ve bedeli ölçülü:
+rotayı çevirmek CCW verir, gergi kayışın gergin tarafına düşer ve span
+gerilmeleri negatife iner (BMC 526 N → −196 N), model yine "çözülüyor" deyip
+uyarı vermiyor.
 
 `veFeadMirrorGeomX` duruyor ama **çizim yolundan çağrılmıyor**: X aynasının tam
 simetri olduğu ölçülmüş bir ilişki ve kanıt atılmaz.
@@ -151,10 +152,52 @@ de CW veya CCW olacak şekilde ayarlayacak bir bileşen kuralım yine bir öncek
 gibi. Buna göre de matematiği ayarlayalım (eğer değişiyorsa)."*
 
 **YÖN BİR AYAR DEĞİL, ROTA SIRASININ SONUCU.** `FEADCore.loopSense`
-(fead-core.js) kasnak merkezlerinin kayış gidiş sırasındaki **ayakkabı bağı
-(shoelace) işaretli alanına** bakıyor: `+1` = CCW, `−1` = CW — **motora ÖNDEN
-bakışta**. Yani kabloları hangi sırada çektiysen yön odur; `solveGeometry`
-onu okuyup her kasnağa `d = (grooved ? s : −s)` veriyor.
+(fead-core.js) kasnak merkezlerinin LİSTE sırasındaki **ayakkabı bağı
+(shoelace) işaretli alanına** bakıyor: `+1` = liste CCW dolanıyor. `solveGeometry`
+onu okuyup her kasnağa `d = (grooved ? s : −s)` veriyor — bu `d` sarım yayının
+LİSTE sırasındaki süpürme işareti, kasnağın dönüşü değil. Kayışın gerçek
+dönüşü `spin = −loopSense(liste)`; gerekçesi hemen aşağıda.
+
+###### LİSTE SIRASI KAYIŞIN GİDİŞİNİN TERSİ (2026-09-08, NİHAİ)
+
+**HÜKÜM: kanvas kabloları ve `build.order`, Gates tablosuyla aynı sırada —
+kayışın gidişinin TERSİ. Kayışın dönüşü `spin = −loopSense(liste)`; Gates
+sırasında kurulan her modelde krank SAAT YÖNÜNDE döner.**
+
+Kullanıcı dört kez *"krank saat yönünde dönmüyor"* dedi ve haklıydı. Hata bir
+fizik varsayımındaydı: *"sürücünün çıkışı gergin"* sanılıyordu. Sürücü kayışı
+kendine ÇEKER — gergin taraf sürücüye GİREN açıklıktır (bisikletin dişlisi üst
+zinciri çeker; gevşek olan alt zincirdir). Çekirdeğin `spanTensions`'ı listeyi
+gergiden yürürken sürücüde `+P/v` yazdığına göre liste = gidişin TERSİ. İki
+rapor kanıtı `docs/gates-reports/README.md` §3'te (AG00976'nın kendi okları
+`FAN -> ALT …` ve gerilme satırı) ve ikisi de testte PDF'ten okunuyor.
+
+| Yüzey | Ne değişti | Nerede |
+|-------|------------|--------|
+| `spin` (rozet · panel · sihirbaz düğmesi · özet) | `−loopSense` | `veFeadNaturalSense` |
+| Kasnak dönüş oku | `cw = (d > 0)` (`d` süpürme, dönüş onun tersi) | `veFeadLayoutSVG` |
+| Animasyon | faz yürüyüşe göre **azalır**; yük `spin` taşır (= `−sense`) | `veFeadAnimTick` · yük |
+| Kanvas tel oku | telin **tersine** bakar (tel liste sırası, ok gidiş) | `connections.js` |
+| Konumlar · sarım · L_eff · gerilme · 2095 doğrulanmış sayı | **dokunulmadı** | — |
+
+**Yolda bulunan ikinci kusur:** animasyon yükü üç sayıyı bağımsız yuvarlıyordu
+(parça boyları · `loop` · `step`); yuvarlanmış adımın 174 katı çevreden
+0,0023 mm uzundu ve faz o pencereden geçerken diş sayısı 174 → 173 düşüyordu.
+`_feadAnimSpec` adımı parça toplamına yeniden oturtuyor; kapı pencerenin
+içindeki fazlarda sayıyor.
+
+**AÇIK İŞ (bu turda BİLEREK yapılmadı):** tel ve sihirbaz tablosu hâlâ liste
+sırasında, yani *"Kasnaklar — kayış sırasıyla"* başlığı ve kılavuzun *"çıkış
+portundan, sonra gelen kasnağın girişine"* tarifi gidişin tersini anlatıyor;
+tel oku bu yüzden telin tersine çizildi. Kalıcı çözüm köprüde: kabloları gidiş
+sırasında tanımlayıp çekirdeğe *"krank sabit + kalanı ters"* ile vermek. Bedeli
+on iki örneğin kablolarını, sihirbaz tablosunu ve Gates tablosuyla satır satır
+karşılaştırmayı birlikte değiştirmek — ayrı bir tur.
+
+**Kapılar:** `tests/unit/fead-spin.test.js` → *"LİSTE SIRASI KAYIŞIN GİDİŞİNİN
+TERSİ"* (çekirdek zinciri · PDF okları · PDF gerilme satırı · sürücü oku · yük
+`spin`), `fead-anim.test.js` (faz azalır · pencere), `fead-layout-plane.test.js`
+(oniki örnekte CW), `port-geometry.test.js` (tel oku), e2e `fead-canvas-drag`.
 
 ###### MATEMATİK: GEOMETRİ DEĞİŞMEZ, GERİLME DEĞİŞİR
 
@@ -172,8 +215,8 @@ takas ediyor, `(−d)·(θ_giriş − θ_çıkış) = d·(θ_çıkış − θ_gi
 birbirini götürüyor. **Hesap katmanına tek satır dokunulmadı.**
 
 Gerilmenin değişmesi de fizik: `spanTensions` ankrajı gergiye yazıp
-(`T[gergi] = designTensionN`) kayış gidiş yönünde yürüyor — sürücüde `+P/v`,
-aksesuarlarda `−P/v`.
+(`T[gergi] = designTensionN`) LİSTE sırasında yürüyor — sürücüde `+P/v`,
+aksesuarlarda `−P/v` (liste gidişin tersi; yukarıdaki hüküm).
 
 ###### GERGİ GEVŞEK TARAFTA OLMALI — 14 Gates sisteminin 14'ünde de öyle
 
