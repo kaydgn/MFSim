@@ -186,11 +186,27 @@ describe('Karşılama ekranı — markup sözleşmesi', () => {
       });
   });
 
-  test('her kutuda ad, açıklama ve künye satırı var', () => {
-    ['ve-module-card-name', 've-module-card-desc', 've-module-card-spec'].forEach(function (sinif) {
+  // Kutu → SATIR (2026-09-08, kullanıcı reçetesi "M6"): modüller sol panele
+  // indi. Uzun açıklama (.ve-module-card-desc) DÜŞTÜ — satırı üç katına
+  // çıkarıyor ve 340 px'lik panel ekrandan taşıyordu. Ad ve künye kalıyor:
+  // "FEAD" tek başına ne olduğunu söylemiyor.
+  test('her satırda ad ve künye var; uzun açıklama bu düzende YOK', () => {
+    ['ve-module-card-name', 've-module-card-spec'].forEach(function (sinif) {
       const n = (WELCOME.match(new RegExp('class="' + sinif + '"', 'g')) || []).length;
       expect(n).toBe(4);
     });
+    expect(WELCOME).not.toContain('ve-module-card-desc');
+  });
+
+  // P4 · M6 — yerleşimin İKİ yapısal hükmü. İkisi de sessiz: bozulunca ekran
+  // yine açılır, yalnız fotoğraf panelin altından geçmez / modüller sağda
+  // boşlukta kalır.
+  test('modüller SOL PANELİN içinde, slayt karşılamanın DOĞRUDAN çocuğu', () => {
+    setupDOM();
+    expect(document.querySelectorAll('.ve-welcome-id .ve-module-card').length).toBe(4);
+    expect(document.querySelector('.ve-welcome > .ve-welcome-slayt')).toBeTruthy();
+    // Sağ sütun kalktı: kalırsa fotoğraf yeniden onun içine kırpılır.
+    expect(document.querySelector('.ve-welcome-work')).toBeNull();
   });
 
   test('şerit gizliyken ulaşılamaz kalacak komutların girişi burada', () => {
@@ -541,6 +557,20 @@ describe('Açılış koreografisi', () => {
       // eslint-disable-next-line no-new-func
       expect(Function('return ' + ifade)()).toBe(perde + (n - 1) * adim);
     });
+  });
+
+  // `both` bitiş karesini KALICI kılar ve CSS animasyonu normal bildirimleri
+  // yener → satırın hover kayması hiç görünmezdi. `backwards` yalnız gecikme
+  // boyunca giriş karesini uygular. Sessiz: hata yok, yalnız hover ölü.
+  test('kart animasyonu `backwards` doldurur — `both` hover\'ı öldürür', () => {
+    [/\.ve-module-card\{[^}]*?(animation:ve-welcome-rise[^;]*);/,
+     /\.ve-welcome-enter \.ve-module-card\{[^}]*?(animation:ve-welcome-rise[^;]*);/]
+      .forEach(function (re) {
+        const m = CSS_WELCOME.match(re);
+        expect(m).toBeTruthy();
+        expect(m[1]).toContain('backwards');       // yalnız BİLDİRİM — yorumdaki
+        expect(m[1]).not.toMatch(/\bboth\b/);      // "both" kapıyı yanıltmasın
+      });
   });
 
   test('koreografi kuralları taban kart kurallarından SONRA gelir', () => {

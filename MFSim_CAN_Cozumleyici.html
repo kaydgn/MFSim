@@ -967,7 +967,13 @@
       --dur-slayt-gecis: 1600ms;  /* çapraz geçiş — uzun, göz yormasın */
       --dur-slayt-kb: 13s;        /* Ken Burns: kare durduğu sürece çok yavaş yaklaşır */
       --slayt-opaklik: 1;         /* resim tam payla çiziliyor (kullanıcı kararı) */
-      --slayt-bulanik: 0px;       /* bulanıklık KAPALI: kareyi siliyordu, okunurluğu örtü sağlıyor */
+      --slayt-bulanik: 0px;       /* bulanıklık KAPALI: kareyi siliyordu */
+      --slayt-ortu: 0%;           /* ÖRTÜ KAPALI (kullanıcı reçetesi): fotoğrafın üstünde
+                                     perde yok. Okunurluğu artık ÖRTÜ değil, sol panelin
+                                     camı taşıyor — sağ tarafta zaten metin kalmadı. */
+      --karsilama-cam: 25%;       /* sol panelin SAYDAMLIK payı: 0 = opak, 100 = yalnız kenarlık.
+                                     Cam BULANIKLIĞI yok (reçete "net"): backdrop-filter
+                                     bilerek yazılmadı, blur(0) bile bedava değil. */
       --dur-step:   70ms;
       --dur-fly:   460ms;
       --ease-fly: cubic-bezier(.4, 0, .2, 1);
@@ -2647,6 +2653,10 @@ body.ve-no-module #ve-ribbon{ display:none; }
   /* Kenar gölgesinin (overlay::after) ÜSTÜNDE: gölge zemine ait, metne değil. */
   position:relative;
   z-index:1;
+  /* Slayt bu kabın İÇİNE mutlak konumlanıyor (sağ sütunun değil): fotoğraf
+     panelin de altından geçsin diye. Taşma kırpılmalı — Ken Burns kareyi
+     büyütüyor, kenardan sızmasın. */
+  overflow:hidden;
   animation:ve-welcome-in var(--dur-slow) var(--ease-out) both;
 }
 @keyframes ve-welcome-in{
@@ -2661,12 +2671,21 @@ body.ve-no-module #ve-ribbon{ display:none; }
 /* ── Sol sütun: kimlik + proje yolları ─────────────────────────────────── */
 .ve-welcome-id{
   flex:0 0 auto;
-  width:clamp(300px, 30%, 420px);
+  /* 340 px tavan (kullanıcı reçetesi): dar pencerede yüzdeyle küçülür, geniş
+     pencerede fotoğrafa yer bırakır. */
+  width:clamp(300px, 34%, 340px);
   display:flex;
   flex-direction:column;
-  padding:42px 38px 26px;
+  padding:34px 30px 22px;
+  /* Slaytın ÜSTÜNDE — fotoğraf panelin ALTINDAN geçiyor, panel onu camla örter. */
+  position:relative;
+  z-index:1;
+  /* Taban: color-mix desteklenmeyen tarayıcıda panel OPAK kalır (metin okunur
+     olmaktan çıkmasın); ikinci bildirim onu cam payıyla ezer. */
   background:var(--bg-secondary);
+  background:color-mix(in srgb, var(--bg-secondary) calc(100% - var(--karsilama-cam)), transparent);
   border-right:1px solid var(--border-color);
+  border-right-color:color-mix(in srgb, var(--border-color) 60%, transparent);
 }
 .ve-welcome-logo{
   display:inline-flex;
@@ -2923,25 +2942,12 @@ body.ve-no-module #ve-ribbon{ display:none; }
 }
 .ve-welcome-stamp[hidden]{ display:none; }
 
-/* ── Sağ sütun: modüller ───────────────────────────────────────────────── */
-.ve-welcome-work{
-  flex:1 1 auto;
-  min-width:0;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  padding:40px;
-  /* Slayt buranın İÇİNE mutlak konumlanıyor; taşma kırpılmalı (Ken Burns
-     kareyi büyütüyor, kenardan sızmasın). */
-  position:relative;
-  overflow:hidden;
-}
-
-/* ── Modüllerin arkasındaki slayt ─────────────────────────────────────────
-   Kareler süslemedir: metnin okunurluğu 15 temada da ÖRTÜYE bağlı, resmin
-   kendisine değil. Bu yüzden örtü tema jetonundan (--bg-primary) türer ve
-   soldan sağa açılır — sol kenar panelin dibi, orada resim hiç görünmez. */
+/* ── Fotoğraf: karşılamanın TAMAMININ zemini ──────────────────────────────
+   Sağ sütun (.ve-welcome-work) KALKTI — modüller sol panele indi ve sağ taraf
+   baştan sona fotoğraf oldu. Slayt bu yüzden .ve-welcome'ın doğrudan çocuğu:
+   panelin de altından geçiyor, panel onu camla örtüyor.
+   Örtü artık KAPALI (bkz. --slayt-ortu jetonu): sağ tarafta örtülecek metin
+   kalmadı, soldaki metnin zemini de panelin kendisi. */
 .ve-welcome-slayt{
   position:absolute;
   inset:0;
@@ -2968,83 +2974,65 @@ body.ve-no-module #ve-ribbon{ display:none; }
   from{ transform:scale(1.05); }
   to{ transform:scale(1); }
 }
+/* Örtü TEK jetondan sürülür ve bugün SIFIR: yönlü gradyan, resmi panelin
+   dibinden silmek içindi — P4'te panel zaten saydam, silinecek yer yok.
+   Jeton kalıyor ki tema/kadraj gerekirse tek satırdan geri açılsın. */
 .ve-welcome-slayt::after{
   content:'';
   position:absolute;
   inset:0;
-  /* İki bileşen: YATAY olan resmi panelin dibinden siler (orada hiç görünmez),
-     DİKEY olan üst ve alt kenarı yumuşatır — kadrajın kalabalık olduğu yerler
-     genelde oralarda ve kutuların arkasında bir yığın istemiyoruz. */
-  /* Örtü %20'ye indi (kullanıcı kararı): resim tam payla, örtü yalnız panelin
-     dibinde ve kenarlarda — metnin oturduğu yerde biraz nefes bıraksın diye. */
-  background:
-    linear-gradient(180deg,
-      color-mix(in srgb, var(--bg-primary) 22%, transparent) 0%,
-      transparent 18%,
-      transparent 74%,
-      color-mix(in srgb, var(--bg-primary) 18%, transparent) 100%),
-    linear-gradient(90deg,
-      color-mix(in srgb, var(--bg-primary) 88%, transparent) 0%,
-      color-mix(in srgb, var(--bg-primary) 30%, transparent) 22%,
-      color-mix(in srgb, var(--bg-primary) 20%, transparent) 100%);
-}
-/* İçerik slaytın ÜSTÜNDE: kutular opak, aralarındaki boşlukta resim görünür. */
-.ve-welcome-eyebrow,
-.ve-module-overlay-grid{
-  position:relative;
-  z-index:1;
+  background:color-mix(in srgb, var(--bg-primary) var(--slayt-ortu, 0%), transparent);
 }
 @media (prefers-reduced-motion: reduce){
   .ve-welcome-kare{ transition:none; }
   .ve-welcome-kare.is-on{ animation:none; transform:none; }
 }
-/* Izgara ve etiketi AYNI ölçüde: geniş ekranda kutular sonsuza kadar
-   büyümesin, ikisi birlikte ortalansın. */
-.ve-welcome-eyebrow,
-.ve-module-overlay-grid{
-  width:100%;
-  max-width:1000px;
-}
+/* Etiket artık panelin İÇİNDE: kendi çipini taşımasına gerek yok, zemini
+   panelin camı. Panelin öteki bölüm başlığıyla (.ve-welcome-panel-title) aynı
+   dili konuşur. */
 .ve-welcome-eyebrow{
-  /* Etiket doğrudan fotoğrafın üstünde: kendi zeminini taşımazsa kadraja göre
-     okunurluğu değişir (kutular opak, bu değil). */
-  align-self:flex-start;
-  width:auto;                      /* ortak kuraldaki %100'ü ez: çip metin kadar olsun */
-  padding:3px 9px;
-  background:color-mix(in srgb, var(--bg-primary) 72%, transparent);
-  border:1px solid color-mix(in srgb, var(--border-color) 55%, transparent);
-  border-radius:2px;
-  margin-bottom:14px;
-  font-size:var(--fs-tiny);
+  margin:18px 0 2px;
+  font-size:var(--fs-micro);
   font-weight:600;
   letter-spacing:var(--tracking-wider);
   text-transform:uppercase;
   color:var(--text-muted);
 }
+/* Adı "grid" ama artık TEK SÜTUN liste (M6). Sınıf korunuyor: imleç ışığını
+   kuran dinleyici (js/components.js › _veWelcomeInstallCardSheen) buraya
+   bağlanıyor ve kart başına dinleyici açmamanın tek yolu bu ortak kap. */
 .ve-module-overlay-grid{
-  display:grid;
-  grid-template-columns:repeat(2, minmax(0, 1fr));
-  gap:14px;
-}
-.ve-module-card{
   display:flex;
   flex-direction:column;
-  padding:18px 18px 14px;
-  background:var(--bg-secondary);
-  border:1px solid var(--border-color);
-  border-radius:var(--radius-lg);
+}
+/* Modül SATIRI — kutu değil (M6): simge · ad + künye · ok. Kendi zemini ve
+   kenarlığı yok; panel zaten bir yüzey, kutu ikincisini kurardı. Ayıran şey
+   ince bir üst çizgi. */
+.ve-module-card{
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  gap:12px;
+  padding:10px 4px;
+  background:none;
+  border:none;
+  border-top:1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+  border-radius:0;
   cursor:pointer;
   text-align:left;
   /* isolation: ışık katmanı (::before) kartın KENDİ yığın bağlamında kalsın —
      yoksa z-index:-1 kartın zemininin de altına düşer ve hiç görünmez. */
   position:relative;
   isolation:isolate;
-  overflow:hidden;
-  animation:ve-welcome-rise var(--dur-slow) var(--ease-out) both;
+  /* fill-mode BACKWARDS, `both` DEĞİL: `both` bitiş karesini (transform:none)
+     kalıcı kılıyor ve CSS animasyonu normal bildirimleri yendiği için hover'ın
+     kaydırması hiç görünmüyordu. `backwards` yalnız gecikme boyunca giriş
+     karesini uygular; bitince eleman kendi stiline döner. */
+  animation:ve-welcome-rise var(--dur-slow) var(--ease-out) backwards;
   transition:border-color var(--dur-base) var(--ease-out),
-             transform var(--dur-base) var(--ease-out),
-             box-shadow var(--dur-base) var(--ease-out);
+             transform var(--dur-base) var(--ease-out);
 }
+.ve-module-card:first-child{ border-top:none; }
 /* Kart temposu tek jetondan (--dur-step); açılış koreografisi aynı adımı
    --dur-enter perdesinin ardından tekrarlar. */
 .ve-module-card:nth-child(2){ animation-delay:var(--dur-step); }
@@ -3059,8 +3047,8 @@ body.ve-no-module #ve-ribbon{ display:none; }
   z-index:-1;
   pointer-events:none;
   opacity:0;
-  background:radial-gradient(240px 180px at var(--mx, 50%) var(--my, 50%),
-    color-mix(in srgb, var(--accent-primary) 13%, transparent),
+  background:radial-gradient(170px 70px at var(--mx, 50%) var(--my, 50%),
+    color-mix(in srgb, var(--accent-primary) 15%, transparent),
     transparent 72%);
   transition:opacity 220ms var(--ease-out);
 }
@@ -3068,25 +3056,21 @@ body.ve-no-module #ve-ribbon{ display:none; }
 .ve-module-card:focus-visible::before{ opacity:1; }
 .ve-module-card:hover,
 .ve-module-card:focus-visible{
-  border-color:var(--accent-primary);
-  transform:translateY(-2px);
-  box-shadow:var(--shadow-lg);
+  transform:translateX(3px);
   outline:none;
 }
+.ve-module-card:hover .ve-module-card-name,
+.ve-module-card:focus-visible .ve-module-card-name{ color:var(--accent-primary); }
+/* Simge kiremidi KALKTI: panelin camı zaten bir yüzey, kutu içinde kutu
+   üçüncü bir yüzey olurdu. Kalan tek şey aksan renkli çizim. */
 .ve-module-card-icon{
   flex-shrink:0;
-  width:50px;
-  height:50px;
-  padding:6px;
-  margin-bottom:13px;
+  width:28px;
+  height:28px;
   display:flex;
   align-items:center;
   justify-content:center;
   color:var(--accent-primary);
-  background:var(--bg-input);
-  border:1px solid var(--border-color);
-  transition:border-color var(--dur-base) var(--ease-out),
-             background var(--dur-base) var(--ease-out);
 }
 /* Simgeler markup'ta 38px genişlik/yükseklik NİTELİĞİYLE geliyor (kutu
    ölçüsü buradan sürülür, dosyadan değil). */
@@ -3094,13 +3078,10 @@ body.ve-no-module #ve-ribbon{ display:none; }
   width:100%;
   height:100%;
 }
-.ve-module-card:hover .ve-module-card-icon,
-.ve-module-card:focus-visible .ve-module-card-icon{
-  border-color:var(--accent-primary);
-  background:color-mix(in srgb, var(--accent-primary) 14%, var(--bg-input));
-}
 .ve-module-card-text{
-  display:block;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
   min-width:0;
 }
 .ve-module-card-name{
@@ -3109,42 +3090,13 @@ body.ve-no-module #ve-ribbon{ display:none; }
   font-weight:600;
   color:var(--text-heading);
   letter-spacing:-0.01em;
-  margin-bottom:4px;
-}
-.ve-module-card-desc{
-  display:block;
-  font-size:var(--fs-body);
-  color:var(--text-secondary);
-  line-height:1.55;
+  transition:color var(--dur-base) var(--ease-out);
 }
 /* Künye satırı: modülün ne olduğunu adından fazlasıyla söyler (çözücü /
    standart / katalog). Değerler kod tarafındaki gerçek kaynaklardan:
-   js/numerics.js, js/mount-core.js, js/fead-belts.js, js/structural-*.js. */
-.ve-module-card-foot{
-  position:relative;
-  display:flex;
-  align-items:center;
-  gap:8px;
-  margin-top:auto;
-  padding-top:12px;
-  border-top:1px solid var(--border-color);
-}
-/* Künye çizgisi hover'da SOLDAN SAĞA aksana boyanır — kartın "açılıyor"
-   yönünü ok ile aynı yöne gösterir. */
-.ve-module-card-foot::before{
-  content:'';
-  position:absolute;
-  top:-1px;
-  left:0;
-  right:0;
-  height:1px;
-  background:var(--accent-primary);
-  transform:scaleX(0);
-  transform-origin:left center;
-  transition:transform 320ms var(--ease-out);
-}
-.ve-module-card:hover .ve-module-card-foot::before,
-.ve-module-card:focus-visible .ve-module-card-foot::before{ transform:scaleX(1); }
+   js/numerics.js, js/mount-core.js, js/fead-belts.js, js/structural-*.js.
+   Uzun açıklama (.ve-module-card-desc) bu düzende DÜŞTÜ: satırı üç katına
+   çıkarıyor ve panel ekrandan taşıyordu. */
 .ve-module-card-spec{
   font-family:var(--font-sans);
   font-size:var(--fs-micro);
@@ -3194,9 +3146,6 @@ body.ve-no-module #ve-ribbon{ display:none; }
 }
 /* Perde koreografiden gelir; kabın kendi kısa fade'i iki kez oynamasın. */
 .ve-welcome.ve-welcome-enter{ animation:none; }
-.ve-welcome-enter .ve-welcome-work{
-  animation:ve-welcome-in var(--dur-enter) var(--ease-out) both;
-}
 .ve-welcome-enter .ve-welcome-id{
   animation:ve-welcome-slide 380ms var(--ease-out) both;
 }
@@ -3223,7 +3172,7 @@ body.ve-no-module #ve-ribbon{ display:none; }
   animation:ve-welcome-rise 380ms var(--ease-out) 360ms both;
 }
 .ve-welcome-enter .ve-module-card{
-  animation:ve-welcome-rise 380ms var(--ease-out) var(--dur-enter) both;
+  animation:ve-welcome-rise 380ms var(--ease-out) var(--dur-enter) backwards;
 }
 .ve-welcome-enter .ve-module-card:nth-child(2){
   animation-delay:calc(var(--dur-enter) + var(--dur-step));
@@ -3263,7 +3212,14 @@ body.ve-chrome-enter .ve-doc-dock{
    position:fixed — tuvalin transform'lu uzayına girerse hesap tutmaz.
    Kalıtsal `ve-welcome-rise` bastırılır (klon gecikmesiz yeniden koşar ve
    uçarken yerinden zıplardı); pointer-events yok, yoksa tıklamayı yutar. */
+/* Satır düzeninde (M6) kartın kendi zemini yok; uçarken gölge taşıyan
+   saydam bir şerit "havada asılı yazı" gibi görünüyordu. Klon bu yüzden
+   kalkışta bir yüzey giyer. */
 .ve-welcome-flyer{
+  background:var(--bg-secondary);
+  border:1px solid var(--accent-primary);
+  border-radius:var(--radius-lg);
+  padding:10px 12px;
   position:fixed;
   /* İnen şeridin (krom, 1000) ÜSTÜNDE, pencerelerin (modal, 4000) altında. */
   z-index:var(--z-widget);
@@ -3317,18 +3273,24 @@ body > .mfsim-loading-logo .mfsim-loading-logo-ico{
   .ve-welcome-sep{ margin:16px 0 14px; }
   .ve-welcome-open{ align-self:flex-start; }
   .ve-welcome-meta{ margin-top:14px; padding-top:10px; }
-  .ve-welcome-work{ padding:26px; justify-content:flex-start; }
+  /* Panel bir üst banda döndü: dört modül alt alta dursa bant fotoğrafı
+     yerinden ederdi — iki sütuna açılır. */
+  .ve-module-overlay-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    column-gap:20px;
+  }
+  .ve-module-card:nth-child(2){ border-top:none; }
 }
 @media (max-width:640px){
   .ve-module-overlay-grid{ grid-template-columns:1fr; }
-  .ve-welcome-work{ padding:18px; }
+  .ve-module-card:nth-child(2){ border-top:1px solid color-mix(in srgb, var(--border-color) 70%, transparent); }
 }
 /* Hareket azaltma: koreografi, kabuk inişi, uçuş ve imleç ışığı DURUR —
    bilgi ve hover vurgusu kalır, kapatılan yalnız hareket. */
 @media (prefers-reduced-motion: reduce){
   .ve-welcome,
   .ve-module-card,
-  .ve-welcome-enter .ve-welcome-work,
   .ve-welcome-enter .ve-welcome-id,
   .ve-welcome-enter .ve-welcome-logo,
   .ve-welcome-enter .ve-welcome-logo-ico,
@@ -3346,8 +3308,7 @@ body > .mfsim-loading-logo .mfsim-loading-logo-ico{
   /* Uçuş JS'te hiç başlatılmıyor (js/components.js matchMedia kapısı); bu
      satır klon yine de doğarsa asılı kalmasın diye emniyet. */
   .ve-welcome-flyer{ transition:none; }
-  .ve-module-card::before,
-  .ve-module-card-foot::before{ transition:none; }
+  .ve-module-card::before{ transition:none; }
 }
 
 .ve-canvas-wrapper{
