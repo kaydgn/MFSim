@@ -4,6 +4,11 @@ Referans görsellerinin klasörü: ekran görüntüleri, taranmış sayfalar, fo
 tasarım örnekleri — programın konusuyla ilgili olan ama programın **içine girmeyen**
 resimler.
 
+> **Karşılama slaytı buradan besleniyor.** Bu klasördeki kareler
+> `assets/karsilama/` altına 1280 px / q0.60 WebP olarak indirgenmiş hâlleriyle
+> girdi; programın içinde görünen kopya odur, build onu gömer. Ayarı değiştirmek
+> gerekirse kaynak burada duruyor.
+
 ## Kurallar
 
 - **Pages'e de tek dosyaya da girmez.** CI deploy yalnızca `index.html`, `pwa/`,

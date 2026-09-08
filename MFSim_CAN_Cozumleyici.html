@@ -964,6 +964,9 @@
       /* Karşılama koreografisinin omurgası — perde süresi ve kart temposu tek
          yerden; ara gecikmeler bu ikisinden okunur. */
       --dur-enter: 420ms;
+      --dur-slayt-gecis: 1600ms;  /* çapraz geçiş — uzun, göz yormasın */
+      --dur-slayt-kb: 13s;        /* Ken Burns: kare durduğu sürece çok yavaş yaklaşır */
+      --slayt-opaklik: 0.46;      /* örtünün altında kalan resim payı */
       --dur-step:   70ms;
       --dur-fly:   460ms;
       --ease-fly: cubic-bezier(.4, 0, .2, 1);
@@ -2928,6 +2931,69 @@ body.ve-no-module #ve-ribbon{ display:none; }
   align-items:center;
   justify-content:center;
   padding:40px;
+  /* Slayt buranın İÇİNE mutlak konumlanıyor; taşma kırpılmalı (Ken Burns
+     kareyi büyütüyor, kenardan sızmasın). */
+  position:relative;
+  overflow:hidden;
+}
+
+/* ── Modüllerin arkasındaki slayt ─────────────────────────────────────────
+   Kareler süslemedir: metnin okunurluğu 15 temada da ÖRTÜYE bağlı, resmin
+   kendisine değil. Bu yüzden örtü tema jetonundan (--bg-primary) türer ve
+   soldan sağa açılır — sol kenar panelin dibi, orada resim hiç görünmez. */
+.ve-welcome-slayt{
+  position:absolute;
+  inset:0;
+  overflow:hidden;
+  pointer-events:none;
+  z-index:0;
+}
+.ve-welcome-kare{
+  position:absolute;
+  inset:-3%;                        /* Ken Burns'ün payı: kenar boşluğu açılmasın */
+  background-size:cover;
+  background-position:center;
+  opacity:0;
+  filter:blur(2px);
+  transform:scale(1.05);
+  transition:opacity var(--dur-slayt-gecis, 1600ms) linear;
+  will-change:opacity, transform;
+}
+.ve-welcome-kare.is-on{
+  opacity:var(--slayt-opaklik, 0.46);
+  animation:ve-slayt-kb var(--dur-slayt-kb, 13s) linear forwards;
+}
+@keyframes ve-slayt-kb{
+  from{ transform:scale(1.05); }
+  to{ transform:scale(1); }
+}
+.ve-welcome-slayt::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  /* İki bileşen: YATAY olan resmi panelin dibinden siler (orada hiç görünmez),
+     DİKEY olan üst ve alt kenarı yumuşatır — kadrajın kalabalık olduğu yerler
+     genelde oralarda ve kutuların arkasında bir yığın istemiyoruz. */
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--bg-primary) 55%, transparent) 0%,
+      transparent 22%,
+      transparent 62%,
+      color-mix(in srgb, var(--bg-primary) 45%, transparent) 100%),
+    linear-gradient(90deg,
+      var(--bg-primary) 0%,
+      color-mix(in srgb, var(--bg-primary) 74%, transparent) 30%,
+      color-mix(in srgb, var(--bg-primary) 62%, transparent) 100%);
+}
+/* İçerik slaytın ÜSTÜNDE: kutular opak, aralarındaki boşlukta resim görünür. */
+.ve-welcome-eyebrow,
+.ve-module-overlay-grid{
+  position:relative;
+  z-index:1;
+}
+@media (prefers-reduced-motion: reduce){
+  .ve-welcome-kare{ transition:none; }
+  .ve-welcome-kare.is-on{ animation:none; transform:none; }
 }
 /* Izgara ve etiketi AYNI ölçüde: geniş ekranda kutular sonsuza kadar
    büyümesin, ikisi birlikte ortalansın. */

@@ -969,6 +969,12 @@
                     </div>
                   </div>
                   <div class="ve-welcome-work">
+                    <!-- Modüllerin ARKASINDAKİ slayt. Kareler js/karsilama-gorseller.js'te
+                         listeli, assets/karsilama/ altında duruyor ve build.js data URI olarak
+                         gömüyor. Katmanları js/components.js › veWelcomeSlaytBaslat kurar;
+                         resim yoksa bu kap boş kalır ve ekran bugünkü hâliyle çizilir.
+                         aria-hidden: süsleme, ekran okuyucuya söylenecek bir şey yok. -->
+                    <div class="ve-welcome-slayt" id="ve-welcome-slayt" aria-hidden="true"></div>
                     <div class="ve-welcome-eyebrow">Modül seç</div>
                     <div class="ve-module-overlay-grid">
                     <div class="ve-module-card" data-module="arac-performans" onclick="veStartModule('arac-performans')" tabindex="0" role="button"
@@ -1227,6 +1233,7 @@
 <script type="text/x-mfsim-defer" src="js/tabs.js" data-mfsim-label="Sekmeler hazırlanıyor..."></script>
 <script type="text/x-mfsim-defer" src="js/results.js" data-mfsim-label="Sonuç paneli..."></script>
 <script type="text/x-mfsim-defer" src="js/signal-tree.js" data-mfsim-label="Sinyal ağacı..."></script>
+<script type="text/x-mfsim-defer" src="js/karsilama-gorseller.js" data-mfsim-label="Karşılama slaytı: kare listesi..."></script>
 <script type="text/x-mfsim-defer" src="js/components.js" data-mfsim-label="Bileşen kütüphanesi..."></script>
 <script type="text/x-mfsim-defer" src="js/sensors.js" data-mfsim-label="Sensör tanımları..."></script>
 <script type="text/x-mfsim-defer" src="js/canvas-space.js" data-mfsim-label="Kanvas uzayı (sonsuz ızgara, kamera)..."></script>

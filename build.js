@@ -174,6 +174,24 @@ if (fs.existsSync(examplesDir)) {
     }
   });
 }
+// ── 2c-3) KARŞILAMA SLAYTI — assets/karsilama/*.webp tek dosyaya göm.
+// Program file:// ile açılıyor: gömülmeyen resim orada YOK demek. Kareler
+// bulanık ve örtü altında çizildiği için 1280 px / q0.60'a indirildi —
+// ölçüldü: 1600 px q0.72 ile sunum koşullarında ayırt edilemiyor, base64
+// maliyeti ise 4,68 MB yerine 2,93 MB.
+var karsilamaDir = path.join(ROOT, 'assets', 'karsilama');
+var karsilama = {};
+if (fs.existsSync(karsilamaDir)) {
+  fs.readdirSync(karsilamaDir).filter(function(f) { return f.endsWith('.webp'); })
+    .sort().forEach(function(f) {
+      karsilama[f] = 'data:image/webp;base64,' +
+        fs.readFileSync(path.join(karsilamaDir, f)).toString('base64');
+    });
+  var kb = Object.keys(karsilama).reduce(function(t, k) { return t + karsilama[k].length; }, 0);
+  console.log('  Karşılama karesi göm: ' + Object.keys(karsilama).length + ' kare · ' +
+    (kb / 1048576).toFixed(2) + ' MB base64');
+}
+
 // ── 2c-2) SÜRÜM KÜNYESİ — indirilen dosyanın "hangi sürümüm ben" cevabı.
 // Yerel build'de `__DEPLOY_RUN_ID__` yer tutucusu OLDUĞU GİBİ kalıyordu
 // (yalnız CI'da GITHUB_RUN_ID ile doluyor) ve version.json yalnız Pages'te
@@ -190,7 +208,8 @@ console.log('  Sürüm künyesi göm: ' + (VERSION_INFO.shortSha || '(git yok)')
 // sayıyor; ikinci bir blok o aritmetiği kaydırırdı.
 var embedScript = '<script>window.__MNT_TOPOLOGIES = ' +
   JSON.stringify(embedded).replace(/</g, '\\u003c') + ';\n' +
-  'window.__MFSIM_BUILD = ' + JSON.stringify(VERSION_INFO).replace(/</g, '\\u003c') + ';</script>';
+  'window.__MFSIM_BUILD = ' + JSON.stringify(VERSION_INFO).replace(/</g, '\\u003c') + ';\n' +
+  'window.__MFSIM_KARSILAMA = ' + JSON.stringify(karsilama).replace(/</g, '\\u003c') + ';</script>';
 // FONKSİYON replacer ŞART: String.replace'in İKİNCİ argümanı dizge olursa
 // içindeki '$1'..'$9', '$&', "$'", '$`' ve '$$' ÖZEL DİZİ sayılıp genişletilir.
 // Örnek topolojilerinde '$' geçen herhangi bir metin (customName, not metni,
