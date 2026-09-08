@@ -512,16 +512,14 @@ function updateAllConnections() {
     // gerilme zinciri buna göre değişiyor. Ok telin ORTASINDA, teğetine bakar.
     // Kısa açıklıkta çizilmez (46 px altında oku sığdırmak teli kalabalıklaştırır).
     //
-    // OK TELİN TERSİNE BAKAR (2026-09-08). Kayış telleri çekirdeğin LİSTE
-    // sırasında kurulu (Gates tablosuyla aynı: from → to) ve o sıra kayışın
-    // gidişinin TERSİ — sürücü kayışı kendine çeker, gergin taraf ona giren
-    // açıklıktır (fead-model.js → veFeadNaturalSense). Ok "kayış nereye
-    // akıyor" sorusunun cevabıdır, "tel hangi porttan çıktı"nın değil; from → to
-    // çizilseydi kart CW dönerken kanvas CCW gösterirdi. Köprü bir gün listeyi
-    // gidiş sırasında verirse bu çevirme onunla birlikte kalkar.
+    // OK TELİN YÖNÜNDE — VE TEL KAYIŞIN GİDİŞİDİR (2026-09-08). Kayış telleri
+    // artık gidiş sırasında kurulur; çekirdeğin ters sırasına çevirme köprüde
+    // (fead-model.js → veFeadRouteFlip). Bir tur boyunca (PR #895) tel liste
+    // sırasındaydı ve ok telin TERSİNE çizilerek doğru gösterildi; köprü
+    // çevirince o çevirme kalktı. Kapı: port-geometry.test.js → "kayış telinin
+    // gidiş oku".
     if(_feadBelt && typeof veConnDirMark === 'function') {
-      var _tersCp = _bezCp ? [_bezCp[2], _bezCp[3], _bezCp[0], _bezCp[1]] : null;
-      var mk = veConnDirMark(lineType, x2, y2, x1, y1, _tersCp);
+      var mk = veConnDirMark(lineType, x1, y1, x2, y2, _bezCp);
       if(mk) svg.appendChild(mk);
     }
     

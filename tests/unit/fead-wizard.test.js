@@ -304,13 +304,16 @@ describe('sıra, sürücü ve satır düzenleme', () => {
     expect(st.pulleys[1].driver).toBe(true);
   });
 
-  test('gergi sıraya KENDİLİĞİNDEN girer (durumda ayrı duruyor)', () => {
+  test('gergi sıraya KENDİLİĞİNDEN girer — krankın hemen ardına (gevşek açıklık)', () => {
+    // 2026-09-08: sıra kayışın GİDİŞİ; gergi sona eklenseydi krankın GİRİŞİNE
+    // (gergin taraf) düşerdi. Varsayılan yer kayış sırasında 2. konum.
     bos();
     wiz.veFeadWizPulleyAdd('fead-crank');
     wiz.veFeadWizPulleyAdd('fead-idler');
     const r = wiz.veFeadWizRoute(wiz.veFeadWizState());
     expect(r.length).toBe(3);
-    expect(r[r.length - 1]).toBe('__ten__');
+    expect(r[1]).toBe('__ten__');
+    expect(r[0]).toBe(wiz.veFeadWizState().pulleys[0].key);   // krank başta
   });
 
   test('kasnak silinince sıradan VE duty kW\'dan düşer', () => {
@@ -1407,6 +1410,8 @@ describe('dönüş yönü — Kasnaklar adımında seçilir', () => {
 // çevirme YAZILAN sırada çalıştığı için iki işlem de yanlış sırayı görüyordu.
 describe('serpantin sırası — iki sıra birleşti', () => {
   // Elle kurulmuş model: sıra `'__ten__'` TAŞIMIYOR (örnek kurucusu taşıyor).
+  // 2026-09-08: sıra kayışın GİDİŞİ; okunan sıra gergiyi krankın hemen ardına
+  // (gevşek açıklık) koyar, sona değil. Hüküm de kayış sırasında yazılır.
   const elleKur = () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const st = wiz.veFeadWizState();
@@ -1435,10 +1440,10 @@ describe('serpantin sırası — iki sıra birleşti', () => {
     // Halkada gerginin komşusu iki yanda da sürücü; ters yürütünce "sürücüden
     // ÖNCE" olan "sürücüden SONRA" oluyor. Sıra ÇEVRİMSEL döndürülerek
     // düzeltilemez: gergiyi sona almak sürücüyü baştan düşürür.
-    expect(b0.tensionerOrder).toEqual({ index: 5, count: 6, last: true });
-    expect(b1.tensionerOrder).toEqual({ index: 1, count: 6, last: false });
+    expect(b0.tensionerOrder).toEqual({ index: 1, count: 6, afterDriver: true, last: true });
+    expect(b1.tensionerOrder).toEqual({ index: 5, count: 6, afterDriver: false, last: false });
     expect(b0.warnings).toEqual([]);
-    expect(b1.warnings.filter((w) => /son sırada değil/.test(w))).toHaveLength(1);
+    expect(b1.warnings.filter((w) => /krankın çıkışında değil/.test(w))).toHaveLength(1);
 
     // AMA FİZİK BOZULMUYOR — ve bu ayrım, uyarının neden bir ZORLAMA
     // olmadığının kendisi. `tensionerSide` span gerilmelerinin ankrajın altına
@@ -1455,12 +1460,12 @@ describe('serpantin sırası — iki sıra birleşti', () => {
   test('SIRA KARTI HÜKMÜ BASAR — iki durumda da', () => {
     const st = elleKur();
     const iyi = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
-    expect(iyi).toMatch(/Gergi sırada <strong>son<\/strong>/);
-    expect(iyi).not.toMatch(/son değil/);
+    expect(iyi).toMatch(/Gergi krankın <strong>çıkışında<\/strong>/);
+    expect(iyi).not.toMatch(/çıkışında değil/);
 
     wiz.veFeadWizRouteReverse();
     const kotu = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
-    expect(kotu).toMatch(/son değil \(2\/6\)/);
+    expect(kotu).toMatch(/çıkışında değil \(6\/6\)/);
     // ÇARE UYDURULMUYOR: sayıların etkilenmediği AYNI cümlede yazılı, yoksa
     // okuyucu bunu bir hesap hatası sanardı.
     expect(kotu).toMatch(/Sayılar bundan etkilenmez/);
@@ -1498,8 +1503,8 @@ describe('serpantin sırası — iki sıra birleşti', () => {
     expect(b1.beltLengthMm).toBeCloseTo(b0.beltLengthMm, 6);
     // Yön seçicisi çevirmeye devrettiği için gergi de sürücünün öbür yanına
     // geçiyor; hüküm sıranın yanında basılıyor (bkz. yukarıdaki test).
-    expect(b1.tensionerOrder.last).toBe(false);
-    expect(b1.warnings.filter((w) => !/son sırada değil/.test(w))).toEqual([]);
+    expect(b1.tensionerOrder.afterDriver).toBe(false);
+    expect(b1.warnings.filter((w) => !/krankın çıkışında değil/.test(w))).toEqual([]);
   });
 });
 
@@ -2929,7 +2934,7 @@ describe('adım listesi ve taşınan yetenek', () => {
     expect(h).toContain('Kasnaklar — kayış sırasıyla');
     expect(h).toContain('veFeadWizRouteReverse()');
     expect(h).toContain("veFeadWizPulleyMove('__ten__'");   // gergi de taşınabiliyor
-    expect(h).toMatch(/Gergi sırada/);                       // hüküm sıranın yanında
+    expect(h).toMatch(/Gergi krankın/);                      // hüküm sıranın yanında
   });
 
   test('TABLO SIRASI SIRANIN KENDİSİ — satır sayısı = rota uzunluğu', () => {

@@ -537,8 +537,11 @@ function veFeadWizSeed(key){
     keyMap[p.key] = row.key;
     st.pulleys.push(row);
   });
-  st.route = (ex.route || []).map(function(k){ return keyMap[k]; })
-    .filter(function(k){ return !!k; });
+  // SIRA KAYIŞIN GİDİŞİ (2026-09-08). `ex.route` Gates TABLO sırası, yani
+  // gidişin tersi; tablo "kayış sırasıyla" dediği için tohum çevrilir (krank
+  // sabit, kalanı ters). Köprü kurarken geri çevirir — sayılar birebir.
+  st.route = veFeadRouteFlip((ex.route || []).map(function(k){ return keyMap[k]; })
+    .filter(function(k){ return !!k; }));
   st.belt = JSON.parse(JSON.stringify(ex.belt || {}));
   st.solver = JSON.parse(JSON.stringify(ex.solver || {}));
   // Duty kW'ı örnekte KASNAK ANAHTARIYLA yazılı; sihirbaz da anahtarla tutuyor
@@ -716,7 +719,11 @@ function veFeadWizNodes(st){
 function veFeadWizRoute(st){
   st = st || _fwState;
   var r = (st.route || []).slice();
-  if(r.indexOf('__ten__') < 0) r.push('__ten__');
+  // GERGİ VARSAYILAN OLARAK KRANKIN HEMEN ARDINDA (2026-09-08): sıra kayışın
+  // gidişi olduğu için gevşek açıklık krankın ÇIKIŞIDIR, kayış sırasında 2.
+  // konum. Sona eklemek (eski, tablo sırası dönemi) gergiyi krankın GİRİŞİNE,
+  // yani gergin tarafa koyardı — rozet kırmızı, span negatif.
+  if(r.indexOf('__ten__') < 0) r.splice(Math.min(1, r.length), 0, '__ten__');
   var gecerli = {};
   (st.pulleys || []).forEach(function(p){ gecerli[p.key] = 1; });
   gecerli.__ten__ = 1;
@@ -1425,25 +1432,37 @@ function _fwStepKasnak(b){
   });
   t += '</tbody></table></div>';
 
-  // GERGİ SONDA MI — hüküm sıranın YANINDA. Köprü bunu `build.tensionerOrder`
-  // ile TAŞIYOR; sihirbaz yeniden hesaplamıyor (ikinci bir sayaç, "⇄ Yönü
-  // çevir" sonrası listeyle uyarının ayrışması demekti).
+  // GERGİ KRANKIN ÇIKIŞINDA MI — hüküm sıranın YANINDA ve KAYIŞ SIRASINDA
+  // (tablo o sırayı gösteriyor; "sırada son" demek onunla çelişirdi). Köprü
+  // bunu `build.tensionerOrder` ile TAŞIYOR; sihirbaz yeniden hesaplamıyor
+  // (ikinci bir sayaç, "⇄ Yönü çevir" sonrası listeyle uyarının ayrışması
+  // demekti).
   var _tord = b && b.tensionerOrder;
   var _hkm = '';
-  if(_tord && _tord.last){
-    _hkm = '<p class="ve-fw-dim">Gergi sırada <strong>son</strong> — Gates '
-      + 'konvansiyonu (sıra sürücüyle başlar, gergiyle biter).</p>';
+  if(_tord && _tord.afterDriver){
+    _hkm = '<p class="ve-fw-dim">Gergi krankın <strong>çıkışında</strong> (kayış '
+      + 'sırasında 2.) — otomatik gergi gevşek açıklıkta durur; Gates tablosunda bu, '
+      + 'sıranın sonudur.</p>';
   } else if(_tord){
-    _hkm = '<p class="ve-fw-warn">⚠ Gergi sırada son değil (' + (_tord.index + 1)
-      + '/' + _tord.count + '). Gates konvansiyonunda gergi kayışın sürücüye '
-      + '<strong>dönüş</strong> açıklığındadır. <span class="ve-fw-dim">Sayılar '
-      + 'bundan etkilenmez; etkilenen tedarikçi raporlarıyla satır satır '
-      + 'karşılaştırılabilirlik.</span></p>';
+    _hkm = '<p class="ve-fw-warn">⚠ Gergi krankın çıkışında değil (' + (_tord.index + 1)
+      + '/' + _tord.count + '). Otomatik gergi kayışın kranktan <strong>çıktığı</strong> '
+      + '(gevşek) açıklıkta durur — kayış sırasında krankın hemen ardında. '
+      + '<span class="ve-fw-dim">Sayılar bundan etkilenmez; etkilenen tedarikçi '
+      + 'raporlarıyla satır satır karşılaştırılabilirlik.</span></p>';
   }
 
   h += _fwCard('Kasnaklar — kayış sırasıyla',
       'var(--accent-primary)', t
     + _hkm
+    // SIRANIN ANLAMI YAZILI: satırlar kayışın gidişi (krank çıkışından). Gates
+    // tabloları bunun TERSİ sırada yazar — örnekler kurulurken çevriliyor,
+    // elle giren kullanıcı ⇄ ile çevirir. Yazılmasaydı Gates tablosunu satır
+    // satır kopyalayan kullanıcı gergiyi gergin tarafa koyar ve rozet kırmızı
+    // yanardı, sebebi görünmeden.
+    + '<p class="ve-fw-dim" style="margin:6px 0 0;">Satırlar kayışın <b>gidiş</b> '
+    + 'sırasıdır: krankın çıkışından başlar, halkayı dolaşır. Gates tabloları '
+    + 'kasnakları bunun <b>tersi</b> sırada yazar — örnekler kurulurken çevrilir; '
+    + 'tabloyu elle kopyaladıysanız ⇄ ile çevirin.</p>'
     + '<div class="ve-fw-rowbtns">'
       + '<button type="button" class="ve-fw-btn" onclick="veFeadWizRouteReverse()">'
       + '⇄ Kayış yönünü çevir</button></div>'

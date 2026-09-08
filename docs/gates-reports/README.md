@@ -344,9 +344,12 @@ sırttan temas   → TERS (CCW)
 ```
 
 **ÖLÇÜLDÜ:** ters dönenlerin hepsi sırttan temas edenler — istisna yok.
-MFSim listeyi tablo sırasında tutar (2095 doğrulanmış sayı buna bağlı) ve
-işareti `veFeadNaturalSense`'te çevirir. Kapı: `tests/unit/fead-spin.test.js`
-→ *"LİSTE SIRASI KAYIŞIN GİDİŞİNİN TERSİ"*.
+MFSim kanvas kablolarını kayışın GİDİŞ sırasında tutar; köprü
+(`veFeadRouteFlip`, krank sabit + kalanı ters) çekirdeğe tablo sırasını verir
+(2095 doğrulanmış sayı ona bağlı) ve yön `veFeadNaturalSense`'te okunur. Örnek
+kayıtlarındaki `route` dizileri tablo sırasında KALIR — bu sayfa ile satır
+satır karşılaştırılsın diye. Kapı: `tests/unit/fead-spin.test.js` → *"LİSTE
+SIRASI KAYIŞIN GİDİŞİNİN TERSİ"* ve *"KABLOLAR GİDİŞ SIRASINDA"*.
 
 ### 4 · Not alanındaki `CW`/`CCW` sistemin yönü DEĞİL, gerginin EL YÖNÜ
 
