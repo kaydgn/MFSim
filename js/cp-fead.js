@@ -170,16 +170,10 @@ function veFeadArrangeByCoords(opts){
   var maxY = Math.max.apply(null, mm.map(function(o){ return o.y; }));
   var ortX = (minX + maxX) / 2, ortY = (minY + maxY) / 2;
 
-  // ÇİZİM DÜZLEMİ BURADA DA GEÇERLİ. Bu, mm → px'in İKİNCİ yolu (küme
-  // ORTALANIR, orijine oturmaz — bu yüzden veFeadMmToCanvas kullanılamıyor).
-  // İşaret oradan alınmazsa "Otomatik Düzenle" ile alt topoloji açılışı ters el
-  // ile yerleştirir: kutu, kapatıp açınca X'te zıplar (kapı:
-  // cp-fead.test.js → "İKİ YERLEŞTİRME YOLU AYNI YERE KOYAR").
-  var sx = (typeof _feadPlaneSx === 'function') ? _feadPlaneSx() : 1;
   var yer = {};
   mm.forEach(function(o){
     var b = veFeadNodeBox(o.n);
-    yer[o.n.id] = { x: CX + sx * (o.x - ortX) * s - b.w / 2,
+    yer[o.n.id] = { x: CX + (o.x - ortX) * s - b.w / 2,
                     y: CY - (o.y - ortY) * s - b.h / 2 };   // Y TERS
   });
 
@@ -1081,8 +1075,7 @@ function getFeadPulleyPropertiesHTML(node){
       ], 3)
     + _feadHint('<b>Dış çap</b> girilir; pitch ve efektif yarıçapları çekirdek kayış profilinden '
         + 'türetir (kaburgalı: r<sub>pitch</sub>=OD/2+h<sub>b</sub>, r<sub>eff</sub>=OD/2). '
-        + 'Konum, kayış düzleminde (Gates rapor düzlemi) kasnak merkezidir'
-        + ((typeof veFeadPlaneNote === 'function') ? _feadEsc(veFeadPlaneNote()) : '') + '.'
+        + 'Konum, kayış düzleminde (Gates rapor düzlemi) kasnak merkezidir.'
         // BAĞ KAPALIYKEN KUTU OYNAMAZ VE BUNU BURADA SÖYLER. Normalde bu üç
         // alan kanvastaki kutuyu da taşıyor (VE_FEAD_COORD_KEYS →
         // veFeadPlaceFromCoords); bağ kapalıyken taşımıyor. Sessiz bırakılsaydı
@@ -2641,21 +2634,13 @@ function veFeadLayoutSVG(build, W, H, opts){
   // eskiden bu durumda kart yalnız "Kayış yolu henüz kurulamadı" diyordu —
   // yani kullanıcı NEDEN olduğunu göremiyordu. Sebep build üzerinde taşınıyor;
   // kart ve panel onu basıyor.
-  // ÖN GÖRÜNÜŞ TEK NOKTADAN: çizimin okuduğu HER geometri buradan geçiyor
-  // (ana konum + hayalet konumlar), dolayısıyla aynalamayı buraya koymak
-  // sarım yaylarını, kaburga dişlerini, dönüş oklarını ve kol çizimini
-  // birlikte çeviriyor. Yirmi ayrı yere serpiştirmek, birinin unutulduğunda
-  // yalnız O ögenin ters kalması demekti.
-  //
-  // VERİ AYNALANMIYOR: build.sys ve bütün sayısal çıktılar Gates düzleminde
-  // kalıyor (bkz. fead-model.js → VE_FEAD_VIEW_FRONT).
-  var _onGor = (typeof veFeadViewFront === 'function') && veFeadViewFront()
-               && (typeof veFeadMirrorGeomX === 'function')
-               && !(opts && opts.rawFrame === true);
+  // ÇİZİM AYNALANMAZ. Kasnak konumları Gates raporunun Layout Data
+  // koordinatlarının kendisidir ve ekranda da öyle durur (bkz. fead-model.js →
+  // "ÇİZİM DÜZLEMİ YOKTUR — TEK ÇERÇEVE VAR"). Burada bir dönem bir ayna
+  // bayrağı vardı; üç turda üç kez yanlış resim üretti ve kaldırıldı.
   function geomAt(rel){
     try {
-      var g = FEADCore.tensionerState(build.sys, rel).geom;
-      return _onGor ? veFeadMirrorGeomX(g) : g;
+      return FEADCore.tensionerState(build.sys, rel).geom;
     }
     catch(e){
       if(!build.geomError)
@@ -2693,9 +2678,6 @@ function veFeadLayoutSVG(build, W, H, opts){
   // kalıyor (BMC'de −259.94 mm, en soldaki kasnaktan 20 mm daha solda). Sınırlara
   // katılmazsa artı işareti çerçevenin dışına düşüp görünmez olur.
   var pv = wantPivot && build.sys.tensioner && build.sys.tensioner.pivot;
-  // Pivot geometriden DEĞİL sistemden okunuyor; aynalanmazsa kol çizimi
-  // kasnaktan kopar (çizim aynalı, pivot değil).
-  if(pv && _onGor) pv = [-pv[0], pv[1]];
   if(pv){
     minX=Math.min(minX,pv[0]); maxX=Math.max(maxX,pv[0]);
     minY=Math.min(minY,pv[1]); maxY=Math.max(maxY,pv[1]);
@@ -3206,17 +3188,14 @@ function veFeadLayoutSVG(build, W, H, opts){
     if(opts.nodeId)
       svg += '<rect x="' + f(cx - VE_FEAD_ROSE_HALF) + '" y="' + f(cy - VE_FEAD_ROSE_HALF) + '" width="'
           + (2*VE_FEAD_ROSE_HALF) + '" height="' + (2*VE_FEAD_ROSE_HALF) + '" fill="transparent">'
-          + '<title>Yön gülü — sürükle ile taşınır, çift tık varsayılan yerine döndürür.'
-          + (_onGor ? ' ÇİZİM ÖN GÖRÜNÜŞTÜR: Gates düzleminin X aynası; koordinatlar ve açı DEĞERLERİ Gates düzleminde kalır.' : '') + '</title></rect>';
+          + '<title>Yön gülü — sürükle ile taşınır, çift tık varsayılan yerine döndürür.</title></rect>';
     svg += '<g data-ve="compass" stroke="var(--text-muted)" stroke-width="1" fill="none">'
         + '<circle cx="' + f(cx) + '" cy="' + f(cy) + '" r="' + f(r) + '"/>'
         + '<line x1="' + f(cx-r-4) + '" y1="' + f(cy) + '" x2="' + f(cx+r+4) + '" y2="' + f(cy) + '"/>'
         + '<line x1="' + f(cx) + '" y1="' + f(cy-r-4) + '" x2="' + f(cx) + '" y2="' + f(cy+r+4) + '"/></g>';
-    // GÜL ÇİZİMİ TAKİP ETMEK ZORUNDA. Çizim ön görünüş için X'te aynalandığında
-    // veri düzleminin 0°'si ekranda SOLA bakar. Gül eski yerinde bırakılırsa
-    // resim aynalı, açı okuması aynalı DEĞİL olur — kullanıcı 0°'yi yanlış
-    // tarafta arar. Bu, düzeltilen "sweep bayrağı" hatasının aynı sınıfı.
-    var ay = _onGor ? -1 : +1;
+    // Gül veri düzleminin yönünü gösterir: 0° sağda, açı +X'ten CCW artar.
+    // Çizim aynalanmadığı için burada bir çeviri yok.
+    var ay = +1;
     var et = [['0', cx + ay*(r+7), cy+3, ay>0?'start':'end'], ['90', cx, cy-r-7, 'middle'],
               ['180', cx - ay*(r+7), cy+3, ay>0?'end':'start'], ['270', cx, cy+r+11, 'middle']];
     et.forEach(function(t){
@@ -5261,8 +5240,7 @@ function veFeadHubTable(R){
         }).join('') + '</tr>';
   });
   h += '</table></div>';
-  return _feadCard('Hubload', 'çalışma (Mean) konumunda · büyüklük [N] / yön [°]'
-    + ((typeof veFeadPlaneNote === 'function') ? veFeadPlaneNote() : ''),
+  return _feadCard('Hubload', 'çalışma (Mean) konumunda · büyüklük [N] / yön [°]',
     'var(--accent-primary)', h);
 }
 

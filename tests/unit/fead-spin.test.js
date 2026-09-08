@@ -71,12 +71,10 @@ const dutyRows = (ns) => (ns.find((n) => n.type === 'fead-solver').data.duty) ||
 const coz = (s) => M.veFeadAnalyze(s.b, { rows: dutyRows(s.ns) });
 const kisa = (nm) => String(nm).replace(/ .*/, '');
 
-// ÇİZİM DÜZLEMİNİN YÖNÜ — kapılar BAYRAĞA değil İLİŞKİYE baksın diye.
-// Rozet/panel "kullanıcının GÖRDÜĞÜ yönü" basmak zorunda; gördüğü yön ise
-// çizim düzlemine bağlı (`VE_FEAD_VIEW_FRONT`). Beklentiyi buradan türetmek,
-// varsayılan düzlem bir daha değiştiğinde bu testlerin sessizce yanlış
-// beklenti kilitlemesini önler — 2026-09-04'te tam olarak bu oldu.
-const cizimYonu = (veriYonu) => (M.VE_FEAD_VIEW_FRONT ? -veriYonu : veriYonu);
+// ÇİZİM AYNALANMAZ (2026-09-07): ekranda görülen yön, verinin dolanım
+// işaretinin KENDİSİ. Arada çeviri yok, bayrak yok — `cizimYonu` kimliktir ve
+// yalnız okunabilirlik için duruyor.
+const cizimYonu = (veriYonu) => veriYonu;
 const cizimGlifi = (veriYonu) => (cizimYonu(veriYonu) > 0 ? '\u21ba CCW' : '\u21bb CW');
 
 // ─────────────────────────────────────────────────────────────────────────────

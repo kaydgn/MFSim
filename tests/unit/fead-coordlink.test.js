@@ -72,7 +72,8 @@ function kur() {
 }
 
 // Ekran X işareti: kanvas sürüklemesinin mm'ye hangi işaretle geçtiği.
-const SX = () => (M.VE_FEAD_VIEW_FRONT ? -1 : 1);
+// ÇİZİM AYNALANMAZ — X işareti sabit (bkz. fead-model.js, "TEK ÇERÇEVE VAR").
+const SX = () => 1;
 
 const bag = (linked) => {
   const d = componentDefs['fead-coordlink'];

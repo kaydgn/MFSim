@@ -335,15 +335,12 @@ function veFeadWizRouteReverse(){
 // İSTENEN YÖN ZATEN GEÇERLİYSE HİÇBİR ŞEY YAPILMAZ — yoksa aynı düğmeye ikinci
 // tık sırayı geri çevirir ve seçici bir aç/kapa gibi davranırdı.
 //
-// DÜĞMELER ÖN GÖRÜNÜŞTE KONUŞUR, KARŞILAŞTIRMA VERİ DÜZLEMİNDE YAPILIR.
-// `b.spin` `FEADCore.loopSense`'ten geliyor ve VERİ düzlemini ölçüyor; çizim
-// aynalı (`VE_FEAD_VIEW_FRONT`). Çeviri tek boundary'de — `veFeadSpinToFront`
-// bir involusyon olduğu için aynı fonksiyon iki yönde de kullanılıyor.
-// Çevrilmeseydi "CW" düğmesi kartta CCW'ye giden bir model kurardı: sessiz,
-// çünkü sayılar makul kalır.
+// DÜĞME DE KART DA AYNI ÇERÇEVEDE. `b.spin` `FEADCore.loopSense`'ten geliyor
+// ve çizim aynalanmadığı için ekranda görülen yön onunla AYNI — arada çeviri
+// yok. (Bir dönem burada bir ayna çevirisi vardı; ayna kaldırıldı.)
 function veFeadWizSpinSet(dirFront){
   if(!_fwState) return false;
-  var istenen = veFeadSpinToFront(_fwNum(dirFront, 0));
+  var istenen = _fwNum(dirFront, 0);
   var b = _fwBuild || veFeadWizBuild();
   var suan = (b && b.spin) ? b.spin : 0;
   if(!istenen || !suan || istenen === suan){ veFeadWizRender(); return false; }
@@ -355,7 +352,7 @@ function veFeadWizSpinSet(dirFront){
 // kontrolü basıyor. İki kopya tutulsaydı biri düzeltilince öbürü sessizce
 // eskirdi — bu deponun tekrar eden kuralı ("panel ile kart AYNI alanı okur").
 function veFeadWizSpinHTML(b){
-  var sp = veFeadSpinToFront((b && b.spin) || 0);   // ÖN GÖRÜNÜŞ
+  var sp = (b && b.spin) || 0;                     // ÇİZİLEN yön
   function dugme(v, glif, ad){
     return '<button type="button" class="ve-fw-spin' + (sp === v ? ' ve-fw-spin-on' : '')
       + '"' + (sp ? '' : ' disabled')
@@ -366,8 +363,8 @@ function veFeadWizSpinHTML(b){
     // İPUCU METNİ DE TEK ÜRETİCİDEN. Düzlem adı burada İKİNCİ KEZ yazılsaydı,
     // ayna bayrağı değişince bu iki düğme sessizce eskirdi — tam olarak bir
     // kez olan şey (metin koşulsuz "önden bakışta" diyordu).
-    + dugme(1, '\u21ba CCW', veFeadSpinLabel(veFeadSpinToFront(1)).uzun)
-    + dugme(-1, '\u21bb CW', veFeadSpinLabel(veFeadSpinToFront(-1)).uzun)
+    + dugme(1, '\u21ba CCW', veFeadSpinLabel(1).uzun)
+    + dugme(-1, '\u21bb CW', veFeadSpinLabel(-1).uzun)
     + '<span class="ve-fw-dim">' + (sp
         ? 'Sıradan türedi; seçim serpantin sırasını ters yürütür.'
         : 'Henüz okunamıyor — en az üç kasnak ve koordinatları gerekli.')
@@ -1828,9 +1825,9 @@ function veFeadWizAngScene(st){
 // fonksiyon): `d` işaretini de çevirdiği için sarım yayları kasnağın içinden
 // geçmiyor. İkinci bir aynalama yazmak, kartla seçicinin sessizce ayrışacağı
 // tek yer olurdu.
-function _fwMir(){
-  return (typeof veFeadSpinToFront === 'function') ? veFeadSpinToFront(1) : 1;
-}
+// ÇİZİM AYNALANMAZ — bu yüzden sabit. Fonksiyon duruyor çünkü kart ile
+// seçicinin AYNI cevabı kullanması bir kapı (fead-wizard.test.js).
+function _fwMir(){ return 1; }
 
 // mm → SVG. +Y mm'de YUKARI, SVG'de aşağı → çevrilir (kanvasın kuralının
 // aynısı). Ölçek bütün sahneyi kabına oturtur; `zoom` onu çarpar.
@@ -1842,19 +1839,10 @@ function _fwMir(){
 function veFeadWizAngSVG(sc, shownDeg, zoom, W, H, hoverDeg){
   if(!sc) return '';
   W = W || 420; H = H || 320;
-  var mir = _fwMir();
-  if(mir < 0){
-    sc = { cx: -sc.cx, cy: sc.cy, armLen: sc.armLen, r: sc.r,
-           others: sc.others.map(function(o){
-             return { x: -o.x, y: o.y, r: o.r };
-           }),
-           geom: (typeof veFeadMirrorGeomX === 'function')
-                 ? veFeadMirrorGeomX(sc.geom) : sc.geom,
-           // BANT AYNALANMAZ, TAŞINIR: örnekler VERİ düzlemindeki açıyı taşıyor
-           // ve ekran açısına çeviri aşağıda `mir` ile zaten yapılıyor. Burada
-           // ikinci kez çevirmek bandı yanlış yarıya oturturdu.
-           band: sc.band };
-  }
+  // ÇİZİM AYNALANMAZ (bkz. fead-model.js → "TEK ÇERÇEVE VAR"). `mir` sabit
+  // +1; `data-mir` niteliği fare→açı çevirisinin okuduğu sözleşme olduğu için
+  // duruyor, ama artık hiçbir zaman −1 olmuyor.
+  var mir = 1;
   var z = (_fwNum(zoom, 1) > 0) ? _fwNum(zoom, 1) : 1;
   var pad = 22;
   var minX = sc.cx - sc.armLen, maxX = sc.cx + sc.armLen;

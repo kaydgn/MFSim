@@ -100,12 +100,8 @@ function ekranKonumlari(build, adet, opt) {
 
 const isaret = (v) => (Math.abs(v) < 1e-9 ? 0 : (v > 0 ? 1 : -1));
 
-// Karşılaştırma RAPOR düzleminde yapılır — varsayılan ne olursa olsun.
-const VARSAYILAN_DUZLEM = M.VE_FEAD_VIEW_FRONT;
-const raporDuzleminde = (fn) => {
-  M.veFeadSetViewFront(false);
-  try { return fn(); } finally { M.veFeadSetViewFront(VARSAYILAN_DUZLEM); }
-};
+// ÇİZİM AYNALANMAZ: karşılaştırma doğrudan yapılır, kurulacak bir düzlem yok.
+const raporDuzleminde = (fn) => fn();
 
 // Jeneratörün ürettiği dokuz örnek + elle yazılmış AG00879: hepsinin fixture
 // karşılığı var, yani raporun Layout Data'sı okunabiliyor.
@@ -199,15 +195,10 @@ describe('KANVAS ile KART aynı elde — ikinci, bağımsız kusur', () => {
                  'AG00902_1275_GATES_2023', 'BMC_FEAD_2026'];
 
   ORNEK.forEach((id) => {
-    // İKİ DÜZLEMDE DE. Aynalama iki yüzeyden yalnız birine konsaydı (2026-09-04'te
-    // tam olarak bu olmuştu: kart aynalı, kanvas değil) kullanıcı aynı modelin
-    // iki resmini ters el ile görürdü ve hiçbir sayı yanlış görünmezdi.
-    [true, false].forEach((onGorunus) => {
-    test(id + ' — kanvas X sırası ile kart X sırası AYNI (' +
-         (onGorunus ? 'ön görünüş' : 'rapor düzlemi') + ')', () => {
-      const eski = M.VE_FEAD_VIEW_FRONT;
-      M.veFeadSetViewFront(onGorunus);
-      try {
+    // Kanvas kutuları ile kart AYNI ELDE olmak zorunda. Bir dönem kart aynalı,
+    // kanvas değildi (2026-09-04) ve kullanıcı aynı modelin iki resmini ters
+    // görüyordu; ayna kalktığı için ikisi de artık tek çerçevede.
+    test(id + ' — kanvas X sırası ile kart X sırası AYNI', () => {
       const b = kur(id);
       expect(b.ok).toBe(true);
       const ex = M.veFeadExampleOf(id);
@@ -238,80 +229,102 @@ describe('KANVAS ile KART aynı elde — ikinci, bağımsız kusur', () => {
         });
       });
       expect(bakilan).toBeGreaterThan(0);
-      } finally { M.veFeadSetViewFront(eski); }
-    });
     });
   });
 });
 
-describe('DÖNÜŞ YÖNÜ — üç yolun da bedeli ÖLÇÜLDÜ (2026-09-07)', () => {
-  // Kullanıcı iki kez, iki ayrı şey istedi ve İKİSİ BİRDEN OLMUYOR:
-  //   (1) 2026-09-04: *"gergi krank kasnağının sol tarafında olmalı"* — yani
-  //       düzen Gates raporunun 1. sayfasındaki gibi.
-  //   (2) 2026-09-07: *"krank kasnağı saat yönünde dönmeli, sistem
-  //       aynalanmayacak."*
+describe('ÇİZİM AYNALANMAZ — konumlar raporun Layout Data\'sıdır', () => {
+  // KULLANICI ÜÇ KEZ BİLDİRDİ, üçüncüsünde dört kaynakla gösterdi (2026-09-07):
+  // Gates AG00976 raporunun şeması, aynı raporun Layout Data tablosu, sistemin
+  // CAD görüntüsü ve mühendisin Excel tasarımı — dördü de AYNI düzeni veriyor.
   //
-  // ÖLÇÜLDÜ — üç yol var, üçünün de bedeli burada kayıtlı:
+  // Sorun hiçbir zaman VERİDE değildi: depodaki örnek raporun koordinatlarının
+  // birebir aynısını taşıyor. Sorun, çizim anında X'i çeviren bir bayraktı ve
+  // o bayrak üç turda üç kez yanlış resim üretti. KALDIRILDI.
   //
-  //   | yol                | konumlar        | krank | fizik           |
-  //   |--------------------|-----------------|-------|-----------------|
-  //   | rapor düzlemi (bu) | sayfayla AYNI   | CCW   | sağlam          |
-  //   | ayna (PR #875)     | TERS            | CW    | sağlam (simetri)|
-  //   | rotayı yerinde çev | sayfayla AYNI   | CW    | KIRIK           |
-  //
-  // VARSAYILAN İKİNCİ SATIR — kullanıcı kararı (2026-09-07), üç yol resimle
-  // yan yana gösterildikten sonra: *"B — motora önden bakış (krank CW)."*
-  // Sol-sağın Gates sayfasının tersine düşmesi bir regresyon değil, seçilen
-  // bakış yönünün kendisi; kullanıcı bedeli görerek seçti.
-  //
-  // AYNALANAN YALNIZ RESİM: saklanan mm koordinatları, çözücü ve basılan
-  // sayılar Gates çerçevesinde KALIYOR — rapordan veri girip PDF'le satır
-  // satır karşılaştırmak bu modülün taşıdığı asıl değer (CLAUDE.md kuralı) ve
-  // bir bakış tercihi için feda edilmiyor. Basıldıkları yer bunu SÖYLÜYOR
-  // (`veFeadPlaneNote`).
-  test('varsayılan ÖN GÖRÜNÜŞ — krank saat yönünde', () => {
-    expect(M.VE_FEAD_VIEW_FRONT).toBe(true);
+  // Bu öbek bayrağın yokluğunu değil, RESMİN KENDİSİNİ ölçüyor.
+
+  test('ayna makinesi ÇİZİM YOLUNDAN çağrılamaz — bayrak da erişimci de YOK', () => {
+    expect(M.VE_FEAD_VIEW_FRONT).toBeUndefined();
+    expect(M.veFeadSetViewFront).toBeUndefined();
+    expect(M.veFeadViewFront).toBeUndefined();
+    expect(M.veFeadSpinToFront).toBeUndefined();
+    expect(M.veFeadPlaneNote).toBeUndefined();
+    // Saf simetri fonksiyonu DURUYOR — ölçülmüş bir ilişkiyi taşıyor, ama
+    // yalnız kendi testinde kullanılıyor.
+    expect(typeof M.veFeadMirrorGeomX).toBe('function');
   });
 
-  test('ONİKİ ÖRNEĞİN ONİKİSİ DE ekranda CW — krank dâhil', () => {
+  // AG00976 — kullanıcının gönderdiği raporun KENDİ "Layout Data" tablosu.
+  // Bu örnek fixture'da yok (jeneratörden gelmiyor), o yüzden çıpa burada.
+  const AG00976 = {
+    'Sürücü Kasnak (FAN)':    [0.00, 0.00],
+    'Avara 1':                [130.10, 139.90],
+    'Klima Kompresörü':       [184.20, 314.50],
+    'Avara 2':                [0.00, 267.40],
+    'Alternatör (155 A)':     [-281.00, 259.50],
+    'Otomatik Gergi (E9843)': [-161.97, 91.29],
+  };
+
+  test('AG00976 örneği raporun koordinatlarını BİREBİR taşıyor', () => {
+    const ex = M.veFeadExampleOf('AG00976_GATES_2025');
+    ex.pulleys.forEach((pu) => {
+      const bek = AG00976[pu.name];
+      expect(bek).toBeTruthy();
+      const d = pu.data || {};
+      let x = Number(d.x), y = Number(d.y);
+      if (!Number.isFinite(x)) {
+        const kutu = M.veFeadTensionerBoxMm(d);
+        expect(kutu).toBeTruthy();
+        x = kutu[0]; y = kutu[1];
+      }
+      expect(x).toBeCloseTo(bek[0], 2);
+      expect(y).toBeCloseTo(bek[1], 2);
+    });
+  });
+
+  test('ÇİZİLEN RESİM de aynı — ALT ve gergi SOLDA, klima SAĞDA', () => {
+    // Kullanıcının bildirdiği belirtinin birebir kendisi. Aynalı bir çizimde
+    // bu kapı kırmızıya döner; ölçülen şey etiket değil SVG'nin cx'i.
+    const b = kur('AG00976_GATES_2025');
+    expect(b.ok).toBe(true);
+    const ex = M.veFeadExampleOf('AG00976_GATES_2025');
+    const scr = ekranKonumlari(b, ex.pulleys.length);
+    const ix = (ad) => ex.pulleys.findIndex((p) => p.name === ad);
+
+    const fan = scr[ix('Sürücü Kasnak (FAN)')];
+    const alt = scr[ix('Alternatör (155 A)')];
+    const ac = scr[ix('Klima Kompresörü')];
+    const ten = scr[ix('Otomatik Gergi (E9843)')];
+
+    expect(alt.x).toBeLessThan(fan.x);      // ALT krankın SOLUNDA
+    expect(ten.x).toBeLessThan(fan.x);      // gergi krankın SOLUNDA
+    expect(ac.x).toBeGreaterThan(fan.x);    // klima krankın SAĞINDA
+    expect(alt.x).toBeLessThan(ten.x);      // ALT gerginin de solunda
+    // Y: krank en altta (ekran y'si en büyük)
+    expect(fan.y).toBeGreaterThan(ac.y);
+    expect(fan.y).toBeGreaterThan(alt.y);
+  });
+
+  test('ONİKİ ÖRNEĞİN ONİKİSİ DE şemada CCW — verinin dolanımıyla AYNI', () => {
     const anahtarlar = M.veFeadExampleKeysAll();
     expect(anahtarlar.length).toBeGreaterThanOrEqual(12);
     anahtarlar.forEach((id) => {
       const b = kur(id);
       expect(b.ok).toBe(true);
-      expect(b.spin).toBe(1);                       // VERİ düzlemi: Σ işaretli sarım = +360
-      const et = M.veFeadSpinLabel(b.spin);         // EKRAN: bunun tersi
-      expect(et.sense).toBe(-1);
-      expect(et.kisa).toBe('\u21bb CW');
+      expect(b.spin).toBe(1);                     // Σ işaretli sarım = +360
+      const et = M.veFeadSpinLabel(b.spin);
+      expect(et.sense).toBe(1);                   // ARADA ÇEVİRİ YOK
+      expect(et.kisa).toBe('\u21ba CCW');
+      expect(et.uzun).toContain('Gates rapor düzlemi');
     });
   });
 
-  test('KRANK GERÇEKTEN CW ÇİZİLİYOR — kasnağın kendi dönüş oku ölçülüyor', () => {
-    // Etiketi değil ÇİZİMİ ölçüyoruz: `p.d` her kasnağın el yönü
-    // (`grooved ? s : -s`) ve kasnak üstündeki ok ondan çiziliyor. Sürücü
-    // kaburgalı temas ettiği için halkayla aynı yönde dönmek zorunda.
-    const b = kur('AG0868_4PK_GATES_2022');
-    const g = F.tensionerState(b.sys, F.meanRel(b.sys)).geom;
-    const ekran = M.veFeadMirrorGeomX(g);           // ön görünüş = aynalı
-    const surucu = ekran.pulleys[0];                // rota kranktan başlıyor
-    expect(isaret(ekran.sense)).toBe(-1);           // halka CW
-    expect(isaret(surucu.d)).toBe(-1);              // KRANK da CW
-    expect(isaret(g.sense)).toBe(+1);               // ...veri düzleminde tersi
-  });
-
-  test('ROTAYI YERİNDE ÇEVİRMEK KRANKI CW YAPAR — ve FİZİĞİ KIRAR', () => {
-    // Bu kapı bir DAVRANIŞI değil bir BEDELİ kilitliyor: "aynalamadan krankı
-    // CW yap" isteğinin tek mekanik karşılığı rotayı ters yürütmek, ve o
-    // gergiyi kayışın GERGİN tarafına atıyor. Ölçüldü (BMC, güç akan tek
-    // örnek): en düşük span 526 N → −196 N. Negatif gerilme fiziksel olarak
-    // yok; model yine "çözülüyor" der, uyarı vermez — bu modülün sessiz hata
-    // sınıfının tam örneği.
-    //
-    // Kayıt burada duruyor ki bir sonraki oturum "yalnız yönü çevirelim"
-    // dediğinde bedeli yeniden ölçmek zorunda kalmasın.
+  test('ROTAYI YERİNDE ÇEVİRMEK FİZİĞİ KIRAR — ölçülmüş bedel, kayıt için', () => {
+    // "Konumlar dursun, kayış ters yürüsün" yolunun bedeli. Kayıt burada
+    // duruyor ki bir sonraki oturum yeniden ölçmek zorunda kalmasın.
     const key = 'BMC_FEAD_2026';
-    const ex = M.veFeadExampleOf(key);
-    const rows = (ex && ex.solver && ex.solver.duty) || [];
+    const rows = (M.veFeadExampleOf(key).solver || {}).duty || [];
     expect(rows.length).toBeGreaterThan(0);
 
     const enDusukSpan = (ters) => {
@@ -323,7 +336,6 @@ describe('DÖNÜŞ YÖNÜ — üç yolun da bedeli ÖLÇÜLDÜ (2026-09-07)', ()
                  data: JSON.parse(JSON.stringify(n.data || {})) };
       });
       let cs = pack.connections.map((c) => Object.assign({}, c));
-      // Modelin kendi yolu: yön kablolarda durur, bir bayrakta değil.
       if (ters) cs = cs.map((c) => Object.assign({}, c, { from: c.to, to: c.from }));
       global.nodes = ns; global.connections = cs;
       const b = M.veFeadBuildSystem(ns, cs);
@@ -342,117 +354,16 @@ describe('DÖNÜŞ YÖNÜ — üç yolun da bedeli ÖLÇÜLDÜ (2026-09-07)', ()
 
     const ileri = enDusukSpan(false);
     const geri = enDusukSpan(true);
-
-    expect(ileri.spin).toBe(1);                     // şemada CCW
-    expect(geri.spin).toBe(-1);                     // şemada CW — istenen yön
-    expect(ileri.enDusuk).toBeGreaterThan(0);       // sağlam yük yolu
-    expect(geri.enDusuk).toBeLessThan(0);           // ...ve ters yürütünce NEGATİF
+    expect(ileri.spin).toBe(1);
+    expect(geri.spin).toBe(-1);
     expect(ileri.enDusuk).toBeCloseTo(526, 0);
-    expect(geri.enDusuk).toBeCloseTo(-196, 0);
-  });
-
-  test('KRANK YÖNÜ AYNALAMADAN SÖYLENİYOR — etiket İKİ BAKIŞI da adıyla verir', () => {
-    // Kullanıcının asıl istediği bilgi buydu ve aynalamadan verilebiliyor:
-    // CW/CCW bir dönüş değil bir BAKIŞ YÖNÜ ifadesi. Rozet ÇİZİLEN yönü basar
-    // (yoksa resimle çelişirdi), uzun metin ikisini de söyler.
-    const et = M.veFeadSpinLabel(1);
-    expect(et.kisa).toBe('\u21bb CW');                     // çizilen yön
-    expect(et.uzun).toContain('önden bakışta');            // ...ve hangi taraftan
-    expect(et.uzun).toContain('Gates rapor düzleminde CCW'); // karşı bakış, adıyla
-    expect(et.karsi).toContain('Gates rapor düzleminde CCW');
-
-    // Rapor düzlemine dönünce ilişki TERSİNE döner — tek üreticiden.
-    const eski = M.VE_FEAD_VIEW_FRONT;
-    try {
-      M.veFeadSetViewFront(false);
-      const f = M.veFeadSpinLabel(1);
-      expect(f.kisa).toBe('\u21ba CCW');
-      expect(f.uzun).toContain('önden bakışta CW');
-      expect(f.karsi).toContain('önden bakışta CW');
-    } finally { M.veFeadSetViewFront(eski); }
-
-    // Yön okunamadığında iddia da yok.
-    expect(M.veFeadSpinLabel(0).karsi).toBe('—');
-  });
-
-  test('RAPOR DÜZLEMİ hâlâ bir çağrı uzakta — arşivle karşılaştırma kaybolmadı', () => {
-    const eski = M.VE_FEAD_VIEW_FRONT;
-    try {
-      M.veFeadSetViewFront(false);
-      expect(M.veFeadSpinLabel(1).kisa).toContain('CCW');
-      expect(M.veFeadSpinLabel(1).uzun).toContain('Gates rapor düzlemi');
-      expect(M.veFeadPlaneNote()).toBe('');        // tek çerçeve → söylenecek fark yok
-      M.veFeadSetViewFront(true);
-      expect(M.veFeadPlaneNote()).toContain('Gates düzleminde');
-    } finally { M.veFeadSetViewFront(eski); }
-  });
-});
-
-describe('AÇI DEĞERLERİ HANGİ DÜZLEMDE — basılan yüzeyler söylüyor', () => {
-  // Sessiz yanlış okuma sınıfı: çizim aynalı, açı DEĞERİ veri düzleminde.
-  // Kullanıcı "Yön 350°" okuyup aynalı resimde oku 190°'de arayabilir.
-  test('not TEK ÜRETİCİDEN ve yalnız ayna açıkken', () => {
-    const eski = M.VE_FEAD_VIEW_FRONT;
-    try {
-      M.veFeadSetViewFront(false);
-      expect(M.veFeadPlaneNote()).toBe('');
-      M.veFeadSetViewFront(true);
-      expect(M.veFeadPlaneNote()).toContain('Gates düzleminde');
-    } finally { M.veFeadSetViewFront(eski); }
-  });
-
-  test('KASNAK PANELİ notu GERÇEKTEN basıyor — üretilen HTML\'den ölçülüyor', () => {
-    // Üreticiyi değil YÜZEYİ ölçüyoruz: bu deponun tekrar eden kaçağı, kapının
-    // üreticiyi doğrulayıp yüzeyin sessizce eski metni basmasıydı.
-    kur('AG0868_4PK_GATES_2022');
-    const nd = global.nodes.filter((n) => M._feadIsPulley(n))[0];
-    expect(nd).toBeTruthy();
-    const eski = M.VE_FEAD_VIEW_FRONT;
-    try {
-      M.veFeadSetViewFront(true);
-      const on = fead.getFeadPulleyPropertiesHTML(nd);
-      expect(on).toContain('Gates rapor düzlemi');
-      expect(on).toContain('çizim ön görünüş');
-      M.veFeadSetViewFront(false);
-      const rapor = fead.getFeadPulleyPropertiesHTML(nd);
-      expect(rapor).toContain('Gates rapor düzlemi');
-      expect(rapor).not.toContain('çizim ön görünüş');
-    } finally { M.veFeadSetViewFront(eski); }
-  });
-});
-
-describe('ayna makinesi — iki düzlem BİRBİRİNE BAĞLI', () => {
-  test('ön görünüş, rapor düzleminin TAM X aynası — çizilen SVG\'den', () => {
-    // Kapı ilişkiyi bağlıyor, bir düzlemi değil: birinde düzeltilen bir işaret
-    // hatası ötekinde sessizce kalamaz.
-    const id = 'AG0868_4PK_GATES_2022';
-    const b = kur(id);
-    const n = M.veFeadExampleOf(id).pulleys.length;
-    const eski = M.VE_FEAD_VIEW_FRONT;
-    let on, rapor;
-    try {
-      M.veFeadSetViewFront(true);  on = ekranKonumlari(b, n);
-      M.veFeadSetViewFront(false); rapor = ekranKonumlari(b, n);
-    } finally { M.veFeadSetViewFront(eski); }
-    // Aynı çerçeve, aynı ölçek → X sırası TERS, Y birebir aynı.
-    let bakilan = 0;
-    for (let i = 0; i < n; i++) {
-      expect(on[i].y).toBeCloseTo(rapor[i].y, 6);
-      for (let j = i + 1; j < n; j++) {
-        const d = rapor[i].x - rapor[j].x;
-        if (Math.abs(d) < 1) continue;
-        bakilan++;
-        expect(isaret(on[i].x - on[j].x)).toBe(-isaret(d));
-      }
-    }
-    expect(bakilan).toBeGreaterThan(0);
+    expect(geri.enDusuk).toBeCloseTo(-196, 0);     // NEGATİF — fiziksel olarak yok
   });
 
   test('`veFeadMirrorGeomX` hâlâ tam simetri — ölçülmüş ilişki korunuyor', () => {
     const b = kur('AG0868_4PK_GATES_2022');
     const g = F.tensionerState(b.sys, F.meanRel(b.sys)).geom;
     const m = M.veFeadMirrorGeomX(g);
-    // Skalerler BİREBİR aynı; değişen yalnız el yönü.
     expect(m.pulleys.map((p) => p.c[0])).toEqual(g.pulleys.map((p) => -p.c[0]));
     expect(m.pulleys.map((p) => p.c[1])).toEqual(g.pulleys.map((p) => p.c[1]));
     expect(m.pulleys.map((p) => p.d)).toEqual(g.pulleys.map((p) => -p.d));
@@ -460,17 +371,11 @@ describe('ayna makinesi — iki düzlem BİRBİRİNE BAĞLI', () => {
     g.wraps.forEach((w, i) => expect(m.wraps[i]).toBeCloseTo(w, 12));
   });
 
-  test('`rawFrame` çizimi aynasız ister — BAYRAKTAN BAĞIMSIZ, hep rapor düzlemi', () => {
+  test('`rawFrame` çizimi varsayılanla AYNI resmi verir — ayna yok', () => {
     const b = kur('AG0868_4PK_GATES_2022');
     const n = M.veFeadExampleOf('AG0868_4PK_GATES_2022').pulleys.length;
-    const rapor = raporDuzleminde(() => ekranKonumlari(b, n));
-    const eski = M.VE_FEAD_VIEW_FRONT;
-    try {
-      [true, false].forEach((on) => {
-        M.veFeadSetViewFront(on);
-        const ham = ekranKonumlari(b, n, { rawFrame: true });
-        rapor.forEach((q, i) => expect(ham[i].x).toBeCloseTo(q.x, 6));
-      });
-    } finally { M.veFeadSetViewFront(eski); }
+    const a = ekranKonumlari(b, n);
+    const ham = ekranKonumlari(b, n, { rawFrame: true });
+    a.forEach((q, i) => expect(ham[i].x).toBeCloseTo(q.x, 6));
   });
 });

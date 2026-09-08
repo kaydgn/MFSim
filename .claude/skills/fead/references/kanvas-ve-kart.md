@@ -99,413 +99,50 @@ araç düğümlerini kümenin dışındaki iki şeride koyuyor ve örnek kurucus
 devrediyor (bkz. *"örnek kurucusu kutuyu koordinatın SÖYLEMEDİĞİ yere
 koyuyordu"*).
 
-#### ÇİZİM DÜZLEMİ — VARSAYILAN ÖN GÖRÜNÜŞ (2026-09-07 üçüncü tur, SON HÜKÜM)
-
-**HÜKÜM: `VE_FEAD_VIEW_FRONT = true`, okuma tek noktadan
-(`veFeadViewFront()` / `veFeadSetViewFront()`).** Krank saat yönünde döner;
-sol-sağ düzeni Gates sayfasının **tersi**dir ve bu kullanıcının bilerek verdiği
-karardır (üç yol resimle yan yana gösterildi, *"B — motora önden bakış"*
-seçildi).
-
-**AYNALANAN YALNIZ RESİM.** Saklanan mm, çözücü ve basılan SAYILAR Gates
-çerçevesinde kalır — rapordan veri girip PDF'le satır satır karşılaştırmak bu
-modülün taşıdığı asıl değer. Basıldıkları yer bunu söyler (`veFeadPlaneNote`).
-
-**KARARI VEREN ÖLÇÜM — raporun KENDİ iki sütunu** (AG00686): koordinatlarda
-gergi krankın solunda (−157 / 0), span gerilmelerinde kranktan çıkan span en
-gergin (1210) ve kranka dönen en gevşek (766). O sırayı o koordinatlarda
-dolaştırınca halka CCW kapanıyor → Gates sayfasında krank CCW döner. Yani
-*"krank CW"* ile *"düzen sayfayla aynı"* tek bir seçimin iki yüzü.
-
-**ÜÇ YOLUN DA BEDELİ ÖLÇÜLDÜ — "aynalamadan CW" KAPALI:**
-
-| yol | konumlar | krank | fizik |
-|-----|----------|-------|-------|
-| rapor düzlemi (varsayılan) | sayfayla AYNI | CCW | sağlam |
-| ayna (`setViewFront(true)`) | TERS | CW | sağlam (tam simetri) |
-| **rotayı yerinde çevir** | sayfayla AYNI | CW | **KIRIK** |
-
-Üçüncüsü kullanıcının istediği şeydi. Ölçüldü: rotayı ters yürütmek gergiyi
-kayışın **gergin** tarafına atıyor, span gerilmeleri negatife düşüyor (BMC —
-güç akan tek örnek — en düşük span **526 N → −196 N**) ve model yine
-"çözülüyor" deyip uyarı vermiyor. Kapı: `fead-layout-plane.test.js` →
-*"ROTAYI YERİNDE ÇEVİRMEK ... FİZİĞİ KIRAR"*. Sebep: bu 12 düzen, kayışın o
-yönde döndüğü varsayımıyla tasarlanmış gerçek sistemler.
-
-Yani **"krank CW" ile "konumlar Gates sayfasıyla aynı" aynı anda sağlanamaz** —
-aradaki fark bir tercih değil bir AYNA.
-
-> **Bir tur boyunca varsayılan ön görünüştü** (aynı gün, PR #875) ve kullanıcı
-> geri aldırdı: *"tüm örnekleri aynalamışsın… gergi konumları değişmiş. Bu
-> böyle olmayacak."* Ayna makinesi silinmedi, yalnız varsayılan değil.
-
-##### Geri alınan turun kaydı (PR #875) — ölçümleri için duruyor
-
-Kullanıcı konvansiyonu: *"Sihirbaz içinde yüklü olan tüm örnekler CCW dönüyor.
-Normalde krank kasnağı (yani sürücü kasnak) saat yönünde dönmesi lazım."*
-Bu, `docs/gates-reports/README.md` §6'nın açıkça EKSİK bıraktığı bilgi —
-konvansiyonu modelin sahibi beyan etti, çıkarım kural oldu.
-
-**İKİ BİLDİRİM BİRBİRİNİN AYNASI, ÜÇÜNCÜ SEÇENEK YOK.** Rapor düzleminde kayış
-ölçülmüş olarak CCW dolanıyor; dolayısıyla *"krank CW"* ile *"düzen raporun
-sayfasıyla aynı"* aynı anda sağlanamaz. Beklenen ve kabul edilen sonuç: gergi,
-kranka göre raporun sayfasındakinin KARŞI tarafında çıkar. Bu bir regresyon
-değil, seçilen bakış yönünün kendisi.
-
-**KANVAS DA AYNALANIR** (`_feadPlaneSx()` → `veFeadCanvasToMm` /
-`veFeadMmToCanvas` / `veFeadArrangeByCoords`). Aşağıdaki "ikinci, bağımsız
-kusur" 2026-09-04'te ayna KAPATILARAK giderilmişti; ayna geri açıldığı için
-artık buradan kapanıyor. Üç yol da tek işaretten besleniyor — biri unutulsaydı
-kutu, kapatıp açınca X'te zıplardı.
-
-**AÇI DEĞERLERİ VERİ DÜZLEMİNDE KALIR** ve basıldıkları yer bunu SÖYLER
-(`veFeadPlaneNote()`, tek üretici; ayna kapalıyken boş): kullanıcı *"Yön 350°"*
-okuyup aynalı resimde oku 190°'de aramasın.
-
-**KAPI ARTIK DÜZLEMİ KENDİSİ KURUYOR.** `fead-layout-plane.test.js` eskiden
-bayrağın DEĞERİNİ kilitliyordu (`toBe(false)`) — o kilit bir tercihi
-savunuyordu, ölçtüğü ilişkiyi değil. Artık arşiv karşılaştırması
-`veFeadSetViewFront(false)` ile rapor düzleminde yapılıyor, kanvas ↔ kart bağı
-İKİ düzlemde de koşuyor ve iki düzlemin birbirinin tam X aynası olduğu ayrıca
-bağlanıyor. Varsayılan bir daha değişirse yalnız dönüş yönü kapıları düşer,
-arşiv kapısı ölçmeye devam eder (mutasyonla doğrulandı: 3 kırmızı / 55 yeşil).
-
-##### Önceki hüküm — RAPOR DÜZLEMİ (2026-09-04), tarihçe
-
-Kullanıcı bildirimi: *"gergi ve kasnak konumları programda yanlış çıkıyor. Ters
-çıkıyor… Gates raporlarının PDF ilk sayfasında kasnak konumları var."* Doğruydu
-ve **7011 testin hiçbiri görmüyordu** — mevcut kapılar aynanın KENDİ
-tutarlılığını ölçüyordu, "resim raporun resmi mi" diye soran yoktu.
-
-**İKİNCİ, BAĞIMSIZ KUSUR — kayıtta hiç yoktu:** `veFeadMmToCanvas` X'i hiç
-çevirmiyor (yalnız Y'yi ters alıyor), yani **kanvas her zaman rapor
-düzlemindeydi**. Kart aynalıyken kullanıcı aynı modelin iki resmini ters
-görüyordu. *"Her şey karıştı"* bildiriminin büyük olasılıkla asıl kaynağı bu.
-
-Kapı: `tests/unit/fead-layout-plane.test.js` — on rapor için çizilen SVG'nin
-`circle[data-pi]` merkezleri, raporun kendi "Layout Data" koordinatlarıyla ÇİFT
-ÇİFT karşılaştırılıyor (sıralama değil çift, çünkü iki kasnak aynı X'i
-paylaşabiliyor), artı kanvas ↔ kart bağı. Beş mutasyonun beşi de kırmızı;
-eski davranışta 48 testin 26'sı düşüyor.
-
-**AYNA SİLİNMEMİŞTİ** — ve iyi ki: 2026-09-07'de varsayılan olarak geri
-döndü. `veFeadMirrorGeomX` · `veFeadSpinToFront` bir ÖLÇÜLMÜŞ ilişkiyi taşıyor
-(tedarikçinin gergi künyesindeki CW/CCW harfi çizim düzleminin TERSİ —
-`docs/gates-reports/README.md` §5) ve bir görünüm tercihi için kanıt atılmaz.
-
-**ETİKETLER DÜZLEMİ ADIYLA SÖYLER** (`_feadPlaneName`, tek üretici). Eskiden
-metin KOŞULSUZ *"motora önden bakışta"* diyordu; ayna kapanınca o cümle
-ölçülmemiş bir iddiaya dönüşürdü (hangi taraftan bakıldığı raporların
-hiçbirinde yazmıyor — README §6). Rozet · panel · toast · sihirbazın yön
-düğmeleri dördü de aynı üreticiden besleniyor.
-
-##### Önceki karar — ÖLÇÜMLERİ için duruyor (2026-08-28)
-
-Kullanıcı kararı: *"MFSim için de kayışın dönüş yönünü default olarak saat
-yönünde yapacağız."*
-
-**ÖLÇÜLDÜ** (`docs/gates-reports/README.md` → *"Dönüş yönü konvansiyonu"*): on
-Gates raporunun ONUNDA DA kayış, raporun kendi çizim düzleminde **CCW**
-dolanıyor (`Σ işaretli sarım = +360`, hiç `−360` yok). Motorlar ön taraftan
-bakıldığında CW döndüğü için o düzlem **ön görünüşün AYNASI** gibi davranıyor.
-
-**YALNIZ ÇİZİM AYNALANIR.** Saklanan mm, çözücü ve bütün sayısal çıktılar Gates
-düzleminde kalır — arşivle satır satır karşılaştırılabilirlik bu modülün en
-değerli özelliği ve bir görünüm tercihi için feda edilmez. Aynalama **X**
-ekseninde: karşı taraftan bakınca sol-sağ yer değiştirir, YUKARI yukarı kalır.
-
-| Ne | Nerede |
-|----|--------|
-| Bayrak | `VE_FEAD_VIEW_FRONT` (varsayılan `true`) · okuma `veFeadViewFront()` · `js/fead-model.js` |
-| Aynalama | `veFeadMirrorGeomX(geom)` — DOM'suz, SAF (girdiyi değiştirmez) |
-| Bağlandığı TEK nokta | `veFeadLayoutSVG` → `geomAt()` |
-
-**TEK NOKTA ŞART:** çizimin okuduğu her geometri (ana konum + hayalet konumlar)
-oradan geçiyor, dolayısıyla sarım yayları · kaburga dişleri · dönüş okları · kol
-çizimi birlikte dönüyor. Yirmi ayrı yere serpiştirmek, biri unutulduğunda yalnız
-O ögenin ters kalması demekti. Pivot ayrıca çevriliyor (`build.sys`'ten okunuyor,
-geometriden değil).
-
-**`d` İŞARETİ DE ÇEVRİLİR.** Aynalama el yönünü ters çevirir; `d` çevrilmezse
-sarım yayları kasnağın İÇİNDEN geçer — kartta bir kez ölçülmüş *"sweep
-bayrağı"* hatasının aynı sınıfı. Aynalama **tam simetri**: `L_eff`, sarımlar,
-gerginlikler BİREBİR aynı kalır (testli).
-
-**YÖN GÜLÜ DE TAKİP EDER.** Aynalı çizimde veri düzleminin `0°`'si ekranda
-**SOLA** bakar; gül eski yerinde bırakılsaydı resim aynalı, açı okuması aynalı
-DEĞİL olurdu — kullanıcı `0°`'yi yanlış tarafta arardı. Gülün `0/180` etiketleri
-ve artış yayı bayrakla birlikte dönüyor, başlığı da durumu yazıyor.
-
-##### YÖN ETİKETLERİ DE AYNALANIR — yoksa kart ile rozet ters düşer
-
-Aynalama bir sessiz kusur DOĞURDU ve kapı onu yakaladı: `out.spin`
-(`FEADCore.loopSense`) **veri düzleminde** ölçülür, ama altı yüzey onu
-*"motora önden bakışta CCW"* diye basıyordu. Çizim aynalandığı için ekranda
-görülen yön onun **tersi**; çevrilmeden basılan etiket kartla çelişiyordu —
-sessiz, çünkü ikisi de ayrı ayrı makul görünür.
-
-Çeviri **tek üreticiden** (`js/fead-model.js`):
-
-| Ne | Sözleşme |
-|----|----------|
-| `veFeadSpinToFront(spin)` | veri ↔ ön görünüş. **İnvolusyon** (kendi tersi) → seçim de aynı fonksiyondan geçer |
-| `veFeadSpinLabel(spin)` | `{sense, glif, kisa, uzun}` — rozet · panel · toast · sihirbazın üç yüzeyi aynı metni okur |
-
-**SEÇİCİ DE BU BOUNDARY'DEN GEÇER.** Sihirbazın yön düğmeleri artık ön
-görünüşte konuşuyor; `veFeadWizSpinSet` gelen değeri veri düzlemine çeviriyor.
-Çevrilmeseydi *"CW"* düğmesi kartta CCW'ye giden bir model kurardı.
-
-**ÖLÇÜLDÜ:** AG00976 ve BMC, veri düzleminde `spin = +1` (CCW — Gates'in kendi
-düzlemi, on raporun onunda da öyle), **ön görünüşte `−1` (CW)** — yani
-kullanıcının istediği varsayılan, hiçbir veriye dokunmadan.
-
-##### AÇI SEÇİCİSİ DE AYNALANIR — yoksa aynı sihirbazın iki resmi ters
-
-Aynalamanın **ikinci** sessiz kusuru: sihirbazın kol açısı seçicisi (6. adım)
-kendi çizicisiyle ve mm düzleminde çiziyordu, yani hemen altındaki *"Kayış
-Yolu"* kartıyla **birbirinin aynası** oluyordu. İkisi de ayrı ayrı makul
-görünür; hata ancak yan yana konunca fark edilir.
-
-| Ne | Karar |
-|----|-------|
-| Sahne | aynalanır (`_fwMir()` → `veFeadSpinToFront(1)`) |
-| Kayış | kartın kullandığı **aynı** `veFeadMirrorGeomX` — `d` de çevrildiği için sarım yayları kasnağın içinden geçmiyor |
-| Saklanan açı | **veri düzleminde KALIR** — çözücü orayı okuyor |
-| Ayna faktörü | `data-mir` ile DOM'a yazılır; ters çevirici onu okuyup ekran açısını veri düzlemine geri çevirir |
-| `0/180` etiketleri | takas edilir — resim aynalı, okuma aynalı değilse kullanıcı `0°`'yi yanlış tarafta arar |
-
-**ASIL KAPI GİDİŞ-DÖNÜŞ:** altı veri açısı ekrana konup geri okunuyor. Tek
-yönü ölçen bir kapı, iki yönde birden yapılmış bir işaret hatasını göremez.
-
-**NORMALLEŞTİRME KAYAN NOKTAYA DAYANIKLI:** `if(a > 180) a -= 360` biçimi,
-ekranın tam sağındaki bir noktada `atan2`'nin `−1e−17` döndürmesiyle sonucu
-`180 ↔ −180` arasında zıplatıyordu — aynı yön, ama saklanan sayı kareden kareye
-değişir. Yerine `a − 360·floor((a+180)/360)`.
-
-Dört mutasyonla ölçüldü, dördü de kırmızı: sahneyi aynalamama, `data-mir`'i
-yazmama, ters çevirmede aynayı yok sayma, `0/180` takasını kaldırma.
-
-##### Gergi serpantinde SON SIRADA — UYARI, zorlama değil
-
-On raporun onunda da sıra gergiyle bitip sürücüyle başlıyor: gergi, kayışın
-sürücüye **dönüş açıklığındadır**, yani GEVŞEK tarafta (AG00686'da ölçüldü:
-`T = 1209.95 · 1208.48 · 767.47 · TEN 766.00` — en düşük, ankrajın kendisi).
-
-**AMA MATEMATİK BU KONUMDAN BAĞIMSIZ.** Gerilme zinciri `T[t] = ankraj` ile
-başlayıp `(t+j) % n` ile dolaşıyor. ÖLÇÜLDÜ — AG00686 çevrimsel olarak dört
-konuma da döndürüldü: `ΔT = 0.0e+0 · ΔH = 0.0e+0 · L_eff birebir aynı`.
-
-Bu yüzden kural bir **uyarı** (`veFeadBuildSystem` → `out.warnings` +
-`out.tensionerOrder`): yanlış yere kablolanmış bir gergi doğru sonuç üretmeye
-devam eder, yalnız yerleşim tedarikçi konvansiyonuna uymaz. Çözümü durdurmak,
-DOĞRU bir modeli reddetmek olurdu.
-
-**`veFeadTensionerSide` HÜKMÜNÜN İKİNCİ KOPYASI DEĞİL** — iki AYRI soru, ve
-ölçüldü ki gerçekten ayrışıyorlar:
-
-| | `tensionerSide` (analiz) | `tensionerOrder` (kurulum) |
-|---|---|---|
-| Sorduğu | span gerilmesi ankrajın ALTINA iniyor mu | sıra tedarikçi konvansiyonuna uyuyor mu |
-| Kanıtı | duty satırlarının gerilmeleri | `out.order` içindeki konum |
-| Yanlışsa | model **fiziksel olarak geçersiz** | model geçerli, yalnız arşivle satır satır karşılaştırılamaz |
-
-**ÖLÇÜLDÜ:** sihirbazın *"⇄ Yönü çevir"*i AG00976'yı `p1>ten>p5>p4>p3>p2`
-yapıyor → `tensionerOrder.last = false` (uyarı düşüyor) ama
-`tensionerSide.ok = true`, `beltLengthMm` ve `springTensionN` **altı ondalığa
-kadar birebir aynı**. Biri ötekinin kopyası olsaydı ayrışamazlardı.
-
-**ÇEVİRME GERGİYİ KAÇINILMAZ OLARAK TAŞIR** ve sıra döndürülerek
-düzeltilemez: halkada gerginin komşusu iki yanda da sürücüdür, ters yürütünce
-*"sürücüden ÖNCE"* olan *"sürücüden SONRA"* olur. Gergiyi sona almak sürücüyü
-baştan düşürür — ikisi aynı anda sağlanamaz. Bu yüzden uyarı *"şunu yap"*
-demiyor, **farkın ne olduğunu** söylüyor.
-
-**HÜKÜM SIRANIN YANINDA DURUR** (sihirbaz 3. adım, `_fwStepYol`): kullanıcının
-elindeki iki kaldıraç da o kartta (satır okları ve *"⇄ Yönü çevir"*). Genel
-uyarı kutusuna bırakılsaydı sebep adımın tepesinde, çare adımın içinde kalırdı.
-Alan **iki yönde de yazılır** (`last: true` da) ki *"denetlendi ve uygun"* ile
-*"hiç denetlenmedi"* ayırt edilebilsin.
-
-#### KANVAS = KAYIŞ DÜZLEMİ — konum artık FİZİKSEL
-
-Kullanıcı isteği (2026-08-25): *"Krank kasnağına koordinatları girdiğimiz zaman,
-bu koordinatların 0,0 noktası olması ve topoloji üzerinde bileşenleri hareket
-ettirdiğimde, örneğin alternatör kasnağını, kanvas üzerinde de hareket etmesi ve
-hesapların buna göre anında güncellenmesi."*
-
-Eskiden kanvastaki konum **hiçbir şey ifade etmiyordu** — çözücü mm
-koordinatlarını yalnız panelden okuyordu. Artık ikisi TEK BİR ŞEY.
-
-| Ne | Karar | Nerede |
-|----|-------|--------|
-| Orijin | **Sürücü kasnak** (rol, tip değil) | `veFeadOriginNode` |
-| Ölçek | **1 px = 1 mm**, hassasiyet zoom'dan | `VE_FEAD_PX_PER_MM` |
-| Y ekseni | Kanvasta aşağı, mm'de **yukarı** | `veFeadCanvasToMm` |
-| Gergi sürüklemesi | **Avara merkezi** taşınır, gövdenin montaj konumu rijit takip eder (kol boyu ve açısı dokunulmadığı için türev aynı kadar ötelenir) | `veFeadDragTensioner` |
-| "Otomatik Düzenle" | Halka değil, **koordinata yerleştir** | `veFeadArrangeByCoords` |
-
-**ÖTELEME BEDAVA — ÖLÇÜLDÜ.** Bütün geometri merkez FARKLARINDAN kuruluyor
-(`tangent`: `w = c_j − c_i`), dolayısıyla krankı orijine almak ücretsiz. BMC'nin
-altı kasnağı + gerginin avara merkezi birlikte `(+500, −300)` ötelenince
-`ΔL_eff = 0.00e+0`, altı sarım açısında `Δ = 0.00e+0`, gerginlik
-`532.142 → 532.142 N` — kayan nokta hassasiyetinde **birebir**. Eski projeler bu
-yüzden sessizce göç edebiliyor (`veFeadNormalizeOrigin`, alt topoloji açılışında).
-
-##### Üç sessiz kırılma noktası — üçü de testli
-
-| Nokta | Yanlış yapılırsa | Neden sessiz |
-|-------|------------------|--------------|
-| **Y ekseni** | Bütün topoloji aynalanır | TAM ayna bütün skalerleri BİREBİR aynı bırakıyor (fizik ayna simetrik); hata sayılardan görünmez, yalnız çizimden |
-| **Kutu merkezi** | Her kasnağa kendi kutu yarısı kadar kayma | Kutu ölçüleri 54…72 px arasında değiştiği için kayma kasnaktan kasnağa farklı — tek bir ofsetle yakalanamaz |
-| **Gergi** | Koordinatı bayat kalır, gergi yanlış yerde çözülür | Kol boyu TUTAR (türev merkezi rijit takip ediyor), yalnız yerleşim yanlış |
-
-Üçüncüsü **kapı boşluğuydu**: gergi senkrondan çıkarılınca hiçbir test
-kırılmıyordu. Orijin sürüklendiğinde krank-göreli HER koordinat aynı karede
-tazelenmeli — gergininki ayrı bir geçişe bırakılamaz.
-
-##### mm → px TAM SAYIYA YUVARLANMAZ
-
-1 px = 1 mm olduğu için tam sayı yuvarlaması koordinatı **1 mm'ye kuantalardı**
-ve bu sessiz bir kayıp: ölçüldü, alternatörün 1 mm'si gerginliği **38.6 N (%5.9)**
-değiştiriyor, gergi kol boyu kapısının toleransı ise 0.5 mm. Yuvarlama 0.01 mm
-— her iki eşiğin de çok altında ve gidiş-dönüş kayıpsız.
-
-##### İmza: kasnak konumu girer, araç düğümü GİRMEZ
-
-`veFeadTopoSignature` konumu bilerek dışlıyordu (ölçüldü: 30 sürükleme karesinde
-0 yeniden kurulum). Artık konum fiziksel olduğu için kasnak koordinatı imzaya
-**giriyor** — bu bilinçli bir geri adım. Ama imzaya giren şey **kanvas pikseli
-değil mm koordinatı**: 440×500'lük Kayış Yolu kartını kendi kutusundan tutup
-taşımak çözücüyü koşturmuyor.
-
-##### Kademeli tazeleme — ÖLÇÜLDÜ
-
-| Ne | Süre | Ne zaman |
-|----|-----:|----------|
-| `veFeadSyncMmFromCanvas` (6 kasnak) | 0.025 ms | her karede |
-| `veFeadBuildSystem` + geometri (kart) | 2.245 ms | her karede |
-| `veFeadAnalyze` (duty + ömür + burulma) | 7.013 ms | **bırakınca** |
-
-Karede koşan toplam **2.27 ms** → 60 fps bütçesinde **7.4× pay**, kare tavanı
-441 fps. Tam çözüm sürükleme yolunda HİÇ koşmuyor.
-
-##### BAĞ AÇILIP KAPANABİLİR — `fead-coordlink` "Konum Bağı" (2026-08-28)
-
-Kullanıcı isteği: *"topoloji üzerindeki bileşenleri kaydırdığımızda, gerçekten
-koordinatları da değişiyordu. Şu an default olarak öyle. Bunu açılır kapanır bir
-özellik haline getirmek istiyorum… ufak, böyle açılıp kapanabilen bir bileşen…
-Onu topolojiye çekip açtığımız kapattığımız zaman, yukarıda bahsettiğim özellik
-devreye girsin veya devreden çıksın."*
-
-Bağ açıkken kanvas bir BLOK DİYAGRAMI olmaktan çıkıyor: kutular fiziksel
-yerlerinde durmak zorunda, yani okunurluk için kaydırılamıyorlar. Yeni düğüm o
-bağı kapatılabilir yapıyor — kapalıyken kutu salt görsel, koordinat salt panel
-girdisi.
-
-| Ne | Karar | Nerede |
-|----|-------|--------|
-| Ad / tip | **Konum Bağı** · `fead-coordlink` · 54×48 · 0 giriş / 0 çıkış · `maxInstances:1` | `components.js` |
-| Bayrak | `node.data.linked` — yalnız `=== false` anlamlı | `veFeadCoordLinkOn` |
-| Okuma | **TEK NOKTA** (kanvas · panel · rozet üçü de aynı fonksiyon) | `fead-model.js` |
-| Rozet | `AÇIK` **amber** ↔ `KAPALI` **mavi**, tıklanabilir | `veFeadApplyCoordLinkBadge` |
-
-**DÜĞÜM YOKSA BAĞ AÇIK** — geriye dönük uyum tam bu satırda: bugüne kadar
-kaydedilmiş hiçbir projede bu düğüm yok, hepsi birebir eski davranışını
-sürdürüyor. Düğüm var ama `linked` yazılı değilse de AÇIK: paletten bırakmak tek
-başına modeli değiştirmemeli. **ÇOK KOPYADA KAPALI KAZANIR** (`maxInstances`
-ikinciyi engelliyor ama elle düzenlenmiş bir dosya taşıyabilir; açıkça KAPALI
-diyen bir düğümü yok saymak kullanıcının talimatını çöpe atmak olurdu).
-
-**RENK ANLAM TAŞIR** ve modülün kendi dilinden geliyor (kayış kipi rozetiyle
-aynı): amber = TÜREYEN, mavi = GİRDİ. Bağ açıkken mm kanvastan türüyor,
-kapalıyken salt panel girdisi. **Soluk gri REDDEDİLDİ** — bu özelliğin en pahalı
-sessiz hatası kullanıcının bağın kapalı olduğunu FARK ETMEMESİ; soluk bir rozet
-tam olarak onu davet ederdi. `BAĞLI/SERBEST` de reddedildi: kayış kipi rozeti
-aynı kanvasta `SERBEST` yazıyor, 60 px yan yana iki farklı anlam olurdu.
-
-###### BAĞIMSIZLIK SİMETRİK — tek yön kapatmak özelliği ÇALIŞMAZ yapardı
-
-Kapı iki yönde de var ve ikincisi bir incelik değil, özelliğin var olma şartı:
-
-| Yön | Kapı | Kapatılmasaydı |
-|-----|------|----------------|
-| kanvas → mm | `veFeadSyncDrag` | — (istenen davranış zaten bu) |
-| mm → kanvas | `veFeadPlaceFromCoords` | Alt topoloji her açılışta kutuları koordinata GERİ ÇEKER; kullanıcının dizilişi kaybolur. Panele tek bir sayı yazmak da (`veFeadSet` → `VE_FEAD_COORD_KEYS`) o kutuyu tek başına yerine oturtup dizilişi bozar |
-
-**KAPI SAF FONKSİYONUN İÇİNDE DEĞİL.** `veFeadSyncMmFromCanvas` /
-`veFeadSyncCanvasFromMm` DOM'suz saf dönüşümler ve öyle kalıyor: kapı oraya
-konsaydı bağdan bağımsız olarak koordinat yazması gereken çağıranlar (göç, örnek
-kurucu, ileride bir toplu işlem) sessizce engellenirdi. Testi bu ayrımı ayrıca
-tutuyor.
-
-**"Otomatik Düzenle" KAPININ DIŞINDA** — açık bir kullanıcı eylemi ve kapalı
-bağda tek yönlü uzlaştırma yolu odur. Örnek yükleme de öyle (ona devrediyor).
-`veFeadNormalizeOrigin` mm→mm bir öteleme, tek kutuya dokunmuyor → etkilenmiyor.
-
-**Kart tazeleme için ek kapı YOK ve gerekmiyor:** `veFeadTopoSignature` mm
-okuyor, piksel değil. Bağ kapalıyken mm değişmiyor → imza sabit → kart yeniden
-kurulmuyor. Doğru davranış kendiliğinden çıkıyor.
-
-###### AÇARKEN KUTU KOORDİNATA DÖNER — koordinat kutuya YAZILMAZ
-
-Üç seçenek vardı ve ikisi tehlikeli:
-
-| | Ne yapar | Hüküm |
-|---|---|---|
-| **(a) kutular mm'ye döner** | model doğrudur, diziliş geçicidir | **SEÇİLEN** |
-| (b) mm kutulardan yeniden yazılır | Kullanıcının bağı kapatma SEBEBİNİ (modeli değiştirmeden dizmek) tek tıkla ve sessizce tersine çevirir | RED |
-| (c) hiçbir şey | (b)'nin gecikmiş ve daha kötü hâli — aşağıya bak | RED |
-
-(a) ayrıca sistemin kendi davranışıyla tutarlı: alt topoloji her açılışında
-`veFeadPlaceFromCoords` zaten kutuları koordinata oturtuyor. Geçiş `saveState`
-çağırıyor (geri alınabilir) ve toast kaç kutunun oturduğunu yazıyor — 0 ise
-kullanıcı hiçbir şeyin değişmediğini görür.
-
-###### DÜĞÜMÜ SİLMEK = BAĞI AÇMAK — ölçülmüş bir sessiz patlama
-
-Bu, ilk uygulamada **kaçırılan** kusurdu ve (c) seçeneğinin neden reddedildiğini
-de açıklıyor. Düğüm silinince bağ AÇILIYOR ("düğüm yoksa AÇIK" varsayılanı),
-ama kutular hâlâ serbest yerlerinde. Ayrışma sessiz kalmıyor, **PATLIYOR**:
-`veFeadSyncMmFromCanvas` mm'yi **MUTLAK** hesaplıyor (delta değil), dolayısıyla
-sonraki İLK sürükleme birikmiş kaymanın tamamını tek karede modele yazıyor.
-
-**ÖLÇÜLDÜ** (BMC, bağ kapalıyken alternatör 80 px sağa / 50 px yukarı dizilmiş,
-sonra bağ düğümü silinmiş):
-
-| | alternatör mm | kol |
-|---|---|---|
-| silmeden hemen sonra | −281.00 | 28.4271° |
-| **ve 1 px SÜRÜKLENİNCE** | **−200.00** | **28.0625°** |
-
-Bir pikselin karşılığı **81 mm** — uyarısız, hatasız. Bu, modülün belgelenmiş
-38.108 mm sınıfının aynısı. `veFeadCoordLinkAfterDelete` (silme yolundan,
-`map.js` `deleteSelectedNodes`) silmeyi rozeti AÇIK'a çevirmekle aynı şey
-sayıyor: kutular koordinata döner. Geriye KAPALI bir kopya kaldıysa uzlaştırma
-YAPILMAZ.
-
-###### İki yan etki, ikisi de bilinçli
-
-**KENETLEME GERİ GELİR.** Kasnak sürüklenirken hizalama kenetlemesi kapalıydı,
-çünkü kutu KENARLARINI yapıştırmak koordinatı sessizce yutuyordu (ölçüldü:
-24.514 mm istenirken 3.940 mm). Bağ kapalıyken o gerekçe yok — kutu salt görsel,
-kenetleme klasik topolojilerdeki anlamına dönüyor ve yutacak bir mm yok.
-
-**KASNAK PANELİ SEBEBİ YAZIYOR.** Konum X/Y alanları normalde kutuyu da taşıyor;
-kapalıyken taşımıyor. Sessiz bırakılsaydı kullanıcı sayıyı yazar, kutu yerinde
-kalır ve **alanın bozuk olduğunu sanardı** — oysa model DEĞİŞTİ. Sağlıklı (bağ
-açık) durumda metin birebir eskisi: yanlış alarm yok.
-
-**ÖLÇÜLDÜ (gerçek tarayıcı, tek dosya `file://`, BMC):** palet girdisi "FEAD
-Araçları" kategorisinde ve `fead-analysis` kapsamında; düğüm 54×48, rozet
-`AÇIK` amber; kapatınca hiçbir şey oynamıyor; kapalıyken alternatör kutusu
-2736.41 → 2826.41 px (DOM dahil) giderken mm **−281 sabit**; yeniden açınca kutu
-2736.41'e dönüyor ve mm yine −281. Konsolda bu özelliğe ait hata yok.
-
-Kapı **on mutasyonla** ölçüldü, onu da kırmızı: sürükleme kapısını silme,
-varsayılanı ters çevirme (11 test), ters yön kapısını silme, `saveState`'i
-kaldırma, açarken mm←kutu yazma, KAPALI rozetini soluk griye çevirme,
-kenetlemeyi bağdan koparma, silme kancasını kaldırma, kasnak paneli uyarısını
-yutma, çok kopyada İLKİNİ kazandırma.
+#### ÇİZİM AYNALANMAZ — TEK ÇERÇEVE VAR (2026-09-07, NİHAİ)
+
+**HÜKÜM: kasnak konumları Gates raporunun "Layout Data" koordinatlarının
+KENDİSİDİR ve ekranda da öyle görünür. Aynalama yoktur, bayrağı da yoktur.**
+
+`VE_FEAD_VIEW_FRONT` · `veFeadViewFront` · `veFeadSetViewFront` ·
+`_feadPlaneSx` · `veFeadPlaneNote` · `veFeadSpinToFront` **SİLİNDİ.** Bir
+bayrak dururken bir sonraki oturum onu yine çevirebilirdi; bu üç turda üç kez
+oldu ve maliyeti kullanıcının güveniydi.
+
+Kullanıcı bunu üç kez bildirdi, üçüncüsünde **dört ayrı kaynakla** gösterdi:
+Gates AG00976 raporunun şeması, aynı raporun Layout Data tablosu, sistemin CAD
+görüntüsü, mühendisin Excel tasarımı. Dördü de aynı düzeni veriyor:
+
+| Kasnak | X | Y |
+|--------|---|---|
+| FAN | 0,00 | 0,00 |
+| IDR | 130,10 | 139,90 |
+| A_C | **184,20** | 314,50 |
+| IDR | 0,00 | 267,40 |
+| ALT | **−281,00** | 259,50 |
+| TEN | **−161,97** | 91,29 |
+
+ALT ve gergi **solda**, klima **sağda**. Depodaki örnek bu sayıların birebir
+aynısını taşıyor — **veri hiç yanlış değildi**, yanlış olan çizim anındaki
+aynaydı.
+
+**DÖNÜŞ YÖNÜ DE BU ÇERÇEVEDE:** `spin` kasnak merkezlerinin kayış gidiş
+sırasındaki dolanım işareti ve ekranda görünen yön onunla AYNI — arada çeviri
+yok. Bu düzende kayış CCW dolanıyor; raporun kendi gerilme sütunu da bunu
+doğruluyor (FAN 1585 → … → TEN 544: kranktan çıkan span en gergin, dönen en
+gevşek).
+
+**"Konumlar dursun, kayış ters yürüsün" YOLU KAPALI** — ölçüldü: gergi kayışın
+gergin tarafına düşüyor ve span gerilmeleri negatife iniyor (BMC 526 N →
+−196 N), model yine "çözülüyor" deyip uyarı vermiyor.
+
+`veFeadMirrorGeomX` duruyor ama **çizim yolundan çağrılmıyor**: X aynasının tam
+simetri olduğu ölçülmüş bir ilişki ve kanıt atılmaz.
+
+**Kapı:** `tests/unit/fead-layout-plane.test.js` → *"ÇİZİM AYNALANMAZ —
+konumlar raporun Layout Data'sıdır"*. Bayrağın yokluğunu, örneğin
+koordinatlarını, ÇİZİLEN SVG'nin sol-sağ düzenini ve ters rotanın bedelini
+birlikte tutuyor.
 
 ##### DÖNÜŞ YÖNÜ — `fead-spin` "Dönüş Yönü" (2026-08-28)
 
