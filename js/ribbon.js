@@ -145,6 +145,15 @@ var VE_RIBBON_TABS = [
       // MFSim çevresinde üretilmiş tek dosyalık HTML programlar (artifact'lar,
       // dışarıdan gelen araçlar, MFSim'in kendi üç ürünü). Kayıt defteri
       // programlar/kayit.json; pencere js/cp-programlar.js.
+      // ── KOMUTA PENCERESİ ───────────────────────────────────────────
+      // "Elimdeki kopyada ne var" + Claude Code'a yapıştırılacak SİPARİŞ FİŞİ.
+      // Ayrı bir şifre ister (js/cp-komuta.js): program şifresi herkeste,
+      // bu pencere bakım işi. Kilit değil KAPAK — pencere hiçbir şeyi
+      // değiştirmiyor, yalnız durum okuyup metin yazıyor.
+      { label: 'Komuta', items: [
+        { size:'lg', icon:'lock', label:'Komuta\nPenceresi', run:'veKomutaAc',
+          tip:'Program durumunu ölç ve sipariş fişi yaz' }
+      ]},
       { label: 'Arşiv', items: [
         { size:'lg', icon:'folder-open', label:'Program\nArşivi', run:'veProgramArsiviOpen',
           tip:'Bu depoda üretilmiş tek dosyalık HTML programlar' }
@@ -239,6 +248,7 @@ function veRibbonRunnable(item) {
 // ve kural yüzeyde yazılı, davranışta yok olurdu.
 var VE_RIBBON_ALWAYS_ON = [
   'veNewProject', 'veLoadTopology', 'veOpenSettings', 'veOpenStatusModal',
+  'veKomutaAc',
   'veShortcutsHelpOpen', 'veCmdkOpen', 'veGame2048Open', 'mfsimLogout',
   'veGuideKitOpen', 'veGuideOpenCurrent', 'veProgramArsiviOpen'
 ];

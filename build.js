@@ -212,6 +212,20 @@ if (fs.existsSync(karsilamaDir)) {
     (kb / 1048576).toFixed(2) + ' MB base64');
 }
 
+// ── 2c-1b) KARŞILAMA KÜNYESİ — kare NUMARASININ insan dilindeki karşılığı.
+// Program slaytı çizerken bunu okumaz (sıra karışık, başlık gösterilmiyor);
+// okuyan Komuta Penceresi'dir (js/cp-komuta.js): "hangi resim hangisi" sorusu
+// tam olarak bu künyeyle çözülüyor. 'tools/' deploy'da _site'a KOPYALANMIYOR,
+// yani gömülmezse tek dosyada da Pages'te de başlıklar boş kalırdı. ~5 KB.
+// Künye ↔ klasör iki yönlü tutuluyor: tests/unit/karsilama-secici.test.js.
+var karsilamaKunye = null;
+var karsilamaKunyeYol = path.join(ROOT, 'tools', 'karsilama-kunye.json');
+if (fs.existsSync(karsilamaKunyeYol)) {
+  karsilamaKunye = JSON.parse(fs.readFileSync(karsilamaKunyeYol, 'utf8'));
+  console.log('  Karşılama künyesi göm: ' +
+    Object.keys(karsilamaKunye.kareler || {}).length + ' kayıt');
+}
+
 // ── 2c-2) SÜRÜM KÜNYESİ — indirilen dosyanın "hangi sürümüm ben" cevabı.
 // Yerel build'de `__DEPLOY_RUN_ID__` yer tutucusu OLDUĞU GİBİ kalıyordu
 // (yalnız CI'da GITHUB_RUN_ID ile doluyor) ve version.json yalnız Pages'te
@@ -230,7 +244,8 @@ var embedScript = '<script>window.__MNT_TOPOLOGIES = ' +
   JSON.stringify(embedded).replace(/</g, '\\u003c') + ';\n' +
   'window.__MFSIM_BUILD = ' + JSON.stringify(VERSION_INFO).replace(/</g, '\\u003c') + ';\n' +
   'window.__MFSIM_KARSILAMA = ' + JSON.stringify(karsilama).replace(/</g, '\\u003c') + ';\n' +
-  'window.__MFSIM_PROGRAMLAR = ' + JSON.stringify(programlarKayit).replace(/</g, '\\u003c') + ';</script>';
+  'window.__MFSIM_PROGRAMLAR = ' + JSON.stringify(programlarKayit).replace(/</g, '\\u003c') + ';\n' +
+  'window.__MFSIM_KARSILAMA_KUNYE = ' + JSON.stringify(karsilamaKunye).replace(/</g, '\\u003c') + ';</script>';
 // FONKSİYON replacer ŞART: String.replace'in İKİNCİ argümanı dizge olursa
 // içindeki '$1'..'$9', '$&', "$'", '$`' ve '$$' ÖZEL DİZİ sayılıp genişletilir.
 // Örnek topolojilerinde '$' geçen herhangi bir metin (customName, not metni,

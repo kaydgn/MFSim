@@ -91,6 +91,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Bu yüzden pencere arşivin yanında olup olmadığını `programlar/arsiv-var.js`'i
   **script etiketiyle yoklayarak ÖLÇER** (`file://` üzerinde `fetch` var/yok
   ayrımı yapmıyor); o dosya bir yoklama hedefidir, veri konmaz.
+- `js/cp-komuta.js` — **Komuta Penceresi** (Araçlar → Komuta, ayrı şifre). İki işi
+  var: elindeki kopyanın durumunu ÖLÇMEK ve buradan bir **sipariş fişi** yazmak.
+  Pencere hiçbir şeyi DEĞİŞTİRMEZ. Tezgâhlar elle yazılmış özet TUTMAZ, canlı
+  veri yapısını okur — elle yazılan özet sessizce bayatlar (bu dosyanın kendi
+  6.052 satırlık dersi). Fişin `dosya` satırı bir kapıdır: beyan edilen yol
+  diskte yoksa test kırılır.
 - `.claude/skills/` — modüllere özgü karar kayıtları (koşullu yüklenir; aşağıya bak)
 - `docs/decisions/` — ortak yüzey kararları + tam test dosyası tablosu
 
@@ -512,6 +518,24 @@ yolunu izledi ve sıçramaların hepsi gömülen WASM'lardandı (OCCT STEP okuyu
 TetGen, boolean'lı OCCT çekirdeği); Yapısal Analiz kaldırılınca ikisi de gitti
 ve dosya **17,1 MB**'a düştü. Sebepsiz bir büyüme bir regresyon işaretidir;
 sayıyı çıplak basmak onu gizler.
+
+## SİPARİŞ FİŞİ geldiğinde — künyeyi ÖNCE doğrula
+
+Kullanıcı Komuta Penceresi'nden (`js/cp-komuta.js`) `MFSIM-SIPARIS v1` başlıklı
+bir metin yapıştırabilir. Fiş, hangi dosyaya ne yapılacağını söyler; ama ilk
+bakılacak satır `kunye`dir:
+
+```bash
+git fetch origin main && git rev-parse --short origin/main   # fişteki sha ile AYNI mı?
+```
+
+**Sapma varsa uygulamadan ÖNCE söyle.** Fiş, kullanıcının ELİNDEKİ kopyadan
+yazılıyor; o kopya bayatsa fişteki numaralar başka kareleri gösteriyor olabilir
+ve hata SESSİZ olur (uygulanır, makul görünür, yanlıştır). Aynı tuzağın ters
+yönü zaten ölçüldü: bir oturum `main`in üç PR gerisinden açıldı.
+
+Fişin biçim sözleşmesi `tests/unit/komuta.test.js`'te gidiş-dönüş kapısıyla
+duruyor (`ayristir(uret(x)) === x`); alan adları diakritiksizdir.
 
 ## Teslim Akışı — PR + merge OTOMATİK, **CI BEKLENMEZ**
 
