@@ -138,7 +138,7 @@ test('sihirbaz "Modeli Kur": kasnaklar + TABLO, tel yok, uyarı yok', async ({ p
   await expect(kart).toBeVisible();
   await expect(kart.locator('tbody tr')).toHaveCount(6);
   const govde = await kart.innerText();
-  ['KASNAK', 'Efektif Çap(mm)', 'Kasnak Dönüş Yönü', 'Kayış Uzunluğu(mm)']
+  ['KASNAK', 'Efektif Çap', 'Kasnak Dönüş Yönü', 'Kayış Uzunluğu']
     .forEach((t) => expect(govde).toContain(t));
   await expect(kart.locator('select[data-ve="spin"]')).toHaveCount(6);   // yön listeleri
   await expect(kart.locator('select[data-ve="add-pulley"]')).toHaveCount(1);

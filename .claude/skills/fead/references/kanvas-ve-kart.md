@@ -695,7 +695,12 @@ tabloyu düzeltemez. Türetilenler o hâlde boş kalır.
 
 **SIRAYI TABLO TAŞIMAZ, KASNAK TAŞIR.** Düğüm bir GÖRÜNÜM: silinse de kayış yolu
 durur. Satır okları (▲▼) `beltIndex`i yeniden yazıyor; **ilk satır sürücünün** ve
-kilitli (yukarıdaki sözleşme), okları sönük çiziliyor.
+kilitli (yukarıdaki sözleşme). Pasif ok bir `<span>` DEĞİL, `disabled` düğme:
+sönük bir metin, klavyeyle gezinen için hiç var olmayan bir düğmedir ve "burada
+bir eylem var ama şu an kullanılamıyor" bilgisini hiç vermez. Sürücülük işareti
+ADDA değil SIRA sütununda (numara vurgulu): ada çip koymak 152 px'lik hücreden
+~46 px alırdı ve ad zaten "Sürücü Kasnak (…)" diyor; oysa sürücülüğün görünür
+sonucu SIRAYA dair.
 
 **VİRGÜLLÜ ONDALIK KABUL EDİLİR.** Tablo `161,400` yazıyor, kullanıcı gördüğü
 biçimde girecek; `parseFloat('63,5')` sessizce `63` verirdi.
@@ -712,9 +717,45 @@ düzeltilen kusur ötekinde yaşadı, ölçüldü. Ve ikisi de örnek düğümü
 doğrudan splice ettiği için `updateNodeCount`'u KENDİLERİ çağırmak zorunda:
 çağırmayınca araç çubuğu bir fazla gösteriyor (12 düğüm varken 13).
 
+**GÖRÜNÜM CSS'TE** (`css/styles.css` → `.ve-fead-tbl*`), satır içi `style=`
+dizelerinde değil — modül kuralı 13. Satır içinde kalan tek şey VERİ:
+`<colgroup>` genişlikleri (tek kaynak `VE_FEAD_TABLE_COLS`) ve hücre payı.
+Bunun getirdikleri, hepsi satır içi CSS'te YAZILAMAZ olan şeyler:
+
+| Ne | Neyi söylüyor |
+|---|---|
+| satır zebrası | okuma çizgisi |
+| satır vurgusu (`:hover`) | fare nerede |
+| odak halkası (`:focus`) | imleç HANGİ hücrede — eskiden `border:none` ile hiç görünmüyordu |
+| `tr.is-sel` | **paneli açık olan kasnak** — kutular kalktığı için başka hiçbir yerde yazmıyor |
+
+`is-sel` bir tazeleme sorusu doğuruyor ve cevabı kart kurmak DEĞİL:
+`veFeadMarkSelectedRow` sınıfı DOM'da yerinde eşitliyor, `cp-core.js`'in
+`addToSelection`/`clearSelection` merkezlerinden çağrılıyor. Tam yeniden kurmak
+o an düzenlenen hücrenin odağını düşürürdü. Ölçüldü (gerçek tarayıcı): çağrı
+olmadan işaret hiç tazelenmiyor ve tabloda paneli AÇIK OLMAYAN bir satır
+işaretli kalıyor — işaretin hiç olmamasından kötü.
+
+Başlıkta ad ile BİRİM ayrı satırda (`X` / `mm`): `X(mm)` bir başlıktan çok bir
+değişken adı gibi okunuyor ve sütunu gereksiz genişletiyordu. Σ satırı
+GÖSTERİLEN sütunların toplamı — defterdeki SUM satırının karşılığı, yeni bir
+büyüklük türetmiyor (üç katman kuralı). Silme ✕ kendi sütununda: sıra oklarıyla
+aynı 70 px'lik hücrede dururken sık yapılan işlem ile geri dönüşü olmayan işlem
+bitişikti. Boş durum artık paleti DEĞİL tablonun kendi ekleyicisini gösteriyor —
+kutular kalktığından beri paletten sürüklemek kanvasta hiçbir iz bırakmıyor,
+yani o tavsiye SESSİZ bir yolu işaret ediyordu.
+
+Kart ölçüsü **824×430 → 850×340**; ölçüldü (AG00976, 6 kasnak): eski kartta
+içerik 200 px yer kaplarken 230 px boştu. Eski ölçü `VE_FEAD_TABLE_LEGACY` ile
+yükseliyor (Kayış Yolu kartındaki kuralın aynısı, tek kapı
+`veFeadLayoutSizeFor`).
+
 Kapı: `fead-table.test.js` — sütun kimlikleri kullanıcının sayfasına karşı,
 türetilenler çekirdekten, girdi sütunları çözülemeyen modelde de dolu, satır
-taşıma + sürücü kilidi, mousedown yutma, tek tazeleme kapısı.
+taşıma + sürücü kilidi, mousedown yutma, tek tazeleme kapısı, ve görünüm için
+ÇİFT kapı (JS satır içi renk yazmıyor + CSS'te durum kuralları var; biri
+olmadan öteki hiçbir şey ifade etmez). Gerçek tarayıcı ölçümü
+`fead-tablo.spec.js` → *"Kayış Tablosu CANLI"*.
 
 #### Kanvasta CANLI kayış yolu kartı (`fead-layout`)
 

@@ -118,6 +118,12 @@ function addToSelection(node) {
   } else {
     showMultipleSelection();
   }
+  // KUTUSUZ DÜĞÜMLERİN "seçili" İŞARETİ. Yukarıdaki `classList.add` bir kutu
+  // varsayıyor; FEAD kasnaklarının kanvasta kutusu YOK, o yüzden onlarda
+  // hiçbir şeye yazmıyor ve seçim yalnız Kayış Tablosu'nun satırında görünür.
+  // `clearAnnotationSelection` çağrısındaki kalıbın aynısı: modül varsa haber
+  // verilir, yoksa sessizce geçilir.
+  if(typeof veFeadMarkSelectedRow === 'function') veFeadMarkSelectedRow();
 }
 
 function clearSelection() {
@@ -127,6 +133,7 @@ function clearSelection() {
   });
   selectedNodes = [];
   if(typeof clearAnnotationSelection === 'function') clearAnnotationSelection();
+  if(typeof veFeadMarkSelectedRow === 'function') veFeadMarkSelectedRow();
   showEmptyProperties();
 }
 

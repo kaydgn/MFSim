@@ -847,17 +847,25 @@ var VE_FEAD_LAYOUT_H = 500;
 // ve aynı sürümde iki farklı kart ölçüsü dolaşırdı.
 var VE_FEAD_LAYOUT_LEGACY = [ { w: 60, h: 56 }, { w: 420, h: 340 } ];
 
-// KAYIŞ TABLOSU ÖLÇÜSÜ. Genişlik ON sütundan TÜRER, yuvarlak bir sayı değil:
-// sıra(70 — indis + ▲▼ + ✕) + ad(136) + X(64) + Y(64) + efektif çap(84) +
-// D(64) + yön(76) + sarım(76) + span(88) + kayış boyu(88) = 810, artı kart
-// kenarı. Sıra sütunu KUTULAR KALKINCA genişledi: kasnak silmenin tek yolu
-// artık bu satır (kanvasta seçilecek bir kutu yok). Dar
-// tutulsaydı sütunlar kısalır ve "Efektif Çap" ile "Span Uzunluğu" başlıkları
-// iki satıra düşerdi — tablonun okunurluğu tam da başlık satırında kırılır.
-// Yükseklik altı kasnak + künye şeridi + sütun başlığı için; daha uzun listede
-// kartın İÇİ kayar (kart büyümez, kanvas yerleşimi bozulmasın).
-var VE_FEAD_TABLE_W = 824;
-var VE_FEAD_TABLE_H = 430;
+// KAYIŞ TABLOSU ÖLÇÜSÜ. Genişlik ON BİR sütundan TÜRER, yuvarlak bir sayı
+// değil: sıra(54) + ad(152) + X(64) + Y(64) + efektif çap(78) + D(64) +
+// yön(86) + sarım(74) + span(82) + kayış boyu(88) + sil(30) = 836, artı kart
+// kenarı. Sıra sütunu DARALDI ve silme kendi sütununa çıktı: üçü tek hücrede
+// dururken (indis + ▲▼ + ✕) sık yapılan işlem ile geri dönüşü olmayan işlem
+// bitişikti. Başlıklarda ad ile BİRİM ayrı satırda olduğu için sütunlar da
+// daraldı — kazanılan genişlik ada ve sayılara gitti.
+//
+// YÜKSEKLİK 430 → 340. Ölçüldü (AG00976, 6 kasnak): içerik 200 px yer
+// kaplarken kartın 230 px'i boştu, yani kartın üçte ikisi. Yeni ölçü SEKİZ
+// kasnak + künye + iki satırlık başlık + Σ satırı + alt şerit içindir; daha
+// uzun listede kartın İÇİ kayar (kart büyümez, kanvas yerleşimi bozulmasın).
+var VE_FEAD_TABLE_W = 850;
+var VE_FEAD_TABLE_H = 340;
+// AŞILMIŞ VARSAYILAN — kayış tablosu bir oturumda iki ölçü gördü. Kayıtlı bir
+// projede eski ölçü BİREBİR duruyorsa (yani kullanıcı hiç dokunmamışsa)
+// yükseltilir; bilerek verilmiş her ölçü korunur. Kayış Yolu kartındaki
+// kuralın aynısı, bkz. veFeadLayoutSizeFor.
+var VE_FEAD_TABLE_LEGACY = [ { w: 824, h: 430 } ];
 // Geriye dönük adlar (dışarıdan okuyan bir yer kalırsa bozulmasın).
 var VE_FEAD_LAYOUT_LEGACY_W = VE_FEAD_LAYOUT_LEGACY[0].w;
 var VE_FEAD_LAYOUT_LEGACY_H = VE_FEAD_LAYOUT_LEGACY[0].h;
@@ -898,12 +906,34 @@ function veIsFeadLayoutNode(node) {
 }
 // SAF (ölçüyü döndürür) + yazan yüzü. Ayrı olmalarının nedeni modül kartıyla
 // aynı: sekme önizlemesi düğümü DEĞİŞTİRMEDEN ölçüye ihtiyaç duyuyor.
+//
+// İKİ KART BİRDEN. Kayış Tablosu da ölçü değiştirdi ve kendi yükseltme
+// listesini taşımasaydı kayıtlı bir proje eski 824×430 kartla açılırdı: yeni
+// düzen (iki satırlık başlık, Σ satırı, silme sütunu) o ölçüde kartın üçte
+// birini boş bırakır ve aynı sürümde iki farklı tablo görünümü dolaşırdı.
+// Ayrı bir fonksiyon açmak, ÇAĞIRANLARIN ikisini de bilmesini gerektirirdi —
+// oysa kapı tek olsun diye (state.js geri yükleme · topology.js önizleme)
+// burası tek yer.
+var VE_FEAD_CARD_SIZES = null;
+function _veFeadCardSizes() {
+  if(!VE_FEAD_CARD_SIZES) VE_FEAD_CARD_SIZES = [
+    { flag: 'isFeadLayout', w: VE_FEAD_LAYOUT_W, h: VE_FEAD_LAYOUT_H,
+      legacy: VE_FEAD_LAYOUT_LEGACY },
+    { flag: 'isFeadTable',  w: VE_FEAD_TABLE_W,  h: VE_FEAD_TABLE_H,
+      legacy: VE_FEAD_TABLE_LEGACY }
+  ];
+  return VE_FEAD_CARD_SIZES;
+}
 function veFeadLayoutSizeFor(node) {
   var w = (node && node.width) || 65, h = (node && node.height) || 60;
-  if(veIsFeadLayoutNode(node)) {
-    for(var i = 0; i < VE_FEAD_LAYOUT_LEGACY.length; i++) {
-      if(w === VE_FEAD_LAYOUT_LEGACY[i].w && h === VE_FEAD_LAYOUT_LEGACY[i].h)
-        return { w: VE_FEAD_LAYOUT_W, h: VE_FEAD_LAYOUT_H, changed: true };
+  var defs = (typeof componentDefs !== 'undefined') ? componentDefs : null;
+  var def = (defs && node && node.type) ? defs[node.type] : null;
+  var kartlar = _veFeadCardSizes(), i, j;
+  for(i = 0; i < kartlar.length; i++) {
+    if(!def || !def[kartlar[i].flag]) continue;
+    for(j = 0; j < kartlar[i].legacy.length; j++) {
+      if(w === kartlar[i].legacy[j].w && h === kartlar[i].legacy[j].h)
+        return { w: kartlar[i].w, h: kartlar[i].h, changed: true };
     }
   }
   return { w: w, h: h, changed: false };

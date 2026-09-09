@@ -45,7 +45,10 @@ test('Kayış Tablosu kanvasta: kurulur, yazılır, sıra değişir', async ({ p
   const kart = page.locator('.ve-fead-table-card').first();
   await expect(kart).toBeVisible();
   const govde = await kart.innerText();
-  ['KASNAK', 'X(mm)', 'Y(mm)', 'D(mm)', 'Σsarım'].forEach((t) => expect(govde).toContain(t));
+  // Başlıkta ad ile birim AYRI satırda (innerText'te aralarında \n var).
+  ['KASNAK', 'Efektif Çap', 'Sarım Açısı', 'Σsarım', 'Σ toplam']
+    .forEach((t) => expect(govde).toContain(t));
+  expect(govde).not.toContain('X(mm)');
 
   // ── 1c) KASNAKLARIN KANVASTA KUTUSU YOK ─────────────────────────────────
   // Kullanıcı isteği (2026-09-09). Kasnaklar MODELDE düğüm olarak duruyor
@@ -120,9 +123,18 @@ test('Kayış Tablosu kanvasta: kurulur, yazılır, sıra değişir', async ({ p
   expect(siraSonra[1]).toBe(siraOnce[2]);                     // takas oldu
   expect(siraSonra.slice().sort()).toEqual(siraOnce.slice().sort());   // kasnak kaybı yok
 
-  // ── 5) SÜRÜCÜ SATIRININ OKLARI SÖNÜK (buton değil) ──────────────────────
-  const ilkSatirButon = await kart.locator('tbody tr').first().locator('button[title*="taşı"]').count();
-  expect(ilkSatirButon).toBe(0);
+  // ── 5) SÜRÜCÜ SATIRININ OKLARI PASİF — ama YİNE DE DÜĞME ────────────────
+  // Eskiden pasif okun yerine soluk bir <span> basılıyordu ve o, klavyeyle
+  // gezinen ya da ekran okuyucu kullanan biri için hiç VAR OLMAYAN bir
+  // düğmeydi: "burada bir eylem var ama şu an kullanılamıyor" bilgisi hiç
+  // verilmiyordu. `disabled` düğme ikisini birden söylüyor.
+  const ilkSatir = kart.locator('tbody tr').first();
+  await expect(ilkSatir.locator('button[title*="taşı"]')).toHaveCount(2);
+  await expect(ilkSatir.locator('button[title*="taşı"]').first()).toBeDisabled();
+  await expect(ilkSatir.locator('button[title*="taşı"]').last()).toBeDisabled();
+  // Sürücülük SIRA sütununda işaretli (adda değil — 152 px'lik hücreden çip
+  // için ~46 px alırdı ve ad zaten "Sürücü Kasnak (FAN)" diyor).
+  await expect(ilkSatir.locator('b.drv')).toHaveCount(1);
 
   // ── 6) İKİ KART BİRLİKTE TAZELENDİ ──────────────────────────────────────
   await expect(page.locator('.ve-fead-layout-card').first()).toBeVisible();
@@ -164,7 +176,7 @@ test('Kayış Tablosu kanvasta: kurulur, yazılır, sıra değişir', async ({ p
   // ── 10) SATIR SİL / EKLE — kutu yokken tek yol ──────────────────────────
   const silOnce = await page.evaluate(() =>
     veFeadBeltOrder(window.nodes).map((n) => n.customName));
-  await kart.locator('tbody tr').nth(3).locator('button[title="Bu kasnağı sil"]').click();
+  await kart.locator('tbody tr').nth(3).locator('button.ve-fead-tbl-del').click();
   await page.waitForTimeout(200);
   const silSonra = await page.evaluate(() =>
     veFeadBeltOrder(window.nodes).map((n) => n.customName));
@@ -182,6 +194,75 @@ test('Kayış Tablosu kanvasta: kurulur, yazılır, sıra değişir', async ({ p
   expect(ekSonra.sira).toHaveLength(6);
   expect(ekSonra.sira[ekSonra.sira.length - 1]).toBe('fead-waterpump');   // SONA
   expect(ekSonra.dom).toBe(0);                    // eklenen kasnağın da kutusu yok
+
+  expect(hatalar).toEqual([]);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  DURUM GERİ BİLDİRİMİ — NODE'DA HİÇ ÖLÇÜLEMEYEN HALKA
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı bildirimi (2026-09-09): *"'Kayış Tablosu' çok demode ve ilkel
+// duruyor."* Sebep bir renk tercihi değil, stilin nerede durduğuydu: kart
+// baştan sona satır içi `style="…"` diziyordu ve satır içi CSS DURUM İFADE
+// EDEMEZ. Aşağıdaki dört ölçüm o sınırın kalktığını gösteriyor ve dördü de
+// yalnız GERÇEK TARAYICIDA var — jsdom `:hover`ı da `:focus`u da hiç
+// hesaplamaz, yani bu kapı Node'a taşınamaz.
+test('Kayış Tablosu CANLI: fare · odak · seçili satır · zebra', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(page);
+  await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
+  await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
+  await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-table'),
+    null, { timeout: 20000 });
+  const kart = page.locator('.ve-fead-table-card').first();
+  const satir = kart.locator('tbody tr');
+  await expect(satir).toHaveCount(6);
+
+  // ── 1) FARE: satırın zemini değişiyor ───────────────────────────────────
+  const zemin = (i) => satir.nth(i).evaluate((el) => getComputedStyle(el).backgroundColor);
+  const once = await zemin(2);
+  await satir.nth(2).hover();
+  expect(await zemin(2)).not.toBe(once);
+
+  // ── 2) ZEBRA: komşu satırlar aynı zemini paylaşmıyor ────────────────────
+  expect(await zemin(0)).not.toBe(await zemin(1));
+
+  // ── 3) ODAK: imlecin HANGİ hücrede olduğu görünüyor ─────────────────────
+  // Eski kartta alanların `border:none`u vardı ve odak hiç çizilmiyordu:
+  // kullanıcı hangi hücreye yazdığını ekrandan okuyamıyordu.
+  const alan = satir.nth(2).locator('input').first();
+  expect(await alan.evaluate((el) => getComputedStyle(el).boxShadow)).toBe('none');
+  await alan.focus();
+  const halka = await alan.evaluate((el) => getComputedStyle(el).boxShadow);
+  expect(halka).not.toBe('none');
+
+  // ── 4) SEÇİLİ SATIR: TABLO İLE PANEL ARASINDAKİ TEK BAĞ ─────────────────
+  // ÖLÇÜLMÜŞ HATA (bu tur): işaret doğru satıra konuyordu ama seçim
+  // değişince hiç TAZELENMİYORDU — kart yalnız model değişince kuruluyor,
+  // panel açmak modeli değiştirmiyor. Sonuç işaretin olmamasından kötüydü:
+  // tabloda işaretli duran satır, paneli açık olan kasnak DEĞİLDİ.
+  for (const i of [0, 2, 5]) {
+    const ad = (await satir.nth(i).locator('button.ve-fead-tbl-name').innerText()).trim();
+    await satir.nth(i).locator('button.ve-fead-tbl-name').click();
+    await page.waitForTimeout(250);
+    const secili = kart.locator('tbody tr.is-sel');
+    await expect(secili).toHaveCount(1);
+    expect((await secili.locator('button.ve-fead-tbl-name').innerText()).trim()).toBe(ad);
+    // Ve panel gerçekten O kasnağı açtı.
+    expect(await page.evaluate(() => (window.selectedNodes || []).length)).toBe(1);
+  }
+
+  // Boşluğa tıklayınca işaret de kalkar — kasnakların kanvasta kutusu yok,
+  // yani `clearSelection`ın kutudan sildiği sınıf onlarda hiçbir şeye yazmaz.
+  await page.evaluate(() => clearSelection());
+  await page.waitForTimeout(150);
+  await expect(kart.locator('tbody tr.is-sel')).toHaveCount(0);
+
+  // ── 5) TABLO KABINA SIĞIYOR — yatay kaydırma yok ────────────────────────
+  expect(await kart.locator('.ve-fead-tbl-wrap').evaluate((el) =>
+    el.scrollWidth <= el.clientWidth + 1)).toBe(true);
 
   expect(hatalar).toEqual([]);
 });
