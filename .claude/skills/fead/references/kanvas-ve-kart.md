@@ -711,6 +711,35 @@ devir seçicisi hiçbir şey değiştirmezdi; testi bu istenmeyen alternatifi de
 koşturup belgeliyor. BMC'de katsayı `×1/139`: 800 dev/dk'da alternatör
 0.29 tur/s, kayış 30 px/s; 2750'de 103 px/s.
 
+###### STROBOSKOP KAPISI ANİMATÖRDE — çeyrek diş/kare (2026-09-09)
+
+Kullanıcı bildirimi: *"Sadece başlangıç sihirbazında kayış görsel olarak ters
+yöne dönüyor."* **Yön DOĞRUYDU** — iki yüzeyde de ölçüldü (`spin` −1, krank
+saat yönünde, kol açıları aynı işaretle dönüyor). Ayrışan şey HIZDI:
+
+| Yüzey | diş adımı | hız | 60 Hz'de | 30 Hz'de |
+|---|---|---|---|---|
+| Kanvas kartı | 10,20 mm | 59,7 mm/s (gerçek kinematik ×ağır çekim) | 0,098 diş/kare | 0,20 |
+| Sihirbaz önizlemesi | 9,63 mm | **260 mm/s** (sabit gösterim hızı) | **0,45 diş/kare** | **0,90** |
+
+Yukarıdaki ağır çekim tavanı (`VE_FEAD_ANIM_TARGET_REV_S`) **kasnak** örnekleme
+sınırından türetilmişti; sihirbaz `dispMmS`'i doğrudan yazdığı için o tavanı hiç
+görmüyordu ve daha DAR olan sınır zaten kayışın diş adımıydı. 30 Hz'de 0,90 diş
+= 0,10 diş **geri**: kayış geriye akıyor görünür.
+
+**KAPI HIZDA DEĞİL ANİMATÖRDE** (`VE_FEAD_ANIM_MAX_STEP_FRAC` = 0,25): kare
+başına ilerleme diş adımının çeyreğiyle sınırlı. Bir sabiti küçültmek yalnız o
+çağıranı ve yalnız 60 Hz'i kurtarırdı; kare süresi büyüyünce (yavaş makine,
+dolu sayfa, arkada koşan ikinci kart) aynı hata geri gelirdi. Bedeli gösterim
+hızı (sihirbazda 260 → ~145 mm/s), karşılığı her kare hızında tek anlamlı yön.
+Dişler ve kollar aynı fazdan sürüldüğü için kırpma ikisini birlikte yavaşlatır
+— kasnakta kayma görünmez. `VE_FEAD_ANIM_MAX_DT` (0,1 s) hâlâ duruyor ama artık
+dar olan sınır bu.
+
+**Kapı:** `tests/unit/fead-anim.test.js` → *"Diş sırası kare başına ÇEYREK
+ADIMDAN fazla ilerlemez"* (sihirbaz çağrısının BİREBİR kopyası, üç mutasyonla
+ölçüldü: kırpmayı kaldırmak, eşiği 0,75 yapmak, işareti çevirmek).
+
 **Diş sırası ve kollar TEK FAZDAN** (`_feadBeltWalk` → `_feadTeethPath` /
 `_feadSpokePath`): kayış zinciri boyunca kümülatif yay uzunluğu. Kol açısı
 `θ = a0 + d·faz/r` olduğundan `ω = d·v/r` **kendiliğinden** çıkıyor — kayışın
