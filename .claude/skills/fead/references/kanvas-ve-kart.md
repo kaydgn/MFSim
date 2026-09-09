@@ -16,6 +16,23 @@ ve `veFeadSet` hepsi düğüm kimliğinden çalışıyor); değişen tek şey ku
 | Kalktı | Yerine |
 |---|---|
 | Kasnak kutusu, adı, rozetleri | Kayış Tablosu satırı (ada tıkla → panel) |
+
+**BOŞ BİR FEAD TOPOLOJİSİ SİHİRBAZLA KARŞILAR** (2026-09-09, kullanıcı isteği:
+*"FEAD modülünü ana topoloji kısmından açtığım zaman, direkt karşıma 'Başlangıç
+Sihirbazı' bileşeninin gelmesini istiyorum."*). Eskiden karşılayan şey BOŞ bir
+Kayış Tablosuydu: doldurulacak hiçbir satırı yok, ne yapılacağını da
+söylemiyordu.
+
+Yalnız KAYITSIZ topolojide (`veFeadOpenEditor`'ün `_yeniTopoloji` bayrağı) ve
+`_silent` olmayan girişte. Kurulmuş bir modele dönerken açılsaydı karşılama bir
+ENGELE dönerdi — her girişte kapatılacak bir pencere. Açılış yüzeyi yine
+kurulur (sihirbaz + Kayış Tablosu): kapatan kullanıcı boş bir kanvasa düşmesin.
+
+**"Başlangıç ve Örnekler" (`fead-example`) KALDIRILDI** aynı turda — sunduğu
+iki şey (sihirbaz düğmesi + örnek açılır listesi) sihirbazın 1. adımında zaten
+vardı ve panelinin kendi metni bunu söylüyordu. Örnek KURUCUSU
+(`veFeadLoadExample`) duruyor: sihirbazın "Modeli Kur"u ile aynı işi yapan yol
+o ve testlerin kanonik model kurucusu.
 | Kutuyu sürükleyerek koordinat girme | Tablonun X/Y hücreleri |
 | Kutuyu seçip silme | Satırın ✕ düğmesi |
 | Paletten sürükleyip kanvasta görme | Tablonun "＋ Kasnak ekle" seçicisi (palet de çalışır, ama artık sessiz) |
@@ -163,10 +180,10 @@ bir yana çektiği için telin üstünden kayardı. 46 px'den kısa açıklıkta
 çizilmez. Dört mutasyonla ölçüldü (Bézier ortası → uç ortası, eşiği kaldırma,
 oran → 45°, giriş/çıkış komşusunu takas): dördü de kırmızı.
 
-Örnek yüklenirken araç düğümleri (Kayış Özellikleri · Çözücü · Başlangıç ve
-Örnekler · Rapor) **sol şeride** alınır — eskiden kümenin üstüne diziliyorlardı
-ve alt topoloji açılışında konan "Başlangıç ve Örnekler" kutusu tam kayış
-yolunun üstüne düşüyordu (Klima ↔ Avara 1 açıklığı oradan geçiyor). Bu bölüşüm
+Örnek yüklenirken araç düğümleri (Kayış Özellikleri · Çözücü · Kayış Tablosu ·
+Rapor) **sol şeride** alınır — eskiden kümenin üstüne diziliyorlardı ve alt
+topoloji açılışında konan kutu tam kayış yolunun üstüne düşüyordu (Klima ↔
+Avara 1 açıklığı oradan geçiyor). Bu bölüşüm
 **korundu** ama artık kurucunun kendi işi değil: `veFeadArrangeByCoords` bütün
 araç düğümlerini kümenin dışındaki iki şeride koyuyor ve örnek kurucusu ona
 devrediyor (bkz. *"örnek kurucusu kutuyu koordinatın SÖYLEMEDİĞİ yere

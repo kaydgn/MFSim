@@ -1700,9 +1700,11 @@ kutusu işaretlenince siliniyor ve **geri alınabilir**. Araç düğümleri
 `fead-belt` zaten `maxInstances:1` ve kullanıcının kart ölçüsü / rapor türü
 gibi tercihlerini çöpe atmanın karşılığı yok.
 
-**SİHİRBAZ DÜĞÜMÜ KURULUMDAN SONRA KALIR** — `fead-example`'ın tersine, ve
-ayrım kullanıcı verisinde: sihirbaz düğümü kullanıcının kendi formunu taşıyor
-(silmek onu çöpe atmak olurdu), örnek düğümü hiçbir şey taşımıyor.
+**SİHİRBAZ DÜĞÜMÜ KURULUMDAN SONRA KALIR** — taşıdığı form kullanıcının kendi
+girdisi ve silmek onu çöpe atmak olurdu; kullanıcı geri dönüp bir sayıyı
+düzeltebilsin. (Bir zamanlar aynı yerde silinen `fead-example` düğümü vardı;
+o bileşen 2026-09-09'da tamamen kaldırıldı — sunduğu örnek listesi sihirbazın
+1. adımında zaten duruyordu.)
 
 ###### İki UI kararı, ikisi de ölçülmüş bir kusurun karşılığı
 

@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-example','fead-layout','fead-table','fead-report','fead-spin','fead-wizard','arac-performans','mount-analysis','fead-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-layout','fead-table','fead-report','fead-spin','fead-wizard','arac-performans','mount-analysis','fead-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -625,11 +625,13 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-warning, #f59e0b)"/><circle cx="78" cy="22" r="6" fill="var(--accent-primary, #3b82f6)"/></svg>',
     inputs: 0, outputs: 0, isFeadSolver: true
   },
-  'fead-example': {
-    name: 'Başlangıç ve Örnekler',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M28 14 h32 l14 14 v58 h-46 z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><path d="M60 14 v14 h14" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><circle cx="42" cy="48" r="8" fill="none" stroke="var(--text-muted, #aaa)" stroke-width="3"/><circle cx="62" cy="44" r="5" fill="none" stroke="var(--text-muted, #aaa)" stroke-width="3"/><line x1="36" y1="68" x2="66" y2="68" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="78" x2="54" y2="78" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg>',
-    inputs: 0, outputs: 0, isFeadExample: true, defaultWidth: 56, defaultHeight: 56
-  },
+  // "BAŞLANGIÇ VE ÖRNEKLER" (`fead-example`) KALDIRILDI (2026-09-09, kullanıcı
+  // isteği: *"Gerek yok."*). Sunduğu iki şeyin ikisi de Başlangıç Sihirbazının
+  // 1. adımında zaten vardı — aynı örnek listesi, aynı künye satırları — ve
+  // panelinin kendi metni bunu söylüyordu: "sihirbazın ilk adımından da
+  // doldurulabilirler". FEAD'e girince artık doğrudan sihirbaz açılıyor.
+  // Örnek KURUCUSU (veFeadLoadExample) duruyor: sihirbazın "Modeli Kur"u ile
+  // aynı işi yapan yol o ve testlerin kanonik model kurucusu.
   // Kayış Yolu — kasnak konumlarından ölçekli serpantin şeması. Sembolün
   // kendisi de GERÇEK geometridir: üç kasnağın (R=15/9/7) dış teğetleri ve
   // sarım yayları analitik çözülüp path'e yazıldı (bkz. cp-fead.js).

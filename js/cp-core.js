@@ -154,7 +154,7 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
 // Hafif paneller — içerik az (kısa metin / birkaç alan / tek eylem): geniş yerine
 // DAR "eylem kartı" + kompakt-sol kimlik (ortalı-simge boşluğu gitsin). Salt sunum.
 var VE_COMPACT_PANEL_TYPES = ['mnt-solver', 'mnt-report', 'mount-analysis',
-  'fead-analysis', 'fead-example', 'fead-report', 'fead-spin',
+  'fead-analysis', 'fead-report', 'fead-spin',
   'fead-wizard',
   'arac-performans', 'terminator', 'sensor', 'scenario', 'coast-down', 'propshaft', 'differential', 'wheel'];
 
@@ -269,8 +269,6 @@ function showNodeProperties(node) {
     html += getFeadLayoutPropertiesHTML(node);
   } else if(node.type === 'fead-solver') {
     html += getFeadSolverPropertiesHTML(node);
-  } else if(node.type === 'fead-example') {
-    html += getFeadExamplePropertiesHTML(node);
   } else if(node.type === 'fead-report') {
     html += getFeadReportPropertiesHTML(node);
   } else if(node.type === 'fead-spin') {

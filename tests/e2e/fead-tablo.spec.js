@@ -15,6 +15,21 @@
 const { test, expect } = require('@playwright/test');
 test.setTimeout(180000);
 
+// FEAD iç topolojisini aç ve KARŞILAMA SİHİRBAZINI kapat.
+//
+// Boş bir FEAD topolojisi 2026-09-09'dan beri sihirbazla karşılıyor (kullanıcı
+// isteği). Bu dosyanın ölçtüğü şey Kayış Tablosu, yani sihirbaz kapatılmalı —
+// gerçek kullanıcının kendi modelini elle kurarken yaptığının aynısı. Kapatma
+// ADIMI DA BİR KAPI: sihirbaz kapanmazsa modal kanvası örter ve tablodaki
+// hiçbir hücreye tıklanamaz.
+async function feadAc(page) {
+  await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => { if (typeof veFeadWizClose === 'function') veFeadWizClose(false); });
+  await page.waitForTimeout(200);
+  await expect(page.locator('#ve-feadwiz-overlay')).toBeHidden();
+}
+
 async function bootApp(page) {
   await page.goto('/index.html');
   await page.evaluate(() => { if (window.MFSimLoader && MFSimLoader.start) MFSimLoader.start(); });
@@ -35,7 +50,7 @@ test('Kayış Tablosu kanvasta: kurulur, yazılır, sıra değişir', async ({ p
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page);
 
-  await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
+  await feadAc(page);
   await page.waitForFunction(() => Array.isArray(window.nodes), null, { timeout: 20000 });
   await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
   await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-table'),
@@ -212,7 +227,7 @@ test('Kayış Tablosu CANLI: fare · odak · seçili satır · zebra', async ({ 
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page);
-  await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
+  await feadAc(page);
   await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
   await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-table'),
     null, { timeout: 20000 });
@@ -318,7 +333,7 @@ test('CTRL+Z: örnek TEK adımda geri alınır, tablo SİLİNMEZ', async ({ page
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page);
-  await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
+  await feadAc(page);
   await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
   await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-table'),
     null, { timeout: 20000 });
@@ -362,7 +377,7 @@ test('CTRL+Z: örnek TEK adımda geri alınır, tablo SİLİNMEZ', async ({ page
   await geriAl(6);
   const taban = await durum();
   expect(taban.kart).toBe(true);
-  expect(taban.dugum).toBe(3);                        // sihirbaz + örnek + tablo
+  expect(taban.dugum).toBe(2);                        // sihirbaz + tablo
   expect(await page.evaluate(() =>
     window.nodes.filter((n) => n.type === 'fead-table').length)).toBe(1);
 

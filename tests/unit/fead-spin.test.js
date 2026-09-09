@@ -539,7 +539,9 @@ describe('bileşen sözleşmesi', () => {
     expect(d.maxInstances).toBe(1);
     const alan = (t) => (componentDefs[t].defaultWidth || 65)
                       * (componentDefs[t].defaultHeight || 60);
-    ['fead-belt', 'fead-report', 'fead-example'].forEach((t) => {
+    // `fead-example` listeden düştü: bileşen 2026-09-09'da kaldırıldı
+    // (kullanıcı: *"Gerek yok"* — sihirbazın 1. adımı aynı listeyi taşıyor).
+    ['fead-belt', 'fead-report', 'fead-table'].forEach((t) => {
       expect(alan('fead-spin')).toBeLessThan(alan(t));
     });
   });
