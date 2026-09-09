@@ -848,9 +848,10 @@ var VE_FEAD_LAYOUT_H = 500;
 var VE_FEAD_LAYOUT_LEGACY = [ { w: 60, h: 56 }, { w: 420, h: 340 } ];
 
 // KAYIŞ TABLOSU ÖLÇÜSÜ. Genişlik ON BİR sütundan TÜRER, yuvarlak bir sayı
-// değil: sıra(54) + ad(152) + X(64) + Y(64) + efektif çap(78) + D(64) +
-// yön(86) + sarım(74) + span(82) + kayış boyu(88) + sil(30) = 836, artı kart
-// kenarı. Sıra sütunu DARALDI ve silme kendi sütununa çıktı: üçü tek hücrede
+// değil: sıra(54) + ad(172) + X(64) + Y(64) + efektif çap(78) + D(64) +
+// yön(86) + sarım(74) + span(82) + kayış boyu(88) + sil(30) = 856, artı kart
+// kenarı. AD SÜTUNU 152 → 172: adın yanına "pencere açılır" simgesi girdi ve
+// dar bırakılsaydı simge, adın kendisini kırparak yer açardı. Sıra sütunu DARALDI ve silme kendi sütununa çıktı: üçü tek hücrede
 // dururken (indis + ▲▼ + ✕) sık yapılan işlem ile geri dönüşü olmayan işlem
 // bitişikti. Başlıklarda ad ile BİRİM ayrı satırda olduğu için sütunlar da
 // daraldı — kazanılan genişlik ada ve sayılara gitti.
@@ -859,13 +860,13 @@ var VE_FEAD_LAYOUT_LEGACY = [ { w: 60, h: 56 }, { w: 420, h: 340 } ];
 // kaplarken kartın 230 px'i boştu, yani kartın üçte ikisi. Yeni ölçü SEKİZ
 // kasnak + künye + iki satırlık başlık + Σ satırı + alt şerit içindir; daha
 // uzun listede kartın İÇİ kayar (kart büyümez, kanvas yerleşimi bozulmasın).
-var VE_FEAD_TABLE_W = 850;
+var VE_FEAD_TABLE_W = 870;
 var VE_FEAD_TABLE_H = 340;
 // AŞILMIŞ VARSAYILAN — kayış tablosu bir oturumda iki ölçü gördü. Kayıtlı bir
 // projede eski ölçü BİREBİR duruyorsa (yani kullanıcı hiç dokunmamışsa)
 // yükseltilir; bilerek verilmiş her ölçü korunur. Kayış Yolu kartındaki
 // kuralın aynısı, bkz. veFeadLayoutSizeFor.
-var VE_FEAD_TABLE_LEGACY = [ { w: 824, h: 430 } ];
+var VE_FEAD_TABLE_LEGACY = [ { w: 824, h: 430 }, { w: 850, h: 340 } ];
 // Geriye dönük adlar (dışarıdan okuyan bir yer kalırsa bozulmasın).
 var VE_FEAD_LAYOUT_LEGACY_W = VE_FEAD_LAYOUT_LEGACY[0].w;
 var VE_FEAD_LAYOUT_LEGACY_H = VE_FEAD_LAYOUT_LEGACY[0].h;

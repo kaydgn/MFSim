@@ -27,7 +27,60 @@ var MAX_UNDO_STEPS = 50;
 // bir kayış yolu çözerdi.
 var VE_SCHEMA_VERSION = 4;
 
+// ── TOPLU KURULUM: BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI ───────────────
+//
+// `createNode` her düğümde `saveState()` çağırıyor ve bu tek düğüm eklerken
+// doğru. Ama BİR kullanıcı eyleminin ONİKİ düğüm kurduğu yerler var (FEAD
+// örneği, "Modeli Kur" sihirbazı, açılış yüzeyi) ve orada aynı çağrı yığına
+// onüç ayrı adım yazıyordu.
+//
+// KULLANICI BİLDİRİMİ (2026-09-09): *"CTRL Z komutunu kullandığımda tablo
+// siliniyor. Yani boş bir hale geliyor. Hata veriyor, garip oluyor."*
+// ÖLÇÜLDÜ (gerçek tarayıcı, AG00976 örneği yüklü): Ctrl+Z modeli düğüm düğüm
+// SÖKÜYORDU — 12. basışta Kayış Tablosu boşalıyor ("henüz kasnak yok"),
+// 13.'te kart tamamen gidiyor, 15.'te yığın tükenip "Geri alınacak işlem yok"
+// uyarısı çıkıyordu. Yani üç belirtinin üçü de tek sebepten: ADIM BOYU.
+//
+// SAYAÇ, BAYRAK DEĞİL: kurucular iç içe geçebiliyor (sihirbaz açılış yüzeyini
+// çağırıyor) ve bayrak olsaydı içteki biterken dıştaki toplu kurulumu da
+// açardı. `veStateBatch` gövdeyi try/finally ile sarıyor: bir hata sayacı
+// AÇIK bırakırsa geri-al oturumun geri kalanında SESSİZCE ölürdü.
+var _veStateBatchDepth = 0;
+function veStateBatch(fn) {
+  if(typeof fn !== 'function') return undefined;
+  // İlk eylem de geri alınabilsin: yığın boşken dönülecek bir durum yok.
+  if(_veStateBatchDepth === 0 && !undoStack.length) saveState();
+  _veStateBatchDepth++;
+  try {
+    return fn();
+  } finally {
+    _veStateBatchDepth--;
+    if(_veStateBatchDepth === 0) saveState();   // TEK adım, kurulum bitince
+  }
+}
+function veStateBatchActive() { return _veStateBatchDepth > 0; }
+
+// BİR TOPOLOJİNİN AÇILIŞ DURUMU GERİ ALINAMAZ.
+//
+// Modüle girip araç künyelerini almak bir DÜZENLEME değil, o topolojinin
+// başlangıcıdır. Geri alınabilir olsaydı Ctrl+Z kullanıcıyı hiçbir şeyin
+// olmadığı BOŞ bir kanvasa düşürürdü ve oradan dönüşün tek yolu Ctrl+Y olurdu
+// — kullanıcının bildirdiği "tablo siliniyor" belirtisinin son adımı tam
+// olarak buydu. Yığın açılış durumuyla başlar; öncesi diye bir şey yok.
+//
+// Yalnız yığın ZATEN BOŞKEN çağrılmalı (yeni bir alt topolojiye giriş anı):
+// dolu bir yığını sıfırlamak kullanıcının geçmişini sessizce silmek olurdu.
+function veStateResetBaseline() {
+  if(_veStateBatchDepth > 0) return false;   // kurulum sürüyor: sonunda çağrılır
+  undoStack = [];
+  redoStack = [];
+  saveState();
+  return true;
+}
+
 function saveState() {
+  // Toplu kurulum sürüyor: ara durumlar yığına GİRMEZ, sonunda tek adım yazılır.
+  if(_veStateBatchDepth > 0) return;
   var state = {
     schemaVersion: VE_SCHEMA_VERSION,
     nodes: JSON.parse(JSON.stringify(nodes.map(function(n) {

@@ -250,3 +250,100 @@ describe('undo-redo döngüsü', () => {
     expect(undoStack.length).toBe(4);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// KULLANICI BİLDİRİMİ (2026-09-09): *"CTRL Z komutunu kullandığımda tablo
+// siliniyor. Yani boş bir hale geliyor. Hata veriyor, garip oluyor."*
+//
+// Sebep: `createNode` her düğümde `saveState()` çağırıyor ve bu TEK düğüm
+// eklerken doğru. Ama bir kullanıcı eyleminin ONİKİ düğüm kurduğu yerler var
+// (FEAD örneği, "Modeli Kur", açılış yüzeyi) ve orada aynı çağrı yığına onüç
+// ayrı adım yazıyordu — Ctrl+Z modeli düğüm düğüm SÖKÜYORDU. Üç belirtinin
+// üçü de (tablo boşalıyor · kart gidiyor · "geri alınacak işlem yok") tek
+// sebepten: ADIM BOYU.
+describe('veStateBatch — toplu kurulum tek adım', () => {
+  beforeEach(() => {
+    global.undoStack = undoStack = [];
+    global.redoStack = redoStack = [];
+    global.nodes = nodes = [];
+    global.connections = connections = [];
+  });
+
+  const ekle = (id) => { nodes.push({ id, type: 'Motor', x: 0, y: 0, data: {} }); saveState(); };
+
+  test('ONİKİ düğüm kuran bir eylem TEK adım bırakır', () => {
+    saveState();                                   // başlangıç durumu
+    expect(undoStack).toHaveLength(1);
+    veStateBatch(() => { for (let i = 0; i < 12; i++) ekle('n' + i); });
+    // Sarılmasaydı 13 olurdu: her createNode kendi adımını yazıyor.
+    expect(undoStack).toHaveLength(2);
+    expect(undoStack[1].nodes).toHaveLength(12);
+    // Ve TEK Ctrl+Z eylemin TAMAMINI geri alıyor: dönülen durum kurulum
+    // ÖNCESİ, bir düğüm eksiği değil. (Düğümlerin DOM'a geri kurulması
+    // restoreState'in işi ve tam kanvas kabuğu gerektiriyor — o halka gerçek
+    // tarayıcıda ölçülüyor: fead-tablo.spec.js → "CTRL+Z".)
+    undo();
+    expect(undoStack[undoStack.length - 1].nodes).toHaveLength(0);
+    expect(redoStack[redoStack.length - 1].nodes).toHaveLength(12);
+  });
+
+  test('İÇ İÇE kurulum da tek adım (sihirbaz açılış yüzeyini çağırıyor)', () => {
+    saveState();
+    veStateBatch(() => {
+      ekle('a');
+      veStateBatch(() => { ekle('b'); ekle('c'); });   // içteki kurucu
+      ekle('d');
+    });
+    // BAYRAK DEĞİL SAYAÇ: bayrak olsaydı içteki biterken dıştaki de açılır ve
+    // 'd' kendi adımını yazardı.
+    expect(undoStack).toHaveLength(2);
+    expect(undoStack[1].nodes.map((n) => n.id)).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  test('GÖVDE PATLARSA geri-al ölmüyor — sayaç finally ile kapanıyor', () => {
+    saveState();
+    expect(() => veStateBatch(() => { ekle('x'); throw new Error('kurulum patladı'); }))
+      .toThrow('kurulum patladı');
+    expect(veStateBatchActive()).toBe(false);
+    // Kapanmasaydı bundan SONRAKİ her saveState sessizce yutulur, yani geri-al
+    // oturumun geri kalanında hiç çalışmazdı.
+    const once = undoStack.length;
+    ekle('y');
+    expect(undoStack.length).toBe(once + 1);
+  });
+
+  test('yığın BOŞKEN ilk eylem de geri alınabilir kalıyor', () => {
+    expect(undoStack).toHaveLength(0);
+    veStateBatch(() => { ekle('a'); ekle('b'); });
+    expect(undoStack).toHaveLength(2);            // ön durum + kurulum
+    expect(undoStack[0].nodes).toHaveLength(0);
+    undo();
+    expect(undoStack[undoStack.length - 1].nodes).toHaveLength(0);
+  });
+
+  test('veStateResetBaseline: açılış durumu yığının TABANI', () => {
+    saveState(); ekle('a'); ekle('b');
+    expect(undoStack.length).toBeGreaterThan(1);
+    expect(veStateResetBaseline()).toBe(true);
+    // Tek durum kalır ve o geri alınamaz: modüle girip araçları almak bir
+    // DÜZENLEME değil, o topolojinin başlangıcı. Adım olsaydı Ctrl+Z
+    // kullanıcıyı BOŞ bir kanvasa düşürürdü (ne tablo ne sihirbaz) ve dönüşün
+    // tek yolu Ctrl+Y olurdu.
+    expect(undoStack).toHaveLength(1);
+    expect(redoStack).toHaveLength(0);
+    expect(undoStack[0].nodes).toHaveLength(2);
+    showToast.mockClear();
+    undo();
+    expect(showToast).toHaveBeenCalledWith('Geri alınacak işlem yok', 'warning');
+    expect(nodes).toHaveLength(2);               // taban duruyor
+  });
+
+  test('kurulum SÜRERKEN taban sıfırlanmaz', () => {
+    saveState();
+    veStateBatch(() => { ekle('a'); expect(veStateResetBaseline()).toBe(false); });
+    expect(undoStack).toHaveLength(2);
+  });
+});

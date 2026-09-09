@@ -586,6 +586,13 @@ describe('görünüm CSS\'te, satır içinde değil', () => {
     expect(CSS).toMatch(/\.ve-fead-tbl tbody tr:nth-child\(even\)\s*\{/);
     expect(CSS).toMatch(/\.ve-fead-tbl-in:focus\s*\{/);
     expect(CSS).toMatch(/\.ve-fead-tbl-sel:focus\s*\{/);
+    // AD DÜĞMESİ: kabarma (gölge) · basılı hâl · paneli açık hâl. Üçü de satır
+    // içi CSS'te yazılamaz ve üçü birlikte "burası bir pencere açar" diyor.
+    expect(CSS).toMatch(/\.ve-fead-tbl-name:hover\{[^}]*box-shadow/);
+    expect(CSS).toMatch(/\.ve-fead-tbl-name:active\{/);
+    expect(CSS).toMatch(/tr\.is-sel \.ve-fead-tbl-name\{/);
+    // Hücre gölgeyi kırpmıyor — kırpsaydı gölge hiç görünmezdi.
+    expect(CSS).toMatch(/\.ve-fead-tbl td\.ad-cell\{[^}]*overflow:visible/);
     // Vurgular AKTİF AKSANDAN türer, sabit maviden değil: projenin on teması
     // tek renk dilini konuşsun (bkz. --accent-tint-* gerekçesi, styles.css).
     const blok = CSS.slice(CSS.indexOf('.ve-fead-table-card{'));
@@ -676,6 +683,32 @@ describe('yeni yüzeyin işlevleri', () => {
     };
     expect(govde('addToSelection')).toContain('veFeadMarkSelectedRow()');
     expect(govde('clearSelection')).toContain('veFeadMarkSelectedRow()');
+  });
+
+  // ── AD HÜCRESİ: "BURASI BİR PENCERE AÇAR" ─────────────────────────────
+  // Kullanıcı isteği (2026-09-09): *"artık bu tablo üzerinden kasnakların
+  // detay özelliklerine gireceğiz… tıklanınca açılır bir pencere olduğunu
+  // belli eden bir yapı olsun."* Kasnakların kanvasta kutusu olmadığı için
+  // panele giden TEK yol bu hücre; okunur bir metin olarak dururken varlığı
+  // ancak DENEYEREK keşfediliyordu (altı çizili hâli yalnız fare üstüne
+  // gelince beliriyordu, yani afordans ondan haberi olana görünüyordu).
+  test('ad bir DÜĞME ve üstünde "pencere açılır" simgesi var', () => {
+    kurOrnek();
+    const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
+      def: componentDefs['fead-table'], data: {} });
+    expect((h.match(/class="ve-fead-tbl-name"/g) || []).length).toBe(6);
+    // SİMGE ÇİZİM, YAZI KARAKTERİ DEĞİL: `⧉` gibi bir glif konteynerin yazı
+    // tipinde olmayabilir ve eksik glif tam da anlatması gereken şeyi yok eder.
+    expect((h.match(/<svg class="ac"/g) || []).length).toBe(6);
+    expect(h).not.toMatch(/⧉|⤢|↗/);
+    expect(h).toContain('stroke="currentColor"');   // düğmenin durumunu izler
+    // Simge TEK KOPYA bir sabitten geliyor, satır başına yeniden yazılmıyor.
+    expect(typeof fead.VE_FEAD_TBL_OPEN_ICON).toBe('string');
+    expect(h.split(fead.VE_FEAD_TBL_OPEN_ICON).length - 1).toBe(6);
+    // Ve hücre gölgeyi KIRPMIYOR — `td`nin genel overflow:hidden'ı gölgeyi de
+    // 1 px'lik kalkışı da keserdi, yani "gölge olsun" isteği sessizce hiçbir
+    // şey yapmazdı.
+    expect((h.match(/class="al-l ad-cell"/g) || []).length).toBe(6);
   });
 
   test('SÜRÜCÜ satırı sıra sütununda işaretli ve ▲ pasif', () => {

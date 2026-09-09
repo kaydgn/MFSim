@@ -260,9 +260,119 @@ test('Kayış Tablosu CANLI: fare · odak · seçili satır · zebra', async ({ 
   await page.waitForTimeout(150);
   await expect(kart.locator('tbody tr.is-sel')).toHaveCount(0);
 
+  // ── 4b) AD DÜĞMESİ "PENCERE AÇILIR" DİYOR ───────────────────────────────
+  // Kullanıcı isteği: *"tıklanınca açılır bir pencere olduğunu belli eden bir
+  // yapı olsun. Gölge olur, o olur bu olur."* Gölge Node'da ÖLÇÜLEMEZ, ve
+  // ölçülmezse sessizce hiç çizilmeyebilir: `td`nin genel `overflow:hidden`i
+  // gölgeyi de 1 px'lik kalkışı da keserdi.
+  const dugme = satir.nth(2).locator('button.ve-fead-tbl-name');
+  const olc = () => dugme.evaluate((el) => {
+    const cs = getComputedStyle(el);
+    return { golge: cs.boxShadow, kenar: cs.borderColor, zemin: cs.backgroundColor,
+             donusum: cs.transform, kirpma: getComputedStyle(el.closest('td')).overflow };
+  });
+  const dinlenme = await olc();
+  expect(dinlenme.golge).toBe('none');
+  expect(dinlenme.kirpma).toBe('visible');          // hücre gölgeyi kırpmıyor
+  await dugme.hover();
+  await page.waitForTimeout(250);
+  const uzerinde = await olc();
+  expect(uzerinde.golge).not.toBe('none');          // GÖLGE
+  expect(uzerinde.donusum).not.toBe(dinlenme.donusum);   // 1 px kalkış
+  expect(uzerinde.kenar).not.toBe(dinlenme.kenar);
+  // Simge bir ÇİZİM: eksik bir yazı karakteri afordansın kendisini yok ederdi.
+  await expect(dugme.locator('svg.ac')).toHaveCount(1);
+  expect(await dugme.locator('svg.ac').evaluate((el) => el.getBoundingClientRect().width))
+    .toBeGreaterThan(4);
+  // PANELİ AÇIK olan düğme BASILI kalıyor — satır vurgusuyla karışmayan
+  // ikinci bir işaret.
+  await satir.nth(3).locator('button.ve-fead-tbl-name').click();
+  await page.waitForTimeout(300);
+  const acik = await satir.nth(3).locator('button.ve-fead-tbl-name')
+    .evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(acik).not.toBe(dinlenme.zemin);
+
   // ── 5) TABLO KABINA SIĞIYOR — yatay kaydırma yok ────────────────────────
   expect(await kart.locator('.ve-fead-tbl-wrap').evaluate((el) =>
     el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+
+  expect(hatalar).toEqual([]);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CTRL+Z KAYIŞ TABLOSUNU SİLMİYOR
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı bildirimi (2026-09-09): *"CTRL Z komutunu kullandığımda tablo
+// siliniyor. Yani boş bir hale geliyor. Hata veriyor, garip oluyor."*
+//
+// ÖLÇÜLDÜ (bu spec, düzeltmeden ÖNCE): örnek yükleme yığına ONÜÇ ayrı adım
+// yazıyordu, çünkü `createNode` her düğümde `saveState()` çağırıyor. Ctrl+Z
+// modeli düğüm düğüm SÖKÜYORDU — 12. basışta tablo boşalıyor ("henüz kasnak
+// yok"), 13.'te kart tamamen gidiyor, 15.'te yığın tükenip "Geri alınacak
+// işlem yok" uyarısı çıkıyordu. Üç belirtinin üçü de tek sebepten: ADIM BOYU.
+//
+// Kapı Node'a taşınamaz: ölçülen şey gerçek klavye olayı → gerçek `undo()` →
+// `restoreState`in kanvası yeniden kurması.
+test('CTRL+Z: örnek TEK adımda geri alınır, tablo SİLİNMEZ', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(page);
+  await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
+  await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
+  await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-table'),
+    null, { timeout: 20000 });
+  await page.waitForTimeout(700);
+
+  const durum = () => page.evaluate(() => {
+    const kart = document.querySelector('.ve-fead-table-card');
+    return { dugum: window.nodes.length,
+             kasnak: window.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley).length,
+             kart: !!kart,
+             satir: kart ? kart.querySelectorAll('tbody tr').length : -1,
+             undo: (window.undoStack || []).length };
+  });
+
+  // ── ONİKİ DÜĞÜMLÜK KURULUM = TEK ADIM ───────────────────────────────────
+  const yuklu = await durum();
+  expect(yuklu.kasnak).toBe(6);
+  expect(yuklu.satir).toBe(6);
+  // Açılış yüzeyi (taban) + örnek = 2. Düzeltmeden önce 14'tü.
+  expect(yuklu.undo).toBe(2);
+
+  const geriAl = async (n) => {
+    for (let i = 0; i < n; i++) {
+      await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+      await page.keyboard.press('Control+z');
+      await page.waitForTimeout(350);
+    }
+  };
+
+  // ── BİR BASIŞ ÖRNEĞİN TAMAMINI GERİ ALIR ────────────────────────────────
+  await geriAl(1);
+  const sonra = await durum();
+  expect(sonra.kasnak).toBe(0);                       // yarım sökülmüş model YOK
+  expect(sonra.kart).toBe(true);                      // TABLO DURUYOR
+  expect(await page.evaluate(() =>
+    /henüz kasnak yok/.test(document.querySelector('.ve-fead-table-card').innerText))).toBe(true);
+
+  // ── AÇILIŞ DURUMU TABAN: DAHA FAZLA BASMAK TABLOYU SİLMİYOR ─────────────
+  // Kullanıcının gördüğü asıl belirti buydu. Modüle girip araçları almak bir
+  // DÜZENLEME değil; adım olsaydı Ctrl+Z boş bir kanvasa düşürürdü.
+  await geriAl(6);
+  const taban = await durum();
+  expect(taban.kart).toBe(true);
+  expect(taban.dugum).toBe(3);                        // sihirbaz + örnek + tablo
+  expect(await page.evaluate(() =>
+    window.nodes.filter((n) => n.type === 'fead-table').length)).toBe(1);
+
+  // ── VE İLERİ AL ÖRNEĞİ TEK ADIMDA GERİ GETİRİYOR ────────────────────────
+  await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+  await page.keyboard.press('Control+y');
+  await page.waitForTimeout(500);
+  const ileri = await durum();
+  expect(ileri.kasnak).toBe(6);
+  expect(ileri.satir).toBe(6);
 
   expect(hatalar).toEqual([]);
 });
