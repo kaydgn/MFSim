@@ -827,7 +827,22 @@ açıklıklar ve öteki adlar sert kalır: sert engeli örtmek yapısal bilgiyi 
 eder, bir sayıya binmek daha küçük zarardır. Tek listeye konsaydı ad, sayıdan
 kaçarken gülün üstüne düşerdi.
 
-**Kapı:** `tests/unit/fead-card-design.test.js` — altı mutasyonla ölçüldü
+**GERİLME SAYISI OKUNUR OLMAK ZORUNDA** (kullanıcı bildirimi: *"kayış
+gerginlikleri iyi görülmüyor"*). Üç kural, üçü de sessiz bir kusuru kapatıyor:
+
+| Kural | Gerekçe |
+|-------|---------|
+| Sayı açıklığın ortasından **DIŞA** kayar (kasnak kümesinin ağırlık merkezinden uzağa) | Sabit bir normal yarı yarıya çizimin İÇİNE bakıyor, sayıyı kalabalığın üstüne atıyordu |
+| Konum **çerçeveye kenetlenir** | Kenetlemesiz hâlde sağdaki açıklıkta sayı kartın dışına taşıp KIRPILIYOR (AG00879 @800 dev/dk, 440×458 — kaynak vaka) |
+| Metin **rampa renginde DEĞİL**, `--text-primary` + `--bg-input` hâlesi (`paint-order`) | Rampanın orta durağı kayışın amberi olmak zorunda, ama o amber açık temada beyaz üstünde 2,3:1 kontrast veriyor; renk zaten yanı başındaki açıklıkta, sayının işi okunmak. Hâle kayışın, dişlerin ve çemberin üstünde de okutuyor |
+
+Sayı kutuları ad yerleştiricisine **yumuşak engel** olarak girer (sarım
+açılarıyla aynı tier). Ölçüldü: 440×374 ve 440×458'de ad↔sayı çakışması sıfır;
+daha dar kartlarda engel çakışmayı artırmıyor. **Gergi kolunu engel yapmak
+DENENDİ ve GİRMEDİ**: dört örnek × dokuz ölçü × iki devirde (72 çizim) hiçbir
+ad kolu kesmiyor — kapısı yazılamayan kod bayatlayan koddur.
+
+**Kapı:** `tests/unit/fead-card-design.test.js` — on mutasyonla ölçüldü
 (engeli kaldırma, açıyı sert engel yapma, kısa adı her yere yayma, ankrajı
 konumdan koparma, dar kartta tabloyu bırakma, künyeyi iki satıra döndürme).
 

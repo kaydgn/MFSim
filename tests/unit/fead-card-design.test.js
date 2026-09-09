@@ -270,6 +270,135 @@ describe('gerilme haritası', () => {
   });
 });
 
+/* ── GERİLME SAYILARI OKUNUR OLMALI ────────────────────────────────────────
+   Kullanıcı bildirimi: "kanvas üzerindeki kayış gerginlikleri iyi
+   görülmüyor". Üç ayrı sebep vardı ve üçü de sessizdi — sayı yine
+   çiziliyordu, yalnız okunmuyordu. */
+const sayiKutulari = (svg) =>
+  [...svg.matchAll(/<text data-ve="span-tension" x="([-\d.]+)" y="([-\d.]+)"[^>]*>([^<]*)</g)]
+    .map((m) => {
+      const x = +m[1], y = +m[2], w = m[3].length * 9 * 0.6;
+      return { v: m[3], x, y, x0: x - w / 2, x1: x + w / 2, y0: y - 8, y1: y + 2 };
+    });
+const gerilmeUclari = (svg) =>
+  [...svg.matchAll(/data-ve="belt-tension" data-span="(\d+)" d="M([-\d.]+) ([-\d.]+)L([-\d.]+) ([-\d.]+)"/g)]
+    .map((m) => ({ i: +m[1], ax: +m[2], ay: +m[3], bx: +m[4], by: +m[5] }));
+const kasnakMerkezleri = (svg) =>
+  [...svg.matchAll(/<circle data-ve="pulley" cx="([-\d.]+)" cy="([-\d.]+)"/g)]
+    .map((m) => ({ x: +m[1], y: +m[2] }));
+/* Doğru parçası ↔ dikdörtgen (yerleştiricinin kendi ölçütü). */
+const kesisir = (g, r) => {
+  const [x1, y1, x2, y2] = g;
+  if (Math.max(x1, x2) < r.x0 || Math.min(x1, x2) > r.x1) return false;
+  if (Math.max(y1, y2) < r.y0 || Math.min(y1, y2) > r.y1) return false;
+  if ((x1 >= r.x0 && x1 <= r.x1 && y1 >= r.y0 && y1 <= r.y1)
+   || (x2 >= r.x0 && x2 <= r.x1 && y2 >= r.y0 && y2 <= r.y1)) return true;
+  const dx = x2 - x1, dy = y2 - y1, yan = (x, y) => dx * (y - y1) - dy * (x - x1);
+  const a = yan(r.x0, r.y0), b = yan(r.x1, r.y0), c = yan(r.x1, r.y1), d = yan(r.x0, r.y1);
+  return !((a > 0 && b > 0 && c > 0 && d > 0) || (a < 0 && b < 0 && c < 0 && d < 0));
+};
+
+describe('gerilme sayısı okunur', () => {
+  const KART = [[440, 374], [440, 458], [380, 330], [340, 298]];
+
+  test('sayı ÇERÇEVENİN İÇİNDE — sağdaki açıklıkta kırpılmıyor', () => {
+    // AG00879 @800 dev/dk · 440×458 KAYNAK VAKA: kenetleme olmadan "1231 N"
+    // kartın sağ kenarından taşıp kırpılıyor (kullanıcının gönderdiği kart).
+    [['AG00976_GATES_2025', 2750], ['AG00879_GATES_2023', 800],
+     ['AG00879_GATES_2023', 2750], ['BMC_FEAD_2026', 2750]].forEach(([anahtar, rpm]) => {
+      const { build } = kur(anahtar);
+      const ten = veFeadSpanTensionMap(build, F.meanRel(build.sys), rpm);
+      expect(ten).not.toBeNull();
+      KART.forEach(([W, H]) => {
+        const svg = fead.veFeadLayoutSVG(build, W, H, { nodeId: 'lay', tension: ten });
+        const kutu = sayiKutulari(svg);
+        expect(kutu.length).toBe(build.order.length);
+        kutu.forEach((b) => {
+          expect(b.x0).toBeGreaterThanOrEqual(0);
+          expect(b.x1).toBeLessThanOrEqual(W);
+          expect(b.y0).toBeGreaterThanOrEqual(0);
+          expect(b.y1).toBeLessThanOrEqual(H);
+        });
+      });
+    });
+  });
+
+  // SABİT NORMAL yarı yarıya çizimin İÇİNE bakıyordu: sayı kalabalığın üstüne
+  // düşüyordu. Yön artık kümenin ağırlık merkezinden DIŞA seçiliyor.
+  test('sayı açıklığın DIŞ tarafında — merkezden uzaklaşıyor', () => {
+    const { build } = kur('AG00879_GATES_2023');
+    const ten = veFeadSpanTensionMap(build, F.meanRel(build.sys), 800);
+    const svg = fead.veFeadLayoutSVG(build, 440, 374, { nodeId: 'lay', tension: ten });
+    const uc = gerilmeUclari(svg), say = sayiKutulari(svg), mrk = kasnakMerkezleri(svg);
+    expect(uc.length).toBe(build.order.length);
+    const cx = mrk.reduce((a, p) => a + p.x, 0) / mrk.length;
+    const cy = mrk.reduce((a, p) => a + p.y, 0) / mrk.length;
+    const uzak = (x, y) => Math.hypot(x - cx, y - cy);
+    let disari = 0;
+    uc.forEach((g, k) => {
+      const orta = uzak((g.ax + g.bx) / 2, (g.ay + g.by) / 2);
+      // Ölçüt "hepsi uzaklaşsın" DEĞİL: çerçeve kenetlemesi bir etiketi geri
+      // çekebiliyor ve merkeze göre teğet bir açıklıkta radyal fark zaten
+      // sıfıra yakın (ölçüldü: −1,3 px). Aranan şey hiçbir etiketin İÇERİ
+      // sürüklenmemesi, ve biri hariç hepsinin gerçekten dışarı çıkması —
+      // sabit normale dönülürse yarısı içeri düşüyor.
+      expect(uzak(say[k].x, say[k].y)).toBeGreaterThan(orta - 2);
+      if (uzak(say[k].x, say[k].y) > orta + 3) disari++;
+    });
+    expect(disari).toBeGreaterThanOrEqual(uc.length - 1);
+  });
+
+  // Sayı YUMUŞAK engeldir (gül ve açıklıklar sert): kart daraltılınca ad,
+  // sert engellerden kaçarken bir sayının üstüne düşebilir — ölçüldü, yalnız
+  // 340×298 ve 380×330'da ve engel olmasa da düşüyordu. Bu yüzden iki ayrı
+  // ölçüt: KULLANIMDAKİ ölçülerde sıfır, her ölçüde ARTMAMA.
+  test('kart ölçüsünde sayı ile ad çakışmıyor', () => {
+    ['AG00976_GATES_2025', 'AG00879_GATES_2023', 'BMC_FEAD_2026'].forEach((anahtar) => {
+      const { build } = kur(anahtar);
+      const ten = veFeadSpanTensionMap(build, F.meanRel(build.sys), 2750);
+      [[440, 374], [440, 458]].forEach(([W, H]) => {
+        const svg = fead.veFeadLayoutSVG(build, W, H,
+          { nodeId: 'lay', tension: ten, shortNames: true, wrapLabels: false });
+        const say = sayiKutulari(svg), ad = adKutulari(svg);
+        say.forEach((a) => ad.forEach((b) => expect(ortusur(a, b)).toBe(false)));
+      });
+    });
+  });
+
+  test('sayıyı engel saymak çakışmayı ARTIRMIYOR — dar kartta da', () => {
+    ['AG00976_GATES_2025', 'AG00879_GATES_2023', 'BMC_FEAD_2026'].forEach((anahtar) => {
+      const { build } = kur(anahtar);
+      const ten = veFeadSpanTensionMap(build, F.meanRel(build.sys), 2750);
+      let yeni = 0, eski = 0;
+      KART.forEach(([W, H]) => {
+        const o = { nodeId: 'lay', shortNames: true, wrapLabels: false };
+        const A = fead.veFeadLayoutSVG(build, W, H, Object.assign({ tension: ten }, o));
+        const B = fead.veFeadLayoutSVG(build, W, H, o);     // sayı engeli YOK
+        const say = sayiKutulari(A);
+        adKutulari(A).forEach((b) => say.forEach((a) => { if (ortusur(a, b)) yeni++; }));
+        adKutulari(B).forEach((b) => say.forEach((a) => { if (ortusur(a, b)) eski++; }));
+      });
+      expect(yeni).toBeLessThanOrEqual(eski);
+    });
+  });
+
+  // HÂLE ŞART: sayı kayışın, dişlerin ve kasnak çemberinin ÜSTÜNDE duruyor.
+  // Renk rampadan ALINMAZ — rampanın orta durağı kayışın amberi olmak zorunda
+  // ve o amber açık temada beyaz üstünde okunmuyor.
+  test('sayı zemin renginde hâle taşır, metin rengiyle yazılır', () => {
+    const { build } = kur();
+    const ten = veFeadSpanTensionMap(build, F.meanRel(build.sys), 2750);
+    const svg = fead.veFeadLayoutSVG(build, 440, 374, { nodeId: 'lay', tension: ten });
+    const et = /<text data-ve="span-tension"[^>]*>/.exec(svg)[0];
+    expect(et).toMatch(/paint-order="stroke"/);
+    expect(et).toMatch(/stroke="var\(--bg-input\)"/);
+    expect(et).toMatch(/fill="var\(--text-primary\)"/);
+    expect(et).not.toMatch(/fill="rgb\(/);
+    expect(et).toMatch(/font-weight="600"/);
+    expect(et).toMatch(/font-size="9"/);   // kutu tahmini bu puntodan türer
+  });
+});
+
 describe('künye TEK SATIR — ama damgalar kalır', () => {
   test('kinematik ve titreşim aynı satırda; ağır çekim ve KALİBRE DEĞİL yerinde', () => {
     const { layout } = kur();
