@@ -3917,7 +3917,7 @@ function veFeadTableCardHTML(node){
   h += '<div class="ve-fead-tbl-foot">'
     + '<b class="' + (okmu ? 'ok' : 'no') + '">' + (okmu ? '✓' : '✗') + '</b>'
     + '<span>Σsarım ' + (Number.isFinite(T.signedWrapDeg) ? _feadFmt(T.signedWrapDeg, 2) : '—')
-    + '° (360 olmalı)</span>'
+    + '° (|Σ| 360 olmalı)</span>'
     + '<span>L_pitch ' + (Number.isFinite(T.LpitchMm) ? _feadFmt(T.LpitchMm, 1) : '—') + '</span>'
     + '<span>L_eff ' + (Number.isFinite(T.LeffMm) ? _feadFmt(T.LeffMm, 1) : '—') + '</span>'
     + (T.posLabel ? '<span class="konum">' + _feadEsc(T.posLabel) + ' konumu</span>' : '')
@@ -4551,7 +4551,8 @@ function veFeadGeometryTable(build, mode){
   return _feadCard('Geometri', _etiket, 'var(--accent-primary)', h
     + _feadHint('Efektif kayış boyu <b>' + _feadFmt(geom.LeffMm,1) + ' mm</b> · '
       + 'pitch boyu ' + _feadFmt(geom.LpitchMm,1) + ' mm · '
-      + 'işaretli sarım toplamı ' + _feadFmt(geom.signedWrapDeg,2) + '° (360 olmalı).'));
+      + 'işaretli sarım toplamı ' + _feadFmt(geom.signedWrapDeg,2) + '° (|Σ| 360 olmalı — '
+      + 'işaret kaburgalı yüzün çevrime göre hangi yana baktığını söyler).'));
 }
 
 // Çözülemeyen model: NE EKSİK olduğunu say. Yanlış bir şema, doğru bir
