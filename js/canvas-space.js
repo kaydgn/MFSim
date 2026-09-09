@@ -245,6 +245,9 @@ function veBoundaryBox(nodeList, pad, measure) {
   var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, seen = 0;
   (nodeList || []).forEach(function(n) {
     if(!n) return;
+    // Kutusuz düğüm çerçeveye GİRMEZ: kanvasta bir şey çizilmiyor, konumu da
+    // (FEAD kasnağında mm koordinatı) kanvas uzayının ölçeğinde değil.
+    if(typeof veIsCanvasHidden === 'function' && veIsCanvasHidden(n)) return;
     if(!isFinite(n.x) || !isFinite(n.y)) return;
     var ds = (typeof veNodeDefaultSize === 'function') ? veNodeDefaultSize(n.type) : { w: 65, h: 60 };
     var w = isFinite(n.width) ? n.width : ds.w;

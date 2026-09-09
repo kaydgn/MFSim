@@ -43,6 +43,7 @@ function _mmContentBBox() {
   var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for(var i = 0; i < nodes.length; i++) {
     var n = nodes[i];
+    if(typeof veIsCanvasHidden === 'function' && veIsCanvasHidden(n)) continue;
     var w = n.width || 65, h = n.height || 60;
     if(n.x < minX) minX = n.x;
     if(n.y < minY) minY = n.y;

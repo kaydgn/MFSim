@@ -34,6 +34,15 @@ document.body.innerHTML = '<div id="ve-canvas"></div>';
 global.nodes = [];
 global.connections = [];
 eval(loadSource('components.js'));
+// components.js'teki yüklem GLOBAL'e yazılır: cp-fead.js / state.js require ile
+// yükleniyor, dolayısıyla çıplak `veIsCanvasHidden` referansı bu dosyanın
+// kapsamını DEĞİL global'i arar. Yazılmazsa kutusuz düğüm kapısı sessizce
+// atlanır ve testler kutuların hâlâ kurulduğu bir dünyayı ölçer.
+global.veIsCanvasHidden = veIsCanvasHidden;
+// Aynı gerekçe: cp-fead.js `componentDefs`i GLOBAL olarak arıyor (tarayıcıda
+// ikisi de üst-seviye). Yazılmazsa tip listesi boş döner ve ekleyici kapısı
+// doğru sebepten değil, katalog hiç görünmediği için kırmızı olur.
+global.componentDefs = componentDefs;
 eval(loadSource('fead-belts.js'));
 global.FEADCore = F;
 Object.keys(M).forEach((k) => { global[k] = M[k]; });
@@ -311,12 +320,18 @@ describe('Dönüş Yönü — defterdeki gibi GİRDİ, ama tek alan üstünden',
     kurOrnek();
     const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
       def: componentDefs['fead-table'], data: {} });
-    expect((h.match(/<select /g) || []).length).toBe(6);            // kasnak başına bir
+    // Altı yön seçicisi + üst künyedeki "kasnak ekle" seçicisi.
+    expect((h.match(/<select /g) || []).length).toBe(7);
     expect((h.match(/<option value="Sağ"/g) || []).length).toBe(6);
     expect((h.match(/<option value="Sol"/g) || []).length).toBe(6);
     expect(h).toMatch(/veFeadTableSetSpin/);
-    // Kart kanvasta: seçici de mousedown yutmalı, yoksa açmak düğümü sürükler.
-    expect((h.match(/<select onmousedown="event\.stopPropagation\(\);"/g) || []).length).toBe(6);
+    // Kart kanvasta: HER seçici mousedown yutmalı (yön seçicileri + ekleyici),
+    // yoksa açmak düğümü sürüklemeye başlar. Sayıyı sabitlemek yerine "hepsi"
+    // ölçülüyor — yeni bir seçici eklenince kapı kendiliğinden onu da kapsar.
+    const secici = (h.match(/<select /g) || []).length;
+    expect((h.match(/<select [^>]*onmousedown="event\.stopPropagation\(\);"/g) || []).length)
+      .toBe(secici);
+    expect(h).toContain('veFeadTableAdd(');
   });
 
   test('YÖN ↔ TEMAS TARAFI birebir: çevirinin çekirdeğin kuralıyla tutarlılığı', () => {
@@ -401,5 +416,106 @@ describe('Kayış Uzunluğu — defterdeki gibi BİRLEŞİK sütun', () => {
     const toplam = fead.VE_FEAD_TABLE_COLS.reduce((a, c) => a + c.w, 0);
     expect(toplam).toBeLessThanOrEqual(VE_FEAD_TABLE_W);
     expect(VE_FEAD_TABLE_W - toplam).toBeLessThan(24);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  KUTULAR KALKTI — EKLEME/SİLMENİN TEK YOLU TABLO
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı isteği (2026-09-09): *"Kutular kalkacak. Kutulara tıklayarak
+// ulaşabildiğimiz detay panellerine tablodan parça isimlerinin üstüne
+// tıklayarak yapacağız. Kutulara gerek yok artık bu modülde."*
+//
+// Kasnak kanvasta çizilmediği için seçilip silinemiyor: satırın kendi ✕'i o
+// boşluğu kapatıyor. Ekleme paletten hâlâ çalışıyor ama SESSİZ (kanvasta bir
+// şey görünmüyor), o yüzden tablonun kendi ekleyicisi de var.
+describe('satır ekle / sil — kutu olmayınca tek yol', () => {
+  test('ekleyici tip listesi componentDefs\'ten türer, ikinci liste yok', () => {
+    kurOrnek();
+    const h = fead.veFeadTableAddHTML();
+    const tipler = Object.keys(componentDefs).filter((t) => componentDefs[t].isFeadPulley);
+    expect(tipler.length).toBeGreaterThan(5);
+    tipler.forEach((t) => expect(h).toContain('value="' + t + '"'));
+    // Kasnak OLMAYAN bir tip listeye sızmamalı.
+    expect(h).not.toContain('value="fead-belt"');
+    expect(h).not.toContain('value="fead-table"');
+  });
+
+  test('ekleme kayış sırasının SONUNA düşer', () => {
+    const { ns } = kurOrnek();
+    const once = M.veFeadBeltOrder(ns).length;
+    let k = 0;
+    global.createNode = (type) => {
+      const d = componentDefs[type];
+      const n = { id: 'yeni' + ++k, type, def: d, x: 0, y: 0,
+                  width: d.defaultWidth, height: d.defaultHeight, data: {} };
+      global.nodes.push(n); return n;
+    };
+    expect(fead.veFeadTableAdd('fead-waterpump')).toBe(true);
+    delete global.createNode;
+    const sira = M.veFeadNormalizeBeltOrder(global.nodes);
+    expect(sira).toHaveLength(once + 1);
+    expect(sira[sira.length - 1].type).toBe('fead-waterpump');   // SONDA
+    expect(sira[0].data.driver).toBe(true);                      // sürücü hâlâ ilk
+  });
+
+  test('kasnak olmayan tip EKLENMEZ', () => {
+    kurOrnek();
+    global.createNode = () => { throw new Error('çağrılmamalıydı'); };
+    expect(fead.veFeadTableAdd('fead-table')).toBe(false);
+    expect(fead.veFeadTableAdd('')).toBe(false);
+    delete global.createNode;
+  });
+
+  test('silme diziden çıkarır, sıra 1..N-1 olarak kapanır', () => {
+    const { ns } = kurOrnek();
+    const hedef = M.veFeadBeltOrder(ns)[2];
+    const ad = hedef.customName;
+    expect(fead.veFeadTableDelete(hedef.id)).toBe(true);
+    expect(global.nodes.some((n) => n.id === hedef.id)).toBe(false);
+    const sira = M.veFeadNormalizeBeltOrder(global.nodes);
+    expect(sira).toHaveLength(5);
+    expect(sira.map((n) => n.customName)).not.toContain(ad);
+    expect(sira.map((n) => n.data.beltIndex)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  test('silme saveState\'i mutasyondan ÖNCE çağırır (geri-al yığınına ön durum)', () => {
+    const { ns } = kurOrnek();
+    const hedef = M.veFeadBeltOrder(ns)[3];
+    // `ns` ile `global.nodes` AYNI dizi: silmeden önceki sayı kopyalanmalı,
+    // yoksa karşılaştırma mutasyon SONRASI uzunluğa bakar.
+    const oncekiAdet = ns.length;
+    stubs.saveState.mockClear();
+    // İLK çağrının gördüğü sayı ölçülüyor: tazeleme yolu sonradan bir kez daha
+    // saveState tetikleyebiliyor ve son değer mutasyon SONRASINI gösterirdi.
+    let adetVardi = -1;
+    stubs.saveState.mockImplementation(() => {
+      if (adetVardi < 0) adetVardi = global.nodes.length;
+    });
+    fead.veFeadTableDelete(hedef.id);
+    expect(adetVardi).toBe(oncekiAdet);           // silinmeden ÖNCEki sayı
+    expect(global.nodes.length).toBe(oncekiAdet - 1);
+    stubs.saveState.mockImplementation(() => {});
+  });
+
+  test('kasnak olmayan düğüm bu yoldan SİLİNMEZ', () => {
+    const { ns } = kurOrnek();
+    const tablo = ns.find((n) => n.type === 'fead-table');
+    const solver = ns.find((n) => n.type === 'fead-solver');
+    expect(fead.veFeadTableDelete(tablo.id)).toBe(false);
+    expect(fead.veFeadTableDelete(solver.id)).toBe(false);
+    expect(fead.veFeadTableDelete('yok-boyle-bir-kimlik')).toBe(false);
+    expect(global.nodes.length).toBe(ns.length);
+  });
+
+  test('her satırda bir ✕ var ve mousedown yutuyor', () => {
+    kurOrnek();
+    const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
+      def: componentDefs['fead-table'], data: {} });
+    expect((h.match(/veFeadTableDelete/g) || []).length).toBe(6);
+    // Sürücü satırı da silinebilir: sürücülük bir ROL, silinen kasnak yerine
+    // bir başkası sürücü işaretlenir. Kilitli olan şey SIRA, kasnağın varlığı değil.
+    expect(h).toContain('veFeadTableAdd(');
   });
 });

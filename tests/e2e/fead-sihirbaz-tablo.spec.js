@@ -99,6 +99,17 @@ test('sihirbaz "Modeli Kur": kasnaklar + TABLO, tel yok, uyarı yok', async ({ p
   expect(durum.cozucu).toBe(1);
   expect(durum.rapor).toBe(1);
   expect(durum.kasnakTeli).toBe(0);          // KASNAKLAR BAĞLANMIYOR
+  // KASNAKLARIN KUTUSU DA YOK: kanvastaki her kutu bir araç düğümü.
+  const kutu = await page.evaluate(() => {
+    const kas = (n) => !!(componentDefs[n.type] || {}).isFeadPulley;
+    return {
+      kasnakDom: window.nodes.filter(kas).filter((n) => document.getElementById(n.id)).length,
+      domToplam: document.querySelectorAll('#ve-canvas .ve-node').length,
+      aracSay: window.nodes.filter((n) => !kas(n)).length,
+    };
+  });
+  expect(kutu.kasnakDom).toBe(0);
+  expect(kutu.domToplam).toBe(kutu.aracSay);
   // ÖKSÜZ DÜĞÜM YOK: 6 kasnak + kayış + çözücü + şema + tablo + rapor +
   // sihirbaz (taslağı taşıdığı için KALIR) = 12. "Başlangıç ve Örnekler"
   // kurulumda siliniyor.
@@ -129,7 +140,8 @@ test('sihirbaz "Modeli Kur": kasnaklar + TABLO, tel yok, uyarı yok', async ({ p
   const govde = await kart.innerText();
   ['KASNAK', 'Efektif Çap(mm)', 'Kasnak Dönüş Yönü', 'Kayış Uzunluğu(mm)']
     .forEach((t) => expect(govde).toContain(t));
-  await expect(kart.locator('select')).toHaveCount(6);           // yön açılır listeleri
+  await expect(kart.locator('select[data-ve="spin"]')).toHaveCount(6);   // yön listeleri
+  await expect(kart.locator('select[data-ve="add-pulley"]')).toHaveCount(1);
   await expect(kart.locator('td[rowspan="6"]')).toHaveCount(1);  // birleşik kayış boyu
 
   // ── 4) ÇÖZÜM ÖNİZLEMEYLE BİREBİR ────────────────────────────────────────

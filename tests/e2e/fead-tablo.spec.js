@@ -47,6 +47,22 @@ test('Kayış Tablosu kanvasta: kurulur, yazılır, sıra değişir', async ({ p
   const govde = await kart.innerText();
   ['KASNAK', 'X(mm)', 'Y(mm)', 'D(mm)', 'Σsarım'].forEach((t) => expect(govde).toContain(t));
 
+  // ── 1c) KASNAKLARIN KANVASTA KUTUSU YOK ─────────────────────────────────
+  // Kullanıcı isteği (2026-09-09). Kasnaklar MODELDE düğüm olarak duruyor
+  // (panel, geri-al, kayıt hepsi oradan) ama kanvasa kutu çizilmiyor.
+  const kutu = await page.evaluate(() => {
+    const kas = (n) => !!(componentDefs[n.type] || {}).isFeadPulley;
+    return {
+      kasnak: window.nodes.filter(kas).length,
+      kasnakDom: window.nodes.filter(kas).filter((n) => document.getElementById(n.id)).length,
+      aracDom: window.nodes.filter((n) => !kas(n)).filter((n) => document.getElementById(n.id)).length,
+      domToplam: document.querySelectorAll('#ve-canvas .ve-node').length,
+    };
+  });
+  expect(kutu.kasnak).toBe(6);
+  expect(kutu.kasnakDom).toBe(0);                 // TEK BİR KUTU BİLE YOK
+  expect(kutu.aracDom).toBe(kutu.domToplam);      // kanvastaki her kutu bir araç düğümü
+
   // ── 2) KASNAKLAR ARASINDA TEL YOK ───────────────────────────────────────
   const teller = await page.evaluate(() => {
     const kas = (id) => {
@@ -131,7 +147,7 @@ test('Kayış Tablosu kanvasta: kurulur, yazılır, sıra değişir', async ({ p
   expect(await page.evaluate((id) =>
     window.nodes.find((n) => n.id === id).data.contact, avaraId)).toBe('back');
 
-  await avaraSatir.locator('select').selectOption('Sağ');
+  await avaraSatir.locator('select[data-ve="spin"]').selectOption('Sağ');
   await page.waitForTimeout(200);
 
   expect(await page.evaluate((id) =>
@@ -144,6 +160,28 @@ test('Kayış Tablosu kanvasta: kurulur, yazılır, sıra değişir', async ({ p
   const birlesik = kart.locator('td[rowspan="6"]');
   await expect(birlesik).toHaveCount(1);
   expect(parseFloat((await birlesik.innerText()).replace(',', '.'))).toBeGreaterThan(1000);
+
+  // ── 10) SATIR SİL / EKLE — kutu yokken tek yol ──────────────────────────
+  const silOnce = await page.evaluate(() =>
+    veFeadBeltOrder(window.nodes).map((n) => n.customName));
+  await kart.locator('tbody tr').nth(3).locator('button[title="Bu kasnağı sil"]').click();
+  await page.waitForTimeout(200);
+  const silSonra = await page.evaluate(() =>
+    veFeadBeltOrder(window.nodes).map((n) => n.customName));
+  expect(silSonra).toHaveLength(silOnce.length - 1);
+  expect(silSonra).not.toContain(silOnce[3]);
+  await expect(kart.locator('tbody tr')).toHaveCount(5);
+
+  await kart.locator('select[data-ve="add-pulley"]').selectOption('fead-waterpump');
+  await page.waitForTimeout(250);
+  const ekSonra = await page.evaluate(() => ({
+    sira: veFeadBeltOrder(window.nodes).map((n) => n.type),
+    dom: window.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley)
+      .filter((n) => document.getElementById(n.id)).length,
+  }));
+  expect(ekSonra.sira).toHaveLength(6);
+  expect(ekSonra.sira[ekSonra.sira.length - 1]).toBe('fead-waterpump');   // SONA
+  expect(ekSonra.dom).toBe(0);                    // eklenen kasnağın da kutusu yok
 
   expect(hatalar).toEqual([]);
 });

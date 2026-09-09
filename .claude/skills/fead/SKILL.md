@@ -1,6 +1,6 @@
 ---
 name: fead
-description: MFSim FEAD (kayış-kasnak / accessory belt drive) modülünün karar kaydı ve dokunulmazlıkları. js/fead-core.js, js/fead-model.js, js/fead-belts.js, js/fead-duty.js, js/fead-tensioners.js, js/cp-fead.js, js/cp-fead-report.js, js/cp-fead-summary.js, js/cp-fead-wizard.js, js/guide-fead.js dosyalarından birine ya da FEAD testlerine (tests/unit/fead-*, cp-fead*, gates-archive, guide-fead, tests/e2e/fead-*) dokunmadan ÖNCE çağır. Çekirdeğin birebir durma kuralı, 2095 referans değerlik doğrulama kapısı, kanvas = kayış düzlemi eşlemesi, gergi tanımı, katalog ve rapor kuralları buradadır.
+description: MFSim FEAD (kayış-kasnak / accessory belt drive) modülünün karar kaydı ve dokunulmazlıkları. js/fead-core.js, js/fead-model.js, js/fead-belts.js, js/fead-duty.js, js/fead-tensioners.js, js/cp-fead.js, js/cp-fead-report.js, js/cp-fead-summary.js, js/cp-fead-wizard.js, js/guide-fead.js dosyalarından birine ya da FEAD testlerine (tests/unit/fead-*, cp-fead*, gates-archive, guide-fead, tests/e2e/fead-*) dokunmadan ÖNCE çağır. Çekirdeğin birebir durma kuralı, 2095 referans değerlik doğrulama kapısı, kasnakların kanvasta KUTUSU OLMAMASI (veri girişi Kayış Tablosu'ndan), gergi tanımı, katalog ve rapor kuralları buradadır.
 ---
 
 # FEAD modülü — dokunmadan önce
@@ -37,12 +37,25 @@ olurdu.
    doğrudan bağlı testler. Eşikler `references/uc-katman-ve-cekirdek.md`'de
    yazılı; **kanonik olan `tests/unit/fead-core.test.js`'in kendisidir.**
    Mutlak B10 ömrü kapı DIŞINDA — yalnız belgelenmiş çap penceresinde geçerli.
-4. **Kanvas = kayış düzlemi.** 1 px = 1 mm, orijin **sürücü kasnak** (rol, tip
-   değil), Y ekseni kanvasta aşağı / mm'de yukarı. mm → px tam sayıya
-   YUVARLANMAZ — 1 mm'lik kayma ölçülebilir bir gerginlik farkı demektir.
-5. **Konum Bağı (`fead-coordlink`) bunu kapatabilir.** Düğüm YOKSA bağ AÇIK —
-   geriye dönük uyum tam bu satırda. Bağımsızlık SİMETRİK: hem kanvas→mm hem
-   mm→kanvas kapatılır. Kapı SAF dönüşüm fonksiyonlarının İÇİNDE değildir.
+4. **KASNAKLARIN KANVASTA KUTUSU YOK** (2026-09-09, kullanıcı isteği).
+   Kasnaklar MODELDE düğüm olarak durur — panel dağıtımı, geri-al,
+   kaydetme/yükleme, şema göçü ve `veFeadSet` hepsi düğüm kimliğinden çalışır —
+   ama kanvasa kutu ÇİZİLMEZ (`componentDefs.noCanvasBox` → `veIsCanvasHidden`,
+   components.js). Koordinat yalnız **Kayış Tablosu**'ndan girilir; detay
+   panele tablodaki ADA tıklanarak gidilir. Kutuları eklemek/silmek de tablonun
+   işi (satır ✕ · "＋ Kasnak ekle").
+   **Kapı ALTI yerde** ve hepsi kutunun varlığını varsayan süpürmeler: DOM
+   kuran iki yol (`createNode` · `restoreState`) ve kutu sınırı okuyan dört yol
+   (`veBoundaryBox` · `veFitViewToContent` · minimap bbox · SVG/PNG dışa
+   aktarma). Biri atlanırsa hata sessizdir: çerçeve boş alanı sarar, "içeriğe
+   sığdır" hiçbir şeyin olmadığı yere kaçar.
+   **Kanvas ↔ mm köprüsü ve `fead-coordlink` bileşeni bununla birlikte KALKTI**
+   (`veFeadPlaceFromCoords`, `veFeadSyncDrag`, `veFeadCanvasToMm`,
+   `veFeadMmToCanvas`, `veFeadSyncMmFromCanvas`, `veFeadSyncCanvasFromMm`,
+   `veFeadNodeCenter`, `veFeadDragTensioner`, `veFeadCoordLinkOn`). Kapı:
+   `cp-fead.test.js` → *"kasnak KUTULARI ve kanvas↔mm köprüsü KALDIRILDI"*.
+5. **"Otomatik Düzenle" artık yalnız ARAÇ KARTLARINI dizer** — dizilecek kasnak
+   yok. Kayış Yolu şeması + Kayış Tablosu sağda, künyeler solda.
 6. **KASNAKLAR BAĞLANMAZ — SIRA TABLODA** (2026-09-09). Kayış yolu bir graf
    değil bir liste: sıra `node.data.beltIndex` alanında, Kayış Tablosu'nun
    satır sırası. `beltIndex` **Gates TABLO sırasını** taşır (kayışın gidişinin
@@ -54,9 +67,13 @@ olurdu.
    `fead-wire-order-migration.test.js` (şema 3 → 4).
 7. **Sürücülük ROL** (`node.data.driver`), tip değil. **Temas tarafı
    (grooved/back) gerçek alandır** — ters verilirse çekirdek hata VERMEZ,
-   geçerli ama başka bir güzergâh çözer. **Çap = DIŞ ÇAP (`od`)**.
-8. **Panel ile kanvas AYNI alanı okur.** Kol konumu, kayış kipi, yön gülü,
-   konum bağı, dönüş yönü — ikinci bir ayar tutmak iki yüzeyin sessizce
+   geçerli ama başka bir güzergâh çözer. Bu yüzden değer üç yüzeyde birden
+   görünür: tip varsayılanı (`componentDefs.feadContact`) → kasnak paneli →
+   **Kayış Tablosu'nun "Kasnak Dönüş Yönü" sütunu** (Sağ/Sol açılır listesi,
+   `contact` alanını yazar). Kanvas rozeti (K/S) kutularla birlikte kalktı.
+   **Çap = DIŞ ÇAP (`od`)**.
+8. **Panel, tablo ve kart AYNI alanı okur.** Kol konumu, kayış kipi, yön gülü,
+   dönüş yönü — ikinci bir ayar tutmak iki yüzeyin sessizce
    ayrışması demektir.
 9. **Geçerlilik sınırı sonucun İÇİNDE taşınır.** Tepe yük `KALİBRE DEĞİL`
    damgasıyla, B10 çap penceresiyle, türetilen boy kökeniyle basılır. Sayı
@@ -67,7 +84,10 @@ olurdu.
     yolundan birinde birinin unutulması demek — ve fark sessiz: iki kart kendi
     başına tutarlı görünür, yalnız biri bir düzenleme geride kalır. Kaynak
     kapısı `fead-table.test.js` içinde.
-11. **Negatif kapı: `veFeadApplyBadge` kasnak kutusuna kesikli çember ÇİZMEZ.**
+11. **Negatif kapı (kutu döneminden kalan): `veFeadApplyBadge` kasnak kutusuna
+    kesikli çember ÇİZMEZ.** Kasnakların kutusu artık hiç yok, yani rozet de
+    çizilmiyor; kapı yine de duruyor çünkü "gerçek çap hayaleti" fikri geri
+    gelirse bu kez TABLOYA ya da karta konmak istenir ve gerekçesi aynı.
     Gerçek çap hayaleti kullanıcı isteğiyle kaldırıldı; kapı sınıf adına değil
     biçime de bakıyor (`border-radius:50%` + `dashed`).
 12. **Katalog bir KISIT değil, bir ÖNERİ.** Ara boy ısmarlanabildiği için panel

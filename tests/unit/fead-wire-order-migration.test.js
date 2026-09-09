@@ -34,6 +34,11 @@ global.nodes = []; global.connections = []; global.selectedNodes = [];
 global.compCounter = 0; global.canvasOffset = { x: 0, y: 0 }; global.canvasZoom = 1;
 const stubs = stubGlobals();
 eval(loadSource('components.js'));
+// components.js'teki yüklem GLOBAL'e yazılır: cp-fead.js / state.js require ile
+// yükleniyor, dolayısıyla çıplak `veIsCanvasHidden` referansı bu dosyanın
+// kapsamını DEĞİL global'i arar. Yazılmazsa kutusuz düğüm kapısı sessizce
+// atlanır ve testler kutuların hâlâ kurulduğu bir dünyayı ölçer.
+global.veIsCanvasHidden = veIsCanvasHidden;
 eval(loadSource('state.js'));
 // Kayıttaki düğümler `def` taşımaz; tarayıcıda _feadDefOf küresel
 // componentDefs'ten okur — testte de öyle olsun.

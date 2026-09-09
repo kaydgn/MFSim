@@ -49,6 +49,11 @@ document.body.innerHTML = '<div id="ve-canvas"></div>';
 global.nodes = [];
 global.connections = [];
 eval(loadSource('components.js'));
+// components.js'teki yüklem GLOBAL'e yazılır: cp-fead.js / state.js require ile
+// yükleniyor, dolayısıyla çıplak `veIsCanvasHidden` referansı bu dosyanın
+// kapsamını DEĞİL global'i arar. Yazılmazsa kutusuz düğüm kapısı sessizce
+// atlanır ve testler kutuların hâlâ kurulduğu bir dünyayı ölçer.
+global.veIsCanvasHidden = veIsCanvasHidden;
 global.componentDefs = componentDefs;
 eval(loadSource('fead-belts.js'));
 global.FEADCore = F;
@@ -182,50 +187,34 @@ describe('çizilen resim = RAPORUN resmi (Gates Layout Data)', () => {
   });
 });
 
-describe('KANVAS ile KART aynı elde — ikinci, bağımsız kusur', () => {
-  // Bu ayna yalnız kartı değil, kartı KANVASTAN da ayırıyordu ve o fark
-  // kaydın hiçbir yerinde yoktu: `veFeadMmToCanvas` X'i hiç çevirmiyor
-  // (yalnız Y'yi ters alıyor — "kanvas = kayış düzlemi" kuralı), yani kanvasa
-  // yerleştirilen kutular HER ZAMAN rapor düzlemindeydi. Kart aynalıyken
-  // kullanıcı aynı modelin İKİ resmini ters görüyordu; "her şey karıştı"
-  // bildiriminin büyük olasılıkla asıl kaynağı bu.
-  //
-  // Kapı ikisini BİRBİRİNE bağlıyor, ikisini de bayrağa değil.
+// ── TABLO ile KART AYNI ELDE ──────────────────────────────────────────────
+//
+// Bu blok eskiden KANVAS kutularını kartla karşılaştırıyordu: bir dönem kart
+// aynalı, kanvas değildi (2026-09-04) ve kullanıcı aynı modelin iki resmini
+// TERS görüyordu. Kasnak kutuları 2026-09-09'da kalktı, ama hata SINIFI
+// kalkmadı — yalnız yüzeyi değişti: bugün aynı modelin iki resmi Kayış
+// Tablosu ile Kayış Yolu kartı. Kapı o ikisini birbirine bağlıyor.
+describe('TABLO ile KART aynı elde — aynı modelin iki resmi', () => {
   const ORNEK = ['AG0868_4PK_GATES_2022', 'AG00879_GATES_2023',
                  'AG00902_1275_GATES_2023', 'BMC_FEAD_2026'];
 
   ORNEK.forEach((id) => {
-    // Kanvas kutuları ile kart AYNI ELDE olmak zorunda. Bir dönem kart aynalı,
-    // kanvas değildi (2026-09-04) ve kullanıcı aynı modelin iki resmini ters
-    // görüyordu; ayna kalktığı için ikisi de artık tek çerçevede.
-    test(id + ' — kanvas X sırası ile kart X sırası AYNI', () => {
+    test(id + ' — tablo X sırası ile kart X sırası AYNI', () => {
       const b = kur(id);
       expect(b.ok).toBe(true);
-      const ex = M.veFeadExampleOf(id);
-      const kart = ekranKonumlari(b, ex.pulleys.length);
-
-      // Kanvas konumu, kanvasın KENDİ tek okuma noktalarından: düz kasnakta
-      // `data.x/y`, gergide `veFeadTensionerBoxMm` (avara merkezi) — senkron
-      // fonksiyonunun okuduğu alanların AYNISI. Ardından `veFeadMmToCanvas`.
-      const org = { x: 500, y: 400, width: 65, height: 60 };
-      const kanvas = ex.pulleys.map((pu) => {
-        let mmX = Number(pu.data.x), mmY = Number(pu.data.y);
-        if (!Number.isFinite(mmX)) {
-          const kutu = M.veFeadTensionerBoxMm(pu.data || {});
-          expect(kutu).toBeTruthy();                     // gergi merkezi okunabilmeli
-          mmX = kutu[0]; mmY = kutu[1];
-        }
-        return M.veFeadMmToCanvas(mmX, mmY, org, 1, { w: 65, h: 60 });
-      });
+      const kart = ekranKonumlari(b, b.order.length);
+      const satir = fead.veFeadTableRows(b).rows;
+      expect(satir).toHaveLength(b.order.length);
 
       let bakilan = 0;
-      ex.pulleys.forEach((_, i) => {
-        ex.pulleys.forEach((__, j) => {
+      satir.forEach((ri, i) => {
+        satir.forEach((rj, j) => {
           if (j <= i) return;
-          const dK = kanvas[i].x - kanvas[j].x;
-          if (Math.abs(dK) < 1) return;                  // aynı X — hüküm yok
+          const dT = ri.xMm - rj.xMm;
+          if (Math.abs(dT) < 1) return;                  // aynı X — hüküm yok
           bakilan++;
-          expect(isaret(kart[i].x - kart[j].x)).toBe(isaret(dK));
+          // Kart mm'den çiziyor: X sırası tablonunkiyle aynı olmak ZORUNDA.
+          expect(isaret(kart[i].x - kart[j].x)).toBe(isaret(dT));
         });
       });
       expect(bakilan).toBeGreaterThan(0);
