@@ -1925,10 +1925,23 @@ function _frGeometryTable(R){
   if(bp && Number.isFinite(Lp)){
     var Lpitch = sumSpan + _frSumArcPitch(g, sys);
     var fark = Lpitch - (sumSpan + sumArc);
-    var bek = 2 * Math.PI * _frNum(bp.hb);
+    // ── ÖZDEŞLİK İŞARET TAŞIR ────────────────────────────────────────────
+    // Doğrusu \( L_{pitch} - L_{eff} = h_b\sum d_i\varphi_i \), yani
+    // İŞARETLİ sarım toplamıyla ölçekli — sabit \( +2\pi h_b \) DEĞİL.
+    // Değişmez ±360°'dir (çekirdek ikisini de kabul ediyor; `veFeadMirrorGeomX`
+    // aynalarken `signedWrapDeg`i negatifliyor). Kaburgalı yüzü ağırlıklı
+    // DIŞA bakan bir güzergâhta toplam −360° çıkar ve o hâlde fark da
+    // \( -2\pi h_b \)'dir.
+    //
+    // ÖLÇÜLDÜ — sabit +2πh_b ile karşılaştıran sürüm, aynı çözülmüş modelde
+    // Kayış Tablosu ve uygunluk kriteri 1 "✓" derken burada "✗ tutmuyor"
+    // basıyordu: bir programın üç yüzeyi, iki ayrı hüküm.
+    var sigmaRad = _frNum(sigma) * Math.PI / 180;
+    var bek = _frNum(bp.hb) * sigmaRad;
     h1 = '<p>Boy özdeşliği (3.6) denetimi: '
        + '\\( L_{\\text{pitch}} - L_{\\text{eff}} = \\) <b>' + _frFs(fark, 4) + ' mm</b>, '
-       + 'beklenen \\( 2\\pi h_b = \\) <b>' + _frFs(bek, 4) + ' mm</b> — '
+       + 'beklenen \\( h_b\\sum d_i\\varphi_i = \\) <b>' + _frFs(bek, 4) + ' mm</b> '
+       + '(işaretli sarım toplamı ' + _frFs(sigma, 2) + '°) — '
        + (Math.abs(fark - bek) < 1e-3 ? '<span class="ok">✓ tutuyor</span>' : '<b>✗ tutmuyor</b>') + '.</p>';
   }
   // φ'nin KURULUŞU: tabloda sarım açıları bir SONUÇ olarak duruyordu; bir
