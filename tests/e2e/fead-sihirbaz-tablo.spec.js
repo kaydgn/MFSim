@@ -33,12 +33,26 @@ test('sihirbaz "Modeli Kur": kasnaklar + TABLO, tel yok, uyarı yok', async ({ p
     return !s || s.style.display === 'none';
   }, null, { timeout: 90000 });
 
-  // FEAD alt topolojisi — açılışta sihirbaz + örnekler + TABLO gelir
+  // FEAD alt topolojisi — açılışta sihirbaz + TABLO gelir, VE SİHİRBAZ AÇILIR
   await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
   await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-wizard'),
     null, { timeout: 20000 });
+
+  // ── BOŞ TOPOLOJİ SİHİRBAZLA KARŞILIYOR ─────────────────────────────────
+  // Kullanıcı isteği (2026-09-09): *"FEAD modülünü ana topoloji kısmından
+  // açtığım zaman, direkt karşıma 'Başlangıç Sihirbazı' bileşeninin gelmesini
+  // istiyorum."* Eskiden karşılayan şey BOŞ bir Kayış Tablosuydu.
+  await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();
+  // Kapatınca iç topoloji ayakta kalıyor — bu bir karşılama, kapı değil.
+  await page.evaluate(() => veFeadWizClose(false));
+  await page.waitForTimeout(200);
+  await expect(page.locator('#ve-feadwiz-overlay')).toBeHidden();
+  expect(await page.evaluate(() =>
+    window.nodes.filter((n) => n.type === 'fead-table').length)).toBe(1);
   const acilis = await page.evaluate(() => window.nodes.map((n) => n.type).sort());
-  expect(acilis).toEqual(['fead-example', 'fead-table', 'fead-wizard']);
+  // "Başlangıç ve Örnekler" 2026-09-09'da kaldırıldı (kullanıcı: *"Gerek yok"*)
+  // — sunduğu liste sihirbazın 1. adımında zaten vardı.
+  expect(acilis).toEqual(['fead-table', 'fead-wizard']);
   expect(await page.evaluate(() =>
     window.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley).length)).toBe(0);
 

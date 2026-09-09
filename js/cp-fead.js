@@ -89,7 +89,6 @@ var VE_FEAD_STARTER_LAYOUT = [
   { type:'fead-layout',  lx:190, ly:20 },
   { type:'fead-solver',  lx:340, ly:20 },
   { type:'fead-wizard',  lx:490, ly:20 },
-  { type:'fead-example', lx:640, ly:20 },
   { type:'fead-report',  lx:790, ly:20 },
   // Tablo 726 px geniş — üst şeridin altına, kayış düzleminin ÜSTÜNE.
   { type:'fead-table',   lx:40,  ly:90 },
@@ -202,7 +201,7 @@ function veFeadPopulateStarter(){
   // bıraktığı anda koordinatını gireceği yeri görmeli. Tablo olmadan kasnak
   // kanvasta durur ama sırasını ve konumunu girecek yüzey yoktur — tel
   // döneminde o işi kanvasta tel çekmek yapıyordu.
-  ['fead-wizard', 'fead-example', 'fead-table'].forEach(function(tip, k){
+  ['fead-wizard', 'fead-table'].forEach(function(tip, k){
     var slot = null;
     for(var i=0;i<VE_FEAD_STARTER_LAYOUT.length;i++){
       if(VE_FEAD_STARTER_LAYOUT[i].type === tip){ slot = VE_FEAD_STARTER_LAYOUT[i]; break; }
@@ -225,6 +224,7 @@ function veFeadOpenEditor(nodeId, _silent){
   var node = nodes.find(function(n){ return n.id === nodeId; });
   if(!node || node.type !== 'fead-analysis') return;
 
+  var _yeniTopoloji = false;
   _veFeadBusy = true;
   try {
     if(typeof veFlushOpenPanelData === 'function') veFlushOpenPanelData();
@@ -240,6 +240,7 @@ function veFeadOpenEditor(nodeId, _silent){
     } else {
       veLoadTabState({ state: null });
       veFeadPopulateStarter();
+      _yeniTopoloji = true;
     }
   } finally { _veFeadBusy = false; }
 
@@ -262,6 +263,27 @@ function veFeadOpenEditor(nodeId, _silent){
   if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
   if(typeof veUpdateWarnings === 'function') veUpdateWarnings();
   if(!_silent && typeof showToast === 'function') showToast('FEAD — İç Topoloji', 'info');
+
+  // ── BOŞ BİR FEAD TOPOLOJİSİ SİHİRBAZLA KARŞILAR ─────────────────────────
+  //
+  // Kullanıcı isteği (2026-09-09): *"FEAD modülünü ana topoloji kısmından
+  // açtığım zaman, direkt karşıma 'Başlangıç Sihirbazı' bileşeninin gelmesini
+  // istiyorum."* Eskiden karşılayan şey BOŞ bir Kayış Tablosuydu: doldurulacak
+  // hiçbir satırı yok, ne yapılacağını da söylemiyordu.
+  //
+  // YALNIZ TAZE TOPOLOJİDE. `_yeniTopoloji` bayrağı yukarıdaki `else` dalından
+  // geliyor — kurulmuş bir modele geri dönerken sihirbazın açılması, kullanıcıyı
+  // her girişte kapatması gereken bir pencereyle karşılamak olurdu. Aynı sebeple
+  // `_silent` (autosave'in görünmez geri-girişi) de dışarıda: orada kullanıcı
+  // FEAD'e girmiyor bile.
+  //
+  // Kapatan için model YİNE KURULABİLİR: sihirbaz düğümü kanvasta duruyor ve
+  // Kayış Tablosu'nun kendi ekleyicisi çalışıyor — bu bir kapı değil bir
+  // karşılama.
+  if(_yeniTopoloji && !_silent && typeof veFeadWizOpenAny === 'function'){
+    try { veFeadWizOpenAny(); }
+    catch(e){ /* sihirbaz açılamazsa iç topoloji yine açık kalır */ }
+  }
 }
 
 // _silent: köke çökerken (veFeadCollapseToRoot → kaydet/sekme değiştir öncesi)
@@ -5136,103 +5158,10 @@ function veFeadPositionTable(build){
   return _feadCard('Gergi Konum Tablosu', 'çalışma çevrimi gerektirmez', 'var(--accent-warning)', h + ek);
 }
 
-function getFeadExamplePropertiesHTML(node){
-  if(!node.data) node.data = {};
-  var html = '<div class="sw-panel">';
-  // SIFIRDAN KURULUM YOLU BURADA DA DURUYOR: kullanıcı boş bir iç topolojide
-  // önce bu panele bakıyor ("örnekler" en tanıdık kelime), ve kendi motorunu
-  // kuracaksa aradığı şey burada yok. Düğme sihirbaz düğümüne DEĞİL doğrudan
-  // sihirbaza gidiyor — paletten ikinci bir kutu aramak zorunda kalmasın.
-  if(typeof veFeadWizOpen === 'function')
-    html += _feadCard('Kendi Modelimi Kuracağım', 'adım adım', 'var(--accent-primary)',
-        '<button onclick="veFeadWizOpenAny()" style="width:100%; padding:11px 14px; '
-      + 'font-size:var(--fs-body); font-weight:700; border:none; cursor:pointer; '
-      + 'border-radius:var(--radius-sm); background:var(--accent-primary); color:#fff;">'
-      + '🧭 Başlangıç Sihirbazını Aç</button>'
-      + _feadHint('Kasnak koordinatlarından çalışma çevrimine kadar bütün girdileri '
-        + 'yedi adımda sorar ve her adımda modeli <b>canlı çözer</b>. Aşağıdaki hazır '
-        + 'örnekler ise tek tıkla kurulur — sihirbazın ilk adımından da '
-        + 'doldurulabilirler.'));
-  // AÇILIR LİSTE, ON İKİ KART DEĞİL — kullanıcı isteği (2026-09-02):
-  // *"pencereyi uzatmasaydın keşke, böyle aşağıya indirilebilir bir pencere
-  // yapsaydın."* Sihirbazın 1. adımında yapılan değişikliğin aynısı; sebep de
-  // aynı: liste üç örnek için tasarlanmıştı, arşivin tamamı örnek olunca panel
-  // 12 kart / 21 KB / 60 satır oldu.
-  //
-  // AYRINTI KAYBOLMUYOR, TEKRARI KAYBOLUYOR: künye satırları (kayış · tahrik
-  // oranı · aksesuar · devir noktası) artık on iki kez değil YALNIZ SEÇİLİ
-  // örnek için basılıyor. Seçim düğümde durur (`node.data.pick`) — panel her
-  // yeniden çizildiğinde kullanıcının baktığı örnek yerinde kalsın.
-  function _exOzet(ex){
-    var egri = ex.pulleys.filter(function(p){ return p.data && p.data.pwrCurve; }).length;
-    // Aksesuar gücü İKİ YOLDAN gelebiliyor: kasnağın kendi devir→kW eğrisinden
-    // (tedarikçi sayfasının biçimi) ya da duty satırına doğrudan yazılmış kW'dan
-    // (Gates raporunun biçimi). Yalnız eğriyi saymak raporlu örneği "0 aksesuar"
-    // gösterirdi; ikisi ayrı ayrı yazılıyor.
-    var dutyKw = 0;
-    (ex.solver.duty || []).forEach(function(r){
-      var m = r && (r.kwByKey || r.kw);
-      if(m) dutyKw = Math.max(dutyKw, Object.keys(m).filter(function(x){ return m[x] > 0.05; }).length);
-    });
-    // Birinci kademe SATIRI koşullu: 'derive' kipinde iki çap yazılır, 'direct'
-    // kipinde o iki alan YOKTUR ve ham basmak "undefined / undefined mm"
-    // üretiyordu. Oran her iki kipte de tek kaynaktan (veFeadDriveRatio).
-    var dr = veFeadDriveRatio(ex.solver);
-    var kademe = (dr.mode === 'derive' && dr.crankOD > 0 && dr.fanOD > 0)
-      ? ('birinci kademe: ' + dr.crankOD + ' / ' + dr.fanOD + ' mm (oran '
-         + dr.ratio.toFixed(3) + ')')
-      : ('tahrik oranı: ' + dr.ratio.toFixed(3)
-         + ' — devir sütunu SÜRÜCÜ KASNAK devri');
-    var b = ex.belt || {};
-    var kayis = 'kayış: ' + _feadEsc(b.beltType || ((b.ribs || '?') + b.profile))
-      + ' · ' + b.effLength + ' mm'
-      + ' · tolerans ' + (b.tolerance > 0 ? '±' + b.tolerance + ' mm' : 'YOK')
-      + ' · aşınma ' + (b.wearPct > 0 ? '%' + (b.wearPct * 100).toFixed(2) : 'YOK');
-    return '<div style="font-size:var(--fs-micro); color:var(--text-secondary); line-height:1.5; margin-bottom:9px;">'
-      + _feadEsc(ex.note) + '</div>'
-      + '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.6; margin-bottom:10px;">'
-      + '• ' + ex.pulleys.length + ' kasnak: koordinat + çap + temas tarafı<br>'
-      + '• gergi: montaj merkezi, kol boyu ve açısı, yay künyesi<br>'
-      + '• ' + kayis + '<br>'
-      + '• ' + (egri ? egri + ' aksesuarın devir → kW eğrisi'
-                     : dutyKw + ' aksesuarın kW\'ı duty satırında') + '<br>'
-      + '• çalışma çevrimi: ' + ex.solver.duty.length + ' devir noktası<br>'
-      + '• ' + kademe + '</div>';
-  }
-
-  var keys = veFeadExampleKeys();
-  var secili = (node.data.pick && veFeadExampleOf(node.data.pick)) ? node.data.pick : keys[0];
-  var sec = '<select onchange="veFeadExamplePick(this.value)" style="width:100%; '
-    + 'padding:8px 10px; font-size:var(--fs-body); background:var(--bg-input); '
-    + 'color:var(--text-primary); border:1px solid var(--border-subtle);">';
-  keys.forEach(function(k){
-    var ex = veFeadExampleOf(k);
-    sec += '<option value="' + _feadEsc(k) + '"' + (k === secili ? ' selected' : '') + '>'
-      + _feadEsc(ex.name + '  ·  ' + ex.pulleys.length + ' kasnak') + '</option>';
-  });
-  sec += '</select>';
-
-  var ex = veFeadExampleOf(secili);
-  html += _feadCard('Hazır Örnekler', keys.length + ' örnek', 'var(--accent-success)',
-      sec
-    + '<div style="margin-top:10px;">' + _exOzet(ex) + '</div>'
-    + '<button onclick="veFeadLoadExample(\'' + _feadEsc(secili) + '\')" style="width:100%; padding:11px 16px; '
-    + 'font-size:var(--fs-body); font-weight:700; letter-spacing:0.02em; border:none; cursor:pointer; '
-    + 'background:var(--accent-success); color:#fff;">İç topolojiye kur</button>'
-    + _feadHint('<b>Mevcut kasnakların üzerine eklenir</b>, silinmez — boş bir iç topolojide '
-      + 'kurmak en temizidir.'));
-  html += '</div>';
-  return html;
-}
-
-// ── ÖRNEĞİ KANVASA KUR ──────────────────────────────────────────────────────
-// Örnek tanımı js/fead-model.js'te (VE_FEAD_EXAMPLES); burada YALNIZ kanvasa
-// yerleştirme var. Kasnaklar kayış düzlemindeki GERÇEK koordinatlarına oranlı
-// yerleştirilir: kanvasta gördüğü şekil sayfadaki yerleşimin ta kendisi olsun.
-// (Kanvas y aşağı doğru artar, kayış düzlemi yukarı — bu yüzden y ters çevrilir.)
-// Sihirbazı düğüm KİMLİĞİ olmadan açar: kanvasta bir sihirbaz düğümü varsa
-// onun taslağı sürer (yarım kalan iş kaybolmaz), yoksa paletten bir tane kurar.
-// Taslağın bir düğümde durması ŞART — kaydedilen proje onu taşıyor.
+// "BAŞLANGIÇ VE ÖRNEKLER" PANELİ KALDIRILDI (2026-09-09, kullanıcı isteği).
+// Bileşenin kendisi de kalktı (bkz. components.js). Sunduğu iki şey —
+// "Sihirbazı Aç" düğmesi ve örnek açılır listesi — sihirbazın 1. adımında
+// zaten vardı; FEAD'e girince artık doğrudan sihirbaz açılıyor.
 function veFeadWizOpenAny(){
   if(typeof veFeadWizOpen !== 'function' || typeof nodes === 'undefined') return false;
   var n = nodes.filter(function(x){ return (_feadDefOf(x) || {}).isFeadWizard; })[0];
@@ -5248,20 +5177,6 @@ function veFeadWizOpenAny(){
   }
   if(!n) return false;
   return veFeadWizOpen(n.id);
-}
-
-// AÇILIR LİSTENİN SEÇİMİ. Seçim DÜĞÜMDE durur, modülde değil: panel her
-// yeniden çizildiğinde (başka bir düğüme tıklayıp geri dönmek, undo/redo)
-// kullanıcının baktığı örnek yerinde kalsın. Seçmek KURMAK DEĞİL — kurma
-// eylemi ayrı düğmede; liste yalnız hangi künyeye baktığını değiştiriyor.
-function veFeadExamplePick(key){
-  var n = (typeof getSelectedNode === 'function') ? getSelectedNode() : null;
-  if(!n && typeof nodes !== 'undefined' && Array.isArray(nodes))
-    n = nodes.filter(function(x){ return x.type === 'fead-example'; })[0];
-  if(!n) return;
-  if(!n.data) n.data = {};
-  n.data.pick = key;
-  if(typeof showNodeProperties === 'function') showNodeProperties(n);
 }
 
 function veFeadLoadExample(key){
@@ -5354,11 +5269,6 @@ function veFeadLoadExample(key){
   // aşağıdaki `veFeadArrangeByCoords` yapıyor ve o, araç düğümlerini kümenin
   // dışındaki iki şeride koyuyor. Yerleştirici çalışamazsa (iki kasnaktan az
   // koordinat) geçerli kalan sıra budur.
-  //
-  // `isFeadExample` BURADA ARANMAZ: o düğüm birkaç satır aşağıda siliniyor,
-  // yani taşınacak bir şey yok. Listede tutulsaydı önce taşınıp sonra silinen
-  // bir kutu olurdu ve yukarıdaki gerekçe onu hâlâ "sol şeride alınıyor" diye
-  // anlatırdı — kodun kendi kaydını yalanlaması.
   var _eskiArac = [];
   if(typeof nodes !== 'undefined') {
     nodes.forEach(function(n){
@@ -5417,41 +5327,8 @@ function veFeadLoadExample(key){
   kuruldu.forEach(function(n){
     if(n.data && Array.isArray(n.data.duty)) veFeadRemapDutyKw(n.data.duty, idMap);
   });
-
-  // ── "BAŞLANGIÇ VE ÖRNEKLER" DÜĞÜMÜ İŞİNİ BİTİRDİ ────────────────────────
-  //
-  // O düğüm bir AÇILIŞ yüzeyi: alt topoloji ilk açıldığında tek başına gelir
-  // (veFeadPopulateStarter) ve tek işi buradaki örnek listesini sunmaktır.
-  // Örnek kurulduktan sonra kanvasta kalması iki şey yapıyordu: sol şeritte
-  // yer kaplıyor, ve kullanıcıya "buradan devam et" diyen bir düğme gibi
-  // duruyordu — oysa devam edilecek yer artık kurulmuş modelin kendisi.
-  //
-  // Bağlantısı YOK (fead-example girişsiz/çıkışsız), o yüzden silmek diziden
-  // ve DOM'dan çıkarmakla bitiyor; deleteSelectedNodes'un sensör/parametrik
-  // temizliğine ihtiyaç yok ve o fonksiyon `selectedNodes` global'ini de
-  // tüketiyor (burada seçim kullanıcınındır, ona dokunulmaz).
-  //
-  // SPLICE, YENİDEN ATAMA DEĞİL: `nodes = nodes.filter(...)` global'i yeni bir
-  // diziye bağlar; bu dosya ile onu tutan diğer modüller tarayıcıda aynı
-  // global'i paylaştığı için çalışır ama Node testinde `global.nodes` bayat
-  // kalır. Yerinde mutasyon iki ortamda da aynı şeyi yapıyor.
-  //
-  // SIRASI: yerleştiriciden ÖNCE. Sonra silinseydi sol şeritte ona ayrılmış
-  // boş bir sıra kalır, altındaki iki kutu bir kademe aşağıda dururdu.
-  if(typeof nodes !== 'undefined' && nodes){
-    for(var _i = nodes.length - 1; _i >= 0; _i--){
-      if(!_feadDefOf(nodes[_i]).isFeadExample) continue;
-      var _el = (typeof document !== 'undefined') ? document.getElementById(nodes[_i].id) : null;
-      if(_el) _el.remove();
-      nodes.splice(_i, 1);
-    }
-    if(typeof selectedNodes !== 'undefined' && Array.isArray(selectedNodes)){
-      // Silinen düğüm seçiliyse seçimde bayat referans kalmasın (panel onu
-      // gösterip "bileşen bulunamadı" durumuna düşerdi).
-      for(var _k = selectedNodes.length - 1; _k >= 0; _k--)
-        if(nodes.indexOf(selectedNodes[_k]) < 0) selectedNodes.splice(_k, 1);
-    }
-  }
+  // "Başlangıç ve Örnekler" düğümünü silen döngü KALKTI: o bileşen artık hiç
+  // kurulmuyor (2026-09-09, kullanıcı isteği — sihirbaz aynı işi yapıyordu).
 
   // KUTULARI KOORDİNATLARINA OTURT — kanvas ile mm ilk kareden itibaren AYNI
   // şeyi söylesin. Sessiz kip: saveState/toast/kamera bu fonksiyonun kendisine
@@ -6016,16 +5893,15 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadPowerCurveCard: veFeadPowerCurveCard,
     veFeadCurveAdd: veFeadCurveAdd, veFeadCurveRemove: veFeadCurveRemove,
     veFeadCurveSet: veFeadCurveSet, veFeadLoadExample: veFeadLoadExample,
-    veFeadExamplePick: veFeadExamplePick,
     veFeadArrangeByCoords: veFeadArrangeByCoords,
     veFeadWizOpenAny: veFeadWizOpenAny,
     veFeadPopulateStarter: veFeadPopulateStarter,
+    veFeadOpenEditor: veFeadOpenEditor,
     getFeadModulePropertiesHTML: getFeadModulePropertiesHTML,
     getFeadPulleyPropertiesHTML: getFeadPulleyPropertiesHTML,
     getFeadTensionerPropertiesHTML: getFeadTensionerPropertiesHTML,
     getFeadBeltPropertiesHTML: getFeadBeltPropertiesHTML,
     getFeadLayoutPropertiesHTML: getFeadLayoutPropertiesHTML,
     getFeadSolverPropertiesHTML: getFeadSolverPropertiesHTML,
-    getFeadExamplePropertiesHTML: getFeadExamplePropertiesHTML
   };
 }

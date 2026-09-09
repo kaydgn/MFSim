@@ -144,7 +144,7 @@ describe('bileşen sözleşmesi', () => {
     });
   });
 
-  test('başlangıçta İKİ açılış yüzeyi kurulur: sihirbaz + örnekler', () => {
+  test('başlangıçta İKİ açılış yüzeyi kurulur: sihirbaz + Kayış Tablosu', () => {
     document.body.innerHTML = '<div id="ve-canvas"></div><div id="ve-canvas-wrapper"></div>';
     global.nodes = []; global.connections = [];
     let k = 0;
@@ -156,12 +156,12 @@ describe('bileşen sözleşmesi', () => {
     };
     const out = fead.veFeadPopulateStarter();
     delete global.createNode;
-    // ÜÇÜNCÜ AÇILIŞ YÜZEYİ: Kayış Tablosu (2026-09-09). Kasnakların veri giriş
-    // yüzeyi artık o; olmadan paletten bırakılan kasnağın koordinatı ve sırası
-    // girilecek yer olmazdı (tel döneminde o işi kanvasta tel çekmek yapıyordu).
-    expect(out.length).toBe(3);
-    expect(out.map((n) => n.type).sort())
-      .toEqual(['fead-example', 'fead-table', 'fead-wizard']);
+    // KAYIŞ TABLOSU: kasnakların veri giriş yüzeyi; olmadan paletten bırakılan
+    // kasnağın koordinatı ve sırası girilecek yer olmazdı (kutuları da yok).
+    // "Başlangıç ve Örnekler" 2026-09-09'da kaldırıldı — sunduğu liste
+    // sihirbazın 1. adımında zaten vardı ve FEAD'e girince sihirbaz açılıyor.
+    expect(out.length).toBe(2);
+    expect(out.map((n) => n.type).sort()).toEqual(['fead-table', 'fead-wizard']);
     // Üst üste binmiyorlar (ikisi de aynı şeride konuyor).
     expect(Math.abs(out[0].x - out[1].x)).toBeGreaterThan(60);
   });
@@ -475,21 +475,21 @@ describe('kurulum kapısı ve kurulum', () => {
     expect(Object.keys(yuk).reduce((a, k) => a + yuk[k], 0)).toBeGreaterThan(0.5);
   });
 
-  test('SİHİRBAZ DÜĞÜMÜ KALIR, "Başlangıç ve Örnekler" GİDER', () => {
+  test('SİHİRBAZ DÜĞÜMÜ KALIR — taşıdığı form kullanıcının girdisi', () => {
     // Ayrım kullanıcı verisinde: sihirbaz düğümü kullanıcının kendi formunu
     // taşıyor (silmek onu çöpe atmak olurdu), örnek düğümü hiçbir şey taşımıyor.
     kabuk();
     wiz.veFeadWizSeed('BMC_FEAD_2026');
     sahteKanvas();
     createNode('fead-wizard', 0, 0);
-    createNode('fead-example', 0, 0);
     const wn = global.nodes.find((n) => n.type === 'fead-wizard');
     wiz.veFeadWizOpen(wn.id);                  // taslak düğüme bağlansın
     wiz.veFeadWizSeed('BMC_FEAD_2026');
     wiz.veFeadWizCreate();
     delete global.createNode; delete global.createConnection;
     expect(global.nodes.filter((n) => n.type === 'fead-wizard').length).toBe(1);
-    expect(global.nodes.filter((n) => n.type === 'fead-example').length).toBe(0);
+    // "Başlangıç ve Örnekler" artık HİÇ KURULMUYOR (bileşen kaldırıldı).
+    expect(componentDefs['fead-example']).toBeUndefined();
     // Taslak düğümde KALDI (kullanıcı geri dönüp bir sayıyı düzeltebilsin).
     expect(global.nodes.find((n) => n.type === 'fead-wizard').data.wiz).toBeTruthy();
   });

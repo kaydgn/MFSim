@@ -311,15 +311,29 @@ describe('kayıt defteri ve sihirbaz', () => {
     expect(new Set(adlar).size).toBe(adlar.length);
   });
 
-  test('örnek paneli HEPSİNİ listeliyor; künye seçiliyken temiz', () => {
-    const liste = CP.getFeadExamplePropertiesHTML({ data: {} });
+  // KAPI YÜZEY DEĞİŞTİRDİ, HÜKÜM DEĞİŞMEDİ. "Başlangıç ve Örnekler" bileşeni
+  // 2026-09-09'da kaldırıldı (kullanıcı isteği: *"Gerek yok"*) — sunduğu liste
+  // sihirbazın 1. adımında zaten vardı. Tutulan şey aynı: KAYIT DEFTERİNDEKİ
+  // HİÇBİR ÖRNEK ERİŞİLEMEZ KALMAMALI ve künyesi undefined/NaN basmamalı.
+  // KÜNYE TEMİZLİĞİNİN GEÇMİŞİ: künye satırı bir zamanlar "birinci kademe:
+  // <crankOD> / <fanOD> mm"yi HAM basıyordu ve tahrik oranını doğrudan veren
+  // örneklerde (ratioMode 'direct') o iki alan YOK — satır "undefined /
+  // undefined mm" çıkıyordu ve bir SAYI gibi okunuyordu. Kapı bu yüzden
+  // varsayılan seçimle yetinmiyor, her örneği sırayla yükleyip ayrı çizdiriyor.
+  test('sihirbazın 1. adımı HEPSİNİ listeliyor; künye seçiliyken temiz', () => {
+    const wiz = require('../../js/cp-fead-wizard.js');
+    document.body.innerHTML = '<div id="ve-feadwiz-overlay" style="display:none;">'
+      + '<div id="ve-fw-nav"></div><div id="ve-fw-body"></div><div id="ve-fw-foot"></div></div>';
+    wiz.veFeadWizReset();          // taze durum — render öncesi ŞART
+    const liste = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
     veFeadExampleKeys().forEach((k) => {
       expect(liste).toMatch(new RegExp('<option value="' + k + '"'));
       expect(liste).toContain(veFeadExampleOf(k).name);
     });
-    // Künye yalnız seçili örnek için basıldığından her biri ayrı çizdiriliyor.
+    // Künye yalnız SEÇİLİ örnek için basıldığından her biri ayrı çizdiriliyor.
     veFeadExampleKeys().forEach((k) => {
-      const h = CP.getFeadExamplePropertiesHTML({ data: { pick: k } });
+      wiz.veFeadWizSeed(k);
+      const h = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
       expect(h).not.toMatch(/undefined|NaN|\[object/);
     });
   });

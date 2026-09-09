@@ -3203,20 +3203,10 @@ function veFeadWizCreate(){
       if(n.data && Array.isArray(n.data.duty)) veFeadRemapDutyKw(n.data.duty, idMap);
     });
 
-  // "Başlangıç ve Örnekler" düğümü işini bitirdi (örnek kurucusunun kararının
-  // aynısı: o düğüm bir AÇILIŞ yüzeyi ve kullanıcı verisi taşımıyor).
-  // SİHİRBAZ DÜĞÜMÜ İSE KALIR: taşıdığı form kullanıcının kendi girdisi, silmek
-  // onu çöpe atmak olurdu — kullanıcı geri dönüp bir sayıyı düzeltebilsin.
-  for(var k = nodes.length - 1; k >= 0; k--){
-    if(!(_feadDefOf(nodes[k]) || {}).isFeadExample) continue;
-    var el2 = (typeof document !== 'undefined') ? document.getElementById(nodes[k].id) : null;
-    if(el2) el2.remove();
-    nodes.splice(k, 1);
-  }
-  if(typeof selectedNodes !== 'undefined' && Array.isArray(selectedNodes))
-    for(var q = selectedNodes.length - 1; q >= 0; q--)
-      if(nodes.indexOf(selectedNodes[q]) < 0) selectedNodes.splice(q, 1);
-
+  // "Başlangıç ve Örnekler" düğümünü silen döngü KALKTI: o bileşen artık hiç
+  // kurulmuyor (2026-09-09, kullanıcı isteği). SİHİRBAZ DÜĞÜMÜ KALIR: taşıdığı
+  // form kullanıcının kendi girdisi, silmek onu çöpe atmak olurdu.
+  //
   // SAYAÇ TAZELENİR. `nodes` dizisi doğrudan splice edildi (deleteSelectedNodes
   // bilerek kullanılmıyor — o `selectedNodes` global'ini tüketiyor), dolayısıyla
   // araç çubuğunun "N bileşen" sayacı ve minimap kendiliğinden güncellenmiyor.

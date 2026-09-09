@@ -390,16 +390,25 @@ describe('kanvasa kurma — gerçek yükleyici', () => {
   });
 });
 
-describe('örnek paneli', () => {
+describe('sihirbazın örnek listesi', () => {
+  // "Başlangıç ve Örnekler" bileşeni 2026-09-09'da kaldırıldı; örnek listesi
+  // sihirbazın 1. adımında duruyor ve kapı oraya taşındı — hüküm aynı: bu
+  // örnek erişilebilir olmalı ve künyesi undefined/NaN basmamalı.
   test('listede duruyor ve seçilince künyesi undefined/NaN basmıyor', () => {
-    // Panel açılır listeye döndü: ad her zaman listede, künye ise SEÇİLİYKEN.
-    const liste = fead.getFeadExamplePropertiesHTML({ data: {} });
+    const wiz = require('../../js/cp-fead-wizard.js');
+    // components.js bu dosyada eval'lendi, yani `componentDefs` yerel kapsamda;
+    // require ile yüklenen sihirbaz onu GLOBAL'de arıyor.
+    global.componentDefs = componentDefs;
+    document.body.innerHTML = '<div id="ve-feadwiz-overlay" style="display:none;">'
+      + '<div id="ve-fw-nav"></div><div id="ve-fw-body"></div><div id="ve-fw-foot"></div></div>';
+    wiz.veFeadWizReset();          // taze durum — render öncesi ŞART
+    const liste = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
     expect(liste).toContain('Anadolu Isuzu 6x6');
     expect(liste).toContain(KEY);
 
-    const secili = fead.getFeadExamplePropertiesHTML({ data: { pick: KEY } });
+    wiz.veFeadWizSeed(KEY);
+    const secili = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
     expect(secili).toContain('8PK1392HD');
-    expect(secili).toMatch(new RegExp("veFeadLoadExample\\('" + KEY + "'\\)"));
     expect(secili).not.toMatch(/undefined|NaN|\[object/);
   });
 });

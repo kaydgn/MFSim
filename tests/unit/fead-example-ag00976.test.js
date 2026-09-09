@@ -111,23 +111,12 @@ describe('örnek kayıt defteri: Gates raporu kurulabilir', () => {
     expect(ten.cenX).toBeCloseTo(-161.97, 2);
   });
 
-  test('panel kartı her iki örnek için de sayı basıyor — "undefined" YOK', () => {
-    // Kart "birinci kademe: <crankOD> / <fanOD> mm" satırını HAM basıyordu.
-    // Gates örneği tahrik oranını doğrudan veriyor (ratioMode 'direct'), yani
-    // o iki alan YOK: satır "undefined / undefined mm" çıkıyordu. Bu, kullanıcı
-    // gözüne çarpan tek işaretti ve bir sayı gibi okunuyordu.
-    // PANEL AÇILIR LİSTEYE DÖNDÜ (2026-09-02): künye artık on iki kez değil
-    // YALNIZ seçili örnek için basılıyor. Kapının niyeti değişmedi, kapsamı
-    // korunuyor: her örnek SIRAYLA seçili yapılıp ayrı ayrı çizdiriliyor —
-    // yoksa kusur yalnız varsayılan seçimde aranırdı.
-    veFeadExampleKeys().forEach((k) => {
-      const html = fead.getFeadExamplePropertiesHTML({ data: { pick: k } });
-      expect(html).toMatch(new RegExp('<option value="' + k + '" selected'));
-      expect(html).toMatch(new RegExp("veFeadLoadExample\\('" + k + "'\\)"));
-      expect(html).not.toMatch(/undefined/);
-      expect(html).not.toMatch(/NaN/);
-    });
-  });
+  // "PANEL KARTI … undefined YOK" KAPISI TAŞINDI. "Başlangıç ve Örnekler"
+  // bileşeni 2026-09-09'da kaldırıldı (kullanıcı: *"Gerek yok"*); künye artık
+  // sihirbazın 1. adımında ve kapı orada, KAYIT DEFTERİNİN TAMAMI üzerinde
+  // dönüyor: `fead-examples-gates.test.js` → *"sihirbazın 1. adımı HEPSİNİ
+  // listeliyor; künye seçiliyken temiz"*. Aynı hükmü iki dosyada tutmak, biri
+  // güncellenince ötekinin sessizce bayatlaması demekti.
 });
 
 describe('GEOMETRİ — Gates "Belt Drive System Geometry" sayfası', () => {

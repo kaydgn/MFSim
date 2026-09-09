@@ -54,9 +54,21 @@ olurdu.
    `veFeadMmToCanvas`, `veFeadSyncMmFromCanvas`, `veFeadSyncCanvasFromMm`,
    `veFeadNodeCenter`, `veFeadDragTensioner`, `veFeadCoordLinkOn`). Kapı:
    `cp-fead.test.js` → *"kasnak KUTULARI ve kanvas↔mm köprüsü KALDIRILDI"*.
-5. **"Otomatik Düzenle" artık yalnız ARAÇ KARTLARINI dizer** — dizilecek kasnak
+5. **BOŞ BİR FEAD TOPOLOJİSİ SİHİRBAZLA KARŞILAR** (2026-09-09, kullanıcı
+   isteği). `veFeadOpenEditor` KAYITSIZ bir alt topoloji kurduğunda
+   (`_yeniTopoloji` bayrağı) `veFeadWizOpenAny()` çağrılır; kurulmuş bir modele
+   dönerken ve `_silent` geri-girişte AÇILMAZ — her girişte kapatılması gereken
+   bir pencere karşılamayı engele çevirirdi. Karşılayan şey eskiden BOŞ bir
+   Kayış Tablosuydu: doldurulacak satırı yok, ne yapılacağını da söylemiyordu.
+   Açılış yüzeyi yine kurulur (sihirbaz + Kayış Tablosu) — kapatan kullanıcı
+   boş bir kanvasa düşmesin. **"Başlangıç ve Örnekler" (`fead-example`)
+   KALDIRILDI**: sunduğu iki şey (sihirbaz düğmesi + örnek listesi) sihirbazın
+   1. adımında zaten vardı. Örnek KURUCUSU (`veFeadLoadExample`) duruyor.
+   Kapılar: `cp-fead.test.js` → *"FEAD editörü açılışı"* ve *"Başlangıç ve
+   Örnekler bileşeni kaldırıldı"*, `fead-sihirbaz-tablo.spec.js`.
+6. **"Otomatik Düzenle" artık yalnız ARAÇ KARTLARINI dizer** — dizilecek kasnak
    yok. Kayış Yolu şeması + Kayış Tablosu sağda, künyeler solda.
-6. **KASNAKLAR BAĞLANMAZ — SIRA TABLODA** (2026-09-09). Kayış yolu bir graf
+7. **KASNAKLAR BAĞLANMAZ — SIRA TABLODA** (2026-09-09). Kayış yolu bir graf
    değil bir liste: sıra `node.data.beltIndex` alanında, Kayış Tablosu'nun
    satır sırası. `beltIndex` **Gates TABLO sırasını** taşır (kayışın gidişinin
    TERSİ) ve `build.order`'ın kendisidir — çevirme yok; gidiş sırası isteyen
@@ -65,20 +77,20 @@ olurdu.
    17 Gates raporunun tamamı buna dayanıyor. Kapı: `fead-table.test.js`,
    `fead-model.test.js` → *"kayış sırası — indisten, sürücüden başlayarak"*,
    `fead-wire-order-migration.test.js` (şema 3 → 4).
-7. **Sürücülük ROL** (`node.data.driver`), tip değil. **Temas tarafı
+8. **Sürücülük ROL** (`node.data.driver`), tip değil. **Temas tarafı
    (grooved/back) gerçek alandır** — ters verilirse çekirdek hata VERMEZ,
    geçerli ama başka bir güzergâh çözer. Bu yüzden değer üç yüzeyde birden
    görünür: tip varsayılanı (`componentDefs.feadContact`) → kasnak paneli →
    **Kayış Tablosu'nun "Kasnak Dönüş Yönü" sütunu** (Sağ/Sol açılır listesi,
    `contact` alanını yazar). Kanvas rozeti (K/S) kutularla birlikte kalktı.
    **Çap = DIŞ ÇAP (`od`)**.
-8. **Panel, tablo ve kart AYNI alanı okur.** Kol konumu, kayış kipi, yön gülü,
+9. **Panel, tablo ve kart AYNI alanı okur.** Kol konumu, kayış kipi, yön gülü,
    dönüş yönü — ikinci bir ayar tutmak iki yüzeyin sessizce
    ayrışması demektir.
-9. **Geçerlilik sınırı sonucun İÇİNDE taşınır.** Tepe yük `KALİBRE DEĞİL`
+10. **Geçerlilik sınırı sonucun İÇİNDE taşınır.** Tepe yük `KALİBRE DEĞİL`
    damgasıyla, B10 çap penceresiyle, türetilen boy kökeniyle basılır. Sayı
    gizlenmez; sınırı yanında yazılır.
-10. **Tazeleme tek noktadan.** İki kart (Kayış Yolu şeması + Kayış Tablosu)
+11. **Tazeleme tek noktadan.** İki kart (Kayış Yolu şeması + Kayış Tablosu)
     HEP BİRLİKTE, `veFeadRefreshCards`'tan; port DOM'u ve kart imzası
     `updateAllConnections`'tan. Kart başına ayrı çağrı, altı düzenleme
     yolundan birinde birinin unutulması demek — ve fark sessiz: iki kart kendi
@@ -91,16 +103,16 @@ olurdu.
     yeniden kurmak düzenlenen hücrenin odağını düşürürdü. Ölçüldü: çağrı
     olmadan işaret hiç tazelenmiyor ve tabloda paneli AÇIK OLMAYAN bir satır
     işaretli kalıyor — işaretin hiç olmamasından kötü.
-11. **Negatif kapı (kutu döneminden kalan): `veFeadApplyBadge` kasnak kutusuna
+12. **Negatif kapı (kutu döneminden kalan): `veFeadApplyBadge` kasnak kutusuna
     kesikli çember ÇİZMEZ.** Kasnakların kutusu artık hiç yok, yani rozet de
     çizilmiyor; kapı yine de duruyor çünkü "gerçek çap hayaleti" fikri geri
     gelirse bu kez TABLOYA ya da karta konmak istenir ve gerekçesi aynı.
     Gerçek çap hayaleti kullanıcı isteğiyle kaldırıldı; kapı sınıf adına değil
     biçime de bakıyor (`border-radius:50%` + `dashed`).
-12. Oturumluk sonuç globali **`window.veFeadResults` proje değişince
+13. Oturumluk sonuç globali **`window.veFeadResults` proje değişince
     temizlenmeli** (`_feadForgetResults`) — yoksa yeni projede önceki projenin
     tabloları durur.
-13. **KAYIŞ TABLOSUNUN GÖRÜNÜMÜ CSS'TE** (`css/styles.css` → `.ve-fead-tbl*`),
+14. **KAYIŞ TABLOSUNUN GÖRÜNÜMÜ CSS'TE** (`css/styles.css` → `.ve-fead-tbl*`),
     satır içi `style=` dizelerinde DEĞİL. Gerekçe kozmetik değil yapısal: satır
     içi CSS DURUM İFADE EDEMEZ (`:hover`, `:focus`, `:nth-child` yazılamaz),
     yani fare hangi satırdaysa, imleç hangi hücredeyse, hangi kasnağın paneli
@@ -130,7 +142,7 @@ olurdu.
     değil. Kapılar: `cp-fead.test.js` / `fead-wizard.test.js` (kurucular
     mekanizmadan geçiyor mu) + `fead-tablo.spec.js` → *"CTRL+Z"*; mekanizmanın
     kendisi `state.test.js`'te ve kuralı kökteki `CLAUDE.md`'de.
-14. **Uygunluk kapıları TEK ÇAĞRIDAN** (`js/fead-checks.js` · `veFeadChecks`):
+15. **Uygunluk kapıları TEK ÇAĞRIDAN** (`js/fead-checks.js` · `veFeadChecks`):
     panel canlı hesaplar, rapor ise çözüm anında yazılan `R.checks`'i OKUR —
     yeniden hesaplasaydı çözümden sonra değiştirilen bir devir sınırı belgeye
     sızardı. Üç kural: merkez mesafesi kuralı **iki kasnaklı** V-kayış
@@ -138,7 +150,7 @@ olurdu.
     yazılır); çevrim oranı **pitch çapından** gelir (defterin dış çaplı ve elle
     yazılmış oranları %2,2 ve %27,8 sapıyor); eksik veri `'wait'`'tir ve
     **uygun sayılmaz**. Kapı: `tests/unit/fead-checks.test.js`.
-15. **Katalog bir KISIT değil bir ÖNERİ** — kayış, gergi, motor ve aksesuar
+16. **Katalog bir KISIT değil bir ÖNERİ** — kayış, gergi, motor ve aksesuar
     kütüphanelerinin dördünde de aynı kural. Elle girilen değer katalogtan
     üstündür; "elle" demek için değerin katalogtan FARKLI olması gerekir
     (yalnız "dolu mu" bakan bir tespit, katalogun kendi yazdığı alanları

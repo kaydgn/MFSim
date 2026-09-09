@@ -98,11 +98,14 @@ describe('Alt-sistem sözleşmesi', () => {
     expect(veClearCanvasDOM).not.toHaveBeenCalled();
   });
 
-  test('başlangıç yerleşimi "Başlangıç ve Örnekler" bileşenini içerir', () => {
-    // İlk açılışta iç topolojiye yalnız bu bileşen konur (diğer iki modülle
-    // aynı kalıp); yerleşimden düşerse modül BOŞ açılırdı.
+  test('başlangıç yerleşimi TANIMLI tiplerden kurulu; örnek bileşeni YOK', () => {
     const tipler = fead.VE_FEAD_STARTER_LAYOUT.map((it) => it.type);
-    expect(tipler).toContain('fead-example');
+    // "Başlangıç ve Örnekler" 2026-09-09'da kaldırıldı (kullanıcı: *"Gerek
+    // yok"*) — sunduğu liste sihirbazın 1. adımında zaten vardı. Negatif kapı
+    // duruyor çünkü yerleşim listesi elle düzenleniyor ve tanımı olmayan bir
+    // tip oraya geri yazılırsa modül o kutuyu SESSİZCE kurmaz.
+    expect(tipler).not.toContain('fead-example');
+    expect(tipler).toContain('fead-wizard');
     expect(tipler).toContain('fead-crank');
     // Yerleşimdeki her tip gerçekten tanımlı olmalı (yazım hatası kapısı)
     tipler.forEach((t) => expect(componentDefs[t]).toBeDefined());
@@ -350,8 +353,7 @@ describe('panel üreticileri — üretiliyor ve patlamıyor', () => {
     ['getFeadPulleyPropertiesHTML', kasnak('fead-crank', { od: 160, x: 0, y: 0 })],
     ['getFeadPulleyPropertiesHTML', kasnak('fead-idler', {})],
     ['getFeadTensionerPropertiesHTML', kasnak('fead-tensioner', {})],
-    ['getFeadBeltPropertiesHTML', kasnak('fead-belt', {})],
-    ['getFeadExamplePropertiesHTML', kasnak('fead-example', {})]
+    ['getFeadBeltPropertiesHTML', kasnak('fead-belt', {})]
     // getFeadReportPropertiesHTML ARTIK BURADA DEĞİL: rapor üreteci kendi
     // dosyasına taşındı (js/cp-fead-report.js) ve orada test ediliyor
     // (tests/unit/cp-fead-report.test.js). Aynı adı iki dosyada üst-seviye
@@ -742,43 +744,12 @@ describe('güç eğrisi kartı', () => {
   });
 });
 
-describe('örnek paneli: tedarikçi sayfası kurulabilir', () => {
-  test('kayıt defterindeki her örnek ERİŞİLEBİLİR — açılır listede', () => {
-    // YÜZEY DEĞİŞTİ: örnek başına bir kart+düğme yerine tek bir açılır liste
-    // (kullanıcı, 2026-09-02: *"pencereyi uzatmasaydın... aşağıya indirilebilir
-    // bir pencere yapsaydın"*). Kapının tuttuğu şey aynı: HİÇBİR ÖRNEK
-    // listeden düşmemeli. Kurma düğmesi artık SEÇİLİ örneğe bakıyor.
-    const html = fead.getFeadExamplePropertiesHTML(kasnak('fead-example', {}));
-    veFeadExampleKeys().forEach((k) => {
-      expect(html).toMatch(new RegExp('<option value="' + k + '"'));
-    });
-    expect(html).toMatch(/veFeadLoadExample\('/);            // kurma yolu duruyor
-    expect(html).not.toMatch(/Hesap çekirdeği bekleniyor/);   // artık boş değil
-  });
-
-  test('PANEL ÖRNEK SAYISIYLA BÜYÜMÜYOR — asıl kazanç bu', () => {
-    // Sorun buydu: on iki örnek → 12 kart · ~21 KB · 60 satır. Kapı sayıya
-    // değil BİÇİME bakıyor — örnek başına bir kurma düğmesi üretilirse panel
-    // yine uzar. Künye YALNIZ seçili örnek için basılıyor.
-    const html = fead.getFeadExamplePropertiesHTML(kasnak('fead-example', {}));
-    expect(veFeadExampleKeys().length).toBeGreaterThan(10);
-    expect((html.match(/veFeadLoadExample\('/g) || [])).toHaveLength(1);
-    expect((html.match(/<select/g) || [])).toHaveLength(1);
-  });
-
-  test('seçim DÜĞÜMDE duruyor ve künye onunla değişiyor', () => {
-    // Seçmek KURMAK değil; ayrıca panel yeniden çizilince seçim kaybolmamalı.
-    const keys = veFeadExampleKeys();
-    const n = kasnak('fead-example', { pick: keys[2] });
-    const html = fead.getFeadExamplePropertiesHTML(n);
-    expect(html).toMatch(new RegExp('<option value="' + keys[2] + '" selected'));
-    // Künye SEÇİLİ örneğin: kayış tipi örnek başına tekil ve kaçışlanmadan
-    // geçiyor (not metni `&` içerebildiği için doğrudan karşılaştırılmaz).
-    expect(html).toContain(veFeadExampleOf(keys[2]).belt.beltType);
-    // Başka bir örneğin künyesi BASILMIYOR — on iki kez tekrar kalktı.
-    expect(html).not.toContain(veFeadExampleOf(keys[0]).belt.beltType);
-  });
-});
+// "ÖRNEK PANELİ" KAPILARI TAŞINDI. Bileşen 2026-09-09'da kaldırıldı (kullanıcı:
+// *"Gerek yok"*) ve tuttukları üç hüküm sihirbazın 1. adımında zaten kapılı:
+// hiçbir örnek listeden düşmüyor (`fead-examples-gates.test.js` → *"sihirbazın
+// 1. adımı HEPSİNİ listeliyor"*), pencere örnek sayısıyla büyümüyor ve seçim
+// künyeyi değiştiriyor (`fead-wizard.test.js` → *"örnekten doldur — AÇILIR
+// LİSTE"*). Buraya kopya bir kapı açmak aynı hükmü iki yerde tutmak olurdu.
 
 describe('servis faktörü sonuç tablosunda hüküm veriyor', () => {
   // Sahte bir sonuç nesnesi: gerçek çözüm bu dosyanın işi değil (fead-example
@@ -2256,5 +2227,110 @@ describe('kurucular TEK geri-al adımı bırakıyor', () => {
     // yığını sıfırlardı.
     expect(iz.sarma).toBe(1);
     expect(iz.taban).toBeUndefined();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  BOŞ BİR FEAD TOPOLOJİSİ SİHİRBAZLA KARŞILAR
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı isteği (2026-09-09): *"FEAD modülünü ana topoloji kısmından
+// açtığım zaman, direkt karşıma 'Başlangıç Sihirbazı' bileşeninin gelmesini
+// istiyorum."* Eskiden karşılayan şey BOŞ bir Kayış Tablosuydu: doldurulacak
+// hiçbir satırı yok, ne yapılacağını da söylemiyordu.
+describe('FEAD editörü açılışı', () => {
+  const kabuk = () => {
+    document.body.innerHTML = '<div id="ve-canvas"></div>';
+    global.nodes = []; global.connections = [];
+    const iz = { wiz: 0, yuklenen: [] };
+    global.veSerializeCurrentState = () => ({ nodes: [], connections: [] });
+    global.veClearCanvasDOM = () => {};
+    global.veLoadTabState = (o) => { iz.yuklenen.push(o && o.state ? 'kayıt' : 'boş'); };
+    // Sahte olan yalnız MODALI AÇAN çağrı; `veFeadWizOpenAny`nin kendisi
+    // gerçek koşuyor (sihirbaz düğümünü bulma/kurma yolu da ölçülsün).
+    global.veFeadWizOpen = (id) => { iz.wiz++; iz.wizId = id; return true; };
+    let k = 0;
+    global.createNode = (type, x, y) => {
+      const d = componentDefs[type] || {};
+      if (d.maxInstances && global.nodes.filter((n) => n.type === type).length >= d.maxInstances)
+        return null;
+      const n = { id: 'oe' + ++k, type, def: d, x, y, data: {} };
+      global.nodes.push(n); return n;
+    };
+    return iz;
+  };
+  const sok = () => {
+    ['veSerializeCurrentState', 'veClearCanvasDOM', 'veLoadTabState',
+     'veFeadWizOpen', 'createNode'].forEach((k) => { delete global[k]; });
+  };
+
+  test('KAYITSIZ topolojiye girince sihirbaz AÇILIR', () => {
+    const iz = kabuk();
+    global.nodes = [{ id: 'fa1', type: 'fead-analysis', data: {} }];
+    fead.veFeadOpenEditor('fa1');
+    sok();
+    expect(iz.yuklenen).toEqual(['boş']);
+    expect(iz.wiz).toBe(1);
+    // Açılış yüzeyi de kuruldu: sihirbazı kapatan kullanıcı boş bir kanvasa
+    // düşmesin — bu bir kapı değil bir karşılama.
+    expect(global.nodes.filter((n) => n.type === 'fead-wizard').length).toBe(1);
+    expect(global.nodes.filter((n) => n.type === 'fead-table').length).toBe(1);
+    // Ve açılan sihirbaz KANVASTAKİ düğümün kendisi — ikinci bir kopya
+    // kurulmuyor (düğüm kullanıcının yarım bıraktığı formu taşıyor).
+    expect(iz.wizId).toBe(global.nodes.filter((n) => n.type === 'fead-wizard')[0].id);
+  });
+
+  test('KURULMUŞ bir modele dönerken sihirbaz AÇILMAZ', () => {
+    const iz = kabuk();
+    // Her girişte kapatılması gereken bir pencereyle karşılamak, karşılamayı
+    // engele çevirirdi.
+    global.nodes = [{ id: 'fa2', type: 'fead-analysis',
+      data: { subTopology: { nodes: [{ id: 'x', type: 'fead-crank', data: {} }],
+                             connections: [] } } }];
+    fead.veFeadOpenEditor('fa2');
+    sok();
+    expect(iz.yuklenen).toEqual(['kayıt']);
+    expect(iz.wiz).toBe(0);
+  });
+
+  test('GÖRÜNMEZ geri-giriş (_silent) sihirbaz AÇMAZ', () => {
+    const iz = kabuk();
+    // autosave köke çöküp kullanıcıyı iç topolojiye geri getiriyor; orada
+    // kullanıcı FEAD'e "girmiyor" bile.
+    global.nodes = [{ id: 'fa3', type: 'fead-analysis', data: {} }];
+    fead.veFeadOpenEditor('fa3', true);
+    sok();
+    expect(iz.wiz).toBe(0);
+  });
+});
+
+// ── "BAŞLANGIÇ VE ÖRNEKLER" KALDIRILDI — NEGATİF KAPI ─────────────────────
+// Kullanıcı isteği (2026-09-09): *"'Başlangıç ve Örnekler' bileşenini de
+// oradan kaldıralım. Gerek yok."* Sunduğu iki şey (sihirbaz düğmesi + örnek
+// listesi) sihirbazın 1. adımında zaten vardı.
+//
+// Kapı BEŞ YÜZEYE birden bakıyor, çünkü bir bileşen beş yerden asılı ve biri
+// unutulursa hata SESSİZ: palette duran ama tanımı olmayan bir kutu hiçbir şey
+// kurmaz, tanımı olup paneli olmayan bir düğüm boş panel açar.
+describe('"Başlangıç ve Örnekler" bileşeni kaldırıldı', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const oku = (f) => fs.readFileSync(path.join(__dirname, '../../', f), 'utf8');
+
+  test('kayıt defteri · palet · panel dağıtımı · açılış yerleşimi — beşi de temiz', () => {
+    expect(componentDefs['fead-example']).toBeUndefined();
+    Object.keys(VE_MODULES).forEach((m) => {
+      expect((VE_MODULES[m].components) || []).not.toContain('fead-example');
+    });
+    expect(oku('index.html')).not.toContain('fead-example');
+    expect(oku('js/cp-core.js')).not.toContain('fead-example');
+    expect(fead.VE_FEAD_STARTER_LAYOUT.map((it) => it.type)).not.toContain('fead-example');
+    expect(fead.getFeadExamplePropertiesHTML).toBeUndefined();
+  });
+
+  test('örnek KURUCUSU duruyor — sihirbazın "Modeli Kur"u ile aynı işi yapan yol', () => {
+    // Kaldırılan şey bileşendi, yetenek değil: `veFeadLoadExample` testlerin
+    // kanonik model kurucusu ve sihirbazın kurulum yolunun aynadaki eşi.
+    expect(typeof fead.veFeadLoadExample).toBe('function');
   });
 });
