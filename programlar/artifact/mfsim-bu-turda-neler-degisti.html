@@ -1,0 +1,424 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>MFSim — Bu Turda Neler Değişti</title>
+
+<style>
+  :root{
+    --ground:#f6f7f9; --panel:#ffffff; --panel-2:#eef1f5;
+    --rule:#dde2e9; --rule-2:#c7cfdb;
+    --ink:#141a24; --ink-2:#4d5768; --ink-3:#7b8598;
+    --accent:#1d4ed8; --warn:#b45309; --ok:#15803d;
+    --font-ui:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --font-mono:ui-monospace,"SF Mono",SFMono-Regular,"Cascadia Mono","Fira Code","Roboto Mono",Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ground:#0a0c10; --panel:#0f1218; --panel-2:#151a22;
+      --rule:#1c2333; --rule-2:#2a3547;
+      --ink:#c8d1dc; --ink-2:#8b96a8; --ink-3:#59647a;
+      --accent:#3b82f6; --warn:#f59e0b; --ok:#22c55e;
+    }
+  }
+  :root[data-theme="light"]{
+    --ground:#f6f7f9; --panel:#ffffff; --panel-2:#eef1f5;
+    --rule:#dde2e9; --rule-2:#c7cfdb;
+    --ink:#141a24; --ink-2:#4d5768; --ink-3:#7b8598;
+    --accent:#1d4ed8; --warn:#b45309; --ok:#15803d;
+  }
+  :root[data-theme="dark"]{
+    --ground:#0a0c10; --panel:#0f1218; --panel-2:#151a22;
+    --rule:#1c2333; --rule-2:#2a3547;
+    --ink:#c8d1dc; --ink-2:#8b96a8; --ink-3:#59647a;
+    --accent:#3b82f6; --warn:#f59e0b; --ok:#22c55e;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:var(--font-ui); font-size:16px; line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{ max-width:900px; margin:0 auto; padding:0 24px 96px; }
+
+  /* ── Başlık ───────────────────────────────────────────── */
+  header{ padding:64px 0 34px; }
+  .eyebrow{
+    font-family:var(--font-mono); font-size:0.7rem; font-weight:600;
+    letter-spacing:0.16em; text-transform:uppercase; color:var(--ink-3);
+    display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::after{ content:""; flex:1; height:1px; background:var(--rule); }
+  h1{
+    font-family:var(--font-mono); font-weight:600;
+    font-size:clamp(1.6rem, 4vw, 2.4rem); line-height:1.15;
+    letter-spacing:-0.015em; margin:22px 0 0; text-wrap:balance;
+  }
+  h1 .dim{ color:var(--ink-3); }
+  .lede{ margin:18px 0 0; font-size:1.05rem; color:var(--ink-2); max-width:62ch; }
+
+  /* ── Özet sayılar ─────────────────────────────────────── */
+  .stats{
+    display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1px;
+    background:var(--rule); border:1px solid var(--rule);
+    border-radius:10px; overflow:hidden; margin-top:32px;
+  }
+  @media (max-width:640px){ .stats{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  .stat{ background:var(--panel); padding:16px 18px; }
+  .stat .n{
+    font-family:var(--font-mono); font-size:1.5rem; font-weight:600;
+    line-height:1.1; font-variant-numeric:tabular-nums; color:var(--ink);
+  }
+  .stat .n .plus{ color:var(--ok); }
+  .stat .k{
+    font-family:var(--font-mono); font-size:0.6rem; font-weight:600;
+    letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);
+    margin-top:6px;
+  }
+
+  /* ── Bölüm ────────────────────────────────────────────── */
+  section{ padding-top:56px; }
+  h2{
+    font-family:var(--font-mono); font-size:0.78rem; font-weight:600;
+    letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-2);
+    margin:0 0 24px; padding-bottom:10px; border-bottom:1px solid var(--rule);
+    display:flex; align-items:baseline; gap:12px;
+  }
+  h2 .note{
+    margin-left:auto; font-size:0.68rem; letter-spacing:0.06em;
+    text-transform:none; color:var(--ink-3); font-weight:400;
+  }
+  p{ margin:0 0 14px; }
+  code{
+    font-family:var(--font-mono); font-size:0.86em;
+    background:var(--panel-2); border:1px solid var(--rule);
+    padding:0.1em 0.4em; border-radius:4px; color:var(--ink);
+  }
+
+  /* ── PR zaman çizgisi ─────────────────────────────────── */
+  /* Numaralandırma burada gerçek bir sıra: her PR bir öncekinin üzerine
+     kuruluyor (#604 #603'ün modelini düzeltiyor, #606 #605'i topluyor). */
+  ol.prs{ list-style:none; margin:0; padding:0; }
+  ol.prs > li{
+    position:relative; padding:0 0 34px 60px;
+    border-left:1px solid var(--rule); margin-left:26px;
+  }
+  ol.prs > li:last-child{ border-left-color:transparent; padding-bottom:0; }
+  .pr-num{
+    position:absolute; left:-26px; top:0;
+    width:52px; height:26px; border-radius:13px;
+    background:var(--panel); border:1px solid var(--rule-2);
+    color:var(--ink-2); font-family:var(--font-mono); font-size:0.68rem;
+    font-weight:700; letter-spacing:0.02em;
+    display:flex; align-items:center; justify-content:center;
+    font-variant-numeric:tabular-nums;
+  }
+  ol.prs > li.is-fix .pr-num{ color:var(--warn); border-color:color-mix(in srgb,var(--warn) 45%,transparent); }
+  h3{
+    font-family:var(--font-mono); font-size:1rem; font-weight:600;
+    margin:0 0 4px; letter-spacing:-0.005em; color:var(--ink);
+  }
+  .pr-kicker{
+    font-family:var(--font-mono); font-size:0.62rem; font-weight:600;
+    letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);
+    margin-bottom:10px;
+  }
+  ol.prs p{ color:var(--ink-2); font-size:0.95rem; max-width:62ch; }
+  ul.bullets{ margin:12px 0 0; padding:0; list-style:none; }
+  ul.bullets li{
+    position:relative; padding-left:18px; margin-bottom:7px;
+    font-size:0.93rem; color:var(--ink-2); max-width:62ch;
+  }
+  ul.bullets li::before{
+    content:""; position:absolute; left:2px; top:0.65em;
+    width:5px; height:5px; border-radius:50%; background:var(--rule-2);
+  }
+  ul.bullets li strong{ color:var(--ink); font-weight:600; }
+
+  /* Hata rozeti */
+  .bug{
+    display:block; margin-top:14px; padding:12px 14px;
+    background:var(--panel); border:1px solid var(--rule);
+    border-left:2px solid var(--warn); border-radius:0 8px 8px 0;
+    font-size:0.9rem; color:var(--ink-2);
+  }
+  .bug b{ color:var(--ink); font-weight:600; }
+  .bug .tag{
+    display:block; font-family:var(--font-mono); font-size:0.58rem;
+    font-weight:700; letter-spacing:0.12em; text-transform:uppercase;
+    color:var(--warn); margin-bottom:5px;
+  }
+
+  /* ── Tablolar ─────────────────────────────────────────── */
+  .tablewrap{ overflow-x:auto; border:1px solid var(--rule); border-radius:10px; }
+  table{ width:100%; border-collapse:collapse; font-size:0.9rem; }
+  thead th{
+    text-align:left; font-family:var(--font-mono); font-size:0.6rem;
+    font-weight:700; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--ink-3); padding:11px 16px; background:var(--panel-2);
+    border-bottom:1px solid var(--rule); white-space:nowrap;
+  }
+  tbody td{
+    padding:11px 16px; border-bottom:1px solid var(--rule);
+    color:var(--ink-2); background:var(--panel); vertical-align:top;
+  }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody td:first-child{ color:var(--ink); }
+  td .mono{ font-family:var(--font-mono); font-size:0.86em; }
+  td .num{ font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+  /* ── Uyarı listesi ────────────────────────────────────── */
+  dl.caveats{ margin:0; display:grid; gap:1px; background:var(--rule);
+              border:1px solid var(--rule); border-radius:10px; overflow:hidden; }
+  dl.caveats > div{ background:var(--panel); padding:16px 20px;
+                    display:grid; grid-template-columns:minmax(130px,180px) 1fr; gap:20px; }
+  @media (max-width:640px){ dl.caveats > div{ grid-template-columns:1fr; gap:4px; } }
+  dl.caveats dt{
+    font-family:var(--font-mono); font-size:0.7rem; font-weight:600;
+    letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-3);
+    padding-top:2px;
+  }
+  dl.caveats dd{ margin:0; font-size:0.92rem; color:var(--ink-2); }
+  dl.caveats dd strong{ color:var(--ink); font-weight:600; }
+
+  footer{
+    margin-top:64px; padding-top:20px; border-top:1px solid var(--rule);
+    font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.06em;
+    color:var(--ink-3); display:flex; gap:18px; flex-wrap:wrap;
+  }
+
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">MFSim · Değişiklik Özeti</div>
+  <h1>Ölçüm İmleci, Ortak Eksen<br><span class="dim">ve Fluent Şerit</span></h1>
+  <p class="lede">
+    Dört birleştirilmiş PR: Sonuçlar sekmesine CANoe tarzı ölçüm imleci geldi,
+    pano tek X ekseni üzerinde çalışır oldu, komutlar menüden Fluent şeride
+    taşındı ve şerit sonrası üst krom sadeleştirildi.
+  </p>
+
+  <div class="stats">
+    <div class="stat"><div class="n">4</div><div class="k">Birleşen PR</div></div>
+    <div class="stat"><div class="n">2</div><div class="k">Yeni modül</div></div>
+    <div class="stat"><div class="n"><span class="plus">+53</span></div><div class="k">Yeni test</div></div>
+    <div class="stat"><div class="n">780</div><div class="k">Test (44 suite)</div></div>
+  </div>
+</header>
+
+<section>
+  <h2>Sırayla ne oldu <span class="note">her adım bir öncekinin üzerine kuruluyor</span></h2>
+
+  <ol class="prs">
+
+    <li>
+      <span class="pr-num">#603</span>
+      <div class="pr-kicker">Yeni özellik</div>
+      <h3>Ölçüm imleci</h3>
+      <p>Fare grafiğin üzerinde gezerken dikey bir çizgi eğrileri kesiyor ve o
+         andaki tüm sensör değerlerini gösteriyor. Panel başına imleç zaten
+         vardı; CANoe'yu kullanışlı kılan üç davranış eksikti.</p>
+      <ul class="bullets">
+        <li><strong>Senkron imleç</strong> — aynı X eksenini paylaşan paneller aynı noktaya kilitleniyor.</li>
+        <li><strong>Sabit referans imleç (Δ)</strong> — tıklayınca imleç sabitleniyor; gezindikçe ΔX ve her sinyal için Δdeğer okunuyor.</li>
+        <li><strong>Legend'da canlı değer</strong> — CANoe'nun sol sütundaki değer okumasının karşılığı.</li>
+        <li>Ok tuşlarıyla örnek örnek adımlama (<code>Shift</code> ile 10×), senkron aç/kapa düğmesi.</li>
+      </ul>
+      <p style="margin-top:12px;">Oynat düğmesi aynı imleç yolunu kullandığı için
+         tarama <strong>bedavaya senkron panellerde birlikte</strong> ilerler oldu.</p>
+    </li>
+
+    <li>
+      <span class="pr-num">#604</span>
+      <div class="pr-kicker">Model düzeltmesi</div>
+      <h3>Ortak X ekseni</h3>
+      <p>#603 farklı X eksenli panelleri senkron <em>dışında bırakıyordu</em> —
+         "bu panel senkronlanmaz" diye bir durum vardı. Doğru model bunun tersi:
+         pano tek bir X ekseni üzerinde çalışır, sensörler ona göre çekilir,
+         dolayısıyla çizgi zaten tüm paneller için ortaktır.</p>
+      <ul class="bullets">
+        <li>İlk dolu panel panonun eksenini belirler; farklı eksen isteyen diyagram hiçbir panele giremez.</li>
+        <li>Uyumsuz diyagramlar Veri Gezgini'nde <strong>sürüklenmeden önce</strong> kilitli görünür.</li>
+        <li>Sinyaller panonun eksenini devralır; X ekseni seçicisi <strong>tüm panelleri birden</strong> değiştirir.</li>
+        <li>Pano temizlenince eksen serbest kalır. 3D paneller kural dışı.</li>
+      </ul>
+      <div class="bug">
+        <span class="tag">Rehber yazılırken çıkan eksik</span>
+        Paneller aynı X <b>değerine</b> kilitleniyordu ama plot alanları farklı yerden
+        başlıyordu — marj her panelde kendi eksen sayısından hesaplanıyordu. Üst üste
+        duran panellerde imleç birkaç piksel kayıyor, "tek çizgi" hissi bozuluyordu.
+        Marj pano geneline çekildi; aynı X değeri artık her panelde <b>aynı piksele</b> düşüyor.
+      </div>
+    </li>
+
+    <li>
+      <span class="pr-num">#605</span>
+      <div class="pr-kicker">Yeni özellik</div>
+      <h3>Fluent tarzı şerit</h3>
+      <p>Komutlar marka menüsünde ve komut paletinde duruyordu — keşfedilmesi için
+         önce aranması gerekiyordu. Şerit bunu tersine çevirdi.</p>
+      <ul class="bullets">
+        <li><strong>Giriş · Görünüm · Araçlar</strong> sekmeleri, etiketli gruplar, büyük/küçük butonlar.</li>
+        <li><strong>Sonuç Araçları</strong> — bağlamsal sekme, yalnızca Sonuçlar sayfasında belirir; ölçüm imleci komutlarını görünür kılar.</li>
+        <li>Hızlı Erişim Araç Çubuğu (Kaydet / Geri / İleri).</li>
+        <li>Aç/kapa komutları gerçek durumu okuyup basılı görünür; şerit daraltılabilir, daraltılmışken sekmeye tıklamak gövdeyi geçici açar.</li>
+      </ul>
+      <div class="bug">
+        <span class="tag">Merge öncesi denetimde yakalandı</span>
+        Hızlı erişimdeki "Kaydet" <code>onclick</code> ile bağlıydı; aynı komut menüde
+        de bulunduğundan E2E testindeki seçici <b>iki elemanla eşleşiyordu</b> —
+        Playwright strict-mode ihlali. Ölçüldü: <span class="num">main</span>'de 1 eşleşme,
+        dalda 2. Delegasyona çevrildi.
+      </div>
+    </li>
+
+    <li class="is-fix">
+      <span class="pr-num">#606</span>
+      <div class="pr-kicker">Sadeleştirme</div>
+      <h3>Üst krom toparlandı</h3>
+      <p>Şerit gelince üst üste <strong>dört krom bandı</strong> oluşmuştu ve
+         dördüncüsü şeritteki komutları 150 px arayla tekrarlıyordu — 14 butondan
+         12'si birebir aynıydı.</p>
+      <ul class="bullets">
+        <li>Canvas araç çubuğundaki komutlar kaldırıldı; şeritte olmayan iki komut (Sınırı Göster, Opaklık) şeride taşındı.</li>
+        <li><strong>Belge sekmeleri çalışma alanının altına alındı</strong> — CANoe'daki düzenin aynısı; üstteki dördüncü bant tamamen kalktı.</li>
+        <li>Aktif şerit sekmesi sakinleştirildi: kromdaki tek aksan-mavi metin artık sayfa sekmeleri. Önce üç yerde birden "buradayım" deniyordu.</li>
+        <li>Grup ayraçları kısaltıldı, ~1 KB ölü CSS temizlendi.</li>
+      </ul>
+      <div class="bug">
+        <span class="tag">Açık temaya bakarken görüldü</span>
+        Büyük + küçük buton içeren grupta ızgara bozuluyordu: büyük buton bir satır
+        sayıldığından küçükler taşıp grup etiketinin üstüne biniyordu —
+        <b>Görünüm → Yakınlaştırma grubunda "Uzaklaştır" hiç görünmüyordu.</b>
+        Düzeltildi ve doğrulamaya <b>tüm sekmeleri tarayan bir taşma kontrolü</b>
+        eklendi ki bu bir daha gözle yakalamaya kalmasın.
+      </div>
+    </li>
+
+  </ol>
+</section>
+
+<section>
+  <h2>Neler eklendi</h2>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>Dosya</th><th>Ne yapar</th><th>Satır</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="mono">js/chart-cursor.js</span></td>
+          <td>Ölçüm imleci: durum, X ekseni kimliği, ortak eksen kuralı, senkron çizim, Δ hesabı</td>
+          <td><span class="num">+628</span></td>
+        </tr>
+        <tr>
+          <td><span class="mono">js/ribbon.js</span></td>
+          <td>Şerit: bildirimsel sekme/grup tanımı, çizim, durum göstergesi, daraltma</td>
+          <td><span class="num">+392</span></td>
+        </tr>
+        <tr>
+          <td><span class="mono">tests/unit/chart-cursor.test.js</span></td>
+          <td>İmleç çekirdeği ve ortak eksen kuralı — 39 test</td>
+          <td><span class="num">+344</span></td>
+        </tr>
+        <tr>
+          <td><span class="mono">tests/unit/ribbon.test.js</span></td>
+          <td>Şerit tanım bütünlüğü — 14 test</td>
+          <td><span class="num">+141</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p style="margin-top:20px; color:var(--ink-2); font-size:0.93rem;">
+    Ayrıca <span class="mono" style="font-size:0.86em;">css/styles.css</span>,
+    <span class="mono" style="font-size:0.86em;">js/graphics.js</span>,
+    <span class="mono" style="font-size:0.86em;">js/results.js</span>,
+    <span class="mono" style="font-size:0.86em;">js/topology.js</span>,
+    <span class="mono" style="font-size:0.86em;">js/tabs.js</span> ve
+    <span class="mono" style="font-size:0.86em;">index.html</span> güncellendi.
+    Toplam <span class="num">+2035 / −251</span> satır, 11 dosya.
+  </p>
+</section>
+
+<section>
+  <h2>Testler <span class="note">neye test yazıldı, neye yazılmadı</span></h2>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>Kapsam</th><th>Neden değerli</th><th>Adet</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>İmleç çekirdeği</td>
+          <td>Örnek kilitleme, değer okuma, Δ hesabı — sessiz bir kayma "makul ama yanlış" bir sayı gösterir, gözle yakalanmaz</td>
+          <td><span class="num">30</span></td>
+        </tr>
+        <tr>
+          <td>Ortak eksen kuralı</td>
+          <td>Kural gevşerse imleç "tüm paneller için ortak" olmaktan çıkar, kullanıcı farkında olmadan senkronsuz panel edinir</td>
+          <td><span class="num">9</span></td>
+        </tr>
+        <tr>
+          <td>Şerit tanımı</td>
+          <td>Her komut gerçek bir fonksiyona, her ikon tanımlı bir ikona işaret etmeli — ikisi de sessizce kırılır ve ancak o sekme açılınca fark edilir</td>
+          <td><span class="num">14</span></td>
+        </tr>
+        <tr>
+          <td>Çizim / DOM katmanı</td>
+          <td><em>Kasıtlı olarak yazılmadı</em> — HTML string assertion'ları kırılgan ve düşük değerli (proje test politikası)</td>
+          <td><span class="num">—</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:20px; color:var(--ink-2); font-size:0.93rem;">
+    Birim testlerin kapsamadığı davranış için her turda gerçek Chromium'da
+    ölçüm yapıldı: <strong>32 + 11 + 21 + 20 + 15 kontrol</strong> — senkron
+    çizim, Δ aritmetiği, bırakma reddi, sürükle-bırak koordinatı, modal
+    z-index'i, taşma taraması ve daha fazlası.
+  </p>
+</section>
+
+<section>
+  <h2>Bilinmesi gerekenler</h2>
+  <dl class="caveats">
+    <div>
+      <dt>Dikey alan</dt>
+      <dd>Üst krom <strong>34 px → 146 px</strong>. Şerit daraltılınca 60 px'e iner ve
+          tercih saklanır. Ayrı bir "klasik görünüm" modu eklenmedi — daraltılmış
+          şerit zaten o işi görüyor.</dd>
+    </div>
+    <div>
+      <dt>E2E süiti</dt>
+      <dd>Bu ortamdaki Chromium sürümü kurulu Playwright ile uyuşmadığından
+          <strong>koşturulamadı</strong>. Etkilenen seçiciler elle doğrulandı
+          (kapsamlı seçiciler tam 1 eşleşme veriyor) ve testler yeni yapıya
+          göre güncellendi. CI <span class="mono" style="font-size:0.86em;">main</span>'de koşuyor.</dd>
+    </div>
+    <div>
+      <dt>Tema kontrolü</dt>
+      <dd>On temanın <strong>ikisinde</strong> göz kontrolü yapıldı (koyu
+          <span class="mono" style="font-size:0.86em;">slate</span>, açık
+          <span class="mono" style="font-size:0.86em;">pearl</span>). Şerit ayrı palet
+          kullanmayıp tema değişkenlerinden beslendiği için diğerlerinin de uyması
+          gerekir, ama gözle bakılmadı.</dd>
+    </div>
+    <div>
+      <dt>Şeritteki boşluk</dt>
+      <dd>Az komutlu sekmelerde şeridin sağı boş kalır. Ribbon'larda normaldir;
+          yer doldurmak için komut uydurulmadı.</dd>
+    </div>
+  </dl>
+</section>
+
+<footer>
+  <span>MFSim</span>
+  <span>PR #603 · #604 · #605 · #606</span>
+  <span>780 test · 44 suite</span>
+</footer>
+
+</div>
+
+</body></html>

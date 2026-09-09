@@ -1,0 +1,815 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>MFSim — Yapı ve Yetkinlik Raporu</title>
+<style>
+  :root {
+    --paper: #EDF0F3;
+    --chrome-ink: #1B2530;
+    --chrome-muted: #5C6B7A;
+    --chrome-line: #C9D2DA;
+    --steel: #33556E;
+    --accent: #C93F0E;
+    --sheet: #F9FAFB;
+    --sheet-ink: #1B2530;
+    --sheet-muted: #5C6B7A;
+    --sheet-line: #D3DAE1;
+    --layer-bg: #FFFFFF;
+    --code-bg: #EDF1F4;
+    --node-fill: #E9EFF4;
+    --node-stroke: #587392;
+    --diag-line: #64748B;
+    --core-tint: #FAEFE7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #12161C;
+      --chrome-ink: #DCE3EA;
+      --chrome-muted: #8B99A6;
+      --chrome-line: #2A343E;
+      --steel: #7FA3C0;
+      --accent: #F06A2D;
+      --sheet: #1A212A;
+      --sheet-ink: #DCE3EA;
+      --sheet-muted: #96A4B1;
+      --sheet-line: #303B47;
+      --layer-bg: #202932;
+      --code-bg: #242E39;
+      --node-fill: #26303B;
+      --node-stroke: #6F8BA4;
+      --diag-line: #8494A3;
+      --core-tint: #33261E;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #12161C;
+    --chrome-ink: #DCE3EA;
+    --chrome-muted: #8B99A6;
+    --chrome-line: #2A343E;
+    --steel: #7FA3C0;
+    --accent: #F06A2D;
+    --sheet: #1A212A;
+    --sheet-ink: #DCE3EA;
+    --sheet-muted: #96A4B1;
+    --sheet-line: #303B47;
+    --layer-bg: #202932;
+    --code-bg: #242E39;
+    --node-fill: #26303B;
+    --node-stroke: #6F8BA4;
+    --diag-line: #8494A3;
+    --core-tint: #33261E;
+  }
+  :root[data-theme="light"] {
+    --paper: #EDF0F3;
+    --chrome-ink: #1B2530;
+    --chrome-muted: #5C6B7A;
+    --chrome-line: #C9D2DA;
+    --steel: #33556E;
+    --accent: #C93F0E;
+    --sheet: #F9FAFB;
+    --sheet-ink: #1B2530;
+    --sheet-muted: #5C6B7A;
+    --sheet-line: #D3DAE1;
+    --layer-bg: #FFFFFF;
+    --code-bg: #EDF1F4;
+    --node-fill: #E9EFF4;
+    --node-stroke: #587392;
+    --diag-line: #64748B;
+    --core-tint: #FAEFE7;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--chrome-ink);
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .wrap {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 44px 20px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 34px;
+  }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.82em;
+    background: var(--code-bg);
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+
+  /* ── Başlık ── */
+  header .eyebrow {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 10px;
+  }
+  header h1 {
+    font-size: clamp(1.7rem, 4vw, 2.4rem);
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    line-height: 1.12;
+    margin: 0 0 14px;
+    text-wrap: balance;
+  }
+  header .lede {
+    max-width: 65ch;
+    margin: 0;
+    color: var(--chrome-muted);
+  }
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin-top: 22px;
+    padding-top: 14px;
+    border-top: 1px solid var(--chrome-line);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.78rem;
+    color: var(--chrome-muted);
+  }
+  .stats b { color: var(--chrome-ink); font-weight: 600; }
+
+  /* ── Bölüm kartı ── */
+  .card {
+    background: var(--sheet);
+    color: var(--sheet-ink);
+    border: 1px solid var(--sheet-line);
+    border-radius: 10px;
+    padding: 22px 24px 20px;
+    box-shadow: 0 1px 3px rgba(10, 22, 34, 0.14);
+  }
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .sec-num {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.74rem;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .sec-head h2 {
+    font-size: 1.12rem;
+    font-weight: 750;
+    margin: 0;
+    letter-spacing: 0.005em;
+  }
+  .sec-src {
+    margin-left: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.7rem;
+    color: var(--sheet-muted);
+  }
+  .sec-intro {
+    margin: 0 0 18px;
+    color: var(--sheet-muted);
+    font-size: 0.9rem;
+    max-width: 72ch;
+  }
+  .card-notes {
+    margin-top: 18px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--sheet-line);
+    font-size: 0.82rem;
+    color: var(--sheet-muted);
+  }
+
+  /* ── 01 · Katman yığını ── */
+  .layer {
+    display: grid;
+    grid-template-columns: 215px 1fr;
+    gap: 6px 18px;
+    align-items: center;
+    border: 1px solid var(--sheet-line);
+    border-radius: 8px;
+    background: var(--layer-bg);
+    padding: 13px 16px;
+  }
+  .layer.core { border-color: var(--accent); background: var(--core-tint); }
+  .layer.aux  { border-style: dashed; margin-top: 16px; }
+  .layer-name {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+  .layer.core .layer-name { color: var(--accent); }
+  .layer-role { font-size: 0.78rem; color: var(--sheet-muted); grid-column: 1; }
+  .chips {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-content: center;
+  }
+  .chip {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.71rem;
+    padding: 3px 9px;
+    background: var(--code-bg);
+    border: 1px solid var(--sheet-line);
+    border-radius: 5px;
+    white-space: nowrap;
+  }
+  .flow-arrow {
+    display: flex;
+    justify-content: center;
+    color: var(--sheet-muted);
+    font-size: 0.62rem;
+    padding: 5px 0;
+    user-select: none;
+  }
+  .aux-caption {
+    margin: 16px 0 -10px;
+    font-size: 0.74rem;
+    color: var(--sheet-muted);
+    font-style: italic;
+  }
+  @media (max-width: 680px) {
+    .layer { grid-template-columns: 1fr; }
+    .chips { grid-column: 1; grid-row: auto; padding-top: 6px; }
+  }
+
+  /* ── 02 · Zaman çizelgesi ── */
+  .steps { list-style: none; margin: 0; padding: 0; }
+  .steps li { position: relative; padding: 0 0 20px 48px; }
+  .steps li:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: 15px; top: 32px; bottom: 2px;
+    width: 2px;
+    background: var(--sheet-line);
+  }
+  .step-n {
+    position: absolute; left: 0; top: 0;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: 1.5px solid var(--steel);
+    color: var(--steel);
+    background: var(--layer-bg);
+    display: flex; align-items: center; justify-content: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.74rem;
+    font-weight: 600;
+  }
+  .step-t { font-weight: 650; font-size: 0.92rem; padding-top: 4px; }
+  .step-d { color: var(--sheet-muted); font-size: 0.84rem; max-width: 62ch; }
+
+  /* ── 03 · SVG topoloji ── */
+  .diagram-scroll { overflow-x: auto; padding-bottom: 4px; }
+  .diagram-scroll svg { display: block; width: 100%; min-width: 960px; height: auto; }
+  .pt-box   { fill: var(--node-fill); stroke: var(--node-stroke); stroke-width: 1.4; }
+  .pt-acc   { fill: var(--code-bg);  stroke: var(--node-stroke); stroke-width: 1.2; }
+  .pt-ecm   { fill: none; stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 5 4; }
+  .pt-line  { stroke: var(--diag-line); stroke-width: 1.5; fill: none; }
+  .pt-dot   { fill: var(--node-stroke); }
+  .pt-t     { font: 600 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: var(--sheet-ink); text-anchor: middle; }
+  .pt-tb    { font: 700 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: var(--sheet-ink); text-anchor: middle; letter-spacing: 0.06em; }
+  .pt-sub   { font: 400 10.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: var(--sheet-muted); text-anchor: middle; }
+  .pt-grp   { font: 600 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: var(--sheet-muted); text-anchor: middle; letter-spacing: 0.14em; }
+  .pt-ecm-t { font: 600 11.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: var(--accent); text-anchor: middle; }
+  .ctrl-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 16px; }
+  .ctrl-cap {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--sheet-muted);
+    margin-right: 4px;
+  }
+  .chip.dashed { border-style: dashed; background: transparent; color: var(--sheet-muted); }
+
+  /* ── 04 · Veri akışı ── */
+  .stage {
+    border: 1px solid var(--sheet-line);
+    border-radius: 8px;
+    background: var(--layer-bg);
+    padding: 12px 16px;
+  }
+  .stage.core { border-color: var(--accent); background: var(--core-tint); }
+  .stage-k {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--steel);
+    margin-bottom: 2px;
+  }
+  .stage.core .stage-k { color: var(--accent); }
+  .stage-t { font-weight: 650; font-size: 0.92rem; }
+  .stage-d { color: var(--sheet-muted); font-size: 0.83rem; }
+  .grid-mini {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .mini {
+    background: var(--code-bg);
+    border: 1px solid var(--sheet-line);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .stage.core .mini { background: var(--layer-bg); }
+  .mini h4 {
+    margin: 0 0 3px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+  .mini p { margin: 0; font-size: 0.78rem; color: var(--sheet-muted); }
+
+  /* ── 05 · Yetkinlik kartları ── */
+  .cap-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(225px, 1fr));
+    gap: 14px;
+  }
+  .cap {
+    border: 1px solid var(--sheet-line);
+    border-radius: 8px;
+    background: var(--layer-bg);
+    padding: 16px 18px;
+  }
+  .cap h3 {
+    margin: 0 0 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--sheet-line);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+  .cap ul { margin: 0; padding: 0; list-style: none; }
+  .cap li {
+    padding: 3.5px 0;
+    font-size: 0.85rem;
+    display: flex;
+    gap: 9px;
+  }
+  .cap li::before { content: "▪"; color: var(--accent); font-size: 0.6rem; line-height: 1.9; }
+
+  /* ── 06 · Build & test ── */
+  .track { margin-bottom: 20px; }
+  .track:last-child { margin-bottom: 0; }
+  .track-label {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--steel);
+    margin-bottom: 9px;
+  }
+  .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+  .fstep {
+    border: 1px solid var(--sheet-line);
+    border-radius: 6px;
+    background: var(--layer-bg);
+    padding: 8px 13px;
+    min-width: 130px;
+  }
+  .fstep b { display: block; font-size: 0.82rem; font-weight: 650; }
+  .fstep span {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.7rem;
+    color: var(--sheet-muted);
+  }
+  .fstep.hl { border-color: var(--accent); background: var(--core-tint); }
+  .farrow {
+    align-self: center;
+    color: var(--sheet-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    user-select: none;
+  }
+
+  footer {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    color: var(--chrome-muted);
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Teknik Rapor · Yapı ve Yetkinlikler</p>
+    <h1>MFSim — Araç Performans Simülasyonu</h1>
+    <p class="lede">Tarayıcıda çalışan, saf HTML/CSS/JS ile framework kullanılmadan yazılmış motor fren ve
+    araç performans simülatörü. Bu rapor programın katmanlı mimarisini, açılış zincirini, güç aktarma
+    topolojisini, simülasyon veri akışını, yetkinliklerini ve build/test hattını altı bölümde özetler.</p>
+    <div class="stats">
+      <span><b>54</b> JS modülü</span>
+      <span><b>~53.000</b> satır JS</span>
+      <span><b>0</b> framework</span>
+      <span><b>Leaflet · Plotly · Three.js</b></span>
+      <span><b>Jest + Playwright</b></span>
+      <span><b>PWA</b> çevrimdışı</span>
+    </div>
+  </header>
+
+  <!-- ═══ 01 · KATMANLI MİMARİ ═══ -->
+  <section class="card">
+    <div class="sec-head">
+      <span class="sec-num">BÖLÜM 01</span>
+      <h2>Katmanlı Mimari</h2>
+      <span class="sec-src">index.html · js/*.js</span>
+    </div>
+    <p class="sec-intro">54 modül altı katmana ayrılır. Bağımlılık oku tek yönlüdür: üst katman alttakini
+    çağırır, tersi asla olmaz — özellikle hesap çekirdeği DOM'a hiç dokunmaz.</p>
+
+    <div class="layer">
+      <div class="layer-name">Kabuk</div>
+      <div class="layer-role">Giriş kapısı, modül yükleyici, çevrimdışı önbellek</div>
+      <div class="chips"><span class="chip">auth.js</span><span class="chip">loader.js</span><span class="chip">pwa/sw.js</span></div>
+    </div>
+    <div class="flow-arrow">▼</div>
+
+    <div class="layer">
+      <div class="layer-name">Topoloji Editörü</div>
+      <div class="layer-role">Kanvas, sürükle-bırak, bağlantılar, sekmeler, undo/redo</div>
+      <div class="chips"><span class="chip">ui-core</span><span class="chip">components</span><span class="chip">connections</span><span class="chip">topology</span><span class="chip">state</span><span class="chip">context-menus</span><span class="chip">node-resize</span></div>
+    </div>
+    <div class="flow-arrow">▼</div>
+
+    <div class="layer">
+      <div class="layer-name">Özellik Panelleri</div>
+      <div class="layer-role">Her bileşenin parametre ve veri giriş arayüzü (cp-*)</div>
+      <div class="chips"><span class="chip">cp-engine</span><span class="chip">cp-gearbox</span><span class="chip">cp-torque-converter</span><span class="chip">cp-drivetrain</span><span class="chip">cp-accessories</span><span class="chip">cp-matching</span><span class="chip">cp-mount</span><span class="chip">cp-solver</span></div>
+    </div>
+    <div class="flow-arrow">▼</div>
+
+    <div class="layer core">
+      <div class="layer-name">Hesap Çekirdeği</div>
+      <div class="layer-role">Saf fonksiyonlar — DOM erişimi yok, girdi/çıktı SI birimlerinde</div>
+      <div class="chips"><span class="chip">numerics</span><span class="chip">ft-performance</span><span class="chip">ft-segment-drive</span><span class="chip">ft-obstacle</span><span class="chip">mount-core</span><span class="chip">simulation-engine</span><span class="chip">solver / solver-pro</span></div>
+    </div>
+    <div class="flow-arrow">▼</div>
+
+    <div class="layer">
+      <div class="layer-name">Sonuç &amp; Görsel</div>
+      <div class="layer-role">Sonuç sekmeleri, grafikler, sensörler, harita, 3D, rapor</div>
+      <div class="chips"><span class="chip">results</span><span class="chip">graphics</span><span class="chip">sensors</span><span class="chip">map</span><span class="chip">cp-mount-viewer</span><span class="chip">cp-mount-report</span></div>
+    </div>
+
+    <p class="aux-caption">Akışın dışında, editörle yan yana çalışan yardımcı hizmetler:</p>
+    <div class="layer aux">
+      <div class="layer-name">Yan Hizmetler</div>
+      <div class="layer-role">Araç çubuğu, gezinme, dışa aktarma, tema, eğlence</div>
+      <div class="chips"><span class="chip">toolbar</span><span class="chip">command-palette</span><span class="chip">minimap</span><span class="chip">align-nodes</span><span class="chip">tidy-layout</span><span class="chip">export-topology</span><span class="chip">theme / settings</span><span class="chip">radio · 2048</span></div>
+    </div>
+
+    <div class="card-notes">
+      Hesap çekirdeği DOM içermediği için birim testler build gerektirmez — Jest doğrudan
+      <code>js/</code> dosyalarını yükler. UI katmanı çekirdeği çağırır; <code>mount-core.js</code>
+      başındaki kural: "UI katmanı çekirdeği çağırır; tersi asla olmaz."
+    </div>
+  </section>
+
+  <!-- ═══ 02 · AÇILIŞ ZİNCİRİ ═══ -->
+  <section class="card">
+    <div class="sec-head">
+      <span class="sec-num">BÖLÜM 02</span>
+      <h2>Açılış Zinciri</h2>
+      <span class="sec-src">auth.js · loader.js</span>
+    </div>
+    <p class="sec-intro">Modüller sayfa açılışında değil, girişten sonra sırayla yüklenir; kullanıcı
+    ilerleme çubuğunda hangi modülün yüklendiğini görür.</p>
+
+    <ol class="steps">
+      <li>
+        <span class="step-n">1</span>
+        <div class="step-t">Giriş kapısı</div>
+        <div class="step-d">SHA-256 parola doğrulaması; 5 hatalı denemede 60 saniye kilit. Başarılı giriş <code>localStorage</code>'a jeton yazar.</div>
+      </li>
+      <li>
+        <span class="step-n">2</span>
+        <div class="step-t">Yükleyici başlar</div>
+        <div class="step-d"><code>MFSimLoader.start()</code> çağrılır; login kapanır, splash ekranı açılır.</div>
+      </li>
+      <li>
+        <span class="step-n">3</span>
+        <div class="step-t">Harici kütüphaneler</div>
+        <div class="step-d">Önce Leaflet 1.9 (harita) ve Plotly 2.35 (grafik), zincirin ortasında Three.js (3D) yüklenir.</div>
+      </li>
+      <li>
+        <span class="step-n">4</span>
+        <div class="step-t">51 modül sırayla</div>
+        <div class="step-d"><code>text/x-mfsim-defer</code> işaretli scriptler tek tek çalıştırılır; her adımda ilerleme yüzdesi ve modül etiketi güncellenir.</div>
+      </li>
+      <li>
+        <span class="step-n">5</span>
+        <div class="step-t">Kuyruk boşaltılır, editör açılır</div>
+        <div class="step-d">Geç yükleme yüzünden kaçan <code>DOMContentLoaded</code> dinleyicileri elle tetiklenir; splash kapanır.</div>
+      </li>
+    </ol>
+
+    <div class="card-notes">
+      Aynı yükleyici iki sürümde de çalışır: geliştirme sürümünde (<code>index.html</code>) scriptler
+      harici dosyadan, üretim build'inde (<code>MFSim_Code.html</code>) satır içi içerikten yüklenir.
+    </div>
+  </section>
+
+  <!-- ═══ 03 · GÜÇ AKTARMA TOPOLOJİSİ ═══ -->
+  <section class="card">
+    <div class="sec-head">
+      <span class="sec-num">BÖLÜM 03</span>
+      <h2>Güç Aktarma Topolojisi</h2>
+      <span class="sec-src">cp-arac-performans.js</span>
+    </div>
+    <p class="sec-intro">"Araç Performans" alt-sistem düğümüne çift tıklanınca açılan hazır 8×8 şablon:
+    güç, motordan transfer kutusuna tek hat ilerler, oradan iki diferansiyele ve dört tekerleğe dallanır.</p>
+
+    <div class="diagram-scroll">
+      <svg viewBox="0 0 1200 330" role="img" aria-label="Güç aktarma zinciri diyagramı">
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 Z" fill="var(--diag-line)"/>
+          </marker>
+        </defs>
+
+        <!-- Aksesuarlar -->
+        <text class="pt-grp" x="80" y="38">AKSESUARLAR</text>
+        <rect class="pt-acc" x="15" y="55"  width="130" height="40" rx="5"/>
+        <text class="pt-t" x="80" y="79">Klima</text>
+        <rect class="pt-acc" x="15" y="115" width="130" height="40" rx="5"/>
+        <text class="pt-t" x="80" y="139">Alternatör</text>
+        <rect class="pt-acc" x="15" y="175" width="130" height="40" rx="5"/>
+        <text class="pt-t" x="80" y="199">Hava Komp.</text>
+
+        <line class="pt-line" x1="145" y1="75"  x2="196" y2="75"  marker-end="url(#arr)"/>
+        <line class="pt-line" x1="145" y1="135" x2="196" y2="135" marker-end="url(#arr)"/>
+        <line class="pt-line" x1="145" y1="195" x2="196" y2="195" marker-end="url(#arr)"/>
+
+        <!-- Motor -->
+        <rect class="pt-box" x="200" y="60" width="130" height="150" rx="7"/>
+        <text class="pt-tb"  x="265" y="125">MOTOR</text>
+        <text class="pt-sub" x="265" y="145">tork eğrisi</text>
+        <text class="pt-sub" x="265" y="160">governor</text>
+        <circle class="pt-dot" cx="200" cy="75"  r="3"/>
+        <circle class="pt-dot" cx="200" cy="135" r="3"/>
+        <circle class="pt-dot" cx="200" cy="195" r="3"/>
+        <circle class="pt-dot" cx="330" cy="135" r="3"/>
+
+        <!-- Zincir -->
+        <line class="pt-line" x1="330" y1="135" x2="376" y2="135" marker-end="url(#arr)"/>
+        <rect class="pt-box" x="380" y="109" width="120" height="52" rx="7"/>
+        <text class="pt-t" x="440" y="139">Tork Konvertörü</text>
+
+        <line class="pt-line" x1="500" y1="135" x2="536" y2="135" marker-end="url(#arr)"/>
+        <rect class="pt-box" x="540" y="109" width="110" height="52" rx="7"/>
+        <text class="pt-t" x="595" y="139">Şanzıman</text>
+
+        <line class="pt-line" x1="650" y1="135" x2="686" y2="135" marker-end="url(#arr)"/>
+        <rect class="pt-box" x="690" y="109" width="100" height="52" rx="7"/>
+        <text class="pt-t" x="740" y="139">Propşaft</text>
+
+        <line class="pt-line" x1="790" y1="135" x2="826" y2="135" marker-end="url(#arr)"/>
+        <rect class="pt-box" x="830" y="93" width="90" height="84" rx="7"/>
+        <text class="pt-t" x="875" y="130">Transfer</text>
+        <text class="pt-t" x="875" y="147">Kutusu</text>
+
+        <!-- Transfer → diferansiyeller -->
+        <polyline class="pt-line" points="920,117 940,117 940,80 956,80"   marker-end="url(#arr)"/>
+        <polyline class="pt-line" points="920,153 940,153 940,190 956,190" marker-end="url(#arr)"/>
+        <rect class="pt-box" x="960" y="58"  width="80" height="44" rx="7"/>
+        <text class="pt-t" x="1000" y="84">Dif. ★</text>
+        <rect class="pt-box" x="960" y="168" width="80" height="44" rx="7"/>
+        <text class="pt-t" x="1000" y="194">Dif.</text>
+
+        <!-- Diferansiyeller → tekerlekler -->
+        <polyline class="pt-line" points="1040,70 1062,70 1062,52 1086,52"     marker-end="url(#arr)"/>
+        <polyline class="pt-line" points="1040,90 1062,90 1062,108 1086,108"   marker-end="url(#arr)"/>
+        <polyline class="pt-line" points="1040,180 1062,180 1062,162 1086,162" marker-end="url(#arr)"/>
+        <polyline class="pt-line" points="1040,200 1062,200 1062,218 1086,218" marker-end="url(#arr)"/>
+        <rect class="pt-acc" x="1090" y="35"  width="68" height="34" rx="5"/>
+        <text class="pt-t" x="1124" y="56">Teker</text>
+        <rect class="pt-acc" x="1090" y="91"  width="68" height="34" rx="5"/>
+        <text class="pt-t" x="1124" y="112">Teker</text>
+        <rect class="pt-acc" x="1090" y="145" width="68" height="34" rx="5"/>
+        <text class="pt-t" x="1124" y="166">Teker</text>
+        <rect class="pt-acc" x="1090" y="201" width="68" height="34" rx="5"/>
+        <text class="pt-t" x="1124" y="222">Teker</text>
+
+        <!-- Motor → Eşleştirme analizi -->
+        <circle class="pt-dot" cx="355" cy="135" r="3"/>
+        <polyline class="pt-line" points="355,135 355,286 376,286" marker-end="url(#arr)"/>
+        <rect class="pt-ecm" x="380" y="260" width="200" height="52" rx="7"/>
+        <text class="pt-ecm-t" x="480" y="282">Motor–Konvertör Eşleştirme</text>
+        <text class="pt-sub"  x="480" y="299">Allison TD-148G kontrolleri</text>
+      </svg>
+    </div>
+
+    <div class="ctrl-row">
+      <span class="ctrl-cap">Bağlantısız kontrol düğümleri</span>
+      <span class="chip dashed">Çözücü</span>
+      <span class="chip dashed">Şanzıman Kontrol</span>
+      <span class="chip dashed">Araç — kütle · Cd · alan</span>
+      <span class="chip dashed">Senaryo / Yol / Engel</span>
+      <span class="chip dashed">Sensör Sihirbazı</span>
+    </div>
+
+    <div class="card-notes">
+      ★ işaretli diferansiyel "master"dır — tekerlek yarıçapı gibi ortak parametreler oradan okunur.
+      Aksesuarlar motorun ön portlarına bağlanır ve devire bağlı güç kaybı olarak motora işlenir
+      (<code>cp-accessories.js</code>). Takoz analizi modülü de aynı alt-sistem kalıbını kullanır;
+      iç topolojisinde bileşenler bağlantısızdır, çözücü hepsini otomatik algılar.
+    </div>
+  </section>
+
+  <!-- ═══ 04 · SİMÜLASYON VERİ AKIŞI ═══ -->
+  <section class="card">
+    <div class="sec-head">
+      <span class="sec-num">BÖLÜM 04</span>
+      <h2>Simülasyon Veri Akışı</h2>
+      <span class="sec-src">connections.js · ft-*.js · results.js</span>
+    </div>
+    <p class="sec-intro">"Hesapla" tuşundan grafiğe giden yol: topoloji önce doğrulanır, güç zinciri
+    çıkarılır, ilgili çözücü koşar, sonuçlar sensörler üzerinden görselleştirilir.</p>
+
+    <div class="stage">
+      <div class="stage-k">Girdi</div>
+      <div class="stage-t">Kanvas topolojisi</div>
+      <div class="stage-d">Düğümler + bağlantılar; her sekme kendi bağımsız topolojisini taşır.</div>
+    </div>
+    <div class="flow-arrow">▼</div>
+
+    <div class="stage">
+      <div class="stage-k">Kontrol</div>
+      <div class="stage-t">Doğrulama — <code>TopologyMath</code></div>
+      <div class="stage-d">Motor ve araç var mı, zincir kopuk mu, portlar uyumlu mu? Hata ve uyarı listesi üretir.</div>
+    </div>
+    <div class="flow-arrow">▼</div>
+
+    <div class="stage">
+      <div class="stage-k">Hazırlık</div>
+      <div class="stage-t">Güç zinciri çıkarımı — <code>veGetPowertrainChain</code></div>
+      <div class="stage-d">Bağlantı grafiğinden motordan tekerleğe sıralı hesap zinciri türetilir.</div>
+    </div>
+    <div class="flow-arrow">▼</div>
+
+    <div class="stage core">
+      <div class="stage-k">Çözücüler</div>
+      <div class="grid-mini">
+        <div class="mini"><h4>Tam gaz hızlanma</h4><p>FT_SOLVER — RK45 + PCHIP, eşdeğer kütle, konvertör/lockup fazları</p></div>
+        <div class="mini"><h4>Segment sürüş</h4><p>Segment başına tam gaz / gaz kesme komutu, eğim, entegratör restart</p></div>
+        <div class="mini"><h4>Engel atlama</h4><p>Araç + tekerlek geometrisi ile engel geçiş yeterliliği</p></div>
+        <div class="mini"><h4>Takoz 6 SD</h4><p>veMountCore — çökme-titreşim, otomatik yük durumları</p></div>
+      </div>
+      <div class="stage-d" style="margin-top:10px">Koşuyu <code>solver-pro.js</code> yönetir: ANSYS tarzı
+      ilerleme penceresi, adım adım log; projedeki diğer sekmeler de otomatik çözülür.</div>
+    </div>
+    <div class="flow-arrow">▼</div>
+
+    <div class="stage">
+      <div class="stage-k">Depo</div>
+      <div class="stage-t">Sonuç deposu — <code>window.veSimResults</code></div>
+      <div class="stage-d">Sekme başına sonuç saklanır; sensörler sinyal seçer, <code>@sekme:sensör</code> sözdizimi başka sekmenin verisini aynı grafiğe getirir.</div>
+    </div>
+    <div class="flow-arrow">▼</div>
+
+    <div class="stage">
+      <div class="stage-k">Çıktı</div>
+      <div class="grid-mini">
+        <div class="mini"><h4>Plotly grafikler</h4><p>3 sonuç sekmesi × 4 grafik slotu</p></div>
+        <div class="mini"><h4>Tablolar</h4><p>Sayısal tablolar ve özet kartları</p></div>
+        <div class="mini"><h4>Leaflet harita</h4><p>Rota ve eğim profili görünümü</p></div>
+        <div class="mini"><h4>3D + Rapor</h4><p>Three.js takoz görüntüleyici, HTML rapor üreteci</p></div>
+      </div>
+    </div>
+
+    <div class="card-notes">
+      Sonuç sekmeleri: <b>Performans Analizi</b> · <b>Hızlanma-Yavaşlama</b> · <b>Engel Atlama</b>
+      (<code>results.js</code>). Sensör sihirbazı hazır paketlerle sensörleri topolojiye otomatik yerleştirir.
+    </div>
+  </section>
+
+  <!-- ═══ 05 · YETKİNLİK HARİTASI ═══ -->
+  <section class="card">
+    <div class="sec-head">
+      <span class="sec-num">BÖLÜM 05</span>
+      <h2>Yetkinlik Haritası</h2>
+      <span class="sec-src">tüm modüller</span>
+    </div>
+    <p class="sec-intro">Programın yapabildikleri dört başlıkta toplanır: mühendislik analizleri, topoloji
+    editörü, görselleştirme ve platform özellikleri.</p>
+
+    <div class="cap-grid">
+      <div class="cap">
+        <h3>Analiz</h3>
+        <ul>
+          <li>Tam gaz hızlanma — RK45 + PCHIP</li>
+          <li>Segment bazlı sürüş analizi</li>
+          <li>Engel atlama analizi</li>
+          <li>Takoz çökme-titreşim — 6 SD</li>
+          <li>Motor–konvertör eşleştirme — Allison TD-148G</li>
+          <li>Motor–şanzıman eşleştirme</li>
+          <li>Aksesuar güç kayıpları</li>
+          <li>Enerji dengesi kontrolü</li>
+        </ul>
+      </div>
+      <div class="cap">
+        <h3>Editör</h3>
+        <ul>
+          <li>Çok sekmeli topoloji</li>
+          <li>Alt-sistem düğümleri — iç topoloji</li>
+          <li>50 adımlı undo / redo</li>
+          <li>Komut paleti — Ctrl+K</li>
+          <li>Minimap ve hizalama araçları</li>
+          <li>Otomatik düzen — tidy</li>
+          <li>Notlar ve etiketler</li>
+          <li>Sağ tık menüleri</li>
+        </ul>
+      </div>
+      <div class="cap">
+        <h3>Görselleştirme</h3>
+        <ul>
+          <li>Plotly grafik ve tablolar</li>
+          <li>Sensör sihirbazı paketleri</li>
+          <li>Leaflet harita — rota, eğim</li>
+          <li>Three.js 3D takoz görüntüleyici</li>
+          <li>PNG / SVG dışa aktarma</li>
+          <li>HTML takoz raporu</li>
+        </ul>
+      </div>
+      <div class="cap">
+        <h3>Platform</h3>
+        <ul>
+          <li>PWA — çevrimdışı çalışma</li>
+          <li>Açık / koyu tema</li>
+          <li>Proje kaydet-yükle — JSON</li>
+          <li>SHA-256 giriş ve kilitleme</li>
+          <li>Şema sürümü ve migrasyon</li>
+          <li>Radyo ve 2048 molası</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card-notes">
+      Sayısal çekirdek doğrulanmış referanslara dayanır: takoz modülü Adams BMC_TTAR_2031 ile, tam gaz
+      matematiği <code>Tam_Gaz_Hizlanma_Matematiksel_Hesaplar.txt</code> ile doğrulanır. Çekirdeğe giren
+      ve çıkan her büyüklük SI birimindedir.
+    </div>
+  </section>
+
+  <!-- ═══ 06 · BUILD ve TEST HATTI ═══ -->
+  <section class="card">
+    <div class="sec-head">
+      <span class="sec-num">BÖLÜM 06</span>
+      <h2>Build ve Test Hattı</h2>
+      <span class="sec-src">build.js · gen-version.js · tests/</span>
+    </div>
+    <p class="sec-intro">İki ayrı tempo: geliştirme döngüsü build'siz ve saniyeler içinde döner; yayın
+    hattı commit başına bir kez koşar.</p>
+
+    <div class="track">
+      <div class="track-label">Geliştirme döngüsü — kaydettikçe</div>
+      <div class="flow">
+        <div class="fstep"><b>Kaynak</b><span>js/ · css/ · index.html</span></div>
+        <div class="farrow">→</div>
+        <div class="fstep hl"><b>Jest watch</b><span>npm run test:watch</span></div>
+        <div class="farrow">→</div>
+        <div class="fstep"><b>Sonuç &lt; 1 sn</b><span>build gerekmez</span></div>
+      </div>
+    </div>
+
+    <div class="track">
+      <div class="track-label">Yayın hattı — commit başına bir kez</div>
+      <div class="flow">
+        <div class="fstep"><b>Build</b><span>npm run build</span></div>
+        <div class="farrow">→</div>
+        <div class="fstep"><b>MFSim_Code.html</b><span>tek dosya · git dışı</span></div>
+        <div class="farrow">→</div>
+        <div class="fstep hl"><b>Playwright E2E</b><span>Chromium · UI akışları</span></div>
+        <div class="farrow">→</div>
+        <div class="fstep"><b>CI deploy</b><span>GitHub Actions</span></div>
+        <div class="farrow">→</div>
+        <div class="fstep"><b>GitHub Pages</b><span>canlı demo</span></div>
+      </div>
+    </div>
+
+    <div class="card-notes">
+      <code>gen-version.js</code> her deploy'da commit SHA'sını build'e ve service-worker önbellek adına
+      damgalar; yeni SHA yeni önbellek demektir, eski önbellekler otomatik temizlenir ve tarayıcılar yeni
+      sürümü kendiliğinden alır. Birim testler: <code>numerics</code> · <code>state</code> ·
+      <code>toolbar-save</code> · <code>sensors</code>.
+    </div>
+  </section>
+
+  <footer>MFSim kaynak kodundan çıkarılmıştır · kaydgn/mfsim · 2026-07</footer>
+</div>
+
+</body></html>
