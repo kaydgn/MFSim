@@ -595,6 +595,34 @@ koordinatlarından çizilir; düğümü sürüklemek şemayı değiştirmez. Par
 | Üst künye | çizilen konumun adı · kol açısı · gerginlik |
 | Alt şerit | ✓/✗ · kasnak sayısı · L_eff · **Σsarım** (360° olmak ZORUNDA) |
 
+##### Kartın sunumu — seçilen bileşim (2026-09-09)
+
+**HÜKÜM: kanvas kartında ad KISA (parantezli ek atılır), sarım açıları KÜNYE
+TABLOSUNDA, kayış açıklıkları GERİLMEYE göre renkli, künye TEK satır.** Panel,
+rapor ve dışa aktarma DEĞİŞMEDİ: hepsi `veFeadLayoutSVG`'nin varsayılanlarını
+kullanıyor, yeni davranışın tamamı karttan geçen `opts`.
+
+| Ne | Kural | Gerekçe |
+|----|-------|---------|
+| Kısa ad (`shortNames`) | "Alternatör (155 A)" → "Alternatör" | Ad merkezde ortalandığı için etiket payı ÖLÇEĞİ kısıtlıyor; parantezli ek tabloda tam duruyor |
+| Sarım açısı | çizimden `veFeadCardTable`'a | Aynı sayı iki kez yazılmaz; kasnak altı boşalınca yerleştiricinin en sıkışık adayı açılıyor |
+| Tablo koşullu | çizime `VE_FEAD_CARD_MIN_DRAW`'dan az kalıyorsa tablo düşer, açılar çizime GERİ döner | Sayı hiçbir kipte kaybolmaz — ya tabloda ya kasnağın altında |
+| Gerilme haritası | yalnız AÇIKLIKLARDA; ankraj çizilen konumdan (`slackN`) | Gerilme çekirdekte açıklık başına tanımlı, sarım boyunca değişiyor ve tek sayısı yok; ankraj geçilmezse şema bir kol konumunu, renk başkasını anlatır |
+| Devir yoksa harita yok | `Durgun` ve senaryoda kayış temel amberi | Gerilme hız ve güç olmadan TANIMSIZ; uydurulmuş renk bu modülün sessiz sınıfı |
+| Künye tek satır | kinematik + titreşim ` · ` ile birleşir | Kullanıcı isteği; **damgalar KALIR** — `ağır çekim` katsayısı ve `KALİBRE DEĞİL` sonucun geçerlilik sınırı (kural 8). Senaryo dalı iki satır kalır, metni tek satıra sığmıyor |
+
+**AD ↔ SARIM AÇISI ÇAKIŞMASI KAPANDI.** Yerleştirici engel olarak yalnız kayış
+açıklıklarını ve yön gülünü sayıyordu; her kasnağın ALTINDAKİ açı yazısı
+listede yoktu, üst aday doluyken ad tam oraya düşüyordu (kullanıcı bildirimi:
+AG00976, "Avara 1" ile 52.83°). Açı etiketi artık **YUMUŞAK** engel — gül,
+açıklıklar ve öteki adlar sert kalır: sert engeli örtmek yapısal bilgiyi yok
+eder, bir sayıya binmek daha küçük zarardır. Tek listeye konsaydı ad, sayıdan
+kaçarken gülün üstüne düşerdi.
+
+**Kapı:** `tests/unit/fead-card-design.test.js` — altı mutasyonla ölçüldü
+(engeli kaldırma, açıyı sert engel yapma, kısa adı her yere yayma, ankrajı
+konumdan koparma, dar kartta tabloyu bırakma, künyeyi iki satıra döndürme).
+
 ##### Gergi kol konumu seçicisi
 
 Gergi kolu yay dengesinde duruyor: kayış uzayıp kısaldıkça (tolerans + aşınma)

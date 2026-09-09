@@ -1391,6 +1391,45 @@ function veFeadAnimRpmChoices(build){
   return out;
 }
 
+// ── AÇIKLIK GERİLMESİ HARİTASI (kanvas kartı) ──────────────────────────────
+// Kart kayışı gerilmeye göre renklendiriyor; sayının kaynağı ÇEKİRDEK, burada
+// yalnız çağrı var.
+//
+// ANKRAJ ÇİZİLEN KONUMDAN ALINIR (`slackN`). Gerilme zinciri gergi
+// açıklığından yürüyor ve o açıklığın gerilmesi kol konumuyla değişiyor
+// (AG00976: Serbest 260 N ↔ Mean 544 N ↔ Min 731 N). Geçilmeseydi harita hangi
+// konum çizilirse çizilsin sistemin tasarım gerginliğini gösterirdi — şema bir
+// konumu, renk başka bir konumu anlatırdı.
+//
+// DEVİR YOKSA null döner: gerilme hız ve güç olmadan TANIMSIZ. Uydurulmuş bir
+// renk, bu modülün sessiz hata sınıfının ta kendisi olurdu; kart o hâlde
+// kayışı temel amberiyle çiziyor.
+function veFeadSpanTensionMap(build, relDeg, engineRpm){
+  if(!build || !build.ok || !build.sys || typeof FEADCore === 'undefined') return null;
+  var rpm = _feadNum(engineRpm, NaN);
+  if(!(rpm > 0)) return null;
+  try {
+    var rel = Number.isFinite(_feadNum(relDeg, NaN)) ? _feadNum(relDeg, NaN)
+                                                     : FEADCore.meanRel(build.sys);
+    var st = FEADCore.tensionerState(build.sys, rel);
+    var row = null;
+    veFeadDutyToCore(build, veFeadDutyRows(build.solver)).forEach(function(r){
+      if(r.engineRpm === rpm) row = r;
+    });
+    var T = FEADCore.spanTensions(build.sys, {
+      engineRpm: rpm, loadsKw: (row && row.loadsKw) || {}, slackN: st.tensionN });
+    var mn = Infinity, mx = -Infinity;
+    T.spanN.forEach(function(v){
+      if(!Number.isFinite(v)) return;
+      if(v < mn) mn = v;
+      if(v > mx) mx = v;
+    });
+    if(!Number.isFinite(mn) || !Number.isFinite(mx)) return null;
+    return { spanN: T.spanN, perPulley: T.perPulley, vMs: T.vMs,
+             engineRpm: rpm, min: mn, max: mx, dutyKnown: !!row };
+  } catch(e){ return null; }
+}
+
 // Kartta seçili devir: 'off' (durgun) ya da bir motor devri.
 // VARSAYILAN, tablonun BASKIN satırıdır (en büyük duty yüzdesi) — "kart açılır
 // açılmaz ne görüyorum" sorusunun cevabı gerçek bir çalışma noktası olsun.
@@ -4389,6 +4428,7 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_ANIM_TARGET_REV_S: VE_FEAD_ANIM_TARGET_REV_S,
     VE_FEAD_ANIM_FALLBACK_RPM: VE_FEAD_ANIM_FALLBACK_RPM,
     veFeadAnimRpmChoices: veFeadAnimRpmChoices, veFeadAnimRpmOf: veFeadAnimRpmOf,
+    veFeadSpanTensionMap: veFeadSpanTensionMap,
     veFeadAnimKinematics: veFeadAnimKinematics,
     VE_FEAD_VIB_GAIN_MIN: VE_FEAD_VIB_GAIN_MIN, VE_FEAD_VIB_GAIN_MAX: VE_FEAD_VIB_GAIN_MAX,
     VE_FEAD_VIB_GAIN_DEF: VE_FEAD_VIB_GAIN_DEF, VE_FEAD_VIB_ZETA: VE_FEAD_VIB_ZETA,
