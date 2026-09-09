@@ -1232,6 +1232,7 @@
 <script type="text/x-mfsim-defer" src="js/empty-hint.js" data-mfsim-label="Boş tuval ipucu..."></script>
 <script type="text/x-mfsim-defer" src="js/easter-egg.js" data-mfsim-label="Sancak selamda..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-programlar.js" data-mfsim-label="Program arşivi..."></script>
+<script type="text/x-mfsim-defer" src="js/cp-komuta.js" data-mfsim-label="Komuta penceresi..."></script>
 <script type="text/x-mfsim-defer" src="js/game-2048.js" data-mfsim-label="Mola: 2048..."></script>
 
 <!-- ═══ BİLEŞEN ÖZELLİKLERİ MODALI ═══ -->
@@ -1255,6 +1256,20 @@
     <div class="ve-settings-body" style="flex-direction:column;">
       <section class="ve-settings-content" id="ve-status-content" style="width:100%;"></section>
     </div>
+  </div>
+</div>
+
+<!-- ═══ KOMUTA PENCERESİ ═══
+     Kabuk Ayarlar/Durum modalleriyle ORTAK (.ve-settings-overlay /
+     .ve-settings-modal). Gövdeyi js/cp-komuta.js çiziyor; buradaki tek kap
+     iskelet. Pencere programı DEĞİŞTİRMEZ — durum okur ve sipariş fişi yazar. -->
+<div id="ve-komuta-overlay" class="ve-settings-overlay" style="display:none;" onmousedown="if(event.target===this) veKomutaKapat()">
+  <div class="ve-settings-modal ve-komuta-modal" role="dialog" aria-labelledby="ve-komuta-title">
+    <div class="ve-settings-header">
+      <span id="ve-komuta-title"><span class="mf-ico mf-ico-lock"></span> Komuta Penceresi</span>
+      <button class="ve-settings-close" onclick="veKomutaKapat()" title="Kapat" aria-label="Kapat">✕</button>
+    </div>
+    <div class="ve-settings-body ve-komuta-body" id="ve-komuta-content"></div>
   </div>
 </div>
 
