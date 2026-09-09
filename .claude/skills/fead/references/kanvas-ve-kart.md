@@ -627,12 +627,33 @@ Efektif Çap(mm) · D(mm) · Kasnak Dönüş Yönü · Sarım Açısı(°) · Sp
 Uzunluğu(mm) · Kayış Uzunluğu(mm)**. Girdi ile türetilen aynı satırda yan yana —
 bir koordinatı değiştirince sarımın ve span'in ne olduğu aynı bakışta görülüyor.
 
-| Sütun | Nereden |
-|---|---|
-| X · Y · D | düğümün kendi alanı (`x`/`y`, gergide **`cenX`/`cenY`**), düzenlenebilir |
-| Efektif Çap | çekirdeğin `rPitch`×2 — kaburgalıda `OD+2·hb`, sırtta `OD+2·hr` |
-| Kasnak Dönüş Yönü | çekirdeğin süpürme işareti: `p.d > 0 → Sağ` (kartın kasnak içi okuyla AYNI ifade) |
-| Sarım · Span · Kayış Uzunluğu | `geom.wrapDeg(i)` · `geom.exitSpanLen(i)` · `geom.LpitchMm` |
+**HANGİ HÜCRE GİRDİ — DEFTERDEN OKUNDU, TAHMİN EDİLMEDİ.** BMC'nin
+`KIRPI_II_NEX_GEN.FEAD.xlsx` defteri incelendi (`Geometrik Entegrasyon`
+C1:K10); sınıflandırma defterin kendi dolgu renkleri (amber `FFFFC000` = girdi,
+yeşil `FF92D050` = formül) ve veri doğrulama listelerinden:
+
+| Sütun | Defterde | MFSim'de |
+|---|---|---|
+| KASNAK | GİRDİ — açılır liste `$C$121:$C$126` (6 tip) | bileşen tipi; hücre adı **panelin kapısı** |
+| X · Y | GİRDİ (amber) | `x`/`y`, gergide **`cenX`/`cenY`** — düzenlenebilir |
+| Efektif Çap | formül `=IF(OR(C5=$C$124,C5=$C$125),G5+2*M8,G5+2*L8)` | çekirdeğin `rPitch`×2 |
+| D(mm) | GİRDİ (amber) | `od` — düzenlenebilir |
+| **Kasnak Dönüş Yönü** | **GİRDİ — açılır liste `$D$169:$D$170` = Sağ/Sol** | **açılır liste; `contact` alanını yazar** |
+| Sarım · Span | formül (yeşil) | `geom.wrapDeg(i)` · `geom.exitSpanLen(i)` |
+| Kayış Uzunluğu | formül `=SUM(AB47:AB52)`, **K5:K10 birleştirilmiş** | `geom.LpitchMm`, `rowspan` ile tek hücre |
+
+**DÖNÜŞ YÖNÜ BİR GÖRÜNÜM, TEMAS TARAFI GERÇEK ALAN.** Defterin span'i yönden
+türüyor (`L48 = IF(H6=H5,"Düz","Ters")` — komşular aynı yöne dönüyorsa dış
+teğet, ters yöne dönüyorsa iç teğet); MFSim'de aynı fizik `contact`ta. Hücre o
+alanı yazıyor, İKİNCİ bir yön alanı açmıyor — çeviri `veFeadContactForSpin`
+(`d = (grooved ? s : −s)` kuralının tersi). Süpürme işareti okunamıyorsa hücre
+salt okunur: uydurulmuş bir taraf sessizce başka bir güzergâh çözdürürdü.
+
+**DEFTERİN SESSİZ TUTARSIZLIĞI MFSim'DE KURULAMIYOR.** Defterde efektif çap
+kasnağın TİPİNDEN, teğet ise YÖNDEN türüyor — bir avarayı "Sağ" yapmak teğeti
+kaburgalı gibi çözer ama efektif çapı sırttan bırakır. MFSim'de iki sayı da
+`contact`tan geldiği için yönü değiştirmek efektif çapı DA değiştiriyor
+(ölçüldü: 77,2 → 77,4 mm, `2·hr → 2·hb`). Kapı `fead-table.test.js` içinde.
 
 **"EFEKTİF ÇAP" ÇEKİRDEĞİN `rEff`'İ DEĞİL, `rPitch`'İ.** İkisi karışsaydı kayış
 boyu `2π·hb` (GATES PK'da 7,54 mm) kayardı ve hata sessiz olurdu. Kullanıcının

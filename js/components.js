@@ -948,14 +948,14 @@ var VE_FEAD_LAYOUT_H = 500;
 // ve aynı sürümde iki farklı kart ölçüsü dolaşırdı.
 var VE_FEAD_LAYOUT_LEGACY = [ { w: 60, h: 56 }, { w: 420, h: 340 } ];
 
-// KAYIŞ TABLOSU ÖLÇÜSÜ. Genişlik dokuz sütundan TÜRER, yuvarlak bir sayı
-// değil: sıra(44) + ad(150) + X(64) + Y(64) + efektif çap(84) + D(64) +
-// yön(76) + sarım(76) + span(88) = 710, artı kart kenarı. Dar tutulsaydı
-// sütunlar kısalır ve "Efektif Çap" ile "Span Uzunluğu" başlıkları iki satıra
-// düşerdi — tablonun okunurluğu tam da başlık satırında kırılır.
-// Yükseklik altı kasnak + iki künye şeridi + sütun başlığı için; daha uzun
-// listede kartın İÇİ kayar (kart büyümez, kanvas yerleşimi bozulmasın).
-var VE_FEAD_TABLE_W = 726;
+// KAYIŞ TABLOSU ÖLÇÜSÜ. Genişlik ON sütundan TÜRER, yuvarlak bir sayı değil:
+// sıra(46) + ad(136) + X(64) + Y(64) + efektif çap(84) + D(64) + yön(76) +
+// sarım(76) + span(88) + kayış boyu(88) = 786, artı kart kenarı. Dar
+// tutulsaydı sütunlar kısalır ve "Efektif Çap" ile "Span Uzunluğu" başlıkları
+// iki satıra düşerdi — tablonun okunurluğu tam da başlık satırında kırılır.
+// Yükseklik altı kasnak + künye şeridi + sütun başlığı için; daha uzun listede
+// kartın İÇİ kayar (kart büyümez, kanvas yerleşimi bozulmasın).
+var VE_FEAD_TABLE_W = 800;
 var VE_FEAD_TABLE_H = 430;
 // Geriye dönük adlar (dışarıdan okuyan bir yer kalırsa bozulmasın).
 var VE_FEAD_LAYOUT_LEGACY_W = VE_FEAD_LAYOUT_LEGACY[0].w;

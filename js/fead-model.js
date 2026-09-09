@@ -3068,6 +3068,35 @@ function veFeadSpinOf(nodeList){
   return veFeadNaturalSense(veFeadBeltOrder(nodeList));
 }
 
+// ── "DÖNÜŞ YÖNÜ" BİR GÖRÜNÜM, TEMAS TARAFI GERÇEK ALAN ─────────────────────
+//
+// BMC'nin KIRPI_II hesap defterinde (`Geometrik Entegrasyon` H5:H10) kasnak
+// dönüş yönü bir AÇILIR LİSTE girdisidir (Sağ/Sol) ve defterin span'i ondan
+// türer: `L48 = IF(H6=H5,"Düz","Ters")` — iki komşu kasnak aynı yöne dönüyorsa
+// dış teğet, ters yöne dönüyorsa iç teğet.
+//
+// MFSim'de aynı fizik TEK alandan gelir: `contact` (grooved/back). Çekirdeğin
+// kuralı `d = (grooved ? s : −s)` ve ekranda görünen dönüş `cw = d > 0`.
+// Yani yön ile temas tarafı, çevrimin süpürme işareti `s` verildiğinde BİREBİR
+// eşlenir — ve bu fonksiyon o eşlemenin tersidir: kullanıcı "Sağ" seçtiğinde
+// hangi temas tarafı yazılmalı.
+//
+// TEK ALAN OLMASI BİR KAZANÇ: defterde efektif çap kasnağın TİPİNDEN
+// (`IF(OR(C5=$C$124,C5=$C$125), G5+2*hr, G5+2*hb)` — avara ve gergi sırttan
+// sayılır), teğet ise YÖNDEN türüyor. İkisi ayrı girdiler olduğu için bir
+// avarayı "Sağ" yapmak defterde teğeti kaburgalı gibi çözer ama efektif çapı
+// sırttan bırakır — sessiz bir tutarsızlık. MFSim'de bu YAPISAL OLARAK
+// imkânsız: iki sayı da `contact`tan gelir.
+//
+// Süpürme işareti okunamıyorsa (koordinat eksik, çevrim çözülmüyor) yön de
+// okunamaz: null döner ve çağıran yazmaz — uydurulmuş bir taraf, sessizce
+// başka bir güzergâh çözdürürdü.
+function veFeadContactForSpin(nodeList, yonSag){
+  var s = -veFeadSpinOf(nodeList);          // çekirdeğin süpürme işareti
+  if(!s) return null;
+  return ((yonSag ? 1 : -1) === s) ? 'grooved' : 'back';
+}
+
 // Sürücü kasnağı çöz (ROL): açık işaret → tip → ilk kasnak.
 function veFeadResolveDriver(pulleys){
   var list = pulleys || [];
@@ -4407,6 +4436,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadMoveBeltIndex: veFeadMoveBeltIndex,
     veFeadNaturalSense: veFeadNaturalSense, veFeadReverseRoute: veFeadReverseRoute,
     veFeadRouteFlip: veFeadRouteFlip, veFeadSpinOf: veFeadSpinOf,
+    veFeadContactForSpin: veFeadContactForSpin,
     veFeadMigrateWireOrder: veFeadMigrateWireOrder,
     veFeadMigrateBeltOrder: veFeadMigrateBeltOrder,
     veFeadSpinLabel: veFeadSpinLabel,
