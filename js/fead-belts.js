@@ -2,8 +2,7 @@
 //  FEAD — KAYIŞ KATALOĞU
 // ============================================================================
 // `fead-belt` bileşeninin katalog katmanı. DOM'suz ve saf veri: panel
-// (js/cp-fead.js) buradan okur, buraya HİÇBİR ŞEY yazmaz. Kalıp
-// js/structural-materials.js ile aynı.
+// (js/cp-fead.js) buradan okur, buraya HİÇBİR ŞEY yazmaz.
 //
 // ── KATALOG BİR KISIT DEĞİL, BİR ÖNERİ ──────────────────────────────────────
 // Kullanıcının kendi akışı şu (2026-08-25): *"tasarımı yaptıktan sonra tasarıma

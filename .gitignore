@@ -10,6 +10,3 @@ MFSim_Code.html
 
 # Ekran görüntüleri (öncesi/sonrası) — üretilir, commit edilmez.
 .shots/
-
-# OCCT gomulu varligi — npm run build:occt-wasm uretir (vendor/opencascade.wasm.gz)
-js/structural-occt-wasm.js

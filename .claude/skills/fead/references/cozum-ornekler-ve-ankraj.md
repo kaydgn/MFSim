@@ -1364,7 +1364,7 @@ hata sınıfı.
 **PARÇA KODU KAYDA KOPYALANIR VE KODSUZ KÜNYEDE SİLİNİR** (`td.tenPart`).
 Silinmeseydi bir künyeden diğerine geçince yeni gerginin pimi ESKİ parçanın
 çizimiyle hesaplanırdı — sayı çıkar, uyarı çıkmaz. Kopya olması ise
-kütüphanenin kendi kuralı (`structural-materials.js` kalıbı): katalog sürümü
+kütüphanenin kendi kuralı (katalog kalıbı): katalog sürümü
 değişse de kaydedilmiş proje kendiliğinden değişmez.
 
 ###### AYNI TURDA ÇIKAN SESSİZ KUSUR — LaTeX kaçışı JS'te YUTULUYOR
@@ -1565,7 +1565,7 @@ dönmeyi (280°) düşürüyor, yani iki bağımsız işaret veriyor.
 
 **KAYIT KOPYA OLARAK GİDER:** kütüphane sürümü değişip bir değer düzeltilse
 bile kaydedilmiş proje kendiliğinden değişmez (`tenLib`/`tenLibVer` yalnız İZ
-bırakıyor) — `structural-materials.js`'in kendi kuralı, bu projenin en çok
+bırakıyor) — katalog kütüphanelerinin kendi kuralı, bu projenin en çok
 kaçındığı hata sınıfı.
 
 **EN KRİTİK KAPI:** kütüphanedeki her sayı `tests/fixtures/fead-validation.js`
@@ -2166,7 +2166,7 @@ demekti); kurulan modelin çözümü önizlemeyle **birebir** (`L` ve `T` 6 hane
 
 Çevrim kaydının izi (`dutyLib`) de artık taşınıyor — hesaba girmiyor, ama
 kullanıcının hangi ölçülmüş kaydı seçtiğini söyleyen tek yer o
-(`structural-materials.js`'in `lib`/`libVer` izinin aynı gerekçesi).
+(katalog izi `lib`/`libVer`'in aynı gerekçesi).
 
 Kapı **27 mutasyonla** ölçüldü, 27'si de kırmızı: yön seçimini bayrağa çevirme ·
 aynı yönü seçmeyi de çevirtme · 2. adımın yön kartını düşürme · yön

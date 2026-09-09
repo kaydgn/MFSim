@@ -3,7 +3,7 @@
 // ============================================================================
 // `fead-tensioner` bileşeninin katalog katmanı. DOM'suz ve saf veri: panel
 // (js/cp-fead.js) buradan okur, buraya HİÇBİR ŞEY yazmaz. Kalıp
-// js/fead-belts.js ve js/structural-materials.js ile aynı.
+// js/fead-belts.js ile aynı.
 //
 // Kullanıcı isteği (2026-08-28): *"Bu otomatik gergi özelliklerini de Gates
 // raporlarından kalibre ederek çekeceğiz."*
@@ -67,7 +67,7 @@
 // Değerler tek tek raporlardan okunmuş ÖLÇÜMLERDİR, bir üretici kataloğu
 // değil. Aynı gövde farklı yay indeksleriyle satılıyor olabilir; buradaki
 // bant o 14 raporun gördüğü banttır. Panel bunu listenin ÜSTÜNDE yazıyor
-// (structural-materials.js'in "nominal ≠ sertifika" kuralının aynısı).
+// ("nominal ≠ sertifika" kuralı: katalog değeri bir ölçüm belgesi değildir).
 var VE_FEAD_TEN_LIB_VERSION = '1.0.0';
 var VE_FEAD_TEN_LIB_SOURCE  = 'Gates ABDS raporları (14 sistem), '
   + 'tests/fixtures/fead-validation.js';
@@ -309,8 +309,8 @@ function veFeadTensionerOf(key){
   return null;
 }
 
-// Arama — `structural-materials.js`'in katlama kuralının aynısı: Türkçe
-// büyük/küçük harf dönüşümü `toLowerCase()` ile TEK BAŞINA doğru değil
+// Arama — Türkçe katlama kuralı: büyük/küçük harf dönüşümü
+// `toLowerCase()` ile TEK BAŞINA doğru değil
 // ('I' → 'ı', 'İ' → noktalı i).
 function _fdTenFold(s){
   return String(s == null ? '' : s)
@@ -334,7 +334,7 @@ function veFeadTensionerFind(q){
 
 // Kayıt → düğüm alanları. KOPYA yazılır, referans DEĞİL: kütüphane sürümü
 // değişip bir değer düzeltilse bile kaydedilmiş proje kendiliğinden değişmez
-// (structural-materials.js'in kendi kuralı; bu projenin en çok kaçındığı hata
+// (bu projenin en çok kaçındığı hata
 // sınıfı bir katalog güncellemesinin eski bir analizi sessizce değiştirmesi).
 //
 // PİVOT VE KOL AÇISI YAZILMAZ: ikisi de MONTAJA aittir, parçaya değil. Künye

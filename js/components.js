@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-example','fead-layout','fead-table','fead-report','fead-spin','fead-wizard','str-geometry','str-material','str-mesh','str-bc','str-results','arac-performans','mount-analysis','fead-analysis','structural-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-example','fead-layout','fead-table','fead-report','fead-spin','fead-wizard','arac-performans','mount-analysis','fead-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -26,7 +26,6 @@ var veSidebarMode = 'performans';
 //   'arac-performans' → "Araç Performans" alt topolojisi: güç aktarma bileşenleri.
 //   'mount-analysis'  → "Takoz" alt topolojisi: Takoz Alt Bileşenleri (mnt-*).
 //   'fead-analysis'   → "FEAD" alt topolojisi: kayış-kasnak bileşenleri (fead-*).
-//   'structural-analysis' → "Yapısal Analiz" alt topolojisi: FEA bileşenleri (str-*).
 // Kategoriler data-ve-scope ile etiketlenir: 'module' (her yerde) | 'top' | modül
 // tipi. Bir alt-sistem açılınca veSyncSidebarScope() kapsamı stack'lerden hesaplar.
 var veSidebarScope = 'top';
@@ -169,7 +168,6 @@ function veSyncSidebarScope() {
   if(typeof veAracStack !== 'undefined' && veAracStack.length) scope = 'arac-performans';
   if(typeof veMntStack !== 'undefined' && veMntStack.length) scope = 'mount-analysis';
   if(typeof veFeadStack !== 'undefined' && veFeadStack.length) scope = 'fead-analysis';
-  if(typeof veStrStack !== 'undefined' && veStrStack.length) scope = 'structural-analysis';
   veSidebarScope = scope;
   veShowAllSidebarComponents();
   // ŞERİT DE KAPSAMI GÖRMELİ. Şeritte kapsama bağlı öğeler var — bugün
@@ -494,82 +492,6 @@ var componentDefs = {
     outputs: 0,
     isSubsystem: true,
     isFeadModule: true
-  },
-  // YAPISAL ANALİZ (Sonlu Elemanlar) ALT-SİSTEM MODÜLÜ — braket ve taşıyıcı
-  // parçaların gerilme/sehim analizi. Diğer üç modülle AYNI nested topoloji
-  // kalıbı: ana canvas'ta tek kart, çift tıkla iç topolojisi (Geometri / Mesh /
-  // Malzeme / Sınır Koşulları / Çözücü / Rapor) açılır (cp-structural.js
-  // veStrOpenEditor). isStrModule: dblclick anahtarı.
-  // Sembol: kesikli kap + ANKASTRE duvara bağlı L braket + üstünde mesh
-  // çizgileri + serbest ucunda yük oku. Modülün kimliği tek bakışta
-  // "yüklenmiş bir parçanın sonlu elemanlar analizi".
-  'structural-analysis': {
-    name: 'Yapısal Analiz',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-dasharray="7 5"/><path d="M20 32 V78" stroke="var(--text-muted, #888)" stroke-width="3" stroke-linecap="round"/><path d="M20 40 l-7 -6 M20 52 l-7 -6 M20 64 l-7 -6 M20 76 l-7 -6" stroke="var(--text-muted, #888)" stroke-width="2.4" stroke-linecap="round"/><path d="M20 36 h14 v26 h26 v13 h-40 z" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4" stroke-linejoin="round"/><path d="M20 49 h14 M27 36 v39 M34 62 l26 13 M34 75 l26 -13 M47 62 v13" stroke="var(--text-muted, #888)" stroke-width="1.7" opacity="0.85"/><path d="M54 38 v17 M49.5 51 L54 59 L58.5 51" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M64 22 h18 v18" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    inputs: 0,
-    outputs: 0,
-    isSubsystem: true,
-    isStrModule: true
-  },
-  // ── Yapısal Analiz alt bileşenleri (str-*) ──────────────────────────────
-  // ANALİZ ZİNCİRİ — bağlantı bu modülde VERİ AKIŞIDIR:
-  //   Geometri → Hesaplama Ağı → Sınır Koşulları → Sonuçlar
-  // Port sayıları zinciri YAPISAL olarak zorlar: Geometri'nin girişi, Sonuçlar'ın
-  // çıkışı yoktur. Yani kullanıcı zinciri ters kuramaz.
-  'str-geometry': {
-    name: 'Geometri',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M28 36 L52 22 L76 36 L76 64 L52 78 L28 64 Z" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5" stroke-linejoin="round"/><path d="M28 36 L52 50 L76 36 M52 50 V78" fill="none" stroke="var(--text-muted, #888)" stroke-width="3.5" stroke-linejoin="round"/><ellipse cx="52" cy="36" rx="7" ry="4" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3"/></svg>',
-    // İKİ ÇIKIŞ, İKİ AYRI ANLAM — ve kenarları da ayrı:
-    //   output-0 (SAĞ)  → ANALİZ ZİNCİRİ: Hesaplama Ağı'na gider.
-    //   output-1 (ALT)  → MALZEME EKİ: 'str-material' alt bileşenine iner.
-    // Tek porta iki teli birden bağlamak da mümkündü (bir port çok bağlantı
-    // taşıyabiliyor) ama o zaman iki tel AYNI noktadan çıkardı: zincir teli ile
-    // ek teli aynı ağızdan doğardı ve alttaki malzeme kutusuna giden tel sağa
-    // çıkıp geri dönerdi. Ayrı port = ayrı ağız = okunur yol.
-    //
-    // GİRİŞ HÂLÂ YOK ve bu yapısal kapı korunuyor: zincirin başı Geometri'dir,
-    // kullanıcı zinciri ters kuramaz (bkz. tests/unit/cp-structural.test.js).
-    // Malzeme eki bunu ZAYIFLATMIYOR çünkü ek, Geometri'nin ÇIKIŞINDAN doğuyor
-    // ve 'str-material'ın çıkışı yok — yani zincire ara halka olarak giremez.
-    inputs: 0, outputs: 2, portLayout: { outputs: ['right', 'bottom'] },
-    isStrGeometry: true, defaultWidth: 62, defaultHeight: 56
-  },
-  // MALZEME VE ÖZELLİKLER — Geometri'ye asılan ALT BİLEŞEN (zincir halkası
-  // DEĞİL). Parçaya (STEP) malzeme atar: E, ν, ρ, akma/çekme dayanımı.
-  //
-  // ÜÇ YAPISAL KARAR:
-  //  1) ÇIKIŞI YOK (outputs: 0) → zincire ara halka olarak sokulamaz. Kutu
-  //     kanvasta bir YAPRAK; "Geometri → Malzeme → Ağ" diye yanlış bir zincir
-  //     kurulamaz, çünkü Malzeme'den çıkan tel yoktur.
-  //  2) GİRİŞİ ÜST KENARDA (portLayout) → tel Geometri'nin ALT portundan
-  //     dümdüz aşağı iner. Klasik "giriş solda" kuralı bırakılsaydı tel sağa
-  //     çıkıp sola dönerdi (FEAD'de ölçülmüş kusurun aynısı).
-  //  3) KUTU KÜÇÜK (50×46; zincir bileşenleri 62×56) → bakışta "bu bir alt
-  //     bileşen" der. Aksesuarların (acc-*) Motor'a asılırken 54×50 olmasıyla
-  //     aynı gerekçe: ölçü, hiyerarşiyi yazıya gerek kalmadan anlatıyor.
-  //
-  // Sembol: teknik resimdeki KESİT TARAMASI (malzeme işareti) + akma noktası
-  // işaretli σ–ε eğrisi. Panel/veri: js/cp-structural.js.
-  'str-material': {
-    name: 'Malzeme ve Özellikler',
-    svg: '<svg width="34" height="34" viewBox="0 0 100 100"><rect x="10" y="44" width="46" height="44" rx="4" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><path d="M14 74 L40 48 M14 86 L52 48 M26 88 L54 60 M40 88 L54 74" stroke="var(--text-muted, #888)" stroke-width="3" stroke-linecap="round"/><path d="M62 12 V44 H96" fill="none" stroke="var(--text-muted, #888)" stroke-width="3" stroke-linecap="round"/><path d="M62 44 L74 20 Q82 13 94 16" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="74" cy="20" r="4.5" fill="var(--accent-warning, #f59e0b)"/></svg>',
-    inputs: 1, outputs: 0, portLayout: { inputs: ['top'] },
-    isStrMaterial: true, defaultWidth: 50, defaultHeight: 46
-  },
-  'str-mesh': {
-    name: 'Hesaplama Ağı',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M18 76 L50 20 L82 76 Z" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5" stroke-linejoin="round"/><path d="M34 48 H66 M50 20 V76 M34 48 L50 76 M66 48 L50 76" fill="none" stroke="var(--text-muted, #888)" stroke-width="3"/><circle cx="34" cy="48" r="4" fill="var(--accent-primary, #3b82f6)"/><circle cx="66" cy="48" r="4" fill="var(--accent-primary, #3b82f6)"/><circle cx="50" cy="76" r="4" fill="var(--accent-primary, #3b82f6)"/></svg>',
-    inputs: 1, outputs: 1, isStrMesh: true, defaultWidth: 62, defaultHeight: 56
-  },
-  'str-bc': {
-    name: 'Sınır Koşulları',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M24 18 V84" stroke="var(--text-muted, #888)" stroke-width="4" stroke-linecap="round"/><path d="M24 28 l-9 -8 M24 42 l-9 -8 M24 56 l-9 -8 M24 70 l-9 -8 M24 84 l-9 -8" stroke="var(--text-muted, #888)" stroke-width="3" stroke-linecap="round"/><line x1="24" y1="54" x2="80" y2="54" stroke="var(--text-secondary, #666)" stroke-width="7" stroke-linecap="round"/><path d="M70 18 v20 M64.5 32 L70 43 L75.5 32" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    inputs: 1, outputs: 1, isStrBC: true, defaultWidth: 62, defaultHeight: 56
-  },
-  'str-results': {
-    name: 'Sonuçlar',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M18 34 H82" stroke="var(--text-muted, #888)" stroke-width="3.5" stroke-dasharray="7 5" stroke-linecap="round"/><path d="M18 34 Q52 34 82 66" fill="none" stroke="var(--text-secondary, #666)" stroke-width="6" stroke-linecap="round"/><rect x="18" y="78" width="20" height="9" rx="2" fill="var(--accent-primary, #3b82f6)"/><rect x="40" y="78" width="20" height="9" rx="2" fill="var(--text-muted, #888)"/><rect x="62" y="78" width="20" height="9" rx="2" fill="var(--accent-danger, #ef4444)"/></svg>',
-    inputs: 1, outputs: 0, isStrResults: true, defaultWidth: 62, defaultHeight: 56
   },
   // ── Aksesuarlar (Araç Performans) — Motor'un ön portlarına bağlanır ──────
   // Diğer bileşenlerden bir tık daha küçük kutular. Çıkış portu (sağ) Motor'un

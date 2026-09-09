@@ -69,15 +69,6 @@ var VE_GUIDE_KIT = [
         + 'izolasyon ve şok analizi.',
     uret: 'veGuideMountHTML',
     dosya: 'MFSim_Takoz_Kullanim_Kilavuzu'
-  },
-  {
-    id: 'str',
-    modul: 'Yapısal Analiz',
-    baslik: 'Yapısal Analiz — STEP’ten Sonuca',
-    ozet: 'STEP içe aktarma, malzeme atama, hesaplama ağı ve sınır koşulları '
-        + 'zinciri.',
-    uret: 'veGuideStrHTML',
-    dosya: 'MFSim_Yapisal_Analiz_Kullanim_Kilavuzu'
   }
 ];
 
@@ -111,8 +102,7 @@ function veGuideKitCount(){
 var VE_GUIDE_SCOPE_MAP = {
   'arac-performans': 'arac',
   'mount-analysis': 'mount',
-  'fead-analysis': 'fead',
-  'structural-analysis': 'str'
+  'fead-analysis': 'fead'
 };
 
 // Açık modülün kılavuz kimliği — hiçbir modülün içinde değilsek null.

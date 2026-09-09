@@ -386,7 +386,6 @@ function _veRestoreStateNodes(state) {
     // bağlantı" özeti kullanıcı dışarı çıkar çıkmaz kendiliğinden tazelenir.
     if(typeof veApplyModuleCard === 'function') veApplyModuleCard(nodeEl, node);
     if(typeof veFeadApplyBadge === 'function') veFeadApplyBadge(nodeEl, node);
-    if(typeof veStrApplyBadge === 'function') veStrApplyBadge(nodeEl, node);
     if(typeof veFeadApplyLayoutCard === 'function') veFeadApplyLayoutCard(nodeEl, node);
 
     document.getElementById('ve-canvas').appendChild(nodeEl);

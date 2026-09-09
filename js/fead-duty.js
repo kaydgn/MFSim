@@ -144,7 +144,7 @@ function _fdDutyDeep(rec){
 }
 
 // KOPYA döner: kütüphane sürümü değişip bir değer düzeltilse bile kaydedilmiş
-// proje kendiliğinden değişmesin (structural-materials.js'in kendi kuralı).
+// proje kendiliğinden değişmesin.
 function veFeadDutyList(){
   return VE_FEAD_DUTY_DB.map(_fdDutyDeep);
 }

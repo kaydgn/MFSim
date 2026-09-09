@@ -11,7 +11,7 @@ da konabiliyor (sağ tık → Etiket Konumu · `node.data.labelPos` · css
 GENİŞLİĞİ kadar taşıyor. Kullanıcı bildirimi (2026-08-24, Yapısal Analiz ·
 Geometri): *"ismini sola çektiğim zaman topoloji çizgisinin dışına taşmış."*
 
-Aynı sessizlik **yatayda da** vardı ve dört modülün hepsini ilgilendiriyor: alt
+Aynı sessizlik **yatayda da** vardı ve modüllerin hepsini ilgilendiriyor: alt
 etiket kutunun MERKEZİNE göre ortalanıyor (`translateX(-50%)`), yani kutusundan
 geniş her ad iki yana eşit taşıyor.
 
