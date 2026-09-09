@@ -1,0 +1,416 @@
+{
+  "surum": 1,
+  "uretildi": "2026-09-09",
+  "aciklama": "MFSim çevresinde üretilen tek dosyalık HTML programlar ve artifact'lar. Yollar bu dosyanın bulunduğu klasöre (programlar/) görelidir.",
+  "programlar": [
+    {
+      "dosya": "../MFSim_Olcum_Goruntuleyici.html",
+      "ad": "MFSim Ölçüm Görüntüleyici",
+      "simge": "📊",
+      "tarih": null,
+      "kume": "urun",
+      "not": "npm run build:viewer üretir; git'e dâhil"
+    },
+    {
+      "dosya": "../MFSim_CAN_Cozumleyici.html",
+      "ad": "MFSim CAN Çözümleyici",
+      "simge": "🚌",
+      "tarih": null,
+      "kume": "urun",
+      "not": "npm run build:can üretir; git'e dâhil"
+    },
+    {
+      "dosya": "../MFSim_Code.html",
+      "ad": "MFSim (tek dosya)",
+      "simge": "⚙️",
+      "tarih": null,
+      "kume": "urun",
+      "not": "npm run build üretir; git'e DÂHİL DEĞİL — kayıtta yol olarak durur"
+    },
+    {
+      "dosya": "disaridan/powerpack_mount_analysis_A26.html",
+      "ad": "Powerpack Mount Analysis A26",
+      "simge": "📐",
+      "tarih": null,
+      "kume": "disaridan",
+      "not": "Takoz modülünün türetildiği kaynak araç; MFSim üretimi değil",
+      "boyut": 366117
+    },
+    {
+      "dosya": "artifact/kayis-yolu-tasarim-denemeleri.html",
+      "ad": "Kayış Yolu Tasarım Denemeleri",
+      "simge": "⚙️",
+      "tarih": "2026-09-09",
+      "boyut": 53597,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-yerlesim-tezgahi.html",
+      "ad": "MFSim Yerleşim Tezgâhı",
+      "simge": "🎛️🖼️",
+      "tarih": "2026-09-08",
+      "boyut": 2032478,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-kadraj-paftasi.html",
+      "ad": "MFSim Kadraj Paftası",
+      "simge": "🖼️📐",
+      "tarih": "2026-09-08",
+      "boyut": 674803,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-acilis-dizisi.html",
+      "ad": "MFSim Açılış Dizisi",
+      "simge": "🎨",
+      "tarih": "2026-09-07",
+      "boyut": 2489388,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/droop-bandi-laboratuvari.html",
+      "ad": "Droop Bandı Laboratuvarı",
+      "simge": "📉",
+      "tarih": "2026-09-07",
+      "boyut": 38645,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/sayisal-cekirdek-haritasi.html",
+      "ad": "Sayısal Çekirdek Haritası",
+      "simge": "🗺️",
+      "tarih": "2026-09-07",
+      "boyut": 29609,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-hareket-paftasi.html",
+      "ad": "MFSim Hareket Paftası",
+      "simge": "🎞️⚙️",
+      "tarih": "2026-09-04",
+      "boyut": 73241,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-karsilama-paftasi.html",
+      "ad": "MFSim Karşılama Paftası",
+      "simge": "⚙️📐",
+      "tarih": "2026-09-04",
+      "boyut": 62628,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-acilis-ekrani.html",
+      "ad": "MFSim Açılış Ekranı",
+      "simge": "⚙️",
+      "tarih": "2026-09-04",
+      "boyut": 50310,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/ag00879-girdi-denetimi.html",
+      "ad": "AG00879 Girdi Denetimi",
+      "simge": "📐",
+      "tarih": "2026-09-02",
+      "boyut": 43786,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/kirpi-ii-fead-defteri.html",
+      "ad": "KIRPI II FEAD Defteri",
+      "simge": "📐",
+      "tarih": "2026-09-01",
+      "boyut": 64944,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/fead-modelleme-kilavuzu.html",
+      "ad": "FEAD Modelleme Kılavuzu",
+      "simge": "⚙️",
+      "tarih": "2026-08-29",
+      "boyut": 55553,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/ag00976-sayi-denetimi.html",
+      "ad": "AG00976 Sayı Denetimi",
+      "simge": "📐",
+      "tarih": "2026-08-28",
+      "boyut": 112300,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/kayis-duzlemi-kanvasi.html",
+      "ad": "Kayış Düzlemi Kanvası",
+      "simge": "📐",
+      "tarih": "2026-08-25",
+      "boyut": 51674,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim.html",
+      "ad": "MFSim",
+      "simge": "⚙️",
+      "tarih": "2026-08-22",
+      "boyut": 12970894,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/fead-yerlesim-etudu.html",
+      "ad": "FEAD Yerleşim Etüdü",
+      "simge": "⚙️",
+      "tarih": "2026-08-18",
+      "boyut": 58265,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/kayis-telinin-yedi-hali.html",
+      "ad": "Kayış Telinin Yedi Hâli",
+      "simge": "〰️",
+      "tarih": "2026-08-18",
+      "boyut": 80494,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/fead-baglanti-dili.html",
+      "ad": "FEAD Bağlantı Dili",
+      "simge": "🔗",
+      "tarih": "2026-08-18",
+      "boyut": 59903,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/fead-graf-dili.html",
+      "ad": "FEAD Graf Dili",
+      "simge": "🎞️",
+      "tarih": "2026-08-18",
+      "boyut": 62353,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/kasnak-bicim-dili.html",
+      "ad": "Kasnak Biçim Dili",
+      "simge": "🛞",
+      "tarih": "2026-08-18",
+      "boyut": 67970,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/c-d-nozul-defteri.html",
+      "ad": "C-D Nozul Defteri",
+      "simge": "✈️",
+      "tarih": "2026-08-17",
+      "boyut": 1547784,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/kart-yerine-harita.html",
+      "ad": "Kart Yerine Harita",
+      "simge": "🗺️",
+      "tarih": "2026-08-17",
+      "boyut": 124085,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/sok-yakalama-defteri.html",
+      "ad": "Şok Yakalama Defteri",
+      "simge": "💥",
+      "tarih": "2026-08-17",
+      "boyut": 1243693,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-dokuz-duzeltme.html",
+      "ad": "MFSim — Dokuz Düzeltme",
+      "simge": "🔧",
+      "tarih": "2026-08-11",
+      "boyut": 26171,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-arac-performans-raporunun-kozmetigi.html",
+      "ad": "MFSim — Araç Performans Raporunun Kozmetiği",
+      "simge": "📐",
+      "tarih": "2026-08-11",
+      "boyut": 1552209,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/takoz-cokme-titresim-sonuclar-paneline-eklenenler.html",
+      "ad": "Takoz Çökme-Titreşim — Sonuçlar paneline eklenenler",
+      "simge": "📉",
+      "tarih": "2026-08-04",
+      "boyut": 914537,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/olcum-verisi-ice-aktarma-mfsim.html",
+      "ad": "Ölçüm Verisi İçe Aktarma — MFSim",
+      "simge": "📊",
+      "tarih": "2026-08-04",
+      "boyut": 487204,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-sade-tema-onerileri.html",
+      "ad": "MFSim — Sade Tema Önerileri",
+      "simge": "🎛️",
+      "tarih": "2026-08-04",
+      "boyut": 64227,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-sensor-girdileri-paneli-4-tasarim-konsepti.html",
+      "ad": "MFSim — Sensör Girdileri Paneli: 4 Tasarım Konsepti",
+      "simge": "🎛️",
+      "tarih": "2026-08-03",
+      "boyut": 70567,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-12-kullanilabilirlik-bulgusu-once-ve-sonra.html",
+      "ad": "MFSim — 12 kullanılabilirlik bulgusu, önce ve sonra",
+      "simge": "🔍",
+      "tarih": "2026-07-30",
+      "boyut": 225217,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-bu-turda-neler-degisti.html",
+      "ad": "MFSim — Bu Turda Neler Değişti",
+      "simge": "🧾",
+      "tarih": "2026-07-29",
+      "boyut": 20106,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-tur-11-txt-raporlari.html",
+      "ad": "MFSim — Tur 11: TXT Raporları",
+      "simge": "📄",
+      "tarih": "2026-07-28",
+      "boyut": 17337,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-olcum-imleci.html",
+      "ad": "MFSim — Ölçüm İmleci",
+      "simge": "🎯",
+      "tarih": "2026-07-28",
+      "boyut": 35397,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-yapi-ve-yetkinlik-raporu.html",
+      "ad": "MFSim — Yapı ve Yetkinlik Raporu",
+      "simge": "📐",
+      "tarih": "2026-07-28",
+      "boyut": 33065,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-tur-10-takoz-raporu-duzeltmeleri.html",
+      "ad": "MFSim — Tur 10: Takoz Raporu Düzeltmeleri",
+      "simge": "📄",
+      "tarih": "2026-07-28",
+      "boyut": 749178,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-takoz-raporu-mevcut-tasarim.html",
+      "ad": "MFSim — Takoz Raporu: Mevcut Tasarım",
+      "simge": "📄",
+      "tarih": "2026-07-28",
+      "boyut": 3359369,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-tur-9-canvas-renkleri-temada.html",
+      "ad": "MFSim — Tur 9: Canvas Renkleri Temada",
+      "simge": "🎨",
+      "tarih": "2026-07-28",
+      "boyut": 180832,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-kozmetik-tur-8-incelemesi.html",
+      "ad": "MFSim — Kozmetik Tur 8 İncelemesi",
+      "simge": "🎨",
+      "tarih": "2026-07-28",
+      "boyut": 259404,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-tur-7-motor-paneli-yerlesimi.html",
+      "ad": "MFSim — Tur 7: Motor Paneli Yerleşimi",
+      "simge": "🎨",
+      "tarih": "2026-07-28",
+      "boyut": 402728,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-kozmetik-tur-6-incelemesi.html",
+      "ad": "MFSim — Kozmetik Tur 6 İncelemesi",
+      "simge": "🎨",
+      "tarih": "2026-07-28",
+      "boyut": 777103,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-kozmetik-tur-5-incelemesi.html",
+      "ad": "MFSim — Kozmetik Tur 5 İncelemesi",
+      "simge": "🎨",
+      "tarih": "2026-07-28",
+      "boyut": 97975,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-kozmetik-tur-4-incelemesi.html",
+      "ad": "MFSim — Kozmetik Tur 4 İncelemesi",
+      "simge": "🎨",
+      "tarih": "2026-07-27",
+      "boyut": 279911,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-kozmetik-tur-3-incelemesi.html",
+      "ad": "MFSim — Kozmetik Tur 3 İncelemesi",
+      "simge": "🎨",
+      "tarih": "2026-07-27",
+      "boyut": 67264,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-kozmetik-tur-2-incelemesi.html",
+      "ad": "MFSim — Kozmetik Tur 2 İncelemesi",
+      "simge": "🎨",
+      "tarih": "2026-07-27",
+      "boyut": 157490,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-kozmetik-duzenlemeler-incelemesi.html",
+      "ad": "MFSim — Kozmetik Düzenlemeler İncelemesi",
+      "simge": "🎨",
+      "tarih": "2026-07-27",
+      "boyut": 348519,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/detay-matematik-raporu-tasarim-onerisi.html",
+      "ad": "Detay Matematik Raporu — Tasarım Önerisi",
+      "simge": "🧮",
+      "tarih": "2026-07-21",
+      "boyut": 28662,
+      "kume": "artifact"
+    },
+    {
+      "dosya": "artifact/mfsim-animasyon-fikirleri-canli-demo.html",
+      "ad": "MFSim — Animasyon Fikirleri (canlı demo)",
+      "simge": "⚡",
+      "tarih": "2026-07-21",
+      "boyut": 22928,
+      "kume": "artifact"
+    }
+  ]
+}

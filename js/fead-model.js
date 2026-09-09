@@ -2532,6 +2532,12 @@ function veFeadExampleNodes(key){
   // HAZIR bir model olmalı. Şema düğümü olmadan kullanıcı çözümü görüyor ama
   // kayış yolunu göremiyor ve onu paletten ayrıca aramak zorunda kalıyordu.
   nodesOut.push({ id:'ex-layout', type:'fead-layout', data:{} });
+  // KAYIŞ TABLOSU DA KURULUR — `ex-layout` ile aynı gerekçe: örnek
+  // "çözülebilir bir model" değil, KULLANIMA HAZIR bir model. Kasnakların
+  // veri giriş yüzeyi artık bu tablo; onsuz gelen bir örnekte kullanıcı
+  // koordinat girmek için bileşeni paletten ayrıca aramak zorunda kalırdı.
+  // Kayış Yolu kartıyla aynı SAĞ şeride düşer (veFeadArrangeByCoords).
+  nodesOut.push({ id:'ex-table',   type:'fead-table',   data:{} });
   // RAPOR DA KURULUR — aynı gerekçe. Örnek "çözülebilir bir model" değil,
   // KULLANIMA HAZIR bir model: kullanıcı çözümü görüyor ama raporu almak için
   // bileşeni paletten ayrıca aramak zorunda kalıyordu. `data:{}` bilerek boş —
@@ -2543,18 +2549,17 @@ function veFeadExampleNodes(key){
   // Özellikleri → Çözücü → Rapor sırası istenen sıradır; rapor solver'dan önce
   // push edilseydi şeritte de onun üstünde çıkardı.
   nodesOut.push({ id:'ex-report',  type:'fead-report',  data:{} });
-  // KABLOLAR KAYIŞIN GİDİŞ SIRASINDA (2026-09-08). `ex.route` Gates TABLO
+  // KAYIŞ SIRASI İNDİSTE, TELDE DEĞİL (2026-09-09). `ex.route` Gates TABLO
   // sırasıdır (rapordaki gibi durur; testler onu raporla satır satır
-  // karşılaştırır) ve o sıra kayışın gidişinin TERSİDİR. Kanvasta tel = gidiş
-  // olduğu için burada çevrilir (krank sabit, kalanı ters — veFeadRouteFlip);
-  // köprü kurarken aynı çevirmeyi geri uygular ve çekirdek yine tablo
-  // sırasını görür. Kapı: fead-spin.test.js → "kablolar GİDİŞ sırasında".
-  var conns = [], gidis = veFeadRouteFlip(ex.route);
-  gidis.forEach(function(k, i){
-    var next = gidis[(i + 1) % gidis.length];
-    if(byKey[k] && byKey[next]) conns.push({ from: byKey[k].id, to: byKey[next].id });
-  });
-  return { nodes: nodesOut, connections: conns, solverId: 'ex-solver', example: ex };
+  // karşılaştırır) ve `beltIndex` de tablo sırasını taşır → ÇEVİRME YOK.
+  // Bir çevirme kalsaydı örnekler ters numaralanır, gergi gergin tarafa düşer
+  // ve span gerilmeleri negatife inerdi (ölçüldü: BMC 526 → −196 N).
+  //
+  // `connections` anahtarı DURUYOR ve boş: FEAD alt topolojisinin bağlantı
+  // listesi hâlâ var (kurucu ona push ediyor), yalnız kasnaklar arası tel
+  // kalmadı. Anahtarı düşürmek her çağıranı `|| []` yazmaya zorlardı.
+  ex.route.forEach(function(k, i){ if(byKey[k]) byKey[k].data.beltIndex = i + 1; });
+  return { nodes: nodesOut, connections: [], solverId: 'ex-solver', example: ex };
 }
 
 // ─── Duty kW sözlüğünün KİMLİK GÖÇÜ ─────────────────────────────────────────
@@ -2587,79 +2592,87 @@ function veFeadRemapDutyKw(dutyRows, idMap){
   return dutyRows;
 }
 
-// ─── Kayış sırası ───────────────────────────────────────────────────────────
-// Bağlantı = kayış yolu. Zincir sürücüden başlar, çıkış→giriş izlenir. Zincire
-// hiç girmemiş kasnaklar (kullanıcı henüz bağlamadıysa) sona, topoloji
-// sırasıyla eklenir — yarım bağlanmış modelde de şema bir şey gösterir.
-// Kayış güzergâhı + TOPOLOJİNİN TEŞHİSİ.
+// ─── KAYIŞ SIRASI BİR ALAN: node.data.beltIndex ─────────────────────────────
 //
-// Eskiden burada tek bir sıra üretiliyordu ve son satır şuydu:
-//     pulleys.forEach(function(p){ if(!seen[p.id]) order.push(p); });
-// yani zincire BAĞLI OLMAYAN kasnak da kayış yoluna sessizce ekleniyordu.
-// Sonucu ağırdı: kullanıcı bir teli koparıyor, çözücü yine aynı kapalı çevrimi
-// kuruyor ve şema hiç değişmiyordu — çizim kurulan TOPOLOJİYİ değil, bileşen
-// LİSTESİNİ gösteriyordu. ÖLÇÜLDÜ (gerçek tarayıcı, BMC): "Avara 2"nin iki
-// telini de silince kart hâlâ "✓ 6 kasnak · L 1715.0 mm" diyordu. Kullanıcı
-// bunu "bağlantı kurulmuyor, topolojiyi tekrar kuramıyorum" diye bildirdi.
+// Sıra eskiden KABLOLARDAN çözülüyordu: her kasnak 1 giriş + 1 çıkış taşırdı,
+// zincir sürücüden başlar, çıkış→giriş izlenirdi. Kullanıcı isteğiyle
+// (2026-09-09) kasnaklar arası bağlantı KALDIRILDI — sıra artık Kayış
+// Tablosu'nun satır sırası ve her kasnak kendi sırasını taşıyor.
 //
-// Artık sıra yine üretiliyor (yerleştirici ve çizim onu kullanıyor) ama
-// GEÇERLİLİK ayrı bir alan olarak taşınıyor: kapalı mı, kopuk kasnak var mı,
-// çatal var mı. veFeadBuildSystem bunlara bakıp ÇÖZMEYİ REDDEDİYOR ve sebebini
-// yazıyor — kanvasta teller görünmeye devam ediyor, yanlış olan şema değil,
-// şemanın YERİNE yazılan mesaj oluyor.
-function veFeadRouteDiagnose(nodeList, connList){
-  var pulleys = (nodeList||[]).filter(_feadIsPulley);
-  var out = { order: [], ok: false, closed: false, isolated: [], errors: [] };
-  if(!pulleys.length) return out;
-
-  var byId = {}, cikis = {}, giris = {};
-  pulleys.forEach(function(n){ byId[n.id] = n; cikis[n.id] = 0; giris[n.id] = 0; });
-  var next = {};
-  (connList||[]).forEach(function(c){
-    if(!c || !byId[c.from] || !byId[c.to]) return;
-    cikis[c.from]++; giris[c.to]++;
-    if(next[c.from] === undefined) next[c.from] = c.to;      // ilk tel kazanır
+// SIRA GATES TABLO SIRASIDIR, kayışın gidişinin TERSİ. Yani `beltIndex`
+// doğrudan `build.order`'ı verir ve çekirdeğe giden liste hiç çevrilmez; gidiş
+// sırası isteyen (sihirbaz, animasyon, kullanıcıya "kayış sırası" diyen her
+// yüzey) veFeadRouteFlip'ten geçer. Seçim keyfî değil: kullanıcının tablosu,
+// 17 Gates raporunun tamamı ve depodaki her `ex.route` bu sırada yazılı —
+// dolayısıyla 2095 doğrulanmış sayı bu değişiklikte hiç oynamıyor.
+//
+// İNDİS DÜĞÜMDE, AYRI BİR LİSTEDE DEĞİL. Sırayı tek bir düğümde (Kayış
+// Tablosu'nda ya da Kayış Özellikleri'nde) liste olarak tutmak, kasnak
+// silindiğinde/kopyalandığında ya da o düğüm hiç yokken listeyi kasnaklardan
+// AYRI tutmak demekti — Dönüş Yönü'nde ölçülmüş "ikinci gerçek kaynak"
+// sınıfının aynısı. İndis kasnakla birlikte doğar, kopyalanır ve ölür.
+//
+// BOŞLUK VE ÇAKIŞMA SESSİZCE ONARILIR: indisi olmayan kasnak SONA düşer
+// (paletten yeni bırakılan kasnak kayışın sonuna eklenir), iki kasnak aynı
+// indisi taşıyorsa dizi sırası ayırır. Onarımı veFeadNormalizeBeltOrder
+// yapıyor ve yalnız veFeadBuildSystem çağırıyor; OKUMA YOLU SAFTIR ve yazmaz.
+//
+// SIRA SÜRÜCÜDEN BAŞLAR — ve bu bir görsel tercih değil, bir SÖZLEŞME. Kablo
+// döneminde zincir sürücüden yürütülüyordu, dolayısıyla sıranın ilk elemanı her
+// zaman sürücüydü; üç yer buna dayanıyor:
+//   • veFeadRouteFlip "krank SABİT, kalanı ters" diyor — ilk eleman sürücü
+//     değilse çevirme başka bir kasnağı sabitler ve gergi yanlış tarafa düşer;
+//   • "gergi krankın çıkışında" hükmü konumu indisten okuyor;
+//   • 17 Gates raporunun tamamı tablosuna sürücüyle başlıyor, karşılaştırmalar
+//     satır satır o sıraya bakıyor.
+// Kayış KAPALI bir çevrim olduğu için başlangıcı döndürmek fiziği değiştirmez
+// (sarım, span ve L aynı) — yani bu kısıt bedelsiz. Döndürme OKUMA anında:
+// kullanıcının indisleri korunuyor, yalnız liste sürücüden başlatılıyor.
+function veFeadBeltOrder(nodeList){
+  var ile = [], siz = [];
+  (nodeList || []).forEach(function(n, i){
+    if(!_feadIsPulley(n)) return;
+    var v = _feadNum(n.data && n.data.beltIndex, NaN);
+    (Number.isFinite(v) ? ile : siz).push({ n: n, v: v, i: i });
   });
+  ile.sort(function(a, b){ return (a.v - b.v) || (a.i - b.i); });
+  var order = ile.concat(siz).map(function(o){ return o.n; });
+  var drv = veFeadResolveDriver(order);
+  if(!drv) return order;
+  var k = order.indexOf(drv);
+  return (k <= 0) ? order : order.slice(k).concat(order.slice(0, k));
+}
 
-  // ÇATAL: kayış tek bir sıra izler; bir kasnaktan iki tel çıkması hangi
-  // sıranın geçerli olduğunu belirsiz bırakır (ilk tel sessizce kazanırdı).
-  pulleys.forEach(function(p){
-    if(cikis[p.id] > 1)
-      out.errors.push('"' + _feadNodeName(p) + '" kasnağından ' + cikis[p.id]
-        + ' kayış çıkıyor. Kayış yolu tek sıradır: her kasnaktan bir tel çıkar, bir tel girer.');
-    if(giris[p.id] > 1)
-      out.errors.push('"' + _feadNodeName(p) + '" kasnağına ' + giris[p.id]
-        + ' kayış giriyor. Kayış yolu tek sıradır: her kasnaktan bir tel çıkar, bir tel girer.');
+// Sırayı 1..N'e oturtur (boşluk kapanır, çakışma ayrılır) ve sırayı döndürür.
+// veFeadMigrateAll ile aynı yerden çağrılıyor: her yüzey veFeadBuildSystem'den
+// geçtiği için indissiz bir kasnak hangi kapıdan girerse girsin numaralanmış
+// oluyor — panelden, tablodan, sürüklemeden ya da rapordan.
+function veFeadNormalizeBeltOrder(nodeList){
+  var order = veFeadBeltOrder(nodeList);
+  order.forEach(function(n, i){
+    if(!n.data) n.data = {};
+    if(n.data.beltIndex !== i + 1) n.data.beltIndex = i + 1;
   });
+  return order;
+}
 
-  var start = veFeadResolveDriver(pulleys) || pulleys[0];
-  var order = [], seen = {}, cur = start.id, guard = 0;
-  while(cur && byId[cur] && !seen[cur] && guard++ < 512){
-    seen[cur] = 1;
-    order.push(byId[cur]);
-    cur = next[cur];
-  }
-  out.closed = (cur === start.id);
-  out.isolated = pulleys.filter(function(p){ return !seen[p.id]; });
-  // Sıra yine BÜTÜN kasnakları taşır: yerleştirici (veFeadArrangeByCoords) ve
-  // rozetler kopuk kasnağı da görmeli. Geçerlilik ayrı alanda.
-  out.order = order.concat(out.isolated);
-
-  if(!out.closed){
-    var son = order.length ? _feadNodeName(order[order.length-1]) : _feadNodeName(start);
-    out.errors.push(cur
-      ? ('Kayış yolu kapanmıyor: "' + son + '" kasnağından çıkan tel, başlangıç kasnağı "'
-         + _feadNodeName(start) + '" yerine "' + _feadNodeName(byId[cur]) + '" kasnağına dönüyor.')
-      : ('Kayış yolu kapanmıyor: "' + son + '" kasnağından çıkan tel yok. '
-         + 'Serpantin sırası krank çıkışından başlayıp krank girişine dönmeli.'));
-  }
-  if(out.isolated.length){
-    out.errors.push('Kayış yoluna bağlı olmayan kasnak var: '
-      + out.isolated.map(_feadNodeName).join(', ')
-      + '. Kanvasta teli çekilmemiş bir kasnak kayışa dahil EDİLMEZ.');
-  }
-  out.ok = out.closed && !out.isolated.length && !out.errors.length;
-  return out;
+// Kasnağı tabloda `delta` satır kaydırır (−1 yukarı, +1 aşağı). Kayış kapalı
+// bir çevrim ama TABLO kapalı değil: ilk satırın üstü, son satırın altı yok —
+// sarma yapılsaydı "yukarı" düğmesi sürücüyü sona atardı ve kullanıcı
+// tablonun neresinde olduğunu kaybederdi. Döner: taşındıysa true.
+function veFeadMoveBeltIndex(nodeList, nodeId, delta){
+  var order = veFeadNormalizeBeltOrder(nodeList);
+  var i = -1, j;
+  for(j = 0; j < order.length; j++) if(order[j].id === nodeId){ i = j; break; }
+  if(i < 0) return false;
+  // İLK SATIR SÜRÜCÜNÜN — ne o iner ne başkası oraya çıkar (yukarıdaki
+  // sözleşme). Kısıt sessiz değil: tablo o iki oku SÖNÜK çiziyor.
+  if(i === 0) return false;
+  var k = i + (delta < 0 ? -1 : 1);
+  if(k < 1 || k >= order.length) return false;
+  var t = order[i]; order[i] = order[k]; order[k] = t;
+  order.forEach(function(n, x){ n.data.beltIndex = x + 1; });
+  return true;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2905,42 +2918,45 @@ function veFeadNaturalSense(order){
   return -FEADCore.loopSense(c);
 }
 
-// ── ROTAYI TERS YÜRÜT — KABLOLARI ÇEVİREREK ────────────────────────────────
+// ── ROTAYI TERS YÜRÜT — İNDİSLERİ ÇEVİREREK ────────────────────────────────
 //
-// Yön BİR BAYRAKTA DEĞİL, KABLOLARIN KENDİSİNDE durur. Düğüme `data.dir` gibi
-// bir alan koymak ikinci bir gerçek kaynağı yaratırdı ve üç yerden ısırırdı:
+// Yön BİR BAYRAKTA DURMAZ, sıranın KENDİSİNDE durur. Düğüme `data.dir` gibi
+// ayrı bir alan koymak ikinci bir gerçek kaynağı yaratırdı: silinince yön
+// sessizce dönerdi, imzaya girmezse GERİ AL sonrası kart bayat kalırdı, ve
+// tablo ile bayrak ayrıştığında hangisinin doğru olduğunun cevabı olmazdı.
+// Bu gerekçe kablo döneminde ölçülmüştü ve indis döneminde de aynen geçerli —
+// değişen yalnız çevrilen şey (tel değil, sıra).
 //
-//   1. Kanvastaki gidiş yönü oku (`veConnDirMark`, connections.js) telin
-//      from→to yönünü çiziyor. Bayrak kullanılsaydı ok, çözülen yönü DEĞİL
-//      kabloyu gösterir — yani yalan söylerdi.
-//   2. `veFeadTopoSignature` tel uçlarını okuyor ama araç düğümlerinin
-//      `data`'sını OKUMUYOR (ölçüldü: araç düğümü alanı değişince imza
-//      değişmiyor). Bayrak imzaya girmezdi → rozete tıklayınca kart doğrudan
-//      çağrıyla tazelenir ama GERİ AL sonrası bayat kalırdı, hem de sessizce.
-//   3. Bayrak silinince yön sessizce dönerdi (Konum Bağı'nda ölçülmüş
-//      "düğümü silmek durumu çeviriyor" sınıfı) → ayrı bir silme kancası.
+// KRANK SABİT + KALANI TERS (veFeadRouteFlip): bir İNVOLÜSYON, iki kez
+// uygulamak kimlik. Bütün tellerin uçlarını takas etmekle BİREBİR aynı sırayı
+// verdiği kablo döneminde ölçülmüştü; indis sırasında da aynı fonksiyon.
 //
-// Kabloyu çevirmek üçünü birden yok ediyor: tek gerçek kaynak, ok kendiliğinden
-// doğru, imza kendiliğinden değişiyor, silinecek bir durum yok.
+// Döner: yeniden numaralanan kasnak sayısı (0 = değişecek bir şey yok).
+function veFeadReverseRoute(nodeList){
+  var order = veFeadNormalizeBeltOrder(nodeList);
+  if(order.length < 3) return 0;
+  var ters = veFeadRouteFlip(order);
+  ters.forEach(function(n, i){ n.data.beltIndex = i + 1; });
+  return ters.length;
+}
+
+// ── ESKİ KAYIT GÖÇLERİ ─────────────────────────────────────────────────────
 //
-// ÖLÇÜLDÜ: kablo çevirmenin verdiği sıra, "krank sabit + kalanı ters" kuralının
-// verdiği sırayla BİREBİR aynı — yani bayrak yolunun tek iddia edilen üstünlüğü
-// (kabloya dokunmamak) karşılıksız.
+// İKİ AYRI GÖÇ, İKİ AYRI SÜRÜM — ve sırası önemli: sürüm 2 damgalı bir dosya
+// önce tellerini çevirir (2→3), SONRA o tellerden indisini kurar (3→4). Tek
+// adımda birleştirilseydi sürüm 2'den gelen dosya ters sırayla numaralanırdı.
 //
-// YERİNDE TAKAS, sil-ve-yeniden-kur DEĞİL: `createConnection` kimliği
-// `'conn-' + Date.now()` ile üretiyor, altı teli tek karede kurmak altı ÖZDEŞ
-// kimlik verirdi.
-//
-// YALNIZ İKİ UCU DA KASNAK olan teller çevrilir: araç düğümleri 0/0 portlu,
-// ama elle düzenlenmiş bir dosya başka tel taşıyabilir.
-function veFeadReverseRoute(nodeList, connList){
+// Teli çeviren yardımcı YALNIZ burada yaşıyor: canlı modelde kasnak teli
+// KALMADI, dolayısıyla kablo yürüyüşü bir göç ayrıntısıdır, bir okuma yolu
+// değil. Dışa da açılmıyor.
+function _feadFlipWires(nodeList, connList){
   var kasnak = {};
   (nodeList || []).forEach(function(n){ if(_feadIsPulley(n)) kasnak[n.id] = 1; });
   var k = 0;
   (connList || []).forEach(function(c){
     if(!c || !kasnak[c.from] || !kasnak[c.to]) return;
     var t = c.to; c.to = c.from; c.from = t;
-    // Kasnak 1 giriş / 1 çıkış taşıyor → port kimlikleri tam olarak bunlar
+    // Kasnak 1 giriş / 1 çıkış taşıyordu → port kimlikleri tam olarak bunlar
     // (js/ui-core.js: inCount === 1 ? 'input' : 'input-' + i).
     c.fromPort = 'output'; c.toPort = 'input';
     k++;
@@ -2948,20 +2964,65 @@ function veFeadReverseRoute(nodeList, connList){
   return k;
 }
 
-// ── ESKİ KAYIT GÖÇÜ: KABLOLAR TABLO SIRASINDAN GİDİŞ SIRASINA ────────────
-//
-// Şema sürümü 3'ten önce kaydedilen projelerde kayış telleri çekirdeğin LİSTE
-// (Gates tablo) sırasındaydı; köprü artık telleri gidiş sırası sayıp çeviriyor
-// (veFeadRouteFlip). Eski bir kayıt çevrilmeden açılsaydı çekirdek tersine
-// dönmüş bir listeyle koşar, gergi gergin tarafa düşer ve span gerilmeleri
-// negatife inerdi — model yine "çözülüyor" derdi (ölçüldü: BMC 526 → −196 N).
-// Göç bir kez, kayıt yüklenirken: iki ucu da kasnak olan her telin uçları takas
-// edilir (Dönüş Yönü düğümünün yaptığının aynısı). Sürüm kapısı ve gömülü alt
-// topolojilere iniş state.js'te (veApplyLegacyMigrations); burası yalnız işi
-// yapar ve kaç tel çevirdiğini döndürür. Kapı: fead-wire-order-migration.test.js.
+// SÜRÜM 3 (2026-09-08): teller çekirdeğin liste sırasından kayışın GİDİŞ
+// sırasına alındı. Sürüm 2 damgalı kayıtların telleri bir kez çevrilir; göç
+// atlansaydı gergi gergin tarafa düşer ve span gerilmeleri negatife inerdi —
+// model yine "çözülüyor" derdi (ölçüldü: BMC 526 → −196 N).
 function veFeadMigrateWireOrder(state){
   if(!state || !Array.isArray(state.nodes)) return 0;
-  return veFeadReverseRoute(state.nodes, state.connections || []);
+  return _feadFlipWires(state.nodes, state.connections || []);
+}
+
+// ESKİ KABLO YÜRÜYÜŞÜ — yalnız göç için. Sürücüden başlar, çıkış→giriş izler,
+// zincire hiç girmemiş kasnakları sona ekler. Canlı okuma yolu artık
+// veFeadBeltOrder; burası o yolun SİLİNMİŞ hâlinin tek kalıntısı ve öyle
+// kalmalı, yoksa iki sıra kaynağı yan yana yaşamaya başlar.
+function _feadWireRouteOrder(nodeList, connList){
+  var pulleys = (nodeList || []).filter(_feadIsPulley);
+  if(!pulleys.length) return [];
+  var byId = {}, next = {};
+  pulleys.forEach(function(n){ byId[n.id] = n; });
+  (connList || []).forEach(function(c){
+    if(!c || !byId[c.from] || !byId[c.to]) return;
+    if(next[c.from] === undefined) next[c.from] = c.to;      // ilk tel kazanır
+  });
+  var start = veFeadResolveDriver(pulleys) || pulleys[0];
+  var order = [], seen = {}, cur = start.id, guard = 0;
+  while(cur && byId[cur] && !seen[cur] && guard++ < 512){
+    seen[cur] = 1; order.push(byId[cur]); cur = next[cur];
+  }
+  return order.concat(pulleys.filter(function(p){ return !seen[p.id]; }));
+}
+
+// SÜRÜM 4 (2026-09-09): kasnaklar arası bağlantı KALDIRILDI, sıra artık
+// node.data.beltIndex. Sürüm 3 (ve öncesi, tellerini yukarıda çevirmiş olarak)
+// damgalı her kayıtta sıra tellerden bir kez okunup indise yazılır, sonra
+// kasnak-kasnak telleri SİLİNİR.
+//
+// TELLERİN SİLİNMESİ GÖÇÜN PARÇASI, ayrı bir temizlik değil: kasnaklar artık
+// 0/0 portlu, dolayısıyla kalan bir tel hiçbir porta oturmaz — kanvasta
+// uçları düğüm merkezine çakılmış ölü çizgiler olarak kalırdı.
+//
+// İndis TABLO sırasını taşıyor, tel GİDİŞ sırasındaydı → veFeadRouteFlip.
+// Çevirme atlansaydı bütün eski modeller ters sırayla numaralanır, gergi
+// gergin tarafa düşerdi (sürüm 3 göçünün ölçtüğü hatanın aynısı).
+function veFeadMigrateBeltOrder(state){
+  if(!state || !Array.isArray(state.nodes)) return 0;
+  var gidis = _feadWireRouteOrder(state.nodes, state.connections || []);
+  if(!gidis.length) return 0;
+  veFeadRouteFlip(gidis).forEach(function(n, i){
+    if(!n.data) n.data = {};
+    n.data.beltIndex = i + 1;
+  });
+  var kasnak = {};
+  state.nodes.forEach(function(n){ if(_feadIsPulley(n)) kasnak[n.id] = 1; });
+  var k = 0, j;
+  if(Array.isArray(state.connections))
+    for(j = state.connections.length - 1; j >= 0; j--){
+      var c = state.connections[j];
+      if(c && kasnak[c.from] && kasnak[c.to]){ state.connections.splice(j, 1); k++; }
+    }
+  return gidis.length + k;
 }
 
 // ── GERGİ GEVŞEK SPANDA MI? ────────────────────────────────────────────────
@@ -3009,11 +3070,12 @@ function veFeadTensionerSide(row, tensionerName){
   return out;
 }
 
-// Yalnız sırayı isteyen çağrılar için ince sarmal (yerleştirici, testler).
-// DÖNEN SIRA KABLOLARIN SIRASIDIR = kayışın GİDİŞİ (2026-09-08). Çekirdek
-// sırası için veFeadRouteFlip.
-function veFeadRouteOrder(nodeList, connList){
-  return veFeadRouteDiagnose(nodeList, connList).order;
+// KAYIŞIN GİDİŞ SIRASI — tablonun sırası DEĞİL, onun tersi (krank sabit).
+// Tablo/çekirdek sırası için doğrudan veFeadBeltOrder. İkisi ayrı isimlerde
+// duruyor çünkü ayrışmaları SESSİZ: her ikisi de aynı kasnakları aynı
+// uzunlukta döndürür, yalnız gergi yanlış tarafa düşer.
+function veFeadRouteOrder(nodeList){
+  return veFeadRouteFlip(veFeadBeltOrder(nodeList));
 }
 
 // ── GİDİŞ SIRASI ↔ ÇEKİRDEK (LİSTE) SIRASI ────────────────────────────────
@@ -3030,19 +3092,48 @@ function veFeadRouteOrder(nodeList, connList){
 // ile bütün tellerin uçlarını takas etmek aynı sırayı verir — Dönüş Yönü
 // düğümü bu yüzden telleri çevirmekle yetiniyor.
 //
-// Ters çevrilen liste kopuk kasnakları da taşıyabilir (veFeadRouteDiagnose
-// sırayı BÜTÜN kasnaklarla döndürür); geçersiz topolojide çekirdek zaten
-// koşmaz, yerleştirici ve rozetler için sıra yeterlidir.
+// Liste BÜTÜN kasnakları taşır (veFeadBeltOrder indissizleri de sona ekler);
+// çözülemeyen bir geometride çekirdek zaten koşmaz, yerleştirici ve rozetler
+// için sıra yeterlidir.
 function veFeadRouteFlip(order){
   var r = (order || []).slice();
   return r.length > 2 ? [r[0]].concat(r.slice(1).reverse()) : r;
 }
 
-// KABLOLAMADAN KAYIŞIN DÖNÜŞÜ — rozet · panel · toast TEK bu noktadan.
-// Gidiş sırasını çekirdek sırasına çevirip `veFeadNaturalSense`'e verir;
-// doğrudan vermek işareti ters çevirirdi (ölçüldü, kapı fead-spin.test.js).
-function veFeadSpinOf(nodeList, connList){
-  return veFeadNaturalSense(veFeadRouteFlip(veFeadRouteOrder(nodeList, connList)));
+// KAYIŞIN DÖNÜŞÜ — rozet · panel · toast TEK bu noktadan. veFeadNaturalSense
+// ÇEKİRDEK (tablo) sırası bekliyor, gidiş sırası değil: gidişi vermek işareti
+// ters çevirirdi (ölçüldü, kapı fead-spin.test.js).
+function veFeadSpinOf(nodeList){
+  return veFeadNaturalSense(veFeadBeltOrder(nodeList));
+}
+
+// ── "DÖNÜŞ YÖNÜ" BİR GÖRÜNÜM, TEMAS TARAFI GERÇEK ALAN ─────────────────────
+//
+// BMC'nin KIRPI_II hesap defterinde (`Geometrik Entegrasyon` H5:H10) kasnak
+// dönüş yönü bir AÇILIR LİSTE girdisidir (Sağ/Sol) ve defterin span'i ondan
+// türer: `L48 = IF(H6=H5,"Düz","Ters")` — iki komşu kasnak aynı yöne dönüyorsa
+// dış teğet, ters yöne dönüyorsa iç teğet.
+//
+// MFSim'de aynı fizik TEK alandan gelir: `contact` (grooved/back). Çekirdeğin
+// kuralı `d = (grooved ? s : −s)` ve ekranda görünen dönüş `cw = d > 0`.
+// Yani yön ile temas tarafı, çevrimin süpürme işareti `s` verildiğinde BİREBİR
+// eşlenir — ve bu fonksiyon o eşlemenin tersidir: kullanıcı "Sağ" seçtiğinde
+// hangi temas tarafı yazılmalı.
+//
+// TEK ALAN OLMASI BİR KAZANÇ: defterde efektif çap kasnağın TİPİNDEN
+// (`IF(OR(C5=$C$124,C5=$C$125), G5+2*hr, G5+2*hb)` — avara ve gergi sırttan
+// sayılır), teğet ise YÖNDEN türüyor. İkisi ayrı girdiler olduğu için bir
+// avarayı "Sağ" yapmak defterde teğeti kaburgalı gibi çözer ama efektif çapı
+// sırttan bırakır — sessiz bir tutarsızlık. MFSim'de bu YAPISAL OLARAK
+// imkânsız: iki sayı da `contact`tan gelir.
+//
+// Süpürme işareti okunamıyorsa (koordinat eksik, çevrim çözülmüyor) yön de
+// okunamaz: null döner ve çağıran yazmaz — uydurulmuş bir taraf, sessizce
+// başka bir güzergâh çözdürürdü.
+function veFeadContactForSpin(nodeList, yonSag){
+  var s = -veFeadSpinOf(nodeList);          // çekirdeğin süpürme işareti
+  if(!s) return null;
+  return ((yonSag ? 1 : -1) === s) ? 'grooved' : 'back';
 }
 
 // Sürücü kasnağı çöz (ROL): açık işaret → tip → ilk kasnak.
@@ -3197,7 +3288,16 @@ function veFeadTranslateError(msg){
 //   { ok, sys, order, names, byName, errors[], warnings[], cfg }
 // ok=false ise errors[] doludur ve sys null'dur. HİÇBİR DURUMDA istisna
 // fırlatmaz — panel yarım kurulmuş bir topolojide de çizilebilmeli.
-function veFeadBuildSystem(nodeList, connList, opt){
+function veFeadBuildSystem(nodeList, opt){
+  // DİZİ ARGÜMAN KAPISI. İkinci parametre 2026-09-09'a kadar kablo listesiydi;
+  // güncellenmemiş tek bir çağrı `connList`i `opt` sanıp SESSİZCE koşardı
+  // (opt'un okunan alanları dizide yok → hepsi undefined, çözüm yine çıkar).
+  // Bu istisna o sessizliği kapatıyor ve aşağıdaki "istisna fırlatmaz"
+  // sözleşmesini bozmuyor: sözleşme YARIM KURULMUŞ MODEL için, bu ise
+  // güncellenmemiş KOD — modelin hiçbir hâli buraya dizi geçiremez.
+  if(Array.isArray(opt))
+    throw new Error('veFeadBuildSystem(nodeList, opt): kablo listesi artık '
+      + 'alınmıyor — kayış sırası node.data.beltIndex alanında.');
   var out = { ok: false, sys: null, order: [], names: [], byName: {},
               errors: [], warnings: [], cfg: null,
               spring: null, drive: null, freeAngleDeg: NaN,
@@ -3214,24 +3314,22 @@ function veFeadBuildSystem(nodeList, connList, opt){
     return out;
   }
 
-  var teshis = veFeadRouteDiagnose(all, connList);
-  // KABLOLAR GİDİŞ SIRASINDA, ÇEKİRDEK LİSTEYİ TERS BEKLER — çevirme burada,
-  // tek noktada (bkz. veFeadRouteFlip). `build.order` böylece Gates tablo
-  // sırasıdır: raporlar, kart ve fixture karşılaştırmaları ona göre okur.
-  var order = veFeadRouteFlip(teshis.order);
+  // SIRA TABLODAN — ve `build.order` onun ta kendisi, çevirme YOK: beltIndex
+  // zaten Gates tablo sırasında saklanıyor (bkz. veFeadBeltOrder). Raporlar,
+  // kart ve fixture karşılaştırmaları bu sırayı okur.
+  //
+  // NUMARALAMA BURADA ONARILIR, göç ile aynı gerekçeyle tek noktada: paletten
+  // yeni bırakılan kasnağın indisi yoktur ve her yüzey buradan geçer.
+  var order = veFeadNormalizeBeltOrder(all);
   out.order = order;
-  out.route = teshis;
-  // DÖNÜŞ YÖNÜ: rota sırasının SONUCU, ayrı bir bayrak DEĞİL (bkz.
-  // veFeadNaturalSense — liste gidişin tersi, işaret orada çevriliyor).
-  // "Dönüş Yönü" düğümü kabloları çeviriyor; buradan okunan sıra zaten
-  // çevrilmiş sıradır.
+  // DÖNÜŞ YÖNÜ: sıranın SONUCU, ayrı bir bayrak DEĞİL. "Dönüş Yönü" düğümü
+  // indisleri çeviriyor; buradan okunan sıra zaten çevrilmiş sıradır.
   out.spin = veFeadNaturalSense(order);
   if(!order.length){ out.errors.push('İç topolojide hiç kasnak yok.'); return out; }
-  // TOPOLOJİ GEÇERLİ DEĞİLSE ÇÖZÜLMEZ. Eskiden kopuk kasnak sıraya sessizce
-  // ekleniyor ve çekirdek pekâlâ "geçerli" bir çevrim çözüyordu — yani kart
-  // kullanıcının KURMADIĞI bir kayışı gösteriyordu. Artık sebep yazılıyor;
-  // kanvastaki teller olduğu gibi duruyor.
-  teshis.errors.forEach(function(m){ out.errors.push(m); });
+  // KOPUK KASNAK / KAPANMAYAN ÇEVRİM / ÇATAL HÜKÜMLERİ KALKTI — kablo yokken
+  // kurulamayan hatalar. Bir kasnak listede varsa kayıştadır; liste her zaman
+  // kapalı bir çevrimdir. Geriye kalan tek topoloji kuralı sayıdır (altta),
+  // geometrinin kendi hataları çekirdekten gelmeye devam ediyor.
   if(order.length < 3){ out.errors.push('En az 3 kasnak gerekli (sürücü + aksesuar + gergi); şu an ' + order.length + '.'); }
 
   var un = veFeadUniqueNames(order);
@@ -3759,14 +3857,14 @@ function veFeadBuildSystem(nodeList, connList, opt){
 
 // Canlı globallerden kur (tarayıcı yolu).
 function veFeadBuildFromCanvas(opt){
-  if(typeof nodes === 'undefined') return veFeadBuildSystem([], [], opt);
-  return veFeadBuildSystem(nodes, (typeof connections !== 'undefined') ? connections : [], opt);
+  if(typeof nodes === 'undefined') return veFeadBuildSystem([], opt);
+  return veFeadBuildSystem(nodes, opt);
 }
 
 // Aktif topolojideki kasnakları kayış sırasında topla.
 function veFeadGatherPulleys(){
   if(typeof nodes === 'undefined') return [];
-  return veFeadRouteOrder(nodes, (typeof connections !== 'undefined') ? connections : []);
+  return veFeadRouteOrder(nodes);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -4372,10 +4470,14 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadContactOf: veFeadContactOf, veFeadContactLabel: veFeadContactLabel,
     veFeadOD: veFeadOD, veFeadHasOD: veFeadHasOD, veFeadRadius: veFeadRadius,
     veFeadMigrateNode: veFeadMigrateNode, veFeadMigrateAll: veFeadMigrateAll,
-    veFeadRouteOrder: veFeadRouteOrder, veFeadRouteDiagnose: veFeadRouteDiagnose,
+    veFeadRouteOrder: veFeadRouteOrder, veFeadBeltOrder: veFeadBeltOrder,
+    veFeadNormalizeBeltOrder: veFeadNormalizeBeltOrder,
+    veFeadMoveBeltIndex: veFeadMoveBeltIndex,
     veFeadNaturalSense: veFeadNaturalSense, veFeadReverseRoute: veFeadReverseRoute,
     veFeadRouteFlip: veFeadRouteFlip, veFeadSpinOf: veFeadSpinOf,
+    veFeadContactForSpin: veFeadContactForSpin,
     veFeadMigrateWireOrder: veFeadMigrateWireOrder,
+    veFeadMigrateBeltOrder: veFeadMigrateBeltOrder,
     veFeadSpinLabel: veFeadSpinLabel,
     _feadPlaneName: _feadPlaneName,
     veFeadTensionerSide: veFeadTensionerSide,

@@ -1,0 +1,734 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style></head><body>
+<title>AG00879 Girdi Denetimi</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --paper:#EBEFF2; --surface:#FBFCFD; --surface-2:#F2F5F7;
+  --ink:#101A21; --ink-2:#576976; --ink-3:#7E8E9A;
+  --rule:#C2CDD5; --rule-soft:#DCE3E8;
+  --accent:#175A87; --accent-soft:#E2EDF5;
+  --flag:#A62E22; --flag-soft:#F7E5E2;
+  --ok:#26654A; --ok-soft:#E1EFE8;
+  --warn:#89600F; --warn-soft:#F6EDDA;
+  --shadow:0 1px 2px rgba(16,26,33,.06), 0 8px 24px -16px rgba(16,26,33,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1318; --surface:#141C22; --surface-2:#19232A;
+    --ink:#DDE6EB; --ink-2:#8496A2; --ink-3:#6B7C88;
+    --rule:#293740; --rule-soft:#1F2B33;
+    --accent:#6BB0DE; --accent-soft:#13293A;
+    --flag:#E37D6B; --flag-soft:#33201C;
+    --ok:#5FB88C; --ok-soft:#16291F;
+    --warn:#D2A54C; --warn-soft:#2B2314;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D1318; --surface:#141C22; --surface-2:#19232A;
+  --ink:#DDE6EB; --ink-2:#8496A2; --ink-3:#6B7C88;
+  --rule:#293740; --rule-soft:#1F2B33;
+  --accent:#6BB0DE; --accent-soft:#13293A;
+  --flag:#E37D6B; --flag-soft:#33201C;
+  --ok:#5FB88C; --ok-soft:#16291F;
+  --warn:#D2A54C; --warn-soft:#2B2314;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"IBM Plex Serif",Georgia,"Times New Roman",serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px; margin:0 auto; padding:0 24px 96px}
+.col{max-width:70ch}
+h1,h2,h3,.mono,.eyebrow,th,.tile-v,.badge{font-family:"Archivo",-apple-system,"Segoe UI",sans-serif}
+.mono,code,table,.num{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace}
+.num{font-variant-numeric:tabular-nums}
+
+/* ── başlık bandı ─────────────────────────────────────────── */
+header{border-bottom:1px solid var(--rule); background:var(--surface)}
+.hd{max-width:1120px; margin:0 auto; padding:34px 24px 26px}
+.eyebrow{
+  font-size:11px; font-weight:600; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink-2); margin:0 0 14px;
+}
+h1{
+  font-size:clamp(30px,4.6vw,46px); font-weight:700; letter-spacing:-.022em;
+  line-height:1.06; margin:0 0 16px; text-wrap:balance;
+}
+.dek{font-size:17px; color:var(--ink-2); margin:0; max-width:60ch}
+.dek b{color:var(--ink); font-weight:600}
+
+.sources{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:0;
+  border-top:1px solid var(--rule-soft); margin-top:28px;
+}
+.src{padding:16px 20px 16px 0; border-right:1px solid var(--rule-soft)}
+.src:last-child{border-right:0; padding-left:20px}
+@media(max-width:640px){
+  .src{border-right:0; border-bottom:1px solid var(--rule-soft); padding-left:0!important}
+  .src:last-child{border-bottom:0}
+}
+.src-k{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--ink-3); margin:0 0 6px}
+.src-n{font-family:"Archivo",sans-serif; font-weight:600; font-size:15px; margin:0 0 4px; line-height:1.35}
+.src-m{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-2); margin:0}
+
+/* ── hüküm ─────────────────────────────────────────────────── */
+.verdict{
+  margin:38px 0 0; padding:26px 28px; background:var(--surface);
+  border:1px solid var(--rule); border-left:4px solid var(--ok); box-shadow:var(--shadow);
+}
+.verdict h2{margin:0 0 10px; font-size:22px; letter-spacing:-.015em; font-weight:700}
+.verdict p{margin:0; color:var(--ink-2); max-width:66ch}
+.verdict p + p{margin-top:10px}
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:1px;
+  background:var(--rule-soft); border:1px solid var(--rule-soft); margin-top:22px}
+.tile{background:var(--surface); padding:14px 16px}
+.tile-k{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-3); margin:0 0 6px}
+.tile-v{font-size:23px; font-weight:600; letter-spacing:-.02em; margin:0;
+  font-variant-numeric:tabular-nums}
+.tile-s{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-2); margin:4px 0 0}
+
+/* ── bölümler ──────────────────────────────────────────────── */
+section{margin-top:64px}
+.sec-h{display:flex; align-items:baseline; gap:14px; margin-bottom:6px;
+  border-bottom:2px solid var(--ink); padding-bottom:8px}
+.sec-n{font-family:"IBM Plex Mono",monospace; font-size:12px; font-weight:600;
+  color:var(--accent); letter-spacing:.06em}
+h2{font-size:26px; font-weight:700; letter-spacing:-.02em; margin:0; line-height:1.15}
+h3{font-size:17px; font-weight:600; letter-spacing:-.01em; margin:34px 0 8px}
+p{margin:14px 0}
+.lede{font-size:17px; color:var(--ink-2)}
+strong{font-weight:600}
+em{font-style:italic; color:var(--ink)}
+
+/* ── tablolar ──────────────────────────────────────────────── */
+.tbl{overflow-x:auto; margin:22px 0; border:1px solid var(--rule-soft); background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:13px; min-width:560px}
+caption{caption-side:top; text-align:left; font-family:"IBM Plex Mono",monospace;
+  font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3);
+  padding:12px 14px 0}
+th{font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--ink-2); text-align:right; padding:12px 12px 8px; border-bottom:1px solid var(--rule);
+  white-space:nowrap; vertical-align:bottom}
+th:first-child,td:first-child{text-align:left}
+td{padding:7px 12px; border-bottom:1px solid var(--rule-soft); text-align:right;
+  font-variant-numeric:tabular-nums; white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--surface-2)}
+td.t{font-family:"IBM Plex Serif",serif; white-space:normal; min-width:15ch}
+.g{color:var(--ink-2)}
+.d-bad{color:var(--flag); font-weight:500}
+.d-ok{color:var(--ok)}
+.rule-top td{border-top:1px solid var(--rule)}
+
+.badge{display:inline-block; font-size:10px; font-weight:600; letter-spacing:.07em;
+  text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.b-crit{background:var(--flag-soft); color:var(--flag)}
+.b-warn{background:var(--warn-soft); color:var(--warn)}
+.b-info{background:var(--accent-soft); color:var(--accent)}
+.b-ok{background:var(--ok-soft); color:var(--ok)}
+
+.fid{font-family:"IBM Plex Mono",monospace; font-weight:600; color:var(--accent)}
+
+/* ── şekiller ──────────────────────────────────────────────── */
+figure{margin:26px 0; background:var(--surface); border:1px solid var(--rule-soft); padding:18px}
+figure svg{display:block; width:100%; height:auto; max-width:660px; margin:0 auto}
+figure text{paint-order:stroke; stroke:var(--surface); stroke-width:3.2px; stroke-linejoin:round}
+figcaption{font-family:"IBM Plex Mono",monospace; font-size:11.5px; line-height:1.6;
+  color:var(--ink-2); margin-top:14px; padding-top:12px; border-top:1px solid var(--rule-soft)}
+figcaption b{color:var(--ink); font-weight:500}
+
+/* ── not kutusu ────────────────────────────────────────────── */
+.note{border-left:3px solid var(--accent); background:var(--surface); padding:14px 18px;
+  margin:22px 0; font-size:15px; color:var(--ink-2)}
+.note b{color:var(--ink)}
+.note.flag{border-left-color:var(--flag)}
+
+ol.chk{list-style:none; counter-reset:c; padding:0; margin:22px 0}
+ol.chk li{counter-increment:c; position:relative; padding:12px 0 12px 46px;
+  border-bottom:1px solid var(--rule-soft)}
+ol.chk li:last-child{border-bottom:0}
+ol.chk li::before{content:counter(c,decimal-leading-zero);
+  position:absolute; left:0; top:13px; font-family:"IBM Plex Mono",monospace;
+  font-size:12px; font-weight:600; color:var(--accent)}
+ol.chk code{font-size:12.5px; background:var(--surface-2); padding:1px 5px; border-radius:2px}
+
+footer{margin-top:72px; padding-top:20px; border-top:1px solid var(--rule);
+  font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-3)}
+</style>
+
+<header>
+  <div class="hd">
+    <p class="eyebrow">FEAD · Girdi denetimi · 2 Eylül 2026</p>
+    <h1>AG00879 girdi denetimi</h1>
+    <p class="dek">MFSim'in ürettiği FEAD raporu ile Gates'in AG00879 raporu arasındaki
+      farkların tamamı <b>girdi farkıdır</b>. Girdiler Gates'in kendi sayfalarındaki
+      değerlere getirildiğinde MFSim raporun her satırını yeniden üretiyor.</p>
+
+    <div class="sources">
+      <div class="src">
+        <p class="src-k">Karşılaştırılan · A</p>
+        <p class="src-n">MFSim FEAD Raporu</p>
+        <p class="src-m">MFSim_FEAD_Raporu_20260902.html<br>5 kasnak · tahrik boyu 1399,7 mm · T 525 N</p>
+      </div>
+      <div class="src">
+        <p class="src-k">Karşılaştırılan · B</p>
+        <p class="src-n">Gates ABDS AG00879</p>
+        <p class="src-m">8PK1392HD · T38665 @31 Nm · 17.05.2023<br>12 sayfa · Gates 9.40.0.0 · Design Tension 476 N</p>
+      </div>
+      <div class="src">
+        <p class="src-k">Sistem</p>
+        <p class="src-n">Anadolu Isuzu 6×6 Cummins</p>
+        <p class="src-m">Secondary ALT &amp; AC Drive<br>FAN · IDR · A_C · ALT · TEN</p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="verdict">
+    <h2>Matematik doğru. Fark on bir girdide.</h2>
+    <p>Gates'in kendi girdileriyle kurulan model, Gates'in <em>bütün</em> çıktı satırlarını
+      yeniden üretiyor: beş sarım açısı, beş açıklık, altı konumluk gergi kolu tablosu,
+      beş devir noktasının gerilme ve hubload zincirleri. Sapma yuvarlama düzeyinde.</p>
+    <p>Dolayısıyla incelenecek olan çekirdek değil, panele girilen sayılardır.
+      Aşağıdaki defter on bir farkı ve her birinin ölçülmüş bedelini veriyor.</p>
+
+    <div class="tiles">
+      <div class="tile">
+        <p class="tile-k">En kötü Δ sarım</p>
+        <p class="tile-v">0,05°</p>
+        <p class="tile-s">5 kasnak · Gates 85,4–241,3°</p>
+      </div>
+      <div class="tile">
+        <p class="tile-k">Δ tasarım gerginliği</p>
+        <p class="tile-v">0,4 N</p>
+        <p class="tile-s">475,6 ↔ 476 N · %0,08</p>
+      </div>
+      <div class="tile">
+        <p class="tile-k">Δ montaj konumu</p>
+        <p class="tile-v">0,00 mm</p>
+        <p class="tile-s">türev 183,00/92,15 ↔ rapor aynı</p>
+      </div>
+      <div class="tile">
+        <p class="tile-k">Δ gerilme zinciri</p>
+        <p class="tile-v">&lt;1 N</p>
+        <p class="tile-s">5 devir × 5 kasnak = 25 değer</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ 1 · FARK DEFTERİ ══════════════ -->
+  <section>
+    <div class="sec-h"><span class="sec-n">01</span><h2>Fark defteri</h2></div>
+    <p class="lede col">Ağırlığa göre sıralı. "Bedel" sütunu, o girdiyi <em>tek başına</em>
+      geri alıp ölçülen sapmadır — diğer on tanesi doğruyken.</p>
+
+    <div class="tbl">
+      <table>
+        <caption>Tablo 1 — Girdi farkları ve tek başına ölçülen bedelleri</caption>
+        <thead>
+          <tr>
+            <th>#</th><th>Girdi</th><th>Gates</th><th>MFSim modeli</th>
+            <th>Bedel (tek başına)</th><th>Ağırlık</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="fid">F1</span></td>
+            <td class="t">Kayış yolu yönü (serpantin sırası)</td>
+            <td class="g">FAN→IDR→A_C→<br>ALT→TEN</td>
+            <td class="d-bad">FAN→TEN→ALT→<br>A_C→IDR</td>
+            <td class="t d-bad">Gerilme zinciri çöküyor: T<sub>min</sub> −578 N,
+              krank çıkışı 1531 → 477 N. Kayma emniyeti, hubload ve yorulma
+              zincirinin tamamı geçersiz.</td>
+            <td><span class="badge b-crit">Kritik</span></td>
+          </tr>
+          <tr>
+            <td><span class="fid">F2</span></td>
+            <td class="t">Düz kasnak dış çapı (IDR + TEN)</td>
+            <td class="g">74,00 mm</td>
+            <td class="d-bad">78,60 mm</td>
+            <td class="t d-bad">Sarım +3,38° (IDR), kayış boyu +7,0 mm,
+              take-up +0,016 mm/°, gergi sarımı +1,96°</td>
+            <td><span class="badge b-crit">Kritik</span></td>
+          </tr>
+          <tr>
+            <td><span class="fid">F3</span></td>
+            <td class="t">Gergi kol boyu <span class="mono">a</span></td>
+            <td class="g">56,0 mm</td>
+            <td class="d-bad">50,0 mm</td>
+            <td class="t d-bad">Tasarım gerginliği +57,1 N (+%12),
+              take-up −0,122 mm/°, montaj konumu 4,24 mm kayıyor</td>
+            <td><span class="badge b-crit">Kritik</span></td>
+          </tr>
+          <tr>
+            <td><span class="fid">F4</span></td>
+            <td class="t">Tahrik oranı (krank kasnağı / motor)</td>
+            <td class="g">1,000</td>
+            <td class="d-bad">1,430</td>
+            <td class="t d-bad">Bütün aksesuar devirleri ×1,43;
+              kayış hızı 17,5 → 25,0 m/s; krank çıkış gerginliği 1531 → 1214 N.
+              Uygunluk kriteri 12–13'ün "klima aşırı devirde" hükmü buradan geliyor.</td>
+            <td><span class="badge b-crit">Kritik</span></td>
+          </tr>
+          <tr>
+            <td><span class="fid">F5</span></td>
+            <td class="t">Çalışma çevrimi (devir · süre payı · güç · sıcaklık)</td>
+            <td class="g">5 nokta<br>600…2200 d/d<br>%5/35/35/20/5<br>80 °C</td>
+            <td class="d-bad">6 nokta<br>800…2000 d/d<br>%27/10/13/18/19/13<br>90 °C</td>
+            <td class="t d-bad">Ortalama gerilme, hubload, mil torku ve ömür
+              tablolarının tamamı başka bir çevrimden. ALT 3,5–8,8 ↔ 5,65–9,22 kW,
+              A_C 1,4–6,0 ↔ 2,69–6,67 kW</td>
+            <td><span class="badge b-crit">Kritik</span></td>
+          </tr>
+          <tr>
+            <td><span class="fid">F6</span></td>
+            <td class="t">Atalet momentleri ve gergi kasnak kütlesi</td>
+            <td class="g">CRK 0,1500<br>IDR 0,0001 · A_C 0,0060<br>ALT 0,0085 · TEN 0,0006<br>kol 0,0060 · kütle 0,50 kg</td>
+            <td class="d-bad">hiçbiri girilmemiş</td>
+            <td class="t d-bad">§8.18 burulma titreşimi hiç kurulamıyor
+              (Gates: System Resonance Mode 1 = 22,11 Hz)</td>
+            <td><span class="badge b-warn">Yüksek</span></td>
+          </tr>
+          <tr>
+            <td><span class="fid">F7</span></td>
+            <td class="t">Kayış efektif boyu</td>
+            <td class="g">1392 mm (girdi)</td>
+            <td class="d-bad">girilmemiş → türev</td>
+            <td class="t">Tasarım kipi; hata değil <em>ama</em> kayış tipine bağlı
+              çıktıları (B10 ömrü, kaburga yorulması, açıklık frekansları) kapatıyor</td>
+            <td><span class="badge b-info">Seçim</span></td>
+          </tr>
+          <tr>
+            <td><span class="fid">F8</span></td>
+            <td class="t">Boy toleransı ± / uzama+aşınma payı</td>
+            <td class="g">5,00 mm / %0,70</td>
+            <td class="d-bad">0,0 mm / %0,00</td>
+            <td class="t d-bad">Konum tablosunun zarfı çöküyor: Değiştirme /
+              Maks. / Çalışma / Min. dört sütun aynı açıya oturuyor</td>
+            <td><span class="badge b-warn">Yüksek</span></td>
+          </tr>
+          <tr>
+            <td><span class="fid">F9</span></td>
+            <td class="t">Mekanik durdurucu (load stop)</td>
+            <td class="g">39,0° bağıl</td>
+            <td class="d-bad">girilmemiş</td>
+            <td class="t">Konum tablosunda <em>Load</em> satırı yok
+              (Gates: 213,1° · 529,1 N · 1378,7 mm)</td>
+            <td><span class="badge b-info">Düşük</span></td>
+          </tr>
+          <tr>
+            <td><span class="fid">F10</span></td>
+            <td class="t">Boy ofseti <span class="mono">lengthOffsetMm</span></td>
+            <td class="g">0,7 mm</td>
+            <td class="d-bad">0 (varsayılan)</td>
+            <td class="t">Gereken kayış boyu 0,7 mm uzun çıkıyor
+              (tolerans ±5 mm'nin içinde)</td>
+            <td><span class="badge b-info">Düşük</span></td>
+          </tr>
+          <tr>
+            <td><span class="fid">F11</span></td>
+            <td class="t">Yay ön yükü M₀</td>
+            <td class="g">20,05 Nm</td>
+            <td class="d-bad">20,15 Nm</td>
+            <td class="t">Çalışma noktasında etkisi yok (M<sub>mean</sub> ikisinde de
+              31,14 Nm); serbest kol açısını 0,24° kaydırıyor</td>
+            <td><span class="badge b-info">Düşük</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Doğru girilmiş olanlar</h3>
+    <p class="col">Denetimin öbür yarısı: aşağıdakiler Gates'in sayfasıyla birebir
+      örtüşüyor ve dokunulmamalı.</p>
+    <div class="tbl">
+      <table>
+        <caption>Tablo 2 — Doğrulanan girdiler</caption>
+        <thead><tr><th>Girdi</th><th>Değer</th><th>Gates kaynağı</th></tr></thead>
+        <tbody>
+          <tr><td class="t">Beş kasnak merkezi</td>
+            <td class="num">0/0 · 140/−45 · 265/−40 · 320/200 · 143,40/52,55</td>
+            <td class="t g">Layout Data, s. 2</td></tr>
+          <tr><td class="t">Temas tarafları</td>
+            <td class="t">FAN·A_C·ALT kaburgalı, IDR·TEN sırt</td>
+            <td class="t g">Flat satırı (IDR, TEN), s. 2</td></tr>
+          <tr><td class="t">Kaburgalı kasnak dış çapları</td>
+            <td class="num">149,61 · 127,00 · 58,80 mm</td>
+            <td class="t g">Effective satırı, s. 2</td></tr>
+          <tr><td class="t">Kolun çalışma açısı θ<sub>kol</sub></td>
+            <td class="num">225,00°</td>
+            <td class="t g">Tensioner Geometry → Mean, s. 3</td></tr>
+          <tr><td class="t">Yay oranı k · çalışma momenti</td>
+            <td class="num">0,409 Nm/° · 31,14 Nm</td>
+            <td class="t g">Tensioner Data, s. 2</td></tr>
+          <tr><td class="t">Kayış profili ve kaburga sayısı</td>
+            <td class="t">PK · 8 kaburga</td>
+            <td class="t g">MT610, 8/polyester, s. 1</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══════════════ 2 · İKİ YAPISAL HATA ══════════════ -->
+  <section>
+    <div class="sec-h"><span class="sec-n">02</span><h2>İki yapısal hata</h2></div>
+    <p class="lede col">On bir farkın dokuzu bir sayının yanlış yazılmasıdır; ikisi
+      modelin <em>kuruluşunda</em>. Bu ikisi ayrıca açıklanmayı hak ediyor çünkü ikisi de
+      sessizce yanlış sonuç üretebilecek türden.</p>
+
+    <h3>F1 — kayış yolu ters yönde bağlanmış</h3>
+    <p class="col">Gerilme zinciri kayış gidiş yönünde yürür: krank kasnağında yükselir,
+      güç çeken her kasnakta bir basamak düşer, avara ve gergide değişmez. Zincirin
+      ankrajı ise <em>her zaman</em> gergi kasnağıdır — tasarım gerginliği oraya konur.
+      Bu yüzden serpantin sırası, gerginin gergin tarafta mı boş tarafta mı durduğunu
+      belirler.</p>
+
+    <figure>
+      <svg viewBox="-92 -246 462 366" role="img"
+           aria-label="AG00879 kayış yolu, ölçekli çizim: beş kasnak, çözülmüş teğet noktaları ve 800 devirdeki açıklık gerginlikleri">
+        <g transform="scale(1,-1)" fill="none">
+          <!-- kayış yolu -->
+          <path d="M 35.94 66.97 A 76.00 76.00 0 1 1 41.47 -63.69 L 119.21 -13.07 A 38.10 38.10 0 0 0 170.42 -22.05 L 213.35 -78.97 A 64.70 64.70 0 0 1 329.46 -45.58 L 350.49 197.36 A 30.60 30.60 0 0 1 294.27 216.56 L 175.44 31.93 A 38.10 38.10 0 0 0 125.39 18.98 L 35.94 66.97 Z"
+                stroke="var(--accent)" stroke-width="3.4" stroke-linejoin="round"/>
+          <!-- kasnaklar: kaburgalı = dolu kenar, sırt = kesikli -->
+          <circle cx="0" cy="0" r="76.0" stroke="var(--ink-2)" stroke-width="1.5"/>
+          <circle cx="265" cy="-40" r="64.7" stroke="var(--ink-2)" stroke-width="1.5"/>
+          <circle cx="320" cy="200" r="30.6" stroke="var(--ink-2)" stroke-width="1.5"/>
+          <circle cx="140" cy="-45" r="38.1" stroke="var(--ink-2)" stroke-width="1.5" stroke-dasharray="5 4"/>
+          <circle cx="143.4" cy="52.55" r="38.1" stroke="var(--ink-2)" stroke-width="1.5" stroke-dasharray="5 4"/>
+          <!-- gergi kolu -->
+          <line x1="182.998" y1="92.148" x2="143.4" y2="52.55" stroke="var(--flag)" stroke-width="3"/>
+          <circle cx="182.998" cy="92.148" r="5.2" fill="var(--flag)" stroke="none"/>
+          <circle cx="143.4" cy="52.55" r="3.2" fill="var(--flag)" stroke="none"/>
+        </g>
+        <!-- yön okları (çevrilmemiş uzayda) -->
+        <g fill="var(--accent)" stroke="none">
+          <path d="M -6 -4.2 L 5 0 L -6 4.2 Z" transform="translate(68.7,45.9) rotate(-33.1)"/>
+          <path d="M -6 -4.2 L 5 0 L -6 4.2 Z" transform="translate(185.4,41.9) rotate(53.0)"/>
+          <path d="M -6 -4.2 L 5 0 L -6 4.2 Z" transform="translate(336.8,-39.5) rotate(-85.1)"/>
+          <path d="M -6 -4.2 L 5 0 L -6 4.2 Z" transform="translate(252.7,-151.9) rotate(122.7)"/>
+          <path d="M -6 -4.2 L 5 0 L -6 4.2 Z" transform="translate(94,-35.8) rotate(-151.8)"/>
+        </g>
+        <!-- kasnak adları -->
+        <g font-family="Archivo, sans-serif" font-size="11" font-weight="600"
+           fill="var(--ink)" text-anchor="middle">
+          <text x="0" y="4">FAN</text>
+          <text x="265" y="44">A_C</text>
+          <text x="320" y="-196">ALT</text>
+          <text x="140" y="49">IDR</text>
+          <text x="143.4" y="-36">TEN</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="8.5" fill="var(--ink-3)" text-anchor="middle">
+          <text x="0" y="16">Ø149,6 krank</text>
+          <text x="265" y="56">Ø127,0</text>
+          <text x="320" y="-184">Ø58,8</text>
+          <text x="140" y="61">Ø74,0 sırt</text>
+          <text x="143.4" y="-25">Ø74,0 sırt</text>
+        </g>
+        <text x="176" y="-97" font-family="IBM Plex Mono, monospace" font-size="8.5"
+              fill="var(--flag)" text-anchor="end">pivot 183,0 / 92,2</text>
+        <!-- açıklık gerginlikleri (800 d/d, Gates) -->
+        <g font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="500"
+           fill="var(--accent)" text-anchor="middle">
+          <text x="85" y="14">1531 N</text>
+          <text x="192" y="78">1529 N</text>
+          <text x="338" y="-124" text-anchor="end">1231 N</text>
+          <text x="252" y="-114">477 N</text>
+          <text x="78" y="-72">476 N</text>
+        </g>
+        <text x="78" y="-62" font-family="IBM Plex Mono, monospace" font-size="8"
+              fill="var(--ink-3)" text-anchor="middle">ankraj</text>
+      </svg>
+      <figcaption><b>Şekil 1 — AG00879 kayış yolu, 1 : 1 mm ölçeğinde.</b>
+        Teğet noktaları ve yaylar MFSim'in çözümünden alındı; kesikli çeper sırttan temas
+        eden kasnağı gösterir. Oklar Gates'in gidiş yönünü verir:
+        <b>FAN → IDR → A_C → ALT → TEN → FAN</b>. Gergi bu yönde krank <em>girişinde</em>,
+        yani boş taraftadır — ankraj 476 N oraya oturur ve krank çıkışı 1531 N'a yükselir.
+        Ters bağlanınca gergi krank çıkışına düşer, ankraj gergin tarafa konur ve
+        zincirin geri kalanı negatife iner.</figcaption>
+    </figure>
+
+    <div class="tbl">
+      <table>
+        <caption>Tablo 3 — Aynı geometri, iki yön · 800 d/d ortalama çıkış gerginliği [N]</caption>
+        <thead><tr><th>Kasnak</th><th>Gates</th><th>MFSim · doğru yön</th><th>MFSim · ters yön</th></tr></thead>
+        <tbody>
+          <tr><td>FAN (krank)</td><td class="g">1531</td><td class="d-ok">1531</td><td class="d-bad">477</td></tr>
+          <tr><td>IDR</td><td class="g">1529</td><td class="d-ok">1529</td><td class="d-bad">−578</td></tr>
+          <tr><td>A_C</td><td class="g">1231</td><td class="d-ok">1231</td><td class="d-bad">−577</td></tr>
+          <tr><td>ALT</td><td class="g">477</td><td class="d-ok">477</td><td class="d-bad">−278</td></tr>
+          <tr><td>TEN <span class="badge b-info">ankraj</span></td><td class="g">476</td><td class="d-ok">476</td><td class="d-bad">476</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note flag"><b>Program bunu sessizce geçmedi.</b> Raporun 8.12'sinde
+      en düşük kayma emniyeti 0,00 çıkıyor, uygunluk kriteri 8 ("her açıklıkta T &gt; 0")
+      <span class="mono">✗ Kontrol</span> basıyor ve gerilme tablosu negatif sayılar
+      gösteriyor. Belirti görünürdü; kaynağı kayış yolunun yönüydü.</div>
+
+    <h3>F2 — Gates'in "Effective" satırı kasnağın dış çapı değil</h3>
+    <p class="col">Kaburgalı kasnaklarda Gates'in <span class="mono">Effective</span>
+      satırı gerçekten dış çapı verir — kord katmanı kanalın <em>içinde</em> kaldığı için
+      efektif çap ile dış çap çakışır. Düz (sırttan temas eden) kasnaklarda çakışmaz:
+      kayış kasnağın <em>üstünde</em> oturur, efektif çap kayışın orta düzlemine gider ve
+      dış çaptan bir kayış kalınlığı büyüktür. Dış çap ayrı bir satırda,
+      <span class="mono">Flat</span> satırında yazar.</p>
+
+    <figure>
+      <svg viewBox="0 0 560 168" role="img"
+           aria-label="Düz kasnakta yarıçap yığını: dış çap 74,0 mm, pitch 76,2 mm, efektif 78,6 mm">
+        <g font-family="IBM Plex Mono, monospace" font-size="10.5">
+          <!-- gövde ve kayış -->
+          <rect x="40" y="20" width="290" height="48" fill="var(--surface-2)"
+                stroke="var(--ink-2)" stroke-width="1.2"/>
+          <text x="185" y="49" fill="var(--ink-2)" text-anchor="middle">kasnak gövdesi (metal)</text>
+          <rect x="330" y="20" width="36" height="48" fill="var(--accent-soft)"
+                stroke="var(--accent)" stroke-width="1.2"/>
+          <text x="348" y="12" fill="var(--accent)" text-anchor="middle">kayış 4,60</text>
+          <!-- dönme ekseni -->
+          <line x1="40" y1="10" x2="40" y2="150" stroke="var(--rule)" stroke-width="1" stroke-dasharray="5 4"/>
+          <text x="34" y="160" fill="var(--ink-3)" text-anchor="middle">eksen</text>
+          <!-- kılavuz dikmeler -->
+          <g stroke="var(--rule)" stroke-width="1" stroke-dasharray="3 3">
+            <line x1="330" y1="68" x2="330" y2="94"/>
+            <line x1="338.6" y1="68" x2="338.6" y2="116"/>
+            <line x1="348" y1="68" x2="348" y2="138"/>
+          </g>
+          <!-- ölçü çizgileri -->
+          <g stroke-width="1.4" fill="none">
+            <line x1="40" y1="94" x2="330" y2="94" stroke="var(--ink-2)"/>
+            <line x1="40" y1="116" x2="338.6" y2="116" stroke="var(--flag)"/>
+            <line x1="40" y1="138" x2="348" y2="138" stroke="var(--ok)"/>
+          </g>
+          <g stroke="none">
+            <path d="M 0 -3.4 L 8 0 L 0 3.4 Z" fill="var(--ink-2)" transform="translate(322,94)"/>
+            <path d="M 0 -3.4 L 8 0 L 0 3.4 Z" fill="var(--flag)" transform="translate(330.6,116)"/>
+            <path d="M 0 -3.4 L 8 0 L 0 3.4 Z" fill="var(--ok)" transform="translate(340,138)"/>
+          </g>
+          <!-- etiketler -->
+          <g font-size="10" text-anchor="start">
+            <text x="378" y="98" fill="var(--ink)">r 37,00 → Ø74,00 · dış çap</text>
+            <text x="378" y="120" fill="var(--flag)">r 38,10 → Ø76,20 · pitch</text>
+            <text x="378" y="142" fill="var(--ok)">r 39,30 → Ø78,60 · efektif</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption><b>Şekil 2 — sırttan temas eden kasnakta yarıçap yığını.</b>
+        Gates'in verdiği üç sayı aynı kasnağın üç ayrı yarıçapıdır:
+        <b>Flat 74,00</b> metalin kendisi, <b>Pitch 76,20</b> = 74,0 + 2·1,10 kord katmanı,
+        <b>Effective 78,60</b> = 74,0 + 4,60 kayış orta düzlemi. MFSim <em>dış çapı</em>
+        ister ve pitch ile efektifi kendisi türetir — 78,60 girilince kasnak
+        4,6 mm şişiyor ve türetilen pitch 80,8 mm'ye çıkıyor.</figcaption>
+    </figure>
+
+    <div class="note"><b>Sağlaması kolay.</b> MFSim'in ürettiği pitch çapı Gates'in
+      <span class="mono">Pitch</span> satırıyla aynı çıkmalı. Raporun 8.3 tablosunda
+      gergi ve avara için 80,8 mm yazıyor, Gates'te 76,20 mm — fark tam
+      2·h<sub>r</sub> + kayış kalınlığı kadar.</div>
+  </section>
+
+  <!-- ══════════════ 3 · DOĞRULAMA ══════════════ -->
+  <section>
+    <div class="sec-h"><span class="sec-n">03</span><h2>Matematiğin doğrulaması</h2></div>
+    <p class="lede col">Aşağıdaki üç tablo aynı modelin üç hâlini karşılaştırıyor:
+      Gates'in raporu, MFSim'in gönderilen raporu, ve girdileri Gates'in sayfalarına
+      getirilmiş MFSim. Üçüncü sütun boyunca sapma yuvarlama düzeyinde kalıyor —
+      çekirdekte düzeltilecek bir şey yok.</p>
+
+    <div class="tbl">
+      <table>
+        <caption>Tablo 4 — Geometri: sarım açıları ve açıklıklar</caption>
+        <thead>
+          <tr><th>Kasnak</th><th>Gates</th><th>MFSim rapor</th><th>Δ</th>
+              <th>MFSim düzeltilmiş</th><th>Δ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="6" style="text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)">Sarım açısı [°]</td></tr>
+          <tr><td>FAN</td><td class="g">241,3</td><td>244,04</td><td class="d-bad">+2,74</td><td>241,29</td><td class="d-ok">−0,01</td></tr>
+          <tr><td>IDR</td><td class="g">86,0</td><td>89,37</td><td class="d-bad">+3,37</td><td>86,04</td><td class="d-ok">+0,04</td></tr>
+          <tr><td>A_C</td><td class="g">138,0</td><td>139,92</td><td class="d-bad">+1,92</td><td>138,02</td><td class="d-ok">+0,02</td></tr>
+          <tr><td>ALT</td><td class="g">152,2</td><td>152,78</td><td class="d-bad">+0,58</td><td>152,18</td><td class="d-ok">−0,02</td></tr>
+          <tr><td>TEN</td><td class="g">85,4</td><td>87,36</td><td class="d-bad">+1,96</td><td>85,45</td><td class="d-ok">+0,05</td></tr>
+          <tr class="rule-top"><td colspan="6" style="text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)">Açıklık — kasnağa giren [mm]</td></tr>
+          <tr><td>→ FAN</td><td class="g">92,8</td><td>89,9</td><td class="d-bad">−2,9</td><td>92,76</td><td class="d-ok">−0,04</td></tr>
+          <tr><td>→ IDR</td><td class="g">71,3</td><td>67,9</td><td class="d-bad">−3,4</td><td>71,29</td><td class="d-ok">−0,01</td></tr>
+          <tr><td>→ A_C</td><td class="g">243,8</td><td>243,8</td><td class="d-ok">0,0</td><td>243,85</td><td class="d-ok">+0,05</td></tr>
+          <tr><td>→ ALT</td><td class="g">219,6</td><td>218,8</td><td class="d-bad">−0,8</td><td>219,57</td><td class="d-ok">−0,03</td></tr>
+          <tr><td>→ TEN</td><td class="g">101,5</td><td>98,9</td><td class="d-bad">−2,6</td><td>101,51</td><td class="d-ok">+0,01</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tbl">
+      <table>
+        <caption>Tablo 5 — Gergi çalışma noktası (Mean)</caption>
+        <thead><tr><th>Büyüklük</th><th>Gates</th><th>MFSim rapor</th><th>MFSim düzeltilmiş</th></tr></thead>
+        <tbody>
+          <tr><td class="t">Kayış efektif boyu [mm]</td><td class="g">1392,0</td><td class="d-bad">1399,7</td><td class="d-ok">1391,99</td></tr>
+          <tr><td class="t">Tasarım gerginliği [N]</td><td class="g">476</td><td class="d-bad">525</td><td class="d-ok">475,6</td></tr>
+          <tr><td class="t">Take-up oranı [mm/°]</td><td class="g">1,143</td><td class="d-bad">1,0349</td><td class="d-ok">1,1429</td></tr>
+          <tr><td class="t">Hubload–kol açısı β [°]</td><td class="g">59,5</td><td class="d-bad">59,15</td><td class="d-ok">59,51</td></tr>
+          <tr><td class="t">Gergi hubload [N]</td><td class="g">645,3</td><td class="d-bad">725,4</td><td class="d-ok">645,3</td></tr>
+          <tr><td class="t">Hubload yönü [°]</td><td class="g">104,5</td><td class="d-bad">104,15</td><td class="d-ok">104,51</td></tr>
+          <tr><td class="t">Yay momenti M(θ) [Nm]</td><td class="g">31,14</td><td class="d-ok">31,14</td><td class="d-ok">31,14</td></tr>
+          <tr><td class="t">Kol bağıl açısı [°]</td><td class="g">27,1</td><td class="d-bad">26,87</td><td class="d-ok">27,11</td></tr>
+          <tr><td class="t">Gövde montaj konumu [mm]</td><td class="g">183,00 / 92,15</td><td class="d-bad">178,76 / 87,91</td><td class="d-ok">183,00 / 92,15</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="col">Montaj konumu satırı kendi başına anlamlı: MFSim onu sormuyor,
+      avara merkezinden ve kol açısından türetiyor
+      (<span class="mono">p = c − a·(cos θ, sin θ)</span>). Doğru kol boyuyla türetilen
+      nokta Gates'in <span class="mono">Tensioner Data → Pivot Point</span> satırının
+      <em>tam üstüne</em> düşüyor — iki bağımsız kanaldan çıkan aynı sayı.</p>
+
+    <div class="tbl">
+      <table>
+        <caption>Tablo 6 — Gergi kolu konum tablosu · düzeltilmiş model ↔ Gates</caption>
+        <thead>
+          <tr><th>Konum</th><th>Gates bağıl [°]</th><th>MFSim</th>
+              <th>Gates T [N]</th><th>MFSim</th><th>Gates EDL [mm]</th><th>MFSim</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Free Arm</td><td class="g">0,0</td><td>0,0</td><td class="g">424,1</td><td>424,2</td><td class="g">1419,9</td><td>1419,9</td></tr>
+          <tr><td>Replace</td><td class="g">13,5</td><td>13,5</td><td class="g">440,8</td><td>440,9</td><td class="g">1407,5</td><td>1407,4</td></tr>
+          <tr><td>Max</td><td class="g">22,7</td><td>22,7</td><td class="g">461,8</td><td>461,8</td><td class="g">1397,7</td><td>1397,7</td></tr>
+          <tr><td>Mean</td><td class="g">27,1</td><td>27,1</td><td class="g">475,5</td><td>475,6</td><td class="g">1392,7</td><td>1392,7</td></tr>
+          <tr><td>Min</td><td class="g">31,4</td><td>31,4</td><td class="g">491,8</td><td>491,8</td><td class="g">1387,7</td><td>1387,7</td></tr>
+          <tr><td>Load</td><td class="g">39,0</td><td>39,0</td><td class="g">529,1</td><td>528,9</td><td class="g">1378,7</td><td>1378,8</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tbl">
+      <table>
+        <caption>Tablo 7 — Ortalama hubload, beş devir noktası × beş kasnak [N] · düzeltilmiş model</caption>
+        <thead><tr><th>Motor d/d</th><th>FAN</th><th>IDR</th><th>A_C</th><th>ALT</th><th>TEN</th></tr></thead>
+        <tbody>
+          <tr><td>600 <span class="g">Gates</span></td><td class="g">1784</td><td class="g">2053</td><td class="g">2536</td><td class="g">1648</td><td class="g">647</td></tr>
+          <tr><td>600 <span class="d-ok">MFSim</span></td><td>1783,7</td><td>2053,3</td><td>2536,3</td><td>1648,1</td><td>646,7</td></tr>
+          <tr class="rule-top"><td>800 <span class="g">Gates</span></td><td class="g">1808</td><td class="g">2088</td><td class="g">2579</td><td class="g">1668</td><td class="g">646</td></tr>
+          <tr><td>800 <span class="d-ok">MFSim</span></td><td>1808,2</td><td>2087,9</td><td>2579,4</td><td>1667,9</td><td>646,4</td></tr>
+          <tr class="rule-top"><td>1200 <span class="g">Gates</span></td><td class="g">1751</td><td class="g">2008</td><td class="g">2457</td><td class="g">1594</td><td class="g">646</td></tr>
+          <tr><td>1200 <span class="d-ok">MFSim</span></td><td>1751,2</td><td>2008,3</td><td>2456,6</td><td>1594,3</td><td>646,0</td></tr>
+          <tr class="rule-top"><td>1700 <span class="g">Gates</span></td><td class="g">1675</td><td class="g">1901</td><td class="g">2313</td><td class="g">1520</td><td class="g">646</td></tr>
+          <tr><td>1700 <span class="d-ok">MFSim</span></td><td>1674,7</td><td>1900,9</td><td>2313,5</td><td>1519,9</td><td>645,8</td></tr>
+          <tr class="rule-top"><td>2200 <span class="g">Gates</span></td><td class="g">1605</td><td class="g">1803</td><td class="g">2151</td><td class="g">1417</td><td class="g">646</td></tr>
+          <tr><td>2200 <span class="d-ok">MFSim</span></td><td>1605,5</td><td>1803,4</td><td>2150,9</td><td>1417,3</td><td>645,7</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══════════════ 4 · KARŞILAŞTIRMANIN DIŞI ══════════════ -->
+  <section>
+    <div class="sec-h"><span class="sec-n">04</span><h2>Girdi düzeltilse de kapanmayanlar</h2></div>
+    <p class="lede col">Üç kalem var ki girdiler tamamen düzeltildikten sonra bile
+      Gates ile örtüşmüyor. Bunlar girdi farkı değil, modelin bilinen sınırı —
+      düzeltme listesine değil, okuma notuna yazılır.</p>
+
+    <div class="tbl">
+      <table>
+        <caption>Tablo 8 — Modelin bilinen sınırları (AG00879)</caption>
+        <thead><tr><th>Büyüklük</th><th>Gates</th><th>MFSim</th><th>Durum</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="t">Burulma titreşimi, Mode 1</td>
+            <td class="g">22,11 Hz</td>
+            <td class="d-bad">25,04 Hz (+%13,2)</td>
+            <td class="t">Kalibre model, iki serbest parametreli
+              (kord rijitliği · kavis payı). AG00879 kalibrasyon takımının
+              <em>dışında</em>; sapma belgeli.</td>
+          </tr>
+          <tr>
+            <td class="t">Kasnak hizalama duyarlılığı</td>
+            <td class="g">s. 4 — tam sayfa</td>
+            <td class="d-bad">üretilmiyor</td>
+            <td class="t">Geometri tek düzlemde çözülüyor; eksenel ofset ve
+              açısal kaçıklık modelde yok (§9.4).</td>
+          </tr>
+          <tr>
+            <td class="t">Tepe yük / ivme taraması</td>
+            <td class="g">s. 1 ve s. 6</td>
+            <td class="d-bad">üretilmiyor</td>
+            <td class="t">"Hangi ivme–yük birleşimi en kritik" taraması ve
+              "kaç newton eklenmeli" ters çözümü kapsam dışı (§9.5).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note"><b>B10 ömrü ayrı bir başlık.</b> Gates 5632 saat veriyor;
+      MFSim bu raporda hiç üretmiyor — ama sebebi model değil kip:
+      kayış boyu girilmediği için (F7) kayış henüz seçilmemiş sayılıyor ve kayış
+      tipine bağlı bütün çıktılar kapatılıyor. F7 düzeltilince bu başlık açılır.</div>
+  </section>
+
+  <!-- ══════════════ 5 · DÜZELTME ══════════════ -->
+  <section>
+    <div class="sec-h"><span class="sec-n">05</span><h2>Düzeltme sırası</h2></div>
+    <p class="lede col">Panelde dokunulacak alanlar, ağırlık sırasına göre.
+      Her adımdan sonra 8.7'deki tasarım gerginliği ve 8.6'daki sarım açıları
+      Gates'in sayfasıyla karşılaştırılabilir.</p>
+
+    <ol class="chk">
+      <li><b>Kayış yolunu ters çevir.</b> Kanvasta serpantin sırası
+        <code>Krank → Avara → Klima → Alternatör → Gergi → Krank</code> olmalı.
+        Doğrulama: 8.11'de hiçbir gerginlik negatif olmamalı ve krank çıkışı
+        en yüksek değer olmalı. <span class="fid">F1</span></li>
+      <li><b>Avara ve gergi kasnaklarının dış çapını 74,0 mm yap.</b>
+        Gates'in <code>Flat</code> satırı; <code>Effective 78,60</code> kayışın
+        orta düzlemidir, kasnak değil. Doğrulama: 8.3'te türetilen pitch çapı
+        76,2 mm çıkmalı. <span class="fid">F2</span></li>
+      <li><b>Gergi kol boyunu 56,0 mm yap.</b> Doğrulama: türetilen montaj konumu
+        183,00 / 92,15 mm çıkmalı — Gates'in <code>Pivot Point</code> satırı.
+        <span class="fid">F3</span></li>
+      <li><b>Tahrik oranını 1,000 yap</b> (krank kasnağı motor devrinde dönüyor).
+        Doğrulama: 8.6'da hız oranları 1,000 / 1,995 / 1,175 / 2,484 / 1,995 çıkmalı.
+        <span class="fid">F4</span></li>
+      <li><b>Çalışma çevrimini Gates'in s. 10 tablosuyla değiştir:</b>
+        600/800/1200/1700/2200 d/d · %5/35/35/20/5 · 80 °C ·
+        A_C 1,40/1,90/3,00/4,20/6,00 kW · ALT 3,50/4,80/6,50/8,20/8,80 kW ·
+        avara ve gergi 0,01 kW. <span class="fid">F5</span></li>
+      <li><b>Atalet momentlerini gir</b> (Gates s. 11): krank mili 0,1500 ·
+        avara 0,0001 · klima 0,0060 · alternatör 0,0085 · gergi kasnağı 0,0006 kg·m² ·
+        gergi kolu 0,0060 kg·m² · gergi kasnak kütlesi 0,50 kg.
+        Bu adım 8.18'i açar. <span class="fid">F6</span></li>
+      <li><b>Kayış boyunu 1392 mm gir</b> — Gates'te boy bir <em>girdi</em>, sonuç değil.
+        Bu adım B10 ömrünü ve kaburga yorulmasını açar. <span class="fid">F7</span></li>
+      <li><b>Toleransı ±5 mm, aşınma payını 0,007 yap</b> (alan oran ister, yüzde değil).
+        Doğrulama: konum tablosunun dört sütunu ayrışmalı. <span class="fid">F8</span></li>
+      <li><b>Mekanik durdurucuyu 39,0° gir.</b> Doğrulama: konum tablosunda
+        <em>Load</em> satırı 213,1° / 529,1 N ile belirmeli. <span class="fid">F9</span></li>
+      <li><b>Boy ofsetini 0,7 mm yap</b> ve <b>yay ön yükünü 20,05 Nm'e çek.</b>
+        İkisi de yuvarlama düzeyinde; son rötuş.
+        <span class="fid">F10</span> <span class="fid">F11</span></li>
+    </ol>
+
+    <div class="note"><b>Onuncu adımdan sonra beklenen:</b> tasarım gerginliği 475,6 N,
+      gereken kayış boyu 1391,99 mm, montaj konumu 183,00 / 92,15 mm, en kötü sarım
+      sapması 0,05°, gerilme ve hubload zincirleri Gates'in beş devir noktasının
+      tamamında 1 N içinde. Bu değerler bu denetimde ölçüldü.</div>
+  </section>
+
+  <footer>
+    Kaynaklar · MFSim_FEAD_Raporu_20260902.html (MFSim FEAD modülü, otomatik rapor) ·
+    AG00879_ANADOLU-ISUZU_6x6_Truck_Secondary_ALT_Drive_8PK1392HD_Gates-T38665-31Nm_17May2023
+    (Gates 9.40.0.0, 12 sayfa, 22.05.2023). Ölçümler MFSim'in kendi çekirdeğiyle
+    (<span class="mono">js/fead-core.js</span> · <span class="mono">js/fead-model.js</span>)
+    Gates'in girdileri üzerinde koşularak alındı.
+  </footer>
+</div>
+
+</body></html>

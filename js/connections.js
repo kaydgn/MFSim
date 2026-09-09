@@ -308,6 +308,12 @@ function getPortPosition(node, portType, portIndex) {
 // t = 0.5 noktası ve türevi analitik; düz/kademeli yolda uçların doğrultusu
 // yeterli. SVG'ye ayrı bir <path> olarak eklenir ve updateAllConnections her
 // tazelemede layer'ı temizlediği için birikmez.
+// BUGÜN ÇAĞIRANI YOK (2026-09-09). Tek çağıran FEAD kayış teliydi ve o tel
+// kasnak portlarıyla birlikte kalktı. Fonksiyon SİLİNMEDİ çünkü FEAD'e özgü
+// bir şey değil: herhangi bir bağlantının ortasına yön oku koyan genel bir
+// geometri (Bézier t=0.5 — "iki ucun ortası" eğriyi kontrol kolları bir yana
+// çektiği için telin üstünden kayardı; 46 px altındaki açıklıkta hiç
+// çizilmez). Matematiği port-geometry.test.js'te ölçülü duruyor.
 function veConnDirMark(lineType, x1, y1, x2, y2, cp) {
   var L = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
   if(!(L > 46)) return null;
@@ -374,11 +380,10 @@ function updateAllConnections() {
     path.setAttribute('class', 've-connection');
     path.setAttribute('data-conn-id', conn.id);
 
-    // FEAD kayış bağlantısı mı: bu tel bir "ilişki" DEĞİL, serpantin kayışın
-    // o kasnaktan sonrakine giden parçası. Hem rengi hem eğri geometrisi bunu
-    // anlatacak şekilde ayrılıyor (aşağıda).
-    var _feadBelt = (typeof _feadIsPulley === 'function')
-                 && _feadIsPulley(fromNode) && _feadIsPulley(toNode);
+    // FEAD KAYIŞ TELİ KALKTI (2026-09-09). Kasnaklar 0/0 portlu — aralarında
+    // tel kurulamıyor, sıra Kayış Tablosu'nda. Buradaki üç dal (amber renk,
+    // uzunluğun %42'si kontrol kolu, telin ortasındaki gidiş oku) o telle
+    // birlikte kalktı; ölçümleri modül skill'inde arşivli.
 
     var d = '';
     var _bezCp = null;
@@ -405,17 +410,6 @@ function updateAllConnections() {
       var fromSide = fromPort.side;
       var toSide = toPort.side;
       var offset = 40; // Bileşenden uzaklaşma mesafesi
-      // KAYIŞTA KONTROL KOLU MESAFEYLE ORANTILI. Sabit 40 px iki uçta da aynı
-      // "burun" uzunluğunu veriyordu: kısa açıklıkta eğri kutunun dibinde kıvrım
-      // yapıyor, uzun açıklıkta ise ortada düzleşip köşeleniyordu. Uzunluğun
-      // %42'si (26–96 px arası) her iki uçta da teğeti sürekli tutuyor —
-      // yani tel kutudan DİK çıkıp karşı kutuya DİK giriyor, arada tek bir
-      // yumuşak yay kalıyor.
-      if(_feadBelt) {
-        var _L = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-        offset = Math.max(26, Math.min(96, _L * 0.42));
-      }
-      
       var cp1x, cp1y, cp2x, cp2y;
       
       // Çıkış portu yönüne göre ilk kontrol noktası
@@ -479,18 +473,6 @@ function updateAllConnections() {
       tcTitle.textContent = 'Konvertör ↔ Şanzıman: eşleştirme ilişkisi — konvertör ailesi şanzımana göre filtrelenir';
       path.appendChild(tcTitle);
     }
-    // Modülün renk dilinde kayış her yerde amber (sembollerde de öyle) ve saç
-    // teli kalınlığı burada yanlış olurdu: bu çizgi "iki bileşen ilişkili"
-    // demiyor, "kayış buradan geçiyor" diyor.
-    if(_feadBelt) {
-      path.classList.add('ve-connection-fead-belt');
-      var beltTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-      beltTitle.textContent = 'Kayış yolu: '
-        + ((typeof _feadNodeName === 'function') ? _feadNodeName(fromNode) : fromNode.type) + ' → '
-        + ((typeof _feadNodeName === 'function') ? _feadNodeName(toNode) : toNode.type);
-      path.appendChild(beltTitle);
-    }
-
     path.addEventListener('contextmenu', function(e) {
       showConnectionContextMenu(e, conn.id);
     });
@@ -512,17 +494,6 @@ function updateAllConnections() {
     // gerilme zinciri buna göre değişiyor. Ok telin ORTASINDA, teğetine bakar.
     // Kısa açıklıkta çizilmez (46 px altında oku sığdırmak teli kalabalıklaştırır).
     //
-    // OK TELİN YÖNÜNDE — VE TEL KAYIŞIN GİDİŞİDİR (2026-09-08). Kayış telleri
-    // artık gidiş sırasında kurulur; çekirdeğin ters sırasına çevirme köprüde
-    // (fead-model.js → veFeadRouteFlip). Bir tur boyunca (PR #895) tel liste
-    // sırasındaydı ve ok telin TERSİNE çizilerek doğru gösterildi; köprü
-    // çevirince o çevirme kalktı. Kapı: port-geometry.test.js → "kayış telinin
-    // gidiş oku".
-    if(_feadBelt && typeof veConnDirMark === 'function') {
-      var mk = veConnDirMark(lineType, x1, y1, x2, y2, _bezCp);
-      if(mk) svg.appendChild(mk);
-    }
-    
     // Bağlantı ortasında TEK sensör göstergesi (kaç sensör bağlı olursa olsun)
     var connSensors = nodes.filter(function(nd) {
       return nd.type === 'sensor' && nd.data && nd.data.attachedConnection === conn.id;
@@ -845,6 +816,14 @@ function veFeadTopoSignature() {
   s += '#';
   var c = (typeof connections !== 'undefined' && connections) ? connections : [];
   for(i = 0; i < c.length; i++) s += c[i].from + '>' + c[i].to + ';';
+  // KAYIŞ SIRASI İMZAYA GİRER (2026-09-09). Sıra eskiden tel uçlarındaydı ve
+  // imza onları zaten okuyordu; artık beltIndex'te. Alınmasaydı "Dönüş Yönü"
+  // rozeti ile tablodaki sıra değişikliği kartı tazelemezdi — hem de sessizce,
+  // çünkü düğüm kimlikleri ve konumlar aynı kalıyor.
+  s += '#';
+  for(i = 0; i < nodes.length; i++)
+    if(nodes[i] && nodes[i].data && nodes[i].data.beltIndex !== undefined)
+      s += nodes[i].id + '#' + nodes[i].data.beltIndex + ';';
   // KASNAK KONUMU ARTIK İMZAYA GİRİYOR — ve bu bilinçli bir GERİ ADIM.
   //
   // Eskiden konum bilerek DIŞLANIYORDU: düğümü sürüklemek çözümü değiştirmiyor
@@ -867,12 +846,16 @@ function veFeadTopoSignature() {
   }
   return s;
 }
+// İKİ KART BİRDEN: şema (Kayış Yolu) ve tablo (Kayış Tablosu) aynı modeli
+// gösteriyor, dolayısıyla aynı imzadan tazeleniyorlar. Yalnız biri
+// tazelenseydi öbürü bir düzenleme geride kalırdı — ve fark SESSİZ olurdu,
+// çünkü ikisi de kendi başına tutarlı görünür.
 function veFeadTopoRefresh() {
-  if(typeof veFeadRefreshLayoutCards !== 'function') return false;
+  if(typeof veFeadRefreshCards !== 'function') return false;
   var sig = veFeadTopoSignature();
   if(sig === _veFeadTopoSig) return false;
   _veFeadTopoSig = sig;
-  veFeadRefreshLayoutCards();
+  veFeadRefreshCards();
   return true;
 }
 

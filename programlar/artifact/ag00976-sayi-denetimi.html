@@ -1,0 +1,1059 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>AG00976 Sayı Denetimi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ink:#12161c; --ink-2:#2b333d; --mut:#5f6a77; --faint:#8d97a3;
+  --paper:#f2f4f6; --card:#ffffff; --rule:#d5dae0; --rule-2:#e6eaee;
+  --prusya:#1f4e79; --prusya-soft:#e8eff6;
+  --uyan:#2c6a4f; --uyan-bg:#e7f1ec;
+  --sapma:#a75d15; --sapma-bg:#faefe2;
+  --kritik:#9c2b2b; --kritik-bg:#f8e9e9;
+  --f-xs:.72rem; --f-sm:.82rem; --f-base:.95rem; --f-lg:1.12rem;
+  --f-xl:1.5rem; --f-2xl:2.1rem; --f-3xl:3rem;
+  --w:min(1180px,92vw); --wt:min(74ch,92vw);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ink:#e7ebef; --ink-2:#c3ccd5; --mut:#94a0ad; --faint:#6e7a87;
+    --paper:#0e1216; --card:#161c22; --rule:#2b333c; --rule-2:#212831;
+    --prusya:#7fb3de; --prusya-soft:#16232f;
+    --uyan:#6fc79c; --uyan-bg:#12251d;
+    --sapma:#e0a161; --sapma-bg:#2a2015;
+    --kritik:#e58b8b; --kritik-bg:#2b1717;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#e7ebef; --ink-2:#c3ccd5; --mut:#94a0ad; --faint:#6e7a87;
+  --paper:#0e1216; --card:#161c22; --rule:#2b333c; --rule-2:#212831;
+  --prusya:#7fb3de; --prusya-soft:#16232f;
+  --uyan:#6fc79c; --uyan-bg:#12251d;
+  --sapma:#e0a161; --sapma-bg:#2a2015;
+  --kritik:#e58b8b; --kritik-bg:#2b1717;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"Source Serif 4","Iowan Old Style",Georgia,serif;
+  font-size:var(--f-base);line-height:1.62;
+  -webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,.ui{font-family:Archivo,"Helvetica Neue",Arial,sans-serif}
+.mono,td.n,th.n,.num{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-variant-numeric:tabular-nums}
+main{width:var(--w);margin:0 auto;padding:0 0 6rem}
+.tx{width:var(--wt);margin-left:0}
+p{margin:0 0 1.05em}
+a{color:var(--prusya)}
+:focus-visible{outline:2px solid var(--prusya);outline-offset:3px;border-radius:2px}
+
+/* ——— antet ——— */
+header.kap{border-bottom:2px solid var(--ink)}
+.hw{width:var(--w);margin:0 auto;padding:4.5rem 0 2.2rem}
+.hüküm{width:var(--w);margin-left:auto;margin-right:auto}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:var(--f-xs);
+  letter-spacing:.16em;text-transform:uppercase;color:var(--prusya);margin:0 0 1.1rem}
+h1{font-size:clamp(2rem,5.2vw,var(--f-3xl));line-height:1.04;font-weight:700;
+  letter-spacing:-.022em;margin:0 0 .7rem;text-wrap:balance;max-width:20ch}
+.dek{font-size:var(--f-lg);color:var(--ink-2);max-width:60ch;margin:0}
+.künye{display:flex;flex-wrap:wrap;gap:.4rem 2.2rem;margin-top:2rem;
+  font-family:"IBM Plex Mono",monospace;font-size:var(--f-xs);color:var(--mut)}
+.künye b{color:var(--ink-2);font-weight:500}
+
+/* ——— hüküm şeridi ——— */
+.hüküm{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:1px;background:var(--rule);border:1px solid var(--rule);margin:2.6rem 0 0}
+.hüküm>div{background:var(--card);padding:1.15rem 1.25rem}
+.hüküm .k{font-family:"IBM Plex Mono",monospace;font-size:var(--f-xs);
+  letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin:0 0 .45rem}
+.hüküm .v{font-family:Archivo,sans-serif;font-size:1.85rem;font-weight:700;
+  line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.hüküm .s{font-size:var(--f-xs);color:var(--faint);margin-top:.4rem;
+  font-family:"IBM Plex Mono",monospace}
+.v.ok{color:var(--uyan)} .v.no{color:var(--sapma)} .v.pr{color:var(--prusya)}
+
+/* ——— bölümler ——— */
+section{padding-top:3.6rem}
+.sh{display:flex;align-items:baseline;gap:1rem;margin:0 0 .4rem;
+  border-top:1px solid var(--rule);padding-top:1.1rem}
+.sn{font-family:"IBM Plex Mono",monospace;font-size:var(--f-xs);color:var(--prusya);
+  font-weight:600;letter-spacing:.08em;flex:none;padding-top:.42rem}
+h2{font-size:var(--f-xl);font-weight:600;letter-spacing:-.015em;margin:0;text-wrap:balance}
+.sd{color:var(--mut);font-size:var(--f-sm);margin:.15rem 0 1.6rem 3.1rem;max-width:66ch}
+h3{font-size:var(--f-lg);font-weight:600;margin:2.4rem 0 .5rem;letter-spacing:-.01em}
+h4{font-size:var(--f-base);font-weight:600;margin:1.6rem 0 .4rem;color:var(--ink-2)}
+
+/* ——— tablo ——— */
+.tw{overflow-x:auto;margin:1.1rem 0 .5rem;border:1px solid var(--rule);background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:var(--f-sm)}
+caption{text-align:left;font-family:Archivo,sans-serif;font-size:var(--f-sm);font-weight:600;
+  padding:.85rem 1rem .1rem;color:var(--ink)}
+caption span{font-weight:400;color:var(--mut);font-family:"IBM Plex Mono",monospace;
+  font-size:var(--f-xs)}
+th,td{padding:.42rem .7rem;text-align:right;border-bottom:1px solid var(--rule-2);
+  white-space:nowrap}
+th{font-family:Archivo,sans-serif;font-weight:600;font-size:var(--f-xs);color:var(--mut);
+  text-transform:uppercase;letter-spacing:.055em;border-bottom:1px solid var(--rule);
+  position:sticky;top:0;background:var(--card)}
+th:first-child,td:first-child{text-align:left}
+td.n{font-size:var(--f-sm)}
+tbody tr:last-child td{border-bottom:0}
+tr.sum td{border-top:1px solid var(--rule);font-weight:600}
+.gk{color:var(--faint)}
+.d0{color:var(--ink)} .d1{color:var(--sapma);font-weight:500} .d2{color:var(--kritik);font-weight:600}
+/* sapma sütununda "tutuyor" sessiz kalsın; vurgu yalnız sapmada */
+td .d0[style*="font-size:.7rem"],td>span.d0:only-child{color:var(--faint)}
+.tw table td .d0{color:var(--ink)}
+/* blok özetinde ve hüküm şeridinde yeşil KALIR */
+tbody td.n.d0{color:var(--ink)}
+table caption+thead~tbody td.ok{color:var(--uyan)}
+
+/* sapma cetveli */
+.rul{display:inline-block;position:relative;width:78px;height:9px;vertical-align:middle;
+  background:var(--rule-2);border-radius:1px}
+.rul i{position:absolute;top:0;bottom:0;width:1px;left:50%;background:var(--faint)}
+.rul b{position:absolute;top:1px;bottom:1px;border-radius:1px;min-width:2px}
+.rul b.p{background:var(--sapma)} .rul b.m{background:var(--prusya)}
+.rul b.z{background:var(--uyan)}
+
+/* rozet */
+.rz{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:var(--f-xs);
+  padding:.1rem .45rem;border-radius:2px;letter-spacing:.03em;white-space:nowrap}
+.rz.ok{background:var(--uyan-bg);color:var(--uyan)}
+.rz.no{background:var(--sapma-bg);color:var(--sapma)}
+.rz.kr{background:var(--kritik-bg);color:var(--kritik)}
+.rz.nt{background:var(--prusya-soft);color:var(--prusya)}
+
+/* not kutusu */
+.nk{border-left:3px solid var(--prusya);background:var(--card);padding:1rem 1.15rem;
+  margin:1.4rem 0;font-size:var(--f-sm);max-width:74ch}
+.nk.kr{border-left-color:var(--kritik)}
+.nk.uy{border-left-color:var(--uyan)}
+.nk p:last-child{margin-bottom:0}
+.nk .b{font-family:Archivo,sans-serif;font-weight:600;font-size:var(--f-sm);
+  display:block;margin-bottom:.35rem}
+.eq{font-family:"IBM Plex Mono",monospace;font-size:var(--f-sm);background:var(--prusya-soft);
+  color:var(--ink);padding:.7rem .9rem;margin:.9rem 0;overflow-x:auto;border-radius:2px}
+ul{margin:.4rem 0 1.1rem;padding-left:1.15rem}
+li{margin-bottom:.35rem;max-width:70ch}
+li::marker{color:var(--prusya)}
+.foot{margin-top:4rem;border-top:1px solid var(--rule);padding-top:1.2rem;
+  font-family:"IBM Plex Mono",monospace;font-size:var(--f-xs);color:var(--faint)}
+@media (max-width:640px){
+  header.kap{padding-top:2.6rem}
+  .sd{margin-left:0}
+}
+</style>
+
+<header class="kap"><div class="hw">
+<p class="eyebrow">Sayı denetimi · MFSim FEAD ↔ Gates AG00976</p>
+<h1>318 sayı, tablo tablo karşılaştırıldı</h1>
+<p class="dek">MFSim'in ürettiği FEAD Özet Raporu ile tedarikçinin (Gates) aynı sistem için
+verdiği mühendislik raporu, her tablo ve her hücre tek tek karşılaştırıldı. 300 değer
+tutuyor; tutmayan 18'in 14'ü tek bir yapısal kusurdan geliyor.</p>
+<div class="künye">
+<span><b>Sistem</b> AG00976 · BMC Otomotif FEAD 5 · Cummins ikincil tahrik</span>
+<span><b>Kayış</b> Gates 8PK1715HD-Fleetrunner</span>
+<span><b>Gergi</b> E9843 @ −250/110</span>
+<span><b>Gates raporu</b> 05.06.2025 · v13.02 · 12 sayfanın 1·2·3·6·8'i</span>
+<span><b>MFSim raporu</b> 27.08.2026 · 6 sayfa</span>
+</div>
+</div></header>
+<div class="hüküm">
+<div><p class="k">Karşılaştırılan değer</p><div class="v pr">318</div><div class="s">7 tablo bloğu</div></div>
+<div><p class="k">Tutuyor</p><div class="v ok">300</div><div class="s">%94,3</div></div>
+<div><p class="k">Tutmuyor</p><div class="v no">18</div><div class="s">14'ü tek tabloda</div></div>
+<div><p class="k">En büyük fark</p><div class="v no">+%22,9</div><div class="s">ALT tepe gerginliği</div></div>
+<div><p class="k">Düzeltmeden sonra</p><div class="v ok">%0,41</div><div class="s">tepe gerginlik RMS · önce %11,8</div></div>
+</div>
+<main>
+<section><div class="sh"><span class="sn">01</span>
+<h2>Yöntem — sayılar gözle değil, programla okundu</h2></div>
+<p class="sd">Bir transkripsiyon hatası bütün karşılaştırmayı zehirler; bu yüzden iki taraf da
+makineyle çıkarıldı ve kaynağına karşı doğrulandı.</p>
+<div class="tx">
+<p><b>Gates tarafı.</b> PDF'in metin katmanı <span class="mono">pymupdf</span> ile
+sayfa sayfa çıkarıldı, sonra elle kurduğum sayı tablosu <em>aynı PDF'e karşı programatik
+olarak doğrulandı</em>: 27 blokta 27 eşleşme. Grafikler PDF'te bitmap olarak duruyor —
+onlar 600 dpi'da yeniden basılıp piksel düzeyinde izlendi, eksenler kendi tick
+işaretlerinden kalibre edildi.</p>
+<p><b>MFSim tarafı.</b> Yayınlanan HTML'in tabloları ayrıştırıldı; ayrıca çözücü doğrudan
+koşturulup <em>yuvarlanmamış</em> değerler alındı. Böylece bir fark görüldüğünde
+"gerçek fark mı, basım yuvarlaması mı" sorusu cevaplanabiliyor.</p>
+<p class="gk" style="font-size:.82rem">Denetim yedi eksende koştu (tepe · frekans · kapsam ·
+girdi · ömür · kayma · geometri) ve bulguların her biri, onu üretmeyen <em>ayrı</em> bir
+koşumla çürütülmeye çalışıldı. İki iddia bu yolla düştü ve düzeltildi; ikisi bu raporda
+düzeltilmiş hâliyle duruyor.</p>
+<div class="nk"><span class="b">Karşılaştırmanın çözünürlük tavanı</span>
+<p>Gates tablolarını <b>1 ondalıkla</b> basıyor. Dolayısıyla ±0,05 birimden küçük hiçbir
+fark bu belgelerden okunamaz. Daha da önemlisi: Gates'in kendi tablosu <b>kendi içinde
+tutarsız</b>. Yayınladığı kol açısı ile yayınladığı gergi koordinatı, kendi pivot ve kol
+boyu künyesiyle en çok <b>0,108 mm / 0,068°</b> ayrışıyor. MFSim'in aynı sınamada
+tutarsızlığı <b>2,8·10⁻¹⁴ mm</b>.</p>
+<p>Bu, aşağıdaki "fark" sütunlarının nasıl okunacağını belirliyor: <b>0,1 mertebesindeki
+farklar Gates'in basım gürültüsünün içindedir</b>, modelin değil.</p></div>
+</div></section>
+<section><div class="sh"><span class="sn">02</span>
+<h2>Blok blok sonuç</h2></div>
+<p class="sd">Her satır bir tablo çiftidir. "Tutuyor" = basım çözünürlüğü içinde ya da
+bağıl fark ≤ %0,1.</p>
+<div class="tw"><table><thead><tr><th>Blok</th><th>Gates kaynağı</th><th class="n">Değer</th><th class="n">Tutuyor</th><th class="n">Tutmuyor</th><th>Uyum</th><th>En kötü</th></tr></thead><tbody>
+<tr><td><b>Kasnak yerleşimi</b></td><td class="gk">Gates s2 · Layout Data</td><td class="n">30</td><td class="n" style="color:var(--uyan)">30</td><td class="n d0">0</td><td><span class="rul"><b class="z" style="left:0;width:78.0px"></b></span> <span class="mono gk">%100</span></td><td class="gk mono" style="text-align:left">TEN Y −0,02 mm (türetilmiş)</td></tr>
+<tr><td><b>Çözülmüş kayış yolu</b></td><td class="gk">Gates s2 · RESULTS</td><td class="n">18</td><td class="n" style="color:var(--uyan)">18</td><td class="n d0">0</td><td><span class="rul"><b class="z" style="left:0;width:78.0px"></b></span> <span class="mono gk">%100</span></td><td class="gk mono" style="text-align:left">en kötü %0,12</td></tr>
+<tr><td><b>Gergi çalışma zarfı</b></td><td class="gk">Gates s3 · Tensioner Geometry</td><td class="n">60</td><td class="n" style="color:var(--uyan)">56</td><td class="n d2">4</td><td><span class="rul"><b class="p" style="left:0;width:72.8px"></b></span> <span class="mono gk">%93</span></td><td class="gk mono" style="text-align:left">Load gerginliği +%0,66</td></tr>
+<tr><td><b>Çalışma çevrimi girdisi</b></td><td class="gk">Gates s8 · Load Conditions</td><td class="n">48</td><td class="n" style="color:var(--uyan)">48</td><td class="n d0">0</td><td><span class="rul"><b class="z" style="left:0;width:78.0px"></b></span> <span class="mono gk">%100</span></td><td class="gk mono" style="text-align:left">birebir</td></tr>
+<tr><td><b>Ortalama gerginlikler</b></td><td class="gk">Gates s8 · Mean Tensions</td><td class="n">72</td><td class="n" style="color:var(--uyan)">72</td><td class="n d0">0</td><td><span class="rul"><b class="z" style="left:0;width:78.0px"></b></span> <span class="mono gk">%100</span></td><td class="gk mono" style="text-align:left">hepsi ≤ 1 N</td></tr>
+<tr><td><b>Ortalama hubloadlar</b></td><td class="gk">Gates s8 · Mean Hubloads</td><td class="n">72</td><td class="n" style="color:var(--uyan)">72</td><td class="n d0">0</td><td><span class="rul"><b class="z" style="left:0;width:78.0px"></b></span> <span class="mono gk">%100</span></td><td class="gk mono" style="text-align:left">hepsi ≤ 1 N</td></tr>
+<tr><td><b>Tepe gerginlik ve hubload</b></td><td class="gk">Gates s1 · Peak Tension & Hubload</td><td class="n">18</td><td class="n" style="color:var(--uyan)">4</td><td class="n d2">14</td><td><span class="rul"><b class="p" style="left:0;width:17.3px"></b></span> <span class="mono gk">%22</span></td><td class="gk mono" style="text-align:left">en kötü %22,9</td></tr>
+<tr class="sum"><td>TOPLAM</td><td></td><td class="n">318</td><td class="n d0">300</td><td class="n d2">18</td><td><span class="mono">%94,3</span></td><td></td></tr>
+</tbody></table></div>
+<div class="nk uy"><span class="b">Geometri ve ortalama kuvvetler tamamen tutuyor</span>
+<p>Yerleşim, kayış yolu, çalışma çevrimi girdisi ve 144 ortalama gerginlik/hubload
+değerinin <b>tamamı</b> tedarikçinin sayılarını üretiyor. Bu, zincirin geometri →
+gerilme → hubload halkalarının doğrulanmış olduğu anlamına geliyor. Farkların
+tamamı tek bir yerde toplanıyor: <b>tepe (peak) yük tablosu</b>.</p></div>
+</section>
+<section><div class="sh"><span class="sn">03</span>
+<h2>Kasnak yerleşimi</h2></div>
+<p class="sd">Gates s2 "Layout Data" ↔ Özet s2 "Kasnak Yerleşimi". 30 değer.</p>
+<div class="tw"><table><caption>Merkez koordinatları ve çaplar <span>· MFSim üstte, Gates altta gri</span></caption><thead><tr><th>Kod</th><th>Kasnak</th><th class="n">X [mm]</th><th class="n">Y [mm]</th><th class="n">Dış Ø</th><th class="n">Pitch Ø</th><th class="n">Efektif Ø</th><th>Temas</th><th class="n">Δ en büyük</th></tr></thead><tbody>
+<tr><td class="mono"><b>FAN</b></td><td>Sürücü Kasnak (FAN)</td><td class="n">0,00</td><td class="n">0,00</td><td class="n">162,0</td><td class="n">164,40</td><td class="n">162,00</td><td class="gk">kaburgalı</td><td class="n d0">0,00 mm</td></tr>
+<tr class="gk"><td class="mono gk">FAN</td><td class="gk" style="font-size:.72rem">Gates</td><td class="n gk">0,00</td><td class="n gk">0,00</td><td class="n gk">162,0</td><td class="n gk">164,40</td><td class="n gk">162,00</td><td></td><td></td></tr>
+<tr><td class="mono"><b>AVA1</b></td><td>Avara 1</td><td class="n">130,10</td><td class="n">139,90</td><td class="n">75,0</td><td class="n">77,20</td><td class="n">79,60</td><td class="gk">sırt</td><td class="n d0">0,00 mm</td></tr>
+<tr class="gk"><td class="mono gk">IDR</td><td class="gk" style="font-size:.72rem">Gates</td><td class="n gk">130,10</td><td class="n gk">139,90</td><td class="n gk">75,0</td><td class="n gk">77,20</td><td class="n gk">79,60</td><td></td><td></td></tr>
+<tr><td class="mono"><b>KK</b></td><td>Klima Kompresörü</td><td class="n">184,20</td><td class="n">314,50</td><td class="n">152,0</td><td class="n">154,40</td><td class="n">152,00</td><td class="gk">kaburgalı</td><td class="n d0">0,00 mm</td></tr>
+<tr class="gk"><td class="mono gk">A_C</td><td class="gk" style="font-size:.72rem">Gates</td><td class="n gk">184,20</td><td class="n gk">314,50</td><td class="n gk">152,0</td><td class="n gk">154,40</td><td class="n gk">152,00</td><td></td><td></td></tr>
+<tr><td class="mono"><b>AVA2</b></td><td>Avara 2</td><td class="n">0,00</td><td class="n">267,40</td><td class="n">75,0</td><td class="n">77,20</td><td class="n">79,60</td><td class="gk">sırt</td><td class="n d0">0,00 mm</td></tr>
+<tr class="gk"><td class="mono gk">IDR</td><td class="gk" style="font-size:.72rem">Gates</td><td class="n gk">0,00</td><td class="n gk">267,40</td><td class="n gk">75,0</td><td class="n gk">77,20</td><td class="n gk">79,60</td><td></td><td></td></tr>
+<tr><td class="mono"><b>ALT</b></td><td>Alternatör (155 A)</td><td class="n">-281,00</td><td class="n">259,50</td><td class="n">57,0</td><td class="n">59,40</td><td class="n">57,00</td><td class="gk">kaburgalı</td><td class="n d0">0,00 mm</td></tr>
+<tr class="gk"><td class="mono gk">ALT</td><td class="gk" style="font-size:.72rem">Gates</td><td class="n gk">-281,00</td><td class="n gk">259,50</td><td class="n gk">57,0</td><td class="n gk">59,40</td><td class="n gk">57,00</td><td></td><td></td></tr>
+<tr><td class="mono"><b>TEN</b></td><td>Otomatik Gergi (E9843) †</td><td class="n">-161,97</td><td class="n">91,27</td><td class="n">75,0</td><td class="n">77,20</td><td class="n">79,60</td><td class="gk">sırt</td><td class="n d1">0,02 mm</td></tr>
+<tr class="gk"><td class="mono gk">TEN</td><td class="gk" style="font-size:.72rem">Gates</td><td class="n gk">-161,97</td><td class="n gk">91,29</td><td class="n gk">75,0</td><td class="n gk">77,20</td><td class="n gk">79,60</td><td></td><td></td></tr>
+</tbody></table></div>
+<div class="tx">
+<p>Kuralın kendisi iki belgede aynı — Gates'in ölçülen ateşleme doğrusu eğimi
+<span class="mono">0,0497 Hz/(d/d)</span>, MFSim'inki <span class="mono">3 × devir / 60 =
+0,0500</span>; fark %0,6, okuma çözünürlüğünün içinde. Yanlış olan kural değil,
+<b>hangi devrin krank devri sayıldığı</b>.</p>
+<p>Otuz değerin yirmi dokuzu <b>birebir</b>. Tek fark gergi kasnağının Y'sinde:
+MFSim <span class="mono">91,27</span>, Gates <span class="mono">91,29</span> —
+<b>0,02 mm</b>. Bu bir girdi değil, <em>türetilmiş</em> bir sayı: gergi kasnağının merkezi
+kol açısından çıkıyor ve 90 mm'lik kolda 0,02 mm ≈ 0,013°'ye karşılık geliyor.</p>
+<p><b>Dış çap sütunu bir tuzak taşıyor ve MFSim doğru tarafta.</b> Gates sırttan temas eden
+kasnaklar için iki ayrı sayı basıyor: <span class="mono">Flat 75,00</span> (fiziksel dış çap) ve
+<span class="mono">Effective 79,60</span> (kayışın gördüğü efektif çap). MFSim'in "dış çap"
+sütunu üçünde de <span class="mono">75,0</span> diyor — yani <em>Flat</em> ile eşleşiyor —
+ve efektif çapı ayrı bir sütunda 79,60 olarak basıyor. İki sütun karışsaydı sarım
+açıları %6 kayardı.</p>
+</div></section>
+<section><div class="sh"><span class="sn">04</span>
+<h2>Çözülmüş kayış yolu</h2></div>
+<p class="sd">Gates s2 "Belt Drive System Geometry" ↔ Özet s2 "Çözülmüş Kayış Yolu". 18 değer,
+18 uyum.</p>
+<div class="tw"><table><caption>Açıklık, sarım ve hız oranı</caption><thead><tr><th>Kod</th><th class="n">Açıklık MFSim</th><th class="n">Gates</th><th class="n">Δ</th><th class="n">Sarım MFSim</th><th class="n">Gates</th><th class="n">Δ</th><th class="n">Oran MFSim</th><th class="n">Gates</th></tr></thead><tbody>
+<tr><td class="mono"><b>FAN</b></td><td class="n">148,0</td><td class="n gk">148,0</td><td class="n d0">+0,000</td><td class="n">156,22</td><td class="n gk">156,2</td><td class="n d0">+0,020</td><td class="n">1,000</td><td class="n gk">1,000</td></tr>
+<tr><td class="mono"><b>AVA1</b></td><td class="n">141,4</td><td class="n gk">141,4</td><td class="n d0">+0,000</td><td class="n">52,83</td><td class="n gk">52,8</td><td class="n d0">+0,030</td><td class="n">2,130</td><td class="n gk">2,130</td></tr>
+<tr><td class="mono"><b>KK</b></td><td class="n">150,8</td><td class="n gk">150,8</td><td class="n d0">+0,000</td><td class="n">198,39</td><td class="n gk">198,4</td><td class="n d0">−0,010</td><td class="n">1,065</td><td class="n gk">1,065</td></tr>
+<tr><td class="mono"><b>AVA2</b></td><td class="n">272,7</td><td class="n gk">272,7</td><td class="n d0">+0,000</td><td class="n">64,32</td><td class="n gk">64,3</td><td class="n d0">+0,020</td><td class="n">2,130</td><td class="n gk">2,130</td></tr>
+<tr><td class="mono"><b>ALT</b></td><td class="n">194,4</td><td class="n gk">194,4</td><td class="n d0">+0,000</td><td class="n">157,09</td><td class="n gk">157,1</td><td class="n d0">−0,010</td><td class="n">2,768</td><td class="n gk">2,768</td></tr>
+<tr><td class="mono"><b>TEN</b></td><td class="n">141,3</td><td class="n gk">141,3</td><td class="n d0">+0,000</td><td class="n">34,56</td><td class="n gk">34,6</td><td class="n d1">−0,040</td><td class="n">2,130</td><td class="n gk">2,130</td></tr>
+</tbody></table></div>
+<div class="tx"><p>Altı açıklık ve altı sarım açısı, Gates'in bastığı son basamağa kadar
+aynı. Σ işaretli sarım <span class="mono">360,00°</span> — kapalı çevrim koşulu sağlanıyor.
+Hız oranları da birebir; dikkat çeken tek nokta alternatörde: tedarikçiye <em>giden</em>
+sayfa oranı dış çaplardan yazmış (<span class="mono">162/57 = 2,842</span>), oysa doğrusu
+pitch çaplarından gelir (<span class="mono">164,4/59,4 = 2,768</span>) ve rapor da 2,768
+diyor. MFSim oranı her zaman pitch çapından hesaplıyor.</p></div></section>
+<section><div class="sh"><span class="sn">05</span>
+<h2>Gergi çalışma zarfı</h2></div>
+<p class="sd">Gates s3 "Tensioner Geometry" ↔ Özet s3 "Altı Kol Konumu". 6 konum × 10 satır =
+60 değer. Tabloların en zorlusu: kolun bütün gezinme aralığı burada.</p>
+<div class="tw"><table><caption>Altı kol konumu <span>· her hücrede MFSim / Gates / fark</span></caption><thead><tr><th>Büyüklük</th>
+<th class="n">Serbest kol</th>
+<th class="n">Değiştirme</th>
+<th class="n">Maks. kayış</th>
+<th class="n">Çalışma (Mean)</th>
+<th class="n">Min. kayış</th>
+<th class="n">Load stop</th>
+</tr></thead><tbody>
+<tr><td><b>Kol konumu</b> <span class="gk mono">[°]</span></td>
+<td class="n"><span class="d0">16,1</span><br><span class="gk" style="font-size:.72rem">16,1</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d1">11,3</span><br><span class="gk" style="font-size:.72rem">11,4</span><br><span class="d1" style="font-size:.7rem">−0,10</span></td>
+<td class="n"><span class="d0">356,3</span><br><span class="gk" style="font-size:.72rem">356,3</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">348,0</span><br><span class="gk" style="font-size:.72rem">348,0</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">339,1</span><br><span class="gk" style="font-size:.72rem">339,1</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">315,7</span><br><span class="gk" style="font-size:.72rem">315,7</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+</tr>
+<tr><td><b>Gergi X</b> <span class="gk mono">[mm]</span></td>
+<td class="n"><span class="d0">-163,5</span><br><span class="gk" style="font-size:.72rem">-163,5</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d1">-161,7</span><br><span class="gk" style="font-size:.72rem">-161,8</span><br><span class="d1" style="font-size:.7rem">+0,10</span></td>
+<td class="n"><span class="d0">-160,2</span><br><span class="gk" style="font-size:.72rem">-160,2</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">-162,0</span><br><span class="gk" style="font-size:.72rem">-162,0</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">-165,9</span><br><span class="gk" style="font-size:.72rem">-165,9</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">-185,6</span><br><span class="gk" style="font-size:.72rem">-185,6</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+</tr>
+<tr><td><b>Gergi Y</b> <span class="gk mono">[mm]</span></td>
+<td class="n"><span class="d0">134,9</span><br><span class="gk" style="font-size:.72rem">134,9</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d1">127,7</span><br><span class="gk" style="font-size:.72rem">127,8</span><br><span class="d1" style="font-size:.7rem">−0,10</span></td>
+<td class="n"><span class="d1">104,2</span><br><span class="gk" style="font-size:.72rem">104,3</span><br><span class="d1" style="font-size:.7rem">−0,10</span></td>
+<td class="n"><span class="d0">91,3</span><br><span class="gk" style="font-size:.72rem">91,3</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">77,9</span><br><span class="gk" style="font-size:.72rem">77,9</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">47,1</span><br><span class="gk" style="font-size:.72rem">47,1</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+</tr>
+<tr><td><b>β</b> <span class="gk mono">[°]</span></td>
+<td class="n"><span class="d0">25,2</span><br><span class="gk" style="font-size:.72rem">25,2</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d1">29,0</span><br><span class="gk" style="font-size:.72rem">28,9</span><br><span class="d1" style="font-size:.7rem">+0,10</span></td>
+<td class="n"><span class="d0">41,6</span><br><span class="gk" style="font-size:.72rem">41,6</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">49,4</span><br><span class="gk" style="font-size:.72rem">49,4</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">58,2</span><br><span class="gk" style="font-size:.72rem">58,2</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">83,3</span><br><span class="gk" style="font-size:.72rem">83,3</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+</tr>
+<tr><td><b>Hubload yönü</b> <span class="gk mono">[°]</span></td>
+<td class="n"><span class="d0">221,3</span><br><span class="gk" style="font-size:.72rem">221,3</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">220,3</span><br><span class="gk" style="font-size:.72rem">220,3</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">218,0</span><br><span class="gk" style="font-size:.72rem">218,0</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">217,4</span><br><span class="gk" style="font-size:.72rem">217,4</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">217,3</span><br><span class="gk" style="font-size:.72rem">217,3</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">218,9</span><br><span class="gk" style="font-size:.72rem">218,9</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+</tr>
+<tr><td><b>Hubload</b> <span class="gk mono">[N]</span></td>
+<td class="n"><span class="d0">224,3</span><br><span class="gk" style="font-size:.72rem">224,5</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">249,6</span><br><span class="gk" style="font-size:.72rem">249,5</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">302,2</span><br><span class="gk" style="font-size:.72rem">302,3</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">323,2</span><br><span class="gk" style="font-size:.72rem">323,2</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">344,6</span><br><span class="gk" style="font-size:.72rem">344,5</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">420,6</span><br><span class="gk" style="font-size:.72rem">420,3</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+</tr>
+<tr><td><b>Gerginlik</b> <span class="gk mono">[N]</span></td>
+<td class="n"><span class="d0">260,1</span><br><span class="gk" style="font-size:.72rem">260,2</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">301,6</span><br><span class="gk" style="font-size:.72rem">301,2</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">437,0</span><br><span class="gk" style="font-size:.72rem">437,0</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">544,0</span><br><span class="gk" style="font-size:.72rem">543,9</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">731,4</span><br><span class="gk" style="font-size:.72rem">731,0</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d1">5 257,1</span><br><span class="gk" style="font-size:.72rem">5 222,8</span><br><span class="d1" style="font-size:.7rem">+34,30</span></td>
+</tr>
+<tr><td><b>Gergi sarımı</b> <span class="gk mono">[°]</span></td>
+<td class="n"><span class="d0">51,1</span><br><span class="gk" style="font-size:.72rem">51,1</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">48,9</span><br><span class="gk" style="font-size:.72rem">48,9</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">40,5</span><br><span class="gk" style="font-size:.72rem">40,5</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">34,6</span><br><span class="gk" style="font-size:.72rem">34,6</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">27,3</span><br><span class="gk" style="font-size:.72rem">27,3</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">4,6</span><br><span class="gk" style="font-size:.72rem">4,6</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+</tr>
+<tr><td><b>Efektif tahrik boyu</b> <span class="gk mono">[mm]</span></td>
+<td class="n"><span class="d0">1 735,4</span><br><span class="gk" style="font-size:.72rem">1 735,4</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">1 732,5</span><br><span class="gk" style="font-size:.72rem">1 732,5</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">1 722,2</span><br><span class="gk" style="font-size:.72rem">1 722,2</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">1 716,2</span><br><span class="gk" style="font-size:.72rem">1 716,2</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">1 710,2</span><br><span class="gk" style="font-size:.72rem">1 710,2</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">1 700,7</span><br><span class="gk" style="font-size:.72rem">1 700,7</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+</tr>
+<tr><td><b>Gereken kayış boyu</b> <span class="gk mono">[mm]</span></td>
+<td class="n"><span class="d0">1 733,8</span><br><span class="gk" style="font-size:.72rem">1 733,8</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">1 730,9</span><br><span class="gk" style="font-size:.72rem">1 730,9</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">1 720,6</span><br><span class="gk" style="font-size:.72rem">1 720,6</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">1 714,6</span><br><span class="gk" style="font-size:.72rem">1 714,6</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">1 708,6</span><br><span class="gk" style="font-size:.72rem">1 708,6</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+<td class="n"><span class="d0">1 699,1</span><br><span class="gk" style="font-size:.72rem">1 699,1</span><br><span class="gk" style="font-size:.7rem">·</span></td>
+</tr>
+</tbody></table></div>
+<div class="tx">
+<p>Altmış değerin <b>elli altısı</b> Gates'in basım çözünürlüğü içinde. Dört tanesi dışarıda
+ve dördü de tek bir yerde toplanıyor.</p>
+<h4>Bağımsız bir doğrulama: Gates kendi grafiğinde bizim açılarımızı çiziyor</h4>
+<p>Gates s2'deki "Belt Tension Control" grafiğinin x ekseni hem <em>göreli</em> hem
+<em>mutlak</em> kol açısıyla etiketli. Grafiği piksel düzeyinde izleyip dikey konum
+çizgilerinin yerlerini okudum: Mean, Min ve Load çizgileri MFSim'in ürettiği göreli
+açılara <b>0,08° içinde</b> oturuyor — yani tablodaki 1 ondalıklı basımdan
+<em>daha iyi</em> bir uyum.</p>
+<div class="eq">MFSim göreli kol açıları : 0 · 4,748 · 19,737 · 28,075 · 36,973 · 60,400
+Gates grafik etiketleri  : 0,0 · 4,7 · 19,8 · 28,1 · 37,0 · 60,4</div>
+<h4>Dört farkın üçü "Değiştirme" sütununda</h4>
+<p>Kol konumu <span class="mono">11,3 ↔ 11,4</span>, gergi Y'si
+<span class="mono">127,7 ↔ 127,8</span>, β <span class="mono">29,0 ↔ 28,9</span>.
+Üçü de aynı ~0,06°'lik kol açısı farkının sonucu. Gates 1 ondalık bastığı için gerçek fark
+0,035°–0,135° arasında bir yerde; hangisi olduğu bu belgelerden okunamıyor. Sonucun
+üzerindeki etkisi: <b>o konumdaki gerginlikte %0,13</b>.</p>
+<div class="nk"><span class="b">Load konumundaki +%0,66, modelin değil geometrinin işi</span>
+<p>Load, mekanik bir durdurucudur; orada gergi sarımı <span class="mono">4,58°</span>'ye
+iniyor ve take-up (<span class="mono">dL/dθ = a·sinβ·2sin(φ/2)</span>) sıfıra yaklaşıyor.
+<span class="mono">T = M/(dL/dθ)</span> olduğu için payda tekilleşiyor ve küçük girdi
+farkları büyüyor. Ölçtüm: aynı 0,05°'lik sarım farkı <b>Mean'de gerginliği %0,14,
+Load'da %1,08 oynatıyor</b> — <b>7,7 kat</b>. Gözlenen +%0,66'lık fark ancak
+<b>0,03°</b>'lik bir sarım farkına karşılık geliyor, yani Gates'in kendi basım
+çözünürlüğünün altında.</p></div>
+<h4>Gerginliğin kendi tutarlılığı</h4>
+<p>Aynı formülü Gates'in <em>kendi bastığı</em> θ, β, φ üçlüsüyle çalıştırınca Gates'in kendi
+gerginlik satırını <b>%0,22</b>'ye kadar tutturamıyor. Yani bu tablodaki ≤%0,13'lük MFSim
+sapmaları, Gates'in kendi basımının iç tutarlılığından <b>daha küçük</b>.</p>
+</div></section>
+<section><div class="sh"><span class="sn">06</span>
+<h2>Çalışma çevrimi girdisi</h2></div>
+<p class="sd">Gates s8 "Load Conditions for DC 95%" ↔ Özet s4. 48 değer, 48 uyum — birebir.</p>
+<div class="tw"><table><caption>Süre payı ve aksesuar güçleri <span>· sürücü gücü girdi değil, toplamdan hesaplanıyor</span></caption><thead><tr><th class="n">Motor [d/d]</th><th class="n">Süre payı MFSim</th><th class="n">Gates</th><th class="n">KK [kW] MFSim</th><th class="n">Gates</th><th class="n">ALT [kW] MFSim</th><th class="n">Gates</th><th class="n">Σ sürücü MFSim</th><th class="n">Gates</th><th>Uyum</th></tr></thead><tbody>
+<tr><td class="n mono"><b>880</b></td><td class="n">25,00</td><td class="n gk">25,00</td><td class="n">2,70</td><td class="n gk">2,70</td><td class="n">3,61</td><td class="n gk">3,61</td><td class="n">6,34</td><td class="n gk">6,34</td><td><span class="rz ok">birebir</span></td></tr>
+<tr><td class="n mono"><b>1000</b></td><td class="n">4,00</td><td class="n gk">4,00</td><td class="n">3,60</td><td class="n gk">3,60</td><td class="n">3,78</td><td class="n gk">3,78</td><td class="n">7,41</td><td class="n gk">7,41</td><td><span class="rz ok">birebir</span></td></tr>
+<tr><td class="n mono"><b>1100</b></td><td class="n">4,50</td><td class="n gk">4,50</td><td class="n">4,00</td><td class="n gk">4,00</td><td class="n">3,83</td><td class="n gk">3,83</td><td class="n">7,86</td><td class="n gk">7,86</td><td><span class="rz ok">birebir</span></td></tr>
+<tr><td class="n mono"><b>1200</b></td><td class="n">5,00</td><td class="n gk">5,00</td><td class="n">4,40</td><td class="n gk">4,40</td><td class="n">3,87</td><td class="n gk">3,87</td><td class="n">8,30</td><td class="n gk">8,30</td><td><span class="rz ok">birebir</span></td></tr>
+<tr><td class="n mono"><b>1400</b></td><td class="n">5,50</td><td class="n gk">5,50</td><td class="n">5,10</td><td class="n gk">5,10</td><td class="n">3,93</td><td class="n gk">3,93</td><td class="n">9,06</td><td class="n gk">9,06</td><td><span class="rz ok">birebir</span></td></tr>
+<tr><td class="n mono"><b>1500</b></td><td class="n">6,00</td><td class="n gk">6,00</td><td class="n">5,40</td><td class="n gk">5,40</td><td class="n">3,94</td><td class="n gk">3,94</td><td class="n">9,37</td><td class="n gk">9,37</td><td><span class="rz ok">birebir</span></td></tr>
+<tr><td class="n mono"><b>1600</b></td><td class="n">7,50</td><td class="n gk">7,50</td><td class="n">5,70</td><td class="n gk">5,70</td><td class="n">3,69</td><td class="n gk">3,69</td><td class="n">9,42</td><td class="n gk">9,42</td><td><span class="rz ok">birebir</span></td></tr>
+<tr><td class="n mono"><b>1700</b></td><td class="n">9,00</td><td class="n gk">9,00</td><td class="n">6,00</td><td class="n gk">6,00</td><td class="n">3,97</td><td class="n gk">3,97</td><td class="n">10,00</td><td class="n gk">10,00</td><td><span class="rz ok">birebir</span></td></tr>
+<tr><td class="n mono"><b>1800</b></td><td class="n">0,50</td><td class="n gk">0,50</td><td class="n">6,30</td><td class="n gk">6,30</td><td class="n">3,98</td><td class="n gk">3,98</td><td class="n">10,31</td><td class="n gk">10,31</td><td><span class="rz ok">birebir</span></td></tr>
+<tr><td class="n mono"><b>2000</b></td><td class="n">12,00</td><td class="n gk">12,00</td><td class="n">6,70</td><td class="n gk">6,70</td><td class="n">3,99</td><td class="n gk">3,99</td><td class="n">10,72</td><td class="n gk">10,72</td><td><span class="rz ok">birebir</span></td></tr>
+<tr><td class="n mono"><b>2500</b></td><td class="n">16,00</td><td class="n gk">16,00</td><td class="n">7,00</td><td class="n gk">7,00</td><td class="n">4,00</td><td class="n gk">4,00</td><td class="n">11,03</td><td class="n gk">11,03</td><td><span class="rz ok">birebir</span></td></tr>
+<tr><td class="n mono"><b>2750</b></td><td class="n">5,00</td><td class="n gk">5,00</td><td class="n">7,40</td><td class="n gk">7,40</td><td class="n">4,02</td><td class="n gk">4,02</td><td class="n">11,45</td><td class="n gk">11,45</td><td><span class="rz ok">birebir</span></td></tr>
+</tbody></table></div>
+<div class="tx"><p>Sürücü (FAN) gücü MFSim'de <b>girdi değildir</b> — diğer aksesuarların
+toplamı olarak hesaplanır, çevrim ancak böyle kapanır. On iki devrin on ikisinde de
+Gates'in bastığı sayıyı üretiyor (<span class="mono">6,34 … 11,45 kW</span>).</p></div></section>
+<section><div class="sh"><span class="sn">07</span>
+<h2>Ortalama gerginlikler ve hubloadlar</h2></div>
+<p class="sd">Gates s8 "Mean Tensions" ve "Mean Hubloads" ↔ Özet s5. 12 devir × 6 kasnak × 2
+büyüklük = 144 değer. Hepsi 1 N içinde.</p>
+<div class="tw"><table><caption>Ortalama gerginlikler [N] <span>· MFSim / Gates / fark</span></caption><thead><tr><th class="n">d/d</th>
+<th class="n">FAN</th>
+<th class="n">AVA1</th>
+<th class="n">KK</th>
+<th class="n">AVA2</th>
+<th class="n">ALT</th>
+<th class="n">TEN</th>
+<th class="n">en büyük Δ</th></tr></thead><tbody>
+<tr><td class="n mono"><b>880</b></td>
+<td class="n"><span class="d0">1381</span> <span class="gk" style="font-size:.72rem">/1381</span></td>
+<td class="n"><span class="d0">1380</span> <span class="gk" style="font-size:.72rem">/1380</span></td>
+<td class="n"><span class="d0">1023</span> <span class="gk" style="font-size:.72rem">/1023</span></td>
+<td class="n"><span class="d0">1022</span> <span class="gk" style="font-size:.72rem">/1022</span></td>
+<td class="n"><span class="d0">545</span> <span class="gk" style="font-size:.72rem">/545</span></td>
+<td class="n"><span class="d0">544</span> <span class="gk" style="font-size:.72rem">/544</span></td>
+<td class="n d0">0 N</td></tr>
+<tr><td class="n mono"><b>1000</b></td>
+<td class="n"><span class="d0">1405</span> <span class="gk" style="font-size:.72rem">/1405</span></td>
+<td class="n"><span class="d0">1404</span> <span class="gk" style="font-size:.72rem">/1404</span></td>
+<td class="n"><span class="d0">986</span> <span class="gk" style="font-size:.72rem">/985</span></td>
+<td class="n"><span class="d0">984</span> <span class="gk" style="font-size:.72rem">/984</span></td>
+<td class="n"><span class="d0">545</span> <span class="gk" style="font-size:.72rem">/545</span></td>
+<td class="n"><span class="d0">544</span> <span class="gk" style="font-size:.72rem">/544</span></td>
+<td class="n d0">1 N</td></tr>
+<tr><td class="n mono"><b>1100</b></td>
+<td class="n"><span class="d0">1374</span> <span class="gk" style="font-size:.72rem">/1374</span></td>
+<td class="n"><span class="d0">1373</span> <span class="gk" style="font-size:.72rem">/1373</span></td>
+<td class="n"><span class="d0">951</span> <span class="gk" style="font-size:.72rem">/951</span></td>
+<td class="n"><span class="d0">950</span> <span class="gk" style="font-size:.72rem">/949</span></td>
+<td class="n"><span class="d0">545</span> <span class="gk" style="font-size:.72rem">/545</span></td>
+<td class="n"><span class="d0">544</span> <span class="gk" style="font-size:.72rem">/544</span></td>
+<td class="n d0">1 N</td></tr>
+<tr><td class="n mono"><b>1200</b></td>
+<td class="n"><span class="d0">1348</span> <span class="gk" style="font-size:.72rem">/1347</span></td>
+<td class="n"><span class="d0">1347</span> <span class="gk" style="font-size:.72rem">/1346</span></td>
+<td class="n"><span class="d0">921</span> <span class="gk" style="font-size:.72rem">/921</span></td>
+<td class="n"><span class="d0">920</span> <span class="gk" style="font-size:.72rem">/920</span></td>
+<td class="n"><span class="d0">545</span> <span class="gk" style="font-size:.72rem">/545</span></td>
+<td class="n"><span class="d0">544</span> <span class="gk" style="font-size:.72rem">/544</span></td>
+<td class="n d0">1 N</td></tr>
+<tr><td class="n mono"><b>1400</b></td>
+<td class="n"><span class="d0">1296</span> <span class="gk" style="font-size:.72rem">/1296</span></td>
+<td class="n"><span class="d0">1295</span> <span class="gk" style="font-size:.72rem">/1295</span></td>
+<td class="n"><span class="d0">872</span> <span class="gk" style="font-size:.72rem">/872</span></td>
+<td class="n"><span class="d0">871</span> <span class="gk" style="font-size:.72rem">/871</span></td>
+<td class="n"><span class="d0">545</span> <span class="gk" style="font-size:.72rem">/545</span></td>
+<td class="n"><span class="d0">544</span> <span class="gk" style="font-size:.72rem">/544</span></td>
+<td class="n d0">0 N</td></tr>
+<tr><td class="n mono"><b>1500</b></td>
+<td class="n"><span class="d0">1270</span> <span class="gk" style="font-size:.72rem">/1270</span></td>
+<td class="n"><span class="d0">1269</span> <span class="gk" style="font-size:.72rem">/1269</span></td>
+<td class="n"><span class="d0">851</span> <span class="gk" style="font-size:.72rem">/851</span></td>
+<td class="n"><span class="d0">850</span> <span class="gk" style="font-size:.72rem">/850</span></td>
+<td class="n"><span class="d0">545</span> <span class="gk" style="font-size:.72rem">/545</span></td>
+<td class="n"><span class="d0">544</span> <span class="gk" style="font-size:.72rem">/544</span></td>
+<td class="n d0">0 N</td></tr>
+<tr><td class="n mono"><b>1600</b></td>
+<td class="n"><span class="d0">1228</span> <span class="gk" style="font-size:.72rem">/1228</span></td>
+<td class="n"><span class="d0">1227</span> <span class="gk" style="font-size:.72rem">/1227</span></td>
+<td class="n"><span class="d0">813</span> <span class="gk" style="font-size:.72rem">/813</span></td>
+<td class="n"><span class="d0">813</span> <span class="gk" style="font-size:.72rem">/813</span></td>
+<td class="n"><span class="d0">545</span> <span class="gk" style="font-size:.72rem">/545</span></td>
+<td class="n"><span class="d0">544</span> <span class="gk" style="font-size:.72rem">/544</span></td>
+<td class="n d0">0 N</td></tr>
+<tr><td class="n mono"><b>1700</b></td>
+<td class="n"><span class="d0">1227</span> <span class="gk" style="font-size:.72rem">/1227</span></td>
+<td class="n"><span class="d0">1227</span> <span class="gk" style="font-size:.72rem">/1227</span></td>
+<td class="n"><span class="d0">817</span> <span class="gk" style="font-size:.72rem">/817</span></td>
+<td class="n"><span class="d0">816</span> <span class="gk" style="font-size:.72rem">/816</span></td>
+<td class="n"><span class="d0">545</span> <span class="gk" style="font-size:.72rem">/545</span></td>
+<td class="n"><span class="d0">544</span> <span class="gk" style="font-size:.72rem">/544</span></td>
+<td class="n d0">0 N</td></tr>
+<tr><td class="n mono"><b>1800</b></td>
+<td class="n"><span class="d0">1209</span> <span class="gk" style="font-size:.72rem">/1209</span></td>
+<td class="n"><span class="d0">1209</span> <span class="gk" style="font-size:.72rem">/1209</span></td>
+<td class="n"><span class="d0">802</span> <span class="gk" style="font-size:.72rem">/802</span></td>
+<td class="n"><span class="d0">802</span> <span class="gk" style="font-size:.72rem">/801</span></td>
+<td class="n"><span class="d0">545</span> <span class="gk" style="font-size:.72rem">/545</span></td>
+<td class="n"><span class="d0">544</span> <span class="gk" style="font-size:.72rem">/544</span></td>
+<td class="n d0">1 N</td></tr>
+<tr><td class="n mono"><b>2000</b></td>
+<td class="n"><span class="d0">1167</span> <span class="gk" style="font-size:.72rem">/1167</span></td>
+<td class="n"><span class="d0">1166</span> <span class="gk" style="font-size:.72rem">/1166</span></td>
+<td class="n"><span class="d0">777</span> <span class="gk" style="font-size:.72rem">/777</span></td>
+<td class="n"><span class="d0">776</span> <span class="gk" style="font-size:.72rem">/776</span></td>
+<td class="n"><span class="d0">545</span> <span class="gk" style="font-size:.72rem">/545</span></td>
+<td class="n"><span class="d0">544</span> <span class="gk" style="font-size:.72rem">/544</span></td>
+<td class="n d0">0 N</td></tr>
+<tr><td class="n mono"><b>2500</b></td>
+<td class="n"><span class="d0">1057</span> <span class="gk" style="font-size:.72rem">/1056</span></td>
+<td class="n"><span class="d0">1056</span> <span class="gk" style="font-size:.72rem">/1056</span></td>
+<td class="n"><span class="d0">731</span> <span class="gk" style="font-size:.72rem">/731</span></td>
+<td class="n"><span class="d0">730</span> <span class="gk" style="font-size:.72rem">/730</span></td>
+<td class="n"><span class="d0">545</span> <span class="gk" style="font-size:.72rem">/544</span></td>
+<td class="n"><span class="d0">544</span> <span class="gk" style="font-size:.72rem">/544</span></td>
+<td class="n d0">1 N</td></tr>
+<tr><td class="n mono"><b>2750</b></td>
+<td class="n"><span class="d0">1028</span> <span class="gk" style="font-size:.72rem">/1028</span></td>
+<td class="n"><span class="d0">1027</span> <span class="gk" style="font-size:.72rem">/1027</span></td>
+<td class="n"><span class="d0">715</span> <span class="gk" style="font-size:.72rem">/715</span></td>
+<td class="n"><span class="d0">714</span> <span class="gk" style="font-size:.72rem">/714</span></td>
+<td class="n"><span class="d0">544</span> <span class="gk" style="font-size:.72rem">/544</span></td>
+<td class="n"><span class="d0">544</span> <span class="gk" style="font-size:.72rem">/544</span></td>
+<td class="n d0">0 N</td></tr>
+</tbody></table></div>
+<div class="tw"><table><caption>Ortalama hubloadlar [N] <span>· MFSim / Gates / fark</span></caption><thead><tr><th class="n">d/d</th>
+<th class="n">FAN</th>
+<th class="n">AVA1</th>
+<th class="n">KK</th>
+<th class="n">AVA2</th>
+<th class="n">ALT</th>
+<th class="n">TEN</th>
+<th class="n">en büyük Δ</th></tr></thead><tbody>
+<tr><td class="n mono"><b>880</b></td>
+<td class="n"><span class="d0">1892</span> <span class="gk" style="font-size:.72rem">/1891</span></td>
+<td class="n"><span class="d0">1228</span> <span class="gk" style="font-size:.72rem">/1228</span></td>
+<td class="n"><span class="d0">2373</span> <span class="gk" style="font-size:.72rem">/2372</span></td>
+<td class="n"><span class="d0">1089</span> <span class="gk" style="font-size:.72rem">/1088</span></td>
+<td class="n"><span class="d0">1539</span> <span class="gk" style="font-size:.72rem">/1539</span></td>
+<td class="n"><span class="d0">324</span> <span class="gk" style="font-size:.72rem">/324</span></td>
+<td class="n d0">1 N</td></tr>
+<tr><td class="n mono"><b>1000</b></td>
+<td class="n"><span class="d0">1915</span> <span class="gk" style="font-size:.72rem">/1915</span></td>
+<td class="n"><span class="d0">1249</span> <span class="gk" style="font-size:.72rem">/1249</span></td>
+<td class="n"><span class="d0">2359</span> <span class="gk" style="font-size:.72rem">/2359</span></td>
+<td class="n"><span class="d0">1048</span> <span class="gk" style="font-size:.72rem">/1048</span></td>
+<td class="n"><span class="d0">1502</span> <span class="gk" style="font-size:.72rem">/1501</span></td>
+<td class="n"><span class="d0">324</span> <span class="gk" style="font-size:.72rem">/324</span></td>
+<td class="n d0">1 N</td></tr>
+<tr><td class="n mono"><b>1100</b></td>
+<td class="n"><span class="d0">1885</span> <span class="gk" style="font-size:.72rem">/1885</span></td>
+<td class="n"><span class="d0">1222</span> <span class="gk" style="font-size:.72rem">/1222</span></td>
+<td class="n"><span class="d0">2295</span> <span class="gk" style="font-size:.72rem">/2295</span></td>
+<td class="n"><span class="d0">1011</span> <span class="gk" style="font-size:.72rem">/1011</span></td>
+<td class="n"><span class="d0">1467</span> <span class="gk" style="font-size:.72rem">/1467</span></td>
+<td class="n"><span class="d0">324</span> <span class="gk" style="font-size:.72rem">/324</span></td>
+<td class="n d0">0 N</td></tr>
+<tr><td class="n mono"><b>1200</b></td>
+<td class="n"><span class="d0">1858</span> <span class="gk" style="font-size:.72rem">/1858</span></td>
+<td class="n"><span class="d0">1198</span> <span class="gk" style="font-size:.72rem">/1198</span></td>
+<td class="n"><span class="d0">2239</span> <span class="gk" style="font-size:.72rem">/2239</span></td>
+<td class="n"><span class="d0">980</span> <span class="gk" style="font-size:.72rem">/979</span></td>
+<td class="n"><span class="d0">1437</span> <span class="gk" style="font-size:.72rem">/1437</span></td>
+<td class="n"><span class="d0">324</span> <span class="gk" style="font-size:.72rem">/324</span></td>
+<td class="n d0">1 N</td></tr>
+<tr><td class="n mono"><b>1400</b></td>
+<td class="n"><span class="d0">1807</span> <span class="gk" style="font-size:.72rem">/1807</span></td>
+<td class="n"><span class="d0">1153</span> <span class="gk" style="font-size:.72rem">/1152</span></td>
+<td class="n"><span class="d0">2140</span> <span class="gk" style="font-size:.72rem">/2140</span></td>
+<td class="n"><span class="d0">928</span> <span class="gk" style="font-size:.72rem">/927</span></td>
+<td class="n"><span class="d0">1389</span> <span class="gk" style="font-size:.72rem">/1389</span></td>
+<td class="n"><span class="d0">323</span> <span class="gk" style="font-size:.72rem">/323</span></td>
+<td class="n d0">1 N</td></tr>
+<tr><td class="n mono"><b>1500</b></td>
+<td class="n"><span class="d0">1781</span> <span class="gk" style="font-size:.72rem">/1781</span></td>
+<td class="n"><span class="d0">1129</span> <span class="gk" style="font-size:.72rem">/1129</span></td>
+<td class="n"><span class="d0">2094</span> <span class="gk" style="font-size:.72rem">/2093</span></td>
+<td class="n"><span class="d0">905</span> <span class="gk" style="font-size:.72rem">/905</span></td>
+<td class="n"><span class="d0">1368</span> <span class="gk" style="font-size:.72rem">/1368</span></td>
+<td class="n"><span class="d0">323</span> <span class="gk" style="font-size:.72rem">/323</span></td>
+<td class="n d0">1 N</td></tr>
+<tr><td class="n mono"><b>1600</b></td>
+<td class="n"><span class="d0">1740</span> <span class="gk" style="font-size:.72rem">/1740</span></td>
+<td class="n"><span class="d0">1092</span> <span class="gk" style="font-size:.72rem">/1092</span></td>
+<td class="n"><span class="d0">2016</span> <span class="gk" style="font-size:.72rem">/2015</span></td>
+<td class="n"><span class="d0">866</span> <span class="gk" style="font-size:.72rem">/865</span></td>
+<td class="n"><span class="d0">1331</span> <span class="gk" style="font-size:.72rem">/1331</span></td>
+<td class="n"><span class="d0">323</span> <span class="gk" style="font-size:.72rem">/323</span></td>
+<td class="n d0">1 N</td></tr>
+<tr><td class="n mono"><b>1700</b></td>
+<td class="n"><span class="d0">1739</span> <span class="gk" style="font-size:.72rem">/1739</span></td>
+<td class="n"><span class="d0">1092</span> <span class="gk" style="font-size:.72rem">/1092</span></td>
+<td class="n"><span class="d0">2018</span> <span class="gk" style="font-size:.72rem">/2018</span></td>
+<td class="n"><span class="d0">869</span> <span class="gk" style="font-size:.72rem">/869</span></td>
+<td class="n"><span class="d0">1335</span> <span class="gk" style="font-size:.72rem">/1334</span></td>
+<td class="n"><span class="d0">323</span> <span class="gk" style="font-size:.72rem">/323</span></td>
+<td class="n d0">1 N</td></tr>
+<tr><td class="n mono"><b>1800</b></td>
+<td class="n"><span class="d0">1721</span> <span class="gk" style="font-size:.72rem">/1721</span></td>
+<td class="n"><span class="d0">1076</span> <span class="gk" style="font-size:.72rem">/1076</span></td>
+<td class="n"><span class="d0">1986</span> <span class="gk" style="font-size:.72rem">/1986</span></td>
+<td class="n"><span class="d0">854</span> <span class="gk" style="font-size:.72rem">/853</span></td>
+<td class="n"><span class="d0">1320</span> <span class="gk" style="font-size:.72rem">/1320</span></td>
+<td class="n"><span class="d0">323</span> <span class="gk" style="font-size:.72rem">/323</span></td>
+<td class="n d0">1 N</td></tr>
+<tr><td class="n mono"><b>2000</b></td>
+<td class="n"><span class="d0">1679</span> <span class="gk" style="font-size:.72rem">/1679</span></td>
+<td class="n"><span class="d0">1038</span> <span class="gk" style="font-size:.72rem">/1038</span></td>
+<td class="n"><span class="d0">1919</span> <span class="gk" style="font-size:.72rem">/1919</span></td>
+<td class="n"><span class="d0">827</span> <span class="gk" style="font-size:.72rem">/827</span></td>
+<td class="n"><span class="d0">1296</span> <span class="gk" style="font-size:.72rem">/1295</span></td>
+<td class="n"><span class="d0">323</span> <span class="gk" style="font-size:.72rem">/323</span></td>
+<td class="n d0">1 N</td></tr>
+<tr><td class="n mono"><b>2500</b></td>
+<td class="n"><span class="d0">1570</span> <span class="gk" style="font-size:.72rem">/1570</span></td>
+<td class="n"><span class="d0">940</span> <span class="gk" style="font-size:.72rem">/940</span></td>
+<td class="n"><span class="d0">1765</span> <span class="gk" style="font-size:.72rem">/1765</span></td>
+<td class="n"><span class="d0">778</span> <span class="gk" style="font-size:.72rem">/778</span></td>
+<td class="n"><span class="d0">1250</span> <span class="gk" style="font-size:.72rem">/1250</span></td>
+<td class="n"><span class="d0">323</span> <span class="gk" style="font-size:.72rem">/323</span></td>
+<td class="n d0">0 N</td></tr>
+<tr><td class="n mono"><b>2750</b></td>
+<td class="n"><span class="d0">1541</span> <span class="gk" style="font-size:.72rem">/1541</span></td>
+<td class="n"><span class="d0">914</span> <span class="gk" style="font-size:.72rem">/914</span></td>
+<td class="n"><span class="d0">1720</span> <span class="gk" style="font-size:.72rem">/1720</span></td>
+<td class="n"><span class="d0">761</span> <span class="gk" style="font-size:.72rem">/760</span></td>
+<td class="n"><span class="d0">1234</span> <span class="gk" style="font-size:.72rem">/1234</span></td>
+<td class="n"><span class="d0">323</span> <span class="gk" style="font-size:.72rem">/323</span></td>
+<td class="n d0">1 N</td></tr>
+</tbody></table></div>
+<div class="tx"><p>Yüz kırk dört değerin tamamı <b>≤ 1 N</b> — yani tedarikçinin tam sayıya
+yuvarladığı basamağın içinde. Gerilme zinciri (ankraj → sarım → güç → hubload vektörü)
+uçtan uca doğrulanmış durumda. <b>Ve bu, bir sonraki bölümdeki bulgunun neden bu kadar
+belirgin olduğunu açıklıyor:</b> aynı zincir, üzerine ivme terimi eklenince tutmayı
+bırakıyor.</p></div></section>
+<section><div class="sh"><span class="sn">08</span>
+<h2>Tepe gerginlik ve hubload — 18 farkın 14'ü burada</h2></div>
+<p class="sd">Gates s1 "Peak Tension & Hubload" ↔ Özet s5. Raporun "kalibre değil" damgası
+taşıyan tek tablosu. Farkın sebebi kalibrasyon eksikliği değil çıktı: <b>zincirde bir
+yapısal kusur var ve kapatılabilir.</b></p>
+<div class="tw"><table><caption>Tepe tablosu, bugünkü hâl <span>· 880 d/d · ±1100 d/d/s</span></caption><thead><tr><th>Kod</th><th class="n">Ortalama</th><th class="n">Tepe MFSim</th><th class="n">Tepe Gates</th><th class="n">Δ%</th><th>sapma</th><th class="n">Hubload MFSim</th><th class="n">Gates</th><th class="n">Δ%</th><th class="n">Yön MFSim</th><th class="n">Gates</th></tr></thead><tbody>
+<tr><td class="mono"><b>FAN</b></td><td class="n gk">1381</td><td class="n">1471</td><td class="n gk">1585</td><td class="n d2">−7,2%</td><td><span class="rul" title="−7,192%"><i></i><b class="m" style="left:27.8px;width:11.2px"></b></span></td><td class="n">1981</td><td class="n gk">2094.8</td><td class="n d2">−5,4%</td><td class="n">93°</td><td class="n gk">92°</td></tr>
+<tr><td class="mono"><b>AVA1</b></td><td class="n gk">1380</td><td class="n">1464</td><td class="n gk">1582</td><td class="n d2">−7,5%</td><td><span class="rul" title="−7,459%"><i></i><b class="m" style="left:27.4px;width:11.6px"></b></span></td><td class="n">1305</td><td class="n gk">1409.1</td><td class="n d2">−7,4%</td><td class="n">330°</td><td class="n gk">330°</td></tr>
+<tr><td class="mono"><b>KK</b></td><td class="n gk">1023</td><td class="n">1058</td><td class="n gk">1177</td><td class="n d2">−10,1%</td><td><span class="rul" title="−10,110%"><i></i><b class="m" style="left:23.2px;width:15.8px"></b></span></td><td class="n">2490</td><td class="n gk">2724.8</td><td class="n d2">−8,6%</td><td class="n">221°</td><td class="n gk">221°</td></tr>
+<tr><td class="mono"><b>AVA2</b></td><td class="n gk">1022</td><td class="n">1051</td><td class="n gk">1174</td><td class="n d2">−10,5%</td><td><span class="rul" title="−10,477%"><i></i><b class="m" style="left:22.7px;width:16.3px"></b></span></td><td class="n">1123</td><td class="n gk">1251.6</td><td class="n d2">−10,3%</td><td class="n">109°</td><td class="n gk">110°</td></tr>
+<tr><td class="mono"><b>ALT</b></td><td class="n gk">545</td><td class="n">671</td><td class="n gk">546</td><td class="n d2">+22,9%</td><td><span class="rul" title="+22,894%"><i></i><b class="p" style="left:39.0px;width:35.7px"></b></span></td><td class="n">1689</td><td class="n gk">1690.3</td><td class="n d0">−0,1%</td><td class="n">339°</td><td class="n gk">340°</td></tr>
+<tr><td class="mono"><b>TEN</b></td><td class="n gk">544</td><td class="n">544</td><td class="n gk">544</td><td class="n d0">+0,0%</td><td><span class="rul" title="+0,000%"><i></i><b class="z" style="left:39.0px;width:1.5px"></b></span></td><td class="n">380</td><td class="n gk">323.8</td><td class="n d2">+17,4%</td><td class="n">199°</td><td class="n gk">218°</td></tr>
+</tbody></table></div>
+<h3>Şeklin kendisi farklı — ve bu ipucu</h3>
+<div class="tx"><p>Sayıların büyüklüğünden çok <b>dağılımı</b> ayrışıyor. Tedarikçi, yük
+taşıyan dört kasnağın dördüne de neredeyse aynı payı veriyor ve alternatöre hiç
+vermiyor; MFSim tersini yapıyor.</p></div>
+<div class="tw"><table><caption>Tepe / ortalama oranı</caption><thead><tr><th>Kod</th>
+<th class="n">FAN</th>
+<th class="n">AVA1</th>
+<th class="n">KK</th>
+<th class="n">AVA2</th>
+<th class="n">ALT</th>
+<th class="n">TEN</th>
+</tr></thead><tbody><tr><td><b>MFSim</b></td>
+<td class="n">1,065</td>
+<td class="n">1,061</td>
+<td class="n">1,034</td>
+<td class="n">1,028</td>
+<td class="n">1,231</td>
+<td class="n">1,000</td>
+</tr><tr><td><b>Gates</b></td>
+<td class="n gk">1,148</td>
+<td class="n gk">1,146</td>
+<td class="n gk">1,151</td>
+<td class="n gk">1,149</td>
+<td class="n gk">1,002</td>
+<td class="n gk">1,000</td>
+</tr></tbody></table></div>
+<div class="nk"><span class="b">Şekil farkı bağımsız bir model farkı DEĞİL — ölçüldü</span>
+<p>Raporun bugünkü açıklaması, ayrışmayı "atalet terimi kasnak başına olduğu için etki hızlı
+dönen alternatörde toplanıyor; iki model yükü başka yere dağıtıyor" diye anlatıyor.
+<b>Ölçüm bunu çürütüyor.</b> Aksesuarların atalet talepleri iki modelde
+<b>%2,5 içinde aynı</b>: KK <span class="mono">49,25 ↔ 48 N</span>, ALT
+<span class="mono">154,58 ↔ 151 N</span>. Dağılım aynı; ayrışan tek şey <em>çevrimin
+kapanması</em>.</p></div><div class="nk uy"><span class="b">Bu kusur DÜZELTİLDİ — 28.08.2026</span>
+<p>Aşağıda ölçülen çevrim kapanışı <span class="mono">main</span>'e girdi
+(<span class="mono">veFeadPeakInertias</span>, çekirdeğe dokunmadan). Bu bölümdeki
+"bugün" sütunları <b>düzeltme öncesini</b> anlatıyor; yayınlanan rapor artık
+"kapatılınca" sütununu basıyor. Aynı turda dört yan kusur ve üç bayat metin de
+kapatıldı — ayrıntısı 13. bölümde.</p></div><h3>Kök neden: ivme terimi kayış çevrimini kapatmıyor</h3>
+<div class="tx">
+<p>Çekirdeğin tepe zinciri (<span class="mono">fead-core.js · peakEstimate</span>) gergi
+açıklığını ankraj alıp halkayı dolaşıyor ve her kasnakta iki terim ekliyor: güç terimi
+ve <b>atalet terimi</b> <span class="mono">J·α·oran/r</span>.</p>
+<p><b>Güç terimi çevrimde sıfıra toplanıyor</b> — çekirdek sürücünün gücünü diğerlerinin
+toplamı olarak zorluyor. <b>Atalet terimi toplanmıyor</b> ve zorlanmıyor da. Ölçtüm:</p>
+<div class="eq">krank adımı (J_FAN·α·1,000/0,0822)      =  +89,69 N
+aksesuar talepleri  5,53 + 49,25 + 5,53 + 154,58  = −214,89 N
+ÇEVRİM ARTIĞI                                     = −125,20 N   ← sıfır olmalıydı</div>
+<p>Zincir gergi açıklığında başlayıp gergi açıklığından <em>bir önceki</em> kasnakta bitiyor
+ve ankrajı bir daha hesaplamıyor. Dolayısıyla bu 125 N'lik artık hiçbir yere yazılmıyor:
+<b>tamamı zincirin son halkasına, alternatör → gergi açıklığına biniyor.</b></p>
+<p>Aynı sınamayı <em>ortalama</em> zincirde yaptım: orada çevrim
+<span class="mono">1,4·10⁻¹³ N</span> ile kapanıyor. Yani kusur ivme terimine özgü.</p>
+<div class="nk kr"><span class="b">Fizik ne diyor</span>
+<p>Krank kasnağı kayış tarafından <em>hızlandırılmıyor</em> — motora cıvatalı ve motor onu
+zaten döndürüyor. Kayış yalnız <b>aksesuar ataletlerini</b> hızlandırır. Dolayısıyla krankta
+kayışın gördüğü gerginlik artışı, aksesuar atalet taleplerinin <b>toplamı</b> olmalı;
+krank kasnağının kendi ataleti değil. Gates'in tablosu bu kapanışı sağlıyor
+(krank adımı <span class="mono">204 N</span> ↔ aksesuar toplamı
+<span class="mono">205 N</span>); MFSim'inki sağlamıyor
+(<span class="mono">89,69</span> ↔ <span class="mono">214,89</span>).</p></div>
+</div>
+<h3>Çevrim kapatılınca ne oluyor — ölçüldü</h3>
+<div class="tw"><table><caption>Aynı tarama, krank adımı = Σ aksesuar talebi <span>· başka hiçbir değişiklik yok</span></caption><thead><tr><th>Kod</th><th class="n">Gates T</th><th class="n">bugün</th><th class="n">Δ%</th><th class="n">kapatılınca</th><th class="n">Δ%</th><th class="n">Gates hub</th><th class="n">bugün</th><th class="n">kapatılınca</th><th class="n">Yön bugün</th><th class="n">kapatılınca</th><th class="n">Gates</th></tr></thead><tbody>
+<tr><td class="mono"><b>FAN</b></td><td class="n gk">1585</td><td class="n d2">1471</td><td class="n d2">−7,2%</td><td class="n d0"><b>1596</b></td><td class="n d0">+0,69%</td><td class="n gk">2095</td><td class="n">1981</td><td class="n d0"><b>2105</b></td><td class="n">93°</td><td class="n d0"><b>92°</b></td><td class="n gk">92°</td></tr>
+<tr><td class="mono"><b>AVA1</b></td><td class="n gk">1582</td><td class="n d2">1464</td><td class="n d2">−7,5%</td><td class="n d0"><b>1589</b></td><td class="n d0">+0,44%</td><td class="n gk">1409</td><td class="n">1305</td><td class="n d0"><b>1417</b></td><td class="n">330°</td><td class="n d0"><b>330°</b></td><td class="n gk">330°</td></tr>
+<tr><td class="mono"><b>KK</b></td><td class="n gk">1177</td><td class="n d2">1058</td><td class="n d2">−10,1%</td><td class="n d0"><b>1183</b></td><td class="n d0">+0,51%</td><td class="n gk">2725</td><td class="n">2490</td><td class="n d0"><b>2738</b></td><td class="n">221°</td><td class="n d0"><b>221°</b></td><td class="n gk">221°</td></tr>
+<tr><td class="mono"><b>AVA2</b></td><td class="n gk">1174</td><td class="n d2">1051</td><td class="n d2">−10,5%</td><td class="n d0"><b>1177</b></td><td class="n d0">+0,26%</td><td class="n gk">1252</td><td class="n">1123</td><td class="n d0"><b>1256</b></td><td class="n">109°</td><td class="n d0"><b>109°</b></td><td class="n gk">110°</td></tr>
+<tr><td class="mono"><b>ALT</b></td><td class="n gk">546</td><td class="n d2">671</td><td class="n d2">+22,9%</td><td class="n d0"><b>545</b></td><td class="n d0">−0,18%</td><td class="n gk">1690</td><td class="n">1689</td><td class="n d0"><b>1692</b></td><td class="n">339°</td><td class="n d0"><b>340°</b></td><td class="n gk">340°</td></tr>
+<tr><td class="mono"><b>TEN</b></td><td class="n gk">544</td><td class="n d0">544</td><td class="n d0">+0,0%</td><td class="n d0"><b>544</b></td><td class="n d0">+0,00%</td><td class="n gk">324</td><td class="n">380</td><td class="n d0"><b>324</b></td><td class="n">199°</td><td class="n d0"><b>217°</b></td><td class="n gk">218°</td></tr>
+</tbody></table></div>
+<div class="hüküm" style="margin:1.4rem 0 0">
+<div><p class="k">Gerginlik RMS sapma</p><div class="v no">%11,8 → %0,41</div><div class="s">en kötü %22,8 → %0,69</div></div>
+<div><p class="k">Hubload RMS sapma</p><div class="v no">%9,8 → %0,39</div><div class="s">en kötü %17,5 → %0,55</div></div>
+<div><p class="k">Gergi hubload yönü</p><div class="v no">199° → 217°</div><div class="s">Gates 218°</div></div>
+<div><p class="k">Kalibrasyon / sabit</p><div class="v ok">0</div><div class="s">tek yapısal düzeltme</div></div>
+</div>
+<div class="tx">
+<p style="margin-top:1.4rem">Tek bir yapısal değişiklikle on sekiz değerin on sekizi de
+<b>%0,7 içine</b> giriyor. Uydurulmuş bir sabit, kalibrasyon ya da eğri uydurma yok.</p>
+<p><b>Alternatörün +%22,9'u ile gerginin 19°'lik yön farkı aynı kökten geliyor.</b>
+−125 N'lik artık zincirin son halkasında toplandığı için ALT'ın çıkış gerginliğini
+545 → 671 N'a çıkarıyor; gergi kasnağının giriş/çıkış oranı 1,002'den 1,232'ye
+sıçrıyor ve hubload vektörü dönüyor. Gerginin sarımı en küçük olan
+(<span class="mono">34,6°</span>) kasnak olduğu için açısal duyarlılığı da en yüksek —
+iki çarpan üst üste biniyor. Çevrim kapatılınca ikisi birden düzeliyor.</p>
+<h3>Bağımsız doğrulama: düzeltme, kullanılmayan bir sayfayı da tutturuyor</h3>
+<div class="tx"><p>Düzeltme yalnız tepe tablosundan türetildi. Gates'in <b>s6/12</b>
+sayfasındaki "Most Critical Load Condition" tablosu bu türetmede <em>hiç kullanılmadı</em>.
+Çevrim kapatılınca MFSim'in kayma-kritik kombinasyon seçimi o tabloyla <b>6'da 5 tam</b>
+örtüşüyor — ivme işareti dahil. Bugünkü hâlde örtüşme <b>6'da 2</b>, ve üç kasnakta ivme
+işareti ters çıkıyor.</p>
+<p class="gk" style="font-size:.82rem">Uyarı: Gates s6'daki tablo bir <em>minimum</em>
+araması (kayma), tepe tablosu bir <em>maksimum</em> araması. İkisi aynı sorunun cevabı değil;
+buradaki karşılaştırma MFSim'in <b>kayma</b> kritik seçimiyle yapıldı.</p></div>
+
+<h3>Aynı taramada bulunan dört yan kusur</h3><div class="tw"><table><caption>Tepe taramasında ayrıca ölçülenler</caption><thead><tr>
+<th>Kusur</th><th>Belirti</th><th>Ölçüm</th><th>Etki</th></tr></thead><tbody><tr><td style="white-space:normal;max-width:24ch"><b>Ölü girdi — panel ivmesi tabloya ulaşmıyor</b></td><td style="text-align:left;white-space:normal;max-width:38ch">Çözücü paneli <span class='mono'>accelRpmS</span>/<span class='mono'>decelRpmS</span> soruyor; tepe kodu <span class='mono'>R.peakAccelRpmS</span> okuyor ve o alan <span class='mono'>js/</span> içinde hiçbir yerde yazılmıyor.</td><td style="text-align:left;white-space:normal;max-width:36ch">Panelde 1100 → 3000 yapılınca tablonun 18 değeri de <b>birebir aynı</b> kalıyor.</td><td style="text-align:left;white-space:normal;max-width:30ch"><span class="rz kr">Sayı bu örnekte tesadüfen doğru (varsayılan 1100 = Gates'in ivmesi); başka bir modelde sessizce yanlış olur.</span></td></tr><tr><td style="white-space:normal;max-width:24ch"><b>Basılan ivme işareti yanlış</b></td><td style="text-align:left;white-space:normal;max-width:38ch">ALT satırı <span class='mono'>+1100 d/d/s</span> yazıyor; kazanan dal yavaşlama.</td><td style="text-align:left;white-space:normal;max-width:36ch">Etkin ivme α = −1100; köprü, çekirdeğe <em>geçirdiği</em> değeri kaydediyor, kazanan dalınkini değil.</td><td style="text-align:left;white-space:normal;max-width:30ch"><span class="rz no">Tabloyu denetleyen okuyucu yanlış durumu arar.</span></td></tr><tr><td style="white-space:normal;max-width:24ch"><b>ALT ve TEN'de kombinasyon etiketi anlamsız</b></td><td style="text-align:left;white-space:normal;max-width:38ch">Rapor ALT için 'KK=%10 · ALT=%100' yazıyor.</td><td style="text-align:left;white-space:normal;max-width:36ch">O iki sütun kW kombinasyonundan <b>cebirsel olarak bağımsız</b>; sekiz durumun yayılımı <span class='mono'>2,3·10⁻¹³ N</span>. Kazanan kayan nokta artığıyla seçiliyor.</td><td style="text-align:left;white-space:normal;max-width:30ch"><span class="rz no">Etiket bir bilgi taşımıyor.</span></td></tr><tr><td style="white-space:normal;max-width:24ch"><b>Taramanın yarısı tekrar</b></td><td style="text-align:left;white-space:normal;max-width:38ch">Köprü ±ivme geçiyor, çekirdek de kendi içinde ±dallanıyor.</td><td style="text-align:left;white-space:normal;max-width:36ch">16 dalın 8'i birebir kopya (ölçülen tekrar kümesi {2}).</td><td style="text-align:left;white-space:normal;max-width:30ch"><span class="rz nt">Sonucu değiştirmiyor; beraberlik kırılmasını ikiye katlıyor.</span></td></tr></tbody></table></div><div class="tx"><p>Ayrıca <b>tepe hubload vektörü fiziksel bir duruma ait değil</b>:
+her kasnak için ayrı ayrı en büyük açıklık gerginliği toplanıp tek seferde hubload'a
+veriliyor. ALT'ın hubload'u ulaşılabilir iki saf durumun en büyüğünü <b>%3,56</b> aşıyor.
+Raporun 5 numaralı notu bunu zaten yazıyor ("en büyük fark %3,6") — ölçüm o notu
+<em>doğruluyor</em>.</p></div>
+<div class="nk"><span class="b">Bu bulgunun raporun kendi metnine etkisi</span>
+<p>Özet raporun 1 numaralı notu bu sapmayı bir <em>şekil farkı</em> olarak açıklıyor ve
+"doğrulama kümesinde tepe verisi yok" diyor. İkincisi doğru; ama <b>birincisi artık
+geçerli değil</b> — şekil farkının kendisi bu kusurun sonucu ve aksesuar atalet
+terimlerinin %2,5 içinde uyuştuğu ölçüldü. Aynı gerekçe <span class="mono">CLAUDE.md</span>
+ve <span class="mono">js/cp-fead-summary.js</span> içindeki kanonik kayıtta da yazılı;
+üçü birden düzeltilmeli.</p>
+<p><b>"Kalibre değil" damgası kalmalı mı?</b> Doğrulama kümesinde hâlâ tek bir tepe değeri
+yok — damganın <em>o</em> gerekçesi geçerli. Ama sapma bandı (−%10,5 … +%22,8) düzeltmeden
+sonra ±%1'e ineceği için o sayılar da güncellenmeli.</p></div>
+</div></section>
+<section><div class="sh"><span class="sn">09</span>
+<h2>Grafikler — tabloda olmayan üç karşılaştırma</h2></div>
+<p class="sd">Gates'in grafikleri PDF'te bitmap. 600 dpi'da basılıp eksenleri kendi tick
+işaretlerinden kalibre edilerek piksel piksel izlendi; böylece tablo dışındaki üç büyüklük de
+karşılaştırılabildi.</p>
+<h3>Gerginlik kontrol eğrisi — <span class="rz ok">RMS %0,25</span></h3>
+<div class="tx"><p>Gates'in "Belt Tension Control" eğrisi ile MFSim'in aynı eğrisi
+<b>58 noktada</b> karşılaştırıldı: RMS sapma <b>%0,25</b>, en kötü
+<b>%0,70</b>. Bu, altı ayrık kol konumundan çok daha güçlü bir doğrulama —
+kolun <em>bütün</em> gezinme aralığı boyunca iki model aynı eğriyi çiziyor.</p></div>
+<h3>Kayma emniyet faktörü — <span class="rz kr">tanımlar ayrışıyor</span></h3>
+<div class="tx"><p>Gates s6/12'de bir "Belt Slip Safety Factor" grafiği var (logaritmik
+eksen, eşik = 1). İzlendi:</p></div>
+<div class="tw"><table><caption>Kayma emniyet faktörü <span>· 880 d/d</span></caption><thead><tr><th>Kod</th>
+<th class="n">FAN</th>
+<th class="n">AVA1</th>
+<th class="n">KK</th>
+<th class="n">AVA2</th>
+<th class="n">ALT</th>
+<th class="n">TEN</th>
+</tr></thead><tbody>
+<tr><td><b>MFSim</b></td><td class="n">4,58</td><td class="n">1,38</td><td class="n">16,73</td><td class="n">1,48</td><td class="n">6,29</td><td class="n">1,23</td></tr>
+<tr><td><b>Gates</b> <span class="gk mono">(grafikten)</span></td><td class="n gk">5,30</td><td class="n gk">221,95</td><td class="n gk">28,06</td><td class="n gk">187,47</td><td class="n gk">5,95</td><td class="n gk">112,97</td></tr>
+<tr><td>oran</td><td class="n d0">1,16×</td><td class="n d2">160,83×</td><td class="n d2">1,68×</td><td class="n d2">126,67×</td><td class="n d0">0,95×</td><td class="n d2">91,85×</td></tr>
+<tr><td class="gk">MFSim kapasitesi e<sup>μφ</sup></td><td class="n gk">11,634</td><td class="n gk">1,381</td><td class="n gk">22,563</td><td class="n gk">1,481</td><td class="n gk">11,794</td><td class="n gk">1,235</td></tr>
+<tr><td class="gk">MFSim gerginlik oranı</td><td class="n gk">2,5384</td><td class="n gk">1,0010</td><td class="n gk">1,3483</td><td class="n gk">1,0013</td><td class="n gk">1,8738</td><td class="n gk">1,0024</td></tr>
+</tbody></table></div>
+<div class="tx">
+<p><b>Yük taşıyan üç kasnakta aynı bantta:</b> FAN 4,58 ↔ 5,30 (MFSim %14 emniyetli tarafta),
+ALT 6,29 ↔ 5,95 (%6 iyimser), KK 16,73 ↔ 28,06 (%40 emniyetli tarafta).</p>
+<p><b>Yük taşımayan üç kasnakta iki mertebe ayrı</b> ve bu bir hata değil, tanım farkı.
+MFSim'in tanımı <span class="mono">SF = e<sup>μφ</sup> / (T<sub>gergin</sub>/T<sub>boş</sub>)</span>;
+avara ve gergide gerginlik oranı ≈ 1,00 olduğu için SF <em>kapasitenin kendisine</em>
+(<span class="mono">1,24–1,48</span>) eşitleniyor ve <b>yapısal olarak</b> Gates'in
+113–222'sine ulaşamaz. İki sayı aynı büyüklük değil.</p>
+<div class="nk"><span class="b">Hüküm aynı, ama sayı yanıltıcı okunabilir</span>
+<p>Her iki belge de "kayma sorunu yok" diyor — Gates'in "Required Increase Tension or Wrap
+Angle" sütunu altı kasnağın hiçbirinde dolu değil. MFSim de hükmü yalnız yük taşıyanların
+en düşüğünden (4,51) veriyor ve diğerlerini "yük taşımaz" diye işaretliyor.
+<b>Ama tablo, servis faktörü 1,3 yazan bir sütunda gergi için 1,23 basıyor</b> — eşiğin
+altında bir sayı. Gates aynı kasnak için 113 basıyor. Bu satırın okunma riski gerçek.</p></div>
+<div class="nk"><span class="b">Tek bir μ üç kaburgalı kasnağa birden oturmuyor</span>
+<p>Yük taşıyanlardaki fark yalnız sürtünme katsayısında. Gates'in eğrilerinden geri çözüldü:
+FAN <span class="mono">0,966–0,971</span> · KK <span class="mono">1,046–1,052</span> ·
+ALT <span class="mono">0,892–0,944</span>. Çekirdek üçüne de tek bir
+<span class="mono">0,90</span> uyguluyor ve kendi notu bu değerin
+<em>"A_C ve ALT eğrilerinden bağımsız olarak ~0,88–0,90"</em> okunduğunu söylüyor —
+ölçüm bunu doğrulamıyor: yalnız ALT tutuyor, KK <b>%17 yukarıda</b>. Sarım açısı büyüdükçe
+sapma büyüyor, yani tek-μ modeli bu rapora tam oturmuyor.</p></div>
+<h4>Kayma eşiği çizgisi bizde yoktu <span class="rz ok">eklendi</span> — ve Gates kendi içinde çelişiyor</h4>
+<p>Gates'in gerginlik grafiğinde yatay bir "Slip Threshold" çizgisi ve altında kırmızı
+tarama var; piksel izinden <b>157,65 N</b> (±0,4) okunuyor. MFSim'in aynı grafiğinde bu çizgi
+<b>yok</b> — üstelik "kaymamak için gereken en düşük gerginlik" diye bir büyüklük hiç
+hesaplanmıyor; kayma hükmü yalnız boyutsuz SF ile veriliyor.</p>
+<p>Hesaplanabilir: açıklık gerginlikleri ankrajdan <b>sabit</b> farklarla ayrıldığı için
+(<span class="mono">T_i = T₀ + Δ_i</span>, fark torkla belirlenir) kök kapalı formda çıkıyor
+— <b>iterasyon yok</b>:</p>
+<div class="eq">T₀* = (Δ_gergin − cap·Δ_gevşek) / (cap − 1),   cap = e^(μφ)</div>
+<p>MFSim'in değeri <b>80,95 N</b> (belirleyici kasnak FAN, 1000 d/d; tasarım
+gerginliğinin <b>6,72 katı</b>).</p>
+<div class="nk"><span class="b">Kapandı — ve iki bağımsız yolla doğrulandı</span>
+<p>Çizgi artık hem ayrıntılı hem özet raporun gerginlik grafiğinde (tek çiziciden),
+eğrinin altına, taralı. Kapalı form <b>ankrajı gerçekten değiştirip çekirdeği baştan
+koşturan</b> bir iki-bölmeyle karşılaştırıldı — ikinci yol cebiri hiç kullanmıyor:</p>
+<div class="eq">kapalı form   80,948063 N
+iki-bölme     80,948063 N   (SF = 1,000000000, aynı kasnak, aynı devir)
+fark          1,4e−14 N</div>
+<p><b>Gergin olan açıklık aranır</b> ve bu önemsiz bir ayrıntı değil: sürücüde çıkış,
+<em>sürülende giriş</em> gergin. Ölçüldü — altı kasnağın <b>beşinde giriş</b> gergin;
+&ldquo;çıkış hep gergin&rdquo; varsayımı alternatörde kökü <span class="mono">39,52 →
+−480,98 N</span> yapıyor. Genel en büyük yine FAN'da kaldığı için <b>toplam sayıya bakan
+bir kapı bunu sessizce geçiriyordu</b>; kapı tek bir sürülen kasnağı yalıtacak şekilde
+yeniden kuruldu.</p></div>
+<div class="nk kr"><span class="b">Ama Gates'in hangi sayısı?</span>
+<p>Gates'in <em>kendi</em> kayma sayfasındaki (s6/12) FAN eğrisi 1000 d/d'de SF = 5,39 diyor;
+aynı yük dağılımında SF = 1 olan ankraj gerginliği <b>66,6 N</b> çıkıyor. Aynı raporun s1
+grafiği ise <b>157,65 N</b> basıyor — Gates'in iki sayfası arasında <b>2,37 kat</b> fark.</p>
+<p>Bu, karşılaştırmayı tersine çeviriyor: MFSim'in 80,95 N'ı Gates'in <em>kayma
+sayfasından</em> türeyen 66,6 N'a yalnız <b>+%21,5</b> uzakta. MFSim, Gates'in s1 çizgisine
+değil ama Gates'in kendi kayma verisine yakın. <b>157,65 N kopyalanmadı</b> — basılan
+sayı modelin kendi zincirinden türüyor.</p></div>
+</div>
+<h3>Doğal frekans haritası — <span class="rz no">aynı seviye, farklı eğim</span></h3>
+<div class="tx">
+<p>Bu grafik ilk bakışta yanıltıcı: <b>altı değil on iki eğri taşıyor.</b> Gates, kayma
+sayfasındaki yük kombinasyonlarını (A_C ve ALT için %100 / %10) frekans haritasına da
+taşımış — altı açıklığın her biri iki kez çizilmiş. Eğri çiftlerinin oranı, öngörülen
+<span class="mono">√(T<sub>100</sub>/T<sub>10</sub>)</span> ile <b>%0,9</b> içinde uyuyor.
+MFSim yalnız tam yük ailesini basıyor.</p>
+</div><div class="tw"><table><caption>Açıklık temel titreşim frekansı <span>· 880 d/d · Gates %100 yük ailesi</span></caption>
+<thead><tr><th>Açıklık</th><th class="n">MFSim [Hz]</th><th class="n">Gates [Hz]</th><th class="n">Δ%</th>
+<th class="n">880→2270 düşüş MFSim</th><th class="n">Gates</th><th class="n">kat</th></tr></thead><tbody><tr><td class="mono">FAN→AVA1</td><td class="n">315,0</td><td class="n gk">288,7</td><td class="n d1">+%9,11</td><td class="n">−%14,75</td><td class="n gk">−%5,08</td><td class="n d1">2,9×</td></tr><tr><td class="mono">AVA1→KK</td><td class="n">329,5</td><td class="n gk">300,1</td><td class="n d1">+%9,80</td><td class="n">−%14,74</td><td class="n gk">−%5,08</td><td class="n d1">2,9×</td></tr><tr><td class="mono">KK→AVA2</td><td class="n">265,5</td><td class="n gk">246,1</td><td class="n d1">+%7,88</td><td class="n">−%20,38</td><td class="n gk">−%8,54</td><td class="n d1">2,4×</td></tr><tr><td class="mono">AVA2→ALT</td><td class="n">146,7</td><td class="n gk">158,6</td><td class="n d1">−%7,50</td><td class="n">−%20,40</td><td class="n gk">−%9,26</td><td class="n d1">2,2×</td></tr><tr><td class="mono">ALT→TEN</td><td class="n">149,1</td><td class="n gk">153,7</td><td class="n d1">−%2,99</td><td class="n">−%9,55</td><td class="n gk">−%3,02</td><td class="n d1">3,2×</td></tr><tr><td class="mono">TEN→FAN</td><td class="n">205,0</td><td class="n gk">187,4</td><td class="n d1">+%9,39</td><td class="n">−%9,51</td><td class="n gk">−%3,14</td><td class="n d1">3,0×</td></tr></tbody></table></div><div class="tx">
+<div class="nk"><span class="b">Kayış kütlesi suçlu değil — ölçüldü ve elendi</span>
+<p>İlk bakışta seviye farkı tek bir kütle çarpanı gibi duruyor. Değil: bütün devir
+aralığına yapılan <b>tek global uyum</b> <span class="mono">m′ = 0,01977 kg/m/kaburga</span>
+veriyor — MFSim'in kullandığı <span class="mono">0,0196</span>'nın <b>%0,9</b> içinde.
+Kütleyi değiştirmek artık RMS'i <b>%7,57'den %7,55'e</b> indiriyor, yani hiçbir şey
+kazandırmıyor. Ve geri-hesaplanan m′ <em>devre bağlı</em>: aynı açıklık için 880 d/d'de
+0,0233, 2270 d/d'de 0,0181 çıkıyor (<b>%40,9 yayılım</b>). Tek bir kütle iki uca birden
+oturmuyor — bu, farkın <b>kütle değil model biçimi</b> farkı olduğunun doğrudan kanıtı.</p></div>
+<h4>Asıl fark eğimde: kayış hızı terimi</h4>
+<p>MFSim'in eğrileri 880→2270 arasında <b>%9,5–20,4</b> düşerken Gates'inkiler
+<b>%3,0–9,3</b> düşüyor — her açıklıkta <b>2,2–3,2 kat</b> daha dik. Sebep ölçüldü:
+MFSim, hareket eden kayışta enine dalga hızını
+<span class="mono">(c²−v²)/(2Lc)</span> ile düzeltiyor; Gates'in eğrileri bu kadar güçlü bir
+hız terimi taşımıyor. En temiz kanıt ALT→TEN ve TEN→FAN açıklıklarında: Gates'in
+<em>kendi tablosu</em> o iki açıklığın gerginliğini on iki devrin hepsinde
+<span class="mono">545/544 N</span> basıyor, yani <span class="mono">√T</span> teriminin
+katkısı sıfır — kalan düşüşün tamamı hız teriminden geliyor ve Gates orada %3,0, MFSim
+%9,5 diyor.</p>
+<h4>İki belge çelişmiyor — farklı pencere çiziyorlar</h4>
+<p>Gates'in eğrileri <b>880–2300 d/d</b> arasında çiziliyor (eksen sınırı 2530 = 2300 × 1,1);
+MFSim 880–2750'yi basıyor. <b>MFSim'in ✗ rezonans hükmünü veren üç hücrenin üçü de 2500 ve
+2750 d/d satırlarında</b> — Gates'in hiç çizmediği devirlerde. Gates'in penceresi içinde
+MFSim'in en düşük f₁/ateşleme oranı <b>1,011</b>, yani kesişme yok.</p>
+<div class="nk"><span class="b">Ateşleme frekansı hangi devirden çıkıyor — belgelenmiş bir seçim</span>
+<p>Çekirdek <span class="mono">firingHz = engineRpm · 6/120</span> yazıyor. Bu örnekte
+<span class="mono">driveRatio = 1</span> olduğu için o <span class="mono">engineRpm</span>
+gerçek krank devri değil, <b>FAN kasnağının devri</b>; gerçek motor 880 / 1,0985 = 801 d/d.</p>
+<p><b>Ama Gates de aynısını yapıyor.</b> Raporun kendi sütunu "Engine RPM" adını taşıyor ve
+"Speed Ratio (Ref. Engine) FAN = 1.000" diyor; frekans haritasındaki ateşleme doğrusunun
+ölçülen eğimi <span class="mono">0,0497 Hz/(d/d)</span> — yani Gates de o sütunu doğrudan
+kullanıyor (gerçek krank devriyle çizseydi eğim 0,0455 olurdu). MFSim tedarikçiyle
+<b>aynı konvansiyonda</b>.</p>
+<p>Bu bir kod hatası değil, örneğin kendi tanımında <em>açıkça yazılı</em> bir modelleme
+seçimi: raporu geri üretmek için <span class="mono">driveRatio = 1</span> gerekiyor.
+Gerçek krank devri istendiğinde model bunu zaten destekliyor
+(<span class="mono">ratioMode: 'derive'</span> + krank/fan çapları; <span class="mono">BMC_FEAD_2026</span>
+öyle kurulu) ve o kipte hem yük zinciri hem ateşleme frekansı doğru çıkıyor.</p>
+<p><b>Yine de bir sonucu var</b> ve okuyucunun bilmesi gerekiyor: bu örnekte basılan
+ateşleme bandı 44,0–137,5 Hz; gerçek krank devriyle 40,1–125,2 Hz olurdu. Rezonans hükmü
+o durumda da ✗ kalıyor ama sayılar değişiyor (en düşük f₁/ateşleme 0,789 → 0,867 ·
+ateşlemenin altında hücre 3/72 → 2/72 · banda düşen burulma modu 1 → 2).</p></div>
+<div class="nk"><span class="b">Açıklanamayan kalan</span>
+<p>AVA2→ALT ve ALT→TEN açıklıklarında fark <b>ters işaretli</b> (Gates yüksek), diğer dördünde
+MFSim yüksek. Dört aday açıklama ölçülerek elendi: eğri–açıklık eşleşme hatası, efsane
+sırası (720 permütasyonun hiçbiri kapatmıyor), yük ailesi karışması, açıklık boyu.
+Kalan sapma açıklanamadı ve raporda öyle durmalı.</p></div>
+<h4>Sistem burulma modu</h4>
+<p>Gates grafiğinin üstünde <span class="mono">"Natural Frequency 12.52 Hz"</span> yazıyor;
+MFSim <b>12,9 Hz</b> diyor — <b>+%3,4</b>. Bu sistem MFSim'in burulma kalibrasyon
+takımında <em>değil</em> (o takım 6 sistem, RMS %8,4), yani bağımsız bir ölçüm ve bandın
+içinde. Duyarlılık: krank <em>mili</em> ataleti geçilmezse 16,76 Hz (+%33,9) çıkıyor —
+baskın girdi orası.</p>
+<p>MFSim'in burulma <b>hükmü</b> (✗) 1. moddan değil, <b>3. moddan</b> (50,7 Hz) geliyor;
+1. mod her iki belgede de rölantinin çok altında (250–259 d/d) ve rezonans üretmiyor.
+Karşılaştırılacak Gates verisi bu beş sayfada yok — çok modlu tablo elimizde olmayan
+"System Vibration Analysis" sayfasında.</p>
+</div></section>
+<section><div class="sh"><span class="sn">10</span>
+<h2>Kapsam farkı</h2></div>
+<p class="sd">Sayılar dışında: Gates'te olup bizde olmayan, bizde olup Gates'in bu beş
+sayfasında olmayan her şey.</p>
+<div class="tw"><table><caption>Gates’te var, Özet raporda yok</caption><thead><tr><th>Öğe</th><th>Gates</th><th>Durum</th><th>Hesaplanıyor mu?</th></tr></thead><tbody>
+<tr><td><b>Permissible Grooved Pulley Axial Offset</b></td><td class="gk mono">s1 · 3×5 tablo</td><td><span class="rz nt">yok</span></td><td style="text-align:left;white-space:normal;max-width:44ch">Çekirdekte <span class='mono'>alignmentAllowance</span> VAR ama düz kasnakların açısal kaçıklığını (ψ) girdi olarak istiyor; MFSim o alanı sormuyor. ψ=0 ile basılan sayı iyimser bir yalan olurdu.</td></tr>
+<tr><td><b>Slip Threshold çizgisi (≈159,5 N)</b></td><td class="gk mono">s1/s2 · gerginlik grafiği</td><td><span class="rz no">yok</span></td><td style="text-align:left;white-space:normal;max-width:44ch">Hesaplanabilir — MFSim'in tanımıyla 78,7 N. Aynı çizgi olmaz.</td></tr>
+<tr><td><b>Most Critical Load Condition tablosu</b></td><td class="gk mono">s6 · ivme + %100/%10</td><td><span class="rz no">yok</span></td><td style="text-align:left;white-space:normal;max-width:44ch">MFSim aynı taramayı YAPIYOR (tepe tablosu için) ama seçtiği kombinasyonu basmıyor.</td></tr>
+<tr><td><b>Belt Code / kord malzemesi</b></td><td class="gk mono">s1 · MT610 · 8/polyester</td><td><span class="rz nt">yok</span></td><td style="text-align:left;white-space:normal;max-width:44ch">Girdi olarak taşınmıyor; kayış künyesi profil + kaburga + boy ile tanımlı.</td></tr>
+<tr><td><b>DOB sütunu (162,99 / 152,99 / 57,99)</b></td><td class="gk mono">s2 · Layout Data</td><td><span class="rz nt">yok</span></td><td style="text-align:left;white-space:normal;max-width:44ch">Türetilebilir (kayış üstü çap). Sonuca girmiyor.</td></tr>
+<tr><td><b>DCn-th % = 95 · Av. Vehicle Speed = 1</b></td><td class="gk mono">s1 · Belt Life B10</td><td><span class="rz nt">yok</span></td><td style="text-align:left;white-space:normal;max-width:44ch">MFSim'in süre payları toplamı %100. Gates'in 95'i farklı bir büyüklük.</td></tr><tr><td><b>Spring Mean Load 22,07 Nm</b></td><td class="gk mono">s2 · Tensioner Data</td><td><span class="rz no">yok</span></td><td style="text-align:left;white-space:normal;max-width:44ch"><b>Türetiliyor</b>: <span class='mono'>springTorque(sys, meanRel) = 22,0760 Nm</span> — %0,03. Çekirdek onu alan olarak taşımıyor, momentten çıkıyor. Satır eklenebilir.</td></tr><tr><td><b>Kayış kimliği: 8PK1715HD</b></td><td class="gk mono">s1 başlık · Belt Code MT610</td><td><span class="rz no">yok</span></td><td style="text-align:left;white-space:normal;max-width:44ch">Düğüm verisinde <span class='mono'>beltType</span> DOLU ve ayrıntılı rapor basıyor; köprü onu <span class='mono'>sys.belt</span>'e taşımadığı için özet basamıyor.</td></tr><tr><td><b>DOB sütunu (162,99 / 152,99 / 57,99)</b></td><td class="gk mono">s2 · Layout Data</td><td><span class="rz nt">yok</span></td><td style="text-align:left;white-space:normal;max-width:44ch">Ölçüldü: DOB − Efektif Ø üç kasnakta da <b>tam 0,99 mm</b>. Profile bağlı bir muayene ölçüsü; Gates de hiçbir hesaba sokmuyor.</td></tr><tr><td><b>Rölanti ve 'Natural Frequency' çizgileri</b></td><td class="gk mono">s1 · frekans haritası</td><td><span class="rz nt">yok</span></td><td style="text-align:left;white-space:normal;max-width:44ch">Sistem doğal frekansı MFSim'de <b>hesaplanıyor</b> (12,9 Hz) ve haritanın hemen altındaki tabloda; aynı grafiğe çizilmiyor.</td></tr>
+</tbody></table></div>
+<div class="tw"><table><caption>Özet raporda var, Gates’in bu beş sayfasında yok</caption><thead><tr><th>Öğe</th><th>Özet</th><th>Not</th></tr></thead><tbody>
+<tr><td><b>Sistem burulma modları (7 mod tablosu)</b></td><td class="mono gk">s1</td><td class="gk" style="text-align:left;white-space:normal">Gates yalnız tek sayı veriyor: 12,52 Hz</td></tr>
+<tr><td><b>Serbest açıklık titreşimi tablosu + rezonans hükmü</b></td><td class="mono gk">s1</td><td class="gk" style="text-align:left;white-space:normal">Gates grafik çiziyor, sayı basmıyor; hüküm de vermiyor</td></tr>
+<tr><td><b>Kasnak ataletleri sütunu</b></td><td class="mono gk">s2</td><td class="gk" style="text-align:left;white-space:normal">Tedarikçiye giden sayfadan; rapor basmıyor</td></tr>
+<tr><td><b>Aksesuar devirleri tablosu</b></td><td class="mono gk">s2</td><td class="gk" style="text-align:left;white-space:normal">Gates yalnız hız oranını basıyor</td></tr>
+<tr><td><b>Kayış boyu dengesi (Σ sarım yayı + Σ açıklık)</b></td><td class="mono gk">s2</td><td class="gk" style="text-align:left;white-space:normal">Efektif tahrik boyunun elle toplanabilir ayrıştırması</td></tr>
+<tr><td><b>Aksesuar mil torku (Q = 9549·P/n)</b></td><td class="mono gk">s4</td><td class="gk" style="text-align:left;white-space:normal">Gates'in eksik 7 sayfasında olabilir</td></tr>
+<tr><td><b>Yük durumunun yorulmaya katkısı</b></td><td class="mono gk">s4</td><td class="gk" style="text-align:left;white-space:normal">—</td></tr>
+<tr><td><b>Kaburga yorulma dağılımı</b></td><td class="mono gk">s6</td><td class="gk" style="text-align:left;white-space:normal">—</td></tr>
+<tr><td><b>Eşdeğer kayış sıcaklığı · tur/saniye · düzeltilmiş B10</b></td><td class="mono gk">s6</td><td class="gk" style="text-align:left;white-space:normal">—</td></tr>
+<tr><td><b>Numaralı model sınırları (Notlar)</b></td><td class="mono gk">s6</td><td class="gk" style="text-align:left;white-space:normal">—</td></tr>
+</tbody></table></div>
+<div class="tx"><p class="gk" style="font-size:.82rem">Gates'in 12 sayfalık raporunun
+1, 2, 3, 6 ve 8. sayfaları elimizde. Eksik yedi sayfada (4, 5, 7, 9–12) muhtemelen
+"Belt Slip / Tension Analysis 1/2", tepe hubload analizi ve ömür ayrıntıları var; yukarıdaki
+"Gates'te yok" satırları yalnız <em>bu beş sayfa</em> için geçerli.</p></div></section>
+<section><div class="sh"><span class="sn">11</span>
+<h2>Girdi eşleşmesi ve ömür</h2></div>
+<p class="sd">İki belge aynı sistemi mi anlatıyor — ve iki noktada ayrılıyorlar.</p>
+<h4>Efektif kayış boyu: 1714,6 mm, künyedeki 1715 değil</h4>
+<div class="tx">
+<p>Gates'in künyesi <span class="mono">Effective Belt Length (ISO 9981) 1715</span> diyor;
+ama aynı raporun kendi <em>Required Eff. Belt Length</em> satırı Mean sütununda
+<span class="mono">1714,6</span> basıyor. "1715" yuvarlanmış katalog adı
+(8PK<b>1715</b>HD). MFSim 1714,6'yı kullanıyor. Farkı ölçtüm:</p>
+<div class="eq">efektif boy 1714,6 → Mean gerginlik 544,05 N   (Gates 543,9 · +%0,03)
+efektif boy 1715,0 → Mean gerginlik 535,35 N   (Gates 543,9 · −%1,57)</div>
+<p>0,4 mm'lik bir okuma farkı kolu 0,56° döndürüyor. Doğru okuma <b>56 kat</b> daha iyi
+uyuyor.</p>
+<h4>Kasnak ataletleri — bir &ldquo;aykırı değer&rdquo; iddiası ve çürütülmesi</h4>
+<p>Rapor ataletleri basmıyor; MFSim onları tedarikçiye <em>giden</em> FEAD_INFORMATION
+sayfasından alıyor. Alternatörün <span class="mono">0,0144 kg·m²</span> değerinin kayışın
+katalog kütlesiyle (<span class="mono">0,0144 kg/m/kaburga</span>) rakamsal olarak çakışması
+denetlendi: <b>tesadüf</b> — Gates'in aynı sınıftaki kendi kaydı (AG00810, ALT, pitch Ø57,4)
+<span class="mono">0,0140</span> veriyor, %2,9 içinde.</p>
+<div class="nk"><span class="b">İDDİA: klima kompresörünün ataleti 5,85 kat aykırı
+&nbsp;·&nbsp; <b style="color:var(--ok)">ÖLÇÜMLE ÇÜRÜTÜLDÜ</b></span>
+<p>İlk okumada şu görünüyordu: MFSim KK için <span class="mono">0,0310 kg·m²</span>
+taşıyor, Gates'in <b>tam aynı pitch çapındaki</b> (Ø154,4) kardeş modeli TM31
+<span class="mono">0,0053</span>, ve on Gates raporunun bastığı bütün kompresör
+ataletleri <span class="mono">0,0030 – 0,0060</span> bandında. Çıkarım
+&ldquo;<em>5,2–5,9 kat, düzeltilmeli</em>&rdquo; idi. <b>İki ölçüm bunu çürüttü.</b></p>
+
+<p><b>1 · Atalet çapla ölçeklenmiyor</b> — dolayısıyla &ldquo;aynı çap ⇒ aynı atalet&rdquo;
+çıkarımının dayanağı yok. Fixture'ın kendisi gösteriyor: ALT Ø57,4 →
+<span class="mono">0,014</span> ama TM31 Ø154,4 → <span class="mono">0,0053</span>.
+Yani <b>küçük kasnak büyük atalet</b> taşıyabiliyor: bu sayılar kasnağın değil,
+<b>sürülen makinenin</b> ataleti — kompresörün kendi iç kütlelerinin
+&ldquo;kayıştan görünen&rdquo; eşdeğeri. Farklı marka bir kompresör, aynı kasnakla
+başka bir sayı verir.</p>
+
+<p><b>2 · Tepe tablosu KK'yı doğrudan yokluyor</b> — yani hangi değerin doğru
+olduğunu <em>bu raporun kendi verisi</em> söyleyebiliyor. Çevrim kapatıldıktan
+sonra tepe gerginlik tablosu atalet dağılımına duyarlı; KK süpürüldü:</p>
+<div class="eq">KK ataleti     RMS sapma (Gates s1 tepe tablosu)
+0,0053  (Gates'in ima ettiği)   %1,19
+0,0250  (en iyi uyum)           %0,253
+0,0310  (bugünkü değer)         %0,41
+
+RMS &lt; %0,5 bandı  →  KK ∈ [0,018 – 0,032]</div>
+<p>Bugünkü değer bandın <b>içinde</b>; Gates'in çapraz-rapor bandı (0,0030–0,0060)
+bandın <b>3–6 katı dışında</b>. Yani veri bugünkü girdiyi destekliyor, iddiayı değil.
+<b>Girdi değiştirilmedi.</b></p>
+
+<p><b>Çapraz kontrol — FAN duyarsız, ve bu çevrim kapanışının kanıtı:</b> aynı
+süpürme FAN'ın kendi ataletiyle koşulunca tablo <span class="mono">%0,413</span>'te
+<b>sabit</b> kalıyor. Krankın kendi ataleti zincire artık hiç girmiyor —
+<span class="mono">veFeadPeakInertias</span> onu aksesuar taleplerinin toplamına
+eşitliyor (1 numaralı madde). Duyarlı olan yalnız aksesuarlar; süpürmenin bir şeyi
+gerçekten ölçtüğünün işareti bu.</p></div>
+
+<div class="nk nt"><span class="b">Yöntem notu — ölçüm aracının kendisi bir kez sessizce ölüydü</span>
+<p>İlk atalet yoklaması sekiz tarama satırının hepsinde <b>birebir aynı</b> sayıyı
+bastı ve bu &ldquo;tablo atalete duyarsız&rdquo; diye okunacaktı. Sebep modelde değil
+araçtaydı: mutasyon <span class="mono">n.data.name</span> üzerinden uygulanıyordu,
+oysa örnek düğümleri adı <span class="mono">customName</span>'de taşıyor — yani
+<b>hiçbir şey değişmiyordu</b>. Araç artık <span class="mono">n.id</span> ile
+anahtarlanıyor <b>ve</b> mutasyon <span class="mono">node.data</span>'yı gerçekten
+değiştirmediyse <span class="mono">MUTASYON ETKİSİZ — ölçüm geçersiz</span> diye
+atıyor. Sessizce &ldquo;etki yok&rdquo; diyen bir ölçüm, yanlış bir sayıdan daha
+tehlikeli.</p></div>
+</div><h4>B10 kayış ömrü</h4>
+<div class="hüküm">
+<div><p class="k">MFSim ham</p><div class="v no">1403</div><div class="s">saat · Gates'in 0,525 katı</div></div>
+<div><p class="k">Ampirik düzeltmeli</p><div class="v ok">2551</div><div class="s">saat · Gates'in 0,955 katı</div></div>
+<div><p class="k">Gates</p><div class="v pr">2670</div><div class="s">saat · PK-2_2p-MT3</div></div>
+<div><p class="k">Sapma</p><div class="v ok">−%4,5</div><div class="s">düzeltilmiş değerle</div></div>
+</div>
+<div class="tx"><p style="margin-top:1.2rem">Ham değer Gates'in yarısı, ve model bunu
+<b>kendisi söylüyor</b>: alternatörün Ø57 mm'si, B10'un kalibre olduğu 79,6–176 mm çap
+penceresinin dışında. Ampirik düzeltme uygulanınca <b>−%4,5</b>'e iniyor. Rapor manşetinde
+düzeltilmiş değeri, alt satırda hamı basıyor — sıralama doğru.</p></div><div class="tx">
+<div class="nk"><span class="b">"2551 saat" bağımsız bir kestirim DEĞİL — in-sample artık</span>
+<p>Düzeltme çarpanı <span class="mono">0,55</span>, aralık dışı kayıtların model/rapor
+oranlarının ortalaması olarak seçilmiş ve o kalibrasyon kümesinin beş satırından
+<b>biri tam da bu rapor</b>. Dolayısıyla −%4,46 bir <em>tahmin hatası</em> değil,
+bir <em>uyum artığı</em>. Düzeltmenin kendi saçılması <b>−%4,7 … +%11,7</b> (sd ±%6,0) ve
+bu bant belgede hiç yazmıyor. Ayrıca Not 2'deki "5 sistem, RMS %2,4" bandı <em>aralık içi</em>
+kalibrasyona ait; aralık dışı düzeltme başka bir kümeden geliyor.</p></div>
+<p>Ham −%47'nin tamamı <b>tek bir terimden</b> geliyor: hasar toplamının <b>%86,93</b>'ünü
+taşıyan Ø57 mm kaburgalı alternatör. PK-2_2p dağılımının doğrulandığı en küçük kaburgalı çap
+118,01 mm; 57,0 mm ona göre 2,07 kat küçük, yani <span class="mono">d⁻⁵·⁶</span> yasasının
+<b>58,9 katlık</b> bir ekstrapolasyonu.</p>
+<div class="nk kr"><span class="b">Yorulma modeli seçicisi ömre GEÇMİYOR — etiket ile sayı ayrışıyor</span>
+<p>Köprü <span class="mono">beltLifeB10</span>'u çağırırken seçilen yorulma modelini
+geçirmiyor; çekirdek her zaman <span class="mono">m = 5,6</span> kullanıyor. Panelde
+<span class="mono">PK-2_2a-MT3</span> seçiliyken sayfa 6 hâlâ "1403 saat" basıyor ve yanına
+<span class="mono">PK-2_2a-MT3</span> yazıyor — <b>o modelin vereceğinin 864 katı</b>.
+Bu örnekte seçili model <span class="mono">PK-2_2p</span> olduğu için sayı doğru; başka bir
+seçimde sessizce yanlış olur.</p></div>
+<p class="gk" style="font-size:.82rem">Aynı sayfada ikinci bir tutarsızlık: Not 3'ün
+"%86,9 → %73,4" sayıları elle yazılmış sabitler ve yalnız m = 5,6 ↔ 3,4 çiftine ait;
+PK-2_2a seçiliyken tablo %53,00 derken not hâlâ %86,9 diyor. Geçerlilik penceresi
+(79,6–176,0 mm) de üç ayrı yerde elle yazılı — çekirdek tek kaynak değil.</p>
+</div></section>
+<section><div class="sh"><span class="sn">12</span>
+<h2>Sonuç ve öneriler</h2></div>
+<p class="sd">Denetimin bıraktığı iş listesi, önem sırasıyla.</p>
+<div class="tx">
+<h4>Doğrulanan</h4>
+<p>Geometri, kayış yolu, çalışma çevrimi ve <b>144 ortalama gerginlik/hubload değerinin
+tamamı</b> tedarikçinin sayılarını üretiyor. Buna, tablo dışı iki bağımsız kontrol de
+ekleniyor: Gates'in gerginlik eğrisi <b>RMS %0,25</b> ile örtüşüyor ve Gates'in bastığı
+sistem burulma frekansı (12,52 Hz) <b>%3,0</b> içinde tutuluyor. Bu zincirin
+doğrulanmış olduğunu söylemek için yeterli.</p>
+</div>
+<div class="tw"><table><caption>Yapılacaklar <span>· 28.08.2026 itibarıyla · <b style="color:var(--ok)">8 madde kapandı</b> · 1 çürütüldü · 6 açık</span></caption><thead><tr><th class="n">#</th><th>İş</th><th>Neden</th><th>Ölçülen etki</th></tr></thead><tbody><tr><td class="n mono"><b>1</b></td><td style="white-space:normal;max-width:24ch"><b>Tepe zincirinde çevrimi kapat</b> <span class="rz ok">kapandı</span></td><td style="text-align:left;white-space:normal;max-width:42ch">Krank adımı, kasnağın kendi ataleti yerine <b>aksesuar atalet taleplerinin toplamı</b> olmalı — kayış krank kasnağını hızlandırmaz. Köprü çekirdeğe <span class='mono'>inertias</span> geçirebiliyor: <b>çekirdeğe dokunmadan</b> yapılabilir.</td><td style="text-align:left;white-space:normal;max-width:32ch"><span class="rz kr">Gerginlik RMS %11,8 → %0,41 · hubload %9,8 → %0,39 · gergi yönü 199° → 217°. Kayma-kritik kombinasyon Gates s6 ile 2/6 → 5/6.</span></td></tr><tr><td class="n mono"><b>2</b></td><td style="white-space:normal;max-width:24ch"><b>Devir sütununun hangi mil olduğunu rapora yaz</b></td><td style="text-align:left;white-space:normal;max-width:42ch">Bu örnekte devir sütunu FAN kasnağının devri (Gates'in konvansiyonu; iki belge de aynı). Ateşleme frekansı ondan çıktığı için gerçek krank devrine göre %9,85 yüksek. Kod hatası değil, <b>rapor bunu söylemiyor</b>.</td><td style="text-align:left;white-space:normal;max-width:32ch"><span class="rz no">Gerçek krank devriyle band 40,1–125,2 Hz · min f₁/ateşleme 0,867 · hücre 2/72 · banda düşen mod 2. Hüküm ✗ kalıyor, sayılar değişiyor.</span></td></tr><tr><td class="n mono"><b>3</b></td><td style="white-space:normal;max-width:24ch"><b>Panel ivmesini tepe tablosuna bağla</b> <span class="rz ok">kapandı</span></td><td style="text-align:left;white-space:normal;max-width:42ch"><span class='mono'>peakAccelRpmS</span> okunuyor ama <span class='mono'>js/</span> içinde hiçbir yerde yazılmıyor; <span class='mono'>decelRpmS</span> hiç okunmuyor.</td><td style="text-align:left;white-space:normal;max-width:32ch"><span class="rz kr">Panelde 1100 → 3000 yapmak tabloyu <b>hiç değiştirmiyor</b>. Bu örnekte sayı tesadüfen doğru.</span></td></tr><tr><td class="n mono"><b>4</b></td><td style="white-space:normal;max-width:24ch"><b>Ömür kartına model uyuşmazlığını yaz</b> <span class="rz ok">kapandı</span></td><td style="text-align:left;white-space:normal;max-width:42ch"><span class='mono'>beltLifeB10</span> çağrısı seçilen modeli geçirmiyor; çekirdek her zaman m = 5,6 kullanıyor.</td><td style="text-align:left;white-space:normal;max-width:32ch"><span class="rz kr">PK-2_2a seçiliyken basılan ömür, yanında yazan modelin verdiğinin <b>864 katı</b>.</span></td></tr><tr><td class="n mono"><b>5</b></td><td style="white-space:normal;max-width:24ch"><b>Klima kompresörü ataletini doğrula</b> <span class="rz ok">çürütüldü</span></td><td style="text-align:left;white-space:normal;max-width:42ch">Doğrulandı ve <b>iddia düştü</b>: atalet çapla ölçeklenmiyor (ALT Ø57,4 → 0,014; TM31 Ø154,4 → 0,0053), bunlar <b>sürülen makinenin</b> ataleti. Tepe tablosu KK'yı doğrudan yokluyor.</td><td style="text-align:left;white-space:normal;max-width:32ch"><span class="rz ok">RMS &lt; %0,5 bandı <b>[0,018 – 0,032]</b>; bugünkü 0,031 içeride, Gates'in ima ettiği 0,0053 <b>3–6 kat dışarıda</b>. <b>Girdi değiştirilmedi.</b></span></td></tr><tr><td class="n mono"><b>6</b></td><td style="white-space:normal;max-width:24ch"><b>1 numaralı notu ve kanonik kaydı düzelt</b> <span class="rz ok">kapandı</span></td><td style="text-align:left;white-space:normal;max-width:42ch">Not, tepe sapmasını 'şekil farkı' olarak açıklıyor; ölçüm aksesuar atalet terimlerinin <b>%2,5 içinde</b> uyuştuğunu gösterdi.</td><td style="text-align:left;white-space:normal;max-width:32ch"><span class="rz kr">Belgenin kendi açıklaması yanlış yönü gösteriyor; sapma bandı da düzeltmeden sonra değişecek.</span></td></tr><tr><td class="n mono"><b>7</b></td><td style="white-space:normal;max-width:24ch"><b>Kayma tablosunda yük taşımayan sütunu ayır</b></td><td style="text-align:left;white-space:normal;max-width:42ch">Servis faktörü 1,3 yazan sütunda gergi için <b>1,23</b> basılıyor. Bizimki e<sup>μφ</sup> ile üstten sınırlı; Gates aynı kasnak için 111–136 basıyor.</td><td style="text-align:left;white-space:normal;max-width:32ch"><span class="rz no">Hüküm doğru; risk yanlış okumada. <b>Gerginlik grafiğine SF = 1 eşiği eklendi</b> (80,95 N · FAN @ 1000 d/d · 6,72 kat pay); kayma tablosundaki sütun ayrımı açık.</span></td></tr><tr><td class="n mono"><b>8</b></td><td style="white-space:normal;max-width:24ch"><b>Kayış hızı teriminin biçimini gözden geçir</b></td><td style="text-align:left;white-space:normal;max-width:42ch">Açıklık frekansı eğrileri devirle Gates'inkinden <b>2,2–3,2 kat</b> daha dik düşüyor. Kayış kütlesi elendi (%0,9 içinde aynı).</td><td style="text-align:left;white-space:normal;max-width:32ch"><span class="rz no">Rezonans hükmünü doğrudan etkiliyor.</span></td></tr><tr><td class="n mono"><b>9</b></td><td style="white-space:normal;max-width:24ch"><b>Tek-μ varsayımını ve kalibrasyon notunu gözden geçir</b></td><td style="text-align:left;white-space:normal;max-width:42ch">Gates'in eğrilerinden geri çözülen μ: FAN 0,97 · KK 1,05 · ALT 0,89. Çekirdeğin notu 'A_C ve ALT bağımsız olarak 0,88–0,90' diyor; yalnız ALT tutuyor.</td><td style="text-align:left;white-space:normal;max-width:32ch"><span class="rz no">KK'da SF %40 muhafazakâr; hükmü değiştirmiyor ama notun iddiası ölçümle tutmuyor.</span></td></tr><tr><td class="n mono"><b>10</b></td><td style="white-space:normal;max-width:24ch"><b>Ömür kartına düzeltmenin saçılmasını ve in-sample uyarısını ekle</b></td><td style="text-align:left;white-space:normal;max-width:42ch">2551 saat bağımsız kestirim değil: 0,55 çarpanını kalibre eden beş satırdan biri bu rapor.</td><td style="text-align:left;white-space:normal;max-width:32ch"><span class="rz no">Düzeltmenin kendi saçılması −%4,7 … +%11,7 (sd ±%6,0), belgede yok.</span></td></tr><tr><td class="n mono"><b>11</b></td><td style="white-space:normal;max-width:24ch"><b>Bayat metinleri temizle</b> <span class="rz ok">kapandı</span></td><td style="text-align:left;white-space:normal;max-width:42ch">Manşet 'bkz. sayfa 5' diyor, ömür bloğu <b>sayfa 6</b>'da. Not 3'ün %86,9/%73,4 sayıları elle yazılı sabit. Geçerlilik penceresi üç ayrı yerde elle yazılı.</td><td style="text-align:left;white-space:normal;max-width:32ch"><span class="rz nt">Belge altı sayfaya çıkarken atıf güncellenmemiş.</span></td></tr><tr><td class="n mono"><b>12</b></td><td style="white-space:normal;max-width:24ch"><b>Kayış kimliğini bas</b> <span class="rz ok">kapandı</span></td><td style="text-align:left;white-space:normal;max-width:42ch">Düğüm verisinde <span class='mono'>beltType = '8PK1715HD'</span> DURUYOR; köprü onu <span class='mono'>sys.belt</span>'e taşımıyor, özet basamıyor. Ayrıntılı rapor basıyor.</td><td style="text-align:left;white-space:normal;max-width:32ch"><span class="rz kr">Künyede <b>GATES 8PK1715HD</b>. Ayrı satır DEĞİL — ölçüldü, ayrı satır sayfa 1'i 8 px taşırıyordu.</span></td></tr><tr><td class="n mono"><b>13</b></td><td style="white-space:normal;max-width:24ch"><b>Yay ortalama momentini bas</b> <span class="rz ok">kapandı</span></td><td style="text-align:left;white-space:normal;max-width:42ch"><span class='mono'>springTorque(sys, meanRel) = 22,0760 Nm</span>; Gates'in künyesi 22,07.</td><td style="text-align:left;white-space:normal;max-width:32ch"><span class="rz kr"><b>22,076 Nm</b> ↔ Gates 22,07 (%0,027). Üç ondalık: iki ondalıkta 22,08'e yuvarlanıp hayali uyuşmazlık okunuyordu.</span></td></tr><tr><td class="n mono"><b>14</b></td><td style="white-space:normal;max-width:24ch"><b>Hizalama payını bağla ya da alanı kaldır</b></td><td style="text-align:left;white-space:normal;max-width:42ch"><span class='mono'>alignmentAllowance</span> çekirdekte tanımlı ve dışa açık ama <b>çağrı yeri sıfır</b>; zorunlu girdisi (düz kasnak açısal kaçıklığı) hiçbir panelde sorulmuyor.</td><td style="text-align:left;white-space:normal;max-width:32ch"><span class="rz nt">Gates'in kendi ψ değerleriyle bile −%48,9 … +%85,7 sapıyor — bugün basılamaz.</span></td></tr><tr><td class="n mono"><b>15</b></td><td style="white-space:normal;max-width:24ch"><b>'Hazırlayan' alanını doldur ya da kaldır</b> <span class="rz ok">kapandı</span></td><td style="text-align:left;white-space:normal;max-width:42ch"><span class='mono'>node.data.author</span> okunuyor ama <span class='mono'>js/</span> içinde yazan yok.</td><td style="text-align:left;white-space:normal;max-width:32ch"><span class="rz kr">Panele alan eklendi; kapı zinciri uçtan uca tutuyor (altı sayfada da basılıyor).</span></td></tr></tbody></table></div>
+<div class="nk uy"><span class="b">Genel hüküm</span>
+<p>Bu iki belge <b>aynı sistemi</b> anlatıyor ve ortalama çalışma koşullarında
+<b>aynı sayıları</b> veriyor — 318 değerin 300'ü, artı Gates'in gerginlik eğrisiyle
+RMS %0,25'lik sürekli bir örtüşme. Ayrıştıkları asıl yer geçici rejim (tepe) tablosu ve
+orada kusur bizde; ama kusur <em>kapatılabilir</em> cinsten ve kalibrasyon gerektirmiyor.
+İkinci ayrışma noktası açıklık frekanslarının devirle olan eğimi — orada da kayış kütlesi
+elendi, geriye model biçimi kaldı.</p>
+<p>Denetimin kendi kuralı: aşağıdaki her sayı ölçülerek elde edildi, hiçbiri tahmin değil.
+İki yerde ilk çıkarımım <b>yanlıştı</b> ve ölçümle düzeltildi — kayış kütlesi hipotezi ve
+"şekil farkı" açıklaması. İkisi de raporda yerini aldı.</p></div>
+</section>
+<p class="foot">Denetim 27.08.2026 · MFSim <span class="mono">main</span> ·
+Gates AG00976 v13.02 (05.06.2025), 12 sayfanın 1·2·3·6·8'i ·
+Sayılar iki taraftan da programatik çıkarıldı; Gates tarafı PDF'e karşı 27/27 doğrulandı.
+Grafik değerleri 600 dpi piksel izinden, eksenler kendi tick işaretlerinden kalibre edilerek
+okundu.</p>
+</main>
+</body></html>

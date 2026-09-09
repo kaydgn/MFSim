@@ -39,7 +39,7 @@ function coz(anahtar, fatModel) {
   // açıklık frekansları) varsayılan olarak KAPALI olduğu için açıkça açılıyor.
   const _b = ns.find((n) => n.type === 'fead-belt');
   if (_b) _b.data.beltDataMode = 'full';
-  const build = veFeadBuildSystem(ns, pack.connections);
+  const build = veFeadBuildSystem(ns);
   const solv = ns.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver)[0];
   const R = veFeadAnalyze(build, {
     rows: veFeadDutyRows(solv), cylinders: 6,
@@ -974,7 +974,7 @@ describe('FEAD özet · tepe taramasının girdisi ve etiketleri', () => {
       id: n.id, type: n.type, def: componentDefs[n.type],
       customName: n.customName, data: JSON.parse(JSON.stringify(n.data))
     }));
-    const build = veFeadBuildSystem(ns, pack.connections);
+    const build = veFeadBuildSystem(ns);
     const solv = ns.filter((n) => componentDefs[n.type] &&
       componentDefs[n.type].isFeadSolver)[0];
     const kur = (acc) => {
@@ -1016,7 +1016,7 @@ describe('FEAD özet · tepe taramasının girdisi ve etiketleri', () => {
     ns.forEach((n) => {
       if (n.type === 'fead-idler' && n.data.inertia != null) n.data.inertia *= 1000;
     });
-    const build = veFeadBuildSystem(ns, pack.connections);
+    const build = veFeadBuildSystem(ns);
     const solv = ns.filter((n) => componentDefs[n.type] &&
       componentDefs[n.type].isFeadSolver)[0];
     const A = veFeadAnalyze(build, {

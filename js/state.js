@@ -18,7 +18,14 @@ var MAX_UNDO_STEPS = 50;
 // kayış telleri bir kez çevrilir (veFeadMigrateWireOrder); düğüm verisi
 // migrasyonu (veMigrateNodeData) yalnız SÜRÜMSÜZ dosyalara uygulanmaya devam
 // eder — sürüm kapısı kademelidir, "eskiyse hepsini koştur" değil.
-var VE_SCHEMA_VERSION = 3;
+//
+// SÜRÜM 4 (2026-09-09): FEAD kasnakları arası BAĞLANTI KALDIRILDI — kayış
+// sırası artık node.data.beltIndex (Kayış Tablosu'nun satır sırası). 3 (ve
+// öncesi) damgalı kayıtlarda sıra tellerden bir kez okunup indise yazılır ve
+// kasnak-kasnak telleri silinir (veFeadMigrateBeltOrder). Göç atlansaydı
+// kasnaklar indissiz kalır, sıra DİZİ SIRASINA düşer ve model sessizce başka
+// bir kayış yolu çözerdi.
+var VE_SCHEMA_VERSION = 4;
 
 function saveState() {
   var state = {
@@ -139,6 +146,10 @@ function veApplyLegacyMigrations(state) {
   // önlediği hata.
   if(v < 2) state.nodes.forEach(veMigrateNodeData);
   if(v < 3 && typeof veFeadMigrateWireOrder === 'function') veFeadMigrateWireOrder(state);
+  // SIRA ADIMI TEL ADIMINDAN SONRA: sürüm 2 damgalı bir dosya önce tellerini
+  // gidiş sırasına çevirir, SONRA o tellerden indisini kurar. Ters sırada
+  // koşsalardı 2'den gelen her dosya ters numaralanırdı.
+  if(v < 4 && typeof veFeadMigrateBeltOrder === 'function') veFeadMigrateBeltOrder(state);
   // GÖMÜLÜ ALT TOPOLOJİLER de aynı kapıdan geçer ve DAMGALANIR: FEAD kanvası
   // `fead-analysis` düğümünün data.subTopology'sinde yaşıyor; editör açılınca
   // veLoadTabState → restoreState onu ikinci kez bu kapıdan geçirir ve damga

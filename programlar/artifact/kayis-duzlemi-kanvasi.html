@@ -1,0 +1,1046 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>Kayış Düzlemi Kanvası</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
+
+<style>
+  :root{
+    --ground:#f6f7f9;
+    --surface:#ffffff;
+    --surface-2:#eef1f5;
+    --ink:#171c24;
+    --ink-2:#4a5563;
+    --ink-3:#77828f;
+    --line:#dce1e8;
+    --line-2:#c3cbd6;
+    --belt:#b06d05;
+    --belt-bg:#fdf4e3;
+    --dec:#2563eb;
+    --dec-bg:#eaf0fe;
+    --stop:#c3261f;
+    --stop-bg:#fdeeed;
+    --ok:#0b7a5b;
+    --shadow:0 1px 2px rgba(23,28,36,.06), 0 8px 24px -16px rgba(23,28,36,.28);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#10141a;
+      --surface:#171c24;
+      --surface-2:#1e242e;
+      --ink:#e5eaf1;
+      --ink-2:#a7b2c0;
+      --ink-3:#78838f;
+      --line:#282f3a;
+      --line-2:#3a434f;
+      --belt:#e9a338;
+      --belt-bg:#2a2114;
+      --dec:#7aa4fb;
+      --dec-bg:#161f33;
+      --stop:#f0776e;
+      --stop-bg:#2c1817;
+      --ok:#4cc39c;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#10141a;
+    --surface:#171c24;
+    --surface-2:#1e242e;
+    --ink:#e5eaf1;
+    --ink-2:#a7b2c0;
+    --ink-3:#78838f;
+    --line:#282f3a;
+    --line-2:#3a434f;
+    --belt:#e9a338;
+    --belt-bg:#2a2114;
+    --dec:#7aa4fb;
+    --dec-bg:#161f33;
+    --stop:#f0776e;
+    --stop-bg:#2c1817;
+    --ok:#4cc39c;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--ground);
+    color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:16px;
+    line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+  .shell{max-width:1080px;margin:0 auto;padding:0 28px 96px}
+  .prose{max-width:70ch}
+
+  /* ---------- başlık ---------- */
+  header.top{
+    padding:56px 0 34px;
+    border-bottom:1px solid var(--line);
+    margin-bottom:44px;
+  }
+  .eyebrow{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:11.5px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--ink-3);margin:0 0 16px;
+  }
+  h1{
+    font-family:"IBM Plex Serif",Georgia,serif;
+    font-weight:600;font-size:clamp(30px,4.6vw,46px);line-height:1.1;
+    letter-spacing:-.018em;margin:0 0 18px;text-wrap:balance;
+  }
+  .lede{font-size:19px;line-height:1.58;color:var(--ink-2);margin:0;max-width:64ch}
+  .lede b{color:var(--ink);font-weight:600}
+  .meta{
+    display:flex;flex-wrap:wrap;gap:8px;margin-top:26px;
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px;
+  }
+  .meta span{
+    border:1px solid var(--line);background:var(--surface);
+    padding:5px 10px;border-radius:3px;color:var(--ink-2);
+  }
+
+  /* ---------- bölümler ---------- */
+  section{margin:0 0 60px}
+  h2{
+    font-family:"IBM Plex Serif",Georgia,serif;
+    font-weight:600;font-size:27px;line-height:1.22;letter-spacing:-.012em;
+    margin:0 0 6px;text-wrap:balance;
+  }
+  h2 .num{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:14px;font-weight:500;color:var(--ink-3);
+    margin-right:12px;letter-spacing:.04em;
+  }
+  h3{
+    font-family:"IBM Plex Sans",sans-serif;
+    font-weight:600;font-size:16.5px;margin:34px 0 8px;letter-spacing:-.004em;
+  }
+  .sub{color:var(--ink-2);font-size:15px;margin:0 0 26px;max-width:66ch}
+  p{margin:0 0 15px}
+  .prose p{max-width:70ch}
+  strong{font-weight:600}
+  code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.88em}
+  code{background:var(--surface-2);padding:1.5px 5px;border-radius:3px;color:var(--ink)}
+  .num-t{font-variant-numeric:tabular-nums}
+
+  /* ---------- rozetler ---------- */
+  .tag{
+    display:inline-flex;align-items:center;gap:6px;
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:10.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+    padding:3px 8px;border-radius:3px;white-space:nowrap;vertical-align:2px;
+  }
+  .tag-m{background:var(--belt-bg);color:var(--belt);border:1px solid color-mix(in srgb,var(--belt) 30%,transparent)}
+  .tag-d{background:var(--dec-bg);color:var(--dec);border:1px solid color-mix(in srgb,var(--dec) 32%,transparent)}
+  .tag-s{background:var(--stop-bg);color:var(--stop);border:1px solid color-mix(in srgb,var(--stop) 30%,transparent)}
+
+  /* ---------- ölçüm bloğu ---------- */
+  .measured{
+    border-left:3px solid var(--belt);
+    background:var(--surface);
+    box-shadow:var(--shadow);
+    border-radius:0 5px 5px 0;
+    padding:20px 24px;margin:24px 0;
+  }
+  .measured .hd{
+    display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px;
+  }
+  .measured .hd h4{
+    margin:0;font-size:15.5px;font-weight:600;font-family:"IBM Plex Sans",sans-serif;
+  }
+  .measured p:last-child{margin-bottom:0}
+  .measured p{max-width:68ch}
+
+  /* ---------- büyük sayı ---------- */
+  .figures{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(184px,1fr));
+    gap:1px;background:var(--line);border:1px solid var(--line);
+    border-radius:5px;overflow:hidden;margin:26px 0;
+  }
+  .fig{background:var(--surface);padding:18px 20px}
+  .fig .v{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:26px;font-weight:500;letter-spacing:-.02em;line-height:1.15;
+    font-variant-numeric:tabular-nums;color:var(--ink);
+  }
+  .fig .v.hot{color:var(--stop)}
+  .fig .v.warm{color:var(--belt)}
+  .fig .k{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--ink-3);margin-top:8px;
+  }
+  .fig .n{font-size:13px;color:var(--ink-2);margin-top:7px;line-height:1.45}
+
+  /* ---------- tablolar ---------- */
+  .tw{overflow-x:auto;margin:24px 0;border:1px solid var(--line);border-radius:5px;background:var(--surface)}
+  table{border-collapse:collapse;width:100%;font-size:14px}
+  th,td{padding:10px 15px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-3);background:var(--surface-2);white-space:nowrap;
+  }
+  tbody tr:last-child td{border-bottom:none}
+  td.n,th.n{text-align:right;font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.nm{font-weight:500;white-space:nowrap}
+  .hot{color:var(--stop)}
+  .good{color:var(--ok)}
+  tr.em td{background:var(--stop-bg)}
+
+  /* ---------- şekil ---------- */
+  figure{margin:32px 0;padding:0}
+  .figbox{
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:5px;padding:22px;overflow-x:auto;
+  }
+  figure svg{display:block;max-width:100%;height:auto;margin:0 auto;color:var(--ink-2)}
+  figcaption{
+    font-size:13.5px;color:var(--ink-2);margin-top:14px;line-height:1.55;max-width:76ch;
+  }
+  figcaption b{color:var(--ink);font-weight:600}
+
+  /* ---------- karar kartları ---------- */
+  .dec{
+    background:var(--surface);border:1px solid var(--line);
+    border-left:3px solid var(--dec);
+    border-radius:0 5px 5px 0;padding:20px 24px;margin:20px 0;box-shadow:var(--shadow);
+  }
+  .dec > .q{
+    display:flex;gap:13px;align-items:baseline;margin-bottom:6px;
+  }
+  .dec .qn{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:13px;font-weight:600;color:var(--dec);flex:none;
+  }
+  .dec .qt{font-size:16.5px;font-weight:600;line-height:1.4}
+  .dec .why{font-size:14.5px;color:var(--ink-2);margin:0 0 16px 26px;max-width:66ch}
+  .opts{list-style:none;margin:0 0 0 26px;padding:0;display:flex;flex-direction:column;gap:9px}
+  .opts li{
+    display:grid;grid-template-columns:22px 1fr;gap:11px;
+    font-size:14.5px;line-height:1.5;color:var(--ink-2);
+  }
+  .opts .lt{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:12.5px;font-weight:600;color:var(--ink-3);padding-top:2px;
+  }
+  .opts li.pick{color:var(--ink)}
+  .opts li.pick .lt{color:var(--ok)}
+  .opts li.pick b{font-weight:600}
+  .rec{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ok);border:1px solid color-mix(in srgb,var(--ok) 34%,transparent);
+    padding:1px 6px;border-radius:3px;margin-left:7px;white-space:nowrap;vertical-align:2px;
+  }
+
+  /* ---------- plan ---------- */
+  ol.plan{list-style:none;counter-reset:s;margin:26px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+  ol.plan li{
+    counter-increment:s;display:grid;grid-template-columns:34px 1fr;gap:14px;
+    padding:15px 18px;background:var(--surface);border:1px solid var(--line);
+    border-radius:5px;align-items:start;
+  }
+  ol.plan li::before{
+    content:counter(s,decimal-leading-zero);
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:12.5px;font-weight:600;color:var(--ink-3);padding-top:2px;
+  }
+  ol.plan .f{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:13px;
+    color:var(--ink);font-weight:500;display:block;margin-bottom:3px;
+  }
+  ol.plan .d{font-size:14.5px;color:var(--ink-2);line-height:1.5}
+
+  ul.pts{margin:14px 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;max-width:70ch}
+  ul.pts li{padding-left:19px;position:relative;color:var(--ink-2);font-size:15px;line-height:1.55}
+  ul.pts li::before{
+    content:"";position:absolute;left:2px;top:.62em;width:5px;height:5px;
+    border-radius:50%;background:var(--line-2);
+  }
+  ul.pts li b{color:var(--ink);font-weight:600}
+
+  .rule{border:none;border-top:1px solid var(--line);margin:0 0 44px}
+
+  /* ---------- teslim bandı ---------- */
+  /* Numarasız: 01–10 sayfanın kendi savının SIRASI. Teslim o savın bir adımı
+     değil, cevaplanmış bir belgenin üstüne basılan mühür. */
+  .ship{
+    border:1px solid color-mix(in srgb,var(--ok) 34%,var(--line));
+    border-radius:5px;
+    background:color-mix(in srgb,var(--ok) 5%,var(--surface));
+    padding:26px 28px 8px;
+    margin:0 0 52px;
+  }
+  .ship .stamp{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:11.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ok);
+    border:1px solid color-mix(in srgb,var(--ok) 36%,transparent);
+    background:color-mix(in srgb,var(--ok) 9%,var(--surface));
+    padding:5px 11px;border-radius:3px;margin:0 0 16px;
+  }
+  .ship .stamp::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ok)}
+  .ship h2{font-size:23px;margin-bottom:8px}
+  .ship .sub{margin-bottom:22px}
+  .ship .tw{margin-top:0}
+  .ship td.d{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+  .ship .done{color:var(--ok);font-weight:600}
+  .ship .after{
+    border-top:1px solid var(--line);
+    margin-top:4px;padding-top:20px;
+  }
+  .ship .after h3{margin-top:0}
+
+  .callout{
+    background:var(--stop-bg);border:1px solid color-mix(in srgb,var(--stop) 24%,transparent);
+    border-radius:5px;padding:18px 22px;margin:26px 0;
+  }
+  .callout p{margin:0;font-size:15px;color:var(--ink);max-width:68ch}
+  .callout p + p{margin-top:11px}
+
+  footer{
+    margin-top:74px;padding-top:26px;border-top:1px solid var(--line);
+    font-size:13.5px;color:var(--ink-3);max-width:70ch;
+  }
+  a{color:var(--dec)}
+  a:focus-visible,li:focus-visible{outline:2px solid var(--dec);outline-offset:3px}
+  @media (prefers-reduced-motion:no-preference){
+    .dec,.measured,ol.plan li{transition:border-color .15s ease}
+  }
+</style>
+
+<div class="shell">
+
+<header class="top">
+  <p class="eyebrow">MFSim · FEAD · topoloji önerisi</p>
+  <h1>Kayış Düzlemi Kanvası</h1>
+  <p class="lede">
+    Kasnak düğümünün kanvastaki yeri bugün <b>hiçbir şey ifade etmiyor</b>; çözücü
+    mm koordinatlarını yalnız panelden okuyor. Öneri, bu bağı kurmak: krank
+    <span class="mono">(0,0)</span> olsun, düğümü sürüklemek kasnağı gerçekten taşısın,
+    hesap anında yenilensin. Ölçtüm — <b>iki parçası bedava, bir parçası fiziğin
+    kendisiyle çarpışıyor.</b>
+  </p>
+  <div class="meta">
+    <span>dal · claude/fead-module-math-changes-7677hc</span>
+    <span>taban · 329 test / 6 süit yeşil</span>
+    <span>ölçüm · BMC 6 kasnak, 8PK 1715</span>
+  </div>
+</header>
+
+<div class="ship">
+  <p class="stamp">Teslim edildi · 25 Ağustos 2026</p>
+  <h2>Altı kararın altısı da uygulandı</h2>
+  <p class="sub">
+    Bu belge tartışma için yazıldı; aşağıdaki tablo onun kapanışı. Her satırda
+    <b>seçilen şık</b>, karşılığında ne yapıldığı ve <b>onu doğrulayan ölçüm</b> var —
+    çünkü bu modülde bir kararın uygulandığını söyleyen şey kodun kendisi değil,
+    onu ölçen sayı.
+  </p>
+
+  <div class="tw">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:22%">Karar</th>
+          <th style="width:7%">Şık</th>
+          <th style="width:36%">Ne yapıldı</th>
+          <th style="width:35%">Ölçüm</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="nm">01 · Kayış boyu</td>
+          <td class="done">C</td>
+          <td>İki kip, kayış düğümünde tıklanabilir <span class="mono">SABİT</span> ↔
+              <span class="mono">SERBEST</span> rozeti; sabit kipte <b>244 stok boy</b>
+              kataloğu</td>
+          <td>Serbest kip boyu <b>hiç görmeden</b> 1715.27 mm türetiyor —
+              tedarikçinin kendi kayışı <b>1715 mm</b> (<span class="mono">%0.016</span>)</td>
+        </tr>
+        <tr>
+          <td class="nm">02 · Gergi sürüklemesi</td>
+          <td class="done">A</td>
+          <td>Pivot taşınır, montaj merkezi kol boyunu koruyarak rijit takip eder</td>
+          <td>Kol boyu ve montaj açısı korunuyor;
+              <span class="mono">veFeadArmCheck</span>'in 0.5 mm kapısı kendiliğinden geçiyor</td>
+        </tr>
+        <tr>
+          <td class="nm">03 · Ölçek</td>
+          <td class="done">A</td>
+          <td>1 px = 1 mm; hassasiyet zoom'dan, panel hassas girdi olarak kalıyor</td>
+          <td>Altı kasnakta sapma <b class="good">0.0000 mm</b>; 60 ekran px = −91.926 mm
+              (zoom 0.653) — <b>istenenin ta kendisi</b></td>
+        </tr>
+        <tr>
+          <td class="nm">04 · Kutu / gerçek çap</td>
+          <td class="done">A</td>
+          <td>Kutu kimliği kalıyor, arkasına soluk gerçek çap çemberi çiziliyor</td>
+          <td>Gerçek tarayıcıda hayaletin genişliği dış çapın <b>ta kendisi</b>
+              (<span class="mono">width px == od mm</span>)</td>
+        </tr>
+        <tr>
+          <td class="nm">05 · "Otomatik Düzenle"</td>
+          <td class="done">A</td>
+          <td>Halka emekli; düğme artık kanvas konumlarını mm'den yeniden kuruyor</td>
+          <td>Koordinatlara <b>hiç dokunmuyor</b>; kutular arası mesafe = mm mesafesi,
+              Y ekseni ters</td>
+        </tr>
+        <tr>
+          <td class="nm">06 · Tazeleme</td>
+          <td class="done">A</td>
+          <td>Geometri + kart + gerginlik her karede; duty/ömür/burulma bırakınca</td>
+          <td>Karede <b>2.27 ms</b> → 60 fps bütçesinde <b class="good">7.4× pay</b>,
+              kare tavanı 441 fps</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="after">
+    <h3>Ve sorduğun asıl soru: "çözülemez bir küme olmasın"</h3>
+    <p>
+      Kalktı. Bölüm 03'teki <b>±10 mm'lik zarf</b> artık yok — alternatör
+      <span class="mono">−200…+60 mm</span> boyunca sürüklenirken çözüm <b>kopmuyor</b> ve
+      hiç kenetlenme olmuyor. Sığmayan bir kayışta bile model çalışma noktasını gerginin
+      <b>nominal kol açısına</b> alıyor ve <em>"bu yerleşim için gereken kayış 1733.3 mm"</em>
+      diye cevap veriyor. Geometri ihlalleri de artık istisna değil, <b>taşınan ihlal</b>:
+      kapanmayan bir yol çiziliyor ve sebebi adıyla yazılıyor. Tek gerçek durdurucu,
+      ortak teğetin var olmadığı durum — <b>kasnak çakışması</b>.
+    </p>
+
+    <h3>Gerçek tarayıcı, plandaki yedi adımın bitmediğini gösterdi</h3>
+    <p>
+      Birim testler koordinat katmanını doğruladı ama zincirin yarısı Node'da
+      <b>hiç koşmuyor</b>. Uçtan uca bir E2E yazılınca <b>iki sessiz kayma</b> çıktı;
+      ikisi de "kutu doğru yerde, panel doğru sayıda, hata yok" görünümündeydi:
+    </p>
+    <ul class="pts">
+      <li><b>Örnek kurucusu koordinatı yalanlıyordu.</b> Kümeyi 520×400'e sığdıran
+      kendi ölçeğini kullanıyordu (×1.1178) — alternatörün kutusu ile mm koordinatı
+      arasında <b>38.108 mm</b> fark vardı ve bu fark ilk sürüklemede koordinatın
+      üstüne biniyordu: 60 px sürüklemek modeli 98 mm oynatıyordu. Düzeltme yeni bir
+      hesap değil, <b>ikinci bir hesabın kaldırılması</b>.</li>
+      <li><b>Hizalama kenetlemesi koordinatı yiyordu.</b> Kutu kenarlarını yapıştırırken
+      bütün düğümler için sabit 65 px genişlik varsayıyor. Ölçüldü: <b>24.514 mm</b>
+      istenirken <b class="hot">3.940 mm</b> oluyordu. Varsayılan kapalı olduğu için
+      ancak açıkça açılarak yakalandı.</li>
+    </ul>
+    <p style="margin-bottom:22px">
+      <b><span class="mono">js/fead-core.js</span>'e dokunulmadı</b> — planda yazdığı gibi.
+      2095 referans değere kalibre edilmiş kapı olduğu gibi ayakta:
+      <b class="good">133 süit / 5829 test</b> yeşil, E2E <b class="good">6/6</b>.
+    </p>
+  </div>
+</div>
+
+<section class="prose">
+  <h2><span class="num">01</span>İstenen davranış</h2>
+  <p class="sub">Anladığımı önce yazayım — yanlış anladıysam gerisi boşa gider.</p>
+  <ul class="pts">
+    <li><b>Krank kasnağı orijindir.</b> Panele girilen <span class="mono">x,y</span>
+      krank için <span class="mono">(0,0)</span>; her şey ona göre ölçülür.</li>
+    <li><b>Kanvastaki konum fizikseldir.</b> Alternatör düğümünü sürüklemek,
+      alternatörü kayış düzleminde taşımak demektir — sembolik bir yerleşim değil.</li>
+    <li><b>Hesap anında yenilenir.</b> Sürükleme sırasında sarım açıları, span boyları,
+      gerginlik ve hubload canlı değişir.</li>
+  </ul>
+  <p>
+    Bugünkü davranış bunun tam tersi ve <code>CLAUDE.md</code>'de açıkça yazılı:
+    <em>"Hesaplara dokunmuyor. Çözücü mm koordinatlarını panelden okuyor, kanvas
+    yerleşiminden değil."</em> Yani bu bir hata düzeltmesi değil, <b>sözleşme
+    değişikliği</b>.
+  </p>
+</section>
+
+<hr class="rule">
+
+<section>
+  <h2><span class="num">02</span>Bedava olan kısım: krankı orijine almak</h2>
+  <p class="sub">Kaygı duyulacak bir yer değil — geometri ötelemeye duyarsız, ve bunu ölçtüm.</p>
+
+  <div class="measured">
+    <div class="hd">
+      <span class="tag tag-m">Ölçüldü</span>
+      <h4>Bütün koordinatları <span class="mono">(+500, −300)</span> kaydırdım</h4>
+    </div>
+    <p>
+      BMC örneğinin altı kasnağını, gergi pivotunu ve montaj merkezini birlikte öteledim.
+      Krank artık <span class="mono">(500, −300)</span>'de. Sonuç:
+    </p>
+    <div class="figures">
+      <div class="fig"><div class="v good">0.00e+0</div><div class="k">Δ L_eff</div><div class="n">1715.0000 mm → 1715.0000 mm</div></div>
+      <div class="fig"><div class="v good">0.00e+0</div><div class="k">Δ sarım (6 kasnak)</div><div class="n">154.29 · 52.85 · 198.40 · 64.31 · 157.45 · 32.99</div></div>
+      <div class="fig"><div class="v good">0.0 %</div><div class="k">Δ gerginlik</div><div class="n">649.986 N → 649.986 N</div></div>
+    </div>
+    <p>
+      Kayan nokta hassasiyetinde <b>birebir aynı</b>. Krankı orijin yapmak
+      matematiksel olarak <b>ücretsiz</b> — çünkü bütün geometri merkez
+      <em>farklarından</em> kuruluyor (<code>tangent()</code> içindeki
+      <span class="mono">w = c_j − c_i</span>).
+    </p>
+    <p>
+      Yan fayda: tedarikçi sayfası (BMC) <b>zaten</b> krankı <span class="mono">(0,0)</span>'da
+      veriyor. Yani bu, veri kaynağının kendi konvansiyonuna hizalanmak.
+    </p>
+  </div>
+
+  <p class="prose">
+    Eski projelerde krank başka bir yerdeyse göç de bedava: bütün koordinatlardan
+    krankınkini çıkarmak <em>tanım gereği</em> bir öteleme. Sessizce yapılabilir.
+  </p>
+</section>
+
+<hr class="rule">
+
+<section>
+  <h2><span class="num">03</span>Zor olan kısım: kasnaklar neredeyse hiç oynayamıyor</h2>
+  <p class="sub">
+    Bu, işin matematiğini asıl belirleyen ölçüm — ve önerinin şeklini değiştiriyor.
+  </p>
+
+  <div class="callout">
+    <p>
+      <b>Alternatörü 1 mm kaydırmak</b> gergi kolunu <span class="mono">−3.0°</span>
+      döndürüyor ve gerginliği <span class="mono">−38.6 N (−%5.9)</span> değiştiriyor.
+      <b>10 mm kaydırmak modeli çözülemez yapıyor.</b>
+    </p>
+    <p>
+      Sebep şaşırtıcı değil ama sonucu ağır: <b>kayış boyu sabit</b> (8PK 1715).
+      Bir kasnağı oynatınca kayışın gezdiği yol uzar ya da kısalır, farkı da yalnız
+      gergi kolu yutabilir — ve kolun yutabileceği miktar sınırlı. Take-up oranı
+      <span class="mono">0.559 mm/°</span>, yani <b>1 mm ≈ 1.8° kol</b>.
+    </p>
+  </div>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 664 554" role="img" aria-label="BMC kayış düzeninin ölçekli çizimi: altı kasnak, çözülmüş kayış yolu ve her kasnağın çevresinde çözülebilir sürükleme zarfı. Zarflar kasnak çaplarına göre çok küçük kalıyor.">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,1 L9,5 L0,9 z" fill="currentColor"></path>
+          </marker>
+        </defs>
+
+        <!-- kayış yolu: çekirdeğin teğet noktaları + işaretli sarım yayları -->
+        <path d="M 280.5 462.5
+                 A 82.2 82.2 0 0 0 438.7 437.0
+                 L 448.3 289.3
+                 A 38.6 38.6 0 0 1 465.5 259.6
+                 L 583.5 181.6
+                 A 77.2 77.2 0 1 0 480.2 69.5
+                 L 387.1 188.1
+                 A 38.6 38.6 0 0 1 348.4 202.0
+                 L 82.1 143.2
+                 A 29.7 29.7 0 0 0 58.7 196.6
+                 L 208.7 301.6
+                 A 38.6 38.6 0 0 1 222.4 318.8
+                 Z"
+              fill="none" stroke="#d98c1a" stroke-width="3.4" stroke-linejoin="round"></path>
+
+        <!-- kasnaklar: gerçek dış çap -->
+        <g fill="none" stroke="currentColor" stroke-width="1.5" opacity=".85">
+          <circle cx="356.7" cy="431.7" r="81"></circle>
+          <circle cx="486.8" cy="291.8" r="37.5" stroke-dasharray="5 4"></circle>
+          <circle cx="540.9" cy="117.2" r="76"></circle>
+          <circle cx="356.7" cy="164.3" r="37.5" stroke-dasharray="5 4"></circle>
+          <circle cx="75.7" cy="172.2" r="28.5"></circle>
+          <circle cx="186.6" cy="333.2" r="37.5" stroke-dasharray="5 4"></circle>
+        </g>
+        <g fill="currentColor">
+          <circle cx="356.7" cy="431.7" r="2.2"></circle>
+          <circle cx="486.8" cy="291.8" r="2.2"></circle>
+          <circle cx="540.9" cy="117.2" r="2.2"></circle>
+          <circle cx="356.7" cy="164.3" r="2.2"></circle>
+          <circle cx="75.7" cy="172.2" r="2.2"></circle>
+          <circle cx="186.6" cy="333.2" r="2.2"></circle>
+        </g>
+
+        <!-- gergi kolu + pivot -->
+        <line x1="96.8" y1="327.6" x2="186.6" y2="333.2" stroke="#0f9d76" stroke-width="1.6" stroke-dasharray="4 3"></line>
+        <g stroke="#0f9d76" stroke-width="1.8">
+          <line x1="90.8" y1="327.6" x2="102.8" y2="327.6"></line>
+          <line x1="96.8" y1="321.6" x2="96.8" y2="333.6"></line>
+        </g>
+
+        <!-- çözülebilir sürükleme zarfları -->
+        <g fill="none" stroke="#c3261f" stroke-width="1.6" stroke-dasharray="3 2.5">
+          <rect x="280.0" y="423.9" width="98.7" height="16.0"></rect>
+          <rect x="469.5" y="264.1" width="40.0" height="69.7"></rect>
+          <rect x="530.2" y="106.6" width="20.6" height="22.4"></rect>
+          <rect x="298.7" y="148.3" width="90.9" height="30.0"></rect>
+          <rect x="66.7" y="157.9" width="17.0" height="148.9"></rect>
+        </g>
+
+        <!-- etiketler -->
+        <g font-family="IBM Plex Mono, ui-monospace, monospace" font-size="12" fill="currentColor">
+          <text x="356.7" y="530" text-anchor="middle">Krank (0,0) · ⌀162</text>
+          <text x="540.9" y="30" text-anchor="middle">Klima · ⌀152</text>
+          <text x="35" y="147" text-anchor="start">Alternatör · ⌀57</text>
+          <text x="538" y="291.8" text-anchor="start">Avara 1</text>
+          <text x="300" y="120" text-anchor="middle">Avara 2</text>
+          <text x="186.6" y="392" text-anchor="middle">Gergi</text>
+        </g>
+        <g font-family="IBM Plex Mono, ui-monospace, monospace" font-size="11.5" fill="#c3261f">
+          <text x="540.9" y="99" text-anchor="middle">±10 mm</text>
+          <text x="90" y="322" text-anchor="start">±9 mm</text>
+          <text x="356.7" y="415" text-anchor="middle">↕ 16 mm</text>
+        </g>
+        <g font-family="IBM Plex Mono, ui-monospace, monospace" font-size="11" fill="#0f9d76">
+          <text x="96.8" y="316" text-anchor="middle">pivot</text>
+        </g>
+
+        <!-- ölçek çubuğu -->
+        <g stroke="currentColor" stroke-width="1.2" fill="none" opacity=".7">
+          <line x1="34" y1="512" x2="134" y2="512"></line>
+          <line x1="34" y1="507" x2="34" y2="517"></line>
+          <line x1="134" y1="507" x2="134" y2="517"></line>
+        </g>
+        <text x="84" y="529" text-anchor="middle" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="11.5" fill="currentColor" opacity=".8">100 mm</text>
+      </svg>
+    </div>
+    <figcaption>
+      <b>BMC kayış düzeni, ölçekli.</b> Turuncu yol ve sarım yayları çekirdeğin
+      <code>solveGeometry</code> çıktısından — elle yerleştirilmiş tek bir koordinat yok
+      (kesikli çember = kayış o kasnağa sırttan değiyor). Kırmızı kesikli dörtgenler,
+      <b>kayış boyu 1715 mm'de sabitken</b> her kasnağın çözülebilir kaldığı bölge.
+      Klima ve alternatör kutuları kasnaklarının kendisinden küçük. Her eksen tek başına
+      ölçüldü, dolayısıyla köşegen hareket biraz daha dar olabilir.
+    </figcaption>
+  </figure>
+
+  <div class="tw">
+    <table>
+      <thead>
+        <tr>
+          <th>Kasnak</th>
+          <th class="n">←X</th><th class="n">→X</th>
+          <th class="n">↓Y</th><th class="n">↑Y</th>
+          <th class="n">ΔT / mm</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="em"><td class="nm">Klima Kompresörü</td><td class="n">10.7</td><td class="n">9.9</td><td class="n">11.8</td><td class="n">10.6</td><td class="n hot">+40.3 N</td></tr>
+        <tr class="em"><td class="nm">Alternatör</td><td class="n">9.0</td><td class="n">8.0</td><td class="n">134.6</td><td class="n">14.3</td><td class="n hot">−38.6 N</td></tr>
+        <tr><td class="nm">Avara 1</td><td class="n">17.3</td><td class="n">22.7</td><td class="n">42.0</td><td class="n">27.7</td><td class="n">−19.0 N</td></tr>
+        <tr><td class="nm">Avara 2</td><td class="n">58.0</td><td class="n">32.9</td><td class="n">14.0</td><td class="n">16.0</td><td class="n">+9.4 N</td></tr>
+        <tr><td class="nm">Sürücü Kasnak</td><td class="n">76.7</td><td class="n">22.0</td><td class="n">8.2</td><td class="n">7.8</td><td class="n">+13.0 N</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="prose">
+    Rakamlar mm. <b>1 px = 1 mm ölçeğinde tipik zarf ±10 piksel</b> — normal bir fare
+    sürüklemesi 50–300 piksel. Yani "bileşenleri serbestçe taşıyorum" hissi ile fiziğin
+    izin verdiği hareket arasında yaklaşık <b>bir mertebe</b> fark var. Bu, öneriyi
+    öldürmüyor; <b>ne demek olduğunu</b> değiştiriyor.
+  </p>
+</section>
+
+<hr class="rule">
+
+<section>
+  <h2><span class="num">04</span>Çatal: kayış boyu sabit mi, serbest mi?</h2>
+  <p class="sub">
+    Sürüklemenin ne anlama geldiği tamamen buna bağlı. İkisi de meşru, ikisi de farklı
+    bir mühendislik sorusuna cevap veriyor.
+  </p>
+
+  <div class="figures">
+    <div class="fig">
+      <div class="v warm">±10 mm</div>
+      <div class="k">A · kayış SABİT</div>
+      <div class="n">Kayışı seçtin, kasnak yerini arıyorsun. Gergi farkı yutar, gerginlik canlı değişir. Zarf dışı = çözüm yok.</div>
+    </div>
+    <div class="fig">
+      <div class="v warm">±40 mm+</div>
+      <div class="k">B · kayış SERBEST</div>
+      <div class="n">Kasnak yerleri belli, kayış seçiyorsun. Sürükleme serbest, "gereken kayış boyu" canlı güncellenir.</div>
+    </div>
+  </div>
+
+  <h3>B kipinde alternatörü X yönünde kaydırdığımda</h3>
+  <div class="tw">
+    <table>
+      <thead>
+        <tr><th class="n">Δx</th><th class="n">Gereken L_eff</th><th class="n">Δ L</th><th class="n">Gerginlik</th><th>Durum</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="n">−40 mm</td><td class="n">1788.2 mm</td><td class="n">+73.2</td><td class="n">521 N</td><td>8PK 1790'a yakın</td></tr>
+        <tr><td class="n">−20 mm</td><td class="n">1751.3 mm</td><td class="n">+36.3</td><td class="n">574 N</td><td>standart boy yok</td></tr>
+        <tr><td class="n">−10 mm</td><td class="n">1733.1 mm</td><td class="n">+18.1</td><td class="n">609 N</td><td>standart boy yok</td></tr>
+        <tr class="em"><td class="n">0</td><td class="n">1715.0 mm</td><td class="n">0.0</td><td class="n">650 N</td><td>tasarım noktası</td></tr>
+        <tr><td class="n">+10 mm</td><td class="n">1697.1 mm</td><td class="n">−17.9</td><td class="n">701 N</td><td>standart boy yok</td></tr>
+        <tr><td class="n">+20 mm</td><td class="n">1679.5 mm</td><td class="n">−35.5</td><td class="n">763 N</td><td>standart boy yok</td></tr>
+        <tr><td class="n">+40 mm</td><td class="n">1645.4 mm</td><td class="n">−69.6</td><td class="n">941 N</td><td>8PK 1650'ye yakın</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="prose">
+    Dikkat: B kipi de bir şeyi <em>bedavaya</em> vermiyor. Kayış boyu serbest bırakılınca
+    hesap her zaman çözülüyor ama <b>gerçekte kayışlar standart boylarda üretiliyor</b> —
+    1751.3 mm diye bir kayış yok. Yani B kipinin dürüst çıktısı "gereken boy şu, en yakın
+    standart şu, o standartla gerginlik şu olur" üçlüsü.
+  </p>
+</section>
+
+<hr class="rule">
+
+<section>
+  <h2><span class="num">05</span>Koordinat dönüşümü ve Y ekseni</h2>
+  <p class="sub">
+    Üç adımlık bir dönüşüm, ve içinde bu projenin en sevmediği türden sessiz bir tuzak var.
+  </p>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 726 306" role="img" aria-label="Kanvas piksel koordinatlarından kayış düzlemi milimetre koordinatlarına dönüşüm: krank orijine çekilir, ölçeğe bölünür, Y ekseni ters çevrilir. Ekranda görüntü aynı kalır ama saklanan Y işareti terstir.">
+        <defs>
+          <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,1 L9,5 L0,9 z" fill="currentColor"></path>
+          </marker>
+          <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,1 L9,5 L0,9 z" fill="#d98c1a"></path>
+          </marker>
+        </defs>
+
+        <!-- panel başlıkları -->
+        <g font-family="IBM Plex Mono, ui-monospace, monospace" font-size="11" fill="currentColor" opacity=".72" letter-spacing="1.4">
+          <text x="24" y="24">KANVAS · px · Y AŞAĞI</text>
+          <text x="452" y="24">KAYIŞ DÜZLEMİ · mm · Y YUKARI</text>
+        </g>
+
+        <!-- panel çerçeveleri -->
+        <g fill="none" stroke="currentColor" stroke-width="1" opacity=".22">
+          <rect x="24" y="36" width="272" height="248" rx="4"></rect>
+          <rect x="452" y="36" width="250" height="248" rx="4"></rect>
+        </g>
+
+        <!-- ===== SOL: kanvas ===== -->
+        <!-- krank kutusu -->
+        <rect x="164" y="176" width="72" height="66" rx="3" fill="none" stroke="currentColor" stroke-width="1.7"></rect>
+        <text x="200" y="214" text-anchor="middle" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="10.5" fill="currentColor">KRANK</text>
+        <!-- eksenler krankta -->
+        <g stroke="currentColor" stroke-width="1.3" opacity=".55">
+          <line x1="200" y1="209" x2="276" y2="209" marker-end="url(#ar2)"></line>
+          <line x1="200" y1="209" x2="200" y2="272" marker-end="url(#ar2)"></line>
+        </g>
+        <g font-family="IBM Plex Mono, ui-monospace, monospace" font-size="10.5" fill="currentColor" opacity=".7">
+          <text x="282" y="212">+x</text>
+          <text x="206" y="272">+y</text>
+        </g>
+        <!-- alternatör kutusu -->
+        <rect x="53" y="76" width="62" height="58" rx="3" fill="none" stroke="currentColor" stroke-width="1.7"></rect>
+        <text x="84" y="109" text-anchor="middle" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="10.5" fill="currentColor">ALT</text>
+        <!-- ham px etiketleri -->
+        <g font-family="IBM Plex Mono, ui-monospace, monospace" font-size="11" fill="#d98c1a">
+          <text x="200" y="258" text-anchor="middle">px (620, 480)</text>
+          <text x="84" y="150" text-anchor="middle">px (339, 220)</text>
+        </g>
+
+        <!-- ===== ORTA: dönüşüm ===== -->
+        <line x1="308" y1="160" x2="440" y2="160" stroke="#d98c1a" stroke-width="2" marker-end="url(#ar3)"></line>
+        <g font-family="IBM Plex Mono, ui-monospace, monospace" font-size="11" fill="currentColor">
+          <text x="374" y="106" text-anchor="middle">1 · krankı çıkar</text>
+          <text x="374" y="128" text-anchor="middle" opacity=".62">−(620, 480)</text>
+          <text x="374" y="192" text-anchor="middle">2 · ölçeğe böl</text>
+          <text x="374" y="214" text-anchor="middle" opacity=".62">s = 1 px/mm</text>
+        </g>
+        <g font-family="IBM Plex Mono, ui-monospace, monospace" font-size="11" fill="#c3261f">
+          <text x="374" y="244" text-anchor="middle">3 · y işaretini ÇEVİR</text>
+          <text x="374" y="264" text-anchor="middle">y_mm = −Δy_px</text>
+        </g>
+
+        <!-- ===== SAĞ: mm düzlemi ===== -->
+        <circle cx="600" cy="209" r="34" fill="none" stroke="currentColor" stroke-width="1.7"></circle>
+        <circle cx="600" cy="209" r="2.2" fill="currentColor"></circle>
+        <g stroke="currentColor" stroke-width="1.3" opacity=".55">
+          <line x1="600" y1="209" x2="676" y2="209" marker-end="url(#ar2)"></line>
+          <line x1="600" y1="209" x2="600" y2="146" marker-end="url(#ar2)"></line>
+        </g>
+        <g font-family="IBM Plex Mono, ui-monospace, monospace" font-size="10.5" fill="currentColor" opacity=".7">
+          <text x="682" y="212">+x</text>
+          <text x="606" y="144">+y</text>
+        </g>
+        <circle cx="490" cy="105" r="12" fill="none" stroke="currentColor" stroke-width="1.7"></circle>
+        <circle cx="490" cy="105" r="1.8" fill="currentColor"></circle>
+        <g font-family="IBM Plex Mono, ui-monospace, monospace" font-size="11" fill="#d98c1a">
+          <text x="600" y="258" text-anchor="middle">mm (0, 0)</text>
+          <text x="490" y="136" text-anchor="middle">mm (−281, +259)</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption>
+      <b>Krank her iki çerçevede de orijindir; tek gerçek fark Y'nin işaretidir.</b>
+      Kanvasta Y aşağı artar, kayış düzleminde yukarı. Alternatör her iki resimde de
+      sol-üstte duruyor — <b>ekranda hiçbir şey değişmiyor</b>, değişen yalnız saklanan
+      sayı. Kutu solda 62×58 px, sağda kasnak gerçek ⌀57 mm: kutu bir sembol, çember
+      gerçek parça.
+    </figcaption>
+  </figure>
+
+  <div class="measured">
+    <div class="hd">
+      <span class="tag tag-m">Ölçüldü</span>
+      <h4>Y işaretini karıştırmak ne yapar?</h4>
+    </div>
+    <p>
+      İki ayrı senaryo ölçtüm ve <b>ikisi de bu projenin belgelediği sessiz hata sınıfına
+      girmiyor</b> — iyi haber:
+    </p>
+    <ul class="pts">
+      <li><b>Tam ayna</b> (her şey <span class="mono">y → −y</span>): bütün skalerler
+        <em>birebir aynı</em> çıkıyor — L_eff, altı sarım açısı, gerginlik, hubload.
+        Fizik ayna simetrik. Yani tutarlı bir şekilde ters yazmak sayısal olarak zararsız,
+        yalnız çizim aynalanır.</li>
+      <li><b>Kısmi ayna</b> (kasnaklar çevrilir, gergi pivotu eski konvansiyonda kalır):
+        model <b>çözülmüyor</b> ve sebebini yazıyor — <span class="mono">"Kayış yolu
+        kapanmıyor"</span>. Sarım değişmezi kapıyı tutuyor.</li>
+    </ul>
+    <p>
+      Yine de dönüşüm <b>tek bir fonksiyonda</b> toplanmalı
+      (<span class="mono">veFeadCanvasToMm</span> / <span class="mono">veFeadMmToCanvas</span>).
+      İki yerde iki kez yazılırsa, kapının yakaladığı şey bu topolojide gürültü,
+      başkasında sessizlik olabilir.
+    </p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<section>
+  <h2><span class="num">06</span>Gergi kasnağı istisnadır</h2>
+  <p class="sub">Merkezi bir <em>girdi</em> değil, çözücünün <em>çıktısı</em>.</p>
+  <p class="prose">
+    Diğer beş kasnağın merkezi panelde yazılı. Gergininki değil: çekirdek onu
+    pivot + kol boyu + yay dengesinden <b>çözüyor</b>, ve kol konumuna göre
+    <span class="mono">FreeArm · Replace · MaxBelt · Mean · MinBelt · Load</span>
+    olmak üzere <b>altı farklı yerde</b> duruyor. BMC'de bu konumlar
+    <span class="mono">59.9 mm</span>'lik bir zarf tarıyor.
+  </p>
+  <p class="prose">
+    Dolayısıyla "gergi düğümünü sürükledim" cümlesinin tek başına bir karşılığı yok —
+    <em>hangi</em> merkezi taşıdığını söylemek gerekiyor. Aşağıda <b>2 numaralı karar</b>
+    bu.
+  </p>
+</section>
+
+<hr class="rule">
+
+<section>
+  <h2><span class="num">07</span>Canlı güncelleme: bütçe var</h2>
+  <p class="sub">Ölçtüm, ve burada iyi haber var — matematik darboğaz değil.</p>
+
+  <div class="tw">
+    <table>
+      <thead>
+        <tr><th>Sürükleme karesinde koşacak iş</th><th class="n">Süre</th><th class="n">16.7 ms'de pay</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">Tek geometri çözümü <span class="mono">geometryAt</span></td><td class="n">0.020 ms</td><td class="n good">835×</td></tr>
+        <tr><td class="nm">Kanvas → sistem <span class="mono">veFeadBuildSystem</span></td><td class="n">2.42 ms</td><td class="n good">7×</td></tr>
+        <tr><td class="nm">Kol konum tablosu <span class="mono">positionTable</span></td><td class="n">5.86 ms</td><td class="n good">2.8×</td></tr>
+        <tr class="em"><td class="nm">TAM çözüm (9 duty satırı + ömür + mod)</td><td class="n">7.10 ms</td><td class="n good">2.4×</td></tr>
+        <tr><td class="nm">Çözülemeyen ara konumda build</td><td class="n">0.135 ms</td><td class="n good">124×</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="prose">
+    Tam çözüm bile 60 fps bütçesine <b>2.4 kat payla</b> sığıyor (141 fps tavan, Node'da
+    ölçüldü — tarayıcıda DOM yazımı bunu daraltır). Çözülemeyen ara konumlar
+    <b>hızlıca</b> düşüyor, yani sürükleme sırasında zarf dışına çıkmak kareyi bloke etmiyor.
+  </p>
+  <p class="prose">
+    Ayrıca <span class="mono">saveState()</span> zaten yalnız <span class="mono">mouseup</span>'ta
+    çağrılıyor (<code>js/ui-core.js:88</code>) — geri-al yığını sürüklemeden
+    kirlenmiyor. Bu tarafta değişiklik gerekmiyor.
+  </p>
+</section>
+
+<hr class="rule">
+
+<section>
+  <h2><span class="num">08</span>Bu değişikliğin kıracağı yerler</h2>
+  <p class="sub">Dokunmadan geçilemeyecek, hepsi bilinen ve hepsi testli.</p>
+  <ul class="pts">
+    <li><b><span class="mono">veFeadArrangeRing</span> ("Otomatik Düzenle")</b> kasnakları
+      bir çembere diziyor — fiziksel kipte bu, girilen bütün koordinatları yok eder.
+      Yeniden anlamlandırılmalı.</li>
+    <li><b><span class="mono">veFeadTopoSignature</span></b> konumu bilerek <em>dışlıyor</em>
+      (<code>js/connections.js:834</code>), böylece sürükleme kartı yeniden kurmuyor —
+      ölçülmüş kazanç: 30 karede 0 yeniden kurulum. Artık konum <em>anlamlı</em>, yani
+      imzaya girmeli; kazanç bilerek geri verilecek.</li>
+    <li><b>Araç düğümleri serbest kalmalı</b> — Kayış Özellikleri, Çözücü, Rapor ve
+      420×340'lık Kayış Yolu kartının mm karşılığı yok. Konum artık <em>tipe bağlı</em>
+      anlam taşıyacak.</li>
+    <li><b>Hizalama kenetlemesi</b> (<span class="mono">checkAlignment</span>) sürükleme
+      sırasında çalışıyor; fiziksel kipte mm koordinatını kenetler. Kasnak merkezlerini
+      hizalamak aslında anlamlı — ama bilinçli bir seçim olmalı.</li>
+    <li><b>Kayış Yolu kartı</b> gereksizleşmiyor: kart <em>çözümü</em> gösteriyor (teğet
+      noktaları, gergi kolunun altı konumu, zarf), topoloji ise <em>girdiyi</em>. Ayrım
+      korunmalı.</li>
+  </ul>
+</section>
+
+<hr class="rule">
+
+<section>
+  <h2><span class="num">09</span>Kararlar — cevabına ihtiyacım olan altı şey</h2>
+  <p class="sub">
+    Her birinde bir önerim var (<span class="rec" style="margin-left:0">önerim</span> etiketli),
+    ama seçim senin. Bunlar kodun şeklini belirliyor, sonradan çevirmek pahalı.
+  </p>
+
+  <div class="dec">
+    <div class="q"><span class="qn">01</span><span class="qt">Kayış boyu sürükleme sırasında sabit mi kalsın?</span></div>
+    <p class="why">
+      Bölüm 03–04. Bu, "sürüklemek" fiilinin ne anlama geldiğini tanımlıyor.
+    </p>
+    <ul class="opts">
+      <li><span class="lt">A</span><span><b>Sabit.</b> Fiziğin kendisi. Sürükleme ±10 mm'lik bir ince ayar; gerginlik canlı değişir; zarf dışında "çözüm yok" yazar.</span></li>
+      <li><span class="lt">B</span><span><b>Serbest.</b> Sürükleme sınırsız; "gereken kayış boyu" canlı güncellenir; gerginlik tasarım değerinde kalır.</span></li>
+      <li class="pick"><span class="lt">C</span><span><b>İkisi de — varsayılan A.</b> Zarf kanvasta çizilir; kullanıcı dışına çıkınca "kayış boyunu yeniden seç" eylemi önerilir.<span class="rec">önerim</span> A fiziği anlatıyor, B tasarım sorusunu; ikisi de gerçek ve aralarındaki geçiş kullanıcının kararı olmalı.</span></li>
+    </ul>
+  </div>
+
+  <div class="dec">
+    <div class="q"><span class="qn">02</span><span class="qt">Gergi düğümünü sürüklemek neyi taşısın?</span></div>
+    <p class="why">Bölüm 06. Merkezi çözülüyor, dolayısıyla doğrudan taşınamaz.</p>
+    <ul class="opts">
+      <li class="pick"><span class="lt">A</span><span><b>Pivotu taşır</b>, montaj merkezi kol boyunu koruyarak rijit takip eder.<span class="rec">önerim</span> Pivot fiziksel bağlantı noktası; <span class="mono">veFeadArmCheck</span>'in 0.5 mm kapısı kendiliğinden sağlanır.</span></li>
+      <li><span class="lt">B</span><span><b>Montaj merkezini taşır</b> — ama o zaman <span class="mono">|merkez − pivot| = kol boyu</span> kapısı kırılır ve kullanıcı sebebini anlamaz.</span></li>
+      <li><span class="lt">C</span><span><b>Kilitli</b>, pivot yalnız panelden girilir. En güvenlisi ama "her şeyi taşıyabiliyorum" hissini bozar.</span></li>
+    </ul>
+  </div>
+
+  <div class="dec">
+    <div class="q"><span class="qn">03</span><span class="qt">Ölçek: 1 px = 1 mm mi?</span></div>
+    <p class="why">
+      BMC kümesi 465×314 mm, yani birebir ölçekte 465×314 px — kanvasa rahat sığıyor.
+      Ama zarf ±10 mm = ±10 px, yani ince ayar için fare çok kaba.
+    </p>
+    <ul class="opts">
+      <li class="pick"><span class="lt">A</span><span><b>1 px = 1 mm, hassasiyet zoom'dan gelir.</b> %400 zoom'da bir ekran pikseli 0.25 mm.<span class="rec">önerim</span> Zoom zaten var; sürükleme sırasında canlı mm okuması gösterilir, panel hassas girdi olarak kalır.</span></li>
+      <li><span class="lt">B</span><span><b>Sabit büyütme</b> (ör. 1 mm = 2 px) — ince ayar kolaylaşır, küme 930×628 px'e çıkar.</span></li>
+      <li><span class="lt">C</span><span><b>Kullanıcı seçer.</b> Esnek ama "ekrandaki mesafe kaç mm" sorusunun cevabı topolojiden topolojiye değişir.</span></li>
+    </ul>
+  </div>
+
+  <div class="dec">
+    <div class="q"><span class="qn">04</span><span class="qt">Kutu mu, gerçek çap mı?</span></div>
+    <p class="why">
+      Kutular 54–72 px, gerçek kasnaklar 57–162 mm. Krankta kutu gerçeği <b>2.25 kat
+      küçük</b> gösteriyor: çakışmayan iki kutu, çakışan iki kasnak olabilir — ve çekirdek
+      bunu "kayış kasnağın içinden geçiyor" diye reddeder.
+      <span class="mono">c48fe17</span>'de kasnakları daireye çevirme denenmiş ve
+      <b>senin isteğinle geri alınmıştı</b>; onu tekrar önermiyorum.
+    </p>
+    <ul class="opts">
+      <li class="pick"><span class="lt">A</span><span><b>Kutu kalır, arkasına soluk gerçek çap çemberi çizilir.</b><span class="rec">önerim</span> Kutu kimliği korunur, fiziksel çakışma <em>hata çıkmadan önce</em> görünür.</span></li>
+      <li><span class="lt">B</span><span><b>Yalnız kutu.</b> Bugünkü görünüm aynen kalır; çakışma yalnız hata mesajından anlaşılır.</span></li>
+      <li><span class="lt">C</span><span><b>Çember, aç/kapa anahtarıyla.</b> Varsayılan kapalı.</span></li>
+    </ul>
+  </div>
+
+  <div class="dec">
+    <div class="q"><span class="qn">05</span><span class="qt">"Otomatik Düzenle" ne yapsın?</span></div>
+    <p class="why">Bugün halka kuruyor — fiziksel kipte bu, girilen koordinatları siler.</p>
+    <ul class="opts">
+      <li class="pick"><span class="lt">A</span><span><b>"Koordinatlara göre yerleştir" olur:</b> kanvas konumlarını mm'den yeniden kurar.<span class="rec">önerim</span> Elle kaydırılmış bir düğümü geri toplamak için gerçek bir ihtiyaç.</span></li>
+      <li><span class="lt">B</span><span><b>FEAD'de tamamen kapanır</b>, düğme gizlenir.</span></li>
+      <li><span class="lt">C</span><span><b>Halka kalır</b> ama yalnız araç düğümlerini dizer, kasnaklara dokunmaz.</span></li>
+    </ul>
+  </div>
+
+  <div class="dec">
+    <div class="q"><span class="qn">06</span><span class="qt">Sürükleme sırasında mı, bırakınca mı tam çözüm?</span></div>
+    <p class="why">
+      Geometri 2.42 ms, tam çözüm 7.10 ms. İkisi de 16.7 ms'lik kareye sığıyor ama
+      tarayıcıda DOM yazımı payı daraltır.
+    </p>
+    <ul class="opts">
+      <li class="pick"><span class="lt">A</span><span><b>Kademeli:</b> geometri + Kayış Yolu kartı + gerginlik her karede; duty/ömür/burulma bırakınca.<span class="rec">önerim</span> "Anında" hissi tam olarak ilk gruptan geliyor; ikinci grup dokuz duty satırı demek ve sürükleme sırasında okunmuyor.</span></li>
+      <li><span class="lt">B</span><span><b>Her şey her karede.</b> Payı var; tarayıcıda ölçmeden söz vermek istemem.</span></li>
+      <li><span class="lt">C</span><span><b>Her şey bırakınca.</b> En ucuz, ama istediğin canlılığı vermiyor.</span></li>
+    </ul>
+  </div>
+</section>
+
+<hr class="rule">
+
+<section>
+  <h2><span class="num">10</span>Uygulama planı</h2>
+  <p class="sub">
+    Kararlar netleşince bu sıra izlenir — bağımlılık sırası, keyfi değil.
+    Her adım kendi testiyle kapatılır.
+  </p>
+
+  <ol class="plan">
+    <li><div>
+      <span class="f">js/fead-model.js</span>
+      <span class="d">Dönüşümün <b>tek kaynağı</b>: <span class="mono">veFeadOriginOf</span> (krank düğümü),
+      <span class="mono">veFeadCanvasToMm</span> / <span class="mono">veFeadMmToCanvas</span>,
+      ve krank ≠ (0,0) olan eski projeler için öteleme göçü. DOM'suz katman, dolayısıyla
+      doğrudan birim testi yazılabilir.</span>
+    </div></li>
+    <li><div>
+      <span class="f">js/components.js</span>
+      <span class="d">Kasnak tanımlarına <b>fiziksel konum bayrağı</b>. Konumun anlamı artık tipe
+      bağlı — araç düğümleri serbest kalır. 4 numaralı karar A ise gerçek çap çemberi
+      de buradan beslenir.</span>
+    </div></li>
+    <li><div>
+      <span class="f">js/ui-core.js · veAttachNodeDrag</span>
+      <span class="d"><span class="mono">mousemove</span> içinde <span class="mono">n.x/n.y</span>
+      güncellendikten sonra, FEAD kasnağıysa mm'ye geri yazılır (<code>ui-core.js:57</code>
+      civarı). Sürükleme sırasında canlı mm okuması.</span>
+    </div></li>
+    <li><div>
+      <span class="f">js/connections.js</span>
+      <span class="d"><span class="mono">veFeadTopoSignature</span>'a konum girer
+      (<code>connections.js:834</code>) — kasnak konumları için, araç düğümleri için değil;
+      yoksa Kayış Yolu kartını taşımak çözücüyü koşturur.</span>
+    </div></li>
+    <li><div>
+      <span class="f">js/cp-fead.js</span>
+      <span class="d">Panelin <span class="mono">x,y</span> alanları çift yönlü olur (tek kaynak
+      <span class="mono">node.data</span>, kanvas türetilmiş). <span class="mono">veFeadArrangeRing</span>
+      5 numaralı karara göre yeniden anlamlandırılır. Zarf göstergesi ve
+      "kayış boyunu yeniden seç" eylemi burada.</span>
+    </div></li>
+    <li><div>
+      <span class="f">js/topology.js · js/state.js</span>
+      <span class="d">Alt topoloji açılışında ve geri yüklemede kasnak konumları mm'den kurulur —
+      bugün kaydedilmiş piksel konumu okunuyor.</span>
+    </div></li>
+    <li><div>
+      <span class="f">tests/unit/</span>
+      <span class="d">Öteleme değişmezliği, Y işareti dönüşümü, zarf sınırı, göç, imzanın
+      kasnak konumuna duyarlı / araç düğümüne duyarsız olması. Mevcut <b>329 testin</b>
+      hangilerinin bu sözleşmeye bağlı olduğu ayrıca taranacak.</span>
+    </div></li>
+  </ol>
+
+  <p class="prose" style="margin-top:26px">
+    <b><span class="mono">js/fead-core.js</span>'e dokunulmuyor.</b> Bu değişikliğin
+    tamamı köprü ve sunum katmanında; çekirdek merkez koordinatlarını zaten alıyor,
+    nereden geldiğini umursamıyor. 2095 referans değere kalibre edilmiş doğrulama kapısı
+    böylece olduğu gibi ayakta kalıyor — ve değişikliğin doğru olduğunu ölçen şey de o.
+  </p>
+</section>
+
+<footer>
+  Bütün sayılar bu depoda, BMC 6 kasnaklı örnek (8PK 1715, tedarikçi sayfası) üzerinde
+  ölçüldü. Geometri çizimi <span class="mono">FEADCore.solveGeometry</span>'nin teğet
+  noktalarından üretildi. Zarf sınırları, her eksende ikiye bölme ile çözülebilirlik
+  sınırı aranarak bulundu.
+</footer>
+
+</div>
+
+</body></html>

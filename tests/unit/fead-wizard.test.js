@@ -151,8 +151,12 @@ describe('bileşen sözleşmesi', () => {
     };
     const out = fead.veFeadPopulateStarter();
     delete global.createNode;
-    expect(out.length).toBe(2);
-    expect(out.map((n) => n.type).sort()).toEqual(['fead-example', 'fead-wizard']);
+    // ÜÇÜNCÜ AÇILIŞ YÜZEYİ: Kayış Tablosu (2026-09-09). Kasnakların veri giriş
+    // yüzeyi artık o; olmadan paletten bırakılan kasnağın koordinatı ve sırası
+    // girilecek yer olmazdı (tel döneminde o işi kanvasta tel çekmek yapıyordu).
+    expect(out.length).toBe(3);
+    expect(out.map((n) => n.type).sort())
+      .toEqual(['fead-example', 'fead-table', 'fead-wizard']);
     // Üst üste binmiyorlar (ikisi de aynı şeride konuyor).
     expect(Math.abs(out[0].x - out[1].x)).toBeGreaterThan(60);
   });
@@ -172,7 +176,7 @@ describe('durum → düğüm çevirisi: örnekleri BİREBİR geri üretiyor', ()
     const st = wiz.veFeadWizState();
     const sb = wiz.veFeadWizBuild();
     const ex = M.veFeadExampleNodes(key);
-    const rb = M.veFeadBuildSystem(ex.nodes, ex.connections);
+    const rb = M.veFeadBuildSystem(ex.nodes);
     return { st, sb, rb };
   };
 
@@ -224,7 +228,7 @@ describe('durum → düğüm çevirisi: örnekleri BİREBİR geri üretiyor', ()
 
     const toplam = (R) => Object.keys(R.duty[0].loadsKw || {})
       .reduce((a, k) => a + R.duty[0].loadsKw[k], 0);
-    const b1 = M.veFeadBuildSystem(pack.nodes, pack.connections);
+    const b1 = M.veFeadBuildSystem(pack.nodes);
     const R1 = M.veFeadAnalyze(b1, { rows: sol.data.duty });
     // Anahtarları boz → aynı model, 0 kW
     sol.data.duty.forEach((r) => {
@@ -276,7 +280,7 @@ describe('kipe göre hangi alan taşınır', () => {
     st.belt.lengthMode = 'fixed';           // kullanıcı ısrar etse bile
     const b = wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-belt');
     expect(b.data.lengthMode).toBeUndefined();
-    const sb = M.veFeadBuildSystem(wiz.veFeadWizNodes(st).nodes, wiz.veFeadWizNodes(st).connections);
+    const sb = M.veFeadBuildSystem(wiz.veFeadWizNodes(st).nodes);
     expect(sb.beltMode).toBe('free');
   });
 });
@@ -390,7 +394,7 @@ describe('kurulum kapısı ve kurulum', () => {
     expect(wiz.veFeadWizCanCreate().ok).toBe(true);
   });
 
-  test('kurulum: düğümler + teller kanvasa geçiyor, çözüm AYNI kalıyor', () => {
+  test('kurulum: düğümler kanvasa geçiyor, çözüm AYNI kalıyor', () => {
     kabuk();
     wiz.veFeadWizSeed('AG00976_GATES_2025');
     const beklenen = wiz.veFeadWizBuild();
@@ -398,19 +402,54 @@ describe('kurulum kapısı ve kurulum', () => {
     const out = wiz.veFeadWizCreate();
     delete global.createNode; delete global.createConnection;
     expect(out).toBeTruthy();
-    // 6 kasnak + kayış + çözücü + kart + rapor
+    // 6 kasnak + kayış + çözücü + şema + tablo + rapor
     expect(global.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley).length).toBe(6);
     expect(global.nodes.filter((n) => n.type === 'fead-belt').length).toBe(1);
     expect(global.nodes.filter((n) => n.type === 'fead-solver').length).toBe(1);
     expect(global.nodes.filter((n) => n.type === 'fead-layout').length).toBe(1);
+    expect(global.nodes.filter((n) => n.type === 'fead-table').length).toBe(1);
     expect(global.nodes.filter((n) => n.type === 'fead-report').length).toBe(1);
-    expect(global.connections.length).toBe(6);
+    // TEL KURULMUYOR (2026-09-09): sıra indiste ve 1..N numaralı.
+    expect(global.connections.length).toBe(0);
+    expect(M.veFeadBeltOrder(global.nodes).map((n) => n.data.beltIndex))
+      .toEqual([1, 2, 3, 4, 5, 6]);
     // KURULAN MODEL ÖNİZLEMEYLE AYNI SAYIYI VERİYOR — sihirbazın varlık şartı.
-    const b = M.veFeadBuildSystem(global.nodes, global.connections);
+    const b = M.veFeadBuildSystem(global.nodes);
     expect(b.ok).toBe(true);
     expect(b.beltLengthMm).toBeCloseTo(beklenen.beltLengthMm, 6);
     expect(b.springTensionN).toBeCloseTo(beklenen.springTensionN, 6);
     expect(b.spin).toBe(beklenen.spin);
+  });
+
+  // ── AÇILIŞ YÜZEYİ ZATEN BİR TABLO KOYMUŞ OLUYOR ─────────────────────────
+  // Kayış Tablosu maxInstances:1 ve veFeadPopulateStarter onu alt topoloji
+  // açılışında kuruyor. Sihirbazın "araç düğümünü yeniden kullan" listesinde
+  // `fead-table` yoksa kurulum ikincisini kurmaya kalkar, createNode reddeder
+  // ve kullanıcı "modeli kur" dediğinde bir UYARI görür — üstelik kurulan
+  // bileşen sayısı da eksik sayılır. Kurulum yolu örnek kurucusundan AYRI bir
+  // döngü olduğu için orada düzeltilen kusur burada yaşayabiliyordu.
+  test('kanvasta zaten TABLO varken: ikincisi kurulmaz, VAR OLAN kullanılır', () => {
+    kabuk();
+    wiz.veFeadWizSeed('AG00976_GATES_2025');
+    sahteKanvas();
+    const tablo = createNode('fead-table', 0, 0);
+    tablo.data.deneme = 42;                       // kullanıcı verisi — kaybolmamalı
+    const kuruldu = wiz.veFeadWizCreate();
+    delete global.createNode; delete global.createConnection;
+
+    const tablolar = global.nodes.filter((n) => n.type === 'fead-table');
+    expect(tablolar).toHaveLength(1);
+    expect(tablolar[0].id).toBe(tablo.id);        // AYNI düğüm, yenisi değil
+    expect(tablolar[0].data.deneme).toBe(42);
+    // AYIRT EDİCİ ÖLÇÜ: var olan tablo KURULAN listede olmalı. Yeniden kullanım
+    // listesinde `fead-table` yoksa createNode reddediyor, düğüm listeye HİÇ
+    // girmiyor (ve gerçek createNode bir uyarı basıyor) — kasnak sayısı ve
+    // "N bileşen kuruldu" toast'ı da eksik çıkıyor. Bu satır olmadan test
+    // düzeltmeyi ölçmüyordu: ölçüldü, mutasyon YEŞİL geçiyordu.
+    expect(kuruldu.map((n) => n.id)).toContain(tablo.id);
+    // Model yine tam kuruldu.
+    expect(global.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley).length).toBe(6);
+    expect(M.veFeadBuildSystem(global.nodes).ok).toBe(true);
   });
 
   test('kurulumda duty kW kanvas KİMLİKLERİNE göç ediyor', () => {
@@ -425,7 +464,7 @@ describe('kurulum kapısı ve kurulum', () => {
     expect(anahtar.length).toBeGreaterThan(0);
     anahtar.forEach((k) => { expect(kimlikler).toContain(k); });
     // Göç yapılmasaydı hiçbiri eşleşmez ve bütün aksesuarlar 0 kW koşardı.
-    const b = M.veFeadBuildSystem(global.nodes, global.connections);
+    const b = M.veFeadBuildSystem(global.nodes);
     const R = M.veFeadAnalyze(b, { rows: sol.data.duty });
     const yuk = R.duty[0].loadsKw || {};
     expect(Object.keys(yuk).reduce((a, k) => a + yuk[k], 0)).toBeGreaterThan(0.5);
@@ -450,12 +489,15 @@ describe('kurulum kapısı ve kurulum', () => {
     expect(global.nodes.find((n) => n.type === 'fead-wizard').data.wiz).toBeTruthy();
   });
 
-  test('temizle işaretliyse mevcut kasnaklar VE telleri gider', () => {
+  test('temizle işaretliyse mevcut kasnaklar gider', () => {
     kabuk();
     wiz.veFeadWizSeed('BMC_FEAD_2026');
     sahteKanvas();
     createNode('fead-crank', 0, 0);
     createNode('fead-idler', 0, 0);
+    // Kasnaklar artık portsuz, aralarında tel YOK; temizlenen şey düğümlerin
+    // kendisi. Kasnağa bağlı bir tel (elle düzenlenmiş dosyada olabilir) yine
+    // gitmeli — o yüzden araç düğümüne giden bir tel kuruluyor.
     createConnection(global.nodes[0].id, global.nodes[1].id);
     expect(global.connections.length).toBe(1);
     wiz.veFeadWizState().temizle = true;
@@ -463,7 +505,7 @@ describe('kurulum kapısı ve kurulum', () => {
     delete global.createNode; delete global.createConnection;
     // Eski iki kasnak gitti; yerine örneğin altı kasnağı geldi.
     expect(global.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley).length).toBe(6);
-    expect(global.connections.length).toBe(6);
+    expect(global.connections.length).toBe(0);
   });
 });
 
@@ -1731,7 +1773,7 @@ describe('sihirbaz girdisi → topoloji bileşeni', () => {
     wiz.veFeadWizSeed('AG00976_GATES_2025');
     const once = wiz.veFeadWizBuild();
     wiz.veFeadWizCreate();
-    const sonra = veFeadBuildSystem(nodes, connections);
+    const sonra = veFeadBuildSystem(nodes);
     expect(sonra.ok).toBe(true);
     expect(sonra.beltLengthMm).toBeCloseTo(once.beltLengthMm, 6);
     expect(sonra.springTensionN).toBeCloseTo(once.springTensionN, 6);

@@ -933,7 +933,7 @@ function _gfOrnekCoz(){
   delete kayis.data.effLength;
 
   var build;
-  try { build = veFeadBuildSystem(pack.nodes, pack.connections); } catch(e){ return null; }
+  try { build = veFeadBuildSystem(pack.nodes); } catch(e){ return null; }
   if(!build || !build.ok) return null;
 
   var R = null;

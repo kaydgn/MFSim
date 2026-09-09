@@ -65,7 +65,7 @@ function kur(mut) {
   const pack = katalogAc(veFeadExampleNodes(KEY));
   pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
   if (mut) mut(pack.nodes);
-  return { pack, build: veFeadBuildSystem(pack.nodes, pack.connections) };
+  return { pack, build: veFeadBuildSystem(pack.nodes) };
 }
 const solverOf = (pack) => pack.nodes.find((n) => n.type === 'fead-solver');
 const tenOf = (nodes) => nodes.find((n) => n.type === 'fead-tensioner').data;
@@ -79,8 +79,11 @@ describe('örnek kayıt defteri: Gates raporu kurulabilir', () => {
     expect(build.ok).toBe(true);
     expect(build.errors || []).toEqual([]);
     expect(build.sys.pulleys).toHaveLength(6);
-    // Kayış yolu kapalı: altı kasnak, altı tel.
-    expect(pack.connections).toHaveLength(6);
+    // Kayış yolu bir LİSTE: altı kasnak 1..6 numaralı (kablo 2026-09-09'da
+    // kalktı — liste yapısı gereği kapalı, kurulamayan bir "açık çevrim" yok).
+    expect(pack.connections).toEqual([]);
+    expect(pack.nodes.filter((n) => n.data && n.data.beltIndex)
+      .map((n) => n.data.beltIndex).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
   test('KANVAS YERLEŞİMİ için her kasnağın sonlu koordinatı var', () => {
@@ -414,7 +417,7 @@ describe('İKİ ÖRNEK AYNI GERGİYİ, FARKLI KAYIŞI ANLATIYOR', () => {
 
     const pb = veFeadExampleNodes('BMC_FEAD_2026');
     pb.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    const bb = veFeadBuildSystem(pb.nodes, pb.connections);
+    const bb = veFeadBuildSystem(pb.nodes);
     const meanB = F.positionTable(bb.sys).find((r) => r.position === 'Mean');
 
     const { build } = kur();
@@ -432,7 +435,7 @@ describe('İKİ ÖRNEK AYNI GERGİYİ, FARKLI KAYIŞI ANLATIYOR', () => {
     // girdilerle ne kadar ileri gidebildiğinin ölçüsü.
     const pb = veFeadExampleNodes('BMC_FEAD_2026');
     pb.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    const bb = veFeadBuildSystem(pb.nodes, pb.connections);
+    const bb = veFeadBuildSystem(pb.nodes);
     expect(pctErr(bb.sys.designTensionN, G.design)).toBeLessThan(5);
     // AG00976 (her şeyi rapordan) çok daha yakın — fark ölçülebilir olmalı.
     const { build } = kur();
@@ -472,7 +475,7 @@ describe('kanvasa kurma — duty kW kimlik göçü', () => {
 
   test('kanvasa kurulan örnek Gates duty tablosunu GERİ ÜRETİYOR', () => {
     const { ns, conns, solver } = kanvasaKur(KEY);
-    const build = veFeadBuildSystem(ns, conns);
+    const build = veFeadBuildSystem(ns);
     expect(build.ok).toBe(true);
     const res = veFeadAnalyze(build, {
       rows: veFeadDutyRows(solver), cylinders: 6, crankInertia: 0.70,
@@ -496,7 +499,7 @@ describe('kanvasa kurma — duty kW kimlik göçü', () => {
       Object.keys(r.kw).forEach((k, i) => { yeni['ex-sahte-' + i] = r.kw[k]; });
       r.kw = yeni;
     });
-    const build = veFeadBuildSystem(ns, conns);
+    const build = veFeadBuildSystem(ns);
     const res = veFeadAnalyze(build, {
       rows: veFeadDutyRows({ data: { duty: bozuk } }), cylinders: 6,
     });

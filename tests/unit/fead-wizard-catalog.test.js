@@ -301,7 +301,7 @@ describe('Sihirbaz — 7. adımın uygunluk kapıları', () => {
 
     // Kurulan modelin yolu: aynı düğüm listesi köprüden geçiyor.
     const pack = wiz.veFeadWizNodes();
-    const kurulan = M.veFeadBuildSystem(pack.nodes, pack.connections);
+    const kurulan = M.veFeadBuildSystem(pack.nodes);
     const sd = pack.nodes.filter((n) => n.id === 'wz-solver')[0].data;
     const R2 = K.veFeadChecks(kurulan, K.veFeadCheckOpt(sd, sd.duty || []));
 

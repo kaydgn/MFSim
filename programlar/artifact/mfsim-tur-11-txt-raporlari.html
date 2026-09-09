@@ -1,0 +1,306 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>MFSim — Tur 11: TXT Raporları</title>
+<style>
+  :root {
+    --ground:#fafbfc; --surface:#ffffff; --raised:#f0f1f3; --sunken:#f6f7f9;
+    --hairline:#e0e2e6; --hairline-strong:#c9ccd2;
+    --text:#1b1e24; --heading:#0c0e12; --muted:#6b7280; --faint:#9098a6;
+    --accent:#2d6fe6; --accent-soft:rgba(45,111,230,0.10);
+    --ok:#16a34a; --warn:#d97706; --bad:#dc2626;
+    --mono:ui-monospace,'SF Mono','JetBrains Mono',Menlo,Consolas,'Liberation Mono',monospace;
+    --sans:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground:#0a0c10; --surface:#0f1218; --raised:#151a22; --sunken:#0c0f14;
+      --hairline:#1c2333; --hairline-strong:#2d3a4f;
+      --text:#c8d1dc; --heading:#e2e8f0; --muted:#7a8599; --faint:#4a5568;
+      --accent:#4f86f0; --accent-soft:rgba(79,134,240,0.13);
+      --ok:#2ea043; --warn:#d29922; --bad:#f0685c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0a0c10; --surface:#0f1218; --raised:#151a22; --sunken:#0c0f14;
+    --hairline:#1c2333; --hairline-strong:#2d3a4f;
+    --text:#c8d1dc; --heading:#e2e8f0; --muted:#7a8599; --faint:#4a5568;
+    --accent:#4f86f0; --accent-soft:rgba(79,134,240,0.13);
+    --ok:#2ea043; --warn:#d29922; --bad:#f0685c;
+  }
+  :root[data-theme="light"] {
+    --ground:#fafbfc; --surface:#ffffff; --raised:#f0f1f3; --sunken:#f6f7f9;
+    --hairline:#e0e2e6; --hairline-strong:#c9ccd2;
+    --text:#1b1e24; --heading:#0c0e12; --muted:#6b7280; --faint:#9098a6;
+    --accent:#2d6fe6; --accent-soft:rgba(45,111,230,0.10);
+    --ok:#16a34a; --warn:#d97706; --bad:#dc2626;
+  }
+
+  body {
+    background:var(--ground); color:var(--text);
+    font-family:var(--sans); font-size:15px; line-height:1.6;
+    -webkit-font-smoothing:antialiased; padding:0 20px 96px;
+  }
+  .wrap { max-width:1080px; margin:0 auto; }
+
+  header { padding:56px 0 32px; border-bottom:1px solid var(--hairline); }
+  .eyebrow {
+    font-family:var(--mono); font-size:11px; letter-spacing:0.14em;
+    text-transform:uppercase; color:var(--muted);
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  h1 {
+    font-family:var(--mono); font-weight:600; font-size:clamp(26px,4.4vw,40px);
+    letter-spacing:-0.02em; line-height:1.15; color:var(--heading);
+    margin:16px 0 0; text-wrap:balance;
+  }
+  .lede { max-width:64ch; margin:16px 0 0; color:var(--muted); font-size:16px; }
+  .lede a { color:var(--accent); }
+
+  .swatch {
+    display:inline-flex; width:30px; height:17px; border-radius:3px;
+    border:1px solid var(--hairline-strong); overflow:hidden; flex:none;
+    vertical-align:-3px;
+  }
+  .swatch i { display:block; height:100%; }
+  .swatch i + i { border-left:1px solid var(--hairline-strong); }
+  .swatch i:nth-child(1) { width:44%; }
+  .swatch i:nth-child(2) { width:30%; }
+  .swatch i:nth-child(3) { width:26%; }
+
+  .verdict {
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr));
+    gap:1px; background:var(--hairline); border:1px solid var(--hairline);
+    border-radius:8px; overflow:hidden; margin:32px 0 0;
+  }
+  .cell { background:var(--surface); padding:16px 18px; }
+  .cell dt {
+    font-family:var(--mono); font-size:10px; letter-spacing:0.12em;
+    text-transform:uppercase; color:var(--faint); margin:0 0 6px;
+  }
+  .cell dd {
+    margin:0; font-family:var(--mono); font-size:17px; font-weight:600;
+    color:var(--heading); font-variant-numeric:tabular-nums;
+  }
+  .state-ok { color:var(--ok); }
+
+  .entry { padding:44px 0; border-bottom:1px solid var(--hairline); }
+  .entry-head { display:flex; gap:16px; align-items:baseline; flex-wrap:wrap; }
+  .idx {
+    font-family:var(--mono); font-size:12px; font-weight:600; color:var(--accent);
+    background:var(--accent-soft); border-radius:4px; padding:3px 8px;
+    letter-spacing:0.06em; flex:none;
+  }
+  h2 {
+    font-family:var(--mono); font-size:clamp(17px,2.4vw,21px); font-weight:600;
+    letter-spacing:-0.01em; color:var(--heading); margin:0; flex:1 1 320px;
+    text-wrap:balance;
+  }
+  .where {
+    font-family:var(--mono); font-size:11px; color:var(--muted);
+    border:1px solid var(--hairline-strong); border-radius:999px; padding:3px 10px;
+    flex:none;
+  }
+  .rows { margin:20px 0 0; display:grid; gap:12px; max-width:78ch; }
+  .row { display:grid; grid-template-columns:76px 1fr; gap:14px; align-items:start; }
+  .row > b {
+    font-family:var(--mono); font-size:10px; letter-spacing:0.1em;
+    text-transform:uppercase; font-weight:500; padding-top:4px; color:var(--muted);
+  }
+  .row.problem > b { color:var(--bad); }
+  .row.fix > b { color:var(--ok); }
+  .row div b { color:var(--heading); font-weight:600; }
+  code {
+    font-family:var(--mono); font-size:0.88em; background:var(--raised);
+    border-radius:3px; padding:1px 5px;
+  }
+
+  .txt {
+    margin:22px 0 0; padding:18px 20px; background:var(--sunken);
+    border:1px solid var(--hairline); border-radius:6px;
+    font-family:var(--mono); font-size:12px; line-height:1.5;
+    overflow-x:auto; color:var(--text);
+  }
+  .txt code { background:none; padding:0; font-size:inherit; }
+  .cap {
+    margin:22px 0 0; display:inline-block;
+    font-family:var(--mono); font-size:10px; letter-spacing:0.12em;
+    padding:3px 8px; border-radius:3px; font-weight:600;
+  }
+  .cap + .txt { margin-top:8px; }
+  .cap-before { color:var(--bad); background:color-mix(in srgb, var(--bad) 12%, transparent); }
+  .cap-after { color:var(--ok); background:color-mix(in srgb, var(--ok) 14%, transparent); }
+  .cap-neutral { color:var(--muted); background:var(--raised); }
+  .note {
+    margin:18px 0 0; padding:12px 16px; border-left:2px solid var(--hairline-strong);
+    color:var(--muted); font-size:14px; max-width:70ch;
+  }
+
+  footer {
+    margin:48px 0 0; padding:20px 0 0; border-top:1px solid var(--hairline);
+    font-family:var(--mono); font-size:11.5px; color:var(--faint);
+    display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+  }
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">
+    <span class="swatch" aria-hidden="true"><i style="background:#fdfdfb"></i><i style="background:#1b1e24"></i><i style="background:#d97706"></i></span>
+    MFSim · Tur 11 · PR #601 · birleştirildi
+  </div>
+  <h1>TXT raporları: inceleme ve ilk düzeltme</h1>
+  <p class="lede">
+    Tam Gaz modülünün iki TXT raporu, gerçek çözücü koşusuyla (BMC L5D motor + TC-415
+    konvertör, RK4) bugünkü koddan üretildi. Tasarımları zaten olgun — asıl bulgu
+    kozmetik değil, bir <b>sunum hatası</b>: fiziksel sınır senteli
+    <code>999</code> kullanıcıya "%999.0" olarak sızıyordu. Düzeltme uygulandı ve
+    merge edildi; iki raporun tam halleri bu mesajın ekinde.
+  </p>
+
+  <dl class="verdict">
+    <div class="cell"><dt>Durum</dt><dd class="state-ok">Merge edildi</dd></div>
+    <div class="cell"><dt>Bulgu</dt><dd>1 sızıntı · 4 yüzey</dd></div>
+    <div class="cell"><dt>Hesap değişimi</dt><dd>0</dd></div>
+    <div class="cell"><dt>Birim test</dt><dd class="state-ok">718 ✓</dd></div>
+  </dl>
+</header>
+
+<section class="entry">
+  <div class="entry-head">
+    <span class="idx">RAPOR 1</span>
+    <h2>Tam Gaz Performans Raporu — kutu grafikli özet</h2>
+    <span class="where">53 KB · 682 satır</span>
+  </div>
+  <div class="rows">
+    <div class="row"><b>Anatomi</b><div>
+      ASCII çift-çizgi antet (BMC logosu), rapor kimlik kutusu, performans özet tablosu,
+      topoloji detayı, bileşen bölümleri (motor eğrisi, konvertör karakteristiği,
+      aksesuar kayıpları), vites-bazlı çekiş/eğim tabloları. Kutular <code>tRow/tRule</code>
+      ile üretiliyor; 80 ve 130 kolonluk iki genişlik standardı tutarlı.
+    </div></div>
+  </div>
+  <pre class="txt "><code>
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║   ██████╗ ███╗   ███╗ ██████╗                                                ║
+║   ██╔══██╗████╗ ████║██╔════╝                                                ║
+║   ██████╔╝██╔████╔██║██║          BMC Otomotiv Sanayi ve Ticaret A.Ş.        ║
+║   ██╔══██╗██║╚██╔╝██║██║          Güç Grubu Müdürlüğü                        ║
+║   ██████╔╝██║ ╚═╝ ██║╚██████╗                                                ║
+║   ╚═════╝ ╚═╝     ╚═╝ ╚═════╝                                                ║
+║                                                                              ║
+╟──────────────────────────────────────────────────────────────────────────────╢
+║                 TAM GAZ HIZLANMA  ·  PERFORMANS HESAP RAPORU                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+  ┌─ RAPOR BİLGİLERİ ──────────────────────────────────────────────────────────┐
+  │ Rapor Tarihi   : 28.07.2026             Hazırlayan     : K. Aydoğan        │
+  │ Rapor Saati    : 10:45:28               Çözücü         : RK4               │
+  │ Rapor No       : BMC-FT-2026-2195       Shift Profili  : allison3200sp_s1  │
+  │ Hesaplama Modu : MFSim Tam Gaz Hızlanma                                    │
+  └────────────────────────────────────────────────────────────────────────────┘</code></pre>
+</section>
+
+<section class="entry">
+  <div class="entry-head">
+    <span class="idx">RAPOR 2</span>
+    <h2>Detay Matematik Hesapları — adım adım iz</h2>
+    <span class="where">158 KB · 3294 satır</span>
+  </div>
+  <div class="rows">
+    <div class="row"><b>Anatomi</b><div>
+      Kılıt adım indeksli içindekiler, okuma kılavuzu, girdiler/sabitler, formül sözlüğü,
+      oturmuş stall analizi ve 21 kilit adım için <b>formül + sayı ikamesi</b> düzeyinde
+      hızlanma izi (RK4 iç adımları dahil). Bilinçli olarak ASCII-güvenli yazılmış
+      (Hazirlayan, Cozucu) — geniş tablolar 121 kolonda kalıyor, taşma yok.
+    </div></div>
+  </div>
+  <pre class="txt "><code>
+╔════════════════════════════════════════════════════════════════════════════════════════╗
+║                          BMC Otomotiv -- Guc Grubu Mudurlugu                           ║
+║                     TAM GAZ HIZLANMA -- DETAY MATEMATIK HESAPLARI                      ║
+╚════════════════════════════════════════════════════════════════════════════════════════╝
+  Rapor Tarihi / Saati             : 28.07.2026 10:45
+  Hazirlayan                       : K. Aydogan
+  Cozucu Metodu                    : RK4 (Klasik)  (dt=0.0050 s)
+  Transfer Kademesi                : High  (oran 1.0000)
+  Yakalanan Kilit Adim             : 21
+==========================================================================================
+
+════════════════════════════ ICINDEKILER — KILIT ADIM INDEKSI ════════════════════════════
+
+  Adim      t (s)   v (km/h)   Vites Tetikleyen
+  --------------------------------------------------------------------------------------
+  L.1       0.000       0.00   1C    kalkis (v=0)
+  L.2       0.460      10.08   1C    hiz-izgarasi (~10 km/h)
+  L.3       0.875      16.93   2C    vites-gecisi</code></pre>
+</section>
+
+<section class="entry">
+  <div class="entry-head">
+    <span class="idx">BULGU</span>
+    <h2>%999.0 — fiziksel sınır senteli kullanıcıya sızıyordu</h2>
+    <span class="where">ft-performance.js → 4 yüzey</span>
+  </div>
+  <div class="rows">
+    <div class="row problem"><b>Sorun</b><div>
+      Çekiş kuvveti aracın ağırlığını aştığında eğim kabiliyeti hesabı
+      <code>999</code>/<code>997</code> sentelini üretir ("araç her eğimi tırmanır" —
+      matematiksel olarak sınırsız). Bu iç değer <b>dört yüzeye ham sayı olarak
+      sızıyordu:</b> TXT özet kutusu ("%999.0"), TXT vites tabloları ("999.0"),
+      ekrandaki Performans Özeti paneli ve HTML rapor tabloları. Grafik tarafıysa
+      zaten <code>&lt;900</code> guard'ıyla korunuyordu — tutarsızlık da buradaydı.
+    </div></div>
+    <div class="row fix"><b>Çözüm</b><div>
+      <code>veGradeDisplay(v, dec, pctPrefix)</code>: ±900 eşiğinde sentel yakalanır —
+      <code>≥100</code> (tabloda) / <code>≥%100</code> (panelde), null/NaN <code>—</code>.
+      Dört yüzey de aynı biçimleyiciye bağlandı; hesap değerleri değişmedi. Kutu
+      hizaları bozulmadı. 11 yeni assertion'la test altında.
+    </div></div>
+  </div>
+  <span class="cap cap-before">ÖNCE — özet kutusu ve eğim tablosu</span>
+  <pre class="txt diff-before"><code>  │ Stall/Kalkış Eğim (Düşük)       │ %999.0                                   │
+  │ %80 Eğim Kabiliyeti (Düşük)     │ %999.0                                   │
+  ├─────────────────────────────┼─────────┼────────────┼────────┼────────────┤
+  │ Durma Eğim Kab. (Stall)     │   999.0 │          – │     1C │      Stall │
+  │ Kalkış Eğim Kab. (Launch)   │   997.0 │          – │     1C │            │
+  │ Düşük Hız Eğim Kabiliyeti   │    92.8 │       10.0 │     1C │        %80 │</code></pre>
+  <span class="cap cap-after">SONRA — aynı satırlar</span>
+  <pre class="txt diff-after"><code>  │ Stall/Kalkış Eğim (Düşük)       │ ≥%100                                    │
+  │ %80 Eğim Kabiliyeti (Düşük)     │ ≥%100                                    │
+  ├─────────────────────────────┼─────────┼────────────┼────────┼────────────┤
+  │ Durma Eğim Kab. (Stall)     │    ≥100 │          – │     1C │      Stall │
+  │ Kalkış Eğim Kab. (Launch)   │    ≥100 │          – │     1C │            │
+  │ Düşük Hız Eğim Kabiliyeti   │    92.8 │       10.0 │     1C │        %80 │</code></pre>
+</section>
+
+<section class="entry">
+  <div class="entry-head">
+    <span class="idx">NOT</span>
+    <h2>Bulgu sayılmayan gözlemler</h2>
+  </div>
+  <div class="rows">
+    <div class="row"><b>1</b><div><b>"Motor | Motor" ve "Şanzıman | —"</b> satırları test
+      fikstüründen geliyor (isimsiz bileşen tanımı); gerçek projede preset adları dolu.
+      Rapor kodunda hata yok.</div></div>
+    <div class="row"><b>2</b><div><b>İki raporun karakter felsefesi farklı</b> — özet rapor tam
+      Türkçe, iz raporu ASCII-transliterasyonlu. İz raporunun başlık yorumunda bu bilinçli bir
+      taşınabilirlik tercihi olarak duruyor; dokunmadım.</div></div>
+    <div class="row"><b>3</b><div>Kutu bütünlüğü iki raporda da sağlam: en uzun satırlar 116/121
+      kolon, 130+ taşma yok, tüm bordür satırları eşit genişlikte.</div></div>
+  </div>
+  <p class="note">
+    Ekte üç dosya var: özet raporun önce/sonra halleri ve detay matematik raporu.
+    Sentelin gerçekte tetiklendiği araç (11.5 ton kamyon, 7.37 diferansiyel, Low kademe)
+    olduğu için önce dosyasında %999.0 satırlarını birebir görebilirsin.
+  </p>
+</section>
+
+<footer>
+  <span class="swatch" aria-hidden="true"><i style="background:#fdfdfb"></i><i style="background:#1b1e24"></i><i style="background:#d97706"></i></span>
+  <span>Çıktılar test fikstürüyle (BMC L5D + TC-415 + Allison S1 profili) gerçek RK4 koşusundan üretildi. PR #601 → main (bfe4e13).</span>
+</footer>
+
+</div>
+
+</body></html>

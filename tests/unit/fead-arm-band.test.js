@@ -38,7 +38,7 @@ function kur(key, yama) {
   const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
   if (yama) yama(ten.data);
   global.nodes = pack.nodes; global.connections = pack.connections;
-  return { pack, ten, build: veFeadBuildSystem(pack.nodes, pack.connections) };
+  return { pack, ten, build: veFeadBuildSystem(pack.nodes) };
 }
 
 /* ══════════════ 1) KÖPRÜ — bandın kendisi ═══════════════════════════════ */
@@ -309,7 +309,7 @@ describe('rapor yüzeyi', () => {
     const pack = veFeadExampleNodes(KEY);
     const ns = pack.nodes.map((n) => ({ id: n.id, type: n.type, def: componentDefs[n.type],
       customName: n.customName, data: JSON.parse(JSON.stringify(n.data)) }));
-    const build = veFeadBuildSystem(ns, pack.connections);
+    const build = veFeadBuildSystem(ns);
     const solv = ns.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver)[0];
     const R = veFeadAnalyze(build, { rows: veFeadDutyRows(solv), cylinders: 6,
       fatigueModel: 'PK-2_2p-MT3' });

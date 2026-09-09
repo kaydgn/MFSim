@@ -1,0 +1,1313 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>MFSim — Sensör Girdileri Paneli: 4 Tasarım Konsepti</title>
+
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   TOKEN SİSTEMİ
+   Panel maketleri MFSim'in gerçek tema değişkenlerini kullanır:
+   açık = "Pearl", koyu = "Koyu Gece (Slate)". Doküman yüzeyi ise
+   panellerin "üstünde durduğu" ayrı bir zemin — maketler ekran gibi
+   okunsun diye hafifçe ayrışır.
+   ══════════════════════════════════════════════════════════════════ */
+:root{
+  /* — MFSim Pearl (açık) — */
+  --bg0:#fafbfc; --bg1:#ffffff; --bg2:#f0f1f3; --bgin:#ffffff;
+  --line:#e0e2e6; --line2:#e8eaed; --lineHi:#c0c4cc;
+  --tx0:#0c0e12; --tx1:#1b1e24; --tx2:#4e535e; --tx3:#9098a6;
+  --acc:#2d6fe6; --ok:#1a9a50; --warn:#d49318; --dngr:#d43d3d;
+  --shadow:rgba(16,22,38,.10);
+  /* doküman zemini — panelden bir tık soğuk, seçilmiş nötr */
+  --page:#eef1f5; --page2:#e4e9f0; --pageInk:#141922; --pageInk2:#4b5566;
+  --pageLine:#d3dae4;
+  --grid:rgba(16,22,38,.055);
+  --selRow:rgba(45,111,230,.12);
+  --swatchRing:rgba(16,22,38,.22);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    /* — MFSim Slate (koyu) — */
+    --bg0:#0a0c10; --bg1:#0f1218; --bg2:#151a22; --bgin:#080a0e;
+    --line:#1c2333; --line2:#222b3a; --lineHi:#2d3a4f;
+    --tx0:#e2e8f0; --tx1:#c8d1dc; --tx2:#7a8599; --tx3:#4a5568;
+    --acc:#3b82f6; --ok:#22c55e; --warn:#d97706; --dngr:#dc2626;
+    --shadow:rgba(0,0,0,.6);
+    --page:#070910; --page2:#0d1119; --pageInk:#dde5f0; --pageInk2:#8792a5;
+    --pageLine:#1a2130;
+    --grid:rgba(255,255,255,.045);
+    --selRow:rgba(59,130,246,.22);
+    --swatchRing:rgba(255,255,255,.22);
+  }
+}
+:root[data-theme="dark"]{
+  --bg0:#0a0c10; --bg1:#0f1218; --bg2:#151a22; --bgin:#080a0e;
+  --line:#1c2333; --line2:#222b3a; --lineHi:#2d3a4f;
+  --tx0:#e2e8f0; --tx1:#c8d1dc; --tx2:#7a8599; --tx3:#4a5568;
+  --acc:#3b82f6; --ok:#22c55e; --warn:#d97706; --dngr:#dc2626;
+  --shadow:rgba(0,0,0,.6);
+  --page:#070910; --page2:#0d1119; --pageInk:#dde5f0; --pageInk2:#8792a5;
+  --pageLine:#1a2130;
+  --grid:rgba(255,255,255,.045);
+  --selRow:rgba(59,130,246,.22);
+  --swatchRing:rgba(255,255,255,.22);
+}
+
+:root{
+  /* MFSim keskin köşe disiplini — 2px, yuvarlak kart yok */
+  --r:2px; --r2:3px;
+  --f-ui:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --f-mono:ui-monospace,'SF Mono','JetBrains Mono','Fira Code',Menlo,Consolas,monospace;
+  /* MFSim sinyal paleti (js/results.js:5186) */
+  --s1:#3b82f6; --s2:#ef4444; --s3:#22c55e; --s4:#f59e0b; --s5:#8b5cf6; --s6:#ec4899;
+}
+
+*{box-sizing:border-box;}
+body{margin:0;}
+
+.doc{
+  background:var(--page);
+  color:var(--pageInk);
+  font-family:var(--f-ui);
+  font-size:.9375rem;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  padding:0 0 96px;
+}
+
+/* ── ölçü sistemi ───────────────────────────────────────────── */
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px;}
+.col{max-width:68ch;}
+
+h1,h2,h3{text-wrap:balance;margin:0;}
+h1{font-size:clamp(1.9rem,4.2vw,2.9rem);line-height:1.08;letter-spacing:-.022em;font-weight:700;color:var(--pageInk);}
+h2{font-size:1.375rem;line-height:1.2;letter-spacing:-.014em;font-weight:650;}
+h3{font-size:1rem;line-height:1.3;font-weight:640;letter-spacing:-.005em;}
+p{margin:0;}
+
+.eyebrow{
+  font-size:.6875rem;font-weight:640;letter-spacing:.17em;text-transform:uppercase;
+  color:var(--pageInk2);font-family:var(--f-mono);
+}
+.lead{font-size:1.0625rem;line-height:1.62;color:var(--pageInk2);}
+.muted{color:var(--pageInk2);}
+.stack{display:flex;flex-direction:column;}
+.g8{gap:8px}.g12{gap:12px}.g16{gap:16px}.g24{gap:24px}.g32{gap:32px}.g48{gap:48px}
+
+/* ── başlık ─────────────────────────────────────────────────── */
+.masthead{
+  border-bottom:1px solid var(--pageLine);
+  background:
+    linear-gradient(180deg,var(--page2),var(--page)),
+    repeating-linear-gradient(90deg,var(--grid) 0 1px,transparent 1px 56px);
+  padding:56px 0 40px;
+}
+.masthead .wrap{display:flex;flex-direction:column;gap:20px;}
+.mast-top{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap;}
+
+.themectl{display:flex;border:1px solid var(--pageLine);border-radius:var(--r);overflow:hidden;flex-shrink:0;}
+.themectl button{
+  font-family:var(--f-mono);font-size:.625rem;letter-spacing:.08em;text-transform:uppercase;
+  padding:6px 11px;background:transparent;border:0;border-right:1px solid var(--pageLine);
+  color:var(--pageInk2);cursor:pointer;transition:background .12s,color .12s;
+}
+.themectl button:last-child{border-right:0;}
+.themectl button[aria-pressed="true"]{background:var(--acc);color:#fff;}
+.themectl button:hover:not([aria-pressed="true"]){background:var(--page2);color:var(--pageInk);}
+.themectl button:focus-visible{outline:2px solid var(--acc);outline-offset:-2px;}
+
+.rule{height:1px;background:var(--pageLine);border:0;margin:0;}
+
+/* ── bölüm ──────────────────────────────────────────────────── */
+section{padding-top:64px;}
+.sec-head{display:flex;flex-direction:column;gap:10px;margin-bottom:28px;}
+.sec-num{
+  font-family:var(--f-mono);font-size:.6875rem;letter-spacing:.14em;
+  color:var(--acc);font-weight:640;
+}
+
+/* ── maket çerçevesi ────────────────────────────────────────── */
+.frame{
+  border:1px solid var(--line);
+  background:var(--bg1);
+  box-shadow:0 1px 0 var(--pageLine), 0 18px 40px -24px var(--shadow);
+  display:flex;flex-direction:column;min-width:0;
+}
+.frame-bar{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 10px;
+  background:linear-gradient(180deg,var(--bg2),var(--bg1));
+  border-bottom:1px solid var(--line);
+  font-family:var(--f-ui);font-size:.6875rem;color:var(--tx2);
+  flex-shrink:0;
+}
+.frame-bar b{color:var(--tx0);font-weight:640;}
+.frame-bar .sep{color:var(--tx3);}
+.frame-tag{
+  margin-left:auto;font-family:var(--f-mono);font-size:.5625rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--tx3);white-space:nowrap;
+}
+.frame-bar b{white-space:nowrap;}
+/* dar panelde başlık çubuğu tek satır kalır */
+@container (max-width:339px){ .frame-bar .sep,.frame-bar .ctx,.frame-tag{display:none;} }
+.frame-body{background:var(--bg1);color:var(--tx1);font-size:.6875rem;min-height:0;}
+/* konsept maketleri: gerçek panel genişliğinde denenebilsin */
+.frame.demo{container-type:inline-size;max-width:var(--demoW,none);transition:max-width .18s ease;}
+
+/* ── yapışkan genişlik denetimi ──────────────────────────────── */
+.widthbar{
+  position:sticky;top:0;z-index:30;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  margin-top:56px;padding:9px 14px;
+  background:color-mix(in srgb,var(--page) 88%,transparent);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border:1px solid var(--pageLine);border-radius:var(--r);
+}
+.widthbar .wl{
+  font-family:var(--f-mono);font-size:.625rem;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--pageInk2);font-weight:640;
+}
+.widthbar .hint{font-size:.75rem;color:var(--pageInk2);margin-left:auto;}
+.wseg{display:flex;border:1px solid var(--pageLine);border-radius:var(--r);overflow:hidden;}
+.wseg button{
+  font-family:var(--f-mono);font-size:.625rem;letter-spacing:.05em;
+  padding:5px 11px;background:var(--page2);border:0;border-right:1px solid var(--pageLine);
+  color:var(--pageInk2);cursor:pointer;white-space:nowrap;
+}
+.wseg button:last-child{border-right:0;}
+.wseg button[aria-pressed="true"]{background:var(--acc);color:#fff;}
+.wseg button:hover:not([aria-pressed="true"]){background:var(--page);color:var(--pageInk);}
+.wseg button:focus-visible{outline:2px solid var(--acc);outline-offset:-2px;}
+
+/* maketlerin ortak iç tipografisi = MFSim ölçeği */
+.mf{font-family:var(--f-ui);font-size:.6875rem;color:var(--tx1);}
+.mf *{box-sizing:border-box;}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums;}
+.num{font-variant-numeric:tabular-nums;}
+
+/* ortak: onay kutusu */
+.ck{
+  appearance:none;-webkit-appearance:none;
+  width:12px;height:12px;flex:0 0 12px;margin:0;
+  border:1px solid var(--lineHi);background:var(--bgin);
+  border-radius:var(--r);cursor:pointer;position:relative;
+  transition:background .1s,border-color .1s;
+}
+.ck:hover{border-color:var(--acc);}
+.ck:checked{background:var(--acc);border-color:var(--acc);}
+.ck:checked::after{
+  content:'';position:absolute;left:3px;top:.5px;width:3px;height:7px;
+  border:solid #fff;border-width:0 1.6px 1.6px 0;transform:rotate(43deg);
+}
+.ck:indeterminate{background:var(--acc);border-color:var(--acc);}
+.ck:indeterminate::after{
+  content:'';position:absolute;left:2px;top:4.5px;width:6px;height:0;
+  border-top:1.6px solid #fff;
+}
+.ck:focus-visible{outline:2px solid var(--acc);outline-offset:1px;}
+
+/* ortak: renk kutucuğu (Vector'deki gibi kare, tıklanabilir) */
+.sw{
+  width:11px;height:11px;flex:0 0 11px;border-radius:0;
+  border:1px solid var(--swatchRing);cursor:pointer;padding:0;
+  transition:transform .1s;
+}
+.sw:hover{transform:scale(1.18);}
+.sw:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
+.sw.off{opacity:.34;}
+
+/* ── konsept başlık kartı ───────────────────────────────────── */
+.concept-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;}
+.concept-id{
+  font-family:var(--f-mono);font-size:.75rem;font-weight:650;letter-spacing:.1em;
+  color:var(--acc);
+}
+.pitch{
+  border-left:2px solid var(--acc);padding-left:14px;
+  font-size:1rem;line-height:1.55;color:var(--pageInk);max-width:64ch;
+}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:32px;align-items:start;}
+@media (max-width:900px){.layout{grid-template-columns:1fr;}}
+
+.notes{display:flex;flex-direction:column;gap:18px;}
+.notes h4{
+  margin:0 0 6px;font-size:.6875rem;font-weight:640;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--pageInk2);font-family:var(--f-mono);
+}
+.notes ul{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:5px;font-size:.875rem;line-height:1.5;}
+.notes li::marker{color:var(--acc);}
+.verdict{
+  display:flex;gap:8px;align-items:flex-start;font-size:.8125rem;line-height:1.5;
+  padding:10px 12px;border:1px solid var(--pageLine);background:var(--page2);
+  border-radius:var(--r);
+}
+.verdict b{font-weight:640;}
+.tick{color:var(--ok);flex-shrink:0;font-weight:700;}
+.cross{color:var(--warn);flex-shrink:0;font-weight:700;}
+
+/* ══ 01 · ÖLÇÜM TABLOSU ═════════════════════════════════════ */
+.ca-tools{
+  display:flex;align-items:center;gap:6px;padding:5px 8px;
+  border-bottom:1px solid var(--line);background:var(--bg2);
+}
+.ca-search{
+  flex:1;min-width:0;padding:3px 7px;font:inherit;font-size:.6875rem;
+  border:1px solid var(--line);background:var(--bgin);color:var(--tx1);border-radius:var(--r);
+}
+.ca-search:focus{outline:none;border-color:var(--acc);}
+.ca-count{font-family:var(--f-mono);font-size:.5625rem;color:var(--tx3);letter-spacing:.06em;white-space:nowrap;}
+.ca-scroll{max-height:378px;overflow:auto;}
+.ca-tbl{width:100%;border-collapse:collapse;font-size:.6875rem;}
+.ca-tbl thead th{
+  position:sticky;top:0;z-index:2;
+  background:var(--bg2);color:var(--tx2);
+  font-weight:640;font-size:.5625rem;letter-spacing:.09em;text-transform:uppercase;
+  text-align:left;padding:5px 7px;border-bottom:1px solid var(--lineHi);
+  white-space:nowrap;
+}
+.ca-tbl thead th.r{text-align:right;}
+.ca-tbl td{
+  padding:0 7px;height:22px;border-bottom:1px solid var(--grid);
+  color:var(--tx1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.ca-tbl td.c{text-align:center;width:26px;padding:0;}
+.ca-tbl td.r{text-align:right;color:var(--tx2);}
+.ca-tbl tbody tr:nth-child(even) td{background:var(--grid);}
+.ca-tbl tbody tr:hover td{background:var(--selRow);}
+.ca-tbl tbody tr.sel td{background:var(--selRow);box-shadow:inset 2px 0 0 var(--acc);}
+.ca-tbl tbody tr.off td:not(.c){opacity:.48;}
+.ca-tbl tr.grp td{
+  background:var(--bg2) !important;height:20px;
+  font-size:.5625rem;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--tx2);font-weight:640;border-bottom:1px solid var(--line);
+  position:sticky;top:22px;z-index:1;
+}
+.ca-key{font-family:var(--f-mono);font-size:.625rem;color:var(--tx2);}
+.ca-cellflex{display:flex;align-items:center;gap:6px;height:22px;}
+/* dar panelde anahtar sütunu düşer — ad ve birim korunur */
+@container (max-width:359px){
+  .ca-tbl th:nth-child(4),.ca-tbl td:nth-child(4){display:none;}
+}
+
+/* ══ 02 · BİLEŞEN AĞACI ════════════════════════════════════ */
+.cb-tools{display:flex;flex-direction:column;gap:5px;padding:6px 8px;border-bottom:1px solid var(--line);background:var(--bg2);}
+.cb-row1{display:flex;gap:6px 8px;align-items:center;flex-wrap:wrap;}
+.cb-seg{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;}
+.cb-seg button{
+  font:inherit;font-size:.5625rem;letter-spacing:.06em;text-transform:uppercase;font-weight:600;
+  padding:3px 8px;background:var(--bg1);border:0;border-right:1px solid var(--line);
+  color:var(--tx2);cursor:pointer;white-space:nowrap;
+}
+.cb-seg button:last-child{border-right:0;}
+.cb-seg button[aria-pressed="true"]{background:var(--acc);color:#fff;}
+.cb-seg button:hover:not([aria-pressed="true"]){background:var(--bg2);color:var(--tx0);}
+.cb-seg button:focus-visible{outline:2px solid var(--acc);outline-offset:-2px;}
+.cb-scroll{max-height:378px;overflow:auto;}
+.cb-grp{border-bottom:1px solid var(--line);}
+.cb-ghead{
+  display:flex;align-items:center;gap:6px;height:24px;padding:0 8px;
+  background:var(--bg2);cursor:pointer;position:sticky;top:0;z-index:1;
+  border-bottom:1px solid var(--grid);
+}
+.cb-ghead:hover{background:var(--bg0);}
+.cb-arrow{
+  width:9px;flex:0 0 9px;color:var(--tx3);font-size:.5rem;
+  transition:transform .14s ease;display:inline-block;text-align:center;
+}
+.cb-grp.open .cb-arrow{transform:rotate(90deg);}
+.cb-gname{font-weight:640;color:var(--tx0);font-size:.6875rem;letter-spacing:-.005em;}
+.cb-gbadge{
+  margin-left:auto;font-family:var(--f-mono);font-size:.5rem;letter-spacing:.05em;
+  color:var(--tx2);background:var(--bg0);border:1px solid var(--line);
+  padding:0 4px;line-height:13px;border-radius:var(--r);
+}
+.cb-gbadge.on{color:#fff;background:var(--acc);border-color:var(--acc);}
+.cb-list{display:none;}
+.cb-grp.open .cb-list{display:block;}
+.cb-sig{
+  display:grid;grid-template-columns:12px 11px minmax(0,1fr) auto 46px;
+  align-items:center;gap:7px;height:22px;padding:0 8px 0 20px;
+  position:relative;cursor:default;
+}
+.cb-sig::before{
+  content:'';position:absolute;left:13px;top:0;bottom:0;width:1px;background:var(--line);
+}
+.cb-sig:hover{background:var(--selRow);}
+.cb-sig.off .cb-name,.cb-sig.off .cb-unit{opacity:.45;}
+.cb-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx1);}
+.cb-unit{font-family:var(--f-mono);font-size:.5625rem;color:var(--tx3);white-space:nowrap;}
+.cb-spark{height:13px;display:block;}
+.cb-sig.off .cb-spark polyline{stroke:var(--tx3);}
+.cb-hit{background:color-mix(in srgb,var(--warn) 34%,transparent);color:inherit;border-radius:1px;}
+.cb-empty{padding:16px 12px;text-align:center;color:var(--tx3);font-size:.625rem;}
+/* 250px'te mini eğri düşer, ad + birim + renk kalır */
+@container (max-width:279px){ .cb-sig{grid-template-columns:12px 11px minmax(0,1fr) auto 0;} .cb-spark{display:none;} }
+
+/* ══ 03 · LİSTE + DENETÇİ ══════════════════════════════════ */
+.cc-split{display:grid;grid-template-columns:minmax(0,1fr) 214px;min-height:340px;}
+/* denetçi 460px'in altında alt alta düşer — 03'ün asıl kısıtı bu */
+@container (max-width:459px){
+  .cc-split{grid-template-columns:1fr;}
+  .cc-left{border-right:0;border-bottom:1px solid var(--line);}
+  .cc-scroll{max-height:150px;}
+}
+.cc-left{border-right:1px solid var(--line);min-width:0;display:flex;flex-direction:column;}
+.cc-scroll{max-height:340px;overflow:auto;}
+.cc-gh{
+  font-size:.5rem;letter-spacing:.13em;text-transform:uppercase;color:var(--tx3);
+  padding:7px 9px 3px;font-weight:640;
+}
+.cc-row{
+  display:flex;align-items:center;gap:7px;height:22px;padding:0 9px;
+  cursor:pointer;border-left:2px solid transparent;
+}
+.cc-row:hover{background:var(--selRow);}
+.cc-row.sel{background:var(--selRow);border-left-color:var(--acc);}
+.cc-row.off .cc-nm{opacity:.45;}
+.cc-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cc-un{font-family:var(--f-mono);font-size:.5625rem;color:var(--tx3);}
+.cc-insp{display:flex;flex-direction:column;background:var(--bg0);min-width:0;}
+.cc-ihead{padding:9px 10px 8px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:3px;}
+.cc-ititle{display:flex;align-items:center;gap:6px;}
+.cc-ititle b{font-size:.75rem;font-weight:650;color:var(--tx0);letter-spacing:-.01em;}
+.cc-ikey{font-family:var(--f-mono);font-size:.5625rem;color:var(--tx3);letter-spacing:.02em;}
+.cc-fld{padding:8px 10px;border-bottom:1px solid var(--grid);display:flex;flex-direction:column;gap:5px;}
+.cc-lbl{font-size:.5rem;letter-spacing:.13em;text-transform:uppercase;color:var(--tx3);font-weight:640;}
+.cc-swrow{display:flex;gap:5px;}
+.cc-swrow .sw{width:15px;height:15px;flex:0 0 15px;}
+.cc-swrow .sw[aria-checked="true"]{box-shadow:0 0 0 1px var(--bg0),0 0 0 2.5px var(--acc);}
+.cc-pills{display:flex;gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;}
+.cc-pills button{
+  flex:1;font:inherit;font-size:.5625rem;font-weight:600;padding:3px 0;
+  background:var(--bg1);border:0;border-right:1px solid var(--line);color:var(--tx2);cursor:pointer;
+}
+.cc-pills button:last-child{border-right:0;}
+.cc-pills button[aria-pressed="true"]{background:var(--acc);color:#fff;}
+.cc-pills button:focus-visible{outline:2px solid var(--acc);outline-offset:-2px;}
+.cc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);}
+.cc-stat{background:var(--bg1);padding:5px 6px;display:flex;flex-direction:column;gap:1px;}
+.cc-stat span{font-size:.5rem;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);}
+.cc-stat b{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:.6875rem;font-weight:600;color:var(--tx0);}
+.cc-uses{display:flex;flex-direction:column;gap:3px;}
+.cc-use{display:flex;align-items:center;gap:5px;font-size:.625rem;color:var(--tx2);}
+.cc-use::before{content:'';width:4px;height:4px;background:var(--acc);flex:0 0 4px;}
+
+/* ══ 04 · KANAL ŞERİTLERİ ══════════════════════════════════ */
+.cd-scroll{max-height:400px;overflow:auto;padding:0;}
+.cd-gh{
+  display:flex;align-items:center;gap:7px;padding:8px 10px 4px;
+  font-size:.5rem;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3);font-weight:640;
+}
+.cd-gh::after{content:'';flex:1;height:1px;background:var(--line);}
+.cd-strip{
+  display:flex;align-items:center;gap:9px;
+  margin:2px 8px;padding:5px 8px 5px 0;
+  background:var(--bg0);border:1px solid var(--line);
+  position:relative;overflow:hidden;
+}
+.cd-strip::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--bar,var(--tx3));
+  transition:width .14s;
+}
+.cd-strip:hover{border-color:var(--lineHi);}
+.cd-strip:hover::before{width:5px;}
+.cd-strip.off{background:transparent;}
+.cd-strip.off::before{opacity:.28;}
+.cd-strip.off .cd-nm,.cd-strip.off .cd-val{opacity:.42;}
+.cd-grip{
+  margin-left:9px;color:var(--tx3);cursor:grab;letter-spacing:-1px;font-size:.625rem;
+  line-height:1;user-select:none;flex-shrink:0;
+}
+.cd-grip:active{cursor:grabbing;}
+.cd-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+.cd-nm{font-size:.6875rem;font-weight:560;color:var(--tx0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cd-key{font-family:var(--f-mono);font-size:.5rem;color:var(--tx3);letter-spacing:.02em;}
+.cd-val{
+  font-family:var(--f-mono);font-variant-numeric:tabular-nums;
+  font-size:.8125rem;font-weight:600;color:var(--tx0);text-align:right;line-height:1.1;
+}
+.cd-un{font-family:var(--f-mono);font-size:.5rem;color:var(--tx3);text-align:right;display:block;}
+.cd-sw{
+  width:24px;height:13px;flex:0 0 24px;border:1px solid var(--lineHi);background:var(--bgin);
+  border-radius:999px;position:relative;cursor:pointer;padding:0;transition:background .14s,border-color .14s;
+}
+.cd-sw::after{
+  content:'';position:absolute;top:1px;left:1px;width:9px;height:9px;border-radius:50%;
+  background:var(--tx3);transition:transform .14s,background .14s;
+}
+.cd-sw[aria-checked="true"]{background:var(--acc);border-color:var(--acc);}
+.cd-sw[aria-checked="true"]::after{transform:translateX(11px);background:#fff;}
+.cd-sw:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
+
+/* ── karşılaştırma tablosu ──────────────────────────────────── */
+.cmp-scroll{overflow-x:auto;border:1px solid var(--pageLine);background:var(--page2);}
+table.cmp{width:100%;border-collapse:collapse;font-size:.8125rem;min-width:660px;}
+table.cmp th,table.cmp td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--pageLine);vertical-align:top;}
+table.cmp thead th{
+  font-family:var(--f-mono);font-size:.625rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--pageInk2);font-weight:640;background:var(--page);white-space:nowrap;
+}
+table.cmp tbody th{font-weight:600;color:var(--pageInk);white-space:nowrap;}
+table.cmp tbody tr:last-child th,table.cmp tbody tr:last-child td{border-bottom:0;}
+table.cmp td{color:var(--pageInk2);}
+.dots{font-family:var(--f-mono);letter-spacing:.12em;color:var(--acc);white-space:nowrap;}
+.dots i{color:var(--pageLine);font-style:normal;}
+
+/* ── öneri ──────────────────────────────────────────────────── */
+.rec{
+  border:1px solid var(--acc);background:color-mix(in srgb,var(--acc) 7%,var(--page2));
+  padding:22px 24px;display:flex;flex-direction:column;gap:14px;border-radius:var(--r);
+}
+.rec h3{color:var(--pageInk);}
+.rec ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:7px;font-size:.9375rem;line-height:1.55;}
+.rec ol::marker{font-family:var(--f-mono);}
+.rec code,.icode{
+  font-family:var(--f-mono);font-size:.8125rem;
+  background:var(--page);border:1px solid var(--pageLine);padding:1px 5px;border-radius:var(--r);
+  color:var(--pageInk);
+}
+
+/* ── kusur listesi (mevcut durum) ───────────────────────────── */
+.flaws{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--pageLine);}
+.flaw{
+  display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;
+  padding:12px 0;border-bottom:1px solid var(--pageLine);align-items:start;
+}
+.flaw-n{font-family:var(--f-mono);font-size:.6875rem;color:var(--dngr);font-weight:640;padding-top:2px;}
+.flaw b{display:block;font-weight:620;color:var(--pageInk);font-size:.9375rem;}
+.flaw span{font-size:.875rem;color:var(--pageInk2);line-height:1.5;}
+
+/* mevcut ağaç yeniden üretimi */
+.old{padding:4px 0;font-size:.75rem;}
+.old-row{display:flex;align-items:center;gap:3px;padding:4px 8px;margin:0 4px;border-radius:var(--r);cursor:pointer;}
+.old-row:hover{background:color-mix(in srgb,var(--acc) 8%,transparent);}
+.old-arrow{width:14px;text-align:center;color:var(--tx3);font-size:.6875rem;}
+.old-icon{width:16px;text-align:center;}
+.old-sensor{
+  display:flex;align-items:center;gap:4px;padding:4px 8px;margin:0 4px;
+  color:#22c55e;font-weight:500;font-size:.75rem;cursor:pointer;border-radius:var(--r);
+}
+.old-sensor:hover{background:rgba(34,197,94,.1);}
+.old-sig{
+  display:flex;align-items:center;gap:4px;padding:3px 8px;margin:0 4px;
+  color:var(--acc);font-weight:500;font-size:.6875rem;cursor:grab;border-radius:var(--r);
+}
+.old-sig:hover{background:color-mix(in srgb,var(--acc) 10%,transparent);}
+.old-sub{padding:2px 0 2px 44px;font-size:.625rem;color:var(--tx3);font-weight:600;}
+.old-cnt{margin-left:auto;font-size:.625rem;color:var(--tx3);}
+
+/* referans paneli */
+.ref{padding:2px 0;}
+.ref-row{
+  display:grid;grid-template-columns:14px 13px minmax(0,1fr);align-items:center;gap:7px;
+  height:19px;padding:0 7px;font-size:.6875rem;
+}
+.ref-row:nth-child(even){background:var(--grid);}
+.ref-row.hl{background:#2f6fd0;color:#fff;}
+.ref-row.hl .ref-nm{color:#fff;}
+.ref-box{width:11px;height:11px;border:1px solid var(--swatchRing);background:var(--bgin);position:relative;}
+.ref-box.on::after{content:'';position:absolute;left:2.5px;top:0;width:3px;height:6px;border:solid var(--tx0);border-width:0 1.5px 1.5px 0;transform:rotate(43deg);}
+.ref-sw{width:11px;height:11px;border:1px solid var(--swatchRing);}
+.ref-nm{font-family:var(--f-mono);font-size:.625rem;color:var(--tx1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;align-items:start;}
+.capt{font-size:.75rem;color:var(--pageInk2);line-height:1.5;margin-top:9px;}
+.capt b{color:var(--pageInk);font-weight:620;}
+
+.shared{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1px;background:var(--pageLine);border:1px solid var(--pageLine);}
+.shared div{background:var(--page2);padding:14px 15px;display:flex;flex-direction:column;gap:5px;}
+.shared b{font-size:.875rem;font-weight:620;color:var(--pageInk);}
+.shared span{font-size:.8125rem;color:var(--pageInk2);line-height:1.5;}
+
+footer{padding-top:56px;}
+.foot{border-top:1px solid var(--pageLine);padding-top:20px;font-size:.8125rem;color:var(--pageInk2);}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition:none !important;animation:none !important;}
+}
+</style>
+
+<div class="doc">
+
+<!-- ══════════════ BAŞLIK ══════════════ -->
+<div class="masthead">
+  <div class="wrap">
+    <div class="mast-top">
+      <div class="stack g12" style="flex:1;min-width:260px;">
+        <span class="eyebrow">MFSim · Arayüz Tasarımı · Sensör Girdileri</span>
+        <h1>Sinyal listesi, ölçüm aleti gibi okunmalı</h1>
+      </div>
+      <div class="themectl" role="group" aria-label="Tema önizleme">
+        <button type="button" data-theme-set="light" aria-pressed="false">Pearl</button>
+        <button type="button" data-theme-set="dark" aria-pressed="false">Slate</button>
+      </div>
+    </div>
+    <p class="lead col">
+      Vector'ün sinyal listesi profesyonel görünüyor çünkü süslü değil — <b>hizalı</b>. Her satır aynı
+      yükseklikte, her sütun aynı yerde başlıyor, durum (görünür / gizli / renk) satırın kendisinde
+      okunuyor. Aşağıda dört farklı konsept var: dördü de MFSim'in kendi renk ve ölçü değişkenleriyle,
+      gerçek sinyal listesiyle ve çalışır halde. Kutucukları tıklayın, arayın, grupları açıp kapatın.
+    </p>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ══════════════ TEŞHİS ══════════════ -->
+<section id="teshis">
+  <div class="sec-head">
+    <span class="sec-num">00 — TEŞHİS</span>
+    <h2>Şu an ne oluyor?</h2>
+    <p class="lead col" style="font-size:.9375rem;">
+      Solda referans deseni, sağda MFSim'in bugünkü Veri Gezgini ağacı — birebir aynı CSS'le yeniden üretildi.
+      Fark estetik değil, yapısal.
+    </p>
+  </div>
+
+  <div class="two">
+    <div>
+      <div class="frame">
+        <div class="frame-bar"><b>Referans</b><span class="sep">·</span><span>otobüs sinyal listesi deseni</span><span class="frame-tag">reference</span></div>
+        <div class="frame-body mf"><div class="ref" id="ref-panel"></div></div>
+      </div>
+      <p class="capt"><b>Neden çalışıyor:</b> onay kutusu + renk + ad, üç sabit sütun. Tek tip satır yüksekliği.
+      Renk sinyalin kimliği — listede de, grafikte de aynı. Seçili satır tam genişlik boyanıyor.</p>
+    </div>
+    <div>
+      <div class="frame">
+        <div class="frame-bar"><b>MFSim</b><span class="sep">·</span><span>Sonuçlar › Veri Gezgini</span><span class="frame-tag">bugün</span></div>
+        <div class="frame-body mf">
+          <div class="old">
+            <div class="old-row"><span class="old-arrow">▼</span><span class="old-icon">▣</span><span style="font-weight:600;">MFSim Projesi</span></div>
+            <div class="old-row" style="padding-left:16px;"><span class="old-arrow">▼</span><span class="old-icon">✓</span><span style="color:var(--acc);font-weight:600;">Ana Topoloji</span><span class="old-cnt">38 sensör</span></div>
+            <div class="old-row" style="padding-left:32px;"><span class="old-arrow">▼</span><span class="old-icon">⚙</span><span>Motor</span><span class="old-cnt" style="color:var(--acc);opacity:.7;">3</span></div>
+            <div class="old-sub">→ Çıkış</div>
+            <div class="old-sensor" style="padding-left:48px;"><span style="font-size:.625rem;color:var(--tx3);width:12px;">▼</span><span>◎</span> Sensör <span class="old-cnt">4 sinyal</span></div>
+            <div class="old-sig" style="padding-left:64px;"><span>▤</span> Motor Devri <span style="font-size:.5625rem;color:var(--tx3);">(rpm)</span></div>
+            <div class="old-sig" style="padding-left:64px;"><span>▤</span> Motor Torku <span style="font-size:.5625rem;color:var(--tx3);">(Nm)</span></div>
+            <div class="old-sig" style="padding-left:64px;"><span>▤</span> Motor Gücü <span style="font-size:.5625rem;color:var(--tx3);">(kW)</span></div>
+            <div class="old-sig" style="padding-left:64px;color:var(--ok);font-style:italic;"><span>▦</span> Tümünü Ekle (4 sinyal)</div>
+            <div class="old-row" style="padding-left:32px;"><span class="old-arrow">▶</span><span class="old-icon">⚙</span><span>Tork Konvertör</span><span class="old-cnt" style="color:var(--acc);opacity:.7;">6</span></div>
+            <div class="old-row" style="padding-left:32px;"><span class="old-arrow">▶</span><span class="old-icon">▤</span><span>Araç</span><span class="old-cnt" style="color:var(--warn);opacity:.7;">4</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="capt"><b>Sorun:</b> her seviye <span class="icode">padding-left</span> ile elle itiliyor (16/32/36/44/48/64px),
+      satır yükseklikleri değişken, renk yok, seçim durumu yok. Sinyal ancak sürüklendikten sonra renk kazanıyor.</p>
+    </div>
+  </div>
+
+  <div class="flaws" style="margin-top:34px;">
+    <div class="flaw"><span class="flaw-n">01</span><div><b>Durum satırda görünmüyor</b><span>Hangi sinyal panelde açık, hangisi değil — listeye bakınca anlaşılmıyor. Onay kutusu yok, renk yok. Kullanıcı paneli açıp kontrol etmek zorunda.</span></div></div>
+    <div class="flaw"><span class="flaw-n">02</span><div><b>Sütun yok, sadece girinti var</b><span>Ad, birim ve sayaç aynı metin akışının içinde. Birimler alt alta hizalanmadığı için göz her satırda yeniden arama yapıyor — okunurluğu en çok düşüren şey bu.</span></div></div>
+    <div class="flaw"><span class="flaw-n">03</span><div><b>Değişken satır yüksekliği</b><span>Ağaç satırı, sensör satırı ve sinyal satırı farklı <span class="icode">padding</span> ve <span class="icode">font-size</span> kullanıyor. Dikey ritim kırıldığında liste "el yapımı" görünüyor.</span></div></div>
+    <div class="flaw"><span class="flaw-n">04</span><div><b>Renk anlam taşımıyor</b><span>Yeşil sensör, mavi sinyal, italik yeşil "Tümünü Ekle" — renk kategoriyi kodluyor, sinyali değil. Oysa grafikte sinyalin bir rengi var; liste onu göstermiyor.</span></div></div>
+    <div class="flaw"><span class="flaw-n">05</span><div><b>Toplu işlem yok</b><span>Bir bileşenin tüm sinyallerini açmak için tek yol "Tümünü Ekle" bağlantısı. Grup seviyesinde üç-durumlu onay kutusu olsa hem seçim hem geri alma tek tıkla olurdu.</span></div></div>
+  </div>
+</section>
+
+<!-- ══════════════ GENİŞLİK DENETİMİ ══════════════ -->
+<div class="widthbar">
+  <span class="wl">Panel genişliği</span>
+  <div class="wseg" role="group" aria-label="Maket genişliği">
+    <button type="button" data-w="250px" aria-pressed="false">250px · varsayılan</button>
+    <button type="button" data-w="400px" aria-pressed="false">400px · azami</button>
+    <button type="button" data-w="none" aria-pressed="true">Geniş · inceleme</button>
+  </div>
+  <span class="hint">Dördü de aynı anda değişir — "250px'e sığar mı" sorusunu burada test edin.</span>
+</div>
+
+<!-- ══════════════ KONSEPT 01 ══════════════ -->
+<section id="k1">
+  <div class="sec-head">
+    <span class="sec-num">01 — KONSEPT</span>
+    <div class="concept-head"><h2>Ölçüm Tablosu</h2><span class="concept-id">// measurement-table</span></div>
+    <p class="pitch">Referansın en sadık karşılığı. Liste değil <b>tablo</b>: gerçek başlık satırı, sabit sütunlar,
+    zebra desen, yapışkan grup ayraçları. En yüksek yoğunluk, en az öğrenme maliyeti.</p>
+  </div>
+
+  <div class="layout">
+    <div class="frame demo">
+      <div class="frame-bar"><b>Sensör Girdileri</b><span class="sep">·</span><span class="ctx">Ana Topoloji</span><span class="frame-tag">konsept 01</span></div>
+      <div class="ca-tools mf">
+        <input class="ca-search" id="a-search" type="search" placeholder="Sinyal ara…" aria-label="Sinyal ara">
+        <span class="ca-count" id="a-count">0 / 0 seçili</span>
+      </div>
+      <div class="frame-body mf ca-scroll">
+        <table class="ca-tbl">
+          <thead><tr>
+            <th class="c"><input type="checkbox" class="ck" id="a-all" aria-label="Tümünü seç"></th>
+            <th class="c" style="width:24px;" title="Renk">●</th>
+            <th>Sinyal</th>
+            <th style="width:96px;">Anahtar</th>
+            <th class="r" style="width:52px;">Birim</th>
+          </tr></thead>
+          <tbody id="a-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div><h4>Ne değişiyor</h4><ul>
+        <li>Sabit <b>22px</b> satır yüksekliği — dikey ritim hiç kırılmıyor.</li>
+        <li>Birim sütunu sağa hizalı ve <span class="icode">tabular-nums</span>; göz tek bir dikey çizgiyi takip ediyor.</li>
+        <li>Sinyal anahtarı (<span class="icode">engine::rpm</span>) monospace ayrı sütunda — kaynak belirsizliği bitiyor.</li>
+        <li>Grup ayracı yapışkan: 200 satırlık listede bile hangi bileşende olduğunuz görünüyor.</li>
+        <li>Satıra tıklamak seçer, kutucuk görünürlüğü değiştirir — iki eylem karışmıyor.</li>
+      </ul></div>
+      <div class="verdict"><span class="tick">+</span><div><b>Güçlü yanı:</b> CANoe/CANalyzer kullanan biri sıfır eğitimle kullanır. 150 sinyalde bile taranabilir.</div></div>
+      <div class="verdict"><span class="cross">−</span><div><b>Bedeli:</b> düz yapı. Bileşen hiyerarşisi sadece ayraçlarla var; MFSim'in ağaç modelini tam yansıtmıyor.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ KONSEPT 02 ══════════════ -->
+<section id="k2">
+  <div class="sec-head">
+    <span class="sec-num">02 — KONSEPT</span>
+    <div class="concept-head"><h2>Bileşen Ağacı</h2><span class="concept-id">// component-tree</span></div>
+    <p class="pitch">MFSim'in veri modeli zaten <b>bileşen → sinyal</b>. Bu konsept ağacı koruyor ama disipline ediyor:
+    üç durumlu grup kutucuğu, sabit girinti kılavuzu, satır sonunda canlı mini eğri.</p>
+  </div>
+
+  <div class="layout">
+    <div class="frame demo">
+      <div class="frame-bar"><b>Sensör Girdileri</b><span class="sep">·</span><span class="ctx">Ana Topoloji</span><span class="frame-tag">konsept 02</span></div>
+      <div class="cb-tools mf">
+        <div class="cb-row1">
+          <input class="ca-search" id="b-search" type="search" placeholder="Sinyal veya bileşen ara…" aria-label="Sinyal ara">
+        </div>
+        <div class="cb-row1">
+          <div class="cb-seg" role="group" aria-label="Filtre">
+            <button type="button" data-bfilter="all" aria-pressed="true">Tümü</button>
+            <button type="button" data-bfilter="on" aria-pressed="false">Seçili</button>
+            <button type="button" data-bfilter="off" aria-pressed="false">Kapalı</button>
+          </div>
+          <span class="ca-count" id="b-count" style="margin-left:auto;"></span>
+        </div>
+      </div>
+      <div class="frame-body mf cb-scroll" id="b-tree"></div>
+    </div>
+
+    <div class="notes">
+      <div><h4>Ne değişiyor</h4><ul>
+        <li>Grup kutucuğu <b>üç durumlu</b>: hepsi / bir kısmı / hiçbiri. Tek tıkla bileşenin tamamı açılıp kapanıyor.</li>
+        <li>Girinti tek seviye ve <b>kılavuz çizgili</b> — 6 farklı <span class="icode">padding-left</span> değeri yerine tek kural.</li>
+        <li>Satır sonundaki 46px'lik mini eğri sinyalin şeklini gösteriyor: testere dişi mi, düz mü, sıfır mı.</li>
+        <li>Arama eşleşen harfleri vurguluyor, eşleşmeyen grupları otomatik kapatıyor.</li>
+        <li>Rozet, grupta kaç sinyalin açık olduğunu sayıyor (<span class="icode">3/6</span>) — açıkken mavi.</li>
+      </ul></div>
+      <div class="verdict"><span class="tick">+</span><div><b>Güçlü yanı:</b> MFSim'in topolojisiyle birebir örtüşüyor. Mevcut ağaç kodunun yerine doğrudan geçebilir.</div></div>
+      <div class="verdict"><span class="cross">−</span><div><b>Bedeli:</b> mini eğri için simülasyon verisinin listede de hazır olması gerekiyor (küçük ek iş).</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ KONSEPT 03 ══════════════ -->
+<section id="k3">
+  <div class="sec-head">
+    <span class="sec-num">03 — KONSEPT</span>
+    <div class="concept-head"><h2>Liste + Denetçi</h2><span class="concept-id">// list-inspector</span></div>
+    <p class="pitch">Liste sade kalıyor, ayrıntı sağdaki denetçiye taşınıyor: renk, eksen, ölçek, istatistik,
+    "bu sinyal hangi diyagramlarda kullanılıyor". Ölçüm yazılımlarının (CANape, DIAdem) klasik duruşu.</p>
+  </div>
+
+  <div class="layout">
+    <div class="frame demo">
+      <div class="frame-bar"><b>Sensör Girdileri</b><span class="sep">·</span><span class="ctx">Ana Topoloji</span><span class="frame-tag">konsept 03</span></div>
+      <div class="frame-body mf">
+        <div class="cc-split">
+          <div class="cc-left"><div class="cc-scroll" id="c-list"></div></div>
+          <div class="cc-insp" id="c-insp"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div><h4>Ne değişiyor</h4><ul>
+        <li>Sinyal <b>özellikleri</b> ilk kez var: renk, Y ekseni ataması, çizgi stili, ölçek.</li>
+        <li>Min / Ort / Maks üçlüsü seçili sinyal için anında görünüyor — panele sürüklemeye gerek yok.</li>
+        <li>"Kullanıldığı diyagramlar" listesi sensör sihirbazı paketleriyle doğrudan bağlanabilir.</li>
+        <li>Sol liste sadeleşiyor: ad + birim + renk. Gürültü sağa taşındı.</li>
+      </ul></div>
+      <div class="verdict"><span class="tick">+</span><div><b>Güçlü yanı:</b> Y1/Y2 ekseni ve renk seçimi gibi bugün hiç olmayan denetimlere yer açıyor.</div></div>
+      <div class="verdict"><span class="cross">−</span><div><b>Bedeli:</b> 250px'lik sol panele sığmaz. Panelin genişlemesi ya da denetçinin açılır katman olması gerekir.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ KONSEPT 04 ══════════════ -->
+<section id="k4">
+  <div class="sec-head">
+    <span class="sec-num">04 — KONSEPT</span>
+    <div class="concept-head"><h2>Kanal Şeritleri</h2><span class="concept-id">// channel-strips</span></div>
+    <p class="pitch">Her sinyal bir <b>kanal</b>: sol kenarında renk çubuğu, ortada adı ve anahtarı, sağında
+    o anki değeri ve aç/kapa anahtarı. Veri kaydedicinin kanal listesi mantığı.</p>
+  </div>
+
+  <div class="layout">
+    <div class="frame demo">
+      <div class="frame-bar"><b>Sensör Girdileri</b><span class="sep">·</span><span class="ctx">t = 12.40 s</span><span class="frame-tag">konsept 04</span></div>
+      <div class="frame-body mf cd-scroll" id="d-list"></div>
+    </div>
+
+    <div class="notes">
+      <div><h4>Ne değişiyor</h4><ul>
+        <li><b>Canlı değer</b> okuması: imleç konumundaki sayı listede görünüyor, tabular hizalı.</li>
+        <li>Renk çubuğu satırın kenarında — göz taramada rengi ad aramadan buluyor.</li>
+        <li>Gerçek aç/kapa anahtarı: "görünür/gizli" ikili durumu için kutucuktan daha net.</li>
+        <li>Tutamaç ile sıra değiştirme — çizim sırası ve legend sırası kullanıcı denetiminde.</li>
+      </ul></div>
+      <div class="verdict"><span class="tick">+</span><div><b>Güçlü yanı:</b> en "cihaz gibi" duran seçenek. İmleç değeriyle birleşince analiz hızlanıyor.</div></div>
+      <div class="verdict"><span class="cross">−</span><div><b>Bedeli:</b> satır başına ~28px. 40+ sinyalde tarama uzuyor; yoğunluk düşük.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ ORTAK KURALLAR ══════════════ -->
+<section id="ortak">
+  <div class="sec-head">
+    <span class="sec-num">05 — ORTAK</span>
+    <h2>Hangisini seçersek seçelim, bunlar değişiyor</h2>
+    <p class="lead col" style="font-size:.9375rem;">Dört konseptin ortak paydası. Asıl "profesyonel" hissini veren şey bu katman — konsept seçimi onun üstüne geliyor.</p>
+  </div>
+  <div class="shared">
+    <div><b>Tek satır yüksekliği</b><span>22px, istisnasız. Ağaç satırı, sinyal satırı, grup satırı — hepsi aynı ritimde.</span></div>
+    <div><b>Renk = sinyalin kimliği</b><span>Listedeki kutucuk, grafikteki çizgi rengiyle aynı. Tıklanınca palet açılır.</span></div>
+    <div><b>Sütun hizası</b><span>Birim ve sayısal alanlar sağa hizalı, <span class="icode">tabular-nums</span>. Ad sütunu tek genişlikte.</span></div>
+    <div><b>Emoji yok</b><span>Mevcut <span class="icode">mf-ico</span> ikon seti kullanılır; ikonlar 12px kutuda ve <span class="icode">currentColor</span>.</span></div>
+    <div><b>Klavye erişimi</b><span>↑/↓ satır, Space görünürlük, Enter denetçi. Odak halkası her yerde görünür.</span></div>
+    <div><b>Girinti tek kuralla</b><span>Elle yazılmış 16/32/36/44/48/64px yerine <span class="icode">--indent</span> değişkeni ve seviye çarpanı.</span></div>
+  </div>
+</section>
+
+<!-- ══════════════ KARŞILAŞTIRMA ══════════════ -->
+<section id="karsilastirma">
+  <div class="sec-head">
+    <span class="sec-num">06 — KARŞILAŞTIRMA</span>
+    <h2>Dördü yan yana</h2>
+  </div>
+  <div class="cmp-scroll">
+    <table class="cmp">
+      <thead><tr><th>Ölçüt</th><th>01 Tablo</th><th>02 Ağaç</th><th>03 Denetçi</th><th>04 Şerit</th></tr></thead>
+      <tbody>
+        <tr><th>Yoğunluk (satır/ekran)</th><td><span class="dots">●●●●<i>●</i></span> ~17</td><td><span class="dots">●●●●<i>●</i></span> ~17</td><td><span class="dots">●●●<i>●●</i></span> ~15</td><td><span class="dots">●●<i>●●●</i></span> ~11</td></tr>
+        <tr><th>Topolojiyi yansıtma</th><td><span class="dots">●●<i>●●●</i></span> ayraç</td><td><span class="dots">●●●●●</span> birebir</td><td><span class="dots">●●●<i>●●</i></span> başlık</td><td><span class="dots">●●●<i>●●</i></span> başlık</td></tr>
+        <tr><th>Sinyal özellikleri</th><td><span class="dots">●<i>●●●●</i></span> yok</td><td><span class="dots">●●<i>●●●</i></span> renk</td><td><span class="dots">●●●●●</span> tam</td><td><span class="dots">●●<i>●●●</i></span> renk+değer</td></tr>
+        <tr><th>250px panele sığar mı</th><td>Evet</td><td>Evet</td><td>Hayır — ≥460px</td><td>Evet (dar)</td></tr>
+        <tr><th>Mevcut koda yakınlık</th><td>Orta — tablo yeniden yazılır</td><td><b>Yüksek</b> — ağaç yapısı korunur</td><td>Düşük — yeni bölme</td><td>Orta — satır bileşeni yeni</td></tr>
+        <tr><th>Tahmini iş</th><td>~1 gün</td><td>~1 gün</td><td>~2,5 gün</td><td>~1,5 gün</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════ ÖNERİ ══════════════ -->
+<section id="oneri">
+  <div class="sec-head">
+    <span class="sec-num">07 — ÖNERİ</span>
+    <h2>Benim önerim</h2>
+  </div>
+  <div class="rec">
+    <h3>02 (Bileşen Ağacı) taban, 03'ün denetçisi açılır katman olarak</h3>
+    <p style="font-size:.9375rem;line-height:1.6;color:var(--pageInk2);max-width:66ch;">
+      02, MFSim'in <span class="icode">bileşen → sinyal</span> modeliyle birebir örtüştüğü için mevcut
+      <span class="icode">veUpdateResultsTree()</span> mantığını korur — kırılma riski en düşük seçenek.
+      01'in sütun disiplinini (sabit satır yüksekliği, sağa hizalı birim, monospace anahtar) 02'nin içine
+      taşırsak referanstaki hizalı görünümü kaybetmeyiz. 03'ün denetçisi ise bir sinyale çift tıklayınca
+      açılan yan katman olur; 250px'lik paneli bozmadan renk/eksen denetimlerini kazandırır.
+    </p>
+    <ol>
+      <li>Ortak kurallar katmanı (05. bölüm) — tek satır yüksekliği, sütun hizası, tek girinti kuralı. Bu tek başına farkın yarısını kapatıyor.</li>
+      <li>02'nin ağaç yapısı: üç durumlu grup kutucuğu, rozet sayacı, arama vurgusu.</li>
+      <li>Renk kutucuğu ve görünürlük durumunun kalıcı hale gelmesi (sinyal başına <span class="icode">color</span> + <span class="icode">visible</span>).</li>
+      <li>Çift tıkla açılan denetçi katmanı — eksen ataması, çizgi stili, min/ort/maks.</li>
+    </ol>
+    <p style="font-size:.875rem;color:var(--pageInk2);">
+      Dokunulacak dosyalar: <span class="icode">js/results.js</span> (ağaç üretimi),
+      <span class="icode">css/styles.css</span> (<span class="icode">.ve-tree-*</span> blokları),
+      <span class="icode">js/sensors.js</span> (sinyal meta verisi). <span class="icode">MFSim_Code.html</span> otomatik üretilir.
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="foot">
+    Beğendiğinizi söyleyin — ya da parçalarını karıştıralım ("02'nin ağacı ama 04'ün canlı değeri" gibi).
+    Seçilen konsepti <span class="icode">js/</span> ve <span class="icode">css/</span> içine gerçek kod olarak uygularım.
+  </div>
+</footer>
+
+</div><!-- .wrap -->
+</div><!-- .doc -->
+
+<script>
+(function(){
+'use strict';
+
+/* ── tema önizleme ─────────────────────────────────────────── */
+var root=document.documentElement;
+var tbtns=Array.prototype.slice.call(document.querySelectorAll('[data-theme-set]'));
+function syncTheme(){
+  var t=root.getAttribute('data-theme');
+  tbtns.forEach(function(b){b.setAttribute('aria-pressed', String(b.dataset.themeSet===t));});
+}
+tbtns.forEach(function(b){
+  b.addEventListener('click',function(){
+    root.setAttribute('data-theme', b.dataset.themeSet);
+    syncTheme();
+  });
+});
+syncTheme();
+new MutationObserver(syncTheme).observe(root,{attributes:true,attributeFilter:['data-theme']});
+
+/* ── maket genişliği ───────────────────────────────────────── */
+Array.prototype.forEach.call(document.querySelectorAll('[data-w]'),function(b){
+  b.addEventListener('click',function(){
+    var w=b.dataset.w;
+    Array.prototype.forEach.call(document.querySelectorAll('.frame.demo'),function(f){
+      f.style.setProperty('--demoW', w);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-w]'),function(x){
+      x.setAttribute('aria-pressed', String(x===b));
+    });
+  });
+});
+
+/* ── MFSim sinyal paleti (js/results.js) ───────────────────── */
+var PAL=['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899'];
+
+/* ── gerçek MFSim sinyalleri ───────────────────────────────── */
+var GROUPS=[
+  {key:'engine', label:'Motor', sigs:[
+    ['rpm','Motor Devri','rpm','saw',1847],
+    ['torque','Motor Torku','Nm','plateau',1620],
+    ['power','Motor Gücü','kW','ramp',287],
+    ['angular_vel','Açısal Hız','rad/s','saw',193.4]
+  ]},
+  {key:'tc', label:'Tork Konvertör', sigs:[
+    ['speed_ratio','Hız Oranı (SR)','−','ramp',0.874],
+    ['torque_ratio','Tork Oranı (TR)','−','decay',1.06],
+    ['efficiency','Verim η','%','hump',86.2],
+    ['slip','Kayma','%','decay',12.6],
+    ['kfactor','K-Factor','rpm/√Nm','decay',214],
+    ['heat_rejection','Isı Reddi','kW','decay',18.9]
+  ]},
+  {key:'gearbox', label:'Şanzıman', sigs:[
+    ['rpm_in','Giriş Devri','rpm','saw',1614],
+    ['torque_in','Giriş Torku','Nm','plateau',1718],
+    ['torque_out','Çıkış Torku','Nm','step',4290],
+    ['ratio','Vites Oranı','−','stepdown',2.49],
+    ['power_loss','Güç Kaybı','kW','ramp',9.7],
+    ['efficiency','Verim','%','plateau',96.4]
+  ]},
+  {key:'shift', label:'Vites Kontrol', sigs:[
+    ['current_gear','Aktif Vites','−','stair',4],
+    ['lockup_state','Lockup Durumu','0/1','square',1],
+    ['n_output','Çıkış Devri','rpm','ramp',648]
+  ]},
+  {key:'vehicle', label:'Araç', sigs:[
+    ['v_speed','Araç Hızı','km/h','ramp',42.7],
+    ['v_distance','Mesafe','m','accel',196.3],
+    ['v_accel','İvme','m/s²','decay',0.68],
+    ['v_kinetic_energy','Kinetik Enerji','kJ','accel',1284]
+  ]},
+  {key:'road', label:'Yol / Ortam', sigs:[
+    ['r_rolling_force','Yuvarlanma Direnci','N','plateau',3140],
+    ['r_aero_force','Aerodinamik Direnç','N','accel',862],
+    ['r_total_resist','Toplam Direnç','N','ramp',4002],
+    ['r_current_grade','Anlık Eğim','%','square',6.0]
+  ]},
+  {key:'solver', label:'Çözücü', sigs:[
+    ['tractive_effort','Çekiş Kuvveti (TE)','kN','decay',48.6],
+    ['drawbar_pull','Net Çekiş (DP)','kN','decay',44.6],
+    ['wheel_power','Tekerlekte Güç','kW','ramp',241],
+    ['net_grade','Eğim Kapasitesi','%','decay',18.2]
+  ]}
+];
+
+/* varsayılan açık sinyaller — sensör sihirbazının "temel" paketine yakın */
+var DEFAULT_ON={'engine::rpm':1,'engine::torque':1,'engine::power':1,
+  'tc::speed_ratio':1,'tc::efficiency':1,
+  'gearbox::torque_out':1,'shift::current_gear':1,
+  'vehicle::v_speed':1,'vehicle::v_accel':1,
+  'solver::tractive_effort':1,'solver::drawbar_pull':1};
+
+/* düz sinyal listesi */
+var SIGS=[]; var ci=0;
+GROUPS.forEach(function(g){
+  g.items=[];
+  g.sigs.forEach(function(s){
+    var id=g.key+'::'+s[0];
+    var o={id:id,gkey:g.key,glabel:g.label,key:s[0],name:s[1],unit:s[2],shape:s[3],val:s[4],
+           color:PAL[ci++%PAL.length],on:!!DEFAULT_ON[id],axis:'Y1',style:'düz'};
+    SIGS.push(o); g.items.push(o);
+  });
+});
+function byId(id){for(var i=0;i<SIGS.length;i++)if(SIGS[i].id===id)return SIGS[i];return null;}
+
+/* ── deterministik mini eğri üreteci ───────────────────────── */
+function series(shape,n){
+  n=n||26; var a=[],i,t;
+  for(i=0;i<n;i++){
+    t=i/(n-1);
+    switch(shape){
+      case 'saw':     a.push(((t*3.4)%1)*0.82+0.12); break;
+      case 'ramp':    a.push(Math.pow(t,0.72)*0.88+0.06); break;
+      case 'accel':   a.push(Math.pow(t,1.9)*0.9+0.05); break;
+      case 'decay':   a.push(Math.pow(1-t,1.5)*0.85+0.08); break;
+      case 'hump':    a.push(Math.sin(Math.PI*Math.pow(t,0.8))*0.82+0.1); break;
+      case 'plateau': a.push((t<0.18? t/0.18*0.8 : 0.8-Math.pow(t-0.18,1.6)*0.42)+0.1); break;
+      case 'step':    a.push(0.18+Math.floor(t*4)/4*0.7); break;
+      case 'stepdown':a.push(0.9-Math.floor(t*4)/4*0.72); break;
+      case 'stair':   a.push(0.14+Math.floor(t*5)/5*0.74); break;
+      case 'square':  a.push(t<0.42?0.16:0.84); break;
+      default:        a.push(0.5);
+    }
+  }
+  return a;
+}
+function sparkSVG(shape,color,w,h){
+  var d=series(shape,26),i,pts=[];
+  for(i=0;i<d.length;i++){
+    pts.push((i/(d.length-1)*(w-2)+1).toFixed(1)+','+((1-d[i])*(h-3)+1.5).toFixed(1));
+  }
+  return '<svg class="cb-spark" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" aria-hidden="true">'+
+         '<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+color+'" stroke-width="1.2" '+
+         'stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>';
+}
+
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function hi(text,q){
+  if(!q) return esc(text);
+  var i=text.toLocaleLowerCase('tr').indexOf(q.toLocaleLowerCase('tr'));
+  if(i<0) return esc(text);
+  return esc(text.slice(0,i))+'<mark class="cb-hit">'+esc(text.slice(i,i+q.length))+'</mark>'+esc(text.slice(i+q.length));
+}
+function nextColor(cur){return PAL[(PAL.indexOf(cur)+1)%PAL.length];}
+
+/* renderlar birbirini haberdar eder */
+var renderers=[];
+function syncAll(){renderers.forEach(function(f){f();});}
+
+/* ══════════════════════════════════════════════════════════
+   REFERANS PANELİ (statik illüstrasyon)
+   ══════════════════════════════════════════════════════════ */
+(function(){
+  var el=document.getElementById('ref-panel');
+  var rows=[
+    ['EEC1::EngSpeed [rpm]','#6b4b8a',1,0],
+    ['CCVS1::WheelBasedVehicleSpeed [km/h]','#a04a4a',1,0],
+    ['ET1::EngCoolantTemp [°C]','#4a4a4a',0,0],
+    ['EEC2::AccelPedalPos1 [%]','#2f5fa8',1,0],
+    ['EBC1::BrakePedalPos [%]','#7a7a7a',0,0],
+    ['EBC1::EngRetarderSelection [%]','#8a8a8a',0,0],
+    ['ActualRetarderPercentTorque [%]','#9a7a4a',0,0],
+    ['ActualEngPercentTorque [%]','#2f3f8a',1,0],
+    ['TransInputShaftSpeed [rpm]','#7a5a3a',0,0],
+    ['TransOutputShaftSpeed [rpm]','#c8a04a',1,1],
+    ['TransCurrentGear','#4aa04a',1,0],
+    ['TransShiftInProcess','#3a8a7a',1,0],
+    ['TrnsTorqueConverterLockupEngaged','#c04a4a',1,0],
+    ['TrnsTrqCnvrtrLckpTrnstnInProcess','#c07a3a',1,0]
+  ];
+  el.innerHTML=rows.map(function(r){
+    return '<div class="ref-row'+(r[3]?' hl':'')+'">'+
+      '<span class="ref-box'+(r[2]==1?' on':'')+'"></span>'+
+      '<span class="ref-sw" style="background:'+r[1]+';"></span>'+
+      '<span class="ref-nm">'+esc(r[0])+'</span></div>';
+  }).join('');
+})();
+
+/* ══════════════════════════════════════════════════════════
+   01 — ÖLÇÜM TABLOSU
+   ══════════════════════════════════════════════════════════ */
+(function(){
+  var body=document.getElementById('a-body');
+  var search=document.getElementById('a-search');
+  var all=document.getElementById('a-all');
+  var count=document.getElementById('a-count');
+  var selId=null, q='';
+
+  function render(){
+    var h='', shown=0;
+    GROUPS.forEach(function(g){
+      var items=g.items.filter(function(s){
+        return !q || (s.name+' '+s.id+' '+g.label).toLocaleLowerCase('tr').indexOf(q)>=0;
+      });
+      if(!items.length) return;
+      h+='<tr class="grp"><td colspan="5">'+esc(g.label)+'</td></tr>';
+      items.forEach(function(s){
+        shown++;
+        h+='<tr data-id="'+s.id+'" class="'+(s.on?'':'off')+(selId===s.id?' sel':'')+'">'+
+           '<td class="c"><div class="ca-cellflex" style="justify-content:center;">'+
+             '<input type="checkbox" class="ck" data-ck="'+s.id+'"'+(s.on?' checked':'')+
+             ' aria-label="'+esc(s.name)+' görünürlüğü"></div></td>'+
+           '<td class="c"><div class="ca-cellflex" style="justify-content:center;">'+
+             '<button class="sw'+(s.on?'':' off')+'" data-sw="'+s.id+'" style="background:'+s.color+
+             ';" title="Renk: '+s.color+' — değiştirmek için tıklayın" aria-label="Renk değiştir"></button></div></td>'+
+           '<td>'+hi(s.name,q)+'</td>'+
+           '<td><span class="ca-key">'+esc(s.id)+'</span></td>'+
+           '<td class="r mono">'+esc(s.unit)+'</td></tr>';
+      });
+    });
+    if(!shown) h='<tr><td colspan="5" style="height:60px;text-align:center;color:var(--tx3);">Eşleşen sinyal yok</td></tr>';
+    body.innerHTML=h;
+    var on=SIGS.filter(function(s){return s.on;}).length;
+    count.textContent=on+' / '+SIGS.length+' seçili';
+    all.checked = on===SIGS.length;
+    all.indeterminate = on>0 && on<SIGS.length;
+  }
+  renderers.push(render);
+
+  body.addEventListener('click',function(e){
+    var sw=e.target.closest('[data-sw]');
+    if(sw){ var s1=byId(sw.dataset.sw); s1.color=nextColor(s1.color); syncAll(); return; }
+    var ck=e.target.closest('[data-ck]');
+    if(ck){ byId(ck.dataset.ck).on=ck.checked; syncAll(); return; }
+    var tr=e.target.closest('tr[data-id]');
+    if(tr){ selId=tr.dataset.id; render(); }
+  });
+  all.addEventListener('change',function(){
+    var v=all.checked; SIGS.forEach(function(s){s.on=v;}); syncAll();
+  });
+  search.addEventListener('input',function(){ q=search.value.trim().toLocaleLowerCase('tr'); render(); });
+  render();
+})();
+
+/* ══════════════════════════════════════════════════════════
+   02 — BİLEŞEN AĞACI
+   ══════════════════════════════════════════════════════════ */
+(function(){
+  var tree=document.getElementById('b-tree');
+  var search=document.getElementById('b-search');
+  var count=document.getElementById('b-count');
+  var open={}; GROUPS.forEach(function(g,i){open[g.key]= i<3;});
+  var q='', filter='all';
+
+  function visible(s){
+    if(filter==='on' && !s.on) return false;
+    if(filter==='off' && s.on) return false;
+    if(q && (s.name+' '+s.id+' '+s.glabel).toLocaleLowerCase('tr').indexOf(q)<0) return false;
+    return true;
+  }
+
+  function render(){
+    var h='', total=0;
+    GROUPS.forEach(function(g){
+      var items=g.items.filter(visible);
+      if(!items.length) return;
+      total+=items.length;
+      var onCnt=g.items.filter(function(s){return s.on;}).length;
+      var isOpen = open[g.key] || !!q;
+      h+='<div class="cb-grp'+(isOpen?' open':'')+'" data-g="'+g.key+'">';
+      h+='<div class="cb-ghead" data-toggle="'+g.key+'" role="button" tabindex="0" aria-expanded="'+isOpen+'">'+
+         '<span class="cb-arrow">▶</span>'+
+         '<input type="checkbox" class="ck" data-gck="'+g.key+'" aria-label="'+esc(g.label)+' tüm sinyalleri">'+
+         '<span class="cb-gname">'+hi(g.label,q)+'</span>'+
+         '<span class="cb-gbadge'+(onCnt?' on':'')+'">'+onCnt+'/'+g.items.length+'</span>'+
+         '</div><div class="cb-list">';
+      items.forEach(function(s){
+        h+='<div class="cb-sig'+(s.on?'':' off')+'" data-id="'+s.id+'">'+
+           '<input type="checkbox" class="ck" data-ck="'+s.id+'"'+(s.on?' checked':'')+
+             ' aria-label="'+esc(s.name)+' görünürlüğü">'+
+           '<button class="sw'+(s.on?'':' off')+'" data-sw="'+s.id+'" style="background:'+s.color+
+             ';" title="Renk değiştir" aria-label="Renk değiştir"></button>'+
+           '<span class="cb-name" title="'+esc(s.id)+'">'+hi(s.name,q)+'</span>'+
+           '<span class="cb-unit">'+esc(s.unit)+'</span>'+
+           sparkSVG(s.shape, s.color, 46, 13)+
+           '</div>';
+      });
+      h+='</div></div>';
+    });
+    if(!total) h='<div class="cb-empty">Eşleşen sinyal yok</div>';
+    tree.innerHTML=h;
+
+    /* üç durumlu grup kutucukları */
+    GROUPS.forEach(function(g){
+      var el=tree.querySelector('[data-gck="'+g.key+'"]'); if(!el) return;
+      var on=g.items.filter(function(s){return s.on;}).length;
+      el.checked = on===g.items.length;
+      el.indeterminate = on>0 && on<g.items.length;
+    });
+    var onAll=SIGS.filter(function(s){return s.on;}).length;
+    count.textContent=onAll+' / '+SIGS.length+' seçili';
+  }
+  renderers.push(render);
+
+  tree.addEventListener('click',function(e){
+    var sw=e.target.closest('[data-sw]');
+    if(sw){ var s1=byId(sw.dataset.sw); s1.color=nextColor(s1.color); syncAll(); return; }
+    var ck=e.target.closest('[data-ck]');
+    if(ck){ byId(ck.dataset.ck).on=ck.checked; syncAll(); return; }
+    var gck=e.target.closest('[data-gck]');
+    if(gck){
+      e.stopPropagation();
+      var g=GROUPS.filter(function(x){return x.key===gck.dataset.gck;})[0];
+      var v=!g.items.every(function(s){return s.on;});
+      g.items.forEach(function(s){s.on=v;}); syncAll(); return;
+    }
+    var t=e.target.closest('[data-toggle]');
+    if(t){ open[t.dataset.toggle]=!open[t.dataset.toggle]; render(); }
+  });
+  tree.addEventListener('keydown',function(e){
+    var t=e.target.closest('[data-toggle]');
+    if(t && (e.key==='Enter'||e.key===' ')){ e.preventDefault(); open[t.dataset.toggle]=!open[t.dataset.toggle]; render(); }
+  });
+  search.addEventListener('input',function(){ q=search.value.trim().toLocaleLowerCase('tr'); render(); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-bfilter]'),function(b){
+    b.addEventListener('click',function(){
+      filter=b.dataset.bfilter;
+      document.querySelectorAll('[data-bfilter]').forEach(function(x){
+        x.setAttribute('aria-pressed', String(x===b));
+      });
+      render();
+    });
+  });
+  render();
+})();
+
+/* ══════════════════════════════════════════════════════════
+   03 — LİSTE + DENETÇİ
+   ══════════════════════════════════════════════════════════ */
+(function(){
+  var list=document.getElementById('c-list');
+  var insp=document.getElementById('c-insp');
+  var sel='engine::rpm';
+
+  var USES={
+    'engine::rpm':['Motor Devri – Araç Hızı','Motor Devri – Zaman','Vites Geçiş RPM Profili'],
+    'engine::torque':['Motor Torku – Araç Hızı','Motor BSFC Çalışma Haritası'],
+    'engine::power':['Motor Gücü – Araç Hızı','Güç Dengesi – Araç Hızı'],
+    'vehicle::v_speed':['Araç Hızı – Zaman','İvme – Araç Hızı','Çekiş Kuvveti – Hız'],
+    'tc::efficiency':['TC Verimi – Araç Hızı','Güç Aktarma Verim Zinciri'],
+    'solver::tractive_effort':['Çekiş Kuvveti (TE) – Hız','TE Zarf Eğrisi']
+  };
+  function stats(s){
+    var d=series(s.shape,26), mn=Math.min.apply(null,d), mx=Math.max.apply(null,d);
+    var av=d.reduce(function(a,b){return a+b;},0)/d.length;
+    var scale=s.val/Math.max(mx,0.001);
+    function f(v){ var x=v*scale; return Math.abs(x)>=100? x.toFixed(0) : Math.abs(x)>=10? x.toFixed(1) : x.toFixed(2); }
+    return [f(mn),f(av),f(mx)];
+  }
+
+  function renderList(){
+    var h='';
+    GROUPS.forEach(function(g){
+      h+='<div class="cc-gh">'+esc(g.label)+'</div>';
+      g.items.forEach(function(s){
+        h+='<div class="cc-row'+(s.on?'':' off')+(sel===s.id?' sel':'')+'" data-id="'+s.id+'" role="button" tabindex="0">'+
+           '<input type="checkbox" class="ck" data-ck="'+s.id+'"'+(s.on?' checked':'')+
+             ' aria-label="'+esc(s.name)+' görünürlüğü">'+
+           '<span class="sw'+(s.on?'':' off')+'" style="background:'+s.color+';cursor:default;"></span>'+
+           '<span class="cc-nm">'+esc(s.name)+'</span>'+
+           '<span class="cc-un">'+esc(s.unit)+'</span></div>';
+      });
+    });
+    list.innerHTML=h;
+  }
+  function renderInsp(){
+    var s=byId(sel); if(!s) return;
+    var st=stats(s), uses=USES[s.id]||[s.glabel+' — genel analiz'];
+    var h='';
+    h+='<div class="cc-ihead"><div class="cc-ititle">'+
+       '<span class="sw" style="background:'+s.color+';cursor:default;"></span><b>'+esc(s.name)+'</b></div>'+
+       '<span class="cc-ikey">'+esc(s.id)+' · '+esc(s.unit)+'</span></div>';
+
+    h+='<div class="cc-fld"><span class="cc-lbl">Görünürlük</span>'+
+       '<div class="cc-pills" role="group" aria-label="Görünürlük">'+
+       '<button type="button" data-vis="1" aria-pressed="'+(s.on)+'">Açık</button>'+
+       '<button type="button" data-vis="0" aria-pressed="'+(!s.on)+'">Gizli</button></div></div>';
+
+    h+='<div class="cc-fld"><span class="cc-lbl">Renk</span><div class="cc-swrow">';
+    PAL.forEach(function(c){
+      h+='<button type="button" class="sw" data-color="'+c+'" style="background:'+c+
+         ';" role="radio" aria-checked="'+(c===s.color)+'" aria-label="Renk '+c+'"></button>';
+    });
+    h+='</div></div>';
+
+    h+='<div class="cc-fld"><span class="cc-lbl">Eksen</span>'+
+       '<div class="cc-pills" role="group" aria-label="Eksen">'+
+       ['Y1','Y2','Y3'].map(function(a){
+         return '<button type="button" data-axis="'+a+'" aria-pressed="'+(s.axis===a)+'">'+a+'</button>';
+       }).join('')+'</div></div>';
+
+    h+='<div class="cc-fld"><span class="cc-lbl">Çizgi</span>'+
+       '<div class="cc-pills" role="group" aria-label="Çizgi stili">'+
+       ['düz','kesik','basamak'].map(function(a){
+         return '<button type="button" data-style="'+a+'" aria-pressed="'+(s.style===a)+'">'+a+'</button>';
+       }).join('')+'</div></div>';
+
+    h+='<div class="cc-fld"><span class="cc-lbl">İstatistik</span><div class="cc-stats">'+
+       '<div class="cc-stat"><span>min</span><b>'+st[0]+'</b></div>'+
+       '<div class="cc-stat"><span>ort</span><b>'+st[1]+'</b></div>'+
+       '<div class="cc-stat"><span>maks</span><b>'+st[2]+'</b></div></div></div>';
+
+    h+='<div class="cc-fld" style="border-bottom:0;"><span class="cc-lbl">Kullanıldığı diyagramlar</span>'+
+       '<div class="cc-uses">'+uses.map(function(u){return '<span class="cc-use">'+esc(u)+'</span>';}).join('')+'</div></div>';
+
+    insp.innerHTML=h;
+  }
+  function render(){renderList();renderInsp();}
+  renderers.push(render);
+
+  list.addEventListener('click',function(e){
+    var ck=e.target.closest('[data-ck]');
+    if(ck){ byId(ck.dataset.ck).on=ck.checked; syncAll(); return; }
+    var row=e.target.closest('[data-id]');
+    if(row){ sel=row.dataset.id; render(); }
+  });
+  list.addEventListener('keydown',function(e){
+    var row=e.target.closest('[data-id]'); if(!row) return;
+    if(e.key==='Enter'){ sel=row.dataset.id; render(); }
+    if(e.key===' '){ e.preventDefault(); var s=byId(row.dataset.id); s.on=!s.on; syncAll(); }
+  });
+  insp.addEventListener('click',function(e){
+    var s=byId(sel); if(!s) return;
+    var c=e.target.closest('[data-color]');   if(c){ s.color=c.dataset.color; syncAll(); return; }
+    var v=e.target.closest('[data-vis]');     if(v){ s.on=v.dataset.vis==='1'; syncAll(); return; }
+    var a=e.target.closest('[data-axis]');    if(a){ s.axis=a.dataset.axis; renderInsp(); return; }
+    var st=e.target.closest('[data-style]');  if(st){ s.style=st.dataset.style; renderInsp(); }
+  });
+  render();
+})();
+
+/* ══════════════════════════════════════════════════════════
+   04 — KANAL ŞERİTLERİ
+   ══════════════════════════════════════════════════════════ */
+(function(){
+  var el=document.getElementById('d-list');
+  function fmt(v){
+    return Math.abs(v)>=1000? v.toFixed(0) : Math.abs(v)>=100? v.toFixed(1) :
+           Math.abs(v)>=10? v.toFixed(2) : v.toFixed(3);
+  }
+  function render(){
+    var h='';
+    GROUPS.forEach(function(g){
+      h+='<div class="cd-gh">'+esc(g.label)+'</div>';
+      g.items.forEach(function(s){
+        h+='<div class="cd-strip'+(s.on?'':' off')+'" style="--bar:'+s.color+';" data-id="'+s.id+'">'+
+           '<span class="cd-grip" title="Sırayı değiştir">⋮⋮</span>'+
+           '<span class="cd-txt"><span class="cd-nm">'+esc(s.name)+'</span>'+
+             '<span class="cd-key">'+esc(s.id)+'</span></span>'+
+           '<span><span class="cd-val">'+fmt(s.val)+'</span>'+
+             '<span class="cd-un">'+esc(s.unit)+'</span></span>'+
+           '<button class="cd-sw" data-tg="'+s.id+'" role="switch" aria-checked="'+s.on+
+             '" aria-label="'+esc(s.name)+' görünürlüğü"></button>'+
+           '</div>';
+      });
+    });
+    el.innerHTML=h;
+  }
+  renderers.push(render);
+  el.addEventListener('click',function(e){
+    var t=e.target.closest('[data-tg]');
+    if(t){ var s=byId(t.dataset.tg); s.on=!s.on; syncAll(); }
+  });
+  render();
+})();
+
+})();
+</script>
+
+</body></html>

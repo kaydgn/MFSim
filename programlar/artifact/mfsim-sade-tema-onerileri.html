@@ -1,0 +1,1115 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>MFSim — Sade Tema Önerileri</title>
+
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   SAYFA KROMU — bilerek AKROMATİK.
+   Bu sayfa renk yargılamak için bir prova tezgahı. Tezgahın kendisi renkliyse
+   örnekler kirlenir; matbaa ve fotoğraf provasında zemin bu yüzden nötr gridir.
+   Sayfadaki TEK renk, incelenen temaların kendi renkleridir.
+   ══════════════════════════════════════════════════════════════════════════ */
+:root{
+  --ground:#e9eaea;
+  --surface:#f7f7f7;
+  --surface-2:#fdfdfd;
+  --hairline:#d5d7d7;
+  --hairline-soft:#e2e3e3;
+  --ink:#121314;
+  --ink-2:#43464a;
+  --ink-3:#6e7276;
+  --ink-4:#9aa0a4;
+  --chip:#121314;
+  --chip-ink:#f7f7f7;
+  --shadow:0 1px 2px rgba(0,0,0,.05), 0 8px 24px -14px rgba(0,0,0,.28);
+
+  --sans:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,"Liberation Mono",monospace;
+
+  --fs-micro:.6875rem;  /* 11 */
+  --fs-small:.75rem;    /* 12 */
+  --fs-body:.8125rem;   /* 13 */
+  --fs-lead:.9375rem;   /* 15 */
+  --fs-h3:1.0625rem;    /* 17 */
+  --fs-h2:1.375rem;     /* 22 */
+  --fs-h1:1.9375rem;    /* 31 */
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ground:#131415;
+    --surface:#1a1b1d;
+    --surface-2:#202224;
+    --hairline:#2c2e31;
+    --hairline-soft:#232527;
+    --ink:#e3e5e6;
+    --ink-2:#b0b4b7;
+    --ink-3:#83888c;
+    --ink-4:#5e6367;
+    --chip:#e3e5e6;
+    --chip-ink:#131415;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#131415; --surface:#1a1b1d; --surface-2:#202224;
+  --hairline:#2c2e31; --hairline-soft:#232527;
+  --ink:#e3e5e6; --ink-2:#b0b4b7; --ink-3:#83888c; --ink-4:#5e6367;
+  --chip:#e3e5e6; --chip-ink:#131415;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -16px rgba(0,0,0,.8);
+}
+:root[data-theme="light"]{
+  --ground:#e9eaea; --surface:#f7f7f7; --surface-2:#fdfdfd;
+  --hairline:#d5d7d7; --hairline-soft:#e2e3e3;
+  --ink:#121314; --ink-2:#43464a; --ink-3:#6e7276; --ink-4:#9aa0a4;
+  --chip:#121314; --chip-ink:#f7f7f7;
+  --shadow:0 1px 2px rgba(0,0,0,.05), 0 8px 24px -14px rgba(0,0,0,.28);
+}
+
+*{ box-sizing:border-box; }
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--sans); font-size:var(--fs-body); line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums;
+}
+.wrap{ max-width:1240px; margin:0 auto; padding:0 20px 96px; }
+
+/* ── tipografi ─────────────────────────────────────────────────────────── */
+h1,h2,h3{ margin:0; font-weight:600; letter-spacing:-.015em; text-wrap:balance; }
+h1{ font-size:var(--fs-h1); line-height:1.15; letter-spacing:-.028em; }
+h2{ font-size:var(--fs-h2); line-height:1.25; }
+h3{ font-size:var(--fs-h3); line-height:1.3; }
+p{ margin:0; }
+.lead{ font-size:var(--fs-lead); color:var(--ink-2); max-width:62ch; line-height:1.6; }
+.eyebrow{
+  font-family:var(--mono); font-size:var(--fs-micro); text-transform:uppercase;
+  letter-spacing:.13em; color:var(--ink-4);
+}
+.mono{ font-family:var(--mono); }
+code{ font-family:var(--mono); font-size:.92em; }
+
+/* ── başlık bandı ──────────────────────────────────────────────────────── */
+header.masthead{
+  border-bottom:1px solid var(--hairline);
+  padding:44px 0 30px;
+  display:grid; gap:22px;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:end;
+}
+.masthead .titleblock{ display:grid; gap:12px; }
+.masthead .metaline{
+  display:flex; flex-wrap:wrap; gap:6px 16px; align-items:center;
+  font-family:var(--mono); font-size:var(--fs-micro); color:var(--ink-4);
+}
+.masthead .metaline b{ color:var(--ink-2); font-weight:500; }
+/* Ayırıcı noktayı ÖĞEYE bağla — ayrı bir <span> olsaydı satır sonunda
+   yapayalnız kalırdı. */
+.masthead .metaline span + span::before{ content:"· "; color:var(--ink-4); }
+.headline-metric{
+  border:1px solid var(--hairline); background:var(--surface);
+  border-radius:3px; padding:14px 18px; min-width:224px;
+  display:grid; gap:2px; box-shadow:var(--shadow);
+}
+.headline-metric .k{ font-family:var(--mono); font-size:var(--fs-micro); color:var(--ink-4);
+  text-transform:uppercase; letter-spacing:.11em; }
+.headline-metric .v{ font-family:var(--mono); font-size:1.55rem; letter-spacing:-.02em; display:flex; align-items:baseline; gap:9px; }
+.headline-metric .v s{ color:var(--ink-4); text-decoration:line-through; text-decoration-thickness:1px; font-size:1.05rem; }
+.headline-metric .v i{ font-style:normal; color:var(--ink-4); font-size:1rem; }
+.headline-metric .n{ font-size:var(--fs-micro); color:var(--ink-3); }
+
+/* ── bölüm ─────────────────────────────────────────────────────────────── */
+section{ padding-top:56px; }
+.sec-head{ display:grid; gap:9px; margin-bottom:22px; }
+.sec-head .row{ display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+
+/* ── tanı kartları ─────────────────────────────────────────────────────── */
+.diag{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1px;
+  background:var(--hairline); border:1px solid var(--hairline); border-radius:3px; overflow:hidden; }
+.diag > div{ background:var(--surface); padding:18px 18px 20px; display:grid; gap:8px; align-content:start; }
+.diag h3{ font-size:var(--fs-body); font-weight:600; }
+.diag p{ font-size:var(--fs-small); color:var(--ink-2); line-height:1.55; }
+.diag .fig{ font-family:var(--mono); font-size:1.5rem; letter-spacing:-.02em; line-height:1; }
+.diag .fig small{ font-size:var(--fs-micro); color:var(--ink-4); letter-spacing:0; }
+
+/* ── prova tezgahı ─────────────────────────────────────────────────────── */
+.bench{ display:grid; grid-template-columns:216px minmax(0,1fr); gap:20px; align-items:start; }
+.rail{ display:grid; gap:16px; position:sticky; top:16px; }
+.rail-group{ display:grid; gap:6px; }
+.rail-group > .eyebrow{ padding-left:2px; margin-bottom:2px; }
+.tcard{
+  display:flex; align-items:center; gap:10px; width:100%;
+  padding:7px 9px; border:1px solid var(--hairline); border-radius:3px;
+  background:var(--surface); color:var(--ink); cursor:pointer; text-align:left;
+  font:inherit; font-size:var(--fs-small);
+  transition:border-color .12s, background .12s, transform .12s;
+}
+.tcard:hover{ border-color:var(--ink-4); }
+.tcard:focus-visible{ outline:2px solid var(--ink); outline-offset:2px; }
+.tcard[aria-pressed="true"]{ background:var(--chip); color:var(--chip-ink); border-color:var(--chip); }
+.tcard .sw{ display:flex; width:34px; height:19px; border-radius:2px; overflow:hidden;
+  box-shadow:inset 0 0 0 1px rgba(128,128,128,.34); flex:none; }
+.tcard .sw i{ display:block; height:100%; }
+.tcard .sw i:nth-child(1){ width:44%; }
+.tcard .sw i:nth-child(2){ width:30%; }
+.tcard .sw i:nth-child(3){ width:26%; }
+.tcard .nm{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tcard .ch{ font-family:var(--mono); font-size:var(--fs-micro); color:var(--ink-4); }
+.tcard[aria-pressed="true"] .ch{ color:var(--chip-ink); opacity:.7; }
+
+/* ── sahne ─────────────────────────────────────────────────────────────── */
+.stage-shell{ display:grid; gap:10px; }
+.stage-bar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  font-family:var(--mono); font-size:var(--fs-micro); color:var(--ink-3); }
+.stage-bar .name{ font-family:var(--sans); font-size:var(--fs-body); font-weight:600; color:var(--ink); letter-spacing:-.01em; }
+.stage-note{ font-size:var(--fs-small); color:var(--ink-2); max-width:70ch; }
+.tag{ border:1px solid var(--hairline); border-radius:999px; padding:1px 9px;
+  font-family:var(--mono); font-size:var(--fs-micro); color:var(--ink-3); background:var(--surface); }
+/* Maket sabit 980px çizilir, sonra kabına sığacak kadar ölçeklenir (bkz. fitStage).
+   Yatay kaydırma yerine ölçek: arayüzün tamamı her genişlikte tek bakışta görünür. */
+.stage-scroll{ overflow:hidden; border:1px solid var(--hairline); border-radius:4px;
+  background:var(--surface); box-shadow:var(--shadow); }
+.app{ transform-origin:top left; }
+
+/* ── MFSim maketi — tüm renkler tema değişkenlerinden gelir ────────────── */
+/* Maket SABİT genişlikte: kanvastaki düğümler px ile konumlanıyor ve
+   bağlantı telleri aynı koordinat uzayında bir SVG. Genişlik esnek olsaydı
+   SVG gerilir, teller düğümlerden kopardı. Dar ekranda kabuk yatay kayar. */
+.app{
+  width:980px; font-family:var(--sans);
+  background:var(--bg-primary); color:var(--text-primary);
+  font-size:11px; line-height:1.4; user-select:none;
+}
+.app-strip{
+  display:flex; align-items:center; gap:8px; height:30px; padding:0 8px;
+  background:var(--bg-secondary); border-bottom:1px solid var(--border-color);
+}
+.brand{ display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--text-heading); }
+.brand-mark{ width:18px; height:18px; border-radius:3px; background:var(--accent-primary);
+  display:grid; place-items:center; box-shadow:inset 0 1px 0 rgba(255,255,255,.28); }
+.brand-mark svg{ width:11px; height:11px; fill:none; stroke:#fff; stroke-width:2; }
+.vsep{ width:1px; height:16px; background:var(--border-color); }
+.qat{ display:flex; gap:2px; }
+.ibtn{ width:22px; height:22px; border-radius:3px; display:grid; place-items:center;
+  color:var(--text-secondary); border:1px solid transparent; }
+.ibtn svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:1.7;
+  stroke-linecap:round; stroke-linejoin:round; }
+.ibtn.on{ color:var(--accent-primary); background:color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  border-color:color-mix(in srgb, var(--accent-primary) 30%, transparent); }
+.rtabs{ display:flex; gap:2px; margin-left:6px; }
+.rtab{ padding:3px 10px; border-radius:3px 3px 0 0; color:var(--text-secondary); font-size:11px; }
+.rtab.active{ color:var(--text-heading); background:var(--bg-tertiary);
+  box-shadow:inset 0 -2px 0 var(--accent-primary); }
+.strip-fill{ flex:1; }
+.dot{ width:7px; height:7px; border-radius:50%; background:var(--accent-success);
+  box-shadow:0 0 6px color-mix(in srgb, var(--accent-success) 55%, transparent); }
+
+.ribbon{ display:flex; align-items:stretch; gap:0; height:74px; padding:6px 4px;
+  background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); }
+.rgroup{ display:grid; grid-template-rows:1fr auto; gap:4px; padding:0 10px;
+  border-right:1px solid var(--border-color); }
+.rgroup:last-child{ border-right:0; }
+.rgroup .gl{ font-size:9px; text-align:center; color:var(--text-muted); letter-spacing:.04em; }
+.rgroup .items{ display:flex; gap:4px; }
+.rbtn{ width:46px; display:grid; gap:3px; justify-items:center; padding:4px 2px 2px;
+  border:1px solid transparent; border-radius:4px; color:var(--text-secondary); }
+.rbtn svg{ width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.6;
+  stroke-linecap:round; stroke-linejoin:round; }
+.rbtn span{ font-size:9px; color:var(--text-secondary); white-space:nowrap; }
+.rbtn.hot{ background:color-mix(in srgb, var(--accent-primary) 10%, transparent);
+  border-color:color-mix(in srgb, var(--accent-primary) 26%, transparent); color:var(--accent-primary); }
+.rbtn.hot span{ color:var(--accent-primary); }
+
+.body{ display:flex; height:342px; }
+.nav{ width:52px; background:var(--bg-secondary); border-right:1px solid var(--border-color);
+  display:grid; gap:2px; align-content:start; padding:6px 4px; }
+.nav-item{ display:grid; gap:3px; justify-items:center; padding:7px 2px; border-radius:4px;
+  color:var(--text-secondary); position:relative; }
+.nav-item svg{ width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.6;
+  stroke-linecap:round; stroke-linejoin:round; }
+.nav-item span{ font-size:9px; }
+.nav-item.active{ color:var(--accent-primary); background:color-mix(in srgb, var(--accent-primary) 10%, transparent); }
+.nav-item.active::before{ content:""; position:absolute; left:-4px; top:6px; bottom:6px; width:2px;
+  border-radius:0 2px 2px 0; background:var(--accent-primary); }
+
+.side{ width:172px; background:var(--bg-secondary); border-right:1px solid var(--border-color);
+  display:grid; grid-template-rows:auto 1fr; }
+.side-head{ display:flex; align-items:center; gap:6px; padding:6px 9px; font-size:11px; font-weight:600;
+  color:var(--text-heading); background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); }
+.side-head svg{ width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.7; }
+.side-body{ padding:8px; display:grid; gap:11px; align-content:start; }
+.cat-title{ font-size:9px; text-transform:uppercase; letter-spacing:.09em; color:var(--text-muted);
+  padding-bottom:4px; border-bottom:1px solid var(--border-color); margin-bottom:5px; }
+.comp{ display:flex; align-items:center; gap:7px; padding:5px 7px; border-radius:4px;
+  border:1px solid var(--border-color); background:var(--bg-tertiary); margin-bottom:4px; font-size:11px; }
+.comp svg{ width:13px; height:13px; fill:none; stroke:var(--text-secondary); stroke-width:1.6; }
+.comp.sel{ border-color:var(--accent-primary);
+  background:color-mix(in srgb, var(--accent-primary) 9%, var(--bg-tertiary)); }
+
+.canvas{ width:560px; flex:none; position:relative; overflow:hidden; background:var(--bg-primary); }
+.canvas::before{ content:""; position:absolute; inset:0; pointer-events:none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--border-color) 55%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border-color) 55%, transparent) 1px, transparent 1px);
+  background-size:20px 20px; }
+.crumb{ position:absolute; top:8px; left:10px; z-index:3; display:flex; align-items:center; gap:6px;
+  padding:3px 9px; border-radius:999px; font-size:10px; color:var(--text-secondary);
+  background:var(--bg-secondary); border:1px solid var(--border-color); }
+.crumb b{ color:var(--text-heading); font-weight:600; }
+.node{ position:absolute; z-index:2; width:62px; display:grid; gap:4px; justify-items:center; }
+.node-box{ width:62px; height:56px; display:grid; place-items:center; border-radius:5px;
+  background:var(--bg-tertiary); box-shadow:0 1px 2px var(--shadow-color);
+  border:1px solid color-mix(in srgb, var(--text-secondary) 45%, var(--text-primary)); }
+.node-box svg{ width:24px; height:24px; fill:none; stroke:var(--text-primary); stroke-width:1.5;
+  stroke-linecap:round; stroke-linejoin:round; }
+.node-lbl{ font-size:10px; color:var(--text-secondary); white-space:nowrap; text-align:center; }
+.node.sel .node-box{ border-color:var(--accent-primary);
+  box-shadow:0 0 0 1px var(--accent-primary), 0 0 0 4px color-mix(in srgb, var(--accent-primary) 22%, transparent); }
+.node.sel .node-lbl{ color:var(--text-heading); }
+.wires{ position:absolute; inset:0; z-index:1; pointer-events:none; }
+.wires path{ fill:none; stroke:color-mix(in srgb, var(--text-secondary) 70%, transparent); stroke-width:1.4; }
+.wires path.live{ stroke:var(--accent-primary); stroke-width:1.7; }
+
+.props{ width:196px; background:var(--bg-secondary); border-left:1px solid var(--border-color);
+  display:grid; grid-template-rows:auto 1fr auto; }
+.props-head{ display:flex; align-items:center; justify-content:space-between; padding:6px 9px;
+  font-size:11px; font-weight:600; color:var(--text-heading);
+  background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); }
+.props-body{ padding:9px; display:grid; gap:8px; align-content:start; }
+.field{ display:grid; gap:3px; }
+.field label{ font-size:10px; color:var(--text-secondary); }
+.field .inp{ display:flex; align-items:center; justify-content:space-between; gap:6px;
+  padding:4px 7px; border-radius:4px; font-size:11px; color:var(--text-primary);
+  background:var(--bg-input); border:1px solid var(--border-color); }
+.field .inp u{ text-decoration:none; color:var(--text-muted); font-size:10px; }
+.field .inp.focus{ border-color:var(--accent-primary);
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--accent-primary) 30%, transparent); }
+.checkline{ display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-primary); }
+.checkbox{ width:12px; height:12px; border-radius:3px; background:var(--accent-primary);
+  display:grid; place-items:center; }
+.checkbox svg{ width:8px; height:8px; fill:none; stroke:#fff; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
+.props-foot{ padding:9px; display:grid; gap:6px; border-top:1px solid var(--border-color); }
+.btn{ padding:5px 10px; border-radius:4px; font-size:11px; text-align:center; }
+.btn.primary{ background:var(--accent-primary); color:#fff; font-weight:600;
+  box-shadow:0 1px 2px var(--shadow-color); }
+.btn.ghost{ border:1px solid var(--border-color); color:var(--text-secondary); background:var(--bg-tertiary); }
+
+.results{ border-top:1px solid var(--border-color); background:var(--bg-secondary);
+  display:grid; grid-template-columns:1fr auto; gap:14px; padding:8px 10px 10px; align-items:stretch; }
+.results-l{ display:grid; gap:6px; }
+.results-title{ display:flex; align-items:center; gap:9px; }
+.results-title h4{ margin:0; font-size:11px; font-weight:600; color:var(--text-heading); }
+.chip{ padding:1px 7px; border-radius:999px; font-size:9px; border:1px solid var(--border-color);
+  color:var(--text-secondary); background:var(--bg-tertiary); }
+.chip.ok{ color:var(--accent-success); border-color:color-mix(in srgb, var(--accent-success) 40%, transparent);
+  background:color-mix(in srgb, var(--accent-success) 12%, transparent); }
+.chip.warn{ color:var(--accent-warning); border-color:color-mix(in srgb, var(--accent-warning) 40%, transparent);
+  background:color-mix(in srgb, var(--accent-warning) 12%, transparent); }
+.chip.bad{ color:var(--accent-danger); border-color:color-mix(in srgb, var(--accent-danger) 40%, transparent);
+  background:color-mix(in srgb, var(--accent-danger) 12%, transparent); }
+.plot{ height:74px; border-radius:4px; background:var(--bg-input);
+  border:1px solid var(--border-color); position:relative; overflow:hidden; }
+.plot svg{ display:block; width:100%; height:100%; }
+.readouts{ display:grid; gap:5px; align-content:start; min-width:132px; }
+.readout{ display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+  padding:4px 8px; border-radius:4px; background:var(--bg-tertiary); border:1px solid var(--border-color); }
+.readout .rk{ font-size:9px; color:var(--text-secondary); }
+.readout .rv{ font-family:var(--mono); font-size:11px; color:var(--text-heading); }
+
+/* ── palet tablosu ─────────────────────────────────────────────────────── */
+.two{ display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:22px; align-items:start; }
+.panel{ border:1px solid var(--hairline); border-radius:3px; background:var(--surface); overflow:hidden; }
+.panel > .ph{ padding:10px 14px; border-bottom:1px solid var(--hairline); display:flex;
+  align-items:baseline; justify-content:space-between; gap:12px; }
+.panel > .ph h3{ font-size:var(--fs-body); }
+.tbl{ width:100%; border-collapse:collapse; font-size:var(--fs-small); }
+.tbl th{ text-align:left; font-family:var(--mono); font-size:var(--fs-micro); font-weight:400;
+  text-transform:uppercase; letter-spacing:.09em; color:var(--ink-4);
+  padding:8px 14px; border-bottom:1px solid var(--hairline); }
+.tbl td{ padding:5px 14px; border-bottom:1px solid var(--hairline-soft); vertical-align:middle; }
+.tbl tr:last-child td{ border-bottom:0; }
+.tbl td.var{ font-family:var(--mono); color:var(--ink-2); }
+.tbl td.hex{ font-family:var(--mono); color:var(--ink-3); }
+.tbl td.role{ color:var(--ink-3); font-size:var(--fs-micro); }
+.chipcol{ width:34px; }
+.swatch-cell{ width:26px; height:16px; border-radius:2px; box-shadow:inset 0 0 0 1px rgba(128,128,128,.34); }
+.tbl tbody tr.grp td{ background:color-mix(in srgb, var(--ink) 4%, transparent);
+  font-family:var(--mono); font-size:var(--fs-micro); text-transform:uppercase;
+  letter-spacing:.1em; color:var(--ink-4); padding:5px 14px; }
+
+.metrics{ display:grid; gap:0; }
+.metric{ display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:12px; align-items:center;
+  padding:7px 14px; border-bottom:1px solid var(--hairline-soft); font-size:var(--fs-small); }
+.metric:last-child{ border-bottom:0; }
+.metric .mk{ color:var(--ink-2); }
+.metric .mk small{ display:block; color:var(--ink-4); font-size:var(--fs-micro); }
+.metric .mv{ font-family:var(--mono); }
+.pass{ font-family:var(--mono); font-size:var(--fs-micro); padding:1px 7px; border-radius:999px;
+  border:1px solid var(--hairline); color:var(--ink-3); white-space:nowrap; }
+.pass[data-ok="1"]{ color:var(--ink); border-color:var(--ink-4); }
+
+/* ── doygunluk grafiği ─────────────────────────────────────────────────── */
+.chart{ border:1px solid var(--hairline); border-radius:3px; background:var(--surface); padding:16px 18px 12px; }
+.chart-plot{ position:relative; display:grid; gap:3px; }
+.gridlines{ position:absolute; inset:0 0 18px 148px; pointer-events:none; display:flex; }
+.gridlines i{ flex:1; border-left:1px solid var(--hairline-soft); }
+.gridlines i:first-child{ border-left:1px solid var(--hairline); }
+.gridlines i:last-child{ border-right:1px solid var(--hairline-soft); }
+.brow{ display:grid; grid-template-columns:148px minmax(0,1fr); gap:0; align-items:center;
+  background:none; border:0; padding:1px 0; font:inherit; color:inherit; cursor:pointer; text-align:left;
+  border-radius:2px; }
+.brow:hover{ background:color-mix(in srgb, var(--ink) 6%, transparent); }
+.brow:focus-visible{ outline:2px solid var(--ink); outline-offset:1px; }
+.brow[aria-pressed="true"] .bname{ font-weight:600; color:var(--ink); }
+.bname{ font-size:var(--fs-small); color:var(--ink-2); padding-right:12px; display:flex;
+  align-items:center; gap:7px; white-space:nowrap; overflow:hidden; }
+.bname em{ font-style:normal; font-family:var(--mono); font-size:var(--fs-micro); color:var(--ink-4); }
+.btrack{ position:relative; height:15px; display:flex; align-items:center; gap:8px; }
+.bfill{ height:11px; border-radius:0 2px 2px 0; box-shadow:inset 0 0 0 1px rgba(128,128,128,.42); min-width:2px; }
+.bval{ font-family:var(--mono); font-size:var(--fs-micro); color:var(--ink-3); }
+.chart-axis{ display:grid; grid-template-columns:148px minmax(0,1fr); margin-top:6px; }
+.chart-axis .ticks{ display:flex; justify-content:space-between; font-family:var(--mono);
+  font-size:var(--fs-micro); color:var(--ink-4); }
+.chart-legend{ display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; padding-top:11px;
+  border-top:1px solid var(--hairline); font-size:var(--fs-micro); color:var(--ink-3); font-family:var(--mono); }
+.chart-legend b{ color:var(--ink); font-weight:600; }
+
+/* ── kod ───────────────────────────────────────────────────────────────── */
+.codewrap{ border:1px solid var(--hairline); border-radius:3px; background:var(--surface); overflow:hidden; }
+.codewrap .ph{ display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:9px 14px; border-bottom:1px solid var(--hairline); }
+.codewrap .ph .f{ font-family:var(--mono); font-size:var(--fs-micro); color:var(--ink-3); }
+pre{ margin:0; padding:14px; overflow-x:auto; font-family:var(--mono); font-size:var(--fs-micro);
+  line-height:1.65; color:var(--ink-2); background:var(--surface-2); }
+.copy{ font:inherit; font-family:var(--mono); font-size:var(--fs-micro); padding:3px 10px;
+  border:1px solid var(--hairline); border-radius:3px; background:var(--surface-2); color:var(--ink-2);
+  cursor:pointer; }
+.copy:hover{ border-color:var(--ink-4); color:var(--ink); }
+.copy:focus-visible{ outline:2px solid var(--ink); outline-offset:2px; }
+
+/* ── kapanış listesi ───────────────────────────────────────────────────── */
+.steps{ display:grid; gap:1px; background:var(--hairline); border:1px solid var(--hairline); border-radius:3px; overflow:hidden; }
+.steps > div{ background:var(--surface); padding:14px 16px; display:grid;
+  grid-template-columns:auto minmax(0,1fr); gap:14px; align-items:start; }
+.steps .st{ font-family:var(--mono); font-size:var(--fs-micro); color:var(--ink-4); padding-top:2px; white-space:nowrap; }
+.steps p{ font-size:var(--fs-small); color:var(--ink-2); }
+.steps b{ color:var(--ink); font-weight:600; }
+
+footer{ margin-top:56px; padding-top:18px; border-top:1px solid var(--hairline);
+  font-family:var(--mono); font-size:var(--fs-micro); color:var(--ink-4);
+  display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+
+@media (max-width:900px){
+  .bench{ grid-template-columns:1fr; }
+  .rail{ position:static; }
+  /* Dar ekranda ray yatay bir ızgaraya döner — 16 kart alt alta uzayıp
+     maketi ekrandan itmesin. */
+  .rail-group{ grid-template-columns:repeat(auto-fill,minmax(168px,1fr)); }
+  .rail-group > .eyebrow{ grid-column:1/-1; }
+  .diag{ grid-template-columns:1fr; }
+  .two{ grid-template-columns:1fr; }
+  header.masthead{ grid-template-columns:1fr; }
+  .gridlines{ inset:0 0 18px 108px; }
+  .brow,.chart-axis{ grid-template-columns:108px minmax(0,1fr); }
+}
+@media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <div class="titleblock">
+    <span class="eyebrow">MFSim · Görünüm · Tema önerisi</span>
+    <h1>Sade aile: gürültüsü kısılmış altı tema</h1>
+    <p class="lead">Mevcut on tema marka renklerini taklit ediyor ve aksanları çok doygun.
+      Aksan yalnız bir logo lekesi değil — seçim çerçevesi, hover dolgusu, odak halkası,
+      buton zemini ve grafik eğrisi hep ondan türüyor. Doygunluk yüksek olunca arayüz
+      “renkli” değil <em>gürültülü</em> okunuyor. Aşağıdaki altı palet aynı iskeleti kullanır,
+      yalnız sesini kısar.</p>
+    <div class="metaline">
+      <span><b>6</b> aday · <b>4</b> koyu · <b>2</b> açık</span>
+      <span>hepsi WCAG eşiklerinden geçti</span>
+      <span>kod deponun <b>claude/professional-program-themes-uv5npg</b> dalında hazır</span>
+    </div>
+  </div>
+  <div class="headline-metric">
+    <span class="k">Ortalama aksan chroma</span>
+    <span class="v"><s>0,163</s><i>→</i>0,061</span>
+    <span class="n">OKLCH · mevcut on temaya karşı yeni altı tema</span>
+  </div>
+</header>
+
+<section id="tani">
+  <div class="sec-head">
+    <div class="row"><h2>Tanı</h2><span class="eyebrow">Neden çocukça hissettiriyor</span></div>
+    <p class="lead">“Çocukça” bir his değil, ölçülebilir üç şeyin sonucu. Üçü de tek tek düzeltilebilir.</p>
+  </div>
+  <div class="diag">
+    <div>
+      <span class="eyebrow">1 · Doygunluk</span>
+      <span class="fig">0,163 <small>OKLCH C</small></span>
+      <h3>Aksanlar tam doygun</h3>
+      <p>ANSYS altını (#ffb71b) ve VS Code mavisi (#007acc) HSL’de %100 doygunlukta.
+        Bu renk arayüzün her seçili kenarında, her hover dolgusunda tekrarlanınca
+        ekran bir gösterge paneli değil bir oyuncak gibi okunur.</p>
+    </div>
+    <div>
+      <span class="eyebrow">2 · Kimlik</span>
+      <span class="fig">5 / 10 <small>marka taklidi</small></span>
+      <h3>Palet ödünç alınmış</h3>
+      <p>ANSYS, Fusion 360, VS Code, SolidWorks, Claude — on temanın beşi başka bir
+        ürünün rengini giyiyor. Ödünç kimlik, kendi kimliğinin olmadığını söyler;
+        profesyonel his tam da burada kaybolur.</p>
+    </div>
+    <div>
+      <span class="eyebrow">3 · Katman</span>
+      <span class="fig">0,109 <small>ΔL sıçraması</small></span>
+      <h3>Yüzey basamakları eşit değil</h3>
+      <p>Donanma Mavisi’nde zemin–panel–kart arası açıklık farkı, Pearl’dekinin
+        iki buçuk katı. Basamak büyüdükçe paneller birbirinden kopar; göz her
+        geçişte yeniden odaklanmak zorunda kalır.</p>
+    </div>
+  </div>
+</section>
+
+<section id="tezgah">
+  <div class="sec-head">
+    <div class="row"><h2>Prova tezgahı</h2><span class="eyebrow">Soldan seç · maket anında değişir</span></div>
+    <p class="lead">Maket, gerçek MFSim düzeninin aynısı: şerit, gezinme rayı, bileşen paneli,
+      ızgaralı kanvas, özellik paneli ve sonuç grafiği. Renklerin hepsi temanın kendi
+      değişkenlerinden geliyor — uygulamada göreceğinizle birebir aynı hesap.
+      Mevcut temaları da aynı tezgaha koydum ki yan yana kıyaslayın.</p>
+  </div>
+
+  <div class="bench">
+    <div class="rail">
+      <div class="rail-group" id="rail-new">
+        <span class="eyebrow">Aday — sade aile</span>
+      </div>
+      <div class="rail-group" id="rail-old">
+        <span class="eyebrow">Mevcut</span>
+      </div>
+    </div>
+
+    <div class="stage-shell">
+      <div class="stage-bar">
+        <span class="name" id="stage-name">Grafit</span>
+        <span class="tag" id="stage-kind">koyu</span>
+        <span class="tag" id="stage-id">graphite</span>
+        <span class="tag" id="stage-chroma">C 0,083</span>
+      </div>
+      <p class="stage-note" id="stage-note"></p>
+
+      <div class="stage-scroll">
+        <div class="app" id="stage">
+
+          <div class="app-strip">
+            <span class="brand">
+              <span class="brand-mark"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span>
+              MFSim
+            </span>
+            <span class="vsep"></span>
+            <span class="qat">
+              <span class="ibtn"><svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg></span>
+              <span class="ibtn"><svg viewBox="0 0 24 24"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg></span>
+              <span class="ibtn"><svg viewBox="0 0 24 24"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 15-6.7l3 2.7"/></svg></span>
+            </span>
+            <span class="vsep"></span>
+            <span class="rtabs">
+              <span class="rtab">Dosya</span>
+              <span class="rtab active">Giriş</span>
+              <span class="rtab">Analiz</span>
+              <span class="rtab">Görünüm</span>
+            </span>
+            <span class="strip-fill"></span>
+            <span class="ibtn on"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg></span>
+            <span class="dot" title="Bağlı"></span>
+          </div>
+
+          <div class="ribbon">
+            <div class="rgroup">
+              <div class="items">
+                <div class="rbtn hot"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg><span>Çöz</span></div>
+                <div class="rbtn"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg><span>Durdur</span></div>
+              </div>
+              <span class="gl">Çözüm</span>
+            </div>
+            <div class="rgroup">
+              <div class="items">
+                <div class="rbtn"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="7" rx="1"/><rect x="14" y="13" width="7" height="7" rx="1"/><path d="M10 7.5h4v6"/></svg><span>Bileşen</span></div>
+                <div class="rbtn"><svg viewBox="0 0 24 24"><path d="M4 12h6M14 12h6"/><circle cx="12" cy="12" r="2"/></svg><span>Bağlantı</span></div>
+                <div class="rbtn"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/></svg><span>Düzenle</span></div>
+              </div>
+              <span class="gl">Topoloji</span>
+            </div>
+            <div class="rgroup">
+              <div class="items">
+                <div class="rbtn"><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 4 5-8 4 5"/></svg><span>Grafik</span></div>
+                <div class="rbtn"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg><span>Tablo</span></div>
+                <div class="rbtn"><svg viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 19h16"/></svg><span>Aktar</span></div>
+              </div>
+              <span class="gl">Sonuçlar</span>
+            </div>
+          </div>
+
+          <div class="body">
+            <div class="nav">
+              <div class="nav-item active"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="6" height="6" rx="1"/><rect x="15" y="14" width="6" height="6" rx="1"/><path d="M9 7h4v10h2"/></svg><span>Topoloji</span></div>
+              <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M4 18l5-7 4 3 6-9"/><path d="M4 20h16"/></svg><span>Sonuç</span></div>
+              <div class="nav-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"/></svg><span>Ayar</span></div>
+            </div>
+
+            <div class="side">
+              <div class="side-head">
+                <svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/></svg>
+                Bileşenler
+              </div>
+              <div class="side-body">
+                <div>
+                  <div class="cat-title">Güç Kaynağı</div>
+                  <div class="comp sel"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="14" height="10" rx="2"/><path d="M17 11h4v4"/></svg>Motor</div>
+                  <div class="comp"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 5v14"/></svg>Alternatör</div>
+                </div>
+                <div>
+                  <div class="cat-title">Aktarma Organları</div>
+                  <div class="comp"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Şanzıman</div>
+                  <div class="comp"><svg viewBox="0 0 24 24"><path d="M4 12h16"/><circle cx="7" cy="12" r="2"/><circle cx="17" cy="12" r="2"/></svg>Propşaft</div>
+                  <div class="comp"><svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="8" rx="2"/><path d="M8 8v8M16 8v8"/></svg>Transfer</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="canvas">
+              <div class="crumb"><b>Araç Performans</b> · alt topoloji</div>
+              <!-- Kanvas 560×342; düğüm kutuları 62×56. Kutu merkezleri:
+                   Motor(71,88) Şanzıman(241,88) Propşaft(241,203) Tekerlek(421,203).
+                   Teller kutu kenarlarından başlar: sol 40/210/390, sağ +62. -->
+              <svg class="wires" viewBox="0 0 560 342">
+                <path class="live" d="M102 88 H210"/>
+                <path d="M102 88 C 152 88, 160 203, 210 203"/>
+                <path d="M272 88 C 322 88, 340 203, 390 203"/>
+                <path d="M272 203 H390"/>
+              </svg>
+              <div class="node sel" style="left:40px; top:60px;">
+                <div class="node-box"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11h5v3h-5"/><path d="M6 7V5M11 7V5"/></svg></div>
+                <div class="node-lbl">Motor</div>
+              </div>
+              <div class="node" style="left:210px; top:60px;">
+                <div class="node-box"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg></div>
+                <div class="node-lbl">Şanzıman</div>
+              </div>
+              <div class="node" style="left:210px; top:175px;">
+                <div class="node-box"><svg viewBox="0 0 24 24"><path d="M4 12h16"/><circle cx="8" cy="12" r="2.4"/><circle cx="16" cy="12" r="2.4"/></svg></div>
+                <div class="node-lbl">Propşaft</div>
+              </div>
+              <div class="node" style="left:390px; top:175px;">
+                <div class="node-box"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></div>
+                <div class="node-lbl">Tekerlek</div>
+              </div>
+            </div>
+
+            <div class="props">
+              <div class="props-head">
+                <span>Motor</span>
+                <span class="chip">6 parametre</span>
+              </div>
+              <div class="props-body">
+                <div class="field">
+                  <label>Maks. tork</label>
+                  <div class="inp focus">2 300 <u>N·m</u></div>
+                </div>
+                <div class="field">
+                  <label>Devir aralığı</label>
+                  <div class="inp">600 – 2 100 <u>d/dk</u></div>
+                </div>
+                <div class="field">
+                  <label>Atalet</label>
+                  <div class="inp">3,4 <u>kg·m²</u></div>
+                </div>
+                <div class="checkline">
+                  <span class="checkbox"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></span>
+                  Motor freni etkin
+                </div>
+              </div>
+              <div class="props-foot">
+                <div class="btn primary">Çözümü Başlat</div>
+                <div class="btn ghost">Varsayılana Dön</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="results">
+            <div class="results-l">
+              <div class="results-title">
+                <h4>Yavaşlama · v(t)</h4>
+                <span class="chip ok">yakınsadı</span>
+                <span class="chip warn">2 uyarı</span>
+                <span class="chip bad">fren aşımı</span>
+              </div>
+              <div class="plot">
+                <svg viewBox="0 0 520 74" preserveAspectRatio="none" aria-label="Hız-zaman eğrisi">
+                  <g id="plot-grid"></g>
+                  <path id="plot-area" d=""></path>
+                  <path id="plot-line" d="" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                  <circle id="plot-end" r="3.5"></circle>
+                </svg>
+              </div>
+            </div>
+            <div class="readouts">
+              <div class="readout"><span class="rk">Fren gücü</span><span class="rv">312 kW</span></div>
+              <div class="readout"><span class="rk">Yavaşlama</span><span class="rv">1,84 m/s²</span></div>
+              <div class="readout"><span class="rk">Mesafe</span><span class="rv">248 m</span></div>
+              <div class="readout"><span class="rk">Çözüm</span><span class="rv">0,42 s</span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="palet">
+  <div class="sec-head">
+    <div class="row"><h2>Palet ve ölçüm</h2><span class="eyebrow" id="palet-for">Grafit</span></div>
+    <p class="lead">On altı değişkenin tamamı ve seçilen temanın ölçülen kontrast değerleri.
+      Sayılar bu sayfada canlı hesaplanıyor — elle yazılmış bir tablo değil.</p>
+  </div>
+  <div class="two">
+    <div class="panel">
+      <div class="ph"><h3>Değişkenler</h3><span class="eyebrow" id="palet-id">graphite</span></div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr><th class="chipcol"></th><th>Değişken</th><th>Değer</th><th>Rol</th></tr></thead>
+          <tbody id="palet-rows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h3>Kontrast denetimi</h3><span class="eyebrow">WCAG 2.1</span></div>
+      <div class="metrics" id="metric-rows"></div>
+    </div>
+  </div>
+</section>
+
+<section id="doygunluk">
+  <div class="sec-head">
+    <div class="row"><h2>Aksan doygunluğu</h2><span class="eyebrow">Her çubuk kendi aksan rengiyle boyalı</span></div>
+    <p class="lead">Çubuğun rengi verinin kendisi: her tema kendi aksanıyla çiziliyor,
+      uzunluğu o rengin OKLCH chroma değeri. Satıra tıklayın, tezgah o temaya geçer.</p>
+  </div>
+  <div class="chart">
+    <div class="chart-plot" id="chart-rows">
+      <div class="gridlines"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+    <div class="chart-axis">
+      <span></span>
+      <span class="ticks"><span>0</span><span>0,05</span><span>0,10</span><span>0,15</span><span>0,20</span><span>0,25</span></span>
+    </div>
+    <div class="chart-legend">
+      <span>Mevcut on tema ortalaması <b>0,163</b></span>
+      <span>Sade aile ortalaması <b>0,061</b></span>
+      <span>Düşüş <b>%63</b></span>
+    </div>
+  </div>
+</section>
+
+<section id="kod">
+  <div class="sec-head">
+    <div class="row"><h2>Kod</h2><span class="eyebrow" id="kod-for">graphite</span></div>
+    <p class="lead">Bir tema üç yerde birden kayıtlı olmalı — <code>css/styles.css</code>,
+      <code>js/theme.js</code> ve <code>js/settings.js</code>. Biri kayarsa uygulama sessizce
+      varsayılana döner; <code>tests/unit/theme-consistency.test.js</code> bu senkronu korur.
+      Aşağıdaki bloklar depoya girdiği hâliyle.</p>
+  </div>
+  <div class="two">
+    <div class="codewrap">
+      <div class="ph"><span class="f">css/styles.css</span><button class="copy" data-copy="css">kopyala</button></div>
+      <pre id="code-css"></pre>
+    </div>
+    <div class="codewrap">
+      <div class="ph"><span class="f">js/settings.js · js/theme.js</span><button class="copy" data-copy="js">kopyala</button></div>
+      <pre id="code-js"></pre>
+    </div>
+  </div>
+</section>
+
+<section id="karar">
+  <div class="sec-head">
+    <div class="row"><h2>Durum ve karar</h2><span class="eyebrow">Ne hazır, ne sizin kararınız</span></div>
+  </div>
+  <div class="steps">
+    <div>
+      <span class="st">hazır</span>
+      <p><b>Altı tema depoda.</b> <code>Ayarlar › Görünüm</code> listesinde en üstte
+        “Sade — Koyu” ve “Sade — Açık” başlıkları altında duruyorlar. Mevcut on tema
+        olduğu gibi kaldı; hiçbir şey silinmedi.</p>
+    </div>
+    <div>
+      <span class="st">karar 1</span>
+      <p><b>Varsayılan tema.</b> Kayıtlı seçimi olmayan kullanıcı hâlâ Midnight açıyor.
+        Grafit’i varsayılan yapmamı isterseniz tek satır: <code>js/theme.js</code> içindeki
+        iki <code>'slate'</code> düşüşü <code>'graphite'</code> olur. Kayıtlı seçimi olanlar etkilenmez.</p>
+    </div>
+    <div>
+      <span class="st">karar 2</span>
+      <p><b>Eskileri emekliye ayırma.</b> On altı tema uzun bir liste. Marka taklidi
+        yapan beşten dördünü — ANSYS, Fusion 360, VS Code, SolidWorks — kaldırmak
+        listeyi temizler; Claude’u sıcak zemini için tutulabilir sayıp dışarıda bıraktım.
+        Kaldırırsak o temayı seçmiş bir kullanıcı sessizce varsayılana döner; söyleyin,
+        geçiş eşlemesi de yazayım.</p>
+    </div>
+    <div>
+      <span class="st">karar 3</span>
+      <p><b>Aile eksik mi.</b> Dördü koyu, ikisi açık. Yüksek kontrastlı bir
+        erişilebilirlik teması (AAA, kalın kenarlar) ya da açık bir monokrom
+        isterseniz aynı kurallarla ekleyebilirim.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>MFSim · Görünüm önerisi · 3 Ağustos 2026</span>
+  <span>Kontrast ve chroma değerleri bu sayfada canlı hesaplanır</span>
+</footer>
+
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   Tek kaynak: paletler burada. Tablo, grafik, kod bloğu ve maket hepsi
+   buradan okur — sayfada aynı hex'i iki kez yazan yer yok.
+   ══════════════════════════════════════════════════════════════════════════ */
+var KEYS = ['bg-primary','bg-secondary','bg-tertiary','bg-input','border-color','border-light',
+  'border-hover','text-primary','text-secondary','text-muted','text-heading','accent-primary',
+  'accent-success','accent-warning','accent-danger','shadow-color'];
+
+var ROLE = {
+  'bg-primary':'kanvas / uygulama zemini',
+  'bg-secondary':'panel ve şerit yüzeyi',
+  'bg-tertiary':'kart, düğüm kutusu, sekme',
+  'bg-input':'girdi ve grafik zemini',
+  'border-color':'saç teli kenar',
+  'border-light':'ikincil ayırıcı',
+  'border-hover':'hover kenarı',
+  'text-primary':'gövde metni',
+  'text-secondary':'etiket, ikincil metin',
+  'text-muted':'ipucu, devre dışı',
+  'text-heading':'başlık, vurgulu değer',
+  'accent-primary':'seçim, odak, birincil buton',
+  'accent-success':'yakınsadı / geçti',
+  'accent-warning':'uyarı, sınır aşımı',
+  'accent-danger':'hata, ıraksama',
+  'shadow-color':'yükseklik gölgesi'
+};
+
+function T(id,name,kind,fam,note,v){
+  var o={id:id,name:name,kind:kind,fam:fam,note:note,vars:{}};
+  for(var i=0;i<KEYS.length;i++) o.vars[KEYS[i]]=v[i];
+  return o;
+}
+
+var THEMES = [
+  /* ── SADE AİLESİ ────────────────────────────────────────────────────── */
+  T('graphite','Grafit','koyu','yeni',
+    'Nötr grafit. Ailenin iş atı — hiçbir yöne renk kaymaz, uzun oturumda sakin durur.',
+    ['#16181b','#1c1f23','#23272c','#101215','#2b3036','#343941','#454c55','#d2d6db','#949aa2',
+     '#696f78','#eceef1','#4a739f','#4e8f66','#a8823f','#b45c56','rgba(0, 0, 0, 0.55)']),
+  T('ink','Mürekkep','koyu','yeni',
+    'Soğuk mavi-siyah. En koyu zemin; karanlık odada ve projeksiyonda en rahat okunanı.',
+    ['#111419','#171b21','#1e232b','#0c0e12','#262c36','#2f3641','#3f4856','#ccd2da','#8d96a3',
+     '#636c7a','#e8ecf1','#5570a6','#4c8f70','#a5843f','#b0605c','rgba(0, 0, 0, 0.6)']),
+  T('basalt','Bazalt','koyu','yeni',
+    'Sıcak nötr taş. Claude temasının sıcaklığı, karamel aksanı olmadan.',
+    ['#1a1917','#201f1c','#282622','#131211','#302e2a','#3a3732','#4b473f','#d6d2cb','#9a958c',
+     '#6e6a63','#f0ece5','#4b7c72','#5a8a5c','#a3813d','#b05f52','rgba(0, 0, 0, 0.5)']),
+  T('mono','Monokrom','koyu','yeni',
+    'Sıfır chroma. Renk yalnız durum bildirir; seçim vurgusu hue ile değil açıklık farkıyla verilir — ailenin en katı üyesi.',
+    ['#151515','#1b1b1b','#232323','#0f0f0f','#2c2c2c','#363636','#4a4a4a','#d4d4d4','#969696',
+     '#6b6b6b','#f2f2f2','#6e6e6e','#5e8a63','#9c8342','#ab5f5b','rgba(0, 0, 0, 0.55)']),
+  T('paper','Kağıt','açık','yeni',
+    'Sıcak kırık beyaz. Rapor ve ekran görüntüsü alırken en dürüst zemin; baskıda da tutar.',
+    ['#f6f4f0','#fbfaf7','#eceae4','#ffffff','#dcd8d0','#e5e1da','#b6b0a5','#26241f','#5c584f',
+     '#8b8579','#14120f','#3a6288','#2f7150','#916324','#a4433c','rgba(40, 34, 24, 0.10)']),
+  T('zinc','Çinko','açık','yeni',
+    'Soğuk açık gri. Aydınlık ofiste, cam parlamasının olduğu ekranda en okunaklısı.',
+    ['#eef0f2','#f7f8f9','#e3e6e9','#ffffff','#d2d6db','#dcdfe4','#a8aeb6','#22262b','#555b63',
+     '#7d838c','#101418','#3f637f','#2f6f4f','#8c6222','#9e433f','rgba(20, 26, 34, 0.10)']),
+
+  /* ── MEVCUT ─────────────────────────────────────────────────────────── */
+  T('slate','Midnight','koyu','eski',
+    'Bugünkü varsayılan. Aksan chroma 0,215 — listedeki en doygun ikinci renk.',
+    ['#0a0c10','#0f1218','#151a22','#080a0e','#1c2333','#222b3a','#2d3a4f','#c8d1dc','#7a8599',
+     '#4a5568','#e2e8f0','#2563eb','#16a34a','#d97706','#dc2626','rgba(0, 0, 0, 0.6)']),
+  T('cream','Carbon','koyu','eski',
+    'Nötr karbon zemin doğru; üzerindeki turuncu aksan her seçili kenarda tekrar ediyor.',
+    ['#161616','#1c1c1c','#222222','#111111','#2a2a2a','#333333','#444444','#d4d4d4','#8c8c8c',
+     '#555555','#f0f0f0','#e05020','#2ea043','#d29922','#f85149','rgba(0, 0, 0, 0.5)']),
+  T('claude','Claude','koyu','eski',
+    'Sıcak kahve zemin hoş; karamel aksan mühendislik değerlerinin yanında fazla yumuşak.',
+    ['#2b2520','#231e1a','#342e28','#1c1815','#3d352e','#453c34','#5a4f44','#e0d6ca','#9c9080',
+     '#6b6055','#f0e8dc','#d4835e','#5a9a6a','#c89545','#c45a4a','rgba(0, 0, 0, 0.4)']),
+  T('navy','Donanma Mavisi','koyu','eski',
+    'Yüzey basamağı listedeki en büyüğü (ΔL 0,109) — paneller birbirinden kopuyor.',
+    ['#0a1728','#0f2237','#17324f','#071120','#21405f','#294a6c','#3a6390','#cfdbea','#869ab6',
+     '#57708c','#eef4fb','#d9b25a','#35a56f','#e58a2c','#e15a51','rgba(0, 6, 16, 0.6)']),
+  T('ansys','ANSYS','koyu','eski',
+    'Altın aksan HSL’de %100 doygun; ödünç alınmış bir marka rengi.',
+    ['#1a2632','#213140','#2a3d4f','#14202b','#314557','#3a5168','#4a647d','#d4dde6','#8ea3b5',
+     '#5d7589','#eaf1f7','#ffb71b','#3fa845','#e8920c','#e04a4a','rgba(0, 0, 0, 0.45)']),
+  T('fusion','Fusion 360','koyu','eski',
+    'Autodesk camgöbeği. Zemin iyi kalibre ama aksan ürünün kendisine ait değil.',
+    ['#2b2e32','#33373c','#3c4147','#242629','#44494f','#4e545b','#626a72','#d9dde1','#9aa0a7',
+     '#6a7079','#f0f2f4','#0696d7','#4caf50','#e8920c','#e25141','rgba(0, 0, 0, 0.5)']),
+  T('vscode','VS Code Dark+','koyu','eski',
+    'Editör mavisi %100 doygun; bg-input zeminden AÇIK — girdiler kart gibi kabarıyor.',
+    ['#1e1e1e','#252526','#2d2d2d','#3c3c3c','#333333','#3c3c3c','#5a5a5a','#d4d4d4','#9d9d9d',
+     '#6a6a6a','#ffffff','#007acc','#4ec9b0','#cca700','#f14c4c','rgba(0, 0, 0, 0.5)']),
+  T('pearl','Pearl','açık','eski',
+    'Yüzey basamağı en dengeli açık tema; yalnız aksanı fazla parlak (C 0,193).',
+    ['#fafbfc','#ffffff','#f0f1f3','#ffffff','#e0e2e6','#e8eaed','#c0c4cc','#1b1e24','#4e535e',
+     '#9098a6','#0c0e12','#2d6fe6','#1a9a50','#d49318','#d43d3d','rgba(0, 0, 0, 0.06)']),
+  T('steel','Steel','açık','eski',
+    'Mevcut ailenin en sakini. Çinko bu temanın chroma’sı yarıya indirilmiş hâli.',
+    ['#e4e7ec','#edf0f5','#d8dce4','#f2f4f8','#c2c8d4','#ced4de','#9aa3b4','#1c2030','#4a5068',
+     '#7a8298','#101422','#3d5ba9','#2e7d46','#b87a10','#b83838','rgba(0, 0, 0, 0.10)']),
+  T('solidworks','SolidWorks','açık','eski',
+    'Kırmızı aksan (C 0,216) listenin en doygunu — hata rengiyle aynı dilde konuşuyor.',
+    ['#e9eef3','#f2f5f8','#dde4ec','#ffffff','#c3cdd9','#d2dae3','#9aa8b8','#1c2733','#4a5868',
+     '#7e8c9c','#0f1822','#d51820','#2e8b3d','#d98314','#b01218','rgba(20, 30, 45, 0.10)'])
+];
+
+var BY_ID = {};
+THEMES.forEach(function(t){ BY_ID[t.id] = t; });
+
+/* ── renk matematiği ───────────────────────────────────────────────────── */
+function rgb(h){ return [1,3,5].map(function(i){ return parseInt(h.slice(i,i+2),16)/255; }); }
+function srgbLin(c){ return c <= 0.04045 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); }
+function wcagL(h){ var c = rgb(h).map(srgbLin); return 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2]; }
+function CR(a,b){ var x = wcagL(a), y = wcagL(b);
+  return (Math.max(x,y) + 0.05) / (Math.min(x,y) + 0.05); }
+function chroma(h){
+  var c = rgb(h).map(srgbLin), r = c[0], g = c[1], b = c[2];
+  var l = Math.cbrt(0.4122214708*r + 0.5363325363*g + 0.0514459929*b);
+  var m = Math.cbrt(0.2119034982*r + 0.6806995451*g + 0.1073969566*b);
+  var s = Math.cbrt(0.0883024619*r + 0.2817188376*g + 0.6299787005*b);
+  var A = 1.9779984951*l - 2.4285922050*m + 0.4505937099*s;
+  var B = 0.0259040371*l + 0.7827717662*m - 0.8086757660*s;
+  return Math.sqrt(A*A + B*B);
+}
+function tr(n, d){ return n.toFixed(d === undefined ? 2 : d).replace('.', ','); }
+
+/* ── tezgah ────────────────────────────────────────────────────────────── */
+var stage = document.getElementById('stage');
+var current = 'graphite';
+
+function paintStage(t){
+  KEYS.forEach(function(k){ stage.style.setProperty('--' + k, t.vars[k]); });
+  drawPlot(t);
+}
+
+/* Sonuç grafiği — yavaşlama eğrisi. Alan dolgusu + soluk ızgara + vurgulu uç. */
+var CURVE = (function(){
+  // x 6→514: uçtaki vurgu noktası (r=3,5) viewBox kenarında kırpılmasın.
+  var pts = [], v = 82;
+  for(var i = 0; i <= 52; i++){
+    var x = i / 52;
+    v = 82 * Math.exp(-2.1 * x) + 6 + 1.6 * Math.sin(i * 0.9) * (1 - x);
+    pts.push([6 + x * 508, 74 - (v / 92) * 60 - 6]);
+  }
+  return pts;
+})();
+function drawPlot(t){
+  var d = CURVE.map(function(p,i){ return (i ? 'L' : 'M') + tr(p[0],1).replace(',','.') + ' ' + tr(p[1],1).replace(',','.'); }).join(' ');
+  var acc = t.vars['accent-primary'];
+  document.getElementById('plot-line').setAttribute('d', d);
+  document.getElementById('plot-line').setAttribute('stroke', acc);
+  var area = document.getElementById('plot-area');
+  area.setAttribute('d', d + ' L514 74 L6 74 Z');
+  area.setAttribute('fill', 'color-mix(in srgb, ' + acc + ' 16%, transparent)');
+  var last = CURVE[CURVE.length - 1];
+  var end = document.getElementById('plot-end');
+  end.setAttribute('cx', last[0]); end.setAttribute('cy', last[1]);
+  end.setAttribute('fill', acc);
+  end.setAttribute('stroke', t.vars['bg-input']); end.setAttribute('stroke-width', '2');
+  var g = '';
+  for(var i = 1; i < 4; i++){
+    var y = (74 / 4) * i;
+    g += '<line x1="0" y1="' + y + '" x2="520" y2="' + y + '" stroke="' +
+         t.vars['border-color'] + '" stroke-width="1"/>';
+  }
+  document.getElementById('plot-grid').innerHTML = g;
+}
+
+/* ── palet tablosu ─────────────────────────────────────────────────────── */
+function renderPalette(t){
+  var rows = '', groups = {
+    'bg-primary':'Yüzeyler', 'border-color':'Kenarlar',
+    'text-primary':'Metin', 'accent-primary':'Aksan ve durum'
+  };
+  KEYS.forEach(function(k){
+    if(groups[k]) rows += '<tr class="grp"><td colspan="4">' + groups[k] + '</td></tr>';
+    var val = t.vars[k];
+    var isHex = val.charAt(0) === '#';
+    rows += '<tr><td class="chipcol"><span class="swatch-cell" style="display:block;background:' +
+      val + '"></span></td><td class="var">--' + k + '</td><td class="hex">' + val +
+      '</td><td class="role">' + ROLE[k] + (isHex ? '' : '') + '</td></tr>';
+  });
+  document.getElementById('palet-rows').innerHTML = rows;
+  document.getElementById('palet-id').textContent = t.id;
+  document.getElementById('palet-for').textContent = t.name;
+}
+
+/* ── kontrast denetimi ─────────────────────────────────────────────────── */
+var CHECKS = [
+  ['Gövde metni / kanvas', 'text-primary üzerine bg-primary', 'text-primary', 'bg-primary', 7, 'AAA ≥ 7'],
+  ['Gövde metni / kart', 'text-primary üzerine bg-tertiary', 'text-primary', 'bg-tertiary', 7, 'AAA ≥ 7'],
+  ['Başlık / panel', 'text-heading üzerine bg-secondary', 'text-heading', 'bg-secondary', 7, 'AAA ≥ 7'],
+  ['Etiket / kanvas', 'text-secondary üzerine bg-primary', 'text-secondary', 'bg-primary', 4.5, 'AA ≥ 4,5'],
+  ['İpucu metni', 'text-muted üzerine bg-primary', 'text-muted', 'bg-primary', 3, '≥ 3'],
+  ['Seçim çerçevesi', 'accent-primary üzerine bg-primary', 'accent-primary', 'bg-primary', 3, 'UI ≥ 3'],
+  ['Buton yazısı', '#ffffff üzerine accent-primary', '#ffffff', 'accent-primary', 4.5, 'AA ≥ 4,5'],
+  ['Yakınsama rozeti', 'accent-success üzerine bg-primary', 'accent-success', 'bg-primary', 3, '≥ 3'],
+  ['Uyarı rozeti', 'accent-warning üzerine bg-primary', 'accent-warning', 'bg-primary', 3, '≥ 3'],
+  ['Hata rozeti', 'accent-danger üzerine bg-primary', 'accent-danger', 'bg-primary', 3, '≥ 3']
+];
+function renderMetrics(t){
+  var h = '';
+  CHECKS.forEach(function(c){
+    var fg = c[2].charAt(0) === '#' ? c[2] : t.vars[c[2]];
+    var bg = c[3].charAt(0) === '#' ? c[3] : t.vars[c[3]];
+    var v = CR(fg, bg), ok = v >= c[4];
+    h += '<div class="metric"><span class="mk">' + c[0] + '<small>' + c[1] + '</small></span>' +
+         '<span class="mv">' + tr(v) + ':1</span>' +
+         '<span class="pass" data-ok="' + (ok ? 1 : 0) + '">' + (ok ? '✓ ' : '✗ ') + c[5] + '</span></div>';
+  });
+  h += '<div class="metric"><span class="mk">Aksan chroma<small>OKLCH C — düşük = sakin</small></span>' +
+       '<span class="mv">' + tr(chroma(t.vars['accent-primary']), 3) + '</span>' +
+       '<span class="pass" data-ok="' + (chroma(t.vars['accent-primary']) <= 0.09 ? 1 : 0) + '">' +
+       (chroma(t.vars['accent-primary']) <= 0.09 ? '✓' : '✗') + ' sade ≤ 0,09</span></div>';
+  document.getElementById('metric-rows').innerHTML = h;
+}
+
+/* ── kod blokları ──────────────────────────────────────────────────────── */
+function renderCode(t){
+  var css = '/* Tema: ' + t.name + ' */\n[data-theme="' + t.id + '"] {\n  color-scheme: ' +
+    (t.kind === 'koyu' ? 'dark' : 'light') + ';\n';
+  KEYS.forEach(function(k){ css += '  --' + k + ': ' + t.vars[k] + ';\n'; });
+  css += '}';
+  document.getElementById('code-css').textContent = css;
+
+  var js = '// js/settings.js — Ayarlar › Görünüm kartı\n' +
+    "{ id: '" + t.id + "', name: '" + t.name + "',\n" +
+    "  swatch: ['" + t.vars['bg-primary'] + "', '" + t.vars['bg-tertiary'] +
+    "', '" + t.vars['accent-primary'] + "'] }\n\n" +
+    "// js/theme.js — geçerli kimlikler dizisi\nvar valid = ['" + t.id + "', /* … */];\n\n" +
+    '// Pul renkleri styles.css ile birebir aynı olmalı;\n' +
+    '// tests/unit/theme-consistency.test.js bu senkronu korur.';
+  document.getElementById('code-js').textContent = js;
+  document.getElementById('kod-for').textContent = t.id;
+}
+
+/* ── ray kartları ──────────────────────────────────────────────────────── */
+function railCard(t){
+  var b = document.createElement('button');
+  b.className = 'tcard';
+  b.type = 'button';
+  b.setAttribute('aria-pressed', String(t.id === current));
+  b.dataset.id = t.id;
+  b.innerHTML = '<span class="sw"><i style="background:' + t.vars['bg-primary'] +
+    '"></i><i style="background:' + t.vars['bg-tertiary'] + '"></i><i style="background:' +
+    t.vars['accent-primary'] + '"></i></span><span class="nm">' + t.name +
+    '</span><span class="ch">' + tr(chroma(t.vars['accent-primary']), 2) + '</span>';
+  b.addEventListener('click', function(){ select(t.id); });
+  return b;
+}
+THEMES.forEach(function(t){
+  document.getElementById(t.fam === 'yeni' ? 'rail-new' : 'rail-old').appendChild(railCard(t));
+});
+
+/* ── doygunluk grafiği ─────────────────────────────────────────────────── */
+var MAXC = 0.25;
+(function(){
+  var host = document.getElementById('chart-rows');
+  var sorted = THEMES.slice().sort(function(a, b){
+    return chroma(b.vars['accent-primary']) - chroma(a.vars['accent-primary']);
+  });
+  sorted.forEach(function(t){
+    var c = chroma(t.vars['accent-primary']);
+    var b = document.createElement('button');
+    b.className = 'brow';
+    b.type = 'button';
+    b.dataset.id = t.id;
+    b.setAttribute('aria-pressed', String(t.id === current));
+    b.innerHTML = '<span class="bname">' + t.name + ' <em>' + (t.fam === 'yeni' ? 'aday' : 'mevcut') +
+      '</em></span><span class="btrack"><span class="bfill" style="width:' +
+      (c / MAXC * 100).toFixed(1) + '%;background:' + t.vars['accent-primary'] +
+      '"></span><span class="bval">' + tr(c, 3) + '</span></span>';
+    b.addEventListener('click', function(){
+      select(t.id);
+      document.getElementById('tezgah').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    host.appendChild(b);
+  });
+})();
+
+/* ── seçim ─────────────────────────────────────────────────────────────── */
+function select(id){
+  var t = BY_ID[id];
+  if(!t) return;
+  current = id;
+  paintStage(t);
+  renderPalette(t);
+  renderMetrics(t);
+  renderCode(t);
+  document.getElementById('stage-name').textContent = t.name;
+  document.getElementById('stage-kind').textContent = t.kind;
+  document.getElementById('stage-id').textContent = t.id;
+  document.getElementById('stage-chroma').textContent = 'C ' + tr(chroma(t.vars['accent-primary']), 3);
+  var noteEl = document.getElementById('stage-note');
+  noteEl.textContent = t.note;
+  noteEl.hidden = !t.note;
+  Array.prototype.forEach.call(document.querySelectorAll('.tcard, .brow'), function(el){
+    el.setAttribute('aria-pressed', String(el.dataset.id === id));
+  });
+}
+
+/* ── maketi kabına sığdır ──────────────────────────────────────────────── */
+var APP_W = 980;
+function fitStage(){
+  var host = stage.parentNode;
+  var s = Math.min(1, host.clientWidth / APP_W);
+  stage.style.transform = s < 1 ? 'scale(' + s.toFixed(4) + ')' : 'none';
+  // scrollHeight dönüşümden etkilenmez → ölçeklenmemiş yükseklik.
+  host.style.height = Math.round(stage.scrollHeight * s) + 'px';
+}
+if(window.ResizeObserver){
+  new ResizeObserver(fitStage).observe(stage.parentNode);
+} else {
+  window.addEventListener('resize', fitStage);
+}
+
+/* ── kopyala ───────────────────────────────────────────────────────────── */
+Array.prototype.forEach.call(document.querySelectorAll('.copy'), function(btn){
+  btn.addEventListener('click', function(){
+    var src = document.getElementById(btn.dataset.copy === 'css' ? 'code-css' : 'code-js');
+    var done = function(){
+      var old = btn.textContent;
+      btn.textContent = 'kopyalandı';
+      setTimeout(function(){ btn.textContent = old; }, 1400);
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(src.textContent).then(done, function(){});
+    } else {
+      var r = document.createRange();
+      r.selectNodeContents(src);
+      var s = window.getSelection();
+      s.removeAllRanges(); s.addRange(r);
+      try { document.execCommand('copy'); done(); } catch(e) {}
+    }
+  });
+});
+
+select('graphite');
+fitStage();
+</script>
+
+</body></html>

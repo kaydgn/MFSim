@@ -55,7 +55,7 @@ function kur(mut) {
   const pack = veFeadExampleNodes(KEY);
   pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
   if (mut) mut(pack.nodes);
-  return { pack, build: veFeadBuildSystem(pack.nodes, pack.connections) };
+  return { pack, build: veFeadBuildSystem(pack.nodes) };
 }
 const tenOf = (nodes) => nodes.find((n) => n.type === 'fead-tensioner').data;
 const beltOf = (nodes) => nodes.find((n) => n.type === 'fead-belt').data;
@@ -70,7 +70,9 @@ describe('örnek kayıt defteri: AG00879 kurulabilir', () => {
     expect(build.errors || []).toEqual([]);
     expect(build.warnings || []).toEqual([]);
     expect(build.sys.pulleys).toHaveLength(5);
-    expect(pack.connections).toHaveLength(5);
+    // KABLO KALKTI (2026-09-09): beş kasnak 1..5 numaralı, sıra tabloda.
+    expect(pack.nodes.filter((n) => n.data && n.data.beltIndex)
+      .map((n) => n.data.beltIndex).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5]);
   });
 
   test('kasnak sırası raporun Layout Data sırası', () => {
@@ -220,7 +222,7 @@ describe('modelin KENDİ İLAN ETTİĞİ sınırlar', () => {
     // raporun 5632 saatine %1 içinde oturuyor.
     const pack = katalogAc(veFeadExampleNodes(KEY));
     pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    const build = veFeadBuildSystem(pack.nodes, pack.connections);
+    const build = veFeadBuildSystem(pack.nodes);
     const solverNode = pack.nodes.find((n) => n.type === 'fead-solver');
     const A = veFeadAnalyze(build, { rows: veFeadDutyRows(solverNode) });
     const life = A.life;
@@ -333,7 +335,7 @@ describe('kanvasa kurma — gerçek yükleyici', () => {
 
   test('kanvasa kurulan örnek raporun duty tablosunu GERİ ÜRETİYOR', () => {
     const { ns, conns, solver } = kanvasaKur(KEY);
-    const build = veFeadBuildSystem(ns, conns);
+    const build = veFeadBuildSystem(ns);
     expect(build.ok).toBe(true);
     const res = veFeadAnalyze(build, { rows: veFeadDutyRows(solver) });
     const r0 = res.analysis.duty[0];
@@ -354,7 +356,7 @@ describe('kanvasa kurma — gerçek yükleyici', () => {
       Object.keys(r.kw).forEach((id) => { yeniKw['ex-' + id] = r.kw[id]; });
       r.kw = yeniKw;
     });
-    const build = veFeadBuildSystem(ns, conns);
+    const build = veFeadBuildSystem(ns);
     const res = veFeadAnalyze(build, { rows: bozuk });
     const r0 = res.analysis.duty[0];
     expect(r0.perPulley[0].powerKw).toBeCloseTo(0, 6);
@@ -369,7 +371,7 @@ describe('kanvasa kurma — gerçek yükleyici', () => {
     // kaydırırdı (ölçülmüş hata sınıfı: CLAUDE.md "örnek kurucusu kutuyu
     // koordinatın SÖYLEMEDİĞİ yere koyuyordu").
     const { ns } = kanvasaKur(KEY);
-    const build = veFeadBuildSystem(ns, global.connections);
+    const build = veFeadBuildSystem(ns);
     expect(build.ok).toBe(true);
     // Çalışma (Mean) konumundaki merkezler. Gergininki ÇÖZÜLÜR — ve raporun
     // Layout Data TEN satırı da zaten Mean merkezidir, yani o da bu kapıdan

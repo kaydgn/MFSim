@@ -77,14 +77,19 @@ describe('Sürücülük bir ROL, tip değil', () => {
     expect(veFeadResolveDriver([])).toBeNull();
   });
 
-  test('kayış sırası sürücüden başlar — sürücü değişince sıra da değişir', () => {
+  // SIRA SÜRÜCÜDEN BAŞLAR — kablo döneminde zincir sürücüden yürütüldüğü için
+  // bedavaydı; indis döneminde veFeadBeltOrder listeyi sürücüye DÖNDÜRÜYOR.
+  // Sözleşme korunmasaydı veFeadRouteFlip ("krank sabit, kalanı ters") başka
+  // bir kasnağı sabitler ve gergi kayışın gergin tarafına düşerdi.
+  test('kayış sırası sürücüden başlar — sürücü değişince sıra da döner', () => {
     const krank = nd('fead-crank'), alt = nd('fead-alternator'), ten = nd('fead-tensioner');
-    const conns = [link(krank, alt), link(alt, ten), link(ten, krank)];
-    expect(veFeadRouteOrder([alt, ten, krank], conns).map((n) => n.id))
+    [krank, alt, ten].forEach((n, i) => { n.data.beltIndex = i + 1; });
+    // Dizi sırası bilerek karışık: okunan şey indis, dizi değil.
+    expect(veFeadBeltOrder([alt, ten, krank]).map((n) => n.id))
       .toEqual([krank.id, alt.id, ten.id]);
     alt.data.driver = true;                       // sürücülüğü alternatöre ver
-    expect(veFeadRouteOrder([alt, ten, krank], conns).map((n) => n.id))
-      .toEqual([alt.id, ten.id, krank.id]);
+    expect(veFeadBeltOrder([alt, ten, krank]).map((n) => n.id))
+      .toEqual([alt.id, ten.id, krank.id]);       // çevrim DÖNDÜ, sıra bozulmadı
   });
 });
 
@@ -155,7 +160,7 @@ describe('hata çevirisi — çekirdeğin teşhis dili kullanıcı diline', () =
 
 describe('veFeadBuildSystem — eksik girdide İSTİSNA ATMAZ, sayar', () => {
   test('boş topoloji: hata listesi dolu, sys null, patlamıyor', () => {
-    const r = veFeadBuildSystem([], []);
+    const r = veFeadBuildSystem([]);
     expect(r.ok).toBe(false);
     expect(r.sys).toBeNull();
     expect(r.errors.join(' ')).toMatch(/kasnak yok/i);
@@ -163,27 +168,27 @@ describe('veFeadBuildSystem — eksik girdide İSTİSNA ATMAZ, sayar', () => {
 
   test('gergisiz model gergiyi ister', () => {
     const r = veFeadBuildSystem([nd('fead-crank', { od: 180, x: 0, y: 0 }),
-                                 nd('fead-alternator', { od: 60, x: 100, y: 100 })], []);
+                                 nd('fead-alternator', { od: 60, x: 100, y: 100 })]);
     expect(r.ok).toBe(false);
     expect(r.errors.join(' ')).toMatch(/Gergi yok/i);
   });
 
   test('konumu girilmemiş kasnak adıyla bildirilir', () => {
     const k = nd('fead-crank', { od: 180 }, 'Krank');
-    const r = veFeadBuildSystem([k, nd('fead-ac', { od: 120, x: 1, y: 1 }), nd('fead-tensioner', { od: 75 })], []);
+    const r = veFeadBuildSystem([k, nd('fead-ac', { od: 120, x: 1, y: 1 }), nd('fead-tensioner', { od: 75 })]);
     expect(r.errors.join(' ')).toMatch(/"Krank" kasnağının konumu/);
   });
 
   test('çapı girilmemiş kasnak UYARI üretir (hata değil) — şema yine çizilebilsin', () => {
     const k = nd('fead-crank', { x: 0, y: 0 }, 'Krank');
-    const r = veFeadBuildSystem([k], []);
+    const r = veFeadBuildSystem([k]);
     expect(r.warnings.join(' ')).toMatch(/"Krank" dış çapı girilmedi/);
   });
 
   test('iki kasnak "Sürücü" işaretliyse reddedilir', () => {
     const a = nd('fead-crank', { od: 180, x: 0, y: 0, driver: true });
     const b = nd('fead-fan', { od: 150, x: 200, y: 0, driver: true });
-    const r = veFeadBuildSystem([a, b, nd('fead-tensioner', { od: 75 })], []);
+    const r = veFeadBuildSystem([a, b, nd('fead-tensioner', { od: 75 })]);
     expect(r.errors.join(' ')).toMatch(/Birden fazla kasnak "Sürücü"/);
   });
 });
@@ -228,40 +233,37 @@ describe('uçtan uca: AG00686 kanvas düğümlerinden Gates sayıları', () => {
     // bilinmiyor, EDL(Mean) − L_nominal olarak bulunur. AG00686 için 3.50 mm.
     const solver = nd('fead-solver', { designTensionN: REF.designN, driveRatio: 1, lengthOffsetMm: 3.5 });
     const list = [crk, idr, ac, ten, belt, solver];
-    // Kayış yolu: bağlantılar = kayışın GİDİŞİ (2026-09-08). Gates tablosu
-    // CRK → IDR → A_C → TEN, gidiş onun tersi: CRK → TEN → A_C → IDR. Köprü
-    // çekirdeğe tablo sırasını verir (veFeadRouteFlip) — `names` onu söyler.
-    const conns = [link(crk, ten), link(ten, ac), link(ac, idr), link(idr, crk)];
-    return { list, conns, crk, idr, ac, ten };
+    // KAYIŞ SIRASI İNDİSTE (2026-09-09, kablo kalktı). `beltIndex` Gates TABLO
+    // sırasını taşıyor — CRK → IDR → A_C → TEN — ve çekirdek listeyi bu sırada
+    // görüyor (`names` onu söyler). Kayışın GİDİŞİ bunun tersidir.
+    [crk, idr, ac, ten].forEach((n, i) => { n.data.beltIndex = i + 1; });
+    return { list, crk, idr, ac, ten };
   }
 
   test('köprü sistemi kurabiliyor, hata yok', () => {
-    // kur() HER ÇAĞRIDA YENİ düğüm kimlikleri üretiyor; ikisini ayrı ayrı
-    // çağırmak bağlantıları BAŞKA bir düğüm kümesine bağlar. Eskiden bu
-    // görünmüyordu, çünkü güzergâh çözücüsü bağlanmamış kasnakları sıraya
-    // sessizce ekliyordu ve dizi sırası tesadüfen doğru yolu veriyordu — yani
-    // bu uçtan uca test kabloları HİÇ sınamıyordu (bkz. veFeadRouteDiagnose).
     const k = kur();
-    const r = veFeadBuildSystem(k.list, k.conns);
+    const r = veFeadBuildSystem(k.list);
     expect(r.errors).toEqual([]);
     expect(r.ok).toBe(true);
-    expect(r.route.closed).toBe(true);
-    expect(r.route.isolated).toEqual([]);
+    // "kapalı mı / kopuk var mı" hükümleri 2026-09-09'da kalktı: sıra bir
+    // liste, ikisi de kurulamıyor. Yerine sıranın kendisi tutuluyor.
+    expect(r.order.map((n) => n.customName)).toEqual(['CRK', 'IDR', 'A_C', 'TEN']);
+    expect(r.order.map((n) => n.data.beltIndex)).toEqual([1, 2, 3, 4]);
   });
 
   test('çekirdek (Gates tablo) sırası CRK → IDR → A_C → TEN — kablolar gidiş sırasındayken', () => {
     const b = kur();
-    const r = veFeadBuildSystem(b.list, b.conns);
+    const r = veFeadBuildSystem(b.list);
     expect(r.names).toEqual(['CRK', 'IDR', 'A_C', 'TEN']);
     // Kablolar gidiş: CRK → TEN → A_C → IDR.
-    expect(veFeadRouteOrder(b.list, b.conns).map((n) => n.customName))
+    expect(veFeadRouteOrder(b.list).map((n) => n.customName))
       .toEqual(['CRK', 'TEN', 'A_C', 'IDR']);
     expect(r.spin).toBe(-1);                                 // krank CW
   });
 
   test('dış çaplardan türeyen yarıçaplar Gates Layout Data ile aynı', () => {
     const b = kur();
-    const sys = veFeadBuildSystem(b.list, b.conns).sys;
+    const sys = veFeadBuildSystem(b.list).sys;
     const p = {}; sys.pulleys.forEach((x) => { p[x.name] = x; });
     expect(p.CRK.rPitch).toBeCloseTo(81.2, 6);   // 160/2 + 1.2
     expect(p.CRK.rEff).toBeCloseTo(80.0, 6);
@@ -273,7 +275,7 @@ describe('uçtan uca: AG00686 kanvas düğümlerinden Gates sayıları', () => {
 
   test('span boyları raporla %0.5 içinde', () => {
     const b = kur();
-    const sys = veFeadBuildSystem(b.list, b.conns).sys;
+    const sys = veFeadBuildSystem(b.list).sys;
     const g = F.tensionerState(sys, REF.relMean).geom;
     g.names.forEach((nm, i) => {
       const hata = Math.abs(g.exitSpanLen(i) - REF.span[nm]) / REF.span[nm] * 100;
@@ -284,7 +286,7 @@ describe('uçtan uca: AG00686 kanvas düğümlerinden Gates sayıları', () => {
 
   test('sarım açıları raporla 0.2° içinde — TEMAS TARAFI DOĞRU OKUNDU demek', () => {
     const b = kur();
-    const sys = veFeadBuildSystem(b.list, b.conns).sys;
+    const sys = veFeadBuildSystem(b.list).sys;
     const g = F.tensionerState(sys, REF.relMean).geom;
     g.names.forEach((nm, i) => {
       expect(Math.abs(g.wrapDeg(i) - REF.wrap[nm])).toBeLessThan(0.2);
@@ -293,7 +295,7 @@ describe('uçtan uca: AG00686 kanvas düğümlerinden Gates sayıları', () => {
 
   test('gergi dengesi: ortalama konumda take-up ve gerginlik raporla uyuşuyor', () => {
     const b = kur();
-    const sys = veFeadBuildSystem(b.list, b.conns).sys;
+    const sys = veFeadBuildSystem(b.list).sys;
     const st = F.tensionerState(sys, REF.relMean);
     expect(Math.abs(st.takeupMmPerDeg - REF.takeupMean) / REF.takeupMean * 100).toBeLessThan(0.5);
     expect(Math.abs(st.tensionN - REF.designN) / REF.designN * 100).toBeLessThan(0.5);
@@ -306,7 +308,7 @@ describe('uçtan uca: AG00686 kanvas düğümlerinden Gates sayıları', () => {
   test('ters temas tarafı hata VERMEZ ama sarımı bozar (rozetin varlık nedeni)', () => {
     const b = kur();
     b.idr.data.contact = 'grooved';               // avarayı yanlışlıkla kaburgalı yap
-    const r = veFeadBuildSystem(b.list, b.conns);
+    const r = veFeadBuildSystem(b.list);
     expect(r.ok).toBe(true);                      // ← hata YOK
     const g = F.tensionerState(r.sys, REF.relMean).geom;
     const i = g.names.indexOf('IDR');
@@ -321,10 +323,15 @@ describe('uçtan uca: AG00686 kanvas düğümlerinden Gates sayıları', () => {
   //
   // Değişmezin kendisi aynen ısırıyor; değişen tek şey ne YAPTIĞI: eskiden
   // istisna atıyordu, şimdi `geomValid=false` + adıyla yazılmış bir uyarı.
-  test('yanlış bağlantı sırası sarım değişmeziyle YAKALANIR', () => {
+  test('yanlış kayış sırası sarım değişmeziyle YAKALANIR', () => {
     const b = kur();
-    const bozuk = [link(b.crk, b.ac), link(b.ac, b.idr), link(b.idr, b.ten), link(b.ten, b.crk)];
-    const r = veFeadBuildSystem(b.list, bozuk);
+    // Doğru tablo sırası CRK → IDR → A_C → TEN. Ortadaki iki kasnağı takas
+    // etmek TABLODA yapılabilen ama fiziksel olmayan bir yol kuruyor — kablo
+    // döneminde aynı hata teli yanlış çekerek yapılıyordu. Kapı aynı: sayılar
+    // yine üretiliyor, geçersizliği söyleyen şey sarım değişmezi.
+    b.idr.data.beltIndex = 3; b.ac.data.beltIndex = 2;
+    const r = veFeadBuildSystem(b.list);
+    expect(r.order.map((n) => n.customName)).toEqual(['CRK', 'A_C', 'IDR', 'TEN']);
 
     expect(r.ok).toBe(true);                 // sayılar üretiliyor
     expect(r.geomValid).toBe(false);         // ama YOL geçersiz ve bu YAZILI
@@ -336,14 +343,15 @@ describe('uçtan uca: AG00686 kanvas düğümlerinden Gates sayıları', () => {
     expect(g.violations.map((v) => v.type)).toContain('wrapSum');
 
     // DOĞRU sıra kurulunca ihlal yok — kapı yanlış yöne de kapalı.
-    const dogru = veFeadBuildSystem(b.list, b.conns);
+    b.idr.data.beltIndex = 2; b.ac.data.beltIndex = 3;
+    const dogru = veFeadBuildSystem(b.list);
     expect(dogru.geomValid).toBe(true);
     expect(F.geometryAt(dogru.sys, dogru.relDeg).violations).toHaveLength(0);
   });
 
   test('konum tablosu üretiliyor, Mean kol açısı Gates ile 0.2° içinde', () => {
     const b = kur();
-    const sys = veFeadBuildSystem(b.list, b.conns).sys;
+    const sys = veFeadBuildSystem(b.list).sys;
     const rows = F.positionTable(sys);
     const mean = rows.filter((r) => r.position === 'Mean')[0];
     expect(mean).toBeDefined();
@@ -361,10 +369,10 @@ describe('uçtan uca: AG00686 kanvas düğümlerinden Gates sayıları', () => {
     // sabitli; dolayısıyla lengthOffsetMm kol açısını değil, aynı açıda
     // GEREKEN boyu kaydırır. Kalibrasyonun anlamı da bu yönde okunur.
     const b = kur();
-    const ile = veFeadBuildSystem(b.list, b.conns);
+    const ile = veFeadBuildSystem(b.list);
     const sifir = b.list.map((n) => (n.type === 'fead-solver'
       ? Object.assign({}, n, { data: Object.assign({}, n.data, { lengthOffsetMm: 0 }) }) : n));
-    const siz = veFeadBuildSystem(sifir, b.conns);
+    const siz = veFeadBuildSystem(sifir);
     expect(ile.ok && siz.ok).toBe(true);
     expect(Math.abs(ile.beltLengthMm - siz.beltLengthMm)).toBeCloseTo(3.5, 6);
     // kol açısı ise DEĞİŞMEZ — sabitlenmiş
@@ -422,7 +430,7 @@ describe('duty cycle → çekirdek: AG00686 gerilme tablosu', () => {
 
   test('kW sözlüğü DÜĞÜM KİMLİĞİYLE anahtarlanır, çekirdeğe ADLA geçer', () => {
     const b = kur([{ rpm: 1250, dcPct: 100, kw: 5 }]);
-    const build = veFeadBuildSystem(b.list, b.conns);
+    const build = veFeadBuildSystem(b.list);
     const duty = veFeadDutyToCore(build, veFeadDutyRows(b.sv));
     expect(duty).toHaveLength(1);
     expect(Object.keys(duty[0].loadsKw).sort()).toEqual(['A_C', 'IDR', 'TEN']);
@@ -436,21 +444,21 @@ describe('duty cycle → çekirdek: AG00686 gerilme tablosu', () => {
   test('kasnak yeniden adlandırılınca girilen güç KAYBOLMAZ', () => {
     const b = kur([{ rpm: 1250, dcPct: 100, kw: 5 }]);
     b.ac.customName = 'Klima (yeni ad)';
-    const build = veFeadBuildSystem(b.list, b.conns);
+    const build = veFeadBuildSystem(b.list);
     const duty = veFeadDutyToCore(build, veFeadDutyRows(b.sv));
     expect(duty[0].loadsKw['Klima (yeni ad)']).toBe(5);
   });
 
   test('devri 0/boş olan satır çözüme girmez (kayış hızı sıfır olurdu)', () => {
     const b = kur([{ rpm: 0, dcPct: 10, kw: 5 }, { rpm: 1250, dcPct: 90, kw: 5 }]);
-    const build = veFeadBuildSystem(b.list, b.conns);
+    const build = veFeadBuildSystem(b.list);
     expect(veFeadDutyToCore(build, veFeadDutyRows(b.sv))).toHaveLength(1);
   });
 
   test('çıkış gerilmeleri Gates duty tablosuyla %0.5 içinde', () => {
     const rows = Object.keys(REF).map((r) => ({ rpm: +r, dcPct: 100 / 3, kw: REF[r].kw }));
     const b = kur(rows);
-    const build = veFeadBuildSystem(b.list, b.conns);
+    const build = veFeadBuildSystem(b.list);
     const res = veFeadAnalyze(build, { rows: veFeadDutyRows(b.sv), cylinders: 6 });
     expect(res.ok).toBe(true);
     res.analysis.duty.forEach((d) => {
@@ -467,7 +475,7 @@ describe('duty cycle → çekirdek: AG00686 gerilme tablosu', () => {
   test('hubload büyüklükleri Gates duty tablosuyla %0.5 içinde', () => {
     const rows = Object.keys(REF).map((r) => ({ rpm: +r, dcPct: 100 / 3, kw: REF[r].kw }));
     const b = kur(rows);
-    const res = veFeadAnalyze(veFeadBuildSystem(b.list, b.conns),
+    const res = veFeadAnalyze(veFeadBuildSystem(b.list),
       { rows: veFeadDutyRows(b.sv), cylinders: 6 });
     res.analysis.duty.forEach((d) => {
       const ref = REF[d.engineRpm].H;
@@ -479,7 +487,7 @@ describe('duty cycle → çekirdek: AG00686 gerilme tablosu', () => {
 
   test('sürücü gücü diğerlerinin toplamı (çevrim kapanır)', () => {
     const b = kur([{ rpm: 1250, dcPct: 100, kw: 5 }]);
-    const res = veFeadAnalyze(veFeadBuildSystem(b.list, b.conns),
+    const res = veFeadAnalyze(veFeadBuildSystem(b.list),
       { rows: veFeadDutyRows(b.sv) });
     const pp = res.analysis.duty[0].perPulley;
     const crk = pp.filter((p) => p.name === 'CRK')[0];
@@ -488,7 +496,7 @@ describe('duty cycle → çekirdek: AG00686 gerilme tablosu', () => {
 
   test('ateşleme frekansı silindir sayısından: 1250 rpm, 6 sil. → 62.5 Hz', () => {
     const b = kur([{ rpm: 1250, dcPct: 100, kw: 5 }]);
-    const res = veFeadAnalyze(veFeadBuildSystem(b.list, b.conns),
+    const res = veFeadAnalyze(veFeadBuildSystem(b.list),
       { rows: veFeadDutyRows(b.sv), cylinders: 6 });
     expect(res.analysis.duty[0].firingHz).toBeCloseTo(62.5, 6);
   });
@@ -499,7 +507,7 @@ describe('duty cycle → çekirdek: AG00686 gerilme tablosu', () => {
   test('yorulma dağılımı: aynı çap + aynı temas → AYNI pay', () => {
     const rows = Object.keys(REF).map((r) => ({ rpm: +r, dcPct: 100 / 3, kw: REF[r].kw }));
     const b = kur(rows);
-    const res = veFeadAnalyze(veFeadBuildSystem(b.list, b.conns),
+    const res = veFeadAnalyze(veFeadBuildSystem(b.list),
       { rows: veFeadDutyRows(b.sv), fatigueModel: 'PK-2_2p-MT3' });
     expect(res.fatigue).toBeTruthy();
     const pay = {};
@@ -514,7 +522,7 @@ describe('duty cycle → çekirdek: AG00686 gerilme tablosu', () => {
   test('B10 ömrü hesaplanıyor ve geçerlilik alanı bildiriliyor', () => {
     const rows = Object.keys(REF).map((r) => ({ rpm: +r, dcPct: 100 / 3, kw: REF[r].kw }));
     const b = kur(rows);
-    const res = veFeadAnalyze(veFeadBuildSystem(b.list, b.conns), { rows: veFeadDutyRows(b.sv) });
+    const res = veFeadAnalyze(veFeadBuildSystem(b.list), { rows: veFeadDutyRows(b.sv) });
     expect(res.life).toBeTruthy();
     expect(res.life.hoursB10).toBeGreaterThan(0);
     // AG00686'nın çapları (79.6 / 137 / 160) geçerlilik alanı içinde
@@ -524,7 +532,7 @@ describe('duty cycle → çekirdek: AG00686 gerilme tablosu', () => {
   // Geçerlilik sınırları SONUCUN İÇİNDE taşınır; dipnotta bırakılmaz.
   test('geçerlilik sınırları her koşuda sonuca ekleniyor', () => {
     const b = kur([{ rpm: 1250, dcPct: 100, kw: 5 }]);
-    const res = veFeadAnalyze(veFeadBuildSystem(b.list, b.conns), { rows: veFeadDutyRows(b.sv) });
+    const res = veFeadAnalyze(veFeadBuildSystem(b.list), { rows: veFeadDutyRows(b.sv) });
     const t = res.limits.join(' ');
     // Burulma modeli çekirdeğe girdikten SONRA bu satır değişti: eskiden
     // "doğal frekans KARŞILAŞTIRILAMAZ" diyordu, çünkü çekirdek yalnız tek
@@ -540,14 +548,14 @@ describe('duty cycle → çekirdek: AG00686 gerilme tablosu', () => {
 
   test('boş çevrimde analiz patlamaz, uyarı verir', () => {
     const b = kur([]);
-    const res = veFeadAnalyze(veFeadBuildSystem(b.list, b.conns), { rows: [] });
+    const res = veFeadAnalyze(veFeadBuildSystem(b.list), { rows: [] });
     expect(res.ok).toBe(true);
     expect(res.duty).toEqual([]);
     expect(res.warnings.join(' ')).toMatch(/Çalışma çevrimi boş/);
   });
 
   test('çözülemeyen modelde analiz hata döndürür, istisna atmaz', () => {
-    const res = veFeadAnalyze(veFeadBuildSystem([], []), { rows: [] });
+    const res = veFeadAnalyze(veFeadBuildSystem([]), { rows: [] });
     expect(res.ok).toBe(false);
     expect(res.error).toBeTruthy();
   });
@@ -576,8 +584,7 @@ describe('katalog bağı — oran çaptan hesaplanır', () => {
     }, 'TEN');
     const belt = nd('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 900, tolerance: 6, beltDataMode: 'full' });
     const sv = nd('fead-solver', { designTensionN: 700, driveRatio: 1 });
-    const build = veFeadBuildSystem([crk, alt, ten, belt, sv],
-      [link(crk, alt), link(alt, ten), link(ten, crk)]);
+    const build = veFeadBuildSystem([crk, alt, ten, belt, sv]);
     expect(build.ok).toBe(true);
     const i = build.names.indexOf('ALT');
     // pitch oranı = 81.2 / 31.2 = 2.6026 → 1000 rpm motorda ALT 2602.6 rpm
@@ -615,7 +622,7 @@ describe('veFeadDutyDegC — hasar-eşdeğer sıcaklık', () => {
     // Ömür/yorulma katalog sabitlerine bağlı → AÇIKÇA açılıyor (varsayılan
     // artık 'none', çünkü kayış boyu bir ÇIKTI ve kayış henüz seçilmemiş).
     ex.nodes.find((n) => n.type === 'fead-belt').data.beltDataMode = 'full';
-    const build = veFeadBuildSystem(ex.nodes, ex.connections);
+    const build = veFeadBuildSystem(ex.nodes);
     expect(build.ok).toBe(true);
     const solv = ex.nodes.find((n) => n.type === 'fead-solver');
     return { build, rows: veFeadDutyRows(solv) };
@@ -718,7 +725,7 @@ describe('B10 ömrü ↔ seçili yorulma modeli', () => {
     // Ömür/yorulma katalog sabitlerine bağlı → AÇIKÇA açılıyor (varsayılan
     // artık 'none', çünkü kayış boyu bir ÇIKTI ve kayış henüz seçilmemiş).
     ex.nodes.find((n) => n.type === 'fead-belt').data.beltDataMode = 'full';
-    const build = veFeadBuildSystem(ex.nodes, ex.connections);
+    const build = veFeadBuildSystem(ex.nodes);
     const solv = ex.nodes.find((n) => n.type === 'fead-solver');
     return { build, rows: veFeadDutyRows(solv) };
   };
@@ -770,7 +777,7 @@ describe('burulma modeli köprüsü', () => {
     // Ömür/yorulma katalog sabitlerine bağlı → AÇIKÇA açılıyor (varsayılan
     // artık 'none', çünkü kayış boyu bir ÇIKTI ve kayış henüz seçilmemiş).
     ex.nodes.find((n) => n.type === 'fead-belt').data.beltDataMode = 'full';
-    const build = veFeadBuildSystem(ex.nodes, ex.connections);
+    const build = veFeadBuildSystem(ex.nodes);
     expect(build.ok).toBe(true);
     const solv = ex.nodes.find((n) => n.type === 'fead-solver');
     return { build, solv, rows: veFeadDutyRows(solv), nodes: ex.nodes };
@@ -824,7 +831,7 @@ describe('burulma modeli köprüsü', () => {
     const ex = veFeadExampleNodes('BMC_FEAD_2026');
     ex.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     ex.nodes.filter((n) => n.type === 'fead-ac').forEach((n) => { delete n.data.inertia; });
-    const build = veFeadBuildSystem(ex.nodes, ex.connections);
+    const build = veFeadBuildSystem(ex.nodes);
     const solv = ex.nodes.find((n) => n.type === 'fead-solver');
     const R = veFeadAnalyze(build, { rows: veFeadDutyRows(solv), crankInertia: 0.70 });
     expect(R.ok).toBe(true);                      // gerilme/ömür etkilenmez
@@ -846,7 +853,7 @@ describe('burulma modeli köprüsü', () => {
     const ac = ex.nodes.find((n) => n.type === 'fead-ac');
     ac.type = 'fead-waterpump'; ac.def = componentDefs['fead-waterpump'];
     delete ac.data.inertia;
-    const build = veFeadBuildSystem(ex.nodes, ex.connections);
+    const build = veFeadBuildSystem(ex.nodes);
     const solv = ex.nodes.find((n) => n.type === 'fead-solver');
     const R = veFeadAnalyze(build, { rows: veFeadDutyRows(solv), crankInertia: 0.70 });
     expect(R.ok).toBe(true);                      // gerilme/ömür etkilenmez
@@ -870,7 +877,15 @@ describe('burulma modeli köprüsü', () => {
 // Buradaki testlerin çapası tek bir cümle: KANVASTA OLMAYAN BİR TEL, ÇÖZÜMDE
 // DE OLMAMALI. Hata mesajı ayrıca hangi kasnağın kopuk olduğunu söylemeli —
 // "çözülemedi" demek kullanıcıyı aramaya bırakırdı.
-describe('güzergâh teşhisi', () => {
+// ── KAYIŞ SIRASI: KABLO YOK, İNDİS VAR (2026-09-09) ────────────────────────
+//
+// Bu blok eskiden "güzergâh teşhisi"ydi ve üç hata sınıfını sayıyordu: kopuk
+// kasnak, kapanmayan çevrim, çatal. ÜÇÜ DE ARTIK KURULAMIYOR — sıra bir graf
+// değil bir liste, listede kopukluk ve çatal diye bir şey yok, liste de
+// tanımı gereği kapalı. Kapı o yüzden hata sınıflarını değil, sıranın
+// SÖZLEŞMESİNİ tutuyor: indisten okunur, sürücüden başlar, hiçbir kasnak
+// düşmez.
+describe('kayış sırası — indisten, sürücüden başlayarak', () => {
   function dortlu() {
     const crk = nd('fead-crank', { od: 160, x: 0, y: 0, driver: true }, 'CRK');
     const idr = nd('fead-idler', { od: 75, x: -72, y: 267 }, 'IDR');
@@ -882,66 +897,66 @@ describe('güzergâh teşhisi', () => {
     }, 'TEN');
     const belt = nd('fead-belt', { profile: 'PK', brand: 'GATES', ribs: 8, effLength: 1475, tolerance: 6, beltDataMode: 'full' });
     const sv = nd('fead-solver', { designTensionN: 765.7, driveRatio: 1, lengthOffsetMm: 3.5 });
-    return {
-      list: [crk, idr, ac, ten, belt, sv], crk, idr, ac, ten,
-      conns: [link(crk, idr), link(idr, ac), link(ac, ten), link(ten, crk)]
-    };
+    [crk, idr, ac, ten].forEach((n, i) => { n.data.beltIndex = i + 1; });
+    return { list: [crk, idr, ac, ten, belt, sv], crk, idr, ac, ten };
   }
 
-  test('tam çevrim: kapalı, kopuk yok', () => {
+  test('sıra indisten okunur, dizi sırasından DEĞİL', () => {
     const k = dortlu();
-    const t = veFeadRouteDiagnose(k.list, k.conns);
-    expect(t.ok).toBe(true);
-    expect(t.closed).toBe(true);
-    expect(t.isolated).toEqual([]);
-    expect(t.order.map((n) => n.customName)).toEqual(['CRK', 'IDR', 'A_C', 'TEN']);
-  });
-
-  // ASIL REGRESYON: tek bir tel silinince sonuç DEĞİŞMEK ZORUNDA.
-  test('bir tel silinince çözüm ARTIK aynı kalmıyor', () => {
-    const k = dortlu();
-    const tam = veFeadBuildSystem(k.list, k.conns);
-    expect(tam.ok).toBe(true);
-
-    const eksik = veFeadBuildSystem(k.list, k.conns.filter((c) => c.to !== k.ac.id));
-    expect(eksik.ok).toBe(false);
-    expect(eksik.errors.join(' ')).toMatch(/A_C/);          // hangi kasnak kopuk, adıyla
-    expect(eksik.route.isolated.map((n) => n.customName)).toContain('A_C');
-  });
-
-  test('kopuk kasnak sıraya eklenir ama ÇÖZÜME girmez', () => {
-    const k = dortlu();
-    const t = veFeadRouteDiagnose(k.list, k.conns.filter((c) => c.to !== k.ac.id));
-    // Yerleştirici ve rozetler kopuk kasnağı da görmeli → sıra yine dört kasnak
-    expect(t.order.length).toBe(4);
-    expect(t.ok).toBe(false);
-    // IDR→A_C kopunca zincir CRK→IDR'de bitiyor; A_C ve TEN'e ULAŞILAMIYOR.
-    // Kopukluk tek kasnakla sınırlı değil, o telden SONRAKİ her şey düşüyor —
-    // eski davranışta ikisi de sessizce kayışa dahil ediliyordu.
-    expect(t.isolated.map((n) => n.customName)).toEqual(['A_C', 'TEN']);
-    expect(t.errors.join(' ')).toMatch(/bağlı olmayan kasnak/);
-  });
-
-  test('kapanmayan zincir sebebini yazar', () => {
-    const k = dortlu();
-    const t = veFeadRouteDiagnose(k.list, k.conns.filter((c) => c.from !== k.ten.id));
-    expect(t.closed).toBe(false);
-    expect(t.errors.join(' ')).toMatch(/kapanmıyor/);
-    expect(t.errors.join(' ')).toMatch(/TEN/);
-  });
-
-  test('bir kasnaktan iki tel çıkarsa çatal bildirilir (ilk tel sessizce kazanmaz)', () => {
-    const k = dortlu();
-    const t = veFeadRouteDiagnose(k.list, k.conns.concat([link(k.crk, k.ac)]));
-    expect(t.ok).toBe(false);
-    expect(t.errors.join(' ')).toMatch(/CRK.*iki|CRK.*2 kayış çıkıyor/);
-  });
-
-  test('veFeadRouteOrder sözleşmesi değişmedi (yerleştirici bunu kullanıyor)', () => {
-    const k = dortlu();
-    expect(veFeadRouteOrder(k.list, k.conns).map((n) => n.customName))
+    const karisik = [k.ten, k.ac, k.crk, k.idr];
+    expect(veFeadBeltOrder(karisik).map((n) => n.customName))
       .toEqual(['CRK', 'IDR', 'A_C', 'TEN']);
-    expect(veFeadRouteOrder(k.list, []).length).toBe(4);   // hiç tel yokken de dört kasnak
+  });
+
+  test('indissiz kasnak SONA düşer — paletten yeni bırakılan kasnak kayışın sonuna eklenir', () => {
+    const k = dortlu();
+    const yeni = nd('fead-alternator', { od: 60, x: 100, y: 100 }, 'ALT');
+    expect(veFeadBeltOrder([yeni].concat(k.list)).map((n) => n.customName))
+      .toEqual(['CRK', 'IDR', 'A_C', 'TEN', 'ALT']);
+  });
+
+  test('çakışan indis kasnak DÜŞÜRMEZ — dizi sırası ayırır, normalize 1..N yazar', () => {
+    const k = dortlu();
+    k.ac.data.beltIndex = 2;                       // IDR ile çakıştı
+    const sira = veFeadNormalizeBeltOrder(k.list);
+    expect(sira.map((n) => n.customName)).toEqual(['CRK', 'IDR', 'A_C', 'TEN']);
+    expect(sira.map((n) => n.data.beltIndex)).toEqual([1, 2, 3, 4]);
+  });
+
+  test('normalize BOŞLUK kapatır (kasnak silinince kalan delik)', () => {
+    const k = dortlu();
+    k.ten.data.beltIndex = 97;
+    expect(veFeadNormalizeBeltOrder(k.list).map((n) => n.data.beltIndex)).toEqual([1, 2, 3, 4]);
+  });
+
+  test('HİÇBİR KASNAK DÜŞMEZ: listedeki her kasnak kayıştadır', () => {
+    const k = dortlu();
+    // Eski dünyada teli çekilmemiş kasnak "kopuk" sayılıp çözümü reddettiriyordu;
+    // burada öyle bir hâl KURULAMIYOR — indisi olmayan kasnak bile sıraya girer.
+    delete k.ac.data.beltIndex;
+    const b = veFeadBuildSystem(k.list);
+    expect(b.ok).toBe(true);
+    expect(b.order.map((n) => n.customName)).toContain('A_C');
+    expect(b.order).toHaveLength(4);
+  });
+
+  test('satır taşıma: sıra değişir, sürücü satırı KİLİTLİ', () => {
+    const k = dortlu();
+    expect(veFeadMoveBeltIndex(k.list, k.ac.id, -1)).toBe(true);      // A_C yukarı
+    expect(veFeadBeltOrder(k.list).map((n) => n.customName))
+      .toEqual(['CRK', 'A_C', 'IDR', 'TEN']);
+    expect(veFeadMoveBeltIndex(k.list, k.crk.id, +1)).toBe(false);    // sürücü inmez
+    expect(veFeadMoveBeltIndex(k.list, k.ac.id, -1)).toBe(false);     // 1. satıra çıkılmaz
+    expect(veFeadBeltOrder(k.list).map((n) => n.customName))
+      .toEqual(['CRK', 'A_C', 'IDR', 'TEN']);
+  });
+
+  test('veFeadRouteOrder GİDİŞ sırası — tablo sırasının çevrilmişi', () => {
+    const k = dortlu();
+    expect(veFeadBeltOrder(k.list).map((n) => n.customName))
+      .toEqual(['CRK', 'IDR', 'A_C', 'TEN']);          // tablo/çekirdek sırası
+    expect(veFeadRouteOrder(k.list).map((n) => n.customName))
+      .toEqual(['CRK', 'TEN', 'A_C', 'IDR']);          // kayışın gidişi
   });
 });
 
@@ -964,7 +979,7 @@ describe('veFeadSlipThreshold — kayma eşiği', () => {
       id: n.id, type: n.type, def: componentDefs[n.type],
       customName: n.customName, data: JSON.parse(JSON.stringify(n.data))
     }));
-    const build = veFeadBuildSystem(ns, pack.connections);
+    const build = veFeadBuildSystem(ns);
     const solv = ns.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver)[0];
     const R = veFeadAnalyze(build, {
       rows: veFeadDutyRows(solv), cylinders: 6,
@@ -986,7 +1001,7 @@ describe('veFeadSlipThreshold — kayma eşiği', () => {
         id: n.id, type: n.type, def: componentDefs[n.type],
         customName: n.customName, data: JSON.parse(JSON.stringify(n.data))
       }));
-      const b2 = veFeadBuildSystem(ns2, pack.connections);
+      const b2 = veFeadBuildSystem(ns2);
       b2.sys.designTensionN = T0;
       const R2 = veFeadAnalyze(b2, { rows, cylinders: 6 });
       let mn = Infinity, nerede = null;
@@ -1129,14 +1144,16 @@ describe('gergi serpantin konumu — uyarı', () => {
       c: mk('c', 'fead-idler', -72, 267, 79),
       d: mk('d', 'fead-ac', -224, 448, 127),
     };
+    // `sira` kayışın GİDİŞ sırası (aşağıdaki not), `beltIndex` ise TABLO
+    // sırasını taşıyor → çevirerek yaz (krank sabit, kalanı ters).
     const ns = sira.map((k) => P[k]);
-    const cs = sira.map((k, i) => ({ from: k, to: sira[(i + 1) % sira.length] }));
-    return M.veFeadBuildSystem(ns, cs, {});
+    M.veFeadRouteFlip(ns).forEach((n, i) => { n.data.beltIndex = i + 1; });
+    return M.veFeadBuildSystem(ns, {});
   };
   const gergiUyarisi = (r) =>
     (r.warnings || []).filter((w) => /krankın çıkışında değil/.test(w));
 
-  // KABLOLAR KAYIŞIN GİDİŞİ (2026-09-08): `kur(['a','c','d','b'])` gergiyi kayış
+  // SIRA ARGÜMANI KAYIŞIN GİDİŞİ: `kur(['a','c','d','b'])` gergiyi kayış
   // sırasında SONA, yani krankın GİRİŞİNE (gergin taraf) koyar; `kur(['a','b',
   // 'c','d'])` krankın ÇIKIŞINA (gevşek taraf). Eski kapı tablo sırasında
   // düşünüyordu ve ikisinin hükmü tersti.

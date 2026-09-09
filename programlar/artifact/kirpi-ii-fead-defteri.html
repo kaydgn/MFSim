@@ -1,0 +1,896 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style></head><body>
+<title>KIRPI II FEAD Defteri</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#f4f6f5; --surface:#ffffff; --surface-2:#eef1f0;
+  --ink:#151a19; --ink-2:#3d4644; --muted:#69736f; --faint:#8b9591;
+  --rule:#d9e0dd; --rule-2:#e9edeb;
+  --accent:#0d5c63; --accent-soft:#e2eeef; --accent-ink:#0a4a50;
+  --ok:#2f6b45; --ok-soft:#e4efe8;
+  --warn:#8a5a10; --warn-soft:#f6eddc;
+  --no:#9c3626; --no-soft:#f7e6e3;
+  --shadow:0 1px 2px rgba(20,35,33,.05), 0 8px 24px -16px rgba(20,35,33,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0f1413; --surface:#161c1b; --surface-2:#1c2322;
+    --ink:#e7ecea; --ink-2:#c3ccc9; --muted:#94a09c; --faint:#75817d;
+    --rule:#28312f; --rule-2:#1f2726;
+    --accent:#5cbcc4; --accent-soft:#12302f; --accent-ink:#8fd6dc;
+    --ok:#6fbb8c; --ok-soft:#15291f;
+    --warn:#d3a44e; --warn-soft:#2a2317;
+    --no:#dd7a68; --no-soft:#2d1a17;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0f1413; --surface:#161c1b; --surface-2:#1c2322;
+  --ink:#e7ecea; --ink-2:#c3ccc9; --muted:#94a09c; --faint:#75817d;
+  --rule:#28312f; --rule-2:#1f2726;
+  --accent:#5cbcc4; --accent-soft:#12302f; --accent-ink:#8fd6dc;
+  --ok:#6fbb8c; --ok-soft:#15291f;
+  --warn:#d3a44e; --warn-soft:#2a2317;
+  --no:#dd7a68; --no-soft:#2d1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1140px; margin:0 auto; padding:0 28px 96px}
+@media (max-width:720px){ .wrap{padding:0 18px 64px} }
+
+/* ---------- başlık ---------- */
+header.top{padding:64px 0 40px; border-bottom:1px solid var(--rule)}
+.eyebrow{
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11.5px; font-weight:500;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--accent); margin:0 0 18px;
+}
+h1{
+  font-family:Archivo,"IBM Plex Sans",sans-serif; font-weight:700;
+  font-size:clamp(2.1rem,5.2vw,3.35rem); line-height:1.04; letter-spacing:-.026em;
+  margin:0 0 20px; text-wrap:balance;
+}
+.lede{font-size:1.115rem; color:var(--ink-2); max-width:64ch; margin:0}
+.lede b{color:var(--ink); font-weight:600}
+
+.kunye{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(178px,1fr)); gap:1px;
+  background:var(--rule); border:1px solid var(--rule); border-radius:4px;
+  margin-top:36px; overflow:hidden;
+}
+.kunye div{background:var(--surface); padding:13px 15px}
+.kunye dt{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.11em;
+  text-transform:uppercase; color:var(--faint); margin:0 0 4px;
+}
+.kunye dd{margin:0; font-size:14px; font-weight:500; color:var(--ink); overflow-wrap:anywhere}
+.kunye dd span{color:var(--muted); font-weight:400}
+
+/* ---------- bölümler ---------- */
+section{padding-top:56px; scroll-margin-top:16px}
+.sec-head{display:flex; gap:18px; align-items:baseline; margin-bottom:8px}
+.sec-num{
+  font-family:"IBM Plex Mono",monospace; font-size:12px; font-weight:600;
+  color:var(--accent); letter-spacing:.06em; padding-top:6px; flex:0 0 auto;
+}
+h2{
+  font-family:Archivo,sans-serif; font-weight:600; font-size:clamp(1.5rem,3vw,1.95rem);
+  letter-spacing:-.018em; line-height:1.16; margin:0; text-wrap:balance;
+}
+h3{
+  font-family:Archivo,sans-serif; font-weight:600; font-size:1.06rem;
+  letter-spacing:-.008em; margin:34px 0 10px; color:var(--ink);
+}
+p{margin:0 0 15px; max-width:68ch}
+.sec-body{padding-left:34px}
+@media (max-width:720px){ .sec-body{padding-left:0} .sec-head{gap:12px} }
+strong{font-weight:600}
+em{font-style:italic; color:var(--ink-2)}
+code, .cell{
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:.875em;
+  background:var(--surface-2); padding:1px 5px; border-radius:3px; color:var(--accent-ink);
+  white-space:nowrap;
+}
+.f{font-family:"IBM Plex Mono",monospace; font-size:.9em; color:var(--ink-2)}
+
+/* ---------- tablolar ---------- */
+.tbl-wrap{overflow-x:auto; margin:22px 0 8px; border:1px solid var(--rule); border-radius:4px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:520px}
+caption{
+  caption-side:bottom; text-align:left; font-size:12.5px; color:var(--muted);
+  padding:10px 2px 0; max-width:74ch;
+}
+th,td{padding:8px 13px; text-align:left; border-bottom:1px solid var(--rule-2); vertical-align:top}
+thead th{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:600;
+  letter-spacing:.09em; text-transform:uppercase; color:var(--faint);
+  background:var(--surface-2); border-bottom:1px solid var(--rule); white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:none}
+td.n, th.n{text-align:right; font-variant-numeric:tabular-nums; font-family:"IBM Plex Mono",monospace; white-space:nowrap}
+td.m{font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--accent-ink); white-space:nowrap}
+tbody tr.grp td{background:var(--surface-2); font-weight:600; font-size:12px;
+  font-family:"IBM Plex Mono",monospace; letter-spacing:.07em; text-transform:uppercase; color:var(--muted)}
+td.name{font-weight:500}
+
+.pill{
+  display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:600;
+  letter-spacing:.05em; padding:2px 7px; border-radius:3px; white-space:nowrap;
+}
+.p-ok{background:var(--ok-soft); color:var(--ok)}
+.p-warn{background:var(--warn-soft); color:var(--warn)}
+.p-no{background:var(--no-soft); color:var(--no)}
+.p-neu{background:var(--surface-2); color:var(--muted)}
+
+/* ---------- vurgu kutusu ---------- */
+.note{
+  background:var(--surface); border:1px solid var(--rule); border-left:3px solid var(--accent);
+  border-radius:0 4px 4px 0; padding:16px 20px; margin:24px 0; box-shadow:var(--shadow);
+}
+.note.w{border-left-color:var(--warn)}
+.note.n{border-left-color:var(--no)}
+.note p:last-child{margin-bottom:0}
+.note .hd{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:600; letter-spacing:.11em;
+  text-transform:uppercase; color:var(--accent); margin:0 0 7px;
+}
+.note.w .hd{color:var(--warn)} .note.n .hd{color:var(--no)}
+
+/* ---------- zincir ---------- */
+ol.chain{list-style:none; margin:24px 0 0; padding:0; counter-reset:st}
+ol.chain>li{
+  counter-increment:st; position:relative; padding:0 0 22px 46px;
+  border-left:1px solid var(--rule); margin-left:13px;
+}
+ol.chain>li:last-child{border-left-color:transparent; padding-bottom:0}
+ol.chain>li::before{
+  content:counter(st,decimal-leading-zero); position:absolute; left:-13px; top:0;
+  width:26px; height:26px; border-radius:50%; background:var(--surface);
+  border:1px solid var(--rule); color:var(--accent);
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:600;
+  display:flex; align-items:center; justify-content:center;
+}
+ol.chain h4{
+  font-family:Archivo,sans-serif; font-size:1rem; font-weight:600; margin:2px 0 6px;
+  letter-spacing:-.005em;
+}
+ol.chain .src{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--faint);
+  letter-spacing:.03em; margin-bottom:8px;
+}
+ol.chain p{margin:0 0 8px; font-size:14.5px; color:var(--ink-2); max-width:66ch}
+.eq{
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; background:var(--surface);
+  border:1px solid var(--rule); border-radius:3px; padding:9px 13px; margin:8px 0;
+  overflow-x:auto; white-space:pre; color:var(--ink-2);
+}
+
+/* ---------- çizim ---------- */
+figure{margin:28px 0 8px}
+.draw{
+  background:var(--surface); border:1px solid var(--rule); border-radius:4px;
+  padding:12px; box-shadow:var(--shadow); overflow:hidden;
+}
+.draw svg{display:block; width:100%; height:auto}
+.belt{fill:none; stroke:var(--ink); stroke-width:3.5; stroke-linejoin:round}
+.pul{fill:var(--surface); stroke:var(--muted); stroke-width:1.4}
+.pul.crank{fill:var(--accent-soft); stroke:var(--accent); stroke-width:2}
+.pul.acc{fill:var(--accent-soft); stroke:var(--accent); stroke-width:1.6}
+.pul.back{fill:var(--surface-2); stroke:var(--muted); stroke-width:1.4; stroke-dasharray:5 4}
+.hub{fill:var(--muted); stroke:none}
+.arm{stroke:var(--warn); stroke-width:2.6; stroke-linecap:round}
+.pivot{fill:var(--surface); stroke:var(--warn); stroke-width:2.2}
+.lab{font-family:"IBM Plex Mono",monospace; font-size:12px; font-weight:600;
+  letter-spacing:.06em; fill:var(--ink)}
+.dim{font-family:"IBM Plex Mono",monospace; font-size:11px; fill:var(--muted)}
+figcaption{font-size:12.5px; color:var(--muted); margin-top:11px; max-width:74ch}
+.legend{display:flex; flex-wrap:wrap; gap:16px; margin-top:12px; font-size:12px; color:var(--muted)}
+.legend span{display:inline-flex; align-items:center; gap:7px}
+.sw{width:13px; height:13px; border-radius:50%; flex:0 0 auto}
+.sw.a{background:var(--accent-soft); border:1.6px solid var(--accent)}
+.sw.b{background:var(--surface-2); border:1.4px dashed var(--muted)}
+.sw.c{background:none; border:none; width:16px; height:3px; border-radius:2px; background-color:var(--warn)}
+
+ul.plain{margin:0 0 15px; padding-left:20px; max-width:68ch}
+ul.plain li{margin-bottom:7px}
+hr.soft{border:none; border-top:1px solid var(--rule); margin:44px 0 0}
+footer{padding-top:28px; font-size:12.5px; color:var(--faint); font-family:"IBM Plex Mono",monospace}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header class="top">
+  <p class="eyebrow">Dış kaynak incelemesi · FEAD modülü</p>
+  <h1>KIRPI II FEAD Defteri</h1>
+  <p class="lede">BMC'nin kendi FEAD hesap defterinin 14 sayfası, sayfa sayfa çözüldü.
+  <b>Geometri MFSim'in çekirdeğiyle birebir örtüşüyor</b> — altı sarım açısı ve altı açıklık
+  boyu 0,000 farkla. Defterin MFSim'de karşılığı olmayan asıl değeri hesapta değil:
+  <b>üç katalog, üç uygunluk kapısı</b> ve bir kayış boyu tanımı.</p>
+
+  <dl class="kunye">
+    <div><dt>Dosya</dt><dd>KIRPI_II_NEX_GEN.FEAD.xlsx <span>· 300.644 B</span></dd></div>
+    <div><dt>Sahibi</dt><dd>ADEM CAM <span>· BMC SAS ARGE / Güç Grubu</span></dd></div>
+    <div><dt>Son kayıt</dt><dd>13.08.2026 <span>· açılış 05.06.2015</span></dd></div>
+    <div><dt>İçerik</dt><dd>14 sayfa <span>(1 gizli) · 11 grafik</span></dd></div>
+    <div><dt>Ana şablon</dt><dd>Fead Calculation-1.xlsm <span>· 23 sayfa, dış bağ</span></dd></div>
+    <div><dt>Motor</dt><dd>ISL8.9E3 375 <span>· 57RS303234</span></dd></div>
+  </dl>
+</header>
+
+<section id="sistem">
+  <div class="sec-head"><span class="sec-num">01</span><h2>İncelenen sistem</h2></div>
+  <div class="sec-body">
+    <p>Defter tek bir tasarımı çözüyor: <strong>altı kasnaklı, 8 kaburgalı PK serpantin</strong>.
+    Sürücü, motorun krankı değil <em>fan tahrik miline oturan Ø159 harici kasnak</em>; motor devri
+    oraya <span class="cell">218,3 / 179,62 = 1,215</span> oranıyla geliyor. Bu düzen, MFSim'de
+    hâlihazırda duran <code>BMC_FEAD_2026</code> örneğiyle <strong>aynı sistemin başka bir motor
+    varyantı</strong> — koordinatlar yuvarlanmış, krank 197,72 yerine 218,3.</p>
+
+    <figure>
+      <div class="draw">
+        <svg viewBox="0 0 640 575" role="img" aria-label="KIRPI II FEAD kayış yolu: altı kasnak, gergi kolu ve pivot">
+          <polygon class="belt" points="274.52,470.57 275.57,473.2 276.72,475.79 277.95,478.35 279.27,480.85 280.68,483.31 282.17,485.72 283.75,488.08 285.41,490.38 287.15,492.62 288.96,494.79 290.85,496.9 292.82,498.95 294.85,500.92 296.96,502.82 299.13,504.64 301.36,506.39 303.65,508.06 306,509.65 308.4,511.15 310.86,512.57 313.36,513.9 315.91,515.14 318.5,516.3 321.12,517.36 323.79,518.32 326.49,519.2 329.21,519.98 331.96,520.66 334.74,521.24 337.53,521.73 340.34,522.12 343.16,522.41 345.98,522.6 348.82,522.69 351.65,522.68 354.49,522.58 357.31,522.37 360.13,522.06 362.94,521.66 365.73,521.15 368.5,520.55 371.24,519.85 373.96,519.06 376.66,518.17 379.31,517.19 381.94,516.11 384.52,514.94 387.06,513.69 389.56,512.34 392,510.91 394.4,509.39 396.73,507.79 399.02,506.11 401.24,504.35 403.4,502.51 405.49,500.6 407.51,498.61 409.46,496.56 411.34,494.43 413.15,492.25 414.87,490 416.52,487.69 418.08,485.33 419.56,482.91 420.96,480.44 422.26,477.93 423.48,475.37 424.61,472.76 425.64,470.12 426.58,467.45 427.43,464.75 428.18,462.01 428.83,459.25 429.39,456.47 429.85,453.68 430.21,450.87 430.47,448.04 441.51,301.11 441.51,301.11 441.63,299.78 441.8,298.46 442.01,297.15 442.27,295.84 442.58,294.54 442.92,293.26 443.32,291.98 443.75,290.73 444.23,289.48 444.76,288.26 445.32,287.05 445.93,285.87 446.57,284.7 447.26,283.56 447.98,282.44 448.74,281.35 449.54,280.28 450.38,279.25 451.25,278.24 452.16,277.26 453.1,276.32 454.07,275.41 455.07,274.53 456.1,273.69 457.16,272.88 458.25,272.11 577.5,190.78 577.5,190.78 579.7,189.22 581.84,187.59 583.92,185.89 585.94,184.11 587.9,182.27 589.79,180.36 591.62,178.38 593.38,176.34 595.06,174.24 596.67,172.08 598.2,169.87 599.66,167.61 601.03,165.29 602.33,162.93 603.54,160.53 604.66,158.09 605.71,155.6 606.66,153.09 607.52,150.54 608.3,147.96 608.99,145.36 609.58,142.74 610.08,140.09 610.49,137.43 610.81,134.76 611.03,132.08 611.16,129.39 611.2,126.7 611.14,124.01 610.99,121.32 610.75,118.64 610.41,115.97 609.98,113.31 609.45,110.67 608.84,108.05 608.13,105.46 607.34,102.89 606.45,100.34 605.48,97.84 604.42,95.36 603.27,92.93 602.04,90.53 600.73,88.18 599.34,85.88 597.87,83.63 596.31,81.43 594.69,79.28 592.99,77.2 591.22,75.17 589.38,73.21 587.47,71.31 585.49,69.48 583.46,67.72 581.36,66.04 579.21,64.42 577,62.88 574.74,61.42 572.43,60.04 570.07,58.75 567.67,57.53 565.23,56.4 562.75,55.35 560.23,54.39 557.69,53.52 555.11,52.74 552.51,52.05 549.89,51.45 547.24,50.94 544.59,50.53 541.91,50.21 539.23,49.98 536.54,49.84 533.85,49.8 531.16,49.85 528.48,50 525.79,50.24 523.12,50.57 520.47,51 517.83,51.51 515.2,52.12 512.61,52.82 510.03,53.61 507.49,54.49 504.98,55.46 502.5,56.52 500.07,57.66 497.67,58.88 495.32,60.19 493.01,61.58 490.76,63.05 488.55,64.59 486.41,66.22 484.32,67.91 482.29,69.68 480.32,71.52 478.42,73.42 476.59,75.39 474.82,77.42 473.13,79.52 380.43,198.34 380.43,198.34 379.6,199.38 378.73,200.38 377.82,201.36 376.88,202.3 375.92,203.21 374.91,204.08 373.88,204.92 372.83,205.73 371.74,206.5 370.63,207.23 369.49,207.92 368.33,208.57 367.15,209.18 365.95,209.75 364.73,210.28 363.49,210.76 362.24,211.21 360.97,211.61 359.69,211.96 358.4,212.28 357.1,212.54 355.78,212.76 354.47,212.94 353.14,213.07 351.82,213.16 350.49,213.2 349.16,213.19 347.83,213.14 346.5,213.04 345.18,212.9 343.86,212.71 342.56,212.48 341.26,212.2 76.46,150.61 76.46,150.61 75.34,150.36 74.2,150.16 73.05,150 71.91,149.88 70.75,149.8 69.6,149.76 68.44,149.75 67.29,149.79 66.14,149.87 64.99,149.99 63.85,150.16 62.71,150.36 61.58,150.6 60.46,150.88 59.35,151.2 58.25,151.55 57.17,151.95 56.09,152.38 55.04,152.85 54,153.36 52.98,153.9 51.98,154.48 51.01,155.1 50.05,155.74 49.12,156.43 48.21,157.14 47.32,157.88 46.47,158.66 45.64,159.46 44.84,160.3 44.07,161.16 43.33,162.04 42.62,162.96 41.95,163.89 41.3,164.85 40.69,165.83 40.12,166.84 39.58,167.86 39.08,168.9 38.61,169.95 38.19,171.03 37.8,172.11 37.44,173.21 37.13,174.33 36.86,175.45 36.62,176.58 36.43,177.72 36.27,178.86 36.16,180.01 36.09,181.16 36.05,182.32 36.06,183.47 36.11,184.63 36.19,185.78 36.32,186.93 36.49,188.07 36.7,189.21 36.95,190.33 37.23,191.45 37.56,192.56 37.93,193.66 38.33,194.74 38.77,195.81 39.25,196.86 39.76,197.89 40.31,198.91 40.9,199.9 41.52,200.88 42.17,201.83 42.86,202.76 43.58,203.66 44.33,204.54 45.11,205.39 45.92,206.21 46.76,207.01 47.62,207.77 48.51,208.51 49.43,209.21 50.37,209.88 209.82,319.16 209.82,319.16 210.95,319.96 212.04,320.8 213.11,321.68 214.14,322.6 215.14,323.55 216.1,324.54 217.03,325.56 217.92,326.62 218.78,327.7 219.59,328.82 220.36,329.96 221.09,331.13 221.78,332.33 222.43,333.55 223.03,334.79 223.59,336.05 224.1,337.34 274.52,470.57"/>
+          <circle class="pul crank" cx="350" cy="442" r="79.50"/>
+          <circle class="hub" cx="350" cy="442" r="3"/>
+          <circle class="pul back" cx="480" cy="304" r="37.50"/>
+          <circle class="hub" cx="480" cy="304" r="3"/>
+          <circle class="pul acc" cx="534" cy="127" r="76.00"/>
+          <circle class="hub" cx="534" cy="127" r="3"/>
+          <circle class="pul back" cx="350" cy="174.6" r="37.50"/>
+          <circle class="hub" cx="350" cy="174.6" r="3"/>
+          <circle class="pul acc" cx="69" cy="182.7" r="31.75"/>
+          <circle class="hub" cx="69" cy="182.7" r="3"/>
+          <circle class="pul back" cx="188" cy="351" r="37.50"/>
+          <circle class="hub" cx="188" cy="351" r="3"/>
+          <line class="arm" x1="99.97" y1="332.29" x2="188" y2="351"/>
+          <circle class="pivot" cx="99.97" cy="332.29" r="4.5"/>
+          <text class="lab" x="350" y="542" text-anchor="middle">TAHRİK</text>
+          <text class="dim" x="350" y="555.00" text-anchor="middle">Ø159 · 155,0°</text>
+          <text class="lab" x="534" y="294" text-anchor="start">AVARA 1</text>
+          <text class="dim" x="534" y="307.00" text-anchor="start">Ø75 · 51,4°</text>
+          <text class="lab" x="534" y="25" text-anchor="middle">KLİMA</text>
+          <text class="dim" x="534" y="38.00" text-anchor="middle">Ø152 · 197,7°</text>
+          <text class="lab" x="298" y="164.6" text-anchor="end">AVARA 2</text>
+          <text class="dim" x="298" y="177.60" text-anchor="end">Ø75 · 65,1°</text>
+          <text class="lab" x="6" y="266" text-anchor="start">ALTERNATÖR</text>
+          <text class="dim" x="6" y="279.00" text-anchor="start">Ø63,5 · 158,7°</text>
+          <text class="lab" x="192" y="403" text-anchor="middle">GERGİ</text>
+          <text class="dim" x="192" y="416.00" text-anchor="middle">Ø75 · 34,8°</text>
+          <text class="dim" x="93.97" y="318.29" text-anchor="end">pivot</text>
+        </svg>
+      </div>
+      <div class="legend">
+        <span><i class="sw a"></i>oluklu tarafla temas (güç çeken)</span>
+        <span><i class="sw b"></i>sırttan temas (avara / gergi)</span>
+        <span><i class="sw c"></i>gergi kolu ve pivotu</span>
+      </div>
+      <figcaption>Kayış yolu, defterin kendi koordinatlarından MFSim çekirdeğiyle çözüldü.
+      Teğet noktaları defterin <span class="cell">Y11:AB16</span> bloğuyla ondalık basamağına kadar
+      aynı. Pivot çizilmiyor, <em>türetiliyor</em>: gergi kasnağı merkezinden 90 mm, 168°.</figcaption>
+    </figure>
+
+    <div class="tbl-wrap">
+      <table>
+        <caption>Kasnak tablosu — <span class="cell">Geometrik Entegrasyon!A5:J10</span>. Temas
+        tarafı defterde <em>ayrı</em> bir "Dönüş Yönü" sütunundan (Sağ/Sol) okunuyor.</caption>
+        <thead><tr>
+          <th>Kasnak</th><th class="n">X</th><th class="n">Y</th><th class="n">Ø dış</th>
+          <th class="n">Ø efektif</th><th>Temas</th><th class="n">Sarım</th><th class="n">Açıklık*</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="name">Tahrik Kasnağı</td><td class="n">0</td><td class="n">0</td><td class="n">159</td><td class="n">161,4</td><td>oluklu</td><td class="n">154,975°</td><td class="n">142,452</td></tr>
+          <tr><td class="name">Avara Kasnak 1</td><td class="n">130</td><td class="n">138</td><td class="n">75</td><td class="n">77,2</td><td>sırt</td><td class="n">51,409°</td><td class="n">147,348</td></tr>
+          <tr><td class="name">Klima Komp.</td><td class="n">184</td><td class="n">315</td><td class="n">152</td><td class="n">154,4</td><td>oluklu</td><td class="n">197,747°</td><td class="n">144,345</td></tr>
+          <tr><td class="name">Avara Kasnak 2</td><td class="n">0</td><td class="n">267,4</td><td class="n">75</td><td class="n">77,2</td><td>sırt</td><td class="n">65,136°</td><td class="n">150,705</td></tr>
+          <tr><td class="name">Alternatör</td><td class="n">−281</td><td class="n">259,3</td><td class="n">63,5</td><td class="n">65,9</td><td>oluklu</td><td class="n">158,669°</td><td class="n">271,859</td></tr>
+          <tr><td class="name">Gergi Kasnağı</td><td class="n">−162</td><td class="n">91</td><td class="n">75</td><td class="n">77,2</td><td>sırt</td><td class="n">34,844°</td><td class="n">193,304</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-top:2px">* satırdaki kasnağa <em>giren</em>
+    açıklığın boyu (mm) — defterin <span class="cell">J</span> sütunu.</p>
+
+    <h3>Sabitler ve girdiler</h3>
+    <ul class="plain">
+      <li><strong>Kayış</strong> — PK profili, GATES markası, 8 kaburga
+      (<span class="cell">Geometrik Entegrasyon!C2,D2</span>; <span class="cell">Spanlardaki frekans!B4</span>).</li>
+      <li><strong>Motor</strong> — 57RS303234 · ISL8.9E3 375/FR94882 · rölanti 700, governed 2100,
+      no-load governed 2330, overspeed 2900 d/dk. Hesap devri 2100.</li>
+      <li><strong>Gergi</strong> — kol 90 mm, yay 22,7 Nm, ön yükleme 8,6 Nm, montaj açısı 168°.</li>
+      <li><strong>Sürtünme ve servis</strong> — μ = 0,3 (<span class="cell">Kuvvet Hesabı!C3</span>),
+      servis faktörü c₂ = 1,3 (<span class="cell">E3</span>), ateşleme sırası 3 (altı silindirin yarım devirdeki patlama sayısı).</li>
+    </ul>
+  </div>
+</section>
+
+<section id="sayfalar">
+  <div class="sec-head"><span class="sec-num">02</span><h2>On dört sayfa, üç katman</h2></div>
+  <div class="sec-body">
+    <p>Sayfalar dağınık görünüyor ama düzen net: <strong>altı katalog sayfası</strong> veriyi
+    tutuyor, <strong>üç sayfa</strong> seçim yapıp hüküm veriyor, <strong>dört sayfa</strong>
+    hesabı yürütüyor. Bir sayfa gizli ve yalnız bir açılır listeyi besliyor.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <caption>Sayfa sıraları defterdeki sekme sırası. "Kuvvet Hesabı" hesabın kendisi değil,
+        <em>Kuvvet Hesabi-</em>'nin çıktısını basan özet sayfası — iki ad bir tire ile ayrılıyor.</caption>
+        <thead><tr><th class="n">#</th><th>Sayfa</th><th>Rol</th><th>İçerik</th></tr></thead>
+        <tbody>
+          <tr class="grp"><td colspan="4">Seçim ve hüküm</td></tr>
+          <tr><td class="n">1</td><td class="name">Komponent Secimi</td><td><span class="pill p-neu">seçim</span></td>
+            <td>Motor + 2 alternatör + 2 klima seçimi; çevrim oranı ve <em>"Kasnak Çapı Küçültülmeli / Büyütülmeli / Uygun"</em> hükmü; motor devri başına aksesuar devri ve gücü tablosu (21 satır)</td></tr>
+          <tr><td class="n">7</td><td class="name">Calisma Oranlari</td><td><span class="pill p-neu">kapı</span></td>
+            <td>Aksesuar devir sınırları ÷ motor devirleri → overspeed / no-load-governed / optimum oranlar; güç eğrisi üstündeki çalışma penceresi</td></tr>
+          <tr><td class="n">3</td><td class="name">Kasnak Mesafe Uygunluğu</td><td><span class="pill p-ok">kapı</span></td>
+            <td>Komşu kasnak merkez mesafesi <span class="cell">0,7·(d₁+d₂) ≤ a ≤ 2·(d₁+d₂)</span> — altı çift, altısı da uygun</td></tr>
+
+          <tr class="grp"><td colspan="4">Hesap</td></tr>
+          <tr><td class="n">2</td><td class="name">Geometrik Entegrasyon</td><td><span class="pill p-neu">hesap</span></td>
+            <td>Defterin çekirdeği. Kasnak tablosu → efektif çap, sarım açısı, açıklık boyu, kayış boyu, teğet noktaları; gergi pivotu; kasnak başına 24 noktalı çizim tabloları (rows 87–173)</td></tr>
+          <tr><td class="n">6</td><td class="name">Kuvvet Hesabi-</td><td><span class="pill p-neu">hesap</span></td>
+            <td>Serpantin gerginlik yürüyüşü: oran → devir → kayış hızı → güç → çevresel kuvvet → k = e<sup>μθ</sup> → F₁/F₂ → hub yükü → kaymama şartı. Ayrıca yay momentinden gergi kuvveti</td></tr>
+          <tr><td class="n">4</td><td class="name">Kuvvet Hesabı</td><td><span class="pill p-neu">özet</span></td>
+            <td>Kasnak başına F<sub>gergin</sub> / F<sub>gevşek</sub> / F<sub>hub</sub> ve Gates biçimindeki <em>"yön/sarım"</em> gösterimi (97,7/155)</td></tr>
+          <tr><td class="n">5</td><td class="name">Spanlardaki frekans</td><td><span class="pill p-warn">hesap</span></td>
+            <td>Açıklık doğal frekansları, sistemin doğal frekansı, motor ateşleme frekansı ve FREKANS GRAFİĞİ — <a href="#zayif" style="color:var(--accent)">üç kusuru burada</a></td></tr>
+
+          <tr class="grp"><td colspan="4">Katalog</td></tr>
+          <tr><td class="n">8</td><td class="name">Motor Bilgileri</td><td><span class="pill p-ok">katalog</span></td>
+            <td><strong>24 motor</strong>: BMC no, marka/model, rölanti–governed–no load governed–overspeed, krank / fan drive / kompresör dişli / su pompası kasnak çapları, tam tork ve güç eğrisi</td></tr>
+          <tr><td class="n">12</td><td class="name">Alternator</td><td><span class="pill p-ok">katalog</span></td>
+            <td><strong>10 alternatör</strong> (Prestolite 120–600 A, Tepaş 350 A): marka/model, BMC no, optimum nominal / maksimum sürekli / anlık maksimum devir, devir–güç eğrisi</td></tr>
+          <tr><td class="n">13</td><td class="name">Klima Komp.</td><td><span class="pill p-ok">katalog</span></td>
+            <td><strong>4 kompresör</strong> (Valeo TM21/TM31, Sanden 7H15): aynı biçim</td></tr>
+          <tr><td class="n">9</td><td class="name">Kayışlar</td><td><span class="pill p-ok">katalog</span></td>
+            <td>3 marka × 5 profil: kaburga adımı, kalınlık, <strong>h<sub>b</sub></strong> ve <strong>h<sub>r</sub></strong>, kaburga başına kütle, hız sınırı, minimum kasnak çapı</td></tr>
+          <tr><td class="n">11</td><td class="name">Optibelt PK</td><td><span class="pill p-warn">katalog</span></td>
+            <td>Güç değeri tablosu: P<sub>N</sub>(küçük kasnak çapı, devir) 17×75 + P<sub>ND</sub>(oran) 4 sütun; iki eksenli doğrusal ara değerleme</td></tr>
+          <tr><td class="n">10</td><td class="name">Optibelt PL</td><td><span class="pill p-warn">katalog</span></td>
+            <td>Aynısı, PL profili için</td></tr>
+          <tr><td class="n">14</td><td class="name">Sheet6</td><td><span class="pill p-neu">gizli</span></td>
+            <td>İki hücre: "Kullanılıyor" / "Kullanılmıyor" — seçim sayfasındaki açılır listenin kaynağı</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <p class="hd">Defterin dışında kalan parça</p>
+      <p>Optibelt sayfalarındaki hesap <strong>bu tasarıma bağlı değil</strong>. Girdileri
+      <span class="cell">'[1]Kayış Hesapları'!J4/J6/J8</span> dış bağından geliyor ve önbellekteki
+      değerler (79,6 mm · 2,240 oran · 4.704 d/dk) bu sistemin hiçbir kasnağına uymuyor —
+      şablondan miras kalmış, <em>bayat</em>. Sarım açısı düzeltmesi c₁ de burada değil, ana
+      şablondaki <span class="cell">Optibelt C1</span> sayfasında. Yani kaburga sayısı seçimi
+      defterde <em>başlamış ama tamamlanmamış</em>.</p>
+    </div>
+  </div>
+</section>
+
+<section id="zincir">
+  <div class="sec-head"><span class="sec-num">03</span><h2>Hesap zinciri</h2></div>
+  <div class="sec-body">
+    <p>Sekiz adım, sekiz sayfa arasında gezinerek. Sıra gerçek bir bağımlılık zinciri: her adım
+    bir öncekinin çıktısını girdi alıyor.</p>
+
+    <ol class="chain">
+      <li>
+        <h4>Motor seçilir, sınırları ve kasnak çapları gelir</h4>
+        <p class="src">Komponent Secimi ← Motor Bilgileri</p>
+        <p>BMC parça numarası bir <span class="cell">INDEX/MATCH</span> anahtarı. Motor satırı
+        rölanti / governed / no load governed / overspeed devirlerini ve krank, fan drive,
+        kompresör dişlisi, su pompası kasnak çaplarını getiriyor.</p>
+      </li>
+      <li>
+        <h4>Aksesuar seçilir, devir penceresi ve güç eğrisi gelir</h4>
+        <p class="src">Komponent Secimi ← Alternator, Klima Komp.</p>
+        <p>İki alternatör ve iki klima kompresörü için ayrı sütun bloğu. Her biri optimum nominal,
+        maksimum sürekli ve anlık maksimum devrini kendi kataloğundan alıyor.</p>
+      </li>
+      <li>
+        <h4>Çevrim oranı hesaplanır ve pencereyle karşılaştırılır</h4>
+        <p class="src">Komponent Secimi!F20 · Calisma Oranlari</p>
+        <p>Oran, hangi kasnakların "Kullanılıyor" olduğuna göre yedi dallı bir
+        <span class="cell">IF</span> zincirinden çıkıyor; sonra aksesuarın optimum bandına düşüp
+        düşmediğine bakılıyor. <strong>Defterin tek doğrudan tasarım hükmü bu.</strong></p>
+        <div class="eq">F20 = (Ø krank / Ø fan drive) · (Ø harici / Ø aksesuar)
+G20 = F20 &lt; oran_min → "Kasnak Çapı Küçültülmeli!!!"
+      F20 &gt; oran_maks → "Kasnak Çapı Büyütülmeli!!!"
+      aksi halde       → "Uygun"</div>
+      </li>
+      <li>
+        <h4>Efektif çap: temas tarafına göre h<sub>b</sub> ya da h<sub>r</sub></h4>
+        <p class="src">Geometrik Entegrasyon!F5:F10 ← Kayışlar!L8, M8</p>
+        <p>Gates PK için h<sub>b</sub> = 1,2 mm, h<sub>r</sub> = 1,1 mm. Oluklu tarafla temas eden
+        kasnak <span class="cell">Ø + 2h<sub>b</sub></span>, sırttan basan
+        <span class="cell">Ø + 2h<sub>r</sub></span> alıyor. Bu, tüm geometrinin oturduğu yarıçap.</p>
+      </li>
+      <li>
+        <h4>Geometri: sarım, açıklık, kayış boyu</h4>
+        <p class="src">Geometrik Entegrasyon</p>
+        <p>Komşu kasnak çiftinin dönüş yönleri aynıysa açıklık <em>düz</em>, farklıysa
+        <em>ters</em> teğet. Sarım açısı 16 dörtgen-bölge birleşiminden seçilen bir
+        <span class="cell">IF</span> ağacıyla, kayış boyu yay + açıklık toplamıyla.</p>
+        <div class="eq">açıklık = √(a² − ((d₁ ∓ d₂)/2)²)      (− düz, + ters)
+kayış   = Σ [ 2π·(dᵢ/2)·(sarımᵢ/360) + açıklıkᵢ ]</div>
+      </li>
+      <li>
+        <h4>Merkez mesafesi kapısı</h4>
+        <p class="src">Kasnak Mesafe Uygunluğu</p>
+        <p>Altı komşu çift için <span class="cell">0,7·(d₁+d₂) ≤ a ≤ 2·(d₁+d₂)</span>. Sayfadaki
+        hücre notları gerekçeyi de yazıyor: alt sınırın altında sarım açıları düşer ve kayma artar,
+        üst sınırın üstünde titreşim ve kayış uzaması gelir.</p>
+      </li>
+      <li>
+        <h4>Güçten gerginliğe: serpantin yürüyüşü</h4>
+        <p class="src">Kuvvet Hesabi-</p>
+        <p>Her aksesuarın kendi devrindeki gücü, servis faktörüyle çarpılıp çevresel kuvvete
+        çevriliyor. Toplam çevresel kuvvet sürücü kasnağın kayma sınırına konuyor ve
+        <strong>gerginlik oradan türetiliyor</strong>; sonra kayış yolu boyunca her aksesuar
+        kendi payını düşürüyor.</p>
+        <div class="eq">Fu = 60000·P·1000 / (π·n·d)          [çevresel kuvvet]
+k  = e^(μ·θ)                        [μ = 0,3]
+F₂ = ΣFu / (k − 1)   ·   F₁ = F₂·k  [sürücüde]
+Fhub = √(F₁² + F₂² + 2F₁F₂·cos(180° − θ))
+kaymama şartı:  F₁ ≤ F₂·k</div>
+      </li>
+      <li>
+        <h4>Frekans: açıklık, sistem, ateşleme</h4>
+        <p class="src">Spanlardaki frekans</p>
+        <p>Her açıklığın enine titreşim frekansı ve motorun ateşleme frekansı devir ekseninde
+        üst üste basılıyor; sayfadaki not kesişmenin rezonans demek olduğunu söylüyor.</p>
+        <div class="eq">f = 1/(2L) · √(T/μ)        L açıklık [m], μ birim kütle [kg/m]
+f_ateşleme = devir/60 · 3   (6 silindir)</div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section id="olcum">
+  <div class="sec-head"><span class="sec-num">04</span><h2>Ölçüm: çekirdek defteri birebir çözüyor</h2></div>
+  <div class="sec-body">
+    <p>Defterin kasnak tablosunu MFSim'in <span class="cell">js/fead-core.js</span> çekirdeğine
+    verdim. Sonuç tahmin değil ölçüm: <strong>on iki geometrik büyüklüğün on ikisinde de fark
+    0,000</strong>. Gergi pivotu da defterin kendi kuralıyla (merkez + 90 mm ∠168°) türetildi ve
+    aynı yere düştü.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <caption>Defterin <span class="cell">I</span> ve <span class="cell">J</span> sütunları,
+        MFSim çekirdeğinin <span class="cell">geometryAt()</span> çıktısıyla. Farklar 10⁻⁹
+        mertebesinde, yani ikisi <em>aynı denklemleri</em> çözüyor.</caption>
+        <thead><tr>
+          <th>Kasnak</th>
+          <th class="n">Sarım · Excel</th><th class="n">Sarım · MFSim</th><th class="n">Δ</th>
+          <th class="n">Açıklık · Excel</th><th class="n">Açıklık · MFSim</th><th class="n">Δ</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="name">Tahrik Kasnağı</td><td class="n">154,975°</td><td class="n">154,975°</td><td class="n">0,000</td><td class="n">142,452</td><td class="n">142,452</td><td class="n">0,000</td></tr>
+          <tr><td class="name">Avara Kasnak 1</td><td class="n">51,409°</td><td class="n">51,409°</td><td class="n">0,000</td><td class="n">147,348</td><td class="n">147,348</td><td class="n">0,000</td></tr>
+          <tr><td class="name">Klima Komp.</td><td class="n">197,747°</td><td class="n">197,747°</td><td class="n">0,000</td><td class="n">144,345</td><td class="n">144,345</td><td class="n">0,000</td></tr>
+          <tr><td class="name">Avara Kasnak 2</td><td class="n">65,136°</td><td class="n">65,136°</td><td class="n">0,000</td><td class="n">150,705</td><td class="n">150,705</td><td class="n">0,000</td></tr>
+          <tr><td class="name">Alternatör</td><td class="n">158,669°</td><td class="n">158,669°</td><td class="n">0,000</td><td class="n">271,859</td><td class="n">271,859</td><td class="n">0,000</td></tr>
+          <tr><td class="name">Gergi Kasnağı</td><td class="n">34,844°</td><td class="n">34,844°</td><td class="n">0,000</td><td class="n">193,304</td><td class="n">193,304</td><td class="n">0,000</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note w">
+      <p class="hd">Tek fark, ve önemli olan tam da o</p>
+      <p>Defterin bastığı kayış boyu <strong>1727,974 mm</strong>. MFSim'in aynı geometriden
+      bulduğu iki boy var: <span class="cell">L<sub>pitch</sub> = 1727,974</span> ve
+      <span class="cell">L<sub>eff</sub> = 1720,434</span>. Fark <strong>7,540 mm</strong> ve bu
+      tam olarak <span class="cell">2π·h<sub>b</sub> = 2π·1,2</span>.</p>
+      <p>Yani defter <strong>pitch boyunu</strong> basıyor. Katalogtaki sayı (Gates <em>effective
+      length</em>, Optibelt/ContiTech <em>reference length</em>) ise <strong>efektif boydur</strong>.
+      "1728" diye kayış ısmarlamak <strong>%0,44 uzun</strong> bir kayış demek — ve bu sessiz bir
+      hata: model çözülür, uyarı çıkmaz, yalnız gergi kolu yanlış yerde durur.</p>
+    </div>
+  </div>
+</section>
+
+<section id="denetimler">
+  <div class="sec-head"><span class="sec-num">05</span><h2>Defterdeki denetimler</h2></div>
+  <div class="sec-body">
+    <p>Defterin hüküm veren her hücresi tarandı: formüldeki metin sabitleri, koşullu
+    biçimlendirme kuralları ve veri doğrulamaları ayrı ayrı. Sonuç:
+    <strong>üç canlı denetim ailesi (16 hücre), bir ölü kural, yedi girdi kısıtı</strong>.
+    Renkler dosyadaki gerçek dolgu kodları.</p>
+
+    <h3>A · Hüküm veren denetimler</h3>
+
+    <div class="tbl-wrap">
+      <table>
+        <caption>Üç aile. "Kasnak Çapı…" hükmü tek bir hata değil, <em>yönü de söyleyen</em>
+        üç durumlu bir hüküm — MFSim'e taşınırken bu korunmalı.</caption>
+        <thead><tr><th>Denetim</th><th>Hücre</th><th>Kural</th><th>Hüküm ve renk</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="name">Çevrim oranı</td>
+            <td class="m">Komponent Secimi<br>G20 · K20 · O20 · S20</td>
+            <td class="m">oran &lt; optimum_min<br>oran &gt; optimum_maks</td>
+            <td>
+              <span class="pill p-no">Kasnak Çapı Küçültülmeli!!!</span> <span class="m">FF0000</span><br>
+              <span class="pill p-warn">Kasnak Çapı Büyütülmeli!!!</span> <span class="m">FF5050</span><br>
+              <span class="pill p-ok">Uygun</span> <span class="m">92D050</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="name">Kasnak merkez mesafesi</td>
+            <td class="m">Kasnak Mesafe<br>Uygunluğu J6:J11</td>
+            <td class="m">0,7·(d₁+d₂) ≤ a ≤ 2·(d₁+d₂)<br>d = <strong>efektif</strong> çap</td>
+            <td>
+              <span class="pill p-ok">Uygun</span> <span class="m">70AD47</span><br>
+              <span class="pill p-no">Uygun Değil</span> <span class="m">FF0000</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="name">Kaymama şartı</td>
+            <td class="m">Kuvvet Hesabi-<br>R5:R10</td>
+            <td class="m">F₁ ≤ F₂·e<sup>μθ</sup></td>
+            <td>
+              <span class="pill p-ok">Uygun</span> <span class="m">92D050</span><br>
+              <span class="pill p-no">Uygun Değil</span> <span class="m">FF0000</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Bu tasarımda payların hepsi</h3>
+    <p>Üç denetim de "Uygun" veriyor — ama <strong>biri sınıra 5 mm kala</strong>.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <caption>Merkez mesafesi: altı komşu çift. Üst sınır çiftin toplam efektif çapının iki katı;
+        alternatör–avara açıklığı uzun olduğu için oraya dayanıyor.</caption>
+        <thead><tr><th>Çift</th><th class="n">d₁+d₂</th><th class="n">alt sınır</th><th class="n">a</th><th class="n">üst sınır</th><th class="n">üst sınıra pay</th><th>Hüküm</th></tr></thead>
+        <tbody>
+          <tr><td class="name">Son ile 1</td><td class="n">238,6</td><td class="n">167,02</td><td class="n">185,809</td><td class="n">477,20</td><td class="n">61,1 %</td><td><span class="pill p-ok">Uygun</span></td></tr>
+          <tr><td class="name">2 ile 1</td><td class="n">238,6</td><td class="n">167,02</td><td class="n">189,589</td><td class="n">477,20</td><td class="n">60,3 %</td><td><span class="pill p-ok">Uygun</span></td></tr>
+          <tr><td class="name">3 ile 2</td><td class="n">231,6</td><td class="n">162,12</td><td class="n">185,054</td><td class="n">463,20</td><td class="n">60,0 %</td><td><span class="pill p-ok">Uygun</span></td></tr>
+          <tr><td class="name">4 ile 3</td><td class="n">231,6</td><td class="n">162,12</td><td class="n">190,057</td><td class="n">463,20</td><td class="n">59,0 %</td><td><span class="pill p-ok">Uygun</span></td></tr>
+          <tr><td class="name">5 ile 4</td><td class="n">143,1</td><td class="n">100,17</td><td class="n">281,117</td><td class="n">286,20</td><td class="n"><span class="pill p-warn">1,8 % · 5,08 mm</span></td><td><span class="pill p-ok">Uygun</span></td></tr>
+          <tr><td class="name">6 ile 5</td><td class="n">143,1</td><td class="n">100,17</td><td class="n">206,121</td><td class="n">286,20</td><td class="n">28,0 %</td><td><span class="pill p-ok">Uygun</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <caption>Çevrim oranı: dört aksesuar sütunundan üçü dolu. Sınırlar
+        <span class="cell">Calisma Oranlari</span>'nda aksesuarın optimum devir aralığı ÷ governed devir.</caption>
+        <thead><tr><th>Aksesuar</th><th class="n">optimum_min</th><th class="n">oran</th><th class="n">optimum_maks</th><th class="n">en yakın sınıra pay</th><th>Hüküm</th></tr></thead>
+        <tbody>
+          <tr><td class="name">1. Alternatör</td><td class="n">2,857</td><td class="n">3,043</td><td class="n">3,810</td><td class="n">6,5 %</td><td><span class="pill p-ok">Uygun</span></td></tr>
+          <tr><td class="name">2. Alternatör</td><td class="n">2,857</td><td class="n">3,438</td><td class="n">3,810</td><td class="n">9,8 %</td><td><span class="pill p-ok">Uygun</span></td></tr>
+          <tr><td class="name">1. Klima Komp.</td><td class="n">0,476</td><td class="n">1,271</td><td class="n">1,429</td><td class="n">11,0 %</td><td><span class="pill p-ok">Uygun</span></td></tr>
+          <tr><td class="name">2. Klima Komp.</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td><span class="pill p-neu">#N/A · seçilmemiş</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note n">
+      <p class="hd">Kaymama şartının altı hücresinden dördü hiç kırmızıya dönemez</p>
+      <p>Sütun zinciri denetimi <em>yapısal olarak</em> geçersiz kılıyor. Sürücüde
+      <span class="cell">O5 = N5·M5</span> — yani karşılaştırma bir özdeşlik, eşitlikle hep sağlanır
+      (gerginlik zaten kayma sınırından türetildiği için). Üç avara/gergi satırında ise
+      <span class="cell">N = O</span> olduğu için koşul <span class="cell">e<sup>μθ</sup> ≥ 1</span>'e
+      indirgeniyor ve bu her zaman doğru.</p>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <caption>Yalnız yük çeken iki aksesuarda denetim gerçekten bir şey ölçüyor — ve orada
+        gerçek bir pay var (1,78× ve 1,61×).</caption>
+        <thead><tr><th>Kasnak</th><th class="n">F₁</th><th class="n">F₂</th><th class="n">e<sup>μθ</sup></th><th class="n">F₂·e<sup>μθ</sup></th><th class="n">oran</th><th>Niteliği</th></tr></thead>
+        <tbody>
+          <tr><td class="name">Tahrik Kasnağı</td><td class="n">1077,8</td><td class="n">478,8</td><td class="n">2,251</td><td class="n">1077,8</td><td class="n">1,00×</td><td><span class="pill p-no">özdeşlik</span> <span class="m">O5 = N5·M5</span></td></tr>
+          <tr><td class="name">Avara Kasnak 1</td><td class="n">1077,8</td><td class="n">1077,8</td><td class="n">1,309</td><td class="n">1410,7</td><td class="n">1,31×</td><td><span class="pill p-no">hep doğru</span> <span class="m">N6 = O6</span></td></tr>
+          <tr><td class="name">Klima Komp.</td><td class="n">1077,8</td><td class="n">680,6</td><td class="n">2,816</td><td class="n">1916,8</td><td class="n">1,78×</td><td><span class="pill p-ok">gerçek denetim</span></td></tr>
+          <tr><td class="name">Avara Kasnak 2</td><td class="n">680,6</td><td class="n">680,6</td><td class="n">1,406</td><td class="n">957,3</td><td class="n">1,41×</td><td><span class="pill p-no">hep doğru</span> <span class="m">N8 = O8</span></td></tr>
+          <tr><td class="name">Alternatör</td><td class="n">680,6</td><td class="n">478,8</td><td class="n">2,295</td><td class="n">1098,8</td><td class="n">1,61×</td><td><span class="pill p-ok">gerçek denetim</span></td></tr>
+          <tr><td class="name">Gergi Kasnağı</td><td class="n">478,8</td><td class="n">478,8</td><td class="n">1,200</td><td class="n">574,6</td><td class="n">1,20×</td><td><span class="pill p-no">hep doğru</span> <span class="m">N10 = O10</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>B · Ölü kural</h3>
+    <div class="note w">
+      <p class="hd">Gergi kuvvetine bir üst sınır denetimi VARDI</p>
+      <p><span class="cell">Kuvvet Hesabi-!B23:C23</span> üzerinde iki koşullu biçimlendirme kuralı
+      duruyor — ama karşılaştırdıkları hücre silinmiş:</p>
+      <div class="eq">IF(B23 &gt; #REF!, 1, 0)  →  kırmızı  FF0000
+IF(B23 &lt; #REF!, 1, 0)  →  yeşil    92D050</div>
+      <p>B23 gergi kuvveti (291,66 N). Yani gergi kuvvetine bir <strong>üst sınır</strong> konuyordu
+      ve sınırın kendisi kaybolmuş. Kural dosyada duruyor, hiçbir şey yapmıyor. MFSim'e taşırken
+      bu sınırın ne olduğunu ADEM CAM'a sormak gerekir — gergi künyesinin azami yay momenti olması
+      en olası aday.</p>
+    </div>
+
+    <h3>C · Girdi kısıtları — hüküm değil, seçim sınırı</h3>
+    <p>Yedi veri doğrulama kuralının hepsi <strong>liste</strong> tipinde: girdiyi katalogla
+    sınırlıyorlar ama uygunluk denetlemiyorlar. Hiçbirinde özel hata metni yok; kural dışı bir
+    değer Excel'in genel uyarı kutusunu açar.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Hücre</th><th>Kaynak liste</th><th>Ne kısıtlıyor</th></tr></thead>
+        <tbody>
+          <tr><td class="m">Komponent Secimi!C9</td><td class="m">'Motor Bilgileri'!Z3:Z50</td><td>motor BMC numarası</td></tr>
+          <tr><td class="m">Komponent Secimi!F11, J11</td><td class="m">Alternator!AC2:AC26</td><td>alternatör BMC numarası</td></tr>
+          <tr><td class="m">Komponent Secimi!N11, R11</td><td class="m">'Klima Komp.'!W6:W26</td><td>kompresör BMC numarası</td></tr>
+          <tr><td class="m">Komponent Secimi!G2:G7 …</td><td class="m">Sheet6!B5:B6</td><td>Kullanılıyor / Kullanılmıyor</td></tr>
+          <tr><td class="m">Geometrik Entegrasyon!C5:C10</td><td class="m">C121:C126</td><td>kasnak tipi (6 tip)</td></tr>
+          <tr><td class="m">Geometrik Entegrasyon!H5:H10</td><td class="m">D169:D170</td><td>dönüş yönü (Sağ / Sol)</td></tr>
+          <tr><td class="m">Geometrik Entegrasyon!C2, D2</td><td class="m">Kayışlar!D2:H2 · S2:S4</td><td>kayış profili ve markası</td></tr>
+          <tr><td class="m">Kuvvet Hesabı!B3</td><td class="m">'Motor Bilgileri'!AM6:AM26</td><td>hesap devri</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>D · Gözle yapılan, hükmü olmayan denetimler</h3>
+    <ul class="plain">
+      <li><strong>Çalışma penceresi</strong> — grafik 2–5, aksesuarın güç eğrisi üstüne rölanti ve
+      governed devirdeki çalışma noktalarını dikey çizgi olarak basıyor. Karşılaştırma göz kararı.</li>
+      <li><strong>FREKANS GRAFİĞİ</strong> — grafik 10: altı açıklık frekansı + ateşleme frekansı +
+      sistemin doğal frekansı. Sayfadaki not "kesişirse rezonansa girer" diyor, ama
+      <em>otomatik hüküm yok</em>.</li>
+      <li>Optibelt tablolarındaki ve sarım açısı matrisindeki renk ölçekleri okumayı
+      kolaylaştırıyor, denetim değil.</li>
+    </ul>
+
+    <h3>E · Hesaplanan ama denetlenmeyen</h3>
+    <p><span class="cell">Calisma Oranlari</span> sayfası aksesuar başına <strong>Overspeed
+    Ratio</strong> ve <strong>No Load Governed Speed Ratio</strong> hesaplıyor
+    (F ve G sütunları) — ve bu sayılar hiçbir yerde bir sınırla karşılaştırılmıyor. Yani
+    aksesuarın anlık maksimum ve sürekli maksimum devir sınırı defterde
+    <strong>veri olarak var, kapı olarak yok</strong>. MFSim'de bu kapıyı kurmak katalog dışında
+    ek veri istemiyor.</p>
+
+    <div class="note">
+      <p class="hd">Taşırken sorulacak: 0,7…2 kuralı serpantinde geçerli mi?</p>
+      <p>Bu kural <strong>iki kasnaklı</strong> V-kayış tahrikleri için yazılmış bir başparmak
+      kuralıdır; orada merkez mesafesi tasarımcının serbest değişkenidir. Serpantinde açıklık
+      boyunu tek bir çift değil bütün yerleşim belirler ve alternatör gibi uzak bir aksesuar üst
+      sınırı doğal olarak zorlar — nitekim bu tasarımda "5 ile 4" çifti sınıra %1,8 kala duruyor
+      ve tasarım gerçekte sorunsuz. Kapıyı taşımak doğru, ama <strong>hüküm değil uyarı</strong>
+      olarak; ve pay yüzdesi hükümle birlikte basılmalı.</p>
+    </div>
+  </div>
+</section>
+
+<section id="zayif">
+  <div class="sec-head"><span class="sec-num">06</span><h2>Defterin dört zayıf noktası</h2></div>
+  <div class="sec-body">
+    <p>Hepsi <em>ölçülerek</em> bulundu, hepsi sessiz: defter çalışır, sayı basar, uyarı vermez.
+    Bunları özellik olarak taşımadan önce bilmek gerek — çünkü bir kısmı MFSim'de zaten
+    <strong>doğru</strong> yapılıyor.</p>
+
+    <h3>1 · Kayış boyu pitch olarak basılıyor</h3>
+    <p>Yukarıda ölçüldü: 7,540 mm (%0,44) fark. MFSim'de bu ayrım zaten var
+    (<span class="cell">L<sub>eff</sub></span> / <span class="cell">L<sub>pitch</sub></span> ayrı
+    hesaplanıyor ve katalog adı efektif boya bağlanıyor) — yani <strong>defterin bu kusuru
+    programa taşınmamalı</strong>, tersine program bu kusuru <em>yakalayabilir</em>.</p>
+
+    <h3>2 · Sistem doğal frekansında kaburga sayısı iki kez çarpılmış</h3>
+    <p>Kayışın toplam kütlesi <span class="cell">B4 = boy · 14,4 g/m/kaburga · 8</span> ile
+    doğru kuruluyor (199,06 g). Ama frekans formülüne giren birim kütle
+    <span class="cell">I6 = B4·8/1000 = 1,5925</span> — <strong>sekizle bir kez daha
+    çarpılmış</strong>, üstelik boya bölünmemiş. Doğrusu 0,1152 kg/m.</p>
+    <div class="eq">basılan:  f = 1/(2·0,2719) · √(291,66 / 1,5925)  = 24,89 Hz
+doğrusu:  f = 1/(2·0,2719) · √(291,66 / 0,1152)  ≈ 92,5 Hz     (3,72×)</div>
+    <p>Grafikte "sistemin doğal frekansı" diye çizilen 3 numaralı çizgi bu yüzden
+    <strong>gerçek yerinden 3,7 kat aşağıda</strong>. Ateşleme frekansı bandı 35–105 Hz olduğu için
+    bu, olmayan bir kesişme gösterip gerçek olanı gizleyebilir.</p>
+
+    <h3>3 · Altı açıklığın frekansı tek gerginlikle hesaplanıyor</h3>
+    <p><span class="cell">G6:G11</span> formüllerinin altısı da <span class="cell">$D$6</span>
+    mutlak referansını kullanıyor — yani <em>son</em> açıklığın 478,8 N'u. Oysa aynı sayfanın
+    <span class="cell">C</span> sütununda açıklık başına gerginlik zaten duruyor. İki açıklıkta
+    gerginlik zaten 478,8 N olduğu için sonuç doğru çıkıyor; <strong>kalan dörtte frekans
+    %19–50 düşük</strong>.</p>
+    <div class="tbl-wrap">
+      <table>
+        <caption>Frekans √T ile ölçekleniyor. "Gerçek T" = o açıklığın
+        <span class="cell">Kuvvet Hesabi-</span> sayfasındaki kendi gerginliği.</caption>
+        <thead><tr><th>Açıklık</th><th class="n">Boy</th><th class="n">Kullanılan T</th><th class="n">Gerçek T</th><th class="n">Basılan f</th><th class="n">Olması gereken</th></tr></thead>
+        <tbody>
+          <tr><td class="name">Son ile 1</td><td class="n">142,45</td><td class="n">478,8 N</td><td class="n">478,8 N</td><td class="n">226,3 Hz</td><td class="n"><span class="pill p-ok">226,3 Hz</span></td></tr>
+          <tr><td class="name">2 ile 1</td><td class="n">147,35</td><td class="n">478,8 N</td><td class="n">1077,8 N</td><td class="n">218,8 Hz</td><td class="n">328,2 Hz</td></tr>
+          <tr><td class="name">3 ile 2</td><td class="n">144,34</td><td class="n">478,8 N</td><td class="n">1077,8 N</td><td class="n">223,3 Hz</td><td class="n">335,1 Hz</td></tr>
+          <tr><td class="name">4 ile 3</td><td class="n">150,71</td><td class="n">478,8 N</td><td class="n">680,6 N</td><td class="n">213,9 Hz</td><td class="n">255,0 Hz</td></tr>
+          <tr><td class="name">5 ile 4</td><td class="n">271,86</td><td class="n">478,8 N</td><td class="n">680,6 N</td><td class="n">118,6 Hz</td><td class="n">141,4 Hz</td></tr>
+          <tr><td class="name">6 ile 5</td><td class="n">193,30</td><td class="n">478,8 N</td><td class="n">478,8 N</td><td class="n">166,8 Hz</td><td class="n"><span class="pill p-ok">166,8 Hz</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>4 · Temas tarafı iki ayrı yerden okunuyor</h3>
+    <p>Efektif çap formülü temas tarafını kasnağın <strong>adından</strong> çıkarıyor:
+    <span class="cell">C5 = "Avara Kasnak" ya da "Gergi Kasnağı" ise h<sub>r</sub>, değilse h<sub>b</sub></span>.
+    Sarım şekli ise <em>başka</em> bir sütundan, "Dönüş Yönü" (Sağ/Sol) alanından geliyor. Bu
+    tasarımda ikisi örtüşüyor; ama <strong>oluklu bir avara</strong> ya da <strong>sırttan basan
+    bir aksesuar</strong> ikisini ayrıştırır ve defter hatasız biçimde yanlış bir yol çözer.
+    MFSim'de bu tek alan (<span class="cell">contact</span>) ve ayrışması yapısal olarak mümkün değil.</p>
+
+    <div class="note n">
+      <p class="hd">Ayrıca: gerginliğin iki farklı tabanı</p>
+      <p>Defter belt gerginliğini <strong>sürücü kasnağın kayma sınırından</strong> türetiyor
+      (478,77 N — yani sürücüde emniyet katsayısı tam 1,00). Gerginin yay dengesinden çıkan
+      kuvvet ise ayrı hesaplanıyor (<span class="cell">26,249 Nm / 0,090 m = 291,66 N</span>) ve
+      yalnız frekans formülüne giriyor. İkincisi <strong>geometri çarpanı taşımıyor</strong>:
+      moment yalnızca kol boyuna bölünmüş, sarım açısı ve kol–bileşke açısı hesaba girmemiş.
+      MFSim'in <span class="cell">tensionerState()</span> fonksiyonu tam bu çarpanı içeriyor
+      (<span class="cell">2·sin(φ/2)·sin β</span>) ve <em>tek bir</em> gerginlik tabanı kullanıyor.</p>
+    </div>
+  </div>
+</section>
+
+<section id="aday">
+  <div class="sec-head"><span class="sec-num">07</span><h2>MFSim'de olan · olmayan</h2></div>
+  <div class="sec-body">
+    <p>Defterin <strong>hesabı</strong> MFSim'de büyük ölçüde zaten var, üstelik daha eksiksiz
+    (burulma modu, B10 ömrü, gergi çalışma bandı defterde hiç yok). Karşılığı olmayan asıl değer
+    <strong>veri ve kapı</strong> tarafında.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <caption>"Var" satırlarındaki kaynak, MFSim'in ilgili dosyası. Kayış profil sabitleri
+        zaten <em>bu defterin</em> Kayışlar sayfasından alınmış — çekirdek kaynağını böyle yazıyor.</caption>
+        <thead><tr><th>Defterdeki iş</th><th>MFSim</th><th>Nerede / ne gerekir</th></tr></thead>
+        <tbody>
+          <tr><td class="name">Geometri: sarım, açıklık, kayış boyu</td><td><span class="pill p-ok">var</span></td><td class="m">fead-core.js · solveGeometry</td></tr>
+          <tr><td class="name">h<sub>b</sub> / h<sub>r</sub> · efektif–pitch ayrımı</td><td><span class="pill p-ok">var</span></td><td class="m">fead-core.js · BELT_DB</td></tr>
+          <tr><td class="name">Gerginlik yürüyüşü · hub yükü ve yönü</td><td><span class="pill p-ok">var</span></td><td class="m">spanTensions · hubloads</td></tr>
+          <tr><td class="name">Kaymama emniyeti</td><td><span class="pill p-ok">var</span></td><td class="m">slipSafety</td></tr>
+          <tr><td class="name">Açıklık frekansı · ateşleme · rezonans grafiği</td><td><span class="pill p-ok">var</span></td><td class="m">spanFrequencies · cp-fead-report §7</td></tr>
+          <tr><td class="name">Minimum kasnak çapı · azami kayış hızı kapısı</td><td><span class="pill p-ok">var</span></td><td class="m">cp-fead-report · denetim listesi</td></tr>
+          <tr><td class="name">Aksesuar güç eğrisi → otomatik kW</td><td><span class="pill p-ok">var</span></td><td class="m">fead-model.js · veFeadAutoKw</td></tr>
+
+          <tr><td class="name"><strong>Motor kataloğu</strong> — 24 kayıt</td><td><span class="pill p-no">yok</span></td><td>devir sınırları + FEAD kasnak çapları + tork/güç eğrisi</td></tr>
+          <tr><td class="name"><strong>Alternatör kataloğu</strong> — 10 kayıt</td><td><span class="pill p-no">yok</span></td><td>devir penceresi + güç eğrisi</td></tr>
+          <tr><td class="name"><strong>Klima kompresörü kataloğu</strong> — 4 kayıt</td><td><span class="pill p-no">yok</span></td><td>devir penceresi + güç eğrisi</td></tr>
+          <tr><td class="name"><strong>Çevrim oranı uygunluk kapısı</strong></td><td><span class="pill p-no">yok</span></td><td>"kasnak çapı küçültülmeli / büyütülmeli / uygun"</td></tr>
+          <tr><td class="name"><strong>Merkez mesafesi kapısı</strong></td><td><span class="pill p-no">yok</span></td><td>0,7·(d₁+d₂) ≤ a ≤ 2·(d₁+d₂), komşu çift başına</td></tr>
+          <tr><td class="name"><strong>Aksesuar devir sınırı kapısı</strong></td><td><span class="pill p-warn">yarı</span></td><td>oranlar defterde hesaplanıyor ama <em>hüküm verilmiyor</em>; MFSim'de hiç yok</td></tr>
+          <tr><td class="name"><strong>Optibelt güç değeri tablosu</strong> → kaburga sayısı</td><td><span class="pill p-no">yok</span></td><td>defterde de <em>yarım</em>: c₁ sarım düzeltmesi ana şablonda kalmış</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<hr class="soft">
+<footer>
+  Ölçümler MFSim <span style="color:var(--accent)">js/fead-core.js v2.0</span> ile alındı ·
+  defter dosyasına dokunulmadı · 01.09.2026
+</footer>
+
+</div>
+
+<section id="eklendi">
+  <div class="sec-head"><span class="sec-num">08</span><h2>Programa eklenenler</h2></div>
+  <div class="sec-body">
+    <p>Yukarıdaki üç kapı ve defterin iki kataloğu MFSim'e girdi
+    (<span class="cell">PR #843</span>, 01.09.2026). Üç yeni dosya, iki panel yüzeyi,
+    rapora üç kriter, <strong>+66 birim testi ve bir uçtan uca test</strong>.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <caption>Kapılar DOM'suz saf fonksiyonlar; panel ve rapor aynı çağrıyı
+        (<span class="cell">veFeadChecks</span>) paylaşıyor — rapor onu çözüm anında yazılan
+        <span class="cell">R.checks</span>'ten okur ve yeniden hesaplamaz.</caption>
+        <thead><tr><th>Dosya</th><th>İçerik</th></tr></thead>
+        <tbody>
+          <tr><td class="m">js/fead-engines.js</td>
+            <td><strong>24 motor</strong>: BMC no, dört devir sınırı, krank / fan drive /
+            kompresör dişlisi / su pompası çapları, tam yük tork+güç eğrisi (301 nokta)</td></tr>
+          <tr><td class="m">js/fead-accessories.js</td>
+            <td><strong>10 alternatör + 4 klima kompresörü</strong>: BMC no, optimum / maksimum
+            sürekli / anlık maksimum devir, devir→kW eğrisi</td></tr>
+          <tr><td class="m">js/fead-checks.js</td>
+            <td>Üç kapı. Merkez mesafesi <span class="pill p-warn">warn</span>,
+            diğer ikisi <span class="pill p-no">hüküm</span>; eksik veri
+            <span class="pill p-neu">wait</span> — uygun sayılmaz</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Doğrulama: kapılar defterin kendi sayılarına karşı</h3>
+    <p>Test referansı MFSim'in kendi hesabı değil, <strong>defterin hücreleri</strong>. Altı merkez
+    mesafesi ve on iki sınır defterle <strong>1e-6 içinde</strong> örtüşüyor. Kapının ısırdığı dört
+    mutasyonla ölçüldü:</p>
+    <div class="tbl-wrap">
+      <table>
+        <caption>İlkinin yalnız bir testi kırması ölçülmüş bir yapı: KIRPI II'de kaburgalı ve sırt
+        kasnaklar sırayla geldiği için her çiftte h<sub>b</sub> ile h<sub>r</sub> toplamda birbirini
+        götürüyor (161,4+77,2 = 159+79,6 = 238,6) — yanlış yarıçapla kurulmuş bir kapı sınırları
+        değiştirmeden geçerdi. Bu yüzden on iki çap tek tek çıpalı.</caption>
+        <thead><tr><th>Mutasyon</th><th class="n">kırmızıya dönen test</th></tr></thead>
+        <tbody>
+          <tr><td class="name">pitch yarıçapı → efektif yarıçap</td><td class="n">1</td></tr>
+          <tr><td class="name">kural katsayısı 0,7 → 0,75</td><td class="n">2</td></tr>
+          <tr><td class="name">hüküm yönü ters (küçültülmeli ↔ büyütülmeli)</td><td class="n">2</td></tr>
+          <tr><td class="name"><span class="cell">warn</span> → <span class="cell">no</span></td><td class="n">2</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note n">
+      <p class="hd">Beşinci kusur — taşınmadı, çünkü MFSim'de yapısal olarak imkânsız</p>
+      <p>Defterde <strong>aynı alternatör için üç ayrı oran</strong> duruyor ve üçü de birbirini
+      tutmuyor:</p>
+      <div class="eq">pitch çaplarından (fizik)          161,4 / 65,9  = 2,4492
+"Komponent Secimi"  — DIŞ çapla   159,0 / 63,5  = 2,5039   +%2,2
+"Kuvvet Hesabi-" F9 — ELLE yazılmış             3,1300   +%27,8</div>
+      <p>Sonuncusu çevresel kuvvete doğrudan giriyor (F<sub>u</sub> ∝ 1/n) ve
+      <strong>alternatörün kuvvetini 258,0 N yerine 201,9 N</strong>, klimanınkini %11,9 düşük
+      gösteriyor. MFSim'de oran her zaman <span class="cell">FEADCore.speedRatio</span> ile pitch
+      yarıçaplarından gelir; ikinci bir alan olmadığı için böyle bir sapma kurulamaz.</p>
+    </div>
+
+    <h3>Kapılar BMC'nin kendi örneğinde ısırıyor</h3>
+    <p>Tedarikçi sayfasının düzeni (<span class="cell">BMC_FEAD_2026</span>) + ISL8.9E3 375 künyesi
+    ile, gerçek tarayıcıda:</p>
+    <ul class="plain">
+      <li><strong>Merkez mesafesi <span class="pill p-warn">sınırda</span></strong> — Avara 2 ↔
+      Alternatör 281,1 mm, üst sınır 273,2 (alternatör Ø57 olduğu için sınır defterdekinden dar).
+      %2,9 aşım. Sahaya çıkmış bir tasarım — kuralın neden hüküm değil uyarı olduğunun ölçümü.</li>
+      <li><strong>Çevrim oranı <span class="pill p-ok">uygun</span></strong> — alternatör governed
+      devirde 7064 d/dk ∈ [6000, 8000].</li>
+      <li><strong>Devir sınırı <span class="pill p-no">kontrol</span></strong> — çevrimin
+      2750 d/dk tepesinde alternatör 9250 &gt; 8000, klima 3559 &gt; 3000 (ikisi de <em>sürekli</em>
+      sınır). Governed 2100'de ikisi de altında.</li>
+    </ul>
+
+    <h3>Başlangıç Sihirbazı — ikinci tur</h3>
+    <p>Kataloglar ve kapılar önce panele girdi; ikinci turda <strong>Başlangıç Sihirbazı</strong>'na
+    taşındı (<span class="cell">PR #844</span>). Sihirbazdan çıkan bir kullanıcı artık motor
+    künyesini ve devir sınırlarını orada giriyor, üç kapının hükmünü de <em>modeli kurmadan
+    önce</em> görüyor.</p>
+    <div class="tbl-wrap">
+      <table>
+        <caption>Sihirbaz kendi uygulama mantığını yazmıyor — panelin
+        <span class="cell">veFeadEngineApply</span> ve <span class="cell">veFeadAccApply</span>
+        fonksiyonlarını çağırıyor, kapılar da tek <span class="cell">veFeadChecks</span>
+        çağrısından geliyor.</caption>
+        <thead><tr><th>Adım</th><th>Eklenen</th></tr></thead>
+        <tbody>
+          <tr><td class="name">6 · Motor ve Çevrim</td>
+            <td>BMC motor kataloğu seçicisi + sapma uyarısı · dört devir alanı (rölanti ·
+            governed · no load governed · overspeed) · yeni <strong>Aksesuar Devir Sınırları</strong>
+            kartı (BMC künyesi + üç düzenlenebilir sınır)</td></tr>
+          <tr><td class="name">7 · Özet ve Kurulum</td>
+            <td><strong>Uygunluk Kapıları</strong> kartı, "Modeli Kur"un hemen üstünde</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      <p class="hd">Turun asıl işi bir taşıma</p>
+      <p>Sihirbaz durumu → <span class="cell">veFeadWizNodes</span> → kurulan düğüm zincirine
+      <strong>altı yeni alan</strong> eklendi: kasnakta <span class="cell">accLib</span> + üç devir
+      sınırı, çözücüde <span class="cell">engineLib</span> + dört motor devri. Taşınmasaydı sessiz
+      bir ayrışma çıkardı — kullanıcı sihirbazda künyeyi seçer, kapılar hüküm verir, kurar ve
+      kanvasta <em>aynı kapılar</em> "değerlendirilemedi" der. Ne hata çıkar ne uyarı. Testin en sıkı
+      kapısı bu yüzden bir <strong>eşitlik</strong>: sihirbazın gösterdiği hüküm, aynı düğüm listesi
+      köprüden geçirildiğinde çıkan hükümle birebir aynı olmak zorunda.</p>
+    </div>
+
+    <h3>Kapsam dışı</h3>
+    <ul class="plain">
+      <li><strong>Optibelt güç değeri tabloları</strong> (gereken kaburga sayısı) — defterde de
+      yarım: girdileri bayat dış bağdan geliyor, c₁ sarım düzeltmesi ana şablonda kalmış.</li>
+      <li><strong>Ölü kural</strong> (<span class="cell">Kuvvet Hesabi-!B23:C23</span>) — gergi
+      kuvvetinin üst sınırı silinmiş; taşımadan önce ADEM CAM'a sorulmalı.</li>
+    </ul>
+  </div>
+</section>
+
+</body></html>

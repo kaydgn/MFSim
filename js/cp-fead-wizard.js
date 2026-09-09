@@ -32,10 +32,11 @@
 //    karar). Yarım kalan sihirbaz kaybolmasın diye durum KAPANIŞTA
 //    `node.data.wiz`e yazılıyor; `saveState` yalnız kapanışta ve kurulumda.
 //
-// ── KAYIŞ SIRASI = KABLOLAMA ───────────────────────────────────────────────
-// Sihirbazdaki sıra doğrudan bağlantı sırasıdır; dönüş yönü (CW/CCW) ondan
-// TÜRER, ayrı bir alan yok. "Dönüş Yönü" bileşeninin dersi (durum kablolarda
-// tutulur, bayrakta değil) burada da geçerli.
+// ── KAYIŞ SIRASI = KAYIŞ TABLOSUNUN SIRASI ────────────────────────────────
+// Sihirbazdaki sıra kurulumda `node.data.beltIndex`e yazılıyor (kasnaklar arası
+// bağlantı 2026-09-09'da kaldırıldı) ve dönüş yönü (CW/CCW) ondan TÜRER, ayrı
+// bir alan yok. Sihirbaz sırayı kayışın GİDİŞ yönünde gösteriyor; indis tablo
+// sırasını taşıdığı için kurulumda veFeadRouteFlip'ten geçiyor.
 
 var VE_FW_STEPS = [
   { key:'kaynak', ad:'Başlangıç',      ipucu:'Sistem adı · örnekten doldur' },
@@ -309,7 +310,7 @@ function veFeadWizRouteMove(key, delta){
   return true;
 }
 // Sırayı çevirmek = dönüş yönünü çevirmek. Ayrı bir "yön" alanı YOK; yön
-// kablolamadan türüyor (fead-spin bileşeninin kuralının aynısı).
+// sıranın kendisinden türüyor (fead-spin bileşeninin kuralının aynısı).
 function veFeadWizRouteReverse(){
   if(!_fwState) return;
   var r = veFeadWizRoute(_fwState);
@@ -700,18 +701,21 @@ function veFeadWizNodes(st){
   });
   out.push({ id: 'wz-solver', type: 'fead-solver', data: sd });
   out.push({ id: 'wz-layout', type: 'fead-layout', data: {} });
+  out.push({ id: 'wz-table',  type: 'fead-table',  data: {} });
   out.push({ id: 'wz-report', type: 'fead-report', data: {} });
 
-  // ── KABLOLAMA: sıra = kayış yolu ─────────────────────────────────────────
+  // ── SIRA İNDİSTE, TELDE DEĞİL (2026-09-09) ───────────────────────────────
+  // `st.route` kayışın GİDİŞ sırasıdır — sihirbaz kullanıcıya o sırayı
+  // gösteriyor ve gergiyi krankın hemen ardına koyuyor. `beltIndex` ise TABLO
+  // sırasını taşır, yani gidişin TERSİNİ → veFeadRouteFlip (krank sabit,
+  // kalanı ters). Çevirme atlansaydı sihirbazdan kurulan her model ters
+  // numaralanır, gergi kayışın GERGİN tarafına düşer ve span gerilmeleri
+  // negatife inerdi — model yine "çözülüyor" derdi.
   var sira = (st.route || []).filter(function(k){ return !!byKey[k]; });
-  var conns = [];
-  if(sira.length > 1){
-    sira.forEach(function(k, i){
-      var next = sira[(i + 1) % sira.length];
-      conns.push({ from: byKey[k].id, to: byKey[next].id });
-    });
-  }
-  return { nodes: out, connections: conns, solverId: 'wz-solver' };
+  if(sira.length > 1 && typeof veFeadRouteFlip === 'function')
+    veFeadRouteFlip(sira.map(function(k){ return byKey[k]; }))
+      .forEach(function(n, i){ n.data.beltIndex = i + 1; });
+  return { nodes: out, connections: [], solverId: 'wz-solver' };
 }
 
 // Sıraya gergi de girmeli; kullanıcı kasnak eklerken sıraya otomatik ekleniyor
@@ -741,7 +745,7 @@ function veFeadWizBuild(){
   var pack = veFeadWizNodes(st);
   st.route = eski;
   var b;
-  try { b = veFeadBuildSystem(pack.nodes, pack.connections); }
+  try { b = veFeadBuildSystem(pack.nodes); }
   catch(e){ return null; }
   _fwBuild = b;
   return b;
@@ -1310,6 +1314,13 @@ function _fwStepKaynak(b){
       // fizik sayısı DEĞİL — okunan şey yön, büyüklük değil. Yönü çekirdeğin
       // kendi `geom.sense`i taşıyor (yükün içinde), yani ok ve akış aynı
       // kaynaktan.
+      //
+      // BU SAYI ANİMATÖR TARAFINDAN KIRPILIYOR ve öyle kalması doğru: 260 mm/s
+      // kare başına 0,45 diş demek (ölçüldü) ve o hızda diş sırası GERİYE
+      // okunuyordu — kullanıcının 2026-09-09'da bildirdiği kusur. Kapı
+      // `VE_FEAD_ANIM_MAX_STEP_FRAC` (cp-fead.js): kare başına en fazla çeyrek
+      // diş. Buradaki sayıyı küçültmek yalnız bu çağıranı ve yalnız 60 Hz'i
+      // kurtarırdı; kırpma her kare hızında çalışıyor.
       //
       // `prefers-reduced-motion` açıksa animatör HİÇ başlamaz (kendi kapısı
       // var) ve şema donuk, okları ve etiketleriyle okunur kalır.
@@ -2968,16 +2979,16 @@ function _fwStepOzet(b){
   var kur = veFeadWizCanCreate();
   var kh2 = '<div class="ve-fw-reads">'
     + _fwRead('Kurulacak bileşen', String(veFeadWizNodes(st).nodes.length)
-        + ' (kasnaklar + gergi + kayış + çözücü + kayış yolu + rapor)')
-    + _fwRead('Kayış bağlantısı', String(veFeadWizNodes(st).connections.length))
+        + ' (kasnaklar + gergi + kayış + çözücü + kayış yolu + tablo + rapor)')
+    + _fwRead('Kayış sırası', String(veFeadWizRoute(st).length) + ' kasnak')
     + '</div>';
   if(kur.varOlan > 0){
-    // MEVCUT MODEL SESSİZCE SİLİNMEZ. Üstüne kurmak çatal hatası üretirdi
-    // (her kasnaktan bir tel çıkar kuralı), silmek ise kullanıcının verisi.
-    // Karar açık onaya bağlı ve `saveState` sayesinde geri alınabilir.
+    // MEVCUT MODEL SESSİZCE SİLİNMEZ. Üstüne kurmak kanvasta iki ayrı kayış
+    // yolunun kasnaklarını tek sıraya karıştırırdı; silmek ise kullanıcının
+    // verisi. Karar açık onaya bağlı ve `saveState` sayesinde geri alınabilir.
     kh2 += '<label class="ve-fw-check"><input type="checkbox"' + (st.temizle ? ' checked' : '')
       + ' onchange="_fwSetRender(\'temizle\', this.checked)">'
-      + '<span>Kanvastaki <b>' + kur.varOlan + ' kasnağı ve kayış bağlantılarını sil</b>, '
+      + '<span>Kanvastaki <b>' + kur.varOlan + ' kasnağı sil</b>, '
       + 'modeli yeniden kur</span></label>';
     kh2 += '';
   }
@@ -3088,8 +3099,9 @@ function veFeadWizCanCreate(){
     out.varOlan = nodes.filter(function(n){ return _feadIsPulley(n); }).length;
   if(out.varOlan > 0 && !_fwState.temizle){
     out.ok = false;
-    out.sebep = 'İç topolojide zaten ' + out.varOlan + ' kasnak var. Üstüne kurmak kayış '
-      + 'yolunu çatallandırır; silme onayını işaretleyin ya da kasnakları elle kaldırın.';
+    out.sebep = 'İç topolojide zaten ' + out.varOlan + ' kasnak var. Üstüne kurmak '
+      + 'iki ayrı kayış yolunun kasnaklarını TEK sıraya karıştırır; silme onayını '
+      + 'işaretleyin ya da kasnakları elle kaldırın.';
   }
   return out;
 }
@@ -3099,7 +3111,7 @@ function veFeadWizCanCreate(){
 // ════════════════════════════════════════════════════════════════════════════
 //
 // Yol örnek kurucusununkiyle (veFeadLoadExample) AYNI ve bu bilinçli: düğümleri
-// `createNode` kuruyor (kimlikler, DOM, portlar oradan), `data` birebir
+// `createNode` kuruyor (kimlikler ve DOM oradan), `data` birebir
 // kopyalanıyor, duty kW sözlüğü kimlik göçünden geçiyor ve yerleştirme tek
 // noktadan (veFeadArrangeByCoords) yapılıyor. İkinci bir kurucu yazmak, iki
 // yolun sessizce ayrışması demekti.
@@ -3119,14 +3131,21 @@ function veFeadWizCreate(){
   st.route = eskiRoute;
 
   // ── TEMİZLİK — yalnız açık onayla ────────────────────────────────────────
-  // Kasnaklar VE onlara bağlı teller gider; araç düğümleri (kayış, çözücü,
-  // kart, rapor) KALIR ve aşağıda yeniden KULLANILIR — maxInstances:1 taşıyan
-  // kayış düğümü ikinci kez kurulamaz, ve kullanıcının kart ölçüsü / rapor
-  // türü gibi tercihlerini çöpe atmanın karşılığı yok.
+  // Kasnaklar gider; araç düğümleri (kayış, çözücü, şema, TABLO, rapor) KALIR
+  // ve aşağıda yeniden KULLANILIR — maxInstances:1 taşıyan düğümler ikinci kez
+  // kurulamaz, ve kullanıcının kart ölçüsü / rapor türü gibi tercihlerini çöpe
+  // atmanın karşılığı yok.
   if(st.temizle) _fwClearPulleys();
 
   // Araç düğümleri: VARSA yeniden kullan, yoksa kur.
-  var araclar = { 'fead-belt': null, 'fead-solver': null, 'fead-layout': null, 'fead-report': null };
+  //
+  // `fead-table` BU LİSTEDE OLMAK ZORUNDA. Kayış Tablosu açılış yüzeyinden
+  // (veFeadPopulateStarter) zaten geliyor ve maxInstances:1; listede olmasaydı
+  // sihirbaz ikincisini kurmaya kalkar, createNode reddeder ve kullanıcı
+  // "modeli kur" dediğinde bir UYARI görürdü — üstelik kurulan bileşen sayısı
+  // da eksik sayılırdı. Örnek kurucusunda ölçülmüş sınıfın aynısı.
+  var araclar = { 'fead-belt': null, 'fead-solver': null, 'fead-layout': null,
+                  'fead-table': null, 'fead-report': null };
   nodes.forEach(function(n){
     if(araclar.hasOwnProperty(n.type) && !araclar[n.type]) araclar[n.type] = n;
   });
@@ -3175,11 +3194,6 @@ function veFeadWizCreate(){
       if(n.data && Array.isArray(n.data.duty)) veFeadRemapDutyKw(n.data.duty, idMap);
     });
 
-  if(typeof createConnection === 'function')
-    pack.connections.forEach(function(c){
-      if(idMap[c.from] && idMap[c.to]) createConnection(idMap[c.from], idMap[c.to]);
-    });
-
   // "Başlangıç ve Örnekler" düğümü işini bitirdi (örnek kurucusunun kararının
   // aynısı: o düğüm bir AÇILIŞ yüzeyi ve kullanıcı verisi taşımıyor).
   // SİHİRBAZ DÜĞÜMÜ İSE KALIR: taşıdığı form kullanıcının kendi girdisi, silmek
@@ -3194,6 +3208,12 @@ function veFeadWizCreate(){
     for(var q = selectedNodes.length - 1; q >= 0; q--)
       if(nodes.indexOf(selectedNodes[q]) < 0) selectedNodes.splice(q, 1);
 
+  // SAYAÇ TAZELENİR. `nodes` dizisi doğrudan splice edildi (deleteSelectedNodes
+  // bilerek kullanılmıyor — o `selectedNodes` global'ini tüketiyor), dolayısıyla
+  // araç çubuğunun "N bileşen" sayacı ve minimap kendiliğinden güncellenmiyor.
+  // ÖLÇÜLDÜ (gerçek tarayıcı): sihirbaz kurulumundan sonra dizi 12 düğüm
+  // taşırken çubuk 13 diyordu — bir sonraki topoloji değişimine kadar bayat.
+  if(typeof updateNodeCount === 'function') updateNodeCount();
   if(typeof veFeadArrangeByCoords === 'function'){
     try { veFeadArrangeByCoords({ silent: true }); } catch(e){ /* yedek: ızgara */ }
   }
@@ -3207,11 +3227,13 @@ function veFeadWizCreate(){
   veFeadWizClose(true);
   if(typeof showToast === 'function')
     showToast('Model kuruldu — ' + kuruldu.length + ' bileşen, '
-      + pack.connections.length + ' kayış bağlantısı.', 'success');
+      + kuruldu.filter(function(n){ return _feadIsPulley(n); }).length
+      + ' kasnak kayış sırasında.', 'success');
   return kuruldu;
 }
 
-// Kasnakları ve onlara bağlı telleri kaldır. `deleteSelectedNodes` KULLANILMAZ:
+// Kasnakları kaldır (ve elle düzenlenmiş bir dosyada onlara bağlı kalmış bir
+// tel varsa onu da). `deleteSelectedNodes` KULLANILMAZ:
 // o fonksiyon `selectedNodes` global'ini tüketiyor (burada seçim kullanıcınındır)
 // ve sensör/parametrik referanslarını da tarıyor — FEAD kasnağında ikisi de yok.
 function _fwClearPulleys(){

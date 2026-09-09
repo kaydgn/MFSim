@@ -1,9 +1,53 @@
-# FEAD — kanvas, bağlantı görünüşü ve Kayış Yolu kartı
+# FEAD — kanvas, Kayış Tablosu ve Kayış Yolu kartı
 
 > Kök `CLAUDE.md`'den taşındı. Metin birebir korunmuştur.
 > Emekli `fead-graph` yönü `emekli-yonler.md` dosyasına alındı.
 
-#### Kayış BAĞLANTISININ görünüşü — düğüme dokunmadan
+## ÖNCE BUNU OKU — KASNAKLAR ARTIK BAĞLANMIYOR (2026-09-09)
+
+**HÜKÜM: kasnaklar 0/0 portlu; kayış sırası `node.data.beltIndex`, yani
+Kayış Tablosu'nun satır sırası.** Kullanıcı isteği: *"Topolojiye çektiğimiz
+bileşenlere tıklayıp özelliklerini değiştirmek, değerlerini girmek yerine böyle
+bir tablomuz olacak, oradan değerleri gireceğiz. Gerekirse de tıklayarak bileşen
+penceresini açarak detay hesaplamalara bakacağız."*
+
+Gerekçe tek cümle: **sıra bir graf değil bir liste.** Kapalı tek çevrimde telin
+taşıyabildiği tek bilgi zaten sıraydı, ama telin yanında kurulamayan durumlar da
+üretiliyordu — çatal, kopuk kasnak, kapanmayan çevrim — ve üçünün de tek çaresi
+kullanıcının teli doğru çekmesiydi. Listede bu hataların hiçbiri KURULAMIYOR.
+
+| Ne kalktı | Nerede duruyordu |
+|---|---|
+| Kasnak portları (1 giriş + 1 çıkış) | `components.js` — dokuz tipte 0/0 |
+| `veFeadPortSideFor` + `defaultPortSide` kancası | `cp-fead.js` / `components.js` |
+| Amber kayış teli, %42 kontrol kolu, telin gidiş oku | `connections.js` (`_feadBelt` üç dalı) |
+| `veFeadRouteDiagnose` (kopuk/çatal/kapanmayan hükümleri) | `fead-model.js` |
+
+| Ne geldi | Nerede |
+|---|---|
+| `beltIndex` okuma/normalize/taşıma | `fead-model.js` `veFeadBeltOrder` · `veFeadNormalizeBeltOrder` · `veFeadMoveBeltIndex` |
+| `fead-table` "Kayış Tablosu" kartı | `components.js` tanım · `cp-fead.js` kart+panel |
+| Şema 4 göçü (tel → indis, teller silinir) | `state.js` + `fead-model.js` `veFeadMigrateBeltOrder` |
+| İki kartın tek tazeleme kapısı | `cp-fead.js` `veFeadRefreshCards` |
+
+**SIRA SÜRÜCÜDEN BAŞLAR** — kablo döneminde zincir sürücüden yürütüldüğü için
+bedavaydı, artık `veFeadBeltOrder` listeyi sürücüye döndürüyor. Üç yer buna
+dayanıyor: `veFeadRouteFlip` ("krank sabit, kalanı ters"), gergi konumu hükmü,
+ve 17 Gates raporunun tablo sırası. Kayış kapalı bir çevrim olduğu için
+başlangıcı döndürmek fiziği değiştirmiyor — kısıt bedelsiz.
+
+**`beltIndex` GATES TABLO SIRASIDIR** (kayışın gidişinin tersi) ve doğrudan
+`build.order`'dır: çevirme yok, 2095 doğrulanmış sayı bu turda hiç oynamadı.
+
+Kapılar: `fead-table.test.js`, `fead-model.test.js` → *"kayış sırası — indisten,
+sürücüden başlayarak"*, `fead-spin.test.js` → *"rotayı çevirmek — SIRADAN"*,
+`fead-wire-order-migration.test.js` (şema 3 → 4), `port-geometry.test.js` →
+*"FEAD kasnakları BAĞLANMAZ"*.
+
+**Aşağıdaki tel bölümleri EMEKLİ** ve yalnız ÖLÇÜMLERİ için duruyor: aynı yön
+yeniden denenirse nelerin ölçülmüş olduğu oradan okunur.
+
+#### Kayış BAĞLANTISININ görünüşü — düğüme dokunmadan  ⟨EMEKLİ 2026-09-09⟩
 
 **Kasnak kutusu MFSim'in klasik dörtgeni olarak kalır.** Bir denemede kasnaklar
 gerçek çapına ölçekli DAİREYE çevrilmiş ve düğümler mm koordinatlarına
@@ -50,7 +94,7 @@ yerleşiminden değil. Ölçüldü: AG00686 **karışık sırayla** elle bağlan
 `210.2 · 26.7 · 202.9 · 26.4`, span `249.2 · 212.6 · 248.9 · 212.6`, Mean kol
 açısı `33.1°` — hepsi Gates raporuyla birebir.
 
-##### Port kenarı, yön oku ve araç şeritleri (eski `veFeadArrangeRing` bölümü)
+##### Port kenarı, yön oku ve araç şeritleri  ⟨port kenarı ve ok EMEKLİ; şeritler geçerli⟩
 
 > **HALKA DÜZENİ EMEKLİ.** Bu bölüm "Otomatik Düzenle FEAD'de HALKA kurar"
 > başlığıyla yazılmıştı ve halka **konum hiçbir şey ifade etmezken** doğruydu.
@@ -505,7 +549,14 @@ içinde ayrıca sayı tutulmaz"*).
 3. **Çap = DIŞ ÇAP (`od`).** Yarıçapları çekirdek `hb`/`hr` ile türetir. Eski
    `dia` alanı `veFeadMigrateNode` ile sessizce göç eder.
 
-#### Kanvasta tel çekmek — çizim KURULAN topolojiyi gösterir
+#### Kanvasta tel çekmek — çizim KURULAN topolojiyi gösterir  ⟨EMEKLİ 2026-09-09⟩
+
+> Bu bölümdeki üç sessizliğin ikisi (kopuk kasnağın sessizce kayışa katılması,
+> geçersiz port çiftinin yutulması) TEL İLE BİRLİKTE ortadan kalktı — listede
+> kurulamıyorlar. Üçüncüsü (kart bağlantı değişince tazelenmiyordu) yaşıyor ve
+> bugün `veFeadRefreshCards` + `veFeadTopoSignature`'ın beltIndex'i okuması
+> onun karşılığı.
+
 
 Kullanıcı bildirimi (2026-08-21): *"bağlantıyı kopardığımda kanvastaki görüntü
 gitmiyor, tekrar bağlamaya çalıştığımda da bağlanmıyor; araya bileşen
@@ -568,6 +619,73 @@ avarayı kayış sırasında takas etmek, alternatörü 20 mm oynatmak ve bir te
 tarafını çevirmek — üçü de çözücüyü reddettiriyor ve sebebini yazıyor; geri
 alınca sarım açıları birebir geri geliyor (`154.3 · 52.8 · 198.4 · 64.3 ·
 157.4 · 33.0`).
+
+#### Kanvasta KAYIŞ TABLOSU (`fead-table`) — veri giriş yüzeyi
+
+Sütunlar mühendisin kendi hesap sayfasından birebir: **KASNAK · X(mm) · Y(mm) ·
+Efektif Çap(mm) · D(mm) · Kasnak Dönüş Yönü · Sarım Açısı(°) · Span
+Uzunluğu(mm) · Kayış Uzunluğu(mm)**. Girdi ile türetilen aynı satırda yan yana —
+bir koordinatı değiştirince sarımın ve span'in ne olduğu aynı bakışta görülüyor.
+
+**HANGİ HÜCRE GİRDİ — DEFTERDEN OKUNDU, TAHMİN EDİLMEDİ.** BMC'nin
+`KIRPI_II_NEX_GEN.FEAD.xlsx` defteri incelendi (`Geometrik Entegrasyon`
+C1:K10); sınıflandırma defterin kendi dolgu renkleri (amber `FFFFC000` = girdi,
+yeşil `FF92D050` = formül) ve veri doğrulama listelerinden:
+
+| Sütun | Defterde | MFSim'de |
+|---|---|---|
+| KASNAK | GİRDİ — açılır liste `$C$121:$C$126` (6 tip) | bileşen tipi; hücre adı **panelin kapısı** |
+| X · Y | GİRDİ (amber) | `x`/`y`, gergide **`cenX`/`cenY`** — düzenlenebilir |
+| Efektif Çap | formül `=IF(OR(C5=$C$124,C5=$C$125),G5+2*M8,G5+2*L8)` | çekirdeğin `rPitch`×2 |
+| D(mm) | GİRDİ (amber) | `od` — düzenlenebilir |
+| **Kasnak Dönüş Yönü** | **GİRDİ — açılır liste `$D$169:$D$170` = Sağ/Sol** | **açılır liste; `contact` alanını yazar** |
+| Sarım · Span | formül (yeşil) | `geom.wrapDeg(i)` · `geom.exitSpanLen(i)` |
+| Kayış Uzunluğu | formül `=SUM(AB47:AB52)`, **K5:K10 birleştirilmiş** | `geom.LpitchMm`, `rowspan` ile tek hücre |
+
+**DÖNÜŞ YÖNÜ BİR GÖRÜNÜM, TEMAS TARAFI GERÇEK ALAN.** Defterin span'i yönden
+türüyor (`L48 = IF(H6=H5,"Düz","Ters")` — komşular aynı yöne dönüyorsa dış
+teğet, ters yöne dönüyorsa iç teğet); MFSim'de aynı fizik `contact`ta. Hücre o
+alanı yazıyor, İKİNCİ bir yön alanı açmıyor — çeviri `veFeadContactForSpin`
+(`d = (grooved ? s : −s)` kuralının tersi). Süpürme işareti okunamıyorsa hücre
+salt okunur: uydurulmuş bir taraf sessizce başka bir güzergâh çözdürürdü.
+
+**DEFTERİN SESSİZ TUTARSIZLIĞI MFSim'DE KURULAMIYOR.** Defterde efektif çap
+kasnağın TİPİNDEN, teğet ise YÖNDEN türüyor — bir avarayı "Sağ" yapmak teğeti
+kaburgalı gibi çözer ama efektif çapı sırttan bırakır. MFSim'de iki sayı da
+`contact`tan geldiği için yönü değiştirmek efektif çapı DA değiştiriyor
+(ölçüldü: 77,2 → 77,4 mm, `2·hr → 2·hb`). Kapı `fead-table.test.js` içinde.
+
+**"EFEKTİF ÇAP" ÇEKİRDEĞİN `rEff`'İ DEĞİL, `rPitch`'İ.** İkisi karışsaydı kayış
+boyu `2π·hb` (GATES PK'da 7,54 mm) kayardı ve hata sessiz olurdu. Kullanıcının
+sayfası bunu bağımsız olarak doğruluyor: altı satırın altısında da fark tam
+`2·hb` / `2·hr`, ve `Σspan + Σ(sarım·r) = 1728 mm` (sayfanın kendi kayış boyu).
+
+**TABLO BİR RAPOR DEĞİL, GİRİŞ YÜZEYİ.** Bu yüzden girdi sütunları geometri
+ÇÖZÜLEMESE DE dolu yazılıyor — kullanıcı düzeltmek istediği sayıyı göremezse
+tabloyu düzeltemez. Türetilenler o hâlde boş kalır.
+
+**SIRAYI TABLO TAŞIMAZ, KASNAK TAŞIR.** Düğüm bir GÖRÜNÜM: silinse de kayış yolu
+durur. Satır okları (▲▼) `beltIndex`i yeniden yazıyor; **ilk satır sürücünün** ve
+kilitli (yukarıdaki sözleşme), okları sönük çiziliyor.
+
+**VİRGÜLLÜ ONDALIK KABUL EDİLİR.** Tablo `161,400` yazıyor, kullanıcı gördüğü
+biçimde girecek; `parseFloat('63,5')` sessizce `63` verirdi.
+
+Yazma yolu panelin kullandığı `veFeadSet`'e devrediyor (saveState + kutuyu
+koordinatına oturtma orada); adına tıklamak kasnağın panelini açıyor.
+
+**SİHİRBAZ VE ÖRNEK KURUCULARI TABLOYU YENİDEN KULLANIR, İKİNCİSİNİ KURMAZ.**
+`fead-table` maxInstances:1 ve açılış yüzeyi (`veFeadPopulateStarter`) onu zaten
+koyuyor; kurucunun "araç düğümünü yeniden kullan" listesinde olmasaydı
+`createNode` reddeder ve kullanıcı "modeli kur" dediğinde bir UYARI görürdü.
+İKİ AYRI DÖNGÜ var (`veFeadLoadExample` ve `veFeadWizCreate`) — birinde
+düzeltilen kusur ötekinde yaşadı, ölçüldü. Ve ikisi de örnek düğümünü `nodes`'tan
+doğrudan splice ettiği için `updateNodeCount`'u KENDİLERİ çağırmak zorunda:
+çağırmayınca araç çubuğu bir fazla gösteriyor (12 düğüm varken 13).
+
+Kapı: `fead-table.test.js` — sütun kimlikleri kullanıcının sayfasına karşı,
+türetilenler çekirdekten, girdi sütunları çözülemeyen modelde de dolu, satır
+taşıma + sürücü kilidi, mousedown yutma, tek tazeleme kapısı.
 
 #### Kanvasta CANLI kayış yolu kartı (`fead-layout`)
 
@@ -738,6 +856,35 @@ Seçili devre göre normalize edilseydi her devirde ekrandaki hız AYNI çıkar 
 devir seçicisi hiçbir şey değiştirmezdi; testi bu istenmeyen alternatifi de
 koşturup belgeliyor. BMC'de katsayı `×1/139`: 800 dev/dk'da alternatör
 0.29 tur/s, kayış 30 px/s; 2750'de 103 px/s.
+
+###### STROBOSKOP KAPISI ANİMATÖRDE — çeyrek diş/kare (2026-09-09)
+
+Kullanıcı bildirimi: *"Sadece başlangıç sihirbazında kayış görsel olarak ters
+yöne dönüyor."* **Yön DOĞRUYDU** — iki yüzeyde de ölçüldü (`spin` −1, krank
+saat yönünde, kol açıları aynı işaretle dönüyor). Ayrışan şey HIZDI:
+
+| Yüzey | diş adımı | hız | 60 Hz'de | 30 Hz'de |
+|---|---|---|---|---|
+| Kanvas kartı | 10,20 mm | 59,7 mm/s (gerçek kinematik ×ağır çekim) | 0,098 diş/kare | 0,20 |
+| Sihirbaz önizlemesi | 9,63 mm | **260 mm/s** (sabit gösterim hızı) | **0,45 diş/kare** | **0,90** |
+
+Yukarıdaki ağır çekim tavanı (`VE_FEAD_ANIM_TARGET_REV_S`) **kasnak** örnekleme
+sınırından türetilmişti; sihirbaz `dispMmS`'i doğrudan yazdığı için o tavanı hiç
+görmüyordu ve daha DAR olan sınır zaten kayışın diş adımıydı. 30 Hz'de 0,90 diş
+= 0,10 diş **geri**: kayış geriye akıyor görünür.
+
+**KAPI HIZDA DEĞİL ANİMATÖRDE** (`VE_FEAD_ANIM_MAX_STEP_FRAC` = 0,25): kare
+başına ilerleme diş adımının çeyreğiyle sınırlı. Bir sabiti küçültmek yalnız o
+çağıranı ve yalnız 60 Hz'i kurtarırdı; kare süresi büyüyünce (yavaş makine,
+dolu sayfa, arkada koşan ikinci kart) aynı hata geri gelirdi. Bedeli gösterim
+hızı (sihirbazda 260 → ~145 mm/s), karşılığı her kare hızında tek anlamlı yön.
+Dişler ve kollar aynı fazdan sürüldüğü için kırpma ikisini birlikte yavaşlatır
+— kasnakta kayma görünmez. `VE_FEAD_ANIM_MAX_DT` (0,1 s) hâlâ duruyor ama artık
+dar olan sınır bu.
+
+**Kapı:** `tests/unit/fead-anim.test.js` → *"Diş sırası kare başına ÇEYREK
+ADIMDAN fazla ilerlemez"* (sihirbaz çağrısının BİREBİR kopyası, üç mutasyonla
+ölçüldü: kırpmayı kaldırmak, eşiği 0,75 yapmak, işareti çevirmek).
 
 **Diş sırası ve kollar TEK FAZDAN** (`_feadBeltWalk` → `_feadTeethPath` /
 `_feadSpokePath`): kayış zinciri boyunca kümülatif yay uzunluğu. Kol açısı
