@@ -2564,6 +2564,54 @@ function veFeadArmArrowSVG(C, P, opt){
       + ' L' + f(G[0] + gen * uy) + ' ' + f(G[1] - gen * ux) + ' Z" fill="' + renk + '"/>';
 }
 
+// ── KISA AD — YALNIZ ÇİZİMDE ───────────────────────────────────────────────
+// "Alternatör (155 A)" 18 karakter; ad merkezde ortalandığı için etiket payı
+// ölçeği kısıtlıyor (iki geçişli `etiketPayi`). Parantezli ek (akım, parça no)
+// kartın KÜNYE TABLOSUNDA tam hâliyle duruyor — bilgi kaybolmuyor, yer
+// değiştiriyor. Ad tamamen parantezliyse ("(E9843)") dokunulmaz: boş bir
+// etiket hiçbir şey söylemez.
+function veFeadShortName(ad){
+  var t = String(ad == null ? '' : ad);
+  var k = t.replace(/\s*\([^()]*\)\s*$/, '').trim();
+  return k || t;
+}
+
+// ── GERİLME → RENK ─────────────────────────────────────────────────────────
+// Üç duraklı rampa: soğuk (gevşek) → amber → sıcak (gergin). ORTA DURAK
+// KAYIŞIN KENDİ AMBERİ, yani harita kapalıyken görülen renk rampanın
+// ortasında duruyor; açıp kapamak bir renk sıçraması gibi okunmuyor.
+// Sabit rgb: rampa bir ÖLÇEK, tema değişkeni değil — açık temada da aynı
+// sıralamayı vermek zorunda.
+var VE_FEAD_TENSION_RAMP = [[74,144,164],[210,153,34],[224,80,32]];
+function veFeadTensionColor(t, min, max){
+  var u = (Number.isFinite(t) && max > min) ? (t - min) / (max - min) : 0.5;
+  u = Math.min(1, Math.max(0, u));
+  var i = (u < 0.5) ? 0 : 1, k = (u < 0.5) ? u*2 : (u - 0.5)*2;
+  var A = VE_FEAD_TENSION_RAMP[i], B = VE_FEAD_TENSION_RAMP[i+1];
+  return 'rgb(' + Math.round(A[0] + (B[0]-A[0])*k) + ','
+                + Math.round(A[1] + (B[1]-A[1])*k) + ','
+                + Math.round(A[2] + (B[2]-A[2])*k) + ')';
+}
+
+// Tek bir AÇIKLIĞIN yolu — gerilme haritası onu kayışın üstüne kendi rengiyle
+// çiziyor. Deformasyon verilirse `_feadWalkPath` ile AYNI örnekleme kullanılır
+// (VE_FEAD_VIB_SPAN_PTS); ayrı bir örnekleme, titreşen kayışın üstünde renkli
+// parçanın kayması demekti — dişlerle kayış arasındaki kuralın aynısı.
+function _feadSpanPathD(walk, spanIdx, T, def){
+  var i = spanIdx * 2, sg = walk && walk.segs && walk.segs[i];
+  if(!sg || sg.a !== 0) return '';
+  var d0 = def && def.disp(i, 0, sg);
+  var out = 'M' + _feadR(T.tx(sg.x + (d0 ? d0[0] : 0))) + ' '
+                + _feadR(T.ty(sg.y + (d0 ? d0[1] : 0)));
+  var K = def ? VE_FEAD_VIB_SPAN_PTS : 1;
+  for(var k = 1; k <= K; k++){
+    var t = sg.l * k / K, dd = def && def.disp(i, t, sg);
+    out += 'L' + _feadR(T.tx(sg.x + sg.ux*t + (dd ? dd[0] : 0))) + ' '
+               + _feadR(T.ty(sg.y + sg.uy*t + (dd ? dd[1] : 0)));
+  }
+  return out;
+}
+
 function veFeadBeltPathD(g, tx, ty, sc, f){
   if(!g || !g.pulleys || !g.spans) return '';
   var q = g.pulleys, n = q.length, d = '';
@@ -2701,7 +2749,8 @@ function veFeadLayoutSVG(build, W, H, opts){
   // geçiyor; kod ↔ ad künyesi aynı sayfada duruyor.
   function gorAd(k){
     var a = opts.names && opts.names[k];
-    return (a == null || a === '') ? geom.names[k] : String(a);
+    var ad = (a == null || a === '') ? geom.names[k] : String(a);
+    return opts.shortNames ? veFeadShortName(ad) : ad;
   }
   var etW = (typeof opts.labelWidth === 'function') ? opts.labelWidth : function(t, fs){
     return String(t == null ? '' : t).length * fs * 0.6;      // monospace/dar sans
@@ -2826,6 +2875,26 @@ function veFeadLayoutSVG(build, W, H, opts){
     // bağlamak, kullanıcı gülü şemanın ortasına sürüklediğinde etiketlerin
     // tam onun altına düşmesi demekti.
     var kutular = roseKutu ? [roseKutu] : [];
+    // SARIM AÇISI ETİKETİ DE BİR ENGEL. Yerleştirici bugüne kadar yalnız kayış
+    // açıklıklarına ve güle bakıyordu; oysa her kasnağın ALTINDA (Y + R + 10)
+    // bir açı yazısı duruyor ve üst aday doluyken ad tam oraya atılıyordu —
+    // iki yazı üst üste, ikisi de okunmaz. Kullanıcı bildirimi (AG00976,
+    // "Avara 1" ile 52.83°). Kutu kuralı çizen satırla AYNI yerden türer.
+    //
+    // AMA YUMUŞAK BİR ENGEL. Gül, açıklıklar ve öteki ADLAR sert: birini
+    // örtmek yapısal bilgiyi yok eder (gülün yön etiketleri, kayışın kendisi,
+    // hangi adın hangi kasnağa ait olduğu). Bir SAYIYA binmek ise daha küçük
+    // bir zarar. Bu yüzden iki geçiş: önce hepsinden kaçılır, hiçbir aday temiz
+    // değilse yalnız sert engellere bakılır. Tek listeye konsaydı dar kartta
+    // ad, açıdan kaçarken gülün üstüne düşerdi (ölçüldü: taşınmış gül kapısı
+    // kırmızıya döndü).
+    var yumusak = [];
+    if(opts.wrapLabels !== false)
+      ps.forEach(function(p, k){
+        var X = offX + (p.c[0]-minX)*s, Y = offY + (maxY-p.c[1])*s + p.rPitch*s + 10;
+        var w = etW(_feadR(geom.wrapDeg(k)) + '°', 8) / 2;
+        yumusak.push({ x0:X-w, x1:X+w, y0:Y-8, y1:Y+2 });
+      });
     ps.forEach(function(p, k){
       var X = offX + (p.c[0]-minX)*s, Y = offY + (maxY-p.c[1])*s, R = p.rPitch*s;
       var w = etW(gorAd(k), 9), h = 10;
@@ -2835,16 +2904,20 @@ function veFeadLayoutSVG(build, W, H, opts){
         { x:X+R+5,    y:Y+3,        an:'start',  x0:X+R+5,  x1:X+R+5+w, y0:Y-5,      y1:Y+5 },
         { x:X-R-5,    y:Y+3,        an:'end',    x0:X-R-5-w, x1:X-R-5, y0:Y-5,       y1:Y+5 }
       ];
-      var sec = null;
-      for(var i=0;i<aday.length && !sec;i++){
-        var a = aday[i];
-        if(a.x0 < 1 || a.x1 > W-ROSE-1 || a.y0 < 1 || a.y1 > H-1) continue;
-        var carpti = false;
-        for(var j=0;j<segler.length && !carpti;j++) if(kesisir(segler[j], a)) carpti = true;
-        for(var m=0;m<kutular.length && !carpti;m++) if(ortusur(kutular[m], a)) carpti = true;
-        if(!carpti) sec = a;
+      function dene(sayilariDaKolla){
+        for(var i=0;i<aday.length;i++){
+          var a = aday[i];
+          if(a.x0 < 1 || a.x1 > W-ROSE-1 || a.y0 < 1 || a.y1 > H-1) continue;
+          var carpti = false;
+          for(var j=0;j<segler.length && !carpti;j++) if(kesisir(segler[j], a)) carpti = true;
+          for(var m=0;m<kutular.length && !carpti;m++) if(ortusur(kutular[m], a)) carpti = true;
+          if(sayilariDaKolla)
+            for(var y=0;y<yumusak.length && !carpti;y++) if(ortusur(yumusak[y], a)) carpti = true;
+          if(!carpti) return a;
+        }
+        return null;
       }
-      if(!sec) sec = aday[0];
+      var sec = dene(true) || dene(false) || aday[0];
       kutular.push(sec); _etiket.push(sec);
     });
   })();
@@ -3038,6 +3111,46 @@ function veFeadLayoutSVG(build, W, H, opts){
   svg += '<path data-ve="belt" d="' + d + '" fill="none" stroke="var(--accent-warning)" stroke-width="2.6" stroke-linejoin="round"/>';
   // Dişler kayışın ÜSTÜNE çizilir (yolun kendisi altta kalsın) ve YALNIZ ana
   // konumda: hayalet yollarda diş sırası okunmaz, yalnız gürültü olurdu.
+  // ── GERİLME HARİTASI — renk yalnız AÇIKLIKLARDA ─────────────────────────
+  // Çekirdek gerilmeyi AÇIKLIK başına veriyor; sarım yayı boyunca gerilme
+  // kasnağın üstünde sürtünmeyle değişiyor ve tek bir sayısı YOK. Yayları da
+  // boyamak, olmayan bir sayıyı iddia etmek olurdu — yaylar temel amber kalıyor
+  // ve haritanın NEREDE tanımlı olduğu çizimden okunuyor.
+  var tmap = opts.tension;
+  if(tmap && tmap.spanN && tmap.spanN.length === (geom.spans || []).length){
+    geom.spans.forEach(function(sp, i){
+      var TN = tmap.spanN[i];
+      if(!Number.isFinite(TN)) return;
+      var renk = veFeadTensionColor(TN, tmap.min, tmap.max);
+      svg += '<path data-ve="belt-tension" data-span="' + i + '" d="'
+          + _feadSpanPathD(walk, i, T, vibDef) + '" fill="none" stroke="' + renk
+          + '" stroke-width="4.2" stroke-linecap="round" opacity="0.95"><title>'
+          + _feadEsc(geom.names[i] + ' → ' + geom.names[(i+1) % ps.length]
+                     + ' · ' + Math.round(TN) + ' N') + '</title></path>';
+      if(opts.spanLabels !== false){
+        var mx = (tx(sp.Pi[0]) + tx(sp.Pj[0]))/2, my = (ty(sp.Pi[1]) + ty(sp.Pj[1]))/2;
+        var vx = tx(sp.Pj[0]) - tx(sp.Pi[0]), vy = ty(sp.Pj[1]) - ty(sp.Pi[1]);
+        var vl = Math.sqrt(vx*vx + vy*vy) || 1;
+        svg += '<text data-ve="span-tension" x="' + f(mx + (vy/vl)*11) + '" y="'
+            + f(my - (vx/vl)*11 + 3) + '" text-anchor="middle" font-size="8" fill="'
+            + renk + '">' + Math.round(TN) + ' N</text>';
+      }
+    });
+    // ÖLÇEK ÇİZİLİR: renk bir SIRALAMA gösteriyor, sayıya çevrilebilmesi için
+    // uçların yazılı olması şart. Gradyan değil ayrık kutucuklar — <defs>
+    // kimliği aynı kanvastaki ikinci kartla çakışırdı.
+    var LB = 84, LX = f(pad - 6), LY = f(H - 34);
+    for(var q = 0; q < 12; q++)
+      svg += '<rect data-ve="tension-scale" x="' + f(LX + q*LB/12) + '" y="' + LY
+          + '" width="' + f(LB/12 + 0.4) + '" height="6" fill="'
+          + veFeadTensionColor(tmap.min + (tmap.max-tmap.min)*(q+0.5)/12, tmap.min, tmap.max) + '"/>';
+    svg += '<text x="' + LX + '" y="' + f(H - 38) + '" font-size="7" fill="var(--text-muted)">'
+        + 'açıklık gerilmesi · ' + Math.round(tmap.engineRpm) + ' dev/dk</text>'
+      + '<text x="' + LX + '" y="' + f(H - 22) + '" font-size="7" fill="var(--text-muted)">'
+      + Math.round(tmap.min) + ' N</text>'
+      + '<text x="' + f(LX + LB) + '" y="' + f(H - 22) + '" text-anchor="end" font-size="7"'
+      + ' fill="var(--text-muted)">' + Math.round(tmap.max) + ' N</text>';
+  }
   svg += '<path data-ve="rib" d="' + _feadTeethPath(walk, geom.sense, stepMm, toothMm, 0, T, vibDef) + '" fill="none"'
       + ' stroke="var(--accent-warning)" stroke-width="1" stroke-linecap="round" opacity="0.9">'
       + '<title>Kayışın kaburgalı yüzü — dişler bu yüzün baktığı tarafı gösterir</title></path>';
@@ -3314,9 +3427,35 @@ function veFeadLayoutCardHTML(node){
   }
 
   var SVIB = (vibSel === 'off') ? 0 : 20;          // kazanç şeridi — yalnız açıkken
-  var svg = veFeadLayoutSVG(build, Math.max(120, W), Math.max(90, H - SER - SEC - SVIB),
+
+  // ── KÜNYE TABLOSU + GERİLME HARİTASI ──────────────────────────────────────
+  // Tablo çizimden pay alıyor. Kart daraltıldığında tablo DÜŞER ve sarım
+  // açıları çizime geri döner (`wrapLabels`); yani sayı hiçbir kipte
+  // kaybolmuyor — ya tabloda ya kasnağın altında. Sınır bir ölçü değil bir
+  // KURAL: çizime en az VE_FEAD_CARD_MIN_DRAW px kalmalı.
+  var geomCard = null;
+  if(build && build.ok && typeof FEADCore !== 'undefined'){
+    try {
+      geomCard = FEADCore.tensionerState(build.sys,
+        (vibRel != null) ? vibRel : FEADCore.meanRel(build.sys)).geom;
+    } catch(e){ geomCard = null; }
+  }
+  var TAB = geomCard ? veFeadCardTableH(build.order.length) : 0;
+  var cizimH = H - SER - SEC - SVIB - TAB;
+  var tabloVar = (TAB > 0 && cizimH >= VE_FEAD_CARD_MIN_DRAW);
+  if(!tabloVar){ TAB = 0; cizimH = H - SER - SEC - SVIB; }
+
+  // Harita yalnız SEÇİLİ SABİT devirde: senaryoda devir zamanın fonksiyonu ve
+  // donuk bir renk o anın gerilmesini yanlış anlatırdı, 'Durgun'da ise gerilme
+  // tanımsız (bkz. fead-model.js → veFeadSpanTensionMap).
+  var tenMap = (rpmSel !== 'off' && rpmSel !== 'scn'
+                && typeof veFeadSpanTensionMap === 'function')
+    ? veFeadSpanTensionMap(build, vibRel, rpmSel) : null;
+
+  var svg = veFeadLayoutSVG(build, Math.max(120, W), Math.max(90, cizimH),
                             { inline: true, posMode: mode, nodeId: node.id,
                               compassPos: node.data && node.data.compassPos,
+                              shortNames: true, wrapLabels: !tabloVar, tension: tenMap,
                               vib: vib, scn: scn,
                               animate: kin ? { dispMmS: scn ? 0 : kin.dispMmS,
                                                slow: kin.slow,
@@ -3344,6 +3483,7 @@ function veFeadLayoutCardHTML(node){
       + '</div>';
   }
   h += '</div>';
+  if(svg && tabloVar) h += veFeadCardTable(build, geomCard, tenMap);
   h += veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes);
   if(vibSel !== 'off') h += veFeadVibStrip(node, build, vib, vibSel);
   h += veFeadLayoutCardStrip(build, mode);
@@ -3474,6 +3614,14 @@ function veFeadVibStrip(node, build, vib, vibSel){
 // AĞIR ÇEKİM KATSAYISI YAZILI: ekranda görülen hız gerçek hız DEĞİL (gerçek
 // zamanda 60 Hz ekranda strob oluyor, bkz. fead-model.js), oranlar ise birebir.
 // Katsayı gizlenseydi kullanıcı ekrandan devir okumaya kalkardı.
+//
+// TEK SATIR (kullanıcı isteği): kinematik ile titreşim künyesi ayrı satırlarda
+// değil, aynı satırda ' · ' ile birleşiyor — künye üç satırdan ikiye iniyor
+// (konum satırı + bu satır). BİRLEŞTİRME METNİ KISALTIR, DAMGAYI KALDIRMAZ:
+// 'ağır çekim' katsayısı ve 'KALİBRE DEĞİL' damgası satırda duruyor, çünkü
+// ikisi de sonucun geçerlilik sınırı (kural 8) — atılsalardı ekrandan devir ve
+// genlik okunmaya kalkılırdı. Senaryo dalı iki satır kalır: oradaki metin tek
+// satıra sığmıyor (ölçüldü, ~145 karakter; kartta tavan ~95).
 function _feadAnimLabel(kin, fallback, vib, scn){
   var alt = '';
   if(scn){
@@ -3493,14 +3641,64 @@ function _feadAnimLabel(kin, fallback, vib, scn){
         + _feadFmt(vib.gain, 0) + ' (ölçek göreli)'
       : 'çırpma ' + _feadFmt(Math.min.apply(null, vib.spans.map(function(x){ return x.f; })), 0)
         + '–' + _feadFmt(Math.max.apply(null, vib.spans.map(function(x){ return x.f; })), 0)
-        + ' Hz · genlik ×' + _feadFmt(vib.gain, 0) + ' (KALİBRE DEĞİL)';
+        + ' Hz ×' + _feadFmt(vib.gain, 0) + ' (KALİBRE DEĞİL)';
   }
   if(!kin) return alt;
   var kat = (kin.slow >= 0.999) ? 'gerçek zaman'
           : '×1/' + Math.round(1/kin.slow) + ' ağır çekim';
   return Math.round(kin.engineRpm) + ' dev/dk' + (fallback ? ' (varsayılan)' : '')
        + '  ·  kayış ' + _feadFmt(kin.beltMs, 1) + ' m/s  ·  ' + kat
-       + (alt ? '\n' + alt : '');
+       + (alt ? '  ·  ' + alt : '');
+}
+
+// ── KÜNYE TABLOSU — sarım açısı çizimden tabloya ───────────────────────────
+// Ad çizimin İÇİNDE kalıyor ama parantezli eki atılıyor (veFeadShortName); tam
+// ad, dış çap, sarım açısı, devir ve güç bu tabloda. İki kazanç: uzun adlar
+// artık şemanın ölçeğini kısıtlamıyor, ve kasnak altındaki açı yazıları
+// kalkınca ad yerleştiricisinin en sıkışık adayı boşalıyor.
+//
+// SAYILAR TEK KAYNAKTAN: sarım çizilen konumun geometrisinden (şemayla aynı
+// nesne), devir ve güç çekirdeğin gerilme çağrısının `perPulley` satırından.
+// İkinci bir hesap kurmak, tablonun şemadan başka bir konumu anlatması demekti.
+// Devir seçili değilse (Durgun) o iki sütun '—' yazar; uydurulmuş bir devir
+// tabloyu sessizce yanlış yapardı.
+var VE_FEAD_TAB_HEAD = 15;      // px — başlık satırı
+var VE_FEAD_TAB_ROW  = 12;      // px — kasnak satırı
+var VE_FEAD_TAB_PAD  = 9;       // px — dolgu + kenarlık
+var VE_FEAD_CARD_MIN_DRAW = 170;  // px — bunun altına inen çizime tablo konmaz
+
+function veFeadCardTableH(n){
+  return (n > 0) ? (VE_FEAD_TAB_HEAD + n*VE_FEAD_TAB_ROW + VE_FEAD_TAB_PAD) : 0;
+}
+
+function veFeadCardTable(build, geom, ten){
+  if(!build || !build.ok || !geom || !build.order || !build.order.length) return '';
+  var say = 'font-variant-numeric:tabular-nums; text-align:right; padding:0 3px;';
+  var bas = 'font-weight:600; color:var(--text-muted); text-align:right; padding:0 3px;';
+  var h = '<div style="flex:0 0 auto; padding:3px 6px 5px; overflow:hidden;'
+    + ' border-top:1px solid var(--border-color); background:var(--bg-secondary, #16181d);'
+    + ' font-size:var(--fs-micro); line-height:' + VE_FEAD_TAB_ROW + 'px;'
+    + ' font-family:ui-monospace, monospace; color:var(--text-secondary);">'
+    + '<table style="width:100%; border-collapse:collapse;"><thead><tr>'
+    + '<th style="' + bas + ' text-align:left;">Kasnak</th>'
+    + '<th style="' + bas + '">Ø</th><th style="' + bas + '">sarım</th>'
+    + '<th style="' + bas + '">dev/dk</th><th style="' + bas + '">kW</th></tr></thead><tbody>';
+  build.order.forEach(function(n, i){
+    var pp = ten && ten.perPulley && ten.perPulley[i];
+    var od = _feadNum(n.data && n.data.od, NaN);
+    var isDrv = !!(build.sys.pulleys[i] && build.sys.pulleys[i].crank);
+    h += '<tr><td style="text-align:left; padding:0 3px; max-width:150px; overflow:hidden;'
+      + ' text-overflow:ellipsis; white-space:nowrap; color:'
+      + (isDrv ? 'var(--accent-primary)' : 'var(--text-primary)') + ';">'
+      + _feadEsc(build.names[i]) + '</td>'
+      + '<td style="' + say + '">' + (Number.isFinite(od) ? _feadFmt(od, 0) : '—') + '</td>'
+      + '<td style="' + say + ' color:var(--accent-warning);">' + _feadFmt(geom.wrapDeg(i), 1) + '°</td>'
+      + '<td style="' + say + '">' + (pp && Number.isFinite(pp.accessoryRpm)
+          ? Math.round(pp.accessoryRpm) : '—') + '</td>'
+      + '<td style="' + say + '">' + (pp && Number.isFinite(pp.powerKw)
+          ? _feadFmt(pp.powerKw, 2) : '—') + '</td></tr>';
+  });
+  return h + '</tbody></table></div>';
 }
 
 // Durum şeridi — "tutarlı mı" sorusunun tek satırlık cevabı.
@@ -5791,6 +5989,9 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_STARTER_LAYOUT: VE_FEAD_STARTER_LAYOUT,
     veFeadBeltPathD: veFeadBeltPathD, veFeadArmArrowSVG: veFeadArmArrowSVG,
     veFeadLayoutSVG: veFeadLayoutSVG,
+    veFeadShortName: veFeadShortName, veFeadTensionColor: veFeadTensionColor,
+    veFeadCardTable: veFeadCardTable, veFeadCardTableH: veFeadCardTableH,
+    VE_FEAD_CARD_MIN_DRAW: VE_FEAD_CARD_MIN_DRAW,
     veFeadApplyBadge: veFeadApplyBadge,
     veFeadApplyBeltModeBadge: veFeadApplyBeltModeBadge,
     veFeadSyncDrag: veFeadSyncDrag,
