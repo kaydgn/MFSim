@@ -836,9 +836,15 @@
       --slayt-ortu: 0%;           /* ÖRTÜ KAPALI (kullanıcı reçetesi): fotoğrafın üstünde
                                      perde yok. Okunurluğu artık ÖRTÜ değil, sol panelin
                                      camı taşıyor — sağ tarafta zaten metin kalmadı. */
-      --karsilama-cam: 25%;       /* sol panelin SAYDAMLIK payı: 0 = opak, 100 = yalnız kenarlık.
-                                     Cam BULANIKLIĞI yok (reçete "net"): backdrop-filter
-                                     bilerek yazılmadı, blur(0) bile bedava değil. */
+      --karsilama-cam: 42%;       /* asılı kartın SAYDAMLIK payı: 0 = opak, 100 = yalnız kenarlık */
+      --karsilama-cam-blur: 22px; /* camın ARKASINI bulandırma yarıçapı */
+      --karsilama-kart-r: 10px;   /* kartın köşe yarıçapı — kabuğun 3 px'i kart için fazla sert */
+      /* Kart fotoğrafın üstünde YÜZÜYOR, temanın kâğıdının değil: gölge her iki
+         temada da koyu olmak zorunda. --shadow-color açık temalarda 0,06 alfa —
+         kâğıt üstünde doğru, fotoğraf üstünde gölge diye okunmuyor. */
+      --karsilama-kart-golge: 0 26px 64px rgba(0,0,0,.42);
+      --karsilama-perde: 34%;     /* kartın SOLUNDAKİ yumuşak perde — kadraj ne olursa
+                                     olsun kartın kenarı parlak bir noktaya oturmasın */
       --dur-step:   70ms;
       --dur-fly:   460ms;
       --ease-fly: cubic-bezier(.4, 0, .2, 1);
@@ -2534,23 +2540,42 @@ body.ve-no-module #ve-ribbon{ display:none; }
 }
 
 /* ── Sol sütun: kimlik + proje yolları ─────────────────────────────────── */
+/* VİTRİN (kullanıcı reçetesi "T6 · Vitrin"): panel ekranın kenarına yapışık bir
+   sütun değil, fotoğrafın üstünde ASILI buzlu bir kart. Akıştan çıkıyor
+   (absolute) — karşılamanın in-flow çocuğu kalmıyor, slayt da mutlak.
+   max-height + overflow ŞART: kısa pencerede (ör. 1280×620) kart ekrandan
+   taşar ve alttaki eylemler ULAŞILAMAZ olurdu; kaydırma kartın içine indi. */
 .ve-welcome-id{
-  flex:0 0 auto;
-  /* 340 px tavan (kullanıcı reçetesi): dar pencerede yüzdeyle küçülür, geniş
-     pencerede fotoğrafa yer bırakır. */
-  width:clamp(300px, 34%, 340px);
+  position:absolute;
+  left:56px;
+  /* Dikey ortalama MARJLA, transform'la DEĞİL: giriş koreografisi
+     (.ve-welcome-enter .ve-welcome-id) transform'u kullanıyor ve `both`
+     doldurmasıyla bitiş karesini kalıcı kılıp translateY(-50%)'yi eziyordu —
+     kart ekranın ortasından AŞAĞI kayıyordu (ölçüldü: üst kenar y=450,
+     olması gereken 134). Marj ortalaması animasyonla çakışmaz. */
+  top:0;
+  bottom:0;
+  height:fit-content;
+  margin-top:auto;
+  margin-bottom:auto;
+  z-index:1;
+  width:clamp(320px, 29%, 380px);
+  max-height:calc(100% - 64px);
+  overflow:auto;
   display:flex;
   flex-direction:column;
-  padding:34px 30px 22px;
-  /* Slaytın ÜSTÜNDE — fotoğraf panelin ALTINDAN geçiyor, panel onu camla örter. */
-  position:relative;
-  z-index:1;
-  /* Taban: color-mix desteklenmeyen tarayıcıda panel OPAK kalır (metin okunur
+  padding:30px 30px 24px;
+  border-radius:var(--karsilama-kart-r);
+  /* Taban: color-mix desteklenmeyen tarayıcıda kart OPAK kalır (metin okunur
      olmaktan çıkmasın); ikinci bildirim onu cam payıyla ezer. */
   background:var(--bg-secondary);
   background:color-mix(in srgb, var(--bg-secondary) calc(100% - var(--karsilama-cam)), transparent);
-  border-right:1px solid var(--border-color);
-  border-right-color:color-mix(in srgb, var(--border-color) 60%, transparent);
+  /* Camın ARKASI bulanır. Kart DURGUN bir yüzey; arkasında yalnız slayt oynuyor. */
+  -webkit-backdrop-filter:blur(var(--karsilama-cam-blur)) saturate(1.18);
+  backdrop-filter:blur(var(--karsilama-cam-blur)) saturate(1.18);
+  border:1px solid var(--border-light);
+  border-color:color-mix(in srgb, var(--border-light) 70%, transparent);
+  box-shadow:var(--karsilama-kart-golge);
 }
 .ve-welcome-logo{
   display:inline-flex;
@@ -2575,7 +2600,8 @@ body.ve-no-module #ve-ribbon{ display:none; }
 .ve-welcome-sep{
   height:1px;
   background:var(--border-color);
-  margin:22px 0 18px;
+  background:color-mix(in srgb, var(--border-color) 75%, transparent);
+  margin:18px 0 14px;
 }
 .ve-welcome-note{
   margin:0;
@@ -2589,9 +2615,11 @@ body.ve-no-module #ve-ribbon{ display:none; }
    Şerit bu ekranda gizli olduğu için "elimdeki kopya ne?" sorusunun cevabı
    yalnız burada duruyor. İçeriği js/components.js doldurur
    (veFillWelcomeChanges / veSyncWelcomeFreshness). */
+/* Kartta yalnız BAŞLIK + düğme duruyor, kayıtlar KAPALI açılıyor: on kayıt
+   kartı boyundan uzun yapıyordu. Düğme onları YERİNDE açar (pencere açmaz);
+   etiketi ve kaç kaydın gizli olduğunu js/components.js yazar. */
 .ve-welcome-panel{
-  margin-top:20px;
-  max-width:36ch;
+  margin-top:16px;
 }
 .ve-welcome-panel-title{
   font-size:var(--fs-tiny);
@@ -2710,9 +2738,11 @@ body.ve-no-module #ve-ribbon{ display:none; }
 
 /* Kimliği yukarıda, eylemleri aşağıda tutan boşluk. Dar pencerede sütunlar
    üst üste bindiği için kapatılır (aşağıdaki medya kuralı). */
+/* Esneme payı KALKTI: kart artık ekranı boydan boya doldurmuyor, boyunu
+   içeriği belirliyor. Blok markup'ta duruyor (koreografi ve dar yerleşim
+   ona göre yazılmış), yalnız yer kaplamıyor. */
 .ve-welcome-spacer{
-  flex:1 1 auto;
-  min-height:24px;
+  display:none;
 }
 .ve-welcome-open{
   display:inline-flex;
@@ -2745,6 +2775,7 @@ body.ve-no-module #ve-ribbon{ display:none; }
 }
 .ve-welcome-links{
   display:flex;
+  justify-content:center;
   gap:2px;
   margin-top:8px;
 }
@@ -2778,9 +2809,11 @@ body.ve-no-module #ve-ribbon{ display:none; }
 /* Sürüm künyesi — şerit bu ekranda gizli olduğu için Program Durumu'na TEK
    giriş. Künye yoksa (modüler index.html) düğme `hidden` kalır. */
 .ve-welcome-meta{
-  margin-top:22px;
-  padding-top:14px;
+  margin-top:16px;
+  padding-top:12px;
+  text-align:center;
   border-top:1px solid var(--border-color);
+  border-top-color:color-mix(in srgb, var(--border-color) 70%, transparent);
 }
 /* TEK YAZI TİPİ: bu ekranda mono yok. Künyenin rakam hizası mono'dan değil
    tabular-nums'tan gelir (açılış künyesiyle aynı çare). */
@@ -2861,6 +2894,18 @@ body.ve-no-module #ve-ribbon{ display:none; }
 @keyframes ve-slayt-kb{
   from{ transform:scale(1); }
   to{ transform:scale(1.06); }
+}
+/* Kartın SOLUNDAKİ perde. Kart cam olduğu için arkasındaki kadraj ne kadar
+   parlaksa kenarı o kadar kayboluyordu; bu yumuşak geçiş kartın oturduğu
+   yeri sabitliyor. Örtüden (::after) AYRI: o ekranın tamamına, bu yalnız
+   sola. */
+.ve-welcome-slayt::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(90deg,
+    color-mix(in srgb, var(--bg-primary) var(--karsilama-perde, 0%), transparent) 0%,
+    transparent 46%);
 }
 /* Örtü TEK jetondan sürülür ve bugün SIFIR: yönlü gradyan, resmi panelin
    dibinden silmek içindi — P4'te panel zaten saydam, silinecek yer yok.
@@ -3138,11 +3183,16 @@ body > .mfsim-loading-logo .mfsim-loading-logo-ico{
    açıklama metni ve boşluk kalkar, eylemler ve künye kalır. */
 @media (max-width:1100px){
   .ve-welcome{ flex-direction:column; }
+  /* Kart ASILI kalır ama artık ortada değil, tepede geniş bir banttır:
+     mutlak konum kaldırılmazsa dar pencerede fotoğrafın ortasını kapatır. */
   .ve-welcome-id{
+    position:static;
+    transform:none;
     width:auto;
-    padding:24px 26px 18px;
-    border-right:none;
-    border-bottom:1px solid var(--border-color);
+    max-height:none;
+    overflow:visible;
+    margin:22px 22px 0;
+    padding:22px 24px 18px;
   }
   .ve-welcome-note,
   .ve-welcome-spacer{ display:none; }

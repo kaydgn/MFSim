@@ -1475,7 +1475,10 @@ function _veWelcomeDur(ad, varsayilan) {
 // bilgi gibi gösterirdi. Commit başlığı SERBEST METİN → textContent ile konur.
 // Karşılamada duran kayıt sayısı; kalanı YERİNDE açılır. Pencere açmak bir
 // satır listeyi görmek için fazla bir tören — kullanıcı isteği (2026-09-08).
-var VE_WELCOME_CHANGE_ILK = 3;
+// Kartta KAÇ kayıt açık başlar. 3'tü; Vitrin düzeninde kart ekranın üstünde
+// asılı duruyor ve on kayıt onu boyundan uzun yapıyordu — hepsi düğmenin
+// arkasına alındı (düğme onları YERİNDE açar, pencere açmaz).
+var VE_WELCOME_CHANGE_ILK = 0;
 
 function veFillWelcomeChanges() {
   if(typeof document === 'undefined') return false;
@@ -1510,7 +1513,9 @@ function veFillWelcomeChanges() {
   var gizli = kayitlar.length - VE_WELCOME_CHANGE_ILK;
   if(dugme && gizli > 0) {
     dugme.hidden = false;
-    dugme.textContent = 'Daha eskiler \u00b7 ' + gizli;
+    // Etiket duruma göre: hiç kayıt açık değilse "daha eskiler" yanlış olurdu,
+    // gizli olanlar listenin TAMAMI.
+    dugme.textContent = (VE_WELCOME_CHANGE_ILK > 0 ? 'Daha eskiler \u00b7 ' : 'Hepsi \u00b7 ') + gizli;
     dugme.onclick = veToggleWelcomeChanges;      // her çizimde aynı işlev — çoğalmaz
   }
   panel.hidden = false;
@@ -1597,7 +1602,9 @@ function veToggleWelcomeChanges() {
   var fazlalar = panel.querySelectorAll('.ve-welcome-change--extra');
   Array.prototype.forEach.call(fazlalar, function(el) { el.hidden = acik; });
   dugme.setAttribute('aria-expanded', acik ? 'false' : 'true');
-  dugme.textContent = acik ? ('Daha eskiler \u00b7 ' + fazlalar.length) : 'Daha az';
+  dugme.textContent = acik
+    ? ((VE_WELCOME_CHANGE_ILK > 0 ? 'Daha eskiler \u00b7 ' : 'Hepsi \u00b7 ') + fazlalar.length)
+    : 'Daha az';
   panel.classList.toggle('is-open', !acik);
   return !acik;
 }
