@@ -83,6 +83,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `MFSim_Olcum_Goruntuleyici.html` — Görüntüleyicinin tek dosya çıktısı (`npm run build:viewer` üretir; MFSim_Code.html'in aksine **git'e dahil** — dağıtımı bu dosyanın indirilmesiyle oluyor)
 - `candbc/` — **CAN Çözümleyici** (ayrı program, bkz. `candbc/README.md`)
 - `MFSim_CAN_Cozumleyici.html` — CAN Çözümleyici'nin tek dosya çıktısı (`npm run build:can` üretir; görüntüleyici gibi **git'e dahil**)
+- `programlar/` — MFSim çevresinde üretilen **tek dosyalık HTML programların arşivi**
+  ve `kayit.json` künyesi (bkz. `programlar/README.md`). Build'e girmez, kod
+  yüklemez, test etmez — **salt veri**. Artifact kopyaları donmuştur; üretilen üç
+  ürün (`MFSim_Code.html`, görüntüleyici, CAN) **taşınmadı**, kayıt onlara depo
+  kökünden yol veriyor. `kayit.json` elle düzenlenmez, üretilir.
 - `.claude/skills/` — modüllere özgü karar kayıtları (koşullu yüklenir; aşağıya bak)
 - `docs/decisions/` — ortak yüzey kararları + tam test dosyası tablosu
 

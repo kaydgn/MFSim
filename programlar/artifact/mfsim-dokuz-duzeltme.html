@@ -1,0 +1,682 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>MFSim — Dokuz Düzeltme</title>
+<style>
+  :root {
+    --paper:      #f6f7f9;
+    --surface:    #ffffff;
+    --ink:        #14181e;
+    --ink-2:      #3b444f;
+    --muted:      #6b7683;
+    --rule:       #dde1e7;
+    --rule-soft:  #eaedf1;
+    --teal:       #0f6b75;
+    --teal-soft:  #e2f0f1;
+    --rust:       #a8442a;
+    --rust-soft:  #f7e8e3;
+    --amber:      #8a6410;
+
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+    --col: 70ch;
+    --s1: .35rem; --s2: .7rem; --s3: 1.1rem; --s4: 1.8rem; --s5: 2.8rem; --s6: 4.2rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:     #11141a;
+      --surface:   #171b22;
+      --ink:       #e8ecf1;
+      --ink-2:     #b6bfca;
+      --muted:     #8a94a1;
+      --rule:      #2a313b;
+      --rule-soft: #222831;
+      --teal:      #5cc2ce;
+      --teal-soft: #14313a;
+      --rust:      #e2836a;
+      --rust-soft: #34201c;
+      --amber:     #d2a63f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:     #11141a;
+    --surface:   #171b22;
+    --ink:       #e8ecf1;
+    --ink-2:     #b6bfca;
+    --muted:     #8a94a1;
+    --rule:      #2a313b;
+    --rule-soft: #222831;
+    --teal:      #5cc2ce;
+    --teal-soft: #14313a;
+    --rust:      #e2836a;
+    --rust-soft: #34201c;
+    --amber:     #d2a63f;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.62;
+    margin: 0;
+    padding: var(--s5) var(--s3) var(--s6);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: var(--col); margin: 0 auto; }
+  .wide { max-width: 96ch; margin: 0 auto; }
+
+  /* ── Başlık ─────────────────────────────────────────────── */
+  header { max-width: 96ch; margin: 0 auto var(--s5); }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: .72rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin: 0 0 var(--s2);
+  }
+  h1 {
+    font-size: clamp(1.9rem, 4.4vw, 2.9rem);
+    line-height: 1.1;
+    letter-spacing: -.024em;
+    font-weight: 660;
+    text-wrap: balance;
+    margin: 0 0 var(--s3);
+    max-width: 22ch;
+  }
+  .standfirst {
+    font-size: 1.06rem;
+    color: var(--ink-2);
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  /* ── Sayaç şeridi ───────────────────────────────────────── */
+  .tally {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin: var(--s4) 0 0;
+  }
+  .tally > div { background: var(--surface); padding: var(--s3) var(--s3) calc(var(--s3) - .2rem); }
+  .tally dt {
+    font-family: var(--mono);
+    font-size: .66rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 var(--s1);
+  }
+  .tally dd {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 1.35rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.02em;
+  }
+  .tally dd small { font-size: .78rem; color: var(--muted); font-weight: 400; }
+
+  /* ── Bölümler ───────────────────────────────────────────── */
+  section { margin: var(--s6) auto 0; }
+  h2 {
+    font-size: 1.32rem;
+    letter-spacing: -.014em;
+    font-weight: 640;
+    margin: 0 0 var(--s2);
+    text-wrap: balance;
+  }
+  .sec-note {
+    color: var(--muted);
+    font-size: .93rem;
+    margin: 0 0 var(--s4);
+    max-width: 60ch;
+  }
+
+  /* ── Kayıt girdisi ──────────────────────────────────────── */
+  .entry { border-top: 1px solid var(--rule); padding-top: var(--s3); margin-top: var(--s4); }
+  .entry:first-of-type { margin-top: 0; }
+  .entry-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--s2);
+    margin-bottom: var(--s2);
+  }
+  .entry h3 {
+    font-size: 1.05rem;
+    font-weight: 620;
+    letter-spacing: -.008em;
+    margin: 0;
+    flex: 1 1 22ch;
+  }
+  .loc {
+    font-family: var(--mono);
+    font-size: .78rem;
+    color: var(--teal);
+    background: var(--teal-soft);
+    padding: .1rem .42rem;
+    white-space: nowrap;
+  }
+  .entry p { margin: 0 0 var(--s2); }
+  .entry p:last-child { margin-bottom: 0; }
+
+  .label {
+    font-family: var(--mono);
+    font-size: .68rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: var(--s1);
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: .87em;
+    background: var(--rule-soft);
+    padding: .08em .32em;
+  }
+
+  pre {
+    font-family: var(--mono);
+    font-size: .82rem;
+    line-height: 1.55;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--teal);
+    padding: var(--s3);
+    overflow-x: auto;
+    margin: var(--s2) 0;
+  }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .cmt { color: var(--muted); }
+  .bad { color: var(--rust); }
+  .good { color: var(--teal); }
+
+  /* ── Ölçüm tablosu ──────────────────────────────────────── */
+  .tbl-wrap { overflow-x: auto; margin: var(--s3) 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+  caption {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: .68rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: var(--s2);
+  }
+  th, td {
+    text-align: left;
+    padding: .5rem .8rem .5rem 0;
+    border-bottom: 1px solid var(--rule-soft);
+    vertical-align: baseline;
+  }
+  thead th {
+    font-size: .7rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    border-bottom: 1px solid var(--rule);
+  }
+  td.num, th.num {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    padding-right: var(--s3);
+    white-space: nowrap;
+  }
+  tr.same td.num { color: var(--ink-2); }
+  tr.changed td.after { color: var(--teal); font-weight: 600; }
+  tr.changed td.before { color: var(--rust); }
+  .verdict {
+    font-family: var(--mono);
+    font-size: .72rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .verdict.keep { color: var(--muted); }
+  .verdict.fix  { color: var(--teal); }
+
+  /* ── Vurgu kutusu ───────────────────────────────────────── */
+  .box {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: var(--s3);
+    margin: var(--s3) 0;
+  }
+  .box.warn { border-color: var(--rust); background: var(--rust-soft); }
+  .box p { margin: 0 0 var(--s2); }
+  .box p:last-child { margin-bottom: 0; }
+
+  ul { padding-left: 1.15rem; margin: var(--s2) 0; }
+  li { margin-bottom: var(--s1); }
+  li::marker { color: var(--muted); }
+
+  a { color: var(--teal); text-underline-offset: .18em; }
+  a:focus-visible, :focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+  footer {
+    max-width: 96ch;
+    margin: var(--s6) auto 0;
+    padding-top: var(--s3);
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: .85rem;
+  }
+
+  @media (max-width: 640px) {
+    body { padding: var(--s4) var(--s3) var(--s5); }
+    .tally dd { font-size: 1.15rem; }
+  }
+</style>
+
+<header>
+  <p class="eyebrow">MFSim · değişiklik kaydı · 11 Ağustos 2026</p>
+  <h1>Dokuz düzeltme, dokuz kanıt</h1>
+  <p class="standfirst">
+    Kapsamlı incelemede bulunan hatalar kapatıldı. Her düzeltme, eski kodda kırılan ve
+    yeni kodda geçen bir testle bağlandı — yeni testler <code>git stash</code> ile
+    orijinal koda karşı koşuldu ve <strong>15 iddia kırmızı yandı</strong>.
+  </p>
+
+  <dl class="tally">
+    <div><dt>Birim testi</dt><dd>2204 <small>← 2102</small></dd></div>
+    <div><dt>Test paketi</dt><dd>94 <small>← 91</small></dd></div>
+    <div><dt>E2E (Chromium)</dt><dd>80 <small>hepsi yeşil</small></dd></div>
+    <div><dt>Değişen dosya</dt><dd>18 <small>+650 / −33</small></dd></div>
+  </dl>
+</header>
+
+<section class="wide">
+  <h2>Sessizce yanlış sayı</h2>
+  <p class="sec-note">
+    Gözle yakalanamayan sınıf: sonuç makul görünür, yanlıştır. Bu turda buradan iki tane çıktı
+    ve ikisi de aynı kökten — yol eğiminin işaret konvansiyonu.
+  </p>
+
+  <div class="entry">
+    <div class="entry-head">
+      <h3>Harita ile fizik konvansiyonu arasındaki çeviri atlanmıştı</h3>
+      <span class="loc">js/simulation-engine.js</span>
+    </div>
+
+    <p>
+      Depoda iki konvansiyon var: harita/segment tarafında <code>grade &gt; 0</code> yokuş
+      <strong>aşağı</strong>, fizik motorunda <code>grade &gt; 0</code> yokuş <strong>yukarı</strong>
+      (direnç). Çeviriyi <code>js/ft-segment-drive.js:492-495</code> açıkça yazıp uyguluyor,
+      <code>js/ft-performance.js</code> de fizik konvansiyonunu kullanıyor,
+      <code>js/graphics.js</code>'in kullanıcıya bastığı rapor metni de öyle diyor:
+      <em>“F_egim: pozitif = direnc / negatif = itici”.</em>
+    </p>
+
+    <p>
+      Bu modül çeviriyi atlıyordu. <code>F_net</code>'te de <code>F_grade</code> çıkarılacağına
+      ekleniyordu — <strong>iki hata birbirini götürdüğü için ivme doğruydu.</strong> Yanlış olan,
+      kullanıcının panelde ve sensörde gördüğü sinyallerdi.
+    </p>
+
+<pre><code><span class="cmt">// önce</span>
+<span class="bad">var F_grade = mass * g * Math.sin(gradeRad);        // çeviri yok</span>
+<span class="bad">var F_net   = F_grade - F_rolling - F_aero + F_engine;</span>
+
+<span class="cmt">// sonra</span>
+<span class="good">function toPhysicsGradePct(mapPct) { … return v === 0 ? 0 : -v; }</span>
+<span class="good">var F_net = F_engine - F_rolling - F_aero - F_grade;  // m_eff·a = F_çekiş − dirençler</span></code></pre>
+
+    <div class="tbl-wrap">
+      <table>
+        <caption>20 t araç · %10 eğim · 40 km/h başlangıç · yokuş yukarı</caption>
+        <thead>
+          <tr>
+            <th>Büyüklük</th>
+            <th class="num">Önce</th>
+            <th class="num">Sonra</th>
+            <th>Sonuç</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="same">
+            <td><code>F_net[0]</code></td>
+            <td class="num">−11678.044178</td>
+            <td class="num">−11678.044178</td>
+            <td class="verdict keep">değişmedi</td>
+          </tr>
+          <tr class="same">
+            <td><code>accel[0]</code></td>
+            <td class="num">−0.540650193</td>
+            <td class="num">−0.540650193</td>
+            <td class="verdict keep">değişmedi</td>
+          </tr>
+          <tr class="same">
+            <td><code>speed[son]</code></td>
+            <td class="num">18.222243105</td>
+            <td class="num">18.222243105</td>
+            <td class="verdict keep">değişmedi</td>
+          </tr>
+          <tr class="same">
+            <td>enerji <code>error_J</code></td>
+            <td class="num">−471.226070</td>
+            <td class="num">−471.226070</td>
+            <td class="verdict keep">değişmedi</td>
+          </tr>
+          <tr class="changed">
+            <td><code>F_grade[0]</code></td>
+            <td class="num before">−19522.630</td>
+            <td class="num after">+19522.630</td>
+            <td class="verdict fix">düzeldi</td>
+          </tr>
+          <tr class="changed">
+            <td><code>r_current_grade[0]</code></td>
+            <td class="num before">−10.0 %</td>
+            <td class="num after">+10.0 %</td>
+            <td class="verdict fix">düzeldi</td>
+          </tr>
+          <tr class="changed">
+            <td><code>r_total_resist[0]</code></td>
+            <td class="num before">3257.708</td>
+            <td class="num after">22780.337</td>
+            <td class="verdict fix">düzeldi</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      Cebir de bunu söylüyor: <code>cos</code> çift fonksiyon olduğu için <code>F_rolling</code>
+      aynı kalır, <code>F_grade</code> işaret değiştirir, <code>F_net</code>'teki işaret de
+      değişir — ikisi sadeleşir. Dinamik korunur, sinyaller düzelir.
+    </p>
+
+    <div class="box">
+      <span class="label">Dayanak — iSCAAN referansı</span>
+      <p>
+        Konvansiyon bir tercih değil; projenin iSCAAN'a kalibre referans belgesi
+        (<code>Tam_Gaz_Hizlanma_Matematiksel_Hesaplar.txt</code>) üç yerde birden tanımlıyor:
+      </p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Yer</th><th>İfade</th></tr></thead>
+          <tbody>
+            <tr><td>§5.2</td><td><code>F_grade = m·g·sin(θ)</code>, <code>θ = atan(grade_pct/100)</code></td></tr>
+            <tr><td>§5.2</td><td><code>F_total = F_rolling + F_aero + F_grade</code> — eğim <strong>toplam dirence dahil</strong></td></tr>
+            <tr><td>satır 320</td><td><code>F_net = F_traction − F_total</code></td></tr>
+            <tr><td>satır 471</td><td><code>P_grade = F_grade·v/1000</code> <strong>(işaretli: + = yokuş yukarı)</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Harita tarafının konvansiyonu ise kullanıcının veri girdiği yerde tanımlı —
+        <code>js/component-extras.js:2102</code>: <em>“↓ İniş”</em> seçilince
+        <code>grade = +pct</code>. Bu ikisi arasındaki çeviri eksikti.
+      </p>
+      <p>
+        Toplam direncin eğimi içerdiği ayrıca depodaki <strong>mevcut</strong> kapıyla da
+        sabit — <code>tests/unit/arac-performans-calc-trace.test.js:133</code>, PR #636'dan beri:
+        <code>F_resist ≈ F_rolling + F_aero + F_grade</code>.
+      </p>
+    </div>
+
+    <div class="box">
+      <span class="label">Direnç büyüklüklerine dokunulmadı</span>
+      <p>
+        Yuvarlanma ve aerodinamik direnç formülleri değişmedi ve ölçümle bit-bit aynı çıktı:
+        <code>F_rolling[0]</code> = <strong>2928.394 N</strong>,
+        <code>F_aero[0]</code> = <strong>329.313 N</strong> — önce de sonra da.
+        <code>F_rolling</code>'deki <code>cos(θ)</code> çift fonksiyon olduğu için işaret
+        çevirisinden etkilenmez.
+      </p>
+      <p>
+        Sayılar elden de kapatıldı: %10 çıkışta 20 t araç için
+        <code>m·g·sin(5.7106°) = 19522.630 N</code>,
+        <code>m·g·cos(5.7106°)·0.015 = 2928.394 N</code>,
+        <code>½·1.225·0.65·6.7·11.111² = 329.313 N</code> — üçü de kodun bastığı değerlerin
+        aynısı. Gereken çekiş 11102 N → 1140 d/d'de 1132 Nm, tork eğrisinin tam üstünde.
+      </p>
+    </div>
+  </div>
+
+  <div class="entry">
+    <div class="entry-head">
+      <h3>Enerji dengesi, dosyanın kendi başlık yorumuyla çelişiyordu</h3>
+      <span class="loc">js/numerics.js:447</span>
+    </div>
+    <p>
+      Başlık yorumu <code>ΔKE + W_diss + W_grade = W_engine</code> diyor, kod ise
+      <code>W_grade</code>'i ekliyordu. Tek üretim çağıranı yukarıdaki modül olduğu için ikisi
+      birlikte düzeltildi. <code>error_J</code> değişmedi; dökümdeki <code>W_grade</code>
+      yokuş yukarıda <span class="bad">−1.596.841</span> → <span class="good">+1.596.841</span>
+      olarak doğru işarete geldi.
+    </p>
+  </div>
+</section>
+
+<section class="wide">
+  <h2>Sessizce yanlış belge</h2>
+  <p class="sec-note">1229 üst-seviye fonksiyon içindeki tek ad çakışması — ve masum değildi.</p>
+
+  <div class="entry">
+    <div class="entry-head">
+      <h3>Aynı dosyada iki kez tanımlanan <code>veDownloadReportHTML</code></h3>
+      <span class="loc">js/results.js:2302 · 3467</span>
+    </div>
+    <p>
+      İkinci bildirim birincisini eziyordu. Dört TXT önizleme panelindeki “HTML İndir” düğmesi
+      ekrandaki TXT'yi değil <em>tasarımlı raporu</em> üretmeye çalışıyordu: kullanıcı ya
+      “Rapor verisi bulunamadı” uyarısı alıyor ya da baktığından başka bir belge indiriyordu.
+      <code>veBuildReportHTML</code> ve <code>veRenderCenteredTXT</code> ölü koda düşmüştü.
+      Testlerde bu adı geçiren tek satır yoktu.
+    </p>
+    <p>
+      İlki <code>veDownloadTXTPreviewAsHTML</code> olarak ayrıldı, dört düğme ona bağlandı.
+      Yeni test indirilen belgenin içeriğini gerçekten okuyor.
+    </p>
+  </div>
+</section>
+
+<section class="wide">
+  <h2>Görünmeyen kod, görünmeyen hata</h2>
+  <p class="sec-note">
+    Biri aramaları kör ediyordu, biri çökmeleri sessizleştiriyordu.
+  </p>
+
+  <div class="entry">
+    <div class="entry-head">
+      <h3>Kaynağın içinde NUL baytı</h3>
+      <span class="loc">js/trace-view.js:584</span>
+    </div>
+    <p>
+      Bir dizgenin başında gerçek bir <code>0x00</code> duruyordu. Görünür yanlış çıktı
+      üretmiyordu — ama dosyayı grep/diff için <strong>ikili</strong> yapıyordu: 3454 satır kod
+      aramalarında sessizce atlanıyordu. <em>Bu incelemenin ilk turunda da atladı.</em>
+      Bayt, görüntüleyici kopyasına ve kullanıcıların indirdiği
+      <code>MFSim_Olcum_Goruntuleyici.html</code> dosyasına da taşınmıştı; üçü de temizlendi.
+    </p>
+  </div>
+
+  <div class="entry">
+    <div class="entry-head">
+      <h3>Çift tanımlı <code>VE_BOARD</code></h3>
+      <span class="loc">viewer/js/board.js</span>
+    </div>
+    <p>
+      Yeni yapısal kapının kendi bulduğu hata. Sahibi <code>trace-view.js</code> — board.js'in
+      kendi başlığında da öyle yazılı — ama aynı değerle ikinci bir bildirim daha vardı.
+      Kaldırıldı; gerçek tarayıcıda görüntüleyici E2E'si (41/41) doğruladı.
+    </p>
+  </div>
+
+  <div class="entry">
+    <div class="entry-head">
+      <h3>Genel hata yakalayıcı yoktu</h3>
+      <span class="loc">js/loader.js</span>
+    </div>
+    <p>
+      <code>window</code> üzerinde ne <code>error</code> ne <code>unhandledrejection</code>
+      dinleniyordu. 66 bin satırlık, framework'süz bir uygulamada render'da atılan bir istisna
+      paneli yarım bırakıyor, kullanıcı hiçbir şey görmüyordu. Yakalayıcı en erken çalışan
+      modüle kondu; <code>preventDefault</code> <strong>çağrılmaz</strong> — amaç hatayı
+      gizlemek değil görünür kılmak.
+    </p>
+  </div>
+</section>
+
+<section class="wide">
+  <h2>Tutarsız tanımlar</h2>
+  <p class="sec-note">Aynı şeyin iki farklı hesabı, aynı adın iki farklı sürümü.</p>
+
+  <div class="entry">
+    <div class="entry-head">
+      <h3><code>r_total_resist</code> aynı fonksiyonun iki dalında farklı hesaplanıyordu</h3>
+      <span class="loc">js/graphics.js · js/simulation-engine.js</span>
+    </div>
+    <p>
+      <code>veGetSensorData</code>'nın bir dalı eğim kuvvetini toplam dirence dahil ediyor,
+      diğeri etmiyordu; simülasyon motoru da etmiyordu. Kanonik tanım
+      (<code>F_roll + F_aero + F_grade</code>, bkz. <code>ft-performance.js:362</code>) etrafında
+      üçü hizalandı.
+    </p>
+  </div>
+
+  <div class="entry">
+    <div class="entry-head">
+      <h3>Eğim kuvveti her durumda “hızlandırıcı” yazıyordu</h3>
+      <span class="loc">js/solver-pro.js</span>
+    </div>
+    <p>
+      Kuvvet dengesi panelinde etiket sabitti. İşaret artık anlamlı olduğu için etiket de
+      ondan türüyor: hızlandırıcı / frenleyici / etkisiz.
+    </p>
+  </div>
+
+  <div class="entry">
+    <div class="entry-head">
+      <h3>Dört kaçış yardımcısı, üç farklı kaçış kümesi</h3>
+      <span class="loc">js/annotations.js · js/results.js</span>
+    </div>
+    <p>
+      <code>escapeHtml</code> — kanonik <code>escapeHTML</code> ile yalnız harf büyüklüğü farkı
+      olan, tek tırnağı kaçırmayan bir ikiz — ve üçüncü bir yerel <code>esc()</code> kaldırıldı.
+      <code>js/radio.js</code>'teki sürüm <strong>bilerek</strong> yerinde bırakıldı:
+      <code>null</code>'ı boş dizgeye çeviriyor, kanonik sürüm çevirmiyor. Gerekçesi koda yazıldı
+      ki ileride yanlışlıkla “temizlenmesin”.
+    </p>
+  </div>
+</section>
+
+<section class="wide">
+  <h2>Kapılar</h2>
+  <p class="sec-note">Bulunan hata değerlidir; bir daha geçemeyen hata sınıfı daha değerli.</p>
+
+  <div class="entry">
+    <div class="entry-head">
+      <h3>Yapısal hijyen testleri</h3>
+      <span class="loc">tests/unit/source-hygiene.test.js</span>
+    </div>
+    <ul>
+      <li><strong>Üst-seviye bildirim çakışması yok</strong> — <code>function</code>,
+        <code>var</code>, <code>let/const</code>; <code>js/</code> ve <code>viewer/js/</code>
+        ayrı kapsamlar. Bu kapı yazılır yazılmaz <code>VE_BOARD</code>'u buldu.</li>
+      <li><strong>Kaynakta kontrol karakteri yok</strong> — <code>js/</code>,
+        <code>viewer/js/</code>, <code>css/</code>, <code>index.html</code>.</li>
+    </ul>
+  </div>
+
+  <div class="entry">
+    <div class="entry-head">
+      <h3>CI artık PR'da koşuyor</h3>
+      <span class="loc">.github/workflows/ci-deploy.yml</span>
+    </div>
+    <p>
+      CI yalnızca <code>main</code>'e push'ta koşuyordu; teslim akışı “PR aç ve merge et” olduğu
+      için kırık kod ancak <em>merge edildikten sonra</em> fark ediliyordu. Artık
+      <code>pull_request</code> tetiği var — yalnız <code>test</code> job'u koşar,
+      <code>build</code>/<code>deploy</code> PR'da atlanır. Concurrency grubu olay-farkında,
+      böylece PR koşumları Pages kuyruğunu bekletmez.
+    </p>
+    <p>
+      İki kapı daha: görüntüleyici senkronu (<code>sync:viewer --check</code>) ve
+      <code>MFSim_Olcum_Goruntuleyici.html</code>'in kaynaklarla taze olması — git'e dâhil ve
+      elle üretilen bu dosya, dağıtımın kendisi.
+    </p>
+  </div>
+</section>
+
+<section class="wide">
+  <h2>Değiştirilmeyenler</h2>
+
+  <div class="box">
+    <span class="label">Geri çekilen öneri</span>
+    <p>
+      İnceleme raporu <code>js/mount-core.js:299</code>'daki PCHIP kopyasını “tekilleştir”
+      demişti. <strong>Yanlış öneriydi.</strong> Kod kopyası kasıtlı ve gerekçesi orada yazılı:
+      aynı Fritsch–Carlson çekirdeği, ama <em>doğrusal ekstrapolasyon</em> — düz olsaydı eğri
+      aralığının dışına taşan bir takozun tanjantı 0 olur, <code>K_T</code> tekilleşir ve Newton
+      çöker. Ayrıca <code>n=2</code> desteği ve çekirdeğin tek başına <code>require</code>
+      edilebilmesi için <code>numerics.js</code>'e bağımsızlık. Dokunulmadı.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <span class="label">Kapsam düzeltmesi</span>
+    <p>
+      İlk rapor eğim hatasını “yokuş yukarı aracı hızlandırıyor” diye sunmuştu.
+      <strong>Bu, canlı yollar için yanlıştı.</strong> Daha derin inceleme iki şey gösterdi:
+      <code>rd.grade</code> skalerini hiçbir panel yazmıyor (<code>js/solver.js:277-279</code>
+      bunu açıkça belgeliyor), ve segment modunda iki işaret hatası birbirini götürüyordu.
+      Yani <em>ivme doğruydu</em>; hatalı olan yayınlanan sinyallerdi. Düzeltme buna göre
+      yapıldı — dinamiğe dokunulmadı, sinyaller hizalandı.
+    </p>
+  </div>
+
+  <div class="box">
+    <span class="label">Sonradan eklenen dayanak</span>
+    <p>
+      Eğim düzeltmesi sorgulanınca gerekçe yeniden türetilmek zorunda kaldı. Artık
+      türetmeye gerek yok: iSCAAN referansının ilgili satırları
+      (<code>§5.2</code>, <code>320</code>, <code>471</code>) ve harita konvansiyonunun
+      tanımlandığı UI satırları <code>js/simulation-engine.js</code>'in yorumlarına işlendi.
+      Yalnızca yorum — kod satırı değişmedi.
+    </p>
+  </div>
+</section>
+
+<section class="wide">
+  <h2>Doğrulama yöntemi</h2>
+  <p class="sec-note">
+    “Testler yeşil” tek başına düzeldi demek değil. Her iddia iki yönden ölçüldü.
+  </p>
+  <ul>
+    <li><strong>Hata kanıtı</strong> — yeni test dosyaları izlenmeyen dosya olduğu için
+      <code>git stash</code> yalnız düzeltmeleri geri aldı; testler orijinal koda karşı koşuldu
+      ve <strong>15 iddia kırmızı</strong> yandı.</li>
+    <li><strong>Regresyon kanıtı</strong> — altın değerler düzeltmeden <em>önce</em> ölçülüp
+      teste gömüldü; <code>F_net</code>, ivme, bitiş hızı ve enerji hatası 9–12 basamak
+      hassasiyetle korunuyor.</li>
+    <li><strong>Gerçek tarayıcı</strong> — 80 E2E testi Chromium'da koştu; görüntüleyici
+      dağıtım dosyası <code>file://</code> üzerinden ayrıca doğrulandı.</li>
+    <li><strong>Bağımsız çürütme denemesi</strong> — paralel alt-ajanlarla iki kez denendi,
+      ikisinde de ortamın araç izin katmanı hatasıyla düştü. Doğrulama bu yüzden elle,
+      tek tek yapıldı: her eğim kaynağı tarandı, <code>veEnergyBalance</code>'ın tek üretim
+      çağıranı olduğu doğrulandı, modül yükleme sırası <code>index.html</code>'den kontrol
+      edildi.</li>
+  </ul>
+</section>
+
+<footer>
+  <p>
+    PR <a href="https://github.com/kaydgn/MFSim/pull/707">#707</a> (düzeltmeler,
+    <code>6c39566</code>) ve <a href="https://github.com/kaydgn/MFSim/pull/708">#708</a>
+    (iSCAAN dayanağı, <code>ebf2a8e</code>) — ikisi de <code>main</code>'e merge edildi,
+    CI yeşil.
+  </p>
+</footer>
+
+</body></html>

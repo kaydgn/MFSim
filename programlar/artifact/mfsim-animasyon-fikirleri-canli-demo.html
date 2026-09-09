@@ -1,0 +1,347 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>MFSim — Animasyon Fikirleri (canlı demo)</title>
+<style>
+  :root{
+    --bg:#0a0c10; --surface:#0f1218; --surface2:#151a22; --inset:#080a0e;
+    --border:#1c2333; --border2:#222b3a;
+    --text:#c8d1dc; --heading:#e2e8f0; --muted:#7a8599; --dim:#4a5568;
+    --accent:#2563eb; --accent2:#5b8bf0; --success:#16a34a; --warning:#d97706; --danger:#dc2626;
+    --r-sm:5px; --r-md:8px; --r-lg:12px; --r-pill:999px;
+    --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(var(--border) 1px,transparent 1px);background-size:26px 26px;}
+  .wrap{max-width:1060px;margin:0 auto;padding:34px 22px 70px;}
+
+  .kick{font-family:var(--mono);font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent2);font-weight:600;}
+  h1{font-size:27px;margin:8px 0 8px;letter-spacing:-.02em;color:var(--heading);text-wrap:balance;}
+  .lede{color:var(--muted);font-size:14.5px;line-height:1.6;margin:0 0 20px;max-width:70ch;}
+  .toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:26px;}
+  .btn{font-family:var(--sans);font-size:12.5px;font-weight:600;cursor:pointer;border-radius:var(--r-sm);
+    padding:8px 14px;border:1px solid var(--accent);background:var(--accent);color:#fff;transition:filter .15s, transform .08s;}
+  .btn:hover{filter:brightness(1.1);}
+  .btn:active{transform:translateY(1px);}
+  .btn.ghost{background:transparent;color:var(--text);border-color:var(--border2);}
+  .btn.ghost:hover{background:var(--surface2);color:var(--heading);}
+  .rm-note{font-size:12px;color:var(--dim);font-family:var(--mono);}
+
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+  @media(max-width:720px){.grid{grid-template-columns:1fr;}}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 6px 22px rgba(0,0,0,.4);}
+  .stage{position:relative;height:190px;background:var(--inset);overflow:hidden;
+    background-image:radial-gradient(var(--border) 1px,transparent 1px);background-size:20px 20px;
+    display:flex;align-items:center;justify-content:center;}
+  .cbody{padding:13px 15px 15px;display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--border);}
+  .crow{display:flex;align-items:center;gap:9px;}
+  .ctitle{font-size:14px;font-weight:600;color:var(--heading);}
+  .tier{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;padding:2px 7px;border-radius:var(--r-pill);text-transform:uppercase;}
+  .tier.domain{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent2);}
+  .tier.micro{background:color-mix(in srgb,var(--success) 20%,transparent);color:#4bc98a;}
+  .cdesc{font-size:12.5px;color:var(--muted);line-height:1.5;flex:1;}
+  .creplay{align-self:flex-start;margin-top:4px;font-family:var(--sans);font-size:11.5px;font-weight:600;color:var(--accent2);
+    background:transparent;border:1px solid var(--border2);border-radius:var(--r-sm);padding:5px 11px;cursor:pointer;transition:background .15s,color .15s;
+    display:inline-flex;align-items:center;gap:6px;}
+  .creplay:hover{background:var(--surface2);color:var(--heading);}
+  .creplay svg{width:12px;height:12px;}
+
+  /* ---- node blocks (shared) ---- */
+  .nd{position:absolute;width:52px;height:46px;border-radius:var(--r-md);background:var(--surface2);
+    border:2px solid #7f8794;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.6);}
+  .nd svg{width:26px;height:26px;color:var(--text);}
+  .nd .lbl{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:5px;font-size:10px;color:var(--muted);white-space:nowrap;}
+  .port{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--success);border:2px solid var(--surface);top:calc(50% - 4.5px);}
+  .port.in{left:-6px;} .port.out{right:-6px;}
+
+  /* Card1: power flow */
+  .flow-dash{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:5 11;
+    animation:flowmove .7s linear infinite;filter:drop-shadow(0 0 3px color-mix(in srgb,var(--accent) 60%,transparent));}
+  .flow-base{fill:none;stroke:var(--border2);stroke-width:2.5;}
+  @keyframes flowmove{to{stroke-dashoffset:-16;}}
+  .paused .flow-dash{animation-play-state:paused;}
+
+  /* Card2/4: charts */
+  .axis{stroke:var(--border2);stroke-width:1;}
+  .chart-line{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;}
+  .chart-area{fill:url(#areaGrad);opacity:0;transition:opacity .5s ease .3s;}
+  .chart-area.show{opacity:1;}
+  .end-dot{fill:var(--accent);opacity:0;}
+  .end-dot.show{opacity:1;transition:opacity .2s ease;}
+
+  /* Card3: count-up */
+  .kpis{display:flex;gap:10px;padding:0 14px;width:100%;justify-content:center;flex-wrap:wrap;}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:11px 14px;min-width:96px;text-align:center;}
+  .kpi .v{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--heading);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .kpi .u{font-size:9.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;}
+
+  /* Card4: playhead */
+  .ph-line{stroke:var(--accent2);stroke-width:1.5;opacity:.7;}
+  .ph-dot{fill:var(--warning);stroke:var(--inset);stroke-width:2;}
+  .ph-read{position:absolute;top:10px;right:12px;font-family:var(--mono);font-size:11px;color:var(--heading);
+    background:color-mix(in srgb,var(--surface) 85%,transparent);border:1px solid var(--border);border-radius:var(--r-sm);padding:3px 8px;font-variant-numeric:tabular-nums;}
+
+  /* Card5: drop-in */
+  .drop-node{opacity:0;}
+  .drop-node.go{animation:dropin .5s cubic-bezier(.34,1.56,.64,1) forwards;}
+  .drop-node.go .lbl{animation:fadeup .3s ease .25s both;}
+  .drop-node.go .port{animation:portpulse .4s ease .35s both;}
+  @keyframes dropin{0%{opacity:0;transform:translate(-50%,-50%) scale(.5);}60%{opacity:1;}100%{opacity:1;transform:translate(-50%,-50%) scale(1);}}
+  @keyframes fadeup{from{opacity:0;transform:translate(-50%,4px);}to{opacity:1;transform:translate(-50%,0);}}
+  @keyframes portpulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--success) 70%,transparent);}100%{box-shadow:0 0 0 7px transparent;}}
+
+  /* Card6: micro */
+  .micro-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;}
+  .demo-btn{font-family:var(--sans);font-size:13px;font-weight:600;color:#fff;background:var(--accent);border:none;
+    border-radius:var(--r-sm);padding:9px 20px;cursor:pointer;transition:filter .15s,transform .07s;}
+  .demo-btn:hover{filter:brightness(1.1);} .demo-btn:active{transform:scale(.94);}
+  .validate-row{display:flex;align-items:center;gap:10px;height:26px;}
+  .check-svg{width:24px;height:24px;}
+  .check-svg path{fill:none;stroke:var(--success);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;
+    stroke-dasharray:30;stroke-dashoffset:30;}
+  .check-svg.go path{animation:draw .4s ease forwards;}
+  @keyframes draw{to{stroke-dashoffset:0;}}
+  .pass-txt{color:var(--success);font-size:13px;font-weight:600;opacity:0;}
+  .pass-txt.go{animation:fadein .3s ease .25s forwards;}
+  @keyframes fadein{to{opacity:1;}}
+  .circ-badge{width:22px;height:22px;border-radius:var(--r-pill);background:var(--warning);color:#000;font-size:11px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;}
+  .circ-badge.pulse{animation:badgepulse 1.6s ease-in-out infinite;}
+  @keyframes badgepulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--warning) 55%,transparent);}50%{box-shadow:0 0 0 6px transparent;}}
+
+  .foot{margin-top:30px;border-top:1px solid var(--border);padding-top:18px;font-size:13px;color:var(--muted);line-height:1.65;}
+  .foot b{color:var(--heading);}
+  .foot .mono{font-family:var(--mono);font-size:12px;color:var(--accent2);}
+
+  @media(prefers-reduced-motion:reduce){
+    .flow-dash{animation:none;} .circ-badge.pulse{animation:none;}
+  }
+</style>
+
+<div class="wrap">
+  <div class="kick">Hareket Önerileri · Canlı Demo</div>
+  <h1>MFSim'e animasyon — 6 aday, hepsi oynatılabilir</h1>
+  <p class="lede">Bir simülasyon programında animasyon "süs" değil, <b>fiziği ve durumu anlatan</b> bir araç olabilir. Aşağıdakiler MFSim'in kendi paletiyle canlı çalışıyor — her kartı <b>Tekrar oynat</b> ile deneyebilirsin. Etiketler değeri gösterir: <span style="color:var(--accent2)">Domain</span> (anlam taşır) · <span style="color:#4bc98a">Micro</span> (cila).</p>
+
+  <div class="toolbar">
+    <button class="btn" id="playAll">▶ Hepsini oynat</button>
+    <button class="btn ghost" id="togglePower">Güç akışını duraklat</button>
+    <span class="rm-note">· Tümü prefers-reduced-motion'a saygılı</span>
+  </div>
+
+  <div class="grid" id="grid">
+
+    <!-- 1. POWER FLOW -->
+    <div class="card">
+      <div class="stage" id="flowStage">
+        <div class="nd" style="left:24px;top:calc(50% - 23px);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="7" width="16" height="11" rx="2"/><path d="M7 7V4h4v3"/></svg><span class="lbl">Motor</span><span class="port out"></span></div>
+        <div class="nd" style="left:calc(50% - 26px);top:calc(50% - 23px);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="3" width="12" height="18" rx="2"/><circle cx="10" cy="9" r="2.4"/><circle cx="14" cy="15" r="3"/></svg><span class="lbl">Şanzıman</span><span class="port in"></span><span class="port out"></span></div>
+        <div class="nd" style="right:24px;top:calc(50% - 23px);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg><span class="lbl">Tekerlek</span><span class="port in"></span></div>
+        <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;">
+          <path class="flow-base" d="M82 95 H142"/><path class="flow-dash" d="M82 95 H142"/>
+          <path class="flow-base" d="M218 95 H300"/><path class="flow-dash" d="M218 95 H300"/>
+        </svg>
+      </div>
+      <div class="cbody">
+        <div class="crow"><span class="ctitle">Güç akışı</span><span class="tier domain">Domain</span></div>
+        <div class="cdesc">Bağlantı hatlarında akan noktalar — motordan tekerleğe güç aktarım yönünü canlandırır. Topolojiyi "yaşayan" bir zincir gibi gösterir. <span style="color:var(--dim)">(SVG stroke-dashoffset döngüsü — bağlantılarınız zaten SVG path)</span></div>
+      </div>
+    </div>
+
+    <!-- 2. CHART DRAW-IN -->
+    <div class="card">
+      <div class="stage">
+        <svg id="drawChart" viewBox="0 0 340 170" style="width:100%;height:100%;">
+          <defs><linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity="0.35"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+          <line class="axis" x1="30" y1="10" x2="30" y2="150"/><line class="axis" x1="30" y1="150" x2="325" y2="150"/>
+          <path id="drawArea" class="chart-area"/>
+          <path id="drawLine" class="chart-line"/>
+          <circle id="drawDot" class="end-dot" r="4"/>
+        </svg>
+      </div>
+      <div class="cbody">
+        <div class="crow"><span class="ctitle">Grafik çizimi</span><span class="tier domain">Domain</span></div>
+        <div class="cdesc">Sonuç eğrisi soldan sağa çizilir, alan dolgusu belirir. "Hesaplama bitti, işte sonuç" hissini verir — anlık belirmekten çok daha tatmin edici.</div>
+        <button class="creplay" data-anim="chart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0114.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0020.5 15"/></svg>Tekrar oynat</button>
+      </div>
+    </div>
+
+    <!-- 3. COUNT-UP -->
+    <div class="card">
+      <div class="stage">
+        <div class="kpis">
+          <div class="kpi"><div class="v" data-count="8.42" data-dec="2">0.00</div><div class="u">0→100 km/h · s</div></div>
+          <div class="kpi"><div class="v" data-count="187" data-dec="0">0</div><div class="u">Maks hız · km/h</div></div>
+          <div class="kpi"><div class="v" data-count="42.8" data-dec="1">0.0</div><div class="u">Menzil · km</div></div>
+        </div>
+      </div>
+      <div class="cbody">
+        <div class="crow"><span class="ctitle">Değer sayacı</span><span class="tier domain">Domain</span></div>
+        <div class="cdesc">Sonuç metrikleri 0'dan gerçek değere doğru sayar (yavaşlayan easing ile). Rakamların "yerine oturması" sonucu vurgular ve okunmasını teşvik eder.</div>
+        <button class="creplay" data-anim="count"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0114.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0020.5 15"/></svg>Tekrar oynat</button>
+      </div>
+    </div>
+
+    <!-- 4. PLAYHEAD -->
+    <div class="card">
+      <div class="stage">
+        <div class="ph-read" id="phRead">t = 0.0 s · v = 0 km/h</div>
+        <svg id="phChart" viewBox="0 0 340 170" style="width:100%;height:100%;">
+          <line class="axis" x1="30" y1="10" x2="30" y2="150"/><line class="axis" x1="30" y1="150" x2="325" y2="150"/>
+          <path id="phLine" class="chart-line" stroke="var(--accent2)"/>
+          <line id="phCursor" class="ph-line" x1="30" y1="10" x2="30" y2="150"/>
+          <circle id="phDot" class="ph-dot" r="5" cx="30" cy="150"/>
+        </svg>
+      </div>
+      <div class="cbody">
+        <div class="crow"><span class="ctitle">Simülasyon oynatma</span><span class="tier domain">Domain</span></div>
+        <div class="cdesc">Bir "oynatma kafası" sonuç grafiğini zamanda tarar; nokta eğri üzerinde ilerlerken değer okuması güncellenir. Sonuçları statik grafikten interaktif bir simülasyona dönüştürür.</div>
+        <button class="creplay" data-anim="play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 3l14 9-14 9V3z"/></svg>Oynat</button>
+      </div>
+    </div>
+
+    <!-- 5. DROP-IN -->
+    <div class="card">
+      <div class="stage" id="dropStage">
+        <div class="nd drop-node" id="dropNode" style="left:50%;top:50%;transform:translate(-50%,-50%);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="7" width="16" height="11" rx="2"/><path d="M7 7V4h4v3"/></svg>
+          <span class="lbl">Motor</span><span class="port in"></span><span class="port out"></span>
+        </div>
+      </div>
+      <div class="cbody">
+        <div class="crow"><span class="ctitle">Node bırakma</span><span class="tier micro">Micro</span></div>
+        <div class="cdesc">Canvas'a bileşen eklendiğinde hafif bir "yaylanarak" belirir (scale + fade + overshoot), etiketi yükselir, portları bir kez nabız atar. Eylemi somutlaştırır.</div>
+        <button class="creplay" data-anim="drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0114.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0020.5 15"/></svg>Tekrar oynat</button>
+      </div>
+    </div>
+
+    <!-- 6. MICRO -->
+    <div class="card">
+      <div class="stage">
+        <div class="micro-wrap">
+          <button class="demo-btn" id="pressBtn">Bas beni (scale feedback)</button>
+          <div class="validate-row">
+            <button class="creplay" id="valBtn" style="margin:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>Doğrula</button>
+            <svg class="check-svg" id="checkSvg" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+            <span class="pass-txt" id="passTxt">Geçti</span>
+            <span style="flex:1"></span>
+            <span class="circ-badge pulse" title="dikkat rozeti">3</span>
+          </div>
+        </div>
+      </div>
+      <div class="cbody">
+        <div class="crow"><span class="ctitle">Mikro-etkileşimler</span><span class="tier micro">Micro</span></div>
+        <div class="cdesc">Buton basma (scale), doğrulama başarısında ✓ çizilmesi, ve dikkat rozetinde nabız. Küçük ama her tıkta hissedilen "yanıt veriyor" cilası.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="foot">
+    <b>Nasıl ilerleriz?</b> — UI yenilemesindeki gibi <b>adım adım</b>: beğendiğin animasyonları seç, her birini ayrı bir PR olarak ekleyip merge edelim. Hepsi <span class="mono">--dur / --ease</span> token'larını ve <span class="mono">prefers-reduced-motion</span>'ı kullanır (kapatınca sade kalır), yani performans ve erişilebilirlik korunur.<br><br>
+    <b>Önerim:</b> önce iki "Domain" vuruşu — <b>Güç akışı</b> ve <b>Grafik çizimi + Değer sayacı</b> (sonuç sayfasına birlikte) — çünkü bunlar programın ne yaptığını anlatıyor. Sonra <b>Simülasyon oynatma</b> (en etkileyici), ardından mikro dokunuşlar. Hangilerini istersin?
+  </div>
+</div>
+
+<script>
+  (function(){
+    var reduce = false;
+    try{ reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
+    var easeOut = function(t){ return 1 - Math.pow(1-t, 3); };
+
+    // ---- accel curve v(t)=Vmax*(1-e^{-t/tau}) sampled to svg coords ----
+    function curvePoints(x0,x1,y0,y1,n){
+      var pts=[]; for(var i=0;i<=n;i++){ var t=i/n; var v=1-Math.exp(-t*3.1);
+        pts.push([x0+(x1-x0)*t, y1-(y1-y0)*v]); } return pts;
+    }
+    function pathD(pts){ return 'M'+pts.map(function(p){return p[0].toFixed(1)+' '+p[1].toFixed(1);}).join(' L'); }
+    var CP = curvePoints(30,320,140,20,60);
+
+    // ---- Card 2: chart draw-in ----
+    var dLine=document.getElementById('drawLine'), dArea=document.getElementById('drawArea'), dDot=document.getElementById('drawDot');
+    dLine.setAttribute('d', pathD(CP));
+    dArea.setAttribute('d', pathD(CP)+' L320 150 L30 150 Z');
+    var last=CP[CP.length-1];
+    dDot.setAttribute('cx', last[0]); dDot.setAttribute('cy', last[1]);
+    function playChart(){
+      var len=dLine.getTotalLength();
+      dArea.classList.remove('show'); dDot.classList.remove('show');
+      dLine.style.transition='none'; dLine.style.strokeDasharray=len; dLine.style.strokeDashoffset= reduce?0:len;
+      void dLine.getBoundingClientRect();
+      dLine.style.transition='stroke-dashoffset 1.05s cubic-bezier(.4,0,.2,1)';
+      dLine.style.strokeDashoffset=0;
+      setTimeout(function(){dArea.classList.add('show');}, reduce?0:250);
+      setTimeout(function(){dDot.classList.add('show');}, reduce?0:900);
+    }
+
+    // ---- Card 3: count-up ----
+    function playCount(){
+      document.querySelectorAll('#grid .kpi .v').forEach(function(el){
+        var target=parseFloat(el.getAttribute('data-count')), dec=parseInt(el.getAttribute('data-dec'));
+        if(reduce){ el.textContent=target.toFixed(dec); return; }
+        var dur=1100, start=null;
+        function step(ts){ if(start===null)start=ts; var p=Math.min(1,(ts-start)/dur);
+          el.textContent=(target*easeOut(p)).toFixed(dec); if(p<1)requestAnimationFrame(step); }
+        requestAnimationFrame(step);
+      });
+    }
+
+    // ---- Card 4: playhead ----
+    var phLine=document.getElementById('phLine'), phCursor=document.getElementById('phCursor'),
+        phDot=document.getElementById('phDot'), phRead=document.getElementById('phRead');
+    phLine.setAttribute('d', pathD(CP));
+    function yAt(x){ // linear interp on CP
+      for(var i=1;i<CP.length;i++){ if(x<=CP[i][0]){ var a=CP[i-1],b=CP[i],t=(x-a[0])/(b[0]-a[0]); return a[1]+(b[1]-a[1])*t; } }
+      return CP[CP.length-1][1];
+    }
+    var phRAF=null;
+    function playPlay(){
+      if(phRAF)cancelAnimationFrame(phRAF);
+      var dur=2600, start=null, x0=30, x1=320;
+      function step(ts){ if(start===null)start=ts; var p=Math.min(1,(ts-start)/dur);
+        var x=x0+(x1-x0)*p, y=yAt(x);
+        phCursor.setAttribute('x1',x); phCursor.setAttribute('x2',x);
+        phDot.setAttribute('cx',x); phDot.setAttribute('cy',y);
+        var tSec=(p*14).toFixed(1), vKmh=Math.round((1-Math.exp(-p*3.1))*187);
+        phRead.textContent='t = '+tSec+' s · v = '+vKmh+' km/h';
+        if(p<1)phRAF=requestAnimationFrame(step);
+      }
+      if(reduce){ phCursor.setAttribute('x1',x1);phCursor.setAttribute('x2',x1);phDot.setAttribute('cx',x1);phDot.setAttribute('cy',yAt(x1));phRead.textContent='t = 14.0 s · v = 187 km/h'; return; }
+      phRAF=requestAnimationFrame(step);
+    }
+
+    // ---- Card 5: drop-in ----
+    var dropNode=document.getElementById('dropNode');
+    function playDrop(){ dropNode.classList.remove('go'); void dropNode.getBoundingClientRect(); dropNode.classList.add('go'); }
+
+    // ---- Card 6: micro ----
+    var checkSvg=document.getElementById('checkSvg'), passTxt=document.getElementById('passTxt');
+    document.getElementById('valBtn').addEventListener('click', function(){
+      checkSvg.classList.remove('go'); passTxt.classList.remove('go');
+      void checkSvg.getBoundingClientRect();
+      checkSvg.classList.add('go'); passTxt.classList.add('go');
+    });
+
+    // ---- power flow toggle ----
+    var flowStage=document.getElementById('flowStage'), tp=document.getElementById('togglePower');
+    tp.addEventListener('click', function(){
+      var paused=flowStage.classList.toggle('paused');
+      tp.textContent = paused ? 'Güç akışını oynat' : 'Güç akışını duraklat';
+    });
+
+    // ---- replay wiring ----
+    var map={chart:playChart,count:playCount,play:playPlay,drop:playDrop};
+    document.querySelectorAll('.creplay[data-anim]').forEach(function(b){
+      b.addEventListener('click', function(){ var f=map[b.getAttribute('data-anim')]; if(f)f(); });
+    });
+    document.getElementById('playAll').addEventListener('click', function(){
+      playChart(); playCount(); playPlay(); playDrop();
+      checkSvg.classList.remove('go'); passTxt.classList.remove('go'); void checkSvg.getBoundingClientRect(); checkSvg.classList.add('go'); passTxt.classList.add('go');
+    });
+
+    // initial play
+    setTimeout(function(){ playChart(); playCount(); setTimeout(playPlay,400); setTimeout(playDrop,300); }, 350);
+  })();
+</script>
+
+</body></html>

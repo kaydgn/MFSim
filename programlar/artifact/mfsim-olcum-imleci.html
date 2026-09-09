@@ -1,0 +1,874 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>MFSim — Ölçüm İmleci</title>
+
+<style>
+  :root{
+    --ground:#f6f7f9; --panel:#ffffff; --panel-2:#eef1f5;
+    --rule:#dde2e9; --rule-2:#c7cfdb;
+    --ink:#141a24; --ink-2:#4d5768; --ink-3:#7b8598;
+    --accent:#1d4ed8; --pin:#b45309;
+    --sig1:#1d4ed8; --sig2:#c2261f; --sig3:#15803d;
+    --grid:rgba(20,26,36,0.07);
+    --font-ui:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --font-mono:ui-monospace,"SF Mono",SFMono-Regular,"Cascadia Mono","Fira Code","Roboto Mono",Consolas,monospace;
+    --col:70ch;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ground:#0a0c10; --panel:#0f1218; --panel-2:#151a22;
+      --rule:#1c2333; --rule-2:#2a3547;
+      --ink:#c8d1dc; --ink-2:#8b96a8; --ink-3:#59647a;
+      --accent:#3b82f6; --pin:#f59e0b;
+      --sig1:#3b82f6; --sig2:#ef4444; --sig3:#22c55e;
+      --grid:rgba(200,209,220,0.08);
+    }
+  }
+  :root[data-theme="light"]{
+    --ground:#f6f7f9; --panel:#ffffff; --panel-2:#eef1f5;
+    --rule:#dde2e9; --rule-2:#c7cfdb;
+    --ink:#141a24; --ink-2:#4d5768; --ink-3:#7b8598;
+    --accent:#1d4ed8; --pin:#b45309;
+    --sig1:#1d4ed8; --sig2:#c2261f; --sig3:#15803d;
+    --grid:rgba(20,26,36,0.07);
+  }
+  :root[data-theme="dark"]{
+    --ground:#0a0c10; --panel:#0f1218; --panel-2:#151a22;
+    --rule:#1c2333; --rule-2:#2a3547;
+    --ink:#c8d1dc; --ink-2:#8b96a8; --ink-3:#59647a;
+    --accent:#3b82f6; --pin:#f59e0b;
+    --sig1:#3b82f6; --sig2:#ef4444; --sig3:#22c55e;
+    --grid:rgba(200,209,220,0.08);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:var(--font-ui); font-size:16px; line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{ max-width:1120px; margin:0 auto; padding:0 24px 96px; }
+  .col{ max-width:var(--col); }
+
+  /* ── Başlık ───────────────────────────────────────────── */
+  header{ padding:64px 0 40px; }
+  .eyebrow{
+    font-family:var(--font-mono); font-size:0.7rem; font-weight:600;
+    letter-spacing:0.16em; text-transform:uppercase; color:var(--ink-3);
+    display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::after{ content:""; flex:1; height:1px; background:var(--rule); }
+  h1{
+    font-family:var(--font-mono); font-weight:600;
+    font-size:clamp(1.7rem, 4.2vw, 2.55rem); line-height:1.15;
+    letter-spacing:-0.015em; margin:22px 0 0; text-wrap:balance;
+    color:var(--ink);
+  }
+  h1 .dim{ color:var(--ink-3); }
+  .lede{ margin:20px 0 0; font-size:1.075rem; color:var(--ink-2); max-width:62ch; }
+  .lede strong{ color:var(--ink); font-weight:600; }
+
+  /* ── Bölümler ─────────────────────────────────────────── */
+  section{ padding-top:56px; }
+  h2{
+    font-family:var(--font-mono); font-size:0.78rem; font-weight:600;
+    letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-2);
+    margin:0 0 22px; padding-bottom:10px; border-bottom:1px solid var(--rule);
+    display:flex; align-items:baseline; gap:12px;
+  }
+  h2 .h2-note{
+    margin-left:auto; font-size:0.68rem; letter-spacing:0.06em;
+    text-transform:none; color:var(--ink-3); font-weight:400;
+  }
+  h3{ font-family:var(--font-mono); font-size:0.92rem; font-weight:600;
+      letter-spacing:0.01em; margin:0 0 6px; color:var(--ink); }
+  p{ margin:0 0 14px; }
+  .col p:last-child{ margin-bottom:0; }
+  a{ color:var(--accent); }
+
+  code, .k{
+    font-family:var(--font-mono); font-size:0.86em;
+    background:var(--panel-2); border:1px solid var(--rule);
+    padding:0.1em 0.4em; border-radius:4px; color:var(--ink);
+  }
+  .k{ font-size:0.76rem; font-weight:600; white-space:nowrap;
+      box-shadow:0 1px 0 var(--rule-2); }
+
+  /* ── Demo ─────────────────────────────────────────────── */
+  .demo{
+    margin-top:4px; background:var(--panel); border:1px solid var(--rule);
+    border-radius:10px; overflow:hidden;
+  }
+  .demo:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; }
+  .demo-bar{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    padding:10px 14px; border-bottom:1px solid var(--rule);
+    background:var(--panel-2);
+    font-family:var(--font-mono); font-size:0.7rem; letter-spacing:0.04em;
+    color:var(--ink-2);
+  }
+  .demo-bar .tag{
+    font-weight:600; letter-spacing:0.14em; text-transform:uppercase;
+    color:var(--ink-3);
+  }
+  .readout{ display:flex; gap:16px; margin-left:auto; flex-wrap:wrap;
+            font-variant-numeric:tabular-nums; }
+  .readout b{ font-weight:600; color:var(--ink); }
+  .readout .pinv b{ color:var(--pin); }
+  .readout .dv b{ color:var(--accent); }
+  .sync-btn{
+    font:inherit; font-weight:600; letter-spacing:0.06em;
+    background:transparent; color:var(--ink-3);
+    border:1px solid var(--rule-2); border-radius:5px;
+    padding:3px 9px; cursor:pointer; transition:color .15s, border-color .15s;
+  }
+  .sync-btn[aria-pressed="true"]{ color:var(--accent); border-color:var(--accent); }
+  .sync-btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+  .pane{ position:relative; border-bottom:1px solid var(--rule); }
+  .pane:last-of-type{ border-bottom:0; }
+  .pane canvas{ display:block; width:100%; height:100%; }
+  .pane-hd{
+    position:absolute; top:8px; left:12px; z-index:3;
+    display:flex; gap:6px; flex-wrap:wrap; pointer-events:none;
+  }
+  .chip{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:var(--font-mono); font-size:0.66rem; letter-spacing:0.02em;
+    padding:2px 7px; border-radius:4px;
+    background:color-mix(in srgb, var(--panel) 86%, transparent);
+    border:1px solid var(--rule);
+  }
+  .chip .swatch{ width:12px; height:2px; border-radius:1px; }
+  .chip .val{
+    font-weight:700; font-variant-numeric:tabular-nums;
+    padding-left:6px; margin-left:2px; border-left:1px solid currentColor;
+  }
+  .chip .val:empty{ display:none; }
+  .xlab{
+    position:absolute; right:12px; bottom:6px; z-index:3; pointer-events:none;
+    font-family:var(--font-mono); font-size:0.62rem; letter-spacing:0.08em;
+    text-transform:uppercase; color:var(--ink-3);
+  }
+  .pane-note{
+    position:absolute; right:12px; top:8px; z-index:3; pointer-events:none;
+    font-family:var(--font-mono); font-size:0.6rem; letter-spacing:0.04em;
+    color:var(--ink-3);
+  }
+  /* İmleç katmanı — stiller burada, JS yalnızca konum yazar.
+     (Mono yığını tırnak içerdiğinden inline `font` kısayolu style attribute'unu kırar.) */
+  .cursor-layer{ position:absolute; inset:0; pointer-events:none; z-index:2; }
+  .cursor-layer .cur-line{
+    position:absolute; width:1px; background:var(--accent);
+    box-shadow:0 0 5px var(--accent);
+  }
+  .cursor-layer .dot{
+    position:absolute; width:9px; height:9px; margin:-4.5px 0 0 -4.5px;
+    border-radius:50%; border:2px solid; background:var(--panel);
+  }
+  .cursor-layer .pin-line{ position:absolute; border-left:1px dashed var(--pin); }
+  .cursor-layer .pin-tag{
+    position:absolute; white-space:nowrap;
+    font-family:var(--font-mono); font-size:0.62rem; font-weight:600;
+    letter-spacing:0.04em; line-height:1.4; color:var(--pin);
+    padding:1px 5px; border-radius:3px;
+    background:color-mix(in srgb, var(--panel) 84%, transparent);
+    border:1px solid color-mix(in srgb, var(--pin) 38%, transparent);
+  }
+  .demo-foot{
+    padding:9px 14px; border-top:1px solid var(--rule); background:var(--panel-2);
+    font-size:0.8rem; color:var(--ink-2);
+  }
+
+  /* ── Etkileşim kartları ───────────────────────────────── */
+  .cards{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1px;
+          background:var(--rule); border:1px solid var(--rule); border-radius:10px;
+          overflow:hidden; }
+  @media (max-width:720px){ .cards{ grid-template-columns:1fr; } }
+  .card{ background:var(--panel); padding:20px 22px; }
+  .card .gesture{
+    font-family:var(--font-mono); font-size:0.68rem; font-weight:600;
+    letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3);
+    margin-bottom:12px; display:block;
+  }
+  .card p{ font-size:0.92rem; color:var(--ink-2); margin:0; }
+  .card p + p{ margin-top:10px; }
+  .card .why{ color:var(--ink-3); font-size:0.86rem; }
+
+  /* ── Sıralı adımlar ───────────────────────────────────── */
+  ol.steps{ list-style:none; counter-reset:s; margin:0; padding:0; }
+  ol.steps li{
+    counter-increment:s; position:relative; padding:0 0 22px 46px;
+    border-left:1px solid var(--rule); margin-left:11px;
+  }
+  ol.steps li:last-child{ border-left-color:transparent; padding-bottom:0; }
+  ol.steps li::before{
+    content:counter(s); position:absolute; left:-11px; top:1px;
+    width:22px; height:22px; border-radius:50%;
+    background:var(--panel); border:1px solid var(--rule-2); color:var(--ink-3);
+    font-family:var(--font-mono); font-size:0.68rem; font-weight:600;
+    display:flex; align-items:center; justify-content:center;
+  }
+  ol.steps li p{ font-size:0.95rem; color:var(--ink-2); margin:6px 0 0; max-width:60ch; }
+  ol.steps li p:first-of-type{ margin-top:2px; }
+
+  /* ── Kurallar listesi ─────────────────────────────────── */
+  dl.rules{ margin:0; display:grid; gap:1px; background:var(--rule);
+            border:1px solid var(--rule); border-radius:10px; overflow:hidden; }
+  dl.rules > div{ background:var(--panel); padding:16px 20px;
+                  display:grid; grid-template-columns:minmax(140px,190px) 1fr; gap:20px; }
+  @media (max-width:640px){ dl.rules > div{ grid-template-columns:1fr; gap:4px; } }
+  dl.rules dt{
+    font-family:var(--font-mono); font-size:0.72rem; font-weight:600;
+    letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-3);
+    padding-top:2px;
+  }
+  dl.rules dd{ margin:0; font-size:0.93rem; color:var(--ink-2); }
+  dl.rules dd strong{ color:var(--ink); font-weight:600; }
+
+  footer{
+    margin-top:64px; padding-top:20px; border-top:1px solid var(--rule);
+    font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.06em;
+    color:var(--ink-3); display:flex; gap:16px; flex-wrap:wrap;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">MFSim · Sonuçlar Sekmesi</div>
+  <h1>Ölçüm İmleci<br><span class="dim">senkron kursör ve Δ okuması</span></h1>
+  <p class="lede">
+    Fareyi bir grafiğin üzerinde gezdirin: dikey bir çizgi eğrileri keser ve
+    o andaki tüm sensör değerlerini gösterir. Sonuç panosu <strong>tek bir X
+    ekseni</strong> üzerinde çalıştığı için bu çizgi <strong>bütün paneller
+    için ortaktır</strong> — dört panel tek bir zaman kafasıyla birlikte okunur.
+    Tıklayınca imleç sabitlenir ve iki nokta arası fark (Δ) hesaplanır.
+  </p>
+</header>
+
+<section>
+  <h2>Deneyin <span class="h2-note">aşağısı çalışan bir kopyası — gerçekten deneyin</span></h2>
+
+  <div class="demo" id="demo" tabindex="0" role="group"
+       aria-label="Ölçüm imleci demosu — fareyle gezinin, tıklayarak sabitleyin, ok tuşlarıyla adımlayın">
+    <div class="demo-bar">
+      <span class="tag">Tam Gaz Hızlanma</span>
+      <button class="sync-btn" id="syncBtn" type="button" aria-pressed="true">SENKRON İMLEÇ</button>
+      <div class="readout">
+        <span>İmleç <b id="roCur">—</b></span>
+        <span class="pinv">Referans <b id="roPin">—</b></span>
+        <span class="dv">Δ <b id="roDelta">—</b></span>
+      </div>
+    </div>
+
+    <div class="pane" id="pane0" style="height:172px;">
+      <canvas id="cv0"></canvas>
+      <div class="pane-hd" id="hd0"></div>
+      <div class="xlab">Zaman [s]</div>
+    </div>
+
+    <div class="pane" id="pane1" style="height:148px;">
+      <canvas id="cv1"></canvas>
+      <div class="pane-hd" id="hd1"></div>
+      <div class="xlab">Zaman [s]</div>
+    </div>
+
+    <div class="pane" id="pane2" style="height:132px;">
+      <canvas id="cv2"></canvas>
+      <div class="pane-hd" id="hd2"></div>
+      <div class="xlab">Zaman [s]</div>
+    </div>
+
+    <div class="demo-foot" id="demoFoot">
+      Üç panel de aynı X ekseninde — pano kuralı bunu garanti eder. İmleç
+      hangi panelde gezerseniz gezin hepsinde aynı noktada durur.
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Dört Hareket</h2>
+  <div class="cards">
+
+    <div class="card">
+      <span class="gesture">Fareyi gezdir</span>
+      <h3>Oku</h3>
+      <p>İmleç en yakın örneğe kilitlenir. Değer kutusunda her sinyalin o andaki
+         değeri, legend rozetlerinde de aynı değer canlı olarak görünür.</p>
+      <p class="why">Eğriye bakıp “burada kaç?” diye tahmin etmek yerine sayıyı okursunuz.</p>
+    </div>
+
+    <div class="card">
+      <span class="gesture">Tıkla</span>
+      <h3>Sabitle ve Δ ölç</h3>
+      <p>Kesikli kehribar çizgi (<span class="k">A</span>) referansı işaretler.
+         Gezinmeye devam ettikçe değer kutusuna ΔX ve her sinyal için Δdeğer eklenir.
+         Aynı noktaya tekrar tıklamak ya da <span class="k">Esc</span> kaldırır.</p>
+      <p class="why">0→50 km/h süresi, vites geçişinde kaybedilen devir, iki tepe arası fark.</p>
+    </div>
+
+    <div class="card">
+      <span class="gesture">← / →</span>
+      <h3>Örnek örnek adımla</h3>
+      <p>Ok tuşları imleci bir örnek ileri/geri taşır; <span class="k">Shift</span>
+         ile onar örnek. Fareyle yakalanamayacak kadar dar bir tepe noktasına
+         böyle oturursunuz.</p>
+      <p class="why">Çözücü değişken adımlı çalışır — “bir örnek” sabit bir süre değildir.</p>
+    </div>
+
+    <div class="card">
+      <span class="gesture">Panel 1 başlığı</span>
+      <h3>Senkronu kapat</h3>
+      <p>Nişangâh ikonu senkronu açıp kapatır. Kapalıyken imleç yalnızca farenin
+         altındaki panelde görünür. Tercihiniz saklanır, sonraki açılışta korunur.</p>
+      <p class="why">Tek bir paneli izole etmek isterseniz kaçış kapısı.</p>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <h2>Ortak X Ekseni <span class="h2-note">çizginin neden hepsinde ortak olduğu</span></h2>
+  <div class="col">
+    <p>Sonuç panosu tek bir X ekseni üzerinde çalışır. Panoya ilk koyduğunuz öğe
+       ekseni belirler — genelde <em>Zaman</em>. O andan itibaren farklı bir X
+       ekseni isteyen bir diyagram hiçbir panele giremez. Kısıt gibi görünür ama
+       imlecin tüm paneller için tek bir çizgi olmasını mümkün kılan şey budur:
+       <strong>senkronlanmayan panel diye bir durum kalmaz.</strong></p>
+  </div>
+  <dl class="rules" style="margin-top:22px;">
+    <div>
+      <dt>Ekseni kim belirler</dt>
+      <dd>Panodaki <strong>ilk dolu panel</strong>. Pano boşken eksen serbesttir;
+          ilk bıraktığınız sinyal ya da diyagram onu kilitler.</dd>
+    </div>
+    <div>
+      <dt>Uyumsuz öğeler</dt>
+      <dd>Veri Gezgini’nde <strong>solar, kilit ikonu alır ve sürüklenemez</strong>.
+          İpucu metni hangi eksenin geçerli olduğunu ve o diyagramın hangi ekseni
+          istediğini yazar — denemeden görürsünüz.</dd>
+    </div>
+    <div>
+      <dt>Sensör sinyalleri</dt>
+      <dd>Sinyallerin kendi X ekseni yoktur; hangi eksende çizileceklerini pano
+          söyler. Bu yüzden <strong>her zaman eklenebilirler</strong> ve boş bir
+          panele bıraktığınızda panonun eksenini devralırlar.</dd>
+    </div>
+    <div>
+      <dt>Ekseni değiştirmek</dt>
+      <dd>X ekseni seçicisi artık <strong>tüm dolu panelleri birden</strong>
+          değiştirir. Zaman ekseninden hıza geçtiğinizde pano bütünüyle geçer;
+          kilitler de tersine döner (bu kez zaman diyagramları kilitlenir).</dd>
+    </div>
+    <div>
+      <dt>Sıfırlamak</dt>
+      <dd>Panoyu tamamen temizleyin — eksen serbest kalır, ağaçtaki bütün
+          kilitler açılır ve baştan istediğiniz ekseni seçebilirsiniz.</dd>
+    </div>
+    <div>
+      <dt>3D paneller</dt>
+      <dd>Kural dışıdır: X/Y/Z üç ayrı sinyalden gelir ve 2B imleç orada zaten
+          çalışmaz. Panonun eksenini de belirlemezler.</dd>
+    </div>
+    <div>
+      <dt>Hizalama</dt>
+      <dd>Paneller <strong>aynı plot marjını</strong> paylaşır. Bir panel ikinci
+          bir Y ekseni açtığında diğerleri de genişler; böylece imleç üst üste
+          duran panellerde <strong>tek düz bir çizgi</strong> olur, birkaç piksel
+          kaymaz.</dd>
+    </div>
+  </dl>
+</section>
+
+<section>
+  <h2>Örnek <span class="h2-note">0 → 50 km/h süresi</span></h2>
+  <div class="col">
+    <ol class="steps">
+      <li>
+        <h3>Hızı ve devri aynı panele koyun</h3>
+        <p>Veri Gezgini’nden <em>Araç Hızı</em> ve <em>Motor Devri</em> sinyallerini
+           bir panele sürükleyin. İkisi farklı birimde olduğu için ayrı Y eksenlerine
+           yerleşir; değer kutusunda hangi eksene ait olduğu rozetle belirtilir.</p>
+      </li>
+      <li>
+        <h3>Başlangıcı sabitleyin</h3>
+        <p>Hız sıfırdan ayrıldığı ana tıklayın. Kesikli <span class="k">A</span>
+           çizgisi oraya oturur ve etiketi tam X değerini yazar.</p>
+      </li>
+      <li>
+        <h3>Hız 50’ye ulaştığı noktaya gidin</h3>
+        <p>Fareyle yaklaşın, sonra <span class="k">←</span> / <span class="k">→</span>
+           ile 50,00 km/h okunana kadar adımlayın. Değer kutusundaki
+           <strong>Δ t</strong> aradığınız süredir; aynı satırda Δ motor devrini de
+           görürsünüz.</p>
+      </li>
+    </ol>
+    <p style="margin-top:22px;color:var(--ink-2);font-size:0.95rem;">
+      Senkron açıkken çekiş kuvveti ya da vites paneli de aynı iki noktada
+      kilitli kalır — süreyi okurken o aralıkta kaç vites değiştiğini ayrıca
+      aramanız gerekmez.
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2>Bilinmesi Gerekenler</h2>
+  <dl class="rules">
+    <div>
+      <dt>Farklı koşular</dt>
+      <dd>Segment sürüş gibi ayrı bir koşudan gelen “zaman” ekseni <strong>ayrı
+          alan</strong> sayılır; adı aynı olsa da ana koşunun zamanıyla
+          karıştırılmaz, aynı panoya giremez.</dd>
+    </div>
+    <div>
+      <dt>Çift tık</dt>
+      <dd>Grafikte çift tık hâlâ <strong>görünümü sıfırlar</strong>. Sabitleme,
+          ikinci tıkın gelmediği anlaşılınca uygulanır — yani çift tıklayınca
+          yanlışlıkla referans bırakmazsınız.</dd>
+    </div>
+    <div>
+      <dt>Yakınlaştırma</dt>
+      <dd>Tekerlek yakınlaştırır, sağ tık kaydırır. Referans imleç X değerine
+          bağlıdır: yakınlaştırınca doğru yerde kalır, görünür aralığın dışına
+          çıkarsa gizlenir, geri döndüğünüzde yeniden belirir.</dd>
+    </div>
+    <div>
+      <dt>Veri yoksa</dt>
+      <dd>Bir sinyalin o koşuda verisi yoksa değer kutusu <strong>“— veri yok”</strong>
+          yazar, sıfır göstermez. Δ satırı da o sinyal için hesaplanmaz.</dd>
+    </div>
+    <div>
+      <dt>Oynat düğmesi</dt>
+      <dd>Grafiğin sol üstündeki oynat düğmesi zaman kafasını soldan sağa tarar.
+          Artık aynı imleç yolunu kullandığı için <strong>tarama senkron panellerde
+          birlikte</strong> ilerler.</dd>
+    </div>
+  </dl>
+</section>
+
+<footer>
+  <span>MFSim · Sonuçlar</span>
+  <span>PR #603</span>
+  <span>js/chart-cursor.js</span>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ── Tam gaz hızlanma koşusu: basit boyuna dinamik ────────────────────
+  // 40 t ağır ticari araç, 6 vites. Yukarı geçişlerde tork kesilir (kavrama
+  // ayrık) — devir testere dişi çizer, çekiş kuvveti o aralıkta sıfırlanır.
+  function simulate(){
+    var m=40000, r=0.51, fd=4.3, eta=0.92, g=9.81;
+    var gears=[7.8,5.2,3.6,2.70,2.05,1.58];
+    var UP=2300, SHIFT_S=0.55;          // yukarı geçiş devri / geçiş süresi [s]
+    var Crr=0.0072, CdA=6.0, rho=1.2;
+    function Teng(n){                   // kaba tork eğrisi [Nm]
+      if(n<800)  return 620;
+      if(n<1200) return 620+(n-800)/400*630;
+      if(n<1750) return 1250;
+      return Math.max(760, 1250-(n-1750)*0.75);
+    }
+    var t=0, v=0.6, gi=0, shift=0;
+    var T=[],RPM=[],V=[],TE=[],G=[],A=[];
+    var dt=0.1;
+    for(; t<=46.0001; t+=dt){
+      var ratio=gears[gi]*fd;
+      var n=v/r*ratio*60/(2*Math.PI);
+      if(shift<=0 && n>UP && gi<gears.length-1){ shift=SHIFT_S; gi++; ratio=gears[gi]*fd; }
+      n=v/r*ratio*60/(2*Math.PI);
+      n=Math.max(600,Math.min(2450,n));
+      var res=Crr*m*g+0.5*rho*CdA*v*v;
+      var te=shift>0 ? 0 : Teng(n)*ratio*eta/r;         // çekiş kuvveti [N]
+      var a=(te-res)/m;
+      T.push(t); RPM.push(n); V.push(v*3.6);
+      TE.push(te/1000); G.push(gi+1); A.push(a);
+      v=Math.max(0.3, v+a*dt);
+      if(shift>0) shift-=dt;
+    }
+    return {t:T,rpm:RPM,v:V,te:TE,gear:G,a:A};
+  }
+  var R=simulate();
+
+  function css(name){
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  // ── Panel tanımları ──────────────────────────────────────────────────
+  // xKey: aynı değeri taşıyan paneller birlikte okunur (gerçek uygulamadaki
+  // X-ekseni kimliğinin karşılığı).
+  var PANES=[
+    { id:0, xKey:'time', x:R.t, xUnit:'s', xName:'t',
+      series:[
+        {name:'Motor Devri', unit:'rpm', data:R.rpm, color:'--sig1', ax:0},
+        {name:'Araç Hızı',   unit:'km/h',data:R.v,   color:'--sig2', ax:1}
+      ]},
+    { id:1, xKey:'time', x:R.t, xUnit:'s', xName:'t',
+      series:[
+        {name:'Çekiş Kuvveti', unit:'kN', data:R.te,   color:'--sig3', ax:0},
+        {name:'Aktif Vites',   unit:'—',  data:R.gear, color:'--sig1', ax:1, step:true}
+      ]},
+    { id:2, xKey:'time', x:R.t, xUnit:'s', xName:'t',
+      series:[
+        {name:'İvme', unit:'m/s²', data:R.a, color:'--sig1', ax:0}
+      ]}
+  ];
+
+  var state={ sync:true, x:null, src:null, pinX:null, pinKey:null };
+  var META=[];
+
+  // Eksen aralıkları: birim grubuna göre, %8 pay ile
+  function axisRanges(p){
+    var axes=[];
+    p.series.forEach(function(s){
+      var a=axes[s.ax]||(axes[s.ax]={min:Infinity,max:-Infinity,unit:s.unit});
+      for(var i=0;i<s.data.length;i++){
+        var val=s.data[i];
+        if(val<a.min)a.min=val;
+        if(val>a.max)a.max=val;
+      }
+    });
+    axes.forEach(function(a){
+      if(!isFinite(a.min)){a.min=0;a.max=1;}
+      var pad=(a.max-a.min||1)*0.10;
+      a.min-=pad; a.max+=pad;
+    });
+    return axes;
+  }
+
+  function niceStep(rough){
+    if(!(rough>0))return 1;
+    var mag=Math.pow(10,Math.floor(Math.log10(rough))), n=rough/mag;
+    return (n<=1.5?1:n<=3?2:n<=7?5:10)*mag;
+  }
+
+  function draw(p){
+    var cv=document.getElementById('cv'+p.id);
+    var host=cv.parentElement;
+    var w=host.clientWidth, h=host.clientHeight;
+    if(w<40||h<40) return;
+    var dpr=window.devicePixelRatio||1;
+    cv.width=w*dpr; cv.height=h*dpr;
+    var ctx=cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+
+    // Marj pano geneli: en çok eksene sahip panele göre. Böylece plot alanları
+    // aynı yerden başlar ve imleç panelden panele kaymaz (uygulamadaki
+    // veBoardChartMargin ile aynı fikir).
+    var maxSeries=1;
+    PANES.forEach(function(q){ if(q.series.length>maxSeries) maxSeries=q.series.length; });
+    var mg={l:52,r:maxSeries>1?46:14,t:34,b:22};
+    var pw=w-mg.l-mg.r, ph=h-mg.t-mg.b;
+    if(pw<20||ph<20) return;
+
+    var xMin=p.x[0], xMax=p.x[p.x.length-1];
+    var axes=axisRanges(p);
+    var gridC=css('--grid'), inkC=css('--ink-3'), ruleC=css('--rule-2');
+
+    function X(v){ return mg.l+(v-xMin)/(xMax-xMin)*pw; }
+    function Y(v,ai){ var a=axes[ai]; return mg.t+ph-(v-a.min)/(a.max-a.min)*ph; }
+
+    // Izgara + X etiketleri
+    ctx.font='500 10px '+css('--font-mono');
+    ctx.fillStyle=inkC; ctx.strokeStyle=gridC; ctx.lineWidth=1;
+    var xs=niceStep((xMax-xMin)/6);
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    for(var xv=Math.ceil(xMin/xs)*xs; xv<=xMax; xv+=xs){
+      var gx=Math.round(X(xv))+0.5;
+      ctx.beginPath(); ctx.moveTo(gx,mg.t); ctx.lineTo(gx,mg.t+ph); ctx.stroke();
+      ctx.fillText(String(Math.round(xv)),gx,mg.t+ph+4);
+    }
+    // Y etiketleri — ilk eksen solda, ikinci sağda
+    [0,1].forEach(function(ai){
+      var a=axes[ai]; if(!a) return;
+      var ys=niceStep((a.max-a.min)/4);
+      ctx.textAlign=ai===0?'right':'left';
+      ctx.textBaseline='middle';
+      ctx.fillStyle=css(p.series.filter(function(s){return s.ax===ai;})[0].color);
+      for(var yv=Math.ceil(a.min/ys)*ys; yv<=a.max; yv+=ys){
+        var gy=Y(yv,ai);
+        if(gy<mg.t-1||gy>mg.t+ph+1) continue;
+        if(ai===0){
+          ctx.strokeStyle=gridC; ctx.beginPath();
+          ctx.moveTo(mg.l,Math.round(gy)+0.5); ctx.lineTo(mg.l+pw,Math.round(gy)+0.5); ctx.stroke();
+        }
+        ctx.fillText(fmtAxis(yv), ai===0?mg.l-7:mg.l+pw+7, gy);
+      }
+    });
+
+    // Çerçeve
+    ctx.strokeStyle=ruleC; ctx.beginPath();
+    ctx.moveTo(mg.l+0.5,mg.t); ctx.lineTo(mg.l+0.5,mg.t+ph); ctx.lineTo(mg.l+pw,mg.t+ph);
+    ctx.stroke();
+
+    // Eğriler
+    ctx.save();
+    ctx.beginPath(); ctx.rect(mg.l,mg.t,pw,ph); ctx.clip();
+    p.series.forEach(function(s){
+      ctx.strokeStyle=css(s.color); ctx.lineWidth=1.6;
+      ctx.lineJoin='round'; ctx.beginPath();
+      for(var i=0;i<s.data.length;i++){
+        var px=X(p.x[i]), py=Y(s.data[i],s.ax);
+        if(i===0) ctx.moveTo(px,py);
+        else if(s.step){ ctx.lineTo(px,Y(s.data[i-1],s.ax)); ctx.lineTo(px,py); }
+        else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+    });
+    ctx.restore();
+
+    META[p.id]={mg:mg,pw:pw,ph:ph,w:w,h:h,xMin:xMin,xMax:xMax,axes:axes,X:X,Y:Y};
+  }
+
+  // Okuma değeri: MFSim'in değer kutusuyla aynı basamak mantığı
+  function fmt(v){
+    if(!isFinite(v)) return '—';
+    var a=Math.abs(v);
+    if(a<5e-3) return '0.00';
+    if(a>=10000) return v.toFixed(0);
+    if(a>=100) return v.toFixed(1);
+    if(a>=1) return v.toFixed(2);
+    return v.toFixed(3);
+  }
+  // Eksen etiketi: kısa ve yuvarlak — üstel biçim eksende okunmaz
+  function fmtAxis(v){
+    var a=Math.abs(v);
+    if(a<1e-9) return '0';
+    if(a>=100) return v.toFixed(0);
+    if(a>=10) return v.toFixed(0);
+    if(a>=1) return v.toFixed(1);
+    return v.toFixed(2);
+  }
+  function fmtD(v){
+    if(v===null||!isFinite(v)) return '—';
+    if(v===0) return '0';
+    return (v>0?'+':'−')+fmt(Math.abs(v));
+  }
+  function snap(arr,x){
+    if(!arr.length||!isFinite(x)) return -1;
+    var lo=0,hi=arr.length-1;
+    while(lo<=hi){ var mid=(lo+hi)>>1; if(arr[mid]<x) lo=mid+1; else hi=mid-1; }
+    var i=lo;
+    if(i>=arr.length) return arr.length-1;
+    if(i>0 && Math.abs(arr[i-1]-x)<Math.abs(arr[i]-x)) i--;
+    return i;
+  }
+
+  // ── Katman: imleç, nokta, referans çizgisi ───────────────────────────
+  function layer(p){
+    var host=document.getElementById('pane'+p.id);
+    var el=host.querySelector('.cursor-layer');
+    if(!el){
+      el=document.createElement('div');
+      el.className='cursor-layer';
+      host.appendChild(el);
+    }
+    return el;
+  }
+
+  function chipHost(p){ return document.getElementById('hd'+p.id); }
+
+  function buildChips(){
+    PANES.forEach(function(p){
+      var host=chipHost(p);
+      host.innerHTML='';
+      p.series.forEach(function(s){
+        var c=document.createElement('span');
+        c.className='chip';
+        c.style.color=css(s.color);
+        c.innerHTML='<span class="swatch" style="background:'+css(s.color)+'"></span>'+
+                    '<span style="color:var(--ink-2)">'+s.name+'</span>'+
+                    '<span style="color:var(--ink-3);font-size:0.92em">['+s.unit+']</span>'+
+                    '<span class="val"></span>';
+        host.appendChild(c);
+      });
+    });
+  }
+
+  function paintPane(p,xVal,isSrc){
+    var m=META[p.id]; if(!m) return false;
+    var el=layer(p);
+    if(xVal===null||xVal<m.xMin||xVal>m.xMax){ clearPane(p); return false; }
+    var i=snap(p.x,xVal); if(i<0){ clearPane(p); return false; }
+    var sx=m.X(p.x[i]);
+
+    var html='<div class="cur-line" style="left:'+sx+'px;top:'+m.mg.t+'px;height:'+m.ph+'px"></div>';
+    p.series.forEach(function(s){
+      var y=m.Y(s.data[i],s.ax);
+      html+='<div class="dot" style="left:'+sx+'px;top:'+y+'px;border-color:'+css(s.color)+'"></div>';
+    });
+    el.innerHTML=html+pinMarkup(p);
+
+    p.series.forEach(function(s,si){
+      chipHost(p).children[si].querySelector('.val').textContent=fmt(s.data[i]);
+    });
+    if(isSrc) updateReadout(p,i);
+    return true;
+  }
+
+  function pinMarkup(p){
+    if(state.pinX===null||state.pinKey!==p.xKey) return '';
+    var m=META[p.id]; if(!m) return '';
+    var i=snap(p.x,state.pinX); if(i<0) return '';
+    var v=p.x[i];
+    if(v<m.xMin||v>m.xMax) return '';
+    var px=m.X(v);
+    // Etiket sağa taşarsa çizginin soluna geçsin
+    var right=px>m.mg.l+m.pw-80;
+    var tag='<div class="pin-tag" style="left:'+(right?'auto':(px+5)+'px')+';'+
+            (right?'right:'+(m.w-px+5)+'px;':'')+'top:'+(m.mg.t+3)+'px">A · '+
+            fmt(v)+' '+p.xUnit+'</div>';
+    return '<div class="pin-line" style="left:'+px+'px;top:'+m.mg.t+'px;height:'+m.ph+'px"></div>'+tag;
+  }
+
+  function clearPane(p){
+    layer(p).innerHTML=pinMarkup(p);
+    p.series.forEach(function(s,si){
+      var c=chipHost(p).children[si];
+      if(c) c.querySelector('.val').textContent='';
+    });
+  }
+
+  function updateReadout(p,i){
+    document.getElementById('roCur').textContent=fmt(p.x[i])+' '+p.xUnit;
+    if(state.pinX!==null&&state.pinKey===p.xKey){
+      var pi=snap(p.x,state.pinX);
+      document.getElementById('roPin').textContent=fmt(p.x[pi])+' '+p.xUnit;
+      document.getElementById('roDelta').textContent=
+        fmtD(p.x[i]-p.x[pi])+' '+p.xUnit+'  ·  '+
+        p.series.map(function(s){
+          return fmtD(s.data[i]-s.data[pi])+' '+s.unit;
+        }).join('  ·  ');
+    } else {
+      document.getElementById('roPin').textContent='—';
+      document.getElementById('roDelta').textContent='—';
+    }
+  }
+
+  // İmleç gizlenince Δ de silinir: ölçülecek "güncel nokta" kalmadığında eski
+  // farkı ekranda bırakmak yanlış okumaya davetiye olurdu. Referans korunur.
+  function clearReadout(){
+    document.getElementById('roCur').textContent='—';
+    document.getElementById('roDelta').textContent='—';
+    if(state.pinX===null) document.getElementById('roPin').textContent='—';
+  }
+
+  var raf=null, pending=null;
+  function moveTo(srcId,xVal){
+    state.x=xVal; state.src=srcId; pending={id:srcId,x:xVal};
+    if(raf) return;
+    raf=requestAnimationFrame(function(){
+      raf=null;
+      var q=pending; pending=null;
+      if(!q||state.x===null||state.src!==q.id) return;
+      var src=PANES[q.id];
+      if(!paintPane(src,q.x,true)) return;
+      if(!state.sync) return;
+      PANES.forEach(function(p){
+        if(p.id!==q.id && p.xKey===src.xKey) paintPane(p,q.x,false);
+      });
+    });
+  }
+
+  function hideAll(){
+    state.x=null; state.src=null;
+    PANES.forEach(clearPane);
+    clearReadout();
+  }
+
+  function eventX(p,e){
+    var m=META[p.id]; if(!m) return null;
+    var cv=document.getElementById('cv'+p.id);
+    var r=cv.getBoundingClientRect();
+    var mx=e.clientX-r.left, my=e.clientY-r.top;
+    if(mx<m.mg.l-2||mx>m.mg.l+m.pw+2||my<m.mg.t-2||my>m.mg.t+m.ph+2) return null;
+    return m.xMin+(mx-m.mg.l)/m.pw*(m.xMax-m.xMin);
+  }
+
+  function repaintPins(){ PANES.forEach(function(p){
+    if(state.x!==null&&(p.id===state.src||(state.sync&&PANES[state.src]&&p.xKey===PANES[state.src].xKey))){
+      paintPane(p,state.x,p.id===state.src);
+    } else clearPane(p);
+  }); }
+
+  // ── Olaylar ──────────────────────────────────────────────────────────
+  PANES.forEach(function(p){
+    var host=document.getElementById('pane'+p.id);
+    host.style.cursor='crosshair';
+    host.addEventListener('mousemove',function(e){
+      var x=eventX(p,e);
+      if(x===null){ hideAll(); return; }
+      moveTo(p.id,x);
+    });
+    host.addEventListener('mouseleave',hideAll);
+    host.addEventListener('click',function(e){
+      var x=eventX(p,e); if(x===null) return;
+      var i=snap(p.x,x);
+      if(state.pinX!==null&&state.pinKey===p.xKey&&snap(p.x,state.pinX)===i){
+        state.pinX=null; state.pinKey=null;
+      } else {
+        state.pinX=p.x[i]; state.pinKey=p.xKey;
+      }
+      repaintPins();
+      if(state.x!==null&&state.src!==null) updateReadout(PANES[state.src],snap(PANES[state.src].x,state.x));
+    });
+  });
+
+  document.getElementById('demo').addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&state.pinX!==null){
+      state.pinX=null; state.pinKey=null; repaintPins(); clearReadout(); e.preventDefault(); return;
+    }
+    if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight') return;
+    var id=state.src===null?0:state.src;
+    var p=PANES[id];
+    var cur=state.x===null?p.x[Math.floor(p.x.length/3)]:state.x;
+    var i=snap(p.x,cur);
+    var next=i+(e.key==='ArrowLeft'?-1:1)*(e.shiftKey?10:1);
+    next=Math.max(0,Math.min(p.x.length-1,next));
+    moveTo(id,p.x[next]);
+    e.preventDefault();
+  });
+
+  var syncBtn=document.getElementById('syncBtn');
+  syncBtn.addEventListener('click',function(){
+    state.sync=!state.sync;
+    syncBtn.setAttribute('aria-pressed',state.sync?'true':'false');
+    if(!state.sync) PANES.forEach(function(p){ if(p.id!==state.src) clearPane(p); });
+    else if(state.x!==null&&state.src!==null) moveTo(state.src,state.x);
+  });
+
+  // ── Yeniden çizim: boyut ve tema ─────────────────────────────────────
+  function redrawAll(){
+    PANES.forEach(draw);
+    buildChips();
+    if(state.x!==null&&state.src!==null) moveTo(state.src,state.x);
+    else PANES.forEach(clearPane);
+  }
+  redrawAll();
+
+  var rzT=null;
+  window.addEventListener('resize',function(){
+    clearTimeout(rzT); rzT=setTimeout(redrawAll,120);
+  });
+  new MutationObserver(redrawAll).observe(document.documentElement,{
+    attributes:true, attributeFilter:['data-theme']
+  });
+  if(window.matchMedia){
+    var mq=window.matchMedia('(prefers-color-scheme: dark)');
+    (mq.addEventListener?mq.addEventListener.bind(mq,'change'):mq.addListener.bind(mq))(redrawAll);
+  }
+
+  // Açılışta imleci bir kez göster — okuyucu hover etmeden ne olduğunu görsün
+  moveTo(0, R.t[Math.round(R.t.length*0.55)]);
+})();
+</script>
+
+</body></html>

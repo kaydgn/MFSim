@@ -1,0 +1,548 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style></head><body>
+<title>Sayısal Çekirdek Haritası</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --ground:#f4f6f8; --panel:#ffffff; --panel-2:#eef1f5;
+  --ink:#111823; --ink-soft:#55606f; --ink-faint:#7d8797;
+  --rule:#dde2e9; --rule-soft:#e8ecf1;
+  --accent:#2563eb; --accent-soft:#e6edfd;
+  --ok:#15803d; --ok-soft:#e7f5ec;
+  --warn:#b45309; --warn-soft:#fdf3e3;
+  --s1:#2a78d6; --s2:#eb6834;
+  --shadow:0 1px 2px rgba(16,24,40,.06), 0 8px 24px -14px rgba(16,24,40,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --ground:#0b0e13; --panel:#12161d; --panel-2:#171d26;
+    --ink:#cdd6e1; --ink-soft:#949dad; --ink-faint:#6f7a8b;
+    --rule:#1e2531; --rule-soft:#181e28;
+    --accent:#4e80ef; --accent-soft:#16233d;
+    --ok:#3fa96a; --ok-soft:#10241a;
+    --warn:#d9a441; --warn-soft:#241d10;
+    --s1:#3987e5; --s2:#d95926;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 28px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --ground:#0b0e13; --panel:#12161d; --panel-2:#171d26;
+  --ink:#cdd6e1; --ink-soft:#949dad; --ink-faint:#6f7a8b;
+  --rule:#1e2531; --rule-soft:#181e28;
+  --accent:#4e80ef; --accent-soft:#16233d;
+  --ok:#3fa96a; --ok-soft:#10241a;
+  --warn:#d9a441; --warn-soft:#241d10;
+  --s1:#3987e5; --s2:#d95926;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 28px -16px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.6;
+}
+.wrap{max-width:940px;margin:0 auto;padding:34px 24px 80px}
+.eyebrow{
+  font-family:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif;
+  font-weight:600;font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-faint);
+}
+h1{font-size:32px;line-height:1.15;font-weight:600;margin:.3em 0 .35em;letter-spacing:-.018em;text-wrap:balance}
+h2{font-size:17px;font-weight:600;margin:0 0 4px;letter-spacing:-.008em}
+p{max-width:68ch;color:var(--ink-soft);margin:0 0 14px}
+p.tight{margin-bottom:8px}
+code{font-family:"IBM Plex Mono",monospace;font-size:.88em;background:var(--panel-2);
+  padding:1px 5px;border-radius:3px;color:var(--ink)}
+header{border-bottom:1px solid var(--rule);padding-bottom:24px;margin-bottom:32px}
+section{margin-bottom:40px}
+.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+
+figure{margin:0 0 18px;background:var(--panel);border:1px solid var(--rule);
+  border-radius:10px;padding:20px 20px 14px;box-shadow:var(--shadow);overflow-x:auto}
+figure svg{display:block;width:100%;height:auto;min-width:520px;color:var(--ink)}
+figcaption{margin-top:12px;padding-top:12px;border-top:1px solid var(--rule-soft);
+  font-size:12.5px;color:var(--ink-faint);max-width:74ch}
+figcaption b{color:var(--ink-soft);font-weight:500}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;
+  background:var(--panel);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:9px 14px;text-align:right;border-bottom:1px solid var(--rule-soft);white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+thead th{font-family:"IBM Plex Sans Condensed",sans-serif;font-size:11px;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);
+  background:var(--panel-2);border-bottom:1px solid var(--rule)}
+tbody td{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;color:var(--ink-soft)}
+tbody td:first-child{font-family:"IBM Plex Sans",sans-serif;color:var(--ink)}
+tbody tr:last-child td{border-bottom:0}
+td.ok{color:var(--ok)} td.bad{color:var(--warn);font-weight:500}
+
+.jobs{display:grid;grid-template-columns:1fr;gap:12px}
+.job{display:grid;grid-template-columns:auto 1fr;gap:0 16px;align-items:start;
+  background:var(--panel);border:1px solid var(--rule);border-radius:10px;
+  padding:16px 18px;box-shadow:var(--shadow)}
+.job .n{font-family:"IBM Plex Mono",monospace;font-size:13px;font-weight:600;
+  color:var(--warn);border:1px solid var(--warn);border-radius:5px;
+  width:26px;height:26px;display:grid;place-items:center;grid-row:span 2}
+.job h3{margin:0 0 4px;font-size:14.5px;font-weight:600}
+.job p{margin:0;font-size:13px;max-width:none}
+.job .where{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-faint);
+  display:block;margin-top:6px}
+
+.note{background:var(--ok-soft);border:1px solid var(--ok);border-radius:10px;
+  padding:14px 18px;font-size:13.5px;color:var(--ink-soft)}
+.note b{color:var(--ink)}
+footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--rule);
+  font-size:12px;color:var(--ink-faint)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap" lang="tr">
+
+<header>
+  <div class="eyebrow">MFSim · sayısal çekirdek denetimi</div>
+  <h1>Aynı matematik kaç yerde yazılı?</h1>
+  <p>Bir tarama, MFSim'de <b>aynı sayısal çekirdeğin birden fazla kez</b> elle
+  yazıldığı üç yer buldu. Hiçbiri diğerine bağlı değil ve hiçbirinin arasında
+  test kapısı yoktu. Bu sayfa nerede ne durduğunu, hangi ayrışmanın kapatıldığını
+  ve hangilerinin açık kaldığını gösterir.</p>
+  <div class="note">
+    <b>Bu turda kapatıldı:</b> PCHIP'in üç yazımı arasındaki uç eğim ayrışması —
+    düzeltildi ve <code>tests/unit/pchip-uc-kopya.test.js</code> ile kapıya bağlandı.
+    Aşağıdaki 2. ve 3. bölüm <b>hâlâ açık</b>.
+  </div>
+</header>
+
+<section>
+  <div class="eyebrow">1 — kapatıldı</div>
+  <h2>PCHIP: bir veri tablosu, üç ayrı yazım</h2>
+  <p>Motor tork eğrisi ve konvertör eğrileri aynı dosyalardan okunuyor, ama hangi
+  modda çalıştığına göre <b>farklı bir interpolasyon kodundan</b> geçiyor. Üç
+  yazımın iç nokta türevleri birebir aynıydı; ayrışma yalnızca <b>uç eğimdeydi</b>.</p>
+
+  <figure>
+    <svg viewBox="0 0 880 386" role="img"
+         aria-label="Aynı tork ve konvertör tablosu üç ayrı PCHIP yazımından geçip üç ayrı kullanıcı yüzeyine gidiyor; yeni test kapısı üçünü birden çevreliyor.">
+      <defs>
+        <marker id="ok" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+        </marker>
+      </defs>
+
+      <!-- kaynak -->
+      <rect x="16" y="150" width="170" height="76" rx="7"
+            fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <text x="101" y="180" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">Aynı veri tablosu</text>
+      <text x="101" y="199" text-anchor="middle" font-size="11" fill="currentColor" opacity=".62">assets/examples/ap_*.json</text>
+      <text x="101" y="214" text-anchor="middle" font-size="11" fill="currentColor" opacity=".62">torqueData · tcData</text>
+
+      <!-- kapı çerçevesi -->
+      <rect x="236" y="30" width="228" height="326" rx="9"
+            fill="none" stroke="currentColor" stroke-width="1.5"
+            stroke-dasharray="6 4" opacity=".45"/>
+      <text x="350" y="22" text-anchor="middle" font-size="11.5" font-weight="600" fill="currentColor" opacity=".72">
+        pchip-uc-kopya.test.js — uyum kapısı (YENİ)
+      </text>
+
+      <!-- çekirdek kutuları -->
+      <rect x="250" y="52" width="200" height="64" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <text x="262" y="74" font-size="12.5" font-weight="600" fill="currentColor">A · numerics.js</text>
+      <text x="262" y="92" font-size="11" fill="currentColor" opacity=".62">veBuildPchipSpline</text>
+      <text x="262" y="107" font-size="11" fill="currentColor" opacity=".62">veEvalPchip</text>
+
+      <rect x="250" y="166" width="200" height="64" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <text x="262" y="188" font-size="12.5" font-weight="600" fill="currentColor">B · ft-performance.js</text>
+      <text x="262" y="206" font-size="11" fill="currentColor" opacity=".62">pchipCreate</text>
+      <text x="262" y="221" font-size="11" fill="currentColor" opacity=".62">_pchipEndSlope</text>
+
+      <rect x="250" y="280" width="200" height="64" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <text x="262" y="302" font-size="12.5" font-weight="600" fill="currentColor">C · mount-core.js</text>
+      <text x="262" y="320" font-size="11" fill="currentColor" opacity=".62">buildMonotoneCubic</text>
+      <text x="262" y="335" font-size="11" fill="currentColor" opacity=".62">tablo dışı: DOĞRUSAL</text>
+
+      <!-- kaynaktan çekirdeklere -->
+      <path d="M186 174 C 214 174 214 84 248 84" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#ok)"/>
+      <path d="M186 188 L 248 194" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#ok)"/>
+      <path d="M186 202 C 214 202 214 312 248 312" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#ok)"/>
+
+      <!-- çekirdeklerden yüzeylere -->
+      <line x1="452" y1="84"  x2="556" y2="84"  stroke="currentColor" stroke-width="1.5" marker-end="url(#ok)"/>
+      <line x1="452" y1="198" x2="556" y2="198" stroke="currentColor" stroke-width="1.5" marker-end="url(#ok)"/>
+      <line x1="452" y1="312" x2="556" y2="312" stroke="currentColor" stroke-width="1.5" marker-end="url(#ok)"/>
+
+      <text x="504" y="76"  text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".62">tork</text>
+      <text x="504" y="190" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".62">tork · K · τ</text>
+      <text x="504" y="304" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".62">F(δ) yasası</text>
+
+      <!-- yüzeyler -->
+      <rect x="560" y="52" width="304" height="64" rx="7" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".72"/>
+      <text x="574" y="76" font-size="12.5" font-weight="600" fill="currentColor">Motor Freni modu</text>
+      <text x="574" y="95" font-size="11" fill="currentColor" opacity=".62">sonuç paneli · hız-devir grafikleri · TXT rapor</text>
+      <text x="574" y="110" font-size="11" fill="currentColor" opacity=".62">kalibrasyon kapısı YOK → ayrışma sessiz kalırdı</text>
+
+      <rect x="560" y="166" width="304" height="64" rx="7" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".72"/>
+      <text x="574" y="190" font-size="12.5" font-weight="600" fill="currentColor">Tam Gaz modu</text>
+      <text x="574" y="209" font-size="11" fill="currentColor" opacity=".62">tavan hız · vites geçişleri · hesap izi raporu</text>
+      <text x="574" y="224" font-size="11" fill="currentColor" opacity=".62">13 araç · 81 geçiş çıpası ile kapılı</text>
+
+      <rect x="560" y="280" width="304" height="64" rx="7" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".72"/>
+      <text x="574" y="304" font-size="12.5" font-weight="600" fill="currentColor">Takoz çözücüsü</text>
+      <text x="574" y="323" font-size="11" fill="currentColor" opacity=".62">statik çökme · 6 modal frekans · fdefl kanalı</text>
+      <text x="574" y="338" font-size="11" fill="currentColor" opacity=".62">tablo dışı doğrusal ZORUNLU (K_T tekilleşmesin)</text>
+    </svg>
+    <figcaption>
+      Aynı tablo üç ayrı yazımdan geçip üç ayrı kullanıcı yüzeyine varıyor.
+      <b>Kesikli çerçeve</b> bu turda eklenen kapıyı gösterir: üç yazım artık
+      <code>assets/examples</code>'taki her sayısal tabloda 200 noktada
+      karşılaştırılıyor. <b>C'nin tablo dışı doğrusal uzatması bilerek ayrıktır</b>
+      ve kapı onu eşitlemeye çalışmaz — düz uzantı Newton çözücüsünde teğet
+      rijitliği tekilleştirip çözümü çökertiyor.
+    </figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Ayrışma neredeydi</h2>
+  <p class="tight">Uç düğüm türevinin şekil koruma kelepçesi. Referans
+  (MATLAB/SLATEC <code>pchipend</code>) <code>sign(d) ≠ sign(δ₁)</code> testini
+  kullanır; <code>sign(0) = 0</code> olduğu için uç aralık <b>düz</b> iken ateşler.
+  <code>ft-performance.js</code> bunu <code>d · δ₁ &lt; 0</code> diye yazıyordu —
+  çarpım tam sıfır olduğu için o durumu kaçırıyordu.</p>
+
+  <figure>
+    <div id="chart"></div>
+    <figcaption>
+      Gerçekçi bir dizel tork eğrisinin düşük devir platosu (800–1200 d/dk'da
+      1000 N·m). <b>Kesin <code>&lt;</code></b> uç eğimi sıfırlamadığı için eğri
+      platonun <b>altına sarkıyor</b> — PCHIP'in tek işi olan şekil koruma orada
+      bozuluyor. Sayılar bu sayfada, MFSim'in kendi <code>pchipCreate</code>
+      koduyla hesaplanıyor.
+    </figcaption>
+  </figure>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr>
+        <th>Yazım</th><th>Kelepçe koşulu</th>
+        <th>Referanstan sapma<br>(400.000 girdi)</th><th>Durum</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>A · <span class="mono">js/numerics.js</span></td><td>d · δ₁ ≤ 0</td><td class="ok">0</td><td class="ok">doğruydu</td></tr>
+        <tr><td>C · <span class="mono">js/mount-core.js</span></td><td>d · δ₁ ≤ 0</td><td class="ok">0</td><td class="ok">doğruydu</td></tr>
+        <tr><td>B · <span class="mono">js/ft-performance.js</span></td><td>d · δ₁ &lt; 0</td><td class="bad">58.797</td><td class="bad">düzeltildi</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">2 — açık</div>
+  <h2>Eşleştirme paneli ile çözücü aynı veriyi farklı okuyor</h2>
+  <p>Motor–Konvertör Eşleştirme paneli, Allison kontrollerinin
+  <b>"geçti/kaldı"</b> kararını <b>lineer</b> interpolasyonla veriyor. Aynı
+  <code>torqueData</code> ve <code>tcData</code> çözücüde <b>PCHIP</b> ile
+  okunuyor. Yani panel bir sayıdan, simülasyon başka bir sayıdan besleniyor.</p>
+
+  <figure>
+    <svg viewBox="0 0 880 250" role="img"
+         aria-label="Aynı tork ve konvertör tablosu, eşleştirme panelinde lineer interpolasyonla, çözücüde PCHIP ile okunuyor; iki farklı sayı iki farklı kullanıcı çıktısına gidiyor.">
+      <defs>
+        <marker id="ok2" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+        </marker>
+      </defs>
+
+      <rect x="16" y="88" width="170" height="70" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <text x="101" y="116" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">Aynı veri tablosu</text>
+      <text x="101" y="135" text-anchor="middle" font-size="11" fill="currentColor" opacity=".62">torqueData · tcData</text>
+
+      <path d="M186 108 C 216 108 216 56 250 56" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#ok2)"/>
+      <path d="M186 138 C 216 138 216 190 250 190" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#ok2)"/>
+
+      <rect x="252" y="24" width="212" height="64" rx="7" fill="none" stroke="currentColor" stroke-width="2" opacity=".9"/>
+      <text x="264" y="46" font-size="12.5" font-weight="600" fill="currentColor">cp-matching.js</text>
+      <text x="264" y="64" font-size="11" fill="currentColor" opacity=".62">interpT · interpKp · interpTau</text>
+      <text x="264" y="79" font-size="11" fill="currentColor" opacity=".62">LİNEER interpolasyon</text>
+
+      <rect x="252" y="158" width="212" height="64" rx="7" fill="none" stroke="currentColor" stroke-width="2" opacity=".9"/>
+      <text x="264" y="180" font-size="12.5" font-weight="600" fill="currentColor">ft-performance.js</text>
+      <text x="264" y="198" font-size="11" fill="currentColor" opacity=".62">pchipCreate · pchipEval</text>
+      <text x="264" y="213" font-size="11" fill="currentColor" opacity=".62">PCHIP (şekil koruyan kübik)</text>
+
+      <line x1="466" y1="56"  x2="574" y2="56"  stroke="currentColor" stroke-width="1.5" marker-end="url(#ok2)"/>
+      <line x1="466" y1="190" x2="574" y2="190" stroke="currentColor" stroke-width="1.5" marker-end="url(#ok2)"/>
+      <text x="520" y="48"  text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".62">tork A</text>
+      <text x="520" y="182" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".62">tork B</text>
+
+      <rect x="576" y="24" width="288" height="64" rx="7" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".72"/>
+      <text x="590" y="46" font-size="12.5" font-weight="600" fill="currentColor">Eşleştirme paneli</text>
+      <text x="590" y="65" font-size="11" fill="currentColor" opacity=".62">C4/C5/C7/C8/C9/C10 “geçti / kaldı”</text>
+      <text x="590" y="80" font-size="11" fill="currentColor" opacity=".62">kullanıcının gördüğü hüküm</text>
+
+      <rect x="576" y="158" width="288" height="64" rx="7" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".72"/>
+      <text x="590" y="180" font-size="12.5" font-weight="600" fill="currentColor">Tam Gaz simülasyonu</text>
+      <text x="590" y="199" font-size="11" fill="currentColor" opacity=".62">tavan hız · vites geçişleri · rapor</text>
+      <text x="590" y="214" font-size="11" fill="currentColor" opacity=".62">hesabın gerçekte kullandığı sayı</text>
+
+      <line x1="358" y1="92" x2="358" y2="154" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 4" opacity=".55"/>
+      <text x="368" y="127" font-size="11.5" font-weight="600" fill="currentColor" opacity=".8">aynı veri, farklı sayı</text>
+    </svg>
+    <figcaption>
+      Ayrışmanın mekanizması: veri tek, okuma iki. Panelin verdiği hüküm ile
+      simülasyonun kullandığı tork aynı tablodan farklı sayılarla türüyor.
+      <code>interpTWithDroop</code> ayrıca çözücünün droop mantığını
+      <b>sadeleştirilmiş biçimde tekrar ediyor</b> — yani üçüncü bir yazım.
+    </figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="eyebrow">3 — açık</div>
+  <h2>Geriye kalan iki iş</h2>
+  <div class="jobs">
+    <div class="job">
+      <div class="n">1</div>
+      <div>
+        <h3>RK45 iki kopya — PCHIP'ten daha kötü durumda</h3>
+        <p><code>numerics.js</code> tam donanımlı bir Dormand–Prince çözücüsü
+        (FSAL, dense output, stiffness algılama, olay yakalama);
+        <code>ft-performance.js</code> içindekiyse satır içi, Butcher tablosu elle
+        yazılmış, FSAL yok, dense output yok. Güvenlik çarpanları
+        (<span class="mono">0,2/5,0</span> ↔ <span class="mono">0,3/2,5</span>) ve
+        <span class="mono">dt_min</span> de farklı — aynı toleransta
+        <b>farklı adım dizisi</b> üretiyorlar. Aralarında hiçbir kapı yok.</p>
+        <span class="where">js/numerics.js · veRK45Solve   ↔   js/ft-performance.js · satır içi</span>
+      </div>
+    </div>
+    <div class="job">
+      <div class="n">2</div>
+      <div>
+        <h3>Takoz kütüphane kartı çözücüden başka eğri çiziyor</h3>
+        <p>Kartın “Kuvvet–Sehim Eğrileri” grafiği <b>kopya A</b> ile çiziliyor;
+        çözücü ve <code>fdefl</code> sinyal kanalı <b>kopya C</b> ile.
+        <code>mount-signals.js</code>'in kendi yorumu bunu yasaklıyor:
+        <i>“panoda görünen eğri ile çözümün kullandığı yasa AYNI olsun.”</i>
+        Bugün tablo içi A ≡ C olduğu için görünmüyor. Üstelik bu dal
+        <b>hiç test edilmiyor</b>: <code>cp-mount.test.js</code>
+        <code>numerics.js</code>'i yüklemediği için PCHIP dalı her testte atlanıyor
+        ve grafik lineer yedekle çiziliyor.</p>
+        <span class="where">js/cp-mount.js · _mntLibForceChart   ↔   js/mount-core.js · makeAxisLaw</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Bulgular üç paralel tarama ajanının raporundan; sayılar bu sayfada MFSim'in
+  kendi <span class="mono">pchipCreate</span> / <span class="mono">pchipEval</span>
+  koduyla hesaplanıyor.
+</footer>
+</div>
+
+<script>
+/* ===== js/ft-performance.js'ten BİREBİR alınan (düzeltilmiş) PCHIP çekirdeği ===== */
+function _pchipEndSlope(h1, h2, del1, del2) {
+    var d = ((2 * h1 + h2) * del1 - h1 * del2) / (h1 + h2);
+    if(d * del1 <= 0) d = 0;
+    else if(del1 * del2 < 0 && Math.abs(d) > 3 * Math.abs(del1)) d = 3 * del1;
+    return d;
+  }
+
+function pchipCreate(xs, ys, label) {
+    var n = xs.length;
+    var who = label ? (label + ' — ') : 'PCHIP: ';
+    if(n < 2) throw new Error(who + 'en az 2 veri noktası gerekli');
+    // xs KESİN ARTAN, tüm değerler SONLU olmalı.
+    //
+    // Neden burada patlıyoruz (sessiz NaN yerine): yinelenen bir x — örneğin motor
+    // tork tablosuna iki kez girilmiş aynı devir — hs[i]=0 yapar, deltas'ta 0/0
+    // oluşur ve ds[] üzerinden spline'ın TAMAMI NaN'a düşer (yalnız o satır değil).
+    // O NaN çözücüde SESSİZCE yayılır: NaN karşılaştırmaları hep false döndüğü
+    // için ne düşük-dal taramasının break'leri (satır ~995) ne de ana döngünün
+    // maks-hız erken çıkışı (satır ~1650) tetiklenebilir. Sonuç: koşum 300 s
+    // güvenlik limitine kadar, her fizik çağrısında tam tarama yaparak sürer.
+    // Ölçüm (RK4, dt=0.01, iki transfer kademesi): temiz veri 0.4 s → yinelenen
+    // devirli veri 248 s. Kullanıcı bunu "program takıldı" olarak görüyor, çünkü
+    // hesap tek senkron blokta ve ilerleme çubuğu boyanamıyor.
+    for(var _v = 0; _v < n; _v++) {
+      if(!isFinite(xs[_v]) || !isFinite(ys[_v])) {
+        throw new Error(who + 'sayısal olmayan veri noktası (satır ' + (_v + 1) +
+                        ': x=' + xs[_v] + ', y=' + ys[_v] + ')');
+      }
+      if(_v > 0 && xs[_v] <= xs[_v - 1]) {
+        throw new Error(who + 'x değerleri kesin artan olmalı — yinelenen/azalan değer: ' +
+                        xs[_v] + ' (satır ' + (_v + 1) + ')');
+      }
+    }
+    if(n === 2) {
+      var slope = (ys[1] - ys[0]) / (xs[1] - xs[0]);
+      return { xs: xs, ys: ys, ds: [slope, slope] };
+    }
+    var deltas = [], hs = [];
+    for(var i = 0; i < n - 1; i++) {
+      hs.push(xs[i + 1] - xs[i]);
+      deltas.push((ys[i + 1] - ys[i]) / hs[i]);
+    }
+    var ds = new Array(n);
+    ds[0] = deltas[0];
+    ds[n - 1] = deltas[n - 2];
+    for(var i = 1; i < n - 1; i++) {
+      if(deltas[i - 1] * deltas[i] <= 0) {
+        ds[i] = 0;
+      } else {
+        var w1 = 2 * hs[i] + hs[i - 1];
+        var w2 = hs[i] + 2 * hs[i - 1];
+        ds[i] = (w1 + w2) / (w1 / deltas[i - 1] + w2 / deltas[i]);
+      }
+    }
+    if(n >= 3) {
+      ds[0] = _pchipEndSlope(hs[0], hs[1], deltas[0], deltas[1]);
+      ds[n - 1] = _pchipEndSlope(hs[n - 2], hs[n - 3], deltas[n - 2], deltas[n - 3]);
+    }
+    return { xs: xs, ys: ys, ds: ds };
+  }
+
+function pchipEval(spline, x) {
+    var xs = spline.xs, ys = spline.ys, ds = spline.ds;
+    var n = xs.length;
+    if(x <= xs[0]) return ys[0];
+    if(x >= xs[n - 1]) return ys[n - 1];
+    var lo = 0, hi = n - 1;
+    while(hi - lo > 1) {
+      var mid = (lo + hi) >> 1;
+      if(xs[mid] > x) hi = mid; else lo = mid;
+    }
+    var h = xs[hi] - xs[lo];
+    var t = (x - xs[lo]) / h;
+    var t2 = t * t, t3 = t2 * t;
+    return (2*t3 - 3*t2 + 1) * ys[lo] + (t3 - 2*t2 + t) * h * ds[lo]
+         + (-2*t3 + 3*t2) * ys[hi] + (t3 - t2) * h * ds[hi];
+  }
+</script>
+
+<script>
+(function(){
+"use strict";
+
+// Gerçekçi dizel tork eğrisi: düşük devirde düz plato (ilk aralık düz).
+var XS = [800, 1200, 1600, 2000, 2400];
+var YS = [1000, 1000, 1100, 1025,  950];
+
+var sp = pchipCreate(XS.slice(), YS.slice(), 'harita');
+
+// "Önceki" eğri: uç eğim ESKİ kuralla (kesin '<') — yalnız ds[0] değişiyor.
+function eskiEndSlope(h1, h2, d1, d2){
+  var d = ((2*h1 + h2)*d1 - h1*d2) / (h1 + h2);
+  if(d * d1 < 0) d = 0;
+  else if(d1*d2 < 0 && Math.abs(d) > 3*Math.abs(d1)) d = 3*d1;
+  return d;
+}
+var h0 = XS[1]-XS[0], h1 = XS[2]-XS[1];
+var del0 = (YS[1]-YS[0])/h0, del1 = (YS[2]-YS[1])/h1;
+var spEski = pchipCreate(XS.slice(), YS.slice(), 'harita');
+spEski.ds[0] = eskiEndSlope(h0, h1, del0, del1);
+
+var SERI = [
+  { ad: 'd · δ₁ ≤ 0  (referans, bugün)', renk: '--s1', sp: sp,     dash: null  },
+  { ad: 'd · δ₁ < 0  (eski, hatalı)',    renk: '--s2', sp: spEski, dash: '5 4' }
+];
+
+// ── çizim ──────────────────────────────────────────────────────────────────
+var NS = 'http://www.w3.org/2000/svg';
+function el(t, a){ var e = document.createElementNS(NS, t);
+  for(var k in a) if(a[k] != null) e.setAttribute(k, a[k]); return e; }
+function fmt(v){ return v.toLocaleString('tr-TR', {maximumFractionDigits:0}); }
+
+// Ölçek İDDİAYA göre: konu düz plato, o yüzden pencere platoyu kapsıyor.
+// Tam eğriyi (800-2400, 950-1100 N·m) çizmek sarkmayı görünmez yapardı.
+var W = 780, H = 300, P = {l:62, r:24, t:16, b:44};
+var iw = W - P.l - P.r, ih = H - P.t - P.b;
+var x0 = 790, x1 = 1260, y0 = 988, y1 = 1006;
+var X = function(v){ return P.l + (v - x0)/(x1 - x0)*iw; };
+var Y = function(v){ return P.t + ih - (v - y0)/(y1 - y0)*ih; };
+
+var svg = el('svg', {viewBox:'0 0 ' + W + ' ' + H, role:'img',
+  'aria-label':'Düz tork platosunda eski kesin kelepçe eğriyi platonun altına sarkıtıyor, düzeltilmiş kelepçe platoda düz tutuyor.'});
+
+// plato vurgusu
+svg.appendChild(el('rect', {x:X(800), y:P.t, width:X(1200)-X(800), height:ih,
+  fill:'currentColor', opacity:'.045'}));
+var pl = el('text', {x:(X(800)+X(1200))/2, y:P.t+14, 'text-anchor':'middle',
+  'font-size':'11', fill:'currentColor', opacity:'.6'});
+pl.textContent = 'düz plato'; svg.appendChild(pl);
+
+// ızgara
+[990, 995, 1000, 1005].forEach(function(t){
+  svg.appendChild(el('line', {x1:P.l, x2:P.l+iw, y1:Y(t), y2:Y(t),
+    stroke:'currentColor', 'stroke-width':1, opacity:'.14'}));
+  var lb = el('text', {x:P.l-9, y:Y(t)+4, 'text-anchor':'end', 'font-size':'11',
+    fill:'currentColor', opacity:'.6', 'font-family':'IBM Plex Mono, monospace'});
+  lb.textContent = fmt(t); svg.appendChild(lb);
+});
+[800, 900, 1000, 1100, 1200].forEach(function(t){
+  var lb = el('text', {x:X(t), y:P.t+ih+20, 'text-anchor':'middle', 'font-size':'11',
+    fill:'currentColor', opacity:'.6', 'font-family':'IBM Plex Mono, monospace'});
+  lb.textContent = fmt(t); svg.appendChild(lb);
+});
+var ax = el('text', {x:P.l+iw/2, y:H-6, 'text-anchor':'middle', 'font-size':'11.5',
+  fill:'currentColor', opacity:'.6'});
+ax.textContent = 'Motor devri [d/dk]'; svg.appendChild(ax);
+var ay = el('text', {x:14, y:P.t+ih/2, 'text-anchor':'middle', 'font-size':'11.5',
+  fill:'currentColor', opacity:'.6', transform:'rotate(-90 14 ' + (P.t+ih/2) + ')'});
+ay.textContent = 'Tork [N·m]'; svg.appendChild(ay);
+
+// eğriler + doğrudan etiket
+SERI.forEach(function(s, i){
+  var d = '', st = (x1-x0)/240;
+  for(var x = x0; x <= x1+1e-9; x += st){
+    var y = pchipEval(s.sp, x);
+    d += (d ? 'L' : 'M') + X(x).toFixed(2) + ' ' + Y(y).toFixed(2);
+  }
+  svg.appendChild(el('path', {d:d, fill:'none', stroke:'var(' + s.renk + ')',
+    'stroke-width':2.5, 'stroke-linecap':'round', 'stroke-dasharray':s.dash}));
+  // Etiket, iki eğrinin EN ÇOK ayrıştığı yere konuyor — sağ uçta ikisi de
+  // platoya döndüğü için orada üst üste binerlerdi. Metin ink renginde;
+  // kimliği yanındaki renkli çizgi taşıyor.
+  var lx = 1010;
+  var yv = Y(pchipEval(s.sp, lx));
+  svg.appendChild(el('line', {x1:X(lx)+8, x2:X(lx)+22, y1:yv, y2:yv,
+    stroke:'var(' + s.renk + ')', 'stroke-width':2.5, 'stroke-linecap':'round',
+    'stroke-dasharray':s.dash}));
+  var tx = el('text', {x:X(lx)+28, y:yv + (i ? 11 : -5), 'font-size':'11.5',
+    fill:'currentColor'});
+  tx.textContent = i ? 'eski  d · δ₁ < 0' : 'bugün  d · δ₁ ≤ 0';
+  svg.appendChild(tx);
+});
+
+// tablo noktaları
+XS.forEach(function(x, i){
+  if(x > x1) return;
+  svg.appendChild(el('circle', {cx:X(x), cy:Y(YS[i]), r:4.6, fill:'var(--panel)',
+    stroke:'var(--panel)', 'stroke-width':2}));
+  svg.appendChild(el('circle', {cx:X(x), cy:Y(YS[i]), r:3.1, fill:'currentColor'}));
+});
+
+// en büyük sapmayı işaretle
+var enX = 0, enD = 0;
+for(var x = XS[0]; x <= XS[1]; x += 5){
+  var dd = pchipEval(sp, x) - pchipEval(spEski, x);
+  if(dd > enD){ enD = dd; enX = x; }
+}
+svg.appendChild(el('line', {x1:X(enX), x2:X(enX), y1:Y(pchipEval(sp, enX)),
+  y2:Y(pchipEval(spEski, enX)), stroke:'currentColor', 'stroke-width':1.5,
+  'stroke-dasharray':'3 3', opacity:'.75'}));
+var an = el('text', {x:X(enX)-10, 'text-anchor':'end', y:(Y(pchipEval(sp, enX)) + Y(pchipEval(spEski, enX)))/2 + 4,
+  'font-size':'11.5', 'font-weight':'600', fill:'currentColor',
+  'font-family':'IBM Plex Mono, monospace'});
+an.textContent = '−' + enD.toFixed(1) + ' N·m';
+svg.appendChild(an);
+
+document.getElementById('chart').appendChild(svg);
+})();
+</script>
+
+</body></html>

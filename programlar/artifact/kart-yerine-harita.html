@@ -1,0 +1,905 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>Kart Yerine Harita</title>
+<style>
+/* ── MFSim'in KENDİ jetonları (css/styles.css "pearl" + "slate") ───────────
+   Bu belge MFSim'in içinden bir öneri; palet de tipografi de uygulamanın
+   kendisinden geliyor. Maketlerdeki her renk kanvasta görülecek renktir. */
+:root{
+  --ground:#fafbfc; --surface:#ffffff; --panel:#f0f1f3;
+  --border:#e0e2e6; --border-hover:#c0c4cc; --line:#e8eaed;
+  --ink:#1b1e24; --ink-2:#4e535e; --ink-3:#646d7d; --ink-head:#0c0e12;
+  --accent:#2d6fe6; --accent-ink:#1b63e4;
+  --ok:#1a9a50; --ok-ink:#157b40;
+  --warn:#d49318; --warn-ink:#8e6310;
+  --bad:#d43d3d; --bad-ink:#cb2d2d;
+  --grid:rgba(27,30,36,.055);
+  --shadow:0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.05);
+  /* def.svg sembolleri bu adları kullanıyor — birebir uygulamadaki gibi */
+  --accent-primary:#2d6fe6; --accent-success:#1a9a50; --accent-warning:#d49318;
+  --accent-danger:#d43d3d; --text-secondary:#4e535e; --text-muted:#646d7d;
+  /* mini harita jetonları */
+  --mini-node-bg:#ffffff; --mini-node-bd:#c0c4cc; --mini-conn:#5a6070; --mini-label:#4e535e;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0a0c10; --surface:#0f1218; --panel:#151a22;
+    --border:#1c2333; --border-hover:#2d3a4f; --line:#222b3a;
+    --ink:#c8d1dc; --ink-2:#98a0b0; --ink-3:#75849d; --ink-head:#e2e8f0;
+    --accent:#2563eb; --accent-ink:#4e80ef;
+    --ok:#16a34a; --ok-ink:#22b357;
+    --warn:#d97706; --warn-ink:#e0910f;
+    --bad:#dc2626; --bad-ink:#e35454;
+    --grid:rgba(200,209,220,.05);
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 28px rgba(0,0,0,.45);
+    --accent-primary:#2563eb; --accent-success:#16a34a; --accent-warning:#d97706;
+    --accent-danger:#dc2626; --text-secondary:#98a0b0; --text-muted:#75849d;
+    --mini-node-bg:#0f1218; --mini-node-bd:#2d3a4f; --mini-conn:#8d96a6; --mini-label:#98a0b0;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0a0c10; --surface:#0f1218; --panel:#151a22;
+  --border:#1c2333; --border-hover:#2d3a4f; --line:#222b3a;
+  --ink:#c8d1dc; --ink-2:#98a0b0; --ink-3:#75849d; --ink-head:#e2e8f0;
+  --accent:#2563eb; --accent-ink:#4e80ef;
+  --ok:#16a34a; --ok-ink:#22b357;
+  --warn:#d97706; --warn-ink:#e0910f;
+  --bad:#dc2626; --bad-ink:#e35454;
+  --grid:rgba(200,209,220,.05);
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 28px rgba(0,0,0,.45);
+  --accent-primary:#2563eb; --accent-success:#16a34a; --accent-warning:#d97706;
+  --accent-danger:#dc2626; --text-secondary:#98a0b0; --text-muted:#75849d;
+  --mini-node-bg:#0f1218; --mini-node-bd:#2d3a4f; --mini-conn:#8d96a6; --mini-label:#98a0b0;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:Inter,"Segoe UI",system-ui,-apple-system,"Helvetica Neue",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px; margin:0 auto; padding:0 28px 96px}
+.col{max-width:68ch}
+
+/* ── Tipografi ─────────────────────────────────────────────────────────── */
+h1{font-size:38px; line-height:1.12; letter-spacing:-.022em; font-weight:700;
+   color:var(--ink-head); margin:0 0 14px; text-wrap:balance; max-width:20ch}
+h2{font-size:23px; line-height:1.22; letter-spacing:-.012em; font-weight:700;
+   color:var(--ink-head); margin:0 0 10px; text-wrap:balance}
+h3{font-size:16px; line-height:1.3; font-weight:700; color:var(--ink-head); margin:0 0 6px}
+p{margin:0 0 14px}
+a{color:var(--accent-ink)}
+strong{font-weight:650; color:var(--ink-head)}
+.lede{font-size:18.5px; line-height:1.58; color:var(--ink-2); max-width:64ch}
+.mono,code,.eyebrow,.mark,.tag,.k{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  font-variant-numeric:tabular-nums;
+}
+code{font-size:.86em; background:var(--panel); border:1px solid var(--border);
+     padding:1px 5px; border-radius:3px; color:var(--ink)}
+.eyebrow{font-size:11.5px; letter-spacing:.14em; text-transform:uppercase;
+         color:var(--ink-3); font-weight:600}
+.small{font-size:13.5px; line-height:1.55; color:var(--ink-3)}
+
+/* ── Sayfa iskeleti ───────────────────────────────────────────────────── */
+header.top{padding:64px 0 34px; border-bottom:1px solid var(--border)}
+section{padding:46px 0; border-bottom:1px solid var(--border)}
+section:last-of-type{border-bottom:0}
+.shead{display:flex; align-items:baseline; gap:14px; margin-bottom:20px; flex-wrap:wrap}
+.shead .eyebrow{flex:0 0 auto}
+
+.facts{display:flex; flex-wrap:wrap; gap:0; margin-top:26px;
+       border:1px solid var(--border); background:var(--surface)}
+.fact{flex:1 1 190px; padding:13px 16px; border-right:1px solid var(--border)}
+.fact:last-child{border-right:0}
+.fact .k{display:block; font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+         color:var(--ink-3); margin-bottom:3px}
+.fact .v{font-size:15px; font-weight:650; color:var(--ink-head)}
+
+/* ── Maket tezgâhı: MFSim kanvası (20 px ızgara) ───────────────────────── */
+.bench{
+  margin:20px 0 8px; padding:34px 30px; overflow-x:auto;
+  border:1px solid var(--border); background-color:var(--ground);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),
+                   linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:20px 20px; background-position:center center;
+}
+.bench.tall{padding:40px 30px}
+.row{display:flex; align-items:flex-start; gap:36px}
+.row.mid{align-items:center}
+.cap{font-size:12.5px; color:var(--ink-3); margin:0 0 22px}
+.cap .mono{color:var(--ink-2)}
+
+/* ── MFSim düğüm/kart dili (css/styles.css .ve-node--module) ───────────── */
+.node{position:relative; display:flex; background:var(--surface);
+      border:1px dashed var(--border-hover); padding:3px; flex:0 0 auto}
+.node.hi{border-color:var(--accent)}
+.card{flex:1; min-width:0; display:flex; background:var(--panel);
+      border:1px solid var(--border); overflow:hidden}
+.rail{flex:0 0 4px; align-self:stretch; background:var(--accent)}
+.rail.off{background:var(--ink-3)}
+.stack{flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden}
+.ico{flex:0 0 auto; display:flex; align-items:center; justify-content:center; margin:0 8px 0 7px}
+.ico svg{display:block}
+.txt{flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; overflow:hidden}
+.nm{font-size:12px; font-weight:600; color:var(--ink-head); line-height:1.15;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.meta{display:flex; align-items:center; gap:5px; font-size:10px; color:var(--ink-3);
+      line-height:1.1; white-space:nowrap}
+.dot{width:5px; height:5px; border-radius:50%; background:var(--ok); flex:0 0 5px}
+.dot.empty{background:transparent; border:1px solid var(--ink-3)}
+.ent{flex:0 0 auto; margin-left:6px; margin-right:8px; font-size:12px; color:var(--ink-3); line-height:1}
+/* Mevcut-durum maketi: uygulamada ad Inter ile 214 px'e sığıyor (ölçülmüş).
+   Burada Inter yüklenemediği için yedek yazı tipi daha geniş; kart aynı 214 px
+   kalsın diye ad bir tık sıkıştırıldı — kesilmiş görünüp yanlış izlenim
+   bırakmasın. */
+.baseline .nm{font-size:11.2px; letter-spacing:-.008em}
+.baseline .ico svg{width:28px; height:28px}
+.baseline .ico{margin:0 7px 0 6px}
+.baseline .ent{margin-left:5px; margin-right:7px}
+
+/* kart başlığı (harita kartında) */
+.hd{display:flex; align-items:center; gap:0; padding:5px 0 5px 0; height:28px;
+    border-bottom:1px solid var(--border); background:var(--panel); flex:0 0 auto}
+.hd .ico{margin:0 6px 0 6px}
+.hd .nm{flex:1; min-width:0}
+.hd .cnt{font-size:10px; color:var(--ink-3); white-space:nowrap; margin-left:8px}
+
+/* harita alanı */
+/* Harita zemini = kanvas zemini, düğüm kutuları bir kademe açık: MFSim'de
+   ilişki tam olarak böyle (--bg-primary tuval, --bg-secondary düğüm). */
+.map{flex:1; min-width:0; background:var(--ground); position:relative; overflow:hidden}
+.map svg{display:block; width:100%; height:100%}
+.map.pad{padding:4px}
+
+/* çerçeve etiketleri (annotations.js .ve-annotation-frame .ve-annotation-label) */
+.notch{position:absolute; top:-8px; left:10px; background:var(--ground);
+       padding:0 6px; font-size:11.5px; font-weight:650; color:var(--ink-head);
+       line-height:1; white-space:nowrap; z-index:2}
+.notch .sub{font-weight:500; color:var(--ink-3)}
+.chip{position:absolute; left:50%; transform:translateX(-50%); bottom:-11px;
+      background:var(--surface); border:1px solid var(--border); border-radius:11px;
+      padding:2px 9px; font-size:10.5px; font-weight:600; color:var(--ink-2);
+      line-height:1.3; white-space:nowrap; z-index:2; box-shadow:var(--shadow)}
+.vrail{position:absolute; left:-1px; top:-1px; bottom:-1px; width:19px;
+       background:var(--panel); border:1px solid var(--border); border-right:0;
+       display:flex; align-items:center; justify-content:center; z-index:2}
+.vrail span{font-size:10.5px; font-weight:650; color:var(--ink-2);
+            writing-mode:vertical-rl; transform:rotate(180deg); white-space:nowrap;
+            letter-spacing:.02em}
+
+/* ölçek kutusu (D seçeneği 1:1 çizimi için) */
+.scaled{transform-origin:top left}
+
+/* ── Metin bileşenleri ────────────────────────────────────────────────── */
+.opt{padding:38px 0 0}
+.opt:first-of-type{padding-top:0}
+.opt-head{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:6px}
+.badge{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px;
+       font-weight:700; letter-spacing:.06em; color:var(--surface); background:var(--ink-head);
+       padding:2px 8px; border-radius:2px; flex:0 0 auto}
+.badge.rec{background:var(--accent); color:#fff}
+.thesis{font-size:16.5px; color:var(--ink-2); max-width:66ch; margin:0 0 4px}
+
+.cols{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:0;
+      border:1px solid var(--border); background:var(--surface); margin-top:18px}
+.cols > div{padding:14px 17px; border-right:1px solid var(--border)}
+.cols > div:last-child{border-right:0}
+.cols h4{margin:0 0 8px; font-size:11px; letter-spacing:.11em; text-transform:uppercase;
+         font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:600}
+.cols .plus h4{color:var(--ok-ink)}
+.cols .minus h4{color:var(--bad-ink)}
+.cols .cost h4{color:var(--ink-3)}
+.cols ul{margin:0; padding-left:17px; font-size:14px; line-height:1.5; color:var(--ink-2)}
+.cols li{margin-bottom:5px}
+.cols li:last-child{margin-bottom:0}
+
+ul.body{margin:0 0 14px; padding-left:20px}
+ul.body li{margin-bottom:7px; color:var(--ink-2)}
+ul.body li strong{color:var(--ink-head)}
+
+table{border-collapse:collapse; width:100%; font-size:14px; background:var(--surface);
+      border:1px solid var(--border)}
+th,td{padding:9px 12px; text-align:left; border-bottom:1px solid var(--line);
+      vertical-align:top}
+th{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px;
+   letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3); font-weight:600;
+   background:var(--panel); border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:0}
+td.num{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-variant-numeric:tabular-nums;
+       white-space:nowrap}
+.tbl-scroll{overflow-x:auto; margin:18px 0 8px}
+.mark{font-size:11px; font-weight:700; padding:1px 6px; border-radius:2px; white-space:nowrap}
+.mark.y{background:color-mix(in srgb,var(--ok) 15%,transparent); color:var(--ok-ink)}
+.mark.n{background:color-mix(in srgb,var(--bad) 14%,transparent); color:var(--bad-ink)}
+.mark.m{background:color-mix(in srgb,var(--warn) 18%,transparent); color:var(--warn-ink)}
+
+.note{border-left:3px solid var(--accent); background:var(--surface);
+      border-top:1px solid var(--border); border-right:1px solid var(--border);
+      border-bottom:1px solid var(--border);
+      padding:15px 18px; margin:20px 0; font-size:14.5px; color:var(--ink-2)}
+.note.warn{border-left-color:var(--warn)}
+.note h4{margin:0 0 6px; font-size:14.5px; color:var(--ink-head); font-weight:700}
+.note p:last-child{margin-bottom:0}
+
+.q{border:1px solid var(--border); background:var(--surface); padding:0; margin-top:18px}
+.q > div{padding:15px 18px; border-bottom:1px solid var(--line); display:flex; gap:14px}
+.q > div:last-child{border-bottom:0}
+.q .qn{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px;
+       font-weight:700; color:var(--accent-ink); flex:0 0 auto; padding-top:2px}
+.q .qb strong{display:block; margin-bottom:2px}
+.q .qb{font-size:14.5px; color:var(--ink-2)}
+
+.file{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px;
+      color:var(--ink-2)}
+footer{padding:38px 0 0; color:var(--ink-3); font-size:13px}
+@media (max-width:720px){
+  .wrap{padding:0 18px 64px}
+  h1{font-size:30px} .lede{font-size:17px}
+  .row{gap:22px}
+}
+</style>
+
+<!-- Mini haritalar: gerçek proje dosyalarından üretildi (bkz. sayfa sonu) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+<symbol id="map-ap" viewBox="2531.5 2733.5 937 532" preserveAspectRatio="xMidYMid meet"><g fill="none" stroke="var(--mini-conn)" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"><path d="M 2623.5 2987.5 C 2663.5 2987.5, 2672.5 2979.5, 2712.5 2979.5"/><path d="M 2623.5 2987.5 C 2663.5 2987.5, 2662.5 3149.5, 2702.5 3149.5"/><path d="M 2777.5 2979.5 C 2817.5 2979.5, 2807.5 2979.5, 2847.5 2979.5"/><path d="M 2912.5 2979.5 C 2952.5 2979.5, 2937.5 2979.5, 2977.5 2979.5"/><path d="M 3042.5 2979.5 C 3082.5 2979.5, 3072.5 2979.5, 3112.5 2979.5"/><path d="M 3177.5 2969.5 C 3217.5 2969.5, 3202.5 2899.5, 3242.5 2899.5"/><path d="M 3177.5 2989.5 C 3217.5 2989.5, 3202.5 3089.5, 3242.5 3089.5"/><path d="M 3307.5 2889.5 C 3347.5 2889.5, 3337.5 2829.5, 3377.5 2829.5"/><path d="M 3307.5 2909.5 C 3347.5 2909.5, 3337.5 2949.5, 3377.5 2949.5"/><path d="M 3307.5 3079.5 C 3347.5 3079.5, 3337.5 3089.5, 3377.5 3089.5"/><path d="M 3307.5 3099.5 C 3347.5 3099.5, 3337.5 3209.5, 3377.5 3209.5"/></g><g><rect x="2677.5" y="2759.5" width="90" height="55" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="2704.35" y="2768.85" width="36.300000000000004" height="36.300000000000004" viewBox="0 0 100 100" overflow="visible"><rect x="15" y="15" width="70" height="70" rx="10" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><polygon points="40,30 40,70 70,50" fill="var(--accent-primary, #3b82f6)"/></svg></g><g><rect x="2907.5" y="2759.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="2920.2" y="2769.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="4"/><path d="M35 30 L35 70" stroke="var(--text-secondary, #666)" stroke-width="4" stroke-linecap="round"/><circle cx="35" cy="35" r="6" fill="var(--accent-warning, #ff9800)"/><path d="M65 30 L65 70" stroke="var(--text-secondary, #666)" stroke-width="4" stroke-linecap="round"/><circle cx="65" cy="55" r="6" fill="var(--accent-warning, #ff9800)"/><path d="M35 35 L50 45 L65 55" stroke="var(--accent-warning, #ff9800)" stroke-width="2.5" fill="none" stroke-dasharray="4,3"/></svg></g><g><rect x="3037.5" y="2759.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="3050.2" y="2769.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><rect x="10" y="30" width="80" height="35" fill="var(--text-secondary, #666)" rx="4"/><rect x="15" y="20" width="50" height="15" fill="var(--text-muted, #888)" rx="3"/><circle cx="25" cy="70" r="10" fill="var(--text-muted, #888)"/><circle cx="75" cy="70" r="10" fill="var(--text-muted, #888)"/></svg></g><g><rect x="2557.5" y="2949.5" width="66" height="76" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="2568.72" y="2965.72" width="43.56" height="43.56" viewBox="0 0 100 100" overflow="visible"><rect x="20" y="25" width="60" height="50" fill="var(--text-secondary, #666)" rx="4"/><rect x="30" y="15" width="15" height="15" fill="var(--text-muted, #888)" rx="2"/><rect x="55" y="15" width="15" height="15" fill="var(--text-muted, #888)" rx="2"/><rect x="10" y="40" width="15" height="20" fill="var(--text-muted, #888)" rx="2"/><rect x="75" y="40" width="15" height="20" fill="var(--text-muted, #888)" rx="2"/><rect x="35" y="75" width="30" height="10" fill="var(--text-muted, #888)" rx="2"/></svg></g><g><rect x="2712.5" y="2949.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="2725.2" y="2959.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><circle cx="50" cy="50" r="35" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="50" cy="50" r="25" fill="var(--text-muted, #888)" opacity="0.5"/><circle cx="50" cy="50" r="12" fill="var(--text-secondary, #666)"/><path d="M35 35 Q50 20 65 35" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" fill="none"/><path d="M65 65 Q50 80 35 65" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" fill="none"/><rect x="10" y="46" width="15" height="8" fill="var(--text-muted, #888)"/><rect x="75" y="46" width="15" height="8" fill="var(--text-muted, #888)"/></svg></g><g><rect x="2847.5" y="2949.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="2860.2" y="2959.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><defs><pattern id="stripes-gearbox" patternUnits="userSpaceOnUse" width="8" height="8"><path d="M-2,2 l4,-4 M0,8 l8,-8 M6,10 l4,-4" stroke="var(--text-muted, #888)" stroke-width="2.5" fill="none"/></pattern></defs><rect x="38" y="5" width="24" height="90" fill="url(#stripes-gearbox)" stroke="var(--text-secondary, #666)" stroke-width="2"/><rect x="8" y="18" width="25" height="8" fill="var(--text-secondary, #666)" rx="1"/><rect x="67" y="18" width="25" height="8" fill="var(--text-secondary, #666)" rx="1"/><rect x="28" y="14" width="12" height="6" fill="var(--text-secondary, #666)" rx="1"/><rect x="60" y="14" width="12" height="6" fill="var(--text-secondary, #666)" rx="1"/><rect x="8" y="70" width="25" height="8" fill="var(--text-secondary, #666)" rx="1"/><rect x="67" y="70" width="25" height="8" fill="var(--text-secondary, #666)" rx="1"/><rect x="28" y="66" width="12" height="6" fill="var(--text-secondary, #666)" rx="1"/><rect x="60" y="66" width="12" height="6" fill="var(--text-secondary, #666)" rx="1"/></svg></g><g><rect x="2977.5" y="2949.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="2990.2" y="2959.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><line x1="10" y1="50" x2="90" y2="50" stroke="var(--text-secondary, #666)" stroke-width="10" stroke-linecap="round"/><circle cx="20" cy="50" r="10" fill="none" stroke="var(--text-muted, #888)" stroke-width="3"/><circle cx="50" cy="50" r="5" fill="var(--text-muted, #888)"/><circle cx="80" cy="50" r="10" fill="none" stroke="var(--text-muted, #888)" stroke-width="3"/><line x1="15" y1="40" x2="25" y2="60" stroke="var(--text-muted, #888)" stroke-width="2"/><line x1="75" y1="40" x2="85" y2="60" stroke="var(--text-muted, #888)" stroke-width="2"/></svg></g><g><rect x="3112.5" y="2949.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="3125.2" y="2959.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><rect x="25" y="20" width="50" height="60" fill="var(--text-secondary, #666)" rx="4"/><rect x="10" y="35" width="20" height="8" fill="var(--text-muted, #888)"/><rect x="70" y="30" width="20" height="8" fill="var(--text-muted, #888)"/><rect x="70" y="62" width="20" height="8" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="12" fill="var(--text-muted, #888)"/></svg></g><g><rect x="3242.5" y="2869.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="3255.2" y="2879.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><circle cx="50" cy="50" r="30" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="50" cy="50" r="15" fill="var(--text-muted, #888)"/><rect x="10" y="46" width="15" height="8" fill="var(--text-muted, #888)"/><rect x="75" y="30" width="15" height="8" fill="var(--text-muted, #888)"/><rect x="75" y="62" width="15" height="8" fill="var(--text-muted, #888)"/></svg></g><g><rect x="3242.5" y="3059.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="3255.2" y="3069.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><circle cx="50" cy="50" r="30" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="50" cy="50" r="15" fill="var(--text-muted, #888)"/><rect x="10" y="46" width="15" height="8" fill="var(--text-muted, #888)"/><rect x="75" y="30" width="15" height="8" fill="var(--text-muted, #888)"/><rect x="75" y="62" width="15" height="8" fill="var(--text-muted, #888)"/></svg></g><g><rect x="3377.5" y="2799.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="3390.2" y="2809.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><circle cx="50" cy="50" r="38" fill="var(--text-secondary, #666)"/><circle cx="50" cy="50" r="28" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="10" fill="var(--text-secondary, #666)"/><rect x="5" y="46" width="15" height="8" fill="var(--text-muted, #888)"/></svg></g><g><rect x="3377.5" y="2919.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="3390.2" y="2929.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><circle cx="50" cy="50" r="38" fill="var(--text-secondary, #666)"/><circle cx="50" cy="50" r="28" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="10" fill="var(--text-secondary, #666)"/><rect x="5" y="46" width="15" height="8" fill="var(--text-muted, #888)"/></svg></g><g><rect x="3377.5" y="3059.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="3390.2" y="3069.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><circle cx="50" cy="50" r="38" fill="var(--text-secondary, #666)"/><circle cx="50" cy="50" r="28" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="10" fill="var(--text-secondary, #666)"/><rect x="5" y="46" width="15" height="8" fill="var(--text-muted, #888)"/></svg></g><g><rect x="3377.5" y="3179.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="3390.2" y="3189.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><circle cx="50" cy="50" r="38" fill="var(--text-secondary, #666)"/><circle cx="50" cy="50" r="28" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="10" fill="var(--text-secondary, #666)"/><rect x="5" y="46" width="15" height="8" fill="var(--text-muted, #888)"/></svg></g><g><rect x="2702.5" y="3119.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="2715.2" y="3129.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4"/><circle cx="30" cy="42" r="14" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="30" cy="42" r="6" fill="var(--text-secondary, #666)"/><path d="M48 42 L56 42" stroke="var(--accent-warning, #f59e0b)" stroke-width="3" stroke-linecap="round"/><path d="M52 38 L56 42 L52 46" stroke="var(--accent-warning, #f59e0b)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="58" y="30" width="28" height="24" rx="4" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><path d="M63 38 L68 38 M63 44 L75 44 M63 50 L71 50" stroke="var(--accent-primary, #3b82f6)" stroke-width="2" stroke-linecap="round"/><path d="M20 70 L40 70 L55 62 L70 70 L85 70" stroke="var(--accent-success, #22c55e)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></g><g><rect x="2927.5" y="3139.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="2940.2" y="3149.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><path d="M5 75 L30 75 L40 40 L60 40 L70 75 L95 75" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><line x1="5" y1="80" x2="95" y2="80" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="20" cy="75" r="6" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3"/><circle cx="80" cy="75" r="6" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3"/><path d="M42 38 L50 25 L58 38" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></g></symbol>
+<symbol id="map-mnt" viewBox="510.99737039819684 186 897.2148807437798 526.3170548459807" preserveAspectRatio="xMidYMid meet"><g fill="none" stroke="var(--mini-conn)" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"><path d="M 786.2986476333584 516.4290007513148 C 826.2986476333584 516.4290007513148, 740.5 478, 700.5 478"/><path d="M 586.9973703981968 386.45003756574 C 626.9973703981968 386.45003756574, 618.5 427.3333333333333, 658.5 427.3333333333333"/><path d="M 586.9973703981968 481.190833959429 C 626.9973703981968 481.190833959429, 618.5 452.66666666666663, 658.5 452.66666666666663"/><path d="M 718.5 258 C 758.5 258, 817.2139994991235 326.015777610819, 777.2139994991235 326.015777610819"/><path d="M 877.7749812171301 258 C 917.7749812171301 258, 833.8806661657902 326.015777610819, 793.8806661657902 326.015777610819"/><path d="M 722.04996243426 639.5657400450791 C 762.04996243426 639.5657400450791, 817.965314300025 562.4290007513148, 777.965314300025 562.4290007513148"/><path d="M 877.7749812171301 640.3170548459807 C 917.7749812171301 640.3170548459807, 834.6319809666918 562.4290007513148, 794.6319809666918 562.4290007513148"/><path d="M 785.5473328324568 372.015777610819 C 825.5473328324568 372.015777610819, 889.3433508640121 409.51314800901577, 849.3433508640121 409.51314800901577"/></g><g><rect x="1290.3591991237831" y="228.14893768522066" width="56" height="56" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="1299.879199123783" y="237.66893768522067" width="36.96" height="36.96" viewBox="0 0 100 100" overflow="visible"><path d="M28 14 h32 l14 14 v58 h-46 z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><path d="M60 14 v14 h14" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><line x1="36" y1="44" x2="66" y2="44" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="56" x2="66" y2="56" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="68" x2="54" y2="68" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg></g><g><rect x="658.5" y="402" width="84" height="76" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="675.42" y="414.92" width="50.160000000000004" height="50.160000000000004" viewBox="0 0 100 100" overflow="visible"><rect x="20" y="36" width="60" height="44" rx="4" fill="var(--accent-primary, #3b82f6)" opacity="0.85"/><rect x="30" y="22" width="14" height="16" fill="var(--accent-primary, #3b82f6)"/><rect x="52" y="22" width="14" height="16" fill="var(--accent-primary, #3b82f6)"/><circle cx="50" cy="58" r="5" fill="#fff"/></svg></g><g><rect x="816.8433508640121" y="409.51314800901577" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="829.5433508640122" y="419.71314800901575" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><rect x="26" y="24" width="48" height="56" rx="5" fill="var(--accent-primary, #3b82f6)" opacity="0.7"/><circle cx="50" cy="52" r="15" fill="none" stroke="#fff" stroke-width="4"/><circle cx="50" cy="52" r="4" fill="#fff"/></svg></g><g><rect x="942.8801652892561" y="410.00525920360633" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="955.5801652892561" y="420.2052592036063" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><rect x="10" y="44" width="80" height="12" rx="6" fill="var(--text-secondary, #888)"/><circle cx="24" cy="50" r="8" fill="none" stroke="var(--text-muted, #aaa)" stroke-width="3"/><circle cx="76" cy="50" r="8" fill="none" stroke="var(--text-muted, #aaa)" stroke-width="3"/><circle cx="50" cy="50" r="5" fill="#fff"/></svg></g><g><rect x="761.2986476333584" y="516.4290007513148" width="50" height="46" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="771.1186476333585" y="524.2490007513148" width="30.360000000000003" height="30.360000000000003" viewBox="0 0 100 100" overflow="visible"><path d="M30 18 L30 78 L80 78" fill="none" stroke="var(--text-secondary, #888)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="42" cy="64" r="5" fill="#fff"/></svg></g><g><rect x="760.5473328324568" y="326.015777610819" width="50" height="46" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="770.3673328324569" y="333.835777610819" width="30.360000000000003" height="30.360000000000003" viewBox="0 0 100 100" overflow="visible"><path d="M30 18 L30 78 L80 78" fill="none" stroke="var(--text-secondary, #888)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="42" cy="64" r="5" fill="#fff"/></svg></g><g><rect x="536.9973703981968" y="363.45003756574" width="50" height="46" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="546.8173703981969" y="371.27003756574" width="30.360000000000003" height="30.360000000000003" viewBox="0 0 100 100" overflow="visible"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #22c55e)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #888)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/></svg></g><g><rect x="536.9973703981968" y="458.190833959429" width="50" height="46" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="546.8173703981969" y="466.010833959429" width="30.360000000000003" height="30.360000000000003" viewBox="0 0 100 100" overflow="visible"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #22c55e)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #888)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/></svg></g><g><rect x="693.5" y="212" width="50" height="46" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="703.32" y="219.82" width="30.360000000000003" height="30.360000000000003" viewBox="0 0 100 100" overflow="visible"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #22c55e)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #888)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/></svg></g><g><rect x="697.04996243426" y="639.5657400450791" width="50" height="46" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="706.8699624342601" y="647.3857400450792" width="30.360000000000003" height="30.360000000000003" viewBox="0 0 100 100" overflow="visible"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #22c55e)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #888)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/></svg></g><g><rect x="852.7749812171301" y="212" width="50" height="46" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="862.5949812171301" y="219.82" width="30.360000000000003" height="30.360000000000003" viewBox="0 0 100 100" overflow="visible"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #22c55e)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #888)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/></svg></g><g><rect x="852.7749812171301" y="640.3170548459807" width="50" height="46" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="862.5949812171301" y="648.1370548459807" width="30.360000000000003" height="30.360000000000003" viewBox="0 0 100 100" overflow="visible"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #22c55e)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #888)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/></svg></g><g><rect x="1140.3591991237831" y="229.14893768522066" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="1153.0591991237832" y="239.34893768522065" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-danger, #ef4444)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-danger, #ef4444)"/><circle cx="78" cy="22" r="6" fill="var(--accent-warning, #f59e0b)"/></svg></g><g><rect x="1322.2122511419766" y="622.1087751341987" width="60" height="56" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="1333.7322511419766" y="631.6287751341987" width="36.96" height="36.96" viewBox="0 0 100 100" overflow="visible"><path d="M50 14 L84 32 L84 68 L50 86 L16 68 L16 32 Z" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><path d="M50 14 L50 50 M50 50 L84 32 M50 50 L16 32" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-linejoin="round"/></svg></g><g><rect x="1116.0694003091905" y="622.1087751341987" width="63.241986607876925" height="57.68645297621005" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="1128.6538641309796" y="631.9154721401544" width="38.07305896429863" height="38.07305896429863" viewBox="0 0 100 100" overflow="visible"><rect x="12" y="14" width="76" height="34" rx="3" fill="none" stroke="var(--text-secondary, #888)" stroke-width="3"/><line x1="20" y1="40" x2="20" y2="20" stroke="var(--accent-danger, #ef4444)" stroke-width="2.5"/><line x1="20" y1="40" x2="44" y2="40" stroke="var(--accent-success, #22c55e)" stroke-width="2.5"/><circle cx="52" cy="30" r="4" fill="var(--accent-warning, #f59e0b)"/><rect x="64" y="24" width="8" height="8" fill="var(--accent-success, #22c55e)"/><rect x="12" y="54" width="76" height="34" rx="3" fill="none" stroke="var(--text-secondary, #888)" stroke-width="3"/><line x1="20" y1="80" x2="20" y2="60" stroke="var(--accent-danger, #ef4444)" stroke-width="2.5"/><line x1="20" y1="80" x2="44" y2="80" stroke="var(--accent-primary, #3b82f6)" stroke-width="2.5"/><circle cx="52" cy="66" r="4" fill="var(--accent-warning, #f59e0b)"/><rect x="64" y="70" width="8" height="8" fill="var(--accent-success, #22c55e)"/></svg></g><g><rect x="1217.8514433920056" y="622.1087751341987" width="60" height="56" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="1229.3714433920056" y="631.6287751341987" width="36.96" height="36.96" viewBox="0 0 100 100" overflow="visible"><path d="M32 66 L78 66 L60 84 L14 84 Z" fill="var(--text-muted, #aaa)" opacity="0.18" stroke="var(--text-muted, #aaa)" stroke-width="1.5"/><line x1="32" y1="66" x2="32" y2="16" stroke="var(--accent-danger, #ef4444)" stroke-width="4.5" stroke-linecap="round"/><polygon points="32,12 28,22 36,22" fill="var(--accent-danger, #ef4444)"/><line x1="32" y1="66" x2="86" y2="66" stroke="var(--accent-success, #22c55e)" stroke-width="4.5" stroke-linecap="round"/><polygon points="90,66 80,62 80,70" fill="var(--accent-success, #22c55e)"/><line x1="32" y1="66" x2="10" y2="86" stroke="var(--accent-primary, #3b82f6)" stroke-width="4.5" stroke-linecap="round"/><polygon points="7,89 18,84 12,78" fill="var(--accent-primary, #3b82f6)"/></svg></g><g><rect x="1109.367121982861" y="437.6418608710623" width="60" height="56" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="1120.887121982861" y="447.1618608710623" width="36.96" height="36.96" viewBox="0 0 100 100" overflow="visible"><path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><path d="M60 12 v16 h16" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="60" width="8" height="18" fill="var(--accent-primary, #3b82f6)"/><rect x="47" y="50" width="8" height="28" fill="var(--accent-primary, #3b82f6)"/><rect x="60" y="42" width="8" height="36" fill="var(--accent-primary, #3b82f6)"/><line x1="34" y1="40" x2="66" y2="40" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg></g></symbol>
+<symbol id="map-fead" viewBox="94 64 437 296" preserveAspectRatio="xMidYMid meet"><g fill="none" stroke="var(--mini-conn)" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"><path d="M 192 233 C 232 233, 260 149, 300 149"/></g><g><rect x="120" y="200" width="72" height="66" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="134.22" y="211.22" width="43.56" height="43.56" viewBox="0 0 100 100" overflow="visible"><circle cx="50" cy="50" r="38" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="50" cy="50" r="31" fill="none" stroke="var(--text-muted, #888)" stroke-width="2.5"/><circle cx="50" cy="50" r="25" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3" stroke-dasharray="5 4"/><circle cx="50" cy="50" r="17" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3.5"/><circle cx="50" cy="38.5" r="2.6" fill="var(--text-muted, #888)"/><circle cx="61.5" cy="50" r="2.6" fill="var(--text-muted, #888)"/><circle cx="50" cy="61.5" r="2.6" fill="var(--text-muted, #888)"/><circle cx="38.5" cy="50" r="2.6" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="6" fill="var(--text-secondary, #666)"/></svg></g><g><rect x="300" y="120" width="62" height="58" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="311.86" y="129.86" width="38.28" height="38.28" viewBox="0 0 100 100" overflow="visible"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #3b82f6)"/><line x1="36" y1="50" x2="41" y2="50" stroke="var(--text-muted, #888)" stroke-width="5"/><circle cx="64" cy="50" r="24" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><path d="M66.6 32.4 L55 53.2 L62.7 53.2 L59.5 64.1 L71.7 46.2 L64 46.2 Z" fill="var(--text-muted, #888)"/></svg></g><g><rect x="300" y="280" width="58" height="54" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="311.18" y="289.18" width="35.64" height="35.64" viewBox="0 0 100 100" overflow="visible"><line x1="64" y1="36" x2="24" y2="76" stroke="var(--text-secondary, #666)" stroke-width="8" stroke-linecap="round"/><circle cx="24" cy="76" r="8" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="24" cy="76" r="2.6" fill="var(--text-secondary, #666)"/><circle cx="64" cy="36" r="21" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="64" cy="36" r="6" fill="var(--accent-primary, #3b82f6)"/><path d="M41 89 A 44 44 0 0 0 73 79" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3.5" stroke-linecap="round"/><polygon points="72,72 84,79 71,85" fill="var(--accent-warning, #f59e0b)"/></svg></g><g><rect x="440" y="200" width="60" height="54" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="452.18" y="209.18" width="35.64" height="35.64" viewBox="0 0 100 100" overflow="visible"><rect x="14" y="12" width="72" height="76" rx="6" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5"/><path d="M24 30 H76 V40 L67 52 L58 40 L49 52 L40 40 L31 52 L24 40 Z" fill="var(--accent-warning, #f59e0b)" fill-opacity="0.18" stroke="var(--accent-warning, #f59e0b)" stroke-width="3" stroke-linejoin="round"/><line x1="26" y1="66" x2="74" y2="66" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="26" y1="76" x2="58" y2="76" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg></g><g><rect x="440" y="90" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="452.7" y="100.2" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-warning, #f59e0b)"/><circle cx="78" cy="22" r="6" fill="var(--accent-primary, #3b82f6)"/></svg></g></symbol>
+<symbol id="map-ap-l" viewBox="2531.5 2733.5 937 532" preserveAspectRatio="xMidYMid meet"><g fill="none" stroke="var(--mini-conn)" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"><path d="M 2623.5 2987.5 C 2663.5 2987.5, 2672.5 2979.5, 2712.5 2979.5"/><path d="M 2623.5 2987.5 C 2663.5 2987.5, 2662.5 3149.5, 2702.5 3149.5"/><path d="M 2777.5 2979.5 C 2817.5 2979.5, 2807.5 2979.5, 2847.5 2979.5"/><path d="M 2912.5 2979.5 C 2952.5 2979.5, 2937.5 2979.5, 2977.5 2979.5"/><path d="M 3042.5 2979.5 C 3082.5 2979.5, 3072.5 2979.5, 3112.5 2979.5"/><path d="M 3177.5 2969.5 C 3217.5 2969.5, 3202.5 2899.5, 3242.5 2899.5"/><path d="M 3177.5 2989.5 C 3217.5 2989.5, 3202.5 3089.5, 3242.5 3089.5"/><path d="M 3307.5 2889.5 C 3347.5 2889.5, 3337.5 2829.5, 3377.5 2829.5"/><path d="M 3307.5 2909.5 C 3347.5 2909.5, 3337.5 2949.5, 3377.5 2949.5"/><path d="M 3307.5 3079.5 C 3347.5 3079.5, 3337.5 3089.5, 3377.5 3089.5"/><path d="M 3307.5 3099.5 C 3347.5 3099.5, 3337.5 3209.5, 3377.5 3209.5"/></g><g><rect x="2677.5" y="2759.5" width="90" height="55" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="2704.35" y="2768.85" width="36.300000000000004" height="36.300000000000004" viewBox="0 0 100 100" overflow="visible"><rect x="15" y="15" width="70" height="70" rx="10" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><polygon points="40,30 40,70 70,50" fill="var(--accent-primary, #3b82f6)"/></svg></g><text x="2722.5" y="2827.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Çözücü</text><g><rect x="2907.5" y="2759.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="2920.2" y="2769.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="4"/><path d="M35 30 L35 70" stroke="var(--text-secondary, #666)" stroke-width="4" stroke-linecap="round"/><circle cx="35" cy="35" r="6" fill="var(--accent-warning, #ff9800)"/><path d="M65 30 L65 70" stroke="var(--text-secondary, #666)" stroke-width="4" stroke-linecap="round"/><circle cx="65" cy="55" r="6" fill="var(--accent-warning, #ff9800)"/><path d="M35 35 L50 45 L65 55" stroke="var(--accent-warning, #ff9800)" stroke-width="2.5" fill="none" stroke-dasharray="4,3"/></svg></g><text x="2940" y="2832.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Şanzıman Kontrol</text><g><rect x="3037.5" y="2759.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="3050.2" y="2769.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><rect x="10" y="30" width="80" height="35" fill="var(--text-secondary, #666)" rx="4"/><rect x="15" y="20" width="50" height="15" fill="var(--text-muted, #888)" rx="3"/><circle cx="25" cy="70" r="10" fill="var(--text-muted, #888)"/><circle cx="75" cy="70" r="10" fill="var(--text-muted, #888)"/></svg></g><text x="3070" y="2832.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">13.06 t</text><g><rect x="2557.5" y="2949.5" width="66" height="76" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="2568.72" y="2965.72" width="43.56" height="43.56" viewBox="0 0 100 100" overflow="visible"><rect x="20" y="25" width="60" height="50" fill="var(--text-secondary, #666)" rx="4"/><rect x="30" y="15" width="15" height="15" fill="var(--text-muted, #888)" rx="2"/><rect x="55" y="15" width="15" height="15" fill="var(--text-muted, #888)" rx="2"/><rect x="10" y="40" width="15" height="20" fill="var(--text-muted, #888)" rx="2"/><rect x="75" y="40" width="15" height="20" fill="var(--text-muted, #888)" rx="2"/><rect x="35" y="75" width="30" height="10" fill="var(--text-muted, #888)" rx="2"/></svg></g><text x="2590.5" y="3038.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Cummins ISB6.7 (D…</text><g><rect x="2712.5" y="2949.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="2725.2" y="2959.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><circle cx="50" cy="50" r="35" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="50" cy="50" r="25" fill="var(--text-muted, #888)" opacity="0.5"/><circle cx="50" cy="50" r="12" fill="var(--text-secondary, #666)"/><path d="M35 35 Q50 20 65 35" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" fill="none"/><path d="M65 65 Q50 80 35 65" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" fill="none"/><rect x="10" y="46" width="15" height="8" fill="var(--text-muted, #888)"/><rect x="75" y="46" width="15" height="8" fill="var(--text-muted, #888)"/></svg></g><text x="2745" y="3022.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">TC413</text><g><rect x="2847.5" y="2949.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="2860.2" y="2959.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><defs><pattern id="stripes-gearbox" patternUnits="userSpaceOnUse" width="8" height="8"><path d="M-2,2 l4,-4 M0,8 l8,-8 M6,10 l4,-4" stroke="var(--text-muted, #888)" stroke-width="2.5" fill="none"/></pattern></defs><rect x="38" y="5" width="24" height="90" fill="url(#stripes-gearbox)" stroke="var(--text-secondary, #666)" stroke-width="2"/><rect x="8" y="18" width="25" height="8" fill="var(--text-secondary, #666)" rx="1"/><rect x="67" y="18" width="25" height="8" fill="var(--text-secondary, #666)" rx="1"/><rect x="28" y="14" width="12" height="6" fill="var(--text-secondary, #666)" rx="1"/><rect x="60" y="14" width="12" height="6" fill="var(--text-secondary, #666)" rx="1"/><rect x="8" y="70" width="25" height="8" fill="var(--text-secondary, #666)" rx="1"/><rect x="67" y="70" width="25" height="8" fill="var(--text-secondary, #666)" rx="1"/><rect x="28" y="66" width="12" height="6" fill="var(--text-secondary, #666)" rx="1"/><rect x="60" y="66" width="12" height="6" fill="var(--text-secondary, #666)" rx="1"/></svg></g><text x="2880" y="3022.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">3000 SP</text><g><rect x="2977.5" y="2949.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="2990.2" y="2959.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><line x1="10" y1="50" x2="90" y2="50" stroke="var(--text-secondary, #666)" stroke-width="10" stroke-linecap="round"/><circle cx="20" cy="50" r="10" fill="none" stroke="var(--text-muted, #888)" stroke-width="3"/><circle cx="50" cy="50" r="5" fill="var(--text-muted, #888)"/><circle cx="80" cy="50" r="10" fill="none" stroke="var(--text-muted, #888)" stroke-width="3"/><line x1="15" y1="40" x2="25" y2="60" stroke="var(--text-muted, #888)" stroke-width="2"/><line x1="75" y1="40" x2="85" y2="60" stroke="var(--text-muted, #888)" stroke-width="2"/></svg></g><text x="3010" y="3022.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Propşaft</text><g><rect x="3112.5" y="2949.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="3125.2" y="2959.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><rect x="25" y="20" width="50" height="60" fill="var(--text-secondary, #666)" rx="4"/><rect x="10" y="35" width="20" height="8" fill="var(--text-muted, #888)"/><rect x="70" y="30" width="20" height="8" fill="var(--text-muted, #888)"/><rect x="70" y="62" width="20" height="8" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="12" fill="var(--text-muted, #888)"/></svg></g><text x="3145" y="3022.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Transfer Kutusu (…</text><g><rect x="3242.5" y="2869.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="3255.2" y="2879.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><circle cx="50" cy="50" r="30" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="50" cy="50" r="15" fill="var(--text-muted, #888)"/><rect x="10" y="46" width="15" height="8" fill="var(--text-muted, #888)"/><rect x="75" y="30" width="15" height="8" fill="var(--text-muted, #888)"/><rect x="75" y="62" width="15" height="8" fill="var(--text-muted, #888)"/></svg></g><text x="3275" y="2942.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Diferansiyel</text><g><rect x="3242.5" y="3059.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="3255.2" y="3069.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><circle cx="50" cy="50" r="30" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="50" cy="50" r="15" fill="var(--text-muted, #888)"/><rect x="10" y="46" width="15" height="8" fill="var(--text-muted, #888)"/><rect x="75" y="30" width="15" height="8" fill="var(--text-muted, #888)"/><rect x="75" y="62" width="15" height="8" fill="var(--text-muted, #888)"/></svg></g><text x="3275" y="3132.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Diferansiyel</text><g><rect x="3377.5" y="2799.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="3390.2" y="2809.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><circle cx="50" cy="50" r="38" fill="var(--text-secondary, #666)"/><circle cx="50" cy="50" r="28" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="10" fill="var(--text-secondary, #666)"/><rect x="5" y="46" width="15" height="8" fill="var(--text-muted, #888)"/></svg></g><text x="3410" y="2872.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Michelin XZA</text><g><rect x="3377.5" y="2919.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="3390.2" y="2929.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><circle cx="50" cy="50" r="38" fill="var(--text-secondary, #666)"/><circle cx="50" cy="50" r="28" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="10" fill="var(--text-secondary, #666)"/><rect x="5" y="46" width="15" height="8" fill="var(--text-muted, #888)"/></svg></g><text x="3410" y="2992.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Michelin XZA</text><g><rect x="3377.5" y="3059.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="3390.2" y="3069.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><circle cx="50" cy="50" r="38" fill="var(--text-secondary, #666)"/><circle cx="50" cy="50" r="28" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="10" fill="var(--text-secondary, #666)"/><rect x="5" y="46" width="15" height="8" fill="var(--text-muted, #888)"/></svg></g><text x="3410" y="3132.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Michelin XZA</text><g><rect x="3377.5" y="3179.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="3390.2" y="3189.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><circle cx="50" cy="50" r="38" fill="var(--text-secondary, #666)"/><circle cx="50" cy="50" r="28" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="10" fill="var(--text-secondary, #666)"/><rect x="5" y="46" width="15" height="8" fill="var(--text-muted, #888)"/></svg></g><text x="3410" y="3252.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Michelin XZA</text><g><rect x="2702.5" y="3119.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="2715.2" y="3129.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4"/><circle cx="30" cy="42" r="14" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="30" cy="42" r="6" fill="var(--text-secondary, #666)"/><path d="M48 42 L56 42" stroke="var(--accent-warning, #f59e0b)" stroke-width="3" stroke-linecap="round"/><path d="M52 38 L56 42 L52 46" stroke="var(--accent-warning, #f59e0b)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="58" y="30" width="28" height="24" rx="4" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><path d="M63 38 L68 38 M63 44 L75 44 M63 50 L71 50" stroke="var(--accent-primary, #3b82f6)" stroke-width="2" stroke-linecap="round"/><path d="M20 70 L40 70 L55 62 L70 70 L85 70" stroke="var(--accent-success, #22c55e)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></g><text x="2735" y="3192.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Motor-Konvertör E…</text><g><rect x="2927.5" y="3139.5" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="2940.2" y="3149.7" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><path d="M5 75 L30 75 L40 40 L60 40 L70 75 L95 75" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><line x1="5" y1="80" x2="95" y2="80" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="20" cy="75" r="6" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3"/><circle cx="80" cy="75" r="6" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3"/><path d="M42 38 L50 25 L58 38" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></g><text x="2960" y="3212.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Engel Geçme</text></symbol>
+<symbol id="map-mnt-l" viewBox="510.99737039819684 186 897.2148807437798 526.3170548459807" preserveAspectRatio="xMidYMid meet"><g fill="none" stroke="var(--mini-conn)" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"><path d="M 786.2986476333584 516.4290007513148 C 826.2986476333584 516.4290007513148, 740.5 478, 700.5 478"/><path d="M 586.9973703981968 386.45003756574 C 626.9973703981968 386.45003756574, 618.5 427.3333333333333, 658.5 427.3333333333333"/><path d="M 586.9973703981968 481.190833959429 C 626.9973703981968 481.190833959429, 618.5 452.66666666666663, 658.5 452.66666666666663"/><path d="M 718.5 258 C 758.5 258, 817.2139994991235 326.015777610819, 777.2139994991235 326.015777610819"/><path d="M 877.7749812171301 258 C 917.7749812171301 258, 833.8806661657902 326.015777610819, 793.8806661657902 326.015777610819"/><path d="M 722.04996243426 639.5657400450791 C 762.04996243426 639.5657400450791, 817.965314300025 562.4290007513148, 777.965314300025 562.4290007513148"/><path d="M 877.7749812171301 640.3170548459807 C 917.7749812171301 640.3170548459807, 834.6319809666918 562.4290007513148, 794.6319809666918 562.4290007513148"/><path d="M 785.5473328324568 372.015777610819 C 825.5473328324568 372.015777610819, 889.3433508640121 409.51314800901577, 849.3433508640121 409.51314800901577"/></g><g><rect x="1290.3591991237831" y="228.14893768522066" width="56" height="56" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="1299.879199123783" y="237.66893768522067" width="36.96" height="36.96" viewBox="0 0 100 100" overflow="visible"><path d="M28 14 h32 l14 14 v58 h-46 z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><path d="M60 14 v14 h14" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><line x1="36" y1="44" x2="66" y2="44" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="56" x2="66" y2="56" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="68" x2="54" y2="68" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg></g><text x="1318.3591991237831" y="297.14893768522063" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Başlangıç ve Örne…</text><g><rect x="658.5" y="402" width="84" height="76" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="675.42" y="414.92" width="50.160000000000004" height="50.160000000000004" viewBox="0 0 100 100" overflow="visible"><rect x="20" y="36" width="60" height="44" rx="4" fill="var(--accent-primary, #3b82f6)" opacity="0.85"/><rect x="30" y="22" width="14" height="16" fill="var(--accent-primary, #3b82f6)"/><rect x="52" y="22" width="14" height="16" fill="var(--accent-primary, #3b82f6)"/><circle cx="50" cy="58" r="5" fill="#fff"/></svg></g><text x="700.5" y="491" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Motor</text><g><rect x="816.8433508640121" y="409.51314800901577" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="829.5433508640122" y="419.71314800901575" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><rect x="26" y="24" width="48" height="56" rx="5" fill="var(--accent-primary, #3b82f6)" opacity="0.7"/><circle cx="50" cy="52" r="15" fill="none" stroke="#fff" stroke-width="4"/><circle cx="50" cy="52" r="4" fill="#fff"/></svg></g><text x="849.3433508640121" y="482.51314800901577" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Şanzıman</text><g><rect x="942.8801652892561" y="410.00525920360633" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="955.5801652892561" y="420.2052592036063" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><rect x="10" y="44" width="80" height="12" rx="6" fill="var(--text-secondary, #888)"/><circle cx="24" cy="50" r="8" fill="none" stroke="var(--text-muted, #aaa)" stroke-width="3"/><circle cx="76" cy="50" r="8" fill="none" stroke="var(--text-muted, #aaa)" stroke-width="3"/><circle cx="50" cy="50" r="5" fill="#fff"/></svg></g><text x="975.3801652892561" y="483.00525920360633" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Şaft payı</text><g><rect x="761.2986476333584" y="516.4290007513148" width="50" height="46" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="771.1186476333585" y="524.2490007513148" width="30.360000000000003" height="30.360000000000003" viewBox="0 0 100 100" overflow="visible"><path d="M30 18 L30 78 L80 78" fill="none" stroke="var(--text-secondary, #888)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="42" cy="64" r="5" fill="#fff"/></svg></g><text x="786.2986476333584" y="575.4290007513148" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Sol cradle</text><g><rect x="760.5473328324568" y="326.015777610819" width="50" height="46" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="770.3673328324569" y="333.835777610819" width="30.360000000000003" height="30.360000000000003" viewBox="0 0 100 100" overflow="visible"><path d="M30 18 L30 78 L80 78" fill="none" stroke="var(--text-secondary, #888)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="42" cy="64" r="5" fill="#fff"/></svg></g><text x="785.5473328324568" y="385.015777610819" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Sağ cradle</text><g><rect x="536.9973703981968" y="363.45003756574" width="50" height="46" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="546.8173703981969" y="371.27003756574" width="30.360000000000003" height="30.360000000000003" viewBox="0 0 100 100" overflow="visible"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #22c55e)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #888)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/></svg></g><text x="561.9973703981968" y="422.45003756574" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Sağ Ön Takoz</text><g><rect x="536.9973703981968" y="458.190833959429" width="50" height="46" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="546.8173703981969" y="466.010833959429" width="30.360000000000003" height="30.360000000000003" viewBox="0 0 100 100" overflow="visible"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #22c55e)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #888)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/></svg></g><text x="561.9973703981968" y="517.190833959429" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Sol Ön Takoz</text><g><rect x="693.5" y="212" width="50" height="46" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="703.32" y="219.82" width="30.360000000000003" height="30.360000000000003" viewBox="0 0 100 100" overflow="visible"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #22c55e)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #888)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/></svg></g><text x="718.5" y="271" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Sağ Orta Takoz</text><g><rect x="697.04996243426" y="639.5657400450791" width="50" height="46" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="706.8699624342601" y="647.3857400450792" width="30.360000000000003" height="30.360000000000003" viewBox="0 0 100 100" overflow="visible"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #22c55e)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #888)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/></svg></g><text x="722.04996243426" y="698.5657400450791" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Sol Orta Takoz</text><g><rect x="852.7749812171301" y="212" width="50" height="46" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="862.5949812171301" y="219.82" width="30.360000000000003" height="30.360000000000003" viewBox="0 0 100 100" overflow="visible"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #22c55e)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #888)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/></svg></g><text x="877.7749812171301" y="271" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Sağ Arka Takoz</text><g><rect x="852.7749812171301" y="640.3170548459807" width="50" height="46" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="862.5949812171301" y="648.1370548459807" width="30.360000000000003" height="30.360000000000003" viewBox="0 0 100 100" overflow="visible"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #22c55e)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #888)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/></svg></g><text x="877.7749812171301" y="699.3170548459807" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Sol Arka Takoz</text><g><rect x="1140.3591991237831" y="229.14893768522066" width="65" height="60" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="1153.0591991237832" y="239.34893768522065" width="39.6" height="39.6" viewBox="0 0 100 100" overflow="visible"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-danger, #ef4444)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-danger, #ef4444)"/><circle cx="78" cy="22" r="6" fill="var(--accent-warning, #f59e0b)"/></svg></g><text x="1172.8591991237831" y="302.14893768522063" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Çözücü</text><g><rect x="1322.2122511419766" y="622.1087751341987" width="60" height="56" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="1333.7322511419766" y="631.6287751341987" width="36.96" height="36.96" viewBox="0 0 100 100" overflow="visible"><path d="M50 14 L84 32 L84 68 L50 86 L16 68 L16 32 Z" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><path d="M50 14 L50 50 M50 50 L84 32 M50 50 L16 32" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-linejoin="round"/></svg></g><text x="1352.2122511419766" y="691.1087751341987" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">3D Görüntüleyici</text><g><rect x="1116.0694003091905" y="622.1087751341987" width="63.241986607876925" height="57.68645297621005" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="1128.6538641309796" y="631.9154721401544" width="38.07305896429863" height="38.07305896429863" viewBox="0 0 100 100" overflow="visible"><rect x="12" y="14" width="76" height="34" rx="3" fill="none" stroke="var(--text-secondary, #888)" stroke-width="3"/><line x1="20" y1="40" x2="20" y2="20" stroke="var(--accent-danger, #ef4444)" stroke-width="2.5"/><line x1="20" y1="40" x2="44" y2="40" stroke="var(--accent-success, #22c55e)" stroke-width="2.5"/><circle cx="52" cy="30" r="4" fill="var(--accent-warning, #f59e0b)"/><rect x="64" y="24" width="8" height="8" fill="var(--accent-success, #22c55e)"/><rect x="12" y="54" width="76" height="34" rx="3" fill="none" stroke="var(--text-secondary, #888)" stroke-width="3"/><line x1="20" y1="80" x2="20" y2="60" stroke="var(--accent-danger, #ef4444)" stroke-width="2.5"/><line x1="20" y1="80" x2="44" y2="80" stroke="var(--accent-primary, #3b82f6)" stroke-width="2.5"/><circle cx="52" cy="66" r="4" fill="var(--accent-warning, #f59e0b)"/><rect x="64" y="70" width="8" height="8" fill="var(--accent-success, #22c55e)"/></svg></g><text x="1147.690393613129" y="692.7952281104087" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">2D Görünüm</text><g><rect x="1217.8514433920056" y="622.1087751341987" width="60" height="56" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="1229.3714433920056" y="631.6287751341987" width="36.96" height="36.96" viewBox="0 0 100 100" overflow="visible"><path d="M32 66 L78 66 L60 84 L14 84 Z" fill="var(--text-muted, #aaa)" opacity="0.18" stroke="var(--text-muted, #aaa)" stroke-width="1.5"/><line x1="32" y1="66" x2="32" y2="16" stroke="var(--accent-danger, #ef4444)" stroke-width="4.5" stroke-linecap="round"/><polygon points="32,12 28,22 36,22" fill="var(--accent-danger, #ef4444)"/><line x1="32" y1="66" x2="86" y2="66" stroke="var(--accent-success, #22c55e)" stroke-width="4.5" stroke-linecap="round"/><polygon points="90,66 80,62 80,70" fill="var(--accent-success, #22c55e)"/><line x1="32" y1="66" x2="10" y2="86" stroke="var(--accent-primary, #3b82f6)" stroke-width="4.5" stroke-linecap="round"/><polygon points="7,89 18,84 12,78" fill="var(--accent-primary, #3b82f6)"/></svg></g><text x="1247.8514433920056" y="691.1087751341987" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Koordinat Düzlemi</text><g><rect x="1109.367121982861" y="437.6418608710623" width="60" height="56" rx="4" fill="var(--mini-node-bg)" stroke="var(--mini-node-bd)" stroke-width="1.2" vector-effect="non-scaling-stroke"/><svg x="1120.887121982861" y="447.1618608710623" width="36.96" height="36.96" viewBox="0 0 100 100" overflow="visible"><path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><path d="M60 12 v16 h16" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="60" width="8" height="18" fill="var(--accent-primary, #3b82f6)"/><rect x="47" y="50" width="8" height="28" fill="var(--accent-primary, #3b82f6)"/><rect x="60" y="42" width="8" height="36" fill="var(--accent-primary, #3b82f6)"/><line x1="34" y1="40" x2="66" y2="40" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg></g><text x="1139.367121982861" y="506.6418608710623" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mini-label)">Rapor</text></symbol>
+<g id="ico-ap"><rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-dasharray="7 5"/><rect x="18" y="46" width="16" height="16" rx="2" fill="var(--text-secondary, #666)"/><line x1="34" y1="54" x2="47" y2="54" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="58" cy="54" r="10" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="58" cy="54" r="3" fill="var(--text-secondary, #666)"/><line x1="68" y1="54" x2="77" y2="54" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="84" cy="54" r="6" fill="none" stroke="var(--text-muted, #888)" stroke-width="3"/><path d="M64 22 h18 v18" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g id="ico-mnt"><rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-dasharray="7 5"/><rect x="30" y="34" width="30" height="10" rx="2" fill="var(--text-secondary, #666)"/><path d="M38 44 Q32 50 42 54 Q32 58 42 62 Q32 66 38 70" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 44 Q46 50 56 54 Q46 58 56 62 Q46 66 52 70" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><line x1="26" y1="72" x2="64" y2="72" stroke="var(--text-secondary, #666)" stroke-width="3"/><path d="M64 22 h18 v18" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g id="ico-fead"><rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-dasharray="7 5"/><circle cx="38" cy="58" r="16" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="38" cy="58" r="5" fill="var(--text-secondary, #666)"/><circle cx="68" cy="58" r="9" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="68" cy="58" r="3.2" fill="var(--text-secondary, #666)"/><path d="M41.7 42.4 L70.1 49.3 A9 9 0 0 1 70.1 66.8 L41.7 73.6 A16 16 0 1 1 41.7 42.4 Z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4" stroke-linejoin="round"/><path d="M64 22 h18 v18" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+</svg>
+
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">MFSim · ana topoloji · tasarım önerisi</div>
+  <h1>Kart yerine harita</h1>
+  <p class="lede">Ana topolojideki üç modül bugün yan yana duruyor ama içleri görünmüyor:
+  16 bileşenlik Araç Performans ile 5 bileşenlik FEAD ekranda aynı kutu. Aşağıda,
+  <strong>kartın yerini alt topolojinin haritasının aldığı</strong> beş yapı ve adın
+  çerçeveye yazılabileceği dört yer var — hepsi sizin gerçek projenizin verisiyle,
+  1:1 ölçekte çizildi.</p>
+
+  <div class="facts">
+    <div class="fact"><span class="k">Araç Performans</span><span class="v">16 bileşen · 11 bağlantı</span></div>
+    <div class="fact"><span class="k">Takoz Çökme-Titreşim</span><span class="v">17 bileşen · 8 bağlantı</span></div>
+    <div class="fact"><span class="k">FEAD</span><span class="v">5 bileşen · 1 bağlantı</span></div>
+    <div class="fact"><span class="k">Maket ölçeği</span><span class="v">1:1 · kanvas %100</span></div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="shead"><span class="eyebrow">Başlangıç noktası</span></div>
+  <h2>Bugün ekranda ne var</h2>
+  <div class="col">
+    <p>Üç modül de <code>214 × 72</code> piksellik aynı karta oturuyor: sol accent şerit,
+    tip sembolü, ad, canlı özet, sağda gir oku. Kart bilgi taşıyor — <em>doluluk</em> ve
+    <em>sayı</em> — ama <em>şekil</em> taşımıyor. Aşağıdaki üç kutu, ekran görüntünüzdeki
+    üç kutunun birebir aynısı.</p>
+  </div>
+
+  <div class="bench">
+    <div class="row baseline">
+      <div class="node" style="width:214px;height:72px">
+        <div class="card">
+          <span class="rail"></span>
+          <span class="ico"><svg width="30" height="30" viewBox="0 0 100 100"><use href="#ico-ap"></use></svg></span>
+          <span class="txt">
+            <span class="nm">Araç Performans</span>
+            <span class="meta"><i class="dot"></i>16 bileşen · 11 bağlantı</span>
+          </span>
+          <span class="ent">▸</span>
+        </div>
+      </div>
+      <div class="node" style="width:214px;height:72px">
+        <div class="card">
+          <span class="rail"></span>
+          <span class="ico"><svg width="30" height="30" viewBox="0 0 100 100"><use href="#ico-mnt"></use></svg></span>
+          <span class="txt">
+            <span class="nm">Takoz Çökme-Titreşim</span>
+            <span class="meta"><i class="dot"></i>17 bileşen · 8 bağlantı</span>
+          </span>
+          <span class="ent">▸</span>
+        </div>
+      </div>
+      <div class="node" style="width:214px;height:72px">
+        <div class="card">
+          <span class="rail"></span>
+          <span class="ico"><svg width="30" height="30" viewBox="0 0 100 100"><use href="#ico-fead"></use></svg></span>
+          <span class="txt">
+            <span class="nm">FEAD</span>
+            <span class="meta"><i class="dot"></i>5 bileşen · 1 bağlantı</span>
+          </span>
+          <span class="ent">▸</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="cap">Mevcut durum · <span class="mono">VE_MODULE_CARD_W/H = 214 × 72</span> · js/components.js</p>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="shead"><span class="eyebrow">Zemin</span></div>
+  <h2>Bu iş neden ucuz: gereken parçalar zaten yazılmış</h2>
+  <div class="col">
+    <p>Haritayı çizmek için yeni bir çizim altyapısı gerekmiyor. Kodda hazır duran beş şey var:</p>
+    <ul class="body">
+      <li><strong>Alt topoloji zaten tam bir durum.</strong> <span class="file">node.data.subTopology</span>
+      düğümler, bağlantılar, açıklamalar ve kamerayı taşıyor — modülden çıkarken yazılıyor
+      (<span class="file">cp-arac-performans.js veAracCloseEditor</span>). Yani kart dışarıdayken
+      harita <em>her zaman</em> güncel: modülün içindeyken zaten ana topolojiye bakmıyorsunuz.</li>
+      <li><strong>Sınır kutusu hesabı var.</strong> <span class="file">canvas-space.js veBoundaryBox</span>
+      ölçüsü kaydedilmemiş düğümler için bile doğru kutuyu veriyor → "haritayı çerçeveye sığdır"
+      ölçeği bundan tek satırda çıkıyor.</li>
+      <li><strong>Port geometrisi saf.</strong> <span class="file">veSnapPortPos / vePortOffset</span>
+      canlı DOM değil, düz düğüm nesnesi okuyor → bağlantı eğrileri durumdan doğrudan çizilebiliyor.</li>
+      <li><strong>Aynı işin iki örneği zaten çalışıyor.</strong> Sekme önizlemesi
+      (<span class="file">topology.js veRenderSnapshot</span>) ve PNG/SVG dışa aktarma
+      (<span class="file">export-topology.js veBuildTopologySVG</span>) bir topolojiyi küçültüp çiziyor.</li>
+      <li><strong>Çerçeveye ad yazma dili de var.</strong> "Gruplama Çerçevesi" tam olarak bunu yapıyor:
+      kesikli çerçeve + üst kenara oturan ad çipi (<span class="file">annotations.js</span>,
+      <span class="file">.ve-annotation-frame .ve-annotation-label</span>). Aşağıdaki L1 varyantı
+      uydurma değil, uygulamanın kendi idiyomu.</li>
+    </ul>
+  </div>
+  <div class="note">
+    <h4>Ölçülen sayılar</h4>
+    <p>Önerilen <span class="mono">300 × 190</span> kartta harita alanı <span class="mono">286 × 154</span> kalıyor.
+    Sığdırma ölçeği: Araç Performans <span class="mono">0,29</span> · Takoz <span class="mono">0,29</span> ·
+    FEAD <span class="mono">0,52</span>. Yani <span class="mono">65 px</span>'lik bir düğüm ekranda
+    <span class="mono">19 px</span> — sembol seçilir, ad okunmaz. Haritada düğüm adları bu yüzden kapalı;
+    çizgi kalınlıkları ise ölçekle küçülmüyor (<span class="mono">non-scaling-stroke</span>), yoksa
+    bağlantılar kaybolurdu. Aşağıdaki bütün maketler bu kurallarla çizildi.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="shead"><span class="eyebrow">Seçenekler</span></div>
+  <h2>Beş yapı</h2>
+  <div class="col">
+    <p>Beşi de aynı soruya farklı cevap veriyor: <em>harita ne kadar yer kaplasın ve kim karar versin?</em>
+    A ve B birbirinin tamamlayıcısı; C otomatik; D en gerçekçi ama en pahalı; E kanvasa hiç dokunmuyor.</p>
+  </div>
+
+  <!-- ─────────── A ─────────── -->
+  <div class="opt">
+    <div class="opt-head"><span class="badge">A</span><h3>Katlanır kart</h3></div>
+    <p class="thesis">Kart olduğu gibi kalır; başlığa bir <span class="mono">▾</span> düğmesi gelir.
+    Açınca düğüm büyür ve altında harita açılır, kapayınca eski kartına döner. Karar kullanıcının,
+    modül başına.</p>
+
+    <div class="bench">
+      <div class="row mid baseline">
+        <div class="node" style="width:214px;height:72px">
+          <div class="card">
+            <span class="rail"></span>
+            <span class="ico"><svg width="30" height="30" viewBox="0 0 100 100"><use href="#ico-ap"></use></svg></span>
+            <span class="txt">
+              <span class="nm">Araç Performans</span>
+              <span class="meta"><i class="dot"></i>16 bileşen · 11 bağlantı</span>
+            </span>
+            <span class="ent">▾</span>
+          </div>
+        </div>
+        <div style="font-size:20px;color:var(--ink-3)" aria-hidden="true">→</div>
+        <div class="node hi" style="width:300px;height:190px">
+          <div class="card">
+            <span class="rail"></span>
+            <span class="stack">
+              <span class="hd">
+                <span class="ico"><svg width="18" height="18" viewBox="0 0 100 100"><use href="#ico-ap"></use></svg></span>
+                <span class="nm">Araç Performans</span>
+                <span class="cnt">16 · 11</span>
+                <span class="ent">▴</span>
+              </span>
+              <span class="map"><svg><use href="#map-ap"></use></svg></span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">Kapalı <span class="mono">214 × 72</span> → açık <span class="mono">300 × 190</span> ·
+    durum düğümde tutulur (<span class="mono">node.data.mapOpen</span>)</p>
+
+    <div class="cols">
+      <div class="plus"><h4>Kazanç</h4><ul>
+        <li>Mevcut kart hiç bozulmuyor — geri dönüş ücretsiz.</li>
+        <li>Kalabalık projede kullanıcı yalnız ilgilendiği modülü açar.</li>
+        <li>Eski kayıtlar aynen açılır: <span class="mono">mapOpen</span> yoksa kapalı.</li>
+      </ul></div>
+      <div class="minus"><h4>Bedel</h4><ul>
+        <li>Sizin istediğiniz "üçü de haritasıyla yan yana" görüntüsü <em>varsayılan</em> değil, bir tıkla geliyor.</li>
+        <li>Düğüm ölçüsü artık iki değerli — kaydetme/eski dosya göçü kuralı gerekiyor.</li>
+      </ul></div>
+      <div class="cost"><h4>Maliyet</h4><ul>
+        <li>Küçük–orta. Kart kurucusu + ölçü kuralı + bir çizici.</li>
+        <li>Yeni saf fonksiyon: sığdırma ölçeği → doğrudan test edilir.</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <!-- ─────────── B ─────────── -->
+  <div class="opt">
+    <div class="opt-head"><span class="badge rec">B</span><h3>Harita kartı — her zaman açık</h3></div>
+    <p class="thesis">Modül düğümünün <em>varsayılan</em> hâli harita olur. Ad çerçevenin başlığında,
+    sayılar sağda. İstediğiniz manzara bu: üç modül, üç harita, yan yana, tek bakışta.</p>
+
+    <div class="bench">
+      <div class="row">
+        <div class="node" style="width:300px;height:190px">
+          <div class="card">
+            <span class="rail"></span>
+            <span class="stack">
+              <span class="hd">
+                <span class="ico"><svg width="18" height="18" viewBox="0 0 100 100"><use href="#ico-ap"></use></svg></span>
+                <span class="nm">Araç Performans</span>
+                <span class="cnt">16 · 11</span>
+                <span class="ent">▸</span>
+              </span>
+              <span class="map"><svg><use href="#map-ap"></use></svg></span>
+            </span>
+          </div>
+        </div>
+        <div class="node" style="width:300px;height:190px">
+          <div class="card">
+            <span class="rail"></span>
+            <span class="stack">
+              <span class="hd">
+                <span class="ico"><svg width="18" height="18" viewBox="0 0 100 100"><use href="#ico-mnt"></use></svg></span>
+                <span class="nm">Takoz Çökme-Titreşim</span>
+                <span class="cnt">17 · 8</span>
+                <span class="ent">▸</span>
+              </span>
+              <span class="map"><svg><use href="#map-mnt"></use></svg></span>
+            </span>
+          </div>
+        </div>
+        <div class="node" style="width:300px;height:190px">
+          <div class="card">
+            <span class="rail"></span>
+            <span class="stack">
+              <span class="hd">
+                <span class="ico"><svg width="18" height="18" viewBox="0 0 100 100"><use href="#ico-fead"></use></svg></span>
+                <span class="nm">FEAD</span>
+                <span class="cnt">5 · 1</span>
+                <span class="ent">▸</span>
+              </span>
+              <span class="map"><svg><use href="#map-fead"></use></svg></span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">Üçü yan yana <span class="mono">972 px</span> · düğüm ölçüsü
+    <span class="mono">300 × 190</span> · harita ölçekleri <span class="mono">0,29 / 0,29 / 0,52</span></p>
+
+    <div class="cols">
+      <div class="plus"><h4>Kazanç</h4><ul>
+        <li>Boş modül ile dolu modül artık <em>şekliyle</em> ayrışıyor; FEAD'in seyrekliği gözle görülüyor.</li>
+        <li>Tıklama gerekmiyor — istenen manzara açılışta geliyor.</li>
+        <li>Sekme önizlemesi ve PNG dışa aktarma aynı çiziciyi kullanırsa üçü de aynı görüntüyü verir.</li>
+      </ul></div>
+      <div class="minus"><h4>Bedel</h4><ul>
+        <li>Modül düğümü <span class="mono">4,4×</span> yer kaplıyor — kalabalık ana topolojide sıkışma.</li>
+        <li>Boş modülde harita alanı boş kalır; "Boş — çift tıklayın" hâli ayrıca tasarlanmalı.</li>
+        <li>Eski kayıtlarda 214 × 72 düğümler var: göç kuralı zorunlu.</li>
+      </ul></div>
+      <div class="cost"><h4>Maliyet</h4><ul>
+        <li>A ile neredeyse aynı — B, A'nın varsayılanı açık hâli.</li>
+        <li>İkisi birlikte yapılırsa ek maliyet ≈ 0.</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <!-- ─────────── C ─────────── -->
+  <div class="opt">
+    <div class="opt-head"><span class="badge">C</span><h3>Yakınlaştırmaya bağlı (anlamsal zoom)</h3></div>
+    <p class="thesis">Karar kullanıcının değil kameranın: uzaktayken kart, yaklaşınca harita.
+    CAE araçlarının klasik çözümü — hiç yeni durum saklanmıyor.</p>
+
+    <div class="bench">
+      <div class="row" style="align-items:flex-end; gap:52px">
+        <div>
+          <div class="scaled" style="transform:scale(.45); width:214px; height:33px">
+            <div class="row baseline" style="gap:20px">
+              <div class="node" style="width:214px;height:72px">
+                <div class="card"><span class="rail"></span>
+                  <span class="ico"><svg width="30" height="30" viewBox="0 0 100 100"><use href="#ico-ap"></use></svg></span>
+                  <span class="txt"><span class="nm">Araç Performans</span>
+                  <span class="meta"><i class="dot"></i>16 bileşen · 11 bağlantı</span></span>
+                  <span class="ent">▸</span></div>
+              </div>
+              <div class="node" style="width:214px;height:72px">
+                <div class="card"><span class="rail"></span>
+                  <span class="ico"><svg width="30" height="30" viewBox="0 0 100 100"><use href="#ico-mnt"></use></svg></span>
+                  <span class="txt"><span class="nm">Takoz Çökme-Titreşim</span>
+                  <span class="meta"><i class="dot"></i>17 bileşen · 8 bağlantı</span></span>
+                  <span class="ent">▸</span></div>
+              </div>
+            </div>
+          </div>
+          <p class="cap" style="margin:16px 0 0">Kamera <span class="mono">%45</span> → kart</p>
+        </div>
+        <div>
+          <div class="row" style="gap:24px">
+            <div class="node hi" style="width:280px;height:178px">
+              <div class="card"><span class="rail"></span><span class="stack">
+                <span class="hd">
+                  <span class="ico"><svg width="18" height="18" viewBox="0 0 100 100"><use href="#ico-ap"></use></svg></span>
+                  <span class="nm">Araç Performans</span><span class="cnt">16 · 11</span><span class="ent">▸</span>
+                </span>
+                <span class="map"><svg><use href="#map-ap"></use></svg></span>
+              </span></div>
+            </div>
+          </div>
+          <p class="cap" style="margin:16px 0 0">Kamera <span class="mono">%100</span> → harita</p>
+        </div>
+      </div>
+    </div>
+    <p class="cap">Eşik önerisi: <span class="mono">canvasZoom &lt; 0,6</span> → kart. Düğüm ölçüsü değişmez,
+    yalnız <em>içeriği</em> değişir.</p>
+
+    <div class="cols">
+      <div class="plus"><h4>Kazanç</h4><ul>
+        <li>Yeni kayıt alanı yok, göç yok, kullanıcı ayarı yok.</li>
+        <li>Uzaklaşınca okunmayan hiçbir şey çizilmiyor — performans kendiliğinden korunuyor.</li>
+      </ul></div>
+      <div class="minus"><h4>Bedel</h4><ul>
+        <li>Ana topolojide zoom çoğunlukla %100 → pratikte hep harita; C tek başına B'ye dönüşüyor.</li>
+        <li>Kullanıcının kontrolü yok: "bunu kart olarak istiyorum" diyemiyor.</li>
+        <li>Eşiğin iki yanında ekran zıplıyor; zoom sırasında dikkat dağıtabilir.</li>
+      </ul></div>
+      <div class="cost"><h4>Maliyet</h4><ul>
+        <li>Küçük — ama <span class="mono">updateCanvasTransform</span> her karede kartları yeniden kurmamalı; eşik geçişi tetiklemeli.</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <!-- ─────────── D ─────────── -->
+  <div class="opt">
+    <div class="opt-head"><span class="badge">D</span><h3>Gerçek iç içe — düğümler ana kanvasta</h3></div>
+    <p class="thesis">Harita "resim" değil: alt topolojinin <em>kendi düğümleri</em> ana kanvasta,
+    kesikli bir çerçevenin içinde, 1:1 çiziliyor. Simulink'in maskesiz alt-sistemi gibi.</p>
+
+    <div class="bench tall">
+      <div class="scaled" style="transform:scale(.5); width:2010px; height:330px">
+        <div class="row" style="gap:70px">
+          <div class="node" style="width:990px;height:600px;padding:0;border-width:2px">
+            <span class="notch">Araç Performans <span class="sub">· 16 bileşen · 11 bağlantı</span></span>
+            <span class="map pad"><svg><use href="#map-ap-l"></use></svg></span>
+          </div>
+          <div class="node" style="width:950px;height:600px;padding:0;border-width:2px">
+            <span class="notch">Takoz Çökme-Titreşim <span class="sub">· 17 bileşen · 8 bağlantı</span></span>
+            <span class="map pad"><svg><use href="#map-mnt-l"></use></svg></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">Gösterim <span class="mono">%50</span> küçültüldü · gerçek çerçeveler
+    <span class="mono">990 × 600</span> ve <span class="mono">950 × 600</span> kanvas pikseli ·
+    düğüm adları burada okunuyor çünkü ölçek 1:1</p>
+
+    <div class="cols">
+      <div class="plus"><h4>Kazanç</h4><ul>
+        <li>En dürüst gösterim: gördüğünüz şey gerçekten topolojinin kendisi.</li>
+        <li>Adlar, portlar, rozetler okunur; ölçek uzlaşması yok.</li>
+        <li>İleride "çerçevenin içinden düzenleme" mümkün hâle gelir.</li>
+      </ul></div>
+      <div class="minus"><h4>Bedel</h4><ul>
+        <li>Üç modül ≈ <span class="mono">3000 × 600</span> kanvas alanı — ana topoloji artık "genel bakış" olmaktan çıkıyor.</li>
+        <li>Düğüm kimlikleri çakışır (<span class="mono">comp-3</span> hem içeride hem dışarıda):
+        seçim, silme, bağlantı güncelleme yollarının hepsi kapsam bilmek zorunda.</li>
+        <li>Tıklama/sürükleme kuralları yeniden yazılıyor: içerideki düğüm sürüklenebilir mi, silinebilir mi?</li>
+        <li>Kaydetme ve geri-al (undo) anlamı değişiyor.</li>
+      </ul></div>
+      <div class="cost"><h4>Maliyet</h4><ul>
+        <li><strong>Büyük.</strong> Diğer dördünün toplamından fazla; kanvas makinesinin çekirdeğine dokunuyor.</li>
+        <li>Yalnız düzenlemeye de izin verilecekse mantıklı; salt görüntü için pahalı.</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <!-- ─────────── E ─────────── -->
+  <div class="opt">
+    <div class="opt-head"><span class="badge">E</span><h3>Ayrı "Genel Bakış" sayfası</h3></div>
+    <p class="thesis">Kanvasa hiç dokunmadan: sol raydaki Topoloji / Sonuçlar'ın yanına üçüncü bir
+    sayfa. Bütün modüllerin haritaları orada, tam ölçekli ve adlarıyla yan yana.</p>
+
+    <div class="bench">
+      <div style="width:980px; border:1px solid var(--border); background:var(--surface)">
+        <div style="display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--border);background:var(--panel)">
+          <span class="mono" style="font-size:11px;font-weight:700;color:var(--ink-head);letter-spacing:.06em">GENEL BAKIŞ</span>
+          <span class="mono" style="font-size:11px;color:var(--ink-3)">Topoloji 1 · 3 modül · 38 bileşen · 20 bağlantı</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border)">
+          <div style="background:var(--surface);padding:12px">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
+              <svg width="16" height="16" viewBox="0 0 100 100"><use href="#ico-ap"></use></svg>
+              <span class="nm" style="font-size:12.5px">Araç Performans</span>
+              <span class="mono" style="margin-left:auto;font-size:10.5px;color:var(--ink-3)">16 · 11</span>
+            </div>
+            <div style="height:180px;border:1px solid var(--border)" class="map"><svg><use href="#map-ap"></use></svg></div>
+          </div>
+          <div style="background:var(--surface);padding:12px">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
+              <svg width="16" height="16" viewBox="0 0 100 100"><use href="#ico-mnt"></use></svg>
+              <span class="nm" style="font-size:12.5px">Takoz Çökme-Titreşim</span>
+              <span class="mono" style="margin-left:auto;font-size:10.5px;color:var(--ink-3)">17 · 8</span>
+            </div>
+            <div style="height:180px;border:1px solid var(--border)" class="map"><svg><use href="#map-mnt"></use></svg></div>
+          </div>
+          <div style="background:var(--surface);padding:12px">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
+              <svg width="16" height="16" viewBox="0 0 100 100"><use href="#ico-fead"></use></svg>
+              <span class="nm" style="font-size:12.5px">FEAD</span>
+              <span class="mono" style="margin-left:auto;font-size:10.5px;color:var(--ink-3)">5 · 1</span>
+            </div>
+            <div style="height:180px;border:1px solid var(--border)" class="map"><svg><use href="#map-fead"></use></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">Sayfa maketi · kanvas ve modül kartı hiç değişmiyor</p>
+
+    <div class="cols">
+      <div class="plus"><h4>Kazanç</h4><ul>
+        <li>En düşük risk: kanvas makinesine sıfır dokunuş.</li>
+        <li>Harita alanı bol → adlar bile okunabilir ölçekte.</li>
+        <li>Rapora/PNG'ye doğrudan çıkarılabilir bir sayfa.</li>
+      </ul></div>
+      <div class="minus"><h4>Bedel</h4><ul>
+        <li>İstediğiniz şey <em>ana topolojide</em> yan yana durmalarıysa bu onu vermiyor — başka bir yere bakıyorsunuz.</li>
+        <li>Konum bilgisi kayboluyor: modüllerin kanvastaki yerleşimi burada yok.</li>
+      </ul></div>
+      <div class="cost"><h4>Maliyet</h4><ul>
+        <li>Orta — yeni sayfa + ray düğmesi, ama izole.</li>
+        <li>B ile birlikte de yaşayabilir; çakışmıyorlar.</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <div class="tbl-scroll">
+    <table>
+      <thead><tr>
+        <th>Seçenek</th><th>Ana kanvasta yan yana harita</th><th>Kullanıcı kontrolü</th>
+        <th>Yer tüketimi</th><th>Kanvas çekirdeğine dokunuş</th><th>Maliyet</th>
+      </tr></thead>
+      <tbody>
+        <tr><td><strong>A</strong> Katlanır kart</td><td><span class="mark m">tıkla</span></td><td>Tam</td>
+            <td class="num">72 → 190 px</td><td><span class="mark y">yok</span></td><td>Küçük–orta</td></tr>
+        <tr><td><strong>B</strong> Harita kartı</td><td><span class="mark y">varsayılan</span></td><td>Yok (A ile birlikte: tam)</td>
+            <td class="num">190 px</td><td><span class="mark y">yok</span></td><td>Küçük–orta</td></tr>
+        <tr><td><strong>C</strong> Zoom'a bağlı</td><td><span class="mark y">yakınken</span></td><td>Dolaylı</td>
+            <td class="num">190 px</td><td><span class="mark m">kamera yolu</span></td><td>Küçük</td></tr>
+        <tr><td><strong>D</strong> Gerçek iç içe</td><td><span class="mark y">tam</span></td><td>Tam</td>
+            <td class="num">~600 px</td><td><span class="mark n">derin</span></td><td>Büyük</td></tr>
+        <tr><td><strong>E</strong> Genel Bakış sayfası</td><td><span class="mark n">hayır</span></td><td>—</td>
+            <td class="num">0 (ayrı sayfa)</td><td><span class="mark y">yok</span></td><td>Orta</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="shead"><span class="eyebrow">Ad nereye</span></div>
+  <h2>Çerçevenin dört yeri</h2>
+  <div class="col">
+    <p>Dördü de aynı haritayı taşıyor; fark yalnız adın durduğu yer. L1 uygulamanın kendi idiyomu
+    (Gruplama Çerçevesi'nin etiketi tam böyle duruyor); L4 dar kartlarda haritaya en az yer kaybettiren.</p>
+  </div>
+
+  <div class="bench">
+    <div class="row" style="gap:40px; flex-wrap:wrap">
+
+      <div>
+        <div class="node" style="width:268px;height:168px;padding:0;border-width:1.5px">
+          <span class="notch">Takoz Çökme-Titreşim</span>
+          <span class="map pad"><svg><use href="#map-mnt"></use></svg></span>
+        </div>
+        <p class="cap" style="margin:20px 0 0"><strong style="color:var(--ink-head)">L1 · üst-sol çentik</strong><br>
+        Kesikli çerçeveyi kesen ad. Uygulamada zaten var.</p>
+      </div>
+
+      <div>
+        <div class="node" style="width:268px;height:168px">
+          <div class="card"><span class="rail"></span><span class="stack">
+            <span class="hd">
+              <span class="ico"><svg width="16" height="16" viewBox="0 0 100 100"><use href="#ico-mnt"></use></svg></span>
+              <span class="nm">Takoz Çökme-Titreşim</span><span class="ent">▸</span>
+            </span>
+            <span class="map"><svg><use href="#map-mnt"></use></svg></span>
+          </span></div>
+        </div>
+        <p class="cap" style="margin:20px 0 0"><strong style="color:var(--ink-head)">L2 · başlık şeridi</strong><br>
+        Pencere başlığı gibi. Sembol ve gir oku da sığar.</p>
+      </div>
+
+      <div>
+        <div class="node" style="width:268px;height:168px;padding:3px">
+          <span class="map" style="border:1px solid var(--border)"><svg><use href="#map-mnt"></use></svg></span>
+          <span class="chip">Takoz Çökme-Titreşim · 17 · 8</span>
+        </div>
+        <p class="cap" style="margin:26px 0 0"><strong style="color:var(--ink-head)">L3 · alt-orta kapsül</strong><br>
+        Alt-topoloji çipiyle aynı dil (<span class="mono">veBoundaryChipPos</span>).</p>
+      </div>
+
+      <div>
+        <div class="node" style="width:268px;height:168px;padding:0">
+          <span class="vrail"><span>Takoz Çökme-Titreşim</span></span>
+          <span class="map pad" style="margin-left:19px"><svg><use href="#map-mnt"></use></svg></span>
+        </div>
+        <p class="cap" style="margin:20px 0 0"><strong style="color:var(--ink-head)">L4 · sol dikey ray</strong><br>
+        Mevcut accent şeridin yerini alır; haritadan hiç yükseklik çalmaz.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="note warn">
+    <h4>Bir uyarı: L1 çentiği zeminin rengini ödünç alıyor</h4>
+    <p>Ad çipinin arkası kanvas zeminiyle aynı olmak zorunda (<span class="mono">--bg-primary</span>),
+    yoksa kesikli çizgi adın altından geçer. Modül düğümü bir <em>Gruplama Çerçevesi</em>'nin
+    üstüne konursa ya da tema değişirse bu varsayım bozulur — L1 seçilirse çipin zemini
+    jetondan okunmalı, sabit renk yazılmamalı.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="shead"><span class="eyebrow">İçerik</span></div>
+  <h2>Çerçevede addan başka ne yazsın</h2>
+  <div class="col">
+    <p>Bugünkü kart dört şey söylüyor: ad, doluluk noktası, bileşen/bağlantı sayısı, gir oku.
+    Harita geldiğinde ikisi gereksizleşiyor — <strong>doluluk artık haritanın kendisinden görünüyor</strong>,
+    bileşen sayısı ise haritada sayılabiliyor. Üç aday kalıyor:</p>
+    <ul class="body">
+      <li><strong>Yalnız ad.</strong> En sessiz; harita zaten anlatıyor.</li>
+      <li><strong>Ad + sayı</strong> (<span class="mono">16 · 11</span>). Bir bakışta doğrulama; dar kartta da sığar.</li>
+      <li><strong>Ad + çözüm durumu.</strong> En çok bilgi taşıyan aday: modül <em>çözüldü mü</em>,
+      sonuç güncel mi? Bu bilgi bugün hiçbir yerde görünmüyor —
+      <span class="file">window.veMountResults</span> / <span class="file">veFeadResults</span>
+      oturumluk global olarak duruyor ve proje değişince temizleniyor.</li>
+    </ul>
+    <p>Öneri: <strong>ad + sayı</strong> varsayılan, çözüm durumu ise ikinci bir rozet olarak
+    (yeşil/gri nokta) sonradan eklenebilir bir yer olarak bırakılsın.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="shead"><span class="eyebrow">Uygulama</span></div>
+  <h2>Harita nasıl çizilir: iki yol</h2>
+
+  <div class="tbl-scroll">
+    <table>
+      <thead><tr><th style="width:30%">&nbsp;</th>
+        <th>R1 · DOM klonu + ölçekleme</th><th>R2 · durumdan SVG üretimi</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Nasıl</strong></td>
+          <td>Sekme önizlemesindeki gibi gerçek <span class="mono">.ve-node</span> DOM'u kurulup
+          <span class="mono">transform: scale()</span> ile küçültülür.</td>
+          <td>Dışa aktarmadaki gibi durumdan tek bir SVG dizesi üretilir.</td></tr>
+        <tr><td><strong>Sadakat</strong></td>
+          <td><span class="mark y">tam</span> Rozetler, FEAD K/S işaretleri, kart içindeki kart — hepsi gelir.</td>
+          <td><span class="mark m">şematik</span> Kutu + sembol + bağlantı. Takoz'un şasi çerçevesi ve yayları,
+          FEAD rozetleri <em>gelmez</em>.</td></tr>
+        <tr><td><strong>Kimlik çakışması</strong></td>
+          <td><span class="mark n">tehlike</span> İçerideki <span class="mono">comp-3</span> ile dışarıdaki
+          <span class="mono">comp-3</span> aynı belgede. <span class="mono">veRenderSnapshot</span> bu yüzden
+          klonlara <em>bilerek</em> id vermiyor — aynı disiplin şart.</td>
+          <td><span class="mark y">yok</span> Tek bir SVG; id yok.</td></tr>
+        <tr><td><strong>Maliyet (3 modül)</strong></td>
+          <td>~38 düğüm × tam DOM ağacı, ana kanvasın içinde.</td>
+          <td>~70 KB SVG, kart kurulurken bir kez.</td></tr>
+        <tr><td><strong>Dışa aktarma ile ortaklık</strong></td>
+          <td>Yok — PNG yolu ayrı kalır.</td>
+          <td><span class="mark y">var</span> Aynı çizici hem karta hem PNG'ye hizmet eder.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <h4>Öneri: R2 + modüle özel süsleme kancası</h4>
+    <p><span class="file">veBuildTopologySVG</span> bugün global <span class="mono">nodes</span> dizisini ve
+    canlı DOM'u okuyor. Onu <span class="mono">(nodes, connections, opts)</span> alan saf bir çiziciye
+    çevirmek tek dokunuş — sonra <em>aynı</em> fonksiyon dışa aktarmaya, sekme önizlemesine ve modül
+    kartına hizmet eder. R2'nin tek eksiği modüle özel süsleme; her modül tipi isteğe bağlı bir
+    <span class="mono">miniDecorate</span> verirse Takoz'un şasisi de haritaya girer.</p>
+    <p style="margin-top:8px">Bu ayrımın önemi şu: <strong>kart, modülün içinde görecekleriniz gibi görünmezse
+    yanıltır.</strong> Takoz modülünün içi bugün yaylar ve bir şasi çerçevesiyle çiziliyor; haritada düz
+    eğriler görürseniz "acaba bağlantıları mı sildim" diye içeri girersiniz.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="shead"><span class="eyebrow">Kapılar</span></div>
+  <h2>Dokunulacak yerler ve kırılacak testler</h2>
+  <div class="col">
+    <ul class="body">
+      <li><span class="file">js/components.js</span> — <span class="mono">veApplyModuleCard</span> tek kurucu;
+      harita buraya girerse sekme önizlemesi ve durum geri-yükleme <em>bedavaya</em> aynı görüntüyü verir.
+      Ölçü ise <span class="mono">VE_MODULE_CARD_W/H</span> + <span class="mono">veModuleSizeFor</span>'da:
+      ikinci bir ölçü ikinci bir yere yazılırsa sessizce ayrışır — dosya bunu bir kez yaşamış
+      (<span class="mono">80 × 66</span> göçü).</li>
+      <li><span class="file">js/export-topology.js</span> — modül düğümünü <em>elle</em> çiziyor
+      (şerit + ad + özet). Kart değişip burası değişmezse ekran ile PNG aynı belgenin iki farklı hâli olur.
+      Bu tam olarak dosyanın kendi yorumunda uyardığı tuzak.</li>
+      <li><span class="file">css/styles.css</span> — <strong>görüntüleyici kapısı.</strong>
+      CSS'e dokunulduğu anda <span class="mono">MFSim_Olcum_Goruntuleyici.html</span> bayatlıyor;
+      CI'daki tazelik kapısı kırmızıya dönüyor ama <span class="mono">npm test</span> yeşil kalıyor.
+      Commit'ten önce <span class="mono">npm run build:viewer</span>.</li>
+      <li><span class="file">tests/unit/module-card.test.js</span> — kart sözleşmesini zaten kilitliyor
+      (ad elemanının <em>taşındığını</em>, kopyalanmadığını dâhil). Harita eklenince buraya
+      sığdırma ölçeği testi girer: saf fonksiyon, kırılgan değil.</li>
+      <li><span class="file">tests/unit/canvas-space.test.js</span> — sınır çerçevesi düğüm ölçüsünden
+      hesaplanıyor; modül büyüyünce çerçeve de büyüyor, bu kendiliğinden doğru çalışmalı.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="shead"><span class="eyebrow">Öneri</span></div>
+  <h2>Ne yapardım</h2>
+  <div class="col">
+    <p><strong>B'yi A ile birlikte, L2 etiketiyle, R2 çizicisiyle.</strong> Gerekçe üç maddede:</p>
+    <ul class="body">
+      <li><strong>B tek başına yeterli ama tehlikeli:</strong> harita varsayılan olsun, ama kullanıcı
+      kalabalıkta kapatabilsin. A'nın katlama düğmesi B'nin üstüne neredeyse ücretsiz biniyor —
+      ikisi aynı kod, farklı varsayılan.</li>
+      <li><strong>L2 (başlık şeridi)</strong> çünkü kart bugün zaten bir başlık satırı: sembol, ad, özet,
+      gir oku aynı hizada duruyor. L2 o satırı korur, altına haritayı ekler — kullanıcı için hiçbir şey
+      yerinden oynamaz. L1 daha zarif ama zemin varsayımı kırılgan (aşağıdaki uyarı); L4'te ad sığıyor
+      ama dikey yazı taramayı yavaşlatıyor, bugünkü accent şeridin yerini aldığı için "modül + doluluk"
+      işareti kayboluyor ve özet ile gir okuna yer kalmıyor.</li>
+      <li><strong>R2</strong> çünkü tek çizici üç yere hizmet ediyor ve kimlik çakışması riski yok.
+      Takoz'un şasisi için <span class="mono">miniDecorate</span> kancası ikinci adımda eklenir.</li>
+    </ul>
+    <p>D'yi ayrı tutuyorum: <em>gerçekten</em> istediğiniz şey çerçevenin içinden düzenlemekse
+    (ana topolojiden çıkmadan takoz taşımak gibi) D tek doğru cevap — ama o zaman bu iş bir görselleştirme
+    işi değil, kanvas mimarisi işi olur ve ayrıca konuşulmalı.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="shead"><span class="eyebrow">Karar</span></div>
+  <h2>Devam etmek için dört soru</h2>
+  <div class="q">
+    <div><span class="qn">1</span><span class="qb"><strong>Hangi yapı?</strong>
+      A+B (öneri) · yalnız B · C · D · E — ya da bir karışım.</span></div>
+    <div><span class="qn">2</span><span class="qb"><strong>Ad nereye?</strong>
+      L1 çentik · L2 başlık şeridi (öneri) · L3 alt kapsül · L4 dikey ray.</span></div>
+    <div><span class="qn">3</span><span class="qb"><strong>Kart ne kadar büyüsün?</strong>
+      <span class="mono">300 × 190</span> önerildi. Daha büyük harita mı istersiniz
+      (<span class="mono">420 × 260</span>), yoksa kanvasta yer daha mı değerli
+      (<span class="mono">240 × 150</span>)? Ölçü tek yerden geldiği için değiştirmek tek satır.</span></div>
+    <div><span class="qn">4</span><span class="qb"><strong>Takoz'un şasisi ve yayları haritada olsun mu?</strong>
+      Olmasın → sade şematik, bugün başlanabilir. Olsun → çizicinin modül başına bir süsleme
+      kancası alması gerekir (ikinci adım).</span></div>
+  </div>
+  <p class="small" style="margin-top:20px">Cevabınızı alınca ilgili seçeneği <span class="mono">js/</span>
+  ve <span class="mono">css/</span> tarafında uygular, <span class="mono">npm run build</span> +
+  <span class="mono">npm test</span> + <span class="mono">npm run build:viewer</span> kapılarından
+  geçirir, PR'ı açıp merge ederim. Bu belgede kodda hiçbir değişiklik yapılmadı.</p>
+</section>
+
+<footer>
+  <p class="small">Maketlerdeki haritalar uydurma değil: <span class="mono">assets/examples/ap_turan_topoloji.json</span>
+  (16 bileşen · 11 bağlantı), <span class="mono">assets/examples/siper_topoloji.json</span>
+  (17 · 8) ve ekran görüntünüzdeki FEAD durumuna denk beş düğümlük bir kurulum,
+  <span class="mono">js/components.js</span>'teki gerçek <span class="mono">componentDefs</span> sembolleri ve
+  <span class="mono">vePortOffset</span> port geometrisiyle çizildi. Renkler MFSim'in kendi
+  "pearl" ve "slate" tema jetonları.</p>
+</footer>
+
+</div>
+
+</body></html>

@@ -1,0 +1,1036 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style></head><body>
+<title>MFSim Karşılama Paftası</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@600;700&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* ══ SAYFA JETONLARI — açık tema temel, koyu tema yalnız jetonları ezer ══ */
+:root{
+  --bg:#e9ecef;
+  --panel:#f7f9fb;
+  --panel-2:#e3e7ec;
+  --line:#c9d0d8;
+  --line-soft:#dde2e8;
+  --ink:#14181c;
+  --ink-2:#4a525c;
+  --ink-3:#6d7681;
+  --accent:#b04a1c;
+  --accent-soft:rgba(176,74,28,.10);
+  --shadow:0 1px 2px rgba(18,24,30,.05), 0 14px 34px rgba(18,24,30,.09);
+  --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --disp:'IBM Plex Sans Condensed','Inter',sans-serif;
+  --mono:'IBM Plex Mono','SF Mono',Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121417;
+    --panel:#191c20;
+    --panel-2:#1f2328;
+    --line:#2b3138;
+    --line-soft:#23272d;
+    --ink:#e8ebee;
+    --ink-2:#a9b1ba;
+    --ink-3:#7d858f;
+    --accent:#e0703a;
+    --accent-soft:rgba(224,112,58,.13);
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 16px 38px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121417;
+  --panel:#191c20;
+  --panel-2:#1f2328;
+  --line:#2b3138;
+  --line-soft:#23272d;
+  --ink:#e8ebee;
+  --ink-2:#a9b1ba;
+  --ink-3:#7d858f;
+  --accent:#e0703a;
+  --accent-soft:rgba(224,112,58,.13);
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 16px 38px rgba(0,0,0,.45);
+}
+
+*{ box-sizing:border-box; }
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:14.5px;
+  line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{ max-width:1280px; margin:0 auto; padding:0 24px 96px; }
+.prose{ max-width:68ch; }
+h1,h2,h3{ font-family:var(--disp); font-weight:700; text-wrap:balance; margin:0; letter-spacing:-.005em; }
+h1{ font-size:clamp(30px,4.4vw,48px); line-height:1.06; }
+h2{ font-size:clamp(21px,2.4vw,27px); line-height:1.15; }
+h3{ font-size:16px; line-height:1.3; }
+p{ margin:0 0 14px; color:var(--ink-2); }
+strong{ color:var(--ink); font-weight:600; }
+.eyebrow{
+  font-family:var(--mono); font-size:11px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-3);
+}
+code{ font-family:var(--mono); font-size:.88em; color:var(--ink); background:var(--panel-2); padding:1px 5px; border:1px solid var(--line-soft); }
+
+/* ── Pafta başlığı ───────────────────────────────────────────────── */
+.sheet-head{ padding:46px 0 30px; border-bottom:1px solid var(--line); }
+.sheet-head .lede{ font-size:16.5px; line-height:1.62; color:var(--ink-2); max-width:62ch; margin:18px 0 0; }
+.titleblock{
+  margin-top:30px; display:grid; gap:1px; background:var(--line);
+  border:1px solid var(--line); grid-template-columns:repeat(4,1fr);
+}
+.titleblock div{ background:var(--panel); padding:9px 12px; }
+.titleblock dt{ font-family:var(--mono); font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3); margin:0 0 3px; }
+.titleblock dd{ margin:0; font-size:13px; color:var(--ink); font-weight:500; }
+@media (max-width:720px){ .titleblock{ grid-template-columns:repeat(2,1fr); } }
+
+/* ── Bölüm ───────────────────────────────────────────────────────── */
+section{ padding-top:56px; }
+.sec-head{ display:flex; align-items:baseline; gap:14px; border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:22px; }
+.sec-head .mark{
+  font-family:var(--mono); font-size:12px; font-weight:500; color:var(--accent);
+  border:1px solid var(--line); padding:2px 7px; letter-spacing:.06em; flex:none;
+  background:var(--panel);
+}
+.sec-head .sub{ margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--ink-3); letter-spacing:.06em; }
+@media (max-width:640px){ .sec-head .sub{ display:none; } }
+
+/* ── Kontroller ──────────────────────────────────────────────────── */
+.controls{
+  position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center;
+  padding:11px 0; margin-bottom:26px;
+  background:color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter:blur(8px); border-bottom:1px solid var(--line-soft);
+}
+.chips{ display:flex; gap:6px; }
+.chip{
+  font-family:var(--mono); font-size:11px; letter-spacing:.04em;
+  padding:5px 11px; border:1px solid var(--line); background:var(--panel); color:var(--ink-2);
+  cursor:pointer; transition:border-color .18s, color .18s, background .18s;
+}
+.chip:hover{ color:var(--ink); border-color:var(--ink-3); }
+.chip[aria-pressed="true"]{ border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
+.chip:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+.ctl-label{ font-family:var(--mono); font-size:10px; letter-spacing:.15em; text-transform:uppercase; color:var(--ink-3); }
+
+/* ── Çerçeve (1280×720 ekran, kapsayıcıya ölçekli) ───────────────── */
+.figure{ margin:0 0 8px; }
+.frame{
+  position:relative; width:100%; max-width:1280px; aspect-ratio:1280/720;
+  overflow:hidden;
+  border:1px solid var(--line); box-shadow:var(--shadow); background:var(--panel-2);
+}
+.screen{
+  width:1280px; height:720px; transform-origin:0 0;
+  transform:scale(var(--k, 1));
+  display:flex; flex-direction:column; overflow:hidden;
+  font-family:var(--sans); font-size:11px; line-height:1.5;
+  color:var(--m-tx); background:var(--m-bg);
+}
+.caption{
+  display:flex; flex-wrap:wrap; gap:6px 16px; align-items:baseline;
+  font-family:var(--mono); font-size:11px; color:var(--ink-3); margin-bottom:34px;
+}
+.caption b{ color:var(--ink-2); font-weight:500; }
+
+/* ── MFSim tema jetonları (önizlemelerin İÇİ — uygulamanın gerçek değerleri) ── */
+[data-mf="karbon"]{
+  --m-bg:#161616; --m-bg2:#1c1c1c; --m-bg3:#222222; --m-in:#111111;
+  --m-bd:#2a2a2a; --m-bd2:#333333; --m-tx:#d4d4d4; --m-tx2:#a8a8a8;
+  --m-mut:#8a8a8a; --m-hd:#f0f0f0; --m-ac:#e05020; --m-ink:#e4653b;
+  --m-sh:0 4px 16px rgba(0,0,0,.5);
+}
+[data-mf="gece"]{
+  --m-bg:#0a0c10; --m-bg2:#0f1218; --m-bg3:#151a22; --m-in:#080a0e;
+  --m-bd:#1c2333; --m-bd2:#222b3a; --m-tx:#c8d1dc; --m-tx2:#98a0b0;
+  --m-mut:#75849d; --m-hd:#e2e8f0; --m-ac:#2563eb; --m-ink:#4e80ef;
+  --m-sh:0 4px 16px rgba(0,0,0,.6);
+}
+[data-mf="pearl"]{
+  --m-bg:#fafbfc; --m-bg2:#ffffff; --m-bg3:#f0f1f3; --m-in:#ffffff;
+  --m-bd:#e0e2e6; --m-bd2:#e8eaed; --m-tx:#1b1e24; --m-tx2:#4e535e;
+  --m-mut:#646d7d; --m-hd:#0c0e12; --m-ac:#2d6fe6; --m-ink:#1b63e4;
+  --m-sh:0 4px 16px rgba(0,0,0,.06);
+}
+
+/* ── Önizleme içi ortak parçalar ─────────────────────────────────── */
+.mf-canvas{
+  flex:1; min-height:0; position:relative;
+  background:
+    linear-gradient(color-mix(in srgb, var(--m-bd) 55%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--m-bd) 55%, transparent) 1px, transparent 1px),
+    var(--m-bg);
+  background-size:34px 34px, 34px 34px, auto;
+  display:flex; align-items:center; justify-content:center;
+}
+.mf-brandmark{ width:1.35em; height:1.35em; color:var(--m-ac); flex:none; }
+.mf-wordmark{ font-weight:700; letter-spacing:.5px; color:var(--m-hd); }
+.mf-tag{ color:var(--m-mut); letter-spacing:.4px; }
+.mf-stamp{
+  font-family:var(--mono); font-size:10px; letter-spacing:.04em; color:var(--m-mut);
+  border:1px solid var(--m-bd); padding:2px 7px; white-space:nowrap;
+}
+.mf-btn{
+  display:inline-flex; align-items:center; gap:7px; padding:7px 12px;
+  border:1px solid var(--m-bd); background:var(--m-bg3); color:var(--m-tx2);
+  font-size:11px; font-weight:500; border-radius:3px; cursor:default;
+  transition:color .16s, border-color .16s, background .16s;
+}
+.mf-btn:hover{ color:var(--m-hd); border-color:var(--m-ac); }
+.mf-btn svg{ width:13px; height:13px; opacity:.85; }
+.mf-link{
+  display:inline-flex; align-items:center; gap:6px; color:var(--m-mut);
+  font-size:11px; padding:6px 8px; border:1px solid transparent; border-radius:3px;
+  transition:color .16s, border-color .16s;
+}
+.mf-link:hover{ color:var(--m-hd); border-color:var(--m-bd); }
+.mf-link svg{ width:12px; height:12px; }
+.mf-key{
+  font-family:var(--mono); font-size:9px; color:var(--m-mut);
+  border:1px solid var(--m-bd); padding:1px 5px; line-height:1.5;
+}
+.mf-tile-ico{
+  display:flex; align-items:center; justify-content:center; flex:none;
+  color:var(--m-ac); background:var(--m-in); border:1px solid var(--m-bd);
+  transition:background .18s, border-color .18s;
+}
+.mf-tile-ico svg{ width:100%; height:100%; }
+.mf-name{ color:var(--m-hd); font-weight:600; letter-spacing:-.01em; }
+.mf-desc{ color:var(--m-tx2); line-height:1.5; }
+.mf-spec{
+  font-family:var(--mono); font-size:9.5px; letter-spacing:.05em; color:var(--m-mut);
+  text-transform:uppercase;
+}
+@media (prefers-reduced-motion: reduce){
+  *{ transition-duration:.001ms !important; animation-duration:.001ms !important; }
+}
+</style>
+<style>
+/* ══ BUGÜNKÜ KABUK — şerit + belge bandı (bölüm 1'deki karşılaştırma) ══ */
+.mf-chrome{ transition:max-height .42s cubic-bezier(.2,.7,.3,1), opacity .28s; overflow:hidden; }
+.mf-ribbon{ max-height:118px; background:var(--m-bg2); border-bottom:1px solid var(--m-bd); }
+.mf-dock{ max-height:29px; background:var(--m-bg2); border-bottom:1px solid var(--m-bd); }
+.demo.is-bare .mf-chrome{ max-height:0; opacity:0; border-bottom-color:transparent; }
+.mf-strip{ height:30px; display:flex; align-items:center; gap:10px; padding:0 10px; border-bottom:1px solid var(--m-bd); }
+.mf-strip .brand{ display:flex; align-items:center; gap:7px; font-size:12px; }
+.mf-sep{ width:1px; height:15px; background:var(--m-bd); }
+.mf-qat{ display:flex; gap:2px; }
+.mf-qat span{ width:22px; height:22px; display:flex; align-items:center; justify-content:center; color:var(--m-mut); opacity:.5; }
+.mf-qat svg{ width:13px; height:13px; }
+.mf-tabs{ display:flex; gap:2px; }
+.mf-tabs span{ padding:5px 12px 6px; font-size:11.5px; color:var(--m-tx2); }
+.mf-tabs .on{ color:var(--m-hd); background:var(--m-bg3); border-top:2px solid var(--m-ac); padding-top:3px; }
+.mf-rbody{ display:flex; align-items:stretch; height:88px; padding:6px 4px 0; }
+.mf-group{ display:flex; flex-direction:column; padding:0 12px; border-right:1px solid var(--m-bd); }
+.mf-group .row{ display:flex; gap:2px; flex:1; align-items:flex-start; }
+.mf-group .glabel{ font-size:9px; letter-spacing:.09em; text-transform:uppercase; color:var(--m-mut); text-align:center; padding:2px 0 4px; opacity:.75; }
+.mf-cmd{ width:52px; display:flex; flex-direction:column; align-items:center; gap:4px; padding:6px 2px; color:var(--m-mut); opacity:.42; text-align:center; font-size:10px; line-height:1.15; }
+.mf-cmd svg{ width:17px; height:17px; }
+.mf-cmd.sm{ flex-direction:row; width:auto; gap:6px; padding:4px 6px; align-items:center; }
+.mf-cmd.sm svg{ width:13px; height:13px; }
+.mf-col{ display:flex; flex-direction:column; }
+.mf-dockrow{ height:28px; display:flex; align-items:center; gap:9px; padding:0 10px; font-size:10.5px; color:var(--m-mut); }
+.mf-doctab{ height:28px; display:flex; align-items:center; padding:0 14px; color:var(--m-hd); background:var(--m-bg3); border-right:1px solid var(--m-bd); border-bottom:2px solid var(--m-ac); font-size:11px; }
+.mf-dockrow .fill{ flex:1; }
+.mf-dockrow svg{ width:11px; height:11px; }
+
+/* ══ A — SESSİZ TUVAL ══ */
+.cA-card{
+  width:760px; padding:26px 30px 20px; background:var(--m-bg2);
+  border:1px solid var(--m-bd); box-shadow:var(--m-sh); display:flex; flex-direction:column;
+}
+.cA-head{ display:flex; align-items:center; gap:10px; }
+.cA-head .mf-wordmark{ font-size:20px; }
+.cA-head .mf-stamp{ margin-left:auto; }
+.cA-tag{ margin-top:5px; font-size:11.5px; }
+.cA-rule{ height:1px; background:var(--m-bd); margin:16px -30px 14px; }
+.cA-bar{ display:flex; align-items:baseline; gap:10px; margin-bottom:10px; }
+.cA-bar .eyeb{ font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--m-mut); }
+.cA-bar .hint{ margin-left:auto; font-size:10px; color:var(--m-mut); display:flex; align-items:center; gap:5px; }
+.cA-grid{ display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+.cA-tile{
+  position:relative; display:flex; gap:12px; align-items:flex-start; padding:13px 14px;
+  background:var(--m-bg3); border:1px solid var(--m-bd); border-radius:3px;
+  transition:border-color .18s, transform .18s, box-shadow .18s;
+}
+.cA-tile:hover{ border-color:var(--m-ac); transform:translateY(-2px); box-shadow:var(--m-sh); }
+.cA-tile:hover .mf-tile-ico{ border-color:var(--m-ac); background:color-mix(in srgb, var(--m-ac) 14%, var(--m-in)); }
+.cA-tile .mf-tile-ico{ width:42px; height:42px; padding:5px; }
+.cA-tile .mf-name{ font-size:13px; margin-bottom:2px; }
+.cA-tile .mf-desc{ font-size:10.5px; padding-right:16px; }
+.cA-tile .num{ position:absolute; top:9px; right:10px; font-family:var(--mono); font-size:9px; color:var(--m-mut); }
+.cA-foot{ display:flex; align-items:center; margin-top:16px; padding-top:14px; border-top:1px solid var(--m-bd); }
+.cA-foot .right{ margin-left:auto; display:flex; gap:2px; }
+
+/* ══ B — ATÖLYE ══ */
+.cB{ display:flex; }
+.cB-left{
+  width:420px; flex:none; background:var(--m-bg2); border-right:1px solid var(--m-bd);
+  padding:42px 38px 30px; display:flex; flex-direction:column;
+}
+.cB-left .brand{ display:flex; align-items:center; gap:11px; }
+.cB-left .mf-wordmark{ font-size:27px; }
+.cB-left .mf-brandmark{ width:26px; height:26px; }
+.cB-tag{ margin-top:8px; font-size:12px; }
+.cB-rule{ height:1px; background:var(--m-bd); margin:22px 0 18px; }
+.cB-note{ font-size:11.5px; color:var(--m-tx2); line-height:1.65; max-width:34ch; }
+.cB-spacer{ flex:1; min-height:24px; }
+.cB-left .mf-btn{ justify-content:center; padding:9px 12px; font-size:11.5px; }
+.cB-links{ display:flex; gap:2px; margin-top:8px; }
+.cB-meta{ margin-top:24px; padding-top:14px; border-top:1px solid var(--m-bd); display:flex; gap:14px; font-family:var(--mono); font-size:9.5px; letter-spacing:.05em; color:var(--m-mut); }
+.cB-right{ flex:1; min-width:0; padding:40px; display:flex; flex-direction:column; }
+.cB-eyeb{ font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--m-mut); margin-bottom:14px; }
+.cB-grid{ flex:1; display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:auto; align-content:center; gap:14px; }
+.cB-tile{
+  display:flex; flex-direction:column; padding:18px 18px 14px; background:var(--m-bg2);
+  border:1px solid var(--m-bd); border-radius:3px;
+  transition:border-color .18s, transform .18s, box-shadow .18s;
+}
+.cB-tile:hover{ border-color:var(--m-ac); transform:translateY(-2px); box-shadow:var(--m-sh); }
+.cB-tile:hover .mf-tile-ico{ border-color:var(--m-ac); background:color-mix(in srgb, var(--m-ac) 14%, var(--m-in)); }
+.cB-tile .mf-tile-ico{ width:50px; height:50px; padding:6px; margin-bottom:13px; }
+.cB-tile .mf-name{ font-size:14px; margin-bottom:4px; }
+.cB-tile .mf-desc{ font-size:11px; }
+.cB-tile .foot{ margin-top:auto; padding-top:12px; border-top:1px solid var(--m-bd); display:flex; align-items:center; gap:8px; }
+.cB-tile .arrow{ margin-left:auto; color:var(--m-mut); display:flex; transition:color .18s, transform .18s; }
+.cB-tile:hover .arrow{ color:var(--m-ac); transform:translateX(4px); }
+.cB-tile .arrow svg{ width:15px; height:15px; }
+
+/* ══ C — PAFTA ══ */
+.cC{ position:relative; padding:20px; }
+.cC-sheet{ position:relative; height:100%; border:1px solid var(--m-bd); display:flex; flex-direction:column; }
+.cC-cross{ position:absolute; width:13px; height:13px; color:var(--m-bd2); }
+.cC-cross.tl{ top:-7px; left:-7px; } .cC-cross.tr{ top:-7px; right:-7px; }
+.cC-cross.bl{ bottom:-7px; left:-7px; } .cC-cross.br{ bottom:-7px; right:-7px; }
+.cC-top{ display:flex; align-items:flex-end; gap:14px; padding:22px 26px 16px; border-bottom:1px solid var(--m-bd); }
+.cC-top .mf-wordmark{ font-size:22px; }
+.cC-top .mf-tag{ font-size:11px; padding-bottom:3px; }
+.cC-top .right{ margin-left:auto; font-family:var(--mono); font-size:10px; letter-spacing:.15em; text-transform:uppercase; color:var(--m-mut); }
+.cC-quad{ flex:1; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:1px; background:var(--m-bd); }
+.cC-cell{
+  position:relative; background:var(--m-bg); padding:22px 26px;
+  display:flex; gap:16px; align-items:center; transition:background .2s;
+}
+.cC-cell:hover{ background:color-mix(in srgb, var(--m-ac) 7%, var(--m-bg)); }
+.cC-cell .mf-tile-ico{ width:46px; height:46px; padding:3px; background:none; border:none; }
+.cC-cell .desig{ position:absolute; top:16px; right:20px; font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--m-mut); }
+.cC-cell .mf-name{ font-size:14px; margin-bottom:4px; }
+.cC-cell .mf-desc{ font-size:11px; max-width:36ch; }
+.cC-cell .open{ margin-top:10px; font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--m-ac); opacity:0; transition:opacity .2s; }
+.cC-cell:hover .open{ opacity:1; }
+.cC-bot{ display:flex; align-items:stretch; border-top:1px solid var(--m-bd); }
+.cC-bot .notes{ flex:1; padding:14px 26px; display:flex; align-items:center; gap:14px; }
+.cC-antet{ display:grid; grid-template-columns:auto 1fr; border-left:1px solid var(--m-bd); width:390px; }
+.cC-antet span{ padding:5px 12px; font-family:var(--mono); font-size:9.5px; letter-spacing:.07em; border-bottom:1px solid var(--m-bd); }
+.cC-antet span{ background:var(--m-bg2); }
+.cC-antet .k{ color:var(--m-mut); text-transform:uppercase; border-right:1px solid var(--m-bd); }
+.cC-antet .v{ color:var(--m-tx); }
+.cC-antet span:nth-last-child(-n+2){ border-bottom:none; }
+
+/* ══ D — ŞERİT ══ */
+.cD{ display:flex; flex-direction:column; }
+.cD-bar{ height:46px; flex:none; display:flex; align-items:center; gap:11px; padding:0 20px; background:var(--m-bg2); border-bottom:1px solid var(--m-bd); }
+.cD-bar .mf-wordmark{ font-size:15px; }
+.cD-bar .right{ margin-left:auto; display:flex; align-items:center; gap:2px; }
+.cD-panels{ flex:1; min-height:0; display:flex; }
+.cD-panel{
+  position:relative; flex:1 1 0; min-width:0; overflow:hidden;
+  border-right:1px solid var(--m-bd); background:var(--m-bg);
+  display:flex; flex-direction:column; justify-content:flex-end;
+  padding:26px 24px 28px;
+  transition:flex-grow .34s cubic-bezier(.2,.7,.3,1), background .24s;
+}
+.cD-panel:last-child{ border-right:none; }
+.cD-panel .wm{
+  position:absolute; inset:14% 0 auto 0; display:flex; justify-content:center;
+  color:var(--m-ac); opacity:.08; transition:opacity .24s;
+}
+.cD-panel .wm svg{ width:132px; height:132px; }
+.cD-panel .mf-tile-ico{ width:38px; height:38px; padding:3px; background:none; border:none; margin-bottom:14px; }
+.cD-panel .mf-name{ font-size:15px; }
+.cD-panel .body{
+  max-height:0; opacity:0; overflow:hidden;
+  transition:max-height .34s cubic-bezier(.2,.7,.3,1), opacity .24s;
+}
+.cD-panel .mf-desc{ font-size:11px; margin-top:7px; max-width:30ch; }
+.cD-panel .go{ margin-top:13px; display:inline-flex; align-items:center; gap:7px; color:var(--m-ac); font-size:11px; font-weight:600; }
+.cD-panel .go svg{ width:13px; height:13px; }
+.cD-panel .rule{ height:2px; width:26px; background:var(--m-bd2); margin-bottom:12px; transition:background .24s, width .3s; }
+.cD-panel.is-open, .cD-panel:hover{ flex-grow:1.9; background:var(--m-bg2); }
+.cD-panel.is-open .body, .cD-panel:hover .body{ max-height:110px; opacity:1; }
+.cD-panel.is-open .wm, .cD-panel:hover .wm{ opacity:.13; }
+.cD-panel.is-open .rule, .cD-panel:hover .rule{ background:var(--m-ac); width:44px; }
+.cD-panels:hover .cD-panel.is-open:not(:hover){ flex-grow:1; background:var(--m-bg); }
+.cD-panels:hover .cD-panel.is-open:not(:hover) .body{ max-height:0; opacity:0; }
+.cD-panels:hover .cD-panel.is-open:not(:hover) .rule{ background:var(--m-bd2); width:26px; }
+.cD-panels:hover .cD-panel.is-open:not(:hover) .wm{ opacity:.07; }
+</style>
+<style>
+/* ── Bugünkü karşılama kartı (bölüm 1'deki referans) ── */
+.cur-card{ width:410px; padding:30px 32px 24px; background:var(--m-bg2); border:1px solid var(--m-bd); box-shadow:var(--m-sh); display:flex; flex-direction:column; }
+.cur-hero{ text-align:center; margin-bottom:18px; }
+.cur-hero .mf-wordmark{ font-size:21px; display:inline-flex; align-items:center; gap:9px; }
+.cur-hero .mf-tag{ margin-top:7px; font-size:11px; }
+.cur-rule{ height:1px; background:var(--m-bd); margin:0 -32px 16px; }
+.cur-list{ display:flex; flex-direction:column; gap:9px; }
+.cur-row{ display:flex; align-items:center; gap:13px; padding:12px 14px; background:var(--m-bg3); border:1px solid var(--m-bd); border-radius:3px; transition:border-color .18s, transform .18s; }
+.cur-row:hover{ border-color:var(--m-ac); transform:translateY(-2px); }
+.cur-row .mf-tile-ico{ width:44px; height:44px; padding:5px; }
+.cur-row .mf-name{ font-size:12.5px; }
+.cur-row .mf-desc{ font-size:10.5px; margin-top:2px; }
+.cur-row .arrow{ color:var(--m-mut); display:flex; }
+.cur-row .arrow svg{ width:16px; height:16px; }
+.cur-open{ align-self:center; margin-top:16px; }
+/* ── Liste / tablo ── */
+.split{ display:grid; grid-template-columns:1fr 1fr; gap:26px; margin:26px 0 0; }
+@media (max-width:760px){ .split{ grid-template-columns:1fr; } }
+.card{ border:1px solid var(--line); background:var(--panel); padding:18px 20px 20px; }
+.card h3{ margin-bottom:10px; }
+.tick{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:9px; }
+.tick li{ display:flex; gap:10px; font-size:13.5px; color:var(--ink-2); line-height:1.5; }
+.tick li b{ font-family:var(--mono); font-size:11.5px; color:var(--ink); font-weight:500; white-space:nowrap; }
+.tick .m{ flex:none; width:16px; color:var(--accent); font-family:var(--mono); font-size:12px; }
+.toggle-row{ display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+.toggle-row .lab{ font-family:var(--mono); font-size:11px; color:var(--ink-3); letter-spacing:.05em; }
+button.act{
+  font-family:var(--mono); font-size:11.5px; letter-spacing:.04em; padding:7px 14px;
+  border:1px solid var(--accent); color:var(--accent); background:var(--accent-soft);
+  cursor:pointer; transition:background .18s, color .18s;
+}
+button.act:hover{ background:var(--accent); color:var(--bg); }
+button.act:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+table.cmp{ width:100%; border-collapse:collapse; margin-top:8px; font-size:13.5px; }
+table.cmp th, table.cmp td{ border:1px solid var(--line); padding:11px 13px; text-align:left; vertical-align:top; color:var(--ink-2); }
+table.cmp th{ background:var(--panel); font-family:var(--mono); font-size:10.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-3); font-weight:500; }
+table.cmp td:first-child{ color:var(--ink); font-weight:600; white-space:nowrap; font-family:var(--disp); font-size:15px; }
+table.cmp td.cost{ font-family:var(--mono); font-size:12px; }
+.tbl-scroll{ overflow-x:auto; }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="mod-ap" viewBox="0 0 100 100">
+      <rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="7 5"/>
+      <rect x="18" y="46" width="16" height="16" rx="2" fill="currentColor"/>
+      <line x1="34" y1="54" x2="47" y2="54" stroke="currentColor" stroke-width="4"/>
+      <circle cx="58" cy="54" r="10" fill="none" stroke="currentColor" stroke-width="4"/>
+      <line x1="68" y1="54" x2="77" y2="54" stroke="currentColor" stroke-width="4"/>
+      <circle cx="84" cy="54" r="6" fill="none" stroke="currentColor" stroke-width="3" opacity="0.7"/>
+      <path d="M64 22 h18 v18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+    </symbol>
+    <symbol id="mod-mount" viewBox="0 0 100 100">
+      <rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="7 5"/>
+      <rect x="30" y="34" width="30" height="10" rx="2" fill="currentColor" opacity="0.55"/>
+      <path d="M38 44 Q32 50 42 54 Q32 58 42 62 Q32 66 38 70" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M52 44 Q46 50 56 54 Q46 58 56 62 Q46 66 52 70" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="26" y1="72" x2="64" y2="72" stroke="currentColor" stroke-width="3"/>
+      <path d="M64 22 h18 v18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+    </symbol>
+    <symbol id="mod-fead" viewBox="0 0 100 100">
+      <rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="7 5"/>
+      <circle cx="38" cy="58" r="16" fill="none" stroke="currentColor" stroke-width="3" opacity="0.65"/>
+      <circle cx="38" cy="58" r="5" fill="currentColor"/>
+      <circle cx="68" cy="58" r="9" fill="none" stroke="currentColor" stroke-width="3" opacity="0.65"/>
+      <circle cx="68" cy="58" r="3.2" fill="currentColor"/>
+      <path d="M41.7 42.4 L70.1 49.3 A9 9 0 0 1 70.1 66.8 L41.7 73.6 A16 16 0 1 1 41.7 42.4 Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M64 22 h18 v18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+    </symbol>
+    <symbol id="mod-str" viewBox="0 0 100 100">
+      <rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="7 5"/>
+      <path d="M20 32 V78" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+      <path d="M20 40 l-7 -6 M20 52 l-7 -6 M20 64 l-7 -6 M20 76 l-7 -6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" opacity="0.6"/>
+      <path d="M20 36 h14 v26 h26 v13 h-40 z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M20 49 h14 M27 36 v39 M34 62 l26 13 M34 75 l26 -13 M47 62 v13" stroke="currentColor" stroke-width="1.7" opacity="0.45"/>
+      <path d="M54 38 v17 M49.5 51 L54 59 L58.5 51" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M64 22 h18 v18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+    </symbol>
+    <g id="strokeset" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></g>
+    <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3.4"/>
+      <path d="M19.1 14.9a1.5 1.5 0 0 0 .3 1.7l.1.1a1.9 1.9 0 1 1-2.7 2.7l-.1-.1a1.5 1.5 0 0 0-1.7-.3 1.5 1.5 0 0 0-.9 1.4v.2a1.9 1.9 0 1 1-3.8 0v-.1a1.5 1.5 0 0 0-1-1.4 1.5 1.5 0 0 0-1.7.3l-.1.1a1.9 1.9 0 1 1-2.7-2.7l.1-.1a1.5 1.5 0 0 0 .3-1.7 1.5 1.5 0 0 0-1.4-.9h-.2a1.9 1.9 0 1 1 0-3.8h.1a1.5 1.5 0 0 0 1.4-1 1.5 1.5 0 0 0-.3-1.7l-.1-.1a1.9 1.9 0 1 1 2.7-2.7l.1.1a1.5 1.5 0 0 0 1.7.3h.1a1.5 1.5 0 0 0 .9-1.4v-.2a1.9 1.9 0 1 1 3.8 0v.1a1.5 1.5 0 0 0 .9 1.4 1.5 1.5 0 0 0 1.7-.3l.1-.1a1.9 1.9 0 1 1 2.7 2.7l-.1.1a1.5 1.5 0 0 0-.3 1.7v.1a1.5 1.5 0 0 0 1.4.9h.2a1.9 1.9 0 1 1 0 3.8h-.1a1.5 1.5 0 0 0-1.4.9z"/>
+    </symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V6a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v1"/><path d="M3 8h17.2a1 1 0 0 1 1 1.2l-1.4 8a1 1 0 0 1-1 .8H4a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12l4 4v12H4z"/><path d="M8 4v6h8V4"/><rect x="8" y="13" width="8" height="7"/></symbol>
+    <symbol id="i-doc-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7z"/><path d="M14 3v4h4M12 11v6M9 14h6"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h11a4.5 4.5 0 1 1 0 9h-6"/><path d="M8 5 4 9l4 4"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 9H9a4.5 4.5 0 1 0 0 9h6"/><path d="m16 5 4 4-4 4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 7V5h4v2M6 7l1 13h10l1-13"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/><path d="M12 15V4M8 8l4-4 4 4"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.5 19 12 6 19.5z"/></symbol>
+    <symbol id="i-wand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m4 20 11-11 3 3L7 23z" transform="translate(0,-3)"/><path d="M15 3v4M13 5h4M18 12v3M16.5 13.5h3"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/><path d="M12 4v11M8 11l4 4 4-4"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7z"/><path d="M14 3v4h4M9 12h6M9 16h4"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H19"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17h.01"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-reg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="5"/></symbol>
+  </defs>
+</svg>
+<div class="wrap" id="deck" lang="tr" data-mf="karbon">
+
+  <header class="sheet-head">
+    <p class="eyebrow">MFSim · arayüz çalışması</p>
+    <h1>Yükleme sonrası ilk ekran</h1>
+    <p class="lede">
+      Bugün bu ekran açıldığında şerit, belge bandı ve durum satırı da çiziliyor: on dörde yakın
+      komut görünüyor ve hepsi pasif — ortada henüz çalışma alanı yok. Ekranın sorduğu soru ise tek:
+      <strong>hangi modül?</strong> Aşağıda önce o kabuğun kapanışı, sonra aynı soruyu soran dört ayrı tasarım var.
+      Önizlemeler canlı; üzerlerine gelince gerçek hover davranışını yapıyor ve MFSim'in kendi temalarıyla çiziliyorlar.
+    </p>
+    <dl class="titleblock">
+      <div><dt>Konu</dt><dd>Modül seçim ekranı</dd></div>
+      <div><dt>Dokunulan</dt><dd>index.html · css/styles.css</dd></div>
+      <div><dt>Önizleme</dt><dd>1280 × 720 · canlı HTML</dd></div>
+      <div><dt>Durum</dt><dd>Öneri — seçim bekliyor</dd></div>
+    </dl>
+  </header>
+
+  <div class="controls">
+    <span class="ctl-label">Önizleme teması</span>
+    <div class="chips" role="group" aria-label="Önizleme teması">
+      <button class="chip" data-theme-btn="karbon" aria-pressed="true">Karbon</button>
+      <button class="chip" data-theme-btn="gece" aria-pressed="false">Koyu Gece</button>
+      <button class="chip" data-theme-btn="pearl" aria-pressed="false">Pearl</button>
+    </div>
+  </div>
+
+  <!-- ══ 1 · KABUK ══ -->
+  <section id="kabuk">
+    <div class="sec-head">
+      <span class="mark">1</span>
+      <h2>Şerit ne zaman görünmeli?</h2>
+      <span class="sub">js/components.js · veSyncModuleShell</span>
+    </div>
+    <div class="prose">
+      <p>
+        Sol Bileşenler paneli ile sayfa rayı bu ekranda <strong>zaten gizleniyor</strong>:
+        <code>veSyncModuleShell()</code> karşılama katmanını izleyip <code>.ve-no-module</code> sınıfını yazıyor.
+        Şerit ise gizlenmiyor, yalnızca pasif çiziliyor (<code>veRibbonNoWorkspace</code>). Aynı anahtarı
+        şeride ve belge bandına uzatmak değişikliğin tamamı — <code>#ve-ribbon</code> <code>.ve-main</code>'in
+        dışında olduğu için sınıfın ayrıca <code>&lt;body&gt;</code>'ye de yazılması gerekiyor.
+      </p>
+    </div>
+
+    <div class="toggle-row">
+      <span class="lab">Aşağıdaki önizleme:</span>
+      <button class="act" id="chrome-toggle" aria-pressed="false">Şeridi gizle</button>
+    </div>
+
+    <figure class="figure">
+      <div class="frame">
+        <div class="screen demo" id="demo-screen">
+          <div class="mf-chrome mf-ribbon">
+            <div class="mf-strip">
+              <span class="brand"><svg class="mf-brandmark"><use href="#i-gear"/></svg><span class="mf-wordmark">MFSim</span></span>
+              <span class="mf-sep"></span>
+              <span class="mf-qat">
+                <span><svg><use href="#i-save"/></svg></span>
+                <span><svg><use href="#i-undo"/></svg></span>
+                <span><svg><use href="#i-redo"/></svg></span>
+              </span>
+              <span class="mf-sep"></span>
+              <span class="mf-tabs"><span class="on">Giriş</span><span>Görünüm</span><span>Araçlar</span></span>
+            </div>
+            <div class="mf-rbody">
+              <div class="mf-group">
+                <div class="row">
+                  <span class="mf-cmd"><svg><use href="#i-doc-plus"/></svg>Yeni<br>Proje</span>
+                  <span class="mf-cmd"><svg><use href="#i-folder"/></svg>Proje<br>Aç</span>
+                  <span class="mf-cmd"><svg><use href="#i-save"/></svg>Kaydet</span>
+                </div>
+                <div class="glabel">Proje</div>
+              </div>
+              <div class="mf-group">
+                <div class="row"><span class="mf-cmd sm"><svg><use href="#i-trash"/></svg>Temizle</span></div>
+                <div class="glabel">&nbsp;</div>
+              </div>
+              <div class="mf-group">
+                <div class="row"><span class="mf-cmd"><svg><use href="#i-upload"/></svg>Ölçüm<br>İçe Aktar</span></div>
+                <div class="glabel">Ölçüm Verisi</div>
+              </div>
+              <div class="mf-group">
+                <div class="row">
+                  <span class="mf-cmd"><svg><use href="#i-search"/></svg>Doğrula</span>
+                  <span class="mf-cmd"><svg><use href="#i-play"/></svg>Çözücü</span>
+                </div>
+                <div class="glabel">Çözüm</div>
+              </div>
+              <div class="mf-group">
+                <div class="row"><div class="mf-col">
+                  <span class="mf-cmd sm"><svg><use href="#i-undo"/></svg>Geri Al</span>
+                  <span class="mf-cmd sm"><svg><use href="#i-redo"/></svg>İleri Al</span>
+                  <span class="mf-cmd sm"><svg><use href="#i-wand"/></svg>Otomatik Düzenle</span>
+                </div></div>
+                <div class="glabel">Düzen</div>
+              </div>
+              <div class="mf-group">
+                <div class="row"><div class="mf-col">
+                  <span class="mf-cmd sm"><svg><use href="#i-download"/></svg>PNG</span>
+                  <span class="mf-cmd sm"><svg><use href="#i-download"/></svg>SVG</span>
+                  <span class="mf-cmd sm"><svg><use href="#i-file"/></svg>Rapor</span>
+                </div></div>
+                <div class="glabel">Dışa Aktar</div>
+              </div>
+            </div>
+          </div>
+          <div class="mf-chrome mf-dock">
+            <div class="mf-dockrow">
+              <span class="mf-doctab">Topoloji 1</span>
+              <svg style="width:11px;height:11px;opacity:.6"><use href="#i-plus"/></svg>
+              <span class="fill"></span>
+              <svg><use href="#i-alert"/></svg><span>Uyarılar 0 ▲</span>
+              <span class="mf-sep"></span><span>0 bileşen, 0 bağlantı</span>
+              <span class="mf-sep"></span><span>%100</span>
+              <span class="mf-sep"></span><span>Hazır</span>
+            </div>
+          </div>
+          <div class="mf-canvas">
+            <div class="cur-card">
+              <div class="cur-hero">
+                <span class="mf-wordmark"><svg class="mf-brandmark"><use href="#i-gear"/></svg>MFSim</span>
+                <div class="mf-tag">Araç Performans Simülasyon Yazılımı</div>
+              </div>
+              <div class="cur-rule"></div>
+              <div class="cur-list">
+                <div class="cur-row"><span class="mf-tile-ico"><svg><use href="#mod-ap"/></svg></span>
+                  <span style="flex:1"><span class="mf-name">Araç Performans</span><div class="mf-desc">Araç güç aktarma organları — tam gaz hızlanma ve performans analizi.</div></span>
+                  <span class="arrow"><svg><use href="#i-arrow"/></svg></span></div>
+                <div class="cur-row"><span class="mf-tile-ico"><svg><use href="#mod-mount"/></svg></span>
+                  <span style="flex:1"><span class="mf-name">Takoz Çökme-Titreşim</span><div class="mf-desc">Motor-şanzıman takoz sistemi — statik çökme ve titreşim (6 SD) analizi.</div></span>
+                  <span class="arrow"><svg><use href="#i-arrow"/></svg></span></div>
+                <div class="cur-row"><span class="mf-tile-ico"><svg><use href="#mod-fead"/></svg></span>
+                  <span style="flex:1"><span class="mf-name">FEAD</span><div class="mf-desc">Motorun ön uç kayış-kasnak sistemi — kasnaklar, gergi ve kayış yolu.</div></span>
+                  <span class="arrow"><svg><use href="#i-arrow"/></svg></span></div>
+                <div class="cur-row"><span class="mf-tile-ico"><svg><use href="#mod-str"/></svg></span>
+                  <span style="flex:1"><span class="mf-name">Yapısal Analiz</span><div class="mf-desc">Braket ve taşıyıcı parçaların sonlu elemanlar analizi — gerilme ve sehim.</div></span>
+                  <span class="arrow"><svg><use href="#i-arrow"/></svg></span></div>
+              </div>
+              <span class="mf-link cur-open"><svg><use href="#i-folder"/></svg> Kayıtlı proje aç</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption class="caption"><b>Bugünkü ekran.</b> Düğmeye bas: şerit ve belge bandı kapanır, geriye yalnız soru kalır.</figcaption>
+    </figure>
+
+    <div class="split">
+      <div class="card">
+        <h3>Kapanan yüzeyler</h3>
+        <ul class="tick">
+          <li><span class="m">—</span><span><b>#ve-ribbon</b> · üç sekme, on dört komut; hepsi pasif çiziliyordu</span></li>
+          <li><span class="m">—</span><span><b>.ve-doc-dock</b> · Topoloji sekmesi, uyarı çipi, %100, "Hazır"</span></li>
+          <li><span class="m">✓</span><span><b>.ve-sidebar</b> · <b>.ve-nav-rail</b> — bugün de gizli</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Ulaşılabilir kalması gereken</h3>
+        <ul class="tick">
+          <li><span class="m">→</span><span><b>veLoadTopology</b> · Kayıtlı proje aç — dört tasarımda da ayrı satır</span></li>
+          <li><span class="m">→</span><span><b>veGuideKitOpen</b> · Kullanım kılavuzları — kılavuz boş tuvalde okunabilmeli</span></li>
+          <li><span class="m">→</span><span><b>veOpenSettings</b> · Ayarlar, tema, oturumu kapat</span></li>
+          <li><span class="m">→</span><span><b>veOpenStatusModal</b> · sürüm künyesine tıklayınca Program Durumu</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ A · SESSİZ TUVAL ══ -->
+  <section id="a">
+    <div class="sec-head">
+      <span class="mark">A</span>
+      <h2>Sessiz Tuval</h2>
+      <span class="sub">bugünkü kartın açılmışı</span>
+    </div>
+    <div class="prose">
+      <p>
+        Aynı kart, iki sütuna açılıyor. Dikey liste 410 px'e sıkıştığı için her açıklama iki satıra kırılıyordu;
+        2×2 ızgarada aynı metin tek nefeste okunuyor ve kart ekranın dikeyini zorlamıyor.
+        Üst çubukta sürüm künyesi, altta <strong>Kayıtlı proje aç</strong> ile ikincil girişler.
+        Rakam çipleri <strong>1–4</strong> kısayolunu görünür kılıyor.
+      </p>
+    </div>
+    <figure class="figure">
+      <div class="frame">
+        <div class="screen">
+          <div class="mf-canvas">
+            <div class="cA-card">
+              <div class="cA-head">
+                <svg class="mf-brandmark"><use href="#i-gear"/></svg>
+                <span class="mf-wordmark">MFSim</span>
+                <span class="mf-stamp">2351493 · PR #867</span>
+              </div>
+              <div class="mf-tag cA-tag">Araç Performans Simülasyon Yazılımı</div>
+              <div class="cA-rule"></div>
+              <div class="cA-bar">
+                <span class="eyeb">Modül seç</span>
+                <span class="hint">kısayol <span class="mf-key">1</span> – <span class="mf-key">4</span></span>
+              </div>
+              <div class="cA-grid">
+                <div class="cA-tile"><span class="num">1</span>
+                  <span class="mf-tile-ico"><svg><use href="#mod-ap"/></svg></span>
+                  <span><span class="mf-name">Araç Performans</span><div class="mf-desc">Güç aktarma organları — tam gaz hızlanma ve performans analizi.</div></span>
+                </div>
+                <div class="cA-tile"><span class="num">2</span>
+                  <span class="mf-tile-ico"><svg><use href="#mod-mount"/></svg></span>
+                  <span><span class="mf-name">Takoz Çökme-Titreşim</span><div class="mf-desc">Motor-şanzıman takozları — statik çökme ve 6 SD titreşim.</div></span>
+                </div>
+                <div class="cA-tile"><span class="num">3</span>
+                  <span class="mf-tile-ico"><svg><use href="#mod-fead"/></svg></span>
+                  <span><span class="mf-name">FEAD</span><div class="mf-desc">Ön uç kayış-kasnak sistemi — kasnaklar, gergi ve kayış yolu.</div></span>
+                </div>
+                <div class="cA-tile"><span class="num">4</span>
+                  <span class="mf-tile-ico"><svg><use href="#mod-str"/></svg></span>
+                  <span><span class="mf-name">Yapısal Analiz</span><div class="mf-desc">Braket ve taşıyıcı parçalar — gerilme ve sehim (FEA).</div></span>
+                </div>
+              </div>
+              <div class="cA-foot">
+                <span class="mf-btn"><svg><use href="#i-folder"/></svg> Kayıtlı proje aç</span>
+                <span class="right">
+                  <span class="mf-link"><svg><use href="#i-book"/></svg> Kılavuzlar</span>
+                  <span class="mf-link"><svg><use href="#i-gear"/></svg> Ayarlar</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption class="caption"><b>A · Sessiz Tuval.</b> Tek kart, 760 px. Izgara zemin uygulamanın kendi tuvali — modül seçilince kart kayboluyor, zemin kalıyor.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ══ B · ATÖLYE ══ -->
+  <section id="b">
+    <div class="sec-head">
+      <span class="mark">B</span>
+      <h2>Atölye</h2>
+      <span class="sub">kimlik solda · iş sağda</span>
+    </div>
+    <div class="prose">
+      <p>
+        Kart tamamen kalkıyor: ekranın kendisi karşılama oluyor. Solda program kimliği ve proje açma yolu,
+        sağda ızgara zemin üzerinde dört modül. Her kutunun altındaki künye satırı o modülün ne olduğunu
+        adından fazlasıyla söylüyor — <strong>hangi çözücü, hangi standart</strong>.
+        Bu düzen 1280 px'in altında tek sütuna iniyor, kart taşması sorunu ortadan kalkıyor.
+      </p>
+    </div>
+    <figure class="figure">
+      <div class="frame">
+        <div class="screen">
+          <div class="cB" style="flex:1;min-height:0">
+            <div class="cB-left">
+              <div class="brand"><svg class="mf-brandmark"><use href="#i-gear"/></svg><span class="mf-wordmark">MFSim</span></div>
+              <div class="mf-tag cB-tag">Araç Performans Simülasyon Yazılımı</div>
+              <div class="cB-rule"></div>
+              <p class="cB-note">
+                Bir modül seçerek başla. Modüller aynı tuvali paylaşır: bir projede birden fazla
+                alt-sistem yan yana durabilir, her biri çift tıkla kendi iç topolojisini açar.
+              </p>
+              <div class="cB-spacer"></div>
+              <span class="mf-btn"><svg><use href="#i-folder"/></svg> Kayıtlı proje aç</span>
+              <div class="cB-links">
+                <span class="mf-link"><svg><use href="#i-book"/></svg> Kılavuzlar</span>
+                <span class="mf-link"><svg><use href="#i-gear"/></svg> Ayarlar</span>
+              </div>
+              <div class="cB-meta"><span>SÜRÜM 2351493 · PR #867</span><span>TEMA KARBON</span></div>
+            </div>
+            <div class="cB-right mf-canvas" style="display:flex;align-items:stretch;justify-content:stretch">
+              <div style="display:flex;flex-direction:column;flex:1;min-width:0">
+                <div class="cB-eyeb">Modül seç</div>
+                <div class="cB-grid">
+                  <div class="cB-tile">
+                    <span class="mf-tile-ico"><svg><use href="#mod-ap"/></svg></span>
+                    <span class="mf-name">Araç Performans</span>
+                    <div class="mf-desc">Güç aktarma organları — tam gaz hızlanma, vites geçişleri, tavan hız.</div>
+                    <div class="foot"><span class="mf-spec">RK45 · tam gaz hızlanma</span><span class="arrow"><svg><use href="#i-arrow"/></svg></span></div>
+                  </div>
+                  <div class="cB-tile">
+                    <span class="mf-tile-ico"><svg><use href="#mod-mount"/></svg></span>
+                    <span class="mf-name">Takoz Çökme-Titreşim</span>
+                    <div class="mf-desc">Motor-şanzıman takoz sistemi — statik çökme, izolasyon, şok.</div>
+                    <div class="foot"><span class="mf-spec">6 serbestlik · Newmark-β</span><span class="arrow"><svg><use href="#i-arrow"/></svg></span></div>
+                  </div>
+                  <div class="cB-tile">
+                    <span class="mf-tile-ico"><svg><use href="#mod-fead"/></svg></span>
+                    <span class="mf-name">FEAD</span>
+                    <div class="mf-desc">Ön uç kayış-kasnak sistemi — kasnaklar, gergi ve kayış yolu.</div>
+                    <div class="foot"><span class="mf-spec">ISO 9982 · 244 stok boy</span><span class="arrow"><svg><use href="#i-arrow"/></svg></span></div>
+                  </div>
+                  <div class="cB-tile">
+                    <span class="mf-tile-ico"><svg><use href="#mod-str"/></svg></span>
+                    <span class="mf-name">Yapısal Analiz</span>
+                    <div class="mf-desc">Braket ve taşıyıcı parçalar — gerilme, sehim, ağ üretimi.</div>
+                    <div class="foot"><span class="mf-spec">OCCT · TetGen · 112 malzeme</span><span class="arrow"><svg><use href="#i-arrow"/></svg></span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption class="caption"><b>B · Atölye.</b> Sol sütun 420 px sabit; sağ taraf tuval zemininde. Künye satırları kataloglardan geliyor.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ══ C · PAFTA ══ -->
+  <section id="c">
+    <div class="sec-head">
+      <span class="mark">C</span>
+      <h2>Pafta</h2>
+      <span class="sub">teknik resim dili</span>
+    </div>
+    <div class="prose">
+      <p>
+        Ekran bir çizim paftası oluyor: dış çerçeve, köşe nişan işaretleri ve sağ altta <strong>antet</strong>.
+        Modüller dört pafta gözüne bölünüyor — kutu yok, yalnız ince ayırıcılar; MFSim'in kendi simgeleri
+        zaten kesikli çerçeveli teknik çizimler, bu dil onların dili. Kimlik ilan edilmiyor, künyede duruyor:
+        programın kendi belge geleneği karşılamayı da anlatıyor.
+      </p>
+    </div>
+    <figure class="figure">
+      <div class="frame">
+        <div class="screen">
+          <div class="cC" style="flex:1;min-height:0;background:var(--m-bg)">
+            <div class="cC-sheet mf-canvas" style="flex-direction:column;align-items:stretch;justify-content:flex-start">
+              <svg class="cC-cross tl"><use href="#i-reg"/></svg>
+              <svg class="cC-cross tr"><use href="#i-reg"/></svg>
+              <svg class="cC-cross bl"><use href="#i-reg"/></svg>
+              <svg class="cC-cross br"><use href="#i-reg"/></svg>
+              <div class="cC-top">
+                <svg class="mf-brandmark" style="width:22px;height:22px"><use href="#i-gear"/></svg>
+                <span class="mf-wordmark">MFSim</span>
+                <span class="mf-tag">Araç Performans Simülasyon Yazılımı</span>
+                <span class="right">Modül seçimi</span>
+              </div>
+              <div class="cC-quad">
+                <div class="cC-cell"><span class="desig">Tuş 1</span>
+                  <span class="mf-tile-ico"><svg><use href="#mod-ap"/></svg></span>
+                  <span><span class="mf-name">Araç Performans</span>
+                    <div class="mf-desc">Güç aktarma organları — tam gaz hızlanma, vites geçişleri, tavan hız.</div>
+                    <div class="open">Aç →</div></span>
+                </div>
+                <div class="cC-cell"><span class="desig">Tuş 2</span>
+                  <span class="mf-tile-ico"><svg><use href="#mod-mount"/></svg></span>
+                  <span><span class="mf-name">Takoz Çökme-Titreşim</span>
+                    <div class="mf-desc">Motor-şanzıman takoz sistemi — statik çökme ve 6 SD titreşim.</div>
+                    <div class="open">Aç →</div></span>
+                </div>
+                <div class="cC-cell"><span class="desig">Tuş 3</span>
+                  <span class="mf-tile-ico"><svg><use href="#mod-fead"/></svg></span>
+                  <span><span class="mf-name">FEAD</span>
+                    <div class="mf-desc">Ön uç kayış-kasnak sistemi — kasnaklar, gergi ve kayış yolu.</div>
+                    <div class="open">Aç →</div></span>
+                </div>
+                <div class="cC-cell"><span class="desig">Tuş 4</span>
+                  <span class="mf-tile-ico"><svg><use href="#mod-str"/></svg></span>
+                  <span><span class="mf-name">Yapısal Analiz</span>
+                    <div class="mf-desc">Braket ve taşıyıcı parçalar — gerilme, sehim, ağ üretimi.</div>
+                    <div class="open">Aç →</div></span>
+                </div>
+              </div>
+              <div class="cC-bot">
+                <div class="notes">
+                  <span class="mf-btn"><svg><use href="#i-folder"/></svg> Kayıtlı proje aç</span>
+                  <span class="mf-link"><svg><use href="#i-book"/></svg> Kılavuzlar</span>
+                  <span class="mf-link"><svg><use href="#i-gear"/></svg> Ayarlar</span>
+                </div>
+                <div class="cC-antet">
+                  <span class="k">Program</span><span class="v">MFSim</span>
+                  <span class="k">Konu</span><span class="v">Modül seçimi</span>
+                  <span class="k">Sürüm</span><span class="v">2351493 · PR #867</span>
+                  <span class="k">Tarih</span><span class="v">04.09.2026</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption class="caption"><b>C · Pafta.</b> Antet gerçek veriyi taşıyor: sürüm künyesi build'de gömülen <b>sha · PR</b> satırının aynısı.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ══ D · ŞERİT ══ -->
+  <section id="d">
+    <div class="sec-head">
+      <span class="mark">D</span>
+      <h2>Şerit</h2>
+      <span class="sub">dört tam boy sütun</span>
+    </div>
+    <div class="prose">
+      <p>
+        Ne kart var ne pencere: dört modül ekranı boydan boya paylaşıyor. Üzerine gelinen sütun genişliyor,
+        açıklamasını ve <strong>Başla</strong> satırını açıyor; diğerleri geri çekiliyor. En cesur seçenek —
+        seçim bir iletişim kutusunda değil, ekranın kendisinde. Karşılığında dar ekran için ayrı bir
+        kural gerekiyor: 900 px altında sütunlar yatay satırlara dönüşmeli.
+      </p>
+    </div>
+    <figure class="figure">
+      <div class="frame">
+        <div class="screen">
+          <div class="cD" style="flex:1;min-height:0">
+            <div class="cD-bar">
+              <svg class="mf-brandmark" style="width:15px;height:15px"><use href="#i-gear"/></svg>
+              <span class="mf-wordmark">MFSim</span>
+              <span class="mf-tag" style="font-size:11px">Araç Performans Simülasyon Yazılımı</span>
+              <span class="right">
+                <span class="mf-stamp">2351493 · PR #867</span>
+                <span class="mf-link"><svg><use href="#i-folder"/></svg> Kayıtlı proje aç</span>
+                <span class="mf-link"><svg><use href="#i-book"/></svg> Kılavuzlar</span>
+                <span class="mf-link"><svg><use href="#i-gear"/></svg> Ayarlar</span>
+              </span>
+            </div>
+            <div class="cD-panels">
+              <div class="cD-panel is-open">
+                <span class="wm"><svg><use href="#mod-ap"/></svg></span>
+                <div class="rule"></div>
+                <span class="mf-tile-ico"><svg><use href="#mod-ap"/></svg></span>
+                <span class="mf-name">Araç Performans</span>
+                <div class="body">
+                  <div class="mf-desc">Güç aktarma organları — tam gaz hızlanma, vites geçişleri, tavan hız.</div>
+                  <span class="go">Başla <svg><use href="#i-arrow"/></svg></span>
+                </div>
+              </div>
+              <div class="cD-panel">
+                <span class="wm"><svg><use href="#mod-mount"/></svg></span>
+                <div class="rule"></div>
+                <span class="mf-tile-ico"><svg><use href="#mod-mount"/></svg></span>
+                <span class="mf-name">Takoz Çökme-Titreşim</span>
+                <div class="body">
+                  <div class="mf-desc">Motor-şanzıman takoz sistemi — statik çökme ve 6 SD titreşim.</div>
+                  <span class="go">Başla <svg><use href="#i-arrow"/></svg></span>
+                </div>
+              </div>
+              <div class="cD-panel">
+                <span class="wm"><svg><use href="#mod-fead"/></svg></span>
+                <div class="rule"></div>
+                <span class="mf-tile-ico"><svg><use href="#mod-fead"/></svg></span>
+                <span class="mf-name">FEAD</span>
+                <div class="body">
+                  <div class="mf-desc">Ön uç kayış-kasnak sistemi — kasnaklar, gergi ve kayış yolu.</div>
+                  <span class="go">Başla <svg><use href="#i-arrow"/></svg></span>
+                </div>
+              </div>
+              <div class="cD-panel">
+                <span class="wm"><svg><use href="#mod-str"/></svg></span>
+                <div class="rule"></div>
+                <span class="mf-tile-ico"><svg><use href="#mod-str"/></svg></span>
+                <span class="mf-name">Yapısal Analiz</span>
+                <div class="body">
+                  <div class="mf-desc">Braket ve taşıyıcı parçalar — gerilme, sehim, ağ üretimi.</div>
+                  <span class="go">Başla <svg><use href="#i-arrow"/></svg></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption class="caption"><b>D · Şerit.</b> Duruş hâlinde ilk sütun açık — mekanizma ilk bakışta okunsun diye. Fareyi gezdir.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ══ SEÇİM ══ -->
+  <section id="secim">
+    <div class="sec-head">
+      <span class="mark">✓</span>
+      <h2>Seçim</h2>
+      <span class="sub">dördünde de şerit kapalı</span>
+    </div>
+    <div class="tbl-scroll">
+      <table class="cmp">
+        <thead>
+          <tr><th>Öneri</th><th>Ne getiriyor</th><th>Bedeli</th><th>Dokunulan</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>A · Sessiz Tuval</td>
+            <td>Bilinen kart; açıklamalar kırılmadan okunuyor, kart dikeyde kısalıyor.</td>
+            <td>En az yenilik — ekran hâlâ bir iletişim kutusu.</td>
+            <td class="cost">kart markup + css</td>
+          </tr>
+          <tr>
+            <td>B · Atölye</td>
+            <td>Kimlik ve iş ayrışıyor; künye satırları modülün ne yaptığını adından fazlasıyla söylüyor.</td>
+            <td>Sol sütun 1280 px altında yer istiyor — tek sütuna inme kuralı gerekiyor.</td>
+            <td class="cost">markup + css + dar ekran kuralı</td>
+          </tr>
+          <tr>
+            <td>C · Pafta</td>
+            <td>Programın kendi belge dili; antet sürüm künyesini ekrana taşıyor.</td>
+            <td>Karakterli ama ısrarlı bir dil — her gün açılan ekranda yorabilir.</td>
+            <td class="cost">markup + css + antet verisi</td>
+          </tr>
+          <tr>
+            <td>D · Şerit</td>
+            <td>Seçim ekranın kendisi; dört modül eşit ağırlıkta ve tam boy.</td>
+            <td>Açıklamalar hover'a bağlı; dokunmatik ve dar ekran için ayrı davranış şart.</td>
+            <td class="cost">markup + css + dar ekran + dokunma</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="split">
+      <div class="card">
+        <h3>Dördünde ortak</h3>
+        <ul class="tick">
+          <li><span class="m">1</span><span>Şerit, belge bandı, panel ve ray <b>gizli</b> — modül seçilince hepsi geri geliyor.</span></li>
+          <li><span class="m">2</span><span>Modül simgeleri değişmiyor: uygulamadaki SVG'lerin aynısı.</span></li>
+          <li><span class="m">3</span><span>Sürüm künyesi ekranda — tıklayınca Program Durumu.</span></li>
+          <li><span class="m">4</span><span>Üç temada da çiziliyor; renkler <code>css/styles.css</code> jetonlarından.</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Sırada</h3>
+        <p style="font-size:13.5px">
+          Bir harf söyle — ya da karıştır ("B ama C'nin anteti ile"). Seçilen tasarımı
+          <code>index.html</code> + <code>css/styles.css</code> üzerinde kurar, kabuğu kapatan
+          sınıfı <code>veSyncModuleShell</code>'e ekler, build ve testleri koşturup PR açarım.
+        </p>
+        <p style="font-size:13.5px;margin:0">
+          Ölçü kapıları hazır: <code>module-start-center</code> ve <code>module-card</code> testleri
+          karşılama ekranından gelen bloğun merkeze düşmesini zaten tutuyor.
+        </p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  /* Ekranlar 1280x720 çizilir, çerçevesine ölçeklenir. Oran CSS'te
+     hesaplanamıyor: calc(100cqw/1280) uzunluk verir, scale() ise sayı ister. */
+  var frames = document.querySelectorAll('.frame');
+  function fit(el){ el.style.setProperty('--k', el.clientWidth / 1280); }
+  if(window.ResizeObserver){
+    var ro = new ResizeObserver(function(entries){
+      entries.forEach(function(e){ fit(e.target); });
+    });
+    frames.forEach(function(f){ ro.observe(f); });
+  } else {
+    frames.forEach(fit);
+    window.addEventListener('resize', function(){ frames.forEach(fit); });
+  }
+
+  var deck = document.getElementById('deck');
+  document.querySelectorAll('[data-theme-btn]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      deck.setAttribute('data-mf', btn.getAttribute('data-theme-btn'));
+      document.querySelectorAll('[data-theme-btn]').forEach(function(b){
+        b.setAttribute('aria-pressed', String(b === btn));
+      });
+    });
+  });
+  var toggle = document.getElementById('chrome-toggle');
+  var demo = document.getElementById('demo-screen');
+  toggle.addEventListener('click', function(){
+    var bare = demo.classList.toggle('is-bare');
+    toggle.setAttribute('aria-pressed', String(bare));
+    toggle.textContent = bare ? 'Şeridi göster' : 'Şeridi gizle';
+  });
+})();
+</script>
+
+</body></html>

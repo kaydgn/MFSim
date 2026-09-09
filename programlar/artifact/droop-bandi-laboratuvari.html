@@ -1,0 +1,858 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style></head><body>
+<title>Droop Bandı Laboratuvarı</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --ground:#f4f6f8; --panel:#ffffff; --panel-2:#eef1f5;
+  --ink:#111823; --ink-soft:#55606f; --ink-faint:#7d8797;
+  --rule:#dde2e9; --rule-soft:#e8ecf1;
+  --accent:#2563eb; --accent-soft:#e6edfd;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+  --warn:#b45309; --warn-bg:#fdf3e3;
+  --ok:#15803d;
+  --shadow:0 1px 2px rgba(16,24,40,.06), 0 8px 24px -14px rgba(16,24,40,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --ground:#0b0e13; --panel:#12161d; --panel-2:#171d26;
+    --ink:#cdd6e1; --ink-soft:#949dad; --ink-faint:#6f7a8b;
+    --rule:#1e2531; --rule-soft:#181e28;
+    --accent:#4e80ef; --accent-soft:#16233d;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+    --warn:#d9a441; --warn-bg:#241d10;
+    --ok:#3fa96a;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 28px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --ground:#0b0e13; --panel:#12161d; --panel-2:#171d26;
+  --ink:#cdd6e1; --ink-soft:#949dad; --ink-faint:#6f7a8b;
+  --rule:#1e2531; --rule-soft:#181e28;
+  --accent:#4e80ef; --accent-soft:#16233d;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+  --warn:#d9a441; --warn-bg:#241d10;
+  --ok:#3fa96a;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 28px -16px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1140px;margin:0 auto;padding:34px 24px 80px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+.eyebrow{
+  font-family:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif;
+  font-weight:600;font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-faint);
+}
+
+/* ---------- başlık ---------- */
+header{border-bottom:1px solid var(--rule);padding-bottom:26px;margin-bottom:26px}
+h1{
+  font-size:33px;line-height:1.15;font-weight:600;margin:.32em 0 .3em;
+  letter-spacing:-.018em;text-wrap:balance;
+}
+.lede{max-width:66ch;color:var(--ink-soft);margin:0 0 18px}
+.lede code{
+  font-family:"IBM Plex Mono",monospace;font-size:.9em;
+  background:var(--panel-2);padding:1px 5px;border-radius:3px;color:var(--ink);
+}
+.origin{
+  display:flex;flex-wrap:wrap;gap:8px 22px;font-size:12.5px;color:var(--ink-faint);
+  padding-top:4px;
+}
+.origin b{font-weight:500;color:var(--ink-soft)}
+
+h2{font-size:15px;font-weight:600;margin:0 0 3px;letter-spacing:-.005em}
+.sub{font-size:13px;color:var(--ink-faint);margin:0 0 16px;max-width:70ch}
+section{margin-bottom:34px}
+
+/* ---------- motor seçici ---------- */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  font:inherit;font-size:13.5px;cursor:pointer;
+  background:var(--panel);color:var(--ink-soft);
+  border:1px solid var(--rule);border-radius:7px;
+  padding:8px 13px;display:flex;align-items:baseline;gap:9px;
+  transition:border-color .12s, color .12s, background .12s;
+}
+.chip:hover{border-color:var(--accent);color:var(--ink)}
+.chip[aria-pressed="true"]{
+  border-color:var(--accent);background:var(--accent-soft);color:var(--ink);font-weight:500;
+}
+.chip .band{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"] .band{color:var(--accent)}
+
+/* ---------- grafikler ---------- */
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:860px){.charts{grid-template-columns:1fr}}
+.plot{
+  background:var(--panel);border:1px solid var(--rule);border-radius:9px;
+  padding:15px 16px 10px;box-shadow:var(--shadow);position:relative;
+}
+.plot h3{font-size:13.5px;font-weight:600;margin:0 0 2px}
+.plot .note{font-size:11.5px;color:var(--ink-faint);margin:0 0 10px}
+.plot svg{display:block;width:100%;height:auto;overflow:visible}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:12px;color:var(--ink-soft)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:15px;height:0;border-top-width:2.5px;border-top-style:solid;display:block;flex:none}
+.tip{
+  position:absolute;pointer-events:none;opacity:0;transition:opacity .1s;
+  background:var(--panel);border:1px solid var(--rule);border-radius:6px;
+  padding:7px 9px;font-size:11.5px;box-shadow:var(--shadow);z-index:5;min-width:132px;
+  font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;
+}
+.tip .r{display:flex;justify-content:space-between;gap:12px;color:var(--ink-soft)}
+.tip .r b{color:var(--ink);font-weight:500}
+.tip .hd{color:var(--ink);font-weight:600;margin-bottom:4px}
+
+/* ---------- ölçüm şeridi ---------- */
+.readout{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  background:var(--panel);border:1px solid var(--rule);border-radius:9px;
+  overflow:hidden;box-shadow:var(--shadow);
+}
+@media (max-width:720px){.readout{grid-template-columns:repeat(2,1fr)}}
+.cell{padding:14px 16px;border-left:1px solid var(--rule-soft)}
+.cell:first-child{border-left:0}
+.cell .k{font-family:"IBM Plex Sans Condensed",sans-serif;font-size:11px;font-weight:600;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);display:block;margin-bottom:5px}
+.cell .v{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;
+  font-size:22px;font-weight:500;letter-spacing:-.02em;display:block;line-height:1.15}
+.cell .u{font-size:12px;color:var(--ink-faint);font-weight:400}
+.cell.hi .v{color:var(--warn)}
+
+/* ---------- politika kartları ---------- */
+.policies{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media (max-width:860px){.policies{grid-template-columns:1fr}}
+.pol{
+  text-align:left;font:inherit;cursor:pointer;
+  background:var(--panel);border:1px solid var(--rule);border-radius:9px;
+  padding:15px 16px 16px;display:flex;flex-direction:column;gap:9px;
+  transition:border-color .12s, box-shadow .12s;
+}
+.pol:hover{border-color:var(--accent)}
+.pol[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.pol .top{display:flex;align-items:center;gap:9px}
+.pol .tag{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;
+  border:1px solid currentColor;border-radius:4px;padding:1px 5px;line-height:1.5;flex:none;
+}
+.pol .name{font-weight:600;font-size:14px;line-height:1.3}
+.pol p{margin:0;font-size:12.5px;color:var(--ink-soft);line-height:1.5}
+.pol .verdict{
+  font-size:12px;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;
+  margin-top:auto;padding-top:9px;border-top:1px solid var(--rule-soft);
+}
+.pol .verdict.bad{color:var(--warn)} .pol .verdict.good{color:var(--ok)}
+.badge-now{
+  font-family:"IBM Plex Sans Condensed",sans-serif;font-size:10.5px;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--accent);
+  border:1px solid var(--accent);border-radius:3px;padding:1px 5px;margin-left:auto;flex:none;
+}
+
+/* ---------- tablolar ---------- */
+.tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:9px;background:var(--panel);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:9px 14px;text-align:right;border-bottom:1px solid var(--rule-soft);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{
+  font-family:"IBM Plex Sans Condensed",sans-serif;font-size:11px;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);
+  background:var(--panel-2);border-bottom:1px solid var(--rule);
+}
+tbody td{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;color:var(--ink-soft)}
+tbody td:first-child{font-family:"IBM Plex Sans",sans-serif;color:var(--ink)}
+tbody tr:last-child td{border-bottom:0}
+td.bad{color:var(--warn);font-weight:500} td.good{color:var(--ok)}
+details.raw{margin-top:12px}
+details.raw summary{cursor:pointer;font-size:12.5px;color:var(--ink-soft);padding:4px 0}
+details.raw summary:hover{color:var(--accent)}
+
+/* ---------- kaynak kod ---------- */
+pre.src{
+  margin:0;background:var(--panel);border:1px solid var(--rule);border-left:3px solid var(--s3);
+  border-radius:0 9px 9px 0;padding:14px 16px;overflow-x:auto;
+  font-family:"IBM Plex Mono",monospace;font-size:12px;line-height:1.65;color:var(--ink-soft);
+}
+pre.src b{color:var(--ink);font-weight:500}
+pre.src i{color:var(--ink-faint);font-style:normal}
+
+/* ---------- karar ---------- */
+.decide{background:var(--panel);border:1px solid var(--rule);border-radius:9px;padding:20px;box-shadow:var(--shadow)}
+.decide textarea{
+  font:inherit;font-size:13.5px;width:100%;min-height:76px;resize:vertical;margin-top:12px;
+  background:var(--ground);color:var(--ink);border:1px solid var(--rule);border-radius:7px;padding:10px 12px;
+}
+.decide textarea::placeholder{color:var(--ink-faint)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+button.act{
+  font:inherit;font-size:13.5px;font-weight:500;cursor:pointer;
+  background:var(--accent);color:#fff;border:1px solid var(--accent);
+  border-radius:7px;padding:8px 16px;transition:opacity .12s;
+}
+button.act:hover{opacity:.88}
+button.act[disabled]{opacity:.45;cursor:not-allowed}
+button.ghost{background:transparent;color:var(--accent)}
+.status{font-size:12.5px;color:var(--ink-faint)}
+.status.saved{color:var(--ok)}
+.record{
+  margin-top:14px;padding:12px 14px;background:var(--ground);
+  border:1px solid var(--rule);border-radius:7px;font-size:13px;color:var(--ink-soft);
+}
+.record .who{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-faint);display:block;margin-top:5px}
+.ask{
+  margin-top:16px;padding-top:16px;border-top:1px solid var(--rule-soft);
+}
+.answer{
+  margin-top:12px;font-size:13.5px;color:var(--ink-soft);white-space:pre-wrap;
+  background:var(--ground);border:1px solid var(--rule);border-radius:7px;padding:12px 14px;
+  max-height:340px;overflow-y:auto;
+}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--rule);font-size:12px;color:var(--ink-faint)}
+</style>
+
+<div class="wrap" lang="tr">
+
+<header>
+  <div class="eyebrow">MFSim · ft-performance.js · createMotorTorqueFn</div>
+  <h1>Droop bandında tork eğrisi neye göre çizilsin?</h1>
+  <p class="lede">Motor tork tablosunun son iki noktası çoğu Allison eğrisinde <b>governed</b> ve
+  <b>no-load governed</b> (tork = 0) — ve aralarında <b>hiç veri yoktur</b>. PCHIP'in şekil koruyan
+  kübiği bu tek geniş aralıkta kirişin belirgin biçimde üstüne şişer; motor governed'ı aştığı bölgede
+  tekerlek gücü fazla çıkar ve araç düz yolda olması gerekenden yüksek hızda dengeye oturur.
+  Aşağıdaki eğriler <code>js/ft-performance.js</code>'in <b>gerçek PCHIP kodu</b> ile, örnek
+  dosyalarının <b>gerçek tork tabloları</b> üzerinde çiziliyor.</p>
+  <div class="origin">
+    <span><b>Veri:</b> assets/examples/ap_*.json</span>
+    <span><b>Matematik:</b> pchipCreate · pchipEval (birebir kopya)</span>
+    <span><b>Ölçüt:</b> Fritsch–Carlson monoton kübik Hermite</span>
+  </div>
+</header>
+
+<section>
+  <h2>Motor</h2>
+  <p class="sub">Üçü de MFSim'in kalibrasyon örneklerinden. İlk ikisinin droop bandında hiç veri yok;
+  Duramax'ta <b>var</b> — bu fark üçüncü politikanın kaderini belirliyor.</p>
+  <div class="chips" id="chips" role="group" aria-label="Motor seçimi"></div>
+</section>
+
+<section class="charts">
+  <div class="plot">
+    <h3>Tam yük eğrisi</h3>
+    <p class="note">Gölgeli bant = governed devrinden tablonun sonuna kadar olan droop bölgesi.</p>
+    <div id="p1"></div>
+    <div class="legend" id="lg1"></div>
+    <div class="tip" id="t1"></div>
+  </div>
+  <div class="plot">
+    <h3>Droop bandı — yakın</h3>
+    <p class="note">Üç politikanın ayrıştığı tek yer burası. Noktalar tablodaki gerçek ölçümler.</p>
+    <div id="p2"></div>
+    <div class="legend" id="lg2"></div>
+    <div class="tip" id="t2"></div>
+  </div>
+</section>
+
+<section>
+  <h2>Son aralıkta ölçülen</h2>
+  <p class="sub">Aralığın tam ortasında, saf PCHIP ile iki uç noktayı birleştiren kiriş arasındaki fark.</p>
+  <div class="readout" id="readout"></div>
+</section>
+
+<section>
+  <h2>Üç politika</h2>
+  <p class="sub">Bir kartı seçince her iki grafikte o politikanın eğrisi kalınlaşır. Kartın altındaki
+  hüküm, seçili motor için <b>o an hesaplanan</b> sayıdır — sabit metin değil.</p>
+  <div class="policies" id="policies"></div>
+</section>
+
+<section>
+  <h2>Üç motorda birden sonuç</h2>
+  <p class="sub"><b>Kiriş taşması:</b> son aralığın ortasında eğrinin kirişin ne kadar üstüne çıktığı.
+  <b>Gerçek noktadan sapma:</b> politikanın doğrusallaştırdığı bandın <b>içinde kalan gerçek veri
+  noktalarını</b> ne kadar ıskaladığı. İyi bir politika ikisinde de küçük olmalı.</p>
+  <div class="tablewrap"><table id="matrix"></table></div>
+  <details class="raw">
+    <summary>Ham veri tablolarını göster (seçili motor)</summary>
+    <div class="tablewrap" style="margin-top:8px"><table id="rawtab"></table></div>
+  </details>
+</section>
+
+<section>
+  <h2>MFSim'de bugün duran kod</h2>
+  <p class="sub">Yukarıdaki B politikası. <code class="mono">droopRunout</code> kapısı, tablonun son
+  noktası tepe torkun %2'sinin altındaysa ve bir öncekisi üstündeyse açılır.</p>
+  <pre class="src" id="srcblock"></pre>
+</section>
+
+<section class="decide">
+  <div class="eyebrow">Karar</div>
+  <h2 style="font-size:19px;margin:.3em 0 .2em">Hangi politika kalsın?</h2>
+  <p class="sub" style="margin-bottom:0">Seçimin bu sayfada saklanır. Sohbet penceresi kapansa da
+  durur; Claude sonraki oturumda buradan okuyabilir.</p>
+  <textarea id="note" placeholder="Gerekçe — ör. &quot;C, ISG460'ta 1930 d/dk noktasını da eziyor; B kalsın.&quot;"></textarea>
+  <div class="row">
+    <button class="act" id="save">Kararı kaydet</button>
+    <span class="status" id="savestatus"></span>
+  </div>
+  <div class="record" id="record">Henüz kayıt yok.</div>
+
+  <div class="ask" id="askwrap" hidden>
+    <div class="eyebrow">İkinci görüş</div>
+    <div class="row" style="margin-top:8px">
+      <button class="act ghost" id="ask">Bu motor için Claude'a sor</button>
+      <span class="status" id="askstatus"></span>
+    </div>
+    <div class="answer" id="answer" hidden></div>
+  </div>
+</section>
+
+<footer>
+  Sayfadaki bütün sayılar tarayıcıda, MFSim'in kendi <span class="mono">pchipCreate</span> /
+  <span class="mono">pchipEval</span> fonksiyonlarıyla hesaplanır — önceden yazılmış hiçbir sonuç yok.
+</footer>
+</div>
+
+<script>
+/* ===== js/ft-performance.js'ten BİREBİR alınan PCHIP çekirdeği ===== */
+function _pchipEndSlope(h1, h2, del1, del2) {
+    var d = ((2 * h1 + h2) * del1 - h1 * del2) / (h1 + h2);
+    if(d * del1 < 0) d = 0;
+    else if(del1 * del2 < 0 && Math.abs(d) > 3 * Math.abs(del1)) d = 3 * del1;
+    return d;
+  }
+
+function pchipCreate(xs, ys, label) {
+    var n = xs.length;
+    var who = label ? (label + ' — ') : 'PCHIP: ';
+    if(n < 2) throw new Error(who + 'en az 2 veri noktası gerekli');
+    // xs KESİN ARTAN, tüm değerler SONLU olmalı.
+    //
+    // Neden burada patlıyoruz (sessiz NaN yerine): yinelenen bir x — örneğin motor
+    // tork tablosuna iki kez girilmiş aynı devir — hs[i]=0 yapar, deltas'ta 0/0
+    // oluşur ve ds[] üzerinden spline'ın TAMAMI NaN'a düşer (yalnız o satır değil).
+    // O NaN çözücüde SESSİZCE yayılır: NaN karşılaştırmaları hep false döndüğü
+    // için ne düşük-dal taramasının break'leri (satır ~995) ne de ana döngünün
+    // maks-hız erken çıkışı (satır ~1650) tetiklenebilir. Sonuç: koşum 300 s
+    // güvenlik limitine kadar, her fizik çağrısında tam tarama yaparak sürer.
+    // Ölçüm (RK4, dt=0.01, iki transfer kademesi): temiz veri 0.4 s → yinelenen
+    // devirli veri 248 s. Kullanıcı bunu "program takıldı" olarak görüyor, çünkü
+    // hesap tek senkron blokta ve ilerleme çubuğu boyanamıyor.
+    for(var _v = 0; _v < n; _v++) {
+      if(!isFinite(xs[_v]) || !isFinite(ys[_v])) {
+        throw new Error(who + 'sayısal olmayan veri noktası (satır ' + (_v + 1) +
+                        ': x=' + xs[_v] + ', y=' + ys[_v] + ')');
+      }
+      if(_v > 0 && xs[_v] <= xs[_v - 1]) {
+        throw new Error(who + 'x değerleri kesin artan olmalı — yinelenen/azalan değer: ' +
+                        xs[_v] + ' (satır ' + (_v + 1) + ')');
+      }
+    }
+    if(n === 2) {
+      var slope = (ys[1] - ys[0]) / (xs[1] - xs[0]);
+      return { xs: xs, ys: ys, ds: [slope, slope] };
+    }
+    var deltas = [], hs = [];
+    for(var i = 0; i < n - 1; i++) {
+      hs.push(xs[i + 1] - xs[i]);
+      deltas.push((ys[i + 1] - ys[i]) / hs[i]);
+    }
+    var ds = new Array(n);
+    ds[0] = deltas[0];
+    ds[n - 1] = deltas[n - 2];
+    for(var i = 1; i < n - 1; i++) {
+      if(deltas[i - 1] * deltas[i] <= 0) {
+        ds[i] = 0;
+      } else {
+        var w1 = 2 * hs[i] + hs[i - 1];
+        var w2 = hs[i] + 2 * hs[i - 1];
+        ds[i] = (w1 + w2) / (w1 / deltas[i - 1] + w2 / deltas[i]);
+      }
+    }
+    if(n >= 3) {
+      ds[0] = _pchipEndSlope(hs[0], hs[1], deltas[0], deltas[1]);
+      ds[n - 1] = _pchipEndSlope(hs[n - 2], hs[n - 3], deltas[n - 2], deltas[n - 3]);
+    }
+    return { xs: xs, ys: ys, ds: ds };
+  }
+
+function pchipEval(spline, x) {
+    var xs = spline.xs, ys = spline.ys, ds = spline.ds;
+    var n = xs.length;
+    if(x <= xs[0]) return ys[0];
+    if(x >= xs[n - 1]) return ys[n - 1];
+    var lo = 0, hi = n - 1;
+    while(hi - lo > 1) {
+      var mid = (lo + hi) >> 1;
+      if(xs[mid] > x) hi = mid; else lo = mid;
+    }
+    var h = xs[hi] - xs[lo];
+    var t = (x - xs[lo]) / h;
+    var t2 = t * t, t3 = t2 * t;
+    return (2*t3 - 3*t2 + 1) * ys[lo] + (t3 - 2*t2 + t) * h * ds[lo]
+         + (-2*t3 + 3*t2) * ys[hi] + (t3 - t2) * h * ds[hi];
+  }
+</script>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- veri: assets/examples/ap_*.json içindeki gerçek tork tabloları ---------- */
+var ENGINES = [
+  { id:"isg460", ad:"ISG12 460 hp", kaynak:"ap_bmc10ton_460", governed:1900, noLoad:2100,
+    t:[[600,1002.7],[700,1050.4],[800,1432.4],[900,1814.4],[1000,2100.8],[1100,2100.8],
+       [1200,2100.8],[1300,2100.8],[1400,2100.8],[1500,2100.8],[1600,1999.4],[1700,1898.6],
+       [1800,1809.1],[1900,1723.9],[1930,1677.3],[2100,0]] },
+  { id:"isg430", ad:"ISG12 430 hp", kaynak:"ap_isg430_4000sp", governed:1900, noLoad:2100,
+    t:[[1000,2000],[1100,2000],[1200,2000],[1300,2000],[1400,2000],[1500,1955],
+       [1600,1909],[1700,1797],[1800,1697],[1900,1589],[2100,0]] },
+  { id:"duramax", ad:"Duramax", kaynak:"ap_duramax", governed:3000, noLoad:3600,
+    t:[[700,203],[1000,271],[1200,583],[1400,1085],[1500,1247],[1600,1332],[1800,1322],
+       [2000,1315],[2200,1302],[2400,1268],[2600,1247],[2800,1194],[3000,1085],
+       [3200,922],[3400,597],[3600,0]] }
+];
+
+var POLICIES = [
+  { id:"A", ad:"Saf PCHIP", renk:"--s1",
+    aciklama:"Tabloya her yerde şekil koruyan kübik uydur. Ek kural yok — kütüphanenin varsayılanı." },
+  { id:"B", ad:"Yalnız son aralık doğrusal", renk:"--s3", simdi:true,
+    aciklama:"Tablonun son noktası tepe torkun %2'sinin altındaysa SADECE o son aralığı doğrusal geç, gerisi PCHIP." },
+  { id:"C", ad:"Tüm droop bandı doğrusal", renk:"--s2",
+    aciklama:"Governed devrindeki noktadan tablonun sonuna kadar tek doğru çek. Bandın tamamı düzleşir." }
+];
+
+/* ---------- interpolantlar ---------- */
+function build(eng){
+  var xs = eng.t.map(function(p){return p[0];});
+  var ys = eng.t.map(function(p){return p[1];});
+  var sp = pchipCreate(xs, ys, eng.ad);
+  var n  = xs.length - 1;
+  var tPeak = Math.max.apply(null, ys);
+  // ft-performance.js'teki droopRunout kapısının aynısı
+  var runout = n >= 1 && ys[n] <= 0.02*tPeak && ys[n-1] > 0.02*tPeak;
+
+  // C bandı: governed'a eşit/altındaki SON veri noktasından tablonun sonuna
+  var gi = 0;
+  for(var i=0;i<xs.length;i++) if(xs[i] <= eng.governed) gi = i;
+
+  function lerp(x, i0, i1){
+    var f = (x - xs[i0]) / (xs[i1] - xs[i0]);
+    return ys[i0] + f*(ys[i1] - ys[i0]);
+  }
+  return {
+    xs:xs, ys:ys, n:n, runout:runout, gi:gi, spline:sp, tPeak:tPeak,
+    A:function(x){ return pchipEval(sp, x); },
+    B:function(x){
+      if(runout && x > xs[n-1] && x < xs[n]) return lerp(x, n-1, n);
+      return pchipEval(sp, x);
+    },
+    C:function(x){
+      if(x > xs[gi] && x < xs[n]) return lerp(x, gi, n);
+      return pchipEval(sp, x);
+    }
+  };
+}
+
+/* ölçüm 1 — son aralığın ortasında kirişten sapma */
+function chordOvershoot(m, fn){
+  var n = m.n, xs = m.xs, ys = m.ys;
+  var xm = (xs[n-1] + xs[n]) / 2;
+  var chord = (ys[n-1] + ys[n]) / 2;
+  var v = fn(xm);
+  return { x:xm, chord:chord, val:v, d:v - chord,
+           pctChord: chord ? 100*(v-chord)/chord : 0,
+           pctLast : ys[n-1] ? 100*(v-chord)/ys[n-1] : 0 };
+}
+
+/* ölçüm 2 — doğrusallaştırılan bandın İÇİNDEKİ gerçek noktalardan en büyük sapma */
+function pointMiss(m, polId){
+  var xs = m.xs, ys = m.ys, n = m.n;
+  var lo, hi;
+  if(polId === "A")      return { d:0, at:null };
+  else if(polId === "B") { if(!m.runout) return {d:0, at:null}; lo = n-1; hi = n; }
+  else                   { lo = m.gi;  hi = n; }
+  var fn = m[polId], worst = 0, at = null;
+  for(var i = lo+1; i < hi; i++){
+    var d = fn(xs[i]) - ys[i];
+    if(Math.abs(d) > Math.abs(worst)){ worst = d; at = xs[i]; }
+  }
+  return { d:worst, at:at };
+}
+
+/* ---------- SVG yardımcıları ---------- */
+var NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs){
+  var e = document.createElementNS(NS, tag);
+  for(var k in attrs) if(attrs[k] !== null && attrs[k] !== undefined) e.setAttribute(k, attrs[k]);
+  return e;
+}
+function ticks(lo, hi, want){
+  var span = hi - lo; if(span <= 0) return [lo];
+  var raw = span / want, mag = Math.pow(10, Math.floor(Math.log10(raw))), norm = raw/mag;
+  var step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+  var out = [], t = Math.ceil(lo/step)*step;
+  for(; t <= hi + step*1e-9; t += step) out.push(Math.round(t*1e6)/1e6);
+  return out;
+}
+function fmt(v, d){
+  return v.toLocaleString("tr-TR", {minimumFractionDigits:d||0, maximumFractionDigits:d||0});
+}
+
+var W = 560, H = 330, PAD = {l:60, r:20, t:14, b:46};
+
+function plot(host, tipEl, cfg){
+  host.textContent = "";
+  var svg = el("svg", {viewBox:"0 0 "+W+" "+H, role:"img",
+                       "aria-label":cfg.aria || "Tork eğrisi grafiği"});
+  var iw = W - PAD.l - PAD.r, ih = H - PAD.t - PAD.b;
+  var x0 = cfg.xd[0], x1 = cfg.xd[1], y0 = cfg.yd[0], y1 = cfg.yd[1];
+  var X = function(v){ return PAD.l + (v - x0)/(x1 - x0)*iw; };
+  var Y = function(v){ return PAD.t + ih - (v - y0)/(y1 - y0)*ih; };
+
+  // droop bandı gölgesi
+  if(cfg.band){
+    svg.appendChild(el("rect", {x:X(cfg.band[0]), y:PAD.t, width:Math.max(0,X(cfg.band[1])-X(cfg.band[0])),
+      height:ih, fill:"var(--accent)", opacity:".055"}));
+  }
+  // ızgara + eksenler
+  ticks(y0, y1, 5).forEach(function(t){
+    svg.appendChild(el("line", {x1:PAD.l, x2:PAD.l+iw, y1:Y(t), y2:Y(t),
+      stroke:"var(--rule)", "stroke-width":1}));
+    var lb = el("text", {x:PAD.l-9, y:Y(t)+4, "text-anchor":"end", fill:"var(--ink-faint)",
+      "font-size":"11", "font-family":"IBM Plex Mono, monospace"});
+    lb.textContent = fmt(t); svg.appendChild(lb);
+  });
+  ticks(x0, x1, 5).forEach(function(t){
+    if(t < x0 || t > x1) return;
+    var lb = el("text", {x:X(t), y:PAD.t+ih+20, "text-anchor":"middle", fill:"var(--ink-faint)",
+      "font-size":"11", "font-family":"IBM Plex Mono, monospace"});
+    lb.textContent = fmt(t); svg.appendChild(lb);
+  });
+  svg.appendChild(el("line", {x1:PAD.l, x2:PAD.l+iw, y1:Y(y0), y2:Y(y0),
+    stroke:"var(--ink-faint)", "stroke-width":1}));
+
+  var ax = el("text", {x:PAD.l+iw/2, y:H-6, "text-anchor":"middle", fill:"var(--ink-faint)",
+    "font-size":"11.5"}); ax.textContent = "Motor devri [d/dk]"; svg.appendChild(ax);
+  var ay = el("text", {x:14, y:PAD.t+ih/2, "text-anchor":"middle", fill:"var(--ink-faint)",
+    "font-size":"11.5", transform:"rotate(-90 14 "+(PAD.t+ih/2)+")"});
+  ay.textContent = "Tork [N·m]"; svg.appendChild(ay);
+
+  // eğriler
+  cfg.series.forEach(function(s){
+    var d = "", step = (x1-x0)/260;
+    for(var x = x0; x <= x1+1e-9; x += step){
+      var y = s.fn(x);
+      d += (d ? "L" : "M") + X(x).toFixed(2) + " " + Y(y).toFixed(2);
+    }
+    svg.appendChild(el("path", {d:d, fill:"none", stroke:"var("+s.renk+")",
+      "stroke-width": s.aktif ? 3 : 1.8, "stroke-linecap":"round", "stroke-linejoin":"round",
+      "stroke-dasharray": s.dash || null, opacity: s.aktif ? 1 : .62}));
+  });
+
+  // gerçek veri noktaları — beyaz halkalı (üst üste binen işaretlere 2px yüzey halkası)
+  (cfg.points||[]).forEach(function(p){
+    if(p[0] < x0-1e-9 || p[0] > x1+1e-9) return;
+    svg.appendChild(el("circle", {cx:X(p[0]), cy:Y(p[1]), r:4.6,
+      fill:"var(--panel)", stroke:"var(--panel)", "stroke-width":2}));
+    svg.appendChild(el("circle", {cx:X(p[0]), cy:Y(p[1]), r:3.1, fill:"var(--ink)"}));
+  });
+
+  // doğrudan etiketler — metin ink renginde, kimliği yanındaki renkli çizgi taşır
+  if(cfg.labelAt !== undefined && cfg.labelAt !== null){
+    var seen = [];
+    cfg.series.slice().sort(function(a,b){ return b.fn(cfg.labelAt) - a.fn(cfg.labelAt); })
+    .forEach(function(s){
+      var yv = Y(s.fn(cfg.labelAt)), xv = X(cfg.labelAt);
+      while(seen.some(function(v){ return Math.abs(v-yv) < 13; })) yv -= 13;
+      seen.push(yv);
+      svg.appendChild(el("line", {x1:xv+7, x2:xv+19, y1:yv, y2:yv,
+        stroke:"var("+s.renk+")", "stroke-width":2.5, "stroke-linecap":"round"}));
+      var tx = el("text", {x:xv+23, y:yv+3.6, fill:"var(--ink)", "font-size":"11",
+        "font-weight": s.aktif ? "600" : "400"});
+      tx.textContent = s.kisa; svg.appendChild(tx);
+    });
+  }
+
+  // imleç + ipucu
+  var cross = el("line", {x1:0,x2:0,y1:PAD.t,y2:PAD.t+ih, stroke:"var(--ink-faint)",
+    "stroke-width":1, "stroke-dasharray":"3 3", opacity:0});
+  svg.appendChild(cross);
+  var hit = el("rect", {x:PAD.l, y:PAD.t, width:iw, height:ih, fill:"transparent",
+    style:"cursor:crosshair"});
+  svg.appendChild(hit);
+
+  hit.addEventListener("pointermove", function(ev){
+    var r = svg.getBoundingClientRect();
+    var px = (ev.clientX - r.left) / r.width * W;
+    var xv = x0 + (px - PAD.l)/iw*(x1 - x0);
+    xv = Math.max(x0, Math.min(x1, xv));
+    cross.setAttribute("x1", X(xv)); cross.setAttribute("x2", X(xv));
+    cross.setAttribute("opacity", .8);
+    var html = '<div class="hd">' + fmt(xv) + ' d/dk</div>';
+    cfg.series.forEach(function(s){
+      html += '<div class="r"><span style="color:var('+s.renk+')">■</span> ' +
+              s.kisa + ' <b>' + fmt(s.fn(xv)) + '</b></div>';
+    });
+    tipEl.innerHTML = html;
+    tipEl.style.opacity = 1;
+    var lx = (ev.clientX - r.left);
+    tipEl.style.left = Math.min(r.width - 150, Math.max(4, lx + 16)) + "px";
+    tipEl.style.top  = Math.max(4, (ev.clientY - r.top) - 10) + "px";
+  });
+  hit.addEventListener("pointerleave", function(){
+    cross.setAttribute("opacity", 0); tipEl.style.opacity = 0;
+  });
+
+  host.appendChild(svg);
+}
+
+/* ---------- durum ---------- */
+var state = { eng:ENGINES[0], pol:null };
+var $ = function(id){ return document.getElementById(id); };
+
+function polColor(id){ return POLICIES.filter(function(p){return p.id===id;})[0].renk; }
+function polShort(id){ return id + " · " + POLICIES.filter(function(p){return p.id===id;})[0].ad; }
+
+function seriesFor(m){
+  return POLICIES.map(function(p){
+    return { kisa:p.id, renk:p.renk, fn:m[p.id], aktif: state.pol === p.id,
+             dash: p.id === "C" ? "5 4" : (p.id === "A" ? null : null) };
+  });
+}
+
+function render(){
+  var eng = state.eng, m = build(eng), xs = m.xs, ys = m.ys, n = m.n;
+
+  /* — motor çipleri — */
+  $("chips").textContent = "";
+  ENGINES.forEach(function(e){
+    var b = document.createElement("button");
+    b.className = "chip"; b.type = "button";
+    b.setAttribute("aria-pressed", e.id === eng.id ? "true" : "false");
+    b.innerHTML = e.ad + ' <span class="band">' + e.governed + "–" + e.noLoad + " d/dk</span>";
+    b.addEventListener("click", function(){ state.eng = e; render(); });
+    $("chips").appendChild(b);
+  });
+
+  /* — grafikler — */
+  var yMax = m.tPeak * 1.08;
+  plot($("p1"), $("t1"), {
+    xd:[xs[0], xs[n]], yd:[0, yMax], band:[eng.governed, xs[n]],
+    series:seriesFor(m), points:eng.t,
+    aria: eng.ad + " tam yük tork eğrisi, üç interpolasyon politikası"
+  });
+  var zLo = Math.min(eng.governed, xs[Math.max(0, n-2)]);
+  var zHi = xs[n];
+  var zPts = eng.t.filter(function(p){ return p[0] >= zLo - 1e-9; });
+  var zMax = Math.max.apply(null, zPts.map(function(p){return p[1];}));
+  // eğrilerin bant içindeki en yüksek değeri de sığmalı
+  POLICIES.forEach(function(p){
+    for(var x=zLo; x<=zHi; x+=(zHi-zLo)/60) zMax = Math.max(zMax, m[p.id](x));
+  });
+  plot($("p2"), $("t2"), {
+    xd:[zLo, zHi], yd:[0, zMax*1.1], band:[eng.governed, xs[n]],
+    series:seriesFor(m), points:eng.t, labelAt: zLo + (zHi-zLo)*0.42,
+    aria: eng.ad + " droop bandı yakın görünüm"
+  });
+
+  [["lg1"],["lg2"]].forEach(function(g){
+    var box = $(g[0]); box.textContent = "";
+    POLICIES.forEach(function(p){
+      var s = document.createElement("span");
+      s.innerHTML = '<i style="border-top-color:var('+p.renk+');' +
+        (p.id==="C" ? 'border-top-style:dashed;' : '') + '"></i>' + p.id + " — " + p.ad;
+      box.appendChild(s);
+    });
+    var s2 = document.createElement("span");
+    s2.innerHTML = '<i style="border-top:0;width:9px;height:9px;border-radius:50%;background:var(--ink)"></i>Tablo verisi';
+    box.appendChild(s2);
+  });
+
+  /* — ölçüm şeridi (saf PCHIP'in kirişten sapması) — */
+  var ov = chordOvershoot(m, m.A);
+  var cells = [
+    ["Son aralık", fmt(xs[n-1]) + "–" + fmt(xs[n]), "d/dk", false],
+    ["Orta noktada PCHIP", fmt(ov.val), "N·m · kiriş " + fmt(ov.chord), false],
+    ["Kirişten taşma", "+" + fmt(ov.d), "N·m", true],
+    ["Oran", "%" + fmt(ov.pctLast, 1), "son gerçek noktaya göre", true]
+  ];
+  $("readout").textContent = "";
+  cells.forEach(function(c){
+    var d = document.createElement("div");
+    d.className = "cell" + (c[3] ? " hi" : "");
+    d.innerHTML = '<span class="k">'+c[0]+'</span><span class="v">'+c[1]+
+                  ' <span class="u">'+c[2]+'</span></span>';
+    $("readout").appendChild(d);
+  });
+
+  /* — politika kartları — */
+  $("policies").textContent = "";
+  POLICIES.forEach(function(p){
+    var o  = chordOvershoot(m, m[p.id]);
+    var pm = pointMiss(m, p.id);
+    var b = document.createElement("button");
+    b.className = "pol"; b.type = "button";
+    b.setAttribute("aria-pressed", state.pol === p.id ? "true" : "false");
+    // Gerçek bir veri noktasını ıskalamak, kirişten sapmaktan daha ağır bir kusur —
+    // önce onu raporla.
+    var kotu, hkm;
+    if(Math.abs(pm.d) > 40){
+      kotu = true;
+      hkm = fmt(pm.at) + " d/dk'daki gerçek noktayı " + fmt(pm.d) + " N·m ıskalıyor";
+    } else if(Math.abs(o.d) > 40){
+      kotu = true;
+      hkm = "Kirişten " + (o.d > 0 ? "+" : "") + fmt(o.d) + " N·m sapıyor";
+    } else {
+      kotu = false;
+      hkm = "Kirişe oturuyor, gerçek nokta ıskalamıyor";
+    }
+    b.innerHTML =
+      '<div class="top"><span class="tag" style="color:var('+p.renk+')">'+p.id+'</span>' +
+      '<span class="name">'+p.ad+'</span>' +
+      (p.simdi ? '<span class="badge-now">MFSim’de bugün</span>' : '') + '</div>' +
+      '<p>'+p.aciklama+'</p>' +
+      '<div class="verdict '+(kotu?"bad":"good")+'">'+ (kotu ? "▲ " : "✓ ") + hkm +'</div>';
+    b.addEventListener("click", function(){
+      state.pol = (state.pol === p.id) ? null : p.id;
+      render();
+      $("savestatus").textContent = state.pol ? "" : "";
+    });
+    $("policies").appendChild(b);
+  });
+
+  /* — üç motorda birden — */
+  var head = "<thead><tr><th>Motor</th><th>Son aralık</th>";
+  POLICIES.forEach(function(p){ head += "<th>"+p.id+" kirişten fark</th><th>"+p.id+" nokta sapması</th>"; });
+  head += "</tr></thead><tbody>";
+  var body = "";
+  ENGINES.forEach(function(e){
+    var mm = build(e);
+    body += "<tr><td>"+e.ad+"</td><td>"+fmt(mm.xs[mm.n-1])+"–"+fmt(mm.xs[mm.n])+"</td>";
+    POLICIES.forEach(function(p){
+      var o = chordOvershoot(mm, mm[p.id]), pm = pointMiss(mm, p.id);
+      var oc = Math.abs(o.d) > 40 ? "bad" : "good";
+      var pc = Math.abs(pm.d) > 40 ? "bad" : "good";
+      body += '<td class="'+oc+'">' + (o.d > .5 ? "+"+fmt(o.d) : fmt(o.d)) + '</td>';
+      body += '<td class="'+pc+'">' + (pm.at === null || Math.abs(pm.d) < .5 ? "—"
+                : fmt(pm.d) + " @ " + fmt(pm.at)) + '</td>';
+    });
+    body += "</tr>";
+  });
+  $("matrix").innerHTML = head + body + "</tbody>";
+
+  var rt = "<thead><tr><th>Devir [d/dk]</th><th>Tork [N·m]</th><th>A</th><th>B</th><th>C</th></tr></thead><tbody>";
+  eng.t.forEach(function(p){
+    rt += "<tr><td>"+fmt(p[0])+"</td><td>"+fmt(p[1],1)+"</td><td>"+fmt(m.A(p[0]),1)+
+          "</td><td>"+fmt(m.B(p[0]),1)+"</td><td>"+fmt(m.C(p[0]),1)+"</td></tr>";
+  });
+  $("rawtab").innerHTML = rt + "</tbody>";
+}
+
+/* ---------- kaynak kod bloğu ---------- */
+$("srcblock").innerHTML =
+'<i>// ft-performance.js — createMotorTorqueFn</i>\n' +
+'var nLast = rpms.length - 1;\n' +
+'var tPeak = Math.max.apply(null, torques);\n' +
+'<b>var droopRunout = nLast >= 1 &amp;&amp; torques[nLast] &lt;= 0.02 * tPeak\n' +
+'               &amp;&amp; torques[nLast - 1] &gt; 0.02 * tPeak;</b>\n\n' +
+'return function(rpm) {\n' +
+'  if(rpm &lt;= 0) return 0;\n' +
+'  var T_net;\n' +
+'  <b>if(droopRunout &amp;&amp; rpm &gt; rpms[nLast - 1] &amp;&amp; rpm &lt; rpms[nLast]) {\n' +
+'    var fd = (rpm - rpms[nLast - 1]) / (rpms[nLast] - rpms[nLast - 1]);\n' +
+'    T_net = torques[nLast - 1] + fd * (torques[nLast] - torques[nLast - 1]);\n' +
+'  }</b> else {\n' +
+'    T_net = pchipEval(spline, rpm);\n' +
+'  }\n' +
+'  <i>// …sentetik governor droop…</i>\n' +
+'  return Math.max(0, T_net);\n' +
+'};';
+
+render();
+
+/* ---------- db: kararı sakla ---------- */
+// Sayfa dosya olarak kaydedilip başka bir yerde açılırsa window.claude HİÇ olmayabilir.
+function use(name){
+  try {
+    return (window.claude && window.claude.use)
+      ? window.claude.use(name) : Promise.resolve(null);
+  } catch(e){ return Promise.resolve(null); }
+}
+var dbRef = null;
+function showRecord(d){
+  if(!d || !d.policy){ $("record").textContent = "Henüz kayıt yok."; return; }
+  var p = POLICIES.filter(function(x){return x.id===d.policy;})[0];
+  $("record").innerHTML =
+    "<b>Seçilen: " + d.policy + " — " + (p ? p.ad : "") + "</b>" +
+    (d.note ? "<br>" + String(d.note).replace(/[<>&]/g, function(c){
+        return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c]; }) : "") +
+    '<span class="who">' + (d.at || "") + (d.engine ? " · " + d.engine : "") + "</span>";
+}
+use("db").then(function(db){
+  if(!db){ $("savestatus").textContent = "Kayıt bu görünümde kapalı."; $("save").disabled = true; return; }
+  dbRef = db.doc("kararlar/pchip-droop");
+  dbRef.onSnapshot(function(s){ showRecord(s.exists ? s.data() : null); },
+                   function(){ $("savestatus").textContent = "Kayıt okunamadı."; });
+}).catch(function(){});
+
+$("save").addEventListener("click", function(){
+  if(!dbRef) return;
+  if(!state.pol){ $("savestatus").textContent = "Önce bir politika kartı seç."; return; }
+  $("savestatus").className = "status"; $("savestatus").textContent = "Kaydediliyor…";
+  dbRef.set({ policy: state.pol, note: $("note").value.trim(),
+              engine: state.eng.ad, at: new Date().toISOString().slice(0,16).replace("T"," ") })
+    .then(function(){ $("savestatus").className = "status saved"; $("savestatus").textContent = "Kaydedildi."; })
+    .catch(function(e){ $("savestatus").textContent = "Kaydedilemedi: " + (e && e.code || "hata"); });
+});
+
+/* ---------- sample: sayfa Claude'a sorar ---------- */
+use("sample").then(function(sample){
+  if(!sample) return;
+  $("askwrap").hidden = false;
+  $("ask").addEventListener("click", function(){
+    var eng = state.eng, m = build(eng);
+    var satir = POLICIES.map(function(p){
+      var o = chordOvershoot(m, m[p.id]), pm = pointMiss(m, p.id);
+      return p.id + " (" + p.ad + "): kiriş taşması " + o.d.toFixed(0) +
+             " N·m, gerçek noktadan sapma " + pm.d.toFixed(0) +
+             (pm.at ? " N·m @ " + pm.at + " d/dk" : " N·m");
+    }).join("\n");
+    var soru =
+      "Bir motor fren/performans simülatöründe motor tork tablosunu interpole ediyoruz. " +
+      "Motor: " + eng.ad + ", governed " + eng.governed + " d/dk, no-load governed " +
+      eng.noLoad + " d/dk. Tablonun son aralığı " + m.xs[m.n-1] + "–" + m.xs[m.n] +
+      " d/dk ve bu aralıkta hiç ölçüm yok (son nokta tork=0).\n\n" +
+      "Üç politikanın ölçülen sonucu:\n" + satir + "\n\n" +
+      "Tam yük hızlanma simülasyonunda tekerlek gücünü ve tavan hızı doğru vermek " +
+      "önceliğimiz. Hangi politikayı önerirsin ve neden? En fazla 120 kelime, Türkçe, " +
+      "madde işareti kullanma.";
+    $("ask").disabled = true;
+    $("askstatus").textContent = "Düşünüyor…";
+    $("answer").hidden = false; $("answer").textContent = "";
+    sample(soru, { modelTier:"default", onText:function(u){
+      $("askstatus").textContent = ""; $("answer").textContent = u.text;
+    }}).then(function(r){
+      $("answer").textContent = r.text; $("ask").disabled = false;
+    }).catch(function(e){
+      $("askstatus").textContent = (e && e.code === "rate_limited")
+        ? "Sınıra takıldı, biraz sonra dene." : "Cevap alınamadı.";
+      $("ask").disabled = false;
+    });
+  });
+}).catch(function(){});
+
+})();
+</script>
+
+</body></html>
