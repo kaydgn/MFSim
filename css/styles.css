@@ -2565,7 +2565,11 @@ body.ve-no-module #ve-ribbon{ display:none; }
   overflow:auto;
   display:flex;
   flex-direction:column;
-  padding:32px 30px 26px;
+  /* SIKI DEFTER (kullanıcı reçetesi, 2026-09-09): liste açık gelince kart
+     1057 px'e çıkmıştı; punto bir kademe, boşluklar üçte bir kısıldı.
+     Puntoların dördü de MEVCUT tipografi merdiveninde bir basamak aşağı
+     iniyor — h1→h2, md→body, lg→md, body→tiny; yeni jeton doğmuyor. */
+  padding:24px 24px 20px;
   border-radius:var(--karsilama-kart-r);
   /* Taban: color-mix desteklenmeyen tarayıcıda kart OPAK kalır (metin okunur
      olmaktan çıkmasın); ikinci bildirim onu cam payıyla ezer. */
@@ -2585,8 +2589,8 @@ body.ve-no-module #ve-ribbon{ display:none; }
 .ve-welcome-logo{
   display:flex;
   align-items:center;
-  gap:11px;
-  font-size:var(--fs-h1);
+  gap:10px;
+  font-size:var(--fs-h2);
   font-weight:700;
   letter-spacing:0.5px;
   color:var(--text-heading);
@@ -2597,8 +2601,8 @@ body.ve-no-module #ve-ribbon{ display:none; }
   color:var(--accent-primary);
 }
 .ve-welcome-tagline{
-  margin-top:6px;
-  font-size:var(--fs-md);
+  margin-top:5px;
+  font-size:var(--fs-body);
   letter-spacing:0.4px;
   color:var(--text-muted);
 }
@@ -2607,7 +2611,7 @@ body.ve-no-module #ve-ribbon{ display:none; }
   height:1px;
   background:var(--border-color);
   background:color-mix(in srgb, var(--border-color) 75%, transparent);
-  margin:20px 0 18px;
+  margin:14px 0 12px;
 }
 
 /* ── Son değişiklikler paneli + güncellik satırı ────────────────────────
@@ -2618,7 +2622,7 @@ body.ve-no-module #ve-ribbon{ display:none; }
    kartı boyundan uzun yapıyordu. Düğme onları YERİNDE açar (pencere açmaz);
    etiketi ve kaç kaydın gizli olduğunu js/components.js yazar. */
 .ve-welcome-panel{
-  margin-top:22px;
+  margin-top:16px;
 }
 .ve-welcome-panel-title{
   font-size:var(--fs-tiny);
@@ -2631,10 +2635,10 @@ body.ve-no-module #ve-ribbon{ display:none; }
   display:flex;
   align-items:baseline;
   gap:10px;
-  padding:6px 0;
+  padding:4px 0;
   border-top:1px solid var(--border-light);
 }
-.ve-welcome-change:first-child{ margin-top:6px; }
+.ve-welcome-change:first-child{ margin-top:4px; }
 .ve-welcome-change-k{
   flex:0 0 66px;
   font-size:var(--fs-micro);
@@ -2645,7 +2649,7 @@ body.ve-no-module #ve-ribbon{ display:none; }
 /* Uzun başlık satırı boyu uzatmasın: iki satırda kesilir. */
 .ve-welcome-change-v{
   min-width:0;
-  font-size:var(--fs-body);
+  font-size:var(--fs-tiny);
   line-height:1.5;
   color:var(--text-primary);
   display:-webkit-box;
@@ -2700,8 +2704,8 @@ body.ve-no-module #ve-ribbon{ display:none; }
   display:flex;
   align-items:center;
   gap:7px;
-  margin-top:12px;
-  padding-top:10px;
+  margin-top:10px;
+  padding-top:8px;
   border-top:1px solid var(--border-light);
   font-size:var(--fs-micro);
   color:var(--text-muted);
@@ -2750,7 +2754,7 @@ body.ve-no-module #ve-ribbon{ display:none; }
   gap:8px;
   /* ÜST PAY ŞART: esneme payı (.ve-welcome-spacer) kalkınca düğme güncellik
      satırına YAPIŞIYORDU — ölçülen açıklık 0 px. */
-  margin-top:22px;
+  margin-top:16px;
   padding:10px 14px;
   font-family:var(--font-sans);
   font-size:var(--fs-md);
@@ -2814,8 +2818,8 @@ body.ve-no-module #ve-ribbon{ display:none; }
 /* Sürüm künyesi — şerit bu ekranda gizli olduğu için Program Durumu'na TEK
    giriş. Künye yoksa (modüler index.html) düğme `hidden` kalır. */
 .ve-welcome-meta{
-  margin-top:18px;
-  padding-top:12px;
+  margin-top:12px;
+  padding-top:9px;
   text-align:center;
   border-top:1px solid var(--border-color);
   border-top-color:color-mix(in srgb, var(--border-color) 70%, transparent);
@@ -2929,7 +2933,7 @@ body.ve-no-module #ve-ribbon{ display:none; }
    panelin camı. Panelin öteki bölüm başlığıyla (.ve-welcome-panel-title) aynı
    dili konuşur. */
 .ve-welcome-eyebrow{
-  margin:0 0 10px;
+  margin:0 0 7px;
   font-size:var(--fs-micro);
   font-weight:600;
   letter-spacing:var(--tracking-wider);
@@ -2942,7 +2946,7 @@ body.ve-no-module #ve-ribbon{ display:none; }
 .ve-module-overlay-grid{
   display:flex;
   flex-direction:column;
-  gap:3px;
+  gap:1px;
 }
 /* Modül SATIRI — kutu değil: simge · ad · ok. Kendi zemini, kenarlığı ve
    AYRACI yok (kullanıcı reçetesi "boşluk"): satırları ayıran şey çizgi değil
@@ -2952,7 +2956,7 @@ body.ve-no-module #ve-ribbon{ display:none; }
   flex-direction:row;
   align-items:center;
   gap:12px;
-  padding:8px 4px;
+  padding:6px 4px;
   background:none;
   border:none;
   border-radius:0;
@@ -3034,7 +3038,7 @@ body.ve-no-module #ve-ribbon{ display:none; }
 }
 .ve-module-card-name{
   display:block;
-  font-size:var(--fs-lg);
+  font-size:var(--fs-md);
   font-weight:600;
   color:var(--text-heading);
   letter-spacing:-0.01em;
