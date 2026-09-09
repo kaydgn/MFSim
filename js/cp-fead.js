@@ -3595,7 +3595,7 @@ function veFeadRefreshLayoutCards(){
 // kullanıcı düzeltmek istediği sayıyı göremezdi. Türetilenler o hâlde boş kalır.
 function veFeadTableRows(build){
   var out = { rows: [], ok: false, LpitchMm: NaN, LeffMm: NaN,
-              signedWrapDeg: NaN, posLabel: '' };
+              signedWrapDeg: NaN, posLabel: '', sense: 0 };
   var order = (build && build.order) ? build.order : [];
   order.forEach(function(n, i){
     var d = n.data || {};
@@ -3643,6 +3643,10 @@ function veFeadTableRows(build){
   out.LeffMm = geom.LeffMm;
   out.signedWrapDeg = geom.signedWrapDeg;
   out.posLabel = (sel && sel.primary) ? sel.primary.label : 'Mean';
+  // ÇEVRİMİN SÜPÜRME İŞARETİ — "Dönüş Yönü" hücresi bunu ters çevirerek temas
+  // tarafını yazıyor (fead-model.js → veFeadContactForSpin). Okunamıyorsa hücre
+  // salt okunur kalır; uydurulmuş bir taraf sessizce başka bir yol çözdürürdü.
+  out.sense = geom.sense || 0;
   out.ok = true;
   return out;
 }
@@ -3651,14 +3655,18 @@ function veFeadTableRows(build){
 // besleniyor (VE_FEAD_TABLE_W bu toplamdan türer, bkz. components.js).
 var VE_FEAD_TABLE_COLS = [
   { k:'no',   t:'#',                    w:46,  al:'center' },
-  { k:'ad',   t:'KASNAK',               w:150, al:'left'   },
+  { k:'ad',   t:'KASNAK',               w:136, al:'left'   },
   { k:'x',    t:'X(mm)',                w:64,  al:'right'  },
   { k:'y',    t:'Y(mm)',                w:64,  al:'right'  },
   { k:'eff',  t:'Efektif Çap(mm)',      w:84,  al:'right'  },
   { k:'od',   t:'D(mm)',                w:64,  al:'right'  },
   { k:'yon',  t:'Kasnak Dönüş Yönü',    w:76,  al:'center' },
   { k:'sar',  t:'Sarım Açısı(°)',       w:76,  al:'right'  },
-  { k:'span', t:'Span Uzunluğu(mm)',    w:88,  al:'right'  }
+  { k:'span', t:'Span Uzunluğu(mm)',    w:88,  al:'right'  },
+  // BİRLEŞİK HÜCRE: kayış boyu satır başına değil, ÇEVRİMİN TAMAMINA ait
+  // (defterde de öyle — K5:K10 birleştirilmiş ve tek formül: =SUM(AB47:AB52)).
+  // Kendi sütununda ve dikeyde ortalanmış duruyor.
+  { k:'kayis', t:'Kayış Uzunluğu(mm)',  w:88,  al:'center' }
 ];
 
 function _feadTblCell(w, al, extra){
@@ -3687,6 +3695,34 @@ function _feadTblNum(id, key, v, w){
     + 'border:none; color:var(--accent-primary, #3b82f6); font-weight:600;'
     + 'text-align:right; padding:3px 5px; font-size:var(--fs-micro);'
     + 'font-family:ui-monospace, monospace;"></td>';
+}
+
+// ── "KASNAK DÖNÜŞ YÖNÜ" DÜZENLENEBİLİR — VE `contact` ALANINI YAZAR ────────
+//
+// BMC'nin hesap defterinde bu sütun bir AÇILIR LİSTE girdisidir (Sağ/Sol,
+// `Geometrik Entegrasyon` H5:H10 · veri doğrulama $D$169:$D$170) ve span'ler
+// ondan türer. MFSim'de aynı fizik `contact` alanında; hücre o alanı yazıyor,
+// İKİNCİ bir yön alanı açmıyor (bkz. veFeadContactForSpin).
+//
+// Bu hücre modülün EN TEHLİKELİ girdisinin dördüncü yüzeyi: temas tarafı ters
+// verilirse çekirdek hata VERMEZ, geçerli ama BAŞKA bir güzergâh çözer. Bu
+// yüzden görünür olması bir incelik değil kural — tip varsayılanı → panel →
+// kanvas rozeti (K/S) → ve artık asıl veri giriş yüzeyi olan tablo.
+function _feadTblSpin(id, yon, w, sense){
+  if(!yon || !sense)
+    return '<td style="' + _feadTblCell(w, 'center',
+        'color:var(--text-muted); font-family:ui-monospace, monospace;') + '">—</td>';
+  var opt = ['Sağ', 'Sol'].map(function(o){
+    return '<option value="' + o + '"' + (o === yon ? ' selected' : '') + '>' + o + '</option>';
+  }).join('');
+  return '<td style="' + _feadTblCell(w, 'center', 'padding:0;') + '">'
+    + '<select onmousedown="event.stopPropagation();" ondblclick="event.stopPropagation();"'
+    + ' onchange="veFeadTableSetSpin(\'' + _feadEsc(id) + '\',this.value)"'
+    + ' title="Kasnağın dönüş yönü — kayışın o kasnağa hangi yüzünden değdiğini yazar"'
+    + ' style="width:100%; box-sizing:border-box; background:var(--bg-input, #0f1115);'
+    + 'border:none; color:var(--accent-primary, #3b82f6); font-weight:600;'
+    + 'text-align:center; padding:2px 4px; font-size:var(--fs-micro);'
+    + 'font-family:ui-monospace, monospace; cursor:pointer;">' + opt + '</select></td>';
 }
 
 function _feadTblRO(v, dec, w, al){
@@ -3719,8 +3755,6 @@ function veFeadTableCardHTML(node){
     + kunye('Kayış Tipi', belt.profile || '—', 'var(--accent-warning, #f59e0b)')
     + kunye('Kayış Markası', belt.brand || '—', 'var(--accent-warning, #f59e0b)')
     + kunye('Kasnak Sayısı', String(T.rows.length))
-    + kunye('Kayış Uzunluğu', Number.isFinite(T.LpitchMm)
-        ? (_feadFmt(T.LpitchMm, 1) + ' mm') : '—')
     + '</div>';
 
   // ── TABLO ────────────────────────────────────────────────────────────────
@@ -3764,9 +3798,17 @@ function veFeadTableCardHTML(node){
     h += _feadTblNum(r.id, r.yKey, r.yMm, C[3].w);
     h += _feadTblRO(r.effDiaMm, 3, C[4].w);
     h += _feadTblNum(r.id, 'od', r.odMm, C[5].w);
-    h += _feadTblRO(r.spin, 0, C[6].w, 'center');
+    h += _feadTblSpin(r.id, r.spin, C[6].w, T.sense);
     h += _feadTblRO(r.wrapDeg, 3, C[7].w);
     h += _feadTblRO(r.spanMm, 3, C[8].w);
+    // KAYIŞ UZUNLUĞU: bütün satırları saran TEK hücre (defterdeki K5:K10
+    // birleşmesinin aynısı) — yalnız ilk satırda basılır.
+    if(k === 0)
+      h += '<td rowspan="' + T.rows.length + '" style="'
+        + _feadTblCell(C[9].w, 'center',
+            'vertical-align:middle; font-family:ui-monospace, monospace;'
+          + 'font-weight:700; color:var(--accent-warning, #f59e0b);') + '">'
+        + (Number.isFinite(T.LpitchMm) ? _feadFmt(T.LpitchMm, 1) : '—') + '</td>';
     h += '</tr>';
   });
   h += '</tbody></table></div>';
@@ -3820,6 +3862,18 @@ function veFeadTableSet(nodeId, key, raw){
   var v = parseFloat(String(raw == null ? '' : raw).trim().replace(',', '.'));
   if(!Number.isFinite(v)){ veFeadTableAfterEdit(); return false; }
   if(typeof veFeadSet === 'function') veFeadSet(nodeId, key, v);
+  veFeadTableAfterEdit();
+  return true;
+}
+
+// Yön hücresi → TEMAS TARAFI. Çeviriyi köprü yapıyor (veFeadContactForSpin);
+// burada ikinci bir işaret kuralı yazmak, çevrimin süpürme işareti değiştiğinde
+// iki yüzeyin sessizce ayrışması demekti.
+function veFeadTableSetSpin(nodeId, yon){
+  if(typeof nodes === 'undefined' || typeof veFeadContactForSpin !== 'function') return false;
+  var c = veFeadContactForSpin(nodes, String(yon) === 'Sağ');
+  if(!c){ veFeadTableAfterEdit(); return false; }   // yön okunamıyor → yazma
+  if(typeof veFeadSet === 'function') veFeadSet(nodeId, 'contact', c);
   veFeadTableAfterEdit();
   return true;
 }
@@ -5750,6 +5804,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadRefreshTableCards: veFeadRefreshTableCards,
     veFeadRefreshCards: veFeadRefreshCards,
     veFeadTableSet: veFeadTableSet, veFeadTableMove: veFeadTableMove,
+    veFeadTableSetSpin: veFeadTableSetSpin,
     veFeadTableOpen: veFeadTableOpen,
     getFeadTablePropertiesHTML: getFeadTablePropertiesHTML,
     veFeadBeltDbHint: veFeadBeltDbHint,

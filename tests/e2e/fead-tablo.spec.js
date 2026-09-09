@@ -119,5 +119,31 @@ test('Kayış Tablosu kanvasta: kurulur, yazılır, sıra değişir', async ({ p
   expect(await page.evaluate(() =>
     window.nodes.filter((n) => n.type === 'fead-table').length)).toBe(1);
 
+  // ── 8) DÖNÜŞ YÖNÜ SEÇİCİSİ `contact` YAZIYOR (defterdeki gibi bir GİRDİ) ──
+  // BMC hesap defterinde bu sütun Sağ/Sol açılır listesidir ve span'ler ondan
+  // türer. MFSim'de aynı fizik `contact` alanında; seçici onu yazıyor ve
+  // EFEKTİF ÇAP da değişiyor — defterde bu ikisi ayrı girdiler olduğu için
+  // ayrışabiliyordu, burada yapısal olarak ayrışamaz.
+  const avaraSatir = kart.locator('tbody tr', { hasText: 'Avara 1' }).first();
+  const effOnce = parseFloat((await avaraSatir.locator('td').nth(4).innerText()).replace(',', '.'));
+  const avaraId = await page.evaluate(() =>
+    window.nodes.find((n) => n.customName === 'Avara 1').id);
+  expect(await page.evaluate((id) =>
+    window.nodes.find((n) => n.id === id).data.contact, avaraId)).toBe('back');
+
+  await avaraSatir.locator('select').selectOption('Sağ');
+  await page.waitForTimeout(200);
+
+  expect(await page.evaluate((id) =>
+    window.nodes.find((n) => n.id === id).data.contact, avaraId)).toBe('grooved');
+  const effSonra = parseFloat((await kart.locator('tbody tr', { hasText: 'Avara 1' })
+    .first().locator('td').nth(4).innerText()).replace(',', '.'));
+  expect(effSonra).toBeCloseTo(effOnce + 0.2, 3);      // 2·hr → 2·hb, GATES PK
+
+  // ── 9) KAYIŞ UZUNLUĞU BİRLEŞİK SÜTUNDA ──────────────────────────────────
+  const birlesik = kart.locator('td[rowspan="6"]');
+  await expect(birlesik).toHaveCount(1);
+  expect(parseFloat((await birlesik.innerText()).replace(',', '.'))).toBeGreaterThan(1000);
+
   expect(hatalar).toEqual([]);
 });

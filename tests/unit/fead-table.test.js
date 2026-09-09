@@ -287,3 +287,119 @@ describe('tazeleme TEK KAPIDAN', () => {
     expect(cagri).toHaveLength(1);               // yalnız veFeadRefreshCards içinde
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  DEFTERİN DÜZENLENEBİLİR HÜCRELERİ — "Kasnak Dönüş Yönü" BİR GİRDİ
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// BMC'nin KIRPI_II hesap defteri incelendi (`Geometrik Entegrasyon`, C1:K10):
+//
+//   SÜTUN            TÜR       DEFTERDEKİ KANIT
+//   KASNAK           girdi     veri doğrulama listesi $C$121:$C$126 (6 tip)
+//   X(mm) · Y(mm)    girdi     sabit, amber dolgu FFFFC000
+//   Efektif Çap(mm)  formül    =IF(OR(C5=$C$124,C5=$C$125),G5+2*M8,G5+2*L8)
+//   D(mm)            girdi     sabit, amber dolgu
+//   Dönüş Yönü       GİRDİ     veri doğrulama listesi $D$169:$D$170 = Sağ/Sol
+//   Sarım · Span     formül    yeşil dolgu FF92D050
+//   Kayış Uzunluğu   formül    =SUM(AB47:AB52), K5:K10 BİRLEŞTİRİLMİŞ
+//
+// Defterin span'i yönden türüyor: `L48 = IF(H6=H5,"Düz","Ters")` — iki komşu
+// kasnak aynı yöne dönüyorsa dış teğet, ters yöne dönüyorsa iç teğet. MFSim'de
+// aynı fizik TEK alanda: `contact`. Hücre o alanı yazıyor.
+describe('Dönüş Yönü — defterdeki gibi GİRDİ, ama tek alan üstünden', () => {
+  test('hücre bir açılır liste ve iki seçeneği var (Sağ/Sol)', () => {
+    kurOrnek();
+    const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
+      def: componentDefs['fead-table'], data: {} });
+    expect((h.match(/<select /g) || []).length).toBe(6);            // kasnak başına bir
+    expect((h.match(/<option value="Sağ"/g) || []).length).toBe(6);
+    expect((h.match(/<option value="Sol"/g) || []).length).toBe(6);
+    expect(h).toMatch(/veFeadTableSetSpin/);
+    // Kart kanvasta: seçici de mousedown yutmalı, yoksa açmak düğümü sürükler.
+    expect((h.match(/<select onmousedown="event\.stopPropagation\(\);"/g) || []).length).toBe(6);
+  });
+
+  test('YÖN ↔ TEMAS TARAFI birebir: çevirinin çekirdeğin kuralıyla tutarlılığı', () => {
+    const { ns, build } = kurOrnek();
+    const T = fead.veFeadTableRows(build);
+    // Çekirdeğin kuralı: d = (grooved ? s : −s), ekranda cw = d > 0 = "Sağ".
+    T.rows.forEach((r, i) => {
+      const beklenen = (r.contact === 'grooved' ? T.sense : -T.sense) > 0 ? 'Sağ' : 'Sol';
+      expect(r.spin).toBe(beklenen);
+    });
+    // Ters yön: fonksiyon o kuralın TERSİ olmalı.
+    expect(M.veFeadContactForSpin(ns, T.sense > 0)).toBe('grooved');
+    expect(M.veFeadContactForSpin(ns, T.sense < 0)).toBe('back');
+  });
+
+  test('yönü değiştirmek `contact` yazıyor — ikinci bir yön alanı AÇILMIYOR', () => {
+    const { ns, build } = kurOrnek();
+    const T = fead.veFeadTableRows(build);
+    const krank = ns.find((n) => n.data && n.data.driver);
+    expect(T.rows[0].spin).toBe('Sağ');
+    expect(krank.data.contact).toBe('grooved');
+
+    expect(fead.veFeadTableSetSpin(krank.id, 'Sol')).toBe(true);
+    expect(krank.data.contact).toBe('back');
+    // Düğümde `dir` / `spin` gibi İKİNCİ bir alan doğmadı.
+    expect(krank.data.spin).toBeUndefined();
+    expect(krank.data.dir).toBeUndefined();
+
+    expect(fead.veFeadTableSetSpin(krank.id, 'Sağ')).toBe(true);
+    expect(krank.data.contact).toBe('grooved');               // gidiş-dönüş birebir
+  });
+
+  test('DEFTERİN SESSİZ TUTARSIZLIĞI MFSim\'de KURULAMIYOR', () => {
+    // Defterde efektif çap kasnağın TİPİNDEN, teğet ise YÖNDEN türüyor: bir
+    // avarayı "Sağ" yapmak teğeti kaburgalı gibi çözer ama efektif çapı sırttan
+    // bırakır. MFSim'de iki sayı da `contact`tan geldiği için yönü değiştirmek
+    // efektif çapı DA değiştirmek zorunda — kapı bunu ölçüyor.
+    const { ns, build } = kurOrnek();
+    const once = fead.veFeadTableRows(build).rows[1];          // Avara 1, sırttan
+    expect(once.spin).toBe('Sol');
+    expect(once.effDiaMm - once.odMm).toBeCloseTo(2 * 1.1, 6);  // hr
+
+    const avara = ns.find((n) => n.id === once.id);
+    fead.veFeadTableSetSpin(avara.id, 'Sağ');
+    const sonra = fead.veFeadTableRows(M.veFeadBuildSystem(ns)).rows[1];
+    expect(sonra.spin).toBe('Sağ');
+    expect(sonra.effDiaMm - sonra.odMm).toBeCloseTo(2 * 1.2, 6); // hb — DEĞİŞTİ
+  });
+
+  test('süpürme işareti okunamıyorsa hücre SALT OKUNUR ve yazma reddedilir', () => {
+    const { ns } = kurOrnek();
+    // Koordinatları sil → çevrim dolanımı okunamıyor.
+    ns.filter((n) => (componentDefs[n.type] || {}).isFeadPulley)
+      .forEach((n) => { delete n.data.x; delete n.data.y; delete n.data.cenX; delete n.data.cenY; });
+    const T = fead.veFeadTableRows(M.veFeadBuildSystem(ns));
+    expect(T.sense).toBe(0);
+    const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
+      def: componentDefs['fead-table'], data: {} });
+    expect(h).not.toMatch(/veFeadTableSetSpin/);              // seçici basılmadı
+    const krank = ns.find((n) => n.data && n.data.driver);
+    const once = krank.data.contact;
+    expect(fead.veFeadTableSetSpin(krank.id, 'Sol')).toBe(false);
+    expect(krank.data.contact).toBe(once);                    // uydurulmadı
+  });
+});
+
+describe('Kayış Uzunluğu — defterdeki gibi BİRLEŞİK sütun', () => {
+  test('kendi sütununda, bütün satırları saran TEK hücre', () => {
+    kurOrnek();
+    const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
+      def: componentDefs['fead-table'], data: {} });
+    expect(h).toContain('Kayış Uzunluğu(mm)');
+    // Defterde K5:K10 birleştirilmiş — burada rowspan, kasnak sayısı kadar.
+    expect((h.match(/rowspan="6"/g) || []).length).toBe(1);
+    // Üst künyeden kalktı: aynı sayıyı iki yerde göstermek ikinci bir kopya olurdu.
+    expect(h.split('Kayış Uzunluğu').length - 1).toBe(1);
+  });
+
+  test('sütun sayısı ON ve genişlikler kart ölçüsüyle tutarlı', () => {
+    expect(fead.VE_FEAD_TABLE_COLS).toHaveLength(10);
+    expect(fead.VE_FEAD_TABLE_COLS[9].k).toBe('kayis');
+    const toplam = fead.VE_FEAD_TABLE_COLS.reduce((a, c) => a + c.w, 0);
+    expect(toplam).toBeLessThanOrEqual(VE_FEAD_TABLE_W);
+    expect(VE_FEAD_TABLE_W - toplam).toBeLessThan(24);
+  });
+});
