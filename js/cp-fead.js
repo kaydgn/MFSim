@@ -2554,6 +2554,38 @@ function veFeadLayoutSVG(build, W, H, opts){
     olcekle(pad, pad, pad, pad);
     etiketPayi();
   }
+  // ── AÇIKLIK GERİLMESİ ETİKETLERİ — konum ad yerleştiricisinden ÖNCE ─────
+  // Üç ölçülmüş kusur birden kapanıyor (kullanıcı bildirimi: "kayış
+  // gerginlikleri iyi görülmüyor"):
+  //   • Sayı SABİT bir normalle kaydırılıyordu; normal yarı yarıya çizimin
+  //     İÇİNE bakıyor ve etiket kalabalığın üstüne düşüyordu. Artık yön
+  //     kümenin ağırlık merkezinden DIŞA seçiliyor.
+  //   • Çerçeveye kenetleme yoktu: sağdaki açıklıkta sayı kartın dışına taşıp
+  //     KIRPILIYORDU.
+  //   • Konumlar burada üretildiği için ad yerleştiricisi onları engel olarak
+  //     görebiliyor; eskiden ad ile sayı birbirini bilmiyordu.
+  var _spanEt = [];
+  if(opts.tension && opts.tension.spanN && opts.spanLabels !== false){
+    var TE = _feadXform(s, offX, offY, minX, maxY);
+    var cx0 = 0, cy0 = 0;
+    ps.forEach(function(p){ cx0 += TE.tx(p.c[0]); cy0 += TE.ty(p.c[1]); });
+    cx0 /= Math.max(1, ps.length); cy0 /= Math.max(1, ps.length);
+    (geom.spans || []).forEach(function(sp, i){
+      var TN = opts.tension.spanN[i];
+      if(!Number.isFinite(TN)) return;
+      var ax = TE.tx(sp.Pi[0]), ay = TE.ty(sp.Pi[1]);
+      var bx = TE.tx(sp.Pj[0]), by = TE.ty(sp.Pj[1]);
+      var mx = (ax+bx)/2, my = (ay+by)/2;
+      var vx = bx-ax, vy = by-ay, vl = Math.sqrt(vx*vx + vy*vy) || 1;
+      var nx = vy/vl, ny = -vx/vl;
+      if((mx-cx0)*nx + (my-cy0)*ny < 0){ nx = -nx; ny = -ny; }     // DIŞA
+      var yazi = Math.round(TN) + ' N', w = etW(yazi, 9);
+      var X = Math.min(Math.max(mx + nx*13, 2 + w/2), W - ROSE - 2 - w/2);
+      var Y = Math.min(Math.max(my + ny*13 + 3, 11), H - 4);
+      _spanEt.push({ i:i, yazi:yazi, x:X, y:Y, x0:X-w/2, x1:X+w/2, y0:Y-8, y1:Y+2 });
+    });
+  }
+
   // ── ETİKET YERLEŞİMİ — KAYIŞ YOLU BİR ENGELDİR ─────────────────────────
   // Ad şimdiye kadar koşulsuz çemberin ÜSTÜNE konuyordu. Yerleşim dairesel
   // olduğu için kasnakların yarısında kayış tam oradan geçiyor: ÖLÇÜLDÜ
@@ -2611,6 +2643,8 @@ function veFeadLayoutSVG(build, W, H, opts){
         var w = etW(_feadR(geom.wrapDeg(k)) + '°', 8) / 2;
         yumusak.push({ x0:X-w, x1:X+w, y0:Y-8, y1:Y+2 });
       });
+    // Gerilme sayıları da aynı tierde: ad ile sayı birbirini bilmiyordu.
+    _spanEt.forEach(function(e){ yumusak.push(e); });
     ps.forEach(function(p, k){
       var X = offX + (p.c[0]-minX)*s, Y = offY + (maxY-p.c[1])*s, R = p.rPitch*s;
       var w = etW(gorAd(k), 9), h = 10;
@@ -2840,17 +2874,22 @@ function veFeadLayoutSVG(build, W, H, opts){
       var renk = veFeadTensionColor(TN, tmap.min, tmap.max);
       svg += '<path data-ve="belt-tension" data-span="' + i + '" d="'
           + _feadSpanPathD(walk, i, T, vibDef) + '" fill="none" stroke="' + renk
-          + '" stroke-width="4.2" stroke-linecap="round" opacity="0.95"><title>'
+          + '" stroke-width="4.4" stroke-linecap="round"><title>'
           + _feadEsc(geom.names[i] + ' → ' + geom.names[(i+1) % ps.length]
                      + ' · ' + Math.round(TN) + ' N') + '</title></path>';
-      if(opts.spanLabels !== false){
-        var mx = (tx(sp.Pi[0]) + tx(sp.Pj[0]))/2, my = (ty(sp.Pi[1]) + ty(sp.Pj[1]))/2;
-        var vx = tx(sp.Pj[0]) - tx(sp.Pi[0]), vy = ty(sp.Pj[1]) - ty(sp.Pi[1]);
-        var vl = Math.sqrt(vx*vx + vy*vy) || 1;
-        svg += '<text data-ve="span-tension" x="' + f(mx + (vy/vl)*11) + '" y="'
-            + f(my - (vx/vl)*11 + 3) + '" text-anchor="middle" font-size="8" fill="'
-            + renk + '">' + Math.round(TN) + ' N</text>';
-      }
+      // SAYI RAMPA RENGİNDE DEĞİL, METİN RENGİNDE. Rampanın orta durağı kayışın
+      // amberi olmak zorunda (harita açılıp kapanınca renk sıçramasın) ama o
+      // amber AÇIK temada beyaz üstünde 2,3:1 kontrast veriyor — 9 px'lik bir
+      // sayı için okunmaz. Renk zaten yanı başındaki açıklıkta; sayının işi
+      // okunmak. Zemin renginde bir hâle (`paint-order`) kayışın, dişlerin ve
+      // kasnak çemberinin üstünde de okunur tutuyor.
+      var _e = null;
+      _spanEt.forEach(function(x){ if(x.i === i) _e = x; });
+      if(_e)
+        svg += '<text data-ve="span-tension" x="' + f(_e.x) + '" y="' + f(_e.y)
+            + '" text-anchor="middle" font-size="9" font-weight="600"'
+            + ' paint-order="stroke" stroke="var(--bg-input)" stroke-width="3.2"'
+            + ' stroke-linejoin="round" fill="var(--text-primary)">' + _e.yazi + '</text>';
     });
     // ÖLÇEK ÇİZİLİR: renk bir SIRALAMA gösteriyor, sayıya çevrilebilmesi için
     // uçların yazılı olması şart. Gradyan değil ayrık kutucuklar — <defs>
