@@ -38,6 +38,18 @@ global.componentDefs = componentDefs;
 global.FEADCore = F;
 const BL = require('../../js/fead-belts.js');
 Object.keys(BL).forEach((k) => { global[k] = BL[k]; });
+// Aksesuar kataloğu — "Devir Sınırları" ve "Katalog Modeli" kartları buna
+// bağlı; yüklenmezse o kartlar hiç çizilmez ve Ek A kapısı onları sessizce
+// atlardı.
+const AC = require('../../js/fead-accessories.js');
+Object.keys(AC).forEach((k) => { global[k] = AC[k]; });
+// "Katalog Modeli" kartı, Araç Performans ile ORTAK preset kütüphanesine bağlı
+// (veFeadPresetLib → VE_ALTERNATOR_PRESETS / VE_AC_PRESETS). Yüklenmezse kart
+// hiç çizilmez ve Ek A'nın o satırı sessizce atlanırdı.
+eval(loadSource('cp-accessories.js'));
+global.VE_ALTERNATOR_PRESETS = VE_ALTERNATOR_PRESETS;
+global.VE_AC_PRESETS = VE_AC_PRESETS;
+global.VE_AIRCOMP_PRESETS = VE_AIRCOMP_PRESETS;
 Object.keys(M).forEach((k) => { global[k] = M[k]; });
 const CP = require('../../js/cp-fead.js');
 Object.keys(CP).forEach((k) => { if (global[k] === undefined) global[k] = CP[k]; });
@@ -46,6 +58,9 @@ const KIT = require('../../js/guide-kit.js');
 Object.keys(KIT).forEach((k) => { global[k] = KIT[k]; });
 const GF = require('../../js/guide-fead.js');
 Object.keys(GF).forEach((k) => { global[k] = GF[k]; });
+// Sihirbaz adım listesi KAYNAKTAN okunur — kılavuzun adım tablosu ona karşı
+// ölçülüyor (aşağıdaki "sihirbaz adım tablosu" kapısı).
+const WZ = require('../../js/cp-fead-wizard.js');
 
 beforeEach(() => resetStubs(stubs));
 
@@ -361,14 +376,30 @@ describe('içerik yönlendirici', () => {
   });
 
   test('Başlangıç Sihirbazı açılış yolu olarak anlatılıyor', () => {
-    // Modül açılışında İKİ kutu geliyor; kılavuz tek kutu derse ilk ekran
-    // yalanlanmış olur ve kullanıcı sihirbazı hiç bulmaz.
+    // Modül açılışında ÜÇ kart geliyor (sihirbaz · örnekler · Kayış Tablosu);
+    // kılavuz eksik sayarsa ilk ekran yalanlanmış olur.
     expect(DOC).toContain('Başlangıç Sihirbazı');
-    expect(DOC).toContain('iki açılış kutusu');
+    expect(DOC).toContain('üç açılış kartı');
     expect(DOC).toContain('Sihirbaz adımları');
-    // Yedi adımın yedisi de bölümlerle eşlenmiş olmalı.
-    ['Kasnaklar', 'Kayış Yolu', 'Otomatik Gergi', 'Motor ve Çevrim', 'Özet ve Kurulum']
-      .forEach((a) => { expect(DOC).toContain(a); });
+  });
+
+  // SİHİRBAZ ADIMLARI PROGRAMDAN OKUNUR — kılavuza kopyalanmaz.
+  //
+  // Eski kapı beş adım adını sabit bir listeden kontrol ediyordu ve içinde
+  // 'Kayış Yolu' vardı. O adım 2026-09-04'te KALKTI (sıra artık kasnak
+  // tablosunun kendisi), ama kapı yeşil kaldı: "Kayış Yolu" belgede araç
+  // kartının ADI olarak da geçiyor, yani kapı adımı değil kelimeyi ölçüyordu.
+  // Şimdi kaynak VE_FW_STEPS'in kendisi.
+  test('sihirbaz adım tablosu programdaki adımlarla birebir', () => {
+    const adimlar = WZ.VE_FW_STEPS.map((x) => x.ad);
+    expect(adimlar.length).toBeGreaterThan(3);
+    adimlar.forEach((ad, i) => {
+      // Tablo satırı "<n> · <ad>" biçiminde: hem ad hem SIRA doğru olmalı.
+      expect(DOC).toContain((i + 1) + ' · ' + ad);
+    });
+    // ...ve kalkan adım geri gelmiş gibi anlatılmıyor.
+    expect(DOC).not.toContain('3 · Kayış Yolu');
+    expect(DOC).toContain('Ayrı bir “Kayış Yolu” adımı yok');
   });
 
   test('hızlı başvuru eki alan → panel eşlemesi veriyor', () => {
@@ -407,6 +438,27 @@ describe('kılavuz ↔ program: kart adları', () => {
       if (d.isFeadTensioner) ten = n;
       if (d.isFeadBelt) belt = n;
     });
+    // KAPI GERGİ VE KAYIŞLA SINIRLIYDI — VE BU BİR BOŞLUKTU. Kasnakların
+    // kanvas kutuları kalkıp veri girişi Kayış Tablosu'na taşındığında
+    // kılavuzun §4/§5'i, Ek A'nın "Konum Bağı" satırı ve §11.2'nin "K/S
+    // rozeti" tablosu olmayan bir programı anlatmaya devam etti; 43 kapının
+    // hiçbiri kırmızıya dönmedi çünkü hiçbiri KASNAK, ÇÖZÜCÜ ya da TABLO
+    // yüzeyine bakmıyordu. Zarf artık dördünü birden alıyor.
+    // KASNAK PANELİ TİPE GÖRE DEĞİŞİYOR: "Katalog Modeli" ve "Devir Sınırları"
+    // yalnız aksesuar kasnaklarında (alternatör · klima · hava kompresörü)
+    // çiziliyor, sürücü kasnakta çizilmiyor. Ek A "Kasnak paneli" derken
+    // ikisini birden kastediyor, o yüzden zarf da ikisinin BİRLEŞİMİ.
+    let surucu = null;
+    let aks = null;
+    let sol = null;
+    pack.nodes.forEach((n) => {
+      const d = componentDefs[n.type] || {};
+      if (d.isFeadSolver) sol = n;
+      if (!d.isFeadPulley || d.isFeadTensioner) return;
+      if (n.data && n.data.driver && !surucu) surucu = n;
+      else if (VE_FEAD_ACC_TYPE && VE_FEAD_ACC_TYPE[n.type] && !aks) aks = n;
+    });
+    const tbl = { id: 'tbl-1', type: 'fead-table', data: {} };
     const eskiN = global.nodes;
     const eskiC = global.connections;
     global.nodes = pack.nodes;
@@ -415,6 +467,12 @@ describe('kılavuz ↔ program: kart adları', () => {
       return {
         Gergi: getFeadTensionerPropertiesHTML(ten),
         'Kayış Özellikleri': getFeadBeltPropertiesHTML(belt),
+        Kasnak: getFeadPulleyPropertiesHTML(surucu)
+              + (aks ? getFeadPulleyPropertiesHTML(aks) : ''),
+        'Çözücü': sol ? getFeadSolverPropertiesHTML(sol) : '',
+        // Kayış Tablosu bir PANEL değil bir KANVAS KARTI: Ek A onu kart
+        // adıyla değil sütun adlarıyla anlatıyor, kapısı da aşağıda ayrı.
+        'Kayış Tablosu': veFeadTableCardHTML(tbl),
       };
     } finally {
       global.nodes = eskiN;
@@ -442,7 +500,10 @@ describe('kılavuz ↔ program: kart adları', () => {
       const h = (r.match(/<td[^>]*>([\s\S]*?)<\/td>/g) || []).map(duz);
       if (h.length < 3) return;
       const panel = PANEL[h[1]];
-      if (!panel) return;                     // Kasnak/Çözücü/Rapor bu kapının dışında
+      if (!panel) return;                     // Rapor ve "—" bu kapının dışında
+      // Kayış Tablosu satırlarının üçüncü hücresi SÜTUN adı taşıyor (kart
+      // değil); onların kapısı aşağıdaki ayrı testte, sütun listesine karşı.
+      if (h[1] === 'Kayış Tablosu') return;
       duz(h[2]).split('·').forEach((ad) => {
         const t = ad.trim();
         if (!t || t === '—') return;
@@ -453,6 +514,59 @@ describe('kılavuz ↔ program: kart adları', () => {
     // Kapının GERÇEKTEN bir şey taradığının kanıtı: boş bir listeyle de yeşil
     // kalırdı (bu depoda "üreticiyi çağıran ama yüzeyi ölçmeyen kapı" dersi).
     expect(bakilan.length).toBeGreaterThanOrEqual(9);
+    // Zarf gerçekten dört paneli birden taradı mı — biri boş dönseydi o
+    // paneldeki her satır sessizce atlanırdı.
+    ['Gergi', 'Kayış Özellikleri', 'Kasnak', 'Çözücü'].forEach((ad) => {
+      expect(PANEL[ad].length).toBeGreaterThan(400);
+      expect(bakilan.some((x) => x.indexOf(ad + ' / ') === 0)).toBe(true);
+    });
+  });
+
+  // ── KAYIŞ TABLOSU: kılavuzun anlattığı sütunlar GERÇEKTEN o tabloda mı ──
+  //
+  // §4 tablonun sütunlarını tek tek anlatıyor. O liste kılavuza kopyalanmış
+  // bir metin olduğu için, bir sütun adı programda değişirse kılavuz sessizce
+  // eskirdi — kasnak kutuları kalktığında olan tam olarak buydu.
+  test('§4 tablonun sütunlarını programdaki adlarla anlatıyor', () => {
+    const adlar = VE_FEAD_TABLE_COLS.map((c) => c.t).filter((t) => t && t !== '#');
+    expect(adlar.length).toBeGreaterThan(6);
+    adlar.forEach((t) => { expect(DOC).toContain(t); });
+    // ...ve tablonun KENDİSİ o başlıkları basıyor (kapı tek yüzeyi ölçmesin).
+    adlar.forEach((t) => { expect(PANEL['Kayış Tablosu']).toContain(t); });
+  });
+
+  test('§4 ekleme/silme yüzeyini tablonun bastığı adla anlatıyor', () => {
+    // Kasnak eklemenin GÖRÜNÜR tek yolu bu; kılavuz paleti gösterirse
+    // kullanıcı hiçbir şey olmayan bir sürükleme yapar (ölçülmüş sınıf).
+    expect(PANEL['Kayış Tablosu']).toContain('Kasnak ekle');
+    expect(DOC).toContain('Kasnak ekle');
+    expect(DOC).toContain('kayış sırasının <strong>sonuna</strong>');
+    // ...VE PALET YOLUNU TARİF ETMİYOR. Yalnız "Kasnak ekle geçiyor mu" diye
+    // bakmak yetmiyor: o ifade Ek A'da ve §4.3'te de var, dolayısıyla §4'ün
+    // ADIMI palete geri dönse bile kapı yeşil kalırdı (ölçüldü). Kasnağı
+    // paletten sürüklemek kanvasta HİÇBİR İZ bırakmıyor — kılavuz o yolu bir
+    // yöntem gibi anlatırsa kullanıcı hiçbir şey olmadığını sanır.
+    expect(DOC).toContain('Kasnağı paletten sürüklemeyin');
+    // ...VE §4'ÜN ADIM LİSTESİ PALETİ TARİF ETMİYOR. Yalnız "Kasnak ekle
+    // geçiyor mu" diye bakmak yetmiyor: o ifade Ek A'da ve §4.3'te de var,
+    // dolayısıyla §4'ün ADIMI palete geri dönse bile kapı yeşil kalırdı
+    // (ölçüldü). Ölçülen yer bu yüzden adımın kendisi.
+    const s4 = DOC.slice(DOC.indexOf('id="g4"'), DOC.indexOf('id="g5"'));
+    const ilkAdim = (s4.match(/<ol>[\s\S]*?<\/ol>/) || [''])[0];
+    expect(ilkAdim).toContain('Kasnak ekle');
+    expect(ilkAdim).not.toMatch(/palet/i);
+  });
+
+  test('KUTUSUZLUK kılavuzda da yazılı — kablolama ve Konum Bağı geçmiyor', () => {
+    // Bu satırların hepsi bir dönem kılavuzdaydı ve programda karşılıkları
+    // kalmadı. Metin yeniden yazıldığında geri sızmasınlar.
+    ['Konum Bağı', 'çıkış portuna', 'giriş portuna', 'Tel kurulur',
+      'kayış yolu kablolan', 'kablolamayı bu belirler'].forEach((k) => {
+      expect(DOC).not.toContain(k);
+    });
+    // ...ve yerine geçen kural açıkça yazılı.
+    expect(DOC).toContain('kanvasta kutusu');
+    expect(DOC).toContain('graf değil, bir listedir');
   });
 
   test('kaldırılan yüzeyler NE panelde NE kılavuzda geçiyor', () => {
