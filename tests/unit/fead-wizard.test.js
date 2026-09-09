@@ -421,6 +421,37 @@ describe('kurulum kapısı ve kurulum', () => {
     expect(b.spin).toBe(beklenen.spin);
   });
 
+  // ── AÇILIŞ YÜZEYİ ZATEN BİR TABLO KOYMUŞ OLUYOR ─────────────────────────
+  // Kayış Tablosu maxInstances:1 ve veFeadPopulateStarter onu alt topoloji
+  // açılışında kuruyor. Sihirbazın "araç düğümünü yeniden kullan" listesinde
+  // `fead-table` yoksa kurulum ikincisini kurmaya kalkar, createNode reddeder
+  // ve kullanıcı "modeli kur" dediğinde bir UYARI görür — üstelik kurulan
+  // bileşen sayısı da eksik sayılır. Kurulum yolu örnek kurucusundan AYRI bir
+  // döngü olduğu için orada düzeltilen kusur burada yaşayabiliyordu.
+  test('kanvasta zaten TABLO varken: ikincisi kurulmaz, VAR OLAN kullanılır', () => {
+    kabuk();
+    wiz.veFeadWizSeed('AG00976_GATES_2025');
+    sahteKanvas();
+    const tablo = createNode('fead-table', 0, 0);
+    tablo.data.deneme = 42;                       // kullanıcı verisi — kaybolmamalı
+    const kuruldu = wiz.veFeadWizCreate();
+    delete global.createNode; delete global.createConnection;
+
+    const tablolar = global.nodes.filter((n) => n.type === 'fead-table');
+    expect(tablolar).toHaveLength(1);
+    expect(tablolar[0].id).toBe(tablo.id);        // AYNI düğüm, yenisi değil
+    expect(tablolar[0].data.deneme).toBe(42);
+    // AYIRT EDİCİ ÖLÇÜ: var olan tablo KURULAN listede olmalı. Yeniden kullanım
+    // listesinde `fead-table` yoksa createNode reddediyor, düğüm listeye HİÇ
+    // girmiyor (ve gerçek createNode bir uyarı basıyor) — kasnak sayısı ve
+    // "N bileşen kuruldu" toast'ı da eksik çıkıyor. Bu satır olmadan test
+    // düzeltmeyi ölçmüyordu: ölçüldü, mutasyon YEŞİL geçiyordu.
+    expect(kuruldu.map((n) => n.id)).toContain(tablo.id);
+    // Model yine tam kuruldu.
+    expect(global.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley).length).toBe(6);
+    expect(M.veFeadBuildSystem(global.nodes).ok).toBe(true);
+  });
+
   test('kurulumda duty kW kanvas KİMLİKLERİNE göç ediyor', () => {
     kabuk();
     wiz.veFeadWizSeed('AG00976_GATES_2025');

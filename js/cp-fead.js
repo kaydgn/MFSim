@@ -5320,6 +5320,12 @@ function veFeadLoadExample(key){
   if(typeof veFeadArrangeByCoords === 'function'){
     try { veFeadArrangeByCoords({ silent: true }); } catch(e){ /* yedek: yukarıdaki sıra */ }
   }
+  // SAYAÇ TAZELENİR. `nodes` dizisi doğrudan splice edildi (deleteSelectedNodes
+  // bilerek kullanılmıyor — o `selectedNodes` global'ini tüketiyor), dolayısıyla
+  // araç çubuğunun "N bileşen" sayacı ve minimap kendiliğinden güncellenmiyor.
+  // ÖLÇÜLDÜ (gerçek tarayıcı): sihirbaz kurulumundan sonra dizi 12 düğüm
+  // taşırken çubuk 13 diyordu — bir sonraki topoloji değişimine kadar bayat.
+  if(typeof updateNodeCount === 'function') updateNodeCount();
   if(typeof updateAllConnections === 'function') updateAllConnections();
   if(typeof veFeadRefreshBadges === 'function') veFeadRefreshBadges();
   _feadForgetResults();
