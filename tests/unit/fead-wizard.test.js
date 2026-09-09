@@ -3105,3 +3105,48 @@ describe('gizli örnek kaydı', () => {
     expect(veFeadExampleKeysAll().length - veFeadExampleKeys().length).toBe(1);
   });
 });
+
+// ── "MODELİ KUR" TEK GERİ-AL ADIMI ────────────────────────────────────────
+// Kullanıcı bildirimi (2026-09-09): *"CTRL Z komutunu kullandığımda tablo
+// siliniyor."* Sihirbaz da örnek yükleyici gibi ONİKİ düğüm kuruyor ve
+// `createNode` her birinde `saveState()` çağırıyor; sarılmazsa Ctrl+Z kurulan
+// modeli düğüm düğüm söker. Adım sayısı state.js'de ölçülü (veStateBatch);
+// buradaki kapı sihirbazın o mekanizmadan GEÇTİĞİNİ tutuyor.
+describe('"Modeli Kur" tek geri-al adımı', () => {
+  test('kurulan her düğüm TEK sarmalın içinde', () => {
+    document.body.innerHTML = '<div id="ve-canvas"></div>'
+      + '<div id="ve-feadwiz-overlay" style="display:none;">'
+      + '<div id="ve-fw-nav"></div><div id="ve-fw-body"></div><div id="ve-fw-foot"></div></div>';
+    global.nodes = []; global.connections = [];
+    const iz = { sarma: 0, derinlik: 0, disarida: [] };
+    global.veStateBatchActive = () => iz.derinlik > 0;
+    global.veStateBatch = (fn) => {
+      iz.sarma++; iz.derinlik++;
+      try { return fn(); } finally { iz.derinlik--; }
+    };
+    let k = 0;
+    global.createNode = (type, x, y) => {
+      const d = componentDefs[type] || {};
+      if (d.maxInstances && global.nodes.filter((n) => n.type === type).length >= d.maxInstances)
+        return null;
+      if (iz.derinlik === 0) iz.disarida.push(type);
+      const n = { id: 'cw' + ++k, type, def: d, x, y,
+                  width: d.defaultWidth || 65, height: d.defaultHeight || 60, data: {} };
+      global.nodes.push(n); return n;
+    };
+    global.createConnection = (from, to) =>
+      global.connections.push({ id: 'c' + global.connections.length, from, to });
+
+    wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const out = wiz.veFeadWizCreate();
+    delete global.createNode; delete global.createConnection;
+    delete global.veStateBatch; delete global.veStateBatchActive;
+
+    expect(out).toBeTruthy();
+    expect(iz.sarma).toBe(1);
+    // Bir düğüm bile dışarıda kurulsaydı kendi adımını yazardı ve Ctrl+Z
+    // kurulumun ORTASINDA bir yere düşerdi.
+    expect(iz.disarida).toEqual([]);
+    expect(global.nodes.length).toBeGreaterThanOrEqual(11);
+  });
+});

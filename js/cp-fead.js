@@ -175,6 +175,24 @@ function veFeadArrangeByCoords(opts){
 // diyene. Sihirbazın içinden de örnekle doldurulabiliyor (veFeadWizSeed), ama
 // oradaki yol formu doldurur — kanvasa kurmaz.
 function veFeadPopulateStarter(){
+  // BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI (bkz. js/state.js → veStateBatch).
+  // Bu kurucu ONİKİ düğüm kuruyor ve `createNode` her birinde `saveState()`
+  // çağırıyor: sarılmazsa Ctrl+Z modeli düğüm düğüm SÖKER (ölçüldü — 12.
+  // basışta Kayış Tablosu boşalıyor, 13.'te kart tamamen gidiyordu).
+  // Yığın zaten toplu kurulumdaysa (sihirbaz açılış yüzeyini çağırıyor)
+  // ikinci kez sarılmaz — sayaç iç içe geçmeyi taşıyor.
+  if(typeof veStateBatch === 'function' && typeof veStateBatchActive === 'function'
+     && !veStateBatchActive()){
+    var _r = veStateBatch(function(){ return veFeadPopulateStarter(); });
+    // AÇILIŞ DURUMU YIĞININ TABANI (bkz. state.js → veStateResetBaseline).
+    // Bir adım olarak dursaydı Ctrl+Z kullanıcıyı boş bir kanvasa düşürürdü:
+    // ne tablo, ne sihirbaz, ne örnek — geri dönüşün tek yolu Ctrl+Y.
+    // Burada güvenli, çünkü bu yol yalnız KAYITSIZ bir alt topolojiye girerken
+    // koşuyor (veFeadOpenEditor → veLoadTabState({state:null})) ve yığın o anda
+    // zaten boş.
+    if(typeof veStateResetBaseline === 'function') veStateResetBaseline();
+    return _r;
+  }
   if(typeof createNode !== 'function') return [];
   var base = (typeof veArrangeModuleBase === 'function')
     ? veArrangeModuleBase(VE_FEAD_STARTER_LAYOUT.map(function(it){ return { lx:it.lx, ly:it.ly }; }))
@@ -3590,7 +3608,7 @@ function veFeadTableRows(build){
 // hem kazanılan genişliği ada ve sayılara bırakıyor.
 var VE_FEAD_TABLE_COLS = [
   { k:'no',    t:'#',                  u:'',   w:54,  al:'c' },
-  { k:'ad',    t:'KASNAK',             u:'',   w:152, al:'l' },
+  { k:'ad',    t:'KASNAK',             u:'',   w:172, al:'l' },
   { k:'x',     t:'X',                  u:'mm', w:64,  al:'r' },
   { k:'y',     t:'Y',                  u:'mm', w:64,  al:'r' },
   { k:'eff',   t:'Efektif Çap',        u:'mm', w:78,  al:'r' },
@@ -3662,6 +3680,18 @@ function _feadTblRO(v, dec, al){
     + (typeof v === 'string' ? _feadEsc(v)
        : (Number.isFinite(v) ? _feadFmt(v, dec) : '—')) + '</td>';
 }
+
+// "PENCERE AÇILIR" SİMGESİ — başlık şeritli küçük bir pencere.
+//
+// ÇİZİM, YAZI KARAKTERİ DEĞİL. `⧉` / `⤢` gibi bir glif konteynerin yazı
+// tipinde olmayabilir ve eksik glif tam da anlatması gereken şeyi — burada bir
+// pencere açıldığını — yok eder. `currentColor` düğmenin durumunu (dinlenme /
+// fare / açık) kendiliğinden izliyor, yani ikinci bir renk kuralı yok.
+var VE_FEAD_TBL_OPEN_ICON =
+  '<svg class="ac" width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"'
+  + ' fill="none" stroke="currentColor" stroke-width="1.2">'
+  + '<rect x="1.4" y="2.4" width="9.2" height="7.2" rx="1.1"/>'
+  + '<path d="M1.4 4.7h9.2"/></svg>';
 
 // ── SEÇİLİ SATIR: TABLO İLE PANEL ARASINDAKİ TEK BAĞ ──────────────────────
 //
@@ -3777,11 +3807,12 @@ function veFeadTableCardHTML(node){
       + '</span></td>';
     // AD: tıklanınca bileşenin PANELİ açılır — "gerekirse tıklayarak bileşen
     // penceresini açarak detay hesaplamalara bakacağız" isteğinin karşılığı.
-    h += '<td class="al-l"><button type="button" class="ve-fead-tbl-name"'
+    h += '<td class="al-l ad-cell"><button type="button" class="ve-fead-tbl-name"'
       + ' onmousedown="event.stopPropagation();"'
       + ' onclick="veFeadTableOpen(\'' + _feadEsc(r.id) + '\')"'
-      + ' title="' + _feadEsc(r.name) + ' — paneli aç, detay hesaplar">'
-      + '<span>' + _feadEsc(r.name) + '</span></button></td>';
+      + ' title="' + _feadEsc(r.name) + ' — panelini aç (detay hesaplar)">'
+      + '<span class="ad">' + _feadEsc(r.name) + '</span>' + VE_FEAD_TBL_OPEN_ICON
+      + '</button></td>';
     h += _feadTblNum(r.id, r.xKey, r.xMm,
                      r.tensioner ? 'Avara merkezi X (montaj konumu bundan türer)' : '');
     h += _feadTblNum(r.id, r.yKey, r.yMm,
@@ -5195,6 +5226,15 @@ function veFeadExamplePick(key){
 }
 
 function veFeadLoadExample(key){
+  // BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI (bkz. js/state.js → veStateBatch).
+  // Bu kurucu ONİKİ düğüm kuruyor ve `createNode` her birinde `saveState()`
+  // çağırıyor: sarılmazsa Ctrl+Z modeli düğüm düğüm SÖKER (ölçüldü — 12.
+  // basışta Kayış Tablosu boşalıyor, 13.'te kart tamamen gidiyordu).
+  // Yığın zaten toplu kurulumdaysa (sihirbaz açılış yüzeyini çağırıyor)
+  // ikinci kez sarılmaz — sayaç iç içe geçmeyi taşıyor.
+  if(typeof veStateBatch === 'function' && typeof veStateBatchActive === 'function'
+     && !veStateBatchActive())
+    return veStateBatch(function(){ return veFeadLoadExample(key); });
   if(typeof createNode !== 'function') return null;
   var pack = veFeadExampleNodes(key);
   if(!pack){ if(typeof showToast === 'function') showToast('Örnek bulunamadı: ' + key, 'error'); return null; }
@@ -5905,6 +5945,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadRefreshLayoutCards: veFeadRefreshLayoutCards,
     VE_FEAD_CARD_CLASS: VE_FEAD_CARD_CLASS,
     VE_FEAD_TABLE_CLASS: VE_FEAD_TABLE_CLASS,
+    VE_FEAD_TBL_OPEN_ICON: VE_FEAD_TBL_OPEN_ICON,
     VE_FEAD_TABLE_COLS: VE_FEAD_TABLE_COLS,
     veFeadTableRows: veFeadTableRows,
     veFeadTableCardHTML: veFeadTableCardHTML,

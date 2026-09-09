@@ -3116,6 +3116,15 @@ function veFeadWizCanCreate(){
 // noktadan (veFeadArrangeByCoords) yapılıyor. İkinci bir kurucu yazmak, iki
 // yolun sessizce ayrışması demekti.
 function veFeadWizCreate(){
+  // BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI (bkz. js/state.js → veStateBatch).
+  // Bu kurucu ONİKİ düğüm kuruyor ve `createNode` her birinde `saveState()`
+  // çağırıyor: sarılmazsa Ctrl+Z modeli düğüm düğüm SÖKER (ölçüldü — 12.
+  // basışta Kayış Tablosu boşalıyor, 13.'te kart tamamen gidiyordu).
+  // Yığın zaten toplu kurulumdaysa (sihirbaz açılış yüzeyini çağırıyor)
+  // ikinci kez sarılmaz — sayaç iç içe geçmeyi taşıyor.
+  if(typeof veStateBatch === 'function' && typeof veStateBatchActive === 'function'
+     && !veStateBatchActive())
+    return veStateBatch(function(){ return veFeadWizCreate(); });
   if(!_fwState) return null;
   var kapi = veFeadWizCanCreate();
   if(!kapi.ok){

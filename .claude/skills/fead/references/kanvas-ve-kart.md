@@ -728,6 +728,26 @@ Bunun getirdikleri, hepsi satır içi CSS'te YAZILAMAZ olan şeyler:
 | satır vurgusu (`:hover`) | fare nerede |
 | odak halkası (`:focus`) | imleç HANGİ hücrede — eskiden `border:none` ile hiç görünmüyordu |
 | `tr.is-sel` | **paneli açık olan kasnak** — kutular kalktığı için başka hiçbir yerde yazmıyor |
+| ad düğmesinin gölgesi | **buraya basılınca bir pencere açılır** |
+
+**AD HÜCRESİ BİR DÜĞME.** Kasnak paneline giden tek yol o hücre; okunur bir
+metin olarak dururken varlığı ancak DENEYEREK keşfediliyordu (altı çizili hâli
+yalnız fare üstüne gelince beliriyordu, yani afordans ondan haberi olana
+görünüyordu). Şimdi kabarık bir düğme + sağında "pencere açılır" simgesi, fare
+üstünde gölge ve 1 px kalkış, basılıyken çöküş, paneli açıkken basılı kalış.
+
+Simge YAZI KARAKTERİ DEĞİL ÇİZİM (`VE_FEAD_TBL_OPEN_ICON`): `⧉` gibi bir glif
+konteynerin yazı tipinde olmayabilir ve eksik glif tam da anlatması gereken
+şeyi yok eder. `currentColor` düğmenin durumunu kendiliğinden izliyor.
+
+Ve hücre gölgeyi KIRPMIYOR (`td.ad-cell{overflow:visible}`): `td`nin genel
+`overflow:hidden`i gölgeyi de kalkışı da keserdi — istek sessizce hiçbir şey
+yapmazdı. Metin yine kırpılıyor, onu içerideki `.ad` kendi yönetiyor.
+
+Afordans iki dilde ayrışıyor ve ayrım kasıtlı: **sayı hücreleri İÇE gömülü**
+(alan — buraya yazılır), **ad hücresi DIŞA kabarık** (düğme — buraya basılır).
+Aynı satırdaki iki farklı işi tek görünümle anlatmak ikisini de belirsiz
+bırakırdı.
 
 `is-sel` bir tazeleme sorusu doğuruyor ve cevabı kart kurmak DEĞİL:
 `veFeadMarkSelectedRow` sınıfı DOM'da yerinde eşitliyor, `cp-core.js`'in

@@ -8674,16 +8674,62 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fead-tbl-del:hover{ background:var(--accent-danger); color:var(--on-danger); opacity:1; }
 .ve-fead-tbl-del:focus-visible{ outline:none; box-shadow:var(--focus-ring); opacity:1; }
 
-/* ── AD HÜCRESİ + ROL ÇİPLERİ ──────────────────────────────────────────── */
+/* ── AD HÜCRESİ: "BURASI BİR PENCERE AÇAR" ─────────────────────────────── */
+/* Kullanıcı isteği (2026-09-09): *"artık bu tablo üzerinden kasnakların detay
+   özelliklerine gireceğiz… tıklanınca açılır bir pencere olduğunu belli eden
+   bir yapı olsun."*
+
+   Kasnakların kanvasta kutusu olmadığı için detay paneline giden TEK yol bu
+   hücre. Okunur bir metin olarak dururken o yolun VARLIĞI ancak deneyerek
+   keşfediliyordu: altı çizili hâli yalnız fare üstüne gelince beliriyor, yani
+   afordans ondan haberi olana görünüyordu.
+
+   AFORDANS İKİ DİLDE AYRIŞIYOR ve ayrım kasıtlı: sayı hücreleri İÇE gömülü
+   (alan — buraya yazılır), ad hücresi DIŞA kabarık (düğme — buraya basılır,
+   bir şey açılır). Aynı satırda iki farklı işi tek görünümle anlatmak ikisini
+   de belirsiz bırakırdı. */
 .ve-fead-tbl-name{
   display:flex; align-items:center; gap:5px; width:100%;
-  background:none; border:none; cursor:pointer; padding:0;
+  padding:3px 6px; cursor:pointer; text-align:left;
+  background:var(--bg-tertiary);
+  /* Dinlenme kenarı `--border-light` DEĞİL `--border-hover`: koyu temalarda
+     ilki zeminden neredeyse ayrılmıyor ve düğme, düz bir metin gibi duruyordu —
+     yani afordans yine yalnız fare üstüne gelince beliriyordu. */
+  border:1px solid var(--border-hover); border-radius:var(--radius-sm);
   font-size:var(--fs-tiny); font-weight:600; color:var(--ink-warning);
-  text-align:left;
+  transition:background .12s, border-color .12s, box-shadow .12s, transform .12s;
 }
-.ve-fead-tbl-name span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.ve-fead-tbl-name:hover span{ text-decoration:underline; }
-.ve-fead-tbl-name:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-fead-tbl-name .ad{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* Pencere simgesi — metnin SAĞINDA: okuma ADLA başlasın, simge onu bölmesin.
+   Yazı karakteri DEĞİL çizim: `⧉` gibi bir glif konteynerdeki yazı tipinde
+   olmayabilir ve eksik glif, afordansın kendisini yok eder. */
+.ve-fead-tbl-name .ac{ flex:none; display:block; color:var(--text-muted); transition:color .12s; }
+.ve-fead-tbl-name:hover{
+  background:var(--bg-secondary); border-color:var(--accent-primary);
+  box-shadow:0 2px 7px var(--shadow-color); transform:translateY(-1px);
+}
+.ve-fead-tbl-name:hover .ad{ text-decoration:underline; }
+.ve-fead-tbl-name:hover .ac{ color:var(--ink-accent); }
+/* BASILI hâl: kabarma çöküyor. Kaldırma ancak geri geliyorsa bir şey anlatır —
+   tıklamanın karşılığı olmayan bir hareket, düğmeyi düğme yapmıyor. */
+.ve-fead-tbl-name:active{ transform:translateY(0); box-shadow:none; }
+.ve-fead-tbl-name:focus-visible{
+  outline:none; border-color:var(--accent-primary); box-shadow:var(--focus-ring);
+}
+/* PANELİ AÇIK OLAN düğme BASILI KALIR. Satır vurgusu tek başına yetmiyor: aynı
+   tonun bir başkası "fare burada" demek ve ikisi karışabilir — düğmenin kendi
+   hâli karışmaz. */
+.ve-fead-tbl tr.is-sel .ve-fead-tbl-name{
+  background:var(--accent-tint-22); border-color:var(--accent-primary);
+  box-shadow:none; transform:none;
+}
+.ve-fead-tbl tr.is-sel .ve-fead-tbl-name .ac{ color:var(--ink-accent); }
+
+/* AD HÜCRESİ KIRPMAZ. `td`nin genel `overflow:hidden`i düğmenin gölgesini ve
+   1 px'lik kalkışını KESERDİ — yani "gölge olsun" isteği sessizce hiçbir şey
+   yapmazdı. Metin yine kırpılıyor, ama içerideki `.ad` kendi taşmasını
+   yönetiyor; dışarı çıkan tek şey gölge. */
+.ve-fead-tbl td.ad-cell{ overflow:visible; position:relative; z-index:1; padding:0 4px; }
 
 /* SÜRÜCÜ SATIRI, AD SÜTUNUNDA DEĞİL SIRA SÜTUNUNDA işaretli. Ada bir
    "SÜRÜCÜ" çipi koymak 152 px'lik hücreden ~46 px alırdı ve karşılığı yoktu:

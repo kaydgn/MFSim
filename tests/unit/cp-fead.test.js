@@ -2176,3 +2176,85 @@ describe('çözücü paneli — çalışma çevrimi', () => {
     expect(h).toContain('özel (elle düzenlendi)');
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// KULLANICI BİLDİRİMİ (2026-09-09): *"CTRL Z komutunu kullandığımda tablo
+// siliniyor. Yani boş bir hale geliyor. Hata veriyor, garip oluyor."*
+//
+// `createNode` her düğümde `saveState()` çağırıyor — tek düğüm eklerken doğru.
+// Ama bu kurucular ONİKİ düğüm kuruyor ve sarılmazlarsa yığına onüç ayrı adım
+// yazıyorlar: Ctrl+Z modeli düğüm düğüm SÖKÜYOR. ÖLÇÜLDÜ (gerçek tarayıcı,
+// AG00976): 12. basışta Kayış Tablosu boşalıyor, 13.'te kart tamamen gidiyor,
+// 15.'te yığın tükenip "Geri alınacak işlem yok" uyarısı çıkıyordu — yani üç
+// belirtinin üçü de tek sebepten.
+//
+// Adım SAYISININ kendisi state.js'de ölçülüyor (veStateBatch). Buradaki kapı
+// başka bir şeyi tutuyor ve o olmadan mekanizmanın hiçbir değeri yok:
+// KURUCULARIN O MEKANİZMADAN GEÇTİĞİNİ.
+describe('kurucular TEK geri-al adımı bırakıyor', () => {
+  const kur = () => {
+    document.body.innerHTML = '<div id="ve-canvas"></div>';
+    global.nodes = []; global.connections = [];
+    const iz = { sarma: 0, derinlik: 0, disarida: [], kurulan: 0 };
+    global.veStateBatchActive = () => iz.derinlik > 0;
+    global.veStateBatch = (fn) => {
+      iz.sarma++; iz.derinlik++;
+      try { return fn(); } finally { iz.derinlik--; }
+    };
+    global.veStateResetBaseline = () => { iz.taban = true; return true; };
+    let k = 0;
+    global.createNode = (type, x, y) => {
+      const d = componentDefs[type] || {};
+      if (d.maxInstances && global.nodes.filter((n) => n.type === type).length >= d.maxInstances)
+        return null;
+      iz.kurulan++;
+      if (iz.derinlik === 0) iz.disarida.push(type);   // sarmalın DIŞINDA kuruldu
+      const n = { id: 'cv' + ++k, type, def: d, x, y,
+                  width: d.defaultWidth || 65, height: d.defaultHeight || 60, data: {} };
+      global.nodes.push(n);
+      return n;
+    };
+    return iz;
+  };
+  const sok = () => {
+    delete global.createNode; delete global.veStateBatch;
+    delete global.veStateBatchActive; delete global.veStateResetBaseline;
+  };
+
+  test('veFeadLoadExample: onbir düğümün TAMAMI tek sarmalın içinde', () => {
+    const iz = kur();
+    fead.veFeadLoadExample('AG00976_GATES_2025');
+    sok();
+    expect(iz.sarma).toBe(1);
+    expect(iz.kurulan).toBeGreaterThanOrEqual(11);
+    // Bir düğüm bile dışarıda kurulsaydı o kendi geri-al adımını yazardı ve
+    // Ctrl+Z eylemin ortasında bir yere düşerdi.
+    expect(iz.disarida).toEqual([]);
+  });
+
+  test('veFeadPopulateStarter: sarmal + AÇILIŞ DURUMU YIĞININ TABANI', () => {
+    const iz = kur();
+    fead.veFeadPopulateStarter();
+    sok();
+    expect(iz.sarma).toBe(1);
+    expect(iz.disarida).toEqual([]);
+    // Modüle girip araçları almak bir DÜZENLEME değil. Adım olsaydı Ctrl+Z
+    // kullanıcıyı boş bir kanvasa düşürürdü: ne tablo, ne sihirbaz, ne örnek —
+    // ve dönüşün tek yolu Ctrl+Y olurdu.
+    expect(iz.taban).toBe(true);
+  });
+
+  test('İÇ İÇE kurucu ikinci kez SARMIYOR (sayaç bayrağa düşmesin)', () => {
+    const iz = kur();
+    global.veStateBatch(() => { fead.veFeadPopulateStarter(); });
+    sok();
+    // Dışarıda zaten bir sarmal açıkken kurucu kendi sarmalını açmıyor:
+    // açsaydı içteki biterken `veStateResetBaseline` DIŞ kurulumun ortasında
+    // yığını sıfırlardı.
+    expect(iz.sarma).toBe(1);
+    expect(iz.taban).toBeUndefined();
+  });
+});

@@ -114,6 +114,22 @@ olurdu.
     CSS'te"* (CSS tarafı); ilki tek başınayken CSS bloğunu silmek bütün
     testleri yeşil bırakırdı. Gerçek tarayıcı ölçümü `fead-tablo.spec.js` →
     *"Kayış Tablosu CANLI"* (jsdom `:hover`ı da `:focus`u da hiç hesaplamaz).
+    **AD HÜCRESİ BİR DÜĞME**, okunur bir metin değil: kasnak paneline giden tek
+    yol o ve metin hâlindeyken varlığı ancak deneyerek keşfediliyordu. Kabarık
+    düğme + "pencere açılır" simgesi (yazı karakteri DEĞİL çizim — eksik bir
+    glif afordansın kendisini yok ederdi) + fare üstünde gölge; hücre bu yüzden
+    `overflow:visible` (genel `td` kuralı gölgeyi de 1 px kalkışı da keserdi,
+    yani "gölge olsun" isteği sessizce hiçbir şey yapmazdı). Sayı hücreleri
+    İÇE gömülü, ad hücresi DIŞA kabarık: aynı satırdaki iki farklı işi tek
+    görünümle anlatmak ikisini de belirsiz bırakırdı.
+    **ÇOK DÜĞÜM KURAN HER KURUCU `veStateBatch` İLE SARILIR** —
+    `veFeadLoadExample`, `veFeadWizCreate`, `veFeadPopulateStarter`. Sarılmazsa
+    Ctrl+Z modeli düğüm düğüm söker ve Kayış Tablosu önce boşalır, sonra
+    kaybolur (kullanıcı bildirimi, ölçüldü). Açılış yüzeyi ayrıca yığının
+    TABANI (`veStateResetBaseline`): modüle girip araçları almak bir düzenleme
+    değil. Kapılar: `cp-fead.test.js` / `fead-wizard.test.js` (kurucular
+    mekanizmadan geçiyor mu) + `fead-tablo.spec.js` → *"CTRL+Z"*; mekanizmanın
+    kendisi `state.test.js`'te ve kuralı kökteki `CLAUDE.md`'de.
 14. **Uygunluk kapıları TEK ÇAĞRIDAN** (`js/fead-checks.js` · `veFeadChecks`):
     panel canlı hesaplar, rapor ise çözüm anında yazılan `R.checks`'i OKUR —
     yeniden hesaplasaydı çözümden sonra değiştirilen bir devir sınırı belgeye
