@@ -59,6 +59,15 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   çağrıyı paylaşır** (`veFeadChecks`), rapor onu çözüm anında yazılan
   `R.checks`'ten okur ve yeniden hesaplamaz.
 - `tools/shot.js` — Ekran görüntüsü aracı (İSTEĞE BAĞLI — yalnız kullanıcı isteyince; `npm run shot -- --help`)
+- `tools/karsilama-secici.{js,html}` + `tools/karsilama-kunye.json` — karşılama
+  karelerinin **seçim tahtası**: numaralı/gruplanmış/büyütülebilir 28 kare, tıklanan
+  kare "kaldırılacak" işareti alır ve karar Artifact `db`'sine yazılır. Sebep, dosya
+  adının hangi resmin hangisi olduğunu söylememesi. **Üretilen sayfa git'e dâhil
+  DEĞİL** (28 kare gömülü, klasörle bayatlar); künye elle yazılır ama klasörle iki
+  yönlü bağlıdır (`tests/unit/karsilama-secici.test.js`).
+- `tools/karsilama-webp.js` — slayta **yeni kare ekleme**: JPEG/PNG → webp + liste.
+  Numara devam eder, **silinen karenin numarası boş kalır** — 28 dosyayı yeniden
+  adlandırmak kullanıcının ekranda öğrendiği numaraları geçersiz kılardı.
 - `docs/gates-reports/` — **Gates raporlarının ham PDF ARŞİVİ + künye indeksi**
   (`README.md`: hangi raporda ne var, sayfa haritası, hangileri alıntı). Bir rapor
   bir kez konur, sonraki oturumlar yeniden yüklemeden okur. Build/Pages'e girmez
@@ -425,6 +434,8 @@ npm run build:viewer        # MFSim_Olcum_Goruntuleyici.html üret (Ölçüm Gö
 npm run build:can           # MFSim_CAN_Cozumleyici.html üret (CAN Çözümleyici)
 npm run build:all           # üçü birden (monolit + görüntüleyici + CAN Çözümleyici)
 npm run shot -- --help      # ekran görüntüsü — İSTEĞE BAĞLI, yalnız kullanıcı isteyince
+npm run karsilama:secici    # karşılama kare seçicisi (Artifact olarak yayınlanır)
+npm run karsilama:webp -- <dosya...>   # yeni kare: JPEG/PNG → webp + listeye yaz
 npm run test:e2e            # E2E testleri (Chromium gerekli)
 npm run test:all            # birim + E2E
 ```

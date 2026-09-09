@@ -12,7 +12,6 @@
 var VE_KARSILAMA_GORSELLER = [
   'karsilama-01.webp',
   'karsilama-02.webp',
-  'karsilama-03.webp',
   'karsilama-04.webp',
   'karsilama-05.webp',
   'karsilama-06.webp',
@@ -24,7 +23,6 @@ var VE_KARSILAMA_GORSELLER = [
   'karsilama-12.webp',
   'karsilama-13.webp',
   'karsilama-14.webp',
-  'karsilama-15.webp',
   'karsilama-16.webp',
   'karsilama-17.webp',
   'karsilama-18.webp',
@@ -32,8 +30,14 @@ var VE_KARSILAMA_GORSELLER = [
   'karsilama-20.webp',
   'karsilama-21.webp',
   'karsilama-22.webp',
-  'karsilama-23.webp',
-  'karsilama-24.webp'
+  'karsilama-24.webp',
+  'karsilama-25.webp',
+  'karsilama-26.webp',
+  'karsilama-27.webp',
+  'karsilama-28.webp',
+  'karsilama-29.webp',
+  'karsilama-30.webp',
+  'karsilama-31.webp'
 ];
 
 if (typeof module !== 'undefined' && module.exports) {

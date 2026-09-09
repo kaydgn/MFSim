@@ -37,7 +37,11 @@ const LISTE = require('../../js/karsilama-gorseller.js').VE_KARSILAMA_GORSELLER;
 // boyut için kaliteden ödün vermeme kararını verdi (CLAUDE.md › teslim kuralı:
 // dosya gzip'lenerek gönderiliyor). Tavanlar buna göre.
 const KARE_TAVAN = 560 * 1024;          // kare başına (ölçülen en büyük: 519 KB)
-const TOPLAM_TAVAN = 6.5 * 1024 * 1024; // klasör toplamı (ölçülen: 5,80 MB)
+// Klasör toplamı. 6,5 MB'dı (24 kare / 5,80 MB ölçümüne %12 pay). 2026-09-09'da
+// kullanıcı üç kareyi kaldırıp yedi kare ekledi → 28 kare / 6,55 MB; tavan aynı
+// payla yeniden kuruldu. Tavan bir BÜTÇE değil KAÇAK ALARMI: asıl kapı kare
+// başına 560 KB, bu satır "klasöre farkında olmadan bir şey düştü" içindir.
+const TOPLAM_TAVAN = 7.3 * 1024 * 1024; // klasör toplamı (ölçülen: 6,55 MB)
 
 function setupDOM() {
   document.body.innerHTML =
