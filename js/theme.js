@@ -31,20 +31,22 @@ function veThemeRgba(varName, alpha, fallback) {
 
 // Sayfa yüklendiğinde kayıtlı temayı uygula
 document.addEventListener('DOMContentLoaded', function() {
-  var savedTheme = 'slate';
+  // Varsayılan AÇIK tema (kullanıcı kararı, 2026-09-09 — karşılama reçetesi).
+  // Kayıtlı seçim her zaman kazanır: bu yalnız hiç seçim yapmamış kopyalar için.
+  var savedTheme = 'pearl';
   try {
-    savedTheme = localStorage.getItem('mf-theme') || 'slate';
+    savedTheme = localStorage.getItem('mf-theme') || 'pearl';
   } catch(e) {}
   // Geçerli temalar — CSS'teki [data-theme] blokları + Ayarlar > Görünüm listesiyle
   // birebir aynı olmalı (js/settings.js _veSettingsRenderAppearance). Listede
-  // olmayan (eski/geçersiz) değerler güvenle 'slate'e döner.
+  // olmayan (eski/geçersiz) değerler güvenle VARSAYILANA döner.
   // SADE: graphite, ink, basalt, mono (koyu) · paper, zinc (açık)
   // KOYU: slate, cream, claude, navy · YÜKSEK KONTRAST: contrast, amber, scope
   // PROFESYONEL: ansys, fusion, vscode · AÇIK: pearl, steel, solidworks
   var valid = ['graphite','ink','basalt','mono','paper','zinc',
                'slate','cream','claude','navy','contrast','amber','scope',
                'ansys','fusion','vscode','pearl','steel','solidworks'];
-  if (valid.indexOf(savedTheme) < 0) savedTheme = 'slate';
+  if (valid.indexOf(savedTheme) < 0) savedTheme = 'pearl';
   changeTheme(savedTheme);
 });
 

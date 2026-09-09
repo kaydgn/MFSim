@@ -319,13 +319,16 @@ describe('CSS — okunurluk ve kırpma', () => {
   // Reçete (kullanıcı, 2026-09-08): "örtü %0 · resim %100 · keskin ·
   // cam %25 / net". Dördü de tek jetondan sürülüyor; biri elle ezilirse
   // ekran yine açılır, yalnız başka bir ekran olur.
-  test('reçete jetonları: örtü 0, resim tam, bulanıklık yok, cam %25', () => {
+  test('reçete jetonları: örtü 0, resim tam, keskin, cam %14 / 8 px, köşe 4', () => {
     // Satır başına ÇİVİLİ + noktalı virgülle biter: gevşek desen aynı adı
     // geçiren bir YORUMU da yakalıyor ve kapı sessizce kapanıyordu.
     expect(CSS).toMatch(/^\s*--slayt-ortu:\s*0%;/m);
     expect(CSS).toMatch(/^\s*--slayt-opaklik:\s*1;/m);
     expect(CSS).toMatch(/^\s*--slayt-bulanik:\s*0px;/m);
-    expect(CSS).toMatch(/^\s*--karsilama-cam:\s*42%;/m);
+    expect(CSS).toMatch(/^\s*--karsilama-cam:\s*14%;/m);
+    expect(CSS).toMatch(/^\s*--karsilama-cam-blur:\s*8px;/m);
+    expect(CSS).toMatch(/^\s*--karsilama-kart-r:\s*4px;/m);
+    expect(CSS).toMatch(/^\s*--karsilama-perde:\s*0%;/m);
   });
 
   test('kart camı: OPAK yedek ÖNCE, cam payı sonra; bulanıklık jetondan', () => {

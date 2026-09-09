@@ -2,12 +2,12 @@
  * Tema tutarlılık testi
  * ─────────────────────
  * Bir tema üç yerde birden kayıtlı olmalı:
- *   • js/theme.js   → `valid` dizisi (geçersiz temayı 'slate'e düşürür)
+ *   • js/theme.js   → `valid` dizisi (geçersiz temayı VARSAYILANA düşürür)
  *   • js/settings.js→ Ayarlar > Görünüm menüsü ({ id, name } listeleri)
  *   • css/styles.css→ [data-theme="id"] { --bg-primary: ... } bloğu
  *
  * Biri diğerinden kayarsa (örn. menüde görünüp CSS'i olmayan tema) uygulama
- * sessizce 'slate'e döner — gözle yakalanmayan "makul ama yanlış" regresyon.
+ * sessizce varsayılana döner — gözle yakalanmayan "makul ama yanlış" regresyon.
  * Bu test o senkronu şimdi ve gelecekteki tema eklemeleri için korur.
  * (theme.js'in kendi yorumu da bu üçlü senkronu zorunlu kılar.)
  */
@@ -100,5 +100,29 @@ describe('tema görsel bütünlüğü', () => {
              varOf('accent-primary').trim() !== colors[2];
     });
     expect(mismatched.map(([id]) => id)).toEqual([]);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VARSAYILAN TEMA — üç yerde yazılı, üçü ayrışabilir
+// js/theme.js hem değişkenin ilk değerinde, hem "kayıt yoksa", hem "kayıt
+// GEÇERSİZSE" bir varsayılan seçiyor. İlk yazımda ikisi 'pearl'e alındı,
+// üçüncüsü 'slate' kaldı: geçersiz bir değer tutan kopya sessizce BAŞKA bir
+// temaya düşüyordu. Hata görünmez — program açılır, yalnız yanlış temada.
+describe('Varsayılan tema tek değer', () => {
+  test('üç düşüş noktası da AYNI temaya çözülür', () => {
+    const ilk = themeJs.match(/var savedTheme = '([a-z]+)';/);
+    const yok = themeJs.match(/localStorage\.getItem\('mf-theme'\)\s*\|\|\s*'([a-z]+)'/);
+    const gecersiz = themeJs.match(/valid\.indexOf\(savedTheme\)\s*<\s*0\)\s*savedTheme\s*=\s*'([a-z]+)'/);
+    expect(ilk && yok && gecersiz).toBeTruthy();
+    expect(new Set([ilk[1], yok[1], gecersiz[1]]).size).toBe(1);
+  });
+
+  test('varsayılan AÇIK bir tema (kullanıcı kararı) ve geçerli listede', () => {
+    const ad = themeJs.match(/var savedTheme = '([a-z]+)';/)[1];
+    expect(ad).toBe('pearl');
+    expect(validIds).toContain(ad);
+    expect(css.slice(css.indexOf('[data-theme="' + ad + '"]'), css.indexOf('[data-theme="' + ad + '"]') + 300))
+      .toContain('color-scheme: light');
   });
 });
