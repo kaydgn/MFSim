@@ -293,7 +293,7 @@ describe('ORİJİN GÖÇÜ — öteleme BEDAVA (ölçüldü)', () => {
     return pack;
   };
   const coz = (pack) => {
-    const b = veFeadBuildSystem(pack.nodes, pack.connections);
+    const b = veFeadBuildSystem(pack.nodes);
     const g = F.geometryAt(b.sys, b.relDeg);
     return { L: g.LeffMm, wrap: g.wraps.map((w) => w * 180 / Math.PI),
              T: F.tensionerState(b.sys, b.relDeg).tensionN };
@@ -369,7 +369,7 @@ describe('sürükleme çözümü GERÇEKTEN değiştiriyor', () => {
     });
     M.veFeadSyncCanvasFromMm(pack.nodes, { origin: org });
 
-    const once = veFeadBuildSystem(pack.nodes, pack.connections).beltLengthMm;
+    const once = veFeadBuildSystem(pack.nodes).beltLengthMm;
 
     // Alternatörü kanvasta 40 px sürükle; YÖN çizim düzleminden, çünkü ölçülen
     // şey X'in işareti değil "kanvas sürüklemesi çözümü değiştiriyor mu".
@@ -379,7 +379,7 @@ describe('sürükleme çözümü GERÇEKTEN değiştiriyor', () => {
     M.veFeadSyncMmFromCanvas(pack.nodes, { origin: org });
     expect(alt.data.x).toBeCloseTo(-281 - 40, 1);
 
-    const sonra = veFeadBuildSystem(pack.nodes, pack.connections).beltLengthMm;
+    const sonra = veFeadBuildSystem(pack.nodes).beltLengthMm;
     expect(sonra).toBeGreaterThan(once);            // uzaklaşan kasnak = uzun kayış
     expect(sonra - once).toBeGreaterThan(20);
   });

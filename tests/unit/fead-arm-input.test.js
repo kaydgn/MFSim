@@ -195,7 +195,7 @@ describe('montaj zarfı — API gitti, gerekçe ölçülü', () => {
     pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
     delete ten.data.armMeanDeg;
-    const b = veFeadBuildSystem(pack.nodes, pack.connections);
+    const b = veFeadBuildSystem(pack.nodes);
     expect(b.ok).toBe(false);
     expect(b.errors.join(' ')).toMatch(/çalışma açısı .*girilmedi/i);
     expect(b.pivot).toBeNull();
@@ -251,7 +251,7 @@ describe('köprü — tek koordinat, göç, zorunlu girdiler', () => {
     ten.data.pivotX = -250; ten.data.pivotY = 110;
     ten.data.armPinned = true; ten.data.angleMode = 'envelope';
 
-    const b = veFeadBuildSystem(pack.nodes, pack.connections);
+    const b = veFeadBuildSystem(pack.nodes);
     expect(b.ok).toBe(true);
     expect(ten.data.pivotX).toBeUndefined();        // göç KÖPRÜDE koştu
     expect(ten.data.angleMode).toBeUndefined();
@@ -268,7 +268,7 @@ describe('köprü — tek koordinat, göç, zorunlu girdiler', () => {
     delete ten.data.cenX; delete ten.data.cenY; delete ten.data.armMeanDeg;
     ten.data.pivotX = -250; ten.data.pivotY = 110;
 
-    const b = veFeadBuildSystem(pack.nodes, pack.connections);
+    const b = veFeadBuildSystem(pack.nodes);
     expect(b.ok).toBe(false);
     expect(b.errors.join(' ')).toMatch(/merkez koordinatı \(X \/ Y\) girilmedi/);
     expect(b.center).toBeNull();
@@ -291,7 +291,7 @@ describe('köprü — tek koordinat, göç, zorunlu girdiler', () => {
   test('AG00976 avara merkezinden Gates’i geri üretiyor', () => {
     const pack = veFeadExampleNodes(KEY);
     pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    const b = veFeadBuildSystem(pack.nodes, pack.connections);
+    const b = veFeadBuildSystem(pack.nodes);
     expect(b.ok).toBe(true);
     // Kayış boyu bir ÇIKTI ve raporun REBL sütununa oturuyor.
     expect(Math.abs(b.beltLengthMm - 1714.6) / 1714.6 * 100).toBeLessThan(0.05);
@@ -317,7 +317,7 @@ describe('yüzey — kayış kipi KİLİTLİ', () => {
     expect(veFeadBeltModeLocked(pack.nodes)).toBe(true);
     // Kilit KÖPRÜDE uygulanıyor: kayış düğümü 'fixed' taşısa bile çözüm
     // serbest kipte koşuyor ve boy TÜREV olarak işaretleniyor.
-    const b = veFeadBuildSystem(pack.nodes, pack.connections);
+    const b = veFeadBuildSystem(pack.nodes);
     expect(b.beltMode).toBe('free');
     expect(b.beltLengthDerived).toBe(true);
   });
@@ -361,7 +361,7 @@ describe('rapor — kayış boyu ÇIKTI, montaj konumu TÜREV', () => {
       id: n.id, type: n.type, def: componentDefs[n.type],
       customName: n.customName, data: JSON.parse(JSON.stringify(n.data)),
     }));
-    const build = veFeadBuildSystem(ns, pack.connections);
+    const build = veFeadBuildSystem(ns);
     const solv = ns.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver)[0];
     const R = veFeadAnalyze(build, {
       rows: veFeadDutyRows(solv), cylinders: 6, fatigueModel: 'PK-2_2p-MT3',
@@ -392,7 +392,7 @@ describe('kayış tipine bağlı çıktılar', () => {
       customName: n.customName, data: JSON.parse(JSON.stringify(n.data)),
     }));
     if (override) ns.find((n) => n.type === 'fead-belt').data.beltDataMode = override;
-    const build = veFeadBuildSystem(ns, pack.connections);
+    const build = veFeadBuildSystem(ns);
     const solv = ns.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver)[0];
     return { build, R: veFeadAnalyze(build, {
       rows: veFeadDutyRows(solv), cylinders: 6, fatigueModel: 'PK-2_2p-MT3' }), ns };

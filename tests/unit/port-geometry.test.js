@@ -262,32 +262,33 @@ describe('veSyncPortDom — port DOM\'u telin ucuyla aynı karede tazelenir', ()
     global.veUpdateBoundary = () => {};
     global.veMinimapUpdate = () => {};
     Object.keys(KENAR).forEach((k) => delete KENAR[k]);
-    eskiKanca = global.veFeadPortSideFor;
-    global.veFeadPortSideFor = (n, p) => KENAR[n.id + '|' + p] || null;
     global.nodes = [];
     global.connections = [];
   });
-  afterEach(() => { global.veFeadPortSideFor = eskiKanca; });
 
+  // KENARI DEĞİŞTİREN CANLI KAYNAK: AYNALAMA.
+  // Bu blok FEAD'in "kenar komşuya bakar" kancasıyla yazılmıştı; kanca
+  // 2026-09-09'da kasnak telleriyle birlikte kalktı. Senkronun kendisi ise
+  // KALDI ve hâlâ gerekli: `node.mirrored` giriş/çıkış kenarlarını takas
+  // ediyor, yani kenar kuruluştan sonra da değişebiliyor. Ölçülen regresyon
+  // aynı regresyon — daire kuruluş anındaki kenarda çakılı kalıyordu.
   test('kenar sonradan değişince daire onu takip eder (regresyon)', () => {
     const a = node({ id: 'a', x: 0, y: 0 });
     const b = node({ id: 'b', x: 300, y: 0 });
     global.nodes = [a, b];
     kutu(a); kutu(b);
-    // Kuruluş anı: bağlantı yok → klasik kural (çıkış SAĞ, giriş SOL)
+    // Kuruluş anı: aynalama yok → klasik kural (çıkış SAĞ, giriş SOL)
     expect(stil('a', 'output')).toEqual({ left: '60px', top: '25px' });
 
-    // Kullanıcı bağlantıyı kurdu; komşu ALTTA kaldığı için kenar değişti
     global.connections = [{ id: 'c', from: 'a', to: 'b', fromPort: 'output', toPort: 'input' }];
-    KENAR['a|output'] = 'bottom';
-    KENAR['b|input'] = 'top';
+    a.mirrored = true; b.mirrored = true;        // kenarlar takas oldu
 
     updateAllConnections();
 
     // Daire artık telin çıktığı kenarda — ve iki sayı da TEK kaynaktan
     expect(stil('a', 'output')).toEqual(beklenen(a, 'output'));
     expect(stil('b', 'input')).toEqual(beklenen(b, 'input'));
-    expect(stil('a', 'output')).toEqual({ left: '27.5px', top: '55px' });
+    expect(stil('a', 'output')).toEqual({ left: '-5px', top: '25px' });
   });
 
   test('dairenin MERKEZİ ile telin ucu aynı noktada (sapma 0)', () => {
@@ -297,7 +298,7 @@ describe('veSyncPortDom — port DOM\'u telin ucuyla aynı karede tazelenir', ()
     kutu(a); kutu(b);
     global.connections = [{ id: 'c', from: 'a', to: 'b', fromPort: 'output', toPort: 'input' }];
     KENAR['a|output'] = 'bottom';
-    KENAR['b|input'] = 'top';
+    a.mirrored = true; b.mirrored = true;
     updateAllConnections();
 
     const k = VE_NODE_BORDER + VE_PORT_SIZE / 2;   // dairenin sol-üstünden merkezine
@@ -309,18 +310,16 @@ describe('veSyncPortDom — port DOM\'u telin ucuyla aynı karede tazelenir', ()
     });
   });
 
-  test('düğüm SÜRÜKLENİNCE de takip eder (kenar ters döner)', () => {
+  test('kenar SONRADAN ters dönerse de takip eder', () => {
     const a = node({ id: 'a', x: 0, y: 0 });
     const b = node({ id: 'b', x: 300, y: 0 });
     global.nodes = [a, b];
     kutu(a); kutu(b);
     global.connections = [{ id: 'c', from: 'a', to: 'b', fromPort: 'output', toPort: 'input' }];
-    KENAR['a|output'] = 'right';
     updateAllConnections();
     expect(stil('a', 'output').left).toBe('60px');
 
-    b.x = -300;                       // komşu artık SOLDA
-    KENAR['a|output'] = 'left';
+    a.mirrored = true;                // çıkış SOL kenara geçti
     updateAllConnections();
     expect(stil('a', 'output')).toEqual(beklenen(a, 'output'));
     expect(stil('a', 'output').left).toBe('-5px');
@@ -332,7 +331,7 @@ describe('veSyncPortDom — port DOM\'u telin ucuyla aynı karede tazelenir', ()
     const a = node({ id: 'a', x: 0, y: 0, data: { portPositions: { output: { side: 'top' } } } });
     global.nodes = [a];
     kutu(a);
-    KENAR['a|output'] = 'bottom';     // dinamik kural BAŞKA bir kenar diyor
+    a.mirrored = true;                // aynalama BAŞKA bir kenar diyor
     updateAllConnections();
     expect(stil('a', 'output')).toEqual(beklenen(a, 'output'));
     expect(stil('a', 'output').top).toBe('-5px');            // ÜST kenar korundu
@@ -368,65 +367,41 @@ describe('veSyncPortDom — port DOM\'u telin ucuyla aynı karede tazelenir', ()
 // boyunca (PR #895) tel Gates tablo sırasındaydı ve ok telin TERSİNE
 // çiziliyordu; köprü çevirince ok telin yönüne döndü. Sıradan (kayış olmayan)
 // tellerde ok zaten çizilmiyor.
-describe('kayış telinin gidiş oku — telin YÖNÜNDE', () => {
-  const uc = (p) => {
-    const n = p.getAttribute('d').match(/-?[\d.]+/g).map(Number);
-    return { kuyruk1: [n[0], n[1]], tip: [n[2], n[3]], kuyruk2: [n[4], n[5]] };
-  };
-  const kutu = (n) => {
-    const el = document.createElement('div');
-    el.id = n.id;
-    el.innerHTML = '<div class="ve-node-box">'
-      + '<div class="ve-node-port input" data-port="input" style="' + vePortStyleAttr(n, 'input') + '"></div>'
-      + '<div class="ve-node-port output" data-port="output" style="' + vePortStyleAttr(n, 'output') + '"></div>'
-      + '</div>';
-    document.body.appendChild(el);
-    return el;
-  };
-  let eskiPulley;
-  beforeEach(() => {
+// KAYIŞ TELİ OKU BLOĞU KALKTI (2026-09-09) — telin kendisiyle birlikte.
+// Kasnaklar portsuz, aralarında bağlantı kurulamıyor; okun çizildiği tek yer
+// orasıydı. Ölçümü (Bézier t=0.5, 46 px eşiği, dört mutasyon) modül skill'inde
+// arşivli ve `veConnDirMark`'ın MATEMATİĞİ hâlâ yukarıdaki blokta test ediliyor
+// — fonksiyon duruyor, bugün çağıranı yok.
+describe('kayış teli: FEAD kasnakları BAĞLANMAZ', () => {
+  test('iki kasnak arasına tel kurulsa bile ok çizilmez (kayış dalı yok)', () => {
     document.body.innerHTML = '<div id="ve-canvas"></div><svg id="ve-connections-layer"></svg>';
     global.isConnecting = false;
     global.veUpdateBoundary = () => {};
     global.veMinimapUpdate = () => {};
     if (!componentDefs['fead-crank'])
-      componentDefs['fead-crank'] = { name: 'Krank Kasnağı', inputs: 1, outputs: 1, isFeadPulley: true };
+      componentDefs['fead-crank'] = { name: 'Krank', inputs: 0, outputs: 0, isFeadPulley: true };
     if (!componentDefs['fead-alternator'])
-      componentDefs['fead-alternator'] = { name: 'Alternatör', inputs: 1, outputs: 1, isFeadPulley: true };
-    eskiPulley = global._feadIsPulley;
-    global._feadIsPulley = (n) => !!(n && componentDefs[n.type] && componentDefs[n.type].isFeadPulley);
-    global.nodes = []; global.connections = [];
-  });
-  afterEach(() => { global._feadIsPulley = eskiPulley; });
-
-  test('ok from → to yönünde bakar; ters kablolamada döner', () => {
+      componentDefs['fead-alternator'] = { name: 'Alternatör', inputs: 0, outputs: 0, isFeadPulley: true };
     const a = node({ id: 'a', type: 'fead-crank', x: 0, y: 0 });
     const b = node({ id: 'b', type: 'fead-alternator', x: 400, y: 0 });
     global.nodes = [a, b];
-    kutu(a); kutu(b);
-    global.connections = [{ id: 'c', from: 'a', to: 'b', fromPort: 'output', toPort: 'input' }];
-    updateAllConnections();
-    const ok = document.querySelector('.ve-conn-dir');
-    expect(ok).not.toBeNull();
-    const p = uc(ok);
-    const orta = (p.kuyruk1[0] + p.kuyruk2[0]) / 2;
-    // a solda, b sağda; tel a → b = kayış a → b akar: ok SAĞA bakar.
-    expect(p.tip[0]).toBeGreaterThan(orta);
-
-    // Kablolar çevrilince (Dönüş Yönü düğümü) ok onunla döner.
-    global.connections = [{ id: 'c', from: 'b', to: 'a', fromPort: 'output', toPort: 'input' }];
-    updateAllConnections();
-    const q = uc(document.querySelector('.ve-conn-dir'));
-    expect(q.tip[0]).toBeLessThan((q.kuyruk1[0] + q.kuyruk2[0]) / 2);
-  });
-
-  test('kayış olmayan telde ok yok', () => {
-    const a = node({ id: 'a', type: 'gearbox', x: 0, y: 0 });
-    const b = node({ id: 'b', type: 'gearbox', x: 400, y: 0 });
-    global.nodes = [a, b];
-    kutu(a); kutu(b);
+    [a, b].forEach((n) => {
+      const el = document.createElement('div');
+      el.id = n.id; el.innerHTML = '<div class="ve-node-box"></div>';
+      document.body.appendChild(el);
+    });
     global.connections = [{ id: 'c', from: 'a', to: 'b', fromPort: 'output', toPort: 'input' }];
     updateAllConnections();
     expect(document.querySelector('.ve-conn-dir')).toBeNull();
+    expect(document.querySelector('.ve-connection-fead-belt')).toBeNull();
+  });
+
+  test('kasnak tipleri PORTSUZ — tel zaten kurulamaz', () => {
+    ['fead-crank', 'fead-alternator', 'fead-idler', 'fead-tensioner']
+      .filter((t) => componentDefs[t])
+      .forEach((t) => {
+        expect(componentDefs[t].inputs).toBe(0);
+        expect(componentDefs[t].outputs).toBe(0);
+      });
   });
 });

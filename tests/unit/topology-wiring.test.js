@@ -23,7 +23,7 @@ const stubs = stubGlobals({
   veUpdateBoundary: jest.fn(),
   veMinimapUpdate: jest.fn(),
   veSyncPortDom: jest.fn(),
-  veFeadRefreshLayoutCards: jest.fn(),
+  veFeadRefreshCards: jest.fn(),
   updateNodeHandles: jest.fn(),
   veAttachNodeDrag: jest.fn(),
   veAttachPortConnect: jest.fn(),
@@ -116,11 +116,11 @@ describe('topoloji imzası — kart yalnız topoloji değişince kurulur', () =>
 
   test('tazeleyici yalnız DEĞİŞİMDE kartı kurar', () => {
     veFeadTopoRefresh();                       // ilk çağrı: imza kurulur
-    stubs.veFeadRefreshLayoutCards.mockClear();
+    stubs.veFeadRefreshCards.mockClear();
     expect(veFeadTopoRefresh()).toBe(false);   // değişim yok
-    expect(stubs.veFeadRefreshLayoutCards).not.toHaveBeenCalled();
+    expect(stubs.veFeadRefreshCards).not.toHaveBeenCalled();
     global.connections = [{ id: 'c1', from: 'a', to: 'b' }];
     expect(veFeadTopoRefresh()).toBe(true);
-    expect(stubs.veFeadRefreshLayoutCards).toHaveBeenCalledTimes(1);
+    expect(stubs.veFeadRefreshCards).toHaveBeenCalledTimes(1);
   });
 });

@@ -73,7 +73,7 @@ function kur(key, yama) {
   pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
   if (yama) yama(pack.nodes);
   global.nodes = pack.nodes; global.connections = pack.connections;
-  return { pack, build: veFeadBuildSystem(pack.nodes, pack.connections) };
+  return { pack, build: veFeadBuildSystem(pack.nodes) };
 }
 const alan = (build, re) => (build.defaults || []).filter((d) => re.test(d.field));
 

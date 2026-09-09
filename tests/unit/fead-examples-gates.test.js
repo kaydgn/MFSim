@@ -47,7 +47,7 @@ const pctErr = (mine, ref) => Math.abs((mine - ref) / ref) * 100;
 function kur(id) {
   const pack = veFeadExampleNodes(id);
   pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-  return { pack, build: veFeadBuildSystem(pack.nodes, pack.connections) };
+  return { pack, build: veFeadBuildSystem(pack.nodes) };
 }
 const solverOf = (pack) => pack.nodes.find((n) => n.type === 'fead-solver');
 const tenOf = (pack) => pack.nodes.find((n) => n.type === 'fead-tensioner').data;
@@ -60,7 +60,11 @@ describe('dokuz raporun dokuzu da kuruluyor', () => {
     expect(build.errors || []).toEqual([]);
     expect(build.warnings || []).toEqual([]);
     expect(build.sys.pulleys).toHaveLength(G.order.length);
-    expect(pack.connections).toHaveLength(G.order.length);
+    // KABLO KALKTI: sıra beltIndex'te. Kapı aynı şeyi tutuyor — her kasnak
+    // numaralanmış ve numaralar 1..N, yani öksüz de çift de yok.
+    expect(pack.nodes.filter((n) => n.data && n.data.beltIndex)
+      .map((n) => n.data.beltIndex).sort((a, b) => a - b))
+      .toEqual(G.order.map((_, i) => i + 1));
   });
 
   test.each(CIFT)('%s — kayış boyu raporun REBL sütunu, katalog adı DEĞİL', (id, fixKey) => {
@@ -341,7 +345,7 @@ describe('kanvasa kurma — gerçek yükleyici', () => {
     const G = V.AG_MISC[fixKey];
     const { ns, conns, solver } = kanvasaKur(id);
     expect(Object.keys(solver.data.duty[0].kw).some((k) => /^ex-/.test(k))).toBe(false);
-    const build = veFeadBuildSystem(ns, conns);
+    const build = veFeadBuildSystem(ns);
     expect(build.ok).toBe(true);
     const A = veFeadAnalyze(build, { rows: veFeadDutyRows(solver) });
     expect(A.analysis.duty[0].perPulley[0].powerKw).toBeCloseTo(G.duty[0].crankKw, 2);
@@ -350,7 +354,7 @@ describe('kanvasa kurma — gerçek yükleyici', () => {
   test.each(CIFT)('%s — kasnak kutuları mm koordinatının söylediği yerde', (id, fixKey) => {
     const G = V.AG_MISC[fixKey];
     const { ns, conns } = kanvasaKur(id);
-    const build = veFeadBuildSystem(ns, conns);
+    const build = veFeadBuildSystem(ns);
     const g = F.geometryAt(build.sys, F.meanRel(build.sys));
     G.order.forEach((key, i) => {
       const ref = G.xy[key];

@@ -176,7 +176,7 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
 
     const sonuc = await page.evaluate(() => {
       const kasnak = window.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley);
-      const b = veFeadBuildSystem(window.nodes, window.connections);
+      const b = veFeadBuildSystem(window.nodes);
       return {
         kasnak: kasnak.length,
         tel: window.connections.length,

@@ -68,7 +68,7 @@ function kur(key) {
   });
   const cs = pack.connections.map((c) => Object.assign({}, c));
   global.nodes = ns; global.connections = cs;
-  return M.veFeadBuildSystem(ns, cs);
+  return M.veFeadBuildSystem(ns);
 }
 
 /**
@@ -387,10 +387,11 @@ describe('ÇİZİM AYNALANMAZ — konumlar raporun Layout Data\'sıdır', () => 
                  x: 0, y: 0, width: d.defaultWidth || 65, height: d.defaultHeight || 60,
                  data: JSON.parse(JSON.stringify(n.data || {})) };
       });
-      let cs = pack.connections.map((c) => Object.assign({}, c));
-      if (ters) cs = cs.map((c) => Object.assign({}, c, { from: c.to, to: c.from }));
-      global.nodes = ns; global.connections = cs;
-      const b = M.veFeadBuildSystem(ns, cs);
+      global.nodes = ns; global.connections = [];
+      // ÇEVİRME ARTIK SIRADAN (kablo 2026-09-09'da kalktı): Dönüş Yönü düğümü
+      // beltIndex'leri yeniden yazıyor. Ölçülen bedel aynı bedel.
+      if (ters) M.veFeadReverseRoute(ns);
+      const b = M.veFeadBuildSystem(ns);
       expect(b.ok).toBe(true);
       const R = M.veFeadAnalyze(b, { rows: rows, cylinders: 6 });
       expect(R.ok).toBe(true);
