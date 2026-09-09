@@ -174,6 +174,26 @@ if (fs.existsSync(examplesDir)) {
     }
   });
 }
+// ── 2c-4) PROGRAM ARŞİVİ KATALOĞU — programlar/kayit.json tek dosyaya göm.
+// KATALOG gömülür, programların GÖVDESİ gömülmez. Ölçüldü: arşivin 48 HTML
+// dosyası `gzip -9` ile 17,40 MB; gömülseydi gönderilen `.gz` 18,9 → ~36 MiB
+// olurdu, teslim sınırının (30 MiB, CLAUDE.md) üstü — program sohbetle
+// gönderilemezdi. Katalog 11,6 KB: liste her kopyada çiziliyor, dosyaların
+// yanında olup olmadığını js/cp-programlar.js ÖLÇÜYOR.
+var programlarKayit = null;
+var programlarPath = path.join(ROOT, 'programlar', 'kayit.json');
+if (fs.existsSync(programlarPath)) {
+  try {
+    programlarKayit = JSON.parse(fs.readFileSync(programlarPath, 'utf8'));
+    console.log('  Program arşivi kataloğu göm: ' +
+      (programlarKayit.programlar || []).length + ' kayıt · ' +
+      (fs.statSync(programlarPath).size / 1024).toFixed(1) + ' KB');
+  } catch (e) {
+    console.error('HATA: Geçersiz JSON: programlar/kayit.json —', e.message);
+    process.exit(1);
+  }
+}
+
 // ── 2c-3) KARŞILAMA SLAYTI — assets/karsilama/*.webp tek dosyaya göm.
 // Program file:// ile açılıyor: gömülmeyen resim orada YOK demek. Kareler
 // ÖZGÜN ölçülerinde (yüklendikleri hâlde) duruyor: 1280 px'e küçültmek görünür
@@ -209,7 +229,8 @@ console.log('  Sürüm künyesi göm: ' + (VERSION_INFO.shortSha || '(git yok)')
 var embedScript = '<script>window.__MNT_TOPOLOGIES = ' +
   JSON.stringify(embedded).replace(/</g, '\\u003c') + ';\n' +
   'window.__MFSIM_BUILD = ' + JSON.stringify(VERSION_INFO).replace(/</g, '\\u003c') + ';\n' +
-  'window.__MFSIM_KARSILAMA = ' + JSON.stringify(karsilama).replace(/</g, '\\u003c') + ';</script>';
+  'window.__MFSIM_KARSILAMA = ' + JSON.stringify(karsilama).replace(/</g, '\\u003c') + ';\n' +
+  'window.__MFSIM_PROGRAMLAR = ' + JSON.stringify(programlarKayit).replace(/</g, '\\u003c') + ';</script>';
 // FONKSİYON replacer ŞART: String.replace'in İKİNCİ argümanı dizge olursa
 // içindeki '$1'..'$9', '$&', "$'", '$`' ve '$$' ÖZEL DİZİ sayılıp genişletilir.
 // Örnek topolojilerinde '$' geçen herhangi bir metin (customName, not metni,

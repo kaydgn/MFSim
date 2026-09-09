@@ -92,6 +92,7 @@ function _cmdkStaticCommands() {
     // Paneller
     { sec:'Panel',   label:'Ayarlar',                   kw:'ayarlar settings tema',             icon:_cmdkIco('settings'),   run:function(){ _cmdkCall('veOpenSettings'); } },
     { sec:'Panel',   label:'Program durumu',            kw:'durum status bilgi versiyon',       icon:_cmdkSvg('info'),       run:function(){ _cmdkCall('veOpenStatusModal'); } },
+    { sec:'Panel',   label:'Program arşivi',             kw:'arşiv program artifact html araç defter', icon:_cmdkIco('folder-open'), run:function(){ _cmdkCall('veProgramArsiviOpen'); } },
     { sec:'Panel',   label:'Uyarılar panelini aç / kapa', kw:'uyarı warning hata',              icon:_cmdkIco('alert-triangle'), run:function(){ _cmdkCall('veToggleWarnings'); } },
     { sec:'Panel',   label:'Kenar çubuğu (sidebar)',    kw:'sidebar kenar çubuğu bileşen',      icon:_cmdkSvg('panel'),      run:function(){ _cmdkCall('veToggleSidebar'); } },
     { sec:'Panel',   label:'Özellikler paneli',         kw:'özellik properties panel',          icon:_cmdkIco('sliders'),    run:function(){ _cmdkCall('veTogglePropertiesPanel'); } },

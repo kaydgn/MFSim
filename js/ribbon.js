@@ -141,6 +141,14 @@ var VE_RIBBON_TABS = [
           tip:'Şu an içinde olduğunuz modülün kullanım kılavuzunu aç',
           when:function(){ return typeof veGuideCurrentId === 'function' && !!veGuideCurrentId(); } }
       ]},
+      // ── PROGRAM ARŞİVİ ─────────────────────────────────────────────
+      // MFSim çevresinde üretilmiş tek dosyalık HTML programlar (artifact'lar,
+      // dışarıdan gelen araçlar, MFSim'in kendi üç ürünü). Kayıt defteri
+      // programlar/kayit.json; pencere js/cp-programlar.js.
+      { label: 'Arşiv', items: [
+        { size:'lg', icon:'folder-open', label:'Program\nArşivi', run:'veProgramArsiviOpen',
+          tip:'Bu depoda üretilmiş tek dosyalık HTML programlar' }
+      ]},
       { label: 'Yardım', items: [
         { size:'sm', icon:'lightbulb', label:'Klavye Kısayolları', run:'veShortcutsHelpOpen' },
         { size:'sm', icon:'search',    label:'Komut Paleti',       run:'veCmdkOpen', tip:'Tüm komutlarda ara (Ctrl+K)' }
@@ -232,7 +240,7 @@ function veRibbonRunnable(item) {
 var VE_RIBBON_ALWAYS_ON = [
   'veNewProject', 'veLoadTopology', 'veOpenSettings', 'veOpenStatusModal',
   'veShortcutsHelpOpen', 'veCmdkOpen', 'veGame2048Open', 'mfsimLogout',
-  'veGuideKitOpen', 'veGuideOpenCurrent'
+  'veGuideKitOpen', 'veGuideOpenCurrent', 'veProgramArsiviOpen'
 ];
 function veRibbonNoWorkspace() {
   var ov = document.getElementById('ve-module-overlay');
