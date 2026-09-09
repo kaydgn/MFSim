@@ -264,7 +264,7 @@ yol, bağımsız gözlenebilir bir davranış değil.
 ##### Katalog — `js/fead-belts.js` (5 profil, 244 stok boy + otomotiv ızgarası)
 
 `BELT_DB` (çekirdek) yalnız profil SABİTLERİNİ taşıyor (hb/hr/kütle); standart
-BOYLAR ayrı bir katalog katmanında ve DOM'suz (`structural-materials.js` kalıbı).
+BOYLAR ayrı bir katalog katmanında ve DOM'suz (katalog kalıbı).
 
 **KATALOG BİR KISIT DEĞİL, BİR ÖNERİ.** Kullanıcının akışı tasarımdan tedariğe
 gidiyor ve Optibelt kataloğu da bunu yazıyor: *"Further dimensions and minimum

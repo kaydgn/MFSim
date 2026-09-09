@@ -70,7 +70,7 @@ describe.each([
  *
  * Kayıt SİLİNMEDİ, kapıya çevrildi: sürüm hem gömülü dosyada hem index.html'de
  * yazılı olmak zorunda. İkisi ayrışırsa "hangi sürümü vendorladık" sorusunun
- * cevabı kaybolur — OCCT/TetGen için depoda kaynak tutma kuralının aynısı.
+ * cevabı kaybolur — vendorlanan her şey için depoda kaynak tutma kuralı.
  */
 describe('vendor/three.min.js kökeni', () => {
   const SURUM = '0.149.0';

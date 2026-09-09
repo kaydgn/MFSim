@@ -109,7 +109,7 @@ describe('bileşen sözleşmesi', () => {
 
   test('palet · kayıt defteri · panel dağıtımı · çift tık — beşi de bağlı', () => {
     // Bir modülün beş dosyaya birden bağlanması bu projenin kendi kuralı
-    // (bkz. cp-structural.test.js): biri unutulursa bileşen paletten
+    // biri unutulursa bileşen paletten
     // sürüklenir ama paneli açılmaz ya da kaydedilen proje bozulur.
     expect(IDX).toContain('data-type="fead-wizard"');
     expect(IDX).toContain('js/cp-fead-wizard.js');

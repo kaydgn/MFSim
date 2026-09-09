@@ -32,10 +32,6 @@ function veAttachNodeDrag(nodeEl, node) {
       veFeadOpenEditor(node.id);
       return;
     }
-    if(node.type === 'structural-analysis' && typeof veStrOpenEditor === 'function') {
-      veStrOpenEditor(node.id);
-      return;
-    }
     // BAŞLANGIÇ SİHİRBAZI — alt topoloji açmıyor ama aynı el alışkanlığını
     // kullanıyor: kutuya çift tık, iş yapan yüzeyi açar. Tek tık paneli
     // gösteriyor ve oradaki düğme de aynı yere gidiyor.
@@ -770,7 +766,6 @@ function createNode(type, x, y, width, height) {
   // KRİTİK: temas tarafı ters verilirse hesap sessizce başka bir güzergâh
   // çözer; kanvasta görünür olması gözle yakalanmasının tek yolu.
   if(typeof veFeadApplyBadge === 'function') veFeadApplyBadge(nodeEl, node);
-  if(typeof veStrApplyBadge === 'function') veStrApplyBadge(nodeEl, node);
   // FEAD Kayış Yolu → kanvasta CANLI ŞEMA kartı (bkz. cp-fead.js
   // veFeadApplyLayoutCard). Girdiler değiştikçe saveState üzerinden tazelenir.
   if(typeof veFeadApplyLayoutCard === 'function') veFeadApplyLayoutCard(nodeEl, node);

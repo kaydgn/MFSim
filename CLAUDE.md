@@ -58,17 +58,6 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   çevrim oranı penceresi, aksesuar devir sınırı. DOM'suz; **panel ve rapor AYNI
   çağrıyı paylaşır** (`veFeadChecks`), rapor onu çözüm anında yazılan
   `R.checks`'ten okur ve yeniden hesaplamaz.
-- `js/structural-materials.js` — Yapısal Analiz malzeme kütüphanesi (112 kayıt / 16 aile,
-  DOM'suz saf veri + arama). Değerler standartların NOMİNAL değerleridir, sertifika değil.
-- `js/structural-occt-wasm.js` — **Üretilen, git'e DAHİL DEĞİL**: OCCT çekirdeğinin
-  .wasm'ı gzip+base64 gömülü (17,5 MB). `npm run build` her seferinde
-  `vendor/opencascade.wasm.gz`'den yeniden üretir → "vendor güncellendi, varlık bayat
-  kaldı" sınıfı YOK. Fresh clone'da modüler `index.html`'i açmadan önce
-  `npm run build:occt-wasm` (ya da `npm run build`) koşmalı.
-- `js/structural-tetgen-wasm.js` — **Üretilen** (elle düzenlenmez): ağ üretecinin .wasm'ı
-  gzip+base64 gömülü. `npm run build:tetgen-wasm-asset` üretir, git'e dahildir.
-  `.wasm`'ın kendisi de üretilen: `npm run build:tetgen-wasm` (emscripten gerekir,
-  kaynak `vendor/tetgen-src/` + `tools/tetgen-wasm-src/`). Aynı bayt-bayt kapısı.
 - `tools/shot.js` — Ekran görüntüsü aracı (İSTEĞE BAĞLI — yalnız kullanıcı isteyince; `npm run shot -- --help`)
 - `docs/gates-reports/` — **Gates raporlarının ham PDF ARŞİVİ + künye indeksi**
   (`README.md`: hangi raporda ne var, sayfa haritası, hangileri alıntı). Bir rapor
@@ -98,10 +87,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 
 **ÖNEMLİ:** Kod değişiklikleri **yalnızca** `js/` ve `css/` klasörlerindeki modüler dosyalara ve `index.html`'e yapılır. `MFSim_Code.html` dosyası **elle düzenlenmez** — `npm run build` ile otomatik üretilir.
 
-### Dört ana modül (alt-sistem kartı → kendi iç topolojisi)
+### Üç ana modül (alt-sistem kartı → kendi iç topolojisi)
 
 Karşılama ekranındaki her kart, ana tuvale tek bir **alt-sistem kartı** bırakır;
-çift tıklayınca kartın kendi iç topolojisi açılır. Dördü de **aynı nested kalıbı**
+çift tıklayınca kartın kendi iç topolojisi açılır. Üçü de **aynı nested kalıbı**
 paylaşır (stack + `node.data.subTopology` + breadcrumb çipi + sidebar kapsamı):
 
 | Modül | Tip anahtarı | Sidebar kapsamı | Ana dosya | Bağlantının anlamı |
@@ -109,7 +98,6 @@ paylaşır (stack + `node.data.subTopology` + breadcrumb çipi + sidebar kapsam�
 | Araç Performans | `arac-performans` | `arac-performans` | `js/cp-arac-performans.js` | Güç akışı |
 | Takoz Çökme-Titreşim | `mount-analysis` | `mount-analysis` | `js/cp-mount.js` | Salt görsel (çözücü tipe göre toplar) |
 | FEAD (kayış-kasnak) | `fead-analysis` | `fead-analysis` | `js/cp-fead.js` | **YOK — kasnakların kanvasta KUTUSU BİLE yok** (`noCanvasBox`). Sıra, koordinat ve çap **Kayış Tablosu**'ndan; detay panele tablodaki ada tıklanarak gidilir |
-| Yapısal Analiz (FEA) | `structural-analysis` | `structural-analysis` | `js/cp-structural.js` | **Analiz zinciri** — veri akışı (Geometri → Ağ → Sınır Koşulları → Sonuçlar) |
 
 Yeni bir modül eklerken dokunulan yerler: `js/components.js` (`componentDefs`
 tanımı + `isSubsystem` + `VE_MODULES.components` + `veSyncSidebarScope`),
@@ -121,20 +109,19 @@ kategorileri, karşılama kartı).
 
 ### Modül karar kayıtları — koşullu yüklenir
 
-İki modülün karar kaydı bu dosyadan **çıkarıldı** ve skill hâline getirildi;
+Modül karar kayıtları bu dosyadan **çıkarıldı** ve skill hâline getirildi;
 gövdeleri ancak çağrıldığında yüklenir. Bu bir arşivleme değil, bir yükleme
 kuralıdır: FEAD'e dokunmayan bir oturum FEAD kayıtlarını ödemez.
 
 | Modül | Skill | Ne zaman çağrılır |
 |-------|-------|-------------------|
 | FEAD (kayış-kasnak) | `fead` | `js/fead-*.js`, `js/cp-fead*.js`, `js/guide-fead.js` ya da FEAD testlerine dokunmadan **ÖNCE** |
-| Yapısal Analiz (FEA) | `structural` | `js/structural-*.js`, `js/cp-structural*.js`, gömülü OCCT/TetGen varlıkları ya da Yapısal testlere dokunmadan **ÖNCE** |
 | Araç Performans (tam gaz) | `arac-performans` | `js/ft-performance.js`, `js/simulation-engine.js`, `js/numerics.js`, `js/cp-arac-*.js`, `js/cp-engine.js`, `js/cp-gearbox.js`, `js/cp-torque-converter.js`, `js/cp-matching.js`, `js/ft-obstacle.js`, `js/ft-segment-drive.js`, `assets/examples/ap_*.json` ya da Araç Performans testlerine dokunmadan **ÖNCE** |
 
-**Bu bir nezaket değil kapıdır.** İki modülün de hata sınıfı sessizdir — sayı
+**Bu bir nezaket değil kapıdır.** Bu modüllerin hata sınıfı sessizdir — sayı
 yanlış çıkar, program çalışmaya devam eder, uyarı verilmez. Skill'i okumadan
 yapılan bir "iyileştirme" (çekirdeği proje stiline çevirmek, gerginin tanımını
-eski yönüne döndürmek, tet4'e düşmek) testten geçebilir ve yine yanlış olabilir.
+eski yönüne döndürmek) testten geçebilir ve yine yanlış olabilir.
 
 Takoz modülünün ayrı karar kaydı **yok**; kuralları kendi test dosyalarında ve
 kodun yorumlarında duruyor.
@@ -143,19 +130,19 @@ Araç Performans'ın kaydı 2026-09-07'de **açıldı** — o güne kadar yoktu.
 bir düzen değişikliği değil, bir ölçüm: `ft-performance.js`'in PCHIP uç eğim
 kelepçesi referansın hatalı çevirisiydi (`< 0` yerine `<= 0` olmalıydı), düz uç
 aralıklı her tabloda şekil koruma garantisini bozuyordu ve **sevk edilen veride
-canlıydı**. Yani modül, FEAD ile Yapısal'ın skill'e sahip olma gerekçesi olan
+canlıydı**. Yani modül, FEAD'in skill'e sahip olma gerekçesi olan
 sessiz hata sınıfını gösterdi. Kayıt o turda çıkan kararları ve kapatılmamış üç
 ayrışmayı taşıyor.
 
-### Üç katman kalıbı (dışarıdan gelen çekirdekli modüller)
+### Üç katman kalıbı (dışarıdan gelen çekirdekli modül)
 
-FEAD ve Yapısal Analiz aynı kalıbı paylaşır ve **kural her ikisinde de aynıdır**:
+FEAD bu kalıbı izler:
 
 | Katman | Kural |
 |--------|-------|
-| Hesap çekirdeği (`js/fead-core.js`, `vendor/opencascade.*`, `vendor/tetgen-src/*`) | **Dışarıdan geldi, birebir durur, dokunulmaz** — güncellemesi de dışarıdan gelir. Proje stiline ÇEVRİLMEZ |
-| Köprü (`js/fead-model.js`, `js/structural-model.js`, `js/structural-mesh-model.js`) | DOM'suz. Kanvas düğümü → çekirdek girdisi; hata çevirisi |
-| Sunum (`js/cp-fead.js`, `js/cp-structural.js`) | Yalnız HTML/kanvas kurar; **kendi geometrisini hesaplamaz** |
+| Hesap çekirdeği (`js/fead-core.js`) | **Dışarıdan geldi, birebir durur, dokunulmaz** — güncellemesi de dışarıdan gelir. Proje stiline ÇEVRİLMEZ |
+| Köprü (`js/fead-model.js`) | DOM'suz. Kanvas düğümü → çekirdek girdisi; hata çevirisi |
+| Sunum (`js/cp-fead.js`) | Yalnız HTML/kanvas kurar; **kendi geometrisini hesaplamaz** |
 
 Uyarlanacak olan çekirdeğin **çevresidir**, çekirdeğin kendisi değil. Bir stil
 uyarlaması sırasındaki tek işaret hatası "testten geçen ama yanlış" bir çekirdek
@@ -163,54 +150,12 @@ uyarlaması sırasındaki tek işaret hatası "testten geçen ama yanlış" bir 
 
 ## Proje geneli kurallar
 
-### Lisans — TetGen AGPL, MFSim MIT
-
-TetGen AGPL-3 veya WIAS'tan ticari lisans. Karar: **kaynak MIT kalır, dağıtılan
-build AGPL-3** (MIT tek yönlü uyumlu; telif hakkı kullanıcıda olduğu için
-optikonalite korunur).
-
-
 ### AĞIR VARLIKLAR GÖMÜLÜR — çevrimdışı çalışmak ŞART
 
 MFSim tek dosya olarak indirilip kullanılıyor. Yanında `vendor/` klasörü
 olmayan bir kurulumda çalışma anında çekilen her varlık **yok** demektir; bu
 bir incelik değil, özelliğin hiç olmaması demek. Bu yüzden ağır varlıklar
 (WASM, font, KaTeX) uygulamanın İÇİNE gömülür ve **talep üzerine** açılır.
-
-> **Bu bölümde eskiden "WASM'lar tek dosyaya inline EDİLMEZ — hem boyut hem
-> lisans aynı kapıya çıkıyor" yazıyordu (`623647f`, iskelet commit'i). O kayıt
-> KALDIRILDI: bir planlama varsayımıydı, ölçülmemişti, ve iki ayrı konuyu tek
-> gerekçede birleştiriyordu. İkisi de tutmadı.**
->
-> • **Boyut** — sanılan maliyet ham base64'ün %133'üydü (occt için 9,67 MB).
->   Ölçüldü: `gzip -9` + base64 ile **3,96 MB**, yani üçte biri. Tek dosya
->   8,58 → **12,64 MB**.
-> • **Lisans** — LGPL-2.1'in istediği "ayrı dosya" değil, kütüphanenin
->   **değiştirilebilir** olması. Kütüphane depoda (bugün
->   `vendor/opencascade.wasm.gz`), lisans metinleri dağıtımda,
->   `npm run build:occt-wasm` gömülü blob'u o dosyadan yeniden üretiyor →
->   koşul karşılanıyor. TetGen'in AGPL-3'ü için
->   gömme/gömmeme hiçbir şeyi değiştirmez: yükümlülük "dağıtılan build AGPL-3"
->   kararında zaten karşılanmış.
-
-**Yeni bir ağır varlık eklerken sorulacaklar** (kural değil, ölçüm):
-
-1. `gzip -9` sonrası base64 boyutu kaç MB? (`tools/build-occt-wasm-asset.js`
-   bunu basıyor.)
-2. Tek dosyanın toplamı kabul edilebilir mi? Bugün **26,8 MB** (OCCT çekirdeği
-   boolean'lı sürüme geçince 12,6 → 26,8; karar kullanıcının).
-3. Açılışta yüklenmiyor mu? (`type="text/x-mfsim-asset"` → ne tarayıcı ne
-   `MFSimLoader` dokunur.)
-4. Açma işi **worker'da** mı? Ana iş parçacığında base64+gunzip yüz
-   milisaniyelik donma demek.
-5. Kaynak dosya depoda kalıyor mu? Çok büyükse **gzip'li** konur — 62,8 MB'lık
-   OCCT wasm'ı depoya sıkıştırılmış giriyor (13,1 MB) ve üreteç base64'ü ondan
-   alıyor. (Yeniden üretilebilirlik + lisans + eski
-   tarayıcı yedeği.) Ve gömülü içeriğin kaynakla **bayt bayt** aynı olduğunu
-   doğrulayan bir test var mı?
-
-TetGen geldiğinde bu beş soru yeniden sorulacak; boyutu **ölçülmedi**, occt'ye
-bakarak tahmin edilmeyecek.
 
 ### Ortak yüzey kuralları
 
@@ -326,20 +271,15 @@ Kullanıcı bildirimi: *"bir PR ve merge için en az 30-40 dakika bekliyoruz."*
 | `npm run test:takoz` | **8 sn** | 21 dosya |
 | `npm run test:fead` | **20 sn** | 30 dosya / 1432 test |
 | `npm run test:arac` | **46 sn** | |
-| `npm run test:yapisal` | **59 sn** | tek başına tabanı belirliyor |
-| `npm test` (tam) | **96 sn** | 167 dosya, 330 sn CPU |
+| `npm test` (tam) | **67 sn** | 168 dosya, 256 sn CPU |
 | tarayıcı doğrulaması | **8–17 sn** | loader beklenmezse 8 |
-
-**TAM TESTİN TABANI TEK BİR DOSYA:** `structural-remesh.test.js` 55 sn CPU
-yiyor, yani 4 çekirdekle bile `npm test` ~55 sn'nin altına inmiyor. FEAD turunda
-o dosyanın hiçbir işi yok.
 
 **KURAL: DÖNGÜDE MODÜL TESTİ, COMMIT'TEN ÖNCE TAM TEST — bir kez.**
 Bir turda `npm test`'i beş kez koşturmak 8 dakika demek; aynı işi
 `npm run test:fead` ile yapmak 100 saniye. Ölçülen kaçak buydu.
 
 ```bash
-npm run test:fead     # ya da :arac · :takoz · :yapisal — döngü boyunca
+npm run test:fead     # ya da :arac · :takoz — döngü boyunca
 npm run hazir         # build + tam test — commit'ten ÖNCE, TEK SEFER
 npm run test:urun     # üç ürün spec'i (CI'nın e2e işi) — UI kabuğuna dokunduysan
 ```
@@ -407,8 +347,8 @@ Referans örnek: `tests/unit/sensors.test.js`.
 
 ## Test Dosyaları
 
-FEAD ve Yapısal Analiz satırları modül skill'lerine taşındı
-(`.claude/skills/<modül>/references/testler.md`); **tam tablo**
+FEAD satırları modül skill'ine taşındı
+(`.claude/skills/fead/references/testler.md`); **tam tablo**
 `docs/decisions/testler.md` içindedir.
 
 | Dosya | Test Edilen Modül | Kapsam |
@@ -475,16 +415,12 @@ npm run test:changed        # git'te değişen dosyalarla ilgili testler (jest -
 npm run test:fead           # ★ FEAD modülü — 20 sn (tam testin yerine, DÖNGÜDE)
 npm run test:arac           # Araç Performans — 46 sn
 npm run test:takoz          # Takoz — 8 sn
-npm run test:yapisal        # Yapısal Analiz — 59 sn
 npm run hazir               # ★ build + tam test — COMMIT ÖNCESİ tek komut
 npm run test:urun           # üç ürün spec'i (CI'nın e2e-urun işinin aynısı)
 npm test                    # tüm birim testleri (sessiz) — 96 sn
 npm run test:ci             # tüm birim testleri (--verbose --ci) — CI logları için
 npm run build               # MFSim_Code.html üret (modüler → monolitik) — commit/deploy öncesi
 npm run sync:viewer         # js/ → viewer/js/ (yedi kopya + iki yerel fark)
-npm run build:occt-wasm     # vendor/opencascade.wasm.gz → js/structural-occt-wasm.js (gömülü OCCT; `npm run build` zaten koşturur)
-npm run build:tetgen-wasm       # vendor/tetgen-src/ → vendor/tetgen-wasm.{js,wasm}  (emscripten GEREKİR, nadiren)
-npm run build:tetgen-wasm-asset # vendor/tetgen-wasm.wasm → js/structural-tetgen-wasm.js (gömülü ağ üreteci)
 npm run build:viewer        # MFSim_Olcum_Goruntuleyici.html üret (Ölçüm Görüntüleyici)
 npm run build:can           # MFSim_CAN_Cozumleyici.html üret (CAN Çözümleyici)
 npm run build:all           # üçü birden (monolit + görüntüleyici + CAN Çözümleyici)
@@ -522,6 +458,8 @@ Kullanıcı sağ tık → çıkart ile açıyor. Küçültme önerildi (görsell
 kalite 75 webp'e indirmek 2,3 MB → ~700 KB yapardı); kullanıcı REDDETTİ:
 *"Yok, dosya boyutu büyüyecek zaten. Zipleyip atmaya devam."* Yani sıkıştırma
 geçici bir çare değil, **kalıcı teslim biçimi** — dosya büyümeye devam edecek.
+(Yapısal Analiz kaldırılınca dosya 17,1 MB'a düştü ve sınırın altına indi; kural
+DEĞİŞMEDİ — kullanıcının kararı sıkıştırmaya devam etmek yönündeydi.)
 Geçici `.gz` gönderimden sonra silinir (çalışma ağacı temiz kalsın).
 
 **PULL BİR NEZAKET DEĞİL KAPIDIR — ÖLÇÜLDÜ.** Oturum konteyneri depoyu bir
@@ -549,12 +487,13 @@ Kullanıcı isteği (2026-08-25): dosyayla birlikte **DURUM ÖZETİ** de verilir
 | Test + build durumu, dosya boyutu | `npm test`, build çıktısı |
 
 **DEĞİŞMEMİŞSE DOSYA GÖNDERİLMEZ.** `main` bir önceki gönderimdeki commit'teyse
-27 MB'ı ikinci kez indirtmenin karşılığı yok: özet verilir, "aynı dosya" denir.
+onlarca MB'ı ikinci kez indirtmenin karşılığı yok: özet verilir, "aynı dosya" denir.
 
-**Boyut takip edilir ve BÜYÜME SEBEBİYLE BİRLİKTE yazılır.** Dosya 8,6 → 27,7 MB
-yolunu izledi ve sıçramaların hepsi gömülen WASM'lardan: OCCT STEP okuyucusu
-(+3,96 MB), TetGen (+0,24 MB), boolean'lı OCCT çekirdeği (12,6 → 26,8 MB).
-Sebepsiz bir büyüme bir regresyon işaretidir; sayıyı çıplak basmak onu gizler.
+**Boyut takip edilir ve SEBEBİYLE BİRLİKTE yazılır.** Dosya 8,6 → 27,7 MB
+yolunu izledi ve sıçramaların hepsi gömülen WASM'lardandı (OCCT STEP okuyucusu,
+TetGen, boolean'lı OCCT çekirdeği); Yapısal Analiz kaldırılınca ikisi de gitti
+ve dosya **17,1 MB**'a düştü. Sebepsiz bir büyüme bir regresyon işaretidir;
+sayıyı çıplak basmak onu gizler.
 
 ## Teslim Akışı — PR + merge OTOMATİK, **CI BEKLENMEZ**
 

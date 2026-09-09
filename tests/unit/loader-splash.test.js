@@ -219,8 +219,8 @@ describe('atlanan modül', () => {
   test('yüklenemeyen modül uyarı olarak GÖRÜNÜR, yükleme devam eder', async () => {
     kur([
       { stage: 'Çekirdek', label: 'Tema motoru' },
-      { stage: 'Yapısal Analiz', label: 'OCCT çekirdeği', src: 'vendor/yok-boyle-bir-dosya.js' },
-      { label: 'Yapısal Analiz: malzeme kütüphanesi' }
+      { stage: 'Takoz', label: '3D kütüphanesi', src: 'vendor/yok-boyle-bir-dosya.js' },
+      { label: 'Takoz: görüntüleyici' }
     ]);
     baslat();
 
@@ -230,13 +230,13 @@ describe('atlanan modül', () => {
     // MODULE_TIMEOUT_MS = 15000 — askıda kalan kaynak bu sürede atlanır
     await ilerlet(16000);
     expect(uyari.hidden).toBe(false);
-    expect(uyari.textContent).toContain('OCCT çekirdeği');
+    expect(uyari.textContent).toContain('3D kütüphanesi');
     expect(uyari.textContent).toContain('konsol');
 
     // Atlanan modülün öbeği "tamam" görünümüne YÜKSELMEZ
-    const yapisal = satirOzeti()[1];
-    expect(yapisal.sinif).toContain('has-skip');
-    expect(yapisal.isaret).toBe('!');
+    const takoz = satirOzeti()[1];
+    expect(takoz.sinif).toContain('has-skip');
+    expect(takoz.isaret).toBe('!');
 
     // ...ama uygulama yine açılır: kalan modüller yüklendi, ilerleme %100
     await ilerlet(8000);

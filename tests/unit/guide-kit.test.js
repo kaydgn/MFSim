@@ -31,11 +31,11 @@ beforeEach(() => resetStubs(stubs));
 
 // ═══════════════════════════════════════════════════════════════════════════
 describe('kayıt defteri', () => {
-  test('dört modülün dördü de kayıtlı ve kimlikler tekil', () => {
-    expect(KIT.VE_GUIDE_KIT).toHaveLength(4);
+  test('üç modülün üçü de kayıtlı ve kimlikler tekil', () => {
+    expect(KIT.VE_GUIDE_KIT).toHaveLength(3);
     const ids = KIT.VE_GUIDE_KIT.map((k) => k.id);
-    expect(new Set(ids).size).toBe(4);
-    expect(ids).toEqual(expect.arrayContaining(['fead', 'arac', 'mount', 'str']));
+    expect(new Set(ids).size).toBe(3);
+    expect(ids).toEqual(expect.arrayContaining(['fead', 'arac', 'mount']));
   });
 
   test('her kayıt zorunlu alanların hepsini taşıyor', () => {
@@ -72,7 +72,7 @@ describe('hangi modüldeyiz', () => {
 
   test('kapsam adları js/components.js ile BİREBİR aynı', () => {
     // İki yerde ayrı yazılsalardı biri sessizce eskir ve yanlış kılavuz
-    // açılırdı. veSyncSidebarScope'un yazdığı dört ad kaynaktan okunuyor.
+    // açılırdı. veSyncSidebarScope'un yazdığı üç ad kaynaktan okunuyor.
     const blok = COMPONENTS_SRC.slice(
       COMPONENTS_SRC.indexOf('function veSyncSidebarScope'),
       COMPONENTS_SRC.indexOf('function veSyncSidebarScope') + 900
@@ -80,11 +80,11 @@ describe('hangi modüldeyiz', () => {
     const kaynak = (blok.match(/scope = '([a-z-]+)'/g) || [])
       .map((s) => s.replace(/scope = '|'/g, ''))
       .filter((s) => s !== 'top');
-    expect(kaynak.length).toBe(4);
+    expect(kaynak.length).toBe(3);
     kaynak.forEach((ad) => {
       expect(Object.keys(KIT.VE_GUIDE_SCOPE_MAP)).toContain(ad);
     });
-    expect(Object.keys(KIT.VE_GUIDE_SCOPE_MAP)).toHaveLength(4);
+    expect(Object.keys(KIT.VE_GUIDE_SCOPE_MAP)).toHaveLength(3);
   });
 
   test('modül dışındayken null', () => {
@@ -98,8 +98,10 @@ describe('hangi modüldeyiz', () => {
     expect(KIT.veGuideCurrentId()).toBe('fead');
   });
 
-  test('kılavuzu YAZILMAMIŞ modülde null — düğme hiç çizilmesin', () => {
-    global.veSidebarScope = 'structural-analysis';
+  test('üreticisi YÜKLENMEMİŞ modülde null — düğme hiç çizilmesin', () => {
+    // Kayıt defterinde var ama `uret` adını taşıyan fonksiyon ortada yok:
+    // düğmeyi çizip tıklayınca hiçbir şey olmaması sessiz başarısızlıktır.
+    global.veSidebarScope = 'mount-analysis';
     expect(KIT.veGuideCurrentId()).toBeNull();
   });
 });
@@ -258,8 +260,10 @@ describe('index.html kaydı', () => {
 describe('pencere kartı', () => {
   afterEach(() => { delete global.veGuideFeadHTML; });
 
-  test('hazır olmayan kılavuz "hazırlanıyor" der, düğme çizmez', () => {
-    const kart = KIT._gkKart(KIT.veGuideKitOf('str'));
+  test('üreticisi yüklenmemiş kılavuz "hazırlanıyor" der, düğme çizmez', () => {
+    // Kayıt defterindeki `uret` yalnız bir AD; o adı taşıyan fonksiyon yoksa
+    // (bu testte veGuideMountHTML tanımlı değil) kart düğme çizmemeli.
+    const kart = KIT._gkKart(KIT.veGuideKitOf('mount'));
     expect(kart).toContain('HAZIRLANIYOR');
     expect(kart).toContain('henüz yazılmadı');
     expect(kart).not.toContain('veGuideOpen(');

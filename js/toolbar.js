@@ -367,8 +367,6 @@ function veSaveTopology() {
   // 20 adımlık yığın 22 KB → 3,14 MB). Otomatik localStorage yedeği de aynı
   // temizleyiciden geçiyor (js/settings.js, kota ~5-10 MB) — oraya YAZMIYORUZ,
   // `simResults`'ın oraya yazılmama gerekçesinin aynısı.
-  // Dosyaya gzip+base64 gider (STEP metni ~4× küçülüyor).
-  if(typeof veStrSrcAttach === 'function') { try { veStrSrcAttach(project.tabs); } catch(e){} }
 
   // Girintisiz (compact) JSON: girintili yazım milyonlarca sayıyı ~2.5×
   // şişirir. Yükleme JSON.parse ile yapıldığından biçim fark etmez.
@@ -408,9 +406,6 @@ function veLoadTopology() {
             // açınca RangeError'a yol açar. Sonuçlar KORUNUR (seyreltilerek).
             var st = (t.state && typeof veSanitizeEmbeddedState === 'function')
               ? veSanitizeEmbeddedState(t.state) : t.state;
-            // STEP kaynağını node.data'dan ÇIKAR ve oturumluk depoya al —
-            // yüklenen proje de undo yığınını şişirmesin (bkz. veStrSrcAttach).
-            if(typeof veStrSrcHarvest === 'function') { try { veStrSrcHarvest(st); } catch(e){} }
             veTabs.push({
               id: t.id,
               name: t.name,

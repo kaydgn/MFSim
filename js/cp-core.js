@@ -141,10 +141,6 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer',
   // FEAD — kayış yolu şeması ve çok alanlı kasnak/gergi panelleri
   'fead-tensioner', 'fead-belt', 'fead-layout', 'fead-table',
-  // Yapısal Analiz — Geometri: sol künye/denetim rayı + sağda 3B görüntüleyici
-  'str-geometry',
-  // Yapısal Analiz — Malzeme: solda 112 kayıtlık katalog, sağda uygulanan kayıt
-  'str-material',
   // Parametrik: çoklu-seri sonuç grafiği tam genişlikte ferah okunur.
   'parametric'];
 
@@ -153,7 +149,6 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
 var VE_COMPACT_PANEL_TYPES = ['mnt-solver', 'mnt-report', 'mount-analysis',
   'fead-analysis', 'fead-example', 'fead-report', 'fead-spin',
   'fead-wizard',
-  'structural-analysis',
   'arac-performans', 'terminator', 'sensor', 'scenario', 'coast-down', 'propshaft', 'differential', 'wheel'];
 
 // Son gösterilen bileşen — pencere konumunu sıfırlamak için. Başka bileşene
@@ -251,18 +246,6 @@ function showNodeProperties(node) {
     html += getMntModulePropertiesHTML(node);
   } else if(node.type === 'fead-analysis') {
     html += getFeadModulePropertiesHTML(node);
-  } else if(node.type === 'structural-analysis') {
-    html += getStrModulePropertiesHTML(node);
-  } else if(node.type === 'str-geometry') {
-    html += getStrGeometryPropertiesHTML(node);
-  } else if(node.type === 'str-material') {
-    html += getStrMaterialPropertiesHTML(node);
-  } else if(node.type === 'str-mesh') {
-    html += getStrMeshPropertiesHTML(node);
-  } else if(node.type === 'str-bc') {
-    html += getStrBCPropertiesHTML(node);
-  } else if(node.type === 'str-results') {
-    html += getStrResultsPropertiesHTML(node);
   } else if(node.type === 'fead-tensioner') {
     html += getFeadTensionerPropertiesHTML(node);
   } else if(node.type === 'fead-crank' || node.type === 'fead-alternator' || node.type === 'fead-ac'
@@ -339,20 +322,6 @@ function showNodeProperties(node) {
   // Yol / Ortam: harita hero → çok geniş+yüksek pencere (--wide boyutunu ezer).
   if(_propWin) _propWin.classList.toggle('ve-properties--road', node.type === 'road');
   // Yapısal Analiz / Geometri: parça YÜKLÜYKEN büyük pencere — 3B görüntüleyici
-  // panelin bütün boyunu doldurur (--wide boyutunu ezer, CSS'te sonra tanımlı).
-  // Parça YOKKEN verilmez: sağ sütun tek satırlık bir yer tutucu, 94vh'lik
-  // pencere bomboş açılırdı (--engine-empty ile aynı gerekçe).
-  if(_propWin) _propWin.classList.toggle('ve-properties--strgeom',
-    node.type === 'str-geometry' && !!(node.data && node.data.geometry));
-  // Yapısal Analiz / Malzeme: katalog listesi kısa olursa gezilemez → büyük
-  // pencere. Geometri'nin aksine KOŞULSUZ veriliyor: sol sütun (katalog) her
-  // zaman dolu, "boş açılan büyük pencere" durumu burada yok.
-  if(_propWin) _propWin.classList.toggle('ve-properties--strmat', node.type === 'str-material');
-  // Yapısal Analiz / Hesaplama Ağı: Geometri ile AYNI kural ve aynı gerekçe —
-  // büyük pencere yalnız ağ VARKEN, çünkü ancak o zaman sağ sütunda 3B
-  // görüntüleyici basılıyor. Ağ yokken panel tek sütunluk kısa bir formdur.
-  if(_propWin) _propWin.classList.toggle('ve-properties--strmesh',
-    node.type === 'str-mesh' && !!(node.data && node.data.mesh));
   // Hafif paneller (VE_COMPACT_PANEL_TYPES): içerik az → dar pencere + kompakt-sol
   // kimlik. Geniş yapmak boş sütun bırakırdı. Salt sunum.
   if(_propWin) _propWin.classList.toggle('ve-properties--compact', VE_COMPACT_PANEL_TYPES.indexOf(node.type) >= 0);
@@ -414,32 +383,6 @@ function showNodeProperties(node) {
     }, 140);
   }
 
-  // Yapısal Analiz Malzeme: panel kurulduktan sonra UYGULANAN kaydı listede
-  // görünür yap. 112 satırlık listede ekranın dışında kalan bir ✓ işareti
-  // hiçbir şey söylemez.
-  if(node.type === 'str-material') {
-    setTimeout(function() {
-      if(typeof veStrMatLibScrollToApplied === 'function') veStrMatLibScrollToApplied(node.id);
-    }, 60);
-  }
-
-  // Yapısal Analiz Geometri: panel DOM'u kurulduktan sonra 3B görüntüleyiciyi
-  // bağla. Panel HTML'i her yeniden çizildiğinde kanvas da yeniden kurulur →
-  // sahne sıfırdan inşa edilir (kamera açısı düğüm kimliğiyle saklı, bkz.
-  // cp-structural-viewer.js _veStrViewerCam).
-  if(node.type === 'str-geometry') {
-    setTimeout(function() {
-      if(typeof veStrGeomMountViewer === 'function') veStrGeomMountViewer(node.id);
-    }, 140);
-  }
-
-  // Yapısal Analiz Hesaplama Ağı: aynı kanca, aynı gerekçe. Görüntüleyici
-  // yalnız ağ VARSA kurulur (kanvas HTML'i de ancak o zaman basılıyor).
-  if(node.type === 'str-mesh') {
-    setTimeout(function() {
-      if(typeof veStrMeshMountViewer === 'function') veStrMeshMountViewer(node.id);
-    }, 140);
-  }
 
   // Takoz Koordinat Düzlemi: panel açılınca koordinat sistemini 3B çiz
   if(node.type === 'mnt-coordframe') {

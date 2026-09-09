@@ -181,11 +181,11 @@ describe('Karşılama ekranı — sürüm künyesi', () => {
 });
 
 describe('Karşılama ekranı — markup sözleşmesi', () => {
-  test('dört modül kutusu, dördü de .ve-module-card (E2E bu seçiciyle tıklıyor)', () => {
+  test('üç modül kutusu, üçü de .ve-module-card (E2E bu seçiciyle tıklıyor)', () => {
     const kartlar = WELCOME.match(/class="ve-module-card"/g) || [];
-    expect(kartlar.length).toBe(4);
+    expect(kartlar.length).toBe(3);
 
-    ['arac-performans', 'mount-analysis', 'fead-analysis', 'structural-analysis']
+    ['arac-performans', 'mount-analysis', 'fead-analysis']
       .forEach(function (tip) {
         expect(WELCOME).toContain("veStartModule('" + tip + "')");
       });
@@ -198,7 +198,7 @@ describe('Karşılama ekranı — markup sözleşmesi', () => {
   // ayrıca anlatılıyor; burada tek iş SEÇTİRMEK.
   test('her satırda yalnız AD var — açıklama da künye de bu düzende YOK', () => {
     const n = (WELCOME.match(/class="ve-module-card-name"/g) || []).length;
-    expect(n).toBe(4);
+    expect(n).toBe(3);
     expect(WELCOME).not.toContain('ve-module-card-desc');
     expect(WELCOME).not.toContain('ve-module-card-spec');
     expect(WELCOME).not.toContain('ve-welcome-note');
@@ -209,7 +209,7 @@ describe('Karşılama ekranı — markup sözleşmesi', () => {
   // boşlukta kalır.
   test('modüller SOL PANELİN içinde, slayt karşılamanın DOĞRUDAN çocuğu', () => {
     setupDOM();
-    expect(document.querySelectorAll('.ve-welcome-id .ve-module-card').length).toBe(4);
+    expect(document.querySelectorAll('.ve-welcome-id .ve-module-card').length).toBe(3);
     expect(document.querySelector('.ve-welcome > .ve-welcome-slayt')).toBeTruthy();
     // Sağ sütun kalktı: kalırsa fotoğraf yeniden onun içine kırpılır.
     expect(document.querySelector('.ve-welcome-work')).toBeNull();
@@ -224,8 +224,8 @@ describe('Karşılama ekranı — markup sözleşmesi', () => {
   });
 
   test('klavye erişimi korunuyor: her kutu odaklanabilir ve Enter/Space ile açılır', () => {
-    expect((WELCOME.match(/tabindex="0"/g) || []).length).toBe(4);
-    expect((WELCOME.match(/event\.key==='Enter'/g) || []).length).toBe(4);
+    expect((WELCOME.match(/tabindex="0"/g) || []).length).toBe(3);
+    expect((WELCOME.match(/event\.key==='Enter'/g) || []).length).toBe(3);
   });
 });
 
@@ -827,13 +827,13 @@ describe('Modüle geçiş — uçuş/kabuk eklendikten sonra da blok tam ortada'
     const gercek = veWelcomeFlyToNode;
     veWelcomeFlyToNode = function () { throw new Error('uçuş bozuk'); };
     try {
-      kartOlc('structural-analysis');
-      expect(() => veStartModule('structural-analysis')).not.toThrow();
+      kartOlc('fead-analysis');
+      expect(() => veStartModule('fead-analysis')).not.toThrow();
     } finally {
       veWelcomeFlyToNode = gercek;
     }
     expect(nodes.length).toBe(1);
-    expect(nodes[0].type).toBe('structural-analysis');
+    expect(nodes[0].type).toBe('fead-analysis');
     expect(document.getElementById('ve-module-overlay').style.display).toBe('none');
     expect(showToast).toHaveBeenCalled();
   });

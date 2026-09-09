@@ -683,7 +683,7 @@ function veFeadWizNodes(st){
   // ÇEVRİM KAYDININ İZİ DE TAŞINIR: panelin çevrim seçicisi tabloyu
   // `veFeadDutyMatch` ile tanıyor, yani bu alan hesaba girmiyor — ama
   // kullanıcının hangi ölçülmüş kaydı seçtiğini söyleyen tek yer burası
-  // (`structural-materials.js`'in `lib`/`libVer` izinin aynı gerekçesi).
+  // (`lib`/`libVer` izi aynı gerekçeyle tutulur).
   if(s.dutyLib) sd.dutyLib = s.dutyLib;
   sd.duty = (s.duty || []).map(function(r){
     var row = { rpm: _fwNum(r.rpm, 0), kw: {} };
