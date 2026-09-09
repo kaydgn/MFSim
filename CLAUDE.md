@@ -84,10 +84,15 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `candbc/` — **CAN Çözümleyici** (ayrı program, bkz. `candbc/README.md`)
 - `MFSim_CAN_Cozumleyici.html` — CAN Çözümleyici'nin tek dosya çıktısı (`npm run build:can` üretir; görüntüleyici gibi **git'e dahil**)
 - `programlar/` — MFSim çevresinde üretilen **tek dosyalık HTML programların arşivi**
-  ve `kayit.json` künyesi (bkz. `programlar/README.md`). Build'e girmez, kod
-  yüklemez, test etmez — **salt veri**. Artifact kopyaları donmuştur; üretilen üç
-  ürün (`MFSim_Code.html`, görüntüleyici, CAN) **taşınmadı**, kayıt onlara depo
-  kökünden yol veriyor. `kayit.json` elle düzenlenmez, üretilir.
+  ve `kayit.json` künyesi (bkz. `programlar/README.md`). Artifact kopyaları
+  donmuştur; üretilen üç ürün (`MFSim_Code.html`, görüntüleyici, CAN)
+  **taşınmadı**, kayıt onlara depo kökünden yol veriyor. `kayit.json` elle
+  düzenlenmez, üretilir. Programa Araçlar → **Program Arşivi**'nden bağlı
+  (`js/cp-programlar.js`). **KATALOG gömülür, programların GÖVDESİ gömülmez** —
+  arşiv gzip'li 17,4 MB, gömülseydi tek dosya 30 MiB teslim sınırını aşardı.
+  Bu yüzden pencere arşivin yanında olup olmadığını `programlar/arsiv-var.js`'i
+  **script etiketiyle yoklayarak ÖLÇER** (`file://` üzerinde `fetch` var/yok
+  ayrımı yapmıyor); o dosya bir yoklama hedefidir, veri konmaz.
 - `.claude/skills/` — modüllere özgü karar kayıtları (koşullu yüklenir; aşağıya bak)
 - `docs/decisions/` — ortak yüzey kararları + tam test dosyası tablosu
 
@@ -454,6 +459,8 @@ FEAD ve Yapısal Analiz satırları modül skill'lerine taşındı
 | `tests/unit/loader-splash.test.js` | `js/loader.js` + `index.html` açılış ekranı | **Açılış ekranı**: splash gövdesi ↔ `ELS` kimlik sözleşmesi (bir yeniden adlandırma çubuğu sessizce durdururdu), `data-mfsim-stage` işaretlerinden aşama öbeklerinin kurulması (işaretsiz script bir öncekine yazılır; ad `&` içerebilir), atlanan modülün GÖRÜNÜR olması + yüklemenin devam etmesi, sürüm künyesi (modüler kopyada boş kalır), ipucu döngüsünün kapanışta DURMASI |
 | `tests/unit/results-txt-preview-download.test.js` | `js/results.js` | TXT önizlemesinin "HTML İndir" yolu — iki rapor üreticisinin ayrı kaldığı; düğme kablolaması artık ÜRETİLEN YÜZEYDEN ölçülüyor (kopya sayısı değil: bandı tek üretici kuruyor) ve dört panelin de aynı kabuğa gittiği |
 | `tests/unit/results-txt-page.test.js` | `js/results.js` + `css/styles.css` | **TXT raporunun görünümü**: üst bandın soldaki "Veri Gezgini" bandıyla TEK ölçü kaynağından beslenmesi (yükseklik, alt çizgi, başlık puntosu, zemin, düğme sınıfı), sayfanın A4 olması ve içeriğe göre DARALMAMASI, gövdenin tek `<pre>` kalması (blok blok ortalama yok) ve metnin bire bir korunup kaçışlanması, font ölçüsünün sayfaya sığmaktan türemesi + okunur tavan, karakter oranının ölçülemeyince GÜVENLİ tarafa düşmesi, indirilen belgenin aynı sayfayı açıp `@page{size:A4}` ile basması |
+| `tests/unit/programlar-arsiv.test.js` | `js/cp-programlar.js` + `programlar/kayit.json` + `build.js` | **Program arşivi kaydı sessiz kırılmasın**: kayıttaki her `dosya` diskte var, öksüz HTML yok, her `kume` pencerenin küme tablosunda var (yoksa satır HİÇ çizilmez), üretilen üç üründe `boyut` YOK / donmuşlarda diskle birebir, `../` ile başlayan ürün yolunun belge dizinine düşmesi (depo ve dağıtım), yoklama hedefinin var olması ve veri TAŞIMAMASI, build'in gömdüğü global adın modülün okuduğuyla aynı olması, arşiv gövdelerinin gömülmediği |
+| `tests/e2e/programlar-arsiv.spec.js` | `js/cp-programlar.js` yoklaması | **GERÇEK tarayıcı**: arşiv yanında yokken liste yine çizilir ama satırlar pasif ve sebebi yazılı; yanındayken satırlar etkin ve tıklanan program gerçekten açılır. jsdom'da script etiketi ağa çıkmaz — bu halka Node'da HİÇ koşmuyor |
 | `tests/e2e/app.spec.js` | Tüm uygulama | Sayfa yükleme, menüler, bileşen ekleme, kaydetme |
 | `tests/e2e/measure-import.spec.js` | İçe aktarma sihirbazı | Gerçek .xlsx → sütun tarama → X/Y seçimi → şeritler |
 | `tests/e2e/viewer.spec.js` | `MFSim_Olcum_Goruntuleyici.html` | **Üretilen tek dosya**, `file://` üzerinden: açılış, içe aktarma, sürükle-bırak, birleştirme, tema, sıfır ağ isteği |

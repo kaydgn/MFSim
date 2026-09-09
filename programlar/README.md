@@ -7,15 +7,39 @@ Hepsi çift tıklayınca çalışır: harici dosya, ağ isteği, kurulum gerekti
 
 Bu dosyalar üç yıl boyunca sohbet üzerinden tek tek gönderildi ve **hiçbir yerde
 listeli durmuyordu**. Bir kısmı yalnız Claude'un artifact galerisinde, bir kısmı
-depo kökünde tek başına duruyordu. Klasörün amacı onları tek bir kapıya toplamak;
-ikinci adımda program içinden bu kayda bakılarak erişilebilir yapılacak.
+depo kökünde tek başına duruyordu. Klasörün amacı onları tek bir kapıya toplamak.
+
+## Programdan erişim — Araçlar → Program Arşivi
+
+MFSim'in şeridinden açılıyor (`js/cp-programlar.js`); pencere bu klasördeki
+`kayit.json`'ı çiziyor, ikinci bir liste tutmuyor.
+
+**Katalog gömülür, programların gövdesi gömülmez.** Ölçüldü: 48 HTML dosyası
+`gzip -9` ile **17,40 MB** (17,40'ın 12,39'u yalnız altı ekran görüntüsü
+ağırlıklı dosyada). Gömülseydi gönderilen `.gz` 18,9 → ~36 MiB olurdu, yani
+teslim sınırının (30 MiB) üstü — program sohbetle gönderilemezdi. Katalog ise
+11,6 KB ve `build.js` onu tek dosyaya gömüyor (`window.__MFSIM_PROGRAMLAR`).
+Sonuç: **liste her kopyada çizilir**, dosyalar yalnız bu klasör yanındayken açılır.
+
+**Yanında olup olmadığı ÖLÇÜLÜR, varsayılmaz.** `arsiv-var.js` bunun için var:
+bir veri dosyası değil, bir yoklama hedefi. `file://` üzerinde `fetch` dosya olsa
+da olmasa da TypeError atıyor (ayrım yapmıyor), `<script>` etiketi ise
+`onload`/`onerror` ile ayırıyor — Chromium'da ölçüldü. Klasör yoksa liste yine
+çizilir ama satırlar pasiftir ve pencere sebebini yazar; ölçmeseydik her tıklama
+tarayıcının "dosya bulunamadı" sayfasına düşerdi.
+
+Klasör Pages dağıtımına da kopyalanıyor (`.github/workflows/ci-deploy.yml`), yani
+yayınlanan kopyada pencere çalışır. İndirilen tek dosyanın yanına konması için
+`programlar/` klasörünün `MFSim_Code.html` ile **aynı dizine** çıkarılması yeter.
 
 ## Yapı
 
-| Klasör | Ne | Git |
+| Klasör / dosya | Ne | Git |
 |--------|-----|-----|
 | `artifact/` | Claude Code artifact'larının indirilmiş kopyası (47 dosya, 31 MB) | dâhil |
 | `disaridan/` | MFSim'in üretmediği, dışarıdan gelen kaynak araçlar | dâhil |
+| `kayit.json` | künye — pencerenin okuduğu tek liste | dâhil |
+| `arsiv-var.js` | yoklama hedefi (tek satır, veri taşımaz) | dâhil |
 | — | üretilen üç ürün depo kökünde duruyor; kayıt onlara **yol** veriyor, kopya tutulmuyor | — |
 
 ## `kayit.json` — makine tarafı

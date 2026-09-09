@@ -208,6 +208,11 @@ jobs:
           # Harici varlıklar (ör. örnek topoloji görselleri) — göreli yolla
           # referans verilenler Pages'e aynı yapıda kopyalanır.
           if [ -d assets ]; then cp -r assets _site/assets; fi
+          # PROGRAM ARSIVI — tek dosyaya GOMULMUYOR (48 dosya, gzip'li 17,4 MB;
+          # gomulse teslim edilen .gz 30 MiB sinirini asardi). Katalog gomulu,
+          # dosyalar burada: Pages'te acilan kopyada Arsiv penceresi CALISIR.
+          # Yaninda arsiv olmayan kopyada pencere bunu OLCUP soyluyor.
+          if [ -d programlar ]; then cp -r programlar _site/programlar; fi
           # OCCT cekirdegi CALISMA ANINDA CEKILMIYOR — tek dosyaya GOMULU
           # (js/structural-occt-wasm.js). Bu kopyalar LGPL-2.1 icin: kutuphane
           # dagitimda mevcut ve DEGISTIRILEBILIR olmali.
