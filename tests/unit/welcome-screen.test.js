@@ -191,16 +191,17 @@ describe('Karşılama ekranı — markup sözleşmesi', () => {
       });
   });
 
-  // Kutu → SATIR (2026-09-08, kullanıcı reçetesi "M6"): modüller sol panele
-  // indi. Uzun açıklama (.ve-module-card-desc) DÜŞTÜ — satırı üç katına
-  // çıkarıyor ve 340 px'lik panel ekrandan taşıyordu. Ad ve künye kalıyor:
-  // "FEAD" tek başına ne olduğunu söylemiyor.
-  test('her satırda ad ve künye var; uzun açıklama bu düzende YOK', () => {
-    ['ve-module-card-name', 've-module-card-spec'].forEach(function (sinif) {
-      const n = (WELCOME.match(new RegExp('class="' + sinif + '"', 'g')) || []).length;
-      expect(n).toBe(4);
-    });
+  // Kutu → SATIR, sonra satır da SADELEŞTİ (kullanıcı reçetesi, 2026-09-09):
+  // kart asılı duruyor ve boyunu içeriği belirliyor. Önce uzun açıklama
+  // (.ve-module-card-desc), sonra künye (.ve-module-card-spec) düştü — geriye
+  // simge + ad + ok kaldı. Modüller Kılavuzlar'dan ve Program Durumu'ndan
+  // ayrıca anlatılıyor; burada tek iş SEÇTİRMEK.
+  test('her satırda yalnız AD var — açıklama da künye de bu düzende YOK', () => {
+    const n = (WELCOME.match(/class="ve-module-card-name"/g) || []).length;
+    expect(n).toBe(4);
     expect(WELCOME).not.toContain('ve-module-card-desc');
+    expect(WELCOME).not.toContain('ve-module-card-spec');
+    expect(WELCOME).not.toContain('ve-welcome-note');
   });
 
   // P4 · M6 — yerleşimin İKİ yapısal hükmü. İkisi de sessiz: bozulunca ekran
@@ -232,6 +233,31 @@ describe('Karşılama ekranı — markup sözleşmesi', () => {
 // 1) ZEMİN — kâğıt dokusu (ızgara kalktı)
 //    Izgara geri gelse ekran yine açılır: hata sessizdir, yalnız karşılama
 //    tuvalin diliyle konuşmaya döner.
+// ═══════════════════════════════════════════════════════════════════════════
+// KART İÇİ İŞÇİLİK (kullanıcı reçetesi, 2026-09-09) — ikisi de SESSİZ
+describe('Vitrin kartı — düğme ve satır vurgusu', () => {
+  test('birincil düğme aksanın ÜSTÜNDE okunacak jetondan boyanır', () => {
+    // Dolu düğmede metin rengi düz beyaz yazılırsa kehribar/amber gibi açık
+    // aksanlı temalarda kontrast 2,3:1'e iniyor — bu yüzden --on-accent var.
+    const m = CSS_WELCOME.match(/\.ve-welcome-open\{[^}]*\}/);
+    expect(m).toBeTruthy();
+    expect(m[0]).toContain('color:var(--on-accent)');
+    expect(m[0]).toContain('background:var(--accent-primary)');
+    expect(m[0]).not.toMatch(/color:\s*#/);
+  });
+
+  test('vurgu şeridi ::after — ::before imleç ışığında KULLANILIYOR', () => {
+    // İkisi aynı sözde-elemana yazılırsa biri ötekini sessizce siler: ışık
+    // ya da şerit kaybolur, hata çıkmaz.
+    expect(CSS_WELCOME).toMatch(/\.ve-module-card::before\{[^}]*radial-gradient/);
+    const bar = CSS_WELCOME.match(/\.ve-module-card::after\{[^}]*\}/);
+    expect(bar).toBeTruthy();
+    expect(bar[0]).toContain('background:var(--accent-primary)');
+    expect(bar[0]).toMatch(/opacity:\s*0/);
+    expect(CSS_WELCOME).toMatch(/\.ve-module-card:hover::after,\s*\n\.ve-module-card:focus-visible::after\{[^}]*opacity:\s*1/);
+  });
+});
+
 describe('Karşılama zemini — kâğıt dokusu', () => {
   test('.ve-module-overlay ızgara gradyanı TANIMLAMIYOR', () => {
     expect(CSS_WELCOME).not.toMatch(/repeating-linear-gradient/);
@@ -280,8 +306,8 @@ describe('Karşılama tipografisi — tek yazı tipi', () => {
     expect(CSS_WELCOME).not.toMatch(/monospace/);
   });
 
-  test('künye ve kart künyesi sans + tabular-nums', () => {
-    ['.ve-module-card-spec', '.ve-welcome-stamp'].forEach(function (sec) {
+  test('sürüm künyesi sans + tabular-nums', () => {
+    ['.ve-welcome-stamp'].forEach(function (sec) {
       const m = CSS_WELCOME.match(new RegExp(sec.replace('.', '\\.') + '\\{[^}]*\\}'));
       expect(m).toBeTruthy();
       expect(m[0]).toContain('font-family:var(--font-sans)');

@@ -975,15 +975,16 @@
       --slayt-ortu: 0%;           /* ÖRTÜ KAPALI (kullanıcı reçetesi): fotoğrafın üstünde
                                      perde yok. Okunurluğu artık ÖRTÜ değil, sol panelin
                                      camı taşıyor — sağ tarafta zaten metin kalmadı. */
-      --karsilama-cam: 42%;       /* asılı kartın SAYDAMLIK payı: 0 = opak, 100 = yalnız kenarlık */
-      --karsilama-cam-blur: 22px; /* camın ARKASINI bulandırma yarıçapı */
-      --karsilama-kart-r: 10px;   /* kartın köşe yarıçapı — kabuğun 3 px'i kart için fazla sert */
+      --karsilama-cam: 14%;       /* asılı kartın SAYDAMLIK payı: 0 = opak, 100 = yalnız kenarlık */
+      --karsilama-cam-blur: 8px;  /* camın ARKASINI bulandırma yarıçapı */
+      --karsilama-kart-r: 4px;    /* kartın köşe yarıçapı */
       /* Kart fotoğrafın üstünde YÜZÜYOR, temanın kâğıdının değil: gölge her iki
          temada da koyu olmak zorunda. --shadow-color açık temalarda 0,06 alfa —
          kâğıt üstünde doğru, fotoğraf üstünde gölge diye okunmuyor. */
       --karsilama-kart-golge: 0 26px 64px rgba(0,0,0,.42);
-      --karsilama-perde: 34%;     /* kartın SOLUNDAKİ yumuşak perde — kadraj ne olursa
-                                     olsun kartın kenarı parlak bir noktaya oturmasın */
+      /* Kartın SOLUNDAKİ perde. Kart %86 opak olduğu için kenarı zaten sabit
+         duruyor; jeton kalıyor, kadraj gerekirse tek satırdan geri açılır. */
+      --karsilama-perde: 0%;
       --dur-step:   70ms;
       --dur-fly:   460ms;
       --ease-fly: cubic-bezier(.4, 0, .2, 1);
@@ -2716,10 +2717,15 @@ body.ve-no-module #ve-ribbon{ display:none; }
   border-color:color-mix(in srgb, var(--border-light) 70%, transparent);
   box-shadow:var(--karsilama-kart-golge);
 }
+/* Başlık ÇİZGİLİ (kullanıcı reçetesi): ayraç aşağıda ayrı bir çizgi değil,
+   logonun kendi alt çizgisi. .ve-welcome-sep bu yüzden kapalı. */
 .ve-welcome-logo{
-  display:inline-flex;
+  display:flex;
   align-items:center;
   gap:11px;
+  padding-bottom:12px;
+  border-bottom:1px solid var(--border-color);
+  border-bottom-color:color-mix(in srgb, var(--border-color) 75%, transparent);
   font-size:var(--fs-h1);
   font-weight:700;
   letter-spacing:0.5px;
@@ -2731,23 +2737,15 @@ body.ve-no-module #ve-ribbon{ display:none; }
   color:var(--accent-primary);
 }
 .ve-welcome-tagline{
-  margin-top:8px;
+  margin-top:10px;
   font-size:var(--fs-md);
   letter-spacing:0.4px;
   color:var(--text-muted);
 }
+/* Ayraç logonun alt çizgisine taşındı; blok markup'ta duruyor (koreografi
+   ona göre yazılmış) ama yer kaplamıyor. */
 .ve-welcome-sep{
-  height:1px;
-  background:var(--border-color);
-  background:color-mix(in srgb, var(--border-color) 75%, transparent);
-  margin:18px 0 14px;
-}
-.ve-welcome-note{
-  margin:0;
-  max-width:36ch;
-  font-size:var(--fs-body);
-  line-height:1.7;
-  color:var(--text-secondary);
+  display:none;
 }
 
 /* ── Son değişiklikler paneli + güncellik satırı ────────────────────────
@@ -2892,9 +2890,12 @@ body.ve-no-module #ve-ribbon{ display:none; }
   font-family:var(--font-sans);
   font-size:var(--fs-md);
   font-weight:500;
-  color:var(--text-primary);
-  background:var(--bg-tertiary);
-  border:1px solid var(--border-color);
+  /* DOLU düğme (kullanıcı reçetesi): kartın tek birincil eylemi, aksan
+     zemininde. --on-accent aksanın ÜSTÜNDE okunacak renk — beyaz her
+     temada yetmiyor, o yüzden jeton. */
+  color:var(--on-accent);
+  background:var(--accent-primary);
+  border:1px solid var(--accent-primary);
   border-radius:var(--radius-sm);
   cursor:pointer;
   transition:color var(--dur-base) var(--ease-out),
@@ -2903,9 +2904,9 @@ body.ve-no-module #ve-ribbon{ display:none; }
 }
 .ve-welcome-open:hover,
 .ve-welcome-open:focus-visible{
-  color:var(--text-heading);
-  border-color:var(--accent-primary);
-  background:color-mix(in srgb, var(--accent-primary) 10%, var(--bg-tertiary));
+  color:var(--on-accent);
+  border-color:color-mix(in srgb, var(--accent-primary) 80%, var(--text-heading));
+  background:color-mix(in srgb, var(--accent-primary) 88%, var(--text-heading));
 }
 .ve-welcome-open .mf-ico{
   width:0.95rem;
@@ -3076,19 +3077,19 @@ body.ve-no-module #ve-ribbon{ display:none; }
 .ve-module-overlay-grid{
   display:flex;
   flex-direction:column;
+  gap:3px;
 }
-/* Modül SATIRI — kutu değil (M6): simge · ad + künye · ok. Kendi zemini ve
-   kenarlığı yok; panel zaten bir yüzey, kutu ikincisini kurardı. Ayıran şey
-   ince bir üst çizgi. */
+/* Modül SATIRI — kutu değil: simge · ad · ok. Kendi zemini, kenarlığı ve
+   AYRACI yok (kullanıcı reçetesi "boşluk"): satırları ayıran şey çizgi değil
+   aralarındaki boşluk. */
 .ve-module-card{
   display:flex;
   flex-direction:row;
   align-items:center;
   gap:12px;
-  padding:10px 4px;
+  padding:8px 4px;
   background:none;
   border:none;
-  border-top:1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
   border-radius:0;
   cursor:pointer;
   text-align:left;
@@ -3101,10 +3102,8 @@ body.ve-no-module #ve-ribbon{ display:none; }
      kaydırması hiç görünmüyordu. `backwards` yalnız gecikme boyunca giriş
      karesini uygular; bitince eleman kendi stiline döner. */
   animation:ve-welcome-rise var(--dur-slow) var(--ease-out) backwards;
-  transition:border-color var(--dur-base) var(--ease-out),
-             transform var(--dur-base) var(--ease-out);
 }
-.ve-module-card:first-child{ border-top:none; }
+
 /* Kart temposu tek jetondan (--dur-step); açılış koreografisi aynı adımı
    --dur-enter perdesinin ardından tekrarlar. */
 .ve-module-card:nth-child(2){ animation-delay:var(--dur-step); }
@@ -3126,13 +3125,25 @@ body.ve-no-module #ve-ribbon{ display:none; }
 }
 .ve-module-card:hover::before,
 .ve-module-card:focus-visible::before{ opacity:1; }
-.ve-module-card:hover,
-.ve-module-card:focus-visible{
-  transform:translateX(3px);
-  outline:none;
+/* Vurgu SOL ŞERİT (kullanıcı reçetesi): satır kaymıyor, adı da renk
+   değiştirmiyor — solunda ince bir aksan çubuğu beliriyor. ::before imleç
+   ışığında kullanıldığı için çubuk ::after. */
+.ve-module-card::after{
+  content:'';
+  position:absolute;
+  left:-12px;
+  top:5px;
+  bottom:5px;
+  width:2px;
+  border-radius:2px;
+  background:var(--accent-primary);
+  opacity:0;
+  transition:opacity var(--dur-base) var(--ease-out);
 }
-.ve-module-card:hover .ve-module-card-name,
-.ve-module-card:focus-visible .ve-module-card-name{ color:var(--accent-primary); }
+.ve-module-card:hover::after,
+.ve-module-card:focus-visible::after{ opacity:1; }
+.ve-module-card:hover,
+.ve-module-card:focus-visible{ outline:none; }
 /* Simge kiremidi KALKTI: panelin camı zaten bir yüzey, kutu içinde kutu
    üçüncü bir yüzey olurdu. Kalan tek şey aksan renkli çizim. */
 .ve-module-card-icon{
@@ -3163,20 +3174,6 @@ body.ve-no-module #ve-ribbon{ display:none; }
   color:var(--text-heading);
   letter-spacing:-0.01em;
   transition:color var(--dur-base) var(--ease-out);
-}
-/* Künye satırı: modülün ne olduğunu adından fazlasıyla söyler (çözücü /
-   standart / katalog). Değerler kod tarafındaki gerçek kaynaklardan:
-   js/numerics.js, js/mount-core.js, js/fead-belts.js, js/structural-*.js.
-   Uzun açıklama (.ve-module-card-desc) bu düzende DÜŞTÜ: satırı üç katına
-   çıkarıyor ve panel ekrandan taşıyordu. */
-.ve-module-card-spec{
-  font-family:var(--font-sans);
-  font-size:var(--fs-micro);
-  font-weight:500;
-  letter-spacing:0.09em;
-  font-variant-numeric:tabular-nums;
-  text-transform:uppercase;
-  color:var(--text-muted);
 }
 .ve-module-card-arrow{
   flex-shrink:0;
@@ -3233,9 +3230,6 @@ body.ve-no-module #ve-ribbon{ display:none; }
 .ve-welcome-enter .ve-welcome-sep{
   transform-origin:left center;
   animation:ve-welcome-draw 320ms var(--ease-out) 260ms both;
-}
-.ve-welcome-enter .ve-welcome-note{
-  animation:ve-welcome-rise 380ms var(--ease-out) 320ms both;
 }
 .ve-welcome-enter .ve-welcome-panel{
   animation:ve-welcome-rise 380ms var(--ease-out) 340ms both;
@@ -3333,8 +3327,7 @@ body > .mfsim-loading-logo .mfsim-loading-logo-ico{
     margin:22px 22px 0;
     padding:22px 24px 18px;
   }
-  .ve-welcome-note,
-  .ve-welcome-spacer{ display:none; }
+
   /* Panelin GÖVDESİ kalkar, GÜNCELLİK SATIRI kalır: değişiklik listesi burada
      sol sütunu uzatıp modül ızgarasını ekrandan aşağı iterdi (overlay
      kaydırılabilir olduğu için hata "kırılma" değil sessiz uzama olurdu),
@@ -3373,7 +3366,6 @@ body > .mfsim-loading-logo .mfsim-loading-logo-ico{
   .ve-welcome-enter .ve-welcome-logo-ico,
   .ve-welcome-enter .ve-welcome-tagline,
   .ve-welcome-enter .ve-welcome-sep,
-  .ve-welcome-enter .ve-welcome-note,
   .ve-welcome-enter .ve-welcome-panel,
   .ve-welcome-enter .ve-welcome-eyebrow,
   .ve-welcome-enter .ve-module-card,
