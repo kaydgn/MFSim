@@ -10,3 +10,8 @@ MFSim_Code.html
 
 # Ekran görüntüleri (öncesi/sonrası) — üretilir, commit edilmez.
 .shots/
+
+# Karşılama kare seçicisi — üretilir, commit edilmez (28 kare gömülü ~3,5 MB
+# ve klasör her değiştiğinde bayatlar). Kaynağı tools/karsilama-secici.*
+# + tools/karsilama-kunye.json; `npm run karsilama:secici` üretir.
+karsilama-secici-uretilen.html
