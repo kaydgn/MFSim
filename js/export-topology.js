@@ -27,6 +27,7 @@ function veBuildTopologySVG() {
   // ── İçerik sınır kutusu ──
   var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   nodes.forEach(function(n) {
+    if(typeof veIsCanvasHidden === 'function' && veIsCanvasHidden(n)) return;
     var w = n.width || 65, h = n.height || 60;
     if(n.x < minX) minX = n.x;
     if(n.y < minY) minY = n.y;
@@ -74,6 +75,8 @@ function veBuildTopologySVG() {
   // ── Düğümler (kutu + sembol + etiket) ──
   var parser = (typeof DOMParser !== 'undefined') ? new DOMParser() : null;
   nodes.forEach(function(n) {
+    // Kutusuz düğüm çizilmez — kanvasta da yok.
+    if(typeof veIsCanvasHidden === 'function' && veIsCanvasHidden(n)) return;
     var w = n.width || 65, h = n.height || 60;
     var def = (typeof componentDefs !== 'undefined' && componentDefs[n.type]) ? componentDefs[n.type] : (n.def || {});
     var boxBg = boxBgFb, boxBd = accent;

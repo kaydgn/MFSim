@@ -25,7 +25,12 @@ const fs = require('fs');
 const path = require('path');
 
 const stubs = stubGlobals();
-eval(loadSource('components.js'));      // gerçek componentDefs + vePortOffset
+eval(loadSource('components.js'));
+// components.js'teki yüklem GLOBAL'e yazılır: cp-fead.js / state.js require ile
+// yükleniyor, dolayısıyla çıplak `veIsCanvasHidden` referansı bu dosyanın
+// kapsamını DEĞİL global'i arar. Yazılmazsa kutusuz düğüm kapısı sessizce
+// atlanır ve testler kutuların hâlâ kurulduğu bir dünyayı ölçer.
+global.veIsCanvasHidden = veIsCanvasHidden;      // gerçek componentDefs + vePortOffset
 eval(loadSource('connections.js'));     // gerçek getPortPosition
 
 const { VE_ARAC_PERFORMANS_LAYOUT } = require('../../js/cp-arac-performans.js');

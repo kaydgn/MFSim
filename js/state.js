@@ -239,7 +239,12 @@ function _veRestoreStateNodes(state) {
     // başında veApplyLegacyMigrations(state) ile YALNIZCA legacy state'lere
     // uygulanır (bkz. yukarı). Burada tekrar uygulanmaz.
     nodes.push(node);
-    
+
+    // KUTUSUZ TİP: DOM kutusu kurulmaz (bkz. components.js veIsCanvasHidden).
+    // Kayıt yolu createNode'dan AYRI olduğu için kapı burada da gerekli —
+    // yoksa kaydedilmiş bir proje açıldığında kutular geri gelirdi.
+    if(typeof veIsCanvasHidden === 'function' && veIsCanvasHidden(node)) return;
+
     // Node element oluştur (createNode ile uyumlu)
     var nodeEl = document.createElement('div');
     nodeEl.className = 've-node' + (VE_STANDALONE_TYPES.indexOf(node.type) >= 0 ? ' ve-node--standalone' : '');

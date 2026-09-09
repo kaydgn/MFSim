@@ -93,19 +93,11 @@ function veAttachNodeDrag(nodeEl, node) {
     //
     // Üstelik kenetleme kutu KENARLARINI hizalıyor ve bunu yaparken BÜTÜN
     // düğümler için sabit 65 px genişlik varsayıyor (checkAlignment); kasnak
-    // kutuları 54…72 px olduğu için hizalanan şey merkez de değil, kenar da
-    // değil. Kasnak koordinatı için anlamı yok.
-    //
-    // KONUM BAĞI KAPALIYKEN KENETLEME GERİ GELİR. İstisnanın tek gerekçesi
-    // koordinatın kanvastan TÜREMESİYDİ; bağ kapalıyken kutu salt görsel,
-    // yani kenetleme klasik topolojilerdeki anlamına (kenarları hizala)
-    // dönüyor ve hiçbir sayıyı bozamaz — kenetlenen 20.6 mm artık
-    // kenetlenecek bir mm değil.
-    var _feadDrag = (typeof _feadIsPulley === 'function')
-      && selectedNodes.some(function(n){ return _feadIsPulley(n); })
-      && (typeof veFeadCoordLinkOn !== 'function' || typeof nodes === 'undefined'
-          || veFeadCoordLinkOn(nodes));
-    var snap = (!_feadDrag && typeof checkAlignment === 'function')
+    // FEAD İSTİSNASI KALKTI (2026-09-09): kasnakların kanvasta kutusu yok
+    // (components.js veIsCanvasHidden), dolayısıyla sürüklenemiyorlar ve
+    // kenetlemenin bozabileceği bir mm koordinatı da kalmadı. Kenetleme
+    // bütün topolojilerde klasik anlamına döndü.
+    var snap = (typeof checkAlignment === 'function')
       ? checkAlignment(selectedNodes) : { snapX: 0, snapY: 0 };
     if(snap.snapX !== 0 || snap.snapY !== 0) {
       selectedNodes.forEach(function(n) { n.x += snap.snapX; n.y += snap.snapY; });
@@ -117,11 +109,6 @@ function veAttachNodeDrag(nodeEl, node) {
     });
 
     _veNodeDrag.dragStart = { x: e.clientX - node.x * canvasZoom, y: e.clientY - node.y * canvasZoom };
-    // FEAD: kasnak konumu FİZİKSEL — kanvasta taşımak kasnağı kayış düzleminde
-    // taşımak demek. Kanvas → mm dönüşümü burada, kareden önce yapılıyor ki
-    // updateAllConnections'ın tetiklediği kart tazelemesi YENİ geometriyi
-    // görsün. FEAD dışındaki topolojilerde bedava (kasnak yoksa erken çıkar).
-    if(typeof veFeadSyncDrag === 'function') veFeadSyncDrag(selectedNodes);
     if(typeof updateAllConnections === 'function') updateAllConnections();
     if(typeof veMinimapUpdate === 'function') veMinimapUpdate();
   });
@@ -167,6 +154,7 @@ function veFitViewToContent(opts) {
   if(W < 20 || H < 20) return;
   var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   nodes.forEach(function(n) {
+    if(typeof veIsCanvasHidden === 'function' && veIsCanvasHidden(n)) return;
     var w = n.width || 65, h = n.height || 60;
     if(n.x < minX) minX = n.x;
     if(n.y < minY) minY = n.y;
@@ -671,7 +659,21 @@ function createNode(type, x, y, width, height) {
   }
   // State kaydet
   if(typeof saveState === 'function') saveState();
-  
+
+  // KUTUSUZ TİP: model düğümü kuruldu, DOM kutusu KURULMAZ (bkz.
+  // components.js veIsCanvasHidden). Sayaç yine tazelenir (düğüm sayısı
+  // değişti) ve `updateAllConnections` çağrılır — kutusuz düğümü GÖSTEREN
+  // yüzey (FEAD'de Kayış Tablosu) topoloji imzasından oradan tazeleniyor;
+  // kutulu yolda o işi bağlantı katmanı zaten yapıyor. Düğüm seçili gelir ki
+  // paletten bırakılan kasnağın paneli açılsın.
+  if(typeof veIsCanvasHidden === 'function' && veIsCanvasHidden(node)) {
+    if(typeof updateNodeCount === 'function') updateNodeCount();
+    if(typeof updateAllConnections === 'function') updateAllConnections();
+    if(typeof clearSelection === 'function') clearSelection();
+    if(typeof addToSelection === 'function') addToSelection(node);
+    return node;
+  }
+
   // Node HTML oluştur
   var nodeEl = document.createElement('div');
   nodeEl.className = 've-node' + (VE_STANDALONE_TYPES.indexOf(node.type) >= 0 ? ' ve-node--standalone' : '');
@@ -853,7 +855,7 @@ function createNode(type, x, y, width, height) {
 // tıklıyor, hiçbir şey olmuyor, hiçbir mesaj çıkmıyor.
 //
 // Sessizlik özellikle FEAD'de yanıltıcı: orada port kenarı KOMŞUYA BAKACAK
-// şekilde dinamik (bkz. veFeadPortSideFor), yani klasik "giriş solda / çıkış
+// şekilde dinamikti (kanca 2026-09-09'da kalktı), yani klasik "giriş solda / çıkış
 // sağda" ipucu YOK — kullanıcı hangisinin giriş hangisinin çıkış olduğunu
 // konumdan okuyamıyor ve yanlış çifte tıklaması olağan. ÖLÇÜLDÜ: çıkış→çıkış
 // tıklamasında ne bağlantı kuruluyordu ne de uyarı çıkıyordu.

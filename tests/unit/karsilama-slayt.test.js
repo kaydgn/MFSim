@@ -60,6 +60,11 @@ setupDOM();
 global.VE_KARSILAMA_GORSELLER = LISTE;   // eval edilen kod BUNU görür
 eval(loadSource('canvas-space.js'));
 eval(loadSource('components.js'));
+// components.js'teki yüklem GLOBAL'e yazılır: cp-fead.js / state.js require ile
+// yükleniyor, dolayısıyla çıplak `veIsCanvasHidden` referansı bu dosyanın
+// kapsamını DEĞİL global'i arar. Yazılmazsa kutusuz düğüm kapısı sessizce
+// atlanır ve testler kutuların hâlâ kurulduğu bir dünyayı ölçer.
+global.veIsCanvasHidden = veIsCanvasHidden;
 
 beforeEach(() => {
   setupDOM();

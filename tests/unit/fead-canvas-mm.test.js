@@ -24,6 +24,7 @@
  *      0.5 mm kapısı kırılır ve kullanıcı sebebini anlamaz.
  */
 const M = require('../../js/fead-model.js');
+const fead = require('../../js/cp-fead.js');
 const F = require('../../js/fead-core.js');
 const B = require('../../js/fead-belts.js');
 
@@ -32,6 +33,11 @@ document.body.innerHTML = '<div id="ve-canvas"></div>';
 global.nodes = [];
 global.connections = [];
 eval(loadSource('components.js'));
+// components.js'teki yüklem GLOBAL'e yazılır: cp-fead.js / state.js require ile
+// yükleniyor, dolayısıyla çıplak `veIsCanvasHidden` referansı bu dosyanın
+// kapsamını DEĞİL global'i arar. Yazılmazsa kutusuz düğüm kapısı sessizce
+// atlanır ve testler kutuların hâlâ kurulduğu bir dünyayı ölçer.
+global.veIsCanvasHidden = veIsCanvasHidden;
 global.componentDefs = componentDefs;
 global.FEADCore = F;
 Object.keys(B).forEach((k) => { global[k] = B[k]; });
@@ -57,67 +63,11 @@ const kasnak = (id, type, px, py, data) => {
            data: Object.assign({ od: 80 }, data || {}) };
 };
 
-describe('dönüşüm — Y ters, merkezden ölçülür', () => {
-  test('gidiş-dönüş birebir', () => {
-    const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true, x: 0, y: 0 });
-    const n = kasnak('a', 'fead-alternator', 1234, 876, {});
-    const mm = M.veFeadCanvasToMm(n, org, 1);
-    const px = M.veFeadMmToCanvas(mm.x, mm.y, org, 1, M.veFeadNodeBox(n));
-    expect(px.x).toBeCloseTo(n.x, 9);
-    expect(px.y).toBeCloseTo(n.y, 9);
-  });
 
-  test('Y TERS: kanvasta AŞAĞI = mm\'de AZALAN', () => {
-    const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true });
-    const asagi = kasnak('a', 'fead-alternator', 1000, 1100, {});
-    const yukari = kasnak('b', 'fead-alternator', 1000, 900, {});
-    expect(M.veFeadCanvasToMm(asagi, org, 1).y).toBeLessThan(0);
-    expect(M.veFeadCanvasToMm(yukari, org, 1).y).toBeGreaterThan(0);
-  });
-
-  test('X ÇİZİM DÜZLEMİNDEN: kanvasta SAĞ = mm\'de artan/azalan (bayrağa göre)', () => {
-    const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true });
-    const sag = kasnak('a', 'fead-alternator', 1200, 1000, {});
-    expect(SX() * M.veFeadCanvasToMm(sag, org, 1).x).toBeGreaterThan(0);
-  });
-
-  // GİDİŞ-DÖNÜŞ BİREBİR — iki fonksiyon birbirinin tam tersi.
-  test('gidiş-dönüş birebir ve X AYNEN taşınıyor', () => {
-    const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true, x: 0, y: 0 });
-    const n = kasnak('a', 'fead-alternator', 1234, 876, {});
-    const mm = M.veFeadCanvasToMm(n, org, 1);
-    const px = M.veFeadMmToCanvas(mm.x, mm.y, org, 1, M.veFeadNodeBox(n));
-    expect(px.x).toBeCloseTo(n.x, 9);
-    expect(px.y).toBeCloseTo(n.y, 9);
-    // Aynalama YOK: mm farkı kutu merkezleri farkının kendisi.
-    const dx = M.veFeadNodeCenter(n).x - M.veFeadNodeCenter(org).x;
-    expect(mm.x).toBeCloseTo(dx, 9);
-  });
-
-  test('farklı kutu ölçüleri sistematik kayma ÜRETMEZ', () => {
-    const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true });
-    // İki farklı tipte kasnağı AYNI merkeze koy → mm'leri aynı olmalı
-    const buyuk = kasnak('a', 'fead-ac', 0, 0, {});
-    const kucuk = kasnak('b', 'fead-idler', 0, 0, {});
-    const hedefX = 1300, hedefY = 1200;
-    buyuk.x = hedefX - buyuk.width / 2;  buyuk.y = hedefY - buyuk.height / 2;
-    kucuk.x = hedefX - kucuk.width / 2;  kucuk.y = hedefY - kucuk.height / 2;
-    expect(buyuk.width).not.toBe(kucuk.width);          // fikstür gerçekten farklı
-    const a = M.veFeadCanvasToMm(buyuk, org, 1), b = M.veFeadCanvasToMm(kucuk, org, 1);
-    expect(a.x).toBeCloseTo(b.x, 9);
-    expect(a.y).toBeCloseTo(b.y, 9);
-  });
-
-  test('1 px = 1 mm', () => {
-    expect(M.VE_FEAD_PX_PER_MM).toBe(1);
-    const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true });
-    const n = kasnak('a', 'fead-alternator', 1000, 1000, {});
-    const once = M.veFeadCanvasToMm(n, org, 1).x;
-    n.x += 250;
-    expect(M.veFeadCanvasToMm(n, org, 1).x - once).toBeCloseTo(SX() * 250, 9);
-  });
-});
-
+// KANVAS ↔ mm SENKRONU KALKTI (2026-09-09) — kasnakların kutusu yok, koordinat
+// yalnız Kayış Tablosu'ndan giriliyor. Bu dosyada kalan şey mm tarafının hâlâ
+// canlı olan üç parçası: orijinin KİM olduğu, gerginin kutu noktasının tek
+// okuyucusu ve orijin göçünün bedava oluşu.
 describe('orijin = SÜRÜCÜ kasnak', () => {
   test('rol tipin önüne geçer — sürücü FAN olabilir', () => {
     const list = [kasnak('c', 'fead-crank', 0, 0, {}),
@@ -133,119 +83,9 @@ describe('orijin = SÜRÜCÜ kasnak', () => {
                                  def: componentDefs['fead-solver'], data: {} }])).toBeNull();
   });
 
-  test('orijinin kendi mm koordinatı (0,0)', () => {
-    const org = kasnak('o', 'fead-crank', 1234, 5678, { driver: true, x: 99, y: 99 });
-    M.veFeadSyncMmFromCanvas([org], { origin: org });
-    expect(org.data.x).toBeCloseTo(0, 9);
-    expect(org.data.y).toBeCloseTo(0, 9);
-  });
 });
 
-describe('senkron — kanvas ↔ mm', () => {
-  const kurum = () => {
-    const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true, x: 0, y: 0 });
-    const alt = kasnak('a', 'fead-alternator', 0, 0, { x: -200, y: 150 });
-    const idl = kasnak('i', 'fead-idler', 0, 0, { x: 120, y: -80 });
-    const list = [org, alt, idl];
-    M.veFeadSyncCanvasFromMm(list, { origin: org });
-    return { list, org, alt, idl };
-  };
 
-  test('mm → kanvas: mesafeler birebir, Y ters', () => {
-    const { org, alt } = kurum();
-    const mo = M.veFeadNodeCenter(org), ma = M.veFeadNodeCenter(alt);
-    expect(ma.x - mo.x).toBeCloseTo(SX() * -200, 6);
-    expect(ma.y - mo.y).toBeCloseTo(-150, 6);        // mm +150 → kanvas −150
-  });
-
-  test('kanvas → mm gidiş-dönüş koordinatı DEĞİŞTİRMEZ', () => {
-    const { list, alt, idl } = kurum();
-    const once = [P(alt.data), P(idl.data)];
-    M.veFeadSyncMmFromCanvas(list);
-    expect(alt.data.x).toBeCloseTo(once[0].x, 3);
-    expect(alt.data.y).toBeCloseTo(once[0].y, 3);
-    expect(idl.data.x).toBeCloseTo(once[1].x, 3);
-    expect(idl.data.y).toBeCloseTo(once[1].y, 3);
-  });
-
-  test('kasnağı sürüklemek mm\'yi O KADAR değiştirir', () => {
-    const { list, alt } = kurum();
-    alt.x += 37; alt.y -= 22;                        // kanvasta sağa ve YUKARI
-    M.veFeadSyncMmFromCanvas(list);
-    expect(alt.data.x).toBeCloseTo(-200 + SX() * 37, 3);
-    expect(alt.data.y).toBeCloseTo(150 + 22, 3);     // yukarı → mm ARTAR
-  });
-
-  // ORİJİN DE BİR KASNAK. Krank sürüklenince diğerlerinin krank-göreli konumu
-  // değişir ve bu FİZİKSEL OLARAK DOĞRUdur: krank aksesuarlara göre kaymıştır.
-  test('ORİJİNİ sürüklemek diğerlerinin mm\'sini karşı yönde kaydırır', () => {
-    const { list, org, alt } = kurum();
-    org.x += 50;                                     // krank sağa
-    M.veFeadSyncMmFromCanvas(list);
-    expect(org.data.x).toBe(0);                      // orijin hep (0,0)
-    expect(alt.data.x).toBeCloseTo(-200 - SX() * 50, 3);   // ötekiler göreli karşı yöne
-  });
-
-  test('araç düğümlerine DOKUNMAZ', () => {
-    const { list } = kurum();
-    const solver = { id: 's', type: 'fead-solver', def: componentDefs['fead-solver'],
-                     x: 9999, y: 9999, data: { designTensionN: 650 } };
-    list.push(solver);
-    M.veFeadSyncMmFromCanvas(list);
-    M.veFeadSyncCanvasFromMm(list);
-    expect(solver.x).toBe(9999);
-    expect(solver.data.x).toBeUndefined();
-  });
-
-  // Kasnak YOKSA orijin de yok → senkron hiç çalışmaz ve yarım model bozulmaz.
-  // (Tek kasnak varsa o KENDİ orijini olur — veFeadResolveDriver ilk kasnağa
-  // düşüyor — ve mm'si tanım gereği (0,0) olur.)
-  test('kasnak yoksa senkron HİÇBİR ŞEY yapmaz', () => {
-    const solver = { id: 's', type: 'fead-solver', def: componentDefs['fead-solver'],
-                     x: 5, y: 5, data: {} };
-    expect(M.veFeadSyncMmFromCanvas([solver])).toBe(0);
-    expect(M.veFeadSyncCanvasFromMm([solver])).toBe(0);
-  });
-
-  test('tek kasnak KENDİ orijinidir', () => {
-    const a = kasnak('a', 'fead-alternator', 500, 500, { x: 10, y: 10 });
-    M.veFeadSyncMmFromCanvas([a]);
-    expect(a.data.x).toBeCloseTo(0, 9);
-    expect(a.data.y).toBeCloseTo(0, 9);
-  });
-});
-
-describe('GERGİ — sürükleme AVARA MERKEZİNİ taşır, montaj konumu RİJİT takip eder', () => {
-  const gergi = (px, py) => kasnak('t', 'fead-tensioner', px, py, {
-    cenX: -170.08, cenY: 99.16, armLen: 90.0, armMeanDeg: 344,
-    preload: 8.6, kArm: 0.48, meanLoad: 22.07 });
-
-  test('ORİJİN sürüklenince gerginin merkezi de tazelenir', () => {
-    const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true, x: 0, y: 0 });
-    const t = gergi(0, 0);
-    const list = [org, t];
-    M.veFeadSyncCanvasFromMm(list, { origin: org });
-    const onceCen = t.data.cenX;
-    const oncePiv = M.veFeadTensionerPivot(t.data)[0];
-
-    org.x += 70;                                  // KRANK sağa sürüklendi
-    expect(M.veFeadSyncMmFromCanvas(list, { origin: org })).toBeGreaterThan(0);
-
-    // Krank-göreli olarak gergi 70 mm karşı yöne kaymış olmalı (yön çizim düzleminden).
-    expect(t.data.cenX).toBeCloseTo(onceCen - SX() * 70, 2);
-    expect(t.data.pivotX).toBeUndefined();        // ikinci koordinat YOK
-    // MONTAJ KONUMU RİJİT TAKİP EDER: kol boyu ve açı dokunulmadığı için
-    // türev aynı kadar ötelenir. Ayrı bir yazma yolu GEREKMİYOR ve olmamalı
-    // (olsaydı montaj konumu sessizce bir GİRDİYE dönerdi).
-    expect(M.veFeadTensionerPivot(t.data)[0]).toBeCloseTo(oncePiv - SX() * 70, 2);
-  });
-
-  test('gergi düğümü olmayan girdide sessizce false', () => {
-    const org = kasnak('o', 'fead-crank', 0, 0, { driver: true });
-    expect(M.veFeadDragTensioner(kasnak('a', 'fead-alternator', 0, 0, {}), org, 1)).toBe(false);
-    expect(M.veFeadDragTensioner(null, org, 1)).toBe(false);
-  });
-});
 
 describe('gergi kutusu HANGİ noktayı gösterir — tek okuyucu', () => {
   // Okuyucu `veFeadTensionerBoxMm(data)` — dizi ya da null döner.
@@ -265,17 +105,17 @@ describe('gergi kutusu HANGİ noktayı gösterir — tek okuyucu', () => {
     expect(Math.hypot(p[0] - (-161.97), p[1] - 91.29)).toBeCloseTo(90, 6);
   });
 
-  test('senkron gergiyi ATLAMAZ', () => {
-    const org = kasnak('o', 'fead-crank', 1000, 1000, { driver: true, x: 0, y: 0 });
+  // "Senkron gergiyi atlamaz" testi KALKTI: kanvas ↔ mm senkronu 2026-09-09'da
+  // kasnak kutularıyla birlikte kaldırıldı. Okuyucunun tekliği ise KALDI ve
+  // asıl kapı o: Kayış Tablosu gergi satırının X/Y'sini buradan alıyor, ikinci
+  // bir "gerginin koordinatı hangisi" kuralı yazılırsa satır boş görünür.
+  test('tablo gergi satırını AYNI okuyucudan alıyor', () => {
     const t = gergi();
-    // Orijin tanım gereği yerinde kalır (yazma olmaz); ölçülen şey GERGİNİN
-    // taşınması ve nereye taşındığı.
-    expect(M.veFeadSyncCanvasFromMm([org, t], { origin: org })).toBeGreaterThanOrEqual(1);
-    // Kutu MERKEZİ avara merkezinin mm konumunda olmalı: krank orijin, Y ters.
-    const om = { x: org.x + org.width / 2, y: org.y + org.height / 2 };
-    const tm = { x: t.x + t.width / 2, y: t.y + t.height / 2 };
-    expect(tm.x - om.x).toBeCloseTo(SX() * -161.97, 0);
-    expect(tm.y - om.y).toBeCloseTo(-91.29, 0);
+    global.nodes = [kasnak('o', 'fead-crank', 0, 0, { driver: true, x: 0, y: 0, od: 160 }), t];
+    const satir = fead.veFeadTableRows({ order: global.nodes }).rows
+      .find((r) => r.tensioner);
+    expect(satir).toBeTruthy();
+    expect([satir.xMm, satir.yMm]).toEqual(M.veFeadTensionerBoxMm(t.data));
   });
 });
 
@@ -352,38 +192,6 @@ describe('ORİJİN GÖÇÜ — öteleme BEDAVA (ölçüldü)', () => {
   });
 });
 
-// ── UÇTAN UCA: sürükle → çözüm değişir ─────────────────────────────────────
-describe('sürükleme çözümü GERÇEKTEN değiştiriyor', () => {
-  test('alternatörü kanvasta taşımak gereken kayış boyunu değiştirir', () => {
-    const pack = veFeadExampleNodes('BMC_FEAD_2026');
-    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    pack.nodes.find((n) => n.type === 'fead-belt').data.lengthMode = 'free';
-
-    // Kanvas konumlarını mm'den kur
-    const org = M.veFeadOriginNode(pack.nodes);
-    org.x = 1000; org.y = 1000;
-    org.width = 72; org.height = 66;
-    pack.nodes.forEach((n) => {
-      if (!n.width) { n.width = (componentDefs[n.type] || {}).defaultWidth || 65; }
-      if (!n.height) { n.height = (componentDefs[n.type] || {}).defaultHeight || 60; }
-    });
-    M.veFeadSyncCanvasFromMm(pack.nodes, { origin: org });
-
-    const once = veFeadBuildSystem(pack.nodes).beltLengthMm;
-
-    // Alternatörü kanvasta 40 px sürükle; YÖN çizim düzleminden, çünkü ölçülen
-    // şey X'in işareti değil "kanvas sürüklemesi çözümü değiştiriyor mu".
-    // mm'de her iki düzlemde de −40 (kranktan UZAĞA) olmalı.
-    const alt = pack.nodes.find((n) => n.id === 'ex-ALT');
-    alt.x -= SX() * 40;
-    M.veFeadSyncMmFromCanvas(pack.nodes, { origin: org });
-    expect(alt.data.x).toBeCloseTo(-281 - 40, 1);
-
-    const sonra = veFeadBuildSystem(pack.nodes).beltLengthMm;
-    expect(sonra).toBeGreaterThan(once);            // uzaklaşan kasnak = uzun kayış
-    expect(sonra - once).toBeGreaterThan(20);
-  });
-});
 
 // ── KADEMELİ TAZELEME ───────────────────────────────────────────────────────
 // Karar 6: geometri + Kayış Yolu kartı her karede, duty/ömür/burulma bırakınca.

@@ -27,6 +27,11 @@ document.body.innerHTML = '<div id="ve-canvas"></div>';
 global.nodes = [];
 global.connections = [];
 eval(loadSource('components.js'));
+// components.js'teki yüklem GLOBAL'e yazılır: cp-fead.js / state.js require ile
+// yükleniyor, dolayısıyla çıplak `veIsCanvasHidden` referansı bu dosyanın
+// kapsamını DEĞİL global'i arar. Yazılmazsa kutusuz düğüm kapısı sessizce
+// atlanır ve testler kutuların hâlâ kurulduğu bir dünyayı ölçer.
+global.veIsCanvasHidden = veIsCanvasHidden;
 eval(loadSource('fead-belts.js'));
 eval(loadSource('fead-duty.js'));
 // GLOBAL'E YAZILMASI ŞART: cp-fead.js `require` ile yükleniyor, dolayısıyla
@@ -524,6 +529,46 @@ describe('topolojiye bakan paneller', () => {
 // arşivli; aynı yön yeniden denenirse oradan okunur.
 test('veFeadPortSideFor KALDIRILDI — geri gelirse kapı kırmızıya döner', () => {
   expect(typeof fead.veFeadPortSideFor).toBe('undefined');
+});
+
+// ── KUTULAR KALKTI (2026-09-09) — NEGATİF KAPI ────────────────────────────
+// Kullanıcı isteği: *"Kutular kalkacak. Kutulara tıklayarak ulaşabildiğimiz
+// detay panellerine tablodan parça isimlerinin üstüne tıklayarak yapacağız."*
+// Kasnaklar modelde DÜĞÜM olarak duruyor (panel, geri-al, kayıt, göç hepsi
+// oradan) ama kanvasa kutu ÇİZİLMİYOR. Kutuya bağlı bütün köprü onunla
+// birlikte kalktı; bu kapı geri gelmelerini yakalar.
+describe('kasnak KUTULARI ve kanvas↔mm köprüsü KALDIRILDI', () => {
+  test('kasnak tipleri noCanvasBox taşır, araç düğümleri taşımaz', () => {
+    Object.keys(componentDefs).filter((t) => componentDefs[t].isFeadPulley)
+      .forEach((t) => expect(componentDefs[t].noCanvasBox).toBe(true));
+    ['fead-belt', 'fead-solver', 'fead-layout', 'fead-table', 'fead-report', 'fead-spin']
+      .forEach((t) => expect(!!componentDefs[t].noCanvasBox).toBe(false));
+  });
+
+  test('veIsCanvasHidden yalnız kasnaklara evet der', () => {
+    expect(veIsCanvasHidden({ type: 'fead-crank' })).toBe(true);
+    expect(veIsCanvasHidden({ type: 'fead-tensioner' })).toBe(true);
+    expect(veIsCanvasHidden({ type: 'fead-table' })).toBe(false);
+    expect(veIsCanvasHidden({ type: 'gearbox' })).toBe(false);
+    expect(veIsCanvasHidden(null)).toBe(false);
+  });
+
+  test('kutuya bağlı yüzeyler dışa açılmıyor — hiçbiri geri gelmedi', () => {
+    ['veFeadPlaceFromCoords', 'veFeadSyncDrag', 'veFeadApplyCoordLinkBadge',
+     'veFeadToggleCoordLink', 'getFeadCoordLinkPropertiesHTML',
+     'veFeadCoordLinkAfterDelete'].forEach((ad) => {
+      expect(typeof fead[ad]).toBe('undefined');
+    });
+    ['veFeadCanvasToMm', 'veFeadMmToCanvas', 'veFeadNodeCenter',
+     'veFeadSyncMmFromCanvas', 'veFeadSyncCanvasFromMm', 'veFeadDragTensioner',
+     'veFeadCoordLinkNode', 'veFeadCoordLinkOn'].forEach((ad) => {
+      expect(typeof M[ad]).toBe('undefined');
+    });
+  });
+
+  test('Konum Bağı bileşeni componentDefs\'te YOK', () => {
+    expect(componentDefs['fead-coordlink']).toBeUndefined();
+  });
 });
 
 describe('gergi paneli TEK koordinat soruyor', () => {
@@ -1450,442 +1495,128 @@ describe('gergi DOĞRULAMA kartı — panel hiçbir şeyi karşılaştırmıyor'
   });
 });
 
-describe('veFeadArrangeByCoords — kasnaklar KOORDİNATLARINA yerleşir', () => {
-  // SÖZLEŞME DEĞİŞTİ. Bu yerleştirici eskiden kasnakları bir HALKAYA diziyordu
-  // ve o zaman doğruydu: kanvastaki konum hiçbir şey ifade etmiyordu. Artık
-  // konum FİZİKSEL (1 px = 1 mm) — halkaya dizmek kullanıcının girdiği bütün
-  // mm koordinatlarını SİLMEK olurdu, yani "düzenle" düğmesi modeli bozardı.
-  const kur = (koord, ekTip) => {
-    const tipler = ['fead-crank', 'fead-alternator', 'fead-idler', 'fead-ac',
-                    'fead-waterpump', 'fead-idler'];
-    const ns = koord.map((c, i) => {
+// ── "OTOMATİK DÜZENLE" ARTIK YALNIZ ARAÇ KARTLARINI DİZİYOR ───────────────
+//
+// Bu blok iki kez yeniden yazıldı ve ikisi de bir sözleşme değişikliğiydi:
+// önce "kasnakları halkaya diz" (konum hiçbir şey ifade etmezken doğruydu),
+// sonra "kutuları mm koordinatına oturt" (kanvas kayış düzlemi olunca). Bugün
+// kasnakların KUTUSU YOK — dizilecek kasnak kalmadı, geriye araç kartları
+// kaldı. Eski iki yönün ölçümleri modül skill'inde arşivli.
+describe('veFeadArrangeByCoords — araç kartlarını diziyor, kasnağa dokunmuyor', () => {
+  const kur = (kasnakSay, aracTipler) => {
+    const tipler = ['fead-crank', 'fead-alternator', 'fead-idler', 'fead-ac'];
+    const ns = [];
+    for (let i = 0; i < kasnakSay; i++) {
       const t = tipler[i % tipler.length];
       const d = componentDefs[t];
-      return { id: 'r' + i, type: t, def: d, x: 0, y: 0,
-               width: d.defaultWidth || 65, height: d.defaultHeight || 60,
-               data: Object.assign({ od: 80 }, c, i === 0 ? { driver: true } : {}) };
-    });
-    (ekTip || []).forEach((t, i) => {
+      ns.push({ id: 'r' + i, type: t, def: d, x: 7, y: 9,
+                width: d.defaultWidth || 65, height: d.defaultHeight || 60,
+                data: Object.assign({ od: 80, x: i * 100, y: i * 50 },
+                                    i === 0 ? { driver: true } : {}) });
+    }
+    (aracTipler || []).forEach((t, i) => {
       const d = componentDefs[t];
       ns.push({ id: 'a' + i, type: t, def: d, x: 0, y: 0,
                 width: d.defaultWidth || 65, height: d.defaultHeight || 60, data: {} });
     });
-    global.nodes = ns;
-    global.connections = [];
-    for (let i = 0; i < koord.length; i++)
-      global.connections.push({ id: 'c' + i, from: 'r' + i, to: 'r' + ((i + 1) % koord.length),
-                                fromPort: 'output', toPort: 'input' });
+    global.nodes = ns; global.connections = [];
     return ns;
   };
-  const merkez = (nd) => ({ x: nd.x + nd.width / 2, y: nd.y + nd.height / 2 });
 
   beforeEach(() => {
     document.body.innerHTML = '<div id="ve-canvas"></div>';
     global.updateAllConnections = jest.fn();
   });
 
-  // D1 KAPISI — ÖLÇÜLMÜŞ BİR SESSİZ KUSURDU.
-  // Yerleştirici gergi için KOŞULSUZ `cenX/cenY` okuyordu; zarf kipinde o
-  // alanlar hiç yazılmıyor, dolayısıyla gergi "koordinatı olmayan kasnak"
-  // sayılıp kümenin ALTINA diziliyordu. ÖLÇÜLDÜ (AG00976, zarf kipi): gergi
-  // kutusu en alttaki kasnaktan 147 px aşağıda, kümenin ortalamasından 343 px
-  // sapmış. Ve `veFeadDragTensioner` zarf kipinde mm'yi MUTLAK yazdığı için
-  // sonraki İLK sürükleme o kaymanın tamamını pivota yazardı.
-  //
-  // Karar TEK YERDE (veFeadTensionerBoxMm, fead-model.js); kapı ÜRETİLEN
-  // YERLEŞİMİ ölçüyor — okuyucuyu doğrudan çağırmak, yerleştiricinin onu
-  // kullanmayı BIRAKMASINI göremezdi.
-  test('gergi kümenin İÇİNE yerleşir (montaj konumundan)', () => {
-    const kurGergi = (kip) => {
-      const tipler = ['fead-crank', 'fead-alternator', 'fead-idler'];
-      const koord = [{ x: 0, y: 0 }, { x: -281, y: 259.5 }, { x: 130, y: 140 }];
-      const ns = koord.map((c, i) => {
-        const t = tipler[i], d = componentDefs[t];
-        return { id: 'r' + i, type: t, def: d, x: 0, y: 0,
-                 width: d.defaultWidth, height: d.defaultHeight,
-                 data: Object.assign({ od: 80 }, c, i === 0 ? { driver: true } : {}) };
-      });
-      const dt = componentDefs['fead-tensioner'];
-      const td = { od: 75, armLen: 90, preload: 8.6, kArm: 0.48, meanLoad: 22.07,
-                   cenX: -161.97, cenY: 91.29, armMeanDeg: -11.9992 };
-      ns.push({ id: 't', type: 'fead-tensioner', def: dt, x: 0, y: 0,
-                width: dt.defaultWidth, height: dt.defaultHeight, data: td });
-      global.nodes = ns; global.connections = [];
-      for (let i = 0; i < ns.length; i++)
-        global.connections.push({ id: 'c' + i, from: ns[i].id,
-          to: ns[(i + 1) % ns.length].id, fromPort: 'output', toPort: 'input' });
-      return ns;
-    };
-    ['a', 'b'].forEach((kip) => {
-      const ns = kurGergi(kip);
-      expect(fead.veFeadArrangeByCoords({ silent: true })).toBe(true);
-      const t = ns[ns.length - 1];
-      const tm = merkez(t);
-      const digerleri = ns.slice(0, 3).map(merkez);
-      const enAlt = Math.max(...digerleri.map((p) => p.y));
-      // Kümenin altındaki "koordinatı yok" sırasına DÜŞMEMELİ.
-      expect(tm.y).toBeLessThan(enAlt);
-      // Ve gerçekten kendi mm noktasında olmalı: krank orijin, Y ters.
-      const om = merkez(ns[0]);
-      const bek = { x: -161.97, y: 91.29 };   // kutu AVARA MERKEZİNİ gösterir
-      expect(SX() * (tm.x - om.x)).toBeCloseTo(bek.x, 0);
-      expect(tm.y - om.y).toBeCloseTo(-bek.y, 0);
+  test('KASNAK KUTUSU OYNAMAZ — kanvasta yeri yok', () => {
+    const ns = kur(4, ['fead-belt', 'fead-layout']);
+    fead.veFeadArrangeByCoords({ silent: true });
+    ns.filter((n) => componentDefs[n.type].isFeadPulley).forEach((n) => {
+      expect(n.x).toBe(7);          // dokunulmadı
+      expect(n.y).toBe(9);
     });
   });
 
-  test('kanvas mesafesi mm mesafesine EŞİT (1 px = 1 mm)', () => {
-    const ns = kur([{ x: 0, y: 0 }, { x: 200, y: 0 }, { x: 0, y: 150 }]);
-    expect(fead.veFeadArrangeByCoords()).toBe(true);
-    const a = merkez(ns[0]), b = merkez(ns[1]), c = merkez(ns[2]);
-    expect(SX() * (b.x - a.x)).toBeCloseTo(200, 0);
-    expect(c.y - a.y).toBeCloseTo(-150, 0);      // ← Y TERS
-  });
-
-  // Y ekseninin ters olması bu modülün en sessiz tuzağı: kanvasta y aşağı,
-  // kayış düzleminde yukarı. Ters yazılsaydı bütün topoloji AYNALANIRDI.
-  test('Y EKSENİ TERS — mm yukarı, kanvas aşağı', () => {
-    const ns = kur([{ x: 0, y: 0 }, { x: 0, y: 300 }]);
-    fead.veFeadArrangeByCoords();
-    expect(merkez(ns[1]).y).toBeLessThan(merkez(ns[0]).y);
-  });
-
-  test('küme görünür alanda ORTALANIR — orijin kenardaysa bile', () => {
-    // BMC'de krank kümenin kenarında (X −281…+184); orijini doğrudan merkeze
-    // koymak her şeyi bir yana yığardı.
-    const ns = kur([{ x: 0, y: 0 }, { x: 400, y: 0 }, { x: 800, y: 0 }]);
-    fead.veFeadArrangeByCoords();
-    const xs = ns.map((n) => merkez(n).x);
-    expect((Math.min(...xs) + Math.max(...xs)) / 2).toBeCloseTo(3000, 0);
-  });
-
-  test('koordinatı OLMAYAN kasnak gizlenmez, kümenin altına dizilir', () => {
-    const ns = kur([{ x: 0, y: 0 }, { x: 200, y: 0 }, {}]);
-    expect(fead.veFeadArrangeByCoords()).toBe(true);
-    const yok = ns[2];
-    expect(Number.isFinite(yok.x)).toBe(true);
-    expect(merkez(yok).y).toBeGreaterThan(merkez(ns[0]).y);
-    // ve üst üste binmiyor (sessizce (0,0)'a konsaydı çakışırdı)
-    expect(Math.abs(merkez(yok).x - merkez(ns[0]).x)
-         + Math.abs(merkez(yok).y - merkez(ns[0]).y)).toBeGreaterThan(20);
-  });
-
-  test('araç düğümleri kümenin DIŞINDA; Kayış Yolu kartı sağ şeritte', () => {
-    const ns = kur([{ x: 0, y: 0 }, { x: 300, y: 0 }, { x: 0, y: 300 }],
-                   ['fead-solver', 'fead-layout']);
-    fead.veFeadArrangeByCoords();
-    const kasnak = ns.slice(0, 3).map((n) => merkez(n).x);
-    const solver = ns.find((n) => n.type === 'fead-solver');
-    const layout = ns.find((n) => n.type === 'fead-layout');
-    expect(merkez(solver).x).toBeLessThan(Math.min(...kasnak));
-    expect(merkez(layout).x).toBeGreaterThan(Math.max(...kasnak));
-  });
-
-  // ── GERGİ KUTUSU: KİP BAŞINA BAŞKA BİR NOKTA ────────────────────────────
-  //
-  // ÖLÇÜLMÜŞ SESSİZLİK: bu yerleştirici gergiyi doğrudan `cenX/cenY`den
-  // okuyordu, oysa zarf kipinde o alan HİÇ yazılmıyor (kasnak merkezi bir
-  // çıktı). Sonuç: gergi "koordinatı yok" sayılıp kümenin ALTINA diziliyor ve
-  // uyarı toast'ı basılıyordu — AG00976'da kutu 2857,4/3039,0 yerine
-  // 2971,0/3277,3. Oysa alt topoloji açılışındaki yol
-  // (veFeadSyncCanvasFromMm) onu PİVOTA oturtuyordu: iki yerleştirme yolu
-  // birbirinden habersizdi ve kutu ilk açılışta yerinden zıplıyordu.
-  const gergili = (tenData) => {
-    const mk = (id, type, data) => {
-      const d = componentDefs[type];
-      return { id, type, def: d, x: 0, y: 0,
-               width: d.defaultWidth || 65, height: d.defaultHeight || 60, data };
-    };
-    const ns = [
-      mk('g0', 'fead-crank',      { driver: true, od: 180, x: 0, y: 0 }),
-      mk('g1', 'fead-alternator', { od: 57, x: -280, y: 60 }),
-      mk('g2', 'fead-idler',      { od: 70, x: -150, y: 150 }),
-      mk('g3', 'fead-tensioner',  tenData)
-    ];
-    global.nodes = ns;
-    global.connections = ns.map((n, i) => ({ id: 'gc' + i, from: n.id,
-      to: ns[(i + 1) % ns.length].id, fromPort: 'output', toPort: 'input' }));
-    return ns;
-  };
-  // Kutunun mm karşılığı: orijin (sürücü) kutusunun merkezine göre, Y TERS,
-  // X çizim düzleminden (ön görünüşte kanvas da aynalanıyor — 2026-09-07).
-  const mmOf = (ns, nd) => ({ x: SX() * (merkez(nd).x - merkez(ns[0]).x),
-                              y: -(merkez(nd).y - merkez(ns[0]).y) });
-
-  test('gergi kutusu AVARA MERKEZİNİ gösterir', () => {
-    const ns = gergili({ od: 75, armLen: 90,
-                         cenX: -161.97, cenY: 91.29, armMeanDeg: -11.9992,
-                         preload: 8.6, kArm: 0.48, meanLoad: 22.07 });
-    expect(fead.veFeadArrangeByCoords()).toBe(true);
-    const mm = mmOf(ns, ns[3]);
-    expect(mm.x).toBeCloseTo(-161.97, 1);
-    expect(mm.y).toBeCloseTo(91.29, 1);
-    // "koordinatı yok" sırasına DÜŞMEDİ: uyarı basılmıyor.
-    const toast = stubs.showToast.mock.calls.map((c) => String(c[0])).join(' | ');
-    expect(toast).not.toContain('koordinatı yok');
-  });
-
-  test('İKİ YERLEŞTİRME YOLU AYNI YERE KOYAR — sync tek kutuyu bile oynatmaz', () => {
-    // Asıl kapı bu: "Otomatik Düzenle" ile alt topoloji açılışı aynı noktayı
-    // kullanmak ZORUNDA. Ayrıştıklarında hata sessiz — kullanıcı düzenler,
-    // kapatıp açar, kutu yerinden zıplar.
-    [{ od: 75, armLen: 90, cenX: -161.97, cenY: 91.29,
-       armMeanDeg: -11.9992, preload: 8.6, kArm: 0.48, meanLoad: 22.07 },
-     { od: 75, armLen: 90, cenX: -161.97, cenY: 91.29,
-       preload: 8.6, kArm: 0.48, meanLoad: 22.07 }].forEach((td) => {
-      const ns = gergili(td);
-      fead.veFeadArrangeByCoords({ silent: true });
-      const once = ns.map((n) => [n.x, n.y]);
-      expect(veFeadSyncCanvasFromMm(ns)).toBe(0);
-      ns.forEach((n, i) => {
-        expect(n.x).toBeCloseTo(once[i][0], 6);
-        expect(n.y).toBeCloseTo(once[i][1], 6);
-      });
-    });
-  });
-
-  test('kipin girdisi eksikse gergi yine gizlenmez — kümenin altına dizilir', () => {
-    // Zarf kipinde pivot yoksa okunacak nokta YOKTUR; sessizce (0,0)'a koymak
-    // kasnakları üst üste bindirirdi (koordinatsız kasnak kuralının aynısı).
-    const ns = gergili({ od: 75, angleMode: 'envelope', armLen: 90 });
-    expect(fead.veFeadArrangeByCoords()).toBe(true);
-    expect(Number.isFinite(ns[3].x)).toBe(true);
-    expect(merkez(ns[3]).y).toBeGreaterThan(merkez(ns[0]).y);
-    const toast = stubs.showToast.mock.calls.map((c) => String(c[0])).join(' | ');
-    expect(toast).toContain('koordinatı yok');
-  });
-
-  test('orijin YOKSA ya da iki kasnaktan az varsa düzen KURULMAZ', () => {
-    kur([{ x: 0, y: 0 }]);
-    expect(fead.veFeadArrangeByCoords()).toBe(false);
-    global.nodes = []; global.connections = [];
-    expect(fead.veFeadArrangeByCoords()).toBe(false);
-  });
-
-  // Yerleştirici KOORDİNAT YAZMAZ — yalnız kutuları yerine koyar. Yazsaydı
-  // "düzenle" düğmesi modeli sessizce değiştirirdi.
-  test('koordinatlara DOKUNMAZ, yalnız kutuları taşır', () => {
-    const ns = kur([{ x: 0, y: 0 }, { x: 250, y: -80 }]);
-    const once = ns.map((n) => JSON.stringify(n.data));
-    fead.veFeadArrangeByCoords();
-    expect(ns.map((n) => JSON.stringify(n.data))).toEqual(once);
-  });
-
-  // SESSİZ KİP — örnek kurucusu buradan geçiyor ve kendi saveState'ini,
-  // kendi toast'ını, kendi kamerasını kullanıyor. Bayrak yutulursa kullanıcı
-  // tek bir "örnek kuruldu" yerine üst üste iki bildirim görür ve tek bir
-  // "geri al" örneği kaldırmaz (undo yığınında iki adım kalır).
-  test('silent: saveState ve toast ÇAĞRILMAZ, yerleştirme yine yapılır', () => {
-    const ns = kur([{ x: 0, y: 0 }, { x: 200, y: 0 }]);
-    global.saveState.mockClear(); global.showToast.mockClear();
+  test('iki BÜYÜK kart sağda, künyeler solda', () => {
+    const ns = kur(3, ['fead-belt', 'fead-solver', 'fead-layout', 'fead-table']);
     expect(fead.veFeadArrangeByCoords({ silent: true })).toBe(true);
-    expect(global.saveState).not.toHaveBeenCalled();
-    expect(global.showToast).not.toHaveBeenCalled();
-    expect(SX() * (merkez(ns[1]).x - merkez(ns[0]).x)).toBeCloseTo(200, 6);
+    const bul = (t) => ns.find((n) => n.type === t);
+    // Sağ şerit: Kayış Yolu + Kayış Tablosu. Sol şerit: künyeler.
+    expect(bul('fead-layout').x).toBeGreaterThan(bul('fead-belt').x);
+    expect(bul('fead-table').x).toBeGreaterThan(bul('fead-solver').x);
+    // Sol şerit SAĞA yaslı (x0 - genişlik), sağ şerit SOLA yaslı → çakışma yok.
+    const solSag = Math.max(bul('fead-belt').x + bul('fead-belt').width,
+                            bul('fead-solver').x + bul('fead-solver').width);
+    expect(bul('fead-layout').x).toBeGreaterThanOrEqual(solSag);
   });
 
-  // TAM SAYIYA YUVARLAMA KUANTALARDI. 1 px = 1 mm olduğu için Math.round
-  // koordinatı 1 mm'ye oturtur; ölçüldü, alternatörün 1 mm'si gerginliği
-  // 38.6 N (%5.9) değiştiriyor ve gergi kol boyu kapısının toleransı 0.5 mm.
-  test('kutu konumu 1 mm\'ye KUANTALANMAZ (kesirli mm korunur)', () => {
-    const ns = kur([{ x: 0, y: 0 }, { x: 130.08, y: 139.92 }]);
-    fead.veFeadArrangeByCoords();
-    expect(SX() * (merkez(ns[1]).x - merkez(ns[0]).x)).toBeCloseTo(130.08, 1);
-    expect(merkez(ns[1]).y - merkez(ns[0]).y).toBeCloseTo(-139.92, 1);
+  test('aynı şeritteki kartlar dikeyde ÇAKIŞMIYOR', () => {
+    const ns = kur(2, ['fead-belt', 'fead-solver', 'fead-report']);
+    fead.veFeadArrangeByCoords({ silent: true });
+    const sol = ns.filter((n) => ['fead-belt', 'fead-solver', 'fead-report'].includes(n.type))
+      .sort((a, b) => a.y - b.y);
+    for (let i = 1; i < sol.length; i++)
+      expect(sol[i].y).toBeGreaterThanOrEqual(sol[i - 1].y + sol[i - 1].height);
   });
 
-  test('veTidyLayout FEAD topolojisinde koordinat yerleştiricisine devreder', () => {
-    kur([{ x: 0, y: 0 }, { x: 200, y: 0 }]);
-    eval(loadSource('tidy-layout.js'));
-    global.veFeadArrangeByCoords = jest.fn(() => true);
-    veTidyLayout();
-    expect(global.veFeadArrangeByCoords).toHaveBeenCalled();
-    global.veFeadArrangeByCoords.mockClear();
-    // Kasnaksız topolojide genel yerleştirici çalışmalı
-    global.nodes = [{ id: 'x', type: 'engine', def: componentDefs['engine'] || {}, x: 0, y: 0, data: {} }];
-    global.connections = [];
-    veTidyLayout();
-    expect(global.veFeadArrangeByCoords).not.toHaveBeenCalled();
-    delete global.veFeadArrangeByCoords;
+  test('yalnız kasnak varsa düzen KURULMAZ (dizilecek kart yok)', () => {
+    kur(4, []);
+    expect(fead.veFeadArrangeByCoords({ silent: true })).toBe(false);
+  });
+
+  test('silent: saveState ve toast ÇAĞRILMAZ, yerleştirme yine yapılır', () => {
+    const ns = kur(2, ['fead-belt', 'fead-layout']);
+    stubs.saveState.mockClear(); stubs.showToast.mockClear();
+    expect(fead.veFeadArrangeByCoords({ silent: true })).toBe(true);
+    expect(stubs.saveState).not.toHaveBeenCalled();
+    expect(stubs.showToast).not.toHaveBeenCalled();
+    expect(ns.find((n) => n.type === 'fead-layout').x).not.toBe(0);
   });
 });
 
-// ════════════════════════════════════════════════════════════════════════════
-//  ÖRNEK KURULUNCA KANVAS İLE mm AYNI ŞEYİ SÖYLER
-// ════════════════════════════════════════════════════════════════════════════
-//
-// Kanvas artık KAYIŞ DÜZLEMİ; kutunun yeri bir görünüm tercihi değil, düğümün
-// taşıdığı mm koordinatının ta kendisi. Örnek kurucusu bunu bir dönem
-// YALANLIYORDU: kümeyi 520×400'lük bir kutuya sığdıran kendi ölçeğini
-// (BMC'de ×1.1178) kullanıyor ve kutuları köşe koordinatıyla diziyordu.
-//
-// ÖLÇÜLDÜ (gerçek tarayıcı, BMC, HİÇ SÜRÜKLEMEDEN önce):
-//   alternatör merkezi − krank merkezi = −319.108 px
-//   alternatör mm koordinatı           = −281.000 mm   →  38.108 mm FARK
-//
-// Sessizliğin sebebi: hata ancak İLK SÜRÜKLEMEDE ortaya çıkıyor.
-// veFeadSyncMmFromCanvas kanvası okuyup mm'yi tazelediği için o 38.108 mm
-// koordinatın üstüne biniyor — kullanıcı 60 px sürüklüyor, model 98 mm
-// oynuyor ve kayış boyu bir anda hiç istenmeyen bir yere gidiyor.
-describe('veFeadLoadExample — kutu konumu mm koordinatını YALANLAMAZ', () => {
-  const kurExample = (key) => {
-    document.body.innerHTML = '<div id="ve-canvas"></div><div id="ve-canvas-wrapper"></div>';
+// ── ÖRNEK KURUCUSU: KASNAK KUTUSU KURMUYOR ────────────────────────────────
+// Eski blok "kutu merkezi mm koordinatına oturuyor mu" diye soruyordu ve iki
+// sessiz kaymayı yakalamıştı (kurucunun kendi ölçeği · hizalama kenetlemesi).
+// İkisi de artık KURULAMIYOR: kutu yok. Kapı bugün onun yerine kutusuzluğu ve
+// araç düğümlerinin şerit sırasını tutuyor.
+describe('veFeadLoadExample — kasnak kutusu KURULMUYOR', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="ve-canvas"></div>';
     global.nodes = []; global.connections = [];
+  });
+
+  test('kurulan kasnakların DOM elemanı yok, araç düğümlerinin var', () => {
     let k = 0;
-    // Gerçek createNode DOM kurar ve tip tanımlarına bakar; burada sınanan şey
-    // KONUM aritmetiği, o yüzden düğüm kabuğu yeter. def GERÇEK tanımdan gelir:
-    // kutu genişliği hatanın bir parçasıydı ((54−72)/2 = −5 px).
     global.createNode = (type, x, y) => {
       const d = componentDefs[type] || {};
-      const n = { id: 'ex' + ++k, type, def: d, x, y,
+      if (d.maxInstances && global.nodes.filter((n) => n.type === type).length >= d.maxInstances)
+        return null;
+      const n = { id: 'cv' + ++k, type, def: d, x, y,
                   width: d.defaultWidth || 65, height: d.defaultHeight || 60, data: {} };
       global.nodes.push(n);
+      // Gerçek createNode kutusuz tipte DOM kurmuyor — sahte de kurmamalı,
+      // yoksa kapı doğru sebepten değil, sahte yüzünden geçerdi.
+      if (!veIsCanvasHidden(n)) {
+        const el = document.createElement('div');
+        el.id = n.id; el.innerHTML = '<div class="ve-node-box"></div>';
+        document.body.appendChild(el);
+      }
       return n;
     };
-    global.createConnection = (from, to) =>
-      global.connections.push({ id: 'c' + global.connections.length, from, to,
-                               fromPort: 'output', toPort: 'input' });
-    const out = fead.veFeadLoadExample(key);
-    delete global.createNode; delete global.createConnection;
-    return out;
-  };
-  const merkez = (n) => ({ x: n.x + n.width / 2, y: n.y + n.height / 2 });
+    fead.veFeadLoadExample('AG00976_GATES_2025');
+    delete global.createNode;
 
-  // ── ÖRNEK "KULLANIMA HAZIR" GELİR: BAŞLANGIÇ GİDER, RAPOR KALIR ─────────
-  //
-  // Kullanıcı isteği (2026-08-26): örnek kurulduktan sonra "Başlangıç ve
-  // Örnekler" kutusu kanvasta kalmasın, "Rapor" kutusu ise Çözücü'nün altında
-  // dursun. İkisi de bir SÖZLEŞME: biri açılış yüzeyi ve işini bitiriyor,
-  // öbürü örneğin eksik kalan halkası (kullanıcı raporu almak için bileşeni
-  // paletten ayrıca aramak zorunda kalıyordu).
-  test('örnek kurulunca "Başlangıç ve Örnekler" düğümü KALMAZ', () => {
-    // Örnekten ÖNCE starter kutusu kanvasta duruyor (veFeadPopulateStarter'ın
-    // koyduğu düğümü taklit ediyoruz; kurExample global.nodes'u sıfırlıyor,
-    // o yüzden createNode kancasını kurup starter'ı ONUNLA ekliyoruz).
-    const eskiKur = fead.veFeadLoadExample;
-    document.body.innerHTML = '<div id="ve-canvas"></div><div id="ve-canvas-wrapper"></div>';
-    global.nodes = []; global.connections = [];
-    let k = 0;
-    global.createNode = (type, x, y) => {
-      const d = componentDefs[type] || {};
-      const n = { id: 'ex' + ++k, type, def: d, x, y,
-                  width: d.defaultWidth || 65, height: d.defaultHeight || 60, data: {} };
-      global.nodes.push(n); return n;
-    };
-    global.createConnection = (from, to) =>
-      global.connections.push({ id: 'c' + global.connections.length, from, to,
-                                fromPort: 'output', toPort: 'input' });
-    createNode('fead-example', 100, 100);
-    expect(global.nodes.filter((n) => n.type === 'fead-example').length).toBe(1);
-
-    expect(eskiKur('BMC_FEAD_2026')).toBeTruthy();
-    expect(global.nodes.filter((n) => n.type === 'fead-example').length).toBe(0);
-    delete global.createNode; delete global.createConnection;
-  });
-
-  test('örnek "Rapor" düğümünü de kurar', () => {
-    expect(kurExample('BMC_FEAD_2026')).toBeTruthy();
-    expect(global.nodes.filter((n) => n.type === 'fead-report').length).toBe(1);
-  });
-
-  // SOL ŞERİT SIRASI nodes dizisi sırasından geliyor (veFeadArrangeByCoords →
-  // serit()). Rapor Çözücü'den ÖNCE push edilseydi şeritte de onun ÜSTÜNDE
-  // çıkardı — sıra bir yerleşim ayrıntısı değil, veFeadExampleNodes'un push
-  // sırasının gözlenebilir sonucu.
-  test('sol şerit sırası: Kayış Özellikleri → Çözücü → Rapor', () => {
-    expect(kurExample('BMC_FEAD_2026')).toBeTruthy();
-    const sol = global.nodes
-      .filter((n) => { const d = componentDefs[n.type] || {};
-                       return d.isFeadBelt || d.isFeadSolver || d.isFeadReport || d.isFeadExample; })
-      .slice().sort((a, b) => a.y - b.y)
-      .map((n) => n.type);
-    expect(sol).toEqual(['fead-belt', 'fead-solver', 'fead-report']);
-    // ve hepsi kasnak kümesinin SOLUNDA (araç kutuları çizime girmez)
-    const kasnakMinX = Math.min(...global.nodes.filter((n) => M._feadIsPulley(n)).map((n) => n.x));
-    global.nodes.filter((n) => { const d = componentDefs[n.type] || {};
-      return d.isFeadBelt || d.isFeadSolver || d.isFeadReport; })
-      .forEach((n) => expect(n.x).toBeLessThan(kasnakMinX));
-  });
-
-  test('kayıtlı BÜTÜN örnekler Rapor düğümünü taşır', () => {
-    Object.keys(M.VE_FEAD_EXAMPLES).forEach((key) => {
-      const pack = M.veFeadExampleNodes(key);
-      const tipler = pack.nodes.map((n) => n.type);
-      expect(tipler).toContain('fead-report');
-      expect(tipler).toContain('fead-layout');
-      // Rapor, Çözücü'den SONRA
-      expect(tipler.indexOf('fead-report')).toBeGreaterThan(tipler.indexOf('fead-solver'));
-      // Rapor düğümü rapor TÜRÜ taşımaz → veFeadReportKind varsayılana ('detailed') düşer
-      const rep = pack.nodes.find((n) => n.type === 'fead-report');
-      expect(rep.data && rep.data.reportKind).toBeUndefined();
-    });
-  });
-
-  test('BMC örneğinde HER kasnağın kutu merkezi mm koordinatına oturur', () => {
-    expect(kurExample('BMC_FEAD_2026')).toBeTruthy();
-    const kasnaklar = global.nodes.filter((n) => M._feadIsPulley(n));
-    expect(kasnaklar.length).toBe(6);
-    const org = M.veFeadOriginNode(global.nodes);
-    expect(org).toBeTruthy();
-    const o = merkez(org);
-    let enBuyukSapma = 0;
-    kasnaklar.forEach((n) => {
-      const d = n.data || {};
-      const mx = M._feadDefOf(n).isFeadTensioner ? d.cenX : d.x;
-      const my = M._feadDefOf(n).isFeadTensioner ? d.cenY : d.y;
-      if (!Number.isFinite(mx) || !Number.isFinite(my)) return;
-      const c = merkez(n);
-      enBuyukSapma = Math.max(enBuyukSapma,
-        Math.abs(SX() * (c.x - o.x) - mx), Math.abs((c.y - o.y) - (-my)));   // Y TERS
-    });
-    // Eski ölçekli yerleşimde bu sayı 38.108 idi.
-    expect(enBuyukSapma).toBeLessThan(0.05);
-  });
-
-  // Asıl bedel burada ödeniyordu: mm zaten doğru duruyor, sürükleme onu
-  // BOZUYORDU. Bir karelik sürüklemeyi birebir yeniden koşturuyoruz.
-  test('İLK SÜRÜKLEME koordinatı KAYDIRMIYOR — sürüklenen kadar oynuyor', () => {
-    kurExample('BMC_FEAD_2026');
-    const alt = global.nodes.find((n) => n.type === 'fead-alternator');
-    const once = alt.data.x;
-    alt.x -= 60;                                   // kanvasta 60 px sola
-    M.veFeadSyncMmFromCanvas(global.nodes);
-    expect(alt.data.x).toBeCloseTo(once - (M.VE_FEAD_VIEW_FRONT ? -1 : 1) * 60, 2);
-    //                                    ↑ eskiden −98.1 oynuyordu
-  });
-
-  test('kurulan her örnekte aynı kapı — kasnak sayısı ve bağlantılar da yerinde', () => {
-    Object.keys(M.VE_FEAD_EXAMPLES).forEach((key) => {
-      expect(kurExample(key)).toBeTruthy();
-      const org = M.veFeadOriginNode(global.nodes);
-      if (!org) return;
-      const o = merkez(org);
-      global.nodes.filter((n) => M._feadIsPulley(n)).forEach((n) => {
-        const d = n.data || {};
-        const mx = M._feadDefOf(n).isFeadTensioner ? d.cenX : d.x;
-        const my = M._feadDefOf(n).isFeadTensioner ? d.cenY : d.y;
-        if (!Number.isFinite(mx) || !Number.isFinite(my)) return;
-        const c = merkez(n);
-        expect(SX() * (c.x - o.x)).toBeCloseTo(mx, 1);
-        expect(c.y - o.y).toBeCloseTo(-my, 1);
-      });
+    const kasnak = global.nodes.filter((n) => componentDefs[n.type].isFeadPulley);
+    expect(kasnak).toHaveLength(6);
+    kasnak.forEach((n) => expect(document.getElementById(n.id)).toBeNull());
+    ['fead-belt', 'fead-solver', 'fead-layout', 'fead-table', 'fead-report'].forEach((t) => {
+      const n = global.nodes.find((x) => x.type === t);
+      expect(n).toBeTruthy();
+      expect(document.getElementById(n.id)).not.toBeNull();
     });
   });
 });
 
-// ════════════════════════════════════════════════════════════════════════════
-//  TÜRETİLEN BOY, KOLUN NEREDE OTURDUĞUNU SÖYLEMEK ZORUNDA
-// ════════════════════════════════════════════════════════════════════════════
-//
-// Serbest kipin cevabı "kol yayın ÇALIŞMA momentindeyken kayış yolu ne kadar"
-// sorusunun cevabı. Kol oraya oturamadıysa çıkan sayı hâlâ bir sayıdır ama
-// "tedarikçiye verilecek boy" DEĞİLDİR. İki hâl var, ikisi de eskiden
-// sessizdi ve panel ikisinde de "Tedarikçiye verilecek boy budur" diyordu:
-//
-//   nominalFallback : künye eksik → kol aralığın ORTASINA düştü
-//   atLimit         : nominal açı erişilemez → kol KENETLENDİ (+39.7 mm)
-//
-// Bu, modülün kendi kuralının ihlaliydi: geçerlilik sınırı sonucun İÇİNDE
-// taşınır (bkz. B10 çap penceresi, tepe yük "KALİBRE DEĞİL" damgası).
 describe('serbest kipte türetilen boyun KÖKENİ', () => {
   const bmc = (mut) => {
     const pack = veFeadExampleNodes('BMC_FEAD_2026');

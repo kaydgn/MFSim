@@ -930,15 +930,6 @@ function veFeadNodeBox(node){
            h: _feadNum(node && node.height, 0) || d.defaultHeight || 60 };
 }
 
-// Kasnağın kanvastaki MERKEZİ. node.x/y kutunun SOL ÜSTÜ — merkezi kullanmak
-// zorunlu: kasnak çapları farklı olduğu için sol üstten ölçmek her kasnağa
-// kendi kutu yarısı kadar sistematik bir kayma verirdi.
-function veFeadNodeCenter(node){
-  var b = veFeadNodeBox(node);
-  return { x: _feadNum(node && node.x, 0) + b.w / 2,
-           y: _feadNum(node && node.y, 0) + b.h / 2 };
-}
-
 // ORİJİN = SÜRÜCÜ KASNAK. Tipe değil ROLE bağlı (`veFeadResolveDriver`):
 // AG00976'da sürücü kasnak FAN'dır, tipe bağlamak o topolojiyi orijinsiz
 // bırakırdı. Kasnak yoksa null → çağıran taraf senkronu ATLAR, konumlar
@@ -949,163 +940,19 @@ function veFeadOriginNode(nodeList){
   return veFeadResolveDriver(pulleys);
 }
 
-// EKRAN X'İNİN İŞARETİ — ÇİZİM DÜZLEMİNDEN, tek noktadan.
+// ── KANVAS ↔ mm KÖPRÜSÜ KALKTI (2026-09-09) ────────────────────────────────
+// veFeadNodeCenter · veFeadCanvasToMm · veFeadMmToCanvas · veFeadSyncMmFromCanvas
+// veFeadSyncCanvasFromMm · veFeadDragTensioner · veFeadCoordLinkNode/On
 //
-// KANVAS DA BİR ÇİZİMDİR. Kayış yolu kartı ön görünüşte X'te aynalanırken
-// kanvas kutuları rapor düzleminde kalırsa kullanıcı AYNI modelin İKİ resmini
-// ters el ile görür — ölçülmüş bir kusur ve kaydın hiçbir yerinde yoktu
-// (`tests/unit/fead-layout-plane.test.js` → "KANVAS ile KART aynı elde").
-// 2026-09-04'te ayna kapatılarak giderilmişti; ayna 2026-09-07'de kullanıcının
-// dönüş yönü konvansiyonuyla geri açıldığı için kusur artık BURADAN kapanıyor.
+// Hepsi kasnak KUTUSUNUN kanvastaki yerini mm koordinatına (ve tersine)
+// çeviriyordu. Kullanıcı isteğiyle kasnakların kutusu kaldırıldı: kanvasta
+// konumları yok, koordinat yalnız Kayış Tablosu'ndan giriliyor. "Konum Bağı"
+// bileşeni de bu köprüyü açıp kapatmak içindi, o da kalktı.
 //
-// SAKLANAN mm DEĞİŞMEZ: iki fonksiyon da bu tek işaretten beslendiği için
-// birbirinin tam tersi olmayı sürdürüyor; kaydedilen koordinat, çözücü ve
-// bütün sayısal çıktılar Gates düzleminde kalıyor (CLAUDE.md kuralı).
-// Kanvas px → kayış düzlemi mm. Y TERS, X AYNEN (çizim aynalanmaz).
-function veFeadCanvasToMm(node, originNode, scale){
-  var s = _feadNum(scale, 0) || VE_FEAD_PX_PER_MM;
-  var c = veFeadNodeCenter(node), o = veFeadNodeCenter(originNode);
-  return { x: (c.x - o.x) / s, y: -(c.y - o.y) / s };
-}
-
-// Kayış düzlemi mm → kanvas px (kutunun SOL ÜSTÜ, DOM'a yazılacak değer).
-function veFeadMmToCanvas(mmX, mmY, originNode, scale, box){
-  var s = _feadNum(scale, 0) || VE_FEAD_PX_PER_MM;
-  var o = veFeadNodeCenter(originNode);
-  var b = box || { w: 65, h: 60 };
-  return { x: o.x + _feadNum(mmX, 0) * s - b.w / 2,
-           y: o.y - _feadNum(mmY, 0) * s - b.h / 2 };
-}
-
-// ── KONUM BAĞI — TEK OKUMA NOKTASI ─────────────────────────────────────────
-//
-// "Kanvas = kayış düzlemi" bağı kapatılabilir (Konum Bağı düğümü). Bağ
-// kapalıyken kanvas konumu ile mm koordinatı BAĞIMSIZ: kutu salt görsel,
-// koordinat salt panel girdisi.
-//
-// OKUMA TEK NOKTADAN. Kanvas (sürükleme), panel ve rozet üçü de bu
-// fonksiyonu çağırıyor — bu modülün tekrar eden kuralı (kayış kipinde
-// `veFeadBeltMode`, kol konumunda `posMode`): iki ayrı yerde hesaplanan bir
-// durum, iki yüzeyin sessizce ayrışması demektir.
-//
-// DÜĞÜM YOKSA BAĞ AÇIK. Geriye dönük uyum bu satırda: bugüne kadar
-// kaydedilmiş hiçbir projede bu düğüm yok, dolayısıyla hepsi birebir eski
-// davranışını sürdürür. Düğüm var ama `linked` yazılı değilse de AÇIK —
-// paletten bırakmak tek başına modeli değiştirmemeli.
-//
-// ÇOK KOPYADA "KAPALI" KAZANIR. `maxInstances:1` ikinci kopyayı zaten
-// engelliyor, ama eski bir kayıt ya da elle düzenlenmiş bir dosya iki kopya
-// taşıyabilir. O zaman açıkça KAPALI diyen bir düğümü yok saymak, kullanıcının
-// verdiği talimatı sessizce çöpe atmak olurdu.
-function veFeadCoordLinkNode(nodeList){
-  var a = (nodeList || []).filter(function(n){ return !!_feadDefOf(n).isFeadCoordLink; });
-  if(!a.length) return null;
-  for(var i = 0; i < a.length; i++)
-    if(a[i] && a[i].data && a[i].data.linked === false) return a[i];
-  return a[0];
-}
-
-function veFeadCoordLinkOn(nodeList){
-  var n = veFeadCoordLinkNode(nodeList);
-  return !n || !n.data || n.data.linked !== false;
-}
-
-// ── KANVASTAN mm'YE ────────────────────────────────────────────────────────
-// Sürükleme sırasında çağrılır. BÜTÜN kasnaklar tek geçişte tazeleniyor,
-// yalnız sürüklenen değil — çünkü orijin de bir kasnak: KRANK sürüklenirse
-// diğerlerinin krank-göreli konumu değişir, ve bu fiziksel olarak DOĞRUdur
-// (krank aksesuarlara göre kaymıştır). Özel durum yazmak yerine tek geçiş.
-function veFeadSyncMmFromCanvas(nodeList, opt){
-  opt = opt || {};
-  var org = opt.origin || veFeadOriginNode(nodeList);
-  if(!org) return 0;
-  var s = _feadNum(opt.scale, 0) || VE_FEAD_PX_PER_MM;
-  var n = 0;
-  (nodeList || []).forEach(function(x){
-    if(!_feadIsPulley(x)) return;
-    // GERGİ AYNI GEÇİŞTE, AMA KENDİ KURALIYLA. Merkezi bir girdi değil,
-    // çözücünün çıktısı; kanvastan yazılan şey MONTAJ merkezi ve pivot
-    // (rijit, kol boyu korunarak). Ayrı bir geçişe bırakmak, orijin
-    // sürüklendiğinde gerginin pivotunu BAYAT bırakırdı — krank-göreli her
-    // koordinat aynı karede tazelenmeli.
-    if(_feadDefOf(x).isFeadTensioner){
-      if(veFeadDragTensioner(x, org, s)) n++;
-      return;
-    }
-    if(!x.data) x.data = {};
-    var mm = veFeadCanvasToMm(x, org, s);
-    var nx = Math.round(mm.x * 1000) / 1000, ny = Math.round(mm.y * 1000) / 1000;
-    if(x.data.x !== nx || x.data.y !== ny){ x.data.x = nx; x.data.y = ny; n++; }
-  });
-  return n;
-}
-
-// ── mm'DEN KANVASA ─────────────────────────────────────────────────────────
-// Yükleme, örnek kurma ve "Otomatik Düzenle" yolunda çağrılır. Orijinin KENDİ
-// kanvas konumu DEĞİŞMEZ: çerçeveyi o tanımlıyor, onu da taşımak bütün kümeyi
-// kaydırırdı.
-function veFeadSyncCanvasFromMm(nodeList, opt){
-  opt = opt || {};
-  var org = opt.origin || veFeadOriginNode(nodeList);
-  if(!org) return 0;
-  var s = _feadNum(opt.scale, 0) || VE_FEAD_PX_PER_MM;
-  var n = 0;
-  (nodeList || []).forEach(function(x){
-    if(!_feadIsPulley(x) || x === org) return;
-    var mmX = _feadNum(x.data && x.data.x, NaN), mmY = _feadNum(x.data && x.data.y, NaN);
-    // ── GERGİNİN KUTUSU HANGİ NOKTAYI GÖSTERİR ────────────────────────────
-    //
-    // AVARA MERKEZİ — yani gerginin TEK koordinatı ve kayış yolunun gerçekten
-    // geçtiği nokta. Diğer kasnaklarda kutu zaten merkezi gösteriyor; gergiyi
-    // istisna yapmanın karşılığı yok.
-    //
-    // Gövdenin montaj konumu bir ÇIKTI (p = c − a·(cos θ, sin θ)) ve kutu onu
-    // GÖSTERMEZ: kutuyu türetilmiş bir noktaya oturtmak, kullanıcının
-    // sürükleyerek doğrudan yazamayacağı bir yüzey demekti.
-    if(_feadDefOf(x).isFeadTensioner){
-      // Kural TEK YERDE (veFeadTensionerBoxMm): "Otomatik Düzenle" ve örnek
-      // kurucusu da aynı okuyucuyu kullanıyor. Satır içi kalsaydı üç yol üç
-      // ayrı kopya taşırdı — nitekim taşıyordu ve ikisi ayrışmıştı.
-      var kutu = veFeadTensionerBoxMm(x.data || {});
-      mmX = kutu ? kutu[0] : NaN; mmY = kutu ? kutu[1] : NaN;
-    }
-    if(!Number.isFinite(mmX) || !Number.isFinite(mmY)) return;
-    var p = veFeadMmToCanvas(mmX, mmY, org, s, veFeadNodeBox(x));
-    // TAM SAYIYA YUVARLANMIYOR. 1 px = 1 mm olduğu için tam sayı yuvarlaması
-    // koordinatı 1 mm'ye KUANTALARDI ve bu sessiz bir kayıp: ölçüldü,
-    // alternatörün 1 mm'si gerginliği 38.6 N (%5.9) değiştiriyor, gergi kol
-    // boyu kapısının toleransı ise 0.5 mm. 0.01 mm'lik yuvarlama her iki
-    // eşiğin de çok altında ve gidiş-dönüşü kayıpsız yapıyor.
-    var px = Math.round(p.x * 100) / 100, py = Math.round(p.y * 100) / 100;
-    if(x.x !== px || x.y !== py){ x.x = px; x.y = py; n++; }
-  });
-  return n;
-}
-
-// ── GERGİ SÜRÜKLEMESİ AVARA MERKEZİNİ TAŞIR ────────────────────────────────
-//
-// Kutu avara merkezini gösteriyor (bkz. veFeadSyncCanvasFromMm), dolayısıyla
-// sürükleme de doğrudan onu yazar. Gövdenin montaj konumu türetilmiş olduğu
-// için kolu koruyarak RİJİT takip ediyor: kol boyu ve kol çalışma açısı
-// dokunulmadan kaldığından p = c − a·(cos θ, sin θ) kendiliğinden aynı kadar
-// ötelenir.
-//
-// ARACI BİR NOKTADAN GEÇİLMEZ. Montaj konumunu yazıp merkezi ondan geri
-// türetmek aynı sayıyı iki kez yuvarlar ve montaj konumunu sessizce bir
-// GİRDİYE çevirirdi — kullanıcının açıkça kaldırttığı şey.
-function veFeadDragTensioner(node, originNode, scale){
-  if(!node || !_feadDefOf(node).isFeadTensioner || !originNode) return false;
-  if(!node.data) node.data = {};
-  var td = node.data;
-  var s0 = _feadNum(scale, 0) || VE_FEAD_PX_PER_MM;
-  var cx0 = _feadNum(td.cenX, NaN), cy0 = _feadNum(td.cenY, NaN);
-  if(!Number.isFinite(cx0) || !Number.isFinite(cy0)) return false;
-  var yeni = veFeadCanvasToMm(node, originNode, s0);
-  var nx = Math.round(yeni.x * 1000) / 1000, ny = Math.round(yeni.y * 1000) / 1000;
-  if(nx === cx0 && ny === cy0) return false;
-  td.cenX = nx; td.cenY = ny;
-  return true;
-}
+// ÖLÇÜMLERİ ARŞİVDE (modül skill'i): köprünün çözdüğü iki sessiz kayma —
+// örnek kurucusunun kendi ölçeğiyle yerleştirmesi (38,108 mm) ve hizalama
+// kenetlemesinin koordinatı yutması (20,6 mm) — bugün KURULAMIYOR, çünkü
+// kutuyu sürükleyerek koordinat yazan bir yol yok.
 
 // ── ORİJİN GÖÇÜ ────────────────────────────────────────────────────────────
 // Krank (0,0) değilse bütün koordinatlardan onunkini çıkar. Bu TANIM GEREĞİ
@@ -4472,13 +4319,8 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_MIN_TAKEUP_RATIO: VE_FEAD_MIN_TAKEUP_RATIO,
     veFeadBeltFit: veFeadBeltFit, veFeadBeltOptions: veFeadBeltOptions,
     VE_FEAD_PX_PER_MM: VE_FEAD_PX_PER_MM,
-    veFeadNodeBox: veFeadNodeBox, veFeadNodeCenter: veFeadNodeCenter,
+    veFeadNodeBox: veFeadNodeBox,
     veFeadOriginNode: veFeadOriginNode,
-    veFeadCanvasToMm: veFeadCanvasToMm, veFeadMmToCanvas: veFeadMmToCanvas,
-    veFeadCoordLinkNode: veFeadCoordLinkNode, veFeadCoordLinkOn: veFeadCoordLinkOn,
-    veFeadSyncMmFromCanvas: veFeadSyncMmFromCanvas,
-    veFeadSyncCanvasFromMm: veFeadSyncCanvasFromMm,
-    veFeadDragTensioner: veFeadDragTensioner,
     veFeadNormalizeOrigin: veFeadNormalizeOrigin,
     veFeadSolveArmClamped: veFeadSolveArmClamped,
     veFeadWorkingPoint: veFeadWorkingPoint,

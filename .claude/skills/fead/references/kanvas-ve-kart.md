@@ -3,7 +3,36 @@
 > Kök `CLAUDE.md`'den taşındı. Metin birebir korunmuştur.
 > Emekli `fead-graph` yönü `emekli-yonler.md` dosyasına alındı.
 
-## ÖNCE BUNU OKU — KASNAKLAR ARTIK BAĞLANMIYOR (2026-09-09)
+## ÖNCE BUNU OKU — KASNAKLARIN KANVASTA KUTUSU YOK (2026-09-09)
+
+**HÜKÜM: kasnaklar kanvasa ÇİZİLMEZ.** Kullanıcı isteği: *"Kutular kalkacak.
+Kutulara tıklayarak ulaşabildiğimiz detay panellerine tablodan parça
+isimlerinin üstüne tıklayarak yapacağız. Kutulara gerek yok artık bu modülde."*
+
+Kasnaklar MODELDE düğüm olarak durmaya devam eder (panel, geri-al, kayıt, göç
+ve `veFeadSet` hepsi düğüm kimliğinden çalışıyor); değişen tek şey kutunun
+çizilmemesi — `componentDefs.noCanvasBox` → `veIsCanvasHidden` (components.js).
+
+| Kalktı | Yerine |
+|---|---|
+| Kasnak kutusu, adı, rozetleri | Kayış Tablosu satırı (ada tıkla → panel) |
+| Kutuyu sürükleyerek koordinat girme | Tablonun X/Y hücreleri |
+| Kutuyu seçip silme | Satırın ✕ düğmesi |
+| Paletten sürükleyip kanvasta görme | Tablonun "＋ Kasnak ekle" seçicisi (palet de çalışır, ama artık sessiz) |
+| `fead-coordlink` (Konum Bağı) | — bağlanacak konum kalmadı |
+| Kanvas ↔ mm köprüsünün tamamı | — koordinatın tek kaynağı `data.x/y` |
+
+**BU BÖLÜMÜN GERİ KALANINDA "KANVAS = KAYIŞ DÜZLEMİ" DİYEN HER SATIR EMEKLİ.**
+1 px = 1 mm eşlemesi, Y ekseninin tersliği, konum bağı, sürükleme senkronu ve
+"Otomatik Düzenle kasnakları koordinatına oturtur" — hepsi kutuya bağlıydı.
+Ölçümleri duruyor çünkü aynı yön yeniden denenirse nelerin ölçüldüğü oradan
+okunur; ama bugünün kuralı bu tablo.
+
+Kapı: `cp-fead.test.js` → *"kasnak KUTULARI ve kanvas↔mm köprüsü KALDIRILDI"*
+ve *"veFeadLoadExample — kasnak kutusu KURULMUYOR"*; gerçek tarayıcıda
+`fead-tablo.spec.js` (kanvastaki her kutu bir araç düğümü).
+
+## KASNAKLAR BAĞLANMIYOR (2026-09-09)
 
 **HÜKÜM: kasnaklar 0/0 portlu; kayış sırası `node.data.beltIndex`, yani
 Kayış Tablosu'nun satır sırası.** Kullanıcı isteği: *"Topolojiye çektiğimiz

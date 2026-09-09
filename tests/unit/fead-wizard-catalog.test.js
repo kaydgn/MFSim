@@ -33,6 +33,11 @@ document.body.innerHTML = '<div id="ve-canvas"></div>';
 global.nodes = [];
 global.connections = [];
 eval(loadSource('components.js'));
+// components.js'teki yüklem GLOBAL'e yazılır: cp-fead.js / state.js require ile
+// yükleniyor, dolayısıyla çıplak `veIsCanvasHidden` referansı bu dosyanın
+// kapsamını DEĞİL global'i arar. Yazılmazsa kutusuz düğüm kapısı sessizce
+// atlanır ve testler kutuların hâlâ kurulduğu bir dünyayı ölçer.
+global.veIsCanvasHidden = veIsCanvasHidden;
 global.componentDefs = componentDefs;
 global.VE_MODULES = VE_MODULES;
 eval(loadSource('cp-accessories.js'));

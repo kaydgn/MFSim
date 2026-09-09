@@ -23,6 +23,11 @@ global.nodes = [];
 global.connections = [];
 
 eval(loadSource('components.js'));
+// components.js'teki yüklem GLOBAL'e yazılır: cp-fead.js / state.js require ile
+// yükleniyor, dolayısıyla çıplak `veIsCanvasHidden` referansı bu dosyanın
+// kapsamını DEĞİL global'i arar. Yazılmazsa kutusuz düğüm kapısı sessizce
+// atlanır ve testler kutuların hâlâ kurulduğu bir dünyayı ölçer.
+global.veIsCanvasHidden = veIsCanvasHidden;
 
 const modulDugum = (over) =>
   Object.assign({ id: 'm1', type: 'arac-performans', x: 0, y: 0,
