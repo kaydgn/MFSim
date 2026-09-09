@@ -1482,10 +1482,13 @@ function _veWelcomeDur(ad, varsayilan) {
 // bilgi gibi gösterirdi. Commit başlığı SERBEST METİN → textContent ile konur.
 // Karşılamada duran kayıt sayısı; kalanı YERİNDE açılır. Pencere açmak bir
 // satır listeyi görmek için fazla bir tören — kullanıcı isteği (2026-09-08).
-// Kartta KAÇ kayıt açık başlar. 3'tü; Vitrin düzeninde kart ekranın üstünde
-// asılı duruyor ve on kayıt onu boyundan uzun yapıyordu — hepsi düğmenin
-// arkasına alındı (düğme onları YERİNDE açar, pencere açmaz).
+// Kartta KAÇ kayıt DÜĞMESİZ durur. 0 = hepsi düğmenin arkasında; düğme
+// onları YERİNDE açar (pencere açmaz).
 var VE_WELCOME_CHANGE_ILK = 0;
+// Liste AÇIK mı doğar? Kullanıcı kararı (2026-09-09): "son değişiklikler açık
+// bir halde gelsin, yani uzunca olsun". Kart uzuyor; sığmazsa kendi içinde
+// kayıyor (bkz. css .ve-welcome-id max-height + overflow).
+var VE_WELCOME_CHANGE_ACIK = true;
 
 function veFillWelcomeChanges() {
   if(typeof document === 'undefined') return false;
@@ -1524,6 +1527,9 @@ function veFillWelcomeChanges() {
     // gizli olanlar listenin TAMAMI.
     dugme.textContent = (VE_WELCOME_CHANGE_ILK > 0 ? 'Daha eskiler \u00b7 ' : 'Hepsi \u00b7 ') + gizli;
     dugme.onclick = veToggleWelcomeChanges;      // her çizimde aynı işlev — çoğalmaz
+    // Duruş açıksa listeyi HEMEN aç. Açma işini toggle yapıyor: etiket,
+    // aria-expanded ve is-open tek yerden yazılsın, ikinci bir kopya doğmasın.
+    if(VE_WELCOME_CHANGE_ACIK) veToggleWelcomeChanges();
   }
   panel.hidden = false;
   return true;

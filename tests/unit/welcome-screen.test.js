@@ -391,42 +391,54 @@ describe('Son değişiklikler paneli — veFillWelcomeChanges', () => {
   // Vitrin düzeninde (2026-09-09) kart ekranın üstünde ASILI duruyor ve boyunu
   // içeriği belirliyor: on kayıt onu ekrandan taşırıyordu. Kayıtlar KAPALI
   // başlıyor — hepsi DOM'da, hepsi düğmenin arkasında.
-  test('duruşta HİÇBİR satır görünmez ama hepsi DOM\'da çizilir', () => {
+  // Liste AÇIK doğar (kullanıcı kararı, 2026-09-09: "açık bir halde gelsin,
+  // yani uzunca olsun"). Düğme artık kapatmak için duruyor.
+  test('duruşta liste AÇIK gelir — hepsi görünür', () => {
     besKayit();
     expect(panel().hidden).toBe(false);
-    expect(satirlar().length).toBe(5);            // hepsi DOM'da
-    expect(gorunur().length).toBe(0);             // hiçbiri açık değil
+    expect(satirlar().length).toBe(5);
+    expect(gorunur().length).toBe(5);
+    expect(dugme().getAttribute('aria-expanded')).toBe('true');
+    expect(dugme().textContent).toBe('Daha az');
     expect([anahtar(0), anahtar(1), anahtar(2)]).toEqual(['sha1', 'sha2', 'sha3']);
   });
 
   // Düğme PENCERE AÇMAZ (kullanıcı isteği): kalanlar aynı listenin altına gelir.
-  test('düğme kayıtları YERİNDE açar, ikinci tıkta kapatır', () => {
+  test('düğme listeyi kapatır, ikinci tıkta YERİNDE geri açar', () => {
     besKayit();
     expect(dugme().hidden).toBe(false);
-    // Etiket duruma göre: hiçbiri açık değilken "daha eskiler" YANLIŞ olurdu.
-    expect(dugme().textContent).toBe('Hepsi · 5');
-    expect(dugme().getAttribute('aria-expanded')).toBe('false');
-
-    veToggleWelcomeChanges();
-    expect(gorunur().length).toBe(5);
-    expect(dugme().getAttribute('aria-expanded')).toBe('true');
-    expect(dugme().textContent).toBe('Daha az');
     expect(panel().classList.contains('is-open')).toBe(true);
 
-    veToggleWelcomeChanges();
+    veToggleWelcomeChanges();                     // kapat
     expect(gorunur().length).toBe(0);
+    expect(dugme().getAttribute('aria-expanded')).toBe('false');
+    // Etiket duruma göre: hiçbiri açık değilken "daha eskiler" YANLIŞ olurdu.
     expect(dugme().textContent).toBe('Hepsi · 5');
     expect(panel().classList.contains('is-open')).toBe(false);
+
+    veToggleWelcomeChanges();                     // yeniden aç
+    expect(gorunur().length).toBe(5);
+    expect(dugme().textContent).toBe('Daha az');
+    expect(panel().classList.contains('is-open')).toBe(true);
   });
 
   // Etiket VE_WELCOME_CHANGE_ILK'ten türer, elle yazılmaz: sayı 3'e dönerse
   // "Hepsi" yalan olur, 0'da "Daha eskiler" yalan olur. İkisi de sessiz.
-  test('düğme etiketi açık kayıt sayısıyla tutarlı', () => {
+  test('düğme etiketi açık kayıt sayısıyla tutarlı (kapalı duruşta)', () => {
     const src = fs.readFileSync(path.join(ROOT, 'js/components.js'), 'utf8');
     const ilk = parseInt(src.match(/var VE_WELCOME_CHANGE_ILK = (\d+);/)[1], 10);
     besKayit();
+    veToggleWelcomeChanges();                     // açık doğuyor → kapat
     expect(gorunur().length).toBe(ilk);
     expect(dugme().textContent).toBe((ilk > 0 ? 'Daha eskiler · ' : 'Hepsi · ') + (5 - ilk));
+  });
+
+  // Açık duruşu TEK yer kurar: veFillWelcomeChanges kendi eliyle hidden/aria/
+  // etiket yazsaydı ikinci bir doğruluk kaynağı doğar ve biri unutulurdu.
+  test('açık duruş toggle üzerinden kurulur — kopya yazım yok', () => {
+    const src = fs.readFileSync(path.join(ROOT, 'js/components.js'), 'utf8');
+    expect(src).toMatch(/var VE_WELCOME_CHANGE_ACIK = true;/);
+    expect(src).toMatch(/if\(VE_WELCOME_CHANGE_ACIK\) veToggleWelcomeChanges\(\);/);
   });
 
   test('düğme pencere açan komuta BAĞLI DEĞİL (onclick yerinde açar)', () => {
@@ -443,14 +455,14 @@ describe('Son değişiklikler paneli — veFillWelcomeChanges', () => {
     expect(gorunur().length).toBe(0);
   });
 
-  test('yeniden çizim açık listeyi KAPALI duruma döndürür', () => {
+  test('yeniden çizim listeyi DURUŞ hâline döndürür', () => {
     besKayit();
-    veToggleWelcomeChanges();
-    expect(gorunur().length).toBe(5);
-    veFillWelcomeChanges();                       // ör. künye yeniden okundu
+    veToggleWelcomeChanges();                     // kapat
     expect(gorunur().length).toBe(0);
-    expect(dugme().getAttribute('aria-expanded')).toBe('false');
-    expect(panel().classList.contains('is-open')).toBe(false);
+    veFillWelcomeChanges();                       // ör. künye yeniden okundu
+    expect(gorunur().length).toBe(5);             // duruş AÇIK
+    expect(dugme().getAttribute('aria-expanded')).toBe('true');
+    expect(panel().classList.contains('is-open')).toBe(true);
   });
 
   // SESSİZ HATA SINIFI: .ve-welcome-change display:flex, .ve-welcome-more
