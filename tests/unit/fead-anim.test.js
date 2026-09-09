@@ -324,15 +324,17 @@ describe('Yayın sözleşmesi — animasyon YALNIZ kanvas kartında', () => {
   });
 });
 
-describe('Animatör — durum DOM\'da değil, döngü kendini durdurur', () => {
-  function kartKur(layout) {
-    document.body.innerHTML = '<div id="ve-canvas"></div>'
-      + '<div id="' + layout.id + '" class="ve-node"><div class="ve-node-box">'
-      + '<div class="ve-fead-layout-card">' + fead.veFeadLayoutCardHTML(layout)
-      + '</div></div></div>';
-    return document.querySelector('svg[data-fead-anim]');
-  }
+// Kanvas kartını DOM'a kurar. İKİ öbek de kullanıyor (animatör + stroboskop
+// kapısı), bu yüzden dosya düzeyinde.
+function kartKur(layout) {
+  document.body.innerHTML = '<div id="ve-canvas"></div>'
+    + '<div id="' + layout.id + '" class="ve-node"><div class="ve-node-box">'
+    + '<div class="ve-fead-layout-card">' + fead.veFeadLayoutCardHTML(layout)
+    + '</div></div></div>';
+  return document.querySelector('svg[data-fead-anim]');
+}
 
+describe('Animatör — durum DOM\'da değil, döngü kendini durdurur', () => {
   // ANİMATÖRÜN DURUMU MODÜLDE, TESTLER ARASINDA SIZAR: faz düğüm kimliğinde
   // (`_feadAnimPhase`, örnek paketi her seferinde AYNI kimliği veriyor) ve saat
   // (`_feadAnimLast`) modül değişkeninde. Ölçüldü: sıfırlanmadan koşan iki
@@ -391,28 +393,36 @@ describe('Animatör — durum DOM\'da değil, döngü kendini durdurur', () => {
   // kayış kartta CCW akıyor, kollar CCW dönüyordu; kullanıcı "krank saat
   // yönünde dönmüyor" diye bildirdi. Ölçülen şey işaretin kendisi: kırpılmış
   // bir karede faz tam −mmS·MAX_DT olmalı, +mmS·MAX_DT DEĞİL.
+  // KARE SÜRESİ 60 Hz — 0,1 s DEĞİL. Eski sürüm bir kareyi `VE_FEAD_ANIM_MAX_DT`
+  // (0,1 s) kadar sürdürüyordu; stroboskop kapısı geldikten sonra o kare kanvas
+  // kartında da kırpılıyor (ölçüldü: 59,7 mm/s × 0,1 s = 5,97 mm = 0,585 diş).
+  // Ölçülen ilişki YÖN, ve o gerçek kare süresinde okunmalı.
   test('faz kayışın GERÇEK gidişinde: yürüyüşe göre AZALIR', () => {
     const { layout } = kurBMC();
     const el = kartKur(layout);
+    const dt = 1 / 60;
     fead.veFeadAnimTick(1);
-    fead.veFeadAnimTick(101);               // dt = 0,1 s
+    fead.veFeadAnimTick(1 + dt * 1000);
     const spec = JSON.parse(el.getAttribute('data-fead-anim'));
     const a = el.querySelector('[data-ve="rib"]').getAttribute('d');
-    fead.veFeadAnimApply(el, -spec.mmS * 0.1);
+    fead.veFeadAnimApply(el, -spec.mmS * dt);
     expect(el.querySelector('[data-ve="rib"]').getAttribute('d')).toBe(a);
-    fead.veFeadAnimApply(el, +spec.mmS * 0.1);
+    fead.veFeadAnimApply(el, +spec.mmS * dt);
     expect(el.querySelector('[data-ve="rib"]').getAttribute('d')).not.toBe(a);
   });
 
-  test('uzun duraklamadan sonra kayış FIRLAMAZ (dt sınırlı)', () => {
+  test('uzun duraklamadan sonra kayış FIRLAMAZ — sınır artık ÇEYREK DİŞ', () => {
     const { layout } = kurBMC();
     const el = kartKur(layout);
     fead.veFeadAnimTick(1);
     fead.veFeadAnimTick(60001);             // sekme bir dakika gizli kaldı
-    const spec = JSON.parse(el.getAttribute('data-fead-anim'));
+    const spec = fead._feadAnimSpec(el);
     const a = el.querySelector('[data-ve="rib"]').getAttribute('d');
-    // En fazla VE_FEAD_ANIM_MAX_DT kadar ilerlemiş olmalı — gidiş yönünde
-    fead.veFeadAnimApply(el, -spec.mmS * 0.1);
+    // İKİ SINIR VAR ve dar olan kazanıyor: `VE_FEAD_ANIM_MAX_DT` (0,1 s) tek
+    // başına 5,97 mm = 0,585 diş geçirirdi; stroboskop kapısı onu çeyrek dişe
+    // indiriyor (bkz. aşağıdaki öbek).
+    expect(spec.mmS * 0.1 / spec.step).toBeGreaterThan(0.25);
+    fead.veFeadAnimApply(el, -spec.step * 0.25);
     expect(el.querySelector('[data-ve="rib"]').getAttribute('d')).toBe(a);
   });
 
@@ -457,5 +467,100 @@ describe('Animatör — durum DOM\'da değil, döngü kendini durdurur', () => {
       expect(spec.spin).toBe(build.spin);
       expect(build.spin).toBe(-1);                    // krank saat yönünde
     });
+  });
+});
+
+// ── STROBOSKOP KAPISI — diş sırası kare başına ÇEYREK ADIM ──────────────────
+//
+// Kullanıcı bildirimi (2026-09-09): *"Sadece başlangıç sihirbazında kayış
+// görsel olarak ters yöne dönüyor."* Yön ÖLÇÜLDÜ ve iki yüzeyde de aynıydı
+// (krank saat yönünde, `spin` −1); ayrışan şey HIZDI. Kayışın hareketi gözle
+// periyodik diş sırasından okunuyor ve periyodik bir desen kare başına yarım
+// periyottan fazla ilerlerse en kısa yorumla, yani GERİYE okunur.
+//
+// ÖLÇÜLDÜ (gerçek tarayıcı, AG00976): kanvas kartı 10,20 mm adımda 59,7 mm/s →
+// 60 Hz'de 0,098 diş/kare; sihirbaz önizlemesi 9,63 mm adımda 260 mm/s →
+// **0,45** diş/kare, 30 Hz'de **0,90** (yani 0,10 diş GERİ). Kapı hızda değil
+// animatörde: kare süresi büyüyünce (yavaş makine, dolu sayfa) bir sabit
+// kurtarmazdı.
+describe('Diş sırası kare başına ÇEYREK ADIMDAN fazla ilerlemez', () => {
+  const KARE = 1000 / 60;                       // 60 Hz'de bir kare (ms)
+  const rib = (el) => el.querySelector('[data-ve="rib"]').getAttribute('d');
+
+  const koy = (svg, id) => {
+    document.body.innerHTML = '<div id="ve-canvas"></div>'
+      + '<div id="' + id + '" class="ve-node"><div class="ve-node-box">'
+      + '<div class="ve-fead-layout-card">' + svg + '</div></div></div>';
+    return document.querySelector('svg[data-fead-anim]');
+  };
+  // SİHİRBAZIN 1. ADIMDAKİ ÖNİZLEMESİNİN BİREBİR ÇAĞRISI (cp-fead-wizard.js).
+  // Sayılar oradan kopyalanmadı, çağrı kopyalandı: hız değişirse kapı da onunla
+  // değişsin (bir kopya sabit, sessizce eskirdi).
+  const wizKart = () => {
+    const { build } = kurBMC();
+    return koy(fead.veFeadLayoutSVG(build, 700, 380,
+      { posMode: 'mean', compass: true, pivot: true, arrows: true,
+        nodeId: 've-fw-example', animate: { dispMmS: 260 } }), 've-fw-example');
+  };
+
+  beforeEach(() => {
+    fead._feadForgetResults();
+    document.body.innerHTML = '<div id="ve-canvas"></div>';
+    fead.veFeadAnimTick(0);                     // kart yok → saat sıfırlanır
+  });
+
+  test('sihirbaz hızı belirsizlik sınırında — 60 Hz\'de yarım adıma yakın, 30 Hz\'de üstünde', () => {
+    const spec = fead._feadAnimSpec(wizKart());
+    expect(spec.mmS).toBeGreaterThan(200);
+    expect(spec.mmS * (KARE / 1000) / spec.step).toBeGreaterThan(0.4);       // 60 Hz
+    expect(spec.mmS * (2 * KARE / 1000) / spec.step).toBeGreaterThan(0.5);   // 30 Hz → GERİ
+  });
+
+  test('animatör KIRPIYOR: bir karede tam çeyrek adım ilerliyor, istenen 0,45 değil', () => {
+    const el = wizKart();
+    const spec = fead._feadAnimSpec(el);
+    fead.veFeadAnimTick(1);
+    fead.veFeadAnimTick(1 + KARE);
+    const cizilen = rib(el);
+
+    fead.veFeadAnimApply(el, -spec.step * 0.25);
+    expect(rib(el)).toBe(cizilen);                       // KIRPILDI
+    fead.veFeadAnimApply(el, -spec.mmS * (KARE / 1000));
+    expect(rib(el)).not.toBe(cizilen);                   // kırpılmasaydı burada olurdu
+  });
+
+  test('kırpma YÖNÜ değiştirmez — faz yine kayışın gidişinde azalıyor', () => {
+    const el = wizKart();
+    const spec = fead._feadAnimSpec(el);
+    fead.veFeadAnimTick(1);
+    fead.veFeadAnimTick(1 + KARE);
+    const cizilen = rib(el);
+    fead.veFeadAnimApply(el, +spec.step * 0.25);         // ters yön
+    expect(rib(el)).not.toBe(cizilen);
+  });
+
+  test('uzun duraklamadan sonra da çeyrek adım — MAX_DT tek başına 2,7 adım geçiriyordu', () => {
+    const el = wizKart();
+    const spec = fead._feadAnimSpec(el);
+    // `VE_FEAD_ANIM_MAX_DT` = 0,1 s (cp-fead.js): tek başına 2,7 diş geçirirdi.
+    expect(spec.mmS * 0.1 / spec.step).toBeGreaterThan(2);                   // ölçüldü: 2,7
+    fead.veFeadAnimTick(1);
+    fead.veFeadAnimTick(60001);                          // sekme bir dakika gizli
+    const cizilen = rib(el);
+    fead.veFeadAnimApply(el, -spec.step * 0.25);
+    expect(rib(el)).toBe(cizilen);
+  });
+
+  test('GERÇEK devirdeki kanvas kartı KIRPILMAZ — kapı yalnız sınırda devrede', () => {
+    const { layout } = kurBMC();
+    const el = kartKur(layout);
+    const spec = fead._feadAnimSpec(el);
+    // Ölçüldü: 0,098 diş/kare — kırpma eşiğinin (0,25) çok altında.
+    expect(spec.mmS * (KARE / 1000) / spec.step).toBeLessThan(0.25);
+    fead.veFeadAnimTick(1);
+    fead.veFeadAnimTick(1 + KARE);
+    const cizilen = rib(el);
+    fead.veFeadAnimApply(el, -spec.mmS * (KARE / 1000));
+    expect(rib(el)).toBe(cizilen);                       // hız aynen geçti
   });
 });

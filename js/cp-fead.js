@@ -3686,6 +3686,39 @@ function _feadScnVibLive(spec, st, vib){
 
 var VE_FEAD_ANIM_ATTR = 'data-fead-anim';
 var VE_FEAD_ANIM_MAX_DT = 0.1;          // s — sekme geri gelince kayış fırlamasın
+
+// ── DİŞ KARE BAŞINA ÇEYREK ADIMDAN FAZLA İLERLEYEMEZ ───────────────────────
+//
+// Kullanıcı bildirimi (2026-09-09): *"Sadece başlangıç sihirbazında kayış
+// görsel olarak ters yöne dönüyor."* Ve yalnız orada — çünkü kayışın hareketi
+// gözle DİŞ SIRASINDAN okunuyor ve diş sırası PERİYODİK bir desen. Böyle bir
+// desen kare başına yarım periyottan fazla ilerlerse göz onu en KISA yorumla
+// okur, o da GERİYE gitmektir (araba tekerleği / stroboskop etkisi).
+//
+// ÖLÇÜLDÜ (gerçek tarayıcı, AG00976):
+//
+//   | Yüzey | diş adımı | hız | 60 Hz'de kare başına | 30 Hz'de |
+//   |---|---|---|---|---|
+//   | Kanvas kartı (`comp-12`) | 10,20 mm | 59,7 mm/s | 0,098 diş | 0,20 diş |
+//   | Sihirbaz önizlemesi | 9,63 mm | **260 mm/s** | **0,45 diş** | **0,90 diş** |
+//
+// Sihirbaz 60 Hz'de belirsizlik sınırının (0,5) hemen altında, 30 Hz'de ise
+// ÜSTÜNDE: 0,90 diş ileri = 0,10 diş geri, yani kayış geriye akıyor görünür.
+// Kanvas kartı gerçek kinematikten beslendiği için 0,098'de kalıyor — hatanın
+// yalnız sihirbazda görünmesinin sebebi bu, iki yüzeyin yönü ÖLÇÜLDÜ ve AYNI
+// (ikisinde de krank saat yönünde).
+//
+// KAPI HIZDA DEĞİL ANİMATÖRDE: bir sabiti küçültmek yalnız bugünkü çağıranı
+// ve yalnız 60 Hz'i kurtarırdı; kare süresi büyüyünce (yavaş makine, dolu
+// sayfa, arkada koşan ikinci kart) aynı hata geri gelirdi. Animatör kare
+// başına ilerlemeyi diş adımının ÇEYREĞİYLE sınırlıyor — yön her kare
+// hızında tek anlamlı kalıyor. Bedeli GÖSTERİM hızı: sihirbazın istediği
+// 260 mm/s ekranda ~145 mm/s'e iniyor. Karşılığı doğru yön; zaten okunması
+// istenen şey yön, büyüklük değil (hız kartta ayrıca yazılı).
+//
+// DİŞLER VE KOLLAR AYRIŞMAZ: ikisi de AYNI fazdan sürülüyor, dolayısıyla
+// kırpma ikisini birlikte yavaşlatıyor — kasnakta kayma görünmüyor.
+var VE_FEAD_ANIM_MAX_STEP_FRAC = 0.25;  // kare başına en fazla çeyrek diş adımı
 var _feadAnimPhase = {};                // düğüm kimliği → mm cinsinden faz
 var _feadVibTime = {};                  // düğüm kimliği → ekran saniyesi (titreşim)
 var VE_FEAD_VIB_TIME_WRAP = 1200;       // s — sin() hassasiyeti için sarma
@@ -3832,7 +3865,12 @@ function veFeadAnimTick(now){
     // dolayısıyla kayışın gerçek akışı fazın azalmasıdır. Tek işaret, tek
     // sayaç: dişler de kollar da aynı fazdan sürüldüğü için kasnakta kayma
     // görünmez. Kapı: fead-anim.test.js → "faz kayışın GERÇEK gidişinde".
-    var p = (_feadAnimPhase[key] || 0) - mmS * dt;
+    var adim = mmS * dt;
+    // STROBOSKOP KAPISI (bkz. VE_FEAD_ANIM_MAX_STEP_FRAC): yarım adımı aşan
+    // ilerleme dişleri GERİYE okutur; çeyrek adım pay bırakıyor.
+    var enFazla = (spec.step > 0) ? spec.step * VE_FEAD_ANIM_MAX_STEP_FRAC : Infinity;
+    if(adim > enFazla) adim = enFazla;
+    var p = (_feadAnimPhase[key] || 0) - adim;
     // Sarma çevresi YÜRÜYÜŞÜN çevresi (parça toplamı) — `loop` künyesi değil;
     // ikisi yuvarlamadan ötürü 1e-4 mm ayrışabiliyor (bkz. _feadAnimSpec).
     var L = (spec.walk && spec.walk.l > 0) ? spec.walk.l : spec.loop;
@@ -5367,6 +5405,7 @@ if (typeof module !== 'undefined' && module.exports) {
     // Animasyon: yürüyüş + faz + döngü. Testler dişleri ve kolları doğrudan
     // bu saf fonksiyonlardan üretip ölçüyor (DOM'suz).
     _feadBeltWalk: _feadBeltWalk, _feadTeethPath: _feadTeethPath,
+    _feadAnimSpec: _feadAnimSpec,                     // test: yükün ÇÖZÜLMÜŞ hâli
     _feadSpokePath: _feadSpokePath, _feadToothStep: _feadToothStep,
     _feadXform: _feadXform, _feadAnimLabel: _feadAnimLabel,
     _feadVibDef: _feadVibDef, _feadWalkPath: _feadWalkPath,

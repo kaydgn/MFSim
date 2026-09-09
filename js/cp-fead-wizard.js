@@ -1311,6 +1311,13 @@ function _fwStepKaynak(b){
       // kendi `geom.sense`i taşıyor (yükün içinde), yani ok ve akış aynı
       // kaynaktan.
       //
+      // BU SAYI ANİMATÖR TARAFINDAN KIRPILIYOR ve öyle kalması doğru: 260 mm/s
+      // kare başına 0,45 diş demek (ölçüldü) ve o hızda diş sırası GERİYE
+      // okunuyordu — kullanıcının 2026-09-09'da bildirdiği kusur. Kapı
+      // `VE_FEAD_ANIM_MAX_STEP_FRAC` (cp-fead.js): kare başına en fazla çeyrek
+      // diş. Buradaki sayıyı küçültmek yalnız bu çağıranı ve yalnız 60 Hz'i
+      // kurtarırdı; kırpma her kare hızında çalışıyor.
+      //
       // `prefers-reduced-motion` açıksa animatör HİÇ başlamaz (kendi kapısı
       // var) ve şema donuk, okları ve etiketleriyle okunur kalır.
       try { svg = veFeadLayoutSVG(b, 700, 380,
