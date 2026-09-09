@@ -207,7 +207,7 @@ describe('katalog + çözücü: üç bağımsız yol tek noktada buluşuyor', ()
     const p = veFeadExampleNodes('BMC_FEAD_2026');
     p.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     if (mode) p.nodes.find((n) => n.type === 'fead-belt').data.lengthMode = mode;
-    return veFeadBuildSystem(p.nodes, p.connections);
+    return veFeadBuildSystem(p.nodes);
   };
 
   test('serbest kipin gereken boyu → katalog → sabit kip tabanı', () => {
@@ -290,7 +290,7 @@ describe('katalog + çözücü: üç bağımsız yol tek noktada buluşuyor', ()
       const pack = veFeadExampleNodes('BMC_FEAD_2026');
       pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
       pack.nodes.find((n) => n.type === 'fead-belt').data.effLength = L;
-      return veFeadBeltOptions(veFeadBuildSystem(pack.nodes, pack.connections));
+      return veFeadBeltOptions(veFeadBuildSystem(pack.nodes));
     };
     const a1 = kur(1715), a2 = kur(1600);
     expect(a1.targetMm).toBeCloseTo(a2.targetMm, 9);

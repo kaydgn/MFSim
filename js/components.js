@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-example','fead-layout','fead-report','fead-coordlink','fead-spin','fead-wizard','str-geometry','str-material','str-mesh','str-bc','str-results','arac-performans','mount-analysis','fead-analysis','structural-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-example','fead-layout','fead-table','fead-report','fead-coordlink','fead-spin','fead-wizard','str-geometry','str-material','str-mesh','str-bc','str-results','arac-performans','mount-analysis','fead-analysis','structural-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -595,14 +595,23 @@ var componentDefs = {
   // kapsamı 'fead-analysis'; bkz. veShowAllSidebarComponents). Panel/aç-kapa
   // mantığı js/cp-fead.js içindedir.
   //
-  // BAĞLANTI = KAYIŞ YOLU. Diğer iki modülde bağlantı ya güç akışı (Araç
-  // Performans) ya da salt görsel (Takoz) demekti; burada üçüncü bir anlamı
-  // var ve fiziksel: bağlantı, serpantin kayışın kasnaktan kasnağa geçtiği
-  // SIRAdır. Krank Kasnağı'nın çıkışından başlar, kasnakları dolaşır ve
-  // Krank'ın girişine döner — yani kapalı bir çevrimdir. Bu yüzden HER kasnak
-  // 1 giriş + 1 çıkış taşır (kayış gelir, kayış gider); "kaynak" ile "yük"
-  // ayrımı porttan değil, tipten okunur (isFeadDriver / isFeadAccessory).
-  // Sarım açısı ve kayış boyu bu sıradan + kasnak konumlarından türetilir.
+  // KASNAKLAR BAĞLANMAZ — SIRA TABLODA (2026-09-09, kullanıcı isteği).
+  // Kayış yolu eskiden kanvasta tel çekilerek kuruluyordu: her kasnak 1 giriş
+  // + 1 çıkış taşır, zincir krank çıkışından başlar, krank girişine dönerdi.
+  // Artık kasnaklar 0/0 portlu ve serpantin sırası Kayış Tablosu'nun satır
+  // sırası (node.data.beltIndex; bkz. js/fead-model.js veFeadBeltOrder).
+  //
+  // NEDEN: sıra bir GRAF DEĞİL, bir LİSTE. Kapalı tek çevrimde telin
+  // taşıyabildiği tek bilgi zaten sıraydı, ama tel onun yanında kurulamayan
+  // durumlar da üretiyordu — çatal, kopuk kasnak, kapanmayan çevrim — ve
+  // üçünün de tek çaresi kullanıcının teli doğru çekmesiydi. Listede bu
+  // hataların hiçbiri KURULAMIYOR.
+  //
+  // Kasnak kutuları kanvasta DURUYOR: konum kayış düzlemidir (1 px = 1 mm) ve
+  // kutuya tıklamak detay hesapların panelini açar. Kalkan tel, kutu değil.
+  //
+  // "kaynak" ile "yük" ayrımı porttan değil tipten okunur (isFeadDriver /
+  // isFeadAccessory). Sarım açısı ve kayış boyu sıradan + konumlardan türer.
   //
   // Renk dili: KAYIŞ her yerde amber (--accent-warning), kasnak kanalı mavi
   // (--accent-primary), gövdeler nötr gri. Böylece 38 px'lik sembolde bile
@@ -623,37 +632,37 @@ var componentDefs = {
     // halka = damper kauçuğu (kasnağı sıradan bir kasnaktan ayıran işaret),
     // göbek flanşı + 4 cıvata.
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="50" cy="50" r="31" fill="none" stroke="var(--text-muted, #888)" stroke-width="2.5"/><circle cx="50" cy="50" r="25" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3" stroke-dasharray="5 4"/><circle cx="50" cy="50" r="17" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3.5"/><circle cx="50" cy="38.5" r="2.6" fill="var(--text-muted, #888)"/><circle cx="61.5" cy="50" r="2.6" fill="var(--text-muted, #888)"/><circle cx="50" cy="61.5" r="2.6" fill="var(--text-muted, #888)"/><circle cx="38.5" cy="50" r="2.6" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="6" fill="var(--text-secondary, #666)"/></svg>',
-    inputs: 1, outputs: 1, isFeadPulley: true, isFeadDriver: true, feadContact: 'grooved',
+    inputs: 0, outputs: 0, isFeadPulley: true, isFeadDriver: true, feadContact: 'grooved',
     defaultWidth: 72, defaultHeight: 66
   },
   'fead-alternator': {
     name: 'Alternatör',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #3b82f6)"/><line x1="36" y1="50" x2="41" y2="50" stroke="var(--text-muted, #888)" stroke-width="5"/><circle cx="64" cy="50" r="24" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><path d="M66.6 32.4 L55 53.2 L62.7 53.2 L59.5 64.1 L71.7 46.2 L64 46.2 Z" fill="var(--text-muted, #888)"/></svg>',
-    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
+    inputs: 0, outputs: 0, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
     defaultWidth: 62, defaultHeight: 58
   },
   'fead-ac': {
     name: 'Klima Kompresörü',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #3b82f6)"/><line x1="36" y1="50" x2="41" y2="50" stroke="var(--text-muted, #888)" stroke-width="5"/><circle cx="64" cy="50" r="24" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><g stroke="var(--text-muted, #888)" stroke-width="4" stroke-linecap="round"><line x1="64" y1="32" x2="64" y2="68"/><line x1="48.4" y1="41" x2="79.6" y2="59"/><line x1="79.6" y1="41" x2="48.4" y2="59"/></g></svg>',
-    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
+    inputs: 0, outputs: 0, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
     defaultWidth: 62, defaultHeight: 58
   },
   'fead-waterpump': {
     name: 'Su Pompası',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #3b82f6)"/><line x1="36" y1="50" x2="40" y2="50" stroke="var(--text-muted, #888)" stroke-width="5"/><circle cx="63" cy="50" r="24" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><g stroke="var(--text-muted, #888)" stroke-width="3.5" stroke-linecap="round"><line x1="70" y1="50" x2="80" y2="50"/><line x1="66.5" y1="56.1" x2="71.5" y2="64.7"/><line x1="59.5" y1="56.1" x2="54.5" y2="64.7"/><line x1="56" y1="50" x2="46" y2="50"/><line x1="59.5" y1="43.9" x2="54.5" y2="35.3"/><line x1="66.5" y1="43.9" x2="71.5" y2="35.3"/></g><circle cx="63" cy="50" r="5" fill="var(--text-secondary, #666)"/><rect x="57" y="73" width="12" height="15" rx="2" fill="var(--text-muted, #888)"/></svg>',
-    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
+    inputs: 0, outputs: 0, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
     defaultWidth: 62, defaultHeight: 58
   },
   'fead-ps': {
     name: 'Direksiyon Pompası',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #3b82f6)"/><line x1="36" y1="50" x2="41" y2="50" stroke="var(--text-muted, #888)" stroke-width="5"/><circle cx="64" cy="50" r="24" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><circle cx="64" cy="50" r="14" fill="none" stroke="var(--text-muted, #888)" stroke-width="4"/><g stroke="var(--text-muted, #888)" stroke-width="3.5" stroke-linecap="round"><line x1="64" y1="45.5" x2="64" y2="36"/><line x1="60.2" y1="52.5" x2="52" y2="57"/><line x1="67.8" y1="52.5" x2="76" y2="57"/></g><circle cx="64" cy="50" r="4.5" fill="var(--text-muted, #888)"/></svg>',
-    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
+    inputs: 0, outputs: 0, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
     defaultWidth: 62, defaultHeight: 58
   },
   'fead-aircomp': {
     name: 'Hava Kompresörü',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="19" cy="52" r="13" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="19" cy="52" r="3.6" fill="var(--accent-primary, #3b82f6)"/><rect x="38" y="30" width="46" height="46" rx="7" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><circle cx="58" cy="53" r="12" fill="none" stroke="var(--text-muted, #888)" stroke-width="4"/><line x1="58" y1="53" x2="66" y2="45" stroke="var(--text-muted, #888)" stroke-width="3.5" stroke-linecap="round"/><rect x="52" y="14" width="14" height="16" rx="2" fill="var(--text-muted, #888)"/><rect x="84" y="45" width="12" height="9" rx="2" fill="var(--text-muted, #888)"/></svg>',
-    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
+    inputs: 0, outputs: 0, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
     defaultWidth: 62, defaultHeight: 58
   },
   'fead-fan': {
@@ -661,14 +670,14 @@ var componentDefs = {
     // Kesikli dış halka = viskoz kavrama gövdesi; dört kanat tek path'in 90°
     // döndürülmüş kopyasıdır (geometri tek yerde durur).
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="36" fill="none" stroke="var(--text-muted, #888)" stroke-width="2.5" stroke-dasharray="5 4"/><g fill="var(--accent-primary, #3b82f6)" opacity="0.85"><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z"/><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z" transform="rotate(90 50 50)"/><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z" transform="rotate(180 50 50)"/><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z" transform="rotate(270 50 50)"/></g><circle cx="50" cy="50" r="9" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="50" cy="50" r="3" fill="var(--text-secondary, #666)"/></svg>',
-    inputs: 1, outputs: 1, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
+    inputs: 0, outputs: 0, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
     defaultWidth: 62, defaultHeight: 58
   },
   'fead-idler': {
     name: 'Avara Kasnak',
     // Yük çekmez, kayış yolunu yönlendirir: düz/çıplak kasnak + rulman.
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="32" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="50" cy="50" r="24" fill="none" stroke="var(--text-muted, #888)" stroke-width="2.5"/><circle cx="50" cy="31.5" r="3" fill="var(--text-muted, #888)"/><circle cx="68.5" cy="50" r="3" fill="var(--text-muted, #888)"/><circle cx="50" cy="68.5" r="3" fill="var(--text-muted, #888)"/><circle cx="31.5" cy="50" r="3" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="13" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="50" cy="50" r="4" fill="var(--text-secondary, #666)"/></svg>',
-    inputs: 1, outputs: 1, isFeadPulley: true, isFeadIdler: true, feadContact: 'back',
+    inputs: 0, outputs: 0, isFeadPulley: true, isFeadIdler: true, feadContact: 'back',
     defaultWidth: 54, defaultHeight: 50
   },
   'fead-tensioner': {
@@ -676,7 +685,7 @@ var componentDefs = {
     // Pivot + kol + kasnak; amber yay oku kolun salınım yönünü söyler
     // (otomatik gergi). Avara ile karışmasın diye kol ZORUNLU işarettir.
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><line x1="64" y1="36" x2="24" y2="76" stroke="var(--text-secondary, #666)" stroke-width="8" stroke-linecap="round"/><circle cx="24" cy="76" r="8" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="24" cy="76" r="2.6" fill="var(--text-secondary, #666)"/><circle cx="64" cy="36" r="21" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="64" cy="36" r="6" fill="var(--accent-primary, #3b82f6)"/><path d="M41 89 A 44 44 0 0 0 73 79" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3.5" stroke-linecap="round"/><polygon points="72,72 84,79 71,85" fill="var(--accent-warning, #f59e0b)"/></svg>',
-    inputs: 1, outputs: 1, isFeadPulley: true, isFeadTensioner: true, feadContact: 'back',
+    inputs: 0, outputs: 0, isFeadPulley: true, isFeadTensioner: true, feadContact: 'back',
     defaultWidth: 58, defaultHeight: 54
   },
   // Kayış Özellikleri — kayışın KENDİSİ bir kasnak değildir: konumu yoktur,
@@ -708,6 +717,34 @@ var componentDefs = {
     inputs: 0, outputs: 0, isFeadLayout: true
     // Ölçü BURADA YOK: Kayış Yolu düğümü kanvasta CANLI ŞEMA kartıdır ve
     // ölçüsü tek yerden gelir (VE_FEAD_LAYOUT_W/H → aşağıdaki döngü).
+  },
+  // ── KAYIŞ TABLOSU — kasnakların TEK veri giriş yüzeyi ─────────────────────
+  //
+  // Kullanıcı isteği (2026-09-09): *"Topolojiye çektiğimiz bileşenlere tıklayıp
+  // özelliklerini değiştirmek, değerlerini girmek yerine böyle bir tablomuz
+  // olacak, oradan değerleri gireceğiz. Gerekirse de tıklayarak bileşen
+  // penceresini açarak detay hesaplamalara bakacağız."*
+  //
+  // Tablo, mühendisin kendi hesap sayfasının biçimidir: satır = kasnak, sıra =
+  // kayış yolu, sütunlar Gates raporunun "Layout Data" tablosunun sütunları.
+  // GİRDİ ile TÜRETİLEN aynı satırda yan yana durur ve bu bilerek: bir
+  // koordinatı değiştirince sarımın ve span'in ne olduğu aynı bakışta görülür.
+  //
+  // SIRAYI TABLO TAŞIMAZ, KASNAK TAŞIR (node.data.beltIndex). Bu düğüm bir
+  // GÖRÜNÜM: silinse de kayış yolu durur, ikinci kopyası olsa da aynı sırayı
+  // gösterir. Sırayı burada bir liste olarak tutmak, kasnak silindiğinde ya da
+  // düğüm hiç yokken listeyi kasnaklardan ayrı tutmak demekti.
+  //
+  // maxInstances:1 — iki kopya aynı şeyi gösterir, yani ikincisi yalnız yer
+  // kaplar ve "hangisinden gireceğim" sorusu üretir.
+  'fead-table': {
+    name: 'Kayış Tablosu',
+    // Amber başlık şeridi (kayış) + mavi veri satırları (kasnak): renk dili
+    // FEAD'in geri kalanıyla aynı.
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="10" y="16" width="80" height="68" rx="6" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><path d="M10 34 H90" stroke="var(--accent-warning, #f59e0b)" stroke-width="7"/><g stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linecap="round"><line x1="20" y1="48" x2="80" y2="48"/><line x1="20" y1="62" x2="80" y2="62"/><line x1="20" y1="76" x2="80" y2="76"/></g><line x1="44" y1="34" x2="44" y2="84" stroke="var(--text-muted, #888)" stroke-width="3"/></svg>',
+    inputs: 0, outputs: 0, isFeadTable: true, maxInstances: 1
+    // Ölçü BURADA YOK: kart ölçüsü tek yerden gelir
+    // (VE_FEAD_TABLE_W/H → aşağıdaki döngü), Kayış Yolu kartındaki kuralın aynısı.
   },
   // ── KONUM BAĞI — kanvas konumu ile mm koordinatı arasındaki bağ ────────────
   //
@@ -803,15 +840,9 @@ function defaultPortSide(node, portType){
   var def = (node && node.type && typeof componentDefs!=='undefined') ? (componentDefs[node.type]||{}) : {};
   var lay = def.portLayout && def.portLayout[isInput ? 'inputs' : 'outputs'];
   if(lay && lay[idx]) return lay[idx];
-  // FEAD KAYIŞ BAĞLANTISI: ucu KOMŞUYA BAKAN kenardan çıkar (bkz. cp-fead.js
-  // veFeadPortSideFor). Klasik kural (giriş solda / çıkış sağda) burada
-  // yanlıştı: serpantin kayış sağdan sola dönerken tel düğümün ÜSTÜNDEN geri
-  // geçmek zorunda kalıyordu. VARSAYILAN olduğu için kullanıcının elle taşıdığı
-  // port (node.data.portPositions) her zaman kazanmaya devam eder.
-  if(typeof veFeadPortSideFor === 'function'){
-    var fs = veFeadPortSideFor(node, portType);
-    if(fs) return fs;
-  }
+  // FEAD'in "kenar komşuya bakar" kancası KALKTI (2026-09-09): kasnaklar artık
+  // 0/0 portlu, aralarında tel yok. Kanca kalsaydı hiç çağrılmayan bir dal
+  // olurdu — ve bir sonraki oturum onu "kullanılıyor" sanırdı.
   if(node && node.mirrored) return isInput ? 'right' : 'left';
   return isInput ? 'left' : 'right';
 }
@@ -916,6 +947,16 @@ var VE_FEAD_LAYOUT_H = 500;
 // HER proje eski küçük kartla açılır, yeni ölçü yalnız yeni kartlarda görünür
 // ve aynı sürümde iki farklı kart ölçüsü dolaşırdı.
 var VE_FEAD_LAYOUT_LEGACY = [ { w: 60, h: 56 }, { w: 420, h: 340 } ];
+
+// KAYIŞ TABLOSU ÖLÇÜSÜ. Genişlik dokuz sütundan TÜRER, yuvarlak bir sayı
+// değil: sıra(44) + ad(150) + X(64) + Y(64) + efektif çap(84) + D(64) +
+// yön(76) + sarım(76) + span(88) = 710, artı kart kenarı. Dar tutulsaydı
+// sütunlar kısalır ve "Efektif Çap" ile "Span Uzunluğu" başlıkları iki satıra
+// düşerdi — tablonun okunurluğu tam da başlık satırında kırılır.
+// Yükseklik altı kasnak + iki künye şeridi + sütun başlığı için; daha uzun
+// listede kartın İÇİ kayar (kart büyümez, kanvas yerleşimi bozulmasın).
+var VE_FEAD_TABLE_W = 726;
+var VE_FEAD_TABLE_H = 430;
 // Geriye dönük adlar (dışarıdan okuyan bir yer kalırsa bozulmasın).
 var VE_FEAD_LAYOUT_LEGACY_W = VE_FEAD_LAYOUT_LEGACY[0].w;
 var VE_FEAD_LAYOUT_LEGACY_H = VE_FEAD_LAYOUT_LEGACY[0].h;
@@ -954,6 +995,10 @@ if(typeof componentDefs !== 'undefined') {
     if(componentDefs[t] && componentDefs[t].isFeadLayout) {
       componentDefs[t].defaultWidth = VE_FEAD_LAYOUT_W;
       componentDefs[t].defaultHeight = VE_FEAD_LAYOUT_H;
+    }
+    if(componentDefs[t] && componentDefs[t].isFeadTable) {
+      componentDefs[t].defaultWidth = VE_FEAD_TABLE_W;
+      componentDefs[t].defaultHeight = VE_FEAD_TABLE_H;
     }
     if(componentDefs[t] && componentDefs[t].isSubsystem) {
       componentDefs[t].defaultWidth = VE_MODULE_CARD_W;

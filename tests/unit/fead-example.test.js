@@ -56,7 +56,7 @@ function kur(mut) {
   const pack = veFeadExampleNodes('BMC_FEAD_2026');
   pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
   if (mut) mut(pack.nodes);
-  const build = veFeadBuildSystem(pack.nodes, pack.connections);
+  const build = veFeadBuildSystem(pack.nodes);
   return { pack, build };
 }
 const tipOf = (nodes, tip) => nodes.find((n) => n.type === tip).data;
@@ -162,7 +162,7 @@ describe('sayfanın dört çıpası', () => {
       const pack = veFeadExampleNodes('BMC_FEAD_2026');
       pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
       if (mut) mut(pack.nodes.find((n) => n.type === 'fead-belt').data);
-      return veFeadBuildSystem(pack.nodes, pack.connections);
+      return veFeadBuildSystem(pack.nodes);
     };
     const bugun = kur();
     const karisik = kur((bd) => {
@@ -210,7 +210,7 @@ describe('montaj merkezi serbest açı DEĞİLDİR', () => {
     const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
     delete ten.data.meanLoad;
     pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    const build = veFeadBuildSystem(pack.nodes, pack.connections);
+    const build = veFeadBuildSystem(pack.nodes);
     expect(build.ok).toBe(false);
     expect(build.errors.join(' ')).toMatch(/çalışma momenti|Spring Mean Load/i);
   });
@@ -329,20 +329,18 @@ describe('örnek kaydı ↔ tanım tutarlılığı', () => {
     });
   });
 
-  test('bağlantılar KAPALI ÇEVRİM kuruyor', () => {
+  // KABLO KALKTI (2026-09-09) — kapı SIRAYA taşındı. Eskiden "her kasnağın tam
+  // bir girişi ve tam bir çıkışı var" diye ölçülen şey, artık "numaralar 1..N
+  // permütasyonu": ikisi de aynı hatayı yakalıyor (öksüz kasnak, çift bağ),
+  // ama liste hâlinde bir kısmı KURULAMIYOR bile.
+  test('kayış sırası 1..N permütasyonu — öksüz kasnak da çift numara da yok', () => {
     veFeadExampleKeys().forEach((k) => {
       const pack = veFeadExampleNodes(k);
       const kasnakSay = veFeadExampleOf(k).pulleys.length;
-      expect(pack.connections.length).toBe(kasnakSay);
-      // her kasnağın tam bir çıkışı ve tam bir girişi var
-      const cikis = {}, giris = {};
-      pack.connections.forEach((c) => {
-        cikis[c.from] = (cikis[c.from] || 0) + 1;
-        giris[c.to] = (giris[c.to] || 0) + 1;
-      });
-      Object.keys(cikis).forEach((id) => expect(cikis[id]).toBe(1));
-      Object.keys(giris).forEach((id) => expect(giris[id]).toBe(1));
-      expect(Object.keys(cikis).length).toBe(kasnakSay);
+      expect(pack.connections).toEqual([]);
+      const idx = pack.nodes.filter((n) => n.data && n.data.beltIndex !== undefined)
+        .map((n) => n.data.beltIndex).sort((a, b) => a - b);
+      expect(idx).toEqual(Array.from({ length: kasnakSay }, (_, i) => i + 1));
     });
   });
 
@@ -485,7 +483,7 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
     const pack = veFeadExampleNodes('BMC_FEAD_2026');
     pack.nodes.find((n) => n.type === 'fead-solver').data.designTensionN = 400;
     pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-    const build = veFeadBuildSystem(pack.nodes, pack.connections);
+    const build = veFeadBuildSystem(pack.nodes);
     expect(build.ok).toBe(true);
     expect(build.sys.designTensionN).toBeCloseTo(525.55, 1); // 400 DEĞİL
     expect(build.warnings).toEqual([]);                     // uyuşmazlık diye bir şey kalmadı
@@ -500,7 +498,7 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
       const sv = pack.nodes.find((n) => n.type === 'fead-solver');
       if (dt != null) sv.data.designTensionN = dt;
       pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
-      const b = veFeadBuildSystem(pack.nodes, pack.connections);
+      const b = veFeadBuildSystem(pack.nodes);
       const R = veFeadAnalyze(b, { rows: veFeadDutyRows(sv), cylinders: 6 });
       return R.analysis.duty[0].perPulley.map((p) => p.exitTensionN);
     };
@@ -522,7 +520,7 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
       const pack = veFeadExampleNodes('BMC_FEAD_2026');
       pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
       if (L !== undefined) pack.nodes.find((n) => n.type === 'fead-belt').data.effLength = L;
-      return veFeadBuildSystem(pack.nodes, pack.connections);
+      return veFeadBuildSystem(pack.nodes);
     };
     const taban = kur();
     [1000, 1500, 1715, 2400].forEach((L) => {
@@ -543,7 +541,7 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
     const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
     ten.data.preload = 0; ten.data.kArm = 0; delete ten.data.meanLoad;
 
-    const b = veFeadBuildSystem(pack.nodes, pack.connections);
+    const b = veFeadBuildSystem(pack.nodes);
     expect(b.ok).toBe(false);
     expect(b.errors.join(' ')).toMatch(/Spring Mean Load|yay katsayısı/i);
     expect(veFeadTranslateError('FEADCore: designTensionN veya slackN gerekli'))

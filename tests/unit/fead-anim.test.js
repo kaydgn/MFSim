@@ -46,7 +46,7 @@ function kurBMC() {
   pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
   global.nodes = pack.nodes;
   global.connections = pack.connections;
-  const build = veFeadBuildSystem(pack.nodes, pack.connections);
+  const build = veFeadBuildSystem(pack.nodes);
   const layout = pack.nodes.find((n) => n.type === 'fead-layout');
   return { pack, build, layout };
 }
@@ -448,7 +448,7 @@ describe('Animatör — durum DOM\'da değil, döngü kendini durdurur', () => {
       const pack = veFeadExampleNodes(key);
       pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
       global.nodes = pack.nodes; global.connections = pack.connections;
-      const build = veFeadBuildSystem(pack.nodes, pack.connections);
+      const build = veFeadBuildSystem(pack.nodes);
       const layout = pack.nodes.find((n) => n.type === 'fead-layout');
       const el = kartKur(layout);
       const spec = JSON.parse(el.getAttribute('data-fead-anim'));

@@ -73,7 +73,7 @@ function kur(opts) {
 }
 
 const coz = (k) => {
-  const b = veFeadBuildSystem(k.list, k.conns);
+  const b = veFeadBuildSystem(k.list);
   if (!b.ok) return { ok: false, build: b, err: (b.errors || [])[0] };
   const st = F.tensionerState(b.sys, b.relDeg);
   return { ok: true, build: b, rel: b.relDeg, L: b.beltLengthMm,
@@ -272,15 +272,21 @@ describe('KENETLEME — hedef erişilemezse istisna değil, sınır', () => {
 });
 
 describe('HOŞGÖRÜLÜ GEOMETRİ — çözülemeyen küme kalmadı', () => {
+  // BOZUK SIRA ARTIK TABLODA YAZILIYOR (kablo 2026-09-09'da kalktı). `ord`
+  // kayışın gidiş sırası — indis tablo sırasını taşıdığı için çevrilerek
+  // yazılıyor; kurulan çekirdek listesi kablo dönemindekiyle BİREBİR aynı,
+  // dolayısıyla ölçülen ihlaller de aynı.
   const bozukSira = () => {
-    const p = pack();
+    const list = P(pack().nodes);
     const ord = ['ex-SRC', 'ex-A_C', 'ex-IDR1', 'ex-IDR2', 'ex-ALT', 'ex-TEN'];
-    return { list: P(p.nodes),
-             conns: ord.map((k, i) => ({ from: k, to: ord[(i + 1) % ord.length] })) };
+    const byId = {};
+    list.forEach((n) => { byId[n.id] = n; });
+    veFeadRouteFlip(ord.map((k) => byId[k])).forEach((n, i) => { n.data.beltIndex = i + 1; });
+    return { list };
   };
 
   test('kapanmayan çevrim ÇÖZÜLÜYOR ama geçersiz olduğu YAZILI', () => {
-    const b = veFeadBuildSystem(bozukSira().list, bozukSira().conns);
+    const b = veFeadBuildSystem(bozukSira().list);
     expect(b.ok).toBe(true);
     expect(b.geomValid).toBe(false);
     expect(b.warnings.join(' ')).toMatch(/KAPANMIYOR/);
@@ -289,7 +295,7 @@ describe('HOŞGÖRÜLÜ GEOMETRİ — çözülemeyen küme kalmadı', () => {
   });
 
   test('kasnağı kesen kayış da ihlal olarak taşınıyor', () => {
-    const b = veFeadBuildSystem(bozukSira().list, bozukSira().conns);
+    const b = veFeadBuildSystem(bozukSira().list);
     const g = F.geometryAt(b.sys, b.relDeg);
     expect(g.violations.map((v) => v.type)).toContain('clearance');
     expect(veFeadViolationText(g.violations.find((v) => v.type === 'clearance')))
@@ -299,7 +305,7 @@ describe('HOŞGÖRÜLÜ GEOMETRİ — çözülemeyen küme kalmadı', () => {
   // ÇEKİRDEĞİN VARSAYILANI DEĞİŞMEDİ. 2095 referans değerli doğrulama kapısı
   // hoşgörüsüz yolu koşuyor; orada ihlal hâlâ İSTİSNA.
   test('hoşgörü VARSAYILAN KAPALI — çekirdek yine atıyor', () => {
-    const b = veFeadBuildSystem(bozukSira().list, bozukSira().conns);
+    const b = veFeadBuildSystem(bozukSira().list);
     const cozulmus = b.sys.pulleys.map((p, i) => ({
       name: p.name, c: F.geometryAt(b.sys, b.relDeg).pulleys[i].c,
       rPitch: p.rPitch, rEff: p.rEff, contact: p.contact }));
@@ -343,8 +349,7 @@ describe('feasibleRelMax — hoşgörü ile ARASINDAKİ sessiz bağ', () => {
   test('yol baştan geçersizse yine bir aralık veriyor (model cevapsız kalmıyor)', () => {
     const p = pack();
     const ord = ['ex-SRC', 'ex-A_C', 'ex-IDR1', 'ex-IDR2', 'ex-ALT', 'ex-TEN'];
-    const b = veFeadBuildSystem(P(p.nodes),
-      ord.map((k, i) => ({ from: k, to: ord[(i + 1) % ord.length] })));
+    const b = veFeadBuildSystem(P(p.nodes));
     expect(b.ok).toBe(true);
     expect(F.feasibleRelMax(b.sys)).toBeGreaterThan(0);
   });
@@ -360,7 +365,7 @@ describe('DEJENERELİK ÖLÇÜTÜ take-up, sarım DEĞİL', () => {
     list.find((n) => n.id === 'ex-SRC').data.contact = 'back';
     const belt = list.find((n) => n.type === 'fead-belt');
     belt.data.lengthMode = 'fixed';
-    const b = veFeadBuildSystem(list, p.connections);
+    const b = veFeadBuildSystem(list);
     expect(b.ok).toBe(true);
     const sys = b.sys;
     const hi = F.feasibleRelMax(sys);
@@ -384,8 +389,7 @@ describe('_geomOpt sistemin ÖMRÜNÜN BAŞINDA kurulur', () => {
     const list = P(p.nodes);
     delete list.find((n) => n.id === 'ex-TEN').data.sense;
     const ord = ['ex-SRC', 'ex-A_C', 'ex-IDR1', 'ex-IDR2', 'ex-ALT', 'ex-TEN'];
-    const b = veFeadBuildSystem(list,
-      ord.map((k, i) => ({ from: k, to: ord[(i + 1) % ord.length] })));
+    const b = veFeadBuildSystem(list);
     expect(b.ok).toBe(true);                 // kurulmadan atmıyor
     expect(b.sys._geomOpt).toEqual({ tolerant: true });
   });

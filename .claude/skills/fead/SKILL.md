@@ -43,22 +43,34 @@ olurdu.
 5. **Konum Bağı (`fead-coordlink`) bunu kapatabilir.** Düğüm YOKSA bağ AÇIK —
    geriye dönük uyum tam bu satırda. Bağımsızlık SİMETRİK: hem kanvas→mm hem
    mm→kanvas kapatılır. Kapı SAF dönüşüm fonksiyonlarının İÇİNDE değildir.
-6. **Sürücülük ROL** (`node.data.driver`), tip değil. **Temas tarafı
+6. **KASNAKLAR BAĞLANMAZ — SIRA TABLODA** (2026-09-09). Kayış yolu bir graf
+   değil bir liste: sıra `node.data.beltIndex` alanında, Kayış Tablosu'nun
+   satır sırası. `beltIndex` **Gates TABLO sırasını** taşır (kayışın gidişinin
+   TERSİ) ve `build.order`'ın kendisidir — çevirme yok; gidiş sırası isteyen
+   `veFeadRouteFlip`'ten geçer. **Sıra SÜRÜCÜDEN başlar** (`veFeadBeltOrder`
+   listeyi döndürür): "krank sabit, kalanı ters" kuralı, gergi konumu hükmü ve
+   17 Gates raporunun tamamı buna dayanıyor. Kapı: `fead-table.test.js`,
+   `fead-model.test.js` → *"kayış sırası — indisten, sürücüden başlayarak"*,
+   `fead-wire-order-migration.test.js` (şema 3 → 4).
+7. **Sürücülük ROL** (`node.data.driver`), tip değil. **Temas tarafı
    (grooved/back) gerçek alandır** — ters verilirse çekirdek hata VERMEZ,
    geçerli ama başka bir güzergâh çözer. **Çap = DIŞ ÇAP (`od`)**.
-7. **Panel ile kanvas AYNI alanı okur.** Kol konumu, kayış kipi, yön gülü,
+8. **Panel ile kanvas AYNI alanı okur.** Kol konumu, kayış kipi, yön gülü,
    konum bağı, dönüş yönü — ikinci bir ayar tutmak iki yüzeyin sessizce
    ayrışması demektir.
-8. **Geçerlilik sınırı sonucun İÇİNDE taşınır.** Tepe yük `KALİBRE DEĞİL`
+9. **Geçerlilik sınırı sonucun İÇİNDE taşınır.** Tepe yük `KALİBRE DEĞİL`
    damgasıyla, B10 çap penceresiyle, türetilen boy kökeniyle basılır. Sayı
    gizlenmez; sınırı yanında yazılır.
-9. **Tazeleme tek noktadan.** Kayış Yolu kartı `saveState()`'ten; port DOM'u ve
-   kart imzası `updateAllConnections`'tan. Yirmi ayrı yere çağrı serpmek
-   birinin unutulması demektir.
-10. **Negatif kapı: `veFeadApplyBadge` kasnak kutusuna kesikli çember ÇİZMEZ.**
+10. **Tazeleme tek noktadan.** İki kart (Kayış Yolu şeması + Kayış Tablosu)
+    HEP BİRLİKTE, `veFeadRefreshCards`'tan; port DOM'u ve kart imzası
+    `updateAllConnections`'tan. Kart başına ayrı çağrı, altı düzenleme
+    yolundan birinde birinin unutulması demek — ve fark sessiz: iki kart kendi
+    başına tutarlı görünür, yalnız biri bir düzenleme geride kalır. Kaynak
+    kapısı `fead-table.test.js` içinde.
+11. **Negatif kapı: `veFeadApplyBadge` kasnak kutusuna kesikli çember ÇİZMEZ.**
     Gerçek çap hayaleti kullanıcı isteğiyle kaldırıldı; kapı sınıf adına değil
     biçime de bakıyor (`border-radius:50%` + `dashed`).
-11. **Katalog bir KISIT değil, bir ÖNERİ.** Ara boy ısmarlanabildiği için panel
+12. **Katalog bir KISIT değil, bir ÖNERİ.** Ara boy ısmarlanabildiği için panel
     elle girişi engellemez.
 12. Oturumluk sonuç globali **`window.veFeadResults` proje değişince
     temizlenmeli** (`_feadForgetResults`) — yoksa yeni projede önceki projenin

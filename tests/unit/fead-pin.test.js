@@ -61,7 +61,7 @@ function kanvasKur(opt) {
     if (o.part !== undefined) { if (o.part) td.tenPart = o.part; else delete td.tenPart; }
     else td.tenPart = 'E9843';
   });
-  return { pack, ten, build: M.veFeadBuildSystem(pack.nodes, pack.connections) };
+  return { pack, ten, build: M.veFeadBuildSystem(pack.nodes) };
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -225,7 +225,7 @@ describe('uçtan uca — kol açısı → pim', () => {
     // Kol açısı bir GİRDİ; pim planı ondan çıkıyor ve açı ne olursa olsun
     // aynı bağıntıyı izliyor.
     const { pack } = ornek((td) => { td.armMeanDeg = 344; td.tenPart = 'E9843'; });
-    const b = M.veFeadBuildSystem(pack.nodes, pack.connections);
+    const b = M.veFeadBuildSystem(pack.nodes);
     expect(b.armAbsDeg).toBe(344);
     expect(b.pin.ok).toBe(true);
     expect(b.pin.angleDeg).toBeCloseTo(231.00, 6);   // 344 − 113

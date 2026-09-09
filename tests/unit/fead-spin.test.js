@@ -83,8 +83,8 @@ function kur(key, ters) {
   });
   const cs = pack.connections.map((c) => Object.assign({}, c));
   global.nodes = ns; global.connections = cs;
-  if (ters) M.veFeadReverseRoute(ns, cs);
-  return { ns, cs, b: M.veFeadBuildSystem(ns, cs) };
+  if (ters) M.veFeadReverseRoute(ns);
+  return { ns, cs, b: M.veFeadBuildSystem(ns) };
 }
 
 const dutyRows = (ns) => (ns.find((n) => n.type === 'fead-solver').data.duty) || [];
@@ -139,7 +139,7 @@ describe('yön AVARA MERKEZİNDEN okunur', () => {
   const kanvas = (key) => {
     const s = kur(key, false);
     const ten = s.ns.find((n) => n.type === 'fead-tensioner');
-    return { ns: s.ns, cs: s.cs, ten, b: M.veFeadBuildSystem(s.ns, s.cs) };
+    return { ns: s.ns, cs: s.cs, ten, b: M.veFeadBuildSystem(s.ns) };
   };
 
   test('AG00976 çözülüyor ve yön okunuyor', () => {
@@ -221,52 +221,53 @@ describe('yön AVARA MERKEZİNDEN okunur', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe('rotayı çevirmek — KABLOLARDAN, bayraktan DEĞİL', () => {
-  test('uçlar YERİNDE takas edilir, port kimlikleri yazılır', () => {
-    const pack = M.veFeadExampleNodes('BMC_FEAD_2026');
-    const ns = pack.nodes.map((n) => ({ id: n.id, type: n.type,
-      def: componentDefs[n.type], data: n.data || {} }));
-    const cs = pack.connections.map((c) => Object.assign({}, c));
-    const ilk = cs[0], fromOnce = ilk.from, toOnce = ilk.to;
-    const k = M.veFeadReverseRoute(ns, cs);
-    expect(k).toBe(cs.length);
-    expect(cs[0]).toBe(ilk);                    // AYNI nesne (yeni kimlik yok)
-    expect(ilk.from).toBe(toOnce);
-    expect(ilk.to).toBe(fromOnce);
-    expect(ilk.fromPort).toBe('output');
-    expect(ilk.toPort).toBe('input');
+describe('rotayı çevirmek — SIRADAN, bayraktan DEĞİL', () => {
+  // Kablo 2026-09-09'da kalktı; çevirmenin gerekçesi DEĞİŞMEDİ (yön ayrı bir
+  // alanda durursa silinince sessizce döner, imzaya girmezse geri-al sonrası
+  // kart bayat kalır). Değişen tek şey çevrilen nesne: tel değil, beltIndex.
+  const kurNs = (key) => M.veFeadExampleNodes(key).nodes.map((n) => ({
+    id: n.id, type: n.type, def: componentDefs[n.type],
+    data: JSON.parse(JSON.stringify(n.data || {})) }));
+
+  test('indisler YERİNDE yeniden yazılır — krank sabit, kalanı ters', () => {
+    const ns = kurNs('BMC_FEAD_2026');
+    const once = M.veFeadBeltOrder(ns).map((n) => n.id);
+    const k = M.veFeadReverseRoute(ns);
+    expect(k).toBe(once.length);
+    const sonra = M.veFeadBeltOrder(ns).map((n) => n.id);
+    expect(sonra[0]).toBe(once[0]);                                  // krank yerinde
+    expect(sonra.slice(1)).toEqual(once.slice(1).reverse());         // kalanı ters
+    // Numaralar yine 1..N: çevirme boşluk ya da çakışma bırakmıyor.
+    expect(M.veFeadBeltOrder(ns).map((n) => n.data.beltIndex))
+      .toEqual(once.map((_, x) => x + 1));
   });
 
   test('iki kez çevirmek BİRİM işlem', () => {
-    const pack = M.veFeadExampleNodes('BMC_FEAD_2026');
-    const ns = pack.nodes.map((n) => ({ id: n.id, type: n.type,
-      def: componentDefs[n.type], data: n.data || {} }));
-    const cs = pack.connections.map((c) => Object.assign({}, c));
-    const once = cs.map((c) => c.from + '>' + c.to).join(',');
-    M.veFeadReverseRoute(ns, cs);
-    expect(cs.map((c) => c.from + '>' + c.to).join(',')).not.toBe(once);
-    M.veFeadReverseRoute(ns, cs);
-    expect(cs.map((c) => c.from + '>' + c.to).join(',')).toBe(once);
+    const ns = kurNs('BMC_FEAD_2026');
+    const once = M.veFeadBeltOrder(ns).map((n) => n.id).join(',');
+    M.veFeadReverseRoute(ns);
+    expect(M.veFeadBeltOrder(ns).map((n) => n.id).join(',')).not.toBe(once);
+    M.veFeadReverseRoute(ns);
+    expect(M.veFeadBeltOrder(ns).map((n) => n.id).join(',')).toBe(once);
   });
 
-  test('yalnız İKİ UCU DA KASNAK olan teller çevrilir', () => {
+  test('yalnız KASNAKLAR numaralanır — araç düğümleri sıraya girmez', () => {
     const ns = [
-      { id: 'p1', type: 'fead-crank', def: componentDefs['fead-crank'], data: {} },
-      { id: 'p2', type: 'fead-idler', def: componentDefs['fead-idler'], data: {} },
+      { id: 'p1', type: 'fead-crank',  def: componentDefs['fead-crank'],  data: { beltIndex: 1 } },
+      { id: 'p2', type: 'fead-idler',  def: componentDefs['fead-idler'],  data: { beltIndex: 2 } },
+      { id: 'p3', type: 'fead-ac',     def: componentDefs['fead-ac'],     data: { beltIndex: 3 } },
       { id: 'r1', type: 'fead-report', def: componentDefs['fead-report'], data: {} },
     ];
-    const cs = [{ from: 'p1', to: 'p2' }, { from: 'p2', to: 'r1' }];
-    expect(M.veFeadReverseRoute(ns, cs)).toBe(1);
-    expect(cs[0].from).toBe('p2');
-    expect(cs[1].from).toBe('p2');              // araç düğümüne giden tel DURUR
-    expect(cs[1].to).toBe('r1');
+    expect(M.veFeadReverseRoute(ns)).toBe(3);
+    expect(M.veFeadBeltOrder(ns).map((n) => n.id)).toEqual(['p1', 'p3', 'p2']);
+    expect(ns[3].data.beltIndex).toBeUndefined();       // araç düğümü dokunulmadı
   });
 
-  test('çevrilmiş rota köprüde GEÇERLİ kalır (yol yine kapanır)', () => {
+  test('çevrilmiş rota köprüde GEÇERLİ kalır (bütün kasnaklar sırada)', () => {
     const s = kur('AG00976_GATES_2025', true);
     expect(s.b.ok).toBe(true);
-    expect(s.b.route.closed).toBe(true);
-    expect(s.b.route.isolated.length).toBe(0);
+    expect(s.b.order).toHaveLength(6);
+    expect(s.b.order.map((n) => n.data.beltIndex)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 });
 
@@ -383,7 +384,7 @@ describe('rozet ve panel', () => {
     // gösteriyordu. Sessiz, çünkü sayı makul.
     const s = kur('AG00976_GATES_2025', false);
     expect(fead.veFeadCurrentSpin()).toBe(ORNEK_SPIN);
-    M.veFeadReverseRoute(global.nodes, global.connections);
+    M.veFeadReverseRoute(global.nodes);
     // Düğüm dizisi hiç değişmedi…
     expect(M.veFeadNaturalSense(global.nodes.filter((n) => M._feadIsPulley(n)))).toBe(ORNEK_SPIN);
     // …ama rota çevrildi, ve okunan yön rotayı izliyor.
@@ -446,7 +447,7 @@ describe('rozet ve panel', () => {
     const a1 = el(); fead.veFeadApplyBadge(a1, b);
     const ilk = a1.querySelector('.ve-fead-badge');         // Gates sırası → CW
 
-    M.veFeadReverseRoute(global.nodes, global.connections);
+    M.veFeadReverseRoute(global.nodes);
     const a2 = el(); fead.veFeadApplyBadge(a2, b);
     const ters = a2.querySelector('.ve-fead-badge');        // çevrilmiş → CCW
 
@@ -469,7 +470,7 @@ describe('rozet ve panel', () => {
 
     const once = M.veFeadNaturalSense(s.b.order);
     r.onclick({ stopPropagation() {}, preventDefault() {} });
-    const sonra = M.veFeadSpinOf(global.nodes, global.connections);
+    const sonra = M.veFeadSpinOf(global.nodes);
     expect(sonra).toBe(-once);
     expect(stubs.saveState).toHaveBeenCalled();
   });
@@ -563,7 +564,7 @@ describe('bileşen sözleşmesi', () => {
     const s = kur('AG00976_GATES_2025', true);
     const once = M.veFeadNaturalSense(s.b.order);
     global.nodes = global.nodes.filter((n) => n.type !== 'fead-spin');
-    expect(M.veFeadSpinOf(global.nodes, global.connections))
+    expect(M.veFeadSpinOf(global.nodes))
       .toBe(once);                                 // yön DEĞİŞMEDİ
   });
 });
@@ -703,9 +704,9 @@ describe('KABLOLAR GİDİŞ SIRASINDA — köprü çekirdeğe tablo sırasını 
     // Bütün tellerin uçlarını takas etmekle AYNI sıra (Dönüş Yönü düğümü buna
     // dayanıyor): ölçülmüş ilişki, burada kilitli.
     const s = kur('AG00976_GATES_2025', false);
-    const once = M.veFeadRouteOrder(global.nodes, global.connections).map((n) => n.id);
-    M.veFeadReverseRoute(global.nodes, global.connections);
-    const sonra = M.veFeadRouteOrder(global.nodes, global.connections).map((n) => n.id);
+    const once = M.veFeadRouteOrder(global.nodes).map((n) => n.id);
+    M.veFeadReverseRoute(global.nodes);
+    const sonra = M.veFeadRouteOrder(global.nodes).map((n) => n.id);
     expect(sonra).toEqual(f(once));
     expect(s.b.ok).toBe(true);
   });
@@ -719,7 +720,7 @@ describe('KABLOLAR GİDİŞ SIRASINDA — köprü çekirdeğe tablo sırasını 
       // doğrulanmış sayı bu satıra bağlı.
       expect(s.b.order.map((n) => n.id)).toEqual(ex.route.map((k) => 'ex-' + k));
       // Kablo sırası = tablo sırasının çevrilmişi = gidiş.
-      const teller = M.veFeadRouteOrder(global.nodes, global.connections).map((n) => n.id);
+      const teller = M.veFeadRouteOrder(global.nodes).map((n) => n.id);
       expect(teller).toEqual(M.veFeadRouteFlip(ex.route.map((k) => 'ex-' + k)));
       // Gidiş sırasındaki merkezlerin dolanımı kayışın dönüşünün KENDİSİ:
       // çekirdek listesinin el yönünün tersi, rozetle aynı işaret.
@@ -729,14 +730,14 @@ describe('KABLOLAR GİDİŞ SIRASINDA — köprü çekirdeğe tablo sırasını 
       expect(F.loopSense(teller.map((id) => cById[id]))).toBe(s.b.spin);
       expect(s.b.spin).toBe(-g.sense);
       expect(s.b.spin).toBe(ORNEK_SPIN);
-      expect(M.veFeadSpinOf(global.nodes, global.connections)).toBe(s.b.spin);
+      expect(M.veFeadSpinOf(global.nodes)).toBe(s.b.spin);
       expect(fead.veFeadCurrentSpin()).toBe(s.b.spin);
     });
   });
 
   test('gidiş sırasını çevirmeden çekirdeğe vermek işareti ters çevirirdi — kapı', () => {
     const s = kur('AG00976_GATES_2025', false);
-    const teller = M.veFeadRouteOrder(global.nodes, global.connections);
+    const teller = M.veFeadRouteOrder(global.nodes);
     expect(M.veFeadNaturalSense(teller)).toBe(-s.b.spin);          // YANLIŞ okuma
     expect(M.veFeadNaturalSense(M.veFeadRouteFlip(teller))).toBe(s.b.spin);
   });

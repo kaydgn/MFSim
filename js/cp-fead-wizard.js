@@ -700,18 +700,21 @@ function veFeadWizNodes(st){
   });
   out.push({ id: 'wz-solver', type: 'fead-solver', data: sd });
   out.push({ id: 'wz-layout', type: 'fead-layout', data: {} });
+  out.push({ id: 'wz-table',  type: 'fead-table',  data: {} });
   out.push({ id: 'wz-report', type: 'fead-report', data: {} });
 
-  // ── KABLOLAMA: sıra = kayış yolu ─────────────────────────────────────────
+  // ── SIRA İNDİSTE, TELDE DEĞİL (2026-09-09) ───────────────────────────────
+  // `st.route` kayışın GİDİŞ sırasıdır — sihirbaz kullanıcıya o sırayı
+  // gösteriyor ve gergiyi krankın hemen ardına koyuyor. `beltIndex` ise TABLO
+  // sırasını taşır, yani gidişin TERSİNİ → veFeadRouteFlip (krank sabit,
+  // kalanı ters). Çevirme atlansaydı sihirbazdan kurulan her model ters
+  // numaralanır, gergi kayışın GERGİN tarafına düşer ve span gerilmeleri
+  // negatife inerdi — model yine "çözülüyor" derdi.
   var sira = (st.route || []).filter(function(k){ return !!byKey[k]; });
-  var conns = [];
-  if(sira.length > 1){
-    sira.forEach(function(k, i){
-      var next = sira[(i + 1) % sira.length];
-      conns.push({ from: byKey[k].id, to: byKey[next].id });
-    });
-  }
-  return { nodes: out, connections: conns, solverId: 'wz-solver' };
+  if(sira.length > 1 && typeof veFeadRouteFlip === 'function')
+    veFeadRouteFlip(sira.map(function(k){ return byKey[k]; }))
+      .forEach(function(n, i){ n.data.beltIndex = i + 1; });
+  return { nodes: out, connections: [], solverId: 'wz-solver' };
 }
 
 // Sıraya gergi de girmeli; kullanıcı kasnak eklerken sıraya otomatik ekleniyor
@@ -741,7 +744,7 @@ function veFeadWizBuild(){
   var pack = veFeadWizNodes(st);
   st.route = eski;
   var b;
-  try { b = veFeadBuildSystem(pack.nodes, pack.connections); }
+  try { b = veFeadBuildSystem(pack.nodes); }
   catch(e){ return null; }
   _fwBuild = b;
   return b;
@@ -2969,7 +2972,7 @@ function _fwStepOzet(b){
   var kh2 = '<div class="ve-fw-reads">'
     + _fwRead('Kurulacak bileşen', String(veFeadWizNodes(st).nodes.length)
         + ' (kasnaklar + gergi + kayış + çözücü + kayış yolu + rapor)')
-    + _fwRead('Kayış bağlantısı', String(veFeadWizNodes(st).connections.length))
+    + _fwRead('Kayış sırası', String(veFeadWizRoute(st).length) + ' kasnak')
     + '</div>';
   if(kur.varOlan > 0){
     // MEVCUT MODEL SESSİZCE SİLİNMEZ. Üstüne kurmak çatal hatası üretirdi
@@ -3175,11 +3178,6 @@ function veFeadWizCreate(){
       if(n.data && Array.isArray(n.data.duty)) veFeadRemapDutyKw(n.data.duty, idMap);
     });
 
-  if(typeof createConnection === 'function')
-    pack.connections.forEach(function(c){
-      if(idMap[c.from] && idMap[c.to]) createConnection(idMap[c.from], idMap[c.to]);
-    });
-
   // "Başlangıç ve Örnekler" düğümü işini bitirdi (örnek kurucusunun kararının
   // aynısı: o düğüm bir AÇILIŞ yüzeyi ve kullanıcı verisi taşımıyor).
   // SİHİRBAZ DÜĞÜMÜ İSE KALIR: taşıdığı form kullanıcının kendi girdisi, silmek
@@ -3207,7 +3205,8 @@ function veFeadWizCreate(){
   veFeadWizClose(true);
   if(typeof showToast === 'function')
     showToast('Model kuruldu — ' + kuruldu.length + ' bileşen, '
-      + pack.connections.length + ' kayış bağlantısı.', 'success');
+      + kuruldu.filter(function(n){ return _feadIsPulley(n); }).length
+      + ' kasnak kayış sırasında.', 'success');
   return kuruldu;
 }
 

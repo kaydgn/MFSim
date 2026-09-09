@@ -1,9 +1,53 @@
-# FEAD — kanvas, bağlantı görünüşü ve Kayış Yolu kartı
+# FEAD — kanvas, Kayış Tablosu ve Kayış Yolu kartı
 
 > Kök `CLAUDE.md`'den taşındı. Metin birebir korunmuştur.
 > Emekli `fead-graph` yönü `emekli-yonler.md` dosyasına alındı.
 
-#### Kayış BAĞLANTISININ görünüşü — düğüme dokunmadan
+## ÖNCE BUNU OKU — KASNAKLAR ARTIK BAĞLANMIYOR (2026-09-09)
+
+**HÜKÜM: kasnaklar 0/0 portlu; kayış sırası `node.data.beltIndex`, yani
+Kayış Tablosu'nun satır sırası.** Kullanıcı isteği: *"Topolojiye çektiğimiz
+bileşenlere tıklayıp özelliklerini değiştirmek, değerlerini girmek yerine böyle
+bir tablomuz olacak, oradan değerleri gireceğiz. Gerekirse de tıklayarak bileşen
+penceresini açarak detay hesaplamalara bakacağız."*
+
+Gerekçe tek cümle: **sıra bir graf değil bir liste.** Kapalı tek çevrimde telin
+taşıyabildiği tek bilgi zaten sıraydı, ama telin yanında kurulamayan durumlar da
+üretiliyordu — çatal, kopuk kasnak, kapanmayan çevrim — ve üçünün de tek çaresi
+kullanıcının teli doğru çekmesiydi. Listede bu hataların hiçbiri KURULAMIYOR.
+
+| Ne kalktı | Nerede duruyordu |
+|---|---|
+| Kasnak portları (1 giriş + 1 çıkış) | `components.js` — dokuz tipte 0/0 |
+| `veFeadPortSideFor` + `defaultPortSide` kancası | `cp-fead.js` / `components.js` |
+| Amber kayış teli, %42 kontrol kolu, telin gidiş oku | `connections.js` (`_feadBelt` üç dalı) |
+| `veFeadRouteDiagnose` (kopuk/çatal/kapanmayan hükümleri) | `fead-model.js` |
+
+| Ne geldi | Nerede |
+|---|---|
+| `beltIndex` okuma/normalize/taşıma | `fead-model.js` `veFeadBeltOrder` · `veFeadNormalizeBeltOrder` · `veFeadMoveBeltIndex` |
+| `fead-table` "Kayış Tablosu" kartı | `components.js` tanım · `cp-fead.js` kart+panel |
+| Şema 4 göçü (tel → indis, teller silinir) | `state.js` + `fead-model.js` `veFeadMigrateBeltOrder` |
+| İki kartın tek tazeleme kapısı | `cp-fead.js` `veFeadRefreshCards` |
+
+**SIRA SÜRÜCÜDEN BAŞLAR** — kablo döneminde zincir sürücüden yürütüldüğü için
+bedavaydı, artık `veFeadBeltOrder` listeyi sürücüye döndürüyor. Üç yer buna
+dayanıyor: `veFeadRouteFlip` ("krank sabit, kalanı ters"), gergi konumu hükmü,
+ve 17 Gates raporunun tablo sırası. Kayış kapalı bir çevrim olduğu için
+başlangıcı döndürmek fiziği değiştirmiyor — kısıt bedelsiz.
+
+**`beltIndex` GATES TABLO SIRASIDIR** (kayışın gidişinin tersi) ve doğrudan
+`build.order`'dır: çevirme yok, 2095 doğrulanmış sayı bu turda hiç oynamadı.
+
+Kapılar: `fead-table.test.js`, `fead-model.test.js` → *"kayış sırası — indisten,
+sürücüden başlayarak"*, `fead-spin.test.js` → *"rotayı çevirmek — SIRADAN"*,
+`fead-wire-order-migration.test.js` (şema 3 → 4), `port-geometry.test.js` →
+*"FEAD kasnakları BAĞLANMAZ"*.
+
+**Aşağıdaki tel bölümleri EMEKLİ** ve yalnız ÖLÇÜMLERİ için duruyor: aynı yön
+yeniden denenirse nelerin ölçülmüş olduğu oradan okunur.
+
+#### Kayış BAĞLANTISININ görünüşü — düğüme dokunmadan  ⟨EMEKLİ 2026-09-09⟩
 
 **Kasnak kutusu MFSim'in klasik dörtgeni olarak kalır.** Bir denemede kasnaklar
 gerçek çapına ölçekli DAİREYE çevrilmiş ve düğümler mm koordinatlarına
@@ -50,7 +94,7 @@ yerleşiminden değil. Ölçüldü: AG00686 **karışık sırayla** elle bağlan
 `210.2 · 26.7 · 202.9 · 26.4`, span `249.2 · 212.6 · 248.9 · 212.6`, Mean kol
 açısı `33.1°` — hepsi Gates raporuyla birebir.
 
-##### Port kenarı, yön oku ve araç şeritleri (eski `veFeadArrangeRing` bölümü)
+##### Port kenarı, yön oku ve araç şeritleri  ⟨port kenarı ve ok EMEKLİ; şeritler geçerli⟩
 
 > **HALKA DÜZENİ EMEKLİ.** Bu bölüm "Otomatik Düzenle FEAD'de HALKA kurar"
 > başlığıyla yazılmıştı ve halka **konum hiçbir şey ifade etmezken** doğruydu.
@@ -505,7 +549,14 @@ içinde ayrıca sayı tutulmaz"*).
 3. **Çap = DIŞ ÇAP (`od`).** Yarıçapları çekirdek `hb`/`hr` ile türetir. Eski
    `dia` alanı `veFeadMigrateNode` ile sessizce göç eder.
 
-#### Kanvasta tel çekmek — çizim KURULAN topolojiyi gösterir
+#### Kanvasta tel çekmek — çizim KURULAN topolojiyi gösterir  ⟨EMEKLİ 2026-09-09⟩
+
+> Bu bölümdeki üç sessizliğin ikisi (kopuk kasnağın sessizce kayışa katılması,
+> geçersiz port çiftinin yutulması) TEL İLE BİRLİKTE ortadan kalktı — listede
+> kurulamıyorlar. Üçüncüsü (kart bağlantı değişince tazelenmiyordu) yaşıyor ve
+> bugün `veFeadRefreshCards` + `veFeadTopoSignature`'ın beltIndex'i okuması
+> onun karşılığı.
+
 
 Kullanıcı bildirimi (2026-08-21): *"bağlantıyı kopardığımda kanvastaki görüntü
 gitmiyor, tekrar bağlamaya çalıştığımda da bağlanmıyor; araya bileşen
@@ -568,6 +619,43 @@ avarayı kayış sırasında takas etmek, alternatörü 20 mm oynatmak ve bir te
 tarafını çevirmek — üçü de çözücüyü reddettiriyor ve sebebini yazıyor; geri
 alınca sarım açıları birebir geri geliyor (`154.3 · 52.8 · 198.4 · 64.3 ·
 157.4 · 33.0`).
+
+#### Kanvasta KAYIŞ TABLOSU (`fead-table`) — veri giriş yüzeyi
+
+Sütunlar mühendisin kendi hesap sayfasından birebir: **KASNAK · X(mm) · Y(mm) ·
+Efektif Çap(mm) · D(mm) · Kasnak Dönüş Yönü · Sarım Açısı(°) · Span
+Uzunluğu(mm) · Kayış Uzunluğu(mm)**. Girdi ile türetilen aynı satırda yan yana —
+bir koordinatı değiştirince sarımın ve span'in ne olduğu aynı bakışta görülüyor.
+
+| Sütun | Nereden |
+|---|---|
+| X · Y · D | düğümün kendi alanı (`x`/`y`, gergide **`cenX`/`cenY`**), düzenlenebilir |
+| Efektif Çap | çekirdeğin `rPitch`×2 — kaburgalıda `OD+2·hb`, sırtta `OD+2·hr` |
+| Kasnak Dönüş Yönü | çekirdeğin süpürme işareti: `p.d > 0 → Sağ` (kartın kasnak içi okuyla AYNI ifade) |
+| Sarım · Span · Kayış Uzunluğu | `geom.wrapDeg(i)` · `geom.exitSpanLen(i)` · `geom.LpitchMm` |
+
+**"EFEKTİF ÇAP" ÇEKİRDEĞİN `rEff`'İ DEĞİL, `rPitch`'İ.** İkisi karışsaydı kayış
+boyu `2π·hb` (GATES PK'da 7,54 mm) kayardı ve hata sessiz olurdu. Kullanıcının
+sayfası bunu bağımsız olarak doğruluyor: altı satırın altısında da fark tam
+`2·hb` / `2·hr`, ve `Σspan + Σ(sarım·r) = 1728 mm` (sayfanın kendi kayış boyu).
+
+**TABLO BİR RAPOR DEĞİL, GİRİŞ YÜZEYİ.** Bu yüzden girdi sütunları geometri
+ÇÖZÜLEMESE DE dolu yazılıyor — kullanıcı düzeltmek istediği sayıyı göremezse
+tabloyu düzeltemez. Türetilenler o hâlde boş kalır.
+
+**SIRAYI TABLO TAŞIMAZ, KASNAK TAŞIR.** Düğüm bir GÖRÜNÜM: silinse de kayış yolu
+durur. Satır okları (▲▼) `beltIndex`i yeniden yazıyor; **ilk satır sürücünün** ve
+kilitli (yukarıdaki sözleşme), okları sönük çiziliyor.
+
+**VİRGÜLLÜ ONDALIK KABUL EDİLİR.** Tablo `161,400` yazıyor, kullanıcı gördüğü
+biçimde girecek; `parseFloat('63,5')` sessizce `63` verirdi.
+
+Yazma yolu panelin kullandığı `veFeadSet`'e devrediyor (saveState + kutuyu
+koordinatına oturtma orada); adına tıklamak kasnağın panelini açıyor.
+
+Kapı: `fead-table.test.js` — sütun kimlikleri kullanıcının sayfasına karşı,
+türetilenler çekirdekten, girdi sütunları çözülemeyen modelde de dolu, satır
+taşıma + sürücü kilidi, mousedown yutma, tek tazeleme kapısı.
 
 #### Kanvasta CANLI kayış yolu kartı (`fead-layout`)
 
