@@ -3311,7 +3311,8 @@ function veFeadRefreshLayoutCards(){
 // kullanıcı düzeltmek istediği sayıyı göremezdi. Türetilenler o hâlde boş kalır.
 function veFeadTableRows(build){
   var out = { rows: [], ok: false, LpitchMm: NaN, LeffMm: NaN,
-              signedWrapDeg: NaN, posLabel: '', sense: 0 };
+              signedWrapDeg: NaN, posLabel: '', sense: 0,
+              sumWrapDeg: NaN, sumSpanMm: NaN };
   var order = (build && build.order) ? build.order : [];
   order.forEach(function(n, i){
     var d = n.data || {};
@@ -3355,6 +3356,14 @@ function veFeadTableRows(build){
     r.wrapDeg = geom.wrapDeg(i);
     r.spanMm = geom.exitSpanLen(i);
   });
+  // SÜTUN TOPLAMLARI — defterdeki SUM satırının karşılığı ve hepsi bu kadar:
+  // gösterilen hücrelerin toplamı, kullanıcı sütunu seçince aldığı sayının
+  // aynısı. Yeni bir büyüklük TÜRETİLMİYOR (üç katman kuralı: sunum kendi
+  // geometrisini hesaplamaz) — toplananların her biri çekirdeğin çıktısı.
+  out.sumWrapDeg = out.rows.reduce(function(a, r){
+    return a + (Number.isFinite(r.wrapDeg) ? r.wrapDeg : 0); }, 0);
+  out.sumSpanMm = out.rows.reduce(function(a, r){
+    return a + (Number.isFinite(r.spanMm) ? r.spanMm : 0); }, 0);
   out.LpitchMm = geom.LpitchMm;
   out.LeffMm = geom.LeffMm;
   out.signedWrapDeg = geom.signedWrapDeg;
@@ -3367,29 +3376,42 @@ function veFeadTableRows(build){
   return out;
 }
 
-// Sütun ölçüleri TEK YERDE: başlık, gövde ve kart genişliği aynı listeden
-// besleniyor (VE_FEAD_TABLE_W bu toplamdan türer, bkz. components.js).
+// ── SÜTUNLAR ───────────────────────────────────────────────────────────────
+// Ölçü ve kimlik TEK YERDE: başlık, `<colgroup>`, gövde ve kart genişliği aynı
+// listeden besleniyor (VE_FEAD_TABLE_W bu toplamdan türer, bkz. components.js).
+//
+// SIRA DEFTERDEKİ SIRA — girdi ile türetilen iç içe (… Y · Efektif Çap · D …)
+// ve öyle KALIYOR. Bitişik bir "GİRDİ" bandı çizmek sütunları yeniden dizmeyi
+// gerektirirdi; oysa bu tablonun varlık sebebi kullanıcının kendi hesap
+// sayfasıyla birebir olması. Girdi/çözüm ayrımı sıradan değil HÜCRENİN
+// GÖRÜNÜMÜNDEN geliyor (alan gibi duran yazılır, düz duran okunur) ve künyedeki
+// lejant o dili bir kez adlandırıyor.
+//
+// `t` başlığın adı, `u` BİRİMİ — ikisi ayrı satıra basılıyor. `X(mm)` bir
+// başlıktan çok bir değişken adı gibi okunuyordu; ayırmak hem sütunu daraltıyor
+// hem kazanılan genişliği ada ve sayılara bırakıyor.
 var VE_FEAD_TABLE_COLS = [
-  { k:'no',   t:'#',                    w:70,  al:'center' },
-  { k:'ad',   t:'KASNAK',               w:136, al:'left'   },
-  { k:'x',    t:'X(mm)',                w:64,  al:'right'  },
-  { k:'y',    t:'Y(mm)',                w:64,  al:'right'  },
-  { k:'eff',  t:'Efektif Çap(mm)',      w:84,  al:'right'  },
-  { k:'od',   t:'D(mm)',                w:64,  al:'right'  },
-  { k:'yon',  t:'Kasnak Dönüş Yönü',    w:76,  al:'center' },
-  { k:'sar',  t:'Sarım Açısı(°)',       w:76,  al:'right'  },
-  { k:'span', t:'Span Uzunluğu(mm)',    w:88,  al:'right'  },
+  { k:'no',    t:'#',                  u:'',   w:54,  al:'c' },
+  { k:'ad',    t:'KASNAK',             u:'',   w:152, al:'l' },
+  { k:'x',     t:'X',                  u:'mm', w:64,  al:'r' },
+  { k:'y',     t:'Y',                  u:'mm', w:64,  al:'r' },
+  { k:'eff',   t:'Efektif Çap',        u:'mm', w:78,  al:'r' },
+  { k:'od',    t:'D',                  u:'mm', w:64,  al:'r' },
+  { k:'yon',   t:'Kasnak Dönüş Yönü',  u:'',   w:86,  al:'c' },
+  { k:'sar',   t:'Sarım Açısı',        u:'°',  w:74,  al:'r' },
+  { k:'span',  t:'Span Uzunluğu',      u:'mm', w:82,  al:'r' },
   // BİRLEŞİK HÜCRE: kayış boyu satır başına değil, ÇEVRİMİN TAMAMINA ait
   // (defterde de öyle — K5:K10 birleştirilmiş ve tek formül: =SUM(AB47:AB52)).
-  // Kendi sütununda ve dikeyde ortalanmış duruyor.
-  { k:'kayis', t:'Kayış Uzunluğu(mm)',  w:88,  al:'center' }
+  { k:'kayis', t:'Kayış Uzunluğu',     u:'mm', w:88,  al:'c' },
+  // SİLME KENDİ SÜTUNUNDA. Sıra oklarıyla aynı hücrede dururken (indis + ▲▼ +
+  // ✕, 70 px, 9 px yazı) sık yapılan işlem ile geri dönüşü olmayan işlem
+  // bitişikti — satır taşırken kasnak silmek bir dikkat değil bir ÖLÇÜ
+  // meselesiydi. Başlığı yok: sütun bir büyüklük taşımıyor.
+  { k:'sil',   t:'',                   u:'',   w:30,  al:'c' }
 ];
 
-function _feadTblCell(w, al, extra){
-  return 'width:' + w + 'px; min-width:' + w + 'px; max-width:' + w + 'px;'
-    + 'text-align:' + al + '; padding:3px 5px; border:1px solid var(--border-color);'
-    + 'overflow:hidden; white-space:nowrap; ' + (extra || '');
-}
+// Hizalama sınıfı — sağ varsayılan (sayı sütunu çoğunlukta), ötekiler açıkça.
+function _feadTblAl(al){ return (al === 'l') ? ' al-l' : (al === 'c') ? ' al-c' : ''; }
 
 // Düzenlenebilir sayı hücresi.
 //
@@ -3402,15 +3424,13 @@ function _feadTblCell(w, al, extra){
 //    "63,5" yazıyor, alan sessizce boşalıyor, model hiç değişmiyor ve hiçbir
 //    uyarı çıkmıyor. Metin alanında değer olduğu gibi geliyor ve ayrıştırmayı
 //    veFeadTableSet yapıyor (hem "63.5" hem "63,5" kabul).
-function _feadTblNum(id, key, v, w){
-  return '<td style="' + _feadTblCell(w, 'right', 'padding:0;') + '">'
-    + '<input type="text" inputmode="decimal" value="' + (Number.isFinite(v) ? v : '') + '"'
+function _feadTblNum(id, key, v, ipucu){
+  return '<td style="padding:0 3px;">'
+    + '<input class="ve-fead-tbl-in" type="text" inputmode="decimal"'
+    + ' value="' + (Number.isFinite(v) ? v : '') + '"'
+    + (ipucu ? ' title="' + _feadEsc(ipucu) + '"' : '')
     + ' onmousedown="event.stopPropagation();" ondblclick="event.stopPropagation();"'
-    + ' onchange="veFeadTableSet(\'' + _feadEsc(id) + '\',\'' + key + '\',this.value)"'
-    + ' style="width:100%; box-sizing:border-box; background:var(--bg-input, #0f1115);'
-    + 'border:none; color:var(--accent-primary, #3b82f6); font-weight:600;'
-    + 'text-align:right; padding:3px 5px; font-size:var(--fs-micro);'
-    + 'font-family:ui-monospace, monospace;"></td>';
+    + ' onchange="veFeadTableSet(\'' + _feadEsc(id) + '\',\'' + key + '\',this.value)"></td>';
 }
 
 // ── "KASNAK DÖNÜŞ YÖNÜ" DÜZENLENEBİLİR — VE `contact` ALANINI YAZAR ────────
@@ -3420,151 +3440,210 @@ function _feadTblNum(id, key, v, w){
 // ondan türer. MFSim'de aynı fizik `contact` alanında; hücre o alanı yazıyor,
 // İKİNCİ bir yön alanı açmıyor (bkz. veFeadContactForSpin).
 //
-// Bu hücre modülün EN TEHLİKELİ girdisinin dördüncü yüzeyi: temas tarafı ters
+// Bu hücre modülün EN TEHLİKELİ girdisinin üçüncü yüzeyi: temas tarafı ters
 // verilirse çekirdek hata VERMEZ, geçerli ama BAŞKA bir güzergâh çözer. Bu
 // yüzden görünür olması bir incelik değil kural — tip varsayılanı → panel →
-// kanvas rozeti (K/S) → ve artık asıl veri giriş yüzeyi olan tablo.
-function _feadTblSpin(id, yon, w, sense){
+// ve artık asıl veri giriş yüzeyi olan tablo.
+function _feadTblSpin(id, yon, sense){
   if(!yon || !sense)
-    return '<td style="' + _feadTblCell(w, 'center',
-        'color:var(--text-muted); font-family:ui-monospace, monospace;') + '">—</td>';
+    return '<td class="ve-fead-tbl-ro bos al-c">—</td>';
   var opt = ['Sağ', 'Sol'].map(function(o){
     return '<option value="' + o + '"' + (o === yon ? ' selected' : '') + '>' + o + '</option>';
   }).join('');
-  return '<td style="' + _feadTblCell(w, 'center', 'padding:0;') + '">'
-    + '<select data-ve="spin" onmousedown="event.stopPropagation();" ondblclick="event.stopPropagation();"'
+  return '<td style="padding:0 3px;">'
+    + '<select class="ve-fead-tbl-sel" data-ve="spin"'
+    + ' onmousedown="event.stopPropagation();" ondblclick="event.stopPropagation();"'
     + ' onchange="veFeadTableSetSpin(\'' + _feadEsc(id) + '\',this.value)"'
-    + ' title="Kasnağın dönüş yönü — kayışın o kasnağa hangi yüzünden değdiğini yazar"'
-    + ' style="width:100%; box-sizing:border-box; background:var(--bg-input, #0f1115);'
-    + 'border:none; color:var(--accent-primary, #3b82f6); font-weight:600;'
-    + 'text-align:center; padding:2px 4px; font-size:var(--fs-micro);'
-    + 'font-family:ui-monospace, monospace; cursor:pointer;">' + opt + '</select></td>';
+    + ' title="Kasnağın dönüş yönü — kayışın o kasnağa hangi yüzünden değdiğini yazar">'
+    + opt + '</select></td>';
 }
 
-function _feadTblRO(v, dec, w, al){
-  return '<td style="' + _feadTblCell(w, al || 'right',
-      'color:var(--text-secondary); font-family:ui-monospace, monospace;') + '">'
+function _feadTblRO(v, dec, al){
+  var bos = !(typeof v === 'string' ? v : Number.isFinite(v));
+  return '<td class="ve-fead-tbl-ro' + (bos ? ' bos' : '') + _feadTblAl(al) + '">'
     + (typeof v === 'string' ? _feadEsc(v)
        : (Number.isFinite(v) ? _feadFmt(v, dec) : '—')) + '</td>';
 }
 
+// ── SEÇİLİ SATIR: TABLO İLE PANEL ARASINDAKİ TEK BAĞ ──────────────────────
+//
+// Kasnakların kanvasta kutusu yok, dolayısıyla `addToSelection`'ın kutuya
+// eklediği `selected` sınıfı onlarda hiçbir şeye yazılmıyor
+// (`getElementById` null döner). Paneli hangi kasnağın açtığı, işaret tabloda
+// olmazsa HİÇBİR YERDE yazmıyor.
+//
+// KURAL TEK YERDE, çünkü iki okuyucusu var: kart yeniden kurulurken (aşağıda)
+// ve seçim değişince DOM'da (veFeadMarkSelectedRow). İkisine ayrı ayrı
+// yazılsaydı biri "tek düğüm seçili" derken öteki "ilk seçili düğüm" diyebilir
+// ve işaret bir seçimde bir satırda, ötekinde başka satırda kalırdı.
+function _feadSelectedId(){
+  if(typeof selectedNodes === 'undefined' || !selectedNodes) return null;
+  if(selectedNodes.length !== 1) return null;
+  return (selectedNodes[0] && selectedNodes[0].id) || null;
+}
+
+// SEÇİM DEĞİŞİNCE KART YENİDEN KURULMAZ, yalnız sınıf eşitlenir.
+//
+// ÖLÇÜLDÜ (gerçek tarayıcı, AG00976): işaret doğru satıra konuyordu ama seçim
+// değiştiğinde hiç tazelenmiyordu — kart yalnız MODEL değişince kuruluyor,
+// oysa panel açmak modeli değiştirmiyor. Sonuç, işaretin olmamasından KÖTÜ:
+// tabloda bir satır işaretli duruyordu ve o satır paneli açık olan kasnak
+// DEĞİLDİ (yüklemenin son kurduğu kasnakta kalmıştı).
+//
+// Tam yeniden kurmak da yanlış olurdu: tablo o anda düzenlenen hücreyi ve
+// odağı kaybederdi. Sınıfı yerinde eşitlemek her ikisini de korur.
+function veFeadMarkSelectedRow(){
+  if(typeof document === 'undefined') return 0;
+  var acik = _feadSelectedId(), n = 0;
+  var satirlar = document.querySelectorAll('.' + VE_FEAD_TABLE_CLASS + ' tbody tr[data-ve-node]');
+  for(var i = 0; i < satirlar.length; i++){
+    var tr = satirlar[i];
+    var ok = !!acik && tr.getAttribute('data-ve-node') === acik;
+    if(ok !== tr.classList.contains('is-sel')){
+      if(ok) tr.classList.add('is-sel'); else tr.classList.remove('is-sel');
+      n++;
+    }
+  }
+  return n;
+}
+
 // Kartın içeriği — AYRI ve SAF(ça), Kayış Yolu kartındaki kuralın aynısı.
+//
+// GÖRÜNÜM CSS'TE (css/styles.css → `.ve-fead-tbl*`), burada DEĞİL. Kart bir
+// zamanlar baştan sona satır içi `style="…"` diziyordu ve o taşıyıcı DURUM
+// İFADE EDEMİYOR: `:hover`, `:focus`, `:nth-child` yazılamadığı için fare
+// hangi satırdaysa, imleç hangi hücredeyse, hangi kasnağın paneli açıksa —
+// üçü de görünmüyordu. Kullanıcının "demode ve ilkel" dediği şey bir renk
+// tercihi değil, tam olarak buydu.
 function veFeadTableCardHTML(node){
   var build = (typeof veFeadBuildFromCanvas === 'function') ? veFeadBuildFromCanvas() : null;
   var T = veFeadTableRows(build);
   var belt = (build && build.cfg && build.cfg.belt) ? build.cfg.belt : {};
   var C = VE_FEAD_TABLE_COLS, i;
 
+  var acik = _feadSelectedId();
+
   // ── ÜST KÜNYE: kayışın kendisi ────────────────────────────────────────────
   // Kayış tipi/markası burada SALT OKUNUR: kaynağı "Kayış Özellikleri"
   // bileşeni ve orada katalog seçicisiyle birlikte duruyor. İkinci bir giriş
   // açmak, katalog kapısını atlayan bir yol açardı.
   var kunye = function(et, dg, vurgu){
-    return '<span style="display:inline-flex; align-items:center; gap:5px; margin-right:14px;">'
-      + '<span style="color:var(--text-muted); font-size:var(--fs-micro);">' + _feadEsc(et) + '</span>'
-      + '<b style="color:' + (vurgu || 'var(--text-primary)') + '; font-family:ui-monospace, monospace;">'
-      + _feadEsc(dg) + '</b></span>';
+    return '<span class="ve-fead-tbl-kunye"><span>' + _feadEsc(et) + '</span>'
+      + '<b' + (vurgu ? ' class="acc"' : '') + '>' + _feadEsc(dg) + '</b></span>';
   };
-  var h = '<div style="flex:0 0 auto; display:flex; align-items:center; flex-wrap:wrap;'
-    + 'padding:5px 8px; border-bottom:1px solid var(--border-color);'
-    + 'background:var(--bg-tertiary); font-size:var(--fs-micro);">'
-    + kunye('Kayış Tipi', belt.profile || '—', 'var(--accent-warning, #f59e0b)')
-    + kunye('Kayış Markası', belt.brand || '—', 'var(--accent-warning, #f59e0b)')
-    + kunye('Kasnak Sayısı', String(T.rows.length))
+  var h = '<div class="ve-fead-tbl-head">'
+    + kunye('Kayış', belt.profile || '—', 1)
+    + kunye('Marka', belt.brand || '—', 1)
+    + kunye('Kasnak', String(T.rows.length))
+    + '<span class="ve-fead-tbl-lgn" title="Sütun sırası kullanıcının hesap'
+    + ' sayfasındakiyle birebir; girdi ile türetilen iç içe duruyor">'
+    + '<i class="gir">123</i>girilir<i class="coz">123</i>çözümden</span>'
     + veFeadTableAddHTML()
     + '</div>';
 
   // ── TABLO ────────────────────────────────────────────────────────────────
-  h += '<div style="flex:1 1 auto; overflow:auto;"'
-    + ' onmousedown="event.stopPropagation();">'
-    + '<table style="border-collapse:collapse; font-size:var(--fs-micro);'
-    + 'table-layout:fixed; width:100%;"><thead><tr style="background:var(--bg-secondary);">';
+  // Genişlik `<colgroup>`tan: ölçü bir stil değil VERİ, ve hücre başına üç
+  // kopya (width/min/max) yazmak aynı sayıyı satır sayısı kadar tekrarlamaktı.
+  h += '<div class="ve-fead-tbl-wrap" onmousedown="event.stopPropagation();">'
+    + '<table class="ve-fead-tbl"><colgroup>';
+  for(i = 0; i < C.length; i++) h += '<col style="width:' + C[i].w + 'px;">';
+  h += '</colgroup><thead><tr>';
   for(i = 0; i < C.length; i++)
-    h += '<th style="' + _feadTblCell(C[i].w, C[i].al,
-        'position:sticky; top:0; z-index:1; background:var(--bg-secondary);'
-      + 'font-weight:700; color:var(--text-heading); white-space:normal; line-height:1.15;')
-      + '">' + _feadEsc(C[i].t) + '</th>';
+    h += '<th class="' + (C[i].k === 'kayis' ? 'sep' : '') + _feadTblAl(C[i].al) + '">'
+      + _feadEsc(C[i].t)
+      + (C[i].u ? '<span class="ve-fead-tbl-unit">' + _feadEsc(C[i].u) + '</span>' : '')
+      + '</th>';
   h += '</tr></thead><tbody>';
 
   if(!T.rows.length){
-    h += '<tr><td colspan="' + C.length + '" style="padding:18px; text-align:center;'
-      + 'color:var(--text-muted);">Kasnak yok — sol paletten ekleyin.</td></tr>';
+    // BAYAT TAVSİYE DEĞİL. Burada bir zamanlar "sol paletten ekleyin" yazıyordu
+    // ve o yol kutular kalktığından beri SESSİZ: paletten sürüklenen kasnak
+    // kanvasta hiçbir iz bırakmıyor, kullanıcı bir şey olmadığını sanıyor.
+    h += '<tr><td colspan="' + C.length + '" class="ve-fead-tbl-empty">'
+      + '<b>Kayış yolunda henüz kasnak yok.</b>'
+      + 'Sağ üstteki <b style="display:inline;">＋ Kasnak ekle</b> ile başlayın —'
+      + ' eklenen kasnak kayış sırasının sonuna düşer.</td></tr>';
   }
   T.rows.forEach(function(r, k){
     var son = (k === T.rows.length - 1);
-    h += '<tr>';
+    h += '<tr data-ve-node="' + _feadEsc(r.id) + '"'
+      + (r.id === acik ? ' class="is-sel"' : '') + '>';
     // SIRA SÜTUNU: numara + iki ok. Sıra kayışın yolu olduğu için okların
-    // taşıdığı şey bir görsel tercih değil, MODELİN KENDİSİ.
-    h += '<td style="' + _feadTblCell(C[0].w, 'center', 'padding:0;') + '">'
-      + '<span style="display:inline-flex; align-items:center; gap:1px;">'
-      + '<b style="color:var(--text-muted); min-width:11px;">' + r.index + '</b>'
-      + _feadTblArrow(r.id, -1, k <= 1)
-      + _feadTblArrow(r.id, +1, son || k === 0)
-      + '<button type="button" onmousedown="event.stopPropagation();"'
-      + ' onclick="veFeadTableDelete(\'' + _feadEsc(r.id) + '\')"'
-      + ' title="Bu kasnağı sil"'
-      + ' style="background:none; border:none; cursor:pointer; padding:0 2px;'
-      + 'font-size:var(--fs-micro); line-height:1; margin-left:2px;'
-      + 'color:var(--accent-danger, #ef4444);">✕</button>'
+    // taşıdığı şey bir görsel tercih değil, MODELİN KENDİSİ. Sürücünün numarası
+    // vurgulu: sıra ondan başlıyor ve satırı bu yüzden kilitli.
+    h += '<td class="al-c" style="padding:0 2px;"><span class="ve-fead-tbl-ord">'
+      + '<b' + (r.driver ? ' class="drv" title="Sürücü — kayış sırası buradan'
+                          + ' başlar, satır kilitli"' : '') + '>' + r.index + '</b>'
+      + _feadTblMove(r.id, -1, k <= 1)
+      + _feadTblMove(r.id, +1, son || k === 0)
       + '</span></td>';
     // AD: tıklanınca bileşenin PANELİ açılır — "gerekirse tıklayarak bileşen
     // penceresini açarak detay hesaplamalara bakacağız" isteğinin karşılığı.
-    h += '<td style="' + _feadTblCell(C[1].w, 'left', 'padding:0;') + '">'
-      + '<button type="button" onmousedown="event.stopPropagation();"'
+    h += '<td class="al-l"><button type="button" class="ve-fead-tbl-name"'
+      + ' onmousedown="event.stopPropagation();"'
       + ' onclick="veFeadTableOpen(\'' + _feadEsc(r.id) + '\')"'
-      + ' title="Paneli aç — detay hesaplar"'
-      + ' style="width:100%; text-align:left; background:none; border:none; cursor:pointer;'
-      + 'padding:3px 5px; font-size:var(--fs-micro); color:var(--accent-warning, #f59e0b);'
-      + 'font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'
-      + (r.driver ? '► ' : '') + _feadEsc(r.name) + '</button></td>';
-    h += _feadTblNum(r.id, r.xKey, r.xMm, C[2].w);
-    h += _feadTblNum(r.id, r.yKey, r.yMm, C[3].w);
-    h += _feadTblRO(r.effDiaMm, 3, C[4].w);
-    h += _feadTblNum(r.id, 'od', r.odMm, C[5].w);
-    h += _feadTblSpin(r.id, r.spin, C[6].w, T.sense);
-    h += _feadTblRO(r.wrapDeg, 3, C[7].w);
-    h += _feadTblRO(r.spanMm, 3, C[8].w);
+      + ' title="' + _feadEsc(r.name) + ' — paneli aç, detay hesaplar">'
+      + '<span>' + _feadEsc(r.name) + '</span></button></td>';
+    h += _feadTblNum(r.id, r.xKey, r.xMm,
+                     r.tensioner ? 'Avara merkezi X (montaj konumu bundan türer)' : '');
+    h += _feadTblNum(r.id, r.yKey, r.yMm,
+                     r.tensioner ? 'Avara merkezi Y (montaj konumu bundan türer)' : '');
+    h += _feadTblRO(r.effDiaMm, 3);
+    h += _feadTblNum(r.id, 'od', r.odMm, '');
+    h += _feadTblSpin(r.id, r.spin, T.sense);
+    h += _feadTblRO(r.wrapDeg, 3);
+    h += _feadTblRO(r.spanMm, 3);
     // KAYIŞ UZUNLUĞU: bütün satırları saran TEK hücre (defterdeki K5:K10
     // birleşmesinin aynısı) — yalnız ilk satırda basılır.
     if(k === 0)
-      h += '<td rowspan="' + T.rows.length + '" style="'
-        + _feadTblCell(C[9].w, 'center',
-            'vertical-align:middle; font-family:ui-monospace, monospace;'
-          + 'font-weight:700; color:var(--accent-warning, #f59e0b);') + '">'
+      h += '<td rowspan="' + T.rows.length + '" class="ve-fead-tbl-L al-c sep">'
         + (Number.isFinite(T.LpitchMm) ? _feadFmt(T.LpitchMm, 1) : '—') + '</td>';
+    h += '<td class="al-c" style="padding:0;">'
+      + '<button type="button" class="ve-fead-tbl-del" onmousedown="event.stopPropagation();"'
+      + ' onclick="veFeadTableDelete(\'' + _feadEsc(r.id) + '\')"'
+      + ' title="' + _feadEsc(r.name) + ' kasnağını sil">✕</button></td>';
     h += '</tr>';
   });
-  h += '</tbody></table></div>';
+  h += '</tbody>';
+
+  // ── Σ SATIRI: defterdeki SUM'ların karşılığı ─────────────────────────────
+  // İki sütun toplamı, fazlası değil — kullanıcının hücreleri seçince aldığı
+  // sayının aynısı. Bir DENETİM olarak sunulmuyor: kayış boyu zaten bu iki
+  // büyüklükten türediği için "tutuyor mu" sorusunun cevabı hep evet olurdu.
+  // Asıl denetim (Σ işaretli sarım = 360°) alt şeritte ve o gerçekten düşebilir.
+  if(T.rows.length)
+    h += '<tfoot><tr>'
+      + '<td colspan="7" class="al-l lbl">Σ toplam</td>'
+      + '<td>' + (Number.isFinite(T.sumWrapDeg) ? _feadFmt(T.sumWrapDeg, 3) : '—') + '</td>'
+      + '<td>' + (Number.isFinite(T.sumSpanMm) ? _feadFmt(T.sumSpanMm, 3) : '—') + '</td>'
+      + '<td colspan="2" class="al-c lbl sep">Σspan + Σyay</td>'
+      + '</tr></tfoot>';
+  h += '</table></div>';
 
   // ── ALT ŞERİT: kapalı çevrim değişmezi ───────────────────────────────────
   // Σ işaretli sarım 360° OLMAK ZORUNDA (Kayış Yolu kartının alt şeridiyle
   // aynı hüküm, aynı kaynak). Sapma varsa sayı gizlenmez, yanına yazılır.
   var okmu = T.ok && Math.abs(Math.abs(T.signedWrapDeg) - 360) <= 0.05;
-  h += '<div style="flex:0 0 auto; display:flex; align-items:center; gap:10px;'
-    + 'padding:4px 8px; border-top:1px solid var(--border-color);'
-    + 'background:var(--bg-tertiary); font-size:var(--fs-micro);'
-    + 'font-family:ui-monospace, monospace; color:var(--text-secondary);">'
-    + '<b style="color:' + (okmu ? 'var(--accent-success, #22c55e)' : 'var(--accent-danger, #ef4444)')
-    + ';">' + (okmu ? '✓' : '✗') + '</b>'
+  h += '<div class="ve-fead-tbl-foot">'
+    + '<b class="' + (okmu ? 'ok' : 'no') + '">' + (okmu ? '✓' : '✗') + '</b>'
     + '<span>Σsarım ' + (Number.isFinite(T.signedWrapDeg) ? _feadFmt(T.signedWrapDeg, 2) : '—')
     + '° (360 olmalı)</span>'
     + '<span>L_pitch ' + (Number.isFinite(T.LpitchMm) ? _feadFmt(T.LpitchMm, 1) : '—') + '</span>'
     + '<span>L_eff ' + (Number.isFinite(T.LeffMm) ? _feadFmt(T.LeffMm, 1) : '—') + '</span>'
-    + (T.posLabel ? '<span>' + _feadEsc(T.posLabel) + ' konumu</span>' : '')
+    + (T.posLabel ? '<span class="konum">' + _feadEsc(T.posLabel) + ' konumu</span>' : '')
     + '</div>';
   return h;
 }
 
-function _feadTblArrow(id, delta, pasif){
+// Sıra oku. Pasif hâl `disabled` — eskiden ok yerine soluk bir <span> basılıyordu
+// ve o, klavyeyle gezinen için hiç var olmayan bir düğmeydi; `disabled` ise
+// "burada bir düğme var ama şu an kullanılamaz" diyor.
+function _feadTblMove(id, delta, pasif){
   var g = (delta < 0) ? '▲' : '▼';
-  if(pasif)
-    return '<span style="opacity:0.22; font-size:var(--fs-micro); line-height:1;'
-      + 'padding:0 1px;">' + g + '</span>';
-  return '<button type="button" onmousedown="event.stopPropagation();"'
+  return '<button type="button" class="ve-fead-tbl-mv"' + (pasif ? ' disabled' : '')
+    + ' onmousedown="event.stopPropagation();"'
     + ' onclick="veFeadTableMove(\'' + _feadEsc(id) + '\',' + delta + ')"'
-    + ' title="Kayış sırasında ' + (delta < 0 ? 'yukarı' : 'aşağı') + ' taşı"'
-    + ' style="background:none; border:none; cursor:pointer; padding:0 1px;'
-    + 'font-size:var(--fs-micro); line-height:1; color:var(--accent-primary, #3b82f6);">'
+    + ' title="Kayış sırasında ' + (delta < 0 ? 'yukarı' : 'aşağı') + ' taşı">'
     + g + '</button>';
 }
 
@@ -3603,12 +3682,10 @@ function veFeadTableAddHTML(){
     if(!componentDefs[t] || !componentDefs[t].isFeadPulley) return;
     opt += '<option value="' + t + '">' + _feadEsc(componentDefs[t].name) + '</option>';
   });
-  return '<span style="margin-left:auto;">'
-    + '<select data-ve="add-pulley" onmousedown="event.stopPropagation();" ondblclick="event.stopPropagation();"'
+  return '<select class="ve-fead-tbl-add" data-ve="add-pulley"'
+    + ' onmousedown="event.stopPropagation();" ondblclick="event.stopPropagation();"'
     + ' onchange="veFeadTableAdd(this.value); this.selectedIndex=0;"'
-    + ' style="background:var(--bg-input, #0f1115); border:1px solid var(--border-color);'
-    + 'border-radius:3px; color:var(--accent-primary, #3b82f6); font-weight:600;'
-    + 'font-size:var(--fs-micro); padding:2px 4px; cursor:pointer;">' + opt + '</select></span>';
+    + ' title="Kayış sırasının sonuna kasnak ekle">' + opt + '</select>';
 }
 
 function veFeadTableAdd(type){
@@ -3703,9 +3780,9 @@ function veFeadApplyTableCard(nodeEl, node){
   var card = box.querySelector('.' + VE_FEAD_TABLE_CLASS);
   if(!card){
     card = document.createElement('div');
+    // GÖRÜNÜM CSS'TE. Kabuğun ölçüsü/yerleşimi de satır içi yazılıyordu; sınıf
+    // zaten var olduğu için ikinci bir kopyaydı ve ikisi ayrışabilirdi.
     card.className = VE_FEAD_TABLE_CLASS;
-    card.style.cssText = 'position:absolute; inset:0; display:flex; flex-direction:column;'
-      + 'overflow:hidden; border-radius:inherit; background:var(--bg-input, #0f1115);';
     var sym = box.querySelector(':scope > svg');
     if(sym) sym.style.display = 'none';
     box.appendChild(card);
@@ -5599,6 +5676,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadTableAdd: veFeadTableAdd, veFeadTableDelete: veFeadTableDelete,
     veFeadTableAddHTML: veFeadTableAddHTML,
     veFeadTableOpen: veFeadTableOpen,
+    veFeadMarkSelectedRow: veFeadMarkSelectedRow,
     getFeadTablePropertiesHTML: getFeadTablePropertiesHTML,
     veFeadBeltDbHint: veFeadBeltDbHint,
     veFeadModelTable: veFeadModelTable,

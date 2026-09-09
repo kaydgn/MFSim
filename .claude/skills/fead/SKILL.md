@@ -84,18 +84,37 @@ olurdu.
     yolundan birinde birinin unutulması demek — ve fark sessiz: iki kart kendi
     başına tutarlı görünür, yalnız biri bir düzenleme geride kalır. Kaynak
     kapısı `fead-table.test.js` içinde.
+    **SEÇİM DEĞİŞİNCE KART KURULMAZ, SINIF EŞİTLENİR** (`veFeadMarkSelectedRow`,
+    `cp-core.js`'in `addToSelection`/`clearSelection` merkezlerinden çağrılır):
+    kasnakların kutusu olmadığı için `addToSelection`'ın kutuya yazdığı
+    `selected` sınıfı onlarda hiçbir şeye yazmıyor, işaretin tek yeri tablo. Tam
+    yeniden kurmak düzenlenen hücrenin odağını düşürürdü. Ölçüldü: çağrı
+    olmadan işaret hiç tazelenmiyor ve tabloda paneli AÇIK OLMAYAN bir satır
+    işaretli kalıyor — işaretin hiç olmamasından kötü.
 11. **Negatif kapı (kutu döneminden kalan): `veFeadApplyBadge` kasnak kutusuna
     kesikli çember ÇİZMEZ.** Kasnakların kutusu artık hiç yok, yani rozet de
     çizilmiyor; kapı yine de duruyor çünkü "gerçek çap hayaleti" fikri geri
     gelirse bu kez TABLOYA ya da karta konmak istenir ve gerekçesi aynı.
     Gerçek çap hayaleti kullanıcı isteğiyle kaldırıldı; kapı sınıf adına değil
     biçime de bakıyor (`border-radius:50%` + `dashed`).
-12. **Katalog bir KISIT değil, bir ÖNERİ.** Ara boy ısmarlanabildiği için panel
-    elle girişi engellemez.
 12. Oturumluk sonuç globali **`window.veFeadResults` proje değişince
     temizlenmeli** (`_feadForgetResults`) — yoksa yeni projede önceki projenin
     tabloları durur.
-13. **Uygunluk kapıları TEK ÇAĞRIDAN** (`js/fead-checks.js` · `veFeadChecks`):
+13. **KAYIŞ TABLOSUNUN GÖRÜNÜMÜ CSS'TE** (`css/styles.css` → `.ve-fead-tbl*`),
+    satır içi `style=` dizelerinde DEĞİL. Gerekçe kozmetik değil yapısal: satır
+    içi CSS DURUM İFADE EDEMEZ (`:hover`, `:focus`, `:nth-child` yazılamaz),
+    yani fare hangi satırdaysa, imleç hangi hücredeyse, hangi kasnağın paneli
+    açıksa — hiçbiri görünmezdi. Kullanıcının "demode ve ilkel" dediği şey bir
+    renk tercihi değil, tam olarak o taşıyıcının sınırıydı. Satır içinde kalan
+    tek şey VERİ: `<colgroup>` genişlikleri ve hücre payı. Vurgular
+    `--accent-tint-*` / `--focus-ring` jetonlarından gelir (sabit `#3b82f6`
+    değil) — projenin kendi kuralı, on tema tek renk dilini konuşsun.
+    Kapı ÇİFT ve ayrı ayrı hiçbir şey ifade etmezler: `fead-table.test.js` →
+    *"kart HTML'i satır içi RENK yazmıyor"* (JS tarafı) + *"DURUM KURALLARI
+    CSS'te"* (CSS tarafı); ilki tek başınayken CSS bloğunu silmek bütün
+    testleri yeşil bırakırdı. Gerçek tarayıcı ölçümü `fead-tablo.spec.js` →
+    *"Kayış Tablosu CANLI"* (jsdom `:hover`ı da `:focus`u da hiç hesaplamaz).
+14. **Uygunluk kapıları TEK ÇAĞRIDAN** (`js/fead-checks.js` · `veFeadChecks`):
     panel canlı hesaplar, rapor ise çözüm anında yazılan `R.checks`'i OKUR —
     yeniden hesaplasaydı çözümden sonra değiştirilen bir devir sınırı belgeye
     sızardı. Üç kural: merkez mesafesi kuralı **iki kasnaklı** V-kayış
@@ -103,7 +122,7 @@ olurdu.
     yazılır); çevrim oranı **pitch çapından** gelir (defterin dış çaplı ve elle
     yazılmış oranları %2,2 ve %27,8 sapıyor); eksik veri `'wait'`'tir ve
     **uygun sayılmaz**. Kapı: `tests/unit/fead-checks.test.js`.
-14. **Katalog bir KISIT değil bir ÖNERİ** — kayış, gergi, motor ve aksesuar
+15. **Katalog bir KISIT değil bir ÖNERİ** — kayış, gergi, motor ve aksesuar
     kütüphanelerinin dördünde de aynı kural. Elle girilen değer katalogtan
     üstündür; "elle" demek için değerin katalogtan FARKLI olması gerekir
     (yalnız "dolu mu" bakan bir tespit, katalogun kendi yazdığı alanları
