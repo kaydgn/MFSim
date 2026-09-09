@@ -235,6 +235,45 @@ describe('Karşılama ekranı — markup sözleşmesi', () => {
 //    tuvalin diliyle konuşmaya döner.
 // ═══════════════════════════════════════════════════════════════════════════
 // KART İÇİ İŞÇİLİK (kullanıcı reçetesi, 2026-09-09) — ikisi de SESSİZ
+describe('Vitrin kartı — dikey ritim', () => {
+  // Kullanıcı: "yazılar bir garip olmuş, butona çok yakın, başlık aşağıda."
+  // Gerçek tarayıcıda ölçülen açıklıklar (px, yukarıdan aşağı):
+  //   ESKİ  31 · 10 · 18 ·  2 · 16 · 8 · 12 ·  0 · 8 · 16
+  //   YENİ  33 ·  6 · 20 · 18 · 10 · 22 · 8 · 14 · 22 · 6 · 18
+  // İki tanesi hataydı ve İKİSİ DE SESSİZ: 0 px düğmeyi güncellik satırına,
+  // 2 px bölüm etiketini ilk modül satırına yapıştırıyordu. Kural bozulunca
+  // ekran yine açılır, yalnız sıkışık görünür.
+  const px = (sec, ozellik) => {
+    const m = CSS_WELCOME.match(new RegExp(sec.replace('.', '\\.') + '\\{[^}]*\\}'));
+    expect(m).toBeTruthy();
+    const d = m[0].match(new RegExp(ozellik + ':\\s*([-\\d]+)px'));
+    return d ? parseInt(d[1], 10) : null;
+  };
+
+  test('birincil düğme üstündeki satıra YAPIŞMIYOR', () => {
+    // .ve-welcome-spacer kalkınca aradaki tek pay da kalkmıştı.
+    expect(px('.ve-welcome-open', 'margin-top')).toBeGreaterThanOrEqual(16);
+  });
+
+  test('künye ADINA yakın, gövdeye uzak (yakınlık kuralı)', () => {
+    // Ayraç logonun ALTINA konunca künye adından kopup gövdeye yapışıyordu.
+    const kunye = px('.ve-welcome-tagline', 'margin-top');
+    const ayrac = px('.ve-welcome-sep', 'margin');       // "20px 0 18px" → 20
+    expect(kunye).toBeLessThan(ayrac);
+    expect(kunye).toBeLessThanOrEqual(8);
+  });
+
+  test('başlık kilidini ayraç BÖLMÜYOR (logo alt çizgisi yok)', () => {
+    const m = CSS_WELCOME.match(/\.ve-welcome-logo\{[^}]*\}/);
+    expect(m).toBeTruthy();
+    expect(m[0]).not.toMatch(/border-bottom/);
+    // Ayraç kendi elemanında ve GÖRÜNÜR — display:none'a düşerse başlıkla
+    // gövde arasındaki tek sınır kaybolur.
+    const sep = CSS_WELCOME.match(/\.ve-welcome-sep\{[^}]*\}/);
+    expect(sep[0]).not.toMatch(/display:\s*none/);
+  });
+});
+
 describe('Vitrin kartı — düğme ve satır vurgusu', () => {
   test('birincil düğme aksanın ÜSTÜNDE okunacak jetondan boyanır', () => {
     // Dolu düğmede metin rengi düz beyaz yazılırsa kehribar/amber gibi açık
