@@ -32,10 +32,11 @@
 //    karar). Yarım kalan sihirbaz kaybolmasın diye durum KAPANIŞTA
 //    `node.data.wiz`e yazılıyor; `saveState` yalnız kapanışta ve kurulumda.
 //
-// ── KAYIŞ SIRASI = KABLOLAMA ───────────────────────────────────────────────
-// Sihirbazdaki sıra doğrudan bağlantı sırasıdır; dönüş yönü (CW/CCW) ondan
-// TÜRER, ayrı bir alan yok. "Dönüş Yönü" bileşeninin dersi (durum kablolarda
-// tutulur, bayrakta değil) burada da geçerli.
+// ── KAYIŞ SIRASI = KAYIŞ TABLOSUNUN SIRASI ────────────────────────────────
+// Sihirbazdaki sıra kurulumda `node.data.beltIndex`e yazılıyor (kasnaklar arası
+// bağlantı 2026-09-09'da kaldırıldı) ve dönüş yönü (CW/CCW) ondan TÜRER, ayrı
+// bir alan yok. Sihirbaz sırayı kayışın GİDİŞ yönünde gösteriyor; indis tablo
+// sırasını taşıdığı için kurulumda veFeadRouteFlip'ten geçiyor.
 
 var VE_FW_STEPS = [
   { key:'kaynak', ad:'Başlangıç',      ipucu:'Sistem adı · örnekten doldur' },
@@ -309,7 +310,7 @@ function veFeadWizRouteMove(key, delta){
   return true;
 }
 // Sırayı çevirmek = dönüş yönünü çevirmek. Ayrı bir "yön" alanı YOK; yön
-// kablolamadan türüyor (fead-spin bileşeninin kuralının aynısı).
+// sıranın kendisinden türüyor (fead-spin bileşeninin kuralının aynısı).
 function veFeadWizRouteReverse(){
   if(!_fwState) return;
   var r = veFeadWizRoute(_fwState);
@@ -2971,16 +2972,16 @@ function _fwStepOzet(b){
   var kur = veFeadWizCanCreate();
   var kh2 = '<div class="ve-fw-reads">'
     + _fwRead('Kurulacak bileşen', String(veFeadWizNodes(st).nodes.length)
-        + ' (kasnaklar + gergi + kayış + çözücü + kayış yolu + rapor)')
+        + ' (kasnaklar + gergi + kayış + çözücü + kayış yolu + tablo + rapor)')
     + _fwRead('Kayış sırası', String(veFeadWizRoute(st).length) + ' kasnak')
     + '</div>';
   if(kur.varOlan > 0){
-    // MEVCUT MODEL SESSİZCE SİLİNMEZ. Üstüne kurmak çatal hatası üretirdi
-    // (her kasnaktan bir tel çıkar kuralı), silmek ise kullanıcının verisi.
-    // Karar açık onaya bağlı ve `saveState` sayesinde geri alınabilir.
+    // MEVCUT MODEL SESSİZCE SİLİNMEZ. Üstüne kurmak kanvasta iki ayrı kayış
+    // yolunun kasnaklarını tek sıraya karıştırırdı; silmek ise kullanıcının
+    // verisi. Karar açık onaya bağlı ve `saveState` sayesinde geri alınabilir.
     kh2 += '<label class="ve-fw-check"><input type="checkbox"' + (st.temizle ? ' checked' : '')
       + ' onchange="_fwSetRender(\'temizle\', this.checked)">'
-      + '<span>Kanvastaki <b>' + kur.varOlan + ' kasnağı ve kayış bağlantılarını sil</b>, '
+      + '<span>Kanvastaki <b>' + kur.varOlan + ' kasnağı sil</b>, '
       + 'modeli yeniden kur</span></label>';
     kh2 += '';
   }
@@ -3091,8 +3092,9 @@ function veFeadWizCanCreate(){
     out.varOlan = nodes.filter(function(n){ return _feadIsPulley(n); }).length;
   if(out.varOlan > 0 && !_fwState.temizle){
     out.ok = false;
-    out.sebep = 'İç topolojide zaten ' + out.varOlan + ' kasnak var. Üstüne kurmak kayış '
-      + 'yolunu çatallandırır; silme onayını işaretleyin ya da kasnakları elle kaldırın.';
+    out.sebep = 'İç topolojide zaten ' + out.varOlan + ' kasnak var. Üstüne kurmak '
+      + 'iki ayrı kayış yolunun kasnaklarını TEK sıraya karıştırır; silme onayını '
+      + 'işaretleyin ya da kasnakları elle kaldırın.';
   }
   return out;
 }
@@ -3102,7 +3104,7 @@ function veFeadWizCanCreate(){
 // ════════════════════════════════════════════════════════════════════════════
 //
 // Yol örnek kurucusununkiyle (veFeadLoadExample) AYNI ve bu bilinçli: düğümleri
-// `createNode` kuruyor (kimlikler, DOM, portlar oradan), `data` birebir
+// `createNode` kuruyor (kimlikler ve DOM oradan), `data` birebir
 // kopyalanıyor, duty kW sözlüğü kimlik göçünden geçiyor ve yerleştirme tek
 // noktadan (veFeadArrangeByCoords) yapılıyor. İkinci bir kurucu yazmak, iki
 // yolun sessizce ayrışması demekti.
@@ -3122,14 +3124,21 @@ function veFeadWizCreate(){
   st.route = eskiRoute;
 
   // ── TEMİZLİK — yalnız açık onayla ────────────────────────────────────────
-  // Kasnaklar VE onlara bağlı teller gider; araç düğümleri (kayış, çözücü,
-  // kart, rapor) KALIR ve aşağıda yeniden KULLANILIR — maxInstances:1 taşıyan
-  // kayış düğümü ikinci kez kurulamaz, ve kullanıcının kart ölçüsü / rapor
-  // türü gibi tercihlerini çöpe atmanın karşılığı yok.
+  // Kasnaklar gider; araç düğümleri (kayış, çözücü, şema, TABLO, rapor) KALIR
+  // ve aşağıda yeniden KULLANILIR — maxInstances:1 taşıyan düğümler ikinci kez
+  // kurulamaz, ve kullanıcının kart ölçüsü / rapor türü gibi tercihlerini çöpe
+  // atmanın karşılığı yok.
   if(st.temizle) _fwClearPulleys();
 
   // Araç düğümleri: VARSA yeniden kullan, yoksa kur.
-  var araclar = { 'fead-belt': null, 'fead-solver': null, 'fead-layout': null, 'fead-report': null };
+  //
+  // `fead-table` BU LİSTEDE OLMAK ZORUNDA. Kayış Tablosu açılış yüzeyinden
+  // (veFeadPopulateStarter) zaten geliyor ve maxInstances:1; listede olmasaydı
+  // sihirbaz ikincisini kurmaya kalkar, createNode reddeder ve kullanıcı
+  // "modeli kur" dediğinde bir UYARI görürdü — üstelik kurulan bileşen sayısı
+  // da eksik sayılırdı. Örnek kurucusunda ölçülmüş sınıfın aynısı.
+  var araclar = { 'fead-belt': null, 'fead-solver': null, 'fead-layout': null,
+                  'fead-table': null, 'fead-report': null };
   nodes.forEach(function(n){
     if(araclar.hasOwnProperty(n.type) && !araclar[n.type]) araclar[n.type] = n;
   });
@@ -3192,6 +3201,12 @@ function veFeadWizCreate(){
     for(var q = selectedNodes.length - 1; q >= 0; q--)
       if(nodes.indexOf(selectedNodes[q]) < 0) selectedNodes.splice(q, 1);
 
+  // SAYAÇ TAZELENİR. `nodes` dizisi doğrudan splice edildi (deleteSelectedNodes
+  // bilerek kullanılmıyor — o `selectedNodes` global'ini tüketiyor), dolayısıyla
+  // araç çubuğunun "N bileşen" sayacı ve minimap kendiliğinden güncellenmiyor.
+  // ÖLÇÜLDÜ (gerçek tarayıcı): sihirbaz kurulumundan sonra dizi 12 düğüm
+  // taşırken çubuk 13 diyordu — bir sonraki topoloji değişimine kadar bayat.
+  if(typeof updateNodeCount === 'function') updateNodeCount();
   if(typeof veFeadArrangeByCoords === 'function'){
     try { veFeadArrangeByCoords({ silent: true }); } catch(e){ /* yedek: ızgara */ }
   }
@@ -3210,7 +3225,8 @@ function veFeadWizCreate(){
   return kuruldu;
 }
 
-// Kasnakları ve onlara bağlı telleri kaldır. `deleteSelectedNodes` KULLANILMAZ:
+// Kasnakları kaldır (ve elle düzenlenmiş bir dosyada onlara bağlı kalmış bir
+// tel varsa onu da). `deleteSelectedNodes` KULLANILMAZ:
 // o fonksiyon `selectedNodes` global'ini tüketiyor (burada seçim kullanıcınındır)
 // ve sensör/parametrik referanslarını da tarıyor — FEAD kasnağında ikisi de yok.
 function _fwClearPulleys(){

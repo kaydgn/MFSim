@@ -674,6 +674,15 @@ biçimde girecek; `parseFloat('63,5')` sessizce `63` verirdi.
 Yazma yolu panelin kullandığı `veFeadSet`'e devrediyor (saveState + kutuyu
 koordinatına oturtma orada); adına tıklamak kasnağın panelini açıyor.
 
+**SİHİRBAZ VE ÖRNEK KURUCULARI TABLOYU YENİDEN KULLANIR, İKİNCİSİNİ KURMAZ.**
+`fead-table` maxInstances:1 ve açılış yüzeyi (`veFeadPopulateStarter`) onu zaten
+koyuyor; kurucunun "araç düğümünü yeniden kullan" listesinde olmasaydı
+`createNode` reddeder ve kullanıcı "modeli kur" dediğinde bir UYARI görürdü.
+İKİ AYRI DÖNGÜ var (`veFeadLoadExample` ve `veFeadWizCreate`) — birinde
+düzeltilen kusur ötekinde yaşadı, ölçüldü. Ve ikisi de örnek düğümünü `nodes`'tan
+doğrudan splice ettiği için `updateNodeCount`'u KENDİLERİ çağırmak zorunda:
+çağırmayınca araç çubuğu bir fazla gösteriyor (12 düğüm varken 13).
+
 Kapı: `fead-table.test.js` — sütun kimlikleri kullanıcının sayfasına karşı,
 türetilenler çekirdekten, girdi sütunları çözülemeyen modelde de dolu, satır
 taşıma + sürücü kilidi, mousedown yutma, tek tazeleme kapısı.
