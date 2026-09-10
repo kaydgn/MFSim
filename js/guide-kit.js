@@ -249,6 +249,7 @@ var VE_GUIDE_APPFIG_TOKENS = {
   '--accent-tint-15': 'rgba(36,66,95,.15)', '--accent-tint-22': 'rgba(36,66,95,.22)',
   '--accent-tint-35': 'rgba(36,66,95,.35)',
   '--dur-fast': '0s', '--shadow-lg': 'none', '--focus-ring': 'transparent',
+  '--shadow-color': 'transparent',
   '--ribbon-strip-h': 'auto', '--ribbon-expanded-h': 'auto'
 };
 
