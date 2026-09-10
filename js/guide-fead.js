@@ -84,6 +84,143 @@ function _gfNot(baslik, govde){ return veGuideNote('', baslik, govde); }
 function _gfUyari(baslik, govde){ return veGuideNote('warn', baslik, govde); }
 function _gfOnay(baslik, govde){ return veGuideNote('check', baslik, govde); }
 
+// ── SAHNELER: PROGRAMIN KENDİ BİLEŞENİ, BELGENİN İÇİNDE ────────────────────
+//
+// Kabuk `js/guide-kit.js`'te (`veGuideScene` + `veGuideSceneCSS`); burada olan
+// tek şey ÜRETİCİYİ ÇAĞIRMAK. Elle yazılmış bir kopya konursa sahnenin bütün
+// gerekçesi düşer — kapı bu yüzden sahnenin içeriğini üreticinin çıktısıyla
+// karşılaştırıyor, sabit bir dizeyle değil.
+//
+// GLOBAL TAKASI ŞART. Kart ve panel üreticileri `nodes`/`connections`
+// global'lerini okuyor (Araç Performans kılavuzundaki `_gaKoslu` ile aynı
+// sınıf). Kullanıcının açık modeli çizilseydi kılavuz herkeste başka
+// görünürdü; `finally` ile geri veriliyor.
+var _gfSahnePack = null;   // örnek bir kez kurulur, sahneler paylaşır
+
+function _gfSahnePaketi(){
+  if(_gfSahnePack !== null) return _gfSahnePack;
+  _gfSahnePack = _gfOrnekCoz() || false;
+  return _gfSahnePack;
+}
+
+// Üreticiyi ÖRNEK MODELDE koştur. Üretici patlarsa sahne hiç çizilmez —
+// yarım bir kutu, olmayan bir arayüzü varmış gibi gösterirdi.
+function _gfSahneHTML(fn){
+  var O = _gfSahnePaketi();
+  if(!O || typeof fn !== 'function') return '';
+  var eskiN = (typeof nodes !== 'undefined') ? nodes : undefined;
+  var eskiC = (typeof connections !== 'undefined') ? connections : undefined;
+  try {
+    if(typeof window !== 'undefined'){
+      window.nodes = O.pack.nodes;
+      window.connections = O.pack.connections || [];
+    }
+    return fn(O) || '';
+  } catch(e){
+    return '';
+  } finally {
+    if(typeof window !== 'undefined'){
+      window.nodes = eskiN;
+      window.connections = eskiC;
+    }
+  }
+}
+
+// Bir kasnağı tipine göre bul — sahne hangi kasnağı gösterdiğini SEÇER,
+// "ilk bulduğun" demek sürücüyü verirdi ve aksesuara özgü kartlar
+// (Katalog Modeli · Devir Sınırları) hiç görünmezdi.
+function _gfSahneKasnak(O, tip){
+  var bul = null;
+  O.pack.nodes.forEach(function(n){ if(n.type === tip && !bul) bul = n; });
+  return bul;
+}
+
+// Şerit düğmesi — `veRibbonItemHTML`'in kendisi. Kayıt defterindeki ögeyi
+// ADIYLA arar: dizi konumundan almak, şerit yeniden dizildiğinde sessizce
+// başka bir düğmeyi çizerdi.
+function _gfSeritOgesi(run){
+  if(typeof VE_RIBBON_TABS === 'undefined' || typeof veRibbonItemHTML !== 'function')
+    return '';
+  var bulunan = null, tabId = '', gi = 0, ii = 0;
+  VE_RIBBON_TABS.forEach(function(t){
+    (t.groups || []).forEach(function(g, gx){
+      (g.items || []).forEach(function(it, ix){
+        if(!bulunan && it.run === run){ bulunan = it; tabId = t.id; gi = gx; ii = ix; }
+      });
+    });
+  });
+  if(!bulunan) return '';
+  try { return veRibbonItemHTML(bulunan, tabId, gi, ii) || ''; } catch(e){ return ''; }
+}
+
+// Düğme KOMUTU VARKEN çizilir. `veRibbonRunnable` düğmenin etkinliğini
+// `window[item.run]` var mı diye ölçüyor; kılavuz belgesi üretilirken o komut
+// yüklü olmayabilir ve düğme PASİF çizilir — kullanıcıya "bu düğme
+// kullanılamaz" demek, anlatılan şeyin tam tersi. Komut çizim süresince
+// tanımlanıyor ve `finally` ile geri veriliyor (`nodes` takasının aynısı).
+function _gfSeritEtkin(run, fn){
+  if(typeof window === 'undefined') return fn();
+  var vardi = Object.prototype.hasOwnProperty.call(window, run);
+  var eski = window[run];
+  try {
+    if(typeof eski !== 'function') window[run] = function(){};
+    return fn();
+  } catch(e){
+    return '';
+  } finally {
+    if(vardi) window[run] = eski; else { try { delete window[run]; } catch(e2){ window[run] = eski; } }
+  }
+}
+
+function _gfSahneSerit(){
+  var btn = _gfSeritEtkin('veTidyLayout', function(){ return _gfSeritOgesi('veTidyLayout'); });
+  if(!btn || btn.indexOf('is-disabled') >= 0) return '';
+  return veGuideScene('<div class="ve-rb-group-items">' + btn + '</div>',
+    'Şeritteki <b>Otomatik Düzenle</b> düğmesi. Bu bir ekran görüntüsü değil — '
+    + 'düğmenin kendisi, programın kendi üreticisinden ve kendi renkleriyle '
+    + 'çizildi; ikonu ya da adı değişirse bu resim <b>kendiliğinden</b> değişir.');
+}
+
+function _gfSahneTablo(){
+  var html = _gfSahneHTML(function(){
+    if(typeof veFeadTableCardHTML !== 'function') return '';
+    return veFeadTableCardHTML({ id: 'gk-tbl', type: 'fead-table', data: {} });
+  });
+  if(!html) return '';
+  // Doğal genişlik ÜRETİLEN HTML'den okunuyor (guide-kit.js
+  // `_gkNaturalWidth`); burada bir ölçü yazılmıyor.
+  return veGuideScene(html,
+    'Kayış Tablosu, <b>Bölüm 14’ün örnek modeliyle</b> doldurulmuş hâlde. '
+    + 'Türeyen sütunlar gerçek çözümden geliyor: Σsarım <b>360,00°</b> okuması '
+    + 'kayış yolunun kapandığını söylüyor. Sütun bir gün yeniden adlandırılırsa '
+    + 'bu şekil onunla birlikte değişir.');
+}
+
+function _gfSahneKasnakPaneli(){
+  var html = _gfSahneHTML(function(O){
+    if(typeof getFeadPulleyPropertiesHTML !== 'function') return '';
+    var n = _gfSahneKasnak(O, 'fead-alternator') || _gfSahneKasnak(O, 'fead-ac');
+    return n ? getFeadPulleyPropertiesHTML(n) : '';
+  });
+  if(!html) return '';
+  return veGuideScene(html,
+    'Bir <b>aksesuar</b> kasnağının paneli (alternatör). Tablodaki ada tıklayınca '
+    + 'açılan yüzey budur. <b>Katalog Modeli</b> ve <b>Devir Sınırları</b> kartları '
+    + 'yalnız aksesuar tiplerinde çizilir — sürücü ya da avara kasnağında yoktur.');
+}
+
+function _gfSahneKapilar(){
+  var html = _gfSahneHTML(function(O){
+    if(typeof veFeadChecksCard !== 'function') return '';
+    return veFeadChecksCard(O.cozucu, O.build);
+  });
+  if(!html) return '';
+  return veGuideScene(html,
+    'Uygunluk Kapıları kartı, örnek model üzerinde <b>canlı ölçülmüş</b> hâlde. '
+    + 'Rozetler üç kuralın o modeldeki hükmünü taşıyor; “değerlendirilemedi” '
+    + 'satırları o kasnakta devir sınırı girilmediği için öyle.');
+}
+
 // ── BÖLÜM KİMLİKLERİ — içindekiler ve başlıklar TEK KAYNAKTAN ──────────────
 // Raporun kendi kuralı: iki yerde yazılsa biri kayardı.
 var VE_GUIDE_FEAD_SECTIONS = [
@@ -317,9 +454,10 @@ function _gfSec3(){
     + 'ekleyebilirsiniz.</p>';
   h += _gfNot('Araç kartlarını dizmek',
       'Tuvalde yalnız araç kartları durduğu için yerleşim bir <em>okunurluk</em> meselesidir, '
-    + 'model değil. Araç çubuğundaki <strong>Otomatik Düzenle</strong> onları dizer: Kayış '
+    + 'model değil. Şeritteki <strong>Otomatik Düzenle</strong> düğmesi onları dizer: Kayış '
     + 'Yolu şeması ile Kayış Tablosu sağa, künye kartları sola. Kasnaklar dizilmez — '
     + 'dizilecek bir kutuları yok.');
+  h += _gfSahneSerit();
   return h;
 }
 
@@ -349,6 +487,7 @@ function _gfSec4(){
       + '<strong>360,00°</strong> olmalı.'
   ]);
 
+  h += _gfSahneTablo();
   h += '<h3>4.1 Tablonun sütunları</h3>';
   h += '<p>Sıra bilinçlidir: <strong>girdi ile türeyen iç içe durur</strong>. Bir koordinatı '
     + 'değiştirdiğinizde sarımın ve span’in ne olduğunu aynı bakışta görürsünüz — sütunları '
@@ -538,6 +677,7 @@ function _gfSec6(){
     ['Katalog Modeli', 'Kasnak panelinde hazır eğri seçimi',
       'Elinizde ölçülmüş eğri yoksa; boş bırakılan kW hücreleri buradan dolar']
   ], ['Kaynak', 'Nerede', 'Ne zaman']);
+  h += _gfSahneKasnakPaneli();
   h += '<h3>6.2 Devir sınırları — uygunluk kapısının girdisi</h3>';
   h += '<p>Aksesuar kasnaklarının panelinde bir <strong>Devir Sınırları</strong> kartı vardır. '
     + 'Buradaki üç sayı bir <em>bilgi</em> değil, Bölüm 11.5’teki uygunluk kapılarının '
@@ -1067,6 +1207,7 @@ function _gfSec11(){
     + '<strong>“değerlendirilemedi”</strong> olur ve <strong>uygun sayılmaz</strong>. Boş '
     + 'bir kapıyı geçilmiş saymak, bu modülün en pahalı hata sınıfının — “makul ama yanlış” '
     + 'sonucun — tam örneği olurdu.');
+  h += _gfSahneKapilar();
   h += _gfNot('Panel ve rapor aynı çağrıyı paylaşır',
       'Kapılar tek bir yerden hesaplanır. Panel <strong>canlı</strong> ölçer; rapor ise '
     + '<strong>çözüm anında</strong> yazılan sonucu okur, yeniden hesaplamaz. Aksi hâlde '
@@ -1637,6 +1778,8 @@ function _gfEkA(){
 
 function veGuideFeadHTML(){
   _gfTblNo = 0; _gfFigNo = 0;
+  _gfSahnePack = null;
+  if(typeof veGuideSceneReset === 'function') veGuideSceneReset();
 
   var tarih = new Date().toLocaleDateString('tr-TR',
     { year: 'numeric', month: 'long', day: 'numeric' });
@@ -1661,9 +1804,19 @@ function veGuideFeadHTML(){
          + _gfSec7() + _gfSec8() + _gfSec9() + _gfSec10() + _gfSec11() + _gfSec12()
          + _gfSec13() + _gfSec14() + _gfEkA();
 
+  // SAHNE CSS'İ SAHNE VARSA EKLENİR. Hiç sahne çizilmediyse (üreticiler
+  // yüklü değil) uygulamanın kurallarını belgeye koymanın karşılığı yok.
+  var sahneCss = '';
+  if(govde.indexOf('gk-sahne') >= 0 && typeof veGuideSceneCSS === 'function'){
+    // Sahne çizildi ama kuralları sökülemiyorsa SESSİZ KALINMAZ: kutu biçimsiz
+    // bir yığın gibi görünür ve kullanıcı olmayan bir arayüz görür.
+    sahneCss = veGuideSceneCSS();
+  }
+
   return veGuideDocHTML({
     title: 'MFSim — FEAD Modelleme Kılavuzu',
-    body: govde
+    body: govde,
+    extraCss: sahneCss
   });
 }
 
@@ -1672,6 +1825,10 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_GUIDE_FEAD_SECTIONS: VE_GUIDE_FEAD_SECTIONS,
     VE_GUIDE_FEAD_GATES: VE_GUIDE_FEAD_GATES,
     _gfOrnekCoz: _gfOrnekCoz, _gfSapma: _gfSapma,
+    _gfSeritOgesi: _gfSeritOgesi, _gfSahneHTML: _gfSahneHTML,
+    _gfSeritEtkin: _gfSeritEtkin,
+    _gfSahneTablo: _gfSahneTablo, _gfSahneKasnakPaneli: _gfSahneKasnakPaneli,
+    _gfSahneKapilar: _gfSahneKapilar, _gfSahneSerit: _gfSahneSerit,
     veGuideFeadHTML: veGuideFeadHTML
   };
 }

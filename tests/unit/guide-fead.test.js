@@ -14,6 +14,9 @@
  *      üretim anında koşmalı. Kapı zinciri CASUSLA tutuyor — sabit basan bir
  *      sürüm değerleri doğru gösterse bile çağrıyı yapmadığı için kırmızı olur.
  */
+const fs = require('fs');
+const path = require('path');
+const io_read = (r) => fs.readFileSync(path.join(__dirname, '../../', r), 'utf8');
 const M = require('../../js/fead-model.js');
 const F = require('../../js/fead-core.js');
 const RP = require('../../js/cp-fead-report.js');
@@ -43,6 +46,10 @@ Object.keys(BL).forEach((k) => { global[k] = BL[k]; });
 // atlardı.
 const AC = require('../../js/fead-accessories.js');
 Object.keys(AC).forEach((k) => { global[k] = AC[k]; });
+// Uygunluk kapıları — §11.4'ün sahnesi bu modüle bağlı. Yüklenmezse kart
+// "Kapılar yüklenmedi" der ve sahne üç kuralı hiç basmaz.
+const CK = require('../../js/fead-checks.js');
+Object.keys(CK).forEach((k) => { global[k] = CK[k]; });
 // "Katalog Modeli" kartı, Araç Performans ile ORTAK preset kütüphanesine bağlı
 // (veFeadPresetLib → VE_ALTERNATOR_PRESETS / VE_AC_PRESETS). Yüklenmezse kart
 // hiç çizilmez ve Ek A'nın o satırı sessizce atlanırdı.
@@ -56,6 +63,18 @@ Object.keys(CP).forEach((k) => { if (global[k] === undefined) global[k] = CP[k];
 Object.keys(RP).forEach((k) => { global[k] = RP[k]; });
 const KIT = require('../../js/guide-kit.js');
 Object.keys(KIT).forEach((k) => { global[k] = KIT[k]; });
+// SAHNELER İÇİN: şerit üreticisi ve uygulamanın CSS'i.
+//
+// `_gkStyleText` CSS'i ÇALIŞAN SAYFADAN okuyor; jsdom'da öyle bir sayfa yok,
+// o yüzden gerçek css/styles.css bir <style> etiketine konuyor. Kapı böylece
+// sökümün KENDİSİNİ ölçüyor — sahte bir dizeyle değil.
+const RB = require('../../js/ribbon.js');
+Object.keys(RB).forEach((k) => { global[k] = RB[k]; });
+['css/styles.css', 'css/icons.css'].forEach((r) => {
+  const st = document.createElement('style');
+  st.textContent = io_read(r);
+  document.head.appendChild(st);
+});
 const GF = require('../../js/guide-fead.js');
 Object.keys(GF).forEach((k) => { global[k] = GF[k]; });
 // Sihirbaz adım listesi KAYNAKTAN okunur — kılavuzun adım tablosu ona karşı
@@ -66,6 +85,21 @@ beforeEach(() => resetStubs(stubs));
 
 // Belge bir kez üretilir; testlerin çoğu aynı çıktıyı tarıyor.
 const DOC = GF.veGuideFeadHTML();
+
+// BELGENİN KENDİ GÖVDESİ — uygulamadan gelen her şey çıkarılmış hâli.
+//
+// Kılavuz artık programın gerçek bileşenlerini `<figure class="appfig">`
+// içinde sahneliyor (js/guide-kit.js → `veGuideScene`). O bileşenlerin HTML'i
+// ve `.appfig` kapsamlı kuralları raporun kendi sözleşmesine tabidir; kılavuzun
+// KENDİ yazdığı içeriği ölçen kapılar onları görmemeli, yoksa uygulamanın
+// kurallarını kılavuzun ihlali sayarlar. Ayrım tek yerde tanımlı.
+// Belgedeki bütün uygulama şekilleri, ve içlerinden ŞEMA olan.
+const SEKILLER = DOC.match(/<figure class="appfig">[\s\S]*?<\/figure>/g) || [];
+const SEMA = SEKILLER.filter((f) => f.indexOf('<svg') >= 0)[0] || '';
+
+const KENDI = DOC
+  .replace(/<figure class="appfig">[\s\S]*?<\/figure>/g, '')
+  .replace(/\.appfig[^{]*\{[^}]*\}/g, '');
 
 // ═══════════════════════════════════════════════════════════════════════════
 describe('belge iskeleti', () => {
@@ -123,9 +157,12 @@ describe('kozmetik raporla aynı', () => {
     // DEĞİLDİR; şablon onları yalnız `.appfig` altında baskı paletine bağlar.
     // Kanvas çizicisinin şekli o sınıfın içinde olduğu için orada meşrudurlar;
     // dışarıda bir tanesi bile "invalid at computed-value time" demek.
-    const figsiz = DOC.replace(/<figure class="appfig">[\s\S]*?<\/figure>/g, '');
+    // Kapsam iki yerden gelebilir ve İKİSİ DE meşru: şeklin İÇİ (rapor
+    // şablonunun kuralı) ve `.appfig ...` diye kapsanmış CSS kuralları
+    // (kılavuzun sahneleri — js/guide-kit.js `_gkScopeRule`). Kapsanmamış tek
+    // bir kullanım "invalid at computed-value time" demek.
     ['var(--fs-', 'var(--bg-', 'var(--text-', 'var(--accent-', 'var(--radius-']
-      .forEach((j) => { expect(figsiz).not.toContain(j); });
+      .forEach((j) => { expect(KENDI).not.toContain(j); });
     // Ve şeklin İÇİNDE kullandıkları gerçekten .appfig altında tanımlı olmalı —
     // bunu bir üstteki "her var(--…) tanımlı" kapısı zaten tutuyor.
   });
@@ -163,7 +200,9 @@ describe('tablo sözleşmesi', () => {
   // gerçek tarayıcıda ölçüldü: tek bir hücre yüzünden 393 px taşma, yatay
   // kaydırma çubuğu, ve hiçbir hata mesajı.
   test('uzun metin taşıyan her hücre class="l" almış', () => {
-    const hucreler = DOC.match(/<td[^>]*>[\s\S]*?<\/td>/g) || [];
+    // Sahnedeki hücreler UYGULAMANIN tablosuna ait (`.ve-fead-tbl`) ve kendi
+    // hizalama sınıflarını taşır; kılavuzun `td.l` sözleşmesi onları bağlamaz.
+    const hucreler = KENDI.match(/<td[^>]*>[\s\S]*?<\/td>/g) || [];
     expect(hucreler.length).toBeGreaterThan(100);
     const sucLu = [];
     hucreler.forEach((h) => {
@@ -193,15 +232,17 @@ describe('kayış yolu şeması', () => {
   test('şema .appfig sınıfı İÇİNDE', () => {
     // Sınıf düşerse çizici uygulamanın jetonlarını çözemez ve kayış,
     // kasnaklar, sarım yayları GÖRÜNMEZ olur — sayfa hatasız, konsol temiz.
+    //
+    // BELGEDE ARTIK BİRDEN ÇOK appfig ŞEKLİ VAR (kılavuz programın kartlarını
+    // da sahneliyor); şema onlardan BİRİ. "İlk şekli al" demek, sahne sırası
+    // değişince sessizce başka bir şekli ölçmek olurdu.
     expect(DOC).toContain('<figure class="appfig">');
-    const fig = (DOC.match(/<figure class="appfig">[\s\S]*?<\/figure>/) || [''])[0];
-    expect(fig).toContain('<svg');
-    expect(fig).toContain('<figcaption>');
+    expect(SEMA).not.toBe('');
+    expect(SEMA).toContain('<figcaption>');
   });
 
   test('şeklin kullandığı her jeton belgenin CSS’inde tanımlı', () => {
-    const fig = (DOC.match(/<figure class="appfig">[\s\S]*?<\/figure>/) || [''])[0];
-    const jetonlar = [...new Set((fig.match(/var\((--[a-z0-9-]+)/g) || []).map((s) => s.slice(4)))];
+    const jetonlar = [...new Set((SEMA.match(/var\((--[a-z0-9-]+)/g) || []).map((x) => x.slice(4)))];
     expect(jetonlar.length).toBeGreaterThan(3);
     jetonlar.forEach((j) => { expect(DOC).toContain(j + ':'); });
   });
@@ -405,6 +446,197 @@ describe('içerik yönlendirici', () => {
   test('hızlı başvuru eki alan → panel eşlemesi veriyor', () => {
     expect(DOC).toContain('Alan → Panel Hızlı Başvurusu');
     expect(DOC).toContain('Gergi Künye Kütüphanesi');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SAHNELER — "şu düğmeye bas" derken düğmenin KENDİSİ
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kılavuz artık programın gerçek bileşenlerini belgeye gömüyor (guide-kit.js →
+// `veGuideScene`). Buradaki kapıların tamamı TEK bir soruyu soruyor: sahnedeki
+// şey gerçekten ÜRETİCİDEN mi geldi? Elle yazılmış bir kopya da aynı görünür,
+// ve tam o yüzden ölçülmesi gereken şey görüntü değil KÖKEN.
+describe('sahneler programın kendi bileşeni', () => {
+  const sahneler = SEKILLER.filter((f) => f.indexOf('data-gk-sahne=') >= 0);
+
+  test('dört sahne de çizildi', () => {
+    // Üretici patlarsa `_gfSahneHTML` boş dönüyor ve sahne HİÇ çizilmiyor —
+    // yani sayının düşmesi sessiz bir kayıp. Sayı burada çıpalı.
+    expect(sahneler.length).toBe(4);
+    // Numaralar 1..N ve tekrarsız: sayaç elle yazılsaydı araya bir sahne
+    // girince kayardı (raporun tablo sayacındaki ders).
+    const no = sahneler.map((f) => Number((f.match(/data-gk-sahne="(\d+)"/) || [])[1]));
+    expect(no).toEqual([1, 2, 3, 4]);
+    sahneler.forEach((f, i) => { expect(f).toContain('Şekil ' + (i + 1) + ' —'); });
+  });
+
+  test('Kayış Tablosu sahnesi ÜRETİCİNİN çıktısı', () => {
+    const f = sahneler.filter((x) => x.indexOf('ve-fead-tbl') >= 0)[0] || '';
+    expect(f).not.toBe('');
+    // Sütun başlıkları tablonun KENDİ sütun listesinden gelmeli.
+    VE_FEAD_TABLE_COLS.map((c) => c.t).filter((t) => t && t !== '#')
+      .forEach((t) => { expect(f).toContain(t); });
+    // ...ve satırlar örnek modelin GERÇEK kasnaklarını taşımalı: sahne canlı
+    // çözülmüş bir modelin üstünde duruyor, boş bir iskelet değil.
+    expect(f).toContain('Alternatör');
+    expect(f).toContain('Σsarım');
+    // Çözümden gelen sayı: kapanan çevrimin işareti.
+    expect(f).toMatch(/360[.,]00/);
+  });
+
+  test('şerit düğmesi sahnesi ŞERİT KAYIT DEFTERİNDEN', () => {
+    const f = sahneler.filter((x) => x.indexOf('ve-rb-btn') >= 0)[0] || '';
+    expect(f).not.toBe('');
+    // Düğme kayıt defterindeki ögenin ta kendisi olmalı — adı ve ikonu
+    // oradan gelir. Elle yazılmış bir düğme bu üçünü de taklit edebilirdi,
+    // o yüzden ÜRETİCİNİN çıktısıyla birebir karşılaştırılıyor.
+    const item = (() => {
+      let bulunan = null;
+      RB.VE_RIBBON_TABS.forEach((t) => (t.groups || []).forEach((g) =>
+        (g.items || []).forEach((it) => { if (it.run === 'veTidyLayout') bulunan = it; })));
+      return bulunan;
+    })();
+    expect(item).toBeTruthy();
+    expect(f).toContain('mf-ico-' + item.icon);
+    expect(f).toContain(item.label);
+    // ...VE ETKİN ÇİZİLMİŞ. Pasif bir düğme kullanıcıya "bu kullanılamaz" der;
+    // anlatılan şeyin tam tersi. `_gfSeritEtkin` bozulursa burada görülür.
+    expect(f).not.toContain('is-disabled');
+    expect(f).not.toContain('aria-disabled');
+  });
+
+  test('kasnak paneli sahnesi AKSESUAR kasnağını gösteriyor', () => {
+    // Sürücü kasnak seçilseydi "Katalog Modeli" ve "Devir Sınırları" kartları
+    // hiç çizilmezdi ve altyazı olmayan bir şeyi anlatırdı (kart-adı kapısında
+    // ölçülmüş sınıf).
+    const f = sahneler.filter((x) => x.indexOf('Devir Sınırları') >= 0)[0] || '';
+    expect(f).not.toBe('');
+    expect(f).toContain('Temas Tarafı');
+    // AYIRT EDİCİ: aksesuar künye seçicisi YALNIZ `VE_FEAD_ACC_TYPE`'ta karşılığı
+    // olan tiplerde çizilir (alternatör · klima). "Katalog Modeli" bu işi
+    // GÖRMÜYOR — sürücü kasnakla ölçüldü, o kart orada da çıkıyor ve mutasyon
+    // kapıdan geçiyordu.
+    expect(f).toContain('BMC künyesi');
+    const tipler = Object.keys(VE_FEAD_ACC_TYPE);
+    expect(tipler.length).toBeGreaterThan(0);
+    // Sahnedeki düğüm gerçekten o tiplerden birine ait olmalı.
+    const id = (f.match(/ve-fead-od-([\w-]+)/) || [])[1] || '';
+    const dugum = (global.nodes || []).concat(GF._gfOrnekCoz().pack.nodes)
+      .filter((n) => n.id === id)[0];
+    expect(dugum).toBeTruthy();
+    expect(tipler).toContain(dugum.type);
+  });
+
+  test('uygunluk kapıları sahnesi ÜÇ KURALI da basıyor', () => {
+    const f = sahneler.filter((x) => x.indexOf('Uygunluk Kapıları') >= 0)[0] || '';
+    expect(f).not.toBe('');
+    ['Kasnak merkez mesafesi', 'Çevrim oranı penceresi', 'Aksesuar devir sınırı']
+      .forEach((k) => { expect(f).toContain(k); });
+  });
+
+  test('sahne CSS’i UYGULAMADAN söküldü ve .appfig altına kapsandı', () => {
+    const css = (DOC.match(/<style>[\s\S]*?<\/style>/g) || []).join('\n');
+    // Kural gerçekten söküldü mü — kaynak css/styles.css'teki tablo kuralları.
+    expect(css).toContain('.appfig .ve-fead-tbl');
+    expect(css).toContain('.appfig .ve-rb-btn');
+    // ...ve KAPSANMAMIŞ bir uygulama kuralı yok: `_gkScopeRule` atlanırsa
+    // uygulamanın kuralları belgenin kendi gövdesine de uygulanırdı.
+    const kapsamsiz = (css.match(/(^|\n)\s*\.(ve-fead-tbl|ve-rb-btn|mf-ico)[^{]*\{/g) || []);
+    expect(kapsamsiz).toEqual([]);
+  });
+
+  test('söküm EKSİKSİZ — kaynaktaki her sınıf belgede karşılıklı', () => {
+    // ÖLÇÜLDÜ VE ISIRDI: söküm tarayıcısı CSS yorumlarını silmezse, süslü
+    // parantez taşıyan bir yorum (bu depoda beş tane var) parantez sayacını
+    // kaydırıyor ve ONDAN SONRAKİ kurallar sessizce düşüyor — 58 seçicinin
+    // 20'si kayboldu, künye şeridi bitişik, birim satırları yan yana çizildi.
+    // Belge yine üretildi, hata çıkmadı.
+    //
+    // Kapı BAĞIMSIZ SAYIYOR: sökücünün kendi çıktısını sökücüye sordurmak,
+    // bozuk bir sökücünün kendisiyle tutarlı kalması demekti.
+    const kaynak = io_read('css/styles.css').replace(/\/\*[\s\S]*?\*\//g, '');
+    const belgeCss = (DOC.match(/<style>[\s\S]*?<\/style>/g) || []).join('\n');
+    // İKİ YÜZEY BİRDEN: `@media`'ya girmeyi kapatan mutasyon kuralı SIZDIRMIYOR,
+    // parantez sayacını kaydırıp SONRAKİLERİ düşürüyor — ve yalnız tablo
+    // sınıflarına bakan bir kapı o kaymayı ıskalayabiliyordu (ölçüldü).
+    const sinif = [...new Set([
+      ...(kaynak.match(/\.ve-fead-tbl[\w-]*/g) || []),
+      ...(kaynak.match(/\.ve-rb-btn[\w-]*/g) || []),
+      ...(kaynak.match(/\.ve-rb-(?:ico|lbl)[\w-]*/g) || [])
+    ])];
+    expect(sinif.length).toBeGreaterThan(18);
+    const eksik = sinif.filter((c) => belgeCss.indexOf('.appfig ' + c) < 0
+                                   && belgeCss.indexOf(c + ' ') < 0
+                                   && belgeCss.indexOf(c + '{') < 0
+                                   && belgeCss.indexOf(c + ',') < 0
+                                   && belgeCss.indexOf(c + ':') < 0);
+    expect(eksik).toEqual([]);
+  });
+
+  test('geniş sahne SAYFAYA SIĞDIRILDI', () => {
+    // Kayış Tablosu doğal hâlinde sayfadan geniş. Ölçeklenmezse yatay kaydırma
+    // ekranda çare olur ama BASKIDA sağdaki sütunlar kaybolur — belge A4.
+    const f = sahneler.filter((x) => x.indexOf('ve-fead-tbl') >= 0)[0] || '';
+    const z = /zoom:([\d.]+)/.exec(f);
+    expect(z).toBeTruthy();
+    const oran = Number(z[1]);
+    expect(oran).toBeGreaterThan(0.5);
+    expect(oran).toBeLessThan(1);
+    // ...ve ölçek GERÇEKTEN yetiyor: doğal genişlik × oran ≤ sayfa.
+    const dogal = KIT._gkNaturalWidth(f);
+    const sayfa = KIT._gkPageWidth();
+    expect(dogal).toBeGreaterThan(sayfa);
+    expect(dogal * oran).toBeLessThanOrEqual(sayfa);
+  });
+
+  // SÖKÜCÜNÜN KENDİSİ — belge üzerinden ölçülemeyen iki kural.
+  //
+  // Bugünkü css/styles.css bu iki hatayı AYIRT ETMİYOR: `@media` içine girmeyi
+  // kapatan bir değişiklik aynı 84 kuralı üretiyor (ölçüldü). Yani belge
+  // üzerinden kurulan bir kapı boş yere yeşil kalırdı — kaynak bugün öyle
+  // dizildiği için, kural doğru olduğu için değil. Girdi burada sentetik ve
+  // hatayı görünür kılıyor.
+  describe('sökücünün kuralları', () => {
+    test('@media içindeki kural ÜST SEVİYE sayılmaz', () => {
+      const css = '.ve-fead-tbl{color:red}'
+        + '@media (max-width:900px){.ve-fead-tbl{color:blue}}'
+        + '.ve-fead-tbl-head{color:green}';
+      const r = KIT._gkTopRules(css, ['.ve-fead-tbl']);
+      const govde = r.map((x) => x.body).join(';');
+      expect(govde).toContain('red');
+      expect(govde).toContain('green');
+      // Dar ekran kuralı sızarsa düğme her ekranda o biçimde çizilir.
+      expect(govde).not.toContain('blue');
+      // ...ve @media'dan SONRAKİ kural düşmemeli: parantez sayacı kayarsa
+      // asıl hasar sızıntı değil, sessiz KAYIP olur.
+      expect(r.length).toBe(2);
+    });
+
+    test('süslü parantez taşıyan YORUM sayacı kaydırmaz', () => {
+      const css = '.ve-fead-tbl{color:red}'
+        + '/* örnek: [hidden]{display:none} kuralını yener */'
+        + '.ve-fead-tbl-head{color:green}';
+      const r = KIT._gkTopRules(css, ['.ve-fead-tbl']);
+      expect(r.length).toBe(2);
+      expect(r.map((x) => x.body).join(';')).toContain('green');
+    });
+
+    test('kaynaktaki gerçek dar-ekran bildirimi belgede yok', () => {
+      // Kaynakta `@media (max-width:900px){ .ve-rb-btn--lg{min-height:54px} }`
+      // var; belgede o bildirim hiç geçmemeli.
+      const belge = (DOC.match(/<style>[\s\S]*?<\/style>/g) || []).join('\n')
+        .replace(/\s+/g, '');
+      expect(io_read('css/styles.css').replace(/\s+/g, ''))
+        .toContain('.ve-rb-btn--lg{min-height:54px;}');
+      expect(belge).not.toContain('.ve-rb-btn--lg{min-height:54px;}');
+    });
+  });
+
+  test('sahnenin istediği her jeton karşılıklı — eksik yok', () => {
+    // Eksik bir jeton belgeyi ÜRETMEYİ engellemez, yalnız o kuralı çöpe atar:
+    // soluk bir renk, kayıp bir çerçeve. Gürültü burada çıkar.
+    expect(KIT.veGuideSceneMissingTokens()).toEqual([]);
   });
 });
 

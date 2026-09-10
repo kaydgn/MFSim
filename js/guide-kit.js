@@ -192,6 +192,278 @@ function veGuideDocHTML(o){
     + '\n</div>\n</body>\n</html>';
 }
 
+// ── SAHNE — PROGRAMIN BİLEŞENİ, BELGENİN İÇİNDE ────────────────────────────
+//
+// "Şu düğmeye bas" derken düğmenin RESMİ değil KENDİSİ konur: kılavuz üretim
+// anında gerçek üreticiyi çağırır (`veFeadTableCardHTML`, `veRibbonItemHTML`,
+// `getFead*PropertiesHTML`) ve çıkan HTML'i belgeye gömer.
+//
+// GEREKÇE §14'ÜN GEREKÇESİYLE AYNI. Ekran görüntüsü gömülseydi düğme
+// değiştiğinde resim sessizce yalan söylerdi ve hiçbir test bunu göremezdi.
+// Kılavuzun METNİ tam olarak böyle eskidi: kasnak kutuları kalktı, kılavuz
+// onları anlatmaya devam etti, 43 kapının hiçbiri kırmızıya dönmedi. Bir resim
+// metinden daha da sessiz eskir.
+//
+// SÖZLEŞME YENİ DEĞİL — RAPORUNKİ. Rapor, uygulamanın çizdiği kayış yolu
+// şemasını `<figure class="appfig">` içine koyuyor ve uygulamanın jetonlarını
+// o sınıf altında BASKI paletine bağlıyor. Sahneler aynı sınıfı kullanır;
+// ikinci bir kabuk sınıfı açmak, aynı sorunun iki çözümü demekti (ve raporun
+// "arayüz jetonu .appfig dışına sızmasın" kapısı zaten o ayrımı bekliyor).
+//
+// CSS KOPYALANMAZ, ÇALIŞAN SAYFADAN SÖKÜLÜR. Bileşenin kuralları
+// `document.styleSheets`ten okunur; ikinci bir kopya tutmak bir tema
+// rötuşunda kılavuzun sessizce ayrışması demekti — `_gkReportCss`'in kozmetik
+// için kurduğu kuralın aynısı.
+
+// Sahnenin çizilmesi için gereken kural önekleri — TEK LİSTE.
+var VE_GUIDE_SCENE_SEL = [
+  '.ve-fead-tbl',      // Kayış Tablosu
+  '.ve-rb-btn',        // şerit düğmesi
+  '.ve-rb-ico',
+  '.ve-rb-lbl',
+  '.mf-ico',           // ikon maskeleri
+  '.sw-panel'          // panel kabuğu
+];
+
+// ARAYÜZ JETONLARININ BASKI KARŞILIĞI. Rapor şablonu `.appfig` altında on bir
+// jeton bağlıyor; sahnelenen bileşenler daha fazlasını istiyor ve eksikler
+// burada tamamlanıyor. YALNIZ EKSİKLER: raporun tanımladığı bir jetonu ikinci
+// kez yazmak, aynı bileşenin iki belgede farklı renkte çizilmesi demekti —
+// `veGuideSceneCSS` bu yüzden çakışanı atıyor, listeye bakıp varsaymıyor.
+//
+// Değerler baskı paletinden türer (rapor: --ink #1b1e24, --line #c9cdd3,
+// --prusya #24425f). Belge DURGUN: geçiş süresi 0, gölge ve odak halkası yok —
+// kâğıtta karşılığı olmayan şeyler.
+var VE_GUIDE_APPFIG_TOKENS = {
+  '--bg-primary': '#fff', '--bg-secondary': '#fbfbfc', '--bg-tertiary': '#f2f4f7',
+  '--text-primary': '#1b1e24', '--text-heading': '#12161f',
+  '--border-light': '#d8dce2', '--border-subtle': '#e4e6e9', '--border-hover': '#b4bbc4',
+  '--font-mono': "'IBM Plex Mono',ui-monospace,monospace",
+  '--fs-body': '11px', '--fs-md': '12px', '--fs-lg': '13px', '--fs-h2': '15px',
+  '--radius-md': '3px', '--tracking-wide': '.04em',
+  '--ink-accent': '#24425f', '--ink-success': '#2e7d4f',
+  '--ink-warning': '#c8781e', '--ink-danger': '#a8321f',
+  '--on-accent': '#fff', '--on-danger': '#fff',
+  '--accent-tint-6': 'rgba(36,66,95,.06)',  '--accent-tint-8': 'rgba(36,66,95,.08)',
+  '--accent-tint-10': 'rgba(36,66,95,.10)', '--accent-tint-12': 'rgba(36,66,95,.12)',
+  '--accent-tint-15': 'rgba(36,66,95,.15)', '--accent-tint-22': 'rgba(36,66,95,.22)',
+  '--accent-tint-35': 'rgba(36,66,95,.35)',
+  '--dur-fast': '0s', '--shadow-lg': 'none', '--focus-ring': 'transparent',
+  '--ribbon-strip-h': 'auto', '--ribbon-expanded-h': 'auto'
+};
+
+// Tema bloğu ÇAPASI — bugün yalnız denetim için okunuyor (baskı paleti
+// kullanıldığı için ekran renkleri belgeye girmiyor). `:root {` diye
+// körlemesine aramak YANLIŞ BLOĞU alıyor: styles.css'te başka bir `:root`
+// daha var ve ondan çıkan sahne renksiz çiziliyordu (ölçüldü).
+var _GK_THEME_RE = /:root\s*,\s*\[data-theme\s*=\s*["']?slate["']?\]/;
+
+// Çalışan sayfadaki CSS metni. İki kaynak, çünkü iki dağıtım biçimi var: tek
+// dosya build'inde CSS satır içi <style>, modüler index.html'de <link>.
+function _gkStyleText(){
+  if(typeof document === 'undefined') return '';
+  var parts = [], i, j;
+  var st = document.getElementsByTagName('style');
+  for(i = 0; i < st.length; i++) parts.push(st[i].textContent || '');
+  var sheets = document.styleSheets || [];
+  for(i = 0; i < sheets.length; i++){
+    var node = sheets[i].ownerNode;
+    if(node && node.tagName === 'STYLE') continue;   // yukarıda alındı
+    var rules = null;
+    // file:// üzerinde <link> sayfasının kuralları SecurityError atabilir.
+    try { rules = sheets[i].cssRules; } catch(e){ rules = null; }
+    if(!rules) continue;
+    var buf = [];
+    for(j = 0; j < rules.length; j++) buf.push(rules[j].cssText);
+    parts.push(buf.join('\n'));
+  }
+  return parts.join('\n');
+}
+
+// ÜST SEVİYE kuralları topla — @media / @supports İÇİNE GİRME.
+//
+// Naif bir "selector{...}" taraması iç içe blokları düzleştirir ve dar ekran
+// kuralını her ekrana uygulanır hâle getirir: `.ve-rb` kurallarının bir kısmı
+// `@media (max-width:900px)` içinde ve o hoisting sessizce yanlış bir düğme
+// çizerdi. Bu yüzden derinlik sayılıyor.
+function _gkTopRules(css, prefixes){
+  // YORUMLAR ÖNCE SİLİNİR. Bu deponun CSS'i yoğun yorumlu ve beşi süslü
+  // parantez taşıyor (`[hidden]{display:none}` gibi kod alıntıları). Yorum
+  // silinmezse parantez sayacı kayıyor ve ONDAN SONRAKİ kurallar sessizce
+  // düşüyor — ölçüldü: 58 seçicinin 20'si kayboldu, tablo künye şeridi
+  // bitişik, birim satırları yan yana çizildi. Belge yine üretilmişti.
+  css = String(css || '').replace(/\/\*[\s\S]*?\*\//g, '');
+  var out = [], i = 0, n = css.length;
+  while(i < n){
+    var ac = css.indexOf('{', i);
+    if(ac < 0) break;
+    var sel = css.slice(i, ac).trim();
+    if(sel.charAt(0) === '@'){            // @-bloğunun gövdesini komple atla
+      var d = 1, k = ac + 1;
+      while(k < n && d > 0){
+        if(css.charAt(k) === '{') d++;
+        else if(css.charAt(k) === '}') d--;
+        k++;
+      }
+      i = k; continue;
+    }
+    var kap = css.indexOf('}', ac);
+    if(kap < 0) break;
+    for(var p = 0; p < prefixes.length; p++){
+      if(sel.indexOf(prefixes[p]) === 0){
+        out.push({ sel: sel, body: css.slice(ac + 1, kap) });
+        break;
+      }
+    }
+    i = kap + 1;
+  }
+  return out;
+}
+
+// Kuralı `.appfig` altına KAPSA — virgüllü listenin her parçası ayrı ayrı.
+// Kapsanmasaydı uygulamanın kuralları belgenin kendi gövdesine de uygulanır,
+// jetonlar orada tanımsız olduğu için "invalid at computed-value time" olurdu.
+function _gkScopeRule(r){
+  var sel = r.sel.split(',').map(function(x){
+    return '.appfig ' + x.trim();
+  }).join(', ');
+  return sel + '{' + r.body + '}';
+}
+
+// Tema jetonları — çapalı, ve ÇAPA TUTSA BİLE İÇERİK DENETLENİR.
+function _gkThemeVars(css){
+  var m = _GK_THEME_RE.exec(css);
+  if(!m) return null;
+  var ac = css.indexOf('{', m.index);
+  var kap = (ac < 0) ? -1 : css.indexOf('}', ac);
+  if(ac < 0 || kap < 0) return null;
+  var govde = css.slice(ac + 1, kap);
+  if(govde.indexOf('--bg-secondary') < 0 || govde.indexOf('--accent-primary') < 0)
+    return null;
+  return govde;
+}
+
+// Sahne kurallarının kullandığı ama NE raporun `.appfig`inde NE de yukarıdaki
+// tabloda karşılığı olan jetonlar. Boş olmak zorunda; kapı bunu ölçüyor.
+//
+// Belge ÜRETİLMEYE DEVAM EDER — eksik bir jetonun bedeli soluk bir renk, yanlış
+// bir sayı değil. Sessiz-yanlış doktrini sayılar içindir; burada gürültü
+// testte çıkar, kullanıcının elinde kılavuzsuz kalmasıyla değil.
+function veGuideSceneMissingTokens(reportCss){
+  if(reportCss === undefined) reportCss = _gkReportCssNow();
+  var rules = _gkTopRules(_gkStyleText(), VE_GUIDE_SCENE_SEL);
+  var metin = rules.map(function(r){ return r.body; }).join('\n');
+  var kul = metin.match(/var\((--[a-z0-9-]+)/g) || [];
+  var rap = String(reportCss || '');
+  var eksik = [];
+  kul.forEach(function(v){
+    var ad = v.slice(4);
+    if(VE_GUIDE_APPFIG_TOKENS[ad]) return;
+    if(rap.indexOf(ad + ':') >= 0) return;
+    if(eksik.indexOf(ad) < 0) eksik.push(ad);
+  });
+  return eksik.sort();
+}
+
+// Sahnenin CSS'i. SESSİZCE BOŞ DÖNMEZ: kural bulunamazsa sahne çizilir ama
+// bambaşka görünür — raporun kozmetik kapısındaki gerekçenin aynısı.
+// Raporun kozmetiğini ÇALIŞMA ANINDA çöz — hangi jetonları zaten bağladığını
+// bilmeden "eksik" diye bir şey yazmak, ikinci bir tanım demekti.
+function _gkReportCssNow(){
+  if(typeof window === 'undefined' || !window.FEAD_REPORT_TEMPLATE_B64) return '';
+  try {
+    return _gkReportCss(decodeURIComponent(escape(atob(window.FEAD_REPORT_TEMPLATE_B64))));
+  } catch(e){ return ''; }
+}
+
+function veGuideSceneCSS(reportCss){
+  if(reportCss === undefined) reportCss = _gkReportCssNow();
+  var rules = _gkTopRules(_gkStyleText(), VE_GUIDE_SCENE_SEL);
+  if(!rules.length)
+    throw new Error('Sahne bileşen kuralları bulunamadı ('
+      + VE_GUIDE_SCENE_SEL.join(' ') + ') — kılavuz programın kendi '
+      + 'görünümüyle çizilemez.');
+  var rap = String(reportCss || '');
+  var jet = '';
+  Object.keys(VE_GUIDE_APPFIG_TOKENS).forEach(function(ad){
+    if(rap.indexOf(ad + ':') >= 0) return;      // rapor zaten bağlamış
+    jet += ad + ':' + VE_GUIDE_APPFIG_TOKENS[ad] + ';';
+  });
+  return (jet ? '.appfig{' + jet + '}\n' : '')
+    + '.appfig .gk-sahne{border:1px solid var(--line); background:var(--paper);'
+    + ' padding:10px 12px; overflow-x:auto; text-align:left;'
+    + ' font-family:system-ui,-apple-system,"Segoe UI",sans-serif;'
+    + ' color:var(--text-primary); line-height:1.45;}\n'
+    + '.appfig .gk-sahne *{box-sizing:border-box;}\n'
+    + '.appfig .gk-sahne button, .appfig .gk-sahne select,'
+    + ' .appfig .gk-sahne input{cursor:default;}\n'
+    + rules.map(_gkScopeRule).join('\n');
+}
+
+// Sayfanın içerik genişliği — raporun kendi `.page` kuralından. İkinci bir
+// sabit yazmak, sayfa ölçüsü değiştiğinde sahnelerin sessizce taşması demekti.
+function _gkPageWidth(){
+  var css = _gkReportCssNow();
+  var m = /\.page\{[^}]*max-width\s*:\s*(\d+)px[^}]*\}/.exec(css);
+  if(!m) return 0;
+  var tam = Number(m[1]);
+  var p = /\.page\{[^}]*padding\s*:\s*\d+px\s+(\d+)px/.exec(css);
+  var yan = p ? Number(p[1]) : 0;
+  return tam - 2 * yan;
+}
+
+// Sahnenin DOĞAL genişliği — üretilen HTML'in kendi `<colgroup>` ölçülerinden.
+//
+// Bir global'e (`VE_FEAD_TABLE_W`) bakmak iki sebeple yanlıştı: kılavuz modül
+// kapsamından o adı göremiyor (ölçüldü — ölçekleme sessizce hiç uygulanmadı),
+// ve gördüğü hâlde bile o sayı KUTUNUN ölçüsü, tablonun değil. Sütun
+// genişlikleri veri olarak zaten HTML'de duruyor; sütun eklenince bu sayı
+// kendiliğinden değişir.
+function _gkNaturalWidth(html){
+  var m = String(html || '').match(/<col[^>]*width\s*:\s*(\d+(?:\.\d+)?)px/g);
+  if(!m || !m.length) return 0;
+  var t = 0;
+  m.forEach(function(x){
+    var v = /(\d+(?:\.\d+)?)px/.exec(x);
+    if(v) t += Number(v[1]);
+  });
+  // Kartın kendi payı: kenarlıklar ve hücre boşluğu. Ölçü sütunlardan gelir,
+  // bu yalnız onun etrafındaki çerçeve.
+  return t ? t + 26 : 0;
+}
+
+// Şekil sayacı — elle "Şekil 3" yazmak, araya bir sahne girdiğinde sessizce
+// kayardı (raporun tablo sayacındaki kuralın aynısı).
+var _gkSahneNo = 0;
+function veGuideSceneReset(){ _gkSahneNo = 0; }
+function veGuideSceneCount(){ return _gkSahneNo; }
+
+// Bir bileşeni sahneye koy. `html` programın ÜRETİCİSİNDEN gelir; buraya elle
+// yazılmış bir kopya konursa sahnenin bütün gerekçesi düşer.
+//
+// Kabuk raporun şekil kalıbıyla birebir: `<figure class="appfig">` +
+// `<figcaption><b>Şekil N —</b> …`.
+function veGuideScene(html, altyazi, dogalEn){
+  if(!html) return '';
+  _gkSahneNo++;
+  // SIĞMAYAN İÇERİK ÖLÇEKLENİR, KIRPILMAZ. Kayış Tablosu doğal hâlinde
+  // sayfadan geniş; yatay kaydırma ekranda çare, BASKIDA değil — A4'e basılan
+  // belgede sağdaki sütunlar kaybolurdu. Oran sayfanın kendi genişliğinden
+  // türer (rapor şablonundan sökülür), elle ayarlanmaz.
+  var stil = '';
+  var en = Number(dogalEn);
+  if(!Number.isFinite(en) || en <= 0) en = _gkNaturalWidth(html);
+  if(Number.isFinite(en) && en > 0){
+    var sayfa = _gkPageWidth();
+    if(sayfa > 0 && en > sayfa)
+      stil = ' style="zoom:' + (Math.floor(sayfa / en * 100) / 100) + '"';
+  }
+  return '<figure class="appfig"><div class="gk-sahne" data-gk-sahne="'
+    + _gkSahneNo + '"' + stil + '>' + html + '</div>'
+    + '<figcaption><b>Şekil ' + _gkSahneNo + ' —</b> ' + (altyazi || '')
+    + '</figcaption></figure>';
+}
+
 // ── ANTET · İÇİNDEKİLER · BÖLÜM — raporun kalıbıyla ────────────────────────
 // Üçü de raporun `.antet` / `.toc` / `h2 .no` yapısını birebir kullanır; tek
 // fark alan adlarıdır. Kılavuza özgü bir yapı icat etmek, "aynı kozmetik"
@@ -428,6 +700,14 @@ if (typeof module !== 'undefined' && module.exports) {
     // dalını ve pencerenin gövdesini ancak buradan görebilir.
     _gkKart: _gkKart, _gkRender: _gkRender, veGuideBuild: veGuideBuild,
     veGuideKitOpen: veGuideKitOpen, veGuideKitClose: veGuideKitClose,
-    veGuideOpenCurrent: veGuideOpenCurrent
+    veGuideOpenCurrent: veGuideOpenCurrent,
+    VE_GUIDE_SCENE_SEL: VE_GUIDE_SCENE_SEL,
+    VE_GUIDE_APPFIG_TOKENS: VE_GUIDE_APPFIG_TOKENS,
+    _gkStyleText: _gkStyleText, _gkTopRules: _gkTopRules, _gkThemeVars: _gkThemeVars,
+    _gkScopeRule: _gkScopeRule, _gkReportCssNow: _gkReportCssNow,
+    _gkPageWidth: _gkPageWidth, _gkNaturalWidth: _gkNaturalWidth,
+    veGuideSceneCSS: veGuideSceneCSS, veGuideScene: veGuideScene,
+    veGuideSceneReset: veGuideSceneReset, veGuideSceneCount: veGuideSceneCount,
+    veGuideSceneMissingTokens: veGuideSceneMissingTokens
   };
 }
