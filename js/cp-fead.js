@@ -1896,15 +1896,19 @@ function _feadVibDef(vib, tau, walk){
   var TWO = Math.PI*2, t = tau || 0;
 
   if(vib.kind === 'span'){
-    // Açıklık çırpması: her açıklık KENDİ frekansıyla, yarım sinüs şeklinde,
+    // Açıklık çırpması: her açıklık KENDİ frekansıyla, KENDİ modunun şeklinde,
     // kendi normali boyunca. Şekil v=0 yaklaşımıdır (yükün başındaki 2. sınır).
+    //
+    // MOD SAYISI ŞEKLİ DEĞİŞTİRİR: sin(n·π·x/L). n=1 bir yay, n=2 ortasında
+    // düğümü olan bir S, n=3 iki düğümlü. Model başka bir modu baskın
+    // gösterirken koşulsuz yay çizmek yanlış resim olurdu.
     var sp = vib.spans || [];
     return {
       disp: function(segIdx, tt, seg){
         var i = _feadSegSpan(segIdx);
         if(i < 0 || !sp[i] || !(seg.l > 0)) return null;
-        var s = sp[i];
-        var w = s.ampMm * Math.sin(Math.PI * tt / seg.l)
+        var s = sp[i], n = (s.mode > 0) ? s.mode : 1;
+        var w = s.ampMm * Math.sin(n * Math.PI * tt / seg.l)
                         * Math.sin(TWO * s.fScreen * t + s.ph);
         return [-seg.uy * w, seg.ux * w];          // açıklığa dik
       },
@@ -2806,6 +2810,7 @@ function veFeadLayoutSVG(build, W, H, opts){
       //   beltMs(t)·1000·slow
       // diye kendisi kuruyor — sabit bir mmS senaryoda yanlış olurdu.
       scn: opts.scn ? _feadScnSlim(opts.scn) : null,
+      vibModes: (typeof VE_FEAD_VIB_MODES === 'number') ? VE_FEAD_VIB_MODES : 4,
       slow: (opts.animate && opts.animate.slow > 0) ? r4(opts.animate.slow) : 0,
       segs: walk.segs.map(function(sg){
         return (sg.a === 0)
@@ -3205,6 +3210,7 @@ function veFeadLayoutCardHTML(node){
   // ve dolayısıyla açıklık frekansı da o konumdan gelmeli. Geçilmeseydi şema
   // bir konumu, çırpma başka bir konumu anlatırdı.
   var vibSel = veFeadVibModeOf(node), vibGain = veFeadVibGainOf(node);
+  var vibZeta = veFeadVibZetaOf(node);
   var vibOpts = { crankInertia: _feadNum(build.solver && build.solver.data
                                          && build.solver.data.crankInertia, 0) };
   var vibModes = (vibSel === 'off') ? null : veFeadVibModeList(build, vibOpts);
@@ -3213,10 +3219,10 @@ function veFeadLayoutCardHTML(node){
     // SENARYODA ÇIRPMA CANLIDIR: frekans ve genlik kare başına senaryonun o
     // andaki gerginliğinden gelir. Donmuş bir yük, süpürme sırasında geçilen
     // rezonansları gösteremezdi — oysa görülecek olay tam olarak o.
-    vib = veFeadVibSpanPayload(build, scn.idle, kin.slow, vibGain, vibRel);
+    vib = veFeadVibSpanPayload(build, scn.idle, kin.slow, vibGain, vibRel, vibZeta);
     if(vib) vib.live = 1;
   } else if(vibSel === 'span' && kin){
-    vib = veFeadVibSpanPayload(build, rpmSel, kin.slow, vibGain, vibRel);
+    vib = veFeadVibSpanPayload(build, rpmSel, kin.slow, vibGain, vibRel, vibZeta);
   } else if(vibSel !== 'off' && vibSel !== 'span'){
     vib = veFeadVibModePayload(build, parseInt(vibSel.slice(5), 10) || 0, vibGain, vibOpts, vibRel);
   }
@@ -3389,9 +3395,25 @@ function veFeadVibStrip(node, build, vib, vibSel){
   } else {
     not = _feadFmt(vib.firingHz, 0) + ' Hz ateşleme · en çok savrulan ×'
         + _feadFmt(Math.max.apply(null, vib.spans.map(function(x){ return x.mag; })), 1)
+        + (vib.maxMode > 1 ? ' (mod ' + vib.maxMode + ')' : '')
         + (vib.anyFlutter ? ' · ÇIRPINMA' : '')
         + (vib.extraSlow > 1.01 ? ' · ek ağır çekim ×1/' + Math.round(vib.extraSlow) : '');
   }
+  // ── SÖNÜM KAYDIRICISI — genliğin yanında, aynı sebeple ──────────────────
+  // ζ göreli genlikleri TEK BAŞINA belirliyor (tepe büyütmesi 1/(2ζ)) ve
+  // ölçülmüş bir sayı değil. Koda gömülü kalsaydı ekrandaki genlik farkının
+  // uydurulmuş bir sabitten geldiği görünmezdi. Görünür bir ayar olması,
+  // sayının ölçülmemiş olduğunu da görünür kılıyor.
+  var z = veFeadVibZetaOf(node);
+  var zSlider = (vib && vib.kind === 'span')
+    ? '<span style="' + etiket + '" title="Sönüm oranı — ÖLÇÜLMÜŞ değil. Tepe büyütmesi 1/(2ζ).">'
+      + 'ζ ' + _feadFmt(z, 2) + '</span>'
+      + '<input type="range" min="' + Math.round(VE_FEAD_VIB_ZETA_MIN*100) + '" max="'
+      + Math.round(VE_FEAD_VIB_ZETA_MAX*100) + '" step="1"'
+      + ' value="' + Math.round(z*100) + '" onmousedown="event.stopPropagation();"'
+      + ' oninput="veFeadSetChoice(\'' + node.id + '\',\'vibZeta\',this.value/100)"'
+      + ' style="flex:0 0 60px; height:14px; accent-color:var(--accent-warning);">'
+    : '';
   return '<div style="flex:0 0 auto; display:flex; align-items:center; gap:5px; padding:1px 6px;'
     + ' border-top:1px solid var(--border-color); background:var(--bg-secondary, #16181d);"'
     + ' onmousedown="event.stopPropagation();" ondblclick="event.stopPropagation();">'
@@ -3400,7 +3422,8 @@ function veFeadVibStrip(node, build, vib, vibSel){
     + '<input type="range" min="' + VE_FEAD_VIB_GAIN_MIN + '" max="' + VE_FEAD_VIB_GAIN_MAX + '" step="1"'
     + ' value="' + g + '" onmousedown="event.stopPropagation();"'
     + ' oninput="veFeadSetChoice(\'' + node.id + '\',\'vibGain\',+this.value)"'
-    + ' style="flex:0 0 84px; height:14px; accent-color:var(--accent-warning);">'
+    + ' style="flex:0 0 72px; height:14px; accent-color:var(--accent-warning);">'
+    + zSlider
     + '<span style="' + etiket + ' overflow:hidden; text-overflow:ellipsis;">'
     + _feadEsc(not) + '</span></div>';
 }
@@ -3439,7 +3462,10 @@ function _feadAnimLabel(kin, fallback, vib, scn){
       // aynı sayıyı basıyor — ikisinin eşleştiği görülsün diye burada da var.
       : 'çırpma ' + _feadFmt(Math.min.apply(null, vib.spans.map(function(x){ return x.f; })), 0)
         + '–' + _feadFmt(Math.max.apply(null, vib.spans.map(function(x){ return x.f; })), 0)
-        + ' Hz @ ' + Math.round(vib.anchorN) + ' N ×' + _feadFmt(vib.gain, 0) + ' (KALİBRE DEĞİL)';
+        + ' Hz @ ' + Math.round(vib.anchorN) + ' N'
+        + (vib.maxMode > 1 ? '  ·  mod 1–' + vib.maxMode : '  ·  mod 1')
+        + '  ·  ζ ' + _feadFmt(vib.zeta, 2) + ' ×' + _feadFmt(vib.gain, 0)
+        + ' (KALİBRE DEĞİL)';
   }
   if(!kin) return alt;
   var kat = (kin.slow >= 0.999) ? 'gerçek zaman'
@@ -4178,14 +4204,21 @@ function _feadScnVibLive(spec, st, vib){
     var mag;
     // UYARMA YOKSA TİTREŞİM DE YOK: durgun kayış çırpmaz. Ateşleme frekansı
     // sıfırken SDOF büyütmesi 1 döner ve kayış sebepsiz sallanırdı.
+    // Baskın mod SENARYODA da seçilir. İdeal telde f_n = n·f₁ tam kat olduğu
+    // için üst modlar bedava: ayrı bir çekirdek çağrısı gerekmiyor.
+    var enF = f, enN = 1;
     if(!(st.firingHz > 0)) mag = 0;
-    else if(fl) mag = cap;                      // duran dalga yok → akan dalga
-    else mag = (typeof _feadVibSpanMag === 'function')
-      ? _feadVibSpanMag(f, st.firingHz, z) : 1;
+    else if(fl){ mag = cap; enF = st.firingHz; }   // duran dalga yok → akan dalga
+    else if(typeof _feadVibSpanMag === 'function'){
+      mag = 0;
+      for(var n = 1; n <= (spec.vibModes || 4); n++){
+        var m = _feadVibSpanMag(n * f, st.firingHz, z);
+        if(m > mag){ mag = m; enF = n * f; enN = n; }
+      }
+    } else mag = 1;
     out.spans.push({
-      f: fl ? st.firingHz : f,
-      fScreen: (fl ? st.firingHz : f) * (spec.slow > 0 ? spec.slow : 1),
-      ampMm: taban * g * mag, mag: mag, flutter: fl,
+      f: enF, fScreen: enF * (spec.slow > 0 ? spec.slow : 1),
+      ampMm: taban * g * mag, mag: mag, flutter: fl, mode: enN,
       ph: (vib.spans && vib.spans[i]) ? vib.spans[i].ph : 0
     });
   }

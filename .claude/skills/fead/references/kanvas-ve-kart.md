@@ -1055,6 +1055,30 @@ edenler ters yönde), diş sayısı faz boyunca sabit (136).
 Animasyon **yalnız kanvas kartında**: panel, HTML rapor §8.5 ve SVG/PNG dışa
 aktarma aynı çiziciyi kullanıyor ama `animate` geçirmiyor → statik kalıyorlar.
 
+##### Baskın mod çizilir; sönüm görünür bir ayar (2026-09-10)
+
+Açıklık tek frekansta titreşmez ve koşulsuz 1. modu çizmek, model başka bir
+modu baskın gösterirken **yanlış resim** çizmekti — şekil de değişiyor: mod 2
+bir yay değil, ortasında düğümü olan bir S. Artık `VE_FEAD_VIB_MODES` (4) mod
+taranıp en çok uyarılanı çiziliyor; şekil `sin(n·π·x/L)`.
+
+**Ama kazanç MERTEBE AĞIRLIĞINA bağlı ve o ağırlık ölçülmüş değil.** İdeal telde
+`f_n = n·f₁` tam kat olduğu için *mod n ↔ k. mertebe* ile *mod 1 ↔ k/n. mertebe*
+AYNI koşul; rezonans koşulları çakışıyor, kazananı yalnız ağırlık belirliyor.
+ÖLÇÜLDÜ (sweep 700–3600, mod 1 yerine en iyi modun kazancı):
+`1/k` → **×1,58** · düz → **×4,73** · `1/k²` → **×1,00**.
+Yani "yüksek modları çiz" bağımsız bir iyileştirme değil, ilan edilmiş bir
+varsayımın altında; bu yüzden mod sayısı künyede yazılı (`mod 1–3`).
+
+**ζ artık kaydırıcıda** (`node.data.vibZeta`, 0,01–0,20). Göreli genlikleri tek
+başına o belirliyor (tepe büyütmesi `1/(2ζ)`, yani 2,5–50 arası) ve koda gömülü
+kalsaydı ekrandaki genlik farkının uydurulmuş bir sabitten geldiği görünmezdi.
+
+Kapı: `fead-vibration.test.js` → *“baskın mod seçiliyor…”*, *“sönüm
+ayarlanabilir…”*, ve **şeklin gerçekten çizildiğini** tutan *“mod şekli çizime
+GERÇEKTEN geçiyor (mod 2 ortada düğüm)”* — sonuncusu olmadan şekli koşulsuz
+yarım sinüse çeviren mutasyon bütün testlerden GEÇİYORDU.
+
 ##### Çırpmanın gerilmesi HARİTADAN — ikinci bir çağrı değil (2026-09-10)
 
 `veFeadVibSpanPayload` kendi `spanTensions` çağrısını yapıyordu ve iki bakımdan
