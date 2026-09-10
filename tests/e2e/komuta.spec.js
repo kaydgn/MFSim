@@ -116,6 +116,11 @@ test('seçim → fiş zinciri: tıklanan kart işaretleniyor ve fişe düşüyor
   expect(bosFis).toContain('MFSIM-SIPARIS v1');
   expect(bosFis).toMatch(/kaldir\s*:\s*\(yok\)/);
 
+  // ÖLÇÜM ÖZETİ fişin ikinci kapısı: kayıt sayısı GERÇEK listeden gelmeli.
+  // (Doğrulayıcı bunu çalışma ağacından yeniden hesaplayıp karşılaştırıyor.)
+  const gercekAdet = await page.evaluate(() => window.VE_KARSILAMA_GORSELLER.length);
+  expect(bosFis).toMatch(new RegExp('olcum\\s*:\\s*' + gercekAdet + ' kayit \\u00b7 [0-9a-f]{6}'));
+
   const a = await kartlar.nth(1).getAttribute('data-vk-anahtar');
   const b = await kartlar.nth(4).getAttribute('data-vk-anahtar');
   await kartlar.nth(1).click();
@@ -132,6 +137,15 @@ test('seçim → fiş zinciri: tıklanan kart işaretleniyor ve fişe düşüyor
   await kartlar.nth(1).click();
   await expect(kartlar.nth(1)).not.toHaveClass(/secili/);
   expect(await page.inputValue('#ve-komuta-fis')).toMatch(new RegExp('kaldir\\s*:\\s*' + b + '$', 'm'));
+});
+
+test('fişin sekiz satırı da kutuya SIĞIYOR — kırpılmıyor', async ({ page }) => {
+  await ac(page); await girisYap(page);
+  const ta = page.locator('#ve-komuta-fis');
+  expect((await ta.inputValue()).split('\n')).toHaveLength(8);
+  // Dikey taşma olsaydı son satır (not) görünmeden kalırdı.
+  const tasma = await ta.evaluate((e) => e.scrollHeight - e.clientHeight);
+  expect(tasma).toBeLessThanOrEqual(1);
 });
 
 test('not alanı fişe geçiyor ve satır sonu fişi bozamıyor', async ({ page }) => {

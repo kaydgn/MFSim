@@ -94,6 +94,44 @@ function veKomutaKunyeMetni(build) {
   return p.join(' · ');
 }
 
+// ── ÖLÇÜM ÖZETİ — fişin İKİNCİ ve asıl kapısı ──────────────────────────────
+//
+// `kunye` satırı kopyanın sürümünü söyler ama SORUYU CEVAPLAMAZ: "bu fiş hâlâ
+// geçerli mi?" Ölçüldü — bir turda `main` altı PR ilerledi ve karşılama listesi
+// HİÇ DEĞİŞMEDİ. Sha karşılaştırması orada "fiş altı PR eski" der; yanlış
+// alarmdır ve birkaç kez tekrarlandığında kapı güvenilirliğini yitirir.
+//
+// Bu yüzden fiş, tezgâhın ÖLÇTÜĞÜ ŞEYİN özetini de taşır. Fiş uygulanırken
+// aynı özet güncel çalışma ağacından yeniden hesaplanır (tools/komuta-dogrula.js):
+// tutuyorsa liste değişmemiştir ve sha ne olursa olsun fiş geçerlidir;
+// tutmuyorsa hangi kaydın gelip hangisinin gittiği ADIYLA söylenebilir.
+//
+// Anahtarlar SIRALANARAK özetlenir: `kaldir` küme anlamlıdır — dosyadaki
+// sıranın değişmesi "06"nın hangi kare olduğunu değiştirmez, o yüzden yeniden
+// sıralama bir sapma sayılmamalı.
+
+// FNV-1a (32 bit). Kriptografi DEĞİL, değişiklik tespiti — tarayıcıda ve
+// Node'da aynı sonucu vermesi, senkron olması ve `crypto.subtle`in secure
+// context koşuluna takılmaması gerekiyor.
+function veKomutaOzet(metin) {
+  var s = String(metin == null ? '' : metin);
+  var h = 0x811c9dc5;
+  function kar(b) {
+    h ^= b & 0xff;
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  for (var i = 0; i < s.length; i++) {
+    var c = s.charCodeAt(i);
+    kar(c); kar(c >> 8);          // iki bayt: Türkçe harf taşıyan bir tezgâh da bozulmasın
+  }
+  return ('0000000' + h.toString(16)).slice(-8);
+}
+
+function veKomutaOlcumOzeti(kayitlar) {
+  var a = (kayitlar || []).map(function (k) { return String(k && k.anahtar); }).sort();
+  return a.length + ' kayit \u00b7 ' + veKomutaOzet(a.join('\u0001')).slice(0, 6);
+}
+
 // ── SİPARİŞ FİŞİ — SAF ÇEKİRDEK (DOM'suz, test edilebilir) ─────────────────
 
 var VE_KOMUTA_FIS_BASLIK = 'MFSIM-SIPARIS v1';
@@ -101,7 +139,7 @@ var VE_KOMUTA_BOS = '(yok)';
 
 // Alan sırası SABİT ve ayrıştırıcıyla ortak. Değeri olmayan alan atlanmaz,
 // '(yok)' yazar: eksik satır ile "bilerek boş" ayırt edilebilsin.
-var VE_KOMUTA_ALANLAR = ['kunye', 'tezgah', 'dosya', 'kaldir', 'ekle', 'not'];
+var VE_KOMUTA_ALANLAR = ['kunye', 'tezgah', 'dosya', 'olcum', 'kaldir', 'ekle', 'not'];
 var _VK_LISTE_ALAN = { kaldir: 1, ekle: 1 };
 
 function _vkTekSatir(s) {
@@ -116,6 +154,7 @@ function veKomutaFisUret(siparis) {
     kunye: _vkTekSatir(s.kunye || veKomutaKunyeMetni()),
     tezgah: _vkTekSatir(s.tezgah),
     dosya: _vkTekSatir(s.dosya),
+    olcum: _vkTekSatir(s.olcum),
     kaldir: (s.kaldir || []).map(_vkTekSatir).filter(Boolean),
     ekle: (s.ekle || []).map(_vkTekSatir).filter(Boolean),
     not: _vkTekSatir(s.not)
@@ -138,7 +177,7 @@ function veKomutaFisAyristir(metin) {
   var i = 0;
   while (i < satirlar.length && !satirlar[i].trim()) i++;
   if (i >= satirlar.length || satirlar[i].trim() !== VE_KOMUTA_FIS_BASLIK) return null;
-  var out = { kunye: '', tezgah: '', dosya: '', kaldir: [], ekle: [], not: '' };
+  var out = { kunye: '', tezgah: '', dosya: '', olcum: '', kaldir: [], ekle: [], not: '' };
   for (i++; i < satirlar.length; i++) {
     var m = /^\s*([a-z]+)\s*:\s*(.*)$/.exec(satirlar[i]);
     if (!m) continue;
@@ -173,6 +212,10 @@ var VE_KOMUTA_TEZGAHLAR = [
     id: 'karsilama',
     ad: 'Karşılama Slaytı',
     dosya: 'js/karsilama-gorseller.js',
+    // Doğrulayıcı (tools/komuta-dogrula.js) `dosya`yı require edip bu adı
+    // global'e koyarak AYNI `olc`u Node'da koşturuyor — tezgâhın ölçtüğü
+    // kaynak iki yerde ayrı ayrı yazılmıyor.
+    disaAktarim: 'VE_KARSILAMA_GORSELLER',
     gorselli: true,
     ipucu: 'Açılışta gösterilen kareler. Kaldırılacakları tıklayın.',
     olc: function () {
@@ -249,6 +292,7 @@ function veKomutaFisMetni() {
   return veKomutaFisUret({
     tezgah: t.id,
     dosya: t.dosya,
+    olcum: veKomutaOlcumOzeti(t.olc()),
     kaldir: Object.keys(_vkSecimSeti(t.id)).sort(),
     not: _vkNot
   });
@@ -381,7 +425,7 @@ function _vkRender() {
     '</div>';
   h += '<input type="text" class="ve-komuta-not" id="ve-komuta-not" placeholder="Not (isteğe bağlı) — örn. 05 ile 08 aynı kare" ' +
     'value="' + _vkKacir(_vkNot) + '" oninput="veKomutaNotYaz(this.value)">';
-  h += '<textarea id="ve-komuta-fis" class="ve-komuta-fis" readonly spellcheck="false" rows="7"></textarea>';
+  h += '<textarea id="ve-komuta-fis" class="ve-komuta-fis" readonly spellcheck="false" rows="8"></textarea>';
   h += '<div class="ve-komuta-fis-alt">Bu metni Claude Code\'a yapıştırın. Künye satırı, fişin hangi sürüme karşı yazıldığını söyler.</div>';
   h += '</div>';
 
@@ -433,6 +477,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veKomutaFisUret: veKomutaFisUret,
     veKomutaFisAyristir: veKomutaFisAyristir,
     veKomutaKunyeMetni: veKomutaKunyeMetni,
+    veKomutaOzet: veKomutaOzet,
+    veKomutaOlcumOzeti: veKomutaOlcumOzeti,
     VE_KOMUTA_TEZGAHLAR: VE_KOMUTA_TEZGAHLAR,
     VE_KOMUTA_FIS_BASLIK: VE_KOMUTA_FIS_BASLIK
   };

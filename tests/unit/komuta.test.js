@@ -42,6 +42,7 @@ describe('sipariş fişi — gidiş-dönüş sözleşmesi', () => {
     kunye: 'd7810f9 · PR #911 · 2026-09-09',
     tezgah: 'karsilama',
     dosya: 'js/karsilama-gorseller.js',
+    olcum: '28 kayit \u00b7 9cc1a3',
     kaldir: ['05', '13', '22'],
     ekle: [],
     not: '05 ile 08 aynı kare, 08 kalsın'
@@ -52,7 +53,7 @@ describe('sipariş fişi — gidiş-dönüş sözleşmesi', () => {
   });
 
   test('boş sipariş de gidiş-dönüş yapar', () => {
-    const bos = { kunye: 'x', tezgah: 't', dosya: 'd', kaldir: [], ekle: [], not: '' };
+    const bos = { kunye: 'x', tezgah: 't', dosya: 'd', olcum: '', kaldir: [], ekle: [], not: '' };
     expect(K.veKomutaFisAyristir(K.veKomutaFisUret(bos))).toEqual(bos);
   });
 
@@ -114,6 +115,47 @@ describe('künye satırı — sapma kapısı', () => {
   });
 });
 
+describe('ölçüm özeti — fişin ikinci kapısı', () => {
+  const kayit = (a) => ({ anahtar: a });
+
+  test('aynı liste aynı özeti verir (belirlenimci)', () => {
+    const a = [kayit('05'), kayit('13')];
+    expect(K.veKomutaOlcumOzeti(a)).toBe(K.veKomutaOlcumOzeti([kayit('05'), kayit('13')]));
+  });
+
+  test('SIRA değişimi özeti DEĞİŞTİRMEZ — `kaldir` küme anlamlı', () => {
+    // Dosyadaki sıranın değişmesi "06"nın hangi kare olduğunu değiştirmez;
+    // sıralamayı sapma saymak her yeniden düzenlemede yanlış alarm verirdi.
+    expect(K.veKomutaOlcumOzeti([kayit('13'), kayit('05')]))
+      .toBe(K.veKomutaOlcumOzeti([kayit('05'), kayit('13')]));
+  });
+
+  test('tek bir kayıt değişince özet DEĞİŞİR', () => {
+    const taban = K.veKomutaOlcumOzeti([kayit('05'), kayit('13')]);
+    expect(K.veKomutaOlcumOzeti([kayit('05'), kayit('14')])).not.toBe(taban);
+    expect(K.veKomutaOlcumOzeti([kayit('05')])).not.toBe(taban);
+    expect(K.veKomutaOlcumOzeti([kayit('05'), kayit('13'), kayit('22')])).not.toBe(taban);
+  });
+
+  test('özet kayıt sayısını okunur biçimde taşıyor', () => {
+    expect(K.veKomutaOlcumOzeti([kayit('05'), kayit('13')])).toMatch(/^2 kayit /);
+    expect(K.veKomutaOlcumOzeti([])).toMatch(/^0 kayit /);
+  });
+
+  test('birleştirme kaçağı yok — ["ab","c"] ile ["a","bc"] ayrışıyor', () => {
+    // Ayırıcısız birleştirilseydi ikisi de "abc" olurdu ve iki farklı liste
+    // aynı özeti verirdi (sessiz "değişmemiş" hükmü).
+    expect(K.veKomutaOlcumOzeti([kayit('ab'), kayit('c')]))
+      .not.toBe(K.veKomutaOlcumOzeti([kayit('a'), kayit('bc')]));
+  });
+
+  test('fiş ölçüm satırını taşıyor ve gidiş-dönüşte korunuyor', () => {
+    const fis = K.veKomutaFisUret({ tezgah: 't', dosya: 'd', olcum: '28 kayit \u00b7 9cc1a3' });
+    expect(fis).toContain('olcum : 28 kayit');
+    expect(K.veKomutaFisAyristir(fis).olcum).toBe('28 kayit \u00b7 9cc1a3');
+  });
+});
+
 describe('tezgâhlar', () => {
   test('en az bir tezgâh var ve hepsinin id/ad/dosya alanı dolu', () => {
     expect(K.VE_KOMUTA_TEZGAHLAR.length).toBeGreaterThan(0);
@@ -129,6 +171,16 @@ describe('tezgâhlar', () => {
       .filter((t) => !fs.existsSync(path.join(KOK, t.dosya)))
       .map((t) => t.id + ' → ' + t.dosya);
     expect(yok).toEqual([]);
+  });
+
+  test('her tezgâh ölçtüğü kaynağı BEYAN ediyor ve o kaynak gerçekten dışa aktarılıyor', () => {
+    // Doğrulayıcı bu beyandan çalışıyor; yoksa fişin geçerliliği Node'da
+    // ölçülemez ve kapı sessizce "gözle bak"a düşer.
+    K.VE_KOMUTA_TEZGAHLAR.forEach((t) => {
+      expect(String(t.disaAktarim || '')).not.toBe('');
+      const mod = require(path.join(KOK, t.dosya));
+      expect(mod[t.disaAktarim]).toBeDefined();
+    });
   });
 
   test('tezgâh id\'leri tekil', () => {

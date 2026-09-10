@@ -10,6 +10,7 @@
     "build:fead-report": "node tools/report-assets/build-fead-report-template.js",
     "build:all": "npm run build && node viewer/build.js && node candbc/build.js",
     "shot": "node tools/shot.js",
+    "komuta:dogrula": "node tools/komuta-dogrula.js",
     "karsilama:secici": "node tools/karsilama-secici.js",
     "karsilama:webp": "node tools/karsilama-webp.js",
     "sync:viewer": "node viewer/sync.js",
