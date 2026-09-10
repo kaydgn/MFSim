@@ -147,7 +147,7 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   'mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-transfer', 'mnt-pto', 'mnt-pump', 'mnt-pto-group',
   'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer',
   // FEAD — kayış yolu şeması ve çok alanlı kasnak/gergi panelleri
-  'fead-tensioner', 'fead-belt', 'fead-layout', 'fead-table',
+  'fead-tensioner', 'fead-belt', 'fead-layout', 'fead-run', 'fead-table',
   // Parametrik: çoklu-seri sonuç grafiği tam genişlikte ferah okunur.
   'parametric'];
 
@@ -265,7 +265,7 @@ function showNodeProperties(node) {
     html += getFeadBeltPropertiesHTML(node);
   } else if(node.type === 'fead-table') {
     html += getFeadTablePropertiesHTML(node);
-  } else if(node.type === 'fead-layout') {
+  } else if(node.type === 'fead-layout' || node.type === 'fead-run') {
     html += getFeadLayoutPropertiesHTML(node);
   } else if(node.type === 'fead-solver') {
     html += getFeadSolverPropertiesHTML(node);

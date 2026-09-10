@@ -820,6 +820,31 @@ koordinatlarından çizilir; düğümü sürüklemek şemayı değiştirmez. Par
 | Üst künye | çizilen konumun adı · kol açısı · gerginlik |
 | Alt şerit | ✓/✗ · kasnak sayısı · L_eff · **Σsarım** (360° olmak ZORUNDA) |
 
+##### KART İKİYE BÖLÜNDÜ — geometri ↔ işletme (2026-09-10)
+
+**HÜKÜM: `fead-layout` (Kayış Yolu) DONUKTUR — şema, adlar, sarım açıları, diş
+sırası, gergi kolu, kol konumları, yön gülü, dönüş okları. `fead-run` (Çalışma
+Noktası) CANLIDIR — gerilme haritası, açıklık gerilmeleri, animasyon, titreşim.
+İkisi de AYNI çiziciden (`veFeadLayoutSVG`) geçer, yalnız opts farklıdır.**
+
+Bölme ölçüye göre değil **soruya** göre: biri model KURULURKEN sorulur ve
+kurulduktan sonra donar, öteki DEVİR SEÇİLİNCE sorulur ve seçici değiştikçe
+değişir. Tek karttayken üç seçici (kol · devir · titreşim) aynı 22 px'lik
+şeride sıkışıyordu.
+
+| Kural | Gerekçe |
+|-------|---------|
+| **Kol konumu TEK ALANDA** — Kayış Yolu düğümünde (`veFeadPosModeShared`) | İkinci bir alan iki kartın farklı geometri çizmesi demekti ve fark SESSİZ: ikisi de kendi içinde tutarlı görünür |
+| Seçiciler bölündü: Kol geometride, Devir + Titreşim çalışmada | Bölmenin ölçülebilir tek kazancı bu; ikisi de aynı kartta kalsaydı hiç doğmazdı |
+| Sarım açıları geometride, açıklık gerilmeleri çalışmada | İkisi birden aynı çizimde kalabalık yapar — soru başka, sayı başka |
+| Animasyon/titreşim yükü YALNIZ çalışma kartında | Geometri kartı yük üretmez, rAF döngüsü onun yüzünden hiç uyanmaz |
+| **Künye tablosu karttan KALKTI** | Ad · Ø · sarım · devir · güç sütunlarını kanvastaki Kayış Tablosu zaten yazıyordu; kalkınca çizim 342 → 458 px |
+| Eski kayda kart EKLENİR (şema 4 → 5, `veFeadMigrateRunCard`) | Göç olmasaydı eski projede gerilme haritası, animasyon ve titreşim sessizce kaybolurdu |
+
+**Kapılar:** `tests/unit/fead-card-design.test.js` → *"iki kart — geometri ↔
+işletme"* (yedi mutasyonla ölçüldü) ve `fead-wire-order-migration.test.js` →
+*"şema 5"*.
+
 ##### Kartın sunumu — seçilen bileşim (2026-09-09)
 
 **HÜKÜM: kanvas kartında ad KISA (parantezli ek atılır), sarım açıları KÜNYE

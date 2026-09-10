@@ -43,8 +43,11 @@ function kur(key) {
   global.nodes = pack.nodes;
   global.connections = pack.connections;
   const build = veFeadBuildSystem(pack.nodes);
+  // KART İKİYE BÖLÜNDÜ (2026-09-10): `layout` = Kayış Yolu (donuk geometri),
+  // `run` = Çalışma Noktası (gerilme haritası · animasyon · titreşim).
   const layout = pack.nodes.find((n) => n.type === 'fead-layout');
-  return { pack, build, layout };
+  const run = pack.nodes.find((n) => n.type === 'fead-run');
+  return { pack, build, layout, run };
 }
 const geomOf = (build, rel) =>
   F.tensionerState(build.sys, rel == null ? F.meanRel(build.sys) : rel).geom;
@@ -73,6 +76,87 @@ const cakisma = (adlar, acilar) => {
 // Kartın ölçeği sarım etiketlerinden ETKİLENMEZ (etiket payı yalnız ADI sayar),
 // yani iki çizim aynı dönüşümü paylaşır ve kutuları karşılaştırılabilir.
 const OLCULER = [[440, 458], [440, 398], [420, 340], [380, 320], [340, 298]];
+
+/* ══════════════════════════════════════════════════════════════════════════
+   KART İKİYE BÖLÜNDÜ (2026-09-10) — geometri ↔ işletme
+   ──────────────────────────────────────────────────────────────────────────
+   Tek kart on beş işi taşıyordu ve üç seçici (kol · devir · titreşim) aynı
+   22 px'lik şeride sıkışıyordu. Bölme ÖLÇÜYE göre değil SORUYA göre:
+   `fead-layout` "kayış nereden geçiyor" sorusunu model KURULURKEN cevaplar ve
+   DONUKTUR; `fead-run` "bu devirde ne oluyor" sorusunu DEVİR SEÇİLİNCE.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('iki kart — geometri ↔ işletme', () => {
+  test('geometri kartı DONUK: animasyon yükü ve gerilme haritası YOK', () => {
+    const { layout } = kur();
+    const kart = fead.veFeadLayoutCardHTML(layout);
+    expect(kart).not.toMatch(/data-fead-anim/);
+    expect(kart).not.toMatch(/data-ve="belt-tension"/);
+    expect(kart).not.toMatch(/data-ve="spoke"/);
+    expect(kart).toMatch(/data-ve="spin"/);          // animasyon yokken dönüş oku geri gelir
+    expect(kart).toMatch(/data-ve="belt"/);
+  });
+
+  test('çalışma kartı CANLI: yük + gerilme haritası var, sarım açıları yok', () => {
+    const { build, run } = kur();
+    const kart = fead.veFeadLayoutCardHTML(run);
+    expect(kart).toMatch(/data-fead-anim/);
+    expect(kart).toMatch(new RegExp('data-fead-node="' + run.id + '"'));
+    expect([...kart.matchAll(/data-ve="belt-tension"/g)]).toHaveLength(build.order.length);
+    expect(aciKutulari(kart).length).toBe(0);
+  });
+
+  // ÜÇ SEÇİCİ ÜÇE BÖLÜNDÜ. İkisi de aynı kartta kalsaydı bölmenin ölçülebilir
+  // tek kazancı (her seçiciye tam genişlik) hiç doğmazdı.
+  test('seçiciler bölündü: Kol geometride, Devir + Titreşim çalışmada', () => {
+    const { layout, run } = kur();
+    const g = fead.veFeadLayoutCardHTML(layout), c = fead.veFeadLayoutCardHTML(run);
+    expect(g).toMatch(/'posMode'/);
+    expect(g).not.toMatch(/'animRpm'/);
+    expect(g).not.toMatch(/'vibMode'/);
+    expect(c).toMatch(/'animRpm'/);
+    expect(c).toMatch(/'vibMode'/);
+    expect(c).not.toMatch(/'posMode'/);
+  });
+
+  // KOL KONUMU TEK ALANDA (Kayış Yolu düğümünde). İkinci bir alan tutulsaydı
+  // iki kart FARKLI kol konumu çizerdi ve fark sessiz olurdu: ikisi de kendi
+  // içinde tutarlı görünür.
+  test('kol konumu paylaşılır: şemadaki seçim çalışma kartını da çevirir', () => {
+    const { layout, run } = kur();
+    expect(fead.veFeadLayoutCardHTML(run)).toMatch(/Çalışma \(Mean\)/);
+    layout.data.posMode = 'free';
+    expect(fead.veFeadPosModeShared(run)).toBe('free');
+    const c = fead.veFeadLayoutCardHTML(run);
+    expect(c).toMatch(/Serbest kol/);
+    expect(c).not.toMatch(/Çalışma \(Mean\) ·/);
+    // Çalışma kartına kendi alanı yazılsa bile şemanınki kazanır.
+    run.data.posMode = 'min';
+    expect(fead.veFeadPosModeShared(run)).toBe('free');
+  });
+
+  // TAZELEME TEK KAPIDAN (modül kuralı 11): iki kart HEP BİRLİKTE. Kart başına
+  // ayrı çağrı, altı düzenleme yolundan birinde birinin unutulması demek.
+  test('veFeadRefreshCards üç kartı da kurar', () => {
+    const { pack } = kur();
+    const hedef = pack.nodes.filter((n) => ['fead-layout', 'fead-run', 'fead-table'].includes(n.type));
+    expect(hedef).toHaveLength(3);
+    document.body.innerHTML = '<div id="ve-canvas"></div>' + hedef.map((n) =>
+      '<div id="' + n.id + '" class="ve-node"><div class="ve-node-box"></div></div>').join('');
+    expect(veFeadRefreshCards()).toBe(3);
+    hedef.forEach((n) => {
+      const el = document.getElementById(n.id);
+      expect(el.querySelector('.ve-fead-layout-card, .ve-fead-table-card')).not.toBeNull();
+    });
+  });
+
+  test('örnek KULLANIMA HAZIR gelir — iki kart da kurulur', () => {
+    ['AG00976_GATES_2025', 'BMC_FEAD_2026'].forEach((k) => {
+      const { pack } = kur(k);
+      expect(pack.nodes.filter((n) => n.type === 'fead-layout')).toHaveLength(1);
+      expect(pack.nodes.filter((n) => n.type === 'fead-run')).toHaveLength(1);
+    });
+  });
+});
 
 describe('ad, sarım açısının üstüne DÜŞMEZ', () => {
   test('hiçbir ölçüde ad kutusu açı kutusuna binmiyor', () => {
@@ -154,64 +238,28 @@ describe('kısa ad YALNIZ çizimde', () => {
     kartAdlari.forEach((a) => expect(a).not.toMatch(/\(/));
   });
 
-  test('tam ad kartın TABLOSUNDA duruyor — bilgi yer değiştirdi, kaybolmadı', () => {
-    const { layout } = kur();
-    const kart = fead.veFeadLayoutCardHTML(layout);
+  test('tam ad KAYIŞ TABLOSU kartında duruyor — bilgi yer değiştirdi, kaybolmadı', () => {
+    const { pack } = kur();
+    const tablo = pack.nodes.find((n) => n.type === 'fead-table');
+    expect(tablo).toBeTruthy();
+    const kart = fead.veFeadTableCardHTML(tablo);
     expect(kart).toMatch(/Alternatör \(155 A\)/);
     expect(kart).toMatch(/Otomatik Gergi \(E9843\)/);
   });
 });
 
-describe('künye tablosu — sayılar şemayla AYNI konumdan', () => {
-  const hucreler = (html) => {
-    const govde = /<tbody>([\s\S]*?)<\/tbody>/.exec(html);
-    return (govde ? [...govde[1].matchAll(/<tr>([\s\S]*?)<\/tr>/g)] : [])
-      .map((r) => [...r[1].matchAll(/<td[^>]*>([^<]*)<\/td>/g)].map((c) => c[1]));
-  };
-
-  test('her kasnak bir satır; sarım · Ø · devir · güç çekirdekle birebir', () => {
-    const { build, layout } = kur();
-    const kart = fead.veFeadLayoutCardHTML(layout);
-    const sat = hucreler(kart);
-    expect(sat.length).toBe(build.order.length);
-    const geom = geomOf(build);
-    const rpm = veFeadAnimRpmOf(build, layout);
-    const ten = veFeadSpanTensionMap(build, F.meanRel(build.sys), rpm);
-    expect(ten).not.toBeNull();
-    sat.forEach((c, i) => {
-      expect(c[0]).toBe(build.names[i]);                       // TAM ad
-      expect(+c[1]).toBeCloseTo(build.order[i].data.od, 6);    // dış çap
-      expect(parseFloat(c[2])).toBeCloseTo(geom.wrapDeg(i), 1);
-      expect(+c[3]).toBe(Math.round(ten.perPulley[i].accessoryRpm));
-      expect(parseFloat(c[4])).toBeCloseTo(ten.perPulley[i].powerKw, 2);
+describe('künye tablosu KARTTA DEĞİL — Kayış Tablosu kartında', () => {
+  // Kart içindeki künye tablosu (ad · Ø · sarım · devir · güç) kanvastaki
+  // KAYIŞ TABLOSU kartının sütunlarını ikinci kez yazıyordu: aynı sayı iki
+  // yüzeyde. Kalkınca sarım açıları çizime geri döndü.
+  test('iki kartın hiçbirinde tablo yok, sarım açıları çizimde', () => {
+    const { build, layout, run } = kur();
+    [layout, run].forEach((n) => {
+      expect(fead.veFeadLayoutCardHTML(n)).not.toMatch(/<tbody>/);
     });
-  });
-
-  test('sarım açıları ÇİZİMDEN kalkar — iki kez yazılmaz', () => {
-    const { layout } = kur();
-    expect(aciKutulari(fead.veFeadLayoutCardHTML(layout)).length).toBe(0);
-  });
-
-  // TABLO ÇİZİMİ EZEMEZ. Kart daraltılınca tablo düşüyor ve açılar çizime GERİ
-  // dönüyor: sayı hiçbir kipte kaybolmuyor — ya tabloda ya kasnağın altında.
-  test('dar kartta tablo düşer, açılar çizime geri döner', () => {
-    const { build, layout } = kur();
-    layout.height = 210;
-    const dar = fead.veFeadLayoutCardHTML(layout);
-    expect(dar).not.toMatch(/<tbody>/);
-    expect(aciKutulari(dar).length).toBe(build.order.length);
-    layout.height = VE_FEAD_LAYOUT_H;
-    const genis = fead.veFeadLayoutCardHTML(layout);
-    expect(genis).toMatch(/<tbody>/);
-    expect(aciKutulari(genis).length).toBe(0);
-  });
-
-  test('devir seçili değilse devir ve güç sütunu "—" — uydurulmuş sayı yok', () => {
-    const { layout } = kur();
-    layout.data.animRpm = 'off';
-    const sat = hucreler(fead.veFeadLayoutCardHTML(layout));
-    expect(sat.length).toBeGreaterThan(0);
-    sat.forEach((c) => { expect(c[3]).toBe('—'); expect(c[4]).toBe('—'); });
+    // Sarım açısı GEOMETRİ kartında; çalışma kartında açıklık gerilmesi var.
+    expect(aciKutulari(fead.veFeadLayoutCardHTML(layout)).length).toBe(build.order.length);
+    expect(aciKutulari(fead.veFeadLayoutCardHTML(run)).length).toBe(0);
   });
 });
 
@@ -238,11 +286,11 @@ describe('gerilme haritası', () => {
   });
 
   test('kartta her açıklık kendi rengiyle ve kendi sayısıyla çiziliyor', () => {
-    const { build, layout } = kur();
-    const kart = fead.veFeadLayoutCardHTML(layout);
+    const { build, run } = kur();
+    const kart = fead.veFeadLayoutCardHTML(run);
     const yollar = [...kart.matchAll(/data-ve="belt-tension" data-span="(\d+)"/g)];
     expect(yollar.length).toBe(build.order.length);
-    const ten = veFeadSpanTensionMap(build, F.meanRel(build.sys), veFeadAnimRpmOf(build, layout));
+    const ten = veFeadSpanTensionMap(build, F.meanRel(build.sys), veFeadAnimRpmOf(build, run));
     const sayilar = [...kart.matchAll(/data-ve="span-tension"[^>]*>(\d+) N</g)].map((m) => +m[1]);
     expect(sayilar.sort((x, y) => x - y))
       .toEqual(ten.spanN.map((v) => Math.round(v)).sort((x, y) => x - y));
@@ -262,9 +310,9 @@ describe('gerilme haritası', () => {
   });
 
   test('"Durgun" seçilince kayış temel amberine döner', () => {
-    const { layout } = kur();
-    layout.data.animRpm = 'off';
-    const kart = fead.veFeadLayoutCardHTML(layout);
+    const { run } = kur();
+    run.data.animRpm = 'off';
+    const kart = fead.veFeadLayoutCardHTML(run);
     expect(kart).not.toMatch(/data-ve="belt-tension"/);
     expect(kart).toMatch(/data-ve="belt"/);
   });
@@ -401,9 +449,9 @@ describe('gerilme sayısı okunur', () => {
 
 describe('künye TEK SATIR — ama damgalar kalır', () => {
   test('kinematik ve titreşim aynı satırda; ağır çekim ve KALİBRE DEĞİL yerinde', () => {
-    const { layout } = kur();
-    layout.data.vibMode = 'span';
-    const kart = fead.veFeadLayoutCardHTML(layout);
+    const { run } = kur();
+    run.data.vibMode = 'span';
+    const kart = fead.veFeadLayoutCardHTML(run);
     const satir = [...kart.matchAll(/data-ve="anim-label"[^>]*>([^<]*)</g)].map((m) => m[1]);
     expect(satir.length).toBe(1);
     expect(satir[0]).toMatch(/ağır çekim/);

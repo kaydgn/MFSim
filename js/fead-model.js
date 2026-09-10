@@ -2439,6 +2439,10 @@ function veFeadExampleNodes(key){
   // HAZIR bir model olmalı. Şema düğümü olmadan kullanıcı çözümü görüyor ama
   // kayış yolunu göremiyor ve onu paletten ayrıca aramak zorunda kalıyordu.
   nodesOut.push({ id:'ex-layout', type:'fead-layout', data:{} });
+  // ÇALIŞMA NOKTASI DA KURULUR — Kayış Yolu ile aynı gerekçe. Kart ikiye
+  // bölündü (2026-09-10): geometri orada, gerilme haritası/animasyon/titreşim
+  // burada. Yalnız biri gelseydi örnek "yarım kullanıma hazır" olurdu.
+  nodesOut.push({ id:'ex-run', type:'fead-run', data:{} });
   // KAYIŞ TABLOSU DA KURULUR — `ex-layout` ile aynı gerekçe: örnek
   // "çözülebilir bir model" değil, KULLANIMA HAZIR bir model. Kasnakların
   // veri giriş yüzeyi artık bu tablo; onsuz gelen bir örnekte kullanıcı
@@ -2930,6 +2934,35 @@ function veFeadMigrateBeltOrder(state){
       if(c && kasnak[c.from] && kasnak[c.to]){ state.connections.splice(j, 1); k++; }
     }
   return gidis.length + k;
+}
+
+// ── KART İKİYE BÖLÜNDÜ: eski kayıda ÇALIŞMA NOKTASI eklenir (şema 4 → 5) ───
+//
+// Kayış Yolu kartı 2026-09-10'da ikiye ayrıldı: geometri `fead-layout`'ta,
+// gerilme haritası + animasyon + titreşim yeni `fead-run` kartında. Göç
+// olmasaydı eski bir proje açıldığında o üç yüzey SESSİZCE kaybolurdu —
+// kullanıcı kartına bakar, animasyonun neden durduğunu anlamazdı.
+//
+// Yeni düğüm şemanın SAĞINA konur (kart 440 geniş + 24 boşluk); ölçüyü
+// components.js'in kendi kuralı yazıyor (`veFeadNormalizeLayoutSize` /
+// `createNode`), buradan sayı verilmez.
+function veFeadMigrateRunCard(state){
+  if(!state || !Array.isArray(state.nodes)) return 0;
+  var sema = null, varMi = false;
+  state.nodes.forEach(function(n){
+    if(!n || !n.type) return;
+    if(n.type === 'fead-layout' && !sema) sema = n;
+    if(n.type === 'fead-run') varMi = true;
+  });
+  if(!sema || varMi) return 0;
+  state.nodes.push({
+    id: 'fead-run-' + Date.now() + '-' + Math.floor(Math.random() * 1e6),
+    type: 'fead-run',
+    x: (typeof sema.x === 'number' ? sema.x : 0) + (sema.width || 440) + 24,
+    y: (typeof sema.y === 'number' ? sema.y : 0),
+    data: {}
+  });
+  return 1;
 }
 
 // ── GERGİ GEVŞEK SPANDA MI? ────────────────────────────────────────────────
@@ -4385,6 +4418,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadContactForSpin: veFeadContactForSpin,
     veFeadMigrateWireOrder: veFeadMigrateWireOrder,
     veFeadMigrateBeltOrder: veFeadMigrateBeltOrder,
+    veFeadMigrateRunCard: veFeadMigrateRunCard,
     veFeadSpinLabel: veFeadSpinLabel,
     _feadPlaneName: _feadPlaneName,
     veFeadTensionerSide: veFeadTensionerSide,

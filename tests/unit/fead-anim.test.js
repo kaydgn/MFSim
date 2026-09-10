@@ -52,8 +52,10 @@ function kurBMC() {
   global.nodes = pack.nodes;
   global.connections = pack.connections;
   const build = veFeadBuildSystem(pack.nodes);
-  const layout = pack.nodes.find((n) => n.type === 'fead-layout');
-  return { pack, build, layout };
+  // KART İKİYE BÖLÜNDÜ (2026-09-10): animasyon, titreşim ve gerilme haritası
+  // `fead-run` (Çalışma Noktası) kartının işi; `fead-layout` donuk geometri.
+  const kart = pack.nodes.find((n) => n.type === 'fead-run');
+  return { pack, build, kart };
 }
 const geomOf = (build) => F.tensionerState(build.sys, F.meanRel(build.sys)).geom;
 
@@ -131,10 +133,10 @@ describe('Kinematik — çekirdeğin sayıları, ekranın hızı', () => {
   });
 
   test('varsayılan devir BASKIN duty satırı; "off" korunur', () => {
-    const { build, layout } = kurBMC();
+    const { build, kart } = kurBMC();
     const baskin = veFeadDutyRows(build.solver)
       .reduce((a, r) => (r.dcPct > a.dcPct ? r : a));
-    expect(veFeadAnimRpmOf(build, layout)).toBe(baskin.rpm);
+    expect(veFeadAnimRpmOf(build, kart)).toBe(baskin.rpm);
     expect(veFeadAnimRpmOf(build, { data: { animRpm: 'off' } })).toBe('off');
     // Listeden düşmüş bir kayıt sessizce başka bir devre çevrilmez, baskına döner
     expect(veFeadAnimRpmOf(build, { data: { animRpm: 12345 } })).toBe(baskin.rpm);
@@ -270,10 +272,10 @@ describe('Yayın sözleşmesi — animasyon YALNIZ kanvas kartında', () => {
   });
 
   test('kart animasyon yükünü ve devir seçicisini taşır', () => {
-    const { layout } = kurBMC();
-    const html = fead.veFeadLayoutCardHTML(layout);
+    const { kart } = kurBMC();
+    const html = fead.veFeadLayoutCardHTML(kart);
     expect(html).toMatch(/data-fead-anim=/);
-    expect(html).toMatch(new RegExp('data-fead-node="' + layout.id + '"'));
+    expect(html).toMatch(new RegExp('data-fead-node="' + kart.id + '"'));
     expect(html).toMatch(/data-ve="spoke"/);
     expect(html).toMatch(/veFeadSetChoice\('[^']+','animRpm'/);
     expect(html).toMatch(/dev\/dk/);
@@ -283,9 +285,9 @@ describe('Yayın sözleşmesi — animasyon YALNIZ kanvas kartında', () => {
   });
 
   test('"Durgun" seçilince yük hiç üretilmez, donuk şema geri gelir', () => {
-    const { layout } = kurBMC();
-    layout.data.animRpm = 'off';
-    const html = fead.veFeadLayoutCardHTML(layout);
+    const { kart } = kurBMC();
+    kart.data.animRpm = 'off';
+    const html = fead.veFeadLayoutCardHTML(kart);
     expect(html).not.toMatch(/data-fead-anim/);
     expect(html).not.toMatch(/data-ve="spoke"/);
     expect(html).toMatch(/data-ve="spin"/);
@@ -306,11 +308,11 @@ describe('Yayın sözleşmesi — animasyon YALNIZ kanvas kartında', () => {
   };
 
   test('yük geçerli JSON ve ekran hızı kinematikle aynı sayı', () => {
-    const { build, layout } = kurBMC();
-    const html = fead.veFeadLayoutCardHTML(layout);
+    const { build, kart } = kurBMC();
+    const html = fead.veFeadLayoutCardHTML(kart);
     const pay = yukuCoz(html);
     expect(pay).not.toBeNull();
-    const kin = veFeadAnimKinematics(build, veFeadAnimRpmOf(build, layout));
+    const kin = veFeadAnimKinematics(build, veFeadAnimRpmOf(build, kart));
     expect(pay.mmS).toBeCloseTo(kin.dispMmS, 3);
     expect(pay.segs.length).toBe(2 * build.order.length);   // açıklık + yay
     // Yürüyüş PITCH yarıçapından geçiyor, yani çevre L_pitch'tir; L_eff ondan
@@ -322,7 +324,7 @@ describe('Yayın sözleşmesi — animasyon YALNIZ kanvas kartında', () => {
 
   test('çözülemeyen modelde kart patlamaz, animasyon da denenmez', () => {
     global.nodes = []; global.connections = [];
-    const lay = { id: 'lay-x', type: 'fead-layout', def: componentDefs['fead-layout'], data: {} };
+    const lay = { id: 'lay-x', type: 'fead-run', def: componentDefs['fead-run'], data: {} };
     const html = fead.veFeadLayoutCardHTML(lay);
     expect(typeof html).toBe('string');
     expect(html).not.toMatch(/data-fead-anim/);
@@ -331,10 +333,10 @@ describe('Yayın sözleşmesi — animasyon YALNIZ kanvas kartında', () => {
 
 // Kanvas kartını DOM'a kurar. İKİ öbek de kullanıyor (animatör + stroboskop
 // kapısı), bu yüzden dosya düzeyinde.
-function kartKur(layout) {
+function kartKur(kart) {
   document.body.innerHTML = '<div id="ve-canvas"></div>'
-    + '<div id="' + layout.id + '" class="ve-node"><div class="ve-node-box">'
-    + '<div class="ve-fead-layout-card">' + fead.veFeadLayoutCardHTML(layout)
+    + '<div id="' + kart.id + '" class="ve-node"><div class="ve-node-box">'
+    + '<div class="ve-fead-layout-card">' + fead.veFeadLayoutCardHTML(kart)
     + '</div></div></div>';
   return document.querySelector('svg[data-fead-anim]');
 }
@@ -358,8 +360,8 @@ describe('Animatör — durum DOM\'da değil, döngü kendini durdurur', () => {
   });
 
   test('tick dişleri ve kolları TAZELER (faz ilerliyor)', () => {
-    const { layout } = kurBMC();
-    const el = kartKur(layout);
+    const { kart } = kurBMC();
+    const el = kartKur(kart);
     expect(el).not.toBeNull();
     const rib0 = el.querySelector('[data-ve="rib"]').getAttribute('d');
     const kol0 = el.querySelector('[data-ve="spoke"]').getAttribute('d');
@@ -373,8 +375,8 @@ describe('Animatör — durum DOM\'da değil, döngü kendini durdurur', () => {
   });
 
   test('faz DÜĞÜM KİMLİĞİNDE durur: kart yeniden kurulunca kayış zıplamaz', () => {
-    const { layout } = kurBMC();
-    let el = kartKur(layout);
+    const { kart } = kurBMC();
+    let el = kartKur(kart);
     // İLK KARE 0 DEĞİL 1: `_feadAnimLast > 0` saati "kurulmuş" sayıyor, yani
     // 0 damgalı ilk kare saati kurmuyor ve ikinci karede dt = 0 kalıyordu. Eski
     // sürüm bu yüzden fazı HİÇ ilerletmeden karşılaştırıyordu (ölçüldü: her
@@ -385,7 +387,7 @@ describe('Animatör — durum DOM\'da değil, döngü kendini durdurur', () => {
     fead.veFeadAnimApply(el, 0);
     expect(oncesi).not.toBe(el.querySelector('[data-ve="rib"]').getAttribute('d'));
 
-    kartKur(layout);                        // saveState → innerHTML yeniden kuruldu
+    kartKur(kart);                        // saveState → innerHTML yeniden kuruldu
     el = document.querySelector('svg[data-fead-anim]');
     fead.veFeadAnimApply(el, 0);            // yeniden kurulan kart faz 0'da
     fead.veFeadAnimTick(401);               // dt = 0 → kayıtlı faz geri gelmeli
@@ -403,8 +405,8 @@ describe('Animatör — durum DOM\'da değil, döngü kendini durdurur', () => {
   // kartında da kırpılıyor (ölçüldü: 59,7 mm/s × 0,1 s = 5,97 mm = 0,585 diş).
   // Ölçülen ilişki YÖN, ve o gerçek kare süresinde okunmalı.
   test('faz kayışın GERÇEK gidişinde: yürüyüşe göre AZALIR', () => {
-    const { layout } = kurBMC();
-    const el = kartKur(layout);
+    const { kart } = kurBMC();
+    const el = kartKur(kart);
     const dt = 1 / 60;
     fead.veFeadAnimTick(1);
     fead.veFeadAnimTick(1 + dt * 1000);
@@ -417,8 +419,8 @@ describe('Animatör — durum DOM\'da değil, döngü kendini durdurur', () => {
   });
 
   test('uzun duraklamadan sonra kayış FIRLAMAZ — sınır artık ÇEYREK DİŞ', () => {
-    const { layout } = kurBMC();
-    const el = kartKur(layout);
+    const { kart } = kurBMC();
+    const el = kartKur(kart);
     fead.veFeadAnimTick(1);
     fead.veFeadAnimTick(60001);             // sekme bir dakika gizli kaldı
     const spec = fead._feadAnimSpec(el);
@@ -439,8 +441,8 @@ describe('Animatör — durum DOM\'da değil, döngü kendini durdurur', () => {
   // `_feadAnimSpec` adımı parça toplamına yeniden oturtuyor; kapı pencerenin
   // İÇİNDEKİ fazlarda sayıyor.
   test('yükten okunan adım çevreyi TAM böler — diş sayısı pencerede de sabit', () => {
-    const { layout } = kurBMC();
-    const el = kartKur(layout);
+    const { kart } = kurBMC();
+    const el = kartKur(kart);
     const spec = JSON.parse(el.getAttribute('data-fead-anim'));
     const say = (ph) => {
       fead.veFeadAnimApply(el, ph);
@@ -464,8 +466,8 @@ describe('Animatör — durum DOM\'da değil, döngü kendini durdurur', () => {
       pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
       global.nodes = pack.nodes; global.connections = pack.connections;
       const build = veFeadBuildSystem(pack.nodes);
-      const layout = pack.nodes.find((n) => n.type === 'fead-layout');
-      const el = kartKur(layout);
+      const kart = pack.nodes.find((n) => n.type === 'fead-run');
+      const el = kartKur(kart);
       const spec = JSON.parse(el.getAttribute('data-fead-anim'));
       expect([1, -1]).toContain(spec.sense);
       expect(spec.spin).toBe(-spec.sense);
@@ -557,8 +559,8 @@ describe('Diş sırası kare başına ÇEYREK ADIMDAN fazla ilerlemez', () => {
   });
 
   test('GERÇEK devirdeki kanvas kartı KIRPILMAZ — kapı yalnız sınırda devrede', () => {
-    const { layout } = kurBMC();
-    const el = kartKur(layout);
+    const { kart } = kurBMC();
+    const el = kartKur(kart);
     const spec = fead._feadAnimSpec(el);
     // Ölçüldü: 0,098 diş/kare — kırpma eşiğinin (0,25) çok altında.
     expect(spec.mmS * (KARE / 1000) / spec.step).toBeLessThan(0.25);

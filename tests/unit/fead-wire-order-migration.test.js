@@ -76,13 +76,61 @@ const kasnakTeli = (st) => st.connections.filter(
       && /^ex-(FAN|SRC|IDR1|IDR2|A_C|ALT|TEN)$/.test(c.to)).length;
 const dutyRows = (ns) => (ns.find((n) => n.type === 'fead-solver').data.duty) || [];
 
+describe('şema 5 — kart ikiye bölündü, ÇALIŞMA NOKTASI eklenir', () => {
+  // Kayış Yolu kartı 2026-09-10'da ikiye ayrıldı. Göç olmasaydı eski bir proje
+  // açıldığında gerilme haritası, animasyon ve titreşim SESSİZCE kaybolurdu:
+  // kart yine çizilir, yalnız üç yüzey yok olur.
+  const eski = () => ({
+    schemaVersion: 4,
+    nodes: [{ id: 'lay-1', type: 'fead-layout', x: 100, y: 60, width: 440, height: 500, data: {} },
+            { id: 'tbl-1', type: 'fead-table', x: 100, y: 600, data: {} }],
+    connections: []
+  });
+
+  test('eski kayda Çalışma Noktası eklenir — şemanın sağına', () => {
+    const st = eski();
+    veApplyLegacyMigrations(st);
+    const run = st.nodes.filter((n) => n.type === 'fead-run');
+    expect(run).toHaveLength(1);
+    expect(run[0].x).toBe(100 + 440 + 24);        // şemanın sağı, kart genişliği + boşluk
+    expect(run[0].y).toBe(60);
+    expect(st.schemaVersion).toBe(VE_SCHEMA_VERSION);
+  });
+
+  test('İKİNCİ geçişte ikinci kart kurulmaz — damga tutuyor', () => {
+    const st = eski();
+    veApplyLegacyMigrations(st);
+    veApplyLegacyMigrations(st);
+    expect(st.nodes.filter((n) => n.type === 'fead-run')).toHaveLength(1);
+  });
+
+  test('kart zaten varsa dokunulmaz; şema yoksa hiç eklenmez', () => {
+    const varOlan = eski();
+    varOlan.nodes.push({ id: 'run-0', type: 'fead-run', x: 9, y: 9, data: {} });
+    expect(M.veFeadMigrateRunCard(varOlan)).toBe(0);
+    expect(varOlan.nodes.filter((n) => n.type === 'fead-run')).toHaveLength(1);
+    // Kayış Yolu kartı olmayan bir topolojide (ör. yalnız tablo) eklenecek bir
+    // şey yok — kart bir GÖRÜNÜM, kendi başına anlamı yok.
+    const semasiz = { schemaVersion: 4, nodes: [{ id: 't', type: 'fead-table', data: {} }], connections: [] };
+    expect(M.veFeadMigrateRunCard(semasiz)).toBe(0);
+    expect(semasiz.nodes.filter((n) => n.type === 'fead-run')).toHaveLength(0);
+  });
+
+  test('GÖMÜLÜ alt topoloji de geçer — FEAD kanvası orada yaşıyor', () => {
+    const st = { schemaVersion: 4, nodes: [{ id: 'mod', type: 'fead-analysis',
+      data: { subTopology: eski() } }], connections: [] };
+    veApplyLegacyMigrations(st);
+    expect(st.nodes[0].data.subTopology.nodes.filter((n) => n.type === 'fead-run')).toHaveLength(1);
+  });
+});
+
 describe('sürüm kapısı — kademeli', () => {
-  test('sürüm 2 → teller çevrilir, indis kurulur, teller SİLİNİR, damga 4', () => {
+  test('sürüm 2 → teller çevrilir, indis kurulur, teller SİLİNİR, damga güncel', () => {
     const sub = Object.assign({ schemaVersion: 2 }, eskiKayit('AG00976_GATES_2025'));
     expect(kasnakTeli(sub)).toBe(6);
     veApplyLegacyMigrations(sub);
     expect(sub.schemaVersion).toBe(VE_SCHEMA_VERSION);
-    expect(VE_SCHEMA_VERSION).toBe(4);
+    expect(VE_SCHEMA_VERSION).toBeGreaterThanOrEqual(4);
     // Kasnak telleri gitti; sıra indise geçti ve Gates TABLO sırası.
     expect(kasnakTeli(sub)).toBe(0);
     expect(siraOf(sub)).toBe('FAN,IDR1,A_C,IDR2,ALT,TEN');
@@ -96,7 +144,7 @@ describe('sürüm kapısı — kademeli', () => {
       .map((k, i, a) => ({ id: 'c' + i, from: 'ex-' + k, to: 'ex-' + a[(i + 1) % a.length],
                            fromPort: 'output', toPort: 'input' }));
     veApplyLegacyMigrations(st);
-    expect(st.schemaVersion).toBe(4);
+    expect(st.schemaVersion).toBe(5);
     expect(kasnakTeli(st)).toBe(0);
     expect(siraOf(st)).toBe('FAN,IDR1,A_C,IDR2,ALT,TEN');
   });
@@ -114,8 +162,8 @@ describe('sürüm kapısı — kademeli', () => {
     const ana = { schemaVersion: 2, connections: [],
       nodes: [{ id: 'fa', type: 'fead-analysis', data: { subTopology: sub } }] };
     veApplyLegacyMigrations(ana);
-    expect(sub.schemaVersion).toBe(4);
-    expect(ana.schemaVersion).toBe(4);
+    expect(sub.schemaVersion).toBe(5);
+    expect(ana.schemaVersion).toBe(5);
     const birinci = siraOf(sub);
     expect(birinci).toBe('SRC,IDR1,A_C,IDR2,ALT,TEN');
     // Editör açılışı: veLoadTabState → restoreState → aynı kapı, alt durumla.
@@ -130,7 +178,7 @@ describe('sürüm kapısı — kademeli', () => {
       nodes: [{ id: 'v', type: 'vehicle', data: { ftCd: 0.75 } }] };
     veApplyLegacyMigrations(st);
     expect(st.nodes[0].data.ftCd).toBe(0.75);
-    expect(st.schemaVersion).toBe(4);
+    expect(st.schemaVersion).toBe(5);
   });
 
   test('sürümsüz (legacy): ikisi de çalışır', () => {
