@@ -361,6 +361,54 @@ describe('kaynak kapıları', () => {
   });
 });
 
+describe('komuta skill\'i tezgâhlarla bağlı', () => {
+  // Skill'in işi, fişi UYGULAMADAN ÖNCE hangi başka kapıdan geçileceğini
+  // söylemek (örn. `ap-ornek` tezgâhının dosyası arac-performans skill'inin
+  // tetik listesinde). Tezgâh eklenip tablo unutulursa skill SESSİZCE eksik
+  // kalır: yeni tezgâhın dosyası hiçbir kapıya bağlanmadan düzenlenir.
+  const SKILL = fs.readFileSync(path.join(KOK, '.claude/skills/komuta/SKILL.md'), 'utf8');
+
+  test('skill dosyası var ve frontmatter\'ı tam', () => {
+    expect(SKILL).toMatch(/^---\nname: komuta\ndescription: /);
+    expect(SKILL.split('---')[1]).toContain('MFSIM-SIPARIS');
+  });
+
+  test('HER TEZGÂHIN skill tablosunda bir satırı var', () => {
+    const eksik = K.VE_KOMUTA_TEZGAHLAR
+      .filter((t) => !new RegExp('\\|\\s*`' + t.id + '`\\s*\\|').test(SKILL))
+      .map((t) => t.id);
+    expect(eksik).toEqual([]);
+  });
+
+  test('tablodaki dosya yolu tezgâhın gerçek dosyası', () => {
+    K.VE_KOMUTA_TEZGAHLAR.forEach((t) => {
+      const satir = SKILL.split('\n').find((l) => l.includes('`' + t.id + '`') && l.startsWith('|'));
+      expect({ id: t.id, var: !!satir }).toEqual({ id: t.id, var: true });
+      expect(satir).toContain('`' + t.dosya + '`');
+    });
+  });
+
+  test('skill\'de adı geçen her başka skill GERÇEKTEN var', () => {
+    // "önce `arac-performans` skill'ini çağır" diyen bir satır, o skill
+    // yeniden adlandırılınca sessizce olmayan bir şeyi işaret ederdi.
+    const adlar = Array.from(SKILL.matchAll(/\*\*`([a-z-]+)`\*\*/g)).map((m) => m[1]);
+    expect(adlar.length).toBeGreaterThan(0);
+    adlar.forEach((ad) => {
+      expect(fs.existsSync(path.join(KOK, '.claude/skills', ad, 'SKILL.md'))).toBe(true);
+    });
+  });
+
+  test('doğrulama komutu skill\'de ve package.json\'da AYNI', () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(KOK, 'package.json'), 'utf8'));
+    expect(pkg.scripts['komuta:dogrula']).toBeTruthy();
+    expect(SKILL).toContain('npm run komuta:dogrula');
+  });
+
+  test('fiil sözlüğü skill\'de eksiksiz', () => {
+    K.VE_KOMUTA_FIILLER.forEach((f) => expect(SKILL).toContain('`' + f.id + '`'));
+  });
+});
+
 describe('index.html + ribbon + build bağları', () => {
   const INDEX = fs.readFileSync(path.join(KOK, 'index.html'), 'utf8');
   const RIBBON = fs.readFileSync(path.join(KOK, 'js/ribbon.js'), 'utf8');
