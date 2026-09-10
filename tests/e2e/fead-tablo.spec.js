@@ -223,7 +223,7 @@ test('Kayış Tablosu kanvasta: kurulur, yazılır, sıra değişir', async ({ p
 // EDEMEZ. Aşağıdaki dört ölçüm o sınırın kalktığını gösteriyor ve dördü de
 // yalnız GERÇEK TARAYICIDA var — jsdom `:hover`ı da `:focus`u da hiç
 // hesaplamaz, yani bu kapı Node'a taşınamaz.
-test('Kayış Tablosu CANLI: fare · odak · seçili satır · zebra', async ({ page }) => {
+test('Kayış Tablosu CANLI: fare · odak · seçili satır · sütun şeridi', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page);
@@ -241,8 +241,47 @@ test('Kayış Tablosu CANLI: fare · odak · seçili satır · zebra', async ({ 
   await satir.nth(2).hover();
   expect(await zemin(2)).not.toBe(once);
 
-  // ── 2) ZEBRA: komşu satırlar aynı zemini paylaşmıyor ────────────────────
-  expect(await zemin(0)).not.toBe(await zemin(1));
+  // ── 2) ZEBRA YOK, SÜTUN ŞERİDİ VAR ──────────────────────────────────────
+  // Zebra kaldırıldı (ölçüldü): `rowspan`lı kayış boyu hücresi zebrayı
+  // ATLIYOR ve kartın sağ ucunda gri/beyaz bir merdiven bırakıyordu. Yerine
+  // türetilen sütunların ŞERİDİ geldi ve şerit ancak GERÇEK TARAYICIDA
+  // ölçülebilen bir katman kuralına dayanıyor: `<col>` zemini `<td>` zemininin
+  // ALTINDA çizilir, yani gövde hücresi opak bir zemin alırsa şerit sessizce
+  // KAYBOLUR — hiçbir şey patlamaz, bant hiç görünmez.
+  expect(await zemin(0)).toBe(await zemin(1));            // komşu satırlar aynı
+  const seffaf = (c) => c === 'rgba(0, 0, 0, 0)' || c === 'transparent';
+  const kat = await kart.evaluate((el) => {
+    const cs = getComputedStyle;
+    const cols = [...el.querySelectorAll('colgroup > col')];
+    const bant = cols.filter((c) => c.classList.contains('coz'));
+    const duz = cols.filter((c) => !c.classList.contains('coz'));
+    const gövde = el.querySelector('tbody tr td.ve-fead-tbl-ro');
+    return { bant: bant.map((c) => cs(c).backgroundColor),
+             duz: duz.map((c) => cs(c).backgroundColor),
+             hucre: cs(gövde).backgroundColor,
+             bas: cs(el.querySelector('thead th')).backgroundColor };
+  });
+  expect(kat.bant).toHaveLength(4);                       // eff · sarım · span · kayış boyu
+  kat.bant.forEach((c) => expect(seffaf(c)).toBe(false)); // şerit BOYALI
+  kat.duz.forEach((c) => expect(seffaf(c)).toBe(true));   // ötekiler değil
+  expect(seffaf(kat.hucre)).toBe(true);                   // hücre şeridi ÖRTMÜYOR
+  expect(seffaf(kat.bas)).toBe(false);                    // başlık opak: şerit gövdede başlar
+
+  // ── 2b) SİLME DİNLENMEDE GÖRÜNMEZ ───────────────────────────────────────
+  // Altı satırda altı ✕ sürekli duruyordu ve sayı sütunlarının sağ ucunda
+  // tablonun ilk okunan işareti bir SİLME düğmesiydi. `opacity` geçişi satır
+  // içi CSS'te yazılamaz ve Node'da hiç hesaplanmaz.
+  const sil = satir.nth(3).locator('button.ve-fead-tbl-del');
+  expect(await sil.evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
+  await satir.nth(3).hover();
+  await page.waitForTimeout(200);
+  expect(Number(await sil.evaluate((el) => getComputedStyle(el).opacity))).toBeGreaterThan(0.9);
+  // Klavye yolu KAPANMADI: odaklanınca geri geliyor (opacity:0 tabbable olmayı
+  // bozmaz, `display:none` bozardı).
+  await satir.nth(0).hover();                             // fare BAŞKA satırda
+  await sil.focus();
+  await page.waitForTimeout(150);
+  expect(Number(await sil.evaluate((el) => getComputedStyle(el).opacity))).toBeGreaterThan(0.9);
 
   // ── 3) ODAK: imlecin HANGİ hücrede olduğu görünüyor ─────────────────────
   // Eski kartta alanların `border:none`u vardı ve odak hiç çizilmiyordu:
@@ -283,12 +322,24 @@ test('Kayış Tablosu CANLI: fare · odak · seçili satır · zebra', async ({ 
   const dugme = satir.nth(2).locator('button.ve-fead-tbl-name');
   const olc = () => dugme.evaluate((el) => {
     const cs = getComputedStyle(el);
+    const sv = el.querySelector('svg.ac');
     return { golge: cs.boxShadow, kenar: cs.borderColor, zemin: cs.backgroundColor,
-             donusum: cs.transform, kirpma: getComputedStyle(el.closest('td')).overflow };
+             donusum: cs.transform, kirpma: getComputedStyle(el.closest('td')).overflow,
+             simgeGorunur: Number(getComputedStyle(sv).opacity),
+             simgeOran: sv.getBoundingClientRect().width / el.getBoundingClientRect().height };
   });
   const dinlenme = await olc();
   expect(dinlenme.golge).toBe('none');
   expect(dinlenme.kirpma).toBe('visible');          // hücre gölgeyi kırpmıyor
+  // SİMGE DİNLENMEDE DURUYOR — afordansın kendisi o. Kutu, zemin ve gölge
+  // yalnız fare altında geliyor; simge çıkarsa afordans yine "ondan haberi
+  // olana" görünür hâle düşer (2026-09-09'un ölçülmüş hatası).
+  expect(dinlenme.simgeGorunur).toBeGreaterThan(0.9);
+  // ÖLÇÜ ORANLA, PİKSELLE DEĞİL: kart kanvasta duruyor ve kameranın
+  // yakınlaştırması ölçüyü ölçekliyor — mutlak bir px eşiği, tasarım hiç
+  // değişmese de yakınlaştırma değişince kırılır (ölçüldü: 11 px'lik simge
+  // 3,13 px geldi ve simge küçülmemişti).
+  expect(dinlenme.simgeOran).toBeGreaterThan(0.2);
   await dugme.hover();
   await page.waitForTimeout(250);
   const uzerinde = await olc();
@@ -297,8 +348,6 @@ test('Kayış Tablosu CANLI: fare · odak · seçili satır · zebra', async ({ 
   expect(uzerinde.kenar).not.toBe(dinlenme.kenar);
   // Simge bir ÇİZİM: eksik bir yazı karakteri afordansın kendisini yok ederdi.
   await expect(dugme.locator('svg.ac')).toHaveCount(1);
-  expect(await dugme.locator('svg.ac').evaluate((el) => el.getBoundingClientRect().width))
-    .toBeGreaterThan(4);
   // PANELİ AÇIK olan düğme BASILI kalıyor — satır vurgusuyla karışmayan
   // ikinci bir işaret.
   await satir.nth(3).locator('button.ve-fead-tbl-name').click();

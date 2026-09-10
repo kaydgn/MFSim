@@ -268,6 +268,184 @@ describe('kart HTML\'i', () => {
     expect(componentDefs['fead-table'].defaultHeight).toBe(VE_FEAD_TABLE_H);
   });
 
+  // ── ÇEVRİM DENETİMİ ÜST KÜNYEDE ────────────────────────────────────────
+  // Kartın ALTINDA bir şerit vardı ve dört sayıyı kısaltmalarla diziyordu:
+  // `Σsarım …° (|Σ| 360 olmalı) · L_pitch … · L_eff … · … konumu`. Okunması
+  // için üçünün de ne olduğunu bilmek gerekiyordu, oysa tablonun tek EVET/HAYIR
+  // sorusu var — kayış yolu kapandı mı. Üçü de başka yerde zaten okunuyordu:
+  // L_pitch birleşik hücrede, L_eff künyede, konum künyenin devamında.
+  test('ÇEVRİM DENETİMİ ÜST KÜNYEDE — alt şerit ve kısaltmaları KALKTI', () => {
+    const { build } = kurOrnek();
+    const T = fead.veFeadTableRows(build);
+    const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
+      def: componentDefs['fead-table'], data: {} });
+    expect(h).not.toContain('ve-fead-tbl-foot');
+    expect(h).not.toMatch(/L_pitch|L_eff/);          // kısaltma değil, Türkçe
+    // Denetim TABLODAN ÖNCE geliyor: künyenin devamı, kartın dibi değil.
+    expect(h.indexOf('ve-fead-tbl-durum')).toBeGreaterThan(-1);
+    expect(h.indexOf('ve-fead-tbl-durum')).toBeLessThan(h.indexOf('<table'));
+    expect(h).toContain('Çevrim kapalı');
+    expect(h).toMatch(/✓/);
+    // L_eff künyeye "efektif boy" olarak geçti — sayı KAYBOLMADI, adı oldu.
+    expect(h).toContain('Efektif boy');
+    expect(h).toContain(T.LeffMm.toFixed(1) + ' mm');
+    // Kol konumu denetimin DEVAMI değil bağlamı: aynı şeritte ama soluk.
+    expect(h).toContain(T.posLabel + ' konumu');
+  });
+
+  // ÇÖZÜLEMEYEN MODEL: denetim sessizce "kapalı" DEMEZ. Tablo bir giriş yüzeyi
+  // olduğu için satırlar yine dolu yazılır (kullanıcı düzelteceği sayıyı
+  // görmeli) — ama üstteki hüküm bunu ✓ ile onaylayamaz.
+  test('çevrim ÇÖZÜLEMİYORSA denetim ✗ ve "AÇIK" diyor', () => {
+    // ALTERNATÖR ÇAPI 5000 mm: kasnak bütün yerleşimi yutuyor, çekirdek
+    // güzergâhı çözemiyor. (`od = 0` ya da `null` YETMEZ — çekirdek hoşgörülü,
+    // eksik çapı kendi varsayılanıyla çözüyor ve Σ yine 360 çıkıyor. Kapının
+    // gerçekten çözülemeyen bir hâle bağlanması şart, yoksa ✗ dalı hiç
+    // koşmaz.)
+    const { ns } = kurOrnek();
+    ns.filter((n) => n.id === 'ex-ALT')[0].data.od = 5000;
+    global.nodes = ns;
+    const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
+      def: componentDefs['fead-table'], data: {} });
+    expect(h).toContain('ve-fead-tbl-durum no');
+    expect(h).toContain('Çevrim AÇIK');
+    expect(h).toMatch(/✗/);
+    expect(h).not.toContain('Çevrim kapalı');
+    // Ve satırlar YİNE DOLU — tablo bir rapor değil, GİRİŞ YÜZEYİ: kullanıcı
+    // düzelteceği sayıyı göremezse tabloyu düzeltemez.
+    expect((h.match(/<input /g) || []).length).toBe(18);
+    // Künyenin efektif boyu da sessizce bir sayı UYDURMUYOR.
+    expect(h).toContain('<span>Efektif boy</span><b>—</b>');
+  });
+
+  // İKİNCİ DAL: geometri ÇÖZÜLDÜ ama çevrim KAPANMADI. Denetim `T.ok`un
+  // kopyası olsaydı bu hâlde sessizce ✓ derdi — Σ 0°, yani kayış hiçbir
+  // kasnağı sarmıyor.
+  test('geometri çözülse DE Σ 360 değilse denetim ✗', () => {
+    const { ns } = kurOrnek();
+    const alt = ns.filter((n) => n.id === 'ex-ALT')[0];
+    const idr = ns.filter((n) => n.id === 'ex-IDR1')[0];
+    alt.data.x = idr.data.x; alt.data.y = idr.data.y;   // iki kasnak üst üste
+    global.nodes = ns;
+    const T = fead.veFeadTableRows(M.veFeadBuildSystem(ns));
+    expect(T.ok).toBe(true);                            // çözüldü…
+    expect(Math.abs(T.signedWrapDeg)).toBeLessThan(1);  // …ama kapanmadı
+    const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
+      def: componentDefs['fead-table'], data: {} });
+    expect(h).toContain('ve-fead-tbl-durum no');
+    expect(h).toContain('Çevrim AÇIK');
+  });
+
+  // ── TÜRETİLEN SÜTUN ŞERİDİ ─────────────────────────────────────────────
+  // Künyede iki satırlık bir lejant vardı: "123 girilir · 123 çözümden". SÖZLE
+  // anlatıyordu ve okunduktan sonra hangi sütunun hangisi olduğu yine hücrenin
+  // görünümünden çıkarılmak zorundaydı. Şerit sütunun KENDİSİNDE duruyor ve
+  // sıraya (defterle birebir) hiç dokunmuyor.
+  //
+  // KAPI SABİT BİR LİSTE DEĞİL, BİR KURAL: bant tam olarak DEĞERİ ÇÖZÜMDEN
+  // GELEN sütunlarda. Liste yazılsaydı yeni bir türetilen sütun eklenince
+  // sessizce bantsız kalırdı.
+  test('BANT tam olarak ÇÖZÜMDEN GELEN sütunlarda — lejant KALKTI', () => {
+    kurOrnek();
+    const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
+      def: componentDefs['fead-table'], data: {} });
+    const kap = document.createElement('div');
+    kap.innerHTML = h;
+    const C = fead.VE_FEAD_TABLE_COLS;
+    const cols = kap.querySelectorAll('colgroup > col');
+    const tds = kap.querySelectorAll('tbody tr:first-child > td');
+    expect(cols).toHaveLength(C.length);
+    expect(tds).toHaveLength(C.length);            // ilk satırda birleşik hücre de var
+    C.forEach((c, i) => {
+      const yazilir = !!tds[i].querySelector('input, select');
+      const deger = tds[i].classList.contains('ve-fead-tbl-ro')
+                 || tds[i].classList.contains('ve-fead-tbl-L');
+      expect(!!c.coz).toBe(deger);                 // kural: değer okunuyorsa bantlı
+      expect(cols[i].classList.contains('coz')).toBe(!!c.coz);
+      if (yazilir) expect(!!c.coz).toBe(false);    // yazılan hiçbir sütun bantlı değil
+    });
+    expect(C.filter((c) => c.coz).map((c) => c.k))
+      .toEqual(['eff', 'sar', 'span', 'kayis']);
+    expect(h).not.toContain('ve-fead-tbl-lgn');
+    expect(h).not.toMatch(/girilir|çözümden/);
+  });
+
+  // ── BASAMAK: 3 → 1 ────────────────────────────────────────────────────
+  // Türetilen sütunlar `126.660` · `142.317` · `221.514` basıyordu ve üçüncü
+  // basamak bir hassasiyet DEĞİLDİ: girdi çapı iki basamaklı, 0,001 mm 1723
+  // mm'lik bir kayışta ölçülemez. Yuvarlama yalnız BASIMDA — model tam
+  // hassasiyette kalıyor (kimlik kapısı bu dosyada ayrıca duruyor).
+  test('türetilen sayılar TEK BASAMAK basılıyor, model tam hassasiyette', () => {
+    const { build } = kurOrnek();
+    const T = fead.veFeadTableRows(build);
+    const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
+      def: componentDefs['fead-table'], data: {} });
+    const kap = document.createElement('div');
+    kap.innerHTML = h;
+    const hucre = [...kap.querySelectorAll('tbody td.ve-fead-tbl-ro')]
+      .map((td) => td.textContent);
+    expect(hucre).toHaveLength(18);                // 6 satır × (eff, sarım, span)
+    hucre.forEach((t) => expect(t).toMatch(/^-?\d+\.\d$/));
+    // Σ satırı da AYNI basamakta: aynı sütunda iki farklı yuvarlama okunmaz.
+    const tf = kap.querySelectorAll('tfoot td');
+    expect(tf[1].textContent).toMatch(/^-?\d+\.\d$/);
+    expect(tf[2].textContent).toMatch(/^-?\d+\.\d$/);
+    // Basılan sayı MODELDEN geliyor (sunum kendi geometrisini hesaplamıyor).
+    expect(hucre[0]).toBe(T.rows[0].effDiaMm.toFixed(1));
+    expect(hucre[1]).toBe(T.rows[0].wrapDeg.toFixed(1));
+    expect(hucre[2]).toBe(T.rows[0].spanMm.toFixed(1));
+    // Ve model kısalmadı: toplamlar hâlâ kayış boyu kimliğini kapatıyor.
+    expect(T.sumWrapDeg.toFixed(1)).not.toBe(String(T.sumWrapDeg));
+  });
+
+  // ── EKLEYİCİ LİSTENİN SONUNDA ─────────────────────────────────────────
+  test('EKLEYİCİ tablonun ALTINDA — künyede değil', () => {
+    kurOrnek();
+    const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
+      def: componentDefs['fead-table'], data: {} });
+    const kap = document.createElement('div');
+    kap.innerHTML = h;
+    // Künyenin sağ ucunda dururken bir kayış künyesi ALANI gibi okunuyordu;
+    // oysa eklenen kasnak sıranın SONUNA düşüyor — eylemin sonucu tam olarak
+    // listenin bittiği yerde beliriyor.
+    expect(kap.querySelector('.ve-fead-tbl-head .ve-fead-tbl-add')).toBeNull();
+    expect(kap.querySelector('.ve-fead-tbl-ekle .ve-fead-tbl-add')).toBeTruthy();
+    expect(h.indexOf('ve-fead-tbl-ekle')).toBeGreaterThan(h.indexOf('</table>'));
+
+    // Boş tablonun tavsiyesi de o yeri gösteriyor. "Sağ üstteki" artık bayat
+    // bir tavsiye olurdu ve bayat tavsiye, tavsiye olmamasından kötüdür.
+    global.nodes = []; global.connections = [];
+    const b = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
+      def: componentDefs['fead-table'], data: {} });
+    expect(b).toContain('Aşağıdaki');
+    expect(b).not.toContain('Sağ üstteki');
+  });
+
+  // ── SÜRÜCÜ SATIRIN KENDİSİNDE ─────────────────────────────────────────
+  test('SÜRÜCÜ satırın SINIFINDA da işaretli — seçim sınıfıyla birlikte', () => {
+    const { ns } = kurOrnek();
+    const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
+      def: componentDefs['fead-table'], data: {} });
+    const kap = document.createElement('div');
+    kap.innerHTML = h;
+    const trs = [...kap.querySelectorAll('tbody tr')];
+    expect(trs.filter((t) => t.classList.contains('drv'))).toHaveLength(1);
+    expect(trs[0].classList.contains('drv')).toBe(true);
+
+    // İKİ KATMAN AYRI: sürücülük kalıcı bir ROL, seçim geçici bir DURUM.
+    // Tek bir sınıfa sıkıştırılsalardı sürücünün paneli açıkken hangisinin
+    // işareti olduğu okunamazdı.
+    const src = ns.filter((n) => n.data && n.data.driver)[0];
+    global.selectedNodes = [src];
+    const kap2 = document.createElement('div');
+    kap2.innerHTML = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
+      def: componentDefs['fead-table'], data: {} });
+    const tr0 = kap2.querySelector('tbody tr');
+    expect(tr0.classList.contains('drv')).toBe(true);
+    expect(tr0.classList.contains('is-sel')).toBe(true);
+    global.selectedNodes = [];
+  });
+
   test('alt şerit kapalı çevrim değişmezini yazıyor', () => {
     kurOrnek();
     const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
@@ -583,9 +761,23 @@ describe('görünüm CSS\'te, satır içinde değil', () => {
     // buydu ve kapı tam olarak onların varlığını tutuyor.
     expect(CSS).toMatch(/\.ve-fead-tbl tbody tr:hover\s*\{/);
     expect(CSS).toMatch(/\.ve-fead-tbl tbody tr\.is-sel\s*\{/);
-    expect(CSS).toMatch(/\.ve-fead-tbl tbody tr:nth-child\(even\)\s*\{/);
+    expect(CSS).toMatch(/\.ve-fead-tbl-in:hover\s*\{/);
     expect(CSS).toMatch(/\.ve-fead-tbl-in:focus\s*\{/);
     expect(CSS).toMatch(/\.ve-fead-tbl-sel:focus\s*\{/);
+    // TÜRETİLEN SÜTUN ŞERİDİ — `<col>` zemini satır içi yazılabilirdi ama
+    // zebra/fare/seçim vurgusuyla katman sırası ancak stil dosyasında kurulur.
+    expect(CSS).toMatch(/\.ve-fead-tbl col\.coz\{/);
+    // ZEBRA YOK — ve olmaması bir ihmal değil ölçüm: `rowspan`lı kayış boyu
+    // hücresi zebrayı atlıyor, kartın sağ ucunda gri/beyaz merdiven kalıyordu.
+    expect(CSS).not.toMatch(/\.ve-fead-tbl tbody tr:nth-child\(even\)/);
+    // SİLME DİNLENMEDE GÖRÜNMEZ, satıra gelince belirir. `:hover` satır içi
+    // CSS'te yazılamaz; kural buradan çıkarsa altı ✕ sürekli görünür kalır.
+    expect(CSS).toMatch(/\.ve-fead-tbl-del\{[^}]*opacity:0;/);
+    expect(CSS).toMatch(/\.ve-fead-tbl tbody tr:hover \.ve-fead-tbl-del/);
+    // SÜRÜCÜ RAYI ve SEÇİM RAYI aynı kenarda: seçim SONRA tanımlı olmak
+    // zorunda, yoksa sürücünün paneli açıkken işaret sürücü rayında kalır.
+    expect(CSS.indexOf('tr.drv td:first-child'))
+      .toBeLessThan(CSS.indexOf('tr.is-sel td:first-child'));
     // AD DÜĞMESİ: kabarma (gölge) · basılı hâl · paneli açık hâl. Üçü de satır
     // içi CSS'te yazılamaz ve üçü birlikte "burası bir pencere açar" diyor.
     expect(CSS).toMatch(/\.ve-fead-tbl-name:hover\{[^}]*box-shadow/);

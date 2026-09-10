@@ -124,10 +124,16 @@ test('sihirbaz "Modeli Kur": kasnaklar + TABLO, tel yok, uyarı yok', async ({ p
   });
   expect(kutu.kasnakDom).toBe(0);
   expect(kutu.domToplam).toBe(kutu.aracSay);
-  // ÖKSÜZ DÜĞÜM YOK: 6 kasnak + kayış + çözücü + şema + tablo + rapor +
-  // sihirbaz (taslağı taşıdığı için KALIR) = 12. "Başlangıç ve Örnekler"
-  // kurulumda siliniyor.
-  expect(durum.toplam).toBe(12);
+  // ÖKSÜZ DÜĞÜM YOK: 6 kasnak + kayış + çözücü + şema + İŞLETME kartı + tablo
+  // + rapor + sihirbaz (taslağı taşıdığı için KALIR) = 13. "Başlangıç ve
+  // Örnekler" kurulumda siliniyor.
+  //
+  // SAYI 12 → 13: Kayış Yolu kartı GEOMETRİ ve İŞLETME olarak ikiye ayrıldı
+  // (`fead-layout` + `fead-run`), sihirbaz ikisini birden kuruyor. Kurucu
+  // ikincisini kurmayı unutursa sihirbazla kurulan model çalışma rejimi
+  // kartsız kalır ve bu SESSİZDİR — model çözülür, kart yalnız yoktur.
+  expect(durum.toplam).toBe(13);
+  expect(durum.tipler.filter((t) => t === 'fead-run')).toHaveLength(1);
   expect(durum.tipler.filter((t) => t === 'fead-example')).toHaveLength(0);
   expect(durum.indis).toEqual([1, 2, 3, 4, 5, 6]);
   expect(durum.sira).toEqual(onizleme.sira); // önizlemeyle AYNI sıra
@@ -135,10 +141,10 @@ test('sihirbaz "Modeli Kur": kasnaklar + TABLO, tel yok, uyarı yok', async ({ p
   // ── 1b) ARAÇ ÇUBUĞU SAYACI DA DOĞRU ─────────────────────────────────────
   // "Başlangıç ve Örnekler" düğümü `nodes`'tan doğrudan splice ediliyor
   // (deleteSelectedNodes bilerek kullanılmıyor), dolayısıyla sayacı kurucunun
-  // KENDİSİ tazelemek zorunda. ÖLÇÜLDÜ: tazelenmeyince dizi 12 düğüm taşırken
-  // çubuk 13 diyordu — bir sonraki topoloji değişimine kadar bayat.
+  // KENDİSİ tazelemek zorunda. ÖLÇÜLDÜ: tazelenmeyince dizi bir eksik sayıyla
+  // görünüyordu — bir sonraki topoloji değişimine kadar bayat.
   const cubuk = await page.locator('.ve-toolbar-info').first().innerText();
-  expect(cubuk).toMatch(/12 bileşen/);
+  expect(cubuk).toMatch(new RegExp(durum.toplam + ' bileşen'));
   expect(cubuk).toMatch(/0 bağlantı/);
 
   // ── 2) UYARI TOAST'I ÇIKMAMALI ──────────────────────────────────────────

@@ -126,14 +126,34 @@ olurdu.
     CSS'te"* (CSS tarafı); ilki tek başınayken CSS bloğunu silmek bütün
     testleri yeşil bırakırdı. Gerçek tarayıcı ölçümü `fead-tablo.spec.js` →
     *"Kayış Tablosu CANLI"* (jsdom `:hover`ı da `:focus`u da hiç hesaplamaz).
-    **AD HÜCRESİ BİR DÜĞME**, okunur bir metin değil: kasnak paneline giden tek
-    yol o ve metin hâlindeyken varlığı ancak deneyerek keşfediliyordu. Kabarık
-    düğme + "pencere açılır" simgesi (yazı karakteri DEĞİL çizim — eksik bir
-    glif afordansın kendisini yok ederdi) + fare üstünde gölge; hücre bu yüzden
-    `overflow:visible` (genel `td` kuralı gölgeyi de 1 px kalkışı da keserdi,
-    yani "gölge olsun" isteği sessizce hiçbir şey yapmazdı). Sayı hücreleri
-    İÇE gömülü, ad hücresi DIŞA kabarık: aynı satırdaki iki farklı işi tek
-    görünümle anlatmak ikisini de belirsiz bırakırdı.
+    **AD HÜCRESİ BİR BAĞLANTI**, okunur bir metin değil: kasnak paneline giden
+    tek yol o ve metin hâlindeyken varlığı ancak deneyerek keşfediliyordu.
+    Afordans DİNLENMEDE duran "pencere açılır" simgesi (yazı karakteri DEĞİL
+    çizim — eksik bir glif afordansın kendisini yok ederdi); kutu, zemin ve
+    gölge yalnız fare altında geliyor, hücre bu yüzden `overflow:visible`
+    (genel `td` kuralı gölgeyi de 1 px kalkışı da keserdi, yani "gölge olsun"
+    isteği sessizce hiçbir şey yapmazdı).
+    **KUTULU HÂLİ ÖLÇÜLDÜ VE GERİ ALINDI** (2026-09-10, gerçek tarayıcı): sayı
+    hücreleri dinlenmede çerçevesiz olduğu için çerçeveli ad hücresi bir METİN
+    ALANI gibi okunuyordu — sağ uca itilmiş simgeyle birlikte bir `<select>`
+    okundan ayırt edilemiyordu. Kural iki yönlü: DÜĞME dinlenmede DOLU
+    (basılır), ALAN dinlenmede BOŞ (yazılır); ikisi birden dolu ya da ikisi
+    birden boş, ikisini de belirsiz bırakır.
+    **GİRDİ/ÇÖZÜM AYRIMI SÜTUN ŞERİDİNDEN** (`<col class="coz">`), sözlü bir
+    lejanttan değil: sütun SIRASI defterle birebir olmak zorunda, yani bitişik
+    bir "GİRDİ" bandı çizilemez. Bant tam olarak DEĞERİ ÇÖZÜMDEN GELEN
+    sütunlarda ve kapı bunu bir KURAL olarak tutuyor (sabit liste değil — yeni
+    bir türetilen sütun sessizce bantsız kalmasın). `<col>` zemini `<td>`
+    zemininin ALTINDA çizilir: gövde hücresi opak bir zemin alırsa şerit
+    sessizce kaybolur, bu yüzden ZEBRA DA YOK (ayrıca `rowspan`lı kayış boyu
+    hücresi zebrayı atlıyor ve kartın sağ ucunda merdiven bırakıyordu).
+    **ÇEVRİM DENETİMİ ÜST KÜNYEDE**, kartın altında değil: tablonun tek
+    EVET/HAYIR sorusu "kayış yolu kapandı mı" ve cevabı künyenin devamında
+    okunur Türkçeyle duruyor (`✓ Çevrim kapalı · Σsarım 360.0°`). Alt şerit
+    dört sayıyı kısaltmalarla diziyordu ve üçü zaten başka yerde okunuyor:
+    L_pitch birleşik hücrede, L_eff künyede ("efektif boy"), konum künyenin
+    devamında. Denetim `T.ok`un kopyası DEĞİL — geometri çözülüp Σ 360'tan
+    saptığı hâl ayrıca kapılı.
     **ÇOK DÜĞÜM KURAN HER KURUCU `veStateBatch` İLE SARILIR** —
     `veFeadLoadExample`, `veFeadWizCreate`, `veFeadPopulateStarter`. Sarılmazsa
     Ctrl+Z modeli düğüm düğüm söker ve Kayış Tablosu önce boşalır, sonra
