@@ -568,6 +568,10 @@ document.addEventListener('DOMContentLoaded', veRibbonInit);
 if(typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VE_RIBBON_TABS: VE_RIBBON_TABS,
+    // Kılavuz sahneleri düğmeyi BU ÜRETİCİDEN alıyor (js/guide-fead.js →
+    // `_gfSeritOgesi`): "şu düğmeye bas" derken düğmenin resmi değil kendisi
+    // konuyor. Dışa açık olması kapının üreticiyi ölçebilmesi için.
+    veRibbonItemHTML: veRibbonItemHTML,
     veRibbonEsc: veRibbonEsc,
     veRibbonRunnable: veRibbonRunnable,
     veRibbonItemBadge: veRibbonItemBadge,
