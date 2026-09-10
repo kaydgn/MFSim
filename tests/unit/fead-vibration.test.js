@@ -57,9 +57,58 @@ describe('AÇIKLIK ÇIRPMASI — frekans sonuç, genlik değil', () => {
   test('açıklık frekansı ÇEKİRDEKTEN gelir (köprü kendi formülünü kurmaz)', () => {
     const b = kur(), { geom } = walkOf(b);
     const map = M.veFeadSpanTensionMap(b, F.meanRel(b.sys), 2750);
-    const ref = F.spanFrequencies(b.sys, geom, map.spanN, { engineRpm: 2750, modes: 1 });
+    const ref = F.spanFrequencies(b.sys, geom, map.spanN,
+                                  { engineRpm: 2750, modes: M.VE_FEAD_VIB_MODES });
     const P = M.veFeadVibSpanPayload(b, 2750, 0.00717, 6);
-    P.spans.forEach((s, i) => expect(s.f).toBeCloseTo(ref[i].fHz[0], 9));
+    // Çizilen frekans BASKIN MODUN frekansı — ama yine ÇEKİRDEĞİN sayısı,
+    // köprünün kendi hesabı değil. `mode` alanı hangisi olduğunu söylüyor.
+    P.spans.forEach((s, i) => {
+      expect(s.mode).toBeGreaterThanOrEqual(1);
+      expect(s.mode).toBeLessThanOrEqual(M.VE_FEAD_VIB_MODES);
+      expect(s.f).toBeCloseTo(ref[i].fHz[s.mode - 1], 9);
+      expect(s.f1).toBeCloseTo(ref[i].fHz[0], 9);
+    });
+  });
+
+  // ── BASKIN MOD SEÇİLİYOR, KOŞULSUZ 1. MOD DEĞİL ─────────────────────────
+  // İdeal telde f_n = n·f₁ TAM KAT olduğu için "mod n ↔ k. mertebe" ile
+  // "mod 1 ↔ k/n. mertebe" aynı koşul; kazananı yalnız mertebe ağırlığı
+  // belirliyor. ÖLÇÜLDÜ (1/k, sweep 700–3600): en büyük kazanç ×1,58.
+  test('baskın mod seçiliyor ve şekli onunla çiziliyor', () => {
+    const b = kur();
+    let ustMod = false;
+    for (let rpm = 900; rpm <= 3400; rpm += 25) {
+      const P = M.veFeadVibSpanPayload(b, rpm, 0.00717, 6);
+      if (!P) continue;
+      P.spans.forEach((s) => {
+        if (s.flutter) return;
+        // seçilen mod, TARANAN modların en büyüğü olmalı
+        for (let n = 1; n <= M.VE_FEAD_VIB_MODES; n++)
+          expect(M._feadVibSpanMag(n * s.f1, P.firingHz, P.zeta)).toBeLessThanOrEqual(s.mag + 1e-9);
+        // frekans o modun tam katı
+        expect(s.f).toBeCloseTo(s.mode * s.f1, 6);
+        if (s.mode > 1) ustMod = true;
+      });
+    }
+    expect(ustMod).toBe(true);              // bant içinde üst mod GERÇEKTEN kazanıyor
+  });
+
+  test('sönüm ayarlanabilir ve büyütme tavanını o belirliyor', () => {
+    const b = kur();
+    [0.02, 0.06, 0.15].forEach((z) => {
+      const P = M.veFeadVibSpanPayload(b, 2750, 0.00717, 6, undefined, z);
+      expect(P.zeta).toBeCloseTo(z, 9);
+      P.spans.forEach((s) => expect(s.mag).toBeLessThanOrEqual(1 / (2 * z) + 1e-9));
+    });
+    // Kenetli: sınır dışı değer sessizce kabul edilmez
+    expect(M.veFeadVibZetaOf({ data: { vibZeta: 9 } })).toBe(M.VE_FEAD_VIB_ZETA_MAX);
+    expect(M.veFeadVibZetaOf({ data: { vibZeta: 0 } })).toBe(M.VE_FEAD_VIB_ZETA_MIN);
+    expect(M.veFeadVibZetaOf({ data: {} })).toBe(M.VE_FEAD_VIB_ZETA);
+    // Daha az sönüm → daha çok savrulma
+    const az = M.veFeadVibSpanPayload(b, 2750, 0.00717, 6, undefined, 0.02);
+    const cok = M.veFeadVibSpanPayload(b, 2750, 0.00717, 6, undefined, 0.15);
+    expect(Math.max.apply(null, az.spans.map((x) => x.ampMm)))
+      .toBeGreaterThan(Math.max.apply(null, cok.spans.map((x) => x.ampMm)));
   });
 
   // ── ASIL KAPI: iki yüzey tek gerilmeyi okuyor ────────────────────────────
@@ -81,8 +130,9 @@ describe('AÇIKLIK ÇIRPMASI — frekans sonuç, genlik değil', () => {
     const gevsek = M.veFeadVibSpanPayload(b, 2750, 0.00717, 6, mean * 0.25);
     const gergin = M.veFeadVibSpanPayload(b, 2750, 0.00717, 6, mean);
     expect(gevsek.anchorN).toBeLessThan(gergin.anchorN);
-    // f ∝ √T: daha gevşek kayış daha DÜŞÜK frekansta çırpar
-    gevsek.spans.forEach((s, i) => expect(s.f).toBeLessThan(gergin.spans[i].f));
+    // f ∝ √T: daha gevşek kayış daha DÜŞÜK frekansta çırpar. Karşılaştırma
+    // TEMEL frekans üstünden — çizilen mod iki konumda farklı olabilir.
+    gevsek.spans.forEach((s, i) => expect(s.f1).toBeLessThan(gergin.spans[i].f1));
   });
 
   test('devir yoksa gerilme TANIMSIZ — uydurulmuş bir çırpma yok', () => {
@@ -290,6 +340,38 @@ describe('DEFORMASYON — çizicilerin ortak mekanizması', () => {
       expect(d[0] * sg.ux + d[1] * sg.uy).toBeCloseTo(0, 9);  // dik
       expect(Math.hypot(d[0], d[1])).toBeGreaterThan(0);
     });
+  });
+
+  // MOD ŞEKLİ GERÇEKTEN ÇİZİLİYOR MU? Yük `mode` taşıyor ama çizicinin onu
+  // kullandığını başka hiçbir kapı tutmuyordu — mutasyonla ölçüldü, şekli
+  // koşulsuz yarım sinüse çeviren değişiklik BÜTÜN testlerden geçiyordu.
+  // Mod n'in tanımlayıcı özelliği n−1 düğümü olması: mod 2 açıklığın TAM
+  // ORTASINDA sıfırlanır ve iki yarısı TERS yöne gider.
+  test('mod şekli çizime GERÇEKTEN geçiyor (mod 2 ortada düğüm)', () => {
+    const b = kur(), { walk } = walkOf(b);
+    const taban = M.veFeadVibSpanPayload(b, 2750, 0.00717, 6);
+    const kur2 = (n) => ({
+      kind: 'span', gain: 6, zeta: 0.06,
+      spans: taban.spans.map((s) => Object.assign({}, s, { mode: n, ph: 0, ampMm: 5 }))
+    });
+    const seg = walk.segs.find((g) => g.a === 0);
+    const si = walk.segs.indexOf(seg);
+    const boy = (d) => (d ? Math.hypot(d[0], d[1]) : 0);
+    const isaret = (d) => (d ? Math.sign(d[0] * -seg.uy + d[1] * seg.ux) : 0);
+
+    const d1 = fead._feadVibDef(kur2(1), 0.31, walk);
+    const d2 = fead._feadVibDef(kur2(2), 0.31, walk);
+    // Mod 1: ortada TEPE
+    expect(boy(d1.disp(si, seg.l / 2, seg))).toBeGreaterThan(boy(d1.disp(si, seg.l / 4, seg)));
+    // Mod 2: ortada DÜĞÜM (sıfır) ve iki yarı ters yönde
+    expect(boy(d2.disp(si, seg.l / 2, seg))).toBeLessThan(1e-9);
+    expect(isaret(d2.disp(si, seg.l / 4, seg)))
+      .toBe(-isaret(d2.disp(si, 3 * seg.l / 4, seg)));
+    expect(Math.abs(isaret(d2.disp(si, seg.l / 4, seg)))).toBe(1);
+    // Mod 3: iki düğüm — L/3 ve 2L/3
+    const d3 = fead._feadVibDef(kur2(3), 0.31, walk);
+    expect(boy(d3.disp(si, seg.l / 3, seg))).toBeLessThan(1e-9);
+    expect(boy(d3.disp(si, 2 * seg.l / 3, seg))).toBeLessThan(1e-9);
   });
 
   test('çırpma kasnak yaylarına DOKUNMAZ — kayış kasnakta savrulmaz', () => {

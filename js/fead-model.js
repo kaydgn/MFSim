@@ -1385,6 +1385,11 @@ var VE_FEAD_VIB_GAIN_DEF = 10;
 // İlan edilmiş sönüm oranı. KALİBRE DEĞİL — yalnız açıklıkların BİRBİRİNE göre
 // genliğini (rezonansa yakın olan daha çok savrulsun) üretmek için var.
 var VE_FEAD_VIB_ZETA = 0.06;
+var VE_FEAD_VIB_ZETA_MIN = 0.01, VE_FEAD_VIB_ZETA_MAX = 0.20;
+// Kaç mod taranacak. Yüksek modlar ideal telde TAM KAT (f_n = n·f₁), yani
+// "mod n ↔ k. mertebe" ile "mod 1 ↔ k/n. mertebe" AYNI koşul; kazananı yalnız
+// mertebe ağırlığı belirliyor. Dördü, ölçülen en büyük kazancı yakalamaya yeter.
+var VE_FEAD_VIB_MODES = 4;
 // 1× kazançta, rezonanstaki bir açıklığın tepe genliği [mm].
 var VE_FEAD_VIB_SPAN_MM = 0.35;
 // 1× kazançta, mod şeklinde en büyük serbestliğin tepe açısı [°].
@@ -1407,6 +1412,16 @@ function veFeadVibGainOf(node){
   var v = _feadNum(node && node.data && node.data.vibGain, NaN);
   if(!Number.isFinite(v)) return VE_FEAD_VIB_GAIN_DEF;
   return Math.min(VE_FEAD_VIB_GAIN_MAX, Math.max(VE_FEAD_VIB_GAIN_MIN, v));
+}
+
+// Sönüm oranı — İLAN EDİLMİŞ, ÖLÇÜLMEMİŞ, ve artık GÖRÜNÜR.
+// Göreli genlikleri tek başına o belirliyor: tepe büyütmesi 1/(2ζ), yani
+// makul aralıkta 2,5 ile 50 arası. Koda gömülü kalsaydı, kullanıcının
+// ekranda gördüğü genlik farkının uydurulmuş bir sayıdan geldiği görünmezdi.
+function veFeadVibZetaOf(node){
+  var v = _feadNum(node && node.data && node.data.vibZeta, NaN);
+  if(!Number.isFinite(v)) return VE_FEAD_VIB_ZETA;
+  return Math.min(VE_FEAD_VIB_ZETA_MAX, Math.max(VE_FEAD_VIB_ZETA_MIN, v));
 }
 
 // Kartın titreşim seçimi: 'off' | 'span' | 'mode:<k>'
@@ -1459,7 +1474,7 @@ function _feadVibSpanMag(fSpan, fFire, zeta){
 // Çare ikinci bir `slackN` eklemek DEĞİL — o, üçüncü bir yüzey doğduğunda aynı
 // ayrışmayı yeniden üretirdi. Harita zaten hem ankrajı hem duty yükünü doğru
 // geçiyor; titreşim ONU okuyor. Tek kaynak, sessiz ayrışma yok.
-function veFeadVibSpanPayload(build, engineRpm, slow, gain, relDeg){
+function veFeadVibSpanPayload(build, engineRpm, slow, gain, relDeg, zeta){
   if(!build || !build.ok || !build.sys || typeof FEADCore === 'undefined') return null;
   var rpm = _feadNum(engineRpm, NaN);
   if(!(rpm > 0)) return null;
@@ -1472,7 +1487,8 @@ function veFeadVibSpanPayload(build, engineRpm, slow, gain, relDeg){
     // Harita null dönerse gerilme TANIMSIZ demektir (devir yok ya da çekirdek
     // çözemedi). Eski çağrıya düşmek, yanlış bir gerilmeyle çırpmak olurdu.
     if(!T) return null;
-    fr = FEADCore.spanFrequencies(sys, st.geom, T.spanN, { engineRpm: rpm, modes: 1 });
+    fr = FEADCore.spanFrequencies(sys, st.geom, T.spanN,
+                                 { engineRpm: rpm, modes: VE_FEAD_VIB_MODES });
     cyl = _feadNum(build.solver && build.solver.data && build.solver.data.cylinders, 6);
     if(!(cyl > 0)) cyl = 6;
     fFire = FEADCore.firingFrequencyHz(rpm, cyl, 4);
@@ -1492,21 +1508,40 @@ function veFeadVibSpanPayload(build, engineRpm, slow, gain, relDeg){
     extra = (fMax * sl) / VE_FEAD_VIB_MAX_SCREEN_HZ;
   var vs = sl / extra;
 
-  var cap = 1/(2*VE_FEAD_VIB_ZETA), varCirp = false;
+  var zt = Math.min(VE_FEAD_VIB_ZETA_MAX,
+                    Math.max(VE_FEAD_VIB_ZETA_MIN, _feadNum(zeta, VE_FEAD_VIB_ZETA)));
+  var cap = 1/(2*zt), varCirp = false, enMod = 1;
   var spans = fr.map(function(s, i){
-    var f = (s.fHz && s.fHz.length) ? s.fHz[0] : 0;
-    var fl = !!s.flutter || !(f > 0);
-    if(fl){ varCirp = true; f = fFire; }              // duran dalga yok — akıp giden dalga
-    var mag = fl ? cap : _feadVibSpanMag(f, fFire, VE_FEAD_VIB_ZETA);
+    var fl = !!s.flutter || !(s.fHz && s.fHz[0] > 0);
+    if(fl){                                           // duran dalga yok — akıp giden dalga
+      varCirp = true;
+      return { f: fFire, fScreen: fFire * vs, ampMm: VE_FEAD_VIB_SPAN_MM * g * cap,
+               ph: (i * 2*Math.PI / Math.max(1, fr.length)),
+               mag: cap, mode: 1, flutter: true, LMm: s.LMm, TN: s.TN };
+    }
+    // ── BASKIN MOD SEÇİLİR, KOŞULSUZ 1. MOD DEĞİL ──────────────────────────
+    // Açıklık tek frekansta titreşmez; hangi modun uyarıldığı devre bağlı.
+    // Şekli de değişiyor: mod 2 bir yay değil, ortasında düğümü olan bir S.
+    // Koşulsuz 1. modu çizmek, model başka bir modu gösterirken YANLIŞ RESİM
+    // çizmek olurdu. ÖLÇÜLDÜ (1/k ağırlığında, sweep 700–3600): en büyük
+    // kazanç ×1,58 (2325 d/dk · mod 2). Kazanç AĞIRLIĞA bağlı — düz ağırlıkta
+    // ×4,73, 1/k²'de ×1,00 — ve ağırlık ölçülmüş değil, ilan edilmiş.
+    var enIyi = 0, enF = s.fHz[0], enN = 1;
+    for(var n = 0; n < s.fHz.length; n++){
+      var m = _feadVibSpanMag(s.fHz[n], fFire, zt);
+      if(m > enIyi){ enIyi = m; enF = s.fHz[n]; enN = n + 1; }
+    }
+    if(enN > enMod) enMod = enN;
     return {
-      f: f, fScreen: f * vs, ampMm: VE_FEAD_VIB_SPAN_MM * g * mag,
+      f: enF, fScreen: enF * vs, ampMm: VE_FEAD_VIB_SPAN_MM * g * enIyi,
       // Faz açıklıktan açıklığa kaydırılır: hepsi aynı anda tepeye çıksaydı
       // kayış nefes alıyormuş gibi görünürdü, oysa açıklıklar bağımsız.
       ph: (i * 2*Math.PI / Math.max(1, fr.length)),
-      mag: mag, flutter: fl, LMm: s.LMm, TN: s.TN
+      mag: enIyi, mode: enN, flutter: false, LMm: s.LMm, TN: s.TN,
+      f1: s.fHz[0]
     };
   });
-  return { kind: 'span', gain: g, zeta: VE_FEAD_VIB_ZETA, extraSlow: extra,
+  return { kind: 'span', gain: g, zeta: zt, maxMode: enMod, extraSlow: extra,
            firingHz: fFire, cylinders: cyl, engineRpm: rpm, anyFlutter: varCirp,
            // Hangi gerilmede çırpıyor — künye yazsın ki "kart 213 N diyor ama
            // frekans neyin?" sorusu bir daha doğmasın.
@@ -4405,6 +4440,8 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_VIB_SCREEN_HZ: VE_FEAD_VIB_SCREEN_HZ,
     VE_FEAD_VIB_MAX_SCREEN_HZ: VE_FEAD_VIB_MAX_SCREEN_HZ,
     VE_FEAD_VIB_ORDERS: VE_FEAD_VIB_ORDERS,
+    VE_FEAD_VIB_ZETA_MIN: VE_FEAD_VIB_ZETA_MIN, VE_FEAD_VIB_ZETA_MAX: VE_FEAD_VIB_ZETA_MAX,
+    VE_FEAD_VIB_MODES: VE_FEAD_VIB_MODES, veFeadVibZetaOf: veFeadVibZetaOf,
     VE_FEAD_VIB_MODE_MAX_DEG: VE_FEAD_VIB_MODE_MAX_DEG,
     veFeadVibGainOf: veFeadVibGainOf, veFeadVibModeOf: veFeadVibModeOf,
     _feadVibSpanMag: _feadVibSpanMag, _feadVibMag: _feadVibMag,
