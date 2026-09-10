@@ -1440,6 +1440,25 @@ function _feadVibSpanMag(fSpan, fFire, zeta){
 // Frekans ÇEKİRDEKTEN (spanFrequencies), genlik ilan edilmiş kazançtan.
 // `slow` kinematiğin ağır çekim katsayısı: aynı katsayı kullanılır ki
 // "bir kayış turunda kaç çırpma" oranı ekranda BİREBİR kalsın.
+//
+// ── GERİLME `veFeadSpanTensionMap`TEN — İKİNCİ BİR ÇAĞRI DEĞİL ─────────────
+// Burada eskiden ayrı bir `spanTensions` çağrısı vardı ve İKİ bakımdan
+// eksikti: ankrajı `designTensionN` (yani çizilen kol konumundan bağımsız) ve
+// yükü `{}` (yani aksesuar yükü hiç yok, bütün açıklıklar aynı gerilmede).
+// Sonuç, AYNI KARTTA iki yüzeyin ayrışmasıydı: kayışın RENGİ konumun
+// gerilmesini gösteriyordu (harita `slackN` geçiyor), TİTREŞİM ise tasarım
+// gerginliğini kullanıyordu.
+//
+// ÖLÇÜLDÜ (BMC örneği, gerçek tarayıcı, kol konumu seçicisi):
+//   Serbest kol  kart 213 N yazıyor → titreşim 526 N kullanıyor → f₁ 218 Hz
+//                                     (konumun kendi gerilmesiyle 129 Hz)
+//   Load stop    kart 1700 N        → titreşim 526 N            → f₁ 218 Hz
+//                                     (konumun kendi gerilmesiyle 405 Hz)
+// Yani kart bir gerilme yazıp başka bir gerilmenin frekansında çırpıyordu.
+//
+// Çare ikinci bir `slackN` eklemek DEĞİL — o, üçüncü bir yüzey doğduğunda aynı
+// ayrışmayı yeniden üretirdi. Harita zaten hem ankrajı hem duty yükünü doğru
+// geçiyor; titreşim ONU okuyor. Tek kaynak, sessiz ayrışma yok.
 function veFeadVibSpanPayload(build, engineRpm, slow, gain, relDeg){
   if(!build || !build.ok || !build.sys || typeof FEADCore === 'undefined') return null;
   var rpm = _feadNum(engineRpm, NaN);
@@ -1449,7 +1468,10 @@ function veFeadVibSpanPayload(build, engineRpm, slow, gain, relDeg){
   try {
     var rel = Number.isFinite(_feadNum(relDeg, NaN)) ? _feadNum(relDeg, NaN) : FEADCore.meanRel(sys);
     st = FEADCore.tensionerState(sys, rel);
-    T  = FEADCore.spanTensions(sys, { engineRpm: rpm, loadsKw: {} });
+    T  = veFeadSpanTensionMap(build, rel, rpm);
+    // Harita null dönerse gerilme TANIMSIZ demektir (devir yok ya da çekirdek
+    // çözemedi). Eski çağrıya düşmek, yanlış bir gerilmeyle çırpmak olurdu.
+    if(!T) return null;
     fr = FEADCore.spanFrequencies(sys, st.geom, T.spanN, { engineRpm: rpm, modes: 1 });
     cyl = _feadNum(build.solver && build.solver.data && build.solver.data.cylinders, 6);
     if(!(cyl > 0)) cyl = 6;
@@ -1486,6 +1508,9 @@ function veFeadVibSpanPayload(build, engineRpm, slow, gain, relDeg){
   });
   return { kind: 'span', gain: g, zeta: VE_FEAD_VIB_ZETA, extraSlow: extra,
            firingHz: fFire, cylinders: cyl, engineRpm: rpm, anyFlutter: varCirp,
+           // Hangi gerilmede çırpıyor — künye yazsın ki "kart 213 N diyor ama
+           // frekans neyin?" sorusu bir daha doğmasın.
+           anchorN: st.tensionN, relDeg: rel,
            spans: spans };
 }
 
@@ -4379,6 +4404,7 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_VIB_SPAN_MM: VE_FEAD_VIB_SPAN_MM, VE_FEAD_VIB_MODE_DEG: VE_FEAD_VIB_MODE_DEG,
     VE_FEAD_VIB_SCREEN_HZ: VE_FEAD_VIB_SCREEN_HZ,
     VE_FEAD_VIB_MAX_SCREEN_HZ: VE_FEAD_VIB_MAX_SCREEN_HZ,
+    VE_FEAD_VIB_ORDERS: VE_FEAD_VIB_ORDERS,
     VE_FEAD_VIB_MODE_MAX_DEG: VE_FEAD_VIB_MODE_MAX_DEG,
     veFeadVibGainOf: veFeadVibGainOf, veFeadVibModeOf: veFeadVibModeOf,
     _feadVibSpanMag: _feadVibSpanMag, _feadVibMag: _feadVibMag,

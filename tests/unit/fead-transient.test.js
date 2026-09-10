@@ -149,10 +149,17 @@ describe('gerilme — çekirdekle BİREBİR, animatörde yeniden kurulur', () =>
   // TASARIM DAYANAĞI: T(N,α) = A(N) + α·B(N) TAM doğrusal olduğu için iki
   // devir ızgarası yeterli ve animatör kare başına çözücü koşturmuyor.
   // Doğrusallık bozulursa yük yanlış gerilme üretir ve kimse fark etmez.
+  // ANKRAJ ÖTELEMESİ dahil: `peakEstimate` koşulsuz designTensionN'den
+  // başlıyor ve `slackN` seçeneği YOK, o yüzden ankraj dışarıdan düzeltiliyor.
+  // Test bunu bir muafiyet değil BİR HÜKÜM olarak tutuyor — öteleme kalkarsa
+  // senaryo yine çizilen konumdan başka bir gerilmeyi anlatır.
   test('ızgara noktalarında çekirdeğin peakEstimate\'i BİREBİR yeniden kurulur', () => {
     const build = kur();
     const scn = TR.veFeadScenarioBuild(build, {});
     const J = TR.veFeadScnInertias(build);
+    const dT = F.tensionerState(build.sys, F.meanRel(build.sys)).tensionN
+             - build.sys.designTensionN;
+    expect(Math.abs(dT)).toBeGreaterThan(1);       // bu fikstürde öteleme GERÇEK
     scn.gRpm.forEach((N, gi) => {
       const kw = TR.veFeadScnLoadsAt(build, N, scn.idle);
       [0, 300, 1100, -900].forEach((al) => {
@@ -166,7 +173,7 @@ describe('gerilme — çekirdekle BİREBİR, animatörde yeniden kurulur', () =>
           // Daha dar bir eşik yuvarlamayı kusur sanardı, daha geniş olan
           // gerçek bir sapmayı kaçırırdı.
           const butce = 1e-4 + Math.abs(al) * 1e-6;
-          expect(Math.abs(A + al * scn.gB[gi][k] - ref[k])).toBeLessThan(butce + 1e-9);
+          expect(Math.abs(A + al * scn.gB[gi][k] - (ref[k] + dT))).toBeLessThan(butce + 1e-9);
         });
       });
     });
@@ -211,11 +218,27 @@ describe('gerilme — çekirdekle BİREBİR, animatörde yeniden kurulur', () =>
     }
   });
 
-  test('durgun kayışta gerilme tasarım gerginliğine oturur', () => {
+  // Durgun kayışta aksesuar yükü yok, ivme yok — geriye ÇİZİLEN KOL KONUMUNUN
+  // gerginliği kalır. Eskiden burada `designTensionN` yazıyordu ve o, kol nerede
+  // olursa olsun aynı sayıydı.
+  test('durgun kayışta gerilme ÇİZİLEN KONUMUN gerginliğine oturur', () => {
     const build = kur();
-    const scn = TR.veFeadScenarioBuild(build, {});
+    const rel = F.meanRel(build.sys);
+    const scn = TR.veFeadScenarioBuild(build, { relDeg: rel });
     const s = TR.veFeadScnStateAt(scn, 0);
-    s.spanN.forEach((T) => expect(T).toBeCloseTo(build.sys.designTensionN, 0));
+    const stT = F.tensionerState(build.sys, rel).tensionN;
+    s.spanN.forEach((T) => expect(T).toBeCloseTo(stT, 0));
+    expect(Math.abs(stT - build.sys.designTensionN)).toBeGreaterThan(1);
+  });
+
+  test('senaryo kol konumunu İZLER — gevşek konumda gerilme düşük', () => {
+    const build = kur();
+    const mean = F.meanRel(build.sys);
+    const gevsek = TR.veFeadScenarioBuild(build, { relDeg: mean * 0.25 });
+    const gergin = TR.veFeadScenarioBuild(build, { relDeg: mean });
+    expect(TR.veFeadScnStateAt(gevsek, 0).spanN[0])
+      .toBeLessThan(TR.veFeadScnStateAt(gergin, 0).spanN[0]);
+    expect(gevsek.notlar.join(' ')).toMatch(/ÇİZİLEN kol konumunun/);
   });
 });
 

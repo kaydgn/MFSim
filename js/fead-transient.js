@@ -204,9 +204,11 @@ function veFeadScenarioBuild(build, opts){
 
   // Geometri: açıklık boyları ve kayış birim kütlesi frekans için gerekli.
   var rel = Number.isFinite(o.relDeg) ? o.relDeg : FEADCore.meanRel(sys);
-  var geom, mPrime, v1;
+  var geom, mPrime, v1, stT;
   try {
-    geom = FEADCore.tensionerState(sys, rel).geom;
+    var st0 = FEADCore.tensionerState(sys, rel);
+    geom = st0.geom;
+    stT  = st0.tensionN;                             // ÇİZİLEN konumun gerilmesi
     mPrime = FEADCore.massPerM(sys);
     v1 = FEADCore.beltSpeed(sys, 1);                 // kayış hızı devirde doğrusal
   } catch(e){ return null; }
@@ -219,6 +221,16 @@ function veFeadScenarioBuild(build, opts){
   // ── Devir ızgarası: A(N) ve B(N) ──────────────────────────────────────────
   // T(N, α) = A + α·B  (tam; dosya başındaki ölçüm). İki çekirdek çağrısı
   // ızgara noktası başına, kare başına SIFIR.
+  //
+  // ── ANKRAJ ÖTELEMESİ: senaryo da ÇİZİLEN konumun gerilmesinde koşar ───────
+  // `peakEstimate` zinciri koşulsuz `designTensionN`'den başlatıyor ve
+  // `slackN` gibi bir seçeneği YOK — çekirdek dokunulmaz, dolayısıyla ankraj
+  // dışarıdan düzeltilir. Bu meşru çünkü ankraj SAF ÖTELEMEDİR: zincir
+  // T[k] = T[k-1] ± (…) diye yürüdüğü için başlangıcı değiştirmek bütün
+  // açıklıkları AYNI miktarda kaydırır. ÖLÇÜLDÜ: slackN 700 → 1200 yapıldığında
+  // dört açıklığın dördü de tam 500,000000 N kayıyor.
+  // Böylece kayışın rengi, çırpması ve senaryosu tek gerilmeyi anlatıyor.
+  var dT = stT - sys.designTensionN;
   var J = veFeadScnInertias(build);
   var gRpm = [], gA = [], gB = [];
   var lo = Math.max(VE_FEAD_SCN_MIN_RPM, inp.crankRpm * 0.4);
@@ -231,7 +243,9 @@ function veFeadScenarioBuild(build, opts){
       a0 = FEADCore.peakEstimate(sys, { engineRpm: N, accelRpmS: 0, loadsKw: kwN, inertias: J }).accel.spanN;
       a1 = FEADCore.peakEstimate(sys, { engineRpm: N, accelRpmS: 1, loadsKw: kwN, inertias: J }).accel.spanN;
     } catch(e){ return null; }
-    gRpm.push(N); gA.push(a0); gB.push(a1.map(function(x, i){ return x - a0[i]; }));
+    gRpm.push(N);
+    gA.push(a0.map(function(x){ return x + dT; }));
+    gB.push(a1.map(function(x, i){ return x - a0[i]; }));   // türev ankrajdan bağımsız
   }
 
   // ── Rampa şekli ───────────────────────────────────────────────────────────
@@ -338,6 +352,7 @@ function veFeadScenarioBuild(build, opts){
   if(inp.kaynak.accelVarsayilan)
     notlar.push('İvme girilmemiş, ' + VE_FEAD_SCN_ACCEL_DEF + ' d/dk/s varsayıldı.');
   notlar.push('Gergi kolu dinamiği DAHİL DEĞİL (çekirdeğin peakEstimate sınırı).');
+  notlar.push('Gerilme ÇİZİLEN kol konumunun gerginliğinden (' + Math.round(stT) + ' N) yürüyor.');
 
   var r4 = function(v){ return Math.round(v * 1e4) / 1e4; };
   return {
@@ -353,7 +368,7 @@ function veFeadScenarioBuild(build, opts){
     gRpm: gRpm.map(r4), gA: gA.map(function(a){ return a.map(r4); }),
     gB: gB.map(function(b){ return b.map(function(x){ return Math.round(x * 1e6) / 1e6; }); }),
     L: spanL.map(r4), adlar: adlar, mPrime: r4(mPrime), v1: Math.round(v1 * 1e8) / 1e8,
-    Td: r4(sys.designTensionN),
+    Td: r4(stT),
     notlar: notlar, egri: !!inp.curve, peakSrc: inp.kaynak.peak
   };
 }
