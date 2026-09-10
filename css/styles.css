@@ -8782,6 +8782,10 @@ span.ve-fw-ro{ display:inline-block; }
   padding-top:12px; margin-top:12px; }
 .ve-komuta-fis-bas{ display:flex; align-items:center; gap:8px; margin-bottom:9px; }
 .ve-komuta-fis-baslik{ font-size:var(--fs-lg); font-weight:600; color:var(--text-heading); }
+.ve-komuta-fiil{ padding:4px 8px; border-radius:6px; font-size:var(--fs-md); cursor:pointer;
+  background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); }
+.ve-komuta-fiil:focus{ outline:none; border-color:var(--accent-primary); box-shadow:var(--focus-ring); }
+.ve-komuta-fiil-aciklama{ font-size:var(--fs-body); color:var(--text-muted); }
 .ve-komuta-sayac{ font-size:var(--fs-body); color:var(--text-muted); margin-right:auto; }
 .ve-komuta-sayac.dolu{ color:var(--ink-danger); font-weight:600; }
 .ve-komuta-btn{ padding:6px 12px; border-radius:7px; font-size:var(--fs-md); cursor:pointer;

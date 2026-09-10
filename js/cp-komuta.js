@@ -134,13 +134,43 @@ function veKomutaOlcumOzeti(kayitlar) {
 
 // ── SİPARİŞ FİŞİ — SAF ÇEKİRDEK (DOM'suz, test edilebilir) ─────────────────
 
-var VE_KOMUTA_FIS_BASLIK = 'MFSIM-SIPARIS v1';
+var VE_KOMUTA_FIS_BASLIK = 'MFSIM-SIPARIS v2';
+var VE_KOMUTA_ESKI_BASLIKLAR = ['MFSIM-SIPARIS v1'];
 var VE_KOMUTA_BOS = '(yok)';
+
+// ── FİİL BİR ALAN DEĞİL, BİR SEÇİM ────────────────────────────────────────
+//
+// v1'de fiş `kaldir` ve `ekle` diye İKİ alan taşıyordu. `ekle` hiç dolmadı ve
+// dolamazdı: karşılamaya kare eklemek bir GÖRSEL yüklemek demek, arşive program
+// eklemek bir HTML dosyası — ikisi de pencerenin taşıyamayacağı şeyler. Yani
+// sözlükte kullanıcısı olmayan bir kelime duruyordu.
+//
+// Gerçekte hepsi aynı iskelet: KAYITLARI SEÇ + NE İSTEDİĞİNİ SÖYLE. Fiil artık
+// `istek` alanında, hedefler `kayit`ta. Yeni bir fiil biçimi değiştirmiyor —
+// v1'in ikinci alan açma yolu her fiilde formatı büyütürdü.
+//
+// Fiiller ve BUGÜN karşılığı olan işler:
+//   kaldir  kayıtları listeden çıkar          (28 karenin 2'sini sil)
+//   duzelt  kayıtlarda bir şey yanlış         (arşivdeki `not`/`tarih` alanı)
+//   incele  bu kayıtlara bak, doğru mu söyle  (örneklerin verisi tutuyor mu)
+// Dördüncüsü, onu isteyen gerçek bir iş çıkınca eklenir.
+var VE_KOMUTA_FIILLER = [
+  { id: 'kaldir', ad: 'Kaldır', isaret: 'kaldırılacak', aciklama: 'Seçili kayıtları listeden çıkar' },
+  { id: 'duzelt', ad: 'Düzelt', isaret: 'düzeltilecek', aciklama: 'Seçili kayıtlarda bir şey yanlış — nota yaz' },
+  { id: 'incele', ad: 'İncele', isaret: 'incelenecek',  aciklama: 'Seçili kayıtlara bak, doğru mu söyle' }
+];
+
+function veKomutaFiilGecerli(x) {
+  for (var i = 0; i < VE_KOMUTA_FIILLER.length; i++) {
+    if (VE_KOMUTA_FIILLER[i].id === x) return true;
+  }
+  return false;
+}
 
 // Alan sırası SABİT ve ayrıştırıcıyla ortak. Değeri olmayan alan atlanmaz,
 // '(yok)' yazar: eksik satır ile "bilerek boş" ayırt edilebilsin.
-var VE_KOMUTA_ALANLAR = ['kunye', 'tezgah', 'dosya', 'olcum', 'kaldir', 'ekle', 'not'];
-var _VK_LISTE_ALAN = { kaldir: 1, ekle: 1 };
+var VE_KOMUTA_ALANLAR = ['kunye', 'tezgah', 'dosya', 'olcum', 'istek', 'kayit', 'not'];
+var _VK_LISTE_ALAN = { kayit: 1 };
 
 function _vkTekSatir(s) {
   // Not alanındaki satır sonu fişin satır tabanlı ayrıştırmasını bozar —
@@ -155,8 +185,8 @@ function veKomutaFisUret(siparis) {
     tezgah: _vkTekSatir(s.tezgah),
     dosya: _vkTekSatir(s.dosya),
     olcum: _vkTekSatir(s.olcum),
-    kaldir: (s.kaldir || []).map(_vkTekSatir).filter(Boolean),
-    ekle: (s.ekle || []).map(_vkTekSatir).filter(Boolean),
+    istek: _vkTekSatir(s.istek) || VE_KOMUTA_FIILLER[0].id,
+    kayit: (s.kayit || []).map(_vkTekSatir).filter(Boolean),
     not: _vkTekSatir(s.not)
   };
   var en = VE_KOMUTA_ALANLAR.reduce(function (m, a) { return Math.max(m, a.length); }, 0);
@@ -176,12 +206,20 @@ function veKomutaFisAyristir(metin) {
   var satirlar = String(metin == null ? '' : metin).split(/\r?\n/);
   var i = 0;
   while (i < satirlar.length && !satirlar[i].trim()) i++;
-  if (i >= satirlar.length || satirlar[i].trim() !== VE_KOMUTA_FIS_BASLIK) return null;
-  var out = { kunye: '', tezgah: '', dosya: '', olcum: '', kaldir: [], ekle: [], not: '' };
+  if (i >= satirlar.length) return null;
+  var bas = satirlar[i].trim();
+  // v1 fişleri de okunur: `kaldir:` satırı `istek: kaldir` + `kayit:`e çevrilir.
+  // Kullanıcının elinde duran eski bir fişi reddetmek, onu yeniden üretmeye
+  // zorlardı — oysa anlamı belirsiz DEĞİL.
+  var eski = VE_KOMUTA_ESKI_BASLIKLAR.indexOf(bas) >= 0;
+  if (bas !== VE_KOMUTA_FIS_BASLIK && !eski) return null;
+  var out = { kunye: '', tezgah: '', dosya: '', olcum: '', istek: VE_KOMUTA_FIILLER[0].id, kayit: [], not: '' };
   for (i++; i < satirlar.length; i++) {
     var m = /^\s*([a-z]+)\s*:\s*(.*)$/.exec(satirlar[i]);
     if (!m) continue;
     var alan = m[1];
+    if (eski && alan === 'kaldir') alan = 'kayit';       // v1 → v2
+    if (eski && alan === 'ekle') continue;               // v1'de hiç dolmadı
     if (VE_KOMUTA_ALANLAR.indexOf(alan) < 0) continue;
     var ham = m[2].trim();
     if (_VK_LISTE_ALAN[alan]) {
@@ -336,6 +374,7 @@ function veKomutaTezgah(id) {
 var _vkAktif = VE_KOMUTA_TEZGAHLAR[0] ? VE_KOMUTA_TEZGAHLAR[0].id : null;
 var _vkSecim = {};    // { tezgahId: { anahtar: true } }
 var _vkNot = '';
+var _vkIstek = VE_KOMUTA_FIILLER[0].id;
 
 function _vkSecimSeti(id) {
   if (!_vkSecim[id]) _vkSecim[id] = {};
@@ -370,6 +409,26 @@ function veKomutaTezgahSec(id) {
 
 function veKomutaNotYaz(v) { _vkNot = v; _vkFisTazele(); }
 
+// Fiil değişince kartlar YENİDEN KURULMUYOR (28 küçük resim yeniden kurulurdu);
+// yalnız işaret metni eşitleniyor — seçili kartın ne olacağını söyleyen tek yer.
+function veKomutaIstekSec(v) {
+  if (!veKomutaFiilGecerli(v)) return;
+  _vkIstek = v;
+  var m = _vkFiilAciklama(v);
+  var el = document.getElementById('ve-komuta-fiil-aciklama');
+  if (el) el.textContent = m.aciklama;
+  var isaretler = document.querySelectorAll('#ve-komuta-content .ve-komuta-isaret');
+  for (var i = 0; i < isaretler.length; i++) isaretler[i].textContent = m.isaret;
+  _vkFisTazele();
+}
+
+function _vkFiilAciklama(id) {
+  for (var i = 0; i < VE_KOMUTA_FIILLER.length; i++) {
+    if (VE_KOMUTA_FIILLER[i].id === id) return VE_KOMUTA_FIILLER[i];
+  }
+  return VE_KOMUTA_FIILLER[0];
+}
+
 // Fiş, seçimden TÜRETİLİR — ikinci bir yerde tutulmaz.
 function veKomutaFisMetni() {
   var t = veKomutaTezgah(_vkAktif);
@@ -378,7 +437,8 @@ function veKomutaFisMetni() {
     tezgah: t.id,
     dosya: t.dosya,
     olcum: veKomutaOlcumOzeti(veKomutaOlc(t)),
-    kaldir: Object.keys(_vkSecimSeti(t.id)).sort(),
+    istek: _vkIstek,
+    kayit: Object.keys(_vkSecimSeti(t.id)).sort(),
     not: _vkNot
   });
 }
@@ -452,7 +512,7 @@ function _vkKayitHTML(t, k, secili) {
   h += '<span class="ve-komuta-no">' + _vkKacir(k.anahtar) + '</span>';
   h += '<span class="ve-komuta-ad">' + _vkKacir(k.baslik || k.etiket) + '</span>';
   if (k.meta) h += '<span class="ve-komuta-meta">' + _vkKacir(k.meta) + '</span>';
-  h += '<span class="ve-komuta-isaret">kaldırılacak</span>';
+  h += '<span class="ve-komuta-isaret">' + _vkKacir(_vkFiilAciklama(_vkIstek).isaret) + '</span>';
   return h + '</button>';
 }
 
@@ -505,6 +565,13 @@ function _vkRender() {
   h += '<div class="ve-komuta-fis-kap">';
   h += '<div class="ve-komuta-fis-bas">' +
     '<span class="ve-komuta-fis-baslik">Sipariş Fişi</span>' +
+    '<select class="ve-komuta-fiil" onchange="veKomutaIstekSec(this.value)" aria-label="İstek">' +
+    VE_KOMUTA_FIILLER.map(function (f) {
+      return '<option value="' + _vkKacir(f.id) + '"' + (f.id === _vkIstek ? ' selected' : '') +
+        '>' + _vkKacir(f.ad) + '</option>';
+    }).join('') + '</select>' +
+    '<span id="ve-komuta-fiil-aciklama" class="ve-komuta-fiil-aciklama">' +
+    _vkKacir(_vkFiilAciklama(_vkIstek).aciklama) + '</span>' +
     '<span id="ve-komuta-sayac" class="ve-komuta-sayac"></span>' +
     '<button type="button" class="ve-komuta-btn" onclick="veKomutaSecimTemizle()">İşaretleri Temizle</button>' +
     '<button type="button" class="ve-komuta-btn ve-komuta-btn-birincil" onclick="veKomutaFisKopyala()">Kopyala</button>' +
@@ -567,6 +634,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veKomutaOlcumOzeti: veKomutaOlcumOzeti,
     VE_KOMUTA_TEZGAHLAR: VE_KOMUTA_TEZGAHLAR,
     veKomutaOlc: veKomutaOlc,
-    VE_KOMUTA_FIS_BASLIK: VE_KOMUTA_FIS_BASLIK
+    VE_KOMUTA_FIS_BASLIK: VE_KOMUTA_FIS_BASLIK,
+    VE_KOMUTA_FIILLER: VE_KOMUTA_FIILLER,
+    veKomutaFiilGecerli: veKomutaFiilGecerli
   };
 }
