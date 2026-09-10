@@ -576,7 +576,7 @@ function veMntCollapseToRoot(){
   while(veMntStack.length && guard++<32){ veMntCloseEditor(true); }
 }
 
-// Alt-topoloji çıkış çipi — TOPOLOJİ SINIR ÇERÇEVESİNİN ALT KENARINA tutunur
+// Alt-topoloji çıkış düğmesi — sınır çerçevesinin İÇİNE, sol üst köşeye tutunur
 // (arac-performans ile aynı CSS sınıfı ve konumlama mantığı).
 function veMntUpdateBreadcrumb(){
   if(typeof document==='undefined') return;
@@ -595,9 +595,12 @@ function veMntUpdateBreadcrumb(){
     host.appendChild(el);
   }
   var depth=veMntStack.length;
-  el.innerHTML='<button onclick="veMntCloseEditor()" title="Ana (üst) topolojiye dön">← Ana topolojiye dön</button>'
-    + '<span class="ve-arac-breadcrumb-label">Takoz Çökme-Titreşim · İç Topoloji'
-    + (depth>1 ? ' <b>(derinlik '+depth+')</b>' : '') + '</span>';
+  el.innerHTML=
+    '<button onclick="veMntCloseEditor()" title="Ana topolojiye dön — Takoz Çökme-Titreşim · İç Topoloji'
+    + (depth>1 ? ' (derinlik '+depth+')' : '') + '">'
+    + '<span class="mf-ico mf-ico-chevrons-left" aria-hidden="true"></span>'
+    + (depth>1 ? '<i class="ve-bc-depth">'+depth+'</i>' : '')
+    + '</button>';
   if(typeof veAnchorBoundaryChip==='function') veAnchorBoundaryChip();
 }
 

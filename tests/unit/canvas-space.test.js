@@ -394,36 +394,49 @@ describe('veBoundaryBox — ad çerçeveye girer (ölçüm işlevi geçilince)',
   });
 });
 
-describe('veBoundaryChipPos — çıkış çipi çerçevenin ALT KENARINA tutunur', () => {
-  const BOX = { x: 2900, y: 2900, w: 400, h: 200 };   // yerel: alt kenar y=3100, merkez x=3100
-  const CHIP = { w: 260, h: 30 };
+describe('veBoundaryChipPos — çıkış düğmesi çerçevenin İÇİNE, SOL ÜST köşeye tutunur', () => {
+  const BOX = { x: 2900, y: 2900, w: 400, h: 200 };   // yerel: sol üst (2900, 2900)
+  const CHIP = { w: 26, h: 26 };                      // 26×26 kare düğme
   const VIEW = { w: 1200, h: 800 };
   // Kamera sözleşmesi: ekran = (yerel - 3000) * zoom + offset
   const scr = (local, z, o) => (local - cs.VE_CANVAS_CENTER) * z + o;
 
-  test('zoom 1: çerçevenin yatay merkezinde, alt kenarının GAP kadar altında', () => {
+  // left/top artık düğmenin SOL ÜST köşesi (eskiden left YATAY MERKEZ'di ve
+  // CSS translateX(-50%) ile kullanılıyordu). Sözleşme değişti → CSS'te
+  // translate kalmadı; ikisi ayrışırsa düğme yarı genişliği kadar kayar.
+  test('zoom 1: çerçevenin sol üst köşesinin İÇİNDE, iki eksende de pay kadar', () => {
     const off = { x: 600, y: 400 };
     const p = cs.veBoundaryChipPos(BOX, 1, off, CHIP, VIEW);
-    expect(p.left).toBeCloseTo(scr(3100, 1, off.x), 9);
-    expect(p.top).toBeCloseTo(scr(3100, 1, off.y) + cs.VE_CHIP_GAP, 9);
+    expect(p.left).toBeCloseTo(scr(2900, 1, off.x) + cs.VE_CHIP_INSET_IN, 9);
+    expect(p.top).toBeCloseTo(scr(2900, 1, off.y) + cs.VE_CHIP_INSET_IN, 9);
   });
 
-  test('pan: çip çerçeveyle birlikte gider (kaydırma kadar, birebir)', () => {
+  test('düğme çerçevenin İÇİNDE kalıyor (dışına taşmıyor)', () => {
+    const off = { x: 600, y: 400 };
+    const p = cs.veBoundaryChipPos(BOX, 1, off, CHIP, VIEW);
+    const frameL = scr(2900, 1, off.x), frameT = scr(2900, 1, off.y);
+    const frameR = scr(2900 + 400, 1, off.x), frameB = scr(2900 + 200, 1, off.y);
+    expect(p.left).toBeGreaterThan(frameL);
+    expect(p.top).toBeGreaterThan(frameT);
+    expect(p.left + CHIP.w).toBeLessThan(frameR);
+    expect(p.top + CHIP.h).toBeLessThan(frameB);
+  });
+
+  test('pan: düğme çerçeveyle birlikte gider (kaydırma kadar, birebir)', () => {
     const a = cs.veBoundaryChipPos(BOX, 1, { x: 600, y: 400 }, CHIP, VIEW);
     const b = cs.veBoundaryChipPos(BOX, 1, { x: 640, y: 430 }, CHIP, VIEW);
     expect(b.left - a.left).toBeCloseTo(40, 9);
     expect(b.top - a.top).toBeCloseTo(30, 9);
   });
 
-  test('zoom: tutunma noktası ölçeklenir ama boşluk ekran px olarak sabit kalır', () => {
+  test('zoom: tutunma noktası ölçeklenir ama pay ekran px olarak sabit kalır', () => {
     const off = { x: 600, y: 400 };
     const p = cs.veBoundaryChipPos(BOX, 0.5, off, CHIP, VIEW);
-    expect(p.left).toBeCloseTo(scr(3100, 0.5, off.x), 9);
-    expect(p.top).toBeCloseTo(scr(3100, 0.5, off.y) + cs.VE_CHIP_GAP, 9);
+    expect(p.left).toBeCloseTo(scr(2900, 0.5, off.x) + cs.VE_CHIP_INSET_IN, 9);
+    expect(p.top).toBeCloseTo(scr(2900, 0.5, off.y) + cs.VE_CHIP_INSET_IN, 9);
   });
 
-  test('çerçeve ekranın altına kayarsa çip görünümde kalır (çıkış yolu kilitlenmez)', () => {
-    // Alt kenar görünümün 5000px altında — kırpılmasa çip erişilemez olurdu
+  test('çerçeve ekranın altına kayarsa düğme görünümde kalır (çıkış yolu kilitlenmez)', () => {
     const p = cs.veBoundaryChipPos(BOX, 1, { x: 600, y: 5400 }, CHIP, VIEW);
     expect(p.top).toBeCloseTo(VIEW.h - CHIP.h - cs.VE_CHIP_INSET, 9);
     expect(p.top + CHIP.h).toBeLessThanOrEqual(VIEW.h);
@@ -433,21 +446,35 @@ describe('veBoundaryChipPos — çıkış çipi çerçevenin ALT KENARINA tutunu
     const up = cs.veBoundaryChipPos(BOX, 1, { x: 600, y: -4000 }, CHIP, VIEW);
     expect(up.top).toBeCloseTo(cs.VE_CHIP_INSET, 9);
     const left = cs.veBoundaryChipPos(BOX, 1, { x: -4000, y: 400 }, CHIP, VIEW);
-    expect(left.left).toBeCloseTo(CHIP.w / 2 + cs.VE_CHIP_INSET, 9);   // sol kenar taşmaz
+    expect(left.left).toBeCloseTo(cs.VE_CHIP_INSET, 9);              // sol kenar taşmaz
     const right = cs.veBoundaryChipPos(BOX, 1, { x: 5000, y: 400 }, CHIP, VIEW);
-    expect(right.left).toBeCloseTo(VIEW.w - CHIP.w / 2 - cs.VE_CHIP_INSET, 9);
+    expect(right.left).toBeCloseTo(VIEW.w - CHIP.w - cs.VE_CHIP_INSET, 9);
   });
 
-  test('görünüm ölçülemiyorsa (0×0) kırpma yapılmaz — çip sıfıra çökmez', () => {
+  test('görünüm ölçülemiyorsa (0×0) kırpma yapılmaz — düğme sıfıra çökmez', () => {
     const off = { x: 600, y: 400 };
     const p = cs.veBoundaryChipPos(BOX, 1, off, CHIP, { w: 0, h: 0 });
-    expect(p.left).toBeCloseTo(scr(3100, 1, off.x), 9);
-    expect(p.top).toBeCloseTo(scr(3100, 1, off.y) + cs.VE_CHIP_GAP, 9);
+    expect(p.left).toBeCloseTo(scr(2900, 1, off.x) + cs.VE_CHIP_INSET_IN, 9);
+    expect(p.top).toBeCloseTo(scr(2900, 1, off.y) + cs.VE_CHIP_INSET_IN, 9);
   });
 
-  test('çerçeve yokken (boş alt-topoloji) görünümün alt-ortasına düşer', () => {
+  test('çerçeve yokken (boş alt-topoloji) görünümün sol üstüne düşer', () => {
     const p = cs.veBoundaryChipPos(null, 1, { x: 600, y: 400 }, CHIP, VIEW);
-    expect(p.left).toBeCloseTo(VIEW.w / 2, 9);
-    expect(p.top).toBeCloseTo(VIEW.h - CHIP.h - cs.VE_CHIP_INSET, 9);
+    expect(p.left).toBeCloseTo(cs.VE_CHIP_INSET, 9);
+    expect(p.top).toBeCloseTo(cs.VE_CHIP_INSET, 9);
+  });
+
+  // CSS ile JS'in AYNI sözleşmeyi konuştuğunu tutar: konum sol üst köşe
+  // olduğu için .ve-arac-breadcrumb'da translate KALMAMALI. Eski kural
+  // translateX(-50%) taşıyordu; kalsaydı düğme 13 px sola kayardı ve kimse
+  // testten anlamazdı.
+  test('CSS kuralı translate taşımıyor (JS sol üst köşe veriyor)', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+    const i = css.indexOf('.ve-arac-breadcrumb{');
+    expect(i).toBeGreaterThan(-1);
+    const blok = css.slice(i, css.indexOf('}', i));
+    expect(blok).not.toMatch(/transform\s*:\s*translate/);
   });
 });

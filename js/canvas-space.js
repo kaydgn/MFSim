@@ -132,14 +132,14 @@ function veTopoBBox(nodeList, annotList) {
   return { minX: minX, minY: minY, maxX: maxX, maxY: maxY };
 }
 
-// ── TOPOLOJİ SINIR ÇERÇEVESİ + ALT-TOPOLOJİ ÇIKIŞ ÇİPİ ──────────────────────
-// Kesikli çerçeveyi js/results.js veUpdateBoundary SVG'ye çizer; "← Ana
-// topolojiye dön" çipi de aynı çerçevenin ALT KENARINA tutunur. Kutu TEK
-// yerden (burası) gelir: iki taraf ayrı ayrı hesaplasaydı çip zamanla
+// ── TOPOLOJİ SINIR ÇERÇEVESİ + ALT-TOPOLOJİ ÇIKIŞ DÜĞMESİ ───────────────────
+// Kesikli çerçeveyi js/results.js veUpdateBoundary SVG'ye çizer; ana topolojiye
+// dönüş düğmesi de aynı çerçevenin İÇİNE, SOL ÜST köşesine tutunur. Kutu TEK
+// yerden (burası) gelir: iki taraf ayrı ayrı hesaplasaydı düğme zamanla
 // çerçeveden kayardı ve kimse fark etmezdi.
 var VE_NODE_LABEL_H = 20;            // düğüm kutusunun ALTINDAKİ ad etiketi
 var VE_BOUNDARY_PAD = 50;            // çerçevenin bileşenlerden uzaklığı (varsayılan)
-var VE_CHIP_GAP = 12;                // çip ile çerçevenin alt kenarı arası (ekran px)
+var VE_CHIP_INSET_IN = 8;            // çıkış düğmesi ile çerçevenin İÇ köşesi arası (ekran px)
 var VE_CHIP_INSET = 10;              // görünüm kenarına en yakın duruş (ekran px)
 
 // ── AD ETİKETİNİN ÇERÇEVEYE ETKİSİ ──────────────────────────────────────────
@@ -276,16 +276,21 @@ function veBoundaryBox(nodeList, pad, measure) {
   return { x: minX - p, y: minY - p, w: (maxX - minX) + p * 2, h: (maxY - minY) + p * 2 };
 }
 
-// SAF: çıkış çipinin GÖRÜNÜM (#ve-canvas-wrapper) koordinatı — {left, top}.
-// left çipin YATAY MERKEZİDİR (CSS translateX(-50%) ile kullanılır).
+// SAF: çıkış düğmesinin GÖRÜNÜM (#ve-canvas-wrapper) koordinatı — {left, top}.
+// left/top düğmenin SOL ÜST köşesidir; CSS'te translate YOK.
 //   box   — veBoundaryBox() çıktısı (yerel px) ya da null
-//   chip  — {w, h} çipin ölçüsü; view — {w, h} görünüm ölçüsü
-// Çip kameranın parçası DEĞİL, ona tutunur: pan/zoom'da çerçeveyle birlikte
+//   chip  — {w, h} düğmenin ölçüsü; view — {w, h} görünüm ölçüsü
+// Düğme kameranın parçası DEĞİL, ona tutunur: pan/zoom'da çerçeveyle birlikte
 // gider ama ölçüsü sabit kalır (zoom %20'de okunmaz olmaz).
 //
+// ÇERÇEVENİN İÇİ, SOL ÜST KÖŞE. Eskiden alt kenarın ALTINDA, yatay ortada
+// duran geniş bir çipti (buton + kapsam etiketi); kullanıcı bildirimi
+// (2026-09-10): "kötü ve amatör duruyor". Sol üst geri/yukarı çıkışın olağan
+// yeri ve çerçevenin sağ alt köşesini boş bırakır.
+//
 // KIRPMA (yalnız görünüm ölçülebiliyorsa): doğal yer görünümün dışına düşerse
-// çip kenara yapışır. Alt-topolojiden çıkmanın BAŞKA yolu yok — kullanıcı
-// çerçeveyi ekran dışına kaydırınca çip de gitseydi topolojide kilitlenirdi.
+// düğme kenara yapışır. Alt-topolojiden çıkmanın BAŞKA yolu yok — kullanıcı
+// çerçeveyi ekran dışına kaydırınca düğme de gitseydi topolojide kilitlenirdi.
 function veBoundaryChipPos(box, zoom, offset, chip, view) {
   var z = (isFinite(zoom) && zoom > 0) ? zoom : 1;
   var ox = (offset && isFinite(offset.x)) ? offset.x : 0;
@@ -297,17 +302,17 @@ function veBoundaryChipPos(box, zoom, offset, chip, view) {
 
   var left, top;
   if(box) {
-    left = (box.x + box.w / 2 - VE_CANVAS_CENTER) * z + ox;
-    top = (box.y + box.h - VE_CANVAS_CENTER) * z + oy + VE_CHIP_GAP;
+    left = (box.x - VE_CANVAS_CENTER) * z + ox + VE_CHIP_INSET_IN;
+    top = (box.y - VE_CANVAS_CENTER) * z + oy + VE_CHIP_INSET_IN;
   } else {
-    // Çerçeve yok (boş alt-topoloji) → görünümün alt-ortası.
-    left = vw / 2;
-    top = vh - ch - VE_CHIP_INSET;
+    // Çerçeve yok (boş alt-topoloji) → görünümün sol üstü.
+    left = VE_CHIP_INSET;
+    top = VE_CHIP_INSET;
   }
 
   if(vw > 0 && vh > 0) {
-    var loL = cw / 2 + VE_CHIP_INSET, hiL = vw - cw / 2 - VE_CHIP_INSET;
-    left = (hiL < loL) ? vw / 2 : Math.min(hiL, Math.max(loL, left));
+    var hiL = vw - cw - VE_CHIP_INSET;
+    left = (hiL < VE_CHIP_INSET) ? VE_CHIP_INSET : Math.min(hiL, Math.max(VE_CHIP_INSET, left));
     var hiT = vh - ch - VE_CHIP_INSET;
     top = (hiT < VE_CHIP_INSET) ? VE_CHIP_INSET : Math.min(hiT, Math.max(VE_CHIP_INSET, top));
   }
@@ -379,7 +384,7 @@ if(typeof module !== 'undefined' && module.exports) {
     VE_LABEL_GAP_V: VE_LABEL_GAP_V,
     VE_LABEL_GAP_H: VE_LABEL_GAP_H,
     VE_BOUNDARY_PAD: VE_BOUNDARY_PAD,
-    VE_CHIP_GAP: VE_CHIP_GAP,
+    VE_CHIP_INSET_IN: VE_CHIP_INSET_IN,
     VE_CHIP_INSET: VE_CHIP_INSET,
     veGridPattern: veGridPattern,
     veApplyGridPattern: veApplyGridPattern,
