@@ -2215,61 +2215,73 @@ body.ve-no-module #ve-ribbon{ display:none; }
    Artık çerçeveye tutunur — konumu js/canvas-space.js veAnchorBoundaryChip
    hesaplar (left/top inline yazılır), pan/zoom'da çerçeveyle birlikte gider.
    Buradaki left/bottom yalnızca JS ölçemeden önceki İLK karenin yedeğidir. */
+/* Alt-topolojiden çıkış düğmesi — TOPOLOJİ SINIR ÇERÇEVESİNİN İÇİ, SOL ÜST.
+   Eskiden çerçevenin alt kenarının ALTINDA, yatay ortada duran geniş bir çipti:
+   dolu aksan zeminli "← Ana topolojiye dön" düğmesi + kapsam etiketi, ~260 px.
+   Kullanıcı bildirimi (2026-09-10): "kötü ve amatör duruyor".
+   Artık 26×26 kare — programda zaten kurulu olan köşe düğmesi dili
+   (.ve-boundary-summary-btn: aynı ölçü, aynı sönük duruş, üstüne gelince
+   belirginleşir). Kapsam etiketi SİLİNMEDİ, title'a taşındı.
+   Konumu veBoundaryChipPos (js/canvas-space.js) hesaplar; left/top artık
+   düğmenin SOL ÜST köşesi, o yüzden translate YOK. */
 .ve-arac-breadcrumb{
   position:absolute;
-  bottom:18px;
-  left:50%;
-  transform:translateX(-50%);
   z-index:60;
   display:flex;
-  align-items:center;
-  gap:9px;
-  padding:5px 11px 5px 8px;
-  max-width:calc(100% - 20px);
-  background:var(--bg-secondary);
-  color:var(--text-secondary);
-  border:1px solid var(--border-color);
-  border-left:3px solid var(--accent-primary);   /* sınır işareti */
-  border-radius:var(--radius-sm);
-  box-shadow:0 4px 14px var(--shadow-color, rgba(0,0,0,0.28));
-  font-size:var(--fs-body);
-  font-weight:600;
-  white-space:nowrap;
-  animation:veBreadcrumbIn 220ms cubic-bezier(0.22,0.61,0.36,1);
+  animation:veBreadcrumbIn 180ms var(--ease-out);
 }
-/* Alttan hafifçe yükselerek belirir (canvas geçişiyle aynı ritim). Yatay
-   ortalama transform'la yapıldığı için keyframe'ler translateX(-50%)'i
-   TAŞIMAK ZORUNDA: yoksa animasyon boyunca çip kendi yarı genişliği kadar
-   sağa kayar ve yerine "otururken" görünür. */
 @keyframes veBreadcrumbIn{
-  from{ opacity:0; transform:translate(-50%, 8px); }
-  to{ opacity:1; transform:translate(-50%, 0); }
+  from{ opacity:0; transform:translateY(-4px); }
+  to{ opacity:1; transform:translateY(0); }
 }
-/* Dar ekranda minimap ile çakışmaya karşı olan "bottom:162px" kuralı KALDIRILDI:
-   çip artık görünümün alt kenarına dock'lu değil, çerçeveye tutunuyor — sağ-alt
-   köşede sabit durmadığı için kaçınacağı sabit bir engel de yok. */
 .ve-arac-breadcrumb button{
-  display:inline-flex;
+  position:relative;
+  width:26px;
+  height:26px;
+  display:flex;
   align-items:center;
-  gap:5px;
+  justify-content:center;
+  padding:0;
+  background:var(--bg-secondary);
+  color:var(--ink-accent);
+  border:1px solid var(--border-hover);
+  border-radius:var(--radius-sm);
+  cursor:pointer;
+  /* .ve-boundary-summary-btn 0,55'te duruyor ama o İKİNCİL bir işlev; bu düğme
+     alt-topolojiden çıkmanın TEK yolu (bkz. veBoundaryChipPos kırpma notu).
+     Sakin ama aranmadan bulunur olmalı → 0,8. */
+  opacity:0.8;
+  transition:opacity var(--dur-base) var(--ease-out),
+             border-color var(--dur-base) var(--ease-out);
+}
+.ve-arac-breadcrumb button:hover{
+  opacity:1;
+  border-color:var(--accent-primary);
+}
+.ve-arac-breadcrumb button .mf-ico{
+  width:15px;
+  height:15px;
+}
+/* Derinlik rozeti — YALNIZ iç içe ikinci seviyeden itibaren basılır. Tek
+   seviyede sayı bilgi taşımıyor; ikide taşıyor ve düğmeden okunmazsa
+   kullanıcı kaç kez çıkacağını bilemez. */
+.ve-arac-breadcrumb button .ve-bc-depth{
+  position:absolute;
+  top:-5px;
+  right:-5px;
+  min-width:13px;
+  height:13px;
+  padding:0 2px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   background:var(--accent-primary);
   color:var(--on-accent);
-  border:none;
-  border-radius:var(--radius-sm);
-  padding:4px 10px;
-  cursor:pointer;
+  border-radius:var(--radius-pill);
+  font-size:var(--fs-micro);
   font-weight:700;
-  font-size:var(--fs-body);
-  letter-spacing:0.01em;
-  transition:filter 0.12s;
-}
-.ve-arac-breadcrumb button:hover{ filter:brightness(1.12); }
-.ve-arac-breadcrumb-label{
-  min-width:0;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  color:var(--text-muted);
-  opacity:0.95;
+  font-style:normal;
+  line-height:1;
 }
 
 .ve-canvas-area{

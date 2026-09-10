@@ -270,8 +270,8 @@ function veAracCollapseToRoot(){
   while(veAracStack.length && guard++ < 32){ veAracCloseEditor(true); }
 }
 
-// Alt-topoloji içindeyken TOPOLOJİ SINIR ÇERÇEVESİNİN ALT KENARINA tutunan
-// çıkış çipi — "← Ana topolojiye dön" + kapsam etiketi. Konumu
+// Alt-topoloji içindeyken TOPOLOJİ SINIR ÇERÇEVESİNİN İÇİNE, SOL ÜST köşeye
+// tutunan çıkış düğmesi — 26 px kare, ikon; kapsam etiketi title'da. Konumu
 // veAnchorBoundaryChip (js/canvas-space.js) hesaplar; pan/zoom'da çerçeveyle
 // birlikte gider.
 function veAracUpdateBreadcrumb(){
@@ -293,10 +293,13 @@ function veAracUpdateBreadcrumb(){
     host.appendChild(el);
   }
   var depth = veAracStack.length;
+  // Kapsam etiketi title'da: düğme 26 px, metin sığmaz — ama bilgi de atılmaz.
   el.innerHTML =
-    '<button onclick="veAracCloseEditor()" title="Ana (üst) topolojiye dön">← Ana topolojiye dön</button>'
-    + '<span class="ve-arac-breadcrumb-label">Araç Performans · Alt Topoloji'
-    + (depth > 1 ? ' <b>(derinlik ' + depth + ')</b>' : '') + '</span>';
+    '<button onclick="veAracCloseEditor()" title="Ana topolojiye dön — Araç Performans · Alt Topoloji'
+    + (depth > 1 ? ' (derinlik ' + depth + ')' : '') + '">'
+    + '<span class="mf-ico mf-ico-chevrons-left" aria-hidden="true"></span>'
+    + (depth > 1 ? '<i class="ve-bc-depth">' + depth + '</i>' : '')
+    + '</button>';
   // Etiket (ve dolayısıyla genişlik) değişti → yeri hemen tazelensin.
   if(typeof veAnchorBoundaryChip === 'function') veAnchorBoundaryChip();
 }

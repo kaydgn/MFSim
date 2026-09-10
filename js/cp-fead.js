@@ -317,7 +317,7 @@ function veFeadCollapseToRoot(){
   while(veFeadStack.length && guard++ < 32){ veFeadCloseEditor(true); }
 }
 
-// Alt-topoloji çıkış çipi — topoloji sınır çerçevesinin alt kenarına tutunur
+// Alt-topoloji çıkış düğmesi — sınır çerçevesinin İÇİNE, sol üst köşeye tutunur
 // (cp-arac-performans.js veAracUpdateBreadcrumb ile aynı CSS sınıfı ve mantık).
 function veFeadUpdateBreadcrumb(){
   if(typeof document === 'undefined') return;
@@ -334,9 +334,12 @@ function veFeadUpdateBreadcrumb(){
     host.appendChild(el);
   }
   var depth = veFeadStack.length;
-  el.innerHTML = '<button onclick="veFeadCloseEditor()" title="Ana (üst) topolojiye dön">← Ana topolojiye dön</button>'
-    + '<span class="ve-arac-breadcrumb-label">FEAD · İç Topoloji'
-    + (depth > 1 ? ' <b>(derinlik ' + depth + ')</b>' : '') + '</span>';
+  el.innerHTML =
+    '<button onclick="veFeadCloseEditor()" title="Ana topolojiye dön — FEAD · İç Topoloji'
+    + (depth > 1 ? ' (derinlik ' + depth + ')' : '') + '">'
+    + '<span class="mf-ico mf-ico-chevrons-left" aria-hidden="true"></span>'
+    + (depth > 1 ? '<i class="ve-bc-depth">' + depth + '</i>' : '')
+    + '</button>';
   if(typeof veAnchorBoundaryChip === 'function') veAnchorBoundaryChip();
 }
 
