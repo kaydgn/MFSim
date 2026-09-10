@@ -193,37 +193,70 @@ describe('tezgâhlar', () => {
   });
 });
 
-describe('karşılama tezgâhı canlı listeyi ölçüyor', () => {
-  const tezgah = K.VE_KOMUTA_TEZGAHLAR.find((t) => t.id === 'karsilama');
-  const { VE_KARSILAMA_GORSELLER } = require(path.join(KOK, 'js/karsilama-gorseller.js'));
+describe('tezgâhlar canlı kaynaklarını ölçüyor', () => {
+  // `olc(veri)` SAF: veriyi argümandan alıyor. Buradaki her ölçüm, tezgâhın
+  // KENDİ beyanından (dosya + disaAktarim) gelen gerçek veriyle koşuyor —
+  // testin elle kurduğu bir kurgu ile değil.
+  const veriyle = (t) => t.olc(require(path.join(KOK, t.dosya))[t.disaAktarim]);
 
-  test('ölçüm programın gerçek kare listesiyle birebir', () => {
-    global.VE_KARSILAMA_GORSELLER = VE_KARSILAMA_GORSELLER;
-    const kayitlar = tezgah.olc();
-    expect(kayitlar.length).toBe(VE_KARSILAMA_GORSELLER.length);
-    expect(kayitlar.map((k) => k.etiket)).toEqual(VE_KARSILAMA_GORSELLER);
-    delete global.VE_KARSILAMA_GORSELLER;
+  test('her tezgâh boş olmayan bir kayıt listesi veriyor', () => {
+    const bos = K.VE_KOMUTA_TEZGAHLAR.filter((t) => veriyle(t).length === 0).map((t) => t.id);
+    expect(bos).toEqual([]);
   });
 
-  test('anahtar kare NUMARASI — fiş dosya adı değil numara taşır', () => {
-    global.VE_KARSILAMA_GORSELLER = ['karsilama-05.webp', 'karsilama-31.webp'];
-    expect(tezgah.olc().map((k) => k.anahtar)).toEqual(['05', '31']);
-    delete global.VE_KARSILAMA_GORSELLER;
+  test('her kaydın anahtarı ve gösterilecek bir adı var', () => {
+    K.VE_KOMUTA_TEZGAHLAR.forEach((t) => {
+      veriyle(t).forEach((k) => {
+        expect(String(k.anahtar || '')).not.toBe('');
+        expect(String(k.baslik || k.etiket || '')).not.toBe('');
+      });
+    });
   });
 
-  test('liste yoksa ölçüm patlamaz, boş döner', () => {
-    expect(tezgah.olc()).toEqual([]);
+  test('ANAHTARLAR TEKİL — yoksa `kaldir` hangi kaydı gösterdiği belirsiz olurdu', () => {
+    K.VE_KOMUTA_TEZGAHLAR.forEach((t) => {
+      const a = veriyle(t).map((k) => String(k.anahtar));
+      const tekrar = a.filter((x, i) => a.indexOf(x) !== i);
+      expect({ tezgah: t.id, tekrar }).toEqual({ tezgah: t.id, tekrar: [] });
+    });
   });
 
-  test('künye başlıkları kare numarasıyla eşleşiyor (gömülü künye varsa)', () => {
+  test('`olc` SAF — global okumuyor, veri argümandan geliyor', () => {
+    // Global'ler kurulu DEĞİLKEN de ölçüm çalışmalı. İlk sözleşmede olc()
+    // üst-seviye bir addan okuyordu; ikinci tezgâh o adı js/ genelinde bir
+    // çakışmaya zorladı (source-hygiene kapısı yasaklıyor).
+    K.VE_KOMUTA_TEZGAHLAR.forEach((t) => {
+      expect(typeof t.kaynak).toBe('function');
+      expect(veriyle(t).length).toBeGreaterThan(0);
+    });
+  });
+
+  test('veri yoksa ölçüm patlamıyor, boş dönüyor', () => {
+    K.VE_KOMUTA_TEZGAHLAR.forEach((t) => {
+      expect(t.olc(null)).toEqual([]);
+      expect(t.olc([])).toEqual([]);
+    });
+  });
+
+  test('düzen bilinen bir değer', () => {
+    K.VE_KOMUTA_TEZGAHLAR.forEach((t) => {
+      expect(['izgara', 'liste']).toContain(t.duzen);
+    });
+  });
+
+  test('karşılama: anahtar kare NUMARASI — fiş dosya adı değil numara taşır', () => {
+    const t = K.VE_KOMUTA_TEZGAHLAR.find((x) => x.id === 'karsilama');
+    expect(t.olc(['karsilama-05.webp', 'karsilama-31.webp']).map((k) => k.anahtar))
+      .toEqual(['05', '31']);
+  });
+
+  test('karşılama: künye başlıkları kare numarasıyla eşleşiyor', () => {
+    const t = K.VE_KOMUTA_TEZGAHLAR.find((x) => x.id === 'karsilama');
     const kunye = JSON.parse(fs.readFileSync(path.join(KOK, 'tools/karsilama-kunye.json'), 'utf8'));
-    // jsdom'da `window` zaten var; global.window'a ATAMA onu değiştirmez —
-    // özellik mevcut window'un üstüne konur (ilk yazımda 28/29 buna düştü).
+    // jsdom'da `window` zaten var; global.window'a ATAMA onu değiştirmez.
     window.__MFSIM_KARSILAMA_KUNYE = kunye;
-    global.VE_KARSILAMA_GORSELLER = VE_KARSILAMA_GORSELLER;
-    const bossuz = tezgah.olc().filter((k) => !k.baslik);
+    const bossuz = veriyle(t).filter((k) => !k.baslik);
     delete window.__MFSIM_KARSILAMA_KUNYE;
-    delete global.VE_KARSILAMA_GORSELLER;
     expect(bossuz).toEqual([]);
   });
 });
@@ -268,6 +301,12 @@ describe('kaynak kapıları', () => {
     const govde = /function veKomutaSecimDegistir\([\s\S]*?\n}/.exec(KAYNAK)[0];
     expect(govde).toContain("classList.toggle('secili'");
     expect(govde).toContain("setAttribute('aria-pressed'");
+  });
+
+  test('liste düzeninin CSS karşılığı var', () => {
+    const css = fs.readFileSync(path.join(KOK, 'css/styles.css'), 'utf8');
+    expect(css).toContain('.ve-komuta-liste');
+    expect(css).toMatch(/\.ve-komuta-kart\.satir/);
   });
 
   test('kullanıcı metni kaçışlanıyor', () => {

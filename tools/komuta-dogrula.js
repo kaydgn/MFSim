@@ -35,8 +35,10 @@ function oku(arg) {
   return fs.readFileSync(arg, 'utf8');
 }
 
-// Tezgâhın `olc()`u tarayıcı için yazıldı: ölçtüğü listeyi ÜST-SEVİYE bir addan
-// okuyor. Node'da o adı tezgâhın kendi beyanından kurup geri alıyoruz.
+// Tezgâh ölçtüğü kaynağı `dosya` + `disaAktarim` ile beyan ediyor; `olc(veri)`
+// saf olduğu için burada global'e HİÇBİR ŞEY yazılmıyor. (İlk yazımda yazılıyordu
+// ve ikinci tezgâhta çöktü: arşivin verisi `programlar` adıyla duruyor, onu
+// global'e koymak js/ genelinde bir ad çakışması demekti.)
 function tezgahiOlc(t) {
   if (!t.disaAktarim) throw new Error('tezgâh "' + t.id + '" disaAktarim beyan etmiyor');
   const mod = require(path.join(KOK, t.dosya));
@@ -44,10 +46,9 @@ function tezgahiOlc(t) {
   if (veri === undefined) {
     throw new Error(t.dosya + ' içinde ' + t.disaAktarim + ' dışa aktarılmıyor');
   }
-  const onceki = global[t.disaAktarim];
-  global[t.disaAktarim] = veri;
-  try { return t.olc() || []; } finally { global[t.disaAktarim] = onceki; }
+  return t.olc(veri) || [];
 }
+
 
 function main() {
   const fis = K.veKomutaFisAyristir(oku(process.argv[2]));
