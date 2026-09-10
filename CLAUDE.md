@@ -519,23 +519,29 @@ TetGen, boolean'lı OCCT çekirdeği); Yapısal Analiz kaldırılınca ikisi de 
 ve dosya **17,1 MB**'a düştü. Sebepsiz bir büyüme bir regresyon işaretidir;
 sayıyı çıplak basmak onu gizler.
 
-## SİPARİŞ FİŞİ geldiğinde — künyeyi ÖNCE doğrula
+## SİPARİŞ FİŞİ geldiğinde — DOĞRULAMADAN uygulama
 
 Kullanıcı Komuta Penceresi'nden (`js/cp-komuta.js`) `MFSIM-SIPARIS v1` başlıklı
-bir metin yapıştırabilir. Fiş, hangi dosyaya ne yapılacağını söyler; ama ilk
-bakılacak satır `kunye`dir:
+bir metin yapıştırabilir. Fiş, kullanıcının ELİNDEKİ kopyadan yazılıyor; o kopya
+bayatsa fişteki numaralar başka kayıtları gösterir ve hata SESSİZ olur —
+uygulanır, makul görünür, yanlıştır. Kapı bir paragraf değil bir komut:
 
 ```bash
-git fetch origin main && git rev-parse --short origin/main   # fişteki sha ile AYNI mı?
+npm run komuta:dogrula -- <fis-dosyasi>     # ya da: ... | npm run komuta:dogrula -- -
 ```
 
-**Sapma varsa uygulamadan ÖNCE söyle.** Fiş, kullanıcının ELİNDEKİ kopyadan
-yazılıyor; o kopya bayatsa fişteki numaralar başka kareleri gösteriyor olabilir
-ve hata SESSİZ olur (uygulanır, makul görünür, yanlıştır). Aynı tuzağın ters
-yönü zaten ölçüldü: bir oturum `main`in üç PR gerisinden açıldı.
+Çıkış kodu 0 değilse **uygulama, kullanıcıya sor.** Betik iki ayrı şeyi ölçer:
+tezgâhın içeriği fiş yazıldığından beri değişti mi (`olcum` özeti), ve fişin
+hedeflediği kayıtlar hâlâ duruyor mu.
+
+**Sha karşılaştırması TEK BAŞINA yetmez ve kullanılmaz.** Ölçüldü: bir turda
+`main` altı PR ilerledi ve karşılama listesi hiç değişmedi — sha kapısı orada
+yanlış alarm verir, birkaç tekrardan sonra da ciddiye alınmaz olur. Ölçülen şey
+sürüm değil tezgâhın kendi içeriğidir.
 
 Fişin biçim sözleşmesi `tests/unit/komuta.test.js`'te gidiş-dönüş kapısıyla
-duruyor (`ayristir(uret(x)) === x`); alan adları diakritiksizdir.
+(`ayristir(uret(x)) === x`), betiğin ısırdığı `tests/unit/komuta-dogrula.test.js`'te
+çıkış koduyla duruyor. Alan adları diakritiksizdir.
 
 ## Teslim Akışı — PR + merge OTOMATİK, **CI BEKLENMEZ**
 
