@@ -50,6 +50,15 @@ Object.keys(AC).forEach((k) => { global[k] = AC[k]; });
 // "Kapılar yüklenmedi" der ve sahne üç kuralı hiç basmaz.
 const CK = require('../../js/fead-checks.js');
 Object.keys(CK).forEach((k) => { global[k] = CK[k]; });
+// Gergi künye kütüphanesi — §7'nin sahnesi buna bağlı. Yüklenmezse kart
+// "Kütüphane yüklenmedi" yazar ve o cümle KULLANICI KILAVUZUNA girer.
+const TN = require('../../js/fead-tensioners.js');
+Object.keys(TN).forEach((k) => { global[k] = TN[k]; });
+// Çevrim kütüphanesi ve motor kataloğu — §9'un sahnesi ikisini de çiziyor.
+const DT = require('../../js/fead-duty.js');
+Object.keys(DT).forEach((k) => { global[k] = DT[k]; });
+const EN = require('../../js/fead-engines.js');
+Object.keys(EN).forEach((k) => { global[k] = EN[k]; });
 // "Katalog Modeli" kartı, Araç Performans ile ORTAK preset kütüphanesine bağlı
 // (veFeadPresetLib → VE_ALTERNATOR_PRESETS / VE_AC_PRESETS). Yüklenmezse kart
 // hiç çizilmez ve Ek A'nın o satırı sessizce atlanırdı.
@@ -430,11 +439,29 @@ describe('içerik yönlendirici', () => {
   });
 
   test('Başlangıç Sihirbazı açılış yolu olarak anlatılıyor', () => {
-    // Modül açılışında ÜÇ kart geliyor (sihirbaz · örnekler · Kayış Tablosu);
-    // kılavuz eksik sayarsa ilk ekran yalanlanmış olur.
     expect(DOC).toContain('Başlangıç Sihirbazı');
-    expect(DOC).toContain('üç açılış kartı');
     expect(DOC).toContain('Sihirbaz adımları');
+    // Boş modül SİHİRBAZLA karşılıyor (2026-09-09); kılavuz bunu yazmazsa
+    // kullanıcı kendiliğinden açılan pencereyi bir hata sanar.
+    expect(DOC).toMatch(/Sihirbaz(ı)? ile karşılar/);
+  });
+
+  // AÇILIŞ KARTLARI PROGRAMDAN OKUNUR — kılavuza sayı yazılmaz.
+  //
+  // Bu liste iki kez değişti: önce "Başlangıç ve Örnekler" eklendi, sonra
+  // KALDIRILDI (sunduğu iki şey sihirbazın 1. adımında zaten vardı). Kılavuz
+  // her ikisinde de eski sayıyı yazmaya devam etti ve hiçbir kapı görmedi.
+  test('kılavuz açılışta gelen kartları doğru sayıyor', () => {
+    const src = io_read('js/cp-fead.js');
+    const m = /\[([^\]]*)\]\.forEach\(function\(tip, k\)/.exec(src);
+    expect(m).toBeTruthy();
+    const tipler = (m[1].match(/'([^']+)'/g) || []).map((x) => x.slice(1, -1));
+    expect(tipler.length).toBeGreaterThan(0);
+    // Kılavuz her kartı ADIYLA anmalı...
+    tipler.forEach((t) => { expect(DOC).toContain(componentDefs[t].name); });
+    // ...ve KALDIRILMIŞ kartı anmamalı.
+    expect(componentDefs['fead-example']).toBeUndefined();
+    expect(DOC).not.toContain('Başlangıç ve Örnekler');
   });
 
   // SİHİRBAZ ADIMLARI PROGRAMDAN OKUNUR — kılavuza kopyalanmaz.
@@ -473,15 +500,57 @@ describe('içerik yönlendirici', () => {
 describe('sahneler programın kendi bileşeni', () => {
   const sahneler = SEKILLER.filter((f) => f.indexOf('data-gk-sahne=') >= 0);
 
-  test('dört sahne de çizildi', () => {
-    // Üretici patlarsa `_gfSahneHTML` boş dönüyor ve sahne HİÇ çizilmiyor —
-    // yani sayının düşmesi sessiz bir kayıp. Sayı burada çıpalı.
-    expect(sahneler.length).toBe(4);
+  // SAYI KAYNAKTAN. Üretici patlarsa `_gfSahneHTML` boş dönüyor ve sahne HİÇ
+  // çizilmiyor — sayının düşmesi sessiz bir kayıp. Elle yazılmış bir sayı ise
+  // her yeni sahnede kapıyı kırar ve "güncelle geç" alışkanlığı doğurur;
+  // bu yüzden beklenen sayı `_gfSahne*` çağrılarından okunuyor.
+  test('kaynaktaki her sahne çağrısı belgede karşılığını buldu', () => {
+    const src = io_read('js/guide-fead.js');
+    const cagri = (src.match(/h \+= _gfSahne\w+\(/g) || []).length;
+    expect(cagri).toBeGreaterThan(3);
+    expect(sahneler.length).toBe(cagri);
     // Numaralar 1..N ve tekrarsız: sayaç elle yazılsaydı araya bir sahne
     // girince kayardı (raporun tablo sayacındaki ders).
     const no = sahneler.map((f) => Number((f.match(/data-gk-sahne="(\d+)"/) || [])[1]));
-    expect(no).toEqual([1, 2, 3, 4]);
+    expect(no).toEqual(no.map((_, i) => i + 1));
     sahneler.forEach((f, i) => { expect(f).toContain('Şekil ' + (i + 1) + ' —'); });
+  });
+
+  test('her ANA yüzeyin bir sahnesi var', () => {
+    // Kullanıcı kılavuzunun sözü: "gerektiği yerde resim". Bu liste o sözün
+    // kendisi — bir yüzey sessizce resimsiz kalırsa burada görünür.
+    // Her satır: yüzeyin adı → o yüzeyde OLAN, başka yüzeyde OLMAYAN bir işaret.
+    const gerek = {
+      'Kayış Tablosu': 've-fead-tbl',
+      'şerit düğmesi': 've-rb-btn',
+      'kasnak paneli': 'Devir Sınırları',
+      'gergi paneli': 'Avara Kasnağının Merkezi',
+      'kayış paneli': 'Kayış Tipine Bağlı Çıktılar',
+      'çözücü paneli': 'Algılanan Model',
+      'rapor paneli': 'Detaylı Raporu',
+      'dönüş yönü': 'Kayış Dönüş Yönü'
+    };
+    const eksik = Object.keys(gerek)
+      .filter((k) => !sahneler.some((f) => f.indexOf(gerek[k]) >= 0));
+    // İKİ TUVAL KARTI AYRI AYRI ARANIR ve işaret `<svg` DEĞİL.
+    // İkisi de aynı çiziciden geçtiği için ikisinde de svg var; dahası gergi
+    // panelinin T(θ) grafiği de bir svg. "Svg taşıyan bir sahne olsun" demek,
+    // DONUK şemayı silen bir değişikliği kaçırıyordu (ölçüldü). İşaret kayış
+    // yolunun kendi çizgisi; ayrım da seçicide: donuk kart devir okumaz.
+    const yol = sahneler.filter((f) => f.indexOf('data-ve="belt"') >= 0);
+    if (!yol.some((f) => f.indexOf('Senaryo — motor çevrimi') < 0))
+      eksik.push('kayış yolu şeması (donuk)');
+    if (!yol.some((f) => f.indexOf('Senaryo — motor çevrimi') >= 0))
+      eksik.push('çalışma noktası (canlı)');
+    // UYGUNLUK KAPILARI KENDİ BAŞINA. Kart, Çözücü panelinin de parçası
+    // olduğu için "Uygunluk Kapıları geçiyor mu" demek §11.4'ün ayrı sahnesini
+    // silen değişikliği kaçırıyordu (ölçüldü — çözücü sahnesi kapıyı tek
+    // başına yeşil tutuyordu). Ayrım: tek başına duran sahnede panelin geri
+    // kalanı YOK.
+    if (!sahneler.some((f) => f.indexOf('Uygunluk Kapıları') >= 0
+                           && f.indexOf('Algılanan Model') < 0))
+      eksik.push('uygunluk kapıları (tek başına)');
+    expect(eksik).toEqual([]);
   });
 
   test('Kayış Tablosu sahnesi ÜRETİCİNİN çıktısı', () => {
@@ -644,6 +713,22 @@ describe('sahneler programın kendi bileşeni', () => {
         .toContain('.ve-rb-btn--lg{min-height:54px;}');
       expect(belge).not.toContain('.ve-rb-btn--lg{min-height:54px;}');
     });
+  });
+
+  test('hiçbir sahne "yüklenmedi/bulunamadı" yazmıyor', () => {
+    // ÖLÇÜLDÜ VE GÖRÜLDÜ: gergi künye kütüphanesi yüklü değilken sahne
+    // "Kütüphane yüklenmedi (js/fead-tensioners.js)." yazıyordu — bir geliştirici
+    // mesajı, kullanıcı kılavuzunun ortasında. Sahne bir bileşenin GERÇEK hâlini
+    // göstermeli; eksik bir bağımlılıkla çizilmiş hâlini değil.
+    const kotu = [];
+    sahneler.forEach((f, i) => {
+      const metin = f.replace(/<[^>]+>/g, ' ');
+      [/yüklenmedi/i, /bulunamadı/i, /çizilemedi/i].forEach((re) => {
+        const m = re.exec(metin);
+        if (m) kotu.push('sahne ' + (i + 1) + ': ' + m[0]);
+      });
+    });
+    expect(kotu).toEqual([]);
   });
 
   test('sahnenin istediği her jeton karşılıklı — eksik yok', () => {
@@ -850,13 +935,17 @@ describe('kılavuz ↔ program: kart adları', () => {
     // ETİKETLER SOYULUR, çünkü ölçülen şey KULLANICININ OKUDUĞU metin:
     // şema SVG'si parçalarını `data-ve="pivot"` ile adlandırıyor ve o bir
     // çizim kimliği, bir terim değil.
-    const govde = DOC
+    // KILAVUZUN KENDİ METNİ ölçülür. Gergi paneli artık belgeye SAHNE olarak
+    // gömülüyor ve programın kendi etiketi hâlâ "merkezden pivota" diyor —
+    // o bir uygulama metni, kılavuzun terminoloji kaçağı değil. (Uygulamanın
+    // kendi etiketi ayrı bir iş; kılavuz onu aynen göstermek zorunda.)
+    const govde = KENDI
       .replace(/<style>[\s\S]*?<\/style>/g, '')
       .replace(/<[^>]+>/g, ' ');
     const kacak = (govde.match(/[Pp]ivot(?!\s*Point)\w*/g) || []);
     expect(kacak).toEqual([]);
     // ...ve raporun alan adı GERÇEKTEN duruyor (kapı boş bir belgeyle de yeşil kalmasın)
-    expect(govde).toContain('Pivot Point');
+    expect(govde).toContain('Pivot Point');   // raporun alan adı kılavuzun kendi metninde
   });
 
   // §14.2.1 KALKTI (2026-09-01): iki kol açısını yan yana ölçüyordu — biri
