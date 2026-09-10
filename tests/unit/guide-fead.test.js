@@ -95,7 +95,8 @@ const DOC = GF.veGuideFeadHTML();
 // kurallarını kılavuzun ihlali sayarlar. Ayrım tek yerde tanımlı.
 // Belgedeki bütün uygulama şekilleri, ve içlerinden ŞEMA olan.
 const SEKILLER = DOC.match(/<figure class="appfig">[\s\S]*?<\/figure>/g) || [];
-const SEMA = SEKILLER.filter((f) => f.indexOf('<svg') >= 0)[0] || '';
+const SAHNELER = SEKILLER.filter((f) => f.indexOf('data-gk-sahne') >= 0);
+const SEMA = SEKILLER.filter((f) => f.indexOf('<svg') >= 0 && f.indexOf('data-gk-sahne') < 0)[0] || '';
 
 const KENDI = DOC
   .replace(/<figure class="appfig">[\s\S]*?<\/figure>/g, '')
@@ -239,6 +240,18 @@ describe('kayış yolu şeması', () => {
     expect(DOC).toContain('<figure class="appfig">');
     expect(SEMA).not.toBe('');
     expect(SEMA).toContain('<figcaption>');
+  });
+
+  test('ŞEMA KİMLİKTEN seçiliyor, konumdan değil', () => {
+    // Bir kez ısırdı: Kayış Tablosunun ad hücresi düğmeye dönünce içine bir SVG
+    // ikon girdi ve "ilk svg'li şekil" artık TABLOYU gösteriyordu; aşağıdaki
+    // jeton kapısı 0 jeton ölçüp düşüyordu. Sahneler `data-gk-sahne` taşır,
+    // kılavuzun KENDİ çizdiği şema taşımaz — çıpa bu.
+    expect(SAHNELER.length).toBeGreaterThan(0);
+    expect(SEMA).not.toBe('');
+    expect(SEMA).not.toContain('data-gk-sahne');
+    // Sahnelerin arasında SVG taşıyan biri VAR; olmasaydı bu kapı boşa düşerdi.
+    expect(SAHNELER.some((f) => f.indexOf('<svg') >= 0)).toBe(true);
   });
 
   test('şeklin kullandığı her jeton belgenin CSS’inde tanımlı', () => {
