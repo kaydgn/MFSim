@@ -8898,6 +8898,24 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-komuta-kart.secili .ve-komuta-kare{ opacity:.42; }
 .ve-komuta-kart.secili .ve-komuta-isaret{ display:block; }
 
+/* ── LİSTE düzeni (görselsiz tezgâhlar) ──
+   Izgara 148 px'lik kutulara bölüyor; "../MFSim_Olcum_Goruntuleyici.html" gibi
+   uzun bir anahtar orada okunmuyor. Metin tezgâhları tek sütunda, ad ile meta
+   aynı satırda. Kart sınıfı ORTAK — durum kuralları (:hover/.secili/halka)
+   ikinci kez yazılmıyor. */
+.ve-komuta-liste{ grid-template-columns:1fr; gap:4px; }
+.ve-komuta-kart.satir{ flex-direction:row; align-items:baseline; gap:10px;
+  padding:7px 11px; border-radius:7px; }
+.ve-komuta-kart.satir .ve-komuta-no{ position:static; flex:0 0 auto; order:3;
+  margin-left:auto; background:var(--bg-input); color:var(--text-muted);
+  max-width:44%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ve-komuta-kart.satir .ve-komuta-ad{ margin-top:0; flex:0 1 auto; font-weight:500;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ve-komuta-kart.satir .ve-komuta-meta{ flex:1 1 auto; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; }
+.ve-komuta-kart.satir .ve-komuta-isaret{ order:4; flex:0 0 auto; }
+.ve-komuta-kart.satir.secili .ve-komuta-no{ background:transparent; }
+
 /* ── sipariş fişi ── */
 .ve-komuta-fis-kap{ flex:0 0 auto; border-top:1px solid var(--border-color);
   padding-top:12px; margin-top:12px; }

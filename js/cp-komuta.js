@@ -196,11 +196,25 @@ function veKomutaFisAyristir(metin) {
 
 // ── TEZGÂHLAR ──────────────────────────────────────────────────────────────
 //
-// Her tezgâh üç şey söyler: NE ölçtüğü (olc), fişin hangi DOSYAYI adres
-// göstereceği (dosya), ve kayıtların nasıl görüneceği (gorselli).
-// `dosya` alanı bir kapıdır: tests/unit/komuta.test.js her tezgâhın beyan
-// ettiği yolun diskte var olduğunu ölçer — dosya yeniden adlandırılırsa fiş
-// olmayan bir dosyayı adres gösterirdi ve bu SESSİZ olurdu.
+// Bir tezgâh şunları söyler:
+//
+//   dosya       fişin adres göstereceği yol — ve doğrulayıcının OKUYACAĞI modül
+//   disaAktarim o modülün hangi adı dışa aktardığı
+//   kaynak()    TARAYICIDA aynı veriyi nereden okuduğu
+//   olc(veri)   veri → kayıt listesi. SAF: hiçbir global okumaz
+//   duzen       'izgara' (görselli) | 'liste' (metin)
+//
+// `olc` NİYE ARGÜMAN ALIYOR: ilk yazımda veriyi üst-seviye bir addan kendisi
+// okuyordu ve doğrulayıcı o adı `global`e koyarak Node'da koşturuyordu. Tek
+// tezgâhla yürüdü; ikincisinde çöktü — arşivin verisi `programlar/kayit.json`
+// içinde `programlar` adıyla duruyor ve onu global'e koymak `js/` genelinde
+// bir ad çakışması demekti (source-hygiene kapısı zaten yasaklıyor). Veri
+// artık ARGÜMAN: tarayıcı `kaynak()`ından, doğrulayıcı diskten getiriyor,
+// `olc` ikisini de aynı biçimde görüyor.
+//
+// `dosya` + `disaAktarim` bir KAPIDIR: tests/unit/komuta.test.js yolun diskte
+// var olduğunu VE o adın gerçekten dışa aktarıldığını ölçer — biri kayarsa fiş
+// olmayan bir dosyayı adres gösterir ve bu SESSİZ olurdu.
 
 function _vkKarsilamaKunye() {
   if (typeof window === 'undefined') return null;
@@ -212,17 +226,15 @@ var VE_KOMUTA_TEZGAHLAR = [
     id: 'karsilama',
     ad: 'Karşılama Slaytı',
     dosya: 'js/karsilama-gorseller.js',
-    // Doğrulayıcı (tools/komuta-dogrula.js) `dosya`yı require edip bu adı
-    // global'e koyarak AYNI `olc`u Node'da koşturuyor — tezgâhın ölçtüğü
-    // kaynak iki yerde ayrı ayrı yazılmıyor.
     disaAktarim: 'VE_KARSILAMA_GORSELLER',
-    gorselli: true,
+    duzen: 'izgara',
     ipucu: 'Açılışta gösterilen kareler. Kaldırılacakları tıklayın.',
-    olc: function () {
-      var liste = (typeof VE_KARSILAMA_GORSELLER !== 'undefined' && VE_KARSILAMA_GORSELLER)
-        ? VE_KARSILAMA_GORSELLER : [];
+    kaynak: function () {
+      return (typeof VE_KARSILAMA_GORSELLER !== 'undefined' && VE_KARSILAMA_GORSELLER) || [];
+    },
+    olc: function (veri) {
       var kunye = _vkKarsilamaKunye();
-      return liste.map(function (ad) {
+      return (veri || []).map(function (ad) {
         var mm = /(\d+)/.exec(ad);
         var no = mm ? mm[1] : ad;
         var k = (kunye && kunye.kareler) ? kunye.kareler[no] : null;
@@ -230,14 +242,87 @@ var VE_KOMUTA_TEZGAHLAR = [
           anahtar: no,
           etiket: ad,
           baslik: k ? (k.baslik || '') : '',
-          grup: k ? (k.grup || '') : '',
-          es: k ? (k.es || '') : '',
+          meta: k ? [k.grup, k.es ? 'eşi: ' + k.es : ''].filter(Boolean).join(' · ') : '',
           gorsel: (typeof veSlaytKaynak === 'function') ? veSlaytKaynak(ad) : 'assets/karsilama/' + ad
         };
       });
     }
+  },
+  {
+    id: 'arsiv',
+    ad: 'Program Arşivi',
+    dosya: 'programlar/kayit.json',
+    disaAktarim: 'programlar',
+    duzen: 'liste',
+    ipucu: 'Araçlar → Program Arşivi\'nde listelenen tek dosyalık programlar.',
+    kaynak: function () {
+      var k = (typeof veProgramlarKayit === 'function') ? veProgramlarKayit() : null;
+      return (k && k.programlar) || [];
+    },
+    olc: function (veri) {
+      return (veri || []).map(function (p) {
+        return {
+          anahtar: String(p.dosya || ''),
+          etiket: String(p.dosya || ''),
+          baslik: (p.simge ? p.simge + ' ' : '') + String(p.ad || p.dosya || ''),
+          meta: [p.kume, p.tarih, p.not].filter(Boolean).join(' · ')
+        };
+      });
+    }
+  },
+  {
+    id: 'ap-ornek',
+    ad: 'Araç Performans Örnekleri',
+    dosya: 'js/cp-arac-example.js',
+    disaAktarim: 'AP_EXAMPLES',
+    duzen: 'liste',
+    ipucu: 'Araç Performans modülünün örnek kartları.',
+    kaynak: function () { return (typeof AP_EXAMPLES !== 'undefined' && AP_EXAMPLES) || []; },
+    olc: function (veri) { return _vkOrnekKayitlari(veri); }
+  },
+  {
+    id: 'takoz-ornek',
+    ad: 'Takoz Örnekleri',
+    dosya: 'js/mount-core.js',
+    disaAktarim: 'MOUNT_EXAMPLES',
+    duzen: 'liste',
+    ipucu: 'Takoz Çökme-Titreşim modülünün örnek modelleri.',
+    // `MOUNT_EXAMPLES` tarayıcıda GLOBAL DEĞİL: mount-core.js bir IIFE ve değer
+    // `veMountCore` ad alanından geliyor (module.exports ise Node'da düz veriyor).
+    // İlk yazımda çıplak ad okundu, tezgâh SESSİZCE "0 kayıt" gösterdi —
+    // e2e'deki "tarayıcı sayısı = Node sayısı" kapısı tam bunun için var.
+    kaynak: function () {
+      return (typeof veMountCore !== 'undefined' && veMountCore && veMountCore.MOUNT_EXAMPLES) || {};
+    },
+    olc: function (veri) { return _vkOrnekKayitlari(veri); }
   }
 ];
+
+// İki örnek kataloğu aynı biçimde okunuyor; biri DİZİ (AP_EXAMPLES), öteki
+// id'ye göre NESNE (MOUNT_EXAMPLES). Fark burada eritiliyor, iki tezgâhta
+// ayrı ayrı değil.
+function _vkOrnekKayitlari(veri) {
+  var dizi = Array.isArray(veri) ? veri : Object.keys(veri || {}).map(function (k) {
+    return veri[k];
+  });
+  return dizi.map(function (o) {
+    return {
+      anahtar: String(o.id || ''),
+      etiket: String(o.id || ''),
+      baslik: String(o.name || o.id || ''),
+      meta: [o.vehicle, o.subtitle].filter(Boolean).join(' · ')
+    };
+  });
+}
+
+// Tarayıcı tarafındaki TEK ölçüm çağrısı. Doğrulayıcı aynı `olc`u diskten
+// gelen veriyle çağırıyor — iki taraf da bu fonksiyonun içinden geçmiyor ama
+// AYNI sözleşmeyi kullanıyor.
+function veKomutaOlc(t) {
+  if (!t || typeof t.olc !== 'function') return [];
+  try { return t.olc(typeof t.kaynak === 'function' ? t.kaynak() : null) || []; }
+  catch (e) { return []; }
+}
 
 function veKomutaTezgah(id) {
   for (var i = 0; i < VE_KOMUTA_TEZGAHLAR.length; i++) {
@@ -292,7 +377,7 @@ function veKomutaFisMetni() {
   return veKomutaFisUret({
     tezgah: t.id,
     dosya: t.dosya,
-    olcum: veKomutaOlcumOzeti(t.olc()),
+    olcum: veKomutaOlcumOzeti(veKomutaOlc(t)),
     kaldir: Object.keys(_vkSecimSeti(t.id)).sort(),
     not: _vkNot
   });
@@ -355,22 +440,22 @@ function _vkGirisHTML() {
 }
 
 function _vkKayitHTML(t, k, secili) {
-  var h = '<button type="button" class="ve-komuta-kart' + (secili ? ' secili' : '') + '" ' +
+  var liste = t.duzen === 'liste';
+  var h = '<button type="button" class="ve-komuta-kart' + (liste ? ' satir' : '') +
+    (secili ? ' secili' : '') + '" ' +
     'data-vk-anahtar="' + _vkKacir(k.anahtar) + '" ' +
     'onclick="veKomutaSecimDegistir(\'' + _vkKacir(t.id) + '\',\'' + _vkKacir(k.anahtar) + '\')" ' +
     'aria-pressed="' + (secili ? 'true' : 'false') + '">';
-  if (t.gorselli && k.gorsel) {
+  if (!liste && k.gorsel) {
     h += '<img class="ve-komuta-kare" src="' + _vkKacir(k.gorsel) + '" alt="" loading="lazy">';
   }
   h += '<span class="ve-komuta-no">' + _vkKacir(k.anahtar) + '</span>';
   h += '<span class="ve-komuta-ad">' + _vkKacir(k.baslik || k.etiket) + '</span>';
-  var alt = [];
-  if (k.grup) alt.push(k.grup);
-  if (k.es) alt.push('eşi: ' + k.es);
-  if (alt.length) h += '<span class="ve-komuta-meta">' + _vkKacir(alt.join(' · ')) + '</span>';
+  if (k.meta) h += '<span class="ve-komuta-meta">' + _vkKacir(k.meta) + '</span>';
   h += '<span class="ve-komuta-isaret">kaldırılacak</span>';
   return h + '</button>';
 }
+
 
 function _vkRender() {
   var kap = document.getElementById('ve-komuta-content');
@@ -383,7 +468,7 @@ function _vkRender() {
   }
 
   var t = veKomutaTezgah(_vkAktif);
-  var kayitlar = t ? (t.olc() || []) : [];
+  var kayitlar = t ? veKomutaOlc(t) : [];
   var set = _vkSecimSeti(_vkAktif);
 
   var h = '';
@@ -401,7 +486,7 @@ function _vkRender() {
     h += '<button type="button" role="tab" class="ve-komuta-tezgah' + (x.id === _vkAktif ? ' etkin' : '') +
       '" aria-selected="' + (x.id === _vkAktif ? 'true' : 'false') + '" ' +
       'onclick="veKomutaTezgahSec(\'' + _vkKacir(x.id) + '\')">' +
-      _vkKacir(x.ad) + ' <span class="ve-komuta-adet">' + (x.olc() || []).length + '</span></button>';
+      _vkKacir(x.ad) + ' <span class="ve-komuta-adet">' + veKomutaOlc(x).length + '</span></button>';
   });
   h += '</div>';
 
@@ -410,7 +495,8 @@ function _vkRender() {
       '<span class="ve-komuta-ipucu">' + _vkKacir(t.ipucu || '') + '</span>' +
       '<code class="ve-komuta-dosya">' + _vkKacir(t.dosya) + '</code>' +
       '</div>';
-    h += '<div class="ve-komuta-kaydir"><div class="ve-komuta-izgara">';
+    h += '<div class="ve-komuta-kaydir"><div class="ve-komuta-izgara ' +
+      (t.duzen === 'liste' ? 've-komuta-liste' : '') + '">';
     kayitlar.forEach(function (k) { h += _vkKayitHTML(t, k, !!set[k.anahtar]); });
     h += '</div></div>';
   }
@@ -480,6 +566,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veKomutaOzet: veKomutaOzet,
     veKomutaOlcumOzeti: veKomutaOlcumOzeti,
     VE_KOMUTA_TEZGAHLAR: VE_KOMUTA_TEZGAHLAR,
+    veKomutaOlc: veKomutaOlc,
     VE_KOMUTA_FIS_BASLIK: VE_KOMUTA_FIS_BASLIK
   };
 }

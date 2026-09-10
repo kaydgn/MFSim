@@ -31,11 +31,9 @@ const K = require(path.join(KOK, 'js/cp-komuta.js'));
 const { VE_KARSILAMA_GORSELLER } = require(path.join(KOK, 'js/karsilama-gorseller.js'));
 
 // Tezgâhın Node'daki ölçümü — doğrulayıcının içeride yaptığının aynısı.
-function guncelOzet() {
-  const t = K.VE_KOMUTA_TEZGAHLAR.find((x) => x.id === 'karsilama');
-  const onceki = global.VE_KARSILAMA_GORSELLER;
-  global.VE_KARSILAMA_GORSELLER = VE_KARSILAMA_GORSELLER;
-  try { return K.veKomutaOlcumOzeti(t.olc()); } finally { global.VE_KARSILAMA_GORSELLER = onceki; }
+function guncelOzet(id) {
+  const t = K.VE_KOMUTA_TEZGAHLAR.find((x) => x.id === id);
+  return K.veKomutaOlcumOzeti(t.olc(require(path.join(KOK, t.dosya))[t.disaAktarim]));
 }
 
 // Betiği GERÇEKTEN çalıştırır; çıkış kodu ile çıktıyı birlikte döner.
@@ -57,7 +55,7 @@ function fis(ek) {
     kunye: '1dbcd0a · PR #914',
     tezgah: 'karsilama',
     dosya: 'js/karsilama-gorseller.js',
-    olcum: guncelOzet()
+    olcum: guncelOzet('karsilama')
   }, ek || {}));
 }
 
