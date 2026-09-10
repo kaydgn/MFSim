@@ -117,7 +117,7 @@ paylaşır (stack + `node.data.subTopology` + breadcrumb çipi + sidebar kapsam�
 |-------|--------------|-----------------|-----------|--------------------|
 | Araç Performans | `arac-performans` | `arac-performans` | `js/cp-arac-performans.js` | Güç akışı |
 | Takoz Çökme-Titreşim | `mount-analysis` | `mount-analysis` | `js/cp-mount.js` | Salt görsel (çözücü tipe göre toplar) |
-| FEAD (kayış-kasnak) | `fead-analysis` | `fead-analysis` | `js/cp-fead.js` | **YOK — kasnakların kanvasta KUTUSU BİLE yok** (`noCanvasBox`). Sıra, koordinat ve çap **Kayış Tablosu**'ndan; detay panele tablodaki ada tıklanarak gidilir |
+| FEAD (kayış-kasnak) | `fead-analysis` | `fead-analysis` | `js/cp-fead.js` | **YOK — kasnakların kanvasta KUTUSU BİLE yok** (`noCanvasBox`). Sıra, koordinat ve çap **Kayış Tablosu**'ndan; detay panele tablodaki ada tıklanarak gidilir. Şema kartı İKİYE bölündü: `fead-layout` donuk geometri, `fead-run` çalışma noktası |
 
 Yeni bir modül eklerken dokunulan yerler: `js/components.js` (`componentDefs`
 tanımı + `isSubsystem` + `VE_MODULES.components` + `veSyncSidebarScope`),

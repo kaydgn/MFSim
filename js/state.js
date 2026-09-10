@@ -25,7 +25,7 @@ var MAX_UNDO_STEPS = 50;
 // kasnak-kasnak telleri silinir (veFeadMigrateBeltOrder). Göç atlansaydı
 // kasnaklar indissiz kalır, sıra DİZİ SIRASINA düşer ve model sessizce başka
 // bir kayış yolu çözerdi.
-var VE_SCHEMA_VERSION = 4;
+var VE_SCHEMA_VERSION = 5;
 
 // ── TOPLU KURULUM: BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI ───────────────
 //
@@ -203,6 +203,9 @@ function veApplyLegacyMigrations(state) {
   // gidiş sırasına çevirir, SONRA o tellerden indisini kurar. Ters sırada
   // koşsalardı 2'den gelen her dosya ters numaralanırdı.
   if(v < 4 && typeof veFeadMigrateBeltOrder === 'function') veFeadMigrateBeltOrder(state);
+  // KART İKİYE BÖLÜNDÜ: eski kayıtta yalnız `fead-layout` var; `fead-run`
+  // eklenmezse gerilme haritası, animasyon ve titreşim SESSİZCE kaybolurdu.
+  if(v < 5 && typeof veFeadMigrateRunCard === 'function') veFeadMigrateRunCard(state);
   // GÖMÜLÜ ALT TOPOLOJİLER de aynı kapıdan geçer ve DAMGALANIR: FEAD kanvası
   // `fead-analysis` düğümünün data.subTopology'sinde yaşıyor; editör açılınca
   // veLoadTabState → restoreState onu ikinci kez bu kapıdan geçirir ve damga

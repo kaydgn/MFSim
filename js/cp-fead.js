@@ -87,6 +87,7 @@ var VE_FEAD_STARTER_LAYOUT = [
   // ── Üst şerit: araçlar ──
   { type:'fead-belt',    lx:40,  ly:20 },
   { type:'fead-layout',  lx:190, ly:20 },
+  { type:'fead-run',     lx:640, ly:20 },
   { type:'fead-solver',  lx:340, ly:20 },
   { type:'fead-wizard',  lx:490, ly:20 },
   { type:'fead-report',  lx:790, ly:20 },
@@ -125,7 +126,7 @@ function veFeadArrangeByCoords(opts){
     // Kutusuz düğüm (kasnak) dizilmez — kanvasta yeri yok.
     if(typeof veIsCanvasHidden === 'function' && veIsCanvasHidden(n)) return;
     var d = _feadDefOf(n);
-    (d.isFeadLayout || d.isFeadTable) ? sag.push(n) : sol.push(n);
+    (d.isFeadLayout || d.isFeadRun || d.isFeadTable) ? sag.push(n) : sol.push(n);
   });
   if(!sol.length && !sag.length) return false;
 
@@ -3123,12 +3124,28 @@ function veFeadLayoutSVG(build, W, H, opts){
 // Stil ELEMANIN ÜSTÜNDE (css/ dosyasında değil): css/styles.css'e dokunmak
 // Ölçüm Görüntüleyici'nin dağıtım dosyasını bayatlatıyor (bkz. CLAUDE.md) ve
 // tek bir kart için o zinciri kurmaya değmez. Rozette de aynı gerekçe var.
+// ── KOL KONUMU TEK ALANDA ──────────────────────────────────────────────────
+// İki kart da AYNI geometriyi çizmek zorunda. Çalışma Noktası kendi
+// `posMode`'unu tutsaydı iki kart farklı kol konumu gösterirdi ve fark SESSİZ
+// olurdu: ikisi de kendi içinde tutarlı görünür, yalnız biri başka bir konumu
+// anlatır. Alan Kayış Yolu düğümünde; seçici de yalnız orada.
+function veFeadPosModeNode(){
+  if(typeof nodes === 'undefined' || !Array.isArray(nodes)) return null;
+  for(var i = 0; i < nodes.length; i++)
+    if(_feadDefOf(nodes[i]).isFeadLayout) return nodes[i];
+  return null;
+}
+function veFeadPosModeShared(node){
+  return veFeadPosMode(veFeadPosModeNode() || node);
+}
+
 var VE_FEAD_CARD_CLASS = 've-fead-layout-card';
 var VE_FEAD_TABLE_CLASS = 've-fead-table-card';
 
 function veFeadApplyLayoutCard(nodeEl, node){
   if(!nodeEl || !node || typeof document === 'undefined') return false;
-  if(!_feadDefOf(node).isFeadLayout) return false;
+  var _d = _feadDefOf(node);
+  if(!_d.isFeadLayout && !_d.isFeadRun) return false;
   var box = nodeEl.querySelector('.ve-node-box') || nodeEl;
 
   // Kart bir kez kurulur, İÇİ tazelenir. Yeniden kurmak her tazelemede
@@ -3171,14 +3188,25 @@ function veFeadLayoutCardHTML(node){
   var H = (node && node.height) || def.defaultHeight || _vH;
   var SER = 20;                                   // alt durum şeridi
   var SEC = 22;                                   // konum seçici şeridi
-  var mode = veFeadPosMode(node);
+
+  // ── İKİ KART, TEK ÇİZİCİ ─────────────────────────────────────────────────
+  // `fead-layout` = Kayış Yolu (GEOMETRİ): donuk şema, sarım açıları, gergi
+  // kolu, kol konumları, yön gülü. Model KURULURKEN sorulan soru.
+  // `fead-run` = Çalışma Noktası (İŞLETME): gerilme haritası, animasyon,
+  // titreşim. DEVİR SEÇİLİNCE sorulan soru.
+  // İkisi de buradan ve aynı `veFeadLayoutSVG`'den geçer — ayrı bir çizim
+  // kodu yok, yalnız opts farklı.
+  var calisma = !!def.isFeadRun;
+  var mode = veFeadPosModeShared(node);
 
   // ── ANİMASYON: seçili devir → kinematik → çiziciye ────────────────────────
   // Devir seçimi kartta duruyor (node.data.animRpm) ve PANEL DE aynı alanı
   // okuyacak olursa iki ayrı ayar tutulmaz — kol konumundaki kuralın aynısı.
   // 'Durgun' seçiliyse animasyon YÜKÜ HİÇ ÜRETİLMEZ: kart bugünkü donuk
   // şemasıyla (dönüş okları geri gelir) kalır, rAF döngüsü de başlamaz.
-  var rpmSel = veFeadAnimRpmOf(build, node);
+  // GEOMETRİ KARTI DONUKTUR: devir de titreşim de okunmaz, yük üretilmez,
+  // rAF döngüsü onun yüzünden hiç uyanmaz.
+  var rpmSel = calisma ? veFeadAnimRpmOf(build, node) : 'off';
 
   // Kol konumu HER ŞEYE geçer: şema hangi konumu çiziyorsa gerginlik, açıklık
   // frekansı ve senaryo da o konumdan gelmeli.
@@ -3212,7 +3240,7 @@ function veFeadLayoutCardHTML(node){
   // Kol konumu titreşime de GEÇER: kart hangi kol konumunu çiziyorsa gerginlik
   // ve dolayısıyla açıklık frekansı da o konumdan gelmeli. Geçilmeseydi şema
   // bir konumu, çırpma başka bir konumu anlatırdı.
-  var vibSel = veFeadVibModeOf(node), vibGain = veFeadVibGainOf(node);
+  var vibSel = calisma ? veFeadVibModeOf(node) : 'off', vibGain = veFeadVibGainOf(node);
   var vibZeta = veFeadVibZetaOf(node);
   var vibOpts = { crankInertia: _feadNum(build.solver && build.solver.data
                                          && build.solver.data.crankInertia, 0) };
@@ -3232,22 +3260,11 @@ function veFeadLayoutCardHTML(node){
 
   var SVIB = (vibSel === 'off') ? 0 : 20;          // kazanç şeridi — yalnız açıkken
 
-  // ── KÜNYE TABLOSU + GERİLME HARİTASI ──────────────────────────────────────
-  // Tablo çizimden pay alıyor. Kart daraltıldığında tablo DÜŞER ve sarım
-  // açıları çizime geri döner (`wrapLabels`); yani sayı hiçbir kipte
-  // kaybolmuyor — ya tabloda ya kasnağın altında. Sınır bir ölçü değil bir
-  // KURAL: çizime en az VE_FEAD_CARD_MIN_DRAW px kalmalı.
-  var geomCard = null;
-  if(build && build.ok && typeof FEADCore !== 'undefined'){
-    try {
-      geomCard = FEADCore.tensionerState(build.sys,
-        (vibRel != null) ? vibRel : FEADCore.meanRel(build.sys)).geom;
-    } catch(e){ geomCard = null; }
-  }
-  var TAB = geomCard ? veFeadCardTableH(build.order.length) : 0;
-  var cizimH = H - SER - SEC - SVIB - TAB;
-  var tabloVar = (TAB > 0 && cizimH >= VE_FEAD_CARD_MIN_DRAW);
-  if(!tabloVar){ TAB = 0; cizimH = H - SER - SEC - SVIB; }
+  // KÜNYE TABLOSU KARTTAN KALKTI. Ad · Ø · sarım · devir · güç sütunlarını
+  // kanvastaki KAYIŞ TABLOSU kartı zaten yazıyor; kartın içinde ikinci kez
+  // yazmak aynı sayıyı iki yüzeyde tutmaktı. Kalkınca sarım açıları çizime
+  // geri döndü (aşağıda `wrapLabels`) ve çizim alanı 342 → 458 px oldu.
+  var cizimH = H - SER - SEC - SVIB;
 
   // Harita yalnız SEÇİLİ SABİT devirde: senaryoda devir zamanın fonksiyonu ve
   // donuk bir renk o anın gerilmesini yanlış anlatırdı, 'Durgun'da ise gerilme
@@ -3256,10 +3273,13 @@ function veFeadLayoutCardHTML(node){
                 && typeof veFeadSpanTensionMap === 'function')
     ? veFeadSpanTensionMap(build, vibRel, rpmSel) : null;
 
+  // SARIM AÇILARI GEOMETRİ KARTINDA. Çalışma kartında açıklık gerilmeleri
+  // (N) yazılıyor ve ikisi birden aynı çizimde kalabalık yapardı — soru başka,
+  // sayı başka.
   var svg = veFeadLayoutSVG(build, Math.max(120, W), Math.max(90, cizimH),
                             { inline: true, posMode: mode, nodeId: node.id,
                               compassPos: node.data && node.data.compassPos,
-                              shortNames: true, wrapLabels: !tabloVar, tension: tenMap,
+                              shortNames: true, wrapLabels: !calisma, tension: tenMap,
                               vib: vib, scn: scn,
                               animate: kin ? { dispMmS: scn ? 0 : kin.dispMmS,
                                                slow: kin.slow,
@@ -3287,8 +3307,7 @@ function veFeadLayoutCardHTML(node){
       + '</div>';
   }
   h += '</div>';
-  if(svg && tabloVar) h += veFeadCardTable(build, geomCard, tenMap);
-  h += veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes);
+  h += veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes, calisma);
   if(vibSel !== 'off') h += veFeadVibStrip(node, build, vib, vibSel);
   h += veFeadLayoutCardStrip(build, mode);
   return h;
@@ -3302,7 +3321,10 @@ function veFeadLayoutCardHTML(node){
 // mousedown DURDURULUR: kart bir kanvas düğümünün içinde ve düğüm mousedown ile
 // SÜRÜKLENMEYE başlıyor — durdurulmazsa listeyi açmaya çalışmak düğümü
 // taşıyordu. change ise serbest; saveState zaten kartı tazeliyor.
-function veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes){
+// `calisma` true ise DEVİR + TİTREŞİM, false ise yalnız KOL KONUMU seçicisi
+// çizilir. Üçü tek şeritte dururken her biri şeridin üçte birine sıkışıyordu;
+// bölünce her seçici kendi kartında tam genişlik alıyor.
+function veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes, calisma){
   var rows = (build && build.ok) ? veFeadPositionRows(build) : [];
   var cozulen = {};
   rows.forEach(function(r){ if(r.ok) cozulen[r.key] = r; });
@@ -3360,13 +3382,16 @@ function veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes){
     + ' border-radius:2px;';
   var etiket = 'font-size:var(--fs-micro); color:var(--text-muted); white-space:nowrap;';
 
-  return '<div style="flex:0 0 auto; display:flex; align-items:center; gap:4px; padding:1px 6px;'
+  var kabuk = '<div style="flex:0 0 auto; display:flex; align-items:center; gap:4px; padding:1px 6px;'
     + ' border-top:1px solid var(--border-color); background:var(--bg-secondary, #16181d);"'
-    + ' onmousedown="event.stopPropagation();" ondblclick="event.stopPropagation();">'
-    + '<span style="' + etiket + '">Kol</span>'
+    + ' onmousedown="event.stopPropagation();" ondblclick="event.stopPropagation();">';
+  if(!calisma)
+    return kabuk
+    + '<span style="' + etiket + '">Kol konumu</span>'
     + '<select onmousedown="event.stopPropagation();"'
     + ' onchange="veFeadSetChoice(\'' + node.id + '\',\'posMode\',this.value)"'
-    + ' style="' + stil + '">' + opts + '</select>'
+    + ' style="' + stil + '">' + opts + '</select></div>';
+  return kabuk
     + '<span style="' + etiket + '">Devir</span>'
     + '<select onmousedown="event.stopPropagation();"'
     + ' onchange="veFeadSetChoice(\'' + node.id + '\',\'animRpm\',this.value)"'
@@ -3478,56 +3503,6 @@ function _feadAnimLabel(kin, fallback, vib, scn){
        + (alt ? '  ·  ' + alt : '');
 }
 
-// ── KÜNYE TABLOSU — sarım açısı çizimden tabloya ───────────────────────────
-// Ad çizimin İÇİNDE kalıyor ama parantezli eki atılıyor (veFeadShortName); tam
-// ad, dış çap, sarım açısı, devir ve güç bu tabloda. İki kazanç: uzun adlar
-// artık şemanın ölçeğini kısıtlamıyor, ve kasnak altındaki açı yazıları
-// kalkınca ad yerleştiricisinin en sıkışık adayı boşalıyor.
-//
-// SAYILAR TEK KAYNAKTAN: sarım çizilen konumun geometrisinden (şemayla aynı
-// nesne), devir ve güç çekirdeğin gerilme çağrısının `perPulley` satırından.
-// İkinci bir hesap kurmak, tablonun şemadan başka bir konumu anlatması demekti.
-// Devir seçili değilse (Durgun) o iki sütun '—' yazar; uydurulmuş bir devir
-// tabloyu sessizce yanlış yapardı.
-var VE_FEAD_TAB_HEAD = 15;      // px — başlık satırı
-var VE_FEAD_TAB_ROW  = 12;      // px — kasnak satırı
-var VE_FEAD_TAB_PAD  = 9;       // px — dolgu + kenarlık
-var VE_FEAD_CARD_MIN_DRAW = 170;  // px — bunun altına inen çizime tablo konmaz
-
-function veFeadCardTableH(n){
-  return (n > 0) ? (VE_FEAD_TAB_HEAD + n*VE_FEAD_TAB_ROW + VE_FEAD_TAB_PAD) : 0;
-}
-
-function veFeadCardTable(build, geom, ten){
-  if(!build || !build.ok || !geom || !build.order || !build.order.length) return '';
-  var say = 'font-variant-numeric:tabular-nums; text-align:right; padding:0 3px;';
-  var bas = 'font-weight:600; color:var(--text-muted); text-align:right; padding:0 3px;';
-  var h = '<div style="flex:0 0 auto; padding:3px 6px 5px; overflow:hidden;'
-    + ' border-top:1px solid var(--border-color); background:var(--bg-secondary, #16181d);'
-    + ' font-size:var(--fs-micro); line-height:' + VE_FEAD_TAB_ROW + 'px;'
-    + ' font-family:ui-monospace, monospace; color:var(--text-secondary);">'
-    + '<table style="width:100%; border-collapse:collapse;"><thead><tr>'
-    + '<th style="' + bas + ' text-align:left;">Kasnak</th>'
-    + '<th style="' + bas + '">Ø</th><th style="' + bas + '">sarım</th>'
-    + '<th style="' + bas + '">dev/dk</th><th style="' + bas + '">kW</th></tr></thead><tbody>';
-  build.order.forEach(function(n, i){
-    var pp = ten && ten.perPulley && ten.perPulley[i];
-    var od = _feadNum(n.data && n.data.od, NaN);
-    var isDrv = !!(build.sys.pulleys[i] && build.sys.pulleys[i].crank);
-    h += '<tr><td style="text-align:left; padding:0 3px; max-width:150px; overflow:hidden;'
-      + ' text-overflow:ellipsis; white-space:nowrap; color:'
-      + (isDrv ? 'var(--accent-primary)' : 'var(--text-primary)') + ';">'
-      + _feadEsc(build.names[i]) + '</td>'
-      + '<td style="' + say + '">' + (Number.isFinite(od) ? _feadFmt(od, 0) : '—') + '</td>'
-      + '<td style="' + say + ' color:var(--accent-warning);">' + _feadFmt(geom.wrapDeg(i), 1) + '°</td>'
-      + '<td style="' + say + '">' + (pp && Number.isFinite(pp.accessoryRpm)
-          ? Math.round(pp.accessoryRpm) : '—') + '</td>'
-      + '<td style="' + say + '">' + (pp && Number.isFinite(pp.powerKw)
-          ? _feadFmt(pp.powerKw, 2) : '—') + '</td></tr>';
-  });
-  return h + '</tbody></table></div>';
-}
-
 // Durum şeridi — "tutarlı mı" sorusunun tek satırlık cevabı.
 // Sarım değişmezi (Σkaburgalı − Σsırttan = 360°) burada duruyor çünkü kapalı
 // bir kayış çevriminin geometrik ZORUNLULUĞU o; tutmuyorsa şema kendi içinde
@@ -3585,7 +3560,8 @@ function veFeadRefreshLayoutCards(){
   if(typeof document === 'undefined' || typeof nodes === 'undefined') return 0;
   var n = 0;
   nodes.forEach(function(x){
-    if(!_feadDefOf(x).isFeadLayout) return;
+    var d = _feadDefOf(x);
+    if(!d.isFeadLayout && !d.isFeadRun) return;      // iki kart da buradan
     var el = document.getElementById(x.id);
     if(el && veFeadApplyLayoutCard(el, x)) n++;
   });
@@ -5286,10 +5262,12 @@ function veFeadLoadExample(key){
   for(var t = 0; t < araclar; t++){
     var tip = pack.nodes[pack.example.pulleys.length + t].type;
     var td = (typeof componentDefs !== 'undefined' && componentDefs[tip]) || {};
-    if(tip === 'fead-layout'){
+    if(tip === 'fead-layout' || tip === 'fead-run'){
       // Ölçü de veriliyor: yoksa veArrangeModuleBase kartı 65×60 sayıp grubu
-      // yanlış ortalıyor ve kart görünür alanın sağından taşıyor.
-      yer.push({ lx: sagSerit, ly: 150, w: td.defaultWidth, h: td.defaultHeight });
+      // yanlış ortalıyor ve kart görünür alanın sağından taşıyor. İki büyük
+      // kart ALT ALTA: yan yana konsalardı sağ şerit 900 px'i geçerdi.
+      yer.push({ lx: sagSerit, ly: 150 + (tip === 'fead-run' ? 540 : 0),
+                 w: td.defaultWidth, h: td.defaultHeight });
     } else {
       // ARAÇLAR SOL ŞERİTTE, KASNAK KÜMESİNİN DIŞINDA. Eskiden kümenin ÜSTÜNE
       // bir sıra hâlinde diziliyorlardı (ly:20) ve "Başlangıç ve Örnekler"
@@ -5848,8 +5826,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadBeltPathD: veFeadBeltPathD, veFeadArmArrowSVG: veFeadArmArrowSVG,
     veFeadLayoutSVG: veFeadLayoutSVG,
     veFeadShortName: veFeadShortName, veFeadTensionColor: veFeadTensionColor,
-    veFeadCardTable: veFeadCardTable, veFeadCardTableH: veFeadCardTableH,
-    VE_FEAD_CARD_MIN_DRAW: VE_FEAD_CARD_MIN_DRAW,
+    veFeadPosModeShared: veFeadPosModeShared, veFeadPosModeNode: veFeadPosModeNode,
     veFeadApplyBadge: veFeadApplyBadge,
     veFeadApplyBeltModeBadge: veFeadApplyBeltModeBadge,
 

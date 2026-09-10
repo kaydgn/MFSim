@@ -701,6 +701,7 @@ function veFeadWizNodes(st){
   });
   out.push({ id: 'wz-solver', type: 'fead-solver', data: sd });
   out.push({ id: 'wz-layout', type: 'fead-layout', data: {} });
+  out.push({ id: 'wz-run',    type: 'fead-run',    data: {} });
   out.push({ id: 'wz-table',  type: 'fead-table',  data: {} });
   out.push({ id: 'wz-report', type: 'fead-report', data: {} });
 
@@ -3154,7 +3155,7 @@ function veFeadWizCreate(){
   // "modeli kur" dediğinde bir UYARI görürdü — üstelik kurulan bileşen sayısı
   // da eksik sayılırdı. Örnek kurucusunda ölçülmüş sınıfın aynısı.
   var araclar = { 'fead-belt': null, 'fead-solver': null, 'fead-layout': null,
-                  'fead-table': null, 'fead-report': null };
+                  'fead-run': null, 'fead-table': null, 'fead-report': null };
   nodes.forEach(function(n){
     if(araclar.hasOwnProperty(n.type) && !araclar[n.type]) araclar[n.type] = n;
   });
