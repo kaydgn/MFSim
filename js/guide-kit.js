@@ -398,6 +398,9 @@ function veGuideSceneCSS(reportCss){
     + '.appfig .gk-sahne *{box-sizing:border-box;}\n'
     + '.appfig .gk-sahne button, .appfig .gk-sahne select,'
     + ' .appfig .gk-sahne input{cursor:default;}\n'
+    + '.gk-cip{display:inline-flex; vertical-align:middle; margin:0 2px;'
+    + ' line-height:normal;}\n'
+    + '.gk-cip button{cursor:default; pointer-events:none;}\n'
     + rules.map(_gkScopeRule).join('\n');
 }
 
@@ -431,6 +434,18 @@ function _gkNaturalWidth(html){
   // Kartın kendi payı: kenarlıklar ve hücre boşluğu. Ölçü sütunlardan gelir,
   // bu yalnız onun etrafındaki çerçeve.
   return t ? t + 26 : 0;
+}
+
+// CÜMLE İÇİNDE DÜĞME. Sahne bir figürdür ve okuma akışını böler; "şeritteki
+// şu düğmeye bas" derken düğmenin kendisi CÜMLENİN İÇİNDE durmalı.
+//
+// `appfig` sınıfı burada da kullanılıyor ve bu bilinçli: o sınıf raporun
+// şablonunda YALNIZ jeton bağlıyor (kutu/kenar stili taşımıyor), dolayısıyla
+// satır içi bir kabuğa da takılabiliyor. İkinci bir jeton kabuğu açmak, aynı
+// paletin iki yerden tanımlanması demekti.
+function veGuideBtn(html){
+  if(!html) return '';
+  return '<span class="appfig gk-cip">' + html + '</span>';
 }
 
 // Şekil sayacı — elle "Şekil 3" yazmak, araya bir sahne girdiğinde sessizce
@@ -709,6 +724,7 @@ if (typeof module !== 'undefined' && module.exports) {
     _gkPageWidth: _gkPageWidth, _gkNaturalWidth: _gkNaturalWidth,
     veGuideSceneCSS: veGuideSceneCSS, veGuideScene: veGuideScene,
     veGuideSceneReset: veGuideSceneReset, veGuideSceneCount: veGuideSceneCount,
+    veGuideBtn: veGuideBtn,
     veGuideSceneMissingTokens: veGuideSceneMissingTokens
   };
 }
