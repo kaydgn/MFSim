@@ -600,3 +600,32 @@ durumu kullanıcıya söyle. "Otomatik merge" testleri atlamak demek değil;
 Yeşil testler tek başına "düzeldi" demek değildir: kullanıcının bildirdiği
 senaryo birebir yeniden üretilip ESKİ kodda kırıldığı, YENİ kodda geçtiği
 ölçülmeden sonuç kesin dille sunulmaz.
+
+## Boşta koşan rutinler — kullanıcı yokken çalışan oturumlar
+
+Dört zamanlanmış rutin (claude.ai → Routines) `main`i çeker, ölçer, **hiçbir
+şeyi merge etmez.** Gece oturumunda GitHub araçları YOK: PR açılamaz, dal
+itilir; PR'ı ertesi gün bir insan-oturumu açar.
+
+| Rutin | Ne zaman (UTC) | Çıktısı |
+|-------|----------------|---------|
+| Gece tam E2E | hafta içi 00:00 | rapor + gerekirse `claude/gece-e2e-<tarih>` dalı |
+| Boyut nöbeti | her gün 04:17 | `docs/olcum/boyut.csv`'ye satır → `claude/boyut-nobeti` dalı |
+| Mutasyon nöbeti | cumartesi 01:23 | yakalanmayan mutantlar + kapı testi → `claude/mutasyon-<modül>-<tarih>` |
+| Açık ayrışma işçisi | perşembe 01:07 | `acik-ayrismalar.md`'nin ilk maddesine **yalnız kapı testi** → dal |
+
+Dördünün de uyduğu kurallar:
+
+- **RUTİN PROMPTU ENVANTER İDDİA ETMEZ, ÖLÇER.** Gece E2E rutini "18 spec var"
+  yazıyordu; üç gün sonra 21 oldu ve prompt örnek olarak silinmiş bir spec'i
+  (`structural-geometry.spec.js`, Yapısal Analiz kaldırıldı) sayıyordu. Prompt
+  depoda olmadığı için hiçbir test onu tutamaz — **tek çare sayıyı koşarken
+  saymaktır** (`ls tests/e2e/*.spec.js | wc -l`).
+- **DEĞİŞMEMİŞ `main`'de KOŞULMAZ.** Ölçüldü: bir gece E2E turu 1 sa 49 dk /
+  $15,37. Değişmemiş bir ağaçta bu, bilinen sonucun ikinci kez satın
+  alınmasıdır. Rutin ilk iş `git log origin/main --since=...` bakar, boşsa çıkar.
+- **Bulgunun kalıcı bir yeri olmalı** — push bildirimi buharlaşır, transkript
+  aranmaz. Ya bir dal, ya `docs/olcum/` altındaki defter.
+- Modül kapısı rutinler için de geçerli: FEAD/Araç dosyalarına dokunacak bir
+  rutin, promptunda **önce skill'i çağırmakla** yükümlüdür.
+- Testi atlamak/gevşetmek yok, `main`'e itmek yok, merge yok.
