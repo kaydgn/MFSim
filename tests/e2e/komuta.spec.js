@@ -126,7 +126,7 @@ test('SEÇİM TEZGÂHA AİT — sekme değişince başka tezgâhın işareti sı
 
   await page.locator('.ve-komuta-tezgahlar button').nth(1).click();
   await expect(page.locator('.ve-komuta-kart.secili')).toHaveCount(0);   // temiz tezgâh
-  expect(await page.inputValue('#ve-komuta-fis')).toMatch(/kaldir\s*:\s*\(yok\)/);
+  expect(await page.inputValue('#ve-komuta-fis')).toMatch(/kayit\s*:\s*\(yok\)/);
 
   await page.locator('.ve-komuta-tezgahlar button').nth(0).click();
   await expect(page.locator('.ve-komuta-kart.secili')).toHaveCount(1);   // ilk seçim duruyor
@@ -185,8 +185,8 @@ test('seçim → fiş zinciri: tıklanan kart işaretleniyor ve fişe düşüyor
   const kartlar = page.locator('.ve-komuta-kart');
 
   const bosFis = await page.inputValue('#ve-komuta-fis');
-  expect(bosFis).toContain('MFSIM-SIPARIS v1');
-  expect(bosFis).toMatch(/kaldir\s*:\s*\(yok\)/);
+  expect(bosFis).toContain('MFSIM-SIPARIS v2');
+  expect(bosFis).toMatch(/kayit\s*:\s*\(yok\)/);
 
   // ÖLÇÜM ÖZETİ fişin ikinci kapısı: kayıt sayısı GERÇEK listeden gelmeli.
   // (Doğrulayıcı bunu çalışma ağacından yeniden hesaplayıp karşılaştırıyor.)
@@ -201,14 +201,14 @@ test('seçim → fiş zinciri: tıklanan kart işaretleniyor ve fişe düşüyor
   await expect(kartlar.nth(1)).toHaveClass(/secili/);
   await expect(kartlar.nth(1)).toHaveAttribute('aria-pressed', 'true');
   const fis = await page.inputValue('#ve-komuta-fis');
-  expect(fis).toMatch(new RegExp('kaldir\\s*:\\s*' + [a, b].sort().join(', ')));
+  expect(fis).toMatch(new RegExp('kayit\\s*:\\s*' + [a, b].sort().join(', ')));
   expect(fis).toContain('dosya : js/karsilama-gorseller.js');
   await expect(page.locator('#ve-komuta-sayac')).toHaveText(/2 kayıt/);
 
   // İkinci tık seçimi geri alır — fiş de geri döner.
   await kartlar.nth(1).click();
   await expect(kartlar.nth(1)).not.toHaveClass(/secili/);
-  expect(await page.inputValue('#ve-komuta-fis')).toMatch(new RegExp('kaldir\\s*:\\s*' + b + '$', 'm'));
+  expect(await page.inputValue('#ve-komuta-fis')).toMatch(new RegExp('kayit\\s*:\\s*' + b + '$', 'm'));
 });
 
 test('fişin sekiz satırı da kutuya SIĞIYOR — kırpılmıyor', async ({ page }) => {
@@ -218,6 +218,25 @@ test('fişin sekiz satırı da kutuya SIĞIYOR — kırpılmıyor', async ({ pag
   // Dikey taşma olsaydı son satır (not) görünmeden kalırdı.
   const tasma = await ta.evaluate((e) => e.scrollHeight - e.clientHeight);
   expect(tasma).toBeLessThanOrEqual(1);
+});
+
+test('FİİL SEÇİMİ: fişin isteği değişiyor ve kart işareti onunla eşitleniyor', async ({ page }) => {
+  await ac(page); await girisYap(page);
+  const fiiller = await page.evaluate(() => window.VE_KOMUTA_FIILLER);
+  expect(fiiller.length).toBeGreaterThanOrEqual(2);
+
+  await page.locator('.ve-komuta-kart').nth(2).click();
+  for (const f of fiiller) {
+    await page.selectOption('.ve-komuta-fiil', f.id);
+    // Fiş isteği taşıyor
+    expect(await page.inputValue('#ve-komuta-fis')).toContain('istek : ' + f.id);
+    // Seçili kartın işareti de o fiili söylüyor — kart YENİDEN KURULMADAN.
+    await expect(page.locator('.ve-komuta-kart.secili .ve-komuta-isaret')).toHaveText(f.isaret);
+    // Açıklama satırı da eşitleniyor
+    await expect(page.locator('#ve-komuta-fiil-aciklama')).toHaveText(f.aciklama);
+  }
+  // Seçim fiil değişimlerinden SAĞ ÇIKIYOR (kart yeniden kurulsaydı düşerdi)
+  await expect(page.locator('.ve-komuta-kart.secili')).toHaveCount(1);
 });
 
 test('not alanı fişe geçiyor ve satır sonu fişi bozamıyor', async ({ page }) => {
@@ -251,7 +270,7 @@ test('İşaretleri Temizle hem kartları hem fişi sıfırlıyor', async ({ page
   await page.locator('.ve-komuta-kart').nth(3).click();
   await page.click('.ve-komuta-fis-bas .ve-komuta-btn:not(.ve-komuta-btn-birincil)');
   await expect(page.locator('.ve-komuta-kart.secili')).toHaveCount(0);
-  expect(await page.inputValue('#ve-komuta-fis')).toMatch(/kaldir\s*:\s*\(yok\)/);
+  expect(await page.inputValue('#ve-komuta-fis')).toMatch(/kayit\s*:\s*\(yok\)/);
 });
 
 test('pencere kapanıp açılınca seçim korunuyor, ESC kapatıyor', async ({ page }) => {

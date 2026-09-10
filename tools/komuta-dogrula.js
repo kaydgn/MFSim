@@ -76,6 +76,7 @@ function main() {
   const anahtarlar = simdi.map((k) => String(k.anahtar));
 
   console.log('tezgâh : ' + t.id + '  (' + t.dosya + ')');
+  console.log('istek  : ' + (fis.istek || '(yok)'));
   console.log('fişteki: ' + (fis.olcum || '(yok)'));
   console.log('şimdi  : ' + simdikiOzet);
   console.log('künye  : ' + (fis.kunye || '(yok)'));
@@ -101,16 +102,25 @@ function main() {
     console.log('  Fişin hangi kayda ait olduğu belirsiz; kullanıcıya sor.');
   }
 
-  // ASIL SORU: fişin hedefleri hâlâ duruyor mu? Özet tutmasa bile buna bakılır —
-  // olmayan bir kaydı silmek sessiz bir yanlış uygulamadır.
-  const kayip = (fis.kaldir || []).filter((a) => anahtarlar.indexOf(a) < 0);
+  // ASIL SORU: fişin hedefleri hâlâ duruyor mu? Özet tutsa bile buna bakılır —
+  // olmayan bir kaydı silmek (ya da olmayan bir kaydı incelemeye kalkmak)
+  // sessiz bir yanlış uygulamadır.
+  const hedefler = fis.kayit || [];
+  const kayip = hedefler.filter((a) => anahtarlar.indexOf(a) < 0);
   if (kayip.length) {
     hata = true;
-    console.log('\n✗ DUR: fişin kaldırmak istediği kayıt(lar) ARTIK YOK: ' + kayip.join(', '));
-    console.log('  Uygulama, hedeflenmeyen bir kaydı silebilir. Uygulamadan önce sor.');
-  } else if (fis.kaldir && fis.kaldir.length) {
-    console.log('\n  Hedefler yerinde: ' + fis.kaldir.join(', ') +
-                ' (kaldırma sonrası ' + (simdi.length - fis.kaldir.length) + ' kayıt kalır)');
+    console.log('\n✗ DUR: fişin hedeflediği kayıt(lar) ARTIK YOK: ' + kayip.join(', '));
+    console.log('  Uygulama, hedeflenmeyen bir kaydı etkileyebilir. Uygulamadan önce sor.');
+  } else if (hedefler.length) {
+    console.log('\n  Hedefler yerinde: ' + hedefler.join(', '));
+    if (fis.istek === 'kaldir') {
+      console.log('  Kaldırma sonrası ' + (simdi.length - hedefler.length) + ' kayıt kalır.');
+    }
+  } else if (fis.istek !== 'incele') {
+    // Hedefsiz bir kaldır/düzelt fişi bir iş TARİF ETMİYOR; sessizce "geçti"
+    // demek, kullanıcının işaretlemeyi unuttuğunu gizlerdi.
+    hata = true;
+    console.log('\n⚠ Fiş hiçbir kayıt seçmemiş — "' + fis.istek + '" neye uygulanacak?');
   }
 
   process.exit(hata ? 1 : 0);

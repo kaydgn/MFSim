@@ -43,8 +43,8 @@ describe('sipariş fişi — gidiş-dönüş sözleşmesi', () => {
     tezgah: 'karsilama',
     dosya: 'js/karsilama-gorseller.js',
     olcum: '28 kayit \u00b7 9cc1a3',
-    kaldir: ['05', '13', '22'],
-    ekle: [],
+    istek: 'kaldir',
+    kayit: ['05', '13', '22'],
     not: '05 ile 08 aynı kare, 08 kalsın'
   };
 
@@ -53,27 +53,27 @@ describe('sipariş fişi — gidiş-dönüş sözleşmesi', () => {
   });
 
   test('boş sipariş de gidiş-dönüş yapar', () => {
-    const bos = { kunye: 'x', tezgah: 't', dosya: 'd', olcum: '', kaldir: [], ekle: [], not: '' };
+    const bos = { kunye: 'x', tezgah: 't', dosya: 'd', olcum: '', istek: 'kaldir', kayit: [], not: '' };
     expect(K.veKomutaFisAyristir(K.veKomutaFisUret(bos))).toEqual(bos);
   });
 
   test('nottaki satır sonu üretimde temizlenir — sonraki satır alan sanılmaz', () => {
-    const fis = K.veKomutaFisUret({ kunye: 'x', tezgah: 't', dosya: 'd', not: 'ilk\nkaldir: 99' });
+    const fis = K.veKomutaFisUret({ kunye: 'x', tezgah: 't', dosya: 'd', not: 'ilk\nkayit: 99' });
     // Satır sonu geçmiş olsaydı '99' bir KALDIRMA emrine dönüşürdü.
-    expect(K.veKomutaFisAyristir(fis).kaldir).toEqual([]);
-    expect(K.veKomutaFisAyristir(fis).not).toBe('ilk kaldir: 99');
+    expect(K.veKomutaFisAyristir(fis).kayit).toEqual([]);
+    expect(K.veKomutaFisAyristir(fis).not).toBe('ilk kayit: 99');
   });
 
   test('başlığı tutmayan metin null döner — yanlış nesne DÖNMEZ', () => {
-    expect(K.veKomutaFisAyristir('merhaba\nkaldir: 05')).toBeNull();
+    expect(K.veKomutaFisAyristir('merhaba\nkayit: 05')).toBeNull();
     expect(K.veKomutaFisAyristir('')).toBeNull();
     expect(K.veKomutaFisAyristir(null)).toBeNull();
   });
 
   test('baştaki boş satırlar ve satır içi boşluk affediliyor (elle yapıştırma)', () => {
-    const fis = '\n\n' + K.veKomutaFisUret({ kunye: 'x', tezgah: 't', dosya: 'd', kaldir: ['05'] })
-      .replace('kaldir', '  kaldir');
-    expect(K.veKomutaFisAyristir(fis).kaldir).toEqual(['05']);
+    const fis = '\n\n' + K.veKomutaFisUret({ kunye: 'x', tezgah: 't', dosya: 'd', kayit: ['05'] })
+      .replace('kayit', '  kayit');
+    expect(K.veKomutaFisAyristir(fis).kayit).toEqual(['05']);
   });
 
   test('alan adları DİAKRİTİKSİZ — kopyala/yapıştırda kodlama kaçağı olmasın', () => {
@@ -85,11 +85,57 @@ describe('sipariş fişi — gidiş-dönüş sözleşmesi', () => {
 
   test('değeri olmayan alan atlanmaz, "(yok)" yazar', () => {
     const fis = K.veKomutaFisUret({ tezgah: 't', dosya: 'd' });
-    expect(fis).toContain('kaldir');
+    expect(fis).toContain('kayit');
     expect(fis).toContain('(yok)');
     // "(yok)" geri okunurken boşa dönmeli, dizgeye değil.
-    expect(K.veKomutaFisAyristir(fis).kaldir).toEqual([]);
+    expect(K.veKomutaFisAyristir(fis).kayit).toEqual([]);
     expect(K.veKomutaFisAyristir(fis).not).toBe('');
+  });
+});
+
+describe('fiil sözlüğü — fiş v2', () => {
+  test('fiiller tekil, adı ve işaret metni dolu', () => {
+    const idler = K.VE_KOMUTA_FIILLER.map((f) => f.id);
+    expect(idler.length).toBe(new Set(idler).size);
+    K.VE_KOMUTA_FIILLER.forEach((f) => {
+      expect(String(f.ad || '')).not.toBe('');
+      expect(String(f.isaret || '')).not.toBe('');
+      expect(String(f.aciklama || '')).not.toBe('');
+      expect(f.id).toMatch(/^[a-z]+$/);      // fişe diakritiksiz yazılıyor
+    });
+  });
+
+  test('istek alanı boş bırakılmıyor — varsayılan fiil yazılıyor', () => {
+    const fis = K.veKomutaFisUret({ tezgah: 't', dosya: 'd' });
+    expect(K.veKomutaFisAyristir(fis).istek).toBe(K.VE_KOMUTA_FIILLER[0].id);
+  });
+
+  test('her fiil gidiş-dönüşte korunuyor', () => {
+    K.VE_KOMUTA_FIILLER.forEach((f) => {
+      const fis = K.veKomutaFisUret({ tezgah: 't', dosya: 'd', istek: f.id, kayit: ['a'] });
+      expect(K.veKomutaFisAyristir(fis).istek).toBe(f.id);
+    });
+  });
+
+  test('geçerlilik denetimi tanımlı fiillerden türüyor', () => {
+    K.VE_KOMUTA_FIILLER.forEach((f) => expect(K.veKomutaFiilGecerli(f.id)).toBe(true));
+    ['', 'sil', 'KALDIR', null].forEach((x) => expect(K.veKomutaFiilGecerli(x)).toBe(false));
+  });
+
+  test('v1 FİŞİ HÂLÂ OKUNUYOR — `kaldir:` satırı `istek`+`kayit`a çevriliyor', () => {
+    // Kullanıcının elinde duran eski bir fişi reddetmek onu yeniden üretmeye
+    // zorlardı; oysa anlamı belirsiz değil.
+    const v1 = ['MFSIM-SIPARIS v1', 'kunye : abc', 'tezgah: karsilama',
+                'dosya : js/karsilama-gorseller.js', 'kaldir: 06, 14', 'ekle  : (yok)'].join('\n');
+    const o = K.veKomutaFisAyristir(v1);
+    expect(o.istek).toBe('kaldir');
+    expect(o.kayit).toEqual(['06', '14']);
+    expect(o.tezgah).toBe('karsilama');
+    expect(o.ekle).toBeUndefined();          // ölü alan taşınmıyor
+  });
+
+  test('bilinmeyen başlık hâlâ null', () => {
+    expect(K.veKomutaFisAyristir('MFSIM-SIPARIS v9\nkayit: 05')).toBeNull();
   });
 });
 

@@ -535,9 +535,13 @@ uygulanır, makul görünür, yanlıştır. Kapı bir paragraf değil bir komut:
 npm run komuta:dogrula -- <fis-dosyasi>     # ya da: ... | npm run komuta:dogrula -- -
 ```
 
-Çıkış kodu 0 değilse **uygulama, kullanıcıya sor.** Betik iki ayrı şeyi ölçer:
-tezgâhın içeriği fiş yazıldığından beri değişti mi (`olcum` özeti), ve fişin
-hedeflediği kayıtlar hâlâ duruyor mu.
+Çıkış kodu 0 değilse **uygulama, kullanıcıya sor.** Betik üç şeyi ölçer:
+tezgâhın içeriği fiş yazıldığından beri değişti mi (`olcum` özeti), fişin
+hedeflediği kayıtlar hâlâ duruyor mu, ve fiş bir iş tarif ediyor mu.
+
+Fişin `istek` satırı ne yapılacağını söyler — `kaldir` · `duzelt` · `incele`
+(`js/cp-komuta.js` › `VE_KOMUTA_FIILLER`). Fiil bir ALAN değil bir SEÇİM:
+sözlük büyürken fişin biçimi sabit kalıyor. `v1` fişleri hâlâ okunuyor.
 
 **Sha karşılaştırması TEK BAŞINA yetmez ve kullanılmaz.** Ölçüldü: bir turda
 `main` altı PR ilerledi ve karşılama listesi hiç değişmedi — sha kapısı orada
