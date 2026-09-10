@@ -137,6 +137,7 @@ kuralıdır: FEAD'e dokunmayan bir oturum FEAD kayıtlarını ödemez.
 |-------|-------|-------------------|
 | FEAD (kayış-kasnak) | `fead` | `js/fead-*.js`, `js/cp-fead*.js`, `js/guide-fead.js` ya da FEAD testlerine dokunmadan **ÖNCE** |
 | Araç Performans (tam gaz) | `arac-performans` | `js/ft-performance.js`, `js/simulation-engine.js`, `js/numerics.js`, `js/cp-arac-*.js`, `js/cp-engine.js`, `js/cp-gearbox.js`, `js/cp-torque-converter.js`, `js/cp-matching.js`, `js/ft-obstacle.js`, `js/ft-segment-drive.js`, `assets/examples/ap_*.json` ya da Araç Performans testlerine dokunmadan **ÖNCE** |
+| Komuta Penceresi / sipariş fişi | `komuta` | Kullanıcı `MFSIM-SIPARIS` başlıklı bir metin YAPIŞTIRDIĞINDA, ya da `js/cp-komuta.js`, `tools/komuta-dogrula.js`, komuta testlerine dokunmadan **ÖNCE** |
 
 **Bu bir nezaket değil kapıdır.** Bu modüllerin hata sınıfı sessizdir — sayı
 yanlış çıkar, program çalışmaya devam eder, uyarı verilmez. Skill'i okumadan
@@ -526,31 +527,16 @@ sayıyı çıplak basmak onu gizler.
 
 ## SİPARİŞ FİŞİ geldiğinde — DOĞRULAMADAN uygulama
 
-Kullanıcı Komuta Penceresi'nden (`js/cp-komuta.js`) `MFSIM-SIPARIS v1` başlıklı
-bir metin yapıştırabilir. Fiş, kullanıcının ELİNDEKİ kopyadan yazılıyor; o kopya
-bayatsa fişteki numaralar başka kayıtları gösterir ve hata SESSİZ olur —
-uygulanır, makul görünür, yanlıştır. Kapı bir paragraf değil bir komut:
+Kullanıcı Komuta Penceresi'nden `MFSIM-SIPARIS` başlıklı bir metin
+yapıştırabilir. **Asla doğrulamadan uygulama:**
 
 ```bash
 npm run komuta:dogrula -- <fis-dosyasi>     # ya da: ... | npm run komuta:dogrula -- -
 ```
 
-Çıkış kodu 0 değilse **uygulama, kullanıcıya sor.** Betik üç şeyi ölçer:
-tezgâhın içeriği fiş yazıldığından beri değişti mi (`olcum` özeti), fişin
-hedeflediği kayıtlar hâlâ duruyor mu, ve fiş bir iş tarif ediyor mu.
-
-Fişin `istek` satırı ne yapılacağını söyler — `kaldir` · `duzelt` · `incele`
-(`js/cp-komuta.js` › `VE_KOMUTA_FIILLER`). Fiil bir ALAN değil bir SEÇİM:
-sözlük büyürken fişin biçimi sabit kalıyor. `v1` fişleri hâlâ okunuyor.
-
-**Sha karşılaştırması TEK BAŞINA yetmez ve kullanılmaz.** Ölçüldü: bir turda
-`main` altı PR ilerledi ve karşılama listesi hiç değişmedi — sha kapısı orada
-yanlış alarm verir, birkaç tekrardan sonra da ciddiye alınmaz olur. Ölçülen şey
-sürüm değil tezgâhın kendi içeriğidir.
-
-Fişin biçim sözleşmesi `tests/unit/komuta.test.js`'te gidiş-dönüş kapısıyla
-(`ayristir(uret(x)) === x`), betiğin ısırdığı `tests/unit/komuta-dogrula.test.js`'te
-çıkış koduyla duruyor. Alan adları diakritiksizdir.
+Çıkış kodu 0 değilse uygulama, kullanıcıya sor. Gerekçesi, fiil sözlüğü ve
+fişin hedef dosyasının hangi BAŞKA skill'i tetiklediği **`komuta` skill'inde** —
+fiş geldiğinde onu çağır.
 
 ## Teslim Akışı — PR + merge OTOMATİK, **CI BEKLENMEZ**
 
