@@ -95,8 +95,13 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   var: elindeki kopyanın durumunu ÖLÇMEK ve buradan bir **sipariş fişi** yazmak.
   Pencere hiçbir şeyi DEĞİŞTİRMEZ. Tezgâhlar elle yazılmış özet TUTMAZ, canlı
   veri yapısını okur — elle yazılan özet sessizce bayatlar (bu dosyanın kendi
-  6.052 satırlık dersi). Fişin `dosya` satırı bir kapıdır: beyan edilen yol
-  diskte yoksa test kırılır.
+  6.052 satırlık dersi). Fiş, tezgâhın ölçtüğü içeriğin ÖZETİNİ taşır ve
+  `npm run komuta:dogrula` onu çalışma ağacından yeniden hesaplar.
+  **Yeni tezgâh eklerken:** `olc(veri)` SAF olmak zorunda (global okumaz) ve
+  tezgâh ölçtüğü kaynağı İKİ YERDEN beyan eder — tarayıcı için `kaynak()`,
+  Node için `dosya` + `disaAktarim`. İkisinin AYNI sayıyı ölçtüğü
+  `tests/e2e/komuta.spec.js`'te kapılı: ayrışma SESSİZDİR — pencere kendinden
+  emin biçimde "0 kayıt" gösterir, hiçbir şey patlamaz.
 - `.claude/skills/` — modüllere özgü karar kayıtları (koşullu yüklenir; aşağıya bak)
 - `docs/decisions/` — ortak yüzey kararları + tam test dosyası tablosu
 
