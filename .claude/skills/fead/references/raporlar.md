@@ -1027,3 +1027,29 @@ Altı mutasyonla ölçüldü — ankrajı yine panelden okuma (3 test kırmızı
 atlama (52), `cfg` ile `sys`i ayrıştırma (1), türetilemedi uyarısını yutma (1),
 panel alanını geri getirme (1), Algılanan Model satırını kaldırma (1).
 
+##### Frekans haritası mertebelerin KATLARINI çizer; §8.18 alt mertebeleri sayar (2026-09-10)
+
+Harita yalnız **1× ateşlemeyi** çiziyordu ve o çizgi açıklık eğrilerini çalışma
+bandının çoğunda hiç kesmiyor — BMC'de açıklıklar 150–190 Hz, ateşleme
+2750 d/dk'da ancak 137,5 Hz. Okuyucu “kesişme yok” diye okuyordu. ÖLÇÜLDÜ
+(AG00686): kesişmeler üst katlarda — **2× ≈ 1500–1900 · 3× ≈ 1000–1300 ·
+4× ≈ 800–1000 d/dk**. Artık 2×/3×/4× ince kesikli çiziliyor; bunlar kartın
+çırpma animasyonunun kullandığı mertebelerin ta kendisi, yani harita ile
+animasyon aynı olayı anlatıyor. **Alt mertebeler bu haritada ÇİZİLMEZ**:
+1. mertebe açıklık frekansına ancak ~11.000 d/dk'da ulaşır.
+
+**§8.18'de tam tersi.** “Karşılık gelen devir” sütunu yalnız ateşleme
+mertebesini kullanıyordu ve bu, düşük frekanslı modları bandın DIŞINA atıyordu:
+BMC'nin 12 Hz'lik gergi kolu modu 240 d/dk'ya düşüyor (rölanti altı) ve bölüm
+“örtüşme yok” diye okunuyordu — oysa **1. mertebe aynı modu 720 d/dk'da, tam
+rölantide kesiyor.** Yeni tablo mertebe kesişmelerini bandın içinde listeliyor;
+küme **Takoz modülüyle aynı** (`mount-signals.js` `_campOrders`, AMC raporundan):
+1 · ateşleme · 2×ateşleme · 4×ateşleme. İkinci bir küme uydurmak iki modülün
+aynı motoru başka mertebelerle anlatması olurdu.
+
+Kapı: `cp-fead-report.test.js` → *“frekans haritası ateşlemenin KATLARINI da
+çiziyor”* (kat çizgileri ateşlemeden DAHA DİK olmalı) + *“§8.18 alt mertebeleri
+de sayıyor”*. İkincisi ilk yazımda **boşa koşuyordu** — `return` ile sessizce
+çıkıyor ve hem kümeyi ateşlemeye indiren hem formülü tersine çeviren
+mutasyondan GEÇİYORDU; artık fikstürün burulma çözümü ve ateşleme dışı bir
+kesişme bulunması ŞART.

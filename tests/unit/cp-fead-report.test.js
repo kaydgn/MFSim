@@ -586,6 +586,64 @@ describe('§8.7 — denklem zinciri ELLE ÇALIŞILABİLİR', () => {
     expect(T).toBeCloseTo(R8.analysis.tensioner.tensionN, 0);
   });
 
+  // ── MERTEBE ÇİZGİLERİ — kesişmelerin çoğu 1× ateşlemede DEĞİL ───────────
+  // Harita eskiden yalnız 1× ateşlemeyi çiziyordu ve o çizgi açıklık
+  // eğrilerini çalışma bandının çoğunda hiç kesmiyor (BMC: açıklıklar
+  // 150–190 Hz, ateşleme 2750 d/dk'da 137,5 Hz) — okuyucu "kesişme yok" diye
+  // okuyordu. Üst katlar 800–1900 d/dk arasında kesiyor.
+  test('frekans haritası ateşlemenin KATLARINI da çiziyor', () => {
+    const fig = RP._frFreqFigure(R8);
+    expect(fig).toContain('data-ve="firing-line"');
+    const kat = [...fig.matchAll(/data-ve="order-line"/g)].length;
+    expect(kat).toBeGreaterThanOrEqual(2);          // 2× ve 3× en azından
+    expect(fig).toMatch(/>2×</);
+    expect(fig).toMatch(/>3×</);
+    // Katlar 1× ateşleme çizgisinden DAHA DİK olmalı — aynı x'te daha yüksek y
+    // demek, SVG'de daha KÜÇÜK y koordinatı.
+    const yols = [...fig.matchAll(/data-ve="order-line"><path d="M([\d.]+) ([\d.]+)\s*L/g)]
+      .map((m) => ({ x: +m[1], y: +m[2] }));
+    const ates = /data-ve="firing-line"><path d="M([\d.]+) ([\d.]+)\s*L/.exec(fig);
+    expect(yols.length).toBeGreaterThanOrEqual(2);
+    yols.forEach((p) => {
+      expect(p.x).toBeCloseTo(+ates[1], 1);         // aynı devirden başlıyor
+      expect(p.y).toBeLessThan(+ates[2]);           // ama daha yüksek frekansta
+    });
+  });
+
+  // ── 8.18: ALT MERTEBELER ────────────────────────────────────────────────
+  // Ateşleme mertebesi düşük frekanslı modları çalışma bandının DIŞINDA
+  // kesiyor (BMC'nin 12 Hz kol modu → 240 d/dk, rölanti altı) ve bölüm
+  // "örtüşme yok" diye okunuyordu. 1. mertebe aynı modu 720 d/dk'da keser.
+  test('§8.18 alt mertebeleri de sayıyor — ateşleme tek uyarma değil', () => {
+    // BOŞA KOŞMASIN: `return` ile sessizce çıkan bir test, mertebe kümesini
+    // ateşlemeye indiren mutasyondan da formülü tersine çeviren mutasyondan da
+    // GEÇİYORDU (ölçüldü). Fikstürün burulma çözümü olmak ZORUNDA.
+    expect(R8.torsional).toBeTruthy();
+    expect(Number.isFinite(R8.torsional.firstElasticHz)).toBe(true);
+    expect(HTML8).toContain('Mertebe kesişmeleri');
+    expect(HTML8).toMatch(/1\. mertebe/);
+    expect(HTML8).toMatch(/60·f\/o/);
+    // Kesişme devri formülü: o. mertebe f'e 60·f/o devrinde ulaşır
+    const sat = [...HTML8.matchAll(
+      /<td class="l">(\d+)\. elastik<\/td><td>([\d,]+)<\/td><td>([\d,]+)\. mertebe[^<]*<\/td><td>([\d,.]+)<\/td>/g)];
+    // Satır YOKSA da bu test hiçbir şey ölçmez — kesişme bulunmak zorunda,
+    // yoksa alt mertebelerin eklenmiş olmasının bir kanıtı kalmaz.
+    expect(sat.length).toBeGreaterThan(0);
+    // ATEŞLEME DIŞI bir mertebe de kesiyor olmalı: kümenin tamamı ateşlemeden
+    // ibaret olsaydı bölüm eskisiyle aynı şeyi anlatırdı.
+    const atesM = R8.analysis.duty[0].firingHz * 60 / R8.analysis.duty[0].engineRpm;
+    const mertebeler = sat.map((m) => Number(m[3].replace(',', '.')));
+    expect(mertebeler.some((o) => Math.abs(o - atesM) > 1e-6)).toBe(true);
+    sat.forEach((m) => {
+      const f = Number(m[2].replace(',', '.'));
+      const o = Number(m[3].replace(',', '.'));
+      const rpm = Number(m[4].replace(/\./g, '').replace(',', '.'));
+      // Tablodaki f BİR ONDALIĞA yuvarlı basılıyor, dolayısıyla geri hesapta
+      // ±2 d/dk pay var; formülün kendisini tutmaya yeter.
+      expect(Math.abs(rpm - 60 * f / o)).toBeLessThan(2.5);
+    });
+  });
+
   test('denklem numaraları sayaçtan: §8 içinde 8.1..8.n, boşluksuz ve tekrarsız', () => {
     const nolar = [...HTML8.matchAll(/<span class="tag">\(8\.(\d+)\)<\/span>/g)].map((x) => Number(x[1]));
     expect(nolar.length).toBeGreaterThanOrEqual(5);

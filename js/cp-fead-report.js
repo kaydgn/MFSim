@@ -2364,6 +2364,55 @@ function _frTorsionalSection(R){
      + 'sistemin bütün olarak dönmesidir; frekansı sıfırdır ve <b>tam bir tane</b> olmak zorundadır — '
      + 'fazlası modelin koptuğunu gösterir (bu çözümde ' + T.rigidBodyModes + ' tane).</p>';
 
+  // ── ALT MERTEBELER — ateşleme tek uyarma değil ───────────────────────────
+  // Yukarıdaki sütun YALNIZ ateşleme mertebesini kullanıyor ve bu, düşük
+  // frekanslı modları çalışma bandının DIŞINA atıyor: BMC'nin 12 Hz'lik gergi
+  // kolu modunda ateşleme mertebesi 240 d/dk'ya denk geliyor, yani rölantinin
+  // altına — bölüm "örtüşme yok" diye okunuyordu. Oysa 1. mertebe (devir/60)
+  // aynı modu 720 d/dk'da, tam rölantide kesiyor.
+  // Mertebe kümesi TAKOZ MODÜLÜNÜN kümesidir (mount-signals.js `_campOrders`,
+  // AMC raporundan): 1 · ateşleme · 2×ateşleme · 4×ateşleme. İkinci bir küme
+  // uydurmak, iki modülün aynı motoru başka mertebelerle anlatması olurdu.
+  if(d0 && d0.firingHz > 0 && d0.engineRpm > 0){
+    var atesMert = d0.firingHz * 60 / d0.engineRpm;         // 6 sil. 4 zamanlı → 3
+    var mertebe = [1, atesMert, 2 * atesMert, 4 * atesMert].filter(function(o, i, a){
+      return o > 0 && a.indexOf(o) === i;
+    }).sort(function(a, b){ return a - b; });
+    var dRpm = (R.analysis && R.analysis.duty) || [];
+    var rLo = Infinity, rHi = -Infinity;
+    dRpm.forEach(function(d){ var v = _frNum(d.engineRpm);
+      if(Number.isFinite(v)){ if(v < rLo) rLo = v; if(v > rHi) rHi = v; } });
+    if(Number.isFinite(rLo) && rHi > rLo){
+      var satir = [];
+      (T.elasticHz || []).forEach(function(f, i){
+        mertebe.forEach(function(o){
+          var rp = 60 * f / o;                              // o. mertebe f'e bu devirde ulaşır
+          if(rp >= rLo && rp <= rHi)
+            satir.push({ mod: i + 1, f: f, o: o, rpm: rp });
+        });
+      });
+      h += '<table><caption>Tablo ' + _frTbl() + ' — Mertebe kesişmeleri (çalışma devir bandı '
+         + _frFs(rLo, 0) + ' – ' + _frFs(rHi, 0) + ' d/dk)</caption>';
+      h += '<tr><th>Mod</th><th>Frekans</th><th>Mertebe</th><th>Kesişme devri</th></tr>';
+      if(satir.length){
+        satir.sort(function(a, b){ return a.rpm - b.rpm; }).forEach(function(x){
+          h += '<tr><td class="l">' + x.mod + '. elastik</td><td>' + _frFs(x.f, 1) + '</td>'
+            + '<td>' + _frFs(x.o, 1).replace(',0', '') + '. mertebe'
+            + (Math.abs(x.o - atesMert) < 1e-9 ? ' (ateşleme)' : '') + '</td>'
+            + '<td>' + _frFs(x.rpm, 0) + '</td></tr>';
+        });
+      } else {
+        h += '<tr><td colspan="4" class="l">Bu mertebelerin hiçbiri çalışma bandında '
+          + 'hiçbir modu kesmiyor.</td></tr>';
+      }
+      h += '</table>';
+      h += '<p>Mertebe <i>o</i>, <i>f</i> frekansına <i>60·f/o</i> devrinde ulaşır. Kümede '
+        + 'ateşlemenin yanında <b>1. mertebe</b> (krank devri) da var: düşük frekanslı modları '
+        + 'ateşleme mertebesi çalışma bandının altında keser, oysa aynı modu 1. mertebe bandın '
+        + '<b>içinde</b> keser. Küme Takoz modülüyle aynıdır.</p>';
+    }
+  }
+
   // Ateşleme bandıyla örtüşme — hüküm değil, gözlem.
   var duty = (R.analysis && R.analysis.duty) || [];
   if(duty.length){
@@ -2799,6 +2848,39 @@ function _frFreqFigure(R){
   var fire = duty.map(function(d){ return [_frNum(d.engineRpm), _frNum(d.firingHz)]; })
                  .filter(function(p){ return Number.isFinite(p[1]); });
   g += '<g data-ve="firing-line">' + _frPolyline(c, fire, '#a8321f', 2.2, '6 4') + '</g>';
+
+  // ── ATEŞLEMENİN KATLARI — kesişimlerin ÇOĞU burada ───────────────────────
+  // Harita eskiden yalnız 1× ateşlemeyi çiziyordu ve o çizgi, açıklık
+  // eğrilerini çalışma bandının çoğunda HİÇ kesmiyor: BMC'de açıklıklar
+  // 150–190 Hz, ateşleme 2750 d/dk'da ancak 137,5 Hz. Okuyucu "kesişme yok"
+  // diye okuyordu. Oysa kesişmeler üst katlarda:
+  //   2× ≈ 1500–1900 d/dk · 3× ≈ 1000–1300 · 4× ≈ 800–1000  (ÖLÇÜLDÜ, AG00686)
+  // Bunlar kartın çırpma animasyonunun kullandığı mertebelerin ta kendisi
+  // (_feadVibSpanMag altıya kadar tarıyor); harita ile animasyon aynı olayı
+  // anlatsın diye buraya da kondu.
+  //
+  // ALT mertebeler (1. mertebe = devir/60) bu haritada ÇİZİLMEZ: açıklık
+  // frekansına ancak 11.000 d/dk'da ulaşırlar, yani hiç kesmezler. Onların
+  // yeri BURULMA modlarının olduğu 8.18 — orada 1. mertebe belirleyici.
+  var egim = 0;                                     // Hz / (d/dk) — ateşleme
+  for(var q = 0; q < fire.length && !egim; q++)
+    if(fire[q][0] > 0) egim = fire[q][1] / fire[q][0];
+  if(egim > 0){
+    for(var k = 2; k <= 4; k++){
+      var yLo = k * egim * rpmLo;
+      if(yLo > yMax) continue;                      // çizim alanının tamamen dışında
+      var xCik = Math.min(rpmHi, yMax / (k * egim));
+      var pts2 = [[rpmLo, yLo], [xCik, k * egim * xCik]];
+      g += '<g data-ve="order-line">'
+         + _frPolyline(c, pts2, '#a8321f', 1.1, '3 3') + '</g>';
+      // Etiket çizginin BİTTİĞİ yerde: gösterge listesine dört satır daha
+      // eklemek sağ payı büyütür ve grafiği daraltırdı.
+      var ex = c.sx(xCik), ey = c.sy(k * egim * xCik);
+      g += '<text x="' + (ex - 3).toFixed(1) + '" y="' + (ey + 10).toFixed(1)
+         + '" text-anchor="end" font-size="8.5" fill="#a8321f" opacity="0.85">'
+         + k + '×</text>';
+    }
+  }
   // GÖSTERGE ÇİZİM ALANININ DIŞINDA — sağ payda, dikey liste.
   var lx = c.W - c.pad.r + 6, ly = c.pad.t + 10;
   var adim = Math.min(13, (c.H - c.pad.t - c.pad.b) / (spans.length + 1));
@@ -2813,9 +2895,12 @@ function _frFreqFigure(R){
   g += '<line x1="' + lx + '" y1="' + (yf - 4).toFixed(1) + '" x2="' + (lx + 16) + '" y2="' + (yf - 4).toFixed(1)
      + '" stroke="#a8321f" stroke-width="2" stroke-dasharray="6 4"/>';
   g += '<text x="' + (lx + 21) + '" y="' + yf.toFixed(1) + '" font-size="9.5" fill="#a8321f">ateşleme frekansı</text>';
-  return _frFigWrap(g, 'Açıklıkların temel enine titreşim frekansı ve motorun ateşleme frekansı (7.2)–(7.3). '
-    + 'İki eğri kesişirse o devirde ilgili açıklık rezonansa girer. Bu grafik yalnız AÇIKLIK '
-    + 'titreşimini gösterir; sistem burulma modları 8.18\'de ayrı tablodadır.');
+  return _frFigWrap(g, 'Açıklıkların temel enine titreşim frekansı ve motorun ateşleme frekansı (7.2)–(7.3); '
+    + 'ince kesikli çizgiler ateşlemenin 2×, 3× ve 4× katlarıdır. Bir açıklık eğrisi bu '
+    + 'çizgilerden birini kestiğinde o devirde rezonansa girer — kesişmelerin çoğu 1× '
+    + 'ateşlemede değil ÜST KATLARDA olur. Alt mertebeler (1. mertebe) açıklık frekansına '
+    + 'çalışma bandında hiç ulaşmaz; onların etkisi burulma modlarındadır — bölüm 8.18. '
+    + 'Bu grafik yalnız AÇIKLIK titreşimini gösterir.');
 }
 
 // ── BMC HESAP DEFTERİNDEN GELEN ÜÇ KAPI — uygunluk tablosunun 11–13. satırları
