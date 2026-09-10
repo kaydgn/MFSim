@@ -1055,6 +1055,30 @@ edenler ters yönde), diş sayısı faz boyunca sabit (136).
 Animasyon **yalnız kanvas kartında**: panel, HTML rapor §8.5 ve SVG/PNG dışa
 aktarma aynı çiziciyi kullanıyor ama `animate` geçirmiyor → statik kalıyorlar.
 
+##### Çırpmanın gerilmesi HARİTADAN — ikinci bir çağrı değil (2026-09-10)
+
+`veFeadVibSpanPayload` kendi `spanTensions` çağrısını yapıyordu ve iki bakımdan
+eksikti: ankrajı `designTensionN` (çizilen kol konumundan bağımsız), yükü `{}`
+(aksesuar yükü yok). Sonuç **aynı kartta iki yüzeyin ayrışmasıydı** — kayışın
+RENGİ konumun gerilmesini gösterirken TİTREŞİM tasarım gerginliğinde çırpıyordu.
+ÖLÇÜLDÜ (BMC, gerçek tarayıcı): kart “Serbest kol · 213 N” yazarken frekans
+526 N'unkiydi (218 Hz; konumun kendi gerilmesiyle 129 Hz).
+
+Çare ikinci bir `slackN` eklemek DEĞİL — üçüncü bir yüzey doğduğunda aynı
+ayrışmayı üretirdi. Titreşim artık `veFeadSpanTensionMap`'i okuyor; harita
+null dönerse (devir yok) payload da null döner, eski çağrıya düşülmez.
+Ankraj künyeye yazılır (`@ 526 N`) çünkü f ∝ √T.
+
+**Senaryo da aynı gerilmede koşar.** `peakEstimate`'in `slackN` seçeneği yok ve
+çekirdek dokunulmaz; ankraj dışarıdan ötelenir. Meşru çünkü ankraj **saf
+ötelemedir** — ÖLÇÜLDÜ: `slackN` 700 → 1200'de dört açıklık da tam
+500,000000 N kayıyor.
+
+Kapı: `fead-vibration.test.js` → *“titreşim ile kayış rengi AYNI gerilmeyi
+okur”*, *“kol konumu değişince çırpma frekansı DA değişir”*;
+`fead-transient.test.js` → *“ızgara … BİREBİR”* (öteleme dahil),
+*“senaryo kol konumunu İZLER”*. Dört mutasyonla ölçüldü.
+
 ##### Titreşim animasyonu — çırpma ve mod şekli (2026-09-02)
 
 Kart iki titreşimi de oynatabiliyor; kaynak **çekirdek**, dokunulmadı

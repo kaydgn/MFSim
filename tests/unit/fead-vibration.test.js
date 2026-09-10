@@ -50,12 +50,44 @@ const walkOf = (build) => {
 const T0 = fead._feadXform(0.7, 10, 10, 0, 500);
 
 describe('AÇIKLIK ÇIRPMASI — frekans sonuç, genlik değil', () => {
+  // Referans ARTIK gerilme HARİTASINDAN kuruluyor, ayrı bir spanTensions
+  // çağrısından değil — çünkü kilitlenmek istenen şey tam olarak bu: titreşim
+  // ile kayışın rengi AYNI gerilmeyi okuyor. Eski hâlinde test kendi ankrajını
+  // kuruyordu ve iki yüzeyin ayrışmasını göremezdi.
   test('açıklık frekansı ÇEKİRDEKTEN gelir (köprü kendi formülünü kurmaz)', () => {
     const b = kur(), { geom } = walkOf(b);
-    const T = F.spanTensions(b.sys, { engineRpm: 2750, loadsKw: {} });
-    const ref = F.spanFrequencies(b.sys, geom, T.spanN, { engineRpm: 2750, modes: 1 });
+    const map = M.veFeadSpanTensionMap(b, F.meanRel(b.sys), 2750);
+    const ref = F.spanFrequencies(b.sys, geom, map.spanN, { engineRpm: 2750, modes: 1 });
     const P = M.veFeadVibSpanPayload(b, 2750, 0.00717, 6);
     P.spans.forEach((s, i) => expect(s.f).toBeCloseTo(ref[i].fHz[0], 9));
+  });
+
+  // ── ASIL KAPI: iki yüzey tek gerilmeyi okuyor ────────────────────────────
+  // Ölçülmüş kusur: kart "Serbest kol · 213 N" yazarken titreşim 526 N'luk
+  // frekansta çırpıyordu (218 Hz, oysa 129 Hz). Ankraj artık ÇİZİLEN konumdan.
+  test('titreşim ile kayış rengi AYNI gerilmeyi okur', () => {
+    const b = kur();
+    [0, F.meanRel(b.sys) * 0.5, F.meanRel(b.sys)].forEach((rel) => {
+      const map = M.veFeadSpanTensionMap(b, rel, 2750);
+      const P = M.veFeadVibSpanPayload(b, 2750, 0.00717, 6, rel);
+      P.spans.forEach((s, i) => expect(s.TN).toBeCloseTo(map.spanN[i], 9));
+      expect(P.anchorN).toBeCloseTo(F.tensionerState(b.sys, rel).tensionN, 9);
+    });
+  });
+
+  test('kol konumu değişince çırpma frekansı DA değişir', () => {
+    const b = kur();
+    const mean = F.meanRel(b.sys);
+    const gevsek = M.veFeadVibSpanPayload(b, 2750, 0.00717, 6, mean * 0.25);
+    const gergin = M.veFeadVibSpanPayload(b, 2750, 0.00717, 6, mean);
+    expect(gevsek.anchorN).toBeLessThan(gergin.anchorN);
+    // f ∝ √T: daha gevşek kayış daha DÜŞÜK frekansta çırpar
+    gevsek.spans.forEach((s, i) => expect(s.f).toBeLessThan(gergin.spans[i].f));
+  });
+
+  test('devir yoksa gerilme TANIMSIZ — uydurulmuş bir çırpma yok', () => {
+    expect(M.veFeadVibSpanPayload(kur(), 0, 0.00717, 6)).toBeNull();
+    expect(M.veFeadVibSpanPayload(kur(), -5, 0.00717, 6)).toBeNull();
   });
 
   test('ateşleme frekansı silindir sayısından — 6 sil. 4 zamanlı @2750 = 137.5 Hz', () => {
@@ -81,15 +113,43 @@ describe('AÇIKLIK ÇIRPMASI — frekans sonuç, genlik değil', () => {
   // en yakın olan olmalı. Olmasaydı çırpma boş bir gösteri olurdu.
   // ÖLÇÜLDÜ (AG00686 @2750): ateşleme 137.5 Hz, CRK->IDR açıklığı 150.1 Hz
   // (%8.4 uzakta) ve büyütmesi 5.13 — dört açıklığın en büyüğü.
-  test('rezonansa en yakın açıklık en çok savrulur (tanı değeri)', () => {
+  // ── TANI DEĞERİ: bir açıklık mertebeye oturunca GERÇEKTEN savruluyor ─────
+  //
+  // Buradaki ilk yazım YANLIŞ BİR HÜKÜM çakmıştı: "en çok savrulan açıklık,
+  // frekansı ATEŞLEMEYE en yakın olandır". Büyütme altı mertebeyi tarıyor
+  // (k·f_ateşleme, 1/k ağırlıklı), dolayısıyla o hüküm yalnız bazı devirlerde
+  // tutuyor — ÖLÇÜLDÜ, 2000 d/dk'da tutmuyor: en yakın açıklık 0, en çok
+  // savrulan açıklık 3. Tesadüfen 2750'de tuttuğu için test yeşildi.
+  //
+  // Doğru ve döngüsel olmayan hüküm şu: her açıklık, KENDİ tepe devrinde bir
+  // mertebenin üstüne oturur ve sönüm tavanına çıkar. ÖLÇÜLDÜ (sweep 700–3600):
+  //   açıklık 0 → 3270 d/dk · 1. mertebeden %0,6 · mag 8,33 (tavan 8,33)
+  //   açıklık 2 → 3325 d/dk · %0,6 · 8,33      açıklık 3 → 3595 d/dk · %0,6 · 8,33
+  //   açıklık 1 → 3600 d/dk · %4,6 · 6,89  (tepesi tarama bandının üstünde)
+  test('bir açıklık mertebeye oturunca sönüm tavanına çıkar (tanı değeri)', () => {
     const b = kur();
-    const P = M.veFeadVibSpanPayload(b, 2750, 0.00717, 6);
-    const enBuyuk = P.spans.indexOf(P.spans.slice().sort((x, y) => y.mag - x.mag)[0]);
-    // Frekansı ateşlemeye en yakın olan açıklık
-    const enYakin = P.spans.indexOf(P.spans.slice().sort(
-      (x, y) => Math.abs(x.f - P.firingHz) - Math.abs(y.f - P.firingHz))[0]);
-    expect(enBuyuk).toBe(enYakin);
-    expect(P.spans[enBuyuk].mag).toBeGreaterThan(4);
+    const cap = 1 / (2 * M.VE_FEAD_VIB_ZETA);
+    const n = M.veFeadVibSpanPayload(b, 2000, 0.00717, 6).spans.length;
+    for (let i = 0; i < n; i++) {
+      let tepe = null, dip = Infinity;
+      for (let rpm = 700; rpm <= 3600; rpm += 20) {
+        const P = M.veFeadVibSpanPayload(b, rpm, 0.00717, 6);
+        if (!P) continue;
+        const m = P.spans[i].mag;
+        if (m < dip) dip = m;
+        if (!tepe || m > tepe.mag)
+          tepe = { mag: m, f: P.spans[i].f, fire: P.firingHz };
+      }
+      // (a) gerçekten rezonansa giriyor — kendi tabanının en az üç katı
+      expect(tepe.mag / dip).toBeGreaterThan(3);
+      // (b) tepe noktası bir MERTEBENİN üstünde (ölçülen en kötü %4,6)
+      let enYakin = 1e9;
+      for (let k = 1; k <= M.VE_FEAD_VIB_ORDERS; k++)
+        enYakin = Math.min(enYakin, Math.abs(k * tepe.fire - tepe.f) / tepe.f);
+      expect(enYakin).toBeLessThan(0.08);
+      // (c) tavanı aşmıyor
+      expect(tepe.mag).toBeLessThanOrEqual(cap + 1e-9);
+    }
   });
 
   test('büyütme sönüm tavanını aşmaz (rezonansta bile sonlu)', () => {

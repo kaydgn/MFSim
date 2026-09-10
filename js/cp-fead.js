@@ -3434,9 +3434,12 @@ function _feadAnimLabel(kin, fallback, vib, scn){
     alt = (vib.kind === 'mode')
       ? 'mod ' + (vib.idx+1) + ' · ' + _feadFmt(vib.fHz, 1) + ' Hz · şekil ×'
         + _feadFmt(vib.gain, 0) + ' (ölçek göreli)'
+      // ANKRAJ GERİLMESİ YAZILI: frekans √T ile ölçekleniyor, yani hangi
+      // gerilmede çırptığı yazılmazsa sayı yorumlanamaz. Kartın konum künyesi
+      // aynı sayıyı basıyor — ikisinin eşleştiği görülsün diye burada da var.
       : 'çırpma ' + _feadFmt(Math.min.apply(null, vib.spans.map(function(x){ return x.f; })), 0)
         + '–' + _feadFmt(Math.max.apply(null, vib.spans.map(function(x){ return x.f; })), 0)
-        + ' Hz ×' + _feadFmt(vib.gain, 0) + ' (KALİBRE DEĞİL)';
+        + ' Hz @ ' + Math.round(vib.anchorN) + ' N ×' + _feadFmt(vib.gain, 0) + ' (KALİBRE DEĞİL)';
   }
   if(!kin) return alt;
   var kat = (kin.slow >= 0.999) ? 'gerçek zaman'
