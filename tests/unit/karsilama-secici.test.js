@@ -33,6 +33,12 @@ const KLASOR = path.join(KOK, 'assets/karsilama');
 const KUNYE = JSON.parse(fs.readFileSync(path.join(KOK, 'tools/karsilama-kunye.json'), 'utf8'));
 const SABLON = fs.readFileSync(path.join(KOK, 'tools/karsilama-secici.html'), 'utf8');
 const URETEC = fs.readFileSync(path.join(KOK, 'tools/karsilama-secici.js'), 'utf8');
+// Aday tarafı: Commons'tan gelen adayların seçim sayfası (ayrı şablon).
+const SLAYT_TEST = fs.readFileSync(path.join(KOK, 'tests/unit/karsilama-slayt.test.js'), 'utf8');
+const ADAY_SABLON = fs.readFileSync(path.join(KOK, 'tools/karsilama-aday-secici.html'), 'utf8');
+const ADAY_URETEC = fs.readFileSync(path.join(KOK, 'tools/karsilama-aday-secici.js'), 'utf8');
+const BUL = fs.readFileSync(path.join(KOK, 'tools/karsilama-bul.js'), 'utf8');
+const WEBP = fs.readFileSync(path.join(KOK, 'tools/karsilama-webp.js'), 'utf8');
 
 const dosyaNolari = fs.readdirSync(KLASOR)
   .filter((f) => /^karsilama-\d+\.webp$/.test(f))
@@ -108,5 +114,85 @@ describe('şablon ↔ üreteç sözleşmesi', () => {
   test('kareler kaçışlanıyor — başlıkta tırnak/işaret HTML kırmıyor', () => {
     expect(SABLON).toMatch(/function kacir\(/);
     expect(SABLON).toContain('kacir(k.baslik)');
+  });
+});
+
+
+describe('aday seçici — şablon ↔ üreteç sözleşmesi', () => {
+  test('iki çapa da şablonda ve üretecte aynı', () => {
+    expect(ADAY_SABLON).toContain('/*__VERI__*/[]');
+    expect(ADAY_URETEC).toContain("CAPA_VERI = '/*__VERI__*/[]'");
+    // Durum çapası tam metin eşleşmesiyle basılıyor; biri elden geçerse üreteç
+    // "şablonda durum çapası yok" diye DURUR, sessizce boş sayfa üretmez.
+    const capa = /CAPA_DURUM = '(.+?)';/.exec(ADAY_URETEC);
+    expect(capa).not.toBeNull();
+    expect(ADAY_SABLON).toContain(capa[1]);
+  });
+
+  test('kendi başına da [hidden] perdesini kapatıyor', () => {
+    expect(ADAY_SABLON).toMatch(/\.perde\[hidden\]\s*\{\s*display:\s*none/);
+  });
+
+  test('başlık ve künye kaçışlanıyor', () => {
+    expect(ADAY_SABLON).toMatch(/function kacir\(/);
+    expect(ADAY_SABLON).toContain('kacir(a.baslik)');
+    expect(ADAY_SABLON).toContain('kacir(a.sahip)');
+  });
+
+  test('kurulu kare seçicisinden AYRI db dokümanı kullanıyor', () => {
+    // Aynı dokümana yazsalar biri ötekinin kararını ezerdi: biri "kaldır",
+    // öteki "ekle" listesi tutuyor.
+    expect(SABLON).toContain("db.doc('karar/secim')");
+    expect(ADAY_SABLON).toContain("db.doc('aday/secim')");
+    expect(ADAY_SABLON).not.toContain("db.doc('karar/secim')");
+  });
+});
+
+describe('tavan sabitleri tek kaynaktan', () => {
+  // Tavanlar karsilama-slayt.test.js'te yaşıyor; iki araç onları KOPYALIYOR.
+  // Kopya sessizce ayrıştı ve bir kez yakalandı: klasör tavanı 6,5 → 7,3 MB
+  // yükseltildiğinde karsilama-webp.js 6,5'te kaldı, yani geçerli bir eklemede
+  // "tavanı aştı" diye uyarıp çıkış kodunu 1 yapıyordu. Sayılar KB'ye
+  // indirgenip karşılaştırılıyor.
+  const kb = (kaynak, ad, birim) => {
+    const m = new RegExp('\\b' + ad + '\\s*=\\s*([^;\\n]+)').exec(kaynak);
+    if (!m) return null;
+    const sayilar = (m[1].match(/[0-9]+(?:\.[0-9]+)?/g) || []).map(Number);
+    if (!sayilar.length) return null;
+    const carpim = sayilar.reduce((t, v) => t * v, 1);
+    return birim === 'bayt' ? carpim / 1024 : carpim;   // hepsi KB'ye
+  };
+
+  test('klasör toplam tavanı üç yerde de aynı', () => {
+    const testKb = kb(SLAYT_TEST, 'TOPLAM_TAVAN', 'bayt');
+    expect(testKb).toBeGreaterThan(0);
+    expect(kb(ADAY_URETEC, 'TAVAN_KB', 'kb')).toBeCloseTo(testKb, 3);
+    expect(kb(WEBP, 'TOPLAM_TAVAN', 'bayt')).toBeCloseTo(testKb, 3);
+  });
+
+  test('kare başına tavan üç yerde de aynı', () => {
+    const testKb = kb(SLAYT_TEST, 'KARE_TAVAN', 'bayt');
+    expect(testKb).toBeGreaterThan(0);
+    expect(kb(ADAY_URETEC, 'KARE_TAVAN_KB', 'kb')).toBeCloseTo(testKb, 3);
+    expect(kb(WEBP, 'KARE_TAVAN', 'bayt')).toBeCloseTo(testKb, 3);
+  });
+});
+
+describe('aday tarayıcısı', () => {
+  test('lisans süzgeci varsayılan KAPALI ama bayrakla açılabiliyor', () => {
+    expect(BUL).toMatch(/lisansSuzgeci:\s*false/);
+    expect(BUL).toContain("--lisans-suzgeci");
+    expect(BUL).toMatch(/o\.lisansSuzgeci\s*&&\s*!lis\.tamam/);
+  });
+
+  test('lisans künyesi her adayda kaydediliyor', () => {
+    for (const alan of ['lisans:', 'sahip:', 'sayfa:', 'lisansSerbest:']) {
+      expect(BUL).toContain(alan);
+    }
+  });
+
+  test('Wikimedia politikası gereği tanımlı User-Agent gönderiliyor', () => {
+    expect(BUL).toMatch(/UA\s*=\s*'MFSim/);
+    expect(BUL).toContain("'User-Agent': UA");
   });
 });

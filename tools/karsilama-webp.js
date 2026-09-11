@@ -30,8 +30,11 @@ const LISTE = path.join(KOK, 'js/karsilama-gorseller.js');
 const CHROMIUM = process.env.MFSIM_CHROMIUM || undefined;
 
 const EN_BOY = 1920;            // uzun kenar tavanı
-const KARE_TAVAN = 560 * 1024;  // tests/unit/karsilama-slayt.test.js ile aynı
-const TOPLAM_TAVAN = 6.5 * 1024 * 1024;
+// İkisi de tests/unit/karsilama-slayt.test.js'teki tavanların KOPYASI; sayılar
+// tests/unit/karsilama-secici.test.js ile bağlı (kopya sessizce ayrışmıştı:
+// tavan 6,5 → 7,3 MB olurken bu dosya 6,5'te kalıp boşuna uyarıyordu).
+const KARE_TAVAN = 560 * 1024;
+const TOPLAM_TAVAN = 7.3 * 1024 * 1024;
 
 function ayristir(argv) {
   const o = { dosyalar: [], kalite: 0.85, kuru: false };

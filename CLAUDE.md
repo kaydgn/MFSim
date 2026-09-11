@@ -68,6 +68,14 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `tools/karsilama-webp.js` — slayta **yeni kare ekleme**: JPEG/PNG → webp + liste.
   Numara devam eder, **silinen karenin numarası boş kalır** — 28 dosyayı yeniden
   adlandırmak kullanıcının ekranda öğrendiği numaraları geçersiz kılardı.
+- `tools/karsilama-bul.js` + `tools/karsilama-aday-secici.{js,html}` — karşılama
+  için **aday kare tarayıcısı** (Wikimedia Commons) ve adayların seçim sayfası.
+  Commons kullanılıyor çünkü ölçüyü ve künyeyi makine okunur veriyor, yani
+  çözünürlük süzgeci İNDİRMEDEN önce uygulanabiliyor. **Lisans bir kapı değil
+  künyedir** (kullanıcı kararı, 2026-09-11) — karta yazılır, eleme yapmaz.
+  **Boyut tahmin edilmez, ölçülür**: üreteç her adayı klasöre girecek kalitede
+  webp'ye çevirip gerçek baytı yazar. İndirilenler ve üretilen sayfa git'e
+  dâhil DEĞİL; kaynak üçlüsü (tarayıcı + üreteç + şablon) git'te.
 - `docs/gates-reports/` — **Gates raporlarının ham PDF ARŞİVİ + künye indeksi**
   (`README.md`: hangi raporda ne var, sayfa haritası, hangileri alıntı). Bir rapor
   bir kez konur, sonraki oturumlar yeniden yüklemeden okur. Build/Pages'e girmez
@@ -436,6 +444,8 @@ npm run build:all           # üçü birden (monolit + görüntüleyici + CAN Ç
 npm run shot -- --help      # ekran görüntüsü — İSTEĞE BAĞLI, yalnız kullanıcı isteyince
 npm run karsilama:secici    # karşılama kare seçicisi (Artifact olarak yayınlanır)
 npm run karsilama:webp -- <dosya...>   # yeni kare: JPEG/PNG → webp + listeye yaz
+npm run karsilama:bul                  # Commons'tan aday kare tara + indir
+npm run karsilama:aday-secici -- --adaylar <dizin>   # aday seçim sayfasını üret
 npm run test:e2e            # E2E testleri (Chromium gerekli)
 npm run test:all            # birim + E2E
 ```
