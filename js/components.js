@@ -661,7 +661,11 @@ var componentDefs = {
     // Kayış (amber) + gerilme rampası (soğuk → sıcak) + devir ibresi: kartın
     // üç işi. Kayış Yolu sembolü serpantin, bu sembol ÖLÇÜM.
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M14 74 L34 52 L54 60 L86 26" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="34" cy="52" r="5.5" fill="var(--accent-primary, #3b82f6)"/><circle cx="54" cy="60" r="5.5" fill="var(--accent-primary, #3b82f6)"/><rect x="14" y="84" width="72" height="8" rx="4" fill="none" stroke="var(--text-muted, #888)" stroke-width="3"/><rect x="16" y="86" width="30" height="4" rx="2" fill="var(--accent-danger, #ef4444)"/><circle cx="86" cy="26" r="6" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/></svg>',
-    inputs: 0, outputs: 0, isFeadRun: true, maxInstances: 1
+    // ÇOK KART SERBEST. `maxInstances: 1` kalktı (2026-09-11): katmanlar kart
+    // başına seçilebilir olunca ikinci bir kart artık aynı resmin kopyası
+    // değil — rölantideki gerilmeleri bir kartta, 2000 dev/dk'dakileri
+    // ötekinde yan yana görmek bu kartın asıl işi.
+    inputs: 0, outputs: 0, isFeadRun: true
     // Ölçü BURADA YOK: VE_FEAD_RUN_W/H → aşağıdaki döngü.
   },
   // ── KAYIŞ TABLOSU — kasnakların TEK veri giriş yüzeyi ─────────────────────

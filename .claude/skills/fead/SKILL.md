@@ -186,7 +186,31 @@ olurdu.
     değil. Kapılar: `cp-fead.test.js` / `fead-wizard.test.js` (kurucular
     mekanizmadan geçiyor mu) + `fead-tablo.spec.js` → *"CTRL+Z"*; mekanizmanın
     kendisi `state.test.js`'te ve kuralı kökteki `CLAUDE.md`'de.
-15. **Uygunluk kapıları TEK ÇAĞRIDAN** (`js/fead-checks.js` · `veFeadChecks`):
+15. **KART NE ÇİZECEĞİNE KENDİ KARAR VERİR** (`VE_FEAD_KATMANLAR` ·
+    `node.data.kat`). Çizicinin katmanları zaten vardı; eksik olan seçimin
+    SAHİBİYDİ — bayraklar kart kurucusunda sabitti, yani ikinci bir kart
+    açmak aynı resmi ikinci kez çizmekti. Seçim artık düğümün alanında ve
+    kart başına ayrı; iki Kayış Yolu kartı yan yana farklı katmanlarla
+    durabilir (`fead-run`ın `maxInstances`ı bu yüzden kalktı).
+    **LİSTE TEK KAYNAK**: kutucuk, varsayılan ve çiziciye giden seçenek adı
+    aynı satırdan gelir — ikinci bir liste, panelde görünüp çizimde hiçbir şey
+    yapmayan bir katman demekti ve bu SESSİZ olurdu.
+    **EKSİK ANAHTAR VARSAYILANA DÜŞER**, kapalıya değil: eski kayıtta `kat`
+    hiç yok ve o kart bugünkü görünümünü aynen korumalı. "Varsayılan" işlemi
+    de alanı SİLER, sıfırla doldurmaz (dolduran hâl bugünün varsayılanını
+    dondurup yarınkini kaçırırdı).
+    **PANELİN AÇIK OLMASI MODELDE DEĞİL** (`VE_FEAD_KAT_ACIK`): görünüm
+    durumu kaydedilmez ve geri-al yığınına yazılmaz — ama kart her değişimde
+    yeniden kurulduğu için bir yerde durmak ZORUNDA, yoksa ilk tıklamada
+    panel kapanır ve ikinci kutucuk işaretlenemez.
+    **KOL KONUMU: geometri kartı KENDİ seçimini çizer, çalışma kartı
+    devralır.** İkisi de `veFeadPosModeShared`ten okuyordu; tek kart varken
+    doğruydu, ikinci bir Kayış Yolu kartı ise kendi seçicisini yazıp BİRİNCİ
+    kartın konumunu çiziyordu.
+    Görünüm CSS'te (`css/styles.css` → `.ve-fead-kat*`), kural 14'ün aynı
+    gerekçesiyle. Kapılar: `tests/unit/fead-katman.test.js` +
+    `tests/e2e/fead-katman.spec.js`.
+16. **Uygunluk kapıları TEK ÇAĞRIDAN** (`js/fead-checks.js` · `veFeadChecks`):
     panel canlı hesaplar, rapor ise çözüm anında yazılan `R.checks`'i OKUR —
     yeniden hesaplasaydı çözümden sonra değiştirilen bir devir sınırı belgeye
     sızardı. Üç kural: merkez mesafesi kuralı **iki kasnaklı** V-kayış
@@ -194,7 +218,7 @@ olurdu.
     yazılır); çevrim oranı **pitch çapından** gelir (defterin dış çaplı ve elle
     yazılmış oranları %2,2 ve %27,8 sapıyor); eksik veri `'wait'`'tir ve
     **uygun sayılmaz**. Kapı: `tests/unit/fead-checks.test.js`.
-16. **Katalog bir KISIT değil bir ÖNERİ** — kayış, gergi, motor ve aksesuar
+17. **Katalog bir KISIT değil bir ÖNERİ** — kayış, gergi, motor ve aksesuar
     kütüphanelerinin dördünde de aynı kural. Elle girilen değer katalogtan
     üstündür; "elle" demek için değerin katalogtan FARKLI olması gerekir
     (yalnız "dolu mu" bakan bir tespit, katalogun kendi yazdığı alanları

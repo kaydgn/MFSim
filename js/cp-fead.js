@@ -2535,7 +2535,14 @@ function veFeadLayoutSVG(build, W, H, opts){
   // taşırıyor ve kayış yolunun üstüne biniyor — ÖLÇÜLDÜ: "Alternatör (155 A)"
   // çerçeveyi 10,4 px aşıyor, dört etiket kayışla çakışıyordu. Rapor kısa kodu
   // geçiyor; kod ↔ ad künyesi aynı sayfada duruyor.
+  // ADLAR KAPATILABİLİR. Kapalıyken `gorAd` boş döner ve bu TEK yerden üç iş
+  // birden hallolur: kenar payı hesabı ad için yer ayırmaz, yerleştirici
+  // ada kutu açmaz (o alan sarım/gerilme etiketlerine kalır) ve metin hiç
+  // basılmaz. Üçünü ayrı ayrı kapatmak, birinin unutulduğu hâlde "ad yok ama
+  // yeri duruyor" gibi sessiz bir sonuç verirdi.
+  var adVar = (opts.nameLabels !== false);
   function gorAd(k){
+    if(!adVar) return '';
     var a = opts.names && opts.names[k];
     var ad = (a == null || a === '') ? geom.names[k] : String(a);
     return opts.shortNames ? veFeadShortName(ad) : ad;
@@ -2717,6 +2724,7 @@ function veFeadLayoutSVG(build, W, H, opts){
       });
     // Gerilme sayıları da aynı tierde: ad ile sayı birbirini bilmiyordu.
     _spanEt.forEach(function(e){ yumusak.push(e); });
+    if(!adVar) return;                       // ad yoksa yerleştirilecek etiket de yok
     ps.forEach(function(p, k){
       var X = offX + (p.c[0]-minX)*s, Y = offY + (maxY-p.c[1])*s, R = p.rPitch*s;
       var w = etW(gorAd(k), 9), h = 10;
@@ -3039,9 +3047,11 @@ function veFeadLayoutSVG(build, W, H, opts){
           + ' Z" fill="' + col + '" opacity="0.75"/>';
     }
 
-    var et = _etiket[k] || { x: X, y: Y - R - 4, an: 'middle' };
-    svg += '<text data-ve="name" x="' + f(et.x) + '" y="' + f(et.y) + '" text-anchor="' + et.an
-        + '" font-size="9" fill="var(--text-muted)">' + _feadEsc(gorAd(k)) + '</text>';
+    if(adVar){
+      var et = _etiket[k] || { x: X, y: Y - R - 4, an: 'middle' };
+      svg += '<text data-ve="name" x="' + f(et.x) + '" y="' + f(et.y) + '" text-anchor="' + et.an
+          + '" font-size="9" fill="var(--text-muted)">' + _feadEsc(gorAd(k)) + '</text>';
+    }
     // SARIM AÇISI ŞEMADA İKİNCİ KEZ YAZILIR. Kanvasta bunun karşılığı var:
     // orada tablo YOK, kart tek başına duruyor. Raporda aynı altı sayı bir
     // sonraki sayfada hizalı ve iki ondalıkla basılıyor; şemada ise kayış
@@ -3221,7 +3231,14 @@ function veFeadLayoutCardHTML(node){
   // İkisi de buradan ve aynı `veFeadLayoutSVG`'den geçer — ayrı bir çizim
   // kodu yok, yalnız opts farklı.
   var calisma = !!def.isFeadRun;
-  var mode = veFeadPosModeShared(node);
+  var kat = veFeadKatmanlar(node);
+  // KOL KONUMU: geometri kartı KENDİ seçimini çizer, çalışma kartı ondan
+  // devralır. Eskiden ikisi de `Shared`ten okuyordu ve tek kart varken bu
+  // doğruydu — ama ikinci bir Kayış Yolu kartı açıldığında o kart kendi
+  // seçiciyi yazıyor, çizimi ise BİRİNCİ kartın konumundan yapıyordu.
+  // Sessizdi: iki kart aynı resmi gösterirken seçicilerinde farklı konum
+  // yazıyordu. Katmanlarla birlikte ikinci kart artık olağan bir kullanım.
+  var mode = calisma ? veFeadPosModeShared(node) : veFeadPosMode(node);
 
   // ── ANİMASYON: seçili devir → kinematik → çiziciye ────────────────────────
   // Devir seçimi kartta duruyor (node.data.animRpm) ve PANEL DE aynı alanı
@@ -3303,7 +3320,15 @@ function veFeadLayoutCardHTML(node){
   var svg = veFeadLayoutSVG(build, Math.max(120, W), Math.max(90, cizimH),
                             { inline: true, posMode: mode, nodeId: node.id,
                               compassPos: node.data && node.data.compassPos,
-                              shortNames: true, wrapLabels: !calisma, tension: tenMap,
+                              // KATMANLAR KARTIN KENDİSİNDEN. Bu satırlar bir
+                              // zamanlar sabitti (`shortNames: true`,
+                              // `wrapLabels: !calisma`) ve ikinci bir kart
+                              // açmak aynı resmi ikinci kez çizmek demekti.
+                              nameLabels: kat.ad, shortNames: kat.adKisa,
+                              wrapLabels: kat.sarim, spanLabels: kat.spanEt,
+                              arrows: kat.ok, compass: kat.gul, pivot: kat.kol,
+                              ghostLabels: kat.hayaletEt,
+                              tension: tenMap,
                               vib: vib, scn: scn,
                               animate: kin ? { dispMmS: scn ? 0 : kin.dispMmS,
                                                slow: kin.slow,
@@ -3331,7 +3356,9 @@ function veFeadLayoutCardHTML(node){
       + '</div>';
   }
   h += '</div>';
-  h += veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes, calisma);
+  h += veFeadKatmanPanelHTML(node, kat, calisma, !!tenMap);
+  h += veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes, calisma,
+                       veFeadKatmanDugmeHTML(node, kat));
   if(vibSel !== 'off') h += veFeadVibStrip(node, build, vib, vibSel);
   h += veFeadLayoutCardStrip(build, mode);
   return h;
@@ -3348,7 +3375,188 @@ function veFeadLayoutCardHTML(node){
 // `calisma` true ise DEVİR + TİTREŞİM, false ise yalnız KOL KONUMU seçicisi
 // çizilir. Üçü tek şeritte dururken her biri şeridin üçte birine sıkışıyordu;
 // bölünce her seçici kendi kartında tam genişlik alıyor.
-function veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes, calisma){
+// ═══════════════════════════════════════════════════════════════════════════
+//  KATMANLAR — KART NE ÇİZECEĞİNE KENDİ KARAR VERİR
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı isteği (2026-09-11): *"Kanvaslar üzerinde görülen şeyler şu anda
+// sabit duruyor. Kanvasların üstüne görülen şeylerin kişiselleştirilmesini
+// istiyorum… Böylelikle kullanıcı istediği kanvasları oluşturur."*
+//
+// Çizicinin (`veFeadLayoutSVG`) bu katmanların HEPSİ zaten vardı; eksik olan
+// şey seçim değil, seçimin SAHİBİYDİ: bayraklar kartı kuran yerde sabit
+// yazılıydı (`shortNames: true`, `wrapLabels: !calisma`, gül/kol/ok hep açık).
+// Yani ikinci bir kart açmak AYNI resmi ikinci kez çizmekti.
+//
+// Seçim artık DÜĞÜMÜN ALANINDA (`node.data.kat`) ve kart başına ayrı. İki
+// Kayış Yolu kartı yan yana durabilir: biri adlarla ve sarım açılarıyla, öteki
+// çıplak yolla. Kayıtta da öyle durur, geri-al da adım adım söker.
+//
+// LİSTE TEK KAYNAK: kutucuklar, varsayılanlar ve çiziciye giden seçenek adı
+// aynı satırdan gelir. İkinci bir liste tutmak, yeni bir katmanın panelde
+// görünüp çizimde hiçbir şey yapmaması demekti — ve bu SESSİZ olurdu.
+//
+//   k          düğüm alanındaki anahtar
+//   svg        veFeadLayoutSVG seçeneği (çizicideki adı)
+//   sema       Kayış Yolu kartının varsayılanı
+//   calisma    Çalışma Noktası kartının varsayılanı
+var VE_FEAD_KATMANLAR = [
+  { k:'ad',        svg:'nameLabels',  t:'Kasnak adları',
+    ip:'Çemberin yanına ad yazılır', sema:1, calisma:1 },
+  { k:'adKisa',    svg:'shortNames',  t:'Adı kısalt',
+    ip:'Sondaki parantez atılır: "Alternatör (155 A)" → "Alternatör"',
+    sema:1, calisma:1, bagli:'ad' },
+  { k:'sarim',     svg:'wrapLabels',  t:'Sarım açıları',
+    ip:'Her kasnağın altına derece', sema:1, calisma:0 },
+  { k:'spanEt',    svg:'spanLabels',  t:'Açıklık gerilmeleri',
+    ip:'Her açıklığın ortasına newton — devir seçiliyken', sema:0, calisma:1 },
+  { k:'ok',        svg:'arrows',      t:'Dönüş okları',
+    ip:'Kasnağın döndüğü yön', sema:1, calisma:1 },
+  { k:'gul',       svg:'compass',     t:'Yön gülü',
+    ip:'Sağ üstteki +X/+Y pusulası — sürüklenebilir', sema:1, calisma:1 },
+  { k:'kol',       svg:'pivot',       t:'Gergi kolu',
+    ip:'Pivot noktası ve kol çizgisi', sema:1, calisma:1 },
+  { k:'hayaletEt', svg:'ghostLabels', t:'Hayalet konum adları',
+    ip:'"TÜMÜ" kipinde soluk yolların adı', sema:1, calisma:0 }
+];
+
+// AÇIK KATMAN PANELİ MODELDE DEĞİL. Panelin açık olması bir GÖRÜNÜM durumu:
+// kaydedilmemeli, geri-al yığınına yazılmamalı, ikinci bir oturuma
+// taşınmamalı. Ama kart her katman değişiminde yeniden kurulduğu için bir
+// yerde durması ŞART — yoksa her tıklamada panel kapanır ve ikinci kutucuk
+// işaretlenemez. Kayış Tablosu'nun seçili satır işaretiyle aynı sınıf
+// (`veFeadMarkSelectedRow`): görünüm durumu modülde, model alanında değil.
+var VE_FEAD_KAT_ACIK = null;
+
+function veFeadKatmanVarsayilan(calisma){
+  var out = {};
+  VE_FEAD_KATMANLAR.forEach(function(K){ out[K.k] = !!(calisma ? K.calisma : K.sema); });
+  return out;
+}
+
+// Düğümün ÇÖZÜLMÜŞ katman kümesi: varsayılan + kullanıcının yazdıkları.
+//
+// EKSİK ANAHTAR VARSAYILANA DÜŞER, kapalıya değil. Eski bir kayıtta `kat` hiç
+// yok — o kart bugünkü görünümünü aynen korumalı; "yazılmamış = kapalı"
+// deseydik kaydedilmiş her proje çıplak bir şemayla açılırdı.
+function veFeadKatmanlar(node){
+  var def = _feadDefOf(node);
+  var out = veFeadKatmanVarsayilan(!!def.isFeadRun);
+  var v = node && node.data && node.data.kat;
+  if(v && typeof v === 'object')
+    VE_FEAD_KATMANLAR.forEach(function(K){
+      if(v[K.k] !== undefined) out[K.k] = !!v[K.k];
+    });
+  // BAĞLI KATMAN: adlar kapalıyken "adı kısalt" bir şey ifade etmiyor.
+  VE_FEAD_KATMANLAR.forEach(function(K){ if(K.bagli && !out[K.bagli]) out[K.k] = false; });
+  return out;
+}
+
+function veFeadKatmanSet(nodeId, k, on){
+  if(typeof nodes === 'undefined') return false;
+  var node = nodes.find(function(n){ return n.id === nodeId; });
+  if(!node) return false;
+  if(!VE_FEAD_KATMANLAR.some(function(K){ return K.k === k; })) return false;
+  if(typeof saveState === 'function') saveState();
+  if(!node.data) node.data = {};
+  if(!node.data.kat || typeof node.data.kat !== 'object') node.data.kat = {};
+  node.data.kat[k] = !!on;
+  if(typeof veFeadRefreshCards === 'function') veFeadRefreshCards();
+  return true;
+}
+
+// ÜÇ İŞLEM. Kutucukları tek tek gezmek sekiz tıklama demek; asıl istenen
+// çoğu zaman "hepsini göster", "çıplak yol" ya da "boş ver, eski hâline dön".
+// VARSAYILAN alanı SİLER, sıfırla doldurmaz: silinmiş bir alan varsayılanı
+// izlemeye devam eder, sıfırlarla doldurulmuş bir alan bugünün varsayılanını
+// dondurup yarınki değişikliği kaçırırdı.
+function veFeadKatmanIslem(nodeId, islem){
+  if(typeof nodes === 'undefined') return false;
+  var node = nodes.find(function(n){ return n.id === nodeId; });
+  if(!node) return false;
+  if(typeof saveState === 'function') saveState();
+  if(!node.data) node.data = {};
+  if(islem === 'varsayilan'){
+    delete node.data.kat;
+  } else if(islem === 'tumu' || islem === 'hicbiri'){
+    var on = (islem === 'tumu');
+    node.data.kat = {};
+    VE_FEAD_KATMANLAR.forEach(function(K){ node.data.kat[K.k] = on; });
+  } else return false;
+  if(typeof veFeadRefreshCards === 'function') veFeadRefreshCards();
+  return true;
+}
+
+// Paneli aç / kapat. Aynı karta ikinci tıklama kapatır; başka bir kart
+// açıldığında öteki kapanır (iki panel aynı anda açıkken hangi kartın
+// ayarına baktığın okunmuyor).
+function veFeadKatmanToggle(nodeId){
+  VE_FEAD_KAT_ACIK = (VE_FEAD_KAT_ACIK === nodeId) ? null : (nodeId || null);
+  if(typeof veFeadRefreshCards === 'function') veFeadRefreshCards();
+  return VE_FEAD_KAT_ACIK;
+}
+
+// Şeritteki tetikleyici — açık katman sayısını da yazar ("6/8"), yani panel
+// açılmadan "bu kart neyi gösteriyor" sorusuna kaba bir cevap var.
+function veFeadKatmanDugmeHTML(node, kat){
+  var acik = 0;
+  VE_FEAD_KATMANLAR.forEach(function(K){ if(kat[K.k]) acik++; });
+  return '<button type="button" class="ve-fead-kat-dugme'
+    + (VE_FEAD_KAT_ACIK === node.id ? ' is-acik' : '') + '"'
+    + ' onmousedown="event.stopPropagation();"'
+    + ' onclick="veFeadKatmanToggle(\'' + _feadEsc(node.id) + '\')"'
+    + ' title="Bu kartta hangi katmanların çizileceğini seç">'
+    + VE_FEAD_KAT_ICON + '<span class="ad">Katmanlar</span>'
+    + '<span class="sayi">' + acik + '/' + VE_FEAD_KATMANLAR.length + '</span></button>';
+}
+
+// KATMAN SİMGESİ — üst üste iki kare (çizim, yazı karakteri DEĞİL: eksik bir
+// glif afordansı yok eder, Kayış Tablosu'nun ad düğmesindeki gerekçenin aynısı).
+var VE_FEAD_KAT_ICON =
+  '<svg class="ac" width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"'
+  + ' fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round">'
+  + '<path d="M6 1.4 10.4 4 6 6.6 1.6 4Z"/><path d="M1.6 7.4 6 10 10.4 7.4"/></svg>';
+
+// Panelin kendisi. GÖRÜNÜM CSS'TE (`css/styles.css` → `.ve-fead-kat*`): bir
+// kutucuk listesinin işi durum göstermek (fare üstünde, işaretli, odakta) ve
+// satır içi stil bunların HİÇBİRİNİ yazamaz — Kayış Tablosu'nda ölçülmüş kural.
+function veFeadKatmanPanelHTML(node, kat, calisma, tenVar){
+  if(VE_FEAD_KAT_ACIK !== node.id) return '';
+  var ad = (node.customName || _feadDefOf(node).name || 'Kart');
+  var h = '<div class="ve-fead-kat" onmousedown="event.stopPropagation();"'
+    + ' ondblclick="event.stopPropagation();">'
+    + '<div class="ve-fead-kat-bas"><b>Katmanlar</b>'
+    + '<span class="kart">' + _feadEsc(ad) + '</span>'
+    + '<button type="button" class="ve-fead-kat-kapat" onclick="veFeadKatmanToggle(null)"'
+    + ' title="Paneli kapat">✕</button></div>'
+    + '<div class="ve-fead-kat-islem">';
+  [['tumu','Tümü'], ['hicbiri','Hiçbiri'], ['varsayilan','Varsayılan']].forEach(function(o){
+    h += '<button type="button" onclick="veFeadKatmanIslem(\'' + _feadEsc(node.id)
+      + '\',\'' + o[0] + '\')">' + o[1] + '</button>';
+  });
+  h += '</div><div class="ve-fead-kat-liste">';
+  VE_FEAD_KATMANLAR.forEach(function(K){
+    // BAĞLI KATMAN kapalı gösterilmez, PASİF gösterilir: kaybolan bir satır
+    // "burada bir ayar vardı" bilgisini de götürür.
+    var pasif = !!(K.bagli && !kat[K.bagli]);
+    // Bir katman açık ama o an ÇİZİLMİYORSA sebebi yanında yazılır; sessizce
+    // hiçbir şey yapmayan bir kutucuk, kullanıcıya kendi seçimini sorgulatır.
+    var uyari = (K.k === 'spanEt' && kat[K.k] && !tenVar) ? 'devir seçili değil'
+              : (K.k === 'hayaletEt' && kat[K.k] && !calisma) ? '' : '';
+    h += '<label class="ve-fead-kat-sat' + (pasif ? ' pasif' : '') + '"'
+      + ' title="' + _feadEsc(K.ip) + '">'
+      + '<input type="checkbox"' + (kat[K.k] ? ' checked' : '') + (pasif ? ' disabled' : '')
+      + ' onchange="veFeadKatmanSet(\'' + _feadEsc(node.id) + '\',\'' + K.k + '\',this.checked)">'
+      + '<span class="ad">' + _feadEsc(K.t) + '</span>'
+      + (uyari ? '<span class="uyari">' + _feadEsc(uyari) + '</span>' : '')
+      + '</label>';
+  });
+  h += '</div><p class="ve-fead-kat-not">Bu seçim <b>yalnız bu karta</b> ait. '
+    + 'Aynı modelden ikinci bir kart açıp başka katmanlar seçebilirsin.</p></div>';
+  return h;
+}
+
+function veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes, calisma, katDugme){
   var rows = (build && build.ok) ? veFeadPositionRows(build) : [];
   var cozulen = {};
   rows.forEach(function(r){ if(r.ok) cozulen[r.key] = r; });
@@ -3414,7 +3622,8 @@ function veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes, calisma){
     + '<span style="' + etiket + '">Kol konumu</span>'
     + '<select onmousedown="event.stopPropagation();"'
     + ' onchange="veFeadSetChoice(\'' + node.id + '\',\'posMode\',this.value)"'
-    + ' style="' + stil + '">' + opts + '</select></div>';
+    + ' style="' + stil + '">' + opts + '</select>'
+    + (katDugme || '') + '</div>';
   return kabuk
     + '<span style="' + etiket + '">Devir</span>'
     + '<select onmousedown="event.stopPropagation();"'
@@ -3423,7 +3632,8 @@ function veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes, calisma){
     + '<span style="' + etiket + '" title="Açıklık çırpması ya da burulma mod şekli">Titr.</span>'
     + '<select onmousedown="event.stopPropagation();"'
     + ' onchange="veFeadSetChoice(\'' + node.id + '\',\'vibMode\',this.value)"'
-    + ' style="' + stil + ' flex:0.95;">' + vOpt + '</select></div>';
+    + ' style="' + stil + ' flex:0.95;">' + vOpt + '</select>'
+    + (katDugme || '') + '</div>';
 }
 
 // ── KAZANÇ ŞERİDİ — yalnız titreşim açıkken ────────────────────────────────
@@ -5902,6 +6112,14 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadLayoutSVG: veFeadLayoutSVG,
     veFeadShortName: veFeadShortName, veFeadTensionColor: veFeadTensionColor,
     veFeadPosModeShared: veFeadPosModeShared, veFeadPosModeNode: veFeadPosModeNode,
+    VE_FEAD_KATMANLAR: VE_FEAD_KATMANLAR,
+    veFeadKatmanVarsayilan: veFeadKatmanVarsayilan,
+    veFeadKatmanlar: veFeadKatmanlar,
+    veFeadKatmanSet: veFeadKatmanSet,
+    veFeadKatmanIslem: veFeadKatmanIslem,
+    veFeadKatmanToggle: veFeadKatmanToggle,
+    veFeadKatmanPanelHTML: veFeadKatmanPanelHTML,
+    veFeadKatmanDugmeHTML: veFeadKatmanDugmeHTML,
     veFeadApplyBadge: veFeadApplyBadge,
     veFeadApplyBeltModeBadge: veFeadApplyBeltModeBadge,
 
