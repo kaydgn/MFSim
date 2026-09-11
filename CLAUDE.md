@@ -575,6 +575,32 @@ npm test          # tüm birim testleri
 2. UI kabuğuna dokunduysan üç ürün spec'ini de yerelde koştur (aşağıda).
 3. Commit → `git push -u origin <dal>` → PR aç → **MERGE ET.**
 4. Merge'den sonra koşuya bir kez bak. Kırmızıysa ileri doğru düzelt.
+5. **ARTIFACT HAZIRLA** — aşağıdaki kural.
+
+### HER DEĞİŞİKLİKTEN SONRA ARTIFACT
+
+Kullanıcı talimatı (2026-09-11): *"Her değişiklik sonrasında bir artifakt
+hazırlamanı istiyorum."* Sorma, bekleme — teslimin parçası.
+
+Sebebi bir süs değil bir kanal: kullanıcının ağı **GitHub'a da Pages'e de
+çıkamıyor** (bkz. "Güncel programı alayım"), yani PR gövdesini okuyamıyor.
+Sohbetteki özet de kaydırmada kayboluyor. Artifact, o turda NE DEĞİŞTİĞİNİN
+kalıcı ve paylaşılabilir tek kaydı.
+
+Sayfa **ne yapıldığını değil ne ÖLÇÜLDÜĞÜNÜ** taşır — bu deponun her yerindeki
+kural: hüküm + gerekçe + kapı. Asgarî içerik:
+
+| Ne | Nereden |
+|----|---------|
+| Bulunan her kusur: önce → sonra **sayısı** | turun ölçümleri |
+| Düzeltmenin tek satır gerekçesi | commit gövdesi |
+| Kapı testi ve **düşebildiğinin kanıtı** | düzeltme geri alınıp koşturularak |
+| Değişen dosyalar + satır sayısı | `git show --stat` |
+| Hata sanılıp kasıtlı çıkanlar | dokunulmayanlar da bir sonuçtur |
+
+Ölçüm YOKSA artifact da yoktur: "iyileştirdim" diyen ama önce/sonra sayısı
+olmayan bir sayfa, bu dosyanın 6.052 satıra çıkmasına yol açan biçim
+taklidinin ta kendisidir.
 
 ### CI BEKLEMEK YASAK — ölçüldü, sıfır bilgi getiriyor
 
