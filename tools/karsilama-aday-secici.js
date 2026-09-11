@@ -37,8 +37,8 @@ const CHROMIUM = process.env.MFSIM_CHROMIUM || undefined;
 const CAPA_VERI = '/*__VERI__*/[]';
 const CAPA_DURUM = '/*__DURUM__*/{ klasorKb: 0, kareSayisi: 0, tavanKb: 0, kareTavanKb: 0 }';
 // İkisi de tests/unit/karsilama-slayt.test.js'teki tavanlarla aynı olmak zorunda.
-const TAVAN_KB = 7.3 * 1024;
-const KARE_TAVAN_KB = 560;
+const TAVAN_KB = 14 * 1024;
+const KARE_TAVAN_KB = 1024;
 
 function ayristir(argv) {
   const o = {

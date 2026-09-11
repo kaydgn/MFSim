@@ -89,6 +89,19 @@ describe('künye alanları', () => {
     expect(kirik).toEqual([]);
   });
 
+  test('kaynak bloğu varsa ÜÇ alanı birden dolu (yarım künye yok)', () => {
+    // Dışarıdan gelen karelerde (Commons taraması) lisans + sahip + Commons
+    // dosya adı birlikte anlam taşıyor: biri eksikse "bu kare nereden geldi"
+    // sorusu cevapsız kalır ve eksikliği hiçbir şey söylemez. Kullanıcının
+    // kendi verdiği karelerde blok HİÇ olmaz — o normaldir, yarımı değil.
+    const yarim = kunyeNolari.filter((n) => {
+      const k = KUNYE.kareler[n].kaynak;
+      if (!k) return false;
+      return !['lisans', 'sahip', 'commons'].every((a) => String(k[a] || '').trim());
+    });
+    expect(yarim).toEqual([]);
+  });
+
   test('es karşılıklı — A B diyorsa B de A demeli', () => {
     const tekYonlu = kunyeNolari.filter((n) => {
       const es = KUNYE.kareler[n].es;

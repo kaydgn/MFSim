@@ -36,12 +36,22 @@ const LISTE = require('../../js/karsilama-gorseller.js').VE_KARSILAMA_GORSELLER;
 // alındı: 1280 px'e indirmek görünür biçimde bulanıklaştırıyordu ve kullanıcı
 // boyut için kaliteden ödün vermeme kararını verdi (CLAUDE.md › teslim kuralı:
 // dosya gzip'lenerek gönderiliyor). Tavanlar buna göre.
-const KARE_TAVAN = 560 * 1024;          // kare başına (ölçülen en büyük: 519 KB)
-// Klasör toplamı. 6,5 MB'dı (24 kare / 5,80 MB ölçümüne %12 pay). 2026-09-09'da
-// kullanıcı üç kareyi kaldırıp yedi kare ekledi → 28 kare / 6,55 MB; tavan aynı
-// payla yeniden kuruldu. Tavan bir BÜTÇE değil KAÇAK ALARMI: asıl kapı kare
-// başına 560 KB, bu satır "klasöre farkında olmadan bir şey düştü" içindir.
-const TOPLAM_TAVAN = 7.3 * 1024 * 1024; // klasör toplamı (ölçülen: 6,55 MB)
+// Kare başına tavan. 560 KB'dı (ölçülen en büyük kare 519 KB) ve 2026-09-11'de
+// kullanıcı bilerek 586 KB'lık bir kareyi seçince kapı yanlış yere düştü:
+// "Ayrıca boyutu aşsın, neden bir limit koyduk?" Haklı — bu tavan bir BÜTÇE
+// değil KAZA ALARMI: kareler tek dosyaya base64 gömülüyor (×1,34), klasöre
+// farkında olmadan düşen 5 MB'lık bir fotoğraf indirilen programı sessizce
+// şişirir. Alarm o kazayı yakalayacak yere taşındı: 1920 px'lik bir webp'nin
+// ölçülen en kötü hâli 739 KB, yani 1 MB üstü artık yalnızca kaza olabilir.
+const KARE_TAVAN = 1024 * 1024;
+// Klasör toplamı — KAÇAK ALARMI, bütçe değil. 6,5 → 7,3 → 14 MB yolunu izledi
+// ve her adımda kullanıcının bilerek eklediği kareler yükseltti.
+//
+// ASIL KISIT NEREDE: teslim `gzip -9` ile yapılıyor (CLAUDE.md › teslim kuralı)
+// ve sınır SendUserFile'ın 30 MiB'ı. 45 kare / 12,41 MB klasörde ÖLÇÜLDÜ:
+// tek dosya 26,57 MB ham, gzip'li 15,60 MiB — sınırın yarısı. Yani bu satır
+// teslimi korumuyor, "klasöre farkında olmadan bir şey düştü" diyor.
+const TOPLAM_TAVAN = 14 * 1024 * 1024;  // klasör toplamı (ölçülen: 12,41 MB)
 
 function setupDOM() {
   document.body.innerHTML =

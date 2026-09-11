@@ -1,45 +1,332 @@
 {
-  "_not": [
-    "Karşılama slaytı karelerinin künyesi — SEÇİCİ SAYFA İÇİN, program bunu OKUMAZ.",
-    "Programın okuduğu tek liste js/karsilama-gorseller.js; burası o karelerin ne",
-    "olduğunu insan diliyle tutar, çünkü dosya adı ('karsilama-17.webp') hangi",
-    "resmin hangisi olduğunu söylemiyor — bu kayıt tam olarak o soruyu çözmek için var.",
-    "",
-    "grup: yelken | gemi | toren  → seçici sayfada bölüm başlığı.",
-    "es: benzer bulunan karenin numarası ('' = eşi yok). Bir HÜKÜM değil, silme",
-    "kararına yardım eden bir ipucu; gözle bakılarak yazıldı.",
-    "",
-    "Klasörle iki yönlü bağlı: tests/unit/karsilama-secici.test.js künyesiz kare",
-    "ve karşılığı olmayan künye bırakmaz."
-  ],
-  "kareler": {
-    "01": { "grup": "toren",  "es": "",   "baslik": "Sancak teslim töreni — beyaz üniforma, kırmızı sancak" },
-    "02": { "grup": "yelken", "es": "",   "baslik": "Boğaz’da yarış — spinnaker açık, güverteden" },
-    "04": { "grup": "toren",  "es": "",   "baslik": "Kışla avlusunda sonbahar töreni — üstten" },
-    "05": { "grup": "yelken", "es": "08", "baslik": "Tek siyah yelkenli — Boğaz, köprü telleri" },
-    "06": { "grup": "gemi",   "es": "",   "baslik": "Osmangazi Köprüsü önünde bot korteji" },
-    "07": { "grup": "yelken", "es": "",   "baslik": "Havadan yelkenli — TUR 1776, balon yelken" },
-    "08": { "grup": "yelken", "es": "05", "baslik": "İki yelkenli — şamandıra dönüşü, havadan" },
-    "09": { "grup": "yelken", "es": "",   "baslik": "Çırağan önünde “Deniz Harp Okulu” yelkenlisi" },
-    "10": { "grup": "toren",  "es": "",   "baslik": "Cumhuriyet Bayramı geçidi — sancaklar" },
-    "11": { "grup": "yelken", "es": "",   "baslik": "Yelken filosu — Boğaz, havadan geniş açı" },
-    "12": { "grup": "gemi",   "es": "13", "baslik": "Tersanede NL-125 ve savaş gemileri — havadan" },
-    "13": { "grup": "gemi",   "es": "12", "baslik": "NL-125 denizde — personel güvertede dizili" },
-    "14": { "grup": "toren",  "es": "",   "baslik": "Toplu hatıra fotoğrafı — tarihi bina önü" },
-    "16": { "grup": "toren",  "es": "17", "baslik": "Atatürk anıtına çelenk sunumu" },
-    "17": { "grup": "toren",  "es": "16", "baslik": "Anıta çelenk sunumu — meşale yanıyor" },
-    "18": { "grup": "toren",  "es": "",   "baslik": "Beyaz üniformalı tören — bayrak sancak" },
-    "19": { "grup": "gemi",   "es": "",   "baslik": "Gemide bayrak töreni" },
-    "20": { "grup": "toren",  "es": "24", "baslik": "Mezuniyet töreni stadyumu — geniş açı" },
-    "21": { "grup": "toren",  "es": "22", "baslik": "Mezuniyet geçidi — siyah üniforma" },
-    "22": { "grup": "toren",  "es": "21", "baslik": "Mezuniyet geçidi — lacivert üniforma" },
-    "24": { "grup": "toren",  "es": "20", "baslik": "Mezuniyet tören alanı — sancak takımı" },
-    "25": { "grup": "toren",  "es": "26", "baslik": "Zafer Bayramı geçidi — sancak takımı, vinçli tesis arkada" },
-    "26": { "grup": "toren",  "es": "25", "baslik": "Zafer Bayramı geçidi — bayraklarla süslü cadde" },
-    "27": { "grup": "toren",  "es": "",   "baslik": "Havadan kampüs — helikopter pisti, kıyı, tören kıtası" },
-    "28": { "grup": "gemi",   "es": "",   "baslik": "Limanda donanma gemileri ve kürek yarışı" },
-    "29": { "grup": "toren",  "es": "31", "baslik": "Mezuniyet töreni — sancak takımı, tören kıtası, dev ekran" },
-    "30": { "grup": "toren",  "es": "",   "baslik": "Mezuniyet — beyaz üniformalı sıralar arasında tören" },
-    "31": { "grup": "toren",  "es": "29", "baslik": "Mezuniyet töreni — protokol tribünü ve geçit" }
+ "_not": [
+  "Karşılama slaytı karelerinin künyesi — SEÇİCİ SAYFA İÇİN, program bunu OKUMAZ.",
+  "Programın okuduğu tek liste js/karsilama-gorseller.js; burası o karelerin ne",
+  "olduğunu insan diliyle tutar, çünkü dosya adı ('karsilama-17.webp') hangi",
+  "resmin hangisi olduğunu söylemiyor — bu kayıt tam olarak o soruyu çözmek için var.",
+  "",
+  "grup: yelken | gemi | toren  → seçici sayfada bölüm başlığı.",
+  "es: benzer bulunan karenin numarası ('' = eşi yok). Bir HÜKÜM değil, silme",
+  "kararına yardım eden bir ipucu; gözle bakılarak yazıldı.",
+  "",
+  "kaynak: YALNIZ dışarıdan gelen karelerde (Wikimedia Commons taraması) —",
+  "lisans, eserin sahibi ve Commons dosya adı. Kullanıcının kendi verdiği",
+  "karelerde bu alan YOK ve olmaması normaldir. Yarım doldurulmuş kaynak ise",
+  "hatadır: üç alanın üçü birden bulunur (kapı testte).",
+  "",
+  "Klasörle iki yönlü bağlı: tests/unit/karsilama-secici.test.js künyesiz kare",
+  "ve karşılığı olmayan künye bırakmaz."
+ ],
+ "kareler": {
+  "01": {
+   "grup": "toren",
+   "es": "",
+   "baslik": "Sancak teslim töreni — beyaz üniforma, kırmızı sancak"
+  },
+  "02": {
+   "grup": "yelken",
+   "es": "",
+   "baslik": "Boğaz’da yarış — spinnaker açık, güverteden"
+  },
+  "04": {
+   "grup": "toren",
+   "es": "",
+   "baslik": "Kışla avlusunda sonbahar töreni — üstten"
+  },
+  "05": {
+   "grup": "yelken",
+   "es": "08",
+   "baslik": "Tek siyah yelkenli — Boğaz, köprü telleri"
+  },
+  "06": {
+   "grup": "gemi",
+   "es": "",
+   "baslik": "Osmangazi Köprüsü önünde bot korteji"
+  },
+  "07": {
+   "grup": "yelken",
+   "es": "",
+   "baslik": "Havadan yelkenli — TUR 1776, balon yelken"
+  },
+  "08": {
+   "grup": "yelken",
+   "es": "05",
+   "baslik": "İki yelkenli — şamandıra dönüşü, havadan"
+  },
+  "09": {
+   "grup": "yelken",
+   "es": "",
+   "baslik": "Çırağan önünde “Deniz Harp Okulu” yelkenlisi"
+  },
+  "10": {
+   "grup": "toren",
+   "es": "",
+   "baslik": "Cumhuriyet Bayramı geçidi — sancaklar"
+  },
+  "11": {
+   "grup": "yelken",
+   "es": "",
+   "baslik": "Yelken filosu — Boğaz, havadan geniş açı"
+  },
+  "12": {
+   "grup": "gemi",
+   "es": "13",
+   "baslik": "Tersanede NL-125 ve savaş gemileri — havadan"
+  },
+  "13": {
+   "grup": "gemi",
+   "es": "12",
+   "baslik": "NL-125 denizde — personel güvertede dizili"
+  },
+  "14": {
+   "grup": "toren",
+   "es": "",
+   "baslik": "Toplu hatıra fotoğrafı — tarihi bina önü"
+  },
+  "16": {
+   "grup": "toren",
+   "es": "17",
+   "baslik": "Atatürk anıtına çelenk sunumu"
+  },
+  "17": {
+   "grup": "toren",
+   "es": "16",
+   "baslik": "Anıta çelenk sunumu — meşale yanıyor"
+  },
+  "18": {
+   "grup": "toren",
+   "es": "",
+   "baslik": "Beyaz üniformalı tören — bayrak sancak"
+  },
+  "19": {
+   "grup": "gemi",
+   "es": "",
+   "baslik": "Gemide bayrak töreni"
+  },
+  "20": {
+   "grup": "toren",
+   "es": "24",
+   "baslik": "Mezuniyet töreni stadyumu — geniş açı"
+  },
+  "21": {
+   "grup": "toren",
+   "es": "22",
+   "baslik": "Mezuniyet geçidi — siyah üniforma"
+  },
+  "22": {
+   "grup": "toren",
+   "es": "21",
+   "baslik": "Mezuniyet geçidi — lacivert üniforma"
+  },
+  "24": {
+   "grup": "toren",
+   "es": "20",
+   "baslik": "Mezuniyet tören alanı — sancak takımı"
+  },
+  "25": {
+   "grup": "toren",
+   "es": "26",
+   "baslik": "Zafer Bayramı geçidi — sancak takımı, vinçli tesis arkada"
+  },
+  "26": {
+   "grup": "toren",
+   "es": "25",
+   "baslik": "Zafer Bayramı geçidi — bayraklarla süslü cadde"
+  },
+  "27": {
+   "grup": "toren",
+   "es": "",
+   "baslik": "Havadan kampüs — helikopter pisti, kıyı, tören kıtası"
+  },
+  "28": {
+   "grup": "gemi",
+   "es": "",
+   "baslik": "Limanda donanma gemileri ve kürek yarışı"
+  },
+  "29": {
+   "grup": "toren",
+   "es": "31",
+   "baslik": "Mezuniyet töreni — sancak takımı, tören kıtası, dev ekran"
+  },
+  "30": {
+   "grup": "toren",
+   "es": "",
+   "baslik": "Mezuniyet — beyaz üniformalı sıralar arasında tören"
+  },
+  "31": {
+   "grup": "toren",
+   "es": "29",
+   "baslik": "Mezuniyet töreni — protokol tribünü ve geçit"
+  },
+  "32": {
+   "grup": "gemi",
+   "es": "42",
+   "baslik": "TCG Anadolu — havadan, sancak bordadan",
+   "kaynak": {
+    "lisans": "Public domain",
+    "sahip": "Mass Communication Specialist 2nd Class Jackson Adkins",
+    "commons": "Turkish Navy amphibious assault ship TCG Anadolu (L400) (starboard).jpg"
+   }
+  },
+  "33": {
+   "grup": "gemi",
+   "es": "",
+   "baslik": "Gün batımında limandan çıkan eğitim gemisi",
+   "kaynak": {
+    "lisans": "CC BY 2.0",
+    "sahip": "rais58",
+    "commons": "Turkish Navy training ship leaving Bizerte for Split.jpg"
+   }
+  },
+  "34": {
+   "grup": "gemi",
+   "es": "39",
+   "baslik": "Güvertede selam duran üç denizci, borda bordaya fırkateyn",
+   "kaynak": {
+    "lisans": "Public domain",
+    "sahip": "Official U.S. Navy Page from United States of America",
+    "commons": "USS Cole salutes the Turkish navy frigate TCG Salihreis. (14935676284).jpg"
+   }
+  },
+  "35": {
+   "grup": "gemi",
+   "es": "",
+   "baslik": "TCG Gaziantep (F-490) ABD muhribiyle birlikte seyirde",
+   "kaynak": {
+    "lisans": "Public domain",
+    "sahip": "Official U.S. Navy Page from United States of America MC3 J. Alexander Delgado/U.S. Navy",
+    "commons": "The Turkish G-Class frigate TCG Gaziantep is underway in formation USS Donald Cook (DDG 75). (27325766933).jpg"
+   }
+  },
+  "36": {
+   "grup": "gemi",
+   "es": "",
+   "baslik": "TCG Fatih (F-242) — baş direkte bayrak",
+   "kaynak": {
+    "lisans": "Public domain",
+    "sahip": "U.S. Department of Defense Current Photos",
+    "commons": "Turkish Navy frigate TCG Fatih (F-242), Augusta Bay, June 2, 2014.jpg"
+   }
+  },
+  "37": {
+   "grup": "gemi",
+   "es": "",
+   "baslik": "TCG Turgutreis (F-241) rıhtımda",
+   "kaynak": {
+    "lisans": "Public domain",
+    "sahip": "Mass Communication Specialist 1st Class David R. Krigbaum",
+    "commons": "Turkish navy frigate TCG Turgutreis (F 241).jpg"
+   }
+  },
+  "38": {
+   "grup": "gemi",
+   "es": "",
+   "baslik": "TCG Bartın (F-504) İzmir açıklarında, alacakaranlık",
+   "kaynak": {
+    "lisans": "CC BY-SA 3.0",
+    "sahip": "The original uploader was KIZILSUNGUR at Turkish Wikipedia .",
+    "commons": "Bartın (F-504) in İzmir 3.jpg"
+   }
+  },
+  "39": {
+   "grup": "gemi",
+   "es": "34",
+   "baslik": "Güverteden el sallayan personel, korvet yanda",
+   "kaynak": {
+    "lisans": "Public domain",
+    "sahip": "MC2 John Herman",
+    "commons": "U.S. Navy Cmdr. Russell Caldwell waves to the Turkish corvette TCG Heybeliada (F 511) from aboard the guided missile destroyer USS Ross (DDG 71) in the Mediterranean Sea during a passing exercise Sept 140902-N-IY142-159.jpg"
+   }
+  },
+  "40": {
+   "grup": "gemi",
+   "es": "",
+   "baslik": "TCG Kınalıada (F-514) limana giriyor",
+   "kaynak": {
+    "lisans": "CC BY 4.0",
+    "sahip": "https://www.mod.go.jp/msdf/index.html 海上自衛隊",
+    "commons": "Turkish Navy Corvette TCG Kınalıada (F-514) arriving at the JMSDF Kure Naval Base.jpg"
+   }
+  },
+  "41": {
+   "grup": "gemi",
+   "es": "",
+   "baslik": "Su yüzüne çıkan Preveze sınıfı denizaltı",
+   "kaynak": {
+    "lisans": "Public domain",
+    "sahip": "U.S. Navy photo by Chief Journalist Dave Fliesen",
+    "commons": "US Navy 050624-N-1464F-025 The Turkish submarine Preveze surfaces following the North Atlantic Treaty Organization (NATO) submarine escape and rescue exercise Sorbet Royal 2005.jpg"
+   }
+  },
+  "42": {
+   "grup": "gemi",
+   "es": "32",
+   "baslik": "TCG Anadolu baştan, alçak açı — Sarayburnu",
+   "kaynak": {
+    "lisans": "CC BY-SA 4.0",
+    "sahip": "Ata Barış",
+    "commons": "TCG Anadolu in Sarayburnu Harbor.jpg"
+   }
+  },
+  "43": {
+   "grup": "gemi",
+   "es": "",
+   "baslik": "TCG İstanbul (F-515) Boğaz’da, kıyıda seyreden kalabalık",
+   "kaynak": {
+    "lisans": "CC BY-SA 4.0",
+    "sahip": "Adem",
+    "commons": "TCG İstanbul (F-515).jpg"
+   }
+  },
+  "44": {
+   "grup": "toren",
+   "es": "",
+   "baslik": "Beyaz üniformalı subaylar — komuta görüşmesi, güvertede",
+   "kaynak": {
+    "lisans": "Public domain",
+    "sahip": "Official Navy Page from United States of America MC1(SW/EXW) Peter D. Lawlor/U.S. Navy",
+    "commons": "Flickr - Official U.S. Navy Imagery - The CNO talks to a Turkish Naval Fleet Commander about the ship's capabilities after a pierside tour at Golcuk Naval Base..jpg"
+   }
+  },
+  "45": {
+   "grup": "toren",
+   "es": "",
+   "baslik": "Türk bayrağıyla paraşüt gösterisi",
+   "kaynak": {
+    "lisans": "CC BY-SA 3.0",
+    "sahip": "Ex13",
+    "commons": "Turkish Republic Day 2012 01.JPG"
+   }
+  },
+  "46": {
+   "grup": "toren",
+   "es": "",
+   "baslik": "Geçitte yürüyen tören kıtası — karma kuvvetler",
+   "kaynak": {
+    "lisans": "CC BY-SA 3.0",
+    "sahip": "Ex13",
+    "commons": "Turkish Republic Day 2012 04.JPG"
+   }
+  },
+  "47": {
+   "grup": "toren",
+   "es": "48",
+   "baslik": "Deniz sınıfı öğrenciler geçitte — beyaz üniforma",
+   "kaynak": {
+    "lisans": "CC BY-SA 3.0",
+    "sahip": "Ex13",
+    "commons": "Turkish Republic Day 2012 08.JPG"
+   }
+  },
+  "48": {
+   "grup": "toren",
+   "es": "47",
+   "baslik": "Hava sınıfı öğrenciler protokol tribünü önünde",
+   "kaynak": {
+    "lisans": "CC BY-SA 3.0",
+    "sahip": "Ex13",
+    "commons": "Turkish Republic Day 2012 09.JPG"
+   }
   }
+ }
 }
