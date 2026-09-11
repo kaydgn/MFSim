@@ -700,8 +700,12 @@ function veFeadWizNodes(st){
     return row;
   });
   out.push({ id: 'wz-solver', type: 'fead-solver', data: sd });
+  // İKİ KANVAS, TEK TİP (2026-09-11, kullanıcı isteği: *"tipoloji tek
+  // olacak"*). Fark ön ayarın ADI (`katOn`), tipin kendisi değil; ad da
+  // yazılır, yoksa iki kart yan yana aynı etiketi taşırdı.
   out.push({ id: 'wz-layout', type: 'fead-layout', data: {} });
-  out.push({ id: 'wz-run',    type: 'fead-run',    data: {} });
+  out.push({ id: 'wz-run',    type: 'fead-layout',
+             customName: 'Çalışma Noktası', data: { katOn: 'isletme' } });
   out.push({ id: 'wz-table',  type: 'fead-table',  data: {} });
   out.push({ id: 'wz-report', type: 'fead-report', data: {} });
 
@@ -3154,10 +3158,26 @@ function veFeadWizCreate(){
   // sihirbaz ikincisini kurmaya kalkar, createNode reddeder ve kullanıcı
   // "modeli kur" dediğinde bir UYARI görürdü — üstelik kurulan bileşen sayısı
   // da eksik sayılırdı. Örnek kurucusunda ölçülmüş sınıfın aynısı.
-  var araclar = { 'fead-belt': null, 'fead-solver': null, 'fead-layout': null,
-                  'fead-run': null, 'fead-table': null, 'fead-report': null };
+  //
+  // EŞLEŞME TİPE DEĞİL, TİP + ÖN AYARA BAKAR. `fead-layout` artık İKİ KEZ
+  // geçiyor (geometri + işletme kanvası, aynı tip — 2026-09-11). Yalnız tipe
+  // bakan bir eşleşmenin iki sessiz kaçağı vardı: (1) tek düğüm tutulursa
+  // ikinci kanvas her "Modeli Kur"da yeniden kurulur ve kartlar üst üste
+  // açıldığı için sayı ancak taşındıklarında fark edilir; (2) kuyruk tutulup
+  // sıraya güvenilirse `nodes` dizisinde işletme kartı önce duruyorsa
+  // GEOMETRİ kartının üstüne `katOn:'isletme'` yazılır — kullanıcının donuk
+  // şeması sebepsizce gerilme haritasına döner.
+  var araclar = {};
+  function _fwAracAnahtar(n){
+    if(!n || !n.type) return '';
+    if(n.type !== 'fead-layout') return n.type;
+    return 'fead-layout:' + ((n.data && n.data.katOn === 'isletme') ? 'isletme' : 'geometri');
+  }
+  ['fead-belt', 'fead-solver', 'fead-layout:geometri', 'fead-layout:isletme',
+   'fead-table', 'fead-report'].forEach(function(t){ araclar[t] = []; });
   nodes.forEach(function(n){
-    if(araclar.hasOwnProperty(n.type) && !araclar[n.type]) araclar[n.type] = n;
+    var k = _fwAracAnahtar(n);
+    if(araclar.hasOwnProperty(k)) araclar[k].push(n);
   });
 
   var base = (typeof veArrangeModuleBase === 'function')
@@ -3166,13 +3186,13 @@ function veFeadWizCreate(){
 
   var kuruldu = [], idMap = {}, i = 0;
   pack.nodes.forEach(function(src){
-    var mevcut = araclar[src.type];
+    var kuyruk = araclar[_fwAracAnahtar(src)];
+    var mevcut = (kuyruk && kuyruk.length) ? kuyruk.shift() : null;   // ikinci kez eşleşmesin
     if(mevcut){
       // Araç düğümü zaten duruyor: verisini tazele, kimliğini haritaya yaz.
       mevcut.data = Object.assign(mevcut.data || {}, JSON.parse(JSON.stringify(src.data)));
       idMap[src.id] = mevcut.id;
       kuruldu.push(mevcut);
-      araclar[src.type] = null;      // ikinci kez eşleşmesin
       return;
     }
     var once = nodes.length;

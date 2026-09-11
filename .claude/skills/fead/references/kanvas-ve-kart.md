@@ -820,30 +820,40 @@ koordinatlarından çizilir; düğümü sürüklemek şemayı değiştirmez. Par
 | Üst künye | çizilen konumun adı · kol açısı · gerginlik |
 | Alt şerit | ✓/✗ · kasnak sayısı · L_eff · **Σsarım** (360° olmak ZORUNDA) |
 
-##### KART İKİYE BÖLÜNDÜ — geometri ↔ işletme (2026-09-10)
+##### İKİ KANVAS, TEK TİP — geometri ↔ işletme (2026-09-11)
 
-**HÜKÜM: `fead-layout` (Kayış Yolu) DONUKTUR — şema, adlar, sarım açıları, diş
-sırası, gergi kolu, kol konumları, yön gülü, dönüş okları. `fead-run` (Çalışma
-Noktası) CANLIDIR — gerilme haritası, açıklık gerilmeleri, animasyon, titreşim.
-İkisi de AYNI çiziciden (`veFeadLayoutSVG`) geçer, yalnız opts farklıdır.**
+**HÜKÜM: kanvas kartının TEK tipi var (`fead-layout`); geometri ile işletme
+arasındaki fark bir ÖN AYARDIR (`node.data.katOn`), tip değil. Açılışta yine
+İKİ kart gelir (örnek · sihirbaz · göç), ikisi de bu tipten ve ikincisi
+`katOn:'isletme'` + `customName:'Çalışma Noktası'` taşır.**
 
-Bölme ölçüye göre değil **soruya** göre: biri model KURULURKEN sorulur ve
-kurulduktan sonra donar, öteki DEVİR SEÇİLİNCE sorulur ve seçici değiştikçe
-değişir. Tek karttayken üç seçici (kol · devir · titreşim) aynı 22 px'lik
-şeride sıkışıyordu.
+Ayrım **soruya** göre duruyor: geometri ön ayarı model KURULURKEN sorulan
+soruyu cevaplar ve DONUKTUR (sarım açıları, gergi kolu, devir 'Durgun');
+işletme ön ayarı DEVİR SEÇİLİNCE sorulanı cevaplar ve canlıdır (açıklık
+gerilmeleri, gerilme haritası, animasyon). Değişen şey ayrımın kendisi değil,
+**sahibi**: artık kullanıcı seçiyor.
+
+Bir dönem bu ayrım İKİ TİPE gömülüydü (`fead-layout` + `fead-run`, 2026-09-10).
+Katmanlar kart başına seçilebilir olunca (2026-09-11) tip aynı işi ikinci kez
+yapmaya başladı — kullanıcı bildirimi: *"iki kanvas var, ikisinin de
+özellikleri falan farklı… Tek kanvas olacak, açılır açılmaz iki kanvas gelsin
+fakat tipoloji tek olacak."*
 
 | Kural | Gerekçe |
 |-------|---------|
-| **Kol konumu TEK ALANDA** — Kayış Yolu düğümünde (`veFeadPosModeShared`) | İkinci bir alan iki kartın farklı geometri çizmesi demekti ve fark SESSİZ: ikisi de kendi içinde tutarlı görünür |
-| Seçiciler bölündü: Kol geometride, Devir + Titreşim çalışmada | Bölmenin ölçülebilir tek kazancı bu; ikisi de aynı kartta kalsaydı hiç doğmazdı |
-| Sarım açıları geometride, açıklık gerilmeleri çalışmada | İkisi birden aynı çizimde kalabalık yapar — soru başka, sayı başka |
-| Animasyon/titreşim yükü YALNIZ çalışma kartında | Geometri kartı yük üretmez, rAF döngüsü onun yüzünden hiç uyanmaz |
+| **Ön ayar ADIYLA taşınır, kopyasıyla değil** (`data.katOn`) | Kopyalansaydı ön ayarın yarınki hâli o kartı bulamazdı; dahası DOM'suz köprü (`fead-model.js`) sekiz bayrağın ikinci bir listesini tutmak zorunda kalırdı |
+| **Ön ayar DEVRİ de belirler** (`VE_FEAD_ON_AYARLAR[].devir`) | Geometri kartının donukluğu tipin içindeydi; taşınmasaydı açılıştaki İKİ kanvas da animasyonlu gelirdi (devir alanı boşken `veFeadAnimRpmOf` en yüksek görev oranlı devri seçiyor) |
+| **Yazılmış alan ön ayarı susturur; ön ayar yalnız SÖZ SÖYLEDİĞİ alanı temizler** | "Geometri" demek donuk şema istemektir (yani `animRpm` silinir), ama titreşimi ve kol konumunu çöpe atmak değildir |
+| **Kol konumu KART BAŞINA** (`veFeadPosMode(node)`) | Tip döneminde çalışma kartı geometriden devralıyordu (`veFeadPosModeShared`, artık YOK); kartlar çoğaltılabilir olunca ikinci kart kendi seçicisini yazıp BİRİNCİ kartın konumunu çiziyordu |
+| **Araç eşleşmesi tip + ÖN AYARA bakar** (sihirbaz `_fwAracAnahtar`) | Yalnız tipe bakan bir eşleşme ya her "Modeli Kur"da fazladan kanvas kurar ya da `nodes` sırası ters olduğunda geometri kartının üstüne `katOn:'isletme'` yazar |
 | **Künye tablosu karttan KALKTI** | Ad · Ø · sarım · devir · güç sütunlarını kanvastaki Kayış Tablosu zaten yazıyordu; kalkınca çizim 342 → 458 px |
-| Eski kayda kart EKLENİR (şema 4 → 5, `veFeadMigrateRunCard`) | Göç olmasaydı eski projede gerilme haritası, animasyon ve titreşim sessizce kaybolurdu |
+| Eski kayda ikinci kanvas EKLENİR (şema 4 → 5, `veFeadMigrateRunCard`) | Göç olmasaydı eski projede gerilme haritası, animasyon ve titreşim sessizce kaybolurdu |
+| Kayıtlı `fead-run` düğümü ÇEVRİLİR (şema 5 → 6, `veFeadMigrateRunToLayout`) | Tip silindi; çevrilmeyen düğüm kanvasta TANIMSIZ tiple kalır — ne adı, ne ölçüsü, ne paneli olur |
 
-**Kapılar:** `tests/unit/fead-card-design.test.js` → *"iki kart — geometri ↔
-işletme"* (yedi mutasyonla ölçüldü) ve `fead-wire-order-migration.test.js` →
-*"şema 5"*.
+**Kapılar:** `tests/unit/fead-card-design.test.js` → *"iki kanvas — geometri ↔
+işletme (tek tip)"*, `fead-katman.test.js` → *"çok kart — TEK TİP"* ve
+*"işlemler"*, `fead-wire-order-migration.test.js` → *"şema 5"* / *"şema 6"*,
+`fead-wizard.test.js` → *"TERS SIRADA"*, `tests/e2e/fead-katman.spec.js`.
 
 ##### Kartın sunumu — seçilen bileşim (2026-09-09)
 

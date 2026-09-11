@@ -102,13 +102,15 @@ test('sihirbaz "Modeli Kur": kasnaklar + TABLO, tel yok, uyarı yok', async ({ p
       }).length,
       toplam: window.nodes.length,
       tipler: window.nodes.map((n) => n.type).sort(),
+      isletme: window.nodes.filter((n) => n.type === 'fead-layout'
+        && (n.data || {}).katOn === 'isletme').length,
       indis: veFeadBeltOrder(window.nodes).map((n) => n.data.beltIndex),
       sira: veFeadBeltOrder(window.nodes).map((n) => n.customName),
     };
   });
   expect(durum.kasnak).toBe(6);              // BİLEŞENLER DE GELİYOR
   expect(durum.tablo).toBe(1);               // ve TEK tablo (ikinci kurulmuyor)
-  expect(durum.sema).toBe(1);
+  expect(durum.sema).toBe(2);                // İKİ kanvas, tek tip (geometri + işletme)
   expect(durum.kayis).toBe(1);
   expect(durum.cozucu).toBe(1);
   expect(durum.rapor).toBe(1);
@@ -128,12 +130,19 @@ test('sihirbaz "Modeli Kur": kasnaklar + TABLO, tel yok, uyarı yok', async ({ p
   // + rapor + sihirbaz (taslağı taşıdığı için KALIR) = 13. "Başlangıç ve
   // Örnekler" kurulumda siliniyor.
   //
-  // SAYI 12 → 13: Kayış Yolu kartı GEOMETRİ ve İŞLETME olarak ikiye ayrıldı
-  // (`fead-layout` + `fead-run`), sihirbaz ikisini birden kuruyor. Kurucu
-  // ikincisini kurmayı unutursa sihirbazla kurulan model çalışma rejimi
-  // kartsız kalır ve bu SESSİZDİR — model çözülür, kart yalnız yoktur.
+  // SAYI 12 → 13: kanvas GEOMETRİ ve İŞLETME olarak ikiye ayrıldı, sihirbaz
+  // ikisini birden kuruyor. Kurucu ikincisini kurmayı unutursa sihirbazla
+  // kurulan model çalışma rejimi kartsız kalır ve bu SESSİZDİR — model
+  // çözülür, kart yalnız yoktur.
+  //
+  // TİP TEK (2026-09-11): ikisi de `fead-layout`, ayrım ÖN AYARDA. Ölçüt bu
+  // yüzden tip sayısı DEĞİL — iki kanvas + biri işletme ön ayarlı. Sihirbazın
+  // araç eşleştirmesi yalnız tipe baksaydı ikinci kanvası her "Modeli Kur"da
+  // YENİDEN kurardı (kartlar üst üste açıldığı için sessiz).
   expect(durum.toplam).toBe(13);
-  expect(durum.tipler.filter((t) => t === 'fead-run')).toHaveLength(1);
+  expect(durum.tipler.filter((t) => t === 'fead-layout')).toHaveLength(2);
+  expect(durum.tipler.filter((t) => t === 'fead-run')).toHaveLength(0);
+  expect(durum.isletme).toBe(1);
   expect(durum.tipler.filter((t) => t === 'fead-example')).toHaveLength(0);
   expect(durum.indis).toEqual([1, 2, 3, 4, 5, 6]);
   expect(durum.sira).toEqual(onizleme.sira); // önizlemeyle AYNI sıra

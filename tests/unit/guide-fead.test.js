@@ -532,15 +532,21 @@ describe('sahneler programın kendi bileşeni', () => {
     };
     const eksik = Object.keys(gerek)
       .filter((k) => !sahneler.some((f) => f.indexOf(gerek[k]) >= 0));
-    // İKİ TUVAL KARTI AYRI AYRI ARANIR ve işaret `<svg` DEĞİL.
+    // İKİ KANVAS AYRI AYRI ARANIR ve işaret `<svg` DEĞİL.
     // İkisi de aynı çiziciden geçtiği için ikisinde de svg var; dahası gergi
     // panelinin T(θ) grafiği de bir svg. "Svg taşıyan bir sahne olsun" demek,
     // DONUK şemayı silen bir değişikliği kaçırıyordu (ölçüldü). İşaret kayış
-    // yolunun kendi çizgisi; ayrım da seçicide: donuk kart devir okumaz.
+    // yolunun kendi çizgisi.
+    //
+    // AYRIM ARTIK SEÇİCİDE DEĞİL, ÇİZİMDE. Kart tipi 2026-09-11'de teke indi
+    // ve devir seçicisi HER karta geldi — "donuk kart devir okumaz" ölçütü o
+    // gün sessizce konusuz kaldı (iki sahne de seçiciyi taşıyor, kapı yeşil
+    // kalırdı). Bugünkü ayrım animasyon YÜKÜ: geometri ön ayarı devri
+    // 'Durgun'a getiriyor, o hâlde yük hiç üretilmiyor.
     const yol = sahneler.filter((f) => f.indexOf('data-ve="belt"') >= 0);
-    if (!yol.some((f) => f.indexOf('Senaryo — motor çevrimi') < 0))
+    if (!yol.some((f) => f.indexOf('data-fead-anim') < 0))
       eksik.push('kayış yolu şeması (donuk)');
-    if (!yol.some((f) => f.indexOf('Senaryo — motor çevrimi') >= 0))
+    if (!yol.some((f) => f.indexOf('data-fead-anim') >= 0))
       eksik.push('çalışma noktası (canlı)');
     // UYGUNLUK KAPILARI KENDİ BAŞINA. Kart, Çözücü panelinin de parçası
     // olduğu için "Uygunluk Kapıları geçiyor mu" demek §11.4'ün ayrı sahnesini

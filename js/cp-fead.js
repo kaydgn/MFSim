@@ -86,8 +86,10 @@ function getFeadModulePropertiesHTML(node){
 var VE_FEAD_STARTER_LAYOUT = [
   // ── Üst şerit: araçlar ──
   { type:'fead-belt',    lx:40,  ly:20 },
+  // İKİ KANVAS, TEK TİP (2026-09-11). İkincisi işletme ön ayarlı; ayrım
+  // `katOn` alanında, tipte DEĞİL.
   { type:'fead-layout',  lx:190, ly:20 },
-  { type:'fead-run',     lx:640, ly:20 },
+  { type:'fead-layout',  lx:640, ly:20, katOn:'isletme' },
   { type:'fead-solver',  lx:340, ly:20 },
   { type:'fead-wizard',  lx:490, ly:20 },
   { type:'fead-report',  lx:790, ly:20 },
@@ -126,7 +128,7 @@ function veFeadArrangeByCoords(opts){
     // Kutusuz düğüm (kasnak) dizilmez — kanvasta yeri yok.
     if(typeof veIsCanvasHidden === 'function' && veIsCanvasHidden(n)) return;
     var d = _feadDefOf(n);
-    (d.isFeadLayout || d.isFeadRun || d.isFeadTable) ? sag.push(n) : sol.push(n);
+    (d.isFeadLayout || d.isFeadTable) ? sag.push(n) : sol.push(n);
   });
   if(!sol.length && !sag.length) return false;
 
@@ -3180,20 +3182,18 @@ function veFeadLayoutSVG(build, W, H, opts){
 // Stil ELEMANIN ÜSTÜNDE (css/ dosyasında değil): css/styles.css'e dokunmak
 // Ölçüm Görüntüleyici'nin dağıtım dosyasını bayatlatıyor (bkz. CLAUDE.md) ve
 // tek bir kart için o zinciri kurmaya değmez. Rozette de aynı gerekçe var.
-// ── KOL KONUMU TEK ALANDA ──────────────────────────────────────────────────
-// İki kart da AYNI geometriyi çizmek zorunda. Çalışma Noktası kendi
-// `posMode`'unu tutsaydı iki kart farklı kol konumu gösterirdi ve fark SESSİZ
-// olurdu: ikisi de kendi içinde tutarlı görünür, yalnız biri başka bir konumu
-// anlatır. Alan Kayış Yolu düğümünde; seçici de yalnız orada.
-function veFeadPosModeNode(){
-  if(typeof nodes === 'undefined' || !Array.isArray(nodes)) return null;
-  for(var i = 0; i < nodes.length; i++)
-    if(_feadDefOf(nodes[i]).isFeadLayout) return nodes[i];
-  return null;
-}
-function veFeadPosModeShared(node){
-  return veFeadPosMode(veFeadPosModeNode() || node);
-}
+// ── KOL KONUMU KARTIN KENDİSİNİN ───────────────────────────────────────────
+// Bir dönem "tek alan" kuralı vardı: iki kart tipi varken (geometri + çalışma
+// noktası) ikisi de AYNI düğümün `posMode`'unu okuyordu, çünkü ikisi de aynı
+// geometriyi çizmek zorundaydı ve farkı görmek imkânsızdı — ikisi de kendi
+// içinde tutarlı görünür, yalnız biri başka bir kol konumunu anlatır.
+//
+// O kural kartlar ÇOĞALTILABİLİR olunca kendi kendini bozdu: ikinci bir kart
+// kendi seçicisini yazıyor, çizimi ise BİRİNCİ kartın konumundan yapıyordu.
+// Alan artık her kartın kendi düğümünde (`veFeadPosMode(node)`), yani seçici
+// ile çizim aynı yerden besleniyor. `veFeadPosModeShared`/`...Node` çifti
+// bununla birlikte KALKTI — çağıranı kalmamıştı ve duran bir "öteki kartın
+// konumunu oku" yardımcısı, bir sonraki düzenlemede sessizce geri gelirdi.
 
 var VE_FEAD_CARD_CLASS = 've-fead-layout-card';
 var VE_FEAD_TABLE_CLASS = 've-fead-table-card';
@@ -3201,7 +3201,7 @@ var VE_FEAD_TABLE_CLASS = 've-fead-table-card';
 function veFeadApplyLayoutCard(nodeEl, node){
   if(!nodeEl || !node || typeof document === 'undefined') return false;
   var _d = _feadDefOf(node);
-  if(!_d.isFeadLayout && !_d.isFeadRun) return false;
+  if(!_d.isFeadLayout) return false;
   var box = nodeEl.querySelector('.ve-node-box') || nodeEl;
 
   // Kart bir kez kurulur, İÇİ tazelenir. Yeniden kurmak her tazelemede
@@ -3243,33 +3243,46 @@ function veFeadLayoutCardHTML(node){
   var W = (node && node.width) || def.defaultWidth || _vW;
   var H = (node && node.height) || def.defaultHeight || _vH;
   var SER = 20;                                   // alt durum şeridi
-  var SEC = 22;                                   // konum seçici şeridi
+  // SEÇİCİ ŞERİDİ İKİ SATIR. Tek tip kalınca dört denetim de her karta geldi
+  // (kol konumu · devir · titreşim · katmanlar) ve dördü 440 px'lik tek
+  // satıra sığmıyor: ölçüldü, üç seçici + düğme şeridi kaydırmaya sokuyor ve
+  // Katmanlar düğmesi kartın dışında kalıyordu.
+  //
+  // BEDELİ ÖLÇÜLDÜ VE BU ÖRNEKTE SIFIR: çizim alanı 458 → 438 px, ama AG00976
+  // yerleşimi GENİŞLİĞE dayandığı için ölçek değişmiyor (en büyük yarıçap
+  // 56.38 px, ikisinde de birebir). Yüksekliğe dayanan bir yerleşimde bedel
+  // %4.4'e kadar çıkabilir; alternatifi ulaşılamayan bir düğme.
+  var SEC = 44;
 
-  // ── İKİ KART, TEK ÇİZİCİ ─────────────────────────────────────────────────
-  // `fead-layout` = Kayış Yolu (GEOMETRİ): donuk şema, sarım açıları, gergi
-  // kolu, kol konumları, yön gülü. Model KURULURKEN sorulan soru.
-  // `fead-run` = Çalışma Noktası (İŞLETME): gerilme haritası, animasyon,
-  // titreşim. DEVİR SEÇİLİNCE sorulan soru.
-  // İkisi de buradan ve aynı `veFeadLayoutSVG`'den geçer — ayrı bir çizim
-  // kodu yok, yalnız opts farklı.
-  var calisma = !!def.isFeadRun;
+  // ── TEK KART TİPİ, TEK ÇİZİCİ ────────────────────────────────────────────
+  // Bir dönem İKİ TİP vardı — `fead-layout` (geometri) ve `fead-run`
+  // (işletme) — ve fark tipin içine gömülüydü: hangi katmanlar açık, hangi
+  // seçiciler görünür, devir okunur mu. Katmanlar kart başına seçilebilir
+  // olunca o ayrım İKİNCİ KEZ aynı işi yapmaya başladı; kullanıcı bildirimi
+  // (2026-09-11): *"iki kanvas var, ikisinin de özellikleri farklı… tipoloji
+  // tek olacak."* Tip kalktı, ayrım ÖN AYAR oldu (`geometri` / `isletme`).
+  //
+  // Buradan geçen her kart AYNI yeteneklere sahip: kol konumu da, devir de,
+  // titreşim de, katmanlar da kendi alanında. Açılışta yine İKİ kart gelir —
+  // ama ikisi de bu tipten ve aralarındaki tek fark değiştirilebilir.
   var kat = veFeadKatmanlar(node);
-  // KOL KONUMU: geometri kartı KENDİ seçimini çizer, çalışma kartı ondan
-  // devralır. Eskiden ikisi de `Shared`ten okuyordu ve tek kart varken bu
-  // doğruydu — ama ikinci bir Kayış Yolu kartı açıldığında o kart kendi
-  // seçiciyi yazıyor, çizimi ise BİRİNCİ kartın konumundan yapıyordu.
-  // Sessizdi: iki kart aynı resmi gösterirken seçicilerinde farklı konum
-  // yazıyordu. Katmanlarla birlikte ikinci kart artık olağan bir kullanım.
-  var mode = calisma ? veFeadPosModeShared(node) : veFeadPosMode(node);
+  // KOL KONUMU KARTIN KENDİSİNİN. Bir dönem çalışma kartı bunu geometri
+  // kartından devralıyordu (`veFeadPosModeShared`); tek tip kalınca
+  // devralınacak bir "öteki" de kalmadı ve her kart kendi seçicisini çiziyor.
+  var mode = veFeadPosMode(node);
 
   // ── ANİMASYON: seçili devir → kinematik → çiziciye ────────────────────────
   // Devir seçimi kartta duruyor (node.data.animRpm) ve PANEL DE aynı alanı
   // okuyacak olursa iki ayrı ayar tutulmaz — kol konumundaki kuralın aynısı.
   // 'Durgun' seçiliyse animasyon YÜKÜ HİÇ ÜRETİLMEZ: kart bugünkü donuk
   // şemasıyla (dönüş okları geri gelir) kalır, rAF döngüsü de başlamaz.
-  // GEOMETRİ KARTI DONUKTUR: devir de titreşim de okunmaz, yük üretilmez,
-  // rAF döngüsü onun yüzünden hiç uyanmaz.
-  var rpmSel = calisma ? veFeadAnimRpmOf(build, node) : 'off';
+  // HER KART DEVİR OKUR. Bir dönem yalnız çalışma kartı okuyordu ve geometri
+  // kartı donuktu; tek tip kalınca "donuk kart" diye bir TİP yok — ama donuk
+  // bir KART var: geometri ön ayarı devri 'Durgun'a getiriyor ve o hâlde yük
+  // üretilmiyor, rAF uyanmıyor, açıklık gerilmesi hesaplanmıyor. Kullanıcı
+  // seçiciden başka bir devir seçer seçmez ön ayar karışmayı bırakır.
+  var onDevir = veFeadOnAyarDevir(node);
+  var rpmSel = (onDevir !== null) ? onDevir : veFeadAnimRpmOf(build, node);
 
   // Kol konumu HER ŞEYE geçer: şema hangi konumu çiziyorsa gerginlik, açıklık
   // frekansı ve senaryo da o konumdan gelmeli.
@@ -3303,7 +3316,10 @@ function veFeadLayoutCardHTML(node){
   // Kol konumu titreşime de GEÇER: kart hangi kol konumunu çiziyorsa gerginlik
   // ve dolayısıyla açıklık frekansı da o konumdan gelmeli. Geçilmeseydi şema
   // bir konumu, çırpma başka bir konumu anlatırdı.
-  var vibSel = calisma ? veFeadVibModeOf(node) : 'off', vibGain = veFeadVibGainOf(node);
+  // HER KART TİTREŞİM OKUR. Bir dönem yalnız çalışma kartı okuyordu (geometri
+  // kartı donuktu); tek tip kalınca "donuk kart" diye bir şey yok — seçici
+  // 'Kapalı'daysa (varsayılan) mod listesi hiç kurulmaz.
+  var vibSel = veFeadVibModeOf(node), vibGain = veFeadVibGainOf(node);
   var vibZeta = veFeadVibZetaOf(node);
   var vibOpts = { crankInertia: _feadNum(build.solver && build.solver.data
                                          && build.solver.data.crankInertia, 0) };
@@ -3336,15 +3352,15 @@ function veFeadLayoutCardHTML(node){
                 && typeof veFeadSpanTensionMap === 'function')
     ? veFeadSpanTensionMap(build, vibRel, rpmSel) : null;
 
-  // SARIM AÇILARI GEOMETRİ KARTINDA. Çalışma kartında açıklık gerilmeleri
-  // (N) yazılıyor ve ikisi birden aynı çizimde kalabalık yapardı — soru başka,
-  // sayı başka.
+  // HANGİ ETİKET ÇİZİLECEK ARTIK KATMANLARDAN. Sarım açısı ile açıklık
+  // gerilmesi aynı çizimde kalabalık yapıyor — ama bu bir TİP kuralı değil,
+  // iki ön ayarın birbirinden ayrıldığı yer.
   var svg = veFeadLayoutSVG(build, Math.max(120, W), Math.max(90, cizimH),
                             { inline: true, posMode: mode, nodeId: node.id,
                               compassPos: node.data && node.data.compassPos,
                               // KATMANLAR KARTIN KENDİSİNDEN. Bu satırlar bir
                               // zamanlar sabitti (`shortNames: true`,
-                              // `wrapLabels: !calisma`) ve ikinci bir kart
+                              // sarım açıları tipten) ve ikinci bir kart
                               // açmak aynı resmi ikinci kez çizmek demekti.
                               nameLabels: kat.ad, shortNames: kat.adKisa,
                               wrapLabels: kat.sarim, spanLabels: kat.spanEt,
@@ -3378,8 +3394,8 @@ function veFeadLayoutCardHTML(node){
       + '</div>';
   }
   h += '</div>';
-  h += veFeadKatmanPanelHTML(node, kat, calisma, !!tenMap);
-  h += veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes, calisma,
+  h += veFeadKatmanPanelHTML(node, kat, !!tenMap);
+  h += veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes,
                        veFeadKatmanDugmeHTML(node, kat));
   if(vibSel !== 'off') h += veFeadVibStrip(node, build, vib, vibSel);
   h += veFeadLayoutCardStrip(build, mode);
@@ -3394,9 +3410,10 @@ function veFeadLayoutCardHTML(node){
 // mousedown DURDURULUR: kart bir kanvas düğümünün içinde ve düğüm mousedown ile
 // SÜRÜKLENMEYE başlıyor — durdurulmazsa listeyi açmaya çalışmak düğümü
 // taşıyordu. change ise serbest; saveState zaten kartı tazeliyor.
-// `calisma` true ise DEVİR + TİTREŞİM, false ise yalnız KOL KONUMU seçicisi
-// çizilir. Üçü tek şeritte dururken her biri şeridin üçte birine sıkışıyordu;
-// bölünce her seçici kendi kartında tam genişlik alıyor.
+// DÖRT DENETİM, İKİ SATIR: kol konumu + Katmanlar üstte, devir + titreşim
+// altta. Bir dönem denetimler İKİ KART TİPİNE bölünmüştü (kol geometride,
+// devir ve titreşim çalışmada); tip kalkınca dördü de her karta geldi ve
+// 440 px'lik tek satıra sığmıyorlar.
 // ═══════════════════════════════════════════════════════════════════════════
 //  KATMANLAR — KART NE ÇİZECEĞİNE KENDİ KARAR VERİR
 // ═══════════════════════════════════════════════════════════════════════════
@@ -3407,7 +3424,7 @@ function veFeadLayoutCardHTML(node){
 //
 // Çizicinin (`veFeadLayoutSVG`) bu katmanların HEPSİ zaten vardı; eksik olan
 // şey seçim değil, seçimin SAHİBİYDİ: bayraklar kartı kuran yerde sabit
-// yazılıydı (`shortNames: true`, `wrapLabels: !calisma`, gül/kol/ok hep açık).
+// yazılıydı (`shortNames: true`, sarım açıları tipten, gül/kol/ok hep açık).
 // Yani ikinci bir kart açmak AYNI resmi ikinci kez çizmekti.
 //
 // Seçim artık DÜĞÜMÜN ALANINDA (`node.data.kat`) ve kart başına ayrı. İki
@@ -3420,27 +3437,50 @@ function veFeadLayoutCardHTML(node){
 //
 //   k          düğüm alanındaki anahtar
 //   svg        veFeadLayoutSVG seçeneği (çizicideki adı)
-//   sema       Kayış Yolu kartının varsayılanı
-//   calisma    Çalışma Noktası kartının varsayılanı
+//   geometri / isletme  →  İKİ ÖN AYAR (o katman o ön ayarda açık mı).
+//
+// ÖN AYARLAR BİR ZAMANLAR İKİ AYRI KART TİPİYDİ ve fark tipin içine
+// gömülüydü. Kullanıcı bildirimi (2026-09-11): *"iki kanvas var, ikisinin de
+// özellikleri falan farklı… Tek kanvas olacak, açılır açılmaz iki kanvas
+// gelsin fakat tipoloji tek olacak."* Haklı: katmanlar kart başına
+// seçilebilir olduktan sonra ikinci bir TİP, aynı işi ikinci kez yapan bir
+// ayrımdı. Tip kalktı, ayrım ÖN AYAR olarak kaldı — açılışta iki kart yine
+// gelir, ama ikisi de aynı tipten ve aralarındaki tek fark kullanıcının
+// değiştirebildiği şey.
 var VE_FEAD_KATMANLAR = [
   { k:'ad',        svg:'nameLabels',  t:'Kasnak adları',
-    ip:'Çemberin yanına ad yazılır', sema:1, calisma:1 },
+    ip:'Çemberin yanına ad yazılır', geometri:1, isletme:1 },
   { k:'adKisa',    svg:'shortNames',  t:'Adı kısalt',
     ip:'Sondaki parantez atılır: "Alternatör (155 A)" → "Alternatör"',
-    sema:1, calisma:1, bagli:'ad' },
+    geometri:1, isletme:1, bagli:'ad' },
   { k:'sarim',     svg:'wrapLabels',  t:'Sarım açıları',
-    ip:'Her kasnağın altına derece', sema:1, calisma:0 },
+    ip:'Her kasnağın altına derece', geometri:1, isletme:0 },
   { k:'spanEt',    svg:'spanLabels',  t:'Açıklık gerilmeleri',
-    ip:'Her açıklığın ortasına newton — devir seçiliyken', sema:0, calisma:1 },
+    ip:'Her açıklığın ortasına newton — devir seçiliyken', geometri:0, isletme:1 },
   { k:'ok',        svg:'arrows',      t:'Dönüş okları',
-    ip:'Kasnağın döndüğü yön', sema:1, calisma:1 },
+    ip:'Kasnağın döndüğü yön', geometri:1, isletme:1 },
   { k:'gul',       svg:'compass',     t:'Yön gülü',
-    ip:'Sağ üstteki +X/+Y pusulası — sürüklenebilir', sema:1, calisma:1 },
+    ip:'Sağ üstteki +X/+Y pusulası — sürüklenebilir', geometri:1, isletme:1 },
   { k:'kol',       svg:'pivot',       t:'Gergi kolu',
-    ip:'Pivot noktası ve kol çizgisi', sema:1, calisma:1 },
+    ip:'Pivot noktası ve kol çizgisi', geometri:1, isletme:1 },
   { k:'hayaletEt', svg:'ghostLabels', t:'Hayalet konum adları',
-    ip:'"TÜMÜ" kipinde soluk yolların adı', sema:1, calisma:0 }
+    ip:'"TÜMÜ" kipinde soluk yolların adı', geometri:1, isletme:0 }
 ];
+
+// ÖN AYARLAR — panelin adlandırılmış iki düğmesi ve kurucuların kullandığı
+// isim. `geometri` aynı zamanda VARSAYILAN: yazılmamış bir kart onu izler.
+// ÖN AYAR DEVİR DE SEÇER (`devir`). Geometri kartının donukluğu bir dönem
+// TİPİN içindeydi: `fead-layout` devri hiç okumazdı, 'off' sabitti. Tip
+// kalkınca o davranış buraya taşındı — yoksa açılıştaki iki kanvasın İKİSİ de
+// animasyonlu gelirdi (devir alanı boşken `veFeadAnimRpmOf` en yüksek görev
+// oranlı devri seçiyor). Alan bir kez YAZILDIYSA ön ayar karışmaz.
+var VE_FEAD_ON_AYARLAR = [
+  { k:'geometri', t:'Geometri', devir:'off',
+    ip:'Kayış nereden geçiyor: sarım açıları, gergi kolu — donuk şema' },
+  { k:'isletme',  t:'İşletme',
+    ip:'Bu devirde ne oluyor: açıklık gerilmeleri, gerilme haritası, akan kayış' }
+];
+var VE_FEAD_KAT_VARSAYILAN = 'geometri';
 
 // AÇIK KATMAN PANELİ MODELDE DEĞİL. Panelin açık olması bir GÖRÜNÜM durumu:
 // kaydedilmemeli, geri-al yığınına yazılmamalı, ikinci bir oturuma
@@ -3450,9 +3490,15 @@ var VE_FEAD_KATMANLAR = [
 // (`veFeadMarkSelectedRow`): görünüm durumu modülde, model alanında değil.
 var VE_FEAD_KAT_ACIK = null;
 
-function veFeadKatmanVarsayilan(calisma){
+// Bir ÖN AYARIN çözülmüş katman kümesi. Anahtar tanınmazsa varsayılana düşer
+// — uydurma bir ad sessizce boş bir küme üretip kartı çıplak bırakmasın.
+function veFeadKatmanVarsayilan(onAyar){
+  var ad = (onAyar === true) ? 'isletme'                 // eski çağrı biçimi
+         : (onAyar === false || !onAyar) ? VE_FEAD_KAT_VARSAYILAN : String(onAyar);
+  if(!VE_FEAD_ON_AYARLAR.some(function(O){ return O.k === ad; }))
+    ad = VE_FEAD_KAT_VARSAYILAN;
   var out = {};
-  VE_FEAD_KATMANLAR.forEach(function(K){ out[K.k] = !!(calisma ? K.calisma : K.sema); });
+  VE_FEAD_KATMANLAR.forEach(function(K){ out[K.k] = !!K[ad]; });
   return out;
 }
 
@@ -3461,9 +3507,32 @@ function veFeadKatmanVarsayilan(calisma){
 // EKSİK ANAHTAR VARSAYILANA DÜŞER, kapalıya değil. Eski bir kayıtta `kat` hiç
 // yok — o kart bugünkü görünümünü aynen korumalı; "yazılmamış = kapalı"
 // deseydik kaydedilmiş her proje çıplak bir şemayla açılırdı.
+// Düğümün AÇIK ÖN AYARI. Yazılmamışsa varsayılan; tanınmayan bir ad da
+// varsayılana düşer (uydurma bir ad kartı sessizce boş bırakmasın).
+function veFeadKatmanOnAyar(node){
+  var ad = node && node.data && node.data.katOn;
+  return VE_FEAD_ON_AYARLAR.some(function(O){ return O.k === ad; })
+    ? ad : VE_FEAD_KAT_VARSAYILAN;
+}
+function veFeadOnAyarOf(ad){
+  var out = null;
+  VE_FEAD_ON_AYARLAR.forEach(function(O){ if(O.k === ad) out = O; });
+  return out;
+}
+// Ön ayarın DEVİR varsayılanı — yalnız alan hiç yazılmamışken. `null` = ön
+// ayarın söyleyecek bir şeyi yok, olağan çözüm koşsun.
+function veFeadOnAyarDevir(node){
+  if(node && node.data && node.data.animRpm !== undefined) return null;
+  var O = veFeadOnAyarOf(veFeadKatmanOnAyar(node));
+  return (O && O.devir !== undefined) ? O.devir : null;
+}
+
+// ÖN AYAR TABAN, `kat` ÜSTÜNE YAZAR. Düğüm ön ayarın ADINI taşıyor, kopyasını
+// değil: ön ayar yarın değişirse onu izleyen kart da değişir. Kurucular
+// (örnek, sihirbaz, göç) yalnız o adı yazabiliyor — köprü katmanı sekiz
+// bayrağın kopyasını tutmak zorunda kalsaydı liste ikinci kez yazılırdı.
 function veFeadKatmanlar(node){
-  var def = _feadDefOf(node);
-  var out = veFeadKatmanVarsayilan(!!def.isFeadRun);
+  var out = veFeadKatmanVarsayilan(veFeadKatmanOnAyar(node));
   var v = node && node.data && node.data.kat;
   if(v && typeof v === 'object')
     VE_FEAD_KATMANLAR.forEach(function(K){
@@ -3496,15 +3565,27 @@ function veFeadKatmanIslem(nodeId, islem){
   if(typeof nodes === 'undefined') return false;
   var node = nodes.find(function(n){ return n.id === nodeId; });
   if(!node) return false;
+  var onAyar = VE_FEAD_ON_AYARLAR.some(function(O){ return O.k === islem; });
+  if(!onAyar && islem !== 'tumu' && islem !== 'hicbiri') return false;
   if(typeof saveState === 'function') saveState();
   if(!node.data) node.data = {};
-  if(islem === 'varsayilan'){
+  if(onAyar){
+    // ÖN AYAR ADIYLA YAZILIR, KOPYASIYLA DEĞİL — ve elle yapılan değişiklikler
+    // temizlenir: "İşletme" demek "bu kart o ön ayarı izlesin" demek, "bugün
+    // o ön ayarın değerleri neyse onlar donsun" değil.
+    if(islem === VE_FEAD_KAT_VARSAYILAN) delete node.data.katOn;
+    else node.data.katOn = islem;
     delete node.data.kat;
-  } else if(islem === 'tumu' || islem === 'hicbiri'){
+    // DEVİR DE TEMİZLENİR, çünkü ön ayarın SÖZ SÖYLEDİĞİ bir alan (`devir`):
+    // "Geometri" diyen bir kullanıcı donuk şema istiyor, elle seçilmiş 2000
+    // dev/dk oraya yapışık kalsaydı ön ayar yarım uygulanmış olurdu. Ön ayarın
+    // söz söylemediği alanlara (titreşim, kol konumu, yön gülü) DOKUNULMAZ.
+    delete node.data.animRpm;
+  } else {
     var on = (islem === 'tumu');
     node.data.kat = {};
     VE_FEAD_KATMANLAR.forEach(function(K){ node.data.kat[K.k] = on; });
-  } else return false;
+  }
   if(typeof veFeadRefreshCards === 'function') veFeadRefreshCards();
   return true;
 }
@@ -3542,7 +3623,7 @@ var VE_FEAD_KAT_ICON =
 // Panelin kendisi. GÖRÜNÜM CSS'TE (`css/styles.css` → `.ve-fead-kat*`): bir
 // kutucuk listesinin işi durum göstermek (fare üstünde, işaretli, odakta) ve
 // satır içi stil bunların HİÇBİRİNİ yazamaz — Kayış Tablosu'nda ölçülmüş kural.
-function veFeadKatmanPanelHTML(node, kat, calisma, tenVar){
+function veFeadKatmanPanelHTML(node, kat, tenVar){
   if(VE_FEAD_KAT_ACIK !== node.id) return '';
   var ad = (node.customName || _feadDefOf(node).name || 'Kart');
   var h = '<div class="ve-fead-kat" onmousedown="event.stopPropagation();"'
@@ -3551,8 +3632,23 @@ function veFeadKatmanPanelHTML(node, kat, calisma, tenVar){
     + '<span class="kart">' + _feadEsc(ad) + '</span>'
     + '<button type="button" class="ve-fead-kat-kapat" onclick="veFeadKatmanToggle(null)"'
     + ' title="Paneli kapat">✕</button></div>'
-    + '<div class="ve-fead-kat-islem">';
-  [['tumu','Tümü'], ['hicbiri','Hiçbiri'], ['varsayilan','Varsayılan']].forEach(function(o){
+    // ÖN AYARLAR ÜSTTE ve ADLARIYLA. Bu iki isim bir zamanlar İKİ AYRI KART
+    // TİPİYDİ; tip kalkınca ayrım kayb olmasın diye buraya taşındı. Kullanıcı
+    // "bu kart geometri olsun" diyebiliyor ve ne demek olduğunu tek tıkla
+    // görebiliyor — sekiz kutucuğu tek tek gezmeden.
+    + '<div class="ve-fead-kat-islem onayar">';
+  var acikOn = veFeadKatmanOnAyar(node);
+  var elle = !!(node.data && node.data.kat);
+  VE_FEAD_ON_AYARLAR.forEach(function(O){
+    // AÇIK ÖN AYAR BASILI KALIR — ama yalnız elle değişiklik YOKKEN: kutucuk
+    // oynatıldıktan sonra kart artık o ön ayar değil, ondan TÜREMİŞ bir küme.
+    h += '<button type="button" title="' + _feadEsc(O.ip) + '"'
+      + ((O.k === acikOn && !elle) ? ' class="is-acik"' : '')
+      + ' onclick="veFeadKatmanIslem(\'' + _feadEsc(node.id) + '\',\'' + O.k + '\')">'
+      + _feadEsc(O.t) + '</button>';
+  });
+  h += '</div><div class="ve-fead-kat-islem">';
+  [['tumu','Tümü'], ['hicbiri','Hiçbiri']].forEach(function(o){
     h += '<button type="button" onclick="veFeadKatmanIslem(\'' + _feadEsc(node.id)
       + '\',\'' + o[0] + '\')">' + o[1] + '</button>';
   });
@@ -3563,8 +3659,7 @@ function veFeadKatmanPanelHTML(node, kat, calisma, tenVar){
     var pasif = !!(K.bagli && !kat[K.bagli]);
     // Bir katman açık ama o an ÇİZİLMİYORSA sebebi yanında yazılır; sessizce
     // hiçbir şey yapmayan bir kutucuk, kullanıcıya kendi seçimini sorgulatır.
-    var uyari = (K.k === 'spanEt' && kat[K.k] && !tenVar) ? 'devir seçili değil'
-              : (K.k === 'hayaletEt' && kat[K.k] && !calisma) ? '' : '';
+    var uyari = (K.k === 'spanEt' && kat[K.k] && !tenVar) ? 'devir seçili değil' : '';
     h += '<label class="ve-fead-kat-sat' + (pasif ? ' pasif' : '') + '"'
       + ' title="' + _feadEsc(K.ip) + '">'
       + '<input type="checkbox"' + (kat[K.k] ? ' checked' : '') + (pasif ? ' disabled' : '')
@@ -3578,7 +3673,7 @@ function veFeadKatmanPanelHTML(node, kat, calisma, tenVar){
   return h;
 }
 
-function veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes, calisma, katDugme){
+function veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes, katDugme){
   var rows = (build && build.ok) ? veFeadPositionRows(build) : [];
   var cozulen = {};
   rows.forEach(function(r){ if(r.ok) cozulen[r.key] = r; });
@@ -3636,26 +3731,31 @@ function veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes, calisma, k
     + ' border-radius:2px;';
   var etiket = 'font-size:var(--fs-micro); color:var(--text-muted); white-space:nowrap;';
 
+  // ── İKİ SATIR ────────────────────────────────────────────────────────────
+  // Kart tipi ikiye bölünmüşken her kart üç denetimden yalnız kendine
+  // düşenleri taşıyordu (geometri: kol konumu · çalışma: devir + titreşim).
+  // Tek tip kalınca dördü de her karta geldi ve 440 px'lik tek satıra
+  // SIĞMIYOR — ölçüldü: şerit kaydırmaya giriyor, Katmanlar düğmesi kartın
+  // dışında kalıyor. Bedeli 20 px çizim alanı (458 → 438) ve bu örnekte
+  // ölçeğe hiç yansımıyor; ayrıntı veFeadLayoutCardHTML'deki SEC yorumunda.
   var kabuk = '<div style="flex:0 0 auto; display:flex; align-items:center; gap:4px; padding:1px 6px;'
     + ' border-top:1px solid var(--border-color); background:var(--bg-secondary, #16181d);"'
     + ' onmousedown="event.stopPropagation();" ondblclick="event.stopPropagation();">';
-  if(!calisma)
-    return kabuk
+  return kabuk
     + '<span style="' + etiket + '">Kol konumu</span>'
     + '<select onmousedown="event.stopPropagation();"'
     + ' onchange="veFeadSetChoice(\'' + node.id + '\',\'posMode\',this.value)"'
     + ' style="' + stil + '">' + opts + '</select>'
-    + (katDugme || '') + '</div>';
-  return kabuk
+    + (katDugme || '') + '</div>'
+    + kabuk
     + '<span style="' + etiket + '">Devir</span>'
     + '<select onmousedown="event.stopPropagation();"'
     + ' onchange="veFeadSetChoice(\'' + node.id + '\',\'animRpm\',this.value)"'
-    + ' style="' + stil + ' flex:0.85;">' + rOpt + '</select>'
+    + ' style="' + stil + ' flex:1.15;">' + rOpt + '</select>'
     + '<span style="' + etiket + '" title="Açıklık çırpması ya da burulma mod şekli">Titr.</span>'
     + '<select onmousedown="event.stopPropagation();"'
     + ' onchange="veFeadSetChoice(\'' + node.id + '\',\'vibMode\',this.value)"'
-    + ' style="' + stil + ' flex:0.95;">' + vOpt + '</select>'
-    + (katDugme || '') + '</div>';
+    + ' style="' + stil + ' flex:1;">' + vOpt + '</select></div>';
 }
 
 // ── KAZANÇ ŞERİDİ — yalnız titreşim açıkken ────────────────────────────────
@@ -3817,7 +3917,7 @@ function veFeadRefreshLayoutCards(){
   var n = 0;
   nodes.forEach(function(x){
     var d = _feadDefOf(x);
-    if(!d.isFeadLayout && !d.isFeadRun) return;      // iki kart da buradan
+    if(!d.isFeadLayout) return;                      // tek kart tipi
     var el = document.getElementById(x.id);
     if(el && veFeadApplyLayoutCard(el, x)) n++;
   });
@@ -5565,15 +5665,17 @@ function veFeadLoadExample(key){
   // YANINDA, kendi alanında duran bir çizim.
   var araclar = pack.nodes.length - pack.example.pulleys.length;
   var sagSerit = 60 + (maxX - minX) * s + 110;
-  var ust = 0;
+  var ust = 0, kanvasNo = 0;
   for(var t = 0; t < araclar; t++){
     var tip = pack.nodes[pack.example.pulleys.length + t].type;
     var td = (typeof componentDefs !== 'undefined' && componentDefs[tip]) || {};
-    if(tip === 'fead-layout' || tip === 'fead-run'){
+    if(tip === 'fead-layout'){
       // Ölçü de veriliyor: yoksa veArrangeModuleBase kartı 65×60 sayıp grubu
       // yanlış ortalıyor ve kart görünür alanın sağından taşıyor. İki büyük
       // kart ALT ALTA: yan yana konsalardı sağ şerit 900 px'i geçerdi.
-      yer.push({ lx: sagSerit, ly: 150 + (tip === 'fead-run' ? 540 : 0),
+      // TİP AYNI olduğu için sıra sayılıyor: birinci kanvas üstte, ikinci
+      // (işletme ön ayarlı) altta.
+      yer.push({ lx: sagSerit, ly: 150 + (kanvasNo++ ? 540 : 0),
                  w: td.defaultWidth, h: td.defaultHeight });
     } else {
       // ARAÇLAR SOL ŞERİTTE, KASNAK KÜMESİNİN DIŞINDA. Eskiden kümenin ÜSTÜNE
@@ -6133,8 +6235,11 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadBeltPathD: veFeadBeltPathD, veFeadArmArrowSVG: veFeadArmArrowSVG,
     veFeadLayoutSVG: veFeadLayoutSVG,
     veFeadShortName: veFeadShortName, veFeadTensionColor: veFeadTensionColor,
-    veFeadPosModeShared: veFeadPosModeShared, veFeadPosModeNode: veFeadPosModeNode,
     VE_FEAD_KATMANLAR: VE_FEAD_KATMANLAR,
+    VE_FEAD_ON_AYARLAR: VE_FEAD_ON_AYARLAR,
+    VE_FEAD_KAT_VARSAYILAN: VE_FEAD_KAT_VARSAYILAN,
+    veFeadKatmanOnAyar: veFeadKatmanOnAyar,
+    veFeadOnAyarOf: veFeadOnAyarOf, veFeadOnAyarDevir: veFeadOnAyarDevir,
     veFeadKatmanVarsayilan: veFeadKatmanVarsayilan,
     veFeadKatmanlar: veFeadKatmanlar,
     veFeadKatmanSet: veFeadKatmanSet,

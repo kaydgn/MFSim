@@ -52,10 +52,18 @@ function kurBMC() {
   global.nodes = pack.nodes;
   global.connections = pack.connections;
   const build = veFeadBuildSystem(pack.nodes);
-  // KART İKİYE BÖLÜNDÜ (2026-09-10): animasyon, titreşim ve gerilme haritası
-  // `fead-run` (Çalışma Noktası) kartının işi; `fead-layout` donuk geometri.
-  const kart = pack.nodes.find((n) => n.type === 'fead-run');
+  const kart = isletmeKart(pack);
   return { pack, build, kart };
+}
+
+// İŞLETME KANVASI — animasyon, titreşim ve gerilme haritası onun işi. Bir
+// dönem AYRI BİR TİPTİ (`fead-run`); 2026-09-11'de tip teke indi ve fark bir
+// ÖN AYARA taşındı (`data.katOn`). Ölçüt bu yüzden tip DEĞİL, ön ayar: yalnız
+// tipe bakan bir arama örnekteki İKİ kanvastan ilkini (donuk geometri kartını)
+// bulur ve bu dosyadaki her animasyon kapısı sessizce boş yükle geçerdi.
+function isletmeKart(pack) {
+  return pack.nodes.find((n) => n.type === 'fead-layout'
+    && n.data && n.data.katOn === 'isletme');
 }
 const geomOf = (build) => F.tensionerState(build.sys, F.meanRel(build.sys)).geom;
 
@@ -324,7 +332,8 @@ describe('Yayın sözleşmesi — animasyon YALNIZ kanvas kartında', () => {
 
   test('çözülemeyen modelde kart patlamaz, animasyon da denenmez', () => {
     global.nodes = []; global.connections = [];
-    const lay = { id: 'lay-x', type: 'fead-run', def: componentDefs['fead-run'], data: {} };
+    const lay = { id: 'lay-x', type: 'fead-layout', def: componentDefs['fead-layout'],
+                  data: { katOn: 'isletme' } };
     const html = fead.veFeadLayoutCardHTML(lay);
     expect(typeof html).toBe('string');
     expect(html).not.toMatch(/data-fead-anim/);
@@ -466,7 +475,7 @@ describe('Animatör — durum DOM\'da değil, döngü kendini durdurur', () => {
       pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
       global.nodes = pack.nodes; global.connections = pack.connections;
       const build = veFeadBuildSystem(pack.nodes);
-      const kart = pack.nodes.find((n) => n.type === 'fead-run');
+      const kart = isletmeKart(pack);
       const el = kartKur(kart);
       const spec = JSON.parse(el.getAttribute('data-fead-anim'));
       expect([1, -1]).toContain(spec.sense);
