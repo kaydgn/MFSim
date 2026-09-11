@@ -13,6 +13,8 @@
     "komuta:dogrula": "node tools/komuta-dogrula.js",
     "karsilama:secici": "node tools/karsilama-secici.js",
     "karsilama:webp": "node tools/karsilama-webp.js",
+    "karsilama:bul": "node tools/karsilama-bul.js",
+    "karsilama:aday-secici": "node tools/karsilama-aday-secici.js",
     "sync:viewer": "node viewer/sync.js",
     "test": "jest --maxWorkers=100%",
     "test:unit": "jest --maxWorkers=100%",
