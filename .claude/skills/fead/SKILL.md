@@ -68,6 +68,13 @@ olurdu.
    Örnekler bileşeni kaldırıldı"*, `fead-sihirbaz-tablo.spec.js`.
 6. **"Otomatik Düzenle" artık yalnız ARAÇ KARTLARINI dizer** — dizilecek kasnak
    yok. Kayış Yolu şeması + Kayış Tablosu sağda, künyeler solda.
+   **Dikey adım KUTUYU DEĞİL, kutu+ADI sayar** (`veFeadArrangeByCoords` →
+   `adPayi`): ad kutunun ALTINDA duruyor, adım onu saymayınca araç kartlarında
+   adın altında 2 px kalıyor ve komşunun dekorasyonu (seçim tutamağı ~5 px
+   dışarı taşar, kayış kipi rozeti üst kenara oturur) adın üstüne biniyordu.
+   Ölçü sınır çerçevesiyle AYNI kaynaktan (`veMeasureNodeLabel` +
+   `veNodeLabelOverflow`); ölçülemezse pay 0 ve davranış birebir eski hâli.
+   Kapı: `cp-fead.test.js` → *"ad KUTUNUN ALTINDA duruyor"*.
 7. **KASNAKLAR BAĞLANMAZ — SIRA TABLODA** (2026-09-09). Kayış yolu bir graf
    değil bir liste: sıra `node.data.beltIndex` alanında, Kayış Tablosu'nun
    satır sırası. `beltIndex` **Gates TABLO sırasını** taşır (kayışın gidişinin
@@ -128,6 +135,13 @@ olurdu.
     *"Kayış Tablosu CANLI"* (jsdom `:hover`ı da `:focus`u da hiç hesaplamaz).
     **AD HÜCRESİ BİR BAĞLANTI**, okunur bir metin değil: kasnak paneline giden
     tek yol o ve metin hâlindeyken varlığı ancak deneyerek keşfediliyordu.
+    **Ve hücre o sözü TUTAR: `veFeadTableOpen` seçmekle kalmaz,
+    `veTogglePropertiesPanel(true)` ile pencereyi de AÇAR** — `addToSelection`
+    panelin yalnız İÇERİĞİNİ doldurur, `#ve-properties-overlay` bir modaldır ve
+    kapalı kalırdı (ölçüldü: satır işaretleniyor, panelin HTML'i kuruluyor,
+    ekranda hiçbir şey olmuyor). Kalıp projede zaten var — solver.js çözüm
+    sonrası aynı çağrıyı yapıyor. Kapı: `fead-table.test.js` → *"ad hücresi
+    paneli AÇIYOR"*.
     Afordans DİNLENMEDE duran "pencere açılır" simgesi (yazı karakteri DEĞİL
     çizim — eksik bir glif afordansın kendisini yok ederdi); kutu, zemin ve
     gölge yalnız fare altında geliyor, hücre bu yüzden `overflow:visible`

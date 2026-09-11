@@ -130,14 +130,38 @@ function veFeadArrangeByCoords(opts){
   });
   if(!sol.length && !sag.length) return false;
 
+  // ADIN YERİ DE ŞERİDE GİRER. Dikey adım yalnız KUTU yüksekliğini sayıyordu,
+  // ad ise kutunun ALTINDA duruyor: araç kartlarında adın altında 2 px kalıyor
+  // ve komşunun DEKORASYONU oraya biniyordu — seçim tutamağı kutudan ~5 px
+  // dışarı taşar ("Çözücü" → "Çöz▪cü"), kayış kipi rozeti kutunun üst kenarına
+  // oturur ve üstteki adın kuyruklarını örter. Ölçüldü (gerçek tarayıcı):
+  // sekiz çakışma, üç araç aralığında da boşluk 2 px.
+  //
+  // Ölçü sınır çerçevesiyle AYNI kaynaktan (veMeasureNodeLabel +
+  // veNodeLabelOverflow) — ikinci bir yükseklik sabiti, adın CSS payı değişince
+  // sessizce ayrışırdı. Ölçülemezse pay 0 ve davranış BİREBİR eski hâli: saf
+  // koşucuda DOM yok, uydurma bir yükseklik kartları sebepsiz uzaklaştırırdı.
+  function adPayi(n, b){
+    if(typeof veMeasureNodeLabel !== 'function' || typeof veNodeLabelOverflow !== 'function')
+      return { top: 0, bottom: 0 };
+    var lbl = veMeasureNodeLabel(n);
+    if(!lbl) return { top: 0, bottom: 0 };
+    var o = veNodeLabelOverflow((n.data && n.data.labelPos) || 'bottom', b.w, b.h, lbl);
+    return { top: o.top || 0, bottom: o.bottom || 0 };
+  }
+
   function serit(list, x0, hiza){
     var toplam = 0;
-    list.forEach(function(n){ toplam += veFeadNodeBox(n).h + 24; });
+    list.forEach(function(n){
+      var b = veFeadNodeBox(n), o = adPayi(n, b);
+      toplam += o.top + b.h + o.bottom + 24;
+    });
     var y = CY - toplam / 2;
     list.forEach(function(n){
-      var b = veFeadNodeBox(n);
+      var b = veFeadNodeBox(n), o = adPayi(n, b);
+      y += o.top;                       // ad ÜSTTEyse kutuyu o kadar aşağı al
       yer[n.id] = { x: (hiza === 'sag') ? x0 : (x0 - b.w), y: y };
-      y += b.h + 24;
+      y += b.h + o.bottom + 24;
     });
   }
   serit(sol, CX - 60, 'sol');
@@ -3927,7 +3951,7 @@ function veFeadTableCardHTML(node){
   // İki sütun toplamı, fazlası değil — kullanıcının hücreleri seçince aldığı
   // sayının aynısı. Bir DENETİM olarak sunulmuyor: kayış boyu zaten bu iki
   // büyüklükten türediği için "tutuyor mu" sorusunun cevabı hep evet olurdu.
-  // Asıl denetim (Σ işaretli sarım = 360°) alt şeritte ve o gerçekten düşebilir.
+  // Asıl denetim (Σ işaretli sarım = 360°) ÜST KÜNYEDE ve o gerçekten düşebilir.
   if(T.rows.length)
     h += '<tfoot><tr>'
       + '<td colspan="7" class="al-l lbl">Σ toplam</td>'
@@ -4090,6 +4114,15 @@ function veFeadTableMove(nodeId, delta){
 
 // Kasnağın panelini aç — kullanıcı isteği: "gerekirse de tıklayarak bileşen
 // penceresini açarak detay hesaplamalara bakacağız".
+//
+// PENCEREYİ AÇAN SATIR SEÇİM DEĞİL, `veTogglePropertiesPanel(true)`.
+// `addToSelection` panelin İÇERİĞİNİ doldurur ama `#ve-properties-overlay`
+// bir MODAL'dır ve kapalı kalır (map.js). Ölçüldü (gerçek tarayıcı): ada
+// tıklanınca satır işaretleniyor, panelin HTML'i kuruluyor, ekranda hiçbir
+// şey olmuyordu — ve kasnakların kanvasta kutusu olmadığı için bu hücre
+// panele giden TEK kapı. Hücrenin "pencere açılır" simgesi de o sözü
+// veriyordu. Kalıp projede zaten var: solver.js çözüm sonrası aynı çağrıyı
+// yapıyor (kapısı solver-run-opens-component.test.js).
 function veFeadTableOpen(nodeId){
   if(typeof nodes === 'undefined') return false;
   var n = nodes.filter(function(x){ return x.id === nodeId; })[0];
@@ -4097,6 +4130,7 @@ function veFeadTableOpen(nodeId){
   if(typeof clearSelection === 'function') clearSelection();
   if(typeof addToSelection === 'function') addToSelection(n);
   else if(typeof showNodeProperties === 'function') showNodeProperties(n);
+  if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
   return true;
 }
 

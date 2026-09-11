@@ -1125,3 +1125,69 @@ describe('eklenen satır görünür kılınıyor', () => {
     expect(govde.indexOf('createNode(')).toBeLessThan(govde.indexOf('_feadScrollRowIntoView'));
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AD HÜCRESİ BİR KAPI: TIKLAYINCA PENCERE **AÇILMALI**
+//
+// Kasnakların kanvasta kutusu yok; detay panele giden TEK yol bu hücre ve
+// hücre "pencere açılır" simgesi taşıyor. `addToSelection` panelin İÇERİĞİNİ
+// doldurur ama `#ve-properties-overlay` bir MODAL'dır ve kapalı kalır
+// (map.js veTogglePropertiesPanel). Ölçüldü (gerçek tarayıcı): ada tıklanınca
+// satır işaretleniyor, panelin HTML'i kuruluyor, ekranda hiçbir şey olmuyordu.
+//
+// Kapı çağrının KENDİSİNİ tutuyor, çünkü ayrışma SESSİZ: seçim doğru, içerik
+// doğru, yalnız pencere görünmüyor — hiçbir şey patlamıyor.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('ad hücresi paneli AÇIYOR', () => {
+  const kur = () => {
+    const d = componentDefs['fead-alternator'];
+    const n = { id: 'ex-ALT', type: 'fead-alternator', def: d, x: 0, y: 0,
+                width: d.defaultWidth || 65, height: d.defaultHeight || 60,
+                data: { od: 60, beltIndex: 2, x: 10, y: 20 } };
+    global.nodes = [n]; global.connections = [];
+    return n;
+  };
+
+  beforeEach(() => {
+    global.clearSelection = jest.fn();
+    global.addToSelection = jest.fn();
+    global.veTogglePropertiesPanel = jest.fn();
+  });
+  afterEach(() => {
+    delete global.clearSelection; delete global.addToSelection;
+    delete global.veTogglePropertiesPanel;
+  });
+
+  test('veFeadTableOpen SEÇMEKLE KALMIYOR, pencereyi de açıyor', () => {
+    const n = kur();
+    expect(fead.veFeadTableOpen('ex-ALT')).toBe(true);
+    expect(global.clearSelection).toHaveBeenCalled();
+    expect(global.addToSelection).toHaveBeenCalledWith(n);
+    // ASIL KAPI: pencere açma çağrısı — yoksa panel dolu ama görünmez.
+    expect(global.veTogglePropertiesPanel).toHaveBeenCalledWith(true);
+  });
+
+  test('olmayan kasnakta pencere AÇILMIYOR', () => {
+    kur();
+    expect(fead.veFeadTableOpen('yok-boyle-bir-id')).toBe(false);
+    expect(global.veTogglePropertiesPanel).not.toHaveBeenCalled();
+  });
+
+  test('veTogglePropertiesPanel yokken PATLAMIYOR (yükleme sırası sözleşmesi)', () => {
+    // cp-fead.js map.js'ten ÖNCE yüklenebiliyor; çıplak çağrı ReferenceError
+    // atardı ve seçim de yapılmamış olurdu.
+    kur();
+    delete global.veTogglePropertiesPanel;
+    expect(() => fead.veFeadTableOpen('ex-ALT')).not.toThrow();
+    expect(global.addToSelection).toHaveBeenCalled();
+  });
+
+  test('ad hücresinin onclick\'i veFeadTableOpen — kapının gerçekten kablosu var', () => {
+    const src = require('fs').readFileSync(
+      require('path').join(__dirname, '../../js/cp-fead.js'), 'utf8');
+    // Hücre bir DÜĞME ve onclick'i bu fonksiyon; sınıf adı değişse de kablo
+    // bu iki parçanın yan yana durmasıyla ölçülüyor.
+    expect(src).toContain('class="ve-fead-tbl-name"');
+    expect(src).toMatch(/onclick="veFeadTableOpen\(/);
+  });
+});
