@@ -37,6 +37,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
+const KUNYE = path.join(__dirname, 'karsilama-kunye.json');
 const API = 'https://commons.wikimedia.org/w/api.php';
 // Wikimedia politikası tanımlanabilir bir User-Agent istiyor.
 const UA = 'MFSim-karsilama-scout/1.0 (https://github.com/kaydgn/MFSim)';
@@ -109,6 +110,22 @@ function lisansTemiz(em) {
   return { tamam: true, kisa: kisa.trim() };
 }
 
+/** Klasörde ZATEN olan Commons dosyaları. Künye dışarıdan gelen her karenin
+ *  `kaynak.commons` adını tutuyor; onsuz ikinci bir tarama aynı kareyi yeniden
+ *  aday diye getirir ve kullanıcı onu ikinci kez seçerse klasöre İKİ KOPYA
+ *  girer — slayt aynı resmi iki kez oynatır ve sebebi hiçbir yerde görünmez. */
+function kuruluOlanlar() {
+  try {
+    const k = JSON.parse(fs.readFileSync(KUNYE, 'utf8')).kareler || {};
+    return new Set(Object.values(k)
+      .map((v) => (v.kaynak || {}).commons)
+      .filter(Boolean));
+  } catch (e) {
+    console.error('  ! künye okunamadı, kurulu kare süzgeci KAPALI: ' + e.message);
+    return new Set();
+  }
+}
+
 // extmetadata alanları HTML taşıyabiliyor (Artist bir <div>'in içinde gelir).
 function metin(em, k) {
   const v = ((em[k] || {}).value || '').toString();
@@ -126,8 +143,10 @@ async function main() {
   fs.mkdirSync(o.cikti, { recursive: true });
 
   const gorulen = new Set();
+  const kurulu = kuruluOlanlar();
   const adaylar = [];
-  const red = { lisans: 0, olcu: 0, tur: 0 };
+  const red = { lisans: 0, olcu: 0, tur: 0, kurulu: 0 };
+  if (kurulu.size) console.log(`${kurulu.size} kare klasörde kurulu — yeniden aday olmayacak`);
 
   const aramalar = o.aramalar.length ? o.aramalar : ARAMALAR;
   if (o.aramalar.length) console.log(`${aramalar.length} özel arama (varsayılan liste atlandı)\n`);
@@ -147,6 +166,8 @@ async function main() {
       if (!ii) continue;
       if (!/^image\/(jpeg|png)$/.test(ii.mime)) { red.tur++; continue; }
       if (ii.width < o.enAzGenislik) { red.olcu++; continue; }
+
+      if (kurulu.has(s.title.replace(/^File:/, ''))) { red.kurulu++; continue; }
 
       const em = ii.extmetadata || {};
       const lis = lisansTemiz(em);
@@ -179,8 +200,8 @@ async function main() {
     await bekle(350);                       // Commons'a nazik ol
   }
 
-  console.log(`\n${adaylar.length} aday · red: lisans ${red.lisans} · ` +
-              `ölçü<${o.enAzGenislik}px ${red.olcu} · tür ${red.tur}`);
+  console.log(`\n${adaylar.length} aday · red: kurulu ${red.kurulu} · ` +
+              `lisans ${red.lisans} · ölçü<${o.enAzGenislik}px ${red.olcu} · tür ${red.tur}`);
 
   let indi = 0;
   for (const a of adaylar) {
