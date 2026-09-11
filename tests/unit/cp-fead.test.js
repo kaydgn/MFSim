@@ -1530,6 +1530,61 @@ describe('veFeadArrangeByCoords — araç kartlarını diziyor, kasnağa dokunmu
       expect(sol[i].y).toBeGreaterThanOrEqual(sol[i - 1].y + sol[i - 1].height);
   });
 
+  // ── ADIN YERİ DE ŞERİDE GİRER ───────────────────────────────────────────
+  // YUKARIDAKİ KAPI YALNIZ KUTUYU ÖLÇÜYOR ve hata tam oradan kaçtı: ad kutunun
+  // ALTINDA duruyor, dikey adım onu hiç saymıyordu. Ölçüldü (gerçek tarayıcı,
+  // 6 kasnaklı AG00976): üç araç aralığında da adın altında 2 px kalıyor ve
+  // komşunun DEKORASYONU oraya biniyordu — seçim tutamağı kutudan ~5 px dışarı
+  // taşar ("Çözücü" → "Çöz▪cü"), kayış kipi rozeti kutunun üst kenarına oturup
+  // üstteki adın kuyruklarını örter. Sekiz çakışma; düzeltmeden sonra sıfır.
+  test('ad KUTUNUN ALTINDA duruyor ve sonraki karta DEĞMİYOR', () => {
+    const CS = require('../../js/canvas-space.js');
+    const LH = 12;
+    global.veNodeLabelOverflow = CS.veNodeLabelOverflow;
+    global.veMeasureNodeLabel = () => ({ w: 96, h: LH });   // DOM'un yerine
+    try {
+      const tipler = ['fead-belt', 'fead-solver', 'fead-report'];
+      const serit = (ns) => ns.filter((n) => tipler.includes(n.type)).sort((a, b) => a.y - b.y);
+
+      // ADSIZ hâlin kutu-kutu boşluğu — kapının ÖLÇÜTÜ bu, koda gömülü bir
+      // sayı değil: sabit değişirse kapı onunla birlikte kayar.
+      delete global.veMeasureNodeLabel;
+      const a = serit((kur(2, tipler), fead.veFeadArrangeByCoords({ silent: true }), global.nodes));
+      const bosluk = a[1].y - (a[0].y + a[0].height);
+      expect(bosluk).toBeGreaterThan(0);
+
+      // ADLI hâl: adın ALTINDA da AYNI boşluk kalmalı — yoksa komşunun
+      // dekorasyonu adın üstüne biner.
+      global.veMeasureNodeLabel = () => ({ w: 96, h: LH });
+      const b = serit((kur(2, tipler), fead.veFeadArrangeByCoords({ silent: true }), global.nodes));
+      const adPay = CS.VE_LABEL_GAP_V + LH;      // css margin + ad yüksekliği
+      for (let i = 1; i < b.length; i++)
+        expect(b[i].y - (b[i - 1].y + b[i - 1].height + adPay)).toBeGreaterThanOrEqual(bosluk);
+    } finally {
+      delete global.veNodeLabelOverflow; delete global.veMeasureNodeLabel;
+    }
+  });
+
+  test('ad ÖLÇÜLEMEZSE yerleşim BİREBİR eski hâli', () => {
+    // Saf koşucuda DOM yok; uydurma bir yükseklik kartları sebepsiz
+    // uzaklaştırırdı. Kapı `veBoundaryBox`un `measure` sözleşmesiyle aynı:
+    // ölçüm işlevi yoksa davranış değişmez.
+    const tipler = ['fead-belt', 'fead-solver', 'fead-report'];
+    const oku = (ns) => ns.filter((n) => tipler.includes(n.type))
+      .sort((a, b) => a.id.localeCompare(b.id)).map((n) => [n.x, n.y]);
+
+    const a = kur(2, tipler);
+    fead.veFeadArrangeByCoords({ silent: true });
+    const olcumsuz = oku(a);
+
+    global.veMeasureNodeLabel = () => null;      // eleman yok → ölçü yok
+    try {
+      const b = kur(2, tipler);
+      fead.veFeadArrangeByCoords({ silent: true });
+      expect(oku(b)).toEqual(olcumsuz);
+    } finally { delete global.veMeasureNodeLabel; }
+  });
+
   test('yalnız kasnak varsa düzen KURULMAZ (dizilecek kart yok)', () => {
     kur(4, []);
     expect(fead.veFeadArrangeByCoords({ silent: true })).toBe(false);
