@@ -459,3 +459,91 @@ describe('künye TEK SATIR — ama damgalar kalır', () => {
     expect(satir[0]).toMatch(/dev\/dk/);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════════════
+   KÜNYE VE ALT NOT DA ENGEL — çizimin İÇİNDEKİ sabit yazılar
+   ──────────────────────────────────────────────────────────────────────────
+   Yerleştiricinin sert listesinde gül, açıklıklar ve öteki adlar vardı; sol
+   üstteki KONUM KÜNYESİ (`pos-label`) ile alt köşedeki DİŞLİ KENAR NOTU
+   (`rib-legend`) yoktu — ikisi de çizimin içinde, sabit yerde duruyor ve
+   yerleştirici tam oraya bakıyordu.
+
+   ÖLÇÜLDÜ (gerçek tarayıcı, 11 örnek × 7 kol konumu): ad künyeye 14 karede,
+   alt nota 14 karede biniyordu; en kötüsü künyenin %60'ını örtüyor. İkisi
+   engel listesine konunca toplam çakışma 78 → 34'e düştü — ve `ad ↔ açı`
+   sınıfı da 28 → 14'e indi, çünkü adlar o iki bölgeden çıkınca sayılara
+   binme fırsatı da azaldı.
+
+   İKİSİ DE SERT TİERDE, çünkü yapısal bilgi: künye "hangi kol konumunu
+   görüyorum" sorusunun tek cevabı, alt not dişli kenarın hangi yüzü
+   gösterdiğinin. Bir SAYIYI örtmek geri alınabilir (yumuşak tier); bunları
+   örtmek çizimi okunamaz kılar.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('ad, KÜNYE ve ALT NOT üstüne düşmez', () => {
+  /* Kutu kuralları yerleştiricinin kendisiyle aynı; ikisi de anchor=start. */
+  const kunyeKutusu = (svg) => {
+    const m = svg.match(/<text data-ve="pos-label" x="([-\d.]+)" y="([-\d.]+)" font-size="([\d.]+)"[^>]*>([^<]*)</);
+    if (!m) return null;
+    const x = +m[1], y = +m[2], fs = +m[3], w = m[4].length * fs * 0.6;
+    return { ad: 'pos-label', x0: x, x1: x + w, y0: y - 8, y1: y + 2 };
+  };
+  const notKutusu = (svg) => {
+    const m = svg.match(/<text data-ve="rib-legend" x="([-\d.]+)" y="([-\d.]+)" font-size="([\d.]+)"[^>]*>([^<]*)</);
+    if (!m) return null;
+    const x = +m[1], y = +m[2], fs = +m[3], w = m[4].length * fs * 0.6;
+    return { ad: 'rib-legend', x0: x, x1: x + w, y0: y - 7, y1: y + 2 };
+  };
+
+  const KONUMLAR = ['free', 'replace', 'max', 'mean', 'min', 'load'];
+
+  test('on bir örneğin hiçbirinde, hiçbir kol konumunda, hiçbir ölçüde binmiyor', () => {
+    const kusur = [];
+    M.veFeadExampleKeysAll().forEach((anahtar) => {
+      const { build } = kur(anahtar);
+      if (!build || !build.ok) return;                 // çözülemeyen örnek konu dışı
+      KONUMLAR.forEach((posMode) => {
+        OLCULER.forEach(([W, H]) => {
+          const svg = fead.veFeadLayoutSVG(build, W, H, { nodeId: 'lay', posMode });
+          if (!svg) return;
+          const adlar = adKutulari(svg);
+          [kunyeKutusu(svg), notKutusu(svg)].forEach((engel) => {
+            if (!engel) return;
+            adlar.forEach((a) => {
+              if (ortusur(a, engel))
+                kusur.push(`${anahtar} · ${posMode} · ${W}×${H}: "${a.ad}" ↔ ${engel.ad}`);
+            });
+          });
+        });
+      });
+    });
+    if (kusur.length)
+      throw new Error(`${kusur.length} çakışma:\n  ` + kusur.slice(0, 12).join('\n  '));
+    expect(kusur).toHaveLength(0);
+  });
+
+  test('iki engel GERÇEKTEN çiziliyor — kapı boş bir süpürme değil', () => {
+    // Engel kutuları SVG'den okunuyor; yazılar basılmazsa kapı hiçbir şey
+    // ölçmeden yeşil kalırdı.
+    const { build } = kur();
+    const svg = fead.veFeadLayoutSVG(build, 440, 458, { nodeId: 'lay', posMode: 'mean' });
+    const k = kunyeKutusu(svg), n = notKutusu(svg);
+    expect(k).not.toBeNull();
+    expect(n).not.toBeNull();
+    expect(k.x1).toBeGreaterThan(k.x0);
+    expect(n.x1).toBeGreaterThan(n.x0);
+    // Künye üstte, not altta — yer değişirse kutu kuralları da yanlış olur.
+    expect(k.y1).toBeLessThan(n.y0);
+  });
+
+  test('ad sayısı hiçbir konumda EKSİLMİYOR — engel etiketi kaybettirmiyor', () => {
+    // Yerleştiricinin ilan ettiği geri düşüş: hiçbir aday temiz değilse ad
+    // ÜSTE döner, KAYBOLMAZ. İki yeni sert engel bunu bozmamalı.
+    const { build } = kur();
+    KONUMLAR.forEach((posMode) => {
+      OLCULER.forEach(([W, H]) => {
+        const svg = fead.veFeadLayoutSVG(build, W, H, { nodeId: 'lay', posMode });
+        expect(adKutulari(svg)).toHaveLength(build.order.length);
+      });
+    });
+  });
+});
