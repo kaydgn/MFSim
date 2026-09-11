@@ -440,3 +440,177 @@ test('CTRL+Z: örnek TEK adımda geri alınır, tablo SİLİNMEZ', async ({ page
 
   expect(hatalar).toEqual([]);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TEKERLEK LİSTEYİ KAYDIRIR, KANVASI UZAKLAŞTIRMAZ
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı gibi kullanılırken ölçüldü (2026-09-11): kart alçaltılıp altı
+// satır görünmez olduğunda, listenin üstünde tekerleği çevirmek tabloyu
+// KAYDIRMIYOR — kanvası UZAKLAŞTIRIYOR (zoom 0,486 → 0,438, tablonun
+// scrollTop'u 0'da kalıyor). Yani kartın içindeki liste tekerlekle hiç
+// kaydırılamıyordu ve kullanıcının ilk refleksi yanlış şeyi yapıyordu.
+//
+// Sebep `ui-core.js`'teki kanvas dinleyicisinin KAYITSIZ `preventDefault()`u:
+// olay hücreden kanvas kabuğuna kabarıyor ve varsayılan kaydırma eylemi,
+// yolun HERHANGİ bir düğümünde iptal edilince hiç gerçekleşmiyor.
+//
+// KAPI NODE'A TAŞINAMAZ: jsdom ne düzen kurar (taşma yok, `scrollHeight`
+// hep `clientHeight`) ne de gerçek bir tekerlek olayının varsayılan eylemini
+// çalıştırır — ölçülen şeyin ikisi de burada.
+test('TEKERLEK: liste kaydırılabilirken tabloyu kaydırır, kanvası değil', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(page);
+  await feadAc(page);
+  await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
+  await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-table'),
+    null, { timeout: 20000 });
+  await page.waitForTimeout(600);
+
+  const kart = page.locator('.ve-fead-table-card').first();
+
+  // ── 1) TAŞMA YOKKEN tekerlek KANVASIN ─────────────────────────────────
+  // Kart varsayılan ölçüsünde altı satırı kayarsız gösteriyor; burada
+  // tekerleği yutmak, kart üstünde kanvası hiç yakınlaştıramamak demekti.
+  const tasmaYok = await kart.locator('.ve-fead-tbl-wrap')
+    .evaluate((el) => el.scrollHeight <= el.clientHeight + 1);
+  expect(tasmaYok).toBe(true);
+  const z0 = await page.evaluate(() => canvasZoom);
+  const satir = kart.locator('tbody tr');
+  await satir.nth(2).hover();
+  await page.mouse.wheel(0, 240);
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => canvasZoom)).not.toBe(z0);
+
+  // ── 2) TAŞMA VARKEN tekerlek TABLONUN ─────────────────────────────────
+  // Kartı alçalt (tabanın üstünde kalarak) — liste artık kayıyor.
+  await page.evaluate(() => {
+    const n = window.nodes.find((x) => x.type === 'fead-table');
+    n.height = 230;
+    document.getElementById(n.id).querySelector('.ve-node-box').style.height = '230px';
+    if (typeof veFeadRefreshCards === 'function') veFeadRefreshCards();
+  });
+  await page.waitForTimeout(350);
+  const tasmaVar = await kart.locator('.ve-fead-tbl-wrap')
+    .evaluate((el) => el.scrollHeight > el.clientHeight + 1);
+  expect(tasmaVar).toBe(true);
+
+  const z1 = await page.evaluate(() => canvasZoom);
+  await satir.nth(1).hover();
+  await page.mouse.wheel(0, 240);
+  await page.waitForTimeout(350);
+  const sonra = await page.evaluate(() => ({
+    zoom: canvasZoom,
+    kaydi: document.querySelector('.ve-fead-tbl-wrap').scrollTop,
+  }));
+  expect(sonra.kaydi).toBeGreaterThan(0);      // TABLO kaydı
+  expect(sonra.zoom).toBe(z1);                 // kanvas OYNAMADI
+
+  // ── 3) KÜNYENİN üstünde tekerlek yine KANVASIN ────────────────────────
+  // Kaydırılabilir yüzey listenin kendisi; künye şeridi kanvasın parçası.
+  await kart.locator('.ve-fead-tbl-head').hover();
+  await page.mouse.wheel(0, 240);
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => canvasZoom)).not.toBe(z1);
+
+  expect(hatalar).toEqual([]);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  KART EN KÜÇÜK ÖLÇÜSÜNÜN ALTINA İNMİYOR
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Ölçülen sessiz kayıp: 130 px yükseklikte yapışkan başlık ile Σ satırı
+// gövdeyi tamamen örtüyor — altı satırın altısı da görünmez oluyor ama Σ
+// hâlâ 663,4 · 1048,7 yazıyor. Node tarafı tabanın BEYAN edildiğini tutuyor;
+// burada ölçülen şey GERÇEK SÜRÜKLEMENİN o tabanda durması ve tabandaki
+// kartın hâlâ satır göstermesi.
+test('YENİDEN BOYUTLANDIRMA: taban aşılmıyor ve tabanda satırlar görünüyor', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(page);
+  await feadAc(page);
+  await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
+  await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-table'),
+    null, { timeout: 20000 });
+  await page.waitForTimeout(600);
+
+  // Kartı seç ki tutamaklar etkin olsun, sonra SE tutamağını sol-üste sürükle.
+  const id = await page.evaluate(() => window.nodes.find((n) => n.type === 'fead-table').id);
+  await page.evaluate((i) => {
+    clearSelection();
+    addToSelection(window.nodes.find((n) => n.id === i));   // DÜĞÜM, DOM elemanı değil
+  }, id);
+  await page.waitForTimeout(250);
+  const tut = page.locator('#' + id + ' .ve-resize-se');
+  const bb = await tut.boundingBox();
+  await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(bb.x - 1400, bb.y - 900, { steps: 14 });   // sınırın çok ötesine
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+
+  const olcu = await page.evaluate((i) => {
+    const n = window.nodes.find((x) => x.id === i);
+    const k = document.querySelector('.ve-fead-table-card');
+    const w = k.querySelector('.ve-fead-tbl-wrap');
+    const wr = w.getBoundingClientRect();
+    const gorunen = [...k.querySelectorAll('tbody tr')]
+      .filter((tr) => { const r = tr.getBoundingClientRect();
+        return r.top < wr.bottom - 2 && r.bottom > wr.top + 2; }).length;
+    return { w: Math.round(n.width), h: Math.round(n.height),
+             min: { w: componentDefs['fead-table'].minWidth, h: componentDefs['fead-table'].minHeight },
+             gorunenSatir: gorunen, gizliSutunPx: w.scrollWidth - w.clientWidth };
+  }, id);
+
+  expect(olcu.w).toBe(olcu.min.w);
+  expect(olcu.h).toBe(olcu.min.h);
+  // TABANDA KART HÂLÂ ÇALIŞIYOR: en az iki satır görünüyor ve hiçbir sütun
+  // kaymıyor. Eski 50×50 tabanında ikisi de sıfırdı.
+  expect(olcu.gorunenSatir).toBeGreaterThanOrEqual(2);
+  expect(olcu.gizliSutunPx).toBeLessThanOrEqual(1);
+
+  expect(hatalar).toEqual([]);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  EKLENEN SATIR GÖRÜNÜR OLUYOR
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// ÖLÇÜLDÜ (2026-09-11): varsayılan kartta yedinci kasnak eklendiğinde satır
+// listenin dibinin 35 px altına düşüyor ve tablo hiç kaymıyordu.
+test('KASNAK EKLE: yeni satır görüş alanına giriyor', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(page);
+  await feadAc(page);
+  await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
+  await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-table'),
+    null, { timeout: 20000 });
+  await page.waitForTimeout(600);
+
+  const kart = page.locator('.ve-fead-table-card').first();
+  const sonSatirDurumu = () => kart.evaluate((k) => {
+    const w = k.querySelector('.ve-fead-tbl-wrap');
+    const son = [...k.querySelectorAll('tbody tr')].pop();
+    const wr = w.getBoundingClientRect(), sr = son.getBoundingClientRect();
+    return { satir: k.querySelectorAll('tbody tr').length,
+             tamGorunur: sr.top >= wr.top - 1.5 && sr.bottom <= wr.bottom + 1.5 };
+  });
+
+  // Liste taşana kadar ekle — GERÇEK açılır listeden, `veFeadTableAdd`
+  // doğrudan çağrılarak değil.
+  for (let i = 0; i < 3; i++) {
+    await kart.locator('.ve-fead-tbl-add').selectOption('fead-idler');
+    await page.waitForTimeout(350);
+    const d = await sonSatirDurumu();
+    expect(d.tamGorunur).toBe(true);          // her eklemede görünür kalıyor
+  }
+  expect((await sonSatirDurumu()).satir).toBe(9);
+  // Ve liste gerçekten taşmış durumda — yani kapı boş bir hâli ölçmüyor.
+  expect(await kart.locator('.ve-fead-tbl-wrap')
+    .evaluate((el) => el.scrollHeight > el.clientHeight + 1)).toBe(true);
+
+  expect(hatalar).toEqual([]);
+});

@@ -2,6 +2,52 @@
 
 > Kök `CLAUDE.md`'den taşındı. Metin birebir korunmuştur.
 
+### Kart İÇİNDEKİ kaydırılabilir yüzey tekerleği önce alır (`veWheelInnerPane`)
+
+`js/ui-core.js`'teki kanvas tekerlek dinleyicisi kayıtsız `preventDefault()`
+çağırıyordu. Olay kartın içinden kabardığı için varsayılan kaydırma eylemi de
+iptal oluyordu: **kartın içindeki hiçbir liste tekerlekle kaydırılamıyordu.**
+
+Ölçüldü (2026-09-11, gerçek tarayıcı, Kayış Tablosu): kart alçaltılıp altı
+satır görünmez olduğunda listenin üstünde tekerlek, tabloyu kaydırmak yerine
+kanvası uzaklaştırıyordu — zoom 0,486 → 0,438, tablonun `scrollTop`'u 0'da.
+Kullanıcının ilk refleksi tam da bu yüzden yanlış şeyi yapıyordu.
+
+Kural: hedef ile kanvas kabuğu arasında **kendi ekseninde gerçekten
+kaydırılabilen** bir yüzey varsa (overflow izin veriyor **ve** içerik
+sığmıyor) tekerlek onundur. İki koşul birden şart — yalnız `overflow`a bakmak,
+taşması olmayan her `auto` kabında tekerleği yutar ve kart üstünde kanvas hiç
+yakınlaştırılamazdı.
+
+Kapı: `tests/e2e/fead-tablo.spec.js` → *"TEKERLEK"* (üç halka: taşma yokken
+kanvas yakınlaşıyor, taşma varken tablo kayıyor ve kanvas oynamıyor, künye
+şeridinde yine kanvas). Node'a taşınamaz — jsdom ne düzen kurar ne de gerçek
+bir tekerleğin varsayılan eylemini çalıştırır.
+
+### Kartın EN KÜÇÜK ÖLÇÜSÜNÜ tipi söyler (`veNodeMinSize`)
+
+`js/node-resize.js` her kartı 50×50'ye kadar küçültüyordu. İçeriği olan bir
+kart için bu ölçü anlamsız ve kaybı SESSİZ:
+
+* Kayış Tablosu 130 px yükseklikte — yapışkan başlık (50) + Σ satırı (24)
+  48 px'lik gövdeyi tamamen örtüyor. Altı satırın altısı da görünmüyor ama Σ
+  hâlâ `663,4 · 1048,7` yazıyor: kart boş görünüyor, boş olmadığını yalnız
+  toplamlar söylüyor.
+* 560 px genişlikte on bir sütunun altısı kayıyor (298 px) ve ölçülen yatay
+  kaydırma çubuğu **0 px** yer kaplıyor — kaybın hiçbir işareti yok.
+
+Taban `componentDefs.minWidth/minHeight`ten okunur; beyan etmeyen tip eski
+50×50'de kalır. Kenar yapışması (snap) da tabanı ezemez. Taban yalnız
+sürüklemeye konsaydı, bu kuraldan ÖNCE küçültülüp kaydedilmiş bir kart bozuk
+hâlde açılmaya devam ederdi — bu yüzden `veFeadLayoutSizeFor` açılışta da
+yükseltiyor.
+
+Kapılar: `tests/unit/fead-table.test.js` → *"en küçük ölçü"* (taban beyan
+ediliyor, sütun toplamından geri kalmıyor, tipten okunuyor, açılışta
+yükseliyor) + `tests/e2e/fead-tablo.spec.js` → *"YENİDEN BOYUTLANDIRMA"*
+(gerçek tutamak sürüklemesi tabanda duruyor ve tabandaki kart hâlâ satır
+gösteriyor).
+
 ### Topoloji sınır çerçevesi ADI da sarar (`veNodeLabelOverflow`)
 
 Kesikli çerçeve (`veBoundaryBox` → `veUpdateBoundary`) yalnız KUTULARI sarıyordu;

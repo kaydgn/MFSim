@@ -4017,8 +4017,29 @@ function veFeadTableAdd(type){
   // İndis normalize sırasında SONA düşer (indissiz kasnak sona eklenir —
   // veFeadBeltOrder). Kart tazelemesini createNode'un updateAllConnections'ı
   // yapıyor; burada ikinci kez çağırmak kartı boşuna iki kez kurardı.
+  _feadScrollRowIntoView(n.id);
   if(typeof showToast === 'function')
     showToast(componentDefs[type].name + ' kayış sırasının sonuna eklendi', 'success');
+  return true;
+}
+
+// EKLENEN SATIR GÖRÜNÜR OLMALI.
+//
+// ÖLÇÜLDÜ (2026-09-11, gerçek tarayıcı): varsayılan kartta yedinci kasnak
+// eklendiğinde satır listenin dibinin 35 px ALTINA düşüyor ve tablo hiç
+// kaymıyor (scrollTop 0'da kalıyor). Kullanıcı "＋ Kasnak ekle" diyor, paneli
+// açılıyor, ama DOLDURACAĞI SATIR ekranda yok — eylemin sonucu görünmüyor.
+// Kaydırma `veFeadRefreshCards`'tan SONRA olmak zorunda: satır o çağrıyla
+// doğuyor, öncesinde DOM'da yok.
+function _feadScrollRowIntoView(nodeId){
+  if(typeof document === 'undefined' || !nodeId) return false;
+  var tr = document.querySelector('.' + VE_FEAD_TABLE_CLASS
+    + ' tbody tr[data-ve-node="' + nodeId + '"]');
+  if(!tr || typeof tr.scrollIntoView !== 'function') return false;
+  // `block:'nearest'` — satır zaten görünüyorsa liste OYNAMAZ. 'center' olsaydı
+  // her ekleme listeyi zıplatırdı, oysa görünen bir satır için yapılacak doğru
+  // şey hiçbir şey yapmamak.
+  tr.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   return true;
 }
 
@@ -5907,7 +5928,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadRefreshCards: veFeadRefreshCards,
     veFeadTableSet: veFeadTableSet, veFeadTableMove: veFeadTableMove,
     veFeadTableSetSpin: veFeadTableSetSpin,
-    veFeadTableAdd: veFeadTableAdd, veFeadTableDelete: veFeadTableDelete,
+    veFeadTableAdd: veFeadTableAdd,
+    _feadScrollRowIntoView: _feadScrollRowIntoView, veFeadTableDelete: veFeadTableDelete,
     veFeadTableAddHTML: veFeadTableAddHTML,
     veFeadTableOpen: veFeadTableOpen,
     veFeadMarkSelectedRow: veFeadMarkSelectedRow,

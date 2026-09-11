@@ -43,6 +43,9 @@ global.veIsCanvasHidden = veIsCanvasHidden;
 // ikisi de üst-seviye). Yazılmazsa tip listesi boş döner ve ekleyici kapısı
 // doğru sebepten değil, katalog hiç görünmediği için kırmızı olur.
 global.componentDefs = componentDefs;
+// node-resize.js'in `veNodeMinSize`i: en küçük ölçüyü TİPTEN okuyor, yani
+// componentDefs global'e yazıldıktan SONRA yüklenmeli.
+eval(loadSource('node-resize.js'));
 eval(loadSource('fead-belts.js'));
 global.FEADCore = F;
 Object.keys(M).forEach((k) => { global[k] = M[k]; });
@@ -1000,5 +1003,125 @@ describe('yeni yüzeyin işlevleri', () => {
     // Şema kartının kendi listesi bozulmadı (tek kapı, iki kart).
     expect(veFeadLayoutSizeFor({ type: 'fead-layout', width: 420, height: 340 }))
       .toEqual({ w: VE_FEAD_LAYOUT_W, h: VE_FEAD_LAYOUT_H, changed: true });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  KART KÜÇÜLTÜLÜNCE İÇERİK KAYBOLUYORDU — EN KÜÇÜK ÖLÇÜ
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı gibi kullanıldı (2026-09-11, gerçek tarayıcı) ve iki SESSİZ kayıp
+// ölçüldü. İkisi de "bir şey patlamıyor, yalnız görünmüyor" sınıfından:
+//
+//   • 130 px yükseklikte gövdeye yer kalmıyor. Yapışkan başlık (50 px) ile
+//     yapışkan Σ satırı (24 px) 48 px'lik kaydırma alanını tamamen örtüyor:
+//     ALTI SATIRIN ALTISI DA görünmez oluyor ama Σ satırı hâlâ 663,4 ve
+//     1048,7 yazıyor. Kart boş görünüyor, boş OLMADIĞINI yalnız toplamlar
+//     söylüyor — yanıltıcı.
+//   • 560 px genişlikte on bir sütunun altısı kayıyor (298 px gizli) ve
+//     ölçülen yatay kaydırma çubuğu 0 px yer kaplıyor: kaybın işareti YOK.
+//
+// Kart BÜYÜTÜLEBİLİR; küçültme içeriğin bütün kaldığı yerde durur.
+describe('en küçük ölçü — kart içeriğinin altına inmiyor', () => {
+  test('Kayış Tablosu tabanını BEYAN EDİYOR ve taban sütunlardan geri kalmıyor', () => {
+    const def = componentDefs['fead-table'];
+    expect(def.minWidth).toBe(VE_FEAD_TABLE_MIN_W);
+    expect(def.minHeight).toBe(VE_FEAD_TABLE_MIN_H);
+    // GENİŞLİK TABANI SÜTUNLARDAN GERİ KALAMAZ: bir sütun eklenirse taban da
+    // büyümeli, yoksa yeni sütun ilk daraltmada sessizce kayar.
+    const toplam = fead.VE_FEAD_TABLE_COLS.reduce((a, c) => a + c.w, 0);
+    expect(VE_FEAD_TABLE_MIN_W).toBeGreaterThanOrEqual(toplam);
+    // YÜKSEKLİK TABANI: künye + iki satırlık başlık + İKİ veri satırı + Σ +
+    // ekleme şeridi. Altındaki her değer gövdeyi yapışkan iki şeridin
+    // arasında eziyor.
+    expect(VE_FEAD_TABLE_MIN_H).toBeGreaterThanOrEqual(24 + 50 + 2 * 34 + 24 + 36);
+    // Ve taban VARSAYILANI aşmıyor — aşsaydı kart açılışta kendi tabanının
+    // altında doğardı.
+    expect(VE_FEAD_TABLE_MIN_W).toBeLessThanOrEqual(VE_FEAD_TABLE_W);
+    expect(VE_FEAD_TABLE_MIN_H).toBeLessThanOrEqual(VE_FEAD_TABLE_H);
+  });
+
+  test('taban TİPTEN okunuyor — beyan etmeyen tip eski 50×50\'de kalıyor', () => {
+    // Mekanizma genel: kart başına `if` yazılsaydı üçüncü kart eklendiğinde
+    // sessizce tabansız kalırdı.
+    expect(typeof veNodeMinSize).toBe('function');
+    expect(veNodeMinSize({ type: 'fead-table' }))
+      .toEqual({ w: VE_FEAD_TABLE_MIN_W, h: VE_FEAD_TABLE_MIN_H });
+    // Beyan etmeyen tip: eski taban.
+    expect(veNodeMinSize({ type: 'fead-idler' })).toEqual({ w: 50, h: 50 });
+    expect(veNodeMinSize(null)).toEqual({ w: 50, h: 50 });
+    // `def` düğümün üstünde taşınıyorsa da okunur (kopyalanan düğüm yolu).
+    expect(veNodeMinSize({ def: { minWidth: 111, minHeight: 222 } }))
+      .toEqual({ w: 111, h: 222 });
+  });
+
+  test('TABANIN ALTINDA KAYITLI kart açılışta yükseliyor', () => {
+    // Taban yalnız sürüklemeye konsaydı, bu kural gelmeden önce küçültülüp
+    // KAYDEDİLMİŞ bir kart o bozuk hâlde açılmaya devam ederdi.
+    expect(veFeadLayoutSizeFor({ type: 'fead-table', width: 300, height: 130 }))
+      .toEqual({ w: VE_FEAD_TABLE_MIN_W, h: VE_FEAD_TABLE_MIN_H, changed: true });
+    // Tek eksen de yeter — öteki bilerek verilmiş olabilir, korunur.
+    expect(veFeadLayoutSizeFor({ type: 'fead-table', width: 1400, height: 120 }))
+      .toEqual({ w: 1400, h: VE_FEAD_TABLE_MIN_H, changed: true });
+    // TABANIN ÜSTÜNDEKİ ölçüye DOKUNULMUYOR (eski kart yükseltme listesi de
+    // bozulmadı — o hâlâ tam eşleşmeyle çalışıyor).
+    expect(veFeadLayoutSizeFor({ type: 'fead-table', width: 1000, height: 500 }).changed)
+      .toBe(false);
+    expect(veFeadLayoutSizeFor({ type: 'fead-table', width: 824, height: 430 }))
+      .toEqual({ w: VE_FEAD_TABLE_W, h: VE_FEAD_TABLE_H, changed: true });
+    // Taban BEYAN ETMEYEN kart etkilenmiyor.
+    expect(veFeadLayoutSizeFor({ type: 'fead-layout', width: 120, height: 90 }).changed)
+      .toBe(false);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  EKLENEN SATIR GÖRÜNÜR OLMALI
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// ÖLÇÜLDÜ (2026-09-11, gerçek tarayıcı): varsayılan kartta yedinci kasnak
+// eklendiğinde satır listenin dibinin 35 px ALTINA düşüyor ve tablo hiç
+// kaymıyor (scrollTop 0'da kalıyor). Kullanıcı "＋ Kasnak ekle" diyor, paneli
+// açılıyor, ama DOLDURACAĞI SATIR ekranda yok.
+describe('eklenen satır görünür kılınıyor', () => {
+  test('ekleyici satırı görüş alanına ALIYOR — ve zaten görünense DOKUNMUYOR', () => {
+    const { ns } = kurOrnek();
+    // Kartı DOM'a kur ki satırlar gerçekten var olsun.
+    const d = componentDefs['fead-table'];
+    ns.push({ id: 'kart', type: 'fead-table', def: d, x: 0, y: 0,
+              width: d.defaultWidth, height: d.defaultHeight, data: {} });
+    const el = document.createElement('div');
+    el.id = 'kart';
+    el.innerHTML = '<div class="ve-node-box"></div>';
+    document.body.appendChild(el);
+    expect(fead.veFeadRefreshCards()).toBeGreaterThan(0);
+
+    const cagri = [];
+    document.querySelectorAll('.' + fead.VE_FEAD_TABLE_CLASS + ' tbody tr[data-ve-node]')
+      .forEach((tr) => { tr.scrollIntoView = (o) => cagri.push([tr.getAttribute('data-ve-node'), o]); });
+
+    // Var olan bir satır: çağrılıyor ama `nearest` — görünen satır listeyi
+    // ZIPLATMAZ. ('center' olsaydı her ekleme listeyi oynatırdı.)
+    expect(fead._feadScrollRowIntoView('ex-ALT')).toBe(true);
+    expect(cagri).toHaveLength(1);
+    expect(cagri[0][0]).toBe('ex-ALT');
+    expect(cagri[0][1].block).toBe('nearest');
+
+    // Olmayan satır sessizce yutuluyor — kart kurulu değilken de çağrılıyor.
+    expect(fead._feadScrollRowIntoView('yok-boyle-bir-id')).toBe(false);
+    expect(fead._feadScrollRowIntoView(null)).toBe(false);
+    expect(cagri).toHaveLength(1);
+  });
+
+  test('veFeadTableAdd kaydırmayı TAZELEMEDEN SONRA çağırıyor', () => {
+    // Sıra kritik: satır `veFeadRefreshCards` ile doğuyor, öncesinde DOM'da
+    // yok — kaydırma önce çağrılsaydı hiçbir şey bulamaz ve sessizce
+    // hiçbir şey yapmazdı.
+    const src = require('fs').readFileSync(
+      require('path').join(__dirname, '../../js/cp-fead.js'), 'utf8');
+    const fn = src.slice(src.indexOf('function veFeadTableAdd(type)'));
+    const govde = fn.slice(0, fn.indexOf('\n}'));
+    expect(govde).toContain('_feadScrollRowIntoView(n.id)');
+    expect(govde.indexOf('createNode(')).toBeLessThan(govde.indexOf('_feadScrollRowIntoView'));
   });
 });
