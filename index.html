@@ -1,5 +1,10 @@
 <!DOCTYPE html>
-<html lang="tr" data-theme="slate">
+<!-- data-theme: belgenin VARSAYILANI, js/theme.js'teki varsayilanla ayni olmak
+     zorunda (kapi: tests/unit/loader-splash.test.js). Ayrismasi bir yazim hatasi
+     degil GORUNUR bir hata uretir: acilis ekrani bir palette acilir, kullanicinin
+     temasi yuklemenin SONUNDA gelir ve kart tam devir teslim aninda renk
+     degistirir. Kayitli secim js/loader.js'te, hicbir sey cizilmeden once konur. -->
+<html lang="tr" data-theme="pearl">
 <head>
   <meta charset="UTF-8" />
   <!-- Kayıtlı temayı İLK boyamadan önce uygula. theme.js login sonrası (deferred)
@@ -38,19 +43,26 @@
 <body>
 
 <!-- ═══ LOADING SCREEN (login sonrasi modul yuklenirken gosterilir) ═══
-     GOVDE, KARSILAMA KARTININ (.ve-welcome) IKIZI: ayni 410 px, ayni ic
-     bosluk, ayni kenar/golge, ayni hero (logo + slogan). Acilis ekrani
-     kapanirken ikisi ust uste erir; kart yerinde durur, yalniz govdesi
-     degisir. Ikisinin ZEMINI de ayni (ince izgara) — bkz. css/styles.css.
+     SAHNE: acilis, karsilama ekraninin KENDISIYLE basliyor. Ayni fotograf
+     (ayni kare), ayni yerde duran ayni buzlu cam kart (.ve-welcome-id'nin
+     ikizi: left 56px, dikey ortali, clamp(320px,29%,380px)). Yukleme bitince
+     fotograf KIMILDAMIYOR, kart yerinden OYNAMIYOR — yalniz kartin govdesi
+     asama listesinden modul listesine doniyor.
 
-     91 modul etiketi tek tek akmiyor: yukleme sirasindaki YEDI obek
+     Eskiden bu kart ekranin ORTASINDA 410 px'lik opak bir kutuydu ve
+     karsilama tam-en fotografa gecince iki ekran ayri kusaga dusmustu.
+
+     Modul etiketleri tek tek akmiyor: yukleme sirasindaki obekler
      gosteriliyor (bkz. data-mfsim-stage isaretleri). Listeyi js/loader.js
-     kurar; burada bos durur.
+     DOM'dan turetir — burada bos durur, sayi yazili degil.
 
      KIMLIKLER SABIT: #mfsim-loading-screen 19 E2E beklemesinde geciyor,
      #mfsim-loading-bar / -percent / -message js/loader.js'teki ELS
      haritasindan okunuyor. Ic yapi serbest, bu dort kimlik degil. -->
 <div id="mfsim-loading-screen" class="mfsim-loading-screen">
+  <!-- Karsilama slaytinin O ANKI karesi, ILK KAREDEN itibaren. Bos kalirsa
+       (kare yok) ekran kagit zeminde durur — bkz. js/loader.js › paintPhoto. -->
+  <div id="mfsim-loading-photo" class="mfsim-loading-photo" aria-hidden="true"></div>
   <div class="mfsim-loading-panel">
     <div class="mfsim-loading-hero">
       <div class="mfsim-loading-logo"><span class="mf-ico mf-ico-settings mfsim-loading-logo-ico"></span><span>MFSim</span></div>
@@ -71,6 +83,11 @@
   </div>
 </div>
 
+<!-- Karsilama kare LISTESI defer DEGIL: js/loader.js acilis karesini secerken
+     bunu okuyor (asagidaki paintPhoto). Saf veri, ~1 KB, bagimliligi yok —
+     defer setinde kalsaydi acilis ekrani fotografsiz baslardi. Karelerin
+     KENDISI zaten <body>'nin hemen ardinda (window.__MFSIM_KARSILAMA). -->
+<script src="js/karsilama-gorseller.js"></script>
 <script src="js/loader.js"></script>
 
 <!-- ═══ LOGIN SCREEN ═══ -->
@@ -1142,7 +1159,6 @@
 <script type="text/x-mfsim-defer" src="js/tabs.js" data-mfsim-label="Sekmeler hazırlanıyor..."></script>
 <script type="text/x-mfsim-defer" src="js/results.js" data-mfsim-label="Sonuç paneli..."></script>
 <script type="text/x-mfsim-defer" src="js/signal-tree.js" data-mfsim-label="Sinyal ağacı..."></script>
-<script type="text/x-mfsim-defer" src="js/karsilama-gorseller.js" data-mfsim-label="Karşılama slaytı: kare listesi..."></script>
 <script type="text/x-mfsim-defer" src="js/components.js" data-mfsim-label="Bileşen kütüphanesi..."></script>
 <script type="text/x-mfsim-defer" src="js/sensors.js" data-mfsim-label="Sensör tanımları..."></script>
 <script type="text/x-mfsim-defer" src="js/canvas-space.js" data-mfsim-label="Kanvas uzayı (sonsuz ızgara, kamera)..."></script>

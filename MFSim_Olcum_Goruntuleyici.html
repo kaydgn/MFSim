@@ -1394,21 +1394,27 @@
     }
 
     /* ===== YUKLEME EKRANI (SPLASH / LOADING SCREEN) =====
-       Panel, KARSILAMA KARTININ (.ve-welcome) IKIZIDIR: ayni 410 px, ayni ic
-       bosluk, ayni kenar/golge, ayni hero. Zemin de ayni: KAGIT dokusu
-       (--paper-grain + iki uclu ton). Eskiden buradaki zemin tam tonda izgara
-       + accent isiltisiydi; karsilama ekrani isiltiyi "renk veriye ayrilir"
-       gerekcesiyle birakmisti ve iki ekran ayrismisti — acilis kapanirken
-       zemin gozle gorulur sekilde degisiyordu. Karsilama izgaradan kagida
-       dondugunde bu blok da onunla birlikte dondu; ikisi ayrilirsa ayni
-       sicrama geri gelir. Kapanista yalniz kartin govdesi eriyor. */
+       SAHNE — acilis, karsilama ekraninin KENDISIYLE basliyor:
+         • ayni fotograf, ayni kare (js/loader.js › paintPhoto secer,
+           js/components.js › _veSlaytKarilmis slayti o kareyle baslatir);
+         • ayni buzlu cam kart, .ve-welcome-id'nin BIREBIR geometrisinde.
+       Kapanista fotograf kimildamiyor, kart yerinden oynamiyor — yalniz
+       kartin govdesi degisiyor.
+
+       Kare bulunamazsa (bos klasor / liste yuklenmemis) fotograf katmani bos
+       kalir ve asagidaki KAGIT zemin gorunur; o zemin de karsilamanin zemini
+       (--paper-grain + iki uclu ton). Ikisi ayrilirsa acilis kapanirken zemin
+       gozle gorulur sekilde degisir — bir kez oyle oldu. */
     .mfsim-loading-screen{
       position:fixed; inset:0; z-index:calc(var(--z-boot) + 1);
       display:none;            /* JS show ile flex olur */
       align-items:center; justify-content:center;
-      padding:24px; overflow:auto;
+      overflow:hidden;         /* fotograf kaydirma cubugu dogurmasin */
       font-family:var(--font-sans);
       opacity:1;               /* INSTANT goster — fade yalniz hide icin */
+      /* PADDING YOK: panel mutlak konumlu ve `left:56px` PADDING KUTUSUNA gore
+         olculur — 24px'lik bir pay kartin karsilama kartindan 24px kaymasina
+         yeterdi ve devir teslimde kart yerinden oynardi. */
       /* Taban: color-mix desteklenmezse bu gecerli kalir (karsilama ile ayni kalip) */
       background:
         var(--paper-grain),
@@ -1423,42 +1429,70 @@
           var(--bg-primary));
       background-size:160px 160px, auto;
     }
+    /* Karsilama slaytinin O ANKI karesi. Ken Burns YOK: karsilama kendi
+       yaklasmasini olcek 1'den baslatiyor, acilista da yaklasma olsaydi devir
+       teslimde kare SICRARDI. Kaynagi js/loader.js › paintPhoto yazar; kare
+       bulunamazsa katman bos kalir ve ustteki kagit zemin gorunur. */
+    .mfsim-loading-photo{
+      position:absolute; inset:0;
+      background-size:cover; background-position:center;
+      background-repeat:no-repeat;
+    }
     .mfsim-loading-screen.mfsim-fading-out{
       transition:opacity 0.34s var(--ease-out);
       opacity:0;
       pointer-events:none;
     }
-    /* Kart zeminden ONCE erir: karsilama karti tam olarak ayni yerde durdugu
-       icin goz "kart kayboldu" degil "kartin ici degisti" gorur. */
+    /* Kart zeminden ONCE erir: karsilama karti TAM OLARAK ayni yerde durdugu
+       icin goz "kart kayboldu" degil "kartin ici degisti" gorur. Kayma YOK —
+       eski translateY(-4px) kart ortadayken devir teslimi yumusatiyordu, ikiz
+       geometride ise kartin 4 px zipladigi anlamina gelir. */
     .mfsim-loading-screen.mfsim-fading-out .mfsim-loading-panel{
-      transition:opacity 0.16s var(--ease-out), transform 0.34s var(--ease-out);
+      transition:opacity 0.16s var(--ease-out);
       opacity:0;
-      transform:translateY(-4px);
     }
 
+    /* .ve-welcome-id ILE AYNI GEOMETRI. Bu bir benzetme degil kopya: iki kart
+       ust uste erirken 1 px'lik fark bile "kart yerinden oynadi" olarak
+       goruluyor. Oradaki bir deger degisirse burasi da degisir —
+       tests/unit/loader-splash.test.js ikisini bagliyor. */
     .mfsim-loading-panel{
-      width:100%; max-width:410px; margin:auto;
-      padding:34px 36px 24px;
+      position:absolute;
+      left:56px;
+      top:0; bottom:0; height:fit-content;
+      margin-top:auto; margin-bottom:auto;   /* dikey ortalama MARJLA (transform koreografiye ait) */
+      width:clamp(320px, 29%, 380px);
+      max-height:calc(100% - 64px);
+      overflow:auto;
+      padding:24px 24px 20px;
+      border-radius:var(--karsilama-kart-r);
+      /* Taban: color-mix desteklenmeyen tarayicida kart OPAK kalir */
       background:var(--bg-secondary);
-      border:1px solid var(--border-color);
-      box-shadow:var(--shadow-xl);
+      background:color-mix(in srgb, var(--bg-secondary) calc(100% - var(--karsilama-cam)), transparent);
+      -webkit-backdrop-filter:blur(var(--karsilama-cam-blur)) saturate(1.18);
+      backdrop-filter:blur(var(--karsilama-cam-blur)) saturate(1.18);
+      border:1px solid var(--border-light);
+      border-color:color-mix(in srgb, var(--border-light) 70%, transparent);
+      box-shadow:var(--karsilama-kart-golge);
     }
-    .mfsim-loading-hero{ text-align:center; }
+    /* Hero de karsilamanin ikizi: logo SOLA yasli, punto --fs-h2, ikon kutusu
+       1.15em. Metrik ayrisirsa js/components.js › veWelcomeAdoptSplashLogo'nun
+       ucusu gorunur bir sicramaya doner (orada olcek 1 varsayiliyor). */
     .mfsim-loading-logo{
-      display:inline-flex;
+      display:flex;
       align-items:center;
-      gap:11px;
-      font-size:var(--fs-h1); font-weight:700;
+      gap:10px;
+      font-size:var(--fs-h2); font-weight:700;
       color:var(--text-heading);
       letter-spacing:0.5px;
     }
     .mfsim-loading-logo-ico{
-      width:1.4rem; height:1.4rem;
+      width:1.15em; height:1.15em;
       color:var(--accent-primary);
       animation:mfsim-loading-spin 4.5s linear infinite;
     }
     .mfsim-loading-subtitle{
-      margin-top:8px;
+      margin-top:5px;
       font-size:var(--fs-body);
       color:var(--text-muted);
       letter-spacing:0.4px;
@@ -1466,7 +1500,8 @@
     .mfsim-loading-sep{
       height:1px;
       background:var(--border-color);
-      margin:18px -36px;
+      background:color-mix(in srgb, var(--border-color) 75%, transparent);
+      margin:14px 0 12px;
     }
 
     /* ── Asama listesi ────────────────────────────────────────────────────
@@ -1584,6 +1619,20 @@
       font-variant-numeric:tabular-nums;
     }
     .mfsim-loading-stamp:empty{ display:none; }
+
+    /* Dar pencere: karsilama kartinin AYNI kurali — kart ortada asili bir
+       sutun degil, TEPEDE genis bir bant (bkz. @media (max-width:1100px)
+       › .ve-welcome-id). Mutlak konum korunuyor: panel `display:flex`i JS
+       satir ici yaziyor, statige donmek `!important` gerektirirdi. */
+    @media (max-width:1100px){
+      .mfsim-loading-panel{
+        left:22px; right:22px; top:22px; bottom:auto;
+        width:auto;
+        margin:0;
+        max-height:calc(100% - 44px);
+        padding:22px 24px 18px;
+      }
+    }
 
     @keyframes mfsim-loading-spin{
       from { transform:rotate(0deg); }

@@ -74,6 +74,7 @@ beforeEach(() => {
   setupDOM();
   hareketKapali = false;
   delete window.__MFSIM_KARSILAMA;
+  delete window.__MFSIM_ACILIS_KARE;
   veWelcomeSlaytDurdur();
 });
 afterEach(() => veWelcomeSlaytDurdur());
@@ -183,6 +184,80 @@ describe('veWelcomeSlaytBaslat', () => {
     const k = _veSlaytKarilmis();
     Math.random = gercek;
     expect(k.slice().sort()).toEqual(LISTE.slice().sort());
+  });
+});
+
+// ═══ 4b) AÇILIŞ KARESİ DEVAMLILIĞI ═════════════════════════════════════════
+// Yükleme ekranı tam ekran bir kareyle açılıyor ve karşılama kartı onun
+// üstünde beliriyor (js/loader.js › paintPhoto). Slayt BAŞKA bir kareyle
+// başlarsa devir teslimde fotoğraf değişir — "kart eridi, sahne durdu" etkisi
+// tam olarak burada kırılır ve kırılma SESSİZDİR: iki ekran da kendi başına
+// doğru görünür.
+describe('Açılış karesi slaytın başına alınıyor', () => {
+  const kap = () => document.getElementById('ve-welcome-slayt');
+  const kareler = () => Array.from(kap().querySelectorAll('.ve-welcome-kare'));
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  test('karılmış liste AÇILIŞ KARESİYLE başlar', () => {
+    window.__MFSIM_ACILIS_KARE = LISTE[LISTE.length - 1];
+    for (let i = 0; i < 8; i++) {
+      expect(_veSlaytKarilmis()[0]).toBe(LISTE[LISTE.length - 1]);
+    }
+  });
+
+  test('geri kalan yine bir PERMÜTASYON — kare kaybolmuyor, çoğalmıyor', () => {
+    window.__MFSIM_ACILIS_KARE = LISTE[3];
+    const k = _veSlaytKarilmis();
+    expect(k.length).toBe(LISTE.length);
+    expect(k.slice().sort()).toEqual(LISTE.slice().sort());
+  });
+
+  test('slayt o kareyle açılıyor — ilk katmanın resmi açılış karesi', () => {
+    window.__MFSIM_ACILIS_KARE = LISTE[2];
+    veWelcomeSlaytBaslat();
+    const acik = kareler().find((k) => k.classList.contains('is-on'));
+    expect(acik.style.backgroundImage).toContain(LISTE[2]);
+  });
+
+  test('İLK KARE geçişsiz açılıyor — perde kalkarken kare yarı saydam kalmaz', () => {
+    veWelcomeSlaytBaslat();
+    const acik = kareler().find((k) => k.classList.contains('is-on'));
+    // Satır içi değer bir kare sonra geri alınır: kalıcı 'none' sonraki
+    // çapraz geçişleri de öldürürdü.
+    expect(acik.style.transition).toBe('');
+  });
+
+  test('açılış karesi YOKSA sıra olduğu gibi kalır (kırılmaz)', () => {
+    const k = _veSlaytKarilmis();
+    expect(k.length).toBe(LISTE.length);
+  });
+
+  test('DEVİR TESLİM slaytı yeniden kurar — perde arkasında geçen kare geri gelir', () => {
+    // Zamanlayıcı 11 sn'de bir kare değiştiriyor, yükleme ~13 sn sürüyor:
+    // slayt perdenin arkasında ilerliyordu ve perde kalktığında açılış
+    // ekranının karesi çoktan geçmiş oluyordu.
+    window.__MFSIM_ACILIS_KARE = LISTE[1];
+    veWelcomeSlaytBaslat();
+    // Perde arkasında bir kare ilerlesin
+    jest.advanceTimersByTime(VE_SLAYT_BEKLEME + 10);
+    const gecmis = kareler().find((k) => k.classList.contains('is-on'));
+    expect(gecmis.style.backgroundImage).not.toContain(LISTE[1]);
+
+    // Açılış ekranı sönerken karşılama devralır
+    document.body.insertAdjacentHTML('beforeend',
+      '<div id="mfsim-loading-screen"><div class="mfsim-loading-logo"></div></div>');
+    veWelcomeAdoptSplashLogo(document.getElementById('mfsim-loading-screen'));
+
+    const acik = kareler().find((k) => k.classList.contains('is-on'));
+    expect(acik.style.backgroundImage).toContain(LISTE[1]);
+  });
+
+  test('açılış karesi listede yoksa sıra BOZULMAZ', () => {
+    window.__MFSIM_ACILIS_KARE = 'karsilama-99.webp';
+    const k = _veSlaytKarilmis();
+    expect(k.slice().sort()).toEqual(LISTE.slice().sort());
+    expect(k[0]).not.toBe('karsilama-99.webp');
   });
 });
 

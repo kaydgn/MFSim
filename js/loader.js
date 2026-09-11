@@ -107,6 +107,7 @@
     bar: 'mfsim-loading-bar',
     pct: 'mfsim-loading-percent',
     msg: 'mfsim-loading-message',
+    photo: 'mfsim-loading-photo',
     stages: 'mfsim-loading-stages',
     skips: 'mfsim-loading-skips',
     tip: 'mfsim-loading-tip',
@@ -135,6 +136,25 @@
     MOD + '+Z / ' + MOD + '+Y — geri al / ileri al',
     'Araçlar → Program Durumu: sürüm künyesi'
   ];
+
+  // ── Tema, ILK KAREDE ─────────────────────────────────────────────────────
+  // js/theme.js kayitli temayi DOMContentLoaded'da uyguluyor; bu dosya o kuyrugu
+  // yuklemenin SONUNA erteliyor (flushDomReady). Sonuc: giris ve acilis ekrani
+  // belgenin varsayilan paletinde yasiyor, kullanicinin temasi tam devir teslim
+  // aninda deviriliyordu — acilis karti bir anda renk degistiriyordu (olculdu:
+  // acilis slate/koyu, karsilama pearl/acik). Bu cagri IIFE degerlendirilirken,
+  // yani giristen de once kosuyor.
+  //
+  // GECERLILIK LISTESI BURADA YOK — tek kaynak js/theme.js. Yalniz slug bicimi
+  // suzuluyor; gecersiz ama slug bicimli bir degerin CSS'te karsiligi olmaz,
+  // belge varsayilanina duser ve theme.js sonunda duzeltir.
+  function applyStoredTheme() {
+    try {
+      var t = localStorage.getItem('mf-theme');
+      if (t && /^[a-z]+$/.test(t)) document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  }
+  applyStoredTheme();
 
   // ── DOMContentLoaded interceptor ─────────────────────────────────────────
   // Modulleri login sonrasi yukluyoruz; o ana kadar DOMContentLoaded fire
@@ -265,6 +285,36 @@
   }
   function stopTips() {
     if (tipTimer) { clearInterval(tipTimer); tipTimer = null; }
+  }
+
+  // ── Acilis karesi ────────────────────────────────────────────────────────
+  // Karsilama ekrani tam ekran bir fotografla aciliyor. Acilis ekrani AYNI
+  // kareyle basliyor ki devir teslimde goruntu HIC degismesin: kart eriyor,
+  // fotograf yerinde kaliyor.
+  //
+  // Iki parca da bu asamada hazir: kareler <body>'nin hemen ardindaki satir ici
+  // blokta (window.__MFSIM_KARSILAMA — build.js yazar), liste ise
+  // js/karsilama-gorseller.js'te ve O DOSYA DEFER DEGIL, bu dosyadan once
+  // yukleniyor. Defer setinde kalsaydi acilis ekrani fotografsiz baslardi.
+  //
+  // Secilen kare window.__MFSIM_ACILIS_KARE'ye yazilir; slaytin karma sirasi
+  // onu basa aliyor (js/components.js › _veSlaytKarilmis).
+  function kareKaynak(ad) {
+    var g = (typeof window !== 'undefined') ? window.__MFSIM_KARSILAMA : null;
+    return (g && g[ad]) ? g[ad] : 'assets/karsilama/' + ad;
+  }
+
+  function paintPhoto() {
+    var el = $(ELS.photo);
+    if (!el) return null;
+    var liste = (typeof window !== 'undefined' && window.VE_KARSILAMA_GORSELLER) || [];
+    if (!liste.length) return null;          // kare yok → kagit zemin kalir
+    var ad = liste[Math.floor(Math.random() * liste.length)];
+    el.style.backgroundImage = 'url("' + kareKaynak(ad) + '")';
+    var splash = $(ELS.splash);
+    if (splash) splash.classList.add('mfsim-has-photo');
+    if (typeof window !== 'undefined') window.__MFSIM_ACILIS_KARE = ad;
+    return ad;
   }
 
   // ── Surum kunyesi ────────────────────────────────────────────────────────
@@ -404,6 +454,7 @@
     startTime = Date.now();
     hideLogin();
     showSplash();
+    paintPhoto();
     paintStamp();
     startTips();
 
