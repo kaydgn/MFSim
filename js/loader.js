@@ -104,6 +104,7 @@
   var startTime = 0;
   var ELS = {
     splash: 'mfsim-loading-screen',
+    ico: 'mfsim-loading-logo-ico',
     bar: 'mfsim-loading-bar',
     pct: 'mfsim-loading-percent',
     msg: 'mfsim-loading-message',
@@ -239,9 +240,21 @@
       var row = host.children[i];
       var bitti = st.done >= st.total;
       var aktif = (i === activeIdx) && !bitti;
-      row.className = 'mfsim-loading-stage' +
+      var cls = 'mfsim-loading-stage' +
         (bitti ? ' is-done' : (aktif ? ' is-active' : '')) +
         (st.skipped ? ' has-skip' : '');
+      // Obek YENI bittiyse isaret yerine oturur (CSS: .is-tick). Bir kez —
+      // bayrak obekte durdugu icin sonraki boyamalar vurusu tekrarlamaz.
+      if (bitti && !st.tiklendi) {
+        st.tiklendi = true;
+        cls += ' is-tick';
+        (function(el) {
+          setTimeout(function() { el.classList.remove('is-tick'); }, 260);
+        })(row);
+      } else if (row.className.indexOf('is-tick') > -1) {
+        cls += ' is-tick';       // suren vurusu yeniden boyama EZMESIN
+      }
+      row.className = cls;
       row.children[0].textContent = st.skipped ? '!' : (bitti ? '✓' : (aktif ? '›' : '·'));
       row.children[2].textContent = st.done + '/' + st.total;
     }
@@ -341,12 +354,48 @@
     return p(d.getDate()) + '.' + p(d.getMonth() + 1) + '.' + d.getFullYear();
   }
 
+  // ── KADEMELI ILERLEME ────────────────────────────────────────────────────
+  // Ilerleme 85 modulun her birinde degil, KADEME KADEME cikiyor. Olculdu:
+  // modul basina adim %1,2 ve adimlar 150 ms arayla geliyordu; 180 ms'lik
+  // gecisler ust uste binince goz sürekli bir KAYMA goruyordu. 12 kademede
+  // adim %8,3 / ~1,1 sn — yedi kat buyuk, yedi kat seyrek.
+  //
+  // KADEME SAYISI CSS'TEN OKUNUR (--mfsim-kademe): cubugun centikleri de ayni
+  // jetondan cizildigi icin sayi iki yerde yazili olsaydi sessizce ayrisir ve
+  // dolgu centikle HIZALANMAZDI. Jeton okunamazsa tasarim degerine duser.
+  function kademeSayisi() {
+    var K = NaN;
+    try {
+      K = parseInt(getComputedStyle(document.documentElement)
+        .getPropertyValue('--mfsim-kademe'), 10);
+    } catch (e) {}
+    return (K > 0) ? K : 12;
+  }
+
+  // Kacinci kademedeyiz. Son kademe icin AYRI BIR DAL YOK ve gerekmiyor:
+  // done === total iken done/total tam olarak 1, yani floor(1 * K) = K —
+  // cubuk kendiliginden %100'e oturur. (Denendi: ayri dal MUTASYONLA
+  // olduruleMEdi, cunku hicbir girdide farkli sonuc vermiyordu; kodda
+  // duran ama hicbir sey yapmayan bir koruma, korudugu iddiasiyla birlikte
+  // yanlis bir hikaye olurdu.)
+  function kademe(done, total) {
+    if (total <= 0) return 0;
+    return Math.floor((done / total) * kademeSayisi());
+  }
+
   function setProgress(done, total, label) {
-    var pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    var K = kademeSayisi();
+    var q = K > 0 ? kademe(done, total) / K : 0;
+    var pct = Math.round(q * 100);
     var bar = $(ELS.bar);
     var pctEl = $(ELS.pct);
     var msg = $(ELS.msg);
-    if (bar) bar.style.width = pct + '%';
+    var ico = $(ELS.ico);
+    // GENISLIK yuvarlanmis yuzdeden DEGIL q'dan: %8,3'lik bir kademede
+    // yuvarlanmis 8 yazilsa dolgu centigin 0,3 punto gerisinde kalirdi.
+    if (bar) bar.style.width = (q * 100).toFixed(3) + '%';
+    // Disli de ayni tempoda: kademe basina bir centik, yukleme boyunca TAM TUR.
+    if (ico) ico.style.transform = 'rotate(' + (q * 360).toFixed(1) + 'deg)';
     // Türkçe yüzde biçimi: işaret sayının önünde (%42) — durum çubuğundaki
     // zoom göstergesiyle (%100) aynı dil.
     if (pctEl) pctEl.textContent = '%' + pct;
@@ -466,6 +515,7 @@
     var stages = stageInfo.list;
     var stageOf = stageInfo.of;
     var skips = [];
+    var sonKademe = -1;          // etiket yalniz kademe degisince yazilir
     renderStages(stages);
 
     if (total === 0) {
@@ -486,9 +536,12 @@
       var ph = placeholders[idx];
       var label = ph.getAttribute('data-mfsim-label');
       var si = stageOf[idx];
-      // Etiketi ve icinde bulunulan obegi once goster — kullanici neyin
-      // yuklendigini gorur.
-      if (label) {
+      // Etiket de KADEMEYLE degisir, 85 kez degil. Cubuk agirlasirken yazinin
+      // cirpinmaya devam etmesi ikisini birden yiyordu: goz nereye bakacagini
+      // bilemiyor, ne cubugu takip ediyor ne adi okuyordu.
+      var k = kademe(idx, total);
+      if (label && k !== sonKademe) {
+        sonKademe = k;
         var msg = $(ELS.msg);
         if (msg) msg.textContent = label;
       }
