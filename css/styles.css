@@ -836,6 +836,15 @@
       --slayt-ortu: 0%;           /* ÖRTÜ KAPALI (kullanıcı reçetesi): fotoğrafın üstünde
                                      perde yok. Okunurluğu artık ÖRTÜ değil, sol panelin
                                      camı taşıyor — sağ tarafta zaten metin kalmadı. */
+      /* AÇILIŞ İLERLEMESİ — kaç KADEMEDE çıkacağı. Çubuk da dişli de bu sayıya
+         göre adımlar ve js/loader.js bu jetonu CSS'ten OKUR: tek kaynak, iki
+         yerde yazılı bir 12 yok. Ölçüldü: 85 modül doğrudan gösterilince adım
+         %1,2 / 150 ms oluyor, 180 ms'lik geçişler üst üste biniyor ve göz
+         sürekli bir KAYMA görüyor. 12 kademede adım %8,3 / ~1,1 sn — yedi kat
+         büyük, yedi kat seyrek; yani "tık". */
+      --mfsim-kademe: 12;
+      --mfsim-kademe-sure: 260ms;
+      --mfsim-kademe-egri: cubic-bezier(0.22, 0.85, 0.25, 1);
       --karsilama-cam: 14%;       /* asılı kartın SAYDAMLIK payı: 0 = opak, 100 = yalnız kenarlık */
       --karsilama-cam-blur: 8px;  /* camın ARKASINI bulandırma yarıçapı */
       --karsilama-kart-r: 4px;    /* kartın köşe yarıçapı */
@@ -1347,10 +1356,15 @@
       color:var(--text-heading);
       letter-spacing:0.5px;
     }
+    /* Dişli SÜREKLİ DÖNMÜYOR: her kademede bir çentik dönüp duruyor
+       (js/loader.js › setProgress). Yükleme boyunca toplam TAM BİR TUR atar —
+       bu yüzden devir teslim anında (%100) dişli hep dik durur ve karşılama
+       logosuna uçarken bir sıçrama olmaz. Eski 4,5 sn'lik sürekli dönüş
+       yüklemeden habersizdi: program donsa da dönmeye devam ederdi. */
     .mfsim-loading-logo-ico{
       width:1.15em; height:1.15em;
       color:var(--accent-primary);
-      animation:mfsim-loading-spin 4.5s linear infinite;
+      transition:transform var(--mfsim-kademe-sure) var(--mfsim-kademe-egri);
     }
     .mfsim-loading-subtitle{
       margin-top:5px;
@@ -1385,6 +1399,17 @@
     .mfsim-loading-stage-mk{
       text-align:center;
       font-size:var(--fs-body);
+      display:inline-block;      /* scale uygulanabilsin */
+    }
+    /* Öbek YENİ bittiğinde işaret yerine oturur — tek vuruş, 220 ms. Bir
+       öbeğin bitmesi altı kez olan GERÇEK bir olay; hareket onu söylüyor. */
+    .mfsim-loading-stage.is-tick .mfsim-loading-stage-mk{
+      animation:mfsim-loading-tik 220ms var(--mfsim-kademe-egri);
+    }
+    @keyframes mfsim-loading-tik{
+      0%   { transform:scale(0.4); }
+      55%  { transform:scale(1.22); }
+      100% { transform:scale(1); }
     }
     .mfsim-loading-stage-ct{
       font-size:var(--fs-tiny);
@@ -1422,12 +1447,20 @@
       letter-spacing:0.3px;
       overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
     }
+    /* 4 → 6 px: ağırlık kalınlıkta da var. Pill yarıçapı da düştü — çentikli
+       bir ray yuvarlak uçlarla ölçü aleti değil şeker gibi duruyordu. */
     .mfsim-loading-bar-wrap{
       position:relative;
-      width:100%; height:4px;
-      background:var(--bg-input);
+      width:100%; height:6px;
+      background-color:var(--bg-input);
+      /* Boş rayda AYRI bir durak deseni YOK. Denendi ve ölçüldü: ray da
+         çentikleniyordu ama dolgunun üstündeki kesikler (aşağıdaki katman)
+         tam aynı geometride olduğu için durakların üstüne biniyor ve onları
+         örtüyordu — iki katman aynı yere çizip biri ötekini siliyordu.
+         Tek katman kaldı: kesikler dolgunun üstünde görünür, boş rayda
+         (aynı renk olduğu için) görünmez. */
       border:1px solid var(--border-color);
-      border-radius:var(--radius-pill);
+      border-radius:var(--radius-sm);
       overflow:hidden;
       margin:10px 0;
     }
@@ -1435,16 +1468,15 @@
       position:absolute; top:0; left:0; bottom:0;
       width:0%;
       background:var(--accent-primary);
-      box-shadow:0 0 8px color-mix(in srgb, var(--accent-primary) 50%, transparent);
-      transition:width 0.18s ease-out;
+      transition:width var(--mfsim-kademe-sure) var(--mfsim-kademe-egri);
     }
-    .mfsim-loading-bar::after{
-      content:'';
-      position:absolute; top:0; right:0; bottom:0; width:30px;
-      background:linear-gradient(90deg,
-        transparent 0%,
-        color-mix(in srgb, var(--text-heading) 35%, transparent) 100%);
-      animation:mfsim-loading-shimmer 1.4s ease-in-out infinite;
+    /* Dolgunun ÜSTÜNDEKİ kesikler: dolan kısım da kademeli görünür. Renk kart
+       yüzeyinin kendisi — çizgi değil, dolguda açılmış boşluk. */
+    .mfsim-loading-bar-notches{
+      position:absolute; inset:0; pointer-events:none;
+      background:repeating-linear-gradient(90deg,
+        transparent 0 calc(100% / var(--mfsim-kademe) - 2px),
+        var(--bg-secondary) calc(100% / var(--mfsim-kademe) - 2px) calc(100% / var(--mfsim-kademe)));
     }
     .mfsim-loading-meta{
       display:flex; align-items:baseline; justify-content:space-between;
@@ -1495,22 +1527,13 @@
       }
     }
 
-    @keyframes mfsim-loading-spin{
-      from { transform:rotate(0deg); }
-      to   { transform:rotate(360deg); }
-    }
-    @keyframes mfsim-loading-shimmer{
-      0%   { opacity:0; transform:translateX(-30px); }
-      50%  { opacity:1; }
-      100% { opacity:0; transform:translateX(0); }
-    }
     /* Hareket azaltma: donen disli, parildayan cubuk ve kapanis gecisi durur.
        Ilerleme BILGISI kalir (sayi, doluluk, asama isaretleri) — kapatilan
        yalniz suslemedir. */
     @media (prefers-reduced-motion: reduce){
-      .mfsim-loading-logo-ico{ animation:none; }
+      .mfsim-loading-logo-ico{ transition:none; }
       .mfsim-loading-bar{ transition:none; }
-      .mfsim-loading-bar::after{ animation:none; opacity:0; }
+      .mfsim-loading-stage.is-tick .mfsim-loading-stage-mk{ animation:none; }
       .mfsim-loading-tip{ transition:none; }
       .mfsim-loading-screen.mfsim-fading-out,
       .mfsim-loading-screen.mfsim-fading-out .mfsim-loading-panel{

@@ -241,6 +241,105 @@ describe('tema ilk karede', () => {
   });
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// KADEMELİ İLERLEME. Ölçüldü: çubuk 85 modülün her birinde ilerliyordu, yani
+// adım %1,2 ve adımlar 150 ms arayla — 180 ms'lik geçişler üst üste binince göz
+// sürekli bir KAYMA görüyordu. Üç sessiz kırılma sınıfı var:
+//   • kademe sayısı CSS ile JS'te AYRI yazılırsa dolgu çentikle hizalanmaz;
+//   • genişlik yuvarlanmış yüzdeden hesaplanırsa dolgu çentiğin gerisinde kalır;
+//   • son kademe atlanırsa çubuk %100'e hiç oturmaz.
+describe('kademeli ilerleme', () => {
+  const CSS = fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8');
+
+  test('kademe sayısı TEK KAYNAK — CSS jetonu, loader onu OKUYOR', () => {
+    expect(CSS).toMatch(/--mfsim-kademe:\s*\d+/);
+    expect(LOADER_SRC).toContain("getPropertyValue('--mfsim-kademe')");
+    // Çentikler de aynı jetondan çiziliyor (dolgunun üstündeki kesikler).
+    const kullanim = (CSS.match(/calc\(100% \/ var\(--mfsim-kademe\)/g) || []).length;
+    expect(kullanim).toBeGreaterThanOrEqual(2);
+  });
+
+  test('ilerleme KADEMEYE yuvarlanıyor — her modülde kımıldamıyor', async () => {
+    kur(Array.from({ length: 24 }, (_, i) => ({
+      stage: i === 0 ? 'Çekirdek' : undefined, label: 'Modül ' + i
+    })));
+    baslat();
+    await ilerlet(10);
+    const pct = () => document.getElementById('mfsim-loading-percent').textContent;
+    const en = () => document.getElementById('mfsim-loading-bar').style.width;
+
+    expect(pct()).toBe('%0');
+    await ilerlet(200);            // 1 modül bitti → 1/24, kademe hâlâ 0
+    expect(pct()).toBe('%0');
+    expect(parseFloat(en())).toBe(0);
+    await ilerlet(200);            // 2 modül → kademe 1/12
+    expect(pct()).toBe('%8');
+    // GENİŞLİK q'dan: yuvarlanmış 8 yazılsaydı dolgu çentiğin 0,3 punto
+    // gerisinde kalırdı — 12 kademede çentik tam 8,333'te.
+    expect(parseFloat(en())).toBeCloseTo(100 / 12, 2);
+  });
+
+  test('SON KADEME atlanmıyor — yükleme bitince çubuk %100', async () => {
+    kur(Array.from({ length: 85 }, (_, i) => ({
+      stage: i === 0 ? 'Çekirdek' : undefined, label: 'Modül ' + i
+    })));
+    baslat();
+    await ilerlet(20000);
+    expect(document.getElementById('mfsim-loading-percent').textContent).toBe('%100');
+    expect(parseFloat(document.getElementById('mfsim-loading-bar').style.width)).toBe(100);
+  });
+
+  test('dişli de kademeyle döner ve %100\'de TAM TUR tamamlar', async () => {
+    kur(Array.from({ length: 24 }, (_, i) => ({
+      stage: i === 0 ? 'Çekirdek' : undefined, label: 'Modül ' + i
+    })));
+    baslat();
+    await ilerlet(10);
+    const ico = document.getElementById('mfsim-loading-logo-ico');
+    expect(ico.style.transform).toBe('rotate(0.0deg)');
+    await ilerlet(400);                       // 2 modül → 1/12
+    expect(ico.style.transform).toBe('rotate(30.0deg)');
+    await ilerlet(20000);
+    // Tam tur: devir teslimde dişli DİK durur, karşılama logosuna uçarken
+    // bir sıçrama olmaz.
+    expect(ico.style.transform).toBe('rotate(360.0deg)');
+  });
+
+  test('modül adı da KADEMEYLE değişir — 85 kez çırpınmaz', async () => {
+    kur(Array.from({ length: 24 }, (_, i) => ({
+      stage: i === 0 ? 'Çekirdek' : undefined, label: 'Modül ' + i
+    })));
+    baslat();
+    await ilerlet(10);
+    const msg = () => document.getElementById('mfsim-loading-message').textContent;
+    expect(msg()).toBe('Modül 0');
+    await ilerlet(200);          // modül 1 yükleniyor, kademe DEĞİŞMEDİ
+    expect(msg()).toBe('Modül 0');
+    await ilerlet(200);          // modül 2 → kademe 1
+    expect(msg()).toBe('Modül 2');
+  });
+
+  test('süsleme hareketleri KALDIRILDI — dönen dişli ve parıltı yok', () => {
+    expect(CSS).not.toContain('mfsim-loading-spin');
+    expect(CSS).not.toContain('mfsim-loading-shimmer');
+    expect(CSS).not.toContain('.mfsim-loading-bar::after');
+  });
+
+  test('biten öbeğin işareti bir kez vurulur, sonra sınıf kalkar', async () => {
+    kur([
+      { stage: 'Çekirdek', label: 'A' },
+      { stage: 'Takoz', label: 'B' }
+    ]);
+    baslat();
+    await ilerlet(200);           // ilk öbek bitti
+    const ilk = document.querySelectorAll('#mfsim-loading-stages li')[0];
+    expect(ilk.className).toContain('is-tick');
+    await ilerlet(400);           // vuruş süresi doldu
+    expect(ilk.className).not.toContain('is-tick');
+    expect(ilk.className).toContain('is-done');
+  });
+});
+
 describe('kart geometrisi karşılama kartının İKİZİ', () => {
   const CSS = fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8');
   // Seçici SATIR BAŞINDAN aranıyor: düz indexOf, `.mfsim-loading-panel{`i
