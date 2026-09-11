@@ -8479,6 +8479,105 @@ span.ve-fw-ro{ display:inline-block; }
    SÜTUN GENİŞLİĞİ BURADA YOK — `<colgroup>` ile JS'ten geliyor, çünkü ölçü
    bir stil değil VERİ (tek kaynak: VE_FEAD_TABLE_COLS, cp-fead.js). */
 
+/* ═══ KATMAN PANELİ (js/cp-fead.js → veFeadKatmanPanelHTML) ════════════════
+   Kayış Yolu / Çalışma Noktası kartlarında "bu kart neyi çizsin" seçimi.
+   GÖRÜNÜM BURADA, satır içi `style=` dizelerinde DEĞİL: bir kutucuk listesinin
+   bütün işi DURUM göstermek — fare hangi satırda, hangi kutu işaretli, imleç
+   nerede — ve satır içi CSS bunların hiçbirini yazamaz. Kayış Tablosu'nda
+   ölçülmüş kuralın aynısı. */
+
+/* Şerit düğmesi — paneli açan tek yol. Açık hâli BASILI kalır. */
+.ve-fead-kat-dugme{
+  flex:0 0 auto; display:inline-flex; align-items:center; gap:4px;
+  padding:1px 5px; cursor:pointer;
+  background:var(--bg-input); color:var(--text-secondary);
+  border:1px solid var(--border-color); border-radius:var(--radius-sm);
+  font-size:var(--fs-micro); line-height:1.5;
+  transition:background .12s, border-color .12s, color .12s;
+}
+.ve-fead-kat-dugme .ac{ flex:none; display:block; }
+.ve-fead-kat-dugme .sayi{
+  font-family:var(--font-mono); font-variant-numeric:tabular-nums;
+  color:var(--text-muted);
+}
+.ve-fead-kat-dugme:hover{ border-color:var(--accent-primary); color:var(--ink-accent); }
+.ve-fead-kat-dugme:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-fead-kat-dugme.is-acik{
+  background:var(--accent-tint-22); border-color:var(--accent-primary);
+  color:var(--ink-accent);
+}
+.ve-fead-kat-dugme.is-acik .sayi{ color:var(--ink-accent); }
+
+/* PANEL ÇİZİMİN ÜSTÜNE BİNER, şeridi İTMEZ. Akışa girseydi panel açılınca
+   çizim alanı daralır, şema yeniden ölçeklenir ve kullanıcı "neyi
+   değiştirdim" sorusunu bir de kayan resimle çözmek zorunda kalırdı. */
+.ve-fead-kat{
+  position:absolute; right:6px; bottom:calc(var(--fead-kat-alt, 44px)); z-index:6;
+  width:236px; max-width:calc(100% - 12px); max-height:calc(100% - 66px);
+  display:flex; flex-direction:column; overflow:hidden;
+  background:var(--bg-secondary); border:1px solid var(--border-hover);
+  border-radius:var(--radius-md, 6px); box-shadow:0 6px 22px var(--shadow-color);
+}
+.ve-fead-kat-bas{
+  flex:0 0 auto; display:flex; align-items:baseline; gap:6px;
+  padding:6px 8px; border-bottom:1px solid var(--border-color);
+  background:var(--bg-tertiary); font-size:var(--fs-micro);
+}
+.ve-fead-kat-bas > b{ color:var(--text-heading); font-size:var(--fs-tiny); }
+.ve-fead-kat-bas .kart{
+  color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.ve-fead-kat-kapat{
+  margin-left:auto; flex:0 0 auto; padding:0 3px; cursor:pointer; line-height:1;
+  background:none; border:none; color:var(--text-muted);
+  font-size:var(--fs-tiny); border-radius:var(--radius-sm);
+}
+.ve-fead-kat-kapat:hover{ background:var(--accent-danger); color:var(--on-danger); }
+.ve-fead-kat-kapat:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+
+/* ÜÇ İŞLEM — sekiz kutucuğu tek tek gezmenin karşılığı. */
+.ve-fead-kat-islem{
+  flex:0 0 auto; display:flex; gap:4px; padding:6px 8px;
+  border-bottom:1px dashed var(--border-color);
+}
+.ve-fead-kat-islem button{
+  flex:1; padding:3px 0; cursor:pointer;
+  background:var(--bg-input); color:var(--text-secondary);
+  border:1px solid var(--border-color); border-radius:var(--radius-sm);
+  font-size:var(--fs-micro); font-weight:600;
+}
+.ve-fead-kat-islem button:hover{ border-color:var(--accent-primary); color:var(--ink-accent); }
+.ve-fead-kat-islem button:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+
+.ve-fead-kat-liste{ flex:1 1 auto; min-height:0; overflow-y:auto; padding:3px 0; }
+.ve-fead-kat-sat{
+  display:flex; align-items:center; gap:7px; padding:4px 9px; cursor:pointer;
+  font-size:var(--fs-micro); color:var(--text-primary);
+}
+.ve-fead-kat-sat:hover{ background:var(--accent-tint-10); }
+.ve-fead-kat-sat input{ flex:0 0 auto; margin:0; cursor:pointer; accent-color:var(--accent-primary); }
+.ve-fead-kat-sat .ad{ flex:1 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* İŞARETLİ SATIR VURGULU: kutucuk 13 px ve tek başına, sekiz satırlık bir
+   listede "hangileri açık" sorusunu bir bakışta cevaplamıyor. */
+.ve-fead-kat-sat:has(input:checked) .ad{ color:var(--ink-accent); font-weight:600; }
+.ve-fead-kat-sat:focus-within{ background:var(--accent-tint-15); }
+/* PASİF SATIR SİLİNMEZ, SOLAR: kaybolan bir satır "burada bir ayar vardı"
+   bilgisini de götürür. */
+.ve-fead-kat-sat.pasif{ opacity:.45; cursor:default; }
+.ve-fead-kat-sat.pasif:hover{ background:none; }
+/* Açık ama o an çizilmeyen katmanın sebebi yanında yazılı. */
+.ve-fead-kat-sat .uyari{
+  flex:0 0 auto; font-size:var(--fs-micro); color:var(--ink-warning);
+  font-style:italic;
+}
+
+.ve-fead-kat-not{
+  flex:0 0 auto; margin:0; padding:6px 9px 7px;
+  border-top:1px solid var(--border-color); background:var(--bg-tertiary);
+  font-size:var(--fs-micro); line-height:1.45; color:var(--text-muted);
+}
+.ve-fead-kat-not b{ color:var(--text-secondary); }
+
 .ve-fead-table-card{
   position:absolute; inset:0; display:flex; flex-direction:column;
   overflow:hidden; border-radius:inherit; background:var(--bg-input);
