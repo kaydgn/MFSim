@@ -1576,3 +1576,97 @@ describe('detay rapor · bölüm atıfları ve sıralama', () => {
     });
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════════════
+   UYGUNLUK KAPILARI DONDURULMUŞ — rapor `R.checks`'i OKUR, HESAPLAMAZ
+   ──────────────────────────────────────────────────────────────────────────
+   Kural modülün karar kaydında yazılı ve gerekçesi de orada: *"yeniden
+   hesaplasaydı çözümden sonra değiştirilen bir devir sınırı belgeye sızardı;
+   rapor ÇÖZÜLEN modeli anlatır."* Ama KAPISI YOKTU — `fead-checks.test.js`
+   üç kapının matematiğini tutuyor, dondurmayı hiçbir test tutmuyordu.
+
+   ÖLÇÜLDÜ (gerçek tarayıcı): model çözüldükten sonra bir kasnak 4000 mm
+   kaydırıldı; canlı kapının en kötü çifti "Klima ↔ Avara 2, a = 4184,47 mm"ye
+   döndü, raporun verisi "Avara 2 ↔ Alternatör, a = 281,11 mm"de KALDI. Kural
+   bugün tutuyor — bu kapı onu tutmaya devam etsin diye var.
+
+   Hata sınıfı SESSİZ: belge üretilir, sayılar makul görünür, yalnız çözülen
+   modele ait değildirler. Tedarikçiye giden bir evrakta en pahalı tür.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('uygunluk kapıları DONDURULMUŞ', () => {
+  /* Üç kapının üçü de AYRI durum taşıyor: biri sızsa hangisi olduğu belli. */
+  const SAHTE = () => ({
+    centerDistance: { durum: 'warn', rows: [], worst: { cift: 'A ↔ B', payPct: -7.77 } },
+    ratioWindow:    { durum: 'ok',   rows: [], governedRpm: 2222, worst: { payPct: 11.11 } },
+    speedLimit:     { durum: 'no',   rows: [], worst: { ad: 'Klima', payPct: -3.33 } }
+  });
+  const satirlar = (R) => { const o = []; RP._frCheckRows(R, (...a) => o.push(a)); return o; };
+
+  test('durum sütunu R.checks\'ten BİREBİR geçiyor', () => {
+    const o = satirlar({ checks: SAHTE() });
+    expect(o.map((s) => s[3])).toEqual(['warn', 'ok', 'no']);
+  });
+
+  test('ölçüt metni R.checks\'in kendi sayısını taşıyor (governed 2222)', () => {
+    const o = satirlar({ checks: SAHTE() });
+    expect(o[1][1]).toContain('2222');
+  });
+
+  test('veFeadChecks HİÇ çağrılmıyor — rapor yeniden hesaplamıyor', () => {
+    const onceki = global.veFeadChecks;
+    global.veFeadChecks = jest.fn(() => {
+      throw new Error('rapor kapıları YENİDEN HESAPLADI — dondurma kuralı kırıldı');
+    });
+    try {
+      expect(() => satirlar({ checks: SAHTE() })).not.toThrow();
+      expect(global.veFeadChecks).not.toHaveBeenCalled();
+      // Tam belge yolunda da çağrılmamalı.
+      global.veFeadChecks.mockClear();
+      const R = coz(); R.checks = SAHTE();
+      expect(() => RP._frCompliance(R)).not.toThrow();
+      expect(global.veFeadChecks).not.toHaveBeenCalled();
+    } finally {
+      if (onceki === undefined) delete global.veFeadChecks; else global.veFeadChecks = onceki;
+    }
+  });
+
+  test('ÇÖZÜLEN modeli anlatır: R.checks değişince belge değişir, MODEL değişince DEĞİŞMEZ', () => {
+    // Aynı R, iki farklı checks → iki farklı belge (kanal gerçekten R.checks).
+    const R = coz();
+    R.checks = SAHTE();
+    const a = RP._frCompliance(R);
+    const k2 = SAHTE(); k2.ratioWindow.governedRpm = 3333;
+    R.checks = k2;
+    const b = RP._frCompliance(R);
+    expect(a).not.toBe(b);
+    expect(a).toContain('2222');
+    expect(b).toContain('3333');
+
+    // MODEL değişse KAPI SATIRLARI oynamıyor — kanal model DEĞİL, R.checks.
+    // Kural ÜÇ BMC KAPISI hakkında; uygunluk tablosunun öteki satırları başka
+    // ölçütler ve modeli okumaları meşru, bu yüzden ölçü `_frCheckRows`.
+    R.checks = SAHTE();
+    const kapiDolu = satirlar(R);
+    const eski = global.nodes;
+    global.nodes = [];                       // modeli tamamen boşalt
+    try { expect(satirlar(R)).toEqual(kapiDolu); } finally { global.nodes = eski; }
+  });
+
+  test('R.checks YOKSA üç satır da "wait" — sayı UYDURULMUYOR', () => {
+    [{}, { checks: null }, { checks: undefined }].forEach((R) => {
+      const o = satirlar(R);
+      expect(o).toHaveLength(3);
+      expect(o.map((s) => s[3])).toEqual(['wait', 'wait', 'wait']);
+      o.forEach((s) => expect(s[2]).toBe('—'));    // bulgu sütunu boş, sayı yok
+    });
+  });
+
+  test('rapor KAYNAĞI veFeadChecks çağırmıyor — geleceğe karşı', () => {
+    // Davranış kapısı bugünü tutar; bu satır yarın birinin "kolaylık olsun"
+    // diye kapıları rapora taşımasını tutar.
+    const src = require('fs').readFileSync(
+      require('path').join(__dirname, '../../js/cp-fead-report.js'), 'utf8');
+    expect(src).not.toMatch(/\bveFeadChecks\s*\(/);
+    expect(src).toMatch(/R\s*&&\s*R\.checks|R\.checks/);      // okuma yolu duruyor
+  });
+});

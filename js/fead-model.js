@@ -4329,7 +4329,22 @@ function veFeadAnalyze(build, opts){
           + 'Aşağıdaki saat değeri ' + VE_FEAD_LIFE_FATIGUE_MODEL + ' üssüne göredir.');
       }
     } catch(e){ out.warnings.push('B10 ömrü: ' + veFeadTranslateError(e && e.message)); }
-  } else {
+  } else if(!duty.length){
+    // UYARI YALNIZ ÇEVRİM GERÇEKTEN BOŞKEN. Koşul bir VE'dir
+    // (`duty.length && beltData !== 'none'`), yani `else` İKİ ayrı sebepten
+    // çalışıyordu; metin ise yalnız birini söylüyor ve o sebebe göre bir çare
+    // öneriyordu.
+    //
+    // ÖLÇÜLDÜ (AG00976, beltDataMode='none' — ki VARSAYILAN): çevrim 12 satır
+    // dolu, hubload ve kayma HESAPLANMIŞ, yalnız frekanslar düşmüşken belge
+    // "Çalışma çevrimi boş … devir satırı ekleyin" diyordu. Özet raporun aynı
+    // sayfasında künye kutusu "12 devir · toplam süre payı %100,0" yazıyor:
+    // belge kendi kendisiyle çelişiyor ve kullanıcıya zaten yaptığı şeyi
+    // öneriyor.
+    //
+    // Kayış verisi kapalıyken kaybolanları `beltDataOff` listesi ZATEN ve
+    // DOĞRU biçimde anlatıyor (B10 · yorulma dağılımı · açıklık frekansları ·
+    // zarf); ikinci bir uyarı bilgi eklemiyor, yanlış bilgi ekliyordu.
     out.warnings.push('Çalışma çevrimi boş: gerilme, hubload, kayma ve frekans hesaplanmadı. '
       + 'Çözücü panelinden devir satırı ekleyin.');
   }

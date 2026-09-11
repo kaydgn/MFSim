@@ -1190,3 +1190,70 @@ describe('gergi serpantin konumu — uyarı', () => {
     expect(r.order.map((n) => n.id)).toEqual(['a', 'd', 'c', 'b']);   // çekirdek: gergi sonda
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════════════
+   "ÇALIŞMA ÇEVRİMİ BOŞ" UYARISI — yalnız çevrim GERÇEKTEN boşken
+   ──────────────────────────────────────────────────────────────────────────
+   Yorulma/ömür bloğunun koşulu bir VE: `duty.length && beltData !== 'none'`.
+   `else` dalı bu yüzden İKİ ayrı sebepten çalışıyordu, metni ise yalnız birini
+   söylüyor ve o sebebe göre bir çare öneriyordu.
+
+   ÖLÇÜLDÜ (AG00976, beltDataMode='none' — ki VARSAYILAN): çevrim 12 satır
+   dolu, hubload ve kayma hesaplanmış, yalnız frekanslar düşmüşken belge
+   "Çalışma çevrimi boş … Çözücü panelinden devir satırı ekleyin" diyordu.
+   Özet raporun AYNI sayfasında künye kutusu "12 devir · toplam süre payı
+   %100,0" yazıyor — belge kendi kendisiyle çelişiyor.
+
+   Kayış verisi kapalıyken kaybolanları `beltDataOff` listesi zaten ve doğru
+   anlatıyor; ikinci uyarı bilgi eklemiyor, YANLIŞ bilgi ekliyordu.
+
+   Hata sınıfı SESSİZ ve pahalı: tedarikçiye giden evrakta okuyucuyu var olan
+   bir veriyi "yok" sanmaya götürüyor.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('çevrim boş uyarısı — iki sebep, tek metin değil', () => {
+  const BOS = /Çalışma çevrimi boş/;
+
+  const coz = (beltMode, dutyVar) => {
+    const pack = M.veFeadExampleNodes('AG00976_GATES_2025');
+    const ns = pack.nodes.map((n) => ({ id: n.id, type: n.type, def: componentDefs[n.type],
+      customName: n.customName, data: JSON.parse(JSON.stringify(n.data)) }));
+    const b = ns.find((n) => n.type === 'fead-belt');
+    if (b) b.data.beltDataMode = beltMode;
+    const build = M.veFeadBuildSystem(ns);
+    const solv = ns.find((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver);
+    const rows = dutyVar ? M.veFeadDutyRows(solv) : [];
+    const R = M.veFeadAnalyze(build, { rows, cylinders: 6, fatigueModel: 'PK-2_2p-MT3' });
+    const d0 = ((R.analysis && R.analysis.duty) || [])[0] || {};
+    return {
+      dutySatir: ((R.analysis && R.analysis.duty) || []).length,
+      uyari: (R.warnings || []).some((w) => BOS.test(w)),
+      kaymaVar: d0.slip !== undefined,
+      hubloadVar: d0.hubloads !== undefined,
+      beltDataOff: (R.beltDataOff || []).length
+    };
+  };
+
+  test('ÇEVRİM DOLU + kayış verisi KAPALI → uyarı YOK (kusurun kendisi)', () => {
+    const r = coz('none', true);
+    expect(r.dutySatir).toBe(12);              // çevrim gerçekten dolu
+    expect(r.kaymaVar).toBe(true);             // kayma HESAPLANMIŞ
+    expect(r.hubloadVar).toBe(true);           // hubload da
+    expect(r.uyari).toBe(false);               // ← eskiden true idi
+    expect(r.beltDataOff).toBeGreaterThan(0);  // kaybolanları asıl bu anlatır
+  });
+
+  test('ÇEVRİM BOŞ → uyarı VAR (kapı boş bir süpürme değil)', () => {
+    ['full', 'none'].forEach((m) => {
+      const r = coz(m, false);
+      expect(r.dutySatir).toBe(0);
+      expect(r.uyari).toBe(true);
+    });
+  });
+
+  test('ÇEVRİM DOLU + kayış verisi AÇIK → uyarı YOK, frekanslar da üretilir', () => {
+    const r = coz('full', true);
+    expect(r.dutySatir).toBe(12);
+    expect(r.uyari).toBe(false);
+    expect(r.beltDataOff).toBe(0);
+  });
+});
