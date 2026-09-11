@@ -969,3 +969,202 @@ describe('kılavuz ↔ program: kart adları', () => {
     expect(DOC).not.toContain('efektif boy alanını boşaltın');
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  KILAVUZ ↔ PROGRAM — TIRNAKLANAN metin gerçekten programın yazdığı mı
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// ÜÇÜNCÜ KEZ AYNI SINIF. Yukarıdaki iki kapı kart ADLARINI ve PANEL adlarını
+// bağlıyor; ama kılavuzun kullanıcıya verdiği talimatların çoğu bir ad değil
+// bir ALINTIDIR: "şu yazıyı arayın", "şöyle yazarsa şu demektir". O alıntılar
+// hiçbir yere bağlı değildi ve ölçüldüğünde ÜÇÜ birden bayattı:
+//
+//   · §5.3  "Kasnaklar çakışıyor: …"  → şerit bunu HİÇ yazmıyor; ✗ dalının
+//           gerçek ikinci hükmü "Kayış kasnağın İÇİNDEN geçiyor"
+//   · §6/§7 "Sırttan değiyor"          → seçeneğin etiketi "Sırtından değiyor"
+//   · §4.2  "alt şeritteki Σsarım"     → o şerit PR #931'de kalktı, okuma üst
+//           künyeye taşındı (bu tur ayrıca düzeltildi)
+//
+// Kapı, kılavuzun gövdesindeki her tipografik tırnağı söküp FEAD kaynağında
+// arıyor. Programın yazmadığı bir metni tırnaklamak ancak DÜZYAZI ise
+// serbest — o küme aşağıda AÇIKÇA duruyor ve kendi öksüz kapısı var: küme
+// kullanılmayan satır taşıyamaz, yoksa sessizce bir çöplüğe dönüşür.
+describe('kılavuz ↔ program: TIRNAKLANAN metinler', () => {
+  const PROG = ['cp-fead.js', 'fead-model.js', 'cp-fead-wizard.js', 'fead-checks.js',
+    'cp-fead-report.js', 'fead-core.js', 'components.js', 'fead-belts.js',
+    'fead-engines.js', 'fead-accessories.js', 'fead-duty.js', 'fead-tensioners.js',
+    'fead-transient.js']
+    .map((f) => io_read('js/' + f)).join('\n');
+
+  const duzelt = (s) => s
+    .replace(/<[^>]+>/g, '')          // <strong> bir metin değil biçim
+    .replace(/['’]/g, "'")            // kesme işaretinin iki yazımı
+    .replace(/\s+/g, ' ')
+    .replace(/\s*[·:…]+\s*$/, '')     // "…" ile biten alıntı kısaltmadır
+    .trim();
+  const PROGD = duzelt(PROG);
+
+  // KILAVUZUN KENDİ SESİ — program bunları yazmaz, kılavuz kullanıcının ya da
+  // mühendisin ağzından konuşur. Alıntı oldukları için tırnaktalar.
+  const DUZYAZI = [
+    'yön şu, temas tarafı bu',
+    'Bu düzen için hangi kayışı ısmarlamalıyım?',
+    'Elimdeki bu kayış bu düzene uyar mı?',
+    'standart',
+    'doğru cevap',
+    'hangi kaydı seçtim',
+    'tablomda şu an ne var',
+    'Boş görünmeyen ama denetlenmemiş',
+    "şu kadar alan elle girilmiş ve katalog değerinin yerine geçiyor"
+  ].map(duzelt);
+
+  // KAYNAK kılavuzun ÜRETİCİSİ, üretilen belge DEĞİL: alıntılar JS dizgesinde
+  // yazılıyor ve `' + '` ile bölünebiliyor; belgede birleşmiş hâli var ama
+  // üreticide bölünmüş hâli aranmalı ki kapı ikisini de görsün.
+  const GFSRC = io_read('js/guide-fead.js');
+  const ALINTI = [...new Set(
+    [...GFSRC.matchAll(/[“]([^”]{2,160})[”]/g)]
+      .map((m) => duzelt(m[1].replace(/'\s*\+\s*'/g, '')))
+      .filter((s) => s.length >= 3)
+  )];
+
+  // İKİ HÜCRELİ SATIR düzyazıda "etiket: değer" diye alıntılanıyor
+  // (Algılanan Model tablosundaki `satir('Geometri', 'çözüldü')`). İkisi de
+  // kaynakta varsa alıntı gerçektir; kural, liste değil.
+  const kaynaktaVar = (s) => {
+    if (PROGD.includes(s)) return true;
+    const i = s.indexOf(': ');
+    if (i > 0) {
+      const sol = s.slice(0, i).trim();
+      const sag = s.slice(i + 2).trim();
+      if (sol && sag && PROGD.includes(sol) && PROGD.includes(sag)) return true;
+    }
+    return false;
+  };
+
+  test('kılavuz gerçekten alıntı taşıyor', () => {
+    expect(ALINTI.length).toBeGreaterThan(25);
+  });
+
+  test('tırnaklanan her PROGRAM metni kaynakta BİREBİR var', () => {
+    const yok = ALINTI.filter((s) => !DUZYAZI.includes(s) && !kaynaktaVar(s));
+    expect(yok).toEqual([]);
+  });
+
+  test('düzyazı kümesi ÖLÜ satır taşımıyor', () => {
+    // Bir düzyazı alıntısı kılavuzdan silindiğinde satırı burada kalırsa küme
+    // yavaşça "kapıyı susturan istisnalar listesi"ne dönüşür.
+    const olu = DUZYAZI.filter((s) => !ALINTI.includes(s));
+    expect(olu).toEqual([]);
+  });
+
+  test('düzyazı kümesi program metnini SAKLAMIYOR', () => {
+    // Ters yön: gerçekten programın yazdığı bir metni düzyazı diye listelemek
+    // kapıyı o metin için kapatırdı.
+    const kacak = DUZYAZI.filter((s) => kaynaktaVar(s));
+    expect(kacak).toEqual([]);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  KILAVUZ ↔ KAYIŞ TABLOSU — kartın ALT ŞERİDİ YOK
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// PR #931 alt şeridi kaldırıp dört okumayı üst künyeye taşıdı. Kılavuz YEDİ
+// yerde eski şeridi anlatmaya devam etti; biri doğrudan talimattı ("alt
+// şeritteki Σsarım okumasına bakın"). Kapı okumayı ADRESİYLE bağlıyor:
+// kılavuzun Kayış Tablosu için gösterdiği yer, o okumayı GERÇEKTEN basan
+// eleman olmalı.
+describe('kılavuz ↔ Kayış Tablosu: Σsarım okumasının ADRESİ', () => {
+  // Kart, zarfın kendisinden değil DOĞRUDAN üreticiden alınır: bu kapı
+  // kartın iç YERLEŞİMİNİ ölçüyor, Ek A'nın ad eşlemesini değil.
+  const KART = (() => {
+    const pack = veFeadExampleNodes('AG00976_GATES_2025');
+    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    const eskiN = global.nodes;
+    const eskiC = global.connections;
+    global.nodes = pack.nodes;
+    global.connections = pack.connections;
+    try {
+      return veFeadTableCardHTML({ id: 'tbl-x', type: 'fead-table', data: {} });
+    } finally {
+      global.nodes = eskiN;
+      global.connections = eskiC;
+    }
+  })();
+
+  test('Σsarım okuması kartın ÜST künyesinde basılıyor', () => {
+    const bas = KART.indexOf('Σsarım');
+    expect(bas).toBeGreaterThan(-1);
+    // Üst künye kartın BAŞINDA: gövde tablosu (<tbody>) ondan sonra geliyor.
+    expect(bas).toBeLessThan(KART.indexOf('<tbody'));
+    expect(KART.slice(0, bas)).toContain('ve-fead-tbl-head');
+  });
+
+  test('kılavuz Kayış Tablosu’nu ALT ŞERİTLE anlatmıyor', () => {
+    // "alt şerit" kılavuzda hâlâ geçebilir — Kayış YOLU kartının şeridi
+    // duruyor. Yasak olan onu KAYIŞ TABLOSU’na yakıştırmak.
+    const satirlar = DOC.split(/<\/(?:tr|p|li|h[23])>/);
+    const suclu = satirlar.filter((s) =>
+      /alt şerit/i.test(s) && /Kayış Tablosu|Σ ?satırı|türeyen sütun/i.test(s));
+    expect(suclu).toEqual([]);
+  });
+
+  test('kılavuz emekli KISALTMALARI kullanmıyor', () => {
+    // L_eff / L_pitch okunur Türkçeye çevrildi ("efektif boy"); kısaltma
+    // kılavuzda kalırsa kullanıcı ekranda olmayan bir etiketi arar.
+    expect(DOC).not.toMatch(/L_eff/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  §14'ÜN GATES SÜTUNU — İKİNCİ KOPYA, BAĞLANMAMIŞTI
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// §14 modelin sayılarını CANLI hesaplıyor (bunun kapısı yukarıda, casusla).
+// Karşısındaki sütun ise dış bir belgenin basılı değeri: `VE_GUIDE_FEAD_GATES`.
+// O sabitler DOĞRU — dokuzu da ölçüldü — ama `tests/fixtures/fead-validation.js`
+// ile aynı raporun İKİNCİ KOPYASIYDI ve hiçbir kapı ikisini birbirine
+// bakmıyordu. Fixture arşivdeki PDF'e karşı tutuluyor; kılavuzun kopyası
+// hiçbir şeye tutulmuyordu. Bir düzeltme fixture'a girip kılavuza girmezse
+// kullanıcı kılavuzunda YANLIŞ bir tedarikçi sayısı kalır ve sessizdir:
+// belge kendi içinde tutarlı görünür.
+describe('§14 Gates sütunu ↔ doğrulama fixture’ı', () => {
+  const V = require('../fixtures/fead-validation.js');
+  const G = V.AG00976['1715@-250/110'];
+  const g = GF.VE_GUIDE_FEAD_GATES;
+  const N = ['FAN', 'IDR1', 'A_C', 'IDR2', 'ALT', 'TEN'];
+
+  test('sabit gerçekten dışa aktarılıyor', () => {
+    expect(g && typeof g === 'object').toBe(true);
+  });
+
+  test('kayış boyu raporun REBL sütunundan (başlıktaki 1715 DEĞİL)', () => {
+    // Rapor başlığı 1715 yazar, REBL sütunu 1714,6. İkisi ayrı sayıdır ve
+    // kılavuz karşılaştırmayı REBL üzerinden yapar — model de onu üretiyor.
+    expect(G.belt).toBe(1715);
+    const mean = G.pos.find((p) => p.name === 'Mean');
+    expect(g.belt).toBe(mean.REBL);
+  });
+
+  test('tekil değerler fixture ile BİREBİR', () => {
+    expect(g.design).toBe(G.design);
+    expect(g.freeAbsDeg).toBe(G.freeAbsDeg);
+    expect(g.NF).toBe(G.NF);
+    expect(g.arm).toBe(G.arm);
+    expect(g.pivot).toEqual(G.pivot);
+    expect(g.tenXY).toEqual(G.xy.TEN);
+  });
+
+  test('kasnak dizileri fixture sırasıyla BİREBİR', () => {
+    expect(g.wrap).toEqual(N.map((k) => G.wrap[k]));
+    expect(g.span).toEqual(N.map((k) => G.span[k]));
+  });
+
+  test('880 dev/dak satırı çevrimin İLK noktasından', () => {
+    const d0 = G.duty[0];
+    expect(d0.engineRpm).toBe(880);
+    expect(g.T880).toEqual(N.map((k) => d0.T[k]));
+    expect(g.H880).toEqual(N.map((k) => d0.H[k]));
+  });
+});
