@@ -56,7 +56,8 @@ var VE_KARSILAMA_GORSELLER = [
   'karsilama-47.webp',
   'karsilama-48.webp',
   'karsilama-49.webp',
-  'karsilama-50.webp'
+  'karsilama-50.webp',
+  'karsilama-51.webp'
 ];
 
 if (typeof module !== 'undefined' && module.exports) {
