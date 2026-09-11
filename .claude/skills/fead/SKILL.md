@@ -190,8 +190,8 @@ olurdu.
     `node.data.kat`). Çizicinin katmanları zaten vardı; eksik olan seçimin
     SAHİBİYDİ — bayraklar kart kurucusunda sabitti, yani ikinci bir kart
     açmak aynı resmi ikinci kez çizmekti. Seçim artık düğümün alanında ve
-    kart başına ayrı; iki Kayış Yolu kartı yan yana farklı katmanlarla
-    durabilir (`fead-run`ın `maxInstances`ı bu yüzden kalktı).
+    kart başına ayrı; iki kanvas yan yana farklı katmanlarla durabilir
+    (`maxInstances` bu yüzden kalktı).
     **LİSTE TEK KAYNAK**: kutucuk, varsayılan ve çiziciye giden seçenek adı
     aynı satırdan gelir — ikinci bir liste, panelde görünüp çizimde hiçbir şey
     yapmayan bir katman demekti ve bu SESSİZ olurdu.
@@ -203,10 +203,10 @@ olurdu.
     durumu kaydedilmez ve geri-al yığınına yazılmaz — ama kart her değişimde
     yeniden kurulduğu için bir yerde durmak ZORUNDA, yoksa ilk tıklamada
     panel kapanır ve ikinci kutucuk işaretlenemez.
-    **KOL KONUMU: geometri kartı KENDİ seçimini çizer, çalışma kartı
-    devralır.** İkisi de `veFeadPosModeShared`ten okuyordu; tek kart varken
-    doğruydu, ikinci bir Kayış Yolu kartı ise kendi seçicisini yazıp BİRİNCİ
-    kartın konumunu çiziyordu.
+    **KOL KONUMU KART BAŞINA** (`veFeadPosMode(node)`). Bir dönem çalışma
+    kartı bunu geometri kartından devralıyordu (`veFeadPosModeShared`, artık
+    YOK): tek kart varken doğruydu, ikinci kanvas ise kendi seçicisini yazıp
+    BİRİNCİ kartın konumunu çiziyordu.
     Görünüm CSS'te (`css/styles.css` → `.ve-fead-kat*`), kural 14'ün aynı
     gerekçesiyle. Kapılar: `tests/unit/fead-katman.test.js` +
     `tests/e2e/fead-katman.spec.js`.
@@ -223,6 +223,23 @@ olurdu.
     üstündür; "elle" demek için değerin katalogtan FARKLI olması gerekir
     (yalnız "dolu mu" bakan bir tespit, katalogun kendi yazdığı alanları
     kullanıcıya mal ediyordu). Kapı: `tests/unit/fead-catalogs.test.js`.
+
+18. **KANVASIN TEK TİPİ VAR** (`fead-layout`); geometri ↔ işletme ayrımı bir
+    ÖN AYARDIR (`node.data.katOn`), tip değil. `fead-run` diye bir bileşen
+    yok. Açılışta yine İKİ kanvas gelir (örnek · sihirbaz · göç) ve ayrım
+    kullanıcının **değiştirebildiği** şeydir — kural 15 geldikten sonra ikinci
+    bir TİP aynı işi ikinci kez yapıyordu.
+    Ön ayar **adıyla** taşınır (kopyasıyla değil) ve **devri de belirler**:
+    geometri `devir:'off'` — donukluk eskiden tipin içindeydi, taşınmasaydı
+    açılıştaki iki kanvas da animasyonlu gelirdi. Yazılmış bir alan ön ayarı
+    susturur; ön ayar yalnız SÖZ SÖYLEDİĞİ alanı temizler.
+    Sihirbazın araç eşleşmesi **tip + ön ayara** bakar (`_fwAracAnahtar`):
+    yalnız tipe bakan bir eşleşme ya her kurulumda fazladan kanvas kurar ya da
+    `nodes` sırası ters olduğunda geometri kartının üstüne işletme ön ayarını
+    yazar — ikisi de sessiz. Kayıtlı `fead-run` düğümleri şema 5 → 6 göçüyle
+    çevrilir (`veFeadMigrateRunToLayout`); çevrilmeseydi tanımsız tipli bir
+    düğüm olarak kalırlardı. Ayrıntı ve kapı listesi
+    `references/kanvas-ve-kart.md` → *"İKİ KANVAS, TEK TİP"*.
 
 ## Referans dosyaları
 

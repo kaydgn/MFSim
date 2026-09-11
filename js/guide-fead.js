@@ -238,11 +238,23 @@ function _gfSahneKasnakPaneli(){
 // Tuval kartları — ikisi de AYNI çiziciden (`veFeadLayoutCardHTML`), tipe
 // göre farklı opts. Kılavuz ikisini de gösterir çünkü bölünmenin sebebi
 // ölçü değil SORU: biri model kurulurken, öteki devir seçilince sorulur.
-function _gfSahneKart(tip){
+// SEÇİM TİPTEN VE (varsa) ÖN AYARDAN. Kanvas tipi teke indikten sonra
+// (2026-09-11) yalnız tipe bakmak iki sahnede de AYNI kartı basardı —
+// örnekteki iki `fead-layout` düğümünden ilkini. `veri` verilirse eşleşme
+// o alanları da arar; bulunamazsa sahne BOŞ döner (yanlış kartı basmaktansa
+// hiç basmamak: boş sahne kılavuz testinde görünür, yanlış kart görünmez).
+function _gfSahneKart(tip, veri){
   return _gfSahneHTML(function(O){
     if(typeof veFeadLayoutCardHTML !== 'function') return '';
     var n = null;
-    O.pack.nodes.forEach(function(x){ if(x.type === tip && !n) n = x; });
+    O.pack.nodes.forEach(function(x){
+      if(n || x.type !== tip) return;
+      if(veri) for(var k in veri){
+        if(!Object.prototype.hasOwnProperty.call(veri, k)) continue;
+        if(!x.data || x.data[k] !== veri[k]) return;
+      }
+      n = x;
+    });
     return n ? veFeadLayoutCardHTML(n) : '';
   });
 }
@@ -251,18 +263,22 @@ function _gfSahneSema(){
   var html = _gfSahneKart('fead-layout');
   if(!html) return '';
   return veGuideScene(html,
-    'Kayış Yolu kartı — <b>ölçekli ve donuk</b> şema. Turuncu yol çözücünün teğet '
-    + 'noktalarından geçiyor, dişler kayışın kaburgalı yüzünü gösteriyor, yeşil artı '
-    + 'gerginin <b>türetilmiş</b> montaj konumu. Alt şeritteki tek seçici kol konumudur.');
+    'Kayış Yolu kanvası, <b>Geometri</b> ön ayarında — ölçekli şema. Turuncu yol '
+    + 'çözücünün teğet noktalarından geçiyor, dişler kayışın kaburgalı yüzünü '
+    + 'gösteriyor, yeşil artı gerginin <b>türetilmiş</b> montaj konumu.');
 }
 
+// AYNI TİP, BAŞKA ÖN AYAR. Sahne bir zamanlar ayrı bir bileşen tipi
+// (`fead-run`) kuruyordu; tip 2026-09-11'de kalktı ve fark `data.katOn`a
+// taşındı. Sahne de o yoldan geçmek ZORUNDA: ikinci bir çizim yolu açsaydı
+// kılavuz, programda olmayan bir kartı anlatırdı.
 function _gfSahneCalisma(){
-  var html = _gfSahneKart('fead-run');
+  var html = _gfSahneKart('fead-layout', { katOn: 'isletme' });
   if(!html) return '';
   return veGuideScene(html,
-    'Çalışma Noktası kartı — aynı çizim, <b>işletme</b> katmanıyla: açıklık gerilmeleri, '
-    + 'gerilme haritası ve titreşim. İki seçicisi var (devir ve titreşim) ve kayış '
-    + '<b>akar</b>; Kayış Yolu kartı bunların hiçbirini yapmaz.');
+    'Aynı kanvas, <b>İşletme</b> ön ayarında: açıklık gerilmeleri, gerilme haritası '
+    + 've titreşim. Kart tipi tektir — fark, kartın <b>Katmanlar</b> panelinden '
+    + 'seçilen ön ayardır ve her kanvas kendi seçimini taşır.');
 }
 
 function _gfSahnePanel(fn, altyazi, coz){

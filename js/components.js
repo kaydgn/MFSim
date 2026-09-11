@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-layout','fead-run','fead-table','fead-report','fead-spin','fead-wizard','arac-performans','mount-analysis','fead-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-layout','fead-table','fead-report','fead-spin','fead-wizard','arac-performans','mount-analysis','fead-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -632,41 +632,34 @@ var componentDefs = {
   // doldurulabilirler". FEAD'e girince artık doğrudan sihirbaz açılıyor.
   // Örnek KURUCUSU (veFeadLoadExample) duruyor: sihirbazın "Modeli Kur"u ile
   // aynı işi yapan yol o ve testlerin kanonik model kurucusu.
-  // Kayış Yolu — kasnak konumlarından ölçekli serpantin şeması. Sembolün
-  // kendisi de GERÇEK geometridir: üç kasnağın (R=15/9/7) dış teğetleri ve
-  // sarım yayları analitik çözülüp path'e yazıldı (bkz. cp-fead.js).
+  // ── KAYIŞ YOLU KANVASI — kasnak konumlarından ölçekli serpantin şeması ───
+  //
+  // Sembolün kendisi de GERÇEK geometridir: üç kasnağın (R=15/9/7) dış
+  // teğetleri ve sarım yayları analitik çözülüp path'e yazıldı (cp-fead.js).
+  //
+  // TEK TİP. Bir dönem İKİ tip vardı — geometri kartı (sarım açıları, gergi
+  // kolu) ve çalışma noktası kartı (gerilme haritası, animasyon, titreşim) —
+  // ve fark TİPİN İÇİNE gömülüydü: hangi katmanlar açık, hangi seçiciler
+  // görünür, devir okunur mu. Katmanlar kart başına seçilebilir olunca
+  // (2026-09-11, `node.data.kat`) o ayrım aynı işi İKİNCİ KEZ yapmaya
+  // başladı. Kullanıcı bildirimi: *"iki kanvas var, ikisinin de özellikleri
+  // falan farklı… Tek kanvas olacak, açılır açılmaz iki kanvas gelsin fakat
+  // tipoloji tek olacak."* Tip kalktı; ayrım ÖN AYAR oldu (`data.katOn`:
+  // geometri / işletme) ve açılışta yine İKİ kart gelir — ikisi de bu tipten.
+  //
+  // maxInstances YOK: iki kart olağan kullanım, üçüncüsü de kullanıcının
+  // hakkı (rölanti · 2000 dev/dk · geometri yan yana).
+  //
+  // TİP ADI DEĞİŞMEDİ, KART ADI DEĞİŞEBİLİR. İki kart yan yana dururken ikisi
+  // de "Kayış Yolu" etiketi taşısaydı ayırt edilemezlerdi; kurucular ikinci
+  // kanvasa `customName` yazıyor ("Çalışma Noktası"). Ön ayarı değiştirmek adı
+  // DEĞİŞTİRMEZ — kullanıcının verdiği adı bir tıklamayla ezmek olurdu.
   'fead-layout': {
     name: 'Kayış Yolu',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M25.9 49.3 L65.2 24.4 A9 9 0 0 1 79 31.5 L81 65.6 A7 7 0 0 1 71.9 72.7 L29.6 76.3 A15 15 0 0 1 25.9 49.3 Z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4" stroke-linejoin="round"/><circle cx="34" cy="62" r="15" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="34" cy="62" r="4.5" fill="var(--text-secondary, #666)"/><circle cx="70" cy="32" r="9" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="70" cy="32" r="3" fill="var(--text-secondary, #666)"/><circle cx="74" cy="66" r="7" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="74" cy="66" r="2.6" fill="var(--text-secondary, #666)"/></svg>',
     inputs: 0, outputs: 0, isFeadLayout: true
-    // Ölçü BURADA YOK: Kayış Yolu düğümü kanvasta CANLI ŞEMA kartıdır ve
-    // ölçüsü tek yerden gelir (VE_FEAD_LAYOUT_W/H → aşağıdaki döngü).
-  },
-  // ── ÇALIŞMA NOKTASI — kartın İŞLETME yarısı ──────────────────────────────
-  //
-  // Kullanıcı isteği (2026-09-10): tek kart on beş işi birden taşıyordu ve üç
-  // seçici (kol · devir · titreşim) aynı şeride sıkışıyordu. Bölme ÖLÇÜYE göre
-  // değil SORUYA göre: Kayış Yolu "kayış nereden geçiyor, çevrim kapanıyor mu"
-  // sorusunu model KURULURKEN cevaplar ve donuktur; bu kart "bu devirde hangi
-  // açıklık ne kadar gergin, ne titreşiyor" sorusunu DEVİR SEÇİLİNCE cevaplar.
-  //
-  // İKİSİ AYNI ÇİZİCİDEN geçer (veFeadLayoutSVG), yalnız opts farklı — ikinci
-  // bir çizim kodu YOK. Kol konumu da tek alanda (Kayış Yolu düğümünde);
-  // buraya ikinci bir posMode konsaydı iki kart farklı geometri çizer ve fark
-  // SESSİZ olurdu (ikisi de kendi içinde tutarlı görünür).
-  //
-  // maxInstances:1 — ikinci kopya aynı çalışma noktasını gösterir.
-  'fead-run': {
-    name: 'Çalışma Noktası',
-    // Kayış (amber) + gerilme rampası (soğuk → sıcak) + devir ibresi: kartın
-    // üç işi. Kayış Yolu sembolü serpantin, bu sembol ÖLÇÜM.
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M14 74 L34 52 L54 60 L86 26" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="34" cy="52" r="5.5" fill="var(--accent-primary, #3b82f6)"/><circle cx="54" cy="60" r="5.5" fill="var(--accent-primary, #3b82f6)"/><rect x="14" y="84" width="72" height="8" rx="4" fill="none" stroke="var(--text-muted, #888)" stroke-width="3"/><rect x="16" y="86" width="30" height="4" rx="2" fill="var(--accent-danger, #ef4444)"/><circle cx="86" cy="26" r="6" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/></svg>',
-    // ÇOK KART SERBEST. `maxInstances: 1` kalktı (2026-09-11): katmanlar kart
-    // başına seçilebilir olunca ikinci bir kart artık aynı resmin kopyası
-    // değil — rölantideki gerilmeleri bir kartta, 2000 dev/dk'dakileri
-    // ötekinde yan yana görmek bu kartın asıl işi.
-    inputs: 0, outputs: 0, isFeadRun: true
-    // Ölçü BURADA YOK: VE_FEAD_RUN_W/H → aşağıdaki döngü.
+    // Ölçü BURADA YOK: kanvas düğümü CANLI ŞEMA kartıdır ve ölçüsü tek
+    // yerden gelir (VE_FEAD_LAYOUT_W/H → aşağıdaki döngü).
   },
   // ── KAYIŞ TABLOSU — kasnakların TEK veri giriş yüzeyi ─────────────────────
   //
@@ -875,13 +868,6 @@ var VE_FEAD_LAYOUT_H = 500;
 // ve aynı sürümde iki farklı kart ölçüsü dolaşırdı.
 var VE_FEAD_LAYOUT_LEGACY = [ { w: 60, h: 56 }, { w: 420, h: 340 } ];
 
-// ÇALIŞMA NOKTASI ÖLÇÜSÜ — Kayış Yolu ile aynı. İki kart yan yana duruyor ve
-// farklı boyda olmaları tek kazanç sağlamadan yerleşimi bozardı; ikisinin de
-// çizim alanı aynı (500 − 22 seçici − 20 durum = 458, titreşim açıkken 438).
-// AŞILMIŞ VARSAYILAN YOK: kart bu ölçüyle doğdu.
-var VE_FEAD_RUN_W = 440;
-var VE_FEAD_RUN_H = 500;
-var VE_FEAD_RUN_LEGACY = [];
 
 // KAYIŞ TABLOSU ÖLÇÜSÜ. Genişlik ON BİR sütundan TÜRER, yuvarlak bir sayı
 // değil: sıra(54) + ad(172) + X(64) + Y(64) + efektif çap(78) + D(64) +
@@ -972,9 +958,7 @@ function _veFeadCardSizes() {
     { flag: 'isFeadLayout', w: VE_FEAD_LAYOUT_W, h: VE_FEAD_LAYOUT_H,
       legacy: VE_FEAD_LAYOUT_LEGACY },
     { flag: 'isFeadTable',  w: VE_FEAD_TABLE_W,  h: VE_FEAD_TABLE_H,
-      legacy: VE_FEAD_TABLE_LEGACY },
-    { flag: 'isFeadRun',    w: VE_FEAD_RUN_W,    h: VE_FEAD_RUN_H,
-      legacy: VE_FEAD_RUN_LEGACY }
+      legacy: VE_FEAD_TABLE_LEGACY }
   ];
   return VE_FEAD_CARD_SIZES;
 }
@@ -1022,10 +1006,6 @@ if(typeof componentDefs !== 'undefined') {
       componentDefs[t].defaultHeight = VE_FEAD_TABLE_H;
       componentDefs[t].minWidth = VE_FEAD_TABLE_MIN_W;
       componentDefs[t].minHeight = VE_FEAD_TABLE_MIN_H;
-    }
-    if(componentDefs[t] && componentDefs[t].isFeadRun) {
-      componentDefs[t].defaultWidth = VE_FEAD_RUN_W;
-      componentDefs[t].defaultHeight = VE_FEAD_RUN_H;
     }
     if(componentDefs[t] && componentDefs[t].isSubsystem) {
       componentDefs[t].defaultWidth = VE_MODULE_CARD_W;

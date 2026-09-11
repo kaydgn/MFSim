@@ -8691,11 +8691,16 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fead-kat-kapat:hover{ background:var(--accent-danger); color:var(--on-danger); }
 .ve-fead-kat-kapat:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 
-/* ÜÇ İŞLEM — sekiz kutucuğu tek tek gezmenin karşılığı. */
+/* İŞLEM SATIRLARI — sekiz kutucuğu tek tek gezmenin karşılığı. Üstteki satır
+   ÖN AYARLAR (Geometri · İşletme), alttaki toptan işlemler (Tümü · Hiçbiri).
+   Ayrı iki satır, çünkü iki farklı şey yapıyorlar: ön ayar kartı ADLANDIRILMIŞ
+   bir görünüme alır ve BASILI KALIR, toptan işlem tek seferlik bir dokunuştur.
+   Tek satıra dizilselerdi basılı kalan düğme ötekilerle aynı görünürdü. */
 .ve-fead-kat-islem{
   flex:0 0 auto; display:flex; gap:4px; padding:6px 8px;
   border-bottom:1px dashed var(--border-color);
 }
+.ve-fead-kat-islem.onayar{ border-bottom-style:solid; padding-bottom:5px; }
 .ve-fead-kat-islem button{
   flex:1; padding:3px 0; cursor:pointer;
   background:var(--bg-input); color:var(--text-secondary);
@@ -8704,6 +8709,15 @@ span.ve-fw-ro{ display:inline-block; }
 }
 .ve-fead-kat-islem button:hover{ border-color:var(--accent-primary); color:var(--ink-accent); }
 .ve-fead-kat-islem button:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+/* AÇIK ÖN AYAR BASILI DURUR. Kartın hangi görünümde olduğunu söyleyen tek
+   yüzey bu: kutucuklara bakıp sekiz bayrağı ön ayarla karşılaştırmak kullanıcı
+   işi değil. Elle bir kutucuk oynatılınca sınıf düşer (kart artık o ön ayar
+   değil, ondan türemiş bir küme) — kural cp-fead.js'te. */
+.ve-fead-kat-islem.onayar button.is-acik{
+  background:var(--accent-tint-15); border-color:var(--accent-primary);
+  color:var(--ink-accent);
+}
+.ve-fead-kat-islem.onayar button.is-acik:hover{ background:var(--accent-tint-20); }
 
 .ve-fead-kat-liste{ flex:1 1 auto; min-height:0; overflow-y:auto; padding:3px 0; }
 .ve-fead-kat-sat{

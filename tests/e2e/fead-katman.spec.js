@@ -9,7 +9,9 @@
  *   • panelin şeridi itmeden çizimin üstüne binmesi,
  *   • `:hover` / `:has(input:checked)` gibi durum kuralları (jsdom hiçbirini
  *     hesaplamaz),
- *   • iki kartın yan yana AYRI resim çizmesi.
+ *   • iki kartın yan yana AYRI resim çizmesi,
+ *   • ÖN AYAR düğmesinin kartı gerçekten çevirmesi (2026-09-11: kanvas tipi
+ *     teke indi, geometri ↔ işletme ayrımı bir ön ayar oldu).
  */
 const { test, expect } = require('@playwright/test');
 test.setTimeout(180000);
@@ -49,7 +51,10 @@ test('KATMAN PANELİ: açılır, çizimi değiştirir, açık kalır', async ({ 
   await bootApp(page);
   await feadOrnek(page);
 
-  const id = await page.evaluate(() => window.nodes.find((n) => n.type === 'fead-layout').id);
+  // ÖRNEK İKİ KANVAS KURUYOR (aynı tipten, ayrı ön ayarla). Geometri olanı
+  // seç — yalnız tipe bakan bir arama hangisini bulacağını söylemez.
+  const id = await page.evaluate(() => window.nodes.find(
+    (n) => n.type === 'fead-layout' && !(n.data || {}).katOn).id);
   const kart = page.locator('#' + id);
   const dugme = kart.locator('.ve-fead-kat-dugme');
 
@@ -75,7 +80,15 @@ test('KATMAN PANELİ: açılır, çizimi değiştirir, açık kalır', async ({ 
   const panel = kart.locator('.ve-fead-kat');
   await expect(panel).toHaveCount(1);
   await expect(panel.locator('input[type="checkbox"]')).toHaveCount(8);
-  await expect(panel.locator('.ve-fead-kat-islem button')).toHaveCount(3);
+  // İKİ SATIR İŞLEM: üstte adlandırılmış ön ayarlar, altta toptan işlemler.
+  await expect(panel.locator('.ve-fead-kat-islem.onayar button')).toHaveCount(2);
+  await expect(panel.locator('.ve-fead-kat-islem:not(.onayar) button')).toHaveCount(2);
+  // AÇIK ÖN AYAR BASILI DURUYOR — ve bu bir CSS durumu, jsdom hesaplamaz.
+  const onAyar = panel.locator('.ve-fead-kat-islem.onayar button');
+  await expect(onAyar.nth(0)).toHaveClass(/is-acik/);
+  await expect(onAyar.nth(1)).not.toHaveClass(/is-acik/);
+  expect(await onAyar.nth(0).evaluate((el) => getComputedStyle(el).backgroundColor))
+    .not.toBe(await onAyar.nth(1).evaluate((el) => getComputedStyle(el).backgroundColor));
 
   // PANEL ÇİZİMİN ÜSTÜNE BİNER, ŞERİDİ İTMEZ. Akışa girseydi panel açılınca
   // çizim alanı daralır, şema yeniden ölçeklenir ve kullanıcı "neyi
@@ -123,20 +136,42 @@ test('KATMAN PANELİ: açılır, çizimi değiştirir, açık kalır', async ({ 
     .locator('.ad').evaluate((el) => getComputedStyle(el).fontWeight);
   expect(Number(await renk(4))).toBeGreaterThan(Number(await renk(0)));  // 4 açık, 0 kapalı
 
-  // ── 5) ÜÇ İŞLEM ─────────────────────────────────────────────────────────
-  await panel.locator('.ve-fead-kat-islem button').nth(1).click();      // Hiçbiri
+  // ── 5) TOPTAN İŞLEMLER ──────────────────────────────────────────────────
+  const toptan = panel.locator('.ve-fead-kat-islem:not(.onayar) button');
+  await toptan.nth(1).click();                                          // Hiçbiri
   await page.waitForTimeout(400);
   expect((await dugme.innerText()).replace(/\s+/g, ' ')).toContain('0/8');
-  await panel.locator('.ve-fead-kat-islem button').nth(0).click();      // Tümü
+  await toptan.nth(0).click();                                          // Tümü
   await page.waitForTimeout(400);
   expect((await dugme.innerText()).replace(/\s+/g, ' ')).toContain('8/8');
-  await panel.locator('.ve-fead-kat-islem button').nth(2).click();      // Varsayılan
-  await page.waitForTimeout(400);
-  expect((await dugme.innerText()).replace(/\s+/g, ' ')).toContain('7/8');
-  expect(await page.evaluate((i) =>
-    window.nodes.find((n) => n.id === i).data.kat, id)).toBeUndefined();
+  // ELLE DEĞİŞİKLİK VARKEN HİÇBİR ÖN AYAR BASILI DEĞİL: kart artık bir ön
+  // ayar değil, ondan TÜREMİŞ bir küme ve düğme bunu söylemeli.
+  await expect(panel.locator('.ve-fead-kat-islem.onayar button.is-acik')).toHaveCount(0);
 
-  // ── 6) KAPATMA ──────────────────────────────────────────────────────────
+  // ── 6) ÖN AYAR DÜĞMESİ KARTI GERÇEKTEN ÇEVİRİYOR ────────────────────────
+  // Kanvas tipi teke indi (2026-09-11); "geometri kartı" ile "çalışma noktası"
+  // arasındaki fark artık BU İKİ DÜĞME. Ölçülen şey resmin kendisi: işletme
+  // ön ayarında animasyon yükü doğuyor, geometride yok.
+  await panel.locator('.ve-fead-kat-islem.onayar button').nth(1).click();   // İşletme
+  await page.waitForTimeout(500);
+  expect(await page.evaluate((i) => ({
+    on: (window.nodes.find((n) => n.id === i).data || {}).katOn,
+    anim: !!document.getElementById(i).querySelector('svg[data-fead-anim]'),
+    gerilme: document.getElementById(i).querySelectorAll('[data-ve="belt-tension"]').length,
+  }), id)).toEqual({ on: 'isletme', anim: true, gerilme: 6 });
+  await expect(kart.locator('.ve-fead-kat')).toHaveCount(1);            // panel AÇIK kaldı
+  await expect(kart.locator('.ve-fead-kat-islem.onayar button').nth(1)).toHaveClass(/is-acik/);
+
+  await kart.locator('.ve-fead-kat-islem.onayar button').nth(0).click(); // Geometri
+  await page.waitForTimeout(500);
+  expect((await dugme.innerText()).replace(/\s+/g, ' ')).toContain('7/8');
+  expect(await page.evaluate((i) => {
+    const n = window.nodes.find((x) => x.id === i);
+    return { kat: n.data.kat, on: n.data.katOn, rpm: n.data.animRpm,
+             anim: !!document.getElementById(i).querySelector('svg[data-fead-anim]') };
+  }, id)).toEqual({ kat: undefined, on: undefined, rpm: undefined, anim: false });
+
+  // ── 7) KAPATMA ──────────────────────────────────────────────────────────
   await panel.locator('.ve-fead-kat-kapat').click();
   await page.waitForTimeout(300);
   await expect(kart.locator('.ve-fead-kat')).toHaveCount(0);
@@ -150,7 +185,16 @@ test('İKİ KART, İKİ AYRI RESİM — kişiselleştirmenin kendisi', async ({ 
   await bootApp(page);
   await feadOrnek(page);
 
-  const a = await page.evaluate(() => window.nodes.find((n) => n.type === 'fead-layout').id);
+  // AÇILIR AÇILMAZ İKİ KANVAS — ve TİPLERİ AYNI (kullanıcı isteği).
+  expect(await page.evaluate(() => ({
+    kanvas: window.nodes.filter((n) => n.type === 'fead-layout').length,
+    isletme: window.nodes.filter((n) => n.type === 'fead-layout'
+      && (n.data || {}).katOn === 'isletme').length,
+    eskiTip: window.nodes.filter((n) => n.type === 'fead-run').length,
+  }))).toEqual({ kanvas: 2, isletme: 1, eskiTip: 0 });
+
+  const a = await page.evaluate(() => window.nodes.find(
+    (n) => n.type === 'fead-layout' && !(n.data || {}).katOn).id);
   const b = await page.evaluate(() => {
     const n = createNode('fead-layout', 3500, 3500);
     return n && n.id;
@@ -166,7 +210,7 @@ test('İKİ KART, İKİ AYRI RESİM — kişiselleştirmenin kendisi', async ({ 
   await page.locator('#' + b + ' .ve-fead-kat-dugme').click();
   await page.waitForTimeout(300);
   const p2 = page.locator('#' + b + ' .ve-fead-kat');
-  await p2.locator('.ve-fead-kat-islem button').nth(1).click();       // Hiçbiri
+  await p2.locator('.ve-fead-kat-islem:not(.onayar) button').nth(1).click();   // Hiçbiri
   await page.waitForTimeout(450);
 
   // ASIL KAPI: iki kart AYRI resim çiziyor.
@@ -210,15 +254,24 @@ test('İKİ KART, İKİ AYRI RESİM — kişiselleştirmenin kendisi', async ({ 
   expect(yolSonra.b).toBeGreaterThan(yolOnce.b);
   expect(yolSonra.a).toBe(yolOnce.a);            // birinci kart DEĞİŞMEDİ
 
-  // ── ÇALIŞMA NOKTASI da çoğaltılabiliyor ────────────────────────────────
+  // ── ÜÇÜNCÜ KANVAS: aynı tip, üçüncü bir ön ayar seçimi ─────────────────
+  // Tip teke indiği için "çalışma noktası eklemek" ayrı bir palet kutusu değil
+  // artık: kanvas eklenir, ön ayarı seçilir. Kapı bunun GERÇEKTEN çalıştığını
+  // ölçüyor — paletten kurulan yeni kart da ön ayar düğmesini taşımalı.
   const r2 = await page.evaluate(() => {
-    const n = createNode('fead-run', 3900, 3500);
+    const n = createNode('fead-layout', 3900, 3500);
     return n ? n.id : null;
   });
   await page.waitForTimeout(500);
   expect(r2).toBeTruthy();
-  expect(await page.evaluate(() => window.nodes.filter((n) => n.type === 'fead-run').length)).toBe(2);
+  expect(await page.evaluate(() => window.nodes.filter((n) => n.type === 'fead-layout').length)).toBe(4);
   await expect(page.locator('#' + r2 + ' .ve-fead-kat-dugme')).toHaveCount(1);
+  await page.locator('#' + r2 + ' .ve-fead-kat-dugme').click();
+  await page.waitForTimeout(300);
+  await page.locator('#' + r2 + ' .ve-fead-kat-islem.onayar button').nth(1).click();
+  await page.waitForTimeout(500);
+  expect(await page.evaluate((i) =>
+    !!document.getElementById(i).querySelector('svg[data-fead-anim]'), r2)).toBe(true);
 
   expect(hatalar).toEqual([]);
 });

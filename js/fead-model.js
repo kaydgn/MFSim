@@ -2439,10 +2439,18 @@ function veFeadExampleNodes(key){
   // HAZIR bir model olmalı. Şema düğümü olmadan kullanıcı çözümü görüyor ama
   // kayış yolunu göremiyor ve onu paletten ayrıca aramak zorunda kalıyordu.
   nodesOut.push({ id:'ex-layout', type:'fead-layout', data:{} });
-  // ÇALIŞMA NOKTASI DA KURULUR — Kayış Yolu ile aynı gerekçe. Kart ikiye
-  // bölündü (2026-09-10): geometri orada, gerilme haritası/animasyon/titreşim
-  // burada. Yalnız biri gelseydi örnek "yarım kullanıma hazır" olurdu.
-  nodesOut.push({ id:'ex-run', type:'fead-run', data:{} });
+  // İKİNCİ KANVAS DA KURULUR — birincisiyle aynı gerekçe: örnek "yarım
+  // kullanıma hazır" olmasın. Geometri bir kartta, işletme (gerilme haritası ·
+  // animasyon · titreşim) ötekinde.
+  //
+  // TİP AYNI (2026-09-11, kullanıcı isteği: *"tipoloji tek olacak"*). Fark
+  // ÖN AYARIN ADI: `katOn:'isletme'`. Ön ayarın KOPYASI değil ADI yazılır —
+  // bu dosya DOM'suz köprü katmanı ve sekiz katman bayrağının ikinci bir
+  // listesini tutsaydı liste sessizce ayrışırdı (cp-fead.js'teki
+  // VE_FEAD_KATMANLAR tek kaynak). `customName` de burada: iki kart yan yana
+  // dururken ikisi de "Kayış Yolu" etiketi taşısaydı ayırt edilemezlerdi.
+  nodesOut.push({ id:'ex-run', type:'fead-layout',
+                  customName:'Çalışma Noktası', data:{ katOn:'isletme' } });
   // KAYIŞ TABLOSU DA KURULUR — `ex-layout` ile aynı gerekçe: örnek
   // "çözülebilir bir model" değil, KULLANIMA HAZIR bir model. Kasnakların
   // veri giriş yüzeyi artık bu tablo; onsuz gelen bir örnekte kullanıcı
@@ -2936,12 +2944,18 @@ function veFeadMigrateBeltOrder(state){
   return gidis.length + k;
 }
 
-// ── KART İKİYE BÖLÜNDÜ: eski kayıda ÇALIŞMA NOKTASI eklenir (şema 4 → 5) ───
+// ── ŞEMA 4 → 5: eski kayıda İKİNCİ KANVAS eklenir ──────────────────────────
 //
-// Kayış Yolu kartı 2026-09-10'da ikiye ayrıldı: geometri `fead-layout`'ta,
-// gerilme haritası + animasyon + titreşim yeni `fead-run` kartında. Göç
-// olmasaydı eski bir proje açıldığında o üç yüzey SESSİZCE kaybolurdu —
-// kullanıcı kartına bakar, animasyonun neden durduğunu anlamazdı.
+// Kayış Yolu kartı 2026-09-10'da ikiye ayrıldı: geometri birinci kartta,
+// gerilme haritası + animasyon + titreşim ikincide. Göç olmasaydı eski bir
+// proje açıldığında o üç yüzey SESSİZCE kaybolurdu — kullanıcı kartına bakar,
+// animasyonun neden durduğunu anlamazdı.
+//
+// EKLENEN KART AYNI TİPTEN (2026-09-11). Bir dönem ayrı bir tip (`fead-run`)
+// eklerdi; tip kalkınca bu göç de ön ayar yazıyor. Sürüm damgasını DEĞİŞTİRMEK
+// gerekmedi: 4 damgalı bir dosya bu adımdan bugünün biçimiyle geçer, 5 damgalı
+// (yani gerçekten `fead-run` düğümü taşıyan) bir dosyayı bir sonraki adım
+// çevirir.
 //
 // Yeni düğüm şemanın SAĞINA konur (kart 440 geniş + 24 boşluk); ölçüyü
 // components.js'in kendi kuralı yazıyor (`veFeadNormalizeLayoutSize` /
@@ -2951,18 +2965,56 @@ function veFeadMigrateRunCard(state){
   var sema = null, varMi = false;
   state.nodes.forEach(function(n){
     if(!n || !n.type) return;
-    if(n.type === 'fead-layout' && !sema) sema = n;
-    if(n.type === 'fead-run') varMi = true;
+    // ESKİ TİP DE SAYILIR: 4 damgalı ama `fead-run` taşıyan bir dosya (elle
+    // düzenlenmiş ya da damgası geride kalmış) buradan ikinci bir kart ALMAZ
+    // — bir sonraki adım o düğümü zaten işletme kanvasına çeviriyor.
+    if(n.type === 'fead-run'){ varMi = true; return; }
+    if(n.type !== 'fead-layout') return;
+    // İŞLETME ÖN AYARLI BİR KANVAS ZATEN VARSA İKİNCİSİ EKLENMEZ. Ölçüt
+    // "kaç tane layout var" DEĞİL: kullanıcı ikinci bir GEOMETRİ kartı açmış
+    // olabilir ve o, kaybolan işletme yüzeyinin yerini tutmaz.
+    if(n.data && n.data.katOn === 'isletme'){ varMi = true; return; }
+    if(!sema) sema = n;
   });
   if(!sema || varMi) return 0;
   state.nodes.push({
     id: 'fead-run-' + Date.now() + '-' + Math.floor(Math.random() * 1e6),
-    type: 'fead-run',
+    type: 'fead-layout',
+    customName: 'Çalışma Noktası',
     x: (typeof sema.x === 'number' ? sema.x : 0) + (sema.width || 440) + 24,
     y: (typeof sema.y === 'number' ? sema.y : 0),
-    data: {}
+    data: { katOn: 'isletme' }
   });
   return 1;
+}
+
+// ── ŞEMA 5 → 6: `fead-run` TİPİ KALKTI, ÖN AYARA DÖNÜŞTÜ ───────────────────
+//
+// Kullanıcı bildirimi (2026-09-11): *"iki kanvas var, ikisinin de özellikleri
+// falan farklı… Tek kanvas olacak, açılır açılmaz iki kanvas gelsin fakat
+// tipoloji tek olacak."* Tip kalktı; `componentDefs['fead-run']` artık YOK.
+//
+// GÖÇ OLMASAYDI HATA SESSİZ DEĞİL, ama sonucu daha kötü: tanınmayan tipli
+// düğüm kanvasta tanımsız bir kutuya düşer (def yok → ad yok, ölçü yok, panel
+// yok) ve kullanıcının kart ölçüsü/devir seçimi/katman seçimi orada mahsur
+// kalır. Çevrilen kart görünümünü BİREBİR korur: `katOn:'isletme'` eski
+// varsayılanın aynısı, elle işaretlenmiş `data.kat` ise zaten üstüne yazar.
+function veFeadMigrateRunToLayout(state){
+  if(!state || !Array.isArray(state.nodes)) return 0;
+  var n = 0;
+  state.nodes.forEach(function(x){
+    if(!x || x.type !== 'fead-run') return;
+    x.type = 'fead-layout';
+    if(!x.data) x.data = {};
+    // ÖN AYAR YALNIZ YAZILMAMIŞSA KONUR: bir kullanıcı ileride bu kartı
+    // "geometri"ye çevirmiş olabilir ve göç onu geri almamalı.
+    if(x.data.katOn === undefined) x.data.katOn = 'isletme';
+    // AD DA KORUNUR: tip adı gittiği için etiket boşalırdı ("Kayış Yolu"
+    // yazan iki kart). Kullanıcının kendi adı varsa dokunulmaz.
+    if(!x.customName) x.customName = 'Çalışma Noktası';
+    n++;
+  });
+  return n;
 }
 
 // ── GERGİ GEVŞEK SPANDA MI? ────────────────────────────────────────────────
@@ -4434,6 +4486,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadMigrateWireOrder: veFeadMigrateWireOrder,
     veFeadMigrateBeltOrder: veFeadMigrateBeltOrder,
     veFeadMigrateRunCard: veFeadMigrateRunCard,
+    veFeadMigrateRunToLayout: veFeadMigrateRunToLayout,
     veFeadSpinLabel: veFeadSpinLabel,
     _feadPlaneName: _feadPlaneName,
     veFeadTensionerSide: veFeadTensionerSide,

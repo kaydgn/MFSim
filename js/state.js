@@ -25,7 +25,13 @@ var MAX_UNDO_STEPS = 50;
 // kasnak-kasnak telleri silinir (veFeadMigrateBeltOrder). Göç atlansaydı
 // kasnaklar indissiz kalır, sıra DİZİ SIRASINA düşer ve model sessizce başka
 // bir kayış yolu çözerdi.
-var VE_SCHEMA_VERSION = 5;
+//
+// SÜRÜM 6 (2026-09-11): FEAD kanvasının İKİ TİPİ TEKE İNDİ. `fead-run`
+// (Çalışma Noktası) diye bir bileşen tipi yok; ayrım artık bir ÖN AYAR
+// (`data.katOn`). Kayıtlı `fead-run` düğümleri `fead-layout`a çevrilir
+// (veFeadMigrateRunToLayout); çevrilmeselerdi tanımsız tipli bir düğüm olarak
+// kanvasta kalırlardı — ne adı, ne ölçüsü, ne paneli olurdu.
+var VE_SCHEMA_VERSION = 6;
 
 // ── TOPLU KURULUM: BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI ───────────────
 //
@@ -206,6 +212,11 @@ function veApplyLegacyMigrations(state) {
   // KART İKİYE BÖLÜNDÜ: eski kayıtta yalnız `fead-layout` var; `fead-run`
   // eklenmezse gerilme haritası, animasyon ve titreşim SESSİZCE kaybolurdu.
   if(v < 5 && typeof veFeadMigrateRunCard === 'function') veFeadMigrateRunCard(state);
+  // TİP TEKE İNDİ: kayıtlı `fead-run` düğümleri `fead-layout` + işletme ön
+  // ayarına çevrilir. 5. adımdan SONRA koşar — o adım 4 damgalı bir dosyaya
+  // zaten bugünün biçimiyle kart ekliyor, bu adım yalnız gerçekten eski tipi
+  // taşıyan dosyalara dokunuyor.
+  if(v < 6 && typeof veFeadMigrateRunToLayout === 'function') veFeadMigrateRunToLayout(state);
   // GÖMÜLÜ ALT TOPOLOJİLER de aynı kapıdan geçer ve DAMGALANIR: FEAD kanvası
   // `fead-analysis` düğümünün data.subTopology'sinde yaşıyor; editör açılınca
   // veLoadTabState → restoreState onu ikinci kez bu kapıdan geçirir ve damga

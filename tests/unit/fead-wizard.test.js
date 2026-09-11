@@ -411,7 +411,11 @@ describe('kurulum kapısı ve kurulum', () => {
     expect(global.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley).length).toBe(6);
     expect(global.nodes.filter((n) => n.type === 'fead-belt').length).toBe(1);
     expect(global.nodes.filter((n) => n.type === 'fead-solver').length).toBe(1);
-    expect(global.nodes.filter((n) => n.type === 'fead-layout').length).toBe(1);
+    // İKİ KANVAS, TEK TİP (2026-09-11): geometri + işletme ön ayarı.
+    expect(global.nodes.filter((n) => n.type === 'fead-layout').length).toBe(2);
+    expect(global.nodes.filter((n) => n.type === 'fead-layout'
+      && n.data && n.data.katOn === 'isletme').length).toBe(1);
+    expect(global.nodes.filter((n) => n.type === 'fead-run').length).toBe(0);
     expect(global.nodes.filter((n) => n.type === 'fead-table').length).toBe(1);
     expect(global.nodes.filter((n) => n.type === 'fead-report').length).toBe(1);
     // TEL KURULMUYOR (2026-09-09): sıra indiste ve 1..N numaralı.
@@ -424,6 +428,43 @@ describe('kurulum kapısı ve kurulum', () => {
     expect(b.beltLengthMm).toBeCloseTo(beklenen.beltLengthMm, 6);
     expect(b.springTensionN).toBeCloseTo(beklenen.springTensionN, 6);
     expect(b.spin).toBe(beklenen.spin);
+  });
+
+  // ── ARAÇ EŞLEŞMESİ TİPE DEĞİL, TİP + ÖN AYARA BAKAR ─────────────────────
+  //
+  // Kanvas tipi 2026-09-11'de teke indi: sihirbaz artık AYNI tipten İKİ düğüm
+  // kuruyor (geometri + işletme ön ayarı). "Var olanı yeniden kullan" eşleşmesi
+  // yalnız TİPE bakarsa iki sessiz kaçak doğuyor ve ikisi de kullanıcının
+  // kartlarını bozuyor:
+  //
+  //   (1) tek düğüm tutulursa ikinci kanvas her "Modeli Kur"da YENİDEN kurulur
+  //       (kartlar üst üste açıldığı için sayı ancak taşınınca fark edilir),
+  //   (2) kuyruk tutulup SIRAYA güvenilirse — `nodes` dizisinde işletme kartı
+  //       önce duruyorsa — geometri kartının üstüne `katOn:'isletme'` yazılır
+  //       ve kullanıcının donuk şeması sebepsizce gerilme haritasına döner.
+  //
+  // Kapı (2)'yi ölçüyor, çünkü (1)'i de kapsıyor: eşleşme ön ayara bakmadıkça
+  // bu diziliş YA fazladan kart üretir YA da ön ayarı ezer.
+  test('kanvasta İKİ kanvas TERS SIRADA varken: ön ayarlar EZİLMİYOR', () => {
+    kabuk();
+    wiz.veFeadWizSeed('AG00976_GATES_2025');
+    sahteKanvas();
+    // TERS SIRA: önce işletme, sonra geometri (kullanıcı ikincisini sonradan
+    // açmış ya da birincisini silip yeniden kurmuş olabilir).
+    const isl = createNode('fead-layout', 0, 0);
+    isl.data.katOn = 'isletme';
+    isl.customName = 'Çalışma Noktası';
+    const geo = createNode('fead-layout', 500, 0);
+    geo.data.posMode = 'min';                     // kullanıcı tercihi — kalmalı
+    wiz.veFeadWizCreate();
+    delete global.createNode; delete global.createConnection;
+
+    const kanvas = global.nodes.filter((n) => n.type === 'fead-layout');
+    expect(kanvas).toHaveLength(2);               // ÜÇÜNCÜSÜ KURULMADI
+    expect(kanvas.filter((n) => (n.data || {}).katOn === 'isletme')).toHaveLength(1);
+    expect(global.nodes.find((n) => n.id === isl.id).data.katOn).toBe('isletme');
+    expect(global.nodes.find((n) => n.id === geo.id).data.katOn).toBeUndefined();
+    expect(global.nodes.find((n) => n.id === geo.id).data.posMode).toBe('min');
   });
 
   // ── AÇILIŞ YÜZEYİ ZATEN BİR TABLO KOYMUŞ OLUYOR ─────────────────────────

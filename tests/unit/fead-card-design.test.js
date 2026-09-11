@@ -43,10 +43,13 @@ function kur(key) {
   global.nodes = pack.nodes;
   global.connections = pack.connections;
   const build = veFeadBuildSystem(pack.nodes);
-  // KART İKİYE BÖLÜNDÜ (2026-09-10): `layout` = Kayış Yolu (donuk geometri),
-  // `run` = Çalışma Noktası (gerilme haritası · animasyon · titreşim).
-  const layout = pack.nodes.find((n) => n.type === 'fead-layout');
-  const run = pack.nodes.find((n) => n.type === 'fead-run');
+  // İKİ KANVAS, TEK TİP (2026-09-11): fark ÖN AYARDA (`data.katOn`), tipte
+  // değil. `layout` = geometri ön ayarı (donuk şema), `run` = işletme ön ayarı
+  // (gerilme haritası · animasyon · titreşim). Ölçüt tip OLAMAZ — ikisi de
+  // `fead-layout`.
+  const kanvas = pack.nodes.filter((n) => n.type === 'fead-layout');
+  const layout = kanvas.find((n) => !(n.data && n.data.katOn));
+  const run = kanvas.find((n) => n.data && n.data.katOn === 'isletme');
   return { pack, build, layout, run };
 }
 const geomOf = (build, rel) =>
@@ -78,15 +81,40 @@ const cakisma = (adlar, acilar) => {
 const OLCULER = [[440, 458], [440, 398], [420, 340], [380, 320], [340, 298]];
 
 /* ══════════════════════════════════════════════════════════════════════════
-   KART İKİYE BÖLÜNDÜ (2026-09-10) — geometri ↔ işletme
+   İKİ KANVAS, TEK TİP — geometri ↔ işletme
    ──────────────────────────────────────────────────────────────────────────
-   Tek kart on beş işi taşıyordu ve üç seçici (kol · devir · titreşim) aynı
-   22 px'lik şeride sıkışıyordu. Bölme ÖLÇÜYE göre değil SORUYA göre:
-   `fead-layout` "kayış nereden geçiyor" sorusunu model KURULURKEN cevaplar ve
-   DONUKTUR; `fead-run` "bu devirde ne oluyor" sorusunu DEVİR SEÇİLİNCE.
+   Tek kart on beş işi taşıyordu; 2026-09-10'da İKİ TİPE bölündü ve fark tipin
+   içine gömüldü. 2026-09-11'de tip teke indi (kullanıcı: *"Tek kanvas olacak,
+   açılır açılmaz iki kanvas gelsin fakat tipoloji tek olacak"*) ve fark bir
+   ÖN AYAR oldu: `data.katOn`. Kapı iki şeyi birden tutar — ayrımın DURDUĞUNU
+   (donuk şema ↔ canlı gerilme haritası) ve artık DEĞİŞTİRİLEBİLİR olduğunu.
    ══════════════════════════════════════════════════════════════════════════ */
-describe('iki kart — geometri ↔ işletme', () => {
-  test('geometri kartı DONUK: animasyon yükü ve gerilme haritası YOK', () => {
+describe('iki kanvas — geometri ↔ işletme (tek tip)', () => {
+  // TEK TİP: iki kart da aynı componentDefs kaydından geliyor. Ayrı bir tip
+  // kalsaydı bu dosyadaki her "ön ayar" kapısı konusuz olurdu.
+  test('iki kanvas da AYNI tipten; `fead-run` diye bir tip YOK', () => {
+    const { layout, run } = kur();
+    expect(layout.type).toBe('fead-layout');
+    expect(run.type).toBe('fead-layout');
+    expect(componentDefs['fead-run']).toBeUndefined();
+    // Ayrım tek alanda ve okunur bir ad: kopyalanmış sekiz bayrak değil.
+    expect(run.data.katOn).toBe('isletme');
+    expect(layout.data.katOn).toBeUndefined();
+  });
+
+  // ÖN AYAR DEĞİŞTİRİLEBİLİR — kişiselleştirmenin kendisi. Tip döneminde
+  // geometri kartını canlıya almanın yolu YOKTU.
+  test('geometri kanvası İŞLETMEYE alınabiliyor — ve geri', () => {
+    const { layout } = kur();
+    expect(fead.veFeadLayoutCardHTML(layout)).not.toMatch(/data-fead-anim/);
+    expect(fead.veFeadKatmanIslem(layout.id, 'isletme')).toBe(true);
+    expect(fead.veFeadLayoutCardHTML(layout)).toMatch(/data-fead-anim/);
+    expect(fead.veFeadKatmanIslem(layout.id, 'geometri')).toBe(true);
+    expect(layout.data.katOn).toBeUndefined();       // varsayılan alanı SİLER
+    expect(fead.veFeadLayoutCardHTML(layout)).not.toMatch(/data-fead-anim/);
+  });
+
+  test('geometri ön ayarı DONUK: animasyon yükü ve gerilme haritası YOK', () => {
     const { layout } = kur();
     const kart = fead.veFeadLayoutCardHTML(layout);
     expect(kart).not.toMatch(/data-fead-anim/);
@@ -96,7 +124,7 @@ describe('iki kart — geometri ↔ işletme', () => {
     expect(kart).toMatch(/data-ve="belt"/);
   });
 
-  test('çalışma kartı CANLI: yük + gerilme haritası var, sarım açıları yok', () => {
+  test('işletme ön ayarı CANLI: yük + gerilme haritası var, sarım açıları yok', () => {
     const { build, run } = kur();
     const kart = fead.veFeadLayoutCardHTML(run);
     expect(kart).toMatch(/data-fead-anim/);
@@ -105,40 +133,44 @@ describe('iki kart — geometri ↔ işletme', () => {
     expect(aciKutulari(kart).length).toBe(0);
   });
 
-  // ÜÇ SEÇİCİ ÜÇE BÖLÜNDÜ. İkisi de aynı kartta kalsaydı bölmenin ölçülebilir
-  // tek kazancı (her seçiciye tam genişlik) hiç doğmazdı.
-  test('seçiciler bölündü: Kol geometride, Devir + Titreşim çalışmada', () => {
+  // DÖRT DENETİM HER KARTTA. Tip döneminde seçiciler kartlara BÖLÜNMÜŞTÜ (kol
+  // geometride, devir + titreşim çalışmada) ve bu bölme kullanıcıyı kartın
+  // tipine mahkûm ediyordu: geometri kartında devri seçmenin yolu yoktu.
+  test('dört denetim de HER kartta: kol · katmanlar · devir · titreşim', () => {
     const { layout, run } = kur();
-    const g = fead.veFeadLayoutCardHTML(layout), c = fead.veFeadLayoutCardHTML(run);
-    expect(g).toMatch(/'posMode'/);
-    expect(g).not.toMatch(/'animRpm'/);
-    expect(g).not.toMatch(/'vibMode'/);
-    expect(c).toMatch(/'animRpm'/);
-    expect(c).toMatch(/'vibMode'/);
-    expect(c).not.toMatch(/'posMode'/);
+    [layout, run].forEach((n) => {
+      const h = fead.veFeadLayoutCardHTML(n);
+      expect(h).toMatch(/'posMode'/);
+      expect(h).toMatch(/'animRpm'/);
+      expect(h).toMatch(/'vibMode'/);
+      expect(h).toMatch(/veFeadKatmanToggle/);
+    });
   });
 
-  // KOL KONUMU TEK ALANDA (Kayış Yolu düğümünde). İkinci bir alan tutulsaydı
-  // iki kart FARKLI kol konumu çizerdi ve fark sessiz olurdu: ikisi de kendi
-  // içinde tutarlı görünür.
-  test('kol konumu paylaşılır: şemadaki seçim çalışma kartını da çevirir', () => {
+  // KOL KONUMU KARTIN KENDİSİNİN. Tip döneminde çalışma kartı geometri
+  // kartından DEVRALIYORDU (`veFeadPosModeShared`) ve tek kart varken doğruydu;
+  // kartlar çoğaltılabilir olunca ikinci kart kendi seçicisini yazıp BİRİNCİ
+  // kartın konumunu çiziyordu.
+  test('kol konumu KART BAŞINA: birininki ötekini çevirmez', () => {
     const { layout, run } = kur();
-    expect(fead.veFeadLayoutCardHTML(run)).toMatch(/Çalışma \(Mean\)/);
+    // ÇİZİMİN KENDİSİ ÖLÇÜLÜR, seçenek listesi değil: her iki kart da bütün
+    // konumları listeliyor, ayrışma yalnız ÇİZİLEN konumda görünür.
+    const cizilen = (n) => (fead.veFeadLayoutCardHTML(n)
+      .match(/data-ve="pos-label"[^>]*>([^<]*)</) || [, ''])[1].split('·')[0].trim();
+    expect(cizilen(run)).toMatch(/Çalışma \(Mean\)/);
     layout.data.posMode = 'free';
-    expect(fead.veFeadPosModeShared(run)).toBe('free');
-    const c = fead.veFeadLayoutCardHTML(run);
-    expect(c).toMatch(/Serbest kol/);
-    expect(c).not.toMatch(/Çalışma \(Mean\) ·/);
-    // Çalışma kartına kendi alanı yazılsa bile şemanınki kazanır.
+    expect(cizilen(layout)).toMatch(/Serbest kol/);
+    expect(cizilen(run)).toMatch(/Çalışma \(Mean\)/);
     run.data.posMode = 'min';
-    expect(fead.veFeadPosModeShared(run)).toBe('free');
+    expect(cizilen(run)).toMatch(/Min\. kayış/);
+    expect(cizilen(layout)).toMatch(/Serbest kol/);
   });
 
   // TAZELEME TEK KAPIDAN (modül kuralı 11): iki kart HEP BİRLİKTE. Kart başına
   // ayrı çağrı, altı düzenleme yolundan birinde birinin unutulması demek.
   test('veFeadRefreshCards üç kartı da kurar', () => {
     const { pack } = kur();
-    const hedef = pack.nodes.filter((n) => ['fead-layout', 'fead-run', 'fead-table'].includes(n.type));
+    const hedef = pack.nodes.filter((n) => ['fead-layout', 'fead-table'].includes(n.type));
     expect(hedef).toHaveLength(3);
     document.body.innerHTML = '<div id="ve-canvas"></div>' + hedef.map((n) =>
       '<div id="' + n.id + '" class="ve-node"><div class="ve-node-box"></div></div>').join('');
@@ -149,11 +181,19 @@ describe('iki kart — geometri ↔ işletme', () => {
     });
   });
 
-  test('örnek KULLANIMA HAZIR gelir — iki kart da kurulur', () => {
+  // AÇILIR AÇILMAZ İKİ KANVAS (kullanıcı isteği). Tip teke indi ama SAYI
+  // inmedi: örnek yine geometri + işletme ile geliyor, yalnız ikisi de aynı
+  // tipten ve ayrımları değiştirilebilir.
+  test('örnek KULLANIMA HAZIR gelir — İKİ kanvas, tek tip, ayrı ön ayar', () => {
     ['AG00976_GATES_2025', 'BMC_FEAD_2026'].forEach((k) => {
       const { pack } = kur(k);
-      expect(pack.nodes.filter((n) => n.type === 'fead-layout')).toHaveLength(1);
-      expect(pack.nodes.filter((n) => n.type === 'fead-run')).toHaveLength(1);
+      const kanvas = pack.nodes.filter((n) => n.type === 'fead-layout');
+      expect(kanvas).toHaveLength(2);
+      expect(kanvas.filter((n) => n.data && n.data.katOn === 'isletme')).toHaveLength(1);
+      expect(pack.nodes.filter((n) => n.type === 'fead-run')).toHaveLength(0);
+      // AD DA AYIRT EDER: ikisi de tip adıyla ("Kayış Yolu") etiketlenseydi
+      // kanvasta hangisinin hangisi olduğu okunamazdı.
+      expect(kanvas.filter((n) => n.customName === 'Çalışma Noktası')).toHaveLength(1);
     });
   });
 });

@@ -5,9 +5,13 @@
  * sabit duruyor… Böylelikle kullanıcı istediği kanvasları oluşturur."*
  *
  * Çizicinin katmanları zaten vardı; eksik olan seçimin SAHİBİYDİ. Bayraklar
- * kartı kuran yerde sabit yazılıydı (`shortNames: true`, `wrapLabels:
- * !calisma`, gül/kol/ok hep açık), yani ikinci bir kart açmak aynı resmi
- * ikinci kez çizmekti.
+ * kartı kuran yerde sabit yazılıydı (`shortNames: true`, sarım açıları kart
+ * TİPİNDEN), yani ikinci bir kart açmak aynı resmi ikinci kez çizmekti.
+ *
+ * İKİNCİ TUR (2026-09-11): *"iki kanvas var, ikisinin de özellikleri falan
+ * farklı… Tek kanvas olacak, açılır açılmaz iki kanvas gelsin fakat tipoloji
+ * tek olacak."* İki kart TİPİ teke indi; aralarındaki fark ÖN AYAR oldu
+ * (`data.katOn`: geometri / işletme).
  *
  * BU DOSYANIN TUTTUĞU SESSİZ HATA SINIFI: bir katman panelde görünüp çizimde
  * hiçbir şey yapmaz. Kutucuk tıklanır, sayaç değişir, resim aynı kalır ve
@@ -52,10 +56,11 @@ function kurOrnek(key) {
 }
 
 // Karta karşılık gelen düğümü kur ve DOM'a as (kart gerçekten kurulsun).
-function kart(type, id) {
+function kart(type, id, veri) {
   const d = componentDefs[type];
   const n = { id: id, type: type, def: d, x: 0, y: 0,
-              width: d.defaultWidth, height: d.defaultHeight, data: {} };
+              width: d.defaultWidth, height: d.defaultHeight,
+              data: Object.assign({}, veri || {}) };
   global.nodes.push(n);
   const el = document.createElement('div');
   el.id = id;
@@ -73,7 +78,7 @@ describe('katman listesi TEK KAYNAK', () => {
     const L = fead.VE_FEAD_KATMANLAR;
     expect(L.length).toBeGreaterThanOrEqual(8);
     const ciz = SRC.slice(SRC.indexOf('function veFeadLayoutSVG'),
-                          SRC.indexOf('function veFeadPosModeNode'));
+                          SRC.indexOf('var VE_FEAD_CARD_CLASS'));
     expect(ciz.length).toBeGreaterThan(2000);        // doğru dilimi aldık
     L.forEach((K) => {
       expect(typeof K.k).toBe('string');
@@ -102,11 +107,11 @@ describe('katman listesi TEK KAYNAK', () => {
 
 // ═══════════════════════════════════════════════════════════════════════════
 describe('varsayılanlar — eski kayıt bugünkü görünümünü KORUR', () => {
-  test('iki kartın varsayılanı FARKLI ve bölünmeden önceki hâlin aynısı', () => {
-    const sema = fead.veFeadKatmanVarsayilan(false);
-    const cal  = fead.veFeadKatmanVarsayilan(true);
+  test('iki ÖN AYARIN varsayılanı FARKLI ve tip döneminin aynısı', () => {
+    const sema = fead.veFeadKatmanVarsayilan('geometri');
+    const cal  = fead.veFeadKatmanVarsayilan('isletme');
     // Kart bölünürken konan kural: sarım açıları GEOMETRİ kartında, açıklık
-    // gerilmeleri ÇALIŞMA kartında (ikisi aynı çizimde kalabalık yapıyordu).
+    // gerilmeleri İŞLETME kartında (ikisi aynı çizimde kalabalık yapıyordu).
     expect(sema.sarim).toBe(true);
     expect(sema.spanEt).toBe(false);
     expect(cal.sarim).toBe(false);
@@ -122,7 +127,7 @@ describe('varsayılanlar — eski kayıt bugünkü görünümünü KORUR', () =>
     // Eski bir kayıtta `kat` alanı hiç yok. "Yazılmamış = kapalı" deseydik
     // kaydedilmiş her proje çıplak bir şemayla açılırdı.
     const n = { type: 'fead-layout', def: componentDefs['fead-layout'], data: {} };
-    expect(fead.veFeadKatmanlar(n)).toEqual(fead.veFeadKatmanVarsayilan(false));
+    expect(fead.veFeadKatmanlar(n)).toEqual(fead.veFeadKatmanVarsayilan('geometri'));
     // Kısmi kayıt: yalnız yazılan anahtar değişir.
     n.data.kat = { sarim: false };
     const k = fead.veFeadKatmanlar(n);
@@ -180,10 +185,10 @@ describe('seçim KART BAŞINA — kişiselleştirmenin kendisi', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-describe('üç işlem', () => {
+describe('işlemler — iki ön ayar + iki toptan', () => {
   test('Tümü / Hiçbiri hepsini yazıyor', () => {
     kurOrnek();
-    const a = kart('fead-run', 'kartA');
+    const a = kart('fead-layout', 'kartA', { katOn: 'isletme' });
     expect(fead.veFeadKatmanIslem('kartA', 'tumu')).toBe(true);
     const hepsi = fead.veFeadKatmanlar(a);
     fead.VE_FEAD_KATMANLAR.forEach((K) => expect(hepsi[K.k]).toBe(true));
@@ -192,18 +197,76 @@ describe('üç işlem', () => {
     fead.VE_FEAD_KATMANLAR.forEach((K) => expect(hic[K.k]).toBe(false));
   });
 
-  test('VARSAYILAN alanı SİLER — bugünün varsayılanını dondurmaz', () => {
+  test('ÖN AYAR alanı SİLER — bugünün varsayılanını dondurmaz', () => {
     kurOrnek();
     const a = kart('fead-layout', 'kartA');
     fead.veFeadKatmanIslem('kartA', 'hicbiri');
     expect(a.data.kat).toBeTruthy();
-    fead.veFeadKatmanIslem('kartA', 'varsayilan');
-    // Silinmiş bir alan varsayılanı İZLEMEYE DEVAM eder; sıfırlarla
-    // doldurulmuş bir alan bugünün varsayılanını dondurup yarınki
-    // değişikliği sessizce kaçırırdı.
+    fead.veFeadKatmanIslem('kartA', 'geometri');
+    // Silinmiş bir alan ön ayarı İZLEMEYE DEVAM eder; sıfırlarla doldurulmuş
+    // bir alan bugünün ön ayarını dondurup yarınki değişikliği sessizce
+    // kaçırırdı. VARSAYILAN ön ayar `katOn`u da siler — yazsaydı "geometri"
+    // adı kayıtta donar ve varsayılanın kendisi değişince kart geride kalırdı.
     expect(a.data.kat).toBeUndefined();
-    expect(fead.veFeadKatmanlar(a)).toEqual(fead.veFeadKatmanVarsayilan(false));
+    expect(a.data.katOn).toBeUndefined();
+    expect(fead.veFeadKatmanlar(a)).toEqual(fead.veFeadKatmanVarsayilan('geometri'));
     expect(fead.veFeadKatmanIslem('kartA', 'uydurma')).toBe(false);
+  });
+
+  // ── ÖN AYAR ADIYLA TAŞINIR, KOPYASIYLA DEĞİL ─────────────────────────────
+  // Kopyalansaydı ön ayarın yarınki hâli o kartı hiç bulamazdı; dahası köprü
+  // katmanı (DOM'suz `fead-model.js`) sekiz bayrağın İKİNCİ bir listesini
+  // tutmak zorunda kalır ve iki liste sessizce ayrışırdı.
+  test('İŞLETME ön ayarı ADIYLA yazılır ve elle seçimleri temizler', () => {
+    kurOrnek();
+    const a = kart('fead-layout', 'kartA');
+    fead.veFeadKatmanSet('kartA', 'gul', false);
+    expect(a.data.kat).toBeTruthy();
+    expect(fead.veFeadKatmanIslem('kartA', 'isletme')).toBe(true);
+    expect(a.data.katOn).toBe('isletme');
+    expect(a.data.kat).toBeUndefined();               // elle seçim temizlendi
+    expect(fead.veFeadKatmanlar(a)).toEqual(fead.veFeadKatmanVarsayilan('isletme'));
+    // Sekiz bayrağın kopyası DEĞİL: kayıtta yalnız bir ad duruyor.
+    expect(Object.keys(a.data)).toEqual(['katOn']);
+  });
+
+  // ÖN AYAR DEVİR DE SEÇER. Geometri kartının donukluğu bir zamanlar TİPİN
+  // içindeydi; tip kalkınca buraya taşındı. Taşınmasaydı açılıştaki iki
+  // kanvasın İKİSİ de animasyonlu gelirdi.
+  test('ön ayar DEVRİ de belirler; kullanıcı seçimi ön ayarı SUSTURUR', () => {
+    kurOrnek();
+    const a = kart('fead-layout', 'kartA');
+    expect(fead.veFeadOnAyarDevir(a)).toBe('off');                 // geometri donuk
+    fead.veFeadKatmanIslem('kartA', 'isletme');
+    expect(fead.veFeadOnAyarDevir(a)).toBeNull();                  // işletme: çözüm koşsun
+    fead.veFeadKatmanIslem('kartA', 'geometri');
+    // YAZILI ALAN ÖN AYARI SUSTURUR — ve ölçüt ön ayarın SÖZ SÖYLEDİĞİ hâlde
+    // alınır (geometri, `devir:'off'`). İşletmede ölçmek hiçbir şey demezdi:
+    // orada ön ayarın zaten söyleyecek bir şeyi yok, ikisi de `null` döner.
+    a.data.animRpm = 2000;
+    expect(fead.veFeadOnAyarDevir(a)).toBeNull();
+    // VE SONUCU ÇİZİMDE: elle devir seçilmiş bir geometri kartı CANLI olur.
+    expect(fead.veFeadLayoutCardHTML(a)).toMatch(/data-fead-anim/);
+    delete a.data.animRpm;
+    expect(fead.veFeadLayoutCardHTML(a)).not.toMatch(/data-fead-anim/);
+    a.data.animRpm = 2000;
+    fead.veFeadKatmanIslem('kartA', 'geometri');
+    expect(a.data.animRpm).toBeUndefined();      // ön ayar söz söylediği alanı temizler
+    expect(fead.veFeadOnAyarDevir(a)).toBe('off');
+    // ÖN AYARIN SÖZ SÖYLEMEDİĞİ alana DOKUNULMAZ.
+    a.data.vibMode = 'span'; a.data.posMode = 'min';
+    fead.veFeadKatmanIslem('kartA', 'isletme');
+    expect(a.data.vibMode).toBe('span');
+    expect(a.data.posMode).toBe('min');
+  });
+
+  test('tanınmayan ön ayar adı VARSAYILANA düşer — kart çıplak kalmaz', () => {
+    const n = { type: 'fead-layout', def: componentDefs['fead-layout'],
+                data: { katOn: 'uydurma' } };
+    expect(fead.veFeadKatmanOnAyar(n)).toBe(fead.VE_FEAD_KAT_VARSAYILAN);
+    expect(fead.veFeadKatmanlar(n)).toEqual(fead.veFeadKatmanVarsayilan('geometri'));
+    expect(fead.veFeadKatmanVarsayilan('uydurma'))
+      .toEqual(fead.veFeadKatmanVarsayilan(fead.VE_FEAD_KAT_VARSAYILAN));
   });
 });
 
@@ -214,10 +277,10 @@ describe('panel', () => {
     const a = kart('fead-layout', 'kartA');
     const b = kart('fead-layout', 'kartB');
     const kat = fead.veFeadKatmanlar(a);
-    expect(fead.veFeadKatmanPanelHTML(a, kat, false, false)).toBe('');
+    expect(fead.veFeadKatmanPanelHTML(a, kat, false)).toBe('');
     fead.veFeadKatmanToggle('kartA');
-    expect(fead.veFeadKatmanPanelHTML(a, kat, false, false)).toContain('ve-fead-kat-liste');
-    expect(fead.veFeadKatmanPanelHTML(b, kat, false, false)).toBe('');
+    expect(fead.veFeadKatmanPanelHTML(a, kat, false)).toContain('ve-fead-kat-liste');
+    expect(fead.veFeadKatmanPanelHTML(b, kat, false)).toBe('');
     // Panelin AÇIK olması bir görünüm durumu: kaydedilmemeli, geri-al
     // yığınına yazılmamalı, ikinci bir oturuma taşınmamalı.
     expect(a.data.katAcik).toBeUndefined();
@@ -225,22 +288,45 @@ describe('panel', () => {
     // İkinci karta geçince birincisi kapanır (iki panel açıkken hangi kartın
     // ayarına baktığın okunmuyor).
     fead.veFeadKatmanToggle('kartB');
-    expect(fead.veFeadKatmanPanelHTML(a, kat, false, false)).toBe('');
-    expect(fead.veFeadKatmanPanelHTML(b, kat, false, false)).not.toBe('');
+    expect(fead.veFeadKatmanPanelHTML(a, kat, false)).toBe('');
+    expect(fead.veFeadKatmanPanelHTML(b, kat, false)).not.toBe('');
     // Aynı karta ikinci tıklama kapatır.
     expect(fead.veFeadKatmanToggle('kartB')).toBeNull();
   });
 
-  test('panelde HER katman için bir kutucuk ve ÜÇ işlem var', () => {
+  test('panelde HER katman için bir kutucuk, HER ön ayar için bir düğme', () => {
     kurOrnek();
     const a = kart('fead-layout', 'kartA');
     fead.veFeadKatmanToggle('kartA');
-    const h = fead.veFeadKatmanPanelHTML(a, fead.veFeadKatmanlar(a), false, false);
+    const h = fead.veFeadKatmanPanelHTML(a, fead.veFeadKatmanlar(a), false);
     const kap = document.createElement('div');
     kap.innerHTML = h;
     expect(kap.querySelectorAll('input[type="checkbox"]'))
       .toHaveLength(fead.VE_FEAD_KATMANLAR.length);
-    expect(kap.querySelectorAll('.ve-fead-kat-islem button')).toHaveLength(3);
+    // ÖN AYARLAR KENDİ SATIRINDA ve listeden TÜRÜYOR: sabit bir sayı yazmak,
+    // üçüncü bir ön ayarın panelde hiç görünmemesi demekti.
+    const on = kap.querySelectorAll('.ve-fead-kat-islem.onayar button');
+    expect(on).toHaveLength(fead.VE_FEAD_ON_AYARLAR.length);
+    fead.VE_FEAD_ON_AYARLAR.forEach((O) => expect(h).toContain('>' + O.t + '<'));
+    // AÇIK ÖN AYAR BASILI: kartın hangi görünümde olduğunu söyleyen tek yüzey.
+    expect([...on].filter((b) => b.classList.contains('is-acik')).map((b) => b.textContent))
+      .toEqual(['Geometri']);
+    expect(kap.querySelectorAll('.ve-fead-kat-islem:not(.onayar) button')).toHaveLength(2);
+
+    // ELLE BİR KUTUCUK OYNATILINCA HİÇBİR ÖN AYAR BASILI KALMAZ: kart artık
+    // o ön ayar değil, ondan TÜREMİŞ bir küme. Basılı bırakmak, kullanıcıya
+    // olmayan bir şeyi söylerdi — ve o hâlde "Geometri"ye basmak resmi
+    // değiştirir, oysa düğme zaten basılı görünürdü.
+    fead.veFeadKatmanSet('kartA', 'gul', false);
+    const kap2 = document.createElement('div');
+    kap2.innerHTML = fead.veFeadKatmanPanelHTML(a, fead.veFeadKatmanlar(a), false);
+    expect(kap2.querySelectorAll('.ve-fead-kat-islem.onayar button.is-acik')).toHaveLength(0);
+    // Ön ayara dönünce işaret geri gelir.
+    fead.veFeadKatmanIslem('kartA', 'geometri');
+    const kap3 = document.createElement('div');
+    kap3.innerHTML = fead.veFeadKatmanPanelHTML(a, fead.veFeadKatmanlar(a), false);
+    expect([...kap3.querySelectorAll('.ve-fead-kat-islem.onayar button.is-acik')]
+      .map((b) => b.textContent)).toEqual(['Geometri']);
     fead.VE_FEAD_KATMANLAR.forEach((K) => expect(h).toContain(K.t));
     // Kişiselleştirmenin ne olduğu panelde YAZILI — yoksa kullanıcı ayarın
     // bütün kartları mı yoksa bu kartı mı bağladığını deneyerek öğrenirdi.
@@ -249,14 +335,14 @@ describe('panel', () => {
 
   test('AÇIK ama o an ÇİZİLMEYEN katman sebebini söylüyor', () => {
     kurOrnek();
-    const a = kart('fead-run', 'kartA');
+    const a = kart('fead-layout', 'kartA', { katOn: 'isletme' });
     fead.veFeadKatmanToggle('kartA');
     const kat = fead.veFeadKatmanlar(a);
     expect(kat.spanEt).toBe(true);
     // Gerilme haritası yoksa (devir seçilmemiş) kutucuk açık ama çizimde
     // karşılığı yok. Sessiz bırakmak kullanıcıya kendi seçimini sorgulatırdı.
-    expect(fead.veFeadKatmanPanelHTML(a, kat, true, false)).toContain('devir seçili değil');
-    expect(fead.veFeadKatmanPanelHTML(a, kat, true, true)).not.toContain('devir seçili değil');
+    expect(fead.veFeadKatmanPanelHTML(a, kat, false)).toContain('devir seçili değil');
+    expect(fead.veFeadKatmanPanelHTML(a, kat, true)).not.toContain('devir seçili değil');
   });
 
   test('şerit düğmesi AÇIK KATMAN SAYISINI yazıyor', () => {
@@ -329,7 +415,7 @@ describe('görünüm CSS\'te, satır içinde değil', () => {
     kurOrnek();
     const a = kart('fead-layout', 'kartA');
     fead.veFeadKatmanToggle('kartA');
-    const h = fead.veFeadKatmanPanelHTML(a, fead.veFeadKatmanlar(a), false, false)
+    const h = fead.veFeadKatmanPanelHTML(a, fead.veFeadKatmanlar(a), false)
             + fead.veFeadKatmanDugmeHTML(a, fead.veFeadKatmanlar(a));
     expect(h).not.toMatch(/style="[^"]*(color|background|border|font-size)/);
     expect(h).not.toMatch(/#[0-9a-fA-F]{3,6}\b/);
@@ -358,21 +444,49 @@ describe('görünüm CSS\'te, satır içinde değil', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-describe('çok kart', () => {
-  test('iki kart tipi de SINIRSIZ — ikinci kart artık kopyanın kopyası değil', () => {
-    // `fead-run` bir zamanlar `maxInstances: 1`di: tek kart varken makuldü,
-    // ama katmanlar kart başına seçilebilir olunca ikinci kart rölantiyi ve
-    // 2000 dev/dk'yı yan yana görmenin tek yolu.
-    expect(componentDefs['fead-run'].maxInstances).toBeUndefined();
+describe('çok kart — TEK TİP', () => {
+  test('kanvas tipi TEK ve SINIRSIZ; `fead-run` diye bir tip YOK', () => {
+    // `fead-run` bir zamanlar ayrı bir tipti (ve `maxInstances: 1`di). Tek
+    // kart varken makuldü; katmanlar kart başına seçilebilir olunca hem sınır
+    // hem TİP konusuz kaldı — ikinci kart rölantiyi ve 2000 dev/dk'yı yan yana
+    // görmenin tek yolu ve ayrımı kullanıcı seçiyor.
+    expect(componentDefs['fead-run']).toBeUndefined();
     expect(componentDefs['fead-layout'].maxInstances).toBeUndefined();
+    // Palet, modül listesi ve panel dağıtımı da eski tipi taşımamalı: kalan
+    // bir kayıt paletten kurulup TANIMSIZ bir düğüm üretirdi.
+    const HTML = fs.readFileSync(path.join(__dirname, '../../index.html'), 'utf8');
+    expect(HTML).not.toContain('fead-run');
+    expect(fs.readFileSync(path.join(__dirname, '../../js/components.js'), 'utf8')
+      .split('\n').filter((l) => l.indexOf('fead-run') >= 0
+                               && l.trim().indexOf('//') !== 0)).toEqual([]);
   });
 
-  test('GEOMETRİ kartı KENDİ kol konumunu çizer, ÇALIŞMA kartı devralır', () => {
-    // Eskiden ikisi de `veFeadPosModeShared`ten okuyordu. Tek kart varken
-    // doğruydu; ikinci bir Kayış Yolu kartı kendi seçicisini yazıyor ama
-    // BİRİNCİ kartın konumunu çiziyordu — seçicide bir konum, resimde başka.
+  test('HER KART KENDİ kol konumunu çizer — devralma YOK', () => {
+    // Eskiden çalışma kartı `veFeadPosModeShared`ten okuyordu: tek kart varken
+    // doğruydu, ikinci kart kendi seçicisini yazıp BİRİNCİ kartın konumunu
+    // çiziyordu. Tek tip kalınca devralınacak bir "öteki" de yok — ve yardımcı
+    // KALDIRILDI, yoksa bir sonraki düzenlemede sessizce geri gelirdi.
     const i = SRC.indexOf('var kat = veFeadKatmanlar(node);');
-    const satir = SRC.slice(i, SRC.indexOf('\n', SRC.indexOf('var mode =', i)));
-    expect(satir).toContain('calisma ? veFeadPosModeShared(node) : veFeadPosMode(node)');
+    const j = SRC.indexOf('var mode =', i);
+    const satir = SRC.slice(j, SRC.indexOf('\n', j));      // KOD satırı, yorum değil
+    expect(satir).toBe('var mode = veFeadPosMode(node);');
+    expect(SRC).not.toContain('function veFeadPosModeShared');
+    expect(fead.veFeadPosModeShared).toBeUndefined();
+  });
+
+  test('iki kart, iki ön ayar, İKİ AYRI RESİM — aynı tipten', () => {
+    kurOrnek();
+    const a = kart('fead-layout', 'kartA');
+    const b = kart('fead-layout', 'kartB', { katOn: 'isletme' });
+    const ha = fead.veFeadLayoutCardHTML(a), hb = fead.veFeadLayoutCardHTML(b);
+    expect(a.type).toBe(b.type);
+    expect(ha).not.toBe(hb);
+    // Geometri donuk (animasyon yükü yok), işletme canlı.
+    expect(ha).not.toMatch(/data-fead-anim/);
+    expect(hb).toMatch(/data-fead-anim/);
+    // Sarım açıları geometride, açıklık gerilmeleri işletmede.
+    expect(ha).toMatch(/data-ve="belt"/);
+    expect(hb).toMatch(/data-ve="belt-tension"/);
+    expect(ha).not.toMatch(/data-ve="belt-tension"/);
   });
 });
