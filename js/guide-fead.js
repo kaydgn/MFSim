@@ -600,8 +600,9 @@ function _gfSec4(){
       + 'hangi yüzünden değdiğini belirler (Bölüm 5.1).',
     'Kasnağın <strong>adına</strong> tıklayarak panelini açın ve tablonun taşımadığı alanları '
       + '(temas tarafı ayrıntısı, atalet, güç eğrisi, devir sınırları) girin — Bölüm 6.',
-    'Bütün kasnakları girdikten sonra alt şeritteki <strong>Σsarım</strong> okumasına bakın: '
-      + '<strong>360,00°</strong> olmalı.'
+    'Bütün kasnakları girdikten sonra <strong>üst künyedeki</strong> '
+      + '<strong>✓ Çevrim kapalı · Σsarım</strong> okumasına bakın: '
+      + '<strong>360,0°</strong> olmalı.'
   ]);
 
   h += _gfSahneTablo();
@@ -647,14 +648,15 @@ function _gfSec4(){
     + 'kaybolmaz. Tarayıcının sayı alanı olsaydı virgüllü giriş sessizce yutulur, model hiç '
     + 'değişmezdi.');
 
-  h += '<h3>4.2 Σ satırı ve alt şerit</h3>';
+  h += '<h3>4.2 Σ satırı ve üst künye</h3>';
   h += _gfAlanTablo('Tablonun iki okuması', [
     ['<strong>Σ toplam</strong> satırı', 'Sarım açısı ve span sütunlarının toplamı',
       'Gösterilen hücrelerin toplamıdır, yeni bir büyüklük türetmez — hücreleri seçince '
       + 'alacağınız sayının aynısı'],
-    ['<strong>Alt şerit</strong>', 'Σsarım · L_eff · kasnak sayısı',
-      '<strong>Σsarım 360,00° olmak zorundadır.</strong> Değilse kayış yolu kapanmıyor '
-      + 'demektir ve şerit sebebini yazar']
+    ['<strong>Üst künye</strong>', 'Kayış profili · marka · kasnak sayısı · efektif boy · '
+      + '<strong>✓/✗ Çevrim kapalı · Σsarım</strong> · gösterilen kol konumu',
+      '<strong>Σsarım 360,0° olmak zorundadır.</strong> Değilse künye <strong>✗ Çevrim '
+      + 'AÇIK</strong> yazar ve kayış yolu kapanmıyor demektir']
   ], ['Nerede', 'Ne gösterir', 'Nasıl okunur']);
 
   h += '<h3>4.3 Kasnak eklemek, silmek, adlandırmak</h3>';
@@ -742,10 +744,10 @@ function _gfSec5(){
   h += '<h3>5.3 Modelin kurulu olduğunu doğrulamak</h3>';
   h += '<p>İki yerde aynı denetim yazılıdır ve ikisi de aynı çözümden gelir:</p>';
   h += _gfAlanTablo('Kapanış denetimi', [
-    ['Kayış Tablosu — alt şerit', 'Σsarım · L_eff · kasnak sayısı',
-      'Σsarım <strong>360,00°</strong> olmak zorunda'],
+    ['Kayış Tablosu — üst künye', '✓/✗ Çevrim kapalı · Σsarım · efektif boy',
+      'Σsarım <strong>360,0°</strong> olmak zorunda'],
     ['Kayış Yolu şeması — alt şerit', '✓/✗ · kasnak sayısı · efektif boy · Σ sarım',
-      'Aynı sayı; ✗ ise sebebini yazar (“Kayış yolu KAPANMIYOR”, “Kasnaklar çakışıyor: …”)']
+      'Aynı sayı; ✗ ise sebebini yazar (“Kayış yolu KAPANMIYOR”, “Kayış kasnağın İÇİNDEN geçiyor”)']
   ], ['Nerede', 'Ne yazar', 'Kural']);
   return h;
 }
@@ -758,7 +760,7 @@ function _gfSec6(){
     + '<strong>temas tarafıyla başlamak</strong> iyi bir alışkanlıktır: hesabı en çok etkileyen '
     + 've en sessiz biçimde yanlış girilebilen alan odur.</p>';
   h += _gfAlanTablo('Kasnak paneli — alanlar', [
-    ['Temas Tarafı', '“Kaburgalı yüzden değiyor” ya da “Sırttan değiyor”',
+    ['Temas Tarafı', '“Kaburgalı yüzden değiyor” ya da “Sırtından değiyor”',
       'Yerleşim çiziminden okunur. Aksesuarlar tipik olarak kaburgalı, avara ve gergi sırttan '
       + 'temas eder.'],
     ['Dış çap (OD)', 'Kasnağın dış çapı, mm', 'Koordinat tablosu. <strong>Pitch çapı '
@@ -852,7 +854,7 @@ function _gfSec7(){
       + 'kayış boyu ve tasarım gerginliği orada.'
   ]);
   h += _gfAlanTablo('Gergi paneli — alanlar', [
-    ['Temas Tarafı', 'Genelde “Sırttan değiyor”', 'Yerleşim çizimi'],
+    ['Temas Tarafı', 'Genelde “Sırtından değiyor”', 'Yerleşim çizimi'],
     ['Dış çap (OD)', 'Gergi kasnağının dış çapı, mm', 'Parça künyesi'],
     ['Atalet J', 'kg·m²', 'Parça künyesi; burulma modeline girer'],
     ['<strong>Merkez X / Y</strong>', 'Gergi <strong>avarasının</strong> merkezi — kayış '
@@ -1290,8 +1292,8 @@ function _gfSec11(){
     + 'rozetleri kalır; kasnak başına okumalar Kayış Tablosu’ndadır.</p>';
   h += _gfAlanTablo('Nerede ne okunur', [
     ['<strong>Kayış Tablosu</strong>', 'Kasnak başına efektif çap · dönüş yönü · sarım · span; '
-      + 'altta Σ toplam ve Σsarım / L_eff şeridi',
-      'Sarım ve span <strong>çözümden</strong>; Σsarım 360,00° olmalı'],
+      + 'altta Σ toplam satırı, üstte künyede ✓/✗ Çevrim kapalı · Σsarım',
+      'Sarım ve span <strong>çözümden</strong>; Σsarım 360,0° olmalı'],
     ['Kayış kartı rozeti', '<code>SABİT</code> (mavi) ↔ <code>SERBEST</code> (amber)',
       'Tıklanabilir; avara merkezi girdiyken kilitli'],
     ['Dönüş Yönü kartı rozeti', '<code>↺ CCW</code> ↔ <code>↻ CW</code>',
@@ -1300,7 +1302,7 @@ function _gfSec11(){
   h += '<h3>11.3 Paneller</h3>';
   h += _gfAlanTablo('Hangi sonuç hangi panelde', [
     ['<strong>Kayış Tablosu</strong>', 'Kasnak başına efektif çap · dönüş yönü · sarım açısı · '
-      + 'span; Σ toplam ve Σsarım / L_eff şeridi', 'Hayır'],
+      + 'span; Σ toplam satırı ve üst künyede Σsarım', 'Hayır'],
     ['Gergi paneli', 'Türeyen montaj konumu · serbest kol açısı · gereken kayış boyu · '
       + 'tasarım gerginliği · konum pimi', 'Hayır'],
     ['Kayış paneli', 'Türetilen boy ve hangi kol açısından geldiği · katalog aday tablosu · '
@@ -1873,7 +1875,7 @@ function _gfEkA(){
       ['<strong>Kayış sırası</strong>', 'Kayış Tablosu', '# sütunundaki ↑ ↓ okları'],
       ['<strong>Kasnak dönüş yönü</strong>', 'Kayış Tablosu', 'Kasnak Dönüş Yönü sütunu'],
       ['Efektif çap · sarım açısı · span · Σsarım', 'Kayış Tablosu',
-        'Türeyen sütunlar ve alt şerit'],
+        'Türeyen sütunlar ve üst künye'],
       ['Temas tarafı (ayrıntı) ve kasnak geometrisi', 'Kasnak',
         'Temas Tarafı · Kasnak Geometrisi'],
       ['Sürücü kasnak seçimi', 'Kasnak', 'Rol'],

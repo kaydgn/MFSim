@@ -162,3 +162,62 @@ describe('yer tutucu rengi jetondan', () => {
     genel.forEach((b) => expect(b.gov).toMatch(/opacity\s*:\s*1/));
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  JETON ROLÜ — `--accent-*` DOLGU, `--ink-*` METİN
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Yer tutucu kapısıyla (yukarıda) AYNI SINIF, ikinci kez: doğru aileden
+// YANLIŞ jetonu almak. Depoda iki aile var ve ikisi de her temada tanımlı:
+//
+//   --accent-danger/warning/success → DOLGU rolü (çerçeve, zemin, şerit)
+//   --ink-danger/warning/success    → METİN rolü (zemine karşı okunur)
+//
+// FEAD Başlangıç Sihirbazı metin rengini `--accent-*`'tan alıyordu. ÖLÇÜLDÜ:
+// 19 tema × 3 rol = 57 çiftin **33'ü** WCAG AA'nın (4,5:1) altında; `--ink-*`
+// ile **0**. En kötüsü sihirbazın en çok okunan metniydi — eksik girdi
+// listesi: pearl temasında uyarı satırı **2,33:1**.
+//
+// Kapı ROLE bakıyor, listeye değil: `.ve-fw-*` seçicilerinde `color:` ASLA
+// dolgu jetonu almaz. Çerçeve ve zemin serbesttir — orada doğru aile odur.
+describe('sihirbaz jeton rolü: metin --ink-*, dolgu --accent-*', () => {
+  const css = fs.readFileSync(path.join(CSS_DIR, 'styles.css'), 'utf8');
+  const satir = css.split('\n');
+
+  // Seçiciyi satır satır taşı: bir kural gövdesi birden çok satıra yayılıyor.
+  const bul = () => {
+    const cikan = [];
+    let sec = '';
+    satir.forEach((l, i) => {
+      const m = l.match(/^\s*([.#][\w\-.,:>()[\]="'\s]+)\{/);
+      if (m) sec = m[1];
+      const c = l.match(/(?<![a-z-])color\s*:\s*var\(--accent-(danger|warning|success)\)/);
+      if (c && /ve-fw/.test(m ? m[1] : sec)) cikan.push({ n: i + 1, sec: (m ? m[1] : sec).trim(), l: l.trim() });
+    });
+    return cikan;
+  };
+
+  test('--ink-* ailesi gerçekten tanımlı (kapının dayandığı zemin)', () => {
+    ['danger', 'warning', 'success'].forEach((r) => {
+      expect(css).toMatch(new RegExp('--ink-' + r + '\\s*:'));
+    });
+  });
+
+  test('sihirbaz metin rengini DOLGU jetonundan almıyor', () => {
+    const suclu = bul();
+    if (suclu.length) {
+      throw new Error(
+        suclu.map((x) => `  css/styles.css:${x.n}  ${x.l}`).join('\n') +
+        '\n\n`color:` METİN rolüdür → var(--ink-danger|warning|success) kullanın.\n' +
+        '`--accent-*` dolgu rolüdür; metin olarak 19 temanın çoğunda AA altında kalır.');
+    }
+    expect(suclu).toEqual([]);
+  });
+
+  test('sihirbaz ÇERÇEVEYİ hâlâ dolgu jetonundan alıyor', () => {
+    // Ters yön: `--ink-*`'ı her yere yaymak da yanlış olurdu — durum şeridi
+    // ve çerçeve rengi dolgu rolüdür ve orada `--accent-*` DOĞRU jetondur.
+    const n = (css.match(/\.ve-fw-[^{]*\{[^}]*border(?:-left)?-color\s*:\s*var\(--accent-(danger|warning|success)\)/g) || []).length;
+    expect(n).toBeGreaterThanOrEqual(3);
+  });
+});
