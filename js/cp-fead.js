@@ -2702,6 +2702,28 @@ function veFeadLayoutSVG(build, W, H, opts){
     // bağlamak, kullanıcı gülü şemanın ortasına sürüklediğinde etiketlerin
     // tam onun altına düşmesi demekti.
     var kutular = roseKutu ? [roseKutu] : [];
+    // SOL ÜST KÜNYE VE ALT NOT DA ENGELDİR — gülle BİREBİR aynı gerekçe:
+    // ikisi de çizimin İÇİNDE, sabit yerde duruyor, ama engel listesinde
+    // yoktu; yerleştirici tam oraya bakıyordu. ÖLÇÜLDÜ (11 örnek × 7 kol
+    // konumu, gerçek tarayıcı): ad künyeye 14 karede, alt nota 14 karede
+    // biniyor — en kötüsü künyenin %60'ını örtüyor.
+    //
+    // SERT tierde, çünkü ikisi de YAPISAL bilgi: künye "hangi kol konumunu
+    // görüyorum" sorusunun tek cevabı, alt not da dişli kenarın hangi yüzü
+    // gösterdiğinin. Bir SAYIYI örtmek geri alınabilir bir zarar (yumuşak
+    // tier), bunları örtmek çizimi okunamaz kılar.
+    //
+    // Metin ÇİZİLDİĞİ yerden türer (aşağıda `data-ve="pos-label"` ve
+    // `data-ve="rib-legend"`), ikinci bir dize yazılmaz: künye biçimi
+    // değişirse engel de onunla değişsin.
+    if(sel.primary){
+      var _kMetin = sel.primary.label + '  ·  kol ' + _feadR(sel.primary.relDeg) + '°'
+        + (Number.isFinite(sel.primary.tensionN)
+            ? '  ·  ' + Math.round(sel.primary.tensionN) + ' N' : '');
+      kutular.push({ x0: pad - 6, x1: pad - 6 + etW(_kMetin, 8.5), y0: 12 - 8, y1: 12 + 2 });
+    }
+    var _lMetin = 'dişli kenar = kayışın kaburgalı yüzü';
+    kutular.push({ x0: pad - 6, x1: pad - 6 + etW(_lMetin, 7), y0: H - 5 - 7, y1: H - 5 + 2 });
     // SARIM AÇISI ETİKETİ DE BİR ENGEL. Yerleştirici bugüne kadar yalnız kayış
     // açıklıklarına ve güle bakıyordu; oysa her kasnağın ALTINDA (Y + R + 10)
     // bir açı yazısı duruyor ve üst aday doluyken ad tam oraya atılıyordu —
