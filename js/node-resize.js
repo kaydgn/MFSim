@@ -40,6 +40,25 @@ function startResize(e, node, handle) {
   document.addEventListener('mouseup', stopResize);
 }
 
+// ── EN KÜÇÜK ÖLÇÜ TİPİN KENDİSİNDEN ────────────────────────────────────────
+//
+// Genel taban 50×50'ydi ve bu, İÇERİĞİ OLAN bir kart için anlamsız: Kayış
+// Tablosu 130 px yüksekliğe indirildiğinde yapışkan başlık ile Σ satırı
+// (50 + 24 px) gövde için yer bırakmıyor — ALTI SATIRIN ALTISI DA görünmez
+// oluyor, ama Σ satırı hâlâ 663,4 · 1048,7 yazıyor. Yani kart boş görünüyor
+// ve boş OLMADIĞINI yalnız toplamlar söylüyor: sessiz ve yanıltıcı.
+// Genişlikte aynısı: 560 px'e daraltılınca on bir sütunun altısı kayıyor ve
+// ölçülen yatay kaydırma çubuğu 0 px yer kaplıyor — yani kaybın işareti YOK.
+//
+// Bu yüzden ölçünün tabanını TİP söyler (`componentDefs.minWidth/minHeight`);
+// beyan etmeyen tip eski 50×50 tabanında kalır.
+function veNodeMinSize(node) {
+  var def = (node && node.type && typeof componentDefs !== 'undefined')
+    ? componentDefs[node.type] : null;
+  if(!def && node && node.def) def = node.def;
+  return { w: (def && def.minWidth) || 50, h: (def && def.minHeight) || 50 };
+}
+
 function doResize(e) {
   if(!isResizing || !resizeNode) return;
   
@@ -50,20 +69,21 @@ function doResize(e) {
   var newHeight = resizeStart.height;
   var newX = resizeStart.nodeX;
   var newY = resizeStart.nodeY;
+  var enAz = veNodeMinSize(resizeNode);
   
   // Handle'a göre boyut ve pozisyon hesapla
   if(resizeHandle.includes('e')) {
-    newWidth = Math.max(50, resizeStart.width + dx);
+    newWidth = Math.max(enAz.w, resizeStart.width + dx);
   }
   if(resizeHandle.includes('w')) {
-    newWidth = Math.max(50, resizeStart.width - dx);
+    newWidth = Math.max(enAz.w, resizeStart.width - dx);
     newX = resizeStart.nodeX + (resizeStart.width - newWidth);
   }
   if(resizeHandle.includes('s')) {
-    newHeight = Math.max(50, resizeStart.height + dy);
+    newHeight = Math.max(enAz.h, resizeStart.height + dy);
   }
   if(resizeHandle.includes('n')) {
-    newHeight = Math.max(50, resizeStart.height - dy);
+    newHeight = Math.max(enAz.h, resizeStart.height - dy);
     newY = resizeStart.nodeY + (resizeStart.height - newHeight);
   }
   
@@ -115,6 +135,12 @@ function doResize(e) {
   
   // Guide çizgilerini göster
   showAlignmentGuides(guides);
+
+  // KENAR YAPIŞMASI TABANI EZEMEZ. Snap, genişliği komşunun kenarına
+  // çekiyor ve bu hesap tabandan habersiz: yakınında dar bir düğüm olan bir
+  // kart, snap eşiğine girdiği anda tabanın altına düşerdi.
+  newWidth = Math.max(enAz.w, newWidth);
+  newHeight = Math.max(enAz.h, newHeight);
   
   resizeNode.width = newWidth;
   resizeNode.height = newHeight;

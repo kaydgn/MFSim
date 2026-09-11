@@ -196,6 +196,27 @@ document.querySelectorAll('.ve-component').forEach(function(comp) {
   });
 });
 
+// ── TEKERLEK KİMİN? ────────────────────────────────────────────────────────
+// Olayın hedefi ile kanvas kabuğu ARASINDA, kendi ekseninde gerçekten
+// kaydırılabilen bir yüzey var mı? Varsa tekerlek onundur.
+//
+// "Kaydırılabilir" İKİ şeyi birden istiyor: `overflow` kaydırmaya izin
+// veriyor OLACAK **ve** içerik kabına SIĞMIYOR olacak. Yalnız birincisine
+// bakmak, taşması olmayan her `auto` kabında tekerleği yutardı ve kart
+// üstünde kanvas hiç yakınlaştırılamazdı.
+function veWheelInnerPane(el, stopEl) {
+  while(el && el !== stopEl && el.nodeType === 1) {
+    var cs = (typeof getComputedStyle === 'function') ? getComputedStyle(el) : null;
+    if(cs) {
+      var oy = cs.overflowY, ox = cs.overflowX;
+      if((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight + 1) return el;
+      if((ox === 'auto' || ox === 'scroll') && el.scrollWidth > el.clientWidth + 1) return el;
+    }
+    el = el.parentElement;
+  }
+  return null;
+}
+
 // Canvas event'leri
 document.addEventListener('DOMContentLoaded', function() {
   var canvas = document.getElementById('ve-canvas');
@@ -254,7 +275,19 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   
   // ===== ZOOM - Mouse tekerleği =====
+  //
+  // KART İÇİNDEKİ KAYDIRILABİLİR YÜZEY TEKERLEĞİ ÖNCE ALIR.
+  //
+  // ÖLÇÜLDÜ (2026-09-11, gerçek tarayıcı, Kayış Tablosu): kart alçaltılıp altı
+  // satır görünmez olduğunda listenin üstünde tekerleği çevirmek tabloyu
+  // KAYDIRMIYOR, kanvası UZAKLAŞTIRIYOR (zoom 0,486 → 0,438; tablonun
+  // scrollTop'u 0'da kalıyor). Sebep aşağıdaki kayıtsız `preventDefault()`:
+  // olay hücreden buraya kabarıyor ve varsayılan kaydırma eylemi, yolun
+  // HERHANGİ bir düğümünde iptal edilince hiç gerçekleşmiyor. Yani kartın
+  // içindeki liste tekerlekle hiç kaydırılamıyordu ve kullanıcının ilk
+  // refleksi tam da bu yüzden yanlış şeyi yapıyordu.
   canvasWrapper.addEventListener('wheel', function(e) {
+    if(veWheelInnerPane(e.target, canvasWrapper)) return;   // içerisi kaydırsın
     e.preventDefault();
     
     var rect = canvasWrapper.getBoundingClientRect();

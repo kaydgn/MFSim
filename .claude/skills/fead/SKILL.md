@@ -154,6 +154,16 @@ olurdu.
     L_pitch birleşik hücrede, L_eff künyede ("efektif boy"), konum künyenin
     devamında. Denetim `T.ok`un kopyası DEĞİL — geometri çözülüp Σ 360'tan
     saptığı hâl ayrıca kapılı.
+    **EKLENEN SATIR GÖRÜŞ ALANINA ALINIR** (`_feadScrollRowIntoView`,
+    `veFeadTableAdd` içinde ve tazelemeden SONRA — satır o çağrıyla doğuyor).
+    Ölçüldü: yedinci kasnak listenin dibinin 35 px altına düşüyor ve tablo hiç
+    kaymıyordu; kullanıcı "＋ Kasnak ekle" diyor, paneli açılıyor, ama
+    dolduracağı satır ekranda yok. `block:'nearest'` — görünen satır listeyi
+    ZIPLATMAZ. Kapı: `fead-table.test.js` + `fead-tablo.spec.js` →
+    *"KASNAK EKLE"*.
+    **KART TABANININ ALTINA İNİLEMEZ** (`componentDefs.minWidth/minHeight`);
+    gerekçesi ve genel mekanizması `docs/decisions/ortak-yuzeyler.md` içinde.
+    Tekerlek de artık listeye ait — aynı belge.
     **ÇOK DÜĞÜM KURAN HER KURUCU `veStateBatch` İLE SARILIR** —
     `veFeadLoadExample`, `veFeadWizCreate`, `veFeadPopulateStarter`. Sarılmazsa
     Ctrl+Z modeli düğüm düğüm söker ve Kayış Tablosu önce boşalır, sonra

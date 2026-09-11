@@ -137,16 +137,29 @@ test.describe('Bileşen ekleme', () => {
       var n = nodes.find((x) => x.type === 'arac-performans');
       veAracOpenEditor(n.id);
     });
-    await page.waitForFunction(() => window.nodes.length === 16, null, { timeout: 15000 });
+    // AÇILIŞ YÜZEYİ SAYILMAZ, BEKLENİR. Burada bir zamanlar `nodes.length === 16`
+    // yazıyordu ve o sayı modülün açılışta bir örnek zinciri kurduğu dönemden
+    // kalmaydı: `veAracPopulateStarter` bugün TEK düğüm kuruyor (`ap-example`
+    // — örnek kartı, FEAD'in sihirbazla karşılamasının karşılığı). Test o gün
+    // kırmızıya döndü ve öyle kaldı; ölçtüğü şey (içeride bileşen eklenebiliyor
+    // mu) ise hiç koşmaz oldu.
+    //
+    // Sabit envanter yerine AÇILIŞ YÜZEYİNİN KENDİSİ bekleniyor, sonra fark
+    // ölçülüyor: kurucu yarın iki kart kursa da kapı ölçtüğü şeyi ölçmeye
+    // devam eder.
+    await page.waitForFunction(() => window.nodes.some((n) => n.type === 'ap-example'),
+      null, { timeout: 15000 });
+    const once = await page.evaluate(() => ({
+      toplam: nodes.length, motor: nodes.filter((n) => n.type === 'engine').length }));
 
     // İç topolojide bileşen kategorileri açılır; motoru kanvasa bırak.
     const engine = page.locator('.ve-component[data-type="engine"]').first();
     await expect(engine).toBeVisible();
     await engine.dragTo(page.locator('#ve-canvas'));
 
-    await page.waitForFunction(() => window.nodes.length === 17, null, { timeout: 10000 });
-    const engines = await page.evaluate(() => nodes.filter((n) => n.type === 'engine').length);
-    expect(engines).toBe(2);       // preset'ten gelen + yeni bırakılan
+    await page.waitForFunction((n) => window.nodes.length === n + 1, once.toplam, { timeout: 10000 });
+    const sonra = await page.evaluate(() => nodes.filter((n) => n.type === 'engine').length);
+    expect(sonra).toBe(once.motor + 1);     // bırakılan motor gerçekten eklendi
   });
 });
 

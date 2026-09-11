@@ -894,6 +894,21 @@ var VE_FEAD_RUN_LEGACY = [];
 // uzun listede kartın İÇİ kayar (kart büyümez, kanvas yerleşimi bozulmasın).
 var VE_FEAD_TABLE_W = 870;
 var VE_FEAD_TABLE_H = 340;
+// EN KÜÇÜK ÖLÇÜ — kartın İÇERİĞİNİN bütün kaldığı sınır (node-resize.js
+// `veNodeMinSize` okur). Genel 50×50 tabanı bu kart için anlamsız, çünkü
+// ikisi de SESSİZ kayıp üretiyordu (ölçüldü, gerçek tarayıcı):
+//   • 130 px yükseklikte yapışkan başlık (50) + Σ satırı (24) gövdeye yer
+//     bırakmıyor — altı satırın altısı da görünmez oluyor ama Σ hâlâ
+//     663,4 · 1048,7 yazıyor: kart BOŞ görünüyor, boş olmadığını yalnız
+//     toplamlar söylüyor.
+//   • 560 px genişlikte on bir sütunun altısı kayıyor ve yatay kaydırma
+//     çubuğunun ölçülen yeri 0 px — kaybın hiçbir işareti yok.
+// Genişlik tabanı kartın kendi ölçüsü — o da zaten SÜTUN TOPLAMINDAN türüyor
+// (tek kaynak VE_FEAD_TABLE_COLS, cp-fead.js), yani sütun eklenirse taban da
+// büyür. Yükseklik tabanı künye + başlık + İKİ satır + Σ + ekleme şeridi.
+// Kartı BÜYÜTMEK serbest; küçültme içeriğin bütün kaldığı yerde durur.
+var VE_FEAD_TABLE_MIN_W = VE_FEAD_TABLE_W;
+var VE_FEAD_TABLE_MIN_H = 210;
 // AŞILMIŞ VARSAYILAN — kayış tablosu bir oturumda iki ölçü gördü. Kayıtlı bir
 // projede eski ölçü BİREBİR duruyorsa (yani kullanıcı hiç dokunmamışsa)
 // yükseltilir; bilerek verilmiş her ölçü korunur. Kayış Yolu kartındaki
@@ -971,6 +986,14 @@ function veFeadLayoutSizeFor(node) {
         return { w: kartlar[i].w, h: kartlar[i].h, changed: true };
     }
   }
+  // TABANIN ALTINDA KAYITLI KART YÜKSELTİLİR. Taban yalnız sürüklemeye
+  // konsaydı, bu kural gelmeden önce küçültülüp KAYDEDİLMİŞ bir kart o bozuk
+  // hâlde açılmaya devam ederdi — satırları görünmeyen, ama Σ'sı sayı yazan
+  // bir tablo. Bilerek verilmiş bir ölçü değil, tam olarak o bozuk hâl.
+  if(def && (def.minWidth || def.minHeight)) {
+    var mw = Math.max(w, def.minWidth || 0), mh = Math.max(h, def.minHeight || 0);
+    if(mw !== w || mh !== h) return { w: mw, h: mh, changed: true };
+  }
   return { w: w, h: h, changed: false };
 }
 function veFeadNormalizeLayoutSize(node) {
@@ -993,6 +1016,8 @@ if(typeof componentDefs !== 'undefined') {
     if(componentDefs[t] && componentDefs[t].isFeadTable) {
       componentDefs[t].defaultWidth = VE_FEAD_TABLE_W;
       componentDefs[t].defaultHeight = VE_FEAD_TABLE_H;
+      componentDefs[t].minWidth = VE_FEAD_TABLE_MIN_W;
+      componentDefs[t].minHeight = VE_FEAD_TABLE_MIN_H;
     }
     if(componentDefs[t] && componentDefs[t].isFeadRun) {
       componentDefs[t].defaultWidth = VE_FEAD_RUN_W;
