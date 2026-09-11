@@ -1609,6 +1609,23 @@
       transform: scale(0.97);
     }
 
+/* ── YER TUTUCU RENGİ JETONDAN GELİR ──────────────────────────────────────
+   Tarayıcının varsayılan `::placeholder` grisi TEMAYA BAKMAZ: Chromium her
+   temada rgb(117,117,117) çiziyor, oysa değerin rengi jetondan geliyor.
+   ÖLÇÜLDÜ (19 tema, özellik panelindeki devir sınırı alanı, gerçek tarayıcı):
+   on dördünde kontrast 4,5:1'in altında, `vscode`'da 2,39:1 ile 3:1'in de
+   altında — yani yer tutucu okunmuyor. `--text-muted` ile on dokuzun en
+   kötüsü 4,59:1.
+
+   Hüküm projenin kendi kuralı: vurgu sabit renk yazılarak değil JETONDAN
+   verilir, on tema tek renk dilini konuşsun. Kalıp zaten vardı
+   (`#ve-cmdk-input::placeholder`) ama TEK bir alana uygulanmıştı.
+
+   `opacity:1` şart: Firefox yer tutucuya varsayılan bir saydamlık uyguluyor ve
+   rengi jetona bağlamak tek başına orada yetmezdi. */
+input::placeholder,
+textarea::placeholder{ color:var(--text-muted); opacity:1; }
+
 /* ===== TAB SİSTEMİ ===== */
 /* #tab-bar KALDIRILDI — içeriği şerit şeridine taşındı (bkz. index.html
    "TEK KROM BANDI"). Aşağıdaki marka/logo kuralları artık şerit şeridinin

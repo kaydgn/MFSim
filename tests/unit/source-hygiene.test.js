@@ -114,3 +114,51 @@ describe('kaynak dosyalarda kontrol karakteri yok', () => {
   });
 });
 
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * YER TUTUCU RENGİ JETONDAN GELİR
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Tarayıcının varsayılan `::placeholder` grisi TEMAYA BAKMAZ: Chromium her
+ * temada rgb(117,117,117) çiziyor, değerin rengi ise jetondan geliyor. ÖLÇÜLDÜ
+ * (19 tema, gerçek tarayıcı, özellik panelindeki devir sınırı alanı): on
+ * dördünde kontrast 4,5:1'in altında, `vscode`'da 2,39:1 — 3:1'in de altında.
+ * `--text-muted` ile on dokuzun en kötüsü 4,59:1.
+ *
+ * BU KAPI NEDEN METİN OKUYOR: renk temaya göre çözülüyor, yani "doğru renk mi"
+ * sorusunun cevabı ancak gerçek tarayıcıda ve tema tema alınır — jsdom
+ * `::placeholder`ı hiç hesaplamaz. Node'da tutulabilecek olan şey KURALIN
+ * VARLIĞI ve sabit renk YAZILMAMIŞ olması; ikisi de sessizce kaybolabilir
+ * (kural silinirse UA grisine düşer, sabit yazılırsa tek temada doğru olur).
+ * ═══════════════════════════════════════════════════════════════════════════ */
+describe('yer tutucu rengi jetondan', () => {
+  const css = fs.readFileSync(path.join(CSS_DIR, 'styles.css'), 'utf8');
+
+  // `input::placeholder{...}` gövdelerini topla (seçici listesinde input geçen).
+  const bloklar = [];
+  const re = /([^{}]*::placeholder[^{}]*)\{([^}]*)\}/g;
+  let m;
+  while ((m = re.exec(css))) bloklar.push({ sec: m[1].trim(), gov: m[2] });
+
+  test('input/textarea için ::placeholder kuralı VAR', () => {
+    const genel = bloklar.filter(b => /(^|,|\s)(input|textarea)::placeholder/.test(b.sec));
+    expect(genel.length).toBeGreaterThan(0);
+  });
+
+  test('her ::placeholder kuralı rengi JETONDAN alıyor — sabit renk yok', () => {
+    const sabit = /color\s*:\s*(#[0-9a-f]{3,8}|rgba?\(|hsla?\()/i;
+    bloklar.forEach((b) => {
+      if (!/color\s*:/i.test(b.gov)) return;          // renk yazmıyorsa konu dışı
+      if (sabit.test(b.gov))
+        throw new Error(`"${b.sec}" yer tutucuya SABİT renk yazıyor: ${b.gov.trim()}\n` +
+          'Renk var(--text-muted) gibi bir jetondan gelmeli — yoksa tek temada doğru olur.');
+      expect(b.gov).toMatch(/color\s*:\s*var\(--/);
+    });
+  });
+
+  test('genel kural Firefox için opacity:1 veriyor', () => {
+    // Firefox yer tutucuya varsayılan bir saydamlık uygular; rengi jetona
+    // bağlamak tek başına orada YETMEZ.
+    const genel = bloklar.filter(b => /(^|,|\s)(input|textarea)::placeholder/.test(b.sec));
+    genel.forEach((b) => expect(b.gov).toMatch(/opacity\s*:\s*1/));
+  });
+});
