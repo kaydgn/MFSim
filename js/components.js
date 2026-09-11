@@ -1575,6 +1575,17 @@ function _veSlaytKarilmis() {
     var j = Math.floor(Math.random() * (i + 1));
     var t = liste[i]; liste[i] = liste[j]; liste[j] = t;
   }
+  // AÇILIŞ KARESİ BAŞA. Yükleme ekranı tam ekran bir kareyle açılıyor
+  // (js/loader.js › paintPhoto) ve karşılama kartı onun üstünde beliriyor:
+  // slayt BAŞKA bir kareyle başlarsa devir teslimde fotoğraf değişir ve
+  // "kart eridi, sahne durdu" etkisi bozulur. Kare listede yoksa (klasör
+  // değişmiş) sıra olduğu gibi kalır — karışık başlamak yanlış kareyle
+  // başlamaktan iyidir.
+  var ilk = (typeof window !== 'undefined') ? window.__MFSIM_ACILIS_KARE : null;
+  if(ilk) {
+    var k = liste.indexOf(ilk);
+    if(k > 0) { liste.splice(k, 1); liste.unshift(ilk); }
+  }
   return liste;
 }
 
@@ -1597,7 +1608,15 @@ function veWelcomeSlaytBaslat() {
 
   var i = 0, aktif = 0;
   katman[0].style.backgroundImage = 'url("' + veSlaytKaynak(kareler[0]) + '")';
+  // İLK KARE ANINDA açılır, 2,6 sn'lik çapraz geçişle DEĞİL: slayt açılış
+  // ekranı sönmeden hemen önce başlıyor (DOMContentLoaded kuyruğu boşalırken)
+  // ve geçişle gelseydi kare daha %15 opaklıktayken perde kalkardı — devir
+  // teslimde fotoğraf bir an SOLUYOR gibi görünürdü. Sonraki kareler normal
+  // geçişle gelir; satır içi değer bir kare sonra geri alınıyor.
+  katman[0].style.transition = 'none';
   katman[0].classList.add('is-on');
+  void katman[0].offsetWidth;
+  katman[0].style.transition = '';
 
   if(kareler.length < 2 || (typeof matchMedia === 'function' &&
      matchMedia('(prefers-reduced-motion: reduce)').matches)) return true;
@@ -1825,6 +1844,14 @@ function veWelcomeAdoptSplashLogo(splashEl) {
   if(typeof document === 'undefined' || !splashEl) return;
   _veWelcomeSplashRestore();                     // ikinci çağrı: önceki uçuşu topla
   veWelcomeEnterReplay();                        // koreografi splash sönerken başlar
+  // SLAYT DEVİR TESLİMDE BAŞLAR. Zamanlayıcı 11 sn'de bir kare değiştiriyor,
+  // yükleme ise ~13 sn sürüyor: slayt perdenin ARKASINDA ilerliyor ve perde
+  // kalktığında açılış ekranının gösterdiği kare çoktan geçmiş oluyordu
+  // (ölçüldü: açılış karsilama-27, karşılama karsilama-07 ile açıldı). Burada
+  // yeniden kurulunca sıra açılış karesiyle başlar (_veSlaytKarilmis) ve 11 sn
+  // kullanıcı kareyi GÖRDÜĞÜ andan itibaren sayılır. İlk kare geçişsiz açıldığı
+  // için yeniden kurulum gözle görülmüyor.
+  if(typeof veWelcomeSlaytBaslat === 'function') veWelcomeSlaytBaslat();
   var kaynak = (typeof splashEl.querySelector === 'function')
     ? splashEl.querySelector('.mfsim-loading-logo') : null;
   var hedef = (typeof document.querySelector === 'function')

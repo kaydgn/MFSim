@@ -90,9 +90,14 @@ function baslat() {
   window.MFSimLoader.start();
 }
 
+const KARELER = ['karsilama-01.webp', 'karsilama-02.webp', 'karsilama-04.webp'];
+
 beforeEach(() => {
   jest.useFakeTimers();
   delete window.__MFSIM_BUILD;
+  delete window.__MFSIM_KARSILAMA;
+  delete window.__MFSIM_ACILIS_KARE;
+  delete window.VE_KARSILAMA_GORSELLER;
 });
 afterEach(() => {
   jest.useRealTimers();
@@ -115,6 +120,159 @@ describe('splash gövdesi ↔ yükleyici kimlik sözleşmesi', () => {
   test('#mfsim-loading-screen kimliği korunuyor — 19 E2E beklemesi buna bakıyor', () => {
     expect(loaderIds().splash).toBe('mfsim-loading-screen');
     expect(splashMarkup()).toContain('id="mfsim-loading-screen"');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SAHNE — açılış karşılama ekranının kendisiyle başlıyor. İki ayrı sessiz
+// kırılma sınıfı var ve ikisi de "program yine açılır" cinsinden:
+//   • kare listesi defer setine geri düşerse yükleme ekranı FOTOĞRAFSIZ açılır;
+//   • kart geometrisi karşılama kartından ayrışırsa devir teslimde kart oynar.
+describe('açılış karesi — liste yükleyiciden ÖNCE', () => {
+  test('js/karsilama-gorseller.js defer DEĞİL', () => {
+    const etiket = INDEX.match(/<script[^>]*karsilama-gorseller\.js[^>]*>/);
+    expect(etiket).not.toBeNull();
+    expect(etiket[0]).not.toContain('x-mfsim-defer');
+  });
+
+  test('liste js/loader.js\'ten ÖNCE yükleniyor', () => {
+    const liste = INDEX.indexOf('js/karsilama-gorseller.js');
+    const loader = INDEX.indexOf('<script src="js/loader.js">');
+    expect(liste).toBeGreaterThan(-1);
+    expect(loader).toBeGreaterThan(-1);
+    expect(liste).toBeLessThan(loader);
+  });
+
+  test('açılış ekranı gövdesi liste etiketinden ÖNCE — boyanacak katman var', () => {
+    expect(INDEX.indexOf('id="mfsim-loading-photo"'))
+      .toBeLessThan(INDEX.indexOf('js/karsilama-gorseller.js'));
+  });
+});
+
+describe('açılış karesi — seçim ve boyama', () => {
+  test('listeden bir kare seçilir, katmana boyanır, sınıf eklenir', async () => {
+    window.VE_KARSILAMA_GORSELLER = KARELER;
+    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    baslat();
+    await ilerlet(10);
+
+    const foto = document.getElementById('mfsim-loading-photo');
+    const secilen = window.__MFSIM_ACILIS_KARE;
+    expect(KARELER).toContain(secilen);
+    expect(foto.style.backgroundImage).toContain(secilen);
+    expect(document.getElementById('mfsim-loading-screen').className)
+      .toContain('mfsim-has-photo');
+  });
+
+  test('gömülü kare varsa data URI kullanılır (çevrimdışı tek dosya)', async () => {
+    window.VE_KARSILAMA_GORSELLER = ['karsilama-01.webp'];
+    window.__MFSIM_KARSILAMA = { 'karsilama-01.webp': 'data:image/webp;base64,AAAA' };
+    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    baslat();
+    await ilerlet(10);
+    expect(document.getElementById('mfsim-loading-photo').style.backgroundImage)
+      .toContain('data:image/webp;base64,AAAA');
+  });
+
+  test('künye yoksa dosya yoluna düşer (modüler kopya)', async () => {
+    window.VE_KARSILAMA_GORSELLER = ['karsilama-01.webp'];
+    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    baslat();
+    await ilerlet(10);
+    expect(document.getElementById('mfsim-loading-photo').style.backgroundImage)
+      .toContain('assets/karsilama/karsilama-01.webp');
+  });
+
+  test('kare YOKSA ekran kâğıt zeminde açılır — sınıf yok, hata yok', async () => {
+    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    baslat();
+    await ilerlet(8000);
+    expect(document.getElementById('mfsim-loading-photo').style.backgroundImage).toBe('');
+    expect(document.getElementById('mfsim-loading-screen').className)
+      .not.toContain('mfsim-has-photo');
+    expect(window.__MFSIM_ACILIS_KARE).toBeUndefined();
+    // ...ve yükleme yine sonuna kadar gider
+    expect(document.getElementById('mfsim-loading-percent').textContent).toBe('%100');
+  });
+});
+
+// Açılış ekranı belgenin varsayılan paletinde yaşıyordu ve kullanıcının teması
+// yüklemenin SONUNDA geliyordu (js/theme.js DOMContentLoaded → flushDomReady):
+// kart tam devir teslim anında renk değiştiriyordu. Ölçüldü: açılış slate/koyu,
+// karşılama pearl/açık.
+describe('tema ilk karede', () => {
+  const THEME_SRC = loadSource('theme.js');
+
+  test('belgenin varsayılanı js/theme.js\'in varsayılanıyla AYNI', () => {
+    const belge = INDEX.match(/<html[^>]*data-theme="([^"]+)"/);
+    const modul = THEME_SRC.match(/var savedTheme = '([^']+)'/);
+    expect(belge).not.toBeNull();
+    expect(modul).not.toBeNull();
+    expect(belge[1]).toBe(modul[1]);
+  });
+
+  test('kayıtlı tema HİÇBİR ŞEY çizilmeden önce uygulanıyor', () => {
+    document.documentElement.setAttribute('data-theme', 'pearl');
+    const gercek = window.localStorage.getItem;
+    window.localStorage.setItem('mf-theme', 'navy');
+    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    // baslat() loader'ı eval eder; tema çağrısı IIFE değerlendirilirken koşar,
+    // yani MFSimLoader.start()'tan da önce.
+    // eslint-disable-next-line no-eval
+    eval(LOADER_SRC);
+    expect(document.documentElement.getAttribute('data-theme')).toBe('navy');
+    window.localStorage.removeItem('mf-theme');
+    expect(typeof gercek).toBe('function');
+  });
+
+  test('bozuk kayıt yazılmaz — belge varsayılanı durur', () => {
+    document.documentElement.setAttribute('data-theme', 'pearl');
+    window.localStorage.setItem('mf-theme', '../kotu değer');
+    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    // eslint-disable-next-line no-eval
+    eval(LOADER_SRC);
+    expect(document.documentElement.getAttribute('data-theme')).toBe('pearl');
+    window.localStorage.removeItem('mf-theme');
+  });
+
+  test('geçerlilik listesi loader\'da KOPYALANMIYOR — tek kaynak js/theme.js', () => {
+    expect(LOADER_SRC).not.toContain('solidworks');
+    expect(THEME_SRC).toContain('solidworks');
+  });
+});
+
+describe('kart geometrisi karşılama kartının İKİZİ', () => {
+  const CSS = fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8');
+  // Seçici SATIR BAŞINDAN aranıyor: düz indexOf, `.mfsim-loading-panel{`i
+  // bileşik seçicinin (`... .mfsim-fading-out .mfsim-loading-panel{`) kuyruğunda
+  // da bulur ve yanlış bloğu ölçerdi.
+  function blok(secici) {
+    const re = new RegExp('^\\s*' + secici.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{', 'm');
+    const m = CSS.match(re);
+    expect(m).not.toBeNull();
+    const i = m.index + m[0].length;
+    return CSS.slice(i, CSS.indexOf('}', i));
+  }
+
+  // Bu değerlerin AYNI olması bir benzetme değil koşul: iki kart üst üste
+  // erirken 1 px'lik fark "kart yerinden oynadı" olarak görülüyor. Karşılama
+  // kartında biri değişirse bu test kırmızıya döner ve ikisi birlikte taşınır.
+  test.each([
+    ['left:56px'],
+    ['width:clamp(320px, 29%, 380px)'],
+    ['var(--karsilama-kart-r)'],
+    ['var(--karsilama-cam)'],
+    ['var(--karsilama-cam-blur)'],
+    ['var(--karsilama-kart-golge)']
+  ])('%s — iki kartta da geçiyor', (deger) => {
+    expect(blok('.mfsim-loading-panel')).toContain(deger);
+    expect(blok('.ve-welcome-id')).toContain(deger);
+  });
+
+  test('kapanışta kart KAYMIYOR — yalnız opaklık', () => {
+    const b = blok('.mfsim-loading-screen.mfsim-fading-out .mfsim-loading-panel');
+    expect(b).toContain('opacity:0');
+    expect(b).not.toContain('translateY');
   });
 });
 
