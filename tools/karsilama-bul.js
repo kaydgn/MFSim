@@ -3,6 +3,11 @@
  * karsilama-bul.js — karşılama slaytı için ADAY KARE TARAYICISI
  *
  *   node tools/karsilama-bul.js [--limit 8] [--en-az-genislik 1600] [--cikti <dizin>]
+ *                                [--arama "<sorgu>" ...]
+ *
+ * VARSAYILAN ARAMALAR klasördeki karelerin konusudur (donanma · harp okulu ·
+ * tören). Bir TEMA taraması için `--arama` ver: verildiğinde varsayılan liste
+ * kullanılmaz, yalnız senin sorguların koşar — kaynağı düzenlemek gerekmez.
  *
  * NEDEN COMMONS — sebep TEKNİK, lisans değil (lisans kararı aşağıda):
  * indirilebilir tek toplu kaynak burası. Arama motorundan gelen sonuçların
@@ -77,7 +82,8 @@ function ayristir(argv) {
     limit: 8,                       // arama başına aday
     enAzGenislik: 1600,
     cikti: path.join(__dirname, '..', '.karsilama-adaylar'),
-    lisansSuzgeci: false          // bkz. üstteki lisans notu
+    lisansSuzgeci: false,         // bkz. üstteki lisans notu
+    aramalar: []                  // boşsa ARAMALAR (varsayılan liste) koşar
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -85,6 +91,7 @@ function ayristir(argv) {
     else if (a === '--en-az-genislik') o.enAzGenislik = parseInt(argv[++i], 10);
     else if (a === '--cikti') o.cikti = path.resolve(argv[++i]);
     else if (a === '--lisans-suzgeci') o.lisansSuzgeci = true;
+    else if (a === '--arama') o.aramalar.push(argv[++i]);
     else if (a === '--help' || a === '-h') o.yardim = true;
     else throw new Error('bilinmeyen bayrak: ' + a);
   }
@@ -122,7 +129,9 @@ async function main() {
   const adaylar = [];
   const red = { lisans: 0, olcu: 0, tur: 0 };
 
-  for (const arama of ARAMALAR) {
+  const aramalar = o.aramalar.length ? o.aramalar : ARAMALAR;
+  if (o.aramalar.length) console.log(`${aramalar.length} özel arama (varsayılan liste atlandı)\n`);
+  for (const arama of aramalar) {
     const url = API + '?action=query&format=json&generator=search' +
       '&gsrsearch=' + encodeURIComponent(arama) +
       '&gsrnamespace=6&gsrlimit=' + o.limit +

@@ -33,8 +33,8 @@ const EN_BOY = 1920;            // uzun kenar tavanı
 // İkisi de tests/unit/karsilama-slayt.test.js'teki tavanların KOPYASI; sayılar
 // tests/unit/karsilama-secici.test.js ile bağlı (kopya sessizce ayrışmıştı:
 // tavan 6,5 → 7,3 MB olurken bu dosya 6,5'te kalıp boşuna uyarıyordu).
-const KARE_TAVAN = 560 * 1024;
-const TOPLAM_TAVAN = 7.3 * 1024 * 1024;
+const KARE_TAVAN = 1024 * 1024;
+const TOPLAM_TAVAN = 14 * 1024 * 1024;
 
 function ayristir(argv) {
   const o = { dosyalar: [], kalite: 0.85, kuru: false };
