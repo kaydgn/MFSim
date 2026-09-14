@@ -484,6 +484,31 @@ oynuyor. Düzeltme yeni bir hesap değil, **ikinci bir hesabın kaldırılması*
 kurucu artık `veFeadArrangeByCoords({silent:true})`'a devrediyor, yani panel
 düzenlemesinin ve "Otomatik Düzenle"nin kullandığı yolun ta kendisine.
 
+###### YEDEK SIRA DA AYNI ŞEKLİ KURAR (2026-09-14)
+
+**HÜKÜM: kurucuların ilk karesi `veFeadFallbackSlots`'tan gelir — tablo sağ
+üstte, kanvaslar altında BİR SIRA, künyeler solda. Yerleştiriciyle aynı ŞEKİL;
+aynı sayı değil (o ad payını DOM'dan ölçüyor, yedekte DOM yok).**
+
+Gerekçe: yerleştirici çağrısı iki kurucuda da `try/catch` ile sarılı, yani bir
+kez patlarsa geçerli kalan sıra yedektir — ve yedek kanvasları ALT ALTA
+(örnek) ya da 120 px'lik ızgarada ÜST ÜSTE (sihirbaz) diziyordu. Kullanıcı
+bildirimi: *"Alt alta hiç estetik durmuyor."*
+
+| Kural | Gerekçe |
+|-------|---------|
+| Yuva üreticisi **düğüm** alır, tip dizesi değil (`_feadDefOf`) | Çıplak `componentDefs` okumak, dosyanın `require` ile yüklendiği her yerde sessizce "her şey künye" demekti — altı düğümün altısı da sol şeride diziliyordu |
+| `solAdet` / `kanvasAdet` geri döner, `ustBasla` / `kanvasBasla` girer | İki çağrı aynı şeridi paylaşıyor (yeni kurulanlar + iç topolojide zaten duranlar); sıfırdan başlamak ikincisini birincinin üstüne yığardı |
+| İç topolojide duran kartların ölçütü **"kutusu var ve kasnak değil"** | Sayılı tip listesi açılış yüzeyinin SİHİRBAZ düğümünü dışarıda bırakıyordu ve yedek yolda o kart yeni kurulanların üstüne biniyordu (ölçüldü: bir çakışma) |
+| Sol şerit **bloğa** yaslanır, kasnak kümesinin soluna değil | Kasnakların kutusu yok; `lx:0`'a konunca aralarında kümenin genişliği kadar boşluk kalıyordu (yedek blok 1689 px, yerleştiricininki 1089) |
+
+**Kapı `tests/e2e/fead-yerlesim.spec.js`** — yedek yol Node'da ÖLÇÜLEMEZ:
+yerleştirici aynı modül kapsamında, stub'lanamıyor ve koordinatların üstüne
+hemen yazıyor. Tarayıcıda `window.veFeadArrangeByCoords` gerçek bir global,
+yani kırılabiliyor. Saf yuva üreticisinin kendi kapıları
+`cp-fead.test.js` → *"YEDEK YERLEŞİM"* ve `fead-wizard.test.js` →
+*"yedek yuvalar"*.
+
 | | eski | yeni |
 |---|---:|---:|
 | altı kasnağın en büyük sapması | **38.108 mm** | **0.0000 mm** |

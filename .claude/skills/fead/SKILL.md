@@ -75,6 +75,12 @@ olurdu.
    Ölçü sınır çerçevesiyle AYNI kaynaktan (`veMeasureNodeLabel` +
    `veNodeLabelOverflow`); ölçülemezse pay 0 ve davranış birebir eski hâli.
    Kapı: `cp-fead.test.js` → *"ad KUTUNUN ALTINDA duruyor"*.
+   **YERLEŞİM: tablo ÜSTTE, kanvaslar YAN YANA** (kullanıcı isteği,
+   2026-09-14: *"Alt alta hiç estetik durmuyor"*) ve kurucuların YEDEK sırası
+   da aynı şekli kurar (`veFeadFallbackSlots` — tek kaynak). Yedek yol Node'da
+   ölçülemiyor (yerleştirici stub'lanamıyor, koordinatın üstüne yazıyor);
+   kapısı `tests/e2e/fead-yerlesim.spec.js`. Ayrıntı:
+   `references/kanvas-ve-kart.md` → *"YEDEK SIRA DA AYNI ŞEKLİ KURAR"*.
 7. **KASNAKLAR BAĞLANMAZ — SIRA TABLODA** (2026-09-09). Kayış yolu bir graf
    değil bir liste: sıra `node.data.beltIndex` alanında, Kayış Tablosu'nun
    satır sırası. `beltIndex` **Gates TABLO sırasını** taşır (kayışın gidişinin

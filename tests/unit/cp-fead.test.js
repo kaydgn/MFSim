@@ -32,6 +32,11 @@ eval(loadSource('components.js'));
 // kapsamını DEĞİL global'i arar. Yazılmazsa kutusuz düğüm kapısı sessizce
 // atlanır ve testler kutuların hâlâ kurulduğu bir dünyayı ölçer.
 global.veIsCanvasHidden = veIsCanvasHidden;
+// AYNI GEREKÇE componentDefs için de geçerli ve bir kez SESSİZCE kaçtı:
+// `veFeadFallbackSlots` tip tanımını okuyamayınca her düğümü "künye" sayıp
+// altısını da sol şeride diziyordu — kapı yeşil kalmazdı ama sebebi de
+// görünmezdi. Gerçek programda componentDefs zaten global (klasik script).
+global.componentDefs = componentDefs;
 eval(loadSource('fead-belts.js'));
 eval(loadSource('fead-duty.js'));
 // GLOBAL'E YAZILMASI ŞART: cp-fead.js `require` ile yükleniyor, dolayısıyla
@@ -1694,6 +1699,133 @@ describe('veFeadLoadExample — kasnak kutusu KURULMUYOR', () => {
       expect(n).toBeTruthy();
       expect(document.getElementById(n.id)).not.toBeNull();
     });
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   YEDEK YERLEŞİM — yerleştirici koşmasa da kanvaslar YAN YANA
+   ──────────────────────────────────────────────────────────────────────────
+   Asıl yerleştirme `veFeadArrangeByCoords` ile yapılıyor: tablo üstte,
+   kanvaslar altında bir sıra. Kurucuların YEDEĞİ ise kanvasları ALT ALTA
+   yazıyordu (örnek) ya da 120 px'lik ızgarada ÜST ÜSTE (sihirbaz) — ve iki
+   çağıran da yerleştiriciyi `try/catch` ile sarıyor, yani o yol bir kez
+   patlarsa kullanıcı sessizce reddettiği resmi alır.
+
+   Kullanıcı bildirimi (2026-09-14): *"Alt alta hiç estetik durmuyor."*
+
+   Kapı KAYNAK DİZESİNE değil, kurucunun gerçekten ürettiği yuva listesine
+   bakıyor: `veArrangeModuleBase` o listeyi argüman olarak alıyor, test onu
+   yakalıyor.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('YEDEK YERLEŞİM — kanvaslar yan yana, tablo üstte', () => {
+  const T = (t) => componentDefs[t];
+
+  test('veFeadFallbackSlots: tablo ÜSTTE, kanvaslar BİR SIRADA ve çakışmıyor', () => {
+    const y = fead.veFeadFallbackSlots(
+      ['fead-belt', 'fead-solver', 'fead-layout', 'fead-layout', 'fead-table', 'fead-report']);
+    const [belt, solver, k1, k2, tablo, rapor] = y;
+
+    // Kanvaslar AYNI satırda ve yan yana — bu turun isteği.
+    expect(k1.ly).toBe(k2.ly);
+    expect(k2.lx).toBeGreaterThan(k1.lx);
+    expect(k2.lx).toBeGreaterThanOrEqual(k1.lx + k1.w);      // çakışma YOK
+    expect(k1.w).toBe(T('fead-layout').defaultWidth);        // ölçü de veriliyor
+    expect(k1.h).toBe(T('fead-layout').defaultHeight);
+
+    // Tablo ÜSTTE ve kanvaslarla aynı sol kenarda (blok dikdörtgen kalsın).
+    expect(tablo.lx).toBe(k1.lx);
+    expect(tablo.ly + tablo.h).toBeLessThanOrEqual(k1.ly);
+
+    // Künyeler SOL şeritte, bloğun soluna; aralarında çakışma yok.
+    [belt, solver, rapor].forEach((a) => expect(a.lx).toBeLessThan(k1.lx));
+    expect(new Set([belt.ly, solver.ly, rapor.ly]).size).toBe(3);
+  });
+
+  // ── AÇILIŞ YÜZEYİ ZATEN DURUYORKEN ──────────────────────────────────────
+  //
+  // GERÇEK TARAYICI YAKALADI, BİRİM TEST KAÇIRDI (bu tur, ölçülmüş):
+  // `veFeadLoadExample` iç topolojide ZATEN duran araç düğümlerini (açılış
+  // yüzeyinin kurduğu sihirbaz + Kayış Tablosu) sol şeridin devamına diziyor
+  // ve o döngü sol şerit sayacını okuyor. Sayaç yuva üreticisine taşınınca
+  // tanımsız kaldı → `ReferenceError: ust is not defined` ve örnek HİÇ
+  // yüklenmedi. Testler yeşildi, çünkü hepsi BOŞ bir topolojiden başlıyordu:
+  // `_eskiArac` boş olunca o satır hiç koşmuyor.
+  test('topolojide ZATEN araç düğümü varken örnek yüklenebiliyor', () => {
+    document.body.innerHTML = '<div id="ve-canvas"></div>';
+    global.connections = [];
+    // Açılış yüzeyinin bıraktığı iki düğüm — gerçek sıra bu.
+    global.nodes = ['fead-wizard', 'fead-table'].map((t, i) => ({
+      id: 'st' + i, type: t, def: componentDefs[t], x: 0, y: 0,
+      width: componentDefs[t].defaultWidth, height: componentDefs[t].defaultHeight, data: {} }));
+    let k = 0;
+    global.createNode = (type, x, y) => {
+      const d = componentDefs[type] || {};
+      if (d.maxInstances && global.nodes.filter((n) => n.type === type).length >= d.maxInstances)
+        return null;
+      const n = { id: 'cv' + ++k, type, def: d, x, y,
+                  width: d.defaultWidth || 65, height: d.defaultHeight || 60, data: {} };
+      global.nodes.push(n); return n;
+    };
+    expect(() => fead.veFeadLoadExample('AG00976_GATES_2025')).not.toThrow();
+    delete global.createNode;
+    expect(global.nodes.filter((n) => n.type === 'fead-layout')).toHaveLength(2);
+    // Zaten duran tablo YENİDEN kurulmadı, sol şeride de yığılmadı.
+    expect(global.nodes.filter((n) => n.type === 'fead-table')).toHaveLength(1);
+  });
+
+  test('ÜÇÜNCÜ kanvas da sıraya girer — sütuna dönmüyor', () => {
+    const y = fead.veFeadFallbackSlots(['fead-layout', 'fead-layout', 'fead-layout']);
+    expect(new Set(y.map((s) => s.ly)).size).toBe(1);
+    expect(y[2].lx).toBeGreaterThanOrEqual(y[1].lx + y[1].w);
+  });
+
+  test('KUTUSUZ tip için yuva YOK — kasnağın kanvasta yeri yok', () => {
+    const y = fead.veFeadFallbackSlots(['fead-crank', 'fead-idler', 'fead-layout']);
+    expect(y[0]).toBeNull();
+    expect(y[1]).toBeNull();
+    expect(y[2]).toBeTruthy();
+    // Sayaç kutusuzları saymıyor: tek kanvas ilk yuvada.
+    expect(y[2].lx).toBe(fead.veFeadFallbackSlots(['fead-layout'])[0].lx);
+  });
+
+  test('veFeadLoadExample YEDEĞİ de yan yana — yerleştirici hiç koşmasa bile', () => {
+    document.body.innerHTML = '<div id="ve-canvas"></div>';
+    global.nodes = []; global.connections = [];
+    let yakalanan = null;
+    global.veArrangeModuleBase = (liste) => { yakalanan = liste.slice(); return { x: 3000, y: 3000 }; };
+    let k = 0;
+    // KURULUM ANI da yakalanır: yuva listesi doğru olup düğümlere yanlış
+    // indisle dağıtılabilir. Son koordinatlar yerleştirici tarafından ezildiği
+    // için yedeğin ölçülebildiği tek an bu.
+    const kurulan = [];
+    global.createNode = (type, x, y) => {
+      const d = componentDefs[type] || {};
+      const n = { id: 'cv' + ++k, type, def: d, x, y,
+                  width: d.defaultWidth || 65, height: d.defaultHeight || 60, data: {} };
+      global.nodes.push(n); kurulan.push({ type, x, y }); return n;
+    };
+    fead.veFeadLoadExample('AG00976_GATES_2025');
+    delete global.createNode; delete global.veArrangeModuleBase;
+
+    expect(yakalanan).toBeTruthy();
+    // Yuvalar ölçü taşıyor mu ve kanvas olanlar hangileri: genişlik+yükseklik
+    // yalnız büyük kartlara yazılıyor (veArrangeModuleBase onları 65×60 sayarsa
+    // grubu yanlış ortalıyor).
+    const buyuk = yakalanan.filter((a) => a && a.w === T('fead-layout').defaultWidth
+                                            && a.h === T('fead-layout').defaultHeight);
+    expect(buyuk).toHaveLength(2);
+    expect(buyuk[0].ly).toBe(buyuk[1].ly);                       // YAN YANA
+    expect(Math.abs(buyuk[1].lx - buyuk[0].lx)).toBeGreaterThanOrEqual(buyuk[0].w);
+    const tablo = yakalanan.find((a) => a && a.w === T('fead-table').defaultWidth);
+    expect(tablo.ly + tablo.h).toBeLessThanOrEqual(buyuk[0].ly);  // TABLO ÜSTTE
+
+    // VE YUVALAR DOĞRU DÜĞÜME GİTTİ.
+    const kk = kurulan.filter((c) => c.type === 'fead-layout');
+    expect(kk).toHaveLength(2);
+    expect(kk[0].y).toBe(kk[1].y);
+    expect(Math.abs(kk[1].x - kk[0].x)).toBeGreaterThanOrEqual(T('fead-layout').defaultWidth);
+    const kt = kurulan.find((c) => c.type === 'fead-table');
+    expect(kt.y + T('fead-table').defaultHeight).toBeLessThanOrEqual(kk[0].y);
   });
 });
 
