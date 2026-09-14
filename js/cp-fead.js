@@ -119,6 +119,75 @@ var VE_FEAD_STARTER_LAYOUT = [
 // Kayış Yolu şeması ile Kayış Tablosu SAĞDA (ikisi de büyük kart), künyeler
 // SOLDA. Bölüşüm veFeadLoadExample ile aynı; tek bir sütuna dizilseydi 800 px
 // genişliğindeki tablo künyelerin üstüne binerdi.
+// ── ARAÇ KARTLARININ YEDEK YERLEŞİMİ — TEK KAYNAK ───────────────────────────
+//
+// Asıl yerleştirme `veFeadArrangeByCoords` ile yapılıyor; bu dizi kurucuların
+// İLK KARESİ ve o yol patlarsa (iki çağıran da try/catch ile yutuyor) geçerli
+// kalan yedek. İki kurucunun (örnek · sihirbaz) kendi yedeği vardı ve ikisi de
+// yerleştiriciden BAŞKA bir şekil kuruyordu — biri kanvasları ALT ALTA, öteki
+// 120 px'lik ızgarada ÜST ÜSTE. Fark sessizdi: yerleştirici bir kez patlasa
+// kullanıcı reddettiği resmi alırdı ve hiçbir yerde uyarı çıkmazdı.
+// Kullanıcı bildirimi (2026-09-14): *"Alt alta hiç estetik durmuyor."*
+//
+// ŞEKİL yerleştiricinin şekli: araçlar solda bir sütun, Kayış Tablosu sağ üstte
+// (GİRİŞ yüzeyi, geniş ve satırlı — okuma sırası ondan başlıyor), kanvaslar
+// onun altında BİR SIRA (aynı modelin iki resmi yan yana durunca
+// karşılaştırılıyor). Birebir aynı SAYI beklenmiyor: yerleştirici ad payını
+// DOM'dan ölçüyor, burada DOM yok.
+//
+// KUTUSUZ TİP (kasnak) için `null` döner — kanvasta yeri yok, ve çağıranın
+// kendi koordinatı var (örnekte mm, sihirbazda ızgara).
+//
+// GİRDİ DÜĞÜM, tip dizesi DEĞİL: tip tanımı `_feadDefOf`ten okunuyor ve o,
+// global `componentDefs` görünmüyorsa düğümün kendi `def` alanına düşüyor.
+// Çıplak global okumak, bu dosyanın `require` ile yüklendiği her yerde
+// (testler) sessizce "her şey bir künye" demekti — ölçüldü: altı düğümün
+// altısı da sol şeride diziliyordu.
+function veFeadFallbackSlots(dugumler, opts){
+  opts = opts || {};
+  var sagX = (typeof opts.sagX === 'number') ? opts.sagX : 60;
+  var ustY = (typeof opts.ustY === 'number') ? opts.ustY : 150;
+  var solX = (typeof opts.solX === 'number') ? opts.solX : -150;
+  // Sol şeridin KAÇINCI satırından başlanacağı: iki çağrı aynı şeridi
+  // paylaşabiliyor (yeni kurulan araçlar + iç topolojide zaten duranlar) ve
+  // sıfırdan başlamak ikincisini birincinin ÜSTÜNE yığardı.
+  var ustBasla = (typeof opts.ustBasla === 'number') ? opts.ustBasla : 0;
+  // Kanvas sırası için aynısı: iç topolojide zaten duran bir kanvas, YENİ
+  // kurulanların sağına eklenmeli — sıfırdan başlarsa üstlerine biner.
+  var kanvasBasla = (typeof opts.kanvasBasla === 'number') ? opts.kanvasBasla : 0;
+  var tablo = _feadDefOf({ type: 'fead-table' });
+  var tabloH = tablo.defaultHeight
+            || ((typeof VE_FEAD_TABLE_H === 'number') ? VE_FEAD_TABLE_H : 340);
+  var kanvasY = ustY + tabloH + 24;
+  var ust = ustBasla, kanvasNo = kanvasBasla, out = [];
+  (dugumler || []).forEach(function(n){
+    var d = _feadDefOf(typeof n === 'string' ? { type: n } : n);
+    if(d.noCanvasBox){ out.push(null); return; }
+    // Ölçü de veriliyor: yoksa veArrangeModuleBase kartı 65×60 sayıp grubu
+    // yanlış ortalıyor ve kart görünür alanın sağından taşıyor.
+    if(d.isFeadTable){
+      out.push({ lx: sagX, ly: ustY, w: d.defaultWidth, h: d.defaultHeight });
+    } else if(d.isFeadLayout){
+      out.push({ lx: sagX + kanvasNo * ((d.defaultWidth || 440) + 24), ly: kanvasY,
+                 w: d.defaultWidth, h: d.defaultHeight });
+      kanvasNo++;
+    } else {
+      // ARAÇLAR SOL ŞERİTTE, KASNAK KÜMESİNİN DIŞINDA. Eskiden kümenin ÜSTÜNE
+      // bir sıra hâlinde diziliyorlardı (ly:20) ve kutular tam kayış yolunun
+      // üstüne düşüyordu: tel kutunun arkasından geçiyor, ikisi de okunmuyordu.
+      out.push({ lx: solX, ly: ustY + ust * 96 });
+      ust++;
+    }
+  });
+  // KAÇ KÜNYE YUVASI KULLANILDI — sol şeritte SIRADAKİ boş satırı isteyen
+  // çağıranlar için (örnek kurucusu, iç topolojide zaten duran araç
+  // düğümlerini aynı şeridin devamına diziyor). Sayıyı çağıranın yeniden
+  // türetmesi, ikinci bir "hangi tip künyedir" kuralı demekti.
+  out.solAdet = ust;
+  out.kanvasAdet = kanvasNo;
+  return out;
+}
+
 function veFeadArrangeByCoords(opts){
   opts = opts || {};
   if(typeof nodes === 'undefined' || !nodes) return false;
@@ -5825,30 +5894,21 @@ function veFeadLoadExample(key){
   // kasnak kümesinin üstüne biner ve komşu düğümlerin portları/rozetleri kartın
   // üstünde görünür (ölçüldü). Kullanıcının istediği yer de bu: topolojinin
   // YANINDA, kendi alanında duran bir çizim.
-  var araclar = pack.nodes.length - pack.example.pulleys.length;
+  // Araç kartlarının yedek yerleşimi ORTAK YERDEN (`veFeadFallbackSlots`):
+  // tablo sağ üstte, kanvaslar altında BİR SIRA, künyeler solda. İkinci bir
+  // yedek yazmak, yerleştirici patladığında iki kurucunun iki ayrı resim
+  // vermesi demekti.
+  // TEK ÇAĞRI: sayaçlar (kaçıncı araç · kaçıncı kanvas) fonksiyonun içinde
+  // yürüyor, düğüm başına çağırmak hepsini aynı yuvaya yığardı.
   var sagSerit = 60 + (maxX - minX) * s + 110;
-  var ust = 0, kanvasNo = 0;
-  for(var t = 0; t < araclar; t++){
-    var tip = pack.nodes[pack.example.pulleys.length + t].type;
-    var td = (typeof componentDefs !== 'undefined' && componentDefs[tip]) || {};
-    if(tip === 'fead-layout'){
-      // Ölçü de veriliyor: yoksa veArrangeModuleBase kartı 65×60 sayıp grubu
-      // yanlış ortalıyor ve kart görünür alanın sağından taşıyor. İki büyük
-      // kart ALT ALTA: yan yana konsalardı sağ şerit 900 px'i geçerdi.
-      // TİP AYNI olduğu için sıra sayılıyor: birinci kanvas üstte, ikinci
-      // (işletme ön ayarlı) altta.
-      yer.push({ lx: sagSerit, ly: 150 + (kanvasNo++ ? 540 : 0),
-                 w: td.defaultWidth, h: td.defaultHeight });
-    } else {
-      // ARAÇLAR SOL ŞERİTTE, KASNAK KÜMESİNİN DIŞINDA. Eskiden kümenin ÜSTÜNE
-      // bir sıra hâlinde diziliyorlardı (ly:20) ve "Başlangıç ve Örnekler"
-      // kutusu tam kayış yolunun üstüne düşüyordu: tel kutunun arkasından
-      // geçiyor, ikisi de okunmuyordu (ölçüldü — Klima ile Avara 1 arasındaki
-      // açıklık oradan geçiyor). Sol şerit kümeyle hiç kesişmiyor.
-      yer.push({ lx: -150, ly: 150 + ust * 96 });
-      ust++;
-    }
-  }
+  // SOL ŞERİT BLOĞA YASLANIR, kasnak kümesinin soluna DEĞİL. `lx:0` kayış
+  // düzleminin sol kenarı ve kasnakların kanvasta kutusu YOK, yani künyeler
+  // oraya konunca aralarında kümenin genişliği kadar BOŞLUK kalıyordu
+  // (ölçüldü: yedek yolda blok 1689 px, yerleştiricininki 1089).
+  var _yuva = veFeadFallbackSlots(pack.nodes.slice(pack.example.pulleys.length),
+                                  { sagX: sagSerit, solX: sagSerit - 210 });
+  _yuva.forEach(function(slot){ yer.push(slot || { lx: -150, ly: 150 }); });
+  var ust = _yuva.solAdet || 0;          // sol şeritte sıradaki boş satır
 
   var base = (typeof veArrangeModuleBase === 'function')
     ? veArrangeModuleBase(yer) : { x:3000, y:3000 };
@@ -5858,20 +5918,36 @@ function veFeadLoadExample(key){
   // aşağıdaki `veFeadArrangeByCoords` yapıyor ve o, araç düğümlerini kümenin
   // dışındaki iki şeride koyuyor. Yerleştirici çalışamazsa (iki kasnaktan az
   // koordinat) geçerli kalan sıra budur.
+  //
+  // ÖLÇÜT "şu dört tipten biri" DEĞİL, "kutusu var ve kasnak değil". Sayılı bir
+  // liste (belt · solver · report · table) açılış yüzeyinin kurduğu SİHİRBAZ
+  // düğümünü dışarıda bırakıyordu: yerleştirici onu topladığı için olağan
+  // yolda görünmüyordu, YEDEK yolda ise kart yerinde kalıp yeni kurulanların
+  // ÜSTÜNE biniyordu (ölçüldü: gerçek tarayıcı, bir çakışma).
   var _eskiArac = [];
   if(typeof nodes !== 'undefined') {
     nodes.forEach(function(n){
-      var d0 = _feadDefOf(n);
-      if(d0.isFeadBelt || d0.isFeadSolver || d0.isFeadReport || d0.isFeadTable)
-        _eskiArac.push(n);
+      if(typeof veIsCanvasHidden === 'function' && veIsCanvasHidden(n)) return;
+      if(_feadDefOf(n).isFeadPulley) return;
+      _eskiArac.push(n);
     });
   }
-  _eskiArac.forEach(function(n, i){
-    n.x = Math.round(base.x - 150);
-    n.y = Math.round(base.y + 150 + (ust + i) * 96);
-    var el = (typeof document !== 'undefined') ? document.getElementById(n.id) : null;
-    if(el){ el.style.left = n.x + 'px'; el.style.top = n.y + 'px'; }
-  });
+  // BUNLAR DA AYNI YUVA ÜRETİCİSİNDEN GEÇER. Eskiden hepsi koşulsuz SOL
+  // şeride diziliyordu ve aralarında Kayış Tablosu da vardı: açılış yüzeyi onu
+  // zaten kurduğu için örnek yüklenirken tablo künyelerin arasına düşüyor,
+  // sağdaki blok da tablosuz kalıyordu. Yerleştirici bunu düzelttiği için
+  // görünmüyordu — YEDEK yolda görünüyor (ölçüldü: gerçek tarayıcı, yedek
+  // yolda blok 1689 px genişliyordu, 993 yerine).
+  veFeadFallbackSlots(_eskiArac, { sagX: sagSerit, solX: sagSerit - 210,
+                                  ustBasla: ust, kanvasBasla: _yuva.kanvasAdet || 0 })
+    .forEach(function(slot, i){
+      var n = _eskiArac[i];
+      if(!n || !slot) return;
+      n.x = Math.round(base.x + slot.lx);
+      n.y = Math.round(base.y + slot.ly);
+      var el = (typeof document !== 'undefined') ? document.getElementById(n.id) : null;
+      if(el){ el.style.left = n.x + 'px'; el.style.top = n.y + 'px'; }
+    });
 
   var kuruldu = [], idMap = {};
   pack.nodes.forEach(function(src, i){
@@ -6494,6 +6570,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadCurveAdd: veFeadCurveAdd, veFeadCurveRemove: veFeadCurveRemove,
     veFeadCurveSet: veFeadCurveSet, veFeadLoadExample: veFeadLoadExample,
     veFeadArrangeByCoords: veFeadArrangeByCoords,
+    veFeadFallbackSlots: veFeadFallbackSlots,
     veFeadWizOpenAny: veFeadWizOpenAny,
     veFeadPopulateStarter: veFeadPopulateStarter,
     veFeadOpenEditor: veFeadOpenEditor,

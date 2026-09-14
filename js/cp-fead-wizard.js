@@ -3188,12 +3188,35 @@ function veFeadWizCreate(){
     if(araclar.hasOwnProperty(k)) araclar[k].push(n);
   });
 
+  // ── YEDEK YERLEŞİM ORTAK YERDEN ─────────────────────────────────────────
+  //
+  // Asıl yerleştirme aşağıdaki `veFeadArrangeByCoords` ile yapılıyor; burası
+  // İLK KARE ve o yol patlarsa (try/catch yutuyor) geçerli kalan sıra. Eskiden
+  // burada 120×110'luk düz bir ızgara vardı ve iki 440×500'lük kanvası 120 px
+  // arayla koyuyordu: 320 px ÜST ÜSTE. Sessizdi — kartlar üst üste açıldığı
+  // için tek kart gibi görünüyorlardı.
+  //
+  // Şekil artık örnek kurucusuyla AYNI kaynaktan (`veFeadFallbackSlots`):
+  // tablo sağ üstte, kanvaslar altında bir sıra, künyeler solda. Kutusuz
+  // tipler (kasnaklar) `null` döner ve eski ızgarada kalır — kanvasta yerleri
+  // olmadığı için görünen bir şey değişmiyor, yalnız createNode'a bir
+  // koordinat gerekiyor.
+  var _yuva = (typeof veFeadFallbackSlots === 'function')
+    ? veFeadFallbackSlots(pack.nodes)
+    : pack.nodes.map(function(){ return null; });
+  function _fwYuva(i){
+    return _yuva[i] || { lx: 60 + (i % 4) * 120, ly: 120 + Math.floor(i / 4) * 110 };
+  }
   var base = (typeof veArrangeModuleBase === 'function')
-    ? veArrangeModuleBase(pack.nodes.map(function(_, i){ return { lx: 60 + (i % 4) * 120, ly: 120 + Math.floor(i / 4) * 110 }; }))
+    ? veArrangeModuleBase(pack.nodes.map(function(_, i){ return _fwYuva(i); }))
     : { x: 3000, y: 3000 };
 
-  var kuruldu = [], idMap = {}, i = 0;
-  pack.nodes.forEach(function(src){
+  // YUVA DÜĞÜMÜN KENDİ SIRASINDAN, kurulan-düğüm SAYACINDAN değil: yuvalar
+  // `pack.nodes`in tiplerinden türüyor (tablo sağ üstte, kanvaslar altında).
+  // Sayaçla indekslemek, zaten duran bir araç atlandığında sonrakilere BAŞKA
+  // tipin yuvasını verirdi — çözücü kutusu tablonun yerine düşerdi.
+  var kuruldu = [], idMap = {};
+  pack.nodes.forEach(function(src, _i){
     var kuyruk = araclar[_fwAracAnahtar(src)];
     var mevcut = (kuyruk && kuyruk.length) ? kuyruk.shift() : null;   // ikinci kez eşleşmesin
     if(mevcut){
@@ -3204,8 +3227,8 @@ function veFeadWizCreate(){
       return;
     }
     var once = nodes.length;
-    createNode(src.type, base.x + 60 + (i % 4) * 120, base.y + 120 + Math.floor(i / 4) * 110);
-    i++;
+    var _s = _fwYuva(_i);
+    createNode(src.type, base.x + _s.lx, base.y + _s.ly);
     if(nodes.length <= once) return;             // maxInstances engelledi
     var yeni = nodes[nodes.length - 1];
     yeni.data = JSON.parse(JSON.stringify(src.data));

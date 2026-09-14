@@ -430,6 +430,53 @@ describe('kurulum kapısı ve kurulum', () => {
     expect(b.spin).toBe(beklenen.spin);
   });
 
+  // ── YEDEK YERLEŞİM: KANVASLAR ÜST ÜSTE DEĞİL, YAN YANA ──────────────────
+  //
+  // Asıl yerleştirme `veFeadArrangeByCoords` ile yapılıyor ve o çağrı
+  // `try/catch` ile sarılı — patlarsa buradaki yedek geçerli kalıyor. Eski
+  // yedek 120×110'luk düz bir ızgaraydı: iki 440×500'lük kanvası 120 px
+  // arayla, yani **320 px ÜST ÜSTE** koyuyordu ve bu sessizdi (kartlar üst
+  // üste açıldığı için tek kart gibi görünüyorlardı).
+  //
+  // Kapı kaynağa değil, kurucunun `veArrangeModuleBase`e verdiği gerçek yuva
+  // listesine bakıyor.
+  test('yedek yuvalar: kanvaslar YAN YANA, tablo ÜSTTE, çakışma YOK', () => {
+    kabuk();
+    wiz.veFeadWizSeed('AG00976_GATES_2025');
+    sahteKanvas();
+    let yakalanan = null;
+    global.veArrangeModuleBase = (liste) => { yakalanan = liste.slice(); return { x: 3000, y: 3000 }; };
+    // KURULUM ANI da yakalanır: yuva listesi doğru olup düğümlere YANLIŞ
+    // indisle dağıtılabilir (sayaçla indekslemek tam bunu yapıyordu). Son
+    // koordinatlar yerleştirici tarafından ezildiği için tek ölçüm noktası bu.
+    const kurulan = [];
+    const _cn = global.createNode;
+    global.createNode = (type, x, y) => { kurulan.push({ type, x, y }); return _cn(type, x, y); };
+    wiz.veFeadWizCreate();
+    delete global.createNode; delete global.createConnection;
+    delete global.veArrangeModuleBase;
+
+    expect(yakalanan).toBeTruthy();
+    const L = componentDefs['fead-layout'], TB = componentDefs['fead-table'];
+    const kanvas = yakalanan.filter((a) => a && a.w === L.defaultWidth && a.h === L.defaultHeight);
+    expect(kanvas).toHaveLength(2);
+    expect(kanvas[0].ly).toBe(kanvas[1].ly);                                   // aynı satır
+    expect(Math.abs(kanvas[1].lx - kanvas[0].lx)).toBeGreaterThanOrEqual(L.defaultWidth);
+    const tablo = yakalanan.find((a) => a && a.w === TB.defaultWidth);
+    expect(tablo.ly + tablo.h).toBeLessThanOrEqual(kanvas[0].ly);              // tablo üstte
+    // KUTUSUZ tipler (kasnaklar) ızgarada kalıyor — kanvasta yerleri yok ama
+    // createNode bir koordinat istiyor.
+    expect(yakalanan.filter(Boolean)).toHaveLength(yakalanan.length);
+
+    // VE YUVALAR DOĞRU DÜĞÜME GİTTİ: iki kanvas gerçekten yan yana kuruldu.
+    const kk = kurulan.filter((k) => k.type === 'fead-layout');
+    expect(kk).toHaveLength(2);
+    expect(kk[0].y).toBe(kk[1].y);
+    expect(Math.abs(kk[1].x - kk[0].x)).toBeGreaterThanOrEqual(L.defaultWidth);
+    const kt = kurulan.find((k) => k.type === 'fead-table');
+    expect(kt.y + TB.defaultHeight).toBeLessThanOrEqual(kk[0].y);
+  });
+
   // ── ARAÇ EŞLEŞMESİ TİPE DEĞİL, TİP + ÖN AYARA BAKAR ─────────────────────
   //
   // Kanvas tipi 2026-09-11'de teke indi: sihirbaz artık AYNI tipten İKİ düğüm
