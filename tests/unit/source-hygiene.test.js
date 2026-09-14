@@ -221,3 +221,70 @@ describe('sihirbaz jeton rolü: metin --ink-*, dolgu --accent-*', () => {
     expect(n).toBeGreaterThanOrEqual(3);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  FEAD PANEL KOZMETİĞİ — üç ölçülmüş kusurun kapısı
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Gerçek tarayıcıda yedi FEAD paneli süpürüldü (2026-09-14) ve üç şey çıktı:
+//
+//   başlık yüksekliği   92 px ↔ 44 px   kasnak/çözücü varsayılan (ortalı-simge)
+//                                       kimliğe düşüyordu, gergi/kayış kompakta
+//   kırpılan denetim    3                "…çapından türet" 169 px gerek / 120 alan
+//   satır uzunluğu      207 karaktere    okunur bant 65–75
+//
+// Üçü de SESSİZ: hiçbiri hata vermiyor, hiçbiri testten düşmüyordu.
+describe('FEAD panel kozmetiği', () => {
+  const css = fs.readFileSync(path.join(CSS_DIR, 'styles.css'), 'utf8');
+  const src = fs.readFileSync(path.join(JS_DIR, 'cp-fead.js'), 'utf8');
+  const core = fs.readFileSync(path.join(JS_DIR, 'cp-core.js'), 'utf8');
+
+  // Kasnak tipleri componentDefs'ten okunur — listeye elle yazmak, yeni bir
+  // kasnak tipi eklendiğinde kapının onu sessizce atlaması demekti.
+  const KASNAK = [...new Set([...fs.readFileSync(path.join(JS_DIR, 'components.js'), 'utf8')
+    .matchAll(/'(fead-(?:crank|alternator|ac|waterpump|ps|aircomp|fan|idler))'\s*:/g)]
+    .map((m) => m[1]))];
+
+  test('kasnak tipleri gerçekten bulunuyor (kapının dayandığı zemin)', () => {
+    expect(KASNAK.length).toBeGreaterThanOrEqual(7);
+  });
+
+  test('HER FEAD paneli aynı kimlik satırını alıyor', () => {
+    // İkisinden birinde olmak yeter: --wide ve --compact aynı kompakt-sol
+    // kimliği veriyor, fark yalnız pencere genişliğinde.
+    const liste = (ad) => {
+      const m = new RegExp('var ' + ad + '\\s*=\\s*\\[([\\s\\S]*?)\\];').exec(core);
+      return m ? [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]) : [];
+    };
+    const hepsi = new Set([...liste('VE_WIDE_PANEL_TYPES'), ...liste('VE_COMPACT_PANEL_TYPES')]);
+    const disarda = [...KASNAK, 'fead-solver', 'fead-tensioner', 'fead-belt']
+      .filter((t) => !hepsi.has(t));
+    expect(disarda).toEqual([]);
+  });
+
+  test('açıklama satırı CSS sınıfından, satır içi stilden DEĞİL', () => {
+    expect(src).toMatch(/function _feadHint\(text\)\{\s*\n\s*return '<div class="ve-fead-not">/);
+    expect(css).toMatch(/\.ve-fead-not\{/);
+  });
+
+  test('açıklama satırının ÖLÇÜ SINIRI var — satır 207 karaktere çıkmasın', () => {
+    const blok = (/\.ve-fead-not\{([^}]*)\}/.exec(css) || [, ''])[1];
+    const m = /max-width\s*:\s*(\d+)ch/.exec(blok);
+    expect(m).not.toBeNull();
+    // Okunur bant 65–75; tavan 80'i geçerse sınır bir işe yaramaz.
+    expect(+m[1]).toBeGreaterThanOrEqual(60);
+    expect(+m[1]).toBeLessThanOrEqual(80);
+  });
+
+  test('açılır liste SABİT piksel değil — taban + tavan', () => {
+    // Sabit genişlik seçeneğin metnini kırpıyordu. Üçü birden gerek:
+    // min hizayı korur, auto içeriğe büyür, max etiketi ezmesini engeller.
+    expect(src).toMatch(/var _FEAD_SEL\s*=/);
+    const blok = (/var _FEAD_SEL\s*=\s*_FEAD_INP\s*\+\s*'([^']*)'/.exec(src) || [, ''])[1];
+    expect(blok).toMatch(/width:auto/);
+    expect(blok).toMatch(/min-width:\d+px/);
+    expect(blok).toMatch(/max-width:\d+%/);
+    // Ve hiçbir açılır liste artık sabit piksele dönmemeli.
+    expect(src).not.toMatch(/<select[^>]*style="width:\d+px; ' \+ _FEAD_INP/);
+  });
+});

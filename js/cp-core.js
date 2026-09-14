@@ -146,8 +146,18 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   // Takoz Çökme-Titreşim modülü — içerik-yoğun paneller (dalga dalga eklenir)
   'mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-transfer', 'mnt-pto', 'mnt-pump', 'mnt-pto-group',
   'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer',
-  // FEAD — kayış yolu şeması ve çok alanlı kasnak/gergi panelleri
-  'fead-tensioner', 'fead-belt', 'fead-layout', 'fead-table',
+  // FEAD — kayış yolu şeması ve çok alanlı kasnak/gergi panelleri.
+  //
+  // KASNAKLAR VE ÇÖZÜCÜ LİSTEDE DEĞİLDİ ve eksiklik bir karar değil bir
+  // atlamaydı: ikisi de varsayılan (ortalı-simge) kimliğe düşüyordu, gergi ve
+  // kayış ise kompakt-sol satıra. ÖLÇÜLDÜ (yedi FEAD paneli, gerçek tarayıcı):
+  // başlık yüksekliği 92 px ↔ 44 px — aynı modülün panelleri iki ayrı pencere
+  // gibi açılıyordu. Kasnak paneli altı kartlı, Çözücü ise modülün en ağır
+  // yüzeyi (Algılanan Model + çevrim tablosu + kapılar + sonuç blokları);
+  // "içerik-yoğun" ölçütünü ikisi de karşılıyor.
+  'fead-tensioner', 'fead-belt', 'fead-layout', 'fead-table', 'fead-solver',
+  'fead-crank', 'fead-alternator', 'fead-ac', 'fead-waterpump', 'fead-ps',
+  'fead-aircomp', 'fead-fan', 'fead-idler',
   // Parametrik: çoklu-seri sonuç grafiği tam genişlikte ferah okunur.
   'parametric'];
 

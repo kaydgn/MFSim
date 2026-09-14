@@ -166,8 +166,54 @@ function veFeadArrangeByCoords(opts){
       y += b.h + o.bottom + 24;
     });
   }
+
+  // BÜYÜK KARTLAR SÜTUN DEĞİL, İKİ SIRA — ölçülmüş bir kadraj kusuru.
+  //
+  // Üçü de üst üste dizilince içerik 959×1388 oluyor: DAR ve UZUN. Görüş alanı
+  // ise geniş (1316×855), yani sığdırma YÜKSEKLİKTEN sınırlanıyor ve yanlarda
+  // 409+409 px boş kalıyor. ÖLÇÜLDÜ (gerçek tarayıcı): açılış zoom'u **0,473**,
+  // görüşün yalnız **%29,9**'u dolu — Kayış Tablosu'nun yazısı okunmuyor.
+  //
+  // Üç diziliş ölçüldü:
+  //   büyükler SÜTUN (bugün)              959×1388 → 0,582
+  //   büyükler tek SIRA                  1887×500  → 0,669
+  //   tablo üstte · kanvaslar yan yana    993×864  → 0,906   ← seçilen
+  //
+  // Seçim yalnız sayısal değil: tablo GİRİŞ yüzeyi (geniş, satırlı) ve üstte
+  // durması okuma sırasına uyuyor; iki kanvas ise AYNI modelin iki resmi
+  // (donuk geometri ↔ çalışma noktası) ve yan yana durunca karşılaştırılıyor.
+  // Alt alta dizmek onları birbirinden 500 px uzaklaştırıyordu.
+  function sira(list, x0, yBas){
+    var x = x0, enYuksek = 0;
+    list.forEach(function(n){
+      var b = veFeadNodeBox(n), o = adPayi(n, b);
+      yer[n.id] = { x: x, y: yBas + o.top };
+      x += b.w + 24;
+      enYuksek = Math.max(enYuksek, o.top + b.h + o.bottom);
+    });
+    return enYuksek;
+  }
+
   serit(sol, CX - 60, 'sol');
-  serit(sag, CX + 60, 'sag');
+  var tablolar = sag.filter(function(n){ return _feadDefOf(n).isFeadTable; });
+  var kanvaslar = sag.filter(function(n){ return !_feadDefOf(n).isFeadTable; });
+  if(tablolar.length && kanvaslar.length){
+    // İki sıranın toplam yüksekliği önce ölçülür ki blok CY'ye ORTALANSIN;
+    // ortalamadan yerleştirmek bloğu aşağı kaydırır ve sol şeritle hizasını
+    // bozardı (araç şeridi kendi içinde zaten ortalı).
+    var oO = function(l){
+      var e = 0;
+      l.forEach(function(n){ var b = veFeadNodeBox(n), o = adPayi(n, b);
+                             e = Math.max(e, o.top + b.h + o.bottom); });
+      return e;
+    };
+    var h1 = oO(tablolar), h2 = oO(kanvaslar);
+    var y0 = CY - (h1 + 24 + h2) / 2;
+    sira(tablolar,  CX + 60, y0);
+    sira(kanvaslar, CX + 60, y0 + h1 + 24);
+  } else {
+    serit(sag, CX + 60, 'sag');       // tek tür varsa eski davranış birebir
+  }
 
   if(!opts.silent && typeof saveState === 'function') saveState();
   nodes.forEach(function(n){
@@ -375,6 +421,20 @@ function veFeadUpdateBreadcrumb(){
 // ════════════════════════════════════════════════════════════════════════════
 var _FEAD_INP = 'padding:4px 6px; font-size:var(--fs-body); height:25px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; box-sizing:border-box;';
 
+// AÇILIR LİSTENİN GENİŞLİĞİ SABİT PİKSEL DEĞİL, TABAN + TAVAN.
+//
+// Sabit genişlik seçeneğin metnini KIRPIYORDU ve kırpılan şey tam olarak
+// kullanıcının okuması gereken şeydi. ÖLÇÜLDÜ (gerçek tarayıcı, yedi panel):
+//   "KAPALI — kayış henüz seçilmedi"            153 px gerek · 120 px alan
+//   "PK-2_2p-MT3 (doğrulanmış, 8 sistem)"       178 px gerek · 120 px alan
+//   "Krank ve fan kasnağı çapından türet"       169 px gerek · 120 px alan
+// Üçü de sessiz: seçenek listesi açılınca doğru görünüyor, KAPALIYKEN yarım.
+//
+// `min-width` hizayı korur (listelerin çoğu yine aynı genişlikte durur),
+// `width:auto` en uzun seçeneğe göre büyümesine izin verir, `max-width`
+// etiketi ezmesini engeller. Üçü olmadan biri ötekini bozar.
+var _FEAD_SEL = _FEAD_INP + ' width:auto; min-width:200px; max-width:58%;';
+
 function _feadCard(title, unit, accent, inner){
   var head = title ? '<div style="display:flex; align-items:center; gap:7px; margin-bottom:9px;">'
     + '<span style="width:3px; height:12px; border-radius:2px; background:' + (accent||'var(--accent-primary)') + ';"></span>'
@@ -411,8 +471,14 @@ function _feadText(node, title, key, ph){
     + '</div>';
 }
 
+// AÇIKLAMA SATIRI — görünümü CSS'te (`css/styles.css` → `.ve-fead-not`).
+//
+// ÖLÇÜ SINIRI BİR SÜS DEĞİL: panel 980 px geniş ve açıklama kabın tamamına
+// yayılıyordu. Gerçek tarayıcıda ölçüldü — gergi ve kayış panellerinde satırlar
+// **207 karaktere** çıkıyor (okunur bant 65–75). Göz satır sonundan başına
+// dönerken yerini kaybediyor; metin "uzun" değil, SATIRI uzun.
 function _feadHint(text){
-  return '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin:-3px 0 9px;">' + text + '</div>';
+  return '<div class="ve-fead-not">' + text + '</div>';
 }
 
 // "Bu bölüm SPEC ile gelecek" notu — kullanıcıya iskeletin nerede bittiğini
@@ -428,7 +494,7 @@ function _feadSelect(node, title, key, options, def, hint){
   var h = '<div style="display:flex; align-items:center; gap:10px; margin-bottom:9px;">'
     + '<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">' + title + '</div>'
     + '<select id="ve-fead-' + key + '-' + node.id + '" onchange="veFeadSetChoice(\'' + node.id + '\',\'' + key + '\',this.value)"'
-    + ' style="width:150px; ' + _FEAD_INP + ' text-align:left;">';
+    + ' style="' + _FEAD_SEL + ' text-align:left;">';
   options.forEach(function(o){
     h += '<option value="' + _feadEsc(o[0]) + '"' + (String(o[0]) === cur ? ' selected' : '') + '>' + _feadEsc(o[1]) + '</option>';
   });
@@ -908,7 +974,7 @@ function veFeadAccLimitCard(node){
       + '<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">'
       + 'BMC künyesi</div>'
       + '<select onchange="veFeadApplyAccLib(\'' + node.id + '\',this.value)"'
-      + ' style="width:230px; ' + _FEAD_INP + ' text-align:left;">'
+      + ' style="' + _FEAD_SEL + ' text-align:left;">'
       + '<option value="">— elle gir —</option>';
     liste.forEach(function(r){
       h += '<option value="' + _feadEsc(r.key) + '"' + (r.key === sec ? ' selected' : '') + '>'
@@ -1221,7 +1287,7 @@ function veFeadTensionerLibCard(node){
     + '<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">'
     + 'Ölçülmüş künye</div>'
     + '<select onchange="veFeadApplyTenLib(\'' + node.id + '\',this.value)"'
-    + ' style="width:230px; ' + _FEAD_INP + ' text-align:left;">';
+    + ' style="' + _FEAD_SEL + ' text-align:left;">';
   opts.forEach(function(o){
     h += '<option value="' + _feadEsc(o[0]) + '"' + (o[0] === sec ? ' selected' : '') + '>'
        + _feadEsc(o[1]) + '</option>';
@@ -5436,7 +5502,7 @@ function veFeadEngineLibRow(node){
     + '<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">'
     + 'BMC motor kataloğu</div>'
     + '<select onchange="veFeadApplyEngineLib(\'' + node.id + '\',this.value)"'
-    + ' style="width:260px; ' + _FEAD_INP + ' text-align:left;">'
+    + ' style="' + _FEAD_SEL + ' text-align:left;">'
     + '<option value="">— elle gir —</option>';
   liste.forEach(function(r){
     h += '<option value="' + _feadEsc(r.key) + '"' + (r.key === sec ? ' selected' : '') + '>'
