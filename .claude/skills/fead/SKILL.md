@@ -258,6 +258,35 @@ olurdu.
     çevrilir (`veFeadMigrateRunToLayout`); çevrilmeseydi tanımsız tipli bir
     düğüm olarak kalırlardı. Ayrıntı ve kapı listesi
     `references/kanvas-ve-kart.md` → *"İKİ KANVAS, TEK TİP"*.
+19. **ÖRNEĞE SAYI YAZMAK İÇİN KAYNAĞIN ONU SÖYLEMESİ GEREKİR.** Aksesuar devir
+    sınırları on iki örneğin altısına yazıldı ve altısı da raporun KENDİ
+    bileşen dosyasından çözüldü (`SD7H15-AC.cmp` · `AG810-250Amp-ALT.cmp` ·
+    `TM31.cmp`); kalan altısında rapor modeli söylemiyor (`A_C.cmp`,
+    `7_9kW_A_C.cmp`, katalogda olmayan `220Amp` ve `TM32`) ve **sınır
+    yazılmadı**. Aksesuarın adı kataloğun yazımını kullanır ("Sanden 7H15",
+    raporun `SD7H15`'i değil) — bağ o zaman gizli bir eşleme tablosu olmadan
+    makineyle denetlenebiliyor. `accLib` YAZILMAZ: künye uygulamak raporun
+    ölçülmüş kW eğrisini ezer, ve aynı modelin iki kaydı varken birini seçmek
+    doğrulanamayan bir parça numarası iddiasıdır.
+    **Motorun governed devri HİÇBİR örneğe yazılmaz** — arşivdeki on bir
+    raporun hiçbirinde yok ve BMC sayfasının krank çapı (197,32) motor
+    kataloğunda tam eşleşmiyor; en yakın dört kayıt governed'da ayrışıyor
+    (2100 · 2200). Çevrim oranı kapısının "değerlendirilemedi" demesi bu
+    yüzden DOĞRU davranıştır. Kapı: `fead-example.test.js`.
+20. **SİHİRBAZ TOHUMU ALAN ALAN KOPYALAR — yeni alan İKİ YÖNE de eklenir.**
+    `veFeadWizNodes` (durum → düğüm) devir sınırlarını taşıyordu,
+    `veFeadWizSeed` (örnek → durum) taşımıyordu; örnekteki sınır kullanıcının
+    gördüğü yolda (sihirbazın 1. adımı) sessizce düşüyor ve kurulan modelde
+    uygunluk kapısı "değerlendirilemedi" diyordu. Kapı GİDİŞ-DÖNÜŞ ölçer, tek
+    yön değil: `fead-wizard-catalog.test.js` → *"TOHUM → DÜĞÜM gidiş-dönüş"*.
+21. **ŞEMADA HEM AD HEM SARIM AÇISI TAŞINIR.** Ad üstü, açı altı tercih eder
+    (sıralar TERS — aynı olsaydı ikisi aynı yere koşar ve kaçınma hiçbir şey
+    çözmezdi); adlar önce yerleşir ve açı için sert engel olur. Hiçbir aday
+    temiz değilken geri düşüş **en az örtüşen** adaydır, ilk aday değil:
+    boole ölçüt 3 px payla sıyıran adayı yazıyı tamamen örtenle eşit sayıyordu.
+    Ölçüldü (420 çizim): çivili açı 117 çakışma → kendi aday listesi 60 → alan
+    ölçütlü geri düşüş **0**. Kapı: `fead-card-design.test.js` →
+    *"sarım açısı da KAÇAR"*.
 
 ## Referans dosyaları
 

@@ -1904,8 +1904,15 @@ var VE_FEAD_EXAMPLES = {
         data:{ od:152, x:184.20,   y:314.50, contact:'grooved', inertia:0.031 } },
       { key:'IDR2', type:'fead-idler',       name:'Avara 2',
         data:{ od:75,  x:0,        y:267.40, contact:'back',    inertia:0.00087 } },
+      // DEVİR SINIRLARI ADI SÖYLEDİĞİ İÇİN YAZILABİLİYOR. Örneğin kendi adı
+      // modeli veriyor ("155 A") ve aksesuar kataloğunda o modelin İKİ kaydı
+      // var (57RS309036 · 57RS309348); ikisi de aynı üç sınırı taşıyor, yani
+      // sayı belirli, parça numarası değil. Bu yüzden `accLib` YAZILMAZ — bir
+      // parça numarası iddia etmek olurdu, üstelik künye uygulamak örneğin
+      // rapordan ölçülmüş kW eğrisini de ezerdi.
       { key:'ALT',  type:'fead-alternator',  name:'Alternatör (155 A)',
-        data:{ od:57,  x:-281.00,  y:259.50, contact:'grooved', inertia:0.0144 } },
+        data:{ od:57,  x:-281.00,  y:259.50, contact:'grooved', inertia:0.0144,
+               optimumRpm:6000, maxContRpm:8000, maxPeakRpm:12000 } },
       { key:'TEN',  type:'fead-tensioner',   name:'Otomatik Gergi (E9843)',
         // Merkez = "Layout Data"nın TEN satırı (−161,97 / 91,29), yani diğer
         // beş kasnakla AYNI sütun: çalışma konumundaki kasnak merkezi.
@@ -2092,8 +2099,15 @@ var VE_FEAD_EXAMPLES = {
     pulleys: [
       { key:'CRK', type:'fead-crank', name:"Krank Kasnağı",
         data:{ od:175.01, x:0, y:0, contact:'grooved', driver:true, inertia:0.5 } },
-      { key:'A_C', type:'fead-ac', name:"Klima Kompresörü",
-        data:{ od:118.01, x:263, y:15, contact:'grooved', inertia:0.0034 } },
+      // MODEL RAPORUN KENDİSİNDE YAZILI: bileşen dosyası `SD7H15-AC.cmp`,
+      // tasarım adı da "Secondary AC (SD7H15) Drive". Katalogda tek Sanden
+      // 7H15 kaydı var (57RS319930), yani üç sınır da belirli.
+      // AD KATALOĞUN YAZIMIYLA: rapor `SD7H15` (Sanden'in kendi kodu), katalog
+      // "Sanden 7H15" diyor. Aynı parça — ama adı katalogla aynı yazmak, bağı
+      // gizli bir eşleme tablosu olmadan MAKİNEYLE denetlenebilir kılıyor.
+      { key:'A_C', type:'fead-ac', name:"Klima Kompresörü (Sanden 7H15)",
+        data:{ od:118.01, x:263, y:15, contact:'grooved', inertia:0.0034,
+               optimumRpm:1000, maxContRpm:3000, maxPeakRpm:6000 } },
       { key:'TEN', type:'fead-tensioner', name:"Otomatik Gergi (E9843)",
         data:{ od:75, contact:'back',
                cenX:121.28, cenY:68.38, armLen:90,
@@ -2125,8 +2139,15 @@ var VE_FEAD_EXAMPLES = {
     pulleys: [
       { key:'CRK', type:'fead-crank', name:"Krank Kasnağı",
         data:{ od:175.01, x:0, y:0, contact:'grooved', driver:true, inertia:0.5 } },
-      { key:'A_C', type:'fead-ac', name:"Klima Kompresörü",
-        data:{ od:118.01, x:263, y:15, contact:'grooved', inertia:0.0034 } },
+      // MODEL RAPORUN KENDİSİNDE YAZILI: bileşen dosyası `SD7H15-AC.cmp`,
+      // tasarım adı da "Secondary AC (SD7H15) Drive". Katalogda tek Sanden
+      // 7H15 kaydı var (57RS319930), yani üç sınır da belirli.
+      // AD KATALOĞUN YAZIMIYLA: rapor `SD7H15` (Sanden'in kendi kodu), katalog
+      // "Sanden 7H15" diyor. Aynı parça — ama adı katalogla aynı yazmak, bağı
+      // gizli bir eşleme tablosu olmadan MAKİNEYLE denetlenebilir kılıyor.
+      { key:'A_C', type:'fead-ac', name:"Klima Kompresörü (Sanden 7H15)",
+        data:{ od:118.01, x:263, y:15, contact:'grooved', inertia:0.0034,
+               optimumRpm:1000, maxContRpm:3000, maxPeakRpm:6000 } },
       { key:'TEN', type:'fead-tensioner', name:"Otomatik Gergi (E9843)",
         data:{ od:75, contact:'back',
                cenX:124.57, cenY:63.97, armLen:90,
@@ -2158,8 +2179,15 @@ var VE_FEAD_EXAMPLES = {
     pulleys: [
       { key:'CRK', type:'fead-crank', name:"Krank Kasnağı",
         data:{ od:175.01, x:0, y:0, contact:'grooved', driver:true, inertia:0.5 } },
-      { key:'A_C', type:'fead-ac', name:"Klima Kompresörü",
-        data:{ od:118.01, x:263, y:15, contact:'grooved', inertia:0.0034 } },
+      // MODEL RAPORUN KENDİSİNDE YAZILI: bileşen dosyası `SD7H15-AC.cmp`,
+      // tasarım adı da "Secondary AC (SD7H15) Drive". Katalogda tek Sanden
+      // 7H15 kaydı var (57RS319930), yani üç sınır da belirli.
+      // AD KATALOĞUN YAZIMIYLA: rapor `SD7H15` (Sanden'in kendi kodu), katalog
+      // "Sanden 7H15" diyor. Aynı parça — ama adı katalogla aynı yazmak, bağı
+      // gizli bir eşleme tablosu olmadan MAKİNEYLE denetlenebilir kılıyor.
+      { key:'A_C', type:'fead-ac', name:"Klima Kompresörü (Sanden 7H15)",
+        data:{ od:118.01, x:263, y:15, contact:'grooved', inertia:0.0034,
+               optimumRpm:1000, maxContRpm:3000, maxPeakRpm:6000 } },
       { key:'TEN', type:'fead-tensioner', name:"Otomatik Gergi (E9843)",
         data:{ od:75, contact:'back',
                cenX:126.06, cenY:62.15, armLen:90,
@@ -2197,8 +2225,11 @@ var VE_FEAD_EXAMPLES = {
         data:{ od:176, x:0, y:0, contact:'grooved', driver:true, inertia:0.7 } },
       { key:'IDR', type:'fead-idler', name:"Avara",
         data:{ od:75, x:-200, y:150, contact:'back', inertia:0.0002 } },
-      { key:'ALT', type:'fead-alternator', name:"Alternatör",
-        data:{ od:55, x:-391, y:131, contact:'grooved', inertia:0.014 } },
+      // Bileşen dosyası `AG810-250Amp-ALT.cmp` — akım raporun kendisinde
+      // yazılı. Katalogda tek 250 A kaydı var (54100000001 Prestolite 250A).
+      { key:'ALT', type:'fead-alternator', name:"Alternatör (250 A)",
+        data:{ od:55, x:-391, y:131, contact:'grooved', inertia:0.014,
+               optimumRpm:6000, maxContRpm:8000, maxPeakRpm:12000 } },
       { key:'TEN', type:'fead-tensioner', name:"Otomatik Gergi (T38519)",
         data:{ od:75, contact:'back',
                cenX:-217.41, cenY:34.81, armLen:90,
@@ -2364,12 +2395,18 @@ var VE_FEAD_EXAMPLES = {
         data:{ od:159, x:0, y:0, contact:'grooved', driver:true } },
       { key:'IDR1', type:'fead-idler', name:"Avara 1",
         data:{ od:75, x:143, y:140, contact:'back' } },
+      // Adı modeli veriyor; katalogdaki iki Valeo TM31 kaydı (55100000130 ·
+      // 57RS322530) aynı üç sınırı taşıyor. Bkz. ALT kaydındaki gerekçe.
       { key:'TM31', type:'fead-ac', name:"Klima Kompresörü (TM31)",
-        data:{ od:152, x:184, y:314.6, contact:'grooved' } },
+        data:{ od:152, x:184, y:314.6, contact:'grooved',
+               optimumRpm:1000, maxContRpm:3000, maxPeakRpm:6000 } },
       { key:'IDR2', type:'fead-idler', name:"Avara 2",
         data:{ od:75, x:0, y:272.5, contact:'back' } },
-      { key:'SD7H15', type:'fead-ac', name:"Klima Kompresörü (SD7H15)",
-        data:{ od:119, x:-267.4, y:241, contact:'grooved' } },
+      // Bileşen dosyası `SD7H15.cmp`; katalogda tek Sanden 7H15 kaydı var
+      // (57RS319930). Ad kataloğun yazımıyla — bkz. AG0868 kayıtlarındaki not.
+      { key:'SD7H15', type:'fead-ac', name:"Klima Kompresörü (Sanden 7H15)",
+        data:{ od:119, x:-267.4, y:241, contact:'grooved',
+               optimumRpm:1000, maxContRpm:3000, maxPeakRpm:6000 } },
       { key:'TEN', type:'fead-tensioner', name:"Otomatik Gergi (E9843)",
         data:{ od:75, contact:'back',
                cenX:-174.47, cenY:86.93, armLen:90,

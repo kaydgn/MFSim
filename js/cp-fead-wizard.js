@@ -535,6 +535,14 @@ function veFeadWizSeed(key){
     if(d.inertia !== undefined) row.inertia = d.inertia;
     if(d.pwrCurve) row.pwrCurve = JSON.parse(JSON.stringify(d.pwrCurve));
     if(d.accPreset) row.accPreset = d.accPreset;
+    // DEVİR SINIRLARI DA TOHUMA GİRER. Ters yön (`veFeadWizNodes`) bunları
+    // zaten taşıyordu; eksik olan ÖRNEK → DURUM yönüydü ve tohum alan alan
+    // kopyaladığı için eksiklik sessizdi: örnekte sınır var, sihirbazdan
+    // kurulan modelde yok, uygunluk kapısı "değerlendirilemedi" diyordu.
+    if(d.accLib) row.accLib = d.accLib;
+    ['optimumRpm', 'maxContRpm', 'maxPeakRpm'].forEach(function(a){
+      if(d[a] !== undefined) row[a] = d[a];
+    });
     keyMap[p.key] = row.key;
     st.pulleys.push(row);
   });
