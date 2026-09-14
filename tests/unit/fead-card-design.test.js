@@ -63,11 +63,15 @@ const adKutulari = (svg) =>
       const x0 = an === 'middle' ? x - w / 2 : an === 'start' ? x : x - w;
       return { ad: m[4], x0, x1: x0 + w, y0: y - 8, y1: y + 2 };
     });
+// AÇI ETİKETİ ARTIK TAŞINABİLİR (2026-09-14): çapası `middle` olmak zorunda
+// değil ve `data-ve="wrap"` ile işaretli. Kutu kuralı adınkiyle aynı — çapa
+// nereye bakıyorsa kutu oradan büyür.
 const aciKutulari = (svg) =>
-  [...svg.matchAll(/<text x="([-\d.]+)" y="([-\d.]+)" text-anchor="middle" font-size="8" fill="var\(--accent-warning\)">([-\d.]+)°</g)]
+  [...svg.matchAll(/<text data-ve="wrap" x="([-\d.]+)" y="([-\d.]+)" text-anchor="(\w+)" font-size="8"[^>]*>([-\d.]+)°</g)]
     .map((m) => {
-      const w = (m[3] + '°').length * 8 * 0.6;
-      return { x0: +m[1] - w / 2, x1: +m[1] + w / 2, y0: +m[2] - 8, y1: +m[2] + 2 };
+      const x = +m[1], y = +m[2], an = m[3], w = (m[4] + '°').length * 8 * 0.6;
+      const x0 = an === 'middle' ? x - w / 2 : an === 'start' ? x : x - w;
+      return { aci: m[4], x0, x1: x0 + w, y0: y - 8, y1: y + 2 };
     });
 const ortusur = (a, b) => !(a.x1 <= b.x0 || a.x0 >= b.x1 || a.y1 <= b.y0 || a.y0 >= b.y1);
 const cakisma = (adlar, acilar) => {
@@ -256,6 +260,103 @@ describe('ad, sarım açısının üstüne DÜŞMEZ', () => {
       expect(yeni).toBeLessThanOrEqual(eski);
       expect(fark).toBeGreaterThan(30);        // engel gerçekten iş yapıyor (61–64/64)
     });
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   AÇI ETİKETİ DE TAŞINIR — engel olmak yetmiyordu
+   ──────────────────────────────────────────────────────────────────────────
+   Yukarıdaki kapı adı açıdan KAÇIRIYOR; açının kendisi ise kasnağın altına
+   ÇİVİLİYDİ. Ad kaçamadığı (dört adayın hiçbiri temiz olmadığı) her karede
+   iki yazı yine üst üste kalıyordu ve sayı bu kez adın altında kayboluyordu.
+
+   ÖLÇÜLDÜ — 12 örnek × 7 kol konumu × 5 kart ölçüsü = 420 çizim, 1820 ad ve
+   1820 açı kutusu:
+
+     çivili açı (eski)   ad ↔ açı çakışması  117
+     + kendi aday listesi                      60
+     + en-az-örtüşen geri düşüş                 0
+
+   İkinci satır tek başına yetmedi ve sebebi geri düşüştü: hiçbir aday temiz
+   değilken ilk adaya dönmek, 3 px payla sıyıran bir adayı yazıyı tamamen
+   örten bir adayla EŞİT sayıyordu. Ölçüt boole değil ALAN olunca kapandı.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('sarım açısı da KAÇAR — çivili değil', () => {
+  const ORNEKLER = Object.keys(M.VE_FEAD_EXAMPLES);
+  const KONUMLAR = ['free', 'replace', 'max', 'mean', 'min', 'load', 'all'];
+
+  // Bütün süpürmeyi tek yerde topla: üç kapı da aynı 420 çizimi okuyor.
+  const supur = () => {
+    const out = { cakisma: 0, adKutu: 0, aciKutu: 0, capa: {}, cizim: 0 };
+    ORNEKLER.forEach((key) => {
+      let pack;
+      try { pack = veFeadExampleNodes(key); } catch (e) { return; }
+      pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+      global.nodes = pack.nodes; global.connections = pack.connections;
+      let build;
+      try { build = veFeadBuildSystem(pack.nodes); } catch (e) { return; }
+      if (!build || !build.ok) return;
+      KONUMLAR.forEach((pm) => OLCULER.forEach(([W, H]) => {
+        let svg;
+        try { svg = fead.veFeadLayoutSVG(build, W, H, { nodeId: 'x', posMode: pm }); }
+        catch (e) { return; }
+        out.cizim++;
+        const adlar = adKutulari(svg), acilar = aciKutulari(svg);
+        out.adKutu += adlar.length;
+        out.aciKutu += acilar.length;
+        // AÇI SAYISI KASNAK SAYISI KADAR — taşınabilir olmak "kaybolabilir"
+        // demek değil; geri düşüş her zaman bir aday döndürür.
+        expect(acilar.length).toBe(build.order.length);
+        // ÇAPAYA DEĞİL KASNAĞA GÖRE SINIFLA: `middle` hem varsayılanı (alt) hem
+        // ikinci adayı (üst) kapsar; ayrımı ancak merkez noktası verir.
+        const merkez = [...svg.matchAll(/<circle cx="([-\d.]+)" cy="([-\d.]+)" r="2\.2"[^>]*data-pi="(\d+)"/g)]
+          .map((m) => ({ x: +m[1], y: +m[2] }));
+        [...svg.matchAll(/<text data-ve="wrap" x="([-\d.]+)" y="([-\d.]+)" text-anchor="(\w+)"/g)]
+          .forEach((m) => {
+            const x = +m[1], y = +m[2], an = m[3];
+            let en = null, d = Infinity;
+            merkez.forEach((c) => {
+              const t = (c.x - x) * (c.x - x) + (c.y - y) * (c.y - y);
+              if (t < d) { d = t; en = c; }
+            });
+            const yer = !en ? '?' : (an !== 'middle') ? 'yan' : (y > en.y ? 'alt' : 'ust');
+            out.capa[yer] = (out.capa[yer] || 0) + 1;
+          });
+        adlar.forEach((a) => acilar.forEach((b) => { if (ortusur(a, b)) out.cakisma++; }));
+      }));
+    });
+    return out;
+  };
+  const S = supur();
+
+  test('süpürme gerçekten ölçüyor — 420 çizim, iki tarafta da kutu var', () => {
+    expect(S.cizim).toBeGreaterThan(300);
+    expect(S.adKutu).toBeGreaterThan(1000);
+    expect(S.aciKutu).toBe(S.adKutu);          // her kasnakta hem ad hem açı
+  });
+
+  test('HİÇBİR çizimde ad ile açı çakışmıyor', () => {
+    expect(S.cakisma).toBe(0);
+  });
+
+  test('aday listesi ÖLÜ DEĞİL — üç adaya da taşınıyor', () => {
+    // Yalnız "alt" görülseydi liste kodda durur, çizimde hiçbir şey yapmazdı.
+    expect(S.capa.ust).toBeGreaterThan(0);
+    expect(S.capa.yan).toBeGreaterThan(0);
+  });
+
+  test('VARSAYILAN yer korunuyor — çoğunluk hâlâ kasnağın ALTINDA', () => {
+    // Aday sırası bozulursa (açı da üstü tercih ederse) iki etiket aynı yere
+    // koşar ve kaçınma hiçbir şey çözmez; kaçınma ancak tercihler AYRIŞINCA
+    // iş görür. Ölçülen dağılım (1820 etiket): alt 1092 · yan 524 · üst 204.
+    //
+    // EŞİK ÖLÇÜLEN SAYIYA ÇİVİLENMİYOR, KURALI SÖYLÜYOR: "varsayılan baskın".
+    // Ölçülen orana (0,60) çivilenseydi kapı bir ad uzadığında — kalabalık
+    // artar, açı daha çok kaçar — konusu olmayan bir sebeple kırmızıya dönerdi;
+    // nitekim bu tam olarak oldu (aksesuar adlarına model kodu eklenince oran
+    // 0,62'den 0,60'a indi).
+    expect(S.capa.alt / S.aciKutu).toBeGreaterThanOrEqual(0.5);
+    expect(S.capa.alt).toBeGreaterThan((S.capa.ust || 0) + (S.capa.yan || 0));
   });
 });
 

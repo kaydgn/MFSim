@@ -2702,6 +2702,7 @@ function veFeadLayoutSVG(build, W, H, opts){
   // etiket komşu kasnağın alanına giriyor. İlk TEMİZ aday seçilir; hiçbiri
   // temiz değilse üste dönülür (etiket kaybolmaz, yalnız çakışır).
   var _etiket = [];
+  var _aciEt = [];
   (function(){
     var T0 = _feadXform(s, offX, offY, minX, maxY);
     var segler = [];
@@ -2764,40 +2765,104 @@ function veFeadLayoutSVG(build, W, H, opts){
     // ad, açıdan kaçarken gülün üstüne düşerdi (ölçüldü: taşınmış gül kapısı
     // kırmızıya döndü).
     var yumusak = [];
-    if(opts.wrapLabels !== false)
+    var aciVar = (opts.wrapLabels !== false);
+    // AÇININ KENDİ ADAY LİSTESİ VAR (2026-09-14) — ama VARSAYILAN yeri hâlâ
+    // adın yumuşak engeli. İkisi birlikte çalışıyor: ad önce kaçmayı dener
+    // (açı yerinde kalsın, çizim kare kare oynamasın), kaçamazsa açı taşınır.
+    // Yalnız biri olsaydı: engel olmadan ad koşulsuz açının üstüne düşerdi,
+    // aday listesi olmadan da ad kaçamadığı her karede iki yazı üst üste kalırdı.
+    var aciAday = [];
+    if(aciVar)
       ps.forEach(function(p, k){
-        var X = offX + (p.c[0]-minX)*s, Y = offY + (maxY-p.c[1])*s + p.rPitch*s + 10;
-        var w = etW(_feadR(geom.wrapDeg(k)) + '°', 8) / 2;
-        yumusak.push({ x0:X-w, x1:X+w, y0:Y-8, y1:Y+2 });
+        var X = offX + (p.c[0]-minX)*s, Yc = offY + (maxY-p.c[1])*s, R = p.rPitch*s;
+        var w = etW(_feadR(geom.wrapDeg(k)) + '°', 8);
+        // SIRA ADINKİNİN TERSİ: ad üstü, açı altı tercih eder. Aynı sırayla
+        // arasalardı ikisi de aynı yere koşar, yer değiştirme hiçbir şey
+        // çözmezdi — kaçınma ancak tercihler ayrıştığında iş görür.
+        aciAday.push([
+          { x:X,       y:Yc+R+10, an:'middle', x0:X-w/2,   x1:X+w/2,   y0:Yc+R+2,  y1:Yc+R+12 },
+          { x:X,       y:Yc-R-4,  an:'middle', x0:X-w/2,   x1:X+w/2,   y0:Yc-R-12, y1:Yc-R-2 },
+          { x:X+R+5,   y:Yc+3,    an:'start',  x0:X+R+5,   x1:X+R+5+w, y0:Yc-5,    y1:Yc+5 },
+          { x:X-R-5,   y:Yc+3,    an:'end',    x0:X-R-5-w, x1:X-R-5,   y0:Yc-5,    y1:Yc+5 }
+        ]);
+        yumusak.push(aciAday[k][0]);          // adın gördüğü yumuşak engel: VARSAYILAN yer
       });
     // Gerilme sayıları da aynı tierde: ad ile sayı birbirini bilmiyordu.
     _spanEt.forEach(function(e){ yumusak.push(e); });
-    if(!adVar) return;                       // ad yoksa yerleştirilecek etiket de yok
-    ps.forEach(function(p, k){
-      var X = offX + (p.c[0]-minX)*s, Y = offY + (maxY-p.c[1])*s, R = p.rPitch*s;
-      var w = etW(gorAd(k), 9), h = 10;
-      var aday = [
-        { x:X,        y:Y-R-4,      an:'middle', x0:X-w/2,  x1:X+w/2,  y0:Y-R-4-8,   y1:Y-R-4+2 },
-        { x:X,        y:Y+R+11,     an:'middle', x0:X-w/2,  x1:X+w/2,  y0:Y+R+11-8,  y1:Y+R+11+2 },
-        { x:X+R+5,    y:Y+3,        an:'start',  x0:X+R+5,  x1:X+R+5+w, y0:Y-5,      y1:Y+5 },
-        { x:X-R-5,    y:Y+3,        an:'end',    x0:X-R-5-w, x1:X-R-5, y0:Y-5,       y1:Y+5 }
-      ];
-      function dene(sayilariDaKolla){
+
+    // ORTAK YERLEŞTİRİCİ. Ad ve açı aynı kuralı koşuyor; ayrıştıkları tek şey
+    // aday sırası ve hangi listeye yazıldıkları. İki kopya tutmak, birinde
+    // düzeltilen bir sınır denetiminin ötekinde eksik kalması demekti.
+    function icerde(a){
+      return !(a.x0 < 1 || a.x1 > W-ROSE-1 || a.y0 < 1 || a.y1 > H-1);
+    }
+    // Örtüşme ALANI — geri düşüşün ölçütü. Boole "çakıştı mı" yetmiyordu:
+    // hiçbir aday temiz değilken ilkine dönmek, 3 px payla sıyıran bir adayı
+    // yazıyı tamamen örten bir adayla EŞİT sayıyordu.
+    function ortAlan(a, b){
+      var w = Math.min(a.x1,b.x1) - Math.max(a.x0,b.x0);
+      var h = Math.min(a.y1,b.y1) - Math.max(a.y0,b.y0);
+      return (w > 0 && h > 0) ? w*h : 0;
+    }
+    function yerlestir(aday, yumusakList, akilliGeri){
+      function dene(yumusagiDaKolla){
         for(var i=0;i<aday.length;i++){
           var a = aday[i];
-          if(a.x0 < 1 || a.x1 > W-ROSE-1 || a.y0 < 1 || a.y1 > H-1) continue;
+          if(!icerde(a)) continue;
           var carpti = false;
           for(var j=0;j<segler.length && !carpti;j++) if(kesisir(segler[j], a)) carpti = true;
           for(var m=0;m<kutular.length && !carpti;m++) if(ortusur(kutular[m], a)) carpti = true;
-          if(sayilariDaKolla)
-            for(var y=0;y<yumusak.length && !carpti;y++) if(ortusur(yumusak[y], a)) carpti = true;
+          if(yumusagiDaKolla)
+            for(var y=0;y<yumusakList.length && !carpti;y++) if(ortusur(yumusakList[y], a)) carpti = true;
           if(!carpti) return a;
         }
         return null;
       }
-      var sec = dene(true) || dene(false) || aday[0];
-      kutular.push(sec); _etiket.push(sec);
-    });
+      var sec = dene(true) || dene(false);
+      if(sec) return sec;
+      // HİÇBİRİ TEMİZ DEĞİL. Etiket yine de ÇİZİLİR (kaybolmaz) — soru yalnız
+      // NEREYE. `akilliGeri` açıkken en az örtüşen aday seçilir; kapalıyken
+      // ilk aday, yani eski davranış birebir.
+      if(!akilliGeri) return aday[0];
+      var enIyi = aday[0], enAz = Infinity;
+      for(var i=0;i<aday.length;i++){
+        var a = aday[i];
+        if(!icerde(a)) continue;
+        var puan = 0;
+        for(var m=0;m<kutular.length;m++) puan += ortAlan(kutular[m], a);
+        for(var y=0;y<yumusakList.length;y++) puan += ortAlan(yumusakList[y], a) * 0.25;
+        if(puan < enAz){ enAz = puan; enIyi = a; }
+      }
+      return enIyi;
+    }
+
+    // 1) ADLAR — sert engellere, sonra (mümkünse) yumuşaklara göre.
+    if(adVar)
+      ps.forEach(function(p, k){
+        var X = offX + (p.c[0]-minX)*s, Y = offY + (maxY-p.c[1])*s, R = p.rPitch*s;
+        var w = etW(gorAd(k), 9);
+        var sec = yerlestir([
+          { x:X,        y:Y-R-4,      an:'middle', x0:X-w/2,  x1:X+w/2,  y0:Y-R-4-8,   y1:Y-R-4+2 },
+          { x:X,        y:Y+R+11,     an:'middle', x0:X-w/2,  x1:X+w/2,  y0:Y+R+11-8,  y1:Y+R+11+2 },
+          { x:X+R+5,    y:Y+3,        an:'start',  x0:X+R+5,  x1:X+R+5+w, y0:Y-5,      y1:Y+5 },
+          { x:X-R-5,    y:Y+3,        an:'end',    x0:X-R-5-w, x1:X-R-5, y0:Y-5,       y1:Y+5 }
+        ], yumusak);
+        kutular.push(sec); _etiket.push(sec);
+      });
+
+    // 2) SARIM AÇILARI — adlar ARTIK YERLEŞMİŞ birer sert engel. Sıra tersine
+    // olamazdı: ad yapısal bilgidir (hangi sayı hangi kasnağın), açı bir
+    // okumadır; yeri daralan taraf okuma olmalı.
+    //
+    // Kendi varsayılan yeri yumuşak listeden ÇIKARILIR — yoksa açı kendi
+    // tercih ettiği yeri "dolu" sayıp koşulsuz ikinci adaya kaçardı.
+    if(aciVar)
+      ps.forEach(function(p, k){
+        var kendi = aciAday[k][0];
+        var yl = yumusak.filter(function(x){ return x !== kendi; });
+        var sec = yerlestir(aciAday[k], yl, true);
+        kutular.push(sec); _aciEt.push(sec);
+      });
   })();
 
   // mm → ekran dönüşümü TEK NESNEDE (_feadXform): animatör de kare başına aynı
@@ -3104,9 +3169,16 @@ function veFeadLayoutSVG(build, W, H, opts){
     // orada tablo YOK, kart tek başına duruyor. Raporda aynı altı sayı bir
     // sonraki sayfada hizalı ve iki ondalıkla basılıyor; şemada ise kayış
     // yolunun üstüne düşüyor (ölçüldü: dört çakışmanın ikisi bu etiketten).
-    if(opts.wrapLabels !== false)
-      svg += '<text x="' + X + '" y="' + f(Y + R + 10) + '" text-anchor="middle" font-size="8" fill="var(--accent-warning)">'
+    //
+    // YERİ YERLEŞTİRİCİDEN GELİR, sabit değil: varsayılanı kasnağın altı, ama
+    // orası doluysa üst/sağ/sol adaylarına taşınır (bkz. `aciAday`). Sabitken
+    // ad kaçamadığı her karede iki yazı üst üste kalıyordu.
+    if(opts.wrapLabels !== false){
+      var _ae = _aciEt[k] || { x: X, y: Y + R + 10, an: 'middle' };
+      svg += '<text data-ve="wrap" x="' + f(_ae.x) + '" y="' + f(_ae.y) + '" text-anchor="'
+          + _ae.an + '" font-size="8" fill="var(--ink-warning)">'
           + f(geom.wrapDeg(k)) + '°</text>';
+    }
   });
 
   // SEÇİLİ KONUMUN KÜNYESİ — sol üstte. "Hangi konumu görüyorum" sorusu şemanın

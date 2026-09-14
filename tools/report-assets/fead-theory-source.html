@@ -94,6 +94,12 @@ svg{width:100%;height:auto;display:block}
   --accent-danger:#a8321f;  --text-secondary:#3c4350; --text-muted:#5a6270;
   --bg-input:#fff; --border-color:#c9cdd3; --radius-sm:2px;
   --fs-tiny:11px; --fs-micro:10px;
+  /* --ink-*: METİN rolü. Uygulamada `--accent-*` DOLGU (çerçeve, zemin),
+     `--ink-*` ise zemine karşı okunacak yazı; çizici sarım açısını ikincisiyle
+     yazıyor. Baskı paletinde kâğıt beyaz olduğu için amber koyulaştırılır —
+     `--warn` (#8a5a1e) zaten bu belgenin kendi okunur amberi. */
+  --ink-accent:#24425f;  --ink-success:#2e7d4f;
+  --ink-warning:#8a5a1e; --ink-danger:#a8321f;
 }
 svg text{font-family:'IBM Plex Mono',monospace}
 

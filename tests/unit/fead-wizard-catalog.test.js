@@ -249,6 +249,45 @@ describe('veFeadWizNodes — altı yeni alan taşınıyor', () => {
     expect(sd.overspeedRpm).toBe(2900);
   });
 
+  // TOHUM YÖNÜ DE TAŞIMAK ZORUNDA — ve TAŞIMIYORDU.
+  //
+  // Yukarıdaki kapılar DURUM → DÜĞÜM yönünü tutuyor. Eksik olan ÖRNEK → DURUM
+  // yönüydü: `veFeadWizSeed` örneğin kasnak verisini alan alan kopyalıyor ve
+  // listede `optimumRpm` / `maxContRpm` / `maxPeakRpm` YOKTU. Sonuç sessizdi ve
+  // tam olarak kullanıcının gördüğü yoldan geçiyordu — örnek sihirbazın 1.
+  // adımından yükleniyor:
+  //
+  //   örnekte sınır VAR → sihirbaz durumunda YOK → kurulan modelde YOK
+  //   → uygunluk kapısı "değerlendirilemedi" (gerçek tarayıcıda ölçüldü)
+  //
+  // Kapı GİDİŞ-DÖNÜŞ ölçüyor: örneğin kendi verisi, sihirbazdan geçip kurulan
+  // düğümde birebir çıkmalı. Tek yönü ölçmek bu kusuru göremezdi.
+  test('TOHUM → DÜĞÜM gidiş-dönüş: örneğin devir sınırları kayb olmuyor', () => {
+    const M2 = require('../../js/fead-model.js');
+    // Sınır taşıyan her örnek denenir — listeye tek örnek yazmak, ötekiler
+    // eklendiğinde kapıyı sessizce dar bırakırdı.
+    let denenen = 0;
+    Object.keys(M2.VE_FEAD_EXAMPLES).forEach((key) => {
+      const ex = M2.VE_FEAD_EXAMPLES[key];
+      const sinirli = (ex.pulleys || []).filter((p) =>
+        p.data && (p.data.optimumRpm > 0 || p.data.maxContRpm > 0 || p.data.maxPeakRpm > 0));
+      if (!sinirli.length) return;
+      expect(wiz.veFeadWizSeed(key)).not.toBe(false);
+      const pack = wiz.veFeadWizNodes();
+      sinirli.forEach((p) => {
+        denenen++;
+        const n = pack.nodes.filter((x) => (x.customName || '') === (p.name || ''))[0];
+        expect({ key, ad: p.name, var: !!n }).toEqual({ key, ad: p.name, var: true });
+        ['optimumRpm', 'maxContRpm', 'maxPeakRpm'].forEach((f) => {
+          if (p.data[f] === undefined) return;
+          expect({ key, ad: p.name, f, v: n.data[f] })
+            .toEqual({ key, ad: p.name, f, v: p.data[f] });
+        });
+      });
+    });
+    expect(denenen).toBeGreaterThanOrEqual(6);
+  });
+
   test('boş alan taşınmaz — 0 yazılmıyor', () => {
     bmcKur();
     const sd = wiz.veFeadWizNodes().nodes.filter((x) => x.id === 'wz-solver')[0].data;

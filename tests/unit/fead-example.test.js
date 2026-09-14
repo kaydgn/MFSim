@@ -553,3 +553,157 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
       .toMatch(/türetilemedi/);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  ÖRNEKLERİN AKSESUAR DEVİR SINIRLARI — HEPSİ KAYNAĞA BAĞLI
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Uygunluk kapılarından biri (aksesuar devir sınırı) on iki örneğin ON İKİSİNDE
+// de "değerlendirilemedi" diyordu: çevrim tepesi VARDI ama karşılaştırılacak
+// bir sınır yoktu. Sınırlar örneklere yazıldı — ama yalnız RAPORUN KENDİSİ
+// modeli söylediği yerde:
+//
+//   AG0868 ×3   `SD7H15-AC.cmp`            → Sanden 7H15   (katalogda tek kayıt)
+//   AG00810     `AG810-250Amp-ALT.cmp`     → Prestolite 250A (tek kayıt)
+//   AG00894     `TM31.cmp` · `SD7H15.cmp`  → Valeo TM31 · Sanden 7H15
+//   AG00976     örneğin adı "Alternatör (155 A)" → Prestolite 155A (iki kayıt,
+//               ikisi de aynı üç sınırı taşıyor: sayı belirli, parça numarası değil)
+//
+// YAZILMAYANLAR DA BİR SONUÇTUR ve sebepleri ölçüldü:
+//   AG00686 ×2  rapor yalnız `A_C.cmp` diyor — model adı yok
+//   AG00902 ×2  `7_9kW_A_C.cmp` — GÜÇ yazıyor, model değil
+//   AG00879     `220Amp` — katalogda 220 A kaydı yok
+//   AG00976 klima  tasarım adı `TM32` — katalogda TM32 yok (TM21 ve TM31 var)
+//   BMC_FEAD_2026  tedarikçi sayfası aksesuarı genel adla anıyor
+//
+// KAPI SAYIYI KATALOĞA BAĞLIYOR: örnekte yazan her sınır, o modelin katalog
+// kayıtlarının HEPSİNİN üzerinde anlaştığı değer olmak zorunda. `accLib`
+// bilerek yazılmıyor — künye uygulamak raporun ölçülmüş kW eğrisini ezerdi ve
+// iki kayıt arasından birini seçmek doğrulanamayan bir parça numarası iddiası
+// olurdu.
+describe('örnek aksesuar sınırları KATALOĞA bağlı', () => {
+  const A = require('../../js/fead-accessories.js');
+  const SINIR = ['optimumRpm', 'maxContRpm', 'maxPeakRpm'];
+
+  // Adın parantezindeki model → katalog kayıtları. Eşleme ÖRNEĞİN KENDİ
+  // ADINDAN çözülüyor, ayrı bir tablo tutulmuyor: tablo ikinci bir kaynak olur
+  // ve ad değişince sessizce eskirdi.
+  //
+  // ÖLÇÜT: MODEL KODU KATALOG ADININ TAM KUYRUĞUDUR. "Sanden 7H15" ile raporun
+  // yazdığı "SD7H15" aynı parçadır; ortak olan kuyruk `7H15` ve katalog adı
+  // tam olarak onunla bitiyor. Düz `includes` bunu kaçırıyordu (marka öneki iki
+  // yazımda farklı).
+  //
+  // "SON N KARAKTER" GEVŞEKLİĞİ ÖLÇÜLDÜ VE REDDEDİLDİ: üç karakterlik ortak
+  // kuyruk ölçütüyle "250 A" hem `Prestolite 250A`'ya hem `Tepaş 350A`'ya
+  // ("50A") eşleşiyor ve ikisinin anlık sınırı ayrışıyor (12000 ↔ 10000).
+  // Kuyruğun TAMAMI aranınca o eşleşme düşüyor.
+  const cekirdek = (s) => (s || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  const modelKayitlari = (ad) => {
+    const m = /\(([^)]+)\)\s*$/.exec(ad || '');
+    if (!m) return null;
+    const tok = cekirdek(m[1]);                              // "155 A" → "155A"
+    if (tok.length < 3) return null;
+    const bul = A.VE_FEAD_ACC_DB.filter((r) => cekirdek(r.ad).endsWith(tok));
+    return bul.length ? bul : null;
+  };
+
+  const aksesuarlar = () => {
+    const out = [];
+    Object.keys(M.VE_FEAD_EXAMPLES).forEach((key) => {
+      const ex = M.VE_FEAD_EXAMPLES[key];
+      (ex.pulleys || []).forEach((p) => {
+        if (p.type !== 'fead-ac' && p.type !== 'fead-alternator') return;
+        out.push({ key, ad: p.name || '', d: p.data || {} });
+      });
+    });
+    return out;
+  };
+
+  test('süpürme gerçekten aksesuar buluyor', () => {
+    const a = aksesuarlar();
+    expect(a.length).toBeGreaterThan(10);
+    expect(a.filter((x) => SINIR.some((f) => x.d[f] > 0)).length).toBeGreaterThan(5);
+  });
+
+  test('sınır yazan HER aksesuarın adı modeli söylüyor', () => {
+    const suclu = aksesuarlar()
+      .filter((x) => SINIR.some((f) => x.d[f] > 0))
+      .filter((x) => !modelKayitlari(x.ad));
+    expect(suclu.map((x) => x.key + ' → "' + x.ad + '"')).toEqual([]);
+  });
+
+  test('yazılan her sınır, o modelin BÜTÜN katalog kayıtlarında aynı', () => {
+    const bad = [];
+    let sayilan = 0;
+    aksesuarlar().forEach((x) => {
+      const kay = modelKayitlari(x.ad);
+      if (!kay) return;
+      SINIR.forEach((f) => {
+        if (!(x.d[f] > 0)) return;
+        sayilan++;
+        const v = [...new Set(kay.map((r) => r[f]))];
+        if (v.length !== 1)
+          bad.push(`${x.key} ${f}: katalog AYRIŞIYOR (${v.join('/')}) — yazılamaz`);
+        else if (v[0] !== x.d[f])
+          bad.push(`${x.key} ${f}: örnek ${x.d[f]} ↔ katalog ${v[0]}`);
+      });
+    });
+    expect(bad).toEqual([]);
+    expect(sayilan).toBeGreaterThanOrEqual(18);        // 6 aksesuar × 3 sınır
+  });
+
+  test('modeli BİLİNMEYEN aksesuara sınır yazılmamış', () => {
+    // Ters yön: "hepsine yazalım, kapı da geçsin" yolunu kapatıyor. Adı model
+    // vermeyen bir aksesuarda sınır varsa o sayı kaynaksızdır.
+    const suclu = aksesuarlar()
+      .filter((x) => !modelKayitlari(x.ad))
+      .filter((x) => SINIR.some((f) => x.d[f] > 0))
+      .map((x) => x.key + ' → "' + x.ad + '"');
+    expect(suclu).toEqual([]);
+  });
+
+  test('`accLib` YAZILMIYOR — künye rapordan ölçülmüş kW eğrisini ezerdi', () => {
+    expect(aksesuarlar().filter((x) => x.d.accLib)).toEqual([]);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  ÇEVRİM ORANI PENCERESİ NEDEN HÂLÂ HÜKÜM VEREMİYOR — ölçülmüş sebep
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// İkinci kapı motorun GOVERNED devrini istiyor ve on iki örneğin hiçbirinde yok.
+// ÖLÇÜLDÜ, ve eksiklik bir ihmal değil bir kaynak sınırı:
+//
+//   · Arşivdeki on bir Gates raporunun hiçbirinde governed/rated devir alanı
+//     YOK (raporlar çevrim tablosu veriyor, motor künyesi değil).
+//   · BMC tedarikçi sayfasının krank çapı 197,32 mm; motor kataloğunda TAM
+//     eşleşme yok (en yakını 197,72) ve o çapı taşıyan DÖRT kayıt governed
+//     devirde AYRIŞIYOR (2100 · 2200). Yani çaptan motor çözülemiyor.
+//
+// Kapı bu yüzden "wait" diyor ve mesajı da doğru: kullanıcıdan motor künyesini
+// istiyor. Bu bir kusur DEĞİL — test, birinin "örneklere bir governed yazalım"
+// demesini engellemek için var.
+describe('governed devri UYDURULMUYOR', () => {
+  test('hiçbir örnek governed/overspeed devri taşımıyor', () => {
+    const suclu = [];
+    Object.keys(M.VE_FEAD_EXAMPLES).forEach((key) => {
+      const sd = (M.VE_FEAD_EXAMPLES[key].solver) || {};
+      ['governedRpm', 'noLoadGovernedRpm', 'overspeedRpm'].forEach((f) => {
+        if (sd[f] != null) suclu.push(key + '.' + f + ' = ' + sd[f]);
+      });
+    });
+    expect(suclu).toEqual([]);
+  });
+
+  test('BMC krank çapı motor kataloğunu TEK kayda indirmiyor', () => {
+    const E = require('../../js/fead-engines.js');
+    const c = M.VE_FEAD_EXAMPLES.BMC_FEAD_2026.solver.crankOD;
+    expect(c).toBe(197.32);
+    expect(E.VE_FEAD_ENGINE_DB.filter((e) => e.crankOD === c)).toEqual([]);
+    // En yakın çap 197,72 — ve o çapı taşıyan kayıtlar governed'da ayrışıyor.
+    const yakin = E.VE_FEAD_ENGINE_DB.filter((e) => Math.abs((e.crankOD || 0) - c) < 0.5);
+    expect(yakin.length).toBeGreaterThan(1);
+    expect([...new Set(yakin.map((e) => e.governedRpm))].length).toBeGreaterThan(1);
+  });
+});
