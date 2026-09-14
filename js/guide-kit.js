@@ -243,7 +243,11 @@ var VE_GUIDE_APPFIG_TOKENS = {
   '--radius-md': '3px', '--tracking-wide': '.04em',
   '--ink-accent': '#24425f', '--ink-success': '#2e7d4f',
   '--ink-warning': '#c8781e', '--ink-danger': '#a8321f',
+  // ZEMİNİNİN EŞİ, ailenin varsayılanı DEĞİL: baskı paletinde amber
+  // (--accent-warning #c8781e) üstünde beyaz 3,41:1, siyah 6,16:1; yeşilde
+  // (#2e7d4f) tersi — beyaz 5,05:1, siyah 4,16:1.
   '--on-accent': '#fff', '--on-danger': '#fff',
+  '--on-warning': '#000', '--on-success': '#fff',
   '--accent-tint-6': 'rgba(36,66,95,.06)',  '--accent-tint-8': 'rgba(36,66,95,.08)',
   '--accent-tint-10': 'rgba(36,66,95,.10)', '--accent-tint-12': 'rgba(36,66,95,.12)',
   '--accent-tint-15': 'rgba(36,66,95,.15)', '--accent-tint-22': 'rgba(36,66,95,.22)',

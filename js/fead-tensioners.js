@@ -91,47 +91,47 @@ var VE_FEAD_TEN_LIB_SOURCE  = 'Gates ABDS raporları (14 sistem), '
 // ribs     : künyenin ölçüldüğü kayış genişliği (meanNm bunun için geçerli)
 var VE_FEAD_TENSIONER_DB = [
   { key:'AG00976-1715', src:'AG00976 · 8PK1715HD · Ten@-250/110',
-    armLen:90, preloadNm:8.60, rateNm:0.480, meanNm:22.07, od:77.2, contact:'back',
+    armLen:90, preloadNm:8.60, rateNm:0.480, meanNm:22.07, od:75.0, contact:'back',
     loadStopRelDeg:60.4, inertia:null, ribs:8, note:'E9843 (montaj çizimi: 28° FreeArm–Mean)' },
   { key:'AG00976-1705', src:'AG00976 · 1705 mm · Ten@-250/110',
-    armLen:90, preloadNm:9.11, rateNm:0.483, meanNm:22.66, od:77.2, contact:'back',
+    armLen:90, preloadNm:9.11, rateNm:0.483, meanNm:22.66, od:75.0, contact:'back',
     inertia:null, ribs:8, note:'' },
   { key:'AG00976-1668', src:'AG00976 · 1668 mm · Ten@-240/115',
-    armLen:90, preloadNm:8.87, rateNm:0.484, meanNm:22.43, od:77.2, contact:'back',
+    armLen:90, preloadNm:8.87, rateNm:0.484, meanNm:22.43, od:75.0, contact:'back',
     loadStopRelDeg:48.3, inertia:null, ribs:8, note:'' },
   { key:'AG00976-1655', src:'AG00976 · 1655 mm · Ten@-250/104',
-    armLen:90, preloadNm:8.99, rateNm:0.484, meanNm:22.54, od:77.2, contact:'back',
+    armLen:90, preloadNm:8.99, rateNm:0.484, meanNm:22.54, od:75.0, contact:'back',
     inertia:null, ribs:8, note:'' },
   { key:'AG00879', part:'T38665', src:'AG00879 · 5 kasnak · kol 56 mm',
-    armLen:56, preloadNm:20.05, rateNm:0.409, meanNm:31.14, od:76.2, contact:'back',
+    armLen:56, preloadNm:20.05, rateNm:0.409, meanNm:31.14, od:74.0, contact:'back',
     loadStopRelDeg:39.0, inertia:null, ribs:8, note:'Bandın DIŞINDA: kısa kollu ayrı bir gövde' },
   { key:'AG00894', part:'E9843', src:'AG00894 · 6 kasnak',
-    armLen:90, preloadNm:8.93, rateNm:0.475, meanNm:23.00, od:77.2, contact:'back',
+    armLen:90, preloadNm:8.93, rateNm:0.475, meanNm:23.00, od:75.0, contact:'back',
     loadStopRelDeg:60.7, inertia:0.0002, ribs:8, note:'' },
   { key:'AG00902-1300', part:'E9843', src:'AG00902 · 1300 mm · 4 kasnak',
-    armLen:90, preloadNm:9.31, rateNm:0.476, meanNm:22.21, od:77.2, contact:'back',
+    armLen:90, preloadNm:9.31, rateNm:0.476, meanNm:22.21, od:75.0, contact:'back',
     loadStopRelDeg:57.4, inertia:0.0004, ribs:8, note:'' },
   { key:'AG00902-1275', part:'E9843', src:'AG00902 · 1275 mm · 4 kasnak',
-    armLen:90, preloadNm:9.13, rateNm:0.480, meanNm:22.15, od:77.2, contact:'back',
+    armLen:90, preloadNm:9.13, rateNm:0.480, meanNm:22.15, od:75.0, contact:'back',
     loadStopRelDeg:45.2, inertia:0.0004, ribs:8, note:'' },
   { key:'AG00686', part:'T38624', src:'AG00686 · 8PK1475 · 4 kasnak',
-    armLen:90, preloadNm:8.59, rateNm:0.482, meanNm:24.54, od:77.2, contact:'back',
+    armLen:90, preloadNm:8.59, rateNm:0.482, meanNm:24.54, od:75.0, contact:'back',
     loadStopRelDeg:62.4, inertia:0.0076, ribs:8, note:'Nominal dönme 33.1° — banttan yüksek ayar' },
   { key:'AG00686-1520', part:'T38624', src:'AG00686 · 1520 mm',
-    armLen:90, preloadNm:8.86, rateNm:0.476, meanNm:22.20, od:77.2, contact:'back',
+    armLen:90, preloadNm:8.86, rateNm:0.476, meanNm:22.20, od:75.0, contact:'back',
     loadStopRelDeg:54.5, inertia:0.0076, ribs:8, note:'' },
   { key:'AG0868-8PK', part:'E9843', src:'AG0868 · 3 kasnak · 8PK',
-    armLen:90, preloadNm:8.56, rateNm:0.501, meanNm:22.57, od:77.2, contact:'back',
+    armLen:90, preloadNm:8.56, rateNm:0.501, meanNm:22.57, od:75.0, contact:'back',
     loadStopRelDeg:48.4, inertia:0.0009, ribs:8, note:'' },
   { key:'AG0868-6PK', part:'E9843', src:'AG0868 · 3 kasnak · 6PK',
-    armLen:90, preloadNm:8.65, rateNm:0.495, meanNm:19.04, od:77.2, contact:'back',
+    armLen:90, preloadNm:8.65, rateNm:0.495, meanNm:19.04, od:75.0, contact:'back',
     loadStopRelDeg:32.6, inertia:0.0009, ribs:6, note:'Aynı gövde, dar kayış → düşük ayar' },
   { key:'AG0868-4PK', part:'E9843', src:'AG0868 · 3 kasnak · 4PK',
-    armLen:90, preloadNm:8.46, rateNm:0.505, meanNm:16.07, od:77.2, contact:'back',
+    armLen:90, preloadNm:8.46, rateNm:0.505, meanNm:16.07, od:75.0, contact:'back',
     loadStopRelDeg:24.1, inertia:0.0009, ribs:4, note:'Aynı gövde, dar kayış → düşük ayar' },
   { key:'AG00810', src:'AG00810 · 4 kasnak',
     armLen:90, preloadNm:11.561, preloadDerived:true, rateNm:0.483, meanNm:29.48,
-    od:77.2, contact:'back', loadStopRelDeg:66.5, inertia:0.0004, ribs:10, part:'T38519',
+    od:75.0, contact:'back', loadStopRelDeg:66.5, inertia:0.0004, ribs:10, part:'T38519',
     note:'Ön yük RAPORDA YOK — mean torktan türetildi (11.561). Ayar bandın üstünde.' }
 ];
 
@@ -366,6 +366,45 @@ function veFeadTensionerApply(td, rec){
   return td;
 }
 
+// SEÇİLİ KÜNYEDEN SAPMA — motor kataloğundaki `veFeadEngineDrift`'in aynısı.
+//
+// NEDEN VAR: üç katalogtan İKİSİ sapmayı söylüyordu, gergi SÖYLEMİYORDU.
+// Kullanıcı kütüphaneden bir gergi seçip kol boyunu 90'dan 85'e çekince
+// `tenLib` hâlâ o kaydı gösteriyor, panel "Ölçülmüş künye: … kol 90 mm"
+// yazıyor ve bant denetimi de GEÇİYOR — 85, on dört kaydın bandının içinde.
+// Yani ekran bir parça kimliği iddia ediyor, model başka bir parça taşıyor.
+//
+// PARÇA ile MONTAJ AYRI RAPORLANIR ve bu bir incelik değil: kartın kendi
+// metni "kol boyu · ön yük · katsayı · kasnak çapı · parça kodu PARÇANIN,
+// çalışma momenti ise MONTAJIN" diyor — aynı gergi 8PK'da 22,57 · 6PK'da
+// 19,04 Nm ile kuruluyor. Çalışma momentini sapma saymak, doğru kurulmuş her
+// modeli uyarı ile işaretlerdi.
+function veFeadTensionerDrift(td){
+  var rec = veFeadTensionerOf(td && td.tenLib);
+  if(!rec) return null;
+  var out = { key: rec.key, part: rec.part || null, drift: [], montaj: [] };
+  var say = function(v){ var n = Number(v); return Number.isFinite(n) ? n : NaN; };
+  [['armLen','armLen','kol boyu','mm'],
+   ['preload','preloadNm','yay ön yükü','Nm'],
+   ['kArm','rateNm','yay katsayısı','Nm/°'],
+   ['od','od','kasnak çapı','mm'],
+   ['inertia','inertia','kol ataleti','kg·m²'],
+   ['loadStopRelDeg','loadStopRelDeg','load stop','°']
+  ].forEach(function(a){
+    if(rec[a[1]] == null) return;                 // kayıtta yok → hüküm yok
+    var v = say(td[a[0]]);
+    if(Number.isFinite(v) && Math.abs(v - rec[a[1]]) > 1e-6)
+      out.drift.push(a[2] + ' ' + v + ' ' + a[3] + ' (künye ' + rec[a[1]] + ')');
+  });
+  // Temas tarafı sayısal değil ama PARÇANIN: ters çevrilmişse parça da başkadır.
+  if(rec.contact && td.contact && td.contact !== rec.contact)
+    out.drift.push('temas tarafı ' + td.contact + ' (künye ' + rec.contact + ')');
+  var m = say(td.meanLoad);
+  if(rec.meanNm != null && Number.isFinite(m) && Math.abs(m - rec.meanNm) > 1e-6)
+    out.montaj.push('çalışma momenti ' + m + ' Nm (künye ' + rec.meanNm + ')');
+  return out;
+}
+
 // Girilen künye ölçülen bandın neresinde? HÜKÜM DEĞİL, KARŞILAŞTIRMA.
 // Kullanıcının gergisi 14 raporun dışından olabilir; bu bir hata değil, ama
 // bir ondalık kayması da tam buradan görünür (rate 0.48 yerine 0.048 yazmak
@@ -411,6 +450,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadTensionerOf: veFeadTensionerOf,
     veFeadTensionerFind: veFeadTensionerFind,
     veFeadTensionerApply: veFeadTensionerApply,
+    veFeadTensionerDrift: veFeadTensionerDrift,
     veFeadTensionerBandCheck: veFeadTensionerBandCheck
   };
 }

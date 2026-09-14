@@ -75,7 +75,7 @@ function getFeadModulePropertiesHTML(node){
     html += '<tr><td style="padding:7px 8px; border:1px solid var(--border-color); color:var(--text-muted);">Alt topoloji henüz açılmadı</td></tr>';
   }
   html += '</table>';
-  html += '<button onclick="veFeadOpenEditor(\'' + node.id + '\')" style="width:100%; padding:14px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.03em;" onmouseover="this.style.filter=\'brightness(1.15)\'" onmouseout="this.style.filter=\'none\'">▶ Alt Topolojiyi Aç</button>';
+  html += '<button onclick="veFeadOpenEditor(\'' + node.id + '\')" style="width:100%; padding:14px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:var(--on-accent); border:none; cursor:pointer; letter-spacing:0.03em;" onmouseover="this.style.filter=\'brightness(1.15)\'" onmouseout="this.style.filter=\'none\'">▶ Alt Topolojiyi Aç</button>';
   html += '</div>';
   return html;
 }
@@ -505,7 +505,8 @@ function veFeadApplyBadge(nodeEl, node){
     // --fs-micro zaten "rozet, mikro etiket" için tanımlı.
     + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
     + 'padding:2px 4px; border-radius:3px; font-family:ui-monospace, monospace;'
-    + 'color:#fff; background:' + (back ? 'var(--text-secondary, #666)' : 'var(--accent-primary, #3b82f6)')
+    + 'color:' + (back ? 'var(--bg-primary)' : 'var(--on-accent)')
+    + '; background:' + (back ? 'var(--text-secondary, #666)' : 'var(--accent-primary, #3b82f6)')
     + '; border:1px solid var(--bg-primary, #111);';
   var box = nodeEl.querySelector('.ve-node-box') || nodeEl;
   box.appendChild(b);
@@ -546,8 +547,9 @@ function veFeadApplyBeltModeBadge(nodeEl, node){
   b.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; cursor:pointer;'
     + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
     + 'padding:2px 4px; border-radius:3px; font-family:ui-monospace, monospace;'
-    + 'color:#fff; background:' + (serbest ? 'var(--accent-warning, #f59e0b)'
-                                           : 'var(--accent-primary, #3b82f6)')
+    + 'color:' + (serbest ? 'var(--on-warning)' : 'var(--on-accent)')
+    + '; background:' + (serbest ? 'var(--accent-warning, #f59e0b)'
+                                 : 'var(--accent-primary, #3b82f6)')
     + '; border:1px solid var(--bg-primary, #111);'
     + (kilit ? 'cursor:default; opacity:0.85;' : '');
   // Rozete basmak düğümü SÜRÜKLEMEYE başlatmamalı: veAttachNodeDrag mousedown'ı
@@ -643,6 +645,13 @@ function veFeadApplySpinBadge(nodeEl, node){
   var bg = (hkm === true) ? 'var(--accent-success, #22c55e)'
          : (hkm === false) ? 'var(--accent-danger, #ef4444)'
          : 'var(--text-secondary, #666)';
+  // METİN JETONU ZEMİNİN EŞİ: `--on-accent` birincil aksana göre kalibre,
+  // yeşil/kırmızı dolguya göre değil. Nötr hâlin zemini bir METİN rengi
+  // (`--text-secondary`) olduğu için oraya `--on-accent` de uymaz — tersi
+  // gerek, yani sayfanın kendi zemini.
+  var fg = (hkm === true) ? 'var(--on-success)'
+         : (hkm === false) ? 'var(--on-danger)'
+         : 'var(--bg-primary)';
   var b = document.createElement('span');
   b.className = 've-fead-badge';
   b.textContent = metin;
@@ -658,7 +667,7 @@ function veFeadApplySpinBadge(nodeEl, node){
   b.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; cursor:pointer;'
     + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
     + 'padding:2px 4px; border-radius:3px; font-family:ui-monospace, monospace;'
-    + 'color:#fff; background:' + bg + '; border:1px solid var(--bg-primary, #111);';
+    + 'color:' + fg + '; background:' + bg + '; border:1px solid var(--bg-primary, #111);';
   b.onmousedown = function(e){ e.stopPropagation(); };
   b.ondblclick  = function(e){ e.stopPropagation(); e.preventDefault(); };
   b.onclick = function(e){
@@ -717,7 +726,7 @@ function getFeadSpinPropertiesHTML(node){
     + _feadEsc(metin) + '</div>'
     + '<button onclick="veFeadToggleSpin()" style="width:100%; padding:11px 14px; '
     + 'margin-bottom:9px; border:none; cursor:pointer; border-radius:var(--radius-sm); '
-    + 'color:#fff; font-weight:700; letter-spacing:0.03em; font-size:var(--fs-body); '
+    + 'color:var(--on-accent); font-weight:700; letter-spacing:0.03em; font-size:var(--fs-body); '
     + 'background:var(--accent-primary);">Yönü çevir</button>'
     // DÜZLEM ADI TEK ÜRETİCİDEN (`_feadPlaneName`). Burada ikinci kez
     // yazılsaydı, ayna bayrağı değişince panel sessizce eskirdi.
@@ -743,7 +752,7 @@ function getFeadSpinPropertiesHTML(node){
   if(hkm && !hkm.ok){
     html += _feadCard('Gergi tarafı', 'hüküm', 'var(--accent-danger)',
         '<div style="font-size:var(--fs-micro); color:var(--text-secondary); line-height:1.7;">'
-      + '<b style="color:var(--accent-danger);">Gergi kayışın GERGİN tarafında.</b> '
+      + '<b style="color:var(--ink-danger);">Gergi kayışın GERGİN tarafında.</b> '
       + 'Ankraj ' + _feadFmt(hkm.anchorN, 1) + ' N, en düşük açıklık '
       + _feadFmt(hkm.minN, 1) + ' N ("' + _feadEsc(hkm.minName || '—') + '") — '
       + _feadFmt(hkm.deficitN, 1) + ' N altında. Otomatik gergi tanım gereği '
@@ -754,7 +763,7 @@ function getFeadSpinPropertiesHTML(node){
       + 'türüyor, panelde girilen bir alan değil.'
       + '</div>');
   } else if(hkm && hkm.ok){
-    html += _feadHint('<b style="color:var(--accent-success);">Gergi gevşek tarafta ✓</b> — '
+    html += _feadHint('<b style="color:var(--ink-success);">Gergi gevşek tarafta ✓</b> — '
       + 'ankraj en düşük açıklık, gerilme zinciri bu yönde tutarlı.');
   } else {
     html += _feadHint('Gergi tarafı hükmü için önce Çözücü panelinden çözüm koşturun.');
@@ -921,7 +930,7 @@ function veFeadAccLimitCard(node){
     var elle = ['optimum','maxCont','maxPeak'].filter(function(k){
       return lim[k] && lim[k].kaynak === 'elle'; });
     h += _feadHint(elle.length
-      ? '<b>' + _feadEsc(lim.ad) + '</b> seçili; <b style="color:var(--accent-warning);">'
+      ? '<b>' + _feadEsc(lim.ad) + '</b> seçili; <b style="color:var(--ink-warning);">'
         + elle.length + ' alan elle girilmiş</b> ve katalog değerinin yerine geçiyor.'
       : '<b>' + _feadEsc(lim.ad) + '</b> — üç sınır da katalogdan.');
   }
@@ -1006,7 +1015,7 @@ function veFeadPowerCurveCard(node){
       + (Number.isFinite(motor) ? _feadFmt(motor, 0) : '—') + '</td>'
       + '<td style="padding:1px 3px; border:1px solid var(--border-color); text-align:center;">'
       + '<button onclick="veFeadCurveRemove(\'' + node.id + '\',' + pi + ')" title="Satırı sil"'
-      + ' style="background:none; border:none; color:var(--accent-danger); cursor:pointer; font-size:var(--fs-body); line-height:1;">×</button></td></tr>';
+      + ' style="background:none; border:none; color:var(--ink-danger); cursor:pointer; font-size:var(--fs-body); line-height:1;">×</button></td></tr>';
   });
   h += '</table>';
 
@@ -1017,10 +1026,10 @@ function veFeadPowerCurveCard(node){
 
   var not = '';
   if(raw.length && pts.length < raw.length)
-    not += _feadHint('<b style="color:var(--accent-warning);">' + (raw.length - pts.length)
+    not += _feadHint('<b style="color:var(--ink-warning);">' + (raw.length - pts.length)
       + ' satır eksik/geçersiz</b> — yalnız devir ve güç değeri dolu satırlar eğriye girer.');
   if(pts.length === 1)
-    not += _feadHint('<b style="color:var(--accent-warning);">Tek nokta</b> — eğri sabit güç '
+    not += _feadHint('<b style="color:var(--ink-warning);">Tek nokta</b> — eğri sabit güç '
       + 'gibi davranır (her devirde ' + _feadFmt(pts[0].kw, 2) + ' kW).');
 
   return _feadCard('Güç Eğrisi', 'sayfadaki devir → kW tablosu', 'var(--accent-primary)',
@@ -1219,9 +1228,24 @@ function veFeadTensionerLibCard(node){
   });
   h += '</select></div>';
 
+  // SEÇİLİ KÜNYEDEN SAPMA — bant denetiminden ÖNCE, çünkü daha keskin bir
+  // soruya cevap veriyor: bant "on dört raporun aralığında mı", sapma ise
+  // "hâlâ SEÇTİĞİN parça mı". Kol boyunu 90'dan 85'e çekmek bandı geçer ama
+  // parçayı değiştirir; ekran o ana kadar yine de künyenin adını yazıyordu.
+  var sap = (typeof veFeadTensionerDrift === 'function') ? veFeadTensionerDrift(td) : null;
+  if(sap && sap.drift.length)
+    h += _feadHint('<b style="color:var(--ink-warning);">Künyeden sapıldı:</b> '
+      + _feadEsc(sap.drift.join('; ')) + '. Bu alanlar <b>parçanın</b> verisidir — '
+      + 'değiştirdiyseniz elinizdeki gergi artık seçili künye değildir. '
+      + 'Kasıtlıysa listeden <i>— elle gir —</i> seçin; künye adı yanıltmasın.');
+  if(sap && sap.montaj.length)
+    h += _feadHint('<b>Montaja göre ayarlandı:</b> ' + _feadEsc(sap.montaj.join('; '))
+      + '. Çalışma momenti <b>montajın</b> verisidir, parçanın değil — aynı gergi '
+      + 'kanal sayısına göre farklı momentle kurulur. Bu bir sapma DEĞİL.');
+
   var b = veFeadTensionerBandCheck(td);
   if(b.outside.length)
-    h += _feadHint('<b style="color:var(--accent-warning);">Ölçülen bandın dışında:</b> '
+    h += _feadHint('<b style="color:var(--ink-warning);">Ölçülen bandın dışında:</b> '
       + _feadEsc(b.outside.join('; ')) + '. Bu bir hata DEĞİL — elinizdeki gergi '
       + 'bu 14 raporun dışından olabilir. Ama bir ondalık kayması da tam burada '
       + 'görünür.');
@@ -1302,7 +1326,7 @@ function veFeadMountReadout(node){
     + 'margin-top:7px; background:var(--bg-tertiary); border:1px solid var(--border-color); '
     + 'border-radius:var(--radius-sm); display:flex; justify-content:space-between; gap:8px;">'
     + '<span style="color:var(--text-muted);">↳ gövdenin montaj konumu (türedi)</span>'
-    + '<span style="font-family:ui-monospace,monospace; color:var(--accent-warning);">'
+    + '<span style="font-family:ui-monospace,monospace; color:var(--ink-warning);">'
     + _feadFmt(p[0], 2) + ' / ' + _feadFmt(p[1], 2) + ' mm</span></div>';
 }
 
@@ -1344,19 +1368,19 @@ function veFeadArmReadout(node){
   h += satir('Kol çalışma açısı (girdi)', _feadFmt(th, 2) + '°');
   var p = veFeadTensionerPivot(td);
   if(p) h += satir('↳ gövdenin montaj konumu (türedi)',
-    _feadFmt(p[0], 2) + ' / ' + _feadFmt(p[1], 2), 'var(--accent-warning)');
+    _feadFmt(p[0], 2) + ' / ' + _feadFmt(p[1], 2), 'var(--ink-warning)');
 
   if(!b || !b.ok){
-    h += satir('Kayış yolu', '— çözülemedi', 'var(--accent-danger)');
+    h += satir('Kayış yolu', '— çözülemedi', 'var(--ink-danger)');
     h += '</div>';
     var sebep = (b && b.errors && b.errors.length) ? b.errors[0] : '';
     return h + (sebep
-      ? _feadHint('<b style="color:var(--accent-danger);">' + _feadEsc(sebep) + '</b>')
+      ? _feadHint('<b style="color:var(--ink-danger);">' + _feadEsc(sebep) + '</b>')
       : _feadHint('Kayış yolu bu yerleşimle çözülemiyor.'));
   }
 
   h += satir('Serbest kol açısı (türedi)', _feadFmt(b.freeAngleDeg, 2) + '°');
-  h += satir('Gereken KAYIŞ BOYU (çıktı)', _feadFmt(b.beltLengthMm, 1) + ' mm', 'var(--accent-warning)');
+  h += satir('Gereken KAYIŞ BOYU (çıktı)', _feadFmt(b.beltLengthMm, 1) + ' mm', 'var(--ink-warning)');
   if(Number.isFinite(b.springTensionN))
     h += satir('Tasarım gerginliği (türedi)', _feadFmt(b.springTensionN, 1) + ' N');
   h += veFeadPinRows(b.pin, satir);
@@ -1370,13 +1394,13 @@ function veFeadArmReadout(node){
   if(bant && bant.ok){
     h += satir(bant.userOk ? 'Kol açısı olanaklı bantta' : 'Kol açısı bandın DIŞINDA',
       (bant.userOk ? '✓ ' : '✗ ') + _feadFmt(bant.arcDeg, 0) + '° / 360° kullanılabilir',
-      bant.userOk ? 'var(--accent-success)' : 'var(--accent-danger)');
+      bant.userOk ? 'var(--ink-success)' : 'var(--ink-danger)');
   }
   h += '</div>';
 
   if(bant && bant.ok){
     if(!bant.userOk && bant.userWhy)
-      h += _feadHint('<b style="color:var(--accent-danger);">Bu açı kullanılamaz:</b> '
+      h += _feadHint('<b style="color:var(--ink-danger);">Bu açı kullanılamaz:</b> '
         + _feadEsc(bant.userWhy) + '. Kayış servis ömrü boyunca kol bu yerleşimi '
         + 'taşıyamıyor — gövdenin montaj saatini değiştirin.');
     var fig = veFeadBandSVG(bant, 320, 132);
@@ -1387,7 +1411,7 @@ function veFeadArmReadout(node){
         + '<b>Bu bir öneri değildir</b> — bandın hangi noktasının motor bloğunda '
         + 'kullanılabilir olduğunu program bilmez; şekil yalnız seçimin bedelini yazar.');
   } else if(bant && bant.note){
-    h += _feadHint('<b style="color:var(--accent-warning);">' + _feadEsc(bant.note) + '</b>');
+    h += _feadHint('<b style="color:var(--ink-warning);">' + _feadEsc(bant.note) + '</b>');
   }
 
   var not = _feadHint('Kol çalışma açısı <b>girilen</b> bir sayıdır ve program onu '
@@ -1402,7 +1426,7 @@ function veFeadArmReadout(node){
     + 'varsayılan <b>konmuyor</b>.');
   not += veFeadPinNote(b.pin);
   if(b.warnings && b.warnings.length)
-    not += _feadHint('<b style="color:var(--accent-warning);">' + _feadEsc(b.warnings[0]) + '</b>');
+    not += _feadHint('<b style="color:var(--ink-warning);">' + _feadEsc(b.warnings[0]) + '</b>');
   return h + not;
 }
 
@@ -1601,7 +1625,7 @@ function getFeadBeltPropertiesHTML(node){
         ? '<div style="display:flex; align-items:center; gap:10px; margin-bottom:9px;">'
           + '<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">'
           + 'Boy kipi</div><div style="width:150px; text-align:center; font-weight:700; '
-          + 'font-size:var(--fs-body); color:var(--accent-warning);">SERBEST (kilitli)</div></div>'
+          + 'font-size:var(--fs-body); color:var(--ink-warning);">SERBEST (kilitli)</div></div>'
           + _feadHint('Kasnak merkezleri ve gergi künyesi verildiğinde kol nominal yay '
             + 'yüküne oturuyor; kapanan kayış yolunun boyu o konumun <b>sonucudur</b> ve '
             + 'girdi olarak seçilemez.')
@@ -1713,7 +1737,7 @@ function veFeadBeltCatalogCard(node, serbest){
       + ' border-bottom:1px solid var(--border-color); white-space:nowrap;">' + t + '</th>';
   };
   var h = '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin:-3px 0 7px;">'
-    + 'Gereken boy <b style="color:var(--accent-warning);">' + _feadFmt(o.targetMm, 2)
+    + 'Gereken boy <b style="color:var(--ink-warning);">' + _feadFmt(o.targetMm, 2)
     + ' mm</b> — aşağıdaki boylardan birini seçerseniz gergi kolu ve gerginlik '
     + 'şu değerlere oturur.</div>';
   h += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse;'
@@ -1731,7 +1755,7 @@ function veFeadBeltCatalogCard(node, serbest){
     var ger = (f.ok && f.fits && Number.isFinite(f.tensionN))
       ? _feadFmt(f.tensionN, 0) + ' N' : '—';
     var sig = !(f.ok && f.fits);
-    if(sig){ kol = '<span style="color:var(--accent-danger);">sığmıyor</span>'; }
+    if(sig){ kol = '<span style="color:var(--ink-danger);">sığmıyor</span>'; }
     return '<tr style="cursor:pointer;' + vur + (sig ? ' opacity:0.65;' : '') + '"'
       + ' onclick="veFeadPickBelt(\'' + node.id + '\',' + c.lengthMm + ')"'
       + ' title="Bu boyu seç (kip SABİT olur)">'
@@ -1739,7 +1763,7 @@ function veFeadBeltCatalogCard(node, serbest){
       + '<td style="padding:3px 5px; text-align:right; color:var(--text-muted);">'
       + (c.deltaMm >= 0 ? '+' : '−') + _feadFmt(Math.abs(c.deltaMm), 1) + '</td>'
       + '<td style="padding:3px 5px; text-align:left;">' + _feadEsc(c.code)
-      + (izgara ? ' <span style="color:var(--accent-warning);">◇</span>' : '') + '</td>'
+      + (izgara ? ' <span style="color:var(--ink-warning);">◇</span>' : '') + '</td>'
       + '<td style="padding:3px 5px; text-align:right;">' + kol + '</td>'
       + '<td style="padding:3px 5px; text-align:right;">' + ger + '</td></tr>';
   };
@@ -1829,7 +1853,7 @@ function veFeadDerivedLengthHTML(node){
     + 'Gereken efektif boy</div>'
     + '<div style="width:130px; text-align:center; font-family:ui-monospace, monospace;'
     + ' font-weight:700; font-size:var(--fs-body); color:'
-    + (supheli ? 'var(--accent-danger)' : 'var(--accent-warning)') + ';">'
+    + (supheli ? 'var(--ink-danger)' : 'var(--ink-warning)') + ';">'
     + _feadEsc(deger) + (supheli ? ' ?' : '') + '</div></div>'
     + _feadHint(not);
 }
@@ -1844,7 +1868,7 @@ function veFeadBeltDbHint(node){
       + 'kaburga adımı ' + bp.ribPitch + ' mm · min. kasnak çapı ' + bp.minPulleyDia + ' mm · '
       + 'maks. hız ' + bp.maxSpeedMs + ' m/s.';
   } catch(e){
-    return '<span style="color:var(--accent-danger);">' + _feadEsc(veFeadTranslateError(e && e.message)) + '</span>';
+    return '<span style="color:var(--ink-danger);">' + _feadEsc(veFeadTranslateError(e && e.message)) + '</span>';
   }
 }
 
@@ -3386,7 +3410,7 @@ function veFeadLayoutCardHTML(node){
       : 'Kayış yolu henüz kurulamadı.';
     h += '<div style="padding:10px 12px; text-align:center; font-size:var(--fs-micro);'
       + ' line-height:1.5; color:var(--text-muted);">'
-      + '<div style="font-size:var(--fs-tiny); font-weight:700; color:var(--accent-danger);'
+      + '<div style="font-size:var(--fs-tiny); font-weight:700; color:var(--ink-danger);'
       + ' margin-bottom:5px;">Şema çizilemiyor</div>' + _feadEsc(neden)
       + ((build && build.errors && build.errors.length > 1)
           ? '<div style="margin-top:5px; opacity:0.8;">+' + (build.errors.length - 1)
@@ -3900,7 +3924,7 @@ function veFeadLayoutCardStrip(build, mode){
       }
     } catch(e){ ok = false; sol = 'Geometri okunamadı'; }
   }
-  var renk = ok ? 'var(--accent-success)' : 'var(--accent-danger)';
+  var renk = ok ? 'var(--ink-success)' : 'var(--ink-danger)';
   return '<div style="flex:0 0 auto; display:flex; justify-content:space-between; gap:6px;'
     + ' align-items:center; padding:2px 7px; font-size:var(--fs-micro); line-height:1.5;'
     + ' font-family:ui-monospace, monospace; color:' + renk
@@ -5101,7 +5125,7 @@ function getFeadSolverPropertiesHTML(node){
     + 'font-size:var(--fs-lg); font-weight:700; letter-spacing:0.03em; border:none; cursor:'
     + (hazir ? 'pointer' : 'not-allowed') + '; background:'
     + (hazir ? 'var(--accent-warning)' : 'var(--bg-tertiary)') + '; color:'
-    + (hazir ? '#fff' : 'var(--text-muted)')
+    + (hazir ? 'var(--on-warning)' : 'var(--text-muted)')
     + (hazir ? '' : '; border:1px solid var(--border-color)') + ';">▶ Hesapla'
     + (hazir ? '' : ' (model veya çevrim eksik)') + '</button>';
 
@@ -5128,9 +5152,9 @@ function veFeadChecksCard(node, build){
   var h = '';
 
   function rozet(durum){
-    if(durum === 'ok')   return '<span style="color:var(--accent-success); font-weight:700;">✓ uygun</span>';
-    if(durum === 'warn') return '<span style="color:var(--accent-warning); font-weight:700;">⚠ sınırda</span>';
-    if(durum === 'no')   return '<span style="color:var(--accent-danger); font-weight:700;">✗ kontrol</span>';
+    if(durum === 'ok')   return '<span style="color:var(--ink-success); font-weight:700;">✓ uygun</span>';
+    if(durum === 'warn') return '<span style="color:var(--ink-warning); font-weight:700;">⚠ sınırda</span>';
+    if(durum === 'no')   return '<span style="color:var(--ink-danger); font-weight:700;">✗ kontrol</span>';
     return '<span style="color:var(--text-muted);">— değerlendirilemedi</span>';
   }
   function baslik(ad, durum, ek){
@@ -5147,8 +5171,8 @@ function veFeadChecksCard(node, build){
   }
   function pay(p){
     var renk = !Number.isFinite(p) ? 'var(--text-muted)'
-             : p < 0  ? 'var(--accent-danger)'
-             : p < 10 ? 'var(--accent-warning)' : 'var(--text-secondary)';
+             : p < 0  ? 'var(--ink-danger)'
+             : p < 10 ? 'var(--ink-warning)' : 'var(--text-secondary)';
     return '<span style="color:' + renk + ';">' + (Number.isFinite(p) ? _feadFmt(p, 1) + '%' : '—') + '</span>';
   }
 
@@ -5182,7 +5206,7 @@ function veFeadChecksCard(node, build){
         + '<td' + TDR + '>' + _feadFmt(r.optimumRpm, 0) + '</td>'
         + '<td' + TDR + '>' + _feadFmt(r.accRpm, 0) + '</td>'
         + '<td' + TDR + '>' + _feadFmt(r.maxContRpm, 0) + '</td>'
-        + '<td' + TD + '><span style="color:' + (r.ok ? 'var(--accent-success)' : 'var(--accent-danger)')
+        + '<td' + TD + '><span style="color:' + (r.ok ? 'var(--ink-success)' : 'var(--ink-danger)')
         + ';">' + _feadEsc(r.metin) + '</span></td></tr>';
     });
     h += tablo(t2);
@@ -5276,7 +5300,7 @@ function veFeadDriveCard(node){
     + 'display:flex; justify-content:space-between; gap:8px;">'
     + '<span style="color:var(--text-muted);">Kullanılan tahrik oranı</span>'
     + '<span style="font-family:ui-monospace,monospace; font-weight:700; color:'
-    + (dr.ok ? 'var(--accent-primary)' : 'var(--accent-warning)') + ';">'
+    + (dr.ok ? 'var(--ink-accent)' : 'var(--ink-warning)') + ';">'
     + _feadFmt(dr.ratio, 4) + (dr.mode === 'derive' ? '  (' + _feadFmt(dr.crankOD, 2) + ' / ' + _feadFmt(dr.fanOD, 2) + ')' : '')
     + '  <span style="font-weight:400; color:var(--text-muted);">' + veFeadDriveModeLabel(dr.mode) + '</span>'
     + '</span></div>';
@@ -5350,7 +5374,7 @@ function veFeadEngineLibRow(node){
 
   var d = (typeof veFeadEngineDrift === 'function') ? veFeadEngineDrift(sd) : null;
   if(d && d.drift.length)
-    h += _feadHint('<b style="color:var(--accent-warning);">Katalogdan sapıldı:</b> '
+    h += _feadHint('<b style="color:var(--ink-warning);">Katalogdan sapıldı:</b> '
       + _feadEsc(d.drift.join('; ')) + '. Bu bir hata değil — kayıt varyanta göre '
       + 'değişebilir; ama bir yazım hatası da tam burada görünür.');
   else if(d)
@@ -5454,7 +5478,7 @@ function veFeadDutyEditor(node, build){
     });
     h += '<td style="padding:1px 3px; border:1px solid var(--border-color); text-align:center;">'
       + '<button onclick="veFeadDutyRemove(\'' + node.id + '\',' + ri + ')" title="Satırı sil"'
-      + ' style="background:none; border:none; color:var(--accent-danger); cursor:pointer; font-size:var(--fs-body); line-height:1;">×</button></td></tr>';
+      + ' style="background:none; border:none; color:var(--ink-danger); cursor:pointer; font-size:var(--fs-body); line-height:1;">×</button></td></tr>';
   });
   h += '</table>';
 
@@ -5469,7 +5493,7 @@ function veFeadDutyEditor(node, build){
 
   var uyari = '';
   if(rows.length && Math.abs(toplam - 100) > 0.5)
-    uyari = _feadHint('<b style="color:var(--accent-warning);">%zaman toplamı ' + _feadFmt(toplam, 1)
+    uyari = _feadHint('<b style="color:var(--ink-warning);">%zaman toplamı ' + _feadFmt(toplam, 1)
       + '</b> — 100 değil. Yorulma ve ömür payları bu ağırlıklara göre dağıtılır; '
       + 'toplam 100 değilse mutlak ömür ölçeklenir (dağılım yüzdeleri etkilenmez).');
 
@@ -5554,7 +5578,7 @@ function veFeadPositionTable(build){
     var isLoad = r.position === 'Load';
     if(r.error){
       h += '<tr><td style="padding:4px 5px; border:1px solid var(--border-color);">' + (ad[r.position] || r.position) + '</td>'
-        + '<td colspan="6" style="padding:4px 5px; border:1px solid var(--border-color); color:var(--accent-danger);">'
+        + '<td colspan="6" style="padding:4px 5px; border:1px solid var(--border-color); color:var(--ink-danger);">'
         + _feadEsc(veFeadTranslateError(r.error)) + '</td></tr>';
       return;
     }
@@ -6032,7 +6056,7 @@ function veFeadTorsionalCard(R){
     h += _feadHint('Duty tablosunun ateşleme frekansı bandı <b>' + _feadFmt(lo, 1) + '–'
       + _feadFmt(hi, 1) + ' Hz</b>. '
       + (ic.length
-          ? '<b style="color:var(--accent-warning);">Bu bandın içinde ' + ic.length
+          ? '<b style="color:var(--ink-warning);">Bu bandın içinde ' + ic.length
             + ' elastik mod var</b> (' + ic.map(function(f){ return _feadFmt(f, 1); }).join(' · ')
             + ' Hz ≈ ' + ic.map(function(f){ return _feadFmt(rpmOf(f), 0); }).join(' · ')
             + ' rpm). Ateşleme mertebesi bu devirlerde modu uyarır.'
@@ -6046,7 +6070,7 @@ function veFeadTorsionalCard(R){
   if(T.takeupCheck && Number.isFinite(T.takeupCheck.errPct)){
     var tk = T.takeupCheck.errPct, iyi = tk < 1;
     h += _feadHint('Take-up özdeşliği: Σ(∂span/∂kol) ile gergi take-up oranı '
-      + '<b style="color:' + (iyi ? 'var(--accent-success)' : 'var(--accent-danger)') + ';">%'
+      + '<b style="color:' + (iyi ? 'var(--ink-success)' : 'var(--ink-danger)') + ';">%'
       + _feadFmt(tk, 3) + '</b> farkla ' + (iyi ? 'tutuyor' : 'TUTMUYOR') + '.');
   }
 
@@ -6068,8 +6092,8 @@ function veFeadDutyResultTable(R){
   // kayma sınırı (1.0) kırmızıya boyanır — uydurma bir eşik gösterilmez.
   var SF_ist = _feadNum(R.serviceFact, 0);
   var sfRenk = function(sf){
-    if(sf < 1) return 'var(--accent-danger)';
-    if(SF_ist > 0 && sf < SF_ist) return 'var(--accent-warning)';
+    if(sf < 1) return 'var(--ink-danger)';
+    if(SF_ist > 0 && sf < SF_ist) return 'var(--ink-warning)';
     return null;
   };
   var h = '<div style="overflow-x:auto;"><table style="width:100%; font-size:var(--fs-micro); border-collapse:collapse; border:1px solid var(--border-color);">';
@@ -6096,7 +6120,7 @@ function veFeadDutyResultTable(R){
       + '<span style="color:var(--text-muted);">Servis faktörü ' + _feadFmt(SF_ist, 2)
       + ' &nbsp;·&nbsp; en kötü nokta ' + enKucukRpm + ' rpm</span>'
       + '<span style="font-family:ui-monospace,monospace; font-weight:700; color:'
-      + (gecti ? 'var(--accent-success)' : 'var(--accent-danger)') + ';">'
+      + (gecti ? 'var(--ink-success)' : 'var(--ink-danger)') + ';">'
       + 'min SF = ' + _feadFmt(enKucukSF, 2) + (gecti ? '  ✓ GEÇTİ' : '  ✗ KALDI') + '</span></div>';
   }
 
@@ -6124,7 +6148,7 @@ function veFeadDutyResultTable(R){
     && A.duty.some(function(d){ return d.slip.some(function(x){ return x.SF < 1; }); });
   var ek = '';
   if(tersYerlesim){
-    ek += _feadHint('<b style="color:var(--accent-danger);">Gergi kayışın GERGİN tarafında</b> — '
+    ek += _feadHint('<b style="color:var(--ink-danger);">Gergi kayışın GERGİN tarafında</b> — '
       + 'ankraj ' + _feadFmt(yon.anchorN, 1) + ' N iken ' + yon.drain.length
       + ' açıklık onun altına iniyor (en düşük ' + _feadFmt(yon.minN, 1) + ' N, "'
       + _feadEsc(yon.minName || '—') + '"). Otomatik gergi <b>gevşek</b> tarafa konur. '
@@ -6132,11 +6156,11 @@ function veFeadDutyResultTable(R){
       + 'almaktır; tasarım gerginliği yay dengesinden türediği için yükseltilemez. '
       + '<b>Bu tabloda kayma emniyet faktörü hüküm vermez.</b>');
   } else {
-    if(kayma) ek += _feadHint('<b style="color:var(--accent-danger);">Kayma emniyet faktörü 1\'in altına '
+    if(kayma) ek += _feadHint('<b style="color:var(--ink-danger);">Kayma emniyet faktörü 1\'in altına '
       + 'iniyor</b> — kayış o devirde kaymaya başlar. Sarım açısını artırın (avara ekleyin ya da '
       + 'kasnak konumlarını değiştirin); gergi künyesi daha yüksek yay momenti veriyorsa o da '
       + 'ankrajı yükseltir.');
-    if(neg) ek += _feadHint('<b style="color:var(--accent-warning);">Bir spanda negatif gerilme</b> — '
+    if(neg) ek += _feadHint('<b style="color:var(--ink-warning);">Bir spanda negatif gerilme</b> — '
       + 'kayış gevşiyor. Ankraj (' + _feadFmt(yon && yon.anchorN, 1) + ' N) yay dengesinden '
       + 'türüyor; çekilen güç bu ankrajın taşıyabileceğinden fazla.');
   }
@@ -6206,13 +6230,13 @@ function veFeadLifeCard(R){
   // değeri başka bir üsse göre. Ayrımı yalnız "Geçerlilik Sınırları" kutusuna
   // bırakmak, iki tabloyu yan yana okuyan kullanıcıyı yanıltırdı.
   if(L.modelMismatch)
-    h += _feadHint('<b style="color:var(--accent-warning);">SEÇİLEN YORULMA MODELİNE GÖRE DEĞİL.</b> '
+    h += _feadHint('<b style="color:var(--ink-warning);">SEÇİLEN YORULMA MODELİNE GÖRE DEĞİL.</b> '
       + 'Bu saat değeri <b>' + _feadEsc(L.calibratedModel || 'PK-2_2p-MT3') + '</b> sabitleriyle '
       + 'kalibre edilmiştir; Çözücü panelinde <b>' + _feadEsc(L.modelMismatch) + '</b> seçili. '
       + 'Yukarıdaki <b>dağılım</b> seçtiğiniz modeli kullanır ve geçerlidir — <b>mutlak ömür '
       + 'kullanmaz</b>. Karşılaştırma için dağılıma bakın.');
   if(!gecerli)
-    h += _feadHint('<b style="color:var(--accent-warning);">GEÇERLİLİK ALANI DIŞINDA.</b> '
+    h += _feadHint('<b style="color:var(--ink-warning);">GEÇERLİLİK ALANI DIŞINDA.</b> '
       + 'Model mutlak ömrü yalnız tüm kasnak çapları 79.6–176 mm iken doğrular. Aralık dışında '
       + 'sistematik olarak ~0.55× veriyor; yukarıdaki sayı bu ampirik düzeltmeyi içerir. '
       + 'Aralık dışı: ' + _feadEsc((L.outOfRange || []).join(', '))
@@ -6224,7 +6248,7 @@ function veFeadLimitsBox(R){
   if(!R.limits || !R.limits.length) return '';
   var h = '<ul style="margin:0; padding-left:18px; font-size:var(--fs-micro); line-height:1.6; color:var(--text-secondary);">';
   R.limits.forEach(function(x){ h += '<li>' + x + '</li>'; });
-  (R.warnings || []).forEach(function(x){ h += '<li style="color:var(--accent-warning);">' + _feadEsc(x) + '</li>'; });
+  (R.warnings || []).forEach(function(x){ h += '<li style="color:var(--ink-warning);">' + _feadEsc(x) + '</li>'; });
   return _feadCard('Geçerlilik Sınırları', 'spesifikasyon §7', 'var(--text-secondary)', h + '</ul>');
 }
 
