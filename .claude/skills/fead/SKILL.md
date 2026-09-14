@@ -287,6 +287,26 @@ olurdu.
     Ölçüldü (420 çizim): çivili açı 117 çakışma → kendi aday listesi 60 → alan
     ölçütlü geri düşüş **0**. Kapı: `fead-card-design.test.js` →
     *"sarım açısı da KAÇAR"*.
+22. **AÇILIŞ KADRAJI: büyük kartlar SÜTUN DEĞİL, iki sıra.** Tablo üstte,
+    iki kanvas altında yan yana (`veFeadArrangeByCoords` → `sira`). Üçü üst
+    üste dizilince blok dar-uzun oluyor (959×1388) ve geniş görüşe sığdırma
+    yükseklikten sınırlanıyor: ölçüldü, açılış zoom'u **0,473** ve görüşün
+    yalnız **%29,9**'u dolu — Kayış Tablosu'nun yazısı okunmuyordu. İki sırayla
+    **0,764** ve **%49,9**. Seçim yalnız sayısal değil: tablo giriş yüzeyi ve
+    üstte durması okuma sırasına uyuyor, iki kanvas ise aynı modelin iki resmi
+    ve yan yana durunca karşılaştırılıyor. Tek tür kart varsa eski sütun
+    davranışı birebir sürüyor. Kapı: `cp-fead.test.js` → *"BÜYÜK kartlar"*.
+23. **HER FEAD PANELİ AYNI KİMLİK SATIRINI ALIR.** Kasnaklar ve Çözücü
+    `VE_WIDE_PANEL_TYPES`'ta DEĞİLDİ ve eksiklik bir karar değil bir atlamaydı:
+    ikisi varsayılan (ortalı-simge) kimliğe düşüyor, gergi ve kayış kompakt-sol
+    satıra — aynı modülün panelleri iki ayrı pencere gibi açılıyordu (başlık
+    92 px ↔ 44 px, gerçek tarayıcıda ölçüldü).
+    Panel kozmetiğinde iki kural daha, ikisi de ölçülmüş kusura karşı:
+    **açıklama satırının ölçü sınırı var** (`.ve-fead-not`, 68ch — sınırsızken
+    satırlar 207 karaktere çıkıyordu) ve **açılır liste sabit piksel değil**
+    (`_FEAD_SEL`: taban + `auto` + tavan — sabit genişlik üç seçeneğin metnini
+    kırpıyordu, en uzunu 169 px gerek / 120 px alan). Kapı:
+    `source-hygiene.test.js` → *"FEAD panel kozmetiği"*.
 
 ## Referans dosyaları
 

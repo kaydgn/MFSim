@@ -8687,6 +8687,19 @@ span.ve-fw-ro{ display:inline-block; }
 }
 .ve-fead-kat-dugme.is-acik .sayi{ color:var(--ink-accent); }
 
+/* ══ FEAD PANEL TİPOGRAFİSİ ═══════════════════════════════════════════════
+   Açıklama satırı (`_feadHint`). ÖLÇÜ SINIRI ölçülmüş bir kusura karşı:
+   panel 980 px ve metin kabın tamamına yayılıyordu — gerçek tarayıcıda gergi
+   ve kayış panellerinde satırlar 207 KARAKTERE çıkıyor. Okunur bant 65–75;
+   `68ch` üst sınırı metni kısaltmadan satırı kısaltıyor.
+   Denetimler (alan · açılır liste) tam genişlikte KALIR: sınır yalnız
+   OKUNAN metne konur, hizalanan yüzeye değil. */
+.ve-fead-not{
+  font-size:var(--fs-micro); color:var(--text-muted);
+  line-height:1.45; margin:-3px 0 9px; max-width:68ch;
+}
+.ve-fead-not b, .ve-fead-not strong{ color:var(--text-secondary); font-weight:600; }
+
 /* PANEL ÇİZİMİN ÜSTÜNE BİNER, şeridi İTMEZ. Akışa girseydi panel açılınca
    çizim alanı daralır, şema yeniden ölçeklenir ve kullanıcı "neyi
    değiştirdim" sorusunu bir de kayan resimle çözmek zorunda kalırdı. */

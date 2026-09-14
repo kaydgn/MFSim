@@ -1524,6 +1524,57 @@ describe('veFeadArrangeByCoords — araç kartlarını diziyor, kasnağa dokunmu
     expect(bul('fead-layout').x).toBeGreaterThanOrEqual(solSag);
   });
 
+  // ── BÜYÜK KARTLAR SÜTUN DEĞİL, İKİ SIRA ─────────────────────────────────
+  // Üçü üst üste dizilince blok DAR ve UZUN oluyordu (959×1388) — görüş alanı
+  // ise geniş, yani sığdırma yükseklikten sınırlanıyor. ÖLÇÜLDÜ (gerçek
+  // tarayıcı, 1316×855): açılış zoom'u 0,473 ve görüşün yalnız %29,9'u dolu;
+  // Kayış Tablosu'nun yazısı okunmuyordu. Tablo üstte + kanvaslar yan yana →
+  // 0,764 ve %49,9.
+  //
+  // Kapı ORANI değil YAPIYI tutuyor: zoom kart ölçüleri değişince kayar ama
+  // "tablo üstte, kanvaslar aynı bantta yan yana" kuralı kalır.
+  test('BÜYÜK kartlar: tablo ÜSTTE, kanvaslar YAN YANA', () => {
+    const ns = kur(3, ['fead-belt', 'fead-solver', 'fead-table',
+                       'fead-layout', 'fead-layout']);
+    expect(fead.veFeadArrangeByCoords({ silent: true })).toBe(true);
+    const tbl = ns.find((n) => n.type === 'fead-table');
+    const kan = ns.filter((n) => n.type === 'fead-layout').sort((a, b) => a.x - b.x);
+    expect(kan).toHaveLength(2);
+
+    // 1) Tablo iki kanvasın da ÜSTÜNDE — alt kenarı ikisinin üst kenarından yukarıda.
+    kan.forEach((k) => expect(tbl.y + tbl.height).toBeLessThanOrEqual(k.y));
+    // 2) İki kanvas AYNI BANTTA: y'leri eşit, x'leri ayrı ve çakışmıyor.
+    expect(kan[1].y).toBe(kan[0].y);
+    expect(kan[1].x).toBeGreaterThanOrEqual(kan[0].x + kan[0].width);
+    // 3) Sağ blok yine sol şeridin SAĞINDA — gruplama bozulmadı.
+    const solSag = Math.max(...['fead-belt', 'fead-solver']
+      .map((t) => ns.find((n) => n.type === t))
+      .map((n) => n.x + n.width));
+    [tbl, kan[0]].forEach((n) => expect(n.x).toBeGreaterThanOrEqual(solSag));
+  });
+
+  test('BÜYÜK blok, sütun hâline göre DAHA GENİŞ ve DAHA ALÇAK', () => {
+    // Kazancın kendisi: aynı kartlar, daha görüş-dostu bir kutu. Oran
+    // yazılmıyor — ölçü sabitlerine çivilemek kapıyı kart ölçüsüne bağlardı.
+    const zarf = (ns) => {
+      const b = ns.filter((n) => ['fead-table', 'fead-layout'].includes(n.type));
+      return { w: Math.max(...b.map((n) => n.x + n.width)) - Math.min(...b.map((n) => n.x)),
+               h: Math.max(...b.map((n) => n.y + n.height)) - Math.min(...b.map((n) => n.y)) };
+    };
+    const a = kur(3, ['fead-table', 'fead-layout', 'fead-layout']);
+    fead.veFeadArrangeByCoords({ silent: true });
+    const iki = zarf(a);
+    // Tek tür kaldığında ESKİ davranış birebir sürüyor (sütun) — kıyas ölçüsü o.
+    const b = kur(3, ['fead-layout', 'fead-layout']);
+    fead.veFeadArrangeByCoords({ silent: true });
+    const sut = zarf(b);
+    expect(iki.w).toBeGreaterThan(sut.w);
+    expect(iki.h).toBeLessThan(sut.h + iki.h);     // tablo eklendi ama sütunlaşmadı
+    // İki kanvas sütundayken üst üste: yükseklikleri toplanır.
+    expect(sut.h).toBeGreaterThanOrEqual(
+      b.filter((n) => n.type === 'fead-layout').reduce((s, n) => s + n.height, 0));
+  });
+
   test('aynı şeritteki kartlar dikeyde ÇAKIŞMIYOR', () => {
     const ns = kur(2, ['fead-belt', 'fead-solver', 'fead-report']);
     fead.veFeadArrangeByCoords({ silent: true });
