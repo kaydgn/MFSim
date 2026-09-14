@@ -42,9 +42,18 @@ describe('kütüphane ↔ fixture — İKİNCİ KOPYA AYRIŞMASIN', () => {
       expect(r.preloadNm).toBe(d.preload);
       expect(r.rateNm).toBe(d.rate);
       expect(r.meanNm).toBe(d.meanLoad);
-      // gergi kasnağının çapı ve temas tarafı — AG_MISC'te pulley.TEN'de
+      // Gergi kasnağının çapı ve temas tarafı — AG_MISC'te `pulley.TEN`'de.
+      //
+      // BU KARŞILAŞTIRMA BİR DÖNEM HATAYI KORUYORDU: fixture'ın `p` alanı
+      // PITCH çapıdır (kendi yorumu da öyle diyor: "düz kasnaklar: flat 75.00
+      // -> pitch 77.20 (=OD/2+hr)"), kütüphanenin `od` alanı ise DIŞ ÇAPTIR.
+      // İkisi `toBe` ile eşitlenince kütüphaneye pitch değeri yazılmış oldu ve
+      // kapı onu "birebir" diye onayladı — künyeyi uygulayan her model gergi
+      // kasnağını 2,20 mm büyük kurdu. İlişki artık AÇIKÇA yazılı.
       if (d.pulley && d.pulley.TEN) {
-        expect(r.od).toBe(d.pulley.TEN.p);
+        const HR = 1.1;                       // PK/GATES sırt yüksekliği
+        expect(d.pulley.TEN.c).toBe('back');  // sırttan temas: pitch = od + 2·h_r
+        expect(r.od).toBeCloseTo(d.pulley.TEN.p - 2 * HR, 6);
         expect(r.contact).toBe(d.pulley.TEN.c);
       }
       if (d.inertia && d.inertia.TEN != null) expect(r.inertia).toBe(d.inertia.TEN);
@@ -133,7 +142,7 @@ describe('bant — bir HÜKÜM değil, karşılaştırma', () => {
   });
 
   test('ONDALIK KAYMASI yakalanıyor — 0.480 → 0.048', () => {
-    const td = { armLen: 90, preload: 8.6, kArm: 0.048, meanLoad: 22.07, od: 77.2 };
+    const td = { armLen: 90, preload: 8.6, kArm: 0.048, meanLoad: 22.07, od: 75.0 };
     const b = T.veFeadTensionerBandCheck(td);
     expect(b.ok).toBe(false);
     expect(b.outside.join(' ')).toMatch(/yay katsayısı/);
@@ -157,7 +166,7 @@ describe('uygulama — KOPYA, ve montaj verisine dokunmaz', () => {
     expect(td.preload).toBe(8.60);
     expect(td.kArm).toBe(0.480);
     expect(td.meanLoad).toBe(22.07);
-    expect(td.od).toBe(77.2);
+    expect(td.od).toBe(75.0);
     expect(td.contact).toBe('back');
     expect(td.tenLib).toBe('AG00976-1715');
     expect(td.tenLibVer).toBe(T.VE_FEAD_TEN_LIB_VERSION);
@@ -218,8 +227,31 @@ describe('kütüphane KURULU MODELDE çalışıyor', () => {
     const mount = M.veFeadSpringSetup(td);
     const mean = d.pos.find((p) => p.name === 'Mean');
     expect(Math.abs(mount.relMeanDeg - mean.rel)).toBeLessThan(0.2);
-    expect(td.od).toBe(77.2);
+    expect(td.od).toBe(75.0);
     expect(F.beltProps({ profile: 'PK', brand: 'GATES' })).toBeTruthy();
+  });
+
+  // ÇAP ÇEKİRDEĞE KADAR İZLENİYOR — yukarıdaki `toBe(75.0)` tek başına bir
+  // ECHO'ydu: kütüphanede ne yazıyorsa onu doğruluyordu. Kusur tam oradan
+  // geçti (pitch çapı OD alanına yazılmıştı) ve bütün kapılar yeşildi.
+  // Asıl soru şu: künyenin çapı ÇEKİRDEKTE hangi pitch çapını üretiyor?
+  test('künyenin çapı çekirdekte raporun PITCH çapını üretiyor', () => {
+    const F = require('../../js/fead-core.js');
+    const bp = F.beltProps({ profile: 'PK', brand: 'GATES' });
+    let sayilan = 0;
+    T.veFeadTensionerList().forEach((rec) => {
+      const d = KAYNAK[rec.key];
+      if (!d || !d.pulley || !d.pulley.TEN) return;      // yalnız AG_MISC kayıtları
+      sayilan++;
+      // Sırttan temas: pitch = od + 2·h_r. `p` fixture'ın PITCH alanı.
+      expect(rec.contact).toBe('back');
+      expect({ k: rec.key, pitch: +(rec.od + 2 * bp.hr).toFixed(3) })
+        .toEqual({ k: rec.key, pitch: +d.pulley.TEN.p.toFixed(3) });
+      // Kaburgalı yüzden temas etseydi BAŞKA bir sayı çıkardı: kapı "hangi
+      // yükseklik" sorusunu da tutuyor, yalnız toplamı değil (hb ≠ hr).
+      expect(Math.abs(rec.od + 2 * bp.hb - d.pulley.TEN.p)).toBeGreaterThan(0.01);
+    });
+    expect(sayilan).toBeGreaterThanOrEqual(9);
   });
 });
 

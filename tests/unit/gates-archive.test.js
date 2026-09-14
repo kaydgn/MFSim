@@ -14,7 +14,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { gatesPdfPages, numberAfter, numbersAfter, pageMarker } = require('../helpers/gates-pdf.js');
+const { gatesPdfPages, gatesPdfText, numberAfter, numbersAfter, pageMarker } = require('../helpers/gates-pdf.js');
 const { REPORT, vibrationOf } = require('../helpers/gates-vibration.js');
 const V = require('../fixtures/fead-validation.js');
 
@@ -246,6 +246,56 @@ describe('gergi künye kütüphanesi — arşive karşı', () => {
     });
     expect(bad).toEqual([]);
     expect(checked).toBe(30);
+  });
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  KASNAK ÇAPI — ALTI ALANDAN ALTINCISI, KAPISI YOKTU VE YANLIŞTI
+  // ═════════════════════════════════════════════════════════════════════════
+  //
+  // Künyenin kol boyu · yay katsayısı · çalışma momenti · ön yük · kaburga
+  // sayısı · parça kodu alanlarının hepsi bu dosyada rapora bağlıydı. `od`
+  // BAĞLI DEĞİLDİ — ve on dördünün on dördü de YANLIŞTI:
+  //
+  //   Gates raporu kasnak çapını İKİ SÜTUNDA basıyor: `Flat` (dış çap) ve
+  //   `Pitch`. Sırttan temas eden kasnakta ikisi arasında tam 2·h_r = 2,20 mm
+  //   var (PK/GATES: h_r = 1,1). Kütüphane PITCH sütununu almış, ama MFSim'in
+  //   `od` alanı DIŞ ÇAPTIR — pitch'i kayış profilinden program türetir.
+  //
+  // ÖLÇÜLDÜ (AG00976, arşivdeki PDF'e karşı):
+  //   od = 75,0  → program pitch 77,200 = raporun Pitch sütunu ✓  boy 1714,61
+  //   od = 77,2  → program pitch 79,400 (2,2 mm fazla)          boy 1715,28
+  // Gates REBL(Mean) 1714,60 — yani künyeyi uygulamak kayış boyunu 0,67 mm
+  // kaydırıyordu. Sessiz: çevrim kapanıyor, çözüm çıkıyor, uyarı yok.
+  //
+  // Kapı artık İKİ YÖNLÜ: `od` raporun Flat sütununda geçmeli VE `od + 2·h_r`
+  // Pitch sütununda geçmeli. Tek yön yetmezdi — yalnız "Flat'ta var" demek,
+  // aynı sayının başka bir kasnağa ait olmasını dışlamaz.
+  test('kasnak çapı raporun FLAT sütunundan — PITCH sütunundan DEĞİL', () => {
+    const HR = 1.1;                       // PK/GATES sırt yüksekliği (fead-core)
+    const sutun = (metin) => {
+      const g = metin.split('\n').map((x) => x.trim());
+      const iF = g.indexOf('Flat'), iP = g.indexOf('Pitch'), iE = g.indexOf('Effective');
+      if (iF < 0 || iP < 0) return null;
+      const say = (a) => a.filter((x) => /^-?\d+\.\d+$/.test(x)).map(Number);
+      return { flat: say(g.slice(iF + 1, iP)),
+               pitch: say(g.slice(iP + 1, iE > iP ? iE : iP + 40)) };
+    };
+    const bad = [];
+    let checked = 0;
+    TL.veFeadTensionerList().forEach((r) => {
+      if (!ARSIV[r.key]) return;
+      const c = sutun(gatesPdfText(path.join(DIR, ARSIV[r.key])));
+      if (!c) { bad.push(`${r.key}: Flat/Pitch sütunu okunamadı`); return; }
+      checked++;
+      const yakin = (dizi, v) => dizi.some((x) => Math.abs(x - v) < 0.005);
+      if (!yakin(c.flat, r.od))
+        bad.push(`${r.key}: od ${r.od} raporun Flat sütununda YOK (${c.flat.join('/')})`);
+      if (!yakin(c.pitch, r.od + 2 * HR))
+        bad.push(`${r.key}: od+2·h_r ${r.od + 2 * HR} raporun Pitch sütununda YOK `
+               + `(${c.pitch.join('/')})`);
+    });
+    expect(bad).toEqual([]);
+    expect(checked).toBe(10);
   });
 
   // ÖN YÜK: dokuz raporda YAZIYOR, AG00810'da YOK ve türetilmiş. Kayıt bunu

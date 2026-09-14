@@ -223,6 +223,24 @@ olurdu.
     üstündür; "elle" demek için değerin katalogtan FARKLI olması gerekir
     (yalnız "dolu mu" bakan bir tespit, katalogun kendi yazdığı alanları
     kullanıcıya mal ediyordu). Kapı: `tests/unit/fead-catalogs.test.js`.
+    **Sapma ÜÇÜNDE DE raporlanır**: motor `veFeadEngineDrift`, aksesuar
+    `veFeadAccLimits(...).kaynak`, gergi `veFeadTensionerDrift`. Üçüncüsü
+    2026-09-14'e kadar YOKTU — künye seçip kol boyunu değiştiren kullanıcıya
+    panel hâlâ künyenin adını yazıyordu. Gergide parça (kol · ön yük ·
+    katsayı · çap · temas) ile montaj (çalışma momenti) AYRI raporlanır;
+    momenti sapma saymak doğru kurulmuş her modeli uyarırdı.
+18. **KATALOG ÇAPI DIŞ ÇAPTIR (`od`), PITCH DEĞİL.** Gates raporu kasnak
+    çapını iki sütunda basar — `Flat` (dış) ve `Pitch` — ve sırttan temas eden
+    kasnakta aralarında tam `2·h_r` vardır (PK/GATES: 2,20 mm). Gergi
+    kütüphanesinin `od` alanı **on dört kaydın on dördünde de PITCH sütununu
+    taşıyordu**; künyeyi uygulayan her model gergi kasnağını 2,20 mm büyük
+    kurup kayış boyunu 0,67 mm kaydırıyordu (AG00976: 1715,28 ≠ 1714,61).
+    Sessizdi — çevrim kapanıyor, çözüm çıkıyor. Kütüphanenin beş alanı arşive
+    bağlıydı, `od` bağlı DEĞİLDİ; fixture kıyası da `od`'yi fixture'ın PITCH
+    alanıyla eşitleyerek hatayı KORUYORDU. Kapı üç açıdan:
+    `gates-archive.test.js` (Flat sütunu + `od+2·h_r` Pitch sütununda),
+    `fead-tensioners.test.js` (fixture ilişkisi açıkça yazılı + çekirdeğin
+    ürettiği pitch).
 
 18. **KANVASIN TEK TİPİ VAR** (`fead-layout`); geometri ↔ işletme ayrımı bir
     ÖN AYARDIR (`node.data.katOn`), tip değil. `fead-run` diye bir bileşen

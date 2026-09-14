@@ -116,13 +116,13 @@ function getFeadReportPropertiesHTML(node){
     var nP = (R.pulleyNames || []).length;
     var nD = (R.duty || []).length;
     html += '<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); background:var(--bg-tertiary); border:1px solid var(--border-color); color:var(--text-primary);">'
-          + '<span style="color:var(--accent-success); font-weight:700;">✓ Model çözüldü</span> — '
+          + '<span style="color:var(--ink-success); font-weight:700;">✓ Model çözüldü</span> — '
           + nP + ' kasnak · ' + nD + ' devir noktası. Rapor güncel çözüme göre üretilir.</div>';
     html += _frDocFields(node);
     var kAd = (kind === 'summary') ? 'Özet Raporu' : 'Detaylı Raporu';
     html += '<button onclick="veFeadGenerateReport(\'' + node.id + '\')" style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:var(--radius-sm);" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 ' + kAd + ' Oluştur ve İndir</button>';
   } else {
-    html += '<div style="padding:10px 12px; margin-bottom:10px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:var(--fs-body); line-height:1.5;">'
+    html += '<div style="padding:10px 12px; margin-bottom:10px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--ink-warning); font-size:var(--fs-body); line-height:1.5;">'
           + '<b>Model çözülmedi.</b> Rapor, Çözücü sonuçlarından üretilir.</div>';
     html += '<button disabled style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--bg-tertiary); color:var(--text-muted); border:1px solid var(--border-color); cursor:not-allowed; border-radius:var(--radius-sm);">📄 Raporu Oluştur ve İndir</button>';
   }
@@ -250,7 +250,7 @@ function veFeadGenerateReport(nodeId){
   _frAssetsTried = true;
   _frEnsureAssets(function(ok){
     if(!ok){
-      _frStatus('Rapor varlıkları yüklenemedi.', 'var(--accent-danger)');
+      _frStatus('Rapor varlıkları yüklenemedi.', 'var(--ink-danger)');
       if(typeof showToast === 'function') showToast('Rapor varlıkları yüklenemedi.', 'error');
       return;
     }
@@ -258,7 +258,7 @@ function veFeadGenerateReport(nodeId){
     try {
       html = (kind === 'summary') ? veFeadSummaryHTML(R, node) : _frBuildReportHTML(R, node);
     } catch(e){
-      _frStatus('Rapor üretilemedi: ' + (e && e.message ? e.message : e), 'var(--accent-danger)');
+      _frStatus('Rapor üretilemedi: ' + (e && e.message ? e.message : e), 'var(--ink-danger)');
       if(typeof showToast === 'function') showToast('Rapor üretilemedi.', 'error');
       return;
     }
@@ -266,7 +266,7 @@ function veFeadGenerateReport(nodeId){
     if(node && node.data && node.data.docNo) ad = String(node.data.docNo).replace(/[^\w.-]+/g, '_')
       + (kind === 'summary' ? '_Ozet' : '');
     _frDownload(html, ad + '_' + _frDateStamp() + '.html');
-    _frStatus('Rapor indirildi (' + Math.round(html.length / 1024) + ' KB).', 'var(--accent-success)');
+    _frStatus('Rapor indirildi (' + Math.round(html.length / 1024) + ' KB).', 'var(--ink-success)');
     if(typeof showToast === 'function') showToast('FEAD raporu indirildi.', 'success');
   });
   return true;

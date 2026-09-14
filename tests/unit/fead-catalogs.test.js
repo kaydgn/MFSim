@@ -402,3 +402,169 @@ describe('index.html yükleme sırası', () => {
       .toBeLessThan(IDX.indexOf('src="js/fead-checks.js"'));
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  “KATALOG BİR KISIT DEĞİL ÖNERİ” — ÜÇÜNDE DE AYNI ŞEKİLDE
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kural modülün karar kaydında yazılı ve DÖRT katalog için geçerli. Kapısı ise
+// yalnız İKİSİNİ tutuyordu: motor (`veFeadEngineDrift`) ve aksesuar
+// (`veFeadAccLimits(...).kaynak`). Üçüncüsü — gergi künyesi — SESSİZDİ:
+//
+//   künye seç → kol boyu 90 mm yazılır → kullanıcı 85 yapar
+//   → `tenLib` HÂLÂ o kaydı gösteriyor, panel “kol 90 mm” yazıyor
+//   → bant denetimi de GEÇİYOR (85, on dört kaydın bandının içinde)
+//
+// Yani ekran bir parça KİMLİĞİ iddia ediyor, model başka bir parça taşıyor.
+// `veFeadTensionerDrift` o boşluğu kapatıyor ve kapı üç katalogu AYNI
+// cümleyle ölçüyor: künye uygulandıktan sonra sapma YOK, bir parça alanı
+// elle değiştirilince sapma VAR.
+//
+// PARÇA ile MONTAJ ayrımı da kapılı: gerginin çalışma momenti montajın
+// verisidir (aynı gergi 8PK'da 22,57 · 6PK'da 19,04 Nm) — onu sapma saymak
+// doğru kurulmuş her modeli uyarırdı.
+describe('katalog bir KISIT değil ÖNERİ — sapma üç katalogda da raporlanıyor', () => {
+  const T = require('../../js/fead-tensioners.js');
+
+  const motor = () => {
+    const e = E.VE_FEAD_ENGINE_DB.find((x) => x.governedRpm != null);
+    const sd = { engineLib: e.key, cylinders: e.cyl, idleRpm: e.idleRpm,
+      governedRpm: e.governedRpm, noLoadGovernedRpm: e.noLoadGovernedRpm,
+      overspeedRpm: e.overspeedRpm, crankOD: e.crankOD, fanOD: e.fanDriveOD };
+    return { rec: e, sd };
+  };
+  const gergi = () => {
+    const rec = T.VE_FEAD_TENSIONER_DB.find((r) => r.armLen != null);
+    const td = {};
+    T.veFeadTensionerApply(td, rec);
+    return { rec, td };
+  };
+
+  test('üç katalogun da bir sapma raporlayıcısı VAR', () => {
+    expect(typeof E.veFeadEngineDrift).toBe('function');
+    expect(typeof A.veFeadAccLimits).toBe('function');
+    // Eksik olan buydu.
+    expect(typeof T.veFeadTensionerDrift).toBe('function');
+  });
+
+  test('MOTOR: künye uygulandı → sapma yok; alan değişti → sapma var', () => {
+    const { sd } = motor();
+    expect(E.veFeadEngineDrift(sd).drift).toEqual([]);
+    sd.governedRpm += 37;
+    const d = E.veFeadEngineDrift(sd);
+    expect(d.drift.length).toBe(1);
+    expect(d.drift[0]).toMatch(/governed/);
+  });
+
+  test('AKSESUAR: künye uygulandı → üçü de “katalog”; alan değişti → “elle”', () => {
+    const n = { data: {} };
+    A.veFeadAccApply(n, A.VE_FEAD_ACC_DB.find((x) => x.maxContRpm != null).key);
+    let l = A.veFeadAccLimits(n);
+    expect(l.maxCont.kaynak).toBe('katalog');
+    n.data.maxContRpm = l.maxCont.rpm + 500;
+    l = A.veFeadAccLimits(n);
+    expect(l.maxCont.kaynak).toBe('elle');
+    // Dokunulmayan alan katalogta KALIR — "bir alan değişti, hepsi elle oldu"
+    // demek kullanıcının girmediği sayıyı ona mal etmek olurdu.
+    expect(l.optimum.kaynak).toBe('katalog');
+  });
+
+  test('GERGİ: künye uygulandı → sapma yok; PARÇA alanı değişti → sapma var', () => {
+    const { td } = gergi();
+    const s0 = T.veFeadTensionerDrift(td);
+    expect(s0.drift).toEqual([]);
+    expect(s0.montaj).toEqual([]);
+    td.armLen = Number(td.armLen) - 5;
+    const s1 = T.veFeadTensionerDrift(td);
+    expect(s1.drift.length).toBe(1);
+    expect(s1.drift[0]).toMatch(/kol boyu/);
+  });
+
+  test('GERGİ: ÇALIŞMA MOMENTİ sapma değil — montajın verisi', () => {
+    const { td } = gergi();
+    td.meanLoad = Number(td.meanLoad) + 3;
+    const s = T.veFeadTensionerDrift(td);
+    expect(s.drift).toEqual([]);          // parça hâlâ aynı parça
+    expect(s.montaj.length).toBe(1);      // ama ayar değişti ve YAZILIYOR
+    expect(s.montaj[0]).toMatch(/çalışma momenti/);
+  });
+
+  test('GERGİ: bant denetimi sapmayı GÖREMEZ — ayrı soru, ayrı kapı', () => {
+    // Kapının kendi gerekçesi: kusur tam olarak bandın sapmayı yakalayamaması
+    // yüzünden sessizdi. Bant hâlâ geçerse ve sapma yakalarsa ikisi ayrı iştir.
+    const { td } = gergi();
+    td.armLen = Number(td.armLen) - 5;
+    expect(T.veFeadTensionerBandCheck(td).ok).toBe(true);      // bant: sorun yok
+    expect(T.veFeadTensionerDrift(td).drift.length).toBe(1);   // sapma: VAR
+  });
+
+  test('künye seçili DEĞİLSE sapma da yok (elle giren uyarılmaz)', () => {
+    expect(T.veFeadTensionerDrift({ armLen: 85, preload: 9 })).toBe(null);
+    expect(E.veFeadEngineDrift({ governedRpm: 2600 })).toBe(null);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  KÜTÜPHANELERİN YAPISAL BÜTÜNLÜĞÜ — altısı birden
+// ═══════════════════════════════════════════════════════════════════════════
+describe('altı kütüphane — yapısal bütünlük', () => {
+  const T = require('../../js/fead-tensioners.js');
+  const D = require('../../js/fead-duty.js');
+
+  test('anahtarlar tekil', () => {
+    [['gergi', T.VE_FEAD_TENSIONER_DB], ['motor', E.VE_FEAD_ENGINE_DB],
+     ['aksesuar', A.VE_FEAD_ACC_DB], ['çevrim', D.VE_FEAD_DUTY_DB]]
+      .forEach(([ad, db]) => {
+        const k = db.map((r) => r.key);
+        expect({ ad, tekil: new Set(k).size }).toEqual({ ad, tekil: k.length });
+      });
+  });
+
+  test('aksesuar devir sınırları SIRALI: optimum ≤ sürekli ≤ anlık', () => {
+    A.VE_FEAD_ACC_DB.forEach((r) => {
+      if (r.optimumRpm != null && r.maxContRpm != null)
+        expect(r.optimumRpm).toBeLessThanOrEqual(r.maxContRpm);
+      if (r.maxContRpm != null && r.maxPeakRpm != null)
+        expect(r.maxContRpm).toBeLessThanOrEqual(r.maxPeakRpm);
+    });
+  });
+
+  test('motor devirleri SIRALI: rölanti < governed ≤ noLoad ≤ overspeed', () => {
+    E.VE_FEAD_ENGINE_DB.forEach((r) => {
+      const a = [r.idleRpm, r.governedRpm, r.noLoadGovernedRpm, r.overspeedRpm]
+        .filter((x) => x != null);
+      for (let i = 1; i < a.length; i++)
+        expect({ key: r.key, ok: a[i] >= a[i - 1] }).toEqual({ key: r.key, ok: true });
+    });
+  });
+
+  test('EKSİK ALAN null, SIFIR DEĞİL — olmayan bir kasnak iddia edilmez', () => {
+    ['crankOD', 'fanDriveOD', 'idleRpm', 'governedRpm', 'noLoadGovernedRpm', 'overspeedRpm']
+      .forEach((f) => E.VE_FEAD_ENGINE_DB.forEach((r) => {
+        expect({ key: r.key, f, sifir: r[f] === 0 }).toEqual({ key: r.key, f, sifir: false });
+      }));
+    ['optimumRpm', 'maxContRpm', 'maxPeakRpm']
+      .forEach((f) => A.VE_FEAD_ACC_DB.forEach((r) => {
+        expect({ key: r.key, f, sifir: r[f] === 0 }).toEqual({ key: r.key, f, sifir: false });
+      }));
+  });
+
+  test('her çalışma çevriminin %zaman toplamı 100', () => {
+    D.VE_FEAD_DUTY_DB.forEach((r) => {
+      const rows = D.veFeadDutyRowsOf(r.key) || [];
+      expect(rows.length).toBeGreaterThan(0);
+      const t = rows.reduce((a, x) => a + (x.dcPct || 0), 0);
+      expect({ key: r.key, t: +t.toFixed(2) }).toEqual({ key: r.key, t: 100 });
+    });
+  });
+
+  test('gergi BANDI kayıtlardan TÜRETİLİYOR — elle yazılmış sabit değil', () => {
+    // Bant elle yazılsaydı bir kayıt eklendiğinde sessizce eskirdi.
+    const kol = T.VE_FEAD_TENSIONER_DB.map((r) => r.armLen).filter(Number.isFinite);
+    expect(T.VE_FEAD_TEN_BAND.armLen.min).toBe(Math.min(...kol));
+    expect(T.VE_FEAD_TEN_BAND.armLen.max).toBe(Math.max(...kol));
+    const od = T.VE_FEAD_TENSIONER_DB.map((r) => r.od).filter(Number.isFinite);
+    expect(T.VE_FEAD_TEN_BAND.od.min).toBe(Math.min(...od));
+    expect(T.VE_FEAD_TEN_BAND.od.max).toBe(Math.max(...od));
+  });
+});

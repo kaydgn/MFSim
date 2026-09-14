@@ -893,7 +893,10 @@ describe('Kayış Yolu kanvas kartı', () => {
   test('çözülen modelde durum şeridi YEŞİL ve kasnak sayısı + boy yazılı', () => {
     const { lay } = kurCozulur();
     const html = fead.veFeadLayoutCardHTML(lay);
-    expect(html).toMatch(/accent-success/);
+    // ŞERİDİN METNİ: `--ink-*` METİN rolüdür (`--accent-*` dolgu rolü). Aile
+    // 2026-09-14'te taşındı; ölçüldü, `--accent-*` metin olarak 19 temanın
+    // çoğunda AA altında kalıyordu.
+    expect(html).toMatch(/ink-success/);
     expect(html).toMatch(/4 kasnak/);
     expect(html).toMatch(/Σsarım/);
     expect(html).toMatch(/✓/);
@@ -904,7 +907,7 @@ describe('Kayış Yolu kanvas kartı', () => {
     const lay = kasnak('fead-layout', {});
     const html = fead.veFeadLayoutCardHTML(lay);
     expect(typeof html).toBe('string');
-    expect(html).toMatch(/accent-danger/);
+    expect(html).toMatch(/ink-danger/);
     expect(html).toMatch(/✗/);
   });
 
@@ -1667,7 +1670,7 @@ describe('serbest kipte türetilen boyun KÖKENİ', () => {
     expect(t).toMatch(/Tedarikçiye verilecek boy budur/);
     expect(t).not.toMatch(/künyesi eksik|oturamadı/);
     // sayı amber kalır, soru işareti eklenmez
-    expect(fead.veFeadDerivedLengthHTML(belt)).toMatch(/--accent-warning/);
+    expect(fead.veFeadDerivedLengthHTML(belt)).toMatch(/--ink-warning/);
     expect(t).not.toMatch(/mm \?/);
     // ve panelde uyarı kutusu çıkmaz
     expect(duz(fead.getFeadBeltPropertiesHTML(belt))).not.toMatch(/Uyarılar/);
@@ -1693,7 +1696,7 @@ describe('serbest kipte türetilen boyun KÖKENİ', () => {
     const h = fead.veFeadDerivedLengthHTML(belt), t = duz(h);
     expect(t).toMatch(/Kol nominal açısına oturamadı/);
     expect(t).not.toMatch(/Tedarikçiye verilecek boy budur/);
-    expect(h).toMatch(/--accent-danger/);
+    expect(h).toMatch(/--ink-danger/);
   });
 
   // Boyun OKUNDUĞU panel, sebebi de basmak zorunda: veFeadWarningBox Kayış
