@@ -353,10 +353,14 @@ function veFeadEngineDrift(sd){
   var e = veFeadEngineOf(sd && sd.engineLib);
   if(!e) return null;
   var out = { key: e.key, ad: e.ad, drift: [] };
+  // SAPMA YALNIZ SORULAN ALANLARDA ARANIR. `noLoadGovernedRpm` listeden
+  // ÇIKTI: künye onu hâlâ yazıyor ama hiçbir yüzey artık sormuyor (ne Çözücü
+  // paneli ne sihirbaz — hiçbir hesap okumuyor). Kullanıcının göremediği ve
+  // düzeltemediği bir alan için "katalogdan sapıldı" demek, kapatılamayan bir
+  // uyarı üretmekti.
   var alanlar = [
     ['cylinders', e.cyl, 'silindir sayısı'],
     ['idleRpm', e.idleRpm, 'rölanti'], ['governedRpm', e.governedRpm, 'governed'],
-    ['noLoadGovernedRpm', e.noLoadGovernedRpm, 'no load governed'],
     ['overspeedRpm', e.overspeedRpm, 'overspeed'],
     ['crankOD', e.crankOD, 'krank kasnağı Ø'], ['fanOD', e.fanDriveOD, 'fan kasnağı Ø']
   ];

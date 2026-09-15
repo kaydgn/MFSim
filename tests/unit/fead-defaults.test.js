@@ -338,24 +338,91 @@ describe('tahrik oranı: tek kademeli düzen', () => {
     expect(veFeadDriveModeLabel('unity')).toMatch(/1:1|tek kademe/i);
   });
 
-  test('panel kartı unity kipinde çap/oran alanı GÖSTERMİYOR', () => {
-    const node = { id: 'sv', type: 'fead-solver', def: componentDefs['fead-solver'],
-                   data: { ratioMode: 'unity', duty: [] } };
-    const h = fead.veFeadDriveCard(node);
-    expect(h).not.toMatch(/ve-fead-crankOD|ve-fead-fanOD|ve-fead-driveRatio/);
-    expect(h).toMatch(/1,0000|1\.0000/);
-    // öbür kiplerde alanlar duruyor
-    node.data.ratioMode = 'derive';
-    expect(fead.veFeadDriveCard(node)).toMatch(/ve-fead-crankOD/);
-    node.data.ratioMode = 'direct';
-    expect(fead.veFeadDriveCard(node)).toMatch(/ve-fead-driveRatio/);
-  });
-
-  test('seçenek listesinde üç kip de var', () => {
+  // ══ PANEL İLE SİHİRBAZ AYNI SORUYU SORAR ═══════════════════════════════
+  //
+  // ÖLÇÜLEN KUSUR: sihirbaz `crankDirect` düzenini kuruyordu, Çözücü panelinin
+  // listesinde o değer HİÇ YOKTU (derive · unity · direct). Sonuç: hiçbir
+  // <option> `selected` almıyor, tarayıcı ilk seçeneği ("çaplardan türet")
+  // gösteriyor, ALTINDA iki çap kutusu basılıyor (etkisi yok — crankDirect'te
+  // oran koşulsuz 1) ve hemen yanındaki okuma satırı "krank kasnağı doğrudan
+  // sürücü (1:1)" diyordu. Aynı kartta iki cevap. Üstelik listeye DOKUNMAK
+  // modeli sessizce `derive`a çeviriyordu.
+  //
+  // Kapı ÜÇ YÜZLÜ ve her biri ayrı ayrı gerekli: (1) listeler birebir aynı,
+  // (2) sihirbazın kurduğu her düzen panelde SEÇİLİ geliyor, (3) her düzenin
+  // alan kümesi ayrı.
+  test('panelin listesi SİHİRBAZIN listesiyle birebir aynı', () => {
     const node = { id: 'sv', type: 'fead-solver', def: componentDefs['fead-solver'],
                    data: { duty: [] } };
     const h = fead.veFeadDriveCard(node);
-    ['derive', 'unity', 'direct'].forEach((k) => expect(h).toContain('value="' + k + '"'));
+    // Tek kaynak: VE_FEAD_DRIVE_MODES (fead-model.js) — iki yüzey de onu okur.
+    expect(VE_FEAD_DRIVE_MODES.map((m) => m[0]))
+      .toEqual(['crankDirect', 'unity', 'derive']);
+    VE_FEAD_DRIVE_MODES.forEach((m) => {
+      expect(h).toContain('value="' + m[0] + '"');
+      // Etiket de birebir: `_feadEsc` yalnız & < > " kaçışlar.
+      expect(h).toContain(m[1].replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
+    });
+    // ELLE ORAN ARTIK SORULMUYOR (kullanıcı kararı, 2026-09-01).
+    expect(h).not.toContain('value="direct"');
+    expect(h).not.toMatch(/ve-fead-driveRatio/);
+  });
+
+  test('sihirbazın kurduğu her düzen panelde SEÇİLİ geliyor', () => {
+    VE_FEAD_DRIVE_MODES.forEach((m) => {
+      const node = { id: 'sv', type: 'fead-solver', def: componentDefs['fead-solver'],
+                     data: { ratioMode: m[0], duty: [] } };
+      const h = fead.veFeadDriveCard(node);
+      const sec = (h.match(/<option value="([^"]+)" selected>/g) || [])
+        .map((x) => x.match(/value="([^"]+)"/)[1]);
+      expect({ kip: m[0], secili: sec }).toEqual({ kip: m[0], secili: [m[0]] });
+    });
+  });
+
+  test('alan kümesi düzene göre: crankDirect hiç · unity krank · derive iki çap', () => {
+    const kart = (mode) => fead.veFeadDriveCard({ id: 'sv', type: 'fead-solver',
+      def: componentDefs['fead-solver'], data: { ratioMode: mode, duty: [] } });
+    // Krank doğrudan sürücü: sorulacak çap yok, oran tanım gereği 1.
+    expect(kart('crankDirect')).not.toMatch(/ve-fead-crankOD|ve-fead-fanOD|ve-fead-driveRatio/);
+    expect(kart('crankDirect')).toMatch(/1,0000|1\.0000/);
+    // Ayrı sürücü kasnak: krank çapı MOTOR VERİSİ olarak kayıtlı (rapora
+    // girer), ama orana girmez — ikinci çap sorulmaz.
+    expect(kart('unity')).toMatch(/ve-fead-crankOD/);
+    expect(kart('unity')).not.toMatch(/ve-fead-fanOD|ve-fead-driveRatio/);
+    expect(kart('unity')).toMatch(/1,0000|1\.0000/);
+    // Ara kademe: iki çap.
+    expect(kart('derive')).toMatch(/ve-fead-crankOD/);
+    expect(kart('derive')).toMatch(/ve-fead-fanOD/);
+    expect(kart('derive')).not.toMatch(/ve-fead-driveRatio/);
+  });
+
+  // ── ESKİ KAYDIN KUYRUĞU ─────────────────────────────────────────────────
+  //
+  // Arşivdeki on iki Gates örneği `direct` + oran 1 ile yazılı ve köprü onları
+  // OKUMAYA devam ediyor. Seçenek listeden kalkarken o modeller yalancı
+  // duruma düşmemeli: seçenek yalnız düğüm onu TAŞIYORSA basılır.
+  test('eski `direct` kaydı seçenek olarak görünür ve SEÇİLİ gelir', () => {
+    const node = { id: 'sv', type: 'fead-solver', def: componentDefs['fead-solver'],
+                   data: { ratioMode: 'direct', driveRatio: 1.1, duty: [] } };
+    const h = fead.veFeadDriveCard(node);
+    expect(h).toContain('value="direct"');
+    expect(h).toContain('<option value="direct" selected>');
+    expect(h).toMatch(/ESKİ KAYIT/);
+    expect(h).toMatch(/ve-fead-driveRatio/);
+    // Köprü değeri okumaya devam ediyor — sayı DEĞİŞMİYOR.
+    expect(veFeadDriveRatio(node.data).ratio).toBe(1.1);
+  });
+
+  // Köprü çap eksikken 'direct'e düşüyor ve etiketi "elle girildi" — panelde
+  // elle girilecek bir alan yokken bu cümle olmayan bir kutuyu işaret ediyordu.
+  test('yarım girilmiş ara kademe: oran ÇÖZÜLEMEDİ der, "elle girildi" demez', () => {
+    const node = { id: 'sv', type: 'fead-solver', def: componentDefs['fead-solver'],
+                   data: { ratioMode: 'derive', crankOD: 197.32, duty: [] } };
+    const h = fead.veFeadDriveCard(node);
+    expect(veFeadDriveRatio(node.data).ok).toBe(false);
+    expect(h).toMatch(/çözülemedi/);
+    expect(h).not.toMatch(/elle girildi/);
   });
 
   test('unity kipi çözümde de 1 — aksesuar devirleri ölçeklenmiyor', () => {

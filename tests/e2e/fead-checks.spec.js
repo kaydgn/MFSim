@@ -40,6 +40,17 @@ async function openFeadWithExample(page) {
   await page.evaluate(() => veFeadLoadExample('BMC_FEAD_2026'));
   await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-alternator'),
     null, { timeout: 20000 });
+  // BOŞ FEAD TOPOLOJİSİ SİHİRBAZLA KARŞILIYOR (2026-09-09) — pencere kanvasın
+  // ÜSTÜNDE duruyor ve `dblclick`i yutuyor. Bu spec o gün SESSİZCE kırıldı:
+  // tıklama 180 sn boyunca "element intercepts pointer events" ile yeniden
+  // deneniyor, test zaman aşımına düşüyordu. CI'nın `e2e-urun` işi üç ÜRÜN
+  // spec'ini koşuyor, bu dosya gece setinde — kırmızılık kimseye görünmedi.
+  // Kullanıcı da aynı şeyi yapar: karşılama penceresini kapatıp kanvasa döner.
+  await page.evaluate(() => { if (typeof veFeadWizClose === 'function') veFeadWizClose(true); });
+  await page.waitForFunction(() => {
+    const o = document.getElementById('ve-feadwiz-overlay');
+    return !o || o.style.display === 'none';
+  }, null, { timeout: 10000 });
 }
 
 test('katalog seçimi ve üç kapı — panel, çözüm ve rapor', async ({ page }) => {
@@ -235,9 +246,16 @@ test('sihirbaz — kataloglar, kapılar ve kurulan modele taşınma', async ({ p
   await page.waitForFunction(() => Array.isArray(window.nodes) && window.nodes.length > 0,
     null, { timeout: 20000 });
 
+  // BOŞ FEAD TOPOLOJİSİ SİHİRBAZLA KARŞILIYOR (2026-09-09) — pencere ZATEN
+  // açık. Bu spec eskiden düğüme çift tıklıyordu ve o gün sessizce kırıldı:
+  // açık modal tıklamayı yakalıyor, `dblclick` 30 sn bekleyip düşüyordu.
+  // Kapı gece E2E setinde olduğu için CI'da görünmedi. Artık İKİ YOL da
+  // kapılı: pencere kendiliğinden açıldıysa öyle devam edilir, açılmadıysa
+  // düğüme çift tıklanır — ikisinde de sonuç aynı görünür pencere.
   const wizId = await page.evaluate(() => window.nodes.find((n) => n.type === 'fead-wizard').id);
-  await page.dblclick('#' + wizId);
-  await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();
+  const overlay = page.locator('#ve-feadwiz-overlay');
+  if (!(await overlay.isVisible())) await page.dblclick('#' + wizId);
+  await expect(overlay).toBeVisible();
 
   // Örnekten doldur — kapıların üstünde koşacağı gerçek bir düzen.
   await page.evaluate(() => veFeadWizSeed('BMC_FEAD_2026'));
@@ -262,12 +280,30 @@ test('sihirbaz — kataloglar, kapılar ve kurulan modele taşınma', async ({ p
   expect(s1.crank).toBe(218.3);
   expect(s1.fan).toBe(179.62);
 
-  // Dört devir alanı DOM'da ve dolu.
+  // ── KÜNYE ALANLARI PENCEREDE, SAYFADA DEĞİL ───────────────────────────
+  //
+  // On alan 2026-09-04'te 6. adımın gövdesinden ayrı bir pencereye taşındı
+  // (`#ve-fw-eng`), bu satırlar ise `#ve-fw-body`ye bakmaya devam ediyordu ve
+  // BOŞ liste dönüyordu. Görünmedi, çünkü testin ilerisi zaten düşüyordu
+  // (yukarıdaki `dblclick`). Artık pencere gerçekten açılıyor ve alanlar
+  // orada aranıyor.
+  await page.evaluate(() => veFeadWizEngOpen());
+  await expect(page.locator('#ve-fw-eng')).toBeVisible();
+
+  // SORULAN ÜÇ DEVİR ALANI pencerede ve dolu. Dördüncüsü ("no load governed")
+  // 2026-09-15'te kalktı: değerini okuyan hiçbir hesap, uygunluk kapısı ya da
+  // rapor satırı yoktu. Künye onu MODELE yazmaya devam ediyor (aşağıdaki
+  // negatif kapı) — sorulmayan şey giriş kutusu.
   const devirler = await page.evaluate(() =>
-    Array.from(document.querySelectorAll('#ve-fw-body input'))
-      .filter((i) => /idleRpm|governedRpm|noLoadGovernedRpm|overspeedRpm/.test(i.outerHTML))
+    Array.from(document.querySelectorAll('#ve-fw-eng input'))
+      .filter((i) => /idleRpm|governedRpm|overspeedRpm/.test(i.outerHTML))
       .map((i) => i.value));
-  expect(devirler).toEqual(['700', '2100', '2330', '2900']);
+  expect(devirler).toEqual(['700', '2100', '2900']);
+  expect(await page.evaluate(() =>
+    document.querySelectorAll('#ve-fw-eng input[oninput*="noLoadGovernedRpm"]').length)).toBe(0);
+  // Ama künye onu durumda TUTUYOR — kaldırılan şey soru, veri değil.
+  expect(await page.evaluate(() => veFeadWizState().solver.noLoadGovernedRpm)).toBe(2330);
+  await page.evaluate(() => veFeadWizEngClose());
 
   // ── AKSESUAR KÜNYELERİ: GERÇEK SEÇİM ──────────────────────────────────
   //

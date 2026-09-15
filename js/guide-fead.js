@@ -1070,25 +1070,39 @@ function _gfSec9(){
   h += '<p><strong>Çözücü</strong> kutusuna çift tıklayın. Modelin geri kalanı burada '
     + 'toplanır.</p>';
   h += _gfSahneCozucu();
-  h += '<h3>9.1 Birinci kademe — krank ile sürücü kasnak arasındaki oran</h3>';
+  h += '<h3>9.1 FEAD tahriki — krank ile sürücü kasnak arasındaki oran</h3>';
   h += '<p>FEAD kayışının sürücü kasnağı krank milinde olmak zorunda değildir: yaygın bir '
     + 'düzende krank ayrı bir kademeyle fan kasnağını döndürür, FEAD kayışı da onun üzerinden '
     + 'tahrik edilir.</p>';
-  h += '<p>Üç kip var ve seçim <em>düzene</em> göre yapılır, kolaylığa göre değil:</p>';
-  h += _gfAlanTablo('Tahrik oranı kipleri', [
-    ['Krank ve fan kasnağı çapından türet', 'Ayrı bir kademe VAR',
-      'Krank ayrı bir kayış/dişli kademesiyle fan kasnağını döndürüyor ve FEAD kayışı '
-      + 'onun üzerinde. İki çapı yazın; oran = krank Ø / fan Ø'],
-    ['Kademe yok — sürücü kasnak motor devrinde', 'Fan kavraması krankın hemen önünde',
+  h += '<p>Üç düzen var ve seçim <em>düzene</em> göre yapılır, kolaylığa göre değil. '
+    + 'Başlangıç Sihirbazı da <strong>bu üçünü, aynı adlarla</strong> sorar — iki yüzey tek '
+    + 'listeden okur:</p>';
+  h += _gfAlanTablo('FEAD tahrik düzenleri', [
+    ['Krank kasnağı doğrudan FEAD’i tahrik ediyor (1:1)', 'Kademe YOK',
+      'Krank kasnağının kendisi sürücü kasnak. Oran tanımı gereği <strong>1</strong>; '
+      + 'çapı zaten Kayış Tablosu’nun sürücü satırında'],
+    ['Kranka bağlı ayrı bir sürücü kasnak — aynı devir (1:1)', 'Kademe YOK, ama çap AYRI',
       'Sürücü kasnak krankla <strong>aynı milde ve aynı devirde</strong> dönüyor. Oran '
-      + 'tanımı gereği <strong>1</strong>; çap da oran da sorulmaz'],
-    ['Oranı elle gir', 'Oranı biliyorsunuz, çapları bilmiyorsunuz',
-      'Tedarikçi sayfası tek bir sayı veriyorsa bu kip']
+      + 'yine <strong>1</strong>; krank kasnağının kendi çapı bir <em>motor verisi</em> '
+      + 'olarak sorulur ve rapora girer'],
+    ['Ara kademe — krank ve sürücü kasnak farklı devirde', 'Ayrı bir kademe VAR',
+      'Krank ayrı bir kayış/dişli kademesiyle bir kasnağı döndürüyor ve FEAD kayışı '
+      + 'onun üzerinde. İki çapı yazın; oran = krank Ø / sürülen Ø']
   ]);
+  h += _gfNot('Elle oran girme yolu kaldırıldı',
+      'Oran artık yalnız <strong>çaplardan</strong> türer. Elle yazılan oran, '
+    + 'spesifikasyon incelemesinin en ciddi bulgusuydu: hesap sayfasındaki elle yazılmış '
+    + 'hız oranları bütün gerilmeleri <strong>%17</strong> düşürüyordu. Sihirbazdan '
+    + '2026-09-01’de kalkmıştı, Çözücü panelinde kalmıştı; artık ikisinde de yok. '
+    + 'Elinizde o kipte kurulmuş <em>eski bir model</em> varsa panel onu bir kez daha '
+    + 'gösterir ve “ESKİ KAYIT” diye işaretler — düzeni değiştirdiğinizde satır bir daha '
+    + 'görünmez.');
   h += _gfAdimlar([
-    'Düzeninize uyan kipi seçin.',
-    'Kartın altındaki “Kullanılan tahrik oranı” satırından hem sayıyı hem de hangi kipten '
-      + 'geldiğini okuyun.'
+    'Düzeninize uyan seçeneği seçin.',
+    'Kartın altındaki “Kullanılan tahrik oranı” satırından hem sayıyı hem de hangi düzenden '
+      + 'geldiğini okuyun. Satır <strong>“çözülemedi — çap eksik”</strong> diyorsa ara kademe '
+      + 'seçilmiş ama iki çaptan biri boştur; o hâlde oran 1 alınır ve girdiğiniz çap hiç '
+      + 'kullanılmaz.'
   ]);
   h += _gfUyari('Bu oran bütün sonuçları ölçekler',
       'Aksesuar devri = motor devri × <strong>tahrik oranı</strong> × (sürücü kasnak pitch '
@@ -1096,22 +1110,27 @@ function _gfSec9(){
     + 'oranda kayar ve hiçbir uyarı çıkmaz. <strong>Ölçüldü:</strong> tek kademeli bir '
     + 'sisteme çap kipinden kalmış 1,430 oranı sızdığında bütün aksesuar devirleri %43 '
     + 'kaymış, kayış hızı 17,5 yerine 25,0 m/s çıkmıştı. Hata sessizdi çünkü çaplar '
-    + 'geçerli sayılardı; yanlış olan <em>kipti</em>. “Kademe yok” kipi tam bunun için var: '
+    + 'geçerli sayılardı; yanlış olan <em>düzendi</em>. İlk iki seçenek tam bunun için var: '
     + 'düzeni ilan ediyorsunuz, sayı üretmiyorsunuz.');
   h += '<h3>9.2 Motor künyesi</h3>';
   h += '<p>Kartın en üstünde <strong>BMC motor kataloğu</strong> seçicisi durur: '
     + '<strong>yirmi dört motor</strong>, BMC’nin kendi FEAD hesap defterinin '
-    + '<em>Motor Bilgileri</em> sayfasından. Bir kayıt seçmek <strong>silindir sayısını, dört '
-    + 'devir sınırını ve birinci kademe çaplarını</strong> yazar; kasnak koordinatlarına ve '
+    + '<em>Motor Bilgileri</em> sayfasından. Bir kayıt seçmek <strong>silindir sayısını, '
+    + 'devir sınırlarını ve birinci kademe çaplarını</strong> yazar; kasnak koordinatlarına ve '
     + 'kayışa <strong>dokunmaz</strong>.</p>';
-  h += _gfAlanTablo('Kataloğun yazdığı dört devir sınırı', [
-    ['Rölanti', 'Motorun boştaki devri', 'Çalışma çevriminin alt ucu'],
+  h += _gfAlanTablo('Sorulan üç devir sınırı', [
+    ['Rölanti', 'Motorun boştaki devri',
+      'Çalışma çevriminin alt ucu; geçici rejim senaryosunun başlangıcı'],
     ['Governed', 'Yük altındaki azami devir',
       'Aksesuar <strong>çevrim oranı penceresi</strong> kapısı bu devirde ölçülür (Bölüm 11.5)'],
-    ['No load governed', 'Yüksüz azami devir', 'Bandın üst ucu'],
     ['Overspeed', 'Anlık aşım devri',
       'Aksesuar <strong>anlık maksimum</strong> kapısı bu devirde ölçülür']
   ], ['Sınır', 'Nedir', 'Nereye girer']);
+  h += _gfNot('“No load governed” artık sorulmuyor',
+      'Katalogda duruyor ve künye seçilince modele yazılıyor — ama onu <em>okuyan</em> '
+    + 'hiçbir hesap, uygunluk kapısı ya da rapor satırı yoktu. Girdi olarak durduğu sürece '
+    + '“girdim, hesaba girdi” izlenimi veriyordu; alan hem Çözücü panelinden hem '
+    + 'sihirbazdan kaldırıldı.');
   h += _gfNot('Katalogdan sapmak serbest — ama sessiz değil',
       'Seçimden sonra bir alanı elle değiştirirseniz kart bunu <strong>yazar</strong>: '
     + '“Katalogdan sapıldı: …”. Bu bir hata değildir — kayıt varyanta göre değişebilir — ama '
@@ -1912,7 +1931,7 @@ function _gfEkA(){
       ['<strong>Kaburga başına kütle</strong>', 'Kayış Özellikleri', 'Malzeme'],
       ['Kayış tipine bağlı çıktılar anahtarı', 'Kayış Özellikleri',
         'Kayış Tipine Bağlı Çıktılar'],
-      ['Tahrik oranı / krank ve fan çapı', 'Çözücü', 'Birinci Kademe'],
+      ['FEAD tahrik düzeni / krank ve kademe çapı', 'Çözücü', 'FEAD Tahriki'],
       ['Silindir sayısı, servis faktörü, krank ataleti, <strong>motor kataloğu</strong>',
         'Çözücü', 'Motor Künyesi'],
       ['Devir, %zaman, sıcaklık, aksesuar kW, <strong>çevrim kaydı</strong>',

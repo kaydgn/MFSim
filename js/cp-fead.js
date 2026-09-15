@@ -61,16 +61,20 @@ var veFeadStack = [];
 var _veFeadBusy = false;
 
 // Modül paneli (tek tık): özet + "Alt Topolojiyi Aç".
+// "BAĞLANTI" SATIRI KALDIRILDI — yapısal olarak hep 0. FEAD tiplerinin on
+// ikisinde de `inputs:0, outputs:0`, yani bu alt topolojide bağlantı
+// KURULAMAZ (kayış sırası `node.data.beltIndex` alanında, telde değil). Satır
+// her modelde aynı sıfırı basıyor ve kullanıcıya "burada bağlanacak bir şey
+// var" diye bakılacak bir yer gösteriyordu. Ortak `veModuleSummaryText`
+// dokunulmadı: Araç Performans ile Takoz'da bağlantı gerçek bir sayıdır.
 function getFeadModulePropertiesHTML(node){
   var sub = node && node.data && node.data.subTopology;
   var nCount = (sub && sub.nodes) ? sub.nodes.length : 0;
-  var cCount = (sub && sub.connections) ? sub.connections.length : 0;
   var initialized = !!(sub && sub.nodes && sub.nodes.length);
   var html = '<div class="sw-panel">';
   html += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
   if(initialized){
     html += '<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bileşen</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">' + nCount + '</td></tr>';
-    html += '<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bağlantı</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">' + cCount + '</td></tr>';
   } else {
     html += '<tr><td style="padding:7px 8px; border:1px solid var(--border-color); color:var(--text-muted);">Alt topoloji henüz açılmadı</td></tr>';
   }
@@ -613,39 +617,27 @@ function veFeadSet(nodeId, key, val){
 // ORTADAN KALKTI — kanca dursaydı hiç çağrılmayan bir dal olurdu. Ölçüm
 // `.claude/skills/fead/references/kanvas-ve-kart.md` içinde duruyor: aynı yön
 // yeniden denenirse nelerin ölçülmüş olduğu oradan okunur.
-// ── KANVAS ROZETİ: temas tarafı + sürücü ────────────────────────────────────
-// Temas tarafı hesabın en tehlikeli girdisi: ters verilirse çekirdek GEÇERLİ
-// ama BAŞKA bir kayış yolu çözer, hata vermez. Panelde bir açılır listede
-// gizlenirse kullanıcı yanlışı fark edemez. Bu yüzden değer kanvasta, düğümün
-// üstünde durur — "K" kaburgalı, "S" sırttan; sürücü kasnak ayrıca "►" taşır.
+// ── KANVAS ROZETİ — DAĞITICI ───────────────────────────────────────────────
 // Stil ELEMANIN ÜSTÜNDE (css/ dosyasında değil) çünkü css/styles.css'e
-// dokunmak Ölçüm Görüntüleyici'nin dağıtım dosyasını bayatlatıyor (bkz.
-// CLAUDE.md); tek rozet için o zinciri kurmaya değmez.
+// dokunmak Ölçüm Görüntüleyici'nin ve CAN Çözümleyici'nin dağıtım dosyalarını
+// bayatlatıyor (bkz. CLAUDE.md); iki rozet için o zinciri kurmaya değmez.
+//
+// KASNAK K/S ROZETİ KALDIRILDI — erişilemez koddu. Kasnakların kanvasta kutusu
+// yok (`noCanvasBox`), yani `createNode` ve `restoreState` onlara DOM elemanı
+// hiç kurmuyor ve `veFeadRefreshBadges`'in `getElementById`'si her seferinde
+// null dönüyordu. Modülün kuralı bunu zaten söylüyordu ("Kanvas rozeti (K/S)
+// kutularla birlikte kalktı"); kalkmayan şey koddu. Temas tarafı üç canlı
+// yüzeyde duruyor: tip varsayılanı → kasnak paneli → Kayış Tablosu'nun
+// "Kasnak Dönüş Yönü" sütunu.
+//
+// Geriye kutusu OLAN iki tip kaldı ve ikisi de rozetini kendi çiziyor.
 function veFeadApplyBadge(nodeEl, node){
   if(!nodeEl || !node || typeof document === 'undefined') return false;
   var old = nodeEl.querySelector('.ve-fead-badge');
   if(old) old.remove();
   if(_feadDefOf(node).isFeadBelt) return veFeadApplyBeltModeBadge(nodeEl, node);
   if(_feadDefOf(node).isFeadSpin) return veFeadApplySpinBadge(nodeEl, node);
-  if(!_feadIsPulley(node)) return false;
-  var back = veFeadContactOf(node) === 'back';
-  var drv = !!(node.data && node.data.driver);
-  var b = document.createElement('span');
-  b.className = 've-fead-badge';
-  b.textContent = (drv ? '► ' : '') + (back ? 'S' : 'K');
-  b.title = 'Temas: ' + veFeadContactLabel(back ? 'back' : 'grooved')
-          + (drv ? ' · Sürücü kasnak' : '');
-  b.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; pointer-events:none;'
-    // Ölçek jetonu — ham px değil (bkz. tests/unit/typography-scale.test.js).
-    // --fs-micro zaten "rozet, mikro etiket" için tanımlı.
-    + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
-    + 'padding:2px 4px; border-radius:3px; font-family:ui-monospace, monospace;'
-    + 'color:' + (back ? 'var(--bg-primary)' : 'var(--on-accent)')
-    + '; background:' + (back ? 'var(--text-secondary, #666)' : 'var(--accent-primary, #3b82f6)')
-    + '; border:1px solid var(--bg-primary, #111);';
-  var box = nodeEl.querySelector('.ve-node-box') || nodeEl;
-  box.appendChild(b);
-  return true;
+  return false;
 }
 
 // KAYIŞ BOYU KİPİ ROZETİ — kanvasta, TIKLANABİLİR.
@@ -733,10 +725,11 @@ function veFeadToggleBeltMode(nodeId){
 
 // ── DÖNÜŞ YÖNÜ ROZETİ ───────────────────────────────────────────────────────
 //
-// Rozet bir BAYRAK GÖSTERMİYOR, KABLOLARDAN TÜREYEN yönü gösteriyor:
-// `veFeadSpinOf` kabloların (gidiş) sırasını çekirdek sırasına çevirip
-// `veFeadNaturalSense` ile okuyor (çekirdeğin `loopSense`'iyle AYNI ölçüt).
-// Tıklamak bir alan yazmıyor, KABLOLARI çeviriyor — tek gerçek kaynak orası.
+// Rozet bir BAYRAK GÖSTERMİYOR, KAYIŞ SIRASINDAN TÜREYEN yönü gösteriyor:
+// `veFeadSpinOf` kasnakların tablo sırasını (`beltIndex`) okuyup
+// `veFeadNaturalSense` ile yönü çıkarıyor (çekirdeğin `loopSense`'iyle AYNI
+// ölçüt). Tıklamak bir "yön" alanı yazmıyor, SIRAYI çeviriyor — tek gerçek
+// kaynak orası.
 //
 // GLİF DURUMU TAŞIR, RENK DEĞİL — ve bu bilinçli. Aynı kanvasta iki rozet daha
 // var (`SABİT/SERBEST`, `AÇIK/KAPALI`) ve ikisinde de renk kanalı
@@ -751,9 +744,9 @@ function veFeadToggleBeltMode(nodeId){
 // Bu bir üçüncü renk EKSENİ, girdi/türetilen ekseniyle çakışmıyor.
 // YÖN ROTA SIRASINDAN OKUNUR, DÜĞÜM DİZİSİ SIRASINDAN DEĞİL — ve bu ayrım
 // bir kapıyla yakalandı. `nodes` dizisinin sırası kayış yolunu anlatmıyor;
-// örnek yüklenirken tesadüfen örtüşüyor, ama kablolar çevrilince dizi
-// DEĞİŞMİYOR. Diziden okuyan rozet, yön çevrildikten sonra da eski yönü
-// gösteriyordu — sessiz, çünkü sayı makul.
+// örnek yüklenirken tesadüfen örtüşüyor, ama sıra çevrilince dizi DEĞİŞMİYOR.
+// Diziden okuyan rozet, yön çevrildikten sonra da eski yönü gösteriyordu —
+// sessiz, çünkü sayı makul.
 //
 // TEK NOKTA: rozet de panel de burayı çağırıyor (iki ayrı hesap tutulsaydı
 // biri bayat kalırdı — bu modülün tekrar eden kuralı).
@@ -837,9 +830,15 @@ function veFeadToggleSpin(){
     showNodeProperties(selectedNode);
   if(typeof showToast === 'function'){
     var sense = veFeadCurrentSpin();
+    // SAYI KASNAK SAYISI, BAĞLANTI SAYISI DEĞİL — `veFeadReverseRoute` kayış
+    // sırasını (beltIndex) yeniden numaralandırıyor. Eski metin "N bağlantı
+    // çevrildi" diyordu; FEAD'de bağlantı YOK (on iki tipin on ikisinde de
+    // inputs:0/outputs:0), yani kullanıcıya hiç var olmamış bir şeyin sayısı
+    // veriliyordu.
     showToast(k ? ('Kayış dönüş yönü: ' + veFeadSpinLabel(sense).kisa
-                   + ' · ' + k + ' bağlantı çevrildi')
-                : 'Çevrilecek kayış bağlantısı yok', k ? 'info' : 'warning');
+                   + ' · ' + k + ' kasnak yeniden sıralandı')
+                : 'Sırası çevrilecek kasnak yok (en az üç kasnak gerekir)',
+              k ? 'info' : 'warning');
   }
   return k;
 }
@@ -865,13 +864,20 @@ function getFeadSpinPropertiesHTML(node){
     + 'background:var(--accent-primary);">Yönü çevir</button>'
     // DÜZLEM ADI TEK ÜRETİCİDEN (`_feadPlaneName`). Burada ikinci kez
     // yazılsaydı, ayna bayrağı değişince panel sessizce eskirdi.
-    + _feadHint('Yön bir ayar DEĞİL: kablolama sırasından türer (<b>' + _feadEsc(
+    //
+    // METİN TEL DÖNEMİNDEN KALMIŞTI: "kablolama sırasından türer", "tel from →
+    // to", "bağlantıları ters çevirir", "kanvastaki gidiş okları da döner".
+    // Kasnaklar 2026-09-09'da bağlanmaz oldu (sıra `beltIndex` alanında) ve
+    // kanvasta kutuları bile yok — dolayısıyla ne kablo var, ne gidiş oku.
+    // Kullanıcı panelde tarif edilen şeyi ekranda arıyordu.
+    + _feadHint('Yön bir ayar DEĞİL: <b>Kayış Tablosu\'nun satır sırasından</b> türer '
+        + '(<b>' + _feadEsc(
             (typeof _feadPlaneName === 'function') ? _feadPlaneName() : 'çizim düzlemi')
-        + '</b>). Kablolar kayışın GİDİŞ sırasındadır (tel from → to, kayış o '
-        + 'yöne akar); Gates tabloları bunun tersi sırada yazılıdır ve köprü '
-        + 'çekirdeğe o sırayı verir. Sürücü kayışı kendine çektiği için gergin '
-        + 'taraf ona GİREN açıklıktır. "Yönü çevir" kayış yolunun bağlantılarını '
-        + 'ters çevirir — kanvastaki gidiş okları da onunla döner.'));
+        + '</b>). Tablo sırası Gates raporlarının "Layout Data" yönündedir, yani '
+        + 'kayışın gidişinin TERSİ; köprü çekirdeğe o sırayı verir. Sürücü kayışı '
+        + 'kendine çektiği için gergin taraf ona GİREN açıklıktır. "Yönü çevir" '
+        + 'krank sabit kalacak şekilde kalan kasnakların sırasını ters çevirir — '
+        + 'tablodaki numaralar da onunla döner.'));
 
   // GEOMETRİ YÖNDEN BAĞIMSIZ, GERİLME DEĞİL — ve bunu panel SÖYLÜYOR, çünkü
   // kullanıcı "yönü çevirdim, sarım açıları neden aynı" diye sormasın.
@@ -881,7 +887,7 @@ function getFeadSpinPropertiesHTML(node){
     + '— ölçüldü, kasnak başına fark 2,5e−14°<br>'
     + '• <b>Değişir:</b> hangi açıklığın GERGİN olduğu — yani span gerilmeleri, '
     + 'hubload yönleri ve kayma emniyeti<br>'
-    + '• <b>Değişir:</b> kasnakların dönüş yönü ve kanvastaki gidiş okları'
+    + '• <b>Değişir:</b> kasnakların dönüş yönü ve Kayış Tablosu\'ndaki sıra numaraları'
     + '</div>');
 
   if(hkm && !hkm.ok){
@@ -5456,52 +5462,73 @@ function veFeadChecksCard(node, build){
       + _feadEsc(c.durum + '/' + w.durum + '/' + s.durum) + '">' + h + '</div>');
 }
 
-// ── BİRİNCİ KADEME (krank → sürücü kasnak) ──────────────────────────────────
+// ── FEAD TAHRİKİ (krank → sürücü kasnak) ────────────────────────────────────
 // FEAD kayışının sürücü kasnağı krank milinde olmak zorunda değil: tipik BMC
 // düzeninde krank ayrı bir kademeyle fan kasnağını döndürüyor, FEAD kayışı da
 // onun üzerinden tahrik ediliyor. Tedarikçi sayfası oranı İKİ ÇAPLA veriyor
-// (krank 197.32 / fan 179.62 = 1.0985 ≈ 1.1), tek bir sayıyla değil — panel de
-// o biçimde sorar ve oranı türetir. Elle sayı girme yolu duruyor (tek kademeli
-// sistemde oran 1'dir ve çap sormak anlamsız olurdu).
+// (krank 197.32 / fan 179.62 = 1.0985 ≈ 1.1), tek bir sayıyla değil.
+//
+// SORU SİHİRBAZLA AYNI SORU, LİSTE DE AYNI LİSTE (`VE_FEAD_DRIVE_MODES`,
+// fead-model.js) — gerekçesi ve ölçümü orada. Buraya ikinci bir seçenek
+// listesi yazmak, sihirbazdan kurulan modelin panelde BAŞKA bir düzen
+// göstermesi demekti; bir kez öyle oldu.
 function veFeadDriveCard(node){
   var sd = node.data || {};
   var dr = veFeadDriveRatio(sd);
 
-  var inner = _feadSelect(node, 'Tahrik oranı nereden gelsin', 'ratioMode',
-      [['derive', 'Krank ve fan kasnağı çapından türet'],
-       ['unity',  'Kademe yok — sürücü kasnak motor devrinde'],
-       ['direct', 'Oranı elle gir']], 'derive',
-      'Oran = sürücü kasnak devri / motor devri. Krank kasnağı fan kasnağından büyükse '
-      + 'sürücü kasnak motordan HIZLI döner (oran &gt; 1).');
-
-  // ALANLAR SEÇİLEN KİPTEN GELİR, ÇÖZÜLEN KİPTEN DEĞİL. `veFeadDriveRatio`
+  // ALANLAR SEÇİLEN DÜZENDEN GELİR, ÇÖZÜLEN DÜZENDEN DEĞİL. `veFeadDriveRatio`
   // çaplar boşken 'derive'ı 'direct'e düşürüyor (oran hâlâ okunabilsin diye);
-  // kart o düşüşü izleseydi "çaplardan türet" seçili ama daha hiçbir çap
+  // kart o düşüşü izleseydi "ara kademe" seçili ama daha hiçbir çap
   // girilmemişken çap alanları KAYBOLURDU ve kullanıcı onları bir daha
-  // giremezdi. `unity` bunun dışında: orada düşüş yok, kip kesin.
-  var kip = (sd.ratioMode === 'unity' || sd.ratioMode === 'direct')
-    ? sd.ratioMode : 'derive';
+  // giremezdi.
+  var kip = veFeadDriveModeOf(sd, true);
 
-  // ÜÇÜNCÜ KİPTE HİÇBİR ALAN YOK — sorulacak bir şey de yok. Fan kavraması
-  // krankın hemen önündeyse sürücü kasnak motorla aynı devirde döner ve oran
-  // tanımı gereği 1'dir; çap sormak kullanıcıyı var olmayan bir kademeyi
-  // tarif etmeye zorlardı.
-  if(kip === 'unity'){
-    inner += _feadHint('Bu düzende fan kavraması krank kasnağının hemen önünde: '
-      + 'sürücü kasnak krankla aynı milde ve aynı devirde döner. Oran <b>1,0000</b> — '
+  // ESKİ KAYDIN KUYRUĞU: `direct` listede YOK, ama düğüm onu taşıyorsa
+  // seçenek olarak basılır — yoksa hiçbir <option> seçili olmaz ve tarayıcı
+  // başka bir düzen gösterir (ölçülmüş kusurun ta kendisi). Kullanıcı bir kez
+  // ayrıldığında geri gelmez: yeni bir `direct` üretecek yüzey kalmadı.
+  var secenekler = VE_FEAD_DRIVE_MODES.slice();
+  if(kip === 'direct') secenekler.push(['direct', 'Oran elle girilmiş — ESKİ KAYIT']);
+
+  var inner = _feadSelect(node, 'Düzen', 'ratioMode', secenekler, 'derive',
+      'Oran = sürücü kasnak devri / motor devri. Krank kasnağı fan kasnağından büyükse '
+      + 'sürücü kasnak motordan HIZLI döner (oran &gt; 1). FEAD\'i tahrik eden ÇAP burada '
+      + 'sorulmaz — o, Kayış Tablosu\'nun sürücü satırındadır.');
+
+  // İLK DÜZENDE HİÇBİR ALAN YOK — sorulacak bir şey de yok: krank kasnağının
+  // kendisi sürücü kasnak, oran tanımı gereği 1 ve çapı zaten Kayış
+  // Tablosu'nda. İkincisinde krank çapı bir MOTOR VERİSİDİR (rapora girer,
+  // orana girmez); üçüncüsünde iki çap da oranı kurar.
+  if(kip === 'crankDirect'){
+    inner += _feadHint('Krank kasnağı doğrudan kayışı çeviriyor: oran <b>1,0000</b> ve '
       + 'türetilecek bir çap yok. Aksesuar devri = motor devri × '
       + '(sürücü kasnak pitch çapı / aksesuar pitch çapı).');
+  } else if(kip === 'unity'){
+    inner += _feadGrid(node, [
+      { key:'crankOD', label:'Krank kasnağı Ø [mm] — motor verisi', ph:'197.32' }
+    ], 1);
+    inner += _feadHint('Sürücü kasnak krankla aynı milde ve aynı devirde: oran '
+      + '<b>1,0000</b>. Krank kasnağının kendi çapı KAYITLIDIR ve rapora girer, '
+      + 'ama orana girmez — FEAD\'i tahrik eden çap sürücü kasnağınkidir.');
   } else if(kip === 'direct'){
     inner += _feadGrid(node, [
       { key:'driveRatio', label:'Tahrik oranı [—]', ph:'1', step:'0.0001' }
     ], 1);
+    inner += _feadHint('<b>Eski kayıt.</b> Elle yazılmış oran artık sorulmuyor '
+      + '(kullanıcı kararı, 2026-09-01): Excel\'deki elle yazılmış hız oranları '
+      + 'bütün gerilmeleri %17 düşürüyordu. Değer OKUNMAYA devam ediyor; düzeni '
+      + 'yukarıdan değiştirirseniz bu satır bir daha görünmez.');
   } else {
     inner += _feadGrid(node, [
       { key:'crankOD', label:'Krank kasnağı Ø [mm]', ph:'197.32' },
-      { key:'fanOD',   label:'Fan / sürücü kasnağı Ø [mm]', ph:'179.62' }
+      { key:'fanOD',   label:'Kademenin sürülen kasnağı Ø [mm]', ph:'179.62' }
     ], 2);
   }
 
+  // ORAN ÇÖZÜLEMEDİYSE KİP ADI YAZILMAZ. Köprü çap eksikken 'direct'e düşüyor
+  // ve etiketi "elle girildi" — panelde elle girilecek bir alan yokken bu
+  // cümle kullanıcıyı olmayan bir kutuya yönlendiriyordu.
+  var etiket = dr.ok ? veFeadDriveModeLabel(dr.mode) : 'çözülemedi — çap eksik';
   var deg = '<div style="font-size:var(--fs-micro); line-height:1.5; padding:7px 9px; margin-bottom:9px; '
     + 'background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm); '
     + 'display:flex; justify-content:space-between; gap:8px;">'
@@ -5509,10 +5536,10 @@ function veFeadDriveCard(node){
     + '<span style="font-family:ui-monospace,monospace; font-weight:700; color:'
     + (dr.ok ? 'var(--ink-accent)' : 'var(--ink-warning)') + ';">'
     + _feadFmt(dr.ratio, 4) + (dr.mode === 'derive' ? '  (' + _feadFmt(dr.crankOD, 2) + ' / ' + _feadFmt(dr.fanOD, 2) + ')' : '')
-    + '  <span style="font-weight:400; color:var(--text-muted);">' + veFeadDriveModeLabel(dr.mode) + '</span>'
+    + '  <span style="font-weight:400; color:var(--text-muted);">' + etiket + '</span>'
     + '</span></div>';
 
-  return _feadCard('Birinci Kademe', 'krank → sürücü kasnak', 'var(--accent-warning)',
+  return _feadCard('FEAD Tahriki', 'krank → sürücü kasnak', 'var(--accent-warning)',
     inner + deg
     + _feadHint('Bu oran aksesuar devirlerinin TAMAMINI ölçekler: aksesuar devri = motor devri '
       + '× tahrik oranı × (sürücü kasnak pitch çapı / aksesuar pitch çapı). Yanlış girilirse '
@@ -5520,14 +5547,24 @@ function veFeadDriveCard(node){
 }
 
 // ── MOTOR KÜNYESİ ───────────────────────────────────────────────────────────
-// Sayfadaki "Engine Info" tablosunun karşılığı. HANGİSİNİN HESABA GİRDİĞİ
-// AÇIKÇA YAZILI: model yarı-statiktir, ivmelenme/yavaşlama ve krank ataleti
-// geçici rejim girdileridir ve bu çekirdek onları KULLANMIYOR. Sessizce alan
-// açıp "girdim, hesaba girdi" izlenimi vermek, hiç sormamaktan kötü olurdu.
+// Sayfadaki "Engine Info" tablosunun karşılığı. HER ALANIN NEREYE GİRDİĞİ
+// AÇIKÇA YAZILI — ve bu kart iki kez o kuralın KENDİ ihlali oldu:
 //
-// DÖRT DEVİR SINIRI 2026-09-01'DE EKLENDİ ve ölü alan DEĞİL: `governedRpm` ve
-// `overspeedRpm` iki uygunluk kapısını besliyor (js/fead-checks.js). Boş
-// bırakılırsa kapılar "değerlendirilemedi" der — uygun saymaz.
+//   1. "No load governed" ALANI KALKTI (0 tüketici). `governedRpm` ve
+//      `overspeedRpm` uygunluk kapılarını besliyor (js/fead-checks.js),
+//      `idleRpm` geçici rejim senaryosunu (js/fead-transient.js) — no-load
+//      governed'ı okuyan hiçbir hesap, kapı ya da rapor satırı YOK. Katalogda
+//      duruyor (BMC'nin kendi künyesi, js/fead-engines.js) ve künye seçilince
+//      veriye yazılıyor; SORULMUYOR. Kartın kendi doktrini buydu zaten:
+//      sessizce alan açıp "girdim, hesaba girdi" izlenimi vermek hiç
+//      sormamaktan kötüdür.
+//   2. NOTU ÜÇ CANLI ALANI ÖLÜ İLAN EDİYORDU. "Krank ataleti · ivmelenme ·
+//      yavaşlama … bu çekirdek onları hesaba katmaz" cümlesi yazıldığında
+//      doğruydu; burulma modeli ve tepe yük tablosu geldikten sonra yanlış
+//      kaldı. ÖLÇÜLDÜ (AG00976): krank ataleti 0,70 → 0,15 birinci burulma
+//      modunu 12,947 → 15,014 Hz kaydırıyor (+%16,0); `accelRpmS` 1100 → 500
+//      tepe tablosuna birebir geçiyor. Yanlış bir "kullanılmıyor" damgası,
+//      kullanıcıyı gerçekten gereken alanı boş bırakmaya davet ediyordu.
 function veFeadEngineCard(node){
   return _feadCard('Motor Künyesi', 'sayfadaki Engine Info', 'var(--text-secondary)',
       veFeadEngineLibRow(node)
@@ -5536,23 +5573,23 @@ function veFeadEngineCard(node){
         { key:'serviceFact', label:'Servis faktörü [—]',  ph:'1.3', step:'0.01' }
       ], 2)
     + _feadGrid(node, [
-        { key:'idleRpm',           label:'Rölanti [d/dk]',   ph:'700',  step:'10' },
-        { key:'governedRpm',       label:'Governed [d/dk]',  ph:'2100', step:'10' },
-        { key:'noLoadGovernedRpm', label:'No load gov.',     ph:'2330', step:'10' },
-        { key:'overspeedRpm',      label:'Overspeed',        ph:'2900', step:'10' }
-      ], 4)
+        { key:'idleRpm',      label:'Rölanti [d/dk]',   ph:'700',  step:'10' },
+        { key:'governedRpm',  label:'Governed [d/dk]',  ph:'2100', step:'10' },
+        { key:'overspeedRpm', label:'Overspeed [d/dk]', ph:'2900', step:'10' }
+      ], 3)
     + _feadGrid(node, [
         { key:'crankInertia', label:'Krank ataleti [kg·m²]', ph:'0.70', step:'0.01' },
         { key:'accelRpmS',    label:'İvmelenme [RPM/s]',     ph:'1000', step:'10' },
         { key:'decelRpmS',    label:'Yavaşlama [RPM/s]',     ph:'1000', step:'10' }
       ], 3)
     + _feadHint('<b>Silindir sayısı</b> ateşleme frekansını verir (f = devir/60 × silindir/2, '
-        + 'dört zamanlı) ve span rezonans kontrolünde KULLANILIR. <b>Servis faktörü</b> kayma '
+        + 'dört zamanlı) ve span rezonans kontrolünde kullanılır. <b>Servis faktörü</b> kayma '
         + 'emniyeti için istenen alt sınır olarak sonuç sekmesinde karşılaştırılır. '
-        + '<b>Governed</b> ve <b>Overspeed</b> devirleri aksesuar devir penceresi ve devir '
-        + 'sınırı kapılarını besler. <b>Krank ataleti · ivmelenme · yavaşlama</b> geçici rejim '
-        + 'girdileridir; bu çekirdek yarı-statiktir ve onları <b>hesaba katmaz</b> — modelin '
-        + 'künyesinde kayıtlı kalırlar.'));
+        + '<b>Governed</b> ve <b>Overspeed</b> aksesuar devir penceresi ve devir sınırı '
+        + 'kapılarını besler, <b>Rölanti</b> geçici rejim senaryosunu. <b>Krank ataleti</b> '
+        + 'burulma modelinin sürücü atalet terimidir — boş bırakılırsa birinci mod belirgin '
+        + 'biçimde YÜKSEK çıkar. <b>İvmelenme</b> ve <b>yavaşlama</b> tepe yük / hubload '
+        + 'tablosuna girer.'));
 }
 
 // ── MOTOR KATALOĞU SATIRI ───────────────────────────────────────────────────
@@ -5587,7 +5624,7 @@ function veFeadEngineLibRow(node){
   else if(d)
     h += _feadHint('Alanlar <b>' + _feadEsc(d.ad) + '</b> kaydıyla birebir.');
   return h + _feadHint('Yirmi dört motor, BMC\'nin kendi FEAD hesap defterinin '
-    + '<i>Motor Bilgileri</i> sayfasından. Seçim <b>silindir sayısını, dört devir sınırını ve '
+    + '<i>Motor Bilgileri</i> sayfasından. Seçim <b>silindir sayısını, devir sınırlarını ve '
     + 'birinci kademe çaplarını</b> yazar; kasnak koordinatlarına ve kayışa <b>dokunmaz</b>.');
 }
 

@@ -1689,6 +1689,38 @@ function veFeadDriveModeLabel(mode){
        : 'elle girildi';
 }
 
+// ── SORULABİLİR DÜZENLER — TEK LİSTE, İKİ YÜZEY ────────────────────────────
+//
+// Sihirbaz ile Çözücü paneli AYNI soruyu soruyor ve bir dönem AYRI listelerden
+// okudular. Ölçüldü: sihirbaz `crankDirect` kurduğunda panelin listesinde o
+// değer HİÇ YOKTU — hiçbir <option> `selected` almıyor, tarayıcı ilk seçeneği
+// ("çaplardan türet") gösteriyor, altındaki çap alanları basılıyor ve hemen
+// yanındaki okuma satırı "krank kasnağı doğrudan sürücü (1:1)" diyordu. Aynı
+// kartta iki cevap; üstelik listeye DOKUNMAK modeli sessizce `derive`a
+// çeviriyordu.
+//
+// `direct` (oranı elle gir) BU LİSTEDE YOK ve olmayacak: kullanıcı kararı
+// (2026-09-01) *"oran sadece kasnak çaplarından türeyecek. El ile herhangi bir
+// giriş olmayacak"* — elle yazılmış oran spesifikasyon §2.3'ün en ciddi
+// bulgusuydu (bütün gerilmeleri %17 düşürüyordu). Köprü onu OKUMAYA devam
+// ediyor (arşivdeki 12 Gates örneği `direct` + oran 1 ile yazılı) ama hiçbir
+// yüzey yeni bir tane ÜRETEMEZ.
+var VE_FEAD_DRIVE_MODES = [
+  ['crankDirect', 'Krank kasnağı doğrudan FEAD\'i tahrik ediyor (1:1)'],
+  ['unity',       'Kranka bağlı ayrı bir sürücü kasnak — aynı devir (1:1)'],
+  ['derive',      'Ara kademe — krank ve sürücü kasnak farklı devirde']
+];
+
+// Düğüm/durum hangi düzeni TAŞIYOR: listedeki üçten biri ya da eski kayıttan
+// gelen `direct`. Tanınmayan her şey `derive`a düşer (köprünün çapsız
+// varsayılanı da o).
+function veFeadDriveModeOf(sd, eskiyiKoru){
+  var m = sd && sd.ratioMode;
+  if(m === 'unity' || m === 'crankDirect') return m;
+  if(eskiyiKoru && m === 'direct') return 'direct';
+  return 'derive';
+}
+
 // ─── ÖRNEK KAYIT DEFTERİ ────────────────────────────────────────────────────
 //
 // Örnekler VERİ olarak burada durur (DOM'suz katman); kanvasa kurma işi sunum
@@ -4565,6 +4597,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadAtLimitText: veFeadAtLimitText, veFeadViolationText: veFeadViolationText,
     VE_FEAD_TENSION_TOL: VE_FEAD_TENSION_TOL,
     veFeadDriveRatio: veFeadDriveRatio, veFeadDriveModeLabel: veFeadDriveModeLabel,
+    VE_FEAD_DRIVE_MODES: VE_FEAD_DRIVE_MODES, veFeadDriveModeOf: veFeadDriveModeOf,
     VE_FEAD_POSITIONS: VE_FEAD_POSITIONS, VE_FEAD_POS_TOL_DEG: VE_FEAD_POS_TOL_DEG,
     veFeadPositionRows: veFeadPositionRows, veFeadPosMode: veFeadPosMode,
     veFeadPosSelection: veFeadPosSelection,

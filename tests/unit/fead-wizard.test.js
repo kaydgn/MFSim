@@ -2451,14 +2451,33 @@ describe('motor künyesi PENCEREDE — sayfa sadeleşti', () => {
     expect(h).toContain('Devir sınırları');
   });
 
-  test('ON ALANIN HEPSİ pencerede ve tek listeden', () => {
+  test('DOKUZ ALANIN HEPSİ pencerede ve tek listeden', () => {
     kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
     const p = wiz.veFeadWizEngHTML();
-    expect(wiz.VE_FW_ENG_FIELDS.length).toBe(10);
+    expect(wiz.VE_FW_ENG_FIELDS.length).toBe(9);
     wiz.VE_FW_ENG_FIELDS.forEach((f) => {
       expect(p).toContain("'" + f.yol + "'");
       expect(p).toContain(f.ad);
     });
+  });
+
+  // ── "NO LOAD GOVERNED" SORULMUYOR — 0 TÜKETİCİ ──────────────────────────
+  //
+  // Onuncu alandı ve değerini OKUYAN hiçbir hesap, uygunluk kapısı ya da rapor
+  // satırı yoktu. Katalogda duruyor ve künye seçilince MODELE yazılıyor (kapı
+  // aşağıda) — sorulmayan şey kullanıcıya açılan giriş kutusu. Çözücü
+  // panelinden de aynı turda kalktı; iki yüzey aynı künyeyi sorar.
+  test('no load governed SORULMUYOR ama künye onu yazmaya devam ediyor', () => {
+    kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
+    expect(wiz.veFeadWizEngHTML()).not.toContain('noLoadGovernedRpm');
+    expect(wiz.VE_FW_ENG_FIELDS.some((f) => /noLoad/i.test(f.yol))).toBe(false);
+    const sd = {};
+    veFeadEngineApply(sd, veFeadEngineList().find((r) => r.key === '57RS303234').key);
+    expect(sd.noLoadGovernedRpm).toBe(2330);
+    // Ve sapma raporu onu ARAMIYOR: görülemeyen bir alan için kapatılamayan
+    // bir uyarı üretmek, uyarının kendisini değersizleştirirdi.
+    sd.noLoadGovernedRpm = 9999;
+    expect(veFeadEngineDrift(sd).drift).toEqual([]);
   });
 
   test('KATALOGDAN GELEN ile GELMEYEN ayrı — ve ayrım kataloğun KENDİSİNDEN', () => {
