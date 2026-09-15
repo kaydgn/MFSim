@@ -314,6 +314,38 @@ olurdu.
     kırpıyordu, en uzunu 169 px gerek / 120 px alan). Kapı:
     `source-hygiene.test.js` → *"FEAD panel kozmetiği"*.
 
+24. **BİR GİRDİ İKİ YÜZEYDE SORULUYORSA LİSTESİ TEK KAYNAKTAN GELİR.** FEAD
+    tahrik düzeni sihirbazda ve Çözücü panelinde ayrı ayrı yazılıydı: sihirbaz
+    `crankDirect` kuruyor, panelin listesinde o değer HİÇ YOK, hiçbir seçenek
+    `selected` almıyor, tarayıcı ilk seçeneği gösteriyor ve listeye dokunmak
+    modeli sessizce `derive`a çeviriyordu. Liste artık `VE_FEAD_DRIVE_MODES`
+    (fead-model.js). **Elle oran (`direct`) hiçbir yüzeyde ÜRETİLEMEZ**
+    (kullanıcı kararı 2026-09-01; §2.3'ün en ciddi bulgusu) ama köprü onu
+    okumaya devam eder — arşivdeki 12 Gates örneği öyle yazılı — ve panel
+    seçeneği yalnız düğüm onu TAŞIYORSA basar. Kapı: `fead-defaults.test.js`
+    → *"panelin listesi SİHİRBAZIN listesiyle birebir aynı"*, *"her düzen
+    panelde SEÇİLİ geliyor"*, *"eski `direct` kaydı"*.
+
+25. **SORULAN HER ALANIN BİR TÜKETİCİSİ OLMAK ZORUNDA.** `noLoadGovernedRpm`
+    iki yüzeyde soruluyordu ve değerini okuyan hiçbir hesap, uygunluk kapısı
+    ya da rapor satırı yoktu; katalogda duruyor, künye onu modele yazmaya
+    devam ediyor, ama SORULMUYOR. Aynı kuralın tersi de geçerli: bir notun
+    canlı bir alanı "hesaba katmaz" diye ilan etmesi de yasak — krank ataleti
+    burulma modelini, ivme/yavaşlama tepe yük tablosunu besliyor. Kapı:
+    `cp-fead.test.js` → *"NO LOAD GOVERNED sorulmuyor"* + *"alanları ölü İLAN
+    ETMİYOR"*, `fead-wizard.test.js` → *"no load governed SORULMUYOR"*.
+    Tarama: panelin sorduğu 53 alandan tüketicisi olmayan tek alan buydu.
+
+26. **KALDIRILAN BİR YAPININ DİLİ DE KALDIRILIR.** Tel dönemi 2026-09-09'da
+    bitti (kasnaklar bağlanmaz, sıra `beltIndex`); Dönüş Yönü paneli ve
+    toast'ı "kablolama sırası · tel from → to · bağlantıları ters çevirir ·
+    kanvastaki gidiş okları" demeye devam ediyordu ve FEAD modül paneli
+    yapısal olarak hep 0 olan bir "Bağlantı" satırı basıyordu (on iki tipin
+    on ikisinde de `inputs:0, outputs:0`). Kasnak K/S rozeti de aynı sınıftan:
+    kutu kalkınca `getElementById` hep null döndü, kod erişilemez hâlde kaldı.
+    Kapı: `cp-fead.test.js` → *"BAĞLANTI satırı yok"* + *"HİÇBİRİNDE port
+    yok"* + *"KASNAK rozet almaz"*.
+
 ## Referans dosyaları
 
 Değiştireceğin alanın dosyasını **oku**; hepsini birden okuma.

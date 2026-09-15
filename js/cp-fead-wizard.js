@@ -121,7 +121,13 @@ function veFeadWizDefault(){
     // bildirdi: aksesuar modeli seçilse bile doldurulacak satır olmadığı için
     // kW sütunları boş kalıyor, on iki satır elle açılıyordu. Kayıt hangi
     // ölçümden geldiğini söylüyor ve 6. adımdaki seçiciyle değiştirilebiliyor.
-    solver: { ratioMode: 'derive', driveRatio: 1, cylinders: 6, serviceFact: 1.3,
+    // `driveRatio` BURADA YOK. Sihirbaz elle oran SORMUYOR (2026-09-01) ama
+    // boş duruma yazılı 1 her kurulan modele taşınıyordu: kullanıcı "ara
+    // kademe" seçip TEK çap girdiğinde köprü o 1'e düşüyor, oran 1 çıkıyor,
+    // kip "elle girildi" oluyor ve "Algılanan Model" satırı ✓ gösteriyordu —
+    // girilen çapın hiç kullanılmadığı hâlde. Alan olmayınca aynı durum
+    // ok:false veriyor ve satır ✗ ile uyarıyor.
+    solver: { ratioMode: 'derive', cylinders: 6, serviceFact: 1.3,
               dutyLib: (typeof VE_FEAD_DUTY_DEFAULT !== 'undefined') ? VE_FEAD_DUTY_DEFAULT : '',
               duty: (typeof veFeadDutyRowsOf === 'function')
                 ? veFeadDutyRowsOf(VE_FEAD_DUTY_DEFAULT) : [] },
@@ -657,11 +663,11 @@ function veFeadWizNodes(st){
   // seçenek SUNMUYOR, dolayısıyla kurduğu model de kipi açık bırakamaz —
   // eskiden bir taslakta 'full' yazılı kalmışsa o sessizce taşınırdı.
   bd.beltDataMode = 'none';
-  // KAYIŞ KİPİ ZARF KİPİNDE YAZILMAZ: orada boy yapısal olarak bir ÇIKTI ve
-  // köprü kipi zaten kilitliyor (veFeadBeltModeLocked). Yazmak, panelde
-  // "SABİT" görünüp serbest koşan bir model üretirdi.
-  if(false)
-    bd.lengthMode = b.lengthMode;
+  // KAYIŞ KİPİ HİÇ YAZILMAZ: gergi avara merkezinden çözüldüğü için boy
+  // yapısal olarak bir ÇIKTI ve köprü kipi zaten kilitliyor
+  // (veFeadBeltModeLocked). Yazmak, panelde "SABİT" görünüp serbest koşan bir
+  // model üretirdi. (Bir dönem burada `if(false)` ile kapatılmış bir atama
+  // duruyordu — koşul hiç doğru olamayacağı için ölü daldı.)
   out.push({ id: 'wz-belt', type: 'fead-belt', data: bd });
 
   var s = st.solver || {};
@@ -2543,11 +2549,17 @@ function _sicaklikAlani(duty){
 // `kat: false` → katalogda KARŞILIĞI OLMAYAN alan; motordan gelemez, elle
 // girilir. Ayrımı gizlemek, kullanıcının "motoru seçtim, hepsi doldu" diye
 // düşünüp boş bir servis faktörüyle devam etmesi demekti.
+//
+// "NO LOAD GOVERNED" BU LİSTEDE YOK — sorulmaz. Sayıyı OKUYAN hiçbir hesap,
+// uygunluk kapısı ya da rapor satırı yok (aranan yerler: fead-model · fead-core
+// · fead-checks · fead-transient · iki rapor üreteci). Katalogda duruyor ve
+// künye seçilince veriye yazılıyor; kullanıcıdan istenmesi, hesaba girdiği
+// izlenimi veriyordu. Aynı kaldırma Çözücü panelinde de yapıldı — iki yüzey
+// aynı künyeyi sorar.
 var VE_FW_ENG_FIELDS = [
   { yol: 'solver.cylinders',         ad: 'Silindir sayısı',      br: '—',      ph: '6',    kat: true  },
   { yol: 'solver.idleRpm',           ad: 'Rölanti',              br: 'RPM',    ph: '700',  kat: true  },
   { yol: 'solver.governedRpm',       ad: 'Governed',             br: 'RPM',    ph: '2100', kat: true  },
-  { yol: 'solver.noLoadGovernedRpm', ad: 'No load governed',     br: 'RPM',    ph: '2330', kat: true  },
   { yol: 'solver.overspeedRpm',      ad: 'Overspeed',            br: 'RPM',    ph: '2900', kat: true  },
   { yol: 'solver.serviceFact',       ad: 'Servis faktörü',       br: '—',      ph: '1.3',  kat: false },
   { yol: 'solver.crankInertia',      ad: 'Krank mili ataleti',   br: 'kg·m²',  ph: '0.70', kat: false },
@@ -2571,7 +2583,7 @@ function _fwEngineOzet(s){
     var v = _fwEngVal(s, f);
     return v === null ? '—' : String(v);
   }).join(' · ');
-  return _fwRead('Devir sınırları (rölanti · gov · no-load · overspeed)', devir + ' RPM')
+  return _fwRead('Devir sınırları (rölanti · governed · overspeed)', devir + ' RPM')
     + _fwRead('Silindir', (function(){ var v = _fwEngVal(s, VE_FW_ENG_FIELDS[0]); return v === null ? '—' : String(v); })())
     + _fwRead('Künye alanları', say + ' / ' + VE_FW_ENG_FIELDS.length
         + (bos ? ' — ' + bos + ' alan boş' : ' — tamam'));
@@ -2647,11 +2659,11 @@ function _fwStepCevrim(b){
   var _srcOD = null;
   (st.pulleys || []).forEach(function(p){ if(p.driver) _srcOD = _fwNum(p.od, null); });
   var h = _fwCard('FEAD Tahriki', 'var(--accent-warning)',
+      // LİSTE TEK KAYNAKTAN (`VE_FEAD_DRIVE_MODES`, fead-model.js): Çözücü
+      // paneli aynı soruyu soruyor ve ikinci bir kopya tutulduğunda iki yüzey
+      // ayrıştı — sihirbazın kurduğu düzen panelin listesinde HİÇ YOKTU.
       _fwGrid([_fwField('Düzen',
-        _fwSelHTML('solver.ratioMode',
-          [['crankDirect', 'Krank kasnağı doğrudan FEAD\'i tahrik ediyor (1:1)'],
-           ['unity',       'Kranka bağlı ayrı bir sürücü kasnak — aynı devir (1:1)'],
-           ['derive',      'Ara kademe — krank ve sürücü kasnak farklı devirde']], _kademe))], 1)
+        _fwSelHTML('solver.ratioMode', VE_FEAD_DRIVE_MODES, _kademe))], 1)
     + (_kademe === 'derive'
         ? _fwGrid([_fwField('Krank kasnağı Ø [mm]', _fwInp('solver.crankOD', { ph: '197.32' })),
                    _fwField('Kademenin sürülen kasnağı Ø [mm]', _fwInp('solver.fanOD', { ph: '179.62' }))])

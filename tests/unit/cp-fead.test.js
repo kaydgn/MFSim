@@ -83,13 +83,34 @@ describe('Alt-sistem sözleşmesi', () => {
     expect(html).toContain("veFeadOpenEditor('comp-3')");
   });
 
-  test('açılmış alt-topolojinin bileşen/bağlantı sayısı özette görünür', () => {
+  // ── "BAĞLANTI" SATIRI KALDIRILDI — YAPISAL OLARAK HEP 0 ─────────────────
+  //
+  // FEAD tiplerinin HEPSİNDE `inputs:0, outputs:0`: bu alt topolojide bir tel
+  // kurulamaz (kayış sırası `node.data.beltIndex` alanında). Panel yine de bir
+  // "Bağlantı" satırı basıyordu ve her modelde aynı sıfırı gösteriyordu —
+  // kullanıcıya bakacak bir yer gösterip hiçbir şey söylemeyen bir satır.
+  //
+  // KAPI ÇİFT: satırın gitmiş olması TEK BAŞINA bir şey ifade etmez, çünkü
+  // sayı ileride yine 0 olmayabilirdi. İkinci yarı tipleri sayıyor.
+  test('bileşen sayısı özette görünür; BAĞLANTI satırı yok', () => {
     const html = fead.getFeadModulePropertiesHTML({
       id: 'comp-4', type: 'fead-analysis',
       data: { subTopology: { nodes: [{}, {}, {}, {}], connections: [{}, {}, {}] } }
     });
     expect(html).toContain('>4<');
-    expect(html).toContain('>3<');
+    expect(html).toContain('Bileşen');
+    expect(html).not.toContain('Bağlantı');
+    expect(html).not.toContain('>3<');
+  });
+
+  test('FEAD tiplerinin HİÇBİRİNDE port yok — bağlantı kurulamaz', () => {
+    const feadTipler = Object.keys(componentDefs)
+      .filter((t) => t.indexOf('fead-') === 0 && t !== 'fead-analysis');
+    expect(feadTipler.length).toBeGreaterThanOrEqual(12);
+    feadTipler.forEach((t) => {
+      const d = componentDefs[t];
+      expect({ t, io: (d.inputs || 0) + (d.outputs || 0) }).toEqual({ t, io: 0 });
+    });
   });
 
   test('çift tık kapısı: veFeadOpenEditor yalnız fead-analysis düğümünü açar', () => {
@@ -174,7 +195,21 @@ describe('componentDefs — temas tarafı varsayılanları', () => {
 // ── Kanvas rozeti ───────────────────────────────────────────────────────────
 // Temas tarafı sessiz hatanın kaynağı; rozet onu gözle görünür kılan tek şey.
 // Rozetin İÇERİĞİ değil, DOĞRU DEĞERİ yansıtması test ediliyor.
-describe('veFeadApplyBadge — temas tarafı kanvasta görünür', () => {
+// ── KASNAK K/S ROZETİ KALDIRILDI — ERİŞİLEMEZ KODDU ───────────────────────
+//
+// Rozet kasnağın kutusuna yapışıyordu; kasnakların kanvasta kutusu 2026-09-09'da
+// kalktı (`noCanvasBox`) ve o günden beri `veFeadRefreshBadges`'in
+// `getElementById` çağrısı kasnaklarda HER SEFERİNDE null dönüyordu — yani
+// fonksiyonun kasnak dalı bir daha hiç koşmadı. Modülün kuralı bunu zaten
+// söylüyordu ("Kanvas rozeti (K/S) kutularla birlikte kalktı"); kalkmayan şey
+// koddu. Testler onu doğrudan çağırarak canlı gösteriyordu.
+//
+// KAPI ŞİMDİ NEGATİF ve kaldırmayı kilitliyor: kasnak rozet ALMAZ, kutusu olan
+// iki tip (kayış · dönüş yönü) almaya devam eder. Temas tarafının üç canlı
+// yüzeyi var ve testleri ayrı: tip varsayılanı (`fead-defaults.test.js`),
+// kasnak paneli (aşağıda) ve Kayış Tablosu'nun "Kasnak Dönüş Yönü" sütunu
+// (`fead-table.test.js`).
+describe('veFeadApplyBadge — kutusu olmayan düğüme rozet konmaz', () => {
   const el = () => {
     const d = document.createElement('div');
     d.className = 've-node';
@@ -187,23 +222,27 @@ describe('veFeadApplyBadge — temas tarafı kanvasta görünür', () => {
     return e.querySelector('.ve-fead-badge');
   };
 
-  test('kaburgalı K, sırttan S gösterir', () => {
-    expect(rozet(kasnak('fead-alternator')).textContent).toBe('K');
-    expect(rozet(kasnak('fead-idler')).textContent).toBe('S');
+  test('KASNAK rozet almaz — kanvasta kutusu yok', () => {
+    ['fead-alternator', 'fead-idler', 'fead-crank', 'fead-ac', 'fead-tensioner']
+      .forEach((t) => {
+        expect({ t, rozet: rozet(kasnak(t)) === null }).toEqual({ t, rozet: true });
+        // Kutusuzluk kapısı: DOM kutusu hiç kurulmuyor (components.js).
+        expect({ t, gizli: veIsCanvasHidden({ type: t }) }).toEqual({ t, gizli: true });
+      });
+    // Sürücülük ve elle ezilen temas tarafı da bir rozet doğurmuyor.
+    expect(rozet(kasnak('fead-crank', { driver: true }))).toBeNull();
+    expect(rozet(kasnak('fead-idler', { contact: 'grooved' }))).toBeNull();
   });
 
-  test('kullanıcının ezdiği değeri yansıtır', () => {
-    expect(rozet(kasnak('fead-idler', { contact: 'grooved' })).textContent).toBe('K');
+  test('kutusu OLAN iki tip rozetini almaya devam eder', () => {
+    expect(rozet(kasnak('fead-belt'))).not.toBeNull();
+    expect(rozet(kasnak('fead-spin'))).not.toBeNull();
   });
 
-  test('sürücü kasnak ayrıca işaretlenir', () => {
-    expect(rozet(kasnak('fead-crank', { driver: true })).textContent).toBe('► K');
-  });
-
-  test('ne kasnak ne kayış olan düğüme rozet konmaz; iki kez çağrılınca çoğalmaz', () => {
+  test('araç düğümüne rozet konmaz; iki kez çağrılınca çoğalmaz', () => {
     expect(rozet(kasnak('fead-solver'))).toBeNull();
     expect(rozet(kasnak('fead-layout'))).toBeNull();
-    const e = el(), n = kasnak('fead-ac');
+    const e = el(), n = kasnak('fead-belt');
     fead.veFeadApplyBadge(e, n);
     fead.veFeadApplyBadge(e, n);
     expect(e.querySelectorAll('.ve-fead-badge')).toHaveLength(1);
@@ -716,12 +755,40 @@ describe('çözücü paneli: birinci kademe ve motor künyesi', () => {
 
   // Hesaba GİRMEYEN alanların girmediği yazılı olmalı: sessizce alan açmak
   // "girdim, hesaba girdi" izlenimi verir.
-  test('motor künyesi kartı hangi alanın hesaba girmediğini SÖYLER', () => {
+  // ── NOT ÜÇ CANLI ALANI ÖLÜ İLAN EDİYORDU ────────────────────────────────
+  //
+  // Eski metin "Krank ataleti · ivmelenme · yavaşlama … bu çekirdek onları
+  // hesaba katmaz" diyordu ve YAZILDIĞINDA doğruydu; burulma modeli ile tepe
+  // yük tablosu geldikten sonra yanlış kaldı. ÖLÇÜLDÜ (AG00976): krank ataleti
+  // 0,70 → 0,15 birinci burulma modunu 12,947 → 15,014 Hz kaydırıyor (+%16,0);
+  // `accelRpmS` sonuca birebir geçiyor (`R.peakAccelRpmS`). Yanlış bir
+  // "kullanılmıyor" damgası, gereken alanı boş bırakmaya davet ediyordu.
+  //
+  // İki alt-kapı: (1) canlı alanlar ölü ilan EDİLMİYOR, (2) sayısal etki
+  // gerçekten var — ikincisi `fead-example.test.js`'te, burada yalnız metin.
+  test('motor künyesi kartı alanları ölü İLAN ETMİYOR', () => {
     const html = fead.veFeadEngineCard(kasnak('fead-solver', {}));
     expect(html).toMatch(/veFeadSet\('[^']+','cylinders'/);
     expect(html).toMatch(/veFeadSet\('[^']+','crankInertia'/);
     expect(html).toMatch(/veFeadSet\('[^']+','serviceFact'/);
-    expect(html).toMatch(/hesaba katmaz/);
+    expect(html).not.toMatch(/hesaba katmaz/);
+    // Üçünün de nereye girdiği YAZILI.
+    expect(html).toMatch(/burulma modelinin/);
+    expect(html).toMatch(/tepe yük/i);
+  });
+
+  // ── "NO LOAD GOVERNED" ALANI KALDIRILDI — 0 TÜKETİCİ ────────────────────
+  //
+  // Değeri okuyan hiçbir hesap, uygunluk kapısı ya da rapor satırı yok. Kart
+  // kendi doktrininde bunu zaten yazıyordu: sessizce alan açıp "girdim, hesaba
+  // girdi" izlenimi vermek hiç sormamaktan kötüdür.
+  test('NO LOAD GOVERNED sorulmuyor; besleyen üç devir soruluyor', () => {
+    const html = fead.veFeadEngineCard(kasnak('fead-solver', {}));
+    expect(html).not.toMatch(/noLoadGovernedRpm/);
+    ['idleRpm', 'governedRpm', 'overspeedRpm'].forEach((k) => {
+      expect({ k, var: new RegExp("veFeadSet\\('[^']+','" + k + "'").test(html) })
+        .toEqual({ k, var: true });
+    });
   });
 });
 
