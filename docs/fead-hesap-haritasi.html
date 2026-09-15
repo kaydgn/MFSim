@@ -1,0 +1,1273 @@
+<title>FEAD Hesap Haritası</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --paper:#F6F7F9; --surface:#FFFFFF; --surface-2:#EEF1F4;
+  --ink:#15202B; --ink-2:#54636F; --ink-3:#7C8A96;
+  --rule:#D5DCE3; --rule-soft:#E6EAEF;
+  --girdi:#1C6FB4;  --girdi-bg:#E8F0F8;
+  --cozum:#A66400;  --cozum-bg:#F8F0E0;
+  --kapi:#1C7355;   --kapi-bg:#E4F0EB;
+  --uyari:#A63523;  --uyari-bg:#F8EAE7;
+  --measure:70ch;
+  --f-disp:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --f-body:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#11161B; --surface:#171E25; --surface-2:#1E262E;
+    --ink:#E3E9EE; --ink-2:#A2B0BB; --ink-3:#7A8894;
+    --rule:#2D3841; --rule-soft:#232C34;
+    --girdi:#6FB2EC; --girdi-bg:#16293A;
+    --cozum:#E8A73E; --cozum-bg:#332714;
+    --kapi:#5FC39C; --kapi-bg:#123026;
+    --uyari:#EC8574; --uyari-bg:#33201C;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#11161B; --surface:#171E25; --surface-2:#1E262E;
+  --ink:#E3E9EE; --ink-2:#A2B0BB; --ink-3:#7A8894;
+  --rule:#2D3841; --rule-soft:#232C34;
+  --girdi:#6FB2EC; --girdi-bg:#16293A;
+  --cozum:#E8A73E; --cozum-bg:#332714;
+  --kapi:#5FC39C; --kapi-bg:#123026;
+  --uyari:#EC8574; --uyari-bg:#33201C;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--f-body); font-size:16px; line-height:1.62;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:1040px; margin:0 auto; padding-block:0 72px; padding-left:20px; padding-right:20px}
+
+/* ── ANTET ─────────────────────────────────────────── */
+.antet{border-bottom:2px solid var(--ink); padding-block:44px 18px; margin-bottom:34px}
+.antet .kod{
+  font-family:var(--f-mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--girdi); font-weight:600; margin:0 0 14px;
+}
+.antet h1{
+  font-family:var(--f-disp); font-weight:700; font-size:clamp(30px,5.4vw,48px);
+  line-height:1.06; letter-spacing:-.022em; margin:0 0 14px; text-wrap:balance;
+}
+.antet .alt{font-size:18px; color:var(--ink-2); max-width:var(--measure); margin:0 0 22px}
+.kunye{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:14px 26px;
+  font-family:var(--f-disp); font-size:12.5px; border-top:1px solid var(--rule); padding-top:16px;
+}
+.kunye div span{display:block; color:var(--ink-3); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; margin-bottom:3px}
+.kunye div b{font-weight:600; font-variant-numeric:tabular-nums}
+
+/* ── BÖLÜM ─────────────────────────────────────────── */
+section{margin-block:52px}
+h2{
+  font-family:var(--f-disp); font-weight:700; font-size:clamp(21px,3vw,27px);
+  line-height:1.16; letter-spacing:-.016em; margin:0 0 6px; text-wrap:balance;
+  padding-top:14px; border-top:2px solid var(--ink);
+}
+h2 .no{
+  font-family:var(--f-mono); font-size:13px; font-weight:600; color:var(--girdi);
+  display:block; margin-bottom:7px; letter-spacing:.08em;
+}
+h3{
+  font-family:var(--f-disp); font-weight:600; font-size:17px; letter-spacing:-.008em;
+  margin:34px 0 8px; text-wrap:balance;
+}
+h4{
+  font-family:var(--f-disp); font-weight:600; font-size:12px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-2); margin:26px 0 8px;
+}
+p{margin:0 0 15px; max-width:var(--measure)}
+ul,ol{margin:0 0 16px; padding-left:22px; max-width:var(--measure)}
+li{margin-bottom:7px}
+a{color:var(--girdi)}
+code,.k{
+  font-family:var(--f-mono); font-size:.855em; background:var(--surface-2);
+  padding:1px 5px; border-radius:3px; color:var(--ink);
+}
+strong{font-weight:600}
+.lead{font-size:18px; color:var(--ink-2); max-width:var(--measure)}
+
+/* ── ŞEKİL ─────────────────────────────────────────── */
+figure{margin:30px 0; padding:0}
+figure svg{display:block; width:100%; max-width:100%; height:auto; color:var(--ink)}
+.sekil-kap{
+  background:var(--surface); border:1px solid var(--rule); border-radius:2px;
+  padding:18px 16px; overflow-x:auto;
+}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; line-height:1.5; color:var(--ink-2);
+  margin-top:11px; max-width:var(--measure);
+}
+figcaption b{color:var(--ink); font-weight:600}
+
+/* ── TABLO ─────────────────────────────────────────── */
+.tablo-kap{overflow-x:auto; margin:20px 0 26px; border:1px solid var(--rule); background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-family:var(--f-disp); font-size:12.5px; line-height:1.45}
+th,td{padding:7px 10px; text-align:left; vertical-align:top; border-bottom:1px solid var(--rule-soft)}
+thead th{
+  background:var(--surface-2); font-size:10.5px; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--ink-2); font-weight:600; border-bottom:1px solid var(--rule); white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:var(--f-mono); font-size:11.5px; white-space:nowrap}
+td.num{text-align:right; font-variant-numeric:tabular-nums; font-family:var(--f-mono); font-size:11.5px}
+caption{
+  caption-side:top; text-align:left; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.09em; text-transform:uppercase; color:var(--ink-2);
+  padding:10px 10px 8px; border-bottom:1px solid var(--rule); background:var(--surface-2);
+}
+
+/* ── ROZET ─────────────────────────────────────────── */
+.rz{
+  display:inline-block; font-family:var(--f-disp); font-size:9.5px; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase; padding:2px 6px; border-radius:2px;
+  white-space:nowrap; line-height:1.5;
+}
+.rz-g{background:var(--girdi-bg); color:var(--girdi); box-shadow:inset 0 0 0 1px currentColor}
+.rz-c{background:var(--cozum-bg); color:var(--cozum); box-shadow:inset 0 0 0 1px currentColor}
+.rz-k{background:var(--kapi-bg); color:var(--kapi); box-shadow:inset 0 0 0 1px currentColor}
+.rz-u{background:var(--uyari-bg); color:var(--uyari); box-shadow:inset 0 0 0 1px currentColor}
+.rz-n{background:var(--surface-2); color:var(--ink-3); box-shadow:inset 0 0 0 1px var(--rule)}
+
+/* ── NOT KUTUSU ────────────────────────────────────── */
+.not{
+  border-left:3px solid var(--uyari); background:var(--uyari-bg);
+  padding:14px 16px; margin:22px 0; max-width:var(--measure);
+}
+.not.iyi{border-left-color:var(--kapi); background:var(--kapi-bg)}
+.not.bilgi{border-left-color:var(--girdi); background:var(--girdi-bg)}
+.not p:last-child{margin-bottom:0}
+.not .bas{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.1em;
+  text-transform:uppercase; display:block; margin-bottom:6px; color:var(--uyari);
+}
+.not.iyi .bas{color:var(--kapi)}
+.not.bilgi .bas{color:var(--girdi)}
+
+/* ── FORMÜL ────────────────────────────────────────── */
+.form{
+  font-family:var(--f-mono); font-size:13.5px; line-height:1.85;
+  background:var(--surface); border:1px solid var(--rule); border-left:3px solid var(--cozum);
+  padding:14px 16px; margin:18px 0; overflow-x:auto; white-space:pre;
+}
+.form .ac{color:var(--cozum); font-weight:600}
+
+/* ── LEJANT ────────────────────────────────────────── */
+.lejant{
+  display:flex; flex-wrap:wrap; gap:10px 22px; font-family:var(--f-disp); font-size:12px;
+  border:1px solid var(--rule); background:var(--surface); padding:12px 14px; margin:20px 0;
+}
+.lejant span{display:flex; align-items:center; gap:7px}
+.lejant i{width:16px; height:10px; border-radius:2px; display:block; flex:none}
+
+/* ── İÇİNDEKİLER ───────────────────────────────────── */
+nav.ic{border:1px solid var(--rule); background:var(--surface); padding:18px 20px; margin:0 0 42px}
+nav.ic h4{margin:0 0 10px}
+nav.ic ol{margin:0; padding-left:0; list-style:none; columns:2; column-gap:34px; max-width:none}
+nav.ic li{font-family:var(--f-disp); font-size:13px; margin-bottom:5px; break-inside:avoid}
+nav.ic a{text-decoration:none; color:var(--ink)}
+nav.ic a:hover{color:var(--girdi); text-decoration:underline}
+nav.ic .n{font-family:var(--f-mono); font-size:11px; color:var(--ink-3); margin-right:7px}
+
+.dip{border-top:1px solid var(--rule); margin-top:58px; padding-top:18px; font-family:var(--f-disp); font-size:11.5px; color:var(--ink-3)}
+:focus-visible{outline:2px solid var(--girdi); outline-offset:2px}
+
+@media (max-width:640px){
+  body{font-size:15px}
+  .wrap{padding-left:16px; padding-right:16px}
+  nav.ic ol{columns:1}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+
+/* ── BASKI ─────────────────────────────────────────── */
+@media print{
+  @page{size:A4; margin:16mm 14mm}
+  :root{
+    --paper:#fff; --surface:#fff; --surface-2:#F2F4F6;
+    --ink:#000; --ink-2:#333; --ink-3:#666; --rule:#999; --rule-soft:#CCC;
+    --girdi:#14568C; --cozum:#7E4B00; --kapi:#14563F; --uyari:#8A2A1B;
+  }
+  body{font-size:10.5pt; line-height:1.5; background:#fff}
+  .wrap{max-width:none; padding:0}
+  nav.ic{break-after:page}
+  section{break-inside:auto; margin-block:26px}
+  h2{break-after:avoid; break-before:page; font-size:16pt; padding-top:0}
+  section:first-of-type h2{break-before:avoid}
+  h3,h4{break-after:avoid}
+  figure,.tablo-kap,.not,.form,.lejant{break-inside:avoid}
+  .sekil-kap{border-color:#999; overflow:visible}
+  .tablo-kap{overflow:visible}
+  table{font-size:8.6pt}
+  th,td{padding:4px 6px}
+  td.mono,th.mono,td.num{font-size:8pt}
+  figcaption{font-size:9pt}
+  a{color:#000; text-decoration:none}
+}
+</style>
+
+<div class="wrap">
+
+<header class="antet">
+  <p class="kod">MFSim · FEAD (Kayış–Kasnak) Modülü · Girdi → Hesap → Çıktı</p>
+  <h1>FEAD Hesap Haritası</h1>
+  <p class="alt">Kullanıcının ne girdiğinin, programın bunlardan ne türettiğinin ve hangi belgeye ne bastığının uçtan uca haritası. Her satır kaynak koddan okundu; hiçbir sayı bu belgede yeniden yazılmadı.</p>
+  <div class="kunye">
+    <div><span>Kaynak</span><b>js/fead-*.js · js/cp-fead*.js</b></div>
+    <div><span>Hesap çekirdeği</span><b>FEADCore v2.0</b></div>
+    <div><span>Doğrulama kapısı</span><b>17 Gates raporu · 2.095 değer</b></div>
+    <div><span>Tarih</span><b>15 Eylül 2026</b></div>
+  </div>
+</header>
+
+<nav class="ic" aria-label="İçindekiler">
+  <h4>İçindekiler</h4>
+  <ol>
+    <li><a href="#s1"><span class="n">1</span>Bir bakışta: dört katman</a></li>
+    <li><a href="#s2"><span class="n">2</span>Kullanıcı girdilerinin tam listesi</a></li>
+    <li><a href="#s3"><span class="n">3</span>Girdi sanılan yedi çıktı</a></li>
+    <li><a href="#s4"><span class="n">4</span>Tek serbestlik derecesi: kayış boyu ↔ kol açısı</a></li>
+    <li><a href="#s5"><span class="n">5</span>Köprünün karar zinciri</a></li>
+    <li><a href="#s6"><span class="n">6</span>Gergi geometrisi ve yay dengesi</a></li>
+    <li><a href="#s7"><span class="n">7</span>Çekirdeğin hesap sırası</a></li>
+    <li><a href="#s8"><span class="n">8</span>Gerilme zinciri ve ankraj</a></li>
+    <li><a href="#s9"><span class="n">9</span>Çıktılar: hangi sayı nerede görünür</a></li>
+    <li><a href="#s10"><span class="n">10</span>Üç uygunluk kapısı</a></li>
+    <li><a href="#s11"><span class="n">11</span>Kataloglar: kısıt değil öneri</a></li>
+    <li><a href="#s12"><span class="n">12</span>Boş bırakılan alan ne olur</a></li>
+    <li><a href="#s13"><span class="n">13</span>Geçerlilik sınırları</a></li>
+    <li><a href="#s14"><span class="n">14</span>Sessiz hata sınıfı</a></li>
+  </ol>
+</nav>
+
+<!-- ══════════════════════════════════════════════════ 1 -->
+<section id="s1">
+  <h2><span class="no">BÖLÜM 1</span>Bir bakışta: dört katman</h2>
+
+  <p class="lead">FEAD modülünde kullanıcı hiçbir zaman doğrudan hesap çekirdeğiyle konuşmaz. Arada bir <strong>köprü</strong> katmanı vardır ve kafa karışıklığının büyük kısmı tam olarak orada doğar: köprü, kullanıcının girdiği alanların bir bölümünü <em>hesaplayarak yeniden üretir</em> ve sonucu çekirdeğe kendi yazar.</p>
+
+  <p>Yani bazı alanlar panelde bir kutu olarak durduğu hâlde hesaba o kutudan girmez; bazı sayılar ise hiç sorulmadığı hâlde sonuçta yazar. Bu belgenin ana konusu o ayrımdır.</p>
+
+  <figure>
+    <div class="sekil-kap">
+      <svg viewBox="0 0 900 660" role="img" aria-label="FEAD modülünün dört katmanı: altı girdi yüzeyi tek bir düğüm veri havuzuna yazar, köprü katmanı bu havuzdan çekirdek girdisini kurar ve bazı alanları türetir, çekirdek geometriyi ve gerilmeleri çözer, sonuç beş ayrı yüzeye basılır.">
+        <defs>
+          <marker id="ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+          </marker>
+          <marker id="okg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#1C6FB4"/>
+          </marker>
+          <marker id="okc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#A66400"/>
+          </marker>
+        </defs>
+
+        <!-- KATMAN 1 -->
+        <text x="18" y="24" font-family="'JetBrains Mono',monospace" font-size="10.5" font-weight="600" fill="#1C6FB4" letter-spacing="1.4">KATMAN 1 — GİRDİ YÜZEYLERİ (kullanıcı buraya yazar)</text>
+        <g font-family="Archivo,sans-serif" font-size="11.5" text-anchor="middle">
+          <rect x="18" y="36" width="132" height="44" rx="2" fill="#E8F0F8" stroke="#1C6FB4" stroke-width="1.4"/>
+          <text x="84" y="55" fill="#15202B" font-weight="600">Başlangıç</text><text x="84" y="70" fill="#15202B" font-weight="600">Sihirbazı</text>
+          <rect x="162" y="36" width="132" height="44" rx="2" fill="#E8F0F8" stroke="#1C6FB4" stroke-width="1.4"/>
+          <text x="228" y="55" fill="#15202B" font-weight="600">Kayış</text><text x="228" y="70" fill="#15202B" font-weight="600">Tablosu</text>
+          <rect x="306" y="36" width="132" height="44" rx="2" fill="#E8F0F8" stroke="#1C6FB4" stroke-width="1.4"/>
+          <text x="372" y="55" fill="#15202B" font-weight="600">Kasnak</text><text x="372" y="70" fill="#15202B" font-weight="600">panelleri</text>
+          <rect x="450" y="36" width="132" height="44" rx="2" fill="#E8F0F8" stroke="#1C6FB4" stroke-width="1.4"/>
+          <text x="516" y="55" fill="#15202B" font-weight="600">Gergi</text><text x="516" y="70" fill="#15202B" font-weight="600">paneli</text>
+          <rect x="594" y="36" width="132" height="44" rx="2" fill="#E8F0F8" stroke="#1C6FB4" stroke-width="1.4"/>
+          <text x="660" y="55" fill="#15202B" font-weight="600">Kayış</text><text x="660" y="70" fill="#15202B" font-weight="600">paneli</text>
+          <rect x="738" y="36" width="144" height="44" rx="2" fill="#E8F0F8" stroke="#1C6FB4" stroke-width="1.4"/>
+          <text x="810" y="55" fill="#15202B" font-weight="600">Çözücü</text><text x="810" y="70" fill="#15202B" font-weight="600">paneli</text>
+        </g>
+        <g stroke="#1C6FB4" stroke-width="1.3" marker-end="url(#okg)">
+          <line x1="84" y1="80" x2="84" y2="112"/><line x1="228" y1="80" x2="228" y2="112"/>
+          <line x1="372" y1="80" x2="372" y2="112"/><line x1="516" y1="80" x2="516" y2="112"/>
+          <line x1="660" y1="80" x2="660" y2="112"/><line x1="810" y1="80" x2="810" y2="112"/>
+        </g>
+
+        <!-- KATMAN 2 -->
+        <text x="18" y="134" font-family="'JetBrains Mono',monospace" font-size="10.5" font-weight="600" fill="#1C6FB4" letter-spacing="1.4">KATMAN 2 — MODEL · kanvas düğümlerinin alanları  ·  ALTI YÜZEY DE BU ALANLARA YAZAR</text>
+        <rect x="18" y="144" width="864" height="76" rx="2" fill="#FFFFFF" stroke="#15202B" stroke-width="1.6"/>
+        <line x1="234" y1="144" x2="234" y2="220" stroke="#D5DCE3"/><line x1="450" y1="144" x2="450" y2="220" stroke="#D5DCE3"/><line x1="666" y1="144" x2="666" y2="220" stroke="#D5DCE3"/>
+        <g font-family="'JetBrains Mono',monospace" font-size="9.8" fill="#54636F">
+          <text x="34" y="165" font-weight="600" fill="#15202B" font-family="Archivo,sans-serif" font-size="11.5">Kasnak düğümü</text>
+          <text x="34" y="182">od · x · y · contact</text><text x="34" y="196">driver · inertia</text><text x="34" y="210">beltIndex · accLib</text>
+          <text x="250" y="165" font-weight="600" fill="#15202B" font-family="Archivo,sans-serif" font-size="11.5">Gergi düğümü</text>
+          <text x="250" y="182">cenX · cenY · armLen</text><text x="250" y="196">armMeanDeg · preload</text><text x="250" y="210">kArm · meanLoad</text>
+          <text x="466" y="165" font-weight="600" fill="#15202B" font-family="Archivo,sans-serif" font-size="11.5">Kayış düğümü</text>
+          <text x="466" y="182">profile · brand · ribs</text><text x="466" y="196">effLength · tolerance</text><text x="466" y="210">wearPct · beltDataMode</text>
+          <text x="682" y="165" font-weight="600" fill="#15202B" font-family="Archivo,sans-serif" font-size="11.5">Çözücü düğümü</text>
+          <text x="682" y="182">ratioMode · cylinders</text><text x="682" y="196">governedRpm · duty[]</text><text x="682" y="210">fatigueModel · accel</text>
+        </g>
+
+        <line x1="450" y1="220" x2="450" y2="256" stroke="#15202B" stroke-width="1.6" marker-end="url(#ok)"/>
+        <text x="462" y="242" font-family="Archivo,sans-serif" font-size="10.5" fill="#54636F">veFeadBuildSystem(nodes)</text>
+
+        <!-- KATMAN 3 -->
+        <text x="18" y="278" font-family="'JetBrains Mono',monospace" font-size="10.5" font-weight="600" fill="#A66400" letter-spacing="1.4">KATMAN 3 — KÖPRÜ · js/fead-model.js (DOM'suz)</text>
+        <rect x="18" y="288" width="864" height="112" rx="2" fill="#F8F0E0" stroke="#A66400" stroke-width="1.6"/>
+        <g font-family="Archivo,sans-serif" font-size="11.5" fill="#15202B">
+          <text x="34" y="310" font-weight="600">Yaptığı üç iş — ve üçüncüsü kafa karışıklığının kaynağı:</text>
+          <text x="34" y="332">1 · Sırayı normalize eder, adları tekilleştirir, eksik girdiyi hata olarak toplar</text>
+          <text x="34" y="352">2 · Boş bırakılan alanları Gates arşivi varsayılanlarıyla doldurur ve bunu künyeye yazar</text>
+          <text x="34" y="372" font-weight="600" fill="#A66400">3 · YEDİ ALANI TÜRETİR ve çekirdeğe kendi yazar (bkz. Bölüm 3)</text>
+          <text x="34" y="391" font-size="10.5" fill="#54636F">kayış boyu · tasarım gerginliği · montaj konumu · serbest kol açısı · sürücü gücü · sense · durdurucu</text>
+        </g>
+
+        <line x1="450" y1="400" x2="450" y2="436" stroke="#A66400" stroke-width="1.6" marker-end="url(#okc)"/>
+        <text x="462" y="422" font-family="Archivo,sans-serif" font-size="10.5" fill="#54636F">cfg → FEADCore.makeSystem</text>
+
+        <!-- KATMAN 4 -->
+        <text x="18" y="458" font-family="'JetBrains Mono',monospace" font-size="10.5" font-weight="600" fill="#15202B" letter-spacing="1.4">KATMAN 4 — HESAP ÇEKİRDEĞİ · js/fead-core.js (dışarıdan geldi, birebir durur)</text>
+        <rect x="18" y="468" width="864" height="60" rx="2" fill="#FFFFFF" stroke="#15202B" stroke-width="1.6"/>
+        <g font-family="Archivo,sans-serif" font-size="11.5" fill="#15202B" text-anchor="middle">
+          <text x="96" y="492" font-weight="600">Geometri</text><text x="96" y="507" font-size="10" fill="#54636F">teğet · sarım · span</text>
+          <text x="254" y="492" font-weight="600">Gergi dengesi</text><text x="254" y="507" font-size="10" fill="#54636F">T = M / (dL/dθ)</text>
+          <text x="412" y="492" font-weight="600">Gerilme zinciri</text><text x="412" y="507" font-size="10" fill="#54636F">span · hubload · kayma</text>
+          <text x="576" y="492" font-weight="600">Titreşim</text><text x="576" y="507" font-size="10" fill="#54636F">açıklık · burulma</text>
+          <text x="754" y="492" font-weight="600">Dayanım</text><text x="754" y="507" font-size="10" fill="#54636F">yorulma · B10 ömür</text>
+        </g>
+        <g stroke="#D5DCE3"><line x1="175" y1="474" x2="175" y2="522"/><line x1="333" y1="474" x2="333" y2="522"/><line x1="494" y1="474" x2="494" y2="522"/><line x1="665" y1="474" x2="665" y2="522"/></g>
+
+        <line x1="450" y1="528" x2="450" y2="560" stroke="#15202B" stroke-width="1.6" marker-end="url(#ok)"/>
+
+        <!-- KATMAN 5 -->
+        <text x="18" y="582" font-family="'JetBrains Mono',monospace" font-size="10.5" font-weight="600" fill="#1C7355" letter-spacing="1.4">KATMAN 5 — ÇIKTI YÜZEYLERİ</text>
+        <g font-family="Archivo,sans-serif" font-size="11" text-anchor="middle">
+          <rect x="18" y="592" width="160" height="44" rx="2" fill="#E4F0EB" stroke="#1C7355" stroke-width="1.4"/>
+          <text x="98" y="611" fill="#15202B" font-weight="600">Kayış Tablosu</text><text x="98" y="625" fill="#54636F" font-size="9.8">3 türetilen sütun</text>
+          <rect x="190" y="592" width="160" height="44" rx="2" fill="#E4F0EB" stroke="#1C7355" stroke-width="1.4"/>
+          <text x="270" y="611" fill="#15202B" font-weight="600">Kayış Yolu kartı</text><text x="270" y="625" fill="#54636F" font-size="9.8">ölçekli şema</text>
+          <rect x="362" y="592" width="160" height="44" rx="2" fill="#E4F0EB" stroke="#1C7355" stroke-width="1.4"/>
+          <text x="442" y="611" fill="#15202B" font-weight="600">Uygunluk kapıları</text><text x="442" y="625" fill="#54636F" font-size="9.8">üç hüküm</text>
+          <rect x="534" y="592" width="160" height="44" rx="2" fill="#E4F0EB" stroke="#1C7355" stroke-width="1.4"/>
+          <text x="614" y="611" fill="#15202B" font-weight="600">Detaylı Rapor</text><text x="614" y="625" fill="#54636F" font-size="9.8">§8.1 – §8.19</text>
+          <rect x="706" y="592" width="176" height="44" rx="2" fill="#E4F0EB" stroke="#1C7355" stroke-width="1.4"/>
+          <text x="794" y="611" fill="#15202B" font-weight="600">Özet Rapor</text><text x="794" y="625" fill="#54636F" font-size="9.8">altı sayfa</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption><b>Şekil 1 — Dört katman.</b> Altı girdi yüzeyi tek bir alan kümesine yazar; köprü o kümeden çekirdek girdisini kurar ve yedi alanı kendisi türetir; çekirdek çözer; sonuç beş yüzeye birden basılır. Panel, tablo ve kart <em>aynı</em> alanı okur — ikinci bir ayar kopyası yoktur.</figcaption>
+  </figure>
+
+  <div class="lejant" aria-label="Renk lejantı">
+    <span><i style="background:var(--girdi-bg); box-shadow:inset 0 0 0 1.4px var(--girdi)"></i> Kullanıcı girdisi</span>
+    <span><i style="background:var(--cozum-bg); box-shadow:inset 0 0 0 1.4px var(--cozum)"></i> Program türetir</span>
+    <span><i style="background:var(--kapi-bg); box-shadow:inset 0 0 0 1.4px var(--kapi)"></i> Çıktı / hüküm</span>
+    <span><i style="background:var(--uyari-bg); box-shadow:inset 0 0 0 1.4px var(--uyari)"></i> Sessiz hata riski</span>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ 2 -->
+<section id="s2">
+  <h2><span class="no">BÖLÜM 2</span>Kullanıcı girdilerinin tam listesi</h2>
+
+  <p>Aşağıdaki dört tablo, FEAD modülünde kullanıcının yazabildiği <strong>her</strong> alanı içerir. “Boşsa” sütunu programın o alanı boş bulduğunda ne yaptığını söyler — bu sütun, “girdim ama bir şey değişmedi” sorusunun cevabıdır.</p>
+
+  <h3>2.1 · Kasnak düğümü</h3>
+  <p>Sekiz kasnak tipi (krank · alternatör · klima · su pompası · direksiyon pompası · hava kompresörü · fan kavraması · avara) <strong>aynı paneli</strong> paylaşır; farklar tipten okunur. Kasnakların kanvasta kutusu yoktur: koordinat yalnız Kayış Tablosu’ndan girilir, detay panele tablodaki ada tıklanarak gidilir.</p>
+
+  <div class="tablo-kap">
+    <table>
+      <caption>Kasnak düğümünün alanları</caption>
+      <thead><tr><th>Alan</th><th class="mono">Anahtar</th><th>Birim</th><th>Durum</th><th>Boşsa</th><th>Nereye girer</th></tr></thead>
+      <tbody>
+        <tr><td>Temas tarafı</td><td class="mono">contact</td><td>—</td><td><span class="rz rz-u">Kritik</span></td><td>Tip varsayılanı (aksesuar: kaburgalı, avara/gergi: sırttan)</td><td>Yarıçap katmanı + kayış güzergâhı</td></tr>
+        <tr><td>Dış çap (OD)</td><td class="mono">od</td><td>mm</td><td><span class="rz rz-g">Girdi</span></td><td>Tipe göre varsayılan çap + <strong>uyarı</strong></td><td>r<sub>pitch</sub>, r<sub>eff</sub>, hız oranı</td></tr>
+        <tr><td>Konum X</td><td class="mono">x</td><td>mm</td><td><span class="rz rz-g">Zorunlu</span></td><td><strong>Hata</strong> — model çözülmez</td><td>Teğet geometrisi</td></tr>
+        <tr><td>Konum Y</td><td class="mono">y</td><td>mm</td><td><span class="rz rz-g">Zorunlu</span></td><td><strong>Hata</strong> — model çözülmez</td><td>Teğet geometrisi</td></tr>
+        <tr><td>Sürücü kasnak</td><td class="mono">driver</td><td>rol</td><td><span class="rz rz-g">Girdi</span></td><td>Tipten çıkarılır + uyarı</td><td>Gerilme zincirinin işareti</td></tr>
+        <tr><td>Atalet J</td><td class="mono">inertia</td><td>kg·m²</td><td><span class="rz rz-n">Seçimlik</span></td><td>Gates medyanı (avara 0,0003 · klima 0,0034 · alternatör 0,01125)</td><td>Burulma modeli, tepe yük</td></tr>
+        <tr><td>Kayış sırası</td><td class="mono">beltIndex</td><td>—</td><td><span class="rz rz-g">Girdi</span></td><td>Tablo satır sırasından onarılır</td><td>Gerilme zinciri sırası</td></tr>
+        <tr><td>Katalog modeli</td><td class="mono">accPreset</td><td>—</td><td><span class="rz rz-n">Seçimlik</span></td><td>kW hücresi boşsa 0 sayılır</td><td>Çalışma çevriminin boş kW hücreleri</td></tr>
+        <tr><td>BMC künyesi</td><td class="mono">accLib</td><td>—</td><td><span class="rz rz-n">Seçimlik</span></td><td>Devir sınırları boş kalır</td><td>Devir sınırı alanlarını doldurur</td></tr>
+        <tr><td>Optimum devir</td><td class="mono">optimumRpm</td><td>d/dk</td><td><span class="rz rz-k">Kapı girdisi</span></td><td>Çevrim oranı kapısı <em>değerlendirilemedi</em></td><td>Kapı 2</td></tr>
+        <tr><td>Maks. sürekli devir</td><td class="mono">maxContRpm</td><td>d/dk</td><td><span class="rz rz-k">Kapı girdisi</span></td><td>Kapı 2 ve 3 <em>değerlendirilemedi</em></td><td>Kapı 2 ve 3</td></tr>
+        <tr><td>Maks. anlık devir</td><td class="mono">maxPeakRpm</td><td>d/dk</td><td><span class="rz rz-k">Kapı girdisi</span></td><td>Overspeed satırı atlanır</td><td>Kapı 3</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>2.2 · Gergi düğümü</h3>
+  <p>FEAD modelinin en yoğun girdi yüzeyi burasıdır ve <strong>beş alanın beşi de zorunludur</strong>: avara merkezi (X, Y), kol boyu, kol çalışma açısı, ve yay künyesinin üç satırı. Bunlardan biri eksikse model hiç çözülmez — çünkü gerginin taşıdığı gerginlik, bütün gerilme zincirinin ankrajıdır.</p>
+
+  <div class="tablo-kap">
+    <table>
+      <caption>Gergi düğümünün alanları</caption>
+      <thead><tr><th>Alan</th><th class="mono">Anahtar</th><th>Birim</th><th>Durum</th><th>Boşsa</th><th>Nereye girer</th></tr></thead>
+      <tbody>
+        <tr><td>Avara merkezi X</td><td class="mono">cenX</td><td>mm</td><td><span class="rz rz-g">Zorunlu</span></td><td><strong>Hata</strong></td><td>Kayış yolu — diğer kasnaklarla aynı sütun</td></tr>
+        <tr><td>Avara merkezi Y</td><td class="mono">cenY</td><td>mm</td><td><span class="rz rz-g">Zorunlu</span></td><td><strong>Hata</strong></td><td>Kayış yolu</td></tr>
+        <tr><td>Kol boyu (a)</td><td class="mono">armLen</td><td>mm</td><td><span class="rz rz-g">Zorunlu</span></td><td><strong>Hata</strong></td><td>dL/dθ = a·sinβ·2sin(φ/2)</td></tr>
+        <tr><td>Kol çalışma açısı (θ)</td><td class="mono">armMeanDeg</td><td>°</td><td><span class="rz rz-g">Zorunlu</span></td><td><strong>Hata — varsayılanı YOK</strong></td><td>Montaj konumu + take-up yönü</td></tr>
+        <tr><td>Yay ön yükü (M₀)</td><td class="mono">preload</td><td>Nm</td><td><span class="rz rz-g">Zorunlu</span></td><td><strong>Hata</strong></td><td>M = M₀ + k·rel</td></tr>
+        <tr><td>Yay katsayısı (k)</td><td class="mono">kArm</td><td>Nm/°</td><td><span class="rz rz-g">Zorunlu</span></td><td><strong>Hata</strong></td><td>M = M₀ + k·rel</td></tr>
+        <tr><td>Çalışma momenti (M<sub>mean</sub>)</td><td class="mono">meanLoad</td><td>Nm</td><td><span class="rz rz-g">Zorunlu</span></td><td><strong>Hata</strong></td><td>rel<sub>nom</sub> = (M<sub>mean</sub> − M₀)/k</td></tr>
+        <tr><td>Dış çap (OD)</td><td class="mono">od</td><td>mm</td><td><span class="rz rz-g">Girdi</span></td><td>75 mm varsayılır + uyarı</td><td>Sarım açısı, teğet</td></tr>
+        <tr><td>Temas tarafı</td><td class="mono">contact</td><td>—</td><td><span class="rz rz-u">Kritik</span></td><td>Sırttan (back)</td><td>Güzergâh</td></tr>
+        <tr><td>Kol dönüş yönü</td><td class="mono">sense</td><td>±1</td><td><span class="rz rz-n">Seçimlik</span></td><td><strong>Çekirdek bulur</strong> (kayışın kısaldığı yön) + uyarı</td><td>Mutlak açı = serbest + sense·rel</td></tr>
+        <tr><td>Mekanik durdurucu</td><td class="mono">loadStopRelDeg</td><td>° (bağıl)</td><td><span class="rz rz-n">Seçimlik</span></td><td>nominal dönüş × 1,8 — <strong>yalnız daraltırsa</strong></td><td>Load konumu, erişim sınırı</td></tr>
+        <tr><td>Kol ataleti</td><td class="mono">armInertia</td><td>kg·m²</td><td><span class="rz rz-n">Seçimlik</span></td><td>Gates System Vibration medyanı (n = 7)</td><td>Burulma modeli</td></tr>
+        <tr><td>Kasnak kütlesi</td><td class="mono">pulleyMass</td><td>kg</td><td><span class="rz rz-n">Seçimlik</span></td><td>Gates medyanı — <strong>girilmezse 1. mod belirgin yüksek çıkar</strong></td><td>Burulma modeli (J<sub>kol</sub> + m·L²)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="not bilgi">
+    <span class="bas">Panelde gördüğünüz açı ile saklanan açı farklıdır</span>
+    <p>Panel “kol yönü”nü <strong>merkezden pivota</strong> bakan işaretli açı olarak gösterir (0° sağda, saat yönünün tersi artı, −180…+180). Saklanan alan <span class="k">armMeanDeg</span> ise mutlak açıdır. Çeviri tek üreticiden geçer. Parça/montaj çizimi bunu ters yönden yazar: E9843’ün çizimindeki <em>“344° MEAN ANGLE”</em>, panelde <strong>164°</strong> okunur.</p>
+  </div>
+
+  <h3>2.3 · Kayış düğümü</h3>
+  <div class="tablo-kap">
+    <table>
+      <caption>Kayış Özellikleri (iç topolojide tek kopya)</caption>
+      <thead><tr><th>Alan</th><th class="mono">Anahtar</th><th>Birim</th><th>Durum</th><th>Boşsa</th><th>Nereye girer</th></tr></thead>
+      <tbody>
+        <tr><td>Profil</td><td class="mono">profile</td><td>PK/PJ/PH/PL/PM</td><td><span class="rz rz-g">Girdi</span></td><td>PK</td><td><strong>h<sub>b</sub>, h<sub>r</sub></strong> → bütün yarıçaplar</td></tr>
+        <tr><td>Marka</td><td class="mono">brand</td><td>—</td><td><span class="rz rz-g">Girdi</span></td><td>GATES</td><td>h<sub>b</sub>, h<sub>r</sub>, birim kütle</td></tr>
+        <tr><td>Kanal sayısı</td><td class="mono">ribs</td><td>adet</td><td><span class="rz rz-g">Zorunlu</span></td><td><strong>Hata</strong></td><td>Birim kütle, ömür, kord rijitliği</td></tr>
+        <tr><td>Efektif boy</td><td class="mono">effLength</td><td>mm</td><td><span class="rz rz-c">Duruma göre</span></td><td>Serbest kipte <strong>hesaplanır</strong>; sabit kipte hata</td><td>Kol açısı, konum zarfı, ömür</td></tr>
+        <tr><td>Boy kipi</td><td class="mono">lengthMode</td><td>fixed/free</td><td><span class="rz rz-c">Gergi varsa kilitli</span></td><td>—</td><td>Hangi büyüklüğün girdi olduğu</td></tr>
+        <tr><td>Tolerans ±</td><td class="mono">tolerance</td><td>mm</td><td><span class="rz rz-n">Seçimlik</span></td><td>Gates basamağı: boy &lt; 1400 mm → ±5, üstü → ±6</td><td>Konum tablosunun zarfı</td></tr>
+        <tr><td>Aşınma + uzama payı</td><td class="mono">wearPct</td><td>oran</td><td><span class="rz rz-n">Seçimlik</span></td><td>0,0070 (14 Gates sisteminin 10’u)</td><td>Replace konumu</td></tr>
+        <tr><td>Tip / kod</td><td class="mono">beltType</td><td>—</td><td><span class="rz rz-n">Künye</span></td><td>Boş kalır</td><td><strong>Hesaba girmez</strong> — yalnız rapor künyesi</td></tr>
+        <tr><td>Katalog çıktıları</td><td class="mono">beltDataMode</td><td>none/full</td><td><span class="rz rz-g">Girdi</span></td><td><strong>none</strong> — dört çıktı üretilmez</td><td>Ömür · yorulma · frekans · zarf</td></tr>
+        <tr><td>Kaburga başına kütle</td><td class="mono">massPerRibKgM</td><td>kg/m</td><td><span class="rz rz-n">Seçimlik</span></td><td>Katalog değeri (Gates PK: 0,0144 — <em>ölçüm 0,0196 diyor</em>)</td><td>Açıklık frekansı</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>2.4 · Çözücü düğümü</h3>
+  <div class="tablo-kap">
+    <table>
+      <caption>Çözücü — motor künyesi, tahrik oranı, çalışma çevrimi</caption>
+      <thead><tr><th>Alan</th><th class="mono">Anahtar</th><th>Birim</th><th>Durum</th><th>Boşsa</th><th>Nereye girer</th></tr></thead>
+      <tbody>
+        <tr><td>Tahrik oranı kipi</td><td class="mono">ratioMode</td><td>—</td><td><span class="rz rz-g">Girdi</span></td><td>derive (çaplardan türet)</td><td>Bütün aksesuar devirlerini ölçekler</td></tr>
+        <tr><td>Krank kasnağı Ø</td><td class="mono">crankOD</td><td>mm</td><td><span class="rz rz-g">Girdi</span></td><td>Oran 1 alınır</td><td>driveRatio = crankOD / fanOD</td></tr>
+        <tr><td>Fan / sürücü kasnağı Ø</td><td class="mono">fanOD</td><td>mm</td><td><span class="rz rz-g">Girdi</span></td><td>Oran 1 alınır</td><td>driveRatio</td></tr>
+        <tr><td>Silindir sayısı</td><td class="mono">cylinders</td><td>adet</td><td><span class="rz rz-g">Girdi</span></td><td>6 varsayılır</td><td>f<sub>ateşleme</sub> = devir/60 × silindir/2</td></tr>
+        <tr><td>Servis faktörü</td><td class="mono">serviceFact</td><td>—</td><td><span class="rz rz-n">Seçimlik</span></td><td>Karşılaştırma yapılmaz</td><td>Kayma emniyeti alt sınırı</td></tr>
+        <tr><td>Rölanti devri</td><td class="mono">idleRpm</td><td>d/dk</td><td><span class="rz rz-n">Künye</span></td><td>—</td><td>Künye / geçici rejim</td></tr>
+        <tr><td>Governed devir</td><td class="mono">governedRpm</td><td>d/dk</td><td><span class="rz rz-k">Kapı girdisi</span></td><td>Kapı 2 ve 3 <em>değerlendirilemedi</em></td><td>Kapı 2 ve 3</td></tr>
+        <tr><td>No-load governed</td><td class="mono">noLoadGovernedRpm</td><td>d/dk</td><td><span class="rz rz-n">Künye</span></td><td>—</td><td>Künye</td></tr>
+        <tr><td>Overspeed devri</td><td class="mono">overspeedRpm</td><td>d/dk</td><td><span class="rz rz-k">Kapı girdisi</span></td><td>Overspeed satırı atlanır</td><td>Kapı 3 (anlık maksimum)</td></tr>
+        <tr><td>Krank ataleti</td><td class="mono">crankInertia</td><td>kg·m²</td><td><span class="rz rz-n">Seçimlik</span></td><td>0,50 (Gates Engine Data medyanı)</td><td><strong>Yalnız burulma modeli</strong> — yarı-statik hesaba girmez</td></tr>
+        <tr><td>İvmelenme</td><td class="mono">accelRpmS</td><td>RPM/s</td><td><span class="rz rz-n">Seçimlik</span></td><td>Tepe tablosu varsayılanla koşar</td><td><strong>Tepe yük + geçici rejim</strong> — ortalama gerilmeye girmez</td></tr>
+        <tr><td>Yavaşlama</td><td class="mono">decelRpmS</td><td>RPM/s</td><td><span class="rz rz-n">Seçimlik</span></td><td>Aynı</td><td>Tepe yük</td></tr>
+        <tr><td>Boy ofseti</td><td class="mono">lengthOffsetMm</td><td>mm</td><td><span class="rz rz-n">Seçimlik</span></td><td>1,3 (5 Gates raporunun ortalaması)</td><td>Sipariş boyu = L<sub>eff</sub> − ofset</td></tr>
+        <tr><td>Yorulma modeli</td><td class="mono">fatigueModel</td><td>—</td><td><span class="rz rz-g">Girdi</span></td><td>PK-2_2p-MT3</td><td>Kaburga yorulma dağılımı (m ve w)</td></tr>
+        <tr><td>Çalışma çevrimi</td><td class="mono">duty[]</td><td>satır</td><td><span class="rz rz-g">Zorunlu</span></td><td><strong>Hesapla düğmesi pasif</strong></td><td>Gerilme · ömür · frekans · tork</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Çalışma çevriminin her satırı dört şey taşır: <strong>devir</strong> (d/dk), <strong>%zaman</strong> (ağırlık), <strong>°C</strong> (kayış sıcaklığı) ve aksesuar başına <strong>kW</strong>. Sürücü sütunu <em>yoktur</em> — sürücünün gücü diğerlerinin toplamıdır ve program onu kendisi hesaplar.</p>
+</section>
+
+<!-- ══════════════════════════════════════════════════ 3 -->
+<section id="s3">
+  <h2><span class="no">BÖLÜM 3</span>Girdi sanılan yedi çıktı</h2>
+
+  <p class="lead">Bunlar, klasik bir FEAD hesap defterinde kullanıcının elle yazdığı ama MFSim’de <strong>hesaplanan</strong> büyüklüklerdir. Her biri bir zamanlar panelde bir kutuydu; her biri ölçülmüş bir gerekçeyle kaldırıldı.</p>
+
+  <div class="tablo-kap">
+    <table>
+      <caption>Program türetir — kullanıcı giremez</caption>
+      <thead><tr><th>Büyüklük</th><th>Nereden türer</th><th>Neden sorulmuyor</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Kayış efektif boyu</strong><br><span class="k">L<sub>eff</sub></span></td>
+          <td>Kol nominal yay yüküne oturur, kapanan yolun boyu o konumun sonucudur</td>
+          <td>Gergi varken kayış boyu ile kol açısı <strong>tek serbestlik derecesini paylaşır</strong>; ikisini birden girdi yapmak aynı bilinmeyeni iki yerden çözmek olurdu</td>
+        </tr>
+        <tr>
+          <td><strong>Tasarım gerginliği</strong><br><span class="k">designTensionN</span></td>
+          <td>T = M(θ) / (dL/dθ) — yay dengesinin kendisi</td>
+          <td>10 Gates raporunda girilen ile türeyen değer <strong>%0,12</strong> içinde örtüşüyor; farkların tamamı yuvarlama. Ayrıca sormak, çeliştiğinde yay dengesini sessizce yok saymak demekti</td>
+        </tr>
+        <tr>
+          <td><strong>Gergi gövdesinin montaj konumu</strong><br><span class="k">pivot</span></td>
+          <td>p = c − a·(cos θ, sin θ)</td>
+          <td>Avara merkezi girdi olduğunda montaj konumu geometrik olarak belirlidir; ikinci bir nokta sormak çelişki üretirdi</td>
+        </tr>
+        <tr>
+          <td><strong>Serbest kol açısı</strong><br><span class="k">freeAngleDeg</span></td>
+          <td>free = θ − sense · rel<sub>nom</sub></td>
+          <td>Çalışma açısı ve yay künyesi verildiğinde artık bir bilinmeyen değil</td>
+        </tr>
+        <tr>
+          <td><strong>Sürücü kasnağın gücü</strong></td>
+          <td>Diğer bütün kasnakların güçlerinin toplamı</td>
+          <td>Çevrim kapanmak zorunda. Elle girilirse ve toplama eşit değilse çekirdek <strong>açık hata verir</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Kol dönüş yönü</strong><br><span class="k">sense</span></td>
+          <td>Kayış boyunun kısaldığı yön</td>
+          <td>Geometriden okunabilir; elle verilebilir ama gerekmez</td>
+        </tr>
+        <tr>
+          <td><strong>Mekanik durdurucu</strong><br><span class="k">loadStopRelDeg</span></td>
+          <td>nominal dönüş × 1,8 — <strong>yalnız çekirdeğin kendi erişim sınırını daraltıyorsa</strong></td>
+          <td>Genişletmesine izin verilse yanlış girilmiş bir yay katsayısı kenetlenmeyi kaldırır ve model saçma bir açıyla “çözülmüş” görünürdü</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>3.1 · Bunlara ek olarak: her zaman hesaplananlar</h3>
+  <div class="tablo-kap">
+    <table>
+      <caption>Hiçbir zaman girdi olmayan türev büyüklükler</caption>
+      <thead><tr><th>Büyüklük</th><th>Formül</th><th>Not</th></tr></thead>
+      <tbody>
+        <tr><td>Pitch yarıçapı</td><td class="mono">kaburgalı: OD/2 + h<sub>b</sub> · sırttan: OD/2 + h<sub>r</sub></td><td>Teğet geometrisi buradan</td></tr>
+        <tr><td>Efektif yarıçap</td><td class="mono">kaburgalı: OD/2 · sırttan: OD/2 + h<sub>r</sub> + h<sub>b</sub></td><td>Kayış boyu buradan</td></tr>
+        <tr><td>Aksesuar devri</td><td class="mono">N<sub>motor</sub> · driveRatio · r<sub>pitch,sürücü</sub> / r<sub>pitch,i</sub></td><td>Elle oran alanı <strong>yoktur</strong></td></tr>
+        <tr><td>Nominal kol dönüşü</td><td class="mono">rel<sub>nom</sub> = (M<sub>mean</sub> − M₀) / k</td><td>Salt yay künyesinden; geometriye bakmaz</td></tr>
+        <tr><td>Kayış hızı</td><td class="mono">v = N · driveRatio · 2π/60 · r<sub>pitch,krank</sub>/1000</td><td>m/s</td></tr>
+        <tr><td>Ateşleme frekansı</td><td class="mono">f = N/60 · silindir/2</td><td>Dört zamanlı</td></tr>
+        <tr><td>Sipariş boyu</td><td class="mono">L<sub>eff</sub> − lengthOffsetMm</td><td>Katalog yuvarlama artığı</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ 4 -->
+<section id="s4">
+  <h2><span class="no">BÖLÜM 4</span>Tek serbestlik derecesi: kayış boyu ↔ kol açısı</h2>
+
+  <p class="lead">FEAD modülünde en sık sorulan soru budur: “Kayış boyunu ben mi gireceğim, program mı bulacak?” Cevap modelde gergi olup olmamasına bağlıdır ve <em>seçim</em> değil <em>yapı</em> meselesidir.</p>
+
+  <p>Bütün kasnak merkezleri sabitken kayış yolunun tek hareketli parçası gergi kolu’dur. Kol döndükçe gergi kasnağının merkezi bir yay çizer ve kapanan kayış yolunun boyu değişir. Yani <strong>kol açısı ile kayış boyu aynı tek bilinmeyenin iki yüzüdür</strong>: birini bilirseniz diğeri çıkar, ikisini birden yazamazsınız.</p>
+
+  <figure>
+    <div class="sekil-kap">
+      <svg viewBox="0 0 880 420" role="img" aria-label="Kayış boyu ile gergi kol açısı arasındaki tek serbestlik derecesi: serbest kipte yay künyesinden kol açısı çözülür ve kayış boyu çıkar; sabit kipte kayış boyu girilir ve kol açısı çözülür; gergi varsa sabit kip kilitlidir.">
+        <defs>
+          <marker id="ok2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+          <marker id="ok2g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1C6FB4"/></marker>
+          <marker id="ok2c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#A66400"/></marker>
+        </defs>
+
+        <!-- ORTAK GÖBEK -->
+        <rect x="310" y="176" width="260" height="62" rx="2" fill="#15202B"/>
+        <text x="440" y="200" font-family="Archivo,sans-serif" font-size="12.5" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">TEK SERBESTLİK DERECESİ</text>
+        <text x="440" y="222" font-family="'JetBrains Mono',monospace" font-size="12" fill="#E8F0F8" text-anchor="middle">rel — gergi kolunun bağıl dönmesi</text>
+
+        <!-- SOL: SERBEST -->
+        <rect x="18" y="26" width="256" height="368" rx="2" fill="#F8F0E0" stroke="#A66400" stroke-width="1.6"/>
+        <text x="146" y="50" font-family="Archivo,sans-serif" font-size="13" font-weight="700" fill="#A66400" text-anchor="middle" letter-spacing=".6">SERBEST KİP</text>
+        <text x="146" y="68" font-family="Archivo,sans-serif" font-size="10.5" fill="#54636F" text-anchor="middle">gergi VARSA tek seçenek — kilitli</text>
+
+        <rect x="38" y="84" width="216" height="72" rx="2" fill="#E8F0F8" stroke="#1C6FB4" stroke-width="1.4"/>
+        <text x="146" y="102" font-family="Archivo,sans-serif" font-size="10" font-weight="700" fill="#1C6FB4" text-anchor="middle" letter-spacing=".8">GİRDİ</text>
+        <g font-family="'JetBrains Mono',monospace" font-size="10.5" fill="#15202B" text-anchor="middle">
+          <text x="146" y="120">M₀ · k · M_mean</text>
+          <text x="146" y="136">(yay künyesi)</text>
+          <text x="146" y="150" font-size="9.5" fill="#54636F">+ kol açısı θ, merkez c</text>
+        </g>
+        <line x1="146" y1="156" x2="146" y2="176" stroke="#A66400" stroke-width="1.5" marker-end="url(#ok2c)"/>
+        <text x="152" y="170" font-family="Archivo,sans-serif" font-size="9.5" fill="#54636F">rel = (M_mean−M₀)/k</text>
+
+        <line x1="146" y1="238" x2="146" y2="268" stroke="#A66400" stroke-width="1.5" marker-end="url(#ok2c)"/>
+        <rect x="38" y="272" width="216" height="72" rx="2" fill="#E4F0EB" stroke="#1C7355" stroke-width="1.4"/>
+        <text x="146" y="290" font-family="Archivo,sans-serif" font-size="10" font-weight="700" fill="#1C7355" text-anchor="middle" letter-spacing=".8">ÇIKTI</text>
+        <g font-family="'JetBrains Mono',monospace" font-size="10.5" fill="#15202B" text-anchor="middle">
+          <text x="146" y="308">L_eff — gereken kayış boyu</text>
+          <text x="146" y="324">T — tasarım gerginliği</text>
+          <text x="146" y="338" font-size="9.5" fill="#54636F">→ katalogdan bu boyu ısmarla</text>
+        </g>
+        <text x="146" y="368" font-family="Archivo,sans-serif" font-size="10.5" fill="#54636F" text-anchor="middle">Tasarım yapıp kayışı</text>
+        <text x="146" y="382" font-family="Archivo,sans-serif" font-size="10.5" fill="#54636F" text-anchor="middle">sonra tedarik ediyorsanız</text>
+
+        <!-- SAĞ: SABİT -->
+        <rect x="606" y="26" width="256" height="368" rx="2" fill="#FFFFFF" stroke="#7C8A96" stroke-width="1.6" stroke-dasharray="5 3"/>
+        <text x="734" y="50" font-family="Archivo,sans-serif" font-size="13" font-weight="700" fill="#54636F" text-anchor="middle" letter-spacing=".6">SABİT KİP</text>
+        <text x="734" y="68" font-family="Archivo,sans-serif" font-size="10.5" fill="#54636F" text-anchor="middle">yalnız gergisiz modelde seçilebilir</text>
+
+        <rect x="626" y="84" width="216" height="72" rx="2" fill="#E8F0F8" stroke="#1C6FB4" stroke-width="1.4"/>
+        <text x="734" y="102" font-family="Archivo,sans-serif" font-size="10" font-weight="700" fill="#1C6FB4" text-anchor="middle" letter-spacing=".8">GİRDİ</text>
+        <g font-family="'JetBrains Mono',monospace" font-size="10.5" fill="#15202B" text-anchor="middle">
+          <text x="734" y="120">L_eff — elinizdeki kayış</text>
+          <text x="734" y="136">(8PK1715 → 1715 mm)</text>
+          <text x="734" y="150" font-size="9.5" fill="#54636F">+ merkezler, yay künyesi</text>
+        </g>
+        <line x1="734" y1="156" x2="734" y2="176" stroke="#15202B" stroke-width="1.5" marker-end="url(#ok2)"/>
+        <text x="726" y="170" font-family="Archivo,sans-serif" font-size="9.5" fill="#54636F" text-anchor="end">solveArmForBeltLength</text>
+
+        <line x1="734" y1="238" x2="734" y2="268" stroke="#15202B" stroke-width="1.5" marker-end="url(#ok2)"/>
+        <rect x="626" y="272" width="216" height="72" rx="2" fill="#E4F0EB" stroke="#1C7355" stroke-width="1.4"/>
+        <text x="734" y="290" font-family="Archivo,sans-serif" font-size="10" font-weight="700" fill="#1C7355" text-anchor="middle" letter-spacing=".8">ÇIKTI</text>
+        <g font-family="'JetBrains Mono',monospace" font-size="10.5" fill="#15202B" text-anchor="middle">
+          <text x="734" y="308">rel — kolun oturduğu açı</text>
+          <text x="734" y="324">T — o açıdaki gerginlik</text>
+          <text x="734" y="338" font-size="9.5" fill="#54636F">→ kayış sığıyor mu, ne kadar</text>
+        </g>
+        <text x="734" y="368" font-family="Archivo,sans-serif" font-size="10.5" fill="#54636F" text-anchor="middle">Elinizde belirli bir kayış</text>
+        <text x="734" y="382" font-family="Archivo,sans-serif" font-size="10.5" fill="#54636F" text-anchor="middle">varsa</text>
+
+        <!-- BAĞLANTILAR -->
+        <line x1="274" y1="207" x2="308" y2="207" stroke="#A66400" stroke-width="1.6" marker-end="url(#ok2c)"/>
+        <line x1="606" y1="207" x2="572" y2="207" stroke="#7C8A96" stroke-width="1.6" marker-end="url(#ok2)"/>
+      </svg>
+    </div>
+    <figcaption><b>Şekil 2 — İki kip, tek bilinmeyen.</b> Solda yay künyesinden kol açısı çözülür ve kayış boyu çıkar; sağda kayış boyu verilir ve kol açısı çözülür. <b>Modelde bir gergi varsa sağdaki kip kilitlidir</b> — seçici kapanır ve panel “SERBEST (kilitli)” yazar.</figcaption>
+  </figure>
+
+  <div class="not iyi">
+    <span class="bas">Sabit kipte kayış sığmazsa ne olur</span>
+    <p>Model <strong>yine çözülür</strong>. Kol nominal yay yüküne karşılık gelen açıya alınır, gereken kayış boyu ayrıca yazılır ve fark bildirilir. Kolu erişim sınırına kenetlemek fiziksel olmayan sayılar üretiyordu: ölçüldü, alternatörü 10 mm kaydırmak 4,15·10¹⁰ N gerginlik veriyordu — take-up tekilliği (dL/dθ → 0) yüzünden.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ 5 -->
+<section id="s5">
+  <h2><span class="no">BÖLÜM 5</span>Köprünün karar zinciri</h2>
+
+  <p>Aşağıdaki sıra, <span class="k">veFeadBuildSystem</span> fonksiyonunun kanvastaki düğümlerden çekirdek sistemini kurarken izlediği gerçek adımlardır. Sıra önemlidir: bazı adımlar ancak bir öncekinin sonucu bilindiğinde yapılabilir.</p>
+
+  <figure>
+    <div class="sekil-kap">
+      <svg viewBox="0 0 880 790" role="img" aria-label="Köprü katmanının on adımlı karar zinciri: sıra normalizasyonu, alan toplama, ilk sistem kurulumu, sense ikinci geçişi, durdurucu daraltması, geometri probu, çalışma noktası, tolerans düzeltmesi, ankraj türetimi ve ihlal taşıma.">
+        <defs>
+          <marker id="ok3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+        </defs>
+        <g font-family="Archivo,sans-serif">
+          <!-- adımlar -->
+          <g>
+            <rect x="60" y="20" width="760" height="54" rx="2" fill="#FFFFFF" stroke="#15202B" stroke-width="1.3"/>
+            <circle cx="60" cy="47" r="15" fill="#15202B"/><text x="60" y="52" font-size="13" font-weight="700" fill="#FFF" text-anchor="middle">1</text>
+            <text x="88" y="42" font-size="12.5" font-weight="600" fill="#15202B">Sıra normalize edilir · adlar tekilleştirilir · eski kayıt göç ettirilir</text>
+            <text x="88" y="61" font-size="10.5" fill="#54636F">Kayış sırası kasnağın kendi alanında (beltIndex); tablo bir görünümdür, sırayı taşımaz</text>
+          </g>
+          <g>
+            <rect x="60" y="86" width="760" height="54" rx="2" fill="#E8F0F8" stroke="#1C6FB4" stroke-width="1.3"/>
+            <circle cx="60" cy="113" r="15" fill="#1C6FB4"/><text x="60" y="118" font-size="13" font-weight="700" fill="#FFF" text-anchor="middle">2</text>
+            <text x="88" y="108" font-size="12.5" font-weight="600" fill="#15202B">Alanlar toplanır · eksikler hataya, boşlar varsayılana yazılır</text>
+            <text x="88" y="127" font-size="10.5" fill="#54636F">Her varsayılan künyeye kaydedilir: hangi alan hangi arşiv kaynağından doldu, panelde ve raporda okunur</text>
+          </g>
+          <g>
+            <rect x="60" y="152" width="760" height="54" rx="2" fill="#FFFFFF" stroke="#15202B" stroke-width="1.3"/>
+            <circle cx="60" cy="179" r="15" fill="#15202B"/><text x="60" y="184" font-size="13" font-weight="700" fill="#FFF" text-anchor="middle">3</text>
+            <text x="88" y="174" font-size="12.5" font-weight="600" fill="#15202B">İlk sistem kurulur — <tspan font-family="'JetBrains Mono',monospace" font-size="11.5">FEADCore.makeSystem(cfg)</tspan></text>
+            <text x="88" y="193" font-size="10.5" fill="#54636F">Yalnız YAPIYI doğrular: alanlar var mı, tek krank ve tek gergi var mı. Kayış yolunun çözülüp çözülmediğine bakmaz</text>
+          </g>
+          <g>
+            <rect x="60" y="218" width="760" height="54" rx="2" fill="#F8F0E0" stroke="#A66400" stroke-width="1.3"/>
+            <circle cx="60" cy="245" r="15" fill="#A66400"/><text x="60" y="250" font-size="13" font-weight="700" fill="#FFF" text-anchor="middle">4</text>
+            <text x="88" y="240" font-size="12.5" font-weight="600" fill="#15202B">İKİNCİ GEÇİŞ — sense belli oldu, serbest kol açısı düzeltilir</text>
+            <text x="88" y="259" font-family="'JetBrains Mono',monospace" font-size="10.5" fill="#54636F">free = armMeanDeg − sense · rel_nom   →   sistem yeniden kurulur</text>
+          </g>
+          <g>
+            <rect x="60" y="284" width="760" height="54" rx="2" fill="#F8F0E0" stroke="#A66400" stroke-width="1.3"/>
+            <circle cx="60" cy="311" r="15" fill="#A66400"/><text x="60" y="316" font-size="13" font-weight="700" fill="#FFF" text-anchor="middle">5</text>
+            <text x="88" y="306" font-size="12.5" font-weight="600" fill="#15202B">Mekanik durdurucu varsayılanı — YALNIZ DARALTIRSA uygulanır</text>
+            <text x="88" y="325" font-size="10.5" fill="#54636F">Çekirdeğin kendi erişim sınırıyla karşılaştırılır; genişletirse hiçbir şey değişmez</text>
+          </g>
+          <g>
+            <rect x="60" y="350" width="760" height="54" rx="2" fill="#F8EAE7" stroke="#A63523" stroke-width="1.3"/>
+            <circle cx="60" cy="377" r="15" fill="#A63523"/><text x="60" y="382" font-size="13" font-weight="700" fill="#FFF" text-anchor="middle">6</text>
+            <text x="88" y="372" font-size="12.5" font-weight="600" fill="#15202B">GEOMETRİ PROBU — kayış yolu gerçekten çözülüyor mu</text>
+            <text x="88" y="391" font-size="10.5" fill="#54636F">Kasnaklar birbirinin içine giriyorsa burada durur. Kapanmayan çevrim ve kasnağı kesen kayış durdurmaz — ihlal olarak TAŞINIR</text>
+          </g>
+          <g>
+            <rect x="60" y="416" width="760" height="54" rx="2" fill="#F8F0E0" stroke="#A66400" stroke-width="1.3"/>
+            <circle cx="60" cy="443" r="15" fill="#A66400"/><text x="60" y="448" font-size="13" font-weight="700" fill="#FFF" text-anchor="middle">7</text>
+            <text x="88" y="438" font-size="12.5" font-weight="600" fill="#15202B">ÇALIŞMA NOKTASI — kip hangisiyse ondan çözülür (bkz. Şekil 2)</text>
+            <text x="88" y="457" font-size="10.5" fill="#54636F">Serbest: rel = nominal · Sabit: rel = kayış boyunu tutturan açı. Erişilemezse en yakın uca kenetlenir ve sebebi taşınır</text>
+          </g>
+          <g>
+            <rect x="60" y="482" width="760" height="54" rx="2" fill="#F8F0E0" stroke="#A66400" stroke-width="1.3"/>
+            <circle cx="60" cy="509" r="15" fill="#A66400"/><text x="60" y="514" font-size="13" font-weight="700" fill="#FFF" text-anchor="middle">8</text>
+            <text x="88" y="504" font-size="12.5" font-weight="600" fill="#15202B">Türetilen boy çekirdeğe geri yazılır · tolerans basamağı düzeltilir</text>
+            <text x="88" y="523" font-size="10.5" fill="#54636F">Serbest kip böylece “boyu hesaplanmış sabit kip”e indirgenir; sonraki hiçbir hesap kipten haberdar olmak zorunda kalmaz</text>
+          </g>
+          <g>
+            <rect x="60" y="548" width="760" height="62" rx="2" fill="#15202B" stroke="#15202B" stroke-width="1.3"/>
+            <circle cx="60" cy="579" r="15" fill="#E8A73E"/><text x="60" y="584" font-size="13" font-weight="700" fill="#15202B" text-anchor="middle">9</text>
+            <text x="88" y="570" font-size="12.5" font-weight="700" fill="#FFFFFF">ANKRAJ TÜRETİLİR — tasarım gerginliği burada doğar</text>
+            <text x="88" y="589" font-family="'JetBrains Mono',monospace" font-size="11.5" fill="#E8A73E">designTensionN = tensionerState(meanRel).tensionN = M / (dL/dθ)</text>
+            <text x="88" y="604" font-size="10.5" fill="#A2B0BB">Türetilemezse uyarı düşer: gerilme, hubload ve ömür hesaplanamaz — ama kayış yolu kartı çizilmeye devam eder</text>
+          </g>
+          <g>
+            <rect x="60" y="622" width="760" height="54" rx="2" fill="#FFFFFF" stroke="#15202B" stroke-width="1.3"/>
+            <circle cx="60" cy="649" r="15" fill="#15202B"/><text x="60" y="654" font-size="13" font-weight="700" fill="#FFF" text-anchor="middle">10</text>
+            <text x="88" y="644" font-size="12.5" font-weight="600" fill="#15202B">İhlaller ve uyarılar sonuca yazılır — sayı gizlenmez, sınırı yanında yazılır</text>
+            <text x="88" y="663" font-size="10.5" fill="#54636F">Gergi sırası · kapanmayan çevrim · kenetlenmiş kol · otomatik bulunan sense · eksik çap</text>
+          </g>
+        </g>
+        <g stroke="#15202B" stroke-width="1.4" marker-end="url(#ok3)">
+          <line x1="440" y1="74" x2="440" y2="84"/><line x1="440" y1="140" x2="440" y2="150"/>
+          <line x1="440" y1="206" x2="440" y2="216"/><line x1="440" y1="272" x2="440" y2="282"/>
+          <line x1="440" y1="338" x2="440" y2="348"/><line x1="440" y1="404" x2="440" y2="414"/>
+          <line x1="440" y1="470" x2="440" y2="480"/><line x1="440" y1="536" x2="440" y2="546"/>
+          <line x1="440" y1="610" x2="440" y2="620"/>
+        </g>
+        <rect x="60" y="700" width="760" height="70" rx="2" fill="#E4F0EB" stroke="#1C7355" stroke-width="1.6"/>
+        <text x="440" y="724" font-family="Archivo,sans-serif" font-size="12.5" font-weight="700" fill="#1C7355" text-anchor="middle" letter-spacing=".6">SONUÇ: build = { ok, sys, order, beltLengthMm, springTensionN, defaults[], warnings[], errors[] }</text>
+        <text x="440" y="744" font-family="Archivo,sans-serif" font-size="11" fill="#54636F" text-anchor="middle">Bu nesne panel · Kayış Tablosu · kart · uygunluk kapıları ve iki raporun TAMAMI tarafından paylaşılır.</text>
+        <text x="440" y="760" font-family="Archivo,sans-serif" font-size="11" fill="#54636F" text-anchor="middle">Köprü hiçbir durumda istisna fırlatmaz: yarım kurulmuş bir modelde de panel çizilebilmelidir.</text>
+      </svg>
+    </div>
+    <figcaption><b>Şekil 3 — Köprünün on adımı.</b> Amber adımlar bir alanı <em>türetir</em>; kırmızı adım modeli durdurabilir; siyah adım 9 bütün gerilme zincirinin ankrajını üretir. Sıra zorunludur: ankraj ancak çalışma noktası çözüldükten sonra hesaplanabilir.</figcaption>
+  </figure>
+</section>
+
+<!-- ══════════════════════════════════════════════════ 6 -->
+<section id="s6">
+  <h2><span class="no">BÖLÜM 6</span>Gergi geometrisi ve yay dengesi</h2>
+
+  <p>Gergi paneline girdiğiniz beş sayının fiziksel karşılığı budur. <strong>Avara merkezi <span class="k">c</span> girdidir</strong> — diğer bütün kasnaklarla aynı sütundan, tedarikçiye giden FEAD bilgi sayfasının koordinat tablosundaki gergi satırının kendisi. <strong>Gövdenin montaj konumu <span class="k">p</span> çıktıdır.</strong></p>
+
+  <figure>
+    <div class="sekil-kap">
+      <svg viewBox="0 0 880 400" role="img" aria-label="Gergi geometrisi: pivot noktası, kol boyu a, kol açısı theta, avara merkezi c, kayış sarım açısı phi, bileşke kuvvet yönü f ve kol ile kuvvet arasındaki beta açısı.">
+        <defs>
+          <marker id="ok4c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#A66400"/></marker>
+          <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="7" stroke="#7C8A96" stroke-width="1.6"/>
+          </pattern>
+        </defs>
+
+        <!-- 1 · avara merkezinin gezdiği yay (en arkada) -->
+        <path d="M 405.8 127.2 A 220.8 220.8 0 0 1 337.6 288.1" fill="none" stroke="#7C8A96" stroke-width="1.4" stroke-dasharray="5 4"/>
+
+        <!-- 2 · kol (kayışın ARKASINDA) -->
+        <line x1="185" y1="128" x2="390" y2="210" stroke="#15202B" stroke-width="7" stroke-linecap="round"/>
+        <line x1="185" y1="128" x2="390" y2="210" stroke="#EEF1F4" stroke-width="2.2" stroke-linecap="round"/>
+
+        <!-- 3 · pivot + zemin -->
+        <rect x="155" y="141" width="60" height="12" fill="url(#hatch)" stroke="#7C8A96" stroke-width="1.2"/>
+        <circle cx="185" cy="128" r="13" fill="#FFFFFF" stroke="#15202B" stroke-width="3"/>
+        <circle cx="185" cy="128" r="4" fill="#15202B"/>
+
+        <!-- 4 · gergi kasnağı -->
+        <circle cx="390" cy="210" r="56" fill="#FFFFFF" stroke="#1C6FB4" stroke-width="3.4"/>
+
+        <!-- 5 · kayış — kasnağın ÜSTÜNDE, jantı gerçekten sarıyor -->
+        <path d="M 120 50 L 353.4 252.3 A 56 56 0 0 0 423.9 254.7 L 680 60" fill="none" stroke="#A66400" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+
+        <!-- 6 · göbek -->
+        <circle cx="390" cy="210" r="6" fill="#1C6FB4"/>
+
+        <!-- 7 · bileşke kuvvet f -->
+        <line x1="390" y1="210" x2="393.4" y2="105" stroke="#A66400" stroke-width="3" marker-end="url(#ok4c)"/>
+        <text x="404" y="110" font-family="'JetBrains Mono',monospace" font-size="14" font-weight="600" fill="#A66400">f</text>
+        <text x="372" y="112" font-family="Archivo,sans-serif" font-size="10.5" fill="#54636F" text-anchor="end">hubload yönü</text>
+
+        <!-- 8 · β — f ile kol arasındaki açı (kasnağın DIŞINDA) -->
+        <path d="M 392.9 120.1 A 90 90 0 0 0 306.4 176.6" fill="none" stroke="#1C7355" stroke-width="1.8"/>
+        <text x="296" y="152" font-family="'JetBrains Mono',monospace" font-size="14" font-weight="600" fill="#1C7355" text-anchor="end">β</text>
+
+        <!-- 9 · φ — sarım açısı (kasnağın İÇİNDE, boş alanda) -->
+        <path d="M 367.7 235.7 A 34 34 0 0 0 410.6 237.1" fill="none" stroke="#A63523" stroke-width="1.8"/>
+        <line x1="390" y1="210" x2="353.4" y2="252.3" stroke="#A63523" stroke-width="1" stroke-dasharray="3 3"/>
+        <line x1="390" y1="210" x2="423.9" y2="254.7" stroke="#A63523" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="389" y="228" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="600" fill="#A63523" text-anchor="middle">φ</text>
+
+        <!-- 10 · θ — kol açısı, +X ekseninden -->
+        <line x1="185" y1="128" x2="330" y2="128" stroke="#7C8A96" stroke-width="1.2" stroke-dasharray="4 3"/>
+        <path d="M 245 128 A 60 60 0 0 1 240.7 150.3" fill="none" stroke="#A63523" stroke-width="1.8"/>
+        <text x="254" y="148" font-family="'JetBrains Mono',monospace" font-size="14" font-weight="600" fill="#A63523">θ</text>
+
+        <!-- 11 · kol boyu a -->
+        <text x="300" y="168" font-family="'JetBrains Mono',monospace" font-size="14" font-weight="600" fill="#15202B" transform="rotate(21.8 300 168)">a</text>
+
+        <!-- 12 · nokta adları -->
+        <text x="166" y="126" font-family="'JetBrains Mono',monospace" font-size="15" font-weight="600" fill="#1C7355" text-anchor="end">p</text>
+        <text x="406" y="200" font-family="'JetBrains Mono',monospace" font-size="15" font-weight="600" fill="#1C6FB4">c</text>
+
+        <!-- 13 · kayış etiketleri -->
+        <text x="124" y="42" font-family="Archivo,sans-serif" font-size="11.5" font-weight="600" fill="#A66400" transform="rotate(41 124 42)">kayış açıklığı</text>
+        <text x="560" y="142" font-family="Archivo,sans-serif" font-size="11.5" font-weight="600" fill="#A66400" transform="rotate(-37 560 142)">kayış açıklığı</text>
+        <text x="302" y="310" font-family="Archivo,sans-serif" font-size="10.5" fill="#54636F">avara merkezinin yolu</text>
+
+        <!-- 14 · künye: hangi nokta girdi, hangisi çıktı -->
+        <rect x="18" y="282" width="236" height="28" rx="2" fill="#E8F0F8" stroke="#1C6FB4" stroke-width="1.3"/>
+        <text x="30" y="301" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="600" fill="#1C6FB4">c</text>
+        <text x="48" y="301" font-family="Archivo,sans-serif" font-size="11.5" fill="#15202B">avara merkezi — cenX, cenY</text>
+        <text x="244" y="301" font-family="Archivo,sans-serif" font-size="9.5" font-weight="700" fill="#1C6FB4" text-anchor="end">GİRDİ</text>
+
+        <rect x="18" y="316" width="236" height="28" rx="2" fill="#E4F0EB" stroke="#1C7355" stroke-width="1.3"/>
+        <text x="30" y="335" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="600" fill="#1C7355">p</text>
+        <text x="48" y="335" font-family="Archivo,sans-serif" font-size="11.5" fill="#15202B">gövdenin montaj konumu</text>
+        <text x="244" y="335" font-family="Archivo,sans-serif" font-size="9.5" font-weight="700" fill="#1C7355" text-anchor="end">ÇIKTI</text>
+
+        <text x="18" y="368" font-family="'JetBrains Mono',monospace" font-size="12" fill="#54636F">p = c − a · (cos θ, sin θ)</text>
+
+        <!-- 15 · yay dengesi -->
+        <rect x="608" y="254" width="256" height="126" rx="2" fill="#15202B"/>
+        <text x="626" y="278" font-family="Archivo,sans-serif" font-size="10" font-weight="700" fill="#E8A73E" letter-spacing=".8">YAY DENGESİ</text>
+        <g font-family="'JetBrains Mono',monospace" font-size="11.5" fill="#FFFFFF">
+          <text x="626" y="300">M     = M₀ + k · rel</text>
+          <text x="626" y="320">dL/dθ = a · sinβ · 2sin(φ/2)</text>
+          <text x="626" y="342" fill="#E8A73E" font-weight="600">T     = M / (dL/dθ)</text>
+          <text x="626" y="364" fill="#A2B0BB" font-size="10.5">hubload = 2 · T · sin(φ/2)</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption><b>Şekil 4 — Gergi dengesi.</b> <span class="k">c</span> (avara merkezi) girdidir; <span class="k">p</span> (montaj konumu, atölyeye giden sayı) ondan ve kol açısından türer. Sarım açısı <span class="k">φ</span> ve kuvvet–kol açısı <span class="k">β</span> geometriden çıkar, yay momenti <span class="k">M</span> künyeden gelir — <b>tasarım gerginliği bu ikisinin oranıdır</b>, ayrıca sorulmaz.</figcaption>
+  </figure>
+
+  <div class="not">
+    <span class="bas">Take-up tekilliği — kolun uç konumundan uzak durun</span>
+    <p>Kol açıldıkça sarım açısı <span class="k">φ</span> küçülür ve <span class="k">dL/dθ</span> sıfıra yaklaşır; <span class="k">T = M/(dL/dθ)</span> olduğu için gerginlik oraya yaklaşırken patlar. Program bu yüzden kolu sınıra kenetlemek yerine nominal açıya düşürür ve farkı yazar.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ 7 -->
+<section id="s7">
+  <h2><span class="no">BÖLÜM 7</span>Çekirdeğin hesap sırası</h2>
+
+  <p>Hesap çekirdeği (<span class="k">js/fead-core.js</span>) dışarıdan gelmiştir ve <strong>birebir durur</strong> — proje stiline çevrilmez, güncellemesi de dışarıdan gelir. Sırayla ne yaptığı:</p>
+
+  <h3>7.1 · Çap katmanı</h3>
+  <p>Kullanıcı yalnız <strong>dış çapı</strong> girer. Profil ve marka kayış sabitlerini (h<sub>b</sub> = efektif çizgi farkı, h<sub>r</sub> = sırt yüksekliği) seçer; iki yarıçap oradan türer.</p>
+  <div class="form">kaburgalı temas :  r_pitch = OD/2 + h_b        r_eff = OD/2
+sırttan temas  :  r_pitch = OD/2 + h_r        r_eff = OD/2 + h_r + h_b
+
+<span class="ac">Teğet geometrisi ve hız oranları PITCH, kayış boyu EFEKTİF yarıçap üzerinden.</span>
+Özdeşlik : L_pitch − L_eff = 2π·h_b   (kapalı çevrim, yerleşimden bağımsız)</div>
+  <p>PK/Gates için h<sub>b</sub> = 1,2 mm, h<sub>r</sub> = 1,1 mm. Yani 100 mm’lik bir kaburgalı kasnağın pitch çapı 102,4 mm’dir — bir kasnak çiftinde merkez mesafesi hesabında 2,4 mm fark eder.</p>
+
+  <h3>7.2 · Geometri</h3>
+  <div class="form">1 · loopSense      merkezlerin sırasından çevrim yönü (+1 CCW / −1 CW)
+2 · tangent        her komşu çift için ORTAK TEĞET → açıklık boyu ve yönü
+3 · wrap           her kasnakta giriş ve çıkış teğetinden sarım açısı φ_i
+4 · L_eff  = Σ açıklık + Σ φ_i · r_eff,i
+    L_pitch= Σ açıklık + Σ φ_i · r_pitch,i
+
+<span class="ac">KAPALI ÇEVRİM DEĞİŞMEZİ : |Σ işaretli sarım| = 360° ± 0,05</span>
+   kaburgalı sarım +, sırttan sarım −. Tutmuyorsa kasnak SIRASI ya da
+   TEMAS TARAFI yanlış.
+5 · checkClearance açıklık başka bir kasnağın içinden geçiyor mu</div>
+
+  <div class="not">
+    <span class="bas">İki denetim iki ayrı hatayı yakalar</span>
+    <p>Sarım değişmezi <strong>kasnak sırası</strong> hatalarını yakalar. Temas tarafı hatalarını yakalamaz — ters taraf da kapalı ve tutarlı bir çevrim üretir. Onu yakalayan şey <span class="k">checkClearance</span>’dır: yol fiziksel olarak bir kasnağın içinden geçer.</p>
+  </div>
+
+  <h3>7.3 · Gerilme, kayma, titreşim, dayanım</h3>
+  <div class="tablo-kap">
+    <table>
+      <caption>Çekirdeğin ürettiği büyüklükler</caption>
+      <thead><tr><th>Çıktı</th><th class="mono">Formül</th><th>Girdi bağımlılığı</th></tr></thead>
+      <tbody>
+        <tr><td>Kayış hızı</td><td class="mono">v = N·i·2π/60·r<sub>pitch,krank</sub></td><td>Devir, tahrik oranı, krank çapı</td></tr>
+        <tr><td>Açıklık gerilmesi</td><td class="mono">T[k] = T[k−1] ± P<sub>k</sub>/v</td><td>Ankraj + duty kW + hız</td></tr>
+        <tr><td>Hubload</td><td class="mono">|T<sub>çıkış</sub>·u<sub>çıkış</sub> − T<sub>giriş</sub>·u<sub>giriş</sub>|</td><td>Gerilmeler + teğet yönleri</td></tr>
+        <tr><td>Kayma emniyeti</td><td class="mono">SF = e<sup>μφ</sup> / (T<sub>gergin</sub>/T<sub>gevşek</sub>)</td><td>Sarım, sürtünme, gerilme oranı</td></tr>
+        <tr><td>Açıklık frekansı</td><td class="mono">f = (c² − v²)/(2Lc),  c = √(T/m′)</td><td>Gerilme, açıklık boyu, birim kütle</td></tr>
+        <tr><td>Ateşleme frekansı</td><td class="mono">f = N/60 · silindir/2</td><td>Devir, silindir sayısı</td></tr>
+        <tr><td>Kaburga yorulma payı</td><td class="mono">hasar<sub>i</sub> ∝ w<sub>i</sub> · d<sub>eff,i</sub><sup>−m</sup></td><td><strong>Yalnız çap ve temas tarafı</strong> — gerilmeden bağımsız</td></tr>
+        <tr><td>B10 ömrü</td><td class="mono">D = geomΣ · geçiş · (T/kanal)<sup>0,96</sup> · 2<sup>(°C−80)/23</sup></td><td>Duty + sıcaklık + ankraj + kanal sayısı</td></tr>
+        <tr><td>Burulma modu</td><td class="mono">K = Bᵀ·diag(k)·B + yay,  M = diag(I)</td><td>Bütün ataletler + kord rijitliği</td></tr>
+        <tr><td>Tepe yük</td><td class="mono">T[k] = T[k−1] ± (P/v + J·α·oran/r)</td><td>İvme + ataletler — <strong>kalibre değil</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="not bilgi">
+    <span class="bas">Satır başına sıcaklık, tek sıcaklığa nasıl iner</span>
+    <p>Çekirdek B10 için tek bir sıcaklık ister, duty tablosunda ise sıcaklık satır başına girilir. Aritmetik ortalama <strong>her zaman aynı yöne</strong> yanlıştır (2<sup>x</sup> dışbükey). Program hasar-eşdeğer sıcaklığı kullanır: <span class="k">°C<sub>eş</sub> = 80 + 23·log₂(Σ w·2^((T−80)/23))</span>. Ölçüldü: BMC örneğinde aritmetik ortalama 90,0 °C → 1010 saat; hasar-eşdeğer 96,7 °C → <strong>810 saat</strong>.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ 8 -->
+<section id="s8">
+  <h2><span class="no">BÖLÜM 8</span>Gerilme zinciri ve ankraj</h2>
+
+  <p class="lead">Bütün gerilme, hubload ve ömür sonuçları tek bir sayıdan doğar: gergi kasnağındaki ankraj. Zincir oradan başlar ve kayışın gidiş yönünde yürür.</p>
+
+  <figure>
+    <div class="sekil-kap">
+      <svg viewBox="0 0 880 340" role="img" aria-label="Gerilme zinciri: gergi kasnağında ankrajlanan gerilme, kayışın gidiş yönünde her yük kasnağında güç bölü hız kadar azalır, sürücü kasnakta toplam güç kadar artar ve çevrim kapanır.">
+        <defs>
+          <marker id="ok5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+        </defs>
+
+        <text x="18" y="24" font-family="'JetBrains Mono',monospace" font-size="10.5" font-weight="600" fill="#1C6FB4" letter-spacing="1.4">KAYIŞIN GİDİŞ YÖNÜ →</text>
+
+        <!-- düğümler -->
+        <g font-family="Archivo,sans-serif" font-size="11.5" text-anchor="middle">
+          <rect x="18" y="52" width="110" height="60" rx="2" fill="#15202B"/>
+          <text x="73" y="74" fill="#E8A73E" font-weight="700" font-size="11">GERGİ</text>
+          <text x="73" y="90" fill="#FFFFFF" font-size="10">ankraj</text>
+          <text x="73" y="104" fill="#A2B0BB" font-size="9.5">T = M/(dL/dθ)</text>
+
+          <rect x="182" y="52" width="106" height="60" rx="2" fill="#FFFFFF" stroke="#15202B" stroke-width="1.4"/>
+          <text x="235" y="78" fill="#15202B" font-weight="600">Alternatör</text><text x="235" y="95" fill="#54636F" font-size="10">yük</text>
+
+          <rect x="342" y="52" width="106" height="60" rx="2" fill="#FFFFFF" stroke="#15202B" stroke-width="1.4"/>
+          <text x="395" y="78" fill="#15202B" font-weight="600">Klima</text><text x="395" y="95" fill="#54636F" font-size="10">yük</text>
+
+          <rect x="502" y="52" width="106" height="60" rx="2" fill="#FFFFFF" stroke="#15202B" stroke-width="1.4"/>
+          <text x="555" y="78" fill="#15202B" font-weight="600">Avara</text><text x="555" y="95" fill="#54636F" font-size="10">yük çekmez</text>
+
+          <rect x="662" y="52" width="106" height="60" rx="2" fill="#E8F0F8" stroke="#1C6FB4" stroke-width="2"/>
+          <text x="715" y="78" fill="#1C6FB4" font-weight="700">KRANK</text><text x="715" y="95" fill="#54636F" font-size="10">sürücü</text>
+        </g>
+
+        <!-- oklar -->
+        <g stroke="#15202B" stroke-width="1.5" marker-end="url(#ok5)">
+          <line x1="128" y1="82" x2="178" y2="82"/><line x1="288" y1="82" x2="338" y2="82"/>
+          <line x1="448" y1="82" x2="498" y2="82"/><line x1="608" y1="82" x2="658" y2="82"/>
+        </g>
+        <g font-family="'JetBrains Mono',monospace" font-size="10" fill="#A63523" text-anchor="middle" font-weight="600">
+          <text x="153" y="74">−P/v</text><text x="313" y="74">−P/v</text><text x="473" y="74">−0</text>
+        </g>
+        <text x="633" y="74" font-family="'JetBrains Mono',monospace" font-size="10" fill="#1C7355" text-anchor="middle" font-weight="600">+ΣP/v</text>
+
+        <!-- geri dönüş -->
+        <path d="M 768 82 L 812 82 L 812 152 L 40 152 L 40 112" fill="none" stroke="#1C6FB4" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#ok5)"/>
+        <text x="426" y="141" font-family="Archivo,sans-serif" font-size="11" fill="#1C6FB4" text-anchor="middle">çevrim kapanır — sürücünün gücü diğerlerinin TOPLAMIDIR</text>
+
+        <!-- açıklama -->
+        <rect x="18" y="182" width="404" height="140" rx="2" fill="#F8F0E0" stroke="#A66400" stroke-width="1.4"/>
+        <text x="36" y="206" font-family="Archivo,sans-serif" font-size="11" font-weight="700" fill="#A66400" letter-spacing=".8">ZİNCİRİN KURALI</text>
+        <g font-family="'JetBrains Mono',monospace" font-size="11" fill="#15202B">
+          <text x="36" y="230">T[gergi] = designTensionN</text>
+          <text x="36" y="250">T[k]     = T[k−1] + s · (kW_k · 1000) / v</text>
+          <text x="36" y="270" font-size="10" fill="#54636F">s = +1 sürücüde · s = −1 yük kasnağında</text>
+        </g>
+        <text x="36" y="294" font-family="Archivo,sans-serif" font-size="10.5" fill="#54636F">Gerilme her yük kasnağında AZALIR, sürücüde ARTAR.</text>
+        <text x="36" y="310" font-family="Archivo,sans-serif" font-size="10.5" fill="#54636F">Ankraj en düşük gerilmedir: gevşek taraf.</text>
+
+        <rect x="442" y="182" width="420" height="140" rx="2" fill="#F8EAE7" stroke="#A63523" stroke-width="1.4"/>
+        <text x="460" y="206" font-family="Archivo,sans-serif" font-size="11" font-weight="700" fill="#A63523" letter-spacing=".8">GERGİ YANLIŞ TARAFTAYSA</text>
+        <g font-family="Archivo,sans-serif" font-size="10.8" fill="#15202B">
+          <text x="460" y="228">Otomatik gergi kayışın GEVŞEK tarafında durur — yani</text>
+          <text x="460" y="245">kayış sırasında krankın hemen ardında. Gergin tarafa</text>
+          <text x="460" y="262">düşerse açıklık gerilmeleri ankrajın altına iner ve</text>
+          <text x="460" y="279">negatife gidebilir: kayış gevşiyor demektir.</text>
+          <text x="460" y="302" fill="#A63523" font-weight="600">Çare: kayış dönüş yönünü çevirin ya da gergiyi</text>
+          <text x="460" y="316" fill="#A63523" font-weight="600">sırada sürücünün önüne alın.</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption><b>Şekil 5 — Gerilme zinciri.</b> Gerilme gergi kasnağında ankrajlanır ve gidiş yönünde yürür. Sürücünün gücü elle girilmez; girilir ve toplama eşit değilse çekirdek <em>“çevrim kapanmaz”</em> hatası verir. Ölçüldü (AG00686): T = 1209,95 · 1208,48 · 767,47 · gergi 766,00 N — <b>en düşüğü ankrajın kendisi</b>.</figcaption>
+  </figure>
+</section>
+
+<!-- ══════════════════════════════════════════════════ 9 -->
+<section id="s9">
+  <h2><span class="no">BÖLÜM 9</span>Çıktılar: hangi sayı nerede görünür</h2>
+
+  <p>Aynı çözüm beş ayrı yüzeye basılır. Hiçbiri kendi hesabını yapmaz — hepsi köprünün ürettiği tek nesneyi okur.</p>
+
+  <h3>9.1 · Kayış Tablosu</h3>
+  <p>Kasnakların tek veri giriş yüzeyi; sütun sırası Gates raporunun “Layout Data” tablosuyla birebirdir. Girdi ve türetilen sütunlar <strong>iç içedir</strong> ve bu bilerekdir: bir koordinatı değiştirince sarımın ve açıklığın ne olduğu aynı bakışta görülür. Değeri çözümden gelen sütunlar zeminde bir şeritle işaretlenir.</p>
+
+  <div class="tablo-kap">
+    <table>
+      <caption>Kayış Tablosu’nun sütunları</caption>
+      <thead><tr><th>Sütun</th><th>Birim</th><th>Kaynak</th><th>Not</th></tr></thead>
+      <tbody>
+        <tr><td>#</td><td>—</td><td><span class="rz rz-g">Girdi</span></td><td>Kayış sırası; ↑↓ ile taşınır, sürücü satırı kilitli</td></tr>
+        <tr><td>KASNAK</td><td>—</td><td><span class="rz rz-g">Girdi</span></td><td><strong>Bir bağlantıdır</strong> — tıklanınca detay paneli açar</td></tr>
+        <tr><td>X · Y</td><td>mm</td><td><span class="rz rz-g">Girdi</span></td><td>Gergi satırında avara merkezi (cenX/cenY)</td></tr>
+        <tr><td>Efektif Çap</td><td>mm</td><td><span class="rz rz-c">Çözüm</span></td><td>2·r<sub>pitch</sub> — OD + 2h<sub>b</sub> ya da OD + 2h<sub>r</sub></td></tr>
+        <tr><td>D</td><td>mm</td><td><span class="rz rz-g">Girdi</span></td><td>Dış çap</td></tr>
+        <tr><td>Kasnak Dönüş Yönü</td><td>Sağ/Sol</td><td><span class="rz rz-g">Girdi</span></td><td><span class="k">contact</span> alanını yazar — <strong>efektif çapı da değiştirir</strong></td></tr>
+        <tr><td>Sarım Açısı</td><td>°</td><td><span class="rz rz-c">Çözüm</span></td><td>Σ işaretli sarım = 360° olmalı</td></tr>
+        <tr><td>Span Uzunluğu</td><td>mm</td><td><span class="rz rz-c">Çözüm</span></td><td>O kasnağın ÇIKIŞ açıklığı</td></tr>
+        <tr><td>Kayış Uzunluğu</td><td>mm</td><td><span class="rz rz-c">Çözüm</span></td><td>Birleşik hücre — çevrimin tamamına ait</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>9.2 · Konum tablosu — kolun gezdiği altı konum</h3>
+  <p>Kayış boyu, toleransı ve aşınma payı bir <strong>zarf</strong> kurar; kol o zarfta gezer. Tolerans ve aşınma boş bırakılırsa dört sütun aynı açıya çöker ve tablo tek anlamlı sütuna iner.</p>
+  <div class="form">Replace = L + tolerans + aşınma·L      (en uzamış kayış)
+MaxBelt = L + tolerans
+Mean    = L                            <span class="ac">← çalışma noktası</span>
+MinBelt = L − tolerans
+FreeArm = rel 0                        (yaysız serbest kol)
+Load    = mekanik durdurucu            (çalışma noktası DEĞİL)</div>
+  <p>Her konum için kol açısı, avara merkezi koordinatı, β, hubload yönü ve büyüklüğü, gerginlik, sarım, kayış boyu ve take-up oranı basılır.</p>
+
+  <h3>9.3 · Sonuç blokları (Hesapla’dan sonra)</h3>
+  <div class="tablo-kap">
+    <table>
+      <caption>Çözücü panelindeki sonuç yüzeyleri</caption>
+      <thead><tr><th>Blok</th><th>İçerik</th><th>Koşul</th></tr></thead>
+      <tbody>
+        <tr><td>Çalışma çevrimi sonuç tablosu</td><td>Devir başına: kayış hızı, kasnak başına gerilme, hubload, kayma emniyeti, açıklık frekansları, ateşleme frekansı</td><td>Duty satırı var</td></tr>
+        <tr><td>Burulma titreşim kartı</td><td>1. elastik mod [Hz] + ateşleme frekansıyla çakışma gözlemi</td><td>Bütün ataletler girilmiş</td></tr>
+        <tr><td>Kaburga yorulma tablosu</td><td>Kasnak başına yorulma katkı payı [%]</td><td>Kayış katalog çıktıları açık</td></tr>
+        <tr><td>B10 ömür kartı</td><td>Saat + hasar-eşdeğer sıcaklık + çap penceresi hükmü</td><td>Kayış katalog çıktıları açık</td></tr>
+        <tr><td>Sınırlar kutusu</td><td>Geçerlilik uyarıları — <strong>her zaman basılır</strong></td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>9.4 · İki rapor</h3>
+  <p>Aynı çözümden iki belge üretilir; farkı okuyucusudur.</p>
+  <div class="tablo-kap">
+    <table>
+      <caption>Rapor türleri</caption>
+      <thead><tr><th>Rapor</th><th>Kapsam</th><th>Okuyucu</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Detaylı Rapor</strong></td><td>Teori (§1–10 + Ek A) + bu modelin çözümü (§8.1 – §8.19), KaTeX matematikle</td><td>Hesabın <em>nasıl</em> yapıldığını denetleyecek mühendis</td></tr>
+        <tr><td><strong>Özet Rapor</strong></td><td>Altı sayfa: Genel Bakış · Geometri · Gergi Çalışma Zarfı · Çalışma Çevrimi ve Torklar · Gerginlik ve Hubload · Dayanım ve Titreşim</td><td>Tedarikçi / onay dosyası</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Detaylı raporun §8 alt bölümleri</h4>
+  <div class="tablo-kap">
+    <table>
+      <caption>§8 — Sayısal örnek: bu modelin çözümü</caption>
+      <thead><tr><th class="mono">§</th><th>Başlık</th><th class="mono">§</th><th>Başlık</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">8.1</td><td>Kritik sonuç özeti</td><td class="mono">8.11</td><td>Ortalama gerginlik ve hubload</td></tr>
+        <tr><td class="mono">8.2</td><td>Kayış künyesi</td><td class="mono">8.12</td><td>Kayma emniyeti</td></tr>
+        <tr><td class="mono">8.3</td><td>Kasnak yerleşimi ve temas tarafı</td><td class="mono">8.13</td><td>Aksesuar mil torku (ortalama)</td></tr>
+        <tr><td class="mono">8.4</td><td>Otomatik gergi künyesi</td><td class="mono">8.14</td><td>Kaburga yorulma dağılımı</td></tr>
+        <tr><td class="mono">8.5</td><td>Çözülmüş kayış yolu</td><td class="mono">8.15</td><td>Yük durumunun yorulmaya katkısı</td></tr>
+        <tr><td class="mono">8.6</td><td>Açıklık, sarım, hız oranı</td><td class="mono">8.16</td><td>B10 kayış ömrü</td></tr>
+        <tr><td class="mono">8.7</td><td>Gergi çalışma noktası ve gerginliğin kaynağı</td><td class="mono">8.17</td><td>Serbest açıklık titreşimi</td></tr>
+        <tr><td class="mono">8.8</td><td>Kolun gezdiği zarf — altı konum</td><td class="mono">8.18</td><td>Sistem burulma titreşimi</td></tr>
+        <tr><td class="mono">8.9</td><td>Kayış take-up</td><td class="mono">8.19</td><td>Tasarım notları</td></tr>
+        <tr><td class="mono">8.10</td><td>Çalışma çevrimi girdisi</td><td class="mono">✓</td><td>FEAD sistem uygunluğu</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ 10 -->
+<section id="s10">
+  <h2><span class="no">BÖLÜM 10</span>Üç uygunluk kapısı</h2>
+
+  <p>Kapılar <strong>Hesapla’ya basmadan önce</strong> görünür, çünkü üçü de yerleşim ve künye verisiyle çözülür; çalışma çevrimi ya da gerginlik gerekmez. Amaç kullanıcının kasnak çapını daha hesaba girmeden düzeltebilmesidir.</p>
+
+  <div class="tablo-kap">
+    <table>
+      <caption>Uygunluk kapıları — panel ve rapor aynı çağrıyı paylaşır</caption>
+      <thead><tr><th>Kapı</th><th>Kural</th><th>Gereken girdi</th><th>İhlalde</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>1 · Kasnak merkez mesafesi</strong></td>
+          <td class="mono">0,7·(d₁+d₂) ≤ a ≤ 2·(d₁+d₂)</td>
+          <td>Koordinatlar + çaplar (pitch)</td>
+          <td><span class="rz rz-u">⚠ sınırda</span> — tasarımı reddetmez, payı yazılır</td>
+        </tr>
+        <tr>
+          <td><strong>2 · Çevrim oranı penceresi</strong></td>
+          <td>Motor governed devrindeyken aksesuar kendi optimum bandında mı</td>
+          <td>governedRpm + optimumRpm + maxContRpm</td>
+          <td><span class="rz rz-u">✗ kontrol</span> — “kasnak çapı küçültülmeli / büyütülmeli”</td>
+        </tr>
+        <tr>
+          <td><strong>3 · Aksesuar devir sınırı</strong></td>
+          <td>Çevrim tepesi ve governed → sürekli sınır; overspeed → anlık sınır</td>
+          <td>maxContRpm · maxPeakRpm + motor devirleri</td>
+          <td><span class="rz rz-u">✗ kontrol</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="not">
+    <span class="bas">Üç durum vardır, iki değil</span>
+    <p>Bir kapı <strong>“değerlendirilemedi”</strong> diyebilir ve bu <em>uygun sayılmaz</em>. Eksik girdiyi “geçti” diye basmak, kapının hiç olmamasından kötü olurdu. Merkez mesafesi kuralının ihlali uyarı seviyesindedir çünkü kural iki kasnaklı V-kayış tahrikleri için yazılmıştır; serpantinde açıklığı tek bir çift değil bütün yerleşim belirler.</p>
+  </div>
+
+  <div class="not bilgi">
+    <span class="bas">Oran her zaman pitch çapından gelir</span>
+    <p>Kaynak hesap defterinde aynı alternatör için üç ayrı oran duruyordu ve üçü birbirini tutmuyordu: pitch çaplarının verdiği 2,4492 · dış çapla hesaplanan 2,5039 (+%2,2) · elle yazılmış 3,13 (+%27,8). Sonuncusu çevresel kuvvete doğrudan giriyor ve alternatörün kuvvetini %27,8 düşük gösteriyordu. MFSim’de böyle bir sapma <strong>yapısal olarak mümkün değil</strong>: elle oran alanı yoktur.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ 11 -->
+<section id="s11">
+  <h2><span class="no">BÖLÜM 11</span>Kataloglar: kısıt değil öneri</h2>
+
+  <p>Beş kütüphanenin beşinde de aynı kural geçerlidir: <strong>elle girilen değer katalogtan üstündür</strong>. Bir alanın “elle girilmiş” sayılması için değerin katalogtakinden <em>farklı</em> olması gerekir — yalnız doluluğa bakan bir tespit, kataloğun kendi yazdığı alanları kullanıcıya mal ederdi.</p>
+
+  <div class="tablo-kap">
+    <table>
+      <caption>Katalog kütüphaneleri</caption>
+      <thead><tr><th>Kütüphane</th><th class="mono">Dosya</th><th class="num">Kayıt</th><th>Ne verir</th><th>Sapma bildirimi</th></tr></thead>
+      <tbody>
+        <tr><td>Kayış kataloğu</td><td class="mono">fead-belts.js</td><td class="num">5 profil</td><td>Stok boy ızgarası + otomotiv ızgarası</td><td>—</td></tr>
+        <tr><td>Çalışma çevrimi</td><td class="mono">fead-duty.js</td><td class="num">7</td><td>Ölçülmüş devir/%zaman/°C desenleri</td><td>“özel (elle düzenlendi)”</td></tr>
+        <tr><td>Gergi künyesi</td><td class="mono">fead-tensioners.js</td><td class="num">14</td><td>Kol boyu · ön yük · katsayı · çap · temas</td><td><span class="k">veFeadTensionerDrift</span> — parça ile montaj ayrı</td></tr>
+        <tr><td>Motor kataloğu</td><td class="mono">fead-engines.js</td><td class="num">24</td><td>Dört devir sınırı · FEAD kasnak çapları · tork eğrisi</td><td><span class="k">veFeadEngineDrift</span></td></tr>
+        <tr><td>Aksesuar kataloğu</td><td class="mono">fead-accessories.js</td><td class="num">10 + 4</td><td><strong>Devir sınırları</strong> (asıl katkısı) + güç eğrisi</td><td>Alan başına “elle girilmiş” damgası</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="not">
+    <span class="bas">Katalog çapı DIŞ çaptır, pitch değil</span>
+    <p>Gergi kütüphanesinin çap alanı bir dönem <strong>on dört kaydın on dördünde de</strong> pitch sütununu taşıyordu. Künyeyi uygulayan her model gergi kasnağını 2,20 mm büyük kuruyor ve kayış boyunu 0,67 mm kaydırıyordu. Hata sessizdi: çevrim kapanıyor, çözüm çıkıyordu.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ 12 -->
+<section id="s12">
+  <h2><span class="no">BÖLÜM 12</span>Boş bırakılan alan ne olur</h2>
+
+  <p>Üç ayrı davranış vardır ve hangisinin geçerli olduğu alanın türüne bağlıdır.</p>
+
+  <div class="tablo-kap">
+    <table>
+      <caption>Boş alanın üç kaderi</caption>
+      <thead><tr><th>Davranış</th><th>Hangi alanlar</th><th>Kullanıcı nasıl görür</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>HATA</strong><br>model çözülmez</td>
+          <td>Kasnak X/Y · kanal sayısı · gerginin beş zorunlu alanı · sabit kipte kayış boyu</td>
+          <td>Panelde kırmızı sorun kutusu; Hesapla düğmesi pasif</td>
+        </tr>
+        <tr>
+          <td><strong>VARSAYILAN</strong><br>arşivden doldurulur</td>
+          <td>Aşınma payı · tolerans · boy ofseti · ataletler · kasnak kütlesi · durdurucu</td>
+          <td><strong>Varsayılan defteri</strong>: hangi alanın hangi kaynaktan doldurulduğu panelde ve raporda yazar</td>
+        </tr>
+        <tr>
+          <td><strong>DEĞERLENDİRİLEMEDİ</strong><br>hüküm verilmez</td>
+          <td>Aksesuar devir sınırları · governed · overspeed</td>
+          <td>İlgili kapı “— değerlendirilemedi” der ve <em>uygun saymaz</em></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>12.1 · Kayış katalog çıktıları kapalıyken</h3>
+  <p>Kayış henüz seçilmemişse <span class="k">beltDataMode = none</span> olur (varsayılan) ve dört çıktı <strong>üretilmez</strong>:</p>
+  <ul>
+    <li>B10 kayış ömrü</li>
+    <li>Kaburga yorulma dağılımı</li>
+    <li>Açıklık doğal frekansları ve çırpınma hükmü</li>
+    <li>Kol konum tablosunun tolerans/aşınma zarfı</li>
+  </ul>
+  <p>Kapatılan şey hesap değil <strong>verinin varlığı</strong>dır: kayış seçilmemişken katalog sabitleriyle üretilen sayı bir varsayım olurdu. Profil sorulmaya devam eder ve kapatılamaz — pitch yarıçapı profil sabitine dayanır.</p>
+</section>
+
+<!-- ══════════════════════════════════════════════════ 13 -->
+<section id="s13">
+  <h2><span class="no">BÖLÜM 13</span>Geçerlilik sınırları</h2>
+
+  <p class="lead">Program hiçbir sayıyı gizlemez; sınırını yanında yazar. Aşağıdaki dört sınır sonucun <em>içinde</em> taşınır ve her iki rapora da basılır.</p>
+
+  <div class="tablo-kap">
+    <table>
+      <caption>Hangi sayıya ne kadar güvenilir</caption>
+      <thead><tr><th>Büyüklük</th><th>Durum</th><th>Sınır</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Geometri · gerilme · hubload · kayma emniyeti · kol zarfı</td>
+          <td><span class="rz rz-k">Doğrulandı</span></td>
+          <td>17 Gates raporundan çıkarılmış <strong>2.095 referans değer</strong>; çalışma sapması %0,391 (eşik %0,5)</td>
+        </tr>
+        <tr>
+          <td>Kaburga yorulma <strong>dağılımı</strong></td>
+          <td><span class="rz rz-k">Doğrulandı</span></td>
+          <td>5 sistemde RMS 0,7 yüzde puanı. <strong>Gerilmeden bağımsız</strong> — yalnız çap ve temas tarafı. Çap penceresinden de bağımsız geçerli</td>
+        </tr>
+        <tr>
+          <td><strong>Mutlak</strong> B10 ömrü</td>
+          <td><span class="rz rz-u">Pencereli</span></td>
+          <td>Yalnız bütün kasnaklar <strong>79,6 – 175 mm</strong> aralığındayken (5 sistem, RMS %2,4). Dışında model ömrü sistematik olarak ~0,55× verir; ampirik düzeltme ayrıca basılır. <em>Sertifikasyon dayanağı değildir</em></td>
+        </tr>
+        <tr>
+          <td>Gergi kol modu frekansı</td>
+          <td><span class="rz rz-u">Karşılaştırılamaz</span></td>
+          <td>Tek serbestlik dereceli kol modu tahminidir; tedarikçi raporunun “Natural Frequency” satırı çok serbestlik dereceli bir <strong>sistem</strong> modudur. İkisi karşılaştırılmamalıdır</td>
+        </tr>
+        <tr>
+          <td>Sistem burulma modu</td>
+          <td><span class="rz rz-n">Mertebe</span></td>
+          <td>5 sistemde RMS %5,2 — mertebe göstergesi olarak okunmalı</td>
+        </tr>
+        <tr>
+          <td>Tepe yük (ivme/yavaşlama)</td>
+          <td><span class="rz rz-u">KALİBRE DEĞİL</span></td>
+          <td>Hesaplanır ama doğrulama kümesinde <strong>tek bir tepe değeri yoktur</strong>. Tablo bu damgayla basılır</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="not bilgi">
+    <span class="bas">Yorulma modeli seçimi ömrü etkilemez — dağılımı etkiler</span>
+    <p>İki sabit takımı çok farklıdır (m = 5,6 ↔ 4,05). Kaburga yorulma <strong>dağılımı</strong> seçtiğiniz modeli kullanır; <strong>mutlak ömür kullanamaz</strong>, çünkü kalibrasyon sabiti geometri toplamının ölçeğini soğuruyor ve üs değişince ömür yüzlerce kat kayıyor. Program bu farkı sonucun içinde yazar.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ 14 -->
+<section id="s14">
+  <h2><span class="no">BÖLÜM 14</span>Sessiz hata sınıfı</h2>
+
+  <p class="lead">Bu modülün karakteristik hatası şudur: <strong>sayı yanlış çıkar, model yine çözülür, uyarı verilmez.</strong> Aşağıdaki alanlar tam olarak bu sınıfa aittir — girerken iki kez bakmaya değer.</p>
+
+  <div class="tablo-kap">
+    <table>
+      <caption>Yanlış girildiğinde program uyarmayan alanlar</caption>
+      <thead><tr><th>Alan</th><th>Ters/yanlış verilirse</th><th>Neden yakalanmaz</th><th>Nasıl doğrulanır</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Temas tarafı</strong><br><span class="k">contact</span></td>
+          <td>Program <em>geçerli ama başka bir</em> kayış yolu çözer</td>
+          <td>Kapalı çevrim de sarım değişmezi de yine tutar</td>
+          <td>Yerleşim çizimiyle karşılaştırın; <span class="k">checkClearance</span> yalnız yol bir kasnağın içinden geçerse yakalar</td>
+        </tr>
+        <tr>
+          <td><strong>Kasnak sırası</strong><br><span class="k">beltIndex</span></td>
+          <td>Gerilme zinciri başka bir sırada yürür</td>
+          <td>Geometri sıradan bağımsız: sarım, açıklık ve L<sub>eff</sub> birebir aynı kalır</td>
+          <td>Sarım değişmezi (Σ = 360°) sıra hatalarını yakalar; ayrıca gergi konumu uyarısı düşer</td>
+        </tr>
+        <tr>
+          <td><strong>Tahrik oranı</strong><br><span class="k">driveRatio</span></td>
+          <td>Bütün güç ve gerilme sonuçları <em>aynı oranda</em> kayar</td>
+          <td>Model tutarlı kalır — yalnız ölçeği yanlıştır</td>
+          <td>“Kullanılan tahrik oranı” satırı panelde okunur; kip <em>derive</em> ise iki çaptan türer</td>
+        </tr>
+        <tr>
+          <td><strong>Yay katsayısı</strong><br><span class="k">kArm</span></td>
+          <td>Bir ondalık kayması (0,048 ↔ 0,480) nominal dönüşü 280°’ye çıkarır</td>
+          <td>Model saçma bir kol açısında “çözülmüş” görünebilir</td>
+          <td>Durdurucu varsayılanı artık <em>yalnız daraltıyorsa</em> uygulanır; kenetlenme uyarısı korunur</td>
+        </tr>
+        <tr>
+          <td><strong>Duty %zaman</strong><br><span class="k">dcPct</span></td>
+          <td>Toplam 100 değilse mutlak ömür ölçeklenir</td>
+          <td>Dağılım yüzdeleri etkilenmez, tablo doğru görünür</td>
+          <td>Panel toplamı yazar ve 100’den saparsa uyarır</td>
+        </tr>
+        <tr>
+          <td><strong>Gergi konumu</strong><br>(sırada nerede)</td>
+          <td>Gergin tarafa düşerse açıklık gerilmeleri ankrajın altına iner</td>
+          <td>Çevrim kapanır, sayılar üretilir</td>
+          <td>Program en kötü satırı bulur ve <strong>sebebi adıyla</strong> yazar</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="not iyi">
+    <span class="bas">Programın kendi savunma hatları</span>
+    <p><strong>1</strong> · Kapalı çevrim değişmezi (Σ işaretli sarım = 360° ± 0,05) — sıra hataları.
+       <strong>2</strong> · Temizlik denetimi — yol bir kasnağın içinden geçiyor mu.
+       <strong>3</strong> · Çevrim kapanma denetimi — sürücü gücü diğerlerinin toplamına eşit mi.
+       <strong>4</strong> · Gergi tarafı hükmü — ankrajın altına inen açıklık var mı.
+       <strong>5</strong> · Üç uygunluk kapısı.
+       <strong>6</strong> · Varsayılan defteri — hangi sayının kullanıcıdan, hangisinin arşivden geldiği.</p>
+  </div>
+</section>
+
+<footer class="dip">
+  <p><strong>MFSim · FEAD Hesap Haritası</strong> — kaynak: <span class="k">js/fead-core.js</span> (FEADCore v2.0) · <span class="k">js/fead-model.js</span> · <span class="k">js/cp-fead.js</span> · <span class="k">js/fead-checks.js</span> · <span class="k">js/cp-fead-report.js</span> · <span class="k">js/cp-fead-summary.js</span>. Bu belge kodun kendisinden okunarak üretilmiştir; kod ile belge ayrışırsa <strong>kod kazanır</strong>.</p>
+</footer>
+
+</div>
