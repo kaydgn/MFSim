@@ -300,7 +300,7 @@ işareti ters çevirir), `fead-wire-order-migration.test.js` (şema 2 → 3 gö�
 `fead-anim.test.js` (faz azalır · pencere), `fead-layout-plane.test.js` (oniki
 örnekte CW), `fead-model.test.js` (gergi krankın çıkışında — kayış sırasında
 hüküm), `fead-wizard.test.js` (gergi varsayılanı krankın ardında · kart hükmü),
-`port-geometry.test.js` (tel oku telin yönünde), e2e `fead-canvas-drag`.
+`port-geometry.test.js` (tel oku telin yönünde), e2e `fead-rozet`.
 
 ###### MATEMATİK: GEOMETRİ DEĞİŞMEZ, GERİLME DEĞİŞİR
 
@@ -461,6 +461,9 @@ Birim testler koordinat katmanını Node'da doğruluyor; zincirin yarısı orada
 HİÇ koşmuyor (gerçek `mousedown/mousemove/mouseup`, `canvasZoom` bölmesi,
 DOM'a yazılan `style.left`, kartın `innerHTML` ile yeniden kurulması).
 `tests/e2e/fead-canvas-drag.spec.js` onu koşturdu ve **iki ayrı kayma** çıktı.
+(O dosya 2026-09-16'da `fead-rozet.spec.js`'e devredildi: ölçtüğü zincirin iki
+halkası kalkmıştı ve dosya açılışta duruyordu. Aşağıdaki ölçümler kendi
+dönemlerinin kaydı.)
 Ortak imzaları: kutu doğru yerde duruyor, panel doğru sayıyı gösteriyor, hiçbir
 hata çıkmıyor — yalnız model kullanıcının koymadığı bir koordinatla çözülüyor.
 

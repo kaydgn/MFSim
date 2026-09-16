@@ -929,8 +929,9 @@ raporun gergi künyesinin hiç kapısı yoktu).
 > **AYNI TURDA ÇIKAN İKİ YAN İŞ.** (a) `\;` LaTeX kaçışı yeni pivot
 > denkleminde bir kez daha yutuldu (JS dizgisinde tek ters bölü) — kapı
 > (`fead-pin.test.js`) artık §8.7'nin İKİ alt bloğunu birden tarıyor, çünkü
-> yalnız pim bloğuna bakan hâli bunu SESSİZCE geçiriyordu. (b) `tests/e2e/
-> fead-canvas-drag.spec.js`'in kayış rozeti testi **taban commit'te de
+> yalnız pim bloğuna bakan hâli bunu SESSİZCE geçiriyordu. (b) kayış kipi
+> rozeti testi (o gün `fead-canvas-drag.spec.js`, bugün `fead-rozet.spec.js`)
+> **taban commit'te de
 > kırmızıydı**: kilit PR #831'de gelmişti ama test hâlâ `SABİT → SERBEST`
 > geçişini bekliyordu. Bugün kilidin kendisini tutuyor.
 
