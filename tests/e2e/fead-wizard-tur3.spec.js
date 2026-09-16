@@ -45,34 +45,39 @@ test('tur3 — seçili kart · gergi satırı · yön · tablo hizası · kaydı
   page.on('console', m => { if (m.type() === 'error') hata.push(m.text()); });
   await sihirbaz(page);
 
-  // ── 1 · YÜKLENEN KART BELİRGİN ─────────────────────────────────────────
-  const kartOku = () => page.evaluate(() => {
-    return [...document.querySelectorAll('.ve-fw-btn-wide')].map(el => {
-      const cs = getComputedStyle(el);
-      return { ad: (el.querySelector('b') || {}).textContent,
-               on: el.classList.contains('ve-fw-btn-on'),
-               shadow: cs.boxShadow !== 'none' && cs.boxShadow !== '',
-               mark: !!el.querySelector('.ve-fw-btn-mark'),
-               border: cs.borderTopColor };
-    });
-  });
-  const k0 = await kartOku();
-  console.log('KART önce', JSON.stringify(k0.map(x => ({ a: x.ad, on: x.on, s: x.shadow }))));
-  expect(k0.filter(x => x.on).length).toBe(0);
-  expect(k0.filter(x => x.shadow).length).toBe(0);
+  // ── 1 · HANGİ ÖRNEĞİN YÜKLENDİĞİ YÜZEYDEN OKUNUYOR ────────────────────
+  //
+  // Bu blok bir dönem GENİŞ KARTLARI ölçüyordu (`.ve-fw-btn-wide`: seçili
+  // kartın gölgesi, işareti, farklı kenarlığı). Kartlar yerini bir açılır
+  // listeye bıraktı ve o sınıfı basan JS kalmadı — sınıf yalnız CSS'te duruyor
+  // ve `.first().click()` 30 sn zaman aşımına düşüyordu. Bu spec o gün
+  // sessizce öldü.
+  //
+  // HÜKÜM DEĞİŞMEDİ: kullanıcı hangi örneğin yüklendiğini yüzeyden okuyabilmeli.
+  // Değişen taşıyıcı: seçili `<option>` + onun yanındaki DURUM SATIRI. İkisi
+  // ayrı ayrı gerekli — `<select>`in "seçili"si tek başına "yüklendi" demiyor
+  // (liste bir öneri de olabilirdi), durum satırı o ayrımı taşıyor.
+  const sec = page.locator('#ve-fw-body select[onchange*="veFeadWizSeedPick"]');
+  await expect(sec).toHaveCount(1);
+  expect(await page.locator('#ve-fw-body .ve-fw-seeded').count()).toBe(0);
 
-  // GERÇEK TIK ile örnek yükle
-  await page.locator('.ve-fw-btn-wide').first().click();
+  // GERÇEK SEÇİM ile örnek yükle — ilk gerçek örnek anahtarı listeden alınır.
+  const anahtar = await sec.evaluate((el) => {
+    const o = [...el.options].find((x) => x.value && x.value !== '__');
+    return o ? o.value : null;
+  });
+  expect(anahtar).not.toBeNull();
+  await sec.selectOption(anahtar);
   await page.waitForTimeout(400);
-  const k1 = await kartOku();
-  console.log('KART sonra', JSON.stringify(k1.map(x => ({ a: x.ad, on: x.on, s: x.shadow, m: x.mark }))));
-  const secili = k1.filter(x => x.on);
-  expect(secili.length).toBe(1);
-  expect(secili[0].shadow).toBe(true);      // GÖLGE gerçekten hesaplanıyor
-  expect(secili[0].mark).toBe(true);
-  // Seçili kartın kenarlığı diğerlerinden FARKLI (belirginlik ölçüsü)
-  const digerleri = k1.filter(x => !x.on).map(x => x.border);
-  expect(digerleri).not.toContain(secili[0].border);
+
+  const yuklendi = page.locator('#ve-fw-body .ve-fw-seeded');
+  await expect(yuklendi).toHaveCount(1);
+  const durumAd = (await yuklendi.locator('b').innerText()).trim();
+  const secAd = await sec.evaluate((el) => el.options[el.selectedIndex].textContent);
+  // DURUM SATIRI İLE LİSTE AYNI KAYDI GÖSTERİYOR — ikisi ayrışsaydı kullanıcı
+  // bir örneği seçip başkasının yüklendiğini okurdu.
+  expect(secAd).toContain(durumAd);
+  expect(await page.evaluate(() => veFeadWizState().seededFrom)).toBe(anahtar);
 
   // ── 2 · GERGİ SATIRI DİĞERLERİYLE AYNI ─────────────────────────────────
   await page.evaluate(() => veFeadWizGoto(1));
@@ -104,18 +109,40 @@ test('tur3 — seçili kart · gergi satırı · yön · tablo hizası · kaydı
   expect(satir.yukseklikFarki).toBeLessThanOrEqual(2);   // satır artık şişmiyor
   expect(satir.xIpucu).toMatch(/montaj noktas/);
 
-  // ── 3 · KAYIŞ YOLU'NDA CCW/CW YOK ──────────────────────────────────────
+  // ── 3 · CCW/CW SEÇİCİSİ VAR ve TEK ÜRETİCİDEN ─────────────────────────
+  //
+  // Bu blok bir dönem seçicinin YOKLUĞUNU çiviliyordu (`spin === 0`). Seçici
+  // kullanıcı isteğiyle geri geldi (2026-08-31: *"'Kasnaklar' kısmına 'dönüş
+  // yönü' seçmeyi de eklememiz gerekiyor"*) ve kapı o gün sessizce ölmüş bir
+  // dönemin durumunu savunur hâle geldi.
+  //
+  // BUGÜNKÜ HÜKÜM DAHA GÜÇLÜ: yüzey TEK ÜRETİCİDEN geliyor
+  // (`veFeadWizSpinHTML`) ve hem 2. hem 3. adım onu basıyor. İki kopya
+  // tutulsaydı biri düzeltilince öbürü sessizce eskirdi.
+  const spinOku = () => page.evaluate(() => ({
+    adet: document.querySelectorAll('.ve-fw-spin').length,
+    acik: document.querySelectorAll('.ve-fw-spin-on').length,
+    glif: [...document.querySelectorAll('.ve-fw-spin')].map((b) => b.textContent.trim()).join('|')
+  }));
   await page.evaluate(() => veFeadWizGoto(1));
   await page.waitForTimeout(300);
   const yol = await page.evaluate(() => ({
-    spin: document.querySelectorAll('.ve-fw-spin').length,
     cevir: !!document.querySelector('button[onclick*="veFeadWizRouteReverse"]'),
     seritYon: (document.querySelector('.ve-fw-live') || {}).innerText || ''
   }));
-  console.log('YOL', JSON.stringify(yol));
-  expect(yol.spin).toBe(0);
+  const s3 = await spinOku();
+  console.log('YOL', JSON.stringify(yol), JSON.stringify(s3));
+  expect(s3.adet).toBe(2);                  // CCW + CW
+  expect(s3.acik).toBe(1);                  // biri BASILI — yön okunuyor
   expect(yol.cevir).toBe(true);
   expect(yol.seritYon).toMatch(/CCW|CW/);   // yön okuması KAYBOLMADI
+
+  // AYNI KONTROL 2. ADIMDA DA, BİREBİR: tek üretici kuralının kapısı.
+  await page.evaluate(() => veFeadWizGoto(0));
+  await page.waitForTimeout(300);
+  await page.evaluate(() => veFeadWizGoto(1));
+  await page.waitForTimeout(300);
+  expect(await spinOku()).toEqual(s3);
 
   // ── 4 · AKSESUAR TABLOSU SEÇİMLE KAYMIYOR ──────────────────────────────
   await page.evaluate(() => veFeadWizGoto(4));

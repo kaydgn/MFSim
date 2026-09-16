@@ -74,20 +74,40 @@ test('tur4 — gergi satırı · taşıma · virgül · açı seçici · nispi a
   expect(satir.gozKirpma).toBe(0);
 
   // ── 2 · SATIR TAŞIMA — GERÇEK TIK ──────────────────────────────────────
-  const adlar = () => page.evaluate(() =>
-    [...document.querySelectorAll('.ve-fw-tbl tbody tr:not(.ve-fw-tr-ten)')]
-      .map(tr => tr.children[2].querySelector('input').value
-                 || tr.children[2].querySelector('input').placeholder));
-  const a0 = await adlar();
-  await page.locator('.ve-fw-tbl tbody tr:nth-child(2) button[title="Yukarı taşı"]').click();
+  //
+  // ÖLÇÜLEN ŞEY BİR KOMŞULUK: ↑ satırı KAYIŞ SIRASINDA bir yukarı alır, yani
+  // TAM ÜSTÜNDEKİ satırla yer değiştirir. Eski kapı bu komşuluğu iki KASNAK
+  // arasında varsayıyordu ve gergi satırını listeden düşürüyordu — oysa gergi
+  // varsayılan olarak krankın hemen ARDINDA (2026-09-08) ve 2. kasnağın tam
+  // üstünde duran şey o. Sonuç: ↑ gergiyi bir aşağı itiyor, iki kasnağın
+  // sırası hiç değişmiyor, test "taşıma çalışmıyor" diyordu. Çalışıyordu;
+  // yanlış olan beklentiydi.
+  //
+  // Düğme de EYLEMİNDEN seçiliyor, ipucu metninden değil: başlık "Yukarı
+  // taşı" iken "Kayış sırasında yukarı" oldu ve seçici hiçbir şey bulamaz
+  // hâle geldi (30 sn zaman aşımı). İpucu kozmetiktir, `onclick` davranışın
+  // kendisi.
+  const satirlar = () => page.evaluate(() =>
+    [...document.querySelectorAll('.ve-fw-tbl tbody tr')].map(tr => {
+      const i = tr.children[2] && tr.children[2].querySelector('input');
+      const sel = tr.children[1] && tr.children[1].querySelector('select');
+      return i ? (i.value || i.placeholder)
+               : (sel ? sel.value : (tr.children[1] || {}).innerText || '').trim();
+    }));
+  const a0 = await satirlar();
+  const yukari = (n) => page.locator('.ve-fw-tbl tbody tr').nth(n - 1)
+    .locator('button[onclick*="PulleyMove"][onclick*=",-1)"]');
+  await yukari(3).click();                 // 3. SATIR — üstündekiyle takas
   await page.waitForTimeout(300);
-  const a1 = await adlar();
+  const a1 = await satirlar();
   console.log('TAŞIMA', JSON.stringify(a0), '→', JSON.stringify(a1));
-  expect(a1[0]).toBe(a0[1]);
-  expect(a1[1]).toBe(a0[0]);
-  // İlk satırın ↑ düğmesi kapalı
-  expect(await page.locator('.ve-fw-tbl tbody tr:nth-child(1) button[title="Yukarı taşı"]')
-    .isDisabled()).toBe(true);
+  expect(a1.length).toBe(a0.length);
+  expect(a1[1]).toBe(a0[2]);               // komşuluk: 3 ↔ 2
+  expect(a1[2]).toBe(a0[1]);
+  expect(a1[0]).toBe(a0[0]);               // krank yerinde
+  expect(a1.slice(3)).toEqual(a0.slice(3));// gerisi kıpırdamadı
+  // İlk satırın ↑ düğmesi kapalı — sürücü kasnak kayış sırasının başıdır.
+  expect(await yukari(1).isDisabled()).toBe(true);
 
   // ── 3 · VİRGÜL — GERÇEK KLAVYE ─────────────────────────────────────────
   // Satır hücreleri: radyo · tip · ad · OD · X · Y · temas · J · ops
@@ -181,11 +201,20 @@ test('tur4 — gergi satırı · taşıma · virgül · açı seçici · nispi a
              sy: r.top + (oy - cy * k) * r.height / +vb[3],
              pxPerMm: k * r.width / +vb[2] };
   });
+  // FARE HAYALETİ OYNATIR, SEÇİMİ EZMEZ. Bu satır bir dönem `shown`ı okuyordu
+  // ve o, DÜZELTİLEN HATANIN KENDİSİYDİ: `veFeadWizAngHover` seçimi doğrudan
+  // yazınca tıklamanın izi kalmıyor, kutuya girilen değer fare düzlemden geçer
+  // geçmez siliniyordu (kullanıcı bildirimi 2026-09-04: *"ok hayalet şekilde
+  // görülmüyor"*). Ayrım o gün geldi; bu blok hiç koşmadığı için eski dünyayı
+  // savunmaya devam etti. Hayalet `hover`da, seçim `shown`da.
+  const oncekiSecim = await page.evaluate(() => VE_FW_ANG.shown);
   await page.mouse.move(merkez.sx + merkez.pxPerMm * 85, merkez.sy);
   await page.waitForTimeout(200);
-  const sifir = await page.evaluate(() => VE_FW_ANG.shown);
-  console.log('FARE sağda →', sifir.toFixed(3), '°');
-  expect(Math.abs(sifir)).toBeLessThan(2);
+  const gez = await page.evaluate(() => ({ hover: VE_FW_ANG.hover, shown: VE_FW_ANG.shown }));
+  console.log('FARE sağda → hayalet', gez.hover, '· seçim', gez.shown);
+  expect(gez.hover).not.toBeNull();
+  expect(Math.abs(gez.hover)).toBeLessThan(2);      // sağ orta = 0°
+  expect(gez.shown).toBe(oncekiSecim);              // SEÇİM KIPIRDAMADI
 
   // TIK: kutuya yazılmalı
   await page.mouse.click(merkez.sx, merkez.sy - merkez.pxPerMm * 85);
@@ -209,7 +238,13 @@ test('tur4 — gergi satırı · taşıma · virgül · açı seçici · nispi a
     alan: [...document.querySelectorAll('input')].find(e =>
       (e.getAttribute('oninput') || '').includes('veFeadWizArmShown')).value }));
   console.log('UYGULA', JSON.stringify(son));
-  expect(son.kapandi).toBe(true);
+  // PENCERE KAPANMAZ — kullanıcı isteği (2026-09-04): *"açı değerini girip
+  // tamam dediğimde pencere otomatik kapanıyor. Kapanmasın."* Bu satır
+  // kapanmayı ŞART KOŞUYORDU, yani kaldırılan davranışı geri çağırıyordu;
+  // blok hiç koşmadığı için fark edilmedi. Uygulamanın gerçekten işlediği
+  // aşağıdaki iki satırda okunuyor — pencerenin kapanması hiçbir zaman
+  // "uygulandı"nın kanıtı değildi.
+  expect(son.kapandi).toBe(false);
   expect(son.saklanan).toBeCloseTo(150, 3);        // −30 nispi → 150 mutlak
   expect(Number(son.alan)).toBeCloseTo(-30, 3);
 

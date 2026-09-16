@@ -160,14 +160,30 @@ test('kol oku: seçici ve özet AYNI dili konuşuyor', async ({ page }) => {
   const r = await sahne(page);
   console.log('OK ' + JSON.stringify(r));
 
+  // RENK JETONDAN OKUNUR, SABİT rgb'DEN DEĞİL. Eski hâl `rgb(22, 163, 74)`
+  // yazıyordu — o, `--accent-success`in BİR TEMADAKİ değeri. Tema paleti
+  // değişince (ölçülen: `rgb(26, 154, 80)`) kapı kırmızıya döndü ve
+  // savunduğu ilişkiyi değil bir renk tercihini savunmuş oldu. Asıl hüküm
+  // şu: iki yüzey AYNI yeşili kullanıyor ve o yeşil başarı jetonu.
+  const yesil = await page.evaluate(() =>
+    getComputedStyle(document.body).getPropertyValue('--accent-success').trim());
+  expect(yesil).toMatch(/^#|^rgb/);
+  const rgb = await page.evaluate((h) => {
+    const d = document.createElement('div');
+    d.style.color = h; document.body.appendChild(d);
+    const c = getComputedStyle(d).color; d.remove(); return c;
+  }, yesil);
+
   // İKİ YÜZEYDE DE: gövde + DOLU uç, ikisi de aynı yeşil.
   for (const y of ['secici', 'ozet']) {
     expect(r[y].govde.length).toBe(1);
     expect(r[y].uc.length).toBe(1);                       // eski şemada 0'dı
-    expect(r[y].govde[0].stroke).toBe('rgb(22, 163, 74)');
-    expect(r[y].uc[0].fill).toBe('rgb(22, 163, 74)');     // uç DOLU
+    expect(r[y].govde[0].stroke).toBe(rgb);
+    expect(r[y].uc[0].fill).toBe(rgb);                    // uç DOLU
     expect(r[y].govde[0].w).toBeGreaterThanOrEqual(2);    // eski şemada 1.6'ydı
   }
+  // …ve ikisi BİREBİR aynı (jeton okunamasa bile bu ilişki tutmalı).
+  expect(r.secici.govde[0].stroke).toBe(r.ozet.govde[0].stroke);
   expect(r.ozet.pivot).toBe(1);
 });
 
@@ -344,7 +360,8 @@ test('motor künyesi sayfadan pencereye taşındı, satır aralığı açıldı'
     const tb = [...body.querySelectorAll('.ve-fw-tbl')].find((t) => /Devir \[RPM\]/.test(t.textContent));
     veFeadWizEngOpen();
     const ov = document.getElementById('ve-fw-eng');
-    const p = { acik: ov.style.display !== 'none', girdi: ov.querySelectorAll('input').length };
+    const p = { acik: ov.style.display !== 'none', girdi: ov.querySelectorAll('input').length,
+                noLoad: ov.querySelectorAll('input[oninput*="noLoadGovernedRpm"]').length };
     veFeadWizEngClose();
     return {
       izgaraArasi: ara,
@@ -360,7 +377,12 @@ test('motor künyesi sayfadan pencereye taşındı, satır aralığı açıldı'
   expect(r.kartGirdi).toBe(0);                        // ESKİDEN 10 girdi
   expect(r.dugme).toBe(true);
   expect(r.pencere.acik).toBe(true);
-  expect(r.pencere.girdi).toBe(10);                   // hepsi pencerede
+  // DOKUZ ALAN — "no load governed" 2026-09-15'te KALKTI (0 tüketici: değerini
+  // okuyan hiçbir hesap, uygunluk kapısı ya da rapor satırı yoktu). Birim
+  // kapısı `VE_FW_ENG_FIELDS.length`'i sayıyor; buradaki sayı DOM'daki gerçek
+  // girdi kutuları, yani listenin sayfaya BASILDIĞINI de ölçüyor.
+  expect(r.pencere.girdi).toBe(9);                    // hepsi pencerede
+  expect(r.pencere.noLoad).toBe(0);                   // ve sorulmuyor
   expect(r.dutyBaslik).not.toContain('°C');           // sütun kalktı
   expect(r.sicaklik).toBe(true);                      // tek alan üstte
 });
