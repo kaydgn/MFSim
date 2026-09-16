@@ -83,8 +83,11 @@ test('tur4 — gergi satırı · taşıma · virgül · açı seçici · nispi a
   // iken "Kayış sırasında yukarı" oldu ve seçici hiçbir şey bulamaz hâle
   // geldi — 30 sn zaman aşımı. Bir ipucu metni kozmetiktir, `onclick` ise
   // davranışın kendisi.
-  const yukari = (n) => page.locator('.ve-fw-tbl tbody tr:nth-child(' + n + ') '
-    + 'button[onclick*="veFeadWizPulleyMove"][onclick*=",-1)"]');
+  // SATIR DA FİLTRELENMİŞ LİSTEDEN: `adlar()` gergi satırını dışlıyor, ama
+  // `nth-child` onu SAYIYOR — ikisi ayrışınca test 2. kasnağı taşıdığını
+  // sanıp gergiyi taşıyordu (ölçülen: "Sürücü Kasnak" ↔ "Alternatör").
+  const yukari = (n) => page.locator('.ve-fw-tbl tbody tr:not(.ve-fw-tr-ten)')
+    .nth(n - 1).locator('button[onclick*="veFeadWizPulleyMove"][onclick*=",-1)"]');
   await yukari(2).click();
   await page.waitForTimeout(300);
   const a1 = await adlar();

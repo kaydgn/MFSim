@@ -109,18 +109,40 @@ test('tur3 — seçili kart · gergi satırı · yön · tablo hizası · kaydı
   expect(satir.yukseklikFarki).toBeLessThanOrEqual(2);   // satır artık şişmiyor
   expect(satir.xIpucu).toMatch(/montaj noktas/);
 
-  // ── 3 · KAYIŞ YOLU'NDA CCW/CW YOK ──────────────────────────────────────
+  // ── 3 · CCW/CW SEÇİCİSİ VAR ve TEK ÜRETİCİDEN ─────────────────────────
+  //
+  // Bu blok bir dönem seçicinin YOKLUĞUNU çiviliyordu (`spin === 0`). Seçici
+  // kullanıcı isteğiyle geri geldi (2026-08-31: *"'Kasnaklar' kısmına 'dönüş
+  // yönü' seçmeyi de eklememiz gerekiyor"*) ve kapı o gün sessizce ölmüş bir
+  // dönemin durumunu savunur hâle geldi.
+  //
+  // BUGÜNKÜ HÜKÜM DAHA GÜÇLÜ: yüzey TEK ÜRETİCİDEN geliyor
+  // (`veFeadWizSpinHTML`) ve hem 2. hem 3. adım onu basıyor. İki kopya
+  // tutulsaydı biri düzeltilince öbürü sessizce eskirdi.
+  const spinOku = () => page.evaluate(() => ({
+    adet: document.querySelectorAll('.ve-fw-spin').length,
+    acik: document.querySelectorAll('.ve-fw-spin-on').length,
+    glif: [...document.querySelectorAll('.ve-fw-spin')].map((b) => b.textContent.trim()).join('|')
+  }));
   await page.evaluate(() => veFeadWizGoto(1));
   await page.waitForTimeout(300);
   const yol = await page.evaluate(() => ({
-    spin: document.querySelectorAll('.ve-fw-spin').length,
     cevir: !!document.querySelector('button[onclick*="veFeadWizRouteReverse"]'),
     seritYon: (document.querySelector('.ve-fw-live') || {}).innerText || ''
   }));
-  console.log('YOL', JSON.stringify(yol));
-  expect(yol.spin).toBe(0);
+  const s3 = await spinOku();
+  console.log('YOL', JSON.stringify(yol), JSON.stringify(s3));
+  expect(s3.adet).toBe(2);                  // CCW + CW
+  expect(s3.acik).toBe(1);                  // biri BASILI — yön okunuyor
   expect(yol.cevir).toBe(true);
   expect(yol.seritYon).toMatch(/CCW|CW/);   // yön okuması KAYBOLMADI
+
+  // AYNI KONTROL 2. ADIMDA DA, BİREBİR: tek üretici kuralının kapısı.
+  await page.evaluate(() => veFeadWizGoto(0));
+  await page.waitForTimeout(300);
+  await page.evaluate(() => veFeadWizGoto(1));
+  await page.waitForTimeout(300);
+  expect(await spinOku()).toEqual(s3);
 
   // ── 4 · AKSESUAR TABLOSU SEÇİMLE KAYMIYOR ──────────────────────────────
   await page.evaluate(() => veFeadWizGoto(4));

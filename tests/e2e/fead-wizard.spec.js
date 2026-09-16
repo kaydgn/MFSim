@@ -79,8 +79,14 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     expect(tipler).not.toContain('fead-example');
 
     // ÇİFT TIK sihirbazı açar (alt-sistem kartlarındaki el alışkanlığı).
+    // BOŞ TOPOLOJİ ZATEN SİHİRBAZLA KARŞILIYOR (2026-09-09), yani pencere açık
+    // ve `dblclick`i yutuyor — bu satır o gün 30 sn zaman aşımına düşmeye
+    // başladı. Ölçülmek istenen şey karşılama değil ÇİFT TIK, o yüzden pencere
+    // önce kapatılıyor: kullanıcı da karşılamayı kapatıp düğüme çift tıklar.
     const id = await page.evaluate(() =>
       window.nodes.find((n) => n.type === 'fead-wizard').id);
+    await page.evaluate(() => { if (typeof veFeadWizClose === 'function') veFeadWizClose(true); });
+    await expect(page.locator('#ve-feadwiz-overlay')).toBeHidden();
     await page.dblclick('#' + id);
     await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();
 
@@ -134,7 +140,19 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     // (`.nth(1)`) seçen eski hâl, tabloya bir sütun eklenince SESSİZCE başka
     // bir hücreyi dolduruyordu: test 130,1'i çapa yazıp X'in değişmemesine
     // bakıyor, ve kırmızılık ancak sayıya bakınca anlaşılıyordu.
-    const hucre = satir.nth(1).locator('input[oninput*="\'x\',this.value"]');
+    // SATIR DA GERGİYİ DIŞLIYOR: gergi satırı aynı tbody'de ve kendi
+    // yazıcılarını kullanıyor (`veFeadWizTenSet`), yani `.nth(1)` ona düşünce
+    // aranan alan o satırda HİÇ yok ve tık 30 sn bekliyordu.
+    const kasnakSatir = page.locator('#ve-fw-body .ve-fw-tbl tbody tr:not(.ve-fw-tr-ten)');
+    const hucre = kasnakSatir.nth(1).locator('input[oninput*="\'x\',this.value"]');
+    await expect(hucre).toHaveCount(1);
+    // HANGİ KASNAĞA YAZDIĞIMIZI SATIRIN KENDİSİ SÖYLESİN: tablo `pulleys`
+    // dizisi sırasıyla değil KAYIŞ SIRASIYLA çiziliyor, yani satır indisi ile
+    // dizi indisi aynı olmak zorunda değil. Anahtar, satırın kendi
+    // yazıcısından okunuyor.
+    const pKey = await hucre.evaluate((el) =>
+      (el.getAttribute('oninput').match(/veFeadWizPulleySet\('([^']+)'/) || [])[1]);
+    expect(pKey).toBeTruthy();
     await hucre.click();
     await hucre.fill('-300');
     // Canlı şerit gecikmeli tazeleniyor (220 ms); odak DÜŞMEMELİ.
@@ -142,7 +160,8 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     const odak = await page.evaluate(() => document.activeElement && document.activeElement.value);
     expect(odak).toBe('-300');
 
-    const x = await page.evaluate(() => veFeadWizState().pulleys[1].x);
+    const x = await page.evaluate((k) =>
+      (veFeadWizState().pulleys.find((p) => p.key === k) || {}).x, pKey);
     expect(String(x)).toBe('-300');
     // Model hâlâ çözülüyor ve kayış boyu DEĞİŞTİ (konum fiziksel).
     await expect(page.locator('#ve-fw-live .ve-fw-pill-ok')).toBeVisible();
