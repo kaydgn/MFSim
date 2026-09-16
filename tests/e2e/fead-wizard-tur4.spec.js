@@ -79,15 +79,20 @@ test('tur4 — gergi satırı · taşıma · virgül · açı seçici · nispi a
       .map(tr => tr.children[2].querySelector('input').value
                  || tr.children[2].querySelector('input').placeholder));
   const a0 = await adlar();
-  await page.locator('.ve-fw-tbl tbody tr:nth-child(2) button[title="Yukarı taşı"]').click();
+  // DÜĞME EYLEMİNDEN SEÇİLİYOR, İPUCU METNİNDEN DEĞİL: başlık "Yukarı taşı"
+  // iken "Kayış sırasında yukarı" oldu ve seçici hiçbir şey bulamaz hâle
+  // geldi — 30 sn zaman aşımı. Bir ipucu metni kozmetiktir, `onclick` ise
+  // davranışın kendisi.
+  const yukari = (n) => page.locator('.ve-fw-tbl tbody tr:nth-child(' + n + ') '
+    + 'button[onclick*="veFeadWizPulleyMove"][onclick*=",-1)"]');
+  await yukari(2).click();
   await page.waitForTimeout(300);
   const a1 = await adlar();
   console.log('TAŞIMA', JSON.stringify(a0), '→', JSON.stringify(a1));
   expect(a1[0]).toBe(a0[1]);
   expect(a1[1]).toBe(a0[0]);
   // İlk satırın ↑ düğmesi kapalı
-  expect(await page.locator('.ve-fw-tbl tbody tr:nth-child(1) button[title="Yukarı taşı"]')
-    .isDisabled()).toBe(true);
+  expect(await yukari(1).isDisabled()).toBe(true);
 
   // ── 3 · VİRGÜL — GERÇEK KLAVYE ─────────────────────────────────────────
   // Satır hücreleri: radyo · tip · ad · OD · X · Y · temas · J · ops

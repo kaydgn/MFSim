@@ -297,10 +297,25 @@ test('Kayış Tablosu CANLI: fare · odak · seçili satır · sütun şeridi', 
   // değişince hiç TAZELENMİYORDU — kart yalnız model değişince kuruluyor,
   // panel açmak modeli değiştirmiyor. Sonuç işaretin olmamasından kötüydü:
   // tabloda işaretli duran satır, paneli açık olan kasnak DEĞİLDİ.
+  // AD HÜCRESİ PENCEREYİ DE AÇIYOR (`veTogglePropertiesPanel(true)`) ve
+  // `#ve-properties-overlay` bir MODAL: ilk tıktan sonra tablonun üstünü
+  // kapatıyor, ikinci tık ona gidiyor ve döngü 180 sn zaman aşımına
+  // düşüyordu. Kullanıcı da aynı şeyi yapar — bakar, kapatır, sıradakine
+  // tıklar. Pencere her turda kapatılıyor; ölçülen hüküm değişmedi.
+  const pencereKapat = () => page.evaluate(() => {
+    if (typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(false);
+  });
   for (const i of [0, 2, 5]) {
+    await pencereKapat();
+    await page.waitForTimeout(120);
     const ad = (await satir.nth(i).locator('button.ve-fead-tbl-name').innerText()).trim();
     await satir.nth(i).locator('button.ve-fead-tbl-name').click();
     await page.waitForTimeout(250);
+    // Pencere GERÇEKTEN açıldı — hücrenin tuttuğu söz bu.
+    expect(await page.evaluate(() => {
+      const o = document.getElementById('ve-properties-overlay');
+      return !!o && o.style.display !== 'none';
+    })).toBe(true);
     const secili = kart.locator('tbody tr.is-sel');
     await expect(secili).toHaveCount(1);
     expect((await secili.locator('button.ve-fead-tbl-name').innerText()).trim()).toBe(ad);

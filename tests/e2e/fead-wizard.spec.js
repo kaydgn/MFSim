@@ -68,9 +68,15 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     await bootApp(page);
     await openFead(page);
 
+    // AÇILIŞ YÜZEYİ: sihirbaz + Kayış Tablosu. "Başlangıç ve Örnekler"
+    // (`fead-example`) 2026-09-09'da KALDIRILDI — sunduğu iki şey (sihirbaz
+    // düğmesi + örnek listesi) sihirbazın 1. adımında zaten vardı. Bu spec o
+    // gün sessizce öldü: hâlâ o tipin VARLIĞINI bekliyordu. Kapı artık ters
+    // yönde duruyor, yani bileşen geri gelirse burada görünür.
     const tipler = await page.evaluate(() => window.nodes.map((n) => n.type));
     expect(tipler).toContain('fead-wizard');
-    expect(tipler).toContain('fead-example');
+    expect(tipler).toContain('fead-table');
+    expect(tipler).not.toContain('fead-example');
 
     // ÇİFT TIK sihirbazı açar (alt-sistem kartlarındaki el alışkanlığı).
     const id = await page.evaluate(() =>
@@ -120,10 +126,15 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     const satir = page.locator('#ve-fw-body .ve-fw-tbl tbody tr');
     expect(await satir.count()).toBeGreaterThan(3);
 
-    // Alternatörün X'ini elle değiştir (5. sütun = Konum X).
+    // Alternatörün X'ini elle değiştir.
     // ALAN ARTIK `type="text" inputmode="decimal"` — `type="number"` virgülü
     // yutuyordu (kullanıcı isteği, 2026-09-01), o yüzden seçici de değişti.
-    const hucre = satir.nth(1).locator('input[inputmode="decimal"]').nth(1);
+    //
+    // HÜCRE SÜTUN SIRASINDAN DEĞİL YAZDIĞI ALANDAN seçiliyor. Sıra indisiyle
+    // (`.nth(1)`) seçen eski hâl, tabloya bir sütun eklenince SESSİZCE başka
+    // bir hücreyi dolduruyordu: test 130,1'i çapa yazıp X'in değişmemesine
+    // bakıyor, ve kırmızılık ancak sayıya bakınca anlaşılıyordu.
+    const hucre = satir.nth(1).locator('input[oninput*="\'x\',this.value"]');
     await hucre.click();
     await hucre.fill('-300');
     // Canlı şerit gecikmeli tazeleniyor (220 ms); odak DÜŞMEMELİ.
@@ -179,20 +190,28 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
       const b = veFeadBuildSystem(window.nodes);
       return {
         kasnak: kasnak.length,
+        // YÖNÜN/ SIRANIN TAŞIYICISI TEL DEĞİL, İNDİS (2026-09-09). Eski kapı
+        // `connections.length === 6` bekliyordu; kasnaklar bağlanmaz oldu,
+        // sayı 0'a düştü ve bu spec o gün sessizce öldü. Bugünkü karşılığı:
+        // her kasnak 1..N arasında TEK BİR indis taşıyor.
         tel: window.connections.length,
+        indis: kasnak.map((n) => n.data.beltIndex).sort((x, y) => x - y).join(','),
         sihirbaz: window.nodes.filter((n) => n.type === 'fead-wizard').length,
         ornek: window.nodes.filter((n) => n.type === 'fead-example').length,
         kart: window.nodes.filter((n) => n.type === 'fead-layout').length,
         ok: b.ok, L: b.beltLengthMm, T: b.springTensionN, spin: b.spin,
-        // Kutular koordinatlarına oturdu mu (arrangeByCoords çağrıldı mı)
-        farkli: new Set(kasnak.map((n) => Math.round(n.x))).size
+        // KOORDİNAT KUTUDA DEĞİL VERİDE: kasnakların kanvasta kutusu yok
+        // (`noCanvasBox`), dolayısıyla `n.x` artık bir yerleşim ayrıntısı.
+        // Ölçülmesi gereken şey mm koordinatlarının taşınmış olması.
+        farkli: new Set(kasnak.map((n) => Math.round(n.data.x))).size
       };
     });
     expect(sonuc.kasnak).toBe(6);
-    expect(sonuc.tel).toBe(6);
-    expect(sonuc.kart).toBe(1);
+    expect(sonuc.tel).toBe(0);           // kasnaklar BAĞLANMAZ
+    expect(sonuc.indis).toBe('1,2,3,4,5,6');
+    expect(sonuc.kart).toBe(2);          // geometri + işletme ön ayarı
     expect(sonuc.sihirbaz).toBe(1);      // taslağı taşıyor, KALIR
-    expect(sonuc.ornek).toBe(0);         // açılış yüzeyi, işini bitirdi
+    expect(sonuc.ornek).toBe(0);         // bileşen KALDIRILDI, geri gelmemeli
     expect(sonuc.ok).toBe(true);
     expect(sonuc.farkli).toBeGreaterThan(3);
     // ÖNİZLEME = KURULAN MODEL
