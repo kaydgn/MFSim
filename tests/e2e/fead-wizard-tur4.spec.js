@@ -74,27 +74,39 @@ test('tur4 — gergi satırı · taşıma · virgül · açı seçici · nispi a
   expect(satir.gozKirpma).toBe(0);
 
   // ── 2 · SATIR TAŞIMA — GERÇEK TIK ──────────────────────────────────────
-  const adlar = () => page.evaluate(() =>
-    [...document.querySelectorAll('.ve-fw-tbl tbody tr:not(.ve-fw-tr-ten)')]
-      .map(tr => tr.children[2].querySelector('input').value
-                 || tr.children[2].querySelector('input').placeholder));
-  const a0 = await adlar();
-  // DÜĞME EYLEMİNDEN SEÇİLİYOR, İPUCU METNİNDEN DEĞİL: başlık "Yukarı taşı"
-  // iken "Kayış sırasında yukarı" oldu ve seçici hiçbir şey bulamaz hâle
-  // geldi — 30 sn zaman aşımı. Bir ipucu metni kozmetiktir, `onclick` ise
-  // davranışın kendisi.
-  // SATIR DA FİLTRELENMİŞ LİSTEDEN: `adlar()` gergi satırını dışlıyor, ama
-  // `nth-child` onu SAYIYOR — ikisi ayrışınca test 2. kasnağı taşıdığını
-  // sanıp gergiyi taşıyordu (ölçülen: "Sürücü Kasnak" ↔ "Alternatör").
-  const yukari = (n) => page.locator('.ve-fw-tbl tbody tr:not(.ve-fw-tr-ten)')
-    .nth(n - 1).locator('button[onclick*="veFeadWizPulleyMove"][onclick*=",-1)"]');
-  await yukari(2).click();
+  //
+  // ÖLÇÜLEN ŞEY BİR KOMŞULUK: ↑ satırı KAYIŞ SIRASINDA bir yukarı alır, yani
+  // TAM ÜSTÜNDEKİ satırla yer değiştirir. Eski kapı bu komşuluğu iki KASNAK
+  // arasında varsayıyordu ve gergi satırını listeden düşürüyordu — oysa gergi
+  // varsayılan olarak krankın hemen ARDINDA (2026-09-08) ve 2. kasnağın tam
+  // üstünde duran şey o. Sonuç: ↑ gergiyi bir aşağı itiyor, iki kasnağın
+  // sırası hiç değişmiyor, test "taşıma çalışmıyor" diyordu. Çalışıyordu;
+  // yanlış olan beklentiydi.
+  //
+  // Düğme de EYLEMİNDEN seçiliyor, ipucu metninden değil: başlık "Yukarı
+  // taşı" iken "Kayış sırasında yukarı" oldu ve seçici hiçbir şey bulamaz
+  // hâle geldi (30 sn zaman aşımı). İpucu kozmetiktir, `onclick` davranışın
+  // kendisi.
+  const satirlar = () => page.evaluate(() =>
+    [...document.querySelectorAll('.ve-fw-tbl tbody tr')].map(tr => {
+      const i = tr.children[2] && tr.children[2].querySelector('input');
+      const sel = tr.children[1] && tr.children[1].querySelector('select');
+      return i ? (i.value || i.placeholder)
+               : (sel ? sel.value : (tr.children[1] || {}).innerText || '').trim();
+    }));
+  const a0 = await satirlar();
+  const yukari = (n) => page.locator('.ve-fw-tbl tbody tr').nth(n - 1)
+    .locator('button[onclick*="PulleyMove"][onclick*=",-1)"]');
+  await yukari(3).click();                 // 3. SATIR — üstündekiyle takas
   await page.waitForTimeout(300);
-  const a1 = await adlar();
+  const a1 = await satirlar();
   console.log('TAŞIMA', JSON.stringify(a0), '→', JSON.stringify(a1));
-  expect(a1[0]).toBe(a0[1]);
-  expect(a1[1]).toBe(a0[0]);
-  // İlk satırın ↑ düğmesi kapalı
+  expect(a1.length).toBe(a0.length);
+  expect(a1[1]).toBe(a0[2]);               // komşuluk: 3 ↔ 2
+  expect(a1[2]).toBe(a0[1]);
+  expect(a1[0]).toBe(a0[0]);               // krank yerinde
+  expect(a1.slice(3)).toEqual(a0.slice(3));// gerisi kıpırdamadı
+  // İlk satırın ↑ düğmesi kapalı — sürücü kasnak kayış sırasının başıdır.
   expect(await yukari(1).isDisabled()).toBe(true);
 
   // ── 3 · VİRGÜL — GERÇEK KLAVYE ─────────────────────────────────────────
