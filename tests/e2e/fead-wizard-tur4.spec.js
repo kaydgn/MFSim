@@ -201,11 +201,20 @@ test('tur4 — gergi satırı · taşıma · virgül · açı seçici · nispi a
              sy: r.top + (oy - cy * k) * r.height / +vb[3],
              pxPerMm: k * r.width / +vb[2] };
   });
+  // FARE HAYALETİ OYNATIR, SEÇİMİ EZMEZ. Bu satır bir dönem `shown`ı okuyordu
+  // ve o, DÜZELTİLEN HATANIN KENDİSİYDİ: `veFeadWizAngHover` seçimi doğrudan
+  // yazınca tıklamanın izi kalmıyor, kutuya girilen değer fare düzlemden geçer
+  // geçmez siliniyordu (kullanıcı bildirimi 2026-09-04: *"ok hayalet şekilde
+  // görülmüyor"*). Ayrım o gün geldi; bu blok hiç koşmadığı için eski dünyayı
+  // savunmaya devam etti. Hayalet `hover`da, seçim `shown`da.
+  const oncekiSecim = await page.evaluate(() => VE_FW_ANG.shown);
   await page.mouse.move(merkez.sx + merkez.pxPerMm * 85, merkez.sy);
   await page.waitForTimeout(200);
-  const sifir = await page.evaluate(() => VE_FW_ANG.shown);
-  console.log('FARE sağda →', sifir.toFixed(3), '°');
-  expect(Math.abs(sifir)).toBeLessThan(2);
+  const gez = await page.evaluate(() => ({ hover: VE_FW_ANG.hover, shown: VE_FW_ANG.shown }));
+  console.log('FARE sağda → hayalet', gez.hover, '· seçim', gez.shown);
+  expect(gez.hover).not.toBeNull();
+  expect(Math.abs(gez.hover)).toBeLessThan(2);      // sağ orta = 0°
+  expect(gez.shown).toBe(oncekiSecim);              // SEÇİM KIPIRDAMADI
 
   // TIK: kutuya yazılmalı
   await page.mouse.click(merkez.sx, merkez.sy - merkez.pxPerMm * 85);
@@ -229,7 +238,13 @@ test('tur4 — gergi satırı · taşıma · virgül · açı seçici · nispi a
     alan: [...document.querySelectorAll('input')].find(e =>
       (e.getAttribute('oninput') || '').includes('veFeadWizArmShown')).value }));
   console.log('UYGULA', JSON.stringify(son));
-  expect(son.kapandi).toBe(true);
+  // PENCERE KAPANMAZ — kullanıcı isteği (2026-09-04): *"açı değerini girip
+  // tamam dediğimde pencere otomatik kapanıyor. Kapanmasın."* Bu satır
+  // kapanmayı ŞART KOŞUYORDU, yani kaldırılan davranışı geri çağırıyordu;
+  // blok hiç koşmadığı için fark edilmedi. Uygulamanın gerçekten işlediği
+  // aşağıdaki iki satırda okunuyor — pencerenin kapanması hiçbir zaman
+  // "uygulandı"nın kanıtı değildi.
+  expect(son.kapandi).toBe(false);
   expect(son.saklanan).toBeCloseTo(150, 3);        // −30 nispi → 150 mutlak
   expect(Number(son.alan)).toBeCloseTo(-30, 3);
 
