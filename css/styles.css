@@ -8603,7 +8603,143 @@ span.ve-fw-ro{ display:inline-block; }
 }
 .ve-fead-not b, .ve-fead-not strong{ color:var(--text-secondary); font-weight:600; }
 
-/* PANEL ÇİZİMİN ÜSTÜNE BİNER, şeridi İTMEZ. Akışa girseydi panel açılınca
+/* ══ KAYIŞ YOLU KARTI — BANT YOK, DENETİM ÇİZİMİN ÜSTÜNDE YÜZER ══════════
+   Kart bir dönem dört yatay bant taşıyordu (iki seçici şeridi 44 px, durum
+   şeridi 20 px, titreşim açıkken kazanç şeridi 20 px daha) ve her biri
+   yüksekliğini ÇİZİMDEN alıyordu. Ölçüldü (440×500 kart): çizime 436 px
+   kalıyordu, titreşim açıkken 416. Bantlar kalktı; çizim kartın tamamını
+   alıyor ve denetimler üstünde yüzüyor. */
+.ve-fead-kanvas{
+  /* ÇUBUĞUN ÜST KENARI TEK KAYNAK: katman paneli ve titreşim şeridi ikisi de
+     buradan hizalanıyor. İki yerde yazılsaydı çubuğun yüksekliği değiştiğinde
+     biri sessizce çubuğun altında kalırdı. Değer = bottom(6) + çubuk (etiket
+     11 + seçici 19 + pay 8 + kenarlık 2 = 40) + 4 px nefes. */
+  --fead-kat-alt:50px;
+  position:relative; flex:1 1 auto; min-height:0; display:flex;
+  /* Kapsayıcı yüzen çubuğun alt kenarını da kırpar: çubuk kartın dışına
+     taşarsa kanvasta tıklanamayan bir denetim kalır. */
+  overflow:hidden;
+}
+.ve-fead-kanvas > .ciz{
+  flex:1 1 auto; min-width:0; min-height:0;
+  display:flex; align-items:center; justify-content:center;
+}
+
+/* ── DURUM ROZETİ — SAĞ ÜST ────────────────────────────────────────────
+   Birincil okuma duruma göre değişiyor: yolunda olan hâlde tek sayı (Σsarım)
+   + soluk bir künye, yolunda OLMAYAN hâlde arızanın cümlesi ve künye yok. */
+.ve-fead-kan-durum{
+  position:absolute; top:5px; right:6px; z-index:5;
+  display:inline-flex; align-items:baseline; gap:5px; max-width:calc(100% - 12px);
+  padding:2px 7px; border-radius:999px; pointer-events:none;
+  font-family:var(--font-mono); font-size:var(--fs-micro); line-height:1.5;
+  background:var(--bg-secondary); border:1px solid var(--border-color);
+  box-shadow:0 1px 5px var(--shadow-color);
+}
+.ve-fead-kan-durum > b{ font-family:inherit; font-weight:700; }
+.ve-fead-kan-durum > span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ve-fead-kan-durum > i{ font-style:normal; color:var(--text-muted); }
+.ve-fead-kan-durum > i::before{ content:"· "; }
+.ve-fead-kan-durum.ok{ color:var(--ink-success); }
+.ve-fead-kan-durum.no{
+  color:var(--ink-danger); border-color:var(--accent-danger);
+  background:var(--bg-secondary);
+}
+
+/* ── YÜZEN DENETİM ÇUBUĞU — ALT KENARDA ─────────────────────────────────
+   Çizimin ÜSTÜNDE duruyor, akışta değil. Zemin yarı saydam: örttüğü kayış
+   yolu tamamen kaybolmasın (bantta öyle bir seçenek yoktu — bant çizimin
+   DIŞINDAYDI ve ölçeği düşürüyordu). */
+.ve-fead-yuz{
+  /* ORTALAMA `left:50%` İLE DEĞİL, `left+right+margin:auto` İLE. Ölçüldü
+     (440 px kart): `left:50%`te mutlak konumlu kabın sığdırma genişliği
+     "kap − left" = 220 px oluyor, çubuk DÖRT SATIRA sarıyor ve 110 px
+     yükseliyor — yüzen çubuğun bütün kazancı geri gidiyordu. İki kenar da
+     verilince sığdırma genişliği kabın tamamı (428 px) ve çubuk tek satır. */
+  position:absolute; left:6px; right:6px; bottom:6px; z-index:5;
+  /* TAVAN AÇIKÇA YAZILIYOR: `left` + `right` + `width` üçü birden verilince
+     yazım AŞIRI KISITLI sayılıyor ve tarayıcı `right`i yok sayıyor, yani
+     sığdırma genişliği kabın tamamı oluyor ve yüzey sağdan taşıyor (ölçüldü:
+     titreşim şeridi 4 px dışarıda, `overflow:hidden` de onu sessizce
+     kırpıyordu). */
+  width:fit-content; max-width:calc(100% - 12px); margin-inline:auto;
+  /* TEK SATIR, SARMA YOK. Sarınca çubuk 40 → 64 px'e çıkıyor ve çizimin
+     üstünü daha çok örtüyordu; onun yerine seçiciler DARALIYOR (aşağıda
+     `flex:0 1 auto` + `min-width:0` + `text-overflow:ellipsis`). Değer
+     kırpılırsa da kaybolmuyor: listeyi açmak tamamını gösteriyor ve seçili
+     konum zaten çizimin sol üst künyesinde tam hâliyle yazılı. */
+  display:flex; align-items:flex-end; gap:5px; flex-wrap:nowrap;
+  padding:4px 6px;
+  border-radius:var(--radius-md, 6px);
+  background:color-mix(in srgb, var(--bg-secondary) 88%, transparent);
+  border:1px solid var(--border-color);
+  box-shadow:0 2px 10px var(--shadow-color);
+  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+}
+/* Alan: etiket üstte, seçici altta — Kayış Tablosu'ndaki girdi alanının
+   aynı kalıbı, iki yüzey aynı dili konuşsun. */
+.ve-fead-yuz-dnt{
+  display:flex; flex-direction:column; gap:1px;
+  flex:0 1 auto; min-width:0;          /* daralabilir — çubuk tek satır kalsın */
+}
+.ve-fead-yuz-dnt > i{
+  font-style:normal; font-size:var(--fs-micro); letter-spacing:var(--tracking-wide);
+  text-transform:uppercase; color:var(--text-muted); padding-left:2px;
+}
+.ve-fead-yuz-dnt > select{
+  /* TARAYICININ OKU YERİNE ÇİZİLMİŞ CHEVRON: `appearance:none` olmadan ok
+     her temada tarayıcının kendi rengiyle geliyor ve çubuğun en göze batan
+     parçası oluyordu. */
+  appearance:none; -webkit-appearance:none;
+  width:100%; max-width:152px; min-width:52px; height:19px;
+  padding:0 15px 0 5px; cursor:pointer;
+  /* Chromium seçili metni KIRPAR; ellipsis olmadan yarım harf kalıyor. */
+  text-overflow:ellipsis; white-space:nowrap; overflow:hidden;
+  font-size:var(--fs-micro); font-family:inherit;
+  color:var(--text-primary); background:var(--bg-input);
+  border:1px solid var(--border-color); border-radius:var(--radius-sm);
+  background-image:linear-gradient(45deg, transparent 50%, currentColor 50%),
+                   linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:calc(100% - 9px) 8px, calc(100% - 6px) 8px;
+  background-size:3px 3px, 3px 3px;
+  background-repeat:no-repeat;
+  transition:border-color .12s, background-color .12s;
+}
+.ve-fead-yuz-dnt.genis > select{ max-width:184px; }
+/* Katmanlar düğmesi DARALMAZ: içinde simge + iki sayı var, kırpılırsa ikisi de
+   okunamaz hâle gelir. Daralma yükünü seçiciler taşıyor. */
+.ve-fead-yuz > .ve-fead-kat-dugme{ flex:0 0 auto; }
+.ve-fead-yuz-dnt > select:hover{ border-color:var(--border-hover); }
+.ve-fead-yuz-dnt > select:focus{
+  outline:none; border-color:var(--accent-primary); box-shadow:var(--focus-ring);
+}
+/* Katmanlar düğmesi çubuğun bir parçası: seçicilerle aynı yüksekliğe
+   oturuyor ve etiket satırı kadar aşağıda duruyor. */
+.ve-fead-yuz > .ve-fead-kat-dugme{ height:19px; padding:0 6px; align-self:flex-end; }
+
+/* ── TİTREŞİM ŞERİDİ — ÇUBUĞUN ÜSTÜNDE YÜZER ────────────────────────────
+   Yalnız titreşim açıkken var ve artık bedeli 0 px: bant hâlinde çizimden
+   20 px koparıyordu. */
+.ve-fead-yuz-vib{
+  /* Ortalama kuralı yüzen çubuğunkiyle aynı (yukarıdaki ölçüm). */
+  position:absolute; left:6px; right:6px; bottom:var(--fead-kat-alt, 44px); z-index:5;
+  width:fit-content; max-width:calc(100% - 12px); margin-inline:auto;
+  display:flex; align-items:center; gap:5px; padding:2px 7px;
+  border-radius:var(--radius-md, 6px);
+  background:color-mix(in srgb, var(--bg-secondary) 88%, transparent);
+  border:1px solid var(--border-color);
+  box-shadow:0 2px 10px var(--shadow-color);
+  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+}
+/* NOT METNİ DARALIR. `text-overflow:ellipsis` tek başına YETMİYOR: `min-width`
+   varsayılanı `auto` olduğu için esnek öğe kendi içeriğinden dar olamıyor ve
+   şerit kartın sağından TAŞIYORDU (ölçüldü, gerçek tarayıcı: 91 px dışarıda,
+   yani kaydırıcılar kartın dışında kalıyordu). Kaydırıcılar daralmaz —
+   daralan bir kaydırıcı okunamaz bir ayar demek. */
+.ve-fead-yuz-vib > span:last-child{ flex:1 1 auto; min-width:0; }
+.ve-fead-yuz-vib > input[type="range"]{ flex:none; }
+
+/* PANEL ÇİZİMİN ÜSTÜNE BİNER, çubuğu İTMEZ. Akışa girseydi panel açılınca
    çizim alanı daralır, şema yeniden ölçeklenir ve kullanıcı "neyi
    değiştirdim" sorusunu bir de kayan resimle çözmek zorunda kalırdı. */
 .ve-fead-kat{
@@ -8724,74 +8860,127 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fead-tbl-durum > i::before{ content:"· "; }
 
 /* ── TABLO ─────────────────────────────────────────────────────────────── */
-.ve-fead-tbl-wrap{ flex:1 1 auto; overflow:auto; }
-.ve-fead-tbl{
-  border-collapse:separate; border-spacing:0; table-layout:fixed; width:100%;
-  font-size:var(--fs-tiny);
+/* ── KASNAK LİSTESİ — IZGARA DEĞİL KART ────────────────────────────────────
+   Kullanıcı isteği (2026-09-21): *"tablo kısmı çok amatör durdu… farklı bir
+   yapı, farklı bir düzen"*. Üç tasarım yönü sunuldu, KART LİSTESİ seçildi.
+
+   Satır artık bir hücre dizisi değil bir KASNAK ve üç bölgesi var:
+     kimlik  — sıra · ad (panelin kapısı) · rol
+     girdi   — elle yazılanlar, DEFTER SIRASINDA (X · Y · D · Yön)
+     çözüm   — çözücünün cevapladıkları (Efektif Çap · Sarım · Span)
+
+   GİRDİ/ÇÖZÜM AYRIMININ TAŞIYICISI DEĞİŞTİ, KURALI DEĞİL. Eskiden türetilen
+   sütunların zemini vurgu renginin %6'sıydı ve ekranda seçilemiyordu; ayrım
+   artık bir ton değil YERLEŞİM — çözüm bölgesi gömülü bir okuma yüzeyi.
+   Bölge İÇİNDEKİ sıra hâlâ defterin sırası, yani gruplama sırayı bölmüyor.
+
+   Bölge genişlikleri sütun listesinden TÜRÜYOR (veFeadKartBolgeW): kart
+   genişliği hâlâ yuvarlak bir sayı değil, sütunların toplamı. */
+.ve-fead-krt-wrap{ flex:1 1 auto; overflow:auto; }
+
+.ve-fead-krt{
+  display:grid; align-items:stretch;
+  /* GENİŞLİKLER VERİ, STİL DEĞİL: `veFeadKartBolgeW` sütun listesinden türetip
+     kabın üstüne yazıyor (`<colgroup>` genişliklerinin yerini alan şey). Burada
+     ikinci bir sayı TUTULMUYOR — yazılmazsa `auto`ya düşer, bir kopya değil.
+     ÇÖZÜM BÖLGESİ `1fr`: kendi sayısı yazılmıyor çünkü ARTAN NE İSE O. Kart
+     varsayılan ölçüsünde artan tam olarak sütun listesinin verdiği genişlik
+     (kapı bunu tutuyor); kullanıcı kartı genişletince artan da oraya gidiyor
+     ve türetilen üç sayı yayılıyor — sabit yazılsaydı genişletilen kartın
+     sağında boş bir şerit kalırdı. */
+  grid-template-columns:
+    minmax(150px, var(--fead-krt-kim, auto))
+    minmax(210px, var(--fead-krt-gir, auto))
+    minmax(160px, 1fr)
+    var(--fead-krt-son, auto);
+  border-bottom:1px solid var(--border-light);
 }
+.ve-fead-krt:hover{ background:var(--accent-tint-10); }
+.ve-fead-krt.is-sel{ background:var(--accent-tint-15); }
 
-/* IZGARA DEĞİL ÇİZGİ. Her hücreye 1px çerçeve çizmek tabloyu bir hesap
-   sayfası taklidine çeviriyordu; mühendislik tablosunun okunma yönü YATAY,
-   o yüzden yalnız satır çizgisi var. Dikey çizgi TEK yerde: kayış boyu
-   sütununun solunda, çünkü orası satıra değil ÇEVRİME ait bölgenin sınırı. */
-.ve-fead-tbl td, .ve-fead-tbl th{
-  /* SATIR 26 → 34 px. Hücreler artık birer ALAN (kendi çerçevesi ve odak
-     halkası olan) — 26 px'de alanın 24 px'i satırın tamamını dolduruyordu ve
-     çerçeveyle satır çizgisi üst üste biniyordu, yani ne alan alan gibi
-     duruyordu ne satır ayrılıyordu. Ölçüldü: 6 kasnak + künye + iki satırlık
-     başlık + Σ + ekleme satırı 340 px'lik karta hâlâ kayarsız sığıyor. */
-  padding:0 7px; height:34px; overflow:hidden; white-space:nowrap;
-  text-align:right; border-bottom:1px solid var(--border-light);
-}
-.ve-fead-tbl .al-l{ text-align:left; }
-.ve-fead-tbl .al-c{ text-align:center; }
-.ve-fead-tbl .sep{ border-left:1px solid var(--border-color); }
-
-/* TÜRETİLEN SÜTUN ŞERİDİ — künyedeki lejantın yerini alan şey.
-   Lejant "123 girilir · 123 çözümden" diye SÖZLE anlatıyordu ve okunduktan
-   sonra hangi sütunun hangisi olduğu yine hücrenin görünümünden çıkarılmak
-   zorundaydı. Şerit sütunun KENDİSİNDE duruyor: sıraya (defterle birebir)
-   hiç dokunmadan "bu üç sütun okunur" diyor.
-   `<col>` zemini `<td>` zemininin ALTINDA çizilir, yani zebra ve fare vurgusu
-   şeridi ezmez — ikisi üst üste binmeden aynı anda okunur. */
-.ve-fead-tbl col.coz{ background:var(--accent-tint-6); }
-
-.ve-fead-tbl thead th{
-  position:sticky; top:0; z-index:2; height:auto; padding:5px 7px 4px;
-  background:var(--bg-secondary); color:var(--text-heading);
-  font-weight:700; white-space:normal; line-height:1.2;
-  border-bottom:1px solid var(--border-hover);
-}
-/* BİRİM KENDİ SATIRINDA. `X(mm)` bir başlık değil bir değişken adı gibi
-   okunuyordu; ad ile birimi ayırmak hem başlığı kısaltıyor hem de sütunu
-   dar tutuyor — kazanılan genişlik ada ve sayılara gidiyor. */
-.ve-fead-tbl-unit{
-  display:block; font-weight:500; font-size:var(--fs-micro);
-  color:var(--text-muted); letter-spacing:var(--tracking-wide);
-}
-
-/* Zebra + fare + seçili satır. Üçü ayrı katman: zebra okuma çizgisi, fare
-   nerede olduğunu, seçili satır PANELİ AÇIK OLANI söyler. Sonuncusu tablo
-   ile panel arasındaki tek bağ — adı tıklayıp paneli açtıktan sonra hangi
-   satırın açık olduğu başka hiçbir yerde yazmıyor. */
-/* ZEBRA KALDIRILDI — ölçüldü (gerçek tarayıcı, AG00976, Pearl).
-   İki zemin aynı anda çizilemez: türetilen sütun ŞERİDİ dikey, zebra yatay,
-   ve kesiştikleri her hücrede hangisinin ne söylediği ayrışmıyordu. Dahası
-   "Kayış Uzunluğu" hücresi bütün satırları saran TEK hücre (rowspan) —
-   zebra onun ÜSTÜNDEN atlıyor ve kartın sağ ucunda gri/beyaz/gri bir merdiven
-   bırakıyordu. Satırı ayıran şey artık üçü birden yetiyor: 34 px yükseklik,
-   alt çizgi ve fare vurgusu.
-
-   SÜRÜCÜ SATIRI: sol ray. Numaranın rozeti "bu kasnak sürücü" diyor, ray
+/* SÜRÜCÜ SATIRI: sol ray. Numaranın rozeti "bu kasnak sürücü" diyor, ray
    "liste BURADAN başlıyor" diyor — ikincisi listeye bakar bakmaz okunuyor,
-   numaraya odaklanmayı gerektirmiyor. SEÇİLİ SATIRIN RAYI BUNU EZER (kural
-   aşağıda, daha sonra): seçim geçici bir durum, sürücülük kalıcı bir rol —
-   ama o an paneli hangi satırın açtığı sorusunun cevabı tektir. */
-.ve-fead-tbl tbody tr.drv td:first-child{ box-shadow:inset 2px 0 0 var(--accent-tint-35); }
+   numaraya odaklanmayı gerektirmiyor. SEÇİLİ SATIRIN RAYI BUNU EZER: seçim
+   geçici bir durum, sürücülük kalıcı bir rol — ama o an paneli hangi satırın
+   açtığı sorusunun cevabı tektir. */
+.ve-fead-krt.drv{ box-shadow:inset 2px 0 0 var(--accent-tint-35); }
+.ve-fead-krt.is-sel{ box-shadow:inset 2px 0 0 var(--accent-primary); }
 
-.ve-fead-tbl tbody tr:hover{ background:var(--accent-tint-10); }
-.ve-fead-tbl tbody tr.is-sel{ background:var(--accent-tint-15); }
-.ve-fead-tbl tbody tr.is-sel td:first-child{ box-shadow:inset 2px 0 0 var(--accent-primary); }
+/* KİMLİK BÖLGESİ GÖLGEYİ KIRPMAZ: ad düğmesi fare altında 1 px kalkıp gölge
+   alıyor (bkz. .ve-fead-tbl-name:hover). Bölgeye bir `overflow:hidden`
+   girerse o gölge sessizce hiç çizilmez — istek yerine getirilmiş görünür ama
+   ekranda hiçbir şey olmaz. Adın kendi kısaltması `.ad`ın içinde. */
+.ve-fead-krt > .kim{
+  display:flex; align-items:center; gap:6px; min-width:0; padding:6px 8px;
+  overflow:visible;
+}
+.ve-fead-krt > .gir{
+  display:flex; align-items:flex-end; gap:6px; min-width:0; padding:5px 8px;
+  border-left:1px solid var(--border-light);
+}
+/* ÇÖZÜM BÖLGESİ GÖMÜLÜ: zemini kartınkinden koyu, yani "burası yazılmaz,
+   okunur" bir yüzey. Ayrımın tek taşıyıcısı bu. */
+.ve-fead-krt > .coz{
+  display:flex; align-items:flex-end; gap:0; min-width:0; padding:5px 8px;
+  background:var(--bg-tertiary); border-left:1px solid var(--border-color);
+}
+.ve-fead-krt > .ve-fead-tbl-del{ align-self:center; }
+
+/* Girdi alanı: etiket ÜSTTE, birim etiketin yanında. `X(mm)` bir başlıktan çok
+   bir değişken adı gibi okunuyordu. */
+.ve-fead-krt-fld{ display:flex; flex-direction:column; gap:1px; min-width:0; flex:1 1 0; }
+.ve-fead-krt-fld > i, .ve-fead-krt-rv > i{
+  font-style:normal; font-family:var(--font-mono); font-size:var(--fs-micro);
+  letter-spacing:var(--tracking-wide); text-transform:uppercase;
+  color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.ve-fead-krt-fld > i .br, .ve-fead-krt-rv > i .br{ opacity:.7; margin-left:3px; }
+
+/* ÇÖZÜM OKUMASI — RENGİ SOLUK DEĞİL. Türetilen sayılar bir dönem
+   `--text-secondary` ile basılıyordu ve bu, listenin ASIL ÇIKTISINI (sarım
+   açısı, span, efektif çap) girdilerden daha soluk gösteriyordu: okunması
+   gereken sayılar en zor okunanlardı. Ayrımı BÖLGE yapıyor; renge ikinci bir
+   iş yüklemek ayrımı da okunurluğu da zayıflatırdı. */
+.ve-fead-krt-rv{
+  display:flex; flex-direction:column; gap:1px; min-width:0; flex:1 1 0;
+  padding-right:6px;
+}
+.ve-fead-krt-rv > b{
+  font-family:var(--font-mono); font-size:var(--fs-tiny); font-weight:600;
+  color:var(--text-primary); font-variant-numeric:tabular-nums;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.ve-fead-krt-rv.bos > b{ color:var(--text-muted); font-weight:400; }
+.ve-fead-krt-bos{ color:var(--text-muted); font-size:var(--fs-tiny); padding:2px 0; }
+
+/* DÖNÜŞ YÖNÜ — İKİ DURUMLU SEGMENT. İki seçenekli bir açılır liste,
+   seçeneklerini göstermek için tıklanmayı gerektiriyordu; oysa ikisi de tek
+   bakışta sığıyor. Ekrandaki yedi ham `<select>`in üçü buradan kalktı. */
+.ve-fead-krt-seg{
+  display:inline-flex; border:1px solid var(--border-color);
+  border-radius:var(--radius-sm); overflow:hidden; align-self:flex-start;
+}
+.ve-fead-krt-seg button{
+  border:0; background:var(--bg-input); color:var(--text-muted);
+  font:inherit; font-size:var(--fs-micro); line-height:1.7; padding:0 7px;
+  cursor:pointer;
+}
+.ve-fead-krt-seg button + button{ border-left:1px solid var(--border-color); }
+.ve-fead-krt-seg button:hover{ background:var(--accent-tint-15); color:var(--ink-accent); }
+.ve-fead-krt-seg button.on{ background:var(--accent-primary); color:var(--on-accent); }
+.ve-fead-krt-seg button:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+
+/* ROL ROZETİ — sürücülük bir TİP değil bir ROL; listede de öyle okunuyor. */
+.ve-fead-krt-rz{
+  flex:none; font-family:var(--font-mono); font-size:var(--fs-micro);
+  letter-spacing:var(--tracking-wide); text-transform:uppercase;
+  padding:1px 4px; border-radius:var(--radius-sm);
+  background:var(--accent-tint-15); color:var(--ink-accent);
+}
+.ve-fead-krt-rz.ten{
+  background:color-mix(in srgb, var(--accent-success) 15%, transparent);
+  color:var(--ink-success);
+}
 
 /* ── SIRA SÜTUNU ───────────────────────────────────────────────────────── */
 .ve-fead-tbl-ord{ display:inline-flex; align-items:center; gap:2px; }
@@ -8823,8 +9012,8 @@ span.ve-fw-ro{ display:inline-block; }
   font-size:var(--fs-tiny); color:var(--text-muted);
   border-radius:var(--radius-sm); opacity:0; transition:opacity .12s;
 }
-.ve-fead-tbl tbody tr:hover .ve-fead-tbl-del,
-.ve-fead-tbl tbody tr.is-sel .ve-fead-tbl-del{ opacity:1; }
+.ve-fead-krt:hover .ve-fead-tbl-del,
+.ve-fead-krt.is-sel .ve-fead-tbl-del{ opacity:1; }
 .ve-fead-tbl-del:hover{ background:var(--accent-danger); color:var(--on-danger); opacity:1; }
 .ve-fead-tbl-del:focus-visible{ outline:none; box-shadow:var(--focus-ring); opacity:1; }
 
@@ -8881,17 +9070,16 @@ span.ve-fw-ro{ display:inline-block; }
 /* PANELİ AÇIK OLAN düğme BASILI KALIR. Satır vurgusu tek başına yetmiyor: aynı
    tonun bir başkası "fare burada" demek ve ikisi karışabilir — düğmenin kendi
    hâli karışmaz. */
-.ve-fead-tbl tr.is-sel .ve-fead-tbl-name{
+.ve-fead-krt.is-sel .ve-fead-tbl-name{
   background:var(--accent-tint-22); border-color:var(--accent-primary);
   box-shadow:none; transform:none; color:var(--ink-accent); font-weight:600;
 }
-.ve-fead-tbl tr.is-sel .ve-fead-tbl-name .ac{ color:var(--ink-accent); }
+.ve-fead-krt.is-sel .ve-fead-tbl-name .ac{ color:var(--ink-accent); }
 
-/* AD HÜCRESİ KIRPMAZ. `td`nin genel `overflow:hidden`i düğmenin gölgesini ve
-   1 px'lik kalkışını KESERDİ — yani "gölge olsun" isteği sessizce hiçbir şey
-   yapmazdı. Metin yine kırpılıyor, ama içerideki `.ad` kendi taşmasını
-   yönetiyor; dışarı çıkan tek şey gölge. */
-.ve-fead-tbl td.ad-cell{ overflow:visible; position:relative; z-index:1; padding:0 4px; }
+/* AD DÜĞMESİ KIRPILMAZ. Tablo döneminde `td`nin genel `overflow:hidden`i
+   düğmenin gölgesini ve 1 px'lik kalkışını KESİYORDU — yani "gölge olsun"
+   isteği sessizce hiçbir şey yapmıyordu. Kart listesinde kimlik bölgesi bir
+   flex kabı (taşmayı geçirir); kırpmayı içerideki `.ad` kendi yönetiyor. */
 
 /* SÜRÜCÜ SATIRI, AD SÜTUNUNDA DEĞİL SIRA SÜTUNUNDA işaretli. Ada bir
    "SÜRÜCÜ" çipi koymak 152 px'lik hücreden ~46 px alırdı ve karşılığı yoktu:
@@ -8942,41 +9130,13 @@ span.ve-fw-ro{ display:inline-block; }
 }
 
 /* ── OKUNUR HÜCRE: sayı bir GİRDİ değil, çözümün sonucu ────────────────── */
-/* RENGİ SOLUK DEĞİL. Türetilen sayılar `--text-secondary` ile basılıyordu ve
-   bu, tablonun ASIL ÇIKTISINI (sarım açısı, span, efektif çap) girdilerden
-   daha soluk gösteriyordu — okunması gereken sayılar en zor okunanlardı.
-   Girdi/çözüm ayrımını sütun ŞERİDİ yapıyor; renge ikinci bir iş yüklemek
-   ayrımı da okunurluğu da zayıflatıyordu. */
-.ve-fead-tbl-ro{
-  font-family:var(--font-mono); font-variant-numeric:tabular-nums;
-  color:var(--text-primary);
-}
-.ve-fead-tbl-ro.bos{ color:var(--text-muted); }
-
-/* Kayış boyu: satıra değil ÇEVRİME ait (defterde de K5:K10 birleşik). */
-.ve-fead-tbl-L{
-  vertical-align:middle; font-family:var(--font-mono);
-  font-variant-numeric:tabular-nums; font-weight:600; font-size:var(--fs-body);
-  color:var(--text-primary);
-}
-
-/* ── Σ SATIRI ──────────────────────────────────────────────────────────── */
-/* Defterdeki SUM formüllerinin karşılığı ve bir DENETİM: kayış boyu
-   Σspan + Σyay kimliğinden geliyor, iki toplamı yan yana basmak o kimliği
-   kullanıcının kendi gözüyle doğrulayabileceği hâle getiriyor. */
-.ve-fead-tbl tfoot td{
-  position:sticky; bottom:0; z-index:2; height:24px;
-  background:var(--bg-secondary); border-top:1px solid var(--border-hover);
-  border-bottom:none; font-family:var(--font-mono);
-  font-variant-numeric:tabular-nums; font-weight:700; color:var(--text-primary);
-}
-/* BÜYÜK HARF YOK. `text-transform:uppercase` başlıklarda işe yarıyor ama bu
-   satırda formül var: "Σspan + Σyay" ekrana "ΣSPAN + ΣYAY" olarak düşüyordu
-   ve büyük harfli sigma dizisi bir formüle değil bir hataya benziyor. */
-.ve-fead-tbl tfoot .lbl{
-  font-family:inherit; font-weight:600; color:var(--text-muted);
-  letter-spacing:var(--tracking-wide); font-size:var(--fs-micro);
-}
+/* KAYIŞ BOYU ve Σ TOPLAM artık ÜST KÜNYEDE, listenin içinde değil.
+   Kayış boyu satıra değil ÇEVRİME ait (defterde de K5:K10 birleşik) ve tabloda
+   bütün satırları saran tek hücre olarak duruyordu: beş satır boyu bir
+   dikdörtgenin ortasında tek bir sayı. Künyeye geçince hem o boşluk kalkıyor
+   hem de değerin çevrimin tamamına ait olduğu doğrudan söylenmiş oluyor.
+   Σ da aynı yere gitti — gösterilen iki büyüklüğün toplamı, bir denetim değil;
+   asıl denetim (işaretli Σ = 360°) künyenin sağ ucunda ve o düşebilir. */
 
 /* ── BOŞ DURUM ─────────────────────────────────────────────────────────── */
 .ve-fead-tbl-empty{

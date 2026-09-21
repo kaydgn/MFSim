@@ -932,41 +932,41 @@ var VE_FEAD_LAYOUT_H = 500;
 var VE_FEAD_LAYOUT_LEGACY = [ { w: 60, h: 56 }, { w: 420, h: 340 } ];
 
 
-// KAYIŞ TABLOSU ÖLÇÜSÜ. Genişlik ON BİR sütundan TÜRER, yuvarlak bir sayı
-// değil: sıra(54) + ad(172) + X(64) + Y(64) + efektif çap(78) + D(64) +
-// yön(86) + sarım(74) + span(82) + kayış boyu(88) + sil(30) = 856, artı kart
-// kenarı. AD SÜTUNU 152 → 172: adın yanına "pencere açılır" simgesi girdi ve
-// dar bırakılsaydı simge, adın kendisini kırparak yer açardı. Sıra sütunu DARALDI ve silme kendi sütununa çıktı: üçü tek hücrede
-// dururken (indis + ▲▼ + ✕) sık yapılan işlem ile geri dönüşü olmayan işlem
-// bitişikti. Başlıklarda ad ile BİRİM ayrı satırda olduğu için sütunlar da
-// daraldı — kazanılan genişlik ada ve sayılara gitti.
+// KAYIŞ TABLOSU ÖLÇÜSÜ. Genişlik yine SÜTUN LİSTESİNDEN TÜRÜYOR, yuvarlak bir
+// sayı değil — ama artık sütun sütun değil BÖLGE bölge toplanıyor
+// (veFeadKartBolgeW, cp-fead.js):
+//   kimlik  sıra(54) + ad(172)                         = 226
+//   girdi   X(64) + Y(64) + D(64) + yön(86)            = 278
+//   çözüm   efektif çap(78) + sarım(74) + span(82)     = 234
+//   silme                                              =  30
+//                                              toplam    768, artı kart kenarı
 //
-// YÜKSEKLİK 430 → 340. Ölçüldü (AG00976, 6 kasnak): içerik 200 px yer
-// kaplarken kartın 230 px'i boştu, yani kartın üçte ikisi. Yeni ölçü SEKİZ
-// kasnak + künye + iki satırlık başlık + Σ satırı + alt şerit içindir; daha
-// uzun listede kartın İÇİ kayar (kart büyümez, kanvas yerleşimi bozulmasın).
-var VE_FEAD_TABLE_W = 870;
-var VE_FEAD_TABLE_H = 340;
+// 870 → 782: KAYIŞ BOYU sütunu (88) listeden çıkıp künyeye geçti — satıra
+// değil ÇEVRİME ait bir değerdi ve tabloda bütün satırları saran tek hücre
+// olarak beş satır boyu bir boşluk bırakıyordu (ölçüldü: 170 px yükseklik,
+// içinde tek sayı). Σ satırı da künyeye taşındı.
+var VE_FEAD_TABLE_W = 770;
+// YÜKSEKLİK 340 → 360. Satır 34 → ~44 px: kart listesinde etiket alanın
+// ÜSTÜNDE duruyor (iki satır), karşılığında başlık satırı tamamen kalktı.
+// Yeni ölçü YEDİ kasnak + künye + ekleme şeridi içindir; daha uzun listede
+// kartın İÇİ kayar (kart büyümez, kanvas yerleşimi bozulmasın).
+var VE_FEAD_TABLE_H = 360;
 // EN KÜÇÜK ÖLÇÜ — kartın İÇERİĞİNİN bütün kaldığı sınır (node-resize.js
 // `veNodeMinSize` okur). Genel 50×50 tabanı bu kart için anlamsız, çünkü
-// ikisi de SESSİZ kayıp üretiyordu (ölçüldü, gerçek tarayıcı):
-//   • 130 px yükseklikte yapışkan başlık (50) + Σ satırı (24) gövdeye yer
-//     bırakmıyor — altı satırın altısı da görünmez oluyor ama Σ hâlâ
-//     663,4 · 1048,7 yazıyor: kart BOŞ görünüyor, boş olmadığını yalnız
-//     toplamlar söylüyor.
-//   • 560 px genişlikte on bir sütunun altısı kayıyor ve yatay kaydırma
-//     çubuğunun ölçülen yeri 0 px — kaybın hiçbir işareti yok.
-// Genişlik tabanı kartın kendi ölçüsü — o da zaten SÜTUN TOPLAMINDAN türüyor
-// (tek kaynak VE_FEAD_TABLE_COLS, cp-fead.js), yani sütun eklenirse taban da
-// büyür. Yükseklik tabanı künye + başlık + İKİ satır + Σ + ekleme şeridi.
-// Kartı BÜYÜTMEK serbest; küçültme içeriğin bütün kaldığı yerde durur.
-var VE_FEAD_TABLE_MIN_W = VE_FEAD_TABLE_W;
-var VE_FEAD_TABLE_MIN_H = 210;
-// AŞILMIŞ VARSAYILAN — kayış tablosu bir oturumda iki ölçü gördü. Kayıtlı bir
-// projede eski ölçü BİREBİR duruyorsa (yani kullanıcı hiç dokunmamışsa)
-// yükseltilir; bilerek verilmiş her ölçü korunur. Kayış Yolu kartındaki
-// kuralın aynısı, bkz. veFeadLayoutSizeFor.
-var VE_FEAD_TABLE_LEGACY = [ { w: 824, h: 430 }, { w: 850, h: 340 } ];
+// ikisi de SESSİZ kayıp üretiyordu (ölçüldü, gerçek tarayıcı): 130 px
+// yükseklikte satırların hiçbiri görünmüyor, dar kartta sütunlar işaretsiz
+// kayıyordu.
+//
+// TABAN ARTIK KART GENİŞLİĞİNİN KENDİSİ DEĞİL. Tablo döneminde on bir sütun
+// sabit genişlikteydi, yani kartı daraltmak sütunları görünmez yapıyordu ve
+// taban = kart ölçüsü olmak zorundaydı. Kart listesinde bölgeler
+// `minmax(...)` ile daralıyor (150 + 210 + 160 + 30 = 550, artı kenar): kart
+// dar kurulduğunda alanlar sıkışır ama hiçbiri kaybolmaz. Bu, kart listesinin
+// ölçülebilir kazançlarından biri.
+var VE_FEAD_TABLE_MIN_W = 564;
+var VE_FEAD_TABLE_MIN_H = 160;
+var VE_FEAD_TABLE_LEGACY = [ { w: 824, h: 430 }, { w: 850, h: 340 },
+                             { w: 870, h: 340 } ];
 // Geriye dönük adlar (dışarıdan okuyan bir yer kalırsa bozulmasın).
 var VE_FEAD_LAYOUT_LEGACY_W = VE_FEAD_LAYOUT_LEGACY[0].w;
 var VE_FEAD_LAYOUT_LEGACY_H = VE_FEAD_LAYOUT_LEGACY[0].h;

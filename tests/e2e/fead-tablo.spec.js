@@ -59,10 +59,26 @@ test('Kayış Tablosu kanvasta: kurulur, yazılır, sıra değişir', async ({ p
   // ── 1) KART KANVASA MONTE OLDU MU ───────────────────────────────────────
   const kart = page.locator('.ve-fead-table-card').first();
   await expect(kart).toBeVisible();
-  const govde = await kart.innerText();
-  // Başlıkta ad ile birim AYRI satırda (innerText'te aralarında \n var).
-  ['KASNAK', 'Efektif Çap', 'Sarım Açısı', 'Σsarım', 'Σ toplam']
+  // Kart satırları TAZELEMEYLE doğuyor: düğüm var olur olmaz okumak, yalnız
+  // künyesi kurulmuş bir kart yakalıyordu (ölçüldü: `innerText` "KAYIŞ ✓").
+  await expect(kart.locator('.ve-fead-krt[data-ve-node]')).toHaveCount(6);
+  // `textContent`, `innerText` DEĞİL: ikincisi CSS'in `text-transform`unu
+  // uyguluyor ("Ø eff" → "Ø EFF") ve yerleşime bağlı, yani yazılan metni
+  // değil çizilen metni ölçer.
+  const govde = await kart.evaluate((el) => el.textContent);
+  // ── ETİKET KISA, DEFTERİN ADI `title`DA ─────────────────────────────────
+  // Izgarada her sütunun bir `<th>`i vardı ve defterin tam adı orada
+  // yazılıydı. Kart listesinde başlık satırı yok: ekranda kısa ad duruyor
+  // ("Ø eff"), defterdeki tam ad alanın üstüne gelince görünüyor. İkisi de
+  // AYNI sütun listesinden geliyor — kapı bunu tutuyor, yoksa biri
+  // değiştiğinde öteki sessizce eskir.
+  ['Ø eff', 'Sarım', 'Span', 'Σsarım', 'Σ toplam', 'Kayış boyu']
     .forEach((t) => expect(govde).toContain(t));
+  const ipuclari = await kart.evaluate((el) =>
+    [...el.querySelectorAll('[title]')].map((e) => e.getAttribute('title')).join(' | '));
+  ['Efektif Çap (mm)', 'Sarım Açısı (°)', 'Span Uzunluğu (mm)',
+   'Kasnak Dönüş Yönü', 'Kayış Uzunluğu (mm)']
+    .forEach((t) => expect(ipuclari).toContain(t));
   expect(govde).not.toContain('X(mm)');
 
   // ── 1c) KASNAKLARIN KANVASTA KUTUSU YOK ─────────────────────────────────
@@ -129,7 +145,7 @@ test('Kayış Tablosu kanvasta: kurulur, yazılır, sıra değişir', async ({ p
   const siraOnce = await page.evaluate(() =>
     veFeadBeltOrder(window.nodes).map((n) => n.customName));
   // Üçüncü satırın "yukarı" oku (ilk satır sürücü — kilitli)
-  await kart.locator('tbody tr').nth(2).locator('button[title*="yukarı"]').click();
+  await kart.locator('.ve-fead-krt[data-ve-node]').nth(2).locator('button[title*="yukarı"]').click();
   await page.waitForTimeout(150);
   const siraSonra = await page.evaluate(() =>
     veFeadBeltOrder(window.nodes).map((n) => n.customName));
@@ -143,7 +159,7 @@ test('Kayış Tablosu kanvasta: kurulur, yazılır, sıra değişir', async ({ p
   // gezinen ya da ekran okuyucu kullanan biri için hiç VAR OLMAYAN bir
   // düğmeydi: "burada bir eylem var ama şu an kullanılamıyor" bilgisi hiç
   // verilmiyordu. `disabled` düğme ikisini birden söylüyor.
-  const ilkSatir = kart.locator('tbody tr').first();
+  const ilkSatir = kart.locator('.ve-fead-krt[data-ve-node]').first();
   await expect(ilkSatir.locator('button[title*="taşı"]')).toHaveCount(2);
   await expect(ilkSatir.locator('button[title*="taşı"]').first()).toBeDisabled();
   await expect(ilkSatir.locator('button[title*="taşı"]').last()).toBeDisabled();
@@ -167,37 +183,54 @@ test('Kayış Tablosu kanvasta: kurulur, yazılır, sıra değişir', async ({ p
   // türer. MFSim'de aynı fizik `contact` alanında; seçici onu yazıyor ve
   // EFEKTİF ÇAP da değişiyor — defterde bu ikisi ayrı girdiler olduğu için
   // ayrışabiliyordu, burada yapısal olarak ayrışamaz.
-  const avaraSatir = kart.locator('tbody tr', { hasText: 'Avara 1' }).first();
-  const effOnce = parseFloat((await avaraSatir.locator('td').nth(4).innerText()).replace(',', '.'));
+  const avaraSatir = kart.locator('.ve-fead-krt[data-ve-node]', { hasText: 'Avara 1' }).first();
+  // Ø eff çözüm bölgesinin İLK okuması (defter sırası: Efektif Çap · Sarım · Span).
+  const effOku = (r) => r.locator('.coz .ve-fead-krt-rv > b').first();
+  const effOnce = parseFloat((await effOku(avaraSatir).innerText()).replace(',', '.'));
   const avaraId = await page.evaluate(() =>
     window.nodes.find((n) => n.customName === 'Avara 1').id);
   expect(await page.evaluate((id) =>
     window.nodes.find((n) => n.id === id).data.contact, avaraId)).toBe('back');
 
-  await avaraSatir.locator('select[data-ve="spin"]').selectOption('Sağ');
+  // AÇILIR LİSTE DEĞİL İKİ DURUMLU SEGMENT: iki seçenek de tek bakışta
+  // sığıyor ve tarayıcının oku listedeki en göze batan parçaydı.
+  await expect(avaraSatir.locator('.ve-fead-krt-seg[data-ve="spin"] button'))
+    .toHaveCount(2);
+  await expect(avaraSatir.locator('.ve-fead-krt-seg[data-ve="spin"] button.on'))
+    .toHaveText('Sol');
+  await avaraSatir.locator('.ve-fead-krt-seg[data-ve="spin"] button', { hasText: 'Sağ' })
+    .click();
   await page.waitForTimeout(200);
 
   expect(await page.evaluate((id) =>
     window.nodes.find((n) => n.id === id).data.contact, avaraId)).toBe('grooved');
-  const effSonra = parseFloat((await kart.locator('tbody tr', { hasText: 'Avara 1' })
-    .first().locator('td').nth(4).innerText()).replace(',', '.'));
+  const effSonra = parseFloat((await effOku(
+    kart.locator('.ve-fead-krt[data-ve-node]', { hasText: 'Avara 1' }).first()
+  ).innerText()).replace(',', '.'));
   expect(effSonra).toBeCloseTo(effOnce + 0.2, 3);      // 2·hr → 2·hb, GATES PK
+  await expect(avaraSatir.locator('.ve-fead-krt-seg[data-ve="spin"] button.on'))
+    .toHaveText('Sağ');
 
-  // ── 9) KAYIŞ UZUNLUĞU BİRLEŞİK SÜTUNDA ──────────────────────────────────
-  const birlesik = kart.locator('td[rowspan="6"]');
-  await expect(birlesik).toHaveCount(1);
-  expect(parseFloat((await birlesik.innerText()).replace(',', '.'))).toBeGreaterThan(1000);
+  // ── 9) KAYIŞ UZUNLUĞU KÜNYEDE ───────────────────────────────────────────
+  // Izgarada bütün satırları saran `rowspan`lı tek hücreydi ve beş satır boyu
+  // bir dikdörtgenin ortasında tek sayı taşıyordu (~170 px boş). Boy satıra
+  // değil ÇEVRİME ait — künyede orası da söylenmiş oluyor.
+  await expect(kart.locator('td[rowspan]')).toHaveCount(0);
+  const boyKunye = kart.locator('.ve-fead-tbl-kunye', { hasText: 'Kayış boyu' });
+  await expect(boyKunye).toHaveCount(1);
+  expect(parseFloat((await boyKunye.locator('b').innerText()).replace(',', '.')))
+    .toBeGreaterThan(1000);
 
   // ── 10) SATIR SİL / EKLE — kutu yokken tek yol ──────────────────────────
   const silOnce = await page.evaluate(() =>
     veFeadBeltOrder(window.nodes).map((n) => n.customName));
-  await kart.locator('tbody tr').nth(3).locator('button.ve-fead-tbl-del').click();
+  await kart.locator('.ve-fead-krt[data-ve-node]').nth(3).locator('button.ve-fead-tbl-del').click();
   await page.waitForTimeout(200);
   const silSonra = await page.evaluate(() =>
     veFeadBeltOrder(window.nodes).map((n) => n.customName));
   expect(silSonra).toHaveLength(silOnce.length - 1);
   expect(silSonra).not.toContain(silOnce[3]);
-  await expect(kart.locator('tbody tr')).toHaveCount(5);
+  await expect(kart.locator('.ve-fead-krt[data-ve-node]')).toHaveCount(5);
 
   await kart.locator('select[data-ve="add-pulley"]').selectOption('fead-waterpump');
   await page.waitForTimeout(250);
@@ -223,7 +256,7 @@ test('Kayış Tablosu kanvasta: kurulur, yazılır, sıra değişir', async ({ p
 // EDEMEZ. Aşağıdaki dört ölçüm o sınırın kalktığını gösteriyor ve dördü de
 // yalnız GERÇEK TARAYICIDA var — jsdom `:hover`ı da `:focus`u da hiç
 // hesaplamaz, yani bu kapı Node'a taşınamaz.
-test('Kayış Tablosu CANLI: fare · odak · seçili satır · sütun şeridi', async ({ page }) => {
+test('Kayış Tablosu CANLI: fare · odak · seçili satır · çözüm bölgesi', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page);
@@ -232,7 +265,7 @@ test('Kayış Tablosu CANLI: fare · odak · seçili satır · sütun şeridi', 
   await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-table'),
     null, { timeout: 20000 });
   const kart = page.locator('.ve-fead-table-card').first();
-  const satir = kart.locator('tbody tr');
+  const satir = kart.locator('.ve-fead-krt[data-ve-node]');
   await expect(satir).toHaveCount(6);
 
   // ── 1) FARE: satırın zemini değişiyor ───────────────────────────────────
@@ -241,31 +274,33 @@ test('Kayış Tablosu CANLI: fare · odak · seçili satır · sütun şeridi', 
   await satir.nth(2).hover();
   expect(await zemin(2)).not.toBe(once);
 
-  // ── 2) ZEBRA YOK, SÜTUN ŞERİDİ VAR ──────────────────────────────────────
-  // Zebra kaldırıldı (ölçüldü): `rowspan`lı kayış boyu hücresi zebrayı
-  // ATLIYOR ve kartın sağ ucunda gri/beyaz bir merdiven bırakıyordu. Yerine
-  // türetilen sütunların ŞERİDİ geldi ve şerit ancak GERÇEK TARAYICIDA
-  // ölçülebilen bir katman kuralına dayanıyor: `<col>` zemini `<td>` zemininin
-  // ALTINDA çizilir, yani gövde hücresi opak bir zemin alırsa şerit sessizce
-  // KAYBOLUR — hiçbir şey patlamaz, bant hiç görünmez.
+  // ── 2) ZEBRA YOK, ÇÖZÜM BÖLGESİ GÖMÜLÜ ──────────────────────────────────
+  // Izgarada girdi/çözüm ayrımının taşıyıcısı boyalı bir SÜTUN şeridiydi
+  // (`<col class="coz">`); kart listesinde ayrım BÖLGENİN KENDİSİ — sağdaki
+  // çözüm bölgesi gömülü bir yüzey ("burası yazılmaz, okunur"). Ayrım ancak
+  // gerçek tarayıcıda ölçülebilir: zemin bir tema jetonundan geliyor ve
+  // jeton kart zeminiyle aynı değere düşerse ayrım SESSİZCE kaybolur —
+  // hiçbir şey patlamaz, iki bölge aynı görünür.
   expect(await zemin(0)).toBe(await zemin(1));            // komşu satırlar aynı
   const seffaf = (c) => c === 'rgba(0, 0, 0, 0)' || c === 'transparent';
-  const kat = await kart.evaluate((el) => {
+  const bolge = await satir.nth(2).evaluate((el) => {
     const cs = getComputedStyle;
-    const cols = [...el.querySelectorAll('colgroup > col')];
-    const bant = cols.filter((c) => c.classList.contains('coz'));
-    const duz = cols.filter((c) => !c.classList.contains('coz'));
-    const gövde = el.querySelector('tbody tr td.ve-fead-tbl-ro');
-    return { bant: bant.map((c) => cs(c).backgroundColor),
-             duz: duz.map((c) => cs(c).backgroundColor),
-             hucre: cs(gövde).backgroundColor,
-             bas: cs(el.querySelector('thead th')).backgroundColor };
+    return { coz: cs(el.querySelector('.coz')).backgroundColor,
+             gir: cs(el.querySelector('.gir')).backgroundColor,
+             kim: cs(el.querySelector('.kim')).backgroundColor,
+             // Okuma alanı kendi zeminini BASMIYOR: bassaydı bölgenin
+             // yüzeyi kırpılır ve ayrım satır satır delik deşik olurdu.
+             oku: cs(el.querySelector('.coz .ve-fead-krt-rv')).backgroundColor };
   });
-  expect(kat.bant).toHaveLength(4);                       // eff · sarım · span · kayış boyu
-  kat.bant.forEach((c) => expect(seffaf(c)).toBe(false)); // şerit BOYALI
-  kat.duz.forEach((c) => expect(seffaf(c)).toBe(true));   // ötekiler değil
-  expect(seffaf(kat.hucre)).toBe(true);                   // hücre şeridi ÖRTMÜYOR
-  expect(seffaf(kat.bas)).toBe(false);                    // başlık opak: şerit gövdede başlar
+  expect(seffaf(bolge.coz)).toBe(false);                  // çözüm bölgesi BOYALI
+  expect(bolge.coz).not.toBe(bolge.gir);                  // girdi bölgesinden AYRI
+  expect(seffaf(bolge.gir)).toBe(true);
+  expect(seffaf(bolge.kim)).toBe(true);
+  expect(seffaf(bolge.oku)).toBe(true);
+  // ÇÖZÜM BÖLGESİNDE YAZILABİLİR HİÇBİR ŞEY YOK, girdi bölgesinde OKUMA yok.
+  await expect(satir.nth(2).locator('.coz input, .coz select, .coz button'))
+    .toHaveCount(0);
+  await expect(satir.nth(2).locator('.gir .ve-fead-krt-rv')).toHaveCount(0);
 
   // ── 2b) SİLME DİNLENMEDE GÖRÜNMEZ ───────────────────────────────────────
   // Altı satırda altı ✕ sürekli duruyordu ve sayı sütunlarının sağ ucunda
@@ -316,7 +351,7 @@ test('Kayış Tablosu CANLI: fare · odak · seçili satır · sütun şeridi', 
       const o = document.getElementById('ve-properties-overlay');
       return !!o && o.style.display !== 'none';
     })).toBe(true);
-    const secili = kart.locator('tbody tr.is-sel');
+    const secili = kart.locator('.ve-fead-krt.is-sel');
     await expect(secili).toHaveCount(1);
     expect((await secili.locator('button.ve-fead-tbl-name').innerText()).trim()).toBe(ad);
     // Ve panel gerçekten O kasnağı açtı.
@@ -327,25 +362,26 @@ test('Kayış Tablosu CANLI: fare · odak · seçili satır · sütun şeridi', 
   // yani `clearSelection`ın kutudan sildiği sınıf onlarda hiçbir şeye yazmaz.
   await page.evaluate(() => clearSelection());
   await page.waitForTimeout(150);
-  await expect(kart.locator('tbody tr.is-sel')).toHaveCount(0);
+  await expect(kart.locator('.ve-fead-krt.is-sel')).toHaveCount(0);
 
   // ── 4b) AD DÜĞMESİ "PENCERE AÇILIR" DİYOR ───────────────────────────────
   // Kullanıcı isteği: *"tıklanınca açılır bir pencere olduğunu belli eden bir
   // yapı olsun. Gölge olur, o olur bu olur."* Gölge Node'da ÖLÇÜLEMEZ, ve
-  // ölçülmezse sessizce hiç çizilmeyebilir: `td`nin genel `overflow:hidden`i
-  // gölgeyi de 1 px'lik kalkışı da keserdi.
+  // ölçülmezse sessizce hiç çizilmeyebilir: kimlik bölgesine bir
+  // `overflow:hidden` girerse gölgeyi de 1 px'lik kalkışı da keser.
   const dugme = satir.nth(2).locator('button.ve-fead-tbl-name');
   const olc = () => dugme.evaluate((el) => {
     const cs = getComputedStyle(el);
     const sv = el.querySelector('svg.ac');
     return { golge: cs.boxShadow, kenar: cs.borderColor, zemin: cs.backgroundColor,
-             donusum: cs.transform, kirpma: getComputedStyle(el.closest('td')).overflow,
+             donusum: cs.transform,
+             kirpma: getComputedStyle(el.closest('.kim')).overflow,
              simgeGorunur: Number(getComputedStyle(sv).opacity),
              simgeOran: sv.getBoundingClientRect().width / el.getBoundingClientRect().height };
   });
   const dinlenme = await olc();
   expect(dinlenme.golge).toBe('none');
-  expect(dinlenme.kirpma).toBe('visible');          // hücre gölgeyi kırpmıyor
+  expect(dinlenme.kirpma).toBe('visible');          // bölge gölgeyi kırpmıyor
   // SİMGE DİNLENMEDE DURUYOR — afordansın kendisi o. Kutu, zemin ve gölge
   // yalnız fare altında geliyor; simge çıkarsa afordans yine "ondan haberi
   // olana" görünür hâle düşer (2026-09-09'un ölçülmüş hatası).
@@ -372,7 +408,7 @@ test('Kayış Tablosu CANLI: fare · odak · seçili satır · sütun şeridi', 
   expect(acik).not.toBe(dinlenme.zemin);
 
   // ── 5) TABLO KABINA SIĞIYOR — yatay kaydırma yok ────────────────────────
-  expect(await kart.locator('.ve-fead-tbl-wrap').evaluate((el) =>
+  expect(await kart.locator('.ve-fead-krt-wrap').evaluate((el) =>
     el.scrollWidth <= el.clientWidth + 1)).toBe(true);
 
   expect(hatalar).toEqual([]);
@@ -408,7 +444,7 @@ test('CTRL+Z: örnek TEK adımda geri alınır, tablo SİLİNMEZ', async ({ page
     return { dugum: window.nodes.length,
              kasnak: window.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley).length,
              kart: !!kart,
-             satir: kart ? kart.querySelectorAll('tbody tr').length : -1,
+             satir: kart ? kart.querySelectorAll('.ve-fead-krt[data-ve-node]').length : -1,
              undo: (window.undoStack || []).length };
   });
 
@@ -488,11 +524,11 @@ test('TEKERLEK: liste kaydırılabilirken tabloyu kaydırır, kanvası değil', 
   // ── 1) TAŞMA YOKKEN tekerlek KANVASIN ─────────────────────────────────
   // Kart varsayılan ölçüsünde altı satırı kayarsız gösteriyor; burada
   // tekerleği yutmak, kart üstünde kanvası hiç yakınlaştıramamak demekti.
-  const tasmaYok = await kart.locator('.ve-fead-tbl-wrap')
+  const tasmaYok = await kart.locator('.ve-fead-krt-wrap')
     .evaluate((el) => el.scrollHeight <= el.clientHeight + 1);
   expect(tasmaYok).toBe(true);
   const z0 = await page.evaluate(() => canvasZoom);
-  const satir = kart.locator('tbody tr');
+  const satir = kart.locator('.ve-fead-krt[data-ve-node]');
   await satir.nth(2).hover();
   await page.mouse.wheel(0, 240);
   await page.waitForTimeout(300);
@@ -507,7 +543,7 @@ test('TEKERLEK: liste kaydırılabilirken tabloyu kaydırır, kanvası değil', 
     if (typeof veFeadRefreshCards === 'function') veFeadRefreshCards();
   });
   await page.waitForTimeout(350);
-  const tasmaVar = await kart.locator('.ve-fead-tbl-wrap')
+  const tasmaVar = await kart.locator('.ve-fead-krt-wrap')
     .evaluate((el) => el.scrollHeight > el.clientHeight + 1);
   expect(tasmaVar).toBe(true);
 
@@ -517,7 +553,7 @@ test('TEKERLEK: liste kaydırılabilirken tabloyu kaydırır, kanvası değil', 
   await page.waitForTimeout(350);
   const sonra = await page.evaluate(() => ({
     zoom: canvasZoom,
-    kaydi: document.querySelector('.ve-fead-tbl-wrap').scrollTop,
+    kaydi: document.querySelector('.ve-fead-krt-wrap').scrollTop,
   }));
   expect(sonra.kaydi).toBeGreaterThan(0);      // TABLO kaydı
   expect(sonra.zoom).toBe(z1);                 // kanvas OYNAMADI
@@ -569,9 +605,9 @@ test('YENİDEN BOYUTLANDIRMA: taban aşılmıyor ve tabanda satırlar görünüy
   const olcu = await page.evaluate((i) => {
     const n = window.nodes.find((x) => x.id === i);
     const k = document.querySelector('.ve-fead-table-card');
-    const w = k.querySelector('.ve-fead-tbl-wrap');
+    const w = k.querySelector('.ve-fead-krt-wrap');
     const wr = w.getBoundingClientRect();
-    const gorunen = [...k.querySelectorAll('tbody tr')]
+    const gorunen = [...k.querySelectorAll('.ve-fead-krt[data-ve-node]')]
       .filter((tr) => { const r = tr.getBoundingClientRect();
         return r.top < wr.bottom - 2 && r.bottom > wr.top + 2; }).length;
     return { w: Math.round(n.width), h: Math.round(n.height),
@@ -607,10 +643,10 @@ test('KASNAK EKLE: yeni satır görüş alanına giriyor', async ({ page }) => {
 
   const kart = page.locator('.ve-fead-table-card').first();
   const sonSatirDurumu = () => kart.evaluate((k) => {
-    const w = k.querySelector('.ve-fead-tbl-wrap');
-    const son = [...k.querySelectorAll('tbody tr')].pop();
+    const w = k.querySelector('.ve-fead-krt-wrap');
+    const son = [...k.querySelectorAll('.ve-fead-krt[data-ve-node]')].pop();
     const wr = w.getBoundingClientRect(), sr = son.getBoundingClientRect();
-    return { satir: k.querySelectorAll('tbody tr').length,
+    return { satir: k.querySelectorAll('.ve-fead-krt[data-ve-node]').length,
              tamGorunur: sr.top >= wr.top - 1.5 && sr.bottom <= wr.bottom + 1.5 };
   });
 
@@ -624,7 +660,7 @@ test('KASNAK EKLE: yeni satır görüş alanına giriyor', async ({ page }) => {
   }
   expect((await sonSatirDurumu()).satir).toBe(9);
   // Ve liste gerçekten taşmış durumda — yani kapı boş bir hâli ölçmüyor.
-  expect(await kart.locator('.ve-fead-tbl-wrap')
+  expect(await kart.locator('.ve-fead-krt-wrap')
     .evaluate((el) => el.scrollHeight > el.clientHeight + 1)).toBe(true);
 
   expect(hatalar).toEqual([]);

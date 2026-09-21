@@ -218,29 +218,32 @@ describe('tablodan düzenleme', () => {
 });
 
 describe('kart HTML\'i', () => {
-  // BAŞLIKTA AD İLE BİRİM AYRI SATIRDA. `X(mm)` bir başlıktan çok bir değişken
-  // adı gibi okunuyordu; kapı ikisinin de basıldığını ama BİTİŞİK BASILMADIĞINI
-  // tutuyor — birleşik yazım geri gelirse sütun yeniden genişler ve iki
-  // satırlık başlığın kazandırdığı genişlik geri kaybedilir.
-  test('sütun başlıkları defterin adları, birimleri KENDİ satırında', () => {
+  // ── ALAN ETİKETLERİ: KISA AD EKRANDA, DEFTERİN ADI `title`DA ────────────
+  // Kart listesinde başlık satırı yok; etiket alanın ÜSTÜNDE duruyor ve dar
+  // olduğu için kısaltılıyor ("Efektif Çap" → "Ø eff"). Defterin adı KAYBOLMAZ:
+  // kapı her sütunun tam adının `title`da yazılı olduğunu tutuyor — tablonun
+  // varlık sebebi kullanıcının hesap sayfasıyla birebir olması.
+  test('alan etiketleri kısa, DEFTERİN ADI title\'da', () => {
     kurOrnek();
     const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
       def: componentDefs['fead-table'], data: {} });
-    // Kullanıcının hesap sayfasındaki adlar — tablonun varlık sebebi bu
-    // sütunlarla birebir olması.
-    ['KASNAK', 'Efektif Çap', 'Kasnak Dönüş Yönü', 'Sarım Açısı',
-     'Span Uzunluğu', 'Kayış Uzunluğu'].forEach((t) => expect(h).toContain(t));
-    expect(h).not.toContain('X(mm)');
-    expect(h).not.toContain('Efektif Çap(mm)');
-    // Birimi olan HER sütun birimini kendi satırında basıyor (tek kaynak:
+    // Satırda görünen her sütunun tam adı title'da geçiyor (tek kaynak:
     // VE_FEAD_TABLE_COLS — burada ikinci bir liste tutulmuyor).
+    const satirda = fead.VE_FEAD_TABLE_COLS.filter(
+      (c) => c.yer === 'gir' || c.yer === 'coz');
+    expect(satirda.length).toBe(7);
+    satirda.forEach((c) => {
+      expect(h).toContain('title="' + c.t + (c.u ? ' (' + c.u + ')' : ''));
+      expect(h).toContain('>' + (c.kt || c.t));     // ekranda kısa ad
+    });
+    // Kayış boyu satırdan ÇIKTI ama adı künyede duruyor.
+    expect(h).toContain('Kayış boyu');
+    expect(h).not.toContain('X(mm)');
+    // Birimi olan her sütun birimini etiketin yanında basıyor.
     const birimli = fead.VE_FEAD_TABLE_COLS.filter((c) => c.u);
     expect(birimli.length).toBe(7);
-    expect((h.match(/class="ve-fead-tbl-unit"/g) || []).length).toBe(birimli.length);
-    birimli.forEach((c) => {
-      expect(h).toContain(c.t + '<span class="ve-fead-tbl-unit">' + c.u + '</span>');
-    });
-    // Üst künye: kayış + marka + kasnak sayısı (+ tabloda kayış uzunluğu)
+    expect((h.match(/class="br"/g) || []).length).toBeGreaterThanOrEqual(6);
+    // Üst künye: kayış + marka + kasnak sayısı
     expect(h).toMatch(/>Kayış</);
     expect(h).toMatch(/>Marka</);
     expect(h).toMatch(/>Kasnak</);
@@ -263,10 +266,19 @@ describe('kart HTML\'i', () => {
       .toBeGreaterThanOrEqual(girdi);
   });
 
-  test('sütun genişlikleri TEK KAYNAKTAN ve kart genişliğiyle tutarlı', () => {
-    const toplam = fead.VE_FEAD_TABLE_COLS.reduce((a, c) => a + c.w, 0);
-    expect(toplam).toBeLessThanOrEqual(VE_FEAD_TABLE_W);
-    expect(VE_FEAD_TABLE_W - toplam).toBeLessThan(24);      // kenar payı, fazlası değil
+  // GENİŞLİK HÂLÂ SÜTUN LİSTESİNDEN TÜRÜYOR — ama sütun sütun değil BÖLGE
+  // bölge. Kart genişliği yuvarlak bir sayı olsaydı sütun eklemek onu sessizce
+  // yetersiz bırakırdı.
+  test('bölge genişlikleri TEK KAYNAKTAN ve kart genişliğiyle tutarlı', () => {
+    const satirda = ['kim', 'gir', 'coz', 'son']
+      .reduce((a, y) => a + fead.veFeadKartBolgeW(y), 0);
+    // Her bölge kendi sütunlarının toplamı; hiçbir sütun iki bölgeye düşmüyor.
+    const hepsi = fead.VE_FEAD_TABLE_COLS.reduce((a, c) => a + c.w, 0);
+    const ozet = fead.veFeadKartBolgeW('ozet');
+    expect(satirda + ozet).toBe(hepsi);
+    expect(ozet).toBeGreaterThan(0);                  // kayış boyu künyede
+    expect(satirda).toBeLessThanOrEqual(VE_FEAD_TABLE_W);
+    expect(VE_FEAD_TABLE_W - satirda).toBeLessThan(24);     // kenar payı, fazlası değil
     expect(componentDefs['fead-table'].defaultWidth).toBe(VE_FEAD_TABLE_W);
     expect(componentDefs['fead-table'].defaultHeight).toBe(VE_FEAD_TABLE_H);
   });
@@ -286,7 +298,7 @@ describe('kart HTML\'i', () => {
     expect(h).not.toMatch(/L_pitch|L_eff/);          // kısaltma değil, Türkçe
     // Denetim TABLODAN ÖNCE geliyor: künyenin devamı, kartın dibi değil.
     expect(h.indexOf('ve-fead-tbl-durum')).toBeGreaterThan(-1);
-    expect(h.indexOf('ve-fead-tbl-durum')).toBeLessThan(h.indexOf('<table'));
+    expect(h.indexOf('ve-fead-tbl-durum')).toBeLessThan(h.indexOf('ve-fead-krt-wrap'));
     expect(h).toContain('Çevrim kapalı');
     expect(h).toMatch(/✓/);
     // L_eff künyeye "efektif boy" olarak geçti — sayı KAYBOLMADI, adı oldu.
@@ -339,38 +351,50 @@ describe('kart HTML\'i', () => {
     expect(h).toContain('Çevrim AÇIK');
   });
 
-  // ── TÜRETİLEN SÜTUN ŞERİDİ ─────────────────────────────────────────────
-  // Künyede iki satırlık bir lejant vardı: "123 girilir · 123 çözümden". SÖZLE
-  // anlatıyordu ve okunduktan sonra hangi sütunun hangisi olduğu yine hücrenin
-  // görünümünden çıkarılmak zorundaydı. Şerit sütunun KENDİSİNDE duruyor ve
-  // sıraya (defterle birebir) hiç dokunmuyor.
+  // ── GİRDİ/ÇÖZÜM AYRIMI: TAŞIYICI DEĞİŞTİ, KURAL DEĞİL ──────────────────
+  // Künyede iki satırlık bir lejant vardı ("123 girilir · 123 çözümden"): SÖZLE
+  // anlatıyordu. Yerine türetilen sütunların `<col>` şeridi geldi — ama şerit
+  // vurgu renginin %6'sıydı ve ekranda seçilemiyordu (kullanıcı bildirimi,
+  // 2026-09-21). Taşıyıcı artık BÖLGENİN KENDİSİ: çözüm alanları gömülü bir
+  // okuma yüzeyinde, girdiler kartın zemininde.
   //
-  // KAPI SABİT BİR LİSTE DEĞİL, BİR KURAL: bant tam olarak DEĞERİ ÇÖZÜMDEN
-  // GELEN sütunlarda. Liste yazılsaydı yeni bir türetilen sütun eklenince
-  // sessizce bantsız kalırdı.
-  test('BANT tam olarak ÇÖZÜMDEN GELEN sütunlarda — lejant KALKTI', () => {
+  // KAPI SABİT BİR LİSTE DEĞİL, BİR KURAL: değeri çözümden gelen her alan
+  // `coz` bölgesinde (ya da çevrimin tamamına ait olan `ozet`te), elle yazılan
+  // hiçbir alan orada değil. Liste yazılsaydı yeni bir türetilen sütun
+  // sessizce girdi bölgesine düşerdi.
+  test('ÇÖZÜM BÖLGESİ tam olarak ÇÖZÜMDEN GELEN alanlarda — lejant KALKTI', () => {
     kurOrnek();
     const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
       def: componentDefs['fead-table'], data: {} });
     const kap = document.createElement('div');
     kap.innerHTML = h;
     const C = fead.VE_FEAD_TABLE_COLS;
-    const cols = kap.querySelectorAll('colgroup > col');
-    const tds = kap.querySelectorAll('tbody tr:first-child > td');
-    expect(cols).toHaveLength(C.length);
-    expect(tds).toHaveLength(C.length);            // ilk satırda birleşik hücre de var
-    C.forEach((c, i) => {
-      const yazilir = !!tds[i].querySelector('input, select');
-      const deger = tds[i].classList.contains('ve-fead-tbl-ro')
-                 || tds[i].classList.contains('ve-fead-tbl-L');
-      expect(!!c.coz).toBe(deger);                 // kural: değer okunuyorsa bantlı
-      expect(cols[i].classList.contains('coz')).toBe(!!c.coz);
-      if (yazilir) expect(!!c.coz).toBe(false);    // yazılan hiçbir sütun bantlı değil
+    const sat = kap.querySelector('.ve-fead-krt');
+    expect(sat).toBeTruthy();
+
+    // Her sütunun bir BÖLGESİ var ve `coz` bayrağıyla tutarlı.
+    C.forEach((c) => {
+      expect(['kim', 'gir', 'coz', 'ozet', 'son']).toContain(c.yer);
+      if (c.coz) expect(['coz', 'ozet']).toContain(c.yer);
+      else expect(['kim', 'gir', 'son']).toContain(c.yer);
     });
-    expect(C.filter((c) => c.coz).map((c) => c.k))
-      .toEqual(['eff', 'sar', 'span', 'kayis']);
+
+    // ÇÖZÜM bölgesinde yazılabilir hiçbir şey YOK.
+    const cz = sat.querySelector('.coz');
+    expect(cz).toBeTruthy();
+    expect(cz.querySelectorAll('input, select, .ve-fead-krt-seg')).toHaveLength(0);
+    expect(cz.querySelectorAll('.ve-fead-krt-rv'))
+      .toHaveLength(C.filter((c) => c.yer === 'coz').length);
+
+    // GİRDİ bölgesinde çözümden gelen hiçbir okuma YOK.
+    const gr = sat.querySelector('.gir');
+    expect(gr.querySelectorAll('.ve-fead-krt-rv')).toHaveLength(0);
+    expect(gr.querySelectorAll('.ve-fead-krt-fld'))
+      .toHaveLength(C.filter((c) => c.yer === 'gir').length);
+
+    // Lejant kalktı.
     expect(h).not.toContain('ve-fead-tbl-lgn');
-    expect(h).not.toMatch(/girilir|çözümden/);
+    expect(h).not.toMatch(/girilir|çözümden geliyor/);
   });
 
   // ── BASAMAK: 3 → 1 ────────────────────────────────────────────────────
@@ -385,14 +409,16 @@ describe('kart HTML\'i', () => {
       def: componentDefs['fead-table'], data: {} });
     const kap = document.createElement('div');
     kap.innerHTML = h;
-    const hucre = [...kap.querySelectorAll('tbody td.ve-fead-tbl-ro')]
-      .map((td) => td.textContent);
+    const hucre = [...kap.querySelectorAll('.ve-fead-krt .coz .ve-fead-krt-rv > b')]
+      .map((el) => el.textContent);
     expect(hucre).toHaveLength(18);                // 6 satır × (eff, sarım, span)
     hucre.forEach((t) => expect(t).toMatch(/^-?\d+\.\d$/));
-    // Σ satırı da AYNI basamakta: aynı sütunda iki farklı yuvarlama okunmaz.
-    const tf = kap.querySelectorAll('tfoot td');
-    expect(tf[1].textContent).toMatch(/^-?\d+\.\d$/);
-    expect(tf[2].textContent).toMatch(/^-?\d+\.\d$/);
+    // Künyedeki Σ da AYNI basamakta: aynı büyüklük iki farklı yuvarlamayla
+    // okunmaz.
+    const sig = [...kap.querySelectorAll('.ve-fead-tbl-kunye')]
+      .filter((e) => /Σ toplam/.test(e.textContent))[0];
+    expect(sig).toBeTruthy();
+    expect(sig.textContent).toMatch(/\d+\.\d° · \d+\.\d mm/);
     // Basılan sayı MODELDEN geliyor (sunum kendi geometrisini hesaplamıyor).
     expect(hucre[0]).toBe(T.rows[0].effDiaMm.toFixed(1));
     expect(hucre[1]).toBe(T.rows[0].wrapDeg.toFixed(1));
@@ -413,7 +439,7 @@ describe('kart HTML\'i', () => {
     // listenin bittiği yerde beliriyor.
     expect(kap.querySelector('.ve-fead-tbl-head .ve-fead-tbl-add')).toBeNull();
     expect(kap.querySelector('.ve-fead-tbl-ekle .ve-fead-tbl-add')).toBeTruthy();
-    expect(h.indexOf('ve-fead-tbl-ekle')).toBeGreaterThan(h.indexOf('</table>'));
+    expect(h.indexOf('ve-fead-tbl-ekle')).toBeGreaterThan(h.indexOf('ve-fead-krt-wrap'));
 
     // Boş tablonun tavsiyesi de o yeri gösteriyor. "Sağ üstteki" artık bayat
     // bir tavsiye olurdu ve bayat tavsiye, tavsiye olmamasından kötüdür.
@@ -431,7 +457,7 @@ describe('kart HTML\'i', () => {
       def: componentDefs['fead-table'], data: {} });
     const kap = document.createElement('div');
     kap.innerHTML = h;
-    const trs = [...kap.querySelectorAll('tbody tr')];
+    const trs = [...kap.querySelectorAll('.ve-fead-krt')];
     expect(trs.filter((t) => t.classList.contains('drv'))).toHaveLength(1);
     expect(trs[0].classList.contains('drv')).toBe(true);
 
@@ -443,7 +469,7 @@ describe('kart HTML\'i', () => {
     const kap2 = document.createElement('div');
     kap2.innerHTML = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
       def: componentDefs['fead-table'], data: {} });
-    const tr0 = kap2.querySelector('tbody tr');
+    const tr0 = kap2.querySelector('.ve-fead-krt');
     expect(tr0.classList.contains('drv')).toBe(true);
     expect(tr0.classList.contains('is-sel')).toBe(true);
     global.selectedNodes = [];
@@ -510,21 +536,34 @@ describe('tazeleme TEK KAPIDAN', () => {
 // kasnak aynı yöne dönüyorsa dış teğet, ters yöne dönüyorsa iç teğet. MFSim'de
 // aynı fizik TEK alanda: `contact`. Hücre o alanı yazıyor.
 describe('Dönüş Yönü — defterdeki gibi GİRDİ, ama tek alan üstünden', () => {
-  test('hücre bir açılır liste ve iki seçeneği var (Sağ/Sol)', () => {
+  // İKİ DURUMLU SEGMENT — açılır liste DEĞİL (2026-09-21). İki seçenekli bir
+  // `<select>` seçeneklerini göstermek için tıklanmayı gerektiriyordu, oysa
+  // ikisi birden tek bakışta sığıyor; üstelik tarayıcının oku listedeki en çok
+  // göze batan parçaydı (altı satırda altı ok). Seçenek SAYISI ikiden
+  // çıkarsa bu karar geri alınır — kapı o yüzden sayıyı da ölçüyor.
+  test('iki durumlu SEGMENT — iki düğme, açık olan işaretli, liste YOK', () => {
     kurOrnek();
     const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
       def: componentDefs['fead-table'], data: {} });
-    // Altı yön seçicisi + üst künyedeki "kasnak ekle" seçicisi.
-    expect((h.match(/<select /g) || []).length).toBe(7);
-    expect((h.match(/<option value="Sağ"/g) || []).length).toBe(6);
-    expect((h.match(/<option value="Sol"/g) || []).length).toBe(6);
-    expect(h).toMatch(/veFeadTableSetSpin/);
-    // Kart kanvasta: HER seçici mousedown yutmalı (yön seçicileri + ekleyici),
-    // yoksa açmak düğümü sürüklemeye başlar. Sayıyı sabitlemek yerine "hepsi"
-    // ölçülüyor — yeni bir seçici eklenince kapı kendiliğinden onu da kapsar.
-    const secici = (h.match(/<select /g) || []).length;
+    const seg = h.match(/<span class="ve-fead-krt-seg" data-ve="spin">[\s\S]*?<\/span>/g) || [];
+    expect(seg).toHaveLength(6);                       // altı kasnak, altı segment
+    seg.forEach((s) => {
+      const dugme = s.match(/<button /g) || [];
+      expect(dugme).toHaveLength(2);                   // Sağ + Sol, ikisi de görünür
+      expect(s).toContain('>Sağ</button>');
+      expect(s).toContain('>Sol</button>');
+      // Açık olan TAM OLARAK BİR tane: hiçbiri işaretli değilse hücre hangi
+      // yönde olduğunu söylemiyor demektir, ikisi birden işaretliyse çelişir.
+      expect((s.match(/class="on"/g) || []).length).toBe(1);
+      // Kart kanvasta: her düğme mousedown yutmalı, yoksa tıklamak düğümü
+      // sürüklemeye başlar.
+      expect((s.match(/onmousedown="event\.stopPropagation\(\);"/g) || []).length).toBe(2);
+    });
+    expect((h.match(/veFeadTableSetSpin\(/g) || []).length).toBe(12);
+    // Satırlarda <select> KALMADI — geriye yalnız ekleyicininki kaldı.
+    expect((h.match(/<select /g) || []).length).toBe(1);
     expect((h.match(/<select [^>]*onmousedown="event\.stopPropagation\(\);"/g) || []).length)
-      .toBe(secici);
+      .toBe(1);
     expect(h).toContain('veFeadTableAdd(');
   });
 
@@ -592,28 +631,53 @@ describe('Dönüş Yönü — defterdeki gibi GİRDİ, ama tek alan üstünden',
   });
 });
 
-describe('Kayış Uzunluğu — defterdeki gibi BİRLEŞİK sütun', () => {
-  test('kendi sütununda, bütün satırları saran TEK hücre', () => {
+// KAYIŞ BOYU SATIRA DEĞİL ÇEVRİME AİT — VE ARTIK KÜNYEDE
+//
+// Defterde K5:K10 BİRLEŞTİRİLMİŞ ve tek formül; ızgara döneminde bu bir
+// `rowspan` hücresiydi ve altı satır boyu bir dikdörtgenin ortasında TEK bir
+// sayı taşıyordu (ölçüldü: 88 px × ~170 px, içinde 5 karakter). Kart listesinde
+// satır diye bir hizalanmış ızgara olmadığı için `rowspan` da yok; değer
+// künyeye taşındı ve orada "çevrimin tamamına ait" olduğu ayrıca söylenmiş
+// oluyor. Defterle bağ KOPMUYOR: sütun listesinde `kayis` girdisi duruyor,
+// künyedeki etiket ondan okunuyor.
+describe('Kayış Uzunluğu — çevrime ait, künyede', () => {
+  test('künyede TEK KEZ, listede HİÇ — ve sütun listesinden okunuyor', () => {
     kurOrnek();
     const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
       def: componentDefs['fead-table'], data: {} });
-    expect(h).toContain('Kayış Uzunluğu<span class="ve-fead-tbl-unit">mm</span>');
-    // Defterde K5:K10 birleştirilmiş — burada rowspan, kasnak sayısı kadar.
-    expect((h.match(/rowspan="6"/g) || []).length).toBe(1);
-    // Üst künyeden kalktı: aynı sayıyı iki yerde göstermek ikinci bir kopya olurdu.
-    expect(h.split('Kayış Uzunluğu').length - 1).toBe(1);
+    const kol = fead.VE_FEAD_TABLE_COLS.find((c) => c.k === 'kayis');
+    expect(kol.yer).toBe('ozet');                       // listede değil, özette
+    // Künyede, kısa adıyla ve tam olarak bir kez.
+    expect(h.split(kol.kt).length - 1).toBe(1);
+    expect(h).toContain('<span>' + kol.kt + '</span>');
+    // `rowspan` hücresi KALKTI — kart listesinde hizalanmış satır yok.
+    expect(h).not.toMatch(/rowspan=/);
+    // Değer çözümden geliyor: gerçek sayı basılıyor, yer tutucu değil.
+    const T = fead.veFeadTableRows(M.veFeadBuildSystem(global.nodes));
+    expect(h).toContain('<b>' + T.LpitchMm.toFixed(1) + ' mm</b>');
   });
 
-  test('sütun sayısı ON BİR ve genişlikler kart ölçüsüyle tutarlı', () => {
+  test('sütun sayısı ON BİR ve bölge genişlikleri kart ölçüsüne sığıyor', () => {
     // Onbirinci sütun SİLME. Sıra oklarıyla aynı hücrede dururken sık yapılan
     // işlem ile geri dönüşü olmayan işlem bitişikti (indis + ▲▼ + ✕ / 70 px /
     // 9 px yazı) — ayrı sütun bir kozmetik değil bir ölçü kararı.
     expect(fead.VE_FEAD_TABLE_COLS).toHaveLength(11);
     expect(fead.VE_FEAD_TABLE_COLS[9].k).toBe('kayis');
     expect(fead.VE_FEAD_TABLE_COLS[10].k).toBe('sil');
-    const toplam = fead.VE_FEAD_TABLE_COLS.reduce((a, c) => a + c.w, 0);
+    // Kartın genişliğini KÜNYEYE giden sütun belirlemez — o listede yer
+    // kaplamıyor. Ölçülen şey listenin dört bölgesinin toplamı.
+    const toplam = ['kim', 'gir', 'coz', 'son']
+      .reduce((a, y) => a + fead.veFeadKartBolgeW(y), 0);
     expect(toplam).toBeLessThanOrEqual(VE_FEAD_TABLE_W);
-    expect(VE_FEAD_TABLE_W - toplam).toBeLessThan(24);
+    // TAM OTURUYOR, "yaklaşık sığıyor" değil: kart kenarlığı dışında artan
+    // sıfır. Çözüm bölgesi `1fr` olduğu için artan ORAYA gidiyor; kart
+    // varsayılan ölçüsündeyken artanın sütun listesinin verdiği genişliğin
+    // TA KENDİSİ olması bu eşitlikle tutuluyor. Ölçüldü (gerçek tarayıcı):
+    // 782 px'lik kartta satır 780, izgara 768 — sağda 12 px ölü şerit vardı.
+    expect(VE_FEAD_TABLE_W - toplam).toBe(2);                  // yalnız kenarlık
+    expect(VE_FEAD_TABLE_W - 2 - fead.veFeadKartBolgeW('kim')
+           - fead.veFeadKartBolgeW('gir') - fead.veFeadKartBolgeW('son'))
+      .toBe(fead.veFeadKartBolgeW('coz'));
   });
 });
 
@@ -744,12 +808,18 @@ describe('görünüm CSS\'te, satır içinde değil', () => {
     const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
       def: componentDefs['fead-table'], data: {} });
     const stiller = (h.match(/style="[^"]*"/g) || []);
-    expect(stiller.length).toBeGreaterThan(0);          // colgroup ölçüleri
+    expect(stiller.length).toBeGreaterThan(0);          // bölge genişlikleri
     stiller.forEach((st) => {
-      // İZİNLİ: genişlik ve hücre payı. İkisi de VERİ (sütun ölçüsü tek
-      // kaynaktan geliyor), tema değil — bir stil dosyasında duramazlar.
-      expect(st).toMatch(/^style="(width:\d+px;|padding:(0|[\d ]+px)( \d+px)?;)+"$/);
+      // İZİNLİ: bölge genişliği (özel özellik olarak) ve `display:inline`.
+      // İlki VERİ — sütun ölçüsü tek kaynaktan geliyor ve CSS'te ikinci kez
+      // yazılamaz; ikincisi boş durum metninin içindeki bir <b>'yi satır
+      // içine çevirmek, bir tema kararı değil.
+      expect(st).toMatch(/^style="(--fead-krt-[a-z]+:\d+px;\s*|display:inline;)+"$/);
     });
+    // ÖLÜ VERİ YOK: çözüm bölgesi `1fr` olduğu için genişliği CSS'te
+    // kullanılmıyor — kart onu basmıyor da. Bassaydı hiçbir şey yapmayan bir
+    // sayı dolaşırdı ve bir sonraki okuyan onu kaynak sanırdı.
+    expect(h).not.toContain('--fead-krt-coz');
     // Eski kartın imzası: her hücrede aksanın sabit yedeği. Geri gelirse tema
     // değişikliği tabloya geçmez — projenin kendi kuralı (--accent-tint-*).
     expect(h).not.toMatch(/#3b82f6|#f59e0b|#0f1115|#ef4444|#22c55e/);
@@ -759,35 +829,41 @@ describe('görünüm CSS\'te, satır içinde değil', () => {
     expect(h).not.toMatch(/style="[^"]*font-size/);
   });
 
-  test('DURUM KURALLARI CSS\'te: fare · odak · seçili satır · zebra', () => {
-    // Dördü de satır içi CSS'te YAZILAMAZ; tablonun donuk görünmesinin sebebi
+  test('DURUM KURALLARI CSS\'te: fare · odak · seçili satır', () => {
+    // Üçü de satır içi CSS'te YAZILAMAZ; tablonun donuk görünmesinin sebebi
     // buydu ve kapı tam olarak onların varlığını tutuyor.
-    expect(CSS).toMatch(/\.ve-fead-tbl tbody tr:hover\s*\{/);
-    expect(CSS).toMatch(/\.ve-fead-tbl tbody tr\.is-sel\s*\{/);
+    expect(CSS).toMatch(/\.ve-fead-krt:hover\s*\{/);
+    expect(CSS).toMatch(/\.ve-fead-krt\.is-sel\s*\{/);
     expect(CSS).toMatch(/\.ve-fead-tbl-in:hover\s*\{/);
     expect(CSS).toMatch(/\.ve-fead-tbl-in:focus\s*\{/);
     expect(CSS).toMatch(/\.ve-fead-tbl-sel:focus\s*\{/);
-    // TÜRETİLEN SÜTUN ŞERİDİ — `<col>` zemini satır içi yazılabilirdi ama
-    // zebra/fare/seçim vurgusuyla katman sırası ancak stil dosyasında kurulur.
-    expect(CSS).toMatch(/\.ve-fead-tbl col\.coz\{/);
-    // ZEBRA YOK — ve olmaması bir ihmal değil ölçüm: `rowspan`lı kayış boyu
-    // hücresi zebrayı atlıyor, kartın sağ ucunda gri/beyaz merdiven kalıyordu.
-    expect(CSS).not.toMatch(/\.ve-fead-tbl tbody tr:nth-child\(even\)/);
+    // İKİ DURUMLU SEGMENT: açık olan dolu, fare altındaki aksanlı, odak halkası
+    // var. Üçü de `<select>` döneminde tarayıcıdan geliyordu; segmenti biz
+    // çizdiğimiz için artık üçünü de yazmak ZORUNDAYIZ.
+    expect(CSS).toMatch(/\.ve-fead-krt-seg button\.on\{/);
+    expect(CSS).toMatch(/\.ve-fead-krt-seg button:hover\{/);
+    expect(CSS).toMatch(/\.ve-fead-krt-seg button:focus-visible\{/);
+    // ÇÖZÜM BÖLGESİNİN ZEMİNİ — `<col class="coz">` şeridinin yerini alan şey.
+    // Ayrım artık bir sütun tonu değil bir YÜZEY: okuma bölgesi gömülü.
+    expect(CSS).toMatch(/\.ve-fead-krt > \.coz\{[^}]*background:/);
+    // ZEBRA YOK — kart listesinde satır zaten kendi kabında; ikinci bir ton
+    // fare ve seçim vurgusunun üstüne binerdi.
+    expect(CSS).not.toMatch(/\.ve-fead-krt:nth-child\(even\)/);
     // SİLME DİNLENMEDE GÖRÜNMEZ, satıra gelince belirir. `:hover` satır içi
     // CSS'te yazılamaz; kural buradan çıkarsa altı ✕ sürekli görünür kalır.
     expect(CSS).toMatch(/\.ve-fead-tbl-del\{[^}]*opacity:0;/);
-    expect(CSS).toMatch(/\.ve-fead-tbl tbody tr:hover \.ve-fead-tbl-del/);
+    expect(CSS).toMatch(/\.ve-fead-krt:hover \.ve-fead-tbl-del/);
     // SÜRÜCÜ RAYI ve SEÇİM RAYI aynı kenarda: seçim SONRA tanımlı olmak
     // zorunda, yoksa sürücünün paneli açıkken işaret sürücü rayında kalır.
-    expect(CSS.indexOf('tr.drv td:first-child'))
-      .toBeLessThan(CSS.indexOf('tr.is-sel td:first-child'));
+    expect(CSS.indexOf('.ve-fead-krt.drv{ box-shadow'))
+      .toBeLessThan(CSS.indexOf('.ve-fead-krt.is-sel{ box-shadow'));
     // AD DÜĞMESİ: kabarma (gölge) · basılı hâl · paneli açık hâl. Üçü de satır
     // içi CSS'te yazılamaz ve üçü birlikte "burası bir pencere açar" diyor.
     expect(CSS).toMatch(/\.ve-fead-tbl-name:hover\{[^}]*box-shadow/);
     expect(CSS).toMatch(/\.ve-fead-tbl-name:active\{/);
-    expect(CSS).toMatch(/tr\.is-sel \.ve-fead-tbl-name\{/);
-    // Hücre gölgeyi kırpmıyor — kırpsaydı gölge hiç görünmezdi.
-    expect(CSS).toMatch(/\.ve-fead-tbl td\.ad-cell\{[^}]*overflow:visible/);
+    expect(CSS).toMatch(/\.ve-fead-krt\.is-sel \.ve-fead-tbl-name\{/);
+    // Kimlik bölgesi gölgeyi kırpmıyor — kırpsaydı gölge hiç görünmezdi.
+    expect(CSS).toMatch(/\.ve-fead-krt > \.kim\{[^}]*overflow:visible/);
     // Vurgular AKTİF AKSANDAN türer, sabit maviden değil: projenin on teması
     // tek renk dilini konuşsun (bkz. --accent-tint-* gerekçesi, styles.css).
     const blok = CSS.slice(CSS.indexOf('.ve-fead-table-card{'));
@@ -822,8 +898,8 @@ describe('yeni yüzeyin işlevleri', () => {
     // olduğunu tablodan okuyamazdı.
     global.selectedNodes = [alt];
     const h = fead.veFeadTableCardHTML(arg);
-    expect((h.match(/class="is-sel"/g) || []).length).toBe(1);
-    expect(h).toContain('<tr data-ve-node="ex-ALT" class="is-sel">');
+    expect((h.match(/ is-sel"/g) || []).length).toBe(1);
+    expect(h).toContain('<div class="ve-fead-krt is-sel" data-ve-node="ex-ALT">');
     // Çok seçimde işaret YOK: "hangi kasnağın paneli açık" sorusunun tek
     // cevabı yokken bir satırı işaretlemek yanlış cevap vermek olurdu.
     global.selectedNodes = [alt, ns.filter((n) => n.id === 'ex-A_C')[0]];
@@ -843,7 +919,7 @@ describe('yeni yüzeyin işlevleri', () => {
     document.body.innerHTML = '<div class="ve-fead-table-card">'
       + fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
           def: componentDefs['fead-table'], data: {} }) + '</div>';
-    const isaretli = () => [...document.querySelectorAll('tr.is-sel')]
+    const isaretli = () => [...document.querySelectorAll('.ve-fead-krt.is-sel')]
       .map((tr) => tr.getAttribute('data-ve-node'));
     expect(isaretli()).toEqual([]);
 
@@ -900,10 +976,15 @@ describe('yeni yüzeyin işlevleri', () => {
     // Simge TEK KOPYA bir sabitten geliyor, satır başına yeniden yazılmıyor.
     expect(typeof fead.VE_FEAD_TBL_OPEN_ICON).toBe('string');
     expect(h.split(fead.VE_FEAD_TBL_OPEN_ICON).length - 1).toBe(6);
-    // Ve hücre gölgeyi KIRPMIYOR — `td`nin genel overflow:hidden'ı gölgeyi de
-    // 1 px'lik kalkışı da keserdi, yani "gölge olsun" isteği sessizce hiçbir
-    // şey yapmazdı.
-    expect((h.match(/class="al-l ad-cell"/g) || []).length).toBe(6);
+    // Düğme KİMLİK bölgesinde, girdilerin arasında değil: basılan bir şey ile
+    // yazılan bir şey aynı bölgede dursaydı "düğme dolu / alan boş" ayrımı
+    // (modül skill'i 14) tek bakışta okunmazdı.
+    const kim = h.match(/<div class="kim">[\s\S]*?<\/div>/g) || [];
+    expect(kim).toHaveLength(6);
+    kim.forEach((k) => {
+      expect(k).toContain('class="ve-fead-tbl-name"');
+      expect(k).not.toContain('ve-fead-tbl-in');      // yazılabilir alan YOK
+    });
   });
 
   test('SÜRÜCÜ satırı sıra sütununda işaretli ve ▲ pasif', () => {
@@ -914,10 +995,15 @@ describe('yeni yüzeyin işlevleri', () => {
     // kayış sırası ondan başlar, o yüzden satır kilitli. Ada çip koymak
     // 152 px'lik hücreden ~46 px alırdı, karşılığı olmadan.
     expect((h.match(/<b class="drv"/g) || []).length).toBe(1);
-    const b0 = h.indexOf('<tbody>');
-    const ilk = h.slice(b0, h.indexOf('</tr>', b0));
+    // Satırın KENDİSİ de işaretli (`drv`): sol ray listeye bakar bakmaz
+    // sıranın nerede başladığını söylüyor.
+    const b0 = h.indexOf('<div class="ve-fead-krt drv"');
+    expect(b0).toBeGreaterThan(-1);
+    const ilk = h.slice(b0, h.indexOf('<div class="ve-fead-krt"', b0));
     expect(ilk).toContain('<b class="drv"');
     expect((ilk.match(/ve-fead-tbl-mv" disabled/g) || []).length).toBe(2);
+    // Rol çipi de orada — "Sürücü" kelimesi listede bir kez geçiyor.
+    expect((h.match(/<span class="ve-fead-krt-rz">Sürücü<\/span>/g) || []).length).toBe(1);
   });
 
   test('SIRA OKUNUN pasif hâli `disabled` — görünmez bir düğme değil', () => {
@@ -941,10 +1027,13 @@ describe('yeni yüzeyin işlevleri', () => {
     // O satırın alanı `cenX/cenY` — AVARA MERKEZİ; montaj konumu ondan
     // TÜREYEN bir çıktı (bkz. fead-model.js). Sütun başlığı "X" dediği için
     // hangi X olduğu yalnız burada yazılı.
-    expect(h).toMatch(/title="Avara merkezi X[^"]*"[^>]*onchange="veFeadTableSet\('ex-TEN','cenX'/);
-    expect(h).toMatch(/title="Avara merkezi Y[^"]*"[^>]*onchange="veFeadTableSet\('ex-TEN','cenY'/);
+    expect(h).toMatch(/title="X \(mm\) — avara merkezi[^"]*"[\s\S]{0,400}?veFeadTableSet\('ex-TEN','cenX'/);
+    expect(h).toMatch(/title="Y \(mm\) — avara merkezi[^"]*"[\s\S]{0,400}?veFeadTableSet\('ex-TEN','cenY'/);
     // Kasnak satırlarında böyle bir not YOK — orada X sadece X.
-    expect((h.match(/Avara merkezi/g) || []).length).toBe(2);
+    expect((h.match(/avara merkezi/g) || []).length).toBe(2);
+    // Ve satır GERGİ olduğunu kimlik bölgesinde de söylüyor: not yalnız
+    // `title`da dursaydı fareyi üstüne götürmeden görünmezdi.
+    expect(h).toContain('<span class="ve-fead-krt-rz ten">Gergi</span>');
   });
 
   test('Σ SATIRI: gösterilen sütunların toplamı, yeni bir büyüklük DEĞİL', () => {
@@ -965,9 +1054,15 @@ describe('yeni yüzeyin işlevleri', () => {
 
     const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
       def: componentDefs['fead-table'], data: {} });
-    expect(h).toContain('<tfoot>');
+    // Σ ARTIK KÜNYEDE: listenin altındaki yapışkan şerit kalktı (kart
+    // listesinde hizalanacak sütun yok, toplam bir sütunun altına düşemez) ve
+    // çevrimin tamamına ait olan öteki sayılarla aynı yere geçti.
     expect(h).toContain('Σ toplam');
-    expect(h).toContain('Σspan + Σyay');
+    expect(h).not.toContain('<tfoot>');
+    const bas = h.indexOf('Σ toplam');
+    expect(bas).toBeLessThan(h.indexOf('ve-fead-krt-wrap'));     // künyede
+    expect(h).toContain('<b>' + T.sumWrapDeg.toFixed(1) + '° · '
+                        + T.sumSpanMm.toFixed(1) + ' mm</b>');
   });
 
   test('BOŞ DURUM tablonun kendi ekleyicisini gösteriyor — palet SESSİZ', () => {
@@ -980,17 +1075,22 @@ describe('yeni yüzeyin işlevleri', () => {
     expect(h).not.toMatch(/paletten/i);
     expect(h).toContain('Kasnak ekle');
     expect(h).toContain('ve-fead-tbl-empty');
-    // Boş tabloda Σ satırı da basılmaz: toplanacak bir şey yok.
-    expect(h).not.toContain('<tfoot>');
+    // Boş listede Σ künyesi de basılmaz: toplanacak bir şey yok.
+    expect(h).not.toContain('Σ toplam');
   });
 
   test('KART ÖLÇÜSÜ yeniden türedi ve eski ölçü YÜKSELİYOR', () => {
     // Ölçüldü (AG00976, 6 kasnak): 430 px'lik kartta içerik 200 px yer
-    // kaplıyordu, yani kartın 230 px'i boştu. Yeni ölçü sekiz kasnak +
-    // künye + iki satırlık başlık + Σ satırı + alt şerit içindir.
-    expect(VE_FEAD_TABLE_H).toBe(340);
-    const toplam = fead.VE_FEAD_TABLE_COLS.reduce((a, c) => a + c.w, 0);
+    // kaplıyordu, yani kartın 230 px'i boştu. Kart listesinde satır daha
+    // yüksek (iki sıra etiket), o yüzden yükseklik geri büyüdü; genişlik ise
+    // `rowspan`lı kayış boyu sütunu künyeye geçtiği için DÜŞTÜ.
+    expect(VE_FEAD_TABLE_H).toBe(360);
+    const toplam = ['kim', 'gir', 'coz', 'son']
+      .reduce((a, y) => a + fead.veFeadKartBolgeW(y), 0);
     expect(VE_FEAD_TABLE_W - toplam).toBeLessThan(24);
+    // Izgara döneminin ölçüsü de yükseltme listesinde — o kart bu sürümde
+    // açılırsa yeni ölçüye oturur.
+    expect(VE_FEAD_TABLE_LEGACY).toContainEqual({ w: 870, h: 340 });
 
     // Kayıtlı bir proje eski ölçüde açılsaydı aynı sürümde iki farklı tablo
     // görünümü dolaşırdı — Kayış Yolu kartındaki kuralın aynısı.
@@ -1027,14 +1127,37 @@ describe('en küçük ölçü — kart içeriğinin altına inmiyor', () => {
     const def = componentDefs['fead-table'];
     expect(def.minWidth).toBe(VE_FEAD_TABLE_MIN_W);
     expect(def.minHeight).toBe(VE_FEAD_TABLE_MIN_H);
-    // GENİŞLİK TABANI SÜTUNLARDAN GERİ KALAMAZ: bir sütun eklenirse taban da
-    // büyümeli, yoksa yeni sütun ilk daraltmada sessizce kayar.
-    const toplam = fead.VE_FEAD_TABLE_COLS.reduce((a, c) => a + c.w, 0);
-    expect(VE_FEAD_TABLE_MIN_W).toBeGreaterThanOrEqual(toplam);
-    // YÜKSEKLİK TABANI: künye + iki satırlık başlık + İKİ veri satırı + Σ +
-    // ekleme şeridi. Altındaki her değer gövdeyi yapışkan iki şeridin
-    // arasında eziyor.
-    expect(VE_FEAD_TABLE_MIN_H).toBeGreaterThanOrEqual(24 + 50 + 2 * 34 + 24 + 36);
+    // GENİŞLİK TABANI ARTIK SÜTUN TOPLAMININ ALTINDA — VE BU BİR GERİLEME
+    // DEĞİL. Izgarada bir sütun sığmayınca SESSİZCE kayıyordu; kart
+    // listesinde bölgeler `minmax(taban, istenen)` ile daralıyor ve hiçbir
+    // alan kaybolmuyor, yalnız darlaşıyor. O yüzden ölçülen şey "toplamdan
+    // geri kalmamak" değil, HER BÖLGENİN kendi tabanını taşıması.
+    const toplam = ['kim', 'gir', 'coz', 'son']
+      .reduce((a, y) => a + fead.veFeadKartBolgeW(y), 0);
+    // Üç içerik bölgesi daralır; SİLME bölgesi daralmaz (tek bir ✕ düğmesi —
+    // daraltılacak bir şeyi yok, daralırsa düğme kırpılır).
+    const tabanlar = { kim: 150, gir: 210, coz: 160 };
+    const tabanTop = Object.keys(tabanlar).reduce((a, y) => a + tabanlar[y], 0)
+      + fead.veFeadKartBolgeW('son');
+    expect(VE_FEAD_TABLE_MIN_W).toBeGreaterThanOrEqual(tabanTop);
+    expect(VE_FEAD_TABLE_MIN_W).toBeLessThan(toplam);
+    // Ve CSS o tabanları GERÇEKTEN yazıyor — yazmazsa bölge 0'a kadar iner
+    // ve ızgaranın sessiz kaybı kart listesine taşınır.
+    const cssBlok = require('fs').readFileSync(
+      require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    ['kim', 'gir'].forEach((y) => {
+      expect(cssBlok).toContain('minmax(' + tabanlar[y] + 'px, var(--fead-krt-'
+                                + y + ', auto))');
+    });
+    // ÇÖZÜM BÖLGESİ `1fr`: tabanı var ama tercih ettiği genişlik yok — ARTAN
+    // NE İSE O. Sabit yazılsaydı genişletilen kartın sağında ölü bir şerit
+    // kalırdı (ölçüldü). Bu yüzden `--fead-krt-coz` CSS'te KULLANILMIYOR.
+    expect(cssBlok).toContain('minmax(' + tabanlar.coz + 'px, 1fr)');
+    expect(cssBlok).not.toContain('var(--fead-krt-coz');
+    expect(cssBlok).toContain('var(--fead-krt-son, auto);');
+    // YÜKSEKLİK TABANI: künye (iki satır sarabilir) + İKİ kart satırı +
+    // ekleme şeridi. Altındaki her değer listeyi künyenin altında eziyor.
+    expect(VE_FEAD_TABLE_MIN_H).toBeGreaterThanOrEqual(44 + 2 * 40 + 32);
     // Ve taban VARSAYILANI aşmıyor — aşsaydı kart açılışta kendi tabanının
     // altında doğardı.
     expect(VE_FEAD_TABLE_MIN_W).toBeLessThanOrEqual(VE_FEAD_TABLE_W);
@@ -1097,7 +1220,7 @@ describe('eklenen satır görünür kılınıyor', () => {
     expect(fead.veFeadRefreshCards()).toBeGreaterThan(0);
 
     const cagri = [];
-    document.querySelectorAll('.' + fead.VE_FEAD_TABLE_CLASS + ' tbody tr[data-ve-node]')
+    document.querySelectorAll('.' + fead.VE_FEAD_TABLE_CLASS + ' .ve-fead-krt[data-ve-node]')
       .forEach((tr) => { tr.scrollIntoView = (o) => cagri.push([tr.getAttribute('data-ve-node'), o]); });
 
     // Var olan bir satır: çağrılıyor ama `nearest` — görünen satır listeyi

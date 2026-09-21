@@ -562,9 +562,13 @@ describe('sahneler programın kendi bileşeni', () => {
   test('Kayış Tablosu sahnesi ÜRETİCİNİN çıktısı', () => {
     const f = sahneler.filter((x) => x.indexOf('ve-fead-tbl') >= 0)[0] || '';
     expect(f).not.toBe('');
-    // Sütun başlıkları tablonun KENDİ sütun listesinden gelmeli.
-    VE_FEAD_TABLE_COLS.map((c) => c.t).filter((t) => t && t !== '#')
-      .forEach((t) => { expect(f).toContain(t); });
+    // Alan adları tablonun KENDİ sütun listesinden gelmeli — sahne elle
+    // yazılmış bir iskelet değil, üreticinin çıktısı.
+    VE_FEAD_TABLE_COLS.filter((c) => ['gir', 'coz', 'ozet'].indexOf(c.yer) >= 0)
+      .forEach((c) => { expect(f).toContain(c.t); expect(f).toContain(c.kt || c.t); });
+    // ...ve KART LİSTESİ, ızgara değil: sahnede `<table>` yok.
+    expect(f).toContain('ve-fead-krt');
+    expect(f).not.toContain('<tbody');
     // ...ve satırlar örnek modelin GERÇEK kasnaklarını taşımalı: sahne canlı
     // çözülmüş bir modelin üstünde duruyor, boş bir iskelet değil.
     expect(f).toContain('Alternatör');
@@ -662,20 +666,51 @@ describe('sahneler programın kendi bileşeni', () => {
     expect(eksik).toEqual([]);
   });
 
+  // SAHNE SAYFAYA SIĞAR — ÖLÇÜLEREK, VARSAYILARAK DEĞİL
+  //
+  // Izgara döneminde Kayış Tablosu doğal hâlinde sayfadan genişti ve sahne
+  // `zoom` ile küçültülüyordu; ölçeklenmezse yatay kaydırma ekranda çare olur
+  // ama BASKIDA sağdaki sütunlar kaybolurdu (belge A4).
+  //
+  // KART LİSTESİNDE ARTIK SIĞIYOR (768 + 26 = 794 px ≤ 816 px), yani `zoom`
+  // basılmıyor. Kapı bu yüzden MEKANİZMAYI değil KURALI ölçüyor, ve asıl
+  // tehlike burada: ölçüm işlevi genişliği `<colgroup>`tan okuyordu ve kart
+  // listesinde `<col>` yok — 0 dönseydi ölçekleme SESSİZCE hiç uygulanmaz,
+  // sahne bugün sığdığı için hiçbir şey görünmezdi. O yüzden önce genişliğin
+  // GERÇEKTEN ölçülebildiği tutuluyor.
   test('geniş sahne SAYFAYA SIĞDIRILDI', () => {
-    // Kayış Tablosu doğal hâlinde sayfadan geniş. Ölçeklenmezse yatay kaydırma
-    // ekranda çare olur ama BASKIDA sağdaki sütunlar kaybolur — belge A4.
     const f = sahneler.filter((x) => x.indexOf('ve-fead-tbl') >= 0)[0] || '';
-    const z = /zoom:([\d.]+)/.exec(f);
-    expect(z).toBeTruthy();
-    const oran = Number(z[1]);
-    expect(oran).toBeGreaterThan(0.5);
-    expect(oran).toBeLessThan(1);
-    // ...ve ölçek GERÇEKTEN yetiyor: doğal genişlik × oran ≤ sayfa.
+    expect(f).not.toBe('');
     const dogal = KIT._gkNaturalWidth(f);
     const sayfa = KIT._gkPageWidth();
-    expect(dogal).toBeGreaterThan(sayfa);
+    expect(sayfa).toBeGreaterThan(0);
+    // GENİŞLİK OKUNABİLDİ — sıfır dönmek "sığıyor" demek DEĞİL, "ölçemedim".
+    expect(dogal).toBeGreaterThan(400);
+    const z = /zoom:([\d.]+)/.exec(f);
+    const oran = z ? Number(z[1]) : 1;
+    if (z) {
+      expect(oran).toBeGreaterThan(0.5);
+      expect(oran).toBeLessThan(1);
+    } else {
+      // Ölçek yoksa sebebi sığmak olmalı, ölçememek değil.
+      expect(dogal).toBeLessThanOrEqual(sayfa);
+    }
     expect(dogal * oran).toBeLessThanOrEqual(sayfa);
+  });
+
+  test('ölçekleme MEKANİZMASI hâlâ çalışıyor — sığmayan sahne küçülüyor', () => {
+    // Yukarıdaki kapı bugünkü kartın sığdığını ölçüyor; bu kapı sığmasaydı ne
+    // olacağını. İkisi ayrı olmak zorunda: `veGuideScene`in ölçekleme dalı
+    // bugün kılavuzda hiç koşmuyor ve sessizce bozulabilirdi.
+    const sayfa = KIT._gkPageWidth();
+    const genis = '<div class="ve-fead-krt-wrap" style="--fead-krt-kim:'
+      + (sayfa * 2) + 'px;"></div>';
+    const dogal = KIT._gkNaturalWidth(genis);
+    expect(dogal).toBeGreaterThan(sayfa);
+    const s = KIT.veGuideScene(genis, 'deneme');
+    const z = /zoom:([\d.]+)/.exec(s);
+    expect(z).toBeTruthy();
+    expect(dogal * Number(z[1])).toBeLessThanOrEqual(sayfa);
   });
 
   // SÖKÜCÜNÜN KENDİSİ — belge üzerinden ölçülemeyen iki kural.
@@ -863,12 +898,30 @@ describe('kılavuz ↔ program: kart adları', () => {
   // §4 tablonun sütunlarını tek tek anlatıyor. O liste kılavuza kopyalanmış
   // bir metin olduğu için, bir sütun adı programda değişirse kılavuz sessizce
   // eskirdi — kasnak kutuları kalktığında olan tam olarak buydu.
-  test('§4 tablonun sütunlarını programdaki adlarla anlatıyor', () => {
-    const adlar = VE_FEAD_TABLE_COLS.map((c) => c.t).filter((t) => t && t !== '#');
-    expect(adlar.length).toBeGreaterThan(6);
-    adlar.forEach((t) => { expect(DOC).toContain(t); });
-    // ...ve tablonun KENDİSİ o başlıkları basıyor (kapı tek yüzeyi ölçmesin).
-    adlar.forEach((t) => { expect(PANEL['Kayış Tablosu']).toContain(t); });
+  test('§4 tablonun alanlarını programdaki adlarla anlatıyor', () => {
+    // IZGARA KALKTI, BAĞ KALDI — ve güçlendi. Kart listesinde `<th>` yok;
+    // defterin adı artık alanın `title`ında, ekranda ise kısa hâli duruyor
+    // (kart okuması için "Ø eff", defterle karşılaştırma için "Efektif Çap").
+    // Kapı İKİSİNİ birden tutuyor: kılavuz defterin adını kullanmalı, kart da
+    // onu taşımalı — biri değişirse öteki sessizce eskimesin.
+    const deger = VE_FEAD_TABLE_COLS.filter((c) => ['gir', 'coz', 'ozet'].indexOf(c.yer) >= 0);
+    expect(deger.length).toBe(8);
+    deger.forEach((c) => {
+      expect(DOC).toContain(c.t);                             // kılavuz: defterin adı
+      expect(PANEL['Kayış Tablosu']).toContain(c.t);          // kart: `title`da
+      expect(PANEL['Kayış Tablosu']).toContain(c.kt || c.t);  // kart: ekranda
+    });
+    // YAPISAL alanların (sıra · ad · silme) ekranda etiketi yok, ama kılavuzun
+    // alan tablosunda ANILMAK zorunda — yoksa bir alan eklenir/çıkarılır ve §4
+    // sessizce eksik kalır. Satır SAYISI ölçülmüyor: X ile Y kılavuzda tek
+    // satırda anlatılıyor (aynı cinsten iki sayı) ve bu editoryal bir karar.
+    const s4 = DOC.slice(DOC.indexOf('id="g4"'), DOC.indexOf('id="g5"'));
+    const tablo = s4.slice(s4.indexOf('Kayış Tablosu alanları'));
+    const govde = tablo.slice(0, tablo.indexOf('</table>'));
+    const yapisal = { no: '#', ad: 'KASNAK', sil: '✕' };
+    VE_FEAD_TABLE_COLS.forEach((c) => {
+      expect(govde).toContain(yapisal[c.k] || c.t);
+    });
   });
 
   test('§4 ekleme/silme yüzeyini tablonun bastığı adla anlatıyor', () => {
@@ -1102,8 +1155,8 @@ describe('kılavuz ↔ Kayış Tablosu: Σsarım okumasının ADRESİ', () => {
   test('Σsarım okuması kartın ÜST künyesinde basılıyor', () => {
     const bas = KART.indexOf('Σsarım');
     expect(bas).toBeGreaterThan(-1);
-    // Üst künye kartın BAŞINDA: gövde tablosu (<tbody>) ondan sonra geliyor.
-    expect(bas).toBeLessThan(KART.indexOf('<tbody'));
+    // Üst künye kartın BAŞINDA: kasnak listesi ondan sonra geliyor.
+    expect(bas).toBeLessThan(KART.indexOf('ve-fead-krt-wrap'));
     expect(KART.slice(0, bas)).toContain('ve-fead-tbl-head');
   });
 

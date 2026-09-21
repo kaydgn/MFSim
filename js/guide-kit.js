@@ -428,15 +428,22 @@ function _gkPageWidth(){
 // genişlikleri veri olarak zaten HTML'de duruyor; sütun eklenince bu sayı
 // kendiliğinden değişir.
 function _gkNaturalWidth(html){
-  var m = String(html || '').match(/<col[^>]*width\s*:\s*(\d+(?:\.\d+)?)px/g);
+  var h = String(html || '');
+  var m = h.match(/<col[^>]*width\s*:\s*(\d+(?:\.\d+)?)px/g);
+  // KART LİSTESİ SÜTUN TAŞIMAZ: ızgara kalkınca genişlik `<colgroup>`tan değil
+  // kabın üstündeki `--fead-krt-*` bölge özelliklerinden geliyor. Ölçüm o
+  // taşıyıcıyı da okumazsa 0 döner ve ölçekleme SESSİZCE hiç uygulanmaz —
+  // sahne bugün sığdığı için ekranda hiçbir şey olmaz, sütunlar yalnız daha
+  // geniş bir kartta ve yalnız BASKIDA kaybolur.
+  if(!m || !m.length) m = h.match(/--fead-krt-[a-z]+\s*:\s*(\d+(?:\.\d+)?)px/g);
   if(!m || !m.length) return 0;
   var t = 0;
   m.forEach(function(x){
     var v = /(\d+(?:\.\d+)?)px/.exec(x);
     if(v) t += Number(v[1]);
   });
-  // Kartın kendi payı: kenarlıklar ve hücre boşluğu. Ölçü sütunlardan gelir,
-  // bu yalnız onun etrafındaki çerçeve.
+  // Kartın kendi payı: kenarlıklar ve hücre boşluğu. Ölçü sütunlardan/
+  // bölgelerden gelir, bu yalnız onun etrafındaki çerçeve.
   return t ? t + 26 : 0;
 }
 
