@@ -8603,6 +8603,178 @@ span.ve-fw-ro{ display:inline-block; }
 }
 .ve-fead-not b, .ve-fead-not strong{ color:var(--text-secondary); font-weight:600; }
 
+/* ══ FEAD PANEL DİLİ (.ve-fp-*) ═══════════════════════════════════════════
+   Kullanıcı bildirimi (2026-09-21, ekran görüntüsüyle): *"çok karışık ve kötü
+   duruyor. Yazılar kaymış, girdiler yanlış konumlanmış."*
+
+   Beş kusur ölçüldü ve dördü YAPISALDI:
+     P1 Pencere GENİŞ (fead-crank, VE_WIDE_PANEL_TYPES → 1040 px) ama içerik
+        tek sütun; `_feadSelect`in etiketi `flex:1` ile boşluğu yiyor ve
+        kontrol sağ uca fırlıyordu.
+     P2 Aynı pencerede İKİ etiket modeli — `_feadSelect` sol-sağ, `_feadGrid`
+        üst-alt. Göz sabit bir sütun kenarı bulamıyordu.
+     P3 Etiket `text-align:center`, giriş `text-align:right`. "Yazılar kaymış"
+        dediği şey tam olarak bu iki kelimelik uyuşmazlıktı.
+     P4 Neredeyse her alanın altında paragraf.
+     P5 Görünüm satır içi `style=` dizelerinde — 240 tane. Satır içi CSS DURUM
+        İFADE EDEMEZ: hiçbir FEAD panelinde `:hover` ya da `:focus` yoktu.
+
+   Çözüm Araç Performans → Motor panelinin kendi dili: bölüm başlığı + kurallı
+   çizgi, ETİKET-DEĞER satırı (paylaşılan sütun kenarı), birim etikette.
+   Üçüncü bir dil kurulmadı. Kural 14'ün (Kayış Tablosu) aynı gerekçesi. */
+
+/* Bölüm başlığı — eski renkli çubuklu kart başlığının yerine. */
+.ve-fp-sect{
+  display:flex; align-items:baseline; gap:7px; min-width:0;
+  font-size:var(--fs-tiny); font-weight:700; letter-spacing:var(--tracking-wide);
+  text-transform:uppercase; color:var(--text-secondary);
+  padding-bottom:5px; margin:0 0 9px;
+  border-bottom:1px solid var(--border-color);
+}
+.ve-fp-sect b{ font-weight:700; }
+.ve-fp-sect em{
+  font-style:normal; font-weight:400; text-transform:none; letter-spacing:0;
+  font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+/* TON, kartın "hesap için kritik" gibi ağırlığını taşıyor — eski renkli çubuk
+   bunu yapıyordu, kaldırmak bilgiyi kaldırmak olurdu (kural 26'nın tersi). */
+.ve-fp-sect[data-tone="danger"]  { border-bottom-color:var(--accent-danger); }
+.ve-fp-sect[data-tone="danger"] b{ color:var(--ink-danger); }
+.ve-fp-sect[data-tone="warning"] { border-bottom-color:var(--accent-warning); }
+.ve-fp-sect[data-tone="success"] { border-bottom-color:var(--accent-success); }
+.ve-fp-sect[data-tone="primary"] { border-bottom-color:var(--accent-primary); }
+.ve-fp-card{ margin:0 0 14px; }
+.ve-fp-card:last-child{ margin-bottom:0; }
+
+/* ALAN IZGARASI — saç teli: hücre KENARLIĞI değil `gap` + ızgara zemini.
+   Sarma olduğunda border satır uçlarında asılı çizgi bırakırdı.
+   `--fp-k` satır içinde yazılır ve VERİdir (sütun sayısı), görünüm değil —
+   `<colgroup>` genişlikleriyle aynı istisna. */
+.ve-fp-grid{
+  display:grid; grid-template-columns:repeat(var(--fp-k,1), minmax(0,1fr));
+  gap:1px; margin:0 0 9px;
+  background:var(--border-color); border:1px solid var(--border-color);
+}
+.ve-fp-f{
+  display:grid; grid-template-columns:minmax(0,1fr) minmax(72px,42%);
+  background:var(--bg-primary); min-width:0; align-items:stretch;
+}
+.ve-fp-l{
+  padding:5px 8px; min-width:0;
+  background:var(--bg-secondary); color:var(--text-secondary);
+  font-size:var(--fs-tiny); display:flex; align-items:center; gap:5px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.ve-fp-l u{
+  text-decoration:none; color:var(--text-muted);
+  font-family:var(--font-mono); font-size:var(--fs-micro); flex:none;
+}
+.ve-fp-inp, .ve-fp-sel{
+  width:100%; min-width:0; border:none; outline:none; box-sizing:border-box;
+  background:var(--bg-input); color:var(--text-primary);
+  font-family:var(--font-mono); font-size:var(--fs-tiny); padding:5px 8px;
+  text-align:right;
+}
+.ve-fp-sel{ text-align:left; font-family:inherit; }
+.ve-fp-inp--text{ text-align:left; font-family:inherit; }
+.ve-fp-inp--tight{ padding:3px 5px; }
+.ve-fp-inp[readonly]{ background:var(--bg-secondary); color:var(--text-muted); }
+/* DURUM — satır içi stilin ifade EDEMEDİĞİ şey. */
+.ve-fp-inp:hover, .ve-fp-sel:hover{ background:var(--bg-tertiary); }
+.ve-fp-inp:focus, .ve-fp-sel:focus{ box-shadow:var(--focus-ring); position:relative; z-index:1; }
+.ve-fp-f:focus-within .ve-fp-l{ color:var(--text-heading); }
+/* AÇILIR LİSTE SABİT PİKSEL DEĞİL — taban + esneme + tavan. Sabit genişlik
+   seçeneğin metnini kırpıyordu (ölçüldü: 169 px gerek / 120 px alan). */
+.ve-fp-f--sel{ grid-template-columns:minmax(0,1fr) minmax(150px,58%); }
+
+.ve-fp-chk{
+  display:flex; align-items:center; gap:8px; margin:0 0 9px; cursor:pointer;
+  padding:6px 8px; font-size:var(--fs-tiny); color:var(--text-secondary);
+  background:var(--bg-secondary); border:1px solid var(--border-color);
+}
+.ve-fp-chk:hover{ border-color:var(--border-hover); color:var(--text-primary); }
+.ve-fp-chk input{ width:14px; height:14px; flex:none; cursor:pointer; accent-color:var(--accent-primary); }
+
+/* ── SEKMELER + SABİT SAĞ SÜTUN (seçilen tasarım: B + C) ─────────────────
+   Sekme panelin UZUNLUĞUNU çözüyor, sağ sütun sekmenin ALDIĞI BAĞLAMI geri
+   veriyor: solda ne düzenlenirse düzenlensin sağda "bunun sonucu ne" duruyor.
+   Sağ sütun sekme değişince YENİDEN KURULMAZ (js: yalnız `hidden` çevrilir). */
+.ve-fp-split{ display:grid; grid-template-columns:minmax(0,1fr) 296px; gap:18px; align-items:start; }
+.ve-fp-main, .ve-fp-side{ min-width:0; }
+@media (max-width:900px){ .ve-fp-split{ grid-template-columns:minmax(0,1fr); } }
+
+.ve-fp-tabs{ display:flex; flex-wrap:wrap; border-bottom:1px solid var(--border-color); margin:0 0 12px; }
+.ve-fp-tab{
+  font:inherit; font-size:var(--fs-tiny); font-weight:600; cursor:pointer;
+  padding:6px 12px; color:var(--text-muted);
+  background:transparent; border:none; border-bottom:2px solid transparent;
+}
+.ve-fp-tab:hover{ color:var(--text-secondary); }
+.ve-fp-tab[aria-selected="true"]{ color:var(--accent-primary); border-bottom-color:var(--accent-primary); }
+.ve-fp-tab:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-fp-tab b{
+  font-family:var(--font-mono); font-size:var(--fs-micro); font-weight:600;
+  margin-left:5px; padding:0 4px; border-radius:6px;
+  background:var(--bg-tertiary); color:var(--text-muted);
+}
+.ve-fp-tab b[data-d="warn"]{ color:var(--ink-warning); }
+.ve-fp-tab b[data-d="err"]{ color:var(--ink-danger); }
+
+/* Künye şeridi — pencerenin cevabı en üstte (Motor'un özet şeridi kalıbı). */
+.ve-fp-inp--ton{
+  /* OKUNUR DEĞERİN ANLAMI — `data-ton` bir anlam adı, satır içi renk değil.
+     Aynı `--ink-*` jetonları, yani on tema tek renk dilini konuşuyor. */
+  font-weight:700; text-align:center;
+}
+.ve-fp-inp--ton[data-ton="warning"]{ color:var(--ink-warning); }
+.ve-fp-inp--ton[data-ton="danger"]{  color:var(--ink-danger); }
+.ve-fp-inp--ton[data-ton="success"]{ color:var(--ink-success); }
+
+.ve-fp-solve{
+  /* ÇÖZÜCÜ PENCERESİNİN TEK EYLEMİ — sağ sütunun dibinde, sekmeden bağımsız.
+     Satır içi stil `:hover`ı ve `:disabled`ı ifade edemiyordu: kapalı düğme
+     de açık düğme de fareye AYNI tepkiyi veriyordu (kural 14). */
+  width:100%; margin-top:10px; padding:13px 16px; border:none; cursor:pointer;
+  font-size:var(--fs-lg); font-weight:700; letter-spacing:0.03em;
+  background:var(--accent-warning); color:var(--on-warning);
+  transition:filter .12s ease;
+}
+.ve-fp-solve:hover:not(:disabled){ filter:brightness(1.08); }
+.ve-fp-solve:focus-visible{ outline:2px solid var(--focus-ring); outline-offset:2px; }
+.ve-fp-solve:disabled{
+  background:var(--bg-tertiary); color:var(--text-muted);
+  border:1px solid var(--border-color); cursor:not-allowed;
+}
+.ve-fp-solve-not{
+  padding:6px 8px; font-size:var(--fs-micro); color:var(--text-muted);
+  background:var(--bg-secondary); border:1px solid var(--border-color); border-top:none;
+}
+
+.ve-fp-sum{
+  display:flex; flex-wrap:wrap; gap:3px 10px; align-items:baseline;
+  font-family:var(--font-mono); font-size:var(--fs-micro); color:var(--text-muted);
+  padding:0 0 9px; margin:0 0 12px; border-bottom:1px solid var(--border-color);
+}
+.ve-fp-sum b{ color:var(--text-heading); font-weight:600; }
+
+.ve-fp-gate{
+  display:flex; align-items:center; gap:7px; padding:4px 0;
+  font-size:var(--fs-tiny); color:var(--text-secondary);
+  border-bottom:1px solid var(--border-color);
+}
+.ve-fp-gate:last-child{ border-bottom:none; }
+.ve-fp-gate i{ width:7px; height:7px; border-radius:50%; flex:none; background:var(--text-muted); }
+.ve-fp-gate[data-d="ok"] i  { background:var(--accent-success); }
+.ve-fp-gate[data-d="warn"] i{ background:var(--accent-warning); }
+.ve-fp-gate[data-d="no"] i  { background:var(--accent-danger); }
+.ve-fp-gate span{ margin-left:auto; font-family:var(--font-mono); font-size:var(--fs-micro); color:var(--text-muted); }
+
+.ve-fp-thumb{ border:1px solid var(--border-color); background:var(--bg-secondary); padding:6px; margin:0 0 12px; }
+.ve-fp-thumb svg{ display:block; width:100%; height:auto; }
+.ve-fp-thumb-bos{ padding:16px 8px; text-align:center; font-size:var(--fs-micro); color:var(--text-muted); }
+
+
 /* ══ KAYIŞ YOLU KARTI — BANT YOK, DENETİM ÇİZİMİN ÜSTÜNDE YÜZER ══════════
    Kart bir dönem dört yatay bant taşıyordu (iki seçici şeridi 44 px, durum
    şeridi 20 px, titreşim açıkken kazanç şeridi 20 px daha) ve her biri

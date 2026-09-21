@@ -371,6 +371,55 @@ olurdu.
     Kapı: `cp-fead.test.js` → *"BAĞLANTI satırı yok"* + *"HİÇBİRİNDE port
     yok"* + *"KASNAK rozet almaz"*.
 
+27. **ÇEKİRDEĞİN KUSURU KÖPRÜDE KAPATILIR — VE BÜTÜN ÇAĞRI YERLERİNDE.**
+    `peakEstimate` atalet adımına `driveRatio`yu İKİ KEZ uyguluyor (`alpha`da
+    bir, `speedRatio`da bir); düzeltme ataletleri `1/driveRatio` ile
+    ölçeklemek ve sözlüğü BÜTÜN kasnaklar için doldurmaktır
+    (`veFeadPeakInertias`). Krank kendi ataletini değil çevrimi kapatan
+    eşdeğeri taşır — kayış krank kasnağını hızlandırmaz. Geçici rejim aynı
+    sözlüğü okur (`veFeadScnInertias` ona delege eder); iki sözlük tutmak,
+    senaryonun gerginlik-ivme eğiminin özet tablosundan sessizce ayrışması
+    demekti. Kalibrasyon takımı bu sınıfı göremez: **arşivdeki Gates
+    örneklerinin tamamı `driveRatio = 1`.** Kapı:
+    `fead-denetim-bulgular.test.js` → *"bulgu 1"*, `cp-fead-summary.test.js`.
+
+28. **ZİNCİR ETKİN GERGİNLİK TAŞIR; AÇIKLIK FREKANSI GERÇEĞİNİ İSTER.**
+    Kasnak yüzey kuvveti hareketli kayışta `N = T − m′v²`, dolayısıyla
+    çekirdeğin `T = M/(dL/dθ)` zinciri etkin gerginliktir ve hubload · kapstan
+    oranı · güç akışı onunla TUTARLIDIR — dokunulmaz. Enine dalga denklemi
+    ise `c² = T/m′ + v²` ister: köprü farkı `veFeadSpanFreqRows`ta kapatır,
+    `TN` zincirin sayısı kalır, merkezkaç payı `TcN` ile ayrı taşınır. Gevşek
+    açıklığa (T ≤ 0) pay EKLENMEZ, yoksa negatif gerginlik uyarısı gizlenirdi.
+    **Bu düzeltme türetilmiştir, tedarikçiye kalibre DEĞİLDİR**: 11 Gates
+    raporunun hiçbirinde açıklık frekansı sayı olarak yok (grafik basılıyor).
+    Bir Gates açıklık frekans tablosu geldiğinde sınanacak ilk yer burasıdır.
+    Kapı: `fead-denetim-bulgular.test.js` → *"bulgu 2"*, `fead-vibration.test.js`.
+
+29. **RİJİT CİSİM MODU SABİT SAYIYLA AYIKLANAMAZ.** Frekansı analitik olarak
+    tam sıfır ama Jacobi artığı matris normuyla büyüyor ve çekirdeğin sabit
+    `1e-6 Hz` eşiğini aşabiliyor; aştığında `firstElasticHz` ~0 Hz döner.
+    Eşik `veFeadTorsionalNorm` içinde GÖRELİ (en büyük modun 10⁻⁶ katı) ve
+    **burulma modelinin ÜÇ çağrı yeri de** oradan geçer — panel/rapor, mod
+    listesi ve mod animasyonu. Üçüncüsü atlanırsa kullanıcının mod listesinin
+    başına rijit mod düşer ve "1. mod" animasyonu titreşim değil topyekûn
+    dönüş gösterir. Sayım sonuçta taşınır (ikinci bir sıfır özdeğer sessizce
+    elastik yapılmaz). Kapı: `fead-denetim-bulgular.test.js` → *"bulgu 3"*.
+
+30. **ÇEKİRDEKTE TUZAK, KÖPRÜDE KAPI OLAN ÜÇ ŞEY KAPISIZ BIRAKILMAZ.**
+    Sayı olarak geçilen `mu` (`analyze` `opt.muGrooved` arar), aynı adlı iki
+    kasnağın yüklerinin birleşmesi (`veFeadUniqueNames` tekilleştirir) ve duty
+    kapsamının %100'den sapması (rapor hüküm verir, çekirdek uyarmaz) —
+    üçü de bugün kapalı, ama kapatan şey bir sonraki düzenlemede sessizce
+    kalkabilir. Yorulma defterindeki **açık ayrışma** da kaydedilir, KAPATILMAZ:
+    `ribTensionExp = 1.13` (kontrollü kaburga deneyi) kullanılmıyor, mutlak
+    ömür `absolute.tensionExp = 0.96` koşuyor; değiştirmek kalibrasyon sabiti
+    C'yi yeniden uydurmayı gerektirir. Kapı: `fead-denetim-bulgular.test.js`
+    → *"bulgu 4·5·6"*.
+
+**Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
+Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı
+kuralların hepsi oradan çıktı.
+
 ## Referans dosyaları
 
 Değiştireceğin alanın dosyasını **oku**; hepsini birden okuma.

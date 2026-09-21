@@ -127,7 +127,7 @@ test('Kayış Tablosu kanvasta: kurulur, yazılır, sıra değişir', async ({ p
     return { L: b.beltLengthMm, altId: alt.id, od: alt.data.od };
   });
   // Alternatörün D sütunu: satırındaki üçüncü sayı alanı (X, Y, D)
-  const satir = kart.locator('tr', { hasText: 'Alternatör' }).first();
+  const satir = kart.locator('.ve-fead-krt[data-ve-node]', { hasText: 'Alternatör' }).first();
   const dHucre = satir.locator('input').nth(2);
   await dHucre.fill('63,5');
   await dHucre.dispatchEvent('change');

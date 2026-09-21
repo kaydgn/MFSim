@@ -217,8 +217,16 @@ function veGuideDocHTML(o){
 
 // Sahnenin çizilmesi için gereken kural önekleri — TEK LİSTE.
 var VE_GUIDE_SCENE_SEL = [
-  '.ve-fead-tbl',      // Kayış Tablosu
+  '.ve-fead-tbl',      // Kayış Tablosu (künye · ekleyici · ad düğmesi)
+  '.ve-fead-table',    // (tablo kabuğunun ikinci kökü)
+  '.ve-fead-krt',      // Kayış Tablosu'nun KART LİSTESİ (satır · bölge · alan)
+  '.ve-fp-',           // FEAD pencerelerinin ortak dili
+  '.ve-fead-kat',      // kanvasın Katmanlar paneli
+  '.ve-fead-kan',      // Kayış Yolu kartının kabuğu + durum rozeti
+  '.ve-fead-yuz',      // çizimin üstünde yüzen denetim çubuğu
+  '.ve-fead-not',      // panel açıklama satırı
   '.ve-rb-btn',        // şerit düğmesi
+  '.ve-rb-group-items',// düğmenin sarmalı (yerleşim)
   '.ve-rb-ico',
   '.ve-rb-lbl',
   '.mf-ico',           // ikon maskeleri
@@ -250,7 +258,8 @@ var VE_GUIDE_APPFIG_TOKENS = {
   '--on-warning': '#000', '--on-success': '#fff',
   '--accent-tint-6': 'rgba(36,66,95,.06)',  '--accent-tint-8': 'rgba(36,66,95,.08)',
   '--accent-tint-10': 'rgba(36,66,95,.10)', '--accent-tint-12': 'rgba(36,66,95,.12)',
-  '--accent-tint-15': 'rgba(36,66,95,.15)', '--accent-tint-22': 'rgba(36,66,95,.22)',
+  '--accent-tint-15': 'rgba(36,66,95,.15)', '--accent-tint-20': 'rgba(36,66,95,.20)',
+  '--accent-tint-22': 'rgba(36,66,95,.22)',
   '--accent-tint-35': 'rgba(36,66,95,.35)',
   '--dur-fast': '0s', '--shadow-lg': 'none', '--focus-ring': 'transparent',
   '--shadow-color': 'transparent',
@@ -262,6 +271,10 @@ var VE_GUIDE_APPFIG_TOKENS = {
 // körlemesine aramak YANLIŞ BLOĞU alıyor: styles.css'te başka bir `:root`
 // daha var ve ondan çıkan sahne renksiz çiziliyordu (ölçüldü).
 var _GK_THEME_RE = /:root\s*,\s*\[data-theme\s*=\s*["']?slate["']?\]/;
+
+// Sahne kutusunun kendi payı: iki yandan 12 px dolgu + 1 px kenarlık.
+// `veGuideSceneCSS`'teki `.gk-sahne` kuralıyla AYNI sayı olmak zorunda.
+var _GK_SAHNE_CERCEVE = 26;
 
 // Çalışan sayfadaki CSS metni. İki kaynak, çünkü iki dağıtım biçimi var: tek
 // dosya build'inde CSS satır içi <style>, modüler index.html'de <link>.
@@ -358,7 +371,12 @@ function veGuideSceneMissingTokens(reportCss){
   if(reportCss === undefined) reportCss = _gkReportCssNow();
   var rules = _gkTopRules(_gkStyleText(), VE_GUIDE_SCENE_SEL);
   var metin = rules.map(function(r){ return r.body; }).join('\n');
-  var kul = metin.match(/var\((--[a-z0-9-]+)/g) || [];
+  // `var(--x, yedek)` biçimi EKSİK SAYILMAZ: yedeğin kendisi tasarımın
+  // cevabıdır — jeton tanımlanmamışsa kural yine çalışır. Yedeksiz kullanım
+  // ise gerçekten karşılıksız kalır.
+  var kul = (metin.match(/var\(\s*--[a-z0-9-]+\s*[,)]/g) || [])
+    .filter(function(x){ return x.charAt(x.length - 1) === ')'; })
+    .map(function(x){ return 'var(' + x.slice(4).replace(/[\s,)]+$/, ''); });
   var rap = String(reportCss || '');
   var eksik = [];
   kul.forEach(function(v){
@@ -400,11 +418,48 @@ function veGuideSceneCSS(reportCss){
     + ' font-family:system-ui,-apple-system,"Segoe UI",sans-serif;'
     + ' color:var(--text-primary); line-height:1.45;}\n'
     + '.appfig .gk-sahne *{box-sizing:border-box;}\n'
-    + '.appfig .gk-sahne button, .appfig .gk-sahne select,'
-    + ' .appfig .gk-sahne input{cursor:default;}\n'
+    // MUTLAK KONUMLU PARÇA SAHNEDE AKIŞA DÖNER. Katman paneli kanvasın
+    // üstünde yüzmek için `position:absolute`; sahnede saracak bir kutu yok,
+    // akıştan çıkıyor ve şekil 22 px yüksekliğe çöküyordu (baskıda ölçüldü).
+    // Belge bir ekran değil: parça, anlatıldığı yerde AKIŞTA durmalı.
+    + '.appfig .gk-sahne > [class*="-kat"], .appfig .gk-sahne > [class*="-panel"]'
+    + '{position:static !important; right:auto; bottom:auto; max-height:none;}\n'
+    // TEK SIRALIK ŞERİTLER SARAR. Kanvas kartının alt şeridi (seçiciler +
+    // özet) uygulamada bir satıra sığıyor; belgenin sütunu daha dar ve şerit
+    // 48 px taşıyordu (baskıda ölçüldü — sağdaki özet kırpılıyordu). Sarmak
+    // doğru çare: içerik aynı, yalnız iki satıra iniyor.
+    // TEK SIRALIK ŞERİTLER SARAR, HÜCRELER DARALABİLİR. Kanvas kartının alt
+    // şeridi uygulamada bir satıra sığıyor; belgenin sütunu daha dar ve özet
+    // 48 px taşıyordu (baskıda ölçüldü — "Σsarım 360,0°" sağdan kırpılıyordu).
+    // `min-width:0` olmadan esnek kutular içeriklerinden küçülemez, yani
+    // sarma tek başına yetmiyor.
+    + '.appfig .gk-sahne [style*="display:flex"]{flex-wrap:wrap;}\n'
+    // `min-width:0` HER torunda: esnek kutunun çocuğu varsayılan
+    // `min-width:auto` ile içeriğinden küçülemez. Satır içi stile bakan bir
+    // seçici yetmiyordu — taşan span, `display:flex`i SINIFTAN alan bir
+    // düğmenin içindeydi (baskıda ölçülerek bulundu).
+    + '.appfig .gk-sahne *{min-width:0;}\n'
+    // DÜĞME İÇERİĞİNE GÖRE GENİŞLER. Uygulamada kart yeniden boyutlanabiliyor
+    // ve şerit düğmeleri sabit genişlikte duruyor; belgede kart sabit ve
+    // düğmenin yazısı dışarı taşıyordu (26 px, baskıda ölçüldü). Belge
+    // etkileşimsiz olduğu için düğmenin ölçüsünü korumanın karşılığı yok.
+    + '.appfig .gk-sahne button{width:auto; flex:0 0 auto; white-space:nowrap;}\n'
+    // ÖLÜ: fare hiçbir şeye ulaşmaz. `_gkFlatten` klavyeyi ve işleyicileri
+    // kesiyor; bu da fareyi. İkisi birden olmadan biri açığı kapatmıyor.
+    + '.appfig .gk-sahne, .appfig .gk-sahne *{pointer-events:none;}\n'
+    + '.appfig .gk-sahne input, .appfig .gk-sahne select,'
+    + ' .appfig .gk-sahne button, .appfig .gk-sahne textarea{cursor:default;}\n'
     + '.gk-cip{display:inline-flex; vertical-align:middle; margin:0 2px;'
-    + ' line-height:normal;}\n'
-    + '.gk-cip button{cursor:default; pointer-events:none;}\n'
+    + ' line-height:normal; pointer-events:none;}\n'
+    + '.gk-cip *{pointer-events:none;}\n'
+    // BASKI: belge ÇIKTI ALINIP okunuyor (kullanıcı kararı). Şekil sayfaya
+    // sığıyorsa bölünmez; sığmıyorsa bölünebilmek ZORUNDA — `break-inside:
+    // avoid` sayfadan uzun bir şekli kendi sayfasına atar ve orada yine taşar,
+    // yani alt kısmı hiç basılmaz. Kart boyutunda şekiller (veGuideCard) bu
+    // yüzden tercih ediliyor; yine de uzun kalan olursa bölünsün.
+    + '@media print{.appfig{break-inside:auto;}'
+    + ' .appfig .gk-sahne{overflow:visible; break-inside:auto;}'
+    + ' .appfig figcaption{break-before:avoid;}}\n'
     + rules.map(_gkScopeRule).join('\n');
 }
 
@@ -428,23 +483,132 @@ function _gkPageWidth(){
 // genişlikleri veri olarak zaten HTML'de duruyor; sütun eklenince bu sayı
 // kendiliğinden değişir.
 function _gkNaturalWidth(html){
-  var h = String(html || '');
-  var m = h.match(/<col[^>]*width\s*:\s*(\d+(?:\.\d+)?)px/g);
-  // KART LİSTESİ SÜTUN TAŞIMAZ: ızgara kalkınca genişlik `<colgroup>`tan değil
-  // kabın üstündeki `--fead-krt-*` bölge özelliklerinden geliyor. Ölçüm o
-  // taşıyıcıyı da okumazsa 0 döner ve ölçekleme SESSİZCE hiç uygulanmaz —
-  // sahne bugün sığdığı için ekranda hiçbir şey olmaz, sütunlar yalnız daha
-  // geniş bir kartta ve yalnız BASKIDA kaybolur.
-  if(!m || !m.length) m = h.match(/--fead-krt-[a-z]+\s*:\s*(\d+(?:\.\d+)?)px/g);
-  if(!m || !m.length) return 0;
-  var t = 0;
-  m.forEach(function(x){
-    var v = /(\d+(?:\.\d+)?)px/.exec(x);
-    if(v) t += Number(v[1]);
-  });
-  // Kartın kendi payı: kenarlıklar ve hücre boşluğu. Ölçü sütunlardan/
-  // bölgelerden gelir, bu yalnız onun etrafındaki çerçeve.
-  return t ? t + 26 : 0;
+  var s = String(html || '');
+  var topla = function(m){
+    var t = 0;
+    m.forEach(function(x){
+      var v = /(\d+(?:\.\d+)?)px/.exec(x);
+      if(v) t += Number(v[1]);
+    });
+    return t;
+  };
+  // 1) SÜTUNLU KART (ızgara): ölçü `<colgroup>`tan toplanır. Pay BASKIDA
+  //    ÖLÇÜLDÜ (`fead-kilavuz-baski.spec.js`) — sütun toplamı hücre payını
+  //    İÇERMEDİĞİ için 26 yetmiyordu, tablo sağdan kırpılıyordu.
+  var m = s.match(/<col[^>]*width\s*:\s*(\d+(?:\.\d+)?)px/g);
+  if(m && m.length) return topla(m) + 60;
+  // 2) KART LİSTESİ SÜTUN TAŞIMAZ: ızgara kalkınca genişlik `<colgroup>`tan
+  //    değil kabın üstündeki `--fead-krt-*` bölge özelliklerinden geliyor.
+  //    Ölçüm o taşıyıcıyı okumazsa 0 döner ve ölçekleme SESSİZCE hiç
+  //    uygulanmaz — sahne bugün sığdığı için ekranda hiçbir şey olmaz,
+  //    sütunlar yalnız daha geniş bir kartta ve yalnız BASKIDA kaybolur.
+  //    TOPLAM OKUNUR, BÖLGELER TOPLANMAZ: çözüm bölgesi `1fr` olduğu için
+  //    kendi genişliğini yazmıyor ve bölgeleri toplamak onu ATLIYOR
+  //    (ölçüldü: 768 yerine 534). Kart toplamı ayrıca basıyor.
+  //    PAY BURADA DA 60 VE SEBEBİ AYNI: 26 "bölge genişlikleri hücre payını
+  //    zaten içeriyor" diye seçilmişti ve ÖLÇÜM onu çürüttü — payın büyük
+  //    kısmı hücre boşluğu değil SAHNENİN KENDİ ÇERÇEVESİ (`.appfig` +
+  //    `.gk-sahne`).
+  var en = /--fead-krt-en\s*:\s*(\d+(?:\.\d+)?)px/.exec(s);
+  if(en) return Number(en[1]) + 60;
+  // 3) SÜTUNSUZ KART (kanvas şeması): kendi dış kutusunun width'i. Bu dal
+  //    olmadan kanvas kartları sayfadan 48 px taşıyordu (baskıda ölçüldü).
+  var w = /^[\s\S]{0,400}?width\s*:\s*(\d{3,4})px/.exec(s);
+  return w ? Number(w[1]) + 26 : 0;
+}
+
+// ── SAHNE ÖLÜDÜR: GÖRÜNÜR, TIKLANMAZ ──────────────────────────────────────
+//
+// Kullanıcı isteği (2026-09-21): *"interaktif şeyler yapmışsın, işte
+// tıklanabiliyor falan filan. Bunlara gerek yok, yani, düz ekran görüntüsü
+// olsun. Kullanıcı kılavuzunu genel olarak çıktı alacağız."*
+//
+// Belge bir KILAVUZ, bir program kopyası değil: açılır liste açılıyor, alana
+// yazılabiliyor, düğme basılabiliyor olmak kullanıcıya belgeyi program sanma
+// hakkı veriyordu. Bileşen aynen çizilmeye devam eder (resmin değeri programa
+// benzemesinde) ama HİÇBİR ŞEY YAPMAZ.
+//
+// Üç şey yapılır ve üçü de ayrı bir sebeple:
+//   1. Olay işleyicileri SÖKÜLÜR — belgede çalışacak bir JS yok, ama dosyada
+//      yük ve bir gün bir bağlamda çalışırlarsa kılavuz kullanıcının modelini
+//      değiştirmeye kalkardı.
+//   2. Odak sırasından çıkarılır (`tabindex="-1"`) — fare `pointer-events`
+//      ile kesiliyor, klavye kesilmezse Tab'la alana girilip yazılabilirdi.
+//   3. Kimlikler SAHNE NUMARASIYLA ÖNEKLENİR — aynı düğüm iki sahnede
+//      çizilince `id` tekrarlanıyor; tekrarlı kimlik HTML'i geçersiz yapar ve
+//      `label[for]` yanlış alana bağlanır.
+function _gkFlatten(html, no){
+  var s = String(html || '');
+  s = s.replace(/\s+on[a-z]+\s*=\s*"[^"]*"/gi, '')
+       .replace(/\s+on[a-z]+\s*=\s*'[^']*'/gi, '');
+  s = s.replace(/<(input|select|textarea|button|a)(\s|>)/gi, '<$1 tabindex="-1"$2');
+  s = s.replace(/<input(\s)/gi, '<input readonly$1');
+  s = s.replace(/\b(id|for)="([^"]*)"/gi, '$1="gk' + no + '-$2"');
+  return s;
+}
+
+// ── BİR KARTI SÖK ─────────────────────────────────────────────────────────
+//
+// Panel üreticileri bütün kartları TEK gövdede veriyor ve o gövde A4 sayfadan
+// uzun olabiliyor (gergi paneli ölçüldü: ~1700 px, sayfa ~1050). Baskıda bir
+// şekil sayfaya sığmıyorsa ya kırpılır ya da kendi başına bir sayfaya atılıp
+// yine taşar. Bu yüzden kılavuz PANELİ değil, anlattığı KARTI gösterir —
+// şekil, açıkladığı paragrafın yanında durur.
+//
+// Söküm başlıkla yapılır çünkü başlık zaten kılavuzun metninde geçiyor
+// (Ek A'nın kart adları kapısı onu programa karşı tutuyor); ikinci bir
+// kimlik uydurmak, kartın adı değişince sessizce boş şekil demekti.
+function veGuideCard(panelHtml, baslik){
+  var s = String(panelHtml || '');
+  var i = s.indexOf('>' + baslik + '<');
+  if(i < 0) return '';
+  // ── KART KUTUSU ARTIK BİR SINIF, SATIR İÇİ ÇERÇEVE DEĞİL ────────────────
+  // FEAD panelleri ortak dile geçince (`.ve-fp-*`) kart kutusu
+  // `<section class="ve-fp-card">` oldu ve satır içi `border:1px solid`
+  // KALMADI. Aşağıdaki eski yol o çapayı arıyor, bulamayınca panelin İLK
+  // div'ine kadar geri yürüyor ve ALAKASIZ bir parça döndürüyordu —
+  // "Algılanan Model" sahnesi sessizce kayboldu (ölçüldü: kılavuzda o
+  // yüzeyin resmi hiç yok, hata da çıkmıyor).
+  var sec = _gkKapsayan(s, i, '<section', '</section>');
+  if(sec) return sec;
+  // Eski yol: kendi zeminini/çerçevesini satır içi yazan div (hâlâ öyle
+  // çizen yüzeyler var — kaldırılırsa onlar sessizce kaybolur).
+  var bas = s.lastIndexOf('<div', i);
+  while(bas > 0){
+    var onceki = s.lastIndexOf('<div', bas - 1);
+    if(s.slice(bas, i).indexOf('border:1px solid') >= 0) break;
+    if(onceki < 0) break;
+    bas = onceki;
+  }
+  if(bas < 0) return '';
+  return _gkKapat(s, bas, '<div', '</div>') || '';
+}
+
+// Verilen konumu SARAN en yakın etiketi bul ve derinlik sayarak kapat.
+// `null` döner: o etikete hiç girilmemişse ya da kapanışı başlığı sarmıyorsa
+// (yani başlık o kutunun İÇİNDE değil, ondan sonra geliyorsa).
+function _gkKapsayan(s, i, ac, kapa){
+  var bas = s.lastIndexOf(ac, i);
+  while(bas >= 0){
+    var tam = _gkKapat(s, bas, ac, kapa);
+    if(tam && bas + tam.length > i) return tam;
+    bas = s.lastIndexOf(ac, bas - 1);
+  }
+  return null;
+}
+
+function _gkKapat(s, bas, ac, kapa){
+  var d = 0, k = bas;
+  while(k < s.length){
+    if(s.substr(k, ac.length) === ac){ d++; k += ac.length; continue; }
+    if(s.substr(k, kapa.length) === kapa){
+      d--; k += kapa.length;
+      if(d === 0) return s.slice(bas, k);
+      continue;
+    }
+    k++;
+  }
+  return null;
 }
 
 // CÜMLE İÇİNDE DÜĞME. Sahne bir figürdür ve okuma akışını böler; "şeritteki
@@ -454,9 +618,11 @@ function _gkNaturalWidth(html){
 // şablonunda YALNIZ jeton bağlıyor (kutu/kenar stili taşımıyor), dolayısıyla
 // satır içi bir kabuğa da takılabiliyor. İkinci bir jeton kabuğu açmak, aynı
 // paletin iki yerden tanımlanması demekti.
+var _gkCipNo = 0;
 function veGuideBtn(html){
   if(!html) return '';
-  return '<span class="appfig gk-cip">' + html + '</span>';
+  _gkCipNo++;
+  return '<span class="appfig gk-cip">' + _gkFlatten(html, 'c' + _gkCipNo) + '</span>';
 }
 
 // Şekil sayacı — elle "Şekil 3" yazmak, araya bir sahne girdiğinde sessizce
@@ -481,12 +647,23 @@ function veGuideScene(html, altyazi, dogalEn){
   var en = Number(dogalEn);
   if(!Number.isFinite(en) || en <= 0) en = _gkNaturalWidth(html);
   if(Number.isFinite(en) && en > 0){
-    var sayfa = _gkPageWidth();
-    if(sayfa > 0 && en > sayfa)
-      stil = ' style="zoom:' + (Math.floor(sayfa / en * 100) / 100) + '"';
+    // SAHNENİN KENDİ ÇERÇEVESİ DÜŞÜLÜR. Ölçek sayfa genişliğiyle
+    // karşılaştırılıyordu, oysa içerik sahnenin dolgusu ve kenarlığı İÇİNE
+    // sığmak zorunda: Kayış Tablosu 49 px taşıyordu (baskıda, öge bazlı
+    // ölçüldü — sağdaki sütun kırpılıyordu).
+    var sayfa = _gkPageWidth() - _GK_SAHNE_CERCEVE;
+    if(sayfa > 0 && en > sayfa){
+      stil = ' style="zoom:' + (Math.floor(sayfa / en * 1000) / 1000) + '"';
+    } else if(en > 0){
+      // KENDİ TASARIM GENİŞLİĞİNDE. Sayfaya GERİLEN bir kart programdakinden
+      // başka bir şey oluyor: tek satıra kurulmuş şeritler sütunu bulamayıp
+      // taşıyor (kanvas kartında 48 px ölçüldü, sağdaki özet kırpılıyordu).
+      // Kart kendi ölçüsünde, ortalanmış duruyor — ekranda olduğu gibi.
+      stil = ' style="max-width:' + Math.round(en) + 'px; margin:0 auto;"';
+    }
   }
   return '<figure class="appfig"><div class="gk-sahne" data-gk-sahne="'
-    + _gkSahneNo + '"' + stil + '>' + html + '</div>'
+    + _gkSahneNo + '"' + stil + '>' + _gkFlatten(html, _gkSahneNo) + '</div>'
     + '<figcaption><b>Şekil ' + _gkSahneNo + ' —</b> ' + (altyazi || '')
     + '</figcaption></figure>';
 }
@@ -735,7 +912,7 @@ if (typeof module !== 'undefined' && module.exports) {
     _gkPageWidth: _gkPageWidth, _gkNaturalWidth: _gkNaturalWidth,
     veGuideSceneCSS: veGuideSceneCSS, veGuideScene: veGuideScene,
     veGuideSceneReset: veGuideSceneReset, veGuideSceneCount: veGuideSceneCount,
-    veGuideBtn: veGuideBtn,
+    veGuideBtn: veGuideBtn, veGuideCard: veGuideCard, _gkFlatten: _gkFlatten,
     veGuideSceneMissingTokens: veGuideSceneMissingTokens
   };
 }

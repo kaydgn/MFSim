@@ -820,6 +820,16 @@ describe('görünüm CSS\'te, satır içinde değil', () => {
     // kullanılmıyor — kart onu basmıyor da. Bassaydı hiçbir şey yapmayan bir
     // sayı dolaşırdı ve bir sonraki okuyan onu kaynak sanırdı.
     expect(h).not.toContain('--fead-krt-coz');
+    // TOPLAM İSE BASILIYOR ve okuyanı var: kartı EKRAN DIŞINDA yerleştiren
+    // kılavuz sahne ölçekleyicisi (`guide-kit.js` → `_gkNaturalWidth`).
+    // Bölgeleri toplamak çözüm bölgesini ATLIYOR — ölçüldü, 768 yerine 534,
+    // yani sahne sığmadığı hâlde "sığıyor" sayılırdı ve baskıda kırpılırdı.
+    expect(h).toContain('--fead-krt-en:' + fead.veFeadKartBolgeW() + 'px');
+    expect(fead.veFeadKartBolgeW()).toBe(
+      ['kim', 'gir', 'coz', 'son'].reduce((a, y) => a + fead.veFeadKartBolgeW(y), 0));
+    // ...ve KÜNYEYE giden sütun toplama GİRMİYOR (listede yer kaplamıyor).
+    expect(fead.veFeadKartBolgeW()).toBeLessThan(
+      fead.VE_FEAD_TABLE_COLS.reduce((a, c) => a + c.w, 0));
     // Eski kartın imzası: her hücrede aksanın sabit yedeği. Geri gelirse tema
     // değişikliği tabloya geçmez — projenin kendi kuralı (--accent-tint-*).
     expect(h).not.toMatch(/#3b82f6|#f59e0b|#0f1115|#ef4444|#22c55e/);

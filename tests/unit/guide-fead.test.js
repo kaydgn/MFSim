@@ -156,8 +156,13 @@ describe('kozmetik raporla aynı', () => {
     // Tanımsız bir var() "invalid at computed-value time"dır ve kalıtılan
     // `stroke` için sonuç `none` demektir: çizim SESSİZCE kaybolur, konsol
     // temiz kalır. Raporda ölçülmüş kusur sınıfı.
-    const kullanilan = [...new Set((DOC.match(/var\((--[a-z0-9-]+)/g) || [])
-      .map((s) => s.slice(4)))];
+    // YEDEKLİ KULLANIM SAYILMAZ: `var(--x, 44px)` tanımsızken de doğru çalışır
+    // — yedek zaten tasarımın cevabı. Yedeksiz kullanım ise gerçekten boşa
+    // düşer. (Uygulamanın `--fead-kat-alt`ı böyle: hiç tanımlı değil, her
+    // kullanımı yedekli.)
+    const kullanilan = [...new Set((DOC.match(/var\(\s*--[a-z0-9-]+\s*[,)]/g) || [])
+      .filter((x) => x.endsWith(')'))
+      .map((x) => x.slice(4).replace(/[\s,)]+$/, '')))];
     const eksik = kullanilan.filter((j) => !DOC.includes(j + ':'));
     expect(eksik).toEqual([]);
   });
@@ -525,7 +530,8 @@ describe('sahneler programın kendi bileşeni', () => {
       'şerit düğmesi': 've-rb-btn',
       'kasnak paneli': 'Devir Sınırları',
       'gergi paneli': 'Avara Kasnağının Merkezi',
-      'kayış paneli': 'Kayış Tipine Bağlı Çıktılar',
+      'kayış künyesi': 'Gereken efektif boy',
+      'kayış kataloğu': 'gereken boya en yakınlar',
       'çözücü paneli': 'Algılanan Model',
       'rapor paneli': 'Detaylı Raporu',
       'dönüş yönü': 'Kayış Dönüş Yönü'
@@ -602,9 +608,12 @@ describe('sahneler programın kendi bileşeni', () => {
     // Sürücü kasnak seçilseydi "Katalog Modeli" ve "Devir Sınırları" kartları
     // hiç çizilmezdi ve altyazı olmayan bir şeyi anlatırdı (kart-adı kapısında
     // ölçülmüş sınıf).
+    // PANEL ARTIK KART KART SAHNELENİYOR (baskı için: bütün panel A4'ten uzun,
+    // 1122 px ölçüldü). İki kart iki ayrı şekil — kapı ikisini de arar.
+    const temas = sahneler.filter((x) => x.indexOf('Temas Tarafı') >= 0)[0] || '';
+    expect(temas).not.toBe('');
     const f = sahneler.filter((x) => x.indexOf('Devir Sınırları') >= 0)[0] || '';
     expect(f).not.toBe('');
-    expect(f).toContain('Temas Tarafı');
     // AYIRT EDİCİ: aksesuar künye seçicisi YALNIZ `VE_FEAD_ACC_TYPE`'ta karşılığı
     // olan tiplerde çizilir (alternatör · klima). "Katalog Modeli" bu işi
     // GÖRMÜYOR — sürücü kasnakla ölçüldü, o kart orada da çıkıyor ve mutasyon
@@ -613,7 +622,7 @@ describe('sahneler programın kendi bileşeni', () => {
     const tipler = Object.keys(VE_FEAD_ACC_TYPE);
     expect(tipler.length).toBeGreaterThan(0);
     // Sahnedeki düğüm gerçekten o tiplerden birine ait olmalı.
-    const id = (f.match(/ve-fead-od-([\w-]+)/) || [])[1] || '';
+    const id = (f.match(/ve-fead-(?:od|optimumRpm)-([\w-]+)/) || [])[1] || '';
     const dugum = (global.nodes || []).concat(GF._gfOrnekCoz().pack.nodes)
       .filter((n) => n.id === id)[0];
     expect(dugum).toBeTruthy();
@@ -652,11 +661,20 @@ describe('sahneler programın kendi bileşeni', () => {
     // İKİ YÜZEY BİRDEN: `@media`'ya girmeyi kapatan mutasyon kuralı SIZDIRMIYOR,
     // parantez sayacını kaydırıp SONRAKİLERİ düşürüyor — ve yalnız tablo
     // sınıflarına bakan bir kapı o kaymayı ıskalayabiliyordu (ölçüldü).
-    const sinif = [...new Set([
-      ...(kaynak.match(/\.ve-fead-tbl[\w-]*/g) || []),
-      ...(kaynak.match(/\.ve-rb-btn[\w-]*/g) || []),
-      ...(kaynak.match(/\.ve-rb-(?:ico|lbl)[\w-]*/g) || [])
-    ])];
+    // SINIF LİSTESİ SABİT DEĞİL, SAHNELERİN KENDİSİNDEN. Elle yazılmış bir
+    // önek listesi yeni bir bileşende sessizce eksik kalıyor: katman paneli
+    // (`.ve-fead-kat`) ve panel açıklama satırı (`.ve-fead-not`) sahnelere
+    // girdiğinde kuralları hiç sökülmedi ve panel STİLSİZ çizildi — başlıklar
+    // bitişik, kutucuklar çıplak (ölçüldü, render'a bakılarak görüldü).
+    // Artık ölçülen şey: sahnede GEÇEN her sınıfın kaynakta kuralı varsa,
+    // o kural belgede de olmalı.
+    const kullanilan = [...new Set(
+      sahneler.join('').match(/class="([^"]*)"/g) || []
+    )].join(' ').match(/ve-[\w-]+|mf-ico[\w-]*|sw-panel[\w-]*/g) || [];
+    const sinif = [...new Set(kullanilan)]
+      .map((c) => '.' + c)
+      .filter((c) => kaynak.indexOf(c + '{') >= 0 || kaynak.indexOf(c + ' ') >= 0
+                  || kaynak.indexOf(c + ',') >= 0 || kaynak.indexOf(c + ':') >= 0);
     expect(sinif.length).toBeGreaterThan(18);
     const eksik = sinif.filter((c) => belgeCss.indexOf('.appfig ' + c) < 0
                                    && belgeCss.indexOf(c + ' ') < 0
@@ -686,6 +704,16 @@ describe('sahneler programın kendi bileşeni', () => {
     expect(sayfa).toBeGreaterThan(0);
     // GENİŞLİK OKUNABİLDİ — sıfır dönmek "sığıyor" demek DEĞİL, "ölçemedim".
     expect(dogal).toBeGreaterThan(400);
+    // PAY SAHNENİN ÇERÇEVESİNİ DE SAYIYOR. Bir dönem kart listesine 26
+    // veriliyordu ("bölge genişlikleri hücre payını zaten içeriyor") ve
+    // ölçüm onu çürüttü: payın büyük kısmı hücre boşluğu değil `.appfig` +
+    // `.gk-sahne` çerçevesi, Şekil 1 baskıda sağdan 16 px taşıyordu. Kapı
+    // artık iki taşıyıcının AYNI payı kullandığını tutuyor — biri sessizce
+    // küçülürse baskıda o sahne kırpılır ve Node'da hiçbir şey görünmez.
+    const bolgeTop = ['kim', 'gir', 'son']
+      .reduce((a, y) => a + CP.veFeadKartBolgeW(y), 0)
+      + CP.veFeadKartBolgeW('coz');
+    expect(dogal - bolgeTop).toBe(60);
     const z = /zoom:([\d.]+)/.exec(f);
     const oran = z ? Number(z[1]) : 1;
     if (z) {
@@ -703,7 +731,7 @@ describe('sahneler programın kendi bileşeni', () => {
     // olacağını. İkisi ayrı olmak zorunda: `veGuideScene`in ölçekleme dalı
     // bugün kılavuzda hiç koşmuyor ve sessizce bozulabilirdi.
     const sayfa = KIT._gkPageWidth();
-    const genis = '<div class="ve-fead-krt-wrap" style="--fead-krt-kim:'
+    const genis = '<div class="ve-fead-krt-wrap" style="--fead-krt-en:'
       + (sayfa * 2) + 'px;"></div>';
     const dogal = KIT._gkNaturalWidth(genis);
     expect(dogal).toBeGreaterThan(sayfa);
@@ -720,6 +748,71 @@ describe('sahneler programın kendi bileşeni', () => {
   // üzerinden kurulan bir kapı boş yere yeşil kalırdı — kaynak bugün öyle
   // dizildiği için, kural doğru olduğu için değil. Girdi burada sentetik ve
   // hatayı görünür kılıyor.
+  // ── KART SÖKÜCÜSÜ: KUTU ARTIK BİR SINIF ────────────────────────────────
+  // FEAD panelleri ortak dile geçince (`.ve-fp-*`) kart kutusu
+  // `<section class="ve-fp-card">` oldu ve satır içi `border:1px solid`
+  // kalmadı. Sökücü yalnız o çapayı arıyordu: bulamayınca panelin İLK
+  // div'ine kadar geri yürüyüp ALAKASIZ bir parça döndürdü ve "Algılanan
+  // Model" sahnesi kılavuzdan SESSİZCE düştü — belge yine üretildi, hata
+  // çıkmadı, yalnız o yüzeyin resmi yok.
+  //
+  // Yukarıdaki "her ANA yüzeyin bir sahnesi var" kapısı bunu yakalıyor ama
+  // ancak GERÇEK panel üzerinden; buradaki girdi sentetik ve her iki kutu
+  // biçimini de ayrı ayrı ölçüyor.
+  describe('kart sökücüsü — iki kutu biçimi de', () => {
+    const govde = '<div class="ve-fp-sect"><b>Algılanan Model</b></div>'
+      + '<p>içerik</p>';
+
+    test('SINIFLI kutu: <section class="ve-fp-card"> sökülür', () => {
+      const panel = '<div class="ust">önce</div>'
+        + '<section class="ve-fp-card">' + govde + '</section>'
+        + '<section class="ve-fp-card"><div class="ve-fp-sect"><b>Başka</b></div></section>';
+      const k = KIT.veGuideCard(panel, 'Algılanan Model');
+      expect(k).toContain('Algılanan Model');
+      expect(k).toContain('içerik');
+      expect(k.indexOf('<section')).toBe(0);
+      expect(k).not.toContain('Başka');            // KOMŞU kart sızmadı
+      expect(k).not.toContain('önce');             // önceki kabuk da
+    });
+
+    test('İÇ İÇE section: en yakın SARAN kutu seçilir', () => {
+      const panel = '<section class="dis"><section class="ve-fp-card">' + govde
+        + '</section></section>';
+      const k = KIT.veGuideCard(panel, 'Algılanan Model');
+      expect(k).toContain('ve-fp-card');
+      expect(k).not.toContain('class="dis"');
+    });
+
+    test('ESKİ kutu hâlâ sökülüyor — satır içi çerçeveli div', () => {
+      // Kaldırılırsa hâlâ öyle çizen yüzeyler sessizce kaybolurdu.
+      const panel = '<div class="ust">önce</div>'
+        + '<div style="border:1px solid #ccc;">' + govde + '</div>';
+      const k = KIT.veGuideCard(panel, 'Algılanan Model');
+      expect(k).toContain('Algılanan Model');
+      expect(k.indexOf('<div style="border:1px solid')).toBe(0);
+      expect(k).not.toContain('önce');
+    });
+
+    test('BAŞLIK YOKSA boş döner — uydurulmuş bir kart değil', () => {
+      expect(KIT.veGuideCard('<section class="ve-fp-card">x</section>', 'Yok')).toBe('');
+      expect(KIT.veGuideCard('', 'Algılanan Model')).toBe('');
+    });
+
+    test('SARMAYAN section seçilmez — başlıktan ÖNCE kapanmış KARDEŞ kutu', () => {
+      // `lastIndexOf` en yakın AÇILIŞI bulur, saran kutuyu değil. Başlıktan
+      // hemen önce kapanmış bir kardeş varsa o seçilir ve döndürülen parça
+      // başlığı HİÇ içermez — sahne yanlış bir kutuyu çizer. Kapı bu yüzden
+      // kardeşi SARAN kutunun içine koyuyor: sarma denetimi düşerse "kapandı"
+      // dönüyor ve "Algılanan Model" kayboluyor.
+      const panel = '<section class="ve-fp-card">'
+        + '<section class="ic">kapandı</section>' + govde + '</section>';
+      const k = KIT.veGuideCard(panel, 'Algılanan Model');
+      expect(k).toContain('Algılanan Model');
+      expect(k).toContain('class="ve-fp-card"');
+      expect(k.indexOf('<section class="ve-fp-card"')).toBe(0);
+    });
+  });
+
   describe('sökücünün kuralları', () => {
     test('@media içindeki kural ÜST SEVİYE sayılmaz', () => {
       const css = '.ve-fead-tbl{color:red}'
