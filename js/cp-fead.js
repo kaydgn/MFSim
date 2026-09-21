@@ -361,67 +361,6 @@ function veFeadPopulateStarter(){
   return created;
 }
 
-// ── AÇILIŞ: MOTORUN ÖN YÜZÜNE İNİŞ ────────────────────────────────────────
-//
-// Üç modül de aynı 300 ms'lik `veTopoEnter` ile açılıyordu (opaklık +
-// 0,965→1 ölçek) — yani FEAD'in girişinde FEAD'e ait hiçbir şey yoktu.
-// Oysa FEAD düzlemi FİZİKSEL OLARAK motorun ön yüzü, ve giriş bunu tek
-// kesintisiz hareketle söyleyebilir: kamera uzaktan iner, blok silueti
-// büyüyerek geçer, arkasından kayış düzlemi çıkar.
-//
-// SİLUET GÖMÜLÜ SVG — dış varlık yok. Çevrimdışı çalışmak şart (kök
-// CLAUDE.md › "AĞIR VARLIKLAR GÖMÜLÜR"); çalışma anında çekilen bir görsel
-// tek dosya kurulumda "yok" demektir.
-var VE_FEAD_BLOK_SVG =
-  '<svg viewBox="0 0 600 460" preserveAspectRatio="xMidYMid meet" aria-hidden="true">'
-  + '<g class="ve-fead-blok-g">'
-  + '<rect x="40" y="40" width="520" height="380" rx="16"/>'
-  + '<rect x="64" y="62" width="472" height="92" rx="8"/>'
-  + '<rect x="64" y="332" width="472" height="66" rx="8"/>'
-  + '<circle cx="300" cy="238" r="84"/><circle cx="300" cy="238" r="34"/>'
-  + '<circle cx="84" cy="84" r="9"/><circle cx="516" cy="84" r="9"/>'
-  + '<circle cx="84" cy="376" r="9"/><circle cx="516" cy="376" r="9"/>'
-  + '</g></svg>';
-
-// TAMAMEN DEKOR — kalıp `veWelcomeFlyToNode`ınkiyle aynı: buradaki bir hata
-// modül açılışını ASLA engellemez. `false` dönerse çağıran genel geçişe düşer
-// (hareket kısıtlıyken de `false` döner ve genel geçiş de orada susar).
-// Temizlik İKİ yoldan; `animationend` arka plan sekmesinde hiç gelmeyebilir
-// ve siluet kalıcı olarak kanvasın üstünde asılı kalırdı. Olay hedefi
-// süzülüyor: siluetin kendi animasyonu da kaba kabarıyor.
-function veFeadAnimateEnter(){
-  if(typeof document === 'undefined' || typeof document.getElementById !== 'function') return false;
-  var canvas = document.getElementById('ve-canvas');
-  var wrap = (canvas && typeof canvas.closest === 'function')
-    ? canvas.closest('.ve-canvas-wrapper') : null;
-  if(!wrap) wrap = document.getElementById('ve-canvas-wrapper');
-  if(!wrap || !wrap.classList || typeof document.createElement !== 'function') return false;
-  try {
-    if(typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-       && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
-  } catch(e){}
-
-  var kat = document.createElement('div');
-  kat.className = 've-fead-blok';
-  kat.setAttribute('aria-hidden', 'true');
-  kat.innerHTML = VE_FEAD_BLOK_SVG;
-  wrap.appendChild(kat);
-
-  wrap.classList.remove('ve-fead-enter');
-  void wrap.offsetWidth;                // reflow — art arda girişte yeniden tetiklensin
-  wrap.classList.add('ve-fead-enter');
-
-  var bitti = function(e){
-    if(e && e.target !== wrap) return;  // siluetin animasyonu kabarıyor — bu o değil
-    wrap.classList.remove('ve-fead-enter');
-    wrap.removeEventListener('animationend', bitti);
-    if(kat.parentNode) kat.parentNode.removeChild(kat);
-  };
-  wrap.addEventListener('animationend', bitti);
-  if(typeof setTimeout === 'function') setTimeout(function(){ bitti(); }, 1100);
-  return true;
-}
-
 // _silent: autosave gibi arka-plan işlemleri köke çöküp (veSaveActiveTabState)
 // kullanıcıyı bulunduğu iç topolojiye geri getirirken true geçer; bu görünmez
 // geri-girişte toast/animasyon tetiklenmez (breadcrumb ve sidebar yine güncellenir).
@@ -465,31 +404,7 @@ function veFeadOpenEditor(nodeId, _silent){
   veFeadRefreshBadges();
 
   if(!_silent && typeof veFitViewToContent === 'function') veFitViewToContent();
-  // FEAD'İN KENDİ GİRİŞİ, olmazsa genel geçiş. Çıkışta (veFeadCloseEditor)
-  // genel geçiş kalıyor: modülden ÇIKMAK bir iniş değil.
-  //
-  // İNİŞ YALNIZ KURULMUŞ BİR MODELE GİRERKEN KOŞAR. Taze topolojide sihirbaz
-  // ekranın ~%88'ini kaplayarak hemen üstüne açılıyor, yani iniş o pencerenin
-  // ARKASINDA görünmeden akardı — ölçüldü (gerçek tarayıcı, 260 ms'lik kare:
-  // kamera hâlâ inerken modal çoktan yarı saydamdı).
-  //
-  // SİHİRBAZI GECİKTİRMEK DENENDİ VE GERİ ALINDI. Gecikme bir YARIŞ açıyor:
-  // "pencere daha açılmadı" diye sihirbaz düğümüne çift tıklayan bir
-  // kullanıcı (ve aynı mantığı kuran E2E yardımcıları — beş spec birden
-  // düştü) pencereyi kendi açıyor, sonra geciken açılış `veFeadWizOpen`i
-  // İKİNCİ kez çağırıp durumu düğümden yeniden okuyor ve o ana kadar
-  // yazılanı sessizce sıfırlıyordu.
-  //
-  // Bu yüzden her animasyon GÖRÜNDÜĞÜ yerde: taze topolojiyi sihirbazın
-  // kendi inişi karşılıyor (_fwAcilisAnim), kurulmuş modeli kamera inişi.
-  var _ozelGiris = false;
-  if(!_silent){
-    if(!_yeniTopoloji){
-      try { _ozelGiris = veFeadAnimateEnter(); }
-      catch(e){ _ozelGiris = false; }
-    }
-    if(!_ozelGiris && typeof veAnimateCanvasTransition === 'function') veAnimateCanvasTransition('enter');
-  }
+  if(!_silent && typeof veAnimateCanvasTransition === 'function') veAnimateCanvasTransition('enter');
   veFeadUpdateBreadcrumb();
   if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
   if(typeof veUpdateWarnings === 'function') veUpdateWarnings();
@@ -511,7 +426,6 @@ function veFeadOpenEditor(nodeId, _silent){
   // Kapatan için model YİNE KURULABİLİR: sihirbaz düğümü kanvasta duruyor ve
   // Kayış Tablosu'nun kendi ekleyicisi çalışıyor — bu bir kapı değil bir
   // karşılama.
-  // AÇILIŞ EŞZAMANLI — geciktirilmesinin bedeli yukarıda yazılı (yarış).
   if(_yeniTopoloji && !_silent && typeof veFeadWizOpenAny === 'function'){
     try { veFeadWizOpenAny(); }
     catch(e){ /* sihirbaz açılamazsa iç topoloji yine açık kalır */ }
@@ -6697,7 +6611,6 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadWizOpenAny: veFeadWizOpenAny,
     veFeadPopulateStarter: veFeadPopulateStarter,
     veFeadOpenEditor: veFeadOpenEditor,
-    veFeadAnimateEnter: veFeadAnimateEnter, VE_FEAD_BLOK_SVG: VE_FEAD_BLOK_SVG,
     getFeadModulePropertiesHTML: getFeadModulePropertiesHTML,
     getFeadPulleyPropertiesHTML: getFeadPulleyPropertiesHTML,
     getFeadTensionerPropertiesHTML: getFeadTensionerPropertiesHTML,
