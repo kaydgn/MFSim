@@ -805,6 +805,42 @@ function veFeadWizIssues(b, step){
 // Kabuk Ayarlar ve İçe Aktarma modallarının kabuğunun aynısı
 // (.ve-settings-overlay / .ve-settings-modal): üçüncü bir pencere dili
 // kurmanın karşılığı yok. Yalnız gövde bu modüle ait (.ve-fw-*).
+// ── AÇILIŞ BİR KESME DEĞİL ────────────────────────────────────────────────
+//
+// `display:flex` tek başına 0 ms'lik bir KESMEDİR. Uygulamanın her yerinde
+// geçiş var — kabuk inişi `--dur-enter` (420 ms), karşılama uçuşu
+// `--dur-fly` (460 ms), tuval geçişi 300 ms — ve tam da en büyük pencere
+// animasyonsuz ekrana çarpıyordu.
+//
+// Sınıf JS'ten konmak ZORUNDA: `display:none` → `flex` geçişi CSS
+// `transition`ı ÇALIŞTIRMAZ (bkz. `body.ve-chrome-enter`, aynı sebeple
+// @keyframes kullanıyor), yani tetikleyen bir sınıf gerekiyor.
+//
+// TEMİZLİK İKİ YOLDAN. `animationend` arka plan sekmesinde hiç gelmeyebilir
+// ve sınıf asılı kalırsa İKİNCİ açılış animasyonsuz olurdu (sınıf zaten
+// duruyor → yeniden tetiklenmez); emniyet zamanlayıcısı onun içindir.
+// Olay hedefi SÜZÜLÜYOR: modalın kendi animasyonu da buraya kabarıyor ve
+// süzülmezse sınıf modal daha yoldayken kalkar, iniş yarıda kesilirdi.
+// Bu yüzden kaplamanın animasyonu modalınkinden KISA OLAMAZ (css/styles.css).
+function _fwAcilisAnim(ov){
+  if(!ov || !ov.classList) return;
+  try {
+    if(typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+       && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  } catch(e){}
+  var sinif = 've-fw-acilis';
+  ov.classList.remove(sinif);
+  void ov.offsetWidth;                 // reflow — art arda açılışta yeniden tetiklensin
+  ov.classList.add(sinif);
+  var bitti = function(e){
+    if(e && e.target !== ov) return;   // modalın animasyonu kabarıyor — bu o değil
+    ov.classList.remove(sinif);
+    ov.removeEventListener('animationend', bitti);
+  };
+  ov.addEventListener('animationend', bitti);
+  if(typeof setTimeout === 'function') setTimeout(function(){ bitti(); }, 700);
+}
+
 function veFeadWizOpen(nodeId){
   if(typeof document === 'undefined') return false;
   var ov = document.getElementById('ve-feadwiz-overlay');
@@ -824,6 +860,7 @@ function veFeadWizOpen(nodeId){
   });
   _fwStep = 0;
   ov.style.display = 'flex';
+  _fwAcilisAnim(ov);
   document.addEventListener('keydown', veFeadWizKey);
   veFeadWizRender();
   return true;
@@ -1001,26 +1038,71 @@ function _fwGrid(alanlar, kol){
 // ── CANLI ŞERİT ────────────────────────────────────────────────────────────
 // Sihirbazın en değerli yüzeyi: kullanıcı daha "İleri" demeden modelin
 // çözülüp çözülmediğini görüyor. Sayı UYDURULMUYOR — çözüm yoksa sebep yazılı.
+// ── ANTET — SİHİRBAZIN KÜNYESİ ────────────────────────────────────────────
+//
+// Burası bir ROZET ŞERİDİYDİ ve iki kusuru vardı; ikisi de yerleşimsel:
+//
+//   1) HÜCRE SAYISI DURUMA GÖRE DEĞİŞİYORDU — çözülmeyen modelde iki hap,
+//      çözülende beş. Yani her tuş vuruşunda şerit yeniden diziliyor, göz
+//      sabit bir yere bakamıyordu. Canlı yamanın (veFeadWizLive) 220 ms'de
+//      bir koştuğu düşünülürse yazarken şerit sürekli oynuyordu.
+//   2) MODELİN KİMLİĞİNİ HİÇ TAŞIMIYORDU. Altı adım boyunca hangi sistemi
+//      kurduğunuzu söyleyen tek şey pencere başlığıydı — o da her modelde
+//      aynı: "FEAD Başlangıç Sihirbazı".
+//
+// Antet bir süs değil bu işin kendi belge geleneği: SIRA SABİT, hücre duruma
+// göre doğup ölmüyor (değeri olmayan '—' gösteriyor), ve sağ uçta modelin
+// çözülüp çözülmediğini söyleyen DAMGA duruyor.
+//
+// SINIF SÖZLEŞMESİ KORUNUYOR (`ve-fw-pill` · `-ok` · `-err` · `-dim`):
+// hücreler görünüm olarak hap değil ama ANLAM olarak aynı şey — canlı durum
+// hücresi. Üç E2E kapısı bu sınıflardan ve metinden okuyor (kayış boyu "mm",
+// gerginlik "N", yön "CCW/CW"), o yüzden metin sözleşmesi de duruyor.
+function _fwAntet(k, v, ek, sinif){
+  return '<span class="ve-fw-pill' + (sinif ? ' ' + sinif : '') + '">'
+       + '<i>' + _fwEsc(k) + '</i><b>' + v + '</b>'
+       + (ek ? '<em>' + _fwEsc(ek) + '</em>' : '') + '</span>';
+}
+// Birim YALNIZ sayı varken yazılır: "— mm" okunur bir şey değil.
+// Derece işareti sayıya BİTİŞİK (344,00° — "344,00 °" değil); ölçü birimleri
+// ayrık yazılır (1715,3 mm).
+function _fwAntetSayi(x, dg, birim){
+  if(!Number.isFinite(x)) return '—';
+  return _fwFmt(x, dg) + (birim === '°' ? '' : ' ') + birim;
+}
 function veFeadWizLiveHTML(b){
-  var h = '<div class="ve-fw-live">';
+  var st = _fwState || {};
+  var h = '<div class="ve-fw-live ve-fw-antet">';
+
+  // ── KİMLİK — DURUMDAN okunur, köprü çözülemese de dolu kalır.
+  // Ad hücresi İKİ İZ genişliğinde: eşit bölüşümde "BMC Otomotif F…" diye
+  // kırpılıyordu ve antetin kimlik alanı zaten geniş olan alandır.
+  h += _fwAntet('Sistem', _fwEsc(String(st.ad || '').trim() || '—'), '', 've-fw-antet-gen');
+  var belt = st.belt || {};
+  var ribs = _fwNum(belt.ribs);
+  var kayis = ((Number.isFinite(ribs) && ribs > 0) ? ribs : '') + String(belt.profile || '');
+  h += _fwAntet('Kayış', _fwEsc(kayis || '—'), belt.brand ? String(belt.brand) : '');
+  // +1 — otomatik gergi `st.ten`de, `st.pulleys` dizisinde DEĞİL.
+  h += _fwAntet('Kasnak', (st.pulleys || []).length + 1);
+
+  // ── ÇÖZÜM — KÖPRÜDEN.
+  h += _fwAntet('Efektif boy', _fwAntetSayi(b && b.beltLengthMm, 1, 'mm'),
+        (b && b.beltLengthDerived) ? 'çıktı' : '');
+  h += _fwAntet('Gergi', _fwAntetSayi(b && b.springTensionN, 1, 'N'));
+  h += _fwAntet('Kol', _fwAntetSayi(b && b.armAbsDeg, 2, '°'));
+  h += _fwAntet('Yön', (b && b.spin) ? _fwEsc(veFeadSpinLabel(b.spin).kisa) : '—');
+
+  // ── DAMGA. Cevapladığı soru YALNIZ "model çözülüyor mu" — "Modeli Kur"un
+  // kapısı bu değil (`veFeadWizCanCreate`, iç topolojideki kasnakları da
+  // sayar). İkisini tek işarete bindirmek, çözülen ama kurulamayan modeli
+  // onaylanmış göstermek olurdu.
   if(!b){
-    h += '<span class="ve-fw-pill ve-fw-pill-dim">çözüm yok</span>';
-    return h + '</div>';
-  }
-  if(b.ok){
-    h += '<span class="ve-fw-pill ve-fw-pill-ok">✓ model çözülüyor</span>';
-    if(Number.isFinite(b.beltLengthMm))
-      h += '<span class="ve-fw-pill">L<sub>eff</sub> <b>' + _fwFmt(b.beltLengthMm, 1) + ' mm</b>'
-         + (b.beltLengthDerived ? ' <em>çıktı</em>' : '') + '</span>';
-    if(Number.isFinite(b.springTensionN))
-      h += '<span class="ve-fw-pill">T <b>' + _fwFmt(b.springTensionN, 1) + ' N</b></span>';
-    if(Number.isFinite(b.armAbsDeg))
-      h += '<span class="ve-fw-pill">kol <b>' + _fwFmt(b.armAbsDeg, 2) + '°</b></span>';
-    if(b.spin)
-      h += '<span class="ve-fw-pill">' + veFeadSpinLabel(b.spin).kisa + '</span>';
+    h += '<span class="ve-fw-pill ve-fw-pill-dim ve-fw-damga">ÇÖZÜM YOK</span>';
+  } else if(b.ok){
+    h += '<span class="ve-fw-pill ve-fw-pill-ok ve-fw-damga">ONAY</span>';
   } else {
-    h += '<span class="ve-fw-pill ve-fw-pill-err">✗ çözülemiyor</span>';
-    h += '<span class="ve-fw-pill ve-fw-pill-dim">' + _fwEsc((b.errors || [])[0] || '') + '</span>';
+    h += '<span class="ve-fw-pill ve-fw-pill-err ve-fw-damga" title="'
+       + _fwEsc((b.errors || [])[0] || '') + '">EKSİK</span>';
   }
   return h + '</div>';
 }
