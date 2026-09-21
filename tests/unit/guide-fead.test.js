@@ -156,8 +156,13 @@ describe('kozmetik raporla aynı', () => {
     // Tanımsız bir var() "invalid at computed-value time"dır ve kalıtılan
     // `stroke` için sonuç `none` demektir: çizim SESSİZCE kaybolur, konsol
     // temiz kalır. Raporda ölçülmüş kusur sınıfı.
-    const kullanilan = [...new Set((DOC.match(/var\((--[a-z0-9-]+)/g) || [])
-      .map((s) => s.slice(4)))];
+    // YEDEKLİ KULLANIM SAYILMAZ: `var(--x, 44px)` tanımsızken de doğru çalışır
+    // — yedek zaten tasarımın cevabı. Yedeksiz kullanım ise gerçekten boşa
+    // düşer. (Uygulamanın `--fead-kat-alt`ı böyle: hiç tanımlı değil, her
+    // kullanımı yedekli.)
+    const kullanilan = [...new Set((DOC.match(/var\(\s*--[a-z0-9-]+\s*[,)]/g) || [])
+      .filter((x) => x.endsWith(')'))
+      .map((x) => x.slice(4).replace(/[\s,)]+$/, '')))];
     const eksik = kullanilan.filter((j) => !DOC.includes(j + ':'));
     expect(eksik).toEqual([]);
   });
@@ -525,7 +530,8 @@ describe('sahneler programın kendi bileşeni', () => {
       'şerit düğmesi': 've-rb-btn',
       'kasnak paneli': 'Devir Sınırları',
       'gergi paneli': 'Avara Kasnağının Merkezi',
-      'kayış paneli': 'Kayış Tipine Bağlı Çıktılar',
+      'kayış künyesi': 'Gereken efektif boy',
+      'kayış kataloğu': 'gereken boya en yakınlar',
       'çözücü paneli': 'Algılanan Model',
       'rapor paneli': 'Detaylı Raporu',
       'dönüş yönü': 'Kayış Dönüş Yönü'
@@ -598,9 +604,12 @@ describe('sahneler programın kendi bileşeni', () => {
     // Sürücü kasnak seçilseydi "Katalog Modeli" ve "Devir Sınırları" kartları
     // hiç çizilmezdi ve altyazı olmayan bir şeyi anlatırdı (kart-adı kapısında
     // ölçülmüş sınıf).
+    // PANEL ARTIK KART KART SAHNELENİYOR (baskı için: bütün panel A4'ten uzun,
+    // 1122 px ölçüldü). İki kart iki ayrı şekil — kapı ikisini de arar.
+    const temas = sahneler.filter((x) => x.indexOf('Temas Tarafı') >= 0)[0] || '';
+    expect(temas).not.toBe('');
     const f = sahneler.filter((x) => x.indexOf('Devir Sınırları') >= 0)[0] || '';
     expect(f).not.toBe('');
-    expect(f).toContain('Temas Tarafı');
     // AYIRT EDİCİ: aksesuar künye seçicisi YALNIZ `VE_FEAD_ACC_TYPE`'ta karşılığı
     // olan tiplerde çizilir (alternatör · klima). "Katalog Modeli" bu işi
     // GÖRMÜYOR — sürücü kasnakla ölçüldü, o kart orada da çıkıyor ve mutasyon
@@ -609,7 +618,7 @@ describe('sahneler programın kendi bileşeni', () => {
     const tipler = Object.keys(VE_FEAD_ACC_TYPE);
     expect(tipler.length).toBeGreaterThan(0);
     // Sahnedeki düğüm gerçekten o tiplerden birine ait olmalı.
-    const id = (f.match(/ve-fead-od-([\w-]+)/) || [])[1] || '';
+    const id = (f.match(/ve-fead-(?:od|optimumRpm)-([\w-]+)/) || [])[1] || '';
     const dugum = (global.nodes || []).concat(GF._gfOrnekCoz().pack.nodes)
       .filter((n) => n.id === id)[0];
     expect(dugum).toBeTruthy();
@@ -648,11 +657,20 @@ describe('sahneler programın kendi bileşeni', () => {
     // İKİ YÜZEY BİRDEN: `@media`'ya girmeyi kapatan mutasyon kuralı SIZDIRMIYOR,
     // parantez sayacını kaydırıp SONRAKİLERİ düşürüyor — ve yalnız tablo
     // sınıflarına bakan bir kapı o kaymayı ıskalayabiliyordu (ölçüldü).
-    const sinif = [...new Set([
-      ...(kaynak.match(/\.ve-fead-tbl[\w-]*/g) || []),
-      ...(kaynak.match(/\.ve-rb-btn[\w-]*/g) || []),
-      ...(kaynak.match(/\.ve-rb-(?:ico|lbl)[\w-]*/g) || [])
-    ])];
+    // SINIF LİSTESİ SABİT DEĞİL, SAHNELERİN KENDİSİNDEN. Elle yazılmış bir
+    // önek listesi yeni bir bileşende sessizce eksik kalıyor: katman paneli
+    // (`.ve-fead-kat`) ve panel açıklama satırı (`.ve-fead-not`) sahnelere
+    // girdiğinde kuralları hiç sökülmedi ve panel STİLSİZ çizildi — başlıklar
+    // bitişik, kutucuklar çıplak (ölçüldü, render'a bakılarak görüldü).
+    // Artık ölçülen şey: sahnede GEÇEN her sınıfın kaynakta kuralı varsa,
+    // o kural belgede de olmalı.
+    const kullanilan = [...new Set(
+      sahneler.join('').match(/class="([^"]*)"/g) || []
+    )].join(' ').match(/ve-[\w-]+|mf-ico[\w-]*|sw-panel[\w-]*/g) || [];
+    const sinif = [...new Set(kullanilan)]
+      .map((c) => '.' + c)
+      .filter((c) => kaynak.indexOf(c + '{') >= 0 || kaynak.indexOf(c + ' ') >= 0
+                  || kaynak.indexOf(c + ',') >= 0 || kaynak.indexOf(c + ':') >= 0);
     expect(sinif.length).toBeGreaterThan(18);
     const eksik = sinif.filter((c) => belgeCss.indexOf('.appfig ' + c) < 0
                                    && belgeCss.indexOf(c + ' ') < 0
