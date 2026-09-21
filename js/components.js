@@ -70,14 +70,11 @@ function veSelectModuleFromOverlay(mode) {
 // çift tıklayarak alt-topolojiye girer; dilerse diğer modülü de sidebar'dan ekler.
 // Not: veSelectModuleFromOverlay testlerce doğrulanan sözleşmeyi korur; bu ayrı
 // fonksiyon yalnızca karşılama kartlarına bağlıdır.
-function veStartModule(type) {
-  // Uçuşun kalkış dikdörtgeni: overlay GİZLENMEDEN ölçülür — gizli kart 0x0'dır.
-  var kart = null, kartRect = null;
-  try {
-    if(/^[a-z-]+$/.test(String(type))) kart = document.querySelector('.ve-module-card[data-module="' + type + '"]');
-    if(kart && typeof kart.getBoundingClientRect === 'function') kartRect = kart.getBoundingClientRect();
-  } catch(e) {}
-
+// Kabuğu yerine oturtur: karşılama kaplamasını kaldırır, panel/rayı senkron
+// getirir, aktif modülü ve kamerayı ayarlar. veStartModule'ün İKİ yolu da
+// buradan geçiyor — ikinci bir kopya, yollardan biri düzeltilince öbürünün
+// sessizce eskimesi demekti.
+function _veModuleShellSetup(type) {
   var overlay = document.getElementById('ve-module-overlay');
   if(overlay) overlay.style.display = 'none';
 
@@ -112,22 +109,84 @@ function veStartModule(type) {
   if(typeof veCameraHome === 'function' && typeof nodes !== 'undefined' && nodes && !nodes.length) {
     veCameraHome();
   }
+}
 
-  // Seçilen modül bloğunu görünür alanın ortasına oluştur.
-  // Canvas CSS'te -3000px offset'li → görünür merkez ≈ 3000 + yarı-genişlik.
-  var yeni = null;
-  if(typeof createNode === 'function' && componentDefs[type]) {
-    var def = componentDefs[type];
-    var w = def.defaultWidth || 80, h = def.defaultHeight || 60;
-    var cx = 3000 + 200 - w / 2, cy = 3000 + 140 - h / 2;
-    var wrap = document.getElementById('ve-canvas-wrapper');
-    if(wrap && typeof canvasOffset !== 'undefined' && typeof canvasZoom !== 'undefined') {
-      var r = wrap.getBoundingClientRect();
-      cx = (r.width / 2 - canvasOffset.x) / canvasZoom + 3000 - w / 2;
-      cy = (r.height / 2 - canvasOffset.y) / canvasZoom + 3000 - h / 2;
-    }
-    yeni = createNode(type, cx, cy);
+// Seçilen modül bloğunu görünür alanın ortasına oluşturur.
+// Canvas CSS'te -3000px offset'li → görünür merkez ≈ 3000 + yarı-genişlik.
+function _veModulePlaceNode(type) {
+  if(typeof createNode !== 'function' || !componentDefs[type]) return null;
+  var def = componentDefs[type];
+  var w = def.defaultWidth || 80, h = def.defaultHeight || 60;
+  var cx = 3000 + 200 - w / 2, cy = 3000 + 140 - h / 2;
+  var wrap = document.getElementById('ve-canvas-wrapper');
+  if(wrap && typeof canvasOffset !== 'undefined' && typeof canvasZoom !== 'undefined') {
+    var r = wrap.getBoundingClientRect();
+    cx = (r.width / 2 - canvasOffset.x) / canvasZoom + 3000 - w / 2;
+    cy = (r.height / 2 - canvasOffset.y) / canvasZoom + 3000 - h / 2;
   }
+  return createNode(type, cx, cy);
+}
+
+// DOĞRUDAN GİRİŞ AÇICISI — tipin kendi beyanından (`componentDefs.moduleEnter`).
+// Kayıt tipte duruyor ki ikinci bir modül aynı davranışı TEK satırla alsın;
+// burada bir tip listesi tutmak, modül eklendiğinde unutulacak bir yer
+// daha demekti.
+function _veModuleEnterFn(type) {
+  var def = (typeof componentDefs !== 'undefined' && componentDefs[type]) || null;
+  var ad = def && def.moduleEnter;
+  if(!ad) return null;
+  var g = (typeof window !== 'undefined') ? window
+        : ((typeof global !== 'undefined') ? global : null);
+  var fn = g ? g[ad] : null;
+  return (typeof fn === 'function') ? fn : null;
+}
+
+function veStartModule(type) {
+  // Uçuşun kalkış dikdörtgeni: overlay GİZLENMEDEN ölçülür — gizli kart 0x0'dır.
+  var kart = null, kartRect = null;
+  try {
+    if(/^[a-z-]+$/.test(String(type))) kart = document.querySelector('.ve-module-card[data-module="' + type + '"]');
+    if(kart && typeof kart.getBoundingClientRect === 'function') kartRect = kart.getBoundingClientRect();
+  } catch(e) {}
+
+  var def = componentDefs[type] || {};
+  var acici = _veModuleEnterFn(type);
+
+  // ── DOĞRUDAN GİRİŞ ──────────────────────────────────────────────────────
+  //
+  // Kullanıcı isteği (2026-09-21): *"ana ekrandan FEAD modülüne tıkladıktan
+  // sonra, direk program içine giriyor, yani güzel bir yükleme ekranı olur."*
+  //
+  // Karta tıklamak eskiden yalnız ana tuvale bir kart bırakıyordu; içeri
+  // girmek için o karta AYRICA çift tıklamak gerekiyordu ve bunu söyleyen
+  // hiçbir şey yoktu.
+  //
+  // UÇUŞ VE TOAST BU YOLDA KURULMUYOR, çünkü ikisi de yükleme ekranının
+  // ALTINDA kalıyor: uçuş --z-widget, toast 5000, ekran --z-boot+1 = 9001.
+  // Görünmeyen bir animasyon kurmak ve okunmayan bir bildirim basmak, işin
+  // yapıldığını sanmanın iki ayrı yolu olurdu.
+  if(acici && typeof veModuleLoaderRun === 'function') {
+    var kurulan = null;
+    veModuleLoaderRun(
+      { ad: def.name || type, alt: def.moduleSubtitle || '', svg: def.svg || '' },
+      [
+        { ad: 'Çalışma alanı hazırlanıyor',
+          not: 'Bileşen paneli ve şerit yerine oturuyor',
+          is: function() { _veModuleShellSetup(type); } },
+        { ad: 'Modül bloğu yerleştiriliyor',
+          not: 'Ana topolojiye modül kartı ekleniyor',
+          is: function() { kurulan = _veModulePlaceNode(type); } },
+        { ad: 'İç topoloji açılıyor',
+          not: 'Modülün kendi çalışma yüzeyi kuruluyor',
+          is: function() { if(kurulan && kurulan.id) acici(kurulan.id); } }
+      ]
+    );
+    return;
+  }
+
+  // ── ESKİ YOL — doğrudan girişi olmayan modüller, birebir ────────────────
+  _veModuleShellSetup(type);
+  var yeni = _veModulePlaceNode(type);
 
   // Uçuş yalnız DEKOR: createNode NESNE döndürür (DOM elemanı değil), eleman
   // id'den bulunur; buradaki bir hata modül açılışını ASLA engellemez.
@@ -136,10 +195,9 @@ function veStartModule(type) {
     if(kart && nodeEl) veWelcomeFlyToNode(kart, nodeEl, kartRect);
   } catch(e) {}
 
-  var label = (componentDefs[type] && componentDefs[type].name) ? componentDefs[type].name : type;
+  var label = def.name ? def.name : type;
   if(typeof showToast === 'function') showToast(label + ' eklendi', 'info');
 }
-
 // Aktif moda ait sidebar bileşenlerini göster.
 // data-always-visible kategorileri her modda görünür; geri kalanlar
 // data-ve-mode (varsayılan 'performans') ile aktif moda göre filtrelenir.
@@ -491,7 +549,12 @@ var componentDefs = {
     inputs: 0,
     outputs: 0,
     isSubsystem: true,
-    isFeadModule: true
+    isFeadModule: true,
+    // DOĞRUDAN GİRİŞ: karşılama kartına tıklamak modülün İÇİNE kadar götürür
+    // (js/components.js › _veModuleEnterFn). Diğer iki modül beyan etmiyor,
+    // dolayısıyla onlarda eski yol birebir duruyor.
+    moduleEnter: 'veFeadOpenEditor',
+    moduleSubtitle: 'Kayış-Kasnak Analizi'
   },
   // ── Aksesuarlar (Araç Performans) — Motor'un ön portlarına bağlanır ──────
   // Diğer bileşenlerden bir tık daha küçük kutular. Çıkış portu (sağ) Motor'un
