@@ -1920,7 +1920,10 @@ describe('serbest kipte türetilen boyun KÖKENİ', () => {
     expect(t).toMatch(/Tedarikçiye verilecek boy budur/);
     expect(t).not.toMatch(/künyesi eksik|oturamadı/);
     // sayı amber kalır, soru işareti eklenmez
-    expect(fead.veFeadDerivedLengthHTML(belt)).toMatch(/--ink-warning/);
+    // RENK ARTIK BİR ANLAM ADI: değer `data-ton="warning"` taşıyor, jetonu
+    // `css/styles.css` veriyor. Satır içi `--ink-warning` aramak, kuralı CSS'e
+    // taşıyan değişikliği kırmızıya düşürürdü — ölçülen şey aynı.
+    expect(fead.veFeadDerivedLengthHTML(belt)).toMatch(/data-ton="warning"/);
     expect(t).not.toMatch(/mm \?/);
     // ve panelde uyarı kutusu çıkmaz
     expect(duz(fead.getFeadBeltPropertiesHTML(belt))).not.toMatch(/Uyarılar/);
@@ -1946,7 +1949,7 @@ describe('serbest kipte türetilen boyun KÖKENİ', () => {
     const h = fead.veFeadDerivedLengthHTML(belt), t = duz(h);
     expect(t).toMatch(/Kol nominal açısına oturamadı/);
     expect(t).not.toMatch(/Tedarikçiye verilecek boy budur/);
-    expect(h).toMatch(/--ink-danger/);
+    expect(h).toMatch(/data-ton="danger"/);
   });
 
   // Boyun OKUNDUĞU panel, sebebi de basmak zorunda: veFeadWarningBox Kayış
@@ -1965,8 +1968,13 @@ describe('serbest kipte türetilen boyun KÖKENİ', () => {
       const t = p.nodes.find((n) => n.type === 'fead-tensioner');
       delete t.data.cenX; delete t.data.cenY; delete t.data.pivotX; delete t.data.pivotY;
     });
-    const t = duz(fead.veFeadDerivedLengthHTML(belt));
-    expect(t).toMatch(/Gereken efektif boy —/);
+    // DEĞER OKUNUR GİRİŞTE DURUYOR: `duz()` etiketleri siliyor, yani
+    // `value="—"` metne hiç dönüşmüyor. Ölçüm girişin kendisinden okunur.
+    const h = fead.veFeadDerivedLengthHTML(belt);
+    const t = duz(h);
+    expect(h).toMatch(/Gereken efektif boy/);
+    expect(h).toMatch(/value="—"/);
+    expect(h).not.toMatch(/value="[^"]*\d+\.\d+ mm/);
     expect(t).not.toMatch(/\d+\.\d+ mm/);
   });
 });
