@@ -23,9 +23,18 @@
  * karede yanıp sönerdi. Bekleme o yüzden var, işi yavaşlatmak için değil.
  */
 
-// Adım başına en az duruş. Üç adım × 170 ms + çıkış ≈ 800 ms; okunacak kadar
-// uzun, beklenmiş hissettirmeyecek kadar kısa.
-var VE_MODLOAD_DURUS = 170;
+// Adım başına en az duruş. Üç adım × 320 ms + son duruş + çıkış ≈ 1,6 sn.
+//
+// 170 İDİ VE KISAYDI (kullanıcı: *"bekleme süresi bir miktar daha
+// artırılabilir, daha profesyonel durur"*). Sayının bir de ölçülebilir
+// gerekçesi var: kademe çubuğunun kendi geçişi `--mfsim-kademe-sure` = 260 ms,
+// yani 170 ms'lik duruşta dolgu HİÇ OTURAMADAN bir sonraki adım geliyor ve
+// çubuk sürekli yolda görünüyordu. Duruş o geçişten UZUN olmak zorunda;
+// aşağıdaki değer onu 60 ms payla aşıyor.
+//
+// Çıkış 300'de kaldı: solma uzadıkça "kapanmıyor" hissi veriyor, ve zaten
+// arkasındaki yüzey hazır.
+var VE_MODLOAD_DURUS = 320;
 var VE_MODLOAD_CIKIS = 300;
 
 var VE_MODLOAD_ELS = {

@@ -300,6 +300,15 @@ describe('KABUK VE KURALLAR', () => {
     expect(Number(m[1])).toBe(ML.VE_MODLOAD_CIKIS);
   });
 
+  test('DURUŞ, ÇUBUĞUN GEÇİŞİNDEN UZUN — dolgu oturabilsin', () => {
+    // Kademe çubuğu `--mfsim-kademe-sure` ile genişliyor. Duruş ondan kısa
+    // olursa dolgu HİÇ OTURAMADAN bir sonraki adım geliyor ve çubuk sürekli
+    // yolda görünüyor — ölçüldü, 170 ms'lik ilk değerde tam olarak buydu.
+    const m = CSS.match(/--mfsim-kademe-sure:\s*(\d+)ms/);
+    expect(m).toBeTruthy();
+    expect(ML.VE_MODLOAD_DURUS).toBeGreaterThan(Number(m[1]));
+  });
+
   test('KAPLAMA ANINDA GELİYOR — panelin koreografisi ayrı', () => {
     // Kaplamanın kendisi solarak gelseydi ilk karede arkasındaki boş tuval
     // görünürdü; koreografi bu yüzden PANELE ait.
