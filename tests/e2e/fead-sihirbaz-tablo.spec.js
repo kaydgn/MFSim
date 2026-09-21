@@ -165,13 +165,25 @@ test('sihirbaz "Modeli Kur": kasnaklar + TABLO, tel yok, uyarı yok', async ({ p
   // ── 3) TABLO KURULAN MODELİ GÖSTERİYOR ──────────────────────────────────
   const kart = page.locator('.ve-fead-table-card').first();
   await expect(kart).toBeVisible();
-  await expect(kart.locator('tbody tr')).toHaveCount(6);
-  const govde = await kart.innerText();
-  ['KASNAK', 'Efektif Çap', 'Kasnak Dönüş Yönü', 'Kayış Uzunluğu']
+  await expect(kart.locator('.ve-fead-krt[data-ve-node]')).toHaveCount(6);
+  // ETİKET KISA, DEFTERİN ADI `title`DA. `textContent`, `innerText` DEĞİL:
+  // ikincisi CSS'in `text-transform`unu uyguluyor ("Ø eff" → "Ø EFF").
+  const govde = await kart.evaluate((el) => el.textContent);
+  ['Ø eff', 'Sarım', 'Span', 'Kayış boyu']
     .forEach((t) => expect(govde).toContain(t));
-  await expect(kart.locator('select[data-ve="spin"]')).toHaveCount(6);   // yön listeleri
+  const ipuclari = await kart.evaluate((el) =>
+    [...el.querySelectorAll('[title]')].map((e) => e.getAttribute('title')).join(' | '));
+  ['Efektif Çap (mm)', 'Kasnak Dönüş Yönü', 'Kayış Uzunluğu (mm)']
+    .forEach((t) => expect(ipuclari).toContain(t));
+  // YÖN: açılır liste değil İKİ DURUMLU SEGMENT (altı satır, altısında da).
+  await expect(kart.locator('select[data-ve="spin"]')).toHaveCount(0);
+  await expect(kart.locator('.ve-fead-krt-seg[data-ve="spin"]')).toHaveCount(6);
   await expect(kart.locator('select[data-ve="add-pulley"]')).toHaveCount(1);
-  await expect(kart.locator('td[rowspan="6"]')).toHaveCount(1);  // birleşik kayış boyu
+  // KAYIŞ BOYU KÜNYEDE: ızgaradaki `rowspan`lı birleşik hücrenin yerini aldı
+  // (boy satıra değil ÇEVRİME ait).
+  await expect(kart.locator('td[rowspan]')).toHaveCount(0);
+  await expect(kart.locator('.ve-fead-tbl-kunye', { hasText: 'Kayış boyu' }))
+    .toHaveCount(1);
 
   // ── 4) ÇÖZÜM ÖNİZLEMEYLE BİREBİR ────────────────────────────────────────
   const kurulan = await page.evaluate(() => {

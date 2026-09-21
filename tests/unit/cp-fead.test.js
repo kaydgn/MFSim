@@ -962,25 +962,158 @@ describe('Kayış Yolu kanvas kartı', () => {
     expect(html).not.toMatch(/data-ve="belt"/);
   });
 
-  test('çözülen modelde durum şeridi YEŞİL ve kasnak sayısı + boy yazılı', () => {
+  // ── DURUM ARTIK BANT DEĞİL SAĞ ÜST ROZET — VE ASİMETRİK ────────────────
+  // Alt bant 20 px'i çizimden alıyordu ve o 20 px'in taşıdığı şey çoğu zaman
+  // "her şey yolunda"dan ibaretti. Rozet yüzüyor (bant 0 px) ve iki hâli
+  // farklı genişlikte: yolunda olan kısa, yolunda OLMAYAN tam cümle. Tersi
+  // olsaydı "Kayış yolu KAPANMIYOR" bir onay işaretiyle aynı yeri kaplardı.
+  test('çözülen modelde durum rozeti YEŞİL — ve İKİ okuma da duruyor', () => {
     const { lay } = kurCozulur();
     const html = fead.veFeadLayoutCardHTML(lay);
-    // ŞERİDİN METNİ: `--ink-*` METİN rolüdür (`--accent-*` dolgu rolü). Aile
-    // 2026-09-14'te taşındı; ölçüldü, `--accent-*` metin olarak 19 temanın
-    // çoğunda AA altında kalıyordu.
-    expect(html).toMatch(/ink-success/);
-    expect(html).toMatch(/4 kasnak/);
-    expect(html).toMatch(/Σsarım/);
+    expect(html).toMatch(/class="ve-fead-kan-durum ok"/);
     expect(html).toMatch(/✓/);
+    // KISA HÂL: görünen okuma Σsarım. Kasnak sayısı ve boy kaybolmuyor —
+    // ikincil metinde duruyor, ayrıca `title`da tamamı var.
+    expect(html).toMatch(/Σsarım/);
+    expect(html).toMatch(/4 kasnak/);
+    const rz = /<div class="ve-fead-kan-durum ok" title="([^"]*)"/.exec(html);
+    expect(rz).toBeTruthy();
+    expect(rz[1]).toContain('4 kasnak');
+    expect(rz[1]).toContain('Σsarım');
   });
 
-  test('boş topolojide patlamaz, kırmızı şeritle çıkar', () => {
+  test('boş topolojide patlamaz, KIRMIZI rozetle çıkar', () => {
     global.nodes = []; global.connections = [];
     const lay = kasnak('fead-layout', {});
     const html = fead.veFeadLayoutCardHTML(lay);
     expect(typeof html).toBe('string');
-    expect(html).toMatch(/ink-danger/);
+    expect(html).toMatch(/class="ve-fead-kan-durum no"/);
     expect(html).toMatch(/✗/);
+    // KÖTÜ HÂL TAM CÜMLE: sebebi rozetin İÇİNDE yazıyor, yalnız `title`da değil.
+    expect(html).toMatch(/<span>Kayış yolu kapanmadı<\/span>/);
+  });
+
+  // ── RENGİN KENDİSİ CSS'TE ──────────────────────────────────────────────
+  // Yukarıdaki iki kapı yalnız SINIFI ölçüyor; sınıfa renk veren kural
+  // silinse ikisi de yeşil kalır ve rozet iki hâlde de aynı renkte çizilir.
+  // Kayış Tablosu'ndaki çift kapının aynısı (modül skill'i 14).
+  // ═══════════════════════════════════════════════════════════════════════
+  //  BANT YOK — DENETİMLER ÇİZİMİN ÜSTÜNDE YÜZER
+  // ═══════════════════════════════════════════════════════════════════════
+  //
+  // Kart bir dönem DÖRT yatay bant taşıyordu ve her biri yüksekliğini
+  // ÇİZİMDEN alıyordu:
+  //
+  //     iki seçici şeridi   44 px   (kol konumu · Katmanlar / devir · titreşim)
+  //     durum şeridi        20 px   ("✓ 6 kasnak · L 1716,2 mm")
+  //     kazanç şeridi       20 px   (yalnız titreşim açıkken)
+  //
+  // Ölçüldü (gerçek tarayıcı, 440×500 kart): çizime 436 px kalıyordu, yani
+  // kartın %13'ü banttı; titreşim açılınca 416 px (%17). Bantlar kalktı.
+  test('KART BANT TAŞIMIYOR — çizim kabı ve yüzen yüzeyler', () => {
+    const { lay } = kurCozulur();
+    const html = fead.veFeadLayoutCardHTML(lay);
+    // Kabuk konumlandırılmış ve çizim onun içinde: rozet, çubuk ve katman
+    // paneli üçü de buna göre yerleşiyor.
+    expect(html).toContain('<div class="ve-fead-kanvas"><div class="ciz">');
+    // ESKİ BANTLARIN İMZASI: her biri üst kenarlıklı, akışa giren bir kutuydu.
+    expect(html).not.toMatch(/flex:0 0 auto;[^"]*border-top/);
+    expect(html).not.toMatch(/border-top:1px solid var\(--border-color\)/);
+    // Ve üç yüzeyin de kendi sınıfı var (görünüm CSS'te — kural 14).
+    expect(html).toContain('class="ve-fead-yuz"');
+    expect(html).toContain('class="ve-fead-kan-durum ');
+  });
+
+  test('YÜZEN ÇUBUK: dört denetim, Katmanlar da İÇİNDE', () => {
+    const { lay } = kurCozulur();
+    const html = fead.veFeadLayoutCardHTML(lay);
+    const cub = /<div class="ve-fead-yuz"[\s\S]*?$/.exec(html)[0];
+    // Üç seçici + Katmanlar düğmesi. Düğme çubuğun DIŞINA düşerse paneli
+    // açmanın tek yolu görünmez olur (kutular yok, palet yolu sessiz).
+    expect((cub.match(/<select /g) || []).length).toBe(3);
+    expect(cub).toContain('ve-fead-kat-dugme');
+    ['Kol', 'Devir', 'Titr'].forEach((t) => expect(cub).toContain('<i>' + t + '</i>'));
+    // Kart kanvasta: çubuğun tamamı mousedown yutuyor, yoksa bir seçiciyi
+    // açmaya çalışmak düğümü sürüklemeye başlar.
+    expect(cub).toContain('onmousedown="event.stopPropagation();"');
+    // ...ve TEKERLEK de: kanvasın kayıtsız preventDefault'u olmasa bile
+    // çubuğun üstünde yakınlaştırmak seçiciyi değiştirirdi.
+    expect(cub).toContain('onwheel="event.stopPropagation();"');
+    // Üç seçici de düğümün KENDİ alanını yazıyor (ikinci bir ayar doğmuyor).
+    ['posMode', 'animRpm', 'vibMode'].forEach((k) =>
+      expect(cub).toContain("veFeadSetChoice('" + lay.id + "','" + k + "'"));
+  });
+
+  // ── YÜZEN ÇUBUK YÖN GÜLÜNÜ ÖRTÜYORDU — ÖLÇÜLMÜŞ HATA ────────────────────
+  // Bantlar kalkınca çizim kartın tamamını aldı ve gülün varsayılan yeri
+  // (sağ alt) tam çubuğun altına düştü: gerçek tarayıcıda gül TAMAMEN
+  // görünmez oluyordu. Gül süs değil — "montaj açısı −3,18°" gibi bir sayının
+  // hangi yöne baktığı yalnız ondan okunuyor.
+  //
+  // Çözüm çizimi KÜÇÜLTMEK değil (o, bandın geri gelmesi olurdu): yalnız gül
+  // yukarı alınıyor, ölçek aynı kalıyor.
+  test('YÖN GÜLÜ yüzen çubuğun ÜSTÜNE alınıyor — çizim küçülmeden', () => {
+    const P = fead.veFeadCompassPlace;
+    const yok = P(440, 500, null);            // rapor / dışa aktarma: pay YOK
+    const var_ = P(440, 500, null, 46);       // canlı kart: pay VAR
+    expect(yok.cy - var_.cy).toBe(46);
+    expect(var_.cx).toBe(yok.cx);             // yalnız dikey taşıma
+    expect(var_.moved).toBe(false);           // hâlâ "varsayılan yer"
+    // PAY KARTIN YARISINDAN ÇOKSA YOK SAYILIR: aşırı daraltılmış bir kartta
+    // gülü yukarı itmek onu çizimin dışına çıkarırdı.
+    expect(P(440, 80, null, 46).cy).toBe(P(440, 80, null).cy);
+    // ELLE TAŞINMIŞ GÜL ETKİLENMEZ — kullanıcının kararı.
+    const el = { fx: 0.5, fy: 0.5 };
+    expect(P(440, 500, el, 46)).toEqual(P(440, 500, el));
+  });
+
+  test('ALT PAY YALNIZ CANLI KARTTA — raporda ve dışa aktarmada YOK', () => {
+    // Rapor ve dışa aktarma AYNI çiziciyi kullanıyor ve orada yüzen çubuk yok;
+    // pay oraya da geçseydi belgede gül sebepsiz yukarı kayardı.
+    const src = require('fs').readFileSync(
+      require('path').join(__dirname, '../../js/cp-fead.js'), 'utf8');
+    expect((src.match(/altPay:/g) || []).length).toBe(1);
+    const fn = src.slice(src.indexOf('function veFeadLayoutCardHTML'));
+    expect(fn.slice(0, fn.indexOf('\n}'))).toContain('altPay: VE_FEAD_YUZ_ALT');
+  });
+
+  // YÜZEN OLMAK BİR CSS DURUMU: yukarıdaki kapılar yalnız sınıfın basıldığını
+  // ölçüyor. Konumlandırma kuralları silinse hepsi yeşil kalır ve üç yüzey de
+  // akışa geri düşer — yani bantlar geri gelir, üstelik SESSİZCE.
+  test('YÜZMEK CSS\'te: kabuk konumlandırılmış, üçü de mutlak', () => {
+    // YORUMLAR SÖKÜLÜYOR. Bu blokta kuralların GEREKÇESİ de yazılı ve gerekçe
+    // reddettiği yazımı ("`left:50%` ile değil") kelimesi kelimesine içeriyor:
+    // ham metinde arayan bir kapı kendi açıklamasını kural sanıp düşerdi.
+    const CSS = require('fs').readFileSync(
+      require('path').join(__dirname, '../../css/styles.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(CSS).toMatch(/\.ve-fead-kanvas\{[^}]*position:relative/);
+    ['ve-fead-kan-durum', 've-fead-yuz', 've-fead-yuz-vib'].forEach((c) => {
+      expect(CSS).toMatch(new RegExp('\\.' + c + '\\{[^}]*position:absolute'));
+    });
+    // ÇUBUK TEK SATIR: sarınca 40 → 64 px'e çıkıp çizimin üstünü daha çok
+    // örtüyordu; yükü seçiciler taşıyor (daralma + ellipsis).
+    expect(CSS).toMatch(/\.ve-fead-yuz\{[^}]*flex-wrap:nowrap/);
+    expect(CSS).toMatch(/\.ve-fead-yuz-dnt > select\{[^}]*text-overflow:ellipsis/);
+    // ORTALAMA `left:50%` İLE DEĞİL. Ölçüldü: mutlak konumlu kabın sığdırma
+    // genişliği "kap − left" oluyor (440'lık kartta 220) ve çubuk DÖRT SATIRA
+    // sarıyordu — yüzen çubuğun bütün kazancı geri gidiyordu.
+    expect(CSS).not.toMatch(/\.ve-fead-yuz\{[^}]*left:50%/);
+    expect(CSS).toMatch(/\.ve-fead-yuz\{[^}]*margin-inline:auto/);
+    // KATMAN PANELİ ÇUBUĞUN ÜSTÜNDE: hizanın tek kaynağı `--fead-kat-alt` ve
+    // JS tarafındaki gül payı (VE_FEAD_YUZ_ALT) onunla aynı sayıyı söylüyor.
+    expect(CSS).toMatch(/--fead-kat-alt:50px/);
+    expect(CSS).toMatch(/\.ve-fead-kat\{[^}]*bottom:calc\(var\(--fead-kat-alt/);
+  });
+
+  test('ROZET RENGİ CSS\'te ve `--ink-*` ailesinden', () => {
+    const CSS = require('fs').readFileSync(
+      require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    // `--ink-*` METİN rolüdür (`--accent-*` dolgu rolü). Aile 2026-09-14'te
+    // taşındı; ölçüldü, `--accent-*` metin olarak 19 temanın çoğunda AA
+    // altında kalıyordu.
+    expect(CSS).toMatch(/\.ve-fead-kan-durum\.ok\{[^}]*color:var\(--ink-success\)/);
+    expect(CSS).toMatch(/\.ve-fead-kan-durum\.no\{[^}]*color:var\(--ink-danger\)/);
   });
 
   test('veFeadRefreshLayoutCards tuvaldeki TÜM şema düğümlerini tazeler', () => {

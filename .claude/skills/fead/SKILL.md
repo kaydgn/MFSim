@@ -125,13 +125,33 @@ olurdu.
 13. Oturumluk sonuç globali **`window.veFeadResults` proje değişince
     temizlenmeli** (`_feadForgetResults`) — yoksa yeni projede önceki projenin
     tabloları durur.
-14. **KAYIŞ TABLOSUNUN GÖRÜNÜMÜ CSS'TE** (`css/styles.css` → `.ve-fead-tbl*`),
+14. **KAYIŞ TABLOSU BİR IZGARA DEĞİL, KART LİSTESİ** (2026-09-21, kullanıcı
+    isteği: *"görseller hiç hoşuma gitmiyor, özellikle tablo kısmı çok amatör
+    durdu"* → üç yönlü tasarım tezgâhından **C · Kart Listesi** seçildi).
+    `<table>` kalktı: her satır bir `.ve-fead-krt` ve ÜÇ BÖLGESİ var —
+    `kim` (sıra · ad düğmesi · rol çipi) · `gir` (X · Y · D · Yön) ·
+    `coz` (Ø eff · Sarım · Span, gömülü zeminde). **Defterin sütun SIRASI
+    bölgelerin İÇİNDE korunuyor**; bölge genişlikleri `veFeadKartBolgeW`
+    ile sütun listesinden türeyip `--fead-krt-*` özel özellikleriyle geçiyor
+    (`<colgroup>` genişliklerinin yerini alan şey). **`coz` bölgesi `1fr`** ve
+    genişliği YAZILMAZ — artan ne ise o; sabit yazılsaydı genişletilen kartın
+    sağında ölü bir şerit kalırdı (ölçüldü: 782 px kartta 12 px).
+    **Kayış boyu ve Σ toplam listeden KÜNYEYE geçti** — ikisi de satıra değil
+    çevrime ait; `rowspan`lı kayış boyu hücresi beş satır boyu bir
+    dikdörtgenin ortasında tek sayı taşıyordu (~170 px boş).
+    **Dönüş Yönü artık İKİ DURUMLU SEGMENT**, `<select>` değil: iki seçenek de
+    tek bakışta sığıyor ve tarayıcının oku listedeki en göze batan parçaydı
+    (altı satırda altı ok). Seçenek sayısı ikiden çıkarsa bu karar geri alınır.
+    Aşağıdaki kuralların hepsi kart listesinde de GEÇERLİ — yalnız taşıyıcıları
+    değişti (`<col class="coz">` → `coz` bölgesinin zemini, `<th>` → alan
+    etiketi + `title`).
+    **GÖRÜNÜM CSS'TE** (`css/styles.css` → `.ve-fead-krt*` / `.ve-fead-tbl*`),
     satır içi `style=` dizelerinde DEĞİL. Gerekçe kozmetik değil yapısal: satır
     içi CSS DURUM İFADE EDEMEZ (`:hover`, `:focus`, `:nth-child` yazılamaz),
     yani fare hangi satırdaysa, imleç hangi hücredeyse, hangi kasnağın paneli
     açıksa — hiçbiri görünmezdi. Kullanıcının "demode ve ilkel" dediği şey bir
     renk tercihi değil, tam olarak o taşıyıcının sınırıydı. Satır içinde kalan
-    tek şey VERİ: `<colgroup>` genişlikleri ve hücre payı. Vurgular
+    tek şey VERİ: `--fead-krt-*` bölge genişlikleri. Vurgular
     `--accent-tint-*` / `--focus-ring` jetonlarından gelir (sabit `#3b82f6`
     değil) — projenin kendi kuralı, on tema tek renk dilini konuşsun.
     Kapı ÇİFT ve ayrı ayrı hiçbir şey ifade etmezler: `fead-table.test.js` →
@@ -150,30 +170,30 @@ olurdu.
     paneli AÇIYOR"*.
     Afordans DİNLENMEDE duran "pencere açılır" simgesi (yazı karakteri DEĞİL
     çizim — eksik bir glif afordansın kendisini yok ederdi); kutu, zemin ve
-    gölge yalnız fare altında geliyor, hücre bu yüzden `overflow:visible`
-    (genel `td` kuralı gölgeyi de 1 px kalkışı da keserdi, yani "gölge olsun"
-    isteği sessizce hiçbir şey yapmazdı).
+    gölge yalnız fare altında geliyor, kimlik bölgesi bu yüzden
+    `overflow:visible` (bir `overflow:hidden` gölgeyi de 1 px kalkışı da
+    keserdi, yani "gölge olsun" isteği sessizce hiçbir şey yapmazdı).
     **KUTULU HÂLİ ÖLÇÜLDÜ VE GERİ ALINDI** (2026-09-10, gerçek tarayıcı): sayı
     hücreleri dinlenmede çerçevesiz olduğu için çerçeveli ad hücresi bir METİN
     ALANI gibi okunuyordu — sağ uca itilmiş simgeyle birlikte bir `<select>`
     okundan ayırt edilemiyordu. Kural iki yönlü: DÜĞME dinlenmede DOLU
     (basılır), ALAN dinlenmede BOŞ (yazılır); ikisi birden dolu ya da ikisi
     birden boş, ikisini de belirsiz bırakır.
-    **GİRDİ/ÇÖZÜM AYRIMI SÜTUN ŞERİDİNDEN** (`<col class="coz">`), sözlü bir
-    lejanttan değil: sütun SIRASI defterle birebir olmak zorunda, yani bitişik
-    bir "GİRDİ" bandı çizilemez. Bant tam olarak DEĞERİ ÇÖZÜMDEN GELEN
-    sütunlarda ve kapı bunu bir KURAL olarak tutuyor (sabit liste değil — yeni
-    bir türetilen sütun sessizce bantsız kalmasın). `<col>` zemini `<td>`
-    zemininin ALTINDA çizilir: gövde hücresi opak bir zemin alırsa şerit
-    sessizce kaybolur, bu yüzden ZEBRA DA YOK (ayrıca `rowspan`lı kayış boyu
-    hücresi zebrayı atlıyor ve kartın sağ ucunda merdiven bırakıyordu).
+    **GİRDİ/ÇÖZÜM AYRIMI YERLEŞİMİN KENDİSİNDE**, sözlü bir lejanttan değil.
+    Izgara döneminde taşıyıcı bir sütun şeridiydi (`<col class="coz">`) ve
+    sebebi hâlâ geçerli: sütun SIRASI defterle birebir olmak zorunda, yani
+    bitişik bir "GİRDİ" bandı çizilemez. Kart listesinde ayrım BÖLGE:
+    `coz`un zemini gömülü ve içinde yazılabilir hiçbir şey yok. Kapı bunu bir
+    KURAL olarak tutuyor (sabit liste değil — her sütunun `yer` alanı `coz`
+    bayrağıyla tutarlı olmak zorunda, yeni bir türetilen sütun sessizce
+    girdi bölgesine düşmesin). ZEBRA YOK: satır zaten kendi kabında ve ikinci
+    bir ton fare/seçim vurgusunun üstüne binerdi.
     **ÇEVRİM DENETİMİ ÜST KÜNYEDE**, kartın altında değil: tablonun tek
     EVET/HAYIR sorusu "kayış yolu kapandı mı" ve cevabı künyenin devamında
     okunur Türkçeyle duruyor (`✓ Çevrim kapalı · Σsarım 360.0°`). Alt şerit
-    dört sayıyı kısaltmalarla diziyordu ve üçü zaten başka yerde okunuyor:
-    L_pitch birleşik hücrede, L_eff künyede ("efektif boy"), konum künyenin
-    devamında. Denetim `T.ok`un kopyası DEĞİL — geometri çözülüp Σ 360'tan
-    saptığı hâl ayrıca kapılı.
+    dört sayıyı kısaltmalarla diziyordu ve üçü zaten başka yerde okunuyor.
+    Denetim `T.ok`un kopyası DEĞİL — geometri çözülüp Σ 360'tan saptığı hâl
+    ayrıca kapılı.
     **EKLENEN SATIR GÖRÜŞ ALANINA ALINIR** (`_feadScrollRowIntoView`,
     `veFeadTableAdd` içinde ve tazelemeden SONRA — satır o çağrıyla doğuyor).
     Ölçüldü: yedinci kasnak listenin dibinin 35 px altına düşüyor ve tablo hiç
@@ -181,8 +201,13 @@ olurdu.
     dolduracağı satır ekranda yok. `block:'nearest'` — görünen satır listeyi
     ZIPLATMAZ. Kapı: `fead-table.test.js` + `fead-tablo.spec.js` →
     *"KASNAK EKLE"*.
-    **KART TABANININ ALTINA İNİLEMEZ** (`componentDefs.minWidth/minHeight`);
-    gerekçesi ve genel mekanizması `docs/decisions/ortak-yuzeyler.md` içinde.
+    **KART TABANI ARTIK KART GENİŞLİĞİNİN KENDİSİ DEĞİL.** Izgarada sütunlar
+    sabit genişlikteydi, yani kartı daraltmak sütunları SESSİZCE görünmez
+    yapıyordu ve taban = kart ölçüsü olmak zorundaydı. Kart listesinde bölgeler
+    `minmax(...)` ile daralıyor (150 + 210 + 160 + 30) ve hiçbir alan
+    kaybolmuyor — taban (564) kart ölçüsünün (770) ALTINDA ve bu bir gerileme
+    değil, kazanç. Mekanizma `componentDefs.minWidth/minHeight`; gerekçesi ve
+    genel hâli `docs/decisions/ortak-yuzeyler.md` içinde.
     Tekerlek de artık listeye ait — aynı belge.
     **ÇOK DÜĞÜM KURAN HER KURUCU `veStateBatch` İLE SARILIR** —
     `veFeadLoadExample`, `veFeadWizCreate`, `veFeadPopulateStarter`. Sarılmazsa

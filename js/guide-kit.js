@@ -217,9 +217,13 @@ function veGuideDocHTML(o){
 
 // Sahnenin çizilmesi için gereken kural önekleri — TEK LİSTE.
 var VE_GUIDE_SCENE_SEL = [
-  '.ve-fead-tbl',      // Kayış Tablosu
+  '.ve-fead-tbl',      // Kayış Tablosu (künye · ekleyici · ad düğmesi)
   '.ve-fead-table',    // (tablo kabuğunun ikinci kökü)
+  '.ve-fead-krt',      // Kayış Tablosu'nun KART LİSTESİ (satır · bölge · alan)
+  '.ve-fp-',           // FEAD pencerelerinin ortak dili
   '.ve-fead-kat',      // kanvasın Katmanlar paneli
+  '.ve-fead-kan',      // Kayış Yolu kartının kabuğu + durum rozeti
+  '.ve-fead-yuz',      // çizimin üstünde yüzen denetim çubuğu
   '.ve-fead-not',      // panel açıklama satırı
   '.ve-rb-btn',        // şerit düğmesi
   '.ve-rb-group-items',// düğmenin sarmalı (yerleşim)
@@ -480,24 +484,37 @@ function _gkPageWidth(){
 // kendiliğinden değişir.
 function _gkNaturalWidth(html){
   var s = String(html || '');
-  // Sütunlu kart (Kayış Tablosu): ölçü `<colgroup>`tan toplanır.
-  // Sütunsuz kart (kanvas şeması): kendi dış kutusunun width'i. İkincisi
-  // olmadan kanvas kartları sayfadan 48 px taşıyordu (baskıda ölçüldü).
+  var topla = function(m){
+    var t = 0;
+    m.forEach(function(x){
+      var v = /(\d+(?:\.\d+)?)px/.exec(x);
+      if(v) t += Number(v[1]);
+    });
+    return t;
+  };
+  // 1) SÜTUNLU KART (ızgara): ölçü `<colgroup>`tan toplanır. Pay BASKIDA
+  //    ÖLÇÜLDÜ (`fead-kilavuz-baski.spec.js`) — sütun toplamı hücre payını
+  //    İÇERMEDİĞİ için 26 yetmiyordu, tablo sağdan kırpılıyordu.
   var m = s.match(/<col[^>]*width\s*:\s*(\d+(?:\.\d+)?)px/g);
-  if(!m || !m.length){
-    var w = /^[\s\S]{0,400}?width\s*:\s*(\d{3,4})px/.exec(s);
-    return w ? Number(w[1]) + 26 : 0;
-  }
-  var t = 0;
-  m.forEach(function(x){
-    var v = /(\d+(?:\.\d+)?)px/.exec(x);
-    if(v) t += Number(v[1]);
-  });
-  // Kartın kendi payı: kart dolgusu, kenarlıklar ve hücre boşluğu. Ölçü
-  // sütunlardan gelir; bu yalnız onun etrafındaki çerçeve ve BASKIDA ÖLÇÜLDÜ
-  // (gerçek tarayıcı, `fead-kilavuz-baski.spec.js`) — pay yetmezken tablo
-  // sağdan kırpılıyordu.
-  return t ? t + 60 : 0;
+  if(m && m.length) return topla(m) + 60;
+  // 2) KART LİSTESİ SÜTUN TAŞIMAZ: ızgara kalkınca genişlik `<colgroup>`tan
+  //    değil kabın üstündeki `--fead-krt-*` bölge özelliklerinden geliyor.
+  //    Ölçüm o taşıyıcıyı okumazsa 0 döner ve ölçekleme SESSİZCE hiç
+  //    uygulanmaz — sahne bugün sığdığı için ekranda hiçbir şey olmaz,
+  //    sütunlar yalnız daha geniş bir kartta ve yalnız BASKIDA kaybolur.
+  //    TOPLAM OKUNUR, BÖLGELER TOPLANMAZ: çözüm bölgesi `1fr` olduğu için
+  //    kendi genişliğini yazmıyor ve bölgeleri toplamak onu ATLIYOR
+  //    (ölçüldü: 768 yerine 534). Kart toplamı ayrıca basıyor.
+  //    PAY BURADA DA 60 VE SEBEBİ AYNI: 26 "bölge genişlikleri hücre payını
+  //    zaten içeriyor" diye seçilmişti ve ÖLÇÜM onu çürüttü — payın büyük
+  //    kısmı hücre boşluğu değil SAHNENİN KENDİ ÇERÇEVESİ (`.appfig` +
+  //    `.gk-sahne`).
+  var en = /--fead-krt-en\s*:\s*(\d+(?:\.\d+)?)px/.exec(s);
+  if(en) return Number(en[1]) + 60;
+  // 3) SÜTUNSUZ KART (kanvas şeması): kendi dış kutusunun width'i. Bu dal
+  //    olmadan kanvas kartları sayfadan 48 px taşıyordu (baskıda ölçüldü).
+  var w = /^[\s\S]{0,400}?width\s*:\s*(\d{3,4})px/.exec(s);
+  return w ? Number(w[1]) + 26 : 0;
 }
 
 // ── SAHNE ÖLÜDÜR: GÖRÜNÜR, TIKLANMAZ ──────────────────────────────────────
@@ -545,23 +562,53 @@ function veGuideCard(panelHtml, baslik){
   var s = String(panelHtml || '');
   var i = s.indexOf('>' + baslik + '<');
   if(i < 0) return '';
-  // Başlığı saran kart kutusunu geriye doğru bul, sonra derinlik sayarak kapat.
+  // ── KART KUTUSU ARTIK BİR SINIF, SATIR İÇİ ÇERÇEVE DEĞİL ────────────────
+  // FEAD panelleri ortak dile geçince (`.ve-fp-*`) kart kutusu
+  // `<section class="ve-fp-card">` oldu ve satır içi `border:1px solid`
+  // KALMADI. Aşağıdaki eski yol o çapayı arıyor, bulamayınca panelin İLK
+  // div'ine kadar geri yürüyor ve ALAKASIZ bir parça döndürüyordu —
+  // "Algılanan Model" sahnesi sessizce kayboldu (ölçüldü: kılavuzda o
+  // yüzeyin resmi hiç yok, hata da çıkmıyor).
+  var sec = _gkKapsayan(s, i, '<section', '</section>');
+  if(sec) return sec;
+  // Eski yol: kendi zeminini/çerçevesini satır içi yazan div (hâlâ öyle
+  // çizen yüzeyler var — kaldırılırsa onlar sessizce kaybolur).
   var bas = s.lastIndexOf('<div', i);
   while(bas > 0){
     var onceki = s.lastIndexOf('<div', bas - 1);
-    // Kart kutusu kendi zeminini/çerçevesini yazan div'dir.
     if(s.slice(bas, i).indexOf('border:1px solid') >= 0) break;
     if(onceki < 0) break;
     bas = onceki;
   }
   if(bas < 0) return '';
+  return _gkKapat(s, bas, '<div', '</div>') || '';
+}
+
+// Verilen konumu SARAN en yakın etiketi bul ve derinlik sayarak kapat.
+// `null` döner: o etikete hiç girilmemişse ya da kapanışı başlığı sarmıyorsa
+// (yani başlık o kutunun İÇİNDE değil, ondan sonra geliyorsa).
+function _gkKapsayan(s, i, ac, kapa){
+  var bas = s.lastIndexOf(ac, i);
+  while(bas >= 0){
+    var tam = _gkKapat(s, bas, ac, kapa);
+    if(tam && bas + tam.length > i) return tam;
+    bas = s.lastIndexOf(ac, bas - 1);
+  }
+  return null;
+}
+
+function _gkKapat(s, bas, ac, kapa){
   var d = 0, k = bas;
   while(k < s.length){
-    if(s.substr(k, 4) === '<div'){ d++; k += 4; continue; }
-    if(s.substr(k, 6) === '</div>'){ d--; k += 6; if(d === 0) return s.slice(bas, k); continue; }
+    if(s.substr(k, ac.length) === ac){ d++; k += ac.length; continue; }
+    if(s.substr(k, kapa.length) === kapa){
+      d--; k += kapa.length;
+      if(d === 0) return s.slice(bas, k);
+      continue;
+    }
     k++;
   }
-  return '';
+  return null;
 }
 
 // CÜMLE İÇİNDE DÜĞME. Sahne bir figürdür ve okuma akışını böler; "şeritteki
