@@ -11,6 +11,7 @@ const takimlar = {
   supurme: 'D — değişken süpürmeleri (yay, kaburga, duty, frekans, makullük)',
   katalog: 'E — profil×marka çap katmanı + kayma emniyeti ayrımı',
   cirpinma: 'E2b — çırpınma bayrağının sebebi (gevşek ↔ merkezkaç ihmali)',
+  kopru: 'F — köprünün düzeltmeleri: aynı ölçütler, düzeltilmiş yoldan',
 };
 const istenen = process.argv.slice(2).filter(a => !a.startsWith('-'));
 const kos = istenen.length ? istenen : Object.keys(takimlar);

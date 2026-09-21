@@ -183,14 +183,20 @@ function veFeadScnLoadsAt(build, rpm, idleRpm){
 }
 
 // Kasnak ataletleri (burulma modelininkiyle AYNI kaynak; krank mili ayrı).
+// ─── ATALET SÖZLÜĞÜ TEK KAYNAKTAN ───────────────────────────────────────────
+//
+// Burası eskiden düğüm alanlarını OLDUĞU GİBİ geçiriyordu ve bu, özet yolunun
+// çoktan kapattığı İKİ kusuru geçici rejimde açık bırakıyordu:
+//   · kayış krank kasnağını hızlandırmaz → çevrim kapanmıyordu
+//   · çekirdek atalet adımına `driveRatio`yu iki kez uyguluyor
+// İkisi de `veFeadPeakInertias` içinde, gerekçeleriyle birlikte yazılı. İki
+// yerde iki sözlük tutmak tam olarak sessiz ayrışmanın kendisiydi: senaryonun
+// gerginlik-ivme eğimi özet tablosundan başka bir sayı anlatıyordu.
+// Kapı: fead-transient.test.js → "atalet sözlüğü ÖZETLE AYNI".
 function veFeadScnInertias(build){
-  var J = {};
-  if(!build || !build.ok) return J;
-  build.order.forEach(function(n, i){
-    var v = (typeof _feadNum === 'function') ? _feadNum(n && n.data && n.data.inertia, NaN) : NaN;
-    if(Number.isFinite(v) && v > 0) J[build.names[i]] = v;
-  });
-  return J;
+  if(!build || !build.ok) return {};
+  if(typeof veFeadPeakInertias !== 'function') return {};
+  return veFeadPeakInertias(build);
 }
 
 // ── SENARYO KURULUMU ────────────────────────────────────────────────────────
