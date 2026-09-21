@@ -3717,37 +3717,6 @@ body > .mfsim-loading-logo .mfsim-loading-logo-ico{
   .ve-arac-breadcrumb{ animation:none; }
 }
 
-/* ── FEAD GİRİŞİ — motorun ön yüzüne iniş ─────────────────────────────────
-   Sınıfı ve siluet katmanını js/cp-fead.js › veFeadAnimateEnter koyuyor;
-   gerekçesi orada. Genel `veTopoEnter`in yerine geçiyor (yalnız GİRİŞTE —
-   çıkış genel geçişte kalıyor).
-   İKİ SÜRE DE 760 ms: temizlik kabın kendi `animationend`ine bağlı, siluet
-   daha uzun sürseydi kaldırıldığında yarıda kesilirdi. */
-.ve-canvas-wrapper.ve-fead-enter{
-  animation:veFeadEnter 760ms cubic-bezier(0.32,0.72,0.24,1);
-}
-@keyframes veFeadEnter{
-  from{ opacity:0; transform:scale(0.86); }
-  to{ opacity:1; transform:scale(1); }
-}
-/* Siluet minimap'in ALTINDA (o z-index:40) ama kanvasın üstünde. */
-.ve-fead-blok{
-  position:absolute; inset:0; z-index:6; pointer-events:none;
-  display:flex; align-items:center; justify-content:center;
-  animation:veFeadBlokOut 760ms cubic-bezier(0.32,0.72,0.24,1) both;
-}
-.ve-fead-blok svg{ width:min(62%, 520px); height:auto; }
-.ve-fead-blok-g{ fill:none; stroke:var(--text-muted); stroke-width:3; }
-@keyframes veFeadBlokOut{
-  0%{ opacity:0.62; transform:scale(1.02); }
-  55%{ opacity:0.42; }
-  100%{ opacity:0; transform:scale(1.5); }
-}
-@media (prefers-reduced-motion: reduce){
-  .ve-canvas-wrapper.ve-fead-enter{ animation:none; }
-  .ve-fead-blok{ animation:none; display:none; }
-}
-
 .ve-canvas{
   width:6000px;
   height:6000px;
@@ -8055,67 +8024,19 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 }
 .ve-fw-head p{ margin:0; font-size:var(--fs-md); color:var(--text-muted); }
 
-/* ── ANTET — sihirbazın künyesi ───────────────────────────────────────────
-   Sihirbazın en değerli yüzeyi: kullanıcı "İleri" demeden modelin çözülüp
-   çözülmediğini görüyor. Eskiden bir ROZET ŞERİDİYDİ (duruma göre 2–5 hap,
-   her canlı yamada yeniden dizilen) — gerekçesi ve iki ölçülmüş kusuru
-   js/cp-fead-wizard.js › veFeadWizLiveHTML başında.
-
-   SAÇ TELİ IZGARASI: hücre aralarındaki çizgi `gap:1px` + ızgara zemini,
-   hücre kenarlığı DEĞİL. Sebebi sarma: sekiz hücre dar modalda iki sıraya
-   düşüyor ve `border-right` o sırada satır uçlarında asılı çizgi bırakırdı. */
-.ve-fw-live{
-  display:grid; grid-template-columns:repeat(auto-fit, minmax(98px, 1fr));
-  gap:1px; margin:0 0 14px;
-  background:var(--border-color);
-  border:1px solid var(--border-color);
-}
+/* Canlı şerit — sihirbazın en değerli yüzeyi: kullanıcı "İleri" demeden
+   modelin çözülüp çözülmediğini görüyor. */
+.ve-fw-live{ display:flex; flex-wrap:wrap; gap:6px; margin:0 0 14px; }
 .ve-fw-pill{
-  display:flex; flex-direction:column; gap:1px; min-width:0;
-  padding:5px 9px 6px; background:var(--bg-primary);
+  display:inline-flex; align-items:center; gap:5px; padding:3px 9px;
   font-size:var(--fs-tiny); color:var(--text-secondary);
+  background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm);
 }
-.ve-fw-pill i{
-  font-style:normal; font-size:var(--fs-micro); color:var(--text-muted);
-  letter-spacing:var(--tracking-wide); text-transform:uppercase;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-.ve-fw-pill b{
-  color:var(--text-heading); font-family:var(--font-mono); font-weight:700;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-.ve-fw-pill em{ font-style:normal; color:var(--text-muted); font-size:var(--fs-micro); }
-/* Kimlik alanı iki iz: eşit bölüşümde sistem adı kırpılıyordu. */
-.ve-fw-antet-gen{ grid-column:span 2; }
-/* DAMGA — düz metin (i/b yok), bu yüzden ortalanıyor. Kenarlık `box-shadow`
-   ile: gerçek bir `border` hücreyi 2 px büyütür ve saç teli ızgarasını kaydırır. */
-.ve-fw-damga{
-  align-items:center; justify-content:center; gap:0; text-align:center;
-  font-family:var(--font-mono); font-weight:700; font-size:var(--fs-micro);
-  letter-spacing:var(--tracking-wide);
-}
-.ve-fw-pill-ok{ color:var(--ink-success); box-shadow:inset 0 0 0 1px var(--accent-success); }
-.ve-fw-pill-err{ color:var(--ink-danger); box-shadow:inset 0 0 0 1px var(--accent-danger); }
+.ve-fw-pill b{ color:var(--text-heading); font-family:var(--font-mono); font-weight:700; }
+.ve-fw-pill em{ font-style:normal; color:var(--ink-warning); font-size:var(--fs-micro); }
+.ve-fw-pill-ok{ border-color:var(--accent-success); color:var(--ink-success); }
+.ve-fw-pill-err{ border-color:var(--accent-danger); color:var(--ink-danger); }
 .ve-fw-pill-dim{ color:var(--text-muted); }
-
-/* ── AÇILIŞ — `display:flex` bir KESMEYDİ ─────────────────────────────────
-   Sınıfı js/cp-fead-wizard.js › _fwAcilisAnim koyuyor (display geçişi CSS
-   `transition` çalıştırmaz, @keyframes şart).
-   KAPLAMANIN SÜRESİ MODALINKİNDEN KISA OLAMAZ: temizlik kaplamanın kendi
-   `animationend`ine bağlı, kısa olsaydı modal daha yoldayken sınıf kalkardı. */
-#ve-feadwiz-overlay.ve-fw-acilis{ animation:veFwAcilis 400ms var(--ease-out) both; }
-#ve-feadwiz-overlay.ve-fw-acilis .ve-fw-modal{
-  animation:veFwModalIn 380ms cubic-bezier(0.22,0.61,0.36,1) both;
-}
-@keyframes veFwAcilis{ from{ opacity:0; } to{ opacity:1; } }
-@keyframes veFwModalIn{
-  from{ opacity:0; transform:translateY(18px) scale(0.972); }
-  to{ opacity:1; transform:none; }
-}
-@media (prefers-reduced-motion: reduce){
-  #ve-feadwiz-overlay.ve-fw-acilis,
-  #ve-feadwiz-overlay.ve-fw-acilis .ve-fw-modal{ animation:none; }
-}
 
 /* Kart — panel kartlarının (_feadCard) aynı dili: sol aksan çubuğu + başlık
    satırında birim/gerekçe. İki yüzey aynı şeyi farklı gösterirse kullanıcı
