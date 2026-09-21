@@ -1474,6 +1474,58 @@ function _feadVibSpanMag(fSpan, fFire, zeta){
 // Çare ikinci bir `slackN` eklemek DEĞİL — o, üçüncü bir yüzey doğduğunda aynı
 // ayrışmayı yeniden üretirdi. Harita zaten hem ankrajı hem duty yükünü doğru
 // geçiyor; titreşim ONU okuyor. Tek kaynak, sessiz ayrışma yok.
+
+// ─── ZİNCİR ETKİN GERGİNLİK TAŞIR, HAREKETLİ TEL GERÇEĞİNİ İSTER ────────────
+//
+// Kasnak yüzeyindeki temas kuvveti hareketli kayışta `N = T − m′v²`'dir:
+// sarımın dφ'lik parçası v²/r merkezcil ivmesi altında ve radyal denge
+// `N dφ − T dφ = −m′v² dφ` veriyor. Gergi kolunun moment dengesi de o kuvveti
+// gördüğü için çekirdeğin `T = M/(dL/dθ)` zinciri ETKİN gerginliktir.
+//
+// Üç tüketici bu sözleşmeyle TUTARLI ve dokunulmamalı:
+//   hubload  = 2·T_etkin·sin(φ/2)        (kasnağa binen gerçek kuvvet)
+//   kayma    = (T₁−T_c)/(T₂−T_c)         (T_c ortak, oran zincirden birebir)
+//   güç      = ΔT·v                      (T_c ortak, farkta yok olur)
+// DÖRDÜNCÜSÜ değil: enine dalga denklemi açıklıktaki GERÇEK gerginliği ister,
+//   c² = T_gerçek/m′ = T_etkin/m′ + v²
+// ve `spanFrequencies` kendisine verileni gerçek sanıyor.
+//
+// ÖLÇÜLDÜ (197 gerçekçi tasarım, kaburga başına 60–130 N): ortanca sapma
+// 1200 d/d'de %−0,9 · 1800'de %−2,1 · 3000'de %−6,7 · 4000'de %−13,3; dağılımın
+// %5'lik ucu 4000 d/d'de %−34,8. İkinci etki YAPAY ÇIRPINMA: gerginliği
+// pozitif olduğu hâlde `c ≤ v` çıkan sistemler (1800 d/d'de 197'de 7–9,
+// 4000'de 9–16). `m′v²` dahilken `c > v` yapısal olarak sağlanır.
+//
+// GATES ARŞİVİ BU SÖZLEŞMEYİ ÇÖZMÜYOR: 11 raporun hiçbirinde açıklık frekansı
+// SAYI olarak yok (tedarikçi onu grafik basıyor, metinde yalnız "Only low
+// frequency spans are shown" notu ve System Resonance değeri var). Yani bu
+// düzeltme türetilmiştir, tedarikçiye kalibre DEĞİLDİR — bir Gates açıklık
+// frekans tablosu geldiğinde sınanacak ilk yer burasıdır.
+//
+// GEVŞEK AÇIKLIK KORUNUR: T_etkin ≤ 0 ise merkezkaç eklenmez. Eklenseydi
+// gevşemiş bir açıklık pozitif gerginliğe dönüp duran dalga taşıyormuş gibi
+// görünürdü; oysa orada kayış kasnaktan ayrılmış demektir ve çekirdeğin
+// negatif gerilme uyarısı o hâli ayrıca bildiriyor.
+//
+// `TN` alanı ZİNCİRİN sayısı olarak geri yazılır: raporun gerginlik sütunu
+// modelin her yerindeki etkin gerginliktir, merkezkaç payı `TcN` ile AYRI
+// taşınır. İki sütunun aynı tabloda iki farklı gerginlik anlatması, kapatmaya
+// çalıştığımız ayrışmanın ta kendisi olurdu.
+// Kapı: fead-span-frekans.test.js.
+function veFeadSpanFreqRows(sys, geom, spanN, opt){
+  var o = opt || {};
+  if(typeof FEADCore === 'undefined') return [];
+  var mp = NaN, v = 0;
+  try { mp = FEADCore.massPerM(sys); } catch(e){ mp = NaN; }
+  var rpm = _feadNum(o.engineRpm, NaN);
+  if(rpm > 0){ try { v = FEADCore.beltSpeed(sys, rpm); } catch(e){ v = 0; } }
+  var Tc = (mp > 0 && v > 0) ? mp * v * v : 0;
+  var gercek = spanN.map(function(T){ return (T > 0) ? T + Tc : T; });
+  var rows = FEADCore.spanFrequencies(sys, geom, gercek, o);
+  rows.forEach(function(r, i){ r.TN = spanN[i]; r.TcN = (spanN[i] > 0) ? Tc : 0; });
+  return rows;
+}
+
 function veFeadVibSpanPayload(build, engineRpm, slow, gain, relDeg, zeta){
   if(!build || !build.ok || !build.sys || typeof FEADCore === 'undefined') return null;
   var rpm = _feadNum(engineRpm, NaN);
@@ -1487,8 +1539,8 @@ function veFeadVibSpanPayload(build, engineRpm, slow, gain, relDeg, zeta){
     // Harita null dönerse gerilme TANIMSIZ demektir (devir yok ya da çekirdek
     // çözemedi). Eski çağrıya düşmek, yanlış bir gerilmeyle çırpmak olurdu.
     if(!T) return null;
-    fr = FEADCore.spanFrequencies(sys, st.geom, T.spanN,
-                                 { engineRpm: rpm, modes: VE_FEAD_VIB_MODES });
+    fr = veFeadSpanFreqRows(sys, st.geom, T.spanN,
+                            { engineRpm: rpm, modes: VE_FEAD_VIB_MODES });
     cyl = _feadNum(build.solver && build.solver.data && build.solver.data.cylinders, 6);
     if(!(cyl > 0)) cyl = 6;
     fFire = FEADCore.firingFrequencyHz(rpm, cyl, 4);
@@ -1557,8 +1609,13 @@ function veFeadVibSpanPayload(build, engineRpm, slow, gain, relDeg, zeta){
 function veFeadVibModeList(build, opts){
   if(!build || !build.ok || !build.sys || typeof FEADCore === 'undefined') return null;
   try {
-    var T = FEADCore.torsionalModel(build.sys, veFeadTorsionalOpt(build, opts || {}));
-    return T.modes.filter(function(m){ return m.fHz > 1e-6; }).map(function(m){ return m.fHz; });
+    // EŞİK TEK YERDE: sabit 1e-6 burada da duruyordu ve rijit cisim modu
+    // eşiği aştığında kullanıcının mod listesinin BAŞINA 0,000001 Hz'lik bir
+    // satır düşüyordu — "1. mod" seçildiğinde animasyon bir titreşim modunu
+    // değil bütün sistemin birlikte dönüşünü oynatırdı.
+    var T = veFeadTorsionalNorm(
+      FEADCore.torsionalModel(build.sys, veFeadTorsionalOpt(build, opts || {})));
+    return T.elasticHz;
   } catch(e){ return null; }
 }
 
@@ -1570,10 +1627,11 @@ function veFeadVibModePayload(build, modeIdx, gain, opts, relDeg){
   var T, st;
   try {
     var rel = Number.isFinite(_feadNum(relDeg, NaN)) ? _feadNum(relDeg, NaN) : FEADCore.meanRel(sys);
-    T  = FEADCore.torsionalModel(sys, veFeadTorsionalOpt(build, opts || {}));
+    T  = veFeadTorsionalNorm(
+      FEADCore.torsionalModel(sys, veFeadTorsionalOpt(build, opts || {})));
     st = FEADCore.tensionerState(sys, rel);
   } catch(e){ return null; }
-  var elastic = T.modes.filter(function(m){ return m.fHz > 1e-6; });
+  var elastic = T.elastic || [];
   var k = Math.max(0, Math.min(elastic.length - 1, Math.round(_feadNum(modeIdx, 0))));
   var m = elastic[k];
   if(!m) return null;
@@ -4159,6 +4217,43 @@ var VE_FEAD_LIFE_FATIGUE_MODEL = 'PK-2_2p-MT3';
 // AG0868 ailesi 41.0/49.7/57.1 Hz'e fırlıyor (RMS %33) ve 8PK varyantında
 // birinci mod sayısal olarak çöküyor. Yani bu alan bağlanmadan model
 // kullanılabilir değil.
+// ─── RİJİT CİSİM MODU SABİT SAYIYLA AYIKLANAMAZ ─────────────────────────────
+//
+// Çekirdek elastik modları `fHz > 1e-6` ile ayırıyor. Rijit cisim modunun
+// frekansı ANALİTİK OLARAK tam sıfırdır (özvektör θ ∝ 1/R, δ = 0 → bütün
+// açıklık uzamaları sıfır), ama Jacobi çözücüsünün sayısal artığı matris
+// normuyla büyüyor ve 1,26·10⁻⁶ Hz'e kadar çıkıyor. Eşiği aştığı anda rijit
+// mod "elastik" sayılıyor ve `firstElasticHz` ~0 Hz dönüyor.
+//
+// ÖLÇÜLDÜ (1942 rastgele sistem): 23'ünde (%1,2) birinci elastik mod 0,000 Hz
+// basılıyor; gerçeği 26–40 Hz. Kusur SESSİZ değil ama YANILTICI: panel ve özet
+// kartı sıfır bir frekans gösteriyor.
+//
+// Eşik GÖRELİ olmalı — mutlak bir sayı, sistemin ölçeğini bilmiyor. En büyük
+// modun 10⁻⁶ katı, 1942 sistemin 1942'sinde rijit modu (≤1,3·10⁻⁶ Hz) eliyor
+// ve en düşük gerçek elastik modu (ölçülen en küçüğü 4,6 Hz) hiç aday etmiyor:
+// tipik f_maks ~100 Hz'de eşik 10⁻⁴ Hz.
+//
+// SAYIYLA ATMIYORUZ. "Tam bir tane vardır" doğru bir hüküm ama onu varsayıp
+// ilk modu koşulsuz atmak, gerçekten iki sıfır özdeğerli bir modelde (yay
+// katsayısı sıfır girilirse) ikinci sıfırı 0 Hz'lik bir "elastik mod" diye
+// basardı. Sayım sonuçta taşınıyor; panel zaten "1 olmalı" diye yazıyor.
+// Kapı: fead-burulma-esik.test.js.
+var VE_FEAD_TORS_REL_FLOOR = 1e-6;
+function veFeadTorsionalNorm(T){
+  if(!T || T.error || !Array.isArray(T.modes) || !T.modes.length) return T;
+  var fMax = 0;
+  T.modes.forEach(function(m){ if(m.fHz > fMax) fMax = m.fHz; });
+  var esik = fMax * VE_FEAD_TORS_REL_FLOOR;
+  var el = T.modes.filter(function(m){ return m.fHz > esik; });
+  T.rigidBodyModes = T.modes.length - el.length;
+  T.elastic = el;                                  // mod NESNELERİ (şekil dahil)
+  T.elasticHz = el.map(function(m){ return m.fHz; });
+  T.firstElasticHz = el.length ? el[0].fHz : null;
+  T.modeFloorHz = esik;
+  return T;
+}
+
 function veFeadTorsionalOpt(build, opts){
   var o = {};
   var J = _feadNum(opts && opts.crankInertia, NaN);
@@ -4214,24 +4309,69 @@ function veFeadTorsionalOpt(build, opts){
 //   gerginlik RMS %11,83 → %0,41 (en kötü %22,81 → %0,69)
 //   hubload   RMS  %9,75 → %0,39 (en kötü %17,51 → %0,55)
 //   gergi hubload yönü 198,8° → 217,1°  (Gates 218°)
+// ─── TAHRİK ORANI ÇARPANI İKİ KEZ BİNİYOR ───────────────────────────────────
+//
+// Çekirdek açısal ivmeyi `alpha = ivme · driveRatio · 2π/60` ile kurup atalet
+// terimini `speedRatio(sys,k)` ile çarpıyor — ama `speedRatio` TANIMI GEREĞİ
+// `driveRatio`yu zaten içeriyor (`driveRatio · r_krank / r_k`). Doğrusu
+// `α_k = ivme · speedRatio_k · 2π/60`; çekirdek her adımı tam `driveRatio`
+// katı yazıyor.
+//
+// KALİBRASYON TAKIMI BUNU GÖREMEZ: arşivdeki Gates örneklerinin TAMAMI
+// `driveRatio = 1` yazılı, yani çarpan 1 ve 2095 değerin hiçbiri oynamıyor.
+// Kusur ancak referanssız bir özdeşlikle görünüyor — aynı makinenin iki
+// yazımı (oran 1 · 1800 d/d · 1100 d/d/s  ↔  oran 2 · 900 d/d · 550 d/d/s)
+// krank kasnağında birebir aynı hareket demek, dolayısıyla bütün gerginlikler
+// aynı olmak ZORUNDA. ÖLÇÜLDÜ: tepe gerginlikte %5,25 fark, kasnak başına
+// atalet adımı tam iki katı.
+//
+// Düzeltme ÇEKİRDEĞE DOKUNMUYOR: hata her adıma DÜZGÜN bindiği için
+// ataletleri `1/driveRatio` ile ölçeklemek onu tam olarak kapatır. Bu yüzden
+// sözlük artık YALNIZ krankı değil BÜTÜN kasnakları taşıyor — ölçekleme
+// kısmi uygulanırsa çevrim kapanışı da bozulur.
+//
+// ─── VE ZİNCİR KAPANIYOR (krank eşdeğer ataleti) ────────────────────────────
+// Kayış krank kasnağını hızlandırmaz: o motora cıvatalı ve motor onu zaten
+// döndürüyor. Kayışın hızlandırdığı kütleler AKSESUARLARDIR; krankta görülen
+// gerginlik artışı onların taleplerinin TOPLAMIDIR. Gergi toplama girmez —
+// zincir orada ankrajlı olduğu için o kasnağın adımı hiç uygulanmıyor.
+//
+// ÖLÇÜLDÜ (AG00976, 880 d/d, 1100 d/d/s): ham artık −125,20 N; 300 bağımsız
+// rastgele sistemde tepe gerginliğin ortalama %7,0'i, en kötü %55,3'ü.
+//
+// ÖLÇÜLEN ETKİ (Gates AG00976 tepe tablosuna karşı):
+//   gerginlik RMS %11,83 → %0,41 (en kötü %22,81 → %0,69)
+//   hubload   RMS  %9,75 → %0,39 (en kötü %17,51 → %0,55)
+//   gergi hubload yönü 198,8° → 217,1°  (Gates 218°)
+//
+// Kapılar: cp-fead-summary.test.js (çevrim kapanışı + Gates tablosu),
+// fead-peak-driveratio.test.js (oran değişmezliği, referanssız).
 function veFeadPeakInertias(build){
   var out = {};
   var sys = build && build.sys;
   if(!sys || !sys.pulleys || typeof FEADCore === 'undefined') return out;
   var c = sys._crkIdx, t = sys._tenIdx;
   if(!(c >= 0) || !sys.pulleys[c]) return out;
+  var dr = _feadNum(sys.driveRatio, 1);
+  if(!(dr > 0)) dr = 1;
   // dI = J·α·oran/r  →  α ortak çarpan, sadeleşiyor.
-  var pay = 0, i, p, oran;
+  var pay = 0, i, p, oran, J = [];
   for(i = 0; i < sys.pulleys.length; i++){
-    if(i === c || i === t) continue;
     p = sys.pulleys[i];
     oran = FEADCore.speedRatio(sys, i);
     if(!(p.rPitch > 0) || !Number.isFinite(oran)) return out;
-    pay += (p.inertiaKgM2 || 0) * oran / (p.rPitch / 1000);
+    // Düğüm alanı ÖNCE, çözülmüş kasnak SONRA: ikisi programda aynı sayıdır
+    // (kasnağınki düğümden türüyor, boşsa varsayılana düşüyor) ama geçici
+    // rejim yolu düğümden besleniyor ve tek kaynak buradan geçmeli.
+    J[i] = _feadNum(build.order && build.order[i] && build.order[i].data
+                    && build.order[i].data.inertia, NaN);
+    if(!(J[i] > 0)) J[i] = p.inertiaKgM2 || 0;
+    if(i !== c && i !== t) pay += J[i] * oran / (p.rPitch / 1000);
   }
   var pc = sys.pulleys[c], oc = FEADCore.speedRatio(sys, c);
   if(!(pc.rPitch > 0) || !(oc > 0)) return out;
-  out[pc.name] = pay * (pc.rPitch / 1000) / oc;
+  J[c] = pay * (pc.rPitch / 1000) / oc;         // çevrimi kapatan eşdeğer atalet
+  for(i = 0; i < sys.pulleys.length; i++) out[sys.pulleys[i].name] = J[i] / dr;
   return out;
 }
 
@@ -4338,6 +4478,25 @@ function veFeadAnalyze(build, opts){
       // BAŞKA bir frekans verirdi. Tek sonuç kalsın: burada kapalı, aşağıda açık.
       torsional: false
     });
+    // ── AÇIKLIK FREKANSLARI KÖPRÜNÜN TEK YOLUNDAN GEÇER ────────────────────
+    // `analyze()` frekansı kendi içinde kuruyor ve zincirin ETKİN gerginliğini
+    // gerçek sanıyor (gerekçe: veFeadSpanFreqRows). Seçenek geçilemediği için
+    // satırlar burada yeniden kuruluyor — açıklık gerginliği `perPulley`de
+    // zaten var (spanN[i] = i. kasnağın çıkış gerilmesi), ikinci bir
+    // `spanTensions` çağrısına gerek yok. Animasyon ve rapor aynı yoldan
+    // geçmezse iki yüzey aynı açıklık için iki frekans yazardı.
+    try {
+      var _geomF = FEADCore.tensionerState(build.sys, FEADCore.meanRel(build.sys)).geom;
+      (out.analysis.duty || []).forEach(function(d){
+        if(!d || !Array.isArray(d.perPulley) || !Array.isArray(d.frequencies)) return;
+        d.frequencies = veFeadSpanFreqRows(build.sys, _geomF,
+          d.perPulley.map(function(p){ return p.exitTensionN; }),
+          { engineRpm: d.engineRpm, modes: 1 });
+      });
+    } catch(e){
+      out.warnings.push('Açıklık frekansları merkezkaç payıyla yeniden '
+        + 'kurulamadı: ' + veFeadTranslateError(e && e.message));
+    }
     out.ok = true;
   } catch(e){
     out.error = veFeadTranslateError(e && e.message);
@@ -4349,7 +4508,8 @@ function veFeadAnalyze(build, opts){
   // eksikse çekirdek açık hata verir ve buraya uyarı olarak düşer. Sessizce
   // atlamıyoruz: kullanıcı frekans kartını boş görüp hesabın çöktüğünü sanmasın.
   try {
-    out.torsional = FEADCore.torsionalModel(build.sys, veFeadTorsionalOpt(build, opts));
+    out.torsional = veFeadTorsionalNorm(
+      FEADCore.torsionalModel(build.sys, veFeadTorsionalOpt(build, opts)));
   } catch(e){
     out.torsional = null;
     out.warnings.push('Burulma modeli: ' + veFeadTranslateError(e && e.message));
@@ -4567,6 +4727,9 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadDutyToCore: veFeadDutyToCore, veFeadAnalyze: veFeadAnalyze,
     veFeadDutyDegC: veFeadDutyDegC, veFeadTorsionalOpt: veFeadTorsionalOpt,
     veFeadPeakInertias: veFeadPeakInertias,
+    veFeadSpanFreqRows: veFeadSpanFreqRows,
+    veFeadTorsionalNorm: veFeadTorsionalNorm,
+    VE_FEAD_TORS_REL_FLOOR: VE_FEAD_TORS_REL_FLOOR,
     veFeadSlipThreshold: veFeadSlipThreshold,
     VE_FEAD_SLIP_LOADED_RATIO: VE_FEAD_SLIP_LOADED_RATIO,
     VE_FEAD_LIFE_FATIGUE_MODEL: VE_FEAD_LIFE_FATIGUE_MODEL,

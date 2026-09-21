@@ -179,18 +179,36 @@ describe('gerilme — çekirdekle BİREBİR, animatörde yeniden kurulur', () =>
     });
   });
 
-  test('ivme gerilmeyi ARTIRIR, yavaşlama AZALTIR (yön tersine döner)', () => {
+  // ── KARŞILAŞTIRMA AYNI DEVİRDE YAPILIR ────────────────────────────────
+  // Eski hâli ivme ve yavaşlama fazlarını RÖLANTİYLE kıyaslıyordu ve bu, iki
+  // değişkeni birbirine karıştırıyordu: iki fazın devri de rölantiden farklı,
+  // dolayısıyla P/v terimi de farklı. ÖLÇÜLDÜ: yavaşlama fazında Tmax
+  // rölantininkinden %2,2 BÜYÜK çıkıyor — α < 0 olduğu hâlde. Yani sınama
+  // ivmenin işaretini değil devir farkını okuyordu ve yalnızca atalet terimi
+  // şişik olduğu sürece (krankın kendi ataleti zincire yazılıyordu) doğru
+  // görünüyordu.
+  //
+  // Hüküm α'nın işareti olduğu için kıyas AYNI DEVİRDE: inişten bir nokta
+  // seçilip çıkıştaki en yakın devirli nokta bulunuyor. ÖLÇÜLDÜ (AG00686):
+  // 1345 d/d'de Tmax ivmede 1213,4 N · yavaşlamada 1190,9 N (%1,9 fark).
+  test('AYNI DEVİRDE ivme gerilmeyi ARTIRIR, yavaşlama AZALTIR', () => {
     const scn = TR.veFeadScenarioBuild(kur(), {});
     const acc = scn.ph.find((p) => p.k === 'accel');
     const dec = scn.ph.find((p) => p.k === 'decel');
-    const idl = scn.ph.find((p) => p.k === 'idle');
-    const sI = TR.veFeadScnStateAt(scn, (idl.t0 + idl.t1) / 2);
     const sA = TR.veFeadScnStateAt(scn, acc.t0 + (acc.t1 - acc.t0) * 0.4);
-    const sD = TR.veFeadScnStateAt(scn, dec.t0 + (dec.t1 - dec.t0) * 0.4);
+    let sD = null, enYakin = Infinity;
+    for (let i = 0; i <= 600; i++) {
+      const s = TR.veFeadScnStateAt(scn, dec.t0 + (dec.t1 - dec.t0) * i / 600);
+      const d = Math.abs(s.rpm - sA.rpm);
+      if (d < enYakin) { enYakin = d; sD = s; }
+    }
+    expect(enYakin).toBeLessThan(5);              // devir gerçekten eşleşti
     expect(sA.alpha).toBeGreaterThan(0);
     expect(sD.alpha).toBeLessThan(0);
-    expect(sA.Tmax).toBeGreaterThan(sI.Tmax * 1.05);
-    expect(sD.Tmin).toBeLessThan(sI.Tmin * 0.97);
+    expect(sA.Tmax).toBeGreaterThan(sD.Tmax * 1.01);
+    // Ankraj açıklığı (gergi) zincirin en küçüğü olduğu sürece Tmin ivmeden
+    // ETKİLENMEZ — orası tanım gereği sabit. Kural Tmax üzerinden okunur.
+    expect(sA.Tmin).toBeCloseTo(sD.Tmin, 6);
   });
 
   // DÖRDÜNCÜ SESSİZ TUZAK. Sabit güç P/v'yi patlatıyor (ölçüldü: 41.927 N),
@@ -285,7 +303,12 @@ describe('rezonans süpürmesi — animasyonun asıl olayı', () => {
     const yukari = bul('accel'), asagi = bul('decel');
     expect(yukari.d).toBeLessThan(0.02);
     expect(asagi.d).toBeLessThan(0.02);
-    expect(Math.abs(yukari.rpm - asagi.rpm)).toBeGreaterThan(40);
+    // HİSTEREZİS KÜÇÜLDÜ, KAYBOLMADI: 40+ d/d idi, ölçülen 20,4. Sebep
+    // atalet teriminin doğru büyüklüğe inmesi — kayış krank kasnağını
+    // hızlandırmadığı için krank adımı kendi ataletinden değil aksesuar
+    // toplamından geliyor (bkz. veFeadPeakInertias). Eşik ölçülen değerin
+    // altına, ama sıfırdan belirgin biçimde uzağa konuyor.
+    expect(Math.abs(yukari.rpm - asagi.rpm)).toBeGreaterThan(15);
   });
 
   test('uyarma yoksa çırpma da yok — durgun kayış sallanmaz', () => {
