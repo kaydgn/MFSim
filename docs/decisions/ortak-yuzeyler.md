@@ -487,3 +487,25 @@ bu kararın kendisi oldu.
 koşamaz (jsdom `getBoundingClientRect`i sıfır döndürür, kenarlık rengini
 kaskaddan hesaplamaz). İki yönde düşmesi ölçüldü: ray kenarı geri konunca
 tek-sütun halkası, durum bandın içine dönünce yerleşim halkaları.
+
+## Tuval bir ÇUKURA oturur (2026-09-22)
+
+**Hüküm.** Tuval dört kenardan da 8 px içeri çekilir, yarıçaplıdır ve **iç**
+gölge taşır. Üst ve alt bantlar (sekmeler · durum) tam genişlikte kalır.
+
+**Gerekçe.** Yerleşim bir ayrım söylüyor: **bant kabuğun, tuval çalışmanın.**
+Kabuğun kenarına yapışan bir bant ile içeri çekilmiş bir yüzey bunu sözsüz
+anlatır; ikisi de kenara yapışınca aynı düzlemde okunuyorlardı.
+
+**İÇ gölge bir YÜKSELTİ değil bir DERİNLİKTİR.** Emekli hüküm
+(*"yalnız YÜZEN katman gölge alır; yerinde duran kabuk gölge almaz"*) bu ayrımı
+yapmadığı için çukuru da yasaklıyordu: nesneyi kaldıran gölge ile yüzeyi oyan
+gölge aynı sayılmıştı. `--shadow-inset` PR 5'te tam bunun için tanımlandı.
+
+**Bölünmüş görünümde her bölme kendi çukuru olur** — boşluk kapta
+(`.ve-split-container` iç payı + `gap`), çukur bölmenin kendisinde.
+
+**Kapı:** `kabuk-sutun.spec.js` → *"tuval bir ÇUKURA oturuyor"*. DÖRT kenarın
+da payı ölçülür (tek kenarda pay bir çukur değil bir kaymadır) ve gölgenin
+`inset` olduğu ayrıca tutulur — dışa çevrilince düşüyor, ölçüldü. Node'da
+koşamaz: jsdom `box-shadow`u kaskaddan hesaplamaz.

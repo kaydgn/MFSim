@@ -2153,11 +2153,18 @@ html.ve-sayfa-tuval .ve-nav-rail{ border-right-color:transparent; }
 }
 
 /* ===== SPLIT VIEW ===== */
+/* TUVAL BİR ÇUKURA OTURUR (Atölye). Boşluk BURADA, çukurun kendisi
+   `.ve-canvas-wrapper`'da: bölünmüş görünümde her bölme kendi çukuru olur.
+   Üst ve alt bantlar (sekmeler · durum) tam genişlikte kalır — kabuğun
+   kenarına yapışan bir bant ile içeri çekilmiş bir tuval, "bant kabuğun,
+   tuval çalışmanın" ayrımını yerleşimle söyler. */
 .ve-split-container{
   display:flex;
   flex:1;
   min-height:0;
   position:relative;
+  padding:8px;
+  gap:8px;
 }
 .ve-split-pane{
   flex:1;
@@ -3027,6 +3034,14 @@ body > .mfsim-loading-logo .mfsim-loading-logo-ico{
   min-height:0;
   position:relative;
   cursor:default;
+  /* EMEKLİ HÜKÜM (2026-09-22): "yalnız YÜZEN katman gölge alır; yerinde duran
+     kabuk gölge almaz" kuralı gereği tuval düz bir dikdörtgendi. Hüküm PR 5'te
+     emekliye ayrıldı ve `--shadow-inset` o turda tanımlandı — çünkü İÇ gölge
+     bir YÜKSELTİ değil bir DERİNLİK: nesneyi kaldırmıyor, yüzeyi oyuyor.
+     Bu ayrım olmadan "gölge yok" kuralı çukuru da yasaklıyordu. */
+  border:1px solid var(--border-color);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-inset);
 }
 
 /* ── Minimap — topoloji genel görünümü (sağ-alt köşe) ─────────────────────

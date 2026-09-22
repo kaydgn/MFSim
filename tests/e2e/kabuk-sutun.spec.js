@@ -119,3 +119,37 @@ test('şerit katlanınca tuval hâlâ kazanıyor', async ({ page }) => {
   // ve şerit katlıyken de durum ALTTA kalır
   expect(sonra.durum.y).toBeGreaterThanOrEqual(sonra.tuval.y + sonra.tuval.h - 1);
 });
+
+// ── TUVAL ÇUKURU (Tur B) ───────────────────────────────────────────────────
+// EMEKLİ HÜKÜM: "yalnız YÜZEN katman gölge alır; yerinde duran kabuk gölge
+// almaz" kuralı tuvali düz bir dikdörtgen tutuyordu. İÇ gölge bir YÜKSELTİ
+// değil bir DERİNLİK — nesneyi kaldırmaz, yüzeyi oyar; o ayrım olmadan kural
+// çukuru da yasaklıyordu.
+//
+// Node'da ölçülemez: jsdom `box-shadow`u kaskaddan hesaplamaz ve `inset`
+// anahtarını hiç döndürmez.
+test('tuval bir ÇUKURA oturuyor — her kenardan içeri, yarıçaplı, İÇ gölgeli', async ({ page }) => {
+  await modulAc(page);
+  const r = await page.evaluate(() => {
+    const w = document.querySelector('#ve-canvas-wrapper');
+    const c = document.querySelector('#ve-split-container');
+    const bw = w.getBoundingClientRect(); const bc = c.getBoundingClientRect();
+    const cs = getComputedStyle(w);
+    return {
+      sol: Math.round(bw.x - bc.x), ust: Math.round(bw.y - bc.y),
+      sag: Math.round((bc.x + bc.width) - (bw.x + bw.width)),
+      alt: Math.round((bc.y + bc.height) - (bw.y + bw.height)),
+      r: parseFloat(cs.borderTopLeftRadius),
+      icGolge: /inset/.test(cs.boxShadow),
+      kenar: parseFloat(cs.borderTopWidth),
+    };
+  });
+  // DÖRT kenardan da içeri: tek kenarda pay, çukur değil kaymadır
+  [r.sol, r.ust, r.sag, r.alt].forEach((p) => expect(p).toBeGreaterThan(0));
+  expect(r.sol).toBe(r.sag);
+  expect(r.ust).toBe(r.alt);
+  expect(r.r).toBeGreaterThan(0);
+  expect(r.kenar).toBeGreaterThan(0);
+  // GÖLGE İÇERİDE: dış gölge yükselti olurdu — emekli hükmün yasakladığı şey o
+  expect(r.icGolge).toBe(true);
+});
