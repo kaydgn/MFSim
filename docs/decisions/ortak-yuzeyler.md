@@ -314,3 +314,70 @@ değiştiğinde ise hepsi birden bayatladı.
 ayrı hiçbir şey ifade etmez: CSS kapısı tek başınayken JS'ten yazılan her
 yarıçap serbest kalıyordu. Kapsam dışı sayılar **TAM eşleşir** — bir satır
 silinince boşalan yer yeni bir sapmaya açılmasın.
+
+## Atölye başlık yüzü — serif bir ROL, bir boyut değil (2026-09-22)
+
+**Hüküm.** Başlıklar `--font-display` (Source Serif 4 600) ile, gövde
+`--font-sans` (Inter) ile çizilir. Bağlama **anlama** göredir: başlık
+elemanları (`h1`-`h4`) ve adıyla başlık olan sınıflar. Boyuta göre bağlanmaz.
+
+**Gerekçe — ölçüldü.** `--fs-title|h2|h1|display|hero` kullanan 18 CSS
+kuralının yalnız **9'u başlık**; kalan 9'u büyük çizilmiş İKON (`.mf-ico`),
+komut paleti arama GİRDİSİ ve `+` sekme düğmesi. JS tarafında ayrım daha da
+keskin: aynı `--fs-h2` hem pencere başlığında, hem `✕` kapatma düğmesinde, hem
+de FEAD'in "1. elastik mod" **sayısında** geçiyor. Boyuta göre bağlayan bir
+kural serifi bir çarpı işaretine ve bir sayıya yazardı.
+
+**Yüz depoda zaten vardı.** Takoz raporunun gömülü varlıklarında (Source Serif
+4 · Archivo · IBM Plex Mono). Ama o dosya açılışta **yüklenmiyor** — 1 MB,
+`type="text/x-mfsim-report"`, ilk rapora kadar hiç okunmuyor. Başlık yüzünü
+oradan almak o 1 MB'ı açılışa taşımak demekti. Bu yüzden `tools/build-display-font.js`
+yalnız arayüzün ihtiyacı olan **iki yüzü** (600, latin + latin-ext) ayrı bir
+stil sayfasına çıkarıyor — **ağ gerektirmez**, kaynağı depodaki dosya.
+
+**Ağırlık `600 700` bilerek ARALIK.** Yüz statik 600; arayüzde 700 isteyen
+başlıklar var. Tek bir 600 bildirilseydi tarayıcı 700'ü SENTETİK
+kalınlaştırırdı (bulanık kenar).
+
+**400 ağırlıklı başlıklar listede DEĞİL** (Sonuçlar'ın katlanır şeritleri): tek
+yüz 600 olduğu için ona düşüp istenenden kalın görünürlerdi.
+
+### Kapının ilk yazımı BOŞTU — `document.fonts.check` hiçbir şey ölçmüyor
+
+İlk e2e kapısı `document.fonts.check()` kullanıyordu. Ölçüldü:
+
+```
+document.fonts.check('600 16px "Zzz Yok Boyle Bir Aile"')  →  true
+```
+
+Spec'e göre `check()` *"bu metni çizmek için yüklenmesi GEREKEN bir yüz kaldı
+mı"* sorusunu cevaplıyor; hiç eşleşen yüz yoksa cevap "kalmadı" — yani `true`.
+Yedek yüze düşen bir harf de `true` döner. **Kanıtlandı:** `fonts-display.css`'ten
+latin-ext yüzü TAMAMEN silindi ve dört test de yeşil kaldı.
+
+Gerçek ölçüt **genişlik**: aynı harf `"Source Serif 4", monospace` ile ve çıplak
+`monospace` ile çizilir; harf yüzde varsa genişlikler ayrışır, yoksa ikisi de
+monospace'e düşüp birebir aynı çıkar. Yeni kapı aynı silmede **ğ ş Ğ İ Ş**'yi
+adlarıyla söylüyor ve latin alt kümesindeki ç ı ö ü'ye dokunmuyor. Kapının
+kendisinin boş olmadığı ayrıca bir halkayla tutuluyor (var olmayan aile bütün
+harfleri eksik saymalı).
+
+### Ödenen bayt — TEK KALEM
+
+| Ürün | Önce | Sonra | Fark |
+|------|------|-------|------|
+| `MFSim_Code.html` | 28.705.033 | 28.790.207 | **+85.174 (+0,30 %)** |
+| `MFSim_Olcum_Goruntuleyici.html` | 1.161.822 | 1.246.996 | **+85.174 (+7,3 %)** |
+| `MFSim_CAN_Cozumleyici.html` | 979.093 | 1.064.267 | **+85.174 (+8,7 %)** |
+
+Altı yüzün tamamı (400 · 600 · italik) taşınsaydı maliyet 195 KB olurdu; yalnız
+600 çifti 81 KB. Görüntüleyici ve CAN için oran yüksek görünüyor çünkü o iki
+ürün küçük — ama başlık yüzü üçünde de aynı olmasaydı **aynı program üç ayrı
+tipografiyle** dağıtılırdı.
+
+### CI listesi tek kaynağa indi
+
+`e2e-urun` işi spec adlarını `package.json`'dan KOPYALIYORDU. Bu turda dördüncü
+spec eklenince ayrışma göründü: yerelde `npm run test:urun` dört spec koşacak,
+CI üçünü koşacaktı — dördüncüsü hiç görülmeden merge edilirdi. İş artık
+`npm run test:urun` çağırıyor.
