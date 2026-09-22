@@ -80,6 +80,25 @@ function _veSettingsRenderAppearance() {
   ];
 
   var html = '<h3 class="ve-settings-section-title">Görünüm</h3>';
+
+  // ── KİMLİK ───────────────────────────────────────────────────────────
+  // Üst bandın avatarı buradan besleniyor. Ad TARAYICIDA durur, projeye
+  // YAZILMAZ: dosyayı paylaşan herkes onu da paylaşırdı.
+  var _kAd = (typeof veKimlikAd === 'function') ? veKimlikAd() : '';
+  var _kBh = (typeof veKimlikBasHarf === 'function') ? veKimlikBasHarf(_kAd) : '';
+  html += '<h3 class="ve-settings-section-title">Kimlik</h3>'
+       +  '<div class="ve-set-kimlik">'
+       +    '<span class="ve-set-kimlik-av' + (_kBh ? '' : ' bos') + '">' + _kBh + '</span>'
+       +    '<label class="ve-fp-f" style="flex:1;">'
+       +      '<span class="ve-fp-l">Ad</span>'
+       +      '<input class="ve-fp-inp ve-fp-inp--text" id="ve-set-kimlik-ad" type="text"'
+       +      ' value="' + String(_kAd).replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '"'
+       +      ' placeholder="Adın ve soyadın" maxlength="40"'
+       +      ' onchange="veKimlikAdYaz(this.value); veSettingsShowSection(\'appearance\');">'
+       +    '</label>'
+       +  '</div>'
+       +  '<p class="ve-set-not">Avatarda baş harfleri görünür. Bu tarayıcıda saklanır,'
+       +  ' proje dosyasına yazılmaz.</p>';
   html += '<p class="ve-settings-desc">Program tek bir tasarım dili taşır; ' +
           'seçtiğin şey o dilin zemini. Seçim anında uygulanır ve hatırlanır.</p>';
   html += '<div class="ve-settings-theme-grid">';

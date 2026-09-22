@@ -500,6 +500,17 @@ document.addEventListener('keydown', function(e) {
     return;
   }
   
+  // Ctrl+S — KAYDET. Bant Atölye'ye geçerken kaydet/geri/ileri ikonları
+  // banttan kalktı (maket onları taşımıyor). Geri ve İleri'nin klavye yolu
+  // zaten aşağıda vardı; KAYDET'İNKİ YOKTU. Düğmeyi klavye yolu açmadan
+  // kaldırmak, sık kullanılan bir eylemi yalnız palete mahkûm etmekti —
+  // ölçüldü, `veSaveTopology` hiçbir tuşa bağlı değildi.
+  if(e.ctrlKey && !e.shiftKey && !e.altKey && (e.key === 's' || e.key === 'S')) {
+    e.preventDefault();
+    if(typeof veSaveTopology === 'function') veSaveTopology();
+    return;
+  }
+
   // Ctrl+Z - Undo
   if(e.ctrlKey && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
     e.preventDefault();

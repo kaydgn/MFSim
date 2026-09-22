@@ -194,23 +194,7 @@
            ikinci bir "aktif modül" değişkeni tutulmuyor. Kökte BOŞ kalır —
            karşılama ekranında gidilecek bir modül yok. -->
       <span class="ve-bant-modul" id="ve-bant-modul" aria-live="polite"></span>
-      <span class="ve-qat-sep"></span>
-
-    <!-- Hızlı Erişim Araç Çubuğu (QAT) — şerit sekmesinden bağımsız, hep görünür.
-         Komutlar data-qat ile bağlanır (js/ribbon.js). Inline onclick KULLANILMAZ:
-         menüdeki aynı komutla `[onclick*="..."]` seçicilerini çoğaltır ve
-         E2E testlerinde belirsizlik yaratırdı. -->
-    <span class="ve-qat" id="ve-qat">
-      <button type="button" class="ve-qat-btn" data-qat="veSaveTopology" title="Projeyi Kaydet" aria-label="Projeyi Kaydet"><span class="mf-ico mf-ico-save"></span></button>
-      <button type="button" class="ve-qat-btn" data-qat="veUndo" title="Geri Al (Ctrl+Z)" aria-label="Geri Al"><span class="mf-ico mf-ico-undo"></span></button>
-      <button type="button" class="ve-qat-btn" data-qat="veRedo" title="İleri Al (Ctrl+Y)" aria-label="İleri Al"><span class="mf-ico mf-ico-redo"></span></button>
-    </span>
-
-    <span class="ve-qat-sep"></span>
-
-    <!-- Şerit sekmeleri — js/ribbon.js doldurur -->
-    <div class="ve-rb-tabs" id="ve-rb-tabs" role="tablist" aria-label="Şerit sekmeleri"></div>
-
+      
     <span class="ve-rb-strip-fill"></span>
       <!-- KOMUT ARAMA — şerit gövdesi varsayılan KATLI açıldığı için
            komutların GÖRÜNÜR girişi bu. Paletin şeridi kapsadığı
@@ -229,6 +213,13 @@
               title="Çözücü bileşenini aç">
         <span class="mf-ico mf-ico-play" aria-hidden="true"></span>Çöz
       </button>
+      <!-- AVATAR — arkasındaki ad UYDURULMUYOR, AÇILIYOR: kullanıcı bir kez
+           yazar (Ayarlar → Görünüm → Kimlik ya da bu menü), tarayıcıda
+           saklanır, projeye YAZILMAZ. Ad yokken sahte baş harf basılmaz. -->
+      <button type="button" class="ve-bant-avatar ve-bant-avatar--bos"
+              id="ve-bant-avatar" onclick="veAvatarMenuAc()"
+              title="Adını gir — hesap menüsü" aria-label="Hesap menüsü"
+              aria-haspopup="menu"></button>
 
 
     <!-- Radyo düğmesi buradaydı; komut şeride taşındı (Araçlar → Mola → Radyo,
@@ -263,7 +254,13 @@
        Tutamak doğrudan #ve-ribbon'ın çocuğu olsaydı o durumda geride kalırdı.
        Tutamak #ve-rb-body'nin İÇİNE de konulamaz: js/ribbon.js her çizimde
        o kabın innerHTML'ini yeniden yazar, statik markup orada duramaz. -->
-  <div class="ve-rb-dock" id="ve-rb-dock">
+  <!-- ŞERİT SEKMELERİ GÖVDEYE AİT, BANDA DEĞİL. Bantta kaldıkları sürece
+         üst satır eski şeridin aynısı okunuyordu (kullanıcı bildirimi):
+         marka · modül · SEKMELER · arama · eylem. Gövde varsayılan katlı
+         olduğuna göre sekmeler de onunla birlikte gizlenmeli — açılınca
+         birlikte gelirler. -->
+      <div class="ve-rb-tabs" id="ve-rb-tabs" role="tablist" aria-label="Şerit sekmeleri"></div>
+      <div class="ve-rb-dock" id="ve-rb-dock">
     <div class="ve-rb-body" id="ve-rb-body" role="tabpanel"></div>
     <button type="button" class="ve-rb-collapse" id="ve-rb-collapse" title="Şeridi daralt" aria-label="Şeridi daralt">▲</button>
   </div>
@@ -1231,6 +1228,7 @@
 <!-- type="text/x-mfsim-defer" => tarayici execute etmez, loader.js yonetir. -->
 <script type="text/x-mfsim-defer" src="js/theme.js" data-mfsim-label="Tema motoru..."></script>
 <script type="text/x-mfsim-defer" src="js/settings.js" data-mfsim-label="Ayarlar paneli..."></script>
+  <script src="js/kimlik.js"></script>
 <script type="text/x-mfsim-defer" src="js/status.js" data-mfsim-label="Program durumu paneli..."></script>
 <script type="text/x-mfsim-defer" src="js/tabs.js" data-mfsim-label="Sekmeler hazırlanıyor..."></script>
 <script type="text/x-mfsim-defer" src="js/results.js" data-mfsim-label="Sonuç paneli..."></script>

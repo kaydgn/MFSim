@@ -107,8 +107,8 @@
          --titlebar-h (34px) + --ribbon-strip-h (26px) = 60px krom vardı;
          şimdi yalnız 30px'lik şerit şeridi var. --titlebar-h kaldırıldı;
          --chrome-h doğrudan şeridin yüksekliği. */
-      --ribbon-strip-h: 44px;
-      --ribbon-expanded-h: 130px;
+      --ribbon-strip-h: 38px;
+      --ribbon-expanded-h: 152px;
       --ribbon-h: var(--ribbon-expanded-h);
       --chrome-h: var(--ribbon-h);
 
@@ -6714,10 +6714,12 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
    sekmeleri, sayfa anahtarı ve radyo aynı satırda. align-items:stretch
    sekmelerin tam yüksekliği kaplaması için gerekli; satır içindeki diğer
    ögeler kendi kuralında ortalanır. */
+/* BANT — kuşak değil bant. Zemin YÜKSELEN yüzey: oyuk ton (--bg-tertiary)
+   bandı bir araç şeridi gibi okutuyordu, oysa bu kabuğun başlığı. */
 .ve-rb-strip{
-  display:flex; align-items:stretch; gap:2px;
-  height:var(--ribbon-strip-h,30px); flex-shrink:0; padding:0 8px;
-  background:var(--bg-tertiary);
+  display:flex; align-items:center; gap:0;
+  height:var(--ribbon-strip-h,38px); flex-shrink:0; padding:0 12px;
+  background:var(--bg-secondary);
   border-bottom:1px solid var(--border-color);
 }
 /* Sekme dışındaki her şey dikeyde ortalanır (sekmeler tam boy kalır). */
@@ -6735,7 +6737,16 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .ve-rb-strip > .ve-bant-ana{ align-self:center; }
 .ve-rb-strip > .ve-bant-ara{ flex-shrink:1; }
 .ve-rb-strip > .theme-selector{ gap:4px; margin-left:6px; }
-.ve-rb-tabs{ display:flex; align-items:stretch; gap:1px; min-width:0; }
+/* SEKMELER GÖVDENİN SATIRI. Bandın içinde dururken üst satır eski şeridin
+   aynısı okunuyordu; gövde katlıyken sekme göstermek de "kapalı ama yarısı
+   açık" bir hâl demekti. */
+.ve-rb-tabs{
+  display:flex; align-items:stretch; gap:2px; min-width:0;
+  height:30px; flex-shrink:0; padding:0 10px;
+  background:var(--bg-tertiary);
+  border-bottom:1px solid var(--border-color);
+}
+#ve-ribbon.is-collapsed .ve-rb-tabs{ display:none; }
 
 /* ═══ ÜST BANT — ATÖLYE ═══════════════════════════════════════════════════
    Maketin satırı: marka · modül adı ┊ komut arama · birincil eylem.
@@ -6746,8 +6757,9 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
    bir tercih değil bir hiyerarşi: marka kimliği, modül adı KONUMU söyler. */
 .ve-bant-modul{
   display:flex; align-items:center; flex-shrink:1; min-width:0;
-  margin-left:10px; padding-left:11px;
+  margin-left:12px; padding-left:12px;
   border-left:1px solid var(--border-color);
+  align-self:center; height:16px;
   font-family:var(--font-mono); font-size:var(--fs-micro);
   letter-spacing:var(--tracking-wider); text-transform:uppercase;
   color:var(--text-muted); white-space:nowrap;
@@ -6763,7 +6775,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
    "burası şu an yazılıyor" demiyor. */
 .ve-bant-ara{
   display:flex; align-items:center; gap:7px; flex:0 1 240px; min-width:120px;
-  margin-left:auto; height:28px; padding:0 8px 0 10px;
+  margin-left:auto; height:24px; padding:0 8px 0 9px;
   font:inherit; font-size:var(--fs-tiny); color:var(--text-muted);
   background:var(--bg-input); cursor:pointer;
   border:1px solid var(--border-color); border-radius:var(--radius-sm);
@@ -6785,7 +6797,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
    hangisi" sorusunu geri getirirdi. */
 .ve-bant-ana{
   display:inline-flex; align-items:center; gap:6px; flex:none;
-  margin-left:8px; height:28px; padding:0 14px;
+  margin-left:8px; height:24px; padding:0 13px;
   font:inherit; font-size:var(--fs-tiny); font-weight:600;
   color:var(--on-accent); background:var(--accent-primary);
   border:1px solid var(--accent-primary); border-radius:var(--radius-sm);
@@ -6796,9 +6808,54 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .ve-bant-ana:active{ transform:translateY(1px); }
 .ve-bant-ana:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 
+/* AVATAR — bandın sağ ucu. Ad yokken SAHTE BAŞ HARF BASILMAZ: nötr bir
+   daire durur ve menüsü adı yazmaya çağırır. "Bilinmiyor"u "biliniyormuş
+   gibi" göstermemek bu deponun kuralı. */
+.ve-bant-avatar{
+  flex:none; margin-left:10px;
+  width:24px; height:24px; border-radius:50%;
+  display:inline-flex; align-items:center; justify-content:center;
+  font:inherit; font-size:var(--fs-tiny); font-weight:600;
+  letter-spacing:.02em;
+  color:var(--on-accent); background:var(--accent-primary);
+  border:1px solid transparent; cursor:pointer; user-select:none;
+}
+.ve-bant-avatar:hover{ background:var(--ink-accent); }
+.ve-bant-avatar:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+/* Ad girilmemiş: dolu aksan yerine SESSİZ bir daire. Dolu bir avatar
+   "buradaki kişi belli" der; belli değilken o bir yalan olurdu. */
+.ve-bant-avatar--bos{
+  background:var(--bg-input); border-color:var(--border-hover);
+  color:transparent;
+  background-image:radial-gradient(circle at 50% 38%, var(--text-muted) 0 22%, transparent 23%),
+                   radial-gradient(ellipse at 50% 96%, var(--text-muted) 0 34%, transparent 35%);
+}
+.ve-bant-avatar--bos:hover{ background-color:var(--bg-tertiary); }
+
+/* HESAP MENÜSÜ — projenin kendi menü dilini (`.ve-context-menu`) kullanır;
+   ikinci bir açılır pencere biçimi aynı şeyi iki yerde tutmaktı. */
+.ve-avatar-menu{ min-width:210px; }
+.ve-avatar-menu-bas{ padding:7px 10px 6px; display:flex; flex-direction:column; gap:1px; }
+.ve-avatar-menu-bas b{
+  font-size:var(--fs-body); font-weight:600; color:var(--text-heading);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.ve-avatar-menu-bas b.bos{ color:var(--text-muted); font-weight:400; font-style:italic; }
+.ve-avatar-menu-bas span{ font-size:var(--fs-micro); color:var(--text-muted); }
+.ve-menu-danger{ color:var(--ink-danger); }
+.ve-menu-danger:hover{ background:var(--accent-tint-12, color-mix(in srgb, var(--accent-danger) 14%, transparent)); color:var(--ink-danger); }
+
 /* Marka bantla birlikte büyüdü: SERİF yüz artık okunur bir boyda. */
-.ve-rb-strip .logo{ font-family:var(--font-display); font-size:var(--fs-lg); letter-spacing:-.01em; }
-.ve-rb-strip .ve-brand-mark{ width:24px; height:24px; }
+/* MARKA — maket YALNIZ sözcük markasını gösteriyor: serif, koyu, ikonsuz.
+   İkon kutusu bir uygulama simgesi; bandın içinde kimlik değil gürültüydü
+   (kullanıcı bildirimi: "eskisiyle aynı olmuş"). Kutu kaldırılmadı, bantta
+   GİZLENDİ — `#ve-project-name-btn`e proje adını js/toolbar.js yazıyor ve
+   js/results.js rapor başlığı için geri okuyor. */
+.ve-rb-strip .logo{
+  font-family:var(--font-display); font-size:var(--fs-title); font-weight:600;
+  letter-spacing:-.015em; color:var(--text-heading); gap:0; padding:0;
+}
+.ve-rb-strip .ve-brand-mark{ display:none; }
 
 .ve-rb-strip-fill{ flex:1; min-width:6px; }
 .ve-rb-tab{
@@ -6855,7 +6912,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 #ve-ribbon.is-peek .ve-rb-dock{
   display:flex;
   position:absolute; top:var(--ribbon-strip-h,26px); left:0; right:0;
-  height:calc(var(--ribbon-expanded-h) - var(--ribbon-strip-h));
+  height:calc(var(--ribbon-expanded-h) - var(--ribbon-strip-h) - 30px);
   background:var(--bg-secondary);
   border-bottom:1px solid var(--border-color);
   box-shadow:var(--shadow-lg);
