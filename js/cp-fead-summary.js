@@ -367,8 +367,11 @@ function _fsrSheet1(R, node){
       + ' , ' + _frFs(R.build && R.build.center && R.build.center[1], 2)],
     ['Gövde montaj konumu † {X, Y}', _frFs(t.pivot && t.pivot[0], 2)
       + ' , ' + _frFs(t.pivot && t.pivot[1], 2)],
-    ['Kol çalışma açısı (mutlak)', _frFs(R.build && R.build.armAbsDeg, 2) + '°'],
-    ['Çalışma kol açısı', _frFs(A.meanRelDeg, 2) + '° (göreli)'],
+    // YAN YANA İKİ SATIR, AYNI ÜÇ KELİME, SIRASI DEĞİŞİK — biri mutlak biri
+    // göreli. Okuyucunun ayırt etmesi için satır sonundaki "(göreli)" ekine
+    // dikkat etmesi gerekiyordu. İki büyüklük, iki AYRI ad.
+    ['θ_kol — mutlak (gövde→merkez)', _frFs(R.build && R.build.armAbsDeg, 2) + '°'],
+    ['Kol dönmesi — göreli (yay kurulması)', _frFs(A.meanRelDeg, 2) + '°'],
     // YAY ORTALAMA MOMENTİ — tedarikçi künyesinin "Spring Mean Load" satırı.
     // Çekirdek onu ALAN olarak taşımıyor; M = M₀ + k·rel'den TÜRÜYOR ve
     // ölçüldü: 22,0760 ↔ Gates 22,07 Nm (%0,03). Türev olduğu için † ile
@@ -652,7 +655,11 @@ function _fsrSheet5(R, node){
   }
   h += mat('Ortalama Gerginlikler [N]',
     function(d, i){ return (d.perPulley[i] || {}).exitTensionN; }, 0,
-    'Değer, kasnaktan sonraki açıklığın gerginliğidir.');
+    // Ayrıntılı raporun §8.11'iyle AYNI hüküm, özetin yerine sığan hâli.
+    // Eski metin ("kasnaktan sonraki açıklık") tablo sırasının diliydi ve
+    // kayışın gidişinde tersini söylüyordu.
+    'Sütun sırası kayışın gidişinin tersi; değer, kayışın o kasnağa GİRDİĞİ '
+    + 'açıklığın gerginliğidir. En büyüğü sürücüye giren (gergin) açıklıkta.');
   h += mat('Ortalama Hubloadlar [N]',
     function(d, i){ return ((d.hubloads || [])[i] || {}).FN; }, 0,
     'Kasnak yatağına binen bileşke kuvvet.');

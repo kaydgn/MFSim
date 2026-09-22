@@ -359,6 +359,79 @@ describe('yüzey — kayış kipi KİLİTLİ', () => {
   });
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  BİR AÇI, BİR AD — "kol açısı" ÜÇ BÜYÜKLÜĞE VERİLMİŞTİ
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı bildirimi (2026-09-22): *"Kol açısını seçtiğimiz diyagramdaki açı
+// tanımları çok başka olmuş. Kafa karıştırıyor."*
+//
+// ÖLÇÜLDÜ (AG00976, TEK model): ekranda DÖRT ayrı sayı dolaşıyordu —
+//   168,00  panel kutusu + sihirbaz alanı   (merkez→gövde, GİRDİ)
+//  −12,00   panelin "Avara Hareketi" satırı + sihirbaz canlı şeridi (mutlak)
+//  348,00   rapor §8.7                       (aynı mutlak, 0–360 yazımı)
+//   28,06   kanvas künyesi + çözücü tablosu  (GÖRELİ — yay kurulması)
+// ve üçünün de adı "kol açısı"ydı. En keskin hâli AYNI PANELDE, 40 satır
+// arayla duran 168,00 ile −12,00 çiftiydi.
+//
+// ÇARE SAYI SİLMEK DEĞİL — üçü de gerekli (girdi · parça çiziminin dili ·
+// yayın kurulması). Çare ÜÇÜNE ÜÇ AYRI AD vermek, ve "(girdi)" diyen satırın
+// gerçekten GİRİLEN sayıyı göstermesi.
+describe('bir açı bir ad — üç büyüklük ayrışmış', () => {
+  const kur = () => {
+    const pack = veFeadExampleNodes(KEY);
+    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    global.nodes = pack.nodes; global.connections = pack.connections;
+    return pack.nodes.find((n) => n.type === 'fead-tensioner');
+  };
+  const say = (h, et) => {
+    const i = h.indexOf(et);
+    expect(i).toBeGreaterThan(-1);
+    const m = /(−?-?\d+[.,]\d+)°/.exec(h.slice(i, i + 260).replace(/<[^>]+>/g, ' '));
+    return m ? Number(m[1].replace('−', '-').replace(',', '.')) : NaN;
+  };
+
+  test('"(girdi)" diyen satır GERÇEKTEN girilen sayıyı gösteriyor', () => {
+    const ten = kur();
+    const h = fead.veFeadArmReadout(ten);
+    const girdi = say(h, 'Kol yönü — girdi (merkez→gövde)');
+    const mutlak = say(h, 'θ_kol — mutlak (gövde→merkez)');
+
+    // Girdi, kullanıcının panele yazdığı sayıdır — saklanan alanın 180° ötesi.
+    // Satır iki ondalığa yuvarlanarak basılıyor; kıyas da o hassasiyette.
+    expect(girdi).toBeCloseTo(veFeadArmShownDeg(ten.data.armMeanDeg), 2);
+    expect(mutlak).toBeCloseTo(Number(ten.data.armMeanDeg), 2);
+    // İKİSİ FARKLI SAYI ve bu doğru — yanlış olan ikisine de aynı adı vermekti.
+    expect(Math.abs(girdi - mutlak)).toBeGreaterThan(100);
+
+    // ESKİ HÂL GERİ GELMESİN: "Kol çalışma açısı (girdi)" etiketi altında
+    // MUTLAK sayı basılıyordu; ikisi birden aynı anda kurulamaz.
+    expect(h).not.toContain('Kol çalışma açısı (girdi)');
+  });
+
+  test('panel kutusu ile okuma satırı AYNI sayıda buluşuyor', () => {
+    const ten = kur();
+    const p = fead.getFeadTensionerPropertiesHTML(ten);
+    const kutu = /veFeadSetArmShown/.test(p)
+      ? Number((/value="(-?[\d.]+)"[^>]*onchange="veFeadSetArmShown/.exec(p) || [])[1])
+      : NaN;
+    expect(Number.isFinite(kutu)).toBe(true);
+    const oku = say(fead.veFeadArmReadout(ten), 'Kol yönü — girdi (merkez→gövde)');
+    // ÖLÇÜLEN ESKİ FARK: 180,00° (168,00 ↔ −12,00). Artık yalnız yuvarlama.
+    expect(Math.abs(kutu - oku)).toBeLessThan(0.01);
+  });
+
+  test('ÜÇ BÜYÜKLÜK ÜÇ AYRI AD — "kol açısı" tek başına kullanılmıyor', () => {
+    const ten = kur();
+    const h = fead.veFeadArmReadout(ten)
+            + fead.getFeadTensionerPropertiesHTML(ten);
+    // Her ad, hangi uçtan ölçüldüğünü ya da hangi büyüklük olduğunu SÖYLÜYOR.
+    expect(h).toMatch(/Kol yönü[^<]*merkez→gövde/);
+    expect(h).toMatch(/θ_kol[^<]*gövde→merkez/);
+    expect(h).toMatch(/Yay kurulması/);
+  });
+});
+
 describe('rapor — kayış boyu ÇIKTI, montaj konumu TÜREV', () => {
   function coz() {
     const pack = veFeadExampleNodes(KEY);

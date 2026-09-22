@@ -2716,6 +2716,29 @@ function veFeadMoveBeltIndex(nodeList, nodeId, delta){
   if(i === 0) return false;
   var k = i + (delta < 0 ? -1 : 1);
   if(k < 1 || k >= order.length) return false;
+  // SON SATIR GERGİNİN — sürücü kilidinin EŞİ ve aynı gerekçeyle sessiz değil
+  // (tablo gerginin iki okunu da SÖNÜK çiziyor).
+  //
+  // Neden: `spanTensions` ankrajı gergiye yazıp listede İLERİ yürüyor ve
+  // sürücüde +P/v, her aksesuarda −P/v ekliyor. Ankrajdan sonraki ilk düğüm
+  // bir AKSESUAR olursa gerginlik hemen ankrajın ALTINA iner ve orada kalır;
+  // hiçbir açıklığın ankrajın altına inmemesi ⟺ gergiden sonraki ilk düğüm
+  // sürücü ⟺ liste sürücüyle başladığına göre gergi SON SATIR. Eşik yok,
+  // kalibrasyon yok — saf cebir. Ölçülen bedeli de var: gergiyi halkada
+  // başka bir açıklığa taşımak L'yi 1714,61 → 2459,29 mm yapıyor, yani
+  // BAŞKA bir yerleşim kurar.
+  //
+  // KİLİT YALNIZ KURAL ZATEN YERİNDEYSE: gergisi ortada duran eski bir kayıt
+  // açıldığında kilit onu o hâlde DONDURURDU ve kullanıcı okla düzeltemezdi.
+  // Bu yüzden koşul `t === son`. Sessiz bir onarım da YAPILMIYOR — burada
+  // sırayı zorla değiştirmek kullanıcının kurduğu yerleşimi başka bir
+  // yerleşime çevirmek olurdu (bkz. yukarıdaki 2459,29 mm ölçümü).
+  var t = -1, son = order.length - 1;
+  for(j = 0; j < order.length; j++) if(_feadDefOf(order[j]).isFeadTensioner){ t = j; break; }
+  if(t === son && son > 0){
+    if(i === t) return false;              // gergi taşınmaz
+    if(k === t) return false;              // kimse gerginin altına inmez
+  }
   var t = order[i]; order[i] = order[k]; order[k] = t;
   order.forEach(function(n, x){ n.data.beltIndex = x + 1; });
   return true;

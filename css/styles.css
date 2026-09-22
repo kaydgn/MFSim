@@ -7783,6 +7783,17 @@ span.ve-fw-ro{ display:inline-block; }
   display:flex; align-items:flex-start; gap:7px;
   font-size:var(--fs-tiny); color:var(--text-muted); line-height:1.5;
 }
+/* AÇININ TANIMI — göstergeden AYRI ve KOŞULSUZ. `.ve-fw-legend` yeşil banda
+   bağlı (bant yoksa basılmıyor); tanım her zaman durmak zorunda, çünkü asıl
+   kusur tanımın seçim yüzeyinde HİÇ olmamasıydı. Sol kenar çizgisi onu bir
+   açıklama bloğu olarak ayırıyor, göstergeyle karışmasın. */
+.ve-fw-angdef{
+  font-size:var(--fs-tiny); color:var(--text-muted); line-height:1.55;
+  padding:6px 9px; margin-top:6px;
+  border-left:2px solid var(--accent-tint-35);
+  background:var(--bg-tertiary); border-radius:var(--radius-sm);
+}
+.ve-fw-angdef b{ color:var(--text-secondary); }
 .ve-fw-legend-arc{
   flex:0 0 auto; width:22px; height:4px; margin-top:5px; border-radius:2px;
   background:var(--accent-success); opacity:0.32;
@@ -8365,11 +8376,26 @@ span.ve-fw-ro{ display:inline-block; }
 }
 
 /* ── ÜST KÜNYE: kayışın kendisi + ekleyici ─────────────────────────────── */
+/* KÜNYE ŞERİDİ = KARTIN TAŞIMA TUTAMAĞI ve bunu SÖYLÜYOR.
+   `.ve-node{cursor:move}` kartın tamamında taşıma imleci gösteriyor, ama
+   kasnak listesi mousedown'ı yutuyor (yutmak ZORUNDA — yoksa bir alana yazmak
+   kartı taşırdı). Ölçüldü (2026-09-22, gerçek tarayıcı): kartın YALNIZ bu
+   şeridi taşıyordu ve şeritte tek bir işaret yoktu — ne imleç ne tutamak.
+   Kullanıcı listeyi tutuyor, imleç taşıyacağını söylüyor, hiçbir şey
+   olmuyordu. Tutamak artık soldaki nokta ızgarasıyla GÖRÜNÜR; ızgara
+   çizimdir (yazı karakteri değil — eksik bir glif afordansı yok ederdi). */
 .ve-fead-tbl-head{
   flex:0 0 auto; display:flex; align-items:center; flex-wrap:wrap; gap:0 14px;
   padding:6px 9px; border-bottom:1px solid var(--border-color);
   background:var(--bg-tertiary); font-size:var(--fs-micro);
+  cursor:move; user-select:none;
 }
+.ve-fead-tbl-head::before{
+  content:""; flex:none; width:7px; height:13px; margin-right:-8px;
+  background-image:radial-gradient(var(--text-muted) 40%, transparent 41%);
+  background-size:3.5px 4.35px; opacity:.5;
+}
+.ve-fead-tbl-head:hover::before{ opacity:1; }
 .ve-fead-tbl-kunye{ display:inline-flex; align-items:center; gap:5px; }
 .ve-fead-tbl-kunye > span{
   color:var(--text-muted); text-transform:uppercase;
@@ -8412,7 +8438,12 @@ span.ve-fw-ro{ display:inline-block; }
 
    Bölge genişlikleri sütun listesinden TÜRÜYOR (veFeadKartBolgeW): kart
    genişliği hâlâ yuvarlak bir sayı değil, sütunların toplamı. */
-.ve-fead-krt-wrap{ flex:1 1 auto; overflow:auto; }
+/* LİSTE TAŞIMAZ, İMLEÇ DE VAAT ETMEZ. `.ve-node{cursor:move}` buraya kadar
+   iniyordu; kural olmadan imleç kartın gövdesi boyunca olmayan bir şeyi
+   gösteriyordu — kullanıcı bildirimi "tablo taşıması düzelmemiş" tam olarak
+   buydu. Taşıyan yer künye şeridi ve artık kendini söylüyor. */
+.ve-fead-krt-wrap{ flex:1 1 auto; overflow:auto; cursor:default; }
+.ve-fead-krt-fld input, .ve-fead-tbl-in{ cursor:text; }
 
 .ve-fead-krt{
   display:grid; align-items:stretch;

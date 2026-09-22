@@ -56,6 +56,52 @@ gergi dengesinde `2sin(φ/2)`→`sin(φ)` (3), sarım değişmezi kontrolünü k
 **Mutlak B10 ömrü KAPI DIŞINDA** — yalnız tüm çaplar 79.6–176 mm iken geçerli,
 dışında sistematik 0.55×.
 
+##### Sürtünme katsayıları — DEĞER doğru, çekirdeğin NOTUNDAKİ teşhis yanlış
+
+`CALIBRATION.muEffGrooved = 0.90` (kaburgalı, **etkin** = düz-kayış eşdeğeri;
+Euler–Eytelwein'e doğrudan girer, ayrıca kama düzeltmesi uygulanmaz) ve
+`muBackside = 0.35` (sırt, **kalibre edilmemiş**).
+
+**0,90 DOĞRU ve emniyetli tarafta** — literatür taraması (2026-09) üç bağımsız
+ölçümle tutarlı buldu ve üçünün de altında: Gerbert & Hansson 1990 ham μ 0,31 →
+0,31/sin20° = **0,906**; Tabatabaei Lotfy 1996 (Leeds PhD §5.3.3) **0,934**;
+Kubas 2019 (Arch. Automot. Eng. 84(2), Tab. 1) kaburga başına eşleştirilmiş
+yükte **0,97**. Kubas 2026 (Sci. Rep. 16:10933) on üreticinin 5PK'sında
+0,49–2,49 ölçtü — 0,90 o bandın alt ucunda, yani "on kayıştan en kötüsü"
+varsayımı. Bir kayma EMNİYET faktöründe doğru taraf budur.
+
+**ÇEKİRDEĞİN NOTUNDAKİ ŞU HÜKÜM YANLIŞ** (`js/fead-core.js`, `muEffGrooved.note`):
+*"mu/sin(alpha/2) seklindeki V-kayis kama faktoru PK icin GECERSIZDIR (~1.17
+verir, fazla iyimser)."* Formül geçersiz değil — **girdisi** yanlıştı: 1,17
+sayısı kaynağı olmayan bir ham μ = 0,40 varsayımından geliyor (0,40/sin20°).
+Literatürün ÖLÇTÜĞÜ ham μ 0,31–0,32'dir ve aynı formül 0,906–0,936 verir, yani
+çekirdeğin kendi 0,90'ını. Kama bağıntısını PK'ya açıkça uygulayan kaynaklar:
+Kubas 2019 dn.(1), Kubas 2026 dn.(2)–(4), Tabatabaei 1996 §5.3.3. Gerçek sınır
+başka: kama etkisi yalnız **kaburga dibi ile kanal tepesi temas etmediği**
+sürece geçerlidir; temas başlayınca etkin μ düz-kayış değerine doğru iner
+(Tabatabaei 1996, Özet).
+
+**NOT DÜZELTİLMEDİ, DÜZELTİLEMEZ:** `fead-core.js` dışarıdan geliyor ve birebir
+duruyor (kural 1) — düzeltmesi de dışarıdan gelmeli. Kayıt burada, ve doğru
+köken **rapora basılıyor** (§8.12) ki okuyucu yanlış gerekçeyi görmesin.
+
+**İKİ AÇIK SINIR, ikisi de §8.12'de yazılı:** (1) `e^(μφ)` bir **tam kayma**
+(gross slip) eşiğidir, "hiç kayma yok" değil — sürünme her yük düzeyinde var
+(Balta ve ark. 2015; Leamy & Wasfy 2002). (2) **Merkezkaç terimi yok**: ölçüt
+`(T₁−T_c)/(T₂−T_c) ≤ e^(μφ)` olmalı, `T_c = m′v²`. İhmal gereken μ'yü DÜŞÜK
+gösteriyor (emniyetsiz yön) ve devirle büyüyor — 8PK/ø160/φ=2,5 rad için
+hesaplandı: 1500 d/d %1,2 · 2500 d/d %3,4 · 3500 d/d %7,5.
+
+**Gates bu sayıyı doğrulayamaz:** 11 raporun metin katmanında `friction` geçişi
+**sıfır** — Gates bir μ basmıyor, dolayısıyla 2095 değerlik kapı kaymayı
+kapsamıyor ve kapsayamaz.
+
+Kapı: `fead-core.test.js` → *"CALIBRATION — sürtünme katsayıları"* (değeri adıyla
+çiviler, kökenin yazılı olmasını şart koşar, 1,17'ye kaymayı ÜST SINIRLA keser,
+ve `opt.muGrooved` geçiş yolunun SF'yi `e^(Δμ·φ)` oranında sürdüğünü ölçer) +
+`cp-fead-report.test.js` → *"§8.12 — sürtünme katsayısının künyesi"* (değer
+CALIBRATION'dan okunuyor, rapora kopyalanmamış).
+
 ##### Burulma modeli — çekirdeğe SONRADAN girdi, kapısı AYRI
 
 Eskiden doğal frekans da kapı dışındaydı: "çekirdek yalnız kol modu verir,
