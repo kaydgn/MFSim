@@ -319,3 +319,76 @@ describe('FEAD panel kozmetiği', () => {
     expect(f).toMatch(/grid-template-columns/);   // etiket | değer, tek satır
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 3) PALET KATMANI DIŞINDA ÇIPLAK RENK YOK
+//
+// ÖLÇÜLEN KUSUR (2026-09-22): css/styles.css'te tema bloklarının dışında
+// 63 çıplak renk vardı — hiçbiri temayı izlemiyordu ve hiçbirinin kapısı
+// yoktu. Tek kapı theme-consistency'deki "sabit-mavi vurgu tonu" halkasıydı
+// ve o da YALNIZ rgba(59,130,246) desenini arıyordu; 63'ün hiçbiri o desene
+// uymuyordu.
+//
+// En pahalıları sessizdi: `.dr-chart-tooltip` KOYU bir kutuydu
+// (rgba(30,36,48,0.92) + #e0e4ec), yani açık zeminde kâğıdın üstünde koyu bir
+// leke olarak kalırdı. `.sw-*` durum paneli ve deploy noktaları sabit 2024
+// yeşili/kırmızısı yazıyordu. Hiçbiri programı durdurmaz; yalnız yanlış
+// görünür.
+//
+// MEŞRU DÖRT İSTİSNA — bunlar renk değil:
+//   • iki `mask-image` gradyanındaki #000 (maske eşiği, boya değil)
+//   • bir color-mix() karartıcısındaki #000 (işlem parametresi)
+//   • --scrim (tema-nötr siyah perde) üstündeki #fff
+const STYLES = fs.readFileSync(path.join(CSS_DIR, 'styles.css'), 'utf8');
+
+describe('palet katmanı dışında çıplak renk yok', () => {
+  // Tema bloklarının bittiği yer: ikinci üst-seviye `}` kapanışı.
+  const paletSonu = (() => {
+    const satirlar = STYLES.split('\n');
+    let kapanis = 0;
+    for (let i = 0; i < satirlar.length; i++) {
+      if (/^ {4}\}\s*$/.test(satirlar[i]) && ++kapanis === 2) return i + 1;
+    }
+    return 0;
+  })();
+
+  test('palet katmanının sınırı bulunabildi (regex kayması erken yakalansın)', () => {
+    expect(paletSonu).toBeGreaterThan(20);
+    expect(paletSonu).toBeLessThan(400);
+  });
+
+  test('gövdede palete-bağlı çıplak renk kalmadı', () => {
+    // Yorumlar boşlukla doldurulur — satır numaraları kaysın istemiyoruz.
+    const govde = STYLES
+      .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+      .split('\n').slice(paletSonu);
+
+    // Tema-NÖTR sayılanlar: saf siyah, saf beyaz ve saf gri. Bunlar bir
+    // paletin değil bir işlemin (perde, maske, karartma) parçası.
+    const notr = /rgba?\(\s*(0,\s*0,\s*0|255,\s*255,\s*255|128,\s*128,\s*128)/;
+    const MESRU = 4;
+
+    const bulunan = [];
+    govde.forEach((satir, i) => {
+      const m = satir.match(/#[0-9a-fA-F]{3,8}\b|rgba?\([0-9][^)]*\)/g);
+      if (!m) return;
+      m.forEach((r) => {
+        if (notr.test(r)) return;
+        bulunan.push(`${paletSonu + i + 1}: ${r} — ${satir.trim().slice(0, 70)}`);
+      });
+    });
+
+    // Sayı YALNIZ AŞAĞI iner. Yeni bir çıplak renk eklenirse bu kapı adıyla,
+    // satırıyla ve bağlamıyla söyler.
+    expect(bulunan.length).toBeLessThanOrEqual(MESRU);
+  });
+
+  // Ölü var() yedeği: css/styles.css'te yedek HİÇ devreye girmez, çünkü :root
+  // yirmi dört jetonun hepsini koşulsuz bildiriyor. Yedekler eski paletin
+  // donmuş kopyasıydı — ör. --accent-tint-6'nın yedeği 2024 mavisiydi ve
+  // jeton yeniden adlandırılsa o mavi sessizce geri gelirdi.
+  test('stil sayfasında ölü var() renk yedeği yok', () => {
+    const olu = STYLES.match(/var\(\s*--[a-z0-9-]+\s*,\s*(?:#[0-9a-fA-F]{3,8}|rgba?\([^()]*\))\s*\)/g) || [];
+    expect(olu).toEqual([]);
+  });
+});
