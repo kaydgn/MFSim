@@ -777,9 +777,15 @@ describe('doğruluk — sessiz sayı hataları', () => {
   test('KATALOG kütlesi frekansları ölçülebilir biçimde KAYDIRIYOR', () => {
     const d = R.analysis.duty[R.analysis.duty.length - 1];
     const f1 = d.frequencies.map((s) => s.fHz[0]);
-    // 0,0196 ile ölçülen değerler
-    [250.1, 261.7, 196.3, 108.5, 127.1, 174.7].forEach((g, i) =>
+    // 0,0196 ile ölçülen değerler (2750 d/d). Çıpalar 250,1 / 261,7 / 196,3 /
+    // 108,5 / 127,1 / 174,7 idi; merkezkaç payı zincire eklenince (m′v² =
+    // 87,9 N, bkz. veFeadSpanFreqRows) hepsi YUKARI kaydı. Yön beklenen yön:
+    // açıklıktaki GERÇEK gerginlik etkin gerginlikten büyüktür.
+    [262.5, 274.6, 211.2, 116.8, 140.6, 193.3].forEach((g, i) =>
       expect(Math.abs(f1[i] - g)).toBeLessThan(0.2));
+    // Merkezkaç payı satırda AYRI taşınıyor; gerginlik sütunu zincirin
+    // sayısını yazmaya devam ediyor (iki sütun tek gerginlik anlatsın).
+    d.frequencies.forEach((s) => expect(s.TcN).toBeCloseTo(87.9, 1));
     // Katalog değeri √(196/144) = 1,167 kat YÜKSEK verirdi — yani bu kapı
     // yalnız "bir sayı" değil, YÖNÜ de tutuyor.
     expect(Math.sqrt(0.0196 / 0.0144)).toBeCloseTo(1.167, 2);
@@ -950,11 +956,25 @@ describe('FEAD özet · tepe zincirinde çevrim kapanışı', () => {
     expect(krank).toBeLessThan(aksesuar * 0.5);
   });
 
-  test('veFeadPeakInertias YALNIZ krank kasnağını ezer', () => {
+  // SÖZLÜK BÜTÜN KASNAKLARI TAŞIR — eskiden yalnız krankı ezerdi.
+  // Sebep ikinci bir kusur: çekirdek atalet adımına `driveRatio`yu İKİ KEZ
+  // uyguluyor (`alpha`da bir, `speedRatio`da bir) ve düzeltme her adımı
+  // `1/driveRatio` ile ölçeklemek. Kısmi ölçekleme çevrim kapanışını da
+  // bozardı, o yüzden sözlük eksiksiz.
+  test('veFeadPeakInertias BÜTÜN kasnakları taşır; krank eşdeğer ataleti', () => {
+    const sys = R.build.sys;
     const ov = veFeadPeakInertias(R.build);
-    const ad = R.build.sys.pulleys[R.build.sys._crkIdx].name;
-    expect(Object.keys(ov)).toEqual([ad]);
+    const ad = sys.pulleys[sys._crkIdx].name;
+    expect(Object.keys(ov).sort()).toEqual(sys.pulleys.map((p) => p.name).sort());
     expect(ov[ad]).toBeGreaterThan(0);
+    // driveRatio = 1 olan bu modelde aksesuarlar kendi ataletlerini taşır…
+    sys.pulleys.forEach((p, i) => {
+      if (i === sys._crkIdx) return;
+      expect(ov[p.name]).toBeCloseTo(p.inertiaKgM2, 12);
+    });
+    // …krank ise kendi ataletini DEĞİL, çevrimi kapatan eşdeğeri.
+    expect(Math.abs(ov[ad] - sys.pulleys[sys._crkIdx].inertiaKgM2))
+      .toBeGreaterThan(1e-6);
   });
 
   test('tepe gerginlikleri Gates AG00976 s1 tablosuna %1 içinde', () => {

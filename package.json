@@ -21,6 +21,7 @@
     "test:watch": "jest --watch",
     "test:changed": "jest -o",
     "test:fead": "jest --maxWorkers=100% \"unit/(fead-|cp-fead|gates-archive|guide-fead)\"",
+    "fead:denetim": "node tools/fead-denetim",
     "test:arac": "jest --maxWorkers=100% \"unit/(arac-|gear-|matching-selection|simulation-engine-grade|pchip-uc-kopya|guide-arac)\"",
     "test:takoz": "jest --maxWorkers=100% \"unit/mount-\"",
     "test:urun": "npx playwright test tests/e2e/published.spec.js tests/e2e/viewer.spec.js tests/e2e/can-cozumleyici.spec.js",

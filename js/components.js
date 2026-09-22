@@ -70,14 +70,11 @@ function veSelectModuleFromOverlay(mode) {
 // çift tıklayarak alt-topolojiye girer; dilerse diğer modülü de sidebar'dan ekler.
 // Not: veSelectModuleFromOverlay testlerce doğrulanan sözleşmeyi korur; bu ayrı
 // fonksiyon yalnızca karşılama kartlarına bağlıdır.
-function veStartModule(type) {
-  // Uçuşun kalkış dikdörtgeni: overlay GİZLENMEDEN ölçülür — gizli kart 0x0'dır.
-  var kart = null, kartRect = null;
-  try {
-    if(/^[a-z-]+$/.test(String(type))) kart = document.querySelector('.ve-module-card[data-module="' + type + '"]');
-    if(kart && typeof kart.getBoundingClientRect === 'function') kartRect = kart.getBoundingClientRect();
-  } catch(e) {}
-
+// Kabuğu yerine oturtur: karşılama kaplamasını kaldırır, panel/rayı senkron
+// getirir, aktif modülü ve kamerayı ayarlar. veStartModule'ün İKİ yolu da
+// buradan geçiyor — ikinci bir kopya, yollardan biri düzeltilince öbürünün
+// sessizce eskimesi demekti.
+function _veModuleShellSetup(type) {
   var overlay = document.getElementById('ve-module-overlay');
   if(overlay) overlay.style.display = 'none';
 
@@ -112,22 +109,84 @@ function veStartModule(type) {
   if(typeof veCameraHome === 'function' && typeof nodes !== 'undefined' && nodes && !nodes.length) {
     veCameraHome();
   }
+}
 
-  // Seçilen modül bloğunu görünür alanın ortasına oluştur.
-  // Canvas CSS'te -3000px offset'li → görünür merkez ≈ 3000 + yarı-genişlik.
-  var yeni = null;
-  if(typeof createNode === 'function' && componentDefs[type]) {
-    var def = componentDefs[type];
-    var w = def.defaultWidth || 80, h = def.defaultHeight || 60;
-    var cx = 3000 + 200 - w / 2, cy = 3000 + 140 - h / 2;
-    var wrap = document.getElementById('ve-canvas-wrapper');
-    if(wrap && typeof canvasOffset !== 'undefined' && typeof canvasZoom !== 'undefined') {
-      var r = wrap.getBoundingClientRect();
-      cx = (r.width / 2 - canvasOffset.x) / canvasZoom + 3000 - w / 2;
-      cy = (r.height / 2 - canvasOffset.y) / canvasZoom + 3000 - h / 2;
-    }
-    yeni = createNode(type, cx, cy);
+// Seçilen modül bloğunu görünür alanın ortasına oluşturur.
+// Canvas CSS'te -3000px offset'li → görünür merkez ≈ 3000 + yarı-genişlik.
+function _veModulePlaceNode(type) {
+  if(typeof createNode !== 'function' || !componentDefs[type]) return null;
+  var def = componentDefs[type];
+  var w = def.defaultWidth || 80, h = def.defaultHeight || 60;
+  var cx = 3000 + 200 - w / 2, cy = 3000 + 140 - h / 2;
+  var wrap = document.getElementById('ve-canvas-wrapper');
+  if(wrap && typeof canvasOffset !== 'undefined' && typeof canvasZoom !== 'undefined') {
+    var r = wrap.getBoundingClientRect();
+    cx = (r.width / 2 - canvasOffset.x) / canvasZoom + 3000 - w / 2;
+    cy = (r.height / 2 - canvasOffset.y) / canvasZoom + 3000 - h / 2;
   }
+  return createNode(type, cx, cy);
+}
+
+// DOĞRUDAN GİRİŞ AÇICISI — tipin kendi beyanından (`componentDefs.moduleEnter`).
+// Kayıt tipte duruyor ki ikinci bir modül aynı davranışı TEK satırla alsın;
+// burada bir tip listesi tutmak, modül eklendiğinde unutulacak bir yer
+// daha demekti.
+function _veModuleEnterFn(type) {
+  var def = (typeof componentDefs !== 'undefined' && componentDefs[type]) || null;
+  var ad = def && def.moduleEnter;
+  if(!ad) return null;
+  var g = (typeof window !== 'undefined') ? window
+        : ((typeof global !== 'undefined') ? global : null);
+  var fn = g ? g[ad] : null;
+  return (typeof fn === 'function') ? fn : null;
+}
+
+function veStartModule(type) {
+  // Uçuşun kalkış dikdörtgeni: overlay GİZLENMEDEN ölçülür — gizli kart 0x0'dır.
+  var kart = null, kartRect = null;
+  try {
+    if(/^[a-z-]+$/.test(String(type))) kart = document.querySelector('.ve-module-card[data-module="' + type + '"]');
+    if(kart && typeof kart.getBoundingClientRect === 'function') kartRect = kart.getBoundingClientRect();
+  } catch(e) {}
+
+  var def = componentDefs[type] || {};
+  var acici = _veModuleEnterFn(type);
+
+  // ── DOĞRUDAN GİRİŞ ──────────────────────────────────────────────────────
+  //
+  // Kullanıcı isteği (2026-09-21): *"ana ekrandan FEAD modülüne tıkladıktan
+  // sonra, direk program içine giriyor, yani güzel bir yükleme ekranı olur."*
+  //
+  // Karta tıklamak eskiden yalnız ana tuvale bir kart bırakıyordu; içeri
+  // girmek için o karta AYRICA çift tıklamak gerekiyordu ve bunu söyleyen
+  // hiçbir şey yoktu.
+  //
+  // UÇUŞ VE TOAST BU YOLDA KURULMUYOR, çünkü ikisi de yükleme ekranının
+  // ALTINDA kalıyor: uçuş --z-widget, toast 5000, ekran --z-boot+1 = 9001.
+  // Görünmeyen bir animasyon kurmak ve okunmayan bir bildirim basmak, işin
+  // yapıldığını sanmanın iki ayrı yolu olurdu.
+  if(acici && typeof veModuleLoaderRun === 'function') {
+    var kurulan = null;
+    veModuleLoaderRun(
+      { ad: def.name || type, alt: def.moduleSubtitle || '', svg: def.svg || '' },
+      [
+        { ad: 'Çalışma alanı hazırlanıyor',
+          not: 'Bileşen paneli ve şerit yerine oturuyor',
+          is: function() { _veModuleShellSetup(type); } },
+        { ad: 'Modül bloğu yerleştiriliyor',
+          not: 'Ana topolojiye modül kartı ekleniyor',
+          is: function() { kurulan = _veModulePlaceNode(type); } },
+        { ad: 'İç topoloji açılıyor',
+          not: 'Modülün kendi çalışma yüzeyi kuruluyor',
+          is: function() { if(kurulan && kurulan.id) acici(kurulan.id); } }
+      ]
+    );
+    return;
+  }
+
+  // ── ESKİ YOL — doğrudan girişi olmayan modüller, birebir ────────────────
+  _veModuleShellSetup(type);
+  var yeni = _veModulePlaceNode(type);
 
   // Uçuş yalnız DEKOR: createNode NESNE döndürür (DOM elemanı değil), eleman
   // id'den bulunur; buradaki bir hata modül açılışını ASLA engellemez.
@@ -136,10 +195,9 @@ function veStartModule(type) {
     if(kart && nodeEl) veWelcomeFlyToNode(kart, nodeEl, kartRect);
   } catch(e) {}
 
-  var label = (componentDefs[type] && componentDefs[type].name) ? componentDefs[type].name : type;
+  var label = def.name ? def.name : type;
   if(typeof showToast === 'function') showToast(label + ' eklendi', 'info');
 }
-
 // Aktif moda ait sidebar bileşenlerini göster.
 // data-always-visible kategorileri her modda görünür; geri kalanlar
 // data-ve-mode (varsayılan 'performans') ile aktif moda göre filtrelenir.
@@ -491,7 +549,12 @@ var componentDefs = {
     inputs: 0,
     outputs: 0,
     isSubsystem: true,
-    isFeadModule: true
+    isFeadModule: true,
+    // DOĞRUDAN GİRİŞ: karşılama kartına tıklamak modülün İÇİNE kadar götürür
+    // (js/components.js › _veModuleEnterFn). Diğer iki modül beyan etmiyor,
+    // dolayısıyla onlarda eski yol birebir duruyor.
+    moduleEnter: 'veFeadOpenEditor',
+    moduleSubtitle: 'Kayış-Kasnak Analizi'
   },
   // ── Aksesuarlar (Araç Performans) — Motor'un ön portlarına bağlanır ──────
   // Diğer bileşenlerden bir tık daha küçük kutular. Çıkış portu (sağ) Motor'un
@@ -869,41 +932,41 @@ var VE_FEAD_LAYOUT_H = 500;
 var VE_FEAD_LAYOUT_LEGACY = [ { w: 60, h: 56 }, { w: 420, h: 340 } ];
 
 
-// KAYIŞ TABLOSU ÖLÇÜSÜ. Genişlik ON BİR sütundan TÜRER, yuvarlak bir sayı
-// değil: sıra(54) + ad(172) + X(64) + Y(64) + efektif çap(78) + D(64) +
-// yön(86) + sarım(74) + span(82) + kayış boyu(88) + sil(30) = 856, artı kart
-// kenarı. AD SÜTUNU 152 → 172: adın yanına "pencere açılır" simgesi girdi ve
-// dar bırakılsaydı simge, adın kendisini kırparak yer açardı. Sıra sütunu DARALDI ve silme kendi sütununa çıktı: üçü tek hücrede
-// dururken (indis + ▲▼ + ✕) sık yapılan işlem ile geri dönüşü olmayan işlem
-// bitişikti. Başlıklarda ad ile BİRİM ayrı satırda olduğu için sütunlar da
-// daraldı — kazanılan genişlik ada ve sayılara gitti.
+// KAYIŞ TABLOSU ÖLÇÜSÜ. Genişlik yine SÜTUN LİSTESİNDEN TÜRÜYOR, yuvarlak bir
+// sayı değil — ama artık sütun sütun değil BÖLGE bölge toplanıyor
+// (veFeadKartBolgeW, cp-fead.js):
+//   kimlik  sıra(54) + ad(172)                         = 226
+//   girdi   X(64) + Y(64) + D(64) + yön(86)            = 278
+//   çözüm   efektif çap(78) + sarım(74) + span(82)     = 234
+//   silme                                              =  30
+//                                              toplam    768, artı kart kenarı
 //
-// YÜKSEKLİK 430 → 340. Ölçüldü (AG00976, 6 kasnak): içerik 200 px yer
-// kaplarken kartın 230 px'i boştu, yani kartın üçte ikisi. Yeni ölçü SEKİZ
-// kasnak + künye + iki satırlık başlık + Σ satırı + alt şerit içindir; daha
-// uzun listede kartın İÇİ kayar (kart büyümez, kanvas yerleşimi bozulmasın).
-var VE_FEAD_TABLE_W = 870;
-var VE_FEAD_TABLE_H = 340;
+// 870 → 782: KAYIŞ BOYU sütunu (88) listeden çıkıp künyeye geçti — satıra
+// değil ÇEVRİME ait bir değerdi ve tabloda bütün satırları saran tek hücre
+// olarak beş satır boyu bir boşluk bırakıyordu (ölçüldü: 170 px yükseklik,
+// içinde tek sayı). Σ satırı da künyeye taşındı.
+var VE_FEAD_TABLE_W = 770;
+// YÜKSEKLİK 340 → 360. Satır 34 → ~44 px: kart listesinde etiket alanın
+// ÜSTÜNDE duruyor (iki satır), karşılığında başlık satırı tamamen kalktı.
+// Yeni ölçü YEDİ kasnak + künye + ekleme şeridi içindir; daha uzun listede
+// kartın İÇİ kayar (kart büyümez, kanvas yerleşimi bozulmasın).
+var VE_FEAD_TABLE_H = 360;
 // EN KÜÇÜK ÖLÇÜ — kartın İÇERİĞİNİN bütün kaldığı sınır (node-resize.js
 // `veNodeMinSize` okur). Genel 50×50 tabanı bu kart için anlamsız, çünkü
-// ikisi de SESSİZ kayıp üretiyordu (ölçüldü, gerçek tarayıcı):
-//   • 130 px yükseklikte yapışkan başlık (50) + Σ satırı (24) gövdeye yer
-//     bırakmıyor — altı satırın altısı da görünmez oluyor ama Σ hâlâ
-//     663,4 · 1048,7 yazıyor: kart BOŞ görünüyor, boş olmadığını yalnız
-//     toplamlar söylüyor.
-//   • 560 px genişlikte on bir sütunun altısı kayıyor ve yatay kaydırma
-//     çubuğunun ölçülen yeri 0 px — kaybın hiçbir işareti yok.
-// Genişlik tabanı kartın kendi ölçüsü — o da zaten SÜTUN TOPLAMINDAN türüyor
-// (tek kaynak VE_FEAD_TABLE_COLS, cp-fead.js), yani sütun eklenirse taban da
-// büyür. Yükseklik tabanı künye + başlık + İKİ satır + Σ + ekleme şeridi.
-// Kartı BÜYÜTMEK serbest; küçültme içeriğin bütün kaldığı yerde durur.
-var VE_FEAD_TABLE_MIN_W = VE_FEAD_TABLE_W;
-var VE_FEAD_TABLE_MIN_H = 210;
-// AŞILMIŞ VARSAYILAN — kayış tablosu bir oturumda iki ölçü gördü. Kayıtlı bir
-// projede eski ölçü BİREBİR duruyorsa (yani kullanıcı hiç dokunmamışsa)
-// yükseltilir; bilerek verilmiş her ölçü korunur. Kayış Yolu kartındaki
-// kuralın aynısı, bkz. veFeadLayoutSizeFor.
-var VE_FEAD_TABLE_LEGACY = [ { w: 824, h: 430 }, { w: 850, h: 340 } ];
+// ikisi de SESSİZ kayıp üretiyordu (ölçüldü, gerçek tarayıcı): 130 px
+// yükseklikte satırların hiçbiri görünmüyor, dar kartta sütunlar işaretsiz
+// kayıyordu.
+//
+// TABAN ARTIK KART GENİŞLİĞİNİN KENDİSİ DEĞİL. Tablo döneminde on bir sütun
+// sabit genişlikteydi, yani kartı daraltmak sütunları görünmez yapıyordu ve
+// taban = kart ölçüsü olmak zorundaydı. Kart listesinde bölgeler
+// `minmax(...)` ile daralıyor (150 + 210 + 160 + 30 = 550, artı kenar): kart
+// dar kurulduğunda alanlar sıkışır ama hiçbiri kaybolmaz. Bu, kart listesinin
+// ölçülebilir kazançlarından biri.
+var VE_FEAD_TABLE_MIN_W = 564;
+var VE_FEAD_TABLE_MIN_H = 160;
+var VE_FEAD_TABLE_LEGACY = [ { w: 824, h: 430 }, { w: 850, h: 340 },
+                             { w: 870, h: 340 } ];
 // Geriye dönük adlar (dışarıdan okuyan bir yer kalırsa bozulmasın).
 var VE_FEAD_LAYOUT_LEGACY_W = VE_FEAD_LAYOUT_LEGACY[0].w;
 var VE_FEAD_LAYOUT_LEGACY_H = VE_FEAD_LAYOUT_LEGACY[0].h;

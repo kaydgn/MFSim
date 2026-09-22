@@ -276,15 +276,46 @@ describe('FEAD panel kozmetiği', () => {
     expect(+m[1]).toBeLessThanOrEqual(80);
   });
 
-  test('açılır liste SABİT piksel değil — taban + tavan', () => {
-    // Sabit genişlik seçeneğin metnini kırpıyordu. Üçü birden gerek:
-    // min hizayı korur, auto içeriğe büyür, max etiketi ezmesini engeller.
-    expect(src).toMatch(/var _FEAD_SEL\s*=/);
-    const blok = (/var _FEAD_SEL\s*=\s*_FEAD_INP\s*\+\s*'([^']*)'/.exec(src) || [, ''])[1];
-    expect(blok).toMatch(/width:auto/);
-    expect(blok).toMatch(/min-width:\d+px/);
-    expect(blok).toMatch(/max-width:\d+%/);
-    // Ve hiçbir açılır liste artık sabit piksele dönmemeli.
-    expect(src).not.toMatch(/<select[^>]*style="width:\d+px; ' \+ _FEAD_INP/);
+  test('açılır liste SABİT piksel değil — taban + esneme + tavan', () => {
+    // Sabit genişlik seçeneğin metnini kırpıyordu (ölçüldü: 169 px gerek /
+    // 120 px alan). Kural DEĞİŞMEDİ, yalnız YERİ değişti: eskiden `_FEAD_SEL`
+    // adlı satır içi stil dizesindeydi, artık panel dilinin CSS'inde —
+    // çünkü satır içi stil `:hover`/`:focus` yazamıyordu (P5).
+    const blok = (/\.ve-fp-f--sel\{([^}]*)\}/.exec(css) || [, ''])[1];
+    expect(blok).toMatch(/grid-template-columns/);
+    // minmax(TABAN, TAVAN): taban hizayı korur, tavan etiketi ezmesini engeller,
+    // aradaki esneme seçeneğe göre büyümesini sağlar.
+    const mm = /minmax\(\s*(\d+)px\s*,\s*(\d+)%\s*\)/.exec(blok);
+    expect(mm).not.toBeNull();
+    expect(+mm[1]).toBeGreaterThanOrEqual(120);   // taban: en uzun seçenek 169 px
+    expect(+mm[2]).toBeLessThanOrEqual(70);       // tavan: etiket ezilmesin
+    // Ve hiçbir açılır liste artık satır içi genişliğe dönmemeli.
+    expect(src).not.toMatch(/<select[^>]*style="width:\d+px/);
+    expect(src).not.toMatch(/_FEAD_SEL|_FEAD_INP/);
+  });
+
+  test('PANEL DİLİ CSS\'te — satır içi stil DURUM ifade edemez', () => {
+    // P5'in kapısı. JS sınıf basıyor; CSS o sınıflara durum kuralı veriyor.
+    // Tek başına hiçbiri bir şey ifade etmez: sınıf basılıp CSS bloğu silinse
+    // bütün JS kapıları yeşil kalırdı (kural 14'ün çift kapı gerekçesi).
+    ['ve-fp-sect', 've-fp-grid', 've-fp-f', 've-fp-l', 've-fp-inp', 've-fp-sel', 've-fp-chk']
+      .forEach((c) => {
+        expect(src).toContain(c);
+        expect(css).toContain('.' + c);
+      });
+    // Durum kuralları GERÇEKTEN var.
+    expect(css).toMatch(/\.ve-fp-inp:hover/);
+    expect(css).toMatch(/\.ve-fp-inp:focus/);
+    expect(css).toMatch(/\.ve-fp-sel:focus/);
+    expect(css).toMatch(/\.ve-fp-chk:hover/);
+  });
+
+  test('ETİKET ile GİRİŞ artık aynı hizada — P3', () => {
+    // Ölçülen kusur: `_feadGrid` etiketi `text-align:center`, `_FEAD_INP` ise
+    // `text-align:right` yazıyordu. Etiket sayının üstünde ortalanıyor, değer
+    // sağa yapışıyordu. Artık etiket SOLDA, değer SAĞDA, aynı satırda.
+    expect(src).not.toMatch(/text-align:center[^']*'\s*\+\s*c\.label/);
+    const f = (/\.ve-fp-f\{([^}]*)\}/.exec(css) || [, ''])[1];
+    expect(f).toMatch(/grid-template-columns/);   // etiket | değer, tek satır
   });
 });

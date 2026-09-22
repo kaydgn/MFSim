@@ -54,10 +54,18 @@ describe('AÇIKLIK ÇIRPMASI — frekans sonuç, genlik değil', () => {
   // çağrısından değil — çünkü kilitlenmek istenen şey tam olarak bu: titreşim
   // ile kayışın rengi AYNI gerilmeyi okuyor. Eski hâlinde test kendi ankrajını
   // kuruyordu ve iki yüzeyin ayrışmasını göremezdi.
+  // GERGİNLİK SÖZLEŞMESİ: zincir ETKİN gerginlik taşır (kasnak yüzey kuvveti
+  // N = T − m′v²), hareketli tel formülü ise GERÇEĞİNİ ister. Köprü farkı
+  // `veFeadSpanFreqRows`te kapatıyor — ama hâlâ ÇEKİRDEĞİN formülünü çağırarak.
+  // Referans bu yüzden merkezkaç payı eklenmiş gerginlikle kuruluyor: test
+  // "köprü kendi formülünü kurmuyor" hükmünü tutmaya devam ediyor, sözleşmeyi
+  // de kilitliyor. Ham zincirle çağrılsaydı 2750 d/d'de 6,3 Hz sapardı.
   test('açıklık frekansı ÇEKİRDEKTEN gelir (köprü kendi formülünü kurmaz)', () => {
     const b = kur(), { geom } = walkOf(b);
     const map = M.veFeadSpanTensionMap(b, F.meanRel(b.sys), 2750);
-    const ref = F.spanFrequencies(b.sys, geom, map.spanN,
+    const mp = F.massPerM(b.sys), v = F.beltSpeed(b.sys, 2750);
+    const ref = F.spanFrequencies(b.sys, geom,
+                                  map.spanN.map((T) => (T > 0 ? T + mp * v * v : T)),
                                   { engineRpm: 2750, modes: M.VE_FEAD_VIB_MODES });
     const P = M.veFeadVibSpanPayload(b, 2750, 0.00717, 6);
     // Çizilen frekans BASKIN MODUN frekansı — ama yine ÇEKİRDEĞİN sayısı,
@@ -172,17 +180,24 @@ describe('AÇIKLIK ÇIRPMASI — frekans sonuç, genlik değil', () => {
   // savrulan açıklık 3. Tesadüfen 2750'de tuttuğu için test yeşildi.
   //
   // Doğru ve döngüsel olmayan hüküm şu: her açıklık, KENDİ tepe devrinde bir
-  // mertebenin üstüne oturur ve sönüm tavanına çıkar. ÖLÇÜLDÜ (sweep 700–3600):
-  //   açıklık 0 → 3270 d/dk · 1. mertebeden %0,6 · mag 8,33 (tavan 8,33)
-  //   açıklık 2 → 3325 d/dk · %0,6 · 8,33      açıklık 3 → 3595 d/dk · %0,6 · 8,33
-  //   açıklık 1 → 3600 d/dk · %4,6 · 6,89  (tepesi tarama bandının üstünde)
+  // mertebenin üstüne oturur ve sönüm tavanına çıkar.
+  //
+  // BANT 3600 → 5000: merkezkaç payı gerginliği (dolayısıyla frekansı)
+  // yükseltince iki açıklığın tepesi 3600'ün ÜSTÜNE çıktı ve bant içinde
+  // yakalanamaz oldular. Bandı genişletmek hükmü koruyor, gevşetmiyor —
+  // eskiden bir açıklık zaten bandın dışındaydı ve eşik onun için açılmıştı.
+  // ÖLÇÜLDÜ (sweep 700–5000, hepsi tavanda):
+  //   açıklık 0 → 3440 d/dk · mertebeden %0,5 · mag 8,33 (tavan 8,33) · tepe/dip 7,9
+  //   açıklık 1 → 3980 d/dk · %0,2 · 8,33 · 8,1
+  //   açıklık 2 → 3500 d/dk · %0,6 · 8,33 · 7,9
+  //   açıklık 3 → 3820 d/dk · %0,5 · 8,33 · 8,1
   test('bir açıklık mertebeye oturunca sönüm tavanına çıkar (tanı değeri)', () => {
     const b = kur();
     const cap = 1 / (2 * M.VE_FEAD_VIB_ZETA);
     const n = M.veFeadVibSpanPayload(b, 2000, 0.00717, 6).spans.length;
     for (let i = 0; i < n; i++) {
       let tepe = null, dip = Infinity;
-      for (let rpm = 700; rpm <= 3600; rpm += 20) {
+      for (let rpm = 700; rpm <= 5000; rpm += 20) {
         const P = M.veFeadVibSpanPayload(b, rpm, 0.00717, 6);
         if (!P) continue;
         const m = P.spans[i].mag;
@@ -312,10 +327,17 @@ describe('DEFORMASYON — çizicilerin ortak mekanizması', () => {
     const b = kur(), { walk, geom } = walkOf(b);
     const vib = spanVib();
     const def = fead._feadVibDef(vib, 0, walk);
-    const sifirdanFarkli = walk.segs.some((sg, i) => {
-      const d = def.disp(i, sg.l / 2, sg);
-      return d && Math.hypot(d[0], d[1]) > 1e-6;
-    });
+    // ÖRNEK NOKTASI TEK DEĞİL: açıklığın ORTASI çift modların DÜĞÜMÜDÜR
+    // (mod 2 → sin(2πx/L), x = L/2'de tam sıfır). Tek noktadan bakan eski
+    // sınama, baskın mod tesadüfen tek sayı olduğu sürece yeşildi; merkezkaç
+    // payı frekansları yükseltip iki açıklıkta baskın modu 2 yapınca dördü de
+    // sıfır okundu. Hüküm "donuk kare HER YERDE sıfır değil" olduğu için
+    // örnekleme de açıklık boyunca yapılmalı.
+    const sifirdanFarkli = [0.25, 0.5, 0.75].some((fr) =>
+      walk.segs.some((sg, i) => {
+        const d = def.disp(i, sg.l * fr, sg);
+        return d && Math.hypot(d[0], d[1]) > 1e-6;
+      }));
     expect(sifirdanFarkli).toBe(true);
     // Şema o kareyle çiziliyor: donuk diş yolu = def@0 ile üretilen yol
     const svg = fead.veFeadLayoutSVG(b, 420, 300, { posMode: 'mean', vib: vib });

@@ -85,6 +85,41 @@
   </div>
 </div>
 
+<!-- ═══ MODÜL GİRİŞ EKRANI ═══
+     Karşılama kartına tıklayınca modülün İÇİNE kadar götüren geçiş.
+     SINIFLAR AÇILIŞ EKRANININ KENDİ SINIFLARI (.mfsim-loading-*): aynı panel
+     konumu, aynı kademe çubuğu, aynı öbek listesi — üçüncü bir pencere dili
+     kurmanın karşılığı yok. Yalnız .mfsim-module-loading yeni; o da fotoğrafsız
+     zemini ve iniş/çıkış koreografisini ekliyor.
+     Gövdeyi js/module-loader.js dolduruyor; buradaki kimlikler sabit. -->
+<div id="mfsim-module-loading" class="mfsim-loading-screen mfsim-module-loading"
+     style="display:none;" aria-hidden="true">
+  <!-- Karşılama slaytının O ANKİ karesi, tıklama anında kopyalanır: kare
+       değişmeyince kartlar eriyip panel aynı fotoğrafın üstünde beliriyor.
+       Kare yoksa ekran kâğıt zeminde durur (açılış ekranının aynı kuralı). -->
+  <div id="ve-modload-photo" class="mfsim-loading-photo" aria-hidden="true"></div>
+  <div class="mfsim-loading-panel">
+    <div class="mfsim-loading-hero">
+      <div class="mfsim-loading-logo">
+        <span id="ve-modload-ico" class="mfsim-modload-ico" aria-hidden="true"></span>
+        <span id="ve-modload-ad">Modül</span>
+      </div>
+      <div id="ve-modload-alt" class="mfsim-loading-subtitle"></div>
+    </div>
+    <div class="mfsim-loading-sep"></div>
+    <ul id="ve-modload-stages" class="mfsim-loading-stages"></ul>
+    <div id="ve-modload-message" class="mfsim-loading-message">Hazırlanıyor...</div>
+    <div class="mfsim-loading-bar-wrap">
+      <div id="ve-modload-bar" class="mfsim-loading-bar"></div>
+      <div class="mfsim-loading-bar-notches" aria-hidden="true"></div>
+    </div>
+    <div class="mfsim-loading-meta">
+      <div class="mfsim-loading-tip">Modül açılıyor</div>
+      <div id="ve-modload-percent" class="mfsim-loading-percent">%0</div>
+    </div>
+  </div>
+</div>
+
 <!-- Karsilama kare LISTESI defer DEGIL: js/loader.js acilis karesini secerken
      bunu okuyor (asagidaki paintPhoto). Saf veri, ~1 KB, bagimliligi yok —
      defer setinde kalsaydi acilis ekrani fotografsiz baslardi. Karelerin
@@ -1154,6 +1189,7 @@
 <script type="text/x-mfsim-defer" src="js/results.js" data-mfsim-label="Sonuç paneli..."></script>
 <script type="text/x-mfsim-defer" src="js/signal-tree.js" data-mfsim-label="Sinyal ağacı..."></script>
 <script type="text/x-mfsim-defer" src="js/components.js" data-mfsim-label="Bileşen kütüphanesi..."></script>
+<script type="text/x-mfsim-defer" src="js/module-loader.js" data-mfsim-label="Modül giriş ekranı..."></script>
 <script type="text/x-mfsim-defer" src="js/sensors.js" data-mfsim-label="Sensör tanımları..."></script>
 <script type="text/x-mfsim-defer" src="js/canvas-space.js" data-mfsim-label="Kanvas uzayı (sonsuz ızgara, kamera)..."></script>
 <script type="text/x-mfsim-defer" src="js/ui-core.js" data-mfsim-label="Kullanıcı arayüzü..."></script>
