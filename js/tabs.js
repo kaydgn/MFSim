@@ -32,6 +32,14 @@ function veSubTabDegistir(tabName) {
   var mainContent = document.querySelector('.ve-main');
 
   // Görsel editör sekmesi (ve-main). Sidebar tek modda çalışır ('performans').
+  // TUVAL SAYFASI BAYRAĞI — ray ile paletin TEK sütun okunmasını CSS'e
+  // bildirir: aralarındaki dikey çizgi yalnız bu sayfada kalkar. Sonuçlar'da
+  // palet gizleniyor ve sütunun tek kenarı onunla gidiyor, ray kendi
+  // kenarını geri alıyor. Sınıf kullanılıyor çünkü satır içi `display`
+  // dizesine bakan bir seçici (`[style*="none"]`) tarayıcının stil
+  // serileştirmesine bağlı olurdu.
+  document.documentElement.classList.toggle('ve-sayfa-tuval', tabName === 'arac-performans');
+
   if(tabName === 'arac-performans') {
     mainContent.style.display = 'flex';
     veSidebarMode = 'performans';

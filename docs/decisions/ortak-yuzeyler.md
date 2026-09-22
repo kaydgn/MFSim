@@ -440,3 +440,50 @@ bildiriyorlar). İki yönde de düşmesi ölçüldü, dosya ve satır adıyla.
 halkası ızgara çizgilerini `stroke="#e4e6e9"` ile seçiyordu: bir GEOMETRİ
 kapısı bir RENK yüzünden düştü. Izgara artık çizimde en çok tekrar eden
 `<line>` rengidir — tanım şeklin kendisinden gelir, paletten değil.
+
+## Atölye kabuğu — tek sütun ve alt durum şeridi (2026-09-22)
+
+**Hüküm.** Ray ile palet TEK sütun okunur: aynı zemin, aralarında dikey çizgi
+yok, sütunun sağ kenarında tek çizgi. Durum okumaları tuvalin ALTINDA, kendi
+şeridinde.
+
+### Birleştirme bir DOM taşıması DEĞİL
+
+Ray `.ve-main`'in dışında duruyor ve bu yapısal: Sonuçlar'a geçince panel de
+tuval de değişiyor, **ray yerinde kalıyor** (kaydı `index.html`'de yazılı).
+Rayı paletin içine taşımak sayfa geçişini kırardı. Birleştirme bu yüzden bir
+**yüzey kararı**: ikisi `--bg-secondary`'ye gelir ve aradaki çizgi kalkar.
+
+Çizgi yalnız TUVAL sayfasında kalkar — Sonuçlar'da palet gizleniyor ve sütunun
+tek kenarı onunla gidiyor, ray kendi kenarını geri alıyor. Bayrağı
+`js/tabs.js` koyuyor (`html.ve-sayfa-tuval`). Satır içi `display` dizesine
+bakan bir seçici (`[style*="none"]`) tarayıcının stil serileştirmesine bağlı
+olurdu.
+
+### 2026-08-13 kullanıcı kararının DURUM YARISI emekli
+
+Kayıt şuydu: *"Bant TUVALİN ÜSTÜNDE durur — sekmeler bu yüzden klasik yönde,
+aşağıya, tuvale bağlanır."* Gerekçe okununca ikiye ayrılıyor ve **yalnız
+sekmelere ait**: bir sekme açtığı belgeye bağlanır. Durum bir gezinme yüzeyi
+değil bir **okuma**; mühendislik yazılımlarının tamamında altta durur.
+
+Sekmeler bandın tamamını aldı: **662 → 996 px** (eskiden sağdaki 327 px'i durum
+yiyordu).
+
+### Ödenen bedel ÇİVİLİ
+
+| Ne | Önce | Sonra |
+|----|------|-------|
+| Tuval yüksekliği (1280×720) | 575 | **551** (−24) |
+| Sekme bandı genişliği | 662 | **996** (+334) |
+| Şerit katlanınca tuval kazancı | — | **+86** (mekanizma zaten vardı) |
+
+24 px'i gizlemek yerine kapıya yazdık. Şerit katlaması (aktif sekmeye ikinci
+tık) **zaten kuruluydu** ve 86 px geri getiriyor — planın "şerit katlanır
+yapılacak" maddesi ölçülünce **yapılmış çıktı**; o turda inşa edilen tek şey
+bu kararın kendisi oldu.
+
+**Kapı:** `tests/e2e/kabuk-sutun.spec.js` — beş halka, Node'da hiçbiri
+koşamaz (jsdom `getBoundingClientRect`i sıfır döndürür, kenarlık rengini
+kaskaddan hesaplamaz). İki yönde düşmesi ölçüldü: ray kenarı geri konunca
+tek-sütun halkası, durum bandın içine dönünce yerleşim halkaları.
