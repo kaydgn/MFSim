@@ -276,22 +276,20 @@ describe('FEAD panel kozmetiği', () => {
     expect(+m[1]).toBeLessThanOrEqual(80);
   });
 
-  test('açılır liste SABİT piksel değil — taban + esneme + tavan', () => {
-    // Sabit genişlik seçeneğin metnini kırpıyordu (ölçüldü: 169 px gerek /
-    // 120 px alan). Kural DEĞİŞMEDİ, yalnız YERİ değişti: eskiden `_FEAD_SEL`
-    // adlı satır içi stil dizesindeydi, artık panel dilinin CSS'inde —
-    // çünkü satır içi stil `:hover`/`:focus` yazamıyordu (P5).
-    const blok = (/\.ve-fp-f--sel\{([^}]*)\}/.exec(css) || [, ''])[1];
-    expect(blok).toMatch(/grid-template-columns/);
-    // minmax(TABAN, TAVAN): taban hizayı korur, tavan etiketi ezmesini engeller,
-    // aradaki esneme seçeneğe göre büyümesini sağlar.
-    const mm = /minmax\(\s*(\d+)px\s*,\s*(\d+)%\s*\)/.exec(blok);
-    expect(mm).not.toBeNull();
-    expect(+mm[1]).toBeGreaterThanOrEqual(120);   // taban: en uzun seçenek 169 px
-    expect(+mm[2]).toBeLessThanOrEqual(70);       // tavan: etiket ezilmesin
-    // Ve hiçbir açılır liste artık satır içi genişliğe dönmemeli.
+  test('açılır liste SABİT piksel değil — yatay yarış BİTTİ', () => {
+    // Ölçülmüş kusur: en uzun seçenek 169 px istiyor, sabit genişlik 120 px
+    // veriyordu ve metin kırpılıyordu. O günkü çare "taban + esneme + tavan"lı
+    // bir SÜTUN ORANIYDI, çünkü etiket aynı satırda yer istiyordu.
+    //
+    // Etiket üste çıkınca liste alanın TAMAMINI alıyor: kırpılma sebebi
+    // ortadan kalktı, oran kuralına gerek yok. Kural emekli DEĞİL, YERİ
+    // değişti — artık CSS metninde değil GERÇEK TARAYICIDA ölçülüyor
+    // (tests/e2e/fead-panel-gramer.spec.js), yani kırpılmanın kendisi.
+    //
+    // Burada kalan şey NEGATİF kapı: sabit piksel geri gelmesin.
     expect(src).not.toMatch(/<select[^>]*style="width:\d+px/);
     expect(src).not.toMatch(/_FEAD_SEL|_FEAD_INP/);
+    expect(css).not.toMatch(/\.ve-fp-sel\{[^}]*width:\s*\d+px/);
   });
 
   test('PANEL DİLİ CSS\'te — satır içi stil DURUM ifade edemez', () => {
@@ -310,13 +308,25 @@ describe('FEAD panel kozmetiği', () => {
     expect(css).toMatch(/\.ve-fp-chk:hover/);
   });
 
-  test('ETİKET ile GİRİŞ artık aynı hizada — P3', () => {
+  test('ETİKET ile GİRİŞ aynı KENARA yaslı — P3', () => {
     // Ölçülen kusur: `_feadGrid` etiketi `text-align:center`, `_FEAD_INP` ise
     // `text-align:right` yazıyordu. Etiket sayının üstünde ortalanıyor, değer
-    // sağa yapışıyordu. Artık etiket SOLDA, değer SAĞDA, aynı satırda.
+    // sağa yapışıyordu.
+    //
+    // O gün çare "ikisini aynı satıra koy" olmuştu. Atölye grameri etiketi
+    // üste aldı (Kayış Tablosu'nun kalıbı) ve aynı kusur yeniden açılabilirdi;
+    // hüküm bu yüzden KENARA taşındı: etiket, denetiminin yaslandığı kenara
+    // yaslanır. Bir liste değil bir KURAL — yeni bir alan tipi kendi hizasını
+    // getirdiğinde etiket onu izler.
     expect(src).not.toMatch(/text-align:center[^']*'\s*\+\s*c\.label/);
+
     const f = (/\.ve-fp-f\{([^}]*)\}/.exec(css) || [, ''])[1];
-    expect(f).toMatch(/grid-template-columns/);   // etiket | değer, tek satır
+    expect(f).toMatch(/flex-direction:\s*column/);      // etiket ÜSTTE
+
+    const l = (/\.ve-fp-l\{([^}]*)\}/.exec(css) || [, ''])[1];
+    expect(l).toMatch(/justify-content:\s*flex-end/);   // sayı alanı: sağ kenar
+    // ve sola yaslı denetimler etiketi de sola çeker
+    expect(css).toMatch(/\.ve-fp-f:has\(\.ve-fp-sel\)[^{]*\{[^}]*flex-start/);
   });
 });
 

@@ -249,7 +249,7 @@ var VE_GUIDE_APPFIG_TOKENS = {
   '--border-light': '#ddd7cb', '--border-hover': '#c6c0b4',
   '--font-mono': "'IBM Plex Mono',ui-monospace,monospace",
   '--fs-body': '11px', '--fs-md': '12px', '--fs-lg': '13px', '--fs-h2': '15px',
-  '--radius-md': '3px', '--radius-pill': '999px', '--tracking-wide': '.04em',
+  '--radius-xs': '2px', '--radius-md': '3px', '--radius-pill': '999px', '--tracking-wide': '.04em',
   '--ink-accent': '#24425f', '--ink-success': '#2e7d4f',
   '--ink-warning': '#c8781e', '--ink-danger': '#a8321f',
   // ZEMİNİNİN EŞİ, ailenin varsayılanı DEĞİL: baskı paletinde amber

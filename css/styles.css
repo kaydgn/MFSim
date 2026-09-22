@@ -8138,42 +8138,83 @@ span.ve-fw-ro{ display:inline-block; }
    Sarma olduğunda border satır uçlarında asılı çizgi bırakırdı.
    `--fp-k` satır içinde yazılır ve VERİdir (sütun sayısı), görünüm değil —
    `<colgroup>` genişlikleriyle aynı istisna. */
+/* ALAN IZGARASI — ATÖLYE GRAMERİ, Kayış Tablosu'nun kanıtlanmış kalıbı.
+   Aynı modülün iki yüzeyi iki ayrı gramer konuşuyordu: tabloda etiket ÜSTTE
+   ve çözüm bölgesi OYUK, panelde etiket SOLDA ve türetilen değer YÜKSELTİLMİŞ
+   zeminde — üstelik kullanıcı panele TABLODAN geçiyor (ad düğmesi).
+   Saç teli ızgara (gap:1px + kenarlık zemini) kalktı: o desen bir HESAP
+   SAYFASI çiziyordu ve kullanıcının Kayış Tablosu için "demode ve ilkel"
+   dediği şeyin aynısıydı. Ayrımı artık zemin taşıyor, çizgi değil.
+   `--fp-k` satır içinde yazılır ve VERİdir (sütun sayısı), görünüm değil. */
 .ve-fp-grid{
   display:grid; grid-template-columns:repeat(var(--fp-k,1), minmax(0,1fr));
-  gap:1px; margin:0 0 9px;
-  background:var(--border-color); border:1px solid var(--border-color);
+  gap:8px; margin:0 0 10px;
 }
+/* ETİKET ÜSTTE — markup zaten `etiket → girdi` sırasında, tek gereken sütun
+   akışı. Kazanç yalnız hizalama değil: etiket yatay yer istemeyince alan
+   DARALABİLİYOR, yani aynı satıra daha çok alan sığıyor. */
 .ve-fp-f{
-  display:grid; grid-template-columns:minmax(0,1fr) minmax(72px,42%);
-  background:var(--bg-primary); min-width:0; align-items:stretch;
+  display:flex; flex-direction:column; gap:2px; min-width:0;
 }
+/* Etiket tipografisi Kayış Tablosu'nunkiyle BİREBİR (`.ve-fead-krt-fld > i`):
+   iki yüzey arasında geçen kullanıcı aynı dili okur. */
 .ve-fp-l{
-  padding:5px 8px; min-width:0;
-  background:var(--bg-secondary); color:var(--text-secondary);
-  font-size:var(--fs-tiny); display:flex; align-items:center; gap:5px;
+  min-width:0; display:flex; align-items:baseline; gap:5px;
+  font-family:var(--font-mono); font-size:var(--fs-micro);
+  letter-spacing:var(--tracking-wide); text-transform:uppercase;
+  color:var(--text-muted);
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  /* ETİKET, DENETİMİYLE AYNI KENARA YASLANIR. Kapatılan kusur (P3) etiketin
+     ortalanıp değerin sağa yapışmasıydı; çare o gün "ikisini aynı satıra koy"
+     olmuştu. Etiket üste çıkınca aynı kusur yeniden açılabilirdi — kural
+     KENARA taşındı: sayı alanı sağa yaslı, o yüzden etiketi de sağda; metin
+     ve açılır liste sola yaslı, etiketi de solda. Bir liste değil bir KURAL:
+     yeni bir alan tipi kendi hizasını getirdiğinde etiket onu izler. */
+  justify-content:flex-end;
 }
+.ve-fp-f:has(.ve-fp-sel) > .ve-fp-l,
+.ve-fp-f:has(.ve-fp-inp--text) > .ve-fp-l{ justify-content:flex-start; }
+/* BİRİM ETİKETİN YANINDA, girdinin içinde değil — Kayış Tablosu'nun ölçülmüş
+   kararı: `X(mm)` bir başlıktan çok bir değişken adı gibi okunuyordu. */
 .ve-fp-l u{
   text-decoration:none; color:var(--text-muted);
   font-family:var(--font-mono); font-size:var(--fs-micro); flex:none;
+  opacity:.75;
 }
 .ve-fp-inp, .ve-fp-sel{
-  width:100%; min-width:0; border:none; outline:none; box-sizing:border-box;
+  width:100%; min-width:0; outline:none; box-sizing:border-box;
+  /* Kenarlık artık alanın KENDİSİNDE: ızgara zemini kalkınca alanın sınırını
+     söyleyen tek şey bu. ALAN dinlenmede BOŞ (yazılır) — kural 14'ün iki
+     yönlü afordansı. */
+  border:1px solid var(--border-color); border-radius:var(--radius-xs);
   background:var(--bg-input); color:var(--text-primary);
-  font-family:var(--font-mono); font-size:var(--fs-tiny); padding:5px 8px;
+  font-family:var(--font-mono); font-size:var(--fs-tiny); padding:4px 8px;
   text-align:right;
 }
 .ve-fp-sel{ text-align:left; font-family:inherit; }
 .ve-fp-inp--text{ text-align:left; font-family:inherit; }
 .ve-fp-inp--tight{ padding:3px 5px; }
-.ve-fp-inp[readonly]{ background:var(--bg-secondary); color:var(--text-muted); }
+/* TÜRETİLEN DEĞER OYUK ZEMİNDE — Kayış Tablosu'nun `coz` bölgesiyle AYNI
+   yüzey (`--bg-tertiary`). Eskiden `--bg-secondary` yazıyordu: o YÜKSELEN
+   yüzey, yani okunur değer yazılabilir olandan daha ÖNDE duruyordu. Ayrımın
+   tek taşıyıcısı zemin olduğu için bu sessiz bir ters işaretti. */
+.ve-fp-inp[readonly]{
+  background:var(--bg-tertiary); color:var(--text-secondary);
+  border-color:var(--border-light); cursor:default;
+}
+.ve-fp-inp[readonly]:hover{ background:var(--bg-tertiary); }
 /* DURUM — satır içi stilin ifade EDEMEDİĞİ şey. */
 .ve-fp-inp:hover, .ve-fp-sel:hover{ background:var(--bg-tertiary); }
 .ve-fp-inp:focus, .ve-fp-sel:focus{ box-shadow:var(--focus-ring); position:relative; z-index:1; }
 .ve-fp-f:focus-within .ve-fp-l{ color:var(--text-heading); }
-/* AÇILIR LİSTE SABİT PİKSEL DEĞİL — taban + esneme + tavan. Sabit genişlik
-   seçeneğin metnini kırpıyordu (ölçüldü: 169 px gerek / 120 px alan). */
-.ve-fp-f--sel{ grid-template-columns:minmax(0,1fr) minmax(150px,58%); }
+/* AÇILIR LİSTE SABİT PİKSEL DEĞİL — kural DEĞİŞMEDİ, YATAY YARIŞ BİTTİ.
+   Ölçülmüş kusur şuydu: en uzun seçenek 169 px gerektiriyor, sabit genişlik
+   120 px veriyordu. Çare "taban + esneme + tavan"lı bir sütun oranıydı, çünkü
+   etiket aynı satırda yer istiyordu. Etiket üste çıkınca liste alanın
+   TAMAMINI alıyor — kırpılma sebebi ortadan kalktı, oran kuralına gerek yok.
+   Kapı da oraya taşındı: artık CSS metninde değil, GERÇEK TARAYICIDA
+   listenin metnini kırpmadığı ölçülüyor (fead-panel-gramer.spec.js). */
+.ve-fp-f--sel .ve-fp-sel{ min-width:0; }
 
 .ve-fp-chk{
   display:flex; align-items:center; gap:8px; margin:0 0 9px; cursor:pointer;

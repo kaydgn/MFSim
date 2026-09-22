@@ -509,3 +509,50 @@ gölge aynı sayılmıştı. `--shadow-inset` PR 5'te tam bunun için tanımland
 da payı ölçülür (tek kenarda pay bir çukur değil bir kaymadır) ve gölgenin
 `inset` olduğu ayrıca tutulur — dışa çevrilince düşüyor, ölçüldü. Node'da
 koşamaz: jsdom `box-shadow`u kaskaddan hesaplamaz.
+
+## Panel alan grameri — iki yüzey tek dil (2026-09-22)
+
+**Hüküm.** Bileşen panelinin alan grameri Kayış Tablosu'nunkiyle **aynıdır**:
+etiket üstte (mono · mikro · büyük harf · soluk), birim etiketin yanında,
+türetilen değer **oyuk** zeminde. Etiket, denetiminin yaslandığı **kenara**
+yaslanır.
+
+**Gerekçe — ölçülen ayrışma.** Aynı modülün iki yüzeyi iki ayrı gramer
+konuşuyordu, ve kullanıcı panele **tablodan** geçiyor (satırdaki ad düğmesi):
+
+| | Kayış Tablosu | Kasnak paneli |
+|---|---|---|
+| Etiket | ÜSTTE | SOLDA |
+| Türetilen değer | OYUK zemin | **YÜKSELEN** zemin |
+| Ayrım | zemin | saç teli ızgara |
+
+İkincisi sessiz bir **ters işaretti**: okunur değer, yazılabilir olandan daha
+önde duruyordu. Ayrımın tek taşıyıcısı zemin olduğu için bunu hiçbir şey
+söylemiyordu. Üçüncüsü bir **hesap sayfası** çiziyordu — kullanıcının Kayış
+Tablosu için *"demode ve ilkel"* dediği desenin aynısı.
+
+**Etiket üstte yalnız bir hiza değil bir KAZANÇ:** etiket yatay yer istemeyince
+alan daralabiliyor, yani aynı satıra daha çok alan sığıyor.
+
+**P3 hükmü EMEKLİ DEĞİL, KENARA TAŞINDI.** Kapatılan kusur etiketin ortalanıp
+değerin sağa yapışmasıydı; o gün çare *"ikisini aynı satıra koy"* olmuştu.
+Etiket üste çıkınca aynı kusur yeniden açılabilirdi, bu yüzden hüküm bir
+**kurala** dönüştü: sayı alanı sağa yaslı → etiketi de sağda; metin ve açılır
+liste sola yaslı → etiketi de solda. Yeni bir alan tipi kendi hizasını
+getirdiğinde etiket onu izler.
+
+**Açılır listenin sabit-piksel kuralı da emekli değil, YERİ değişti.** Ölçülmüş
+kusur (en uzun seçenek 169 px ister, alan 120 px verir) bir **yatay yarıştan**
+doğuyordu: etiket aynı satırda yer istiyordu. Etiket üste çıkınca liste alanın
+tamamını alıyor ve yarış bitiyor. Kapı CSS metninden gerçek tarayıcıya taşındı:
+ölçülen şey artık bir oran değil **kırpılmanın kendisi**.
+
+**Ödenen bedel:** panel 260 → **281 px** (+21, %8) — 12 alan, 5 ızgara.
+Beklenenden az, çünkü etiket mikro punto ve saç teli kenarlıkları gitti.
+
+**Kapı:** `tests/e2e/fead-panel-gramer.spec.js` (4 halka). Node'da koşamaz:
+jsdom kaskaddan `background-color` hesaplamaz, `:has()` değerlendirmez,
+`scrollWidth`i sıfır döndürür. İki düşme ölçüldü — türetilen değer yükselen
+zemine dönünce halka jeton değerini adıyla söylüyor, etiket sola dönünce
+hangi alanların bozulduğunu sayıyor (*"Dış çap (OD) → denetim right, etiket
+flex-start"*).
