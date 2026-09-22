@@ -59,8 +59,12 @@ function veSettingsShowSection(name) {
 
 // ─── GÖRÜNÜM ───────────────────────────────────────────────────────────────
 function _veSettingsRenderAppearance() {
-  var current = 'slate';
-  try { current = localStorage.getItem('mf-theme') || 'slate'; } catch(e) {}
+  // VARSAYILAN 'pearl' — js/theme.js'teki üç düşüş noktasıyla AYNI olmak
+  // zorunda. Burası 'slate' kalmıştı: hiç tema seçmemiş kopya pearl açılıyor
+  // ama bu pencere Midnight'ı işaretli gösteriyordu (ölçüldü 2026-09-22).
+  // Kapı: tests/unit/theme-consistency.test.js › "BEŞ düşüş noktası".
+  var current = 'pearl';
+  try { current = localStorage.getItem('mf-theme') || 'pearl'; } catch(e) {}
   // swatch: [zemin, yüzey, aksan] — styles.css'teki tema bloklarıyla aynı
   // değerler (--bg-primary / --bg-tertiary / --accent-primary). Önizleme pulu
   // aktif temanın değişkenlerini kullanamaz (hepsi aynı görünürdü), bu yüzden
