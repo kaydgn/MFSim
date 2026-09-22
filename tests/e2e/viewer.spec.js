@@ -734,7 +734,7 @@ test.describe('Tema — işletim sistemini izler', () => {
     test('açık temayla açılır', async ({ page }) => {
       await openViewer(page);
       const st = await themeState(page);
-      expect(st.theme).toBe('pearl');
+      expect(st.theme).toBe('acik');
       expect(st.label).toBe('Sistem');
       // Hiçbir şey seçilmeden localStorage'a yazılmamalı: yazılırsa kullanıcı
       // sisteme bir daha hiç dönemez, "sistem gibi davran" tek seferlik olurdu.
@@ -747,7 +747,7 @@ test.describe('Tema — işletim sistemini izler', () => {
     test('koyu temayla açılır', async ({ page }) => {
       await openViewer(page);
       const st = await themeState(page);
-      expect(st.theme).toBe('slate');
+      expect(st.theme).toBe('koyu');
       expect(st.label).toBe('Sistem');
     });
 
@@ -755,15 +755,15 @@ test.describe('Tema — işletim sistemini izler', () => {
       await openViewer(page);
 
       await page.click('#mfv-theme-btn');
-      expect(await themeState(page)).toMatchObject({ theme: 'pearl', label: 'Açık' });
+      expect(await themeState(page)).toMatchObject({ theme: 'acik', label: 'Açık' });
 
       await page.click('#mfv-theme-btn');
-      expect(await themeState(page)).toMatchObject({ theme: 'slate', label: 'Koyu' });
+      expect(await themeState(page)).toMatchObject({ theme: 'koyu', label: 'Koyu' });
 
       // Üçüncü tık sisteme DÖNER. İki durumlu bir anahtarda bu dönüş
       // mümkün olmazdı — istenen davranışın çekirdeği burası.
       await page.click('#mfv-theme-btn');
-      expect(await themeState(page)).toMatchObject({ theme: 'slate', label: 'Sistem' });
+      expect(await themeState(page)).toMatchObject({ theme: 'koyu', label: 'Sistem' });
     });
 
     test('elle yapılan seçim yeniden açılışta hatırlanır', async ({ page }) => {
@@ -772,7 +772,7 @@ test.describe('Tema — işletim sistemini izler', () => {
       await page.reload();
       await page.waitForSelector('#ve-trace');
       const st = await themeState(page);
-      expect(st.theme).toBe('pearl');
+      expect(st.theme).toBe('acik');
       expect(st.label).toBe('Açık');
     });
 
@@ -782,9 +782,9 @@ test.describe('Tema — işletim sistemini izler', () => {
       // ekran görür. Betiği DOM hazır olmadan, ilk fırsatta yokluyoruz.
       await page.goto(FILE_URL);
       const early = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
-      expect(early).toBe('slate');
+      expect(early).toBe('koyu');
       await page.waitForSelector('#ve-trace');
-      expect((await themeState(page)).theme).toBe('slate');
+      expect((await themeState(page)).theme).toBe('koyu');
     });
 
     test('diyagram çiziliyken tema değişimi ekranı gerçekten açar', async ({ page }) => {

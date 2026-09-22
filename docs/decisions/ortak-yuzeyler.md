@@ -205,3 +205,52 @@ yani **davranış değişmedi**.
 > `data-theme` çakışması (host aynı özniteliğe yazıyor), ve script/style
 > sayımının JS içindeki şablonları da sayması. Git geçmişinde duruyor.
 
+
+## Ondokuz gömülü tema KALDIRILDI — iki zemin, üç kip (2026-09-22)
+
+**Hüküm.** `css/styles.css`'te ondokuz `[data-theme]` bloğu vardı (456 bildirim,
+sıfır jeton sapması). Hepsi kaldırıldı; yerine `acik` ve `koyu` geldi. Kullanıcı
+artık palet değil **kip** seçiyor: `acik · koyu · sistem`.
+
+**Gerekçe.** Kullanıcı kararı: program tek bir tasarım dili ("Atölye") taşıyacak.
+Ondokuz palet o dilin değil, dilsizliğin işaretiydi.
+
+**Kip ≠ kimlik.** `sistem` bir kimlik DEĞİLDİR ve CSS bloğu yoktur; `data-theme`a
+yazılsaydı belge sessizce `:root`a düşerdi. Kip localStorage'da durur, kimlik
+attribute'a yazılır.
+
+**Kimlikler tek kelime ve tiresiz.** `js/loader.js`'in ilk-kare çözücüsü ve
+`index.html`'in satır içi betiği tireli bir kimliği ayrı ayrı ele alırdı;
+tek kelime kuralı o ayrışmayı baştan kapatıyor.
+
+**Kapılar.** `theme-consistency.test.js` — kip↔menü senkronu, tam iki kimlik,
+`:root` ile virgüllü ortak bildirim, iki ilk-kare yolunun 18 girdide aynı
+kimliği çözmesi, üç göç yolunun ondokuz eski kimlikte aynı aileye düşmesi.
+`theme-contrast.test.js` — iki zemin de WCAG AA.
+
+### Emekliye ayrılan gerekçeler
+
+Silinen 101 satır palet yorumunun taşıdığı üç hüküm, kodda karşılığı kalmadığı
+için buraya taşındı. **Bunlar artık yürürlükte değil**; yeniden bir palet ailesi
+açılırsa başlangıç noktası olsunlar diye duruyorlar:
+
+- **SADE ailesi (graphite · ink · basalt · mono · paper · zinc).** Düşük
+  doygunlukta aksan, eşit yüzey basamakları. Kural: aksan yalnız seçim ve durum
+  bildirir, kimlik taşımaz.
+- **Yüksek kontrast ailesi (contrast · amber · scope).** Saf siyah zemin +
+  fosfor ekran geleneği. Ölçülmüştü: diğer koyu temaların metin kontrastı
+  15,2'de tavan yapıyor, bu aile 16–18 arasında. Halation eşiği bu yüzden ayrı
+  tutulmuştu.
+- **Kehribar rampası (amber).** Fosfor ekranın sarı-turuncu rampası eşit
+  aralıklı değil; göz düşük parlaklıkta sarıyı daha hızlı ayırt ediyor.
+
+### Göç kopyası — bilinçli ve GEÇİCİ
+
+Ondokuz eski kimliğin aile eşlemesi ÜÇ yerde duruyor: `index.html` satır içi
+betiği, `js/loader.js`, `js/theme.js` (`MF_ESKI_KIMLIK`). İlk ikisi göçü **ilk
+karede** yapmak zorunda — yoksa koyu tema seçmiş bir kullanıcı açılışı açık
+zeminde görür, sonra ekran koyuya devrilir; tam olarak `loader-splash`'ın
+kapattığı sıçrama. Üçüncüsü kaydı kalıcı olarak yeni sözlüğe yazar.
+
+Korunan şey "kopya yok" değil **üçünün aynı kararı vermesi**. Kayıtlar yeni
+sözlüğe döndükçe üç liste birlikte silinebilir.

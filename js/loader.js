@@ -146,13 +146,24 @@
   // acilis slate/koyu, karsilama pearl/acik). Bu cagri IIFE degerlendirilirken,
   // yani giristen de once kosuyor.
   //
-  // GECERLILIK LISTESI BURADA YOK — tek kaynak js/theme.js. Yalniz slug bicimi
-  // suzuluyor; gecersiz ama slug bicimli bir degerin CSS'te karsiligi olmaz,
-  // belge varsayilanina duser ve theme.js sonunda duzeltir.
+  // KAYITLI KIP → COZULMUS KIMLIK. Eskiden burada yalniz bir slug SUZGECI
+  // vardi ve tanimadigi degeri hic yazmiyordu; iki tema kalinca bu yetmez,
+  // cunku 'sistem' bir kimlik degil bir kip ve CSS'te blogu yok — yazilsaydi
+  // belge sessizce :root'a duserdi.
+  //
+  // index.html'in <head>'indeki satir ici betikle AYNI karari vermek zorunda.
+  // Ikisi ayrisirsa loader'in olcup kapattigi acilis renk sicramasi geri gelir
+  // ve bunu yalniz gercek tarayicida kullanici gorur.
+  // Kapi: tests/unit/theme-consistency.test.js › "iki ilk-kare yolu AYNI
+  // kimligi cozuyor" — iki betik de cikarilip ayni girdilerle kosuluyor.
   function applyStoredTheme() {
     try {
-      var t = localStorage.getItem('mf-theme');
-      if (t && /^[a-z]+$/.test(t)) document.documentElement.setAttribute('data-theme', t);
+      var v = localStorage.getItem('mf-theme'), t = 'acik';
+      if (v === 'koyu') t = 'koyu';
+      else if (v === 'sistem') t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'koyu' : 'acik';
+      else if (/^(pearl|steel|solidworks|paper|zinc)$/.test(v)) t = 'acik';
+      else if (/^(slate|cream|claude|ansys|fusion|vscode|navy|graphite|ink|basalt|mono|contrast|amber|scope)$/.test(v)) t = 'koyu';
+      document.documentElement.setAttribute('data-theme', t);
     } catch (e) {}
   }
   applyStoredTheme();

@@ -205,38 +205,67 @@ describe('tema ilk karede', () => {
 
   test('belgenin varsayılanı js/theme.js\'in varsayılanıyla AYNI', () => {
     const belge = INDEX.match(/<html[^>]*data-theme="([^"]+)"/);
-    const modul = THEME_SRC.match(/var savedTheme = '([^']+)'/);
+    // theme.js'in varsayılanı TEK sabitte: MF_VARSAYILAN = MF_ACIK.
+    const sabit = THEME_SRC.match(/var MF_VARSAYILAN = (MF_[A-Z]+);/);
     expect(belge).not.toBeNull();
-    expect(modul).not.toBeNull();
-    expect(belge[1]).toBe(modul[1]);
+    expect(sabit).not.toBeNull();
+    const deger = THEME_SRC.match(new RegExp('var ' + sabit[1] + " = '([^']+)';"));
+    expect(deger).not.toBeNull();
+    expect(belge[1]).toBe(deger[1]);
   });
 
-  test('kayıtlı tema HİÇBİR ŞEY çizilmeden önce uygulanıyor', () => {
-    document.documentElement.setAttribute('data-theme', 'pearl');
+  test('kayıtlı kip HİÇBİR ŞEY çizilmeden önce uygulanıyor', () => {
+    document.documentElement.setAttribute('data-theme', 'acik');
     const gercek = window.localStorage.getItem;
-    window.localStorage.setItem('mf-theme', 'navy');
+    window.localStorage.setItem('mf-theme', 'koyu');
     kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
     // baslat() loader'ı eval eder; tema çağrısı IIFE değerlendirilirken koşar,
     // yani MFSimLoader.start()'tan da önce.
     // eslint-disable-next-line no-eval
     eval(LOADER_SRC);
-    expect(document.documentElement.getAttribute('data-theme')).toBe('navy');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('koyu');
     window.localStorage.removeItem('mf-theme');
     expect(typeof gercek).toBe('function');
   });
 
-  test('bozuk kayıt yazılmaz — belge varsayılanı durur', () => {
-    document.documentElement.setAttribute('data-theme', 'pearl');
+  // ESKİ KİMLİK GÖÇÜ DE İLK KAREDE. Ondokuz temadan kalan bir kayıt
+  // ('navy' gibi) yeni sözlükte yok; göç yüklemenin sonuna bırakılsaydı
+  // koyu tema seçmiş kullanıcı açılışı AÇIK zeminde görür, sonra ekran
+  // koyuya devrilirdi — tam olarak bu dosyanın kapattığı sıçrama.
+  test('eski kimlik ilk karede göçüyor', () => {
+    document.documentElement.setAttribute('data-theme', 'acik');
+    window.localStorage.setItem('mf-theme', 'navy');
+    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    // eslint-disable-next-line no-eval
+    eval(LOADER_SRC);
+    expect(document.documentElement.getAttribute('data-theme')).toBe('koyu');
+    window.localStorage.removeItem('mf-theme');
+  });
+
+  // DAVRANIŞ DEĞİŞTİ: eskiden tanınmayan değer HİÇ YAZILMIYORDU (belge
+  // varsayılanı dururdu). Artık çözücü her zaman yazar — çünkü 'sistem'
+  // kipinin karşılığı ancak matchMedia okunarak bulunur ve yazılmazsa
+  // belge :root'a düşerdi. Tanınmayan değerin karşılığı VARSAYILAN.
+  test('bozuk kayıt varsayılana düşer, çöpten türetilmez', () => {
+    document.documentElement.setAttribute('data-theme', 'koyu');
     window.localStorage.setItem('mf-theme', '../kotu değer');
     kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
     // eslint-disable-next-line no-eval
     eval(LOADER_SRC);
-    expect(document.documentElement.getAttribute('data-theme')).toBe('pearl');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('acik');
     window.localStorage.removeItem('mf-theme');
   });
 
-  test('geçerlilik listesi loader\'da KOPYALANMIYOR — tek kaynak js/theme.js', () => {
-    expect(LOADER_SRC).not.toContain('solidworks');
+  // ESKİDEN: "geçerlilik listesi loader'da KOPYALANMIYOR — tek kaynak
+  // js/theme.js". O hüküm ondokuz tema dönemine aitti ve artık TERSİ geçerli:
+  // loader eski kimlikleri TANIMAK ZORUNDA, yoksa göçü ilk karede yapamaz
+  // (yukarıdaki halka). Kopya bilinçli ve GEÇİCİ — kayıtlar yeni sözlüğe
+  // döndükçe bu üç liste birlikte silinebilir.
+  // Korunması gereken şey "kopya yok" değil "kopyalar AYNI kararı veriyor":
+  // kapı tests/unit/theme-consistency.test.js › "iki ilk-kare yolu AYNI
+  // kimliği çözüyor" ve "üç göç yolu aynı aileye düşüyor".
+  test('loader eski kimlikleri göç için tanıyor', () => {
+    expect(LOADER_SRC).toContain('solidworks');
     expect(THEME_SRC).toContain('solidworks');
   });
 });

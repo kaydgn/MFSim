@@ -4,13 +4,20 @@
      degil GORUNUR bir hata uretir: acilis ekrani bir palette acilir, kullanicinin
      temasi yuklemenin SONUNDA gelir ve kart tam devir teslim aninda renk
      degistirir. Kayitli secim js/loader.js'te, hicbir sey cizilmeden once konur. -->
-<html lang="tr" data-theme="pearl">
+<html lang="tr" data-theme="acik">
 <head>
   <meta charset="UTF-8" />
-  <!-- Kayıtlı temayı İLK boyamadan önce uygula. theme.js login sonrası (deferred)
-       yüklendiğinden, o çalışana kadar login/açılış ekranları varsayılan 'slate'
-       ile gelirdi; bu satır kullanıcının temasını (ör. Carbon) anında geçerli kılar. -->
-  <script>try{var _mfT=localStorage.getItem('mf-theme');if(_mfT)document.documentElement.setAttribute('data-theme',_mfT);}catch(e){}</script>
+  <!-- Kayıtlı KİPİ İLK boyamadan önce çözülmüş KİMLİĞE çevirip uygula.
+       theme.js login sonrası (deferred) yüklendiğinden, o çalışana kadar
+       login/açılış ekranları belge varsayılanında gelirdi.
+       Üç iş birden: (1) 'sistem' kipini matchMedia ile çöz — 'sistem' diye bir
+       CSS bloğu yok, yazılsaydı belge sessizce :root'a düşerdi; (2) ondokuz
+       temadan kalan eski kimlikleri göçür (AÇIK aile beştir, gerisi koyuydu);
+       (3) kayıt yoksa AÇIK — kullanıcı kararı, 2026-09-09.
+       js/loader.js'teki applyStoredTheme AYNI kararı vermek zorunda; ayrışma
+       açılışta renk sıçraması demek ve yalnız gerçek tarayıcıda görülür.
+       Kapı: tests/unit/theme-consistency.test.js › "iki ilk-kare yolu". -->
+  <script>try{var v=localStorage.getItem('mf-theme'),t='acik';if(v==='koyu')t='koyu';else if(v==='sistem')t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'koyu':'acik';else if(/^(pearl|steel|solidworks|paper|zinc)$/.test(v))t='acik';else if(/^(slate|cream|claude|ansys|fusion|vscode|navy|graphite|ink|basalt|mono|contrast|amber|scope)$/.test(v))t='koyu';document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
   <title>MFSim — Araç Performans Simülasyonu</title>
   <!-- Leaflet CSS (vendored from unpkg leaflet@1.9.4) -->
   <link rel="stylesheet" href="vendor/leaflet.css" />

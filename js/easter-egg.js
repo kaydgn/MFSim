@@ -40,7 +40,7 @@ var MF_DHO_CONFIG = {
   // Onur penceresindeki "temaya geç" düğmesi (opsiyonel). Uygulamanın
   // "Donanma Mavisi" temasına tek tıkla geçer. temaButonu:false ile gizlenir.
   temaButonu: true,
-  temaId: 'navy',
+  temaId: 'koyu',
   temaButonEtiketi: '⚓ Donanma Mavisi temasına geç'
 };
 
@@ -214,7 +214,7 @@ function veDenizHarpToggle() {
 
 // Onur penceresindeki düğme → uygulamanın "Donanma Mavisi" temasına geç.
 function veDenizHarpApplyTheme() {
-  var id = MF_DHO_CONFIG.temaId || 'navy';
+  var id = MF_DHO_CONFIG.temaId || 'koyu';
   if (typeof changeTheme === 'function') changeTheme(id);
   if (typeof showToast === 'function') showToast('Donanma Mavisi teması uygulandı ⚓', 'success');
   veDenizHarpClose();
