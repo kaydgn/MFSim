@@ -267,6 +267,13 @@
          yakın durumlarda aşağı yuvarlandı: yoğunluk keskin sadeliğin parçası.
          Yeni bir boyut EKLEMEDEN önce buradan bir basamak seç. */
       --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      /* ATÖLYE BAŞLIK YÜZÜ. Gövde Inter kalır — serif YALNIZ başlıkta.
+         Yüz depoda zaten vardı (takoz raporunun gömülü varlıkları); arayüz
+         için gereken iki yüzü `tools/build-display-font.js` çıkarıyor.
+         Yedek zinciri BİLEREK serif: yüz yüklenemezse başlık Georgia'ya
+         düşsün, gövdeyle aynı sans'a değil — yoksa başlık ile gövde arasındaki
+         ayrım sessizce kaybolurdu. */
+      --font-display: 'Source Serif 4', Georgia, 'Times New Roman', serif;
       --font-mono: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, 'Liberation Mono', monospace;
       --fs-micro:   0.5625rem;  /*  9px — rozet, mikro etiket, birim eki */
       --fs-tiny:    0.625rem;   /* 10px — yoğun etiket, tablo hücresi */
@@ -1040,6 +1047,30 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       text-rendering: optimizeLegibility;
+    }
+
+    /* ===== BAŞLIK YÜZÜ — LİSTE TEK YERDE =====================================
+       Atölye'de serif bir BAŞLIK yüzüdür, bir boyut basamağı değil. Ayrımı
+       ÖLÇTÜK (2026-09-22): `--fs-title|h2|h1|display|hero` kullanan 18 CSS
+       kuralının yalnız 9'u başlık; kalan 9'u büyük çizilmiş İKON (`.mf-ico`),
+       komut paleti arama GİRDİSİ ve `+` sekme düğmesi. JS tarafında ayrım daha
+       da keskin: aynı `--fs-h2` hem pencere başlığında hem `✕` kapatma
+       düğmesinde hem de FEAD'in "1. elastik mod" SAYISINDA geçiyor.
+       Yani boyuta göre bağlamak serifi bir çarpı işaretine ve bir sayıya
+       yazardı. Bağlama bu yüzden ANLAMA göre: başlık elemanları + adıyla
+       başlık olan sınıflar.
+       Ağırlık 600-700 arası: yüz o aralığı karşılıyor (bkz. üreteç). 400
+       ağırlıklı bölüm başlıkları (Sonuçlar'ın katlanır şeritleri) LİSTEDE
+       DEĞİL — 600 yüzüne düşüp istenenden kalın görünürlerdi. */
+    h1, h2, h3, h4,
+    .mfsim-login-title,
+    .mfsim-loading-logo,
+    .ve-welcome-logo,
+    .ve-settings-section-title,
+    .ve-empty-hint-title,
+    .ve-komuta-giris-baslik {
+      font-family: var(--font-display);
+      letter-spacing: -0.01em;
     }
 
     /* Form kontrolleri gövdenin yazı tipini MİRAS ALMAZ — tarayıcı onlara
