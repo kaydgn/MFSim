@@ -22,10 +22,10 @@ function getECMatchingPropertiesHTML(node) {
   html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
   html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Şanzıman Türbin Torku Limiti</span></div>';
   html += '<div class="sw-pkg-body">';
-  html += '<table style="width:100%; border-collapse:collapse; font-size:var(--fs-body);">';
+  html += '<table class="ve-pnl-tbl">';
   html += '<tr>';
-  html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary); width:55%;">Şanzıman Türbin Torku Limiti [N·m]</th>';
-  html += '<td style="padding:4px 6px; border:1px solid var(--border-color); background:var(--bg-secondary);"><input type="number" id="ecm-turbine-rating-' + node.id + '" value="' + turbineRating + '" step="10" min="500" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onECMParamChange(\'' + node.id + '\')"></td>';
+  html += '<th class="lbl" style="background:var(--bg-tertiary); border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary); width:55%;">Şanzıman Türbin Torku Limiti [N·m]</th>';
+  html += '<td style="border:1px solid var(--border-color); background:var(--bg-secondary);"><input type="number" id="ecm-turbine-rating-' + node.id + '" value="' + turbineRating + '" step="10" min="500" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onECMParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   html += '</table>';
   html += '<div class="sw-pkg-desc">C7 kontrolü için kullanılır. Şanzıman preseti seçildiğinde otomatik güncellenir (Net Turbine Torque limiti).</div>';
@@ -340,19 +340,19 @@ function runECMatchingAnalysis(nodeId) {
 
     // Tablo
     h += '<div style="overflow-x:auto;">';
-    h += '<table style="width:100%; border-collapse:collapse; font-size:var(--fs-tiny); min-width:420px;">';
+    h += '<table class="ve-pnl-tbl ve-pnl-tbl--tiny" style="min-width:420px;">';
     h += '<thead><tr style="background:var(--bg-tertiary);">';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:left; font-weight:600; color:var(--text-heading);">Durum</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:left; font-weight:600; color:var(--text-heading);">Konvertör</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">Stall τ</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="C4: Stall Speed">Stall<br>rpm</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="C5: Min Engine Speed">Min N<br>rpm</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="C7: Stall Turbine Torque">T_turb<br>N·m</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="C8: SR at Governed Speed">SR@<br>Gov</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">C5</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">C7</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">C8</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);"></th>';
+    h += '<th class="lbl" style="border:1px solid var(--border-color); font-weight:600; color:var(--text-heading);">Durum</th>';
+    h += '<th class="lbl" style="border:1px solid var(--border-color); font-weight:600; color:var(--text-heading);">Konvertör</th>';
+    h += '<th style="border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Stall τ</th>';
+    h += '<th style="border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);" title="C4: Stall Speed">Stall<br>rpm</th>';
+    h += '<th style="border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);" title="C5: Min Engine Speed">Min N<br>rpm</th>';
+    h += '<th style="border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);" title="C7: Stall Turbine Torque">T_turb<br>N·m</th>';
+    h += '<th style="border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);" title="C8: SR at Governed Speed">SR@<br>Gov</th>';
+    h += '<th style="border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">C5</th>';
+    h += '<th style="border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">C7</th>';
+    h += '<th style="border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">C8</th>';
+    h += '<th style="border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);"></th>';
     h += '</tr></thead><tbody>';
 
     // Kullanıcının TC bileşeninde seçtiği konvertörü belirle. Anahtar yazılı
@@ -384,22 +384,22 @@ function runECMatchingAnalysis(nodeId) {
       var borderLeft = isSelected ? '3px solid var(--accent-success)' : 'none';
       
       h += '<tr style="background:' + bgColor + '; border-left:' + borderLeft + ';">';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); white-space:nowrap;"><span style="font-size:var(--fs-tiny); font-weight:600; color:' + statusColor + ';">' + statusIcon + ' ' + statusText + '</span></td>';
+      h += '<td style="border:1px solid var(--border-color);"><span style="font-size:var(--fs-tiny); font-weight:600; color:' + statusColor + ';">' + statusIcon + ' ' + statusText + '</span></td>';
       // Seçili konvertör TİK ROZETİYLE işaretlenir (şanzıman tablosuyla aynı
       // dil). Eskiden yalnız ince bir sol kenar çizgisi vardı — tablo zaten
       // renkli olduğu için görünmüyordu.
-      h += '<td style="padding:4px; border:1px solid var(--border-color); font-weight:600; color:var(--text-heading);">' + r.name
+      h += '<td style="border:1px solid var(--border-color); font-weight:600; color:var(--text-heading);">' + r.name
          + (isSelected ? ' <span style="font-size:var(--fs-micro); background:var(--accent-success); color:#fff; padding:0 4px; border-radius:var(--radius-sm);" title="Bu konvertör Tork Konvertörü bileşenine yüklü">✔</span>' : '')
          + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + r.stallTau.toFixed(2) + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + r.stallSpeed.toFixed(0) + '</td>';
+      h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + r.stallTau.toFixed(2) + '</td>';
+      h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + r.stallSpeed.toFixed(0) + '</td>';
       h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:' + (r.c5ok ? 'var(--text-primary)' : 'var(--accent-danger)') + ';">' + r.minSpeed.toFixed(0) + '</td>';
       h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:' + (r.c7ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + r.tTurbineStall.toFixed(0) + '</td>';
       h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:' + (r.c8ok ? 'var(--text-primary)' : 'var(--accent-warning)') + ';">' + r.srGov.toFixed(3) + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center;">' + (r.c5ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center;">' + (r.c7ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center;">' + (r.c8ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '⚠') + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center;">';
+      h += '<td style="border:1px solid var(--border-color);">' + (r.c5ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + '</td>';
+      h += '<td style="border:1px solid var(--border-color);">' + (r.c7ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + '</td>';
+      h += '<td style="border:1px solid var(--border-color);">' + (r.c8ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '⚠') + '</td>';
+      h += '<td style="border:1px solid var(--border-color);">';
       if(isSelected) {
         // Zaten yüklü → düğme pasif ve ✔; şanzıman tablosundaki davranışın aynısı
         h += '<button class="sw-btn" style="padding:2px 8px; font-size:var(--fs-micro); opacity:0.5; cursor:default;" disabled title="Bu konvertör hâlihazırda yüklü">✔</button>';
@@ -941,7 +941,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
 
     // Tablo
     h += '<div style="overflow-x:auto;">';
-    h += '<table style="width:100%; border-collapse:collapse; font-size:var(--fs-micro); table-layout:fixed;">';
+    h += '<table class="ve-pnl-tbl" style="font-size:var(--fs-micro); table-layout:fixed;">';
     h += '<colgroup>';
     h += '<col style="width:28px;">';   // Durum (ikon)
     h += '<col style="width:auto;">';   // Şanzıman
@@ -955,16 +955,16 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
     h += '<col style="width:34px;">';   // Seç
     h += '</colgroup>';
     h += '<thead><tr style="background:var(--bg-tertiary);">';
-    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:600; color:var(--text-heading); font-size:var(--fs-micro);" title="Durum">⊘</th>';
-    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:left; font-weight:600; color:var(--text-heading);">Şanzıman</th>';
-    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">V</th>';
-    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="C9: Giriş Güç Limiti (kW)">Güç</th>';
-    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="C10: Giriş Tork Limiti (Nm)">Tork</th>';
-    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="Net Türbin Torku (Nm)">Türb.</th>';
-    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="Maks. Çıkış Hızı (rpm)">Çkş</th>';
-    h += '<th style="padding:3px 1px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">C9</th>';
-    h += '<th style="padding:3px 1px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">C10</th>';
-    h += '<th style="padding:3px 1px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);"></th>';
+    h += '<th style="border:1px solid var(--border-color); font-weight:600; color:var(--text-heading); font-size:var(--fs-micro);" title="Durum">⊘</th>';
+    h += '<th class="lbl" style="border:1px solid var(--border-color); font-weight:600; color:var(--text-heading);">Şanzıman</th>';
+    h += '<th style="border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">V</th>';
+    h += '<th style="border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);" title="C9: Giriş Güç Limiti (kW)">Güç</th>';
+    h += '<th style="border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);" title="C10: Giriş Tork Limiti (Nm)">Tork</th>';
+    h += '<th style="border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);" title="Net Türbin Torku (Nm)">Türb.</th>';
+    h += '<th style="border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);" title="Maks. Çıkış Hızı (rpm)">Çkş</th>';
+    h += '<th style="border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">C9</th>';
+    h += '<th style="border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">C10</th>';
+    h += '<th style="border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);"></th>';
     h += '</tr></thead><tbody>';
 
     results.forEach(function(r) {
@@ -992,16 +992,16 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
       // Şanzıman adını kısalt: "Allison | 4000SP" → "4000SP"
       var shortName = r.name.replace(/^Allison\s*\|\s*/i, '');
       h += '<tr style="background:' + bgColor + '; border-left:' + borderLeft + ';" title="' + statusText + ': ' + r.name + '">';
-      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center;" title="' + statusText + '"><span style="font-size:var(--fs-tiny);">' + statusIcon + '</span></td>';
-      h += '<td style="padding:2px 3px; border:1px solid var(--border-color); font-weight:600; color:var(--text-heading); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + shortName + calMark + (isSelected ? ' <span style="font-size:var(--fs-micro); background:var(--accent-primary); color:white; padding:0 3px; border-radius:var(--radius-sm);">✔</span>' : '') + '</td>';
-      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + r.gearCount + '</td>';
+      h += '<td style="border:1px solid var(--border-color);" title="' + statusText + '"><span style="font-size:var(--fs-tiny);">' + statusIcon + '</span></td>';
+      h += '<td style="border:1px solid var(--border-color); font-weight:600; color:var(--text-heading); overflow:hidden; text-overflow:ellipsis;">' + shortName + calMark + (isSelected ? ' <span style="font-size:var(--fs-micro); background:var(--accent-primary); color:white; padding:0 3px; border-radius:var(--radius-sm);">✔</span>' : '') + '</td>';
+      h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + r.gearCount + '</td>';
       h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c9ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + (r.grossInputPower !== null ? r.grossInputPower : '—') + '</td>';
       h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c10ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + (r.grossInputTorque !== null ? r.grossInputTorque : '—') + '</td>';
-      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + (r.netTurbineTorque !== null ? r.netTurbineTorque : '—') + '</td>';
-      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + (r.maxOutputSpeed !== null ? r.maxOutputSpeed : '—') + '</td>';
-      h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center; font-size:var(--fs-micro);">' + (r.score < 0 ? '—' : (r.c9ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>')) + '</td>';
-      h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center; font-size:var(--fs-micro);">' + (r.score < 0 ? '—' : (r.c10ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>')) + '</td>';
-      h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center;">';
+      h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + (r.netTurbineTorque !== null ? r.netTurbineTorque : '—') + '</td>';
+      h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + (r.maxOutputSpeed !== null ? r.maxOutputSpeed : '—') + '</td>';
+      h += '<td style="border:1px solid var(--border-color); font-size:var(--fs-micro);">' + (r.score < 0 ? '—' : (r.c9ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>')) + '</td>';
+      h += '<td style="border:1px solid var(--border-color); font-size:var(--fs-micro);">' + (r.score < 0 ? '—' : (r.c10ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>')) + '</td>';
+      h += '<td style="border:1px solid var(--border-color);">';
       h += '<button class="sw-btn ' + (isSelected ? '' : 'sw-btn-primary') + '" onclick="egmSelectGearbox(\'' + nodeId + '\',\'' + r.key + '\')" style="padding:1px 4px; font-size:var(--fs-micro);' + (isSelected ? ' opacity:0.5; cursor:default;' : '') + '"' + (isSelected ? ' disabled' : '') + '>' + (isSelected ? '✔' : 'Seç') + '</button>';
       h += '</td>';
       h += '</tr>';

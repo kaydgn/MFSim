@@ -711,7 +711,7 @@ describe('panel alan borcu yalnız aşağı iner', () => {
   const PANEL = ['cp-engine.js', 'cp-gearbox.js', 'cp-torque-converter.js',
     'cp-drivetrain.js', 'cp-matching.js', 'cp-mount.js', 'cp-accessories.js',
     'cp-solver.js', 'sensors.js', 'solver-pro.js'];
-  const TAVAN = 1170;   // ölçüldü 2026-09-22 — TAM sayı, pay YOK
+  const TAVAN = 1081;   // ölçüldü 2026-09-22 — TAM sayı, pay YOK (1170 → 1081)
 
   test('satır içi `style=` sayısı tavanı geçmiyor', () => {
     let n = 0;
@@ -726,6 +726,23 @@ describe('panel alan borcu yalnız aşağı iner', () => {
     expect({ toplam: n, tavan: TAVAN, dagilim: n > TAVAN ? dagilim : undefined })
       .toEqual({ toplam: n, tavan: TAVAN, dagilim: undefined });
     expect(n).toBeLessThanOrEqual(TAVAN);
+  });
+
+  test('panel veri tablosu borçtan ÇIKTI — sunum sınıftan', () => {
+    // 31 tablo `.ve-pnl-tbl`ye taşındı. Asıl kazanç sayı değil YETENEK:
+    // satır içi CSS `:hover` yazamaz, yani "hangi satırdayım" sorusunun
+    // cevabı YOKTU. Sayı 1170 → 1081; taşınan 397+48+22 BİLDİRİM, ki
+    // yukarıdaki sayaç onu göremez (o `style=` ÖZNİTELİĞİ sayıyor,
+    // içindeki bildirimi değil).
+    expect(STYLES).toMatch(/\.ve-pnl-tbl tbody tr:hover\{[^}]*background/);
+    expect(STYLES).toMatch(/\.ve-pnl-tbl thead th\{[^}]*position:\s*sticky/);
+    const kullanan = ['cp-engine.js', 'cp-gearbox.js', 'cp-torque-converter.js',
+      'cp-drivetrain.js', 'cp-matching.js', 'cp-mount.js', 'cp-solver.js'];
+    let n = 0;
+    kullanan.forEach((f) => {
+      n += (fs.readFileSync(path.join(JS_DIR, f), 'utf8').match(/ve-pnl-tbl/g) || []).length;
+    });
+    expect(n).toBeGreaterThanOrEqual(31);
   });
 
   test('FEAD paneli borçtan ÇIKTI — gramerin referansı', () => {

@@ -4544,6 +4544,51 @@ body > .mfsim-loading-logo .mfsim-loading-logo-ico{
    sayıları kırpıyordu ("1000" → "100").
    Sütun genişlikleri YÜZDE: sabit px'te artan alan son sütuna yığılıyor,
    tablo ortadan bölünmüş görünüyordu. */
+/* ══ PANEL VERİ TABLOSU — OKUNUR, DÜZENLENMEZ ══════════════════════════
+   Ölçülen kusur: panellerde 38 veri tablosu vardı ve her biri kendi
+   yapışkan başlığını, kenarlığını ve dolgusunu SATIR İÇİ yazıyordu. Satır içi
+   CSS durum ifade edemez (`:hover` yazılamaz), yani vites oranları ya da
+   takoz koordinatları okunurken "hangi satırdayım" sorusunun cevabı YOKTU.
+   Kayış Tablosu'nu kart listesine çeviren gerekçenin aynısı — kullanıcının
+   "demode ve ilkel" dediği şey bir renk tercihi değil taşıyıcının sınırıydı.
+
+   FARE SATIRIN TAMAMINI boyar (hücreyi değil): okunan şey satır.
+   ZEBRA YOK — satır zaten kenarlıkla ayrık, ikinci bir ton fare vurgusunun
+   üstüne binerdi (Kayış Tablosu'nda ölçülmüş karar).
+   Başlık YAPIŞKAN ve `--z-*` ölçeğine girmez: tablonun KENDİ kabında yerel
+   bir kaldırma, pencere katmanı değil. */
+.ve-pnl-tbl{
+  width:100%; border-collapse:collapse; font-size:var(--fs-body);
+}
+.ve-pnl-tbl--tiny{ font-size:var(--fs-tiny); }
+.ve-pnl-tbl--framed{ border:1px solid var(--border-color); }
+.ve-pnl-tbl thead th{
+  position:sticky; top:0; z-index:1;
+  padding:5px 6px; text-align:center; white-space:nowrap;
+  font-weight:600; color:var(--text-heading);
+  background:var(--bg-tertiary);
+  border-bottom:1px solid var(--border-color);
+}
+.ve-pnl-tbl tbody td{
+  padding:4px 6px; text-align:center;
+  border-bottom:1px solid var(--border-color);
+}
+/* HİZA sınıfları — varsayılan `center`, hücrenin kendi `text-align`ının
+   yerini alırlar. YALNIZ hiza: bu turda yüz DEĞİŞTİRİLMEDİ. Sayı sütununu
+   `--font-mono`ya çevirmek doğru tipografi (Kayış Tablosu öyle) ama 100+
+   hücrenin hangisinin gerçekten sayı olduğu tek tek doğrulanmadan
+   yapılamaz — doğrulanmamış bir değişiklik bu deponun tanımıyla bir
+   iyileştirme değil bir iddia. */
+.ve-pnl-tbl td.num, .ve-pnl-tbl th.num{ text-align:right; }
+.ve-pnl-tbl td.lbl, .ve-pnl-tbl th.lbl{ text-align:left; }
+/* SIKI hücre — içinde `<input>` olan satırlar. Varsayılan 4px 6px dolgu bir
+   girdi kutusunun etrafında fazladan yer yakıyor; satır kurucularının
+   ölçtüğü değer 3px ve o KORUNUYOR. `.ve-eng-sheet td.in` ile aynı fikir. */
+.ve-pnl-tbl td.tight, .ve-pnl-tbl th.tight{ padding:3px; }
+/* SATIR VURGUSU — satır içi CSS'in ifade EDEMEDİĞİ şey. */
+.ve-pnl-tbl tbody tr:hover{ background:var(--accent-tint-8); }
+.ve-pnl-tbl tbody tr:last-child td{ border-bottom:none; }
+
 .ve-eng-sheet{ width:100%; table-layout:fixed; border-collapse:collapse;
   font-family:var(--font-mono); }
 .ve-properties-content .ve-eng-sheet th{

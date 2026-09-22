@@ -103,7 +103,7 @@ function getSolverPropertiesHTML(node) {
   }
   html += '</div>';
 
-  html += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
+  html += '<table class="ve-pnl-tbl ve-pnl-tbl--framed">';
 
   // Zaman modu: otomatik "maks hıza kadar"
   html += '<input type="hidden" id="ve-solver-timemode-' + node.id + '" value="stop">';
@@ -111,26 +111,26 @@ function getSolverPropertiesHTML(node) {
   // Çözüm yöntemi
   var method = d.method || 'rk4';
   var isAdaptive = method === 'rk45';
-  html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Çözüm yöntemi</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-solver-method-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);"><option value="euler"' + (method==='euler'?' selected':'') + '>Euler (1. derece)</option><option value="heun"' + (method==='heun'?' selected':'') + '>Heun (2. derece)</option><option value="ralston"' + (method==='ralston'?' selected':'') + '>Ralston (2. derece, optimal)</option><option value="rk4"' + (method==='rk4'?' selected':'') + '>RK4 (4. derece)</option><option value="rk45"' + (method==='rk45'?' selected':'') + '><span class="mf-ico mf-ico-zap"></span> RK45 Dormand-Prince (adaptif)</option></select></td></tr>';
-  html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="padding:3px 6px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>Euler</b>: Hızlı, düşük doğruluk. <b>Heun</b>: İyi denge. <b>Ralston</b>: Optimal 2. derece. <b>RK4</b>: Yüksek doğruluk (önerilen). <b>RK45</b>: Adaptif adım — otomatik hassasiyet kontrolü.</td></tr>';
+  html += '<tr style="border-bottom:1px solid var(--border-color);"><th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Çözüm yöntemi</th><td style="background:var(--bg-tertiary);"><select id="ve-solver-method-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);"><option value="euler"' + (method==='euler'?' selected':'') + '>Euler (1. derece)</option><option value="heun"' + (method==='heun'?' selected':'') + '>Heun (2. derece)</option><option value="ralston"' + (method==='ralston'?' selected':'') + '>Ralston (2. derece, optimal)</option><option value="rk4"' + (method==='rk4'?' selected':'') + '>RK4 (4. derece)</option><option value="rk45"' + (method==='rk45'?' selected':'') + '><span class="mf-ico mf-ico-zap"></span> RK45 Dormand-Prince (adaptif)</option></select></td></tr>';
+  html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>Euler</b>: Hızlı, düşük doğruluk. <b>Heun</b>: İyi denge. <b>Ralston</b>: Optimal 2. derece. <b>RK4</b>: Yüksek doğruluk (önerilen). <b>RK45</b>: Adaptif adım — otomatik hassasiyet kontrolü.</td></tr>';
 
   // Sabit adım büyüklüğü (RK45 dışında)
   var ftDt = d.ftDt || 0.01;
   var showDtRow = method !== 'rk45';
-  html += '<tr id="ve-solver-ftdt-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showDtRow ? 'display:none;' : '') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Adım büyüklüğü Δt [s]</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-solver-ftdt-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);"><option value="0.05"' + (ftDt==0.05?' selected':'') + '>0.05 (hızlı)</option><option value="0.02"' + (ftDt==0.02?' selected':'') + '>0.02</option><option value="0.01"' + (ftDt==0.01?' selected':'') + '>0.01 (varsayılan)</option><option value="0.005"' + (ftDt==0.005?' selected':'') + '>0.005 (hassas)</option><option value="0.001"' + (ftDt==0.001?' selected':'') + '>0.001 (çok hassas)</option></select></td></tr>';
+  html += '<tr id="ve-solver-ftdt-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showDtRow ? 'display:none;' : '') + '"><th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Adım büyüklüğü Δt [s]</th><td style="background:var(--bg-tertiary);"><select id="ve-solver-ftdt-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);"><option value="0.05"' + (ftDt==0.05?' selected':'') + '>0.05 (hızlı)</option><option value="0.02"' + (ftDt==0.02?' selected':'') + '>0.02</option><option value="0.01"' + (ftDt==0.01?' selected':'') + '>0.01 (varsayılan)</option><option value="0.005"' + (ftDt==0.005?' selected':'') + '>0.005 (hassas)</option><option value="0.001"' + (ftDt==0.001?' selected':'') + '>0.001 (çok hassas)</option></select></td></tr>';
 
   // RK45 tolerans ayarları
   var ftAtol = d.ftAtol !== undefined ? d.ftAtol : 1e-6;
   var ftRtol = d.ftRtol !== undefined ? d.ftRtol : 1e-4;
   var showFtTol = method === 'rk45';
-  html += '<tr id="ve-solver-fttol-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Tolerans (ATol / RTol)</th><td style="padding:6px; background:var(--bg-tertiary);"><div style="display:flex; gap:4px; align-items:center;"><input type="text" id="ve-solver-ftatol-' + node.id + '" value="' + ftAtol + '" style="width:50%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"><input type="text" id="ve-solver-ftrtol-' + node.id + '" value="' + ftRtol + '" style="width:50%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"></div></td></tr>';
-  html += '<tr id="ve-solver-fttol-desc-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><td colspan="2" style="padding:3px 6px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>ATol</b>: Mutlak tolerans (hız m/s). <b>RTol</b>: Bağıl tolerans. Adaptif adım sayısı toleransa göre otomatik belirlenir.</td></tr>';
+  html += '<tr id="ve-solver-fttol-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Tolerans (ATol / RTol)</th><td style="background:var(--bg-tertiary);"><div style="display:flex; gap:4px; align-items:center;"><input type="text" id="ve-solver-ftatol-' + node.id + '" value="' + ftAtol + '" style="width:50%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"><input type="text" id="ve-solver-ftrtol-' + node.id + '" value="' + ftRtol + '" style="width:50%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"></div></td></tr>';
+  html += '<tr id="ve-solver-fttol-desc-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>ATol</b>: Mutlak tolerans (hız m/s). <b>RTol</b>: Bağıl tolerans. Adaptif adım sayısı toleransa göre otomatik belirlenir.</td></tr>';
   
   // Güvenlik limiti — GÖRÜNÜR ve düzenlenebilir. Koşu bu süreye ulaşırsa
   // kesilir; kesilen koşu üst hızı olduğundan düşük raporlar, bu yüzden
   // değerin gizli kalmaması gerekiyor.
-  html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Güvenlik limiti [s]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-solver-maxtime-' + node.id + '" value="' + maxSimTime + '" min="1" step="10" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right; font-family:monospace;"></td></tr>';
-  html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="padding:3px 6px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Simülasyon en fazla bu kadar sürer. Koşu limite dayanırsa üst hıza ulaşılmadan kesilir — sonuç olduğundan düşük çıkar. Varsayılan ' + VE_DEFAULT_MAX_SIM_TIME + ' s.</td></tr>';
+  html += '<tr style="border-bottom:1px solid var(--border-color);"><th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Güvenlik limiti [s]</th><td style="background:var(--bg-tertiary);"><input type="number" id="ve-solver-maxtime-' + node.id + '" value="' + maxSimTime + '" min="1" step="10" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right; font-family:monospace;"></td></tr>';
+  html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Simülasyon en fazla bu kadar sürer. Koşu limite dayanırsa üst hıza ulaşılmadan kesilir — sonuç olduğundan düşük çıkar. Varsayılan ' + VE_DEFAULT_MAX_SIM_TIME + ' s.</td></tr>';
 
   html += '</table>';
   html += '</div>';                                   // ve-cp-col--in kapat (girdi)
@@ -360,12 +360,12 @@ function getGearShiftPropertiesHTML(node) {
   html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:4px;">Converter-Mod Geçişleri</div>';
   html += '<p style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Converter modda şanzıman çıkış devri (N<sub>out</sub>) belirli eşiklere ulaştığında geçiş tetiklenir.</p>';
 
-  html += '<table style="width:100%; border-collapse:collapse; font-size:var(--fs-tiny); border:1px solid var(--border-color);">';
+  html += '<table class="ve-pnl-tbl ve-pnl-tbl--tiny ve-pnl-tbl--framed">';
   html += '<thead><tr style="background:var(--bg-secondary);">';
-  html += '<th style="padding:5px 6px; text-align:left; border-bottom:1px solid var(--border-color);">Geçiş</th>';
-  html += '<th style="padding:5px 6px; text-align:center; border-bottom:1px solid var(--border-color);">Model</th>';
-  html += '<th style="padding:5px 6px; text-align:left; border-bottom:1px solid var(--border-color);">Formül / Katsayılar</th>';
-  html += '<th style="padding:5px 6px; text-align:center; border-bottom:1px solid var(--border-color);">Eşik<br>[rpm]</th>';
+  html += '<th class="lbl">Geçiş</th>';
+  html += '<th>Model</th>';
+  html += '<th class="lbl">Formül / Katsayılar</th>';
+  html += '<th>Eşik<br>[rpm]</th>';
   html += '</tr></thead><tbody>';
 
   // 1C→2C
@@ -383,10 +383,10 @@ function getGearShiftPropertiesHTML(node) {
     thr1C2C = (ratio1C2C * shiftRefRPM).toFixed(0);
   }
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
-  html += '<td style="padding:5px 6px; font-weight:600; color:var(--accent-primary);">1C → 2C</td>';
-  html += '<td style="padding:5px 6px; text-align:center;"><span style="background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + model1C2C + '</span></td>';
-  html += '<td style="padding:5px 6px; font-family:monospace; font-size:var(--fs-tiny);">' + formula1C2C + '</td>';
-  html += '<td style="padding:5px 6px; text-align:center; font-weight:600; color:var(--accent-primary);">' + thr1C2C + '</td>';
+  html += '<td style="font-weight:600; color:var(--accent-primary);">1C → 2C</td>';
+  html += '<td><span style="background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + model1C2C + '</span></td>';
+  html += '<td style="font-family:monospace; font-size:var(--fs-tiny);">' + formula1C2C + '</td>';
+  html += '<td style="font-weight:600; color:var(--accent-primary);">' + thr1C2C + '</td>';
   html += '</tr>';
 
   // 2C→2L
@@ -421,10 +421,10 @@ function getGearShiftPropertiesHTML(node) {
     thr2C2L = '—';
   }
   html += '<tr>';
-  html += '<td style="padding:5px 6px; font-weight:600; color:var(--accent-primary);">2C → 2L</td>';
-  html += '<td style="padding:5px 6px; text-align:center;"><span style="background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + model2C2L + '</span></td>';
-  html += '<td style="padding:5px 6px; font-family:monospace; font-size:var(--fs-tiny);">' + formula2C2L + '</td>';
-  html += '<td style="padding:5px 6px; text-align:center; font-weight:600; color:var(--accent-primary);">' + thr2C2L + '</td>';
+  html += '<td style="font-weight:600; color:var(--accent-primary);">2C → 2L</td>';
+  html += '<td><span style="background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + model2C2L + '</span></td>';
+  html += '<td style="font-family:monospace; font-size:var(--fs-tiny);">' + formula2C2L + '</td>';
+  html += '<td style="font-weight:600; color:var(--accent-primary);">' + thr2C2L + '</td>';
   html += '</tr>';
 
   html += '</tbody></table>';
@@ -438,16 +438,16 @@ function getGearShiftPropertiesHTML(node) {
   var luShifts = spData.lockupShifts;
   if (luShifts) {
     html += '<div style="overflow-x:auto; border:1px solid var(--border-color); border-radius:var(--radius-md);">';
-    html += '<table style="width:100%; border-collapse:collapse; font-size:var(--fs-tiny);">';
-    html += '<thead style="background:var(--bg-secondary);">';
+    html += '<table class="ve-pnl-tbl ve-pnl-tbl--tiny">';
+    html += '<thead>';
     html += '<tr>';
-    html += '<th style="padding:5px 6px; text-align:center; border-bottom:1px solid var(--border-color);">Geçiş</th>';
-    html += '<th style="padding:5px 6px; text-align:center; border-bottom:1px solid var(--border-color);">Model</th>';
-    html += '<th style="padding:5px 6px; text-align:center; border-bottom:1px solid var(--border-color);">a</th>';
-    html += '<th style="padding:5px 6px; text-align:center; border-bottom:1px solid var(--border-color);">b</th>';
-    html += '<th style="padding:5px 6px; text-align:center; border-bottom:1px solid var(--border-color);">minCap</th>';
-    html += '<th style="padding:5px 6px; text-align:center; border-bottom:1px solid var(--border-color);">i<sub>gear</sub></th>';
-    html += '<th style="padding:5px 6px; text-align:center; border-bottom:1px solid var(--border-color);">Eşik<br>[rpm]</th>';
+    html += '<th>Geçiş</th>';
+    html += '<th>Model</th>';
+    html += '<th>a</th>';
+    html += '<th>b</th>';
+    html += '<th>minCap</th>';
+    html += '<th>i<sub>gear</sub></th>';
+    html += '<th>Eşik<br>[rpm]</th>';
     html += '</tr></thead><tbody>';
 
     var luKeys = Object.keys(luShifts);
@@ -483,13 +483,13 @@ function getGearShiftPropertiesHTML(node) {
       var shiftLabel = luKey.replace(/(\d+L)(\d+L)/, '$1 → $2');
 
       html += '<tr style="border-bottom:1px solid var(--border-color);">';
-      html += '<td style="padding:4px 6px; text-align:center; font-weight:600; color:var(--accent-primary);">' + shiftLabel + '</td>';
-      html += '<td style="padding:4px 6px; text-align:center;"><span style="background:var(--bg-secondary); padding:1px 5px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + modelType + '</span></td>';
-      html += '<td style="padding:4px 6px; text-align:center; font-family:monospace;">' + aVal + '</td>';
-      html += '<td style="padding:4px 6px; text-align:center; font-family:monospace;">' + bVal + '</td>';
-      html += '<td style="padding:4px 6px; text-align:center; font-family:monospace; color:var(--text-muted);">' + capVal + '</td>';
-      html += '<td style="padding:4px 6px; text-align:center; font-family:monospace;">' + (typeof iGear === 'number' ? iGear.toFixed(3) : iGear) + '</td>';
-      html += '<td style="padding:4px 6px; text-align:center; font-weight:600; color:var(--accent-success);">' + threshold.toFixed(0) + '</td>';
+      html += '<td style="font-weight:600; color:var(--accent-primary);">' + shiftLabel + '</td>';
+      html += '<td><span style="background:var(--bg-secondary); padding:1px 5px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + modelType + '</span></td>';
+      html += '<td style="font-family:monospace;">' + aVal + '</td>';
+      html += '<td style="font-family:monospace;">' + bVal + '</td>';
+      html += '<td style="font-family:monospace; color:var(--text-muted);">' + capVal + '</td>';
+      html += '<td style="font-family:monospace;">' + (typeof iGear === 'number' ? iGear.toFixed(3) : iGear) + '</td>';
+      html += '<td style="font-weight:600; color:var(--accent-success);">' + threshold.toFixed(0) + '</td>';
       html += '</tr>';
     }
     html += '</tbody></table></div>';
@@ -508,16 +508,16 @@ function getGearShiftPropertiesHTML(node) {
   var dsThresholds = spData.downshiftThresholds;
   if (dsThresholds) {
     html += '<div style="overflow-x:auto; border:1px solid var(--border-color); border-radius:var(--radius-md);">';
-    html += '<table style="width:100%; border-collapse:collapse; font-size:var(--fs-tiny);">';
-    html += '<thead style="background:var(--bg-secondary);">';
+    html += '<table class="ve-pnl-tbl ve-pnl-tbl--tiny">';
+    html += '<thead>';
     html += '<tr>';
-    html += '<th style="padding:5px 6px; text-align:center; border-bottom:1px solid var(--border-color);">Geçiş</th>';
-    html += '<th style="padding:5px 6px; text-align:center; border-bottom:1px solid var(--border-color);">Model</th>';
-    html += '<th style="padding:5px 6px; text-align:center; border-bottom:1px solid var(--border-color);">a</th>';
-    html += '<th style="padding:5px 6px; text-align:center; border-bottom:1px solid var(--border-color);">b</th>';
-    html += '<th style="padding:5px 6px; text-align:center; border-bottom:1px solid var(--border-color);">Cap / Özel</th>';
-    html += '<th style="padding:5px 6px; text-align:center; border-bottom:1px solid var(--border-color);">Eşik<br>[rpm]</th>';
-    html += '<th style="padding:5px 6px; text-align:center; border-bottom:1px solid var(--border-color);">Histerezis<br>[rpm]</th>';
+    html += '<th>Geçiş</th>';
+    html += '<th>Model</th>';
+    html += '<th>a</th>';
+    html += '<th>b</th>';
+    html += '<th>Cap / Özel</th>';
+    html += '<th>Eşik<br>[rpm]</th>';
+    html += '<th>Histerezis<br>[rpm]</th>';
     html += '</tr></thead><tbody>';
 
     var dsKeys = Object.keys(dsThresholds);
@@ -560,13 +560,13 @@ function getGearShiftPropertiesHTML(node) {
       var dsLabel = dsKey.replace(/(\d+)to(\d+)/, '$1 → $2');
 
       html += '<tr style="border-bottom:1px solid var(--border-color);">';
-      html += '<td style="padding:4px 6px; text-align:center; font-weight:600; color:var(--accent-danger);">' + dsLabel + '</td>';
-      html += '<td style="padding:4px 6px; text-align:center;"><span style="background:var(--bg-secondary); padding:1px 5px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + dsModelType + '</span></td>';
-      html += '<td style="padding:4px 6px; text-align:center; font-family:monospace;">' + dsAVal + '</td>';
-      html += '<td style="padding:4px 6px; text-align:center; font-family:monospace;">' + dsBVal + '</td>';
-      html += '<td style="padding:4px 6px; text-align:center; font-family:monospace; color:var(--text-muted);">' + dsCapVal + '</td>';
-      html += '<td style="padding:4px 6px; text-align:center; font-weight:600; color:var(--accent-danger);">' + dsThr.toFixed(0) + '</td>';
-      html += '<td style="padding:4px 6px; text-align:center; font-weight:500; color:var(--accent-warning);">' + hysteresis + '</td>';
+      html += '<td style="font-weight:600; color:var(--accent-danger);">' + dsLabel + '</td>';
+      html += '<td><span style="background:var(--bg-secondary); padding:1px 5px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + dsModelType + '</span></td>';
+      html += '<td style="font-family:monospace;">' + dsAVal + '</td>';
+      html += '<td style="font-family:monospace;">' + dsBVal + '</td>';
+      html += '<td style="font-family:monospace; color:var(--text-muted);">' + dsCapVal + '</td>';
+      html += '<td style="font-weight:600; color:var(--accent-danger);">' + dsThr.toFixed(0) + '</td>';
+      html += '<td style="font-weight:500; color:var(--accent-warning);">' + hysteresis + '</td>';
       html += '</tr>';
     }
     html += '</tbody></table></div>';
