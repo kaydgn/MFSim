@@ -1799,7 +1799,7 @@ function _veWaypointShowOnMap(nodeId) {
     var marker = L.marker([wp.lat, wp.lng], {
       icon: L.divIcon({
         className: '',
-        html: '<div style="background:' + color + '; color:#000; width:18px; height:18px; border-radius:3px; text-align:center; line-height:18px; font-size:var(--fs-micro); font-weight:700; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,0.4);"><span class="mf-ico mf-ico-map-pin"></span></div>',
+        html: '<div style="background:' + color + '; color:#000; width:18px; height:18px; border-radius:var(--radius-xs); text-align:center; line-height:18px; font-size:var(--fs-micro); font-weight:700; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,0.4);"><span class="mf-ico mf-ico-map-pin"></span></div>',
         iconSize: [18, 18], iconAnchor: [9, 18]
       })
     }).addTo(map);
@@ -1876,7 +1876,7 @@ function _veWaypointUpdateList(nodeId) {
     var w = wps[i];
     var color = w.auto ? '#4fc3f7' : _veWaypointColors[i % _veWaypointColors.length];
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
-    html += '<td style="padding:2px 4px; text-align:center;"><span style="display:inline-block; width:10px; height:10px; border-radius:2px; background:' + color + ';"></span></td>';
+    html += '<td style="padding:2px 4px; text-align:center;"><span style="display:inline-block; width:10px; height:10px; border-radius:var(--radius-xs); background:' + color + ';"></span></td>';
     html += '<td style="padding:2px 4px; text-align:left; font-weight:600; color:' + color + '; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + w.name + '">' + w.name + '</td>';
     html += '<td style="padding:2px 4px; text-align:right;">' + (w.dist / 1000).toFixed(2) + ' km</td>';
     html += '<td style="padding:2px 4px; text-align:right;">' + w.elev.toFixed(0) + ' m</td>';

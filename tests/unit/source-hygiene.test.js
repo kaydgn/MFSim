@@ -392,3 +392,127 @@ describe('palet katmanı dışında çıplak renk yok', () => {
     expect(olu).toEqual([]);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 4) ŞEKİL ÖLÇEĞİ DIŞINDA SABİT YARIÇAP YOK
+//
+// ÖLÇÜLEN KUSUR (2026-09-22): --radius-* jetonu 197 yerde kullanılıyordu ama
+// 61 nokta ondan bağımsız sabit yazıyordu. Jetonun değerini değiştirmek o 61
+// noktanın hiçbirini oynatmaz: sonuç yarısı yuvarlak yarısı keskin bir arayüz
+// olurdu ve hiçbir test bunu ölçmezdi.
+//
+// İKİ ŞEY ÖLÇEĞİN PARÇASI DEĞİLDİR ve jetona ÇEVRİLMEZ:
+//   • `border-radius: 50%` — bu bir DAİRE (nokta, avatar, gösterge), yarıçap
+//     basamağı değil. Jetona bağlanırsa daire elips olur.
+//   • `border-radius: 0` — bilinçli köşeleme (sıfırlama, bitişik hücre).
+//     Ölçekten bir basamak seçmek onu sessizce yuvarlardı.
+describe('şekil ölçeği dışında sabit yarıçap yok', () => {
+  const jetonBlokSonu = STYLES.indexOf('--shadow-inset:');
+
+  test('şekil jetonları bulunabildi (regex kayması erken yakalansın)', () => {
+    expect(jetonBlokSonu).toBeGreaterThan(0);
+    ['xs', 'sm', 'md', 'lg', 'xl', 'pill'].forEach((r) => {
+      expect(STYLES).toMatch(new RegExp('--radius-' + r + ':\\s*[0-9]'));
+    });
+  });
+
+  // Ölçüt JETONDAN SONRA KALANDIR, bildirimin ilk karakteri değil: köşe başına
+  // yazılan `0 var(--radius-sm) var(--radius-sm) 0` tamamen ölçeğe bağlıdır
+  // ama rakamla başlar. İlk yazımı o bildirimi kusur sayıyordu — kapı kendi
+  // ölçtüğü şeyi yanlış tarif ediyordu.
+  test('gövdede ölçek dışı sabit yarıçap kalmadı', () => {
+    const govde = STYLES.slice(jetonBlokSonu)
+      .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
+    const sabit = [];
+    (govde.match(/border-radius:\s*[^;}]+/g) || []).forEach((bildirim) => {
+      const ham = bildirim.replace(/border-radius:\s*/, '').trim();
+      ham
+        .replace(/var\(\s*--[a-z0-9-]+\s*\)/g, ' ')   // jetona bağlı parça düşer
+        .split(/[\s/]+/)
+        .filter(Boolean)
+        .filter((v) => /[0-9]/.test(v) && v !== '50%' && v !== '0')
+        .forEach(() => sabit.push(ham));
+    });
+    expect([...new Set(sabit)]).toEqual([]);
+  });
+
+  // Gölge jetonlarına `none` YAZILMAZ — bu kural emekli değil. Bazı
+  // bildirimler onları liste içinde kullanıyor (`0 0 0 1px accent,
+  // var(--shadow-sm)`) ve `none` orada tüm bildirimi geçersiz kılıp odak
+  // halkasını sessizce düşürürdü.
+  test('gölge jetonları geçerli sözdizimi taşıyor, none değil', () => {
+    ['sm', 'md', 'lg', 'xl', 'inset'].forEach((k) => {
+      const m = STYLES.match(new RegExp('--shadow-' + k + ':\\s*([^;]+);'));
+      expect(m).not.toBeNull();
+      expect(m[1].trim()).not.toBe('none');
+      expect(m[1]).toMatch(/\d/);
+    });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 5) JS SATIR İÇİ YARIÇAPI DA ÖLÇEĞE BAĞLI
+//
+// Bölüm 4 yalnız `css/styles.css`'i ölçüyor. Arayüzün büyük bölümü ise satır
+// içi `style="..."` dizeleriyle JS'ten kuruluyor: ÖLÇÜLDÜ (2026-09-22) — 96
+// nokta, jetondan bağımsız. Yani ölçeği değiştirmek panelleri oynatıyor ama
+// çözücü kartlarını, takoz künyelerini ve sihirbaz düğmelerini OLDUĞU YERDE
+// bırakıyordu. Hata sessiz: her ekran kendi başına tutarlı görünür.
+//
+// SINIFLANDIRMA SAYIYA DEĞİL ROLE GÖRE. Aynı `1px` iki ayrı işte geçiyordu:
+// 22×22 kapatma düğmesinde (KAP — ölçeğe bağlanır) ve 14×3 lejant çubuğunda
+// (ÇİZGİ ÖRNEĞİ — diyagram dilinin parçası, bağlanmaz). Sayıya göre
+// çevirmek ikincisini kapsüle döndürürdü.
+//
+// ÇİZGİ ÖRNEĞİ KURALLA ELENİR, LİSTEYLE DEĞİL: aynı bildirimde kendi kutusunu
+// ≤3px ilan eden bir eleman çizgidir. Böylece yarın eklenen bir lejant çubuğu
+// kendiliğinden geçer, yarın eklenen bir düğme geçmez.
+describe('JS satır içi yarıçapı ölçeğe bağlı', () => {
+  // BELGE ÜRETEN yüzeyler kapsam dışı: indirilen rapor kendi stil sayfasını
+  // taşır ve `var(--radius-*)` orada TANIMSIZDIR — bağlamak yarıçapı sessizce
+  // 0 yapardı. 2048 tahtası da kendi geometrisi (kendi paleti gibi).
+  // Sayılar TAM eşleşir: bir satır silinince boşalan yer yeni bir sapmaya
+  // açılmasın.
+  const KAPSAM_DISI = {
+    'js/results.js': 3,          // rapor BELGESİ stil sayfası (--prusya/--paper)
+    'js/cp-mount-report.js': 1,  // rapor belgesinde lejant kutusu
+    'js/game-2048.js': 4,        // 2048'in kendi tahtası: tahta · göz · taş · örtü
+  };
+
+  function sabitler() {
+    const bulunan = {};
+    jsFiles(JS_DIR).forEach(({ rel, abs }) => {
+      fs.readFileSync(abs, 'utf8').split('\n').forEach((sat, i) => {
+        const re = /border-radius:\s*([^;"'`}]+)/g;
+        let m;
+        while ((m = re.exec(sat)) !== null) {
+          const ham = m[1].trim();
+          if (/var\(\s*--radius/.test(ham)) continue;
+          if (ham === '50%' || ham === '0' || ham === 'inherit') continue;  // daire · bilinçli köşe
+          // Kendi kutusunu ≤3px ilan eden eleman bir ÇİZGİ ÖRNEĞİDİR.
+          const bas = Math.max(sat.lastIndexOf('style="', m.index), sat.lastIndexOf('{', m.index), 0);
+          const kap = sat.slice(bas, m.index);
+          const w = /width:\s*([0-9.]+)px/.exec(kap);
+          const h = /height:\s*([0-9.]+)px/.exec(kap);
+          if ((w && parseFloat(w[1]) <= 3) || (h && parseFloat(h[1]) <= 3)) continue;
+          (bulunan[rel] = bulunan[rel] || []).push(`${rel}:${i + 1} → ${ham}`);
+        }
+      });
+    });
+    return bulunan;
+  }
+
+  test('kapsam dışı olmayan hiçbir dosyada ölçek dışı yarıçap yok', () => {
+    const b = sabitler();
+    const sapan = Object.keys(b).filter((f) => !KAPSAM_DISI[f])
+      .reduce((a, f) => a.concat(b[f]), []);
+    expect(sapan).toEqual([]);
+  });
+
+  test('kapsam dışı sayılar TAM eşleşiyor (boşalan yer yeni sapmaya açılmasın)', () => {
+    const b = sabitler();
+    const olculen = {};
+    Object.keys(KAPSAM_DISI).forEach((f) => { olculen[f] = (b[f] || []).length; });
+    expect(olculen).toEqual(KAPSAM_DISI);
+  });
+});

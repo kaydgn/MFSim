@@ -248,7 +248,7 @@ var VE_GUIDE_APPFIG_TOKENS = {
   '--border-light': '#d8dce2', '--border-subtle': '#e4e6e9', '--border-hover': '#b4bbc4',
   '--font-mono': "'IBM Plex Mono',ui-monospace,monospace",
   '--fs-body': '11px', '--fs-md': '12px', '--fs-lg': '13px', '--fs-h2': '15px',
-  '--radius-md': '3px', '--tracking-wide': '.04em',
+  '--radius-md': '3px', '--radius-pill': '999px', '--tracking-wide': '.04em',
   '--ink-accent': '#24425f', '--ink-success': '#2e7d4f',
   '--ink-warning': '#c8781e', '--ink-danger': '#a8321f',
   // ZEMİNİNİN EŞİ, ailenin varsayılanı DEĞİL: baskı paletinde amber
@@ -729,7 +729,7 @@ function _gkKart(k){
   h += '<div style="display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;">'
      + '<b style="font-size:var(--fs-body); color:var(--text-primary);">' + _gkEsc(k.modul) + '</b>'
      + '<span style="font-family:ui-monospace,monospace; font-size:var(--fs-micro); '
-     + 'letter-spacing:.08em; text-transform:uppercase; padding:1px 6px; border-radius:3px; '
+     + 'letter-spacing:.08em; text-transform:uppercase; padding:1px 6px; border-radius:var(--radius-xs); '
      + (hazir
         ? 'background:rgba(16,185,129,.14); color:var(--accent-success);">HAZIR'
         : 'background:var(--bg-tertiary); color:var(--text-muted);">HAZIRLANIYOR')
