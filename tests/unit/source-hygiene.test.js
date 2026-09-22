@@ -671,3 +671,167 @@ describe('kanvas çizimi tema köprüsünden geçer', () => {
     });
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 8) DOLU DÜĞMENİN HOVER'I JETONDAN, PARLAKLIK FİLTRESİNDEN DEĞİL
+//
+// ÖLÇÜLEN KUSUR (2026-09-22): 11 `:hover` kuralı `filter:brightness(...)`
+// kullanıyordu. Filtre tema-KÖRDÜR ve iki kimlikte TERS yönde hareket eder:
+//
+//     açık  #a8502b + brightness(1.1) → beyaz metin 5,46 → 4,67  (AA tabanı 4,5)
+//     koyu  #d9763f + brightness(1.1) → koyu metin  5,71 → 6,86
+//
+// Yani aynı jest açık kimlikte okunurluğu DÜŞÜRÜYOR, koyuda yükseltiyor.
+// `--ink-*` jetonları zaten "aksanı metin gücünde kullan" için ölçülmüş
+// değerler: açıkta daha koyu, koyuda daha açık — hover her iki kimlikte de
+// kontrastı ARTIRAN yöne gidiyor.
+describe('hover parlaklık filtresi kullanmıyor', () => {
+  test('css/ içinde `filter:brightness` kuralı yok', () => {
+    const govde = STYLES.replace(/\/\*[\s\S]*?\*\//g, '');   // yorumlar hariç
+    const kalan = [];
+    govde.split('\n').forEach((sat, i) => {
+      if (/filter\s*:\s*brightness/.test(sat)) kalan.push(`${i + 1}: ${sat.trim().slice(0, 70)}`);
+    });
+    expect(kalan).toEqual([]);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 9) PANEL ALAN BORCU — YALNIZ AŞAĞI İNER
+//
+// FEAD paneli Atölye alan gramerine geçti (etiket üstte · birim yanında ·
+// türetilen oyuk blokta) ve görünümü CSS'e taşındı. Kalan paneller hâlâ
+// satır içi `style=` ile alan kuruyor — ve satır içi CSS DURUM İFADE EDEMEZ
+// (`:hover`, `:focus`, `:invalid` yazılamaz), yani o paneller donuk.
+//
+// Bu sayı bir hedef değil BORÇTUR: modül modül iner. Tek başına bir kapı
+// değil bir SAYAÇ — ama artmasını engelliyor, ve bu deponun öğrendiği şey
+// tam olarak sayılmayan borcun sessizce büyüdüğü.
+describe('panel alan borcu yalnız aşağı iner', () => {
+  const PANEL = ['cp-engine.js', 'cp-gearbox.js', 'cp-torque-converter.js',
+    'cp-drivetrain.js', 'cp-matching.js', 'cp-mount.js', 'cp-accessories.js',
+    'cp-solver.js', 'sensors.js', 'solver-pro.js'];
+  const TAVAN = 1170;   // ölçüldü 2026-09-22 — TAM sayı, pay YOK
+
+  test('satır içi `style=` sayısı tavanı geçmiyor', () => {
+    let n = 0;
+    const dagilim = {};
+    PANEL.forEach((f) => {
+      const p = path.join(JS_DIR, f);
+      if (!fs.existsSync(p)) return;
+      const k = (fs.readFileSync(p, 'utf8').match(/style="/g) || []).length;
+      dagilim[f] = k; n += k;
+    });
+    // Dağılımı hata mesajına taşı: hangi modülün borcu büyüdü, adıyla görünsün
+    expect({ toplam: n, tavan: TAVAN, dagilim: n > TAVAN ? dagilim : undefined })
+      .toEqual({ toplam: n, tavan: TAVAN, dagilim: undefined });
+    expect(n).toBeLessThanOrEqual(TAVAN);
+  });
+
+  test('FEAD paneli borçtan ÇIKTI — gramerin referansı', () => {
+    const fead = fs.readFileSync(path.join(JS_DIR, 'cp-fead.js'), 'utf8');
+    // Alanlar CSS sınıfından: `ve-fp-f` / `ve-fp-l` / `ve-fp-inp`
+    expect(fead).toMatch(/class="ve-fp-f"/);
+    expect(STYLES).toMatch(/\.ve-fp-f\{[^}]*flex-direction:\s*column/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 10) HER `:hover` GERÇEKTEN BİR ŞEY DEĞİŞTİRİR
+//
+// 8. bölüm `filter:brightness`in GİTTİĞİNİ ölçüyor — yerine konanın İŞE
+// YARADIĞINI değil. Aradaki fark ölçüldü ve sessizdi: `.ve-settings-btn-primary`
+// kuralında yeni `background:var(--ink-accent)` bildiriminden SONRA eski
+// `background:var(--accent-primary)` duruyordu; art arda yazılan iki bildirimde
+// SONUNCUSU kazanır, yani hover dinlenme durumunun aynısını boyuyordu.
+// `filter` eskiden bildirim sırasından BAĞIMSIZ çalıştığı için aynı kural
+// yıllarca doğru görünmüştü. `.dr-hdr`de de aynı şey oldu: taban zaten
+// `--bg-tertiary` idi ve hover ona aynı değeri yazıyordu.
+//
+// İkisi de testten geçiyordu. Kaldırmayı ölçen bir kapı, yerine konanın ölü
+// olmasını göremez — kapı VARIŞI ölçmek zorunda.
+//
+// NÖTRLEYİCİ bir istisnadır, ölü değildir: `.ve-fp-inp[readonly]:hover` tabanı
+// ile aynı değeri yazar ama işi DAHA GENİŞ bir hover'ı (`.ve-fp-inp:hover`)
+// iptal etmektir — salt-okunur alan fareye tepki VERMEMELİ. İşareti, nitelik/
+// sınıf niteleyicileri soyulunca ortaya çıkan daha genel bir `:hover`
+// kuralının aynı özelliği yazıyor olmasıdır.
+describe('her :hover gerçekten bir şey değiştirir', () => {
+  // Eşleşen süslü parantezle kural tarayıcı; @media/@supports gövdelerine iner
+  function kurallariTara(metin) {
+    const out = []; let i = 0;
+    while (i < metin.length) {
+      const ac = metin.indexOf('{', i);
+      if (ac < 0) break;
+      const sec = metin.slice(i, ac).split(/[;}]/).pop().trim();
+      let d = 1, j = ac + 1;
+      while (j < metin.length && d > 0) { if (metin[j] === '{') d++; else if (metin[j] === '}') d--; j++; }
+      const govde = metin.slice(ac + 1, j - 1);
+      if (sec.startsWith('@')) out.push(...kurallariTara(govde));
+      else if (sec) out.push({ sec, govde, sat: metin.slice(0, ac).split('\n').length });
+      i = j;
+    }
+    return out;
+  }
+  // Bir gövdenin KAZANAN bildirimleri — art arda yazılanda sonuncusu kazanır
+  function kazananlar(govde) {
+    const m = {};
+    govde.split(';').forEach((d) => {
+      const k = d.indexOf(':');
+      if (k < 0) return;
+      const ad = d.slice(0, k).trim().toLowerCase();
+      if (!ad || !/^[-a-z]+$/.test(ad)) return;
+      m[ad] = d.slice(k + 1).trim().replace(/\s+/g, ' ');
+    });
+    return m;
+  }
+
+  test('taban durumunun aynısını boyayan `:hover` kuralı yok', () => {
+    const govde = STYLES.replace(/\/\*[\s\S]*?\*\//g, '');
+    const kurallar = kurallariTara(govde);
+
+    // Taban: `:hover/:focus/:active` TAŞIMAYAN kuralların birikmiş bildirimleri
+    const taban = {};
+    kurallar.forEach((r) => {
+      if (/:(hover|focus|active)/.test(r.sec)) return;
+      r.sec.split(',').forEach((s) => {
+        const k = s.trim();
+        taban[k] = Object.assign(taban[k] || {}, kazananlar(r.govde));
+      });
+    });
+    // Hover haritası: nötrleyici tespiti için "hangi seçici hangi özelliği yazıyor"
+    const hover = {};
+    kurallar.forEach((r) => {
+      if (!r.sec.includes(':hover')) return;
+      r.sec.split(',').forEach((s) => {
+        const k = s.trim();
+        hover[k] = Object.assign(hover[k] || {}, kazananlar(r.govde));
+      });
+    });
+
+    const olu = [];
+    kurallar.forEach((r) => {
+      if (!r.sec.includes(':hover')) return;
+      r.sec.split(',').forEach((secim) => {
+        const sec = secim.trim();
+        if (!sec.includes(':hover')) return;
+        const temel = sec.replace(/:hover(\([^)]*\))?/g, '').replace(/:not\([^)]*\)/g, '').trim();
+        const t = taban[temel];
+        if (!t) return;                       // tabanı olmayan hover'ı ölçemeyiz
+        const h = kazananlar(r.govde);
+        const adlar = Object.keys(h);
+        if (!adlar.length) return;
+        // Tabandan FARKLI tek bir bildirim yeter
+        if (adlar.some((a) => t[a] === undefined || t[a] !== h[a])) return;
+        // NÖTRLEYİCİ Mİ? Niteleyicileri soyunca daha genel bir hover aynı
+        // özelliği yazıyorsa bu kural onu iptal etmek için var
+        const genel = temel.replace(/\[[^\]]*\]/g, '').trim() + ':hover';
+        const g = hover[genel];
+        if (g && genel !== sec && adlar.some((a) => g[a] !== undefined)) return;
+        olu.push(`${r.sat}: ${sec} → ${adlar.map((a) => `${a}:${h[a]}`).join('; ')}`);
+      });
+    });
+
+    expect(olu).toEqual([]);
+  });
+});

@@ -740,3 +740,71 @@ kurallar da taşınır. Devralınan bir kural, yazılı olmayan bir karardır.
 **Kapı:** `kabuk-sutun.spec.js` → *"karşılama ekranında durum şeridi
 GÖRÜNMÜYOR"* — hem gizlendiğini hem modüle girince **geri geldiğini** ölçer
 (gizleme kalıcı olmamalı). Düşmesi ölçüldü.
+
+
+## Hover jetondan gelir, parlaklık filtresinden değil (2026-09-22)
+
+**Ölçülen kusur.** Dolu düğmelerin `:hover`ı on bir yerde
+`filter:brightness(1.08…1.15)` ile yapılıyordu. Filtre **tema-KÖRDÜR**:
+boyanmış sonucu çarpar, hangi kimlikte olduğunu bilmez. Ölçüldü —
+
+| Kimlik | Aksan | Metin kontrastı: dinlenme → hover |
+|--------|-------|-----------------------------------|
+| Açık | `#a8502b` | 5,46 → **4,67** (AA tabanına iniyor) |
+| Koyu | `#d9763f` | 5,71 → **6,86** |
+
+Yani aynı bildirim iki kimlikte **ters** yöne gidiyor: açıkta okunaklılığı
+düşürüyor, koyuda artırıyor.
+
+**Hüküm.** Hover `--ink-accent` / `--ink-success` / `--ink-warning`
+jetonlarından gelir. `--ink-*` zaten "aksanı metin gücünde kullan" için
+ölçülmüş değerlerdir — açıkta daha koyu, koyuda daha açık — yani hover **iki
+kimlikte de kontrastı artıran yöne** gider.
+
+**`--bg-*` merdiveni bu işe yaramaz**: iki kimlikte TERS sıralı (açıkta
+`--bg-tertiary` `#e6e1d8`, `--bg-secondary` `#faf8f4`'ten KOYU; koyuda
+`#2a2621` ondan AÇIK). "Bir üst yüzey" diye tek bir jeton yok. Opak bir
+yüzeyin hover'ı gerektiğinde aksan kendi zeminine karıştırılır
+(`color-mix(in srgb, var(--accent-primary) 8%, var(--bg-tertiary))`) —
+`--accent-tint-8` doğru orandır ama SAYDAMDIR ve gölgeli/üstte duran bir
+yüzeyde altını geçirir.
+
+### Kaldırmayı ölçen kapı, yerine konanın ölü olduğunu göremez
+
+Bunu iki yerde **sessizce** kaçırdık. `.ve-settings-btn-primary:hover`
+kuralında yeni `background:var(--ink-accent)` bildiriminden **sonra** eski
+`background:var(--accent-primary)` duruyordu; art arda yazılan iki bildirimde
+sonuncusu kazanır, yani hover dinlenme durumunun aynısını boyuyordu. Eski
+`filter` bildirim sırasından **bağımsız** çalıştığı için aynı kural yıllarca
+doğru görünmüştü. `.dr-hdr`de de aynısı: taban zaten `--bg-tertiary` idi ve
+hover ona aynı değeri yazdı. İkisi de `filter:brightness` yok diyen kapıdan
+geçiyordu.
+
+**Hüküm.** Kapı **VARIŞI** ölçer: her `:hover` kuralı tabanından farklı en az
+bir kazanan bildirim yazmak zorunda.
+
+**NÖTRLEYİCİ istisnadır, ölü değildir.** `.ve-fp-inp[readonly]:hover` tabanıyla
+aynı değeri yazar ama işi daha geniş bir hover'ı (`.ve-fp-inp:hover`) iptal
+etmektir — salt-okunur alan fareye tepki VERMEMELİ. İşareti, niteleyicileri
+soyulunca ortaya çıkan daha genel bir `:hover` kuralının aynı özelliği
+yazıyor olmasıdır. Muafiyet **koşulludur**: geniş kural silinirse nötrleyici
+de ölü sayılır (ölçüldü).
+
+**Kapı:** `source-hygiene.test.js` bölüm 8 (`filter:brightness` yok, satırıyla)
++ bölüm 10 (ölü hover yok — 193 `:hover` kuralının tamamı taranıyor). Üç düşme
+ölçüldü: ölü hover yakalanıyor, nötrleyici muafiyeti geniş kural silinince
+düşüyor.
+
+## Panel alan borcu yalnız aşağı iner (2026-09-22)
+
+FEAD paneli Atölye alan gramerine geçti; kalan on panel dosyası hâlâ satır içi
+`style=` ile alan kuruyor. Satır içi CSS **durum ifade edemez** (`:hover`,
+`:focus`, `:invalid` yazılamaz) — o paneller bu yüzden donuk.
+
+**Hüküm.** Sayı bir hedef değil **borçtur**: 1170'te çivilendi ve yalnız
+modül modül iner. Pay bırakılmadı — pay bırakmak, borcun sessizce büyümesine
+verilmiş izindir; bu deponun `CLAUDE.md`'si tam olarak o şekilde 6.052 satıra
+çıktı.
+
+**Kapı:** `source-hygiene.test.js` bölüm 9. Tavan aşılınca hata mesajı
+**dosya başına dağılımı** basar — hangi modülün borcu büyüdü, adıyla görünür.
