@@ -235,6 +235,20 @@ function veSyncSidebarScope() {
   // kalır: FEAD'e girdiniz, düğme hâlâ yok. Modül aç/kapa bu fonksiyondan
   // geçen TEK nokta, dolayısıyla tazeleme de buraya ait.
   if(typeof veRibbonRender === 'function') veRibbonRender();
+  veBantModulYaz();
+}
+
+// ÜST BANDIN MODÜL ADI — kaynağı `veSidebarScope`, yani modül aç/kapa'nın
+// geçtiği TEK nokta. İkinci bir "aktif modül" değişkeni tutulmuyor: iki
+// değişken iki yüzeyin sessizce ayrışması demekti (bu deponun kendi dersi).
+// Kökte BOŞ yazılır — karşılama ekranında gidilecek bir modül yok — ve
+// `:empty` kuralı ayracı da kaldırıyor.
+function veBantModulYaz() {
+  var el = document.getElementById('ve-bant-modul');
+  if(!el) return;
+  var def = (typeof veSidebarScope === 'string' && veSidebarScope !== 'top')
+    ? componentDefs[veSidebarScope] : null;
+  el.textContent = (def && def.name) ? def.name : '';
 }
 
 // Bileşen tanımları (SVG sembolleri)

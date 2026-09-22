@@ -556,3 +556,60 @@ jsdom kaskaddan `background-color` hesaplamaz, `:has()` değerlendirmez,
 zemine dönünce halka jeton değerini adıyla söylüyor, etiket sola dönünce
 hangi alanların bozulduğunu sayıyor (*"Dış çap (OD) → denetim right, etiket
 flex-start"*).
+
+## Atölye üst bandı — komut dizen yüzey, yön gösteren yüzeye döndü (2026-09-22)
+
+**Hüküm.** Bant üç şey söyler: **neredeyim** (marka · modül adı), **ne
+arıyorum** (komut arama), **tek ana eylem** (Çöz). Şerit gövdesi varsayılan
+olarak **katlı** açılır.
+
+**Ön koşul — ve meşruiyetin tamamı bu.** Gövdeyi kapatmak, ancak şeritteki her
+komut palette de bulunabiliyorsa meşru. Ölçüldü: şerit **42** komut, palet
+**30** — **on biri palette YOKTU** (sınır çerçevesi, kılavuzlar, Komuta
+penceresi, radyo ve Sonuç sayfasının beş şerit komutu). Koşul sağlanmasaydı
+hata **sessiz** olurdu: komut kaybolmaz, sadece **bulunamaz** — fonksiyon
+duruyor, çağrısı duruyor, düğmesi ekranda değil.
+
+**Tek meşru istisna `veCmdkOpen`**: paleti açan komut palette aranmaz.
+
+**Modül adının kaynağı `veSidebarScope`** — modül aç/kapa'nın geçtiği tek
+nokta. İkinci bir "aktif modül" değişkeni tutulmuyor: iki değişken iki yüzeyin
+sessizce ayrışması demekti. Kökte **boş** yazılır (karşılama ekranında
+gidilecek modül yok) ve `:empty` kuralı ayracı da kaldırır — boş bir çizgi
+"bir şey eksik" der.
+
+**Komut arama ALAN GİBİ görünür, DÜĞMEDİR.** Kural 14'ün iki yönlü afordansı
+(düğme dolu, alan boş) burada bilerek esnetildi: kutu bir metin alanı olsaydı
+kullanıcı içine yazmayı beklerdi, oysa yazmak paleti açar. Çerçeveli ama dolu
+değil — *"buraya bir şey yazacaksın"* diyor, *"burası şu an yazılıyor"*
+demiyor.
+
+**Bandın TEK dolu düğmesi var.** İkinci bir dolu düğme "asıl iş hangisi"
+sorusunu geri getirirdi. Kapı bunu renk adıyla değil **zeminle** ölçüyor.
+
+### Yetki devri bandın tamamına taşındı
+
+`data-qat` dinleyicisi `#ve-qat` kabına bağlıydı; bandın yeni düğmeleri o kabın
+**dışında**. Dinleyici kapta kalsaydı düğmeler **sessizce ölürdü** — markup
+doğru, fonksiyon yerinde, tık hiçbir şey yapmaz. Ölçüldü ve kapıda tutuluyor.
+Pasifleştirme taraması da aynı sebeple bandın tamamını geziyor.
+
+### Ölçülen sonuç
+
+| Ne | Önce | Sonra |
+|----|------|-------|
+| Şerit yüksekliği (varsayılan) | 116 px | **44 px** |
+| Tuval yüksekliği (1280×720) | 551 | **623** (+72) |
+| Palet kapsamı | 30/42 | **41/42** (+ 1 meşru istisna) |
+
+### Yapılmayanlar — ve neden
+
+| Maketteki | Neden yok |
+|-----------|-----------|
+| Avatar (**KA**) | Programda **kullanıcı kimliği yok** — tek ortak parola. Baş harf basmak olmayan bir kimliği iddia etmek olurdu |
+| "Kaydedildi · 12:04" | Kaydetme **zamanı hiçbir yerde tutulmuyor**. Uydurulmuş bir saat, yanlış bir güvence verir |
+
+**Kapı:** `tests/unit/komut-kapsami.test.js` (kapsam, Node'da) +
+`tests/e2e/ust-bant.spec.js` (yerleşim ve canlı bağ, gerçek tarayıcıda). İki
+düşme ölçüldü: bir komut paletten çıkarılınca kapsam kapısı adıyla söylüyor,
+yetki devri kaba geri dönünce arama düğmesi paleti açamıyor.

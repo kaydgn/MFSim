@@ -98,6 +98,23 @@ function _cmdkStaticCommands() {
     { sec:'Panel',   label:'Özellikler paneli',         kw:'özellik properties panel',          icon:_cmdkIco('sliders'),    run:function(){ _cmdkCall('veTogglePropertiesPanel'); } },
     { sec:'Panel',   label:'Rapor',                     kw:'rapor report pdf',                  icon:_cmdkIco('file-text'),  run:function(){ _cmdkCall('veShowRaporModal'); } },
     { sec:'Genel',   label:'Klavye kısayolları',        kw:'klavye kısayol shortcut yardım help tuş', icon:_cmdkSvg('kbd'), run:function(){ _cmdkCall('veShortcutsHelpOpen'); } },
+    // ── ŞERİDİN KALANI ─────────────────────────────────────────────────
+    // Palet şeridin ALTERNATİFİ değil, kapsayıcısı olmak zorunda: şerit gövdesi
+    // varsayılan olarak katlı açılıyor ve burada olmayan bir komut, kullanıcının
+    // bulamayacağı bir komuttur. Ölçüldü (2026-09-22): şeritteki 42 komuttan
+    // 11'i palette YOKTU. Kapı: tests/unit/komut-kapsami.test.js
+    { sec:'Görünüm', label:'Sınırı göster / gizle',     kw:'sınır boundary çerçeve frame', icon:_cmdkIco('frame'),      run:function(){ _cmdkCall('veToggleBoundary'); } },
+    { sec:'Görünüm', label:'Sınır opaklığı',            kw:'sınır boundary opaklık opacity kontrast', icon:_cmdkIco('contrast'), run:function(){ _cmdkCall('veCycleBoundaryOpacity'); } },
+    { sec:'Panel',   label:'Komuta penceresi',          kw:'komuta sipariş fiş durum ölç', icon:_cmdkIco('lock'),       run:function(){ _cmdkCall('veKomutaAc'); } },
+    { sec:'Panel',   label:'Radyo',                     kw:'radyo müzik çalar radio',      icon:_cmdkIco('radio'),      run:function(){ _cmdkCall('veToggleRadio'); } },
+    { sec:'Genel',   label:'Kılavuz kiti',              kw:'kılavuz guide yardım belge indir', icon:_cmdkIco('clipboard'), run:function(){ _cmdkCall('veGuideKitOpen'); } },
+    { sec:'Genel',   label:'Bu modülün kılavuzu',       kw:'kılavuz guide modül yardım',   icon:_cmdkIco('file-text'),  run:function(){ _cmdkCall('veGuideOpenCurrent'); } },
+    // Sonuç sayfasının şerit komutları — şerit gövdesi katlıyken tek yol bu.
+    { sec:'Sonuç',   label:'Sonuçları temizle',         kw:'temizle sonuç ölçüm boşalt clear', icon:_cmdkIco('trash'),  run:function(){ _cmdkCall('veClearAllResults'); } },
+    { sec:'Sonuç',   label:'Tümünü sığdır (zaman ekseni)', kw:'sığdır fit zaman eksen şerit', icon:_cmdkIco('maximize'), run:function(){ _cmdkCall('veTrFit'); } },
+    { sec:'Sonuç',   label:'Birime göre birleştir',     kw:'birleştir merge birim şerit',  icon:_cmdkIco('grid-cells'), run:function(){ _cmdkCall('veTrMergeByUnit'); } },
+    { sec:'Sonuç',   label:'Şeritlere ayır',            kw:'ayır split şerit sinyal',      icon:_cmdkIco('scissors'),   run:function(){ _cmdkCall('veTrSplitAll'); } },
+    { sec:'Sonuç',   label:'Referansı kaldır',          kw:'referans imleç delta kaldır unpin', icon:_cmdkIco('crosshair'), run:function(){ _cmdkCall('veTrUnpin'); } },
     { sec:'Genel',   label:'Çıkış yap',                 kw:'çıkış logout oturum kapat exit',    icon:_cmdkIco('log-out'),    run:function(){ _cmdkCall('mfsimLogout'); } }
   ];
 }
