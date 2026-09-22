@@ -1476,7 +1476,7 @@ function veRenderGradeChart(canvasId, data, title, showLabels) {
   ctx.clip();
   
   // Data line
-  ctx.strokeStyle = '#4a86c8'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+  ctx.strokeStyle = veThemeRgba('--seri-1', 1); ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
   ctx.beginPath();
   var visiblePts = [];
   for(var li = 0; li < data.length; li++) {
@@ -1491,7 +1491,7 @@ function veRenderGradeChart(canvasId, data, title, showLabels) {
     var pp = visiblePts[pi];
     if(pp.x < padL - 5 || pp.x > W - padR + 5 || pp.y < padT - 5 || pp.y > H - padB + 5) continue;
     ctx.beginPath(); ctx.arc(pp.x, pp.y, 4.5, 0, Math.PI * 2);
-    ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.strokeStyle = '#4a86c8'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.strokeStyle = veThemeRgba('--seri-1', 1); ctx.lineWidth = 2; ctx.stroke();
   }
   
   // Labels
@@ -1645,14 +1645,14 @@ function veRenderAccelChart(canvasId, chartData, title) {
   ctx.beginPath(); ctx.moveTo(W - padR, padT); ctx.lineTo(W - padR, H - padB); ctx.stroke();
   
   // Left Y labels (Time - blue)
-  ctx.fillStyle = '#4a86c8'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'right';
+  ctx.fillStyle = veThemeRgba('--seri-1', 1); ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'right';
   for(var lt = 0; lt <= yTMax; lt += tStep) { ctx.fillText(lt.toString(), padL - 8, toYT(lt) + 4); }
   ctx.save(); ctx.translate(16, padT + plotH / 2); ctx.rotate(-Math.PI / 2);
   ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Süre (saniye)', 0, 0); ctx.restore();
   
   // Right Y labels (Distance - red)
   var dStep = yDMax <= 100 ? 20 : yDMax <= 300 ? 50 : yDMax <= 600 ? 100 : 200;
-  ctx.fillStyle = '#8f3636'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'left';
+  ctx.fillStyle = veThemeRgba('--seri-2', 1); ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'left';
   for(var ld = 0; ld <= yDMax; ld += dStep) { ctx.fillText(ld.toString(), W - padR + 8, toYD(ld) + 4); }
   ctx.save(); ctx.translate(W - 10, padT + plotH / 2); ctx.rotate(Math.PI / 2);
   ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Mesafe (m)', 0, 0); ctx.restore();
@@ -1670,7 +1670,7 @@ function veRenderAccelChart(canvasId, chartData, title) {
   ctx.clip();
   
   // Time line (blue)
-  ctx.strokeStyle = '#4a86c8'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+  ctx.strokeStyle = veThemeRgba('--seri-1', 1); ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
   ctx.beginPath();
   for(var ti = 0; ti < tp.length; ti++) {
     var px = toX(tp[ti].x), py = toYT(tp[ti].y);
@@ -1681,11 +1681,11 @@ function veRenderAccelChart(canvasId, chartData, title) {
     var tpx = toX(tp[tpi].x), tpy = toYT(tp[tpi].y);
     if(tpx < padL - 5 || tpx > W - padR + 5) continue;
     ctx.beginPath(); ctx.arc(tpx, tpy, 4.5, 0, Math.PI * 2);
-    ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.strokeStyle = '#4a86c8'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.strokeStyle = veThemeRgba('--seri-1', 1); ctx.lineWidth = 2; ctx.stroke();
   }
   
   // Distance line (red)
-  ctx.strokeStyle = '#8f3636'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+  ctx.strokeStyle = veThemeRgba('--seri-2', 1); ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
   ctx.beginPath();
   for(var di = 0; di < dp.length; di++) {
     var dpx = toX(dp[di].x), dpy = toYD(dp[di].y);
@@ -1696,7 +1696,7 @@ function veRenderAccelChart(canvasId, chartData, title) {
     var ddpx = toX(dp[dpi].x), ddpy = toYD(dp[dpi].y);
     if(ddpx < padL - 5 || ddpx > W - padR + 5) continue;
     ctx.beginPath(); ctx.arc(ddpx, ddpy, 4.5, 0, Math.PI * 2);
-    ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.strokeStyle = '#8f3636'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.strokeStyle = veThemeRgba('--seri-2', 1); ctx.lineWidth = 2; ctx.stroke();
   }
   
   // Restore from clip
@@ -1705,15 +1705,15 @@ function veRenderAccelChart(canvasId, chartData, title) {
   // Legend
   var legX = padL + 14, legY = padT + 12;
   ctx.font = '11px Segoe UI, sans-serif';
-  ctx.strokeStyle = '#4a86c8'; ctx.lineWidth = 2.5;
+  ctx.strokeStyle = veThemeRgba('--seri-1', 1); ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(legX, legY); ctx.lineTo(legX + 24, legY); ctx.stroke();
   ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#4a86c8'; ctx.textAlign = 'left'; ctx.fillText('Süre (s)', legX + 30, legY + 4);
+  ctx.fillStyle = veThemeRgba('--seri-1', 1); ctx.textAlign = 'left'; ctx.fillText('Süre (s)', legX + 30, legY + 4);
   legY += 18;
-  ctx.strokeStyle = '#8f3636'; ctx.lineWidth = 2.5;
+  ctx.strokeStyle = veThemeRgba('--seri-2', 1); ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(legX, legY); ctx.lineTo(legX + 24, legY); ctx.stroke();
   ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#8f3636'; ctx.fillText('Mesafe (m)', legX + 30, legY + 4);
+  ctx.fillStyle = veThemeRgba('--seri-2', 1); ctx.fillText('Mesafe (m)', legX + 30, legY + 4);
   
   // Store interaction data
   canvas._drChart = {
@@ -2122,7 +2122,7 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
   ctx.fillText('Devir (rpm)', margin.left + pw/2, H - 6);
   
   // Left Y labels (Power - blue)
-  ctx.fillStyle = '#3b82f6'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'right';
+  ctx.fillStyle = veThemeRgba('--seri-1', 1); ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'right';
   for(var pp = Math.ceil(pwrMin / pwrStep) * pwrStep; pp <= pwrMax; pp += pwrStep) {
     var yp = toYP(pp);
     if(yp < margin.top + 5 || yp > H - margin.bottom - 5) continue;
@@ -2133,7 +2133,7 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
   
   // Right Y labels (Torque - red)
   var trkStep = baseTrkMax <= 400 ? 100 : baseTrkMax <= 800 ? 200 : baseTrkMax <= 1500 ? 200 : 500;
-  ctx.fillStyle = '#ef4444'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'left';
+  ctx.fillStyle = veThemeRgba('--seri-2', 1); ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'left';
   for(var tt = Math.ceil(trkMin / trkStep) * trkStep; tt <= trkMax; tt += trkStep) {
     var yt = toYT(tt);
     if(yt < margin.top + 5 || yt > H - margin.bottom - 5) continue;
@@ -4234,10 +4234,10 @@ function _drEcmRedraw() {
   });
   
   // Motor curve
-  ctx.beginPath();ctx.strokeStyle='#f59e0b';ctx.lineWidth=2.5;ctx.setLineDash([]);var firstM=true;
+  ctx.beginPath();ctx.strokeStyle=veThemeRgba('--accent-warning', 1);ctx.lineWidth=2.5;ctx.setLineDash([]);var firstM=true;
   _td.forEach(function(d){var tp=d.torque-_pDrop;if(tp<0)tp=0;if(firstM){ctx.moveTo(xP(d.rpm),yP(tp));firstM=false;}else ctx.lineTo(xP(d.rpm),yP(tp));});
   ctx.lineTo(xP(_nlg),yP(0));ctx.stroke();
-  ctx.fillStyle='#f59e0b';ctx.font='bold 10px sans-serif';ctx.textAlign='left';
+  ctx.fillStyle=veThemeRgba('--accent-warning', 1);ctx.font='bold 10px sans-serif';ctx.textAlign='left';
   var mLbl=_td[0];if(mLbl.rpm>minRPM&&mLbl.rpm<maxRPM)ctx.fillText('Motor (Net − '+_pDrop+')',xP(mLbl.rpm)+4,yP(mLbl.torque-_pDrop)-8);
   
   // Governed line
@@ -4684,7 +4684,7 @@ function veRenderFTUpshiftChart(canvasId, steps) {
   ctx.fillText('Araç Hızı (km/h)', padL + plotW / 2, H - 6);
   
   // Left Y labels (RPM — blue)
-  ctx.fillStyle = '#4a86c8'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'right';
+  ctx.fillStyle = veThemeRgba('--seri-1', 1); ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'right';
   for(var lr = Math.ceil(yRPMMin / rStep) * rStep; lr <= yRPMMax; lr += rStep) {
     ctx.fillText(lr.toString(), padL - 6, toYR(lr) + 4);
   }
@@ -4694,13 +4694,13 @@ function veRenderFTUpshiftChart(canvasId, steps) {
   
   // Right Y labels (Grade — red)
   var gStep = yGrMax > 200 ? 50 : yGrMax > 80 ? 20 : 10;
-  ctx.fillStyle = '#8f3636'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'left';
+  ctx.fillStyle = veThemeRgba('--seri-2', 1); ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'left';
   for(var lg = Math.ceil(yGrMin / gStep) * gStep; lg <= yGrMax; lg += gStep) {
     ctx.fillText(lg.toString(), W - padR + 6, toYG(lg) + 4);
   }
   ctx.save(); ctx.translate(W - 8, padT + plotH / 2); ctx.rotate(Math.PI / 2);
   ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center';
-  ctx.fillStyle = '#8f3636';
+  ctx.fillStyle = veThemeRgba('--seri-2', 1);
   ctx.fillText('Net Eğim (%)', 0, 0); ctx.restore();
   
   // Zoom indicator
@@ -4716,7 +4716,7 @@ function veRenderFTUpshiftChart(canvasId, steps) {
   ctx.clip();
   
   // ── Engine Speed line (blue, sawtooth) ──
-  ctx.strokeStyle = '#4a86c8'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.setLineDash([]);
+  ctx.strokeStyle = veThemeRgba('--seri-1', 1); ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.setLineDash([]);
   ctx.beginPath();
   for(var ei = 0; ei < steps.length; ei++) {
     var ex = toX(steps[ei].speed), ey = toYR(steps[ei].engineRPM);
@@ -4728,11 +4728,11 @@ function veRenderFTUpshiftChart(canvasId, steps) {
     if(epx < padL - 5 || epx > W - padR + 5) continue;
     ctx.beginPath(); ctx.arc(epx, epy, 4.5, 0, Math.PI * 2);
     ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill();
-    ctx.strokeStyle = '#4a86c8'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = veThemeRgba('--seri-1', 1); ctx.lineWidth = 2; ctx.stroke();
   }
   
   // ── Net Grade line (red, descending) ──
-  ctx.strokeStyle = '#8f3636'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.setLineDash([]);
+  ctx.strokeStyle = veThemeRgba('--seri-2', 1); ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.setLineDash([]);
   ctx.beginPath();
   for(var gi = 0; gi < steps.length; gi++) {
     var gx2 = toX(steps[gi].speed), gy2 = toYG(steps[gi].netGrade);
@@ -4744,7 +4744,7 @@ function veRenderFTUpshiftChart(canvasId, steps) {
     if(gpx < padL - 5 || gpx > W - padR + 5) continue;
     ctx.beginPath(); ctx.arc(gpx, gpy, 4.5, 0, Math.PI * 2);
     ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill();
-    ctx.strokeStyle = '#8f3636'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = veThemeRgba('--seri-2', 1); ctx.lineWidth = 2; ctx.stroke();
   }
   
   // Restore from clip
@@ -4753,16 +4753,16 @@ function veRenderFTUpshiftChart(canvasId, steps) {
   // Legend
   var legX = padL + 14, legY = padT + 14;
   ctx.font = '11px Segoe UI, sans-serif';
-  ctx.strokeStyle = '#4a86c8'; ctx.lineWidth = 2.5; ctx.setLineDash([]);
+  ctx.strokeStyle = veThemeRgba('--seri-1', 1); ctx.lineWidth = 2.5; ctx.setLineDash([]);
   ctx.beginPath(); ctx.moveTo(legX, legY); ctx.lineTo(legX + 24, legY); ctx.stroke();
   ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#4a86c8'; ctx.textAlign = 'left'; ctx.fillText('Motor Devri (rpm)', legX + 30, legY + 4);
+  ctx.fillStyle = veThemeRgba('--seri-1', 1); ctx.textAlign = 'left'; ctx.fillText('Motor Devri (rpm)', legX + 30, legY + 4);
   
   legY += 18;
-  ctx.strokeStyle = '#8f3636'; ctx.lineWidth = 2.5;
+  ctx.strokeStyle = veThemeRgba('--seri-2', 1); ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(legX, legY); ctx.lineTo(legX + 24, legY); ctx.stroke();
   ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#8f3636'; ctx.fillText('Net Eğim (%)', legX + 30, legY + 4);
+  ctx.fillStyle = veThemeRgba('--seri-2', 1); ctx.fillText('Net Eğim (%)', legX + 30, legY + 4);
   
   // Store interaction data (same structure as grade/accel charts)
   canvas._drChart = {

@@ -195,7 +195,14 @@
            karşılama ekranında gidilecek bir modül yok. -->
       <span class="ve-bant-modul" id="ve-bant-modul" aria-live="polite"></span>
       
-    <span class="ve-rb-strip-fill"></span>
+    <!-- ŞERİT SEKMELERİ BANDIN İÇİNDE, MARKANIN YANINDA — ama YALNIZ gövde
+           açıkken (css: `#ve-ribbon.is-collapsed .ve-rb-tabs`). İki uç da
+           ölçüldü ve ikisi de yanlıştı: hep bantta durunca üst satır eski
+           şeridin aynısı okunuyordu; gövdeye alınca da açılışta çizginin
+           ALTINDA ikinci bir satır doğuyordu (kullanıcı bildirimi). Doğrusu
+           ortası: katlıyken yok, açıkken markanın yanında. -->
+      <div class="ve-rb-tabs" id="ve-rb-tabs" role="tablist" aria-label="Şerit sekmeleri"></div>
+      <span class="ve-rb-strip-fill"></span>
       <!-- KOMUT ARAMA — şerit gövdesi varsayılan KATLI açıldığı için
            komutların GÖRÜNÜR girişi bu. Paletin şeridi kapsadığı
            `tests/unit/komut-kapsami.test.js` ile kapılı: kapsamıyorsa bu
@@ -254,13 +261,7 @@
        Tutamak doğrudan #ve-ribbon'ın çocuğu olsaydı o durumda geride kalırdı.
        Tutamak #ve-rb-body'nin İÇİNE de konulamaz: js/ribbon.js her çizimde
        o kabın innerHTML'ini yeniden yazar, statik markup orada duramaz. -->
-  <!-- ŞERİT SEKMELERİ GÖVDEYE AİT, BANDA DEĞİL. Bantta kaldıkları sürece
-         üst satır eski şeridin aynısı okunuyordu (kullanıcı bildirimi):
-         marka · modül · SEKMELER · arama · eylem. Gövde varsayılan katlı
-         olduğuna göre sekmeler de onunla birlikte gizlenmeli — açılınca
-         birlikte gelirler. -->
-      <div class="ve-rb-tabs" id="ve-rb-tabs" role="tablist" aria-label="Şerit sekmeleri"></div>
-      <div class="ve-rb-dock" id="ve-rb-dock">
+            <div class="ve-rb-dock" id="ve-rb-dock">
     <div class="ve-rb-body" id="ve-rb-body" role="tabpanel"></div>
     <button type="button" class="ve-rb-collapse" id="ve-rb-collapse" title="Şeridi daralt" aria-label="Şeridi daralt">▲</button>
   </div>

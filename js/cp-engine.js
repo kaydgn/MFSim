@@ -2670,7 +2670,7 @@ function updateVEMotorChart(nodeId) {
   var rect = { width: fit.w };
   
   if(torquePoints.length < 2 && powerPoints.length < 2) {
-    ctx.fillStyle = '#666';
+    ctx.fillStyle = veThemeRgba('--text-secondary', 1);
     ctx.font = '12px system-ui';
     ctx.textAlign = 'center';
     ctx.fillText('En az 2 veri noktası gerekli', rect.width / 2, 100);

@@ -304,7 +304,7 @@ function pcDrawHint(ctx2d, canvas, ml, mt, pw, isDark) {
   var prevAlign = ctx2d.textAlign, prevFont = ctx2d.font, prevFill = ctx2d.fillStyle;
   ctx2d.textAlign = 'left';
   if(pcIsZoomed(canvas)) {
-    ctx2d.fillStyle = '#60a5fa';
+    ctx2d.fillStyle = veThemeRgba('--seri-1', 1);
     ctx2d.font = 'bold 9px sans-serif';
     ctx2d.fillText(canvas._pcZoom.scale.toFixed(1) + '× — sol tık: sıfırla', ml + 6, mt + 11);
   } else {

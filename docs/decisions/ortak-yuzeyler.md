@@ -659,3 +659,84 @@ okunmuyor, biri ayırt etmiyor; tek parçalı adda ikinci harf **uydurulmaz**.
 
 **Kapı:** `tests/unit/kimlik.test.js` (baş harf, tuzağın kendisi dahil çivili)
 + `tests/e2e/ust-bant.spec.js` (envanter · avatar · menü · Ctrl+S).
+
+## Şerit sekmeleri — markanın yanında, ama yalnız gövde açıkken (2026-09-22)
+
+**Hüküm.** Sekmeler (Giriş · Görünüm · Araçlar) bandın **içinde**, markanın
+yanında durur — ve **yalnız gövde açıkken** çizilir.
+
+**İki uç da ölçüldü, ikisi de yanlıştı:**
+
+| Deneme | Kusur |
+|--------|-------|
+| Hep bantta (ilk hâl) | Üst satır eski şeridin aynısı okunuyordu — *"eskisiyle de aynı olmuş"* |
+| Gövdeye taşındı | Açılışta bandın çizgisinin **altında** ikinci bir başlık satırı doğuyordu — *"başlıklar üstteki çizginin altına geliyor"* |
+
+Doğrusu ortası. Sekme bir **sayfa başlığı** değil, gövdenin hangi yüzünü
+gördüğünü söyleyen bir **seçici**; yeri de o gövdeyi açan bandın kendisi.
+Kendi zemini **yok** — bandın zeminini paylaşır, yoksa banda ikinci bir şerit
+çizerdi. Üst kenarlık + negatif `margin-bottom` hilesi (klasör kulağı) kalktı:
+bandın altındaki çizgiye yapışacak bir kenarı yok.
+
+## Kanvas çizimi tema köprüsünden geçer (2026-09-22)
+
+**Hüküm.** Hiçbir `ctx.fillStyle/strokeStyle` ataması sabit hex yazmaz;
+hepsi `veThemeRgba` köprüsünden geçer. Diyagram serileri **tema başına** ayrı
+değer taşır (`--seri-1..4`).
+
+**Gerekçe — ölçülen kusur.** 65 atama köprüyü atlıyordu ve hata bir temada
+görünmez, ötekinde okunmazdı:
+
+| Renk | Nerede kırık |
+|------|--------------|
+| `#8f3636` seri kırmızısı | koyu zeminde **2,45** |
+| `#a78bfa` seri moru | beyazda **2,72** |
+| `#4aa3ff` | beyazda **2,63** |
+| `#666` eksen yazısı · `#444` ızgara | koyu zeminde okunmuyor |
+
+Yani diyagramların yarısı bir kimlikte, yarısı ötekinde kayboluyordu. Tek bir
+palet iki kimliğe yetmiyor: seriler **hue** ile ayrışır, parlaklıkla değil, ve
+her biri **kendi** kimliğinin zeminlerinde ≥3:1 olmak zorunda.
+
+| | açık | koyu |
+|---|---|---|
+| `--seri-1` | `#2f6a9e` (4,89) | `#7ab3e0` (7,31) |
+| `--seri-2` | `#9a3b3b` (5,87) | `#e08585` (6,14) |
+| `--seri-3` | `#6b4fa0` (5,53) | `#b39ddb` (6,85) |
+| `--seri-4` | `#2f6b45` (5,43) | `#6cbb87` (7,11) |
+
+### Önbellek DENENDİ ve GERİ ALINDI
+
+Çizim döngüsü kare başına onlarca çağrı yapıyor; `veThemeRgba`'ya bir önbellek
+eklendi ve **aynı turda geri alındı**. Sebep: jeton değeri `changeTheme`
+dışında bir yoldan değişirse önbellek bayat kalıyor ve köprü *"şu anki değeri
+oku"* sözünü bozuyor — `theme-rgba.test.js` bunu anında yakaladı.
+
+Asıl kusur testin kırılması değil, **kazancın ölçülmeden eklenmesiydi**:
+ölçülmüş bir kazanç için bile o sözleşme bozulmazdı. Çağıran tarafta önbellek
+meşru ve zaten var — `js/results.js` → `_drThemeColors()`, tema değişiminde
+sıfırlanıyor.
+
+**Kapı:** `source-hygiene.test.js` bölüm 7 — sabit hex yok, `ctx`'e `var()`
+dizesi verilmiyor (Canvas onu sessizce yutar), ve seri paleti iki kimlikte de
+≥3:1. İki düşme ölçüldü, ikisi de adıyla söylüyor.
+
+
+## Bir öğeyi taşımak, üstündeki kuralları da taşımaktır (2026-09-22)
+
+**Ölçülen kusur.** Durum şeridi Tur A'da `.ve-doc-dock`'tan çıkarılıp tuvalin
+altına taşındı. Şerit o kabın içindeyken `.ve-main.ve-no-module .ve-doc-dock
+{ display:none }` kuralıyla **birlikte** gizleniyordu — karşılama ekranında
+görünmemesinin sebebi buydu ve kendi kuralı hiç yazılmamıştı.
+
+Taşınınca kapsamdan **sessizce** çıktı: karşılama ekranının dibinde
+*"0 bileşen, 0 bağlantı · %100 · Hazır"* belirdi, yani arkada açık bir
+topoloji varmış gibi (kullanıcı bildirimi). Hiçbir test bakmıyordu — şeridin
+karşılamada gizli olduğu hiçbir yerde yazılı değildi, bir kabın yan etkisiydi.
+
+**Hüküm.** Bir öğe DOM'da yer değiştirdiğinde, ona **kabı üzerinden** uygulanan
+kurallar da taşınır. Devralınan bir kural, yazılı olmayan bir karardır.
+
+**Kapı:** `kabuk-sutun.spec.js` → *"karşılama ekranında durum şeridi
+GÖRÜNMÜYOR"* — hem gizlendiğini hem modüle girince **geri geldiğini** ölçer
+(gizleme kalıcı olmamalı). Düşmesi ölçüldü.

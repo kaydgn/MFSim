@@ -1453,7 +1453,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
   var routeAvgGrade = totalDistCalc > 0 ? weightedGradeCalc / totalDistCalc : 0;
   var avgY = toY(routeAvgGrade);
   if(avgY >= padT && avgY <= padT + plotH) {
-    ctx.strokeStyle = '#ff9800';
+    ctx.strokeStyle = veThemeRgba('--accent-warning', 1);
     ctx.lineWidth = 1.5;
     ctx.setLineDash([6, 3]);
     ctx.beginPath();
@@ -1462,7 +1462,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
     ctx.stroke();
     ctx.setLineDash([]);
     // Etiket
-    ctx.fillStyle = '#ff9800';
+    ctx.fillStyle = veThemeRgba('--accent-warning', 1);
     ctx.font = '600 8px Segoe UI, sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText('Ort: %' + routeAvgGrade.toFixed(2), padL + 4, avgY - 4);
@@ -1477,7 +1477,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
       // Seçim kutusu
       ctx.fillStyle = 'rgba(255,152,0,0.12)';
       ctx.fillRect(selX1, padT, selX2 - selX1, plotH);
-      ctx.strokeStyle = '#ff9800';
+      ctx.strokeStyle = veThemeRgba('--accent-warning', 1);
       ctx.lineWidth = 1;
       ctx.setLineDash([3, 2]);
       ctx.strokeRect(selX1, padT, selX2 - selX1, plotH);
@@ -1486,7 +1486,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
       if(sel.avgGrade !== undefined) {
         var selAvgY = toY(sel.avgGrade);
         if(selAvgY >= padT && selAvgY <= padT + plotH) {
-          ctx.strokeStyle = '#ffeb3b';
+          ctx.strokeStyle = veThemeRgba('--accent-warning', 1);
           ctx.lineWidth = 2;
           ctx.setLineDash([4, 2]);
           ctx.beginPath();
@@ -1494,7 +1494,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
           ctx.lineTo(selX2, selAvgY);
           ctx.stroke();
           ctx.setLineDash([]);
-          ctx.fillStyle = '#ffeb3b';
+          ctx.fillStyle = veThemeRgba('--accent-warning', 1);
           ctx.font = '700 9px Segoe UI, sans-serif';
           ctx.textAlign = 'center';
           ctx.fillText('Seçim Ort: %' + sel.avgGrade.toFixed(2), (selX1 + selX2) / 2, selAvgY - 6);
@@ -2063,9 +2063,9 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
   var startElev = pts[0].elev.toFixed(0);
   var endElev = pts[pts.length - 1].elev.toFixed(0);
   ctx.font = '600 8px Segoe UI, sans-serif';
-  ctx.fillStyle = '#4caf50'; ctx.textAlign = 'left';
+  ctx.fillStyle = veThemeRgba('--seri-4', 1); ctx.textAlign = 'left';
   ctx.fillText('A ' + startElev + 'm ▸', padL + 4, H - padB - 4);
-  ctx.fillStyle = '#ef5350'; ctx.textAlign = 'right';
+  ctx.fillStyle = veThemeRgba('--seri-2', 1); ctx.textAlign = 'right';
   ctx.fillText('◂ ' + endElev + 'm B', W - padR - 4, H - padB - 4);
 
   // Çizim alanı kırp
@@ -2092,7 +2092,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
 
   // ── Ana çizgi (mor — GPS tarzı) ──
   if(pts.length >= 2) {
-    ctx.strokeStyle = '#b39ddb';
+    ctx.strokeStyle = veThemeRgba('--seri-3', 1);
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
@@ -2166,7 +2166,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
     // Profil üzerindeki nokta
     ctx.fillStyle = wpColor;
     ctx.beginPath(); ctx.arc(wpX, wpY, 4.5, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+    ctx.strokeStyle = veThemeRgba('--bg-input', 1); ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(wpX, wpY, 4.5, 0, Math.PI * 2); ctx.stroke();
     // İsim etiketi (üstte, çapraz)
     ctx.save();

@@ -134,22 +134,43 @@ test('bantta şerit sekmesi ve QAT ikonu YOK', async ({ page }) => {
     };
   });
   expect(r.qatKabi).toBe(false);        // kaydet/geri/ileri ikonları banttan kalktı
-  expect(r.bantSekmesi).toBe(false);    // şerit sekmeleri gövdenin
-  expect(r.sekmeGorunur).toBe(false);   // gövde katlıyken sekme de yok
+  // SEKMELER BANDIN İÇİNDE (markanın yanında) ama KATLIYKEN GÖRÜNMEZ.
+  // İki uç da ölçüldü ve ikisi de yanlıştı: hep görünürken üst satır eski
+  // şeridin aynısı okunuyordu; gövdeye taşınınca da açılışta bandın
+  // çizgisinin ALTINDA ikinci bir başlık satırı doğuyordu.
+  expect(r.bantSekmesi).toBe(true);     // kabı BANT
+  expect(r.sekmeGorunur).toBe(false);   // ama katlıyken çizilmiyor
   expect(r.markaIkonu).toBe(false);     // maket yalnız SÖZCÜK markasını gösteriyor
   expect(r.bantY).toBeLessThanOrEqual(40);   // "çok kalın olmuş" — 44 → 38
 });
 
-// Sekmeler kaybolmadı, YERİ değişti: gövde açılınca birlikte gelirler.
-test('gövde açılınca şerit sekmeleri geliyor', async ({ page }) => {
+// Gövde açılınca sekmeler MARKANIN YANINDA belirir — ALTINDA değil.
+// Kullanıcı bildirimi: "başlıklar üstteki çizginin altına geliyor; yanına
+// gelsin, MFSim yazan kısmın yanında olsun."
+test('gövde açılınca sekmeler MARKANIN YANINDA, bandın İÇİNDE', async ({ page }) => {
   await ac(page, 'fead-analysis');
   await page.evaluate(() => veRibbonToggleCollapse());
   await page.waitForTimeout(500);
-  const gorunur = await page.evaluate(() => {
+  const r = await page.evaluate(() => {
     const t = document.querySelector('#ve-rb-tabs');
-    return !!(t && t.getBoundingClientRect().height > 0 && t.children.length > 1);
+    const bant = document.querySelector('#ve-rb-strip');
+    const marka = document.querySelector('#ve-project-name-btn');
+    const tb = t.getBoundingClientRect(); const bb = bant.getBoundingClientRect();
+    const mb = marka.getBoundingClientRect();
+    return {
+      gorunur: tb.height > 0, sekmeSayi: t.children.length,
+      // AYNI SATIR: sekmelerin dikey orta noktası bandın içinde
+      ayniSatir: (tb.y + tb.height / 2) > bb.y && (tb.y + tb.height / 2) < (bb.y + bb.height),
+      markaninSaginda: tb.x > mb.x,
+      // ve bandın ALTINA taşmıyor — ikinci bir başlık satırı yok
+      cizginiAsmiyor: (tb.y + tb.height) <= (bb.y + bb.height) + 1,
+    };
   });
-  expect(gorunur).toBe(true);
+  expect(r.gorunur).toBe(true);
+  expect(r.sekmeSayi).toBeGreaterThan(1);
+  expect(r.ayniSatir).toBe(true);
+  expect(r.markaninSaginda).toBe(true);
+  expect(r.cizginiAsmiyor).toBe(true);
 });
 
 // ── AVATAR ────────────────────────────────────────────────────────────────
