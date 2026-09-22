@@ -2962,6 +2962,9 @@ function veTogglePropertiesPanel(forceState) {
   // Kullanıcı hiçbir şey yapmadı; o turdaki clearSelection/openEditor
   // kapatma çağrıları paneli gözünün önünde kapatıyordu.
   if(!open && typeof veSubtopoNavRestoring === 'function' && veSubtopoNavRestoring()) return;
+  // Tuval sütunu müfettiş kadar daralsın (geniş ekranda; dar ekranda kural
+  // @media içinde olduğu için sınıfın karşılığı yok ve modal davranış durur).
+  document.documentElement.classList.toggle('ve-mufettis-acik', open);
   if(open) {
     if(ov.style.display !== 'flex') {
       // Tamamen kapalıydı → display set, sonra rAF ile visible (geçiş 0→1)

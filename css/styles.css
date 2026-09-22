@@ -122,6 +122,10 @@
          --chrome-h doğrudan şeridin yüksekliği. */
       --ribbon-strip-h: 38px;
       --ribbon-expanded-h: 132px;
+      /* Müfettiş sütununun genişliği — tuvalin daralma miktarıyla AYNI
+         kaynaktan gelmek zorunda; iki yerde yazılsaydı sütun tuvali örterdi
+         ya da arada ölü şerit kalırdı. */
+      --inspector-w: 380px;
       --ribbon-h: var(--ribbon-expanded-h);
       --chrome-h: var(--ribbon-h);
 
@@ -4304,6 +4308,52 @@ body > .mfsim-loading-logo .mfsim-loading-logo-ico{
 .ve-properties.ve-properties--mntlib{
   max-width:1040px;
   max-height:92vh;
+}
+
+/* ══ ÖZELLİK PENCERESİ GENİŞ EKRANDA SÜTUNDUR, MODAL DEĞİL ══════════════
+   Ölçülen kusur: bileşen özellikleri ekranın ORTASINDA, %60 karartmalı bir
+   perdenin üstünde açılıyordu. Yani bir sayı girmek için model gözden
+   kayboluyordu; girilen sayının modeli nasıl değiştirdiğini görmek pencereyi
+   KAPATMAYI gerektiriyordu. Atölye kalıbında müfettiş tuvalin YANINDADIR —
+   kullanıcı yazarken sonucu görür.
+
+   Geniş ekranda: perde yok, pencere sağ kenara yaslı tam boy sütun, tuval
+   sütunu onun kadar DARALIR (örtmez — örtseydi kazanılan şey yine gizlenen
+   model olurdu). Tıklama tuvale geçer (`pointer-events`), yani müfettiş
+   açıkken model düzenlenebilir; kapatma ✕ ve ESC'te kalır.
+
+   DAR ekranda modal davranış BİREBİR durur: 1280 px altında sütun ile tuval
+   birlikte sığmaz (ray 48 + kenar çubuğu 220 + müfettiş 380 = 648; kalan
+   tuval 632 px ve kenar çubuğu 360'a kadar genişleyebiliyor).
+
+   İKİ VARYANT MODAL KALIR — `--2dview` (1000 px) ve `--mntlib` (1040 px)
+   birer GÖRÜNTÜLEYİCİ, müfettiş değil: ilki üç ölçekli diyagramı alt alta,
+   ikincisi seçici + üç eksen grafiğini yan yana koyar. 380 px'lik bir sütunda
+   ikisi de okunamaz hâle gelirdi. */
+@media (min-width:1280px){
+  .ve-properties-overlay:not(:has(.ve-properties--2dview, .ve-properties--mntlib)){
+    inset:var(--chrome-h) 0 0 auto;   /* sağ kenar, bandın ALTINDAN başlar */
+    width:var(--inspector-w);
+    padding:0;
+    background:transparent;           /* PERDE YOK — model görünür kalır */
+    pointer-events:none;              /* tıklama tuvale geçer */
+    align-items:stretch;
+    justify-content:flex-end;
+  }
+  .ve-properties-overlay:not(:has(.ve-properties--2dview, .ve-properties--mntlib)) .ve-properties{
+    width:100%; max-width:none; max-height:none;
+    border-radius:0;
+    border-top:none; border-right:none; border-bottom:none;
+    box-shadow:var(--shadow-lg);
+    pointer-events:auto;
+    transform:translateX(14px);
+    transition:transform 0.18s var(--ease-out);
+  }
+  .ve-properties-overlay.visible:not(:has(.ve-properties--2dview, .ve-properties--mntlib)) .ve-properties{
+    transform:translateX(0);
+  }
+  /* Tuval sütunu müfettiş kadar daralır. Sınıf veTogglePropertiesPanel'den. */
+  html.ve-mufettis-acik:not(:has(.ve-properties--2dview, .ve-properties--mntlib)) .ve-canvas-area{ padding-right:var(--inspector-w); }
 }
 
 /* ══ TAKOZ SEÇİCİ — AÇILIR LİSTE (combobox) ══
