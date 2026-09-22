@@ -12,20 +12,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ink:#1b1e24; --paper:#fdfdfb; --line:#c9cdd3; --line-soft:#e4e6e9;
-  --prusya:#24425f; --prusya-soft:#eef2f6; --check:#2e7d4f; --check-soft:#eaf3ee;
-  --warn:#8a5a1e; --warn-soft:#f7f1e6; --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --ink:#26241f; --paper:#fdfdfb; --line:#c6c0b4; --line-soft:#e6e1d8;
+  --vurgu:#96441f; --vurgu-soft:#f2e9e3; --check:#2a6140; --check-soft:#e8f0ea;
+  --warn:#6d5310; --warn-soft:#f5efe2; --mono:'IBM Plex Mono',ui-monospace,monospace;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--paper);color:var(--ink);
   font-family:'Source Serif 4',Georgia,serif;font-size:15.5px;line-height:1.68;}
 .page{max-width:880px;margin:0 auto;padding:48px 32px 96px}
-h1,h2,h3{font-family:'Archivo',system-ui,sans-serif;color:var(--prusya);line-height:1.25;font-stretch:87%}
+h1,h2,h3{font-family:'Archivo',system-ui,sans-serif;color:var(--vurgu);line-height:1.25;font-stretch:87%}
 h1{font-size:27px;font-weight:700;letter-spacing:.2px;margin:0 0 6px}
-h2{font-size:19px;font-weight:700;margin:56px 0 14px;padding-top:14px;border-top:2px solid var(--prusya);
+h2{font-size:19px;font-weight:700;margin:56px 0 14px;padding-top:14px;border-top:2px solid var(--vurgu);
   display:flex;gap:14px;align-items:baseline}
-h2 .no{font-family:var(--mono);font-size:13px;color:var(--paper);background:var(--prusya);
+h2 .no{font-family:var(--mono);font-size:13px;color:var(--paper);background:var(--vurgu);
   padding:2px 8px;border-radius:2px;transform:translateY(-2px)}
 h3{font-size:15.5px;font-weight:600;margin:26px 0 8px;color:var(--ink)}
 p{margin:0 0 13px;text-align:justify;hyphens:auto}
@@ -34,7 +34,7 @@ em{font-style:italic}
 
 /* ── Antet (çizim başlık bloğu) ── */
 .antet{border:1.5px solid var(--ink);margin-bottom:36px}
-.antet .band{background:var(--prusya);color:#fff;padding:16px 20px}
+.antet .band{background:var(--vurgu);color:#fff;padding:16px 20px}
 .antet .band .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;opacity:.85;margin-bottom:6px}
 .antet .band h1{color:#fff}
 .antet .band .sub{font-family:'Archivo',sans-serif;font-size:13.5px;font-weight:400;opacity:.92;margin-top:4px}
@@ -48,19 +48,19 @@ em{font-style:italic}
 .eqno{position:relative}
 .eqno .tag{position:absolute;right:0;top:50%;transform:translateY(-50%);
   font-family:var(--mono);font-size:12.5px;color:#5a6270}
-.note{background:var(--prusya-soft);border-left:3px solid var(--prusya);padding:12px 16px;margin:16px 0;font-size:14.5px}
+.note{background:var(--vurgu-soft);border-left:3px solid var(--vurgu);padding:12px 16px;margin:16px 0;font-size:14.5px}
 .note.warn{background:var(--warn-soft);border-left-color:var(--warn)}
 .note.check{background:var(--check-soft);border-left-color:var(--check)}
 .note .t{font-family:'Archivo',sans-serif;font-weight:700;font-size:12px;letter-spacing:1.5px;
   text-transform:uppercase;display:block;margin-bottom:4px}
-.note.warn .t{color:var(--warn)} .note.check .t{color:var(--check)} .note .t{color:var(--prusya)}
+.note.warn .t{color:var(--warn)} .note.check .t{color:var(--check)} .note .t{color:var(--vurgu)}
 
 /* ── Tablolar ── */
 table{border-collapse:collapse;width:100%;margin:14px 0 20px;font-size:13.5px}
 caption{caption-side:top;text-align:left;font-family:'Archivo',sans-serif;font-size:12.5px;
-  font-weight:600;color:var(--prusya);padding-bottom:6px;letter-spacing:.3px}
+  font-weight:600;color:var(--vurgu);padding-bottom:6px;letter-spacing:.3px}
 th{font-family:'Archivo',sans-serif;font-size:12px;font-weight:600;letter-spacing:.5px;
-  background:var(--prusya-soft);color:var(--prusya);padding:7px 10px;border:1px solid var(--line);text-align:center}
+  background:var(--vurgu-soft);color:var(--vurgu);padding:7px 10px;border:1px solid var(--line);text-align:center}
 td{padding:6px 10px;border:1px solid var(--line-soft);font-family:var(--mono);font-size:12.8px;text-align:right;white-space:nowrap}
 td.l{text-align:left;font-family:'Source Serif 4',serif;font-size:13.8px;white-space:normal}
 td.c{text-align:center}
@@ -73,7 +73,7 @@ tr.sum td{border-top:1.5px solid var(--line);background:#f7f8f9;font-weight:500}
 figure{margin:22px 0 26px;border:1px solid var(--line);padding:14px 14px 10px;background:#fff}
 figcaption{font-family:'Archivo',sans-serif;font-size:12.5px;color:#3c4350;margin-top:10px;
   padding-top:8px;border-top:1px solid var(--line-soft)}
-figcaption b{color:var(--prusya)}
+figcaption b{color:var(--vurgu)}
 svg{width:100%;height:auto;display:block}
 svg text{font-family:'IBM Plex Mono',monospace}
 
@@ -86,8 +86,8 @@ pre code{background:none;padding:0}
 .katex-display{margin:14px 0 18px}
 .toc{font-family:'Archivo',sans-serif;font-size:13.5px;columns:2;column-gap:36px;margin:10px 0 4px}
 .toc a{color:var(--ink);text-decoration:none;display:block;padding:3px 0;border-bottom:1px dotted var(--line-soft)}
-.toc a:hover{color:var(--prusya)}
-.toc .n{font-family:var(--mono);font-size:11.5px;color:var(--prusya);margin-right:8px}
+.toc a:hover{color:var(--vurgu)}
+.toc .n{font-family:var(--mono);font-size:11.5px;color:var(--vurgu);margin-right:8px}
 
 @media print{
   .page{max-width:100%;padding:0}
@@ -159,33 +159,33 @@ pre code{background:none;padding:0}
 <figure>
 <svg viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#24425f"/></marker>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#96441f"/></marker>
     <pattern id="hatch" width="8" height="8" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="8" stroke="#8a92a0" stroke-width="1.5"/></pattern>
   </defs>
   <!-- govde -->
   <g>
-    <rect x="200" y="60" width="420" height="110" fill="#eef2f6" stroke="#24425f" stroke-width="2"/>
-    <text x="410" y="92" text-anchor="middle" font-size="14" fill="#24425f" font-weight="600">RİJİT GÖVDE</text>
+    <rect x="200" y="60" width="420" height="110" fill="#f2e9e3" stroke="#96441f" stroke-width="2"/>
+    <text x="410" y="92" text-anchor="middle" font-size="14" fill="#96441f" font-weight="600">RİJİT GÖVDE</text>
     <text x="410" y="112" text-anchor="middle" font-size="11.5" fill="#3c4350">m, I_G  (motor + şanzıman + şaft payı + cradle)</text>
   </g>
   <!-- CG sembolu -->
   <g transform="translate(410,145)">
-    <circle r="13" fill="none" stroke="#1b1e24" stroke-width="1.6"/>
-    <path d="M0,0 L13,0 A13,13 0 0 1 0,13 Z M0,0 L-13,0 A13,13 0 0 1 0,-13 Z" fill="#1b1e24"/>
-    <text x="20" y="4" font-size="12" fill="#1b1e24">G</text>
+    <circle r="13" fill="none" stroke="#26241f" stroke-width="1.6"/>
+    <path d="M0,0 L13,0 A13,13 0 0 1 0,13 Z M0,0 L-13,0 A13,13 0 0 1 0,-13 Z" fill="#26241f"/>
+    <text x="20" y="4" font-size="12" fill="#26241f">G</text>
   </g>
   <!-- eksenler -->
-  <g stroke="#24425f" stroke-width="1.6" fill="none">
+  <g stroke="#96441f" stroke-width="1.6" fill="none">
     <line x1="410" y1="145" x2="510" y2="145" marker-end="url(#arr)"/>
     <line x1="410" y1="145" x2="410" y2="38" marker-end="url(#arr)"/>
   </g>
-  <text x="516" y="149" font-size="12" fill="#24425f">x, u_x</text>
-  <text x="416" y="36" font-size="12" fill="#24425f">z, u_z</text>
+  <text x="516" y="149" font-size="12" fill="#96441f">x, u_x</text>
+  <text x="416" y="36" font-size="12" fill="#96441f">z, u_z</text>
   <!-- donme oku -->
-  <path d="M 455 128 A 30 30 0 1 1 456 162" fill="none" stroke="#24425f" stroke-width="1.4" marker-end="url(#arr)"/>
-  <text x="492" y="188" font-size="12" fill="#24425f">θ_y</text>
+  <path d="M 455 128 A 30 30 0 1 1 456 162" fill="none" stroke="#96441f" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="492" y="188" font-size="12" fill="#96441f">θ_y</text>
   <!-- yaylar -->
-  <g stroke="#1b1e24" stroke-width="1.8" fill="none">
+  <g stroke="#26241f" stroke-width="1.8" fill="none">
     <path d="M250,170 l0,10 l12,6 l-24,12 l24,12 l-24,12 l12,6 l0,10"/>
     <path d="M560,170 l0,10 l12,6 l-24,12 l24,12 l-24,12 l12,6 l0,10"/>
   </g>
@@ -194,19 +194,19 @@ pre code{background:none;padding:0}
   <text x="578" y="212" font-size="11.5" fill="#3c4350">k_x, k_y, k_z</text>
   <!-- zemin -->
   <rect x="210" y="238" width="80" height="10" fill="url(#hatch)"/>
-  <line x1="210" y1="238" x2="290" y2="238" stroke="#1b1e24" stroke-width="2"/>
+  <line x1="210" y1="238" x2="290" y2="238" stroke="#26241f" stroke-width="2"/>
   <rect x="520" y="238" width="80" height="10" fill="url(#hatch)"/>
-  <line x1="520" y1="238" x2="600" y2="238" stroke="#1b1e24" stroke-width="2"/>
+  <line x1="520" y1="238" x2="600" y2="238" stroke="#26241f" stroke-width="2"/>
   <text x="405" y="262" text-anchor="middle" font-size="11.5" fill="#3c4350">şasi (rijit)</text>
   <!-- konum vektoru -->
-  <line x1="410" y1="145" x2="252" y2="172" stroke="#8a5a1e" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arr)"/>
-  <text x="300" y="150" font-size="12" fill="#8a5a1e">d_i</text>
+  <line x1="410" y1="145" x2="252" y2="172" stroke="#6d5310" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arr)"/>
+  <text x="300" y="150" font-size="12" fill="#6d5310">d_i</text>
   <!-- sehim -->
-  <line x1="238" y1="176" x2="238" y2="232" stroke="#2e7d4f" stroke-width="1.4" marker-end="url(#arr)"/>
-  <text x="196" y="208" font-size="12" fill="#2e7d4f">δ_i</text>
+  <line x1="238" y1="176" x2="238" y2="232" stroke="#2a6140" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="196" y="208" font-size="12" fill="#2a6140">δ_i</text>
   <text x="640" y="120" font-size="12.5" fill="#3c4350">Her takozda:</text>
-  <text x="640" y="140" font-size="12.5" fill="#1b1e24">δ_i = u + θ × d_i</text>
-  <text x="640" y="160" font-size="12.5" fill="#1b1e24">f_i = −k_i δ_i</text>
+  <text x="640" y="140" font-size="12.5" fill="#26241f">δ_i = u + θ × d_i</text>
+  <text x="640" y="160" font-size="12.5" fill="#26241f">f_i = −k_i δ_i</text>
 </svg>
 <figcaption><b>Şekil 1 —</b> Kavramsal model: 6 serbestlik dereceli rijit gövde, üç eksenli lineer yaylarla (takozlar) rijit şasiye bağlıdır. \( \mathbf{d}_i \), takozun ağırlık merkezine göre konumu; \( \boldsymbol{\delta}_i \), takoz sehim vektörüdür.</figcaption>
 </figure>
@@ -339,16 +339,16 @@ $$ \big(\mathbf K_{\text{din}}-\omega^2\,\mathbf M\big)\,\boldsymbol{\varphi}=\m
 
 <figure>
 <svg viewBox="-1220 -560 4640 1120" xmlns="http://www.w3.org/2000/svg">
-  <defs><marker id="arr2" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#24425f"/></marker></defs>
+  <defs><marker id="arr2" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#96441f"/></marker></defs>
   <!-- eksen ve merkez cizgisi -->
-  <line x1="-1150" y1="0" x2="3330" y2="0" stroke="#c9cdd3" stroke-width="3" stroke-dasharray="26 16"/>
-  <line x1="-1150" y1="-500" x2="-800" y2="-500" stroke="#24425f" stroke-width="6" marker-end="url(#arr2)"/>
-  <text x="-770" y="-478" font-size="60" fill="#24425f">+X</text>
-  <line x1="-1150" y1="-500" x2="-1150" y2="-250" stroke="#24425f" stroke-width="6" marker-end="url(#arr2)"/>
-  <text x="-1130" y="-190" font-size="60" fill="#24425f">−Y</text>
+  <line x1="-1150" y1="0" x2="3330" y2="0" stroke="#c6c0b4" stroke-width="3" stroke-dasharray="26 16"/>
+  <line x1="-1150" y1="-500" x2="-800" y2="-500" stroke="#96441f" stroke-width="6" marker-end="url(#arr2)"/>
+  <text x="-770" y="-478" font-size="60" fill="#96441f">+X</text>
+  <line x1="-1150" y1="-500" x2="-1150" y2="-250" stroke="#96441f" stroke-width="6" marker-end="url(#arr2)"/>
+  <text x="-1130" y="-190" font-size="60" fill="#96441f">−Y</text>
   <text x="-1150" y="440" font-size="54" fill="#5a6270">+Y (sağ) ↑ şekilde üsttedir</text>
   <!-- takozlar (kare) : y_cizim = -Y -->
-  <g fill="#fff" stroke="#1b1e24" stroke-width="7">
+  <g fill="#fff" stroke="#26241f" stroke-width="7">
     <rect x="-988" y="-90" width="80" height="80"/>   <!-- sag on  (+50.8) -->
     <rect x="-988" y="10"  width="80" height="80"/>   <!-- sol on  (-50.8) -->
     <rect x="495"  y="-397" width="80" height="80"/>  <!-- sag orta -->
@@ -356,9 +356,9 @@ $$ \big(\mathbf K_{\text{din}}-\omega^2\,\mathbf M\big)\,\boldsymbol{\varphi}=\m
     <rect x="597"  y="-397" width="80" height="80"/>  <!-- sag arka -->
     <rect x="597"  y="317"  width="80" height="80"/>  <!-- sol arka -->
   </g>
-  <text x="-948" y="-140" text-anchor="middle" font-size="52" fill="#1b1e24">ön takozlar</text>
-  <text x="586" y="-450" text-anchor="middle" font-size="52" fill="#1b1e24">sağ orta · sağ arka</text>
-  <text x="586" y="480" text-anchor="middle" font-size="52" fill="#1b1e24">sol orta · sol arka</text>
+  <text x="-948" y="-140" text-anchor="middle" font-size="52" fill="#26241f">ön takozlar</text>
+  <text x="586" y="-450" text-anchor="middle" font-size="52" fill="#26241f">sağ orta · sağ arka</text>
+  <text x="586" y="480" text-anchor="middle" font-size="52" fill="#26241f">sol orta · sol arka</text>
   <!-- bilesen CG'leri -->
   <g>
     <circle cx="-321" cy="-5" r="34" fill="none" stroke="#5a6270" stroke-width="6"/>
@@ -374,9 +374,9 @@ $$ \big(\mathbf K_{\text{din}}-\omega^2\,\mathbf M\big)\,\boldsymbol{\varphi}=\m
   </g>
   <!-- birlesik CG sembolu -->
   <g transform="translate(255,-8)">
-    <circle r="52" fill="#fff" stroke="#1b1e24" stroke-width="7"/>
-    <path d="M0,0 L52,0 A52,52 0 0 1 0,52 Z M0,0 L-52,0 A52,52 0 0 1 0,-52 Z" fill="#1b1e24"/>
-    <text x="0" y="130" text-anchor="middle" font-size="54" fill="#1b1e24" font-weight="600">G (254,7 · 7,5)</text>
+    <circle r="52" fill="#fff" stroke="#26241f" stroke-width="7"/>
+    <path d="M0,0 L52,0 A52,52 0 0 1 0,52 Z M0,0 L-52,0 A52,52 0 0 1 0,-52 Z" fill="#26241f"/>
+    <text x="0" y="130" text-anchor="middle" font-size="54" fill="#26241f" font-weight="600">G (254,7 · 7,5)</text>
   </g>
 </svg>
 <figcaption><b>Şekil 2 —</b> Üstten görünüş (X–Y düzlemi, ölçekli): altı takoz, bileşen ağırlık merkezleri ve birleşik ağırlık merkezi. Cradle braketleri ile şaft noktasının geride oluşu, birleşik ağırlık merkezini takoz grubunun arkasına çeker.</figcaption>
@@ -385,17 +385,17 @@ $$ \big(\mathbf K_{\text{din}}-\omega^2\,\mathbf M\big)\,\boldsymbol{\varphi}=\m
 <figure>
 <svg viewBox="-1220 -1030 4640 1330" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <marker id="arr3" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#24425f"/></marker>
+    <marker id="arr3" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#96441f"/></marker>
     <pattern id="hatch2" width="26" height="26" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="26" stroke="#8a92a0" stroke-width="5"/></pattern>
   </defs>
-  <line x1="-1150" y1="0" x2="3330" y2="0" stroke="#c9cdd3" stroke-width="3" stroke-dasharray="26 16"/>
+  <line x1="-1150" y1="0" x2="3330" y2="0" stroke="#c6c0b4" stroke-width="3" stroke-dasharray="26 16"/>
   <text x="3160" y="-24" font-size="46" fill="#5a6270">Z = 0</text>
-  <line x1="-1150" y1="-960" x2="-800" y2="-960" stroke="#24425f" stroke-width="6" marker-end="url(#arr3)"/>
-  <text x="-770" y="-938" font-size="60" fill="#24425f">+X</text>
-  <line x1="-1150" y1="-960" x2="-1150" y2="-710" stroke="#24425f" stroke-width="6" marker-end="url(#arr3)"/>
-  <text x="-1130" y="-650" font-size="60" fill="#24425f">+Z</text>
+  <line x1="-1150" y1="-960" x2="-800" y2="-960" stroke="#96441f" stroke-width="6" marker-end="url(#arr3)"/>
+  <text x="-770" y="-938" font-size="60" fill="#96441f">+X</text>
+  <line x1="-1150" y1="-960" x2="-1150" y2="-710" stroke="#96441f" stroke-width="6" marker-end="url(#arr3)"/>
+  <text x="-1130" y="-650" font-size="60" fill="#96441f">+Z</text>
   <!-- takozlar yan gorunus: on z=371, orta/arka z=635 -->
-  <g fill="#fff" stroke="#1b1e24" stroke-width="7">
+  <g fill="#fff" stroke="#26241f" stroke-width="7">
     <rect x="-988" y="-411" width="80" height="80"/>
     <rect x="495" y="-675" width="80" height="80"/>
     <rect x="597" y="-675" width="80" height="80"/>
@@ -405,8 +405,8 @@ $$ \big(\mathbf K_{\text{din}}-\omega^2\,\mathbf M\big)\,\boldsymbol{\varphi}=\m
     <rect x="485" y="-595" width="100" height="34"/>
     <rect x="587" y="-595" width="100" height="34"/>
   </g>
-  <text x="-948" y="-460" text-anchor="middle" font-size="50" fill="#1b1e24">ön (z=371)</text>
-  <text x="586" y="-724" text-anchor="middle" font-size="50" fill="#1b1e24">orta+arka (z=635)</text>
+  <text x="-948" y="-460" text-anchor="middle" font-size="50" fill="#26241f">ön (z=371)</text>
+  <text x="586" y="-724" text-anchor="middle" font-size="50" fill="#26241f">orta+arka (z=635)</text>
   <!-- CG'ler -->
   <circle cx="-321" cy="-859" r="34" fill="none" stroke="#5a6270" stroke-width="6"/>
   <text x="-321" y="-910" text-anchor="middle" font-size="50" fill="#5a6270">motor G (z=859)</text>
@@ -417,9 +417,9 @@ $$ \big(\mathbf K_{\text{din}}-\omega^2\,\mathbf M\big)\,\boldsymbol{\varphi}=\m
   <circle cx="3042" cy="168" r="30" fill="none" stroke="#5a6270" stroke-width="6"/>
   <text x="3042" y="260" text-anchor="middle" font-size="50" fill="#5a6270">şaft (z=−168)</text>
   <g transform="translate(255,-746)">
-    <circle r="52" fill="#fff" stroke="#1b1e24" stroke-width="7"/>
-    <path d="M0,0 L52,0 A52,52 0 0 1 0,52 Z M0,0 L-52,0 A52,52 0 0 1 0,-52 Z" fill="#1b1e24"/>
-    <text x="0" y="-90" text-anchor="middle" font-size="54" fill="#1b1e24" font-weight="600">G (z=746)</text>
+    <circle r="52" fill="#fff" stroke="#26241f" stroke-width="7"/>
+    <path d="M0,0 L52,0 A52,52 0 0 1 0,52 Z M0,0 L-52,0 A52,52 0 0 1 0,-52 Z" fill="#26241f"/>
+    <text x="0" y="-90" text-anchor="middle" font-size="54" fill="#26241f" font-weight="600">G (z=746)</text>
   </g>
 </svg>
 <figcaption><b>Şekil 3 —</b> Yandan görünüş (X–Z düzlemi, ölçekli). Ağırlık merkezi (z≈746) takoz düzlemlerinin (371 / 635) üzerindedir; bu düşey ofset \( \mathbf K_{t\theta} \) kuplaj bloğunun ana kaynağıdır ve boyuna/enine ötelemeleri kafa vurma/yalpa dönmeleriyle birleştirir.</figcaption>

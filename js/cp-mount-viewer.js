@@ -247,8 +247,8 @@ function _mntViewerAttachHover(canvas){
   var V=_veMountViewer; if(!V) return;
   var tip=document.createElement('div');
   tip.style.cssText='position:fixed; z-index:100060; pointer-events:none; display:none; max-width:240px; '
-    +'padding:7px 9px; font-size:var(--fs-tiny); line-height:1.5; background:var(--bg-secondary,#1a1a1a); '
-    +'color:var(--text-primary,#eee); border:1px solid var(--border-color,#444); border-radius:var(--radius-md); '
+    +'padding:7px 9px; font-size:var(--fs-tiny); line-height:1.5; background:var(--bg-secondary); '
+    +'color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-md); '
     +'box-shadow:0 6px 20px rgba(0,0,0,0.45);';
   document.body.appendChild(tip);
   V.tooltip=tip;
@@ -384,9 +384,9 @@ function veMountViewerUpdate(){
       _mntViewerMarkerMat('--accent-success', '#22c55e', 30));
     box.position.copy(_mntW(x,y,z));
     var kInfo='';
-    if(mt.kxs!==undefined||mt.kzs!==undefined) kInfo='<br><span style="color:var(--text-muted,#888);">Statik k (N/mm):</span> '+_mntViewerN(mt.kxs,0)+' · '+_mntViewerN(mt.kys,0)+' · '+_mntViewerN(mt.kzs,0);
-    box.userData={ info:'<b style="color:var(--accent-success,#22c55e);">'+_mntViewerEsc(mt.name||'Takoz')+'</b>'
-      +'<br><span style="color:var(--text-muted,#888);">Konum (mm):</span> '+x.toFixed(1)+' · '+y.toFixed(1)+' · '+z.toFixed(1)+kInfo };
+    if(mt.kxs!==undefined||mt.kzs!==undefined) kInfo='<br><span style="color:var(--text-muted);">Statik k (N/mm):</span> '+_mntViewerN(mt.kxs,0)+' · '+_mntViewerN(mt.kys,0)+' · '+_mntViewerN(mt.kzs,0);
+    box.userData={ info:'<b style="color:var(--accent-success);">'+_mntViewerEsc(mt.name||'Takoz')+'</b>'
+      +'<br><span style="color:var(--text-muted);">Konum (mm):</span> '+x.toFixed(1)+' · '+y.toFixed(1)+' · '+z.toFixed(1)+kInfo };
     V.group.add(box);
     if(hasCG){
       var g=new THREE.BufferGeometry().setFromPoints([_mntW(cg[0],cg[1],cg[2]), _mntW(x,y,z)]);
@@ -404,9 +404,9 @@ function veMountViewerUpdate(){
     var s=new THREE.Mesh(new THREE.SphereGeometry(r,18,18),
       _mntViewerMarkerMat('--accent-warning', '#f59e0b', 20));
     s.position.copy(_mntW(x,y,z));
-    s.userData={ info:'<b style="color:var(--accent-warning,#f59e0b);">'+_mntViewerEsc(c.name||'Bileşen')+'</b>'
-      +'<br><span style="color:var(--text-muted,#888);">Kütle:</span> '+(m>0?m.toFixed(1)+' kg':'—')
-      +'<br><span style="color:var(--text-muted,#888);">CG (mm):</span> '+x.toFixed(1)+' · '+y.toFixed(1)+' · '+z.toFixed(1) };
+    s.userData={ info:'<b style="color:var(--accent-warning);">'+_mntViewerEsc(c.name||'Bileşen')+'</b>'
+      +'<br><span style="color:var(--text-muted);">Kütle:</span> '+(m>0?m.toFixed(1)+' kg':'—')
+      +'<br><span style="color:var(--text-muted);">CG (mm):</span> '+x.toFixed(1)+' · '+y.toFixed(1)+' · '+z.toFixed(1) };
     V.group.add(s);
   });
 
@@ -415,9 +415,9 @@ function veMountViewerUpdate(){
     var cgm=new THREE.Mesh(new THREE.SphereGeometry(40,32,32),
       _mntViewerMarkerMat('--accent-danger', '#ef4444', 80));
     cgm.position.copy(_mntW(cg[0],cg[1],cg[2]));
-    cgm.userData={ info:'<b style="color:var(--accent-danger,#ef4444);">Birleşik Ağırlık Merkezi</b>'
-      +'<br><span style="color:var(--text-muted,#888);">Toplam kütle:</span> '+mSum.toFixed(1)+' kg'
-      +'<br><span style="color:var(--text-muted,#888);">CG (mm):</span> '+cg[0].toFixed(1)+' · '+cg[1].toFixed(1)+' · '+cg[2].toFixed(1) };
+    cgm.userData={ info:'<b style="color:var(--accent-danger);">Birleşik Ağırlık Merkezi</b>'
+      +'<br><span style="color:var(--text-muted);">Toplam kütle:</span> '+mSum.toFixed(1)+' kg'
+      +'<br><span style="color:var(--text-muted);">CG (mm):</span> '+cg[0].toFixed(1)+' · '+cg[1].toFixed(1)+' · '+cg[2].toFixed(1) };
     V.group.add(cgm);
     // Kamera hedefini birleşik CG'ye getir (ilk kurulumda)
     if(!V._framed){ V.ctrl.target.copy(_mntW(cg[0],cg[1],cg[2])); _mntViewerUpdateCamera(); V._framed=true; }

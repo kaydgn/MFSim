@@ -973,16 +973,16 @@ function swShowDiagramInfo(pkgId, diagIdx) {
     ov.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;';
     document.body.appendChild(ov);
   }
-  var html = '<div style="background:var(--bg-primary,#fff);border-radius:var(--radius-sm);padding:20px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);color:var(--text-primary,#333);">';
+  var html = '<div style="background:var(--bg-primary);border-radius:var(--radius-sm);padding:20px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);color:var(--text-primary);">';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
   var diagIcon = d.zAxis ? '<span class="mf-ico mf-ico-package"></span>' : '<span class="mf-ico mf-ico-trending-up"></span>';
   html += '<span style="font-weight:700;font-size:var(--fs-lg);">' + diagIcon + ' ' + d.name + '</span>';
-  html += '<button onclick="document.getElementById(\'sw-info-overlay\').remove()" style="background:none;border:none;font-size:var(--fs-title);cursor:pointer;color:var(--text-muted,#999);">✕</button>';
+  html += '<button onclick="document.getElementById(\'sw-info-overlay\').remove()" style="background:none;border:none;font-size:var(--fs-title);cursor:pointer;color:var(--text-muted);">✕</button>';
   html += '</div>';
   var axisInfo = '<b>X:</b> ' + d.xAxis + ' &nbsp; <b>Y:</b> ' + (Array.isArray(d.yAxis) ? d.yAxis.join(' / ') : d.yAxis);
   if(d.zAxis) axisInfo += ' &nbsp; <b>Z (renk):</b> ' + d.zAxis;
-  html += '<div style="font-size:var(--fs-body);color:var(--text-secondary,#666);margin-bottom:8px;">' + axisInfo + '</div>';
-  html += '<div style="font-size:var(--fs-body);line-height:1.5;color:var(--text-primary,#333);border-top:1px solid var(--border-color,#eee);padding-top:10px;">' + d.significance + '</div>';
+  html += '<div style="font-size:var(--fs-body);color:var(--text-secondary);margin-bottom:8px;">' + axisInfo + '</div>';
+  html += '<div style="font-size:var(--fs-body);line-height:1.5;color:var(--text-primary);border-top:1px solid var(--border-color);padding-top:10px;">' + d.significance + '</div>';
   if(d.note) {
     html += '<div style="font-size:var(--fs-body);color:var(--accent-warning);margin-top:8px;padding:6px 8px;background:color-mix(in srgb, var(--accent-warning) 8%, transparent);border-radius:var(--radius-sm);">⚠ ' + d.note + '</div>';
   }

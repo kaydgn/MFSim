@@ -381,3 +381,62 @@ tipografiyle** dağıtılırdı.
 spec eklenince ayrışma göründü: yerelde `npm run test:urun` dört spec koşacak,
 CI üçünü koşacaktı — dördüncüsü hiç görülmeden merge edilirdi. İş artık
 `npm run test:urun` çağırıyor.
+
+## Dışa çıkan belgeler — kâğıt beyaz, mürekkep Atölye (2026-09-22)
+
+**Hüküm.** İndirilen her belgenin (SVG/PNG dışa aktarma · takoz raporu · FEAD
+raporu · Sonuçlar'ın tasarımlı raporu · TXT sayfası · kılavuzlar · PWA)
+MÜREKKEBİ ekranın `--ink-*` jetonlarıyla birebirdir. **Kâğıt beyaz kalır.**
+
+**Gerekçe.** Belgeler uygulamanın stil sayfasını kullanamaz — tek başına
+açılıyorlar ve `var(--accent-primary)` orada tanımsız. Bu yüzden renkleri
+SABİT yazıyorlar, ve tam bu yüzden sessizce bayatlıyorlar: ekran Atölye'ye
+geçtiğinde **dört ayrı belge paleti** 2024'ün soğuk baskı kimliğinde kaldı
+(prusya mavisi `#24425f`, soğuk kurşun `#1b1e24`, soğuk gri `#c9cdd3`).
+Hiçbir test bakmıyordu; kullanıcı ancak bir rapor ÜRETİP açtığında görürdü.
+
+**Kâğıt neden bej olmadı.** Atölye'nin açık zemini `#f0ede7` bir EKRAN
+zeminidir. Kâğıda bej basmak bej mürekkep harcamaktır; `@media print` zaten
+zemini beyaza zorluyordu. Bağlanan şey mürekkeptir — ve ekranın `--ink-*`
+jetonları zaten "aksanı METİN olarak kullan" için ölçülmüş değerler, yani
+kâğıtta da okunur güçteler.
+
+**`--prusya` adı EMEKLİ.** Renk artık prusya mavisi değil; adı bırakmak bir
+yalanı kodda tutmak olurdu. Yerine `--vurgu`. Kapı **kullanımı** arıyor
+(`var(--prusya)` / `--prusya:`), **anmayı** değil — emekli adı bir yorumda
+anmak bu deponun istediği şeydir.
+
+**Dördüncü palet ancak kapı yazılınca göründü.** `js/results.js`'in tasarımlı
+rapor kabuğu üç kaynağı çevirdikten SONRA bulundu: elle sayılan liste eksikti,
+kapı saydı.
+
+### Aynı turda bulunan İKİ CANLI KUSUR — ikisi de tanımsız jeton
+
+Şekil ve palet turları jetonları saymaya zorlayınca iki başvuru ortaya çıktı
+ve ikisinin de **tanımı yoktu**:
+
+| Jeton | Çağıran | Sonucu |
+|-------|---------|--------|
+| `--bg-hover` | 4 `:hover` kuralı + 2048 düğmesi | o dört yüzeyde fare üstündeyken **hiçbir şey olmuyordu** |
+| `--border-subtle` | `.ve-fw-seeded` | notun **üç kenarında çerçeve yoktu**, yalnız sol aksan şeridi çiziliyordu |
+
+Hata sınıfı bu deponun korktuğu sınıf: CSS'te çözülemeyen bir özel özellik
+bildirimi **sessizce geçersiz kılar** — konsola hiçbir şey düşmez, hiçbir test
+kırılmaz, yalnız beklenen şey olmaz.
+
+`--bg-hover` için YENİ JETON AÇILMADI. Ölçüldü: koyu kimlikte `--text-muted`
+AA'yı (4,5) yalnız `#2a2621`'de geçiyor — yani `--bg-tertiary`'nin kendisi.
+Aynı değeri ikinci bir adla yazmak sürüklenmeye davetiyedir; beş çağıran var
+olan yüzeye bağlandı.
+
+**Kapı:** `source-hygiene.test.js` bölüm 6 — `css/` ve `js/` içindeki her
+`var(--x)` başvurusu `css/`'te bildirilen jeton kümesiyle karşılaştırılır.
+Belge üreticileri kapsam dışı (kendi jetonlarını kendi stil sayfalarında
+bildiriyorlar). İki yönde de düşmesi ölçüldü, dosya ve satır adıyla.
+
+### Geometri kapıları RENGE çivilenmez
+
+`cp-fead-summary.test.js`'in "frekans göstergesi çizim alanının DIŞINDA"
+halkası ızgara çizgilerini `stroke="#e4e6e9"` ile seçiyordu: bir GEOMETRİ
+kapısı bir RENK yüzünden düştü. Izgara artık çizimde en çok tekrar eden
+`<line>` rengidir — tanım şeklin kendisinden gelir, paletten değil.

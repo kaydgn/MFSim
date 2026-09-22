@@ -1652,7 +1652,7 @@ function veRenderAccelChart(canvasId, chartData, title) {
   
   // Right Y labels (Distance - red)
   var dStep = yDMax <= 100 ? 20 : yDMax <= 300 ? 50 : yDMax <= 600 ? 100 : 200;
-  ctx.fillStyle = '#c0392b'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'left';
+  ctx.fillStyle = '#8f3636'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'left';
   for(var ld = 0; ld <= yDMax; ld += dStep) { ctx.fillText(ld.toString(), W - padR + 8, toYD(ld) + 4); }
   ctx.save(); ctx.translate(W - 10, padT + plotH / 2); ctx.rotate(Math.PI / 2);
   ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Mesafe (m)', 0, 0); ctx.restore();
@@ -1685,7 +1685,7 @@ function veRenderAccelChart(canvasId, chartData, title) {
   }
   
   // Distance line (red)
-  ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+  ctx.strokeStyle = '#8f3636'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
   ctx.beginPath();
   for(var di = 0; di < dp.length; di++) {
     var dpx = toX(dp[di].x), dpy = toYD(dp[di].y);
@@ -1696,7 +1696,7 @@ function veRenderAccelChart(canvasId, chartData, title) {
     var ddpx = toX(dp[dpi].x), ddpy = toYD(dp[dpi].y);
     if(ddpx < padL - 5 || ddpx > W - padR + 5) continue;
     ctx.beginPath(); ctx.arc(ddpx, ddpy, 4.5, 0, Math.PI * 2);
-    ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.strokeStyle = '#8f3636'; ctx.lineWidth = 2; ctx.stroke();
   }
   
   // Restore from clip
@@ -1710,10 +1710,10 @@ function veRenderAccelChart(canvasId, chartData, title) {
   ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#4a86c8'; ctx.textAlign = 'left'; ctx.fillText('Süre (s)', legX + 30, legY + 4);
   legY += 18;
-  ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2.5;
+  ctx.strokeStyle = '#8f3636'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(legX, legY); ctx.lineTo(legX + 24, legY); ctx.stroke();
   ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#c0392b'; ctx.fillText('Mesafe (m)', legX + 30, legY + 4);
+  ctx.fillStyle = '#8f3636'; ctx.fillText('Mesafe (m)', legX + 30, legY + 4);
   
   // Store interaction data
   canvas._drChart = {
@@ -1922,7 +1922,7 @@ function _drChartMouseMove(e) {
       html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Hızlanma</div>';
       html += '<div>Hız: <b style="color:#60a5fa;">' + snapSpeed.toFixed(1) + '</b> km/h</div>';
       if(tVal !== null) html += '<div>Süre: <b style="color:#4a86c8;">' + tVal.toFixed(2) + '</b> s</div>';
-      if(dValI !== null) html += '<div>Mesafe: <b style="color:#c0392b;">' + Math.round(dValI) + '</b> m</div>';
+      if(dValI !== null) html += '<div>Mesafe: <b style="color:#8f3636;">' + Math.round(dValI) + '</b> m</div>';
     }
   } else if(d.type === 'distGrade') {
     // Hangi segmentte olduğunu bul
@@ -2402,16 +2402,16 @@ function veBuildReportHTML(content, title) {
     ':root{--rp-w:794px;--rp-pad:45px;--rp-fs-max:11px;' +
     '--rp-ch:' + veTxtCharRatio().toFixed(4) + ';--rp-cols:' + veTxtCols(content) + ';' +
     "--rp-mono:'Consolas','Monaco','SF Mono','DejaVu Sans Mono','Courier New',monospace;}" +
-    'html,body{margin:0;background:#eceff3;}' +
+    'html,body{margin:0;background:#f0ede7;}' +
     '.mf-wrap{padding:28px 24px 48px;}' +
     '.mf-card{width:var(--rp-w);min-height:1123px;margin:0 auto;background:#fff;' +
-    'border:1px solid #d8dce2;box-shadow:0 2px 16px rgba(0,0,0,.10);' +
+    'border:1px solid #dcd8d0;box-shadow:0 2px 16px rgba(38,36,31,.10);' +
     'padding:var(--rp-pad);box-sizing:border-box;}' +
-    '.mf-card pre{margin:0;padding:0;white-space:pre;line-height:1.5;color:#14171c;' +
+    '.mf-card pre{margin:0;padding:0;white-space:pre;line-height:1.5;color:#26241f;' +
     'font-family:var(--rp-mono);' +
     'font-size:min(var(--rp-fs-max),calc((var(--rp-w) - 2 * var(--rp-pad))/var(--rp-cols)/var(--rp-ch)));}' +
-    '@media(prefers-color-scheme:dark){html,body{background:#23201c;}' +
-    '.mf-card{background:#2b2621;border-color:#3d352e;}.mf-card pre{color:#e6ddd0;}}' +
+    '@media(prefers-color-scheme:dark){html,body{background:#1a1815;}' +
+    '.mf-card{background:#221f1b;border-color:#37312a;}.mf-card pre{color:#e6e0d5;}}' +
     '@media print{@page{size:A4;margin:12mm;}html,body{background:#fff;}' +
     '.mf-wrap{padding:0;}.mf-card{width:auto;min-height:0;border:none;box-shadow:none;padding:0;}}' +
     '</style></head><body><div class="mf-wrap"><div class="mf-card">' +
@@ -3815,9 +3815,9 @@ function _veReportAssemble(R, sim, charts) {
 // Kapı: tests/unit/report-cosmetics.test.js — kullanılan her var() tanımlı mı.
 var _VE_REPORT_CSS = `
 :root{
-  --ink:#1b1e24; --paper:#fdfdfb; --line:#c9cdd3; --line-soft:#e4e6e9;
-  --prusya:#24425f; --prusya-soft:#eef2f6; --check:#2e7d4f; --check-soft:#eaf3ee;
-  --warn:#8a5a1e; --warn-soft:#f7f1e6; --bad:#b23b3b;
+  --ink:#26241f; --paper:#fdfdfb; --line:#c6c0b4; --line-soft:#e6e1d8;
+  --vurgu:#96441f; --vurgu-soft:#f2e9e3; --check:#2a6140; --check-soft:#e8f0ea;
+  --warn:#6d5310; --warn-soft:#f5efe2; --bad:#b23b3b;
   --mono:"IBM Plex Mono",ui-monospace,monospace;
   /* Belge tipografi ölçeği — Takoz raporu şablonuyla aynı basamaklar. */
   --rfs-tiny:10px;    /* antet alan etiketi */
@@ -3840,11 +3840,11 @@ body{margin:0;background:var(--paper);color:var(--ink);
   font-family:"Source Serif 4",Georgia,serif;font-size:var(--rfs-title);line-height:1.68;
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
 .page{max-width:880px;margin:0 auto;padding:48px 32px 96px}
-h1,h2,h3{font-family:"Archivo",system-ui,sans-serif;color:var(--prusya);line-height:1.25;font-stretch:87%}
+h1,h2,h3{font-family:"Archivo",system-ui,sans-serif;color:var(--vurgu);line-height:1.25;font-stretch:87%}
 h1{font-size:var(--rfs-h1);font-weight:700;letter-spacing:.2px;margin:0 0 6px}
-h2{font-size:var(--rfs-h2);font-weight:700;margin:44px 0 14px;padding-top:14px;border-top:2px solid var(--prusya);
+h2{font-size:var(--rfs-h2);font-weight:700;margin:44px 0 14px;padding-top:14px;border-top:2px solid var(--vurgu);
   display:flex;gap:14px;align-items:baseline}
-h2 .no{font-family:var(--mono);font-size:var(--rfs-lg);color:var(--paper);background:var(--prusya);
+h2 .no{font-family:var(--mono);font-size:var(--rfs-lg);color:var(--paper);background:var(--vurgu);
   padding:2px 8px;border-radius:2px;transform:translateY(-2px)}
 h3{font-size:var(--rfs-title);font-weight:600;margin:26px 0 8px;color:var(--ink)}
 p{margin:0 0 13px;text-align:justify;hyphens:auto}
@@ -3852,7 +3852,7 @@ strong{font-weight:600} em{font-style:italic}
 
 /* ── Antet ── */
 .antet{border:1.5px solid var(--ink);margin-bottom:36px}
-.antet .band{background:var(--prusya);color:#fff;padding:16px 20px}
+.antet .band{background:var(--vurgu);color:#fff;padding:16px 20px}
 .antet .band .eyebrow{font-family:var(--mono);font-size:var(--rfs-body);letter-spacing:2.5px;text-transform:uppercase;opacity:.85;margin-bottom:6px}
 .antet .band h1{color:#fff}
 .antet .band .sub{font-family:"Archivo",sans-serif;font-size:var(--rfs-lg);font-weight:400;opacity:.92;margin-top:4px;line-height:1.4}
@@ -3870,19 +3870,19 @@ strong{font-weight:600} em{font-style:italic}
 .katex{font-size:var(--rfs-math)}
 
 /* ── Notlar ── */
-.note{background:var(--prusya-soft);border-left:3px solid var(--prusya);padding:12px 16px;margin:16px 0;font-size:var(--rfs-xl)}
+.note{background:var(--vurgu-soft);border-left:3px solid var(--vurgu);padding:12px 16px;margin:16px 0;font-size:var(--rfs-xl)}
 .note.warn{background:var(--warn-soft);border-left-color:var(--warn)}
 .note.check{background:var(--check-soft);border-left-color:var(--check)}
 .note .t{font-family:"Archivo",sans-serif;font-weight:700;font-size:var(--rfs-md);letter-spacing:1.5px;
-  text-transform:uppercase;display:block;margin-bottom:4px;color:var(--prusya)}
+  text-transform:uppercase;display:block;margin-bottom:4px;color:var(--vurgu)}
 .note.warn .t{color:var(--warn)} .note.check .t{color:var(--check)}
 
 /* ── Tablolar ── */
 table{border-collapse:collapse;width:100%;margin:14px 0 20px;font-size:var(--rfs-lg)}
 caption{caption-side:top;text-align:left;font-family:"Archivo",sans-serif;font-size:var(--rfs-md);
-  font-weight:600;color:var(--prusya);padding-bottom:6px;letter-spacing:.3px}
+  font-weight:600;color:var(--vurgu);padding-bottom:6px;letter-spacing:.3px}
 th{font-family:"Archivo",sans-serif;font-size:var(--rfs-md);font-weight:600;letter-spacing:.5px;
-  background:var(--prusya-soft);color:var(--prusya);padding:7px 10px;border:1px solid var(--line);text-align:center}
+  background:var(--vurgu-soft);color:var(--vurgu);padding:7px 10px;border:1px solid var(--line);text-align:center}
 td{padding:6px 10px;border:1px solid var(--line-soft);font-family:var(--mono);font-size:var(--rfs-md);text-align:right;white-space:nowrap}
 td.l{text-align:left;font-family:"Source Serif 4",Georgia,serif;font-size:var(--rfs-lg);white-space:normal}
 td.c{text-align:center}
@@ -3910,7 +3910,7 @@ figure{margin:22px 0 26px;border:1px solid var(--line);padding:14px 14px 10px;ba
 figure img{width:100%;height:auto;display:block}
 figcaption{font-family:"Archivo",sans-serif;font-size:var(--rfs-md);color:#3c4350;margin-top:10px;
   padding-top:8px;border-top:1px solid var(--line-soft)}
-figcaption b{color:var(--prusya)}
+figcaption b{color:var(--vurgu)}
 svg{width:100%;height:auto;display:block}
 svg text{font-family:"IBM Plex Mono",monospace}
 
@@ -3923,8 +3923,8 @@ pre code{background:none;padding:0}
 /* ── İçindekiler ── */
 .toc{font-family:"Archivo",sans-serif;font-size:var(--rfs-lg);columns:2;column-gap:36px;margin:10px 0 4px}
 .toc a{color:var(--ink);text-decoration:none;display:block;padding:3px 0;border-bottom:1px dotted var(--line-soft);break-inside:avoid}
-.toc a:hover{color:var(--prusya)}
-.toc .n{font-family:var(--mono);font-size:var(--rfs-body);color:var(--prusya);margin-right:8px;font-weight:600}
+.toc a:hover{color:var(--vurgu)}
+.toc .n{font-family:var(--mono);font-size:var(--rfs-body);color:var(--vurgu);margin-right:8px;font-weight:600}
 
 .foot{margin-top:40px;font-size:var(--rfs-lg);color:#5a6270;border-top:1px solid var(--line);padding-top:12px;font-family:"Archivo",sans-serif}
 
@@ -3975,7 +3975,7 @@ function veDownloadReportHTML() {
 
   // 2) Grafikleri SABİT AÇIK renklerle yeniden çiz (tema bağımsızlığı)
   var _savedTC = _drTC;
-  _drTC = { bg:'#ffffff', bgAlt:'#f0f1f3', text:'#1b1e24', textSec:'#4e535e',
+  _drTC = { bg:'#ffffff', bgAlt:'#f0f1f3', text:'#26241f', textSec:'#4e535e',
             textMuted:'#9098a6', border:'#e8eaed', accent:'#2d6fe6', axisLine:'#c2c8d4' };
   function _drawReportCharts() {
     try {
@@ -4694,13 +4694,13 @@ function veRenderFTUpshiftChart(canvasId, steps) {
   
   // Right Y labels (Grade — red)
   var gStep = yGrMax > 200 ? 50 : yGrMax > 80 ? 20 : 10;
-  ctx.fillStyle = '#c0392b'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'left';
+  ctx.fillStyle = '#8f3636'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'left';
   for(var lg = Math.ceil(yGrMin / gStep) * gStep; lg <= yGrMax; lg += gStep) {
     ctx.fillText(lg.toString(), W - padR + 6, toYG(lg) + 4);
   }
   ctx.save(); ctx.translate(W - 8, padT + plotH / 2); ctx.rotate(Math.PI / 2);
   ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center';
-  ctx.fillStyle = '#c0392b';
+  ctx.fillStyle = '#8f3636';
   ctx.fillText('Net Eğim (%)', 0, 0); ctx.restore();
   
   // Zoom indicator
@@ -4732,7 +4732,7 @@ function veRenderFTUpshiftChart(canvasId, steps) {
   }
   
   // ── Net Grade line (red, descending) ──
-  ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.setLineDash([]);
+  ctx.strokeStyle = '#8f3636'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.setLineDash([]);
   ctx.beginPath();
   for(var gi = 0; gi < steps.length; gi++) {
     var gx2 = toX(steps[gi].speed), gy2 = toYG(steps[gi].netGrade);
@@ -4744,7 +4744,7 @@ function veRenderFTUpshiftChart(canvasId, steps) {
     if(gpx < padL - 5 || gpx > W - padR + 5) continue;
     ctx.beginPath(); ctx.arc(gpx, gpy, 4.5, 0, Math.PI * 2);
     ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill();
-    ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = '#8f3636'; ctx.lineWidth = 2; ctx.stroke();
   }
   
   // Restore from clip
@@ -4759,10 +4759,10 @@ function veRenderFTUpshiftChart(canvasId, steps) {
   ctx.fillStyle = '#4a86c8'; ctx.textAlign = 'left'; ctx.fillText('Motor Devri (rpm)', legX + 30, legY + 4);
   
   legY += 18;
-  ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2.5;
+  ctx.strokeStyle = '#8f3636'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(legX, legY); ctx.lineTo(legX + 24, legY); ctx.stroke();
   ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#c0392b'; ctx.fillText('Net Eğim (%)', legX + 30, legY + 4);
+  ctx.fillStyle = '#8f3636'; ctx.fillText('Net Eğim (%)', legX + 30, legY + 4);
   
   // Store interaction data (same structure as grade/accel charts)
   canvas._drChart = {

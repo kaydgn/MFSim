@@ -740,7 +740,7 @@ function veOpenCoastDownWizard(nodeId) {
 
   // Modal
   var modal = document.createElement('div');
-  modal.style.cssText = 'width:100%; max-width:1100px; height:85vh; max-height:820px; background:var(--bg-secondary, #0f1218); border:1px solid var(--border-color, #1c2333); border-radius:var(--radius-lg); display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+  modal.style.cssText = 'width:100%; max-width:1100px; height:85vh; max-height:820px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg); display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
 
   // Header
   var header = document.createElement('div');
@@ -2276,7 +2276,7 @@ function veManualSegExpandProfile(nodeId) {
 
   // Modal
   var modal = document.createElement('div');
-  modal.style.cssText = 'width:90%; max-width:1200px; height:70vh; max-height:700px; background:var(--bg-secondary, #0f1218); border:1px solid var(--border-color, #1c2333); border-radius:var(--radius-lg); display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+  modal.style.cssText = 'width:90%; max-width:1200px; height:70vh; max-height:700px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg); display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
 
   // Header — ince ortak başlık
   var segs = node.data.manualSegments;

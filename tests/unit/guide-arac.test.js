@@ -121,7 +121,7 @@ test('KAÇIŞLANMIŞ MARKUP sızmıyor — başlıklar kaçışlanır, içlerine
 // ═══════════════════════════════════════════════════════════════════════════
 describe('kozmetik — rapordan ÇIKARILAN CSS', () => {
   test('raporun kendi jetonları ve sınıfları var', () => {
-    expect(DOC).toContain('--prusya');
+    expect(DOC).toContain('--vurgu');
     expect(DOC).toContain('.antet');
     expect(DOC).toContain('.toc');
   });

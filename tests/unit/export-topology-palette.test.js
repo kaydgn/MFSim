@@ -10,22 +10,21 @@
 // palettir ve bugüne kadar hiçbir kapısı yoktu.
 //
 // ÖLÇÜLDÜ (2026-09-22): 331 `var(--x, #y)` çağrısı, 10 benzersiz jeton|yedek
-// çifti, jetonların 0'ı tanımsız — ve 10'unun 10'u da varsayılan temanın
-// değerinden SAPIYOR:
+// çifti — ve 10'unun 10'u da varsayılan temanın değerinden SAPIYORDU:
 //
-//     --text-muted       #888 · #aaa   vs  #646d7d
-//     --text-secondary   #666 · #888 · #999  vs  #4e535e
-//     --accent-primary   #3b82f6       vs  #2d6fe6
-//     --accent-success   #22c55e       vs  #1a9a50
-//     --accent-warning   #f59e0b · #ff9800   vs  #d49318
-//     --accent-danger    #ef4444       vs  #d43d3d
+//     --text-muted       #888 · #aaa          vs  #676055
+//     --text-secondary   #666 · #888 · #999   vs  #544e44
+//     --accent-primary   #3b82f6              vs  #a8502b
+//     --accent-success   #22c55e              vs  #2f6b45
+//     --accent-warning   #f59e0b · #ff9800    vs  #8a6a12
+//     --accent-danger    #ef4444              vs  #9a3b3b
 //
-// Sessizlik mekaniği: ekran doğru renkte görünür, indirilen dosya 2024
-// paletinde çıkar. Hiçbir test bakmaz, hiçbir şey patlamaz — kullanıcı ancak
-// bir SVG açtığında görür. Bu kapı o sapmayı GÖRÜNÜR ve ÖLÇÜLÜ tutar.
+// Sessizlik mekaniği: ekran Atölye'de, indirilen dosya 2024 paletinde. Hiçbir
+// test bakmaz, hiçbir şey patlamaz — kullanıcı ancak bir SVG açtığında görür.
 //
-// SAPMA_TAVANI bir hedef değil BORÇTUR: yalnız aşağı iner. Atölye geçişinin
-// "dışa çıkan belgeler" turunda 0'a indirilip bu sayı kaldırılacak.
+// SAPMA ARTIK SIFIR ve kapı BİR BORÇ TAVANI DEĞİL, BİR EŞİTLİKTİR: her yedek
+// varsayılan temanın değerinin AYNISI olmak zorunda. Tavanlı hâl, palet
+// değişince sapmanın sessizce geri gelmesine on kişilik yer bırakıyordu.
 
 const fs = require('fs');
 const path = require('path');
@@ -61,7 +60,6 @@ const ciftler = [...comp.matchAll(/var\(\s*--([\w-]+)\s*,\s*(#[0-9a-fA-F]{3,8})\
 
 const benzersiz = [...new Map(ciftler.map((c) => [c.jeton + '|' + c.yedek, c])).values()];
 
-const SAPMA_TAVANI = 10;
 
 describe('dışa aktarmanın yedek paleti', () => {
   test('varsayılan tema okunabildi (regex kayması erken yakalansın)', () => {
@@ -92,12 +90,12 @@ describe('dışa aktarmanın yedek paleti', () => {
     expect([...new Set(bilinmeyen)]).toEqual([]);
   });
 
-  // BORÇ KAPISI — yalnız aşağı iner.
-  test(`yedek ↔ varsayılan tema sapması ${SAPMA_TAVANI}'u geçmiyor`, () => {
+  // EŞİTLİK KAPISI — indirilen belge ekranla AYNI paleti taşır.
+  test('her yedek varsayılan temanın değeriyle BİREBİR aynı', () => {
     const t = jetonlar(temaBlogu(VARSAYILAN));
     const sapan = benzersiz
       .filter((c) => t[c.jeton] && t[c.jeton].toLowerCase() !== c.yedek.toLowerCase())
       .map((c) => `--${c.jeton}: ${c.yedek} ≠ ${t[c.jeton]}`);
-    expect(sapan.length).toBeLessThanOrEqual(SAPMA_TAVANI);
+    expect(sapan).toEqual([]);
   });
 });

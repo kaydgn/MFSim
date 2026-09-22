@@ -431,16 +431,16 @@ function _frConceptFigure(){
 
   var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Kavramsal FEAD şeması">';
   svg += '<defs><marker id="frArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7"'
-       + ' orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a5a1e"/></marker></defs>';
+       + ' orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6d5310"/></marker></defs>';
 
   // ── gergi kolu ve pivotu (kayışın ALTINDA kalsın diye önce çizilir) ─────
   svg += '<line x1="' + f(tx(pv[0])) + '" y1="' + f(ty(pv[1])) + '" x2="' + f(tx(P[3].c[0]))
-       + '" y2="' + f(ty(P[3].c[1])) + '" stroke="#2e7d4f" stroke-width="1.8" stroke-dasharray="5 4"/>';
+       + '" y2="' + f(ty(P[3].c[1])) + '" stroke="#2a6140" stroke-width="1.8" stroke-dasharray="5 4"/>';
   var px = f(tx(pv[0])), py = f(ty(pv[1])), a = 7;
-  svg += '<g stroke="#2e7d4f" stroke-width="2">'
+  svg += '<g stroke="#2a6140" stroke-width="2">'
        + '<line x1="' + f(px-a) + '" y1="' + py + '" x2="' + f(px+a) + '" y2="' + py + '"/>'
        + '<line x1="' + px + '" y1="' + f(py-a) + '" x2="' + px + '" y2="' + f(py+a) + '"/></g>';
-  svg += '<text x="' + f(px-11) + '" y="' + f(py+4) + '" text-anchor="end" font-size="12" fill="#2e7d4f">pivot</text>';
+  svg += '<text x="' + f(px-11) + '" y="' + f(py+4) + '" text-anchor="end" font-size="12" fill="#2a6140">pivot</text>';
 
   // ── kayış yolu: çekirdeğin teğet uçları + işaretli sarım yayları ────────
   var d = '';
@@ -457,8 +457,8 @@ function _frConceptFigure(){
   P.forEach(function(p){
     var cx = f(tx(p.c[0])), cy = f(ty(p.c[1]));
     svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + f(p.r*s) + '" fill="none"'
-         + ' stroke="#24425f" stroke-width="2"' + (p.contact === 'back' ? ' stroke-dasharray="6 5"' : '') + '/>'
-         + '<circle cx="' + cx + '" cy="' + cy + '" r="3" fill="#24425f"/>';
+         + ' stroke="#96441f" stroke-width="2"' + (p.contact === 'back' ? ' stroke-dasharray="6 5"' : '') + '/>'
+         + '<circle cx="' + cx + '" cy="' + cy + '" r="3" fill="#96441f"/>';
   });
 
   // ── ETİKET YERLEŞTİRİCİ: çakışana kadar iter ─────────────────────────────
@@ -505,13 +505,13 @@ function _frConceptFigure(){
   var wrapP = geo.wraps[PHI], dirP = (gP.d > 0) ? 1 : -1, ri = pP.r*0.46;
   function onRing(ang, rad){ return [pP.c[0] + rad*Math.cos(ang), pP.c[1] + rad*Math.sin(ang)]; }
   svg += '<path d="M' + pt(pP.c) + ' L' + pt(Tin) + ' M' + pt(pP.c) + ' L' + pt(Tout)
-       + '" stroke="#8a5a1e" stroke-width="1.1" stroke-dasharray="4 3" opacity="0.9"/>';
+       + '" stroke="#6d5310" stroke-width="1.1" stroke-dasharray="4 3" opacity="0.9"/>';
   svg += '<path d="M' + pt(onRing(aIn, ri)) + ' A' + f(ri*s) + ' ' + f(ri*s) + ' 0 '
        + (wrapP > Math.PI ? 1 : 0) + ' ' + (dirP > 0 ? 0 : 1) + ' ' + pt(onRing(aIn + dirP*wrapP, ri))
-       + '" fill="none" stroke="#8a5a1e" stroke-width="1.8" marker-end="url(#frArr)"/>';
+       + '" fill="none" stroke="#6d5310" stroke-width="1.8" marker-end="url(#frArr)"/>';
   var phiLb = onRing(aIn + dirP*wrapP/2, ri + 15);
   svg += '<text x="' + f(tx(phiLb[0])) + '" y="' + f(ty(phiLb[1])+5) + '" text-anchor="middle"'
-       + ' font-size="14" fill="#8a5a1e">φ</text>';
+       + ' font-size="14" fill="#6d5310">φ</text>';
 
   // ── serbest açıklık (span) künyesi: EN UZUN açıklığın dışına ────────────
   // Ölçü çizgisi o açıklığın GERÇEK teğet uçlarından ofsetlenir ve iki ucu
@@ -546,7 +546,7 @@ function _frConceptFigure(){
     var x = Math.max(w/2 + 4, Math.min(W - w/2 - 4, tx(p.c[0])));
     var y = p.altta ? (ty(p.c[1]-p.r) + 16) : (ty(p.c[1]+p.r) - 9);
     svg += '<text x="' + f(x) + '" y="' + f(y) + '" text-anchor="middle" font-size="' + fs
-         + '" fill="#24425f">' + _frEsc(p.etiket) + '</text>';
+         + '" fill="#96441f">' + _frEsc(p.etiket) + '</text>';
   });
 
   // ── alt künye: çeper dokusunun ve renklerin ne anlattığı ────────────────
@@ -679,7 +679,7 @@ function _frSummary(R){
   var h = '<h3>8.1 Kritik sonuç özeti</h3>';
   h += '<div class="note ' + (iyi ? 'check' : 'warn') + '">';
   h += '<span class="t">' + (iyi ? 'Model tutarlı' : 'Dikkat gerektiren bulgu var') + '</span>';
-  function sat(k, v){ return '<div style="margin:3px 0;"><strong style="color:var(--prusya);">' + k + ':</strong> ' + v + '</div>'; }
+  function sat(k, v){ return '<div style="margin:3px 0;"><strong style="color:var(--vurgu);">' + k + ':</strong> ' + v + '</div>'; }
   h += sat('Kapalı çevrim', 'Σ işaretli sarım = <b>' + _frFs(sigma, 2) + '°</b> '
         + (kapali ? '<span class="ok">✓</span>' : '<b>(360° olmalı)</b>'));
   // İKİ AYRI UZUNLUK, tek başlık altında basılıyordu ve baştaki sayı kayışın
@@ -1133,13 +1133,13 @@ function _frWrapFigure(R){
      + '" stroke="#9aa2ad" stroke-width="1" stroke-dasharray="5 4"/>';
   g += '<text x="' + f2(tx(c[0] + ref) + 4) + '" y="' + f2(cy + 4) + '" font-size="11.5" fill="#9aa2ad">0° (+X)</text>';
   // kasnak çemberi
-  g += '<circle cx="' + f2(cx) + '" cy="' + f2(cy) + '" r="' + f2(rs) + '" fill="none" stroke="#24425f"'
+  g += '<circle cx="' + f2(cx) + '" cy="' + f2(cy) + '" r="' + f2(rs) + '" fill="none" stroke="#96441f"'
      + ' stroke-width="2"' + (q.contact === 'back' ? ' stroke-dasharray="6 5"' : '') + '/>';
-  g += '<circle cx="' + f2(cx) + '" cy="' + f2(cy) + '" r="3.2" fill="#24425f"/>';
+  g += '<circle cx="' + f2(cx) + '" cy="' + f2(cy) + '" r="3.2" fill="#96441f"/>';
   // yarıçap doğruları (teğet noktalarına)
   [q.Pin, q.Pout].forEach(function(z){
     g += '<line x1="' + f2(cx) + '" y1="' + f2(cy) + '" x2="' + X(z) + '" y2="' + Y(z)
-       + '" stroke="#24425f" stroke-width="1.2" stroke-dasharray="4 3"/>';
+       + '" stroke="#96441f" stroke-width="1.2" stroke-dasharray="4 3"/>';
   });
   // açıklık parçaları + sarım yayı (kayış rengi)
   g += '<path d="M' + P(pIn0) + ' L' + P(q.Pin) + '" fill="none" stroke="#c8781e" stroke-width="4" marker-end="url(#frW1)"/>';
@@ -1187,7 +1187,7 @@ function _frWrapFigure(R){
   // ALTINDA KaTeX denklemi olarak durur — kaynak aynı, dizgi tutarlı.
   // ── açıklama sütunu ──────────────────────────────────────────────────
   g += '<line x1="' + (pad.l - 20) + '" y1="14" x2="' + (pad.l - 20) + '" y2="' + (Hd - 34)
-     + '" stroke="#e4e6e9" stroke-width="1"/>';
+     + '" stroke="#e6e1d8" stroke-width="1"/>';
   g += _frLegend(14, 16, pad.l - 44, [
     ['P_giriş · P_çıkış — teğet noktaları', 'Kayışın kasnağa değdiği ve ayrıldığı '
       + 'noktalar; §3.2\'nin ortak teğet çözümünden gelir.', '#c8781e'],
@@ -1196,13 +1196,13 @@ function _frWrapFigure(R){
     ['φ — SARIM AÇISI', 'Kayışın kasnağı sardığı yay: iki teğet açısının, sarım '
       + 'işareti d ile çarpılmış farkı. Aşağıdaki denklem bu kasnak için birebir gösterir.', '#c8781e'],
     ['d — sarım işareti', 'Temas tarafından gelir: kaburgalı yüzden temas edende +1, '
-      + 'sırttan temas edende −1 (çeper kesikli çizilir).', '#24425f']
+      + 'sırttan temas edende −1 (çeper kesikli çizilir).', '#96441f']
   ], 10.2);
   // Uzun kasnak adı alt künyeyi çerçeveden taşırırdı (SVG metni kırpılmaz).
   var kunye = q.name + ' — ' + (q.contact === 'back' ? 'sırttan temas, d = −1' : 'kaburgalı temas, d = +1');
   var enCok = Math.floor((Wd - 28) / (11 * 0.6));
   if(kunye.length > enCok) kunye = kunye.slice(0, enCok - 1) + '…';
-  g += '<text x="14" y="' + (Hd - 10) + '" font-size="11" fill="#1b1e24">' + _frEsc(kunye) + '</text>';
+  g += '<text x="14" y="' + (Hd - 10) + '" font-size="11" fill="#26241f">' + _frEsc(kunye) + '</text>';
   var fig = _frFigWrap(g, 'Sarım açısının kuruluşu (3.3). Kayış kasnağa <b>P<sub>giriş</sub></b> teğet '
     + 'noktasında değer, çeperi izler ve <b>P<sub>çıkış</sub></b>\'te ayrılır; iki teğet noktası '
     + '§3.2\'nin ortak teğet çözümünden gelir. θ açıları merkezden <b>+X eksenine göre</b> ölçülür '
@@ -1285,16 +1285,16 @@ function _frBetaFigure(R){
      + '<marker id="frB3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">'
      + '<path d="M0 0 L10 5 L0 10 z" fill="#5a6270"/></marker>'
      + '<marker id="frB4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">'
-     + '<path d="M0 0 L10 5 L0 10 z" fill="#2e7d4f"/></marker></defs>';
+     + '<path d="M0 0 L10 5 L0 10 z" fill="#2a6140"/></marker></defs>';
 
   // kol + pivot (kayışın altında kalsın diye önce)
   g += '<line x1="' + X(p) + '" y1="' + Y(p) + '" x2="' + f2(cx) + '" y2="' + f2(cy)
-     + '" stroke="#2e7d4f" stroke-width="2" stroke-dasharray="5 4"/>';
+     + '" stroke="#2a6140" stroke-width="2" stroke-dasharray="5 4"/>';
   var px = X(p), py = Y(p), aa = 7;
-  g += '<g stroke="#2e7d4f" stroke-width="2">'
+  g += '<g stroke="#2a6140" stroke-width="2">'
      + '<line x1="' + f2(px - aa) + '" y1="' + py + '" x2="' + f2(px + aa) + '" y2="' + py + '"/>'
      + '<line x1="' + px + '" y1="' + f2(py - aa) + '" x2="' + px + '" y2="' + f2(py + aa) + '"/></g>';
-  g += '<text x="' + f2(px) + '" y="' + f2(py + 20) + '" text-anchor="middle" font-size="12" fill="#2e7d4f">pivot</text>';
+  g += '<text x="' + f2(px) + '" y="' + f2(py + 20) + '" text-anchor="middle" font-size="12" fill="#2a6140">pivot</text>';
 
   // açıklıklar + sarım yayı
   g += '<path d="M' + P(pIn0) + ' L' + P(q.Pin) + '" fill="none" stroke="#c8781e" stroke-width="4" marker-end="url(#frB1)"/>';
@@ -1302,9 +1302,9 @@ function _frBetaFigure(R){
   g += '<path d="M' + P(q.Pin) + ' A' + f2(rs) + ' ' + f2(rs) + ' 0 ' + (q.wrapDeg > 180 ? 1 : 0)
      + ' ' + (q.d > 0 ? 0 : 1) + ' ' + P(q.Pout) + '" fill="none" stroke="#c8781e" stroke-width="5"/>';
   // kasnak
-  g += '<circle cx="' + f2(cx) + '" cy="' + f2(cy) + '" r="' + f2(rs) + '" fill="none" stroke="#24425f"'
+  g += '<circle cx="' + f2(cx) + '" cy="' + f2(cy) + '" r="' + f2(rs) + '" fill="none" stroke="#96441f"'
      + ' stroke-width="2"' + (q.contact === 'back' ? ' stroke-dasharray="6 5"' : '') + '/>';
-  g += '<circle cx="' + f2(cx) + '" cy="' + f2(cy) + '" r="3.2" fill="#24425f"/>';
+  g += '<circle cx="' + f2(cx) + '" cy="' + f2(cy) + '" r="3.2" fill="#96441f"/>';
   // φ yayı (kasnağın içinde)
   g += _frAngMark(cx, cy, rs * 0.62, sIn, (q.d > 0 ? -1 : 1) * wrapRad, '#c8781e', 2, null);
 
@@ -1324,7 +1324,7 @@ function _frBetaFigure(R){
      + '" stroke="#a8321f" stroke-width="3" marker-end="url(#frB2)"/>';
   // merkezin hareket yönü t (kola dik)
   g += '<line data-ve="that" x1="' + f2(cx) + '" y1="' + f2(cy) + '" x2="' + X(eT) + '" y2="' + Y(eT)
-     + '" stroke="#2e7d4f" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#frB4)"/>';
+     + '" stroke="#2a6140" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#frB4)"/>';
   // β yayı: bileşke ile KOL (merkez → pivot) arasında
   var aF   = Math.atan2(ty(eF[1]) - cy, tx(eF[0]) - cx);
   var aArm = Math.atan2(py - cy, px - cx);
@@ -1356,19 +1356,19 @@ function _frBetaFigure(R){
   g += LB.ekle(cx, cy, Math.cos(aPhiMid), Math.sin(aPhiMid),
                'φ', '#c8781e', 15, rs * 0.58);
   g += LB.ekle((px + cx) / 2, (py + cy) / 2, -(cy - py), (cx - px),
-               'a', '#2e7d4f', 15, 15);
+               'a', '#2a6140', 15, 15);
   g += ucEtk(eF,   'f', '#a8321f', 14);
-  g += ucEtk(eT,   't', '#2e7d4f', 14);
+  g += ucEtk(eT,   't', '#2a6140', 14);
   g += ucEtk(eIn,  '−u_giriş', '#5a6270', 12);
   g += ucEtk(eOut, 'u_çıkış',  '#5a6270', 12);
   // Sayısal türetme şeklin İÇİNDE değil ALTINDA (KaTeX, §8.7): φ şeklindeki
   // gerekçenin aynısı. Şekil yalnız SEMBOLLERİ taşır — a, φ, β, f, t.
   // ── açıklama sütunu ──────────────────────────────────────────────────
   g += '<line x1="' + (pad.l - 22) + '" y1="16" x2="' + (pad.l - 22) + '" y2="' + (Hd - 16)
-     + '" stroke="#e4e6e9" stroke-width="1"/>';
+     + '" stroke="#e6e1d8" stroke-width="1"/>';
   g += _frLegend(14, 14, pad.l - 46, [
-    ['a — gergi kol boyu', 'Montaj konumundan avara merkezine. Bu zincirdeki TEK girdi.', '#2e7d4f'],
-    ['t — merkezin hareket yönü', 'Kola dik. Kol dθ dönünce merkez t yönünde a·dθ yol alır.', '#2e7d4f'],
+    ['a — gergi kol boyu', 'Montaj konumundan avara merkezine. Bu zincirdeki TEK girdi.', '#2a6140'],
+    ['t — merkezin hareket yönü', 'Kola dik. Kol dθ dönünce merkez t yönünde a·dθ yol alır.', '#2a6140'],
     ['u_giriş · u_çıkış — açıklık doğrultuları', 'Kayışın kasnağı çektiği iki birim vektör.', '#5a6270'],
     ['f — bileşke', 'f = u_çıkış − u_giriş. Hem hubload doğrultusu (5.4) hem take-up\'ın '
       + 'kaynağı. Boyu yalnız sarıma bağlı: |f| = 2 sin(φ/2).', '#a8321f'],
@@ -1791,7 +1791,7 @@ function _frTakeupChart(R){
                      xLabel: 'Gergi kol açısı — göreli [°]', yLabel: 'Gereken tahrik boyu [mm]',
                      xDec: 0, yDec: 1, H: (_FR_RAW ? _FR_H : 280), alt: 'Kayış take-up eğrisi' });
   var g = c.svg;
-  g += '<g data-ve="takeup-curve">' + _frPolyline(c, sw.pts.map(function(p){ return [p.rel, p.L]; }), '#24425f', 2.4) + '</g>';
+  g += '<g data-ve="takeup-curve">' + _frPolyline(c, sw.pts.map(function(p){ return [p.rel, p.L]; }), '#96441f', 2.4) + '</g>';
   var t0 = sw.pts[0], t1 = sw.pts[sw.pts.length - 1];
   var ort = Math.abs((t1.L - t0.L) / (t1.rel - t0.rel));
   var anlik = K ? _frNum(K.st.takeupMmPerDeg) : NaN;
@@ -1806,13 +1806,13 @@ function _frTakeupChart(R){
        + '</g>';
     var XM = c.sx(rm), YM = c.sy(Lm);
     g += '<line data-ve="mean-line" x1="' + XM.toFixed(1) + '" y1="' + c.pad.t + '" x2="' + XM.toFixed(1)
-       + '" y2="' + (c.H - c.pad.b) + '" stroke="#2e7d4f" stroke-width="1.6" stroke-dasharray="4 3"/>';
-    g += '<circle cx="' + XM.toFixed(1) + '" cy="' + YM.toFixed(1) + '" r="4" fill="#2e7d4f"/>';
+       + '" y2="' + (c.H - c.pad.b) + '" stroke="#2a6140" stroke-width="1.6" stroke-dasharray="4 3"/>';
+    g += '<circle cx="' + XM.toFixed(1) + '" cy="' + YM.toFixed(1) + '" r="4" fill="#2a6140"/>';
     var et = 'teğetin eğimi = dL/dθ = ' + _frFs(anlik, 4) + ' mm/°';
     var xe = Math.min(XM + 10, c.W - _frTxtW(et, 11.5) - 8);
     g += '<text x="' + xe.toFixed(1) + '" y="' + (YM - 12).toFixed(1) + '" font-size="11.5" fill="#a8321f">'
        + _frEsc(et) + '</text>';
-    g += '<text x="' + (XM + 6).toFixed(1) + '" y="' + (c.pad.t + 12) + '" font-size="11" fill="#2e7d4f">Mean</text>';
+    g += '<text x="' + (XM + 6).toFixed(1) + '" y="' + (c.pad.t + 12) + '" font-size="11" fill="#2a6140">Mean</text>';
   }
   return { g: g, sw: sw, K: K, anlik: anlik, ort: ort };
 }
@@ -1856,12 +1856,12 @@ function _frTakeupRateFigure(R, sw){
                      xLabel: 'Gergi kol açısı — göreli [°]', yLabel: 'Take-up oranı dL/dθ [mm/°]',
                      xDec: 0, yDec: 3, H: 260, alt: 'Take-up oranının kol açısıyla değişimi' });
   var g = c.svg;
-  g += '<g data-ve="takeup-rate">' + _frPolyline(c, pts.map(function(p){ return [p.rel, p.tk]; }), '#24425f', 2.4) + '</g>';
+  g += '<g data-ve="takeup-rate">' + _frPolyline(c, pts.map(function(p){ return [p.rel, p.tk]; }), '#96441f', 2.4) + '</g>';
   // tepe noktası
   var tepe = pts[0];
   pts.forEach(function(p){ if(p.tk > tepe.tk) tepe = p; });
   g += '<circle cx="' + c.sx(tepe.rel).toFixed(1) + '" cy="' + c.sy(tepe.tk).toFixed(1)
-     + '" r="4" fill="#8a5a1e"/>';
+     + '" r="4" fill="#6d5310"/>';
   var tm = 'tepe ' + _frFs(tepe.tk, 4) + ' mm/° @ ' + _frFs(tepe.rel, 1) + '°';
   // Tepe ile Mean çok yakın olabiliyor (BMC: 26,6° ↔ 28,5°) ve iki etiket üst
   // üste biniyordu (ölçüldü). Yakınsa tepe etiketi ALTA ve SOLA alınır.
@@ -1871,14 +1871,14 @@ function _frTakeupRateFigure(R, sw){
   var tmX = yakin ? Math.max(c.pad.l + 4, c.sx(tepe.rel) - tmW - 10)
                   : Math.min(c.sx(tepe.rel) + 8, c.W - tmW - 8);
   g += '<text x="' + tmX.toFixed(1) + '" y="' + (c.sy(tepe.tk) + (yakin ? 20 : -9)).toFixed(1)
-     + '" font-size="11" fill="#8a5a1e">' + _frEsc(tm) + '</text>';
+     + '" font-size="11" fill="#6d5310">' + _frEsc(tm) + '</text>';
   if(K){
     var rm = rmT, tkm = _frNum(K.st.takeupMmPerDeg);
     var XM = c.sx(rm);
     g += '<line x1="' + XM.toFixed(1) + '" y1="' + c.pad.t + '" x2="' + XM.toFixed(1) + '" y2="'
-       + (c.H - c.pad.b) + '" stroke="#2e7d4f" stroke-width="1.6" stroke-dasharray="4 3"/>';
-    g += '<circle cx="' + XM.toFixed(1) + '" cy="' + c.sy(tkm).toFixed(1) + '" r="4" fill="#2e7d4f"/>';
-    g += '<text x="' + (XM + 6).toFixed(1) + '" y="' + (c.pad.t + 12) + '" font-size="11" fill="#2e7d4f">Mean</text>';
+       + (c.H - c.pad.b) + '" stroke="#2a6140" stroke-width="1.6" stroke-dasharray="4 3"/>';
+    g += '<circle cx="' + XM.toFixed(1) + '" cy="' + c.sy(tkm).toFixed(1) + '" r="4" fill="#2a6140"/>';
+    g += '<text x="' + (XM + 6).toFixed(1) + '" y="' + (c.pad.t + 12) + '" font-size="11" fill="#2a6140">Mean</text>';
   }
   var ilk = pts[0], son = pts[pts.length - 1];
   var aciklama = '';
@@ -1999,7 +1999,7 @@ function _frPositionTable(R){
   h += '<tr><th>Büyüklük</th>';
   pos.forEach(function(p){
     var ad = TR[p.position] || p.position;
-    var vurgu = (p.position === 'Mean') ? ' style="background:#eef2f6;"' : '';
+    var vurgu = (p.position === 'Mean') ? ' style="background:#f2e9e3;"' : '';
     h += '<th' + vurgu + '>' + _frEsc(ad) + '</th>';
   });
   h += '</tr>';
@@ -2595,22 +2595,22 @@ function _frChart(opt){
   for(i = 0; i <= nX; i++){
     var xv = tX ? tX[i] : x0 + (x1 - x0) * i / nX, X = sx(xv);
     g += '<line x1="' + X.toFixed(1) + '" y1="' + pad.t + '" x2="' + X.toFixed(1) + '" y2="' + (H - pad.b)
-       + '" stroke="#e4e6e9" stroke-width="1"/>';
+       + '" stroke="#e6e1d8" stroke-width="1"/>';
     g += '<text x="' + X.toFixed(1) + '" y="' + (H - pad.b + 15) + '" text-anchor="middle" font-size="11" fill="#5a6270">'
        + _frF(xv, opt.xDec == null ? 0 : opt.xDec) + '</text>';
   }
   for(i = 0; i <= nY; i++){
     var yv = tY ? tY[i] : y0 + (y1 - y0) * i / nY, Y = sy(yv);
     g += '<line x1="' + pad.l + '" y1="' + Y.toFixed(1) + '" x2="' + (W - pad.r) + '" y2="' + Y.toFixed(1)
-       + '" stroke="#e4e6e9" stroke-width="1"/>';
+       + '" stroke="#e6e1d8" stroke-width="1"/>';
     g += '<text x="' + (pad.l - 7) + '" y="' + (Y + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="#5a6270">'
        + _frF(yv, opt.yDec == null ? 0 : opt.yDec) + '</text>';
   }
-  g += '<line x1="' + pad.l + '" y1="' + pad.t + '" x2="' + pad.l + '" y2="' + (H - pad.b) + '" stroke="#1b1e24" stroke-width="1.2"/>';
-  g += '<line x1="' + pad.l + '" y1="' + (H - pad.b) + '" x2="' + (W - pad.r) + '" y2="' + (H - pad.b) + '" stroke="#1b1e24" stroke-width="1.2"/>';
-  g += '<text x="' + ((pad.l + W - pad.r) / 2) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="11.5" fill="#1b1e24">'
+  g += '<line x1="' + pad.l + '" y1="' + pad.t + '" x2="' + pad.l + '" y2="' + (H - pad.b) + '" stroke="#26241f" stroke-width="1.2"/>';
+  g += '<line x1="' + pad.l + '" y1="' + (H - pad.b) + '" x2="' + (W - pad.r) + '" y2="' + (H - pad.b) + '" stroke="#26241f" stroke-width="1.2"/>';
+  g += '<text x="' + ((pad.l + W - pad.r) / 2) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="11.5" fill="#26241f">'
      + _frEsc(opt.xLabel || '') + '</text>';
-  g += '<text transform="translate(14,' + ((pad.t + H - pad.b) / 2) + ') rotate(-90)" text-anchor="middle" font-size="11.5" fill="#1b1e24">'
+  g += '<text transform="translate(14,' + ((pad.t + H - pad.b) / 2) + ') rotate(-90)" text-anchor="middle" font-size="11.5" fill="#26241f">'
      + _frEsc(opt.yLabel || '') + '</text>';
   return { svg: g, sx: sx, sy: sy, W: W, H: H, pad: pad };
 }
@@ -2714,7 +2714,7 @@ function _frTensionFigure(R){
   g += _frPolyline(c, icinde.filter(function(p){ return p.T * 1.1 <= yMax; }).map(function(p){ return [p.rel, p.T * 1.1]; }), '#7f9bb5', 1.2, '4 3');
   g += _frPolyline(c, icinde.map(function(p){ return [p.rel, p.T * 0.9]; }), '#7f9bb5', 1.2, '4 3');
   g += '</g>';
-  g += '<g data-ve="tension-curve">' + _frPolyline(c, icinde.map(function(p){ return [p.rel, p.T]; }), '#1b1e24', 2.4) + '</g>';
+  g += '<g data-ve="tension-curve">' + _frPolyline(c, icinde.map(function(p){ return [p.rel, p.T]; }), '#26241f', 2.4) + '</g>';
 
   // KONUM ÇİZGİLERİ. Tolerans ve aşınma 0 girildiğinde dört orta konum AYNI
   // açıya oturuyor; ayrı ayrı yazılsalardı etiketler üst üste binerdi
@@ -2731,7 +2731,7 @@ function _frTensionFigure(R){
   g += '<g data-ve="pos-line">';
   kume.forEach(function(k, idx){
     var X = c.sx(k.rel);
-    var renk = k.mean ? '#2e7d4f' : '#8a5a1e';
+    var renk = k.mean ? '#2a6140' : '#6d5310';
     g += '<line x1="' + X.toFixed(1) + '" y1="' + c.pad.t + '" x2="' + X.toFixed(1) + '" y2="' + (c.H - c.pad.b)
        + '" stroke="' + renk + '" stroke-width="' + (k.mean ? 2 : 1.3) + '" stroke-dasharray="4 3"/>';
     var sag = (X < c.W * 0.75);
@@ -2817,13 +2817,13 @@ function _frSlipFigure(R, esik){
     var y = 24 + i * satir;
     var w = (mins[i] / maxV) * (W - L - R2);
     var kotu = yukTasir[i] && Number.isFinite(esik) && mins[i] < esik;
-    var dolgu = kotu ? '#a8321f' : (yukTasir[i] ? '#24425f' : '#9aa3ad');
+    var dolgu = kotu ? '#a8321f' : (yukTasir[i] ? '#96441f' : '#9aa3ad');
     g += '<text x="' + (L - 8) + '" y="' + (y + 13) + '" text-anchor="end" font-size="12" fill="'
-       + (yukTasir[i] ? '#1b1e24' : '#5a6270') + '">' + _frEsc(etAd[i]) + '</text>';
+       + (yukTasir[i] ? '#26241f' : '#5a6270') + '">' + _frEsc(etAd[i]) + '</text>';
     g += '<rect data-ve="sf-bar" x="' + L + '" y="' + y + '" width="' + Math.max(1, w).toFixed(1) + '" height="18" '
        + 'fill="' + dolgu + '" opacity="' + (yukTasir[i] ? '0.82' : '0.55') + '"/>';
     var etX = Math.min(L + w + 6, W - R2 + 4);
-    g += '<text x="' + etX.toFixed(1) + '" y="' + (y + 13) + '" font-size="11.5" fill="#1b1e24">' + _frFs(mins[i], 2) + '</text>';
+    g += '<text x="' + etX.toFixed(1) + '" y="' + (y + 13) + '" font-size="11.5" fill="#26241f">' + _frFs(mins[i], 2) + '</text>';
   });
   if(Number.isFinite(esik) && esik > 0){
     var X = L + (esik / maxV) * (W - L - R2);
@@ -2850,10 +2850,10 @@ function _frFatigueFigure(R){
     var y = 18 + i * satir;
     var v = _frNum(p.sharePct) || 0;
     var w = (v / maxV) * (W - L - R2);
-    g += '<text x="' + (L - 8) + '" y="' + (y + 13) + '" text-anchor="end" font-size="12" fill="#1b1e24">' + _frEsc(p.name) + '</text>';
+    g += '<text x="' + (L - 8) + '" y="' + (y + 13) + '" text-anchor="end" font-size="12" fill="#26241f">' + _frEsc(p.name) + '</text>';
     g += '<rect data-ve="fatigue-bar" x="' + L + '" y="' + y + '" width="' + Math.max(1, w).toFixed(1) + '" height="17" '
-       + 'fill="' + (p.contact === 'back' ? '#8a5a1e' : '#24425f') + '" opacity="0.82"/>';
-    g += '<text x="' + (L + w + 6).toFixed(1) + '" y="' + (y + 13) + '" font-size="11.5" fill="#1b1e24">'
+       + 'fill="' + (p.contact === 'back' ? '#6d5310' : '#96441f') + '" opacity="0.82"/>';
+    g += '<text x="' + (L + w + 6).toFixed(1) + '" y="' + (y + 13) + '" font-size="11.5" fill="#26241f">'
        + _frFs(v, 1) + '%</text>';
   });
   g += '<text x="' + L + '" y="' + (H - 8) + '" font-size="11" fill="#5a6270">lacivert: kaburgalı temas · kahve: sırt teması</text>';
@@ -2897,7 +2897,7 @@ function _frFreqFigure(R){
                      // yutuyordu — özet raporda sayfa taşıyordu (ölçüldü).
                      H: (_FR_RAW ? _FR_H : 300), alt: 'Doğal frekans haritası' });
   var g = c.svg;
-  var renk = ['#24425f', '#8a5a1e', '#2e7d4f', '#a8321f', '#5a6270', '#7a4fa8'];
+  var renk = ['#96441f', '#6d5310', '#2a6140', '#a8321f', '#5a6270', '#7a4fa8'];
   spans.forEach(function(sp, si){
     var pts = [];
     duty.forEach(function(d){

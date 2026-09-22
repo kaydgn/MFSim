@@ -1553,13 +1553,13 @@ function veMntDecorateConnections(svg){
     var rect=document.createElementNS(NS,'rect');
     rect.setAttribute('x',fr.x1); rect.setAttribute('y',fr.y1);
     rect.setAttribute('width',fr.x2-fr.x1); rect.setAttribute('height',fr.y2-fr.y1);
-    rect.setAttribute('rx',16); rect.setAttribute('fill','var(--accent-primary, #3b82f6)');
-    rect.setAttribute('fill-opacity','0.045'); rect.setAttribute('stroke','var(--accent-primary, #3b82f6)');
+    rect.setAttribute('rx',16); rect.setAttribute('fill','var(--accent-primary)');
+    rect.setAttribute('fill-opacity','0.045'); rect.setAttribute('stroke','var(--accent-primary)');
     rect.setAttribute('stroke-width','1.6'); rect.setAttribute('stroke-dasharray','2 6'); rect.setAttribute('opacity','0.7');
     g.appendChild(rect);
     var t=document.createElementNS(NS,'text');
     t.setAttribute('x',fr.x1+11); t.setAttribute('y',fr.y1+16);
-    t.setAttribute('fill','var(--accent-primary, #3b82f6)'); t.setAttribute('font-size','10.5');
+    t.setAttribute('fill','var(--accent-primary)'); t.setAttribute('font-size','10.5');
     t.setAttribute('opacity','0.72'); t.setAttribute('letter-spacing','1.5');
     t.setAttribute('font-family','ui-monospace, monospace'); t.textContent='ŞASİ'; g.appendChild(t);
   }
@@ -1576,7 +1576,7 @@ function veMntDecorateConnections(svg){
     var l=document.createElementNS(NS,'line');
     l.setAttribute('x1',a.x+(a.width||50)/2); l.setAttribute('y1',a.y+(a.height||46)/2);
     l.setAttribute('x2',b.x+(b.width||50)/2); l.setAttribute('y2',b.y+(b.height||46)/2);
-    l.setAttribute('stroke','var(--text-secondary, #888)'); l.setAttribute('stroke-width','3');
+    l.setAttribute('stroke','var(--text-secondary)'); l.setAttribute('stroke-width','3');
     l.setAttribute('stroke-linecap','round'); l.setAttribute('opacity','0.7'); g.appendChild(l);
   }
 
@@ -1623,7 +1623,7 @@ function _mntSpring(g, a, b){
   d+=' L '+b.x+' '+b.y;
   var p=document.createElementNS(NS,'path');
   p.setAttribute('d',d); p.setAttribute('fill','none');
-  p.setAttribute('stroke','var(--accent-success, #22c55e)'); p.setAttribute('stroke-width','2');
+  p.setAttribute('stroke','var(--accent-success)'); p.setAttribute('stroke-width','2');
   p.setAttribute('stroke-linecap','round'); p.setAttribute('stroke-linejoin','round'); p.setAttribute('opacity','0.95');
   g.appendChild(p);
 }
@@ -1634,7 +1634,7 @@ function _mntChassisGlyph(g, n, side){
   var NS='http://www.w3.org/2000/svg';
   var w=n.width||50, h=n.height||46, gap=9, rail=Math.min(w,h)*0.62, tick=7, N=5;
   var cx=n.x+w/2, cy=n.y+h/2;
-  var col='var(--accent-primary, #3b82f6)';
+  var col='var(--accent-primary)';
   function ln(x1,y1,x2,y2,wd,op){
     var l=document.createElementNS(NS,'line');
     l.setAttribute('x1',x1); l.setAttribute('y1',y1); l.setAttribute('x2',x2); l.setAttribute('y2',y2);
@@ -1898,9 +1898,9 @@ var _MNT2D_MONO="ui-monospace,'SF Mono',Menlo,Consolas,'Liberation Mono',monospa
 var _MNT2D_SANS="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif";
 // İşaret renkleri — bileşen ikonuyla (components.js) tutarlı, tema uyumlu:
 // takoz=yeşil, bileşen CG=amber, birleşik CG=kırmızı. Fallback'li accent-* değişkenleri.
-var _MNT2D_C_MOUNT='var(--accent-success, #22c55e)';
-var _MNT2D_C_COMP ='var(--accent-warning, #f59e0b)';
-var _MNT2D_C_CG   ='var(--accent-danger, #ef4444)';
+var _MNT2D_C_MOUNT='var(--accent-success)';
+var _MNT2D_C_COMP ='var(--accent-warning)';
+var _MNT2D_C_CG   ='var(--accent-danger)';
 function _mnt2DText(x,y,t,anchor,color,size,bold,family){
   return '<text x="'+_mnt2DR(x)+'" y="'+_mnt2DR(y)+'" text-anchor="'+(anchor||'middle')+'" font-size="'+(size||8)+'"'
     + ' font-family="'+(family||_MNT2D_MONO)+'" fill="'+(color||'var(--text-secondary)')+'"'+(bold?' font-weight="700"':'')+'>'+_mntEsc(t)+'</text>';

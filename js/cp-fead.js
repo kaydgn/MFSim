@@ -707,9 +707,9 @@ function veFeadApplyBeltModeBadge(nodeEl, node){
     + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
     + 'padding:2px 4px; border-radius:var(--radius-xs); font-family:ui-monospace, monospace;'
     + 'color:' + (serbest ? 'var(--on-warning)' : 'var(--on-accent)')
-    + '; background:' + (serbest ? 'var(--accent-warning, #f59e0b)'
-                                 : 'var(--accent-primary, #3b82f6)')
-    + '; border:1px solid var(--bg-primary, #111);'
+    + '; background:' + (serbest ? 'var(--accent-warning)'
+                                 : 'var(--accent-primary)')
+    + '; border:1px solid var(--bg-primary);'
     + (kilit ? 'cursor:default; opacity:0.85;' : '');
   // Rozete basmak düğümü SÜRÜKLEMEYE başlatmamalı: veAttachNodeDrag mousedown'ı
   // yakalıyor ve sürükleme başlarsa tık hiç gelmiyor.
@@ -802,9 +802,9 @@ function veFeadApplySpinBadge(nodeEl, node){
   var _R = (typeof veFeadResults !== 'undefined' && veFeadResults) ? veFeadResults : null;
   var hkm = (_R && _R.tensionerSide) ? !!_R.tensionerSide.ok : null;
 
-  var bg = (hkm === true) ? 'var(--accent-success, #22c55e)'
-         : (hkm === false) ? 'var(--accent-danger, #ef4444)'
-         : 'var(--text-secondary, #666)';
+  var bg = (hkm === true) ? 'var(--accent-success)'
+         : (hkm === false) ? 'var(--accent-danger)'
+         : 'var(--text-secondary)';
   // METİN JETONU ZEMİNİN EŞİ: `--on-accent` birincil aksana göre kalibre,
   // yeşil/kırmızı dolguya göre değil. Nötr hâlin zemini bir METİN rengi
   // (`--text-secondary`) olduğu için oraya `--on-accent` de uymaz — tersi
@@ -827,7 +827,7 @@ function veFeadApplySpinBadge(nodeEl, node){
   b.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; cursor:pointer;'
     + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
     + 'padding:2px 4px; border-radius:var(--radius-xs); font-family:ui-monospace, monospace;'
-    + 'color:' + fg + '; background:' + bg + '; border:1px solid var(--bg-primary, #111);';
+    + 'color:' + fg + '; background:' + bg + '; border:1px solid var(--bg-primary);';
   b.onmousedown = function(e){ e.stopPropagation(); };
   b.ondblclick  = function(e){ e.stopPropagation(); e.preventDefault(); };
   b.onclick = function(e){
@@ -3798,7 +3798,7 @@ function veFeadApplyLayoutCard(nodeEl, node){
     card = document.createElement('div');
     card.className = VE_FEAD_CARD_CLASS;
     card.style.cssText = 'position:absolute; inset:0; display:flex; flex-direction:column;'
-      + 'overflow:hidden; border-radius:inherit; background:var(--bg-input, #0f1115);';
+      + 'overflow:hidden; border-radius:inherit; background:var(--bg-input);';
     // Tuvaldeki sembol kartın arkasında kalmasın (düğüm kutusu kendi SVG'sini
     // ortada gösteriyor); şema onun yerini alır.
     var sym = box.querySelector(':scope > svg');

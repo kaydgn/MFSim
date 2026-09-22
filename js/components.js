@@ -241,43 +241,43 @@ function veSyncSidebarScope() {
 var componentDefs = {
   'gearbox': {
     name: 'Şanzıman',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><defs><pattern id="stripes-gearbox" patternUnits="userSpaceOnUse" width="8" height="8"><path d="M-2,2 l4,-4 M0,8 l8,-8 M6,10 l4,-4" stroke="var(--text-muted, #888)" stroke-width="2.5" fill="none"/></pattern></defs><rect x="38" y="5" width="24" height="90" fill="url(#stripes-gearbox)" stroke="var(--text-secondary, #666)" stroke-width="2"/><rect x="8" y="18" width="25" height="8" fill="var(--text-secondary, #666)" rx="1"/><rect x="67" y="18" width="25" height="8" fill="var(--text-secondary, #666)" rx="1"/><rect x="28" y="14" width="12" height="6" fill="var(--text-secondary, #666)" rx="1"/><rect x="60" y="14" width="12" height="6" fill="var(--text-secondary, #666)" rx="1"/><rect x="8" y="70" width="25" height="8" fill="var(--text-secondary, #666)" rx="1"/><rect x="67" y="70" width="25" height="8" fill="var(--text-secondary, #666)" rx="1"/><rect x="28" y="66" width="12" height="6" fill="var(--text-secondary, #666)" rx="1"/><rect x="60" y="66" width="12" height="6" fill="var(--text-secondary, #666)" rx="1"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><defs><pattern id="stripes-gearbox" patternUnits="userSpaceOnUse" width="8" height="8"><path d="M-2,2 l4,-4 M0,8 l8,-8 M6,10 l4,-4" stroke="var(--text-muted, #676055)" stroke-width="2.5" fill="none"/></pattern></defs><rect x="38" y="5" width="24" height="90" fill="url(#stripes-gearbox)" stroke="var(--text-secondary, #544e44)" stroke-width="2"/><rect x="8" y="18" width="25" height="8" fill="var(--text-secondary, #544e44)" rx="1"/><rect x="67" y="18" width="25" height="8" fill="var(--text-secondary, #544e44)" rx="1"/><rect x="28" y="14" width="12" height="6" fill="var(--text-secondary, #544e44)" rx="1"/><rect x="60" y="14" width="12" height="6" fill="var(--text-secondary, #544e44)" rx="1"/><rect x="8" y="70" width="25" height="8" fill="var(--text-secondary, #544e44)" rx="1"/><rect x="67" y="70" width="25" height="8" fill="var(--text-secondary, #544e44)" rx="1"/><rect x="28" y="66" width="12" height="6" fill="var(--text-secondary, #544e44)" rx="1"/><rect x="60" y="66" width="12" height="6" fill="var(--text-secondary, #544e44)" rx="1"/></svg>',
     inputs: 1,
     outputs: 1
   },
   'torque-converter': {
     name: 'Tork Konvertörü',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="35" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="50" cy="50" r="25" fill="var(--text-muted, #888)" opacity="0.5"/><circle cx="50" cy="50" r="12" fill="var(--text-secondary, #666)"/><path d="M35 35 Q50 20 65 35" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" fill="none"/><path d="M65 65 Q50 80 35 65" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" fill="none"/><rect x="10" y="46" width="15" height="8" fill="var(--text-muted, #888)"/><rect x="75" y="46" width="15" height="8" fill="var(--text-muted, #888)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="35" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="4"/><circle cx="50" cy="50" r="25" fill="var(--text-muted, #676055)" opacity="0.5"/><circle cx="50" cy="50" r="12" fill="var(--text-secondary, #544e44)"/><path d="M35 35 Q50 20 65 35" stroke="var(--accent-primary, #a8502b)" stroke-width="3" fill="none"/><path d="M65 65 Q50 80 35 65" stroke="var(--accent-primary, #a8502b)" stroke-width="3" fill="none"/><rect x="10" y="46" width="15" height="8" fill="var(--text-muted, #676055)"/><rect x="75" y="46" width="15" height="8" fill="var(--text-muted, #676055)"/></svg>',
     inputs: 1,
     outputs: 1
   },
   'ec-matching': {
     name: 'Motor-Konvertör Eşleştirme',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4"/><circle cx="30" cy="42" r="14" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="30" cy="42" r="6" fill="var(--text-secondary, #666)"/><path d="M48 42 L56 42" stroke="var(--accent-warning, #f59e0b)" stroke-width="3" stroke-linecap="round"/><path d="M52 38 L56 42 L52 46" stroke="var(--accent-warning, #f59e0b)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="58" y="30" width="28" height="24" rx="4" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><path d="M63 38 L68 38 M63 44 L75 44 M63 50 L71 50" stroke="var(--accent-primary, #3b82f6)" stroke-width="2" stroke-linecap="round"/><path d="M20 70 L40 70 L55 62 L70 70 L85 70" stroke="var(--accent-success, #22c55e)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="4"/><circle cx="30" cy="42" r="14" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="3"/><circle cx="30" cy="42" r="6" fill="var(--text-secondary, #544e44)"/><path d="M48 42 L56 42" stroke="var(--accent-warning, #8a6a12)" stroke-width="3" stroke-linecap="round"/><path d="M52 38 L56 42 L52 46" stroke="var(--accent-warning, #8a6a12)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="58" y="30" width="28" height="24" rx="4" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="3"/><path d="M63 38 L68 38 M63 44 L75 44 M63 50 L71 50" stroke="var(--accent-primary, #a8502b)" stroke-width="2" stroke-linecap="round"/><path d="M20 70 L40 70 L55 62 L70 70 L85 70" stroke="var(--accent-success, #2f6b45)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     inputs: 1,
     outputs: 0
   },
   'engine-gearbox-matching': {
     name: 'Motor-Şanzıman Eşleştirme',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/><rect x="20" y="28" width="25" height="40" rx="3" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><line x1="25" y1="42" x2="40" y2="42" stroke="var(--text-muted, #888)" stroke-width="2"/><line x1="25" y1="50" x2="40" y2="50" stroke="var(--text-muted, #888)" stroke-width="2"/><line x1="25" y1="58" x2="40" y2="58" stroke="var(--text-muted, #888)" stroke-width="2"/><path d="M48 48 L56 48" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" stroke-linecap="round"/><path d="M52 44 L56 48 L52 52" stroke="var(--accent-primary, #3b82f6)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="58" y="30" width="28" height="24" rx="4" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><path d="M63 38 L68 38 M63 44 L75 44 M63 50 L71 50" stroke="var(--accent-primary, #3b82f6)" stroke-width="2" stroke-linecap="round"/><path d="M20 74 L40 74 L55 66 L70 74 L85 74" stroke="var(--accent-success, #22c55e)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="4"/><rect x="20" y="28" width="25" height="40" rx="3" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="3"/><line x1="25" y1="42" x2="40" y2="42" stroke="var(--text-muted, #676055)" stroke-width="2"/><line x1="25" y1="50" x2="40" y2="50" stroke="var(--text-muted, #676055)" stroke-width="2"/><line x1="25" y1="58" x2="40" y2="58" stroke="var(--text-muted, #676055)" stroke-width="2"/><path d="M48 48 L56 48" stroke="var(--accent-primary, #a8502b)" stroke-width="3" stroke-linecap="round"/><path d="M52 44 L56 48 L52 52" stroke="var(--accent-primary, #a8502b)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="58" y="30" width="28" height="24" rx="4" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="3"/><path d="M63 38 L68 38 M63 44 L75 44 M63 50 L71 50" stroke="var(--accent-primary, #a8502b)" stroke-width="2" stroke-linecap="round"/><path d="M20 74 L40 74 L55 66 L70 74 L85 74" stroke="var(--accent-success, #2f6b45)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     inputs: 1,
     outputs: 0
   },
   'shift-controller': {
     name: 'Şanzıman Kontrol',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="4"/><path d="M35 30 L35 70" stroke="var(--text-secondary, #666)" stroke-width="4" stroke-linecap="round"/><circle cx="35" cy="35" r="6" fill="var(--accent-warning, #ff9800)"/><path d="M65 30 L65 70" stroke="var(--text-secondary, #666)" stroke-width="4" stroke-linecap="round"/><circle cx="65" cy="55" r="6" fill="var(--accent-warning, #ff9800)"/><path d="M35 35 L50 45 L65 55" stroke="var(--accent-warning, #ff9800)" stroke-width="2.5" fill="none" stroke-dasharray="4,3"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="4"/><path d="M35 30 L35 70" stroke="var(--text-secondary, #544e44)" stroke-width="4" stroke-linecap="round"/><circle cx="35" cy="35" r="6" fill="var(--accent-warning, #8a6a12)"/><path d="M65 30 L65 70" stroke="var(--text-secondary, #544e44)" stroke-width="4" stroke-linecap="round"/><circle cx="65" cy="55" r="6" fill="var(--accent-warning, #8a6a12)"/><path d="M35 35 L50 45 L65 55" stroke="var(--accent-warning, #8a6a12)" stroke-width="2.5" fill="none" stroke-dasharray="4,3"/></svg>',
     inputs: 0,
     outputs: 0
   },
   'propshaft': {
     name: 'Propşaft',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><line x1="10" y1="50" x2="90" y2="50" stroke="var(--text-secondary, #666)" stroke-width="10" stroke-linecap="round"/><circle cx="20" cy="50" r="10" fill="none" stroke="var(--text-muted, #888)" stroke-width="3"/><circle cx="50" cy="50" r="5" fill="var(--text-muted, #888)"/><circle cx="80" cy="50" r="10" fill="none" stroke="var(--text-muted, #888)" stroke-width="3"/><line x1="15" y1="40" x2="25" y2="60" stroke="var(--text-muted, #888)" stroke-width="2"/><line x1="75" y1="40" x2="85" y2="60" stroke="var(--text-muted, #888)" stroke-width="2"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><line x1="10" y1="50" x2="90" y2="50" stroke="var(--text-secondary, #544e44)" stroke-width="10" stroke-linecap="round"/><circle cx="20" cy="50" r="10" fill="none" stroke="var(--text-muted, #676055)" stroke-width="3"/><circle cx="50" cy="50" r="5" fill="var(--text-muted, #676055)"/><circle cx="80" cy="50" r="10" fill="none" stroke="var(--text-muted, #676055)" stroke-width="3"/><line x1="15" y1="40" x2="25" y2="60" stroke="var(--text-muted, #676055)" stroke-width="2"/><line x1="75" y1="40" x2="85" y2="60" stroke="var(--text-muted, #676055)" stroke-width="2"/></svg>',
     inputs: 1,
     outputs: 1
   },
   'engine': {
     name: 'Motor',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="20" y="25" width="60" height="50" fill="var(--text-secondary, #666)" rx="4"/><rect x="30" y="15" width="15" height="15" fill="var(--text-muted, #888)" rx="2"/><rect x="55" y="15" width="15" height="15" fill="var(--text-muted, #888)" rx="2"/><rect x="10" y="40" width="15" height="20" fill="var(--text-muted, #888)" rx="2"/><rect x="75" y="40" width="15" height="20" fill="var(--text-muted, #888)" rx="2"/><rect x="35" y="75" width="30" height="10" fill="var(--text-muted, #888)" rx="2"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="20" y="25" width="60" height="50" fill="var(--text-secondary, #544e44)" rx="4"/><rect x="30" y="15" width="15" height="15" fill="var(--text-muted, #676055)" rx="2"/><rect x="55" y="15" width="15" height="15" fill="var(--text-muted, #676055)" rx="2"/><rect x="10" y="40" width="15" height="20" fill="var(--text-muted, #676055)" rx="2"/><rect x="75" y="40" width="15" height="20" fill="var(--text-muted, #676055)" rx="2"/><rect x="35" y="75" width="30" height="10" fill="var(--text-muted, #676055)" rx="2"/></svg>',
     // Ön (sol) taraftaki 3 GİRİŞ portu = aksesuarlar (Klima / Alternatör / Hava
     // Komp.). Sıra port index'ine kilitli (bkz. cp-accessories.js VE_ACC_PORT_MAP):
     //   input-0 = Klima, input-1 = Alternatör, input-2 = Hava Kompresörü.
@@ -290,64 +290,64 @@ var componentDefs = {
   },
   'transfer': {
     name: 'Transfer Kutusu',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="25" y="20" width="50" height="60" fill="var(--text-secondary, #666)" rx="4"/><rect x="10" y="35" width="20" height="8" fill="var(--text-muted, #888)"/><rect x="70" y="30" width="20" height="8" fill="var(--text-muted, #888)"/><rect x="70" y="62" width="20" height="8" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="12" fill="var(--text-muted, #888)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="25" y="20" width="50" height="60" fill="var(--text-secondary, #544e44)" rx="4"/><rect x="10" y="35" width="20" height="8" fill="var(--text-muted, #676055)"/><rect x="70" y="30" width="20" height="8" fill="var(--text-muted, #676055)"/><rect x="70" y="62" width="20" height="8" fill="var(--text-muted, #676055)"/><circle cx="50" cy="50" r="12" fill="var(--text-muted, #676055)"/></svg>',
     inputs: 1,
     outputs: 2
   },
   'differential': {
     name: 'Diferansiyel',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="30" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="50" cy="50" r="15" fill="var(--text-muted, #888)"/><rect x="10" y="46" width="15" height="8" fill="var(--text-muted, #888)"/><rect x="75" y="30" width="15" height="8" fill="var(--text-muted, #888)"/><rect x="75" y="62" width="15" height="8" fill="var(--text-muted, #888)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="30" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="4"/><circle cx="50" cy="50" r="15" fill="var(--text-muted, #676055)"/><rect x="10" y="46" width="15" height="8" fill="var(--text-muted, #676055)"/><rect x="75" y="30" width="15" height="8" fill="var(--text-muted, #676055)"/><rect x="75" y="62" width="15" height="8" fill="var(--text-muted, #676055)"/></svg>',
     inputs: 1,
     outputs: 2
   },
   'wheel': {
     name: 'Tekerlek',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="var(--text-secondary, #666)"/><circle cx="50" cy="50" r="28" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="10" fill="var(--text-secondary, #666)"/><rect x="5" y="46" width="15" height="8" fill="var(--text-muted, #888)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="var(--text-secondary, #544e44)"/><circle cx="50" cy="50" r="28" fill="var(--text-muted, #676055)"/><circle cx="50" cy="50" r="10" fill="var(--text-secondary, #544e44)"/><rect x="5" y="46" width="15" height="8" fill="var(--text-muted, #676055)"/></svg>',
     inputs: 1,
     outputs: 0
   },
   'vehicle': {
     name: 'Araç',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="10" y="30" width="80" height="35" fill="var(--text-secondary, #666)" rx="4"/><rect x="15" y="20" width="50" height="15" fill="var(--text-muted, #888)" rx="3"/><circle cx="25" cy="70" r="10" fill="var(--text-muted, #888)"/><circle cx="75" cy="70" r="10" fill="var(--text-muted, #888)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="10" y="30" width="80" height="35" fill="var(--text-secondary, #544e44)" rx="4"/><rect x="15" y="20" width="50" height="15" fill="var(--text-muted, #676055)" rx="3"/><circle cx="25" cy="70" r="10" fill="var(--text-muted, #676055)"/><circle cx="75" cy="70" r="10" fill="var(--text-muted, #676055)"/></svg>',
     inputs: 0,
     outputs: 0
   },
   'sensor': {
     name: 'Sensör',
-    svg: '<svg width="23" height="23" viewBox="0 0 100 120"><circle cx="50" cy="32" r="28" fill="var(--accent-success, #22c55e)"/><circle cx="50" cy="32" r="12" fill="white" opacity="0.4"/><path d="M38 56 L50 110 L62 56" fill="var(--accent-success, #22c55e)"/></svg>',
+    svg: '<svg width="23" height="23" viewBox="0 0 100 120"><circle cx="50" cy="32" r="28" fill="var(--accent-success, #2f6b45)"/><circle cx="50" cy="32" r="12" fill="white" opacity="0.4"/><path d="M38 56 L50 110 L62 56" fill="var(--accent-success, #2f6b45)"/></svg>',
     inputs: 1,
     outputs: 0,
     isSensor: true
   },
   'sensor-wizard': {
     name: 'Sensör Sihirbazı',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--text-secondary, #999)" stroke-width="4"/><circle cx="30" cy="36" r="10" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="30" cy="36" r="4" fill="var(--text-secondary, #666)"/><path d="M30 46 L30 56" stroke="var(--text-secondary, #666)" stroke-width="2.5" stroke-linecap="round"/><circle cx="55" cy="36" r="10" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="55" cy="36" r="4" fill="var(--text-secondary, #666)"/><path d="M55 46 L55 56" stroke="var(--text-secondary, #666)" stroke-width="2.5" stroke-linecap="round"/><circle cx="80" cy="36" r="10" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="80" cy="36" r="4" fill="var(--text-secondary, #666)"/><path d="M80 46 L80 56" stroke="var(--text-secondary, #666)" stroke-width="2.5" stroke-linecap="round"/><path d="M20 62 L40 62 L55 58 L70 62 L88 62" stroke="var(--text-secondary, #666)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 72 L35 72 M45 72 L65 72 M75 72 L88 72" stroke="var(--text-muted, #888)" stroke-width="2" stroke-linecap="round" stroke-dasharray="3,3"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="4"/><circle cx="30" cy="36" r="10" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="3"/><circle cx="30" cy="36" r="4" fill="var(--text-secondary, #544e44)"/><path d="M30 46 L30 56" stroke="var(--text-secondary, #544e44)" stroke-width="2.5" stroke-linecap="round"/><circle cx="55" cy="36" r="10" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="3"/><circle cx="55" cy="36" r="4" fill="var(--text-secondary, #544e44)"/><path d="M55 46 L55 56" stroke="var(--text-secondary, #544e44)" stroke-width="2.5" stroke-linecap="round"/><circle cx="80" cy="36" r="10" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="3"/><circle cx="80" cy="36" r="4" fill="var(--text-secondary, #544e44)"/><path d="M80 46 L80 56" stroke="var(--text-secondary, #544e44)" stroke-width="2.5" stroke-linecap="round"/><path d="M20 62 L40 62 L55 58 L70 62 L88 62" stroke="var(--text-secondary, #544e44)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 72 L35 72 M45 72 L65 72 M75 72 L88 72" stroke="var(--text-muted, #676055)" stroke-width="2" stroke-linecap="round" stroke-dasharray="3,3"/></svg>',
     inputs: 0,
     outputs: 0,
     maxInstances: 1
   },
   'terminator': {
     name: 'Sonlandırıcı',
-    svg: '<svg width="22" height="22" viewBox="0 0 100 100"><rect x="18" y="18" width="64" height="64" rx="8" fill="none" stroke="var(--accent-danger, #ef4444)" stroke-width="5" stroke-dasharray="8,4"/><line x1="35" y1="35" x2="65" y2="65" stroke="var(--accent-danger, #ef4444)" stroke-width="5.5" stroke-linecap="round"/><line x1="65" y1="35" x2="35" y2="65" stroke="var(--accent-danger, #ef4444)" stroke-width="5.5" stroke-linecap="round"/></svg>',
+    svg: '<svg width="22" height="22" viewBox="0 0 100 100"><rect x="18" y="18" width="64" height="64" rx="8" fill="none" stroke="var(--accent-danger, #9a3b3b)" stroke-width="5" stroke-dasharray="8,4"/><line x1="35" y1="35" x2="65" y2="65" stroke="var(--accent-danger, #9a3b3b)" stroke-width="5.5" stroke-linecap="round"/><line x1="65" y1="35" x2="35" y2="65" stroke="var(--accent-danger, #9a3b3b)" stroke-width="5.5" stroke-linecap="round"/></svg>',
     inputs: 1,
     outputs: 0,
     isTerminator: true
   },
   'scenario': {
     name: 'Senaryolar',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="4"/><path d="M30 60 L45 40 L60 55 L75 30" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="75" cy="30" r="5" fill="var(--accent-warning, #ff9800)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="4"/><path d="M30 60 L45 40 L60 55 L75 30" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="75" cy="30" r="5" fill="var(--accent-warning, #8a6a12)"/></svg>',
     inputs: 0,
     outputs: 0
   },
   'coast-down': {
     name: 'Coast-Down',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M10 80 Q30 75 50 50 Q70 25 90 20" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linecap="round"/><circle cx="90" cy="20" r="6" fill="var(--accent-primary, #3b82f6)"/><circle cx="10" cy="80" r="6" fill="var(--text-muted, #888)"/><line x1="10" y1="85" x2="90" y2="85" stroke="var(--text-secondary, #666)" stroke-width="2"/><line x1="10" y1="85" x2="10" y2="20" stroke="var(--text-secondary, #666)" stroke-width="2"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M10 80 Q30 75 50 50 Q70 25 90 20" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linecap="round"/><circle cx="90" cy="20" r="6" fill="var(--accent-primary, #a8502b)"/><circle cx="10" cy="80" r="6" fill="var(--text-muted, #676055)"/><line x1="10" y1="85" x2="90" y2="85" stroke="var(--text-secondary, #544e44)" stroke-width="2"/><line x1="10" y1="85" x2="10" y2="20" stroke="var(--text-secondary, #544e44)" stroke-width="2"/></svg>',
     inputs: 0,
     outputs: 0
   },
   'solver': {
     name: 'Çözücü',
-    svg: '<svg width="28" height="28" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="10" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><polygon points="40,30 40,70 70,50" fill="var(--accent-primary, #3b82f6)"/></svg>',
+    svg: '<svg width="28" height="28" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="10" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5"/><polygon points="40,30 40,70 70,50" fill="var(--accent-primary, #a8502b)"/></svg>',
     inputs: 0,
     outputs: 0,
     defaultWidth: 90,
@@ -355,26 +355,26 @@ var componentDefs = {
   },
   'road': {
     name: 'Yol / Ortam',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M10 70 L90 40" stroke="var(--text-secondary, #666)" stroke-width="6" stroke-linecap="round"/><path d="M10 80 L90 50" stroke="var(--text-muted, #888)" stroke-width="3" stroke-dasharray="8,4"/><polygon points="85,30 95,45 85,45" fill="var(--accent-primary, #3b82f6)"/><circle cx="25" cy="22" r="10" fill="var(--accent-warning, #ff9800)" opacity="0.7"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M10 70 L90 40" stroke="var(--text-secondary, #544e44)" stroke-width="6" stroke-linecap="round"/><path d="M10 80 L90 50" stroke="var(--text-muted, #676055)" stroke-width="3" stroke-dasharray="8,4"/><polygon points="85,30 95,45 85,45" fill="var(--accent-primary, #a8502b)"/><circle cx="25" cy="22" r="10" fill="var(--accent-warning, #8a6a12)" opacity="0.7"/></svg>',
     inputs: 0,
     outputs: 0
   },
   'parametric': {
     name: 'Parametrik Analiz',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="12" y="12" width="76" height="76" rx="8" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/><text x="50" y="40" text-anchor="middle" font-size="28" font-weight="700" fill="var(--accent-primary, #3b82f6)">P</text><path d="M25 60 L40 55 L55 65 L70 48 L85 58" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="25" cy="60" r="3" fill="var(--accent-warning, #f59e0b)"/><circle cx="55" cy="65" r="3" fill="var(--accent-warning, #f59e0b)"/><circle cx="85" cy="58" r="3" fill="var(--accent-warning, #f59e0b)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="12" y="12" width="76" height="76" rx="8" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="4"/><text x="50" y="40" text-anchor="middle" font-size="28" font-weight="700" fill="var(--accent-primary, #a8502b)">P</text><path d="M25 60 L40 55 L55 65 L70 48 L85 58" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="25" cy="60" r="3" fill="var(--accent-warning, #8a6a12)"/><circle cx="55" cy="65" r="3" fill="var(--accent-warning, #8a6a12)"/><circle cx="85" cy="58" r="3" fill="var(--accent-warning, #8a6a12)"/></svg>',
     inputs: 0,
     outputs: 0
   },
   'obstacle-crossing': {
     name: 'Engel Geçme',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M5 75 L30 75 L40 40 L60 40 L70 75 L95 75" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><line x1="5" y1="80" x2="95" y2="80" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="20" cy="75" r="6" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3"/><circle cx="80" cy="75" r="6" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3"/><path d="M42 38 L50 25 L58 38" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M5 75 L30 75 L40 40 L60 40 L70 75 L95 75" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><line x1="5" y1="80" x2="95" y2="80" stroke="var(--text-secondary, #544e44)" stroke-width="3"/><circle cx="20" cy="75" r="6" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="3"/><circle cx="80" cy="75" r="6" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="3"/><path d="M42 38 L50 25 L58 38" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     inputs: 0,
     outputs: 0,
     maxInstances: 1
   },
   'gear-shift': {
     name: 'Vites Geçişleri',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="10" width="70" height="80" rx="8" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="4"/><circle cx="35" cy="35" r="6" fill="var(--text-secondary, #666)"/><circle cx="65" cy="35" r="6" fill="var(--text-secondary, #666)"/><circle cx="35" cy="60" r="6" fill="var(--text-secondary, #666)"/><circle cx="65" cy="60" r="6" fill="var(--text-secondary, #666)"/><path d="M35 35 L35 60" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round"/><path d="M35 60 L65 60" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round"/><circle cx="35" cy="60" r="8" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="2"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="10" width="70" height="80" rx="8" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="4"/><circle cx="35" cy="35" r="6" fill="var(--text-secondary, #544e44)"/><circle cx="65" cy="35" r="6" fill="var(--text-secondary, #544e44)"/><circle cx="35" cy="60" r="6" fill="var(--text-secondary, #544e44)"/><circle cx="65" cy="60" r="6" fill="var(--text-secondary, #544e44)"/><path d="M35 35 L35 60" stroke="var(--accent-warning, #8a6a12)" stroke-width="3" stroke-linecap="round"/><path d="M35 60 L65 60" stroke="var(--accent-warning, #8a6a12)" stroke-width="3" stroke-linecap="round"/><circle cx="35" cy="60" r="8" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="2"/></svg>',
     inputs: 0,
     outputs: 0
   },
@@ -393,30 +393,30 @@ var componentDefs = {
   // konum/rijitlik). Panel: cp-mount.js.
   'mnt-motor': {
     name: 'Motor',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="20" y="36" width="60" height="44" rx="4" fill="var(--accent-primary, #3b82f6)" opacity="0.85"/><rect x="30" y="22" width="14" height="16" fill="var(--accent-primary, #3b82f6)"/><rect x="52" y="22" width="14" height="16" fill="var(--accent-primary, #3b82f6)"/><circle cx="50" cy="58" r="5" fill="#fff"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="20" y="36" width="60" height="44" rx="4" fill="var(--accent-primary, #a8502b)" opacity="0.85"/><rect x="30" y="22" width="14" height="16" fill="var(--accent-primary, #a8502b)"/><rect x="52" y="22" width="14" height="16" fill="var(--accent-primary, #a8502b)"/><circle cx="50" cy="58" r="5" fill="#fff"/></svg>',
     inputs: 3, outputs: 0, isMountBody: true, defaultWidth: 84, defaultHeight: 76,
     portLayout: { inputs: ['left','top','bottom'] }   // ön / sağ / sol
   },
   'mnt-gearbox': {
     name: 'Şanzıman',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="26" y="24" width="48" height="56" rx="5" fill="var(--accent-primary, #3b82f6)" opacity="0.7"/><circle cx="50" cy="52" r="15" fill="none" stroke="#fff" stroke-width="4"/><circle cx="50" cy="52" r="4" fill="#fff"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="26" y="24" width="48" height="56" rx="5" fill="var(--accent-primary, #a8502b)" opacity="0.7"/><circle cx="50" cy="52" r="15" fill="none" stroke="#fff" stroke-width="4"/><circle cx="50" cy="52" r="4" fill="#fff"/></svg>',
     inputs: 2, outputs: 0, isMountBody: true,
     portLayout: { inputs: ['top','bottom'] }   // sağ / sol
   },
   'mnt-shaft': {
     name: 'Şaft',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="10" y="44" width="80" height="12" rx="6" fill="var(--text-secondary, #888)"/><circle cx="24" cy="50" r="8" fill="none" stroke="var(--text-muted, #aaa)" stroke-width="3"/><circle cx="76" cy="50" r="8" fill="none" stroke="var(--text-muted, #aaa)" stroke-width="3"/><circle cx="50" cy="50" r="5" fill="#fff"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="10" y="44" width="80" height="12" rx="6" fill="var(--text-secondary, #544e44)"/><circle cx="24" cy="50" r="8" fill="none" stroke="var(--text-muted, #676055)" stroke-width="3"/><circle cx="76" cy="50" r="8" fill="none" stroke="var(--text-muted, #676055)" stroke-width="3"/><circle cx="50" cy="50" r="5" fill="#fff"/></svg>',
     inputs: 1, outputs: 0, isMountBody: true
   },
   'mnt-bracket': {
     name: 'Braket',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M30 18 L30 78 L80 78" fill="none" stroke="var(--text-secondary, #888)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="42" cy="64" r="5" fill="#fff"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M30 18 L30 78 L80 78" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="42" cy="64" r="5" fill="#fff"/></svg>',
     inputs: 2, outputs: 1, isMountBody: true, defaultWidth: 50, defaultHeight: 46,
     portLayout: { inputs: ['top','bottom'], outputs: ['right'] }   // takozlar üst/alt
   },
   'mnt-transfer': {
     name: 'Transfer Kutusu',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="28" y="24" width="44" height="52" rx="4" fill="var(--accent-primary, #3b82f6)" opacity="0.75"/><rect x="12" y="36" width="16" height="8" fill="var(--text-muted, #aaa)"/><rect x="72" y="34" width="16" height="7" fill="var(--text-muted, #aaa)"/><rect x="72" y="59" width="16" height="7" fill="var(--text-muted, #aaa)"/><circle cx="50" cy="50" r="5" fill="#fff"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="28" y="24" width="44" height="52" rx="4" fill="var(--accent-primary, #a8502b)" opacity="0.75"/><rect x="12" y="36" width="16" height="8" fill="var(--text-muted, #676055)"/><rect x="72" y="34" width="16" height="7" fill="var(--text-muted, #676055)"/><rect x="72" y="59" width="16" height="7" fill="var(--text-muted, #676055)"/><circle cx="50" cy="50" r="5" fill="#fff"/></svg>',
     inputs: 1, outputs: 0, isMountBody: true
   },
   // ── PTO GRUBU (kuyruk mili + pompalar) ────────────────────────────────────
@@ -434,25 +434,25 @@ var componentDefs = {
   // Panel her iki yolu da tanır ve çakışmayı canlı uyarır (cp-mount.js _mntPtoConflict).
   'mnt-pto': {
     name: 'PTO',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><g stroke="var(--accent-primary, #3b82f6)" stroke-width="6.5" stroke-linecap="round"><line x1="32" y1="15" x2="32" y2="25"/><line x1="32" y1="75" x2="32" y2="85"/><line x1="7" y1="50" x2="17" y2="50"/><line x1="14" y1="32" x2="21" y2="39"/><line x1="14" y1="68" x2="21" y2="61"/><line x1="50" y1="32" x2="43" y2="39"/><line x1="50" y1="68" x2="43" y2="61"/></g><circle cx="32" cy="50" r="18" fill="var(--accent-primary, #3b82f6)" opacity="0.9"/><circle cx="32" cy="50" r="5.5" fill="#fff"/><rect x="50" y="46" width="30" height="8" rx="4" fill="var(--text-secondary, #888)"/><rect x="78" y="34" width="10" height="32" rx="3" fill="var(--text-secondary, #888)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><g stroke="var(--accent-primary, #a8502b)" stroke-width="6.5" stroke-linecap="round"><line x1="32" y1="15" x2="32" y2="25"/><line x1="32" y1="75" x2="32" y2="85"/><line x1="7" y1="50" x2="17" y2="50"/><line x1="14" y1="32" x2="21" y2="39"/><line x1="14" y1="68" x2="21" y2="61"/><line x1="50" y1="32" x2="43" y2="39"/><line x1="50" y1="68" x2="43" y2="61"/></g><circle cx="32" cy="50" r="18" fill="var(--accent-primary, #a8502b)" opacity="0.9"/><circle cx="32" cy="50" r="5.5" fill="#fff"/><rect x="50" y="46" width="30" height="8" rx="4" fill="var(--text-secondary, #544e44)"/><rect x="78" y="34" width="10" height="32" rx="3" fill="var(--text-secondary, #544e44)"/></svg>',
     inputs: 1, outputs: 1, isMountBody: true, isMountCarried: true, defaultWidth: 50, defaultHeight: 46,
     portLayout: { inputs: ['bottom'], outputs: ['right'] }
   },
   'mnt-pump': {
     name: 'Pompa',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="45" width="24" height="10" rx="5" fill="var(--text-secondary, #888)"/><circle cx="57" cy="50" r="27" fill="var(--accent-primary, #3b82f6)" opacity="0.85"/><polygon points="47,36 47,64 73,50" fill="#fff"/><rect x="49" y="8" width="16" height="17" rx="3" fill="var(--text-secondary, #888)"/><rect x="49" y="75" width="16" height="17" rx="3" fill="var(--text-secondary, #888)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="45" width="24" height="10" rx="5" fill="var(--text-secondary, #544e44)"/><circle cx="57" cy="50" r="27" fill="var(--accent-primary, #a8502b)" opacity="0.85"/><polygon points="47,36 47,64 73,50" fill="#fff"/><rect x="49" y="8" width="16" height="17" rx="3" fill="var(--text-secondary, #544e44)"/><rect x="49" y="75" width="16" height="17" rx="3" fill="var(--text-secondary, #544e44)"/></svg>',
     inputs: 1, outputs: 1, isMountBody: true, isMountCarried: true, defaultWidth: 50, defaultHeight: 46,
     portLayout: { inputs: ['bottom'], outputs: ['left'] }
   },
   'mnt-pto-group': {
     name: 'PTO Toplam',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><text x="50" y="21" text-anchor="middle" font-size="22" font-weight="700" fill="var(--accent-primary, #3b82f6)" font-family="ui-monospace, monospace">&#931;</text><rect x="7" y="28" width="86" height="57" rx="10" fill="var(--accent-primary, #3b82f6)" fill-opacity="0.10" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-dasharray="9 6"/><line x1="41" y1="56" x2="50" y2="56" stroke="var(--text-secondary, #888)" stroke-width="4" stroke-linecap="round"/><line x1="66" y1="56" x2="72" y2="56" stroke="var(--text-secondary, #888)" stroke-width="4" stroke-linecap="round"/><circle cx="28" cy="56" r="14" fill="var(--accent-primary, #3b82f6)" opacity="0.9"/><circle cx="28" cy="56" r="4.5" fill="#fff"/><circle cx="58" cy="56" r="10" fill="var(--accent-primary, #3b82f6)" opacity="0.6"/><circle cx="79" cy="56" r="8" fill="var(--accent-primary, #3b82f6)" opacity="0.42"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><text x="50" y="21" text-anchor="middle" font-size="22" font-weight="700" fill="var(--accent-primary, #a8502b)" font-family="ui-monospace, monospace">&#931;</text><rect x="7" y="28" width="86" height="57" rx="10" fill="var(--accent-primary, #a8502b)" fill-opacity="0.10" stroke="var(--accent-primary, #a8502b)" stroke-width="4" stroke-dasharray="9 6"/><line x1="41" y1="56" x2="50" y2="56" stroke="var(--text-secondary, #544e44)" stroke-width="4" stroke-linecap="round"/><line x1="66" y1="56" x2="72" y2="56" stroke="var(--text-secondary, #544e44)" stroke-width="4" stroke-linecap="round"/><circle cx="28" cy="56" r="14" fill="var(--accent-primary, #a8502b)" opacity="0.9"/><circle cx="28" cy="56" r="4.5" fill="#fff"/><circle cx="58" cy="56" r="10" fill="var(--accent-primary, #a8502b)" opacity="0.6"/><circle cx="79" cy="56" r="8" fill="var(--accent-primary, #a8502b)" opacity="0.42"/></svg>',
     inputs: 1, outputs: 1, isMountBody: true, isMountCarried: true, defaultWidth: 60, defaultHeight: 50,
     portLayout: { inputs: ['bottom'], outputs: ['left'] }
   },
   'mnt-mount': {
     name: 'Takoz',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #22c55e)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #888)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #2f6b45)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #2f6b45)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #2f6b45)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #544e44)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #676055)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #676055)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #676055)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #676055)" stroke-width="2.5"/></svg>',
     inputs: 0, outputs: 1, isMount: true, defaultWidth: 50, defaultHeight: 46
   },
   // Takoz Özellikleri — takoz KATALOĞU/kütüphane yöneticisi. Fiziksel topolojiye
@@ -461,29 +461,29 @@ var componentDefs = {
   // görünür. İç topolojide tek kopya (maxInstances:1). Panel: cp-mount.js.
   'mnt-library': {
     name: 'Takoz Özellikleri',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="16" y="12" width="68" height="76" rx="6" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="5"/><path d="M40 30 Q34 35 43 39 Q34 43 43 47 Q34 51 40 55" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="54" y1="34" x2="74" y2="34" stroke="var(--text-secondary, #888)" stroke-width="4" stroke-linecap="round"/><line x1="54" y1="44" x2="74" y2="44" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="26" y1="68" x2="74" y2="68" stroke="var(--text-muted, #aaa)" stroke-width="3.5" stroke-linecap="round"/><line x1="26" y1="78" x2="60" y2="78" stroke="var(--text-muted, #aaa)" stroke-width="3.5" stroke-linecap="round"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="16" y="12" width="68" height="76" rx="6" fill="none" stroke="var(--accent-success, #2f6b45)" stroke-width="5"/><path d="M40 30 Q34 35 43 39 Q34 43 43 47 Q34 51 40 55" fill="none" stroke="var(--accent-success, #2f6b45)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="54" y1="34" x2="74" y2="34" stroke="var(--text-secondary, #544e44)" stroke-width="4" stroke-linecap="round"/><line x1="54" y1="44" x2="74" y2="44" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/><line x1="26" y1="68" x2="74" y2="68" stroke="var(--text-muted, #676055)" stroke-width="3.5" stroke-linecap="round"/><line x1="26" y1="78" x2="60" y2="78" stroke="var(--text-muted, #676055)" stroke-width="3.5" stroke-linecap="round"/></svg>',
     inputs: 0, outputs: 0, isMountLibrary: true, maxInstances: 1, defaultWidth: 60, defaultHeight: 54
   },
   'mnt-solver': {
     name: 'Çözücü',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-danger, #ef4444)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-danger, #ef4444)"/><circle cx="78" cy="22" r="6" fill="var(--accent-warning, #f59e0b)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-danger, #9a3b3b)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-danger, #9a3b3b)"/><circle cx="78" cy="22" r="6" fill="var(--accent-warning, #8a6a12)"/></svg>',
     inputs: 0, outputs: 0, isMountSolver: true
   },
   // Araç Performans "Başlangıç ve Örnekler" — mnt-example'ın güç aktarma karşılığı.
   // Kayıt defteri ve panel js/cp-arac-example.js içinde.
   'ap-example': {
     name: 'Başlangıç ve Örnekler',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M28 14 h32 l14 14 v58 h-46 z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><path d="M60 14 v14 h14" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="42" width="14" height="11" rx="2" fill="var(--text-muted, #aaa)"/><line x1="48" y1="47" x2="56" y2="47" stroke="var(--text-muted, #aaa)" stroke-width="3"/><circle cx="61" cy="47" r="5" fill="none" stroke="var(--text-muted, #aaa)" stroke-width="3"/><line x1="36" y1="66" x2="66" y2="66" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="76" x2="54" y2="76" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M28 14 h32 l14 14 v58 h-46 z" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="5" stroke-linejoin="round"/><path d="M60 14 v14 h14" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="42" width="14" height="11" rx="2" fill="var(--text-muted, #676055)"/><line x1="48" y1="47" x2="56" y2="47" stroke="var(--text-muted, #676055)" stroke-width="3"/><circle cx="61" cy="47" r="5" fill="none" stroke="var(--text-muted, #676055)" stroke-width="3"/><line x1="36" y1="66" x2="66" y2="66" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="76" x2="54" y2="76" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/></svg>',
     inputs: 0, outputs: 0, isApExample: true, defaultWidth: 56, defaultHeight: 56
   },
   'mnt-example': {
     name: 'Başlangıç ve Örnekler',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M28 14 h32 l14 14 v58 h-46 z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><path d="M60 14 v14 h14" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><line x1="36" y1="44" x2="66" y2="44" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="56" x2="66" y2="56" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="68" x2="54" y2="68" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M28 14 h32 l14 14 v58 h-46 z" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="5" stroke-linejoin="round"/><path d="M60 14 v14 h14" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="5" stroke-linejoin="round"/><line x1="36" y1="44" x2="66" y2="44" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="56" x2="66" y2="56" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="68" x2="54" y2="68" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/></svg>',
     inputs: 0, outputs: 0, isMountExample: true, defaultWidth: 56, defaultHeight: 56
   },
   'mnt-viewer': {
     name: '3D Görüntüleyici',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M50 14 L84 32 L84 68 L50 86 L16 68 L16 32 Z" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><path d="M50 14 L50 50 M50 50 L84 32 M50 50 L16 32" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-linejoin="round"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M50 14 L84 32 L84 68 L50 86 L16 68 L16 32 Z" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linejoin="round"/><path d="M50 14 L50 50 M50 50 L84 32 M50 50 L16 32" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="4" stroke-linejoin="round"/></svg>',
     inputs: 0, outputs: 0, isMountViewer: true, defaultWidth: 60, defaultHeight: 56
   },
   // Koordinat Düzlemi — koordinat sistemini (X/Y/Z eksenleri + düzlemler) 3B
@@ -491,7 +491,7 @@ var componentDefs = {
   // Fiziksel topolojiye bağlanmaz. Panel/3B: cp-mount.js + cp-mount-viewer.js.
   'mnt-coordframe': {
     name: 'Koordinat Düzlemi',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M32 66 L78 66 L60 84 L14 84 Z" fill="var(--text-muted, #aaa)" opacity="0.18" stroke="var(--text-muted, #aaa)" stroke-width="1.5"/><line x1="32" y1="66" x2="32" y2="16" stroke="var(--accent-danger, #ef4444)" stroke-width="4.5" stroke-linecap="round"/><polygon points="32,12 28,22 36,22" fill="var(--accent-danger, #ef4444)"/><line x1="32" y1="66" x2="86" y2="66" stroke="var(--accent-success, #22c55e)" stroke-width="4.5" stroke-linecap="round"/><polygon points="90,66 80,62 80,70" fill="var(--accent-success, #22c55e)"/><line x1="32" y1="66" x2="10" y2="86" stroke="var(--accent-primary, #3b82f6)" stroke-width="4.5" stroke-linecap="round"/><polygon points="7,89 18,84 12,78" fill="var(--accent-primary, #3b82f6)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M32 66 L78 66 L60 84 L14 84 Z" fill="var(--text-muted, #676055)" opacity="0.18" stroke="var(--text-muted, #676055)" stroke-width="1.5"/><line x1="32" y1="66" x2="32" y2="16" stroke="var(--accent-danger, #9a3b3b)" stroke-width="4.5" stroke-linecap="round"/><polygon points="32,12 28,22 36,22" fill="var(--accent-danger, #9a3b3b)"/><line x1="32" y1="66" x2="86" y2="66" stroke="var(--accent-success, #2f6b45)" stroke-width="4.5" stroke-linecap="round"/><polygon points="90,66 80,62 80,70" fill="var(--accent-success, #2f6b45)"/><line x1="32" y1="66" x2="10" y2="86" stroke="var(--accent-primary, #a8502b)" stroke-width="4.5" stroke-linecap="round"/><polygon points="7,89 18,84 12,78" fill="var(--accent-primary, #a8502b)"/></svg>',
     inputs: 0, outputs: 0, isMountCoordFrame: true, defaultWidth: 60, defaultHeight: 56
   },
   // 2D Görünüm — güç grubunun üstten (X–Y) ve yandan (X–Z) ölçekli diyagramları:
@@ -499,7 +499,7 @@ var componentDefs = {
   // güncellendikçe yeniden çizilir. Fiziksel topolojiye bağlanmaz. Panel: cp-mount.js.
   'mnt-2dview': {
     name: '2D Görünüm',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="12" y="14" width="76" height="34" rx="3" fill="none" stroke="var(--text-secondary, #888)" stroke-width="3"/><line x1="20" y1="40" x2="20" y2="20" stroke="var(--accent-danger, #ef4444)" stroke-width="2.5"/><line x1="20" y1="40" x2="44" y2="40" stroke="var(--accent-success, #22c55e)" stroke-width="2.5"/><circle cx="52" cy="30" r="4" fill="var(--accent-warning, #f59e0b)"/><rect x="64" y="24" width="8" height="8" fill="var(--accent-success, #22c55e)"/><rect x="12" y="54" width="76" height="34" rx="3" fill="none" stroke="var(--text-secondary, #888)" stroke-width="3"/><line x1="20" y1="80" x2="20" y2="60" stroke="var(--accent-danger, #ef4444)" stroke-width="2.5"/><line x1="20" y1="80" x2="44" y2="80" stroke="var(--accent-primary, #3b82f6)" stroke-width="2.5"/><circle cx="52" cy="66" r="4" fill="var(--accent-warning, #f59e0b)"/><rect x="64" y="70" width="8" height="8" fill="var(--accent-success, #22c55e)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="12" y="14" width="76" height="34" rx="3" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="3"/><line x1="20" y1="40" x2="20" y2="20" stroke="var(--accent-danger, #9a3b3b)" stroke-width="2.5"/><line x1="20" y1="40" x2="44" y2="40" stroke="var(--accent-success, #2f6b45)" stroke-width="2.5"/><circle cx="52" cy="30" r="4" fill="var(--accent-warning, #8a6a12)"/><rect x="64" y="24" width="8" height="8" fill="var(--accent-success, #2f6b45)"/><rect x="12" y="54" width="76" height="34" rx="3" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="3"/><line x1="20" y1="80" x2="20" y2="60" stroke="var(--accent-danger, #9a3b3b)" stroke-width="2.5"/><line x1="20" y1="80" x2="44" y2="80" stroke="var(--accent-primary, #a8502b)" stroke-width="2.5"/><circle cx="52" cy="66" r="4" fill="var(--accent-warning, #8a6a12)"/><rect x="64" y="70" width="8" height="8" fill="var(--accent-success, #2f6b45)"/></svg>',
     inputs: 0, outputs: 0, isMount2DView: true, defaultWidth: 60, defaultHeight: 56
   },
   // Rapor — Çözücü'nün 6 SD sonuçlarını akademik, tamamen çevrimdışı bir HTML
@@ -507,7 +507,7 @@ var componentDefs = {
   // Fiziksel topolojiye bağlanmaz. Panel/üreteç: cp-mount-report.js.
   'mnt-report': {
     name: 'Rapor',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><path d="M60 12 v16 h16" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="60" width="8" height="18" fill="var(--accent-primary, #3b82f6)"/><rect x="47" y="50" width="8" height="28" fill="var(--accent-primary, #3b82f6)"/><rect x="60" y="42" width="8" height="36" fill="var(--accent-primary, #3b82f6)"/><line x1="34" y1="40" x2="66" y2="40" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linejoin="round"/><path d="M60 12 v16 h16" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="60" width="8" height="18" fill="var(--accent-primary, #a8502b)"/><rect x="47" y="50" width="8" height="28" fill="var(--accent-primary, #a8502b)"/><rect x="60" y="42" width="8" height="36" fill="var(--accent-primary, #a8502b)"/><line x1="34" y1="40" x2="66" y2="40" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/></svg>',
     inputs: 0, outputs: 0, isMountReport: true, defaultWidth: 60, defaultHeight: 56
   },
   // ── Araç Performans (ALT-SİSTEM / subsystem düğümü) ──────────────────────
@@ -516,7 +516,7 @@ var componentDefs = {
   // ve iç-topoloji mantığı js/cp-arac-performans.js içindedir.
   'arac-performans': {
     name: 'Araç Performans',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-dasharray="7 5"/><rect x="18" y="46" width="16" height="16" rx="2" fill="var(--text-secondary, #666)"/><line x1="34" y1="54" x2="47" y2="54" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="58" cy="54" r="10" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="58" cy="54" r="3" fill="var(--text-secondary, #666)"/><line x1="68" y1="54" x2="77" y2="54" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="84" cy="54" r="6" fill="none" stroke="var(--text-muted, #888)" stroke-width="3"/><path d="M64 22 h18 v18" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="4" stroke-dasharray="7 5"/><rect x="18" y="46" width="16" height="16" rx="2" fill="var(--text-secondary, #544e44)"/><line x1="34" y1="54" x2="47" y2="54" stroke="var(--text-secondary, #544e44)" stroke-width="4"/><circle cx="58" cy="54" r="10" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="4"/><circle cx="58" cy="54" r="3" fill="var(--text-secondary, #544e44)"/><line x1="68" y1="54" x2="77" y2="54" stroke="var(--text-secondary, #544e44)" stroke-width="4"/><circle cx="84" cy="54" r="6" fill="none" stroke="var(--text-muted, #676055)" stroke-width="3"/><path d="M64 22 h18 v18" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     inputs: 0,
     outputs: 0,
     isSubsystem: true
@@ -529,7 +529,7 @@ var componentDefs = {
   // Takoz/Çözücü) açılır (cp-mount.js veMntOpenEditor). isMountModule: dblclick.
   'mount-analysis': {
     name: 'Takoz Çökme-Titreşim',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-dasharray="7 5"/><rect x="30" y="34" width="30" height="10" rx="2" fill="var(--text-secondary, #666)"/><path d="M38 44 Q32 50 42 54 Q32 58 42 62 Q32 66 38 70" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 44 Q46 50 56 54 Q46 58 56 62 Q46 66 52 70" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><line x1="26" y1="72" x2="64" y2="72" stroke="var(--text-secondary, #666)" stroke-width="3"/><path d="M64 22 h18 v18" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="4" stroke-dasharray="7 5"/><rect x="30" y="34" width="30" height="10" rx="2" fill="var(--text-secondary, #544e44)"/><path d="M38 44 Q32 50 42 54 Q32 58 42 62 Q32 66 38 70" fill="none" stroke="var(--accent-success, #2f6b45)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 44 Q46 50 56 54 Q46 58 56 62 Q46 66 52 70" fill="none" stroke="var(--accent-success, #2f6b45)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><line x1="26" y1="72" x2="64" y2="72" stroke="var(--text-secondary, #544e44)" stroke-width="3"/><path d="M64 22 h18 v18" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     inputs: 0,
     outputs: 0,
     isSubsystem: true,
@@ -545,7 +545,7 @@ var componentDefs = {
   // modülün kimliği tek bakışta "kayış-kasnak".
   'fead-analysis': {
     name: 'FEAD',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-dasharray="7 5"/><circle cx="38" cy="58" r="16" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="38" cy="58" r="5" fill="var(--text-secondary, #666)"/><circle cx="68" cy="58" r="9" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="68" cy="58" r="3.2" fill="var(--text-secondary, #666)"/><path d="M41.7 42.4 L70.1 49.3 A9 9 0 0 1 70.1 66.8 L41.7 73.6 A16 16 0 1 1 41.7 42.4 Z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4" stroke-linejoin="round"/><path d="M64 22 h18 v18" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="4" stroke-dasharray="7 5"/><circle cx="38" cy="58" r="16" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="3"/><circle cx="38" cy="58" r="5" fill="var(--text-secondary, #544e44)"/><circle cx="68" cy="58" r="9" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="3"/><circle cx="68" cy="58" r="3.2" fill="var(--text-secondary, #544e44)"/><path d="M41.7 42.4 L70.1 49.3 A9 9 0 0 1 70.1 66.8 L41.7 73.6 A16 16 0 1 1 41.7 42.4 Z" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="4" stroke-linejoin="round"/><path d="M64 22 h18 v18" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     inputs: 0,
     outputs: 0,
     isSubsystem: true,
@@ -561,17 +561,17 @@ var componentDefs = {
   // ilgili giriş portuna gider. Panel/veri/senkron: js/cp-accessories.js.
   'acc-ac': {
     name: 'Klima Kompresörü',
-    svg: '<svg width="34" height="34" viewBox="0 0 100 100"><g stroke="var(--text-secondary, #666)" stroke-width="6" stroke-linecap="round"><line x1="50" y1="14" x2="50" y2="86"/><line x1="19" y1="32" x2="81" y2="68"/><line x1="81" y1="32" x2="19" y2="68"/></g><g stroke="var(--text-muted, #888)" stroke-width="4.5" stroke-linecap="round" fill="none"><path d="M50 14 l-9 11 M50 14 l9 11 M50 86 l-9 -11 M50 86 l9 -11 M19 32 l1 14 M19 32 l13 -3 M81 68 l-1 -14 M81 68 l-13 3 M81 32 l-13 -3 M81 32 l1 14 M19 68 l13 3 M19 68 l1 -14"/></g></svg>',
+    svg: '<svg width="34" height="34" viewBox="0 0 100 100"><g stroke="var(--text-secondary, #544e44)" stroke-width="6" stroke-linecap="round"><line x1="50" y1="14" x2="50" y2="86"/><line x1="19" y1="32" x2="81" y2="68"/><line x1="81" y1="32" x2="19" y2="68"/></g><g stroke="var(--text-muted, #676055)" stroke-width="4.5" stroke-linecap="round" fill="none"><path d="M50 14 l-9 11 M50 14 l9 11 M50 86 l-9 -11 M50 86 l9 -11 M19 32 l1 14 M19 32 l13 -3 M81 68 l-1 -14 M81 68 l-13 3 M81 32 l-13 -3 M81 32 l1 14 M19 68 l13 3 M19 68 l1 -14"/></g></svg>',
     inputs: 0, outputs: 1, defaultWidth: 54, defaultHeight: 50
   },
   'acc-alternator': {
     name: 'Alternatör',
-    svg: '<svg width="34" height="34" viewBox="0 0 100 100"><circle cx="52" cy="52" r="30" fill="none" stroke="var(--text-secondary, #666)" stroke-width="6"/><path d="M56 30 L38 57 L50 57 L45 74 L64 46 L52 46 Z" fill="var(--text-muted, #888)"/><rect x="10" y="47" width="13" height="9" rx="1" fill="var(--text-muted, #888)"/></svg>',
+    svg: '<svg width="34" height="34" viewBox="0 0 100 100"><circle cx="52" cy="52" r="30" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="6"/><path d="M56 30 L38 57 L50 57 L45 74 L64 46 L52 46 Z" fill="var(--text-muted, #676055)"/><rect x="10" y="47" width="13" height="9" rx="1" fill="var(--text-muted, #676055)"/></svg>',
     inputs: 0, outputs: 1, defaultWidth: 54, defaultHeight: 50
   },
   'acc-aircomp': {
     name: 'Hava Kompresörü',
-    svg: '<svg width="34" height="34" viewBox="0 0 100 100"><rect x="20" y="34" width="48" height="46" rx="8" fill="var(--text-secondary, #666)"/><circle cx="44" cy="57" r="13" fill="none" stroke="var(--text-muted, #888)" stroke-width="4"/><line x1="44" y1="57" x2="52" y2="49" stroke="var(--text-muted, #888)" stroke-width="3" stroke-linecap="round"/><rect x="68" y="44" width="16" height="9" rx="1" fill="var(--text-muted, #888)"/><rect x="38" y="20" width="14" height="14" rx="2" fill="var(--text-muted, #888)"/></svg>',
+    svg: '<svg width="34" height="34" viewBox="0 0 100 100"><rect x="20" y="34" width="48" height="46" rx="8" fill="var(--text-secondary, #544e44)"/><circle cx="44" cy="57" r="13" fill="none" stroke="var(--text-muted, #676055)" stroke-width="4"/><line x1="44" y1="57" x2="52" y2="49" stroke="var(--text-muted, #676055)" stroke-width="3" stroke-linecap="round"/><rect x="68" y="44" width="16" height="9" rx="1" fill="var(--text-muted, #676055)"/><rect x="38" y="20" width="14" height="14" rx="2" fill="var(--text-muted, #676055)"/></svg>',
     inputs: 0, outputs: 1, defaultWidth: 54, defaultHeight: 50
   },
 
@@ -616,37 +616,37 @@ var componentDefs = {
     // Torsiyonel damperli krank kasnağı: dış V-kanal halkası, kesikli amber
     // halka = damper kauçuğu (kasnağı sıradan bir kasnaktan ayıran işaret),
     // göbek flanşı + 4 cıvata.
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="50" cy="50" r="31" fill="none" stroke="var(--text-muted, #888)" stroke-width="2.5"/><circle cx="50" cy="50" r="25" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3" stroke-dasharray="5 4"/><circle cx="50" cy="50" r="17" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3.5"/><circle cx="50" cy="38.5" r="2.6" fill="var(--text-muted, #888)"/><circle cx="61.5" cy="50" r="2.6" fill="var(--text-muted, #888)"/><circle cx="50" cy="61.5" r="2.6" fill="var(--text-muted, #888)"/><circle cx="38.5" cy="50" r="2.6" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="6" fill="var(--text-secondary, #666)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5"/><circle cx="50" cy="50" r="31" fill="none" stroke="var(--text-muted, #676055)" stroke-width="2.5"/><circle cx="50" cy="50" r="25" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="3" stroke-dasharray="5 4"/><circle cx="50" cy="50" r="17" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="3.5"/><circle cx="50" cy="38.5" r="2.6" fill="var(--text-muted, #676055)"/><circle cx="61.5" cy="50" r="2.6" fill="var(--text-muted, #676055)"/><circle cx="50" cy="61.5" r="2.6" fill="var(--text-muted, #676055)"/><circle cx="38.5" cy="50" r="2.6" fill="var(--text-muted, #676055)"/><circle cx="50" cy="50" r="6" fill="var(--text-secondary, #544e44)"/></svg>',
     inputs: 0, outputs: 0, noCanvasBox: true, isFeadPulley: true, isFeadDriver: true, feadContact: 'grooved',
     defaultWidth: 72, defaultHeight: 66
   },
   'fead-alternator': {
     name: 'Alternatör',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #3b82f6)"/><line x1="36" y1="50" x2="41" y2="50" stroke="var(--text-muted, #888)" stroke-width="5"/><circle cx="64" cy="50" r="24" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><path d="M66.6 32.4 L55 53.2 L62.7 53.2 L59.5 64.1 L71.7 46.2 L64 46.2 Z" fill="var(--text-muted, #888)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #a8502b)"/><line x1="36" y1="50" x2="41" y2="50" stroke="var(--text-muted, #676055)" stroke-width="5"/><circle cx="64" cy="50" r="24" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="5"/><path d="M66.6 32.4 L55 53.2 L62.7 53.2 L59.5 64.1 L71.7 46.2 L64 46.2 Z" fill="var(--text-muted, #676055)"/></svg>',
     inputs: 0, outputs: 0, noCanvasBox: true, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
     defaultWidth: 62, defaultHeight: 58
   },
   'fead-ac': {
     name: 'Klima Kompresörü',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #3b82f6)"/><line x1="36" y1="50" x2="41" y2="50" stroke="var(--text-muted, #888)" stroke-width="5"/><circle cx="64" cy="50" r="24" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><g stroke="var(--text-muted, #888)" stroke-width="4" stroke-linecap="round"><line x1="64" y1="32" x2="64" y2="68"/><line x1="48.4" y1="41" x2="79.6" y2="59"/><line x1="79.6" y1="41" x2="48.4" y2="59"/></g></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #a8502b)"/><line x1="36" y1="50" x2="41" y2="50" stroke="var(--text-muted, #676055)" stroke-width="5"/><circle cx="64" cy="50" r="24" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="5"/><g stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"><line x1="64" y1="32" x2="64" y2="68"/><line x1="48.4" y1="41" x2="79.6" y2="59"/><line x1="79.6" y1="41" x2="48.4" y2="59"/></g></svg>',
     inputs: 0, outputs: 0, noCanvasBox: true, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
     defaultWidth: 62, defaultHeight: 58
   },
   'fead-waterpump': {
     name: 'Su Pompası',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #3b82f6)"/><line x1="36" y1="50" x2="40" y2="50" stroke="var(--text-muted, #888)" stroke-width="5"/><circle cx="63" cy="50" r="24" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><g stroke="var(--text-muted, #888)" stroke-width="3.5" stroke-linecap="round"><line x1="70" y1="50" x2="80" y2="50"/><line x1="66.5" y1="56.1" x2="71.5" y2="64.7"/><line x1="59.5" y1="56.1" x2="54.5" y2="64.7"/><line x1="56" y1="50" x2="46" y2="50"/><line x1="59.5" y1="43.9" x2="54.5" y2="35.3"/><line x1="66.5" y1="43.9" x2="71.5" y2="35.3"/></g><circle cx="63" cy="50" r="5" fill="var(--text-secondary, #666)"/><rect x="57" y="73" width="12" height="15" rx="2" fill="var(--text-muted, #888)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #a8502b)"/><line x1="36" y1="50" x2="40" y2="50" stroke="var(--text-muted, #676055)" stroke-width="5"/><circle cx="63" cy="50" r="24" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="5"/><g stroke="var(--text-muted, #676055)" stroke-width="3.5" stroke-linecap="round"><line x1="70" y1="50" x2="80" y2="50"/><line x1="66.5" y1="56.1" x2="71.5" y2="64.7"/><line x1="59.5" y1="56.1" x2="54.5" y2="64.7"/><line x1="56" y1="50" x2="46" y2="50"/><line x1="59.5" y1="43.9" x2="54.5" y2="35.3"/><line x1="66.5" y1="43.9" x2="71.5" y2="35.3"/></g><circle cx="63" cy="50" r="5" fill="var(--text-secondary, #544e44)"/><rect x="57" y="73" width="12" height="15" rx="2" fill="var(--text-muted, #676055)"/></svg>',
     inputs: 0, outputs: 0, noCanvasBox: true, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
     defaultWidth: 62, defaultHeight: 58
   },
   'fead-ps': {
     name: 'Direksiyon Pompası',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #3b82f6)"/><line x1="36" y1="50" x2="41" y2="50" stroke="var(--text-muted, #888)" stroke-width="5"/><circle cx="64" cy="50" r="24" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><circle cx="64" cy="50" r="14" fill="none" stroke="var(--text-muted, #888)" stroke-width="4"/><g stroke="var(--text-muted, #888)" stroke-width="3.5" stroke-linecap="round"><line x1="64" y1="45.5" x2="64" y2="36"/><line x1="60.2" y1="52.5" x2="52" y2="57"/><line x1="67.8" y1="52.5" x2="76" y2="57"/></g><circle cx="64" cy="50" r="4.5" fill="var(--text-muted, #888)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="22" cy="50" r="14" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5"/><circle cx="22" cy="50" r="4" fill="var(--accent-primary, #a8502b)"/><line x1="36" y1="50" x2="41" y2="50" stroke="var(--text-muted, #676055)" stroke-width="5"/><circle cx="64" cy="50" r="24" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="5"/><circle cx="64" cy="50" r="14" fill="none" stroke="var(--text-muted, #676055)" stroke-width="4"/><g stroke="var(--text-muted, #676055)" stroke-width="3.5" stroke-linecap="round"><line x1="64" y1="45.5" x2="64" y2="36"/><line x1="60.2" y1="52.5" x2="52" y2="57"/><line x1="67.8" y1="52.5" x2="76" y2="57"/></g><circle cx="64" cy="50" r="4.5" fill="var(--text-muted, #676055)"/></svg>',
     inputs: 0, outputs: 0, noCanvasBox: true, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
     defaultWidth: 62, defaultHeight: 58
   },
   'fead-aircomp': {
     name: 'Hava Kompresörü',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="19" cy="52" r="13" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="19" cy="52" r="3.6" fill="var(--accent-primary, #3b82f6)"/><rect x="38" y="30" width="46" height="46" rx="7" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><circle cx="58" cy="53" r="12" fill="none" stroke="var(--text-muted, #888)" stroke-width="4"/><line x1="58" y1="53" x2="66" y2="45" stroke="var(--text-muted, #888)" stroke-width="3.5" stroke-linecap="round"/><rect x="52" y="14" width="14" height="16" rx="2" fill="var(--text-muted, #888)"/><rect x="84" y="45" width="12" height="9" rx="2" fill="var(--text-muted, #888)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="19" cy="52" r="13" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5"/><circle cx="19" cy="52" r="3.6" fill="var(--accent-primary, #a8502b)"/><rect x="38" y="30" width="46" height="46" rx="7" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="5"/><circle cx="58" cy="53" r="12" fill="none" stroke="var(--text-muted, #676055)" stroke-width="4"/><line x1="58" y1="53" x2="66" y2="45" stroke="var(--text-muted, #676055)" stroke-width="3.5" stroke-linecap="round"/><rect x="52" y="14" width="14" height="16" rx="2" fill="var(--text-muted, #676055)"/><rect x="84" y="45" width="12" height="9" rx="2" fill="var(--text-muted, #676055)"/></svg>',
     inputs: 0, outputs: 0, noCanvasBox: true, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
     defaultWidth: 62, defaultHeight: 58
   },
@@ -654,14 +654,14 @@ var componentDefs = {
     name: 'Fan Kavraması',
     // Kesikli dış halka = viskoz kavrama gövdesi; dört kanat tek path'in 90°
     // döndürülmüş kopyasıdır (geometri tek yerde durur).
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="36" fill="none" stroke="var(--text-muted, #888)" stroke-width="2.5" stroke-dasharray="5 4"/><g fill="var(--accent-primary, #3b82f6)" opacity="0.85"><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z"/><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z" transform="rotate(90 50 50)"/><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z" transform="rotate(180 50 50)"/><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z" transform="rotate(270 50 50)"/></g><circle cx="50" cy="50" r="9" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="50" cy="50" r="3" fill="var(--text-secondary, #666)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="36" fill="none" stroke="var(--text-muted, #676055)" stroke-width="2.5" stroke-dasharray="5 4"/><g fill="var(--accent-primary, #a8502b)" opacity="0.85"><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z"/><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z" transform="rotate(90 50 50)"/><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z" transform="rotate(180 50 50)"/><path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z" transform="rotate(270 50 50)"/></g><circle cx="50" cy="50" r="9" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="4"/><circle cx="50" cy="50" r="3" fill="var(--text-secondary, #544e44)"/></svg>',
     inputs: 0, outputs: 0, noCanvasBox: true, isFeadPulley: true, isFeadAccessory: true, feadContact: 'grooved',
     defaultWidth: 62, defaultHeight: 58
   },
   'fead-idler': {
     name: 'Avara Kasnak',
     // Yük çekmez, kayış yolunu yönlendirir: düz/çıplak kasnak + rulman.
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="32" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="50" cy="50" r="24" fill="none" stroke="var(--text-muted, #888)" stroke-width="2.5"/><circle cx="50" cy="31.5" r="3" fill="var(--text-muted, #888)"/><circle cx="68.5" cy="50" r="3" fill="var(--text-muted, #888)"/><circle cx="50" cy="68.5" r="3" fill="var(--text-muted, #888)"/><circle cx="31.5" cy="50" r="3" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="13" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="50" cy="50" r="4" fill="var(--text-secondary, #666)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="32" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5"/><circle cx="50" cy="50" r="24" fill="none" stroke="var(--text-muted, #676055)" stroke-width="2.5"/><circle cx="50" cy="31.5" r="3" fill="var(--text-muted, #676055)"/><circle cx="68.5" cy="50" r="3" fill="var(--text-muted, #676055)"/><circle cx="50" cy="68.5" r="3" fill="var(--text-muted, #676055)"/><circle cx="31.5" cy="50" r="3" fill="var(--text-muted, #676055)"/><circle cx="50" cy="50" r="13" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="4"/><circle cx="50" cy="50" r="4" fill="var(--text-secondary, #544e44)"/></svg>',
     inputs: 0, outputs: 0, noCanvasBox: true, isFeadPulley: true, isFeadIdler: true, feadContact: 'back',
     defaultWidth: 54, defaultHeight: 50
   },
@@ -669,7 +669,7 @@ var componentDefs = {
     name: 'Gergi',
     // Pivot + kol + kasnak; amber yay oku kolun salınım yönünü söyler
     // (otomatik gergi). Avara ile karışmasın diye kol ZORUNLU işarettir.
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><line x1="64" y1="36" x2="24" y2="76" stroke="var(--text-secondary, #666)" stroke-width="8" stroke-linecap="round"/><circle cx="24" cy="76" r="8" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="24" cy="76" r="2.6" fill="var(--text-secondary, #666)"/><circle cx="64" cy="36" r="21" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="64" cy="36" r="6" fill="var(--accent-primary, #3b82f6)"/><path d="M41 89 A 44 44 0 0 0 73 79" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3.5" stroke-linecap="round"/><polygon points="72,72 84,79 71,85" fill="var(--accent-warning, #f59e0b)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><line x1="64" y1="36" x2="24" y2="76" stroke="var(--text-secondary, #544e44)" stroke-width="8" stroke-linecap="round"/><circle cx="24" cy="76" r="8" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="4"/><circle cx="24" cy="76" r="2.6" fill="var(--text-secondary, #544e44)"/><circle cx="64" cy="36" r="21" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5"/><circle cx="64" cy="36" r="6" fill="var(--accent-primary, #a8502b)"/><path d="M41 89 A 44 44 0 0 0 73 79" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="3.5" stroke-linecap="round"/><polygon points="72,72 84,79 71,85" fill="var(--accent-warning, #8a6a12)"/></svg>',
     inputs: 0, outputs: 0, noCanvasBox: true, isFeadPulley: true, isFeadTensioner: true, feadContact: 'back',
     defaultWidth: 58, defaultHeight: 54
   },
@@ -679,13 +679,13 @@ var componentDefs = {
   // aşağı bakar — kasnak tarafı) + künye satırları.
   'fead-belt': {
     name: 'Kayış Özellikleri',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="14" y="12" width="72" height="76" rx="6" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5"/><path d="M24 30 H76 V40 L67 52 L58 40 L49 52 L40 40 L31 52 L24 40 Z" fill="var(--accent-warning, #f59e0b)" fill-opacity="0.18" stroke="var(--accent-warning, #f59e0b)" stroke-width="3" stroke-linejoin="round"/><line x1="26" y1="66" x2="74" y2="66" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="26" y1="76" x2="58" y2="76" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="14" y="12" width="72" height="76" rx="6" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="5"/><path d="M24 30 H76 V40 L67 52 L58 40 L49 52 L40 40 L31 52 L24 40 Z" fill="var(--accent-warning, #8a6a12)" fill-opacity="0.18" stroke="var(--accent-warning, #8a6a12)" stroke-width="3" stroke-linejoin="round"/><line x1="26" y1="66" x2="74" y2="66" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/><line x1="26" y1="76" x2="58" y2="76" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/></svg>',
     inputs: 0, outputs: 0, isFeadBelt: true, maxInstances: 1,
     defaultWidth: 60, defaultHeight: 54
   },
   'fead-solver': {
     name: 'Çözücü',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-warning, #f59e0b)"/><circle cx="78" cy="22" r="6" fill="var(--accent-primary, #3b82f6)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-warning, #8a6a12)"/><circle cx="78" cy="22" r="6" fill="var(--accent-primary, #a8502b)"/></svg>',
     inputs: 0, outputs: 0, isFeadSolver: true
   },
   // "BAŞLANGIÇ VE ÖRNEKLER" (`fead-example`) KALDIRILDI (2026-09-09, kullanıcı
@@ -719,7 +719,7 @@ var componentDefs = {
   // DEĞİŞTİRMEZ — kullanıcının verdiği adı bir tıklamayla ezmek olurdu.
   'fead-layout': {
     name: 'Kayış Yolu',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M25.9 49.3 L65.2 24.4 A9 9 0 0 1 79 31.5 L81 65.6 A7 7 0 0 1 71.9 72.7 L29.6 76.3 A15 15 0 0 1 25.9 49.3 Z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4" stroke-linejoin="round"/><circle cx="34" cy="62" r="15" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="34" cy="62" r="4.5" fill="var(--text-secondary, #666)"/><circle cx="70" cy="32" r="9" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="70" cy="32" r="3" fill="var(--text-secondary, #666)"/><circle cx="74" cy="66" r="7" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="74" cy="66" r="2.6" fill="var(--text-secondary, #666)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M25.9 49.3 L65.2 24.4 A9 9 0 0 1 79 31.5 L81 65.6 A7 7 0 0 1 71.9 72.7 L29.6 76.3 A15 15 0 0 1 25.9 49.3 Z" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="4" stroke-linejoin="round"/><circle cx="34" cy="62" r="15" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="3"/><circle cx="34" cy="62" r="4.5" fill="var(--text-secondary, #544e44)"/><circle cx="70" cy="32" r="9" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="3"/><circle cx="70" cy="32" r="3" fill="var(--text-secondary, #544e44)"/><circle cx="74" cy="66" r="7" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="3"/><circle cx="74" cy="66" r="2.6" fill="var(--text-secondary, #544e44)"/></svg>',
     inputs: 0, outputs: 0, isFeadLayout: true
     // Ölçü BURADA YOK: kanvas düğümü CANLI ŞEMA kartıdır ve ölçüsü tek
     // yerden gelir (VE_FEAD_LAYOUT_W/H → aşağıdaki döngü).
@@ -747,7 +747,7 @@ var componentDefs = {
     name: 'Kayış Tablosu',
     // Amber başlık şeridi (kayış) + mavi veri satırları (kasnak): renk dili
     // FEAD'in geri kalanıyla aynı.
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="10" y="16" width="80" height="68" rx="6" fill="none" stroke="var(--text-secondary, #666)" stroke-width="5"/><path d="M10 34 H90" stroke="var(--accent-warning, #f59e0b)" stroke-width="7"/><g stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linecap="round"><line x1="20" y1="48" x2="80" y2="48"/><line x1="20" y1="62" x2="80" y2="62"/><line x1="20" y1="76" x2="80" y2="76"/></g><line x1="44" y1="34" x2="44" y2="84" stroke="var(--text-muted, #888)" stroke-width="3"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="10" y="16" width="80" height="68" rx="6" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="5"/><path d="M10 34 H90" stroke="var(--accent-warning, #8a6a12)" stroke-width="7"/><g stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linecap="round"><line x1="20" y1="48" x2="80" y2="48"/><line x1="20" y1="62" x2="80" y2="62"/><line x1="20" y1="76" x2="80" y2="76"/></g><line x1="44" y1="34" x2="44" y2="84" stroke="var(--text-muted, #676055)" stroke-width="3"/></svg>',
     inputs: 0, outputs: 0, isFeadTable: true, maxInstances: 1
     // Ölçü BURADA YOK: kart ölçüsü tek yerden gelir
     // (VE_FEAD_TABLE_W/H → aşağıdaki döngü), Kayış Yolu kartındaki kuralın aynısı.
@@ -774,7 +774,7 @@ var componentDefs = {
   'fead-spin': {
     name: 'Dönüş Yönü',
     // Kasnak (mavi) + çevresinde dönüş oku (amber): "bu halka hangi yöne gider".
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M50 14 A36 36 0 1 1 14 50" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="6" stroke-linecap="round"/><polygon points="5,55 14,36 23,55" fill="var(--accent-warning, #f59e0b)"/><circle cx="50" cy="50" r="20" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="50" cy="50" r="6" fill="var(--accent-primary, #3b82f6)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M50 14 A36 36 0 1 1 14 50" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="6" stroke-linecap="round"/><polygon points="5,55 14,36 23,55" fill="var(--accent-warning, #8a6a12)"/><circle cx="50" cy="50" r="20" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5"/><circle cx="50" cy="50" r="6" fill="var(--accent-primary, #a8502b)"/></svg>',
     inputs: 0, outputs: 0, isFeadSpin: true, maxInstances: 1,
     defaultWidth: 54, defaultHeight: 48
   },
@@ -791,13 +791,13 @@ var componentDefs = {
   'fead-wizard': {
     name: 'Başlangıç Sihirbazı',
     // Numaralı adımlar + son adımda onay işareti: "sırayla doldur, sonunda kur".
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="26" cy="26" r="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="26" cy="52" r="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5"/><circle cx="26" cy="78" r="9" fill="var(--accent-warning, #f59e0b)"/><line x1="26" y1="35" x2="26" y2="43" stroke="var(--text-muted, #aaa)" stroke-width="4"/><line x1="26" y1="61" x2="26" y2="69" stroke="var(--text-muted, #aaa)" stroke-width="4"/><line x1="44" y1="26" x2="82" y2="26" stroke="var(--text-muted, #aaa)" stroke-width="5" stroke-linecap="round"/><line x1="44" y1="52" x2="74" y2="52" stroke="var(--text-muted, #aaa)" stroke-width="5" stroke-linecap="round"/><path d="M46 78 l8 9 l17 -19" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="26" cy="26" r="9" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5"/><circle cx="26" cy="52" r="9" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5"/><circle cx="26" cy="78" r="9" fill="var(--accent-warning, #8a6a12)"/><line x1="26" y1="35" x2="26" y2="43" stroke="var(--text-muted, #676055)" stroke-width="4"/><line x1="26" y1="61" x2="26" y2="69" stroke="var(--text-muted, #676055)" stroke-width="4"/><line x1="44" y1="26" x2="82" y2="26" stroke="var(--text-muted, #676055)" stroke-width="5" stroke-linecap="round"/><line x1="44" y1="52" x2="74" y2="52" stroke="var(--text-muted, #676055)" stroke-width="5" stroke-linecap="round"/><path d="M46 78 l8 9 l17 -19" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     inputs: 0, outputs: 0, isFeadWizard: true, maxInstances: 1,
     defaultWidth: 60, defaultHeight: 56
   },
   'fead-report': {
     name: 'Rapor',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><path d="M60 12 v16 h16" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="60" width="8" height="18" fill="var(--accent-primary, #3b82f6)"/><rect x="47" y="50" width="8" height="28" fill="var(--accent-primary, #3b82f6)"/><rect x="60" y="42" width="8" height="36" fill="var(--accent-primary, #3b82f6)"/><line x1="34" y1="40" x2="66" y2="40" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linejoin="round"/><path d="M60 12 v16 h16" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="60" width="8" height="18" fill="var(--accent-primary, #a8502b)"/><rect x="47" y="50" width="8" height="28" fill="var(--accent-primary, #a8502b)"/><rect x="60" y="42" width="8" height="36" fill="var(--accent-primary, #a8502b)"/><line x1="34" y1="40" x2="66" y2="40" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/></svg>',
     inputs: 0, outputs: 0, isFeadReport: true, defaultWidth: 60, defaultHeight: 56
   },
 };
