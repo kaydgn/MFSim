@@ -254,3 +254,24 @@ kapattığı sıçrama. Üçüncüsü kaydı kalıcı olarak yeni sözlüğe yaz
 
 Korunan şey "kopya yok" değil **üçünün aynı kararı vermesi**. Kayıtlar yeni
 sözlüğe döndükçe üç liste birlikte silinebilir.
+
+## Atölye paleti — yüzey yönü bir KURAL (2026-09-22)
+
+**Hüküm.** `--bg-secondary` her zaman `--bg-primary`'den AÇIK (yükselen panel);
+`--bg-tertiary` ise **metinden UZAĞA** gider — açık zeminde primary'den KOYU,
+koyu zeminde AÇIK. `--bg-input` her iki uçta da uç değerdir.
+
+**Gerekçe.** Kural tahmin edilmedi, ondokuz temanın hepsinden ölçülerek
+çıkarıldı. Atölye paletinin ilk yazımında `--bg-tertiary` açık zeminde
+primary'den AÇIK konmuştu; o hâlde tertiary ile secondary neredeyse aynı
+değerde kalıyor ve **bütün oyuk yüzeyler sessizce düzleşiyordu** — hiçbir test
+kırılmazdı, çünkü kontrast eşikleri yine tutuyordu.
+
+**Ölçülen ikinci kelepçe.** Tertiary doğru yöne (koyuya) alınınca açık zeminin
+EN KÖTÜ yüzeyi o oldu ve `--text-muted` 4,23'e düştü. Eşiği tutan en açık değer
+arandı: `#676055` → 4,77. Bir basamak açığı (`#6b6458`) 4,49'da kalıyordu.
+Daha koyu bir değer eşiği rahat geçerdi ama kademe ayrışmasını
+(`secondary/muted`) gereksiz yere daraltırdı — 1,326'da bırakıldı.
+
+**Kapı.** `theme-contrast.test.js` — her jeton DÖRT yüzeye ayrı ayrı vurulur,
+yani yüzeylerden biri yanlış yöne giderse en kötü yüzey değişir ve eşik düşer.
