@@ -606,7 +606,7 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   
   // Motor net tork eğrisi (pump torque = net - deduction)
   ctx.beginPath();
-  ctx.strokeStyle = '#f59e0b';
+  ctx.strokeStyle = veThemeRgba('--accent-warning', 1);
   ctx.lineWidth = 2.5;
   ctx.setLineDash([]);
   var firstM = true;
@@ -627,7 +627,7 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   ctx.stroke();
   
   // Motor eğrisi etiketi
-  ctx.fillStyle = '#f59e0b'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillStyle = veThemeRgba('--accent-warning', 1); ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'left';
   // pumpDrop konvertörler arası ORTALAMA (bkz. chartPumpDrop) → ham float
   // basılırsa etikete 23.67059823029812 gibi bir değer sızar. 1 ondalık yeter.
   ctx.fillText('Motor (Net − ort. ' + pumpDrop.toFixed(1) + ' N·m)', xPos(torqueData[0].rpm) + 4, yPos(torqueData[0].torque - pumpDrop) - 8);
@@ -687,7 +687,7 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
     });
   } catch(err) {
     console.warn('ECM small chart dots error:', err);
-    ctx.fillStyle = '#f59e0b'; ctx.font = '9px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillStyle = veThemeRgba('--accent-warning', 1); ctx.font = '9px sans-serif'; ctx.textAlign = 'left';
     ctx.fillText('⚠ Kesişim hesaplama hatası', ml + 4, mt + ph - 4);
   }
   
@@ -705,7 +705,7 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   // legend'e ait olduğu için sol üstte duruyor.
   ctx.textAlign = 'left';
   if((zoomState.scale || 1) > 1.05 || (zoomState.scale || 1) < 0.95) {
-    ctx.fillStyle = '#60a5fa'; ctx.font = 'bold 9px sans-serif';
+    ctx.fillStyle = veThemeRgba('--seri-1', 1); ctx.font = 'bold 9px sans-serif';
     ctx.fillText(zoomState.scale.toFixed(1) + '× — sol tık: sıfırla', ml + 6, mt + 11);
   } else {
     ctx.fillStyle = isDark ? 'rgba(122,133,153,0.8)' : 'rgba(100,116,139,0.85)';
@@ -1443,7 +1443,7 @@ function ecmDrawModalChart() {
   // Motor curve (pump torque = net - deduction)
   var motorPts = [];
   ctx.beginPath();
-  ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 3; ctx.setLineDash([]);
+  ctx.strokeStyle = veThemeRgba('--accent-warning', 1); ctx.lineWidth = 3; ctx.setLineDash([]);
   var firstM = true;
   d.torqueData.forEach(function(dd) {
     var tp = Math.max(0, dd.torque - d.pumpDrop);
@@ -1469,7 +1469,7 @@ function ecmDrawModalChart() {
   ctx.closePath(); ctx.fill();
   
   // Motor label
-  ctx.fillStyle = '#f59e0b'; ctx.font = 'bold 12px system-ui, sans-serif'; ctx.textAlign = 'left';
+  ctx.fillStyle = veThemeRgba('--accent-warning', 1); ctx.font = 'bold 12px system-ui, sans-serif'; ctx.textAlign = 'left';
   // Ortalama düşüm — ham basılırsa uzun ondalık sızar (bkz. ecmAveragePumpDrop)
   ctx.fillText('Motor (Net − ort. ' + d.pumpDrop.toFixed(1) + ' N·m)', xPos(d.torqueData[1].rpm) + 6, yPos(d.torqueData[1].torque - d.pumpDrop) - 12);
   
@@ -1545,7 +1545,7 @@ function ecmDrawModalChart() {
         // Inner highlight
         ctx.beginPath();
         ctx.arc(px, py, 2.5, 0, Math.PI * 2);
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = veThemeRgba('--bg-input', 1);
         ctx.fill();
         
         // RPM label
@@ -1592,7 +1592,7 @@ function ecmDrawModalChart() {
     });
   } catch(err) {
     console.warn('ECM intersection dots error:', err);
-    ctx.fillStyle = '#f59e0b'; ctx.font = '11px system-ui, sans-serif'; ctx.textAlign = 'left';
+    ctx.fillStyle = veThemeRgba('--accent-warning', 1); ctx.font = '11px system-ui, sans-serif'; ctx.textAlign = 'left';
     ctx.fillText('⚠ Kesişim hesaplama hatası', ml + 6, mt + ph - 8);
   }
   

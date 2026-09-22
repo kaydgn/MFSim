@@ -166,3 +166,40 @@ test('tuval bir ÇUKURA oturuyor — her kenardan içeri, yarıçaplı, İÇ gö
   // GÖLGE İÇERİDE: dış gölge yükselti olurdu — emekli hükmün yasakladığı şey o
   expect(r.icGolge).toBe(true);
 });
+
+// KARŞILAMA EKRANINDA DURUM ŞERİDİ YOK.
+// Kural eskiden GEREKMİYORDU: şerit `.ve-doc-dock`in içindeydi ve onun
+// `.ve-no-module` kuralıyla birlikte gizleniyordu. Şerit tuvalin altına
+// taşınınca kapsamdan SESSİZCE çıktı ve karşılamanın dibinde
+// "0 bileşen, 0 bağlantı · %100 · Hazır" belirdi — arkada açık bir topoloji
+// varmış gibi. BİR ÖĞEYİ TAŞIMAK, ÜSTÜNDEKİ KURALLARI DA TAŞIMAKTIR.
+test('karşılama ekranında durum şeridi GÖRÜNMÜYOR', async ({ page }) => {
+  await page.goto('file://' + BUILD);
+  await page.fill('#mfsim-login-password', 'mfsim2024');
+  await page.press('#mfsim-login-password', 'Enter');
+  await page.waitForFunction(() => Array.isArray(window.nodes), null, { timeout: 90000 });
+  await page.waitForSelector('#mfsim-loading-screen', { state: 'hidden', timeout: 90000 });
+
+  const karsilama = await page.evaluate(() => {
+    const g = (s) => {
+      const e = document.querySelector(s);
+      if (!e) return { yok: true };
+      const b = e.getBoundingClientRect();
+      return { gorunur: b.width > 0 && b.height > 0 };
+    };
+    return { durum: g('#ve-status-bar'), dock: g('#ve-doc-dock'),
+             modulYok: !!document.querySelector('.ve-main.ve-no-module') };
+  });
+  expect(karsilama.modulYok).toBe(true);
+  expect(karsilama.durum.gorunur).toBe(false);
+  expect(karsilama.dock.gorunur).toBe(false);
+
+  // ve modüle girince GERİ GELİR — gizleme kalıcı olmamalı
+  await page.click('.ve-module-card[data-module="fead-analysis"]');
+  await page.waitForTimeout(1200);
+  const icerde = await page.evaluate(() => {
+    const b = document.querySelector('#ve-status-bar').getBoundingClientRect();
+    return b.width > 0 && b.height > 0;
+  });
+  expect(icerde).toBe(true);
+});

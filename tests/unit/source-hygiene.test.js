@@ -589,3 +589,85 @@ describe('tanımsız jetona başvuru yok', () => {
     expect(eksik).toEqual([]);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 7) KANVAS ÇİZİMİ TEMA KÖPRÜSÜNDEN GEÇER
+//
+// Canvas API `var(--x)` ÇÖZEMEZ: `ctx.fillStyle = 'var(--seri-1)'` sessizce
+// hiçbir şey yapmaz (geçersiz renk, önceki değer kalır). Köprü bu yüzden var
+// (`veThemeRgba`, js/theme.js) — jetonu okur, `rgba()` döndürür.
+//
+// ÖLÇÜLEN KUSUR (2026-09-22): 65 `ctx.fillStyle/strokeStyle` ataması köprüyü
+// ATLAYIP sabit hex yazıyordu. Hata bir temada görünmez, ötekinde okunmaz:
+//
+//     #8f3636 (seri kırmızısı)  koyu zeminde 2,45   ✗
+//     #a78bfa (seri moru)       beyazda      2,72   ✗
+//     #666    (eksen yazısı)    koyu zeminde         ✗
+//
+// Yani diyagramların yarısı bir kimlikte, yarısı ötekinde kayboluyordu.
+describe('kanvas çizimi tema köprüsünden geçer', () => {
+  const CIZIM = jsFiles(JS_DIR).filter(({ abs }) =>
+    /\.(fillStyle|strokeStyle)\s*=/.test(fs.readFileSync(abs, 'utf8')));
+
+  test('çizim yapan dosyalar bulundu (kapının dayandığı zemin)', () => {
+    expect(CIZIM.length).toBeGreaterThan(3);
+  });
+
+  test('hiçbir ctx renk ataması SABİT hex yazmıyor', () => {
+    const sabit = [];
+    CIZIM.forEach(({ rel, abs }) => {
+      fs.readFileSync(abs, 'utf8').split('\n').forEach((sat, i) => {
+        const m = sat.match(/\.(?:fillStyle|strokeStyle)\s*=\s*['"]#[0-9a-fA-F]{3,8}['"]/g);
+        if (m) m.forEach((x) => sabit.push(`${rel}:${i + 1} → ${x.trim()}`));
+      });
+    });
+    expect(sabit).toEqual([]);
+  });
+
+  // KÖPRÜ `var()` DİZESİ ALMAZ. Bir gün biri `ctx.fillStyle='var(--x)'`
+  // yazarsa hiçbir şey patlamaz — çizim önceki rengiyle sürer.
+  test("ctx'e `var(--…)` dizesi verilmiyor", () => {
+    const hatali = [];
+    CIZIM.forEach(({ rel, abs }) => {
+      fs.readFileSync(abs, 'utf8').split('\n').forEach((sat, i) => {
+        if (/\.(?:fillStyle|strokeStyle)\s*=\s*['"]var\(/.test(sat)) hatali.push(`${rel}:${i + 1}`);
+      });
+    });
+    expect(hatali).toEqual([]);
+  });
+
+  // SERİ PALETİ TEMA BAŞINA TANIMLI ve her biri KENDİ zeminlerinde ≥3:1.
+  // Tek bir palet iki kimliğe yetmiyordu — ölçümü yukarıda.
+  test('seri paleti iki kimlikte de tanımlı ve okunur', () => {
+    const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const lin = (c) => { const x = c / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+    const lum = (c) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+    const oran = (a, b) => {
+      const L1 = lum(hex(a)); const L2 = lum(hex(b));
+      return (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+    };
+    const blok = (id) => {
+      const re = new RegExp('\\[data-theme="' + id + '"\\][^{]*\\{([^}]*)\\}', 'g');
+      for (const m of STYLES.matchAll(re)) if (/--bg-primary\s*:/.test(m[1])) return m[1];
+      return '';
+    };
+    const jet = (b) => {
+      const o = {}; let m;
+      const re = /--([\w-]+):\s*([^;]+);/g;
+      while ((m = re.exec(b)) !== null) o[m[1]] = m[2].trim();
+      return o;
+    };
+    [['acik', ['bg-input', 'bg-secondary', 'bg-primary']],
+      ['koyu', ['bg-input', 'bg-secondary', 'bg-primary']]].forEach(([id, zeminler]) => {
+      const t = jet(blok(id));
+      const dusen = [];
+      [1, 2, 3, 4].forEach((n) => {
+        const c = t['seri-' + n];
+        expect(c).toMatch(/^#[0-9a-f]{6}$/i);
+        const en = Math.min(...zeminler.map((z) => oran(c, t[z])));
+        if (en < 3) dusen.push(`${id}/--seri-${n}: ${en.toFixed(2)}`);
+      });
+      expect(dusen).toEqual([]);
+    });
+  });
+});

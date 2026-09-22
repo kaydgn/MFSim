@@ -955,7 +955,7 @@ function drawVETCTauChart(nodeId, pts) {
   var ph = 200 - margin.top - margin.bottom;
   
   if(pts.length < 2) {
-    ctx.fillStyle = '#666'; ctx.font = '12px system-ui'; ctx.textAlign = 'center';
+    ctx.fillStyle = veThemeRgba('--text-secondary', 1); ctx.font = '12px system-ui'; ctx.textAlign = 'center';
     ctx.fillText('En az 2 veri noktası gerekli', rect.width / 2, 100);
     return;
   }
@@ -992,17 +992,17 @@ function drawVETCTauChart(nodeId, pts) {
   ctx.fillText('Coupling', couplingX, margin.top - 5);
   
   // Sol eksen (τ) - Mavi
-  ctx.strokeStyle = '#4aa3ff'; ctx.lineWidth = 1;
+  ctx.strokeStyle = veThemeRgba('--seri-1', 1); ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(margin.left, margin.top); ctx.lineTo(margin.left, margin.top + ph); ctx.stroke();
   // Sağ eksen (η) - Kırmızı
-  ctx.strokeStyle = '#ff6b6b';
+  ctx.strokeStyle = veThemeRgba('--seri-2', 1);
   ctx.beginPath(); ctx.moveTo(margin.left + pw, margin.top); ctx.lineTo(margin.left + pw, margin.top + ph); ctx.stroke();
   // Alt eksen
-  ctx.strokeStyle = '#444';
+  ctx.strokeStyle = veThemeRgba('--border-hover', 1);
   ctx.beginPath(); ctx.moveTo(margin.left, margin.top + ph); ctx.lineTo(margin.left + pw, margin.top + ph); ctx.stroke();
   
   // X etiketleri
-  ctx.fillStyle = '#888'; ctx.font = '9px system-ui'; ctx.textAlign = 'center';
+  ctx.fillStyle = veThemeRgba('--text-muted', 1); ctx.font = '9px system-ui'; ctx.textAlign = 'center';
   for(var i = 0; i <= 5; i++) {
     var xv = xMin + (xMax - xMin) * i / 5;
     ctx.fillText(xv.toFixed(2), xS(xv), margin.top + ph + 15);
@@ -1010,28 +1010,28 @@ function drawVETCTauChart(nodeId, pts) {
   ctx.fillText('SR [-]', margin.left + pw / 2, 200 - 5);
   
   // Sol Y etiketleri (τ)
-  ctx.fillStyle = '#4aa3ff'; ctx.textAlign = 'right';
+  ctx.fillStyle = veThemeRgba('--seri-1', 1); ctx.textAlign = 'right';
   for(var i = 0; i <= 4; i++) { var yv = tauMax * (_pcWin.minY + (_pcWin.maxY - _pcWin.minY) * i / 4); ctx.fillText(yv.toFixed(1), margin.left - 5, yT(yv) + 3); }
   
   // Sağ Y etiketleri (η)
-  ctx.fillStyle = '#ff6b6b'; ctx.textAlign = 'left';
+  ctx.fillStyle = veThemeRgba('--seri-2', 1); ctx.textAlign = 'left';
   for(var i = 0; i <= 4; i++) { var yv = etaMax * (_pcWin.minY + (_pcWin.maxY - _pcWin.minY) * i / 4); ctx.fillText(Math.round(yv), margin.left + pw + 5, yE(yv) + 3); }
   
   // Eğriler plot alanına kırpılır (yakınlaştırma taşmasın)
   ctx.save(); ctx.beginPath(); ctx.rect(margin.left, margin.top, pw, ph); ctx.clip();
 
   // τ eğrisi
-  ctx.strokeStyle = '#4aa3ff'; ctx.lineWidth = 2.5; ctx.beginPath();
+  ctx.strokeStyle = veThemeRgba('--seri-1', 1); ctx.lineWidth = 2.5; ctx.beginPath();
   pts.forEach(function(p, i) { var x = xS(p.sr), y = yT(p.tau); if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
   ctx.stroke();
-  ctx.fillStyle = '#4aa3ff';
+  ctx.fillStyle = veThemeRgba('--seri-1', 1);
   pts.forEach(function(p) { ctx.beginPath(); ctx.arc(xS(p.sr), yT(p.tau), 3.5, 0, Math.PI * 2); ctx.fill(); });
   
   // η eğrisi
-  ctx.strokeStyle = '#ff6b6b'; ctx.lineWidth = 2.5; ctx.beginPath();
+  ctx.strokeStyle = veThemeRgba('--seri-2', 1); ctx.lineWidth = 2.5; ctx.beginPath();
   pts.forEach(function(p, i) { var x = xS(p.sr), y = yE(p.eta); if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
   ctx.stroke();
-  ctx.fillStyle = '#ff6b6b';
+  ctx.fillStyle = veThemeRgba('--seri-2', 1);
   pts.forEach(function(p) { ctx.beginPath(); ctx.arc(xS(p.sr), yE(p.eta), 3.5, 0, Math.PI * 2); ctx.fill(); });
   ctx.restore();   // kırpma biter
 
@@ -1073,7 +1073,7 @@ function drawVETCKpumpChart(nodeId, pts) {
   var ph = 180 - margin.top - margin.bottom;
   
   if(pts.length < 2) {
-    ctx.fillStyle = '#666'; ctx.font = '12px system-ui'; ctx.textAlign = 'center';
+    ctx.fillStyle = veThemeRgba('--text-secondary', 1); ctx.font = '12px system-ui'; ctx.textAlign = 'center';
     ctx.fillText('En az 2 veri noktası gerekli', rect.width / 2, 90);
     return;
   }
@@ -1099,14 +1099,14 @@ function drawVETCKpumpChart(nodeId, pts) {
   }
   
   // Sol eksen
-  ctx.strokeStyle = '#a78bfa'; ctx.lineWidth = 1;
+  ctx.strokeStyle = veThemeRgba('--seri-3', 1); ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(margin.left, margin.top); ctx.lineTo(margin.left, margin.top + ph); ctx.stroke();
   // Alt eksen
-  ctx.strokeStyle = '#444';
+  ctx.strokeStyle = veThemeRgba('--border-hover', 1);
   ctx.beginPath(); ctx.moveTo(margin.left, margin.top + ph); ctx.lineTo(margin.left + pw, margin.top + ph); ctx.stroke();
   
   // X etiketleri
-  ctx.fillStyle = '#888'; ctx.font = '9px system-ui'; ctx.textAlign = 'center';
+  ctx.fillStyle = veThemeRgba('--text-muted', 1); ctx.font = '9px system-ui'; ctx.textAlign = 'center';
   for(var i = 0; i <= 5; i++) {
     var xv = xMin + (xMax - xMin) * i / 5;
     ctx.fillText(xv.toFixed(2), xS(xv), margin.top + ph + 15);
@@ -1114,7 +1114,7 @@ function drawVETCKpumpChart(nodeId, pts) {
   ctx.fillText('SR [-]', margin.left + pw / 2, 180 - 5);
   
   // Y etiketleri
-  ctx.fillStyle = '#a78bfa'; ctx.textAlign = 'right';
+  ctx.fillStyle = veThemeRgba('--seri-3', 1); ctx.textAlign = 'right';
   for(var i = 0; i <= 4; i++) {
     var yv = kMin + (kMax - kMin) * i / 4;
     ctx.fillText(yv.toFixed(1), margin.left - 5, yS(yv) + 3);
@@ -1124,10 +1124,10 @@ function drawVETCKpumpChart(nodeId, pts) {
   ctx.save(); ctx.beginPath(); ctx.rect(margin.left, margin.top, pw, ph); ctx.clip();
 
   // K_pump eğrisi
-  ctx.strokeStyle = '#a78bfa'; ctx.lineWidth = 2.5; ctx.beginPath();
+  ctx.strokeStyle = veThemeRgba('--seri-3', 1); ctx.lineWidth = 2.5; ctx.beginPath();
   pts.forEach(function(p, i) { var x = xS(p.sr), y = yS(p.kpump); if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
   ctx.stroke();
-  ctx.fillStyle = '#a78bfa';
+  ctx.fillStyle = veThemeRgba('--seri-3', 1);
   pts.forEach(function(p) { ctx.beginPath(); ctx.arc(xS(p.sr), yS(p.kpump), 3.5, 0, Math.PI * 2); ctx.fill(); });
   ctx.restore();
 

@@ -2445,7 +2445,7 @@ function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
 
   // Nokta markerlar
   for(var n = 0; n < points.length; n++) {
-    ctx.fillStyle = '#3b82f6';
+    ctx.fillStyle = veThemeRgba('--seri-1', 1);
     ctx.beginPath();
     ctx.arc(toX(points[n].x), toY(points[n].y), 3, 0, 2 * Math.PI);
     ctx.fill();

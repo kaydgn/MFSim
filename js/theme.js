@@ -99,6 +99,13 @@ function changeTheme(kip) {
 // yeni renk gelir (minimap'in kullandığı teknikle aynı). Tüm temalar 6 haneli
 // hex tanımlar; çözülemeyen değerde fallback döner ki grafik hiç renksiz
 // kalmasın.
+// ÖNBELLEKSİZ, BİLEREK. Çizim döngüsünde kare başına onlarca çağrı olduğu için
+// bir önbellek denendi ve GERİ ALINDI: jeton değeri `changeTheme` dışında bir
+// yoldan değişirse (bir testin kurduğu sahne, ileride bir kullanıcı teması)
+// önbellek bayat kalıyor ve köprü "şu anki değeri oku" sözünü bozuyor.
+// Kazanç ÖLÇÜLMEDEN eklenmişti; sözleşme ölçülmüş bir kazanç için bile
+// bozulmazdı. Çağıran tarafta önbellek meşru ve zaten var —
+// `js/results.js` → `_drThemeColors()` tema değişiminde sıfırlanıyor.
 function veThemeRgba(varName, alpha, fallback) {
   var v = '';
   try {
