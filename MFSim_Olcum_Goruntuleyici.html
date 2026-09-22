@@ -144,10 +144,18 @@
        chroma kuralı, halation eşiği, kehribar rampası) ve kaldırma kararı:
        docs/decisions/ortak-yuzeyler.md.
 
-       BU TURDA RENK DEĞERİ DEĞİŞMEDİ: Açık birebir eski 'pearl', Koyu birebir
-       eski 'slate'. Atölye paleti bir SONRAKİ turda bu iki bloğun içine
-       yazılacak — kimlik geçişiyle palet değişimi aynı commit'te olsaydı
-       'koyu mod açık çiziyor' ile 'koyu palet açık göründü' ayırt edilemezdi.
+       ATÖLYE PALETİ. Sıcak kâğıt zemin + terrakota aksan; koyu zemin de aynı
+       sıcak ailede (mavi-siyah değil kahve-siyah). Kimlik geçişi bir ÖNCEKİ
+       turda ayrı yapıldı: ikisi aynı commit'te olsaydı 'koyu mod açık çiziyor'
+       ile 'koyu palet açık göründü' birbirinden ayrılamazdı.
+
+       YÜZEY YÖNÜ BİR KURAL, TERCİH DEĞİL: --bg-secondary her zaman primary'den
+       AÇIK (yükselen panel), --bg-tertiary ise METİNDEN UZAĞA gider — açık
+       zeminde primary'den KOYU, koyu zeminde AÇIK. Ölçülerek çıkarıldı;
+       tertiary'yi ters yöne koymak bütün oyuk yüzeyleri sessizce düzleştirir.
+
+       --text-muted açık zeminde #676055: eşiği tutan EN AÇIK değer (4,77).
+       Bir basamak açığı (#6b6458) tertiary üstünde 4,49'a düşüyordu.
 
        KİMLİKLER TEK KELİME VE TİRESİZ olmak zorunda: js/loader.js'in ilk-kare
        süzgeci /^[a-z]+$/ ve tireli bir kimlik oradan geçmez — geçmezse
@@ -172,59 +180,59 @@
     /* ── AÇIK — belgenin varsayılanı ─────────────────────────────────────── */
     :root, [data-theme="acik"] {
       color-scheme: light;
-      --bg-primary: #fafbfc;
-      --bg-secondary: #ffffff;
-      --bg-tertiary: #f0f1f3;
+      --bg-primary: #f0ede7;
+      --bg-secondary: #faf8f4;
+      --bg-tertiary: #e6e1d8;
       --bg-input: #ffffff;
-      --border-color: #e0e2e6;
-      --border-light: #e8eaed;
-      --border-hover: #c0c4cc;
-      --text-primary: #1b1e24;
-      --text-secondary: #4e535e;
-      --text-muted: #646d7d;
-      --text-heading: #0c0e12;
-      --accent-primary: #2d6fe6;
-      --accent-success: #1a9a50;
-      --accent-warning: #d49318;
-      --accent-danger: #d43d3d;
-      --shadow-color: rgba(0, 0, 0, 0.06);
+      --border-color: #dcd8d0;
+      --border-light: #e4ded4;
+      --border-hover: #c2bbac;
+      --text-primary: #26241f;
+      --text-secondary: #544e44;
+      --text-muted: #676055;
+      --text-heading: #14120f;
+      --accent-primary: #a8502b;
+      --accent-success: #2f6b45;
+      --accent-warning: #8a6a12;
+      --accent-danger: #9a3b3b;
+      --shadow-color: rgba(38, 36, 31, 0.10);
       --on-accent: #ffffff;
-      --on-success: #051e10;
-      --on-warning: #442f08;
+      --on-success: #ffffff;
+      --on-warning: #ffffff;
       --on-danger: #ffffff;
-      --ink-accent: #1b63e4;
-      --ink-success: #157b40;
-      --ink-warning: #8e6310;
-      --ink-danger: #cb2d2d;
+      --ink-accent: #96441f;
+      --ink-success: #2a6140;
+      --ink-warning: #6d5310;
+      --ink-danger: #8f3636;
     }
 
     /* ── KOYU ────────────────────────────────────────────────────────────── */
     [data-theme="koyu"] {
       color-scheme: dark;
-      --bg-primary: #0a0c10;
-      --bg-secondary: #0f1218;
-      --bg-tertiary: #151a22;
-      --bg-input: #080a0e;
-      --border-color: #1c2333;
-      --border-light: #222b3a;
-      --border-hover: #2d3a4f;
-      --text-primary: #c8d1dc;
-      --text-secondary: #98a0b0;
-      --text-muted: #75849d;
-      --text-heading: #e2e8f0;
-      --accent-primary: #2563eb;
-      --accent-success: #16a34a;
-      --accent-warning: #d97706;
-      --accent-danger: #dc2626;
-      --shadow-color: rgba(0, 0, 0, 0.6);
-      --on-accent: #ffffff;
-      --on-success: #052812;
-      --on-warning: #391f02;
-      --on-danger: #ffffff;
-      --ink-accent: #4e80ef;
-      --ink-success: var(--accent-success);
-      --ink-warning: var(--accent-warning);
-      --ink-danger: #e35454;
+      --bg-primary: #1a1815;
+      --bg-secondary: #221f1b;
+      --bg-tertiary: #2a2621;
+      --bg-input: #141210;
+      --border-color: #37312a;
+      --border-light: #413a32;
+      --border-hover: #544c42;
+      --text-primary: #e6e0d5;
+      --text-secondary: #b7ae9f;
+      --text-muted: #968d7e;
+      --text-heading: #f7f2e9;
+      --accent-primary: #d9763f;
+      --accent-success: #5fae7a;
+      --accent-warning: #d2a545;
+      --accent-danger: #d97676;
+      --shadow-color: rgba(0, 0, 0, 0.55);
+      --on-accent: #20130a;
+      --on-success: #052312;
+      --on-warning: #2a1f05;
+      --on-danger: #2a0d0d;
+      --ink-accent: #e08a56;
+      --ink-success: #6cbb87;
+      --ink-warning: #d9ae52;
+      --ink-danger: #e08585;
     }
 
     /* ========== TASARIM SİSTEMİ ÖLÇEKLERİ (tema-bağımsız) ==========

@@ -74,9 +74,9 @@ function _veSettingsRenderAppearance() {
   // görünürdü), bu yüzden renkler burada sabit; palet değişirse burası da
   // değişmeli. Kapı: tests/unit/theme-consistency.test.js.
   var kipler = [
-    { id: 'acik',   name: 'Açık',   swatch: ['#fafbfc', '#f0f1f3', '#2d6fe6'] },
-    { id: 'koyu',   name: 'Koyu',   swatch: ['#0a0c10', '#151a22', '#2563eb'] },
-    { id: 'sistem', name: 'Sistem', swatch: ['#fafbfc', '#0a0c10', '#2d6fe6'] }
+    { id: 'acik',   name: 'Açık',   swatch: ['#f0ede7', '#e6e1d8', '#a8502b'] },
+    { id: 'koyu',   name: 'Koyu',   swatch: ['#1a1815', '#2a2621', '#d9763f'] },
+    { id: 'sistem', name: 'Sistem', swatch: ['#f0ede7', '#1a1815', '#a8502b'] }
   ];
 
   var html = '<h3 class="ve-settings-section-title">Görünüm</h3>';
