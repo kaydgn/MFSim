@@ -835,3 +835,83 @@ describe('her :hover gerçekten bir şey değiştirir', () => {
     expect(olu).toEqual([]);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 11) PENCERE KABUKLARI JETON KONUŞUR
+//
+// Kaplamalar ve pencereler yarı yarıya jeton, yarı yarıya sabit değer
+// yazıyordu — ve iki taraf AYNI şeyi söylemiyordu:
+//
+//   perde   `--scrim` = rgba(0,0,0,0.62)  ↔  iki kaplama `rgba(0,0,0,0.6)`
+//   gölge   `--shadow-xl` = 0 12px 32px var(--shadow-color)
+//                                        ↔  iki pencere `0 24px 70px rgba(0,0,0,.42)`
+//   z       `--z-overlay: 300` (yorumu modül kaplamasını ADIYLA sayıyor)
+//                                        ↔  `.ve-module-overlay` `z-index:100`
+//
+// Gölge farkı görünür bir kusurdu: `--shadow-color` TEMA FARKINDADIR (açıkta
+// rgba(38,36,31,0.10), koyuda rgba(0,0,0,0.55)); sabit `rgba(0,0,0,.42)` açık
+// kimlikte jetonun 4,2 KATI donuk siyah bir leke bırakıyordu. Perde farkı
+// gözle ayırt edilmez (0,60 ↔ 0,62) ama jetonu değiştiren bir tur pencerelerin
+// YARISINI hareket ettirirdi. z farkı `.ve-split-dropzone` ile aynı sayıya
+// oturuyordu — aynı kapta buluşsalar sıra kaynak sırasına kalırdı.
+//
+// `.ve-chart-legend-overlay` MUAF: `position:absolute` ile bir grafiğin İÇİNDE
+// duran künye rozeti, pencere kabuğu değil; z'si o grafiğin yerel yığınına ait.
+describe('pencere kabukları jeton konuşur', () => {
+  const MUAF = ['.ve-chart-legend-overlay'];
+  // Kabuk = kuralın ÖZNESİ bir overlay/modal/panel olan kural.
+  //
+  // "Adında geçen" YETMEZ ve ölçüldü: `.ve-properties-content .ve-eng-sheet th`
+  // yapışkan bir tablo başlığı ve `z-index:1` onun YEREL kaldırması — pencere
+  // kabuğunun yığın katmanı değil. Özne, seçicinin SON bileşik parçasıdır;
+  // torunlar kapının dışında kalır.
+  const KABUK_ADI = /\.[\w-]*(overlay|modal|panel|properties)[\w-]*/i;
+  function kabuklar(metin) {
+    const out = [];
+    const bas = /(?:^|[}\s;])([^{};@]*\{)/g;
+    let m;
+    while ((m = bas.exec(metin))) {
+      const ham = m[1].slice(0, -1).trim();
+      if (!ham || ham.startsWith('@')) continue;
+      let d = 1, j = bas.lastIndex;
+      while (j < metin.length && d > 0) { if (metin[j] === '{') d++; else if (metin[j] === '}') d--; j++; }
+      const govde = metin.slice(bas.lastIndex, j - 1);
+      // Her seçici dalında ÖZNE (son bileşik) kabuk mu?
+      const ozne = ham.split(',').some((dal) => {
+        const son = dal.trim().split(/[\s>+~]+/).filter(Boolean).pop() || '';
+        return KABUK_ADI.test(son);
+      });
+      if (ozne) out.push({ sel: ham, govde, sat: metin.slice(0, m.index).split('\n').length });
+      bas.lastIndex = j;
+    }
+    return out;
+  }
+
+  test('perde · gölge · z-index sabit değerden değil jetondan gelir', () => {
+    const govde = STYLES.replace(/\/\*[\s\S]*?\*\//g, '');
+    const kalan = [];
+    kabuklar(govde).forEach((r) => {
+      if (MUAF.some((m) => r.sel.includes(m))) return;
+      r.govde.split(';').forEach((dec) => {
+        const k = dec.indexOf(':');
+        if (k < 0) return;
+        const ad = dec.slice(0, k).trim().toLowerCase();
+        const val = dec.slice(k + 1).trim().replace(/\s+/g, ' ');
+        if (val.includes('var(')) return;                    // jetondan geliyor
+        if (ad === 'background' && /rgba?\(/.test(val)) kalan.push(`${r.sat}: ${r.sel} → perde ${val}`);
+        if (ad === 'box-shadow' && /rgba?\(/.test(val)) kalan.push(`${r.sat}: ${r.sel} → gölge ${val}`);
+        if (ad === 'z-index' && /^\d+$/.test(val)) kalan.push(`${r.sat}: ${r.sel} → z ${val}`);
+      });
+    });
+    expect(kalan).toEqual([]);
+  });
+
+  test('jetonların kendisi duruyor — kapı boşa taranmıyor', () => {
+    // Kapı ancak taradığı kabukları GERÇEKTEN bulursa bir şey ifade eder.
+    const govde = STYLES.replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(kabuklar(govde).length).toBeGreaterThan(20);
+    expect(STYLES).toMatch(/--scrim:\s*rgba/);
+    expect(STYLES).toMatch(/--shadow-xl:\s*[^;]*var\(--shadow-color\)/);
+    expect(STYLES).toMatch(/--z-overlay:\s*\d+/);
+  });
+});

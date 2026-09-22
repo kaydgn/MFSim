@@ -857,3 +857,47 @@ merkezini yine sahipleniyor), dar halka yeşil kalıyor.
 kalması değil: boş tuvale tıklamak seçimi boşaltır ve pencere onun **sonucu**
 olarak kapanır. Perdeli dünyada aynı tıklama perdeye düşer, pencere kapanır ve
 seçim **olduğu gibi kalır**. Halka `selectedNodes.length` 1 → 0 geçişini ölçer.
+
+
+## Pencere kabukları jeton konuşur (2026-09-22)
+
+**Ölçülen kusur.** Kaplamalar ve pencereler yarı yarıya jeton, yarı yarıya
+sabit değer yazıyordu — ve iki taraf **aynı şeyi söylemiyordu**:
+
+| Ne | Jeton | Sabit yazan |
+|----|-------|-------------|
+| perde | `--scrim` = `rgba(0,0,0,0.62)` | iki kaplama: `rgba(0,0,0,0.6)` |
+| gölge | `--shadow-xl` = `0 12px 32px var(--shadow-color)` | iki pencere: `0 24px 70px rgba(0,0,0,.42)` |
+| z | `--z-overlay: 300` | `.ve-module-overlay`: `z-index:100` |
+
+Üçünün ağırlığı **aynı değil** ve olduğu gibi yazılması gerekiyor:
+
+- **Gölge görünür bir kusurdu.** `--shadow-color` tema farkındadır (açıkta
+  `rgba(38,36,31,0.10)`, koyuda `rgba(0,0,0,0.55)`); sabit `rgba(0,0,0,.42)`
+  açık kimlikte jetonun **4,2 katı** donuk siyah bir leke bırakıyordu — kâğıt
+  zeminli Atölye'de gri bir bulaşma olarak okunuyor.
+- **Perde farkı gözle ayırt edilmez** (0,60 ↔ 0,62). Bedeli görünüm değil
+  **sürüklenme**: jetonu değiştiren bir tur pencerelerin yarısını hareket
+  ettirir, yarısını yerinde bırakır.
+- **z farkı bir çakışma riski.** `--z-overlay`ın yorumu modül kaplamasını
+  **adıyla** sayıyor ("tuvali kaplayan örtüler: modül seçimi") ama kural 100
+  yazıyordu — aynı sayıyı `.ve-split-dropzone` de kullanıyor, yani ikisi aynı
+  kapta buluşsa sıra kaynak sırasına kalırdı.
+
+**Hüküm.** Bir pencere kabuğunun perdesi, gölgesi ve yığın katmanı jetondan
+gelir. Sabit değer yazmak, jetonun o yüzeyde geçersiz olduğunu söylemektir.
+
+### "Adında geçen" yetmez — özne olmalı
+
+Kapının ilk hâli torunları da tarıyordu ve `.ve-properties-content
+.ve-eng-sheet th` üzerinde düştü: yapışkan bir tablo başlığı ve `z-index:1`
+onun **yerel** kaldırması, pencere kabuğunun yığın katmanı değil. Kapı artık
+seçicinin **öznesine** (son bileşik parça) bakıyor; torunlar dışarıda.
+
+`.ve-chart-legend-overlay` ayrıca **muaf**: `position:absolute` ile bir
+grafiğin içinde duran künye rozeti, pencere kabuğu değil.
+
+**Kapı:** `source-hygiene.test.js` bölüm 11. **59 özne kabuk kuralı** taranıyor
+ve bu sayı ikinci bir halkayla çivili — hiçbir şey tarayamayan bir kapı
+sessizce yeşil kalırdı. Üç dalın üçü de ayrı ayrı düşürüldü: perde
+(`.ve-settings-overlay`), gölge (`.ve-help-panel`), z (`.ve-module-overlay`).
