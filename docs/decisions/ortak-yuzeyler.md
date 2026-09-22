@@ -901,3 +901,47 @@ grafiğin içinde duran künye rozeti, pencere kabuğu değil.
 ve bu sayı ikinci bir halkayla çivili — hiçbir şey tarayamayan bir kapı
 sessizce yeşil kalırdı. Üç dalın üçü de ayrı ayrı düşürüldü: perde
 (`.ve-settings-overlay`), gölge (`.ve-help-panel`), z (`.ve-module-overlay`).
+
+
+## Marka üç yüzeyde de aynı çizilir (2026-09-22)
+
+**Ölçülen kusur.** "MFSim" yazısı açılış ekranında **-0,2px**, karşılama
+ekranında **+0,5px** tracking ile çiziliyordu — aynı yüz (Source Serif 4),
+aynı boy (20px), **saniyeler arayla**. Devir teslimde marka görünür biçimde
+geniyordu: gerçek tarayıcıda ölçüldü, beş karakter × 0,7px ≈ 3,5px, yani
+%5'lik bir genleme.
+
+**Sebep bir tercih değil KASKAD.** Display yüzü bağlaması
+
+```css
+h1, h2, h3, h4, .mfsim-login-title, .mfsim-loading-logo, .ve-welcome-logo, …
+{ font-family: var(--font-display); letter-spacing: -0.01em; }
+```
+
+ile elemanların kendi `letter-spacing:0.5px` bildirimi **aynı özgüllükte**.
+İkisinde bağlama **sonra** geldiği için kazanıyordu (bildirim ÖLÜYDÜ),
+`.ve-welcome-logo` ise bağlamadan sonra tanımlı olduğu için **kazanıyordu**.
+`0.5px` eski **sans** marka yazısından kalmaydı ve serif yüze geçilirken
+kimse onu aramadı.
+
+Yani aynı bildirim, aynı dosyada, üç elemandan **ikisinde ölü birinde
+canlıydı** — ve farkı yalnız kaynaktaki SIRA belirliyordu.
+
+**Hüküm.** Display bağlamasına giren bir eleman tracking'ini **bağlamadan**
+alır. Aynı değeri tekrar etmek bile yasak: `.ve-settings-section-title`
+bağlamanın değerini (`-0.01em`) kelimesi kelimesine tekrar ediyordu — bugün
+zararsız, ama bağlama değiştiği gün sessizce ayrışacak ikinci bir kaynak.
+
+**Kardeş kural:** açılış kartı ile karşılama kartının geometrisi zaten **1
+px'e kadar** kilitli (`loader-splash.test.js`); gerekçesi aynı — devir
+teslimde hiçbir şey yerinden oynamamalı. Marka o kartın İÇİNDEKİ yazı ve
+aynı korumayı hak ediyordu.
+
+**Kapı ÇİFT.** `source-hygiene.test.js` bölüm 12 kuralı statik tutar ve
+**bağlama listesini elle kopyalamaz, kaynaktan okur** — liste bulunamazsa
+halka düşer, yani kapı boşa çalışamaz (ölçüldü: bağlama bozulunca
+`Expected >= 4, Received 1`). `tests/e2e/marka-tutarli.spec.js` gerçek
+tarayıcıda iki ekranın hesaplanmış değerini karşılaştırır **ve genişlik
+farkının göz ayıracak kadar büyük olduğunu** ayrıca ölçer — tracking
+eşitliği tek başına, ölçülen şeyin görünür bir fark olduğunu söylemez.
+Üç düşme de ölçüldü.
