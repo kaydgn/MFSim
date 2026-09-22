@@ -808,3 +808,52 @@ verilmiş izindir; bu deponun `CLAUDE.md`'si tam olarak o şekilde 6.052 satıra
 
 **Kapı:** `source-hygiene.test.js` bölüm 9. Tavan aşılınca hata mesajı
 **dosya başına dağılımı** basar — hangi modülün borcu büyüdü, adıyla görünür.
+
+
+## Müfettiş tuvalin YANINDADIR, üstünde değil (2026-09-22)
+
+**Ölçülen kusur.** Bileşen özellikleri ekranın **ortasında**, `rgba(0,0,0,0.6)`
+karartmalı bir perdenin üstünde açılıyordu. Yani bir sayı girmek modeli gözden
+kaybettiriyor, girilen sayının modeli nasıl değiştirdiğini görmek pencereyi
+**kapatmayı** gerektiriyordu. Perde ayrıca tuvalin tamamını yutuyordu:
+`elementFromPoint` tuvalin tam ortasında overlay'in kendisini döndürüyordu.
+
+**Hüküm.** ≥1280 px'te özellik penceresi sağ kenara yaslı **tam boy sütundur**:
+perde yok, `pointer-events:none` ile tıklama tuvale geçer, tuval sütunu
+`--inspector-w` kadar **daralır**. Daralma şart — örtseydi kazanılan şey yine
+gizlenen model olurdu. Genişlik ile daralma **aynı jetondan** gelir; iki yerde
+yazılsaydı ya sütun tuvali örterdi ya arada ölü şerit kalırdı.
+
+**Eşik 1280 px**: altında ray (48) + kenar çubuğu (220, 360'a kadar açılabilir)
++ müfettiş (380) tuvale 632 px bırakıyor. Altında modal davranış **birebir**
+durur — dar ekranda sütun bir kazanç değil kayıptır.
+
+**İki varyant modal kalır.** `--2dview` (1000 px) ve `--mntlib` (1040 px) birer
+**görüntüleyicidir**, müfettiş değil: ilki üç ölçekli diyagramı alt alta,
+ikincisi seçici + üç eksen grafiğini yan yana koyar. 380 px'lik bir sütunda
+ikisi de okunamaz olurdu. Ayrım `:has()` ile kuralın kendisinde — ikinci bir
+JS bayrağı iki yüzeyin sessizce ayrışması demekti.
+
+### Ölçünün kendisi iki kez yanlıştı
+
+Bunu yazarken iki kez **çalışan bir düzeni "bozuk" ölçtüm**; ikisi de kaydedilmeye
+değer çünkü ikisi de sessiz:
+
+1. **`clientWidth` DOLGUYU İÇERİR.** `.ve-canvas-area`nın `clientWidth`i
+   müfettiş açıkken de kapalıyken de 1316 — `padding-right` daralmayı hiç
+   göstermez. Çizim yüzeyi `.ve-split-container`dır ve ölçü ondan alınır.
+2. **Açılış ekranı hâlâ üstteydi.** Halka "tıklama tuvale geçiyor mu" diye
+   sorup `#mfsim-loading-photo` ölçüyordu. Testin beklediği şey fonksiyonların
+   varlığıydı; perdenin çekilmesi ayrı bir koşul.
+
+**Kapı:** `tests/e2e/mufettis-sutun.spec.js` — üç halka (geniş ekranda sütun ·
+tıklamanın tuvale geçmesi · dar ekranda modalin birebir durması). Node'da
+koşamaz: jsdom `@media` değerlendirmez, `:has()` hesaplamaz, `elementFromPoint`
+yoktur. Düşmesi ölçüldü: eşik erişilemez yapılınca iki geniş halka **eski
+belirtiyle** düşüyor (`rgba(0, 0, 0, 0.6)` geri geliyor, overlay tuvalin
+merkezini yine sahipleniyor), dar halka yeşil kalıyor.
+
+**Tıklamanın gerçekten geçtiğini ayıran ölçü seçimdir**, pencerenin açık
+kalması değil: boş tuvale tıklamak seçimi boşaltır ve pencere onun **sonucu**
+olarak kapanır. Perdeli dünyada aynı tıklama perdeye düşer, pencere kapanır ve
+seçim **olduğu gibi kalır**. Halka `selectedNodes.length` 1 → 0 geçişini ölçer.
