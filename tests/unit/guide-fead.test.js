@@ -148,7 +148,7 @@ describe('belge iskeleti', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 describe('kozmetik raporla aynı', () => {
   test('raporun palet jetonları belgede tanımlı', () => {
-    ['--prusya', '--ink', '--paper', '--line', '--check', '--warn']
+    ['--vurgu', '--ink', '--paper', '--line', '--check', '--warn']
       .forEach((j) => { expect(DOC).toContain(j + ':'); });
   });
 

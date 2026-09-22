@@ -696,8 +696,16 @@ describe('şekiller — ortak çizici kapıları', () => {
     const svg = RP.veFeadFigureRaw(RP._frFreqFigure, R, 780, 190);
     expect(svg).toContain('data-ve="span-freq"');
     const o = svgOl(svg);
-    // düşey ızgara çizgileri = çizim alanının sağ sınırı
-    const grid = [...svg.matchAll(/<line x1="([\d.]+)"[^>]*stroke="#e4e6e9"/g)].map((m) => Number(m[1]));
+    // Düşey ızgara çizgileri = çizim alanının sağ sınırı. RENK ÇİVİLENMEZ:
+    // ilk yazım `stroke="#e4e6e9"` arıyordu ve Atölye paleti gelince bu
+    // GEOMETRİ kapısı bir RENK yüzünden düştü (2026-09-22). Izgara, çizimde
+    // en çok tekrar eden `<line>` rengidir — tanım şeklin kendisinden gelir.
+    const strokeSay = {};
+    [...svg.matchAll(/<line [^>]*stroke="(#[0-9a-fA-F]{3,6})"/g)]
+      .forEach((m) => { strokeSay[m[1]] = (strokeSay[m[1]] || 0) + 1; });
+    const gridRenk = Object.keys(strokeSay).sort((a, b) => strokeSay[b] - strokeSay[a])[0];
+    const grid = [...svg.matchAll(new RegExp('<line x1="([\\d.]+)"[^>]*stroke="' + gridRenk + '"', 'g'))]
+      .map((m) => Number(m[1]));
     expect(grid.length).toBeGreaterThan(2);
     const cizimSag = Math.max(...grid);
     const gost = [...svg.matchAll(/<text x="([\d.]+)"[^>]*font-size="9\.5"/g)].map((m) => Number(m[1]));

@@ -80,8 +80,8 @@ function _mfDhoInjectCSS() {
     '.mf-dho-overlay.open{opacity:1;}',
     '.mf-dho-overlay[hidden]{display:none;}',
     '.mf-dho-panel{position:relative;width:min(430px,100%);box-sizing:border-box;',
-      'background:var(--bg-secondary,#0f1218);color:var(--text-primary,#c8d1dc);',
-      'border:1px solid var(--border-light,#222b3a);border-radius:var(--radius-xl);',
+      'background:var(--bg-secondary);color:var(--text-primary);',
+      'border:1px solid var(--border-light);border-radius:var(--radius-xl);',
       'box-shadow:0 24px 70px rgba(0,0,0,.55),0 2px 0 rgba(255,255,255,.03) inset;',
       'padding:30px 30px 22px;text-align:center;',
       'transform:translateY(14px) scale(.97);opacity:0;transition:transform .28s cubic-bezier(.2,.9,.3,1),opacity .28s ease;}',
@@ -98,28 +98,28 @@ function _mfDhoInjectCSS() {
       'transform-origin:50% 12%;animation:mf-dho-sway 4.5s ease-in-out infinite;}',
     '@keyframes mf-dho-sway{0%,100%{transform:rotate(-6deg);}50%{transform:rotate(6deg);}}',
     '@media (prefers-reduced-motion: reduce){.mf-dho-badge svg{animation:none;}}',
-    '.mf-dho-title{font-size:var(--fs-h2);font-weight:700;letter-spacing:.5px;color:var(--text-heading,#e2e8f0);margin:0;}',
-    '.mf-dho-sub{font-size:var(--fs-body);letter-spacing:2.5px;text-transform:uppercase;color:var(--text-secondary,#7a8599);margin:6px 0 0;}',
+    '.mf-dho-title{font-size:var(--fs-h2);font-weight:700;letter-spacing:.5px;color:var(--text-heading);margin:0;}',
+    '.mf-dho-sub{font-size:var(--fs-body);letter-spacing:2.5px;text-transform:uppercase;color:var(--text-secondary);margin:6px 0 0;}',
     // Yıl rozeti
     '.mf-dho-year{display:inline-flex;align-items:baseline;gap:8px;margin:16px 0 4px;padding:6px 16px;',
-      'border:1px solid var(--border-light,#222b3a);border-radius:var(--radius-pill);background:var(--bg-tertiary,#151a22);}',
+      'border:1px solid var(--border-light);border-radius:var(--radius-pill);background:var(--bg-tertiary);}',
     '.mf-dho-year b{font-size:var(--fs-h2);font-weight:700;color:#d9b968;letter-spacing:1px;}',
-    '.mf-dho-year span{font-size:var(--fs-tiny);letter-spacing:2px;text-transform:uppercase;color:var(--text-muted,#4a5568);}',
+    '.mf-dho-year span{font-size:var(--fs-tiny);letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);}',
     // Halat ayıracı
-    '.mf-dho-rope{display:flex;align-items:center;gap:10px;margin:18px 2px 14px;color:var(--text-muted,#4a5568);}',
+    '.mf-dho-rope{display:flex;align-items:center;gap:10px;margin:18px 2px 14px;color:var(--text-muted);}',
     '.mf-dho-rope::before,.mf-dho-rope::after{content:"";flex:1;height:1px;',
-      'background:linear-gradient(90deg,transparent,var(--border-hover,#2d3a4f),transparent);}',
+      'background:linear-gradient(90deg,transparent,var(--border-hover),transparent);}',
     '.mf-dho-rope svg{width:16px;height:16px;color:#c9a24b;opacity:.85;}',
     // Söz
-    '.mf-dho-quote{font-size:var(--fs-title);line-height:1.6;font-style:italic;color:var(--text-primary,#c8d1dc);margin:0;}',
+    '.mf-dho-quote{font-size:var(--fs-title);line-height:1.6;font-style:italic;color:var(--text-primary);margin:0;}',
     '.mf-dho-quote-mark{color:#c9a24b;font-weight:700;font-style:normal;}',
-    '.mf-dho-author{font-size:var(--fs-body);letter-spacing:1px;color:var(--text-secondary,#7a8599);margin:10px 0 0;}',
+    '.mf-dho-author{font-size:var(--fs-body);letter-spacing:1px;color:var(--text-secondary);margin:10px 0 0;}',
     '.mf-dho-author::before{content:"— ";}',
     // İthaf + marka altlığı
-    '.mf-dho-foot{margin-top:20px;padding-top:14px;border-top:1px solid var(--border-color,#1c2333);',
+    '.mf-dho-foot{margin-top:20px;padding-top:14px;border-top:1px solid var(--border-color);',
       'display:flex;flex-direction:column;gap:8px;}',
-    '.mf-dho-dedication{font-size:var(--fs-md);color:var(--text-secondary,#7a8599);}',
-    '.mf-dho-brand{font-size:var(--fs-tiny);letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted,#4a5568);}',
+    '.mf-dho-dedication{font-size:var(--fs-md);color:var(--text-secondary);}',
+    '.mf-dho-brand{font-size:var(--fs-tiny);letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);}',
     // Temaya geç düğmesi — altın hayalet düğme
     '.mf-dho-cta{align-self:center;margin:2px 0 6px;padding:9px 18px;border-radius:var(--radius-lg);cursor:pointer;',
       'font-size:var(--fs-lg);font-weight:600;letter-spacing:.3px;color:#f2e2b3;',
@@ -130,8 +130,8 @@ function _mfDhoInjectCSS() {
     // Kapat düğmesi
     '.mf-dho-close{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:var(--radius-md);cursor:pointer;',
       'display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;',
-      'color:var(--text-secondary,#7a8599);transition:background .15s,border-color .15s,color .15s;}',
-    '.mf-dho-close:hover{background:var(--bg-tertiary,#151a22);border-color:var(--border-light,#222b3a);color:var(--text-primary,#c8d1dc);}'
+      'color:var(--text-secondary);transition:background .15s,border-color .15s,color .15s;}',
+    '.mf-dho-close:hover{background:var(--bg-tertiary);border-color:var(--border-light);color:var(--text-primary);}'
   ].join('\n');
   document.head.appendChild(st);
 }

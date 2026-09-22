@@ -153,7 +153,7 @@ function _gkReportCss(tpl){
   // Çıkarılan bloğun GERÇEKTEN kozmetik blok olduğunu doğrula: şablonun
   // sırası değişirse (ör. araya üçüncü bir <style> girerse) yanlış blok
   // alınabilirdi ve fark yalnız belgeye bakınca görünürdü.
-  if(css.indexOf('--prusya') < 0 || css.indexOf('.antet') < 0)
+  if(css.indexOf('--vurgu') < 0 || css.indexOf('.antet') < 0)
     throw new Error('Şablondan çıkarılan <style> bloğu rapor kozmetiği değil.');
   return css;
 }
@@ -239,13 +239,14 @@ var VE_GUIDE_SCENE_SEL = [
 // kez yazmak, aynı bileşenin iki belgede farklı renkte çizilmesi demekti —
 // `veGuideSceneCSS` bu yüzden çakışanı atıyor, listeye bakıp varsaymıyor.
 //
-// Değerler baskı paletinden türer (rapor: --ink #1b1e24, --line #c9cdd3,
-// --prusya #24425f). Belge DURGUN: geçiş süresi 0, gölge ve odak halkası yok —
-// kâğıtta karşılığı olmayan şeyler.
+// Değerler BASKI paletinden türer (rapor: --ink #26241f, --line #c6c0b4,
+// --vurgu #96441f) — ekran paletinden DEĞİL. Şekiller kâğıda basılıyor: zemin
+// beyaz kalır, griler Atölye'nin sıcak eksenindedir. Belge DURGUN: geçiş
+// süresi 0, gölge ve odak halkası yok — kâğıtta karşılığı olmayan şeyler.
 var VE_GUIDE_APPFIG_TOKENS = {
-  '--bg-primary': '#fff', '--bg-secondary': '#fbfbfc', '--bg-tertiary': '#f2f4f7',
-  '--text-primary': '#1b1e24', '--text-heading': '#12161f',
-  '--border-light': '#d8dce2', '--border-subtle': '#e4e6e9', '--border-hover': '#b4bbc4',
+  '--bg-primary': '#fff', '--bg-secondary': '#fbfaf7', '--bg-tertiary': '#f2efe8',
+  '--text-primary': '#26241f', '--text-heading': '#14120f',
+  '--border-light': '#ddd7cb', '--border-hover': '#c6c0b4',
   '--font-mono': "'IBM Plex Mono',ui-monospace,monospace",
   '--fs-body': '11px', '--fs-md': '12px', '--fs-lg': '13px', '--fs-h2': '15px',
   '--radius-md': '3px', '--radius-pill': '999px', '--tracking-wide': '.04em',

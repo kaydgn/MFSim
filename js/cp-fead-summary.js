@@ -1154,18 +1154,18 @@ function veFeadSummaryHTML(R, node){
 function _fsrCss(){
   return [
     ':root{',
-    '  --ink:#1b1e24;--paper:#fff;--line:#b3b9c0;--rule:#8b929b;--soft:#e2e6ea;',
-    '  --prusya:#24425f;--band:#c0392b;--head:#eef2f6;--zebra:#f6f8fa;',
-    '  --warn:#8a5a1e;--bad:#a8321f;--ok:#2e7d4f;--hl:#fff3cd;--dim:#4a525e;',
+    '  --ink:#26241f;--paper:#fff;--line:#c6c0b4;--rule:#9c9486;--soft:#e6e1d8;',
+    '  --vurgu:#96441f;--band:#8f3636;--head:#f2e9e3;--zebra:#f7f4ef;',
+    '  --warn:#6d5310;--bad:#a8321f;--ok:#2a6140;--hl:#fff3cd;--dim:#4a525e;',
     // beş basamaklı ölçek — 1,15 oranlı, tabanı 9 px (A4 baskıda ≈ 6,8 pt)
     '  --f-xl:16px;--f-lg:11.5px;--f-md:10px;--f-sm:9.4px;--f-xs:8.8px;',
     '  --lh:1.4;',
     '}',
     // Kanvastan gelen şekil uygulamanın palet jetonlarını kullanıyor; tanımsız
     // var() kalıtılan `stroke` için `none` demek → çizim GÖRÜNMEZ olur.
-    '.appfig{--accent-primary:#24425f;--accent-success:#2e7d4f;--accent-warning:#c8781e;',
+    '.appfig{--accent-primary:#96441f;--accent-success:#2a6140;--accent-warning:#c8781e;',
     '  --accent-danger:#a8321f;--text-secondary:#3c4350;--text-muted:#5a6270;',
-    '  --bg-input:#fff;--border-color:#c9cdd3;--radius-sm:2px;--fs-tiny:11px;--fs-micro:10px;}',
+    '  --bg-input:#fff;--border-color:#c6c0b4;--radius-sm:2px;--fs-tiny:11px;--fs-micro:10px;}',
     '*{box-sizing:border-box}',
     // ── KALINLIK GÖMÜLÜ AĞIRLIKLARA BAĞLI ──────────────────────────────────
     // Belge çevrimdışı: yazı tipleri `mount-report-assets.js` içinde GÖMÜLÜ ve
@@ -1201,7 +1201,7 @@ function _fsrCss(){
     '.hdr-title b{display:block;font-size:var(--f-sm);font-weight:700;color:#000;',
     '  letter-spacing:.01em}',
     '.hdr-sub{display:flex;justify-content:space-between;gap:12px;font-size:var(--f-xs);',
-    '  color:var(--dim);border-top:2px solid var(--prusya);padding-top:2px;margin-top:5px}',
+    '  color:var(--dim);border-top:2px solid var(--vurgu);padding-top:2px;margin-top:5px}',
 
     // ── SAYFA BAŞLIĞI ── belgenin tek büyük puntosu
     '.h1{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;',
@@ -1214,7 +1214,7 @@ function _fsrCss(){
     '.blk{margin:0}',
     ".bt{font-family:'Archivo',sans-serif;font-size:var(--f-lg);font-weight:700;color:#000;",
     '  margin:0 0 3px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;',
-    '  border-left:3px solid var(--prusya);padding-left:6px}',
+    '  border-left:3px solid var(--vurgu);padding-left:6px}',
     ".bt2{font-family:'Archivo',sans-serif;font-size:var(--f-sm);font-weight:700;color:#000;",
     '  margin:6px 0 2px}',
     '.kvi{font-weight:400;color:var(--dim);font-size:var(--f-xs);',
@@ -1263,7 +1263,7 @@ function _fsrCss(){
     "table.gt.kvt3 td:not(.l){text-align:left;white-space:normal;font-family:'Source Serif 4',Georgia,serif;font-size:var(--f-xs);line-height:1.4}",
 
     // ── KÜNYE KARTI ──
-    ".kvblk{border:1px solid var(--line);border-top:2px solid var(--prusya);padding:4px 7px 3px;",
+    ".kvblk{border:1px solid var(--line);border-top:2px solid var(--vurgu);padding:4px 7px 3px;",
     '  margin:0 0 7px}',
     ".kvt{font-family:'Archivo',sans-serif;font-size:var(--f-sm);font-weight:700;color:#000;",
     '  margin-bottom:2px}',
@@ -1276,7 +1276,7 @@ function _fsrCss(){
 
     // ── KRİTİK SONUÇ KARTLARI (sayfa 1) ──
     '.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:2px 0 0}',
-    '.card{border:1px solid var(--line);border-top:3px solid var(--prusya);padding:4px 6px 5px;',
+    '.card{border:1px solid var(--line);border-top:3px solid var(--vurgu);padding:4px 6px 5px;',
     '  min-width:0}',
     '.card.ok{border-top-color:var(--ok)}.card.no{border-top-color:var(--bad)}',
     '.card.uy{border-top-color:var(--warn)}',

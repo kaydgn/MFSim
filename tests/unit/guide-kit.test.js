@@ -114,7 +114,7 @@ describe('kozmetik şablondan çıkarılır (ikinci kopya yok)', () => {
     const css = KIT._gkReportCss(tpl());
     expect(css.length).toBeGreaterThan(3000);
     // Raporun görsel dilinin dört imzası — biri eksikse yanlış blok alınmıştır.
-    expect(css).toContain('--prusya');
+    expect(css).toContain('--vurgu');
     expect(css).toContain('.antet');
     expect(css).toContain('.appfig');
     expect(css).toContain('@media print');
@@ -152,7 +152,7 @@ describe('kozmetik şablondan çıkarılır (ikinci kopya yok)', () => {
     expect(h).toContain('<html lang="tr">');
     expect(h).toContain('<title>Deneme</title>');
     expect(h).toContain('<div class="page">');
-    expect(h).toContain('--prusya');
+    expect(h).toContain('--vurgu');
     expect(h.trim().endsWith('</html>')).toBe(true);
     // KaTeX KİTAPLIĞI GEÇMEZ: kılavuzda denklem yok, özet raporun 944→340 KB
     // kararının aynısı. Ölçüt kitaplığın kendisi — şablonun kozmetik bloğunda

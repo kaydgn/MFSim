@@ -516,3 +516,66 @@ describe('JS satır içi yarıçapı ölçeğe bağlı', () => {
     expect(olculen).toEqual(KAPSAM_DISI);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 6) TANIMSIZ JETONA BAŞVURU YOK
+//
+// ÖLÇÜLEN KUSUR (2026-09-22): `--bg-hover` BEŞ yerden çağrılıyordu (dört
+// `:hover` kuralı + 2048'in düğmesi) ve HİÇBİR YERDE bildirilmemişti. Yani o
+// dört yüzeyde fare üstündeyken hiçbir şey olmuyordu.
+//
+// Hata sınıfı tam olarak bu deponun korktuğu sınıf: CSS'te çözülemeyen bir
+// özel özellik bildirimi SESSİZCE geçersiz kılar — konsola hiçbir şey düşmez,
+// hiçbir test kırılmaz, yalnız beklenen şey olmaz. Beş yıl durabilirdi.
+//
+// Kapı `css/` ve `js/` içindeki HER `var(--x)` başvurusunu `css/`'te bildirilen
+// jeton kümesiyle karşılaştırır.
+describe('tanımsız jetona başvuru yok', () => {
+  const cssDosyalari = fs.readdirSync(CSS_DIR).filter((f) => f.endsWith('.css'))
+    .map((f) => fs.readFileSync(path.join(CSS_DIR, f), 'utf8'));
+  const tumCss = cssDosyalari.join('\n');
+
+  // Bildirilen jeton: `--ad:` biçiminde YAZILAN her şey (tema blokları dahil).
+  const tanimli = new Set(
+    [...tumCss.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1])
+  );
+
+  // Belge üreticileri KENDİ jetonlarını kendi stil sayfalarında bildiriyor
+  // (rapor: --ink/--warn/--line/--vurgu/--paper…, kılavuz: kendi kümesi).
+  // Onlar `css/` altında yok ve olmamalı — ürünün stilini şişirirlerdi.
+  const BELGE_URETEN = new Set([
+    'cp-mount-report.js', 'cp-fead-report.js', 'mount-report-template.js',
+    'mount-report-assets.js', 'guide-kit.js', 'guide-fead.js', 'results.js',
+    'cp-fead-summary.js',
+  ]);
+
+  test('jeton kümesi okunabildi (regex kayması erken yakalansın)', () => {
+    expect(tanimli.size).toBeGreaterThan(100);
+    expect(tanimli.has('--bg-primary')).toBe(true);
+  });
+
+  test('css/ içinde tanımsız jetona başvuru yok', () => {
+    const eksik = [];
+    fs.readdirSync(CSS_DIR).filter((f) => f.endsWith('.css')).forEach((f) => {
+      fs.readFileSync(path.join(CSS_DIR, f), 'utf8').split('\n').forEach((sat, i) => {
+        [...sat.matchAll(/var\(\s*(--[\w-]+)\s*\)/g)].forEach((m) => {
+          if (!tanimli.has(m[1])) eksik.push(`css/${f}:${i + 1} → ${m[1]}`);
+        });
+      });
+    });
+    expect(eksik).toEqual([]);
+  });
+
+  test('js/ içinde tanımsız jetona başvuru yok (belge üreticileri hariç)', () => {
+    const eksik = [];
+    jsFiles(JS_DIR).forEach(({ rel, abs }) => {
+      if (BELGE_URETEN.has(path.basename(abs))) return;
+      fs.readFileSync(abs, 'utf8').split('\n').forEach((sat, i) => {
+        [...sat.matchAll(/var\(\s*(--[\w-]+)\s*\)/g)].forEach((m) => {
+          if (!tanimli.has(m[1])) eksik.push(`${rel}:${i + 1} → ${m[1]}`);
+        });
+      });
+    });
+    expect(eksik).toEqual([]);
+  });
+});
