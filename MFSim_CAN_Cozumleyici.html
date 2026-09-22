@@ -1351,7 +1351,7 @@ textarea::placeholder{ color:var(--text-muted); opacity:1; }
   align-items:stretch;
   gap:2px;
   padding:6px 4px;
-  background:var(--bg-tertiary);
+  background:var(--bg-secondary);
   border-right:1px solid var(--border-color);
 }
 /* Karşılama ekranındayken (modül seçilmemiş) ray gizlenir — sınıfı sidebar ile
@@ -1444,6 +1444,17 @@ body.ve-no-module #ve-ribbon{ display:none; }
   .ve-nav-item{ padding:8px 2px; }
   .ve-nav-item.active::before{ left:-4px; }
 }
+
+/* RAY + PALET TEK SÜTUN (Atölye). İkisi ayrı ebeveynde duruyor ve bu YAPISAL:
+   ray `.ve-main`'in DIŞINDA, çünkü Sonuçlar'a geçince panel de tuval de
+   değişir, ray yerinde kalır. Yani birleştirme bir DOM taşıması olamaz —
+   yüzeyle yapılır: ikisi aynı zemine gelir ve aradaki dikey çizgi kalkar,
+   sütunun sağ kenarında TEK çizgi (paletin) durur.
+   Çizgi yalnız TUVAL sayfasında kalkar: Sonuçlar'da palet gizleniyor ve o tek
+   çizgi onunla birlikte gidiyor, ray kendi kenarını geri alır. Bayrağı
+   js/tabs.js koyuyor — satır içi `display` dizesine bakan bir seçici
+   (`[style*="none"]`) tarayıcının serileştirmesine bağlı olurdu. */
+html.ve-sayfa-tuval .ve-nav-rail{ border-right-color:transparent; }
 
 .ve-main{
   flex:1;
@@ -1948,17 +1959,28 @@ body.ve-no-module #ve-ribbon{ display:none; }
 }
 
 /* ===== ALT DURUM KÜMESİ (STATUS BAR) ===== */
+/* DURUM ŞERİDİ — tuvalin ALTINDA, kanvas alanının son satırı.
+   Eskiden sekme bandının SAĞ yarısındaydı (327 px) ve bant tuvalin üstündeydi;
+   o yerleşimin gerekçesi sekmelere aitti (sekme açtığı belgeye bağlanır),
+   duruma değil. Durum bir gezinme yüzeyi değil bir OKUMA. Ayrıntı ve ödenen
+   bedel: docs/decisions/ortak-yuzeyler.md. */
 .ve-status-bar{
   display:flex;
   align-items:center;
   gap:8px;
-  flex-shrink:0;              /* sekmeler taşsa da durum bilgisi ezilmez */
-  padding:0 10px;
+  flex-shrink:0;              /* tuval büyüyünce şerit ezilmez */
+  height:24px;
+  padding:0 12px;
+  background:var(--bg-secondary);
+  border-top:1px solid var(--border-color);
   font-size:var(--fs-tiny);
   color:var(--text-secondary);
   user-select:none;
   font-variant-numeric:tabular-nums;   /* sayaç/zoom rakamları hizalı, kayma yok */
 }
+/* Uyarı çipi solda kalır, ölçümler sağa toplanır: solda "sorun var mı",
+   sağda "ne kadar". Aradaki esneme ikisini pencere genişledikçe ayırır. */
+.ve-status-bar .ve-status-warnings{ margin-right:auto; }
 .ve-status-item{
   display:inline-flex;
   align-items:center;

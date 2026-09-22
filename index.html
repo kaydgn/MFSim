@@ -883,6 +883,14 @@
              Bant TUVALİN ÜSTÜNDE durur (kullanıcı isteği, 2026-08-13): şeridin
              hemen altında, kanvas alanının ilk satırı. Sekmeler bu yüzden klasik
              yönde — aşağıya, tuvale bağlanır.
+
+             O kararın DURUM YARISI 2026-09-22'de emekli oldu: gerekçe
+             ("sekme açtığı belgeye bağlanır") yalnız SEKMELERE ait, duruma
+             değil. Durum bir gezinme yüzeyi değil bir OKUMA — mühendislik
+             yazılımlarının tamamında altta durur. Bant artık yalnız sekme
+             taşıyor ve sekmeler bandın tamamını kullanıyor (eskiden sağdaki
+             327 px'i durum yiyordu). Ödenen bedel ölçüldü: tuval 24 px
+             kaybediyor, ama şerit katlanınca 86 px geri geliyor.
              Uyarılar bandın ALTINA açılan yüzen panelde — açmak tuvali
              küçültmüyor, yalnızca geçici olarak üzerini örtüyor. -->
         <div class="ve-doc-dock" id="ve-doc-dock">
@@ -897,20 +905,6 @@
             </div>
           </div>
           <div class="ve-tab-bar ve-tab-bar--top" id="ve-tab-bar"></div>
-          <div id="ve-status-bar" class="ve-status-bar">
-            <button type="button" class="ve-status-warnings" id="ve-warnings-chip" data-severity="none" onclick="veToggleWarnings()" aria-expanded="false" aria-controls="ve-warnings-panel" title="Uyarılar panelini aç / kapa">
-              <span class="mf-ico mf-ico-alert-triangle"></span>
-              <span class="ve-status-warnings-label">Uyarılar</span>
-              <span id="ve-warnings-count">0</span>
-              <span id="ve-warnings-toggle">▲</span>
-            </button>
-            <span class="ve-status-sep"></span>
-            <span class="ve-toolbar-info" id="ve-status-counts">0 bileşen, 0 bağlantı</span>
-            <span class="ve-status-sep"></span>
-            <span class="ve-status-item ve-status-clickable" id="ve-status-zoom" onclick="veResetZoom()" title="Yakınlaştırma — tıkla: %100'e sıfırla">%100</span>
-            <span class="ve-status-sep"></span>
-            <span class="ve-status-item" id="ve-status-mode">Hazır</span>
-          </div>
         </div>
         <div class="ve-split-container" id="ve-split-container">
           <div class="ve-split-pane focused" id="ve-pane-0">
@@ -1068,8 +1062,27 @@
             </div>
           </div>
         </div>
-      </div>
 
+        <!-- DURUM ŞERİDİ — tuvalin ALTINDA, kanvas alanının son satırı.
+             `.ve-canvas-area` içinde duruyor (pencerenin tamamında değil):
+             zoom ve kip TUVALE ait okumalar, Sonuçlar sayfasında anlamları
+             yok. Orada `.ve-main` gizleniyor ve şerit onunla birlikte
+             gidiyor — bugünkü davranışın birebir aynısı. -->
+        <div id="ve-status-bar" class="ve-status-bar">
+          <button type="button" class="ve-status-warnings" id="ve-warnings-chip" data-severity="none" onclick="veToggleWarnings()" aria-expanded="false" aria-controls="ve-warnings-panel" title="Uyarılar panelini aç / kapa">
+            <span class="mf-ico mf-ico-alert-triangle"></span>
+            <span class="ve-status-warnings-label">Uyarılar</span>
+            <span id="ve-warnings-count">0</span>
+            <span id="ve-warnings-toggle">▲</span>
+          </button>
+          <span class="ve-status-sep"></span>
+          <span class="ve-toolbar-info" id="ve-status-counts">0 bileşen, 0 bağlantı</span>
+          <span class="ve-status-sep"></span>
+          <span class="ve-status-item ve-status-clickable" id="ve-status-zoom" onclick="veResetZoom()" title="Yakınlaştırma — tıkla: %100'e sıfırla">%100</span>
+          <span class="ve-status-sep"></span>
+          <span class="ve-status-item" id="ve-status-mode">Hazır</span>
+        </div>
+      </div>
       
     </div>
     
