@@ -1769,7 +1769,18 @@ function veFeadArmReadout(node){
   var h = '<div style="font-size:var(--fs-micro); line-height:1.5; padding:7px 9px; margin-bottom:9px; '
         + 'background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
   h += satir('Yay kurulması (Mean−Pre)/Rate', _feadFmt(m.relMeanDeg, 2) + '°');
-  h += satir('Kol çalışma açısı (girdi)', _feadFmt(th, 2) + '°');
+  // AYNI PANELDE İKİ AYRI SAYI DURUYORDU ve ikisi de "kol açısı" diye
+  // okunuyordu: yukarıdaki kutu 168,00 (merkez→gövde, GİRDİ), buradaki satır
+  // −12,00 (gövde→merkez, mutlak). Kullanıcı bildirimi (2026-09-22): *"açı
+  // tanımları çok başka olmuş, kafa karıştırıyor."*
+  //
+  // ÇARE İKİ SAYIDAN BİRİNİ SİLMEK DEĞİL — ikisi de gerekli: girdi
+  // kullanıcının yazdığı, mutlak ise PARÇA ÇİZİMİNİN dili (E9843'ün çizimi
+  // "344° MEAN ANGLE" yazıyor). Çare ikisine de AYRI AD vermek, ve "(girdi)"
+  // diyen satırın gerçekten GİRİLEN sayıyı göstermesi.
+  h += satir('Kol yönü — girdi (merkez→gövde)',
+             _feadFmt(veFeadArmShownDeg(th), 2) + '°');
+  h += satir('θ_kol — mutlak (gövde→merkez)', _feadFmt(th, 2) + '°');
   var p = veFeadTensionerPivot(td);
   if(p) h += satir('↳ gövdenin montaj konumu (türedi)',
     _feadFmt(p[0], 2) + ' / ' + _feadFmt(p[1], 2), 'var(--ink-warning)');
@@ -2204,7 +2215,7 @@ function veFeadBeltCatalogCard(node, serbest){
   h += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse;'
     + ' font-family:ui-monospace, monospace; font-size:var(--fs-micro);">'
     + '<thead><tr>' + sut('Boy', '20%') + sut('Δ', '16%') + sut('Kod', '26%', 'left')
-    + sut('Kol', '16%') + sut('Gerginlik', '22%') + '</tr></thead><tbody>';
+    + sut('Kol dönmesi', '16%') + sut('Gerginlik', '22%') + '</tr></thead><tbody>';
 
   var satir = function(c, izgara){
     if(!c) return '';
@@ -4887,7 +4898,24 @@ function veFeadTableCardHTML(node){
     + (Number.isFinite(T.signedWrapDeg) ? _feadFmt(T.signedWrapDeg, 1) : '—')
     + '°</span>'
     + (T.posLabel ? '<i>' + _feadEsc(T.posLabel) + ' konumu</i>' : '')
-    + '</span></div>';
+    + '</span>'
+    // GERGİNİN YERİ HÜKMÜ — SIRANIN DÜZENLENDİĞİ YÜZEYDE. `tensionerOrder`
+    // köprüde zaten hesaplanıyor (kural 16) ama yalnız uyarı kutularında ve
+    // sihirbazın 2. adımında basılıyordu; sırayı ▲▼ ile değiştiren kullanıcı
+    // listeye bakıyor ve hükmü orada göremiyordu. YALNIZ KURAL KIRIKKEN
+    // basılıyor: kural yerindeyken ek bir çip künye şeridini ikinci satıra
+    // sarardı ve kartın en küçük yüksekliği onu hesaba katmıyor.
+    + (function(){
+        var to = build && build.tensionerOrder;
+        if(!to || to.last) return '';
+        return '<span class="ve-fead-tbl-durum no"'
+          + ' title="Gerilme zinciri gergiye ankrajlanır ve listede ileri yürür:'
+          + ' gergiden sonraki ilk kasnak sürücü DEĞİLSE açıklıklar ankrajın'
+          + ' altına iner. Sıra sürücüyle başladığına göre gergi SON SATIR olmalı.">'
+          + '<b>✗</b><span>Gergi sonda değil · ' + (to.index + 1) + '/' + to.count
+          + '</span></span>';
+      }())
+    + '</div>';
 
   // ── KASNAK LİSTESİ ───────────────────────────────────────────────────────
   // Izgara değil kart: her satır bir KASNAK ve üç bölgesi var — kimlik,
@@ -4919,11 +4947,16 @@ function veFeadTableCardHTML(node){
     h += '<div class="ve-fead-tbl-empty">'
       + '<b>Kayış yolunda henüz kasnak yok.</b>'
       + 'Aşağıdaki <b style="display:inline;">＋ Kasnak ekle</b> ile başlayın —'
-      + ' eklenen kasnak kayış sırasının sonuna düşer.</div>';
+      + ' eklenen kasnak otomatik gerginin önüne düşer.</div>';
   }
 
+  // GERGİ SON SATIRDAYSA KİLİT YERİNDEDİR ve liste bunu SÖNÜK okla söylüyor
+  // (sürücü kilidinin aynı kalıbı). Kural yerinde DEĞİLSE kilit de yok:
+  // gergisi ortada duran eski bir kayıt okla düzeltilebilmeli.
+  var N = T.rows.length;
+  var gergiSonda = N > 1 && !!T.rows[N - 1].tensioner;
   T.rows.forEach(function(r, k){
-    var son = (k === T.rows.length - 1);
+    var son = (k === N - 1);
     // SÜRÜCÜ SATIRIN KENDİSİNDE işaretli (`drv`), yalnız numarasında değil:
     // sol rayı satırın nerede başladığını listeye bakar bakmaz söylüyor.
     var sinif = 've-fead-krt' + (r.driver ? ' drv' : '') + (r.id === acik ? ' is-sel' : '');
@@ -4936,8 +4969,8 @@ function veFeadTableCardHTML(node){
     h += '<div class="kim"><span class="ve-fead-tbl-ord">'
       + '<b' + (r.driver ? ' class="drv" title="Sürücü — kayış sırası buradan'
                           + ' başlar, satır kilitli"' : '') + '>' + r.index + '</b>'
-      + _feadTblMove(r.id, -1, k <= 1)
-      + _feadTblMove(r.id, +1, son || k === 0)
+      + _feadTblMove(r.id, -1, k <= 1 || (gergiSonda && r.tensioner))
+      + _feadTblMove(r.id, +1, son || k === 0 || (gergiSonda && k === N - 2))
       + '</span>'
       // AD: tıklanınca bileşenin PANELİ açılır — "gerekirse tıklayarak bileşen
       // penceresini açarak detay hesaplamalara bakacağız" isteğinin karşılığı.
@@ -4982,7 +5015,7 @@ function veFeadTableCardHTML(node){
   // burada beliriyor. Kartın altı da bir denetim şeridi değil bir eylem şeridi.
   h += '<div class="ve-fead-tbl-ekle">'
     + veFeadTableAddHTML()
-    + '<span class="ipucu">eklenen kasnak kayış sırasının sonuna düşer</span>'
+    + '<span class="ipucu">eklenen kasnak otomatik gerginin önüne düşer</span>'
     + '</div>';
   return h;
 }
@@ -5031,11 +5064,27 @@ function veFeadTableSet(nodeId, key, raw){
 // KARTIN ALTINDA duruyor, künyenin sağ ucunda değil: eklenen kasnak sıranın
 // SONUNA düşüyor, yani eylemin sonucu tam olarak listenin bittiği yerde
 // beliriyor. Künyede dururken bir kayış künyesi alanı gibi okunuyordu.
+// Modeldeki otomatik gergi düğümü (yoksa null). Tek yerden okunuyor ki
+// "gergi hangisi" sorusu iki ayrı yanıt üretmesin.
+function _feadTensionerOf(list){
+  if(!list || typeof componentDefs === 'undefined') return null;
+  for(var i = 0; i < list.length; i++)
+    if(list[i] && (componentDefs[list[i].type] || {}).isFeadTensioner) return list[i];
+  return null;
+}
+
 function veFeadTableAddHTML(){
   if(typeof componentDefs === 'undefined') return '';
   var opt = '<option value="">＋ Kasnak ekle…</option>';
+  // MODELDE ZATEN GERGİ VARSA LİSTEDE GÖRÜNMEZ. Çekirdek birden fazla gergiyi
+  // de reddediyor; liste onu sunmaya devam ederse kullanıcı modeli ikinci bir
+  // yönden çözülemez hâle getirebiliyordu. Seçenek KALDIRILIYOR, `disabled`
+  // basılmıyor: gri bir satır "neden kapalı?" diye sorduruyor, oysa cevap
+  // zaten listede görünen gergi satırı.
+  var _tenVar = (typeof nodes !== 'undefined') && !!_feadTensionerOf(nodes);
   Object.keys(componentDefs).forEach(function(t){
     if(!componentDefs[t] || !componentDefs[t].isFeadPulley) return;
+    if(_tenVar && componentDefs[t].isFeadTensioner) return;
     opt += '<option value="' + t + '">' + _feadEsc(componentDefs[t].name) + '</option>';
   });
   return '<select class="ve-fead-tbl-add" data-ve="add-pulley"'
@@ -5050,14 +5099,41 @@ function veFeadTableAdd(type){
      || !componentDefs[type].isFeadPulley) return false;
   // Konum kutusuz tipte kullanılmıyor ama createNode imzası istiyor; kanvas
   // merkezi geçiliyor ki bir gün kutulu bir tipe uygulansa da anlamlı olsun.
+  // İKİNCİ GERGİ KURULMAZ. Liste onu zaten sunmuyor (veFeadTableAddHTML) ama
+  // kapı İŞLEVDE de duruyor: liste bir gün başka bir yerden beslenirse kısıt
+  // sessizce kalkardı ve çekirdeğin reddi kullanıcıya ancak çözüm anında,
+  // başka bir yüzeyde görünürdü.
+  if(componentDefs[type].isFeadTensioner && typeof nodes !== 'undefined'
+     && _feadTensionerOf(nodes)){
+    if(typeof showToast === 'function')
+      showToast('Modelde zaten bir otomatik gergi var; çekirdek ikincisini '
+        + 'kabul etmez.', 'warning');
+    return false;
+  }
   var n = createNode(type, 3000, 3000);
   if(!n) return false;
+  // YENİ KASNAK GERGİNİN ÖNÜNE DÜŞER, sıranın SONUNA değil.
+  //
+  // İndissiz kasnağı `veFeadBeltOrder` sona atıyor; bu, "döngü otomatik
+  // gergiyle biter" kuralını kasnak eklenir eklenmez kırıyordu (gergi N−1'e
+  // kayıyor ve kullanıcı hiçbir şey yapmadan modeli uyarılı hâle getiriyordu).
+  // Kesirli indis veriliyor; `veFeadNormalizeBeltOrder` zaten 1..N'e oturtuyor.
+  //
+  // GÜVENLİ, çünkü yeni kasnağın henüz KOORDİNATI yok: halkadaki yeri
+  // geometriye hiç girmiyor. (Koordinatı olan bir kasnağı halkada oynatmak
+  // bedava DEĞİL — ölçüldü, L 1714,61 → 2459,29 mm.)
+  var _ten = _feadTensionerOf(nodes);
+  if(_ten && _ten !== n){
+    var _ti = Number(_ten.data && _ten.data.beltIndex);
+    if(Number.isFinite(_ti)){ n.data.beltIndex = _ti - 0.5; veFeadTableAfterEdit(); }
+  }
   // İndis normalize sırasında SONA düşer (indissiz kasnak sona eklenir —
   // veFeadBeltOrder). Kart tazelemesini createNode'un updateAllConnections'ı
   // yapıyor; burada ikinci kez çağırmak kartı boşuna iki kez kurardı.
   _feadScrollRowIntoView(n.id);
   if(typeof showToast === 'function')
-    showToast(componentDefs[type].name + ' kayış sırasının sonuna eklendi', 'success');
+    showToast(componentDefs[type].name + (_ten && _ten !== n
+      ? ' otomatik gerginin önüne eklendi' : ' kayış sırasının sonuna eklendi'), 'success');
   return true;
 }
 
@@ -5091,6 +5167,21 @@ function veFeadTableDelete(nodeId){
   var i = -1, k;
   for(k = 0; k < nodes.length; k++) if(nodes[k].id === nodeId){ i = k; break; }
   if(i < 0 || !_feadIsPulley(nodes[i])) return false;
+  // GERGİ SİLİNEMEZ — kozmetik bir kısıt değil: `fead-core.js` gergisiz
+  // sistemi kurmayı REDDEDİYOR (throw) ve köprü aynı kapıyı tekrarlıyor.
+  // Silinince model çözülemez hâle geliyordu ve sonuç dağınıktı: köprü hata
+  // veriyor, modül paneli "Gergi 0 adet"i amber yakıyor, raporun §4 ve
+  // §8.7/8.8/8.9 bölümleri tamamen düşüyordu.
+  //
+  // ASIL GEREKÇE İKİ YÜZEYİN ZIT DAVRANMASI: sihirbaz gergi satırının ✕'ini
+  // `disabled` basıp sebebini `title`da yazıyor; liste ise serbest
+  // bırakıyordu. Aynı modelin iki yüzeyi aynı kuralı söylemeli.
+  if((componentDefs[nodes[i].type] || {}).isFeadTensioner){
+    if(typeof showToast === 'function')
+      showToast('Otomatik gergi silinemez: her FEAD modelinde tam bir gergi '
+        + 'vardır (çekirdek gergisiz sistemi çözmez).', 'warning');
+    return false;
+  }
   if(typeof saveState === 'function') saveState();
   var ad = _feadNodeName(nodes[i]);
   nodes.splice(i, 1);
@@ -6285,7 +6376,10 @@ function veFeadPositionTable(build){
              Mean:'Ortalama', MinBelt:'Min. kayış', Load:'Load (mekanik stop)' };
   var h = '<table style="width:100%; font-size:var(--fs-micro); border-collapse:collapse; border:1px solid var(--border-color);">'
     + '<tr style="background:var(--bg-tertiary);">'
-    + ['Konum','Kol [°]','Gerginlik [N]','Hubload [N]','Yön [°]','β [°]','Sarım [°]'].map(function(t){
+    // "Kol [°]" üç büyüklükten HANGİSİ olduğunu söylemiyordu (burada GÖRELİ
+    // dönme basılıyor — raporun §8.8'i aynı satırı "Kol açısı — göreli" diye
+    // adlandırıyor). Tek ad, tek sayı.
+    + ['Konum','Kol dönmesi — göreli [°]','Gerginlik [N]','Hubload [N]','Yön [°]','β [°]','Sarım [°]'].map(function(t){
         return '<th style="padding:4px 5px; border:1px solid var(--border-color); text-align:left; font-weight:600; color:var(--text-secondary);">'+t+'</th>';
       }).join('') + '</tr>';
   rows.forEach(function(r){

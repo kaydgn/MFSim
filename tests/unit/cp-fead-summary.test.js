@@ -169,6 +169,20 @@ describe('Gates çıpaları — tedarikçi sayfası geri üretiliyor', () => {
       expect(Math.abs(hub[i] - g)).toBeLessThanOrEqual(2));
   });
 
+  // SÜTUNUN ANLAMI: yukarıdaki altılı (1381 · 1380 · 1023 · 1022 · 545 · 544)
+  // tablo sırasındadır ve tablo sırası kayışın gidişinin TERSİDİR. Yani 1381
+  // sürücünün ÇIKIŞI değil GİRİŞİDİR; çıkışı 544'tür (gerginin bulunduğu
+  // açıklık). Özetin notu bir dönem "kasnaktan sonraki açıklığın gerginliği"
+  // diyordu — sıra dilinde doğru, kayışın gidişinde TERS, ve sıranın ters
+  // olduğu hiçbir yerde yazmıyordu. Ayrıntılı raporun §8.11'iyle aynı hüküm.
+  test('sayfa 5: gerginlik sütununun anlamı BEYAN EDİLİYOR', () => {
+    const s5 = SU._fsrSheet5(R, NODE);
+    expect(s5).toMatch(/gidişinin tersi/);
+    expect(s5).toMatch(/GİRDİĞİ/);
+    expect(s5).toMatch(/sürücüye giren \(gergin\) açıklıkta/);
+    expect(s5).not.toMatch(/Değer, kasnaktan sonraki açıklığın gerginliğidir/);
+  });
+
   test('tasarım gerginliği türetilip 544 N basılıyor', () => {
     expect(SU._fsrSheet1(R, NODE)).toMatch(/544 N/);
   });
@@ -217,9 +231,19 @@ describe('gergi künyesi — merkez GİRDİ, montaj konumu TÜREV', () => {
     expect(Math.hypot(c[0] - p[0], c[1] - p[1])).toBeCloseTo(90, 0);
   });
 
-  test('kol çalışma açısı da künyede — montaj konumunu o belirliyor', () => {
+  // ADLANDIRMA 2026-09-22'DE AYRIŞTIRILDI. Özetin bu sayfasında yan yana iki
+  // satır vardı — "Kol çalışma açısı (mutlak)" ve "Çalışma kol açısı" — aynı
+  // üç kelime, sırası değişik, biri mutlak biri göreli. Okuyucunun ayırt
+  // etmesi için satır sonundaki "(göreli)" ekine dikkat etmesi gerekiyordu.
+  test('kol açıları AYRI ADLARLA künyede — mutlak ↔ göreli karışmıyor', () => {
     const { al } = satirlar();
-    expect(al('Kol çalışma açısı (mutlak)')).toMatch(/−12,00°/);
+    expect(al('θ_kol — mutlak (gövde→merkez)')).toMatch(/−12,00°/);
+    expect(al('Kol dönmesi — göreli (yay kurulması)')).toMatch(/°/);
+    // ESKİ ÇİFT GERİ GELMESİN — `al()` bulunamayan etikette kendi içinde
+    // patlıyor, o yüzden YOKLUK ham sayfadan ölçülüyor.
+    const s1 = SU._fsrSheet1(R, NODE);
+    expect(s1).not.toContain('Kol çalışma açısı (mutlak)');
+    expect(s1).not.toContain('Çalışma kol açısı');
   });
 });
 

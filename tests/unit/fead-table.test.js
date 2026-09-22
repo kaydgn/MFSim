@@ -698,13 +698,57 @@ describe('satır ekle / sil — kutu olmayınca tek yol', () => {
     const h = fead.veFeadTableAddHTML();
     const tipler = Object.keys(componentDefs).filter((t) => componentDefs[t].isFeadPulley);
     expect(tipler.length).toBeGreaterThan(5);
-    tipler.forEach((t) => expect(h).toContain('value="' + t + '"'));
+    // GERGİ HARİÇ: örnekte zaten bir tane var ve çekirdek ikincisini kabul
+    // etmiyor (aşağıdaki kapı). Listenin geri kalanı componentDefs'ten türer.
+    tipler.filter((t) => !componentDefs[t].isFeadTensioner)
+      .forEach((t) => expect(h).toContain('value="' + t + '"'));
     // Kasnak OLMAYAN bir tip listeye sızmamalı.
     expect(h).not.toContain('value="fead-belt"');
     expect(h).not.toContain('value="fead-table"');
   });
 
-  test('ekleme kayış sırasının SONUNA düşer', () => {
+  // GERGİ TEKİLDİR VE HER İKİ YÜZEYDE ÖYLE DAVRANIR (2026-09-22).
+  //
+  // Ölçülen aykırılık: sihirbaz gergi satırının ✕'ini `disabled` basıyor ve
+  // sebebini yazıyordu; Kayış Tablosu ise hem silmeye hem İKİNCİ bir gergi
+  // eklemeye izin veriyordu. Yani kullanıcı tablodan modeli İKİ AYRI yönden
+  // çözülemez hâle getirebiliyordu (0 gergi / 2 gergi) — `fead-core.js`
+  // ikisini de reddediyor (:371 ve :374) ama reddi ancak çözüm anında,
+  // başka bir yüzeyde görünüyordu.
+  test('GERGİ TEKİL: listede sunulmaz, eklenmez, silinmez', () => {
+    const { ns } = kurOrnek();
+    const ten = ns.find((n) => componentDefs[n.type].isFeadTensioner);
+    expect(ten).toBeTruthy();
+
+    // (1) Modelde gergi varken liste onu SUNMUYOR.
+    expect(fead.veFeadTableAddHTML()).not.toContain('value="fead-tensioner"');
+
+    // (2) Liste atlansa bile İŞLEV reddediyor — kapı iki katmanlı.
+    global.createNode = () => { throw new Error('çağrılmamalıydı'); };
+    expect(fead.veFeadTableAdd('fead-tensioner')).toBe(false);
+    delete global.createNode;
+
+    // (3) Silinmiyor ve model bozulmuyor.
+    const once = global.nodes.length;
+    expect(fead.veFeadTableDelete(ten.id)).toBe(false);
+    expect(global.nodes.length).toBe(once);
+    expect(global.nodes.some((n) => n.id === ten.id)).toBe(true);
+
+    // (4) Ama BAŞKA bir kasnak hâlâ silinebiliyor: kilit her şeyi dondurmuyor.
+    const alt = global.nodes.find((n) => n.type === 'fead-alternator');
+    expect(fead.veFeadTableDelete(alt.id)).toBe(true);
+    expect(global.nodes.some((n) => n.id === alt.id)).toBe(false);
+  });
+
+  // DAVRANIŞ 2026-09-22'DE DEĞİŞTİ ve bu test o gün TERS ÇEVRİLDİ.
+  //
+  // Eskiden yeni kasnak sıranın SONUNA düşüyordu (indissiz kasnağı
+  // `veFeadBeltOrder` sona atıyor). Bedeli: "döngü otomatik gergiyle biter"
+  // kuralı, kullanıcı bir kasnak ekler eklemez kırılıyor, gergi N−1'e kayıyor
+  // ve `build.warnings` uyarı basıyordu — yani kullanıcı hiçbir şey yanlış
+  // yapmadan modeli uyarılı hâle getiriyordu. Yeni kasnağın KOORDİNATI henüz
+  // olmadığı için halkadaki yerini seçmek bedava (geometriye hiç girmiyor).
+  test('ekleme OTOMATİK GERGİNİN ÖNÜNE düşer — döngü gergiyle bitmeye devam eder', () => {
     const { ns } = kurOrnek();
     const once = M.veFeadBeltOrder(ns).length;
     let k = 0;
@@ -718,8 +762,13 @@ describe('satır ekle / sil — kutu olmayınca tek yol', () => {
     delete global.createNode;
     const sira = M.veFeadNormalizeBeltOrder(global.nodes);
     expect(sira).toHaveLength(once + 1);
-    expect(sira[sira.length - 1].type).toBe('fead-waterpump');   // SONDA
-    expect(sira[0].data.driver).toBe(true);                      // sürücü hâlâ ilk
+    const son = sira[sira.length - 1];
+    expect(componentDefs[son.type].isFeadTensioner).toBe(true);        // GERGİ SONDA
+    expect(sira[sira.length - 2].type).toBe('fead-waterpump');         // yeni onun ÖNÜNDE
+    expect(sira[0].data.driver).toBe(true);                            // sürücü hâlâ ilk
+    // İNDİSLER 1..N'e oturmuş: kesirli indis kalıcı bir sıralama kuralı DEĞİL.
+    expect(sira.map((n) => n.data.beltIndex))
+      .toEqual(sira.map((_, i) => i + 1));
   });
 
   test('kasnak olmayan tip EKLENMEZ', () => {
@@ -1025,9 +1074,27 @@ describe('yeni yüzeyin işlevleri', () => {
     // eylem vardı ama kullanılamıyor" bilgisini hiç almıyordu.
     expect(h).not.toMatch(/opacity:0\.22/);
     expect((h.match(/<button[^>]*ve-fead-tbl-mv/g) || []).length).toBe(12);
-    // DÖRT pasif ok, üç değil: 1. satırın ikisi (sürücü kilitli), 2. satırın
-    // ▲'sı (sürücünün üstüne çıkamaz) ve son satırın ▼'si.
-    expect((h.match(/ve-fead-tbl-mv" disabled/g) || []).length).toBe(4);
+    // ALTI pasif ok. DÖRDÜ eski kilitten: 1. satırın ikisi (sürücü kilitli),
+    // 2. satırın ▲'sı (sürücünün üstüne çıkamaz), son satırın ▼'si.
+    // İKİSİ 2026-09-22'de GERGİ KİLİDİNDEN geldi: gergi son satırda olduğu
+    // için kendi ▲'sı ve bir üstteki satırın ▼'si de pasif — yoksa kullanıcı
+    // ETKİN görünüp hiçbir şey yapmayan bir düğmeye basardı (bu depoda daha
+    // önce ölçülmüş kusur sınıfı).
+    expect((h.match(/ve-fead-tbl-mv" disabled/g) || []).length).toBe(6);
+
+    // KİLİT YALNIZ KURAL YERİNDEYKEN: gergisi ortada duran bir kayıt okla
+    // düzeltilebilmeli, yoksa kilit onu o hâlde DONDURURDU.
+    const ten = global.nodes.find((n) => componentDefs[n.type].isFeadTensioner);
+    const alt = global.nodes.find((n) => n.type === 'fead-alternator');
+    const t0 = ten.data.beltIndex, a0 = alt.data.beltIndex;
+    ten.data.beltIndex = a0; alt.data.beltIndex = t0;          // gergiyi ORTAYA al
+    M.veFeadNormalizeBeltOrder(global.nodes);
+    const h2 = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
+      def: componentDefs['fead-table'], data: {} });
+    expect((h2.match(/ve-fead-tbl-mv" disabled/g) || []).length).toBe(4);
+    // ve hüküm künyede GÖRÜNÜYOR (sıranın düzenlendiği yüzeyde).
+    expect(h2).toContain('Gergi sonda değil');
+    expect(h).not.toContain('Gergi sonda değil');              // kural yerindeyken sessiz
   });
 
   test('GERGİ SATIRININ X/Y\'si ne olduğunu SÖYLÜYOR', () => {
@@ -1322,5 +1389,69 @@ describe('ad hücresi paneli AÇIYOR', () => {
     // bu iki parçanın yan yana durmasıyla ölçülüyor.
     expect(src).toContain('class="ve-fead-tbl-name"');
     expect(src).toMatch(/onclick="veFeadTableOpen\(/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  KARTIN TAŞIMA TUTAMAĞI
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı bildirimi (2026-09-22): *"Tablo taşıması düzelmemiş."* Ölçüldü
+// (gerçek tarayıcı, AG00976): kart YALNIZ üstteki künye şeridinden
+// taşınıyordu; kasnak listesinin gövdesi taşımıyordu. Kusur "kart taşınmıyor"
+// değil, İMLECİN YALAN SÖYLEMESİYDİ: `.ve-node{cursor:move}` kartın
+// tamamında taşıma imleci gösteriyor, ama liste mousedown'ı yutuyor (yutmak
+// ZORUNDA — yoksa bir alana yazmak kartı taşırdı). Kullanıcı imlecin
+// gösterdiği yerden tutuyor ve hiçbir şey olmuyordu.
+//
+// #932 bu davranışı "künyeden sürükleme kartı taşıyor / gövdeden taşımıyor"
+// diye EL ile ölçmüş ama o turda eklenen altı kapının hiçbiri sürüklemeyi
+// tutmuyordu — bu yüzden ne bozulduğu ne de keşfedilemez olduğu görüldü.
+//
+// KURAL: kartın KÜNYESİ taşır, VERİ yüzeyi taşımaz, ve İMLEÇ ikisini de doğru
+// söyler. Tutamak ayrıca GÖRÜNÜR (nokta ızgarası) — asıl kusur onun hiçbir
+// işaret taşımamasıydı.
+describe('kart taşıma tutamağı — künye taşır, liste taşımaz', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const CSS = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+
+  // İMLEÇ KAPISI. Gerçek sürükleme jsdom'da koşamaz (olay kabarması ve
+  // `getComputedStyle(cursor)` yok) — o halka `fead-tablo.spec.js` → "KART
+  // TAŞIMA"da. Buradaki kapı KURALIN CSS'te var olduğunu tutuyor; ikisi ayrı
+  // ayrı anlamsız: E2E olmadan kural yazılıp uygulanmayabilir, bu olmadan
+  // CSS bloğu silinince E2E'nin neden kırmızıya döndüğü anlaşılmaz.
+  test('İMLEÇ künye ile veri yüzeyini AYIRIYOR (kural CSS\'te)', () => {
+    const blok = CSS.slice(CSS.indexOf('.ve-fead-table-card{'));
+    // Künye: taşır ve öyle der.
+    expect(blok).toMatch(/\.ve-fead-tbl-head\{[^}]*cursor:move;/);
+    // Veri yüzeyi: `.ve-node{cursor:move}` buraya kadar iniyordu.
+    expect(blok).toMatch(/\.ve-fead-krt-wrap\{[^}]*cursor:default;/);
+    expect(blok).toMatch(/cursor:text;/);
+  });
+
+  // TUTAMAK GÖRÜNÜR: nokta ızgarası ÇİZİM (yazı karakteri değil — eksik bir
+  // glif afordansın kendisini yok ederdi, ad hücresindeki kuralın aynısı) ve
+  // DİNLENMEDE de duruyor (yalnız fare üstündeyken belirse keşfedilemezlik
+  // aynen sürerdi).
+  test('TUTAMAK GÖRÜNÜR — nokta ızgarası, çizim, dinlenmede de var', () => {
+    const blok = CSS.slice(CSS.indexOf('.ve-fead-table-card{'));
+    expect(blok).toMatch(/\.ve-fead-tbl-head::before\{/);
+    expect(blok).toMatch(/\.ve-fead-tbl-head::before\{[^}]*radial-gradient/);
+    // `content` BOŞ: ızgara arka plandan geliyor, bir karakterden değil.
+    expect(blok).not.toMatch(/\.ve-fead-tbl-head::before\{[^}]*content:"[^"]+"/);
+    // Dinlenmede opaklık sıfır DEĞİL.
+    const m = /\.ve-fead-tbl-head::before\{([^}]*)\}/.exec(blok);
+    expect(m).toBeTruthy();
+    expect(/opacity:0;/.test(m[1])).toBe(false);
+  });
+
+  // KASNAK LİSTESİ MOUSEDOWN'I YUTMAYA DEVAM EDİYOR — kural bunun ÜSTÜNE
+  // kuruldu, yerine değil. Yutma kalkarsa bir alana yazmak kartı taşır.
+  test('liste kabı mousedown\'ı yutmayı SÜRDÜRÜYOR', () => {
+    kurOrnek();
+    const h = fead.veFeadTableCardHTML({ id: 't', type: 'fead-table',
+      def: componentDefs['fead-table'], data: {} });
+    expect(h).toMatch(/class="ve-fead-krt-wrap" onmousedown="event\.stopPropagation\(\);"/);
   });
 });

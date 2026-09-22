@@ -1608,16 +1608,18 @@ describe('serpantin sırası — iki sıra birleşti', () => {
     void st;
   });
 
-  test('GERGİ SATIRI TAŞINABİLİYOR — oklar artık ölü değil', () => {
-    // ÖLÇÜLDÜ: `indexOf('__ten__') < 0` ile erken dönüyordu; 3. adımdaki
-    // yukarı/aşağı okları etkin görünüp hiçbir şey yapmıyordu.
+  // KURAL 2026-09-22'DE DEĞİŞTİ. Eskiden gergi satırı taşınabiliyordu; o gün
+  // eklenen şey "oklar ÖLÜ DEĞİL" idi (`indexOf('__ten__') < 0` ile erken
+  // dönüyor, düğme etkin görünüp hiçbir şey yapmıyordu). Kullanıcı isteği
+  // üzerine gergi artık SON SATIRA kilitli — ama o eski dersin kendisi
+  // duruyor: kilit SESSİZ DEĞİL, düğme `disabled` basılıyor.
+  test('GERGİ SATIRI KİLİTLİ — ve kilit sessiz değil, ok `disabled`', () => {
     const st = elleKur();
     const once = wiz.veFeadWizRoute(st).join('>');
-    wiz.veFeadWizRouteMove('__ten__', -1);
-    const sonra = wiz.veFeadWizRoute(st).join('>');
-    expect(sonra).not.toBe(once);
-    expect(sonra.split('>').indexOf('__ten__'))
-      .toBe(once.split('>').indexOf('__ten__') - 1);
+    expect(wiz.veFeadWizRouteMove('__ten__', -1)).toBe(false);
+    expect(wiz.veFeadWizRoute(st).join('>')).toBe(once);     // sıra oynamadı
+    expect(wiz.veFeadWizRouteMove('__ten__', +1)).toBe(false);
+    expect(wiz.veFeadWizRoute(st).join('>')).toBe(once);
   });
 
   test('YAZMA BİRİM İŞLEM — seedlenmiş sıra değişmiyor', () => {
@@ -2206,17 +2208,37 @@ describe('kasnak satırı taşıma — TABLO SIRASI = KAYIŞ SIRASI', () => {
   // TAŞINDI: tablo artık sıranın kendisi ve değişiklik SESSİZ DEĞİL (kartın
   // başlığı "Kasnaklar — kayış sırasıyla", hükmü ve "⇄ Kayış yönünü çevir"
   // düğmesi aynı kartta).
-  test('↑ ↓ KAYIŞ SIRASINI değiştiriyor, uçlarda duruyor', () => {
+  // TAŞIMA BASILAN SIRADA OKUNUR (2026-09-22). Tablo artık Gates/tablo
+  // sırasını basıyor, model sırası (`st.route`) ise GİDİŞ — flip bir yansıma
+  // olduğu için basılan sıradaki ↓ gidiş sırasında bir YUKARI demek.
+  test('↑ ↓ KAYIŞ SIRASINI değiştiriyor, BASILAN uçlarda duruyor', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const st = wiz.veFeadWizState();
-    const yol = () => wiz.veFeadWizRoute(st).join(',');
-    const y0 = yol();
-    expect(wiz.veFeadWizPulleyMove(st.pulleys[1].key, -1)).toBe(true);
-    expect(yol()).not.toBe(y0);
-    const s0 = wiz.veFeadWizRoute(st);
-    expect(wiz.veFeadWizPulleyMove(s0[0], -1)).toBe(false);                 // tepe
-    expect(wiz.veFeadWizPulleyMove(s0[s0.length - 1], 1)).toBe(false);      // dip
+    const basilan = () => M.veFeadRouteFlip(wiz.veFeadWizRoute(st));
+    const y0 = basilan().join(',');
+    const p0 = basilan();
+    // Basılan tablonun 2. satırı bir aşağı: sıra gerçekten değişiyor.
+    expect(wiz.veFeadWizPulleyMove(p0[1], +1)).toBe(true);
+    expect(basilan().join(',')).not.toBe(y0);
+    const p1 = basilan();
+    expect(wiz.veFeadWizPulleyMove(p1[0], -1)).toBe(false);                // tepe = sürücü
+    expect(wiz.veFeadWizPulleyMove(p1[p1.length - 1], +1)).toBe(false);    // dip = gergi
     expect(wiz.veFeadWizPulleyMove('yok-boyle', 1)).toBe(false);
+  });
+
+  // İKİ UÇ DA KİLİTLİ ve ikisi de Kayış Tablosu'ndaki kuralın aynısı.
+  // SÜRÜCÜ kilidi bu turda AÇILDI: eskiden basılan 2. satırın ↑'si sürücüyle
+  // YER DEĞİŞTİRİYORDU (veFeadWizRouteMove yalnız `j < 0` bakıyordu).
+  test('SÜRÜCÜ ve GERGİ uçları kilitli — kimse yerlerini alamaz', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const st = wiz.veFeadWizState();
+    const basilan = () => M.veFeadRouteFlip(wiz.veFeadWizRoute(st));
+    const p = basilan(), n = p.length;
+    expect(p[n - 1]).toBe('__ten__');                        // gergi SON satır
+    const y0 = p.join(',');
+    expect(wiz.veFeadWizPulleyMove(p[1], -1)).toBe(false);   // sürücünün yerine çıkılamaz
+    expect(wiz.veFeadWizPulleyMove(p[n - 2], +1)).toBe(false); // gerginin altına inilemez
+    expect(basilan().join(',')).toBe(y0);
   });
 
   test('ÇÖZÜMÜ DEĞİŞTİRİYOR — sıra kayışın kendisi', () => {
@@ -2233,23 +2255,45 @@ describe('kasnak satırı taşıma — TABLO SIRASI = KAYIŞ SIRASI', () => {
     expect(b1.beltLengthMm).not.toBeCloseTo(b0.beltLengthMm, 6);
   });
 
-  test('GERGİ SATIRI da taşınabiliyor — okları artık ölü değil', () => {
+  test('GERGİ SATIRI SON SATIRDA KİLİTLİ — döngü gergiyle biter', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const st = wiz.veFeadWizState();
-    const yer = () => wiz.veFeadWizRoute(st).indexOf('__ten__');
-    const y0 = yer();
-    expect(y0).toBeGreaterThan(0);
-    expect(wiz.veFeadWizPulleyMove('__ten__', -1)).toBe(true);
-    expect(yer()).toBe(y0 - 1);
+    const basilan = () => M.veFeadRouteFlip(wiz.veFeadWizRoute(st));
+    expect(basilan()[basilan().length - 1]).toBe('__ten__');
+    const y0 = basilan().join(',');
+    expect(wiz.veFeadWizPulleyMove('__ten__', -1)).toBe(false);
+    expect(wiz.veFeadWizPulleyMove('__ten__', +1)).toBe(false);
+    expect(basilan().join(',')).toBe(y0);
   });
 
-  test('düğmeler satırda ve uçlarda KAPALI', () => {
+  // ÖLÜ DÜĞME YOK: `veFeadWizRouteMove`'un reddettiği her hareket için ok
+  // `disabled` basılmalı. Etkin görünüp hiçbir şey yapmayan düğme bu deponun
+  // adıyla saydığı kusur sınıfı (gerginin okları bir dönem tam olarak öyleydi).
+  test('düğmeler satırda ve uçlarda KAPALI — reddedilen her hareket için', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const st = wiz.veFeadWizState();
     const h = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
     expect(h).toContain('veFeadWizPulleyMove');
-    const govde = h.slice(h.indexOf('<tbody>'), h.indexOf('</tbody>'));
-    const ilk = govde.slice(0, govde.indexOf('</tr>'));
-    expect(ilk).toMatch(/class="ve-fw-mini" disabled[^>]*>↑/);   // ilk satır yukarı gidemez
+    const d = document.createElement('div'); d.innerHTML = h;
+    const tr = [...d.querySelectorAll('.ve-fw-tbl-kasnak tbody tr')];
+    const n = tr.length;
+    const ok = (i, y) => tr[i].querySelectorAll('.ve-fw-mini')[y ? 0 : 1];
+    const basilan = M.veFeadRouteFlip(wiz.veFeadWizRoute(st));
+
+    expect(basilan[n - 1]).toBe('__ten__');
+    expect(ok(0, true).disabled).toBe(true);        // sürücü: ↑ yok
+    expect(ok(0, false).disabled).toBe(true);       // sürücü: ↓ yok
+    expect(ok(1, true).disabled).toBe(true);        // sürücünün yerine çıkılamaz
+    expect(ok(n - 2, false).disabled).toBe(true);   // gerginin altına inilemez
+    expect(ok(n - 1, true).disabled).toBe(true);    // gergi: ↑ yok
+    expect(ok(n - 1, false).disabled).toBe(true);   // gergi: ↓ yok
+    // Ortadaki satırlar SERBEST — kilit her şeyi dondurmuyor.
+    expect(ok(2, true).disabled).toBe(false);
+    expect(ok(2, false).disabled).toBe(false);
+
+    // VE HER PASİF OK GERÇEKTEN REDDEDİLİYOR (kapı ikinci yönden):
+    [[0, -1], [0, +1], [1, -1], [n - 2, +1], [n - 1, -1], [n - 1, +1]]
+      .forEach(([i, dl]) => expect(wiz.veFeadWizPulleyMove(basilan[i], dl)).toBe(false));
   });
 });
 
@@ -3100,16 +3144,23 @@ describe('adım listesi ve taşınan yetenek', () => {
     expect(satir).toBe(wiz.veFeadWizRoute(st).length);
   });
 
-  test('GERGİ SATIRI ROTADAKİ YERİNDE — sona sabitlenmiş değil', () => {
+  // Kullanıcı isteği (2026-09-22): *"Tabloda otomatik gergiyi en son kısımda
+  // görmek istiyoruz."* Sihirbaz gidiş sırasını basıyor ve gergi 2. SATIRDA
+  // görünüyordu; kurduğu Kayış Tablosu'nda ise sonuncu. Aynı modelin iki
+  // yüzeyi ters sırada okunuyordu.
+  test('GERGİ SATIRI BASILAN TABLONUN SONUNDA — Kayış Tablosu ile aynı sıra', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const st = wiz.veFeadWizState();
-    wiz.veFeadWizPulleyMove('__ten__', -1);                  // gergiyi bir yukarı al
-    const yer = wiz.veFeadWizRoute(st).indexOf('__ten__');
     const d = document.createElement('div');
     d.innerHTML = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
     const satirlar = [...d.querySelectorAll('.ve-fw-tbl-kasnak tbody tr')];
     const tenSatir = satirlar.findIndex((tr) => tr.classList.contains('ve-fw-tr-ten'));
-    expect(tenSatir).toBe(yer);
+    expect(tenSatir).toBe(satirlar.length - 1);                       // SON SATIR
+    // Ve basılan sıra gerçekten TABLO sırası: modelin GİDİŞ sırasının flip'i.
+    expect(M.veFeadRouteFlip(wiz.veFeadWizRoute(st))[satirlar.length - 1])
+      .toBe('__ten__');
+    // MODEL DEĞİŞMEDİ: rota hâlâ gidiş sırasında, gergi krankın hemen ardında.
+    expect(wiz.veFeadWizRoute(st).indexOf('__ten__')).toBe(1);
   });
 });
 
@@ -3255,5 +3306,86 @@ describe('"Modeli Kur" tek geri-al adımı', () => {
     // kurulumun ORTASINDA bir yere düşerdi.
     expect(iz.disarida).toEqual([]);
     expect(global.nodes.length).toBeGreaterThanOrEqual(11);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  GERGİNİN SAYILARI TOHUMDAN GELMİYOR — KULLANICI GİRİYOR
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı isteği (2026-09-22): *"Otomatik gergiyi başlangıç sihirbazında
+// otomatik olarak görüyoruz. Bu otomatik olarak gelmesin, kullanıcı seçsin."*
+//
+// AYRIM ÖNEMLİ: gerginin VARLIĞI yapısal bir zorunluluk — `fead-core.js:371`
+// gergisiz sistemi kurmayı reddediyor (throw) ve çekirdek dokunulmaz, yani
+// "gergi hiç gelmesin" bugünkü matematikte "model hiç çözülmesin" demek.
+// Seçtirilebilecek olan SAYILARDIR ve kullanıcı bu okumayı seçti.
+describe('gerginin sayıları: tohum BOŞ, kapı KURULUMDA', () => {
+  test('tohumda çap ve kol boyu YOK (contact yapısal, kalıyor)', () => {
+    const t = wiz.veFeadWizDefault().ten;
+    expect(t.od).toBeUndefined();
+    expect(t.armLen).toBeUndefined();
+    expect(t.contact).toBe('back');        // tipin kendisi, ölçüm değil
+    expect(t.tenLib).toBe('');
+  });
+
+  // EN SİNSİ YOL BU OLURDU: tohumu boşaltıp `veFeadWizNodes`teki `od` yedeğini
+  // (`_fwNum(t.od, 75)`) bırakmak. Alan boş görünür, kurulan modele sessizce
+  // 75 yazılırdı — "kullanıcı seçsin" isteği görünürde yerine gelir, gerçekte
+  // gelmezdi. Bu deponun belgelenmiş sessiz hata sınıfının ta kendisi.
+  test('boş çap MODELE 75 diye yazılmıyor — yedek kaldırıldı', () => {
+    kabuk();
+    wiz.veFeadWizReset();                       // tohumdan başla (boş gergi)
+    const st = wiz.veFeadWizState();
+    st.pulleys = [
+      { key: 'p1', type: 'fead-crank', name: 'CRK', od: 160, x: 0, y: 0, driver: true },
+      { key: 'p2', type: 'fead-alternator', name: 'ALT', od: 60, x: 200, y: 0 },
+    ];
+    const ten = wiz.veFeadWizNodes(st).nodes
+      .find((n) => componentDefs[n.type].isFeadTensioner);
+    expect(ten).toBeTruthy();
+    expect(ten.data.od).toBeUndefined();          // 75 SIZMADI
+    expect(ten.data.armLen).toBeUndefined();
+    expect(ten.data.contact).toBe('back');
+  });
+
+  test('KURULUM KAPISI eksik alanı ADIYLA söylüyor ve kurulumu reddediyor', () => {
+    kabuk();
+    wiz.veFeadWizReset();
+    const st = wiz.veFeadWizState();
+    const k0 = wiz.veFeadWizCanCreate();
+    expect(k0.ok).toBe(false);
+    expect(k0.sebep).toMatch(/kasnak çapı/);
+    expect(k0.sebep).toMatch(/kol boyu/);
+    expect(k0.sebep).toMatch(/3\. adım/);         // NEREDE girileceği yazılı
+
+    st.ten.od = 75;
+    expect(wiz.veFeadWizCanCreate().sebep).not.toMatch(/kasnak çapı/);
+    expect(wiz.veFeadWizCanCreate().sebep).toMatch(/kol boyu/);
+
+    st.ten.armLen = 90;
+    expect(wiz.veFeadWizCanCreate().ok).toBe(true);
+  });
+
+  // ÖRNEK YOLU BOZULMUYOR: tohum boşaldı ama örnek/künye yolu sayıları
+  // yazmaya devam ediyor, yani kullanıcı "seç" dediğinde kurulum açılıyor.
+  test('örnek seçilince kapı AÇILIYOR — tohum boşluğu yolu kapatmıyor', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const st = wiz.veFeadWizState();
+    expect(Number.isFinite(Number(st.ten.od))).toBe(true);
+    expect(Number.isFinite(Number(st.ten.armLen))).toBe(true);
+    expect(wiz.veFeadWizCanCreate().ok).toBe(true);
+  });
+
+  // ATÖLYEYE GİDEN SAYI SESSİZCE KAYBOLMUYOR. `veFeadTensionerPivot` girdiler
+  // eksikken null döndürüyor ve kart HİÇ basılmıyordu; tohum boşalınca o
+  // sessizlik pahalı hâle geldi.
+  test('Gövdenin Montaj Konumu kartı kaybolmuyor, EKSİĞİ yazıyor', () => {
+    kabuk();
+    wiz.veFeadWizReset();
+    const h = wiz.veFeadWizStepHTML(2, null);
+    expect(h).toContain('Gövdenin Montaj Konumu');
+    expect(h).toMatch(/Hesaplanamadı/);
+    expect(h).toMatch(/kol boyu/);
   });
 });

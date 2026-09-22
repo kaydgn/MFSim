@@ -90,6 +90,170 @@ describe('sayı biçimi — Türkçe ve dürüst', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  §8.8 — BAŞLIK SÜTUN SAYISINI SÖYLER
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı sorusu (2026-09-22): *"§4.4'te 'altı çalışma konumu' kısmı var.
+// Bu çalışma konumları neye göre belirleniyor?"*
+//
+// Cevap: ADLARI ve SIRASI çekirdekte çivili (Gates "Tensioner Geometry"
+// sayfasından birebir), SAYILARI tamamen çözülüyor. Ama araştırırken bir
+// kusur çıktı: başlık sabit "altı konum" diyor ve tablo BEŞ sütun
+// basabiliyor — Load yalnız gerginin mekanik durdurucusu biliniyorsa
+// ekleniyor. Raporun kendi testi bunu zaten kabul ediyordu
+// (`toBeGreaterThanOrEqual(5)`) ama başlığı tutan hiçbir halka yoktu.
+describe('§8.8 — konum sayısı başlıkta DOĞRU yazıyor', () => {
+  // Load stop'u DÜŞÜREN ulaşılabilir hâl: yay katsayısında bir ondalık kayması
+  // nominal dönüşü 280,6°'ye çıkarıyor, aday stop 505° oluyor ve çekirdeğin
+  // sınırından büyük olduğu için HİÇ uygulanmıyor (fead-defaults.test.js).
+  const besli = () => coz({ mutate: (ns) => {
+    ns.find((n) => n.type === 'fead-tensioner').data.kArm = 0.048;
+  } });
+
+  test('ALTI konumda başlık "altı" diyor', () => {
+    expect(R8.analysis.positions).toHaveLength(6);
+    expect(HTML8).toContain('8.8 Gergi kolunun gezdiği zarf — altı konum');
+    expect(HTML8).not.toContain('Load sütunu basılmadı');
+  });
+
+  test('BEŞ konumda başlık "beş" diyor ve SEBEBİ yazılı', () => {
+    const R5 = besli();
+    expect(R5.analysis.positions).toHaveLength(5);          // Load düştü
+    const H5 = RP._frSection8(R5, NODE);
+    expect(H5).toContain('8.8 Gergi kolunun gezdiği zarf — beş konum');
+    expect(H5).not.toContain('— altı konum');
+    // Eksik sütun bir hesap hatası DEĞİL, eksik bir GİRDİ — ve bu yazılı.
+    expect(H5).toContain('Load sütunu basılmadı');
+    expect(H5).toMatch(/mekanik durdurucu/);
+    // Sütun sayısı da gerçekten beş: başlık ile tablo AYNI şeyi söylüyor.
+    const i = H5.indexOf('<h3>8.8'), j = H5.indexOf('</table>', i);
+    const th = (H5.slice(i, j).match(/<th/g) || []).length;
+    expect(th).toBe(5 + 1);                                  // 5 konum + satır adı
+  });
+
+  // TEORİ METNİ DE İNKÂR ETMİYOR. §4.4 bir dönem "standartlaşmış altı konum
+  // kullanılır" diyerek altıyı mutlak bir sayı gibi yazıyordu; program
+  // basabildiği bir hâli belgede reddedemez (belge tedarikçiye gidiyor).
+  test('teori §4.4 Load\'un KOŞULLU olduğunu söylüyor', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(path.join(__dirname,
+      '../../tools/report-assets/fead-theory-source.html'), 'utf8');
+    const i = src.indexOf('4.4 ');
+    const p44 = src.slice(i, src.indexOf('</table>', i));
+    expect(p44).toMatch(/yalnız gergi künyesinde tanımlıysa/);
+    expect(p44).toMatch(/beş konuma iner/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  §8.12 — SÜRTÜNME KATSAYISI BELGEDE OKUNUR
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Eski kapanış cümlesi yalnız "Sürtünme katsayıları çekirdeğin kalibrasyon
+// sabitleridir" diyordu: DEĞER hiçbir yerde basılmıyordu. Ölçüldü — bütün
+// js/ + şablon ağacında '0.90' ya da '0.35' kullanıcıya basılan hiçbir metinde
+// geçmiyordu, yani okuyucu SF'nin hangi μ ile hesaplandığını belgenin içinden
+// öğrenemiyordu. Modül kuralı 10 bunun tersini söylüyor: sayı gizlenmez,
+// GEÇERLİLİK SINIRI sonucun İÇİNDE taşınır.
+describe('§8.12 — sürtünme katsayısının künyesi', () => {
+  const F = require('../../js/fead-core.js');
+  const s812 = () => {
+    const i = HTML8.indexOf('<h3>8.12');
+    expect(i).toBeGreaterThan(-1);
+    const j = HTML8.indexOf('<h3>8.13', i);
+    return HTML8.slice(i, j > i ? j : i + 6000);
+  };
+
+  test('İKİ DEĞER DE SAYIYLA basılıyor', () => {
+    const p = s812();
+    expect(p).toMatch(/μ<sub>kaburgalı<\/sub> = 0,9/);
+    expect(p).toMatch(/μ<sub>sırt<\/sub> = 0,35/);
+  });
+
+  // DEĞER ÇEKİRDEKTEN OKUNUYOR — ikinci bir kopya YOK. Rapora elle yazılan
+  // bir '0,90' bir sonraki kalibrasyonda sessizce bayatlardı; bu kapı tam
+  // olarak o kopyayı yakalar (sabiti geçici olarak değiştirip HTML'e bakıyor).
+  test('değer CALIBRATION\'dan geliyor, rapora KOPYALANMAMIŞ', () => {
+    const g0 = F.CALIBRATION.muEffGrooved.value;
+    try {
+      F.CALIBRATION.muEffGrooved.value = 0.77;
+      const p = RP._frSection8(R8, NODE);
+      expect(p).toMatch(/μ<sub>kaburgalı<\/sub> = 0,77/);
+      expect(p).not.toMatch(/μ<sub>kaburgalı<\/sub> = 0,9/);
+    } finally { F.CALIBRATION.muEffGrooved.value = g0; }
+  });
+
+  test('KÖKEN ve SINIR yazılı — üç kaynak, kalibre edilmemiş taraf, iki çekince', () => {
+    const p = s812();
+    // Köken: üç bağımsız ölçüm adıyla.
+    expect(p).toMatch(/Gerbert/);
+    expect(p).toMatch(/Tabatabaei/);
+    expect(p).toMatch(/Kubas/);
+    // Sınır 1 — sırt değeri kalibre DEĞİL ve bu saklanmıyor.
+    expect(p).toMatch(/kalibre edilmemiştir/);
+    // Sınır 2 — e^(μφ) bir TAM KAYMA eşiği, "hiç kayma yok" değil.
+    expect(p).toMatch(/tam kayma/);
+    // Sınır 3 — merkezkaç terimi hesaba katılmıyor ve hangi yönde yanıltıyor.
+    expect(p).toMatch(/[Mm]erkezkaç/);
+    expect(p).toMatch(/katılmamıştır/);
+    // ESKİ CÜMLE GERİ GELMESİN: değeri gizleyen hâli.
+    expect(p).not.toMatch(/Sürtünme katsayıları çekirdeğin kalibrasyon sabitleridir/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  §8.11 — SÜTUNUN ANLAMI BEYAN EDİLİR
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı sorusu (2026-09-22): *"Krank … saat yönüne doğru dönüyorsa,
+// kayışın geldiği kısım her zaman çok daha gergin olacak. Bunun doğru
+// olduğunu matematiğimize bakarak doğrular mısın?"*
+//
+// MATEMATİK DOĞRUYDU — 14 Gates sisteminin 14'ünde giren açıklık gergin ve
+// fark tam olarak P/v (ölçüldü; kapısı fead-spin.test.js → "GİDİŞ DİLİNDE").
+// YANLIŞ OLAN RAPORUN DİLİYDİ: §8.11 "sürücü kasnakta yükselir … o kasnaktan
+// SONRAKİ açıklık" diyordu. Bu, tablo sırasının (Gates "Layout Data", kayışın
+// gidişinin TERSİ) dilidir; kayışın gidişinde tam tersini söyler. Rapor
+// hiçbir yerde tablonun ters sırada olduğunu yazmıyordu, dolayısıyla okuyan
+// mühendis sürücü sütunundaki 1381 N'u "krankın çıkışı" sanıyordu — oysa o
+// krankın GİRİŞİ; çıkışı 544 N. Panel doğruyu, rapor tersini söylüyordu.
+describe('§8.11 — gerginlik sütununun anlamı', () => {
+  const _s811 = () => {
+    const i = HTML8.indexOf('<h3>8.11');
+    expect(i).toBeGreaterThan(-1);
+    return HTML8.slice(i, i + 1600);
+  };
+
+  test('tablo sırasının GİDİŞİN TERSİ olduğu ve sütunun GİREN açıklık olduğu yazılı', () => {
+    expect(HTML8).toMatch(/gidişinin tersidir/);
+    expect(HTML8).toMatch(/kayışın o kasnağa <b>girdiği<\/b> açıklığın gerginliğidir/);
+  });
+
+  test('GİDİŞ yönündeki yön doğru: aksesuarda yükselir, sürücüde düşer', () => {
+    // Eski metin bunların ikisini de TERS söylüyordu.
+    // ÇIPA BAŞLIK ETİKETİNDEN: çıplak '8.11' dizesi şekillerin SVG yol
+    // verisinde de geçiyor (ilk eşleşme bir `L482.45 80.08M…` parçası).
+    const p = _s811();
+    expect(p).toMatch(/her güç çeken kasnakta bir basamak <b>yükselir<\/b>/);
+    expect(p).toMatch(/sürücü kasnakta tek adımda <b>düşer<\/b>/);
+    // ESKİ HÜKÜM GERİ GELMESİN: "sürücü kasnakta yükselir" cümlesi artık
+    // kurulamamalı (sıra dili olduğu söylenmeden).
+    expect(p).not.toMatch(/sürücü kasnakta yükselir/);
+    expect(p).not.toMatch(/o kasnaktan <b>sonraki<\/b>/);
+  });
+
+  test('uçlar adlandırılmış: en büyük GİREN, en küçük gerginin satırı', () => {
+    // ÇIPA BAŞLIK ETİKETİNDEN: çıplak '8.11' dizesi şekillerin SVG yol
+    // verisinde de geçiyor (ilk eşleşme bir `L482.45 80.08M…` parçası).
+    const p = _s811();
+    expect(p).toMatch(/sürücüye giren \(gergin\) açıklıkta/);
+    expect(p).toMatch(/sürücüden çıkan \(gevşek\)/);
+    expect(p).toMatch(/ΔT = M\/r = P\/v/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 describe('§8 — girdi tabloları', () => {
   test('bölüm ve alt bölümler üretiliyor', () => {
     expect(HTML8).toContain('id="s8"');
