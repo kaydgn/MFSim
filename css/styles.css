@@ -539,10 +539,8 @@
       color:var(--on-accent);
     }
     .ve-settings-btn-primary:hover {
-      filter: brightness(1.1);
-      border-color: var(--accent-primary);
-      color:var(--on-accent);
-      background: var(--accent-primary);
+      background: var(--ink-accent);
+      border-color: var(--ink-accent);
     }
     .ve-settings-btn-danger {
       border-color: var(--danger-glow);
@@ -3373,7 +3371,14 @@ body > .mfsim-loading-logo .mfsim-loading-logo-ico{
   transition:background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), filter var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 .sw-btn-primary{background:var(--accent-primary);color:var(--on-accent);border-color:var(--accent-primary);}
-.sw-btn-primary:hover{filter:brightness(1.1);}
+/* DOLU DÜĞMENİN HOVER'I JETONDAN, PARLAKLIK FİLTRESİNDEN DEĞİL.
+   `filter:brightness(1.1)` tema-KÖRDÜR ve iki kimlikte TERS yönde hareket
+   eder — ölçüldü: açık kimlikte beyaz metnin kontrastı 5,46 → 4,67 (AA
+   tabanına yaklaşıyor), koyuda 5,71 → 6,86. `--ink-*` jetonları zaten
+   "aksanı metin gücünde kullan" için ölçülmüş değerler: açıkta daha koyu,
+   koyuda daha açık — yani hover her iki kimlikte de AYNI yöne, kontrastı
+   artıran yöne gidiyor. */
+.sw-btn-primary:hover{background:var(--ink-accent);border-color:var(--ink-accent);}
 .sw-btn-outline{background:transparent;color:var(--text-secondary);border-color:var(--border-color);}
 .sw-btn-outline:hover{border-color:var(--text-muted);background:var(--bg-tertiary);}
 /* Sabit #dc2626 yerine jeton: açık temalarda sabit kırmızı paletin dışına
@@ -4341,7 +4346,7 @@ body > .mfsim-loading-logo .mfsim-loading-logo-ico{
   border:none;border-radius:var(--radius-md);
   transition:filter var(--dur-fast) var(--ease-out);
 }
-.mntlib-add:hover{ filter:brightness(1.1); }
+.mntlib-add:hover{ background:var(--ink-accent); border-color:var(--ink-accent); }
 /* Satır göstergeleri — tetikleyici ve liste satırları aynı dili konuşur:
    nokta = girdi türü (özel / gömülü / değiştirilmiş / eğrili), kz = statik
    eksenel rijitlik, ∿ = nonlineer yasa taşıyor. */
@@ -5029,14 +5034,14 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   color:var(--on-accent);
 }
 .ve-solver-btn.primary:hover{
-  filter:brightness(1.15);
+  background:var(--ink-accent); border-color:var(--ink-accent);
 }
 .ve-solver-btn.success{
   background:linear-gradient(135deg,var(--accent-success),color-mix(in srgb,var(--accent-success) 78%,#000));
   color:white;
 }
 .ve-solver-btn.success:hover{
-  filter:brightness(1.15);
+  background:var(--ink-success); border-color:var(--ink-success);
 }
 .ve-solver-empty{
   padding:20px;
@@ -5934,7 +5939,15 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   border-radius:var(--radius-sm);
   margin-top:4px;
 }
-.dr-hdr:hover{background:var(--bg-secondary);filter:brightness(1.08);}
+/* AÇILIR BAŞLIĞIN HOVER'I KENDİ YÜZEYİNİN ÜSTÜNE KARIŞIR.
+   `--bg-*` merdiveni iki kimlikte TERS yönde sıralı (açıkta tertiary
+   #e6e1d8 secondary'den KOYU, koyuda #2a2621 ondan AÇIK), yani "bir üst
+   yüzey" diye tek bir jeton yok. `--accent-tint-8` doğru orandır ama
+   SAYDAMDIR: başlık `box-shadow`lu ve listenin üstünde duruyor, saydam
+   zemin altındaki satırları geçirirdi. Bu yüzden aynı %8 aksan başlığın
+   KENDİ zeminine karıştırılıyor — opak kalıyor, iki kimlikte de aynı
+   yöne gidiyor. */
+.dr-hdr:hover{background:color-mix(in srgb, var(--accent-primary) 8%, var(--bg-tertiary));}
 .dr-hdr .dr-arrow{font-size:var(--fs-micro);flex-shrink:0;width:12px;text-align:center;color:var(--text-muted);transition:transform 0.18s ease;}
 .dr-body{padding:18px 24px;font-size:var(--fs-body);color:var(--text-primary);background:var(--bg-secondary);overflow:hidden;transition:max-height 0.18s cubic-bezier(0.4,0,0.2,1), opacity 0.18s ease;}
 .dr-girdi-wrapper{overflow:hidden;transition:max-height 0.18s cubic-bezier(0.4,0,0.2,1), opacity 0.18s ease;padding-bottom:8px;}
@@ -6264,7 +6277,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   flex-shrink: 0;
   transition: filter 0.12s, transform 0.08s;
 }
-.ve-status-update-banner-btn:hover { filter: brightness(1.12); }
+.ve-status-update-banner-btn:hover { background: var(--ink-accent); border-color: var(--ink-accent); }
 .ve-status-update-banner-btn:active { transform: translateY(1px); }
 
 /* Program Durumu — açılır-kapanır commit listesi */
@@ -6513,7 +6526,7 @@ body.mf-radio-dragging .mf-radio-head{ cursor:grabbing; }
   width:40px; height:40px;
   background:var(--accent-primary); border-color:var(--accent-primary); color:var(--on-accent);
 }
-.mf-radio-play:hover{ background:var(--accent-primary); color:var(--on-accent); filter:brightness(1.08); }
+.mf-radio-play:hover{ background:var(--ink-accent); color:var(--on-accent); }
 .mf-radio-play svg{ width:20px; height:20px; }
 .mf-radio-vol{ display:flex; align-items:center; gap:6px; margin-left:auto; }
 .mf-radio-mute{ width:30px; height:30px; }
@@ -6686,7 +6699,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
   background:var(--accent-primary); border:none; border-radius:50%;
   color:var(--on-accent); cursor:pointer; transition:filter var(--dur-fast,0.12s);
 }
-.mf-radio-mini-pp:hover{ filter:brightness(1.08); }
+.mf-radio-mini-pp:hover{ background:var(--ink-accent); }
 .mf-radio-mini-pp svg{ width:18px; height:18px; }
 .mf-radio-mini-info{ flex:1; min-width:0; display:flex; align-items:center; gap:7px; }
 .mf-radio-mini-text{ min-width:0; display:flex; flex-direction:column; }
@@ -7912,9 +7925,9 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
 .ve-fw-btn:hover:not(:disabled){ background:var(--bg-tertiary); border-color:var(--border-hover); }
 .ve-fw-btn:disabled{ opacity:.45; cursor:not-allowed; }
 .ve-fw-btn-primary{ background:var(--accent-primary); border-color:var(--accent-primary); color:var(--on-accent); }
-.ve-fw-btn-primary:hover:not(:disabled){ filter:brightness(1.12); background:var(--accent-primary); }
+.ve-fw-btn-primary:hover:not(:disabled){ background:var(--ink-accent); border-color:var(--ink-accent); }
 .ve-fw-btn-go{ background:var(--accent-warning); border-color:var(--accent-warning); color:var(--on-warning); font-weight:700; }
-.ve-fw-btn-go:hover:not(:disabled){ filter:brightness(1.12); background:var(--accent-warning); }
+.ve-fw-btn-go:hover:not(:disabled){ background:var(--ink-warning); border-color:var(--ink-warning); }
 .ve-fw-btn-wide{
   display:flex; flex-direction:column; align-items:flex-start; gap:2px;
   width:100%; margin-bottom:6px; text-align:left; padding:8px 11px;
@@ -8425,7 +8438,7 @@ span.ve-fw-ro{ display:inline-block; }
   background:var(--accent-warning); color:var(--on-warning);
   transition:filter .12s ease;
 }
-.ve-fp-solve:hover:not(:disabled){ filter:brightness(1.08); }
+.ve-fp-solve:hover:not(:disabled){ background:var(--ink-accent); border-color:var(--ink-accent); }
 .ve-fp-solve:focus-visible{ outline:2px solid var(--focus-ring); outline-offset:2px; }
 .ve-fp-solve:disabled{
   background:var(--bg-tertiary); color:var(--text-muted);
@@ -9150,7 +9163,7 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-komuta-btn:hover{ border-color:var(--border-hover); color:var(--text-primary); }
 .ve-komuta-btn:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 .ve-komuta-btn-birincil{ background:var(--accent-primary); border-color:var(--accent-primary); color:var(--on-accent); }
-.ve-komuta-btn-birincil:hover{ filter:brightness(1.08); color:var(--on-accent); }
+.ve-komuta-btn-birincil:hover{ background:var(--ink-accent); border-color:var(--ink-accent); color:var(--on-accent); }
 .ve-komuta-not{ width:100%; padding:7px 10px; border-radius:var(--radius-md); font-size:var(--fs-md); margin-bottom:8px;
   background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); }
 .ve-komuta-not:focus{ outline:none; border-color:var(--accent-primary); box-shadow:var(--focus-ring); }
