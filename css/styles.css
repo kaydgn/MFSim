@@ -475,7 +475,8 @@
       font-weight: 700;
       color: var(--text-heading);
       margin: 0 0 6px;
-      letter-spacing: -0.01em;
+      /* tracking display bağlamasından — burada TEKRAR etmek, bağlama
+         değişince sessizce ayrışacak ikinci bir kaynak demekti. */
     }
     .ve-settings-desc {
       font-size:var(--fs-body);
@@ -648,7 +649,7 @@
     .mfsim-login-title{
       font-size:var(--fs-h2); font-weight:700;
       color:var(--text-heading);
-      letter-spacing:0.5px;
+      /* tracking display bağlamasından (-0.01em) — bkz. `--font-display` */
     }
     .mfsim-login-subtitle{
       font-size:var(--fs-body);
@@ -784,7 +785,7 @@
       gap:10px;
       font-size:var(--fs-h2); font-weight:700;
       color:var(--text-heading);
-      letter-spacing:0.5px;
+      /* tracking display bağlamasından (-0.01em) — bkz. `--font-display` */
     }
     /* Dişli SÜREKLİ DÖNMÜYOR: her kademede bir çentik dönüp duruyor
        (js/loader.js › setProgress). Yükleme boyunca toplam TAM BİR TUR atar —
@@ -2225,7 +2226,10 @@ html.ve-sayfa-tuval .ve-nav-rail{ border-right-color:transparent; }
   gap:10px;
   font-size:var(--fs-h2);
   font-weight:700;
-  letter-spacing:0.5px;
+  /* tracking display bağlamasından (-0.01em) — bkz. `--font-display`.
+     Burada `0.5px` yazmak bağlamayı EZİYORDU (bu kural sonra geliyor):
+     açılış ekranıyla karşılama ekranı AYNI markayı ayrı tracking'le
+     çiziyordu, saniyeler arayla. */
   color:var(--text-heading);
 }
 .ve-welcome-logo-ico{

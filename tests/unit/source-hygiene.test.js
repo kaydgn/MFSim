@@ -915,3 +915,54 @@ describe('pencere kabukları jeton konuşur', () => {
     expect(STYLES).toMatch(/--z-overlay:\s*\d+/);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 12) DISPLAY YÜZÜNE BAĞLI ELEMAN KENDİ TRACKING'İNİ YAZMAZ
+//
+// Ölçülen kusur: "MFSim" açılış ekranında -0,2px, karşılama ekranında +0,5px
+// tracking ile çiziliyordu — aynı yüz, aynı boy, saniyeler arayla.
+//
+// Sebep KASKAD: display bağlaması (`h1..h4, .mfsim-loading-logo,
+// .ve-welcome-logo { font-family:var(--font-display); letter-spacing:-0.01em }`)
+// ile elemanın kendi `letter-spacing:0.5px` bildirimi AYNI özgüllükte. İkisinde
+// bağlama SONRA geliyordu (bildirim ölüydü), `.ve-welcome-logo` ise bağlamadan
+// sonra tanımlı olduğu için KAZANIYORDU. `0.5px` eski SANS markadan kalmaydı.
+//
+// Yani aynı bildirim, aynı dosyada, üç elemandan ikisinde ölü birinde canlıydı
+// ve farkı yalnız SIRA belirliyordu. Kapı sırayı değil KURALI tutar: bağlamaya
+// giren bir eleman tracking'ini bağlamadan alır.
+//
+// Gerçek tarayıcı karşılığı: `tests/e2e/marka-tutarli.spec.js`.
+describe('display yüzüne bağlı eleman kendi tracking’ini yazmaz', () => {
+  test('bağlama listesindeki hiçbir sınıf letter-spacing bildirmiyor', () => {
+    const govde = STYLES.replace(/\/\*[\s\S]*?\*\//g, '');
+    // Bağlama kuralını BUL — listesi elle kopyalanmaz, kaynaktan okunur.
+    const m = govde.match(/([^{}]*)\{[^{}]*font-family:\s*var\(--font-display\)[^{}]*\}/);
+    expect(m).not.toBeNull();
+    const bagli = m[1].split(',').map((s) => s.trim()).filter((s) => s.startsWith('.'));
+    expect(bagli.length).toBeGreaterThanOrEqual(4);   // liste gerçekten okundu
+
+    const kalan = [];
+    const bas = /(?:^|[}\s;])([^{};@]*)\{/g;
+    let r;
+    while ((r = bas.exec(govde))) {
+      const sel = r[1].trim();
+      let d = 1, j = bas.lastIndex;
+      while (j < govde.length && d > 0) { if (govde[j] === '{') d++; else if (govde[j] === '}') d--; j++; }
+      const blok = govde.slice(bas.lastIndex, j - 1);
+      bas.lastIndex = j;
+      if (!sel || sel.startsWith('@')) continue;
+      if (/font-family:\s*var\(--font-display\)/.test(blok)) continue;   // bağlamanın kendisi
+      sel.split(',').forEach((dal) => {
+        if (!bagli.includes(dal.trim())) return;
+        blok.split(';').forEach((dec) => {
+          const k = dec.indexOf(':');
+          if (k < 0) return;
+          if (dec.slice(0, k).trim().toLowerCase() !== 'letter-spacing') return;
+          kalan.push(`${govde.slice(0, r.index).split('\n').length}: ${dal.trim()} → ${dec.slice(k + 1).trim()}`);
+        });
+      });
+    }
+    expect(kalan).toEqual([]);
+  });
+});
