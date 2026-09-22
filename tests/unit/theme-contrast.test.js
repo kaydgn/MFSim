@@ -61,6 +61,28 @@ function coz(t, anahtar) {
   return m ? coz(t, m[1]) : (v.startsWith('#') ? v : null);
 }
 
+// ÇÖZÜLEMEYEN JETON ARTIK SESSİZ GEÇMİYOR.
+//
+// ÖLÇÜLEN DELİK (2026-09-22): `coz()` hex olmayan değerde null dönüyordu,
+// `hex(null)` NaN üretiyordu, `oran()` NaN veriyordu ve testin kendi kalıbı
+// `expect('NaN').toBe('NaN')` YEŞİL geçiyordu. Üç atlama noktası bu deliği
+// paylaşıyordu (--text-*, --on-*, --ink-* halkaları). Sonuç: `oklch()`,
+// `color-mix()`, `rgb()` ya da 3 haneli hex ile yazılmış bir palet bu
+// kapıdan HİÇ ÖLÇÜLMEDEN geçerdi — kapı yeşil yanar, kontrast bilinmezdi.
+//
+// Aynı delik ZEMİN tarafında da vardı: `if (!t[z].startsWith('#')) return;`
+// hex olmayan bir yüzeyi ölçmeden ATLIYORDU. Artık zemin de buradan geçiyor.
+function hexi(t, anahtar) {
+  const v = coz(t, anahtar);
+  if (!/^#[0-9a-fA-F]{6}$/.test(v || '')) {
+    throw new Error(
+      `${t.ad} · --${anahtar}: 6 haneli hex bekleniyordu, gelen "${t[anahtar]}". `
+      + 'Kontrast ölçülemez — tema jetonları #rrggbb yazılmalı '
+      + '(oklch/color-mix/rgb/3-hane bu kapıdan geçemez).');
+  }
+  return hex(v);
+}
+
 const AA = 4.5;
 const ZEMIN = ['bg-primary', 'bg-secondary', 'bg-tertiary', 'bg-input'];
 const temalar = temalariOku();
@@ -76,10 +98,9 @@ describe('tema paleti — metin kontrastı (WCAG AA)', () => {
       // hangisiyse ölçüt odur.
       ['text-muted', 'text-secondary', 'text-primary', 'text-heading'].forEach((k) => {
         test(`--${k} her yüzeyde AA`, () => {
-          const fg = hex(coz(t, k));
+          const fg = hexi(t, k);
           ZEMIN.forEach((z) => {
-            if (!t[z] || !t[z].startsWith('#')) return;
-            const r = oran(fg, hex(t[z]));
+            const r = oran(fg, hexi(t, z));
             expect(`${k} / ${z}: ${r.toFixed(2)}`)
               .toBe(`${k} / ${z}: ${Math.max(r, AA).toFixed(2)}`);
           });
@@ -90,7 +111,7 @@ describe('tema paleti — metin kontrastı (WCAG AA)', () => {
       [['accent-primary', 'on-accent'], ['accent-success', 'on-success'],
         ['accent-warning', 'on-warning'], ['accent-danger', 'on-danger']].forEach(([a, o]) => {
         test(`--${o} → --${a} zemininde AA`, () => {
-          const r = oran(hex(coz(t, o)), hex(t[a]));
+          const r = oran(hexi(t, o), hexi(t, a));
           expect(`${o}: ${r.toFixed(2)}`).toBe(`${o}: ${Math.max(r, AA).toFixed(2)}`);
         });
       });
@@ -99,10 +120,9 @@ describe('tema paleti — metin kontrastı (WCAG AA)', () => {
       [['accent-primary', 'ink-accent'], ['accent-success', 'ink-success'],
         ['accent-warning', 'ink-warning'], ['accent-danger', 'ink-danger']].forEach(([a, i]) => {
         test(`--${i} her yüzeyde AA`, () => {
-          const fg = hex(coz(t, i));
+          const fg = hexi(t, i);
           ZEMIN.forEach((z) => {
-            if (!t[z] || !t[z].startsWith('#')) return;
-            const r = oran(fg, hex(t[z]));
+            const r = oran(fg, hexi(t, z));
             expect(`${i} / ${z}: ${r.toFixed(2)}`)
               .toBe(`${i} / ${z}: ${Math.max(r, AA).toFixed(2)}`);
           });
@@ -112,10 +132,16 @@ describe('tema paleti — metin kontrastı (WCAG AA)', () => {
       // Üç kademe AYIRT EDİLEBİLİR kalmalı. Yalnız eşiği tutturmak yetmez:
       // muted'ı 4,6'ya çekerken secondary 4,69'da bırakılsaydı iki kademe
       // gözle aynı görünür, hiyerarşi ikiye inerdi.
+      // Zeminler de ölçülebilir olmak zorunda: hex olmayan bir yüzey eskiden
+      // sessizce ATLANIYORDU, yani o yüzeyin üstündeki hiçbir metin ölçülmemiş
+      // oluyordu. Dördü birden hex değilse `Math.min(...[])` = Infinity'ye
+      // düşüp kademe testi NaN'a çarpardı — gürültülü ama yanlış adresli.
+      test('dört zemin de 6 haneli hex', () => {
+        ZEMIN.forEach((z) => { expect(() => hexi(t, z)).not.toThrow(); });
+      });
+
       test('muted < secondary < primary — kademeler ayrışıyor', () => {
-        const en = (k) => Math.min(...ZEMIN
-          .filter((z) => t[z] && t[z].startsWith('#'))
-          .map((z) => oran(hex(coz(t, k)), hex(t[z]))));
+        const en = (k) => Math.min(...ZEMIN.map((z) => oran(hexi(t, k), hexi(t, z))));
         const m = en('text-muted'); const s = en('text-secondary'); const p = en('text-primary');
         expect(s / m).toBeGreaterThan(1.15);
         expect(p / s).toBeGreaterThan(1.15);

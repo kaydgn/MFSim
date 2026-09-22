@@ -18,6 +18,7 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '../../', f), 'utf8');
 const css = read('css/styles.css');
 const themeJs = read('js/theme.js');
 const settingsJs = read('js/settings.js');
+const loaderJs = read('js/loader.js');
 
 const uniqSort = (arr) => Array.from(new Set(arr)).sort();
 
@@ -110,12 +111,37 @@ describe('tema görsel bütünlüğü', () => {
 // üçüncüsü 'slate' kaldı: geçersiz bir değer tutan kopya sessizce BAŞKA bir
 // temaya düşüyordu. Hata görünmez — program açılır, yalnız yanlış temada.
 describe('Varsayılan tema tek değer', () => {
-  test('üç düşüş noktası da AYNI temaya çözülür', () => {
+  test('BEŞ düşüş noktası da AYNI temaya çözülür', () => {
     const ilk = themeJs.match(/var savedTheme = '([a-z]+)';/);
     const yok = themeJs.match(/localStorage\.getItem\('mf-theme'\)\s*\|\|\s*'([a-z]+)'/);
     const gecersiz = themeJs.match(/valid\.indexOf\(savedTheme\)\s*<\s*0\)\s*savedTheme\s*=\s*'([a-z]+)'/);
-    expect(ilk && yok && gecersiz).toBeTruthy();
-    expect(new Set([ilk[1], yok[1], gecersiz[1]]).size).toBe(1);
+    // DÖRDÜNCÜ ve BEŞİNCİ nokta: Ayarlar > Görünüm penceresi kendi varsayılanını
+    // tutuyor ve bu kapı onu HİÇ OKUMUYORDU. Ölçüldü (2026-09-22): theme.js üç
+    // yerde de 'pearl' derken settings.js 'slate' diyordu — yani hiç tema
+    // seçmemiş bir kopya PEARL açılıyor, ama Ayarlar'ı açınca MIDNIGHT işaretli
+    // görünüyordu. Sessiz: program çalışır, yalnız pencere yalan söyler.
+    const ayarIlk = settingsJs.match(/var current = '([a-z]+)';/);
+    const ayarYok = settingsJs.match(/localStorage\.getItem\('mf-theme'\)\s*\|\|\s*'([a-z]+)'/);
+    expect(ilk && yok && gecersiz && ayarIlk && ayarYok).toBeTruthy();
+    expect(new Set([ilk[1], yok[1], gecersiz[1], ayarIlk[1], ayarYok[1]]).size).toBe(1);
+  });
+
+  // ── İLK KARE: İKİ YOL, TEK KURAL ─────────────────────────────────────────
+  // Kayıtlı tema, hiçbir şey çizilmeden önce İKİ ayrı yerde uygulanıyor:
+  //   index.html   → <head> içindeki satır içi betik — SÜZGEÇ YOK
+  //   js/loader.js → applyStoredTheme() — /^[a-z]+$/ slug süzgeci var
+  // Bugün zararsız, çünkü index.html önce koşuyor ve loader hiçbir zaman
+  // TEMİZLEMİYOR; ama kural ayrıştığı an sonuç sessiz: süzgecin reddettiği
+  // bir kimlik seçilirse loader'ın ölçüp kapattığı açılış renk sıçraması geri
+  // gelir ve bunu yalnız gerçek tarayıcıda kullanıcı görür.
+  // Kapı kördü: loader-splash.test.js tiresiz 'navy' kullanıyor, yani süzgecin
+  // bir kimliği REDDEDEBİLECEĞİ hiç ölçülmemişti.
+  test('loader.js süzgeci GEÇERLİ her tema kimliğini kabul ediyor', () => {
+    const m = loaderJs.match(/if \(t && \/([^/]+)\/\.test\(t\)\)/);
+    expect(m).toBeTruthy();                       // süzgeç hâlâ orada mı
+    const suzgec = new RegExp(m[1]);
+    const reddedilen = validIds.filter((id) => !suzgec.test(id));
+    expect(reddedilen).toEqual([]);
   });
 
   test('varsayılan AÇIK bir tema (kullanıcı kararı) ve geçerli listede', () => {
