@@ -423,12 +423,12 @@ function getMntModulePropertiesHTML(node){
   var cCount = (sub && sub.connections) ? sub.connections.length : 0;
   var initialized = !!(sub && sub.nodes && sub.nodes.length);
   var html='<div class="sw-panel">';
-  html+='<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
+  html+='<table class="ve-pnl-tbl ve-pnl-tbl--framed" style="margin-bottom:10px;">';
   if(initialized){
-    html+='<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bileşen</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">'+nCount+'</td></tr>';
-    html+='<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bağlantı</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">'+cCount+'</td></tr>';
+    html+='<tr><td style="border:1px solid var(--border-color); color:var(--text-secondary);">Bileşen</td><td style="border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">'+nCount+'</td></tr>';
+    html+='<tr><td style="border:1px solid var(--border-color); color:var(--text-secondary);">Bağlantı</td><td style="border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">'+cCount+'</td></tr>';
   } else {
-    html+='<tr><td style="padding:7px 8px; border:1px solid var(--border-color); color:var(--text-muted);">Alt topoloji henüz açılmadı</td></tr>';
+    html+='<tr><td style="border:1px solid var(--border-color); color:var(--text-muted);">Alt topoloji henüz açılmadı</td></tr>';
   }
   html+='</table>';
   html+='<button onclick="veMntOpenEditor(\''+node.id+'\')" style="width:100%; padding:14px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.03em;" onmouseover="this.style.filter=\'brightness(1.15)\'" onmouseout="this.style.filter=\'none\'">▶ Alt Topolojiyi Aç</button>';
@@ -890,12 +890,12 @@ function _mntPtoRefTable(type){
   var th='padding:4px 7px; text-align:right; color:var(--text-muted); font-weight:600; border-bottom:1px solid var(--border-color); white-space:nowrap;';
   var td='padding:3px 7px; text-align:right; color:var(--text-primary); font-variant-numeric:tabular-nums; white-space:nowrap;';
   var h='<details style="margin-top:2px;"><summary style="cursor:pointer; font-size:var(--fs-micro); color:var(--text-secondary); padding:2px 0; user-select:none;">ASR-SR-116 referans değerleri <span style="color:var(--text-muted);">(ASFAT 8x8 Obüs)</span></summary>';
-  h+='<div style="overflow-x:auto; margin-top:6px;"><table style="width:100%; border-collapse:collapse; font-size:var(--fs-micro);"><thead><tr>';
-  ref.head.forEach(function(c,i){ h+='<th style="'+th+(i===0?' text-align:left;':'')+'">'+_mntEsc(c)+'</th>'; });
+  h+='<div style="overflow-x:auto; margin-top:6px;"><table class="ve-pnl-tbl" style="font-size:var(--fs-micro);"><thead><tr>';
+  ref.head.forEach(function(c,i){ h+='<th style="'+th+(i===0?' text-align:left; ':'')+';">'+_mntEsc(c)+'</th>'; });
   h+='</tr></thead><tbody>';
   ref.rows.forEach(function(r){
     h+='<tr style="border-bottom:1px solid var(--border-color);">';
-    r.forEach(function(c,i){ h+='<td style="'+td+(i===0?' text-align:left; color:var(--text-secondary);':'')+'">'+_mntEsc(c)+'</td>'; });
+    r.forEach(function(c,i){ h+='<td style="'+td+(i===0?' text-align:left; color:var(--text-secondary); ':'')+';">'+_mntEsc(c)+'</td>'; });
     h+='</tr>';
   });
   h+='</tbody></table></div>';
@@ -1221,11 +1221,11 @@ function _mntExampleDetailsHTML(ex){
   h+='</div>';
   var specs=ex.specs||[];
   if(specs.length){
-    h+='<table style="width:100%; font-size:var(--fs-tiny); border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:13px;">';
+    h+='<table class="ve-pnl-tbl ve-pnl-tbl--tiny ve-pnl-tbl--framed" style="margin-bottom:13px;">';
     specs.forEach(function(r){
       h+='<tr style="border-bottom:1px solid var(--border-color);">'
-        +'<th style="padding:5px 9px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:52%; font-weight:500; color:var(--text-secondary); white-space:nowrap;">'+_mntEsc(r[0])+'</th>'
-        +'<td style="padding:5px 9px; color:var(--text-primary); font-weight:600;">'+_mntEsc(r[1])+'</td></tr>';
+        +'<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:52%; font-weight:500; color:var(--text-secondary);">'+_mntEsc(r[0])+'</th>'
+        +'<td style="color:var(--text-primary); font-weight:600;">'+_mntEsc(r[1])+'</td></tr>';
     });
     h+='</table>';
   }
@@ -2848,13 +2848,13 @@ function _mntLibCurveEditor(node, e){
       + '<button onclick="veMntLibCurveEnable(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" style="width:100%; padding:7px; font-size:var(--fs-body); font-weight:600; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">＋ z-eğrisi ekle (sz\'den lineer tohum)</button>';
   } else {
     inner = '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin-bottom:7px;">δ: sehim [mm], f: kuvvet [N] (basma <b>−</b>). Çözücü δ\'ya göre sıralar; monoton eğri önerilir.</div>';
-    inner += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:var(--fs-tiny); margin-bottom:7px;"><thead><tr>'
-      + '<th style="'+_mntMxTh()+'">δ [mm]</th><th style="'+_mntMxTh()+'">f [N]</th><th style="'+_mntMxTh()+'"></th></tr></thead><tbody>';
+    inner += '<div style="overflow-x:auto;"><table class="ve-pnl-tbl ve-pnl-tbl--tiny" style="margin-bottom:7px;"><thead><tr>'
+      + '<th style="'+_mntMxTh()+';">δ [mm]</th><th style="'+_mntMxTh()+';">f [N]</th><th style="'+_mntMxTh()+';"></th></tr></thead><tbody>';
     pts.forEach(function(p,i){
       inner += '<tr>'
-        + '<td style="'+_mntMxTd()+'"><input type="number" value="'+_mntEsc(p[0])+'" step="0.5" onchange="veMntLibCurveSetPoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\','+i+',0,this.value)" style="width:100%; '+_MNT_INP+'"></td>'
-        + '<td style="'+_mntMxTd()+'"><input type="number" value="'+_mntEsc(p[1])+'" step="10" onchange="veMntLibCurveSetPoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\','+i+',1,this.value)" style="width:100%; '+_MNT_INP+'"></td>'
-        + '<td style="'+_mntMxTd()+'"><button onclick="veMntLibCurveRemovePoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\','+i+')" title="Noktayı sil" style="background:none; border:1px solid var(--border-color); color:var(--accent-danger); cursor:pointer; padding:1px 6px; font-size:var(--fs-body); line-height:1;">✕</button></td>'
+        + '<td style="'+_mntMxTd()+';"><input type="number" value="'+_mntEsc(p[0])+'" step="0.5" onchange="veMntLibCurveSetPoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\','+i+',0,this.value)" style="width:100%; '+_MNT_INP+'"></td>'
+        + '<td style="'+_mntMxTd()+';"><input type="number" value="'+_mntEsc(p[1])+'" step="10" onchange="veMntLibCurveSetPoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\','+i+',1,this.value)" style="width:100%; '+_MNT_INP+'"></td>'
+        + '<td style="'+_mntMxTd()+';"><button onclick="veMntLibCurveRemovePoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\','+i+')" title="Noktayı sil" style="background:none; border:1px solid var(--border-color); color:var(--accent-danger); cursor:pointer; padding:1px 6px; font-size:var(--fs-body); line-height:1;">✕</button></td>'
         + '</tr>';
     });
     inner += '</tbody></table></div>';

@@ -945,3 +945,55 @@ tarayıcıda iki ekranın hesaplanmış değerini karşılaştırır **ve geniş
 farkının göz ayıracak kadar büyük olduğunu** ayrıca ölçer — tracking
 eşitliği tek başına, ölçülen şeyin görünür bir fark olduğunu söylemez.
 Üç düşme de ölçüldü.
+
+
+## Panel veri tablosu sunumu sınıftan alır (2026-09-22)
+
+**Ölçülen kusur.** Panellerde **31 veri tablosu** kendi yapışkan başlığını,
+kenarlığını ve dolgusunu **satır içi** yazıyordu. Satır içi CSS durum ifade
+edemez — `:hover` yazılamaz — yani vites oranları ya da takoz koordinatları
+okunurken **"hangi satırdayım" sorusunun cevabı yoktu**. Kayış Tablosu'nu
+kart listesine çeviren gerekçenin aynısı.
+
+**Hüküm.** `.ve-pnl-tbl` tek kaynak: yapışkan başlık, hücre dolgusu/kenarlığı
+ve **satır vurgusu**. Satır içinde yalnız **VERİ** kalır (sütun genişliği,
+koşullu renk, JS'in ürettiği değer) — sunum kalmaz.
+
+- **Fare satırın tamamını boyar**, hücreyi değil: okunan şey satır.
+- **Zebra yok** — satır zaten kenarlıkla ayrık, ikinci bir ton fare
+  vurgusunun üstüne binerdi (Kayış Tablosu'nda ölçülmüş karar).
+- **Başlık `--z-*` ölçeğine girmez**: tablonun kendi kabında yerel bir
+  kaldırma, pencere katmanı değil (bölüm 11'in muafiyetiyle aynı ayrım).
+- **`.tight` hücre** yoğun girdi satırları için: varsayılan `4px 6px` bir
+  `<input>` etrafında fazladan yer yakıyor; satır kurucularının ölçtüğü 3px
+  korunuyor. `.ve-eng-sheet td.in` ile aynı fikir.
+
+### Bu turda DEĞİŞTİRİLMEYENLER — ve neden
+
+- **Sayı sütunu `--font-mono`ya çevrilmedi.** Doğru tipografi bu (Kayış
+  Tablosu öyle) ama 100+ hücrenin hangisinin gerçekten sayı olduğu tek tek
+  doğrulanmadan yapılamaz. Doğrulanmamış bir değişiklik bu deponun tanımıyla
+  bir iyileştirme değil bir **iddiadır**. `.num` bu turda yalnız hiza veriyor.
+- **`cp-mount.js`'te iki hücre** (`627`, `628`) taşınmadı: anahtar/değer
+  tablosunun başlık sütunu biçimi, satır tablosununkinden farklı.
+- **`sensors.js` · `solver-pro.js` · `cp-accessories.js`** hiç dokunulmadı —
+  ya tablosu yok ya da kendi sınıfı zaten var (`.ve-acc-tbl`).
+
+### Sayaç bu işi OLDUĞUNDAN KÜÇÜK gösteriyor
+
+Bölüm 9'un sayacı `style=` **özniteliğini** sayar, içindeki **bildirimi**
+değil. Bu turda düşen bildirim **467** (108 tablo + 397 hücre + 48 hiza +
+22 sıkı girdi hücresi, ikinci geçişteki 48 üçüncü geçişte tamamlandı); öznitelik
+sayısı ise yalnız **1170 → 1081** indi, çünkü hücrelerin çoğu hâlâ bir veri
+bildirimi taşıyor ve öznitelik ayakta kalıyor. Tavan yine de yeni ölçüme
+çivilendi.
+
+**Kapı ÇİFT.** `source-hygiene.test.js` bölüm 9 sayıyı ve sınıfın varlığını
+(`tr:hover` + `thead th` sticky + en az 31 kullanım) tutar;
+`tests/e2e/panel-tablo.spec.js` gerçek tarayıcıda **fare satırın zeminini
+gerçekten değiştiriyor mu** ve **hücre biçimi sınıftan mı geliyor** diye
+ölçer. Node'da koşamaz: jsdom `:hover`ı hiç hesaplamaz.
+
+Düşmeleri ölçüldü: satır vurgusu silinince tarayıcı halkası
+`rgba(0, 0, 0, 0)` ile düşüyor, tek satır içi stil eklenince sayaç
+`1082 > 1081` diyor.
