@@ -8516,6 +8516,17 @@ span.ve-fw-ro{ display:inline-block; }
   display:flex; align-items:flex-start; gap:7px;
   font-size:var(--fs-tiny); color:var(--text-muted); line-height:1.5;
 }
+/* AÇININ TANIMI — göstergeden AYRI ve KOŞULSUZ. `.ve-fw-legend` yeşil banda
+   bağlı (bant yoksa basılmıyor); tanım her zaman durmak zorunda, çünkü asıl
+   kusur tanımın seçim yüzeyinde HİÇ olmamasıydı. Sol kenar çizgisi onu bir
+   açıklama bloğu olarak ayırıyor, göstergeyle karışmasın. */
+.ve-fw-angdef{
+  font-size:var(--fs-tiny); color:var(--text-muted); line-height:1.55;
+  padding:6px 9px; margin-top:6px;
+  border-left:2px solid var(--accent-tint-35);
+  background:var(--bg-tertiary); border-radius:var(--radius-sm);
+}
+.ve-fw-angdef b{ color:var(--text-secondary); }
 .ve-fw-legend-arc{
   flex:0 0 auto; width:22px; height:4px; margin-top:5px; border-radius:2px;
   background:var(--accent-success); opacity:0.32;
@@ -8790,11 +8801,26 @@ span.ve-fw-ro{ display:inline-block; }
 }
 
 /* ── ÜST KÜNYE: kayışın kendisi + ekleyici ─────────────────────────────── */
+/* KÜNYE ŞERİDİ = KARTIN TAŞIMA TUTAMAĞI ve bunu SÖYLÜYOR.
+   `.ve-node{cursor:move}` kartın tamamında taşıma imleci gösteriyor, ama
+   tablo gövdesi mousedown'ı yutuyor (yutmak ZORUNDA — yoksa hücreye yazmak
+   kartı taşırdı). Ölçüldü (2026-09-22, gerçek tarayıcı): 340 px'lik kartın
+   yalnız bu 24 px'i taşıyordu ve şeritte tek bir işaret yoktu — ne imleç ne
+   tutamak. Kullanıcı tabloyu tutuyor, imleç taşıyacağını söylüyor, hiçbir şey
+   olmuyordu. Tutamak artık soldaki nokta ızgarasıyla GÖRÜNÜR; ızgara çizimdir
+   (yazı karakteri değil — eksik bir glif afordansın kendisini yok ederdi). */
 .ve-fead-tbl-head{
   flex:0 0 auto; display:flex; align-items:center; flex-wrap:wrap; gap:0 14px;
   padding:6px 9px; border-bottom:1px solid var(--border-color);
   background:var(--bg-tertiary); font-size:var(--fs-micro);
+  cursor:move; user-select:none;
 }
+.ve-fead-tbl-head::before{
+  content:""; flex:none; width:7px; height:13px; margin-right:-8px;
+  background-image:radial-gradient(var(--text-muted) 40%, transparent 41%);
+  background-size:3.5px 4.35px; opacity:.5;
+}
+.ve-fead-tbl-head:hover::before{ opacity:1; }
 .ve-fead-tbl-kunye{ display:inline-flex; align-items:center; gap:5px; }
 .ve-fead-tbl-kunye > span{
   color:var(--text-muted); text-transform:uppercase;
@@ -8821,7 +8847,11 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fead-tbl-durum > i::before{ content:"· "; }
 
 /* ── TABLO ─────────────────────────────────────────────────────────────── */
-.ve-fead-tbl-wrap{ flex:1 1 auto; overflow:auto; }
+/* GÖVDE TAŞIMAZ, İMLEÇ DE VAAT ETMEZ. `.ve-node{cursor:move}` buraya kadar
+   iniyordu; kural olmadan imleç 278 px boyunca olmayan bir şeyi gösteriyordu.
+   Kaydırma çubuğu da bu kaba ait ve o da taşımaz (bkz. veFeadTblWrapDown). */
+.ve-fead-tbl-wrap{ flex:1 1 auto; overflow:auto; cursor:default; }
+.ve-fead-tbl-in{ cursor:text; }
 .ve-fead-tbl{
   border-collapse:separate; border-spacing:0; table-layout:fixed; width:100%;
   font-size:var(--fs-tiny);
@@ -8853,7 +8883,12 @@ span.ve-fw-ro{ display:inline-block; }
    şeridi ezmez — ikisi üst üste binmeden aynı anda okunur. */
 .ve-fead-tbl col.coz{ background:var(--accent-tint-6); }
 
+/* SÜTUN BAŞLIĞI İKİNCİ TUTAMAK. Tek başına künye şeridi 24 px'ti; başlık
+   satırıyla birlikte tutulabilir alan 74 px'e çıkıyor. Uygun çünkü içinde
+   tek bir denetim yok (yalnız sütun adları) ve yapışkan olduğu için liste
+   kaydırılsa bile yerinde duruyor. Geçiş kapısı JS'te: veFeadTblWrapDown. */
 .ve-fead-tbl thead th{
+  cursor:move; user-select:none;
   position:sticky; top:0; z-index:2; height:auto; padding:5px 7px 4px;
   background:var(--bg-secondary); color:var(--text-heading);
   font-weight:700; white-space:normal; line-height:1.2;
@@ -8884,6 +8919,13 @@ span.ve-fw-ro{ display:inline-block; }
    numaraya odaklanmayı gerektirmiyor. SEÇİLİ SATIRIN RAYI BUNU EZER (kural
    aşağıda, daha sonra): seçim geçici bir durum, sürücülük kalıcı bir rol —
    ama o an paneli hangi satırın açtığı sorusunun cevabı tektir. */
+/* GERGİ SATIRI ROL İŞARETLİ — sürücü rayının eşi. "Döngü otomatik gergiyle
+   biter" artık bir KURAL (satır kilitli, ekleme onun önüne düşüyor); kuralın
+   öznesi de listeye bakar bakmaz görünmeli. Sürücü rayıyla aynı kenarda ama
+   ayrı renkte: biri sıranın başı, öteki sonu. */
+.ve-fead-tbl tbody tr.ten td:first-child{
+  box-shadow:inset 2px 0 0 var(--ink-warning);
+}
 .ve-fead-tbl tbody tr.drv td:first-child{ box-shadow:inset 2px 0 0 var(--accent-tint-35); }
 
 .ve-fead-tbl tbody tr:hover{ background:var(--accent-tint-10); }

@@ -114,7 +114,20 @@ function veFeadWizDefault(){
   return {
     ad: 'Yeni FEAD Sistemi',
     pulleys: [],
-    ten: { od: 75, contact: 'back', armLen: 90, tenLib: '' },
+    // GERGİNİN SAYILARI BOŞ AÇILIR — kullanıcı isteği (2026-09-22):
+    // *"Otomatik gergiyi başlangıç sihirbazında otomatik olarak görüyoruz.
+    // Bu otomatik olarak gelmesin, kullanıcı seçsin."*
+    //
+    // Gerginin VARLIĞI yapısal: `fead-core.js` gergisiz sistemi reddediyor
+    // (throw) ve çekirdek dokunulmaz — yani "gergi hiç gelmesin" bugünkü
+    // matematikte "model hiç çözülmesin" demek. Seçtirilebilecek olan
+    // SAYILARDIR: çap ve kol boyu artık yazılı gelmiyor, kullanıcı ya 3.
+    // adımdaki katalogtan künye seçiyor ya da elle giriyor.
+    //
+    // `contact` BOŞ BIRAKILMIYOR: otomatik gerginin kayışa sırttan değmesi
+    // bir ölçüm değil tipin kendisi (`componentDefs.feadContact`), ve
+    // seçtirmek olmayan bir özgürlük sunardı.
+    ten: { contact: 'back', tenLib: '' },
     route: [],
     belt: { profile: 'PK', brand: 'GATES', ribs: 8 },
     // ÇALIŞMA ÇEVRİMİ DOLU AÇILIR. Bir dönem `duty: []` idi ve kullanıcı
@@ -279,7 +292,14 @@ function veFeadWizTenSet(alan, val){
 // DEĞİL `st.ten`de duruyor ve yalnız o fonksiyon okunan sırayı geri yazmayı
 // biliyor. İkinci bir taşıyıcı yazmak, gerginin satırını yine ölü bırakırdı.
 function veFeadWizPulleyMove(key, delta){
-  return veFeadWizRouteMove(key, delta);
+  // TAŞIMA BASILAN SIRADA OKUNUR. Tablo 2026-09-22'den beri TABLO sırasını
+  // basıyor (Gates "Layout Data", gidişin tersi) ama model sırası (`st.route`)
+  // GİDİŞ olarak kalıyor. `veFeadRouteFlip` bir yansıma olduğu için basılan
+  // sıradaki bir satır aşağı, gidiş sırasında bir satır YUKARI demektir.
+  // Çevrilmezse oklar ters yönde taşır: kullanıcı "aşağı" der, satır yukarı
+  // gider — ve jsdom kapıları bunu yakalayamaz (okunan sıraya bakıyorlar,
+  // BASILAN sıraya değil).
+  return veFeadWizRouteMove(key, -delta);
 }
 
 // ── SIRA ───────────────────────────────────────────────────────────────────
@@ -310,6 +330,15 @@ function veFeadWizRouteMove(key, delta){
   if(!_fwState) return false;
   var r = veFeadWizRoute(_fwState), i = r.indexOf(key), j = i + delta;
   if(i < 0 || j < 0 || j >= r.length) return false;
+  // İKİ UÇ KİLİTLİ — Kayış Tablosu'ndaki kalıbın BİREBİR aynısı, çünkü
+  // sihirbaz tam o tabloyu kuruyor ve iki yüzey aynı kuralı söylemeli.
+  //   · GİDİŞ sırasının 0. öğesi SÜRÜCÜ (basılan tablonun da ilk satırı).
+  //     Eskiden korumasızdı: 1. satırın ↑'si sürücüyle YER DEĞİŞTİRİYORDU.
+  //   · GİDİŞ sırasının 1. öğesi GERGİ ise, o basılan tablonun SON satırıdır
+  //     ("döngü otomatik gergiyle biter"). Kilit yalnız kural yerindeyken —
+  //     gergisi başka yerde duran bir durum okla düzeltilebilmeli.
+  if(i === 0 || j === 0) return false;
+  if(r.indexOf('__ten__') === 1 && (i === 1 || j === 1)) return false;
   var t = r[i]; r[i] = r[j]; r[j] = t;
   _fwState.route = r;
   veFeadWizRender();
@@ -621,8 +650,13 @@ function veFeadWizNodes(st){
   // ── GERGİ ────────────────────────────────────────────────────────────────
   // Kip alanı YOK: tek yol var (avara merkezi girdi, montaj konumu türev).
   var t = st.ten || {};
-  var td = { od: _fwNum(t.od, 75), contact: t.contact || 'back',
-             armLen: _fwNum(t.armLen, NaN) };
+  // ÇAP YEDEĞİ YOK. Bir dönem `_fwNum(t.od, 75)` yazılıydı; tohum boşaltılıp
+  // bu yedek bırakılsaydı "kullanıcı seçsin" isteği GÖRÜNÜRDE yerine gelir,
+  // gerçekte gelmezdi: alan boş görünür, kurulan modele sessizce 75 yazılırdı.
+  // Bu, tam olarak bu modülün belgelenmiş sessiz hata sınıfı.
+  var td = { contact: t.contact || 'back',
+             od: _fwNum(t.od, NaN), armLen: _fwNum(t.armLen, NaN) };
+  if(!Number.isFinite(td.od)) delete td.od;
   if(!Number.isFinite(td.armLen)) delete td.armLen;
   ['preload', 'kArm', 'meanLoad', 'armInertia', 'pulleyMass', 'loadStopRelDeg',
    'inertia'].forEach(function(a){
@@ -1014,8 +1048,15 @@ function veFeadWizLiveHTML(b){
          + (b.beltLengthDerived ? ' <em>çıktı</em>' : '') + '</span>';
     if(Number.isFinite(b.springTensionN))
       h += '<span class="ve-fw-pill">T <b>' + _fwFmt(b.springTensionN, 1) + ' N</b></span>';
+    // ŞERİT KULLANICININ YAZDIĞI SAYIYI GÖSTERİR. Bir dönem mutlak açı
+    // basılıyordu: kullanıcı 2. adımda kutuya 168 yazarken ekranın üstündeki
+    // pil −12,00° diyordu — aynı modelin aynı alanı, iki sayı. Pil artık
+    // GÖSTERİLEN açıyı basıyor ve adını da söylüyor ("kol yönü"), çünkü
+    // "kol" tek başına üç ayrı büyüklüğe verilmiş bir addı.
     if(Number.isFinite(b.armAbsDeg))
-      h += '<span class="ve-fw-pill">kol <b>' + _fwFmt(b.armAbsDeg, 2) + '°</b></span>';
+      h += '<span class="ve-fw-pill">kol yönü <b>'
+        + _fwFmt((typeof veFeadArmShownDeg === 'function')
+                 ? veFeadArmShownDeg(b.armAbsDeg) : b.armAbsDeg, 2) + '°</b></span>';
     if(b.spin)
       h += '<span class="ve-fw-pill">' + veFeadSpinLabel(b.spin).kisa + '</span>';
   } else {
@@ -1416,11 +1457,25 @@ function _fwStepKasnak(b){
   var t = '<div class="ve-fw-tblwrap"><table class="ve-fw-tbl ve-fw-tbl-fixed ve-fw-tbl-kasnak"><thead><tr>'
     + '<th>Sürücü</th><th>Tip</th><th>Ad</th><th>Ø OD [mm]</th><th>X [mm]</th><th>Y [mm]</th>'
     + '<th>Temas</th><th>J [kg·m²]</th><th></th></tr></thead><tbody>';
-  // SATIRLAR KAYIŞ SIRASINDA — gergi de kendi sırasında, sonda değil.
-  // Eskiden tablo `st.pulleys` sırasını basıyor ve gergi satırı HER ZAMAN
-  // sona ekleniyordu; sıra ile tablo ayrı olduğu için bu tutarlıydı. Artık
-  // tablo sıranın KENDİSİ, dolayısıyla gergi nerede sıradaysa orada.
-  var _sira = veFeadWizRoute(st);
+  // SATIRLAR TABLO SIRASINDA — yani Gates "Layout Data" sırası, kayışın
+  // gidişinin TERSİ ve kurulacak Kayış Tablosu'nun BİREBİR aynısı.
+  //
+  // Kullanıcı isteği (2026-09-22): *"Tabloda otomatik gergiyi en son kısımda
+  // görmek istiyoruz."* Sihirbaz gidiş sırasını basıyordu ve gergi orada 2.
+  // SATIRDI; kurduğu Kayış Tablosunda ise sonuncu. Aynı modelin iki yüzeyi
+  // ters sırada okunuyor, ve sihirbaz bunu bir paragrafla açıklamak zorunda
+  // kalıyordu. Üstelik Gates raporunu satır satır kopyalayan kullanıcı ⇄ ile
+  // çevirmek zorundaydı — bu deponun asıl iş akışı tam olarak odur.
+  //
+  // MODEL DEĞİŞMİYOR: `st.route` gidiş sırasında kalıyor, `veFeadWizNodes`in
+  // kendi flip'i (aşağıda) aynen duruyor, `beltIndex` birebir aynı çıkıyor —
+  // yani 2095 doğrulanmış sayının hiçbiri oynamıyor. Değişen yalnız BASILAN
+  // sıra ve okların yönü (bkz. veFeadWizPulleyMove).
+  var _sira = (typeof veFeadRouteFlip === 'function')
+    ? veFeadRouteFlip(veFeadWizRoute(st)) : veFeadWizRoute(st);
+  // Kural YERİNDEYSE kilit de yerinde; değilse (⇄ ile yön çevrilmiş olabilir)
+  // satırlar serbest kalır ki kullanıcı okla düzeltebilsin.
+  var _gergiSonda = _sira.length > 1 && _sira[_sira.length - 1] === '__ten__';
   var _byKey = {};
   st.pulleys.forEach(function(p){ _byKey[p.key] = p; });
   _sira.forEach(function(_k, i){
@@ -1451,10 +1506,15 @@ function _fwStepKasnak(b){
       + '</select></td>'
       + '<td><input type="text" inputmode="decimal" class="ve-fw-inp" value="' + _fwEsc(p.inertia === undefined ? '' : p.inertia)
         + '" placeholder="—" oninput="veFeadWizPulleySet(\'' + p.key + '\',\'inertia\',this.value)"></td>'
+      // OKLAR KİLİDİ GÖSTERİR. Etkin görünüp hiçbir şey yapmayan düğme bu
+      // deponun adıyla saydığı kusur sınıfı — ve `veFeadWizRouteMove` iki
+      // ucu da reddediyor: sürücünün yerine çıkılamaz, gerginin altına
+      // inilemez. Koşullar BASILAN sıraya göre (tablo sırası).
       + '<td class="ve-fw-c ve-fw-rowops">'
-        + '<button type="button" class="ve-fw-mini"' + (i === 0 ? ' disabled' : '')
+        + '<button type="button" class="ve-fw-mini"' + (i <= 1 ? ' disabled' : '')
           + ' title="Kayış sırasında yukarı" onclick="veFeadWizPulleyMove(\'' + p.key + '\',-1)">↑</button>'
-        + '<button type="button" class="ve-fw-mini"' + (i === _sira.length - 1 ? ' disabled' : '')
+        + '<button type="button" class="ve-fw-mini"'
+          + (i === 0 || i >= _sira.length - 1 - (_gergiSonda ? 1 : 0) ? ' disabled' : '')
           + ' title="Kayış sırasında aşağı" onclick="veFeadWizPulleyMove(\'' + p.key + '\',1)">↓</button>'
         + '<button type="button" class="ve-fw-x" title="Sil"'
           + ' onclick="veFeadWizPulleyDel(\'' + p.key + '\')">✕</button></td>'
@@ -1484,15 +1544,13 @@ function _fwStepKasnak(b){
   h += _fwCard('Kasnaklar — kayış sırasıyla',
       'var(--accent-primary)', t
     + _hkm
-    // SIRANIN ANLAMI YAZILI: satırlar kayışın gidişi (krank çıkışından). Gates
-    // tabloları bunun TERSİ sırada yazar — örnekler kurulurken çevriliyor,
-    // elle giren kullanıcı ⇄ ile çevirir. Yazılmasaydı Gates tablosunu satır
-    // satır kopyalayan kullanıcı gergiyi gergin tarafa koyar ve rozet kırmızı
-    // yanardı, sebebi görünmeden.
-    + '<p class="ve-fw-dim" style="margin:6px 0 0;">Satırlar kayışın <b>gidiş</b> '
-    + 'sırasıdır: krankın çıkışından başlar, halkayı dolaşır. Gates tabloları '
-    + 'kasnakları bunun <b>tersi</b> sırada yazar — örnekler kurulurken çevrilir; '
-    + 'tabloyu elle kopyaladıysanız ⇄ ile çevirin.</p>'
+    // SIRANIN ANLAMI YAZILI: satırlar Gates tablo sırasında, yani kurulacak
+    // Kayış Tablosu'yla AYNI. Bir dönem gidiş sırası basılıyordu ve o zaman
+    // Gates raporunu kopyalayan kullanıcı ⇄ ile çevirmek zorundaydı.
+    + '<p class="ve-fw-dim" style="margin:6px 0 0;">Satırlar <b>Gates tablo '
+    + 'sırasındadır</b> — kurulacak Kayış Tablosu\'yla aynı: sürücü ilk, '
+    + 'otomatik gergi <b>son</b> satır. (Bu sıra kayışın gidişinin tersidir; '
+    + 'gidiş yönünü ⇄ ile çevirebilirsiniz.)</p>'
     + '<div class="ve-fw-rowbtns">'
       + '<button type="button" class="ve-fw-btn" onclick="veFeadWizRouteReverse()">'
       + '⇄ Kayış yönünü çevir</button></div>'
@@ -1584,9 +1642,16 @@ function _fwTenRow(st, ix, n){
     // OK DÜĞMELERİ ARTIK CANLI: Kayış Yolu adımı kalkınca gerginin sıradaki
     // yerini düzenlemenin tek yeri bu satır oldu. Eskiden devre dışıydılar ve
     // ipucu "3. adımda düzenlenir" diyordu — o adım artık yok.
+    // GERGİ SON SATIRDAYSA İKİ OK DA PASİF — "döngü otomatik gergiyle biter"
+    // artık bir KURAL (2026-09-22, kullanıcı isteği) ve kilit sessiz değil.
+    // Kural yerinde değilse (⇄ ile yön çevrilmiş) oklar CANLI kalır: gergi
+    // gergin tarafa düşmüş demektir ve kullanıcı onu geri alabilmeli.
     + '<td class="ve-fw-c ve-fw-rowops">'
-      + '<button type="button" class="ve-fw-mini"' + (ix === 0 ? ' disabled' : '')
-        + ' title="Kayış sırasında yukarı"'
+      + '<button type="button" class="ve-fw-mini"'
+        + (ix === 0 || ix === n - 1 ? ' disabled' : '')
+        + ' title="' + (ix === n - 1 ? 'Gergi son satırda kilitli: döngü otomatik'
+            + ' gergiyle biter (gevşek açıklık krankın çıkışıdır).'
+            : 'Kayış sırasında yukarı') + '"'
         + ' onclick="veFeadWizPulleyMove(\'__ten__\',-1)">↑</button>'
       + '<button type="button" class="ve-fw-mini"' + (ix >= n - 1 ? ' disabled' : '')
         + ' title="Kayış sırasında aşağı"'
@@ -1674,9 +1739,34 @@ function _fwStepGergi(b){
     : null;
   if(_piv)
     h += _fwCard('Gövdenin Montaj Konumu', 'var(--accent-warning)',
-        _fwReadHTML(_fwTeX('\\vec{p} = \\vec{c} - a\\,(\\cos\\theta,\\ \\sin\\theta)',
-                           'p = c − a·(cos θ, sin θ)'),
+        // DENKLEM KULLANICININ YAZDIĞI AÇIYLA YAZILIR. θ mutlaktı (gövde→merkez)
+        // ve alanda duran sayı gösterilen açıydı (merkez→gövde, 180° ötesi):
+        // kendi sayısını denkleme koyan kullanıcı 2a kadar uzakta YANLIŞ
+        // noktayı buluyordu. φ = gösterilen açı ile denklem cebirsel olarak
+        // BİREBİR aynı, yalnız işaret artıya dönüyor (c − a·u(θ) = c + a·u(φ),
+        // çünkü u(φ) = −u(θ)).
+        _fwReadHTML(_fwTeX('\\vec{p} = \\vec{c} + a\\,(\\cos\\varphi,\\ \\sin\\varphi)',
+                           'p = c + a·(cos φ, sin φ)   ·   φ = kol yönü'),
           _piv[0].toFixed(2) + ' / ' + _piv[1].toFixed(2) + ' mm')
+      );
+  else
+    // KART KAYBOLMAZ, EKSİĞİ SÖYLER.
+    //
+    // `veFeadTensionerPivot` girdilerden biri eksikse null döndürüyor ve kart
+    // hiç basılmıyordu. Gerginin sayıları 2026-09-22'de tohumdan çıkarılınca
+    // bu sessizlik pahalı hâle geldi: ATÖLYEYE GİDEN tek denetim sayısı,
+    // kullanıcı hiçbir şey görmeden yok oluyordu. Eksik alan adıyla yazılıyor.
+    h += _fwCard('Gövdenin Montaj Konumu', 'var(--accent-warning)',
+        '<div class="ve-fw-dim">Hesaplanamadı — eksik: <b>'
+        + (function(){
+            var e = [];
+            if(!Number.isFinite(_fwNum(t.cenX, NaN))
+               || !Number.isFinite(_fwNum(t.cenY, NaN))) e.push('avara merkezi (X/Y)');
+            if(!Number.isFinite(_fwNum(t.armLen, NaN))) e.push('kol boyu');
+            if(!Number.isFinite(_fwNum(t.armMeanDeg, NaN))) e.push('kol yönü');
+            return e.length ? _fwEsc(e.join(' · ')) : 'geçersiz değer';
+          }())
+        + '</b>. Montaj noktası bu üçünden türer; atölyeye giden sayı budur.</div>'
       );
   return h;
 }
@@ -1933,7 +2023,9 @@ function veFeadWizAngSVG(sc, shownDeg, zoom, W, H, hoverDeg){
 
   var C = [X(sc.cx), Y(sc.cy)], R = sc.armLen * k;
 
-  // ── AÇI EKSENLERİ — kolun gezinme çemberi üzerinde, soluk ──────────────
+  // ── AÇI EKSENLERİ — MONTAJ NOKTASININ geometrik yeri üzerinde, soluk ───
+  // (Kesikli çember kolun gezindiği yer DEĞİL: merkez sabit, kol boyu sabit,
+  //  dolayısıyla çember gövdenin montaj noktasının olanaklı yerleridir.)
   h += '<circle cx="' + f(C[0]) + '" cy="' + f(C[1]) + '" r="' + f(R) + '"'
     + ' fill="none" stroke="var(--border-color)" stroke-dasharray="3 4"/>'
     + '<line x1="' + f(C[0] - R - 8) + '" y1="' + f(C[1]) + '" x2="' + f(C[0] + R + 8)
@@ -2045,9 +2137,13 @@ function veFeadWizAngSVG(sc, shownDeg, zoom, W, H, hoverDeg){
 function veFeadWizAngHTML(){
   var sc = veFeadWizAngScene();
   if(!sc)
+    // ESKİ CÜMLE FİZİĞİ TERS ANLATIYORDU: *"kol o merkez etrafında dönüyor."*
+    // Kol PİVOT etrafında döner; avara merkezi kolun UCUDUR. Seçici, gövdenin
+    // montaj noktasının olanaklı yerini çiziyor — kolun gezindiği çemberi
+    // değil. Bu iki cümle diyagramın yanlış okunmasını doğrudan öğretiyordu.
     return '<div class="ve-fw-issue ve-fw-issue-err">✗ Açı seçmek için önce '
-      + '<b>avara merkezi (X/Y)</b> ve <b>kol boyu</b> gerekli — kol o merkez etrafında '
-      + 'o yarıçapta dönüyor.</div>';
+      + '<b>avara merkezi (X/Y)</b> ve <b>kol boyu</b> gerekli — gövdenin montaj '
+      + 'noktası o merkezden kol boyu kadar uzakta olmak zorunda.</div>';
   var d = VE_FW_ANG ? VE_FW_ANG.shown : NaN;
   var piv = null;
   if(Number.isFinite(d) && typeof veFeadArmFromShown === 'function'
@@ -2077,9 +2173,35 @@ function veFeadWizAngHTML(){
           + 'gelemediği ya da gelirse çözümün servis aralığından çıktığı açılar.'
           + '</div>'
         : '')
+    // AÇININ TANIMI SEÇİM YÜZEYİNİN KENDİSİNDE.
+    //
+    // Kullanıcı bildirimi (2026-09-22): *"Kol açısını seçtiğimiz diyagramdaki
+    // açı tanımları çok başka olmuş. Kafa karıştırıyor."* Ölçüldü: bu modal
+    // yalnız çizim + zoom + yeşil yay göstergesi + üç okuma + giriş kutusu
+    // basıyordu. "0° nereden ölçülüyor", "artı yön hangisi", "yeşil ok neyi
+    // gösteriyor", "kesikli çember ne" — hiçbiri ekranda YAZILI DEĞİLDİ. Bu
+    // bilgiyi taşıyan tek metin BAŞKA bir yüzeydeki panel ipucuydu ve
+    // kullanıcı açıyı seçerken onu görmüyordu.
+    //
+    // En sezgisel olmayan parça referans NOKTASIDIR: gösterilen açı merkezden
+    // PİVOTA bakar, yani "Kol yönü 0°" demek "gövde avaranın SAĞINDA, kol
+    // SOLA uzanıyor" demektir. Bir ad ("kol yönü") doğal olarak "kolun baktığı
+    // yön" diye okunur ve o tam tersidir — bu yüzden ok açıkça adlandırılıyor.
+    // SINIF AYRI (`ve-fw-angdef`): `ve-fw-legend` BANDA bağlı ve bant yokken
+    // basılmıyor (kapısı fead-wizard.test.js'te). Tanım ise her zaman durmalı
+    // — asıl kusur zaten tanımın hiç görünmemesiydi.
+    + '<div class="ve-fw-angdef">'
+      + '<b>Kol yönü nedir:</b> yeşil ok <b>avara merkezinden gövdenin montaj '
+      + 'noktasına</b> bakar. <b>0° sağda, saat yönünün tersi artı</b>, değer '
+      + 'işaretli (−180…+180 — programın yön gülü aynı ekseni 0…360 ile yazar, '
+      + 'yani buradaki −90 gülde 270\'tir). Kesikli çember montaj noktasının '
+      + 'olanaklı yerleridir: merkez ve kol boyu sabit olduğu için nokta o '
+      + 'çember üzerinde durmak zorunda. Parça çizimi aynı yönü TERS uçtan, '
+      + 'mutlak yazar (E9843: <i>"344° MEAN ANGLE"</i> ↔ burada 164°).'
+      + '</div>'
     + '<div class="ve-fw-reads">' + _fwAngReads(sc, d) + '</div>'
     + '<div class="ve-fw-ang-row">'
-      + '<label class="ve-fw-lbl" for="ve-fw-ang-in">Tam açı [°]</label>'
+      + '<label class="ve-fw-lbl" for="ve-fw-ang-in">Kol yönü [°]</label>'
       + '<input id="ve-fw-ang-in" type="text" inputmode="decimal" class="ve-fw-inp"'
         + ' value="' + (Number.isFinite(d) ? _fwFmt(d, 2) : '') + '"'
         + ' oninput="veFeadWizAngType(this.value)"'
@@ -3127,6 +3249,21 @@ function veFeadWizCanCreate(){
     out.sebep = 'İç topolojide zaten ' + out.varOlan + ' kasnak var. Üstüne kurmak '
       + 'iki ayrı kayış yolunun kasnaklarını TEK sıraya karıştırır; silme onayını '
       + 'işaretleyin ya da kasnakları elle kaldırın.';
+    return out;
+  }
+  // GERGİNİN SAYILARI ARTIK TOHUMDAN GELMİYOR (2026-09-22) — kapı da burada.
+  // Olmasaydı "kullanıcı seçsin" isteği, çözülemeyen bir model kurmakla
+  // sonuçlanırdı: köprü hatayı adıyla verir ama kullanıcı onu ancak kurulum
+  // BİTTİKTEN sonra, başka bir yüzeyde görürdü.
+  var _t = _fwState.ten || {};
+  var _eksik = [];
+  if(!Number.isFinite(_fwNum(_t.od, NaN))) _eksik.push('kasnak çapı');
+  if(!Number.isFinite(_fwNum(_t.armLen, NaN))) _eksik.push('kol boyu');
+  if(_eksik.length){
+    out.ok = false;
+    out.sebep = 'Otomatik gerginin ' + _eksik.join(' ve ') + ' girilmedi. '
+      + '3. adımda ("Otomatik Gergi") ya katalogdan bir künye seçin ya da '
+      + 'değerleri elle girin — gergisiz ya da eksik gergiyle model çözülmez.';
   }
   return out;
 }

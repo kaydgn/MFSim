@@ -206,8 +206,12 @@ test('Kayış Tablosu kanvasta: kurulur, yazılır, sıra değişir', async ({ p
     dom: window.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley)
       .filter((n) => document.getElementById(n.id)).length,
   }));
+  // DAVRANIŞ 2026-09-22'DE DEĞİŞTİ: yeni kasnak sıranın sonuna değil OTOMATİK
+  // GERGİNİN ÖNÜNE düşüyor. Eskisi, kullanıcı bir kasnak ekler eklemez
+  // "döngü gergiyle biter" kuralını kırıyor ve modeli uyarılı hâle getiriyordu.
   expect(ekSonra.sira).toHaveLength(6);
-  expect(ekSonra.sira[ekSonra.sira.length - 1]).toBe('fead-waterpump');   // SONA
+  expect(ekSonra.sira[ekSonra.sira.length - 1]).toBe('fead-tensioner');   // GERGİ SONDA
+  expect(ekSonra.sira[ekSonra.sira.length - 2]).toBe('fead-waterpump');   // yeni ONUN ÖNÜNDE
   expect(ekSonra.dom).toBe(0);                    // eklenen kasnağın da kutusu yok
 
   expect(hatalar).toEqual([]);
@@ -606,26 +610,137 @@ test('KASNAK EKLE: yeni satır görüş alanına giriyor', async ({ page }) => {
   await page.waitForTimeout(600);
 
   const kart = page.locator('.ve-fead-table-card').first();
-  const sonSatirDurumu = () => kart.evaluate((k) => {
+  // ÖLÇÜLEN ŞEY "SON SATIR" DEĞİL, "YENİ EKLENEN SATIR". 2026-09-22'ye kadar
+  // ikisi aynıydı; artık yeni kasnak gerginin ÖNÜNE düşüyor, yani sondan bir
+  // önceki satır. Eskisi gibi son satıra bakmak, ölçülmek istenen şeyi (eklenen
+  // satır görüş alanına alınıyor mu) SESSİZCE başka bir satırla değiştirirdi.
+  const satirDurumu = (id) => kart.evaluate((k, nid) => {
     const w = k.querySelector('.ve-fead-tbl-wrap');
-    const son = [...k.querySelectorAll('tbody tr')].pop();
-    const wr = w.getBoundingClientRect(), sr = son.getBoundingClientRect();
+    const tr = k.querySelector('tbody tr[data-ve-node="' + nid + '"]');
+    const wr = w.getBoundingClientRect(), sr = tr.getBoundingClientRect();
     return { satir: k.querySelectorAll('tbody tr').length,
              tamGorunur: sr.top >= wr.top - 1.5 && sr.bottom <= wr.bottom + 1.5 };
-  });
+  }, id);
+  const idler = () => page.evaluate(() =>
+    window.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley).map((n) => n.id));
 
   // Liste taşana kadar ekle — GERÇEK açılır listeden, `veFeadTableAdd`
   // doğrudan çağrılarak değil.
+  let son = { satir: 0 };
   for (let i = 0; i < 3; i++) {
+    const once = await idler();
     await kart.locator('.ve-fead-tbl-add').selectOption('fead-idler');
     await page.waitForTimeout(350);
-    const d = await sonSatirDurumu();
-    expect(d.tamGorunur).toBe(true);          // her eklemede görünür kalıyor
+    const yeniId = (await idler()).find((x) => !once.includes(x));
+    expect(yeniId).toBeTruthy();
+    son = await satirDurumu(yeniId);
+    expect(son.tamGorunur).toBe(true);        // EKLENEN satır her eklemede görünür
   }
-  expect((await sonSatirDurumu()).satir).toBe(9);
+  expect(son.satir).toBe(9);
   // Ve liste gerçekten taşmış durumda — yani kapı boş bir hâli ölçmüyor.
   expect(await kart.locator('.ve-fead-tbl-wrap')
     .evaluate((el) => el.scrollHeight > el.clientHeight + 1)).toBe(true);
+
+  expect(hatalar).toEqual([]);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  KART TAŞIMA — TUTAMAK NEREDE, İMLEÇ NE SÖYLÜYOR
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı bildirimi (2026-09-22): *"Tablo taşıması düzelmemiş."* ÖLÇÜLDÜ,
+// düzeltmeden önce, bu dosyanın kurduğu sahnede (AG00976, zoom 1):
+//
+//   | Sürüklenen yer      | dx,dy  |
+//   |---------------------|--------|
+//   | künye şeridi (24px) | 60,40  |  ← tek çalışan yer
+//   | sütun başlığı       |  0,0   |
+//   | tablo gövdesi       |  0,0   |
+//
+// Yani kart taşınıyordu ama 340 px'in 24 px'inden, ve şeritte tutamak
+// olduğunu söyleyen TEK BİR İŞARET yoktu — ne imleç ne çizim. Üstelik
+// `.ve-node{cursor:move}` kartın TAMAMINDA taşıma imleci gösteriyordu, yani
+// imleç gövde boyunca olmayan bir şeyi vaat ediyordu.
+//
+// Bu halka Node'da KOŞAMAZ: gerçek `mousedown → mousemove → mouseup` zinciri,
+// olay kabarması ve `getComputedStyle(cursor)` jsdom'da yok.
+test('KART TAŞIMA: kabuk taşır, veri yüzeyi taşımaz, imleç ikisini de söyler',
+  async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(page);
+  await feadAc(page);
+  await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
+  await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-table'),
+    null, { timeout: 20000 });
+
+  const id = await page.evaluate(() => {
+    const t = window.nodes.find((n) => n.type === 'fead-table');
+    const w = document.getElementById('ve-canvas-wrapper');
+    canvasZoom = 1;
+    canvasOffset.x = w.clientWidth / 2 - (t.x + t.width / 2 - 3000);
+    canvasOffset.y = w.clientHeight / 2 - (t.y + t.height / 2 - 3000);
+    updateCanvasTransform();
+    return t.id;
+  });
+  await page.waitForTimeout(200);
+
+  // Bir noktadan sürükle, MODEL koordinatındaki değişimi döndür, sonra geri al.
+  async function surukle(sel) {
+    const r = await page.locator(sel).first().boundingBox();
+    const once = await page.evaluate((i) => {
+      const n = window.nodes.find((x) => x.id === i); return { x: n.x, y: n.y };
+    }, id);
+    await page.mouse.move(r.x + r.width / 2, r.y + r.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(r.x + r.width / 2 + 60, r.y + r.height / 2 + 40, { steps: 12 });
+    await page.mouse.up();
+    await page.waitForTimeout(150);
+    const d = await page.evaluate(([i, o]) => {
+      const n = window.nodes.find((x) => x.id === i);
+      const dd = { dx: Math.round(n.x - o.x), dy: Math.round(n.y - o.y) };
+      n.x = o.x; n.y = o.y;                                   // sahneyi geri al
+      const el = document.getElementById(i);
+      if (el) { el.style.left = n.x + 'px'; el.style.top = n.y + 'px'; }
+      if (typeof updateAllConnections === 'function') updateAllConnections();
+      return dd;
+    }, [id, once]);
+    await page.waitForTimeout(80);
+    return d;
+  }
+
+  // KABUK TAŞIR — ikisi de, ve ikincisi bu turda AÇILDI (24 → 74 px).
+  expect(await surukle('.ve-fead-tbl-head')).toEqual({ dx: 60, dy: 40 });
+  expect(await surukle('.ve-fead-tbl thead th')).toEqual({ dx: 60, dy: 40 });
+
+  // VERİ YÜZEYİ TAŞIMAZ — yoksa hücreye yazmak kartı taşırdı.
+  expect(await surukle('.ve-fead-tbl tbody td.ad-cell')).toEqual({ dx: 0, dy: 0 });
+  expect(await surukle('.ve-fead-tbl-in')).toEqual({ dx: 0, dy: 0 });
+
+  // İMLEÇ AYNI AYRIMI SÖYLÜYOR. Kablolama doğru olup imleç yine her yerde
+  // "move" gösterseydi kullanıcının şikâyeti aynen sürerdi.
+  const imlec = await page.evaluate((i) => {
+    const el = document.getElementById(i);
+    const c = (s) => getComputedStyle(el.querySelector(s)).cursor;
+    return { kutu: getComputedStyle(el).cursor, head: c('.ve-fead-tbl-head'),
+             th: c('.ve-fead-tbl thead th'), wrap: c('.ve-fead-tbl-wrap'),
+             input: c('.ve-fead-tbl-in') };
+  }, id);
+  expect(imlec.kutu).toBe('move');            // düğümün kendisi taşınabilir
+  expect(imlec.head).toBe('move');
+  expect(imlec.th).toBe('move');
+  expect(imlec.wrap).not.toBe('move');        // ESKİ HÂL: 'move' — yalan
+  expect(imlec.input).toBe('text');
+
+  // TUTAMAK GÖRÜNÜR: nokta ızgarası dinlenmede de çiziliyor (yalnız fare
+  // üstündeyken belirse, keşfedilemezlik aynen sürerdi).
+  const grip = await page.evaluate((i) => {
+    const h = document.getElementById(i).querySelector('.ve-fead-tbl-head');
+    const st = getComputedStyle(h, '::before');
+    return { img: st.backgroundImage, w: st.width, opak: parseFloat(st.opacity) };
+  }, id);
+  expect(grip.img).toContain('radial-gradient');
+  expect(grip.opak).toBeGreaterThan(0);
 
   expect(hatalar).toEqual([]);
 });

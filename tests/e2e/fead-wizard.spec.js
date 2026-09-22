@@ -284,6 +284,47 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     expect(dortAdim).toBeGreaterThan(0);
   });
 
+  // SATIR TAŞIMA BASILAN YÖNDE — GERÇEK TIKLAMAYLA.
+  //
+  // Kullanıcı isteği (2026-09-22): *"Tabloda otomatik gergiyi en son kısımda
+  // görmek istiyoruz."* Tablo artık Gates/tablo sırasını basıyor ama model
+  // sırası (`st.route`) GİDİŞ olarak kaldı; `veFeadWizPulleyMove` deltayı bu
+  // yüzden ÇEVİRİYOR. Çevirmeyi unutmak sessiz bir kusur olurdu: kullanıcı
+  // "aşağı" der, satır YUKARI gider. jsdom kapıları bunu göremez — okunan
+  // sıraya bakabilirler, BASILAN satırların DOM'daki yerine değil.
+  test('TABLO SIRASI: gergi SON satır ve ok satırı BASILAN yönde taşıyor', async ({ page }) => {
+    await bootApp(page);
+    await openFead(page);
+    await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
+    await ornekKur(page);
+    await page.locator('#ve-fw-nav .ve-fw-step').nth(1).click();
+
+    const satirlar = () => page.evaluate(() =>
+      Array.from(document.querySelectorAll('.ve-fw-tbl-kasnak tbody tr')).map((tr) =>
+        tr.classList.contains('ve-fw-tr-ten') ? '__ten__'
+          : (tr.querySelector('input[type="text"]') || {}).value || '?'));
+
+    const once = await satirlar();
+    expect(once[once.length - 1]).toBe('__ten__');        // GERGİ SON SATIR
+
+    // İKİ UÇ KİLİTLİ ve kilit sessiz değil — `disabled` basılıyor.
+    const tr = page.locator('.ve-fw-tbl-kasnak tbody tr');
+    await expect(tr.nth(0).locator('.ve-fw-mini').nth(0)).toBeDisabled();
+    await expect(tr.nth(0).locator('.ve-fw-mini').nth(1)).toBeDisabled();
+    await expect(tr.last().locator('.ve-fw-mini').nth(0)).toBeDisabled();
+    await expect(tr.last().locator('.ve-fw-mini').nth(1)).toBeDisabled();
+
+    // 2. satırın ↓'sine GERÇEK tıkla: o satır BİR AŞAĞI inmeli.
+    const tasinan = once[1];
+    await tr.nth(1).locator('.ve-fw-mini').nth(1).click();
+    await page.waitForTimeout(350);
+    const sonra = await satirlar();
+    expect(sonra[2]).toBe(tasinan);                        // AŞAĞI indi
+    expect(sonra[1]).toBe(once[2]);                        // komşu yukarı çıktı
+    expect(sonra[0]).toBe(once[0]);                        // sürücü yerinde
+    expect(sonra[sonra.length - 1]).toBe('__ten__');       // gergi hâlâ sonda
+  });
+
   test('aksesuar modeli açılır pencereden seçilir, kW elle GİRİLMEZ', async ({ page }) => {
     await bootApp(page);
     await openFead(page);

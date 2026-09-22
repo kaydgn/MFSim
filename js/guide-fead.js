@@ -879,9 +879,19 @@ function _gfSec7(){
       'Bilgi sayfasının koordinat tablosu, gergi satırı; dönen raporda <em>Layout Data</em>'],
     ['Kol boyu (Arm Length)', 'Montaj ekseni ile kasnak merkezi arasındaki sabit mesafe, mm',
       'Raporun <em>Tensioner Data</em> bölümü; 56–90 mm aralığında doğrulandı'],
-    ['<strong>Kol çalışma açısı</strong>', 'Kolun çalışma konumundaki <strong>mutlak</strong> '
-      + 'açısı (+X’ten CCW) — gergi gövdesinin montajdaki saat konumu',
-      'Gerginin parça/montaj çizimi (E9843: <em>“344° MEAN ANGLE”</em>)'],
+    // KILAVUZ PROGRAMIN YAZDIĞINI ALINTILAR. Panelin alanı "Kol yönü" ve
+    // NİSPİ (merkez→gövde, işaretli); kılavuz onu "mutlak" diye tanıtıyordu
+    // ve iki yüzey ayrışmıştı. Mutlak açı yine anlatılıyor — parça çiziminin
+    // dili o — ama AYRI bir ad ve açık bir çeviriyle.
+    ['<strong>Kol yönü</strong>', 'Gövdenin montaj noktasının avara merkezine '
+      + 'göre yönü — <strong>merkez→gövde</strong>, 0° sağda, saat yönünün '
+      + 'tersi artı, işaretli (−180…+180). Panele <strong>bu</strong> girilir.',
+      'Gerginin parça/montaj çizimi aynı yönü TERS uçtan ve mutlak yazar '
+      + '(E9843: <em>“344° MEAN ANGLE”</em> ↔ panelde <strong>164°</strong>)'],
+    ['θ<sub>kol</sub> (mutlak)', 'Aynı kolun <strong>gövde→merkez</strong> yönü, '
+      + '0…360. Çekirdeğin, raporun ve pim açısının dili; panelde okunur, '
+      + 'girilmez. θ = kol yönü + 180°.',
+      'Türev — girilen kol yönünden'],
     ['Ön yük (Pre-Load)', 'Nm', 'Bilgi sayfasının Tensioner tablosu'],
     ['Yay katsayısı (Rate)', 'Nm/°', 'Aynı tablo'],
     ['Çalışma momenti (Mean Load)', 'Nm', 'Aynı tablo. Kolun montajda ne kadar kurulduğunu '
@@ -978,7 +988,10 @@ function _gfSec7(){
   h += _gfAlanTablo('Avara Hareketi kartının okuması', [
     ['Yay kurulması', '(M<sub>çalışma</sub> − M<sub>ön</sub>) / k — kolun bağıl dönmesi',
       'Salt yay künyesinden; geometriye hiç bakmaz'],
-    ['Kol çalışma açısı', 'Girdiğiniz mutlak açı', 'Bir <strong>girdi</strong>'],
+    ['Kol yönü — girdi (merkez→gövde)', 'Panele yazdığınız sayının kendisi',
+      'Bir <strong>girdi</strong>'],
+    ['θ<sub>kol</sub> — mutlak (gövde→merkez)', 'Aynı yön, ters uçtan: +180°',
+      'Türev — parça çiziminin dili'],
     ['↳ gövdenin montaj konumu (türedi)', 'Merkezden kol boyu kadar geride, çalışma açısında',
       '<strong>Türeyen</strong> — atölyeye giden sayı; §7.1’in denetim sayısı'],
     ['Serbest kol açısı (türedi)', 'θ<sub>çalışma</sub> − sense × yay kurulması',
@@ -1631,8 +1644,16 @@ function _gfSec14(){
         'Raporun <em>Layout Data</em> tablosunun gergi satırı — panelde '
         + '“Avara Kasnağının Merkezi”'],
       ['Kol boyu', _gfF(td.armLen, 1) + ' mm', 'Raporun <em>Tensioner Data</em> bölümü'],
-      ['Kol çalışma açısı', _gfFs(td.armMeanDeg, 2) + '°',
-        'Gerginin parça/montaj çizimi — gövdenin montajdaki saat konumu'],
+      // "GİRİLEN DEĞERLER" tablosu kullanıcının GERÇEKTEN girdiği sayıyı
+      // basmalı: `armMeanDeg` saklanan (mutlak) hâl, panele yazılan ise onun
+      // 180° ötesi. Ham basılınca tablo "siz şunu girdiniz" diyerek girilmemiş
+      // bir sayı gösteriyordu.
+      ['Kol yönü (girdi)',
+        _gfFs((typeof veFeadArmShownDeg === 'function')
+              ? veFeadArmShownDeg(td.armMeanDeg) : td.armMeanDeg, 2) + '°',
+        'Panele yazılan değer — merkez→gövde, işaretli'],
+      ['θ<sub>kol</sub> (mutlak, türev)', _gfFs(td.armMeanDeg, 2) + '°',
+        'Gerginin parça/montaj çizimi — gövde→merkez, 0…360'],
       ['Yay ön yükü', _gfF(td.preload, 2) + ' Nm', 'Aynı bölüm'],
       ['Yay katsayısı', _gfF(td.kArm, 3) + ' Nm/°', 'Aynı bölüm'],
       ['Çalışma momenti', _gfF(td.meanLoad, 2) + ' Nm', 'Aynı bölüm'],

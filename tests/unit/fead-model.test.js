@@ -956,6 +956,46 @@ describe('kayış sırası — indisten, sürücüden başlayarak', () => {
       .toEqual(['CRK', 'A_C', 'IDR', 'TEN']);
   });
 
+  // GERGİ SON SATIRDA KALIR — sürücü kilidinin EŞİ (2026-09-22).
+  //
+  // Kullanıcı isteği: *"Döngü her zaman en son otomatik gergi ile bitecek."*
+  // Kural kodda bir UYARI olarak vardı ama hiçbir yazma yolu ona uymuyordu:
+  // satır okları gergiyi yukarı itebiliyordu. Gerekçe cebirsel —
+  // `spanTensions` ankrajı gergiye yazıp listede ileri yürüyor; gergiden
+  // sonraki ilk düğüm bir AKSESUAR olursa gerginlik ankrajın ALTINA iner.
+  // Liste sürücüyle başladığına göre kural tam olarak "gergi son satır".
+  test('satır taşıma: GERGİ SON SATIRDA KİLİTLİ, kimse altına inemez', () => {
+    const k = dortlu();
+    expect(veFeadBeltOrder(k.list).map((n) => n.customName))
+      .toEqual(['CRK', 'IDR', 'A_C', 'TEN']);
+    expect(veFeadMoveBeltIndex(k.list, k.ten.id, -1)).toBe(false);   // gergi çıkamaz
+    expect(veFeadMoveBeltIndex(k.list, k.ten.id, +1)).toBe(false);   // (zaten son)
+    expect(veFeadMoveBeltIndex(k.list, k.ac.id, +1)).toBe(false);    // altına inilemez
+    expect(veFeadBeltOrder(k.list).map((n) => n.customName))
+      .toEqual(['CRK', 'IDR', 'A_C', 'TEN']);                        // sıra oynamadı
+    // Kilit ötekileri DONDURMUYOR: gergiye değmeyen taşıma hâlâ serbest.
+    expect(veFeadMoveBeltIndex(k.list, k.ac.id, -1)).toBe(true);
+    expect(veFeadBeltOrder(k.list).map((n) => n.customName))
+      .toEqual(['CRK', 'A_C', 'IDR', 'TEN']);
+  });
+
+  // KİLİT YALNIZ KURAL ZATEN YERİNDEYSE. Gergisi ORTADA duran eski bir kayıt
+  // açıldığında kilit onu o hâlde dondururdu ve kullanıcı okla düzeltemezdi —
+  // yani kural, kendisini ihlal eden kaydı onarılamaz yapardı.
+  test('gergi SONDA DEĞİLSE kilit yok — eski kayıt okla düzeltilebilir', () => {
+    const k = dortlu();
+    k.ten.data.beltIndex = 2; k.idr.data.beltIndex = 4;   // gergiyi ortaya al
+    veFeadNormalizeBeltOrder(k.list);
+    expect(veFeadBeltOrder(k.list).map((n) => n.customName))
+      .toEqual(['CRK', 'TEN', 'A_C', 'IDR']);
+    expect(veFeadMoveBeltIndex(k.list, k.ten.id, +1)).toBe(true);    // SERBEST
+    expect(veFeadMoveBeltIndex(k.list, k.ten.id, +1)).toBe(true);
+    expect(veFeadBeltOrder(k.list).map((n) => n.customName))
+      .toEqual(['CRK', 'A_C', 'IDR', 'TEN']);                        // onarıldı
+    // Onarıldığı an kilit devreye giriyor.
+    expect(veFeadMoveBeltIndex(k.list, k.ten.id, -1)).toBe(false);
+  });
+
   test('veFeadRouteOrder GİDİŞ sırası — tablo sırasının çevrilmişi', () => {
     const k = dortlu();
     expect(veFeadBeltOrder(k.list).map((n) => n.customName))

@@ -333,3 +333,90 @@ describe('torsionalModel — burulma modeli', () => {
     });
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SÜRTÜNME KATSAYILARI — DEĞERİ ÇİVİLEYEN TEK KAPI
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı sorusu (2026-09-22): *"Bu sürtünme katsayısı neye göre
+// belirleniyor? … bu değerin doğruluğu hakkında sağlam literatür
+// araştırmasına ihtiyacımız var."*
+//
+// ÖLÇÜLDÜ (bu kapılar eklenmeden önce, `muEffGrooved` mutasyonu · bu dosya ve
+// cp-fead-report.test.js hariç bırakılarak):
+//
+//   | μ    | kırmızıya dönen |
+//   |------|-----------------|
+//   | 0,95 | 1               |
+//   | 1,05 | 1               |
+//   | 1,17 | 1               |
+//   | 2,00 | 4               |
+//
+// Yani değer KORUMASIZ DEĞİLDİ — ama koruma TÜRETİLMİŞ bir altın çıpaydı
+// (`fead-model.test.js` → veFeadSlipThreshold, "AG00976 eşiği 80,94 N"). O
+// çıpa "bir sayı oynadı" der, "μ oynadı" demez: kayma eşiği μ'ye üstel bağlı
+// olduğu için başka bir sebepten de kayabilir ve okuyan kişi hangisi olduğunu
+// bilemez. Buradaki kapılar sabiti ADIYLA çiviliyor, kökeninin yazılı
+// olmasını şart koşuyor ve bugüne kadar HİÇ OLMAYAN bir şeyi ekliyor:
+// kaburgalı katsayıya ÜST SINIR (kama formülünün iyimser 1,17'sine kayma).
+//
+// 2095 değerlik Gates kapısı kaymaya HİÇ dokunmuyor ve dokunamaz: 11 raporun
+// metin katmanında 'friction' geçişi sıfır — Gates bir μ BASMIYOR.
+//
+// LİTERATÜR TURU (2026-09) 0,90'ı DOĞRULADI ve üç bağımsız ölçümün altında
+// bıraktığı için emniyetli taraf olduğunu gösterdi:
+//   · Gerbert & Hansson 1990 — ham μ 0,31 → 0,31/sin20° = 0,906
+//   · Tabatabaei Lotfy 1996 (Leeds PhD §5.3.3) — 0,934
+//   · Kubas 2019 (Arch. Automot. Eng. 84(2), Tab.1) — 0,97
+// Sayı DEĞİŞMEDİ; değişen, arkasındaki dayanak ve bu kapının varlığı.
+describe('CALIBRATION — sürtünme katsayıları', () => {
+  test('değerler ÇİVİLİ: kaburgalı 0,90 · sırt 0,35', () => {
+    expect(F.CALIBRATION.muEffGrooved.value).toBe(0.90);
+    expect(F.CALIBRATION.muBackside.value).toBe(0.35);
+  });
+
+  test('her ikisinin de KÖKENİ yazılı — çıplak sabit yok', () => {
+    ['muEffGrooved', 'muBackside'].forEach((k) => {
+      expect(typeof F.CALIBRATION[k].note).toBe('string');
+      expect(F.CALIBRATION[k].note.length).toBeGreaterThan(40);
+    });
+    // Sırt değeri KALİBRE DEĞİL ve notu bunu SÖYLEMEK zorunda: sayı gizlenmez,
+    // sınırı yanında yazılır (modül kuralı 10).
+    expect(F.CALIBRATION.muBackside.note).toMatch(/[Kk]alibre/);
+  });
+
+  test('KABURGALI > SIRT — kanal kaması düz yüzeyden fazla tutar', () => {
+    expect(F.CALIBRATION.muEffGrooved.value)
+      .toBeGreaterThan(F.CALIBRATION.muBackside.value);
+  });
+
+  // KAMA FORMÜLÜNÜN VERDİĞİ SAYI BİR ÜST SINIR DEĞİL, BİR UYARI ÇİZGİSİ.
+  // Çekirdeğin notu "mu/sin(alpha/2) … ~1.17 verir, fazla iyimser" diyor;
+  // 1,17 kaynağı olmayan bir ham μ = 0,40 varsayımından geliyor (0,40/sin20°).
+  // Literatürün ÖLÇTÜĞÜ ham μ 0,31–0,32'dir ve aynı formül 0,906–0,936 verir
+  // — yani çekirdeğin kendi 0,90'ını. Kapı, o iyimser sayıya kaymayı tutuyor.
+  test('değer kama formülünün İYİMSER sonucuna kaymıyor (< 1,0)', () => {
+    expect(F.CALIBRATION.muEffGrooved.value).toBeLessThan(1.0);
+    expect(0.40 / Math.sin(20 * Math.PI / 180)).toBeCloseTo(1.170, 3);   // notun 1,17'si
+    expect(0.31 / Math.sin(20 * Math.PI / 180)).toBeCloseTo(0.906, 3);   // ölçülen ham μ
+  });
+
+  // KATSAYI GERÇEKTEN SF'Yİ SÜRÜYOR: çekirdeğin geçiş yolu (opt.muGrooved)
+  // çalışıyor ve SF tam olarak e^(Δμ·φ) oranında oynuyor. Bu olmadan yukarıdaki
+  // üç kapı bir sayıyı çiviler ama o sayının bir şey YAPTIĞINI ölçmez.
+  test('μ SF\'yi üstel olarak sürüyor — geçiş yolu canlı', () => {
+    const sys = V.buildAG00976('1715@-250/110');
+    const g = F.geometryAt(sys, 0);
+    const T = sys.pulleys.map(() => 500);
+    const a = F.slipSafety(g, T, {});
+    const b = F.slipSafety(g, T, { muGrooved: 0.70, muBack: 0.35 });
+    const i = sys.pulleys.findIndex((p) => p.contact !== 'back');
+    expect(i).toBeGreaterThanOrEqual(0);
+    const phi = g.wraps[i];                       // radyan (çekirdeğin kendi alanı)
+    expect(a[i].SF / b[i].SF).toBeCloseTo(Math.exp((0.90 - 0.70) * phi), 6);
+    // Ve sırt kasnağı BAŞKA katsayıyı kullanıyor: ikisi karışsaydı oran aynı olurdu.
+    const j = sys.pulleys.findIndex((p) => p.contact === 'back');
+    expect(j).toBeGreaterThanOrEqual(0);
+    expect(a[j].SF).toBeCloseTo(b[j].SF, 9);      // muBack değişmedi → SF de değişmez
+  });
+});

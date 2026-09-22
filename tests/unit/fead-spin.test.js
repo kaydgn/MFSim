@@ -619,6 +619,58 @@ describe('LİSTE SIRASI KAYIŞIN GİDİŞİNİN TERSİ', () => {
     expect(s.b.spin).toBe(ORNEK_SPIN);
   });
 
+  // KULLANICININ SORUSU, GİDİŞ DİLİNDE (2026-09-22): *"Krank … saat yönüne
+  // doğru dönüyorsa, kayışın geldiği kısım her zaman çok daha gergin olacak.
+  // Bunun doğru olduğunu matematiğimize bakarak doğrular mısın?"*
+  //
+  // Yukarıdaki halka aynı fiziği LİSTE dilinde tutuyor. Bu halka onu, RAPORUN
+  // §8.11'de artık kullandığı GİDİŞ diliyle yeniden ölçüyor — çünkü rapor o
+  // dilde bir hüküm BASIYOR ve hükmün altında sayı olmak zorunda. İkisi ayrı
+  // ayrı anlamsız: liste kapısı tek başına raporun cümlesini korumaz, dil
+  // kapısı (cp-fead-report.test.js) tek başına doğru cümlenin altında yanlış
+  // sayı basılmasına izin verir.
+  test('GİDİŞ DİLİNDE: sürücüye GİREN açıklık en gergin, ÇIKAN en gevşek, fark = P/v', () => {
+    const s = kur('AG00976_GATES_2025', false);
+    const R = coz(s);
+    expect(R.ok).toBe(true);
+    const rows = (R.analysis && R.analysis.duty) || [];
+    const row = rows.reduce((a, b) => {
+      const g = (r) => (r.perPulley || []).reduce((t, p) => t + (Number(p.powerKw) || 0), 0);
+      return g(b) > g(a) ? b : a;
+    }, rows[0]);
+    const c = s.b.sys.pulleys.findIndex((p) => p.crank);
+    expect(c).toBeGreaterThanOrEqual(0);
+
+    // Liste gidişin TERSİ olduğu için: kasnağa GİDİŞTE giren açıklık = o
+    // kasnağın LİSTE çıkış spanı; gidişte çıkan açıklık = liste giriş spanı.
+    const giren = Number(row.perPulley[c].exitTensionN);
+    const cikan = Number(row.perPulley[c].entryTensionN);
+    const hepsi = row.perPulley.map((p) => Number(p.exitTensionN));
+
+    expect(giren).toBeCloseTo(Math.max.apply(null, hepsi), 6);   // EN GERGİN
+    expect(cikan).toBeCloseTo(Math.min.apply(null, hepsi), 6);   // EN GEVŞEK
+    expect(giren).toBeGreaterThan(cikan);
+
+    // Fark tam olarak sürücünün aktardığı kuvvet: ΔT = M/r = P/v.
+    const P = Number(row.perPulley[c].powerKw) * 1000;
+    expect(giren - cikan).toBeCloseTo(P / Number(row.vMs), 3);
+
+    // GERGİNİN ANKRAJI EN GEVŞEK AÇIKLIKTA: gergi sıranın sonundayken o
+    // açıklık tam olarak sürücüden ÇIKAN açıklıktır — raporun bastığı hüküm.
+    const t = s.b.sys._tenIdx;
+    expect(Number(row.perPulley[t].exitTensionN)).toBeCloseTo(cikan, 6);
+    expect(t).toBe(s.b.sys.pulleys.length - 1);
+
+    // "HER ZAMAN çok daha gergin" YÜKE BAĞLI: güçler sıfırken fark da sıfır.
+    const bos = rows.reduce((a, b) => {
+      const g = (r) => (r.perPulley || []).reduce((x, p) => x + (Number(p.powerKw) || 0), 0);
+      return g(b) < g(a) ? b : a;
+    }, rows[0]);
+    const bosP = Number(bos.perPulley[c].powerKw) * 1000;
+    expect(Number(bos.perPulley[c].exitTensionN) - Number(bos.perPulley[c].entryTensionN))
+      .toBeCloseTo(bosP / Number(bos.vMs), 3);
+  });
+
   test('AG00976 raporunun kendi okları: düz kasnak komşuları TABLONUN TERSİ yönde', () => {
     const txt = gatesPdfText(AG00976_PDF).replace(/\s+/g, ' ');
     const m = /Adjacent Grooved Pulleys((?: [A-Z_0-9]+ - >[A-Z_0-9]+){3})/.exec(txt);

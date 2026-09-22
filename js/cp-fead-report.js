@@ -1976,10 +1976,25 @@ function _frPositionTable(R){
   // Etiketler TEK KAYNAKTAN: model katmanındaki VE_FEAD_POSITIONS. Rapor kendi
   // sözlüğünü tutsaydı panelle ve kanvastaki kartla bir gün ayrışırdı.
   var TR = _frPosLabels();
-  var h = '<h3>8.8 Gergi kolunun gezdiği zarf — altı konum</h3>';
+  // BAŞLIK SÜTUN SAYISINDAN TÜRER, SABİT DİZE DEĞİL.
+  //
+  // Eskiden "altı konum" yazıyordu ama tablo BEŞ sütun basabiliyor: Load
+  // konumu yalnız gerginin mekanik durdurucusu (`loadStopRelDeg`) biliniyorsa
+  // eklenir (fead-core.js:555, fead-model.js veFeadPositionRows). Ulaşılabilir
+  // bir hâl: yay katsayısı aday stop'u çekirdeğin sınırının üstüne çıkarırsa
+  // alan hiç yazılmıyor (kapısı fead-defaults.test.js'te). Okuyucu "altı
+  // konum" başlığı altında beş sütun görüyordu ve bunu tutan test YOKTU.
+  var _sayi = { 4: 'dört', 5: 'beş', 6: 'altı', 7: 'yedi' }[pos.length]
+              || String(pos.length);
+  var h = '<h3>8.8 Gergi kolunun gezdiği zarf — ' + _sayi + ' konum</h3>';
   h += '<p>Kayış boyu tolerans ve aşınmayla değiştikçe kol döner; her konumda kayış yolu, sarım açıları ve '
      + 'gerginlik başkadır (§4.4). Aşağıdaki tablo bu zarfı verir. <b>Load bir mekanik durdurucudur, '
      + 'çalışma noktası değildir.</b></p>';
+  // SEBEBİ DE YAZILIR: eksik sütun bir hesap hatası değil, eksik bir GİRDİdir.
+  if(!pos.some(function(p){ return p.position === 'Load'; }))
+    h += '<p><b>Load sütunu basılmadı:</b> gergi künyesinde mekanik durdurucu '
+       + '(load stop) tanımlı değil. Tedarikçi raporları bu konumu her zaman '
+       + 'basar; eksikliği modelin girdisindendir, hesabın değil.</p>';
   h += '<table><caption>Tablo ' + _frTbl() + ' — Gergi kolu konum tablosu</caption>';
   h += '<tr><th>Büyüklük</th>';
   pos.forEach(function(p){
@@ -2073,9 +2088,22 @@ function _frTensionTables(R){
   if(!duty.length) return '';
   var adlar = (duty[0].perPulley || []).map(function(q){ return q.name; });
   var h = '<h3>8.11 Ortalama gerginlik ve hubload</h3>';
-  h += '<p>Gerginlik kayış boyunca sabit değildir: sürücü kasnakta yükselir, her güç çeken kasnakta bir '
-     + 'basamak düşer, avara ve gergide değişmez (§5.1). Aşağıdaki değer, o kasnaktan <b>sonraki</b> '
-     + 'açıklığın gerginliğidir. Hız oranları §8.6\'da; aksesuar devri = motor devri × hız oranı.</p>';
+  // SÜTUNUN ANLAMI AÇIKÇA BEYAN EDİLİR. Eski metin "sürücü kasnakta yükselir …
+  // o kasnaktan SONRAKİ açıklık" diyordu; bu, tablo sırasının (Gates "Layout
+  // Data", kayışın gidişinin TERSİ) dilidir ve kayışın gidişinde tam TERSİNİ
+  // söyler. Rapor hiçbir yerde tablonun ters sırada olduğunu yazmadığı için
+  // okuyan mühendis sürücü sütunundaki en büyük değeri "krankın çıkışı"
+  // sanıyordu — oysa orası krankın GİRİŞİ (ölçüldü, AG00976 @880 d/d:
+  // giren 1409,6 N · çıkan 572,6 N · fark 837,0 N = P/v).
+  h += '<p>Gerginlik kayış boyunca sabit değildir. Bu tablonun <b>sütun sırası Gates '
+     + '"Layout Data" sırasıdır, yani kayışın gidişinin tersidir</b>; sütundaki değer, '
+     + 'kayışın o kasnağa <b>girdiği</b> açıklığın gerginliğidir. Kayışın gidiş yönünde '
+     + 'okunduğunda gerginlik her güç çeken kasnakta bir basamak <b>yükselir</b>, sürücü '
+     + 'kasnakta tek adımda <b>düşer</b>, avara ve gergide değişmez (§5.1). En büyük değer '
+     + 'sürücüye giren (gergin) açıklıkta, en küçük değer otomatik gerginin satırındadır — '
+     + 'gergi kayış sırasının sonundayken o açıklık tam olarak sürücüden çıkan (gevşek) '
+     + 'açıklıktır. İkisinin farkı sürücünün aktardığı kuvvettir: ΔT = M/r = P/v. '
+     + 'Hız oranları §8.6\'da; aksesuar devri = motor devri × hız oranı.</p>';
 
   function matris(baslik, oku, dec){
     var t = '<table><caption>Tablo ' + _frTbl() + ' — ' + baslik + '</caption>';
@@ -2150,9 +2178,42 @@ function _frSlipSection(R){
        + 'taraf birlikte yükselir, oran 1\'de kalır (§8.7). Tek etkili değişken sarım açısıdır. '
        + 'Bu yüzden yukarıdaki hüküm yalnız yük taşıyan kasnaklara dayanır: ' + ib + '.</div>';
   }
-  h += '<p style="font-size:13px;color:#5a6270;">Kaburgalı temasta etkin sürtünme kanal geometrisiyle '
-     + 'büyür; sırttan temas eden avara ve gergi kasnaklarında düz yüzey sürtünmesi geçerlidir ve emniyet '
-     + 'payı dardır. Sürtünme katsayıları çekirdeğin kalibrasyon sabitleridir.</p>';
+  // SAYININ KENDİSİ BASILIR, "çekirdeğin sabitidir" denmez.
+  //
+  // Eski cümle μ'nün DEĞERİNİ hiç yazmıyordu; okuyucu SF'nin hangi katsayıyla
+  // hesaplandığını belgenin içinden ÖĞRENEMİYORDU (bütün js/ + şablon ağacında
+  // '0.90' ya da '0.35' kullanıcıya basılan hiçbir metinde geçmiyordu). Modül
+  // kuralı 10 bunun tersini söylüyor: geçerlilik sınırı sonucun İÇİNDE taşınır.
+  //
+  // DEĞER ÇEKİRDEKTEN OKUNUR, ikinci bir kopya tutulmaz — rapora elle yazılan
+  // bir '0,90' bir sonraki kalibrasyonda sessizce bayatlardı.
+  var _cal = (_frCore() && _frCore().CALIBRATION) || {};
+  var _muG = _cal.muEffGrooved && _cal.muEffGrooved.value;
+  var _muB = _cal.muBackside && _cal.muBackside.value;
+  h += '<p style="font-size:13px;color:#5a6270;">Kaburgalı temasta etkin sürtünme kanal '
+     + 'geometrisiyle büyür; sırttan temas eden avara ve gergi kasnaklarında düz yüzey '
+     + 'sürtünmesi geçerlidir ve emniyet payı dardır. Kullanılan değerler: '
+     + '<b>μ<sub>kaburgalı</sub> = ' + _frF(_muG, 2) + '</b> · '
+     + '<b>μ<sub>sırt</sub> = ' + _frF(_muB, 2) + '</b>.</p>';
+  // KÖKENİ VE SINIRI YANINDA. İkisi AYNI kuvvette değil ve bu yazılmalı.
+  h += '<div class="note" style="font-size:12.5px;">'
+     + '<b>Sürtünme katsayılarının kökeni ve geçerlilik sınırı.</b> '
+     + 'μ<sub>kaburgalı</sub> bir <i>etkin</i> (düz-kayış eşdeğeri) katsayıdır: '
+     + 'Euler–Eytelwein bağıntısına doğrudan girer, ayrıca kama düzeltmesi '
+     + 'uygulanmaz. Değer üç bağımsız kaynakla tutarlıdır — Gerbert &amp; Hansson '
+     + '(1990) ham μ 0,31 → 0,31/sin20° = 0,906; Tabatabaei Lotfy (Leeds, 1996, '
+     + '§5.3.3) ölçümü 0,934; Kubas (Arch. Automot. Eng. 84(2), 2019, Tab. 1) '
+     + 'kaburga başına eşleştirilmiş yükte 0,97 — ve üçünün de <b>altında</b> '
+     + 'kaldığı için emniyetli taraftadır. '
+     + 'μ<sub>sırt</sub> <b>kalibre edilmemiştir</b>: Poly-V sırtı ile düz kasnak '
+     + 'için birincil bir ölçüm bulunamadı (2026-09 taraması); değer tipik '
+     + 'kauçuk–metal mertebesindedir ve düz kasnakta gerilme oranı ≈1 olduğu '
+     + 'için SF üzerindeki etkisi küçüktür. '
+     + '<b>Bağıntının sınırı:</b> e<sup>μφ</sup> bir <i>tam kayma</i> (gross slip) '
+     + 'eşiğidir, "hiç kayma yok" eşiği değil — sürünme (creep) her yük düzeyinde '
+     + 'vardır. Merkezkaç terimi (T<sub>c</sub> = m′v²) hesaba <b>katılmamıştır</b>; '
+     + 'ihmal, gereken μ\'yü olduğundan düşük gösterir ve etkisi devirle büyür.'
+     + '</div>';
   return h;
 }
 
