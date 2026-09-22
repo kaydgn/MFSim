@@ -46,15 +46,15 @@ function veSolverRunProfessional() {
   header.style.cssText = 'padding:8px 14px;background:var(--bg-secondary);border-bottom:2px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;';
   header.innerHTML = '<div style="display:flex;align-items:center;gap:10px;">' +
     '<div style="display:flex;gap:3px;">' +
-      '<span style="width:8px;height:8px;border-radius:1px;background:var(--bg-tertiary);border:1px solid var(--border-color);display:inline-block;"></span>' +
-      '<span style="width:8px;height:8px;border-radius:1px;background:var(--bg-tertiary);border:1px solid var(--border-color);display:inline-block;"></span>' +
-      '<span style="width:8px;height:8px;border-radius:1px;background:var(--bg-tertiary);border:1px solid var(--border-color);display:inline-block;"></span>' +
+      '<span style="width:8px;height:8px;border-radius:var(--radius-xs);background:var(--bg-tertiary);border:1px solid var(--border-color);display:inline-block;"></span>' +
+      '<span style="width:8px;height:8px;border-radius:var(--radius-xs);background:var(--bg-tertiary);border:1px solid var(--border-color);display:inline-block;"></span>' +
+      '<span style="width:8px;height:8px;border-radius:var(--radius-xs);background:var(--bg-tertiary);border:1px solid var(--border-color);display:inline-block;"></span>' +
     '</div>' +
     '<div style="font-weight:700;font-size:var(--fs-md);color:var(--text-heading);letter-spacing:0.06em;text-transform:uppercase;">MFSim — Çözücü</div>' +
   '</div>' +
   '<div style="display:flex;align-items:center;gap:5px;">' +
-    '<button id="ve-solver-log-dl" style="display:none;padding:3px 9px;font-size:var(--fs-micro);font-weight:600;background:transparent;border:1px solid var(--border-color);border-radius:1px;color:var(--text-muted);cursor:pointer;letter-spacing:0.03em;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-muted)\'"><span class="mf-ico mf-ico-download"></span> LOG</button>' +
-    '<button id="ve-solver-modal-close" style="width:22px;height:22px;border-radius:1px;background:transparent;border:1px solid var(--border-color);color:var(--text-muted);cursor:pointer;font-size:var(--fs-tiny);display:none;" onclick="document.getElementById(\'ve-solver-modal-overlay\').remove()">✕</button>' +
+    '<button id="ve-solver-log-dl" style="display:none;padding:3px 9px;font-size:var(--fs-micro);font-weight:600;background:transparent;border:1px solid var(--border-color);border-radius:var(--radius-xs);color:var(--text-muted);cursor:pointer;letter-spacing:0.03em;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-muted)\'"><span class="mf-ico mf-ico-download"></span> LOG</button>' +
+    '<button id="ve-solver-modal-close" style="width:22px;height:22px;border-radius:var(--radius-xs);background:transparent;border:1px solid var(--border-color);color:var(--text-muted);cursor:pointer;font-size:var(--fs-tiny);display:none;" onclick="document.getElementById(\'ve-solver-modal-overlay\').remove()">✕</button>' +
   '</div>';
   modal.appendChild(header);
   
@@ -72,7 +72,7 @@ function veSolverRunProfessional() {
   
   // Log area — iç pencere (inset border)
   var logWrap = document.createElement('div');
-  logWrap.style.cssText = 'flex:1;overflow-y:auto;margin:8px 14px 10px;background:var(--bg-tertiary);border:2px inset var(--border-color);border-radius:1px;padding:12px 16px;min-height:160px;max-height:36vh;';
+  logWrap.style.cssText = 'flex:1;overflow-y:auto;margin:8px 14px 10px;background:var(--bg-tertiary);border:2px inset var(--border-color);border-radius:var(--radius-xs);padding:12px 16px;min-height:160px;max-height:36vh;';
   logWrap.innerHTML = '<div id="ve-sp-log" style="font-family:Consolas,\'Courier New\',monospace;font-size:var(--fs-body);line-height:1.65;color:var(--text-secondary);white-space:pre-wrap;"></div>';
   modal.appendChild(logWrap);
   

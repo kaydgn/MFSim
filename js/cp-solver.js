@@ -317,10 +317,10 @@ function getGearShiftPropertiesHTML(node) {
   html += '</div>';
 
   // ── 1. Profil Seçici ──
-  html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:10px;">';
+  html += '<div style="background:var(--bg-tertiary); border-radius:var(--radius-md); padding:10px; margin-bottom:10px;">';
   html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:6px;">Shift Profili</div>';
 
-  html += '<select id="ve-gs-profile-' + node.id + '" onchange="onVEGearShiftProfileChange(\'' + node.id + '\')" style="width:100%; padding:6px 8px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; margin-bottom:6px;">';
+  html += '<select id="ve-gs-profile-' + node.id + '" onchange="onVEGearShiftProfileChange(\'' + node.id + '\')" style="width:100%; padding:6px 8px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); margin-bottom:6px;">';
   var profileKeys = Object.keys(VE_FT_SHIFT_PROFILES);
   for (var pi = 0; pi < profileKeys.length; pi++) {
     var pk = profileKeys[pi];
@@ -334,10 +334,10 @@ function getGearShiftPropertiesHTML(node) {
   // Profil özet bilgileri
   var lockupOffset = spData.lockupOffset || 0;
   html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; font-size:var(--fs-tiny);">';
-  html += '<div style="background:var(--bg-secondary); padding:5px 7px; border-radius:4px;"><span style="color:var(--text-muted);">Aile:</span> <span style="color:var(--text-heading); font-weight:500;">' + (spData.family || '—') + '</span></div>';
-  html += '<div style="background:var(--bg-secondary); padding:5px 7px; border-radius:4px;"><span style="color:var(--text-muted);">Lockup Offset:</span> <span style="color:var(--text-heading); font-weight:500;">' + lockupOffset + ' rpm</span></div>';
-  html += '<div style="background:var(--bg-secondary); padding:5px 7px; border-radius:4px;"><span style="color:var(--text-muted);">Shift Ref:</span> <span style="color:var(--text-heading); font-weight:500;">' + (shiftRefRPM > 0 ? shiftRefRPM + ' rpm' : 'Tanımsız') + '</span></div>';
-  html += '<div style="background:var(--bg-secondary); padding:5px 7px; border-radius:4px;"><span style="color:var(--text-muted);">Gov. RPM:</span> <span style="color:var(--text-heading); font-weight:500;">' + (governed > 0 ? governed + ' rpm' : 'Tanımsız') + '</span></div>';
+  html += '<div style="background:var(--bg-secondary); padding:5px 7px; border-radius:var(--radius-sm);"><span style="color:var(--text-muted);">Aile:</span> <span style="color:var(--text-heading); font-weight:500;">' + (spData.family || '—') + '</span></div>';
+  html += '<div style="background:var(--bg-secondary); padding:5px 7px; border-radius:var(--radius-sm);"><span style="color:var(--text-muted);">Lockup Offset:</span> <span style="color:var(--text-heading); font-weight:500;">' + lockupOffset + ' rpm</span></div>';
+  html += '<div style="background:var(--bg-secondary); padding:5px 7px; border-radius:var(--radius-sm);"><span style="color:var(--text-muted);">Shift Ref:</span> <span style="color:var(--text-heading); font-weight:500;">' + (shiftRefRPM > 0 ? shiftRefRPM + ' rpm' : 'Tanımsız') + '</span></div>';
+  html += '<div style="background:var(--bg-secondary); padding:5px 7px; border-radius:var(--radius-sm);"><span style="color:var(--text-muted);">Gov. RPM:</span> <span style="color:var(--text-heading); font-weight:500;">' + (governed > 0 ? governed + ' rpm' : 'Tanımsız') + '</span></div>';
   html += '</div>';
 
   if (pk !== activeProfileKey && activeProfileKey !== selectedKey) {
@@ -347,7 +347,7 @@ function getGearShiftPropertiesHTML(node) {
 
   // Governed RPM yoksa uyarı
   if (governed <= 0) {
-    html += '<div style="background:var(--accent-danger); color:white; border-radius:6px; padding:10px; margin-bottom:10px; font-size:var(--fs-body); text-align:center;">Motor Governed RPM tanımlı değil. Eşik hesaplamaları yapılamaz.</div>';
+    html += '<div style="background:var(--accent-danger); color:white; border-radius:var(--radius-md); padding:10px; margin-bottom:10px; font-size:var(--fs-body); text-align:center;">Motor Governed RPM tanımlı değil. Eşik hesaplamaları yapılamaz.</div>';
     html += '</div>';
     return html;
   }
@@ -356,7 +356,7 @@ function getGearShiftPropertiesHTML(node) {
   // kartları SOL = Converter + Lockup, SAĞ = Downshift + Matematik + Algoritma
   html += '<div class="ve-cp-grid ve-cp-grid--cards"><div class="ve-cp-col">';
   // ── 2. Converter-Mod Geçişleri ──
-  html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:10px;">';
+  html += '<div style="background:var(--bg-tertiary); border-radius:var(--radius-md); padding:10px; margin-bottom:10px;">';
   html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:4px;">Converter-Mod Geçişleri</div>';
   html += '<p style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Converter modda şanzıman çıkış devri (N<sub>out</sub>) belirli eşiklere ulaştığında geçiş tetiklenir.</p>';
 
@@ -384,7 +384,7 @@ function getGearShiftPropertiesHTML(node) {
   }
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<td style="padding:5px 6px; font-weight:600; color:var(--accent-primary);">1C → 2C</td>';
-  html += '<td style="padding:5px 6px; text-align:center;"><span style="background:var(--bg-secondary); padding:2px 6px; border-radius:3px; font-size:var(--fs-micro);">' + model1C2C + '</span></td>';
+  html += '<td style="padding:5px 6px; text-align:center;"><span style="background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + model1C2C + '</span></td>';
   html += '<td style="padding:5px 6px; font-family:monospace; font-size:var(--fs-tiny);">' + formula1C2C + '</td>';
   html += '<td style="padding:5px 6px; text-align:center; font-weight:600; color:var(--accent-primary);">' + thr1C2C + '</td>';
   html += '</tr>';
@@ -422,7 +422,7 @@ function getGearShiftPropertiesHTML(node) {
   }
   html += '<tr>';
   html += '<td style="padding:5px 6px; font-weight:600; color:var(--accent-primary);">2C → 2L</td>';
-  html += '<td style="padding:5px 6px; text-align:center;"><span style="background:var(--bg-secondary); padding:2px 6px; border-radius:3px; font-size:var(--fs-micro);">' + model2C2L + '</span></td>';
+  html += '<td style="padding:5px 6px; text-align:center;"><span style="background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + model2C2L + '</span></td>';
   html += '<td style="padding:5px 6px; font-family:monospace; font-size:var(--fs-tiny);">' + formula2C2L + '</td>';
   html += '<td style="padding:5px 6px; text-align:center; font-weight:600; color:var(--accent-primary);">' + thr2C2L + '</td>';
   html += '</tr>';
@@ -431,13 +431,13 @@ function getGearShiftPropertiesHTML(node) {
   html += '</div>';
 
   // ── 3. Lockup-Mod Upshift Tablosu ──
-  html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:10px;">';
+  html += '<div style="background:var(--bg-tertiary); border-radius:var(--radius-md); padding:10px; margin-bottom:10px;">';
   html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:4px;">Lockup-Mod Upshift Eşikleri</div>';
   html += '<p style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Lockup modda: N<sub>out</sub> = N<sub>engine</sub> / i<sub>gear</sub> (SR = 1.0). Geçiş koşulu: N<sub>out</sub> ≥ a × ESL + b</p>';
 
   var luShifts = spData.lockupShifts;
   if (luShifts) {
-    html += '<div style="overflow-x:auto; border:1px solid var(--border-color); border-radius:6px;">';
+    html += '<div style="overflow-x:auto; border:1px solid var(--border-color); border-radius:var(--radius-md);">';
     html += '<table style="width:100%; border-collapse:collapse; font-size:var(--fs-tiny);">';
     html += '<thead style="background:var(--bg-secondary);">';
     html += '<tr>';
@@ -484,7 +484,7 @@ function getGearShiftPropertiesHTML(node) {
 
       html += '<tr style="border-bottom:1px solid var(--border-color);">';
       html += '<td style="padding:4px 6px; text-align:center; font-weight:600; color:var(--accent-primary);">' + shiftLabel + '</td>';
-      html += '<td style="padding:4px 6px; text-align:center;"><span style="background:var(--bg-secondary); padding:1px 5px; border-radius:3px; font-size:var(--fs-micro);">' + modelType + '</span></td>';
+      html += '<td style="padding:4px 6px; text-align:center;"><span style="background:var(--bg-secondary); padding:1px 5px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + modelType + '</span></td>';
       html += '<td style="padding:4px 6px; text-align:center; font-family:monospace;">' + aVal + '</td>';
       html += '<td style="padding:4px 6px; text-align:center; font-family:monospace;">' + bVal + '</td>';
       html += '<td style="padding:4px 6px; text-align:center; font-family:monospace; color:var(--text-muted);">' + capVal + '</td>';
@@ -501,13 +501,13 @@ function getGearShiftPropertiesHTML(node) {
   // ── 4. Downshift Tablosu ──
   html += '</div>';                                    // ve-cp-col (sol) kapat
   html += '<div class="ve-cp-col">';                   // SAĞ sütun: downshift + matematik + algoritma
-  html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:10px;">';
+  html += '<div style="background:var(--bg-tertiary); border-radius:var(--radius-md); padding:10px; margin-bottom:10px;">';
   html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:4px;">Downshift Eşikleri</div>';
   html += '<p style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Downshift koşulu: N<sub>out</sub> &lt; eşik → alt vitese düş. Histerezis = upshift eşiği − downshift eşiği.</p>';
 
   var dsThresholds = spData.downshiftThresholds;
   if (dsThresholds) {
-    html += '<div style="overflow-x:auto; border:1px solid var(--border-color); border-radius:6px;">';
+    html += '<div style="overflow-x:auto; border:1px solid var(--border-color); border-radius:var(--radius-md);">';
     html += '<table style="width:100%; border-collapse:collapse; font-size:var(--fs-tiny);">';
     html += '<thead style="background:var(--bg-secondary);">';
     html += '<tr>';
@@ -561,7 +561,7 @@ function getGearShiftPropertiesHTML(node) {
 
       html += '<tr style="border-bottom:1px solid var(--border-color);">';
       html += '<td style="padding:4px 6px; text-align:center; font-weight:600; color:var(--accent-danger);">' + dsLabel + '</td>';
-      html += '<td style="padding:4px 6px; text-align:center;"><span style="background:var(--bg-secondary); padding:1px 5px; border-radius:3px; font-size:var(--fs-micro);">' + dsModelType + '</span></td>';
+      html += '<td style="padding:4px 6px; text-align:center;"><span style="background:var(--bg-secondary); padding:1px 5px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + dsModelType + '</span></td>';
       html += '<td style="padding:4px 6px; text-align:center; font-family:monospace;">' + dsAVal + '</td>';
       html += '<td style="padding:4px 6px; text-align:center; font-family:monospace;">' + dsBVal + '</td>';
       html += '<td style="padding:4px 6px; text-align:center; font-family:monospace; color:var(--text-muted);">' + dsCapVal + '</td>';
@@ -576,10 +576,10 @@ function getGearShiftPropertiesHTML(node) {
   html += '</div>';
 
   // ── 5. Matematik Özeti ──
-  html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:10px;">';
+  html += '<div style="background:var(--bg-tertiary); border-radius:var(--radius-md); padding:10px; margin-bottom:10px;">';
   html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:6px;">Matematiksel Modeller</div>';
 
-  var mathStyle = 'background:var(--bg-input); border-radius:5px; padding:8px 10px; border:1px solid var(--border-color); font-family:monospace; font-size:var(--fs-micro); line-height:1.8; color:var(--text-secondary); margin-bottom:6px;';
+  var mathStyle = 'background:var(--bg-input); border-radius:var(--radius-sm); padding:8px 10px; border:1px solid var(--border-color); font-family:monospace; font-size:var(--fs-micro); line-height:1.8; color:var(--text-secondary); margin-bottom:6px;';
 
   html += '<div style="' + mathStyle + '">';
   html += '<span style="color:var(--accent-primary); font-weight:600;">Lineer Model:</span><br>';
@@ -608,16 +608,16 @@ function getGearShiftPropertiesHTML(node) {
   html += '  [ESL &gt; maxESL₂] → a₃ × ESL + b₃';
   html += '</div>';
 
-  html += '<div style="background:var(--bg-secondary); border-left:3px solid var(--accent-primary); border-radius:0 5px 5px 0; padding:8px 10px; font-size:var(--fs-micro); color:var(--text-muted); line-height:1.5;">';
+  html += '<div style="background:var(--bg-secondary); border-left:3px solid var(--accent-primary); border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:8px 10px; font-size:var(--fs-micro); color:var(--text-muted); line-height:1.5;">';
   html += 'Tüm katsayılar iSCAAN çapraz validasyondan türetilmiştir. Tipik max hata: ±0.5 rpm (lineer), ±6-12 rpm (nonlineer bölgeler).';
   html += '</div>';
   html += '</div>';
 
   // ── 6. Shift Mantığı Akışı ──
-  html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:10px;">';
+  html += '<div style="background:var(--bg-tertiary); border-radius:var(--radius-md); padding:10px; margin-bottom:10px;">';
   html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:6px;">Vites Geçiş Algoritması</div>';
 
-  var codeStyle = 'background:var(--bg-input); border-radius:5px; padding:10px; border:1px solid var(--border-color); font-family:monospace; font-size:var(--fs-micro); line-height:1.7; color:var(--text-secondary); overflow-x:auto; white-space:pre;';
+  var codeStyle = 'background:var(--bg-input); border-radius:var(--radius-sm); padding:10px; border:1px solid var(--border-color); font-family:monospace; font-size:var(--fs-micro); line-height:1.7; color:var(--text-secondary); overflow-x:auto; white-space:pre;';
 
   html += '<div style="' + codeStyle + '">';
   html += '<span style="color:var(--text-muted);">Girdiler: N_engine, SR, i_gear, current_gear, mode</span>\n';

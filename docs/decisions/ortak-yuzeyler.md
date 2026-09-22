@@ -275,3 +275,42 @@ Daha koyu bir değer eşiği rahat geçerdi ama kademe ayrışmasını
 
 **Kapı.** `theme-contrast.test.js` — her jeton DÖRT yüzeye ayrı ayrı vurulur,
 yani yüzeylerden biri yanlış yöne giderse en kötü yüzey değişir ve eşik düşer.
+
+## Atölye şekil ölçeği — yarıçap ROL'e göre bağlanır (2026-09-22)
+
+**Hüküm.** Köşe yarıçapı tek bir ölçekten gelir — `--radius-xs|sm|md|lg|xl|pill`
+= 3 · 5 · 7 · 10 · 14 · 999 px — ve arayüzdeki her KAP o ölçekten bir basamak
+seçer. Sabit yazılmış yarıçap yalnız üç hâlde meşrudur: daire (`50%`), bilinçli
+keskin köşe (`0`), ve **çizgi örneği**.
+
+**Gerekçe.** Jeton 197 yerde kullanılıyordu ama 61 CSS + 96 JS noktası ondan
+bağımsızdı. Ölçeği değiştirmek panelleri oynatıp çözücü kartlarını, takoz
+künyelerini ve sihirbaz düğmelerini yerinde bırakıyordu: yarısı yuvarlak yarısı
+keskin bir arayüz, ve hiçbir test bunu ölçmüyordu.
+
+**Sınıflandırma SAYIYA DEĞİL ROLE göre.** Aynı `1px` iki ayrı işte geçiyordu:
+22×22 kapatma düğmesinde (KAP → ölçeğe bağlanır) ve 14×3 lejant çubuğunda
+(ÇİZGİ ÖRNEĞİ → diyagram dilinin parçası). Sayıya göre çevirmek ikincisini
+kapsüle döndürürdü. Kapı bu ayrımı **kural** olarak tutuyor: aynı bildirimde
+kendi kutusunu ≤3px ilan eden eleman çizgidir — yarın eklenen bir lejant
+kendiliğinden geçer, yarın eklenen bir düğme geçmez.
+
+**Ölü yedek temizlendi.** `var(--radius-md, 8px)` biçiminde 28 bildirim vardı.
+Jeton her zaman tanımlı olduğu için yedeğin hiçbiri devreye girmiyordu — ama
+**aynı jetona üç ayrı yedek** yazılmıştı (`--radius-sm` için 5px · 6px · 7px).
+Yedekler ölü olduğu için bu tutarsızlık hiçbir yerde görünmüyordu; ölçek
+değiştiğinde ise hepsi birden bayatladı.
+
+### Ölçeğe BAĞLANMAYANLAR — dokunulmayan da bir sonuçtur
+
+| Ne | Kaç | Neden |
+|----|-----|-------|
+| `stroke-width` | 330+ | Şekil değil **anlam**: 4px kayış ile 1px ızgara çizgisi aynı ölçeğin basamakları değil. Üç basamağa indirmek FEAD ve takoz mühendislik çizimlerini sessizce yeniden yazardı |
+| Bileşen sembollerinin `rx`'i | 61 | Semboller **100×100 viewBox'ta 38×38 çiziliyor**: `rx="8"` ekranda ~3 px, yani zaten ölçekte. Ayrıca kap değil ÇİZİM (şanzıman gövdesi, konvertör kabuğu) |
+| Rapor belgeleri | 4 | İndirilen rapor kendi stil sayfasını taşır; `var(--radius-*)` orada TANIMSIZ — bağlamak yarıçapı sessizce 0 yapardı. Dışa çıkan belgeler ayrı turun işi |
+| 2048 tahtası | 4 | Oyunun kendi geometrisi, kendi paleti gibi (`#bbada0`). Kabuk (pencere · skor · düğme · kapat) Atölye'ye çevrildi, tahta çevrilmedi |
+
+**Kapı.** `source-hygiene.test.js` bölüm 4 (CSS) + bölüm 5 (JS). İkisi ayrı
+ayrı hiçbir şey ifade etmez: CSS kapısı tek başınayken JS'ten yazılan her
+yarıçap serbest kalıyordu. Kapsam dışı sayılar **TAM eşleşir** — bir satır
+silinince boşalan yer yeni bir sapmaya açılmasın.

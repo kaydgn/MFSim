@@ -248,7 +248,7 @@ function _mntViewerAttachHover(canvas){
   var tip=document.createElement('div');
   tip.style.cssText='position:fixed; z-index:100060; pointer-events:none; display:none; max-width:240px; '
     +'padding:7px 9px; font-size:var(--fs-tiny); line-height:1.5; background:var(--bg-secondary,#1a1a1a); '
-    +'color:var(--text-primary,#eee); border:1px solid var(--border-color,#444); border-radius:6px; '
+    +'color:var(--text-primary,#eee); border:1px solid var(--border-color,#444); border-radius:var(--radius-md); '
     +'box-shadow:0 6px 20px rgba(0,0,0,0.45);';
   document.body.appendChild(tip);
   V.tooltip=tip;

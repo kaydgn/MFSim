@@ -705,7 +705,7 @@ function veFeadApplyBeltModeBadge(nodeEl, node){
     : 'Kayış boyu SABİT: girilen boy kullanılıyor. Tıkla → tasarımdan hesaplansın.';
   b.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; cursor:pointer;'
     + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
-    + 'padding:2px 4px; border-radius:3px; font-family:ui-monospace, monospace;'
+    + 'padding:2px 4px; border-radius:var(--radius-xs); font-family:ui-monospace, monospace;'
     + 'color:' + (serbest ? 'var(--on-warning)' : 'var(--on-accent)')
     + '; background:' + (serbest ? 'var(--accent-warning, #f59e0b)'
                                  : 'var(--accent-primary, #3b82f6)')
@@ -826,7 +826,7 @@ function veFeadApplySpinBadge(nodeEl, node){
         : hkm === true ? '\n\nGergi gevşek tarafta ✓' : '');
   b.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; cursor:pointer;'
     + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
-    + 'padding:2px 4px; border-radius:3px; font-family:ui-monospace, monospace;'
+    + 'padding:2px 4px; border-radius:var(--radius-xs); font-family:ui-monospace, monospace;'
     + 'color:' + fg + '; background:' + bg + '; border:1px solid var(--bg-primary, #111);';
   b.onmousedown = function(e){ e.stopPropagation(); };
   b.ondblclick  = function(e){ e.stopPropagation(); e.preventDefault(); };
