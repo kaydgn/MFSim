@@ -613,3 +613,49 @@ Pasifleştirme taraması da aynı sebeple bandın tamamını geziyor.
 `tests/e2e/ust-bant.spec.js` (yerleşim ve canlı bağ, gerçek tarayıcıda). İki
 düşme ölçüldü: bir komut paletten çıkarılınca kapsam kapısı adıyla söylüyor,
 yetki devri kaba geri dönünce arama düğmesi paleti açamıyor.
+
+## Bandın envanteri — "eskisiyle aynı olmuş" (2026-09-22)
+
+**Bildirim.** Bant Atölye'ye geçirildikten sonra kullanıcı: *"bu toolbar çok
+kalın olmuş. Ayrıca eskisiyle de aynı olmuş."* Haklıydı ve sebep **renk değil
+ENVANTERDİ**: bandın içinde hâlâ şerit sekmeleri (Giriş · Görünüm · Araçlar)
+ve kaydet/geri/ileri ikonları duruyordu. Yeni öğeler onların yanına eklenmişti,
+yerlerine değil.
+
+**Hüküm.** Bant yalnız dört şey taşır: **marka · modül adı** ┊ **komut arama ·
+birincil eylem · avatar**. Şerit sekmeleri **gövdenin** satırıdır ve gövde
+katlıyken onlar da yoktur — "kapalı ama yarısı açık" bir hâl yoktur.
+
+| Ne | Önce | Sonra |
+|----|------|-------|
+| Bant yüksekliği | 44 px | **38 px** |
+| Şerit sekmeleri | bantta | **gövdede** (katlıyken gizli) |
+| Kaydet/geri/ileri ikonu | bantta | **yok** — klavye + palet |
+| Marka ikon kutusu | var | **gizli** (maket yalnız sözcük markasını gösteriyor) |
+| Bant zemini | `--bg-tertiary` (oyuk) | **`--bg-secondary`** (yükselen) |
+| Tuval yüksekliği | 623 | **629** |
+
+Oyuk zemin bandı bir **araç şeridi** gibi okutuyordu; bu kabuğun başlığı.
+
+**KALDIRILAN DÜĞMENİN YOLU AÇIK KALIR.** Kaydet ikonu banttan kalkarken
+ölçüldü: `veSaveTopology` **hiçbir tuşa bağlı değildi** (Ctrl+Z ve Ctrl+Y
+vardı, Ctrl+S yoktu). Düğmeyi klavye yolu açmadan kaldırmak, sık kullanılan
+bir eylemi yalnız palete mahkûm etmekti — **Ctrl+S o turda eklendi**.
+
+## Kimlik — uydurulmadı, AÇILDI (2026-09-22)
+
+**Hüküm.** Avatar bir adı gösterir; ad **kullanıcının kendi yazdığıdır**
+(Ayarlar → Görünüm → Kimlik ya da avatar menüsü). **Tarayıcıda** saklanır,
+**projeye yazılmaz** — dosyayı paylaşan herkes onu da paylaşırdı.
+
+Ad yokken **sahte baş harf basılmaz**: nötr bir daire durur ve menü adı
+yazmaya çağırır. *"Bilinmiyor"u "biliniyormuş gibi" göstermemek* bu deponun
+kuralı; ilk turda avatarın hiç yapılmamasının sebebi de buydu.
+
+**BAŞ HARF TÜRKÇE BÜYÜTÜLÜR.** `'i'.toUpperCase()` → `'I'`, oysa Türkçe'de
+`'İ'`. "İlker" → "I" **yanlış** baş harftir ve hata sessizdir: avatar dolu
+görünür. `toLocaleUpperCase('tr')` kullanılır. En çok iki harf — üçü avatarda
+okunmuyor, biri ayırt etmiyor; tek parçalı adda ikinci harf **uydurulmaz**.
+
+**Kapı:** `tests/unit/kimlik.test.js` (baş harf, tuzağın kendisi dahil çivili)
++ `tests/e2e/ust-bant.spec.js` (envanter · avatar · menü · Ctrl+S).

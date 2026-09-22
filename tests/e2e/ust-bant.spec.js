@@ -59,8 +59,13 @@ test('şerit gövdesi VARSAYILAN katlı — bant tek satır', async ({ page }) =
   expect(r.katli).toBe(true);
   // Şeridin tamamı bandın kendisi kadar: gövde gerçekten kapalı
   expect(r.serit.h).toBe(r.bant.h);
-  // ve bant maketin havadar satırı — eski 30 px'lik kuşak değil
-  expect(r.bant.h).toBeGreaterThanOrEqual(40);
+  // BANDIN ÖLÇÜSÜ İKİ UÇLU. Alt sınır: eski 30 px'lik araç kuşağı değil,
+  // marka ve eylem taşıyan bir bant. Üst sınır: kalın da değil — ilk yazım
+  // 44 px'ti ve kullanıcı "çok kalın olmuş" dedi. İki sınır arasında bir
+  // aralık, tek bir sayıyı çivilemekten dürüst: yazı ölçüsü değişirse bant
+  // da bir tık oynayabilmeli, ama iki uçtan da kaçamamalı.
+  expect(r.bant.h).toBeGreaterThan(32);
+  expect(r.bant.h).toBeLessThanOrEqual(40);
 });
 
 test('MODÜL ADI canlı — modülün içinde yazılı, kökte BOŞ', async ({ page }) => {
@@ -105,4 +110,91 @@ test('gövde kapalı olunca tuval KAZANIYOR', async ({ page }) => {
   const acik = await page.evaluate(olc);
   expect(acik.katli).toBe(false);
   expect(katli.tuval.h - acik.tuval.h).toBeGreaterThan(60);
+});
+
+// ── BANT ESKİ ŞERİT DEĞİL (kullanıcı bildirimi: "eskisiyle aynı olmuş") ────
+// Bandın eski okunmasının sebebi renk değil ENVANTERDİ: içinde hâlâ şerit
+// sekmeleri ve kaydet/geri/ileri ikonları duruyordu. Maket ikisini de
+// taşımıyor. Kapı ENVANTERİ tutuyor, görünümü değil.
+test('bantta şerit sekmesi ve QAT ikonu YOK', async ({ page }) => {
+  await ac(page, 'fead-analysis');
+  const r = await page.evaluate(() => {
+    const bant = document.querySelector('#ve-rb-strip');
+    const sekme = document.querySelector('#ve-rb-tabs');
+    return {
+      qatKabi: !!document.querySelector('#ve-qat'),
+      bantSekmesi: !!(sekme && bant.contains(sekme)),
+      // sekmeler gövdeye ait: gövde katlıyken görünmezler
+      sekmeGorunur: !!(sekme && sekme.getBoundingClientRect().height > 0),
+      markaIkonu: (() => {
+        const m = document.querySelector('.ve-rb-strip .ve-brand-mark');
+        return !!(m && m.getBoundingClientRect().width > 0);
+      })(),
+      bantY: Math.round(bant.getBoundingClientRect().height),
+    };
+  });
+  expect(r.qatKabi).toBe(false);        // kaydet/geri/ileri ikonları banttan kalktı
+  expect(r.bantSekmesi).toBe(false);    // şerit sekmeleri gövdenin
+  expect(r.sekmeGorunur).toBe(false);   // gövde katlıyken sekme de yok
+  expect(r.markaIkonu).toBe(false);     // maket yalnız SÖZCÜK markasını gösteriyor
+  expect(r.bantY).toBeLessThanOrEqual(40);   // "çok kalın olmuş" — 44 → 38
+});
+
+// Sekmeler kaybolmadı, YERİ değişti: gövde açılınca birlikte gelirler.
+test('gövde açılınca şerit sekmeleri geliyor', async ({ page }) => {
+  await ac(page, 'fead-analysis');
+  await page.evaluate(() => veRibbonToggleCollapse());
+  await page.waitForTimeout(500);
+  const gorunur = await page.evaluate(() => {
+    const t = document.querySelector('#ve-rb-tabs');
+    return !!(t && t.getBoundingClientRect().height > 0 && t.children.length > 1);
+  });
+  expect(gorunur).toBe(true);
+});
+
+// ── AVATAR ────────────────────────────────────────────────────────────────
+// Kimlik UYDURULMADI, AÇILDI. Ad yokken sahte baş harf basılmaz.
+test('avatar: ad yokken BOŞ, ad girilince baş harf', async ({ page }) => {
+  await ac(page, 'fead-analysis');
+  const bos = await page.evaluate(() => {
+    const a = document.querySelector('#ve-bant-avatar');
+    return { metin: a.textContent.trim(), bosSinif: a.classList.contains('ve-bant-avatar--bos') };
+  });
+  expect(bos.metin).toBe('');
+  expect(bos.bosSinif).toBe(true);
+
+  const dolu = await page.evaluate(() => {
+    veKimlikAdYaz('Kerem Aydoğan');
+    const a = document.querySelector('#ve-bant-avatar');
+    return { metin: a.textContent.trim(), bosSinif: a.classList.contains('ve-bant-avatar--bos') };
+  });
+  expect(dolu.metin).toBe('KA');
+  expect(dolu.bosSinif).toBe(false);
+});
+
+test('avatar menüsü açılıyor ve ESC ile kapanıyor', async ({ page }) => {
+  await ac(page, 'fead-analysis');
+  await page.click('#ve-bant-avatar');
+  await expect(page.locator('.ve-avatar-menu')).toBeVisible();
+  await expect(page.locator('.ve-avatar-menu [data-ve-avatar="cikis"]')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.ve-avatar-menu')).toHaveCount(0);
+});
+
+// KALDIRILAN DÜĞMENİN YOLU AÇIK KALIR. Kaydet ikonu banttan kalktı ve
+// `veSaveTopology` HİÇBİR TUŞA BAĞLI DEĞİLDİ (ölçüldü) — Ctrl+S o turda
+// eklendi. Düğmeyi klavye yolu açmadan kaldırmak, sık kullanılan bir eylemi
+// yalnız palete mahkûm etmekti.
+test('Ctrl+S kaydetmeye bağlı', async ({ page }) => {
+  await ac(page, 'fead-analysis');
+  const cagrildi = await page.evaluate(async () => {
+    let n = 0;
+    const eski = window.veSaveTopology;
+    window.veSaveTopology = function () { n++; };
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true }));
+    await new Promise((r) => setTimeout(r, 100));
+    window.veSaveTopology = eski;
+    return n;
+  });
+  expect(cagrildi).toBe(1);
 });

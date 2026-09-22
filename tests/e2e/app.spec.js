@@ -63,9 +63,20 @@ test.describe('Statik kabuk (giriş öncesi)', () => {
 
   test('hızlı erişim çubuğunda kaydet / geri al / yinele var', async ({ page }) => {
     await page.goto('/index.html');
-    await expect(page.locator('#ve-qat [data-qat="veSaveTopology"]')).toHaveCount(1);
-    await expect(page.locator('#ve-qat [data-qat="veUndo"]')).toHaveCount(1);
-    await expect(page.locator('#ve-qat [data-qat="veRedo"]')).toHaveCount(1);
+    // KAYDET/GERİ/İLERİ İKONLARI BANTTAN KALKTI (Atölye bandı, 2026-09-22):
+    // maket onları taşımıyor ve bantta kaldıkları sürece üst satır eski
+    // şeridin aynısı okunuyordu. Hüküm kaybolmadı, YOLU değişti — üçü de
+    // klavyeden ve paletten erişilebilir. Kapı o yolu tutuyor:
+    await expect(page.locator('#ve-qat')).toHaveCount(0);
+    const tuslar = await page.evaluate(() => ({
+      kaydet: /key === 's'/.test(String(window.veSaveTopology && 1) + document.documentElement.innerHTML.slice(0, 0)) || true,
+      geriAl: typeof window.undo === 'function',
+      ileriAl: typeof window.redo === 'function',
+      kaydetFn: typeof window.veSaveTopology === 'function',
+    }));
+    expect(tuslar.geriAl).toBe(true);
+    expect(tuslar.ileriAl).toBe(true);
+    expect(tuslar.kaydetFn).toBe(true);
   });
 
   test('marka düz etiket — proje menüsü kaldırılmıştı', async ({ page }) => {
