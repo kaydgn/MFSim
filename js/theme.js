@@ -1,14 +1,95 @@
 // ============================================================================
-// TEMA YÖNETİMİ (Ayarlar modalına taşındı — bkz. settings.js)
+// TEMA YÖNETİMİ — İKİ ZEMİN, ÜÇ KİP
 // ============================================================================
-// Tema değiştir: data-theme uygula, kaydet, tüm [data-mf-theme] item'larını senkronize et.
-function changeTheme(themeId) {
-  if (!themeId) return;
-  document.documentElement.setAttribute('data-theme', themeId);
-  try { localStorage.setItem('mf-theme', themeId); } catch(e) {}
-  // Ayarlar modalındaki tema kartlarının aktif (✓) durumunu güncelle
-  document.querySelectorAll('[data-mf-theme]').forEach(function(el) {
-    el.classList.toggle('active', el.getAttribute('data-mf-theme') === themeId);
+// Burada bir zamanlar ondokuz tema vardı ve Ayarlar > Görünüm onları kart kart
+// listeliyordu. Hepsi kaldırıldı: program artık TEK tasarim dili taşıyor ve o
+// dilin iki zemini var. Kullanıcının seçtiği şey bir palet değil bir KİP:
+//
+//     acik · koyu · sistem        (sistem = işletim sistemini izle)
+//
+// Kip ile KİMLİK ayrı şeylerdir. localStorage bir KİP tutar; `data-theme`
+// attribute'una yazılan ise çözülmüş KİMLİK ('acik' ya da 'koyu') — 'sistem'
+// diye bir CSS bloğu yoktur ve yazılsaydı belge sessizce :root'a düşerdi.
+//
+// KİMLİKLER TEK KELİME VE TİRESİZ: js/loader.js'in ilk-kare süzgeci /^[a-z]+$/
+// ve tireli bir kimlik oradan geçmez — geçmezse loader'ın ölçüp kapattığı
+// açılış renk sıçraması geri gelir.
+// Kapı: tests/unit/theme-consistency.test.js › "süzgeci GEÇERLİ her tema
+// kimliğini kabul ediyor".
+
+var MF_ACIK = 'acik';
+var MF_KOYU = 'koyu';
+var MF_ANAHTAR = 'mf-theme';
+
+// Geçerli kipler. Ayarlar > Görünüm menüsü bununla senkron olmak zorunda
+// (kapı: theme-consistency.test.js).
+var MF_KIPLER = ['acik', 'koyu', 'sistem'];
+
+// VARSAYILAN TEK YERDE. Kullanıcı kararı (2026-09-09, karşılama reçetesi):
+// hiç seçim yapmamış kopya AÇIK açılır — 'sistem' DEĞİL. Bu sabit programda
+// başka hiçbir yerde tekrarlanmaz; Ayarlar penceresi de kendi varsayılanını
+// tutmaz, aşağıdaki veThemeStoredKip()'i çağırır. Eskiden tutuyordu ve
+// ayrışmıştı: program pearl açılıyor, pencere Midnight işaretli gösteriyordu.
+var MF_VARSAYILAN = MF_ACIK;
+
+// ── Eski kimlik göçü ────────────────────────────────────────────────────────
+// Ondokuz temanın kayıtlı seçimleri tarayıcılarda duruyor. Göç yapılmazsa
+// o kopyalar tanınmayan bir kimlik taşır, belge :root'a düşer ve kullanıcı
+// koyu tema seçmişken AÇIK açılır — hiçbir şey patlamaz, yani sessiz.
+// Eşleme ailelere göre: hangi tema light, hangisi dark bildiriyorduysa.
+var MF_ESKI_KIMLIK = {
+  slate: MF_KOYU, cream: MF_KOYU, claude: MF_KOYU, ansys: MF_KOYU,
+  fusion: MF_KOYU, vscode: MF_KOYU, navy: MF_KOYU, graphite: MF_KOYU,
+  ink: MF_KOYU, basalt: MF_KOYU, mono: MF_KOYU, contrast: MF_KOYU,
+  amber: MF_KOYU, scope: MF_KOYU,
+  pearl: MF_ACIK, steel: MF_ACIK, solidworks: MF_ACIK, paper: MF_ACIK,
+  zinc: MF_ACIK
+};
+
+// Ham bir depolama değerini geçerli bir KİPE çevirir. Tanınmayan her şey
+// varsayılana düşer — bozuk kayıt programı durdurmaz.
+function veThemeKip(ham) {
+  if (MF_KIPLER.indexOf(ham) >= 0) return ham;
+  if (MF_ESKI_KIMLIK[ham]) return MF_ESKI_KIMLIK[ham];
+  return MF_VARSAYILAN;
+}
+
+// İşletim sistemi koyu mu? Tarayıcı bilmiyorsa AÇIK kabul edilir —
+// belirsizlikte kâğıt, ekranın varsayılanı.
+function veThemeOsKoyu() {
+  try {
+    return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  } catch (e) { return false; }
+}
+
+// KİP → data-theme KİMLİĞİ. 'sistem' burada çözülür.
+function veThemeKimlik(kip) {
+  if (kip === MF_KOYU) return MF_KOYU;
+  if (kip === MF_ACIK) return MF_ACIK;
+  return veThemeOsKoyu() ? MF_KOYU : MF_ACIK;
+}
+
+// Kayıtlı kip — göç dâhil. Ayarlar penceresi de bunu okur; ikinci bir
+// varsayılan doğmasın diye.
+function veThemeStoredKip() {
+  var v = null;
+  try { v = localStorage.getItem(MF_ANAHTAR); } catch (e) {}
+  return veThemeKip(v);
+}
+
+// ── Uygulama ────────────────────────────────────────────────────────────────
+// TEK GİRİŞ. js/results.js bu fonksiyonu SARMALAYARAK grafik önbelleğini
+// temizliyor (_drTC); tema değişimi için ikinci bir yol açılırsa panolar
+// sayfa yenilenene kadar eski renklerde kalır. Sistem takibi de buradan
+// geçer, kendi başına attribute yazmaz.
+function changeTheme(kip) {
+  if (!kip) return;
+  var k = veThemeKip(kip);
+  document.documentElement.setAttribute('data-theme', veThemeKimlik(k));
+  try { localStorage.setItem(MF_ANAHTAR, k); } catch (e) {}
+  // Ayarlar > Görünüm'deki kip düğmelerinin aktif (✓) durumu
+  document.querySelectorAll('[data-mf-theme]').forEach(function (el) {
+    el.classList.toggle('active', el.getAttribute('data-mf-theme') === k);
   });
 }
 
@@ -29,28 +110,41 @@ function veThemeRgba(varName, alpha, fallback) {
   return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + alpha + ')';
 }
 
-// Sayfa yüklendiğinde kayıtlı temayı uygula
+// Sayfa yüklendiğinde kayıtlı kipi uygula. İlk kare ZATEN boyandı
+// (index.html'in satır içi betiği + js/loader.js); bu çağrı kipi normalleştirir
+// ve eski kimlik kaydını yeni sözlüğe yazar.
 document.addEventListener('DOMContentLoaded', function() {
-  // Varsayılan AÇIK tema (kullanıcı kararı, 2026-09-09 — karşılama reçetesi).
-  // Kayıtlı seçim her zaman kazanır: bu yalnız hiç seçim yapmamış kopyalar için.
-  var savedTheme = 'pearl';
-  try {
-    savedTheme = localStorage.getItem('mf-theme') || 'pearl';
-  } catch(e) {}
-  // Geçerli temalar — CSS'teki [data-theme] blokları + Ayarlar > Görünüm listesiyle
-  // birebir aynı olmalı (js/settings.js _veSettingsRenderAppearance). Listede
-  // olmayan (eski/geçersiz) değerler güvenle VARSAYILANA döner.
-  // SADE: graphite, ink, basalt, mono (koyu) · paper, zinc (açık)
-  // KOYU: slate, cream, claude, navy · YÜKSEK KONTRAST: contrast, amber, scope
-  // PROFESYONEL: ansys, fusion, vscode · AÇIK: pearl, steel, solidworks
-  var valid = ['graphite','ink','basalt','mono','paper','zinc',
-               'slate','cream','claude','navy','contrast','amber','scope',
-               'ansys','fusion','vscode','pearl','steel','solidworks'];
-  if (valid.indexOf(savedTheme) < 0) savedTheme = 'pearl';
-  changeTheme(savedTheme);
+  changeTheme(veThemeStoredKip());
 });
+
+// SİSTEM kipindeyken işletim sistemi gün batımında koyuya dönerse program da
+// o anda dönmeli — "sistem gibi davranmak" bu. Elle seçim yapılmışsa
+// dokunulmaz. changeTheme üzerinden geçer, yani grafik önbelleği de temizlenir.
+(function () {
+  var mq;
+  try { mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)'); } catch (e) { return; }
+  if (!mq) return;
+  var onChange = function () {
+    if (veThemeStoredKip() === 'sistem') changeTheme('sistem');
+  };
+  // addEventListener eski Safari'de yok; addListener kaldırıldı ama hâlâ
+  // çalışıyor. İkisi de yoksa takip sessizce devre dışı kalır, program çalışır.
+  if (mq.addEventListener) mq.addEventListener('change', onChange);
+  else if (mq.addListener) mq.addListener(onChange);
+})();
 
 // Birim testleri için (tarayıcıda etkisiz)
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { changeTheme: changeTheme, veThemeRgba: veThemeRgba };
+  module.exports = {
+    MF_ACIK: MF_ACIK,
+    MF_KOYU: MF_KOYU,
+    MF_KIPLER: MF_KIPLER,
+    MF_VARSAYILAN: MF_VARSAYILAN,
+    MF_ESKI_KIMLIK: MF_ESKI_KIMLIK,
+    veThemeKip: veThemeKip,
+    veThemeKimlik: veThemeKimlik,
+    veThemeStoredKip: veThemeStoredKip,
+    changeTheme: changeTheme,
+    veThemeRgba: veThemeRgba
+  };
 }

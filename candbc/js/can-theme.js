@@ -17,8 +17,8 @@
 // Tema kimlikleri css/styles.css'teki [data-theme] bloklarından. İkisi de nötr
 // gri-mavi ailede ve mavi aksanlı: tema değişince eğri renkleri
 // (CDB_SIGNAL_COLORS) aynı kaldığı için zemin de aynı aileden olmalı.
-var CDB_DARK  = 'slate';
-var CDB_LIGHT = 'pearl';
+var CDB_DARK  = 'koyu';
+var CDB_LIGHT = 'acik';
 var CDB_THEME_KEY = 'mfcan-theme';
 
 function cdbStoredThemeMode() {

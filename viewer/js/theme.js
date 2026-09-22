@@ -2,11 +2,11 @@
 // TEMA — işletim sistemini izler, kullanıcı geçersiz kılabilir
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// VIEWER'A ÖZGÜ DOSYA. MFSim'in js/theme.js'i on altı tema taşıyor ve açılışta
-// koşulsuz 'slate'e düşüyor; orada bu doğru, çünkü tema Ayarlar panelinden
+// VIEWER'A ÖZGÜ DOSYA. MFSim'in js/theme.js'i de artık iki zemin taşıyor
+// (acik/koyu) ve orada varsayılan AÇIK — çünkü orada tema Ayarlar panelinden
 // seçilen bir tercih. Burada tema bir tercih DEĞİL, ortama uyum meselesi:
-// program tek başına, günün her saatinde açık duracak. Bu yüzden varsayılan
-// işletim sisteminin kendisi.
+// program tek başına, günün her saatinde açık duracak. Bu yüzden buradaki
+// varsayılan işletim sisteminin kendisi.
 //
 // ÜÇ DURUM, TEK DÜĞME — Sistem → Açık → Koyu → Sistem
 // İki durumlu bir anahtar (yalnız Açık/Koyu) daha basit olurdu ama kullanıcı
@@ -21,8 +21,8 @@
 // Tema kimlikleri css/styles.css'teki [data-theme] bloklarından. İkisi de nötr
 // gri-mavi ailede ve mavi aksanlı: tema değişince eğri renkleri (VE_SIGNAL_COLORS)
 // aynı kaldığı için zemin de aynı aileden olmalı, yoksa palet yabancı düşer.
-var MFV_DARK  = 'slate';
-var MFV_LIGHT = 'pearl';
+var MFV_DARK  = 'koyu';
+var MFV_LIGHT = 'acik';
 var MFV_KEY   = 'mfv-theme';
 
 // ── Tercih okuma ──────────────────────────────────────────────────────────

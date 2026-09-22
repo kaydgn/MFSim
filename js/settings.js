@@ -59,79 +59,42 @@ function veSettingsShowSection(name) {
 
 // ─── GÖRÜNÜM ───────────────────────────────────────────────────────────────
 function _veSettingsRenderAppearance() {
-  // VARSAYILAN 'pearl' — js/theme.js'teki üç düşüş noktasıyla AYNI olmak
-  // zorunda. Burası 'slate' kalmıştı: hiç tema seçmemiş kopya pearl açılıyor
-  // ama bu pencere Midnight'ı işaretli gösteriyordu (ölçüldü 2026-09-22).
-  // Kapı: tests/unit/theme-consistency.test.js › "BEŞ düşüş noktası".
-  var current = 'pearl';
-  try { current = localStorage.getItem('mf-theme') || 'pearl'; } catch(e) {}
-  // swatch: [zemin, yüzey, aksan] — styles.css'teki tema bloklarıyla aynı
-  // değerler (--bg-primary / --bg-tertiary / --accent-primary). Önizleme pulu
-  // aktif temanın değişkenlerini kullanamaz (hepsi aynı görünürdü), bu yüzden
-  // renkler burada sabit. Tema paleti değişirse burası da güncellenmeli —
-  // tests/unit/theme-consistency.test.js bu senkronu korur.
-  // SADE ailesi — düşük doygunlukta, marka taklidi yapmayan paletler.
-  // Ayrıntılı gerekçe css/styles.css'teki "SADE AİLESİ" başlığında.
-  var sadeDark = [
-    { id: 'graphite', name: 'Grafit',        swatch: ['#16181b', '#23272c', '#4a739f'] },
-    { id: 'ink',      name: 'Mürekkep',      swatch: ['#111419', '#1e232b', '#5570a6'] },
-    { id: 'basalt',   name: 'Bazalt',        swatch: ['#1a1917', '#282622', '#4b7c72'] },
-    { id: 'mono',     name: 'Monokrom',      swatch: ['#151515', '#232323', '#6e6e6e'] }
+  // VARSAYILAN BURADA TUTULMAZ — js/theme.js'ten okunur. Bu pencere eskiden
+  // kendi varsayılanını tutuyordu ve ayrışmıştı: program 'pearl' açılıyor,
+  // pencere 'Midnight' işaretli gösteriyordu (ölçüldü 2026-09-22). Kopyayı
+  // kapıyla korumak yerine kopyanın kendisi kaldırıldı.
+  var current = (typeof veThemeStoredKip === 'function') ? veThemeStoredKip() : 'acik';
+
+  // ÜÇ KİP — ondokuz tema kartının yerine. 'sistem' bir palet değil bir
+  // DAVRANIŞ: işletim sistemi gün batımında koyuya dönünce program da döner.
+  // Bu yüzden onun pulu iki zemini yan yana gösterir.
+  //
+  // swatch: [zemin, yüzey, aksan] — css/styles.css'teki blokların GERÇEK
+  // değerleri. Pul aktif temanın değişkenlerini kullanamaz (üç kart da aynı
+  // görünürdü), bu yüzden renkler burada sabit; palet değişirse burası da
+  // değişmeli. Kapı: tests/unit/theme-consistency.test.js.
+  var kipler = [
+    { id: 'acik',   name: 'Açık',   swatch: ['#fafbfc', '#f0f1f3', '#2d6fe6'] },
+    { id: 'koyu',   name: 'Koyu',   swatch: ['#0a0c10', '#151a22', '#2563eb'] },
+    { id: 'sistem', name: 'Sistem', swatch: ['#fafbfc', '#0a0c10', '#2d6fe6'] }
   ];
-  var sadeLight = [
-    { id: 'paper',    name: 'Kağıt',         swatch: ['#f6f4f0', '#eceae4', '#3a6288'] },
-    { id: 'zinc',     name: 'Çinko',         swatch: ['#eef0f2', '#e3e6e9', '#3f637f'] }
-  ];
-  var dark = [
-    { id: 'slate',  name: 'Midnight',        swatch: ['#0a0c10', '#151a22', '#2563eb'] },
-    { id: 'cream',  name: 'Carbon',          swatch: ['#161616', '#222222', '#e05020'] },
-    { id: 'claude', name: 'Claude',          swatch: ['#141413', '#252420', '#d97757'] },
-    { id: 'navy',   name: 'Donanma Mavisi',  swatch: ['#0a1728', '#17324f', '#d9b25a'] }
-  ];
-  // Yüksek kontrast ailesi — saf siyah zemin + fosfor ekran geleneği
-  var kontrast = [
-    { id: 'contrast', name: 'Yüksek Kontrast', swatch: ['#000000', '#171717', '#4db8ff'] },
-    { id: 'amber',    name: 'Fosfor Kehribar', swatch: ['#0a0705', '#1c150d', '#ffb000'] },
-    { id: 'scope',    name: 'Osiloskop',       swatch: ['#05070a', '#121821', '#7ceaff'] }
-  ];
-  var pro = [
-    { id: 'ansys',  name: 'ANSYS',           swatch: ['#1a2632', '#2a3d4f', '#ffb71b'] },
-    { id: 'fusion', name: 'Fusion 360',      swatch: ['#2b2e32', '#3c4147', '#0696d7'] },
-    { id: 'vscode', name: 'VS Code Dark+',   swatch: ['#1e1e1e', '#2d2d2d', '#007acc'] }
-  ];
-  var light = [
-    { id: 'pearl',      name: 'Pearl',       swatch: ['#fafbfc', '#f0f1f3', '#2d6fe6'] },
-    { id: 'steel',      name: 'Steel',       swatch: ['#e4e7ec', '#d8dce4', '#3d5ba9'] },
-    { id: 'solidworks', name: 'SolidWorks',  swatch: ['#e9eef3', '#dde4ec', '#d51820'] }
-  ];
-  function group(label, list, note) {
-    var h = '<div class="ve-settings-subhead">' + label + '</div>';
-    if (note) h += '<p class="ve-settings-desc">' + note + '</p>';
-    h += '<div class="ve-settings-theme-grid">';
-    list.forEach(function(t) {
-      var a = (t.id === current) ? ' active' : '';
-      h += '<button class="ve-theme-menu-item' + a + '" data-mf-theme="' + t.id + '" onclick="changeTheme(\'' + t.id + '\')">';
-      h += '<span class="ve-theme-swatch" aria-hidden="true">';
-      t.swatch.forEach(function(c) { h += '<i style="background:' + c + '"></i>'; });
-      h += '</span>';
-      h += '<span class="ve-theme-swatch-name">' + t.name + '</span>';
-      h += '</button>';
-    });
-    h += '</div>';
-    return h;
-  }
-  var html = '<h3 class="ve-settings-section-title">Tema</h3>';
-  html += '<p class="ve-settings-desc">Uygulamanın renk paletini değiştirir. Seçim anında uygulanır ve hatırlanır.</p>';
-  html += group('Sade — Koyu', sadeDark,
-    'Düşük doygunlukta aksan, eşit yüzey basamakları. Uzun oturumlarda ' +
-    'gözü yormaz; renk yalnız seçim ve durum bildirir.');
-  html += group('Sade — Açık', sadeLight);
-  html += group('Koyu', dark);
-  html += group('Yüksek Kontrast', kontrast,
-    'Saf siyah zemin ve fosfor ekran geleneği. Diğer koyu temaların metin ' +
-    'kontrastı 15,2\'de tavan yapıyor; bu aile 16–18 arasında.');
-  html += group('Profesyonel', pro);
-  html += group('Açık', light);
+
+  var html = '<h3 class="ve-settings-section-title">Görünüm</h3>';
+  html += '<p class="ve-settings-desc">Program tek bir tasarım dili taşır; ' +
+          'seçtiğin şey o dilin zemini. Seçim anında uygulanır ve hatırlanır.</p>';
+  html += '<div class="ve-settings-theme-grid">';
+  kipler.forEach(function(t) {
+    var a = (t.id === current) ? ' active' : '';
+    html += '<button class="ve-theme-menu-item' + a + '" data-mf-theme="' + t.id + '" onclick="changeTheme(\'' + t.id + '\')">';
+    html += '<span class="ve-theme-swatch" aria-hidden="true">';
+    t.swatch.forEach(function(c) { html += '<i style="background:' + c + '"></i>'; });
+    html += '</span>';
+    html += '<span class="ve-theme-swatch-name">' + t.name + '</span>';
+    html += '</button>';
+  });
+  html += '</div>';
+  html += '<p class="ve-settings-desc">Sistem kipinde işletim sistemi koyuya ' +
+          'döndüğünde program da o anda döner; elle seçim yaptıysan dokunulmaz.</p>';
   return html;
 }
 

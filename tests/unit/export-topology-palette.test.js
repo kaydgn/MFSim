@@ -33,10 +33,11 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '../../', f), 'utf8');
 
 const comp = read('js/components.js');
 const css = read('css/styles.css');
-const themeJs = read('js/theme.js');
 
-// Varsayılan tema — js/theme.js'teki ilk düşüş noktasından okunur, çivilenmez.
-const VARSAYILAN = (themeJs.match(/var savedTheme = '([a-z]+)';/) || [])[1];
+// BELGENİN VARSAYILAN PALETİ — `:root` ile virgüllü bildirilen kimlik. Burası
+// çivilenmez: attribute'suz bir belgenin (ve bağımsız SVG'nin) gerçekten
+// düştüğü blok hangisiyse ölçüt odur.
+const VARSAYILAN = (css.match(/:root,\s*\[data-theme="([\w-]+)"\]\s*\{/) || [])[1];
 
 function temaBlogu(id) {
   const re = new RegExp('\\[data-theme="' + id + '"\\][^{]*\\{([^}]*)\\}', 'g');

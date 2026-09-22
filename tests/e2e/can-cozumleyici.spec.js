@@ -134,6 +134,6 @@ test('tema düğmesi üç durumu dolaşır ve grafiği yeniden çizer', async ({
   const t1 = await page.getAttribute('html', 'data-theme');
   await page.click('#cdb-theme-btn');
   const t2 = await page.getAttribute('html', 'data-theme');
-  expect([t0, t1, t2]).toEqual(expect.arrayContaining(['pearl', 'slate']));
+  expect([t0, t1, t2]).toEqual(expect.arrayContaining(['acik', 'koyu']));
   expect(t1).not.toBe(t2);
 });

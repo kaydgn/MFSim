@@ -88,8 +88,11 @@ const ZEMIN = ['bg-primary', 'bg-secondary', 'bg-tertiary', 'bg-input'];
 const temalar = temalariOku();
 
 describe('tema paleti — metin kontrastı (WCAG AA)', () => {
-  test('on dokuz tema da okunabiliyor', () => {
-    expect(temalar).toHaveLength(19);
+  // İKİ ZEMİN. Ondokuz tema kaldırıldı; bu sayı bir hedef değil bir ÇAPA —
+  // regex kayarsa (blok biçimi değişirse) dizi boşalır ve aşağıdaki bütün
+  // halkalar sessizce HİÇ koşmaz. Sayı buradan okunur, sabit yazılmaz.
+  test('iki zemin de okunabiliyor', () => {
+    expect(temalar.map((t) => t.ad)).toEqual(['acik', 'koyu']);
   });
 
   temalar.forEach((t) => {
