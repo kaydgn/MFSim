@@ -214,8 +214,19 @@ var _veRibbonPeek = false;
 
 var VE_RIBBON_COLLAPSE_KEY = 'mf-ribbon-collapsed';
 
+// ŞERİT GÖVDESİ VARSAYILAN KATLI (2026-09-22, Atölye üst bandı).
+// Meşruiyeti TEK bir koşula bağlı: şeritteki her komut palette de bulunabilsin
+// — `tests/unit/komut-kapsami.test.js`. Koşul sağlanmazsa hata SESSİZ olurdu:
+// komut kaybolmaz, sadece BULUNAMAZ.
+// Yazılmış bir tercih EZİLMEZ: gövdeyi açık bırakmış kullanıcı açık bulur.
+// Anahtar iki değeri de saklıyor ('1' katlı, '0' açık); eskiden yalnız '1'
+// yazılıyordu, yani "açık" bir tercih değil varsayılanın yokluğuydu ve bu
+// değişiklik onu sessizce geri alırdı.
 (function veRibbonLoadPref() {
-  try { if(localStorage.getItem(VE_RIBBON_COLLAPSE_KEY) === '1') veRibbonCollapsed = true; } catch(e) {}
+  try {
+    var v = localStorage.getItem(VE_RIBBON_COLLAPSE_KEY);
+    veRibbonCollapsed = (v === null) ? true : (v === '1');
+  } catch(e) { veRibbonCollapsed = true; }
 })();
 
 // ── Yardımcılar ──────────────────────────────────────────────────────────
@@ -378,7 +389,10 @@ function veRibbonRender() {
 // alanı yokken hepsi pasif. Aksi hâlde şeritteki "Kaydet" gri, başlıktaki aynı
 // komut tıklanabilir görünüyordu.
 function veRibbonSyncQat() {
-  var qat = document.getElementById('ve-qat');
+  // Tarama da bandın tamamında: komut arama ve birincil eylem de modül
+  // seçilmeden önce pasif olmalı (tıklanabilir görünen ölü komut, kuralın
+  // kapattığı kusurun ta kendisi).
+  var qat = document.getElementById('ve-rb-strip') || document.getElementById('ve-qat');
   if(!qat) return;
   var blocked = veRibbonNoWorkspace();
   qat.querySelectorAll('[data-qat]').forEach(function(btn) {
@@ -531,7 +545,11 @@ function veRibbonInit() {
   // Hızlı Erişim Araç Çubuğu (krom bandı içinde) — inline onclick yerine
   // delegasyon: aynı komut menüde de bulunduğundan `[onclick*="..."]`
   // seçicilerini çoğaltmamak için.
-  var qat = document.getElementById('ve-qat');
+  // Yetki devri BANDIN TAMAMINA bağlanır, yalnız `#ve-qat`a değil: Atölye
+  // bandında `data-qat` taşıyan düğmeler o kabın DIŞINDA da var (komut arama,
+  // birincil eylem). Dinleyici kapta kalsaydı o düğmeler sessizce ölürdü —
+  // markup doğru, fonksiyon yerinde, tık hiçbir şey yapmaz. Ölçüldü.
+  var qat = document.getElementById('ve-rb-strip') || document.getElementById('ve-qat');
   if(qat && !qat._rbInit) {
     qat._rbInit = true;
     qat.addEventListener('click', function(e) {

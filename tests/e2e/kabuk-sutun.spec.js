@@ -59,6 +59,7 @@ const olc = () => {
     ray: g('#ve-nav-rail'), palet: g('#ve-sidebar'), dock: g('#ve-doc-dock'),
     durum: g('#ve-status-bar'), tuval: g('#ve-split-container'),
     bayrak: document.documentElement.classList.contains('ve-sayfa-tuval'),
+    katli: !!document.querySelector('#ve-ribbon.is-collapsed'),
   };
 };
 
@@ -107,17 +108,29 @@ test('sekme bandı artık bandın TAMAMI — durum onu yemiyor', async ({ page }
 
 // ŞERİT KATLAMASI ZATEN VARDI (aktif sekmeye ikinci tık). Alt şerit onu
 // bozmamalı: kazanç ölçülüyor ki bir sonraki tur farkında olmadan yutmasın.
-test('şerit katlanınca tuval hâlâ kazanıyor', async ({ page }) => {
+//
+// KAPI DURUMA DUYARLI, VARSAYILANA DEĞİL. İlk yazımı "açık başlar, katlayınca
+// kazanır" diye kuruluyordu; üst bant turu gövdeyi VARSAYILAN KATLI yapınca
+// aynı çağrı gövdeyi AÇIYOR ve kazanç eksiye dönüyordu. Hüküm hiç değişmedi —
+// mekanizma tuvali ölçülebilir biçimde oynatıyor — ölçüm o hükme çevrildi.
+test('şerit katlaması tuvali ölçülebilir biçimde oynatıyor', async ({ page }) => {
   await modulAc(page);
-  const once = await page.evaluate(olc);
+  const a = await page.evaluate(olc);
   await page.evaluate(() => veRibbonToggleCollapse());
   await page.waitForTimeout(500);
-  const sonra = await page.evaluate(olc);
+  const b = await page.evaluate(olc);
 
-  const kazanc = sonra.tuval.h - once.tuval.h;
-  expect(kazanc).toBeGreaterThan(60);
-  // ve şerit katlıyken de durum ALTTA kalır
-  expect(sonra.durum.y).toBeGreaterThanOrEqual(sonra.tuval.y + sonra.tuval.h - 1);
+  // Hangisi katlıysa tuval O DURUMDA daha yüksek olmalı
+  const katliOlan = a.katli ? a : b;
+  const acikOlan = a.katli ? b : a;
+  expect(katliOlan.katli).toBe(true);
+  expect(acikOlan.katli).toBe(false);
+  expect(katliOlan.tuval.h - acikOlan.tuval.h).toBeGreaterThan(60);
+
+  // ve her iki durumda da durum şeridi ALTTA kalır
+  [a, b].forEach((s) => {
+    expect(s.durum.y).toBeGreaterThanOrEqual(s.tuval.y + s.tuval.h - 1);
+  });
 });
 
 // ── TUVAL ÇUKURU (Tur B) ───────────────────────────────────────────────────

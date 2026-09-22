@@ -189,7 +189,12 @@
          rapor başlığı için geri okur. -->
     <span class="logo" id="ve-project-name-btn" title="MFSim"><span class="ve-brand-mark"><span class="mf-ico mf-ico-settings"></span></span><span class="ve-brand-name">MFSim</span></span>
 
-    <span class="ve-qat-sep"></span>
+    <!-- MODÜL ADI — hangi modülün içindeyiz. Kaynak `veSidebarScope`
+           (js/components.js): modül aç/kapa oradan geçen TEK nokta, yani
+           ikinci bir "aktif modül" değişkeni tutulmuyor. Kökte BOŞ kalır —
+           karşılama ekranında gidilecek bir modül yok. -->
+      <span class="ve-bant-modul" id="ve-bant-modul" aria-live="polite"></span>
+      <span class="ve-qat-sep"></span>
 
     <!-- Hızlı Erişim Araç Çubuğu (QAT) — şerit sekmesinden bağımsız, hep görünür.
          Komutlar data-qat ile bağlanır (js/ribbon.js). Inline onclick KULLANILMAZ:
@@ -207,6 +212,24 @@
     <div class="ve-rb-tabs" id="ve-rb-tabs" role="tablist" aria-label="Şerit sekmeleri"></div>
 
     <span class="ve-rb-strip-fill"></span>
+      <!-- KOMUT ARAMA — şerit gövdesi varsayılan KATLI açıldığı için
+           komutların GÖRÜNÜR girişi bu. Paletin şeridi kapsadığı
+           `tests/unit/komut-kapsami.test.js` ile kapılı: kapsamıyorsa bu
+           düğme bir yalan olurdu. Alan gibi görünür ama DÜĞMEDİR —
+           yazmak paleti açar, kutu bir metin alanı değil. -->
+      <button type="button" class="ve-bant-ara" data-qat="veCmdkOpen"
+              title="Komut ara (Ctrl+K)" aria-label="Komut ara">
+        <span class="mf-ico mf-ico-search" aria-hidden="true"></span>
+        <span class="ve-bant-ara-t">Komut ara</span>
+        <kbd class="ve-bant-kbd">Ctrl K</kbd>
+      </button>
+      <!-- BİRİNCİL EYLEM — bandın tek dolu düğmesi. Şeritte "Çözücü" adıyla
+           ve `accent:true` ile zaten vardı; bant onu gövdeden ÖNE aldı. -->
+      <button type="button" class="ve-bant-ana" data-qat="veSolverRun"
+              title="Çözücü bileşenini aç">
+        <span class="mf-ico mf-ico-play" aria-hidden="true"></span>Çöz
+      </button>
+
 
     <!-- Radyo düğmesi buradaydı; komut şeride taşındı (Araçlar → Mola → Radyo,
          bkz. js/ribbon.js). Bant komut yüzeyidir ve bandın sağ ucu artık

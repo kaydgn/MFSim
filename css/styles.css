@@ -107,8 +107,8 @@
          --titlebar-h (34px) + --ribbon-strip-h (26px) = 60px krom vardı;
          şimdi yalnız 30px'lik şerit şeridi var. --titlebar-h kaldırıldı;
          --chrome-h doğrudan şeridin yüksekliği. */
-      --ribbon-strip-h: 30px;
-      --ribbon-expanded-h: 116px;
+      --ribbon-strip-h: 44px;
+      --ribbon-expanded-h: 130px;
       --ribbon-h: var(--ribbon-expanded-h);
       --chrome-h: var(--ribbon-h);
 
@@ -6724,9 +6724,82 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .ve-rb-strip > .logo,
 .ve-rb-strip > .ve-qat,
 .ve-rb-strip > .ve-qat-sep,
+.ve-rb-strip > .ve-bant-modul,
+.ve-rb-strip > .ve-bant-ara,
+.ve-rb-strip > .ve-bant-ana,
 .ve-rb-strip > .theme-selector{ display:flex; align-items:center; flex-shrink:0; }
+/* Bandın 44 px'inde 28 px'lik öğeler DİKEYDE ORTALANIR. Sekmeler tam boy
+   kalmak zorunda olduğu için kap `stretch`; ortalama öğe başına yapılır. */
+.ve-rb-strip > .ve-bant-modul,
+.ve-rb-strip > .ve-bant-ara,
+.ve-rb-strip > .ve-bant-ana{ align-self:center; }
+.ve-rb-strip > .ve-bant-ara{ flex-shrink:1; }
 .ve-rb-strip > .theme-selector{ gap:4px; margin-left:6px; }
 .ve-rb-tabs{ display:flex; align-items:stretch; gap:1px; min-width:0; }
+
+/* ═══ ÜST BANT — ATÖLYE ═══════════════════════════════════════════════════
+   Maketin satırı: marka · modül adı ┊ komut arama · birincil eylem.
+   Şerit gövdesi varsayılan KATLI açılıyor; bandın işi artık "komutları
+   dizmek" değil, NEREDEYİM + NE ARIYORUM + TEK ANA EYLEM. */
+
+/* MODÜL ADI — markanın devamı, onun kadar yüksek sesli değil. Sessiz kalması
+   bir tercih değil bir hiyerarşi: marka kimliği, modül adı KONUMU söyler. */
+.ve-bant-modul{
+  display:flex; align-items:center; flex-shrink:1; min-width:0;
+  margin-left:10px; padding-left:11px;
+  border-left:1px solid var(--border-color);
+  font-family:var(--font-mono); font-size:var(--fs-micro);
+  letter-spacing:var(--tracking-wider); text-transform:uppercase;
+  color:var(--text-muted); white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis;
+}
+/* Kökte ayraç da gitmeli: boş bir çizgi "bir şey eksik" der. */
+.ve-bant-modul:empty{ border-left:none; margin-left:0; padding-left:0; }
+
+/* KOMUT ARAMA — ALAN GİBİ GÖRÜNÜR, DÜĞMEDİR. Kural 14'ün iki yönlü
+   afordansı burada bilerek esnetildi ve sebebi yazılı: kutu bir metin alanı
+   olsaydı kullanıcı içine yazmayı bekler, oysa yazmak paleti açar. Bu yüzden
+   dinlenmede DOLU değil ama çerçeveli — "buraya bir şey yazacaksın" diyor,
+   "burası şu an yazılıyor" demiyor. */
+.ve-bant-ara{
+  display:flex; align-items:center; gap:7px; flex:0 1 240px; min-width:120px;
+  margin-left:auto; height:28px; padding:0 8px 0 10px;
+  font:inherit; font-size:var(--fs-tiny); color:var(--text-muted);
+  background:var(--bg-input); cursor:pointer;
+  border:1px solid var(--border-color); border-radius:var(--radius-sm);
+}
+.ve-bant-ara .mf-ico{ width:13px; height:13px; flex:none; color:var(--text-muted); }
+.ve-bant-ara-t{ flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ve-bant-ara:hover{ border-color:var(--border-hover); color:var(--text-secondary); }
+.ve-bant-ara:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-bant-kbd{
+  flex:none; font-family:var(--font-mono); font-size:var(--fs-micro);
+  padding:1px 5px; border-radius:var(--radius-xs);
+  background:var(--bg-tertiary); color:var(--text-muted);
+  border:1px solid var(--border-light);
+}
+@media (max-width:860px){ .ve-bant-ara-t, .ve-bant-kbd{ display:none; }
+  .ve-bant-ara{ flex:0 0 auto; padding:0 9px; } }
+
+/* BİRİNCİL EYLEM — bandın TEK dolu düğmesi. İkinci bir dolu düğme, "asıl iş
+   hangisi" sorusunu geri getirirdi. */
+.ve-bant-ana{
+  display:inline-flex; align-items:center; gap:6px; flex:none;
+  margin-left:8px; height:28px; padding:0 14px;
+  font:inherit; font-size:var(--fs-tiny); font-weight:600;
+  color:var(--on-accent); background:var(--accent-primary);
+  border:1px solid var(--accent-primary); border-radius:var(--radius-sm);
+  cursor:pointer; white-space:nowrap;
+}
+.ve-bant-ana .mf-ico{ width:12px; height:12px; color:currentColor; }
+.ve-bant-ana:hover{ background:var(--ink-accent); border-color:var(--ink-accent); }
+.ve-bant-ana:active{ transform:translateY(1px); }
+.ve-bant-ana:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+
+/* Marka bantla birlikte büyüdü: SERİF yüz artık okunur bir boyda. */
+.ve-rb-strip .logo{ font-family:var(--font-display); font-size:var(--fs-lg); letter-spacing:-.01em; }
+.ve-rb-strip .ve-brand-mark{ width:24px; height:24px; }
+
 .ve-rb-strip-fill{ flex:1; min-width:6px; }
 .ve-rb-tab{
   background:none; border:none; cursor:pointer; font:inherit;
