@@ -1001,7 +1001,12 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
       h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + (r.maxOutputSpeed !== null ? r.maxOutputSpeed : '—') + '</td>';
       h += '<td style="border:1px solid var(--border-color); font-size:var(--fs-micro);">' + (r.score < 0 ? '—' : (r.c9ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>')) + '</td>';
       h += '<td style="border:1px solid var(--border-color); font-size:var(--fs-micro);">' + (r.score < 0 ? '—' : (r.c10ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>')) + '</td>';
-      h += '<td style="border:1px solid var(--border-color);">';
+      // DÜĞME HÜCRESİ İNCE PAYLI (`egm-sec`, css/styles.css): panel kabuğunun
+      // `td{padding:5px 8px !important}` kuralıyla 34 px'lik sütunda "Seç"
+      // düğmesine 18 px kalıyordu; 28 px'lik düğme tablonun 2,2 px DIŞINA
+      // taşıyor ve 380 px'lik sütunda yatay kaydırma çubuğu açıyordu (ölçüldü,
+      // 2026-09-23). Satır içi `padding` o `!important`ı EZEMEZ — sınıf şart.
+      h += '<td class="egm-sec" style="border:1px solid var(--border-color); text-align:center;">';
       h += '<button class="sw-btn ' + (isSelected ? '' : 'sw-btn-primary') + '" onclick="egmSelectGearbox(\'' + nodeId + '\',\'' + r.key + '\')" style="padding:1px 4px; font-size:var(--fs-micro);' + (isSelected ? ' opacity:0.5; cursor:default;' : '') + '"' + (isSelected ? ' disabled' : '') + '>' + (isSelected ? '✔' : 'Seç') + '</button>';
       h += '</td>';
       h += '</tr>';

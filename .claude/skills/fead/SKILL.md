@@ -435,10 +435,20 @@ olurdu.
     söyler** (`@container vepanel`, ≤ 640 px) — ekran sorgusu 380 px'lik
     müfettiş sütununda hiç tetiklenmiyordu ve düzenlenen sütuna 42 px
     kalıyordu. Dar kapta sekmeler üste, pencerenin EYLEMİ (`.ve-fp-solve`:
-    Hesapla · Raporu Oluştur) kaydırma alanının dibine yapışır; veri ızgarası
-    (çevrim tablosu) KENDİ kabında kayar, pencere kaymaz. Kapı:
+    Hesapla · Raporu Oluştur) kaydırma alanının dibine yapışır. Kapı:
     `tests/e2e/mufettis-sigma.spec.js` (okunurluk: düzenlenen sütun · girdi ·
-    etiket · başlık, her sekme gezilerek) + `cp-fead-report.test.js`.
+    etiket · başlık · yatay kaydırma, her sekme gezilerek) + `cp-fead-report.test.js`.
+    **Veri tablosu (çevrim · güç eğrisi) bir BİRİMDİR** (`data-ve-tablo`,
+    tablo + kendi düğmeleri): sütuna sığmazsa yerinde özet kartı kalır ve
+    "Tabloyu aç" onu küçük bir pencereye TAŞIR (`js/tablo-pencere.js`) —
+    sütunda yatay kaydırma YOK (2026-09-23; önce 785–1162 / 359 px).
+    **Küçük resmin sorusu "bu kasnak nerede"**: pencerenin kasnağı vurgulu
+    (`highlightId`), adlar kısa, sarım açısı yok, ad yerleşimi `nameSmart`
+    (yay + disk engeli, 16 açı × 2 uzaklık, en az örtüşen geri düşüş).
+    `nameSmart` KANVAS KARTINA VE RAPORA DOKUNMAZ — onların yerleşimi
+    `fead-card-design.test.js`te ayrıca kapılı. Kapılar: `fead-panel-dili.test.js`
+    → *"PENCERE DÜZENİ"* ve *"BİRİMİNDE"*, `fead-panel-gramer.spec.js`,
+    `tablo-pencere.spec.js`.
 
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı

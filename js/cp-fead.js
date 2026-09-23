@@ -1151,12 +1151,30 @@ function veFeadTabsHTML(nodeId, sekmeler, aktif){
 // kopyalansalardı `veFeadChecks` dört ayrı yerden çağrılırdı — kural 16 tam da
 // bunu yasaklıyor — ve küçük resmin seçenekleri sessizce ayrışırdı.
 
-// Kayış yolunun küçük resmi. Kuzey gülü, pivot ve oklar KAPALI: 268 px'te
+// Kayış yolunun küçük resmi. Kuzey gülü, pivot ve oklar KAPALI: bu ölçüde
 // okunmuyorlar, yalnız mürekkep ekliyorlar.
-function _feadSideThumb(build){
+//
+// BÖLÜMÜN SORUSU "BU KASNAK NEREDE" (2026-09-23). Kanvas kartının resmi
+// küçültülüp konuyordu ve o soruyu cevaplamıyordu: pencerenin kasnağı öteki
+// beşiyle AYNI çiziliyordu. Ölçülen kusurlar (AG00879, 380 px'lik sütun):
+// iki AD üst üste ("Sürücü Kasnak (FAN)" × "Otomatik Gergi (T38665)"), bir
+// sarım açısı komşu kasnağın İÇİNDE, çizim çift çerçeveli. Şimdi:
+//   • pencerenin kasnağı VURGULU (`highlightId`) ve adı yerleşimde önce gelir;
+//   • adlar kısa (künye kodu parantezde kalır, çizimde değil);
+//   • sarım açıları YOK — pencerenin açısı hemen altta "Türetilenler"de,
+//     ötekilerin açısı bu sorunun cevabı değil;
+//   • ad kaçamıyorsa en AZ örtüşen yere düşer (`nameSmart`), ilk adaya değil;
+//   • çerçeveyi kap çizer, SVG çizmez (`frame:false`).
+// Tuval 320×230: sütunda ~344 px'e büyüyor, yani yazı ~1,1× — eskiden 268
+// px'ten 1,3× büyüyordu ve her etiket sığdığı yerden taşıyordu.
+function _feadSideThumb(build, hlId){
   var svg = null;
   if(build && typeof veFeadLayoutSVG === 'function'){
-    try { svg = veFeadLayoutSVG(build, 268, 200, { compass: false, pivot: false, arrows: false }); }
+    try {
+      svg = veFeadLayoutSVG(build, 320, 230, { compass: false, pivot: false, arrows: false,
+        shortNames: true, wrapLabels: false, nameSmart: true, frame: false,
+        highlightId: hlId || null });
+    }
     catch(e){ svg = null; }
   }
   return '<div class="ve-fp-sect"><b>Kayış Yolundaki Yeri</b></div>'
@@ -1179,7 +1197,9 @@ function _feadSideThumb(build){
 // topoloji içinde global taramayla aynı, modül kartında (kök tuval) ise
 // alt topolojininki — global tarama orada yanlış modeli sorardı.
 function _feadSideGates(build, T){
-  var h = '<div class="ve-fp-sect"><b>Uygunluk</b><em>veFeadChecks</em></div>';
+  // Sağdaki not KULLANICIYA söylenir: burada bir dönem işlevin adı
+  // (`veFeadChecks`) basılıyordu — kodun iç adı, okuyana hiçbir şey demiyor.
+  var h = '<div class="ve-fp-sect"><b>Uygunluk</b><em>canlı</em></div>';
   var kapilar = null;
   try {
     if(typeof veFeadChecks === 'function' && typeof veFeadCheckOpt === 'function'){
@@ -1224,10 +1244,13 @@ function _feadSideModel(node){
 
 // Türetilen değer bloğu — `_feadRO` TEK KAYNAK: okunur giriş, düzenlenebilir
 // olandan yalnız `readonly` ile ayrılsaydı fare yine imleç gösterirdi.
+// İKİ SÜTUN: tek sütunda dört okuma dört TAM GENİŞLİK kutu oluyordu —
+// 380 px'lik pencerede ~350 px dikey yer, değer kutunun öbür ucunda
+// (ölçüldü). Sütun sayısı satır sayısını aşmaz (`_feadGrid`in kuralı).
 function _feadSideRO(baslik, kaynak, satirlar){
   var h = '<div class="ve-fp-sect"><b>' + baslik + '</b>'
         + (kaynak ? '<em>' + kaynak + '</em>' : '') + '</div>'
-        + '<div class="ve-fp-grid" style="--fp-k:1;">';
+        + '<div class="ve-fp-grid" style="--fp-k:' + Math.max(1, Math.min(2, satirlar.length)) + ';">';
   satirlar.forEach(function(r){ h += _feadRO(r[0], r[1], r[2] || ''); });
   return h + '</div>';
 }
@@ -1237,7 +1260,7 @@ function veFeadPulleySide(node){
   var M = _feadSideModel(node);
   var build = M.build, T = M.T, satir = M.satir, nT = M.n;
 
-  out.html += _feadSideThumb(build);
+  out.html += _feadSideThumb(build, node && node.id);
   out.html += _feadSideRO('Türetilenler', 'çekirdekten', [
     ['Efektif çap', (satir && Number.isFinite(satir.effDiaMm)) ? _feadFmt(satir.effDiaMm, 1) + ' mm' : '—'],
     ['Sarım açısı', (satir && Number.isFinite(satir.wrapDeg)) ? _feadFmt(satir.wrapDeg, 1) + '°' : '—'],
@@ -1253,16 +1276,23 @@ function veFeadPulleySide(node){
   var xv = _feadNum(d.x, NaN), yv = _feadNum(d.y, NaN);
   if(Number.isFinite(xv) && Number.isFinite(yv))
     par.push('konum <b>' + _feadFmt(xv, 1) + ' / ' + _feadFmt(yv, 1) + '</b>');
-  if(d.driver) par.push('<b>SÜRÜCÜ</b>');
+  if(d.driver) par.push('<b>Sürücü</b>');
+  // Çip dili tek: soluk ad + koyu değer ("konum 0.0 / 0.0", "sıra 1/5").
   var tmp = (typeof veFeadContactOf === 'function') ? veFeadContactOf(node) : '';
-  if(tmp) par.push(tmp === 'back' ? 'sırttan temas' : 'kaburgalı yüzden temas');
+  if(tmp) par.push('temas <b>' + (tmp === 'back' ? 'sırt' : 'kaburgalı') + '</b>');
   if(satir) par.push('sıra <b>' + satir.index + '/' + nT + '</b>');
   out.ozet = _feadOzetSerit(par);
   return out;
 }
 
+// ÖZET ŞERİDİ ÇİPLERDEN KURULUR, ayraçtan değil. Ayraç (`·`) kendi başına
+// bir esnek öğeydi: satır sarınca biri satırın SONUNDA asılı kaldı ve bir
+// madde ("sıra 1/5") ikinci satıra tek başına düştü (ölçüldü, 380 px). Çip
+// bölünmez; sarılan şey bütün bir madde olur ve asılı işaret kalmaz.
 function _feadOzetSerit(par){
-  return par.length ? '<div class="ve-fp-sum">' + par.join('<span>·</span>') + '</div>' : '';
+  return par.length ? '<div class="ve-fp-sum">' + par.map(function(p){
+    return '<span class="ve-fp-sum-i">' + p + '</span>';
+  }).join('') + '</div>' : '';
 }
 
 // ── ARAÇ PANELLERİNİN SAĞ SÜTUNU (gergi · kayış · çözücü)
@@ -1272,7 +1302,7 @@ function _feadOzetSerit(par){
 function veFeadToolSide(node, baslik, kaynak, satirlar, ozetPar, ekBlok){
   var out = { html: '', ozet: '' };
   var M = _feadSideModel(node);
-  out.html += _feadSideThumb(M.build);
+  out.html += _feadSideThumb(M.build, node && node.id);
   if(satirlar && satirlar.length) out.html += _feadSideRO(baslik, kaynak, satirlar);
   out.html += _feadSideGates(M.build, M.T);
   if(ekBlok) out.html += ekBlok;
@@ -1462,15 +1492,15 @@ function veFeadPowerCurveCard(node){
   var idx = -1;
   if(build.ok) build.order.forEach(function(n, i){ if(n.id === node.id) idx = i; });
 
-  var h = '<table style="width:100%; font-size:var(--fs-micro); border-collapse:collapse; border:1px solid var(--border-color);">';
-  h += '<tr style="background:var(--bg-tertiary);">'
-     + ['Aksesuar devri', 'Güç [kW]', 'Motor devri'].map(function(t){
-         return '<th style="padding:3px 4px; border:1px solid var(--border-color); font-weight:600; color:var(--text-secondary);">' + t + '</th>';
-       }).join('')
-     + '<th style="padding:3px 4px; border:1px solid var(--border-color);"></th></tr>';
+  // Çalışma çevrimi tablosuyla AYNI tablo sınıfları (yapışkan başlık,
+  // satır vurgusu) — satır içi stil `:hover`ı ifade edemiyordu (kural 14).
+  var h = '<div class="ve-fp-duty"><table class="ve-pnl-tbl ve-pnl-tbl--framed ve-pnl-tbl--tiny ve-fp-duty-tbl">'
+     + '<thead><tr>'
+     + ['Aksesuar devri', 'Güç [kW]', 'Motor devri'].map(function(t){ return '<th>' + t + '</th>'; }).join('')
+     + '<th aria-label="Sil"></th></tr></thead><tbody>';
 
   if(!raw.length){
-    h += '<tr><td colspan="4" style="padding:9px; text-align:center; color:var(--text-muted); border:1px solid var(--border-color);">'
+    h += '<tr><td colspan="4" class="ve-fp-duty-bos">'
        + 'Eğri girilmedi — katalog modeli (varsa) kullanılır.</td></tr>';
   }
   raw.forEach(function(p, pi){
@@ -1482,25 +1512,25 @@ function veFeadPowerCurveCard(node){
       if(Number.isFinite(bir) && bir > 0) motor = rpm * 1000 / bir;
     }
     var hucre = function(key, val, step){
-      return '<td style="padding:1px 2px; border:1px solid var(--border-color);">'
+      return '<td class="tight">'
         + '<input type="number" value="' + _feadEsc(val == null ? '' : val) + '" step="' + step + '"'
         + ' onchange="veFeadCurveSet(\'' + node.id + '\',' + pi + ',\'' + key + '\',this.value)"'
         + ' class="ve-fp-inp ve-fp-inp--tight"></td>';
     };
     h += '<tr>' + hucre('rpm', p && p.rpm, '10') + hucre('kw', p && p.kw, '0.01')
-      + '<td style="padding:2px 5px; border:1px solid var(--border-color); text-align:right; '
-      + ' color:var(--text-muted);">'
-      + (Number.isFinite(motor) ? _feadFmt(motor, 0) : '—') + '</td>'
-      + '<td style="padding:1px 3px; border:1px solid var(--border-color); text-align:center;">'
-      + '<button onclick="veFeadCurveRemove(\'' + node.id + '\',' + pi + ')" title="Satırı sil"'
-      + ' style="background:none; border:none; color:var(--ink-danger); cursor:pointer; font-size:var(--fs-body); line-height:1;">×</button></td></tr>';
+      + '<td class="ve-fp-duty-oku">' + (Number.isFinite(motor) ? _feadFmt(motor, 0) : '—') + '</td>'
+      + '<td class="tight"><button type="button" class="ve-fp-duty-sil"'
+      + ' onclick="veFeadCurveRemove(\'' + node.id + '\',' + pi + ')" title="Satırı sil" aria-label="Satırı sil">×</button></td></tr>';
   });
-  h += '</table>';
+  h += '</tbody></table></div>';
 
-  h += '<div style="display:flex; gap:6px; margin-top:7px;">'
-    + '<button onclick="veFeadCurveAdd(\'' + node.id + '\')" style="flex:1; padding:5px; font-size:var(--fs-micro); '
-    + 'background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;">+ Devir noktası</button>'
+  h += '<div class="ve-fp-eylem">'
+    + '<button type="button" class="ve-fp-dugme" onclick="veFeadCurveAdd(\'' + node.id + '\')">+ Devir noktası</button>'
     + '</div>';
+  // Bugün sütuna SIĞIYOR (üç sütun) — birim yine işaretli: sığmadığı bir
+  // kapta (dar ekran, uzun başlık) karar ölçümle verilir, listeyle değil.
+  h = '<div class="ve-tablo" data-ve-tablo="fead-curve:' + _feadEsc(node.id) + '"'
+    + ' data-ve-tablo-baslik="Güç Eğrisi" data-ve-tablo-ozet="' + raw.length + ' devir noktası">' + h + '</div>';
 
   var not = '';
   if(raw.length && pts.length < raw.length)
@@ -3069,6 +3099,11 @@ function veFeadLayoutSVG(build, W, H, opts){
   });
 
   var ps = geom.pulleys;
+  // VURGULANAN KASNAK — pencerenin kendi kasnağı (`highlightId`). İndis
+  // `build.order`dan: çizimin k'inci kasnağı modelin k'inci düğümü.
+  var hk = -1;
+  if(opts.highlightId && build.order)
+    build.order.forEach(function(n, k){ if(n && n.id === opts.highlightId) hk = k; });
   var minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
   function sinirla(list){
     list.forEach(function(p){
@@ -3287,6 +3322,47 @@ function veFeadLayoutSVG(build, W, H, opts){
     (geom.spans || []).forEach(function(sp){
       segler.push([T0.tx(sp.Pi[0]), T0.ty(sp.Pi[1]), T0.tx(sp.Pj[0]), T0.ty(sp.Pj[1])]);
     });
+    // KASNAK DİSKLERİ DE ENGEL — yalnız `nameSmart` çiziminde: ad komşu
+    // kasnağın çemberine ya da İÇİNE düşmesin (eski küçük resimde bir sarım
+    // açısı sürücü kasnağın içindeydi — ölçüldü). Kendi kasnağı sorun değil:
+    // adaylar çemberin en az 2 px dışında kuruluyor.
+    var diskler = [];
+    if(opts.nameSmart)
+      ps.forEach(function(p){
+        diskler.push({ x: T0.tx(p.c[0]), y: T0.ty(p.c[1]), r: p.rPitch * s + 1 });
+      });
+    function diskeDeger(d, a){
+      var nx = Math.min(Math.max(d.x, a.x0), a.x1), ny = Math.min(Math.max(d.y, a.y0), a.y1);
+      return (nx - d.x) * (nx - d.x) + (ny - d.y) * (ny - d.y) < d.r * d.r;
+    }
+    // SARIM YAYI DA KAYIŞTIR — yalnız `nameSmart` çiziminde. Engel listesi
+    // yalnız DÜZ açıklıkları tutuyordu; kayışın kasnağın üstünden dolandığı
+    // yerde "üst" aday temiz sayılıyor ve ad yayın üstüne yazılıyordu
+    // (ölçüldü: pencerenin küçük resminde "Avara" kayışın üstünde). Yay iki
+    // halkayla örneklenir: çemberin kendisi ve kayışın DIŞ kenarı. Dış kenar
+    // TEMAS TARAFINA bağlı: sırttan temas eden kasnakta dişler dışa bakar
+    // (+4,5 px), kaburgalıda içe (+1,5 px — yalnız çizginin yarı kalınlığı).
+    // Hepsine 4 px yazmak, kaburgalı kasnağın boş üstünü de "dolu" sayıp adı
+    // kayışın geçtiği alta itiyordu (ölçüldü: "Alternatör").
+    // Kanvas kartına ve rapora dokunmaz — onların yerleşimi ayrıca kapılı
+    // (fead-card-design.test.js). Yürüyüşün sırası: 2i açıklık, 2i+1 ise
+    // (i+1)'inci kasnağın yayı (`_feadBeltWalk`).
+    if(opts.nameSmart)
+      _feadBeltWalk(geom).segs.forEach(function(sg, si){
+        if(sg.a !== 1 || !(sg.r > 0)) return;
+        var pk = ps[(((si - 1) / 2) + 1) % ps.length];
+        var dis = (pk && pk.contact === 'back') ? 4.5 : 1.5;
+        var yay = sg.l / sg.r, N = Math.max(4, Math.ceil(yay / 0.3));
+        [0, dis / s].forEach(function(dr){
+          var once = null;
+          for(var t = 0; t <= N; t++){
+            var th = sg.a0 + sg.d * yay * t / N;
+            var nk = [T0.tx(sg.cx + (sg.r + dr) * Math.cos(th)), T0.ty(sg.cy + (sg.r + dr) * Math.sin(th))];
+            if(once) segler.push([once[0], once[1], nk[0], nk[1]]);
+            once = nk;
+          }
+        });
+      });
     function kesisir(seg, r){                       // doğru parçası ↔ dikdörtgen
       var x1=seg[0], y1=seg[1], x2=seg[2], y2=seg[3];
       if(Math.max(x1,x2) < r.x0 || Math.min(x1,x2) > r.x1) return false;
@@ -3390,6 +3466,7 @@ function veFeadLayoutSVG(build, W, H, opts){
           var carpti = false;
           for(var j=0;j<segler.length && !carpti;j++) if(kesisir(segler[j], a)) carpti = true;
           for(var m=0;m<kutular.length && !carpti;m++) if(ortusur(kutular[m], a)) carpti = true;
+          for(var dk=0;dk<diskler.length && !carpti;dk++) if(diskeDeger(diskler[dk], a)) carpti = true;
           if(yumusagiDaKolla)
             for(var y=0;y<yumusakList.length && !carpti;y++) if(ortusur(yumusakList[y], a)) carpti = true;
           if(!carpti) return a;
@@ -3408,6 +3485,11 @@ function veFeadLayoutSVG(build, W, H, opts){
         if(!icerde(a)) continue;
         var puan = 0;
         for(var m=0;m<kutular.length;m++) puan += ortAlan(kutular[m], a);
+        // Kayışı ya da bir kasnağı kesen aday, bir kutuyu örtenden AĞIR sayılır:
+        // yazı çizginin üstünde okunmaz.
+        // Yalnız `nameSmart`ta: kanvas kartının ve raporun geri düşüşü kapılı.
+        if(opts.nameSmart) for(var j2=0;j2<segler.length;j2++) if(kesisir(segler[j2], a)) puan += 40;
+        for(var dk2=0;dk2<diskler.length;dk2++) if(diskeDeger(diskler[dk2], a)) puan += 40;
         for(var y=0;y<yumusakList.length;y++) puan += ortAlan(yumusakList[y], a) * 0.25;
         if(puan < enAz){ enAz = puan; enIyi = a; }
       }
@@ -3415,17 +3497,47 @@ function veFeadLayoutSVG(build, W, H, opts){
     }
 
     // 1) ADLAR — sert engellere, sonra (mümkünse) yumuşaklara göre.
+    //
+    // VURGULANAN KASNAĞIN ADI ÖNCE YERLEŞİR: temiz yeri o alsın — resmin
+    // sorusu onun adı. Öteki sıra değişmez (eski çizimler birebir).
+    // `nameSmart`: hiçbir aday temiz değilse ilk adaya değil en AZ örtüşene
+    // düşer. Varsayılan KAPALI — kanvas kartının ve raporun yerleşimi kapılı
+    // (fead-card-design.test.js) ve bu seçenek onlara dokunmuyor.
+    var adSira = ps.map(function(p, k){ return k; });
+    if(hk > 0){ adSira.splice(hk, 1); adSira.unshift(hk); }
     if(adVar)
-      ps.forEach(function(p, k){
+      adSira.forEach(function(k){
+        var p = ps[k];
         var X = offX + (p.c[0]-minX)*s, Y = offY + (maxY-p.c[1])*s, R = p.rPitch*s;
-        var w = etW(gorAd(k), 9);
-        var sec = yerlestir([
+        // Vurgulu ad KALIN yazılıyor: aynı metin ~%8 geniş. Tahmin ince yazıya
+        // göreydi ve ölçüldü — kalın adın sağ ucu kayışa değiyordu.
+        var w = etW(gorAd(k), 9) * (k === hk ? 1.1 : 1);
+        var aday = [
           { x:X,        y:Y-R-4,      an:'middle', x0:X-w/2,  x1:X+w/2,  y0:Y-R-4-8,   y1:Y-R-4+2 },
           { x:X,        y:Y+R+11,     an:'middle', x0:X-w/2,  x1:X+w/2,  y0:Y+R+11-8,  y1:Y+R+11+2 },
           { x:X+R+5,    y:Y+3,        an:'start',  x0:X+R+5,  x1:X+R+5+w, y0:Y-5,      y1:Y+5 },
           { x:X-R-5,    y:Y+3,        an:'end',    x0:X-R-5-w, x1:X-R-5, y0:Y-5,       y1:Y+5 }
-        ], yumusak);
-        kutular.push(sec); _etiket.push(sec);
+        ];
+        // DÖRT YÖN DAR KALABALIKTA YETMİYOR — yalnız `nameSmart` çiziminde
+        // çemberin çevresinde 16 açı × 2 uzaklık daha denenir (tercih sırası
+        // korunur: önce eski dört yer). Ölçüldü: 6 kasnaklı küçük resimde
+        // köşedeki kasnağın dört yeri de doluydu (üst çerçevenin dışı, alt ve
+        // sol kayış, sağ çerçevenin dışı) ve ad kayışın üstüne düşüyordu.
+        if(opts.nameSmart)
+          [6, 14].forEach(function(uz){
+            for(var ai = 0; ai < 16; ai++){
+              var th = -Math.PI/2 + ai * Math.PI/8;
+              var cx = X + (R + uz) * Math.cos(th), cy = Y + (R + uz) * Math.sin(th);
+              var co = Math.cos(th), si = Math.sin(th);
+              var an = (co > 0.35) ? 'start' : (co < -0.35) ? 'end' : 'middle';
+              var x0 = (an === 'start') ? cx : (an === 'end') ? cx - w : cx - w/2;
+              var y0 = (si < -0.35) ? cy - 10 : (si > 0.35) ? cy : cy - 5;
+              aday.push({ x: (an === 'start') ? x0 : (an === 'end') ? x0 + w : x0 + w/2,
+                          y: y0 + 8, an: an, x0: x0, x1: x0 + w, y0: y0, y1: y0 + 10 });
+            }
+          });
+        var sec = yerlestir(aday, yumusak, !!opts.nameSmart);
+        kutular.push(sec); _etiket[k] = sec;
       });
 
     // 2) SARIM AÇILARI — adlar ARTIK YERLEŞMİŞ birer sert engel. Sıra tersine
@@ -3566,8 +3678,12 @@ function veFeadLayoutSVG(build, W, H, opts){
   // ÖLÇÜ SINIRI ŞART: panel iki sütuna geçtiğinde (VE_WIDE_PANEL_TYPES) yalnız
   // width:100% veren bir viewBox'lı SVG en-boy oranıyla birlikte YÜKSELİR ve
   // pencerenin altından taşarak kırpılır (ölçüldü). max-width bunu keser.
+  // `frame:false` — çerçeveyi KAP çiziyor (pencerenin küçük resmi); SVG'nin
+  // kendi kenarlığı içte ikinci bir kutu oluyordu (ölçüldü: çift çerçeve).
   var kabuk = opts.inline
     ? '<svg' + animAttr + ' viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" style="display:block; width:100%; height:100%;">'
+    : (opts.frame === false)
+    ? '<svg' + animAttr + ' viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="display:block; width:100%; height:auto;">'
     : '<svg' + animAttr + ' viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="display:block; width:100%; max-width:'
       + W + 'px; margin:0 auto; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
   var svg = kabuk;
@@ -3695,8 +3811,14 @@ function veFeadLayoutSVG(build, W, H, opts){
     // data-pi SIRANIN SONUNDA: kasnak çemberinin ilk üç niteliği (cx/cy/r) bu
     // dosyanın dışından da OKUNUYOR (şema kapıları onları düzenli ifadeyle
     // ayrıştırıyor); araya bir nitelik sokmak o okuyucuları sessizce kırardı.
+    // VURGU kasnağın ARKASINA bir zemin + kalın çember: rol rengi (sürücü ·
+    // gergi · aksesuar) aynı kalır, yani vurgu rolü EZMEZ, üstüne biner.
+    var vurgu = (k === hk);
+    if(vurgu)
+      svg += '<circle data-ve="pulley-hl" cx="' + X + '" cy="' + Y + '" r="' + f(R + 3)
+          + '" fill="var(--accent-tint-15)" stroke="none"/>';
     svg += '<circle data-ve="pulley" cx="' + X + '" cy="' + Y + '" r="' + R + '" fill="none" stroke="' + col
-        + '" stroke-width="2"' + (p.contact === 'back' ? ' stroke-dasharray="4 3"' : '')
+        + '" stroke-width="' + (vurgu ? 3 : 2) + '"' + (p.contact === 'back' ? ' stroke-dasharray="4 3"' : '')
         + ' data-pi="' + k + '"/>';
     svg += '<circle cx="' + X + '" cy="' + Y + '" r="2.2" fill="' + col + '" data-pi="' + k + '"/>';
 
@@ -3741,7 +3863,8 @@ function veFeadLayoutSVG(build, W, H, opts){
     if(adVar){
       var et = _etiket[k] || { x: X, y: Y - R - 4, an: 'middle' };
       svg += '<text data-ve="name" x="' + f(et.x) + '" y="' + f(et.y) + '" text-anchor="' + et.an
-          + '" font-size="9" fill="var(--text-muted)">' + _feadEsc(gorAd(k)) + '</text>';
+          + '" font-size="9"' + (vurgu ? ' font-weight="700" fill="var(--text-heading)"' : ' fill="var(--text-muted)"')
+          + '>' + _feadEsc(gorAd(k)) + '</text>';
     }
     // SARIM AÇISI ŞEMADA İKİNCİ KEZ YAZILIR. Kanvasta bunun karşılığı var:
     // orada tablo YOK, kart tek başına duruyor. Raporda aynı altı sayı bir
@@ -6356,11 +6479,13 @@ function veFeadDutyEditor(node, build){
     // "Özel" bir seçenek değil bir OKUMA: tablo elle düzenlenmişse hiçbir
     // kayda uymaz ve seçici bunu söyler.
     if(!dSuan) dOps = '<option value="" selected>&mdash; özel (elle düzenlendi) &mdash;</option>' + dOps;
-    dSec = '<div style="margin-bottom:7px;">'
-      + '<label style="display:block; font-size:var(--fs-micro); color:var(--text-secondary); margin-bottom:3px;">'
-      + 'Çevrim kaydı</label>'
+    // Pencerenin öteki alanlarıyla AYNI satır (etiket üstte, sol kenarda):
+    // burada kendi satır içi etiketi vardı ve pencerede tek başına başka
+    // biçimde yazılıyordu (2026-09-23).
+    dSec = '<div class="ve-fp-grid" style="--fp-k:1;">'
+      + '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Çevrim kaydı</span>'
       + '<select onchange="if(this.value) veFeadDutyLib(\'' + node.id + '\', this.value)"'
-      + ' class="ve-fp-sel">' + dOps + '</select></div>';
+      + ' class="ve-fp-sel">' + dOps + '</select></label></div>';
   }
 
   // ÇEVRİM TABLOSU KENDİ KABINDA KAYAR, pencere kaymaz. Dokuz sütunlu bir
@@ -6370,7 +6495,7 @@ function veFeadDutyEditor(node, build){
   // girdisinde bir ARTIK vardı: stil sınıfa taşınırken kapanış tırnağı
   // kalmış, `class="…" color:var(--text-muted);"` diye öznitelik dışında çöp
   // basıyordu (tarayıcı sessizce yutuyordu).
-  var h = dSec + '<div class="ve-fp-duty"><table class="ve-pnl-tbl ve-pnl-tbl--framed ve-pnl-tbl--tiny ve-fp-duty-tbl"><thead><tr>'
+  var h = '<div class="ve-fp-duty"><table class="ve-pnl-tbl ve-pnl-tbl--framed ve-pnl-tbl--tiny ve-fp-duty-tbl"><thead><tr>'
      + ['Devir', '%zaman', '°C'].map(function(t){ return '<th>' + t + '</th>'; }).join('')
      + yuk.map(function(n){
          return '<th title="' + _feadEsc(_feadNodeName(n)) + ' [kW]">' + _feadEsc(_feadNodeName(n)) + '</th>';
@@ -6410,22 +6535,33 @@ function veFeadDutyEditor(node, build){
   h += '</tbody></table></div>';
 
   var toplam = rows.reduce(function(a, r){ return a + r.dcPct; }, 0);
-  h += '<div style="display:flex; gap:6px; margin-top:7px;">'
-    + '<button onclick="veFeadDutyAdd(\'' + node.id + '\')" style="flex:1; padding:5px; font-size:var(--fs-micro); '
-    + 'background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;">+ Devir satırı</button>'
-    + '<button onclick="veFeadDutyFillCatalog(\'' + node.id + '\')" style="flex:1; padding:5px; font-size:var(--fs-micro); '
-    + 'background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" '
-    + 'title="Boş kW hücrelerini seçili katalog eğrilerinden doldur">Katalogdan doldur</button>'
-    + '</div>';
-
+  // Uyarı BİRİMİN İÇİNDE: tablo pencerede doldurulurken de görünsün.
   var uyari = '';
   if(rows.length && Math.abs(toplam - 100) > 0.5)
     uyari = _feadHint('<b style="color:var(--ink-warning);">%zaman toplamı ' + _feadFmt(toplam, 1)
       + '</b> — 100 değil. Yorulma ve ömür payları bu ağırlıklara göre dağıtılır; '
       + 'toplam 100 değilse mutlak ömür ölçeklenir (dağılım yüzdeleri etkilenmez).');
+  h += '<div class="ve-fp-eylem">'
+    + '<button type="button" class="ve-fp-dugme" onclick="veFeadDutyAdd(\'' + node.id + '\')">+ Devir satırı</button>'
+    + '<button type="button" class="ve-fp-dugme" onclick="veFeadDutyFillCatalog(\'' + node.id + '\')"'
+    + ' title="Boş kW hücrelerini seçili katalog eğrilerinden doldur">Katalogdan doldur</button>'
+    + '</div>';
+
+  // TABLO + DÜĞMELERİ TEK BİRİM (js/tablo-pencere.js): sütuna sığmazsa
+  // birimin yerinde bir özet kartı kalır ve "Tabloyu aç" onu küçük bir
+  // pencereye taşır. Satır ekleyen düğme birimin İÇİNDE — pencerede
+  // doldurulan tabloya satır da pencereden eklenebilsin.
+  var devirler = rows.map(function(r){ return _feadNum(r.rpm, NaN); })
+    .filter(function(v){ return Number.isFinite(v); });
+  var ozet = rows.length + ' devir noktası'
+    + (devirler.length ? ' · ' + Math.min.apply(null, devirler) + '–' + Math.max.apply(null, devirler) + ' d/dk' : '')
+    + ' · ' + yuk.length + ' aksesuar sütunu';
+  h = '<div class="ve-tablo" data-ve-tablo="fead-duty:' + _feadEsc(node.id) + '"'
+    + ' data-ve-tablo-baslik="Çalışma Çevrimi" data-ve-tablo-ozet="' + _feadEsc(ozet) + '">' + h + uyari + '</div>';
+
 
   return _feadCard('Çalışma Çevrimi', 'sürücü sütunu YOK — gücü hesaplanır', 'var(--accent-success)',
-    h + uyari
+    dSec + h
     + _feadHint('Boş bırakılan kW hücresi: aksesuarda katalog modeli seçiliyse o eğriden '
         + 'doldurulur (aksesuar devri kasnak <b>pitch çaplarından</b> hesaplanır, elle oran '
         + 'girilmez), seçili değilse 0 sayılır.'));

@@ -203,3 +203,37 @@ test('karşılama ekranında durum şeridi GÖRÜNMÜYOR', async ({ page }) => {
   });
   expect(icerde).toBe(true);
 });
+
+// PALET: LİSTE SATIRI, KUTU DEĞİL (2026-09-23). Kullanıcı bildirimi (kenar
+// çubuğunun ekran görüntüsüyle): "Şuradaki yapı biraz karışık. Düzen vs yok."
+// Ölçülen iki kusur: (1) kategori başlığı ne kutunun kenarına ne ikona
+// oturuyordu (kutu 72,5 · başlık 76 · ikon 82 px); (2) her öğe dolu zeminli,
+// kenarlıklı bir kutuydu — FEAD paletinde on dokuz kutu üst üste.
+test('palet: kategori başlığı İKONUN kenarında, öğe dinlenmede zeminsiz', async ({ page }) => {
+  await modulAc(page);
+  await page.mouse.move(1500, 900);           // fare hiçbir öğenin üstünde değil
+  const r = await page.evaluate(() => {
+    const kaymis = [], dolu = [];
+    let olculen = 0;
+    document.querySelectorAll('#ve-sidebar .ve-category').forEach((kat) => {
+      const bas = kat.querySelector('.ve-category-title');
+      const oge = [...kat.querySelectorAll('.ve-component')].filter((o) => o.getBoundingClientRect().height > 0);
+      if (!bas || !oge.length || !bas.getBoundingClientRect().height) return;
+      const ikon = oge[0].querySelector('svg');
+      if (!ikon) return;
+      olculen++;
+      const rg = document.createRange(); rg.selectNodeContents(bas);
+      const dx = rg.getBoundingClientRect().left - ikon.getBoundingClientRect().left;
+      if (Math.abs(dx) > 1) kaymis.push(bas.textContent.trim() + ' ' + dx.toFixed(1) + ' px');
+      oge.forEach((o) => {
+        if (o.classList.contains('ve-submodule')) return;       // modül satırı kendi kabı
+        const z = getComputedStyle(o).backgroundColor;
+        if (!/,\s*0\s*\)$/.test(z) && z !== 'transparent') dolu.push(o.textContent.trim() + ' ' + z);
+      });
+    });
+    return { kaymis, dolu, olculen };
+  });
+  expect(r.olculen).toBeGreaterThanOrEqual(2);  // FEAD Kasnakları + Araçları + Araçlar
+  expect(r.kaymis).toEqual([]);
+  expect(r.dolu).toEqual([]);
+});
