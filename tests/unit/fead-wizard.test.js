@@ -770,8 +770,8 @@ describe('adım eşlemesi ve yüzeyler', () => {
     const maddeler = Array.from(d.querySelectorAll('ol.ve-fp-liste li b')).map((b) => b.textContent);
     expect(maddeler).toEqual(wiz.VE_FW_STEPS.map((s) => s.ad));
     expect(d.textContent).not.toMatch(/yedi adım/i);
-    // Krank Kasnağı ailesinin kabuğu: özet şeridi + kategori sekmeleri + sağ
-    // sütun, ve pencerenin tek eylemi sütunda.
+    // Krank Kasnağı ailesinin kabuğu: kategori sekmeleri + sağ sütun, ve
+    // pencerenin tek eylemi sütunda.
     expect(d.querySelectorAll('.ve-fp-tabs .ve-fp-tab').length).toBe(2);
     expect(d.querySelector('.ve-fp-side .ve-fp-solve').getAttribute('onclick')).toBe("veFeadWizOpen('w3')");
   });

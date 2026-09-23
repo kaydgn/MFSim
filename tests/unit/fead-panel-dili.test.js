@@ -412,7 +412,7 @@ describe('KAPSAM — yalnız kasnak değil, BÜTÜN FEAD panelleri', () => {
 // Hizanın kendisi gerçek tarayıcıda ölçülür (fead-panel-gramer.spec.js);
 // burada KURULUŞ kapılı.
 // ═══════════════════════════════════════════════════════════════════════════
-describe('PENCERE DÜZENİ — özet, notlar, türetilenler, küçük resim', () => {
+describe('PENCERE DÜZENİ — notlar, türetilenler, küçük resim', () => {
   // Gerçek bir örnek: küçük resim ancak çözülen bir modelde çizilir.
   const ornekKur = (anahtar) => {
     const pack = veFeadExampleNodes(anahtar);
@@ -423,22 +423,8 @@ describe('PENCERE DÜZENİ — özet, notlar, türetilenler, küçük resim', ()
     return global.nodes;
   };
 
-  test('özet şeridi ÇİPLERDEN — her madde bölünmez bir kap, asılı ayraç YOK', () => {
-    // Ayraç (`·`) kendi başına bir esnek öğeydi: satır sarınca satır sonunda
-    // asılı kalıyor, "sıra 1/5" tek başına ikinci satıra düşüyordu.
-    const n = ornekKur('AG00879_GATES_2023').filter((x) => x.data && x.data.driver)[0];
-    const kap = ciz(getFeadPulleyPropertiesHTML(n));
-    const serit = kap.querySelector('.ve-fp-sum');
-    expect(serit).toBeTruthy();
-    const cocuk = [...serit.childNodes];
-    expect(cocuk.length).toBeGreaterThanOrEqual(4);
-    // Şeridin BÜTÜN çocukları çip — arada çıplak metin ya da ayraç yok.
-    expect(cocuk.every((c) => c.nodeType === 1 && c.classList.contains('ve-fp-sum-i'))).toBe(true);
-    expect(cocuk.some((c) => c.textContent.trim() === '·')).toBe(false);
-    // Çip dili tek: soluk ad + koyu değer. "temas" de artık öyle.
-    const temas = cocuk.filter((c) => /^temas/.test(c.textContent))[0];
-    expect(temas && temas.querySelector('b')).toBeTruthy();
-  });
+  // (Özet şeridi 2026-09-23'te kullanıcı kararıyla KALKTI — çiplerinin
+  // kuralı onunla gitti; yokluğunun kapısı fead-pencere-ailesi.test.js.)
 
   test('bölüm notları KULLANICI dilinde — kodun iç adı basılmıyor', () => {
     // Uygunluk bölümünün sağında işlevin adı yazıyordu: `veFeadChecks`.
@@ -486,11 +472,11 @@ describe('PENCERE DÜZENİ — özet, notlar, türetilenler, küçük resim', ()
     expect(th.querySelectorAll('text[data-ve="wrap"]').length).toBe(0);
     // Çerçeveyi kap çiziyor: SVG'nin kendi kenarlığı yok (çift çerçeve).
     expect(th.querySelector('svg').getAttribute('style')).not.toMatch(/border/);
-    // Kasnak OLMAYAN pencerede (çözücü) vurgu yok — yanlış bir kasnağı
-    // işaretlemek, hiç işaretlememekten kötü.
+    // Kasnak OLMAYAN pencerede (çözücü) küçük resim HİÇ YOK — vurgulanacak
+    // bir kasnak yok ve resim o pencerenin sorusuna bir şey katmıyor
+    // (kullanıcı, 2026-09-23). Bütün tipler için kural: fead-pencere-ailesi.
     const coz = dugumler.filter((x) => x.type === 'fead-solver')[0];
-    const th2 = ciz(getFeadSolverPropertiesHTML(coz)).querySelector('.ve-fp-thumb');
-    expect(th2.querySelectorAll('[data-ve="pulley-hl"]').length).toBe(0);
+    expect(ciz(getFeadSolverPropertiesHTML(coz)).querySelector('.ve-fp-thumb')).toBeNull();
   });
 
   test('küçük resimde adlar birbirine BİNMİYOR — bütün örnekler × bütün kasnaklar', () => {

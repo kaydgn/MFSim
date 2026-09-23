@@ -3507,11 +3507,7 @@ function getFeadWizardPropertiesHTML(node){
   var eylem = '<button type="button" class="ve-fp-solve" onclick="veFeadWizOpen(\''
     + node.id + '\')"><span class="mf-ico mf-ico-wand" aria-hidden="true"></span>'
     + ' Sihirbazı Aç</button>';
-  var ozet = w
-    ? ['taslak <b>' + _fwEsc(w.ad || '—') + '</b>', '<b>' + kasnak + '</b> kasnak',
-       '<b>' + nokta + '</b> devir noktası']
-    : ['taslak <b>yok</b>'];
-  var yan = veFeadToolSide(node, null, null, null, ozet, eylem);
+  var yan = veFeadToolSide(node, null, null, null, eylem);
   return veFeadPanelShell(node, [{ k:'tas', ad:'Taslak',  govde: taslak },
                                  { k:'adm', ad:'Adımlar', govde: adimlar }], yan);
 }

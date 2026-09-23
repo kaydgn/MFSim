@@ -424,7 +424,9 @@ olurdu.
 
 31. **HER FEAD PENCERESİ KRANK KASNAĞI AİLESİNDE — DAR KAPTA DA** (2026-09-23,
     kullanıcı isteği: *"kategori kategori pencereler"*). Kabuk TEK üreticiden
-    (`veFeadPanelShell`: özet şeridi · kategori sekmeleri · özet sütunu);
+    (`veFeadPanelShell`: kategori sekmeleri · sağ sütun). **Tepede özet şeridi
+    YOK** (kullanıcı kararı, aynı gün: *"tepede böyle özet bir açıklamaya gerek
+    yok"* — çipleri pencerenin kendisinde zaten yazılı olanı tekrar ediyordu);
     Kayış Tablosu (Girdiler · Çözüm), Kayış Yolu (Şema · Geometri), Rapor
     (Tür · Künye), Dönüş Yönü (Yön · Etkisi), Sihirbaz (Taslak · Adımlar) ve
     kökteki modül kartı (İçerik · Model) da bu kabukta. Pencerenin tek EYLEMİ
@@ -442,13 +444,17 @@ olurdu.
     tablo + kendi düğmeleri): sütuna sığmazsa yerinde özet kartı kalır ve
     "Tabloyu aç" onu küçük bir pencereye TAŞIR (`js/tablo-pencere.js`) —
     sütunda yatay kaydırma YOK (2026-09-23; önce 785–1162 / 359 px).
-    **Küçük resmin sorusu "bu kasnak nerede"**: pencerenin kasnağı vurgulu
+    **Küçük resmin sorusu "bu kasnak nerede"** ve bu yüzden YALNIZ KASNAK
+    PENCERESİNDE durur (`componentDefs.isFeadPulley` — gergi dâhil; kullanıcı:
+    *"gerekli gereksiz her yere eklemişsin — Sonuç'ta buna ne ihtiyaç var?"*):
+    pencerenin kasnağı vurgulu
     (`highlightId`), adlar kısa, sarım açısı yok, ad yerleşimi `nameSmart`
     (yay + disk engeli, 16 açı × 2 uzaklık, en az örtüşen geri düşüş).
     `nameSmart` KANVAS KARTINA VE RAPORA DOKUNMAZ — onların yerleşimi
     `fead-card-design.test.js`te ayrıca kapılı. Kapılar: `fead-panel-dili.test.js`
     → *"PENCERE DÜZENİ"* ve *"BİRİMİNDE"*, `fead-panel-gramer.spec.js`,
-    `tablo-pencere.spec.js`.
+    `tablo-pencere.spec.js`; özet şeridinin YOKLUĞU ve küçük resmin YERİ
+    `fead-pencere-ailesi.test.js`te, tipten okunan kural olarak.
 
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı

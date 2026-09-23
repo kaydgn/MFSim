@@ -141,9 +141,7 @@ function getFeadReportPropertiesHTML(node){
     + (solved ? kAd + ' Oluştur ve İndir' : 'Raporu Oluştur ve İndir') + '</button>'
     + '<div id="ve-fead-report-status" class="ve-fp-durum-not"></div>';
 
-  var ozet = ['tür <b>' + (kind === 'summary' ? 'Özet' : 'Detaylı') + '</b>',
-              solved ? 'model <b>çözüldü</b>' : 'model <b>çözülmedi</b>'];
-  var yan = veFeadToolSide(node, null, null, null, ozet, durum + eylem);
+  var yan = veFeadToolSide(node, null, null, null, durum + eylem);
   return veFeadPanelShell(node, [{ k:'tur', ad:'Tür',   govde: _frKindPicker(node, kind) },
                                  { k:'kun', ad:'Künye', govde: _frDocFields(node) }], yan);
 }

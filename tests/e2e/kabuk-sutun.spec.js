@@ -7,7 +7,7 @@
  * `getBoundingClientRect`i hep sıfır döndürür ve `border-right-color`ı
  * kaskaddan hesaplamaz.
  *
- * İKİ HÜKÜM:
+ * ÜÇ HÜKÜM:
  *
  * 1) RAY + PALET TEK SÜTUN. İkisi ayrı ebeveynde ve bu YAPISAL: ray
  *    `.ve-main`'in dışında, çünkü Sonuçlar'a geçince panel de tuval de
@@ -20,6 +20,10 @@
  *    (327 px) ve bant tuvalin üstündeydi. O yerleşimin gerekçesi
  *    ("sekme açtığı belgeye bağlanır") yalnız SEKMELERE ait. Şerit inince
  *    sekmeler bandın tamamını aldı: 662 → 996 px.
+ *
+ * 3) KABUK TEK ÇİZGİ (2026-09-23). Üst kenardaki üç başlık ("Bileşenler",
+ *    sekmeler, müfettiş) tek bant: aynı ölçü, aynı zemin, aynı alt çizgi.
+ *    Tuval kenara yapışık; "tuval bir ÇUKURA oturur" hükmü emekli.
  *
  * ÖDENEN BEDEL BURADA ÇİVİLİ: tuval 24 px kaybetti. Bunu gizlemek yerine
  * ölçüyoruz — ve şeridin katlanmasının 86 px geri getirdiğini de.
@@ -133,38 +137,115 @@ test('şerit katlaması tuvali ölçülebilir biçimde oynatıyor', async ({ pag
   });
 });
 
-// ── TUVAL ÇUKURU (Tur B) ───────────────────────────────────────────────────
-// EMEKLİ HÜKÜM: "yalnız YÜZEN katman gölge alır; yerinde duran kabuk gölge
-// almaz" kuralı tuvali düz bir dikdörtgen tutuyordu. İÇ gölge bir YÜKSELTİ
-// değil bir DERİNLİK — nesneyi kaldırmaz, yüzeyi oyar; o ayrım olmadan kural
-// çukuru da yasaklıyordu.
+// ── KABUK TEK ÇİZGİ (2026-09-23) ───────────────────────────────────────────
+// Kullanıcı: "pencere sınırları bir hizasız, tatsız, güzel değil." Ölçülen:
+// üst kenarda yan yana üç başlık üç ayrı ölçü — "Bileşenler" 37, sekme bandı
+// 29, müfettiş başlığı 33 px; alt çizgileri y=75 · 67 · 71'de. Tuval de 8 px
+// içeride, 10 px köşeli ayrı çerçevedeydi (EMEKLİ "tuval bir ÇUKURA oturur"
+// hükmü): her sınır iki çizgiydi ve aktif sekme tuvale değil aradaki 8 px'lik
+// kâğıda açılıyordu.
 //
-// Node'da ölçülemez: jsdom `box-shadow`u kaskaddan hesaplamaz ve `inset`
-// anahtarını hiç döndürmez.
-test('tuval bir ÇUKURA oturuyor — her kenardan içeri, yarıçaplı, İÇ gölgeli', async ({ page }) => {
+// Node'da ölçülemez: jsdom yerleşim hesaplamaz, bir metnin çizildiği satırı
+// (`Range.getBoundingClientRect`) hiç bilmez. CSS metninin kapısı
+// tests/unit/kabuk-bant.test.js.
+test('KABUK TEK ÇİZGİ — üç başlık aynı bantta, tuval komşularına yapışık', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
   await modulAc(page);
+  // Sihirbaz boş topolojiyi karşılıyor; kapatıp açılış yüzeyinin bir kartının
+  // penceresini sütunda açıyoruz (müfettiş başlığı ancak açıkken var).
+  await page.evaluate(() => {
+    if (typeof veFeadWizClose === 'function') veFeadWizClose(false);
+    const n = nodes.find((x) => x.type === 'fead-table') || nodes[0];
+    clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
+  });
+  await page.waitForTimeout(600);
   const r = await page.evaluate(() => {
-    const w = document.querySelector('#ve-canvas-wrapper');
-    const c = document.querySelector('#ve-split-container');
-    const bw = w.getBoundingClientRect(); const bc = c.getBoundingClientRect();
-    const cs = getComputedStyle(w);
+    const k = (s) => document.querySelector(s).getBoundingClientRect();
+    const orta = (s) => {
+      const rg = document.createRange(); rg.selectNodeContents(document.querySelector(s));
+      const b = rg.getBoundingClientRect(); return b.top + b.height / 2;
+    };
+    const sb = k('.ve-sidebar-header'), dk = k('#ve-doc-dock'), mh = k('.ve-properties-header');
+    const sp = k('#ve-sidebar'), w = k('#ve-canvas-wrapper'), st = k('#ve-status-bar');
+    const mu = k('#ve-properties'), tab = k('#ve-tab-bar .ve-tab.active'), tb = k('#ve-tab-bar');
+    const wcs = getComputedStyle(document.querySelector('#ve-canvas-wrapper'));
+    const tcs = getComputedStyle(document.querySelector('#ve-tab-bar .ve-tab.active'));
     return {
-      sol: Math.round(bw.x - bc.x), ust: Math.round(bw.y - bc.y),
-      sag: Math.round((bc.x + bc.width) - (bw.x + bw.width)),
-      alt: Math.round((bc.y + bc.height) - (bw.y + bw.height)),
-      r: parseFloat(cs.borderTopLeftRadius),
-      icGolge: /inset/.test(cs.boxShadow),
-      kenar: parseFloat(cs.borderTopWidth),
+      alt: [sb.bottom, dk.bottom, mh.bottom], boy: [sb.height, dk.height, mh.height],
+      yazi: [orta('.ve-sidebar-title'), orta('#ve-tab-bar .ve-tab.active'), orta('#ve-properties-title')],
+      tuval: { sol: w.left - sp.right, ust: w.top - dk.bottom, sag: mu.left - w.right, alt: st.top - w.bottom },
+      kose: wcs.borderTopLeftRadius, golge: wcs.boxShadow, kenar: wcs.borderTopWidth,
+      sekme: { alt: tab.bottom - dk.bottom, kesik: tab.bottom - tb.bottom, zemin: tcs.backgroundColor, tuvalZemin: wcs.backgroundColor },
     };
   });
-  // DÖRT kenardan da içeri: tek kenarda pay, çukur değil kaymadır
-  [r.sol, r.ust, r.sag, r.alt].forEach((p) => expect(p).toBeGreaterThan(0));
-  expect(r.sol).toBe(r.sag);
-  expect(r.ust).toBe(r.alt);
-  expect(r.r).toBeGreaterThan(0);
-  expect(r.kenar).toBeGreaterThan(0);
-  // GÖLGE İÇERİDE: dış gölge yükselti olurdu — emekli hükmün yasakladığı şey o
-  expect(r.icGolge).toBe(true);
+  // Üç başlığın alt çizgisi AYNI y'de ve ölçüleri aynı (eski: 75 · 67 · 71).
+  expect(Math.max(...r.alt) - Math.min(...r.alt)).toBeLessThanOrEqual(0.5);
+  expect(Math.max(...r.boy) - Math.min(...r.boy)).toBeLessThanOrEqual(0.5);
+  // Yazıları da aynı ortada: sekme bandın dibine yaslı kısa bir kutu olsaydı
+  // "Topoloji 1" komşularından aşağıda kalırdı.
+  expect(Math.max(...r.yazi) - Math.min(...r.yazi)).toBeLessThanOrEqual(1.5);
+  // Tuval dört kenarda da komşusunun çizgisine yapışık (eski: 8 px pay her yanda).
+  Object.values(r.tuval).forEach((p) => expect(Math.abs(p)).toBeLessThanOrEqual(0.5));
+  expect(r.kose).toBe('0px');
+  expect(r.kenar).toBe('0px');
+  expect(r.golge).toBe('none');
+  // Aktif sekme bandın çizgisini ÖRTÜYOR ve tuvalin zeminini taşıyor: tuvale
+  // bağlanıyor. Şerit onu KESMİYOR (overflow-y:hidden).
+  expect(Math.abs(r.sekme.alt)).toBeLessThanOrEqual(0.5);
+  expect(r.sekme.kesik).toBeLessThanOrEqual(0.5);
+  expect(r.sekme.zemin).toBe(r.sekme.tuvalZemin);
+});
+
+// BAŞLIK İÇERİĞİN KENARINDA + KİMLİK SATIRI TİPİ SÖYLER (2026-09-23).
+// Bandın başlığı altındaki sütunun sol kenarından başlamalı: "Bileşenler"
+// simgesi 76'da, altındaki kategori başlıkları ve öğe simgeleri 81'deydi;
+// müfettiş başlığı 1233'te, içeriği 1231'de. Kimlik satırı da iç kimliği
+// basıyordu ("ID: comp-4") — kullanıcıya bir şey demeyen, hiçbir yerde
+// aranamayan bir dize. Yerine TİP: "Sürücü Kasnak (FAN)" bir Fan Kavraması.
+test('başlıklar içeriğin kenarında; kimlik satırı iç kimliği değil TİPİ söylüyor', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await modulAc(page);
+  await page.evaluate(() => {
+    if (typeof veFeadWizClose === 'function') veFeadWizClose(false);
+    veFeadLoadExample('AG00976_GATES_2025');
+  });
+  await page.waitForTimeout(1500);
+  const r = await page.evaluate(async () => {
+    const sol = (el) => { const g = document.createRange(); g.selectNodeContents(el); return g.getBoundingClientRect().left; };
+    const kat = [...document.querySelectorAll('.ve-sidebar-content .ve-category')].find((c) => c.offsetParent);
+    const kenar = {
+      bas: document.querySelector('.ve-sidebar-header .mf-ico').getBoundingClientRect().left,
+      kategori: sol(kat.querySelector('.ve-category-title')),
+      oge: kat.querySelector('.ve-component svg').getBoundingClientRect().left,
+    };
+    const ac = async (n) => {
+      clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
+      await new Promise((z) => setTimeout(z, 500));
+      const P = document.querySelector('#ve-properties');
+      const ic = document.querySelector('.ve-properties-content');
+      const o = { tip: (P.querySelector('.ve-prop-tip') || {}).textContent || null,
+        kimlik: /\bcomp-\d+\b/.test(P.textContent),
+        bas: document.querySelector('.ve-properties-header .mf-ico').getBoundingClientRect().left,
+        icerik: ic.getBoundingClientRect().left + parseFloat(getComputedStyle(ic).paddingLeft) };
+      veTogglePropertiesPanel(false);
+      await new Promise((z) => setTimeout(z, 250));
+      return o;
+    };
+    const surucu = nodes.find((x) => x.data && x.data.driver);
+    return { kenar, surucu: await ac(surucu), tipAdi: componentDefs[surucu.type].name,
+             cozucu: await ac(nodes.find((x) => x.type === 'fead-solver')) };
+  });
+  // Kenar çubuğu: başlığın simgesi = kategori başlığı = öğe simgesi (eski: 76 · 81 · 81).
+  expect(Math.abs(r.kenar.bas - r.kenar.kategori)).toBeLessThanOrEqual(1);
+  expect(Math.abs(r.kenar.bas - r.kenar.oge)).toBeLessThanOrEqual(1);
+  // Müfettiş: başlığın simgesi içeriğin sol kenarında (eski: 1233 ↔ 1231).
+  expect(Math.abs(r.surucu.bas - r.surucu.icerik)).toBeLessThanOrEqual(0.5);
+  // Adlandırılmış bileşen tipini söylüyor; iç kimlik HİÇBİR yerde basılmıyor.
+  expect(r.surucu.tip).toBe(r.tipAdi);
+  expect(r.surucu.kimlik).toBe(false);
+  // Adı tipin adı olan bileşende alt satır YOK — aynı sözcük iki kez yazılmaz.
+  expect(r.cozucu.tip).toBe(null);
+  expect(r.cozucu.kimlik).toBe(false);
 });
 
 // KARŞILAMA EKRANINDA DURUM ŞERİDİ YOK.

@@ -34,20 +34,20 @@ function kural(secici) {
 }
 
 describe('üst bant — iki yarı TEK ölçü kaynağından beslenir', () => {
-  test('--results-bar-h tanımlı', () => {
-    expect(css).toMatch(/--results-bar-h:\s*\d+px/);
+  test('--bant-h tanımlı', () => {
+    expect(css).toMatch(/--bant-h:\s*\d+px/);
   });
 
   test('sol yarı (.ve-results-head) yüksekliğini o değişkenden alır', () => {
     const k = kural('.ve-results-head');
     expect(k).not.toBeNull();
-    expect(k).toContain('min-height:var(--results-bar-h)');
+    expect(k).toContain('min-height:var(--bant-h)');
   });
 
   test('sağ yarı (.ve-trace-toolbar) da aynı değişkeni kullanır', () => {
     const k = kural('.ve-trace-toolbar');
     expect(k).not.toBeNull();
-    expect(k).toContain('min-height:var(--results-bar-h)');
+    expect(k).toContain('min-height:var(--bant-h)');
   });
 
   // Sabit height olsaydı dar pencerede sarılan düğmeler bandın dışına taşardı.

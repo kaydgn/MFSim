@@ -92,15 +92,23 @@ describe('Alt-sistem sözleşmesi', () => {
   //
   // KAPI ÇİFT: satırın gitmiş olması TEK BAŞINA bir şey ifade etmez, çünkü
   // sayı ileride yine 0 olmayabilirdi. İkinci yarı tipleri sayıyor.
-  test('bileşen sayısı özette görünür; BAĞLANTI satırı yok', () => {
+  // Sayı İÇERİK kartındaki dökümde (Kasnak · Gergi · Kayış · Araç): tepedeki
+  // özet şeridi 2026-09-23'te kullanıcı kararıyla kalktı ve toplamı oradan
+  // okumak artık mümkün değil — döküm aynı sayıyı parçalarıyla veriyor.
+  test('bileşen sayısı İçerik dökümünde görünür; BAĞLANTI satırı yok', () => {
     const html = fead.getFeadModulePropertiesHTML({
       id: 'comp-4', type: 'fead-analysis',
       data: { subTopology: { nodes: [{}, {}, {}, {}], connections: [{}, {}, {}] } }
     });
-    expect(html).toContain('>4<');
+    const d = document.createElement('div');
+    d.innerHTML = html;
+    const ic = d.querySelector('#ve-fp-panes-comp-4 > [data-k="ic"]');
+    const sayilar = [...ic.querySelectorAll('.ve-fp-inp[readonly]')].map((i) => Number(i.value));
+    expect(sayilar.length).toBe(4);                              // dört tür
+    expect(sayilar.reduce((a, b) => a + b, 0)).toBe(4);          // toplam = düğüm sayısı
     expect(html).toContain('Bileşen');
     expect(html).not.toContain('Bağlantı');
-    expect(html).not.toContain('>3<');
+    expect(sayilar).not.toContain(3);                            // tel sayısı hiçbir yerde
   });
 
   test('FEAD tiplerinin HİÇBİRİNDE port yok — bağlantı kurulamaz', () => {

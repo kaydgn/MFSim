@@ -161,10 +161,11 @@ test('açılır listenin metni kırpılmıyor', async ({ page }) => {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PENCERE DÜZENİ (2026-09-23) — kullanıcı: "Hizalamalar, şekiller şukullar
-// hep kaymış." Üç halka da jsdom'da koşamaz: metnin gerçek sol kenarı
-// (`Range.getBoundingClientRect`), bir çipin kaç satıra bölündüğü
-// (`getClientRects`) ve bir yazının kayış çizgisinin ÜSTÜNDE olup olmadığı
-// (`isPointInStroke`) yalnız yerleşim motorunda var.
+// hep kaymış." İki halka da jsdom'da koşamaz: metnin gerçek sol kenarı
+// (`Range.getBoundingClientRect`) ve bir yazının kayış çizgisinin ÜSTÜNDE
+// olup olmadığı (`isPointInStroke`) yalnız yerleşim motorunda var.
+// (Üçüncü halka özet şeridinin çiplerini ölçüyordu; şerit aynı gün kullanıcı
+// kararıyla KALKTI — yokluğunun kapısı fead-pencere-ailesi.test.js.)
 // ═══════════════════════════════════════════════════════════════════════════
 
 test('TEK SOL KENAR — bütün sekmelerde etiket denetiminin sol kenarında başlıyor', async ({ page }) => {
@@ -194,22 +195,6 @@ test('TEK SOL KENAR — bütün sekmelerde etiket denetiminin sol kenarında ba�
   expect(r.olculen).toBeGreaterThan(10);          // BOŞA ÇALIŞMIYOR
   // Eski hâl: sayı alanlarının etiketi SAĞA yaslıydı — "Dış çap (OD) 52 px".
   expect(r.out).toEqual([]);
-});
-
-test('özet şeridi ÇİPLERDEN — hiçbir madde iki satıra bölünmüyor, asılı ayraç yok', async ({ page }) => {
-  await kasnakPaneliAc(page);
-  const r = await page.evaluate(() => {
-    const serit = document.querySelector('#ve-properties-overlay .ve-fp-sum');
-    const cip = [...serit.querySelectorAll('.ve-fp-sum-i')];
-    return {
-      cip: cip.length,
-      bolunen: cip.filter((c) => c.getClientRects().length !== 1).map((c) => c.textContent),
-      ayrac: [...serit.childNodes].filter((n) => n.textContent.trim() === '·').length,
-    };
-  });
-  expect(r.cip).toBeGreaterThanOrEqual(4);
-  expect(r.bolunen).toEqual([]);
-  expect(r.ayrac).toBe(0);
 });
 
 test('küçük resim: pencerenin kasnağı VURGULU, adlar ne birbirine ne KAYIŞA biniyor', async ({ page }) => {

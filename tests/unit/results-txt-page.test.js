@@ -67,15 +67,15 @@ eval(loadSource('results.js'));
 
 // ─────────────────────────────────────────────────────────────────────────
 describe('üst bant — soldaki "Veri Gezgini" bandıyla TEK ölçü kaynağı', () => {
-  test('.ve-rep-head yüksekliğini --results-bar-h\'tan alır', () => {
+  test('.ve-rep-head yüksekliğini --bant-h\'tan alır', () => {
     const k = kural('.ve-rep-head');
     expect(k).not.toBeNull();
-    expect(k).toContain('min-height:var(--results-bar-h)');
+    expect(k).toContain('min-height:var(--bant-h)');
   });
 
   test('sol yarı (.ve-results-head) da aynı değişkeni kullanır', () => {
     // İkisi ayrı sayı tutarsa bant panel ayırıcısında yine kırılır.
-    expect(kural('.ve-results-head')).toContain('min-height:var(--results-bar-h)');
+    expect(kural('.ve-results-head')).toContain('min-height:var(--bant-h)');
   });
 
   test('alt çizgi iki bantta da 1px (rapor bandı 2px çiziyordu)', () => {
@@ -88,10 +88,12 @@ describe('üst bant — soldaki "Veri Gezgini" bandıyla TEK ölçü kaynağı',
     expect(kural('.ve-results-head-title')).toContain('font-size:var(--fs-md)');
   });
 
-  test('zemin de aynı (bant tek parça görünsün)', () => {
-    const g = /background:linear-gradient\(180deg, var\(--bg-tertiary\), var\(--bg-secondary\)\)/;
-    expect(kural('.ve-rep-head')).toMatch(g);
-    expect(kural('.ve-results-head')).toMatch(g);
+  test('zemin de aynı (bant tek parça görünsün) — kabuğun TEK zemin jetonu', () => {
+    // Zemin artık bir jeton (--bant-zemin): Topoloji'nin üç bandı da aynısını
+    // okuyor (tests/unit/kabuk-bant.test.js). İki bant iki ayrı gradyan
+    // yazsaydı biri değişince ayrışırlardı.
+    expect(kural('.ve-rep-head')).toContain('background:var(--bant-zemin)');
+    expect(kural('.ve-results-head')).toContain('background:var(--bant-zemin)');
   });
 
   test('düğmeler ölçüm penceresi araç çubuğunun düğmesini PAYLAŞIR', () => {

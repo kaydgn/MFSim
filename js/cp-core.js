@@ -225,7 +225,13 @@ function showNodeProperties(node) {
   html += '<div class="ve-prop-meta">';
   html += '<div class="ve-prop-name"><span id="ve-node-name-display-' + node.id + '">' + displayName + '</span>';
   html += '<button class="ve-prop-nameedit" onclick="veEditNodeName(\'' + node.id + '\')" title="İsmi düzenle"><span class="mf-ico mf-ico-edit"></span></button></div>';
-  html += '<div class="ve-prop-id">ID: ' + node.id + '</div>';
+  // ALT SATIR TİPİ SÖYLER, iç kimliği değil (2026-09-23). "ID: comp-4"
+  // kullanıcıya bir şey demiyordu — hiçbir başka yüzeyde geçmiyor, hiçbir
+  // yerde aranamıyor. Adlandırılmış bir bileşenin NE olduğu ise addan her
+  // zaman okunmuyor ("Sürücü Kasnak (FAN)" bir Fan Kavraması). Ad tipin
+  // adıyla aynıysa alt satır yok: aynı sözcük iki kez yazılmaz.
+  if(node.customName && node.def && node.def.name && node.customName !== node.def.name)
+    html += '<div class="ve-prop-tip">' + node.def.name + '</div>';
   html += '</div>';  // ve-prop-meta
   html += '<button class="ve-prop-del" onclick="deleteSelectedNodes()" title="Bileşeni Sil"><span class="mf-ico mf-ico-trash"></span></button>';
   html += '</div>';  // ve-prop-identity
