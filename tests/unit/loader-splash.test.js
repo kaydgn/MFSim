@@ -5,7 +5,7 @@
  * atlanan modül davranışı ve splash ↔ loader kimlik sözleşmesi hiçbir kapının
  * arkasında değildi. Üçü de sessiz kırılma sınıfı —
  *
- *   • `#mfsim-loading-bar` yeniden adlandırılsa çubuk hiç dolmaz, hata çıkmaz;
+ *   • `#mfsim-loading-cetvel` yeniden adlandırılsa cetvel hiç dolmaz, hata çıkmaz;
  *   • bir modül atlanırsa program EKSİK açılır ve tek iz console.warn'dur;
  *   • ipucu döngüsü kapanışta durdurulmazsa uygulama açıldıktan sonra da
  *     arkada saymaya devam eder.
@@ -70,16 +70,25 @@ async function ilerlet(ms, adim = 50) {
   }
 }
 
-function satirlar() {
-  return Array.from(document.querySelectorAll('#mfsim-loading-stages li'));
+// O anki öbeğin etiketi: Roma rakamı + ad (AMBLEM'de liste yok).
+function bolum() {
+  const el = document.getElementById('mfsim-loading-bolum');
+  return {
+    no: el.children[0].textContent,
+    ad: el.children[1].textContent,
+    sinif: el.className,
+    belir: el.getAttribute('data-belir')
+  };
 }
-function satirOzeti() {
-  return satirlar().map((li) => ({
-    ad: li.children[1].textContent,
-    isaret: li.children[0].textContent,
-    sayi: li.children[2].textContent,
-    sinif: li.className
-  }));
+// Cetvel: bölme sayısı, geçilen, vurgulu uç ve yardımcı teknolojiye giden değer.
+function cetvel() {
+  const el = document.getElementById('mfsim-loading-cetvel');
+  return {
+    bolme: el.children.length,
+    gecti: el.querySelectorAll('span.is-gecti').length,
+    son: Array.from(el.children).findIndex((c) => c.classList.contains('is-son')),
+    aria: el.getAttribute('aria-valuenow')
+  };
 }
 
 function baslat() {
@@ -192,7 +201,7 @@ describe('açılış karesi — seçim ve boyama', () => {
       .not.toContain('mfsim-has-photo');
     expect(window.__MFSIM_ACILIS_KARE).toBeUndefined();
     // ...ve yükleme yine sonuna kadar gider
-    expect(document.getElementById('mfsim-loading-percent').textContent).toBe('%100');
+    expect(cetvel().aria).toBe('100');
   });
 });
 
@@ -271,21 +280,29 @@ describe('tema ilk karede', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// KADEMELİ İLERLEME. Ölçüldü: çubuk 85 modülün her birinde ilerliyordu, yani
-// adım %1,2 ve adımlar 150 ms arayla — 180 ms'lik geçişler üst üste binince göz
-// sürekli bir KAYMA görüyordu. Üç sessiz kırılma sınıfı var:
-//   • kademe sayısı CSS ile JS'te AYRI yazılırsa dolgu çentikle hizalanmaz;
-//   • genişlik yuvarlanmış yüzdeden hesaplanırsa dolgu çentiğin gerisinde kalır;
-//   • son kademe atlanırsa çubuk %100'e hiç oturmaz.
-describe('kademeli ilerleme', () => {
+// KADEMELİ İLERLEME. Ölçüldü: ilerleme 85 modülün her birinde kımıldıyordu,
+// yani adım %1,2 ve adımlar 150 ms arayla — 180 ms'lik geçişler üst üste
+// binince göz sürekli bir KAYMA görüyordu. AMBLEM'de ilerlemeyi 12 bölmeli
+// CETVEL söylüyor ve yüzde görünmüyor. Üç sessiz kırılma sınıfı var:
+//   • bölme sayısı CSS ile JS'te AYRI yazılırsa bölmeler sütunlara oturmaz;
+//   • son kademe atlanırsa cetvel hiç dolmaz;
+//   • vurgulu uç bitişte kalırsa "hâlâ yükleniyor" gibi durur.
+describe('kademeli ilerleme — cetvel', () => {
   const CSS = fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8');
 
   test('kademe sayısı TEK KAYNAK — CSS jetonu, loader onu OKUYOR', () => {
     expect(CSS).toMatch(/--mfsim-kademe:\s*\d+/);
     expect(LOADER_SRC).toContain("getPropertyValue('--mfsim-kademe')");
-    // Çentikler de aynı jetondan çiziliyor (dolgunun üstündeki kesikler).
-    const kullanim = (CSS.match(/calc\(100% \/ var\(--mfsim-kademe\)/g) || []).length;
-    expect(kullanim).toBeGreaterThanOrEqual(2);
+    // Cetvelin ızgarası da aynı jetondan: bölmeleri JS kuruyor, sütunları CSS.
+    expect(CSS).toMatch(/\.mfsim-amblem-cetvel\{[^}]*grid-template-columns:repeat\(var\(--mfsim-kademe\)/);
+  });
+
+  test('cetvel kademe başına BİR bölme kuruyor', async () => {
+    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    baslat();
+    await ilerlet(10);
+    // jsdom stil sayfası yüklemez: jeton okunamaz, tasarım değerine (12) düşer.
+    expect(cetvel().bolme).toBe(12);
   });
 
   test('ilerleme KADEMEYE yuvarlanıyor — her modülde kımıldamıyor', async () => {
@@ -294,28 +311,31 @@ describe('kademeli ilerleme', () => {
     })));
     baslat();
     await ilerlet(10);
-    const pct = () => document.getElementById('mfsim-loading-percent').textContent;
-    const en = () => document.getElementById('mfsim-loading-bar').style.width;
-
-    expect(pct()).toBe('%0');
+    expect(cetvel()).toMatchObject({ gecti: 0, son: -1, aria: '0' });
     await ilerlet(200);            // 1 modül bitti → 1/24, kademe hâlâ 0
-    expect(pct()).toBe('%0');
-    expect(parseFloat(en())).toBe(0);
+    expect(cetvel()).toMatchObject({ gecti: 0, son: -1, aria: '0' });
     await ilerlet(200);            // 2 modül → kademe 1/12
-    expect(pct()).toBe('%8');
-    // GENİŞLİK q'dan: yuvarlanmış 8 yazılsaydı dolgu çentiğin 0,3 punto
-    // gerisinde kalırdı — 12 kademede çentik tam 8,333'te.
-    expect(parseFloat(en())).toBeCloseTo(100 / 12, 2);
+    // Son geçilen bölme VURGU taşıyor — ilerlemenin ucu.
+    expect(cetvel()).toMatchObject({ gecti: 1, son: 0, aria: '8' });
   });
 
-  test('SON KADEME atlanmıyor — yükleme bitince çubuk %100', async () => {
+  test('SON KADEME atlanmıyor — yükleme bitince cetvel TAM ve ucu sönük', async () => {
     kur(Array.from({ length: 85 }, (_, i) => ({
       stage: i === 0 ? 'Çekirdek' : undefined, label: 'Modül ' + i
     })));
     baslat();
     await ilerlet(20000);
-    expect(document.getElementById('mfsim-loading-percent').textContent).toBe('%100');
-    expect(parseFloat(document.getElementById('mfsim-loading-bar').style.width)).toBe(100);
+    // Bitişte vurgulu uç KALMAZ: hepsi aynı renge oturur.
+    expect(cetvel()).toEqual({ bolme: 12, gecti: 12, son: -1, aria: '100' });
+  });
+
+  test('YÜZDE GÖRÜNMÜYOR — değer yalnız yardımcı teknolojiye gidiyor', () => {
+    // Kimlik aranıyor, sınıf değil: modül giriş ekranı kendi yüzdesini
+    // (#ve-modload-percent) aynı sınıfla taşımaya devam ediyor.
+    const govde = splashMarkup();
+    expect(govde).not.toContain('id="mfsim-loading-percent"');
+    expect(govde).toMatch(/id="mfsim-loading-cetvel"[^>]*role="progressbar"/);
+    expect(LOADER_SRC).not.toMatch(/textContent = '%'/);
   });
 
   test('dişli de kademeyle döner ve %100\'de TAM TUR tamamlar', async () => {
@@ -353,27 +373,56 @@ describe('kademeli ilerleme', () => {
     expect(CSS).not.toContain('mfsim-loading-shimmer');
     expect(CSS).not.toContain('.mfsim-loading-bar::after');
   });
+});
 
-  test('biten öbeğin işareti bir kez vurulur, sonra sınıf kalkar', async () => {
-    kur([
-      { stage: 'Çekirdek', label: 'A' },
-      { stage: 'Takoz', label: 'B' }
-    ]);
-    baslat();
-    await ilerlet(200);           // ilk öbek bitti
-    const ilk = document.querySelectorAll('#mfsim-loading-stages li')[0];
-    expect(ilk.className).toContain('is-tick');
-    await ilerlet(400);           // vuruş süresi doldu
-    expect(ilk.className).not.toContain('is-tick');
-    expect(ilk.className).toContain('is-done');
+// AMBLEM'in iki görünüm kuralı — ikisi de "program yine açılır" cinsinden
+// sessiz kırılma: perde temadan kopunca açık temada yazı okunmaz olur, kapanış
+// kayarsa uçan marka ile amblem aynı anda iki yöne gider.
+describe('amblem — perde ve kapanış', () => {
+  const CSS = fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8');
+  // Seçici listesinde `anahtar` geçen İLK kuralın gövdesi (yorumlar ayıklanmış).
+  function kural(anahtar) {
+    const govde = CSS.replace(/\/\*[\s\S]*?\*\//g, '');
+    const re = /([^{}]+)\{([^{}]*)\}/g;
+    let m;
+    while ((m = re.exec(govde))) {
+      if (m[1].split(',').some((s) => s.trim() === anahtar)) return m[2];
+    }
+    return null;
+  }
+
+  // Tema-nötr siyah bir perde (rgba(0,0,0,…)) çıplak renk kapısından GEÇER —
+  // o kapı siyahı meşru sayıyor. Ama açık temada yazı koyu: siyah perde onu
+  // koyu zemine oturturdu. Perdenin tek rengi temanın kendi zemini.
+  test('perde TEMANIN ZEMİNİNDEN — başka renk yok', () => {
+    const b = kural('.mfsim-amblem-perde');
+    expect(b).not.toBeNull();
+    const renkler = (b.match(/var\(--[a-z0-9-]+\)/g) || []);
+    expect(renkler.length).toBeGreaterThanOrEqual(4);
+    expect(new Set(renkler)).toEqual(new Set(['var(--bg-primary)']));
+    expect(b).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgba?\(/);
+  });
+
+  test('fotoğraf yoksa perde de yok — kâğıdın üstünde ikinci kâğıt olmasın', () => {
+    expect(kural('.mfsim-loading-screen:not(.mfsim-has-photo) .mfsim-amblem-perde'))
+      .toMatch(/display:\s*none/);
+  });
+
+  test('kapanışta amblem KAYMIYOR — yalnız opaklık', () => {
+    const b = kural('.mfsim-loading-screen.mfsim-fading-out .mfsim-amblem');
+    expect(b).not.toBeNull();
+    expect(b).toContain('opacity:0');
+    expect(b).not.toMatch(/transform|translate/);
   });
 });
 
-describe('kart geometrisi karşılama kartının İKİZİ', () => {
+// Modül giriş ekranı (js/module-loader.js) kartlı kaldı: tıklanan karşılama
+// kartının YERİNDE beliriyor. Açılış ekranı 2026-09-23'e kadar bu paneli
+// kullanıyordu; kural o günden beri modül girişinin.
+describe('modül giriş paneli karşılama kartının İKİZİ', () => {
   const CSS = fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8');
   // Seçici SATIR BAŞINDAN aranıyor: düz indexOf, `.mfsim-loading-panel{`i
-  // bileşik seçicinin (`... .mfsim-fading-out .mfsim-loading-panel{`) kuyruğunda
-  // da bulur ve yanlış bloğu ölçerdi.
+  // bileşik seçicinin kuyruğunda da bulur ve yanlış bloğu ölçerdi.
   function blok(secici) {
     const re = new RegExp('^\\s*' + secici.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{', 'm');
     const m = CSS.match(re);
@@ -382,9 +431,10 @@ describe('kart geometrisi karşılama kartının İKİZİ', () => {
     return CSS.slice(i, CSS.indexOf('}', i));
   }
 
-  // Bu değerlerin AYNI olması bir benzetme değil koşul: iki kart üst üste
-  // erirken 1 px'lik fark "kart yerinden oynadı" olarak görülüyor. Karşılama
-  // kartında biri değişirse bu test kırmızıya döner ve ikisi birlikte taşınır.
+  // Bu değerlerin AYNI olması bir benzetme değil koşul: panel kartın yerinde
+  // belirirken 1 px'lik fark "kart yerinden oynadı" olarak görülüyor.
+  // Karşılama kartında biri değişirse bu test kırmızıya döner ve ikisi
+  // birlikte taşınır.
   test.each([
     ['left:56px'],
     ['width:clamp(320px, 29%, 380px)'],
@@ -397,10 +447,10 @@ describe('kart geometrisi karşılama kartının İKİZİ', () => {
     expect(blok('.ve-welcome-id')).toContain(deger);
   });
 
-  test('kapanışta kart KAYMIYOR — yalnız opaklık', () => {
-    const b = blok('.mfsim-loading-screen.mfsim-fading-out .mfsim-loading-panel');
-    expect(b).toContain('opacity:0');
-    expect(b).not.toContain('translateY');
+  // Amblem de kartın SOL KENARINDA duruyor: devir teslimde marka kartın
+  // kenarından içeri iniyor, yandan gelmiyor.
+  test('amblem karşılama kartıyla aynı sol kenarda', () => {
+    expect(blok('.mfsim-amblem')).toContain('left:56px');
   });
 });
 
@@ -430,7 +480,11 @@ describe('index.html aşama işaretleri', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-describe('aşama listesi', () => {
+// O ANKİ ÖBEK. Eskiden bütün öbekler sayaçlarıyla alt alta duruyordu; hiçbiri
+// okunmuyor ama hepsi okunmayı bekliyormuş gibi duruyordu. AMBLEM'de yalnız
+// o anki öbek var, Roma rakamıyla. Rakam index.html'deki sıradan TÜRER —
+// öbek eklenince ya da yer değiştirince burada güncellenecek bir sayı yok.
+describe('o anki öbek', () => {
   test('işaretler öbekleri kurar; işaretsiz script bir öncekine yazılır', async () => {
     kur([
       { stage: 'Çekirdek', label: 'Tema motoru' },
@@ -441,22 +495,52 @@ describe('aşama listesi', () => {
     ]);
     baslat();
     await ilerlet(10);
-
-    expect(satirOzeti().map((r) => [r.ad, r.sayi])).toEqual([
-      ['Çekirdek', '0/3'],
-      ['Takoz', '0/2']
-    ]);
+    expect(bolum()).toMatchObject({ no: 'I', ad: 'Çekirdek' });
+    await ilerlet(400);            // iki modül bitti — işaretsiz ikisi hâlâ Çekirdek'te
+    expect(bolum()).toMatchObject({ no: 'I', ad: 'Çekirdek' });
+    await ilerlet(100);            // üçüncü bitti → sıradaki öbek
+    expect(bolum()).toMatchObject({ no: 'II', ad: 'Takoz' });
   });
 
   test('öbek adında & geçebilir — metin olarak yazılıyor, HTML olarak değil', async () => {
     kur([{ stage: 'Araçlar & ölçüm', label: 'Harita modülü' }]);
     baslat();
     await ilerlet(10);
-    expect(satirlar()[0].children[1].textContent).toBe('Araçlar & ölçüm');
-    expect(satirlar()[0].children[1].innerHTML).toBe('Araçlar &amp; ölçüm');
+    const ad = document.getElementById('mfsim-loading-bolum').children[1];
+    expect(ad.textContent).toBe('Araçlar & ölçüm');
+    expect(ad.innerHTML).toBe('Araçlar &amp; ölçüm');
   });
 
-  test('yükleme ilerledikçe işaret ve sayaç değişir, biten öbek ✓ olur', async () => {
+  test('Roma rakamı öbek SIRASINDAN — 4 → IV, 9 → IX, 14 → XIV', async () => {
+    kur(Array.from({ length: 14 }, (_, i) => ({ stage: 'Öbek ' + (i + 1), label: 'M' + i })));
+    baslat();
+    const gorulen = [];
+    for (let i = 0; i < 14; i++) {
+      await ilerlet(i === 0 ? 10 : 150);
+      gorulen.push(bolum().no);
+    }
+    expect(gorulen).toEqual(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X',
+      'XI', 'XII', 'XIII', 'XIV']);
+  });
+
+  test('etiket yalnız öbek DEĞİŞİNCE belirir — öbek içinde kımıldamaz', async () => {
+    kur([
+      { stage: 'Çekirdek', label: 'A' },
+      { label: 'B' },
+      { stage: 'Takoz', label: 'C' }
+    ]);
+    baslat();
+    await ilerlet(10);
+    const ilk = bolum().belir;
+    expect(['a', 'b']).toContain(ilk);
+    await ilerlet(200);            // öbek içinde bir modül ilerledi
+    expect(bolum().belir).toBe(ilk);
+    await ilerlet(200);            // öbek değişti → animasyon adı değişir, bir kez oynar
+    expect(bolum().no).toBe('II');
+    expect(bolum().belir).not.toBe(ilk);
+  });
+
+  test('yükleme bitince etiket "✓ Hazır", cetvel tam, modüller GERÇEKTEN çalıştı', async () => {
     kur([
       { stage: 'Çekirdek', label: 'Tema motoru' },
       { label: 'Ayarlar paneli' },
@@ -464,24 +548,16 @@ describe('aşama listesi', () => {
     ]);
     baslat();
     await ilerlet(10);
-
-    // Başlangıç: ilk öbek etkin, hiçbiri bitmemiş
-    expect(satirOzeti()[0].isaret).toBe('›');
-    expect(satirOzeti()[0].sinif).toContain('is-active');
-    expect(satirOzeti()[1].isaret).toBe('·');
-
-    // İlk iki modül (STEP_DELAY_MS = 150 her adım)
+    expect(bolum()).toMatchObject({ no: 'I', ad: 'Çekirdek' });
     await ilerlet(400);
-    expect(satirOzeti()[0]).toMatchObject({ isaret: '✓', sayi: '2/2' });
-    expect(satirOzeti()[0].sinif).toContain('is-done');
-    expect(satirOzeti()[1].isaret).toBe('›');
+    expect(bolum()).toMatchObject({ no: 'II', ad: 'FEAD' });
 
     // Üçüncü modül + minimum toplam süre + kapanış
     await ilerlet(8000);
-    expect(satirOzeti().map((r) => r.isaret)).toEqual(['✓', '✓']);
-    expect(document.getElementById('mfsim-loading-percent').textContent).toBe('%100');
+    expect(bolum()).toMatchObject({ no: '✓', ad: 'Hazır' });
+    expect(cetvel().aria).toBe('100');
     expect(document.getElementById('mfsim-loading-message').textContent).toBe('Tamamlandı');
-    // Satır içi modüller GERÇEKTEN çalıştı — liste süslemesi değil
+    // Satır içi modüller GERÇEKTEN çalıştı — etiket süslemesi değil
     expect(window.__yuklendi).toBe(3);
   });
 
@@ -513,20 +589,29 @@ describe('atlanan modül', () => {
     const uyari = document.getElementById('mfsim-loading-skips');
     expect(uyari.hidden).toBe(true);
 
-    // MODULE_TIMEOUT_MS = 15000 — askıda kalan kaynak bu sürede atlanır
-    await ilerlet(16000);
+    // Askıdaki kaynak: öbek etkin ama henüz işaretsiz
+    await ilerlet(15000);
+    expect(uyari.hidden).toBe(true);
+    expect(bolum()).toMatchObject({ no: 'II', ad: 'Takoz' });
+    expect(bolum().sinif).not.toContain('is-atlandi');
+
+    // MODULE_TIMEOUT_MS = 15000 — iki adımdan (2 × 150 ms) sonra başlayan
+    // bekleme 15 300'de dolar, kaynak atlanır; sıradaki modül 150 ms sonra
+    await ilerlet(350);
     expect(uyari.hidden).toBe(false);
     expect(uyari.textContent).toContain('3D kütüphanesi');
     expect(uyari.textContent).toContain('konsol');
 
-    // Atlanan modülün öbeği "tamam" görünümüne YÜKSELMEZ
-    const takoz = satirOzeti()[1];
-    expect(takoz.sinif).toContain('has-skip');
-    expect(takoz.isaret).toBe('!');
+    // Öbek sürdüğü sürece etiketi de işaretli (rakam kehribar)
+    expect(bolum()).toMatchObject({ no: 'II', ad: 'Takoz' });
+    expect(bolum().sinif).toContain('is-atlandi');
 
-    // ...ama uygulama yine açılır: kalan modüller yüklendi, ilerleme %100
+    // ...ama uygulama yine açılır: kalan modüller yüklendi, cetvel tam.
+    // Kalıcı iz uyarı satırı: öbek geçince etiket de geçti.
     await ilerlet(8000);
-    expect(document.getElementById('mfsim-loading-percent').textContent).toBe('%100');
+    expect(cetvel().aria).toBe('100');
+    expect(bolum().sinif).not.toContain('is-atlandi');
+    expect(uyari.hidden).toBe(false);
     expect(window.__yuklendi).toBe(2);
   });
 

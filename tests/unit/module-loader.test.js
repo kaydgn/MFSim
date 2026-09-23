@@ -282,9 +282,11 @@ describe('KABUK VE KURALLAR', () => {
     expect(IDX).toContain('js/module-loader.js');
   });
 
-  test('AÇILIŞ EKRANININ DİLİ — kendi sınıfları kullanılıyor', () => {
-    // Üçüncü bir pencere dili kurmanın karşılığı yok: panel, kademe çubuğu ve
-    // öbek listesi açılış ekranının sınıflarının AYNISI.
+  test('AİLENİN DİLİ — .mfsim-loading-* sınıfları kullanılıyor', () => {
+    // Üçüncü bir pencere dili kurmanın karşılığı yok: panel (karşılama
+    // kartının ikizi), kademe çubuğu ve öbek listesi .mfsim-loading-*
+    // ailesinin sınıfları. Açılış ekranı 2026-09-23'te kartsız amblemine
+    // geçti; kartlı panel bu ekranda yaşıyor.
     ['mfsim-loading-panel', 'mfsim-loading-stages', 'mfsim-loading-bar',
      'mfsim-loading-bar-notches', 'mfsim-loading-sep'].forEach((c) => {
       expect(IDX).toContain('class="' + c + '"');
