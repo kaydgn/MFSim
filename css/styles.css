@@ -8749,6 +8749,11 @@ span.ve-fw-ro{ display:inline-block; }
 }
 .ve-fp-liste li + li{ margin-top:4px; }
 .ve-fp-liste b{ color:var(--text-heading); font-weight:600; }
+/* Açıklama notunun üst payı bilerek eksi (−3 px, üstündeki ALANA yaslanır);
+   bir listenin ardında not listeye yapışıyordu (sihirbazın Adımlar sekmesi,
+   ekran görüntüsünde görüldü). Pay yalnız bu komşulukta — liste kartın son
+   elemanıyken (modül kartının Kayış Sırası) fazladan boşluk doğmasın. */
+.ve-fp-liste + .ve-fead-not{ margin-top:9px; }
 .ve-fp-durum-not{ margin-top:8px; font-size:var(--fs-tiny); color:var(--text-muted); }
 .ve-fp-durum-not:empty{ display:none; }
 .ve-fp-inp--alan{ resize:vertical; min-height:64px; line-height:1.45; }
