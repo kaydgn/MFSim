@@ -336,7 +336,7 @@ Bir turda `npm test`'i beş kez koşturmak 8 dakika demek; aynı işi
 ```bash
 npm run test:fead     # ya da :arac · :takoz — döngü boyunca
 npm run hazir         # build + tam test — commit'ten ÖNCE, TEK SEFER
-npm run test:urun     # üç ürün spec'i (CI'nın e2e işi) — UI kabuğuna dokunduysan
+npm run test:urun     # CI'nın e2e-urun işinin KENDİSİ — UI kabuğuna dokunduysan
 ```
 
 Mutasyon testleri de modül testiyle koşar; tam testle değil.
@@ -475,7 +475,7 @@ npm run test:fead           # ★ FEAD modülü — 20 sn (tam testin yerine, D�
 npm run test:arac           # Araç Performans — 46 sn
 npm run test:takoz          # Takoz — 8 sn
 npm run hazir               # ★ build + tam test — COMMIT ÖNCESİ tek komut
-npm run test:urun           # üç ürün spec'i (CI'nın e2e-urun işinin aynısı)
+npm run test:urun           # CI'nın e2e-urun işinin kendisi (liste package.json'da)
 npm test                    # tüm birim testleri (sessiz) — 96 sn
 npm run test:ci             # tüm birim testleri (--verbose --ci) — CI logları için
 npm run build               # MFSim_Code.html üret (modüler → monolitik) — commit/deploy öncesi
@@ -594,7 +594,7 @@ npm test          # tüm birim testleri
 ```
 
 1. `npm run build` + `npm test` **ikisi de yeşil** olmadan commit YOK.
-2. UI kabuğuna dokunduysan üç ürün spec'ini de yerelde koştur (aşağıda).
+2. UI kabuğuna dokunduysan `npm run test:urun`u yerelde koştur (aşağıda).
 3. Commit → `git push -u origin <dal>` → PR aç → **MERGE ET.**
 4. Merge'den sonra koşuya bir kez bak. Kırmızıysa ileri doğru düzelt.
 5. **ARTIFACT HAZIRLA** — aşağıdaki kural.
@@ -641,15 +641,21 @@ CI'daki `test` işi **tam olarak** şunu koşuyor (`.github/workflows/ci-deploy.
 Yani `npm test` yeşilse o iş **kesinlikle** yeşil. Onu beklemek, bilinen bir
 sonucu iki buçuk dakika daha beklemektir.
 
-Geriye yalnız `e2e-urun` kalıyor ve o da üç ÜRÜN spec'i:
+Geriye yalnız `e2e-urun` kalıyor ve o işin koştuğu şey **`npm run test:urun`**:
 
 ```bash
-npx playwright test tests/e2e/published.spec.js tests/e2e/viewer.spec.js \
-    tests/e2e/can-cozumleyici.spec.js      # ~2 dk · MFSIM_CHROMIUM gerekli
+npm run test:urun      # ~6–7 dk · MFSIM_CHROMIUM gerekli · spec listesi package.json'da
 ```
+
+**Spec listesi BURAYA YAZILMAZ** — `package.json` tek kaynak. Elle yazılmış
+üç dosyalık liste yedi dosyalık betiğin altında kaldı; `e2e-urun` beş
+birleşme boyunca fark edilmeden kırmızıydı ve `deploy` atlandı (#977–#981).
 
 Yerelde koşturmak bir CI turundan hızlı. **Ürün kabuğuna dokunan bir turda
 koştur; dokunmayan turda ne koştur ne bekle.**
+
+**Bir sonraki turun İLK işi önceki birleşmenin koşu SONUCUNU okumaktır** —
+kuyruktaki bir koşuya "bir kez bakmak" sonucu göstermez.
 
 ### VE ASLA `sleep` DÖNGÜSÜYLE BEKLEME
 
