@@ -19,6 +19,10 @@
  * kullanıcı: "pencere sınırları hizasız" — ve karşılamaya özel kural gereksiz
  * kaldı. Tuvalin kenara yapışıklığı artık kabuk-sutun.spec.js'te.)
  *
+ * 2026-09-23'ten beri açılışta KART YOK (AMBLEM): ölçülen şey amblemin sol
+ * kenarı — karşılama kartı onun yerinde, aynı kenarda beliriyor ve marka
+ * kartın logosuna içeriden iniyor.
+ *
  * Node'da koşamaz: jsdom yerleşim hesaplamaz, `getBoundingClientRect` hep 0.
  */
 const { test, expect } = require('@playwright/test');
@@ -37,16 +41,16 @@ const kutu = (sel) => {
   return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) };
 };
 
-test('karşılama fotoğrafı TAM KENAR ve kartı açılış kartıyla AYNI yerde', async ({ page }) => {
+test('karşılama fotoğrafı TAM KENAR ve kartı amblemin kenarında', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   await page.goto('file://' + BUILD);
   await page.fill('#mfsim-login-password', 'mfsim2024');
   await page.press('#mfsim-login-password', 'Enter');
   // AÇILIŞ EKRANI — yükleme sürerken ölç
-  await page.waitForSelector('#mfsim-loading-screen .mfsim-loading-panel', { state: 'visible', timeout: 30000 });
+  await page.waitForSelector('#mfsim-loading-screen .mfsim-amblem', { state: 'visible', timeout: 30000 });
   const acilis = {
     foto: await page.evaluate(kutu, '#mfsim-loading-photo'),
-    kart: await page.evaluate(kutu, '#mfsim-loading-screen .mfsim-loading-panel'),
+    amblem: await page.evaluate(kutu, '#mfsim-loading-screen .mfsim-amblem'),
   };
   await page.waitForSelector('#mfsim-loading-screen', { state: 'hidden', timeout: 90000 });
   await page.waitForTimeout(800);
@@ -58,10 +62,9 @@ test('karşılama fotoğrafı TAM KENAR ve kartı açılış kartıyla AYNI yerd
   // Fotoğraf ekranın TAMAMI — çerçeve yok
   expect(karsilama.foto).toEqual({ x: 0, y: 0, w: 1600, h: 900 });
   expect(karsilama.foto).toEqual(acilis.foto);
-  // Kart açılış kartının ÜSTÜNE oturuyor: sol kenar ve genişlik ÇİZİMDE aynı
-  // (yükseklik içeriğe göre değişir; o bilerek farklı)
-  expect(karsilama.kart.x).toBe(acilis.kart.x);
-  expect(karsilama.kart.w).toBe(acilis.kart.w);
+  // Kart amblemin SOL KENARINDA beliriyor — ÇİZİMDE aynı x
+  // (genişlik ve yükseklik bilerek farklı: amblem bir kart değil)
+  expect(karsilama.kart.x).toBe(acilis.amblem.x);
 
   // Köşe de yok: kaplamanın kabı yuvarlatılmış olsaydı fotoğraf köşeden kırpılırdı
   const kose = await page.evaluate(() => getComputedStyle(document.querySelector('.ve-canvas-wrapper')).borderTopLeftRadius);

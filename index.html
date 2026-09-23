@@ -53,54 +53,56 @@
 <body>
 
 <!-- ═══ LOADING SCREEN (login sonrasi modul yuklenirken gosterilir) ═══
-     SAHNE: acilis, karsilama ekraninin KENDISIYLE basliyor. Ayni fotograf
-     (ayni kare), ayni yerde duran ayni buzlu cam kart (.ve-welcome-id'nin
-     ikizi: left 56px, dikey ortali, clamp(320px,29%,380px)). Yukleme bitince
-     fotograf KIMILDAMIYOR, kart yerinden OYNAMIYOR — yalniz kartin govdesi
-     asama listesinden modul listesine doniyor.
+     AMBLEM (kullanıcı seçimi, 2026-09-23): kart YOK. Fotoğraf tam ekran; sol
+     yarıyı temanın ZEMİNİNDEN türeyen bir perde okunur kılıyor ve üstünde
+     büyük marka duruyor — çark, "MFSim", künye, 12 bölmeli cetvel, o anki
+     bölüm, o anki modül. Yüzde YOK: ilerlemeyi cetvel söylüyor.
 
-     Eskiden bu kart ekranin ORTASINDA 410 px'lik opak bir kutuydu ve
-     karsilama tam-en fotografa gecince iki ekran ayri kusaga dusmustu.
+     DEVİR TESLİM: fotoğraf karşılamanın O ANKİ karesi, yani kımıldamıyor.
+     Marka karşılama kartının logosuna KÜÇÜLEREK uçuyor (js/components.js ›
+     veWelcomeAdoptSplashLogo) — aynı aile, aynı ağırlık, aynı em-iz; yalnız
+     boy farklı, bu yüzden ölçek tam oran ve iniş karesinde sıçrama yok.
 
-     Modul etiketleri tek tek akmiyor: yukleme sirasindaki obekler
-     gosteriliyor (bkz. data-mfsim-stage isaretleri). Listeyi js/loader.js
-     DOM'dan turetir — burada bos durur, sayi yazili degil.
+     Öbekler (data-mfsim-stage) tek tek listelenmiyor: yalnız O ANKİ öbek
+     Roma rakamıyla yazılıyor. Cetveli ve öbek etiketini js/loader.js
+     DOM'dan kurar — burada boş durur, sayı yazılı değil.
 
-     KIMLIKLER SABIT: #mfsim-loading-screen 19 E2E beklemesinde geciyor,
-     #mfsim-loading-bar / -percent / -message js/loader.js'teki ELS
-     haritasindan okunuyor. Ic yapi serbest, bu dort kimlik degil. -->
+     KİMLİKLER SABİT: #mfsim-loading-screen 19 E2E beklemesinde geçiyor;
+     geri kalanı js/loader.js'teki ELS haritasından okunuyor ve kapısı
+     tests/unit/loader-splash.test.js. -->
 <div id="mfsim-loading-screen" class="mfsim-loading-screen">
   <!-- Karsilama slaytinin O ANKI karesi, ILK KAREDEN itibaren. Bos kalirsa
        (kare yok) ekran kagit zeminde durur — bkz. js/loader.js › paintPhoto. -->
   <div id="mfsim-loading-photo" class="mfsim-loading-photo" aria-hidden="true"></div>
-  <div class="mfsim-loading-panel">
-    <div class="mfsim-loading-hero">
-      <div class="mfsim-loading-logo"><span id="mfsim-loading-logo-ico" class="mf-ico mf-ico-settings mfsim-loading-logo-ico"></span><span>MFSim</span></div>
-      <div class="mfsim-loading-subtitle">Araç Performans Simülasyon Yazılımı</div>
+  <div class="mfsim-amblem-perde" aria-hidden="true"></div>
+  <div class="mfsim-amblem">
+    <span id="mfsim-loading-logo-ico" class="mf-ico mf-ico-settings mfsim-loading-logo-ico" aria-hidden="true"></span>
+    <!-- Cetvel ADIN genişliğinde: kap içeriğine göre daralıyor, cetvel ona
+         yayılıyor — genişlik bir sayı değil bir ilişki. -->
+    <div class="mfsim-amblem-kunye">
+      <div class="mfsim-loading-logo mfsim-amblem-ad"><span>MFSim</span></div>
+      <div class="mfsim-amblem-alt">Araç Performans Simülasyon Yazılımı</div>
+      <div id="mfsim-loading-cetvel" class="mfsim-amblem-cetvel" role="progressbar"
+           aria-label="Program yükleniyor" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
     </div>
-    <div class="mfsim-loading-sep"></div>
-    <ul id="mfsim-loading-stages" class="mfsim-loading-stages"></ul>
+    <div id="mfsim-loading-bolum" class="mfsim-amblem-bolum"><span class="mfsim-amblem-no"></span><span class="mfsim-amblem-bolum-ad"></span></div>
+    <div id="mfsim-loading-message" class="mfsim-amblem-mesaj">Başlatılıyor...</div>
     <div id="mfsim-loading-skips" class="mfsim-loading-skips" hidden></div>
-    <div id="mfsim-loading-message" class="mfsim-loading-message">Başlatılıyor...</div>
-    <div class="mfsim-loading-bar-wrap">
-      <div id="mfsim-loading-bar" class="mfsim-loading-bar"></div>
-      <!-- Dolgunun ustundeki kesikler; kademe sayisi CSS jetonundan gelir. -->
-      <div class="mfsim-loading-bar-notches" aria-hidden="true"></div>
-    </div>
-    <div class="mfsim-loading-meta">
-      <div id="mfsim-loading-tip" class="mfsim-loading-tip"></div>
-      <div id="mfsim-loading-percent" class="mfsim-loading-percent">%0</div>
-    </div>
+  </div>
+  <div class="mfsim-amblem-dip">
+    <div id="mfsim-loading-tip" class="mfsim-amblem-ipucu"></div>
     <div id="mfsim-loading-stamp" class="mfsim-loading-stamp"></div>
   </div>
 </div>
 
 <!-- ═══ MODÜL GİRİŞ EKRANI ═══
      Karşılama kartına tıklayınca modülün İÇİNE kadar götüren geçiş.
-     SINIFLAR AÇILIŞ EKRANININ KENDİ SINIFLARI (.mfsim-loading-*): aynı panel
-     konumu, aynı kademe çubuğu, aynı öbek listesi — üçüncü bir pencere dili
-     kurmanın karşılığı yok. Yalnız .mfsim-module-loading yeni; o da fotoğrafsız
-     zemini ve iniş/çıkış koreografisini ekliyor.
+     SINIFLAR .mfsim-loading-* AİLESİ: panel karşılama kartının (.ve-welcome-id)
+     ikizi, kademe çubuğu ve öbek listesi — üçüncü bir pencere dili kurmanın
+     karşılığı yok. Açılış ekranı 2026-09-23'te kartsız AMBLEM'e geçti; bu ekran
+     KARTLI kaldı, çünkü karşılama kartından doğuyor ve onun yerinde beliriyor.
+     Yalnız .mfsim-module-loading yeni; o da fotoğrafsız zemini ve iniş/çıkış
+     koreografisini ekliyor.
      Gövdeyi js/module-loader.js dolduruyor; buradaki kimlikler sabit. -->
 <div id="mfsim-module-loading" class="mfsim-loading-screen mfsim-module-loading"
      style="display:none;" aria-hidden="true">

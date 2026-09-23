@@ -66,15 +66,15 @@
 // isaretlenmis tum modulleri sirayla yukler, splash overlay'inde ilerlemeyi
 // gosterir, bitince karsilama ekranina erir.
 //
-// NE GOSTERILIR: 91 modul adi tek tek akmiyordu — hicbiri okunacak kadar
-// durmuyor, ama hepsi okunmayi bekliyormus gibi duruyordu. Artik yukleme
-// sirasindaki YEDI OBEK duruyor (Cekirdek, Araç Performans, Takoz, FEAD,
-// Kilavuzlar, Yapisal Analiz, Araclar & olcum) ve her birinin yaninda kacinci
-// modulde olundugu yaziyor; o anki modulun tam adi listenin altinda ayri bir
-// satirda kaliyor. Obek sinirlari index.html'de yalnizca YEDI script'e konan
-// `data-mfsim-stage` ozniteliginden okunuyor: bir sonraki isarete kadar gelen
-// her script ayni obege sayilir. Yani script'lerin yeri degistiginde ya da
-// yenisi eklendiginde burada guncellenecek bir SAYI YOK.
+// NE GOSTERILIR (AMBLEM, 2026-09-23): liste de yuzde de yok. Ilerlemeyi
+// 12 bolmeli CETVEL gosteriyor, altinda yalniz O ANKI OBEK Roma rakamiyla
+// (I CEKIRDEK, II ARAC PERFORMANS...) ve o anki modulun tam adi. Eskiden
+// obeklerin hepsi sayaclariyla alt alta duruyordu; hicbiri okunmuyor ama
+// hepsi okunmayi bekliyormus gibi duruyordu. Obek sinirlari index.html'de
+// yalnizca birkac script'e konan `data-mfsim-stage` ozniteliginden okunuyor:
+// bir sonraki isarete kadar gelen her script ayni obege sayilir. Yani
+// script'lerin yeri degistiginde ya da yenisi eklendiginde burada
+// guncellenecek bir SAYI YOK.
 //
 // Hem dev mode (index.html, external src) hem monolitik build (inline icerik)
 // ile calisir. Inline tag'ler textContent kopyalanarak yeniden olusturulur;
@@ -105,11 +105,10 @@
   var ELS = {
     splash: 'mfsim-loading-screen',
     ico: 'mfsim-loading-logo-ico',
-    bar: 'mfsim-loading-bar',
-    pct: 'mfsim-loading-percent',
+    cetvel: 'mfsim-loading-cetvel',
+    bolum: 'mfsim-loading-bolum',
     msg: 'mfsim-loading-message',
     photo: 'mfsim-loading-photo',
-    stages: 'mfsim-loading-stages',
     skips: 'mfsim-loading-skips',
     tip: 'mfsim-loading-tip',
     stamp: 'mfsim-loading-stamp',
@@ -125,9 +124,9 @@
     return /Mac|iPhone|iPad|iPod/.test(ua) ? '⌘' : 'Ctrl';
   })();
 
-  // KISA TUTULUYOR: satir tek satirlik ve yuzde gostergesiyle ayni sirada —
-  // olculdu, ~46 karakterden uzun ipucu kartin icinde kirpiliyor ve yarim
-  // cumle kalan bir ipucu hic olmamasindan kotu.
+  // KISA TUTULUYOR: dipte tek satir. Uzun ipucu kirpilir ve yarim cumle
+  // kalan bir ipucu hic olmamasindan kotu (kart doneminde olculdu: ~46
+  // karakterden uzunu kirpiliyordu).
   var TIPS = [
     MOD + '+K — komut paleti',
     '? — klavye kısayolları penceresi',
@@ -202,7 +201,7 @@
 
   // ── Asama modeli ─────────────────────────────────────────────────────────
   // Sinir isareti tasiyan script yeni bir obek baslatir; isaretsizler bir
-  // oncekine yazilir. Hic isaret yoksa tek bir obek olusur — liste bos kalmaz.
+  // oncekine yazilir. Hic isaret yoksa tek bir obek olusur — etiket bos kalmaz.
   function buildStages(placeholders) {
     var list = [];
     var of = [];
@@ -211,64 +210,72 @@
       var ad = placeholders[i].getAttribute
         ? placeholders[i].getAttribute('data-mfsim-stage') : null;
       if (ad || !cur) {
-        cur = { ad: ad || 'Modüller', total: 0, done: 0, skipped: 0 };
+        cur = { ad: ad || 'Modüller', skipped: 0 };
         list.push(cur);
       }
-      cur.total++;
       of.push(list.length - 1);
     }
     return { list: list, of: of };
   }
 
-  function renderStages(stages) {
-    var host = $(ELS.stages);
-    if (!host) return;
-    host.innerHTML = '';
-    for (var i = 0; i < stages.length; i++) {
-      var li = document.createElement('li');
-      li.className = 'mfsim-loading-stage';
-      var mk = document.createElement('span');
-      mk.className = 'mfsim-loading-stage-mk';
-      mk.textContent = '·';
-      var nm = document.createElement('span');
-      nm.className = 'mfsim-loading-stage-nm';
+  // Obegin sira numarasi, Roma rakamiyla: 1 → I. Obek sayisi index.html'den
+  // gelir ve sabit degil; tablo 39'a kadar dogru yazar, bugun alti obek var.
+  function roma(n) {
+    var T = [[10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']];
+    var s = '';
+    for (var i = 0; i < T.length; i++) {
+      while (n >= T[i][0]) { s += T[i][1]; n -= T[i][0]; }
+    }
+    return s;
+  }
+
+  // ── O anki obek ──────────────────────────────────────────────────────────
+  // Yalniz obek DEGISINCE yazilir ve bir kez belirir: animasyon adi a ↔ b
+  // gidip geliyor (CSS: iki ozdes @keyframes), tarayici ad degisimini yeni
+  // bir animasyon sayar — yeniden baslatmak icin reflow zorlamak gerekmiyor.
+  // i < 0: yukleme bitti, etiket "✓ Hazır".
+  var sonBolum = null;
+  function paintBolum(stages, i) {
+    var el = $(ELS.bolum);
+    if (!el) return;
+    var hazir = !(i >= 0 && i < stages.length);
+    var anahtar = hazir ? 'hazir' : String(i);
+    if (anahtar !== sonBolum) {
+      sonBolum = anahtar;
+      var no = el.children[0], ad = el.children[1];
+      if (no) no.textContent = hazir ? '✓' : roma(i + 1);
       // textContent: obek adi index.html'den geliyor ve '&' icerebiliyor
-      // ("Araclar & olcum"). innerHTML ile yazilsa kacislanmasi gerekirdi.
-      nm.textContent = stages[i].ad;
-      var ct = document.createElement('span');
-      ct.className = 'mfsim-loading-stage-ct';
-      ct.textContent = '0/' + stages[i].total;
-      li.appendChild(mk); li.appendChild(nm); li.appendChild(ct);
-      host.appendChild(li);
+      // ("Araçlar & ölçüm"). innerHTML ile yazilsa kacislanmasi gerekirdi.
+      if (ad) ad.textContent = hazir ? 'Hazır' : stages[i].ad;
+      el.setAttribute('data-belir', el.getAttribute('data-belir') === 'a' ? 'b' : 'a');
+    }
+    // Atlanan modul barindiran obek: rakam kehribara doner (CSS: .is-atlandi).
+    el.classList.toggle('is-atlandi', !hazir && stages[i].skipped > 0);
+  }
+
+  // ── Cetvel ───────────────────────────────────────────────────────────────
+  // Kademe basina bir bolme; SAYISI CSS jetonundan (kademeSayisi) — izgara da
+  // ayni jetonla cizildigi icin bolme sayisi ile sutun sayisi ayrisamaz.
+  function renderCetvel() {
+    var el = $(ELS.cetvel);
+    if (!el) return;
+    el.innerHTML = '';
+    for (var i = 0, K = kademeSayisi(); i < K; i++) {
+      el.appendChild(document.createElement('span'));
     }
   }
 
-  function paintStages(stages, activeIdx) {
-    var host = $(ELS.stages);
-    if (!host) return;
-    for (var i = 0; i < stages.length && i < host.children.length; i++) {
-      var st = stages[i];
-      var row = host.children[i];
-      var bitti = st.done >= st.total;
-      var aktif = (i === activeIdx) && !bitti;
-      var cls = 'mfsim-loading-stage' +
-        (bitti ? ' is-done' : (aktif ? ' is-active' : '')) +
-        (st.skipped ? ' has-skip' : '');
-      // Obek YENI bittiyse isaret yerine oturur (CSS: .is-tick). Bir kez —
-      // bayrak obekte durdugu icin sonraki boyamalar vurusu tekrarlamaz.
-      if (bitti && !st.tiklendi) {
-        st.tiklendi = true;
-        cls += ' is-tick';
-        (function(el) {
-          setTimeout(function() { el.classList.remove('is-tick'); }, 260);
-        })(row);
-      } else if (row.className.indexOf('is-tick') > -1) {
-        cls += ' is-tick';       // suren vurusu yeniden boyama EZMESIN
-      }
-      row.className = cls;
-      row.children[0].textContent = st.skipped ? '!' : (bitti ? '✓' : (aktif ? '›' : '·'));
-      row.children[2].textContent = st.done + '/' + st.total;
+  // k: gecilen kademe. Son gecilen bolme VURGU tasir (ilerlemenin ucu);
+  // yukleme bitince ucu kalmaz, hepsi ayni renge oturur. Yuzde GORUNMUYOR,
+  // yardimci teknolojiye aria-valuenow ile soyleniyor.
+  function paintCetvel(k, K) {
+    var el = $(ELS.cetvel);
+    if (!el) return;
+    for (var i = 0; i < el.children.length; i++) {
+      el.children[i].className = (i < k)
+        ? ((i === k - 1 && k < K) ? 'is-gecti is-son' : 'is-gecti') : '';
     }
+    el.setAttribute('aria-valuenow', String(K > 0 ? Math.round((k / K) * 100) : 0));
   }
 
   // ── Atlanan modul ────────────────────────────────────────────────────────
@@ -371,9 +378,9 @@
   // gecisler ust uste binince goz sürekli bir KAYMA goruyordu. 12 kademede
   // adim %8,3 / ~1,1 sn — yedi kat buyuk, yedi kat seyrek.
   //
-  // KADEME SAYISI CSS'TEN OKUNUR (--mfsim-kademe): cubugun centikleri de ayni
+  // KADEME SAYISI CSS'TEN OKUNUR (--mfsim-kademe): cetvelin izgarasi da ayni
   // jetondan cizildigi icin sayi iki yerde yazili olsaydi sessizce ayrisir ve
-  // dolgu centikle HIZALANMAZDI. Jeton okunamazsa tasarim degerine duser.
+  // bolmeler sutunlara oturmazdi. Jeton okunamazsa tasarim degerine duser.
   function kademeSayisi() {
     var K = NaN;
     try {
@@ -396,20 +403,13 @@
 
   function setProgress(done, total, label) {
     var K = kademeSayisi();
-    var q = K > 0 ? kademe(done, total) / K : 0;
-    var pct = Math.round(q * 100);
-    var bar = $(ELS.bar);
-    var pctEl = $(ELS.pct);
+    var k = K > 0 ? kademe(done, total) : 0;
+    var q = K > 0 ? k / K : 0;
     var msg = $(ELS.msg);
     var ico = $(ELS.ico);
-    // GENISLIK yuvarlanmis yuzdeden DEGIL q'dan: %8,3'lik bir kademede
-    // yuvarlanmis 8 yazilsa dolgu centigin 0,3 punto gerisinde kalirdi.
-    if (bar) bar.style.width = (q * 100).toFixed(3) + '%';
+    paintCetvel(k, K);
     // Disli de ayni tempoda: kademe basina bir centik, yukleme boyunca TAM TUR.
     if (ico) ico.style.transform = 'rotate(' + (q * 360).toFixed(1) + 'deg)';
-    // Türkçe yüzde biçimi: işaret sayının önünde (%42) — durum çubuğundaki
-    // zoom göstergesiyle (%100) aynı dil.
-    if (pctEl) pctEl.textContent = '%' + pct;
     if (label && msg) msg.textContent = label;
   }
 
@@ -498,7 +498,7 @@
 
   function finalize(total, stages) {
     setProgress(total, total, 'Son hazırlıklar...');
-    paintStages(stages, -1);
+    paintBolum(stages, -1);
     // Moduller bitti — kuyruktaki DOMContentLoaded handler'larini calistir
     flushDomReady();
     // Minimum toplam sureyi bekle — gercek is daha hizliysa fark kadar
@@ -527,16 +527,17 @@
     var stageOf = stageInfo.of;
     var skips = [];
     var sonKademe = -1;          // etiket yalniz kademe degisince yazilir
-    renderStages(stages);
+    renderCetvel();
 
     if (total === 0) {
       setProgress(1, 1, 'Hazır');
+      paintBolum(stages, -1);
       setTimeout(hideSplash, 250);
       return;
     }
 
     setProgress(0, total, 'Modüller hazırlanıyor...');
-    paintStages(stages, 0);
+    paintBolum(stages, 0);
 
     var idx = 0;
     function next() {
@@ -556,7 +557,7 @@
         var msg = $(ELS.msg);
         if (msg) msg.textContent = label;
       }
-      paintStages(stages, si);
+      paintBolum(stages, si);
       // Her adim arasi kucuk gecikme — ilerleme gozle takip edilebilsin.
       setTimeout(function() {
         loadOne(ph).then(function(atlandi) {
@@ -565,10 +566,11 @@
             skips.push(label || (ph.src || '').split('/').pop() || 'bilinmeyen modül');
             paintSkips(skips);
           }
-          stages[si].done++;
           idx++;
           setProgress(idx, total);
-          paintStages(stages, stageOf[idx]);
+          // Son modul bittiyse etiket finalize'da "Hazır"a doner; o ana kadar
+          // atlanan modulun obegi isaretli kalsin diye burada da boyanir.
+          paintBolum(stages, idx < total ? stageOf[idx] : si);
           next();
         });
       }, STEP_DELAY_MS);

@@ -1811,28 +1811,115 @@ function veWelcomeFlyToNode(kartEl, nodeEl, kaynakRect) {
   }, _veWelcomeDur('--dur-fast', 120) + 30);
 }
 
-var _veWelcomeSplashKlon = null;
+var _veWelcomeSplashKlon = [];
 var _veWelcomeSplashGizli = [];
 
 // Marka devamlılığı temizliği: iki yoldan da (onfinish + emniyet zamanlayıcısı)
 // çağrılabilir, idempotenttir. Hiç çağrılmazsa karşılama MARKASIZ kalırdı.
 function _veWelcomeSplashRestore() {
-  if(_veWelcomeSplashKlon && _veWelcomeSplashKlon.parentNode) {
-    _veWelcomeSplashKlon.parentNode.removeChild(_veWelcomeSplashKlon);
-  }
-  _veWelcomeSplashKlon = null;
+  _veWelcomeSplashKlon.forEach(function(k) { if(k && k.parentNode) k.parentNode.removeChild(k); });
+  _veWelcomeSplashKlon = [];
   _veWelcomeSplashGizli.forEach(function(el) { if(el && el.style) el.style.visibility = ''; });
   _veWelcomeSplashGizli = [];
 }
 
-// Yükleme markası → karşılama markası. js/loader.js hideSplash içinden, splash
-// SÖNMEDEN önce çağırır; klon body'de yaşar (splash 340 ms'de display:none
-// olur, uçuş ondan uzun sürer). Ölçek 1: iki logonun yazı metriği BİREBİR aynı,
-// yalnız ikon kutusu farklı — klon hedef ikon ölçüsüyle doğar; dikdörtgen
-// oranından türetilen bir ölçek yazıyı büyütüp inişte sıçratırdı.
+// Açılış elemanının body'de yaşayan kopyası, kaynağın ekrandaki kutusunda.
+// Kutu AÇIKÇA yazılır: yazının kopya içindeki yeri kaynaktakiyle aynı kalsın
+// (uçuşun hesabı o ofsete dayanıyor).
+function _veWelcomeSplashKopya(el, r) {
+  var k = el.cloneNode(true);
+  k.removeAttribute('id');
+  k.setAttribute('aria-hidden', 'true');
+  k.style.position = 'fixed';
+  k.style.left = r.left + 'px';
+  k.style.top = r.top + 'px';
+  k.style.width = r.width + 'px';
+  k.style.height = r.height + 'px';
+  k.style.margin = '0';
+  k.style.transformOrigin = '0 0';
+  k.style.pointerEvents = 'none';
+  k.style.zIndex = 'calc(var(--z-boot) + 2)';  // splash'ın (boot+1) üstünde; bant jetondan
+  return k;
+}
+
+// Uçuş planı: kaynak ve hedef ÖLÇÜLÜR, hiçbir şey kıpırdatılmaz. Karşılamanın
+// giriş koreografisi BAŞLAMADAN çağrılmalı — koreografi kartı translateX(-16px)
+// ve logoyu translateY(14px)'ten başlatıyor; sonra ölçülen hedef, logonun
+// DURACAĞI yer değil o anki yeri olurdu.
+//
+// ÖLÇEK TAM ORAN: açılış markası --fs-amblem, karşılama logosu --fs-h2 ile
+// çiziliyor; aile, ağırlık ve em-iz AYNI (başlık bağlaması). Yani küçültülmüş
+// açılış markası logonun kendisi — oran boylardan okunur, kutulardan değil
+// (kutu yuvarlanmış px taşır). Dikey hiza yazı kutularının ORTASINDAN:
+// satır yüksekliği iki yerde farklı ama boşluk simetrik, orta nokta ile taban
+// çizgisi arasındaki mesafe boyla orantılı — ortalar örtüşünce taban
+// çizgileri de örtüşür.
+function _veWelcomeSplashPlan(splashEl) {
+  var ad = (typeof splashEl.querySelector === 'function')
+    ? splashEl.querySelector('.mfsim-loading-logo') : null;
+  var hedef = (typeof document.querySelector === 'function')
+    ? document.querySelector('.ve-welcome-logo') : null;
+  if(!ad || !hedef) return null;
+  if(_veWelcomeReducedMotion() || typeof ad.animate !== 'function') return null;
+  var yazi = ad.lastElementChild || ad, hYazi = hedef.lastElementChild || hedef;
+  var S = ad.getBoundingClientRect(), Y = yazi.getBoundingClientRect(), T = hYazi.getBoundingClientRect();
+  if(!S.width || !S.height || !T.width || !T.height) return null;   // ölçü yok → sessizce çık
+  var fs = parseFloat(getComputedStyle(ad).fontSize), ft = parseFloat(getComputedStyle(hedef).fontSize);
+  if(!(fs > 0) || !(ft > 0)) return null;
+  var o = ft / fs;
+  var plan = {
+    gizle: [ad, hedef],
+    ucanlar: [{
+      el: ad, r: S, olcek: o,
+      dx: T.left - S.left - (Y.left - S.left) * o,
+      dy: (T.top + T.height / 2) - S.top - ((Y.top - S.top) + Y.height / 2) * o,
+      // Hale yalnız fotoğrafın üstünde anlamlı; kartın camına iniyor.
+      hale: getComputedStyle(ad).textShadow
+    }]
+  };
+  // Çark AYRI uçar: açılışta adın ÜSTÜNDE, karşılamada SOLUNDA duruyor.
+  var cark = splashEl.querySelector('.mfsim-loading-logo-ico');
+  var hCark = hedef.querySelector('.ve-welcome-logo-ico');
+  var C = cark ? cark.getBoundingClientRect() : null, H = hCark ? hCark.getBoundingClientRect() : null;
+  if(C && H && C.width && H.width) {
+    plan.gizle.push(cark);
+    plan.ucanlar.push({ el: cark, r: C, olcek: H.width / C.width, dx: H.left - C.left, dy: H.top - C.top });
+  }
+  return plan;
+}
+
+function _veWelcomeSplashUc(plan) {
+  var sure = 520;                                // splash 340 ms'de gider; uçuş ondan uzun yaşar
+  var sonAnim = null;
+  plan.ucanlar.forEach(function(u) {
+    var klon = _veWelcomeSplashKopya(u.el, u.r);
+    document.body.appendChild(klon);
+    _veWelcomeSplashKlon.push(klon);
+    var bas = { transform: 'translate(0px, 0px) scale(1)' };
+    var son = { transform: 'translate(' + u.dx + 'px, ' + u.dy + 'px) scale(' + u.olcek + ')' };
+    if(u.hale && u.hale !== 'none') { bas.textShadow = u.hale; son.textShadow = 'none'; }
+    try {
+      sonAnim = klon.animate([bas, son],
+        { duration: sure, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' });
+    } catch(e) {}
+  });
+  // İki marka aynı pikselde durmasın (amblem 160 ms daha görünür).
+  // visibility — display:none satırı toplar, hedef dikdörtgeni geçersizleşirdi.
+  plan.gizle.forEach(function(el) {
+    if(el && el.style) { el.style.visibility = 'hidden'; _veWelcomeSplashGizli.push(el); }
+  });
+  if(sonAnim) sonAnim.onfinish = _veWelcomeSplashRestore;
+  setTimeout(_veWelcomeSplashRestore, sure + 60);  // olay gelmezse marka geri gelsin
+}
+
+// Açılış markası → karşılama markası. js/loader.js hideSplash içinden, splash
+// SÖNMEDEN önce çağırır; klonlar body'de yaşar (splash 340 ms'de display:none
+// olur, uçuş ondan uzun sürer). Açılışta marka BÜYÜK (amblem), karşılamada
+// kartın logosu: ad ve çark ayrı ayrı küçülerek yerine iner.
 function veWelcomeAdoptSplashLogo(splashEl) {
   if(typeof document === 'undefined' || !splashEl) return;
   _veWelcomeSplashRestore();                     // ikinci çağrı: önceki uçuşu topla
+  var plan = _veWelcomeSplashPlan(splashEl);     // koreografiden ÖNCE ölç
   veWelcomeEnterReplay();                        // koreografi splash sönerken başlar
   // SLAYT DEVİR TESLİMDE BAŞLAR. Zamanlayıcı 11 sn'de bir kare değiştiriyor,
   // yükleme ise ~13 sn sürüyor: slayt perdenin ARKASINDA ilerliyor ve perde
@@ -1842,49 +1929,7 @@ function veWelcomeAdoptSplashLogo(splashEl) {
   // kullanıcı kareyi GÖRDÜĞÜ andan itibaren sayılır. İlk kare geçişsiz açıldığı
   // için yeniden kurulum gözle görülmüyor.
   if(typeof veWelcomeSlaytBaslat === 'function') veWelcomeSlaytBaslat();
-  var kaynak = (typeof splashEl.querySelector === 'function')
-    ? splashEl.querySelector('.mfsim-loading-logo') : null;
-  var hedef = (typeof document.querySelector === 'function')
-    ? document.querySelector('.ve-welcome-logo') : null;
-  if(!kaynak || !hedef) return;
-  if(_veWelcomeReducedMotion() || typeof kaynak.animate !== 'function') return;
-  var s = kaynak.getBoundingClientRect(), t = hedef.getBoundingClientRect();
-  if(!s.width || !s.height || !t.width || !t.height) return;   // ölçü yok → sessizce çık
-  var klon = kaynak.cloneNode(true);
-  klon.removeAttribute('id');
-  klon.setAttribute('aria-hidden', 'true');
-  klon.style.position = 'fixed';
-  klon.style.left = s.left + 'px';
-  klon.style.top = s.top + 'px';
-  klon.style.margin = '0';
-  klon.style.transformOrigin = '0 0';
-  klon.style.pointerEvents = 'none';
-  klon.style.zIndex = 'calc(var(--z-boot) + 2)'; // splash'ın (boot+1) üstünde; bant jetondan
-  var ico = klon.querySelector('.mf-ico');
-  if(ico) {
-    ico.style.animation = 'none';                // dönen dişli klonda 0°'den başlardı
-    ico.style.width = '1.15em';                  // hedef logonun ikon kutusu
-    ico.style.height = '1.15em';
-  }
-  document.body.appendChild(klon);
-  _veWelcomeSplashKlon = klon;
-  // İki marka aynı pikselde durmasın (splash paneli 160 ms daha görünür).
-  // visibility — display:none satırı toplar, hedef dikdörtgeni geçersizleşirdi.
-  [kaynak, hedef].forEach(function(el) {
-    if(el && el.style) { el.style.visibility = 'hidden'; _veWelcomeSplashGizli.push(el); }
-  });
-  var dx = t.left - s.left;
-  var dy = (t.top + t.height / 2) - (s.top + s.height / 2);
-  var sure = 520;                                // splash 340 ms'de gider; uçuş ondan uzun yaşar
-  var anim = null;
-  try {
-    anim = klon.animate([
-      { transform: 'translate(0px, 0px)' },
-      { transform: 'translate(' + dx + 'px, ' + dy + 'px)' }
-    ], { duration: sure, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' });
-  } catch(e) {}
-  if(anim) anim.onfinish = _veWelcomeSplashRestore;
-  setTimeout(_veWelcomeSplashRestore, sure + 60);  // olay gelmezse marka geri gelsin
+  if(plan) _veWelcomeSplashUc(plan);
 }
 // Loader tek bir global ad biliyor; eval ile yüklenen kapsamlarda da bulunsun.
 if(typeof window !== 'undefined') window.veWelcomeAdoptSplashLogo = veWelcomeAdoptSplashLogo;

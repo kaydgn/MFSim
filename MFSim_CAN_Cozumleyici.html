@@ -449,6 +449,7 @@
       --fs-h1:      1.5rem;     /* 24px — karşılama başlığı */
       --fs-display: 2rem;       /* 32px — açılış/marka */
       --fs-hero:    2.5rem;     /* 40px — açılış logosu */
+      --fs-amblem:  5rem;       /* 80px — açılış amblemi (marka); logoya --fs-h2'ye küçülerek iner */
       --leading-tight: 1.25;
       --leading-normal: 1.5;
       --tracking-wide: 0.04em;
@@ -842,12 +843,16 @@
     }
 
     /* ===== YUKLEME EKRANI (SPLASH / LOADING SCREEN) =====
-       SAHNE — acilis, karsilama ekraninin KENDISIYLE basliyor:
-         • ayni fotograf, ayni kare (js/loader.js › paintPhoto secer,
-           js/components.js › _veSlaytKarilmis slayti o kareyle baslatir);
-         • ayni buzlu cam kart, .ve-welcome-id'nin BIREBIR geometrisinde.
-       Kapanista fotograf kimildamiyor, kart yerinden oynamiyor — yalniz
-       kartin govdesi degisiyor.
+       AMBLEM (kullanıcı seçimi, 2026-09-23): kart YOK. Açılış, karşılama
+       ekranının FOTOĞRAFIYLA başlıyor (aynı kare: js/loader.js › paintPhoto
+       seçer, js/components.js › _veSlaytKarilmis slaytı o kareyle başlatır);
+       sol yarıyı temanın zemininden türeyen bir perde okunur kılıyor ve
+       üstünde büyük marka duruyor. Kapanışta fotoğraf kımıldamıyor, marka
+       karşılama kartının logosuna küçülerek uçuyor.
+
+       .mfsim-loading-screen İKİ EKRANIN ORTAK KABUĞU: açılış (amblem) ve
+       modül giriş ekranı (kartlı panel, aşağıda). Zemin, fotoğraf ve kâğıt
+       burada; ikisinin içi ayrı.
 
        Kare bulunamazsa (bos klasor / liste yuklenmemis) fotograf katmani bos
        kalir ve asagidaki KAGIT zemin gorunur; o zemin de karsilamanin zemini
@@ -860,9 +865,9 @@
       overflow:hidden;         /* fotograf kaydirma cubugu dogurmasin */
       font-family:var(--font-sans);
       opacity:1;               /* INSTANT goster — fade yalniz hide icin */
-      /* PADDING YOK: panel mutlak konumlu ve `left:56px` PADDING KUTUSUNA gore
-         olculur — 24px'lik bir pay kartin karsilama kartindan 24px kaymasina
-         yeterdi ve devir teslimde kart yerinden oynardi. */
+      /* PADDING YOK: amblem ve panel mutlak konumlu ve `left:56px` PADDING
+         KUTUSUNA gore olculur — 24px'lik bir pay karsilama kartindan 24px
+         kaymaya yeterdi. */
       /* Taban: color-mix desteklenmezse bu gecerli kalir (karsilama ile ayni kalip) */
       background:
         var(--paper-grain),
@@ -891,19 +896,201 @@
       opacity:0;
       pointer-events:none;
     }
-    /* Kart zeminden ONCE erir: karsilama karti TAM OLARAK ayni yerde durdugu
-       icin goz "kart kayboldu" degil "kartin ici degisti" gorur. Kayma YOK —
-       eski translateY(-4px) kart ortadayken devir teslimi yumusatiyordu, ikiz
-       geometride ise kartin 4 px zipladigi anlamina gelir. */
-    .mfsim-loading-screen.mfsim-fading-out .mfsim-loading-panel{
+
+    /* ── AMBLEM ───────────────────────────────────────────────────────────
+       Perde TEMANIN ZEMİNİNDEN türüyor (--bg-primary), bir karartıcıdan
+       değil: açık temada kâğıt rengi bir sis, koyu temada gece; yazı her iki
+       temada da kendi zemininin üstünde. Tema-nötr siyah bir perde açık
+       temada koyu yazıyı koyu zemine oturturdu — kapısı loader-splash.test.js.
+       Fotoğraf yoksa perde de yok: kâğıdın üstünde ikinci bir kâğıt olurdu.
+       Duraklar yüzde AMA px TABANLI: yalnız yüzde olsaydı dar pencerede perde
+       amblemden önce biterdi (ölçüldü: 1000 px'te künye %40'lık, 390 px'te
+       çıplak fotoğrafın üstündeydi). Taban 1600 px'teki değerlerin aynısı —
+       geniş ekranda hiçbir şey değişmiyor. */
+    .mfsim-amblem-perde{
+      position:absolute; inset:0;
+      pointer-events:none;
+      background:
+        linear-gradient(90deg,
+          color-mix(in srgb, var(--bg-primary) 90%, transparent) 0,
+          color-mix(in srgb, var(--bg-primary) 74%, transparent) max(20%, 320px),
+          color-mix(in srgb, var(--bg-primary) 30%, transparent) max(37%, 592px),
+          transparent max(54%, 864px)),
+        linear-gradient(0deg,
+          color-mix(in srgb, var(--bg-primary) 60%, transparent) 0,
+          transparent 22%);
+    }
+    .mfsim-loading-screen:not(.mfsim-has-photo) .mfsim-amblem-perde{ display:none; }
+    /* Blok karşılama kartının SOL KENARINDA (left:56px) ve dikey ortada —
+       ortalama MARJLA, kartın aynı kalıbı. Yazının halesi zeminden: fotoğrafın
+       parlak bir yeri harfin kenarını yemesin. */
+    .mfsim-amblem{
+      position:absolute;
+      left:56px;
+      top:0; bottom:0; height:fit-content;
+      margin-top:auto; margin-bottom:auto;
+      display:flex; flex-direction:column; align-items:flex-start;
+      color:var(--text-heading);
+      text-shadow:0 0 18px color-mix(in srgb, var(--bg-primary) 60%, transparent);
+    }
+    /* Dişli SÜREKLİ DÖNMÜYOR: her kademede bir çentik dönüp duruyor
+       (js/loader.js › setProgress). Yükleme boyunca toplam TAM BİR TUR atar —
+       bu yüzden devir teslim anında (%100) dişli hep dik durur ve karşılama
+       logosuna uçarken bir sıçrama olmaz. Boyu markanın boyundan türer. */
+    .mfsim-loading-logo-ico{
+      display:block;
+      width:calc(var(--fs-amblem) * 0.3); height:calc(var(--fs-amblem) * 0.3);
+      color:var(--accent-primary);
+      transition:transform var(--mfsim-kademe-sure) var(--mfsim-kademe-egri);
+    }
+    /* Ad + künye + cetvel TEK KAP: kap içeriği kadar geniş (fit-content),
+       cetvel ona yayılıyor. Cetvelin boyu bir sayı değil, ADIN genişliği. */
+    .mfsim-amblem-kunye{
+      display:flex; flex-direction:column; align-items:flex-start;
+    }
+    /* MARKA: karşılama logosuyla AYNI aile, AYNI ağırlık, AYNI em-iz (başlık
+       bağlamasından); yalnız boy farklı. Uçuşta ölçek bu yüzden tam oran
+       (--fs-h2 / --fs-amblem) ve iniş karesinde klon logonun BİREBİR üstüne
+       oturuyor — kapısı tests/e2e/marka-tutarli.spec.js. Burada ağırlık ya
+       da iz yazmak o uçuşu inişte "genleyen" bir markaya çevirirdi.
+       Sol pay optik: M'nin gövdesi çarkın çizgisiyle aynı dikeyde dursun. */
+    .mfsim-loading-logo.mfsim-amblem-ad{
+      margin-top:calc(var(--fs-amblem) * 0.16);
+      margin-left:calc(var(--fs-amblem) * -0.044);
+      font-size:var(--fs-amblem);
+      line-height:0.86;
+    }
+    /* Künye adın genişliğinde biter: iz, --fs-lg'deki satırı adın mürekkep
+       kenarına oturtuyor (ölçüldü: izsiz 27 px kısa kalıyordu). */
+    .mfsim-amblem-alt{
+      margin-top:calc(var(--fs-amblem) * 0.2);
+      font-size:var(--fs-lg);
+      font-weight:500;
+      letter-spacing:0.062em;
+      color:var(--text-secondary);
+      white-space:nowrap;
+    }
+    /* Cetvel: kademe başına bir bölme — sayısı --mfsim-kademe'den, yani
+       yükleyicinin okuduğu jetonun AYNISI. Geçilen bölme yazının rengi, son
+       geçilen VURGU (ilerlemenin ucu), gelecek bölme yazının %20'si. */
+    .mfsim-amblem-cetvel{
+      align-self:stretch;
+      display:grid;
+      grid-template-columns:repeat(var(--mfsim-kademe), minmax(0, 1fr));
+      gap:4px;
+      margin-top:calc(var(--fs-amblem) * 0.34);
+    }
+    .mfsim-amblem-cetvel > span{
+      height:2px;
+      background-color:color-mix(in srgb, var(--text-heading) 20%, transparent);
+      transition:background-color var(--mfsim-kademe-sure) var(--mfsim-kademe-egri);
+    }
+    .mfsim-amblem-cetvel > span.is-gecti{ background-color:var(--text-heading); }
+    .mfsim-amblem-cetvel > span.is-gecti.is-son{ background-color:var(--accent-primary); }
+    /* O ANKİ ÖBEK: Roma rakamı + ad. Öbek değişince bir kez belirir — iki
+       özdeş animasyon arasında GİDİP GELİYOR: ad değişince tarayıcı onu yeni
+       bir animasyon sayıyor, yeniden başlatmak için reflow zorlamak gerekmiyor
+       (js/loader.js › paintBolum). */
+    .mfsim-amblem-bolum{
+      margin-top:14px;
+      min-height:15px;
+      display:flex; align-items:baseline; gap:12px;
+      font-size:var(--fs-body);
+      font-weight:600;
+      letter-spacing:0.22em;
+      text-transform:uppercase;
+    }
+    .mfsim-amblem-bolum[data-belir="a"]{ animation:mfsim-belir-a 520ms var(--ease-out); }
+    .mfsim-amblem-bolum[data-belir="b"]{ animation:mfsim-belir-b 520ms var(--ease-out); }
+    @keyframes mfsim-belir-a{
+      from{ opacity:0; transform:translateY(5px); }
+      to{ opacity:1; transform:none; }
+    }
+    @keyframes mfsim-belir-b{
+      from{ opacity:0; transform:translateY(5px); }
+      to{ opacity:1; transform:none; }
+    }
+    .mfsim-amblem-no{ min-width:22px; color:var(--ink-accent); }
+    /* Atlanan modül barındıran öbek: rakam kehribara döner. Kalıcı iz
+       aşağıdaki uyarı satırıdır — öbek geçince etiket de geçiyor. */
+    .mfsim-amblem-bolum.is-atlandi .mfsim-amblem-no{ color:var(--ink-warning); }
+    /* KIRPILAN SATIRDA HALE YOK: `overflow:hidden` haleyi kutunun kenarında
+       keser ve koyu temada yazının arkasında köşeli koyu bir dikdörtgen kalır
+       (ölçüldü; açık temada hale zeminle aynı renk olduğu için görünmüyordu).
+       Satır zaten perdenin en koyu yerinde. */
+    .mfsim-amblem-mesaj{
+      margin-top:8px;
+      min-height:16px;
+      max-width:min(380px, calc(100vw - 112px));
+      font-size:var(--fs-md);
+      color:var(--text-secondary);
+      text-shadow:none;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+
+    /* ── Atlanan modul uyarisi ────────────────────────────────────────────
+       Bir modul zaman asimina ugrar ya da yuklenemezse loader onu ATLAR ve
+       uygulama acilir. Eskiden bu yalniz konsola yazilirdi: kullanici eksik
+       bir programla calismaya devam ederdi. Artik acilista gorunur. */
+    .mfsim-loading-skips{
+      margin-top:12px;
+      max-width:min(380px, calc(100vw - 112px));
+      padding:6px 9px;
+      border-left:2px solid var(--accent-warning);
+      background:color-mix(in srgb, var(--accent-warning) 10%, transparent);
+      font-size:var(--fs-tiny);
+      line-height:1.5;
+      color:var(--ink-warning);
+      text-shadow:none;
+    }
+
+    /* Dip: ipucu + sürüm künyesi, amblemle aynı sol kenarda. */
+    .mfsim-amblem-dip{
+      position:absolute;
+      left:56px; bottom:32px;
+      max-width:calc(100% - 112px);
+      display:flex; flex-direction:column; gap:5px;
+      font-size:var(--fs-tiny);
+      letter-spacing:0.3px;
+      color:var(--text-muted);
+      text-shadow:0 0 12px color-mix(in srgb, var(--bg-primary) 70%, transparent);
+    }
+    .mfsim-amblem-ipucu{
+      text-shadow:none;          /* kırpılan satır — bkz. .mfsim-amblem-mesaj */
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      transition:opacity var(--dur-slow) var(--ease-out);
+    }
+    .mfsim-amblem-ipucu.is-swapping{ opacity:0; }
+    /* Surum kunyesi: hangi kopyanin acildigi PROGRAM ACILMADAN gorunur.
+       Modüler index.html'de window.__MFSIM_BUILD yoktur → eleman bos kalir ve
+       :empty ile hic yer kaplamaz. */
+    .mfsim-loading-stamp{
+      font-size:var(--fs-micro);
+      font-weight:500;
+      letter-spacing:0.08em;
+      font-variant-numeric:tabular-nums;
+    }
+    .mfsim-loading-stamp:empty{ display:none; }
+
+    /* Kapanış: amblem zeminden ÖNCE erir; marka ve çark o an klonlarıyla
+       değişmiş oluyor ve karşılama logosuna uçuyor. Kayma YOK — hareket eden
+       tek şey uçan marka. */
+    .mfsim-loading-screen.mfsim-fading-out .mfsim-amblem,
+    .mfsim-loading-screen.mfsim-fading-out .mfsim-amblem-dip{
       transition:opacity 0.16s var(--ease-out);
       opacity:0;
     }
+    @media (max-width:640px){
+      .mfsim-amblem,
+      .mfsim-amblem-dip{ left:24px; }
+    }
 
-    /* .ve-welcome-id ILE AYNI GEOMETRI. Bu bir benzetme degil kopya: iki kart
-       ust uste erirken 1 px'lik fark bile "kart yerinden oynadi" olarak
-       goruluyor. Oradaki bir deger degisirse burasi da degisir —
-       tests/unit/loader-splash.test.js ikisini bagliyor. */
+    /* ── MODÜL GİRİŞ PANELİ ───────────────────────────────────────────────
+       .ve-welcome-id ILE AYNI GEOMETRI. Bu bir benzetme degil kopya: panel
+       tıklanan karşılama kartının YERİNDE beliriyor ve 1 px'lik fark bile
+       "kart yerinden oynadı" olarak goruluyor. Oradaki bir deger degisirse
+       burasi da degisir — tests/unit/loader-splash.test.js ikisini bagliyor.
+       (Açılış ekranı 2026-09-23'e kadar bu paneli kullanıyordu.) */
     .mfsim-loading-panel{
       position:absolute;
       left:56px;
@@ -924,8 +1111,8 @@
       box-shadow:var(--karsilama-kart-golge);
     }
     /* Hero de karsilamanin ikizi: logo SOLA yasli, punto --fs-h2, ikon kutusu
-       1.15em. Metrik ayrisirsa js/components.js › veWelcomeAdoptSplashLogo'nun
-       ucusu gorunur bir sicramaya doner (orada olcek 1 varsayiliyor). */
+       sabit. Açılış markası da bu sınıfı taşıyor (başlık bağlaması onu
+       buradan buluyor); boyu yukarıda .mfsim-amblem-ad ezer. */
     .mfsim-loading-logo{
       display:flex;
       align-items:center;
@@ -933,16 +1120,6 @@
       font-size:var(--fs-h2); font-weight:700;
       color:var(--text-heading);
       /* tracking başlık bağlamasından (-0.01em) */
-    }
-    /* Dişli SÜREKLİ DÖNMÜYOR: her kademede bir çentik dönüp duruyor
-       (js/loader.js › setProgress). Yükleme boyunca toplam TAM BİR TUR atar —
-       bu yüzden devir teslim anında (%100) dişli hep dik durur ve karşılama
-       logosuna uçarken bir sıçrama olmaz. Eski 4,5 sn'lik sürekli dönüş
-       yüklemeden habersizdi: program donsa da dönmeye devam ederdi. */
-    .mfsim-loading-logo-ico{
-      width:1.15em; height:1.15em;
-      color:var(--accent-primary);
-      transition:transform var(--mfsim-kademe-sure) var(--mfsim-kademe-egri);
     }
     .mfsim-loading-subtitle{
       margin-top:5px;
@@ -957,10 +1134,9 @@
       margin:14px 0 12px;
     }
 
-    /* ── Asama listesi ────────────────────────────────────────────────────
-       91 modul adi tek tek akmiyor; yukleme sirasindaki yedi obek duruyor ve
-       icinde kacinci modulde olundugu sayiyla goruluyor. Isaret sutunu sabit
-       genislikte (14px) — asamalar bittikce ad kaymaz. */
+    /* ── Adım listesi ─────────────────────────────────────────────────────
+       Modül giriş ekranının adımları (js/module-loader.js). İşaret sütunu
+       sabit genişlikte (14px) — adımlar bittikçe ad kaymaz. */
     .mfsim-loading-stages{
       list-style:none; margin:0; padding:0;
       font-size:var(--fs-md);
@@ -977,45 +1153,11 @@
     .mfsim-loading-stage-mk{
       text-align:center;
       font-size:var(--fs-body);
-      display:inline-block;      /* scale uygulanabilsin */
-    }
-    /* Öbek YENİ bittiğinde işaret yerine oturur — tek vuruş, 220 ms. Bir
-       öbeğin bitmesi altı kez olan GERÇEK bir olay; hareket onu söylüyor. */
-    .mfsim-loading-stage.is-tick .mfsim-loading-stage-mk{
-      animation:mfsim-loading-tik 220ms var(--mfsim-kademe-egri);
-    }
-    @keyframes mfsim-loading-tik{
-      0%   { transform:scale(0.4); }
-      55%  { transform:scale(1.22); }
-      100% { transform:scale(1); }
-    }
-    .mfsim-loading-stage-ct{
-      font-size:var(--fs-tiny);
-      font-variant-numeric:tabular-nums;
-      letter-spacing:0.3px;
     }
     .mfsim-loading-stage.is-done{ color:var(--text-secondary); }
     .mfsim-loading-stage.is-done .mfsim-loading-stage-mk{ color:var(--accent-success); }
     .mfsim-loading-stage.is-active{ color:var(--text-heading); }
-    .mfsim-loading-stage.is-active .mfsim-loading-stage-mk,
-    .mfsim-loading-stage.is-active .mfsim-loading-stage-ct{ color:var(--accent-primary); }
-    /* Atlanan modul barindiran asama: isaret kehribara doner ve OYLE KALIR —
-       asama "tamam" gorunumune yukselmez. */
-    .mfsim-loading-stage.has-skip .mfsim-loading-stage-mk{ color:var(--accent-warning); }
-
-    /* ── Atlanan modul uyarisi ────────────────────────────────────────────
-       Bir modul zaman asimina ugrar ya da yuklenemezse loader onu ATLAR ve
-       uygulama acilir. Eskiden bu yalniz konsola yazilirdi: kullanici eksik
-       bir programla calismaya devam ederdi. Artik acilista gorunur. */
-    .mfsim-loading-skips{
-      margin-top:10px;
-      padding:6px 9px;
-      border-left:2px solid var(--accent-warning);
-      background:color-mix(in srgb, var(--accent-warning) 10%, transparent);
-      font-size:var(--fs-tiny);
-      line-height:1.5;
-      color:var(--ink-warning);
-    }
+    .mfsim-loading-stage.is-active .mfsim-loading-stage-mk{ color:var(--accent-primary); }
 
     .mfsim-loading-message{
       margin-top:12px;
@@ -1066,9 +1208,7 @@
       flex:1; min-width:0;
       color:var(--text-muted);
       overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-      transition:opacity var(--dur-slow) var(--ease-out);
     }
-    .mfsim-loading-tip.is-swapping{ opacity:0; }
     .mfsim-loading-percent{
       color:var(--accent-primary);
       font-weight:600;
@@ -1076,20 +1216,6 @@
       min-width:40px;
       text-align:right;
     }
-    /* Surum kunyesi: hangi kopyanin acildigi PROGRAM ACILMADAN gorunur.
-       Modüler index.html'de window.__MFSIM_BUILD yoktur → eleman bos kalir ve
-       :empty ile hic yer kaplamaz. */
-    .mfsim-loading-stamp{
-      margin-top:14px;
-      padding-top:10px;
-      border-top:1px solid var(--border-color);
-      font-size:var(--fs-micro);
-      letter-spacing:0.6px;
-      color:var(--text-muted);
-      text-align:right;
-      font-variant-numeric:tabular-nums;
-    }
-    .mfsim-loading-stamp:empty{ display:none; }
 
     /* Dar pencere: karsilama kartinin AYNI kurali — kart ortada asili bir
        sutun degil, TEPEDE genis bir bant (bkz. @media (max-width:1100px)
@@ -1105,20 +1231,19 @@
       }
     }
 
-    /* Hareket azaltma: donen disli, parildayan cubuk ve kapanis gecisi durur.
-       Ilerleme BILGISI kalir (sayi, doluluk, asama isaretleri) — kapatilan
-       yalniz suslemedir. */
+    /* Hareket azaltma: dişlinin çentiği, cetvelin geçişi, öbek etiketinin
+       belirişi ve kapanış geçişi durur. İlerleme BİLGİSİ kalır (cetvel,
+       öbek, modül adı) — kapatılan yalnız hareket. */
     @media (prefers-reduced-motion: reduce){
       .mfsim-loading-logo-ico{ transition:none; }
+      .mfsim-amblem-cetvel > span{ transition:none; }
+      .mfsim-amblem-bolum[data-belir]{ animation:none; }
+      .mfsim-amblem-ipucu{ transition:none; }
       .mfsim-loading-bar{ transition:none; }
-      .mfsim-loading-stage.is-tick .mfsim-loading-stage-mk{ animation:none; }
-      .mfsim-loading-tip{ transition:none; }
       .mfsim-loading-screen.mfsim-fading-out,
-      .mfsim-loading-screen.mfsim-fading-out .mfsim-loading-panel{
+      .mfsim-loading-screen.mfsim-fading-out .mfsim-amblem,
+      .mfsim-loading-screen.mfsim-fading-out .mfsim-amblem-dip{
         transition:none;
-      }
-      .mfsim-loading-screen.mfsim-fading-out .mfsim-loading-panel{
-        transform:none;
       }
     }
 
@@ -3004,16 +3129,14 @@ body.ve-chrome-enter .ve-doc-dock{
 /* Klondaki imleç ışığı kalkışta sıçrama üretir — sönük doğar. */
 .ve-welcome-flyer::before{ animation:none; opacity:0; }
 
-/* Marka devamlılığı: açılış logosunun body'ye taşınan kopyası. Splash'in
-   İÇİNDE değil (orada panelle birlikte 160 ms'de sönerdi), bu yüzden seçici
-   doğrudan gövde çocuğu. Konumu JS yazar; burada yalnız kopyanın HEDEF
-   ölçüsü ve durmuş çarkı var — dönen çark klonda 0°'den yeniden başlardı. */
-body > .mfsim-loading-logo{ pointer-events:none; }
-body > .mfsim-loading-logo .mfsim-loading-logo-ico{
-  width:1.15em;
-  height:1.15em;
-  animation:none;
-}
+/* Marka devamlılığı: açılış markasının (ad + çark) body'ye taşınan
+   kopyaları. Splash'in İÇİNDE değiller (orada amblemle birlikte 160 ms'de
+   sönerlerdi), bu yüzden seçici doğrudan gövde çocuğu. Konumu, boyu ve
+   uçuşu JS yazar (js/components.js › veWelcomeAdoptSplashLogo); burada
+   yalnız durmuş çark var — geçiş klonda yeniden koşmasın. */
+body > .mfsim-loading-logo,
+body > .mfsim-loading-logo-ico{ pointer-events:none; }
+body > .mfsim-loading-logo-ico{ transition:none; }
 
 /* Dar pencere: iki sütun üst üste. Sol panel bir başlık bandına dönüşür;
    açıklama metni ve boşluk kalkar, eylemler ve künye kalır. */

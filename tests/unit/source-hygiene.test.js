@@ -984,6 +984,13 @@ describe('pencere kabukları jeton konuşur', () => {
 // ve farkı yalnız SIRA belirliyordu. Kapı sırayı değil KURALI tutar: bağlamaya
 // giren bir eleman tracking'ini bağlamadan alır.
 //
+// BİLEŞİK SEÇİCİ DE SAYILIR (2026-09-23): açılış markası artık büyük
+// (`.mfsim-loading-logo.mfsim-amblem-ad`) ve boyunu bileşik bir seçiciden
+// alıyor. Kapı eskiden yalnız TAM eşleşen dalı tarıyordu; o kurala yazılacak
+// bir iz bağlamayı ezer, uçuşun ölçeğini bozar (inişte marka geniş ya da dar
+// kalır) ve kapıdan geçerdi. Dalın SON bileşiği bağlı sınıfı taşıyorsa o
+// dal bağlı elemanı seçiyor demektir.
+//
 // Gerçek tarayıcı karşılığı: `tests/e2e/marka-tutarli.spec.js`.
 describe('başlık bağlamasına giren eleman kendi tracking’ini yazmaz', () => {
   // Bağlama kuralı: seçici listesinde marka sınıfları VE tracking bildirimi
@@ -995,6 +1002,11 @@ describe('başlık bağlamasına giren eleman kendi tracking’ini yazmaz', () =
     expect(m).not.toBeNull();
     const bagli = m[1].split(',').map((s) => s.trim()).filter((s) => s.startsWith('.'));
     expect(bagli.length).toBeGreaterThanOrEqual(4);   // liste gerçekten okundu
+    const kacis = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const secer = (dal) => {
+      const son = dal.trim().split(/[\s>+~]+/).pop() || '';
+      return bagli.some((c) => new RegExp(kacis(c) + '(?![\\w-])').test(son));
+    };
 
     const kalan = [];
     const bas = /(?:^|[}\s;])([^{};@]*)\{/g;
@@ -1008,7 +1020,7 @@ describe('başlık bağlamasına giren eleman kendi tracking’ini yazmaz', () =
       if (!sel || sel.startsWith('@')) continue;
       if (sel === m[1].trim()) continue;   // bağlamanın kendisi
       sel.split(',').forEach((dal) => {
-        if (!bagli.includes(dal.trim())) return;
+        if (!secer(dal)) return;
         blok.split(';').forEach((dec) => {
           const k = dec.indexOf(':');
           if (k < 0) return;
