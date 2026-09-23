@@ -2409,7 +2409,7 @@ function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
     // Segment ismi
     var midX = (x1 + x2) / 2;
     ctx.fillStyle = 'rgba(128,128,128,0.6)';
-    ctx.font = '9px sans-serif';
+    ctx.font = veThemeFont(9);
     ctx.textAlign = 'center';
     var segLabel = segs[si].name || ('S' + (si + 1));
     if(segLabel.length > 10) segLabel = segLabel.substring(0, 9) + '…';
@@ -2462,7 +2462,7 @@ function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
 
   // Y ekseni etiketleri (irtifa)
   ctx.fillStyle = 'rgba(128,128,128,0.7)';
-  ctx.font = '9px sans-serif';
+  ctx.font = veThemeFont(9);
   ctx.textAlign = 'right';
   for(var ly = 0; ly <= 4; ly++) {
     var val = yMin + (1 - ly / 4) * yRange;

@@ -7,12 +7,15 @@
  * Serif 4), aynı boy (20px), saniyeler arayla. Devir teslimde marka
  * görünür biçimde geniyordu.
  *
- * Sebep bir renk tercihi değil KASKAD: display yüzü bağlaması
+ * Sebep bir renk tercihi değil KASKAD: başlık bağlaması
  * (`h1..h4, .mfsim-loading-logo, .ve-welcome-logo { letter-spacing:-0.01em }`)
  * ile üç elemanın kendi `letter-spacing:0.5px` bildirimi AYNI özgüllükte.
  * İkisinde bağlama SONRA geldiği için kazanıyordu (bildirim ölüydü),
  * `.ve-welcome-logo` ise bağlamadan sonra tanımlı olduğu için KAZANIYORDU.
  * `0.5px` eski SANS marka yazısından kalmaydı.
+ *
+ * 2026-09-23'ten beri marka serif değil — tek yüz, Inter. Kural aynen
+ * geçerli: yüz değişti, "iki ekranda aynı tracking" şartı değişmedi.
  *
  * Bu halka Node'da koşamaz: jsdom kaskadı çözmez, `letterSpacing`i
  * hesaplamaz ve metin genişliği ölçmez.
@@ -48,7 +51,7 @@ test('marka açılışta ve karşılamada AYNI tracking ile çiziliyor', async (
   });
 
   expect(karsilama).toEqual(acilis);                 // ÜÇÜ DE birebir
-  expect(acilis.yuz).toBe('Source Serif 4');         // display yüzü gerçekten yüklü
+  expect(acilis.yuz).toBe('Inter');                  // tek yüz — marka da gövdeyle aynı aile
   expect(acilis.ls).toBe('-0.2px');                  // = -0.01em × 20px, bağlamadan
 });
 

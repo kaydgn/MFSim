@@ -626,7 +626,7 @@ function veAccDrawChart(nodeId){
   var layout = {
     margin: { l: 52, r: 14, t: 8, b: 40 },
     paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
-    font: { family: 'system-ui, -apple-system, sans-serif', size: 10, color: txt },
+    font: { family: veThemeFontFamily(), size: 10, color: txt },
     xaxis: { title: { text: 'Motor devri [rpm]', font: { size: 10.5, color: txt } }, gridcolor: grid, zeroline: false, linecolor: grid, tickfont: { size: 9, color: txt } },
     yaxis: { title: { text: 'Çekilen güç [kW]', font: { size: 10.5, color: txt } }, gridcolor: grid, zeroline: false, rangemode: 'tozero', linecolor: grid, tickfont: { size: 9, color: txt } },
     showlegend: false, hovermode: 'closest',

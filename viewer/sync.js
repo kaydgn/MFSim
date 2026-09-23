@@ -128,6 +128,13 @@ function buildTraceView() {
 var CARRIED = [
   { fn: 'veThemeRgba', from: 'js/theme.js', to: 'viewer/js/theme.js', kip: 'birebir',
     neden: 'canvas CSS değişkeni çözemiyor; köprü fonksiyon' },
+  // Tek yüz (2026-09-23): tuvalin `font`u da `var()` çözemiyor. trace-view.js
+  // iki programda da bu köprüyü çağırıyor — kopyalar ayrışırsa grafikler bir
+  // programda Inter'le, ötekinde yedek yüzle çizilir.
+  { fn: 'veThemeFontFamily', from: 'js/theme.js', to: 'viewer/js/theme.js', kip: 'birebir',
+    neden: 'tuval yazı yüzü köprüsü — aile' },
+  { fn: 'veThemeFont', from: 'js/theme.js', to: 'viewer/js/theme.js', kip: 'birebir',
+    neden: 'tuval yazı yüzü köprüsü — font kısaltması' },
 
   // board.js'e elden taşınmış olanlar (2026-08 ölçümü: 28 üst-seviye
   // fonksiyonun 28'i de js/ altında AYNI ADLA duruyor; bunların 8'i bayt bayt

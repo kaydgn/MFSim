@@ -68,8 +68,8 @@ var VE_TR = {
   NAME_DOT_GAP: 5,
   BADGE_H: 14,        // imleç değer rozetinin yüksekliği
   BADGE_GAP: 2,       // iki rozet arası en az boşluk (0 olsa kenarlar birleşir)
-  AXIS_H: 30,         // alttaki sabit zaman ekseni canvas'ının yüksekliği
-  FONT: '-apple-system,system-ui,Segoe UI,sans-serif'
+  AXIS_H: 30          // alttaki sabit zaman ekseni canvas'ının yüksekliği
+  // FONT kalktı (2026-09-23): yüz tek kaynaktan, `veThemeFont` (theme.js).
 };
 
 // ── Saf çekirdek: kimlik ve uzlaştırma ───────────────────────────────────────
@@ -725,7 +725,7 @@ function veTrAxisLabelW(ctx, axis) {
 }
 
 function veTrGeometry(ctx, lanes, view, w, availH) {
-  ctx.font = '9.5px ' + VE_TR.FONT;
+  ctx.font = veThemeFont(9.5);
 
   // Oluk, EN ÇOK EKSENLİ şeridin sütun yığınını taşımak zorunda: eksenler
   // şerit başına değişse de plotX pano genelinde tektir (bütün şeritler aynı
@@ -759,7 +759,7 @@ function veTrGeometry(ctx, lanes, view, w, availH) {
   // yine de iki addır ve ad bloğu olmadan biri "+1" diye yutulurdu.
   var anyMulti = lanes.some(veTrLaneMerged);
 
-  ctx.font = '600 9px ' + VE_TR.FONT;
+  ctx.font = veThemeFont(9, 600);
   var nameW = 0;
   if(anyMulti) {
     lanes.forEach(function(lane) {
@@ -773,7 +773,7 @@ function veTrGeometry(ctx, lanes, view, w, availH) {
   // edemez. Sığmayan ad kırpılır (veTrFitTitle), sütunlar yerinde kalır.
   var blockW = anyMulti ? Math.min(nameW, VE_TR.NAME_MAX_W) : 0;
 
-  ctx.font = '9.5px ' + VE_TR.FONT;
+  ctx.font = veThemeFont(9.5);
   var maxStack = 0, maxAxes = 1;
   lanes.forEach(function(lane) {
     var axes = lane.axes || [lane];
@@ -1098,7 +1098,7 @@ function veTrDrawAxisNames(ctx, geo, lane, rect) {
     ? veThemeRgba('--text-muted', 0.9, 'rgba(140,148,160,0.9)') : 'rgba(140,148,160,0.9)';
 
   ctx.save();
-  ctx.font = '600 9px ' + VE_TR.FONT;
+  ctx.font = veThemeFont(9, 600);
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';
 
@@ -1153,7 +1153,7 @@ function veTrDrawLane(ctx, geo, lane, rect, idx, timeArr, xTicks) {
   // oluşur, hiçbiri hangi eksene ait olduğu anlaşılmadan okunurdu. Ötekiler
   // yalnızca kendi tik çentiklerini ve etiketlerini yazar; hangi eğriye ait
   // olduğu RENKTEN belli olur.
-  ctx.font = '9.5px ' + VE_TR.FONT;
+  ctx.font = veThemeFont(9.5);
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'right';
 
@@ -1251,7 +1251,7 @@ function veTrDrawLane(ctx, geo, lane, rect, idx, timeArr, xTicks) {
     var g0 = lane.sigs[0];
     var e = veTrExtent(g0.series);
     if(e) {
-      ctx.font = '9px ' + VE_TR.FONT;
+      ctx.font = veThemeFont(9);
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = g0.color;
@@ -1292,7 +1292,7 @@ function veTrDrawLane(ctx, geo, lane, rect, idx, timeArr, xTicks) {
     ctx.save();
     ctx.translate(tx, y0 + ph / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.font = '600 9.5px ' + VE_TR.FONT;
+    ctx.font = veThemeFont(9.5, 600);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = lane.color;
@@ -1304,7 +1304,7 @@ function veTrDrawLane(ctx, geo, lane, rect, idx, timeArr, xTicks) {
 
   // Veri yoksa şerit boş kalmasın: neden boş olduğunu söylesin
   if(!lane.hasData) {
-    ctx.font = '10px ' + VE_TR.FONT;
+    ctx.font = veThemeFont(10);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = 'rgba(128,128,128,0.75)';
     ctx.fillText('veri yok — önce çözümü çalıştırın', x0 + pw / 2, y0 + ph / 2);
@@ -1312,7 +1312,7 @@ function veTrDrawLane(ctx, geo, lane, rect, idx, timeArr, xTicks) {
 
   // Kilit rozeti (elle Y sınırı)
   if(lane.locked) {
-    ctx.font = '8.5px ' + VE_TR.FONT;
+    ctx.font = veThemeFont(8.5);
     ctx.textAlign = 'right'; ctx.textBaseline = 'top';
     ctx.fillStyle = lane.color;
     ctx.globalAlpha = 0.8;
@@ -1392,10 +1392,10 @@ function veTrDrawAxis(geo, tick, axisName) {
 
   // Eksen adı sağ uçta — CANoe'da "[s]" burada durur. ÖNCE ölçülür: son bölme
   // etiketi adın altına girerse ikisi üst üste binip okunmaz oluyordu.
-  ctx.font = '600 10px ' + VE_TR.FONT;
+  ctx.font = veThemeFont(10, 600);
   var nameLeft = w - 4 - ctx.measureText(axisName).width - 8;
 
-  ctx.font = '10px ' + VE_TR.FONT;
+  ctx.font = veThemeFont(10);
   ctx.fillStyle = 'rgba(140,140,155,0.95)';
   ctx.strokeStyle = 'rgba(140,140,155,0.6)';
   ctx.textAlign = 'center';
@@ -1414,7 +1414,7 @@ function veTrDrawAxis(geo, tick, axisName) {
 
   ctx.textAlign = 'right';
   ctx.fillStyle = 'rgba(140,140,155,0.95)';
-  ctx.font = '600 10px ' + VE_TR.FONT;
+  ctx.font = veThemeFont(10, 600);
   ctx.fillText(axisName, w - 4, 7);
 
   // İşaret çubuğu (marker bar): sabitlenmiş imlecin yeri
@@ -1488,7 +1488,7 @@ function veTrDrawOverlay() {
   if(i < 0) return;
   var pi = (veTrState.pinX != null) ? veTrSnapIndex(timeArr, veTrState.pinX) : -1;
 
-  ctx.font = '10px ' + VE_TR.FONT;
+  ctx.font = veThemeFont(10);
   ctx.textBaseline = 'middle';
 
   lanes.forEach(function(lane, li) {
@@ -1846,7 +1846,7 @@ function veTrDrawMarks(ctx, geo, lanes) {
   var bot = last.y + last.h;
 
   ctx.save();
-  ctx.font = '9px ' + VE_TR.FONT;
+  ctx.font = veThemeFont(9);
   ctx.textBaseline = 'middle';
 
   // ── Dikey (x) işaretler: tüm şeritleri boydan boya keser ──

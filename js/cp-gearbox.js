@@ -163,7 +163,7 @@ function getShiftControllerPropertiesHTML(node) {
   html += '</tbody></table>';
   
   // Shift mantığı kuralları
-  html += '<div style="background:var(--bg-input); border-radius:var(--radius-sm); padding:8px 10px; margin-bottom:8px; border:1px solid var(--border-color); font-family:monospace; font-size:var(--fs-tiny); line-height:1.6; color:var(--text-secondary);">';
+  html += '<div style="background:var(--bg-input); border-radius:var(--radius-sm); padding:8px 10px; margin-bottom:8px; border:1px solid var(--border-color); font-size:var(--fs-tiny); line-height:1.6; color:var(--text-secondary);">';
   html += '1C → 2C: shift @ N_out ≥ ' + shift1C2C_outRatio + ' × N_shift_ref<br>';
   html += '2C → 2L: shift @ N_out ≥ ' + shift2C2L_outRatio + ' × N_shift_ref (lockup engage)';
   html += '</div>';
@@ -180,7 +180,7 @@ function getShiftControllerPropertiesHTML(node) {
   html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Shift Controller Algoritması</span></div>';
   html += '<div class="sw-pkg-body">';
   
-  var codeStyle = 'background:var(--bg-input); border-radius:var(--radius-sm); padding:10px; border:1px solid var(--border-color); font-family:monospace; font-size:var(--fs-micro); line-height:1.7; color:var(--text-secondary); overflow-x:auto; white-space:pre;';
+  var codeStyle = 'background:var(--bg-input); border-radius:var(--radius-sm); padding:10px; border:1px solid var(--border-color); font-size:var(--fs-micro); line-height:1.7; color:var(--text-secondary); overflow-x:auto; white-space:pre;';
   
   html += '<div style="' + codeStyle + '">';
   html += '<span style="color:var(--text-muted);">Girdiler: N_engine, SR, V_vehicle, current_gear, mode</span>\n\n';
@@ -220,7 +220,7 @@ function getShiftControllerPropertiesHTML(node) {
   // Shift sırası görsel
   html += '<div class="sw-section-title" style="margin-top:10px;">Shift Sırası — ' + profileName + ', full throttle (WOT):</div>';
   
-  html += '<div style="background:var(--bg-input); border-radius:var(--radius-sm); padding:10px; border:1px solid var(--border-color); font-family:monospace; font-size:var(--fs-micro); line-height:1.8; color:var(--text-secondary); overflow-x:auto; white-space:pre;">';
+  html += '<div style="background:var(--bg-input); border-radius:var(--radius-sm); padding:10px; border:1px solid var(--border-color); font-size:var(--fs-micro); line-height:1.8; color:var(--text-secondary); overflow-x:auto; white-space:pre;">';
   html += '<span style="color:var(--accent-primary); font-weight:600;">1C → 2C → 2L → 3L → 4L → 5L → 6L</span>\n';
   html += ' │                              └ Son vites, governed\'a kadar\n';
   html += ' │                     └ N_eng >= N_ref−' + lockupOffset + ' → 6L\n';

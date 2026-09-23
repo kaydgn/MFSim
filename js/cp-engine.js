@@ -180,7 +180,7 @@ function getEnginePropertiesHTML(node) {
     sheetHtml += '<div id="ve-motor-data-area-' + node.id + '" class="ve-eng-sheet-area" data-show="flex"' +
                  ' style="display:' + (hasData ? 'flex' : 'none') + ';">';
     sheetHtml += '<div class="sw-section-title" style="display:flex; justify-content:space-between;">Veri Izgarası' +
-                 '<span id="ve-sheet-range-' + node.id + '" style="font-family:var(--font-mono); font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-muted);">' +
+                 '<span id="ve-sheet-range-' + node.id + '" style=" font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-muted);">' +
                  'A1:C' + rows.length + ' girdi · ƒ D:F türetilen</span></div>';
     // Izgara VARSAYILAN OLARAK SÜTUNU DOLDURUR (.ve-eng-sheet-wrap → flex:1).
     // Eskiden sabit 352px'ti: 21 satırlık katalog verisi kaydırma çubuğuna
@@ -218,7 +218,7 @@ function getEnginePropertiesHTML(node) {
     });
     sheetHtml += '</tbody><tfoot><tr><td class="n">' + (rows.length + 1) + '</td>' +
                  '<td colspan="6">boş satır — yaz ya da “Yapıştır” ile ' +
-                 '<span style="font-family:var(--font-mono);">devir ⇥ tork ⇥ güç</span> aktar</td>' +
+                 '<span>devir ⇥ tork ⇥ güç</span> aktar</td>' +
                  '</tr></tfoot></table></div>';
 
     // Resize tutamacı — mevcut davranış (tablo yüksekliği node.data.tableHeight)
@@ -236,9 +236,9 @@ function getEnginePropertiesHTML(node) {
     sheetHtml += '</div>';
     sheetHtml += '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.5;">' +
                  'ƒ sütunları düzenlenemez, her hücre değişiminde yeniden hesaplanır: ' +
-                 '<span style="font-family:var(--font-mono); color:var(--text-secondary);">D = aksesuar kaybı(devir)</span> · ' +
-                 '<span style="font-family:var(--font-mono); color:var(--text-secondary);">F = max(0, C − D)</span> · ' +
-                 '<span style="font-family:var(--font-mono); color:var(--text-secondary);">E = F × 9549.3 / A</span>. ' +
+                 '<span style=" color:var(--text-secondary);">D = aksesuar kaybı(devir)</span> · ' +
+                 '<span style=" color:var(--text-secondary);">F = max(0, C − D)</span> · ' +
+                 '<span style=" color:var(--text-secondary);">E = F × 9549.3 / A</span>. ' +
                  'Çözücü ve raporlar E–F sütunlarını okur.</div>';
     sheetHtml += '</div>';  // ve-motor-data-area
   }
@@ -297,7 +297,7 @@ function getEnginePropertiesHTML(node) {
   fitHtml += '</select>';
   fitHtml += '</div>';
 
-  fitHtml += '<div id="ve-motor-fit-' + node.id + '" style="font-size:var(--fs-tiny); color:var(--text-muted); padding:6px 8px; background:var(--bg-input); border:1px solid var(--border-color); font-family:var(--font-mono); word-break:break-all; line-height:1.5;">';
+  fitHtml += '<div id="ve-motor-fit-' + node.id + '" style="font-size:var(--fs-tiny); color:var(--text-muted); padding:6px 8px; background:var(--bg-input); border:1px solid var(--border-color); word-break:break-all; line-height:1.5;">';
   fitHtml += 'Veri girildikten sonra denklem gösterilecek.';
   fitHtml += '</div>';
   if(!isFullThrottle) fitHtml += '</div></div>'; // sw-pkg-body + sw-pkg-card
@@ -334,8 +334,8 @@ function getEnginePropertiesHTML(node) {
     var totalUser = accData.reduce(function(s, a) { return s + (a.userLoss || 0); }, 0);
     accHtml += '<tr style="background:var(--bg-secondary); font-weight:600;">';
     accHtml += '<td style="border:1px solid var(--border-color); color:var(--text-heading);">Toplam</td>';
-    accHtml += '<td id="ve-acc-total-std-' + node.id + '" style="border:1px solid var(--border-color); text-align:right; font-family:var(--font-mono); color:var(--text-muted);">' + totalStd.toFixed(1) + '</td>';
-    accHtml += '<td id="ve-acc-total-user-' + node.id + '" style="border:1px solid var(--border-color); text-align:right; font-family:var(--font-mono); color:var(--accent-warning);">' + totalUser.toFixed(1) + '</td>';
+    accHtml += '<td id="ve-acc-total-std-' + node.id + '" style="border:1px solid var(--border-color); text-align:right; color:var(--text-muted);">' + totalStd.toFixed(1) + '</td>';
+    accHtml += '<td id="ve-acc-total-user-' + node.id + '" style="border:1px solid var(--border-color); text-align:right; color:var(--accent-warning);">' + totalUser.toFixed(1) + '</td>';
     accHtml += '</tr>';
     accHtml += '</tbody></table>';
     // "Kayıpları Uygula" doğrulama sütununa taşındı — sonucu orada okunuyor.
@@ -348,7 +348,7 @@ function getEnginePropertiesHTML(node) {
     // Governed devirdeki toplam aksesuar kaybı (eğrili/manuel/legacy — tek kaynak).
     var lossAtGoverned = veCalcAccLossAtRPM(accData, initGoverned, initGoverned);
     netHtml += '<div class="sw-section-title" style="display:flex; justify-content:space-between;">Doğrulama' +
-               '<span id="ve-net-badge-' + node.id + '" style="font-weight:400; text-transform:none; letter-spacing:0; font-family:var(--font-mono); color:var(--accent-warning);">−' +
+               '<span id="ve-net-badge-' + node.id + '" style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--accent-warning);">−' +
                lossAtGoverned.toFixed(1) + ' kW @ ' + initGoverned + '</span></div>';
 
     netHtml += '<div style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:4px;">';
@@ -434,7 +434,7 @@ function getEnginePropertiesHTML(node) {
       return '<span style="display:inline-flex; gap:5px; align-items:baseline;">' +
              '<span style="font-size:var(--fs-micro); text-transform:uppercase; letter-spacing:0.4px; color:' +
              (color || 'var(--text-muted)') + ';">' + label + '</span>' +
-             '<span style="font-family:var(--font-mono); color:' + (color || 'var(--text-primary)') + ';">' +
+             '<span style=" color:' + (color || 'var(--text-primary)') + ';">' +
              val + '</span></span>';
     };
     headHtml += '<div id="ve-eng-headline-' + node.id + '" class="ve-ft-extra" data-node="' + node.id +
@@ -2671,7 +2671,7 @@ function updateVEMotorChart(nodeId) {
   
   if(torquePoints.length < 2 && powerPoints.length < 2) {
     ctx.fillStyle = veThemeRgba('--text-secondary', 1);
-    ctx.font = '12px system-ui';
+    ctx.font = veThemeFont(12);
     ctx.textAlign = 'center';
     ctx.fillText('En az 2 veri noktası gerekli', rect.width / 2, 100);
     return;
@@ -2749,7 +2749,7 @@ function updateVEMotorChart(nodeId) {
   
   // X ekseni etiketleri
   ctx.fillStyle = VE_ENG_C.etiket;
-  ctx.font = '9px system-ui';
+  ctx.font = veThemeFont(9);
   ctx.textAlign = 'center';
   for(var i = 0; i <= 4; i++) {
     var xVal = xMin + (xMax - xMin) * i / 4;
@@ -3006,7 +3006,7 @@ function updateVENetChart(nodeId) {
   ctx.beginPath(); ctx.moveTo(margin.left, margin.top + plotHeight); ctx.lineTo(margin.left + plotWidth, margin.top + plotHeight); ctx.stroke();
   
   // X etiketleri
-  ctx.fillStyle = VE_ENG_C.etiket; ctx.font = '9px system-ui'; ctx.textAlign = 'center';
+  ctx.fillStyle = VE_ENG_C.etiket; ctx.font = veThemeFont(9); ctx.textAlign = 'center';
   for(var i = 0; i <= 4; i++) {
     var xVal = xMin + (xMax - xMin) * i / 4;
     ctx.fillText(Math.round(xVal), xScale(xVal), margin.top + plotHeight + 15);
@@ -3052,7 +3052,7 @@ function updateVENetChart(nodeId) {
     ctx.moveTo(xScale(governed), margin.top);
     ctx.lineTo(xScale(governed), margin.top + plotHeight);
     ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = VE_ENG_C.governed; ctx.font = '8px system-ui'; ctx.textAlign = 'right';
+    ctx.fillStyle = VE_ENG_C.governed; ctx.font = veThemeFont(8); ctx.textAlign = 'right';
     ctx.fillText('governed', xScale(governed) - 3, margin.top + 8);
   }
 

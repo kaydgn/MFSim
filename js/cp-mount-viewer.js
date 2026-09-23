@@ -304,7 +304,7 @@ function _mntViewerAxes(scene){
 }
 function _mntViewerLabel(text, pos){
   var cv=document.createElement('canvas'); cv.width=64; cv.height=64;
-  var ctx=cv.getContext('2d'); ctx.fillStyle=_mntViewerCssStr('--text-primary','#ffffff'); ctx.font='bold 40px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  var ctx=cv.getContext('2d'); ctx.fillStyle=_mntViewerCssStr('--text-primary','#ffffff'); ctx.font=veThemeFont(40, 'bold'); ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText(text, 32, 32);
   var tex=new THREE.CanvasTexture(cv);
   var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true}));
@@ -429,11 +429,11 @@ function veMountViewerUpdate(){
 function _mntViewerTextSprite(text, pos, color, worldSize){
   var fs=44, pad=10;
   var cv=document.createElement('canvas'); var ctx=cv.getContext('2d');
-  ctx.font='bold '+fs+'px Arial';
+  ctx.font=veThemeFont(fs, 'bold');
   var tw=Math.max(1, Math.ceil(ctx.measureText(text).width));
   cv.width=tw+pad*2; cv.height=fs+pad*2;
   ctx=cv.getContext('2d');
-  ctx.font='bold '+fs+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font=veThemeFont(fs, 'bold'); ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillStyle=color||_mntViewerCssStr('--text-primary','#ffffff');
   ctx.fillText(text, cv.width/2, cv.height/2);
   var tex=new THREE.CanvasTexture(cv);

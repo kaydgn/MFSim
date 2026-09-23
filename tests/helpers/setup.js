@@ -58,6 +58,15 @@ global.loadCanSource = function loadCanSource(file) {
   global.escapeHTML = new Function(src.slice(i, end) + '\nreturn escapeHTML;')();
 })();
 
+// TUVAL YAZI YÜZÜ KÖPRÜSÜ (js/theme.js) HER TESTTE TANIMLI — `stubGlobals()`
+// çağrılmasa da. Tuval çizen modüller onu KOŞULSUZ çağırıyor (renk köprüsünün
+// aksine `typeof` kalkanı yok): tek yüz kapısı (`tek-yazi-tipi.test.js`) her
+// `ctx.font` atamasını köprüye zorunlu kılıyor. jsdom `--font-sans`ı
+// çözemediği için sabit bir aile yeterli; `theme.js`i yükleyen test gerçeğini
+// kurar.
+global.veThemeFontFamily = () => 'Inter';
+global.veThemeFont = (px, w) => (w ? w + ' ' : '') + px + 'px Inter';
+
 // UI katmanının çağırdığı, çekirdek mantık açısından önemsiz olan ortak
 // yan-etki fonksiyonlarını jest.fn() olarak global'e kurar. Testte hangi
 // stub'lara ihtiyaç varsa `extra` ile eklenebilir/geçersiz kılınabilir.

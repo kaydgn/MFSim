@@ -104,6 +104,25 @@ function veThemeRgba(varName, alpha, fallback) {
   return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + alpha + ')';
 }
 
+// TUVALİN YAZI YÜZÜ — CSS'teki `--font-sans`ı okur (tek yüz, 2026-09-23).
+// Canvas'ın `font` özelliği `var()` çözemez (renk köprüsünün gerekçesinin
+// aynısı). Grafikler yüzü kendileri yazıyordu ve dört aile doğmuştu —
+// Segoe UI · Arial · system-ui · sans-serif: Windows'ta her grafik arayüzden
+// farklı bir yüzle çiziliyordu. Önbelleksiz, `veThemeRgba` ile aynı sözleşme.
+// Yedek aile yalnız jeton okunamazsa (test ortamı) devreye girer.
+function veThemeFontFamily() {
+  var aile = '';
+  try {
+    aile = getComputedStyle(document.documentElement).getPropertyValue('--font-sans').trim();
+  } catch(e) {}
+  return aile || "Inter, -apple-system, 'Segoe UI', sans-serif";
+}
+// Tuvalin `font` kısaltması: '600 11px <aile>'. Grafik kütüphaneleri (Plotly)
+// yalnız aileyi ister → `veThemeFontFamily()`.
+function veThemeFont(px, weight) {
+  return (weight ? weight + ' ' : '') + px + 'px ' + veThemeFontFamily();
+}
+
 // ── Açılış ve sistem takibi ───────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', function() {

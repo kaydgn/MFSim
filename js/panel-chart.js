@@ -305,11 +305,11 @@ function pcDrawHint(ctx2d, canvas, ml, mt, pw, isDark) {
   ctx2d.textAlign = 'left';
   if(pcIsZoomed(canvas)) {
     ctx2d.fillStyle = veThemeRgba('--seri-1', 1);
-    ctx2d.font = 'bold 9px sans-serif';
+    ctx2d.font = veThemeFont(9, 'bold');
     ctx2d.fillText(canvas._pcZoom.scale.toFixed(1) + '× — sol tık: sıfırla', ml + 6, mt + 11);
   } else {
     ctx2d.fillStyle = isDark ? 'rgba(122,133,153,0.8)' : 'rgba(100,116,139,0.85)';
-    ctx2d.font = '8px sans-serif';
+    ctx2d.font = veThemeFont(8);
     ctx2d.fillText('Ctrl + Scroll: yakınlaştır  ·  Sağ tık + sürükle: kaydır', ml + 6, mt + 11);
   }
   ctx2d.textAlign = prevAlign; ctx2d.font = prevFont; ctx2d.fillStyle = prevFill;
