@@ -456,11 +456,23 @@ describe('içerik yönlendirici', () => {
   // Bu liste iki kez değişti: önce "Başlangıç ve Örnekler" eklendi, sonra
   // KALDIRILDI (sunduğu iki şey sihirbazın 1. adımında zaten vardı). Kılavuz
   // her ikisinde de eski sayıyı yazmaya devam etti ve hiçbir kapı görmedi.
+  //
+  // Liste KURUCUNUN KENDİSİNDEN okunuyor, kaynak dizesinden değil: kurucu
+  // listeyi bir değişkene aldığında (2026-09-23, yuva üreticisi de aynı
+  // listeyi istiyor) kaynak kalıbı tutmadı ve kapı sebepsiz kırmızıya döndü.
   test('kılavuz açılışta gelen kartları doğru sayıyor', () => {
-    const src = io_read('js/cp-fead.js');
-    const m = /\[([^\]]*)\]\.forEach\(function\(tip, k\)/.exec(src);
-    expect(m).toBeTruthy();
-    const tipler = (m[1].match(/'([^']+)'/g) || []).map((x) => x.slice(1, -1));
+    const eskiNodes = global.nodes, eskiKur = global.createNode;
+    global.nodes = [];
+    global.createNode = (type, x, y) => {
+      const n = { id: 'st' + global.nodes.length, type, x, y, data: {} };
+      global.nodes.push(n); return n;
+    };
+    let tipler;
+    try { tipler = CP.veFeadPopulateStarter().map((n) => n.type); }
+    finally {
+      global.nodes = eskiNodes;
+      if (eskiKur === undefined) delete global.createNode; else global.createNode = eskiKur;
+    }
     expect(tipler.length).toBeGreaterThan(0);
     // Kılavuz her kartı ADIYLA anmalı...
     tipler.forEach((t) => { expect(DOC).toContain(componentDefs[t].name); });
@@ -922,7 +934,6 @@ describe('kılavuz ↔ program: kart adları', () => {
       if (n.data && n.data.driver && !surucu) surucu = n;
       else if (VE_FEAD_ACC_TYPE && VE_FEAD_ACC_TYPE[n.type] && !aks) aks = n;
     });
-    const tbl = { id: 'tbl-1', type: 'fead-table', data: {} };
     const eskiN = global.nodes;
     const eskiC = global.connections;
     global.nodes = pack.nodes;
@@ -934,9 +945,10 @@ describe('kılavuz ↔ program: kart adları', () => {
         Kasnak: getFeadPulleyPropertiesHTML(surucu)
               + (aks ? getFeadPulleyPropertiesHTML(aks) : ''),
         'Çözücü': sol ? getFeadSolverPropertiesHTML(sol) : '',
-        // Kayış Tablosu bir PANEL değil bir KANVAS KARTI: Ek A onu kart
-        // adıyla değil sütun adlarıyla anlatıyor, kapısı da aşağıda ayrı.
-        'Kayış Tablosu': veFeadTableCardHTML(tbl),
+        // Kayış Tablosu bir PANEL değil — 2026-09-23'ten beri Kayış Yolu
+        // kartının açtığı PENCERE (Çizim Masası). Ek A onu sütun adlarıyla
+        // anlatıyor, kapısı da aşağıda ayrı.
+        'Kayış Tablosu': veFeadTableCardHTML(null),
       };
     } finally {
       global.nodes = eskiN;
@@ -1017,26 +1029,38 @@ describe('kılavuz ↔ program: kart adları', () => {
     });
   });
 
-  test('§4 ekleme/silme yüzeyini tablonun bastığı adla anlatıyor', () => {
-    // Kasnak eklemenin GÖRÜNÜR tek yolu bu; kılavuz paleti gösterirse
-    // kullanıcı hiçbir şey olmayan bir sürükleme yapar (ölçülmüş sınıf).
+  // İKİ EKLEME YOLU VAR VE İKİSİ DE GÖRÜNÜR (Çizim Masası, 2026-09-23):
+  // paletten kayışın ÜSTÜNE bırakmak ve tablonun "＋ Kasnak ekle"si. Bir dönem
+  // palet yolu SESSİZDİ (kutusuz düğüm kuruluyor, ekranda hiçbir şey
+  // değişmiyordu) ve kılavuz "Kasnağı paletten sürüklemeyin" diyordu — o
+  // uyarı bugün YANLIŞ ve geri sızmamalı. Kapı adımın KENDİSİNE bakıyor: yalnız
+  // "Kasnak ekle geçiyor mu" demek yetmiyordu, ifade Ek A'da ve §4.3'te de var
+  // ve adım değişse bile kapı yeşil kalırdı (ölçüldü).
+  test('§4 iki ekleme yolunu da doğru anlatıyor — çizime BIRAKMAK ve tablonun ekleyicisi', () => {
     expect(PANEL['Kayış Tablosu']).toContain('Kasnak ekle');
     expect(DOC).toContain('Kasnak ekle');
-    expect(DOC).toContain('kayış sırasının <strong>sonuna</strong>');
-    // ...VE PALET YOLUNU TARİF ETMİYOR. Yalnız "Kasnak ekle geçiyor mu" diye
-    // bakmak yetmiyor: o ifade Ek A'da ve §4.3'te de var, dolayısıyla §4'ün
-    // ADIMI palete geri dönse bile kapı yeşil kalırdı (ölçüldü). Kasnağı
-    // paletten sürüklemek kanvasta HİÇBİR İZ bırakmıyor — kılavuz o yolu bir
-    // yöntem gibi anlatırsa kullanıcı hiçbir şey olmadığını sanır.
-    expect(DOC).toContain('Kasnağı paletten sürüklemeyin');
-    // ...VE §4'ÜN ADIM LİSTESİ PALETİ TARİF ETMİYOR. Yalnız "Kasnak ekle
-    // geçiyor mu" diye bakmak yetmiyor: o ifade Ek A'da ve §4.3'te de var,
-    // dolayısıyla §4'ün ADIMI palete geri dönse bile kapı yeşil kalırdı
-    // (ölçüldü). Ölçülen yer bu yüzden adımın kendisi.
+    expect(DOC).not.toContain('Kasnağı paletten sürüklemeyin');
+    // Tablonun ekleyicisi kasnağı GERGİNİN ÖNÜNE koyar (2026-09-22): "sonuna"
+    // yazan kılavuz davranışın eski hâlini anlatıyordu.
+    expect(DOC).not.toContain('kayış sırasının <strong>sonuna</strong>');
+    expect(DOC).toContain('gerginin <strong>önüne</strong>');
     const s4 = DOC.slice(DOC.indexOf('id="g4"'), DOC.indexOf('id="g5"'));
     const ilkAdim = (s4.match(/<ol>[\s\S]*?<\/ol>/) || [''])[0];
     expect(ilkAdim).toContain('Kasnak ekle');
-    expect(ilkAdim).not.toMatch(/palet/i);
+    expect(ilkAdim).toContain('<strong>kayışın üstüne</strong>');
+  });
+
+  // ÇİZİM MASASI KILAVUZDA — programın eylemleri kılavuzun tablosunda. Metin
+  // kopyalanmış bir liste olduğu için bir eylem kalkar ya da eklenirse
+  // kılavuz sessizce eskir (kutular kalktığında olan tam olarak buydu).
+  test('§4 çizimdeki eylemleri anlatıyor — tıkla · sürükle · ok · Delete · Tablo', () => {
+    const s4 = DOC.slice(DOC.indexOf('id="g4"'), DOC.indexOf('id="g5"'));
+    const tablo = (s4.match(/<caption>Tablo [^<]*Çizimde ne yapılır<\/caption>[\s\S]*?<\/table>/) || [''])[0];
+    ['Tıklamak', 'Sürüklemek', 'Ok tuşları', 'Delete', 'Kayışın üstüne bırakmak', 'Tablo']
+      .forEach((e) => expect(tablo).toContain(e));
+    // Kapının tuttuğu davranışlar programda GERÇEKTEN var.
+    ['veFeadCizimBas', 'veFeadCizimTus', 'veFeadPaletBirak', 'veFeadTabloAc']
+      .forEach((f) => expect(typeof CP[f]).toBe('function'));
   });
 
   test('KUTUSUZLUK kılavuzda da yazılı — kablolama ve Konum Bağı geçmiyor', () => {
@@ -1238,7 +1262,7 @@ describe('kılavuz ↔ Kayış Tablosu: Σsarım okumasının ADRESİ', () => {
     global.nodes = pack.nodes;
     global.connections = pack.connections;
     try {
-      return veFeadTableCardHTML({ id: 'tbl-x', type: 'fead-table', data: {} });
+      return veFeadTableCardHTML(null);
     } finally {
       global.nodes = eskiN;
       global.connections = eskiC;

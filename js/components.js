@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-layout','fead-table','fead-report','fead-spin','fead-wizard','arac-performans','mount-analysis','fead-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-layout','fead-report','fead-spin','fead-wizard','arac-performans','mount-analysis','fead-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -738,34 +738,10 @@ var componentDefs = {
     // Ölçü BURADA YOK: kanvas düğümü CANLI ŞEMA kartıdır ve ölçüsü tek
     // yerden gelir (VE_FEAD_LAYOUT_W/H → aşağıdaki döngü).
   },
-  // ── KAYIŞ TABLOSU — kasnakların TEK veri giriş yüzeyi ─────────────────────
-  //
-  // Kullanıcı isteği (2026-09-09): *"Topolojiye çektiğimiz bileşenlere tıklayıp
-  // özelliklerini değiştirmek, değerlerini girmek yerine böyle bir tablomuz
-  // olacak, oradan değerleri gireceğiz. Gerekirse de tıklayarak bileşen
-  // penceresini açarak detay hesaplamalara bakacağız."*
-  //
-  // Tablo, mühendisin kendi hesap sayfasının biçimidir: satır = kasnak, sıra =
-  // kayış yolu, sütunlar Gates raporunun "Layout Data" tablosunun sütunları.
-  // GİRDİ ile TÜRETİLEN aynı satırda yan yana durur ve bu bilerek: bir
-  // koordinatı değiştirince sarımın ve span'in ne olduğu aynı bakışta görülür.
-  //
-  // SIRAYI TABLO TAŞIMAZ, KASNAK TAŞIR (node.data.beltIndex). Bu düğüm bir
-  // GÖRÜNÜM: silinse de kayış yolu durur, ikinci kopyası olsa da aynı sırayı
-  // gösterir. Sırayı burada bir liste olarak tutmak, kasnak silindiğinde ya da
-  // düğüm hiç yokken listeyi kasnaklardan ayrı tutmak demekti.
-  //
-  // maxInstances:1 — iki kopya aynı şeyi gösterir, yani ikincisi yalnız yer
-  // kaplar ve "hangisinden gireceğim" sorusu üretir.
-  'fead-table': {
-    name: 'Kayış Tablosu',
-    // Amber başlık şeridi (kayış) + mavi veri satırları (kasnak): renk dili
-    // FEAD'in geri kalanıyla aynı.
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="10" y="16" width="80" height="68" rx="6" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="5"/><path d="M10 34 H90" stroke="var(--accent-warning, #8a6a12)" stroke-width="7"/><g stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linecap="round"><line x1="20" y1="48" x2="80" y2="48"/><line x1="20" y1="62" x2="80" y2="62"/><line x1="20" y1="76" x2="80" y2="76"/></g><line x1="44" y1="34" x2="44" y2="84" stroke="var(--text-muted, #676055)" stroke-width="3"/></svg>',
-    inputs: 0, outputs: 0, isFeadTable: true, maxInstances: 1
-    // Ölçü BURADA YOK: kart ölçüsü tek yerden gelir
-    // (VE_FEAD_TABLE_W/H → aşağıdaki döngü), Kayış Yolu kartındaki kuralın aynısı.
-  },
+  // KAYIŞ TABLOSU (`fead-table`) KANVAS BİLEŞENİ DEĞİL (2026-09-23, Çizim
+  // Masası): kanvasta 7 px'e küçülen bir formdu, artık kanvas kartının
+  // "Tablo" düğmesiyle açılan bir pencere (cp-fead.js → veFeadTabloAc).
+  // Kayıtlı düğümler şema 7 göçüyle silinir (fead-model.js).
   // KONUM BAĞI (`fead-coordlink`) KALDIRILDI (2026-09-09). Bileşen yalnız
   // kanvastaki kutu konumu ile mm koordinatı arasındaki bağı açıp kapatıyordu;
   // kasnakların kutusu kalkınca (noCanvasBox) bağlanacak bir konum kalmadı ve
@@ -946,41 +922,6 @@ var VE_FEAD_LAYOUT_H = 500;
 var VE_FEAD_LAYOUT_LEGACY = [ { w: 60, h: 56 }, { w: 420, h: 340 } ];
 
 
-// KAYIŞ TABLOSU ÖLÇÜSÜ. Genişlik yine SÜTUN LİSTESİNDEN TÜRÜYOR, yuvarlak bir
-// sayı değil — ama artık sütun sütun değil BÖLGE bölge toplanıyor
-// (veFeadKartBolgeW, cp-fead.js):
-//   kimlik  sıra(54) + ad(172)                         = 226
-//   girdi   X(64) + Y(64) + D(64) + yön(86)            = 278
-//   çözüm   efektif çap(78) + sarım(74) + span(82)     = 234
-//   silme                                              =  30
-//                                              toplam    768, artı kart kenarı
-//
-// 870 → 782: KAYIŞ BOYU sütunu (88) listeden çıkıp künyeye geçti — satıra
-// değil ÇEVRİME ait bir değerdi ve tabloda bütün satırları saran tek hücre
-// olarak beş satır boyu bir boşluk bırakıyordu (ölçüldü: 170 px yükseklik,
-// içinde tek sayı). Σ satırı da künyeye taşındı.
-var VE_FEAD_TABLE_W = 770;
-// YÜKSEKLİK 340 → 360. Satır 34 → ~44 px: kart listesinde etiket alanın
-// ÜSTÜNDE duruyor (iki satır), karşılığında başlık satırı tamamen kalktı.
-// Yeni ölçü YEDİ kasnak + künye + ekleme şeridi içindir; daha uzun listede
-// kartın İÇİ kayar (kart büyümez, kanvas yerleşimi bozulmasın).
-var VE_FEAD_TABLE_H = 360;
-// EN KÜÇÜK ÖLÇÜ — kartın İÇERİĞİNİN bütün kaldığı sınır (node-resize.js
-// `veNodeMinSize` okur). Genel 50×50 tabanı bu kart için anlamsız, çünkü
-// ikisi de SESSİZ kayıp üretiyordu (ölçüldü, gerçek tarayıcı): 130 px
-// yükseklikte satırların hiçbiri görünmüyor, dar kartta sütunlar işaretsiz
-// kayıyordu.
-//
-// TABAN ARTIK KART GENİŞLİĞİNİN KENDİSİ DEĞİL. Tablo döneminde on bir sütun
-// sabit genişlikteydi, yani kartı daraltmak sütunları görünmez yapıyordu ve
-// taban = kart ölçüsü olmak zorundaydı. Kart listesinde bölgeler
-// `minmax(...)` ile daralıyor (150 + 210 + 160 + 30 = 550, artı kenar): kart
-// dar kurulduğunda alanlar sıkışır ama hiçbiri kaybolmaz. Bu, kart listesinin
-// ölçülebilir kazançlarından biri.
-var VE_FEAD_TABLE_MIN_W = 564;
-var VE_FEAD_TABLE_MIN_H = 160;
-var VE_FEAD_TABLE_LEGACY = [ { w: 824, h: 430 }, { w: 850, h: 340 },
-                             { w: 870, h: 340 } ];
 // Geriye dönük adlar (dışarıdan okuyan bir yer kalırsa bozulmasın).
 var VE_FEAD_LAYOUT_LEGACY_W = VE_FEAD_LAYOUT_LEGACY[0].w;
 var VE_FEAD_LAYOUT_LEGACY_H = VE_FEAD_LAYOUT_LEGACY[0].h;
@@ -1022,20 +963,14 @@ function veIsFeadLayoutNode(node) {
 // SAF (ölçüyü döndürür) + yazan yüzü. Ayrı olmalarının nedeni modül kartıyla
 // aynı: sekme önizlemesi düğümü DEĞİŞTİRMEDEN ölçüye ihtiyaç duyuyor.
 //
-// İKİ KART BİRDEN. Kayış Tablosu da ölçü değiştirdi ve kendi yükseltme
-// listesini taşımasaydı kayıtlı bir proje eski 824×430 kartla açılırdı: yeni
-// düzen (iki satırlık başlık, Σ satırı, silme sütunu) o ölçüde kartın üçte
-// birini boş bırakır ve aynı sürümde iki farklı tablo görünümü dolaşırdı.
-// Ayrı bir fonksiyon açmak, ÇAĞIRANLARIN ikisini de bilmesini gerektirirdi —
-// oysa kapı tek olsun diye (state.js geri yükleme · topology.js önizleme)
-// burası tek yer.
+// LİSTE, çünkü kapı TEK olsun (state.js geri yükleme · topology.js önizleme).
+// Kayış Tablosu kartı bir dönem burada ikinci satırdı; tablo kanvastan inince
+// (2026-09-23) satırı da kalktı.
 var VE_FEAD_CARD_SIZES = null;
 function _veFeadCardSizes() {
   if(!VE_FEAD_CARD_SIZES) VE_FEAD_CARD_SIZES = [
     { flag: 'isFeadLayout', w: VE_FEAD_LAYOUT_W, h: VE_FEAD_LAYOUT_H,
-      legacy: VE_FEAD_LAYOUT_LEGACY },
-    { flag: 'isFeadTable',  w: VE_FEAD_TABLE_W,  h: VE_FEAD_TABLE_H,
-      legacy: VE_FEAD_TABLE_LEGACY }
+      legacy: VE_FEAD_LAYOUT_LEGACY }
   ];
   return VE_FEAD_CARD_SIZES;
 }
@@ -1077,12 +1012,6 @@ if(typeof componentDefs !== 'undefined') {
     if(componentDefs[t] && componentDefs[t].isFeadLayout) {
       componentDefs[t].defaultWidth = VE_FEAD_LAYOUT_W;
       componentDefs[t].defaultHeight = VE_FEAD_LAYOUT_H;
-    }
-    if(componentDefs[t] && componentDefs[t].isFeadTable) {
-      componentDefs[t].defaultWidth = VE_FEAD_TABLE_W;
-      componentDefs[t].defaultHeight = VE_FEAD_TABLE_H;
-      componentDefs[t].minWidth = VE_FEAD_TABLE_MIN_W;
-      componentDefs[t].minHeight = VE_FEAD_TABLE_MIN_H;
     }
     if(componentDefs[t] && componentDefs[t].isSubsystem) {
       componentDefs[t].defaultWidth = VE_MODULE_CARD_W;

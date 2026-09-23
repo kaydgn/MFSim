@@ -4,9 +4,9 @@
  * Kullanıcı sorusu (2026-09-09): *"Başlangıç sihirbazı kısmında 'modeli kur'
  * dediğimizde bu yapı gelecek değil mi? Yoksa hâlâ bileşenler mi gelecek?"*
  *
- * Cevap İKİSİ BİRDEN, ve bu bilinçli: kasnak kutuları kanvasta durur (kayış
- * düzlemindeki konumları modelin kendisi, ve tıklanınca detay paneli açılır),
- * kayış SIRASI ise Kayış Tablosu'nda. Bu dosya onu gerçek tarayıcıda ölçüyor.
+ * Cevap: kasnaklar MODELDE düğüm olarak kurulur (kutuları yok — 2026-09-09)
+ * ve Kayış Yolu çiziminde görünür; kayış SIRASI Kayış Tablosu'nda (kartın
+ * düğmesiyle açılan pencere). Bu dosya onu gerçek tarayıcıda ölçüyor.
  *
  * Node'da HİÇ koşmayan halka: sihirbazın GERÇEK "Modeli Kur" düğmesine
  * tıklamak, createNode'un maxInstances kapısına çarpması ve kurulum sonrası
@@ -18,7 +18,7 @@
 const { test, expect } = require('@playwright/test');
 test.setTimeout(180000);
 
-test('sihirbaz "Modeli Kur": kasnaklar + TABLO, tel yok, uyarı yok', async ({ page }) => {
+test('sihirbaz "Modeli Kur": kasnaklar + İKİ ÇİZİM, tel yok, uyarı yok', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
 
@@ -33,7 +33,8 @@ test('sihirbaz "Modeli Kur": kasnaklar + TABLO, tel yok, uyarı yok', async ({ p
     return !s || s.style.display === 'none';
   }, null, { timeout: 90000 });
 
-  // FEAD alt topolojisi — açılışta sihirbaz + TABLO gelir, VE SİHİRBAZ AÇILIR
+  // FEAD alt topolojisi — açılışta sihirbaz + BOŞ Kayış Yolu kartı gelir, VE
+  // SİHİRBAZ AÇILIR (tablo 2026-09-23'ten beri kartın açtığı pencere).
   await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
   await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-wizard'),
     null, { timeout: 20000 });
@@ -47,12 +48,14 @@ test('sihirbaz "Modeli Kur": kasnaklar + TABLO, tel yok, uyarı yok', async ({ p
   await page.evaluate(() => veFeadWizClose(false));
   await page.waitForTimeout(200);
   await expect(page.locator('#ve-feadwiz-overlay')).toBeHidden();
-  expect(await page.evaluate(() =>
-    window.nodes.filter((n) => n.type === 'fead-table').length)).toBe(1);
   const acilis = await page.evaluate(() => window.nodes.map((n) => n.type).sort());
   // "Başlangıç ve Örnekler" 2026-09-09'da kaldırıldı (kullanıcı: *"Gerek yok"*)
   // — sunduğu liste sihirbazın 1. adımında zaten vardı.
-  expect(acilis).toEqual(['fead-table', 'fead-wizard']);
+  expect(acilis).toEqual(['fead-layout', 'fead-wizard']);
+  // Boş kart kendi boş hâlini söylüyor ve iki yolu da gösteriyor.
+  expect(await page.evaluate(() =>
+    (document.querySelector('.ve-fead-kan-bos') || {}).textContent || '')).toMatch(/henüz kasnak yok/);
+  const bosId = await page.evaluate(() => window.nodes.find((n) => n.type === 'fead-layout').id);
   expect(await page.evaluate(() =>
     window.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley).length)).toBe(0);
 
@@ -109,8 +112,10 @@ test('sihirbaz "Modeli Kur": kasnaklar + TABLO, tel yok, uyarı yok', async ({ p
     };
   });
   expect(durum.kasnak).toBe(6);              // BİLEŞENLER DE GELİYOR
-  expect(durum.tablo).toBe(1);               // ve TEK tablo (ikinci kurulmuyor)
+  expect(durum.tablo).toBe(0);               // tablo bir kanvas düğümü DEĞİL
   expect(durum.sema).toBe(2);                // İKİ kanvas, tek tip (geometri + işletme)
+  // ÜÇÜNCÜ ÇİZİM YOK: açılışın boş kartı geometri kartı olarak DEVRALINDI.
+  expect(await page.evaluate((id) => window.nodes.some((n) => n.id === id), bosId)).toBe(true);
   expect(durum.kayis).toBe(1);
   expect(durum.cozucu).toBe(1);
   expect(durum.rapor).toBe(1);
@@ -126,20 +131,19 @@ test('sihirbaz "Modeli Kur": kasnaklar + TABLO, tel yok, uyarı yok', async ({ p
   });
   expect(kutu.kasnakDom).toBe(0);
   expect(kutu.domToplam).toBe(kutu.aracSay);
-  // ÖKSÜZ DÜĞÜM YOK: 6 kasnak + kayış + çözücü + şema + İŞLETME kartı + tablo
-  // + rapor + sihirbaz (taslağı taşıdığı için KALIR) = 13. "Başlangıç ve
-  // Örnekler" kurulumda siliniyor.
+  // ÖKSÜZ DÜĞÜM YOK: 6 kasnak + kayış + çözücü + şema + İŞLETME kartı + rapor
+  // + sihirbaz (taslağı taşıdığı için KALIR) = 12.
   //
-  // SAYI 12 → 13: kanvas GEOMETRİ ve İŞLETME olarak ikiye ayrıldı, sihirbaz
-  // ikisini birden kuruyor. Kurucu ikincisini kurmayı unutursa sihirbazla
-  // kurulan model çalışma rejimi kartsız kalır ve bu SESSİZDİR — model
-  // çözülür, kart yalnız yoktur.
+  // SAYI 13 → 12 (2026-09-23): Kayış Tablosu kanvas düğümü olmaktan çıktı.
+  // Kanvas GEOMETRİ ve İŞLETME olarak iki kart; kurucu ikincisini kurmayı
+  // unutursa sihirbazla kurulan model çalışma rejimi kartsız kalır ve bu
+  // SESSİZDİR — model çözülür, kart yalnız yoktur.
   //
   // TİP TEK (2026-09-11): ikisi de `fead-layout`, ayrım ÖN AYARDA. Ölçüt bu
   // yüzden tip sayısı DEĞİL — iki kanvas + biri işletme ön ayarlı. Sihirbazın
   // araç eşleştirmesi yalnız tipe baksaydı ikinci kanvası her "Modeli Kur"da
   // YENİDEN kurardı (kartlar üst üste açıldığı için sessiz).
-  expect(durum.toplam).toBe(13);
+  expect(durum.toplam).toBe(12);
   expect(durum.tipler.filter((t) => t === 'fead-layout')).toHaveLength(2);
   expect(durum.tipler.filter((t) => t === 'fead-run')).toHaveLength(0);
   expect(durum.isletme).toBe(1);
@@ -157,13 +161,15 @@ test('sihirbaz "Modeli Kur": kasnaklar + TABLO, tel yok, uyarı yok', async ({ p
   expect(cubuk).toMatch(/0 bağlantı/);
 
   // ── 2) UYARI TOAST'I ÇIKMAMALI ──────────────────────────────────────────
-  // `fead-table` araç yeniden kullanım listesinde yoksa createNode ikinci
-  // tabloyu reddediyor ve kullanıcı "en fazla 1 tane olabilir" görüyordu.
+  // Açılış yüzeyinin düğümü yeniden kullanım listesinde yoksa createNode
+  // ikincisini reddediyor ve kullanıcı "en fazla 1 tane olabilir" görüyordu
+  // (ölçüldü — o gün Kayış Tablosu'yla).
   const toastlar = (await page.locator('.ve-toast, [class*="toast"]').allInnerTexts()).join(' ');
   expect(toastlar).not.toMatch(/en fazla 1 tane/);
 
-  // ── 3) TABLO KURULAN MODELİ GÖSTERİYOR ──────────────────────────────────
-  const kart = page.locator('.ve-fead-table-card').first();
+  // ── 3) TABLO KURULAN MODELİ GÖSTERİYOR — kartın düğmesiyle açılan pencere
+  await page.locator('.ve-fead-tablo-dugme').first().click();
+  const kart = page.locator('#ve-fead-tablo');
   await expect(kart).toBeVisible();
   await expect(kart.locator('.ve-fead-krt[data-ve-node]')).toHaveCount(6);
   // ETİKET KISA, DEFTERİN ADI `title`DA. `textContent`, `innerText` DEĞİL:

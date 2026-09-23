@@ -155,7 +155,7 @@ test('KABUK TEK ÇİZGİ — üç başlık aynı bantta, tuval komşularına yap
   // penceresini sütunda açıyoruz (müfettiş başlığı ancak açıkken var).
   await page.evaluate(() => {
     if (typeof veFeadWizClose === 'function') veFeadWizClose(false);
-    const n = nodes.find((x) => x.type === 'fead-table') || nodes[0];
+    const n = nodes.find((x) => x.type === 'fead-layout') || nodes[0];
     clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
   });
   await page.waitForTimeout(600);

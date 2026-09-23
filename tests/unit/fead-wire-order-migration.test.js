@@ -308,3 +308,48 @@ describe('fizik — göç eden eski kayıt bugünkü örnekle BİREBİR', () => 
     expect(R.tensionerSide.ok).toBe(false);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  ŞEMA 7 — KAYIŞ TABLOSU KANVASTAN İNDİ (Çizim Masası, 2026-09-23)
+// ═══════════════════════════════════════════════════════════════════════════
+// Tablo artık bir kanvas bileşeni değil, Kayış Yolu kartının açtığı pencere;
+// `fead-table` tipinin tanımı kalktı. Kayıtlı tablo düğümü veri TAŞIMIYORDU
+// (satırları kasnak düğümlerinden okuyordu), yani silmek hiçbir şey
+// kaybettirmez — silinmeseydi tanımsız bir tip olarak kanvasa geri yüklenirdi.
+describe('şema 7 — kayıtlı Kayış Tablosu kartı silinir', () => {
+  const eski = () => ({
+    schemaVersion: 6,
+    nodes: [{ id: 'lay-1', type: 'fead-layout', x: 100, y: 60, width: 440, height: 500, data: {} },
+            { id: 'tbl-1', type: 'fead-table', x: 100, y: 600, data: { kat: 1 } },
+            { id: 'p1', type: 'fead-crank', data: { od: 160, x: 0, y: 0, beltIndex: 1 } }],
+    connections: [{ id: 'c1', from: 'tbl-1', to: 'lay-1' }, { id: 'c2', from: 'lay-1', to: 'p1' }]
+  });
+
+  test('tablo düğümü ve ona bağlı tel silinir; geri kalan AYNEN durur', () => {
+    const st = eski();
+    veApplyLegacyMigrations(st);
+    expect(st.nodes.map((n) => n.id)).toEqual(['lay-1', 'p1']);
+    expect(st.connections.map((c) => c.id)).toEqual(['c2']);
+    expect(st.nodes[1].data).toEqual({ od: 160, x: 0, y: 0, beltIndex: 1 });
+    expect(st.schemaVersion).toBe(VE_SCHEMA_VERSION);
+    expect(VE_SCHEMA_VERSION).toBeGreaterThanOrEqual(7);
+  });
+
+  test('GÖMÜLÜ alt topoloji de geçer; ikinci geçiş bir şey yapmaz', () => {
+    const st = { schemaVersion: 6, nodes: [{ id: 'mod', type: 'fead-analysis',
+      data: { subTopology: eski() } }], connections: [] };
+    veApplyLegacyMigrations(st);
+    const sub = st.nodes[0].data.subTopology;
+    expect(sub.nodes.map((n) => n.type)).not.toContain('fead-table');
+    expect(sub.schemaVersion).toBe(VE_SCHEMA_VERSION);
+    expect(M.veFeadMigrateTableOff(sub)).toBe(0);
+  });
+
+  test('DAMGASI 7 olan kayda dokunulmaz — kademeli kapı', () => {
+    // Güncel bir kayıtta `fead-table` diye bir düğüm olamaz; olursa bir
+    // HATANIN izidir ve sessizce silinmesi onu gizlerdi.
+    const st = Object.assign(eski(), { schemaVersion: VE_SCHEMA_VERSION });
+    veApplyLegacyMigrations(st);
+    expect(st.nodes.map((n) => n.id)).toContain('tbl-1');
+  });
+});

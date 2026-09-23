@@ -31,7 +31,11 @@ var MAX_UNDO_STEPS = 50;
 // (`data.katOn`). Kayıtlı `fead-run` düğümleri `fead-layout`a çevrilir
 // (veFeadMigrateRunToLayout); çevrilmeselerdi tanımsız tipli bir düğüm olarak
 // kanvasta kalırlardı — ne adı, ne ölçüsü, ne paneli olurdu.
-var VE_SCHEMA_VERSION = 6;
+//
+// SÜRÜM 7 (2026-09-23): FEAD KAYIŞ TABLOSU KANVASTAN İNDİ — tablo artık kanvas
+// kartının açtığı bir pencere (Çizim Masası). Kayıtlı `fead-table` düğümleri
+// silinir (veFeadMigrateTableOff); veri taşımıyorlardı.
+var VE_SCHEMA_VERSION = 7;
 
 // ── TOPLU KURULUM: BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI ───────────────
 //
@@ -217,6 +221,8 @@ function veApplyLegacyMigrations(state) {
   // zaten bugünün biçimiyle kart ekliyor, bu adım yalnız gerçekten eski tipi
   // taşıyan dosyalara dokunuyor.
   if(v < 6 && typeof veFeadMigrateRunToLayout === 'function') veFeadMigrateRunToLayout(state);
+  // TABLO KANVASTAN İNDİ: kayıtlı tablo kartı silinir (veri taşımıyordu).
+  if(v < 7 && typeof veFeadMigrateTableOff === 'function') veFeadMigrateTableOff(state);
   // GÖMÜLÜ ALT TOPOLOJİLER de aynı kapıdan geçer ve DAMGALANIR: FEAD kanvası
   // `fead-analysis` düğümünün data.subTopology'sinde yaşıyor; editör açılınca
   // veLoadTabState → restoreState onu ikinci kez bu kapıdan geçirir ve damga

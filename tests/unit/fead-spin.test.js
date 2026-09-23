@@ -541,7 +541,9 @@ describe('bileşen sözleşmesi', () => {
                       * (componentDefs[t].defaultHeight || 60);
     // `fead-example` listeden düştü: bileşen 2026-09-09'da kaldırıldı
     // (kullanıcı: *"Gerek yok"* — sihirbazın 1. adımı aynı listeyi taşıyor).
-    ['fead-belt', 'fead-report', 'fead-table'].forEach((t) => {
+    // `fead-table` de düştü (2026-09-23): tablo artık kanvas bileşeni değil,
+    // Kayış Yolu kartının açtığı pencere.
+    ['fead-belt', 'fead-report', 'fead-layout'].forEach((t) => {
       expect(alan('fead-spin')).toBeLessThan(alan(t));
     });
   });

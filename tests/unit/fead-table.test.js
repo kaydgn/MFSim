@@ -267,9 +267,10 @@ describe('kart HTML\'i', () => {
   });
 
   // GENİŞLİK HÂLÂ SÜTUN LİSTESİNDEN TÜRÜYOR — ama sütun sütun değil BÖLGE
-  // bölge. Kart genişliği yuvarlak bir sayı olsaydı sütun eklemek onu sessizce
-  // yetersiz bırakırdı.
-  test('bölge genişlikleri TEK KAYNAKTAN ve kart genişliğiyle tutarlı', () => {
+  // bölge. (Tablo kanvastan inince — 2026-09-23 — bir KART ölçüsü kalmadı;
+  // toplam yine `--fead-krt-en` olarak basılıyor, kılavuzun sahne ölçekleyicisi
+  // onu okuyor.)
+  test('bölge genişlikleri TEK KAYNAKTAN — toplam da basılıyor', () => {
     const satirda = ['kim', 'gir', 'coz', 'son']
       .reduce((a, y) => a + fead.veFeadKartBolgeW(y), 0);
     // Her bölge kendi sütunlarının toplamı; hiçbir sütun iki bölgeye düşmüyor.
@@ -277,10 +278,9 @@ describe('kart HTML\'i', () => {
     const ozet = fead.veFeadKartBolgeW('ozet');
     expect(satirda + ozet).toBe(hepsi);
     expect(ozet).toBeGreaterThan(0);                  // kayış boyu künyede
-    expect(satirda).toBeLessThanOrEqual(VE_FEAD_TABLE_W);
-    expect(VE_FEAD_TABLE_W - satirda).toBeLessThan(24);     // kenar payı, fazlası değil
-    expect(componentDefs['fead-table'].defaultWidth).toBe(VE_FEAD_TABLE_W);
-    expect(componentDefs['fead-table'].defaultHeight).toBe(VE_FEAD_TABLE_H);
+    kurOrnek();
+    const h = fead.veFeadTableCardHTML(null);
+    expect(h).toContain('--fead-krt-en:' + satirda + 'px;');
   });
 
   // ── ÇEVRİM DENETİMİ ÜST KÜNYEDE ────────────────────────────────────────
@@ -490,20 +490,41 @@ describe('tazeleme TEK KAPIDAN', () => {
   // bir ayrışma demek — ikisi de kendi başına tutarlı görünür, yalnız biri bir
   // düzenleme geride kalır. Bu yüzden altı düzenleme yolu da veFeadRefreshCards
   // çağırıyor, kart başına ayrı çağrı yok.
-  test('veFeadRefreshCards ŞEMAYI ve TABLOYU birlikte kuruyor', () => {
+  // TABLO ARTIK BİR PENCERE (Çizim Masası, 2026-09-23): tek kapı şemayı VE —
+  // açıksa — tablo penceresini tazeler. Pencere bir sonraki karede kurulur
+  // (odak kuralı: Sekme ile geçilen hücre sökülmesin).
+  test('veFeadRefreshCards ŞEMAYI ve AÇIK TABLO PENCERESİNİ birlikte tazeler', async () => {
     const { ns } = kurOrnek();
-    ['fead-layout', 'fead-table'].forEach((t, i) => {
-      const d = componentDefs[t];
-      ns.push({ id: 'kart' + i, type: t, def: d, x: 0, y: 0,
-                width: d.defaultWidth, height: d.defaultHeight, data: {} });
-      const el = document.createElement('div');
-      el.id = 'kart' + i;
-      el.innerHTML = '<div class="ve-node-box"></div>';
-      document.body.appendChild(el);
-    });
-    expect(fead.veFeadRefreshCards()).toBe(2);
+    const d = componentDefs['fead-layout'];
+    ns.push({ id: 'kart0', type: 'fead-layout', def: d, x: 0, y: 0,
+              width: d.defaultWidth, height: d.defaultHeight, data: {} });
+    const el = document.createElement('div');
+    el.id = 'kart0';
+    el.innerHTML = '<div class="ve-node-box"></div>';
+    document.body.appendChild(el);
+    const kap = document.createElement('div');
+    kap.id = 've-canvas-wrapper';
+    document.body.appendChild(kap);
+    expect(fead.veFeadRefreshCards()).toBe(1);            // pencere kapalı: yalnız şema
     expect(document.querySelector('#kart0 .' + fead.VE_FEAD_CARD_CLASS)).toBeTruthy();
-    expect(document.querySelector('#kart1 .' + fead.VE_FEAD_TABLE_CLASS)).toBeTruthy();
+
+    expect(fead.veFeadTabloAc()).toBe(true);
+    const govde = () => document.querySelector('#ve-fead-tablo .' + fead.VE_FEAD_TABLE_CLASS);
+    expect(govde().querySelectorAll('.ve-fead-krt[data-ve-node]')).toHaveLength(6);
+    const xAlani = () => [...govde().querySelectorAll('input')]
+      .find((i) => i.getAttribute('onchange') === "veFeadTableSet('ex-IDR1','x',this.value)");
+    expect(xAlani().value).toBe('130.1');
+
+    ns.find((n) => n.id === 'ex-IDR1').data.x = 140;
+    expect(fead.veFeadRefreshCards()).toBe(2);            // şema + pencere
+    await new Promise((r) => (typeof requestAnimationFrame === 'function'
+      ? requestAnimationFrame(r) : setTimeout(r, 0)));
+    expect(xAlani().value).toBe('140');
+
+    expect(fead.veFeadTabloKapat()).toBe(true);
+    expect(document.getElementById('ve-fead-tablo')).toBeNull();
+    expect(fead.veFeadRefreshCards()).toBe(1);
+    document.body.innerHTML = '';
   });
 
   test('düzenleme yolları kart başına AYRI çağrı yapmıyor (kaynak kapısı)', () => {
@@ -657,27 +678,20 @@ describe('Kayış Uzunluğu — çevrime ait, künyede', () => {
     expect(h).toContain('<b>' + T.LpitchMm.toFixed(1) + ' mm</b>');
   });
 
-  test('sütun sayısı ON BİR ve bölge genişlikleri kart ölçüsüne sığıyor', () => {
+  test('sütun sayısı ON BİR — kayış boyu listede yer kaplamıyor', () => {
     // Onbirinci sütun SİLME. Sıra oklarıyla aynı hücrede dururken sık yapılan
     // işlem ile geri dönüşü olmayan işlem bitişikti (indis + ▲▼ + ✕ / 70 px /
     // 9 px yazı) — ayrı sütun bir kozmetik değil bir ölçü kararı.
     expect(fead.VE_FEAD_TABLE_COLS).toHaveLength(11);
     expect(fead.VE_FEAD_TABLE_COLS[9].k).toBe('kayis');
     expect(fead.VE_FEAD_TABLE_COLS[10].k).toBe('sil');
-    // Kartın genişliğini KÜNYEYE giden sütun belirlemez — o listede yer
-    // kaplamıyor. Ölçülen şey listenin dört bölgesinin toplamı.
+    // Listenin genişliği = dört bölgenin toplamı; KÜNYEYE giden sütun sayılmaz.
+    // (Kartın ölçüsü bu toplamdan türüyordu; tablo kanvastan inince —
+    // 2026-09-23 — kart ölçüsü de kalktı, toplam yalnız kılavuzun ölçeğinde.)
     const toplam = ['kim', 'gir', 'coz', 'son']
       .reduce((a, y) => a + fead.veFeadKartBolgeW(y), 0);
-    expect(toplam).toBeLessThanOrEqual(VE_FEAD_TABLE_W);
-    // TAM OTURUYOR, "yaklaşık sığıyor" değil: kart kenarlığı dışında artan
-    // sıfır. Çözüm bölgesi `1fr` olduğu için artan ORAYA gidiyor; kart
-    // varsayılan ölçüsündeyken artanın sütun listesinin verdiği genişliğin
-    // TA KENDİSİ olması bu eşitlikle tutuluyor. Ölçüldü (gerçek tarayıcı):
-    // 782 px'lik kartta satır 780, izgara 768 — sağda 12 px ölü şerit vardı.
-    expect(VE_FEAD_TABLE_W - toplam).toBe(2);                  // yalnız kenarlık
-    expect(VE_FEAD_TABLE_W - 2 - fead.veFeadKartBolgeW('kim')
-           - fead.veFeadKartBolgeW('gir') - fead.veFeadKartBolgeW('son'))
-      .toBe(fead.veFeadKartBolgeW('coz'));
+    expect(toplam).toBe(fead.veFeadKartBolgeW());
+    expect(fead.veFeadKartBolgeW('ozet')).toBe(fead.VE_FEAD_TABLE_COLS[9].w);
   });
 });
 
@@ -812,9 +826,9 @@ describe('satır ekle / sil — kutu olmayınca tek yol', () => {
 
   test('kasnak olmayan düğüm bu yoldan SİLİNMEZ', () => {
     const { ns } = kurOrnek();
-    const tablo = ns.find((n) => n.type === 'fead-table');
+    const kanvas = ns.find((n) => n.type === 'fead-layout');
     const solver = ns.find((n) => n.type === 'fead-solver');
-    expect(fead.veFeadTableDelete(tablo.id)).toBe(false);
+    expect(fead.veFeadTableDelete(kanvas.id)).toBe(false);
     expect(fead.veFeadTableDelete(solver.id)).toBe(false);
     expect(fead.veFeadTableDelete('yok-boyle-bir-kimlik')).toBe(false);
     expect(global.nodes.length).toBe(ns.length);
@@ -1156,28 +1170,22 @@ describe('yeni yüzeyin işlevleri', () => {
     expect(h).not.toContain('Σ toplam');
   });
 
-  test('KART ÖLÇÜSÜ yeniden türedi ve eski ölçü YÜKSELİYOR', () => {
-    // Ölçüldü (AG00976, 6 kasnak): 430 px'lik kartta içerik 200 px yer
-    // kaplıyordu, yani kartın 230 px'i boştu. Kart listesinde satır daha
-    // yüksek (iki sıra etiket), o yüzden yükseklik geri büyüdü; genişlik ise
-    // `rowspan`lı kayış boyu sütunu künyeye geçtiği için DÜŞTÜ.
-    expect(VE_FEAD_TABLE_H).toBe(360);
-    const toplam = ['kim', 'gir', 'coz', 'son']
-      .reduce((a, y) => a + fead.veFeadKartBolgeW(y), 0);
-    expect(VE_FEAD_TABLE_W - toplam).toBeLessThan(24);
-    // Izgara döneminin ölçüsü de yükseltme listesinde — o kart bu sürümde
-    // açılırsa yeni ölçüye oturur.
-    expect(VE_FEAD_TABLE_LEGACY).toContainEqual({ w: 870, h: 340 });
-
-    // Kayıtlı bir proje eski ölçüde açılsaydı aynı sürümde iki farklı tablo
-    // görünümü dolaşırdı — Kayış Yolu kartındaki kuralın aynısı.
-    expect(VE_FEAD_TABLE_LEGACY).toContainEqual({ w: 824, h: 430 });
-    expect(veFeadLayoutSizeFor({ type: 'fead-table', width: 824, height: 430 }))
-      .toEqual({ w: VE_FEAD_TABLE_W, h: VE_FEAD_TABLE_H, changed: true });
-    // BİLEREK verilmiş ölçü korunur.
-    expect(veFeadLayoutSizeFor({ type: 'fead-table', width: 900, height: 500 }).changed)
-      .toBe(false);
-    // Şema kartının kendi listesi bozulmadı (tek kapı, iki kart).
+  // TABLO KANVASTAN İNDİ (2026-09-23, Çizim Masası): bir KART değil, kanvas
+  // kartının "Tablo" düğmesiyle açılan pencere. Tip, palet girdisi, paneli ve
+  // kart ölçüsü sabitleri KALKTI; biri kalsa kanvasa yeniden bir form girerdi
+  // — açılış yakınlaştırmasında 7,1 px'e küçülen (ölçüldü) aynı form.
+  test('Kayış Tablosu bir kanvas bileşeni DEĞİL — tip, palet, panel ve ölçü yok', () => {
+    expect(componentDefs['fead-table']).toBeUndefined();
+    expect(typeof VE_FEAD_TABLE_W).toBe('undefined');
+    expect(typeof VE_FEAD_TABLE_LEGACY).toBe('undefined');
+    const html = require('fs').readFileSync(
+      require('path').join(__dirname, '../../index.html'), 'utf8');
+    expect(html).not.toMatch(/data-type="fead-table"/);
+    expect(loadSource('cp-core.js')).not.toMatch(/'fead-table'/);
+    expect(fead.getFeadTablePropertiesHTML).toBeUndefined();
+    // Pencereye giden kapı kanvas kartının yüzen çubuğunda.
+    expect(loadSource('cp-fead.js')).toMatch(/veFeadTabloDugmeHTML\(\) \+ '<\/div>'/);
+    // Şema kartının yükseltme listesi bozulmadı (tek kapı).
     expect(veFeadLayoutSizeFor({ type: 'fead-layout', width: 420, height: 340 }))
       .toEqual({ w: VE_FEAD_LAYOUT_W, h: VE_FEAD_LAYOUT_H, changed: true });
   });
@@ -1200,26 +1208,12 @@ describe('yeni yüzeyin işlevleri', () => {
 //
 // Kart BÜYÜTÜLEBİLİR; küçültme içeriğin bütün kaldığı yerde durur.
 describe('en küçük ölçü — kart içeriğinin altına inmiyor', () => {
-  test('Kayış Tablosu tabanını BEYAN EDİYOR ve taban sütunlardan geri kalmıyor', () => {
-    const def = componentDefs['fead-table'];
-    expect(def.minWidth).toBe(VE_FEAD_TABLE_MIN_W);
-    expect(def.minHeight).toBe(VE_FEAD_TABLE_MIN_H);
-    // GENİŞLİK TABANI ARTIK SÜTUN TOPLAMININ ALTINDA — VE BU BİR GERİLEME
-    // DEĞİL. Izgarada bir sütun sığmayınca SESSİZCE kayıyordu; kart
-    // listesinde bölgeler `minmax(taban, istenen)` ile daralıyor ve hiçbir
-    // alan kaybolmuyor, yalnız darlaşıyor. O yüzden ölçülen şey "toplamdan
-    // geri kalmamak" değil, HER BÖLGENİN kendi tabanını taşıması.
-    const toplam = ['kim', 'gir', 'coz', 'son']
-      .reduce((a, y) => a + fead.veFeadKartBolgeW(y), 0);
-    // Üç içerik bölgesi daralır; SİLME bölgesi daralmaz (tek bir ✕ düğmesi —
-    // daraltılacak bir şeyi yok, daralırsa düğme kırpılır).
+  // Kayış Tablosu kartı bu kuralın İLK kullanıcısıydı; tablo kanvastan inince
+  // (2026-09-23) kart gitti, MEKANİZMA kaldı (kökteki CLAUDE.md'de genel kural).
+  // Kapı artık sentetik bir tiple mekanizmayı ölçüyor; listenin bölge
+  // tabanları ise pencerede de geçerli (daralır, kaybolmaz).
+  test('liste bölgeleri TABANINI CSS\'te taşıyor — daralır, kaybolmaz', () => {
     const tabanlar = { kim: 150, gir: 210, coz: 160 };
-    const tabanTop = Object.keys(tabanlar).reduce((a, y) => a + tabanlar[y], 0)
-      + fead.veFeadKartBolgeW('son');
-    expect(VE_FEAD_TABLE_MIN_W).toBeGreaterThanOrEqual(tabanTop);
-    expect(VE_FEAD_TABLE_MIN_W).toBeLessThan(toplam);
-    // Ve CSS o tabanları GERÇEKTEN yazıyor — yazmazsa bölge 0'a kadar iner
-    // ve ızgaranın sessiz kaybı kart listesine taşınır.
     const cssBlok = require('fs').readFileSync(
       require('path').join(__dirname, '../../css/styles.css'), 'utf8');
     ['kim', 'gir'].forEach((y) => {
@@ -1227,26 +1221,20 @@ describe('en küçük ölçü — kart içeriğinin altına inmiyor', () => {
                                 + y + ', auto))');
     });
     // ÇÖZÜM BÖLGESİ `1fr`: tabanı var ama tercih ettiği genişlik yok — ARTAN
-    // NE İSE O. Sabit yazılsaydı genişletilen kartın sağında ölü bir şerit
-    // kalırdı (ölçüldü). Bu yüzden `--fead-krt-coz` CSS'te KULLANILMIYOR.
+    // NE İSE O. Bu yüzden `--fead-krt-coz` CSS'te KULLANILMIYOR.
     expect(cssBlok).toContain('minmax(' + tabanlar.coz + 'px, 1fr)');
     expect(cssBlok).not.toContain('var(--fead-krt-coz');
     expect(cssBlok).toContain('var(--fead-krt-son, auto);');
-    // YÜKSEKLİK TABANI: künye (iki satır sarabilir) + İKİ kart satırı +
-    // ekleme şeridi. Altındaki her değer listeyi künyenin altında eziyor.
-    expect(VE_FEAD_TABLE_MIN_H).toBeGreaterThanOrEqual(44 + 2 * 40 + 32);
-    // Ve taban VARSAYILANI aşmıyor — aşsaydı kart açılışta kendi tabanının
-    // altında doğardı.
-    expect(VE_FEAD_TABLE_MIN_W).toBeLessThanOrEqual(VE_FEAD_TABLE_W);
-    expect(VE_FEAD_TABLE_MIN_H).toBeLessThanOrEqual(VE_FEAD_TABLE_H);
   });
 
   test('taban TİPTEN okunuyor — beyan etmeyen tip eski 50×50\'de kalıyor', () => {
-    // Mekanizma genel: kart başına `if` yazılsaydı üçüncü kart eklendiğinde
+    // Mekanizma genel: kart başına `if` yazılsaydı yeni bir kart eklendiğinde
     // sessizce tabansız kalırdı.
     expect(typeof veNodeMinSize).toBe('function');
-    expect(veNodeMinSize({ type: 'fead-table' }))
-      .toEqual({ w: VE_FEAD_TABLE_MIN_W, h: VE_FEAD_TABLE_MIN_H });
+    componentDefs['test-kart'] = { name: 'Deneme', minWidth: 300, minHeight: 120 };
+    try {
+      expect(veNodeMinSize({ type: 'test-kart' })).toEqual({ w: 300, h: 120 });
+    } finally { delete componentDefs['test-kart']; }
     // Beyan etmeyen tip: eski taban.
     expect(veNodeMinSize({ type: 'fead-idler' })).toEqual({ w: 50, h: 50 });
     expect(veNodeMinSize(null)).toEqual({ w: 50, h: 50 });
@@ -1256,19 +1244,19 @@ describe('en küçük ölçü — kart içeriğinin altına inmiyor', () => {
   });
 
   test('TABANIN ALTINDA KAYITLI kart açılışta yükseliyor', () => {
-    // Taban yalnız sürüklemeye konsaydı, bu kural gelmeden önce küçültülüp
-    // KAYDEDİLMİŞ bir kart o bozuk hâlde açılmaya devam ederdi.
-    expect(veFeadLayoutSizeFor({ type: 'fead-table', width: 300, height: 130 }))
-      .toEqual({ w: VE_FEAD_TABLE_MIN_W, h: VE_FEAD_TABLE_MIN_H, changed: true });
-    // Tek eksen de yeter — öteki bilerek verilmiş olabilir, korunur.
-    expect(veFeadLayoutSizeFor({ type: 'fead-table', width: 1400, height: 120 }))
-      .toEqual({ w: 1400, h: VE_FEAD_TABLE_MIN_H, changed: true });
-    // TABANIN ÜSTÜNDEKİ ölçüye DOKUNULMUYOR (eski kart yükseltme listesi de
-    // bozulmadı — o hâlâ tam eşleşmeyle çalışıyor).
-    expect(veFeadLayoutSizeFor({ type: 'fead-table', width: 1000, height: 500 }).changed)
-      .toBe(false);
-    expect(veFeadLayoutSizeFor({ type: 'fead-table', width: 824, height: 430 }))
-      .toEqual({ w: VE_FEAD_TABLE_W, h: VE_FEAD_TABLE_H, changed: true });
+    // Taban yalnız sürüklemeye konsaydı, kuraldan önce küçültülüp KAYDEDİLMİŞ
+    // bir kart o bozuk hâlde açılmaya devam ederdi.
+    componentDefs['test-kart'] = { name: 'Deneme', minWidth: 300, minHeight: 120 };
+    try {
+      expect(veFeadLayoutSizeFor({ type: 'test-kart', width: 200, height: 90 }))
+        .toEqual({ w: 300, h: 120, changed: true });
+      // Tek eksen de yeter — öteki bilerek verilmiş olabilir, korunur.
+      expect(veFeadLayoutSizeFor({ type: 'test-kart', width: 1400, height: 100 }))
+        .toEqual({ w: 1400, h: 120, changed: true });
+      // TABANIN ÜSTÜNDEKİ ölçüye DOKUNULMUYOR.
+      expect(veFeadLayoutSizeFor({ type: 'test-kart', width: 1000, height: 500 }).changed)
+        .toBe(false);
+    } finally { delete componentDefs['test-kart']; }
     // Taban BEYAN ETMEYEN kart etkilenmiyor.
     expect(veFeadLayoutSizeFor({ type: 'fead-layout', width: 120, height: 90 }).changed)
       .toBe(false);
@@ -1285,16 +1273,13 @@ describe('en küçük ölçü — kart içeriğinin altına inmiyor', () => {
 // açılıyor, ama DOLDURACAĞI SATIR ekranda yok.
 describe('eklenen satır görünür kılınıyor', () => {
   test('ekleyici satırı görüş alanına ALIYOR — ve zaten görünense DOKUNMUYOR', () => {
-    const { ns } = kurOrnek();
-    // Kartı DOM'a kur ki satırlar gerçekten var olsun.
-    const d = componentDefs['fead-table'];
-    ns.push({ id: 'kart', type: 'fead-table', def: d, x: 0, y: 0,
-              width: d.defaultWidth, height: d.defaultHeight, data: {} });
-    const el = document.createElement('div');
-    el.id = 'kart';
-    el.innerHTML = '<div class="ve-node-box"></div>';
-    document.body.appendChild(el);
-    expect(fead.veFeadRefreshCards()).toBeGreaterThan(0);
+    kurOrnek();
+    // Tablo PENCERESİNİ aç ki satırlar gerçekten var olsun (tablo kanvastan
+    // indi, 2026-09-23 — satırlar artık pencerede).
+    const kap = document.createElement('div');
+    kap.id = 've-canvas-wrapper';
+    document.body.appendChild(kap);
+    expect(fead.veFeadTabloAc()).toBe(true);
 
     const cagri = [];
     document.querySelectorAll('.' + fead.VE_FEAD_TABLE_CLASS + ' .ve-fead-krt[data-ve-node]')
@@ -1311,6 +1296,8 @@ describe('eklenen satır görünür kılınıyor', () => {
     expect(fead._feadScrollRowIntoView('yok-boyle-bir-id')).toBe(false);
     expect(fead._feadScrollRowIntoView(null)).toBe(false);
     expect(cagri).toHaveLength(1);
+    fead.veFeadTabloKapat();
+    document.body.innerHTML = '';
   });
 
   test('veFeadTableAdd kaydırmayı TAZELEMEDEN SONRA çağırıyor', () => {

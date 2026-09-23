@@ -754,7 +754,6 @@ function veFeadWizNodes(st){
   out.push({ id: 'wz-layout', type: 'fead-layout', data: {} });
   out.push({ id: 'wz-run',    type: 'fead-layout',
              customName: 'Çalışma Noktası', data: { katOn: 'isletme' } });
-  out.push({ id: 'wz-table',  type: 'fead-table',  data: {} });
   out.push({ id: 'wz-report', type: 'fead-report', data: {} });
 
   // ── SIRA İNDİSTE, TELDE DEĞİL (2026-09-09) ───────────────────────────────
@@ -1548,7 +1547,7 @@ function _fwStepKasnak(b){
     // Kayış Tablosu'yla AYNI. Bir dönem gidiş sırası basılıyordu ve o zaman
     // Gates raporunu kopyalayan kullanıcı ⇄ ile çevirmek zorundaydı.
     + '<p class="ve-fw-dim" style="margin:6px 0 0;">Satırlar <b>Gates tablo '
-    + 'sırasındadır</b> — kurulacak Kayış Tablosu\'yla aynı: sürücü ilk, '
+    + 'sırasındadır</b> — Kayış Tablosu penceresiyle aynı: sürücü ilk, '
     + 'otomatik gergi <b>son</b> satır. (Bu sıra kayışın gidişinin tersidir; '
     + 'gidiş yönünü ⇄ ile çevirebilirsiniz.)</p>'
     + '<div class="ve-fw-rowbtns">'
@@ -3304,7 +3303,7 @@ function veFeadWizCreate(){
   st.route = eskiRoute;
 
   // ── TEMİZLİK — yalnız açık onayla ────────────────────────────────────────
-  // Kasnaklar gider; araç düğümleri (kayış, çözücü, şema, TABLO, rapor) KALIR
+  // Kasnaklar gider; araç düğümleri (kayış, çözücü, kanvaslar, rapor) KALIR
   // ve aşağıda yeniden KULLANILIR — maxInstances:1 taşıyan düğümler ikinci kez
   // kurulamaz, ve kullanıcının kart ölçüsü / rapor türü gibi tercihlerini çöpe
   // atmanın karşılığı yok.
@@ -3312,11 +3311,9 @@ function veFeadWizCreate(){
 
   // Araç düğümleri: VARSA yeniden kullan, yoksa kur.
   //
-  // `fead-table` BU LİSTEDE OLMAK ZORUNDA. Kayış Tablosu açılış yüzeyinden
-  // (veFeadPopulateStarter) zaten geliyor ve maxInstances:1; listede olmasaydı
-  // sihirbaz ikincisini kurmaya kalkar, createNode reddeder ve kullanıcı
-  // "modeli kur" dediğinde bir UYARI görürdü — üstelik kurulan bileşen sayısı
-  // da eksik sayılırdı. Örnek kurucusunda ölçülmüş sınıfın aynısı.
+  // AÇILIŞ YÜZEYİNİN BOŞ KAYIŞ YOLU KARTI da bu yoldan YENİDEN KULLANILIR
+  // (Çizim Masası, 2026-09-23 — tablo artık bir kanvas bileşeni değil):
+  // `fead-layout:geometri` anahtarı onu yakalar, ikinci bir kart kurulmaz.
   //
   // EŞLEŞME TİPE DEĞİL, TİP + ÖN AYARA BAKAR. `fead-layout` artık İKİ KEZ
   // geçiyor (geometri + işletme kanvası, aynı tip — 2026-09-11). Yalnız tipe
@@ -3333,7 +3330,7 @@ function veFeadWizCreate(){
     return 'fead-layout:' + ((n.data && n.data.katOn === 'isletme') ? 'isletme' : 'geometri');
   }
   ['fead-belt', 'fead-solver', 'fead-layout:geometri', 'fead-layout:isletme',
-   'fead-table', 'fead-report'].forEach(function(t){ araclar[t] = []; });
+   'fead-report'].forEach(function(t){ araclar[t] = []; });
   nodes.forEach(function(n){
     var k = _fwAracAnahtar(n);
     if(araclar.hasOwnProperty(k)) araclar[k].push(n);
@@ -3348,7 +3345,7 @@ function veFeadWizCreate(){
   // için tek kart gibi görünüyorlardı.
   //
   // Şekil artık örnek kurucusuyla AYNI kaynaktan (`veFeadFallbackSlots`):
-  // tablo sağ üstte, kanvaslar altında bir sıra, künyeler solda. Kutusuz
+  // kanvaslar sağda bir sıra, künyeler solda. Kutusuz
   // tipler (kasnaklar) `null` döner ve eski ızgarada kalır — kanvasta yerleri
   // olmadığı için görünen bir şey değişmiyor, yalnız createNode'a bir
   // koordinat gerekiyor.
@@ -3363,9 +3360,9 @@ function veFeadWizCreate(){
     : { x: 3000, y: 3000 };
 
   // YUVA DÜĞÜMÜN KENDİ SIRASINDAN, kurulan-düğüm SAYACINDAN değil: yuvalar
-  // `pack.nodes`in tiplerinden türüyor (tablo sağ üstte, kanvaslar altında).
+  // `pack.nodes`in tiplerinden türüyor (kanvaslar sağda, künyeler solda).
   // Sayaçla indekslemek, zaten duran bir araç atlandığında sonrakilere BAŞKA
-  // tipin yuvasını verirdi — çözücü kutusu tablonun yerine düşerdi.
+  // tipin yuvasını verirdi — çözücü kutusu bir kanvasın yerine düşerdi.
   var kuruldu = [], idMap = {};
   pack.nodes.forEach(function(src, _i){
     var kuyruk = araclar[_fwAracAnahtar(src)];
@@ -3373,6 +3370,16 @@ function veFeadWizCreate(){
     if(mevcut){
       // Araç düğümü zaten duruyor: verisini tazele, kimliğini haritaya yaz.
       mevcut.data = Object.assign(mevcut.data || {}, JSON.parse(JSON.stringify(src.data)));
+      // YUVASINI DA ALIR. Yuva listesi paketin BÜTÜN düğümleri için kuruldu;
+      // devralınan düğüm eski yerinde kalırsa ona ayrılan yuva boş kalır ve
+      // yedek yolda sırada bir kart boşluğu açılır — açılış yüzeyinin boş
+      // Kayış Yolu kartı ile yeni kurulan işletme kartı ayrı iki tabandan
+      // ölçülmüş olur (örnek kurucusundaki kuralın aynısı).
+      var _ys = _fwYuva(_i);
+      mevcut.x = Math.round(base.x + _ys.lx);
+      mevcut.y = Math.round(base.y + _ys.ly);
+      var _mel = (typeof document !== 'undefined') ? document.getElementById(mevcut.id) : null;
+      if(_mel){ _mel.style.left = mevcut.x + 'px'; _mel.style.top = mevcut.y + 'px'; }
       idMap[src.id] = mevcut.id;
       kuruldu.push(mevcut);
       return;

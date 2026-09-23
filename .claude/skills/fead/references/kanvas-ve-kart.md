@@ -3,6 +3,35 @@
 > Kök `CLAUDE.md`'den taşındı. Metin birebir korunmuştur.
 > Emekli `fead-graph` yönü `emekli-yonler.md` dosyasına alındı.
 
+## ÖNCE BUNU OKU — ÇİZİM MASASI (2026-09-23)
+
+**HÜKÜM: kasnak Kayış Yolu ÇİZİMİNDE seçilir, taşınır ve eklenir; Kayış
+Tablosu kanvastan İNDİ ve kartın "Tablo" düğmesiyle açılan, modal olmayan
+bir alt pencere oldu.** Kullanıcı kararı (tasarım tezgâhı II, üç canlı
+prototip): *"Çizim Masası çok güzel. Kodlamaya başla."* Gerekçe ölçülmüştü:
+kanvas kartı olarak tablo açılış yakınlaştırmasında 7,1 px'e iniyor ve
+kanvasın %39'unu kaplıyordu; kasnağın YERİ ise yalnız sayı olarak
+girilebiliyordu.
+
+| Önce | Şimdi | Nerede |
+|---|---|---|
+| X/Y yalnız tablodan | çizimde sürükle (0,1 mm ızgara) · ok 1 mm / Shift 10 mm | `veFeadCizimBas` · `veFeadKasnakKaydir` · `veFeadCizimTus` |
+| Panel yalnız tablodaki addan | çizimdeki kasnağa TIKLA ya da tablodaki ad | `veFeadCizimBas` (hareketsiz bırakma = tık) |
+| Kasnak ekle: tablonun seçicisi (konumsuz, gerginin önüne) | paletten kayışın ÜSTÜNE bırak → iki komşunun arasına, bırakılan noktaya | `veFeadPaletBirak` · `veFeadAciklikSec` · `veFeadAradanEkle` |
+| Paletten kanvasa bırakma SESSİZ | çizim dışına bırakılan kasnak tabloya eklenir ve tablo açılır | `veFeadPaletBirak` |
+| `fead-table` kanvas kartı | `#ve-fead-tablo` penceresi (kanvasın altında) | `veFeadTabloAc` · `veFeadTabloToggle` |
+| Açılış yüzeyi: sihirbaz + tablo | sihirbaz + BOŞ Kayış Yolu kartı (örnek/sihirbaz onu DEVRALIR) | `veFeadPopulateStarter` · `veFeadLoadExample` · `veFeadWizCreate` |
+| Yerleşim: tablo üstte, kanvaslar altta | kanvaslar tek sıra, künyeler solda | `veFeadArrangeByCoords` · `veFeadFallbackSlots` |
+
+Kuralların kendisi SKILL.md → **kural 32**; kapılar
+`tests/unit/fead-cizim-masasi.test.js` + `tests/e2e/fead-cizim-masasi.spec.js`
++ `tests/e2e/fead-tablo.spec.js` (pencere). Aşağıdaki "Kanvasta KAYIŞ
+TABLOSU" bölümünün kart listesi kuralları PENCEREDE aynen geçerli; kanvas
+KARTINA özgü satırları (kart ölçüsü, taşıma tutamağı, kart içi tekerlek, en
+küçük kart ölçüsü) EMEKLİ — genel mekanizmaları (`veWheelInnerPane`,
+`veNodeMinSize`) duruyor ve sentetik bir kartla `tests/e2e/kart-yuzey.spec.js`
+kapısında.
+
 ## ÖNCE BUNU OKU — KASNAKLARIN KANVASTA KUTUSU YOK (2026-09-09)
 
 **HÜKÜM: kasnaklar kanvasa ÇİZİLMEZ.** Kullanıcı isteği: *"Kutular kalkacak.
@@ -489,8 +518,8 @@ düzenlemesinin ve "Otomatik Düzenle"nin kullandığı yolun ta kendisine.
 
 ###### YEDEK SIRA DA AYNI ŞEKLİ KURAR (2026-09-14)
 
-**HÜKÜM: kurucuların ilk karesi `veFeadFallbackSlots`'tan gelir — tablo sağ
-üstte, kanvaslar altında BİR SIRA, künyeler solda. Yerleştiriciyle aynı ŞEKİL;
+**HÜKÜM: kurucuların ilk karesi `veFeadFallbackSlots`'tan gelir — kanvaslar
+sağda BİR SIRA (2026-09-23'e kadar tablonun ALTINDA), künyeler solda. Yerleştiriciyle aynı ŞEKİL;
 aynı sayı değil (o ad payını DOM'dan ölçüyor, yedekte DOM yok).**
 
 Gerekçe: yerleştirici çağrısı iki kurucuda da `try/catch` ile sarılı, yani bir
@@ -695,6 +724,10 @@ alınca sarım açıları birebir geri geliyor (`154.3 · 52.8 · 198.4 · 64.3 
 157.4 · 33.0`).
 
 #### Kanvasta KAYIŞ TABLOSU (`fead-table`) — veri giriş yüzeyi
+
+> **2026-09-23'ten beri kanvas kartı değil, pencere** (bkz. dosyanın başı —
+> Çizim Masası). Kart listesinin kuralları pencerede aynen geçerli; kartın
+> kanvastaki hâline özgü satırlar emekli.
 
 Sütunlar mühendisin kendi hesap sayfasından birebir: **KASNAK · X(mm) · Y(mm) ·
 Efektif Çap(mm) · D(mm) · Kasnak Dönüş Yönü · Sarım Açısı(°) · Span

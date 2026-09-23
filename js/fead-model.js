@@ -2578,12 +2578,9 @@ function veFeadExampleNodes(key){
   // dururken ikisi de "Kayış Yolu" etiketi taşısaydı ayırt edilemezlerdi.
   nodesOut.push({ id:'ex-run', type:'fead-layout',
                   customName:'Çalışma Noktası', data:{ katOn:'isletme' } });
-  // KAYIŞ TABLOSU DA KURULUR — `ex-layout` ile aynı gerekçe: örnek
-  // "çözülebilir bir model" değil, KULLANIMA HAZIR bir model. Kasnakların
-  // veri giriş yüzeyi artık bu tablo; onsuz gelen bir örnekte kullanıcı
-  // koordinat girmek için bileşeni paletten ayrıca aramak zorunda kalırdı.
-  // Kayış Yolu kartıyla aynı SAĞ şeride düşer (veFeadArrangeByCoords).
-  nodesOut.push({ id:'ex-table',   type:'fead-table',   data:{} });
+  // KAYIŞ TABLOSU KURULMAZ (2026-09-23, Çizim Masası): tablo bir kanvas
+  // bileşeni değil, kartın "Tablo" düğmesiyle açılan bir PENCERE. Giriş
+  // yüzeyi çizimin kendisi.
   // RAPOR DA KURULUR — aynı gerekçe. Örnek "çözülebilir bir model" değil,
   // KULLANIMA HAZIR bir model: kullanıcı çözümü görüyor ama raporu almak için
   // bileşeni paletten ayrıca aramak zorunda kalıyordu. `data:{}` bilerek boş —
@@ -3164,6 +3161,28 @@ function veFeadMigrateRunToLayout(state){
     if(!x.customName) x.customName = 'Çalışma Noktası';
     n++;
   });
+  return n;
+}
+
+// ── ŞEMA 6 → 7: KAYIŞ TABLOSU KANVASTAN İNDİ ─────────────────────────────
+//
+// Kullanıcı kararı (2026-09-23, tasarım tezgâhı II · Çizim Masası): tablo bir
+// kanvas kartı olarak 7 px'e küçülen bir formdu; artık kanvas kartının
+// "Tablo" düğmesiyle açılan bir PENCERE. `componentDefs['fead-table']` YOK.
+// Göç olmasaydı kayıtlı projede tanımsız tipli bir kutu kalırdı (ad yok, ölçü
+// yok, panel yok). Düğüm VERİ TAŞIMIYORDU (sıra `beltIndex`te, kasnaklarda),
+// yani silmek hiçbir şey kaybettirmez; bağlantısı da yoktu (0/0 port).
+function veFeadMigrateTableOff(state){
+  if(!state || !Array.isArray(state.nodes)) return 0;
+  var sil = {};
+  state.nodes.forEach(function(x){ if(x && x.type === 'fead-table') sil[x.id] = true; });
+  var n = Object.keys(sil).length;
+  if(!n) return 0;
+  state.nodes = state.nodes.filter(function(x){ return !(x && sil[x.id]); });
+  if(Array.isArray(state.connections))
+    state.connections = state.connections.filter(function(c){
+      return !(c && (sil[c.from] || sil[c.to]));
+    });
   return n;
 }
 
@@ -4739,6 +4758,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadMigrateBeltOrder: veFeadMigrateBeltOrder,
     veFeadMigrateRunCard: veFeadMigrateRunCard,
     veFeadMigrateRunToLayout: veFeadMigrateRunToLayout,
+    veFeadMigrateTableOff: veFeadMigrateTableOff,
     veFeadSpinLabel: veFeadSpinLabel,
     _feadPlaneName: _feadPlaneName,
     veFeadTensionerSide: veFeadTensionerSide,
