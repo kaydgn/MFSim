@@ -389,9 +389,10 @@ function _gfSahneCevrim(){
 
 function _gfSahneRapor(){
   return _gfSahnePanel('getFeadReportPropertiesHTML',
-    'Rapor paneli. Doküman künyesi alanları antete ve belgenin sonundaki notlara akar; '
-    + 'rapor <b>çözülmüş</b> modelden üretilir, model çözülmemişse düğme pasiftir ve '
-    + 'sebebi yazılır.', true);
+    'Rapor paneli, iki kategori: <b>Tür</b> (burada açık — hangi belge indirilecek) ve '
+    + '<b>Künye</b> (antete ve belgenin sonundaki notlara akan dört alan). Sağ sütun '
+    + 'kasnak panellerininkiyle aynı; rapor <b>çözülmüş</b> modelden üretilir, model '
+    + 'çözülmemişse düğme pasiftir ve sebebi yazılır.', true);
 }
 
 function _gfSahneKatman(){

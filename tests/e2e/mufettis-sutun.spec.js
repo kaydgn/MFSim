@@ -43,11 +43,14 @@ async function bootApp(page, w) {
 }
 
 // Paneli KULLANICININ yolundan açar: kanvasta bir bileşen seç.
-async function panelAc(page) {
-  await page.evaluate(() => {
-    const n = createNode('engine', 400, 300);
+// ARAÇ penceresi — sütuna sığdığı ÖLÇÜLMÜŞ bir tip. İlk hâli MOTOR
+// kullanıyordu ve motorun BOŞ penceresini ölçüyordu: veriyle dolu motor
+// 380 px'e 185 px sığmıyor (bkz. mufettis-sigma.spec.js). Motor artık modal.
+async function panelAc(page, tip) {
+  await page.evaluate((tip) => {
+    const n = createNode(tip || 'vehicle', 400, 300);
     clearSelection(); addToSelection(n);
-  });
+  }, tip);
   // Seçim ile AÇMA arasına nefes: modülün açılış yüzeyi yerleşirken
   // `clearSelection` çağırıyor ve o da pencereyi kapatıyor.
   await page.waitForTimeout(500);

@@ -416,6 +416,19 @@ olurdu.
     C'yi yeniden uydurmayı gerektirir. Kapı: `fead-denetim-bulgular.test.js`
     → *"bulgu 4·5·6"*.
 
+31. **HER FEAD PENCERESİ KRANK KASNAĞI AİLESİNDE — DAR KAPTA DA** (2026-09-23,
+    kullanıcı isteği: *"kategori kategori pencereler"*). Kabuk TEK üreticiden
+    (`veFeadPanelShell`: özet şeridi · kategori sekmeleri · özet sütunu);
+    Kayış Tablosu (Girdiler · Çözüm), Kayış Yolu (Şema · Geometri) ve Rapor
+    (Tür · Künye) da artık bu kabukta. **Tek sütuna geçişi PANELİN genişliği
+    söyler** (`@container vepanel`, ≤ 640 px) — ekran sorgusu 380 px'lik
+    müfettiş sütununda hiç tetiklenmiyordu ve düzenlenen sütuna 42 px
+    kalıyordu. Dar kapta sekmeler üste, pencerenin EYLEMİ (`.ve-fp-solve`:
+    Hesapla · Raporu Oluştur) kaydırma alanının dibine yapışır; veri ızgarası
+    (çevrim tablosu) KENDİ kabında kayar, pencere kaymaz. Kapı:
+    `tests/e2e/mufettis-sigma.spec.js` (okunurluk: düzenlenen sütun · girdi ·
+    etiket · başlık, her sekme gezilerek) + `cp-fead-report.test.js`.
+
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı
 kuralların hepsi oradan çıktı.

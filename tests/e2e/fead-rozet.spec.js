@@ -178,10 +178,13 @@ test.describe('FEAD kanvas rozetleri', () => {
           catch (e) { return null; }
         })(),
         L: (function () {
-          const svg = document.querySelector('svg[data-fead-node]');
-          const strip = svg && svg.parentElement.parentElement
-            .querySelector('div:last-child');
-          const m = strip && strip.textContent.match(/L\s+([\d.]+)\s*mm/);
+          // Künye DURUM ROZETİNİN KENDİSİNDEN: `title` her hâlde tamamını
+          // taşıyor (cp-fead.js — "İKİ OKUMA DA KAYBOLMUYOR"). Eski yol svg'nin
+          // dedesinin SON div'ini okuyordu; "BANT YOK — denetim üstte yüzer"
+          // düzenlemesinden sonra o div yüzen DENETİM ÇUBUĞU oldu ve L
+          // sessizce `null` döndü (main'de de kırmızıydı, 2026-09-23 ölçüldü).
+          const r = document.querySelector('.ve-fead-kan-durum');
+          const m = r && (r.getAttribute('title') || '').match(/L\s+([\d.]+)\s*mm/);
           return m ? Number(m[1]) : null;
         })(),
       }));

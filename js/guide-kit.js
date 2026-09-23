@@ -221,6 +221,7 @@ var VE_GUIDE_SCENE_SEL = [
   '.ve-fead-table',    // (tablo kabuğunun ikinci kökü)
   '.ve-fead-krt',      // Kayış Tablosu'nun KART LİSTESİ (satır · bölge · alan)
   '.ve-fp-',           // FEAD pencerelerinin ortak dili
+  '.ve-pnl-tbl',       // panel veri tablosu — çözücünün çevrim ızgarası (2026-09-23)
   '.ve-fead-kat',      // kanvasın Katmanlar paneli
   '.ve-fead-kan',      // Kayış Yolu kartının kabuğu + durum rozeti
   '.ve-fead-yuz',      // çizimin üstünde yüzen denetim çubuğu
@@ -262,6 +263,12 @@ var VE_GUIDE_APPFIG_TOKENS = {
   '--accent-tint-15': 'rgba(36,66,95,.15)', '--accent-tint-20': 'rgba(36,66,95,.20)',
   '--accent-tint-22': 'rgba(36,66,95,.22)',
   '--accent-tint-35': 'rgba(36,66,95,.35)',
+  // DURUM TONLARI — rapor penceresinin durum kutusu (Model çözüldü/çözülmedi).
+  // Baskı yeşili #2e7d4f ve baskı kehribarı #c8781e'den, aksan tonlarının
+  // kalıbıyla (.08 zemin · .15 kenar) — ekran paletinden DEĞİL.
+  '--success-tint-8': 'rgba(46,125,79,.08)',  '--success-tint-15': 'rgba(46,125,79,.15)',
+  '--warning-tint-8': 'rgba(200,120,30,.08)', '--warning-tint-15': 'rgba(200,120,30,.15)',
+  '--danger-tint-8': 'rgba(168,50,31,.08)',   // baskı kırmızısı #a8321f — çevrim tablosunun sil düğmesi
   '--dur-fast': '0s', '--shadow-lg': 'none', '--focus-ring': 'transparent',
   '--shadow-color': 'transparent',
   '--ribbon-strip-h': 'auto', '--ribbon-expanded-h': 'auto'

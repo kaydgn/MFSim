@@ -105,82 +105,92 @@ function veFeadReportKind(node){
   return (k === 'summary') ? 'summary' : 'detailed';
 }
 
+// ── RAPOR PENCERESİ — KRANK KASNAĞI AİLESİNDE ──────────────────────────────
+// Kullanıcı isteği (2026-09-23): FEAD pencereleri Krank Kasnağı'nın yapısında,
+// kategori kategori. İki KATEGORİ: TÜR (hangi belge) ve KÜNYE (antete akan
+// dört alan). Özet sütunu kasnak pencerelerininkinin aynısı (kayış yolu ·
+// uygunluk) ve pencerenin CEVABINI + EYLEMİNİ taşır: model çözüldü mü,
+// "Raporu Oluştur". Eylem çözücünün Hesapla'sıyla aynı sınıf (`.ve-fp-solve`)
+// — dar sütunda o da kaydırma alanının dibine yapışır.
+//
+// Eski hâlin üç ölçülmüş kusuru kalktı: seçili tür kartı SABİT MAVİ
+// (`rgba(59,130,246,0.10)`, Atölye'nin toprak aksanı yerine eski temanın
+// rengi), düğmenin hover'ı satır içi `onmouseover` ile `filter:brightness`
+// (K turunun kapısı yalnız CSS'i taradığı için görmemişti) ve `color:#fff`.
+// Görünüm artık CSS'te (`.ve-fp-tur*` · `.ve-fp-durum*` — FEAD pencere ailesinin sınıfları; kılavuzun söküm önekine kendiliğinden girer), durum ifade edebiliyor.
+//
+// KÜNYE ARTIK MODEL ÇÖZÜLMEDEN DE DOLDURULABİLİR: alanların tüketicisi antet
+// (kural 25) ve belge bilgisini çözümden önce girmek meşru; sekme kümesi
+// çözüm durumuna göre değişseydi sekmeler görünüp kaybolurdu.
 function getFeadReportPropertiesHTML(node){
   if(!node.data) node.data = {};
   var R = _frResults();
   var solved = !!(R && R.ok);
   var kind = veFeadReportKind(node);
-  var html = '<div class="sw-panel">';
-  html += _frKindPicker(node, kind);
-  if(solved){
-    var nP = (R.pulleyNames || []).length;
-    var nD = (R.duty || []).length;
-    html += '<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); background:var(--bg-tertiary); border:1px solid var(--border-color); color:var(--text-primary);">'
-          + '<span style="color:var(--ink-success); font-weight:700;">✓ Model çözüldü</span> — '
-          + nP + ' kasnak · ' + nD + ' devir noktası. Rapor güncel çözüme göre üretilir.</div>';
-    html += _frDocFields(node);
-    var kAd = (kind === 'summary') ? 'Özet Raporu' : 'Detaylı Raporu';
-    html += '<button onclick="veFeadGenerateReport(\'' + node.id + '\')" style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:var(--radius-sm);" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 ' + kAd + ' Oluştur ve İndir</button>';
-  } else {
-    html += '<div style="padding:10px 12px; margin-bottom:10px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--ink-warning); font-size:var(--fs-body); line-height:1.5;">'
-          + '<b>Model çözülmedi.</b> Rapor, Çözücü sonuçlarından üretilir.</div>';
-    html += '<button disabled style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--bg-tertiary); color:var(--text-muted); border:1px solid var(--border-color); cursor:not-allowed; border-radius:var(--radius-sm);">📄 Raporu Oluştur ve İndir</button>';
-  }
-  html += '<div id="ve-fead-report-status" style="margin-top:8px; font-size:var(--fs-tiny); color:var(--text-muted);"></div>';
-  html += '</div>';
-  return html;
+  var kAd = (kind === 'summary') ? 'Özet Raporu' : 'Detaylı Raporu';
+
+  var durum = solved
+    ? '<div class="ve-fp-durum" data-d="ok"><b>Model çözüldü</b> — '
+      + (R.pulleyNames || []).length + ' kasnak · ' + (R.duty || []).length
+      + ' devir noktası. Rapor güncel çözüme göre üretilir.</div>'
+    : '<div class="ve-fp-durum" data-d="warn"><b>Model çözülmedi.</b> '
+      + 'Rapor, Çözücü sonuçlarından üretilir.</div>';
+  var eylem = '<button type="button" class="ve-fp-solve"'
+    + (solved ? ' onclick="veFeadGenerateReport(\'' + node.id + '\')"' : ' disabled') + '>'
+    + '<span class="mf-ico mf-ico-download" aria-hidden="true"></span> '
+    + (solved ? kAd + ' Oluştur ve İndir' : 'Raporu Oluştur ve İndir') + '</button>'
+    + '<div id="ve-fead-report-status" class="ve-fp-durum-not"></div>';
+
+  var ozet = ['tür <b>' + (kind === 'summary' ? 'Özet' : 'Detaylı') + '</b>',
+              solved ? 'model <b>çözüldü</b>' : 'model <b>çözülmedi</b>'];
+  var yan = veFeadToolSide(node, null, null, null, ozet, durum + eylem);
+  return veFeadPanelShell(node, [{ k:'tur', ad:'Tür',   govde: _frKindPicker(node, kind) },
+                                 { k:'kun', ad:'Künye', govde: _frDocFields(node) }], yan);
 }
 
 // Rapor türü seçici. İki durumlu bir anahtar değil İKİ KART: her türün ne
 // olduğu seçim yapılmadan ÖNCE okunabilsin. Seçim `saveState` çağırır ve
 // paneli yeniden çizer (veFeadSetChoice kalıbı) — tür bir görünüm tercihi
 // değil, hangi belgenin indirileceğini belirleyen bir karar.
+// Kartlar DÜĞME (klavyeyle seçilir) ve `role="radio"` — seçili olan
+// `aria-checked`, görünümü CSS'ten o öznitelikle.
 function _frKindPicker(node, kind){
-  var h = '<div style="margin:0 0 10px;">'
-    + '<div style="font-size:var(--fs-tiny); font-weight:600; color:var(--text-heading); margin-bottom:5px;">Rapor türü</div>';
+  var ic = '<div class="ve-fp-tur" role="radiogroup" aria-label="Rapor türü">';
   VE_FEAD_REPORT_KINDS.forEach(function(k){
     var on = (k.key === kind);
-    h += '<div onclick="veFeadSetChoice(\'' + node.id + '\',\'reportKind\',\'' + k.key + '\')"'
-      + ' style="cursor:pointer; margin-bottom:5px; padding:7px 9px; border:1px solid '
-      + (on ? 'var(--accent-primary)' : 'var(--border-color)') + '; background:'
-      + (on ? 'rgba(59,130,246,0.10)' : 'var(--bg-secondary)') + ';">'
-      + '<div style="display:flex; align-items:center; gap:7px;">'
-      + '<span style="width:11px; height:11px; flex:none; border-radius:50%; border:2px solid '
-      + (on ? 'var(--accent-primary)' : 'var(--text-muted)') + '; background:'
-      + (on ? 'var(--accent-primary)' : 'transparent') + ';"></span>'
-      + '<b style="font-size:var(--fs-tiny); color:var(--text-heading);">' + k.ad + '</b></div>'
-      + '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:3px; line-height:1.4;">'
-      + k.aciklama + '</div></div>';
+    ic += '<button type="button" class="ve-fp-tur-k" role="radio" aria-checked="' + on + '"'
+      + ' onclick="veFeadSetChoice(\'' + node.id + '\',\'reportKind\',\'' + k.key + '\')">'
+      + '<span class="ve-fp-tur-nok" aria-hidden="true"></span>'
+      + '<b>' + k.ad + '</b><em>' + k.aciklama + '</em></button>';
   });
-  return h + '</div>';
+  ic += '</div>';
+  return _feadCard('Rapor Türü', 'hangi belge indirilecek', 'var(--accent-primary)', ic);
 }
 
-// Doküman künyesi — antete ve §8.18'e akan üç alan. Tedarikçi sayfasının
+// Doküman künyesi — antete ve §8.18'e akan dört alan. Tedarikçi sayfasının
 // künyesinde de bunlar var (doküman no, revizyon, tasarım notları).
+// FEAD ALAN GRAMERİ (`.ve-fp-f` · etiket üstte): kasnak pencereleriyle aynı dil.
 function _frDocFields(node){
   var d = node.data || {};
   function inp(key, label, ph){
-    return '<div style="margin-bottom:7px;">'
-      + '<label style="display:block; font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:2px;">' + label + '</label>'
-      + '<input type="text" value="' + _frEsc(d[key] == null ? '' : d[key]) + '" placeholder="' + _frEsc(ph) + '"'
-      + ' oninput="veFeadSet(\'' + node.id + '\',\'' + key + '\',this.value)"'
-      + ' style="width:100%; padding:5px 7px; font-size:var(--fs-tiny); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);"></div>';
+    return '<label class="ve-fp-f"><span class="ve-fp-l">' + label + '</span>'
+      + '<input class="ve-fp-inp ve-fp-inp--text" type="text" value="' + _frEsc(d[key] == null ? '' : d[key]) + '"'
+      + ' placeholder="' + _frEsc(ph) + '"'
+      + ' oninput="veFeadSet(\'' + node.id + '\',\'' + key + '\',this.value)"></label>';
   }
-  var h = '<div style="margin:0 0 10px; padding:9px 10px; background:var(--bg-secondary); border:1px solid var(--border-color);">'
-    + '<div style="font-size:var(--fs-tiny); font-weight:600; color:var(--text-heading); margin-bottom:6px;">Doküman künyesi</div>';
   // HAZIRLAYAN — özet raporun anteti bu alanı okuyordu ama HİÇBİR YER onu
   // yazmıyordu: altı sayfanın altısında da "Hazırlayan: —" basılıyordu.
   // Tedarikçi çıktısı da aynı satırı taşıyor ("User: ...").
-  h += inp('author', 'Hazırlayan', 'A. Kol');
-  h += inp('docNo', 'Doküman no', 'FEAD-2026-001');
-  h += inp('revision', 'Revizyon', 'A');
-  h += '<div><label style="display:block; font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:2px;">Tasarım notları (her satır bir not)</label>'
-     + '<textarea rows="3" oninput="veFeadSet(\'' + node.id + '\',\'notes\',this.value)"'
-     + ' placeholder="2026-08-18 | Gergi montaj konumu 5 mm sola alındı"'
-     + ' style="width:100%; padding:5px 7px; font-size:var(--fs-tiny); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); resize:vertical;">'
-     + _frEsc(d.notes == null ? '' : d.notes) + '</textarea></div>';
-  h += '</div>';
-  return h;
+  var ic = '<div class="ve-fp-grid" style="--fp-k:1;">' + inp('author', 'Hazırlayan', 'A. Kol') + '</div>'
+    + '<div class="ve-fp-grid" style="--fp-k:2;">'
+    + inp('docNo', 'Doküman no', 'FEAD-2026-001') + inp('revision', 'Revizyon', 'A') + '</div>'
+    + '<div class="ve-fp-grid" style="--fp-k:1;"><label class="ve-fp-f">'
+    + '<span class="ve-fp-l">Tasarım notları (her satır bir not)</span>'
+    + '<textarea class="ve-fp-inp ve-fp-inp--text ve-fp-inp--alan" rows="3"'
+    + ' oninput="veFeadSet(\'' + node.id + '\',\'notes\',this.value)"'
+    + ' placeholder="2026-08-18 | Gergi montaj konumu 5 mm sola alındı">'
+    + _frEsc(d.notes == null ? '' : d.notes) + '</textarea></label></div>';
+  return _feadCard('Doküman Künyesi', 'antete ve §8.18\'e akar', 'var(--accent-warning)', ic);
 }
 
 // ═══════════════════ TALEP-ÜZERİNE VARLIK YÜKLEME ═══════════════════════════

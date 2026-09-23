@@ -459,18 +459,36 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
       expect(r.serit).toBe(r.zemin);              // şerit ve rozet AYNI renkte
       expect(Number(r.rozet)).toBeGreaterThan(0); // sayı, ✓ değil
     });
-    // ...ve renk gerçekten kırmızı ailesinden (R baskın).
+    // ...ve renk gerçekten kırmızı ailesinden. AİLE TONDAN (HSV) ölçülür:
+    // ilk hâli kanal farkıyla ölçüyordu (R > G + 60 / G > R + 60) ve Atölye
+    // paletinin yeşili #2f6b45'te G − R TAM 60 — renk açıkça yeşil (ton 142°,
+    // doygunluk .56) ama vekil eşikte kırılıyordu. Ton + doygunluk NİYETİN
+    // kendisi ("kırmızı" / "belirgin yeşil") ve korunmak istenen mutasyonu
+    // (st-ok kuralı silinir → nötr gri rozet, doygunluk ≈ .06) yine yakalar.
     const rgb = (c) => c.match(/\d+/g).map(Number);
-    const [kr, kg] = rgb(kirmizi[0].zemin);
-    expect(kr).toBeGreaterThan(kg + 60);
+    const hsv = (c) => {
+      const [r, g, b] = rgb(c).slice(0, 3).map((v) => v / 255);
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+      let h = 0;
+      if (d) {
+        h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+        h *= 60; if (h < 0) h += 360;
+      }
+      return { h, s: mx ? d / mx : 0 };
+    };
+    const k = hsv(kirmizi[0].zemin);
+    expect(k.h <= 20 || k.h >= 340).toBe(true);
+    expect(k.s).toBeGreaterThan(0.4);
 
     // DOLU örnek: altısı da YEŞİL ve ✓ taşıyor.
     await page.evaluate(() => veFeadWizSeed('AG00976_GATES_2025'));
     const dolu = await page.evaluate(oku);
     expect(dolu.every((r) => r.durum === 'ok')).toBe(true);
     expect(dolu.every((r) => r.rozet === '✓')).toBe(true);
-    const [yr, yg] = rgb(dolu[0].zemin);
-    expect(yg).toBeGreaterThan(yr + 60);          // yeşil ailesi
+    const y = hsv(dolu[0].zemin);                  // yeşil ailesi
+    expect(y.h).toBeGreaterThanOrEqual(90);
+    expect(y.h).toBeLessThanOrEqual(170);
+    expect(y.s).toBeGreaterThan(0.4);
 
     // ARADA: bir kasnağın çapı silinince O ADIM ayrışıyor, kalanlar yeşil kalır.
     await page.evaluate(() => { veFeadWizState().pulleys[2].od = ''; veFeadWizRender(); });

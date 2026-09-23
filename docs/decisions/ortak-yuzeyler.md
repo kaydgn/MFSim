@@ -997,3 +997,53 @@ gerçekten değiştiriyor mu** ve **hücre biçimi sınıftan mı geliyor** diye
 Düşmeleri ölçüldü: satır vurgusu silinince tarayıcı halkası
 `rgba(0, 0, 0, 0)` ile düşüyor, tek satır içi stil eklenince sayaç
 `1082 > 1081` diyor.
+
+
+## Bandın sağ ucu, karşılama kenarı, sütun kipi (2026-09-23)
+
+Kullanıcı bildirimi: ▼ ve KA "çalışmıyor", KA'nın açtığı yapı kötü; karşılama
+fotoğrafının çerçevesi var; bileşen pencereleri yeni modele göre olmamış.
+
+**Hesap menüsünün yüzeyi `.ve-context-menu`de.** Dört sağ-tık menüsü yüzeyini
+satır içi `cssText`ten alıyordu, sınıf yalnız yazı boyu taşıyordu; avatar
+menüsü sınıfı devraldı ve saydam, kenarlıksız, `z-index`siz doğdu. İlk kapısı
+`toBeVisible()` ölçüyordu — boyutu olan her kutu "görünür" sayılır. Kapı artık
+OKUNMAYI ölçer (opak zemin, kenarlık, üç noktada en üstteki eleman menü).
+Kapı: `ust-bant.spec.js` → *"OKUNUR bir yüzey"*.
+
+**Sütun bir pencere değil — `--z-dock` (400).** Müfettiş sütunu `--z-modal`da
+durunca bandın menüsü onun arkasında açılıyordu. Kapı: *"müfettişin ÜSTÜNDE"*.
+
+**Tek ESC tek katman.** Menüyü kapatan tuş alttaki müfettişi de kapatıyordu
+(yakalama evresindeki dinleyici olayı yaymaya bırakıyordu). Kapı: *"TEK ESC"*.
+
+**Avatar açılışta tazelenir.** `veAvatarYaz` yalnız ad yazılınca çağrılıyordu;
+kayıtlı ad yeniden açılışta bandda görünmüyordu. Kapı: *"AÇILIŞTA"*.
+
+**Şerit düğmesi iki durumda da yerinde, yalnız ok döner.** Yalnız katlıyken
+vardı; basınca kayboluyor, sağ küme 26 px kayıyor ve tıklanan noktaya avatar
+oturuyordu — ikinci tık hesap menüsüne gidiyordu. Kapı: *"KAYMIYOR"*.
+
+**Karşılamada tuval çukuru yok.** Çukur (Tur B) kaplamanın kabına uygulanınca
+kaplama da çerçevelendi: foto 1902×1014, kart açılış kartından 9 px içeride —
+iki kartın CSS'i birebir aynı, ÇİZİMİ değil (`left` kapsayana göre). Önceki
+dersin tersi: bir kaba kural EKLEMEK de içindekileri etkiler.
+Kapı: `karsilama-kenar.spec.js` (çizilmiş dikdörtgenler).
+
+**Sütuna sığmayan pencere modal açılır** (`VE_SUTUNA_SIGMAYAN`, ölçülmüş,
+yalnız aşağı iner). Tur C'nin kapısı yalnız BOŞ motor penceresini ölçmüştü.
+**Taşma sıfır okunur demek değil**: ezilen pencere taşmaz. Kapı dört okunurluk
+ölçüsü taşır — düzenlenen sütun ≥ %90, girdi ≥ 56 px, etiket kırpılmıyor
+(çizilmiş metin kutusuyla; `scrollWidth` başlangıç yönüne taşmayı saymaz),
+başlık büzülmüyor. Kapı: `mufettis-sigma.spec.js`.
+
+**Tek sütuna geçişi panelin genişliği söyler, ekranın değil.** FEAD kabuğu
+`@media (max-width:900px)` ile tek sütuna iniyordu; geniş ekranda 380 px'lik
+sütunda sorgu tetiklenmedi, düzenlenen sütuna 42 px kaldı. `@container`
+(`.ve-properties-content`). Kapı: aynı spec, *"düzenlenen sütun"*.
+
+**Etiket kırpılmaz, satır kaydırır.** Sağa yaslı + `nowrap` + `overflow:hidden`
+sığmayan etiketi SOLDAN kesiyordu, üç nokta çıkmıyordu: "Çalışma momenti —
+Mean Load" → "Mean Load". Kapı: aynı spec, *"etiket kırpık"*.
+
+**Hover rengini ailesinden alır.** Kapı: `source-hygiene.test.js` bölüm 13.

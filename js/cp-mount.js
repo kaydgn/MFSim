@@ -668,8 +668,12 @@ function _mntSingle(node, title, unit, key, ph, step){
   var v=(node.data[key]===undefined||node.data[key]===null)?'':node.data[key];
   return '<div style="display:flex; align-items:center; gap:10px; margin-bottom:9px;">'
     +'<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">'+title+(unit?' <span style="color:var(--text-muted); font-weight:400;">'+unit+'</span>':'')+'</div>'
-    +'<input type="number" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'" placeholder="'+(ph||'')+'" onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:120px; '+_MNT_INP+'">'
+    +'<input type="number" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'" placeholder="'+(ph||'')+'" onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:120px; min-width:0; '+_MNT_INP+'">'
     +'</div>';
+  // `min-width:0` ŞART: esnek kutuda bir girdinin otomatik en küçük boyu
+  // kendi genişliğidir — 120 px'in altına hiç inmiyordu. 380 px'lik müfettiş
+  // sütununda satır 10,94 px taşıyor ve içeriğe YATAY KAYDIRMA çubuğu
+  // ekliyordu (ölçüldü).
 }
 // Etiketli hücre ızgarası (cells=[{key,label,step,ph}], cols sütun).
 function _mntGrid(node, cells, cols){

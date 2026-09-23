@@ -340,6 +340,22 @@ function veRibbonRender() {
   var bodyHost = document.getElementById('ve-rb-body');
   if(!tabsHost || !bodyHost) return;
 
+  // YAPISAL DURUM İÇERİKTEN ÖNCE. Katlı/açık sınıfı eskiden en sonda, gövde
+  // kurulduktan SONRA yazılıyordu: gövdeyi kuran bir komutun `when()`
+  // denetimi patlasaydı değişken dönmüş, sınıf dönmemiş olurdu — düğme
+  // sessizce "çalışmıyor" gibi görünürdü. Bugün hiçbir `when()` patlamıyor
+  // (ölçüldü); sıra yine de aç/kapa'yı içeriğin başarısına bağlamamalı.
+  host.classList.toggle('is-collapsed', veRibbonCollapsed);
+  host.classList.toggle('is-peek', veRibbonCollapsed && _veRibbonPeek);
+  veRibbonApplyHeight();
+  var tog = document.getElementById('ve-rb-expand');
+  if(tog) {
+    var togEtiket = veRibbonCollapsed ? 'Şeridi aç' : 'Şeridi daralt';
+    tog.setAttribute('title', togEtiket);
+    tog.setAttribute('aria-label', togEtiket);
+    tog.setAttribute('aria-expanded', veRibbonCollapsed ? 'false' : 'true');
+  }
+
   // ── Sekmeler ──
   var h = '';
   tabs.forEach(function(t) {
@@ -378,10 +394,6 @@ function veRibbonRender() {
     });
   }
   bodyHost.innerHTML = b;
-
-  host.classList.toggle('is-collapsed', veRibbonCollapsed);
-  host.classList.toggle('is-peek', veRibbonCollapsed && _veRibbonPeek);
-  veRibbonApplyHeight();
   veRibbonSyncQat();
 }
 
