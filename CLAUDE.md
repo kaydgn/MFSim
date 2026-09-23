@@ -510,20 +510,31 @@ git rev-parse --short origin/main                           # build çıktısın
 sonra gerçek tarayıcıda aç ve **0 ağ isteği / 0 konsol hatası** olduğunu ölç,
 ardından dosyayı SendUserFile ile bırak.
 
-**DOSYA SIKIŞTIRILARAK GÖNDERİLİR — 30 MiB SINIRI AŞILDI (2026-09-08).**
-Karşılama slaytının 24 görseli (`assets/karsilama/`, 2,3 MB) data URI olarak
-gömülünce tek dosya **30,8 MiB** oldu ve SendUserFile'ın **30 MiB** sınırını
-aştı: gönderim REDDEDİLDİ. Ölçüldü — `gzip -9` ile **18,9 MiB**, rahat geçiyor:
+**SIKIŞTIRMA BİR KOŞULDUR, BİR ADET DEĞİL — ÖNCE BOYUTU ÖLÇ (2026-09-23).**
+Kural şudur: **sığıyorsa sıkıştırmadan gönder.**
 
 ```bash
-gzip -9 -c MFSim_Code.html > MFSim_Code.html.gz   # gönderilen bu
+ls -l MFSim_Code.html          # 30 MiB'ın ALTINDA mı?
+# altındaysa  → MFSim_Code.html doğrudan gönderilir
+# üstündeyse  → gzip -9 -c MFSim_Code.html > MFSim_Code.html.gz
 ```
-Kullanıcı sağ tık → çıkart ile açıyor. Küçültme önerildi (görselleri 1200 px /
-kalite 75 webp'e indirmek 2,3 MB → ~700 KB yapardı); kullanıcı REDDETTİ:
-*"Yok, dosya boyutu büyüyecek zaten. Zipleyip atmaya devam."* Yani sıkıştırma
-geçici bir çare değil, **kalıcı teslim biçimi** — dosya büyümeye devam edecek.
-(Yapısal Analiz kaldırılınca dosya 17,1 MB'a düştü ve sınırın altına indi; kural
-DEĞİŞMEDİ — kullanıcının kararı sıkıştırmaya devam etmek yönündeydi.)
+
+Kullanıcı isteği (2026-09-23): *"Sıkıştırılmış olarak atmasana, normal at."*
+Bu, 2026-09-08'deki *"Zipleyip atmaya devam"* kararını **iptal etmez, yerine
+oturtur**: o gün dosya 30,8 MiB'tı ve SendUserFile'ın **30 MiB** sınırını
+aştığı için gönderim REDDEDİLMİŞTİ — yani sıkıştırma bir tercih değil
+ZORUNLULUKTU. Sınırın altına inince zorunluluk kalkıyor, çünkü sıkıştırılmış
+dosya kullanıcıya fazladan bir iş yüklüyor (sağ tık → çıkart).
+
+Bu kural bir kez **kalıcı teslim biçimi** diye yazıldı ve yanlıştı: koşulu
+(30 MiB sınırı) kuralın kendisi sanmak, dosya 17,1 MiB'a düştüğünde bile
+gereksiz yere sıkıştırmaya devam etmek demekti.
+
+Küçültme önerildi (görselleri 1200 px / kalite 75 webp'e indirmek), kullanıcı
+REDDETTİ — **o karar duruyor**: karelerin kalitesi düşürülmez. Dosya
+büyümeye devam edecek, yani sınır er geç yeniden aşılacak; o gün sıkıştırma
+kendiliğinden geri gelir.
+
 Geçici `.gz` gönderimden sonra silinir (çalışma ağacı temiz kalsın).
 
 **PULL BİR NEZAKET DEĞİL KAPIDIR — ÖLÇÜLDÜ.** Oturum konteyneri depoyu bir
