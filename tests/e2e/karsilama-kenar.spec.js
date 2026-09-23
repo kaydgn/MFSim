@@ -1,0 +1,81 @@
+/**
+ * karsilama-kenar.spec.js — KARŞILAMA AÇILIŞ EKRANININ İKİZİ Mİ (ÇİZİMDE)?
+ * ──────────────────────────────────────────────────────────────────────────
+ *
+ * ÖLÇÜLEN KUSUR (2026-09-23, kullanıcı bildirimi: "kenarlardan kısıtı var,
+ * çerçevesi var"): karşılama fotoğrafı (9, 9)'dan 1902×1014 çiziliyordu,
+ * 1920×1032 yerine. Kaplama `.ve-canvas-wrapper`ın İÇİNDE duruyor ve Tur B'nin
+ * tuval çukurunu (8 px dolgu + 1 px kenarlık + 10 px köşe + iç gölge) birlikte
+ * devralmıştı.
+ *
+ * Kart da aynı 9 px'i yedi ve bunu söyleyen bir kapı YOKTU:
+ * `loader-splash.test.js` iki kartın CSS METNİNİ karşılaştırıyor — ikisi de
+ * `left:56px` yazıyor. Ama `left` kapsayan bloğa göre; açılış kartınınki
+ * ekranın kendisi, karşılama kartınınki içeri kaymış tuval kabı. Metin
+ * birebir aynıydı, ÇİZİM 9 px ayrıydı. Bu halka çizimi ölçer.
+ *
+ * Node'da koşamaz: jsdom yerleşim hesaplamaz, `getBoundingClientRect` hep 0.
+ */
+const { test, expect } = require('@playwright/test');
+const path = require('path');
+const fs = require('fs');
+
+const BUILD = path.join(__dirname, '../..', 'MFSim_Code.html');
+test.beforeAll(() => {
+  if (!fs.existsSync(BUILD)) throw new Error('MFSim_Code.html yok. Önce: npm run build');
+});
+
+const kutu = (sel) => {
+  const e = document.querySelector(sel);
+  if (!e) return null;
+  const r = e.getBoundingClientRect();
+  return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) };
+};
+
+test('karşılama fotoğrafı TAM KENAR ve kartı açılış kartıyla AYNI yerde', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.goto('file://' + BUILD);
+  await page.fill('#mfsim-login-password', 'mfsim2024');
+  await page.press('#mfsim-login-password', 'Enter');
+  // AÇILIŞ EKRANI — yükleme sürerken ölç
+  await page.waitForSelector('#mfsim-loading-screen .mfsim-loading-panel', { state: 'visible', timeout: 30000 });
+  const acilis = {
+    foto: await page.evaluate(kutu, '#mfsim-loading-photo'),
+    kart: await page.evaluate(kutu, '#mfsim-loading-screen .mfsim-loading-panel'),
+  };
+  await page.waitForSelector('#mfsim-loading-screen', { state: 'hidden', timeout: 90000 });
+  await page.waitForTimeout(800);
+  const karsilama = {
+    foto: await page.evaluate(kutu, '#ve-welcome-slayt'),
+    kart: await page.evaluate(kutu, '.ve-welcome-id'),
+  };
+
+  // Fotoğraf ekranın TAMAMI — çerçeve yok
+  expect(karsilama.foto).toEqual({ x: 0, y: 0, w: 1600, h: 900 });
+  expect(karsilama.foto).toEqual(acilis.foto);
+  // Kart açılış kartının ÜSTÜNE oturuyor: sol kenar ve genişlik ÇİZİMDE aynı
+  // (yükseklik içeriğe göre değişir; o bilerek farklı)
+  expect(karsilama.kart.x).toBe(acilis.kart.x);
+  expect(karsilama.kart.w).toBe(acilis.kart.w);
+
+  // Köşe de yok: kaplamanın kabı yuvarlatılmış olsaydı fotoğraf köşeden kırpılırdı
+  const kose = await page.evaluate(() => getComputedStyle(document.querySelector('.ve-canvas-wrapper')).borderTopLeftRadius);
+  expect(kose).toBe('0px');
+});
+
+test('çukur MODÜLDE geri geliyor — kural karşılamaya ait, tuvale değil', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.goto('file://' + BUILD);
+  await page.fill('#mfsim-login-password', 'mfsim2024');
+  await page.press('#mfsim-login-password', 'Enter');
+  await page.waitForSelector('#mfsim-loading-screen', { state: 'hidden', timeout: 90000 });
+  await page.click('.ve-module-card[data-module="arac-performans"]');
+  await page.waitForSelector('#mfsim-module-loading', { state: 'hidden', timeout: 30000 }).catch(() => {});
+  await page.waitForTimeout(400);
+  const r = await page.evaluate(() => {
+    const c = getComputedStyle(document.getElementById('ve-split-container'));
+    const w = getComputedStyle(document.querySelector('.ve-canvas-wrapper'));
+    return { dolgu: c.paddingTop, kenar: w.borderTopWidth, kose: w.borderTopLeftRadius, golge: w.boxShadow !== 'none' };
+  });
+  expect(r).toEqual({ dolgu: '8px', kenar: '1px', kose: '10px', golge: true });
+});

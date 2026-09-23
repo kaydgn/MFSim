@@ -56,7 +56,11 @@ const WELCOME = HTML.slice(
 // için geçerli, dosyanın tamamı için değil.
 const CSS_WELCOME = (function () {
   const a = CSS.indexOf('/* \u2550\u2550\u2550 Modül Seçim / Karşılama Ekranı');
-  const b = CSS.indexOf('.ve-canvas-wrapper{');
+  // Sınır karşılama başlığından SONRAKİ ilk tuval kuralı. Düz `indexOf` dosyadaki
+  // İLK `.ve-canvas-wrapper{`i buluyordu; karşılamanın çukursuz kuralı
+  // (`.ve-main.ve-no-module .ve-canvas-wrapper{`, 2026-09-23) başlıktan önce
+  // durunca sınır ters düştü ve bu dosyanın 71 testi HİÇ koşmadı.
+  const b = CSS.indexOf('.ve-canvas-wrapper{', a);
   if (a < 0 || b < 0 || b < a) throw new Error('css/styles.css: karşılama bölümü bulunamadı');
   return CSS.slice(a, b);
 })();

@@ -226,7 +226,7 @@
       <button type="button" class="ve-bant-avatar ve-bant-avatar--bos"
               id="ve-bant-avatar" onclick="veAvatarMenuAc()"
               title="Adını gir — hesap menüsü" aria-label="Hesap menüsü"
-              aria-haspopup="menu"></button>
+              aria-haspopup="menu" aria-expanded="false"></button>
 
 
     <!-- Radyo düğmesi buradaydı; komut şeride taşındı (Araçlar → Mola → Radyo,
@@ -240,13 +240,13 @@
       <span id="ve-deploy-refresh" class="ve-deploy-refresh" onclick="veRefreshApp()" title="Güncellemeyi al"><span class="mf-ico mf-ico-refresh"></span></span>
     </span>
 
-    <!-- Geri aç — YALNIZ şerit daraltılmışken görünür (css: .is-collapsed).
-         Daralt tutamağı gövdenin köşesinde olduğu için gövdeyle birlikte
-         gizleniyor; daraltılmış durumda geri açmanın GÖRÜNÜR bir yolu
-         kalmıyordu (çift tık ve peek çalışıyordu ama görünmüyordu; bilmeyen
-         için şerit kilitlenmiş gibiydi). Sabit durumda gizli kalır: bandın
-         sağ ucunun yeniden kalabalıklaşmaması bu düzenlemenin amacıydı. -->
-    <button type="button" class="ve-rb-expand" id="ve-rb-expand" title="Şeridi geri aç" aria-label="Şeridi geri aç">▼</button>
+    <!-- ŞERİDİ AÇ / DARALT — İKİ DURUMDA DA BURADA, yalnız ok döner.
+         Eskiden yalnız katlıyken görünüyordu: basınca kayboluyor ve bandın
+         sağ kümesi 26 px sağa kayıyordu — tıklanan noktaya AVATAR oturuyor,
+         ikinci tık şerit yerine hesap menüsüne gidiyordu (ölçüldü). Başlık
+         ve `aria-expanded` her çizimde js/ribbon.js'ten yazılır. -->
+    <button type="button" class="ve-rb-expand" id="ve-rb-expand" title="Şeridi aç" aria-label="Şeridi aç"
+            aria-expanded="false" aria-controls="ve-rb-dock"><span class="mf-ico mf-ico-chevron-down" aria-hidden="true"></span></button>
   </div>
 
   <!-- Gövde + daralt tutamağı AYNI kapta.

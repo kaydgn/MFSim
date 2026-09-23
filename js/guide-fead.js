@@ -327,8 +327,9 @@ function _gfSahnePanel(fn, altyazi, coz){
 
 function _gfSahneSpin(){
   return _gfSahnePanel('getFeadSpinPropertiesHTML',
-    'Dönüş Yönü kartının paneli. Rozet çevrimin yönünü çevirir; <b>rengi</b> gerginin '
-    + 'gevşek tarafta olup olmadığının hükmünü taşır.');
+    'Dönüş Yönü penceresi, iki kategoride: <b>Yön</b> (çevrimin dönüşü ve nereden türediği) '
+    + 've <b>Etkisi</b> (yön değişince neyin değişip neyin değişmediği). <b>Yönü çevir</b> sağ '
+    + 'sütunda; üstündeki satır gerginin gevşek tarafta olup olmadığının hükmünü taşır.');
 }
 
 function _gfSahneGergiMerkez(){
@@ -389,9 +390,10 @@ function _gfSahneCevrim(){
 
 function _gfSahneRapor(){
   return _gfSahnePanel('getFeadReportPropertiesHTML',
-    'Rapor paneli. Doküman künyesi alanları antete ve belgenin sonundaki notlara akar; '
-    + 'rapor <b>çözülmüş</b> modelden üretilir, model çözülmemişse düğme pasiftir ve '
-    + 'sebebi yazılır.', true);
+    'Rapor paneli, iki kategori: <b>Tür</b> (burada açık — hangi belge indirilecek) ve '
+    + '<b>Künye</b> (antete ve belgenin sonundaki notlara akan dört alan). Sağ sütun '
+    + 'kasnak panellerininkiyle aynı; rapor <b>çözülmüş</b> modelden üretilir, model '
+    + 'çözülmemişse düğme pasiftir ve sebebi yazılır.', true);
 }
 
 function _gfSahneKatman(){

@@ -27,7 +27,12 @@ async function ac(page, modul) {
   await page.waitForSelector('#mfsim-loading-screen', { state: 'hidden', timeout: 90000 });
   if (modul) {
     await page.click('.ve-module-card[data-module="' + modul + '"]');
-    await page.waitForTimeout(1200);
+    // MODÜL YÜKLEME PERDESİ çekilene kadar bekle. Ölçüldü: karta basıldıktan
+    // ~1,5 sn sonra bile `#mfsim-module-loading` bandın ÜSTÜNDE duruyor.
+    // `page.click` hedef tıklanabilir olana dek beklediği için bu yarışı
+    // gizler; koordinata basan `mouse.click` gizlemez — ve perdeye basar.
+    await page.waitForSelector('#mfsim-module-loading', { state: 'hidden', timeout: 30000 }).catch(() => {});
+    await page.waitForTimeout(300);
     // FEAD boş topolojiyi SİHİRBAZLA karşılar (modülün kuralı) ve modal bandı
     // ÖRTER. Ölçüm örtüden geçer (`getBoundingClientRect` katman bilmez) ama
     // TIK geçmez — kapıyı yazarken bu fark ölçüldü.
@@ -193,13 +198,136 @@ test('avatar: ad yokken BOŞ, ad girilince baş harf', async ({ page }) => {
   expect(dolu.bosSinif).toBe(false);
 });
 
-test('avatar menüsü açılıyor ve ESC ile kapanıyor', async ({ page }) => {
+// ── HESAP MENÜSÜ OKUNUR BİR YÜZEY Mİ ─────────────────────────────────────
+// Bu halkanın İLK hâli `toBeVisible()` ölçüyordu ve menü SAYDAMKEN geçti:
+// Playwright'ın "görünür"ü boyutu olan her kutu demek. Menü zeminsiz,
+// kenarlıksız, `z-index`siz bir metin yığınıydı ve şeridin, sütundaki
+// müfettişin ARKASINDA doğuyordu (kullanıcı bildirimi: "hiç güzel bir yapı
+// gelmiyor"). Kapı artık VAR OLMAYI değil OKUNMAYI ölçer: opak zemin,
+// kenarlık, gölge, ve menünün üç noktasında en üstteki eleman menünün kendisi.
+const menuOlc = () => {
+  const m = document.querySelector('.ve-avatar-menu');
+  if (!m) return null;
+  const cs = getComputedStyle(m), r = m.getBoundingClientRect();
+  const a = document.getElementById('ve-bant-avatar').getBoundingClientRect();
+  const nok = [[r.left + 12, r.top + 12], [r.left + r.width / 2, r.top + r.height / 2], [r.right - 12, r.bottom - 12]];
+  return {
+    saydam: /rgba\([^)]*,\s*0\)$/.test(cs.backgroundColor) || cs.backgroundColor === 'transparent',
+    kenar: cs.borderTopWidth, golge: cs.boxShadow !== 'none',
+    ustte: nok.every(([x, y]) => { const u = document.elementFromPoint(x, y); return !!(u && m.contains(u)); }),
+    sagHiza: Math.round(r.right - a.right), ekranda: r.left >= 0 && r.right <= innerWidth,
+  };
+};
+
+test('hesap menüsü OKUNUR bir yüzey — opak, kenarlıklı, en üstte', async ({ page }) => {
   await ac(page, 'fead-analysis');
   await page.click('#ve-bant-avatar');
-  await expect(page.locator('.ve-avatar-menu')).toBeVisible();
-  await expect(page.locator('.ve-avatar-menu [data-ve-avatar="cikis"]')).toBeVisible();
+  const r = await page.evaluate(menuOlc);
+  expect(r).not.toBeNull();
+  expect(r.saydam).toBe(false);
+  expect(r.kenar).toBe('1px');
+  expect(r.golge).toBe(true);
+  expect(r.ustte).toBe(true);
+  expect(r.sagHiza).toBe(0);           // avatarın sağ kenarına yaslı
+  expect(r.ekranda).toBe(true);
+});
+
+// SÜTUNDA KALAN bir pencere aç. İki halka önce ARAÇ penceresini açıyordu;
+// araç ölçümle `VE_SUTUNA_SIGMAYAN`a girince halkalar sütunu değil MODALI
+// açmaya başladı. Öncül açık bir iddia: tip listeye girerse sebebiyle düşer.
+const sutundaPencereAc = () => {
+  const t = 'differential';
+  if (VE_SUTUNA_SIGMAYAN.indexOf(t) >= 0)
+    throw new Error(t + ' modal açılıyor (VE_SUTUNA_SIGMAYAN) — sütunda kalan bir tip seçin');
+  const n = createNode(t, 500, 300); clearSelection(); addToSelection(n);
+};
+
+test('hesap menüsü sütundaki müfettişin ÜSTÜNDE açılıyor', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await ac(page, 'arac-performans');
+  await page.evaluate(sutundaPencereAc);
+  await page.waitForTimeout(400);
+  await page.evaluate(() => veTogglePropertiesPanel(true));
+  await page.waitForTimeout(600);
+  await page.click('#ve-bant-avatar');
+  const r = await page.evaluate(menuOlc);
+  // Sütun eskiden PENCERE katmanındaydı (4000) — bandın menüsü (2000) onun
+  // arkasında doğuyordu. Sütun artık `--z-dock`ta.
+  expect(r.ustte).toBe(true);
+});
+
+test('TEK ESC TEK KATMAN — menüyü kapatan tuş alttaki paneli sökmüyor', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await ac(page, 'arac-performans');
+  await page.evaluate(sutundaPencereAc);
+  await page.waitForTimeout(400);
+  await page.evaluate(() => veTogglePropertiesPanel(true));
+  await page.waitForTimeout(600);
+  await page.click('#ve-bant-avatar');
+  await expect(page.locator('.ve-avatar-menu')).toHaveCount(1);
   await page.keyboard.press('Escape');
   await expect(page.locator('.ve-avatar-menu')).toHaveCount(0);
+  // Ölçülen kusur: aynı ESC map.js'in dinleyicisine de ulaşıp paneli kapatıyordu.
+  const panelAcik = await page.evaluate(() =>
+    document.getElementById('ve-properties-overlay').classList.contains('visible'));
+  expect(panelAcik).toBe(true);
+});
+
+test('ad menüden, YERİNDE değişiyor — tarayıcı `prompt`u yok', async ({ page }) => {
+  await ac(page, 'fead-analysis');
+  let diyalog = 0;
+  page.on('dialog', (d) => { diyalog++; d.dismiss(); });
+  await page.click('#ve-bant-avatar');
+  await page.click('.ve-avatar-menu [data-ve-avatar="ad"]');
+  await expect(page.locator('.ve-avatar-menu-ad input')).toBeFocused();
+  await page.keyboard.type('İlker Şahin');
+  await page.keyboard.press('Enter');
+  const r = await page.evaluate(() => ({
+    avatar: document.getElementById('ve-bant-avatar').textContent,
+    menuAd: document.querySelector('.ve-avatar-menu-kim b').textContent,
+  }));
+  expect(diyalog).toBe(0);
+  expect(r.avatar).toBe('İŞ');         // Türkçe büyütme: 'i' → 'İ'
+  expect(r.menuAd).toBe('İlker Şahin');
+});
+
+// AÇILIŞTA AVATAR TAZELENİR. `veAvatarYaz` eskiden yalnız ad YAZILDIĞI anda
+// çağrılıyordu: ad saklı olduğu hâlde yeniden açılışta avatar boş kalıyordu.
+test('kayıtlı ad AÇILIŞTA avatara geliyor', async ({ page }) => {
+  await page.addInitScript(() => { try { localStorage.setItem('mf-kullanici-ad', 'Kerem Aydoğan'); } catch (e) {} });
+  await ac(page, 'fead-analysis');
+  const r = await page.evaluate(() => {
+    const a = document.getElementById('ve-bant-avatar');
+    return { metin: a.textContent.trim(), bos: a.classList.contains('ve-bant-avatar--bos') };
+  });
+  expect(r).toEqual({ metin: 'KA', bos: false });
+});
+
+// ŞERİDİ AÇ/DARALT DÜĞMESİ YERİNDE DURUR. Eskiden yalnız katlıyken vardı:
+// basınca kayboluyor, sağ küme 26 px kayıyor ve tıklanan noktaya AVATAR
+// oturuyordu — ikinci tık şerit yerine hesap menüsünü açıyordu (ölçüldü).
+test('şerit düğmesine basınca sağ küme KAYMIYOR ve düğme hâlâ altında', async ({ page }) => {
+  await ac(page, 'fead-analysis');
+  const x = () => page.evaluate(() => ['.ve-bant-ara', '.ve-bant-ana', '#ve-bant-avatar', '#ve-rb-expand']
+    .map((s) => Math.round(document.querySelector(s).getBoundingClientRect().left)));
+  const nokta = await page.evaluate(() => { const r = document.getElementById('ve-rb-expand').getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  const once = await x();
+  await page.mouse.click(nokta.x, nokta.y);
+  await page.waitForTimeout(300);
+  const sonra = await x();
+  expect(sonra).toEqual(once);
+  const r = await page.evaluate(({ x, y }) => ({
+    katli: document.getElementById('ve-ribbon').classList.contains('is-collapsed'),
+    aria: document.getElementById('ve-rb-expand').getAttribute('aria-expanded'),
+    altindaki: (document.elementFromPoint(x, y) || {}).closest ? document.elementFromPoint(x, y).closest('button').id : null,
+  }), nokta);
+  expect(r.katli).toBe(false);
+  expect(r.aria).toBe('true');
+  expect(r.altindaki).toBe('ve-rb-expand');   // ikinci tık yine şeride gider
+  await page.mouse.click(nokta.x, nokta.y);
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => document.getElementById('ve-ribbon').classList.contains('is-collapsed'))).toBe(true);
 });
 
 // KALDIRILAN DÜĞMENİN YOLU AÇIK KALIR. Kaydet ikonu banttan kalktı ve

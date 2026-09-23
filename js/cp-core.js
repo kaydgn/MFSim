@@ -140,6 +140,31 @@ function clearSelection() {
 // İki sütun (geniş) düzene geçmiş içerik-yoğun bileşen tipleri.
 // Yeni panel dönüştürüldükçe buraya eklenir → pencere otomatik genişler,
 // kimlik kompakt-sola geçer. (Yerleşim üreticileri ilgili cp-*.js dosyalarında.)
+// SÜTUNA SIĞMAYAN PENCERELER — ÖLÇÜLDÜ, TAHMİN EDİLMEDİ.
+// Tur C müfettişi geniş ekranda 380 px'lik bir sütuna aldı ve kapısı yalnız
+// BOŞ motor penceresini ölçtü. Her tipin penceresi GERÇEK veriyle (üç modülün
+// örneği yüklü) açılıp ölçüldüğünde 54 tipten 14'ü sütunda taşıyor ya da
+// kesiliyordu: eşleştirme 337 px'e kadar, vites 205, motor 185 (kullanıcının
+// ekran görüntüsü — grafik kesik, düğmeler dağınık, yatay kaydırma).
+// Bu pencereler kategori gramerine taşınana dek MODAL açılır: kesik bir
+// sütun, çalışan bir modalden kötüdür. Liste YALNIZ AŞAĞI İNER — bir pencere
+// sığacak biçimde yeniden kurulunca buradan çıkar ve
+// `tests/e2e/mufettis-sigma.spec.js` onu sütunda ölçer.
+// `mnt-2dview` ile `mnt-library` görüntüleyici oldukları için KALICI olarak
+// burada (bkz. docs/decisions/ortak-yuzeyler.md → "Müfettiş tuvalin YANINDADIR").
+var VE_SUTUNA_SIGMAYAN = ['engine', 'ec-matching', 'gear-shift', 'shift-controller', 'gearbox',
+  'acc-ac', 'acc-alternator', 'acc-aircomp', 'road', 'mnt-example', 'mnt-pto-group',
+  'mnt-2dview', 'mnt-library',
+  // TAŞMAYAN AMA EZİLEN — okunurluk ölçüsü (girdi < 56 px) ekleyince çıktı:
+  // araç adı 40 px'lik kutuda, konvertör tablosunda 13 px, Takoz'un altılı
+  // ızgarasında "550.03" 46 px'e sığmıyor. Kendi kategori tasarımları gelene
+  // dek modal (kullanıcı sırası: önce FEAD).
+  'vehicle', 'torque-converter', 'transfer',
+  'mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-bracket', 'mnt-mount',
+  'mnt-shaft', 'mnt-pto', 'mnt-pump'];
+// `fead-table` 2026-09-23'te listeden ÇIKTI: dokuz sütunlu ızgara iki kategoriye
+// (Girdiler · Çözüm) ayrıldı ve sütuna sığıyor — mufettis-sigma.spec.js ölçüyor.
+
 var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-controller', 'vehicle', 'transfer', 'obstacle-crossing', 'engine-gearbox-matching', 'gear-shift', 'gearbox', 'solver', 'sensor-wizard', 'road',
   // Aksesuarlar — iki sütun (model/oran | güç-çekişi grafiği)
   'acc-ac', 'acc-alternator', 'acc-aircomp',
@@ -309,6 +334,8 @@ function showNodeProperties(node) {
   // (diğer bileşenlerde varsayılan boyuta döner). Salt sunum, mantığa dokunmaz.
   var _propWin = document.getElementById('ve-properties');
   if(_propWin) _propWin.classList.toggle('ve-properties--2dview', node.type === 'mnt-2dview');
+  // Sütuna sığmayan pencere MODAL açılır (VE_SUTUNA_SIGMAYAN, ölçülmüş liste).
+  if(_propWin) _propWin.classList.toggle('ve-properties--modal', VE_SUTUNA_SIGMAYAN.indexOf(node.type) >= 0);
   // Takoz Özellikleri: iki sütun (seçici + detay) ve 3 eksen grafiği yan yana → geniş pencere.
   if(_propWin) _propWin.classList.toggle('ve-properties--mntlib', node.type === 'mnt-library');
   // İçerik-yoğun paneller (VE_WIDE_PANEL_TYPES listesi): geniş pencere +

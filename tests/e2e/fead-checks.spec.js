@@ -103,8 +103,14 @@ test('katalog seçimi ve üç kapı — panel, çözüm ve rapor', async ({ page
   }, altId);
   await page.waitForTimeout(300);
 
+  // KATALOG LİSTESİ "DEVİR SINIRLARI" SEKMESİNDE. Kasnak penceresi 2026-09-21'de
+  // kategori sekmelerine bölündü ve bu halka o günden beri gizli bir sekmedeki
+  // listeye `selectOption` deneyip 3 dk bekleyerek düşüyordu (main'de de
+  // kırmızıydı — 2026-09-23 ölçüldü). Kullanıcının yolu: sekmeye bas, sonra seç.
+  await page.click('.ve-fp-tab[data-k="dev"]');
   const accSec = page.locator('select[onchange*="veFeadApplyAccLib"]');
   await expect(accSec).toHaveCount(1);
+  await expect(accSec).toBeVisible();
   await accSec.selectOption('57RS309348');
   await page.waitForTimeout(400);
 

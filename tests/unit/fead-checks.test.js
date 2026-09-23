@@ -382,4 +382,46 @@ describe('İki yüzey de AYNI çağrıyı kullanıyor', () => {
   test('rapor rozetinde dördüncü durum "warn" var', () => {
     expect(REPORT).toMatch(/d === 'warn'/);
   });
+
+  // ── ÜÇÜNCÜ YÜZEY: PENCERELERİN SAĞ SÜTUNU — METİN DEĞİL DAVRANIŞ ─────────
+  //
+  // Yukarıdaki halkalar KAYNAK METNİNE bakıyor ve bu yüzeyin kusurunu
+  // göremezdi: sütun `veFeadChecks`i gerçekten çağırıyordu, ama çözücüyü
+  // `_feadSolverNode()` ile ARGÜMANSIZ arıyordu. O işlev kimlikle arar; hiçbir
+  // düğüm bulunmuyor ve kapılar BOŞ çevrimle soruluyordu. Ölçüldü (gerçek
+  // tarayıcı, AG00976 + BMC): çözücü kartı "Devir sınırı: uygun" derken
+  // sütun aynı kapıya "değerlendirilemedi" diyordu. Burada ölçülen şey
+  // çağrının VARLIĞI değil CEVABIN AYNILIĞI.
+  test('pencerelerin sağ sütunu çözücü kartıyla AYNI hükmü veriyor', () => {
+    const fead = require('../../js/cp-fead.js');
+    const M = require('../../js/fead-model.js');
+    global.veFeadChecks = K.veFeadChecks;
+    global.veFeadCheckOpt = K.veFeadCheckOpt;
+    global.veFeadDutyRows = M.veFeadDutyRows;
+    // Global taramada BULUNAMAYACAK bir çözücü: model onu kendi taşıyor
+    // (`build.solver`, köprünün bulduğu düğüm). Yol global taramaya geri
+    // dönerse `nodes` boş ve halka düşer.
+    global.nodes = [];
+    const solver = { id: 'S1', type: 'fead-solver',
+      data: { governedRpm: MOTOR.governedRpm, overspeedRpm: MOTOR.overspeedRpm,
+              duty: [{ rpm: 2100, dcPct: 40 }, { rpm: 800, dcPct: 60 }] } };
+    const build = Object.assign(kirpiBuild(), { solver });
+
+    const kart = K.veFeadChecks(build, K.veFeadCheckOpt(solver.data, M.veFeadDutyRows(solver)));
+    // BOŞA ÇALIŞMIYOR: çevrim okunmasa üçü de 'wait' olurdu ve eşitlik
+    // "ikisi de bilmiyor" demek olurdu.
+    expect(kart.speedLimit.durum).toBe('ok');
+    expect(kart.ratioWindow.durum).not.toBe('wait');
+
+    const kap = document.createElement('div');
+    kap.innerHTML = fead._feadSideGates(build, null);
+    const sutun = (ad) => {
+      const g = Array.from(kap.querySelectorAll('.ve-fp-gate'))
+        .find((x) => x.textContent.indexOf(ad) === 0);
+      return g ? g.getAttribute('data-d') : null;
+    };
+    expect(sutun('Devir sınırı')).toBe(kart.speedLimit.durum);
+    expect(sutun('Çevrim oranı')).toBe(kart.ratioWindow.durum);
+    expect(sutun('Merkez mesafesi')).toBe(kart.centerDistance.durum);
+  });
 });

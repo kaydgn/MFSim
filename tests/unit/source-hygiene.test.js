@@ -694,6 +694,28 @@ describe('hover parlaklık filtresi kullanmıyor', () => {
     });
     expect(kalan).toEqual([]);
   });
+
+  // AYNI KUSUR JS'TE, SATIR İÇİ — ve yukarıdaki halka onu HİÇ görmüyordu:
+  // `onmouseover="this.style.filter='brightness(1.15)'"`. Ölçüldü
+  // (2026-09-23): altı düğme — modül kartlarının "Alt Topolojiyi Aç"ı,
+  // örnek kartlarının "Örneği Aktar"ı, Takoz raporunun düğmesi. FEAD'inki
+  // modül kartı Krank Kasnağı kabuğuna geçince kalktı; kalan beşi AP/Takoz
+  // pencereleri kendi kategori tasarımlarına geçerken kalkar. Sayı bir
+  // HEDEF değil BORÇ: artamaz, yalnız iner.
+  test('JS satır içi hover parlaklık işleyicisi yalnız AZALIR', () => {
+    const TAVAN = 5;   // ölçüldü 2026-09-23 — TAM sayı, pay YOK (6 → 5)
+    const bulunan = [];
+    fs.readdirSync(JS_DIR).filter((f) => f.endsWith('.js')).forEach((f) => {
+      fs.readFileSync(path.join(JS_DIR, f), 'utf8').split('\n').forEach((sat, i) => {
+        if (/on\w+=[^>]*filter\s*=\s*\\?['"]brightness/.test(sat)) bulunan.push(`${f}:${i + 1}`);
+      });
+    });
+    expect({ n: bulunan.length, yerler: bulunan.length > TAVAN ? bulunan : undefined })
+      .toEqual({ n: bulunan.length, yerler: undefined });
+    expect(bulunan.length).toBeLessThanOrEqual(TAVAN);
+    // FEAD borçtan ÇIKTI — geri gelmesin.
+    expect(bulunan.filter((y) => /^cp-fead/.test(y))).toEqual([]);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -981,5 +1003,40 @@ describe('display yüzüne bağlı eleman kendi tracking’ini yazmaz', () => {
       });
     }
     expect(kalan).toEqual([]);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 13) HOVER RENGİNİ AİLESİNDEN ALIR
+//
+// Ölçülen kusur (2026-09-23): K turu on bir `filter:brightness` hover'ını
+// `--ink-*` jetonlarına çevirdi ve ÜÇÜNDE yanlış aileyi seçti — zemini
+// `--accent-warning` (kehribar) olan Hesapla ve zemini `--accent-success`
+// (yeşil) olan iki düğme, fareyle `--ink-accent`e (toprak) SIÇRIYORDU.
+// Bölüm 10 bunu göremez: hover tabandan farklı bir değer yazıyor, yani
+// "ölü" değil — yalnız YANLIŞ. Aile eşlemesi: primary↔accent, warning,
+// success, danger.
+describe('hover rengini ailesinden alır', () => {
+  test('`--accent-X` zeminli kuralın hover`ı `--ink-X` (aynı aile)', () => {
+    const css = STYLES.replace(/\/\*[\s\S]*?\*\//g, '');
+    const AILE = { 'accent-primary': 'accent', 'accent-warning': 'warning', 'accent-success': 'success',
+      'accent-danger': 'danger', 'ink-accent': 'accent', 'ink-warning': 'warning', 'ink-success': 'success',
+      'ink-danger': 'danger' };
+    const kural = {};
+    const re = /([^{}@]+)\{([^{}]*)\}/g;
+    let m;
+    while ((m = re.exec(css))) {
+      const bg = [...m[2].matchAll(/background(?:-color)?\s*:\s*var\(--((?:accent|ink)-[a-z]+)\)/g)].map((x) => x[1]);
+      if (!bg.length) continue;
+      m[1].split(',').forEach((s) => { const k = s.trim(); if (k) kural[k] = bg[bg.length - 1]; });
+    }
+    const uyumsuz = [];
+    Object.keys(kural).forEach((sel) => {
+      if (!sel.includes(':hover')) return;
+      const taban = sel.replace(/:hover(\([^)]*\))?/g, '').replace(/:not\([^)]*\)/g, '').trim();
+      const t = kural[taban], h = kural[sel];
+      if (AILE[t] && AILE[h] && AILE[t] !== AILE[h]) uyumsuz.push(`${sel}: --${t} → --${h}`);
+    });
+    expect(uyumsuz).toEqual([]);
   });
 });

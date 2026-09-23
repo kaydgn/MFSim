@@ -753,8 +753,27 @@ describe('adım eşlemesi ve yüzeyler', () => {
     const doluNode = { id: 'w2', type: 'fead-wizard',
                        data: { wiz: JSON.parse(JSON.stringify(wiz.veFeadWizState())) } };
     const h2 = wiz.getFeadWizardPropertiesHTML(doluNode);
-    expect(h2).toContain('Kayıtlı taslak');
+    // Taslağın KÜNYESİ basılıyor — başlık değil, taslağın kendi adı.
+    expect(doluNode.data.wiz.ad).toBeTruthy();
+    expect(h2).toContain(doluNode.data.wiz.ad);
+    expect(h2).not.toMatch(/Henüz taslak yok/);
     expect(h2).not.toContain('undefined');
+  });
+
+  // ADIM LİSTESİ KAYNAKTAN. Pencere eskiden elle yazılmış bir özet taşıyordu:
+  // "bütün girdileri YEDİ adımda sorar: … kayış yolu sırası …" — Kayış Yolu
+  // adımı 2026-09-04'te kalkmıştı ve sihirbaz altı adımdı. Kapı sayıyı değil
+  // EŞLEŞMEYİ tutar: bir adım eklenir ya da kalkarsa pencere kendiliğinden izler.
+  test('panel: adım listesi VE_FW_STEPS ile birebir — elle yazılmış sayı yok', () => {
+    const d = document.createElement('div');
+    d.innerHTML = wiz.getFeadWizardPropertiesHTML({ id: 'w3', type: 'fead-wizard', data: {} });
+    const maddeler = Array.from(d.querySelectorAll('ol.ve-fp-liste li b')).map((b) => b.textContent);
+    expect(maddeler).toEqual(wiz.VE_FW_STEPS.map((s) => s.ad));
+    expect(d.textContent).not.toMatch(/yedi adım/i);
+    // Krank Kasnağı ailesinin kabuğu: özet şeridi + kategori sekmeleri + sağ
+    // sütun, ve pencerenin tek eylemi sütunda.
+    expect(d.querySelectorAll('.ve-fp-tabs .ve-fp-tab').length).toBe(2);
+    expect(d.querySelector('.ve-fp-side .ve-fp-solve').getAttribute('onclick')).toBe("veFeadWizOpen('w3')");
   });
 
   test('açılış/kapanış: durum düğüme YAZILIR, saveState bir kez çağrılır', () => {
