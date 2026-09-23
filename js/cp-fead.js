@@ -137,13 +137,9 @@ function getFeadModulePropertiesHTML(node){
           }).join('') + '</ol>'
         : _feadHint('Kasnak yok.'));
 
-  var yan = { html: _feadSideThumb(build) + _feadSideGates(build, T)
+  var yan = { html: _feadSideGates(build, T)
       + '<button type="button" class="ve-fp-solve" onclick="veFeadOpenEditor(\'' + node.id + '\')">'
-      + '<span class="mf-ico mf-ico-folder-open" aria-hidden="true"></span> Alt Topolojiyi Aç</button>',
-    ozet: _feadOzetSerit(kurulu
-      ? ['<b>' + liste.length + '</b> bileşen', '<b>' + say.kasnak + '</b> kasnak',
-         (T && T.ok) ? 'çevrim <b>kapalı</b>' : 'çevrim <b>kapanmadı</b>']
-      : ['alt topoloji <b>açılmadı</b>']) };
+      + '<span class="mf-ico mf-ico-folder-open" aria-hidden="true"></span> Alt Topolojiyi Aç</button>' };
   return veFeadPanelShell(node, [{ k:'ic',  ad:'İçerik', govde: icerik },
                                  { k:'mod', ad:'Model',  govde: model }], yan);
 }
@@ -1015,10 +1011,7 @@ function getFeadSpinPropertiesHTML(node){
   var eylem = '<button type="button" class="ve-fp-solve" onclick="veFeadToggleSpin()">'
     + '<span class="mf-ico mf-ico-refresh" aria-hidden="true"></span> Yönü çevir</button>';
 
-  var ozet = ['yön <b>' + _feadEsc(lbl.kisa) + '</b>',
-              !hkm ? 'gergi tarafı <b>çözüm bekliyor</b>'
-              : hkm.ok ? 'gergi <b>gevşek tarafta</b>' : 'gergi <b>GERGİN tarafta</b>'];
-  var yan = veFeadToolSide(node, null, null, null, ozet, durum + eylem);
+  var yan = veFeadToolSide(node, null, null, null, durum + eylem);
   return veFeadPanelShell(node, [{ k:'yon', ad:'Yön',    govde: yon },
                                  { k:'etk', ad:'Etkisi', govde: etk }], yan);
 }
@@ -1154,6 +1147,14 @@ function veFeadTabsHTML(nodeId, sekmeler, aktif){
 // Kayış yolunun küçük resmi. Kuzey gülü, pivot ve oklar KAPALI: bu ölçüde
 // okunmuyorlar, yalnız mürekkep ekliyorlar.
 //
+// YALNIZ KASNAK PENCERESİNDE (2026-09-23, kullanıcı: "gerekli gereksiz her
+// yere eklemişsin — Sonuç'ta buna ne ihtiyaç var?"). Bölüm 17 FEAD
+// penceresinin 16'sında duruyordu (yalnız Kayış Yolu'nda yoktu); kasnağı
+// olmayan yedi pencerede vurgulanacak bir yer yok ve resim çözücünün,
+// raporun, sihirbazın kendi sorusuna hiçbir şey katmıyordu. Kural tipten okunur
+// (`componentDefs.isFeadPulley` — gergi de bir kasnak), liste tutulmaz;
+// kapısı tests/unit/fead-pencere-ailesi.test.js.
+//
 // BÖLÜMÜN SORUSU "BU KASNAK NEREDE" (2026-09-23). Kanvas kartının resmi
 // küçültülüp konuyordu ve o soruyu cevaplamıyordu: pencerenin kasnağı öteki
 // beşiyle AYNI çiziliyordu. Ölçülen kusurlar (AG00879, 380 px'lik sütun):
@@ -1256,7 +1257,7 @@ function _feadSideRO(baslik, kaynak, satirlar){
 }
 
 function veFeadPulleySide(node){
-  var out = { html: '', ozet: '' };
+  var out = { html: '' };
   var M = _feadSideModel(node);
   var build = M.build, T = M.T, satir = M.satir, nT = M.n;
 
@@ -1268,55 +1269,36 @@ function veFeadPulleySide(node){
     ['Kayış sırası', satir ? (satir.index + ' / ' + nT + (satir.driver ? ' · sürücü' : '')) : '—']
   ]);
   out.html += _feadSideGates(build, T);
-
-  // ── KÜNYE ŞERİDİ — pencerenin cevabı en üstte (Motor'un özet şeridi kalıbı)
-  var d = node.data || {};
-  var par = [];
-  if(Number.isFinite(_feadNum(d.od, NaN))) par.push('Ø <b>' + _feadFmt(_feadNum(d.od, NaN), 1) + ' mm</b>');
-  var xv = _feadNum(d.x, NaN), yv = _feadNum(d.y, NaN);
-  if(Number.isFinite(xv) && Number.isFinite(yv))
-    par.push('konum <b>' + _feadFmt(xv, 1) + ' / ' + _feadFmt(yv, 1) + '</b>');
-  if(d.driver) par.push('<b>Sürücü</b>');
-  // Çip dili tek: soluk ad + koyu değer ("konum 0.0 / 0.0", "sıra 1/5").
-  var tmp = (typeof veFeadContactOf === 'function') ? veFeadContactOf(node) : '';
-  if(tmp) par.push('temas <b>' + (tmp === 'back' ? 'sırt' : 'kaburgalı') + '</b>');
-  if(satir) par.push('sıra <b>' + satir.index + '/' + nT + '</b>');
-  out.ozet = _feadOzetSerit(par);
   return out;
 }
 
-// ÖZET ŞERİDİ ÇİPLERDEN KURULUR, ayraçtan değil. Ayraç (`·`) kendi başına
-// bir esnek öğeydi: satır sarınca biri satırın SONUNDA asılı kaldı ve bir
-// madde ("sıra 1/5") ikinci satıra tek başına düştü (ölçüldü, 380 px). Çip
-// bölünmez; sarılan şey bütün bir madde olur ve asılı işaret kalmaz.
-function _feadOzetSerit(par){
-  return par.length ? '<div class="ve-fp-sum">' + par.map(function(p){
-    return '<span class="ve-fp-sum-i">' + p + '</span>';
-  }).join('') + '</div>' : '';
-}
+// ÖZET ŞERİDİ YOK (2026-09-23, kullanıcı: "tepede böyle özet bir açıklamaya
+// gerek yok"). Pencerenin başında çap · konum · rol · temas · sıra çipleri
+// duruyordu; beşinin de yeri pencerenin kendisindeydi (Geometri sekmesi ve
+// sağ sütunun "Türetilenler"i), yani şerit aynı sayıları ikinci kez, üstelik
+// sekmelerin ÜSTÜNDE yazıyordu. Kapı: fead-pencere-ailesi.test.js.
 
-// ── ARAÇ PANELLERİNİN SAĞ SÜTUNU (gergi · kayış · çözücü)
-// Kasnak sütununun aynısı; yalnız ORTA blok değişiyor. `ekBlok` panelin kendi
-// cevabını (çözücüde "Hesapla" düğmesi) sütuna asmak için — sekme ne olursa
-// olsun görünmesi gereken tek şey o.
-function veFeadToolSide(node, baslik, kaynak, satirlar, ozetPar, ekBlok){
-  var out = { html: '', ozet: '' };
+// ── ARAÇ PANELLERİNİN SAĞ SÜTUNU (kayış · çözücü · tablo · rapor · …)
+// Kasnak sütununun aynısı, KÜÇÜK RESİM HARİÇ: vurgulanacak kasnağı olmayan
+// pencerede kayış yolunun resmi bir şey söylemiyor (`_feadSideThumb`).
+// `ekBlok` panelin kendi cevabını (çözücüde "Hesapla" düğmesi) sütuna asmak
+// için — sekme ne olursa olsun görünmesi gereken tek şey o.
+function veFeadToolSide(node, baslik, kaynak, satirlar, ekBlok){
+  var out = { html: '' };
   var M = _feadSideModel(node);
-  out.html += _feadSideThumb(M.build, node && node.id);
   if(satirlar && satirlar.length) out.html += _feadSideRO(baslik, kaynak, satirlar);
   out.html += _feadSideGates(M.build, M.T);
   if(ekBlok) out.html += ekBlok;
-  out.ozet = _feadOzetSerit(ozetPar || []);
   return out;
 }
 
-// Panel kabuğu TEK ÜRETİCİDEN: özet şeridi + sekmeler + sağ sütun. Dört panel
-// bunu elle kursaydı biri `ve-fp-side`ı sekme gövdesinin İÇİNE koyup (ölçüldü:
-// aynı DOM nesnesi kalıyor, kapı fark etmiyordu) tasarımın bütün katkısını
-// sessizce yok edebilirdi.
+// Panel kabuğu TEK ÜRETİCİDEN: sekmeler + sağ sütun. Dört panel bunu elle
+// kursaydı biri `ve-fp-side`ı sekme gövdesinin İÇİNE koyup (ölçüldü: aynı DOM
+// nesnesi kalıyor, kapı fark etmiyordu) tasarımın bütün katkısını sessizce
+// yok edebilirdi.
 function veFeadPanelShell(node, sekmeler, yan){
   var aktif = veFeadPanelTabOf(node.id, sekmeler.map(function(s){ return s.k; }));
-  return '<div class="sw-panel ve-fp">' + yan.ozet
+  return '<div class="sw-panel ve-fp">'
     + '<div class="ve-fp-split"><div class="ve-fp-main">'
     + veFeadTabsHTML(node.id, sekmeler, aktif)
     + '</div><div class="ve-fp-side">' + yan.html + '</div></div></div>';
@@ -2242,7 +2224,7 @@ function getFeadBeltPropertiesHTML(node){
   // olduğunu unutup katalog boyu arıyordu.
   var _bs = veFeadBeltSideRows(node);
   return veFeadPanelShell(node, sekmeler,
-    veFeadToolSide(node, 'Kayış Künyesi', 'seçimden', _bs.satirlar, _bs.ozet));
+    veFeadToolSide(node, 'Kayış Künyesi', 'seçimden', _bs.satirlar));
 }
 
 // Kayış sağ sütununun satırları — DEĞERİ OLAN alan tek kaynaktan okunur
@@ -2272,13 +2254,6 @@ function veFeadBeltSideRows(node){
   if(Lp === '—' && Number.isFinite(_feadNum(d.lengthMm, NaN)))
     Lp = _feadFmt(_feadNum(d.lengthMm, NaN), 1) + ' mm';
 
-  var par = [];
-  if(d.profile) par.push('<b>' + _feadEsc(String(d.profile)) + '</b>');
-  if(kanal !== '—') par.push(kanal + ' kanal');
-  if(Lp !== '—') par.push('L<sub>pitch</sub> <b>' + _feadEsc(Lp) + '</b>');
-  par.push(serbest ? 'boy <b>tasarımdan</b>' : 'boy <b>katalogdan</b>');
-  if(d.brand) par.push(_feadEsc(String(d.brand)));
-
   return {
     satirlar: [
       ['Profil', prof],
@@ -2286,8 +2261,7 @@ function veFeadBeltSideRows(node){
       ['Pitch boyu', Lp],
       ['Efektif boy', Le],
       ['Boy kaynağı', serbest ? 'tasarımdan hesaplanır' : 'katalogdan seçilir']
-    ],
-    ozet: par
+    ]
   };
 }
 
@@ -5864,11 +5838,7 @@ function getFeadTablePropertiesHTML(node){
         })
     + _feadHint('Bu sütunlar HESAPLANMAZ, çekirdekten okunur — pencere kendi '
       + 'geometrisini kurmaz (üç katman kuralı).'));
-  var ozet = [T.rows.length + ' kasnak'];
-  if(Number.isFinite(T.signedWrapDeg)) ozet.push('Σ sarım <b>' + _feadFmt(T.signedWrapDeg, 2) + '°</b>');
-  if(Number.isFinite(T.LpitchMm)) ozet.push('pitch <b>' + _feadFmt(T.LpitchMm, 1) + ' mm</b>');
-  if(Number.isFinite(T.LeffMm)) ozet.push('efektif <b>' + _feadFmt(T.LeffMm, 1) + ' mm</b>');
-  var yan = veFeadToolSide(node, null, null, null, ozet);
+  var yan = veFeadToolSide(node, null, null, null);
   return veFeadPanelShell(node, [{ k:'gir', ad:'Girdiler', govde: gir },
                                  { k:'coz', ad:'Çözüm',    govde: coz }], yan);
 }
@@ -5912,14 +5882,9 @@ function getFeadLayoutPropertiesHTML(node){
     + svg);
   var geo = veFeadGeometryTable(build, mode);
 
-  // Özet şeridi — hangi konumun çizildiği ve çevrimin kapanışı
   var T = null;
   try { T = veFeadTableRows(build); } catch(e){ T = null; }
-  var konumAd = (mode === 'all') ? 'TÜMÜ' : ((VE_FEAD_POSITIONS.filter(function(P){ return P.key === mode; })[0] || {}).label || mode);
-  var ozet = ['konum <b>' + _feadEsc(konumAd) + '</b>'];
-  if(T && Number.isFinite(T.signedWrapDeg)) ozet.push('Σ sarım <b>' + _feadFmt(T.signedWrapDeg, 2) + '°</b>');
-  if(T && Number.isFinite(T.LeffMm)) ozet.push('efektif <b>' + _feadFmt(T.LeffMm, 1) + ' mm</b>');
-  var yan = { html: _feadSideGates(build, T) + veFeadWarningBox(build), ozet: _feadOzetSerit(ozet) };
+  var yan = { html: _feadSideGates(build, T) + veFeadWarningBox(build) };
   return veFeadPanelShell(node, [{ k:'sema', ad:'Şema',     govde: sema },
                                  { k:'geo',  ad:'Geometri', govde: geo }], yan);
 }
@@ -6140,16 +6105,11 @@ function getFeadSolverPropertiesHTML(node){
                   { k:'son', ad:'Sonuç',    govde: _son }];
 
   var R = (typeof veFeadResults !== 'undefined' && veFeadResults) ? veFeadResults[node.id] : null;
-  var par = [];
-  par.push(build.ok ? 'model <b>çözüldü</b>' : '<b>model eksik</b>');
-  par.push('çevrim <b>' + satirSay + ' satır</b>');
-  if(R) par.push('<b>hesaplandı</b>');
-
   var yan = veFeadToolSide(node, 'Çözüm Durumu', 'canlı', [
     ['Model', build.ok ? 'çözüldü' : 'eksik'],
     ['Çevrim satırı', String(satirSay)],
     ['Son hesap', R ? 'var' : 'yok']
-  ], par, dugme);
+  ], dugme);
 
   return veFeadPanelShell(node, sekmeler, yan);
 }

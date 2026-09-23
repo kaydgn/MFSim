@@ -2,9 +2,11 @@
  * fead-pencere-ailesi.test.js — HER FEAD PENCERESİ KRANK KASNAĞI AİLESİNDE
  *
  * Kullanıcı isteği (2026-09-23): bileşen pencereleri Krank Kasnağı'nın
- * yapısında, KATEGORİ KATEGORİ — özet şeridi, kategori sekmeleri, sekmeden
- * bağımsız sağ sütun. Kural (FEAD skill'i, kural 31) "HER FEAD penceresi"
- * diyordu ama onu tutan bir kapı YOKTU: turun ilk yarısı kapandığında üç
+ * yapısında, KATEGORİ KATEGORİ — kategori sekmeleri ve sekmeden bağımsız sağ
+ * sütun. (Tepedeki özet şeridi aynı gün kullanıcı kararıyla KALKTI; küçük
+ * resim yalnız kasnak pencerelerinde kaldı — ikisinin de kapısı burada.)
+ * Kural (FEAD skill'i, kural 31) "HER FEAD penceresi" diyordu ama onu tutan
+ * bir kapı YOKTU: turun ilk yarısı kapandığında üç
  * pencere (modül kartı · Dönüş Yönü · Sihirbaz) hâlâ eski düz paneldeydi ve
  * hiçbir test kırmızıya dönmedi.
  *
@@ -100,28 +102,77 @@ describe('HER FEAD PENCERESİ KRANK KASNAĞI AİLESİNDE', () => {
       .map((t) => t + ' → ' + KURUCU[t])).toEqual([]);
   });
 
-  test('her tipin penceresi kabuğu kuruyor: özet · ≥2 kategori · sağ sütun', () => {
+  // Tipin penceresini GERÇEK modelle çizer. Modül kartı KÖK tuvalde durur;
+  // alt topolojisi bu modelin kendisi. Örnekte olmayan tip (su pompası,
+  // dönüş yönü, …) MODELE EKLENMEZ — eklenseydi ölçülen model her tipte
+  // başka olurdu.
+  function pencere(t) {
+    let n = global.nodes.find((x) => x.type === t);
+    if (!n && t === 'fead-analysis') {
+      n = { id: 'mod-1', type: t, def: componentDefs[t],
+            data: { subTopology: { nodes: JSON.parse(JSON.stringify(global.nodes)) } } };
+    }
+    if (!n) n = { id: 'yeni-' + t, type: t, def: componentDefs[t], data: {} };
+    const d = document.createElement('div');
+    d.innerHTML = global[KURUCU[t]](n);
+    return d;
+  }
+
+  test('her tipin penceresi kabuğu kuruyor: ≥2 kategori · sağ sütun', () => {
     kur('AG00976_GATES_2025');
     const disarida = [];
     TIPLER.forEach((t) => {
-      let n = global.nodes.find((x) => x.type === t);
-      // Modül kartı KÖK tuvalde durur; alt topolojisi bu modelin kendisi.
-      if (!n && t === 'fead-analysis') {
-        n = { id: 'mod-1', type: t, def: componentDefs[t],
-              data: { subTopology: { nodes: JSON.parse(JSON.stringify(global.nodes)) } } };
-      }
-      // Örnekte olmayan tip (su pompası, dönüş yönü, …): MODELE EKLENMEZ —
-      // eklenseydi ölçülen model her tipte başka olurdu.
-      if (!n) n = { id: 'yeni-' + t, type: t, def: componentDefs[t], data: {} };
-      const d = document.createElement('div');
-      d.innerHTML = global[KURUCU[t]](n);
+      const d = pencere(t);
       const eksik = [];
-      if (!d.querySelector('.ve-fp-sum')) eksik.push('özet şeridi');
       if (d.querySelectorAll('.ve-fp-tabs .ve-fp-tab').length < 2) eksik.push('kategori sekmeleri');
       if (!d.querySelector('.ve-fp-split > .ve-fp-side')) eksik.push('sağ sütun');
       if (eksik.length) disarida.push(t + ' (' + KURUCU[t] + '): ' + eksik.join(', '));
     });
     expect(disarida).toEqual([]);
+  });
+
+  // KULLANICI KARARI (2026-09-23): "tepede böyle özet bir açıklamaya gerek
+  // yok". Şerit çap · konum · rol · temas · sıra çiplerini sekmelerin ÜSTÜNDE
+  // yazıyordu; beşinin de yeri pencerenin kendisinde. Kapı geri dönüşe karşı:
+  // hiçbir FEAD penceresi sekmelerden önce bir şerit basmaz — pencerenin ilk
+  // çocuğu bölünmüş gövdenin kendisi.
+  test('ÖZET ŞERİDİ YOK — pencere doğrudan sekmelerle başlıyor', () => {
+    kur('AG00976_GATES_2025');
+    const serit = [];
+    TIPLER.forEach((t) => {
+      const kabuk = pencere(t).querySelector('.ve-fp');
+      if (!kabuk) return;                         // kabuğu yoksa üstteki halka söyler
+      const ilk = kabuk.firstElementChild;
+      if (!ilk || !ilk.classList.contains('ve-fp-split')) {
+        serit.push(t + ': ' + (ilk ? ilk.className : 'boş'));
+      }
+    });
+    expect(serit).toEqual([]);
+  });
+
+  // KÜÇÜK RESİM YALNIZ KASNAK PENCERESİNDE (kullanıcı, 2026-09-23: "gerekli
+  // gereksiz her yere 'Kayış Yolundaki Yeri' eklemişsin — Sonuç'ta buna ne
+  // ihtiyaç var?"). Bölümün sorusu "BU kasnak nerede"; kasnağı olmayan
+  // pencerede vurgulanacak yer yok. KURAL, liste değil: beklenen tipten okunur
+  // (`isFeadPulley` — gergi de bir kasnak), yeni bir tip kendiliğinden girer.
+  test('"Kayış Yolundaki Yeri" YALNIZ kasnak penceresinde — kural tipten', () => {
+    kur('AG00976_GATES_2025');
+    const yanlis = [];
+    let kasnakli = 0;
+    TIPLER.forEach((t) => {
+      const beklenen = !!componentDefs[t].isFeadPulley;
+      const d = pencere(t);
+      const var_ = !!d.querySelector('.ve-fp-side .ve-fp-thumb');
+      const baslik = [...d.querySelectorAll('.ve-fp-sect b')]
+        .some((b) => /Kayış Yolundaki Yeri/.test(b.textContent));
+      if (beklenen) kasnakli++;
+      if (var_ !== beklenen || baslik !== beklenen) {
+        yanlis.push(t + ': ' + (beklenen ? 'olmalı, yok' : 'olmamalı, var'));
+      }
+    });
+    // BOŞA ÇALIŞMIYOR: kasnak tipleri gerçekten ölçülüyor (9 tip).
+    expect(kasnakli).toBeGreaterThanOrEqual(9);
+    expect(yanlis).toEqual([]);
   });
 
   test('pencerenin EYLEMİ sağ sütunda ve tek — sekme değişince kaybolmasın', () => {

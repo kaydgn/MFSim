@@ -14,6 +14,11 @@
  * ekranın kendisi, karşılama kartınınki içeri kaymış tuval kabı. Metin
  * birebir aynıydı, ÇİZİM 9 px ayrıydı. Bu halka çizimi ölçer.
  *
+ * (İkinci bir halka "çukur MODÜLDE geri geliyor"u tutuyordu: karşılamanın
+ * çukursuz kuralı modüle sızmasın. 2026-09-23'te çukur tuvalden de kalktı —
+ * kullanıcı: "pencere sınırları hizasız" — ve karşılamaya özel kural gereksiz
+ * kaldı. Tuvalin kenara yapışıklığı artık kabuk-sutun.spec.js'te.)
+ *
  * Node'da koşamaz: jsdom yerleşim hesaplamaz, `getBoundingClientRect` hep 0.
  */
 const { test, expect } = require('@playwright/test');
@@ -61,21 +66,4 @@ test('karşılama fotoğrafı TAM KENAR ve kartı açılış kartıyla AYNI yerd
   // Köşe de yok: kaplamanın kabı yuvarlatılmış olsaydı fotoğraf köşeden kırpılırdı
   const kose = await page.evaluate(() => getComputedStyle(document.querySelector('.ve-canvas-wrapper')).borderTopLeftRadius);
   expect(kose).toBe('0px');
-});
-
-test('çukur MODÜLDE geri geliyor — kural karşılamaya ait, tuvale değil', async ({ page }) => {
-  await page.setViewportSize({ width: 1600, height: 900 });
-  await page.goto('file://' + BUILD);
-  await page.fill('#mfsim-login-password', 'mfsim2024');
-  await page.press('#mfsim-login-password', 'Enter');
-  await page.waitForSelector('#mfsim-loading-screen', { state: 'hidden', timeout: 90000 });
-  await page.click('.ve-module-card[data-module="arac-performans"]');
-  await page.waitForSelector('#mfsim-module-loading', { state: 'hidden', timeout: 30000 }).catch(() => {});
-  await page.waitForTimeout(400);
-  const r = await page.evaluate(() => {
-    const c = getComputedStyle(document.getElementById('ve-split-container'));
-    const w = getComputedStyle(document.querySelector('.ve-canvas-wrapper'));
-    return { dolgu: c.paddingTop, kenar: w.borderTopWidth, kose: w.borderTopLeftRadius, golge: w.boxShadow !== 'none' };
-  });
-  expect(r).toEqual({ dolgu: '8px', kenar: '1px', kose: '10px', golge: true });
 });

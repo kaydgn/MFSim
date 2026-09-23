@@ -159,7 +159,7 @@ jetonu değil, ölçüm parametresidir (tipografi ölçeği kapısı bunu doğru
 1 px, başlık 13 px'e karşı 12 px (gerçek tarayıcı, 1600×950). Bu, 2026-08-17'de
 `.ve-results-head` ↔ `.ve-trace-toolbar` arasında kapatılan kırılmanın
 **aynısıydı**; rapor overlay'i o düzeltmeye dahil edilmemişti. Bant artık
-`.ve-rep-head` ile **aynı `--results-bar-h`'tan** besleniyor, düğmeler ölçüm
+`.ve-rep-head` ile **aynı `--results-bar-h`'tan** (bugün `--bant-h`) besleniyor, düğmeler ölçüm
 penceresi araç çubuğunun düğmesini (`.ve-trace-btn`) **paylaşıyor** — aynı
 bandın iki yarısı için ikinci bir düğme stili tutmanın karşılığı yok.
 **ÖLÇÜLDÜ:** alt çizgi farkı **12 → 0 px**, yükseklik 36 ↔ 36, başlık 12 ↔ 12.
@@ -512,27 +512,29 @@ koşamaz (jsdom `getBoundingClientRect`i sıfır döndürür, kenarlık rengini
 kaskaddan hesaplamaz). İki yönde düşmesi ölçüldü: ray kenarı geri konunca
 tek-sütun halkası, durum bandın içine dönünce yerleşim halkaları.
 
-## Tuval bir ÇUKURA oturur (2026-09-22)
+## Kabuk TEK ÇİZGİ — üst bant tek jeton, tuval kenara yapışık (2026-09-23)
 
-**Hüküm.** Tuval dört kenardan da 8 px içeri çekilir, yarıçaplıdır ve **iç**
-gölge taşır. Üst ve alt bantlar (sekmeler · durum) tam genişlikte kalır.
+**Hüküm.** Yan yana duran üst başlıklar ölçüyü ve zemini tek jetondan alır
+(`--bant-h` + `--bant-zemin`): Topoloji'de "Bileşenler" · sekme bandı ·
+müfettiş başlığı, Sonuçlar'da Veri Gezgini · araç çubuğu · rapor bandı. Bandın
+başlığı altındaki sütunun sol kenarından başlar. Tuvalin kendi çerçevesi yok;
+sınırı komşusunun çizgisidir. Aktif sekme bandın çizgisini örter (çizgi
+zeminin iç gölgesi, kenarlık değil) ve tuvale bağlanır.
 
-**Gerekçe.** Yerleşim bir ayrım söylüyor: **bant kabuğun, tuval çalışmanın.**
-Kabuğun kenarına yapışan bir bant ile içeri çekilmiş bir yüzey bunu sözsüz
-anlatır; ikisi de kenara yapışınca aynı düzlemde okunuyorlardı.
+**Gerekçe — ölçülen.** Kullanıcı: *"pencere sınırları bir hizasız, tatsız,
+güzel değil."* Topoloji'de üç başlık 37 · 29 · 33 px, alt çizgileri y=75 · 67 ·
+71; iki zemin rengi. Tuval 8 px içeride 10 px köşeli bir çukurdaydı: her sınır
+iki çizgi (kenar çubuğu 283 ↔ tuval 292, bant 67 ↔ tuval 75), aktif sekme
+tuvale değil aradaki kâğıda açılıyordu. Aynı kırılma Sonuçlar'da 2026-08-17'de
+`--results-bar-h` ile kapatılmıştı; jeton kabuğun oldu.
 
-**İÇ gölge bir YÜKSELTİ değil bir DERİNLİKTİR.** Emekli hüküm
-(*"yalnız YÜZEN katman gölge alır; yerinde duran kabuk gölge almaz"*) bu ayrımı
-yapmadığı için çukuru da yasaklıyordu: nesneyi kaldıran gölge ile yüzeyi oyan
-gölge aynı sayılmıştı. `--shadow-inset` PR 5'te tam bunun için tanımlandı.
+**Emekli: "Tuval bir ÇUKURA oturur" (2026-09-22).** Ayrımı ("bant kabuğun,
+tuval çalışmanın") pay ile söylüyordu; bugün zemin söylüyor (bantlar yüzey,
+tuval kâğıt). Karşılamanın "çukursuz" istisnası onunla gereksiz kaldı.
 
-**Bölünmüş görünümde her bölme kendi çukuru olur** — boşluk kapta
-(`.ve-split-container` iç payı + `gap`), çukur bölmenin kendisinde.
-
-**Kapı:** `kabuk-sutun.spec.js` → *"tuval bir ÇUKURA oturuyor"*. DÖRT kenarın
-da payı ölçülür (tek kenarda pay bir çukur değil bir kaymadır) ve gölgenin
-`inset` olduğu ayrıca tutulur — dışa çevrilince düşüyor, ölçüldü. Node'da
-koşamaz: jsdom `box-shadow`u kaskaddan hesaplamaz.
+**Kapı:** `tests/unit/kabuk-bant.test.js` (CSS metni: her bant jetondan, kural
+olarak) + `kabuk-sutun.spec.js` → *"KABUK TEK ÇİZGİ"* ve *"başlıklar içeriğin
+kenarında"* (gerçek tarayıcı; eski derlemede 8 px ve 5 px ile düşüyor).
 
 ## Panel alan grameri — iki yüzey tek dil (2026-09-22)
 
@@ -1066,7 +1068,8 @@ oturuyordu — ikinci tık hesap menüsüne gidiyordu. Kapı: *"KAYMIYOR"*.
 kaplama da çerçevelendi: foto 1902×1014, kart açılış kartından 9 px içeride —
 iki kartın CSS'i birebir aynı, ÇİZİMİ değil (`left` kapsayana göre). Önceki
 dersin tersi: bir kaba kural EKLEMEK de içindekileri etkiler.
-Kapı: `karsilama-kenar.spec.js` (çizilmiş dikdörtgenler).
+Kapı: `karsilama-kenar.spec.js` (çizilmiş dikdörtgenler). (Çukur aynı gün
+tuvalden de kalktı — "Kabuk TEK ÇİZGİ"; istisna kuralı onunla gitti.)
 
 **Sütuna sığmayan pencere modal açılır** (`VE_SUTUNA_SIGMAYAN`, ölçülmüş,
 yalnız aşağı iner). Tur C'nin kapısı yalnız BOŞ motor penceresini ölçmüştü.

@@ -198,8 +198,15 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
 - **Sonuçlar penceresindeki TXT raporları A4 SAYFADIR** (794×1123 px), tek
   `<pre>`, sola yaslı. Font ölçüsü **CSS'te** sayfaya sığmaktan türer (JS'te px
   yazılmaz — indirilen HTML'de JS yok). Üst bandı `veRepHeadHTML` **tek
-  üretici** kurar ve `--results-bar-h`'tan beslenir; panel başına kopya bant
+  üretici** kurar ve `--bant-h`'tan beslenir; panel başına kopya bant
   kurulmaz.
+- **KABUĞUN ÜST BANDI TEK ÇİZGİ, TUVAL KENARA YAPIŞIK.** Her sayfada yan yana
+  duran başlıklar (Topoloji: "Bileşenler" · sekme bandı · müfettiş başlığı;
+  Sonuçlar: Veri Gezgini · araç çubuğu · rapor bandı) ölçüyü ve zemini TEK
+  jetondan alır: `--bant-h` + `--bant-zemin`. Bandın başlığı altındaki
+  sütunun sol kenarından başlar. Tuvalin kendi çerçevesi yok (çukur emekli):
+  sınırı komşusunun çizgisidir. Kapı: `kabuk-bant.test.js` +
+  `kabuk-sutun.spec.js` → *"KABUK TEK ÇİZGİ"*.
 - **BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI.** `createNode` her düğümde
   `saveState()` çağırıyor; ONİKİ düğüm kuran bir kurucu (modül örneği,
   sihirbaz, açılış yüzeyi) bu yüzden `js/state.js` → **`veStateBatch(fn)`** ile

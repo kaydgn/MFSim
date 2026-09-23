@@ -2339,7 +2339,7 @@ function veTxtDocHTML(txtContent) {
 // Beş panel (dört TXT önizlemesi + Detaylı Rapor) bu bandı satır içi stille,
 // birbirinin kopyası olarak kuruyordu; biri düzeltilince diğer dördü sessizce
 // ayrışıyordu. Ölçü artık .ve-rep-head kuralında ve soldaki "Veri Gezgini"
-// bandıyla (.ve-results-head) AYNI --results-bar-h'tan besleniyor.
+// bandıyla (.ve-results-head) AYNI --bant-h'tan besleniyor.
 // opt: { icon, title, back:{onclick,label}, actions:[{onclick,icon,label,title,danger}] }
 function veRepHeadHTML(opt) {
   opt = opt || {};
