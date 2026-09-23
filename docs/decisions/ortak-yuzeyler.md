@@ -975,7 +975,8 @@ zararsız, ama bağlama değiştiği gün sessizce ayrışacak ikinci bir kaynak
 **Kardeş kural:** açılış kartı ile karşılama kartının geometrisi zaten **1
 px'e kadar** kilitli (`loader-splash.test.js`); gerekçesi aynı — devir
 teslimde hiçbir şey yerinden oynamamalı. Marka o kartın İÇİNDEKİ yazı ve
-aynı korumayı hak ediyordu.
+aynı korumayı hak ediyordu. (2026-09-23'ten beri açılışta kart yok — aşağıya
+bak; geometri kilidi modül giriş panelinde sürüyor.)
 
 **Kapı ÇİFT.** `source-hygiene.test.js` bölüm 12 kuralı statik tutar ve
 **bağlama listesini elle kopyalamaz, kaynaktan okur** — liste bulunamazsa
@@ -986,6 +987,27 @@ farkının göz ayıracak kadar büyük olduğunu** ayrıca ölçer — tracking
 eşitliği tek başına, ölçülen şeyin görünür bir fark olduğunu söylemez.
 Üç düşme de ölçüldü.
 
+
+## Açılış AMBLEM'e geçti — marka büyük, logoya iner (2026-09-23)
+
+**Hüküm.** Açılış ekranında kart yok: tam ekran fotoğraf, temanın zemininden
+türeyen sol perde, büyük marka (`--fs-amblem`), 12 bölmeli cetvel, o anki
+öbek, o anki modül; yüzde yok. Yukarıdaki kural "aynı boy"dan **"aynı aile,
+aynı ağırlık, aynı em-iz"**e genişledi: boy bilerek farklı ve devir teslimde
+ad ile çark ayrı ayrı, TAM ORANLA (`--fs-h2 / --fs-amblem`) küçülerek
+logoya iner. Modül giriş ekranı KARTLI kaldı — karşılama kartından doğuyor.
+
+**Gerekçe.** Küçültülmüş açılış markası logonun kendisi olmalı: iz ya da
+ağırlık ayrışırsa uçuş inişte genleyen ya da daralan bir markaya döner.
+Hedef, karşılamanın giriş koreografisinden ÖNCE ölçülür — koreografi kartı
+`translateX(-16px)`, logoyu `translateY(14px)`'ten başlatıyor ve sonra
+ölçülen hedef logonun duracağı yer değil o anki yeri olur.
+
+**Kapı.** `tests/e2e/marka-tutarli.spec.js` uçuşu dondurup iki ucunu ÇİZİMDE
+ölçer; `source-hygiene.test.js` bölüm 12 bileşik seçiciyi de tarar
+(`.mfsim-loading-logo.mfsim-amblem-ad`'a yazılan iz eski kapıdan
+geçiyordu); perdenin tek rengi `--bg-primary` (`loader-splash.test.js` —
+tema-nötr siyah, çıplak renk kapısından geçer).
 
 ## Panel veri tablosu sunumu sınıftan alır (2026-09-22)
 
