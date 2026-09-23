@@ -308,25 +308,37 @@ describe('FEAD panel kozmetiği', () => {
     expect(css).toMatch(/\.ve-fp-chk:hover/);
   });
 
-  test('ETİKET ile GİRİŞ aynı KENARA yaslı — P3', () => {
-    // Ölçülen kusur: `_feadGrid` etiketi `text-align:center`, `_FEAD_INP` ise
-    // `text-align:right` yazıyordu. Etiket sayının üstünde ortalanıyor, değer
-    // sağa yapışıyordu.
+  test('ETİKET ile GİRİŞ aynı KENARA yaslı — ve o kenar HER ALANDA SOL', () => {
+    // Ölçülen kusur (P3): `_feadGrid` etiketi `text-align:center`, `_FEAD_INP`
+    // ise `text-align:right` yazıyordu. Etiket sayının üstünde ortalanıyor,
+    // değer sağa yapışıyordu. Hüküm KENARA taşındı: etiket, denetiminin
+    // yaslandığı kenara yaslanır.
     //
-    // O gün çare "ikisini aynı satıra koy" olmuştu. Atölye grameri etiketi
-    // üste aldı (Kayış Tablosu'nun kalıbı) ve aynı kusur yeniden açılabilirdi;
-    // hüküm bu yüzden KENARA taşındı: etiket, denetiminin yaslandığı kenara
-    // yaslanır. Bir liste değil bir KURAL — yeni bir alan tipi kendi hizasını
-    // getirdiğinde etiket onu izler.
+    // 2026-09-23: kural doğruydu ama kenarı ALAN TİPİNE bırakıyordu — sayı
+    // sağa, liste sola. Aynı pencerede etiketler beş ayrı sol kenara
+    // dağılıyordu (ölçüldü: 11 · 63 · 203 · 305–325 px; 32 pencere/sekmede
+    // 149 etiket denetiminin sol kenarından kaymış). Kullanıcı: "Hizalamalar,
+    // şekiller şukullar hep kaymış." Şimdi kenar TEK: sol.
     expect(src).not.toMatch(/text-align:center[^']*'\s*\+\s*c\.label/);
 
     const f = (/\.ve-fp-f\{([^}]*)\}/.exec(css) || [, ''])[1];
     expect(f).toMatch(/flex-direction:\s*column/);      // etiket ÜSTTE
 
     const l = (/\.ve-fp-l\{([^}]*)\}/.exec(css) || [, ''])[1];
-    expect(l).toMatch(/justify-content:\s*flex-end/);   // sayı alanı: sağ kenar
-    // ve sola yaslı denetimler etiketi de sola çeker
-    expect(css).toMatch(/\.ve-fp-f:has\(\.ve-fp-sel\)[^{]*\{[^}]*flex-start/);
+    expect(l).toMatch(/justify-content:\s*flex-start/);
+    expect(l).toMatch(/text-align:\s*left/);
+    const g = (/\.ve-fp-inp, \.ve-fp-sel\{([^}]*)\}/.exec(css) || [, ''])[1];
+    expect(g).toMatch(/text-align:\s*left/);            // sayı da SOLDA
+
+    // HİÇBİR KURAL etiketi ya da denetimi sağa/ortaya GERİ çekmiyor. Tek bir
+    // alan tipi kendi kenarını getirse pencere yine iki kenara bölünür —
+    // kapı liste değil KURAL: `.ve-fp-l|inp|sel` adını taşıyan her seçici.
+    // Yorumlar ayıklanır: yorumda geçen bir sınıf adı seçici değildir.
+    const aykiri = [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+      .filter(([, sel, govde]) => /\.ve-fp-(l|inp|sel)\b/.test(sel)
+        && /text-align:\s*(right|center)|justify-content:\s*flex-end/.test(govde))
+      .map(([, sel]) => sel.trim());
+    expect(aykiri).toEqual([]);
   });
 });
 

@@ -367,6 +367,11 @@ function showNodeProperties(node) {
   // Hafif paneller (VE_COMPACT_PANEL_TYPES): içerik az → dar pencere + kompakt-sol
   // kimlik. Geniş yapmak boş sütun bırakırdı. Salt sunum.
   if(_propWin) _propWin.classList.toggle('ve-properties--compact', VE_COMPACT_PANEL_TYPES.indexOf(node.type) >= 0);
+  // SIĞMAYAN TABLO AÇILIR PENCEREDE (js/tablo-pencere.js). Ölçüm pencere
+  // sınıflarından (sütun ↔ modal ↔ geniş) SONRA — genişliği onlar belirliyor.
+  // Eşzamanlı: bir kare bile geniş tablo sütunda görünmesin. Panel kapalıysa
+  // genişlik 0'dır ve karar gözlemciye kalır (açılınca verilir).
+  if(typeof veTabloKatla === 'function') veTabloKatla(content);
   // Modal OTOMATİK AÇILMAZ — tek tık sadece seçim yapar, çift tık (veAttachNodeDrag)
   // veya marker tıklaması modal'ı açar. Eğer modal zaten açıksa içerik yenilenir.
 

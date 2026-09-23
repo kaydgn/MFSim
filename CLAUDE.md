@@ -225,6 +225,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   `tabular-nums` ile. Tuval `var()` çözemez → `veThemeFont(px, ağırlık)`;
   çıplak aile adı yazılmaz. Tek istisna hizası BOŞLUKLA kurulmuş düz metin
   (TXT rapor `<pre>`). Kapı: `tek-yazi-tipi.test.js` + `tek-yazi-tipi.spec.js`.
+- **SÜTUNDA YATAY KAYDIRMA YOK — sığmayan tablo AÇILIR PENCEREDE**
+  (`js/tablo-pencere.js`). Panel tabloyu + kendi düğmelerini bir BİRİM
+  işaretler (`data-ve-tablo` · `-baslik` · `-ozet`); karar ÖLÇÜMDEN (sığmıyorsa
+  özet kartı + "Tabloyu aç"), tablo pencereye TAŞINIR, kopyalanmaz. Kapı:
+  `tablo-pencere.test.js` + `tablo-pencere.spec.js` + `mufettis-sigma.spec.js`.
 - **Artifact önizlemesi kaldırıldı**, ama `build.js`'teki
   `maskRawTextKeepOffsets` **KALIR**: rapor üreticileri HTML şablonu bastığı
   için gerçek belgede sahte `</body>` geçiyor ve kalkan onun içindir.

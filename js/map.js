@@ -2978,6 +2978,9 @@ function veTogglePropertiesPanel(forceState) {
     }
   } else {
     if(!isVisible) return;
+    // Açılır tablo penceresi müfettişin İÇERİĞİNİ taşıyor — müfettiş
+    // kapanırken sahipsiz kalmasın (js/tablo-pencere.js).
+    if(typeof veTabloKapat === 'function') veTabloKapat();
     ov.classList.remove('visible');
     setTimeout(function() {
       // 220ms sonra hâlâ visible değilse gerçekten kapat (race-safe)

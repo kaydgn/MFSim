@@ -401,3 +401,203 @@ describe('KAPSAM — yalnız kasnak değil, BÜTÜN FEAD panelleri', () => {
     expect(SRC).not.toMatch(/_FEAD_INP|_FEAD_SEL/);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PENCERE DÜZENİ (2026-09-23) — kullanıcı bildirimi, kasnak penceresinin
+// ekran görüntüsüyle: *"Şuradaki yapı biraz karışık. Düzen vs yok.
+// Hizalamalar, şekiller şukullar hep kaymış."* Gerçek tarayıcıda ölçüldü
+// (5 örnek × bütün pencere/sekmeler): etiketlerin denetiminden kayması
+// 149 → 0, özet şeridinde asılı ayraç 4 → 0, bölüm çizgisi rengi 5 → 2,
+// küçük resimde ad × ad çakışması 30 → 0, ad × kayış 90 → 0 (AG00879).
+// Hizanın kendisi gerçek tarayıcıda ölçülür (fead-panel-gramer.spec.js);
+// burada KURULUŞ kapılı.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('PENCERE DÜZENİ — özet, notlar, türetilenler, küçük resim', () => {
+  // Gerçek bir örnek: küçük resim ancak çözülen bir modelde çizilir.
+  const ornekKur = (anahtar) => {
+    const pack = veFeadExampleNodes(anahtar);
+    global.nodes = pack.nodes.map((n) => ({
+      id: n.id, type: n.type, def: componentDefs[n.type],
+      customName: n.customName, data: JSON.parse(JSON.stringify(n.data)) }));
+    global.connections = [];
+    return global.nodes;
+  };
+
+  test('özet şeridi ÇİPLERDEN — her madde bölünmez bir kap, asılı ayraç YOK', () => {
+    // Ayraç (`·`) kendi başına bir esnek öğeydi: satır sarınca satır sonunda
+    // asılı kalıyor, "sıra 1/5" tek başına ikinci satıra düşüyordu.
+    const n = ornekKur('AG00879_GATES_2023').filter((x) => x.data && x.data.driver)[0];
+    const kap = ciz(getFeadPulleyPropertiesHTML(n));
+    const serit = kap.querySelector('.ve-fp-sum');
+    expect(serit).toBeTruthy();
+    const cocuk = [...serit.childNodes];
+    expect(cocuk.length).toBeGreaterThanOrEqual(4);
+    // Şeridin BÜTÜN çocukları çip — arada çıplak metin ya da ayraç yok.
+    expect(cocuk.every((c) => c.nodeType === 1 && c.classList.contains('ve-fp-sum-i'))).toBe(true);
+    expect(cocuk.some((c) => c.textContent.trim() === '·')).toBe(false);
+    // Çip dili tek: soluk ad + koyu değer. "temas" de artık öyle.
+    const temas = cocuk.filter((c) => /^temas/.test(c.textContent))[0];
+    expect(temas && temas.querySelector('b')).toBeTruthy();
+  });
+
+  test('bölüm notları KULLANICI dilinde — kodun iç adı basılmıyor', () => {
+    // Uygunluk bölümünün sağında işlevin adı yazıyordu: `veFeadChecks`.
+    const kodAdi = /^ve[A-Z]\w*$|^_?[a-z]+[A-Z]\w*$|\(\)/;
+    [getFeadPulleyPropertiesHTML(kasnak()),
+     getFeadSolverPropertiesHTML({ id: 's1', type: 'fead-solver', data: {} }),
+     getFeadBeltPropertiesHTML({ id: 'b1', type: 'fead-belt', data: { profile: 'PK', ribs: 8 } })]
+      .forEach((html) => {
+        [...ciz(html).querySelectorAll('.ve-fp-sect em')].forEach((em) => {
+          expect(em.textContent.trim()).not.toMatch(kodAdi);
+        });
+      });
+    // Kaynakta da: hiçbir bölüm notu bir `ve…` adı taşımıyor.
+    expect(SRC).not.toMatch(/<em>ve[A-Z]\w*<\/em>/);
+  });
+
+  test('türetilenler İKİ sütunda — dört okuma dört tam genişlik satır değil', () => {
+    const n = ornekKur('AG00879_GATES_2023').filter((x) => x.data && x.data.driver)[0];
+    const yan = ciz(getFeadPulleyPropertiesHTML(n)).querySelector('.ve-fp-side');
+    const izg = [...yan.querySelectorAll('.ve-fp-grid')]
+      .filter((g) => g.querySelector('.ve-fp-inp[readonly]'))[0];
+    expect(izg).toBeTruthy();
+    expect(izg.getAttribute('style')).toBe('--fp-k:2;');
+    expect(izg.querySelectorAll('.ve-fp-f').length).toBe(4);
+  });
+
+  test('küçük resim pencerenin KASNAĞINI vurguluyor — tek kasnak, adı kalın, açı yok', () => {
+    const dugumler = ornekKur('AG00976_GATES_2025');
+    const hedef = dugumler.filter((x) => x.id === 'ex-ALT')[0];
+    const th = ciz(getFeadPulleyPropertiesHTML(hedef)).querySelector('.ve-fp-thumb');
+    const vurgu = th.querySelectorAll('[data-ve="pulley-hl"]');
+    expect(vurgu.length).toBe(1);
+    // Vurgu DOĞRU kasnakta: zeminin merkezi, adı kalın yazılan kasnağın çemberi.
+    const kalin = [...th.querySelectorAll('text[data-ve="name"]')]
+      .filter((t) => t.getAttribute('font-weight') === '700');
+    expect(kalin.length).toBe(1);
+    expect(kalin[0].textContent).toBe(veFeadShortName(hedef.customName));
+    const hl = vurgu[0];
+    const cember = [...th.querySelectorAll('circle[data-ve="pulley"]')]
+      .filter((c) => c.getAttribute('cx') === hl.getAttribute('cx')
+                  && c.getAttribute('cy') === hl.getAttribute('cy'))[0];
+    expect(cember).toBeTruthy();
+    expect(cember.getAttribute('stroke-width')).toBe('3');
+    // Sarım açıları küçük resimde YOK — pencerenin açısı "Türetilenler"de.
+    expect(th.querySelectorAll('text[data-ve="wrap"]').length).toBe(0);
+    // Çerçeveyi kap çiziyor: SVG'nin kendi kenarlığı yok (çift çerçeve).
+    expect(th.querySelector('svg').getAttribute('style')).not.toMatch(/border/);
+    // Kasnak OLMAYAN pencerede (çözücü) vurgu yok — yanlış bir kasnağı
+    // işaretlemek, hiç işaretlememekten kötü.
+    const coz = dugumler.filter((x) => x.type === 'fead-solver')[0];
+    const th2 = ciz(getFeadSolverPropertiesHTML(coz)).querySelector('.ve-fp-thumb');
+    expect(th2.querySelectorAll('[data-ve="pulley-hl"]').length).toBe(0);
+  });
+
+  test('küçük resimde adlar birbirine BİNMİYOR — bütün örnekler × bütün kasnaklar', () => {
+    // Kutu, yerleştiricinin kendi genişlik kuralıyla (9 px × 0,6 em; kalın
+    // ad %10 geniş) yeniden kurulur. Eski küçük resim AG00879'da her
+    // pencerede "Sürücü Kasnak (FAN)" ile "Otomatik Gergi (T38665)"u üst
+    // üste basıyordu.
+    let cizim = 0, ad = 0, cakisma = 0;
+    Object.keys(M.VE_FEAD_EXAMPLES).forEach((anahtar) => {
+      let dugumler;
+      try { dugumler = ornekKur(anahtar); } catch (e) { return; }
+      dugumler.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadPulley)
+        .forEach((n) => {
+          const th = ciz(getFeadPulleyPropertiesHTML(n)).querySelector('.ve-fp-thumb svg');
+          if (!th) return;
+          cizim++;
+          const kutu = [...th.querySelectorAll('text[data-ve="name"]')].map((t) => {
+            const x = +t.getAttribute('x'), y = +t.getAttribute('y');
+            const w = t.textContent.length * 9 * 0.6 * (t.getAttribute('font-weight') === '700' ? 1.1 : 1);
+            const an = t.getAttribute('text-anchor');
+            const x0 = an === 'start' ? x : an === 'end' ? x - w : x - w / 2;
+            return { x0, x1: x0 + w, y0: y - 8, y1: y + 2 };
+          });
+          ad += kutu.length;
+          for (let i = 0; i < kutu.length; i++) for (let j = i + 1; j < kutu.length; j++) {
+            const a = kutu[i], b = kutu[j];
+            if (a.x1 > b.x0 + 0.5 && b.x1 > a.x0 + 0.5 && a.y1 > b.y0 + 0.5 && b.y1 > a.y0 + 0.5) cakisma++;
+          }
+        });
+    });
+    expect(cizim).toBeGreaterThan(40);          // süpürme gerçekten ölçüyor
+    expect(ad).toBeGreaterThan(200);
+    expect(cakisma).toBe(0);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GENİŞ TABLO BİRİMDE (2026-09-23) — kullanıcı: "geniş tablolar bileşen
+// pencerelerine sığmıyor. Bu pencereleri açılır ufak pencereler şeklinde
+// yapmamız gerekiyor." Katlama kararı ölçümden (js/tablo-pencere.js); burada
+// kapılı olan, FEAD'in veri tablolarının o mekanizmaya BAĞLI olması.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('FEAD veri tabloları açılır pencere BİRİMİNDE', () => {
+  // Çevrim KÜTÜPHANESİ de yüklenir: yüklenmezse panel çevrim seçicisini hiç
+  // basmıyor (doğru davranış) — ama o dünyada ölçülen şey seçicinin YOKLUĞU
+  // olurdu, birimin dışında durup durmadığı değil.
+  const DU = require('../../js/fead-duty.js');
+  Object.keys(DU).forEach((k) => { if (global[k] === undefined) global[k] = DU[k]; });
+  const ornek = () => {
+    const pack = veFeadExampleNodes('AG00976_GATES_2025');
+    global.nodes = pack.nodes.map((n) => ({
+      id: n.id, type: n.type, def: componentDefs[n.type],
+      customName: n.customName, data: JSON.parse(JSON.stringify(n.data)) }));
+    return global.nodes;
+  };
+
+  test('her FEAD veri tablosu (.ve-fp-duty) bir birimin İÇİNDE — kural, liste değil', () => {
+    const d = ornek();
+    const paneller = [
+      getFeadSolverPropertiesHTML(d.filter((n) => n.type === 'fead-solver')[0]),
+      getFeadPulleyPropertiesHTML(d.filter((n) => n.type === 'fead-ac')[0]),
+    ];
+    let tablo = 0;
+    paneller.forEach((html) => {
+      ciz(html).querySelectorAll('.ve-fp-duty').forEach((t) => {
+        tablo++;
+        expect(t.closest('[data-ve-tablo]')).toBeTruthy();
+      });
+    });
+    expect(tablo).toBe(2);                 // çevrim + güç eğrisi
+  });
+
+  test('çevrim birimi: satır EKLEYEN düğme ve %zaman uyarısı birimin içinde, özet sayıları doğru', () => {
+    const d = ornek();
+    const coz = d.filter((n) => n.type === 'fead-solver')[0];
+    // %zaman toplamı 100'den saptırılır: uyarı pencerede de görünmeli.
+    coz.data.duty[0].dcPct = Number(coz.data.duty[0].dcPct) + 7;
+    const kap = ciz(getFeadSolverPropertiesHTML(coz));
+    const birim = kap.querySelector('[data-ve-tablo^="fead-duty:"]');
+    expect(birim).toBeTruthy();
+    expect(birim.getAttribute('data-ve-tablo')).toBe('fead-duty:' + coz.id);
+    expect(birim.querySelector('button[onclick^="veFeadDutyAdd("]')).toBeTruthy();
+    expect(birim.textContent).toMatch(/%zaman toplamı/);
+    // Özet modelden: satır sayısı ve devir aralığı.
+    const ozet = birim.getAttribute('data-ve-tablo-ozet');
+    const devir = coz.data.duty.map((r) => Number(r.rpm));
+    expect(ozet).toContain(coz.data.duty.length + ' devir noktası');
+    expect(ozet).toContain(Math.min(...devir) + '–' + Math.max(...devir) + ' d/dk');
+    // Çevrim seçici birimin DIŞINDA: sütuna sığıyor, katlanmamalı.
+    const sec = [...kap.querySelectorAll('select')].filter((s) => /veFeadDutyLib/.test(s.getAttribute('onchange') || ''))[0];
+    expect(sec).toBeTruthy();
+    expect(birim.contains(sec)).toBe(false);
+    // ...ve pencerenin alan dilini konuşuyor (kendi satır içi etiketi değil).
+    expect(sec.closest('.ve-fp-f')).toBeTruthy();
+  });
+
+  test('tablo düğmeleri sınıftan — satır içi stil DURUM ifade edemez', () => {
+    const d = ornek();
+    let dugme = 0;
+    [getFeadSolverPropertiesHTML(d.filter((n) => n.type === 'fead-solver')[0]),
+     getFeadPulleyPropertiesHTML(d.filter((n) => n.type === 'fead-ac')[0])].forEach((html) => {
+      ciz(html).querySelectorAll('[data-ve-tablo] button').forEach((b) => {
+        dugme++;
+        expect(b.getAttribute('style') || '').toBe('');
+      });
+    });
+    // BOŞA ÇALIŞMIYOR: ekle + katalogdan doldur + satır silenler.
+    expect(dugme).toBeGreaterThanOrEqual(4);
+  });
+});

@@ -1665,7 +1665,7 @@ html.ve-sayfa-tuval .ve-nav-rail{ border-right-color:transparent; }
 }
 
 .ve-category{
-  margin-bottom:10px;
+  margin-bottom:12px;
 }
 
 .ve-category-title{
@@ -1673,17 +1673,26 @@ html.ve-sayfa-tuval .ve-nav-rail{ border-right-color:transparent; }
   font-weight:600;
   color:var(--text-muted);
   text-transform:uppercase;
-  letter-spacing:0.5px;
-  margin-bottom:5px;
-  padding-left:4px;
+  letter-spacing:var(--tracking-wide);
+  margin-bottom:4px;
+  /* BAŞLIK İKONUN KENARINDA: öğenin kenarlığı (1) + iç payı (8) = 9 px.
+     Eskiden 4 px'teydi ve ne kutunun kenarına ne ikona oturuyordu
+     (ölçüldü, 2026-09-23: kutu 72,5 · başlık 76 · ikon 82 px). */
+  padding-left:9px;
 }
 
+/* LİSTE SATIRI, KUTU DEĞİL (2026-09-23). Her öğe dolu zeminli, kenarlıklı
+   bir kutuydu ve aralarında 4 px vardı: FEAD paletinde on dokuz kutu üst
+   üste bir düğme yığını çiziyordu. Kullanıcı bildirimi (ekran görüntüsü):
+   "Şuradaki yapı biraz karışık. Düzen vs yok." Zemin ve kenarlık artık
+   yalnız fare üstündeyken; dinlenmede satırı ikon ve ad taşıyor. Kenarlık
+   SAYDAM kalır, yok olmaz — fareyle 1 px kayma olmasın. */
 .ve-component{
-  background:var(--bg-tertiary);
-  border:1px solid var(--border-color);
+  background:transparent;
+  border:1px solid transparent;
   border-radius:var(--radius-sm);
   padding:6px 8px;
-  margin-bottom:4px;
+  margin-bottom:2px;
   color:var(--text-primary);
   font-size:var(--fs-body);
   cursor:grab;
@@ -1749,9 +1758,9 @@ html.ve-sayfa-tuval .ve-nav-rail{ border-right-color:transparent; }
 }
 
 .ve-component:hover{
-  border-color:var(--accent-primary);
+  border-color:var(--border-color);
   background:var(--bg-input);
-  box-shadow:0 0 0 2px color-mix(in srgb, var(--accent-primary) 18%, transparent), var(--shadow-md);
+  box-shadow:var(--shadow-sm);
   transform:translateY(-1px);
 }
 
@@ -5165,6 +5174,11 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-properties-content td{
   padding:5px 8px !important;
 }
+/* Motor-şanzıman eşleştirme tablosunun düğme hücresi: 34 px'lik sütunda
+   yukarıdaki genel dolgu "Seç" düğmesini tablonun DIŞINA itiyordu (2,2 px,
+   sütunda yatay kaydırma — ölçüldü). Genel kural `!important` olduğu için
+   istisna da öyle yazılmak ZORUNDA; kapsamı tek hücre sınıfı. */
+.ve-properties-content td.egm-sec{ padding:2px !important; }
 .ve-properties-content table input[type="number"],
 .ve-properties-content table input[type="text"],
 .ve-properties-content table select{
@@ -8620,13 +8634,14 @@ span.ve-fw-ro{ display:inline-block; }
   font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
-/* TON, kartın "hesap için kritik" gibi ağırlığını taşıyor — eski renkli çubuk
-   bunu yapıyordu, kaldırmak bilgiyi kaldırmak olurdu (kural 26'nın tersi). */
+/* TON YALNIZ "KRİTİK"TE RENK OLUR. Kartın "hesap için kritik" ağırlığını
+   taşıyan tek ton `danger`; kaldırmak bilgiyi kaldırmak olurdu (kural 26'nın
+   tersi). Öteki üç ton (primary · success · warning) bir ANLAM taşımıyordu —
+   Geometri turuncu, Rol yeşil, Katalog kehribar çizgiyle ayrılıyordu ve tek
+   sütunda sağ sütunun nötr çizgili bölümleriyle alt alta düşünce aynı
+   pencerede dört ayrı çizgi rengi okunuyordu (2026-09-23). */
 .ve-fp-sect[data-tone="danger"]  { border-bottom-color:var(--accent-danger); }
 .ve-fp-sect[data-tone="danger"] b{ color:var(--ink-danger); }
-.ve-fp-sect[data-tone="warning"] { border-bottom-color:var(--accent-warning); }
-.ve-fp-sect[data-tone="success"] { border-bottom-color:var(--accent-success); }
-.ve-fp-sect[data-tone="primary"] { border-bottom-color:var(--accent-primary); }
 .ve-fp-card{ margin:0 0 14px; }
 .ve-fp-card:last-child{ margin-bottom:0; }
 
@@ -8666,17 +8681,18 @@ span.ve-fw-ro{ display:inline-block; }
      çıkmaz, en bilgilendirici BAŞ sessizce kaybolur. 184 etiketten 8'i:
      "Çalışma momenti — Mean Load [Nm]" soldan 70 px yiyordu (kullanıcı yalnız
      "Mean Load" okuyordu), "Krank ataleti" → "RANK ATALETİ". */
-  white-space:normal; text-align:right;
-  /* ETİKET, DENETİMİYLE AYNI KENARA YASLANIR. Kapatılan kusur (P3) etiketin
-     ortalanıp değerin sağa yapışmasıydı; çare o gün "ikisini aynı satıra koy"
-     olmuştu. Etiket üste çıkınca aynı kusur yeniden açılabilirdi — kural
-     KENARA taşındı: sayı alanı sağa yaslı, o yüzden etiketi de sağda; metin
-     ve açılır liste sola yaslı, etiketi de solda. Bir liste değil bir KURAL:
-     yeni bir alan tipi kendi hizasını getirdiğinde etiket onu izler. */
-  justify-content:flex-end;
+  white-space:normal; text-align:left;
+  /* ETİKET, DENETİMİYLE AYNI KENARA YASLANIR — ve o kenar artık HER ALANDA
+     SOL (2026-09-23). Kural (P3'ün mirası) doğruydu ama kenarı alan tipine
+     bırakıyordu: sayı alanı sağa, liste sola yaslıydı, yani aynı pencerede
+     etiketler BEŞ ayrı sol kenara dağılıyordu (ölçüldü, 380 px'lik kasnak
+     penceresi: 11 · 63 · 203 · 305–325 px). Kullanıcı bildirimi: "Hizalamalar,
+     şekiller şukullar hep kaymış." Sayı da sola yaslanınca etiket, değer ve
+     bölüm başlığı tek çizgiden başlıyor. Sağa yaslı rakamın işi SÜTUN
+     karşılaştırmasıydı — o iş Kayış Tablosu'nda, tek kasnaklık pencerede
+     değil. */
+  justify-content:flex-start;
 }
-.ve-fp-f:has(.ve-fp-sel) > .ve-fp-l,
-.ve-fp-f:has(.ve-fp-inp--text) > .ve-fp-l{ justify-content:flex-start; text-align:left; }
 /* BİRİM ETİKETİN YANINDA, girdinin içinde değil — Kayış Tablosu'nun ölçülmüş
    kararı: `X(mm)` bir başlıktan çok bir değişken adı gibi okunuyordu. */
 .ve-fp-l u{
@@ -8692,7 +8708,7 @@ span.ve-fw-ro{ display:inline-block; }
   border:1px solid var(--border-color); border-radius:var(--radius-xs);
   background:var(--bg-input); color:var(--text-primary);
   font-size:var(--fs-tiny); padding:4px 8px;
-  text-align:right;
+  text-align:left;
 }
 .ve-fp-sel{ text-align:left; font-family:inherit; }
 .ve-fp-inp--text{ text-align:left; font-family:inherit; }
@@ -8790,7 +8806,7 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fp-inp--ton{
   /* OKUNUR DEĞERİN ANLAMI — `data-ton` bir anlam adı, satır içi renk değil.
      Aynı `--ink-*` jetonları, yani on tema tek renk dilini konuşuyor. */
-  font-weight:700; text-align:center;
+  font-weight:700; text-align:left;
 }
 .ve-fp-inp--ton[data-ton="warning"]{ color:var(--ink-warning); }
 .ve-fp-inp--ton[data-ton="danger"]{  color:var(--ink-danger); }
@@ -8820,9 +8836,17 @@ span.ve-fw-ro{ display:inline-block; }
 }
 
 .ve-fp-sum{
-  display:flex; flex-wrap:wrap; gap:3px 10px; align-items:baseline;
-  font-size:var(--fs-micro); color:var(--text-muted);
-  padding:0 0 9px; margin:0 0 12px; border-bottom:1px solid var(--border-color);
+  display:flex; flex-wrap:wrap; gap:5px; align-items:center;
+  padding:0 0 10px; margin:0 0 12px; border-bottom:1px solid var(--border-color);
+}
+/* ÇİP BÖLÜNMEZ (`nowrap`): sarılan şey bütün bir madde olur. Ayraçlı eski
+   şeritte `·` satır sonunda asılı kalıyor, "sıra 1/5" tek başına ikinci
+   satıra düşüyordu (ölçüldü). */
+.ve-fp-sum-i{
+  display:inline-flex; align-items:baseline; gap:4px; white-space:nowrap;
+  padding:2px 8px; border-radius:var(--radius-sm);
+  background:var(--bg-tertiary); color:var(--text-muted);
+  font-size:var(--fs-micro); line-height:1.5;
 }
 .ve-fp-sum b{ color:var(--text-heading); font-weight:600; }
 
@@ -8907,6 +8931,11 @@ span.ve-fw-ro{ display:inline-block; }
    en küçük genişliklerinde durur ve TABLO yatay kayar — pencere değil. */
 .ve-fp-duty{ overflow-x:auto; margin:0 0 8px; }
 .ve-fp-duty-tbl th{ font-weight:600; }
+/* VERİ TABLOSUNDA SAYI SAĞA YASLI, başlığı da onunla — sütun alt alta
+   karşılaştırılır (3.61 / 3.78 / 3.83), ondalık hizası okunur. Alan
+   dilinin "tek sol kenar" kuralı FORM satırı içindir, tablonun sütunu
+   değil (source-hygiene: kural `.ve-fp-l|inp|sel` seçicilerine bakar). */
+.ve-fp-duty-tbl thead th:not(:last-child), .ve-fp-duty-tbl input{ text-align:right; }
 /* EN KÜÇÜK GENİŞLİK YALNIZ ETKİLEŞİMLİ PENCEREDE. Kılavuz bu tabloyu A4'e
    basıyor ve kâğıtta kaydırma yok: kural koşulsuz olunca 11. sahne 15 px
    taşıyordu (fead-kilavuz-baski.spec.js, ölçüldü). Kılavuzun sökümü seçicinin
@@ -8920,6 +8949,97 @@ span.ve-fw-ro{ display:inline-block; }
   color:var(--ink-danger); font-size:var(--fs-body); border-radius:var(--radius-xs);
 }
 .ve-fp-duty-sil:hover{ background-color:var(--danger-tint-8); }
+/* Tablonun OKUNUR hücresi (güç eğrisinde "Motor devri") — girdiyle aynı
+   satırda, girdiden ayrı: soluk ve sağa yaslı (sütun karşılaştırması). */
+.ve-fp-duty-oku{ color:var(--text-muted); text-align:right; padding:2px 6px; white-space:nowrap; }
+
+/* EYLEM SATIRI — tablonun altındaki ikincil düğmeler ("+ Devir satırı",
+   "Katalogdan doldur"). Satır içi stildeydiler: `:hover`/`:focus` yoktu ve
+   alttaki açıklamaya YAPIŞIKTILAR (boşluk 0 px — ölçüldü). */
+.ve-fp-eylem{ display:flex; gap:6px; margin:8px 0 10px; }
+.ve-fp-dugme{
+  flex:1; padding:5px 10px; cursor:pointer;
+  font:inherit; font-size:var(--fs-tiny); font-weight:600;
+  color:var(--text-primary); background:var(--bg-tertiary);
+  border:1px solid var(--border-color); border-radius:var(--radius-sm);
+}
+.ve-fp-dugme:hover{ background:var(--bg-input); border-color:var(--border-hover); }
+.ve-fp-dugme:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+
+/* ══ SÜTUNA SIĞMAYAN TABLO AÇILIR PENCEREDE (js/tablo-pencere.js) ═════════
+   Kullanıcı isteği (2026-09-23): "geniş tablolar bileşen pencerelerine
+   sığmıyor. Bu pencereleri açılır ufak pencereler şeklinde yapmamız
+   gerekiyor." Ölçüldü: çalışma çevrimi tablosu 1162 px, sütun 359 px.
+   Birim (`.ve-tablo`) sığmıyorsa KATLANIR, yerinde özet kartı kalır. */
+.ve-tablo--katli{ display:none; }
+.ve-tablo-kart{
+  display:flex; align-items:center; gap:10px;
+  padding:8px 10px; margin:0 0 10px;
+  background:var(--bg-tertiary); border:1px solid var(--border-color);
+  border-radius:var(--radius-sm);
+}
+/* `display:flex` tarayıcının [hidden]{display:none} kuralını YENER. */
+.ve-tablo-kart[hidden]{ display:none; }
+.ve-tablo-kart-yazi{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+.ve-tablo-kart-yazi b{ font-size:var(--fs-tiny); font-weight:600; color:var(--text-heading); }
+.ve-tablo-kart-yazi span{ font-size:var(--fs-micro); color:var(--text-muted); }
+.ve-tablo-ac{
+  display:inline-flex; align-items:center; gap:6px; flex:none; cursor:pointer;
+  padding:6px 10px; font:inherit; font-size:var(--fs-tiny); font-weight:600;
+  color:var(--on-accent); background:var(--accent-primary);
+  border:1px solid var(--accent-primary); border-radius:var(--radius-sm);
+}
+.ve-tablo-ac:hover{ background:var(--ink-accent); border-color:var(--ink-accent); }
+.ve-tablo-ac:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+/* Pencere açıkken kart YERİNDE kalır ve bunu söyler: düğme sönük. */
+.ve-tablo-kart--acik .ve-tablo-ac{
+  color:var(--text-muted); background:var(--bg-input); border-color:var(--border-color);
+}
+
+/* PENCERE — kabuk jeton konuşur (perde · gölge · katman; source-hygiene 11).
+   Müfettişin (sütun `--z-dock`, modal `--z-modal`) ÜSTÜNDE: içeriğini o
+   pencereden alıyor. Genişlik İÇERİKTEN (`max-content`) — tablo doğal
+   genişliğinde açılır, ekrandan büyükse kendi kabında kayar. */
+.ve-tablo-perde{
+  position:fixed; inset:0; z-index:calc(var(--z-modal) + 1);
+  background:var(--scrim);
+  display:flex; align-items:center; justify-content:center; padding:24px;
+}
+.ve-tablo-pencere{
+  width:max-content; min-width:360px; max-width:100%; max-height:100%;
+  display:flex; flex-direction:column;
+  background:var(--bg-secondary); border:1px solid var(--border-color);
+  border-radius:var(--radius-lg); box-shadow:var(--shadow-xl);
+}
+.ve-tablo-bas{
+  display:flex; align-items:baseline; gap:10px; flex:none;
+  padding:12px 12px 10px 16px; border-bottom:1px solid var(--border-color);
+}
+.ve-tablo-bas b{ font-size:var(--fs-lg); font-weight:700; color:var(--text-heading); letter-spacing:-0.01em; }
+.ve-tablo-bas em{ font-style:normal; font-size:var(--fs-tiny); color:var(--text-muted); }
+.ve-tablo-kapat{
+  margin-left:auto; align-self:center; display:inline-flex; align-items:center; justify-content:center;
+  width:26px; height:26px; padding:0; cursor:pointer;
+  color:var(--text-muted); background:transparent; border:1px solid transparent;
+  border-radius:var(--radius-sm);
+}
+.ve-tablo-kapat:hover{ color:var(--text-primary); background:var(--bg-tertiary); border-color:var(--border-color); }
+.ve-tablo-kapat:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-tablo-govde{ padding:14px 16px 6px; overflow:auto; min-height:0; }
+/* PENCERE KÜÇÜK KALIR: girdinin genişliği SABİT. `width:100%` bir girdi
+   tablonun doğal genişliğine kendi varsayılan boyunu (~150 px) katıyordu ve
+   sekiz sütunlu çevrim penceresi 1517 px'e açılıyordu (ölçüldü) — "ufak
+   pencere" isteğinin tersi. Uzun sütun adı iki satıra kırılır, sütunu
+   genişletmez. (`.ve-properties-content` önekli en küçük genişlik kuralı
+   pencereye TAŞINMAZ — birim artık o kabın dışında.) */
+.ve-tablo-pencere .ve-fp-duty-tbl input{ width:84px; min-width:0; }
+.ve-tablo-pencere .ve-fp-duty-tbl td:first-child input{ width:92px; }
+.ve-tablo-pencere .ve-fp-duty-tbl thead th{
+  white-space:normal; max-width:104px; line-height:1.25; vertical-align:bottom;
+  text-wrap:balance;          /* "Alternatör (155 A)" parantezde kırılsın, "155 / A)" diye değil */
+}
+.ve-tablo-pencere .ve-fp-eylem{ justify-content:flex-start; }
+.ve-tablo-pencere .ve-fp-dugme{ flex:0 0 auto; }
 
 .ve-fp-gate{
   display:flex; align-items:center; gap:7px; padding:4px 0;
@@ -8933,7 +9053,12 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fp-gate[data-d="no"] i  { background:var(--accent-danger); }
 .ve-fp-gate span{ margin-left:auto; font-size:var(--fs-micro); color:var(--text-muted); }
 
-.ve-fp-thumb{ border:1px solid var(--border-color); background:var(--bg-secondary); padding:6px; margin:0 0 12px; }
+/* TEK ÇERÇEVE: kap çiziyor, SVG değil (`frame:false`). Eskiden kabın gri
+   kutusunun içinde SVG'nin kendi beyaz, yuvarlak kutusu duruyordu. */
+.ve-fp-thumb{
+  border:1px solid var(--border-color); border-radius:var(--radius-sm);
+  background:var(--bg-input); padding:4px; margin:0 0 14px;
+}
 .ve-fp-thumb svg{ display:block; width:100%; height:auto; }
 .ve-fp-thumb-bos{ padding:16px 8px; text-align:center; font-size:var(--fs-micro); color:var(--text-muted); }
 

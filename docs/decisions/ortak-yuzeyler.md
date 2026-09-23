@@ -549,6 +549,19 @@ doğuyordu: etiket aynı satırda yer istiyordu. Etiket üste çıkınca liste a
 tamamını alıyor ve yarış bitiyor. Kapı CSS metninden gerçek tarayıcıya taşındı:
 ölçülen şey artık bir oran değil **kırpılmanın kendisi**.
 
+**2026-09-23 — kenar TEK: sol.** Kural doğruydu ama kenarı ALAN TİPİNE
+bırakıyordu: sayı sağda, liste solda. Aynı pencerede etiketler beş ayrı sol
+kenara dağılıyordu (380 px'lik kasnak penceresi: 11 · 63 · 203 · 305–325 px;
+5 örnek × bütün pencere/sekmelerde 114–150 etiket denetiminin sol kenarından
+kaymış). Kullanıcı: *"Hizalamalar, şekiller şukullar hep kaymış."* Sayı da
+sola yaslandı; etiket, değer ve bölüm başlığı tek çizgiden başlıyor. Sağa
+yaslı rakamın işi SÜTUN karşılaştırmasıdır — o iş veri TABLOSUNDA kalır
+(`.ve-fp-duty-tbl` sayıyı ve başlığını sağa yaslar). Aynı turda: türetilenler
+iki sütun, özet şeridi çip (asılı `·` ayracı yok), bölüm çizgisi yalnız
+"kritik"te renkli (5 renk → 2). Kapı: `source-hygiene.test.js` → *"HER ALANDA
+SOL"* (`.ve-fp-l|inp|sel` seçicisi sağa/ortaya geri çekemez) +
+`fead-panel-gramer.spec.js` → *"TEK SOL KENAR"*.
+
 **Ödenen bedel:** panel 260 → **281 px** (+21, %8) — 12 alan, 5 ızgara.
 Beklenenden az, çünkü etiket mikro punto ve saç teli kenarlıkları gitti.
 
@@ -1050,3 +1063,63 @@ sığmayan etiketi SOLDAN kesiyordu, üç nokta çıkmıyordu: "Çalışma momen
 Mean Load" → "Mean Load". Kapı: aynı spec, *"etiket kırpık"*.
 
 **Hover rengini ailesinden alır.** Kapı: `source-hygiene.test.js` bölüm 13.
+
+
+## Sütuna sığmayan tablo açılır pencerede (2026-09-23)
+
+**Hüküm.** Müfettiş sütununda yatay kaydırma olmaz. Panel, veri tablosunu ve
+ONUN düğmelerini bir BİRİM olarak işaretler (`data-ve-tablo` · `-baslik` ·
+`-ozet`); `js/tablo-pencere.js` birimi çizimden sonra ÖLÇER: tablo kabına
+sığmıyorsa yerinde bir özet kartı kalır ve "Tabloyu aç" birimi küçük bir
+pencereye taşır. Sığıyorsa hiçbir şey değişmez.
+
+**Gerekçe — ölçüldü.** Kullanıcı: *"geniş tablolar bileşen pencerelerine
+sığmıyor. Bu pencereleri açılır ufak pencereler şeklinde yapmamız
+gerekiyor."* Üç modülün bütün pencereleri, her sekme: FEAD çalışma çevrimi
+785/359 px (AG00976 örneği; her kasnak tipi eklenince 1162/359), AP
+motor-şanzıman eşleştirme 337/335 px. İkincisi bir tablo genişliği değil bir
+düğmeydi — "Seç", panel kabuğunun `td{padding:5px 8px !important}` kuralıyla
+34 px'lik sütunda tablonun 2,2 px dışına çıkıyordu; satır içi `padding` o
+`!important`ı ezemediği için hücreye sınıf (`egm-sec`) verildi.
+
+**Tablo TAŞINIR, kopyalanmaz.** Hücrelerin olay işleyicileri satır içi ve
+düğüm kimliğini taşıyor; aynı DOM pencereye taşınınca aynı modeli yazar.
+Pencere içeriğini kendisi üretmez — ikinci bir üretici panel ile pencerenin
+sessizce ayrışması olurdu. Panel yeniden çizilince (satır ekle/sil) yeni birim
+yeniden pencereye alınır; panel başka bir düğüme geçerse pencere kapanır.
+
+**Karar bir `ResizeObserver`dan, BİR SONRAKİ KAREDE.** Geri çağrının içinde
+katlamak gözlenen kabın boyunu değiştiriyor ve tarayıcı "ResizeObserver loop
+completed with undelivered notifications" atıyor — uygulamanın hata
+yakalayıcısı bunu kullanıcıya "Beklenmeyen hata" diye gösterdi (ölçüldü). İlk
+karar eşzamanlı, sonrakiler bir kare ertelenir.
+
+**Pencere ufak kalır.** Girdinin genişliği SABİT (84 px): `width:100%` bir
+girdi tablonun doğal genişliğine kendi varsayılan boyunu katıyordu ve pencere
+1517/1600 px açılıyordu; şimdi 807 px. Uzun sütun adı dengeli kırılır
+(`text-wrap:balance`).
+
+**TEK ESC = TEK KATMAN.** Dinleyici yakalama evresinde ve yayılmayı keser;
+odaktaki hücre sökülmeden ÖNCE bırakılır (son değer `onchange` ile yazılır).
+
+**Kapı.** `tests/unit/tablo-pencere.test.js` (karar · taşıma kimliği · yeniden
+çizim · sahiplik · ESC · odak; beş mutasyonun beşi de yakalanıyor) +
+`tests/e2e/tablo-pencere.spec.js` (`test:urun`; eski kodda üç halkanın üçü de
+düşüyor) + `tests/e2e/mufettis-sigma.spec.js` (her sekmede yatay kaydırma).
+
+## Palet: liste satırı, kutu değil (2026-09-23)
+
+**Hüküm.** Palet öğesi dinlenmede zeminsiz ve kenarlıksızdır (kenarlık
+SAYDAM — fareyle 1 px kayma olmasın); zemin, kenar ve gölge fare üstündeyken
+gelir. Kategori başlığı İKONUN kenarından başlar (öğenin kenarlığı + iç payı
+= 9 px).
+
+**Gerekçe.** Kullanıcı (kenar çubuğunun ekran görüntüsüyle): *"Şuradaki
+yapı biraz karışık. Düzen vs yok."* FEAD paletinde on dokuz dolu kutu üst
+üste bir düğme yığını çiziyordu; başlık ne kutunun kenarına ne ikona
+oturuyordu (kutu 72,5 · başlık 76 · ikon 82 px). Yazı etiketinin ve gruplama
+çerçevesinin simgesi SVG içinde bir YAZI GLİFİYDİ ("T", "Grup") — çizgi
+simgeye çevrildi.
+
+**Kapı.** `kabuk-sutun.spec.js` → *"palet: kategori başlığı İKONUN
+kenarında, öğe dinlenmede zeminsiz"*.

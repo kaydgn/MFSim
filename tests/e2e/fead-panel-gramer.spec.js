@@ -158,3 +158,91 @@ test('açılır listenin metni kırpılmıyor', async ({ page }) => {
   });
   expect(kirpik).toEqual([]);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PENCERE DÜZENİ (2026-09-23) — kullanıcı: "Hizalamalar, şekiller şukullar
+// hep kaymış." Üç halka da jsdom'da koşamaz: metnin gerçek sol kenarı
+// (`Range.getBoundingClientRect`), bir çipin kaç satıra bölündüğü
+// (`getClientRects`) ve bir yazının kayış çizgisinin ÜSTÜNDE olup olmadığı
+// (`isPointInStroke`) yalnız yerleşim motorunda var.
+// ═══════════════════════════════════════════════════════════════════════════
+
+test('TEK SOL KENAR — bütün sekmelerde etiket denetiminin sol kenarında başlıyor', async ({ page }) => {
+  await kasnakPaneliAc(page);
+  const r = await page.evaluate(() => {
+    const out = []; let olculen = 0;
+    const kok = document.querySelector('#ve-properties-overlay');
+    const sekmeler = [...kok.querySelectorAll('.ve-fp-tab')];
+    const id = (kok.querySelector('[id^="ve-fp-tabs-"]') || { id: '' }).id.replace('ve-fp-tabs-', '');
+    sekmeler.forEach((b) => {
+      veFeadPanelTab(id, b.getAttribute('data-k'));
+      kok.querySelectorAll('.ve-fp-f').forEach((f) => {
+        if (f.closest('[hidden]')) return;
+        const l = f.querySelector('.ve-fp-l'), d = f.querySelector('.ve-fp-inp, .ve-fp-sel');
+        if (!l || !d) return;
+        const rg = document.createRange(); rg.selectNodeContents(l);
+        const m = rg.getBoundingClientRect();
+        if (!m.width) return;
+        olculen++;
+        const dx = m.left - d.getBoundingClientRect().left;
+        if (Math.abs(dx) > 1.5) out.push(l.textContent.trim().slice(0, 20) + ' ' + Math.round(dx) + ' px');
+      });
+    });
+    return { out, olculen, sekme: sekmeler.length };
+  });
+  expect(r.sekme).toBeGreaterThanOrEqual(2);
+  expect(r.olculen).toBeGreaterThan(10);          // BOŞA ÇALIŞMIYOR
+  // Eski hâl: sayı alanlarının etiketi SAĞA yaslıydı — "Dış çap (OD) 52 px".
+  expect(r.out).toEqual([]);
+});
+
+test('özet şeridi ÇİPLERDEN — hiçbir madde iki satıra bölünmüyor, asılı ayraç yok', async ({ page }) => {
+  await kasnakPaneliAc(page);
+  const r = await page.evaluate(() => {
+    const serit = document.querySelector('#ve-properties-overlay .ve-fp-sum');
+    const cip = [...serit.querySelectorAll('.ve-fp-sum-i')];
+    return {
+      cip: cip.length,
+      bolunen: cip.filter((c) => c.getClientRects().length !== 1).map((c) => c.textContent),
+      ayrac: [...serit.childNodes].filter((n) => n.textContent.trim() === '·').length,
+    };
+  });
+  expect(r.cip).toBeGreaterThanOrEqual(4);
+  expect(r.bolunen).toEqual([]);
+  expect(r.ayrac).toBe(0);
+});
+
+test('küçük resim: pencerenin kasnağı VURGULU, adlar ne birbirine ne KAYIŞA biniyor', async ({ page }) => {
+  await kasnakPaneliAc(page);
+  const r = await page.evaluate(() => {
+    const th = document.querySelector('#ve-properties-overlay .ve-fp-thumb svg');
+    const kayis = [...th.querySelectorAll('path[data-ve="belt"], path[data-ve="rib"]')];
+    const adlar = [...th.querySelectorAll('text[data-ve="name"]')];
+    const kayista = [], ust = [];
+    adlar.forEach((t) => {
+      // İnce çizgiyi kaçırmamak için SIK örnek: birim başına iki nokta.
+      const bb = t.getBBox(), nx = Math.max(8, Math.ceil(bb.width * 2));
+      let vur = false;
+      for (let i = 1; i < nx && !vur; i++) for (let j = 1; j < 5 && !vur; j++) {
+        const pt = th.createSVGPoint();
+        pt.x = bb.x + bb.width * i / nx; pt.y = bb.y + bb.height * j / 5;
+        if (kayis.some((k) => k.isPointInStroke(pt))) vur = true;
+      }
+      if (vur) kayista.push(t.textContent);
+    });
+    const kutu = adlar.map((t) => t.getBoundingClientRect());
+    for (let i = 0; i < kutu.length; i++) for (let j = i + 1; j < kutu.length; j++) {
+      const a = kutu[i], b = kutu[j];
+      if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1
+       && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1) ust.push(adlar[i].textContent + ' × ' + adlar[j].textContent);
+    }
+    return { ad: adlar.length, kayista, ust,
+      vurgu: th.querySelectorAll('[data-ve="pulley-hl"]').length,
+      kalin: adlar.filter((t) => getComputedStyle(t).fontWeight === '700').map((t) => t.textContent) };
+  });
+  expect(r.ad).toBeGreaterThanOrEqual(5);
+  expect(r.vurgu).toBe(1);
+  expect(r.kalin.length).toBe(1);
+  expect(r.ust).toEqual([]);
+  expect(r.kayista).toEqual([]);
+});

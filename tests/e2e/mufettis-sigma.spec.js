@@ -79,6 +79,15 @@ const pencereOlc = async (tip) => {
         if (q.left - t.left > 0.5 || t.right - q.right > 0.5) sorun.push(`${k}: etiket kırpık "${l.textContent.trim().slice(0, 24)}"`); });
       ic.querySelectorAll('.ve-fp-sect').forEach((h) => {
         if (h.offsetWidth && h.offsetWidth < icW * 0.9) sorun.push(`${k}: başlık büzük ${h.offsetWidth} px`); });
+      // İÇERİDE YATAY KAYDIRMA YOK (2026-09-23). Taşma ve kesik ölçümü
+      // yalnız AÇILIŞ sekmesine bakıyordu ve kendi kabında kayan bir tablo
+      // pencereyi hiç taşırmıyor: çalışma çevrimi "Çevrim" sekmesinde
+      // 1162/359 px kayıyordu, tarama yeşildi. Sığmayan tablo artık açılır
+      // pencerede (js/tablo-pencere.js); sütunda kayan kap kalmamalı.
+      ic.querySelectorAll('*').forEach((el) => {
+        if (!el.offsetWidth || el === ic) return;
+        if (/(auto|scroll)/.test(getComputedStyle(el).overflowX) && el.scrollWidth > el.clientWidth + 1)
+          sorun.push(`${k}: yatay kaydırma ${el.scrollWidth}/${el.clientWidth} px`); });
     }
   }
   const r = { tip, sutun: ov.getBoundingClientRect().width < innerWidth, tasma: ic.scrollWidth - ic.clientWidth, kesik, enSag,
