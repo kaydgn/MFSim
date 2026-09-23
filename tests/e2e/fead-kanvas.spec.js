@@ -70,7 +70,8 @@ const olc = (page, id) => page.evaluate((i) => {
     rozet: R(el.querySelector('.ve-fead-kan-durum')),
     vib: R(el.querySelector('.ve-fead-yuz-vib')),
     secici: el.querySelectorAll('.ve-fead-yuz select').length,
-    katDugme: el.querySelectorAll('.ve-fead-yuz .ve-fead-kat-dugme').length,
+    katDugme: el.querySelectorAll('.ve-fead-yuz .ve-fead-kat-dugme:not(.ve-fead-tablo-dugme)').length,
+    tabloDugme: el.querySelectorAll('.ve-fead-yuz .ve-fead-tablo-dugme').length,
     gulOrtuldu: ort(gul, yuz),
     // Bant kalıntısı: akışa giren, üst kenarlıklı kutu.
     bant: el.querySelectorAll('.ve-fead-card-body > div:not(.ve-fead-kanvas)').length,
@@ -103,6 +104,10 @@ test('KAYIŞ YOLU KARTI: bant yok, çubuk tek satır, gül açıkta', async ({ p
   // yerine 110 px. Yüzen çubuğun bütün kazancı geri giderdi.
   expect(m.secici).toBe(3);
   expect(m.katDugme).toBe(1);
+  // Kayış Tablosu'nun KAPISI da çubukta (Çizim Masası, 2026-09-23) ve
+  // çubuk onunla da TEK SATIR kalıyor — aşağıdaki yükseklik kapısı ikisini
+  // birlikte ölçüyor.
+  expect(m.tabloDugme).toBe(1);
   expect(m.yuz.h).toBeLessThan(48);                         // tek satır
   expect(m.yuz.l).toBeGreaterThanOrEqual(m.kutu.l - 1);
   expect(m.yuz.r).toBeLessThanOrEqual(m.kutu.r + 1);

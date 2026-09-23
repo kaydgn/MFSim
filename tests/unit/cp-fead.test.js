@@ -1964,12 +1964,17 @@ describe('YEDEK YERLEŞİM — kanvaslar yan yana', () => {
   test('topolojide ZATEN araç düğümü varken örnek yüklenebiliyor', () => {
     const bos = acilis();
     global.createNode = sahteKur();
-    expect(() => fead.veFeadLoadExample('AG00976_GATES_2025')).not.toThrow();
+    let kuruldu;
+    expect(() => { kuruldu = fead.veFeadLoadExample('AG00976_GATES_2025'); }).not.toThrow();
     delete global.createNode;
     const kan = global.nodes.filter((n) => n.type === 'fead-layout');
     // ÜÇ DEĞİL İKİ çizim: boş kart geometri kartı olarak devralındı...
     expect(kan).toHaveLength(2);
     expect(kan).toContain(bos);
+    // ...ve KURULANLAR arasında sayılıyor (bildirimdeki "N bileşen" bu
+    // listeden; sayılmayınca AG00976 "10 bileşen" diyordu, model 11).
+    expect(kuruldu).toContain(bos);
+    expect(kuruldu).toHaveLength(11);
     expect(bos.data.katOn).toBeUndefined();                  // geometri ön ayarı
     // ...ve işletme kartı YENİ kuruldu, ön ayarıyla.
     expect(kan.find((n) => n !== bos).data.katOn).toBe('isletme');

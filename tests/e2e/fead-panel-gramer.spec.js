@@ -38,7 +38,10 @@ async function bootApp(page) {
 }
 
 // Kasnağın panelini KULLANICININ yolundan açar: Kayış Tablosu'ndaki ad
-// düğmesi. İkinci bir yol yok — kasnakların kanvasta kutusu da yok.
+// düğmesi. Tablo 2026-09-23'ten beri kanvas kartı değil, Kayış Yolu kartının
+// "Tablo" düğmesiyle açılan PENCERE (Çizim Masası); tablonun alanlarını ölçen
+// halkalar onu açık okuyor. (Öbür yol çizimdeki kasnağa tıklamak —
+// `fead-cizim-masasi.spec.js`.)
 async function kasnakPaneliAc(page) {
   await bootApp(page);
   await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
@@ -46,11 +49,12 @@ async function kasnakPaneliAc(page) {
   await page.evaluate(() => { if (typeof veFeadWizClose === 'function') veFeadWizClose(false); });
   await page.waitForTimeout(200);
   await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
-  await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-table'),
+  await page.waitForFunction(() => window.nodes.filter((n) => n.type === 'fead-layout').length === 2,
     null, { timeout: 20000 });
-  const kart = page.locator('.ve-fead-table-card').first();
-  await expect(kart.locator('.ve-fead-krt[data-ve-node]')).toHaveCount(6);
-  await kart.locator('.ve-fead-tbl-name').first().click();
+  await page.locator('.ve-fead-tablo-dugme').first().click();
+  const tablo = page.locator('#ve-fead-tablo');
+  await expect(tablo.locator('.ve-fead-krt[data-ve-node]')).toHaveCount(6);
+  await tablo.locator('.ve-fead-tbl-name').first().click();
   await expect(page.locator('#ve-properties-overlay')).toBeVisible();
   await page.waitForTimeout(400);
 }

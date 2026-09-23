@@ -141,16 +141,21 @@ function updateCanvasTransform() {
 // Otomatik yüklenen/kurulan topolojiler ızgaranın kenarına yapışmasın diye
 // kullanılır. Node koordinatlarına DOKUNMAZ — yalnız kamerayı (canvasOffset/
 // canvasZoom) ayarlar. maxZoom=1: küçük topolojilerde yakınlaştırmaz, sadece ortalar.
+// opts.only        : yalnız bu yüklemi sağlayan düğümler sığdırılır (varsayılan: hepsi)
+// opts.bottomInset : kabın altından bu kadar px ÖRTÜLÜ sayılır — içerik
+//                    üstte kalan alana sığdırılır (kanvasın üstüne binen bir
+//                    pencere açıkken; bkz. cp-fead.js → veFeadTabloAc).
 function veFitViewToContent(opts) {
   opts = opts || {};
   if(typeof nodes === 'undefined' || !nodes || nodes.length === 0) return;
   var wrapper = document.getElementById('ve-canvas-wrapper');
   if(!wrapper) return;
-  var W = wrapper.clientWidth, H = wrapper.clientHeight;
+  var W = wrapper.clientWidth, H = wrapper.clientHeight - Math.max(0, opts.bottomInset || 0);
   if(W < 20 || H < 20) return;
   var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   nodes.forEach(function(n) {
     if(typeof veIsCanvasHidden === 'function' && veIsCanvasHidden(n)) return;
+    if(typeof opts.only === 'function' && !opts.only(n)) return;
     var w = n.width || 65, h = n.height || 60;
     if(n.x < minX) minX = n.x;
     if(n.y < minY) minY = n.y;
@@ -190,9 +195,18 @@ function veResetZoom() {
 }
 
 // Drag başlangıcı
+// Sürüklenen tip AYRICA bir globalde tutulur: `dataTransfer.getData`
+// yalnız `drop` anında okunabiliyor, `dragover`da boş dönüyor — oysa FEAD
+// çizimi sürüklerken hedef açıklığı göstermek için tipi o anda bilmeli.
+var vePaletSuruklenen = null;
 document.querySelectorAll('.ve-component').forEach(function(comp) {
   comp.addEventListener('dragstart', function(e) {
     e.dataTransfer.setData('component-type', this.getAttribute('data-type'));
+    vePaletSuruklenen = this.getAttribute('data-type');
+  });
+  comp.addEventListener('dragend', function() {
+    vePaletSuruklenen = null;
+    if(typeof veFeadPaletBitti === 'function') veFeadPaletBitti();
   });
 });
 
@@ -257,12 +271,18 @@ document.addEventListener('DOMContentLoaded', function() {
   // Drop event
   canvasWrapper.addEventListener('dragover', function(e) {
     e.preventDefault();
+    // FEAD çizimi: kasnak bir açıklığın üstündeyse hedefi gösterir.
+    if(vePaletSuruklenen && typeof veFeadPaletUstunde === 'function')
+      veFeadPaletUstunde(e, vePaletSuruklenen);
   });
   
   canvasWrapper.addEventListener('drop', function(e) {
     e.preventDefault();
     var type = e.dataTransfer.getData('component-type');
     if(!type || !componentDefs[type]) return;
+    // FEAD KASNAĞI kanvasa kutu olarak düşmez: çizimde bir açıklığa girer
+    // ya da tablonun ekleyicisine gider (bkz. cp-fead.js → veFeadPaletBirak).
+    if(typeof veFeadPaletBirak === 'function' && veFeadPaletBirak(e, type)) return;
 
     var rect = canvasWrapper.getBoundingClientRect();
     // Canvas başlangıç offseti (CSS'de top:-3000px, left:-3000px)

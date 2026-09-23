@@ -166,7 +166,7 @@ test('EKRANDA ikinci aile yok — FEAD pencereleri ve AP pencereleri taranıyor'
   await page.evaluate(() => { if (typeof veFeadWizClose === 'function') veFeadWizClose(false); veFeadLoadExample('AG00976_GATES_2025'); });
   await page.waitForTimeout(2500);
   await topla();                                                     // FEAD kanvası + kartlar
-  for (const tip of ['fead-fan', 'fead-tensioner', 'fead-belt', 'fead-solver', 'fead-table']) {
+  for (const tip of ['fead-fan', 'fead-tensioner', 'fead-belt', 'fead-solver', 'fead-layout']) {
     const var_ = await page.evaluate((t) => { const n = nodes.find((x) => x.type === t); if (!n) return false; clearSelection(); addToSelection(n); return true; }, tip);
     if (!var_) continue;
     await page.waitForTimeout(500);
@@ -174,6 +174,10 @@ test('EKRANDA ikinci aile yok — FEAD pencereleri ve AP pencereleri taranıyor'
     await page.waitForTimeout(700);
     await topla();
   }
+  // Kayış Tablosu artık bir PENCERE (Çizim Masası) — o da taranıyor.
+  await page.evaluate(() => { veTogglePropertiesPanel(false); veFeadTabloAc(); });
+  await page.waitForTimeout(500);
+  await topla();
   expect(aykiri).toEqual({});
   // BOŞA ÇALIŞMIYOR: tarama gerçekten yüzlerce öğeye baktı (eskiden FEAD
   // ekranında 126–146 öğe mono'ydu).

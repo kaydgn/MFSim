@@ -73,8 +73,9 @@ test('FEAD kartı: geçiş ekranı görünüyor ve modülün İÇİNE giriliyor'
   }));
   // ASIL KAPI: tıklama modülün İÇİNE kadar götürdü.
   expect(son.derinlik).toBe(1);
-  // Açılış yüzeyi kuruldu (boş FEAD topolojisi sihirbazla karşılar).
-  expect(son.tipler).toEqual(['fead-table', 'fead-wizard']);
+  // Açılış yüzeyi kuruldu (boş FEAD topolojisi sihirbazla karşılar):
+  // sihirbaz + BOŞ Kayış Yolu kartı (Çizim Masası, 2026-09-23).
+  expect(son.tipler).toEqual(['fead-layout', 'fead-wizard']);
   expect(son.sihirbaz).toBe('flex');
   expect(son.kaplamaYok).toBe('none');
   expect(hata).toEqual([]);

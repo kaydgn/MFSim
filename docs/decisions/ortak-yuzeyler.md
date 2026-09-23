@@ -19,10 +19,12 @@ sığmıyor) tekerlek onundur. İki koşul birden şart — yalnız `overflow`a 
 taşması olmayan her `auto` kabında tekerleği yutar ve kart üstünde kanvas hiç
 yakınlaştırılamazdı.
 
-Kapı: `tests/e2e/fead-tablo.spec.js` → *"TEKERLEK"* (üç halka: taşma yokken
-kanvas yakınlaşıyor, taşma varken tablo kayıyor ve kanvas oynamıyor, künye
-şeridinde yine kanvas). Node'a taşınamaz — jsdom ne düzen kurar ne de gerçek
-bir tekerleğin varsayılan eylemini çalıştırır.
+Kapı: `tests/e2e/kart-yuzey.spec.js` → *"TEKERLEK"* — SENTETİK bir kartla
+(taşan liste kayıyor ve kanvas oynamıyor, taşmayan `auto` kap tekerleği
+yutmuyor). Kural bir karta değil mekanizmaya ait: ölçüldüğü Kayış Tablosu
+kartı 2026-09-23'te kanvastan indi (Çizim Masası), kural kaldı. Node'a
+taşınamaz — jsdom ne düzen kurar ne de gerçek bir tekerleğin varsayılan
+eylemini çalıştırır.
 
 ### Kartın EN KÜÇÜK ÖLÇÜSÜNÜ tipi söyler (`veNodeMinSize`)
 
@@ -42,11 +44,11 @@ sürüklemeye konsaydı, bu kuraldan ÖNCE küçültülüp kaydedilmiş bir kart
 hâlde açılmaya devam ederdi — bu yüzden `veFeadLayoutSizeFor` açılışta da
 yükseltiyor.
 
-Kapılar: `tests/unit/fead-table.test.js` → *"en küçük ölçü"* (taban beyan
-ediliyor, sütun toplamından geri kalmıyor, tipten okunuyor, açılışta
-yükseliyor) + `tests/e2e/fead-tablo.spec.js` → *"YENİDEN BOYUTLANDIRMA"*
-(gerçek tutamak sürüklemesi tabanda duruyor ve tabandaki kart hâlâ satır
-gösteriyor).
+Kapılar: `tests/unit/fead-table.test.js` → *"en küçük ölçü"* (tipten
+okunuyor, açılışta yükseliyor — sentetik tiple) + `tests/e2e/kart-yuzey.spec.js`
+→ *"EN KÜÇÜK ÖLÇÜ"* (gerçek tutamak sürüklemesi tabanda duruyor). İlk
+kullanıcısı Kayış Tablosu kartıydı; kart 2026-09-23'te kanvastan indi, bugün
+taban beyan eden bir tip yok ama mekanizma ve kapısı duruyor.
 
 ### Topoloji sınır çerçevesi ADI da sarar (`veNodeLabelOverflow`)
 

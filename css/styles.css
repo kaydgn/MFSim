@@ -9022,6 +9022,20 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 [data-ve="drag-span"] rect{ fill:var(--bg-secondary); stroke:var(--accent-warning); stroke-width:1; }
 [data-ve="drag-span"] text{ font-weight:600; fill:var(--text-primary); }
 @media (prefers-reduced-motion: reduce){ [data-ve="pulley-hov"]{ transition:none; } }
+/* PALETTEN BIRAKMA İZİ (veFeadPaletUstunde): hedef açıklık + hayalet kasnak.
+   Kapalı açıklık (gergi ↔ sürücü) kırmızı; açıklıktan uzaksa yalnız soluk
+   hayalet — nereye düşeceği bırakmadan ÖNCE okunsun. */
+[data-ve="birak-iz"] line{ stroke-width:5; stroke-dasharray:7 5; stroke-linecap:round; }
+[data-ve="birak-iz"] line.hedef{ stroke:var(--accent-primary); }
+[data-ve="birak-iz"] line.kapali{ stroke:var(--accent-danger); }
+[data-ve="birak-iz"] circle{ stroke-width:1.5; stroke-dasharray:4 3; }
+[data-ve="birak-iz"] circle.hedef{ fill:var(--accent-tint-15); stroke:var(--accent-primary); }
+[data-ve="birak-iz"] circle.kapali{ fill:var(--danger-tint-15); stroke:var(--accent-danger); }
+[data-ve="birak-iz"] circle.uzak{ fill:none; stroke:var(--text-muted); }
+[data-ve="birak-iz"] text{
+  font-weight:700; fill:var(--text-heading);
+  paint-order:stroke; stroke:var(--bg-input); stroke-width:3px; stroke-linejoin:round;
+}
 
 /* ── YÜZEN DENETİM ÇUBUĞU — ALT KENARDA ─────────────────────────────────
    Çizimin ÜSTÜNDE duruyor, akışta değil. Zemin yarı saydam: örttüğü kayış
@@ -9231,13 +9245,13 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   position:relative; inset:auto; flex:1 1 auto; min-height:0;
   border-radius:0 0 var(--radius-lg) var(--radius-lg);
 }
-/* Pencerede yazı BÜYÜR: kanvasın yoğun ölçüsü (9/10 px) → arayüzün kendi
-   basamakları (11/13 px). Ölçek jetonu YENİDEN TANIMLANMAZ — basamağın
-   değerini yerelde değiştirmek ölçeği eritirdi (typography-scale.test.js:
-   11/11 ve 13/13 çakışması); rol başına bir basamak SEÇİLİR. */
+/* Pencerede SAYILAR BÜYÜR: kanvasın yoğun ölçüsü (10 px) → 13 px; künye ve
+   denetimler 9 → 11 px. ALAN ETİKETİ BÜYÜMEZ: kasnak panelinin etiketiyle
+   aynı gramer (fead-panel-gramer.spec.js — kullanıcı iki yüzey arasında
+   geçiyor). Ölçek jetonu YENİDEN TANIMLANMAZ — basamağın değerini yerelde
+   değiştirmek ölçeği eritirdi (typography-scale.test.js: 11/11 ve 13/13
+   çakışması); rol başına bir basamak SEÇİLİR. */
 .ve-fead-tablo-pencere .ve-fead-tbl-head,
-.ve-fead-tablo-pencere .ve-fead-krt-fld > i,
-.ve-fead-tablo-pencere .ve-fead-krt-rv > i,
 .ve-fead-tablo-pencere .ve-fead-krt-seg button,
 .ve-fead-tablo-pencere .ve-fead-krt-rz,
 .ve-fead-tablo-pencere .ve-fead-tbl-mv,
@@ -9275,7 +9289,7 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-fead-tablo-pencere .ve-fead-krt > .coz{ padding-top:4px; padding-bottom:4px; align-items:center; }
 .ve-fead-tablo-pencere .ve-fead-krt--bas .bas-ad,
 .ve-fead-tablo-pencere .ve-fead-krt--bas .ve-fead-tbl-ord > b{
-  font-size:var(--fs-body); font-weight:600; letter-spacing:var(--tracking-wide);
+  font-size:var(--fs-micro); font-weight:600; letter-spacing:var(--tracking-wide);
   text-transform:uppercase; color:var(--text-muted);
 }
 

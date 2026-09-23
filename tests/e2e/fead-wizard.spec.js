@@ -68,14 +68,17 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     await bootApp(page);
     await openFead(page);
 
-    // AÇILIŞ YÜZEYİ: sihirbaz + Kayış Tablosu. "Başlangıç ve Örnekler"
-    // (`fead-example`) 2026-09-09'da KALDIRILDI — sunduğu iki şey (sihirbaz
-    // düğmesi + örnek listesi) sihirbazın 1. adımında zaten vardı. Bu spec o
-    // gün sessizce öldü: hâlâ o tipin VARLIĞINI bekliyordu. Kapı artık ters
-    // yönde duruyor, yani bileşen geri gelirse burada görünür.
+    // AÇILIŞ YÜZEYİ: sihirbaz + BOŞ Kayış Yolu kartı (Çizim Masası,
+    // 2026-09-23 — tablo kanvastan indi, kartın düğmesiyle açılan pencere).
+    // "Başlangıç ve Örnekler" (`fead-example`) 2026-09-09'da KALDIRILDI —
+    // sunduğu iki şey (sihirbaz düğmesi + örnek listesi) sihirbazın 1.
+    // adımında zaten vardı. Bu spec o gün sessizce öldü: hâlâ o tipin
+    // VARLIĞINI bekliyordu. Kapı artık ters yönde duruyor, yani bileşen geri
+    // gelirse burada görünür.
     const tipler = await page.evaluate(() => window.nodes.map((n) => n.type));
     expect(tipler).toContain('fead-wizard');
-    expect(tipler).toContain('fead-table');
+    expect(tipler).toContain('fead-layout');
+    expect(tipler).not.toContain('fead-table');
     expect(tipler).not.toContain('fead-example');
 
     // ÇİFT TIK sihirbazı açar (alt-sistem kartlarındaki el alışkanlığı).
