@@ -850,6 +850,13 @@ function veFeadTopoSignature() {
 // gösteriyor, dolayısıyla aynı imzadan tazeleniyorlar. Yalnız biri
 // tazelenseydi öbürü bir düzenleme geride kalırdı — ve fark SESSİZ olurdu,
 // çünkü ikisi de kendi başına tutarlı görünür.
+// İMZAYI UNUT: kartlar bir kez İMZADAN BAĞIMSIZ kuruluyor — restoreState her
+// düğümü kurarken kartını da kuruyor ve o anda `nodes` YARIM (kasnaklardan önce
+// gelen kart hiç kasnak görmüyor, "henüz kasnak yok" basıyor). Geri yükleme
+// bitince imza unutulur ki ardından gelen updateAllConnections kartları TAM
+// modelle yeniden kursun — geri yüklenen imza öncekiyle AYNI olsa bile (imzaya
+// girmeyen bir alanın geri alınması; ölçüldü, 2026-09-23).
+function veFeadTopoInvalidate() { _veFeadTopoSig = null; }
 function veFeadTopoRefresh() {
   if(typeof veFeadRefreshCards !== 'function') return false;
   var sig = veFeadTopoSignature();

@@ -140,17 +140,26 @@ function saveState() {
   } catch(e) {}
 }
 
+// YIĞINDAKİ DURUM BİR ANLIK GÖRÜNTÜDÜR — canlı modele BAĞLANMAZ.
+// restoreState düğümün `data`sını durumun KENDİ nesnesinden alıyor (kopya
+// değil). Yığındaki kaydı doğrudan geri yüklemek, geri-al'dan sonraki ilk
+// yerinde düzenlemenin (`node.data.x = …`) o kaydı da değiştirmesi demekti:
+// sonraki Ctrl+Z "Geri alındı" deyip hiçbir şeyi geri almıyordu (ölçüldü,
+// 2026-09-23 — her modülde, ana tuvalde de). Kopya kaydın kendisinden alınır;
+// kayıt zaten saveState'te JSON'dan geçtiği için JSON güvenli.
+function _veStateKopya(state) { return JSON.parse(JSON.stringify(state)); }
+
 function undo() {
   if(undoStack.length < 2) {
     showToast('Geri alınacak işlem yok', 'warning');
     return;
   }
-  
+
   var currentState = undoStack.pop();
   redoStack.push(currentState);
-  
+
   var prevState = undoStack[undoStack.length - 1];
-  restoreState(prevState);
+  restoreState(_veStateKopya(prevState));
   showToast('Geri alındı');
 }
 
@@ -159,10 +168,10 @@ function redo() {
     showToast('İleri alınacak işlem yok', 'warning');
     return;
   }
-  
+
   var nextState = redoStack.pop();
   undoStack.push(nextState);
-  restoreState(nextState);
+  restoreState(_veStateKopya(nextState));
   showToast('İleri alındı');
 }
 
@@ -477,6 +486,10 @@ function _veRestoreStateNodes(state) {
     });
   });
   
+  // FEAD kartları yukarıda düğüm düğüm, YARIM modelle kuruldu: kasnaklardan
+  // önce gelen kart kasnak görmedi. İmza unutulur ki updateAllConnections
+  // onları TAM modelle yeniden kursun (bkz. connections.js veFeadTopoInvalidate).
+  if(typeof veFeadTopoInvalidate === 'function') veFeadTopoInvalidate();
   updateAllConnections();
   updateNodeCount();
   clearSelection();

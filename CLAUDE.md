@@ -215,6 +215,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   bir düzenleme değil. Kapı: `state.test.js` (mekanizma) + `cp-fead.test.js` /
   `fead-wizard.test.js` / `fead-cizim-masasi.test.js` (kurucular ve çizimde
   ekleme o mekanizmadan geçiyor mu).
+- **YIĞINDAKİ DURUM BİR ANLIK GÖRÜNTÜDÜR.** Geri-al / ileri-al yığındaki
+  kaydın KOPYASINI geri yükler (`js/state.js` → `_veStateKopya`):
+  `restoreState` düğüm `data`sını durumun kendi nesnesinden alıyor ve kopyasız
+  hâlde geri-al'dan sonraki ilk yerinde düzenleme kaydı da değiştiriyordu —
+  sonraki Ctrl+Z "Geri alındı" deyip hiçbir şeyi geri almıyordu. Kapı:
+  `geri-al-yolu.test.js` (GERÇEK `restoreState`; `state.test.js` onu sahte yapıyor).
 - **KART İÇİNDEKİ KAYDIRILABİLİR YÜZEY TEKERLEĞİ ÖNCE ALIR**
   (`js/ui-core.js` → `veWheelInnerPane`). Kanvasın tekerlek dinleyicisi
   kayıtsız `preventDefault()` çağırdığı sürece kart içindeki hiçbir liste
@@ -462,6 +468,7 @@ FEAD satırları modül skill'ine taşındı
 | `tests/e2e/fead-kanvas.spec.js` | `js/cp-fead.js` Kayış Yolu kartı (gerçek tarayıcı) | **BANT YOK, DENETİM ÜSTTE YÜZER**: kart dört yatay bant taşıyordu (iki seçici şeridi 44 px + durum 20 px + titreşim açıkken 20 px daha) ve her biri yüksekliğini ÇİZİMDEN alıyordu — 440×500 kartta çizime 436 px kalıyordu, titreşimle 416. Node'da hiç koşmayan halkalar: çizimin GERÇEKTEN kabuğun tamamını alması, yüzen çubuğun TEK SATIR kalması ve taşmaması (`left:50%` ile ortalanırsa mutlak kabın sığdırma genişliği yarıya iniyor ve çubuk dört satıra sarıyor — ölçüldü, 40 → 110 px), **yön gülünün çubuğun altında kalmaması** (ölçülmüş hata: gül TAMAMEN görünmez oluyordu; çözüm çizimi küçültmek değil gülü yukarı almak), titreşim şeridinin de yüzmesi ve çizimi küçültmemesi, rozetin BİRİNCİL okumasının duruma göre değişmesi (iyi hâlde tek sayı + soluk künye, kötü hâlde arızanın cümlesi ve künye YOK) ve renginin CSS'ten gelmesi |
 | `tests/e2e/fead-katman.spec.js` | Katman paneli (gerçek tarayıcı) | **Node'da hiç koşmayan halkalar**: düğme yüzen çubuğun içinde ve çubuk kaymıyor, gerçek tıklama paneli açıyor, panel çubuğu İTMEDEN çizimin üstüne biniyor ve kartın içinde duruyor, kutucuk çizimi değiştiriyor ve **panel açık kalıyor** (kapansaydı ikinci kutucuk işaretlenemezdi), bağlı satır pasifleşiyor, `:hover` ve `:has(input:checked)` gerçekten hesaplanıyor, toptan işlemler sayacı 5/8 → 0/8 → 8/8 gezdiriyor; **ÖN AYAR DÜĞMESİ kartı gerçekten çeviriyor** (Geometri ↔ İşletme: animasyon yükü doğuyor/kayboluyor, basılı durum CSS'ten hesaplanıyor, elle kutucuk oynayınca hiçbir ön ayar basılı kalmıyor) ve Geometri'ye dönünce `kat`/`katOn`/`animRpm` alanlarının üçü de SİLİNİYOR; **iki kart iki ayrı resim** çiziyor, ikinci panel açılınca birincisi kapanıyor, her kart KENDİ kol konumunu çiziyor ve paletten kurulan ÜÇÜNCÜ kanvas da ön ayar seçebiliyor |
 | `tests/unit/state.test.js` | `js/state.js` | Undo/redo stack yönetimi; **toplu kurulum TEK adım** (`veStateBatch`) — `createNode` her düğümde `saveState` çağırdığı için onikilik bir kurulum yığına onüç adım yazıyordu ve Ctrl+Z modeli düğüm düğüm SÖKÜYORDU; sayaç (bayrak değil — kurucular iç içe geçiyor), gövde patlasa bile `finally` ile kapanma (kapanmasaydı geri-al oturumun kalanında sessizce ölürdü) ve **açılış durumunun yığın TABANI olması** (`veStateResetBaseline`) |
+| `tests/unit/geri-al-yolu.test.js` | `js/state.js` `restoreState` (GERÇEK) + `js/connections.js` imza | **Yığındaki durum bir anlık görüntü**: geri-al ve ileri-al KOPYA geri yükler — ikinci Ctrl+Z da geri alıyor, geri yüklenen düğüm kaydın nesnesini taşımıyor; FEAD kartı kasnaklardan önce gelse de geri yüklemeden sonra TAM modelle kuruluyor (imzaya girmeyen bir alanın geri alınması kartı boşaltmıyor) |
 | `tests/unit/toolbar-save.test.js` | `js/toolbar.js` | Proje kaydetme, JSON serileştirme, showSaveFilePicker |
 | `tests/unit/viewer-board.test.js` | `viewer/js/board.js` | Görüntüleyici panosu: bir panoda tek ölçüm dosyası kuralı, X ekseni seçenekleri, veri kapısı |
 | `tests/unit/viewer-sync.test.js` | `viewer/sync.js` | Görüntüleyici kopyaları `js/`'ten geride kaldıysa kırmızı — sessiz ayrışmaya karşı kapı |

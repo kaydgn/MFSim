@@ -154,6 +154,47 @@ test('TIKLA: pencere açılır, kasnak iki çizimde de işaretli; GERGİDE avara
   expect(hatalar).toEqual([]);
 });
 
+// Ölçüldü (2026-09-23): (1) imzaya girmeyen bir düzenlemenin (katman) geri
+// alınması, kasnaklardan ÖNCE gelen kartı "henüz kasnak yok"a düşürüyordu;
+// (2) bir geri-al'dan sonraki ok tuşu yığındaki kaydı da değiştiriyordu ve
+// sonraki Ctrl+Z koordinatı geri getirmiyordu. Mekanizma geri-al-yolu.test.js'te.
+test('CTRL+Z: çizim kartı boşalmaz, geri-al üst üste de geri alır', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await ornek(page);
+  const kartlar = () => page.evaluate(() => window.nodes.filter((n) => n.type === 'fead-layout')
+    .map((n) => (document.querySelector('#' + n.id + ' .ve-fead-kan-bos') ? 'BOŞ' : 'çizim')));
+  const odaksiz = () => page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+  // Ön koşul: açılış kartı yeniden kullanıldığı için kart kasnaklardan ÖNCE.
+  expect(await page.evaluate(() => window.nodes.findIndex((n) => n.type === 'fead-layout')
+    < window.nodes.findIndex((n) => (componentDefs[n.type] || {}).isFeadPulley))).toBe(true);
+
+  await page.evaluate(() => {
+    veFeadKatmanSet(window.nodes.find((n) => n.type === 'fead-layout').id, 'ok', false);
+  });
+  await odaksiz();
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(400);
+  expect(await kartlar()).toEqual(['çizim', 'çizim']);
+
+  const h = await halka(page, 'Alternatör (155 A)');
+  const x0 = (await veri(page, h.id)).x;
+  for (let tur = 1; tur <= 2; tur++) {
+    const c = await halka(page, 'Alternatör (155 A)');   // geri-al seçimi temizliyor
+    await page.mouse.click(c.x, c.y);
+    await page.evaluate(() => veTogglePropertiesPanel(false));
+    await odaksiz();
+    await page.keyboard.press('ArrowRight');
+    await page.waitForTimeout(200);
+    expect((await veri(page, h.id)).x).toBeCloseTo(x0 + 1, 6);
+    await page.keyboard.press('Control+z');
+    await page.waitForTimeout(400);
+    expect({ tur, x: (await veri(page, h.id)).x }).toEqual({ tur, x: x0 });
+  }
+  expect(await kartlar()).toEqual(['çizim', 'çizim']);
+  expect(hatalar).toEqual([]);
+});
+
 // Paletten HTML5 sürükle-bırak: kaynak öğe → çizimde bir nokta.
 async function birak(page, tip, hedef, olcIz) {
   const src = page.locator('.ve-component[data-type="' + tip + '"]').first();

@@ -114,6 +114,12 @@ olurdu.
     yolundan birinde birinin unutulması demek — ve fark sessiz: iki kart kendi
     başına tutarlı görünür, yalnız biri bir düzenleme geride kalır. Kaynak
     kapısı `fead-table.test.js` içinde.
+    **GERİ YÜKLEME İMZAYI UNUTUR** (`veFeadTopoInvalidate`, `restoreState`'in
+    sonunda): geri yükleme kartı düğümünü kurarken kuruyor ve açılış kartı
+    örnekte yeniden kullanıldığı için kasnaklardan ÖNCE geliyor — o an model
+    yarım, kart "henüz kasnak yok" basıyor. İmza kapısı imzaya girmeyen bir
+    alanın (katman, çözücü alanı) geri alınmasında tazelemeyi atlıyordu.
+    Kapı: `geri-al-yolu.test.js` + `fead-cizim-masasi.spec.js` → *"CTRL+Z"*.
     **SEÇİM DEĞİŞİNCE KART KURULMAZ, SINIF EŞİTLENİR** (`veFeadMarkSelectedRow`,
     `cp-core.js`'in `addToSelection`/`clearSelection` merkezlerinden çağrılır):
     kasnakların kutusu olmadığı için `addToSelection`'ın kutuya yazdığı
