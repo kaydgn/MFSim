@@ -136,6 +136,35 @@ function veThemeFont(px, weight) {
   return (weight ? weight + ' ' : '') + px + 'px ' + veThemeFontFamily();
 }
 
+// BELGEYE GİDEN YÜZ — indirilen rapor ve kılavuz uygulamanın stil sayfasını
+// kullanamaz (tek başına açılıyor), arayüzün yüzünü KENDİ İÇİNE gömmek
+// zorunda. Kaynak ikinci bir kopya DEĞİL: arayüzün kendi @font-face kuralları
+// (css/fonts.css — build onu <style> olarak gömüyor, yani tek dosya ürününde
+// kurallar her zaman okunur). Eskiden raporlar kendi üç yüzünü (Archivo ·
+// Source Serif 4 · IBM Plex Mono) ayrı bir pakette taşıyordu: aynı program
+// ekranda bir, kâğıtta üç aileyle yazıyordu (2026-09-23).
+// Okunamazsa (modüler kopya file:// üzerinde — tarayıcı başka dosyanın
+// kurallarını vermiyor) boş döner ve belge sistem yazısına düşer.
+function veThemeFontFaceCss() {
+  var aile = veThemeFontFamily().split(',')[0].replace(/["']/g, '').trim();
+  var out = [];
+  try {
+    var ss = document.styleSheets;
+    for (var i = 0; i < ss.length; i++) {
+      var kurallar = null;
+      try { kurallar = ss[i].cssRules; } catch (e) { kurallar = null; }
+      if (!kurallar) continue;
+      for (var j = 0; j < kurallar.length; j++) {
+        var r = kurallar[j];
+        if (r.type !== 5) continue;                       // CSSRule.FONT_FACE_RULE
+        var ad = String((r.style && r.style.getPropertyValue('font-family')) || '').replace(/["']/g, '').trim();
+        if (ad === aile) out.push(r.cssText);
+      }
+    }
+  } catch (e) {}
+  return out.join('\n');
+}
+
 // Sayfa yüklendiğinde kayıtlı kipi uygula. İlk kare ZATEN boyandı
 // (index.html'in satır içi betiği + js/loader.js); bu çağrı kipi normalleştirir
 // ve eski kimlik kaydını yeni sözlüğe yazar.

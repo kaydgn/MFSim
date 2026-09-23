@@ -300,7 +300,9 @@ function _frDownload(html, filename){
 function _frBuildReportHTML(R, node){
   var A = window.MNT_REPORT_ASSETS;
   var tpl = decodeURIComponent(escape(atob(window.FEAD_REPORT_TEMPLATE_B64)));
-  var assetsCss = A.fontsCss + '\n' + A.katexCss;
+  // Yüz ARAYÜZÜN kendi @font-face kurallarından (js/theme.js), KaTeX paketten.
+  var assetsCss = ((typeof veThemeFontFaceCss === 'function') ? veThemeFontFaceCss() : '')
+    + '\n' + A.katexCss;
   // '>' ARANMAZ — tarayıcı "<\/script" + boşluk / '/' / '>' ile de kapatır.
   // (Aynı kaçış cp-mount-report.js ve results.js'te de var; üçü aynı kuralı uygular.)
   var katexJs = A.katexJs.replace(/<\/script/gi, '<\\/script');
@@ -394,8 +396,11 @@ var _FR_CONCEPT = {
   phiRingMm: 16                                 // işaret halkasının çeperden açıklığı
 };
 
-// Rapor CSS'i SVG yazılarını IBM Plex Mono'ya sabitliyor (`svg text` kuralı),
-// yani karakter genişliği SABİT: 0.6 em. Eski şekilde bu hesaba katılmamıştı
+// Rapor CSS'i SVG yazılarını belgenin TEK yüzüne bağlıyor (`svg text` kuralı,
+// Inter). 2026-09-23'e kadar yüz eş aralıklıydı (IBM Plex Mono, tam 0.6 em);
+// Inter orantılı — bu şekillerin etiketlerinde ölçüldü: ortalama 0,51 em, en
+// geniş kısa sayı etiketi 0,655 em, ve 101 metnin HİÇBİRİ çerçeveden taşmıyor
+// (gerçek tarayıcı, dönüşüm sonrası kutu). Eski şekilde bu hesaba katılmamıştı
 // ve alt künye satırı 820'lik viewBox'ı 32 px aşıp KIRPILIYORDU — ekranda
 // "…kesikli: sırt t" diye kesiliyordu (ölçüldü). Etiketler artık bu genişlikle
 // yerleştiriliyor; çerçeveye sığdıkları testle kilitli.

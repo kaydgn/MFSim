@@ -41,7 +41,9 @@ yerine **(560,130)**'a düşüyor, yani kasnağın MERKEZİNDEN geçiyordu; akse
 yayının kirişi 2r'den uzun olduğu için SVG yarıçapı 62 → 64.2'ye büyütüp yayı
 kasnaktan **96 px** uzağa oturtuyordu — **kayış o kasnağa hiç değmiyordu.** Alt
 künye satırı da 820'lik viewBox'ı 32 px aşıp kırpılıyordu (rapor CSS'i SVG
-yazılarını IBM Plex Mono'ya sabitliyor: karakter 0.6 em, proporsiyonel değil).
+yazılarını o gün IBM Plex Mono'ya sabitliyordu: karakter 0.6 em. 2026-09-23'ten
+beri belgenin tek yüzü Inter — orantılı; ölçüldü: ortalama 0,51 em, en geniş
+kısa sayı etiketi 0,655 em, 101 şekil metninin hiçbiri çerçeveden taşmıyor).
 
 Şekil artık `FEADCore.solveGeometry`'nin teğet noktaları, sarım açıları ve
 dönüş yönleriyle çiziliyor. Kazanç yalnız "doğru duruyor" değil: çekirdek
@@ -404,7 +406,7 @@ yer kaybı değil, yer KAZANCI (sayfa 1'de 455 px, sayfa 3'te 264 px).
 |---|-------|----------------|
 | 1 | Sütun başlığı **kısa kod** + sayfa altında künye | 41 yatay taşmanın çoğu; puntoyu kıran baskı |
 | 2 | **Bütün hücreleri aynı olan sütun tablodan çıkar**, künyeye iner (`_fsrConstCols`) | 5 tabloda 11 sütun · 130 hücre · 11 farklı sayı |
-| 3 | Kalınlık **gömülü ağırlıklara** bağlı (Archivo 700 · serif 600 · mono 500) | sentetik kalın: 36 ögede glifler şişiyordu |
+| 3 | Kalınlık **gömülü ağırlıklara** bağlı — 2026-09-23'ten beri tek yüz Inter, 400–800 (önce Archivo 700 · serif 600 · mono 500) | sentetik kalın: 36 ögede glifler şişiyordu |
 | 4 | Punto **tek ölçekten** (`--f-xl…--f-xs`), satır içi px YOK | 17 ayrı punto |
 | 5 | Şemada etiket **kayış yolunu ENGEL sayar** (üst→alt→sağ→sol) | 4 çakışma |
 | 6 | Şemanın **W'si kabın genişliğini aşmaz** | 460 birimlik kutu 397 px'e sığdırılınca ölçek 0,863 → adlar **6,0 px** |

@@ -71,10 +71,19 @@ describe('Araç Performans raporu — bağımsız belge kendi kendine yeter', ()
     expect(kucuk).toEqual([]);
   });
 
-  test('rapor gövdesi Takoz raporuyla aynı üç yazı tipini kullanıyor', () => {
-    expect(REPORT_CSS).toMatch(/Source Serif 4/);
-    expect(REPORT_CSS).toMatch(/Archivo/);
-    expect(REPORT_CSS).toMatch(/IBM Plex Mono/);
+  // TEK YÜZ (2026-09-23): rapor arayüzün yüzüyle (Inter) yazar — eskiden üç
+  // aile vardı (Source Serif 4 gövde · Archivo başlık · IBM Plex Mono sayı)
+  // ve aynı program ekranda bir, kâğıtta üç aileyle yazıyordu. Rakam hizası
+  // tabular-nums ile; `--mono` artık aynı yüze bağlı bir takma ad.
+  test('rapor gövdesi TEK yüzle yazıyor — Takoz raporuyla aynı (Inter)', () => {
+    expect(REPORT_CSS).toMatch(/--yuz:"Inter"/);
+    expect(REPORT_CSS).toMatch(/--mono:var\(--yuz\)/);
+    expect(REPORT_CSS).toMatch(/font-variant-numeric:tabular-nums/);
+    expect(REPORT_CSS).not.toMatch(/Source Serif|Archivo|IBM Plex|font-stretch/);
+    // Her font-family bildirimi tek yüzden (değişkenden) geliyor.
+    const aile = [...REPORT_CSS.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/font-family:\s*([^;}]+)/g)].map((m) => m[1].trim());
+    expect(aile.length).toBeGreaterThan(10);
+    expect(aile.filter((a) => !/^var\(--(yuz|mono)\)$/.test(a))).toEqual([]);
   });
 
   test('baskı kuralları Takoz raporuyla eşit (sayfa marjı, tablo başlığı tekrarı)', () => {

@@ -320,9 +320,23 @@ silinince boşalan yer yeni bir sapmaya açılmasın.
 **Hüküm.** Arayüzün her yüzeyi tek aileyle çizilir: `--font-sans` (Inter,
 `css/fonts.css`'te gömülü; 400–800, latin + latin-ext). Başlık, gövde, etiket,
 sayı, form denetimi ve **tuval** dâhil. Başlık ayrı bir YÜZ değil: aynı aile,
-kendi ağırlığı ve `letter-spacing:-0.01em`. **Tek istisna** hizası boşlukla
-kurulmuş düz metin: TXT rapor sayfası (`.ve-rep-page pre`, `.ve-rep-measure`
-→ `--rep-mono`).
+kendi ağırlığı ve `letter-spacing:-0.01em`. **İndirilen belgeler de**
+(AP · Takoz · FEAD ayrıntılı · FEAD özet raporu, kılavuzlar) aynı yüzle yazar.
+**İki istisna:** hizası boşlukla kurulmuş düz metin — TXT rapor sayfası
+(`.ve-rep-page pre`, `.ve-rep-measure` → `--rep-mono`) — ve KaTeX'in formül
+yüzü (matematik dizgisi kendi yüzüyle yazar).
+
+**Belgeler yüzü arayüzden GÖMER** (`js/theme.js` → `veThemeFontFaceCss`):
+arayüzün kendi @font-face kuralları (build `css/fonts.css`'i `<style>` olarak
+gömüyor), ikinci bir kopya değil. Önce belgeler kendi üç yüzünü (Source Serif
+4 gövde · Archivo başlık · IBM Plex Mono sayı) ~390 KB'lık ayrı bir pakette
+taşıyordu; aynı program ekranda bir, kâğıtta üç aileyle yazıyordu. Ölçüldü
+(AG00976): FEAD özetinde 133 · 271 · 712, ayrıntılı raporda 301 · 730 · 1311
+öğe → iki belgede 3458 öğenin tamamı Inter; özetin altı A4 sayfasının hiçbiri
+taşmıyor; 136 şekil metninin hiçbiri çerçeveden kırpılmıyor. Paket 1.086.340 →
+695.429 bayt (`build-report-assets.js --mevcut-katex` ağsız yeniden üretir).
+Kapı: `tek-yazi-tipi.test.js` → *"belgeler de tek yüz"* + `tek-yazi-tipi.spec.js`
+→ *"BELGE de tek yüz"* (belge uygulamanın DIŞINDA açılır, yüz orada ölçülür).
 
 **Gerekçe — ölçüldü.** Kullanıcı isteği: *"Program içinde çok fazla yazı tipi
 var. Tek bir yazı tipi olmasını istiyorum."* Önce, gerçek tarayıcıda: ekranda
@@ -359,10 +373,18 @@ document.fonts.check('600 16px "Zzz Yok Boyle Bir Aile"')  →  true
 Spec'e göre `check()` *"bu metni çizmek için yüklenmesi GEREKEN bir yüz kaldı
 mı"* sorusunu cevaplıyor; hiç eşleşen yüz yoksa cevap "kalmadı" — yani `true`.
 Yedek yüze düşen bir harf de `true` döner (kanıtlandı: latin-ext yüzü TAMAMEN
-silindi, eski dört halka yeşil kaldı). Gerçek ölçüt **genişlik**: aynı harf
-`"Inter", monospace` ile ve çıplak `monospace` ile çizilir; yüzde varsa
-genişlikler ayrışır, yoksa birebir aynı çıkar. Kapının kendisinin boş olmadığı
-ayrı bir halkayla tutulur (var olmayan aile bütün harfleri eksik saymalı).
+silindi, eski dört halka yeşil kaldı). Gerçek ölçüt **genişlik** — ama tek
+yedekle ve eşikle DEĞİL. İlk yazım harfi `"Inter", monospace` ile ve çıplak
+`monospace` ile çizip farka 0,5 px eşik koyuyordu; CI'da (#984) kırmızıya
+döndü ve sebep yüz değil TESADÜFTÜ: Inter'in "ö"sü 0,597 em, DejaVu Sans
+Mono'nunki 0,602 em — yerelde fark 0,55 px'ti (eşiği 0,05 px'le geçiyordu),
+CI'ın Chromium'unda altına düştü. Şimdi harf aynı aileyle **üç ayrı yedeğe**
+(`monospace` · `serif` · `sans-serif`) karşı çizilir: yüzde varsa üçü de
+Inter'den çizilir ve BİREBİR aynıdır, yoksa her biri kendi yedeğine düşüp
+ayrışır — eşik de Inter'in kendi genişliği de işin içinde değil. latin-ext
+sökülünce ölçüm tam olarak ğ ş Ğ İ Ş'yi adlarıyla söylüyor. Kapının kendisinin
+boş olmadığı ayrı bir halkayla tutulur (var olmayan aile bütün harfleri eksik
+saymalı).
 
 **Tembel alt küme.** `latin-ext` parçası `unicode-range` ile ancak o harflerle
 metin çizilince iner. Halka yükü `document.fonts.load` ile AÇIKÇA ister —

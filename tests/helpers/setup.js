@@ -66,6 +66,9 @@ global.loadCanSource = function loadCanSource(file) {
 // kurar.
 global.veThemeFontFamily = () => 'Inter';
 global.veThemeFont = (px, w) => (w ? w + ' ' : '') + px + 'px Inter';
+// Belgeye gömülen yüz (js/theme.js). jsdom stil sayfası kuralı taşımadığı
+// için boş — belgeyi kuran test gerekirse kendi değerini verir.
+global.veThemeFontFaceCss = () => '';
 
 // UI katmanının çağırdığı, çekirdek mantık açısından önemsiz olan ortak
 // yan-etki fonksiyonlarını jest.fn() olarak global'e kurar. Testte hangi

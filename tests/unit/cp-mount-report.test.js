@@ -270,8 +270,13 @@ describe('Şablon montajı — token doldurma + $$ sınırlayıcı korunması', 
     const tpl = '<style>@@ASSETS_CSS@@</style><body>@@ANTET@@ @@SECTION8@@'
       + '<script>@@KATEX_JS@@</script>$$ \\mathbf{K}\\mathbf{q}=\\mathbf{F} $$</body>';
     window.MNT_REPORT_TEMPLATE_B64 = B64(tpl);
-    window.MNT_REPORT_ASSETS = { fontsCss: '/*FONTS*/', katexCss: '/*KATEX_CSS*/', katexJs: 'KATEX_JS_BODY' };
-    const html = rep._mntBuildReportHTML(R);
+    window.MNT_REPORT_ASSETS = { katexCss: '/*KATEX_CSS*/', katexJs: 'KATEX_JS_BODY' };
+    // Yüz rapor paketinden DEĞİL, arayüzün @font-face kurallarından gelir
+    // (js/theme.js → veThemeFontFaceCss, 2026-09-23).
+    const eskiYuz = global.veThemeFontFaceCss;
+    global.veThemeFontFaceCss = () => '/*FONTS*/';
+    let html;
+    try { html = rep._mntBuildReportHTML(R); } finally { global.veThemeFontFaceCss = eskiYuz; }
     expect(html).not.toContain('@@');                 // tüm tokenlar dolduruldu
     expect(html).toContain('/*FONTS*/');
     expect(html).toContain('/*KATEX_CSS*/');

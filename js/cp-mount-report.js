@@ -300,7 +300,8 @@ function _mntReportDownload(html, filename){
 function _mntBuildReportHTML(R, opts){
   var A=window.MNT_REPORT_ASSETS;
   var tpl=decodeURIComponent(escape(atob(window.MNT_REPORT_TEMPLATE_B64)));
-  var assetsCss=A.fontsCss + '\n' + A.katexCss;
+  // Yüz ARAYÜZÜN kendi @font-face kurallarından (js/theme.js), KaTeX paketten.
+  var assetsCss=((typeof veThemeFontFaceCss==='function') ? veThemeFontFaceCss() : '') + '\n' + A.katexCss;
   // '>' ARANMAZ — tarayıcı "<\/script" + boşluk / '/' / '>' ile de kapatır.
   // (Aynı kaçış js/results.js'te de var; ikisi aynı kuralı uygular.)
   var katexJs=A.katexJs.replace(/<\/script/gi,'<\\/script');
@@ -855,7 +856,7 @@ function _mntRepLoadBar(R){
     var y=top+i*rowH, bw=Math.max(2, r.v/max*barMax), cy=y+rowH/2;
     svg+='<text x="'+(padL-8)+'" y="'+(cy+4)+'" text-anchor="end" font-size="11" fill="#26241f">'+_rEsc(_mntRepShort(r.name,16))+'</text>';
     svg+='<rect x="'+padL+'" y="'+(y+4)+'" width="'+bw.toFixed(1)+'" height="'+(rowH-10)+'" fill="#96441f"/>';
-    svg+='<text x="'+(padL+bw+6)+'" y="'+(cy+4)+'" font-size="11" fill="#3c4350" font-family="IBM Plex Mono,monospace">'+_rF(r.v,2)+' kN</text>';
+    svg+='<text x="'+(padL+bw+6)+'" y="'+(cy+4)+'" font-size="11" fill="#3c4350" font-family="Inter,system-ui,sans-serif">'+_rF(r.v,2)+' kN</text>';
   });
   svg+='</svg>';
   return '<figure>'+svg+'<figcaption><b>Şekil '+_rFig()+' —</b> Statik durumda takozların şasiye ilettiği düşey kuvvet (|f_z|) dağılımı.</figcaption></figure>';

@@ -569,23 +569,23 @@ describe('kozmetik — okunabilirlik kararları', () => {
   // Yazı tipleri belgeye GÖMÜLÜ ve küme sınırlı. Olmayan bir ağırlık
   // istendiğinde tarayıcı glifleri kendisi şişiriyor (sentetik kalın); eş
   // aralıklı bir yüzde 9 px civarında harfler birbirine giriyor.
-  test('istenen her font-weight gömülü kümede var', () => {
-    const IZIN = { Archivo: [400, 700], 'Source Serif 4': [400, 600], 'IBM Plex Mono': [400, 500] };
+  test('istenen her font-weight gömülü kümede var — TEK yüz (Inter)', () => {
+    // Belge arayüzün yüzünü gömüyor (css/fonts.css: 400 · 500 · 600 · 700 ·
+    // 800). Kümede olmayan bir ağırlık tarayıcıda SENTETİK kalın üretir.
+    const IZIN = [400, 500, 600, 700, 800];
     const css = SU._fsrCss();
-    // Kural blokları: "<seçici>{...}" — aile ve ağırlık aynı blokta ise eşleşir
-    const kotu = [];
-    css.replace(/\{([^}]*)\}/g, (_, g) => {
-      const aile = (g.match(/font-family:\s*'([^']+)'/) || [])[1];
-      const w = (g.match(/font-weight:\s*(\d+)/) || [])[1];
-      if (aile && w && IZIN[aile] && IZIN[aile].indexOf(Number(w)) < 0) kotu.push(aile + '@' + w);
-      return _;
-    });
+    expect(css).toMatch(/--yuz:'Inter'/);
+    expect(css).not.toMatch(/'Source Serif 4'|'Archivo'|'IBM Plex Mono'/);
+    const aile = [...css.matchAll(/font-family:\s*([^;}]+)/g)].map((m) => m[1].trim());
+    expect(aile.length).toBeGreaterThan(10);                     // kapı gerçekten tarıyor
+    expect(aile.filter((a) => a !== 'var(--yuz)')).toEqual([]);
+    const kotu = [...css.matchAll(/font-weight:\s*(\d+)/g)].map((m) => Number(m[1]))
+      .filter((w) => IZIN.indexOf(w) < 0);
     expect(kotu).toEqual([]);
-    // Belgenin varsayılan <b> ağırlığı serif tavanı olan 600 olmalı
     expect(css).toMatch(/b,strong\{font-weight:600\}/);
-    // Logo da gömülü ağırlıkta (800 istenirse sentetik olurdu)
+    // Logo da gömülü yüzde ve gömülü ağırlıkta.
+    expect(SU._fsrLogo()).toMatch(/font-family="Inter/);
     expect(SU._fsrLogo()).toMatch(/font-weight="700"/);
-    expect(SU._fsrLogo()).not.toMatch(/font-weight="800"/);
   });
 
   // ── TEK ÖLÇEK ─────────────────────────────────────────────────────────

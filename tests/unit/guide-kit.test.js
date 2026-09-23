@@ -138,16 +138,25 @@ describe('kozmetik şablondan çıkarılır (ikinci kopya yok)', () => {
   });
 
   test('veGuideDocHTML varlıklar yokken sessiz kalmaz', () => {
-    const yedek = window.MNT_REPORT_ASSETS;
-    delete window.MNT_REPORT_ASSETS;
-    expect(() => KIT.veGuideDocHTML({ title: 'x', body: '' }))
-      .toThrow(/varlıkları yüklenmedi/);
-    if (yedek) window.MNT_REPORT_ASSETS = yedek;
+    // Kılavuzun gerek duyduğu tek varlık raporun ŞABLONU (kozmetik bloğu
+    // oradan kopyalanıyor). Yüz artık rapor paketinden değil arayüzün kendi
+    // @font-face kurallarından geliyor — paket yokken de belge kurulur.
+    const yedek = window.FEAD_REPORT_TEMPLATE_B64;
+    delete window.FEAD_REPORT_TEMPLATE_B64;
+    try {
+      expect(() => KIT.veGuideDocHTML({ title: 'x', body: '' }))
+        .toThrow(/varlıkları yüklenmedi/);
+    } finally { if (yedek) window.FEAD_REPORT_TEMPLATE_B64 = yedek; }
   });
 
   test('belge kabuğu raporun iskeletini kurar', () => {
-    window.MNT_REPORT_ASSETS = { fontsCss: '/* font */' };
-    const h = KIT.veGuideDocHTML({ title: 'Deneme', body: '<p>gövde</p>' });
+    const eskiYuz = global.veThemeFontFaceCss;
+    global.veThemeFontFaceCss = () => '/* arayüz yüzü */';
+    let h;
+    try { h = KIT.veGuideDocHTML({ title: 'Deneme', body: '<p>gövde</p>' }); }
+    finally { global.veThemeFontFaceCss = eskiYuz; }
+    // Yüz ARAYÜZÜN kurallarından gömülü (rapor paketinden değil).
+    expect(h).toContain('/* arayüz yüzü */');
     expect(h.startsWith('<!DOCTYPE html>')).toBe(true);
     expect(h).toContain('<html lang="tr">');
     expect(h).toContain('<title>Deneme</title>');
@@ -160,15 +169,12 @@ describe('kozmetik şablondan çıkarılır (ikinci kopya yok)', () => {
     // raporun bloğunun ta kendisi); yasak olan çalıştırılabilir kod.
     expect(h).not.toContain('@@KATEX_JS@@');
     expect(h).not.toMatch(/<script/i);
-    delete window.MNT_REPORT_ASSETS;
   });
 
   test('başlık kaçışlanıyor', () => {
-    window.MNT_REPORT_ASSETS = { fontsCss: '' };
     const h = KIT.veGuideDocHTML({ title: '<script>x</script>', body: '' });
     expect(h).not.toContain('<title><script>');
     expect(h).toContain('&lt;script&gt;');
-    delete window.MNT_REPORT_ASSETS;
   });
 });
 
