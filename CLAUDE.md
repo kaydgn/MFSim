@@ -99,12 +99,6 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Bu yüzden pencere arşivin yanında olup olmadığını `programlar/arsiv-var.js`'i
   **script etiketiyle yoklayarak ÖLÇER** (`file://` üzerinde `fetch` var/yok
   ayrımı yapmıyor); o dosya bir yoklama hedefidir, veri konmaz.
-- `css/fonts-display.css` — Atölye'nin **başlık yüzü** (Source Serif 4 600,
-  latin + latin-ext). **Otomatik üretilir, elle düzenlenmez**
-  (`npm run build:display-font`); kaynağı `js/mount-report-assets.js`, **ağ
-  gerektirmez**. Serif bir ROL'dür, bir boyut basamağı değil: bağlama
-  `h1`-`h4` + adıyla başlık olan sınıflara yapılır, `--fs-h2` gibi bir boyuta
-  DEĞİL — aynı boyut ikonda, `✕` düğmesinde ve bir SAYIDA da geçiyor.
 - `js/cp-komuta.js` — **Komuta Penceresi** (Araçlar → Komuta, ayrı şifre). İki işi
   var: elindeki kopyanın durumunu ÖLÇMEK ve buradan bir **sipariş fişi** yazmak.
   Pencere hiçbir şeyi DEĞİŞTİRMEZ. Tezgâhlar elle yazılmış özet TUTMAZ, canlı
@@ -226,6 +220,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   sürüklemede hem AÇILIŞTA uygulanır (yoksa kuraldan önce kaydedilmiş kart
   bozuk açılır). Kapı: `fead-table.test.js` + `fead-tablo.spec.js` →
   *"YENİDEN BOYUTLANDIRMA"*.
+- **TEK YAZI TİPİ: Inter** (`--font-sans`, gömülü `css/fonts.css`) — başlık,
+  gövde, etiket, sayı, form ve TUVAL dâhil. Rakam hizası mono ile değil
+  `tabular-nums` ile. Tuval `var()` çözemez → `veThemeFont(px, ağırlık)`;
+  çıplak aile adı yazılmaz. Tek istisna hizası BOŞLUKLA kurulmuş düz metin
+  (TXT rapor `<pre>`). Kapı: `tek-yazi-tipi.test.js` + `tek-yazi-tipi.spec.js`.
 - **Artifact önizlemesi kaldırıldı**, ama `build.js`'teki
   `maskRawTextKeepOffsets` **KALIR**: rapor üreticileri HTML şablonu bastığı
   için gerçek belgede sahte `</body>` geçiyor ve kalkan onun içindir.
@@ -482,7 +481,6 @@ npm run build               # MFSim_Code.html üret (modüler → monolitik) —
 npm run sync:viewer         # js/ → viewer/js/ (yedi kopya + iki yerel fark)
 npm run build:viewer        # MFSim_Olcum_Goruntuleyici.html üret (Ölçüm Görüntüleyici)
 npm run build:can           # MFSim_CAN_Cozumleyici.html üret (CAN Çözümleyici)
-npm run build:display-font  # css/fonts-display.css üret (başlık yüzü; ağ YOK)
 npm run build:all           # üçü birden (monolit + görüntüleyici + CAN Çözümleyici)
 npm run shot -- --help      # ekran görüntüsü — İSTEĞE BAĞLI, yalnız kullanıcı isteyince
 npm run karsilama:secici    # karşılama kare seçicisi (Artifact olarak yayınlanır)

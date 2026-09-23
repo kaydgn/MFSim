@@ -123,13 +123,13 @@ function getSolverPropertiesHTML(node) {
   var ftAtol = d.ftAtol !== undefined ? d.ftAtol : 1e-6;
   var ftRtol = d.ftRtol !== undefined ? d.ftRtol : 1e-4;
   var showFtTol = method === 'rk45';
-  html += '<tr id="ve-solver-fttol-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Tolerans (ATol / RTol)</th><td style="background:var(--bg-tertiary);"><div style="display:flex; gap:4px; align-items:center;"><input type="text" id="ve-solver-ftatol-' + node.id + '" value="' + ftAtol + '" style="width:50%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"><input type="text" id="ve-solver-ftrtol-' + node.id + '" value="' + ftRtol + '" style="width:50%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"></div></td></tr>';
+  html += '<tr id="ve-solver-fttol-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Tolerans (ATol / RTol)</th><td style="background:var(--bg-tertiary);"><div style="display:flex; gap:4px; align-items:center;"><input type="text" id="ve-solver-ftatol-' + node.id + '" value="' + ftAtol + '" style="width:50%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVESolverParamChange(\'' + node.id + '\')"><input type="text" id="ve-solver-ftrtol-' + node.id + '" value="' + ftRtol + '" style="width:50%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVESolverParamChange(\'' + node.id + '\')"></div></td></tr>';
   html += '<tr id="ve-solver-fttol-desc-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>ATol</b>: Mutlak tolerans (hız m/s). <b>RTol</b>: Bağıl tolerans. Adaptif adım sayısı toleransa göre otomatik belirlenir.</td></tr>';
   
   // Güvenlik limiti — GÖRÜNÜR ve düzenlenebilir. Koşu bu süreye ulaşırsa
   // kesilir; kesilen koşu üst hızı olduğundan düşük raporlar, bu yüzden
   // değerin gizli kalmaması gerekiyor.
-  html += '<tr style="border-bottom:1px solid var(--border-color);"><th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Güvenlik limiti [s]</th><td style="background:var(--bg-tertiary);"><input type="number" id="ve-solver-maxtime-' + node.id + '" value="' + maxSimTime + '" min="1" step="10" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right; font-family:monospace;"></td></tr>';
+  html += '<tr style="border-bottom:1px solid var(--border-color);"><th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Güvenlik limiti [s]</th><td style="background:var(--bg-tertiary);"><input type="number" id="ve-solver-maxtime-' + node.id + '" value="' + maxSimTime + '" min="1" step="10" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;"></td></tr>';
   html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Simülasyon en fazla bu kadar sürer. Koşu limite dayanırsa üst hıza ulaşılmadan kesilir — sonuç olduğundan düşük çıkar. Varsayılan ' + VE_DEFAULT_MAX_SIM_TIME + ' s.</td></tr>';
 
   html += '</table>';
@@ -385,7 +385,7 @@ function getGearShiftPropertiesHTML(node) {
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<td style="font-weight:600; color:var(--accent-primary);">1C → 2C</td>';
   html += '<td><span style="background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + model1C2C + '</span></td>';
-  html += '<td style="font-family:monospace; font-size:var(--fs-tiny);">' + formula1C2C + '</td>';
+  html += '<td style=" font-size:var(--fs-tiny);">' + formula1C2C + '</td>';
   html += '<td style="font-weight:600; color:var(--accent-primary);">' + thr1C2C + '</td>';
   html += '</tr>';
 
@@ -423,7 +423,7 @@ function getGearShiftPropertiesHTML(node) {
   html += '<tr>';
   html += '<td style="font-weight:600; color:var(--accent-primary);">2C → 2L</td>';
   html += '<td><span style="background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + model2C2L + '</span></td>';
-  html += '<td style="font-family:monospace; font-size:var(--fs-tiny);">' + formula2C2L + '</td>';
+  html += '<td style=" font-size:var(--fs-tiny);">' + formula2C2L + '</td>';
   html += '<td style="font-weight:600; color:var(--accent-primary);">' + thr2C2L + '</td>';
   html += '</tr>';
 
@@ -485,10 +485,10 @@ function getGearShiftPropertiesHTML(node) {
       html += '<tr style="border-bottom:1px solid var(--border-color);">';
       html += '<td style="font-weight:600; color:var(--accent-primary);">' + shiftLabel + '</td>';
       html += '<td><span style="background:var(--bg-secondary); padding:1px 5px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + modelType + '</span></td>';
-      html += '<td style="font-family:monospace;">' + aVal + '</td>';
-      html += '<td style="font-family:monospace;">' + bVal + '</td>';
-      html += '<td style="font-family:monospace; color:var(--text-muted);">' + capVal + '</td>';
-      html += '<td style="font-family:monospace;">' + (typeof iGear === 'number' ? iGear.toFixed(3) : iGear) + '</td>';
+      html += '<td>' + aVal + '</td>';
+      html += '<td>' + bVal + '</td>';
+      html += '<td style=" color:var(--text-muted);">' + capVal + '</td>';
+      html += '<td>' + (typeof iGear === 'number' ? iGear.toFixed(3) : iGear) + '</td>';
       html += '<td style="font-weight:600; color:var(--accent-success);">' + threshold.toFixed(0) + '</td>';
       html += '</tr>';
     }
@@ -562,9 +562,9 @@ function getGearShiftPropertiesHTML(node) {
       html += '<tr style="border-bottom:1px solid var(--border-color);">';
       html += '<td style="font-weight:600; color:var(--accent-danger);">' + dsLabel + '</td>';
       html += '<td><span style="background:var(--bg-secondary); padding:1px 5px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + dsModelType + '</span></td>';
-      html += '<td style="font-family:monospace;">' + dsAVal + '</td>';
-      html += '<td style="font-family:monospace;">' + dsBVal + '</td>';
-      html += '<td style="font-family:monospace; color:var(--text-muted);">' + dsCapVal + '</td>';
+      html += '<td>' + dsAVal + '</td>';
+      html += '<td>' + dsBVal + '</td>';
+      html += '<td style=" color:var(--text-muted);">' + dsCapVal + '</td>';
       html += '<td style="font-weight:600; color:var(--accent-danger);">' + dsThr.toFixed(0) + '</td>';
       html += '<td style="font-weight:500; color:var(--accent-warning);">' + hysteresis + '</td>';
       html += '</tr>';
@@ -579,7 +579,7 @@ function getGearShiftPropertiesHTML(node) {
   html += '<div style="background:var(--bg-tertiary); border-radius:var(--radius-md); padding:10px; margin-bottom:10px;">';
   html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:6px;">Matematiksel Modeller</div>';
 
-  var mathStyle = 'background:var(--bg-input); border-radius:var(--radius-sm); padding:8px 10px; border:1px solid var(--border-color); font-family:monospace; font-size:var(--fs-micro); line-height:1.8; color:var(--text-secondary); margin-bottom:6px;';
+  var mathStyle = 'background:var(--bg-input); border-radius:var(--radius-sm); padding:8px 10px; border:1px solid var(--border-color); font-size:var(--fs-micro); line-height:1.8; color:var(--text-secondary); margin-bottom:6px;';
 
   html += '<div style="' + mathStyle + '">';
   html += '<span style="color:var(--accent-primary); font-weight:600;">Lineer Model:</span><br>';
@@ -617,7 +617,7 @@ function getGearShiftPropertiesHTML(node) {
   html += '<div style="background:var(--bg-tertiary); border-radius:var(--radius-md); padding:10px; margin-bottom:10px;">';
   html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:6px;">Vites Geçiş Algoritması</div>';
 
-  var codeStyle = 'background:var(--bg-input); border-radius:var(--radius-sm); padding:10px; border:1px solid var(--border-color); font-family:monospace; font-size:var(--fs-micro); line-height:1.7; color:var(--text-secondary); overflow-x:auto; white-space:pre;';
+  var codeStyle = 'background:var(--bg-input); border-radius:var(--radius-sm); padding:10px; border:1px solid var(--border-color); font-size:var(--fs-micro); line-height:1.7; color:var(--text-secondary); overflow-x:auto; white-space:pre;';
 
   html += '<div style="' + codeStyle + '">';
   html += '<span style="color:var(--text-muted);">Girdiler: N_engine, SR, i_gear, current_gear, mode</span>\n';

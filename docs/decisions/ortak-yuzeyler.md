@@ -315,36 +315,42 @@ ayrı hiçbir şey ifade etmez: CSS kapısı tek başınayken JS'ten yazılan he
 yarıçap serbest kalıyordu. Kapsam dışı sayılar **TAM eşleşir** — bir satır
 silinince boşalan yer yeni bir sapmaya açılmasın.
 
-## Atölye başlık yüzü — serif bir ROL, bir boyut değil (2026-09-22)
+## Tek yazı tipi — Inter (2026-09-23)
 
-**Hüküm.** Başlıklar `--font-display` (Source Serif 4 600) ile, gövde
-`--font-sans` (Inter) ile çizilir. Bağlama **anlama** göredir: başlık
-elemanları (`h1`-`h4`) ve adıyla başlık olan sınıflar. Boyuta göre bağlanmaz.
+**Hüküm.** Arayüzün her yüzeyi tek aileyle çizilir: `--font-sans` (Inter,
+`css/fonts.css`'te gömülü; 400–800, latin + latin-ext). Başlık, gövde, etiket,
+sayı, form denetimi ve **tuval** dâhil. Başlık ayrı bir YÜZ değil: aynı aile,
+kendi ağırlığı ve `letter-spacing:-0.01em`. **Tek istisna** hizası boşlukla
+kurulmuş düz metin: TXT rapor sayfası (`.ve-rep-page pre`, `.ve-rep-measure`
+→ `--rep-mono`).
 
-**Gerekçe — ölçüldü.** `--fs-title|h2|h1|display|hero` kullanan 18 CSS
-kuralının yalnız **9'u başlık**; kalan 9'u büyük çizilmiş İKON (`.mf-ico`),
-komut paleti arama GİRDİSİ ve `+` sekme düğmesi. JS tarafında ayrım daha da
-keskin: aynı `--fs-h2` hem pencere başlığında, hem `✕` kapatma düğmesinde, hem
-de FEAD'in "1. elastik mod" **sayısında** geçiyor. Boyuta göre bağlayan bir
-kural serifi bir çarpı işaretine ve bir sayıya yazardı.
+**Gerekçe — ölçüldü.** Kullanıcı isteği: *"Program içinde çok fazla yazı tipi
+var. Tek bir yazı tipi olmasını istiyorum."* Önce, gerçek tarayıcıda: ekranda
+BEŞ aile — Inter; başlıkta Source Serif 4; etiket ve sayıda sistem mono'su
+(FEAD ekranında 126–146 öğe); tuvalde `sans-serif` ve `system-ui` (Windows'ta
+Arial ve Segoe UI). Kaynakta 54 CSS mono kuralı, ~50 satır içi mono bildirimi
+ve kendi ailesini yazan 101 tuval ataması.
 
-**Yüz depoda zaten vardı.** Takoz raporunun gömülü varlıklarında (Source Serif
-4 · Archivo · IBM Plex Mono). Ama o dosya açılışta **yüklenmiyor** — 1 MB,
-`type="text/x-mfsim-report"`, ilk rapora kadar hiç okunmuyor. Başlık yüzünü
-oradan almak o 1 MB'ı açılışa taşımak demekti. Bu yüzden `tools/build-display-font.js`
-yalnız arayüzün ihtiyacı olan **iki yüzü** (600, latin + latin-ext) ayrı bir
-stil sayfasına çıkarıyor — **ağ gerektirmez**, kaynağı depodaki dosya.
+**Rakam hizası mono İSTEMEZ.** Mono'nun buradaki tek işi rakamları alt alta
+hizalamaktı; `body`'deki `font-variant-numeric: tabular-nums` bunu Inter'le
+yapıyor.
 
-**Ağırlık `600 700` bilerek ARALIK.** Yüz statik 600; arayüzde 700 isteyen
-başlıklar var. Tek bir 600 bildirilseydi tarayıcı 700'ü SENTETİK
-kalınlaştırırdı (bulanık kenar).
+**Tuval `var()` çözemez** → `veThemeFont(px, ağırlık)` / `veThemeFontFamily()`
+(`js/theme.js`) aileyi `--font-sans`'tan okur. Tuvale çıplak aile adı
+yazılmaz; Plotly de aileyi aynı köprüden alır.
 
-**400 ağırlıklı başlıklar listede DEĞİL** (Sonuçlar'ın katlanır şeritleri): tek
-yüz 600 olduğu için ona düşüp istenenden kalın görünürlerdi.
+**UA stil sayfası `kbd, code, samp, pre`'ye monospace verir.** Mono kuralları
+kalkınca `kbd` sessizce sistem mono'suna döndü (gerçek tarayıcıda ölçüldü);
+form sıfırlaması (`font-family:inherit`) o dört elemanı da kapsıyor.
 
-### Kapının ilk yazımı BOŞTU — `document.fonts.check` hiçbir şey ölçmüyor
+**Ağırlıklar gömülü setten** (400–800). `650` gibi bir değer tarayıcıda
+sessizce 700'e yuvarlanır.
 
-İlk e2e kapısı `document.fonts.check()` kullanıyordu. Ölçüldü:
+**Başlık yüzü EMEKLİ** (2026-09-22'de girdi, 09-23'te çıktı):
+`css/fonts-display.css`, `tools/build-display-font.js` ve
+`build:display-font` kalktı; üç üründe de −85 KB.
+
+### Ölçüm `measureText` ile — `document.fonts.check` BOŞTUR
 
 ```
 document.fonts.check('600 16px "Zzz Yok Boyle Bir Aile"')  →  true
@@ -352,28 +358,24 @@ document.fonts.check('600 16px "Zzz Yok Boyle Bir Aile"')  →  true
 
 Spec'e göre `check()` *"bu metni çizmek için yüklenmesi GEREKEN bir yüz kaldı
 mı"* sorusunu cevaplıyor; hiç eşleşen yüz yoksa cevap "kalmadı" — yani `true`.
-Yedek yüze düşen bir harf de `true` döner. **Kanıtlandı:** `fonts-display.css`'ten
-latin-ext yüzü TAMAMEN silindi ve dört test de yeşil kaldı.
+Yedek yüze düşen bir harf de `true` döner (kanıtlandı: latin-ext yüzü TAMAMEN
+silindi, eski dört halka yeşil kaldı). Gerçek ölçüt **genişlik**: aynı harf
+`"Inter", monospace` ile ve çıplak `monospace` ile çizilir; yüzde varsa
+genişlikler ayrışır, yoksa birebir aynı çıkar. Kapının kendisinin boş olmadığı
+ayrı bir halkayla tutulur (var olmayan aile bütün harfleri eksik saymalı).
 
-Gerçek ölçüt **genişlik**: aynı harf `"Source Serif 4", monospace` ile ve çıplak
-`monospace` ile çizilir; harf yüzde varsa genişlikler ayrışır, yoksa ikisi de
-monospace'e düşüp birebir aynı çıkar. Yeni kapı aynı silmede **ğ ş Ğ İ Ş**'yi
-adlarıyla söylüyor ve latin alt kümesindeki ç ı ö ü'ye dokunmuyor. Kapının
-kendisinin boş olmadığı ayrıca bir halkayla tutuluyor (var olmayan aile bütün
-harfleri eksik saymalı).
+**Tembel alt küme.** `latin-ext` parçası `unicode-range` ile ancak o harflerle
+metin çizilince iner. Halka yükü `document.fonts.load` ile AÇIKÇA ister —
+istemeyen ilk yazımı, başlıkları serif olan eski derlemede ğ/ş/İ'yi "eksik"
+saydı; yüz aynıydı.
 
-### Ödenen bayt — TEK KALEM
-
-| Ürün | Önce | Sonra | Fark |
-|------|------|-------|------|
-| `MFSim_Code.html` | 28.705.033 | 28.790.207 | **+85.174 (+0,30 %)** |
-| `MFSim_Olcum_Goruntuleyici.html` | 1.161.822 | 1.246.996 | **+85.174 (+7,3 %)** |
-| `MFSim_CAN_Cozumleyici.html` | 979.093 | 1.064.267 | **+85.174 (+8,7 %)** |
-
-Altı yüzün tamamı (400 · 600 · italik) taşınsaydı maliyet 195 KB olurdu; yalnız
-600 çifti 81 KB. Görüntüleyici ve CAN için oran yüksek görünüyor çünkü o iki
-ürün küçük — ama başlık yüzü üçünde de aynı olmasaydı **aynı program üç ayrı
-tipografiyle** dağıtılırdı.
+**Kapı.** `tests/unit/tek-yazi-tipi.test.js` (CSS'te aile yalnız `inherit` ya
+da `var(--font-sans)`, istisna listesi TAM eşleşir; JS'te her `.font =`
+köprüden, satır içi aile yok; Plotly köprüden) + `tests/e2e/tek-yazi-tipi.spec.js`
+(gerçek tarayıcı: ekranda 500+ öğe ve tuvalde tek aile, Türkçe harfler iki
+ağırlıkta, sıfır ağ isteği). Değişiklik öncesi derlemede halkaların üçü
+düşüyor: başlık `Source Serif 4`; ekranda `SF Mono` / `Source Serif 4` /
+`ui-monospace`; tuvalde `sans-serif`.
 
 ### CI listesi tek kaynağa indi
 
@@ -916,6 +918,7 @@ geniyordu: gerçek tarayıcıda ölçüldü, beş karakter × 0,7px ≈ 3,5px, y
 ```css
 h1, h2, h3, h4, .mfsim-login-title, .mfsim-loading-logo, .ve-welcome-logo, …
 { font-family: var(--font-display); letter-spacing: -0.01em; }
+/* 2026-09-23: aile tekleşti, bağlama artık YALNIZ tracking yazar */
 ```
 
 ile elemanların kendi `letter-spacing:0.5px` bildirimi **aynı özgüllükte**.

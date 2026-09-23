@@ -63,7 +63,7 @@ function veSolverRunProfessional() {
   progressWrap.style.cssText = 'padding:8px 14px 6px;background:var(--bg-secondary);border-bottom:1px solid var(--border-color);';
   progressWrap.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">' +
     '<span id="ve-sp-phase" style="font-size:var(--fs-body);font-weight:600;color:var(--text-heading);letter-spacing:0.02em;">Başlatılıyor...</span>' +
-    '<span id="ve-sp-percent" style="font-size:var(--fs-body);font-weight:700;color:var(--accent-primary);font-family:Consolas,monospace;">0%</span>' +
+    '<span id="ve-sp-percent" style="font-size:var(--fs-body);font-weight:700;color:var(--accent-primary);">0%</span>' +
   '</div>' +
   '<div style="width:100%;height:3px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:var(--radius-sm);overflow:hidden;">' +
     '<div id="ve-sp-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#1b6a2a,#35a050);transition:width 0.3s ease;"></div>' +
@@ -73,7 +73,7 @@ function veSolverRunProfessional() {
   // Log area — iç pencere (inset border)
   var logWrap = document.createElement('div');
   logWrap.style.cssText = 'flex:1;overflow-y:auto;margin:8px 14px 10px;background:var(--bg-tertiary);border:2px inset var(--border-color);border-radius:var(--radius-xs);padding:12px 16px;min-height:160px;max-height:36vh;';
-  logWrap.innerHTML = '<div id="ve-sp-log" style="font-family:Consolas,\'Courier New\',monospace;font-size:var(--fs-body);line-height:1.65;color:var(--text-secondary);white-space:pre-wrap;"></div>';
+  logWrap.innerHTML = '<div id="ve-sp-log" style="font-size:var(--fs-body);line-height:1.65;color:var(--text-secondary);white-space:pre-wrap;"></div>';
   modal.appendChild(logWrap);
   
   overlay.appendChild(modal);

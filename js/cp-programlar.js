@@ -153,7 +153,7 @@ function _vpaSatir(p, i, varMi) {
   var alt = [];
   if(p.tarih) alt.push(_vpaEsc(p.tarih));
   if(boy) alt.push(_vpaEsc(boy));
-  alt.push('<span style="font-family:ui-monospace,monospace; opacity:.75;">'
+  alt.push('<span style=" opacity:.75;">'
     + _vpaEsc(veProgramlarYolMetni(p)) + '</span>');
 
   var h = '<div style="display:flex; align-items:center; gap:10px; padding:8px 10px; '

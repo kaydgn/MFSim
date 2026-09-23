@@ -769,7 +769,7 @@ function veFeadApplyBeltModeBadge(nodeEl, node){
     : 'Kayış boyu SABİT: girilen boy kullanılıyor. Tıkla → tasarımdan hesaplansın.';
   b.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; cursor:pointer;'
     + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
-    + 'padding:2px 4px; border-radius:var(--radius-xs); font-family:ui-monospace, monospace;'
+    + 'padding:2px 4px; border-radius:var(--radius-xs);'
     + 'color:' + (serbest ? 'var(--on-warning)' : 'var(--on-accent)')
     + '; background:' + (serbest ? 'var(--accent-warning)'
                                  : 'var(--accent-primary)')
@@ -890,7 +890,7 @@ function veFeadApplySpinBadge(nodeEl, node){
         : hkm === true ? '\n\nGergi gevşek tarafta ✓' : '');
   b.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; cursor:pointer;'
     + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
-    + 'padding:2px 4px; border-radius:var(--radius-xs); font-family:ui-monospace, monospace;'
+    + 'padding:2px 4px; border-radius:var(--radius-xs);'
     + 'color:' + fg + '; background:' + bg + '; border:1px solid var(--bg-primary);';
   b.onmousedown = function(e){ e.stopPropagation(); };
   b.ondblclick  = function(e){ e.stopPropagation(); e.preventDefault(); };
@@ -1489,7 +1489,7 @@ function veFeadPowerCurveCard(node){
     };
     h += '<tr>' + hucre('rpm', p && p.rpm, '10') + hucre('kw', p && p.kw, '0.01')
       + '<td style="padding:2px 5px; border:1px solid var(--border-color); text-align:right; '
-      + 'font-family:ui-monospace,monospace; color:var(--text-muted);">'
+      + ' color:var(--text-muted);">'
       + (Number.isFinite(motor) ? _feadFmt(motor, 0) : '—') + '</td>'
       + '<td style="padding:1px 3px; border:1px solid var(--border-color); text-align:center;">'
       + '<button onclick="veFeadCurveRemove(\'' + node.id + '\',' + pi + ')" title="Satırı sil"'
@@ -1850,7 +1850,7 @@ function veFeadArmReadout(node){
   var satir = function(et, deg, renk){
     return '<div style="display:flex; justify-content:space-between; gap:8px; padding:2px 0;">'
       + '<span style="color:var(--text-muted);">' + et + '</span>'
-      + '<span style="font-family:ui-monospace,monospace; color:' + (renk || 'var(--text-primary)') + ';">'
+      + '<span style=" color:' + (renk || 'var(--text-primary)') + ';">'
       + deg + '</span></div>';
   };
   var h = '<div style="font-size:var(--fs-micro); line-height:1.5; padding:7px 9px; margin-bottom:9px; '
@@ -2300,7 +2300,7 @@ function veFeadBeltCatalogCard(node, serbest){
     + ' mm</b> — aşağıdaki boylardan birini seçerseniz gergi kolu ve gerginlik '
     + 'şu değerlere oturur.</div>';
   h += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse;'
-    + ' font-family:ui-monospace, monospace; font-size:var(--fs-micro);">'
+    + ' font-size:var(--fs-micro);">'
     + '<thead><tr>' + sut('Boy', '20%') + sut('Δ', '16%') + sut('Kod', '26%', 'left')
     + sut('Kol dönmesi', '16%') + sut('Gerginlik', '22%') + '</tr></thead><tbody>';
 
@@ -6061,7 +6061,7 @@ function veFeadChecksCard(node, build){
       + '<span style="font-size:var(--fs-micro);">' + rozet(durum) + '</span></div>';
   }
   var TD = ' style="padding:2px 5px; border-bottom:1px solid var(--border-color);"';
-  var TDR = ' style="padding:2px 5px; border-bottom:1px solid var(--border-color); text-align:right; font-family:ui-monospace,monospace;"';
+  var TDR = ' style="padding:2px 5px; border-bottom:1px solid var(--border-color); text-align:right;"';
   function tablo(inner){
     return '<table style="width:100%; font-size:var(--fs-micro); border-collapse:collapse; margin-bottom:6px;">'
       + inner + '</table>';
@@ -6217,7 +6217,7 @@ function veFeadDriveCard(node){
     + 'background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm); '
     + 'display:flex; justify-content:space-between; gap:8px;">'
     + '<span style="color:var(--text-muted);">Kullanılan tahrik oranı</span>'
-    + '<span style="font-family:ui-monospace,monospace; font-weight:700; color:'
+    + '<span style=" font-weight:700; color:'
     + (dr.ok ? 'var(--ink-accent)' : 'var(--ink-warning)') + ';">'
     + _feadFmt(dr.ratio, 4) + (dr.mode === 'derive' ? '  (' + _feadFmt(dr.crankOD, 2) + ' / ' + _feadFmt(dr.fanOD, 2) + ')' : '')
     + '  <span style="font-weight:400; color:var(--text-muted);">' + etiket + '</span>'
@@ -7056,7 +7056,7 @@ function veFeadDutyResultTable(R){
       + 'border-radius:var(--radius-sm);">'
       + '<span style="color:var(--text-muted);">Servis faktörü ' + _feadFmt(SF_ist, 2)
       + ' &nbsp;·&nbsp; en kötü nokta ' + enKucukRpm + ' rpm</span>'
-      + '<span style="font-family:ui-monospace,monospace; font-weight:700; color:'
+      + '<span style=" font-weight:700; color:'
       + (gecti ? 'var(--ink-success)' : 'var(--ink-danger)') + ';">'
       + 'min SF = ' + _feadFmt(enKucukSF, 2) + (gecti ? '  ✓ GEÇTİ' : '  ✗ KALDI') + '</span></div>';
   }

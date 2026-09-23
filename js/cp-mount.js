@@ -1565,7 +1565,7 @@ function veMntDecorateConnections(svg){
     t.setAttribute('x',fr.x1+11); t.setAttribute('y',fr.y1+16);
     t.setAttribute('fill','var(--accent-primary)'); t.setAttribute('font-size','10.5');
     t.setAttribute('opacity','0.72'); t.setAttribute('letter-spacing','1.5');
-    t.setAttribute('font-family','ui-monospace, monospace'); t.textContent='ŞASİ'; g.appendChild(t);
+    t.textContent='ŞASİ'; g.appendChild(t);
   }
 
   // ── Aktarma hattı omurgası: ana gövdeler, x sırasına göre merkezden ──
@@ -1898,8 +1898,10 @@ function _mnt2DGather(){
   return { comps:comps, mounts:mounts, cg:cg };
 }
 // SVG metin/işaret yardımcıları — akademik, tek renkli (tema uyumlu) görünüm.
-var _MNT2D_MONO="ui-monospace,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace";
-var _MNT2D_SANS="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif";
+// Yüz KAPSAYICIDAN miras (tek yüz, 2026-09-23): çizim arayüzün içinde Inter,
+// bir belgeye gömülünce belgenin yüzüyle yazılır. Eskiden eş aralıklı bir
+// yığın ve hiç kullanılmayan ikinci bir sans yığını tutuyordu.
+var _MNT2D_YUZ='inherit';
 // İşaret renkleri — bileşen ikonuyla (components.js) tutarlı, tema uyumlu:
 // takoz=yeşil, bileşen CG=amber, birleşik CG=kırmızı. Fallback'li accent-* değişkenleri.
 var _MNT2D_C_MOUNT='var(--accent-success)';
@@ -1907,7 +1909,7 @@ var _MNT2D_C_COMP ='var(--accent-warning)';
 var _MNT2D_C_CG   ='var(--accent-danger)';
 function _mnt2DText(x,y,t,anchor,color,size,bold,family){
   return '<text x="'+_mnt2DR(x)+'" y="'+_mnt2DR(y)+'" text-anchor="'+(anchor||'middle')+'" font-size="'+(size||8)+'"'
-    + ' font-family="'+(family||_MNT2D_MONO)+'" fill="'+(color||'var(--text-secondary)')+'"'+(bold?' font-weight="700"':'')+'>'+_mntEsc(t)+'</text>';
+    + ' font-family="'+(family||_MNT2D_YUZ)+'" fill="'+(color||'var(--text-secondary)')+'"'+(bold?' font-weight="700"':'')+'>'+_mntEsc(t)+'</text>';
 }
 function _mnt2DR(v){ return Math.round(v*10)/10; }
 // "Güzel" eksen adımı (1·2·5 ×10^k) ve o adıma oturan işaret (tick) değerleri —
@@ -2219,7 +2221,7 @@ function _mnt2DViewSVG(data){
       +   '<button type="button" data-z="reset" title="Sıfırla" aria-label="Sıfırla">⟲</button>'
       + '</div>'
       + '<svg class="ve-mnt2d-fig" viewBox="'+vb+'" data-vb="'+vb+'" preserveAspectRatio="xMidYMid meet"'
-      +   ' style="display:block; width:100%; height:auto; touch-action:none; cursor:grab; font-family:'+_MNT2D_MONO+';">'
+      +   ' style="display:block; width:100%; height:auto; touch-action:none; cursor:grab; font-family:'+_MNT2D_YUZ+';">'
       + inner + '</svg>'
       + '</div>';
   }
@@ -2502,7 +2504,7 @@ function _mntLibForceChart(e, axis){
   var W=300, H=212, plotL=44, plotR=292, plotT=12, plotB=172;
   function px(xx){ return plotL+(xx-dmin)/(dmax-dmin)*(plotR-plotL); }
   function py(ff){ return plotB-(ff-fmin)/(fmax-fmin)*(plotB-plotT); }
-  var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block; font-family:'+_MNT2D_MONO+';">';
+  var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block; font-family:'+_MNT2D_YUZ+';">';
   s+='<rect x="'+plotL+'" y="'+plotT+'" width="'+(plotR-plotL)+'" height="'+(plotB-plotT)+'" fill="var(--bg-input)" opacity="0.3"/>';
   // Izgara + eksen etiketleri (4 işaret hedefi — kalabalık olmasın)
   var xticks=_mnt2DNiceTicks(dmin,dmax,4), yticks=_mnt2DNiceTicks(fmin,fmax,4);
@@ -2526,7 +2528,7 @@ function _mntLibForceChart(e, axis){
   // Eksen başlıkları
   s+=_mnt2DText((plotL+plotR)/2, H-3, 'sehim δ [mm]', 'middle', 'var(--text-secondary)', 9.5);
   var yc=(plotT+plotB)/2;
-  s+='<text x="11" y="'+yc+'" text-anchor="middle" font-size="9.5" font-family="'+_MNT2D_MONO+'" fill="var(--text-secondary)" transform="rotate(-90 11 '+yc+')">kuvvet f [N]</text>';
+  s+='<text x="11" y="'+yc+'" text-anchor="middle" font-size="9.5" font-family="'+_MNT2D_YUZ+'" fill="var(--text-secondary)" transform="rotate(-90 11 '+yc+')">kuvvet f [N]</text>';
   s+='</svg>';
   return s;
 }
@@ -3430,7 +3432,7 @@ function _mntSolverStatusHTML(R){
       h+='En çok iterasyon: <b style="color:var(--text-primary);">'+maxIt+'</b> ('+_mntEsc(maxName)+' durumu).';
       var tr=(R._worstIter && R._worstIter.trace && R._worstIter.trace.length) ? R._worstIter.trace : null;
       if(tr){
-        h+='<div style="margin-top:3px;">Artık ‖r‖: <span style="font-family:monospace; color:var(--text-primary);">'
+        h+='<div style="margin-top:3px;">Artık ‖r‖: <span style=" color:var(--text-primary);">'
           + tr.map(function(v){ return _mntSci(v); }).join(' → ')+'</span> N</div>';
       }
       h+='</div>';

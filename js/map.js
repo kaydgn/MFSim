@@ -1345,7 +1345,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
   ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, H - padB); ctx.lineTo(W - padR, H - padB); ctx.stroke();
 
   // Y etiketleri
-  ctx.fillStyle = textColor; ctx.font = '9px Segoe UI, sans-serif'; ctx.textAlign = 'right';
+  ctx.fillStyle = textColor; ctx.font = veThemeFont(9); ctx.textAlign = 'right';
   for(var ly = Math.ceil(yMin / yStep) * yStep; ly <= yMax; ly += yStep) {
     ctx.fillText('%' + ly.toFixed(0), padL - 4, toY(ly) + 3);
   }
@@ -1364,18 +1364,18 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
   }
 
   // Eksen başlıkları
-  ctx.fillStyle = headColor; ctx.font = '600 9.5px Segoe UI, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = headColor; ctx.font = veThemeFont(9.5, 600); ctx.textAlign = 'center';
   ctx.fillText('Mesafe (m)', padL + plotW / 2, H - 3);
   ctx.save(); ctx.translate(10, padT + plotH / 2); ctx.rotate(-Math.PI / 2);
   ctx.fillText('Eğim (%)', 0, 0); ctx.restore();
 
   // Başlık
-  ctx.fillStyle = headColor; ctx.font = '600 10.5px Segoe UI, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = headColor; ctx.font = veThemeFont(10.5, 600); ctx.textAlign = 'center';
   ctx.fillText('Mesafe — Eğim Profili', padL + plotW / 2, 14);
 
   // Zoom göstergesi
   if(zs > 1.05 || zs < 0.95) {
-    ctx.fillStyle = 'rgba(106,27,154,0.85)'; ctx.font = '600 8px Segoe UI, sans-serif'; ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(106,27,154,0.85)'; ctx.font = veThemeFont(8, 600); ctx.textAlign = 'right';
     ctx.fillText(zs.toFixed(1) + 'x', W - padR - 26, padT - 4);
   }
 
@@ -1463,7 +1463,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
     ctx.setLineDash([]);
     // Etiket
     ctx.fillStyle = veThemeRgba('--accent-warning', 1);
-    ctx.font = '600 8px Segoe UI, sans-serif';
+    ctx.font = veThemeFont(8, 600);
     ctx.textAlign = 'left';
     ctx.fillText('Ort: %' + routeAvgGrade.toFixed(2), padL + 4, avgY - 4);
   }
@@ -1495,7 +1495,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
           ctx.stroke();
           ctx.setLineDash([]);
           ctx.fillStyle = veThemeRgba('--accent-warning', 1);
-          ctx.font = '700 9px Segoe UI, sans-serif';
+          ctx.font = veThemeFont(9, 700);
           ctx.textAlign = 'center';
           ctx.fillText('Seçim Ort: %' + sel.avgGrade.toFixed(2), (selX1 + selX2) / 2, selAvgY - 6);
         }
@@ -1508,7 +1508,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
   // ── SavGol filtre bilgisi ──
   ctx.save();
   ctx.fillStyle = 'rgba(255,152,0,0.6)';
-  ctx.font = '600 7.5px Segoe UI, sans-serif';
+  ctx.font = veThemeFont(7.5, 600);
   ctx.textAlign = 'right';
   ctx.fillText('SavGol Filtre', W - padR - 4, padT + 12);
   ctx.restore();
@@ -2020,7 +2020,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
   ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, H - padB); ctx.lineTo(W - padR, H - padB); ctx.stroke();
 
   // Y etiketleri (rakım)
-  ctx.fillStyle = textColor; ctx.font = '9px Segoe UI, sans-serif'; ctx.textAlign = 'right';
+  ctx.fillStyle = textColor; ctx.font = veThemeFont(9); ctx.textAlign = 'right';
   for(var ly = Math.ceil(yMin / yStep) * yStep; ly <= yMax; ly += yStep) {
     ctx.fillText(ly.toFixed(0) + 'm', padL - 4, toY(ly) + 3);
   }
@@ -2039,13 +2039,13 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
   }
 
   // Eksen başlıkları
-  ctx.fillStyle = headColor; ctx.font = '600 9.5px Segoe UI, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = headColor; ctx.font = veThemeFont(9.5, 600); ctx.textAlign = 'center';
   ctx.fillText('Mesafe (m)', padL + plotW / 2, H - 3);
   ctx.save(); ctx.translate(10, padT + plotH / 2); ctx.rotate(-Math.PI / 2);
   ctx.fillText('Rakım (m)', 0, 0); ctx.restore();
 
   // Başlık
-  ctx.fillStyle = headColor; ctx.font = '600 10.5px Segoe UI, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = headColor; ctx.font = veThemeFont(10.5, 600); ctx.textAlign = 'center';
   var sampleInfo = pts.length + ' sample';
   if(pts.length > 1) {
     var avgInterval = (totalDist / (pts.length - 1));
@@ -2055,14 +2055,14 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
 
   // Zoom göstergesi
   if(zs > 1.05 || zs < 0.95) {
-    ctx.fillStyle = 'rgba(106,27,154,0.85)'; ctx.font = '600 8px Segoe UI, sans-serif'; ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(106,27,154,0.85)'; ctx.font = veThemeFont(8, 600); ctx.textAlign = 'right';
     ctx.fillText(zs.toFixed(1) + 'x', W - padR - 26, padT - 4);
   }
 
   // Başlangıç / Bitiş etiketleri (rakım değerleri ile)
   var startElev = pts[0].elev.toFixed(0);
   var endElev = pts[pts.length - 1].elev.toFixed(0);
-  ctx.font = '600 8px Segoe UI, sans-serif';
+  ctx.font = veThemeFont(8, 600);
   ctx.fillStyle = veThemeRgba('--seri-4', 1); ctx.textAlign = 'left';
   ctx.fillText('A ' + startElev + 'm ▸', padL + 4, H - padB - 4);
   ctx.fillStyle = veThemeRgba('--seri-2', 1); ctx.textAlign = 'right';
@@ -2126,7 +2126,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
     var glMidX = (glX1 + glX2) / 2;
     var glMidY = Math.min(glY1, glY2) - 8;
     ctx.fillStyle = gl.color;
-    ctx.font = '700 9px Segoe UI, sans-serif';
+    ctx.font = veThemeFont(9, 700);
     ctx.textAlign = 'center';
     var glLabel = '%' + gl.grade.toFixed(2) + '  Δh:' + gl.deltaH.toFixed(1) + 'm';
     // Arka plan kutusu
@@ -2139,7 +2139,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
     ctx.fillStyle = 'rgba(15,18,24,0.85)';
     ctx.beginPath(); ctx.arc(glX1 + 10, glY1 - 10, 8, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = gl.color;
-    ctx.font = '700 8px Segoe UI, sans-serif';
+    ctx.font = veThemeFont(8, 700);
     ctx.fillText('' + (gli + 1), glX1 + 10, glY1 - 7);
   }
 
@@ -2172,7 +2172,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
     ctx.save();
     ctx.translate(wpX, padT + 4);
     ctx.rotate(-Math.PI / 4);
-    ctx.font = '600 8px Segoe UI, sans-serif';
+    ctx.font = veThemeFont(8, 600);
     ctx.textAlign = 'left';
     // Arka plan kutusu
     var wpLabel = wp.name;
@@ -2183,7 +2183,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
     ctx.fillText(wpLabel, 1, 0);
     ctx.restore();
     // Mesafe etiketi (altta)
-    ctx.font = '500 7px Segoe UI, sans-serif';
+    ctx.font = veThemeFont(7, 500);
     ctx.fillStyle = wpColor;
     ctx.textAlign = 'center';
     ctx.globalAlpha = 0.7;
@@ -2214,7 +2214,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
       var pvDh = pvLeftY - pvRightY;
       var pvGrade = (pvDh / pvDist) * 100;
       ctx.fillStyle = dp.color;
-      ctx.font = '700 10px Segoe UI, sans-serif';
+      ctx.font = veThemeFont(10, 700);
       ctx.textAlign = 'center';
       var pvLabel = '%' + pvGrade.toFixed(2) + '  Δh:' + pvDh.toFixed(1) + 'm  (' + pvDist.toFixed(0) + 'm)';
       var pvMidX = (toX(dp.x1) + toX(dp.x2)) / 2;

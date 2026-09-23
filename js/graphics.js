@@ -5646,11 +5646,11 @@ function veRender3DScatter(slotIdx) {
       opacity: 0.85,
       line: { width: 0.3, color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' },
       colorbar: {
-        title: { text: zLabel, font: { size: 10, color: textColor, family: 'system-ui, -apple-system, sans-serif' } },
+        title: { text: zLabel, font: { size: 10, color: textColor, family: veThemeFontFamily() } },
         thickness: 14,
         len: 0.55,
         y: 0.5,
-        tickfont: { size: 9, color: textColor, family: 'system-ui, -apple-system, sans-serif' },
+        tickfont: { size: 9, color: textColor, family: veThemeFontFamily() },
         outlinewidth: 0,
         bgcolor: 'rgba(0,0,0,0)',
         xpad: 8,
@@ -5664,7 +5664,7 @@ function veRender3DScatter(slotIdx) {
     hoverlabel: {
       bgcolor: isDark ? 'rgba(30,32,40,0.95)' : 'rgba(255,255,255,0.95)',
       bordercolor: isDark ? 'rgba(99,102,241,0.5)' : 'rgba(99,102,241,0.4)',
-      font: { size: 11, color: isDark ? '#e2e8f0' : '#1e293b', family: 'system-ui, -apple-system, sans-serif' }
+      font: { size: 11, color: isDark ? '#e2e8f0' : '#1e293b', family: veThemeFontFamily() }
     }
   };
 
@@ -5690,8 +5690,8 @@ function veRender3DScatter(slotIdx) {
     showbackground: true,
     backgroundcolor: sceneBg,
     showspikes: false,
-    tickfont: { size: 9, color: textColor, family: 'system-ui, -apple-system, sans-serif' },
-    titlefont: { size: 11, color: textColor, family: 'system-ui, -apple-system, sans-serif' },
+    tickfont: { size: 9, color: textColor, family: veThemeFontFamily() },
+    titlefont: { size: 11, color: textColor, family: veThemeFontFamily() },
     tickformat: '.4~g',
     linecolor: lineColor,
     linewidth: 1
@@ -5720,7 +5720,7 @@ function veRender3DScatter(slotIdx) {
     plot_bgcolor: paperBg,
     margin: { l: 0, r: 0, t: 0, b: 0 },
     showlegend: false,
-    font: { family: 'system-ui, -apple-system, sans-serif' }
+    font: { family: veThemeFontFamily() }
   };
 
   var config = {

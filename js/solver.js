@@ -421,7 +421,7 @@ function veSolverRunLegacy() {
           var summaryRows = '<tr><td style="color:var(--text-muted);">Mod:</td><td style="text-align:right;font-weight:600;">' + tLabel + '</td></tr><tr><td style="color:var(--text-muted);">Yöntem:</td><td style="text-align:right;font-weight:600;">' + mLabel + '</td></tr>';
           if(sd.method === 'rk45') {
             summaryRows += '<tr><td style="color:var(--text-muted);">Çıktı noktası:</td><td style="text-align:right;font-weight:600;">' + (sd.resolution || 500) + '</td></tr>';
-            summaryRows += '<tr><td style="color:var(--text-muted);">Tolerans:</td><td style="text-align:right;font-weight:600;font-family:monospace;font-size:var(--fs-tiny);">' + (sd.atol || 1e-6) + ' / ' + (sd.rtol || 1e-4) + '</td></tr>';
+            summaryRows += '<tr><td style="color:var(--text-muted);">Tolerans:</td><td style="text-align:right;font-weight:600;font-size:var(--fs-tiny);">' + (sd.atol || 1e-6) + ' / ' + (sd.rtol || 1e-4) + '</td></tr>';
           } else {
             summaryRows += '<tr><td style="color:var(--text-muted);">Çözünürlük:</td><td style="text-align:right;font-weight:600;">' + (sd.resolution || 200) + ' adım</td></tr>';
             summaryRows += '<tr><td style="color:var(--text-muted);">Δt:</td><td style="text-align:right;font-weight:600;">' + ((sd.dt || 0.3).toFixed(4)) + ' s</td></tr>';
@@ -483,10 +483,10 @@ function veSolverRunLegacy() {
           rhtml += '<table style="width:100%; font-size:var(--fs-tiny); color:var(--text-secondary);">';
           
           if(ss.method === 'rk45') {
-            rhtml += '<tr><td>İç adım sayısı:</td><td style="text-align:right; font-weight:600; font-family:monospace;">' + (ss.steps || 0) + '</td></tr>';
-            rhtml += '<tr><td>Reddedilen adım:</td><td style="text-align:right; font-weight:600; font-family:monospace; color:' + (ss.rejected > 0 ? '#f59e0b' : 'var(--accent-success)') + ';">' + (ss.rejected || 0) + '</td></tr>';
-            if(ss.dtMin !== undefined) rhtml += '<tr><td>dt aralığı:</td><td style="text-align:right; font-weight:600; font-family:monospace;">' + ss.dtMin.toExponential(2) + ' → ' + ss.dtMax.toExponential(2) + ' s</td></tr>';
-            if(ss.maxError !== undefined) rhtml += '<tr><td>Maks yerel hata:</td><td style="text-align:right; font-weight:600; font-family:monospace;">' + ss.maxError.toExponential(2) + '</td></tr>';
+            rhtml += '<tr><td>İç adım sayısı:</td><td style="text-align:right; font-weight:600;">' + (ss.steps || 0) + '</td></tr>';
+            rhtml += '<tr><td>Reddedilen adım:</td><td style="text-align:right; font-weight:600; color:' + (ss.rejected > 0 ? '#f59e0b' : 'var(--accent-success)') + ';">' + (ss.rejected || 0) + '</td></tr>';
+            if(ss.dtMin !== undefined) rhtml += '<tr><td>dt aralığı:</td><td style="text-align:right; font-weight:600;">' + ss.dtMin.toExponential(2) + ' → ' + ss.dtMax.toExponential(2) + ' s</td></tr>';
+            if(ss.maxError !== undefined) rhtml += '<tr><td>Maks yerel hata:</td><td style="text-align:right; font-weight:600;">' + ss.maxError.toExponential(2) + '</td></tr>';
             if(ss.events && ss.events.length > 0) rhtml += '<tr><td>Algılanan olaylar:</td><td style="text-align:right; font-weight:600;">' + ss.events.length + '</td></tr>';
             if(ss.stiffnessDetected) rhtml += '<tr style="border-top:1px solid var(--border-color);"><td colspan="2" style="padding-top:6px; font-weight:700; color:#ef4444;">⚠ Sertlik Uyarısı</td></tr><tr><td colspan="2" style="font-size:var(--fs-tiny); color:#ef4444;">Problem sert (stiff) olabilir. Adım boyutu sürekli minimumda veya ardışık redler algılandı. Tolerans değerlerini gevşetmeyi veya simülasyon parametrelerini gözden geçirmeyi deneyin.</td></tr>';
           }
@@ -499,11 +499,11 @@ function veSolverRunLegacy() {
             rhtml += '<tr style="border-top:1px solid var(--border-color);"><td colspan="2" style="padding-top:6px; font-weight:600; color:var(--text-heading);"><span class="mf-ico mf-ico-zap"></span> Enerji Dengesi</td></tr>';
             rhtml += '<tr><td>Hata:</td><td style="text-align:right; font-weight:700; color:' + errColor + ';">%' + ee.error_pct.toFixed(4) + '</td></tr>';
             rhtml += '<tr><td>Durum:</td><td style="text-align:right; font-weight:600; color:' + errColor + ';">' + errLabel + '</td></tr>';
-            rhtml += '<tr><td>ΔKE:</td><td style="text-align:right; font-family:monospace;">' + (ee.deltaKE / 1000).toFixed(2) + ' kJ</td></tr>';
-            rhtml += '<tr><td>Motor işi:</td><td style="text-align:right; font-family:monospace;">' + (ee.breakdown.W_engine / 1000).toFixed(2) + ' kJ</td></tr>';
-            rhtml += '<tr><td>Yuvarlanma:</td><td style="text-align:right; font-family:monospace;">' + (ee.breakdown.W_rolling / 1000).toFixed(2) + ' kJ</td></tr>';
-            rhtml += '<tr><td>Aerodinamik:</td><td style="text-align:right; font-family:monospace;">' + (ee.breakdown.W_aero / 1000).toFixed(2) + ' kJ</td></tr>';
-            rhtml += '<tr><td>Eğim:</td><td style="text-align:right; font-family:monospace;">' + (ee.breakdown.W_grade / 1000).toFixed(2) + ' kJ</td></tr>';
+            rhtml += '<tr><td>ΔKE:</td><td style="text-align:right;">' + (ee.deltaKE / 1000).toFixed(2) + ' kJ</td></tr>';
+            rhtml += '<tr><td>Motor işi:</td><td style="text-align:right;">' + (ee.breakdown.W_engine / 1000).toFixed(2) + ' kJ</td></tr>';
+            rhtml += '<tr><td>Yuvarlanma:</td><td style="text-align:right;">' + (ee.breakdown.W_rolling / 1000).toFixed(2) + ' kJ</td></tr>';
+            rhtml += '<tr><td>Aerodinamik:</td><td style="text-align:right;">' + (ee.breakdown.W_aero / 1000).toFixed(2) + ' kJ</td></tr>';
+            rhtml += '<tr><td>Eğim:</td><td style="text-align:right;">' + (ee.breakdown.W_grade / 1000).toFixed(2) + ' kJ</td></tr>';
           }
           
           // PCHIP spline bilgisi

@@ -956,14 +956,15 @@ describe('pencere kabukları jeton konuşur', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 12) DISPLAY YÜZÜNE BAĞLI ELEMAN KENDİ TRACKING'İNİ YAZMAZ
+// 12) BAŞLIK BAĞLAMASINA GİREN ELEMAN KENDİ TRACKING'İNİ YAZMAZ
 //
 // Ölçülen kusur: "MFSim" açılış ekranında -0,2px, karşılama ekranında +0,5px
 // tracking ile çiziliyordu — aynı yüz, aynı boy, saniyeler arayla.
 //
-// Sebep KASKAD: display bağlaması (`h1..h4, .mfsim-loading-logo,
-// .ve-welcome-logo { font-family:var(--font-display); letter-spacing:-0.01em }`)
-// ile elemanın kendi `letter-spacing:0.5px` bildirimi AYNI özgüllükte. İkisinde
+// Sebep KASKAD: başlık bağlaması (`h1..h4, .mfsim-loading-logo,
+// .ve-welcome-logo { letter-spacing:-0.01em }` — 2026-09-23'e kadar ayrıca
+// serif `font-family` taşıyordu, tek yüzde yalnız tracking kaldı) ile
+// elemanın kendi `letter-spacing:0.5px` bildirimi AYNI özgüllükte. İkisinde
 // bağlama SONRA geliyordu (bildirim ölüydü), `.ve-welcome-logo` ise bağlamadan
 // sonra tanımlı olduğu için KAZANIYORDU. `0.5px` eski SANS markadan kalmaydı.
 //
@@ -972,11 +973,13 @@ describe('pencere kabukları jeton konuşur', () => {
 // giren bir eleman tracking'ini bağlamadan alır.
 //
 // Gerçek tarayıcı karşılığı: `tests/e2e/marka-tutarli.spec.js`.
-describe('display yüzüne bağlı eleman kendi tracking’ini yazmaz', () => {
+describe('başlık bağlamasına giren eleman kendi tracking’ini yazmaz', () => {
+  // Bağlama kuralı: seçici listesinde marka sınıfları VE tracking bildirimi
+  // olan kural. Listesi elle kopyalanmaz, kaynaktan okunur.
+  const BAGLAMA = /([^{}]*\.mfsim-loading-logo[^{}]*\.ve-welcome-logo[^{}]*)\{([^{}]*letter-spacing[^{}]*)\}/;
   test('bağlama listesindeki hiçbir sınıf letter-spacing bildirmiyor', () => {
     const govde = STYLES.replace(/\/\*[\s\S]*?\*\//g, '');
-    // Bağlama kuralını BUL — listesi elle kopyalanmaz, kaynaktan okunur.
-    const m = govde.match(/([^{}]*)\{[^{}]*font-family:\s*var\(--font-display\)[^{}]*\}/);
+    const m = govde.match(BAGLAMA);
     expect(m).not.toBeNull();
     const bagli = m[1].split(',').map((s) => s.trim()).filter((s) => s.startsWith('.'));
     expect(bagli.length).toBeGreaterThanOrEqual(4);   // liste gerçekten okundu
@@ -991,7 +994,7 @@ describe('display yüzüne bağlı eleman kendi tracking’ini yazmaz', () => {
       const blok = govde.slice(bas.lastIndex, j - 1);
       bas.lastIndex = j;
       if (!sel || sel.startsWith('@')) continue;
-      if (/font-family:\s*var\(--font-display\)/.test(blok)) continue;   // bağlamanın kendisi
+      if (sel === m[1].trim()) continue;   // bağlamanın kendisi
       sel.split(',').forEach((dal) => {
         if (!bagli.includes(dal.trim())) return;
         blok.split(';').forEach((dec) => {
