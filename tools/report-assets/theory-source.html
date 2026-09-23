@@ -9,19 +9,19 @@
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"
   onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --ink:#26241f; --paper:#fdfdfb; --line:#c6c0b4; --line-soft:#e6e1d8;
   --vurgu:#96441f; --vurgu-soft:#f2e9e3; --check:#2a6140; --check-soft:#e8f0ea;
-  --warn:#6d5310; --warn-soft:#f5efe2; --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --warn:#6d5310; --warn-soft:#f5efe2; --yuz:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:var(--yuz);
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--paper);color:var(--ink);
-  font-family:'Source Serif 4',Georgia,serif;font-size:15.5px;line-height:1.68;}
+  font-family:var(--yuz);font-variant-numeric:tabular-nums;font-size:15.5px;line-height:1.68;}
 .page{max-width:880px;margin:0 auto;padding:48px 32px 96px}
-h1,h2,h3{font-family:'Archivo',system-ui,sans-serif;color:var(--vurgu);line-height:1.25;font-stretch:87%}
+h1,h2,h3{font-family:var(--yuz);color:var(--vurgu);line-height:1.25}
 h1{font-size:27px;font-weight:700;letter-spacing:.2px;margin:0 0 6px}
 h2{font-size:19px;font-weight:700;margin:56px 0 14px;padding-top:14px;border-top:2px solid var(--vurgu);
   display:flex;gap:14px;align-items:baseline}
@@ -37,12 +37,12 @@ em{font-style:italic}
 .antet .band{background:var(--vurgu);color:#fff;padding:16px 20px}
 .antet .band .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;opacity:.85;margin-bottom:6px}
 .antet .band h1{color:#fff}
-.antet .band .sub{font-family:'Archivo',sans-serif;font-size:13.5px;font-weight:400;opacity:.92;margin-top:4px}
+.antet .band .sub{font-family:var(--yuz);font-size:13.5px;font-weight:400;opacity:.92;margin-top:4px}
 .antet .fields{display:grid;grid-template-columns:repeat(4,1fr);border-top:1.5px solid var(--ink)}
 .antet .f{padding:8px 12px;border-right:1px solid var(--line)}
 .antet .f:last-child{border-right:none}
 .antet .f .k{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#5a6270}
-.antet .f .v{font-family:'Archivo',sans-serif;font-size:13px;font-weight:600;margin-top:2px}
+.antet .f .v{font-family:var(--yuz);font-size:13px;font-weight:600;margin-top:2px}
 
 /* ── Denklem/işaret blokları ── */
 .eqno{position:relative}
@@ -51,18 +51,18 @@ em{font-style:italic}
 .note{background:var(--vurgu-soft);border-left:3px solid var(--vurgu);padding:12px 16px;margin:16px 0;font-size:14.5px}
 .note.warn{background:var(--warn-soft);border-left-color:var(--warn)}
 .note.check{background:var(--check-soft);border-left-color:var(--check)}
-.note .t{font-family:'Archivo',sans-serif;font-weight:700;font-size:12px;letter-spacing:1.5px;
+.note .t{font-family:var(--yuz);font-weight:700;font-size:12px;letter-spacing:1.5px;
   text-transform:uppercase;display:block;margin-bottom:4px}
 .note.warn .t{color:var(--warn)} .note.check .t{color:var(--check)} .note .t{color:var(--vurgu)}
 
 /* ── Tablolar ── */
 table{border-collapse:collapse;width:100%;margin:14px 0 20px;font-size:13.5px}
-caption{caption-side:top;text-align:left;font-family:'Archivo',sans-serif;font-size:12.5px;
+caption{caption-side:top;text-align:left;font-family:var(--yuz);font-size:12.5px;
   font-weight:600;color:var(--vurgu);padding-bottom:6px;letter-spacing:.3px}
-th{font-family:'Archivo',sans-serif;font-size:12px;font-weight:600;letter-spacing:.5px;
+th{font-family:var(--yuz);font-size:12px;font-weight:600;letter-spacing:.5px;
   background:var(--vurgu-soft);color:var(--vurgu);padding:7px 10px;border:1px solid var(--line);text-align:center}
 td{padding:6px 10px;border:1px solid var(--line-soft);font-family:var(--mono);font-size:12.8px;text-align:right;white-space:nowrap}
-td.l{text-align:left;font-family:'Source Serif 4',serif;font-size:13.8px;white-space:normal}
+td.l{text-align:left;font-family:var(--yuz);font-size:13.8px;white-space:normal}
 td.c{text-align:center}
 tr.sum td{border-top:1.5px solid var(--line);background:#f7f8f9;font-weight:500}
 .ok{color:var(--check);font-weight:600}
@@ -71,11 +71,11 @@ tr.sum td{border-top:1.5px solid var(--line);background:#f7f8f9;font-weight:500}
 
 /* ── Şekiller ── */
 figure{margin:22px 0 26px;border:1px solid var(--line);padding:14px 14px 10px;background:#fff}
-figcaption{font-family:'Archivo',sans-serif;font-size:12.5px;color:#3c4350;margin-top:10px;
+figcaption{font-family:var(--yuz);font-size:12.5px;color:#3c4350;margin-top:10px;
   padding-top:8px;border-top:1px solid var(--line-soft)}
 figcaption b{color:var(--vurgu)}
 svg{width:100%;height:auto;display:block}
-svg text{font-family:'IBM Plex Mono',monospace}
+svg text{font-family:var(--yuz)}
 
 /* ── Kod ── */
 pre{background:#f4f5f6;border:1px solid var(--line);padding:16px 18px;overflow-x:auto;
@@ -84,7 +84,7 @@ code{font-family:var(--mono);font-size:.92em;background:#f1f2f4;padding:1px 5px;
 pre code{background:none;padding:0}
 
 .katex-display{margin:14px 0 18px}
-.toc{font-family:'Archivo',sans-serif;font-size:13.5px;columns:2;column-gap:36px;margin:10px 0 4px}
+.toc{font-family:var(--yuz);font-size:13.5px;columns:2;column-gap:36px;margin:10px 0 4px}
 .toc a{color:var(--ink);text-decoration:none;display:block;padding:3px 0;border-bottom:1px dotted var(--line-soft)}
 .toc a:hover{color:var(--vurgu)}
 .toc .n{font-family:var(--mono);font-size:11.5px;color:var(--vurgu);margin-right:8px}

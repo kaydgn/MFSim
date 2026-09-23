@@ -175,12 +175,14 @@ function veGuideEnsureAssets(cb){
 // KaTeX GEÇMİYOR ve bu bilinçli: kılavuzda denklem yok. Özet raporun aynı
 // kararı belge boyunu 944 KB'tan 340 KB'a indiriyor.
 function veGuideDocHTML(o){
-  if(typeof window === 'undefined' || !window.FEAD_REPORT_TEMPLATE_B64
-     || !window.MNT_REPORT_ASSETS)
+  // Kılavuzun gerek duyduğu tek varlık raporun ŞABLONU (kozmetik bloğu
+  // oradan kopyalanıyor). Yüz artık rapor paketinden değil ARAYÜZÜN kendi
+  // @font-face kurallarından geliyor (js/theme.js → veThemeFontFaceCss).
+  if(typeof window === 'undefined' || !window.FEAD_REPORT_TEMPLATE_B64)
     throw new Error('Rapor varlıkları yüklenmedi.');
   var tpl = decodeURIComponent(escape(atob(window.FEAD_REPORT_TEMPLATE_B64)));
   var css = _gkReportCss(tpl);
-  var fonts = window.MNT_REPORT_ASSETS.fontsCss || '';
+  var fonts = (typeof veThemeFontFaceCss === 'function') ? veThemeFontFaceCss() : '';
   return '<!DOCTYPE html>\n<html lang="tr">\n<head>\n<meta charset="UTF-8">\n'
     + '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
     + '<title>' + _gkEsc(o.title) + '</title>\n'
@@ -248,7 +250,7 @@ var VE_GUIDE_APPFIG_TOKENS = {
   '--bg-primary': '#fff', '--bg-secondary': '#fbfaf7', '--bg-tertiary': '#f2efe8',
   '--text-primary': '#26241f', '--text-heading': '#14120f',
   '--border-light': '#ddd7cb', '--border-hover': '#c6c0b4',
-  '--font-mono': "'IBM Plex Mono',ui-monospace,monospace",
+  '--font-mono': "'Inter',system-ui,sans-serif",   // tek yüz — belgede de (2026-09-23)
   '--fs-body': '11px', '--fs-md': '12px', '--fs-lg': '13px', '--fs-h2': '15px',
   '--radius-xs': '2px', '--radius-md': '3px', '--radius-pill': '999px', '--tracking-wide': '.04em',
   '--ink-accent': '#24425f', '--ink-success': '#2e7d4f',
@@ -424,7 +426,7 @@ function veGuideSceneCSS(reportCss){
   return (jet ? '.appfig{' + jet + '}\n' : '')
     + '.appfig .gk-sahne{border:1px solid var(--line); background:var(--paper);'
     + ' padding:10px 12px; overflow-x:auto; text-align:left;'
-    + ' font-family:system-ui,-apple-system,"Segoe UI",sans-serif;'
+    + ' font-family:\'Inter\',system-ui,-apple-system,"Segoe UI",sans-serif;'
     + ' color:var(--text-primary); line-height:1.45;}\n'
     + '.appfig .gk-sahne *{box-sizing:border-box;}\n'
     // MUTLAK KONUMLU PARÇA SAHNEDE AKIŞA DÖNER. Katman paneli kanvasın
@@ -737,7 +739,7 @@ function _gkKart(k){
     + 'flex-direction:column; gap:8px;">';
   h += '<div style="display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;">'
      + '<b style="font-size:var(--fs-body); color:var(--text-primary);">' + _gkEsc(k.modul) + '</b>'
-     + '<span style="font-family:ui-monospace,monospace; font-size:var(--fs-micro); '
+     + '<span style="font-size:var(--fs-micro); '
      + 'letter-spacing:.08em; text-transform:uppercase; padding:1px 6px; border-radius:var(--radius-xs); '
      + (hazir
         ? 'background:rgba(16,185,129,.14); color:var(--accent-success);">HAZIR'

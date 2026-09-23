@@ -2640,11 +2640,12 @@ function veCloseDetailedReport() {
 // ============================================================================
 //  ARAÇ PERFORMANS — DETAYLI RAPOR → BAĞIMSIZ HTML (referans kozmetiği)
 // ============================================================================
-// "Takoz Çökme–Titreşim" raporunun estetiğini birebir izler: Source Serif 4 gövde,
-// Archivo başlıklar, IBM Plex Mono sayılar; Prusya mavisi vurgu; numaralı <h2>
-// bölümler + <p> prose + <caption>'lı tablolar + <figure> + KaTeX denklemleri.
-// Temadan bağımsız beyaz. Fontlar ve KaTeX belgeye GÖMÜLÜ (window.MNT_REPORT_ASSETS,
-// Takoz raporuyla aynı paket) — indirilen dosya çevrimdışı, sıfır ağ isteğiyle açılır.
+// "Takoz Çökme–Titreşim" raporunun estetiğini birebir izler: TEK YÜZ (Inter —
+// arayüzün yüzü; sayılar tabular-nums ile hizalı), Prusya mavisi vurgu; numaralı
+// <h2> bölümler + <p> prose + <caption>'lı tablolar + <figure> + KaTeX denklemleri.
+// Temadan bağımsız beyaz. Yüz ve KaTeX belgeye GÖMÜLÜ (yüz arayüzün kendi
+// @font-face kurallarından, KaTeX Takoz raporuyla aynı paketten) — indirilen
+// dosya çevrimdışı, sıfır ağ isteğiyle açılır.
 //
 // SÖZLEŞME (bölüm üreticileri için) — her bölüm şu imzayı taşır:
 //   function _veRepSecX(R, sim, H, charts) -> { id, title, body }  (yoksa null)
@@ -3818,7 +3819,8 @@ var _VE_REPORT_CSS = `
   --ink:#26241f; --paper:#fdfdfb; --line:#c6c0b4; --line-soft:#e6e1d8;
   --vurgu:#96441f; --vurgu-soft:#f2e9e3; --check:#2a6140; --check-soft:#e8f0ea;
   --warn:#6d5310; --warn-soft:#f5efe2; --bad:#b23b3b;
-  --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --yuz:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:var(--yuz);  /* rakam hizası tabular-nums ile — ayrı bir yüz yok */
   /* Belge tipografi ölçeği — Takoz raporu şablonuyla aynı basamaklar. */
   --rfs-tiny:10px;    /* antet alan etiketi */
   --rfs-body:11.5px;  /* eyebrow, TOC numarası, rozet */
@@ -3831,16 +3833,16 @@ var _VE_REPORT_CSS = `
   /* GÖRELİ basamaklar — bilerek em: satır içi matematik ve kod, içine
      gömüldüğü metinle birlikte ölçeklenmeli; sabit px iç içe kullanımda
      (örn. tablo hücresindeki satır içi formül) yanlış boyut verirdi. */
-  --rfs-math:1.02em;  /* satır içi KaTeX — Source Serif 4 ile optik denge */
+  --rfs-math:1.02em;  /* satır içi KaTeX — gövde yüzüyle optik denge */
   --rfs-code:.92em;   /* satır içi <code> */
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--paper);color:var(--ink);
-  font-family:"Source Serif 4",Georgia,serif;font-size:var(--rfs-title);line-height:1.68;
+  font-family:var(--yuz);font-variant-numeric:tabular-nums;font-size:var(--rfs-title);line-height:1.68;
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
 .page{max-width:880px;margin:0 auto;padding:48px 32px 96px}
-h1,h2,h3{font-family:"Archivo",system-ui,sans-serif;color:var(--vurgu);line-height:1.25;font-stretch:87%}
+h1,h2,h3{font-family:var(--yuz);color:var(--vurgu);line-height:1.25}
 h1{font-size:var(--rfs-h1);font-weight:700;letter-spacing:.2px;margin:0 0 6px}
 h2{font-size:var(--rfs-h2);font-weight:700;margin:44px 0 14px;padding-top:14px;border-top:2px solid var(--vurgu);
   display:flex;gap:14px;align-items:baseline}
@@ -3855,12 +3857,12 @@ strong{font-weight:600} em{font-style:italic}
 .antet .band{background:var(--vurgu);color:#fff;padding:16px 20px}
 .antet .band .eyebrow{font-family:var(--mono);font-size:var(--rfs-body);letter-spacing:2.5px;text-transform:uppercase;opacity:.85;margin-bottom:6px}
 .antet .band h1{color:#fff}
-.antet .band .sub{font-family:"Archivo",sans-serif;font-size:var(--rfs-lg);font-weight:400;opacity:.92;margin-top:4px;line-height:1.4}
+.antet .band .sub{font-family:var(--yuz);font-size:var(--rfs-lg);font-weight:400;opacity:.92;margin-top:4px;line-height:1.4}
 .antet .fields{display:grid;grid-template-columns:repeat(5,1fr);border-top:1.5px solid var(--ink)}
 .antet .f{padding:8px 12px;border-right:1px solid var(--line)}
 .antet .f:last-child{border-right:none}
 .antet .f .k{font-family:var(--mono);font-size:var(--rfs-tiny);letter-spacing:1.5px;text-transform:uppercase;color:#5a6270}
-.antet .f .v{font-family:"Archivo",sans-serif;font-size:var(--rfs-lg);font-weight:600;margin-top:2px;word-break:break-word}
+.antet .f .v{font-family:var(--yuz);font-size:var(--rfs-lg);font-weight:600;margin-top:2px;word-break:break-word}
 
 /* ── Denklem blokları (KaTeX) ── */
 .eqno{position:relative}
@@ -3873,18 +3875,18 @@ strong{font-weight:600} em{font-style:italic}
 .note{background:var(--vurgu-soft);border-left:3px solid var(--vurgu);padding:12px 16px;margin:16px 0;font-size:var(--rfs-xl)}
 .note.warn{background:var(--warn-soft);border-left-color:var(--warn)}
 .note.check{background:var(--check-soft);border-left-color:var(--check)}
-.note .t{font-family:"Archivo",sans-serif;font-weight:700;font-size:var(--rfs-md);letter-spacing:1.5px;
+.note .t{font-family:var(--yuz);font-weight:700;font-size:var(--rfs-md);letter-spacing:1.5px;
   text-transform:uppercase;display:block;margin-bottom:4px;color:var(--vurgu)}
 .note.warn .t{color:var(--warn)} .note.check .t{color:var(--check)}
 
 /* ── Tablolar ── */
 table{border-collapse:collapse;width:100%;margin:14px 0 20px;font-size:var(--rfs-lg)}
-caption{caption-side:top;text-align:left;font-family:"Archivo",sans-serif;font-size:var(--rfs-md);
+caption{caption-side:top;text-align:left;font-family:var(--yuz);font-size:var(--rfs-md);
   font-weight:600;color:var(--vurgu);padding-bottom:6px;letter-spacing:.3px}
-th{font-family:"Archivo",sans-serif;font-size:var(--rfs-md);font-weight:600;letter-spacing:.5px;
+th{font-family:var(--yuz);font-size:var(--rfs-md);font-weight:600;letter-spacing:.5px;
   background:var(--vurgu-soft);color:var(--vurgu);padding:7px 10px;border:1px solid var(--line);text-align:center}
 td{padding:6px 10px;border:1px solid var(--line-soft);font-family:var(--mono);font-size:var(--rfs-md);text-align:right;white-space:nowrap}
-td.l{text-align:left;font-family:"Source Serif 4",Georgia,serif;font-size:var(--rfs-lg);white-space:normal}
+td.l{text-align:left;font-family:var(--yuz);font-size:var(--rfs-lg);white-space:normal}
 td.c{text-align:center}
 tr.sum td{border-top:1.5px solid var(--line);background:#f7f8f9;font-weight:500}
 /* ── Anahtar–değer tablosu: İKİ SÜTUN DA gövde yazı tipi, normal ağırlık ──
@@ -3897,7 +3899,7 @@ tr.sum td{border-top:1.5px solid var(--line);background:#f7f8f9;font-weight:500}
    öyle. Ayrım "tablo" ile "özellik listesi" arasında, bold ile normal arasında
    değil. */
 table.kv td.l{width:46%;color:#3c4350}
-table.kv td:not(.l){font-family:"Source Serif 4",Georgia,serif;font-size:var(--rfs-lg);
+table.kv td:not(.l){font-family:var(--yuz);font-size:var(--rfs-lg);
   font-weight:400;font-variant-numeric:tabular-nums}
 .st-ok{color:var(--check);font-weight:600;white-space:nowrap}
 .st-warn{color:var(--warn);font-weight:600;white-space:nowrap}
@@ -3908,11 +3910,11 @@ table.kv td:not(.l){font-family:"Source Serif 4",Georgia,serif;font-size:var(--r
 /* ── Şekiller ── */
 figure{margin:22px 0 26px;border:1px solid var(--line);padding:14px 14px 10px;background:#fff}
 figure img{width:100%;height:auto;display:block}
-figcaption{font-family:"Archivo",sans-serif;font-size:var(--rfs-md);color:#3c4350;margin-top:10px;
+figcaption{font-family:var(--yuz);font-size:var(--rfs-md);color:#3c4350;margin-top:10px;
   padding-top:8px;border-top:1px solid var(--line-soft)}
 figcaption b{color:var(--vurgu)}
 svg{width:100%;height:auto;display:block}
-svg text{font-family:"IBM Plex Mono",monospace}
+svg text{font-family:var(--yuz)}
 
 /* ── Kod ── */
 pre{background:#f4f5f6;border:1px solid var(--line);padding:16px 18px;overflow-x:auto;
@@ -3921,12 +3923,12 @@ code{font-family:var(--mono);font-size:var(--rfs-code);background:#f1f2f4;paddin
 pre code{background:none;padding:0}
 
 /* ── İçindekiler ── */
-.toc{font-family:"Archivo",sans-serif;font-size:var(--rfs-lg);columns:2;column-gap:36px;margin:10px 0 4px}
+.toc{font-family:var(--yuz);font-size:var(--rfs-lg);columns:2;column-gap:36px;margin:10px 0 4px}
 .toc a{color:var(--ink);text-decoration:none;display:block;padding:3px 0;border-bottom:1px dotted var(--line-soft);break-inside:avoid}
 .toc a:hover{color:var(--vurgu)}
 .toc .n{font-family:var(--mono);font-size:var(--rfs-body);color:var(--vurgu);margin-right:8px;font-weight:600}
 
-.foot{margin-top:40px;font-size:var(--rfs-lg);color:#5a6270;border-top:1px solid var(--line);padding-top:12px;font-family:"Archivo",sans-serif}
+.foot{margin-top:40px;font-size:var(--rfs-lg);color:#5a6270;border-top:1px solid var(--line);padding-top:12px;font-family:var(--yuz)}
 
 @media print{
   @page{margin:18mm 16mm}
@@ -3990,19 +3992,21 @@ function veDownloadReportHTML() {
 
   if(typeof showToast === 'function') showToast('HTML rapor hazırlanıyor…', 'info');
 
-  // Gömülü varlıklar — Takoz raporuyla AYNI kaynak (window.MNT_REPORT_ASSETS):
-  // Archivo + Source Serif 4 + IBM Plex Mono (woff2 data-URI) ve KaTeX (css+js).
-  // Hepsi belgeye gömülür; indirilen rapor çevrimdışı, sıfır ağ isteğiyle açılır.
-  // Varlık yüklenemezse rapor yine üretilir — yalnız yerel fontlara ve düz
-  // metin formüllere düşer (sessiz başarısızlık değil: belge eksiksiz kalır).
+  // Gömülü varlıklar: yüz ARAYÜZÜN kendi @font-face kurallarından (Inter —
+  // js/theme.js → veThemeFontFaceCss; ekran ve kâğıt aynı aile), KaTeX
+  // (css+js) Takoz raporuyla AYNI paketten (window.MNT_REPORT_ASSETS). Hepsi
+  // belgeye gömülür; indirilen rapor çevrimdışı, sıfır ağ isteğiyle açılır.
+  // Paket yüklenemezse rapor yine üretilir — düz metin formüllere düşer
+  // (sessiz başarısızlık değil: belge eksiksiz kalır).
   function withAssets(cb) {
+    function yuz() { return (typeof veThemeFontFaceCss === 'function') ? veThemeFontFaceCss() : ''; }
     function pick() {
       var A = window.MNT_REPORT_ASSETS;
-      return A ? { fontsCss: A.fontsCss || '', katexCss: A.katexCss || '', katexJs: A.katexJs || '' }
-               : { fontsCss: '', katexCss: '', katexJs: '' };
+      return A ? { fontsCss: yuz(), katexCss: A.katexCss || '', katexJs: A.katexJs || '' }
+               : { fontsCss: yuz(), katexCss: '', katexJs: '' };
     }
     if(typeof _mntReportEnsureAssets === 'function') {
-      try { _mntReportEnsureAssets(function(ok) { cb(ok ? pick() : { fontsCss: '', katexCss: '', katexJs: '' }); }); return; }
+      try { _mntReportEnsureAssets(function(ok) { cb(ok ? pick() : { fontsCss: yuz(), katexCss: '', katexJs: '' }); }); return; }
       catch(e) {}
     }
     cb(pick());

@@ -8705,7 +8705,9 @@ span.ve-fw-ro{ display:inline-block; }
    satıra düşüyordu (ölçüldü). */
 .ve-fp-sum-i{
   display:inline-flex; align-items:baseline; gap:4px; white-space:nowrap;
-  padding:2px 8px; border-radius:var(--radius-sm);
+  /* 7 px: sürücü kasnağın beş çipi 380 px'lik sütuna TEK satırda sığsın —
+     8 px'te beşincisi 3,5 px farkla alt satıra tek başına düşüyordu. */
+  padding:2px 7px; border-radius:var(--radius-sm);
   background:var(--bg-tertiary); color:var(--text-muted);
   font-size:var(--fs-micro); line-height:1.5;
 }

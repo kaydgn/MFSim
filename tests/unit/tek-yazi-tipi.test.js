@@ -229,3 +229,50 @@ describe('JS — tek aile kuralı', () => {
     expect(aykiri).toEqual([]);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BELGELER DE TEK YÜZ (2026-09-23)
+//
+// İndirilen raporlar (AP · Takoz · FEAD ayrıntılı · FEAD özet) ve kılavuz
+// kendi üç yüzünü taşıyordu: Source Serif 4 gövde · Archivo başlık · IBM Plex
+// Mono sayı, ~390 KB'lık ayrı bir pakette. Aynı program ekranda bir, kâğıtta
+// üç aileyle yazıyordu. Belgeler artık arayüzün yüzünü arayüzün KENDİ
+// @font-face kurallarından gömüyor (js/theme.js → veThemeFontFaceCss);
+// ikinci bir kopya yok. İstisnalar yalnız hizası boşlukla kurulmuş TXT sayfası
+// (yukarıda) ve KaTeX'in formül yüzü — matematik dizgisi kendi yüzüyle yazar.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('belgeler de tek yüz — raporlar, özet, kılavuz', () => {
+  const ESKI = /Archivo|Source Serif|IBM Plex/;
+  // Yorumlar ayıklanır: eski yüzü ANLATAN bir yorum kural ihlali değil.
+  const yorumsuz = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n').map((l) => l.replace(/(^|[^:'"\\])\/\/.*$/, '$1')).join('\n');
+
+  test('eski üç yüz HİÇBİR kaynakta yok — JS, şablon kaynakları, üretilmiş şablonlar', () => {
+    const kalan = [];
+    JS.forEach(({ f, src }) => { if (ESKI.test(yorumsuz(src))) kalan.push('js/' + f); });
+    ['theory-source.html', 'fead-theory-source.html'].forEach((f) => {
+      const s = fs.readFileSync(path.join(ROOT, 'tools/report-assets', f), 'utf8');
+      if (ESKI.test(yorumsuz(s.replace(/<!--[\s\S]*?-->/g, '')))) kalan.push('tools/report-assets/' + f);
+    });
+    // Üretilmiş şablonlar base64 — çözülüp bakılır; kaynağından yeniden
+    // üretilmemiş bir şablon eski yüzü kâğıda taşımaya devam ederdi.
+    [['mount-report-template.js', 'MNT'], ['fead-report-template.js', 'FEAD']].forEach(([f]) => {
+      const m = fs.readFileSync(path.join(ROOT, 'js', f), 'utf8').match(/= "([A-Za-z0-9+/=]+)"/);
+      const t = Buffer.from(m[1], 'base64').toString('utf8');
+      if (ESKI.test(yorumsuz(t))) kalan.push('js/' + f + ' (çözülmüş)');
+      expect(t).toMatch(/--yuz:'Inter'/);
+    });
+    expect(kalan).toEqual([]);
+  });
+
+  test('rapor paketi metin yüzü TAŞIMIYOR — belgeler yüzü arayüzün kurallarından alıyor', () => {
+    const paket = fs.readFileSync(path.join(ROOT, 'js/mount-report-assets.js'), 'utf8');
+    expect(paket).not.toMatch(/fontsCss/);                 // eskiden ~390 KB base64
+    const kopru = JS.filter(({ src }) => /veThemeFontFaceCss\(\)/.test(src)).map(({ f }) => f);
+    expect(kopru).toEqual(expect.arrayContaining(
+      ['cp-fead-report.js', 'cp-fead-summary.js', 'cp-mount-report.js', 'guide-kit.js', 'results.js']));
+    // Hiçbir üretici paketin kaldırılan alanını okumuyor (okusaydı sessizce
+    // `undefined` gömerdi — belge yazı tipsiz açılırdı).
+    expect(JS.filter(({ src }) => /\bA\.fontsCss|MNT_REPORT_ASSETS\.fontsCss/.test(src)).map(({ f }) => f)).toEqual([]);
+  });
+});

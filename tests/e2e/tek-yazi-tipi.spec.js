@@ -63,12 +63,24 @@ async function ac(page, kayit) {
 }
 
 // Harf harf ölçer: eksik olan HANGİSİ olduğu görünsün.
+//
+// ÜÇ YEDEKLE, EŞİKSİZ (2026-09-23). İlk yazım harfi `"Inter", monospace` ile
+// ve çıplak `monospace` ile çizip farka 0,5 px eşik koyuyordu. CI'da kırmızıya
+// döndü ve sebep yüz değil TESADÜFTÜ: Inter'in "o/ö" ilerlemesi (0,597 em)
+// DejaVu Sans Mono'nunkine (0,602 em) çok yakın — yerelde fark 0,55 px (eşiği
+// 0,05 px'le geçiyordu), CI'ın Chromium'unda eşiğin altına düştü ve "ö"
+// eksik sayıldı. Şimdi aynı harf aynı aileyle ÜÇ AYRI yedeğe karşı çizilir:
+// harf yüzde VARSA üçü de Inter'den çizilir, genişlikler BİREBİR aynıdır;
+// yoksa her biri kendi yedeğine düşer ve ayrışır. Inter'in kendi genişliği
+// ve bir eşik artık işin içinde değil.
 async function yuzdeOlmayanHarfler(page, aile, agirlik, harfler) {
   return page.evaluate(([a, w, hs]) => {
     const c = document.createElement('canvas').getContext('2d');
     const gen = (f, t) => { c.font = f; return c.measureText(t).width; };
-    return [...hs].filter((h) => Math.abs(gen(w + ' 100px "' + a + '", monospace', h)
-      - gen(w + ' 100px monospace', h)) < 0.5);
+    return [...hs].filter((h) => {
+      const g = ['monospace', 'serif', 'sans-serif'].map((y) => gen(w + ' 100px "' + a + '", ' + y, h));
+      return Math.max(...g) - Math.min(...g) > 0.01;
+    });
   }, [aile, agirlik, harfler]);
 }
 
@@ -198,4 +210,56 @@ test('yüz GÖMÜLÜ — tek dosya açılırken ağ isteği yok', async ({ page 
   page.on('request', (r) => { if (!r.url().startsWith('file://') && !r.url().startsWith('data:')) dis.push(r.url()); });
   await ac(page);
   expect(dis).toEqual([]);
+});
+
+// BELGE DE TEK YÜZ (2026-09-23). İndirilen raporlar kendi üç yüzünü
+// taşıyordu — FEAD özetinde Archivo 133 · Source Serif 4 271 · IBM Plex Mono
+// 712 öğe, ayrıntılı raporda 301 · 730 · 1311. Yüz artık arayüzün KENDİ
+// @font-face kurallarından gömülüyor (veThemeFontFaceCss). Belge TEK BAŞINA
+// açılır: ölçülen şey, uygulamanın dışında yüzün gerçekten yüklenmesi.
+test('BELGE de tek yüz — indirilen FEAD raporları arayüzün yüzünü gömüyor', async ({ page, browser }) => {
+  await ac(page);
+  await page.click('.ve-module-card[data-module="fead-analysis"]');
+  await page.waitForSelector('#mfsim-module-loading', { state: 'hidden', timeout: 30000 }).catch(() => {});
+  await page.waitForTimeout(800);
+  await page.evaluate(() => { if (typeof veFeadWizClose === 'function') veFeadWizClose(false); veFeadLoadExample('AG00976_GATES_2025'); });
+  await page.waitForTimeout(2500);
+  await page.evaluate(() => { const s = nodes.find((n) => n.type === 'fead-solver'); veFeadSolve(s.id); });
+  await page.waitForFunction(() => window.veFeadResults && window.veFeadResults.ok, null, { timeout: 60000 });
+  const belge = await page.evaluate(() => new Promise((res) => {
+    _frEnsureAssets(() => {
+      const R = _frResults(); const node = _frFindReportNode();
+      res({ ozet: veFeadSummaryHTML(R, node), rapor: _frBuildReportHTML(R, node) });
+    });
+  }));
+  for (const [ad, html] of Object.entries(belge)) {
+    // Gömülü: Inter'in @font-face kuralları, veri URI'siyle; eski üç yüz yok.
+    const yuz = (html.match(/@font-face\s*\{[^}]*font-family:\s*["']?Inter/g) || []).length;
+    expect(yuz, ad + ': gömülü Inter kuralı').toBeGreaterThanOrEqual(8);
+    expect(html, ad).not.toMatch(/Archivo|Source Serif|IBM Plex/);
+    const p = await browser.newPage();
+    await p.route('**/*', (r) => (r.request().url().startsWith('data:') ? r.continue() : r.abort()));
+    await p.setContent(html, { waitUntil: 'load' });
+    const m = await p.evaluate(async () => {
+      await document.fonts.ready;
+      const aile = {}; let n = 0;
+      document.querySelectorAll('body *').forEach((el) => {
+        if (el.closest('.katex')) return;                   // formül yüzü istisna
+        if (![...el.childNodes].some((c) => c.nodeType === 3 && c.textContent.trim())) return;
+        n++;
+        const a = getComputedStyle(el).fontFamily.split(',')[0].replace(/["']/g, '').trim();
+        aile[a] = (aile[a] || 0) + 1;
+      });
+      await document.fonts.load('400 16px Inter', 'AaÇğış');
+      // Yukarıdaki üç yedekli ölçümün aynısı: yüz yüklüyse üçü de Inter'den.
+      const c = document.createElement('canvas').getContext('2d');
+      const g = ['monospace', 'serif', 'sans-serif'].map((y) => {
+        c.font = '400 40px "Inter", ' + y; return c.measureText('AaÇğış0189').width; });
+      return { aile, n, yuklu: Math.max(...g) - Math.min(...g) <= 0.01 };
+    });
+    await p.close();
+    expect(m.n, ad + ': taranan öğe').toBeGreaterThan(500);
+    expect(Object.keys(m.aile), ad).toEqual([AILE]);
+    expect(m.yuklu, ad + ': Inter belgenin İÇİNDE yüklü (uygulama olmadan)').toBe(true);
+  }
 });

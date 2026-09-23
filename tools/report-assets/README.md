@@ -2,7 +2,7 @@
 
 `mnt-report` bileşeni (bkz. `js/cp-mount-report.js`), Çözücü'nün 6 SD sonuçlarını
 **tamamen çevrimdışı / self-contained** bir HTML rapora döker. Rapor, referans
-teori raporunun estetiğindedir; matematik (KaTeX) ve fontlar dosyaya **gömülüdür**,
+teori raporunun estetiğindedir; matematik (KaTeX) ve yazı tipi dosyaya **gömülüdür**,
 böylece internet olmadan her yerde açılır ve yazdırılabilir.
 
 Bu klasör, iki **runtime** dosyasını üreten tek-seferlik araçları içerir. Runtime
@@ -10,7 +10,7 @@ dosyaları `js/` altında **commit edilir** (elle düzenlenmez):
 
 | Runtime dosyası | Ne içerir | Üreten |
 |---|---|---|
-| `js/mount-report-assets.js` | KaTeX (css+js) + 3 metin fontu, tümü woff2 data-URI gömülü (~1 MB) | `build-report-assets.js` |
+| `js/mount-report-assets.js` | KaTeX (css+js), yazı tipleri woff2 data-URI gömülü (~680 KB). **Metin yüzü burada DEĞİL** — belgeler arayüzün yüzünü (Inter) arayüzün kendi @font-face kurallarından gömer (`js/theme.js` → `veThemeFontFaceCss`, 2026-09-23) | `build-report-assets.js` |
 | `js/mount-report-template.js` | Teori şablonu (§1–7, 9, 10, Ek A) base64, `@@…@@` token'lı | `build-report-template.js` |
 
 Her ikisi de `index.html`'de `type="text/x-mfsim-report"` ile işaretlidir →
@@ -22,8 +22,8 @@ derlemede içeriği inline eder → indirilmiş tek dosyada da çalışır.
 
 - **KaTeX sürümü** güncellenecekse → `build-report-assets.js` içindeki URL'yi
   değiştir, yeniden çalıştır.
-- **Fontlar / alt küme** değişecekse (ör. yeni bir dil) → `SUBSET` aralığını
-  düzenle, yeniden çalıştır.
+- **Metin yüzü** bu paketten gelmez: arayüzün `css/fonts.css`'i değişirse
+  belgeler yeni yüzü kendiliğinden gömer.
 - **Teori metni / denklemler / şekiller** değişecekse → `theory-source.html`'i
   düzenle, `build-report-template.js`'i yeniden çalıştır.
 
@@ -35,10 +35,10 @@ derlemede içeriği inline eder → indirilmiş tek dosyada da çalışır.
 ## Çalıştırma
 
 ```bash
-# Gereksinimler: node, curl (proxy'yi kullanır), python3
-pip install fonttools brotli      # font subset + değişken-font instancing için
+# Gereksinimler: node, curl (proxy'yi kullanır)
 
 node tools/report-assets/build-report-assets.js      # → js/mount-report-assets.js  (~30 sn, ağ gerektirir)
+node tools/report-assets/build-report-assets.js --mevcut-katex   # aynı çıktı, AĞSIZ (KaTeX mevcut dosyadan)
 node tools/report-assets/build-report-template.js    # → js/mount-report-template.js (anında, ağsız)
 ```
 
@@ -53,7 +53,7 @@ kısaltmasıyla bozulmasın diye):
 
 | Token | Doldurulan |
 |---|---|
-| `@@ASSETS_CSS@@` | `fontsCss` + `katexCss` (gömülü) |
+| `@@ASSETS_CSS@@` | arayüzün yüzü (`veThemeFontFaceCss()`) + `katexCss` (gömülü) |
 | `@@KATEX_JS@@` | `katexJs` (gömülü; `</script>` kaçışlı) |
 | `@@ANTET@@` | Dinamik başlık bloğu (bileşen/takoz sayısı, toplam kütle, tarih) |
 | `@@SECTION8@@` | §8 "Sayısal Örnek" — bu modelin gerçek çözümü (tablolar, şekiller, adımlar) |

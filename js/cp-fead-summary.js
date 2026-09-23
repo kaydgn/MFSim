@@ -136,9 +136,9 @@ function _fsrLogo(){
   // viewBox 42 px'lik yazının çıkıntısını da SARAR: 0 0 132 46'da harflerin
   // tepesi 1 px dışarıda kalıyordu (ölçüldü) ve baskıda kırpılıyordu.
   return '<svg viewBox="-2 -3 138 52" role="img" aria-label="BMC">'
-    // AĞIRLIK 800 DEĞİL 700: gömülü Archivo yalnız 400 ve 700 taşıyor, 800
-    // istendiğinde tarayıcı glifleri kendisi şişiriyor (sentetik kalın).
-    + '<text x="2" y="36" font-family="Archivo, Arial Narrow, sans-serif" font-size="42"'
+    // Belgenin TEK yüzü (Inter, gömülü 400–800). Ağırlık 700: kapı gömülü
+    // kümede olmayan ağırlığı yasaklıyor (sentetik kalın).
+    + '<text x="2" y="36" font-family="Inter, system-ui, sans-serif" font-size="42"'
     + ' font-weight="700" letter-spacing="-1.5" fill="#1d1d1b">BMC</text></svg>';
 }
 
@@ -1126,8 +1126,9 @@ function _fsrPeak(R){
 
 // ═══════════════════ BELGE MONTAJI ══════════════════════════════════════════
 function veFeadSummaryHTML(R, node){
-  var A = (typeof window !== 'undefined') ? window.MNT_REPORT_ASSETS : null;
-  var fonts = (A && A.fontsCss) ? A.fontsCss : '';
+  // Yüz ARAYÜZÜN kendi @font-face kurallarından (js/theme.js) — ayrı bir
+  // rapor paketinden değil: ekran ve kâğıt aynı aileyle yazar.
+  var fonts = (typeof veThemeFontFaceCss === 'function') ? veThemeFontFaceCss() : '';
   // Sayfa üreticileri AÇIK DİZİDE: ada göre çözmek (window[...] ya da eval)
   // hem tek dosya sürümünde hem Node'da farklı davranıyor ve bir sayfanın
   // sessizce boş basılmasına yol açardı.
@@ -1160,6 +1161,7 @@ function _fsrCss(){
     // beş basamaklı ölçek — 1,15 oranlı, tabanı 9 px (A4 baskıda ≈ 6,8 pt)
     '  --f-xl:16px;--f-lg:11.5px;--f-md:10px;--f-sm:9.4px;--f-xs:8.8px;',
     '  --lh:1.4;',
+    "  --yuz:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;",
     '}',
     // Kanvastan gelen şekil uygulamanın palet jetonlarını kullanıyor; tanımsız
     // var() kalıtılan `stroke` için `none` demek → çizim GÖRÜNMEZ olur.
@@ -1167,17 +1169,17 @@ function _fsrCss(){
     '  --accent-danger:#a8321f;--text-secondary:#3c4350;--text-muted:#5a6270;',
     '  --bg-input:#fff;--border-color:#c6c0b4;--radius-sm:2px;--fs-tiny:11px;--fs-micro:10px;}',
     '*{box-sizing:border-box}',
-    // ── KALINLIK GÖMÜLÜ AĞIRLIKLARA BAĞLI ──────────────────────────────────
-    // Belge çevrimdışı: yazı tipleri `mount-report-assets.js` içinde GÖMÜLÜ ve
-    // küme sınırlı — Archivo 400/700, Source Serif 4 400/600, IBM Plex Mono
-    // 400/500. Olmayan bir ağırlık istendiğinde tarayıcı **sentetik kalın**
-    // üretir: glifleri kendi kendine şişirir. Eş aralıklı bir yüzde bu, 9 px
-    // civarında harflerin birbirine girmesi demek — kullanıcının "yazılar
-    // komik bir şekilde kötü duruyor" dediği şeyin ölçülebilir yarısı.
-    // Kural: Archivo → 700, serif → 600, mono → 500. Kapı bunu tutuyor.
-    'b,strong{font-weight:600}',                       // Source Serif 4 tavanı
+    // ── TEK YÜZ, GÖMÜLÜ AĞIRLIKLAR (2026-09-23) ────────────────────────────
+    // Belge arayüzün yüzünü (Inter) gömüyor — `veThemeFontFaceCss`, arayüzün
+    // kendi @font-face kuralları: 400 · 500 · 600 · 700 · 800. Eskiden üç ayrı
+    // yüz vardı (Archivo 400/700 · Source Serif 4 400/600 · IBM Plex Mono
+    // 400/500) ve olmayan bir ağırlık istendiğinde tarayıcı SENTETİK kalın
+    // üretiyordu — kullanıcının "yazılar komik bir şekilde kötü duruyor"
+    // dediği şeyin ölçülebilir yarısı. Kural aynı: istenen ağırlık gömülü
+    // kümede olmak zorunda; kapı bunu tutuyor.
+    'b,strong{font-weight:600}',
     'body{margin:0;background:#8d9199;color:var(--ink);',
-    "  font-family:'Source Serif 4',Georgia,serif;font-size:var(--f-md);line-height:var(--lh);",
+    "  font-family:var(--yuz);font-size:var(--f-md);line-height:var(--lh);",
     '  -webkit-font-smoothing:antialiased}',
 
     // ── SAYFA ── A4 dikey.
@@ -1194,9 +1196,9 @@ function _fsrCss(){
     // ── ANTET ──
     '.hdr{display:grid;grid-template-columns:82px 1fr auto;align-items:center;gap:12px}',
     '.hdr-logo svg{width:74px;height:26px;display:block}',
-    ".hdr-org{font-family:'Archivo',sans-serif;font-size:var(--f-xs);font-weight:700;",
+    ".hdr-org{font-family:var(--yuz);font-size:var(--f-xs);font-weight:700;",
     '  line-height:1.3;color:var(--dim)}',
-    ".hdr-title{font-family:'Archivo',sans-serif;font-size:var(--f-xs);line-height:1.3;",
+    ".hdr-title{font-family:var(--yuz);font-size:var(--f-xs);line-height:1.3;",
     '  color:var(--dim);text-align:right}',
     '.hdr-title b{display:block;font-size:var(--f-sm);font-weight:700;color:#000;',
     '  letter-spacing:.01em}',
@@ -1206,22 +1208,22 @@ function _fsrCss(){
     // ── SAYFA BAŞLIĞI ── belgenin tek büyük puntosu
     '.h1{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;',
     '  border-bottom:1px solid var(--rule);padding-bottom:3px;margin:8px 0 2px}',
-    ".h1 h1{font-family:'Archivo',sans-serif;font-size:var(--f-xl);font-weight:700;",
+    ".h1 h1{font-family:var(--yuz);font-size:var(--f-xl);font-weight:700;",
     '  letter-spacing:-.01em;margin:0;color:#000}',
     '.h1 span{font-size:var(--f-sm);color:var(--dim)}',
 
     // ── BLOK ──
     '.blk{margin:0}',
-    ".bt{font-family:'Archivo',sans-serif;font-size:var(--f-lg);font-weight:700;color:#000;",
+    ".bt{font-family:var(--yuz);font-size:var(--f-lg);font-weight:700;color:#000;",
     '  margin:0 0 3px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;',
     '  border-left:3px solid var(--vurgu);padding-left:6px}',
-    ".bt2{font-family:'Archivo',sans-serif;font-size:var(--f-sm);font-weight:700;color:#000;",
+    ".bt2{font-family:var(--yuz);font-size:var(--f-sm);font-weight:700;color:#000;",
     '  margin:6px 0 2px}',
     '.kvi{font-weight:400;color:var(--dim);font-size:var(--f-xs);',
-    "  font-family:'Source Serif 4',Georgia,serif}",
+    "  font-family:var(--yuz)}",
     '.stamp{font-weight:700;color:var(--warn);background:#fdf4e6;border:1px solid var(--warn);',
     "  padding:0 5px;font-size:var(--f-xs);letter-spacing:.06em;text-transform:uppercase;",
-    "  font-family:'Archivo',sans-serif}",
+    "  font-family:var(--yuz)}",
     // Açıklama: tablonun ALTINDA, ölçülü satır uzunluğuyla.
     '.nt{font-size:var(--f-xs);color:var(--dim);line-height:1.45;padding:3px 2px 0;',
     '  max-width:64em}',
@@ -1233,9 +1235,9 @@ function _fsrCss(){
     'table.gt{border-collapse:collapse;width:100%;font-size:var(--f-sm);',
     '  border:1px solid var(--rule)}',
     'table.gt th,table.gt td{padding:2px 5px;text-align:right;white-space:nowrap;',
-    "  font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;",
+    "  font-family:var(--yuz);font-variant-numeric:tabular-nums;",
     '  border-bottom:1px solid var(--soft)}',
-    "table.gt th{background:var(--head);font-family:'Archivo',sans-serif;font-weight:700;",
+    "table.gt th{background:var(--head);font-family:var(--yuz);font-weight:700;",
     '  text-align:right;font-size:var(--f-xs);line-height:1.2;color:#000;',
     '  border-bottom:1px solid var(--rule);vertical-align:bottom}',
     'table.gt th.l,table.gt td.l{text-align:left}',
@@ -1245,7 +1247,7 @@ function _fsrCss(){
     // kalıyor. `width:1px` + `nowrap` o sütunu METNİ KADAR yapar, kalanı
     // sayısal sütunlar paylaşır.
     'table.gt th.l,table.gt td.l{width:1px}',
-    "table.gt td.l{font-family:'Source Serif 4',Georgia,serif;font-weight:600}",
+    "table.gt td.l{font-family:var(--yuz);font-weight:600}",
     'table.gt tr:nth-child(even) td{background:var(--zebra)}',
     'table.gt tr:last-child td{border-bottom:none}',
     'table.gt td.hi,table.gt th.hi{background:var(--hl)}',
@@ -1260,18 +1262,18 @@ function _fsrCss(){
     'table.gt.kvt2 td.l{width:62%}',
     // Açıklama sütunu geniş: künye bir tablo değil, gerekçe listesi.
     "table.gt.kvt3 td.l{width:26%;white-space:normal}",
-    "table.gt.kvt3 td:not(.l){text-align:left;white-space:normal;font-family:'Source Serif 4',Georgia,serif;font-size:var(--f-xs);line-height:1.4}",
+    "table.gt.kvt3 td:not(.l){text-align:left;white-space:normal;font-family:var(--yuz);font-size:var(--f-xs);line-height:1.4}",
 
     // ── KÜNYE KARTI ──
     ".kvblk{border:1px solid var(--line);border-top:2px solid var(--vurgu);padding:4px 7px 3px;",
     '  margin:0 0 7px}',
-    ".kvt{font-family:'Archivo',sans-serif;font-size:var(--f-sm);font-weight:700;color:#000;",
+    ".kvt{font-family:var(--yuz);font-size:var(--f-sm);font-weight:700;color:#000;",
     '  margin-bottom:2px}',
     '.kvr{display:flex;justify-content:space-between;gap:10px;padding:1px 0;',
     '  border-bottom:1px dotted var(--soft);font-size:var(--f-sm)}',
     '.kvr:last-child{border-bottom:none}',
     '.kvr span{color:var(--dim)}',
-    ".kvr b{font-family:'IBM Plex Mono',monospace;font-weight:500;text-align:right;",
+    ".kvr b{font-family:var(--yuz);font-weight:500;text-align:right;",
     '  font-variant-numeric:tabular-nums;white-space:nowrap}',
 
     // ── KRİTİK SONUÇ KARTLARI (sayfa 1) ──
@@ -1280,9 +1282,9 @@ function _fsrCss(){
     '  min-width:0}',
     '.card.ok{border-top-color:var(--ok)}.card.no{border-top-color:var(--bad)}',
     '.card.uy{border-top-color:var(--warn)}',
-    ".card .ck{font-family:'Archivo',sans-serif;font-size:var(--f-xs);font-weight:700;",
+    ".card .ck{font-family:var(--yuz);font-size:var(--f-xs);font-weight:700;",
     '  color:var(--dim);text-transform:uppercase;letter-spacing:.04em;line-height:1.2}',
-    ".card .cv{font-family:'IBM Plex Mono',monospace;font-size:var(--f-lg);font-weight:500;",
+    ".card .cv{font-family:var(--yuz);font-size:var(--f-lg);font-weight:500;",
     '  color:#000;margin:2px 0 1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     '.card.no .cv{color:var(--bad)}.card.uy .cv{color:var(--warn)}',
     '.card .cs{font-size:var(--f-xs);color:var(--dim);line-height:1.3}',
@@ -1290,7 +1292,7 @@ function _fsrCss(){
     // ── KOD KÜNYESİ ── kısaltma ancak karşılığı aynı sayfadaysa okunur
     '.legend{display:flex;flex-wrap:wrap;gap:3px 14px;font-size:var(--f-xs);color:var(--dim);',
     '  border-top:1px solid var(--soft);padding-top:3px;margin-top:auto}',
-    ".legend b{font-family:'IBM Plex Mono',monospace;font-weight:500;color:#000;margin-right:3px}",
+    ".legend b{font-family:var(--yuz);font-weight:500;color:#000;margin-right:3px}",
 
     // ── UYARI KUTUSU ──
     'ol.notes{margin:0;padding-left:18px;font-size:var(--f-xs);line-height:1.45;color:var(--dim)}',
@@ -1298,7 +1300,7 @@ function _fsrCss(){
     'ol.notes b{color:var(--ink)}',
     '.warnbox{border:1px solid var(--warn);border-left:3px solid var(--warn);background:#fdf9f2;',
     '  padding:4px 8px;font-size:var(--f-xs);color:var(--ink);line-height:1.4}',
-    ".warnbox b{font-family:'Archivo',sans-serif;font-weight:700;display:block;margin-bottom:1px}",
+    ".warnbox b{font-family:var(--yuz);font-weight:700;display:block;margin-bottom:1px}",
     '.warnbox ul{margin:0;padding-left:14px}',
 
     // ── SÜTUNLAR ── `c58` = şema geniş, künye dar
@@ -1309,7 +1311,7 @@ function _fsrCss(){
     // ── ŞEKİL ── SVG hiçbir zaman kutusundan taşmaz
     '.fig{margin:0;overflow:hidden}',
     '.fig svg{width:100%;height:auto;display:block;max-width:100%}',
-    ".fig text{font-family:'IBM Plex Mono',ui-monospace,monospace}",
+    ".fig text{font-family:var(--yuz)}",
     '.nofig{border:1px dashed var(--line);padding:10px;color:var(--dim);',
     '  font-size:var(--f-sm);text-align:center}',
 
@@ -1331,7 +1333,7 @@ function _fsrCss(){
     '.scope{border:1px solid var(--line);border-left:3px solid var(--ok);padding:4px 8px 5px;',
     '  font-size:var(--f-xs);line-height:1.45;height:100%}',
     '.scope.out{border-left-color:var(--dim)}',
-    ".scope b{font-family:'Archivo',sans-serif;font-weight:700;font-size:var(--f-sm);display:block;",
+    ".scope b{font-family:var(--yuz);font-weight:700;font-size:var(--f-sm);display:block;",
     '  margin-bottom:2px;color:#000}',
     '.scope ul{margin:0;padding-left:13px}',
     '.scope li{margin-bottom:1px}',

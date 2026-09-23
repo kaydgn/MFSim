@@ -1815,13 +1815,15 @@ function veFeadWizTeXPaint(){
     } catch(e){ /* yedek metin yerinde kalır */ }
   });
 }
-// KaTeX'in CSS'i ve betiği sayfaya BİR KEZ enjekte edilir. Fontlar da rapor
-// varlığından geliyor — ağdan hiçbir şey çekilmiyor (çevrimdışı kuralı).
+// KaTeX'in CSS'i ve betiği sayfaya BİR KEZ enjekte edilir — ağdan hiçbir şey
+// çekilmiyor (çevrimdışı kuralı). Metin yüzü ENJEKTE EDİLMEZ: sayfa zaten
+// arayüzün yüzüyle (Inter) yazıyor; eskiden rapor paketinin üç yüzü de
+// (Archivo · Source Serif 4 · IBM Plex Mono) buraya taşınıyordu.
 function _fwTeXInject(A){
   if(typeof document === 'undefined' || document.getElementById('ve-fw-katex')) return;
   var st = document.createElement('style');
   st.id = 've-fw-katex';
-  st.textContent = (A.fontsCss || '') + '\n' + (A.katexCss || '');
+  st.textContent = (A.katexCss || '');
   document.head.appendChild(st);
   if(typeof katex === 'undefined' && A.katexJs){
     var sc = document.createElement('script');

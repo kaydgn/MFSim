@@ -221,10 +221,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   bozuk açılır). Kapı: `fead-table.test.js` + `fead-tablo.spec.js` →
   *"YENİDEN BOYUTLANDIRMA"*.
 - **TEK YAZI TİPİ: Inter** (`--font-sans`, gömülü `css/fonts.css`) — başlık,
-  gövde, etiket, sayı, form ve TUVAL dâhil. Rakam hizası mono ile değil
-  `tabular-nums` ile. Tuval `var()` çözemez → `veThemeFont(px, ağırlık)`;
-  çıplak aile adı yazılmaz. Tek istisna hizası BOŞLUKLA kurulmuş düz metin
-  (TXT rapor `<pre>`). Kapı: `tek-yazi-tipi.test.js` + `tek-yazi-tipi.spec.js`.
+  gövde, etiket, sayı, form, TUVAL ve İNDİRİLEN BELGELER dâhil. Rakam hizası
+  mono ile değil `tabular-nums` ile. Tuval `var()` çözemez → `veThemeFont(px,
+  ağırlık)`; belge yüzü arayüzden gömer → `veThemeFontFaceCss()`. Çıplak aile
+  adı yazılmaz. İstisnalar: hizası BOŞLUKLA kurulmuş düz metin (TXT rapor
+  `<pre>`) ve KaTeX formülü. Kapı: `tek-yazi-tipi.test.js` + `tek-yazi-tipi.spec.js`.
 - **SÜTUNDA YATAY KAYDIRMA YOK — sığmayan tablo AÇILIR PENCEREDE**
   (`js/tablo-pencere.js`). Panel tabloyu + kendi düğmelerini bir BİRİM
   işaretler (`data-ve-tablo` · `-baslik` · `-ozet`); karar ÖLÇÜMDEN (sığmıyorsa
