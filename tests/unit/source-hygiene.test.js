@@ -694,6 +694,28 @@ describe('hover parlaklık filtresi kullanmıyor', () => {
     });
     expect(kalan).toEqual([]);
   });
+
+  // AYNI KUSUR JS'TE, SATIR İÇİ — ve yukarıdaki halka onu HİÇ görmüyordu:
+  // `onmouseover="this.style.filter='brightness(1.15)'"`. Ölçüldü
+  // (2026-09-23): altı düğme — modül kartlarının "Alt Topolojiyi Aç"ı,
+  // örnek kartlarının "Örneği Aktar"ı, Takoz raporunun düğmesi. FEAD'inki
+  // modül kartı Krank Kasnağı kabuğuna geçince kalktı; kalan beşi AP/Takoz
+  // pencereleri kendi kategori tasarımlarına geçerken kalkar. Sayı bir
+  // HEDEF değil BORÇ: artamaz, yalnız iner.
+  test('JS satır içi hover parlaklık işleyicisi yalnız AZALIR', () => {
+    const TAVAN = 5;   // ölçüldü 2026-09-23 — TAM sayı, pay YOK (6 → 5)
+    const bulunan = [];
+    fs.readdirSync(JS_DIR).filter((f) => f.endsWith('.js')).forEach((f) => {
+      fs.readFileSync(path.join(JS_DIR, f), 'utf8').split('\n').forEach((sat, i) => {
+        if (/on\w+=[^>]*filter\s*=\s*\\?['"]brightness/.test(sat)) bulunan.push(`${f}:${i + 1}`);
+      });
+    });
+    expect({ n: bulunan.length, yerler: bulunan.length > TAVAN ? bulunan : undefined })
+      .toEqual({ n: bulunan.length, yerler: undefined });
+    expect(bulunan.length).toBeLessThanOrEqual(TAVAN);
+    // FEAD borçtan ÇIKTI — geri gelmesin.
+    expect(bulunan.filter((y) => /^cp-fead/.test(y))).toEqual([]);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

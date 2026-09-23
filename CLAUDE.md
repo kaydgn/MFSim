@@ -32,7 +32,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `build.js` — Build script (`index.html` + `js/` + `css/` → `MFSim_Code.html`)
 - `js/fead-belts.js` — FEAD kayış kataloğu (5 profil, 244 stok boy + otomotiv
   ızgarası). DOM'suz saf veri; ISO 9982 / DIN 7867, üretici kataloglarından çıkarıldı.
-- `js/cp-fead-wizard.js` — FEAD **Başlangıç Sihirbazı** (7 adımlık modal). Kendi
+- `js/cp-fead-wizard.js` — FEAD **Başlangıç Sihirbazı** (adımlı modal; adımlar `VE_FW_STEPS`). Kendi
   modelini KURMAZ: durum → `veFeadWizNodes` → köprünün düğüm biçimi; önizleme de
   kurulum da aynı listeden geçer.
 - `js/fead-duty.js` — FEAD **çalışma çevrimi** kütüphanesi (7 ölçülmüş çevrim).

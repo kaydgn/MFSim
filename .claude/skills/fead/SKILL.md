@@ -249,6 +249,12 @@ olurdu.
     yazılır); çevrim oranı **pitch çapından** gelir (defterin dış çaplı ve elle
     yazılmış oranları %2,2 ve %27,8 sapıyor); eksik veri `'wait'`'tir ve
     **uygun sayılmaz**. Kapı: `tests/unit/fead-checks.test.js`.
+    **Pencerelerin sağ sütunu ÜÇÜNCÜ yüzeydir** ve çözücüyü modelin kendisinden
+    alır (`build.solver`): global taramayla argümansız aranınca hiç bulunmuyor,
+    kapılar boş çevrimle soruluyordu — çözücü "uygun" derken sütun
+    "değerlendirilemedi" diyordu. Kaynak metnine bakan kapı bunu göremezdi;
+    kapı CEVABIN aynılığını ölçer (aynı dosya, *"sağ sütunu çözücü kartıyla
+    AYNI hükmü"*).
 17. **Katalog bir KISIT değil bir ÖNERİ** — kayış, gergi, motor ve aksesuar
     kütüphanelerinin dördünde de aynı kural. Elle girilen değer katalogtan
     üstündür; "elle" demek için değerin katalogtan FARKLI olması gerekir
@@ -419,8 +425,13 @@ olurdu.
 31. **HER FEAD PENCERESİ KRANK KASNAĞI AİLESİNDE — DAR KAPTA DA** (2026-09-23,
     kullanıcı isteği: *"kategori kategori pencereler"*). Kabuk TEK üreticiden
     (`veFeadPanelShell`: özet şeridi · kategori sekmeleri · özet sütunu);
-    Kayış Tablosu (Girdiler · Çözüm), Kayış Yolu (Şema · Geometri) ve Rapor
-    (Tür · Künye) da artık bu kabukta. **Tek sütuna geçişi PANELİN genişliği
+    Kayış Tablosu (Girdiler · Çözüm), Kayış Yolu (Şema · Geometri), Rapor
+    (Tür · Künye), Dönüş Yönü (Yön · Etkisi), Sihirbaz (Taslak · Adımlar) ve
+    kökteki modül kartı (İçerik · Model) da bu kabukta. Pencerenin tek EYLEMİ
+    sağ sütunda. **Modül kartı modelini ALT TOPOLOJİDEN kurar** — kökte
+    `veFeadBuildFromCanvas` boş modeli çözerdi. "Her pencere" bir LİSTE değil
+    KURAL olarak kapılı: `tests/unit/fead-pencere-ailesi.test.js` tipleri
+    `componentDefs`ten, kurucuyu `cp-core.js`'in dağıtımından okur. **Tek sütuna geçişi PANELİN genişliği
     söyler** (`@container vepanel`, ≤ 640 px) — ekran sorgusu 380 px'lik
     müfettiş sütununda hiç tetiklenmiyordu ve düzenlenen sütuna 42 px
     kalıyordu. Dar kapta sekmeler üste, pencerenin EYLEMİ (`.ve-fp-solve`:

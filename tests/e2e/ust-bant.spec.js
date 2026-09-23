@@ -232,10 +232,20 @@ test('hesap menüsü OKUNUR bir yüzey — opak, kenarlıklı, en üstte', async
   expect(r.ekranda).toBe(true);
 });
 
+// SÜTUNDA KALAN bir pencere aç. İki halka önce ARAÇ penceresini açıyordu;
+// araç ölçümle `VE_SUTUNA_SIGMAYAN`a girince halkalar sütunu değil MODALI
+// açmaya başladı. Öncül açık bir iddia: tip listeye girerse sebebiyle düşer.
+const sutundaPencereAc = () => {
+  const t = 'differential';
+  if (VE_SUTUNA_SIGMAYAN.indexOf(t) >= 0)
+    throw new Error(t + ' modal açılıyor (VE_SUTUNA_SIGMAYAN) — sütunda kalan bir tip seçin');
+  const n = createNode(t, 500, 300); clearSelection(); addToSelection(n);
+};
+
 test('hesap menüsü sütundaki müfettişin ÜSTÜNDE açılıyor', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   await ac(page, 'arac-performans');
-  await page.evaluate(() => { const n = createNode('vehicle', 500, 300); clearSelection(); addToSelection(n); });
+  await page.evaluate(sutundaPencereAc);
   await page.waitForTimeout(400);
   await page.evaluate(() => veTogglePropertiesPanel(true));
   await page.waitForTimeout(600);
@@ -249,7 +259,7 @@ test('hesap menüsü sütundaki müfettişin ÜSTÜNDE açılıyor', async ({ pa
 test('TEK ESC TEK KATMAN — menüyü kapatan tuş alttaki paneli sökmüyor', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   await ac(page, 'arac-performans');
-  await page.evaluate(() => { const n = createNode('vehicle', 500, 300); clearSelection(); addToSelection(n); });
+  await page.evaluate(sutundaPencereAc);
   await page.waitForTimeout(400);
   await page.evaluate(() => veTogglePropertiesPanel(true));
   await page.waitForTimeout(600);

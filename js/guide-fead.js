@@ -327,8 +327,9 @@ function _gfSahnePanel(fn, altyazi, coz){
 
 function _gfSahneSpin(){
   return _gfSahnePanel('getFeadSpinPropertiesHTML',
-    'Dönüş Yönü kartının paneli. Rozet çevrimin yönünü çevirir; <b>rengi</b> gerginin '
-    + 'gevşek tarafta olup olmadığının hükmünü taşır.');
+    'Dönüş Yönü penceresi, iki kategoride: <b>Yön</b> (çevrimin dönüşü ve nereden türediği) '
+    + 've <b>Etkisi</b> (yön değişince neyin değişip neyin değişmediği). <b>Yönü çevir</b> sağ '
+    + 'sütunda; üstündeki satır gerginin gevşek tarafta olup olmadığının hükmünü taşır.');
 }
 
 function _gfSahneGergiMerkez(){

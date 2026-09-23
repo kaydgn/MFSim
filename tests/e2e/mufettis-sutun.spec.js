@@ -43,14 +43,20 @@ async function bootApp(page, w) {
 }
 
 // Paneli KULLANICININ yolundan açar: kanvasta bir bileşen seç.
-// ARAÇ penceresi — sütuna sığdığı ÖLÇÜLMÜŞ bir tip. İlk hâli MOTOR
-// kullanıyordu ve motorun BOŞ penceresini ölçüyordu: veriyle dolu motor
-// 380 px'e 185 px sığmıyor (bkz. mufettis-sigma.spec.js). Motor artık modal.
+// SÜTUNDA KALAN bir pencere. Bu yardımcı AYNI tuzağa iki kez düştü: önce
+// MOTOR'u açıyordu (boş penceresini ölçüyordu — veriyle dolu motor 380 px'e
+// 185 px sığmıyor), sonra ARAÇ'ı. İkisi de ölçümle `VE_SUTUNA_SIGMAYAN`a girdi
+// ve halka sütunu değil MODALI ölçmeye başladı — ölçülen: perde
+// rgba(0,0,0,.62). Öncül artık açık bir iddia: tip listeye girerse test
+// sebebini söyleyerek düşer, perde renginden bulmaca çıkmaz.
+const SUTUN_TIPI = 'differential';
 async function panelAc(page, tip) {
   await page.evaluate((tip) => {
-    const n = createNode(tip || 'vehicle', 400, 300);
+    if (VE_SUTUNA_SIGMAYAN.indexOf(tip) >= 0)
+      throw new Error(tip + ' modal açılıyor (VE_SUTUNA_SIGMAYAN) — sütunda kalan bir tip seçin');
+    const n = createNode(tip, 400, 300);
     clearSelection(); addToSelection(n);
-  }, tip);
+  }, tip || SUTUN_TIPI);
   // Seçim ile AÇMA arasına nefes: modülün açılış yüzeyi yerleşirken
   // `clearSelection` çağırıyor ve o da pencereyi kapatıyor.
   await page.waitForTimeout(500);

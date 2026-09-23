@@ -60,28 +60,92 @@ function _feadFmt(x, dg){ if(!Number.isFinite(x)) return '—'; dg=(dg===undefin
 var veFeadStack = [];
 var _veFeadBusy = false;
 
-// Modül paneli (tek tık): özet + "Alt Topolojiyi Aç".
-// "BAĞLANTI" SATIRI KALDIRILDI — yapısal olarak hep 0. FEAD tiplerinin on
-// ikisinde de `inputs:0, outputs:0`, yani bu alt topolojide bağlantı
-// KURULAMAZ (kayış sırası `node.data.beltIndex` alanında, telde değil). Satır
-// her modelde aynı sıfırı basıyor ve kullanıcıya "burada bağlanacak bir şey
-// var" diye bakılacak bir yer gösteriyordu. Ortak `veModuleSummaryText`
-// dokunulmadı: Araç Performans ile Takoz'da bağlantı gerçek bir sayıdır.
+// ── MODÜL KARTI PENCERESİ — KRANK KASNAĞI AİLESİNDE ────────────────────────
+// Kullanıcı isteği (2026-09-23): FEAD pencereleri Krank Kasnağı'nın yapısında,
+// KATEGORİ KATEGORİ. Kök tuvaldeki kartın penceresi iki kategoriye ayrıldı:
+// İÇERİK (alt topolojide ne var) ve MODEL (kayış yolunun cevabı). Pencerenin
+// EYLEMİ "Alt Topolojiyi Aç".
+//
+// MODEL ALT TOPOLOJİDEN KURULUR, global tuvalden DEĞİL. Kökteyken global
+// `nodes` modül kartlarını taşıyor; `veFeadBuildFromCanvas` orada BOŞ bir
+// modeli çözer ve sağ sütun her kartta "çözülemedi" derdi. Köprü DOM'suz ve
+// düğüm listesini argüman olarak alıyor (`veFeadBuildSystem`) — kart kendi
+// listesini veriyor. Uygunluk kapıları da çözücüyü o modelden okur
+// (`_feadSideGates` → `build.solver`).
+//
+// "BAĞLANTI" SATIRI YOK — yapısal olarak hep 0. FEAD tiplerinin on ikisinde de
+// `inputs:0, outputs:0`, yani bu alt topolojide bağlantı KURULAMAZ (kayış
+// sırası `node.data.beltIndex` alanında, telde değil). Satır her modelde aynı
+// sıfırı basıyor ve kullanıcıya "burada bağlanacak bir şey var" diye bakılacak
+// bir yer gösteriyordu. Ortak `veModuleSummaryText` dokunulmadı: Araç
+// Performans ile Takoz'da bağlantı gerçek bir sayıdır.
 function getFeadModulePropertiesHTML(node){
   var sub = node && node.data && node.data.subTopology;
-  var nCount = (sub && sub.nodes) ? sub.nodes.length : 0;
-  var initialized = !!(sub && sub.nodes && sub.nodes.length);
-  var html = '<div class="sw-panel">';
-  html += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
-  if(initialized){
-    html += '<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bileşen</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">' + nCount + '</td></tr>';
-  } else {
-    html += '<tr><td style="padding:7px 8px; border:1px solid var(--border-color); color:var(--text-muted);">Alt topoloji henüz açılmadı</td></tr>';
+  var liste = (sub && Array.isArray(sub.nodes)) ? sub.nodes : [];
+  var kurulu = liste.length > 0;
+
+  // KATEGORİ TİPİN KENDİ BEYANINDAN (`componentDefs` bayrakları): elle tutulan
+  // bir tip listesi, yeni bir kasnak tipi geldiğinde onu sessizce "araç" sayardı.
+  var say = { kasnak: 0, gergi: 0, kayis: 0, arac: 0 };
+  liste.forEach(function(n){
+    var d = _feadDefOf(n);
+    if(d.isFeadTensioner) say.gergi++;
+    else if(d.isFeadPulley) say.kasnak++;
+    else if(d.isFeadBelt) say.kayis++;
+    else say.arac++;
+  });
+
+  var build = null, T = null;
+  if(kurulu && typeof veFeadBuildSystem === 'function'){
+    try { build = veFeadBuildSystem(liste, {}); } catch(e){ build = null; }
+    try { T = (build && typeof veFeadTableRows === 'function') ? veFeadTableRows(build) : null; }
+    catch(e){ T = null; }
   }
-  html += '</table>';
-  html += '<button onclick="veFeadOpenEditor(\'' + node.id + '\')" style="width:100%; padding:14px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:var(--on-accent); border:none; cursor:pointer; letter-spacing:0.03em;" onmouseover="this.style.filter=\'brightness(1.15)\'" onmouseout="this.style.filter=\'none\'">▶ Alt Topolojiyi Aç</button>';
-  html += '</div>';
-  return html;
+  function mm(v, dec){ return Number.isFinite(v) ? _feadFmt(v, dec) + ' mm' : '—'; }
+
+  var icerik = kurulu
+    ? _feadCard('Bileşenler', 'alt topolojide', 'var(--accent-primary)',
+        '<div class="ve-fp-grid" style="--fp-k:2;">'
+      + _feadRO('Kasnak', String(say.kasnak)) + _feadRO('Gergi', String(say.gergi))
+      + _feadRO('Kayış', String(say.kayis))   + _feadRO('Araç', String(say.arac))
+      + '</div>'
+      + _feadHint('Kasnakların kanvasta kutusu yok: sıra, koordinat ve çap '
+        + '<b>Kayış Tablosu</b>ndan girilir; bir kasnağın penceresi için tablodaki '
+        + 'adına tıklayın.'))
+    : _feadCard('Bileşenler', 'alt topolojide', 'var(--text-muted)',
+        _feadHint('Alt topoloji henüz açılmadı. Açınca <b>Başlangıç Sihirbazı</b> '
+          + 'karşılar: kasnakları, gergiyi, kayışı ve çalışma çevrimini adım adım '
+          + 'sorar ya da hazır bir örnekten doldurur.'));
+
+  var model = _feadCard('Kayış Yolu', 'çekirdekten', 'var(--accent-warning)',
+      '<div class="ve-fp-grid" style="--fp-k:1;">'
+    + _feadRO('Pitch boyu', mm(T && T.LpitchMm, 1))
+    + _feadRO('Efektif boy', mm(T && T.LeffMm, 1))
+    + _feadRO('Σ sarım', (T && Number.isFinite(T.signedWrapDeg))
+        ? _feadFmt(T.signedWrapDeg, 2) + '°' : '—')
+    + '</div>'
+    + _feadHint('Bu sayılar HESAPLANMAZ, alt topolojinin kendi modelinden okunur — '
+      + 'içerideki Kayış Tablosu ile aynı kaynak.'));
+  // SIRA BİR LİSTE, bir alan değil: altı kasnaklı bir sıra salt okunur bir
+  // kutuya sığmaz ve kutu metni SESSİZCE kırpar.
+  var satirlar = (T && T.rows) ? T.rows : [];
+  model += _feadCard('Kayış Sırası', 'tablo sırası', 'var(--accent-primary)',
+      satirlar.length
+        ? '<ol class="ve-fp-liste">' + satirlar.map(function(r){
+            return '<li>' + (r.driver ? '<b>' + _feadEsc(r.name) + '</b> · sürücü'
+                                      : _feadEsc(r.name)) + '</li>';
+          }).join('') + '</ol>'
+        : _feadHint('Kasnak yok.'));
+
+  var yan = { html: _feadSideThumb(build) + _feadSideGates(build, T)
+      + '<button type="button" class="ve-fp-solve" onclick="veFeadOpenEditor(\'' + node.id + '\')">'
+      + '<span class="mf-ico mf-ico-folder-open" aria-hidden="true"></span> Alt Topolojiyi Aç</button>',
+    ozet: _feadOzetSerit(kurulu
+      ? ['<b>' + liste.length + '</b> bileşen', '<b>' + say.kasnak + '</b> kasnak',
+         (T && T.ok) ? 'çevrim <b>kapalı</b>' : 'çevrim <b>kapanmadı</b>']
+      : ['alt topoloji <b>açılmadı</b>']) };
+  return veFeadPanelShell(node, [{ k:'ic',  ad:'İçerik', govde: icerik },
+                                 { k:'mod', ad:'Model',  govde: model }], yan);
 }
 
 // REFERANS yerleşim (yerel px). İlk açılışta bu yerleşimin TAMAMI kurulmaz —
@@ -875,33 +939,37 @@ function veFeadToggleSpin(){
   return k;
 }
 
-// ── DÖNÜŞ YÖNÜ PANELİ ───────────────────────────────────────────────────────
+// ── DÖNÜŞ YÖNÜ PENCERESİ — KRANK KASNAĞI AİLESİNDE ─────────────────────────
+// Kullanıcı isteği (2026-09-23): FEAD pencereleri Krank Kasnağı'nın yapısında,
+// KATEGORİ KATEGORİ. İki kategori: YÖN (çevrimin dönüşü, nereden türediği,
+// yanlış taraftaysa gerginin hükmü) ve ETKİSİ (yön değişince neyin değişip
+// neyin değişmediği). Pencerenin EYLEMİ "Yönü çevir" — çözücüdeki Hesapla'nın
+// yerinde, sekmeden bağımsız. Hüküm sağ sütunda bir DURUM satırı: cevap bir
+// sekmenin içine gömülürse öteki sekmedeyken görünmez.
+//
+// Görünüm CSS'te (`.ve-fp-yon` · `.ve-fp-liste` · `.ve-fp-durum[data-d]`):
+// eski panel yönün rengini, vurguları ve düğmeyi SATIR İÇİ yazıyordu ve
+// düğme fareye hiç tepki vermiyordu (kural 14).
 function getFeadSpinPropertiesHTML(node){
   if(!node.data) node.data = {};
   var sense = veFeadCurrentSpin();
-  var metin = sense ? veFeadSpinLabel(sense).uzun : '— (okunamadı)';
+  var lbl = veFeadSpinLabel(sense);
+  var metin = sense ? lbl.uzun : '— (okunamadı)';
   var R = (typeof veFeadResults !== 'undefined' && veFeadResults) ? veFeadResults : null;
   var hkm = (R && R.tensionerSide) ? R.tensionerSide : null;
-  var renk = !hkm ? 'var(--text-secondary)'
-           : hkm.ok ? 'var(--accent-success)' : 'var(--accent-danger)';
+  var ton = !hkm ? '' : hkm.ok ? 'success' : 'danger';
 
-  var html = '<div class="sw-panel">';
-  html += _feadCard('Kayış Dönüş Yönü', '', renk,
-      '<div style="font-family:ui-monospace,monospace; font-weight:700; '
-    + 'font-size:var(--fs-lg); color:' + renk + '; margin-bottom:9px;">'
+  // DÜZLEM ADI TEK ÜRETİCİDEN (`_feadPlaneName`). Burada ikinci kez
+  // yazılsaydı, ayna bayrağı değişince pencere sessizce eskirdi.
+  //
+  // METİN TEL DÖNEMİNDEN KALMIŞTI: "kablolama sırasından türer", "tel from →
+  // to", "bağlantıları ters çevirir", "kanvastaki gidiş okları da döner".
+  // Kasnaklar 2026-09-09'da bağlanmaz oldu (sıra `beltIndex` alanında) ve
+  // kanvasta kutuları bile yok — dolayısıyla ne kablo var, ne gidiş oku.
+  // Kullanıcı panelde tarif edilen şeyi ekranda arıyordu.
+  var yon = _feadCard('Kayış Dönüş Yönü', 'kayış tablosundan', 'var(--accent-primary)',
+      '<div class="ve-fp-yon"' + (ton ? ' data-ton="' + ton + '"' : '') + '>'
     + _feadEsc(metin) + '</div>'
-    + '<button onclick="veFeadToggleSpin()" style="width:100%; padding:11px 14px; '
-    + 'margin-bottom:9px; border:none; cursor:pointer; border-radius:var(--radius-sm); '
-    + 'color:var(--on-accent); font-weight:700; letter-spacing:0.03em; font-size:var(--fs-body); '
-    + 'background:var(--accent-primary);">Yönü çevir</button>'
-    // DÜZLEM ADI TEK ÜRETİCİDEN (`_feadPlaneName`). Burada ikinci kez
-    // yazılsaydı, ayna bayrağı değişince panel sessizce eskirdi.
-    //
-    // METİN TEL DÖNEMİNDEN KALMIŞTI: "kablolama sırasından türer", "tel from →
-    // to", "bağlantıları ters çevirir", "kanvastaki gidiş okları da döner".
-    // Kasnaklar 2026-09-09'da bağlanmaz oldu (sıra `beltIndex` alanında) ve
-    // kanvasta kutuları bile yok — dolayısıyla ne kablo var, ne gidiş oku.
-    // Kullanıcı panelde tarif edilen şeyi ekranda arıyordu.
     + _feadHint('Yön bir ayar DEĞİL: <b>Kayış Tablosu\'nun satır sırasından</b> türer '
         + '(<b>' + _feadEsc(
             (typeof _feadPlaneName === 'function') ? _feadPlaneName() : 'çizim düzlemi')
@@ -911,39 +979,48 @@ function getFeadSpinPropertiesHTML(node){
         + 'krank sabit kalacak şekilde kalan kasnakların sırasını ters çevirir — '
         + 'tablodaki numaralar da onunla döner.'));
 
-  // GEOMETRİ YÖNDEN BAĞIMSIZ, GERİLME DEĞİL — ve bunu panel SÖYLÜYOR, çünkü
-  // kullanıcı "yönü çevirdim, sarım açıları neden aynı" diye sormasın.
-  html += _feadCard('Neyi değiştirir', '', 'var(--text-muted)',
-      '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.7;">'
-    + '• <b>Değişmez:</b> sarım açıları, açıklıklar, efektif kayış boyu, Σsarım=360 '
-    + '— ölçüldü, kasnak başına fark 2,5e−14°<br>'
-    + '• <b>Değişir:</b> hangi açıklığın GERGİN olduğu — yani span gerilmeleri, '
-    + 'hubload yönleri ve kayma emniyeti<br>'
-    + '• <b>Değişir:</b> kasnakların dönüş yönü ve Kayış Tablosu\'ndaki sıra numaraları'
-    + '</div>');
-
   if(hkm && !hkm.ok){
-    html += _feadCard('Gergi tarafı', 'hüküm', 'var(--accent-danger)',
-        '<div style="font-size:var(--fs-micro); color:var(--text-secondary); line-height:1.7;">'
-      + '<b style="color:var(--ink-danger);">Gergi kayışın GERGİN tarafında.</b> '
+    yon += _feadCard('Gergi Tarafı', 'hüküm', 'var(--accent-danger)',
+        '<div class="ve-fp-durum" data-d="no">'
+      + '<b>Gergi kayışın GERGİN tarafında.</b> '
       + 'Ankraj ' + _feadFmt(hkm.anchorN, 1) + ' N, en düşük açıklık '
       + _feadFmt(hkm.minN, 1) + ' N ("' + _feadEsc(hkm.minName || '—') + '") — '
       + _feadFmt(hkm.deficitN, 1) + ' N altında. Otomatik gergi tanım gereği '
       + '<b>gevşek</b> tarafa konur; gergin tarafta tahrik gerginliğinin tamamını '
-      + 'yayla karşılamak zorunda kalır ve durdurucusuna dayanır.<br><br>'
-      + 'Çare: <b>yönü çevirin</b> ya da gergiyi kayış sırasında sürücünün önüne alın. '
-      + 'Tasarım gerginliğini yükseltmek bir seçenek DEĞİL — o değer yay dengesinden '
-      + 'türüyor, panelde girilen bir alan değil.'
-      + '</div>');
-  } else if(hkm && hkm.ok){
-    html += _feadHint('<b style="color:var(--ink-success);">Gergi gevşek tarafta ✓</b> — '
-      + 'ankraj en düşük açıklık, gerilme zinciri bu yönde tutarlı.');
-  } else {
-    html += _feadHint('Gergi tarafı hükmü için önce Çözücü panelinden çözüm koşturun.');
+      + 'yayla karşılamak zorunda kalır ve durdurucusuna dayanır.</div>'
+      + _feadHint('Çare: <b>yönü çevirin</b> ya da gergiyi kayış sırasında sürücünün '
+        + 'önüne alın. Tasarım gerginliğini yükseltmek bir seçenek DEĞİL — o değer yay '
+        + 'dengesinden türüyor, panelde girilen bir alan değil.'));
   }
 
-  html += '</div>';
-  return html;
+  // GEOMETRİ YÖNDEN BAĞIMSIZ, GERİLME DEĞİL — ve bunu pencere SÖYLÜYOR, çünkü
+  // kullanıcı "yönü çevirdim, sarım açıları neden aynı" diye sormasın.
+  var etk = _feadCard('Neyi Değiştirir', 'ölçüldü', 'var(--text-muted)',
+      '<ul class="ve-fp-liste">'
+    + '<li><b>Değişmez:</b> sarım açıları, açıklıklar, efektif kayış boyu, Σsarım=360 '
+    + '— ölçüldü, kasnak başına fark 2,5e−14°</li>'
+    + '<li><b>Değişir:</b> hangi açıklığın GERGİN olduğu — yani span gerilmeleri, '
+    + 'hubload yönleri ve kayma emniyeti</li>'
+    + '<li><b>Değişir:</b> kasnakların dönüş yönü ve Kayış Tablosu\'ndaki sıra numaraları</li>'
+    + '</ul>');
+
+  var durum = !hkm
+    ? '<div class="ve-fp-durum"><b>Gergi tarafı:</b> hüküm için önce Çözücü '
+      + 'penceresinden çözüm koşturun.</div>'
+    : hkm.ok
+      ? '<div class="ve-fp-durum" data-d="ok"><b>Gergi gevşek tarafta ✓</b> — ankraj '
+        + 'en düşük açıklık, gerilme zinciri bu yönde tutarlı.</div>'
+      : '<div class="ve-fp-durum" data-d="no"><b>Gergi GERGİN tarafında</b> — yönü '
+        + 'çevirin ya da gergiyi sürücünün önüne alın (Yön sekmesi).</div>';
+  var eylem = '<button type="button" class="ve-fp-solve" onclick="veFeadToggleSpin()">'
+    + '<span class="mf-ico mf-ico-refresh" aria-hidden="true"></span> Yönü çevir</button>';
+
+  var ozet = ['yön <b>' + _feadEsc(lbl.kisa) + '</b>',
+              !hkm ? 'gergi tarafı <b>çözüm bekliyor</b>'
+              : hkm.ok ? 'gergi <b>gevşek tarafta</b>' : 'gergi <b>GERGİN tarafta</b>'];
+  var yan = veFeadToolSide(node, null, null, null, ozet, durum + eylem);
+  return veFeadPanelShell(node, [{ k:'yon', ad:'Yön',    govde: yon },
+                                 { k:'etk', ad:'Etkisi', govde: etk }], yan);
 }
 
 // Tüm kasnakların rozetini tazele (temas tarafı / sürücü değişince).
@@ -1091,12 +1168,22 @@ function _feadSideThumb(build){
 
 // Uygunluk kapıları — TEK `veFeadChecks` çağrısından (kural 16). Rapor bunu
 // yeniden hesaplamaz, çözüm anında yazılan `R.checks`'i okur.
+//
+// ÇÖZÜCÜ MODELİN KENDİSİNDEN (`build.solver`), global taramadan DEĞİL. Bu
+// satır 2026-09-21'den 09-23'e kadar `_feadSolverNode()` diyordu — o işlev
+// KİMLİKLE arıyor, argümansız çağrı hiçbir düğüm bulmuyor ve kapılar BOŞ
+// çevrimle soruluyordu. Ölçüldü: AG00976 ve BMC örneklerinde çözücü kartı
+// "Devir sınırı: uygun" (12 devir noktası) derken FEAD pencerelerinin sağ
+// sütunu aynı kapıya "değerlendirilemedi" diyordu. Sessizdi — 'wait' bir
+// hata değil, "veri yok" demek. `build.solver` köprünün BULDUĞU düğüm:
+// topoloji içinde global taramayla aynı, modül kartında (kök tuval) ise
+// alt topolojininki — global tarama orada yanlış modeli sorardı.
 function _feadSideGates(build, T){
   var h = '<div class="ve-fp-sect"><b>Uygunluk</b><em>veFeadChecks</em></div>';
   var kapilar = null;
   try {
     if(typeof veFeadChecks === 'function' && typeof veFeadCheckOpt === 'function'){
-      var sn = (typeof _feadSolverNode === 'function') ? _feadSolverNode() : null;
+      var sn = (build && build.solver) || null;
       kapilar = veFeadChecks(build, veFeadCheckOpt((sn && sn.data) || {},
         (sn && typeof veFeadDutyRows === 'function') ? veFeadDutyRows(sn) : []));
     }
@@ -7107,7 +7194,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     // Rapor penceresi (cp-fead-report.js) kasnak ailesinin BÖLÜM kalıbını
     // ondan alır — ikinci bir kart üreticisi yazmak iki dilin ayrışmasıydı.
-    _feadCard: _feadCard,
+    _feadCard: _feadCard, _feadRO: _feadRO, _feadHint: _feadHint,
     VE_FEAD_STARTER_LAYOUT: VE_FEAD_STARTER_LAYOUT,
     veFeadBeltPathD: veFeadBeltPathD, veFeadArmArrowSVG: veFeadArmArrowSVG,
     veFeadLayoutSVG: veFeadLayoutSVG,
@@ -7216,7 +7303,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadOpenEditor: veFeadOpenEditor,
     veFeadPanelTab: veFeadPanelTab, veFeadPanelTabOf: veFeadPanelTabOf,
     veFeadTabsHTML: veFeadTabsHTML, veFeadPulleySide: veFeadPulleySide,
-    veFeadToolSide: veFeadToolSide, veFeadPanelShell: veFeadPanelShell,
+    veFeadToolSide: veFeadToolSide, veFeadPanelShell: veFeadPanelShell, _feadSideGates: _feadSideGates,
     veFeadBeltSideRows: veFeadBeltSideRows,
     veFeadPanelTabState: function(){ return VE_FEAD_PANEL_TAB; },
     getFeadModulePropertiesHTML: getFeadModulePropertiesHTML,

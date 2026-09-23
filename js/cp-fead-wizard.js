@@ -3462,42 +3462,56 @@ function _fwClearPulleys(){
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-//  PANEL — düğümün kendi yüzeyi
+//  PANEL — düğümün kendi yüzeyi · KRANK KASNAĞI AİLESİNDE
 // ════════════════════════════════════════════════════════════════════════════
+// Kullanıcı isteği (2026-09-23): FEAD pencereleri Krank Kasnağı'nın yapısında,
+// KATEGORİ KATEGORİ. İki kategori: TASLAK (düğümde kayıtlı yarım model) ve
+// ADIMLAR (sihirbazın ne sorduğu). Pencerenin EYLEMİ "Sihirbazı Aç".
+//
+// ADIM LİSTESİ `VE_FW_STEPS`TEN, elle yazılmaz. Eski metin "bütün girdileri
+// YEDİ adımda sorar: … kayış yolu sırası …" diyordu; Kayış Yolu adımı
+// 2026-09-04'te kaldırılmıştı ve sihirbaz altı adımdı. Elle yazılan özet
+// sessizce bayatlar — bu deponun tekrar eden dersi.
+//
+// Kart gövdesi FEAD pencerelerinin grameri (`_feadCard` · `_feadRO` ·
+// `_feadHint`), sihirbaz MODALININ grameri (`_fwCard`) değil: bu yüzey
+// modalın bir adımı değil, bir bileşen penceresi.
 function getFeadWizardPropertiesHTML(node){
   if(!node.data) node.data = {};
   var w = node.data.wiz;
-  var kasnak = w && w.pulleys ? w.pulleys.length : 0;
-  var h = '<div class="sw-panel">';
-  h += '<div style="padding:10px 12px; margin-bottom:10px; font-size:var(--fs-tiny); '
-    + 'line-height:1.6; background:var(--bg-tertiary); border:1px solid var(--border-color); '
-    + 'color:var(--text-secondary);">Sihirbaz bir modeli kurmak için gereken <b>bütün '
-    + 'girdileri</b> yedi adımda sorar: kasnak koordinatları · kayış yolu sırası · gergi '
-    + 'künyesi · kayış · motor ve çalışma çevrimi. Her adımda model <b>canlı çözülür</b>, '
-    + 'yani eksik girdiyi son adımı beklemeden görürsünüz.</div>';
-  h += '<button onclick="veFeadWizOpen(\'' + node.id + '\')" style="width:100%; '
-    + 'padding:13px 16px; font-size:var(--fs-lg); font-weight:700; letter-spacing:0.02em; '
-    + 'border:none; cursor:pointer; border-radius:var(--radius-sm); '
-    + 'background:var(--accent-primary); color:#fff;">🧭 Sihirbazı Aç</button>';
-  if(w){
-    h += '<div style="margin-top:10px; padding:8px 10px; font-size:var(--fs-micro); '
-      + 'line-height:1.7; background:var(--bg-secondary); border:1px solid var(--border-color); '
-      + 'color:var(--text-muted);">'
-      + '<b style="color:var(--text-primary);">Kayıtlı taslak</b><br>'
-      + 'Sistem: <b>' + _fwEsc(w.ad || '—') + '</b><br>'
-      + 'Kasnak: <b>' + kasnak + '</b> (+ gergi)<br>'
-      + 'Çalışma çevrimi: <b>' + ((w.solver && w.solver.duty) ? w.solver.duty.length : 0)
-      + '</b> devir noktası</div>';
-  } else {
-    h += '<div style="margin-top:10px; font-size:var(--fs-micro); color:var(--text-muted); '
-      + 'line-height:1.6;">Henüz taslak yok. Sihirbazı açıp boş başlayabilir ya da hazır bir '
-      + 'örnekten doldurabilirsiniz.</div>';
-  }
-  h += '<div style="margin-top:10px; font-size:var(--fs-micro); color:var(--text-muted); '
-    + 'line-height:1.6;">Düğüme <b>çift tıklamak</b> da sihirbazı açar. Kurulumdan sonra '
-    + 'taslak bu düğümde kalır — geri dönüp bir sayıyı düzeltebilirsiniz.</div>';
-  h += '</div>';
-  return h;
+  var kasnak = (w && w.pulleys) ? w.pulleys.length : 0;
+  var nokta = (w && w.solver && w.solver.duty) ? w.solver.duty.length : 0;
+
+  var taslak = w
+    ? _feadCard('Kayıtlı Taslak', 'bu düğümde', 'var(--accent-primary)',
+        '<div class="ve-fp-grid" style="--fp-k:1;">'
+      + _feadRO('Sistem', w.ad || '—')
+      + _feadRO('Kasnak', kasnak + ' (+ gergi)')
+      + _feadRO('Çalışma çevrimi', nokta + ' devir noktası')
+      + '</div>')
+    : _feadCard('Kayıtlı Taslak', 'bu düğümde', 'var(--text-muted)',
+        _feadHint('Henüz taslak yok. Sihirbazı açıp boş başlayabilir ya da hazır bir '
+          + 'örnekten doldurabilirsiniz.'));
+  taslak += _feadHint('Düğüme <b>çift tıklamak</b> da sihirbazı açar. Kurulumdan sonra '
+    + 'taslak bu düğümde kalır — geri dönüp bir sayıyı düzeltebilirsiniz.');
+
+  var adimlar = _feadCard('Adımlar', VE_FW_STEPS.length + ' adım', 'var(--accent-primary)',
+      '<ol class="ve-fp-liste">' + VE_FW_STEPS.map(function(s){
+        return '<li><b>' + _fwEsc(s.ad) + '</b> — ' + _fwEsc(s.ipucu) + '</li>';
+      }).join('') + '</ol>'
+    + _feadHint('Her adımda model <b>canlı çözülür</b>, yani eksik girdiyi son adımı '
+      + 'beklemeden görürsünüz.'));
+
+  var eylem = '<button type="button" class="ve-fp-solve" onclick="veFeadWizOpen(\''
+    + node.id + '\')"><span class="mf-ico mf-ico-wand" aria-hidden="true"></span>'
+    + ' Sihirbazı Aç</button>';
+  var ozet = w
+    ? ['taslak <b>' + _fwEsc(w.ad || '—') + '</b>', '<b>' + kasnak + '</b> kasnak',
+       '<b>' + nokta + '</b> devir noktası']
+    : ['taslak <b>yok</b>'];
+  var yan = veFeadToolSide(node, null, null, null, ozet, eylem);
+  return veFeadPanelShell(node, [{ k:'tas', ad:'Taslak',  govde: taslak },
+                                 { k:'adm', ad:'Adımlar', govde: adimlar }], yan);
 }
 
 if(typeof module !== 'undefined' && module.exports){

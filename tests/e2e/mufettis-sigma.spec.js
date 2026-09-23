@@ -43,6 +43,50 @@ const MODULLER = {
   },
 };
 
+// Bir pencereyi aç ve ölç — tarama da, kökteki modül kartı da BU işlevden
+// geçer (ikinci bir ölçüm kopyası, iki kapının ayrı şeyleri ölçmesi demekti).
+const pencereOlc = async (tip) => {
+  const n = nodes.find((x) => x.type === tip);
+  clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
+  await new Promise((r) => setTimeout(r, 650));
+  const ov = document.getElementById('ve-properties-overlay');
+  const pn = document.querySelector('.ve-properties'), ic = document.querySelector('.ve-properties-content');
+  const pr = pn.getBoundingClientRect();
+  let kesik = 0, enSag = 0;
+  ic.querySelectorAll('*').forEach((el) => { const q = el.getBoundingClientRect();
+    if (q.width < 2 || q.height < 2) return;
+    if (q.right > pr.right + 1) { kesik++; enSag = Math.max(enSag, Math.round(q.right - pr.right)); } });
+  // OKUNURLUK — taşma sıfır diye okunur değil. FEAD pencereleri sütunda
+  // HİÇ TAŞMIYORDU ama EZİLİYORDU: özet sütunu sabit 296 px'ini alıyor,
+  // düzenlenen sütuna 42 px kalıyordu (tek sütuna geçiş EKRAN sorgusuydu,
+  // panelin değil). Sekmeler alt alta kayıyor, girdiler parmak ucu kadar
+  // kalıyor, etiketler SOLDAN kırpılıyordu — `scrollWidth` başlangıç
+  // yönüne taşmayı hiç saymaz. Bu yüzden her sekme gezilir ve ölçü
+  // ÇİZİLMİŞ kutudan alınır.
+  const sorun = [];
+  if (ov.getBoundingClientRect().width < innerWidth) {
+    const icW = ic.clientWidth - parseFloat(getComputedStyle(ic).paddingLeft) - parseFloat(getComputedStyle(ic).paddingRight);
+    const sekmeler = [...ic.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k'));
+    for (const k of (sekmeler.length ? sekmeler : [null])) {
+      if (k) { veFeadPanelTab(n.id, k); await new Promise((r) => setTimeout(r, 60)); }
+      const ana = ic.querySelector('.ve-fp-main');
+      if (ana && ana.offsetWidth < icW * 0.9) sorun.push(`${k}: düzenlenen sütun ${ana.offsetWidth}/${Math.round(icW)} px`);
+      ic.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=hidden]), select, textarea').forEach((e) => {
+        if (e.offsetWidth && e.offsetWidth < 56) sorun.push(`${k}: ${e.tagName.toLowerCase()} ${e.offsetWidth} px`); });
+      ic.querySelectorAll('.ve-fp-l').forEach((l) => {
+        if (!l.offsetWidth) return;
+        const q = l.getBoundingClientRect(), rg = document.createRange(); rg.selectNodeContents(l); const t = rg.getBoundingClientRect();
+        if (q.left - t.left > 0.5 || t.right - q.right > 0.5) sorun.push(`${k}: etiket kırpık "${l.textContent.trim().slice(0, 24)}"`); });
+      ic.querySelectorAll('.ve-fp-sect').forEach((h) => {
+        if (h.offsetWidth && h.offsetWidth < icW * 0.9) sorun.push(`${k}: başlık büzük ${h.offsetWidth} px`); });
+    }
+  }
+  const r = { tip, sutun: ov.getBoundingClientRect().width < innerWidth, tasma: ic.scrollWidth - ic.clientWidth, kesik, enSag,
+    listede: VE_SUTUNA_SIGMAYAN.indexOf(tip) >= 0, sorun: [...new Set(sorun)].slice(0, 4) };
+  veTogglePropertiesPanel(false); await new Promise((res) => setTimeout(res, 260));
+  return r;
+};
+
 for (const [modul, M] of Object.entries(MODULLER)) {
   test(`${modul}: sütuna giren her pencere SIĞIYOR, sığmayan MODAL`, async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1032 });
@@ -58,54 +102,30 @@ for (const [modul, M] of Object.entries(MODULLER)) {
     await page.waitForTimeout(3500);
 
     const tipler = await page.evaluate(`(() => { const on = ${M.tip.toString()};
-      Object.keys(componentDefs).filter((t) => on(t) && !componentDefs[t].isSubsystem && !/wizard$|^fead-spin$/.test(t))
+      Object.keys(componentDefs).filter((t) => on(t) && !componentDefs[t].isSubsystem && !/wizard$/.test(t))
         .forEach((t, i) => { if (!nodes.some((n) => n.type === t)) { try { createNode(t, 200 + (i % 8) * 90, 700 + Math.floor(i / 8) * 90); } catch (e) {} } });
       return [...new Set(nodes.map((n) => n.type))]; })()`);
     expect(tipler.length).toBeGreaterThan(8);          // tarama gerçekten bir şey açtı
+    // SİHİRBAZ TİPLERİ KURULMAZ (kurulunca kendi modalını açıyor), ama FEAD'in
+    // sihirbaz düğümü açılış yüzeyinde ZATEN var ve ölçülüyor. Dönüş Yönü
+    // (`fead-spin`) bir dönem taramanın DIŞINDAYDI; Krank Kasnağı kabuğuna
+    // geçince içeri alındı. İkisinin de gerçekten ölçüldüğü burada tutulur —
+    // kurulamayan bir tip sessizce taramadan düşerdi.
+    if (modul === 'fead-analysis') expect(tipler).toEqual(expect.arrayContaining(['fead-spin', 'fead-wizard']));
 
     const olcum = [];
     for (const tip of tipler) {
-      olcum.push(await page.evaluate(async (tip) => {
-        const n = nodes.find((x) => x.type === tip);
-        clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
-        await new Promise((r) => setTimeout(r, 650));
-        const ov = document.getElementById('ve-properties-overlay');
-        const pn = document.querySelector('.ve-properties'), ic = document.querySelector('.ve-properties-content');
-        const pr = pn.getBoundingClientRect();
-        let kesik = 0, enSag = 0;
-        ic.querySelectorAll('*').forEach((el) => { const q = el.getBoundingClientRect();
-          if (q.width < 2 || q.height < 2) return;
-          if (q.right > pr.right + 1) { kesik++; enSag = Math.max(enSag, Math.round(q.right - pr.right)); } });
-        // OKUNURLUK — taşma sıfır diye okunur değil. FEAD pencereleri sütunda
-        // HİÇ TAŞMIYORDU ama EZİLİYORDU: özet sütunu sabit 296 px'ini alıyor,
-        // düzenlenen sütuna 42 px kalıyordu (tek sütuna geçiş EKRAN sorgusuydu,
-        // panelin değil). Sekmeler alt alta kayıyor, girdiler parmak ucu kadar
-        // kalıyor, etiketler SOLDAN kırpılıyordu — `scrollWidth` başlangıç
-        // yönüne taşmayı hiç saymaz. Bu yüzden her sekme gezilir ve ölçü
-        // ÇİZİLMİŞ kutudan alınır.
-        const sorun = [];
-        if (ov.getBoundingClientRect().width < innerWidth) {
-          const icW = ic.clientWidth - parseFloat(getComputedStyle(ic).paddingLeft) - parseFloat(getComputedStyle(ic).paddingRight);
-          const sekmeler = [...ic.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k'));
-          for (const k of (sekmeler.length ? sekmeler : [null])) {
-            if (k) { veFeadPanelTab(n.id, k); await new Promise((r) => setTimeout(r, 60)); }
-            const ana = ic.querySelector('.ve-fp-main');
-            if (ana && ana.offsetWidth < icW * 0.9) sorun.push(`${k}: düzenlenen sütun ${ana.offsetWidth}/${Math.round(icW)} px`);
-            ic.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=hidden]), select, textarea').forEach((e) => {
-              if (e.offsetWidth && e.offsetWidth < 56) sorun.push(`${k}: ${e.tagName.toLowerCase()} ${e.offsetWidth} px`); });
-            ic.querySelectorAll('.ve-fp-l').forEach((l) => {
-              if (!l.offsetWidth) return;
-              const q = l.getBoundingClientRect(), rg = document.createRange(); rg.selectNodeContents(l); const t = rg.getBoundingClientRect();
-              if (q.left - t.left > 0.5 || t.right - q.right > 0.5) sorun.push(`${k}: etiket kırpık "${l.textContent.trim().slice(0, 24)}"`); });
-            ic.querySelectorAll('.ve-fp-sect').forEach((h) => {
-              if (h.offsetWidth && h.offsetWidth < icW * 0.9) sorun.push(`${k}: başlık büzük ${h.offsetWidth} px`); });
-          }
-        }
-        const r = { tip, sutun: ov.getBoundingClientRect().width < innerWidth, tasma: ic.scrollWidth - ic.clientWidth, kesik, enSag,
-          listede: VE_SUTUNA_SIGMAYAN.indexOf(tip) >= 0, sorun: [...new Set(sorun)].slice(0, 4) };
-        veTogglePropertiesPanel(false); await new Promise((res) => setTimeout(res, 260));
-        return r;
-      }, tip));
+      olcum.push(await page.evaluate(pencereOlc, tip));
+    }
+    // MODÜL KARTI KÖK TUVALDE — içeriden yapılan tarama ona hiç ulaşmıyor
+    // (`isSubsystem` tipleri kurulmuyor). FEAD'inki Krank Kasnağı kabuğunda ve
+    // modelini ALT TOPOLOJİDEN kuruyor; köke dönüp aynı işlevle ölçülür.
+    if (modul === 'fead-analysis') {
+      await page.evaluate(() => veFeadCloseEditor());
+      await page.waitForTimeout(600);
+      const kart = await page.evaluate(pencereOlc, 'fead-analysis');
+      expect(kart.sutun).toBe(true);
+      olcum.push(kart);
     }
     const tasan = olcum.filter((r) => r.sutun && (r.tasma > 0 || r.kesik > 0))
       .map((r) => `${r.tip}: taşma ${r.tasma} px, ${r.kesik} kesik öğe (en ${r.enSag} px)`);

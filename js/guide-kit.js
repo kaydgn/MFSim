@@ -269,6 +269,7 @@ var VE_GUIDE_APPFIG_TOKENS = {
   '--success-tint-8': 'rgba(46,125,79,.08)',  '--success-tint-15': 'rgba(46,125,79,.15)',
   '--warning-tint-8': 'rgba(200,120,30,.08)', '--warning-tint-15': 'rgba(200,120,30,.15)',
   '--danger-tint-8': 'rgba(168,50,31,.08)',   // baskı kırmızısı #a8321f — çevrim tablosunun sil düğmesi
+  '--danger-tint-15': 'rgba(168,50,31,.15)',  // Dönüş Yönü hükmü (gergi gergin tarafta)
   '--dur-fast': '0s', '--shadow-lg': 'none', '--focus-ring': 'transparent',
   '--shadow-color': 'transparent',
   '--ribbon-strip-h': 'auto', '--ribbon-expanded-h': 'auto'

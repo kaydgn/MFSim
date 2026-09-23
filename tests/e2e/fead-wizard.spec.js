@@ -90,7 +90,7 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     await page.dblclick('#' + id);
     await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();
 
-    // Yedi adım rayda duruyor.
+    // Adımlar rayda duruyor (Kayış Yolu adımı 2026-09-04'te kalktı: altı).
     await expect(page.locator('#ve-fw-nav .ve-fw-step')).toHaveCount(6);
     await expect(page.locator('#ve-fw-nav .ve-fw-step.on')).toHaveCount(1);
     expect(hatalar).toEqual([]);

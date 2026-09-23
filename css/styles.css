@@ -8728,6 +8728,27 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fp-durum[data-d="ok"] b{ color:var(--ink-success); }
 .ve-fp-durum[data-d="warn"]{ background:var(--warning-tint-8); border-color:var(--warning-tint-15); }
 .ve-fp-durum[data-d="warn"] b{ color:var(--ink-warning); }
+/* "no" bir UYARI değil bir HÜKÜM (Dönüş Yönü: gergi gergin tarafta) —
+   kehribar "sınırda" demek olurdu. Kapıların üç durumuyla aynı sözlük. */
+.ve-fp-durum[data-d="no"]{ background:var(--danger-tint-8); border-color:var(--danger-tint-15); }
+.ve-fp-durum[data-d="no"] b{ color:var(--ink-danger); }
+
+/* ── DÖNÜŞ YÖNÜ PENCERESİ — yön okunur bir DEĞER, rengi hükümden ──────────
+   Eski panel rengi satır içi yazıyordu; `data-ton` bir ANLAM adı. */
+.ve-fp-yon{
+  margin:0 0 9px; font-family:var(--font-mono); font-weight:700;
+  font-size:var(--fs-lg); line-height:1.35; color:var(--text-secondary);
+}
+.ve-fp-yon[data-ton="success"]{ color:var(--ink-success); }
+.ve-fp-yon[data-ton="danger"]{  color:var(--ink-danger); }
+/* Madde listesi — "Neyi Değiştirir" ve sihirbazın adımları. Açıklama notu
+   (`.ve-fead-not`) değil: maddeler pencerenin İÇERİĞİ, dipnotu değil. */
+.ve-fp-liste{
+  margin:0; padding:0 0 0 18px; font-size:var(--fs-tiny); line-height:1.6;
+  color:var(--text-secondary);
+}
+.ve-fp-liste li + li{ margin-top:4px; }
+.ve-fp-liste b{ color:var(--text-heading); font-weight:600; }
 .ve-fp-durum-not{ margin-top:8px; font-size:var(--fs-tiny); color:var(--text-muted); }
 .ve-fp-durum-not:empty{ display:none; }
 .ve-fp-inp--alan{ resize:vertical; min-height:64px; line-height:1.45; }
