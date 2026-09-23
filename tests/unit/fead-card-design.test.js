@@ -170,18 +170,20 @@ describe('iki kanvas — geometri ↔ işletme (tek tip)', () => {
     expect(cizilen(layout)).toMatch(/Serbest kol/);
   });
 
-  // TAZELEME TEK KAPIDAN (modül kuralı 11): iki kart HEP BİRLİKTE. Kart başına
+  // TAZELEME TEK KAPIDAN (modül kuralı 11): kartlar HEP BİRLİKTE. Kart başına
   // ayrı çağrı, altı düzenleme yolundan birinde birinin unutulması demek.
-  test('veFeadRefreshCards üç kartı da kurar', () => {
+  // Kayış Tablosu artık kart değil pencere; kapalıyken sayılmaz (açıkken
+  // sayıldığı `fead-table.test.js` → "tazeleme TEK KAPIDAN").
+  test('veFeadRefreshCards iki kanvası da kurar', () => {
     const { pack } = kur();
-    const hedef = pack.nodes.filter((n) => ['fead-layout', 'fead-table'].includes(n.type));
-    expect(hedef).toHaveLength(3);
+    const hedef = pack.nodes.filter((n) => n.type === 'fead-layout');
+    expect(hedef).toHaveLength(2);
     document.body.innerHTML = '<div id="ve-canvas"></div>' + hedef.map((n) =>
       '<div id="' + n.id + '" class="ve-node"><div class="ve-node-box"></div></div>').join('');
-    expect(veFeadRefreshCards()).toBe(3);
+    expect(veFeadRefreshCards()).toBe(2);
     hedef.forEach((n) => {
       const el = document.getElementById(n.id);
-      expect(el.querySelector('.ve-fead-layout-card, .ve-fead-table-card')).not.toBeNull();
+      expect(el.querySelector('.ve-fead-layout-card')).not.toBeNull();
     });
   });
 
@@ -379,13 +381,18 @@ describe('kısa ad YALNIZ çizimde', () => {
     kartAdlari.forEach((a) => expect(a).not.toMatch(/\(/));
   });
 
-  test('tam ad KAYIŞ TABLOSU kartında duruyor — bilgi yer değiştirdi, kaybolmadı', () => {
-    const { pack } = kur();
-    const tablo = pack.nodes.find((n) => n.type === 'fead-table');
-    expect(tablo).toBeTruthy();
-    const kart = fead.veFeadTableCardHTML(tablo);
-    expect(kart).toMatch(/Alternatör \(155 A\)/);
-    expect(kart).toMatch(/Otomatik Gergi \(E9843\)/);
+  // Tam ad İKİ yerde: Kayış Tablosu PENCERESİNDE (tablo artık kanvas kartı
+  // değil — Çizim Masası, 2026-09-23) ve çizimdeki kasnağın İPUCUNDA (isabet
+  // halkasının <title>'ı — fare kasnağın üstüne gelince okunur).
+  test('tam ad TABLO PENCERESİNDE ve çizimin İPUCUNDA — bilgi yer değiştirdi, kaybolmadı', () => {
+    const { layout } = kur();
+    const pencere = fead.veFeadTableCardHTML(null, { pencere: true });
+    expect(pencere).toMatch(/Alternatör \(155 A\)/);
+    expect(pencere).toMatch(/Otomatik Gergi \(E9843\)/);
+    const ipucu = [...fead.veFeadLayoutCardHTML(layout)
+      .matchAll(/<g data-ve="hit"[\s\S]*?<\/g>/g)].map((m) => m[0]).join('');
+    expect(ipucu).toMatch(/<title>Alternatör \(155 A\) —/);
+    expect(ipucu).toMatch(/<title>Otomatik Gergi \(E9843\) —/);
   });
 });
 

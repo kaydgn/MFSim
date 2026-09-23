@@ -456,11 +456,23 @@ describe('içerik yönlendirici', () => {
   // Bu liste iki kez değişti: önce "Başlangıç ve Örnekler" eklendi, sonra
   // KALDIRILDI (sunduğu iki şey sihirbazın 1. adımında zaten vardı). Kılavuz
   // her ikisinde de eski sayıyı yazmaya devam etti ve hiçbir kapı görmedi.
+  //
+  // Liste KURUCUNUN KENDİSİNDEN okunuyor, kaynak dizesinden değil: kurucu
+  // listeyi bir değişkene aldığında (2026-09-23, yuva üreticisi de aynı
+  // listeyi istiyor) kaynak kalıbı tutmadı ve kapı sebepsiz kırmızıya döndü.
   test('kılavuz açılışta gelen kartları doğru sayıyor', () => {
-    const src = io_read('js/cp-fead.js');
-    const m = /\[([^\]]*)\]\.forEach\(function\(tip, k\)/.exec(src);
-    expect(m).toBeTruthy();
-    const tipler = (m[1].match(/'([^']+)'/g) || []).map((x) => x.slice(1, -1));
+    const eskiNodes = global.nodes, eskiKur = global.createNode;
+    global.nodes = [];
+    global.createNode = (type, x, y) => {
+      const n = { id: 'st' + global.nodes.length, type, x, y, data: {} };
+      global.nodes.push(n); return n;
+    };
+    let tipler;
+    try { tipler = CP.veFeadPopulateStarter().map((n) => n.type); }
+    finally {
+      global.nodes = eskiNodes;
+      if (eskiKur === undefined) delete global.createNode; else global.createNode = eskiKur;
+    }
     expect(tipler.length).toBeGreaterThan(0);
     // Kılavuz her kartı ADIYLA anmalı...
     tipler.forEach((t) => { expect(DOC).toContain(componentDefs[t].name); });

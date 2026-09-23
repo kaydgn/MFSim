@@ -8736,22 +8736,6 @@ span.ve-fw-ro{ display:inline-block; }
   background:var(--bg-secondary); border:1px solid var(--border-color); border-top:none;
 }
 
-/* ── KAYIŞ TABLOSU PENCERESİ — iki kategori (Girdiler · Çözüm) ──────────────
-   Tablo `.ve-pnl-tbl`nin kendisi (başlık yapışkan, satır fareye tepki verir);
-   basamaklar gövdenin tablo rakamlarıyla alt alta okunur. */
-.ve-fp-tbl th u{ text-decoration:none; font-weight:400; opacity:.75; }
-.ve-fp-tbl .sira{ width:1%; color:var(--text-muted); }
-.ve-fp-tbl td.yon{ color:var(--text-secondary); }
-.ve-fp-tbl tr.surucu td.lbl{ font-weight:600; }
-/* Ad bir BAĞLANTI — kasnağın penceresine gider (`veFeadTableOpen`). */
-.ve-fp-tbl-ad{
-  font:inherit; color:var(--ink-accent); background:none; border:none; padding:0;
-  cursor:pointer; text-align:left; display:inline-flex; gap:4px; align-items:baseline;
-}
-.ve-fp-tbl-ad i{ font-style:normal; font-size:var(--fs-micro); color:var(--accent-primary); }
-.ve-fp-tbl-ad:hover{ text-decoration:underline; text-underline-offset:2px; }
-.ve-fp-tbl-ad:focus-visible{ outline:none; box-shadow:var(--focus-ring); border-radius:var(--radius-xs); }
-
 /* ── RAPOR PENCERESİ — iki kategori (Tür · Künye) ───────────────────────────
    Tür kartları DÜĞME ve `role="radio"`: seçili olan `aria-checked="true"`.
    Eski hâlde seçili kartın zemini SABİT MAVİYDİ (`rgba(59,130,246,.10)` —
@@ -8809,7 +8793,7 @@ span.ve-fw-ro{ display:inline-block; }
    elemanıyken (modül kartının Kayış Sırası) fazladan boşluk doğmasın.
    TABLO da alan değil: Kayış Tablosu penceresinin iki sekmesinde not tablonun
    çizgisine 3 px BİNİYORDU (ölçüldü, 79 notun ikisi; 2026-09-23). */
-:is(.ve-fp-liste, .ve-fp-tbl) + .ve-fead-not{ margin-top:9px; }
+.ve-fp-liste + .ve-fead-not{ margin-top:9px; }
 .ve-fp-durum-not{ margin-top:8px; font-size:var(--fs-tiny); color:var(--text-muted); }
 .ve-fp-durum-not:empty{ display:none; }
 .ve-fp-inp--alan{ resize:vertical; min-height:64px; line-height:1.45; }
@@ -8994,6 +8978,51 @@ span.ve-fw-ro{ display:inline-block; }
   background:var(--bg-secondary);
 }
 
+/* ── BOŞ / ÇİZİLEMEYEN KART — çıkmaz değil, iki kapı (Çizim Masası) ── */
+.ve-fead-kan-bos{
+  display:flex; flex-direction:column; align-items:center; gap:5px;
+  padding:14px 16px; text-align:center; max-width:340px;
+  font-size:var(--fs-micro); line-height:1.5; color:var(--text-muted);
+}
+.ve-fead-kan-bos > b{ font-size:var(--fs-tiny); font-weight:700; color:var(--ink-danger); }
+.ve-fead-kan-bos.ilk > b{ color:var(--text-heading); font-size:var(--fs-md); }
+.ve-fead-kan-bos > .ek{ opacity:.8; }
+.ve-fead-kan-bos > .eylem{ display:flex; gap:6px; margin-top:6px; }
+.ve-fead-kan-bos > .eylem > button{
+  font:inherit; font-size:var(--fs-tiny); font-weight:600; cursor:pointer;
+  padding:5px 11px; border-radius:var(--radius-sm);
+  border:1px solid var(--border-color); background:var(--bg-secondary); color:var(--text-primary);
+}
+.ve-fead-kan-bos > .eylem > button:first-child{
+  background:var(--accent-primary); border-color:var(--accent-primary); color:var(--on-accent);
+}
+.ve-fead-kan-bos > .eylem > button:hover{ border-color:var(--accent-primary); }
+.ve-fead-kan-bos > .eylem > button:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+
+/* ── ÇİZİM MASASI — kasnak çizimde seçilir, taşınır ─────────────────────
+   (js/cp-fead.js → veFeadCizimBas). Seçim ve fare altı SINIFLA taşınır,
+   kart yeniden kurulmaz: `.is-hov` · `.is-sel` her çizimde AYNI kasnağı
+   yakar (`data-fead-k`). Sunum niteliklerini (stroke-width/fill) CSS ezer. */
+.ve-fead-hit{ fill:transparent; cursor:grab; }
+body.ve-fead-surukleniyor, body.ve-fead-surukleniyor *{ cursor:grabbing !important; }
+[data-ve="pulley-hov"]{
+  fill:var(--accent-tint-15); stroke:none; opacity:0; pointer-events:none;
+  transition:opacity .12s ease;
+}
+[data-ve="pulley-hov"].is-hov, [data-ve="pulley-hov"].is-sel{ opacity:1; }
+[data-ve="pulley-hov"].is-sel{ stroke:var(--accent-primary); stroke-width:1.3; stroke-dasharray:3 2.5; }
+circle[data-ve="pulley"].is-hov, circle[data-ve="pulley"].is-sel{ stroke-width:3; }
+text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:var(--text-heading); }
+/* Punto SVG niteliğinde (çizimin kendi birimi, öteki etiketler gibi). */
+[data-ve="drag-readout"]{
+  font-weight:700; fill:var(--text-heading); pointer-events:none;
+  paint-order:stroke; stroke:var(--bg-input); stroke-width:3px; stroke-linejoin:round;
+}
+[data-ve="drag-span"]{ pointer-events:none; }
+[data-ve="drag-span"] rect{ fill:var(--bg-secondary); stroke:var(--accent-warning); stroke-width:1; }
+[data-ve="drag-span"] text{ font-weight:600; fill:var(--text-primary); }
+@media (prefers-reduced-motion: reduce){ [data-ve="pulley-hov"]{ transition:none; } }
+
 /* ── YÜZEN DENETİM ÇUBUĞU — ALT KENARDA ─────────────────────────────────
    Çizimin ÜSTÜNDE duruyor, akışta değil. Zemin yarı saydam: örttüğü kayış
    yolu tamamen kaybolmasın (bantta öyle bir seçenek yoktu — bant çizimin
@@ -9176,6 +9205,80 @@ span.ve-fw-ro{ display:inline-block; }
   overflow:hidden; border-radius:inherit; background:var(--bg-input);
 }
 
+/* ── KAYIŞ TABLOSU PENCERESİ (Çizim Masası) — kanvasın ALTINDA, modal DEĞİL ──
+   Tablo kanvastan indi (açılışta 7,1 px'e küçülüyordu). Pencere kanvas
+   yakınlaştırmasından bağımsız; açıkken çizim görünür ve sürüklenebilir.
+   Yazı jetonları pencerede BÜYÜR (9/10 px → 11/13 px), satırların tekrar eden
+   etiketleri gizlenir ve yerine TEK bir başlık satırı gelir. */
+.ve-fead-tablo-pencere{
+  position:absolute; left:50%; bottom:16px; transform:translateX(-50%);
+  z-index:calc(var(--z-canvas-ui) + 1);
+  width:min(920px, calc(100% - 32px)); max-height:min(58%, 480px);
+  display:flex; flex-direction:column;
+  background:var(--bg-secondary); border:1px solid var(--border-color);
+  border-radius:var(--radius-lg); box-shadow:var(--shadow-xl);
+}
+.ve-fead-tablo-bas{
+  display:flex; align-items:baseline; gap:10px; flex:none;
+  padding:10px 10px 8px 14px; border-bottom:1px solid var(--border-color);
+}
+.ve-fead-tablo-bas b{ font-size:var(--fs-lg); font-weight:700; color:var(--text-heading); }
+.ve-fead-tablo-bas em{ font-style:normal; font-size:var(--fs-tiny); color:var(--text-muted); }
+/* Pencere varyantının kuralları PENCERENİN KÖKÜ altında: yalnız bu kapta
+   geçerliler ve kılavuzun sahne sökümüne (`.ve-fead-table*` · `.ve-fead-krt*`
+   önekleri, js/guide-kit.js) karışmıyorlar — baskıda pencere yok. */
+.ve-fead-tablo-pencere > .ve-fead-table-card{
+  position:relative; inset:auto; flex:1 1 auto; min-height:0;
+  border-radius:0 0 var(--radius-lg) var(--radius-lg);
+}
+/* Pencerede yazı BÜYÜR: kanvasın yoğun ölçüsü (9/10 px) → arayüzün kendi
+   basamakları (11/13 px). Ölçek jetonu YENİDEN TANIMLANMAZ — basamağın
+   değerini yerelde değiştirmek ölçeği eritirdi (typography-scale.test.js:
+   11/11 ve 13/13 çakışması); rol başına bir basamak SEÇİLİR. */
+.ve-fead-tablo-pencere .ve-fead-tbl-head,
+.ve-fead-tablo-pencere .ve-fead-krt-fld > i,
+.ve-fead-tablo-pencere .ve-fead-krt-rv > i,
+.ve-fead-tablo-pencere .ve-fead-krt-seg button,
+.ve-fead-tablo-pencere .ve-fead-krt-rz,
+.ve-fead-tablo-pencere .ve-fead-tbl-mv,
+.ve-fead-tablo-pencere .ve-fead-tbl-ekle,
+.ve-fead-tablo-pencere .ve-fead-tbl-add{ font-size:var(--fs-body); }
+.ve-fead-tablo-pencere .ve-fead-krt-rv > b,
+.ve-fead-tablo-pencere .ve-fead-krt-bos,
+.ve-fead-tablo-pencere .ve-fead-tbl-del,
+.ve-fead-tablo-pencere .ve-fead-tbl-name,
+.ve-fead-tablo-pencere .ve-fead-tbl-in,
+.ve-fead-tablo-pencere .ve-fead-tbl-sel{ font-size:var(--fs-lg); }
+.ve-fead-tablo-pencere .ve-fead-krt-wrap{
+  --fead-krt-kim:300px !important; --fead-krt-gir:340px !important;
+}
+.ve-fead-tablo-pencere .ve-fead-tbl-head{ cursor:default; }
+.ve-fead-tablo-pencere .ve-fead-tbl-head::before{ display:none; }
+.ve-fead-tablo-pencere .ve-fead-krt:not(.ve-fead-krt--bas) .ve-fead-krt-fld > i,
+.ve-fead-tablo-pencere .ve-fead-krt:not(.ve-fead-krt--bas) .ve-fead-krt-rv > i{ display:none; }
+.ve-fead-tablo-pencere .ve-fead-krt--bas{
+  position:sticky; top:0; z-index:2; border-bottom:1px solid var(--border-color);
+}
+/* BAŞLIK SATIRI FAREYE TEPKİ VERMEZ (etkileşimsiz, `aria-hidden`): satırın
+   `:hover` zeminini iptal eden NÖTRLEYİCİ — `.ve-fp-inp[readonly]:hover`
+   kalıbı. Yapışkan başlığın altından geçen satır hover'ı yakalamasın diye
+   `pointer-events:none` KULLANILMAZ: tıklama başlığın altındaki görünmez
+   hücreye düşerdi. */
+.ve-fead-krt[aria-hidden="true"]{ background:var(--bg-secondary); }
+.ve-fead-krt[aria-hidden="true"]:hover{ background:var(--bg-secondary); }
+.ve-fead-tablo-pencere .ve-fead-krt--bas .ve-fead-tbl-mv{ visibility:hidden; }
+/* Başlık DEĞERİN hizasında: girdi sayıları sağa yaslı, yön ortada. */
+.ve-fead-tablo-pencere .ve-fead-krt--bas > .gir > .ve-fead-krt-fld > i{ text-align:right; padding-right:8px; }
+.ve-fead-tablo-pencere .ve-fead-krt--bas > .gir > .ve-fead-krt-fld:last-child > i{ text-align:center; padding-right:0; }
+.ve-fead-tablo-pencere .ve-fead-krt > .kim,
+.ve-fead-tablo-pencere .ve-fead-krt > .gir,
+.ve-fead-tablo-pencere .ve-fead-krt > .coz{ padding-top:4px; padding-bottom:4px; align-items:center; }
+.ve-fead-tablo-pencere .ve-fead-krt--bas .bas-ad,
+.ve-fead-tablo-pencere .ve-fead-krt--bas .ve-fead-tbl-ord > b{
+  font-size:var(--fs-body); font-weight:600; letter-spacing:var(--tracking-wide);
+  text-transform:uppercase; color:var(--text-muted);
+}
+
 /* ── ÜST KÜNYE: kayışın kendisi + ekleyici ─────────────────────────────── */
 /* KÜNYE ŞERİDİ = KARTIN TAŞIMA TUTAMAĞI ve bunu SÖYLÜYOR.
    `.ve-node{cursor:move}` kartın tamamında taşıma imleci gösteriyor, ama
@@ -9264,6 +9367,8 @@ span.ve-fw-ro{ display:inline-block; }
   border-bottom:1px solid var(--border-light);
 }
 .ve-fead-krt:hover{ background:var(--accent-tint-10); }
+/* ÇİZİMDEKİ kasnağın üstüne gelmek satırını da yakar (Çizim Masası). */
+.ve-fead-krt.is-hov{ background:var(--accent-tint-10); }
 .ve-fead-krt.is-sel{ background:var(--accent-tint-15); }
 
 /* SÜRÜCÜ SATIRI: sol ray. Numaranın rozeti "bu kasnak sürücü" diyor, ray

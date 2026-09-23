@@ -227,6 +227,7 @@ var VE_GUIDE_SCENE_SEL = [
   '.ve-fead-kat',      // kanvasın Katmanlar paneli
   '.ve-fead-kan',      // Kayış Yolu kartının kabuğu + durum rozeti
   '.ve-fead-yuz',      // çizimin üstünde yüzen denetim çubuğu
+  '.ve-fead-hit',      // çizimin isabet halkaları (Çizim Masası) — baskıda görünmez
   '.ve-fead-not',      // panel açıklama satırı
   '.ve-rb-btn',        // şerit düğmesi
   '.ve-rb-group-items',// düğmenin sarmalı (yerleşim)

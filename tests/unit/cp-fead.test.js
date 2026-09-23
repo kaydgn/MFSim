@@ -595,14 +595,14 @@ describe('kasnak KUTULARI ve kanvas↔mm köprüsü KALDIRILDI', () => {
   test('kasnak tipleri noCanvasBox taşır, araç düğümleri taşımaz', () => {
     Object.keys(componentDefs).filter((t) => componentDefs[t].isFeadPulley)
       .forEach((t) => expect(componentDefs[t].noCanvasBox).toBe(true));
-    ['fead-belt', 'fead-solver', 'fead-layout', 'fead-table', 'fead-report', 'fead-spin']
+    ['fead-belt', 'fead-solver', 'fead-layout', 'fead-report', 'fead-spin']
       .forEach((t) => expect(!!componentDefs[t].noCanvasBox).toBe(false));
   });
 
   test('veIsCanvasHidden yalnız kasnaklara evet der', () => {
     expect(veIsCanvasHidden({ type: 'fead-crank' })).toBe(true);
     expect(veIsCanvasHidden({ type: 'fead-tensioner' })).toBe(true);
-    expect(veIsCanvasHidden({ type: 'fead-table' })).toBe(false);
+    expect(veIsCanvasHidden({ type: 'fead-layout' })).toBe(false);
     expect(veIsCanvasHidden({ type: 'gearbox' })).toBe(false);
     expect(veIsCanvasHidden(null)).toBe(false);
   });
@@ -1724,68 +1724,46 @@ describe('veFeadArrangeByCoords — araç kartlarını diziyor, kasnağa dokunmu
     });
   });
 
-  test('iki BÜYÜK kart sağda, künyeler solda', () => {
-    const ns = kur(3, ['fead-belt', 'fead-solver', 'fead-layout', 'fead-table']);
+  test('BÜYÜK kartlar sağda, künyeler solda', () => {
+    const ns = kur(3, ['fead-belt', 'fead-solver', 'fead-layout', 'fead-layout']);
     expect(fead.veFeadArrangeByCoords({ silent: true })).toBe(true);
     const bul = (t) => ns.find((n) => n.type === t);
-    // Sağ şerit: Kayış Yolu + Kayış Tablosu. Sol şerit: künyeler.
-    expect(bul('fead-layout').x).toBeGreaterThan(bul('fead-belt').x);
-    expect(bul('fead-table').x).toBeGreaterThan(bul('fead-solver').x);
-    // Sol şerit SAĞA yaslı (x0 - genişlik), sağ şerit SOLA yaslı → çakışma yok.
+    // Sol şerit SAĞA yaslı (x0 - genişlik), sağ blok SOLA yaslı → çakışma yok.
     const solSag = Math.max(bul('fead-belt').x + bul('fead-belt').width,
                             bul('fead-solver').x + bul('fead-solver').width);
-    expect(bul('fead-layout').x).toBeGreaterThanOrEqual(solSag);
+    ns.filter((n) => n.type === 'fead-layout')
+      .forEach((k) => expect(k.x).toBeGreaterThanOrEqual(solSag));
   });
 
-  // ── BÜYÜK KARTLAR SÜTUN DEĞİL, İKİ SIRA ─────────────────────────────────
-  // Üçü üst üste dizilince blok DAR ve UZUN oluyordu (959×1388) — görüş alanı
-  // ise geniş, yani sığdırma yükseklikten sınırlanıyor. ÖLÇÜLDÜ (gerçek
-  // tarayıcı, 1316×855): açılış zoom'u 0,473 ve görüşün yalnız %29,9'u dolu;
-  // Kayış Tablosu'nun yazısı okunmuyordu. Tablo üstte + kanvaslar yan yana →
-  // 0,764 ve %49,9.
+  // ── KANVASLAR SÜTUN DEĞİL, TEK SIRA ─────────────────────────────────────
+  // Üst üste dizilen büyük kartlar DAR ve UZUN bir blok üretiyordu ve görüş
+  // alanı geniş olduğu için sığdırma yükseklikten sınırlanıyordu (ölçüldü:
+  // açılış zoom'u 0,473, görüşün %29,9'u dolu). Kayış Tablosu kanvastan inince
+  // (2026-09-23, Çizim Masası) üst sıra boşaldı; geriye iki kanvas kaldı ve
+  // ikisi AYNI modelin iki resmi — yan yana durunca karşılaştırılıyorlar.
   //
   // Kapı ORANI değil YAPIYI tutuyor: zoom kart ölçüleri değişince kayar ama
-  // "tablo üstte, kanvaslar aynı bantta yan yana" kuralı kalır.
-  test('BÜYÜK kartlar: tablo ÜSTTE, kanvaslar YAN YANA', () => {
-    const ns = kur(3, ['fead-belt', 'fead-solver', 'fead-table',
-                       'fead-layout', 'fead-layout']);
+  // "kanvaslar aynı bantta yan yana" kuralı kalır.
+  test('BÜYÜK kartlar: kanvaslar TEK SIRADA, yan yana', () => {
+    const ns = kur(3, ['fead-belt', 'fead-solver', 'fead-layout', 'fead-layout']);
     expect(fead.veFeadArrangeByCoords({ silent: true })).toBe(true);
-    const tbl = ns.find((n) => n.type === 'fead-table');
     const kan = ns.filter((n) => n.type === 'fead-layout').sort((a, b) => a.x - b.x);
     expect(kan).toHaveLength(2);
-
-    // 1) Tablo iki kanvasın da ÜSTÜNDE — alt kenarı ikisinin üst kenarından yukarıda.
-    kan.forEach((k) => expect(tbl.y + tbl.height).toBeLessThanOrEqual(k.y));
-    // 2) İki kanvas AYNI BANTTA: y'leri eşit, x'leri ayrı ve çakışmıyor.
+    // AYNI BANTTA: y'leri eşit, x'leri ayrı ve çakışmıyor.
     expect(kan[1].y).toBe(kan[0].y);
     expect(kan[1].x).toBeGreaterThanOrEqual(kan[0].x + kan[0].width);
-    // 3) Sağ blok yine sol şeridin SAĞINDA — gruplama bozulmadı.
-    const solSag = Math.max(...['fead-belt', 'fead-solver']
-      .map((t) => ns.find((n) => n.type === t))
-      .map((n) => n.x + n.width));
-    [tbl, kan[0]].forEach((n) => expect(n.x).toBeGreaterThanOrEqual(solSag));
   });
 
-  test('BÜYÜK blok, sütun hâline göre DAHA GENİŞ ve DAHA ALÇAK', () => {
-    // Kazancın kendisi: aynı kartlar, daha görüş-dostu bir kutu. Oran
-    // yazılmıyor — ölçü sabitlerine çivilemek kapıyı kart ölçüsüne bağlardı.
-    const zarf = (ns) => {
-      const b = ns.filter((n) => ['fead-table', 'fead-layout'].includes(n.type));
-      return { w: Math.max(...b.map((n) => n.x + n.width)) - Math.min(...b.map((n) => n.x)),
-               h: Math.max(...b.map((n) => n.y + n.height)) - Math.min(...b.map((n) => n.y)) };
-    };
-    const a = kur(3, ['fead-table', 'fead-layout', 'fead-layout']);
+  test('iki kanvasın bloğu GENİŞ ve ALÇAK — yükseklikler toplanmıyor', () => {
+    // Kazancın kendisi: aynı kartlar, görüş-dostu bir kutu. Oran yazılmıyor —
+    // ölçü sabitlerine çivilemek kapıyı kart ölçüsüne bağlardı.
+    const ns = kur(3, ['fead-layout', 'fead-layout']);
     fead.veFeadArrangeByCoords({ silent: true });
-    const iki = zarf(a);
-    // Tek tür kaldığında ESKİ davranış birebir sürüyor (sütun) — kıyas ölçüsü o.
-    const b = kur(3, ['fead-layout', 'fead-layout']);
-    fead.veFeadArrangeByCoords({ silent: true });
-    const sut = zarf(b);
-    expect(iki.w).toBeGreaterThan(sut.w);
-    expect(iki.h).toBeLessThan(sut.h + iki.h);     // tablo eklendi ama sütunlaşmadı
-    // İki kanvas sütundayken üst üste: yükseklikleri toplanır.
-    expect(sut.h).toBeGreaterThanOrEqual(
-      b.filter((n) => n.type === 'fead-layout').reduce((s, n) => s + n.height, 0));
+    const b = ns.filter((n) => n.type === 'fead-layout');
+    const w = Math.max(...b.map((n) => n.x + n.width)) - Math.min(...b.map((n) => n.x));
+    const h = Math.max(...b.map((n) => n.y + n.height)) - Math.min(...b.map((n) => n.y));
+    expect(w).toBeGreaterThanOrEqual(b.reduce((t, n) => t + n.width, 0));
+    expect(h).toBe(Math.max(...b.map((n) => n.height)));
   });
 
   test('aynı şeritteki kartlar dikeyde ÇAKIŞMIYOR', () => {
@@ -1902,7 +1880,7 @@ describe('veFeadLoadExample — kasnak kutusu KURULMUYOR', () => {
     const kasnak = global.nodes.filter((n) => componentDefs[n.type].isFeadPulley);
     expect(kasnak).toHaveLength(6);
     kasnak.forEach((n) => expect(document.getElementById(n.id)).toBeNull());
-    ['fead-belt', 'fead-solver', 'fead-layout', 'fead-table', 'fead-report'].forEach((t) => {
+    ['fead-belt', 'fead-solver', 'fead-layout', 'fead-report'].forEach((t) => {
       const n = global.nodes.find((x) => x.type === t);
       expect(n).toBeTruthy();
       expect(document.getElementById(n.id)).not.toBeNull();
@@ -1913,8 +1891,8 @@ describe('veFeadLoadExample — kasnak kutusu KURULMUYOR', () => {
 /* ══════════════════════════════════════════════════════════════════════════
    YEDEK YERLEŞİM — yerleştirici koşmasa da kanvaslar YAN YANA
    ──────────────────────────────────────────────────────────────────────────
-   Asıl yerleştirme `veFeadArrangeByCoords` ile yapılıyor: tablo üstte,
-   kanvaslar altında bir sıra. Kurucuların YEDEĞİ ise kanvasları ALT ALTA
+   Asıl yerleştirme `veFeadArrangeByCoords` ile yapılıyor: kanvaslar sağda bir
+   sıra, künyeler solda. Kurucuların YEDEĞİ ise kanvasları ALT ALTA
    yazıyordu (örnek) ya da 120 px'lik ızgarada ÜST ÜSTE (sihirbaz) — ve iki
    çağıran da yerleştiriciyi `try/catch` ile sarıyor, yani o yol bir kez
    patlarsa kullanıcı sessizce reddettiği resmi alır.
@@ -1925,24 +1903,35 @@ describe('veFeadLoadExample — kasnak kutusu KURULMUYOR', () => {
    bakıyor: `veArrangeModuleBase` o listeyi argüman olarak alıyor, test onu
    yakalıyor.
    ══════════════════════════════════════════════════════════════════════════ */
-describe('YEDEK YERLEŞİM — kanvaslar yan yana, tablo üstte', () => {
+describe('YEDEK YERLEŞİM — kanvaslar yan yana', () => {
   const T = (t) => componentDefs[t];
+  const sahteKur = (kurulan) => {
+    let k = 0;
+    return (type, x, y) => {
+      const d = componentDefs[type] || {};
+      if (d.maxInstances && global.nodes.filter((n) => n.type === type).length >= d.maxInstances)
+        return null;
+      const n = { id: 'cv' + ++k, type, def: d, x, y,
+                  width: d.defaultWidth || 65, height: d.defaultHeight || 60, data: {} };
+      global.nodes.push(n);
+      if (kurulan) kurulan.push({ type, x, y });
+      return n;
+    };
+  };
 
-  test('veFeadFallbackSlots: tablo ÜSTTE, kanvaslar BİR SIRADA ve çakışmıyor', () => {
+  test('veFeadFallbackSlots: kanvaslar BİR SIRADA, künye şeridiyle aynı tepede', () => {
     const y = fead.veFeadFallbackSlots(
-      ['fead-belt', 'fead-solver', 'fead-layout', 'fead-layout', 'fead-table', 'fead-report']);
-    const [belt, solver, k1, k2, tablo, rapor] = y;
+      ['fead-belt', 'fead-solver', 'fead-layout', 'fead-layout', 'fead-report']);
+    const [belt, solver, k1, k2, rapor] = y;
 
-    // Kanvaslar AYNI satırda ve yan yana — bu turun isteği.
+    // Kanvaslar AYNI satırda ve yan yana.
     expect(k1.ly).toBe(k2.ly);
-    expect(k2.lx).toBeGreaterThan(k1.lx);
     expect(k2.lx).toBeGreaterThanOrEqual(k1.lx + k1.w);      // çakışma YOK
     expect(k1.w).toBe(T('fead-layout').defaultWidth);        // ölçü de veriliyor
     expect(k1.h).toBe(T('fead-layout').defaultHeight);
-
-    // Tablo ÜSTTE ve kanvaslarla aynı sol kenarda (blok dikdörtgen kalsın).
-    expect(tablo.lx).toBe(k1.lx);
-    expect(tablo.ly + tablo.h).toBeLessThanOrEqual(k1.ly);
+    // Üst sıra BOŞ kalmıyor: tablo kanvastan indi, kanvaslar yukarı çıktı —
+    // blok dikdörtgen kalsın diye künye şeridinin ilk satırıyla aynı tepede.
+    expect(k1.ly).toBe(belt.ly);
 
     // Künyeler SOL şeritte, bloğun soluna; aralarında çakışma yok.
     [belt, solver, rapor].forEach((a) => expect(a.lx).toBeLessThan(k1.lx));
@@ -1951,34 +1940,69 @@ describe('YEDEK YERLEŞİM — kanvaslar yan yana, tablo üstte', () => {
 
   // ── AÇILIŞ YÜZEYİ ZATEN DURUYORKEN ──────────────────────────────────────
   //
-  // GERÇEK TARAYICI YAKALADI, BİRİM TEST KAÇIRDI (bu tur, ölçülmüş):
+  // GERÇEK TARAYICI YAKALADI, BİRİM TEST KAÇIRDI (ölçülmüş):
   // `veFeadLoadExample` iç topolojide ZATEN duran araç düğümlerini (açılış
-  // yüzeyinin kurduğu sihirbaz + Kayış Tablosu) sol şeridin devamına diziyor
+  // yüzeyinin kurduğu sihirbaz + boş Kayış Yolu) sol şeridin devamına diziyor
   // ve o döngü sol şerit sayacını okuyor. Sayaç yuva üreticisine taşınınca
   // tanımsız kaldı → `ReferenceError: ust is not defined` ve örnek HİÇ
   // yüklenmedi. Testler yeşildi, çünkü hepsi BOŞ bir topolojiden başlıyordu:
   // `_eskiArac` boş olunca o satır hiç koşmuyor.
-  test('topolojide ZATEN araç düğümü varken örnek yüklenebiliyor', () => {
+  //
+  // İKİNCİ DERS (Çizim Masası, 2026-09-23): açılış yüzeyi artık boş bir
+  // Kayış Yolu kartı koyuyor. Örnek kendi geometri kartını onun YANINA
+  // kurunca kanvasta ÜÇ çizim oluyordu (ölçüldü, gerçek tarayıcı).
+  const acilis = () => {
     document.body.innerHTML = '<div id="ve-canvas"></div>';
     global.connections = [];
     // Açılış yüzeyinin bıraktığı iki düğüm — gerçek sıra bu.
-    global.nodes = ['fead-wizard', 'fead-table'].map((t, i) => ({
+    global.nodes = ['fead-wizard', 'fead-layout'].map((t, i) => ({
       id: 'st' + i, type: t, def: componentDefs[t], x: 0, y: 0,
       width: componentDefs[t].defaultWidth, height: componentDefs[t].defaultHeight, data: {} }));
-    let k = 0;
-    global.createNode = (type, x, y) => {
-      const d = componentDefs[type] || {};
-      if (d.maxInstances && global.nodes.filter((n) => n.type === type).length >= d.maxInstances)
-        return null;
-      const n = { id: 'cv' + ++k, type, def: d, x, y,
-                  width: d.defaultWidth || 65, height: d.defaultHeight || 60, data: {} };
-      global.nodes.push(n); return n;
-    };
+    return global.nodes[1];
+  };
+
+  test('topolojide ZATEN araç düğümü varken örnek yüklenebiliyor', () => {
+    const bos = acilis();
+    global.createNode = sahteKur();
     expect(() => fead.veFeadLoadExample('AG00976_GATES_2025')).not.toThrow();
     delete global.createNode;
-    expect(global.nodes.filter((n) => n.type === 'fead-layout')).toHaveLength(2);
-    // Zaten duran tablo YENİDEN kurulmadı, sol şeride de yığılmadı.
-    expect(global.nodes.filter((n) => n.type === 'fead-table')).toHaveLength(1);
+    const kan = global.nodes.filter((n) => n.type === 'fead-layout');
+    // ÜÇ DEĞİL İKİ çizim: boş kart geometri kartı olarak devralındı...
+    expect(kan).toHaveLength(2);
+    expect(kan).toContain(bos);
+    expect(bos.data.katOn).toBeUndefined();                  // geometri ön ayarı
+    // ...ve işletme kartı YENİ kuruldu, ön ayarıyla.
+    expect(kan.find((n) => n !== bos).data.katOn).toBe('isletme');
+  });
+
+  test('devralınan kanvas, yerini aldığı kartın YUVASINA geçer — sırada boşluk yok', () => {
+    // Yerleştirici koşunca her şey yeniden dizildiği için yedek yuva son
+    // koordinatta görünmüyor; ölçülebildiği tek an KURULUM anı. Bu yüzden
+    // devralınan kartın aldığı HER koordinat kaydediliyor.
+    const bos = acilis();
+    const gecmis = [];
+    let _x = 0, _y = 0;
+    Object.defineProperty(bos, 'x', { get: () => _x, set: (v) => { _x = v; gecmis.push(['x', v]); } });
+    Object.defineProperty(bos, 'y', { get: () => _y, set: (v) => { _y = v; gecmis.push(['y', v]); } });
+    let yakalanan = null;
+    global.veArrangeModuleBase = (liste) => { yakalanan = liste.slice(); return { x: 3000, y: 3000 }; };
+    const kurulan = [];
+    global.createNode = sahteKur(kurulan);
+    fead.veFeadLoadExample('AG00976_GATES_2025');
+    delete global.createNode; delete global.veArrangeModuleBase;
+
+    const kanvasYuva = yakalanan.filter((a) => a && a.w === T('fead-layout').defaultWidth);
+    expect(kanvasYuva).toHaveLength(2);
+    // Geometri kartı paketin İLK kanvası — boş kart onun yuvasını almalı.
+    const beklenen = { x: Math.round(3000 + kanvasYuva[0].lx),
+                       y: Math.round(3000 + kanvasYuva[0].ly) };
+    expect(gecmis).toContainEqual(['x', beklenen.x]);
+    expect(gecmis).toContainEqual(['y', beklenen.y]);
+    // Yeni kurulan işletme kartı İKİNCİ yuvada — yan yana, aynı satırda.
+    const isl = kurulan.filter((c) => c.type === 'fead-layout');
+    expect(isl).toHaveLength(1);
+    expect(isl[0]).toMatchObject({ x: 3000 + kanvasYuva[1].lx, y: 3000 + kanvasYuva[1].ly });
+    expect(isl[0].y).toBe(beklenen.y);
   });
 
   test('ÜÇÜNCÜ kanvas da sıraya girer — sütuna dönmüyor', () => {
@@ -2001,17 +2025,11 @@ describe('YEDEK YERLEŞİM — kanvaslar yan yana, tablo üstte', () => {
     global.nodes = []; global.connections = [];
     let yakalanan = null;
     global.veArrangeModuleBase = (liste) => { yakalanan = liste.slice(); return { x: 3000, y: 3000 }; };
-    let k = 0;
     // KURULUM ANI da yakalanır: yuva listesi doğru olup düğümlere yanlış
     // indisle dağıtılabilir. Son koordinatlar yerleştirici tarafından ezildiği
     // için yedeğin ölçülebildiği tek an bu.
     const kurulan = [];
-    global.createNode = (type, x, y) => {
-      const d = componentDefs[type] || {};
-      const n = { id: 'cv' + ++k, type, def: d, x, y,
-                  width: d.defaultWidth || 65, height: d.defaultHeight || 60, data: {} };
-      global.nodes.push(n); kurulan.push({ type, x, y }); return n;
-    };
+    global.createNode = sahteKur(kurulan);
     fead.veFeadLoadExample('AG00976_GATES_2025');
     delete global.createNode; delete global.veArrangeModuleBase;
 
@@ -2024,16 +2042,12 @@ describe('YEDEK YERLEŞİM — kanvaslar yan yana, tablo üstte', () => {
     expect(buyuk).toHaveLength(2);
     expect(buyuk[0].ly).toBe(buyuk[1].ly);                       // YAN YANA
     expect(Math.abs(buyuk[1].lx - buyuk[0].lx)).toBeGreaterThanOrEqual(buyuk[0].w);
-    const tablo = yakalanan.find((a) => a && a.w === T('fead-table').defaultWidth);
-    expect(tablo.ly + tablo.h).toBeLessThanOrEqual(buyuk[0].ly);  // TABLO ÜSTTE
 
     // VE YUVALAR DOĞRU DÜĞÜME GİTTİ.
     const kk = kurulan.filter((c) => c.type === 'fead-layout');
     expect(kk).toHaveLength(2);
     expect(kk[0].y).toBe(kk[1].y);
     expect(Math.abs(kk[1].x - kk[0].x)).toBeGreaterThanOrEqual(T('fead-layout').defaultWidth);
-    const kt = kurulan.find((c) => c.type === 'fead-table');
-    expect(kt.y + T('fead-table').defaultHeight).toBeLessThanOrEqual(kk[0].y);
   });
 });
 
@@ -2729,9 +2743,11 @@ describe('FEAD editörü açılışı', () => {
     expect(iz.yuklenen).toEqual(['boş']);
     expect(iz.wiz).toBe(1);
     // Açılış yüzeyi de kuruldu: sihirbazı kapatan kullanıcı boş bir kanvasa
-    // düşmesin — bu bir kapı değil bir karşılama.
+    // düşmesin — bu bir kapı değil bir karşılama. Karşılayan kart artık BOŞ
+    // bir Kayış Yolu (Çizim Masası, 2026-09-23): kendi boş hâlini çiziyor ve
+    // iki yolu da gösteriyor ("Sihirbazla kur" · "Tabloyu aç").
     expect(global.nodes.filter((n) => n.type === 'fead-wizard').length).toBe(1);
-    expect(global.nodes.filter((n) => n.type === 'fead-table').length).toBe(1);
+    expect(global.nodes.filter((n) => n.type === 'fead-layout').length).toBe(1);
     // Ve açılan sihirbaz KANVASTAKİ düğümün kendisi — ikinci bir kopya
     // kurulmuyor (düğüm kullanıcının yarım bıraktığı formu taşıyor).
     expect(iz.wizId).toBe(global.nodes.filter((n) => n.type === 'fead-wizard')[0].id);

@@ -162,8 +162,6 @@ var VE_SUTUNA_SIGMAYAN = ['engine', 'ec-matching', 'gear-shift', 'shift-controll
   'vehicle', 'torque-converter', 'transfer',
   'mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-bracket', 'mnt-mount',
   'mnt-shaft', 'mnt-pto', 'mnt-pump'];
-// `fead-table` 2026-09-23'te listeden ÇIKTI: dokuz sütunlu ızgara iki kategoriye
-// (Girdiler · Çözüm) ayrıldı ve sütuna sığıyor — mufettis-sigma.spec.js ölçüyor.
 
 var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-controller', 'vehicle', 'transfer', 'obstacle-crossing', 'engine-gearbox-matching', 'gear-shift', 'gearbox', 'solver', 'sensor-wizard', 'road',
   // Aksesuarlar — iki sütun (model/oran | güç-çekişi grafiği)
@@ -180,7 +178,7 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   // gibi açılıyordu. Kasnak paneli altı kartlı, Çözücü ise modülün en ağır
   // yüzeyi (Algılanan Model + çevrim tablosu + kapılar + sonuç blokları);
   // "içerik-yoğun" ölçütünü ikisi de karşılıyor.
-  'fead-tensioner', 'fead-belt', 'fead-layout', 'fead-table', 'fead-solver',
+  'fead-tensioner', 'fead-belt', 'fead-layout', 'fead-solver',
   'fead-crank', 'fead-alternator', 'fead-ac', 'fead-waterpump', 'fead-ps',
   'fead-aircomp', 'fead-fan', 'fead-idler',
   // Parametrik: çoklu-seri sonuç grafiği tam genişlikte ferah okunur.
@@ -304,8 +302,6 @@ function showNodeProperties(node) {
     html += getFeadPulleyPropertiesHTML(node);
   } else if(node.type === 'fead-belt') {
     html += getFeadBeltPropertiesHTML(node);
-  } else if(node.type === 'fead-table') {
-    html += getFeadTablePropertiesHTML(node);
   } else if(node.type === 'fead-layout') {
     html += getFeadLayoutPropertiesHTML(node);
   } else if(node.type === 'fead-solver') {

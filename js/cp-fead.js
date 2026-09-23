@@ -157,8 +157,6 @@ var VE_FEAD_STARTER_LAYOUT = [
   { type:'fead-solver',  lx:340, ly:20 },
   { type:'fead-wizard',  lx:490, ly:20 },
   { type:'fead-report',  lx:790, ly:20 },
-  // Tablo 726 px geniş — üst şeridin altına, kayış düzleminin ÜSTÜNE.
-  { type:'fead-table',   lx:40,  ly:90 },
   // ── Kayış düzlemi: krank altta ortada, aksesuarlar çevresinde ──
   { type:'fead-crank',       name:'Krank Kasnağı', lx:250, ly:330 },
   { type:'fead-tensioner',   name:'Gergi',         lx:140, ly:210 },
@@ -219,19 +217,15 @@ function veFeadFallbackSlots(dugumler, opts){
   // Kanvas sırası için aynısı: iç topolojide zaten duran bir kanvas, YENİ
   // kurulanların sağına eklenmeli — sıfırdan başlarsa üstlerine biner.
   var kanvasBasla = (typeof opts.kanvasBasla === 'number') ? opts.kanvasBasla : 0;
-  var tablo = _feadDefOf({ type: 'fead-table' });
-  var tabloH = tablo.defaultHeight
-            || ((typeof VE_FEAD_TABLE_H === 'number') ? VE_FEAD_TABLE_H : 340);
-  var kanvasY = ustY + tabloH + 24;
+  // TABLO KANVASTAN İNDİ (2026-09-23): kanvaslar artık ÜST sırada, yan yana.
+  var kanvasY = ustY;
   var ust = ustBasla, kanvasNo = kanvasBasla, out = [];
   (dugumler || []).forEach(function(n){
     var d = _feadDefOf(typeof n === 'string' ? { type: n } : n);
     if(d.noCanvasBox){ out.push(null); return; }
     // Ölçü de veriliyor: yoksa veArrangeModuleBase kartı 65×60 sayıp grubu
     // yanlış ortalıyor ve kart görünür alanın sağından taşıyor.
-    if(d.isFeadTable){
-      out.push({ lx: sagX, ly: ustY, w: d.defaultWidth, h: d.defaultHeight });
-    } else if(d.isFeadLayout){
+    if(d.isFeadLayout){
       out.push({ lx: sagX + kanvasNo * ((d.defaultWidth || 440) + 24), ly: kanvasY,
                  w: d.defaultWidth, h: d.defaultHeight });
       kanvasNo++;
@@ -261,7 +255,7 @@ function veFeadArrangeByCoords(opts){
     // Kutusuz düğüm (kasnak) dizilmez — kanvasta yeri yok.
     if(typeof veIsCanvasHidden === 'function' && veIsCanvasHidden(n)) return;
     var d = _feadDefOf(n);
-    (d.isFeadLayout || d.isFeadTable) ? sag.push(n) : sol.push(n);
+    d.isFeadLayout ? sag.push(n) : sol.push(n);
   });
   if(!sol.length && !sag.length) return false;
 
@@ -328,24 +322,17 @@ function veFeadArrangeByCoords(opts){
   }
 
   serit(sol, CX - 60, 'sol');
-  var tablolar = sag.filter(function(n){ return _feadDefOf(n).isFeadTable; });
-  var kanvaslar = sag.filter(function(n){ return !_feadDefOf(n).isFeadTable; });
-  if(tablolar.length && kanvaslar.length){
-    // İki sıranın toplam yüksekliği önce ölçülür ki blok CY'ye ORTALANSIN;
-    // ortalamadan yerleştirmek bloğu aşağı kaydırır ve sol şeritle hizasını
-    // bozardı (araç şeridi kendi içinde zaten ortalı).
-    var oO = function(l){
-      var e = 0;
-      l.forEach(function(n){ var b = veFeadNodeBox(n), o = adPayi(n, b);
-                             e = Math.max(e, o.top + b.h + o.bottom); });
-      return e;
-    };
-    var h1 = oO(tablolar), h2 = oO(kanvaslar);
-    var y0 = CY - (h1 + 24 + h2) / 2;
-    sira(tablolar,  CX + 60, y0);
-    sira(kanvaslar, CX + 60, y0 + h1 + 24);
-  } else {
-    serit(sag, CX + 60, 'sag');       // tek tür varsa eski davranış birebir
+  // KANVASLAR TEK SIRA, YAN YANA. Tablo kanvastan inince (2026-09-23) üst
+  // sıra boşaldı; kanvasları SÜTUNA dizmek dar-uzun bir blok üretir ve
+  // sığdırma yükseklikten sınırlanırdı (ölçülmüş kusur, 0,473). Sıra CY'ye
+  // ORTALANIR ki sol şeritle hizası bozulmasın.
+  if(sag.length){
+    var enY = 0;
+    sag.forEach(function(n){
+      var b = veFeadNodeBox(n), o = adPayi(n, b);
+      enY = Math.max(enY, o.top + b.h + o.bottom);
+    });
+    sira(sag, CX + 60, CY - enY / 2);
   }
 
   if(!opts.silent && typeof saveState === 'function') saveState();
@@ -399,20 +386,18 @@ function veFeadPopulateStarter(){
     return _r;
   }
   if(typeof createNode !== 'function') return [];
+  // AÇILIŞ YÜZEYİ: sihirbaz + BOŞ BİR KAYIŞ YOLU KARTI (Çizim Masası,
+  // 2026-09-23). Kart boşken kendi boş hâlini çizer ("Sihirbazla kur" ·
+  // "Tabloyu aç"); sihirbazın "Modeli Kur"u onu geometri kartı olarak
+  // YENİDEN KULLANIR (tip + ön ayar eşleşmesi). Yerleşim ortak yuvadan.
+  var tipler = ['fead-wizard', 'fead-layout'];
+  var yuva = veFeadFallbackSlots(tipler);
   var base = (typeof veArrangeModuleBase === 'function')
-    ? veArrangeModuleBase(VE_FEAD_STARTER_LAYOUT.map(function(it){ return { lx:it.lx, ly:it.ly }; }))
+    ? veArrangeModuleBase(yuva)
     : { x:3000, y:3000 };
   var created = [];
-  // KAYIŞ TABLOSU DA AÇILIŞTA GELİR: sıfırdan kuran kullanıcı kasnağı paletten
-  // bıraktığı anda koordinatını gireceği yeri görmeli. Tablo olmadan kasnak
-  // kanvasta durur ama sırasını ve konumunu girecek yüzey yoktur — tel
-  // döneminde o işi kanvasta tel çekmek yapıyordu.
-  ['fead-wizard', 'fead-table'].forEach(function(tip, k){
-    var slot = null;
-    for(var i=0;i<VE_FEAD_STARTER_LAYOUT.length;i++){
-      if(VE_FEAD_STARTER_LAYOUT[i].type === tip){ slot = VE_FEAD_STARTER_LAYOUT[i]; break; }
-    }
-    if(!slot) slot = { lx: 490 + k * 150, ly: 20 };
+  tipler.forEach(function(tip, k){
+    var slot = yuva[k] || { lx: k * 150, ly: 20 };
     var before = (typeof nodes !== 'undefined') ? nodes.length : 0;
     createNode(tip, base.x + slot.lx, base.y + slot.ly);
     if(typeof nodes !== 'undefined' && nodes.length > before) created.push(nodes[nodes.length-1]);
@@ -2885,6 +2870,252 @@ function veFeadCompassReset(nodeId){
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+//  ÇİZİM MASASI — KASNAK ÇİZİMDE SEÇİLİR VE TAŞINIR
+// ════════════════════════════════════════════════════════════════════════════
+// Kullanıcı kararı (2026-09-23, tasarım tezgâhı II): kanvas kartının çizimi
+// giriş yüzeyi olur. Kasnağa tıklamak penceresini açar, sürüklemek konumunu
+// yazar (gergide AVARA MERKEZİ `cenX/cenY` — montaj konumu ondan türer ve
+// onunla birlikte kayar); kesin sayı pencerede ve tabloda.
+//
+//  • ÇİZİM KENDİ GEOMETRİSİNİ HESAPLAMAZ: sürükleme yalnız GİRDİYİ yazar
+//    (farenin mm cinsinden yer değiştirmesi, 0,1 mm'ye yuvarlı). Kayış yolu,
+//    sarım ve boy çekirdekten gelir.
+//  • ÖLÇEK SÜRÜKLEME BOYUNCA DONAR. Çizim her kurulumda kasnaklara
+//    sığdırılıyor; donmasa kasnak kenara yaklaştıkça çizim imlecin altında
+//    küçülür ve kasnak imleçten kaçardı. Bırakınca kart yeniden sığdırılır.
+//  • KAYIŞI KOPARAN HAMLE YAZILMAZ: geçerli bir modelden geçersizine giden
+//    hamlede kasnak son geçerli yerinde durur, kart sebebini yazar. Model
+//    başta zaten geçersizse hamle serbest — onaran kullanıcı kilitlenmesin.
+//  • Sürükleme boyunca saveState ÇAĞRILMAZ, bırakınca bir kez: tek hamle =
+//    tek geri-al adımı.
+var VE_FEAD_SURUKLE = null;     // { kart, kasnak, xf:{kartId:xf}, red } — görünüm durumu
+var VE_FEAD_UZERINDE = null;    // fare altındaki kasnağın kimliği — görünüm durumu
+
+// Kayış yolunun SAĞLIĞI TEK YERDEN: kart rozeti ile sürükleme kapısı aynı
+// hükmü versin. Çekirdek hoşgörülü çözüyor (ihlaller sayı olarak taşınır),
+// yani "çizildi" demek "doğru" demek değil.
+function veFeadYolDurumu(build, mode){
+  var d = { ok: !!(build && build.ok), sol: 'Kayış yolu kapanmadı', sag: '', neden: '' };
+  // `neden` KISA ve KESİN: sürükleme reddinde kart onu yazar (rozetin `sol`u
+  // künyeyle birlikte uzun cümle).
+  if(!d.ok){
+    d.neden = (build && build.errors && build.errors[0]) || (build && build.geomError)
+      || 'kayış yolu kurulamıyor';
+    return d;
+  }
+  try {
+    // HANGİ KONUM ÇİZİLİYORSA onun sayıları; Mean'in sayılarını gösterip başka
+    // bir konumu çizmek sessiz bir yanlış okuma olurdu.
+    var sel = veFeadPosSelection(build, mode || 'mean');
+    var relS = (sel.primary && Number.isFinite(sel.primary.relDeg))
+      ? sel.primary.relDeg : FEADCore.meanRel(build.sys);
+    var g = FEADCore.tensionerState(build.sys, relS).geom, sg = 0, bk = 0;
+    g.wraps.forEach(function(w, i){
+      if(build.sys.pulleys[i].contact === 'back') bk += w; else sg += w;
+    });
+    var inv = (sg - bk) * 180 / Math.PI;
+    d.sol = build.order.length + ' kasnak · L ' + _feadFmt(g.LeffMm, 1) + ' mm';
+    // ÇEVRİM İKİ YÖNE DE GEZİLEBİLİR: aynalanmış düzende işaretli sarım −360°
+    // çıkar ve çekirdek onu da kabul ediyor (|Σ| − 360). Yön künyede yazılır.
+    d.sag = 'Σsarım ' + _feadFmt(inv, 1) + '°' + (inv < 0 ? ' (ters yön)' : '');
+    if(Math.abs(Math.abs(inv) - 360) > 0.05){
+      d.ok = false; d.sol = 'Kayış yolu KAPANMIYOR · ' + d.sol;
+      d.neden = 'kayış yolu kapanmıyor (Σsarım ' + _feadFmt(inv, 1) + '°)';
+    } else if((g.violations || []).length){
+      d.ok = false; d.sol = 'Kayış kasnağın İÇİNDEN geçiyor · ' + d.sol;
+      d.neden = 'kayış bir kasnağın içinden geçiyor';
+    }
+  } catch(e){
+    d.ok = false; d.sol = 'Geometri okunamadı';
+    d.neden = (typeof veFeadTranslateError === 'function')
+      ? veFeadTranslateError(e && e.message) : 'geometri çözülemedi';
+  }
+  return d;
+}
+
+function _feadKartSvg(kartId){
+  if(typeof document === 'undefined') return null;
+  var el = document.getElementById(kartId);
+  return el ? el.querySelector('.ve-fead-kanvas svg[data-fead-xf]') : null;
+}
+// Çizimin mm → görünüm katsayıları: çizici kökte `data-fead-xf` olarak basar
+// (`s ox oy mx my`, `_feadXform`un aynısı) — ikinci bir ölçek hesabı yok.
+function _feadCizimXf(svg){
+  var a = svg && svg.getAttribute && svg.getAttribute('data-fead-xf');
+  if(!a) return null;
+  var p = String(a).split(' ').map(Number);
+  if(p.length !== 5 || !p.every(Number.isFinite) || !(p[0] > 0)) return null;
+  return { s: p[0], ox: p[1], oy: p[2], mx: p[3], my: p[4] };
+}
+function _feadCizimMm(xf, pt){ return [xf.mx + (pt.x - xf.ox) / xf.s, xf.my - (pt.y - xf.oy) / xf.s]; }
+// Kasnağın KONUM GİRDİSİ: tablonun satırıyla aynı anahtar (gergide cenX/cenY).
+function _feadKasnakKoord(node){
+  var ten = !!_feadDefOf(node).isFeadTensioner, d = (node && node.data) || {};
+  var kx = ten ? 'cenX' : 'x', ky = ten ? 'cenY' : 'y';
+  return { kx: kx, ky: ky, x: _feadNum(d[kx], NaN), y: _feadNum(d[ky], NaN) };
+}
+function _feadMm01(v){ return Math.round(v * 10) / 10; }
+function _feadNodeById(id){
+  if(typeof nodes === 'undefined' || !id) return null;
+  for(var i = 0; i < nodes.length; i++) if(nodes[i].id === id) return nodes[i];
+  return null;
+}
+
+// Seçim ve fare altı işareti SINIFLA eşitlenir, kart yeniden KURULMAZ: fare
+// her kasnakta çizimi baştan kurmak imlecin altındaki öğeyi değiştirirdi.
+function veFeadCizimIsaretle(){
+  if(typeof document === 'undefined') return 0;
+  var sec = _feadSelectedId(), uz = VE_FEAD_UZERINDE;
+  var el = document.querySelectorAll('[data-fead-k]');
+  for(var i = 0; i < el.length; i++){
+    var k = el[i].getAttribute('data-fead-k');
+    el[i].classList.toggle('is-sel', !!sec && k === sec);
+    el[i].classList.toggle('is-hov', !!uz && k === uz);
+  }
+  var satir = document.querySelectorAll('.ve-fead-krt[data-ve-node]');
+  for(var j = 0; j < satir.length; j++)
+    satir[j].classList.toggle('is-hov', !!uz && satir[j].getAttribute('data-ve-node') === uz);
+  return el.length;
+}
+
+function veFeadCizimUzerinde(id){
+  if(VE_FEAD_SURUKLE) return false;
+  id = id || null;
+  if(VE_FEAD_UZERINDE === id) return false;
+  VE_FEAD_UZERINDE = id;
+  veFeadCizimIsaretle();
+  return true;
+}
+
+// Kasnağın çemberine basıldı. Hareketsiz bırakılırsa TIK (pencere açılır),
+// 3 px'ten fazla kayarsa SÜRÜKLEME. mousedown DURDURULUR: kart bir kanvas
+// düğümünün içinde, durdurulmasa kasnağı tutmak kartı taşırdı (gülün kuralı).
+function veFeadCizimBas(evt, kartId, kasnakId){
+  if(!evt || (evt.button != null && evt.button !== 0) || typeof document === 'undefined') return false;
+  if(evt.stopPropagation) evt.stopPropagation();
+  if(evt.preventDefault) evt.preventDefault();
+  var node = _feadNodeById(kasnakId);
+  if(!node) return false;
+  if(typeof clearSelection === 'function') clearSelection();
+  if(typeof addToSelection === 'function') addToSelection(node);
+  var svg = _feadKartSvg(kartId), xf = _feadCizimXf(svg), k0 = _feadKasnakKoord(node);
+  var p0 = svg ? _feadSvgPoint(svg, evt) : null;
+  var suruklenir = !!(xf && p0 && Number.isFinite(k0.x) && Number.isFinite(k0.y));
+  var m0 = suruklenir ? _feadCizimMm(xf, p0) : null;
+  var xfler = {};
+  var bastaGecerli = false;
+  if(suruklenir){
+    nodes.forEach(function(n){
+      if(!_feadDefOf(n).isFeadLayout) return;
+      var x = _feadCizimXf(_feadKartSvg(n.id));
+      if(x) xfler[n.id] = x;
+    });
+    bastaGecerli = veFeadYolDurumu(veFeadBuildFromCanvas(), 'mean').ok;
+  }
+  var tasindi = false, hedef = null, kare = 0, yazildi = false;
+
+  function uygula(){
+    kare = 0;
+    if(!hedef) return;
+    var eskiX = node.data[k0.kx], eskiY = node.data[k0.ky];
+    node.data[k0.kx] = hedef.x; node.data[k0.ky] = hedef.y;
+    var red = '';
+    if(bastaGecerli){
+      var yd = veFeadYolDurumu(veFeadBuildFromCanvas(), 'mean');
+      if(!yd.ok){
+        node.data[k0.kx] = eskiX; node.data[k0.ky] = eskiY;
+        red = yd.neden || 'kayış yolu kurulamıyor';
+      }
+    }
+    if(!red && (node.data[k0.kx] !== k0.x || node.data[k0.ky] !== k0.y)) yazildi = true;
+    if(VE_FEAD_SURUKLE) VE_FEAD_SURUKLE.red = red;
+    hedef = null;
+    veFeadRefreshCards();
+  }
+  function tasi(e){
+    if(!suruklenir) return;
+    var p = _feadSvgPoint(_feadKartSvg(kartId) || svg, e);
+    if(!p) return;
+    if(!tasindi){
+      if(Math.abs(p.x - p0.x) < 3 && Math.abs(p.y - p0.y) < 3) return;
+      tasindi = true;
+      VE_FEAD_SURUKLE = { kart: kartId, kasnak: kasnakId, xf: xfler, red: '' };
+      if(document.body) document.body.classList.add('ve-fead-surukleniyor');
+    }
+    var m = _feadCizimMm(xf, p);
+    hedef = { x: _feadMm01(k0.x + (m[0] - m0[0])), y: _feadMm01(k0.y + (m[1] - m0[1])) };
+    if(kare) return;
+    if(typeof requestAnimationFrame === 'function') kare = requestAnimationFrame(uygula);
+    else uygula();
+  }
+  function birak(){
+    document.removeEventListener('mousemove', tasi, true);
+    document.removeEventListener('mouseup', birak, true);
+    if(kare && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(kare);
+    if(hedef) uygula();
+    VE_FEAD_SURUKLE = null;
+    VE_FEAD_UZERINDE = kasnakId;
+    if(document.body) document.body.classList.remove('ve-fead-surukleniyor');
+    if(!tasindi){
+      if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
+      veFeadCizimIsaretle();
+      return;
+    }
+    if(yazildi && typeof saveState === 'function') saveState();
+    veFeadTableAfterEdit();
+  }
+  document.addEventListener('mousemove', tasi, true);
+  document.addEventListener('mouseup', birak, true);
+  return true;
+}
+
+// Klavyeyle kaydır: ok 1 mm, Shift+ok 10 mm. Aynı kapıdan geçer (kayışı
+// koparan adım yazılmaz) ve her basış bir geri-al adımıdır.
+function veFeadKasnakKaydir(id, dx, dy){
+  var node = _feadNodeById(id);
+  if(!node || !_feadDefOf(node).isFeadPulley) return false;
+  var k = _feadKasnakKoord(node);
+  if(!Number.isFinite(k.x) || !Number.isFinite(k.y)) return false;
+  var bastaGecerli = veFeadYolDurumu(veFeadBuildFromCanvas(), 'mean').ok;
+  node.data[k.kx] = _feadMm01(k.x + dx);
+  node.data[k.ky] = _feadMm01(k.y + dy);
+  if(bastaGecerli){
+    var yd = veFeadYolDurumu(veFeadBuildFromCanvas(), 'mean');
+    if(!yd.ok){
+      node.data[k.kx] = k.x; node.data[k.ky] = k.y;
+      if(typeof showToast === 'function')
+        showToast('Buraya taşınamaz — ' + (yd.neden || 'kayış yolu kurulamıyor'), 'warning');
+      return false;
+    }
+  }
+  if(typeof saveState === 'function') saveState();
+  veFeadTableAfterEdit();
+  return true;
+}
+
+// Kökteki klavye dinleyicisinin kancası (ui-core.js). Kutusuz bir kasnak
+// seçiliyken oklar onu kaydırır, Delete kayış sırasını kapatarak siler —
+// genel `deleteSelectedNodes` sırayı kapatmıyor ve gergi kuralını bilmiyor.
+function veFeadCizimTus(e){
+  if(!e || e.ctrlKey || e.metaKey || e.altKey) return false;
+  var node = _feadNodeById(_feadSelectedId());
+  if(!node || !_feadDefOf(node).isFeadPulley) return false;
+  var y = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[e.key];
+  if(y){
+    if(e.preventDefault) e.preventDefault();
+    var adim = e.shiftKey ? 10 : 1;
+    veFeadKasnakKaydir(node.id, y[0] * adim, y[1] * adim);
+    return true;
+  }
+  if(e.key === 'Delete' || e.key === 'Backspace'){
+    if(e.preventDefault) e.preventDefault();
+    if(typeof veFeadTableDelete === 'function') veFeadTableDelete(node.id);
+    return true;
+  }
+  return false;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 //  KAYIŞ YOLU (2D ŞEMA) — ARTIK ÇEKİRDEĞİN GEOMETRİSİYLE
 // ════════════════════════════════════════════════════════════════════════════
 // Şema, kayış çevresini KENDİ hesaplamaz: FEADCore.solveGeometry'nin ürettiği
@@ -3246,6 +3477,10 @@ function veFeadLayoutSVG(build, W, H, opts){
     olcekle(pad, pad, pad, pad);
     etiketPayi();
   }
+  // SÜRÜKLEME SÜRERKEN ÖLÇEK DONAR (bkz. ÇİZİM MASASI): kasnak kenara
+  // yaklaştıkça yeniden sığdırmak çizimi imlecin altında küçültürdü.
+  var _xs = opts.xfSabit;
+  if(_xs && _xs.s > 0){ s = _xs.s; offX = _xs.ox; offY = _xs.oy; minX = _xs.mx; maxY = _xs.my; }
   // ── AÇIKLIK GERİLMESİ ETİKETLERİ — konum ad yerleştiricisinden ÖNCE ─────
   // Üç ölçülmüş kusur birden kapanıyor (kullanıcı bildirimi: "kayış
   // gerginlikleri iyi görülmüyor"):
@@ -3654,8 +3889,15 @@ function veFeadLayoutSVG(build, W, H, opts){
   // pencerenin altından taşarak kırpılır (ölçüldü). max-width bunu keser.
   // `frame:false` — çerçeveyi KAP çiziyor (pencerenin küçük resmi); SVG'nin
   // kendi kenarlığı içte ikinci bir kutu oluyordu (ölçüldü: çift çerçeve).
+  // DÜZENLENEBİLİR ÇİZİM (kanvas kartı) kendi mm dönüşümünü taşır: sürükleme
+  // fareyi mm'ye buradan çevirir, ikinci bir ölçek hesabı yapmaz.
+  var _duzen = !!(opts.edit && opts.inline && opts.nodeId);
+  var editAttr = _duzen
+    ? ' data-fead-xf="' + [s, offX, offY, minX, maxY].map(function(v){
+        return Math.round(v * 1e6) / 1e6; }).join(' ') + '"'
+    : '';
   var kabuk = opts.inline
-    ? '<svg' + animAttr + ' viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" style="display:block; width:100%; height:100%;">'
+    ? '<svg' + animAttr + editAttr + ' viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" style="display:block; width:100%; height:100%;">'
     : (opts.frame === false)
     ? '<svg' + animAttr + ' viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="display:block; width:100%; height:auto;">'
     : '<svg' + animAttr + ' viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="display:block; width:100%; max-width:'
@@ -3788,12 +4030,26 @@ function veFeadLayoutSVG(build, W, H, opts){
     // VURGU kasnağın ARKASINA bir zemin + kalın çember: rol rengi (sürücü ·
     // gergi · aksesuar) aynı kalır, yani vurgu rolü EZMEZ, üstüne biner.
     var vurgu = (k === hk);
+    // DÜZENLENEBİLİR ÇİZİMDE her kasnağın bir işaret zemini VAR, görünürlüğü
+    // CSS'te (`.is-hov` · `.is-sel`): seçim ve fare altı kartı yeniden
+    // kurmadan değişir (veFeadCizimIsaretle). Kimlik `data-pi`nin ARKASINDA.
+    // SUNUM NİTELİĞİ GÖRÜNMEZ (`fill="none" opacity="0"`) ve CSS onu ezer:
+    // kural taşımayan bir belgede (kılavuzun baskısı) nitelik olmasa SVG
+    // varsayılanı SİYAH dolgu olur ve her kasnağın arkasına kara bir disk
+    // çizilirdi.
+    var _kid = (_duzen && build.order[k]) ? build.order[k].id : '';
+    var _ksin = _kid ? ((_kid === opts.selId ? ' is-sel' : '') + (_kid === opts.hovId ? ' is-hov' : '')) : '';
+    var _katt = _kid ? ' data-fead-k="' + _feadEsc(_kid) + '"'
+      + (_ksin ? ' class="' + _ksin.trim() + '"' : '') : '';
+    if(_kid)
+      svg += '<circle data-ve="pulley-hov" cx="' + X + '" cy="' + Y + '" r="' + f(R + 4)
+          + '" fill="none" opacity="0"' + _katt + '/>';
     if(vurgu)
       svg += '<circle data-ve="pulley-hl" cx="' + X + '" cy="' + Y + '" r="' + f(R + 3)
           + '" fill="var(--accent-tint-15)" stroke="none"/>';
     svg += '<circle data-ve="pulley" cx="' + X + '" cy="' + Y + '" r="' + R + '" fill="none" stroke="' + col
         + '" stroke-width="' + (vurgu ? 3 : 2) + '"' + (p.contact === 'back' ? ' stroke-dasharray="4 3"' : '')
-        + ' data-pi="' + k + '"/>';
+        + ' data-pi="' + k + '"' + _katt + '/>';
     svg += '<circle cx="' + X + '" cy="' + Y + '" r="2.2" fill="' + col + '" data-pi="' + k + '"/>';
 
     // KASNAK KOLLARI — yalnız animasyonlu kartta. Kasnağın rol rengini taşırlar
@@ -3838,7 +4094,7 @@ function veFeadLayoutSVG(build, W, H, opts){
       var et = _etiket[k] || { x: X, y: Y - R - 4, an: 'middle' };
       svg += '<text data-ve="name" x="' + f(et.x) + '" y="' + f(et.y) + '" text-anchor="' + et.an
           + '" font-size="9"' + (vurgu ? ' font-weight="700" fill="var(--text-heading)"' : ' fill="var(--text-muted)"')
-          + '>' + _feadEsc(gorAd(k)) + '</text>';
+          + _katt + '>' + _feadEsc(gorAd(k)) + '</text>';
     }
     // SARIM AÇISI ŞEMADA İKİNCİ KEZ YAZILIR. Kanvasta bunun karşılığı var:
     // orada tablo YOK, kart tek başına duruyor. Raporda aynı altı sayı bir
@@ -3893,6 +4149,63 @@ function veFeadLayoutSVG(build, W, H, opts){
     if(hayalet.length)
       svg += '<text x="' + f(pad - 6) + '" y="' + y2 + '" font-size="7" fill="var(--text-muted)">'
           + hayalet.length + ' konum daha (soluk) — kolun gezdiği aralık</text>';
+  }
+
+  // ── ÇİZİM MASASI: sürükleme künyesi + isabet halkaları ──────────────────
+  if(_duzen){
+    // Sürüklenen kasnağın KÜNYESİ: konum GİRDİSİ (mm; gergide avara merkezi)
+    // ve komşu iki açıklığın boyu — kesin sayı sürüklerken de okunsun.
+    var _sk = -1;
+    if(opts.surukleK) build.order.forEach(function(n, k){ if(n && n.id === opts.surukleK) _sk = k; });
+    if(_sk >= 0 && ps[_sk]){
+      var _sn = build.order[_sk], _sd = _sn.data || {}, _sten = !!_feadDefOf(_sn).isFeadTensioner;
+      var _sx = _feadNum(_sten ? _sd.cenX : _sd.x, NaN), _sy = _feadNum(_sten ? _sd.cenY : _sd.y, NaN);
+      var _SX = tx(ps[_sk].c[0]), _SY = ty(ps[_sk].c[1]), _SR = ps[_sk].rPitch * s;
+      var _sagda = (_SX + _SR + 8 + 96) < W;
+      svg += '<text data-ve="drag-readout" x="' + f(_sagda ? _SX + _SR + 8 : _SX - _SR - 8)
+          + '" y="' + f(Math.max(12, _SY - _SR * 0.6)) + '" text-anchor="' + (_sagda ? 'start' : 'end')
+          + '" font-size="9.5">'
+          + 'X ' + _feadFmt(_sx, 1) + ' · Y ' + _feadFmt(_sy, 1) + ' mm</text>';
+      var _gx = 0, _gy = 0;
+      ps.forEach(function(p){ _gx += tx(p.c[0]); _gy += ty(p.c[1]); });
+      _gx /= ps.length; _gy /= ps.length;
+      [(_sk - 1 + ps.length) % ps.length, _sk].forEach(function(i){
+        var sp = geom.spans && geom.spans[i];
+        if(!sp) return;
+        var ax = tx(sp.Pi[0]), ay = ty(sp.Pi[1]), bx = tx(sp.Pj[0]), by = ty(sp.Pj[1]);
+        var mx = (ax + bx) / 2, my = (ay + by) / 2;
+        var vx = bx - ax, vy = by - ay, vl = Math.sqrt(vx*vx + vy*vy) || 1;
+        var nx = vy / vl, ny = -vx / vl;
+        if((mx - _gx) * nx + (my - _gy) * ny < 0){ nx = -nx; ny = -ny; }      // DIŞA
+        var yazi = _feadFmt(sp.L, 1) + ' mm', w = yazi.length * 5 + 12;
+        var X = Math.min(Math.max(mx + nx * 13, w/2 + 2), W - w/2 - 2);
+        var Y = Math.min(Math.max(my + ny * 13, 10), H - 10);
+        svg += '<g data-ve="drag-span"><rect x="' + f(X - w/2) + '" y="' + f(Y - 7.5) + '" width="' + f(w)
+            + '" height="15" rx="7.5"/><text x="' + f(X) + '" y="' + f(Y + 3)
+            + '" text-anchor="middle" font-size="8.5">'
+            + yazi + '</text></g>';
+      });
+    }
+    // İSABET HALKALARI EN ÜSTTE ve BÜYÜKTEN KÜÇÜĞE: büyük kasnağın yanındaki
+    // küçük avara üstte kalsın. Yarıçap en az 11 px — 77 mm'lik avara dar
+    // kartta birkaç piksel olabiliyor.
+    var _hit = ps.map(function(p, k){ return { p: p, k: k }; })
+      .sort(function(a, b){ return b.p.rPitch - a.p.rPitch; });
+    svg += '<g data-ve="hit">';
+    _hit.forEach(function(o){
+      var n = build.order[o.k];
+      if(!n) return;
+      var hid = _feadEsc(n.id), kid = _feadEsc(opts.nodeId);
+      // `fill="transparent"` NİTELİKTE de: `none` isabet almaz, nitelik
+      // hiç olmasa CSS'siz belgede halka SİYAH dolguyla çizilirdi.
+      svg += '<circle class="ve-fead-hit" data-fead-k="' + hid + '" cx="' + f(tx(o.p.c[0]))
+          + '" cy="' + f(ty(o.p.c[1])) + '" r="' + f(Math.max(o.p.rPitch * s + 3, 11)) + '"'
+          + ' fill="transparent"'
+          + ' onmousedown="veFeadCizimBas(event,\'' + kid + '\',\'' + hid + '\')"'
+          + ' onmouseenter="veFeadCizimUzerinde(\'' + hid + '\')" onmouseleave="veFeadCizimUzerinde(null)">'
+          + '<title>' + _feadEsc(_feadNodeName(n)) + ' — sürükle: taşı · tıkla: penceresini aç</title></circle>';
+    });
+    svg += '</g>';
   }
 
   // YÖN GÜLÜ — sağ altta, tedarikçi çıktısındaki gibi. Kayış düzleminin açı
@@ -4135,6 +4448,15 @@ function veFeadLayoutCardHTML(node){
   // iki ön ayarın birbirinden ayrıldığı yer.
   var svg = veFeadLayoutSVG(build, Math.max(120, W), Math.max(90, cizimH),
                             { inline: true, posMode: mode, nodeId: node.id,
+                              // ÇİZİM MASASI: kanvas kartı DÜZENLENEBİLİR çizimdir.
+                              // Seçim/fare altı işareti ve sürükleme durumu görünüm
+                              // durumudur (modelde değil); kart kurulurken de
+                              // aynen basılsın ki tazeleme işareti düşürmesin.
+                              edit: true, selId: _feadSelectedId(), hovId: VE_FEAD_UZERINDE,
+                              xfSabit: VE_FEAD_SURUKLE ? VE_FEAD_SURUKLE.xf[node.id] : null,
+                              // Sürükleme KÜNYESİ yalnız imlecin altındaki kartta.
+                              surukleK: (VE_FEAD_SURUKLE && VE_FEAD_SURUKLE.kart === node.id)
+                                ? VE_FEAD_SURUKLE.kasnak : null,
                               compassPos: node.data && node.data.compassPos,
                               // KATMANLAR KARTIN KENDİSİNDEN. Bu satırlar bir
                               // zamanlar sabitti (`shortNames: true`,
@@ -4167,14 +4489,20 @@ function veFeadLayoutCardHTML(node){
     var neden = (build && build.errors && build.errors.length) ? build.errors[0]
       : (build && build.geomError) ? build.geomError
       : 'Kayış yolu henüz kurulamadı.';
-    h += '<div style="padding:10px 12px; text-align:center; font-size:var(--fs-micro);'
-      + ' line-height:1.5; color:var(--text-muted);">'
-      + '<div style="font-size:var(--fs-tiny); font-weight:700; color:var(--ink-danger);'
-      + ' margin-bottom:5px;">Şema çizilemiyor</div>' + _feadEsc(neden)
-      + ((build && build.errors && build.errors.length > 1)
-          ? '<div style="margin-top:5px; opacity:0.8;">+' + (build.errors.length - 1)
-            + ' eksik daha — panelde tamamı yazılı</div>' : '')
-      + '</div>';
+    // ÇİZİM MASASI: kart giriş yüzeyi, dolayısıyla boş ya da çizilemeyen hâli
+    // bir ÇIKMAZ değil — ne yapılacağını söyler ve iki kapıyı gösterir.
+    // Kasnağı olmayan model ARIZA değil başlangıçtır: kırmızı başlık yok.
+    var _bos = !(build && build.order && build.order.length);
+    h += '<div class="ve-fead-kan-bos' + (_bos ? ' ilk' : '') + '">'
+      + '<b>' + (_bos ? 'Kayış yolunda henüz kasnak yok' : 'Şema çizilemiyor') + '</b>'
+      + '<span>' + _feadEsc(_bos ? 'Sihirbazla kur ya da tabloyu açıp kasnakları sırayla ekle.' : neden) + '</span>'
+      + ((!_bos && build && build.errors && build.errors.length > 1)
+          ? '<span class="ek">+' + (build.errors.length - 1)
+            + ' eksik daha — panelde tamamı yazılı</span>' : '')
+      + '<span class="eylem">'
+      + '<button type="button" onmousedown="event.stopPropagation();" onclick="veFeadWizOpenAny()">Sihirbazla kur</button>'
+      + '<button type="button" onmousedown="event.stopPropagation();" onclick="veFeadTabloAc()">Tabloyu aç</button>'
+      + '</span></div>';
   }
   h += '</div>';
   // SIRA: rozet → katman paneli → titreşim şeridi → yüzen çubuk. Panel
@@ -4538,7 +4866,32 @@ function veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes, katDugme){
     + alan('Kol', 'Gergi kolunun hangi konumu çiziliyor', 'posMode', opts)
     + alan('Devir', 'Animasyon devri — çalışma çevriminden', 'animRpm', rOpt, 1)
     + alan('Titr', 'Açıklık çırpması ya da burulma mod şekli', 'vibMode', vOpt)
-    + (katDugme || '') + '</div>';
+    + (katDugme || '') + veFeadTabloDugmeHTML() + '</div>';
+}
+
+// "TABLO" DÜĞMESİ — Kayış Tablosu penceresinin kanvastaki tek kapısı (tablo
+// kanvastan indi, 2026-09-23). Basılı hâli pencerenin açık olduğunu söyler.
+var VE_FEAD_TBL_ICON =
+  '<svg class="ac" width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"'
+  + ' fill="none" stroke="currentColor" stroke-width="1.1">'
+  + '<rect x="1.4" y="1.9" width="9.2" height="8.2" rx="1"/>'
+  + '<path d="M1.4 4.6h9.2M1.4 7.3h9.2M4.6 4.6v5.5"/></svg>';
+function veFeadTabloDugmeHTML(){
+  var acik = veFeadTabloAcikMi();
+  return '<button type="button" class="ve-fead-kat-dugme ve-fead-tablo-dugme' + (acik ? ' is-acik' : '') + '"'
+    + ' aria-pressed="' + (acik ? 'true' : 'false') + '"'
+    + ' onmousedown="event.stopPropagation();" onclick="veFeadTabloToggle()"'
+    + ' title="Kayış Tablosu — Gates Layout Data: sayıları topluca gir (Esc kapatır)">'
+    + VE_FEAD_TBL_ICON + '<span class="ad">Tablo</span></button>';
+}
+function _feadTabloDugmeEsitle(){
+  if(typeof document === 'undefined') return;
+  var acik = veFeadTabloAcikMi();
+  var d = document.querySelectorAll('.ve-fead-tablo-dugme');
+  for(var i = 0; i < d.length; i++){
+    d[i].classList.toggle('is-acik', acik);
+    d[i].setAttribute('aria-pressed', acik ? 'true' : 'false');
+  }
 }
 
 // ── KAZANÇ ŞERİDİ — yalnız titreşim açıkken ────────────────────────────────
@@ -4649,41 +5002,13 @@ function _feadAnimLabel(kin, fallback, vib, scn){
 // bir kayış çevriminin geometrik ZORUNLULUĞU o; tutmuyorsa şema kendi içinde
 // tutarlı görünse bile yol yanlış çözülmüş demektir.
 function veFeadLayoutCardStrip(build, mode){
-  var ok = !!(build && build.ok);
-  var sol = 'Kayış yolu kapanmadı', sag = '';
-  if(ok){
-    try {
-      // Şerit HANGİ KONUM ÇİZİLİYORSA onun sayılarını verir; Mean'in sayılarını
-      // gösterip başka bir konumu çizmek sessiz bir yanlış okuma olurdu.
-      var sel = veFeadPosSelection(build, mode || 'mean');
-      var relS = (sel.primary && Number.isFinite(sel.primary.relDeg))
-        ? sel.primary.relDeg : FEADCore.meanRel(build.sys);
-      var st = FEADCore.tensionerState(build.sys, relS);
-      var g = st.geom, sg = 0, bk = 0;
-      g.wraps.forEach(function(w, i){
-        if(build.sys.pulleys[i].contact === 'back') bk += w; else sg += w;
-      });
-      var inv = (sg - bk) * 180 / Math.PI;
-      sol = build.order.length + ' kasnak · L ' + _feadFmt(g.LeffMm, 1) + ' mm';
-      // ÇEVRİM İKİ YÖNE DE GEZİLEBİLİR: aynalanmış bir düzende kayış ters yönde
-      // dolanır ve işaretli sarım toplamı −360° çıkar. Çekirdek bunu ZATEN kabul
-      // ediyor (fead-core.js: |‌|Σ|−360| > 0.05 → hata), yani ±360'ın ikisi de
-      // geçerli çözüm. Buradaki kapı yalnız +360 arıyordu; rastgele üretilmiş
-      // bir topolojide çekirdeğin kusursuz çözdüğü bir yerleşim kartta ✗ ile
-      // "tutarsız" görünüyordu. Yön künyede yazılıyor ki bilgi kaybolmasın.
-      sag = 'Σsarım ' + _feadFmt(inv, 1) + '°' + (inv < 0 ? ' (ters yön)' : '');
-      // ÇEKİRDEK ARTIK HOŞGÖRÜLÜ: kapanmayan çevrim istisna atmıyor, sayıları
-      // üretip ihlali taşıyor (bkz. solveGeometry tolerant). Yani kart artık
-      // ÇİZİYOR — ve tam bu yüzden şeridin sebebi ADIYLA söylemesi gerekiyor:
-      // çizilen yol makul görünür, yanlış olduğu yalnız buradan okunur.
-      if(Math.abs(Math.abs(inv) - 360) > 0.05){
-        ok = false;
-        sol = 'Kayış yolu KAPANMIYOR · ' + sol;
-      } else if((g.violations || []).length){
-        ok = false;
-        sol = 'Kayış kasnağın İÇİNDEN geçiyor · ' + sol;
-      }
-    } catch(e){ ok = false; sol = 'Geometri okunamadı'; }
+  // Hüküm TEK YERDEN (veFeadYolDurumu): sürükleme kapısı da aynısını soruyor.
+  var yd = veFeadYolDurumu(build, mode);
+  var ok = yd.ok, sol = yd.sol, sag = yd.sag;
+  // SÜRÜKLEME REDDİ görünür: kasnak neden orada durdu, kartın kendisi söyler.
+  if(VE_FEAD_SURUKLE && VE_FEAD_SURUKLE.red){
+    ok = false; sag = '';
+    sol = 'Buraya taşınamaz — ' + VE_FEAD_SURUKLE.red;
   }
   // ── ALT BANT DEĞİL, SAĞ ÜST ROZET ───────────────────────────────────────
   // Şerit 20 px'i çizimden alıyordu ve o 20 px'in taşıdığı şey ÇOĞU ZAMAN
@@ -5015,6 +5340,9 @@ function veFeadMarkSelectedRow(){
       n++;
     }
   }
+  // ÇİZİMLER DE AYNI SEÇİMİ GÖSTERİR (Çizim Masası) — aynı kapıdan, kart
+  // kurulmadan.
+  veFeadCizimIsaretle();
   return n;
 }
 
@@ -5026,7 +5354,31 @@ function veFeadMarkSelectedRow(){
 // hangi satırdaysa, imleç hangi hücredeyse, hangi kasnağın paneli açıksa —
 // üçü de görünmüyordu. Kullanıcının "demode ve ilkel" dediği şey bir renk
 // tercihi değil, tam olarak buydu.
-function veFeadTableCardHTML(node){
+// PENCERE KİPİNDE BAŞLIK SATIRI — etiketler BİR KEZ. Satırla AYNI ızgara ve
+// aynı bölgeler (sıra okları bile görünmez hâlde duruyor), dolayısıyla
+// sütunlar hizalı; satırların kendi etiketleri pencerede CSS'le gizlenir.
+function _feadTabloBasSatiri(){
+  function et(kol){
+    return '<i>' + _feadEsc(kol.kt || kol.t)
+      + (kol.u ? '<span class="br">' + _feadEsc(kol.u) + '</span>' : '') + '</i>';
+  }
+  function hucre(k, sinif){
+    var kol = _feadKol(k);
+    return '<span class="' + sinif + '" title="' + _feadEsc(kol.t + (kol.u ? ' (' + kol.u + ')' : ''))
+      + '">' + et(kol) + '</span>';
+  }
+  var ok = '<button type="button" class="ve-fead-tbl-mv" tabindex="-1" disabled>▲</button>';
+  return '<div class="ve-fead-krt ve-fead-krt--bas" aria-hidden="true">'
+    + '<div class="kim"><span class="ve-fead-tbl-ord"><b>#</b>' + ok + ok + '</span>'
+    + '<span class="bas-ad">Kasnak</span></div>'
+    + '<div class="gir">' + ['x', 'y', 'od', 'yon'].map(function(k){
+        return hucre(k, 've-fead-krt-fld'); }).join('') + '</div>'
+    + '<div class="coz">' + ['eff', 'sar', 'span'].map(function(k){
+        return hucre(k, 've-fead-krt-rv'); }).join('') + '</div>'
+    + '<span></span></div>';
+}
+
+function veFeadTableCardHTML(node, opt){
   var build = (typeof veFeadBuildFromCanvas === 'function') ? veFeadBuildFromCanvas() : null;
   var T = veFeadTableRows(build);
   var belt = (build && build.cfg && build.cfg.belt) ? build.cfg.belt : {};
@@ -5123,6 +5475,7 @@ function veFeadTableCardHTML(node){
     + ' --fead-krt-gir:' + veFeadKartBolgeW('gir') + 'px;'
     + ' --fead-krt-son:' + veFeadKartBolgeW('son') + 'px;'
     + ' --fead-krt-en:' + veFeadKartBolgeW() + 'px;">';
+  if(opt && opt.pencere && T.rows.length) h += _feadTabloBasSatiri();
 
   if(!T.rows.length){
     // BAYAT TAVSİYE DEĞİL. Burada bir zamanlar "sol paletten ekleyin" yazıyordu
@@ -5143,7 +5496,8 @@ function veFeadTableCardHTML(node){
     var son = (k === N - 1);
     // SÜRÜCÜ SATIRIN KENDİSİNDE işaretli (`drv`), yalnız numarasında değil:
     // sol rayı satırın nerede başladığını listeye bakar bakmaz söylüyor.
-    var sinif = 've-fead-krt' + (r.driver ? ' drv' : '') + (r.id === acik ? ' is-sel' : '');
+    var sinif = 've-fead-krt' + (r.driver ? ' drv' : '') + (r.id === acik ? ' is-sel' : '')
+      + (r.id === VE_FEAD_UZERINDE ? ' is-hov' : '');
     h += '<div class="' + sinif + '" data-ve-node="' + _feadEsc(r.id) + '">';
 
     // ── KİMLİK ──
@@ -5331,6 +5685,9 @@ function veFeadTableAdd(type){
 // doğuyor, öncesinde DOM'da yok.
 function _feadScrollRowIntoView(nodeId){
   if(typeof document === 'undefined' || !nodeId) return false;
+  // Pencerenin tazelemesi bir sonraki kareye ertelenmiş olabilir (odak
+  // kuralı); satır ancak o kurulumla doğuyor — bekleyen tazeleme ŞİMDİ yapılır.
+  _feadTabloBosalt();
   var tr = document.querySelector('.' + VE_FEAD_TABLE_CLASS
     + ' .ve-fead-krt[data-ve-node="' + nodeId + '"]');
   if(!tr || typeof tr.scrollIntoView !== 'function') return false;
@@ -5435,24 +5792,6 @@ function veFeadTableAfterEdit(){
     showNodeProperties(selectedNodes[0]);
 }
 
-function veFeadApplyTableCard(nodeEl, node){
-  if(!nodeEl || !node || typeof document === 'undefined') return false;
-  if(!_feadDefOf(node).isFeadTable) return false;
-  var box = nodeEl.querySelector('.ve-node-box') || nodeEl;
-  var card = box.querySelector('.' + VE_FEAD_TABLE_CLASS);
-  if(!card){
-    card = document.createElement('div');
-    // GÖRÜNÜM CSS'TE. Kabuğun ölçüsü/yerleşimi de satır içi yazılıyordu; sınıf
-    // zaten var olduğu için ikinci bir kopyaydı ve ikisi ayrışabilirdi.
-    card.className = VE_FEAD_TABLE_CLASS;
-    var sym = box.querySelector(':scope > svg');
-    if(sym) sym.style.display = 'none';
-    box.appendChild(card);
-  }
-  card.innerHTML = veFeadTableCardHTML(node);
-  return true;
-}
-
 // ── FEAD KARTLARININ TEK TAZELEME KAPISI ───────────────────────────────────
 // İki kart (şema + tablo) AYNI modeli gösteriyor, dolayısıyla hep BİRLİKTE
 // tazelenmeli. Çağrıları kart başına ayırmak, altı düzenleme yolundan birinde
@@ -5466,15 +5805,140 @@ function veFeadRefreshCards(){
   return n;
 }
 
+// ── KAYIŞ TABLOSU PENCERESİ (Çizim Masası, 2026-09-23) ─────────────────────
+// Tablo kanvastan İNDİ: kanvas kartı olarak açılış yakınlaştırmasında 7,1 px'e
+// küçülen bir formdu (ölçüldü). Artık kanvas kartının "Tablo" düğmesiyle
+// açılan bir PENCERE — kanvasın ALTINDA, MODAL DEĞİL: açıkken çizim görünür ve
+// sürüklenebilir, hücreye yazılan sayı çizimde, çizimde sürüklenen kasnak
+// tabloda anında görünür. Yazı kanvasla ölçeklenmez.
+//
+// İÇERİK TABLONUN TEK ÜRETİCİSİNDEN (veFeadTableCardHTML) — pencere kendi
+// satırını kurmaz. Pencere kipinde başlık satırı bir kez basılır ve satırların
+// tekrar eden etiketleri gizlenir (78 etiket parçası 36 sayıya karşıydı).
+var VE_FEAD_TABLO_ID = 've-fead-tablo';
+var _feadTabloKare = 0;
+
+function veFeadTabloAcikMi(){
+  return !!(typeof document !== 'undefined' && document.getElementById(VE_FEAD_TABLO_ID));
+}
+
+function _feadTabloKap(){
+  if(typeof document === 'undefined') return null;
+  return document.querySelector('.ve-split-pane.focused .ve-canvas-wrapper')
+    || document.getElementById('ve-canvas-wrapper');
+}
+
+function veFeadTabloAc(){
+  if(typeof document === 'undefined') return false;
+  var p = document.getElementById(VE_FEAD_TABLO_ID);
+  if(!p){
+    var kap = _feadTabloKap();
+    if(!kap) return false;
+    p = document.createElement('section');
+    p.id = VE_FEAD_TABLO_ID;
+    p.className = 've-fead-tablo-pencere';
+    p.setAttribute('role', 'dialog');
+    p.setAttribute('aria-label', 'Kayış Tablosu');
+    p.innerHTML = '<header class="ve-fead-tablo-bas"><b>Kayış Tablosu</b>'
+      + '<em>Gates Layout Data · yazılan değer çizime anında yansır</em>'
+      + '<button type="button" class="ve-tablo-kapat" aria-label="Kapat" title="Kapat (Esc)"'
+      + ' onclick="veFeadTabloKapat()">'
+      + '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8"'
+      + ' stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></header>'
+      + '<div class="' + VE_FEAD_TABLE_CLASS + '"></div>';
+    // Pencere kanvasın İÇİNDE duruyor ama kanvasın parçası DEĞİL: basmak
+    // kaydırmayı/seçim kutusunu, tekerlek yakınlaştırmayı başlatmasın.
+    ['mousedown', 'dblclick', 'wheel', 'contextmenu'].forEach(function(t){
+      p.addEventListener(t, function(e){ e.stopPropagation(); });
+    });
+    // SATIR ↔ ÇİZİM: satırın üstüne gelmek kasnağı çizimde yakar.
+    p.addEventListener('mouseover', function(e){
+      var r = e.target && e.target.closest && e.target.closest('.ve-fead-krt[data-ve-node]');
+      veFeadCizimUzerinde(r ? r.getAttribute('data-ve-node') : null);
+    });
+    p.addEventListener('mouseleave', function(){ veFeadCizimUzerinde(null); });
+    kap.appendChild(p);
+    document.addEventListener('keydown', _feadTabloTus, true);
+  }
+  _feadTabloCiz();
+  _feadTabloDugmeEsitle();
+  return true;
+}
+
+// ODAK KORUNUR. Hücre `onchange` ile yazıyor ve o olay hücreden ÇIKARKEN
+// tetikleniyor; tazeleme aynı anda yapılsa Sekme ile geçilen SONRAKİ hücre
+// sökülür ve odak düşerdi (ikinci sayı yazılamaz). Tazeleme bu yüzden bir
+// sonraki kareye ertelenir ve o anki odak (anahtarıyla) yeniden verilir.
+function _feadTabloCiz(){
+  _feadTabloKare = 0;
+  var p = (typeof document !== 'undefined') ? document.getElementById(VE_FEAD_TABLO_ID) : null;
+  var govde = p && p.querySelector('.' + VE_FEAD_TABLE_CLASS);
+  if(!govde) return false;
+  var odak = document.activeElement, anahtar = null, s0 = null, s1 = null;
+  if(odak && govde.contains(odak)){
+    anahtar = odak.getAttribute('onchange') || odak.getAttribute('onclick');
+    try { s0 = odak.selectionStart; s1 = odak.selectionEnd; } catch(e){ /* düğme */ }
+  }
+  var kay = govde.querySelector('.ve-fead-krt-wrap');
+  var ust = kay ? kay.scrollTop : 0;
+  govde.innerHTML = veFeadTableCardHTML(null, { pencere: true });
+  kay = govde.querySelector('.ve-fead-krt-wrap');
+  if(kay) kay.scrollTop = ust;
+  if(anahtar){
+    var el = govde.querySelectorAll('input, button, select');
+    for(var i = 0; i < el.length; i++){
+      if(el[i].getAttribute('onchange') !== anahtar && el[i].getAttribute('onclick') !== anahtar) continue;
+      el[i].focus();
+      try { if(s0 != null) el[i].setSelectionRange(s0, s1); } catch(e){ /* düğme */ }
+      break;
+    }
+  }
+  return true;
+}
+
+function veFeadTabloKapat(){
+  if(typeof document === 'undefined') return false;
+  var p = document.getElementById(VE_FEAD_TABLO_ID);
+  if(!p) return false;
+  // Odaktaki hücre ÖNCE bırakılır: değer `onchange` ile yazılsın. Odaktaki
+  // bir hücreyi DOM'dan sökmek son değeri hiç yazdırmamak olurdu.
+  var odak = document.activeElement;
+  if(odak && p.contains(odak) && typeof odak.blur === 'function') odak.blur();
+  if(p.parentNode) p.parentNode.removeChild(p);
+  document.removeEventListener('keydown', _feadTabloTus, true);
+  veFeadCizimUzerinde(null);
+  _feadTabloDugmeEsitle();
+  return true;
+}
+
+// Bekleyen pencere tazelemesini ŞİMDİ yap — satırını DOM'da bulması gereken
+// bir adım geliyorsa (eklenen satırı görüş alanına almak gibi).
+function _feadTabloBosalt(){
+  if(!_feadTabloKare) return false;
+  if(typeof cancelAnimationFrame === 'function') cancelAnimationFrame(_feadTabloKare);
+  _feadTabloCiz();
+  return true;
+}
+
+function veFeadTabloToggle(){ return veFeadTabloAcikMi() ? veFeadTabloKapat() : veFeadTabloAc(); }
+
+// YAKALAMA evresinde: ESC yalnız pencereyi kapatır, alttaki seçimi temizlemez
+// (tek tuş, tek katman — tablo-pencere.js'in kuralı).
+function _feadTabloTus(e){
+  if(e.key !== 'Escape' || !veFeadTabloAcikMi()) return;
+  e.stopPropagation();
+  e.preventDefault();
+  veFeadTabloKapat();
+}
+
+// Tazeleme kapısının tablo ayağı: pencere açıksa bir sonraki karede tazelenir
+// (bkz. odak kuralı). Kanvasta tablo kartı artık yok.
 function veFeadRefreshTableCards(){
-  if(typeof document === 'undefined' || typeof nodes === 'undefined') return 0;
-  var n = 0;
-  nodes.forEach(function(x){
-    if(!_feadDefOf(x).isFeadTable) return;
-    var el = document.getElementById(x.id);
-    if(el && veFeadApplyTableCard(el, x)) n++;
-  });
-  return n;
+  if(!veFeadTabloAcikMi()) return 0;
+  if(_feadTabloKare) return 1;
+  if(typeof requestAnimationFrame === 'function') _feadTabloKare = requestAnimationFrame(_feadTabloCiz);
+  else _feadTabloCiz();
+  return 1;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -5776,72 +6240,9 @@ function veFeadAnimEnsure(){
   return true;
 }
 
-// ── KAYIŞ TABLOSU PANELİ ────────────────────────────────────────────────────
-// Panel KARTLA AYNI SATIRLARI okur (veFeadTableRows) — ikinci bir tablo
-// üreticisi tutmak, birinin sessizce eskimesi demekti. Buradaki kopya SALT
-// OKUNUR: giriş yüzeyi kanvastaki kart, panel ise "ne çıktı" bakışı.
-// ── KAYIŞ TABLOSU PENCERESİ — KRANK KASNAĞI AİLESİNDE ──────────────────────
-// Kullanıcı isteği (2026-09-23): bileşen pencereleri Krank Kasnağı'nın yapısında,
-// KATEGORİ KATEGORİ. Bu pencere dokuz sütunlu tek bir ızgaraydı ve 380 px'lik
-// müfettiş sütununa sığmıyordu (48 px taşma, 35 kesik öğe — ölçüldü), bu
-// yüzden modal açılıyordu. Dokuz sütun iki KATEGORİYE ayrıldı ve ayrım kanvas
-// tablosunun kendi ayrımı: GİRDİ (X · Y · D · Yön) ile ÇÖZÜM (efektif çap ·
-// sarım · span) — kural 14, "girdi/çözüm ayrımı yerleşimin kendisinde".
-// Veri TEK KAYNAKTAN (`veFeadTableRows`, kural 9): pencere hesaplamaz, okur.
-// Ad bir BAĞLANTI: kanvas tablosunun ad düğmesiyle aynı yol (`veFeadTableOpen`)
-// — sütunda bu pencere kasnaklar arasında bir gezgine dönüşür.
-function getFeadTablePropertiesHTML(node){
-  if(!node.data) node.data = {};
-  var M = _feadSideModel(node);
-  var T = M.T;
-  if(!T || !T.rows || !T.rows.length){
-    return '<div class="sw-panel">'
-      + _feadHint('İç topolojide kasnak yok. Sol paletten kasnak ekleyin; '
-        + 'her yeni kasnak kayış sırasının SONUNA eklenir ve sırayı kanvastaki '
-        + 'tablodan (▲▼) değiştirirsiniz.')
-      + '</div>';
-  }
-  function sayi(v, dec){
-    return (typeof v === 'string') ? _feadEsc(v) : (Number.isFinite(v) ? _feadFmt(v, dec) : '—');
-  }
-  function ad(r){
-    return '<button type="button" class="ve-fp-tbl-ad" title="Kasnağın penceresini aç"'
-      + ' onclick="veFeadTableOpen(\'' + r.id + '\')">'
-      + (r.driver ? '<i aria-label="sürücü">►</i>' : '') + _feadEsc(r.name) + '</button>';
-  }
-  function tablo(basliklar, hucreler){
-    var h = '<table class="ve-pnl-tbl ve-pnl-tbl--framed ve-fp-tbl"><thead><tr>'
-      + basliklar.map(function(b){ return '<th class="' + b[1] + '">' + b[0] + '</th>'; }).join('')
-      + '</tr></thead><tbody>';
-    T.rows.forEach(function(r){ h += '<tr' + (r.driver ? ' class="surucu"' : '') + '>' + hucreler(r) + '</tr>'; });
-    return h + '</tbody></table>';
-  }
-  var gir = _feadCard('Konum ve Çap', 'kanvastaki tablodan girilir', 'var(--accent-primary)',
-      tablo([['#', 'sira'], ['Kasnak', 'lbl'], ['X <u>mm</u>', 'num'], ['Y <u>mm</u>', 'num'],
-             ['D <u>mm</u>', 'num'], ['Yön', 'yon']],
-        function(r){
-          return '<td class="sira">' + r.index + '</td><td class="lbl">' + ad(r) + '</td>'
-            + '<td class="num">' + sayi(r.xMm, 1) + '</td><td class="num">' + sayi(r.yMm, 1) + '</td>'
-            + '<td class="num">' + sayi(r.odMm, 1) + '</td><td class="yon">' + sayi(r.spin, 0) + '</td>';
-        })
-    + _feadHint('Sıra <b>kayışın yolu</b>: satır sırası Gates raporlarının '
-      + '"Layout Data" tablosuyla aynı yönde yazılır ve kayışın gidişinin '
-      + 'TERSİDİR. Değerleri <b>kanvastaki tablodan</b> girin; bir kasnağın '
-      + 'penceresi için adına tıklayın.'));
-  var coz = _feadCard('Çekirdeğin Cevabı', 'çalışma (Mean) konumunda', 'var(--accent-warning)',
-      tablo([['#', 'sira'], ['Kasnak', 'lbl'], ['Ef. çap <u>mm</u>', 'num'],
-             ['Sarım <u>°</u>', 'num'], ['Span <u>mm</u>', 'num']],
-        function(r){
-          return '<td class="sira">' + r.index + '</td><td class="lbl">' + ad(r) + '</td>'
-            + '<td class="num">' + sayi(r.effDiaMm, 1) + '</td><td class="num">' + sayi(r.wrapDeg, 2) + '</td>'
-            + '<td class="num">' + sayi(r.spanMm, 2) + '</td>';
-        })
-    + _feadHint('Bu sütunlar HESAPLANMAZ, çekirdekten okunur — pencere kendi '
-      + 'geometrisini kurmaz (üç katman kuralı).'));
-  var yan = veFeadToolSide(node, null, null, null);
-  return veFeadPanelShell(node, [{ k:'gir', ad:'Girdiler', govde: gir },
-                                 { k:'coz', ad:'Çözüm',    govde: coz }], yan);
-}
+// KAYIŞ TABLOSU PANELİ (`getFeadTablePropertiesHTML`) KALKTI (2026-09-23):
+// tablo artık bir düğüm değil, kanvas kartının açtığı PENCERE — seçilecek bir
+// tablo düğümü, dolayısıyla onun paneli de yok (bkz. veFeadTabloAc).
 
 // ── KAYIŞ YOLU PENCERESİ — KRANK KASNAĞI AİLESİNDE ─────────────────────────
 // İki KATEGORİ: ŞEMA (kol konumu · titreşim · ölçekli çizim) ve GEOMETRİ
@@ -6714,9 +7115,8 @@ function veFeadLoadExample(key){
   // üstünde görünür (ölçüldü). Kullanıcının istediği yer de bu: topolojinin
   // YANINDA, kendi alanında duran bir çizim.
   // Araç kartlarının yedek yerleşimi ORTAK YERDEN (`veFeadFallbackSlots`):
-  // tablo sağ üstte, kanvaslar altında BİR SIRA, künyeler solda. İkinci bir
-  // yedek yazmak, yerleştirici patladığında iki kurucunun iki ayrı resim
-  // vermesi demekti.
+  // kanvaslar sağda BİR SIRA, künyeler solda. İkinci bir yedek yazmak,
+  // yerleştirici patladığında iki kurucunun iki ayrı resim vermesi demekti.
   // TEK ÇAĞRI: sayaçlar (kaçıncı araç · kaçıncı kanvas) fonksiyonun içinde
   // yürüyor, düğüm başına çağırmak hepsini aynı yuvaya yığardı.
   var sagSerit = 60 + (maxX - minX) * s + 110;
@@ -6752,11 +7152,10 @@ function veFeadLoadExample(key){
     });
   }
   // BUNLAR DA AYNI YUVA ÜRETİCİSİNDEN GEÇER. Eskiden hepsi koşulsuz SOL
-  // şeride diziliyordu ve aralarında Kayış Tablosu da vardı: açılış yüzeyi onu
-  // zaten kurduğu için örnek yüklenirken tablo künyelerin arasına düşüyor,
-  // sağdaki blok da tablosuz kalıyordu. Yerleştirici bunu düzelttiği için
-  // görünmüyordu — YEDEK yolda görünüyor (ölçüldü: gerçek tarayıcı, yedek
-  // yolda blok 1689 px genişliyordu, 993 yerine).
+  // şeride diziliyordu: açılış yüzeyinin kurduğu BÜYÜK kart (o gün Kayış
+  // Tablosu, bugün boş Kayış Yolu) künyelerin arasına düşüyordu. Yerleştirici
+  // bunu düzelttiği için görünmüyordu — YEDEK yolda görünüyor (ölçüldü: gerçek
+  // tarayıcı, yedek yolda blok 1689 px genişliyordu, 993 yerine).
   veFeadFallbackSlots(_eskiArac, { sagX: sagSerit, solX: sagSerit - 210,
                                   ustBasla: ust, kanvasBasla: _yuva.kanvasAdet || 0 })
     .forEach(function(slot, i){
@@ -6768,12 +7167,38 @@ function veFeadLoadExample(key){
       if(el){ el.style.left = n.x + 'px'; el.style.top = n.y + 'px'; }
     });
 
+  // KANVAS KARTI YENİDEN KULLANILIR — tip + ön ayar eşleşmesiyle, sihirbazın
+  // `_fwAracAnahtar` kuralının aynısı. Açılış yüzeyi (Çizim Masası,
+  // 2026-09-23) boş bir Kayış Yolu kartı koyuyor; örnek kendi geometri
+  // kartını onun yanına kursa kanvasta ÜÇ çizim olurdu (ölçüldü).
+  var _kanvasKuyruk = { geometri: [], isletme: [] };
+  if(typeof nodes !== 'undefined') nodes.forEach(function(n){
+    if(_feadDefOf(n).isFeadLayout)
+      _kanvasKuyruk[(n.data && n.data.katOn === 'isletme') ? 'isletme' : 'geometri'].push(n);
+  });
+
   var kuruldu = [], idMap = {};
   pack.nodes.forEach(function(src, i){
-    // TEK KOPYALI ARAÇ DÜĞÜMÜ ZATEN VARSA HİÇ DENEME. `fead-table` açılış
-    // yüzeyinden (veFeadPopulateStarter) geliyor; createNode ikincisini zaten
-    // reddediyor ama bir UYARI TOAST'ı basıyordu ve kullanıcı örneği kurarken
-    // "Kayış Tablosu topolojide en fazla 1 tane olabilir" görüyordu — ÖLÇÜLDÜ
+    if(_feadDefOf(src).isFeadLayout){
+      var _q = _kanvasKuyruk[(src.data && src.data.katOn === 'isletme') ? 'isletme' : 'geometri'];
+      var _m = (_q && _q.length) ? _q.shift() : null;
+      if(_m){
+        _m.data = Object.assign(_m.data || {}, JSON.parse(JSON.stringify(src.data || {})));
+        // YERİNİ DE DEVRALIR: yukarıdaki döngü onu yeni kanvasların SAĞINA
+        // koydu; devraldığı kartın yuvasına geçmezse yedek yolda sırada bir
+        // kanvaslık boşluk kalır.
+        _m.x = Math.round(base.x + yer[i].lx);
+        _m.y = Math.round(base.y + yer[i].ly);
+        var _mel = (typeof document !== 'undefined') ? document.getElementById(_m.id) : null;
+        if(_mel){ _mel.style.left = _m.x + 'px'; _mel.style.top = _m.y + 'px'; }
+        idMap[src.id] = _m.id;
+        return;
+      }
+    }
+    // TEK KOPYALI ARAÇ DÜĞÜMÜ ZATEN VARSA HİÇ DENEME. createNode ikincisini
+    // zaten reddediyor ama bir UYARI TOAST'ı basıyordu ve kullanıcı örneği
+    // kurarken "… topolojide en fazla 1 tane olabilir" görüyordu (o gün
+    // açılış yüzeyinin Kayış Tablosu'yla) — ÖLÇÜLDÜ
     // (gerçek tarayıcı, AG00976). Zaten duran düğüm KULLANILIR: kimlik
     // haritasına o yazılır, yoksa ona başvuran bir alan öksüz kalırdı.
     var _d1 = (typeof componentDefs !== 'undefined' && componentDefs[src.type]) || {};
@@ -7358,12 +7783,13 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadRefreshLayoutCards: veFeadRefreshLayoutCards,
     VE_FEAD_CARD_CLASS: VE_FEAD_CARD_CLASS,
     VE_FEAD_TABLE_CLASS: VE_FEAD_TABLE_CLASS,
+    veFeadTabloAc: veFeadTabloAc, veFeadTabloKapat: veFeadTabloKapat,
+    veFeadTabloToggle: veFeadTabloToggle, veFeadTabloAcikMi: veFeadTabloAcikMi,
     VE_FEAD_TBL_OPEN_ICON: VE_FEAD_TBL_OPEN_ICON,
     VE_FEAD_TABLE_COLS: VE_FEAD_TABLE_COLS,
     veFeadKartBolgeW: veFeadKartBolgeW,
     veFeadTableRows: veFeadTableRows,
     veFeadTableCardHTML: veFeadTableCardHTML,
-    veFeadApplyTableCard: veFeadApplyTableCard,
     veFeadRefreshTableCards: veFeadRefreshTableCards,
     veFeadRefreshCards: veFeadRefreshCards,
     veFeadTableSet: veFeadTableSet, veFeadTableMove: veFeadTableMove,
@@ -7373,7 +7799,9 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadTableAddHTML: veFeadTableAddHTML,
     veFeadTableOpen: veFeadTableOpen,
     veFeadMarkSelectedRow: veFeadMarkSelectedRow,
-    getFeadTablePropertiesHTML: getFeadTablePropertiesHTML,
+    veFeadYolDurumu: veFeadYolDurumu, veFeadCizimBas: veFeadCizimBas,
+    veFeadCizimUzerinde: veFeadCizimUzerinde, veFeadCizimIsaretle: veFeadCizimIsaretle,
+    veFeadKasnakKaydir: veFeadKasnakKaydir, veFeadCizimTus: veFeadCizimTus,
     veFeadBeltDbHint: veFeadBeltDbHint,
     veFeadModelTable: veFeadModelTable,
     veFeadPositionTable: veFeadPositionTable,

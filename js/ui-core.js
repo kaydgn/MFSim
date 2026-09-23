@@ -481,7 +481,11 @@ document.addEventListener('DOMContentLoaded', function() {
     var isEditorActive = sayfa2 && sayfa2.classList.contains('active');
     
     if(isInput || !isEditorActive) return;
-    
+
+    // FEAD Çizim Masası: kutusuz bir kasnak seçiliyken oklar onu mm cinsinden
+    // kaydırır, Delete kayış sırasını kapatarak siler (cp-fead.js).
+    if(typeof veFeadCizimTus === 'function' && veFeadCizimTus(e)) return;
+
     // Ctrl+C - Kopyala
     if((e.ctrlKey || e.metaKey) && e.key === 'c') {
       if(selectedNodes.length > 0) {

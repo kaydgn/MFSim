@@ -144,7 +144,7 @@ describe('bileşen sözleşmesi', () => {
     });
   });
 
-  test('başlangıçta İKİ açılış yüzeyi kurulur: sihirbaz + Kayış Tablosu', () => {
+  test('başlangıçta İKİ açılış yüzeyi kurulur: sihirbaz + BOŞ Kayış Yolu', () => {
     document.body.innerHTML = '<div id="ve-canvas"></div><div id="ve-canvas-wrapper"></div>';
     global.nodes = []; global.connections = [];
     let k = 0;
@@ -156,12 +156,14 @@ describe('bileşen sözleşmesi', () => {
     };
     const out = fead.veFeadPopulateStarter();
     delete global.createNode;
-    // KAYIŞ TABLOSU: kasnakların veri giriş yüzeyi; olmadan paletten bırakılan
-    // kasnağın koordinatı ve sırası girilecek yer olmazdı (kutuları da yok).
+    // BOŞ KAYIŞ YOLU (Çizim Masası, 2026-09-23): kasnakların giriş yüzeyi
+    // artık ÇİZİM; boş hâlinde iki yolu gösteriyor ("Sihirbazla kur" ·
+    // "Tabloyu aç"). Eskiden burada Kayış Tablosu kartı duruyordu — tablo
+    // artık kanvas bileşeni değil, kartın açtığı pencere.
     // "Başlangıç ve Örnekler" 2026-09-09'da kaldırıldı — sunduğu liste
     // sihirbazın 1. adımında zaten vardı ve FEAD'e girince sihirbaz açılıyor.
     expect(out.length).toBe(2);
-    expect(out.map((n) => n.type).sort()).toEqual(['fead-table', 'fead-wizard']);
+    expect(out.map((n) => n.type).sort()).toEqual(['fead-layout', 'fead-wizard']);
     // Üst üste binmiyorlar (ikisi de aynı şeride konuyor).
     expect(Math.abs(out[0].x - out[1].x)).toBeGreaterThan(60);
   });
@@ -407,7 +409,7 @@ describe('kurulum kapısı ve kurulum', () => {
     const out = wiz.veFeadWizCreate();
     delete global.createNode; delete global.createConnection;
     expect(out).toBeTruthy();
-    // 6 kasnak + kayış + çözücü + şema + tablo + rapor
+    // 6 kasnak + kayış + çözücü + iki kanvas + rapor — TABLO YOK (pencere)
     expect(global.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley).length).toBe(6);
     expect(global.nodes.filter((n) => n.type === 'fead-belt').length).toBe(1);
     expect(global.nodes.filter((n) => n.type === 'fead-solver').length).toBe(1);
@@ -416,7 +418,7 @@ describe('kurulum kapısı ve kurulum', () => {
     expect(global.nodes.filter((n) => n.type === 'fead-layout'
       && n.data && n.data.katOn === 'isletme').length).toBe(1);
     expect(global.nodes.filter((n) => n.type === 'fead-run').length).toBe(0);
-    expect(global.nodes.filter((n) => n.type === 'fead-table').length).toBe(1);
+    expect(global.nodes.filter((n) => n.type === 'fead-table').length).toBe(0);
     expect(global.nodes.filter((n) => n.type === 'fead-report').length).toBe(1);
     // TEL KURULMUYOR (2026-09-09): sıra indiste ve 1..N numaralı.
     expect(global.connections.length).toBe(0);
@@ -440,7 +442,7 @@ describe('kurulum kapısı ve kurulum', () => {
   //
   // Kapı kaynağa değil, kurucunun `veArrangeModuleBase`e verdiği gerçek yuva
   // listesine bakıyor.
-  test('yedek yuvalar: kanvaslar YAN YANA, tablo ÜSTTE, çakışma YOK', () => {
+  test('yedek yuvalar: kanvaslar YAN YANA, çakışma YOK', () => {
     kabuk();
     wiz.veFeadWizSeed('AG00976_GATES_2025');
     sahteKanvas();
@@ -457,13 +459,11 @@ describe('kurulum kapısı ve kurulum', () => {
     delete global.veArrangeModuleBase;
 
     expect(yakalanan).toBeTruthy();
-    const L = componentDefs['fead-layout'], TB = componentDefs['fead-table'];
+    const L = componentDefs['fead-layout'];
     const kanvas = yakalanan.filter((a) => a && a.w === L.defaultWidth && a.h === L.defaultHeight);
     expect(kanvas).toHaveLength(2);
     expect(kanvas[0].ly).toBe(kanvas[1].ly);                                   // aynı satır
     expect(Math.abs(kanvas[1].lx - kanvas[0].lx)).toBeGreaterThanOrEqual(L.defaultWidth);
-    const tablo = yakalanan.find((a) => a && a.w === TB.defaultWidth);
-    expect(tablo.ly + tablo.h).toBeLessThanOrEqual(kanvas[0].ly);              // tablo üstte
     // KUTUSUZ tipler (kasnaklar) ızgarada kalıyor — kanvasta yerleri yok ama
     // createNode bir koordinat istiyor.
     expect(yakalanan.filter(Boolean)).toHaveLength(yakalanan.length);
@@ -473,8 +473,6 @@ describe('kurulum kapısı ve kurulum', () => {
     expect(kk).toHaveLength(2);
     expect(kk[0].y).toBe(kk[1].y);
     expect(Math.abs(kk[1].x - kk[0].x)).toBeGreaterThanOrEqual(L.defaultWidth);
-    const kt = kurulan.find((k) => k.type === 'fead-table');
-    expect(kt.y + TB.defaultHeight).toBeLessThanOrEqual(kk[0].y);
   });
 
   // ── ARAÇ EŞLEŞMESİ TİPE DEĞİL, TİP + ÖN AYARA BAKAR ─────────────────────
@@ -514,32 +512,47 @@ describe('kurulum kapısı ve kurulum', () => {
     expect(global.nodes.find((n) => n.id === geo.id).data.posMode).toBe('min');
   });
 
-  // ── AÇILIŞ YÜZEYİ ZATEN BİR TABLO KOYMUŞ OLUYOR ─────────────────────────
-  // Kayış Tablosu maxInstances:1 ve veFeadPopulateStarter onu alt topoloji
-  // açılışında kuruyor. Sihirbazın "araç düğümünü yeniden kullan" listesinde
-  // `fead-table` yoksa kurulum ikincisini kurmaya kalkar, createNode reddeder
-  // ve kullanıcı "modeli kur" dediğinde bir UYARI görür — üstelik kurulan
-  // bileşen sayısı da eksik sayılır. Kurulum yolu örnek kurucusundan AYRI bir
-  // döngü olduğu için orada düzeltilen kusur burada yaşayabiliyordu.
-  test('kanvasta zaten TABLO varken: ikincisi kurulmaz, VAR OLAN kullanılır', () => {
+  // ── AÇILIŞ YÜZEYİ ZATEN BİR KANVAS KOYMUŞ OLUYOR ────────────────────────
+  // veFeadPopulateStarter alt topoloji açılışında BOŞ bir Kayış Yolu kartı
+  // kuruyor (Çizim Masası, 2026-09-23). "Modeli Kur" onu geometri kartı
+  // olarak DEVRALMALI: devralmazsa kanvasta ÜÇ çizim olur — ikisi aynı donuk
+  // şema (ölçüldü, gerçek tarayıcı, örnek kurucusunda). Bir dönem aynı kapı
+  // Kayış Tablosu içindi (maxInstances:1 — ikincisi reddedilip uyarı
+  // basıyordu); sınıf aynı: açılış yüzeyinin düğümü kurulumun parçası olur.
+  //
+  // Devralınan kart YUVASINI da alır: yuva listesi paketin bütün düğümleri
+  // için kurulmuş; eski yerinde kalırsa yedek yolda sırada bir kanvaslık
+  // boşluk kalıyor ve iki kanvas iki ayrı tabandan ölçülüyor.
+  test('kanvasta zaten BOŞ KAYIŞ YOLU varken: geometri kartı olarak DEVRALINIR', () => {
     kabuk();
     wiz.veFeadWizSeed('AG00976_GATES_2025');
     sahteKanvas();
-    const tablo = createNode('fead-table', 0, 0);
-    tablo.data.deneme = 42;                       // kullanıcı verisi — kaybolmamalı
+    const bos = createNode('fead-layout', -999, -999);
+    bos.data.kat = { adlar: false };                // kullanıcı verisi — kaybolmamalı
+    let yakalanan = null;
+    global.veArrangeModuleBase = (liste) => { yakalanan = liste.slice(); return { x: 3000, y: 3000 }; };
+    const gecmis = [];
+    let _x = bos.x, _y = bos.y;
+    Object.defineProperty(bos, 'x', { get: () => _x, set: (v) => { _x = v; gecmis.push(['x', v]); } });
+    Object.defineProperty(bos, 'y', { get: () => _y, set: (v) => { _y = v; gecmis.push(['y', v]); } });
     const kuruldu = wiz.veFeadWizCreate();
     delete global.createNode; delete global.createConnection;
+    delete global.veArrangeModuleBase;
 
-    const tablolar = global.nodes.filter((n) => n.type === 'fead-table');
-    expect(tablolar).toHaveLength(1);
-    expect(tablolar[0].id).toBe(tablo.id);        // AYNI düğüm, yenisi değil
-    expect(tablolar[0].data.deneme).toBe(42);
-    // AYIRT EDİCİ ÖLÇÜ: var olan tablo KURULAN listede olmalı. Yeniden kullanım
-    // listesinde `fead-table` yoksa createNode reddediyor, düğüm listeye HİÇ
-    // girmiyor (ve gerçek createNode bir uyarı basıyor) — kasnak sayısı ve
-    // "N bileşen kuruldu" toast'ı da eksik çıkıyor. Bu satır olmadan test
-    // düzeltmeyi ölçmüyordu: ölçüldü, mutasyon YEŞİL geçiyordu.
-    expect(kuruldu.map((n) => n.id)).toContain(tablo.id);
+    const kanvas = global.nodes.filter((n) => n.type === 'fead-layout');
+    expect(kanvas).toHaveLength(2);                  // ÜÇÜNCÜSÜ KURULMADI
+    expect(kanvas).toContain(bos);                   // AYNI düğüm, yenisi değil
+    expect(bos.data.katOn).toBeUndefined();          // geometri ön ayarında kaldı
+    expect(bos.data.kat).toEqual({ adlar: false });
+    expect(kanvas.find((n) => n !== bos).data.katOn).toBe('isletme');
+    // AYIRT EDİCİ ÖLÇÜ: devralınan kart KURULAN listede olmalı — "N bileşen
+    // kuruldu" sayısı ve duty kimlik göçü o listeden okunuyor.
+    expect(kuruldu.map((n) => n.id)).toContain(bos.id);
+    // YUVA: paketin ilk kanvas yuvası.
+    const L = componentDefs['fead-layout'];
+    const yuva = yakalanan.filter((a) => a && a.w === L.defaultWidth && a.h === L.defaultHeight)[0];
+    expect(gecmis).toContainEqual(['x', Math.round(3000 + yuva.lx)]);
+    expect(gecmis).toContainEqual(['y', Math.round(3000 + yuva.ly)]);
     // Model yine tam kuruldu.
     expect(global.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley).length).toBe(6);
     expect(M.veFeadBuildSystem(global.nodes).ok).toBe(true);
