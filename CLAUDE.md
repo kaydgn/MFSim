@@ -58,6 +58,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   çevrim oranı penceresi, aksesuar devir sınırı. DOM'suz; **panel ve rapor AYNI
   çağrıyı paylaşır** (`veFeadChecks`), rapor onu çözüm anında yazılan
   `R.checks`'ten okur ve yeniden hesaplamaz.
+- `js/fead-signals.js` + `js/fead-brief.js` + `js/cp-fead-results.js` — Sonuçlar
+  sayfasının **FEAD sekmesi**: dört veri kümesi (çevrim · Campbell · gergi kolu ·
+  senaryo), şerit yorumu ve sunum (özet kartları, hazır diyagramlar, Sonuç
+  Özeti). **Pano OKUR, hesaplamaz** — kümeler çözüm anında `R.signals`'a
+  yazılır; kural ve kapıları FEAD skill'inde (kural 33).
 - `tools/shot.js` — Ekran görüntüsü aracı (İSTEĞE BAĞLI — yalnız kullanıcı isteyince; `npm run shot -- --help`)
 - `tools/karsilama-secici.{js,html}` + `tools/karsilama-kunye.json` — karşılama
   karelerinin **seçim tahtası**: numaralı/gruplanmış/büyütülebilir 28 kare, tıklanan
@@ -245,6 +250,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   işaretler (`data-ve-tablo` · `-baslik` · `-ozet`); karar ÖLÇÜMDEN (sığmıyorsa
   özet kartı + "Tabloyu aç"), tablo pencereye TAŞINIR, kopyalanmaz. Kapı:
   `tablo-pencere.test.js` + `tablo-pencere.spec.js` + `mufettis-sigma.spec.js`.
+- **SONUÇLAR PANOSUNA YAYIN YAPAN MODÜL KAYNAK TABLOSUNA GİRER**
+  (`js/results.js` → `veResultSources`): sekme · kütüphane · yorum · sonuç
+  globali · unutucu. `results.js` · `trace-view.js` · `graphics.js`'e modüle
+  özgü dal YAZILMAZ — Takoz'un 42 satırlık dağınık dalı ikinci modülde
+  kopyalanacaktı ve biri zaten unutulmuştu ("Sonuçları Temizle" FEAD'i
+  silmiyordu). Kapı: `fead-sonuclar-sekme.test.js` + `mount-results-tab.test.js`.
 - **Artifact önizlemesi kaldırıldı**, ama `build.js`'teki
   `maskRawTextKeepOffsets` **KALIR**: rapor üreticileri HTML şablonu bastığı
   için gerçek belgede sahte `</body>` geçiyor ve kalkan onun içindir.

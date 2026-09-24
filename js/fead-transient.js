@@ -359,6 +359,14 @@ function veFeadScenarioBuild(build, opts){
     notlar.push('İvme girilmemiş, ' + VE_FEAD_SCN_ACCEL_DEF + ' d/dk/s varsayıldı.');
   notlar.push('Gergi kolu dinamiği DAHİL DEĞİL (çekirdeğin peakEstimate sınırı).');
   notlar.push('Gerilme ÇİZİLEN kol konumunun gerginliğinden (' + Math.round(stT) + ' N) yürüyor.');
+  // KAYIŞ VERİSİ KAPISI. Açıklık frekansı katalog birim kütlesinden (m′) gelir;
+  // kayış tipine bağlı çıktılar kapalıyken çözüm onu SİLİYOR ve panel
+  // "üretilmiyor" diyor. Senaryo onu yeniden hesaplayıp "⚠ REZONANS" yazıyordu
+  // (ölçüldü: 11 örneğin 11'inde). Kapalıysa frekans yükte YOK; gerilme,
+  // devir ve ateşleme frekansı katalogtan bağımsız olduğu için kalır.
+  var fAcik = (typeof veFeadBeltDataOn === 'function') ? veFeadBeltDataOn(build) : true;
+  if(!fAcik)
+    notlar.push('Açıklık frekansları ÜRETİLMİYOR: kayış tipine bağlı çıktılar kapalı (birim kütle katalogdan).');
 
   var r4 = function(v){ return Math.round(v * 1e4) / 1e4; };
   return {
@@ -374,6 +382,7 @@ function veFeadScenarioBuild(build, opts){
     gRpm: gRpm.map(r4), gA: gA.map(function(a){ return a.map(r4); }),
     gB: gB.map(function(b){ return b.map(function(x){ return Math.round(x * 1e6) / 1e6; }); }),
     L: spanL.map(r4), adlar: adlar, mPrime: r4(mPrime), v1: Math.round(v1 * 1e8) / 1e8,
+    fOff: !fAcik,
     Td: r4(stT),
     notlar: notlar, egri: !!inp.curve, peakSrc: inp.kaynak.peak
   };
@@ -427,7 +436,7 @@ function veFeadScnStateAt(scn, t){
     // ya da dalga hızı kayış hızının altına düşerse duran dalga YOKTUR.
     var c = Math.sqrt(Math.max(Tk, 0) / scn.mPrime);
     var L = scn.L[k] / 1000;
-    spanF.push((c > v && L > 0) ? (c*c - v*v) / (2 * L * c) : 0);
+    if(!scn.fOff) spanF.push((c > v && L > 0) ? (c*c - v*v) / (2 * L * c) : 0);
   }
   return {
     t: tt, faz: faz.k, fazAd: faz.ad, rpm: rpm, alpha: al,

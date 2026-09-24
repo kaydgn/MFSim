@@ -1183,3 +1183,29 @@ simgeye çevrildi.
 
 **Kapı.** `kabuk-sutun.spec.js` → *"palet: kategori başlığı İKONUN
 kenarında, öğe dinlenmede zeminsiz"*.
+
+## Modül sonuç kaynakları — tek tablo (2026-09-24)
+
+**Hüküm:** Sonuçlar panosuna ARAÇ çözümünden bağımsız veri kümesi yayınlayan
+her modül `js/results.js` → `veResultSources` tablosuna bir giriş olarak
+katılır (sekme · kütüphane · yorum motoru · sonuç globali · kimlik eşleyici ·
+unutucu · isteğe bağlı ağaç/boş durum kancaları). Ortak dosyalarda
+(`results.js` · `trace-view.js` · `graphics.js`) modüle özgü dal YAZILMAZ.
+
+**Gerekçe:** Takoz'un dalları üç dosyaya 42 satır hâlinde dağılmıştı; ikinci
+modül (FEAD) aynı 42 satırı kopyalayacaktı ve birinin unutulduğu gün kanallar
+yanlış eksende SESSİZCE çizilirdi. Nitekim bir tanesi zaten unutulmuştu:
+"Sonuçları Temizle" (`veClearAllResults`) FEAD sonucunu silmiyordu — artık
+liste tablonun kendisi.
+
+**Kapı:** `tests/unit/fead-sonuclar-sekme.test.js` (FEAD) +
+`tests/unit/mount-results-tab.test.js` (Takoz, değişmeden yeşil).
+
+### Hiç çizilmemiş eksen tuvali yer yutar
+
+`#ve-trace-axis`in boyu yalnız çizimde yazılıyordu; o ana dek tarayıcının
+varsayılan 300×150 oranıyla genişliğe ölçekleniyordu (1160 px genişlikte
+580 px — boş panonun alanı 932 → 332 px). Ortalı tek satırlık boş durum bunu
+gizliyordu. Boş panoda yükseklik çizildiğindekiyle aynı (`VE_TR.AXIS_H`)
+baştan verilir. Kapı: `tests/e2e/fead-sonuclar.spec.js` (düzeltme geri
+alınınca 580 px ile düşüyor).
