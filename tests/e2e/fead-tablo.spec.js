@@ -53,6 +53,10 @@ async function ornekVeTablo(page) {
     null, { timeout: 20000 });
   await page.waitForTimeout(400);
   await page.locator('.ve-fead-tablo-dugme').first().click();
+  // İmleç düğmenin yerinde kalırsa, çekmece açılıp kamera çizimleri
+  // sığdırınca bir satırın ya da kasnağın ÜSTÜNE düşebilir ve "dinlenme"
+  // zemini fare altı olarak ölçülür. Kabuğun köşesine çekilir.
+  await page.mouse.move(2, 2);
   const tablo = page.locator('#ve-fead-tablo');
   await expect(tablo.locator('.ve-fead-krt[data-ve-node]')).toHaveCount(6);
   return tablo;
@@ -320,29 +324,134 @@ test('Kayış Tablosu CANLI: fare · odak · seçili satır · çözüm bölgesi
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  PENCERE KANVASIN PARÇASI DEĞİL — ama ÇİZİMİ ÖRTMÜYOR
+//  ÇEKMECE — TUVALİN ALTINDA, ÜSTÜNDE DEĞİL
 // ═══════════════════════════════════════════════════════════════════════════
-// Pencere kanvas kabının İÇİNDE duruyor: bir tık kanvası kaydırmaya, bir
-// tekerlek kanvası yakınlaştırmaya başlamamalı. Ve açıldığında çizimlerin
-// alt yarısını örtüyordu (ölçüldü, 1600×1000: her çizimin 175 px'i) —
-// "yazılan değer çizime anında yansır" sözü yansıdığı yer görünmüyorken
-// tutulmazdı.
-test('PENCERE: çizimi örtmüyor, kanvası kaydırmıyor, tekerlek listeyi kaydırıyor', async ({ page }) => {
+// Kullanıcı (2026-09-24): "Tablo açılıyor fakat kötü bir yere geliyor."
+// Ölçüldü (eski hâl, AG00976): tuvalin ÜSTÜNDE yüzen, ortalı, 16 px havada bir
+// kart — 1366×768'de tuval alanının %45'ini ve minimap'in %65'ini örtüyor, çizimleri
+// 0,83 → 0,49'a küçültüyor, kapanınca da öyle bırakıyordu; 1920×1080'de
+// 1,00 → 1,11 YAKINLAŞIYORDU. Çekmece artık kanvas alanının SATIRI: tuval
+// kısalır, hiçbir şey örtülmez. Node'a taşınamaz (jsdom yerleşim kurmaz).
+for (const [W, H] of [[1366, 768], [1920, 1080]]) {
+  test(`ÇEKMECE ${W}×${H}: tuvalin altına yapışık, hiçbir şeyi örtmüyor, kapanınca kamera döner`, async ({ page }) => {
+    const hatalar = [];
+    page.on('pageerror', (e) => hatalar.push(String(e)));
+    await page.setViewportSize({ width: W, height: H });
+    await bootApp(page);
+    await feadAc(page);
+    await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
+    await page.waitForFunction(() => window.nodes.filter((n) => n.type === 'fead-layout').length === 2,
+      null, { timeout: 20000 });
+    await page.waitForTimeout(600);
+    const kamera = () => page.evaluate(() => ({ z: canvasZoom, x: canvasOffset.x, y: canvasOffset.y }));
+    const k0 = await kamera();
+    await page.locator('.ve-fead-tablo-dugme').first().click();
+    await page.mouse.move(5, H - 5);
+    await page.waitForTimeout(800);                   // kamera geçişi (tidy-cam)
+    const o = await page.evaluate(() => {
+      const R = (el) => el.getBoundingClientRect();
+      const p = R(document.getElementById('ve-fead-tablo'));
+      const w = R(document.getElementById('ve-canvas-wrapper'));
+      const s = R(document.getElementById('ve-status-bar'));
+      const mm = document.getElementById('ve-minimap');
+      const m = (mm && !mm.classList.contains('ve-minimap-hidden')) ? R(mm) : null;
+      const kartlar = window.nodes.filter((n) => n.type === 'fead-layout')
+        .map((n) => R(document.getElementById(n.id)));
+      const liste = document.querySelector('#ve-fead-tablo .ve-fead-krt-wrap');
+      const coz = document.querySelector('#ve-fead-tablo .ve-fead-krt[data-ve-node] > .coz');
+      const b = [...coz.querySelectorAll('.ve-fead-krt-rv > b')].map(R);
+      return {
+        kenar: [p.top - w.bottom, s.top - p.bottom, p.left - w.left, w.right - p.right].map(Math.round),
+        minimapUstte: m ? m.bottom <= p.top + 0.5 : 'minimap yok',
+        kesik: kartlar.filter((r) => r.top < w.top - 1 || r.bottom > w.bottom + 1
+                                  || r.left < w.left - 1 || r.right > w.right + 1).length,
+        kaydirma: liste.scrollHeight - liste.clientHeight,
+        cozYayilim: Math.round(b[b.length - 1].left - b[0].left),
+      };
+    });
+    expect(o.kenar).toEqual([0, 0, 0, 0]);            // tuvalin altı · şeridin üstü · iki yan
+    expect(o.minimapUstte).toBe(true);
+    expect(o.kesik).toBe(0);                          // iki çizim de tam görünüyor
+    expect(o.kaydirma).toBeLessThanOrEqual(0);        // altı satır kaydırmasız
+    expect(o.cozYayilim).toBeLessThanOrEqual(240);    // çözüm sayıları yayılmıyor
+    expect((await kamera()).z).toBeLessThanOrEqual(k0.z + 1e-9);   // YAKINLAŞMAZ
+
+    // KAPANINCA KAMERA DÖNER — kullanıcı oynatmadıysa tuval eski boyuna
+    // uzarken çizimler sığdırılmış küçük hâlde kalmaz.
+    await page.locator('#ve-fead-tablo .ve-tablo-kapat').click();
+    await page.waitForTimeout(700);
+    const k2 = await kamera();
+    expect(k2.z).toBeCloseTo(k0.z, 9);
+    expect(Math.abs(k2.x - k0.x)).toBeLessThan(0.5);
+    expect(Math.abs(k2.y - k0.y)).toBeLessThan(0.5);
+    expect(hatalar).toEqual([]);
+  });
+}
+
+test('ÇEKMECE TUTAMAĞI: sürükleyince tuval o kadar kısalır; seçilen boy korunur, çift tık sıfırlar', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  const tablo = await ornekVeTablo(page);
+  await page.waitForTimeout(600);
+  const olc = () => page.evaluate(() => ({
+    p: Math.round(document.getElementById('ve-fead-tablo').getBoundingClientRect().height),
+    w: Math.round(document.getElementById('ve-canvas-wrapper').getBoundingClientRect().height),
+    ust: document.getElementById('ve-fead-tablo').getBoundingClientRect().top }));
+  const a = await olc();
+  const x = 700;
+  await page.mouse.move(x, a.ust + 1.5);              // üst kenarın tutamağı
+  await page.mouse.down();
+  await page.mouse.move(x, a.ust + 1.5 - 120, { steps: 6 });
+  await page.mouse.up();
+  const b = await olc();
+  expect(Math.abs(b.p - a.p - 120)).toBeLessThanOrEqual(2);
+  expect(a.w - b.w).toBe(b.p - a.p);                  // tuval KISALDI — örtü yok
+  // Çok yukarı çekmek tuvali tabanının altına indiremez.
+  await page.mouse.move(x, b.ust + 1.5);
+  await page.mouse.down();
+  await page.mouse.move(x, 20, { steps: 8 });
+  await page.mouse.up();
+  const c = await olc();
+  expect(c.w).toBeGreaterThanOrEqual(179);
+  // Kapat · aç: seçilen boy korunur.
+  await tablo.locator('.ve-tablo-kapat').click();
+  await page.locator('.ve-fead-tablo-dugme').first().click();
+  await page.waitForTimeout(300);
+  expect((await olc()).p).toBe(c.p);
+  // Çift tık: içerik kadarına döner.
+  await page.locator('#ve-fead-tablo .ve-fead-tablo-tutamak').dblclick({ position: { x: 700 - 284, y: 5 } });
+  await page.waitForTimeout(200);
+  expect((await olc()).p).toBe(a.p);
+  expect(hatalar).toEqual([]);
+});
+
+test('ÇEKMECE FEAD\'e AİT: ana topolojiye dönünce kapanır; arka plan kaydı KAPATMAZ', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  const tablo = await ornekVeTablo(page);
+  // Arka plan kaydı: köke çöker ve aynı anda geri girer — çekmece yerinde.
+  await page.evaluate(() => veSaveActiveTabStateKeepView());
+  await page.waitForTimeout(300);
+  await expect(tablo.locator('.ve-fead-krt[data-ve-node]')).toHaveCount(6);
+  // Kullanıcı ana topolojiye dönüyor: eskiden çekmece SATIRSIZ açık kalıyordu.
+  await page.evaluate(() => veFeadCloseEditor());
+  await page.waitForTimeout(400);
+  await expect(page.locator('#ve-fead-tablo')).toHaveCount(0);
+  expect(hatalar).toEqual([]);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  ÇEKMECE KANVASIN PARÇASI DEĞİL
+// ═══════════════════════════════════════════════════════════════════════════
+// Basmak kanvası kaydırmaya, tekerlek kanvası yakınlaştırmaya başlamamalı;
+// eklenen satır listede görünür olmalı.
+test('ÇEKMECE: kanvası kaydırmıyor, tekerlek listeyi kaydırıyor, eklenen satır görünür', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await page.setViewportSize({ width: 1600, height: 1000 });
   const tablo = await ornekVeTablo(page);
   await page.waitForTimeout(700);                   // kamera geçişi (tidy-cam)
-
-  // ── 1) ÇİZİMLER PENCERENİN ÜSTÜNDE ─────────────────────────────────────
-  const ortu = await page.evaluate(() => {
-    const p = document.getElementById('ve-fead-tablo').getBoundingClientRect();
-    return window.nodes.filter((n) => n.type === 'fead-layout').map((n) => {
-      const r = document.getElementById(n.id).getBoundingClientRect();
-      return Math.max(0, Math.round(r.bottom - p.top));
-    });
-  });
-  expect(ortu).toEqual([0, 0]);
 
   // ── 2) PENCEREYE BASMAK KANVASI KAYDIRMIYOR ────────────────────────────
   const kamera = () => page.evaluate(() => [canvasZoom, canvasOffset.x, canvasOffset.y].join(','));
@@ -355,7 +464,9 @@ test('PENCERE: çizimi örtmüyor, kanvası kaydırmıyor, tekerlek listeyi kayd
   expect(await kamera()).toBe(k0);
 
   // ── 3) TEKERLEK: liste taşıyorsa LİSTEYİ kaydırır, kanvası hiç ────────
-  for (let i = 0; i < 4; i++) {
+  // Çekmecenin tavanı alanın yarısı (1600×1000'de ~480 px): liste ancak
+  // on dört satırda taşıyor.
+  for (let i = 0; i < 8; i++) {
     await tablo.locator('select[data-ve="add-pulley"]').selectOption('fead-idler');
     await page.waitForTimeout(250);
   }

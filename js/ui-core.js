@@ -141,16 +141,13 @@ function updateCanvasTransform() {
 // Otomatik yüklenen/kurulan topolojiler ızgaranın kenarına yapışmasın diye
 // kullanılır. Node koordinatlarına DOKUNMAZ — yalnız kamerayı (canvasOffset/
 // canvasZoom) ayarlar. maxZoom=1: küçük topolojilerde yakınlaştırmaz, sadece ortalar.
-// opts.only        : yalnız bu yüklemi sağlayan düğümler sığdırılır (varsayılan: hepsi)
-// opts.bottomInset : kabın altından bu kadar px ÖRTÜLÜ sayılır — içerik
-//                    üstte kalan alana sığdırılır (kanvasın üstüne binen bir
-//                    pencere açıkken; bkz. cp-fead.js → veFeadTabloAc).
+// opts.only : yalnız bu yüklemi sağlayan düğümler sığdırılır (varsayılan: hepsi)
 function veFitViewToContent(opts) {
   opts = opts || {};
   if(typeof nodes === 'undefined' || !nodes || nodes.length === 0) return;
   var wrapper = document.getElementById('ve-canvas-wrapper');
   if(!wrapper) return;
-  var W = wrapper.clientWidth, H = wrapper.clientHeight - Math.max(0, opts.bottomInset || 0);
+  var W = wrapper.clientWidth, H = wrapper.clientHeight;
   if(W < 20 || H < 20) return;
   var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   nodes.forEach(function(n) {

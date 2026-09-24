@@ -14,6 +14,10 @@
  *     teke indi, geometri ↔ işletme ayrımı bir ön ayar oldu).
  */
 const { test, expect } = require('@playwright/test');
+// Katmanlar düğmesi. "Tablo" düğmesi (Çizim Masası) aynı görünüm sınıfını
+// paylaşıyor; sınıfla aranan düğme İKİ öğe buluyordu ve bu dosya 2026-09-23'ten
+// beri kırmızıydı (fead-kanvas.spec.js aynı dışlamayı zaten yapıyor).
+const KAT = '.ve-fead-kat-dugme:not(.ve-fead-tablo-dugme)';
 test.setTimeout(180000);
 
 async function bootApp(page) {
@@ -56,7 +60,7 @@ test('KATMAN PANELİ: açılır, çizimi değiştirir, açık kalır', async ({ 
   const id = await page.evaluate(() => window.nodes.find(
     (n) => n.type === 'fead-layout' && !(n.data || {}).katOn).id);
   const kart = page.locator('#' + id);
-  const dugme = kart.locator('.ve-fead-kat-dugme');
+  const dugme = kart.locator(KAT);
 
   // ── 1) DÜĞME KARTIN İÇİNDE ──────────────────────────────────────────────
   // Şeritte üç seçici + düğme var ve şerit kaymıyor; düğme taşarsa paneli
@@ -65,7 +69,7 @@ test('KATMAN PANELİ: açılır, çizimi değiştirir, açık kalır', async ({ 
   expect((await dugme.innerText()).replace(/\s+/g, ' ')).toContain('Katmanlar');
   expect(await page.evaluate((i) => {
     const el = document.getElementById(i);
-    const b = el.querySelector('.ve-fead-kat-dugme');
+    const b = el.querySelector('.ve-fead-kat-dugme:not(.ve-fead-tablo-dugme)');
     const k = el.querySelector('.ve-node-box');
     return { tasti: b.getBoundingClientRect().right > k.getBoundingClientRect().right + 1,
              seritKaydi: b.parentElement.scrollWidth > b.parentElement.clientWidth + 1 };
@@ -73,7 +77,7 @@ test('KATMAN PANELİ: açılır, çizimi değiştirir, açık kalır', async ({ 
 
   // ── 2) GERÇEK TIKLAMA PANELİ AÇIYOR ─────────────────────────────────────
   await expect(kart.locator('.ve-fead-kat')).toHaveCount(0);
-  const seritOnce = await kart.locator('.ve-fead-kat-dugme')
+  const seritOnce = await kart.locator(KAT)
     .evaluate((el) => Math.round(el.getBoundingClientRect().top));
   await dugme.click();
   await page.waitForTimeout(350);
@@ -93,7 +97,7 @@ test('KATMAN PANELİ: açılır, çizimi değiştirir, açık kalır', async ({ 
   // PANEL ÇİZİMİN ÜSTÜNE BİNER, ŞERİDİ İTMEZ. Akışa girseydi panel açılınca
   // çizim alanı daralır, şema yeniden ölçeklenir ve kullanıcı "neyi
   // değiştirdim" sorusunu bir de kayan resimle çözmek zorunda kalırdı.
-  expect(await kart.locator('.ve-fead-kat-dugme')
+  expect(await kart.locator(KAT)
     .evaluate((el) => Math.round(el.getBoundingClientRect().top))).toBe(seritOnce);
   // Ve panel kartın İÇİNDE duruyor.
   expect(await page.evaluate((i) => {
@@ -207,7 +211,7 @@ test('İKİ KART, İKİ AYRI RESİM — kişiselleştirmenin kendisi', async ({ 
   expect(await adSay(page, b)).toBe(6);
 
   // İkinci kartı ÇIPLAK YOL yap: gerçek düğme ve gerçek kutucuklarla.
-  await page.locator('#' + b + ' .ve-fead-kat-dugme').click();
+  await page.locator('#' + b + ' ' + KAT).click();
   await page.waitForTimeout(300);
   const p2 = page.locator('#' + b + ' .ve-fead-kat');
   await p2.locator('.ve-fead-kat-islem:not(.onayar) button').nth(1).click();   // Hiçbiri
@@ -223,7 +227,7 @@ test('İKİ KART, İKİ AYRI RESİM — kişiselleştirmenin kendisi', async ({ 
 
   // İKİNCİ PANEL AÇILINCA BİRİNCİSİ KAPANIR: iki panel aynı anda açıkken
   // hangi kartın ayarına baktığın okunmuyor.
-  await page.locator('#' + a + ' .ve-fead-kat-dugme').click();
+  await page.locator('#' + a + ' ' + KAT).click();
   await page.waitForTimeout(350);
   await expect(page.locator('#' + a + ' .ve-fead-kat')).toHaveCount(1);
   await expect(page.locator('#' + b + ' .ve-fead-kat')).toHaveCount(0);
@@ -265,8 +269,8 @@ test('İKİ KART, İKİ AYRI RESİM — kişiselleştirmenin kendisi', async ({ 
   await page.waitForTimeout(500);
   expect(r2).toBeTruthy();
   expect(await page.evaluate(() => window.nodes.filter((n) => n.type === 'fead-layout').length)).toBe(4);
-  await expect(page.locator('#' + r2 + ' .ve-fead-kat-dugme')).toHaveCount(1);
-  await page.locator('#' + r2 + ' .ve-fead-kat-dugme').click();
+  await expect(page.locator('#' + r2 + ' ' + KAT)).toHaveCount(1);
+  await page.locator('#' + r2 + ' ' + KAT).click();
   await page.waitForTimeout(300);
   await page.locator('#' + r2 + ' .ve-fead-kat-islem.onayar button').nth(1).click();
   await page.waitForTimeout(500);

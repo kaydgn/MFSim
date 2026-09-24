@@ -1225,6 +1225,13 @@ describe('en küçük ölçü — kart içeriğinin altına inmiyor', () => {
     expect(cssBlok).toContain('minmax(' + tabanlar.coz + 'px, 1fr)');
     expect(cssBlok).not.toContain('var(--fead-krt-coz');
     expect(cssBlok).toContain('var(--fead-krt-son, auto);');
+    // ÇEKMECEDE TAVAN (2026-09-24): tuvalin sütunu kadar geniş bir çekmecede
+    // `1fr` üç türetilen sayıyı yayıyordu (1920 px'te ~320 px arayla). Orada
+    // çözüm bölgesinin tavanı var; artan satırın SONUNDAKİ boş ize gider.
+    const cekmece = cssBlok.match(/\.ve-fead-tablo-pencere \.ve-fead-krt\{\s*grid-template-columns:([^;]*);/);
+    expect(cekmece).toBeTruthy();
+    expect(cekmece[1]).toMatch(new RegExp('minmax\\(' + tabanlar.coz + 'px, \\d+px\\)'));
+    expect(cekmece[1].trim()).toMatch(/1fr$/);
   });
 
   test('taban TİPTEN okunuyor — beyan etmeyen tip eski 50×50\'de kalıyor', () => {

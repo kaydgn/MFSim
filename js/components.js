@@ -740,7 +740,8 @@ var componentDefs = {
   },
   // KAYIŞ TABLOSU (`fead-table`) KANVAS BİLEŞENİ DEĞİL (2026-09-23, Çizim
   // Masası): kanvasta 7 px'e küçülen bir formdu, artık kanvas kartının
-  // "Tablo" düğmesiyle açılan bir pencere (cp-fead.js → veFeadTabloAc).
+  // "Tablo" düğmesiyle tuvalin altında açılan bir çekmece (cp-fead.js →
+  // veFeadTabloAc).
   // Kayıtlı düğümler şema 7 göçüyle silinir (fead-model.js).
   // KONUM BAĞI (`fead-coordlink`) KALDIRILDI (2026-09-09). Bileşen yalnız
   // kanvastaki kutu konumu ile mm koordinatı arasındaki bağı açıp kapatıyordu;
