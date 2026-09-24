@@ -517,7 +517,7 @@ describe('rozet ve panel', () => {
     const s = kur('AG00976_GATES_2025', true);
     const R = coz(s);
     global.veFeadResults = Object.assign({ ok: true }, R);
-    const h = fead.veFeadDutyResultTable(
+    const h = fead.veFeadResultVerdicts(
       Object.assign({}, R, { pulleyNames: s.b.names }));
     expect(h).toContain('GERGİN tarafında');
     expect(h).toMatch(/yükseltilemez/);

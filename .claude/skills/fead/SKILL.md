@@ -499,6 +499,32 @@ olurdu.
     Kapılar: `tests/unit/fead-cizim-masasi.test.js` +
     `tests/e2e/fead-cizim-masasi.spec.js`.
 
+33. **SONUÇLAR SAYFASINDA FEAD SEKMESİ — PANO OKUR, HESAPLAMAZ** (2026-09-24,
+    kullanıcı isteği: *"FEAD'e özel bir Sonuçlar penceresi"*). Veri kümeleri
+    ÇÖZÜM ANINDA `R.signals`'a yazılır (`js/fead-signals.js`, yorum
+    `js/fead-brief.js`, sunum `js/cp-fead-results.js`): çevrim (devir) ·
+    Campbell (devir) · kol taraması (kol açısı) · senaryo (zaman) — panonun tek
+    X ekseni kuralı yüzünden DÖRT küme. Kurallar:
+    • Kararlı rejim sayıları `R.analysis`'ten BİREBİR; tarama raporun
+      ızgarasıyla aynı (`veFeadArmSweep` tek kaynak), tepe yük Özet Rapor'un
+      `_fsrPeak`'inden. `R.build` canlı düğümlere bağlı — sonradan kurulan
+      küme çözümden sonra değişen alanı sızdırırdı.
+    • **Sonuç bir MODEL İMZASI taşır** (`R.sig` · `veFeadModelSig`: kasnak,
+      kayış, çözücü verisi; görünüm düğümleri DIŞARIDA) ve bayatlık TEK
+      çağrıdan (`veFeadResultState`): çözücü penceresi, Sonuçlar sekmesi ve
+      rapor aynı hükmü okur. Ölçülen kusur: çap +%10 → tablo %8 eski, damga yok.
+    • **Kayış verisi kapısı TEK soru** (`veFeadBeltDataOn`): kapalıyken ne
+      çözüm, ne kartın çırpması, ne senaryo, ne pano açıklık frekansı üretir.
+      Ölçülen kusur: 11/11 örnekte senaryo "⚠ REZONANS" yazıyordu.
+    • Çözücü penceresinin Sonuç sekmesi ÖZETTİR (durum · kartlar · hüküm ·
+      "Sonuçlar'da aç"); tablolar Sonuç Özeti penceresinde. Kartlar İKİ
+      yüzeyde aynı üreticiden (`veFeadSignals.summary`).
+    • Ortak dosyalarda FEAD dalı YOK: kaynak tablosuna (`veResultSources`,
+      js/results.js) girer — kök `CLAUDE.md` → ortak yüzey kuralları.
+    Kapılar: `fead-sonuclar.test.js` (dört kusurun üçü + okuma sözleşmesi),
+    `fead-sonuclar-sekme.test.js` (kablolama + "Sonuçları Temizle"),
+    `tests/e2e/fead-sonuclar.spec.js` (sayfa boyu kart, gerçek çizim).
+
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı
 kuralların hepsi oradan çıktı.

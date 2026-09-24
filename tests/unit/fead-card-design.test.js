@@ -597,7 +597,12 @@ describe('gerilme sayısı okunur', () => {
 
 describe('künye TEK SATIR — ama damgalar kalır', () => {
   test('kinematik ve titreşim aynı satırda; ağır çekim ve KALİBRE DEĞİL yerinde', () => {
-    const { run } = kur();
+    const { pack, run } = kur();
+    // Çırpma frekansı katalog birim kütlesinden gelir, yani kayış tipine bağlı
+    // çıktılar AÇIK olmalı (veFeadBeltDataOn) — örnekler varsayılan olarak
+    // kapalı geliyor ve kapalıyken çırpma hiç üretilmiyor (ayrı kapı:
+    // fead-sonuclar.test.js → "kayış verisi kapısı").
+    pack.nodes.find((n) => n.type === 'fead-belt').data.beltDataMode = 'full';
     run.data.vibMode = 'span';
     const kart = fead.veFeadLayoutCardHTML(run);
     const satir = [...kart.matchAll(/data-ve="anim-label"[^>]*>([^<]*)</g)].map((m) => m[1]);

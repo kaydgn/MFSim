@@ -831,7 +831,7 @@ describe('güç eğrisi kartı', () => {
 // künyeyi değiştiriyor (`fead-wizard.test.js` → *"örnekten doldur — AÇILIR
 // LİSTE"*). Buraya kopya bir kapı açmak aynı hükmü iki yerde tutmak olurdu.
 
-describe('servis faktörü sonuç tablosunda hüküm veriyor', () => {
+describe('servis faktörü sonuç HÜKMÜNDE — tablo Sonuçlar\'a taşındı, hüküm pencerede kaldı', () => {
   // Sahte bir sonuç nesnesi: gerçek çözüm bu dosyanın işi değil (fead-example
   // orada), burada test edilen şey EŞİĞİN NEREDEN GELDİĞİ.
   const sahteR = (sf, minSF) => ({
@@ -845,25 +845,25 @@ describe('servis faktörü sonuç tablosunda hüküm veriyor', () => {
   });
 
   test('min SF servis faktörünün üstündeyse GEÇTİ', () => {
-    const html = fead.veFeadDutyResultTable(sahteR(1.3, 1.8));
+    const html = fead.veFeadResultVerdicts(sahteR(1.3, 1.8));
     expect(html).toMatch(/GEÇTİ/);
     expect(html).not.toMatch(/KALDI/);
   });
 
   test('min SF servis faktörünün altındaysa KALDI', () => {
-    const html = fead.veFeadDutyResultTable(sahteR(1.3, 1.15));
+    const html = fead.veFeadResultVerdicts(sahteR(1.3, 1.15));
     expect(html).toMatch(/KALDI/);
   });
 
   // Eşik ARTIK SABİT DEĞİL: 1.5 isteyen kullanıcıda 1.4 kalmalı, 1.2 isteyende
   // aynı 1.4 geçmeli. Sabit 1.3 olsaydı ikisi de aynı sonucu verirdi.
   test('eşik kullanıcının girdiği servis faktörü — sabit 1.3 DEĞİL', () => {
-    expect(fead.veFeadDutyResultTable(sahteR(1.5, 1.4))).toMatch(/KALDI/);
-    expect(fead.veFeadDutyResultTable(sahteR(1.2, 1.4))).toMatch(/GEÇTİ/);
+    expect(fead.veFeadResultVerdicts(sahteR(1.5, 1.4))).toMatch(/KALDI/);
+    expect(fead.veFeadResultVerdicts(sahteR(1.2, 1.4))).toMatch(/GEÇTİ/);
   });
 
   test('servis faktörü girilmemişse hüküm satırı HİÇ çıkmaz (uydurma eşik yok)', () => {
-    const html = fead.veFeadDutyResultTable(sahteR(0, 1.1));
+    const html = fead.veFeadResultVerdicts(sahteR(0, 1.1));
     expect(html).not.toMatch(/GEÇTİ|KALDI/);
     expect(html).not.toMatch(/Servis faktörü/);
   });

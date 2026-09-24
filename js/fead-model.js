@@ -1528,6 +1528,9 @@ function veFeadSpanFreqRows(sys, geom, spanN, opt){
 
 function veFeadVibSpanPayload(build, engineRpm, slow, gain, relDeg, zeta){
   if(!build || !build.ok || !build.sys || typeof FEADCore === 'undefined') return null;
+  // Çırpma açıklık frekansıyla titreşir ve o frekans katalog birim kütlesinden
+  // geliyor — kayış tipine bağlı çıktılar KAPALIYSA üretilmez (veFeadBeltDataOn).
+  if(!veFeadBeltDataOn(build)) return null;
   var rpm = _feadNum(engineRpm, NaN);
   if(!(rpm > 0)) return null;
   var g = Math.min(VE_FEAD_VIB_GAIN_MAX, Math.max(VE_FEAD_VIB_GAIN_MIN, _feadNum(gain, VE_FEAD_VIB_GAIN_DEF)));
@@ -4691,6 +4694,91 @@ function veFeadAnalyze(build, opts){
   return out;
 }
 
+// ─── KAYIŞ TİPİNE BAĞLI ÇIKTILAR AÇIK MI — TEK SORU, TEK CEVAP ──────────────
+//
+// Kapı `veFeadAnalyze`'da kuruluydu ama YALNIZ orada: çözüm açıklık
+// frekanslarını siliyor, panel "üretilmiyor" diyordu — oysa kartın çırpma
+// katmanı ve geçici rejim senaryosu aynı frekansı katalog birim kütlesinden
+// yeniden hesaplayıp "⚠ REZONANS" yazıyordu. ÖLÇÜLDÜ: 11 örneğin 11'inde,
+// senaryonun 401 karesinin 29…223'ünde. Soru artık tek yerde; frekans üreten
+// her yüzey buradan geçer. Varsayılan `veFeadAnalyze` ile AYNI (alan hiç
+// yoksa 'full'): gerçek bir kurulum alanı her zaman yazar, elle kurulmuş test
+// yapıları bugünkü davranışlarını korur.
+function veFeadBeltDataOn(build){
+  if(!build) return false;
+  return (build.beltDataMode || 'full') !== 'none';
+}
+
+// ─── SONUCUN KİMLİĞİ — "bu sayılar HANGİ modele ait?" ────────────────────────
+//
+// Sonuç oturumluk bir global ve rapor bilerek ÇÖZÜLEN modeli anlatıyor. Eksik
+// olan, modelin çözümden SONRA değişip değişmediğini söyleyen bir damgaydı.
+// ÖLÇÜLDÜ (AG00976): çözümden sonra sürücü kasnak çapı 162 → 178,2 mm; Sonuç
+// sekmesi 880 d/d'de 1381 N göstermeye devam etti, güncel model 1272 N veriyor
+// (≈ %8) ve hiçbir yüzey bunu söylemedi.
+//
+// İMZA MODEL DÜĞÜMLERİNİN VERİSİNDEN: kasnaklar (gergi dâhil), kayış ve
+// çözücü. Görünüm düğümleri (Kayış Yolu kartı, rapor, sihirbaz, dönüş yönü)
+// DIŞARIDA — kartın katmanını değiştirmek sonucu bayatlatmaz. Dönüş yönü
+// rozeti modeli kasnakların alanına yazarak değiştirir, o yüzden onun etkisi
+// yine yakalanır. Anahtar SIRALI kanonik biçim: geri yüklenen bir düğümün
+// alan sırası farklı olabilir ama anlamı aynıdır.
+function _feadCanon(v){
+  if(v === null || typeof v !== 'object') return JSON.stringify(v === undefined ? null : v);
+  if(Array.isArray(v)) return '[' + v.map(_feadCanon).join(',') + ']';
+  return '{' + Object.keys(v).sort().filter(function(k){ return v[k] !== undefined; })
+    .map(function(k){ return JSON.stringify(k) + ':' + _feadCanon(v[k]); }).join(',') + '}';
+}
+// FNV-1a (32 bit). Kriptografik değil, gerekmiyor: soru "aynı mı", "kim
+// yazdı" değil. Sonuç KISA kalsın diye metnin kendisi değil özeti taşınır.
+function _feadHash(s){
+  var h = 0x811c9dc5;
+  for(var i = 0; i < s.length; i++){
+    h ^= s.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return ('0000000' + h.toString(16)).slice(-8);
+}
+function veFeadModelSig(nodeList){
+  var parca = [];
+  (nodeList || []).forEach(function(n){
+    if(!n) return;
+    var d = _feadDefOf(n);
+    if(!(d.isFeadPulley || d.isFeadBelt || n.type === 'fead-belt' || n.type === 'fead-solver')) return;
+    parca.push([String(n.id), n.type, n.customName || '', n.data || {}]);
+  });
+  if(!parca.length) return null;
+  parca.sort(function(a, b){ return a[0] < b[0] ? -1 : (a[0] > b[0] ? 1 : 0); });
+  var s;
+  try { s = _feadCanon(parca); } catch(e){ return null; }
+  return _feadHash(s);
+}
+
+// ─── GERGİ KOLU TARAMASI — rapor ile Sonuçlar'ın ORTAK verisi ───────────────
+// Belt Tension Control ve Take-up grafikleri bunu çiziyordu (cp-fead-report.js
+// `_frArmSweep`). Sonuçlar penceresi de aynı eğriyi çiziyor; iki tarama iki
+// ızgara demekti ve rapordaki eğri panodakinden sessizce ayrışabilirdi.
+// Tarama ÇÖZÜLEN modelin (build.sys) üzerinde: serbest koldan erişilebilen en
+// büyük göreli açıya kadar, n+1 nokta.
+function veFeadArmSweep(build, n){
+  if(typeof FEADCore === 'undefined' || !build || !build.sys || !FEADCore.tensionerState) return null;
+  var sys = build.sys, hi = 60;
+  try { if(FEADCore.feasibleRelMax) hi = FEADCore.feasibleRelMax(sys); } catch(e){}
+  if(!(hi > 0)) return null;
+  var N = (n > 3) ? Math.round(n) : 90, pts = [];
+  for(var i = 0; i <= N; i++){
+    var rel = hi * i / N;
+    try {
+      var st = FEADCore.tensionerState(sys, rel);
+      if(st && Number.isFinite(st.tensionN))
+        pts.push({ rel: rel, abs: st.absDeg, T: st.tensionN, L: st.driveLenMm,
+                   tk: st.takeupMmPerDeg, phi: st.wrapDeg, beta: st.betaDeg,
+                   hub: st.hubloadN, M: st.springNm });
+    } catch(e){}
+  }
+  return pts.length > 3 ? { pts: pts, relMax: hi } : null;
+}
+
 // Jest/Node köprüsü (tarayıcıda no-op)
 
 // ─── KASNAK KISA KODU ───────────────────────────────────────────────────────
@@ -4768,6 +4856,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadPresetOf: veFeadPresetOf, veFeadAutoKw: veFeadAutoKw,
     veFeadRatioSys: veFeadRatioSys,
     veFeadDutyToCore: veFeadDutyToCore, veFeadAnalyze: veFeadAnalyze,
+    veFeadBeltDataOn: veFeadBeltDataOn, veFeadModelSig: veFeadModelSig,
+    veFeadArmSweep: veFeadArmSweep, _feadCanon: _feadCanon, _feadHash: _feadHash,
     veFeadDutyDegC: veFeadDutyDegC, veFeadTorsionalOpt: veFeadTorsionalOpt,
     veFeadPeakInertias: veFeadPeakInertias,
     veFeadSpanFreqRows: veFeadSpanFreqRows,

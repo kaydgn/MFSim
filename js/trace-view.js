@@ -390,10 +390,12 @@ function veTrResolveX(slot) {
   // düşüş devreye girerse ARAÇ zaman dizisi kullanılır ve pencere "Frekans
   // [Hz]" etiketiyle 0–30 s'lik bir ekseni çizer; imleç saniyeyi Hz diye okur.
   // Böyle bir durumda eksen YOK'tur — pencere boş durumunu göstersin.
-  if(!arr && typeof veMntSignals !== 'undefined') {
+  // Aynı kural FEAD eksenleri (~fead-cevrim:rpm …) için de geçerli: kaynak
+  // tablosu (js/results.js veResultSources) hangi modülün olduğunu söyler.
+  if(!arr && typeof veResSourceOf === 'function') {
     var _xid = (slot.xAxis && slot.xAxis.id) ? String(slot.xAxis.id) : '';
     var _cx = _xid.indexOf(':');
-    if(veMntSignals.isMountSensor(_cx > 0 ? _xid.substring(0, _cx) : _xid)) return null;
+    if(veResSourceOf(_cx > 0 ? _xid.substring(0, _cx) : _xid)) return null;
   }
 
   if(!arr) {
@@ -1700,7 +1702,16 @@ function veTrRender() {
   var surfEl = document.getElementById('ve-trace-surface');
   if(surfEl) surfEl.style.display = hasSignals ? 'block' : 'none';
   var axEl = document.getElementById('ve-trace-axis');
-  if(axEl) axEl.style.visibility = hasSignals ? 'visible' : 'hidden';
+  if(axEl) {
+    axEl.style.visibility = hasSignals ? 'visible' : 'hidden';
+    // HİÇ ÇİZİLMEMİŞ EKSEN TUVALİ YER YUTAR. Boyutu yalnız çizimde yazılıyor
+    // (veTrDrawAxis) ve o ana dek tarayıcının varsayılan 300×150 oranıyla
+    // genişliğe ölçekleniyor — ölçüldü: 1160 px genişlikte 580 px, boş
+    // panonun alanı 932 → 332 px. Ortalı tek satırlık boş durum bunu
+    // gizliyordu; sayfa boyu bir başlangıç kartı (FEAD) kırpılınca göründü.
+    // Yükseklik çizildiğindekiyle AYNI: ilk çizimde düzen zıplamaz.
+    if(!hasSignals && !axEl.style.height) axEl.style.height = VE_TR.AXIS_H + 'px';
+  }
 
   if(!hasSignals) {
     veTrState.geo = null;
@@ -1828,12 +1839,28 @@ function veTrMarkColor(kind, alpha) {
     : 'rgba(59,130,246,' + a + ')';
 }
 
+// Panonun gösterdiği MODÜL veri kümesi (Takoz · FEAD): { src, ds, R } ya da
+// null. Kaynak tablosu results.js'te; Ölçüm Görüntüleyici'de o dosya yok ve
+// cevap her zaman null — görüntüleyicide modül kümesi olmaz.
+function veTrModDataset(slot) {
+  if(typeof veResultSources === 'undefined' || typeof veResSets !== 'function') return null;
+  slot = slot || veTrBoard();
+  if(!slot) return null;
+  for(var i = 0; i < veResultSources.length; i++) {
+    var src = veResultSources[i], L = src.lib();
+    if(!L) continue;
+    var sets = veResSets(src);
+    if(!sets.length) continue;
+    var ds = L.setOfSlot(sets, slot);
+    if(ds) return { src: src, ds: ds, R: src.R() };
+  }
+  return null;
+}
+
 // Panonun gösterdiği veri kümesinin işaretleri; yoksa boş.
 function veTrMarks() {
-  if(typeof veMntSignals === 'undefined') return [];
-  var sets = (typeof veMntSets === 'function') ? veMntSets() : [];
-  if(!sets.length) return [];
-  var ds = veMntSignals.setOfSlot(sets, veTrBoard());
+  var m = veTrModDataset();
+  var ds = m && m.ds;
   return (ds && ds.brief && ds.brief.marks) ? ds.brief.marks : [];
 }
 
@@ -2104,14 +2131,12 @@ function veTrNoteGripDown(e, el) {
 // bindiği hâl farklı şeyler anlatır, tek metin ikisine birden hizmet edemez.
 // Bu yüzden çözüm anında değil ÇİZİM anında üretilir.
 function veTrNoteEntries(lanes) {
-  if(typeof veMntSignals === 'undefined' || typeof veMntBrief === 'undefined') return [];
-  var sets = (typeof veMntSets === 'function') ? veMntSets() : [];
-  if(!sets.length) return [];
-  var R = (typeof window !== 'undefined') ? window.veMountResults : null;
-  if(!R) return [];
   var slot = veTrBoard();
-  var ds = veMntSignals.setOfSlot(sets, slot);
-  if(!ds) return [];
+  var m = veTrModDataset(slot);
+  if(!m || !m.R) return [];
+  var B = m.src.brief();
+  if(!B || typeof B.forLane !== 'function') return [];
+  var ds = m.ds, R = m.R;
 
   if(!lanes) {
     try { lanes = veTrBuildLanes(slot); } catch(e) { return []; }
@@ -2120,7 +2145,7 @@ function veTrNoteEntries(lanes) {
   (lanes || []).forEach(function(lane) {
     var ids = (lane.sigs || []).map(function(g) { return g.sensor.signal; });
     if(!ids.length) return;
-    var br = veMntBrief.forLane(ds, R, ids);
+    var br = B.forLane(ds, R, ids);
     if(br && br.paras && br.paras.length) out.push(br);
   });
   return out;
@@ -2128,10 +2153,8 @@ function veTrNoteEntries(lanes) {
 
 // Kapalı hâlde görünen tek satır — panonun genel özeti.
 function veTrNoteLead() {
-  if(typeof veMntSignals === 'undefined') return null;
-  var sets = (typeof veMntSets === 'function') ? veMntSets() : [];
-  if(!sets.length) return null;
-  var ds = veMntSignals.setOfSlot(sets, veTrBoard());
+  var m = veTrModDataset();
+  var ds = m && m.ds;
   return (ds && ds.brief) ? { name: ds.name, lead: ds.brief.lead || '' } : null;
 }
 
@@ -2263,11 +2286,18 @@ function veTrEmptyHTML() {
   // İçe aktarılmış ölçüm de çizilecek veridir: varsa "önce çözümü çalıştırın"
   // demek yanlış olur — kullanıcının verisi zaten var, eksik olan sinyal seçimi.
   var hasImport = (typeof veImpAny === 'function') && veImpAny();
-  // Takoz sekmesi ARAÇ çözümünden bağımsız beslenir (window.veMountResults):
-  // yalnız takoz modelini çözmüş kullanıcıya "çözüm sonucu yok" demek yanlış
+  // Modül sekmeleri (Takoz · FEAD) ARAÇ çözümünden bağımsız beslenir:
+  // yalnız o modeli çözmüş kullanıcıya "çözüm sonucu yok" demek yanlış
   // olurdu — verisi var, eksik olan sinyal seçimi.
-  var mntOnly = (typeof veActiveSolverTabId !== 'undefined') && veActiveSolverTabId === 'mount' &&
-                (typeof veMntSets === 'function') && veMntSets().length > 0;
+  var _modSrc = (typeof veResActiveSource === 'function') ? veResActiveSource() : null;
+  var mntOnly = !!_modSrc;
+  // Modülün KENDİ başlangıç kartı varsa (FEAD: özet + hazır diyagramlar) boş
+  // pano onu gösterir: sinyal listesine yollamaktan önce sorulacak soru
+  // "tasarım tutuyor mu", cevabı da çözümde hazır.
+  if(_modSrc && typeof _modSrc.emptyHTML === 'function') {
+    var _modH = _modSrc.emptyHTML();
+    if(_modH) return _modH;
+  }
   var noSim = !window.veSimResults && !hasImport && !mntOnly;
   var h = '';
 

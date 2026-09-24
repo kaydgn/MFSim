@@ -27,11 +27,16 @@ function veGetSensorData(sensorId, signalOverride, dataSource) {
   // Eşleşme TAM anahtar listesiyle (isMountSensor), salt önekle değil: alt
   // topolojide 'mnt-motor' gibi bileşen tipleri var ve sihirbazın sanal sensör
   // kimliği '~'+tip biçiminde — önek kontrolü onları kaçırırdı.
-  if(typeof veMntSignals !== 'undefined' && veMntSignals.isMountSensor(sensorId)) {
+  //
+  // FEAD kanalları (~fead-<küme>) aynı yoldan geçer: kaynak tablosu
+  // (js/results.js veResultSources) kimliğin hangi modüle ait olduğunu söyler.
+  var _modSrc = (typeof veResSourceOf === 'function') ? veResSourceOf(sensorId) : null;
+  if(_modSrc) {
     if(!signalOverride) return null;
-    var mntR = window.veMountResults;
-    if(!mntR || mntR.error || !mntR.signals) return null;
-    return veMntSignals.series(mntR.signals, sensorId, signalOverride);
+    var _modSets = veResSets(_modSrc);
+    var _modLib = _modSrc.lib();
+    if(!_modSets.length || !_modLib) return null;
+    return _modLib.series(_modSets, sensorId, signalOverride);
   }
 
   if(sensorId.charAt(0) === '@') {
@@ -3389,9 +3394,15 @@ function veClearAllResults() {
   if(typeof veSyncBoardState === 'function') veSyncBoardState();
 
   window.veSimResults = null;
-  // "Tüm sonuçlar" TAKOZ sonucunu da kapsar; yoksa temizlemeden sonra takoz
-  // çözüm sekmesi ayakta kalır ve kullanıcıya sonuçlar silinmemiş gibi görünür.
-  if(typeof _mntForgetResults === 'function') _mntForgetResults();
+  // "Tüm sonuçlar" MODÜL sonuçlarını da kapsar (Takoz · FEAD); yoksa
+  // temizlemeden sonra modülün çözüm sekmesi ayakta kalır ve kullanıcıya
+  // sonuçlar silinmemiş gibi görünür. FEAD'inki bir dönem unutulmuştu:
+  // "Sonuçları Temizle" Araç ve Takoz'u siliyor, FEAD çözücü penceresi ve
+  // raporu eski çözümü göstermeye devam ediyordu. Artık liste kaynak
+  // tablosunun kendisi — yeni bir modül eklendiğinde ayrıca hatırlanmaz.
+  if(typeof veResultSources !== 'undefined' && Array.isArray(veResultSources)) {
+    veResultSources.forEach(function(src) { try { src.forget(); } catch(e) {} });
+  } else if(typeof _mntForgetResults === 'function') _mntForgetResults();
 
   veSolverTabSlots = {};
   veSolverTabCollapsed = {};

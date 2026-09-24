@@ -6,58 +6,128 @@ var veSolverTabDefs = [
   // Takoz sekmesi ARAÇ çözümünden bağımsızdır: kendi çözücüsü (▶ Hesapla,
   // js/cp-mount.js) window.veMountResults'ı doldurur. Araç hiç çözülmemişken
   // de görünür — kullanıcı yalnız takoz modelini çalıştırmış olabilir.
-  { id: 'mount',        name: 'Takoz Çökme-Titreşim', icon: '<span class="mf-ico mf-ico-activity"></span>', resultKey: 'mount' }
+  { id: 'mount',        name: 'Takoz Çökme-Titreşim', icon: '<span class="mf-ico mf-ico-activity"></span>', resultKey: 'mount' },
+  // FEAD sekmesi de öyle: FEAD Çözücüsü (▶ Hesapla, js/cp-fead.js) doldurur.
+  { id: 'fead',         name: 'FEAD Kayış Tahriki',   icon: '<span class="mf-ico mf-ico-disc"></span>', resultKey: 'fead' }
 ];
 var veActiveSolverTabId = 'performance';
 var veSolverTabSlots = {};  // { tabId: [{},{},{},{}] }
 var veSolverTabCollapsed = {}; // { tabId: [false,false,false,false] }
 
-// Takozun kanal kümeleri (js/mount-signals.js build çıktısı) — çözüm yoksa [].
-function veMntSets() {
-  var R = (typeof window !== 'undefined') ? window.veMountResults : null;
-  if(!R || R.error || !R.signals || !R.signals.length) return [];
+// ===== MODÜL SONUÇ KAYNAKLARI =====
+//
+// ARAÇ çözümünden BAĞIMSIZ veri kümesi yayınlayan modüller. Takoz ilk
+// tüketiciydi ve dalları üç ortak dosyaya (results.js · trace-view.js ·
+// graphics.js) 42 satır hâlinde dağılmıştı; FEAD ikinci tüketici. Dalları
+// `if(fead)` diye kopyalamak, üçüncü modülde aynı 42 satırı bir kez daha
+// yazmak ve birinin unutulduğu gün o modülün kanallarını SESSİZCE yanlış
+// eksende çizmek demekti. Kaynak artık TEK tabloda.
+//
+// Her giriş: sekme kimliği · veri kütüphanesi (build/groups/series/setOf/
+// setOfSlot/xAxisOf/channelOf — js/mount-signals.js'in arayüzü) · yorum
+// motoru (build/forLane) · sonuç globali · kimlik eşleyici · unutucu. Kimlik
+// eşleşmesi kütüphanenin TAM anahtar listesiyle yapılır, önekle değil
+// (gerekçesi mount-signals.js SET_KEYS'te).
+var veResultSources = [
+  { tab: 'mount', ad: 'Takoz Çökme-Titreşim', ikon: 'activity',
+    lib: function() { return (typeof veMntSignals !== 'undefined') ? veMntSignals : null; },
+    brief: function() { return (typeof veMntBrief !== 'undefined') ? veMntBrief : null; },
+    R: function() { return (typeof window !== 'undefined') ? window.veMountResults : null; },
+    match: function(id) { var L = this.lib(); return !!(L && L.isMountSensor(id)); },
+    forget: function() { if(typeof _mntForgetResults === 'function') _mntForgetResults(); },
+    kanal: 'takoz kanalı',
+    cozum: 'Takoz alt topolojisinde ▶ Hesapla ile yeniden çözün.',
+    treeBottom: function() { return veMntTreeReportHTML(); } },
+  { tab: 'fead', ad: 'FEAD Kayış Tahriki', ikon: 'disc',
+    lib: function() { return (typeof veFeadSignals !== 'undefined') ? veFeadSignals : null; },
+    brief: function() { return (typeof veFeadBrief !== 'undefined') ? veFeadBrief : null; },
+    R: function() { return (typeof window !== 'undefined') ? window.veFeadResults : null; },
+    match: function(id) { var L = this.lib(); return !!(L && L.isFeadSensor(id)); },
+    forget: function() { if(typeof _feadForgetResults === 'function') _feadForgetResults(); },
+    kanal: 'FEAD kanalı',
+    cozum: 'FEAD alt topolojisinde Çözücü → ▶ Hesapla ile yeniden çözün.',
+    // Ağaç süsleri ve pano boş durumu FEAD'in kendi sunum dosyasında
+    // (js/cp-fead-results.js) — burada yalnız bağlantı noktası duruyor.
+    treeTop: function() { return (typeof veFeadResTreeTopHTML === 'function') ? veFeadResTreeTopHTML() : ''; },
+    treeBottom: function() { return (typeof veFeadResTreeReportHTML === 'function') ? veFeadResTreeReportHTML() : ''; },
+    emptyHTML: function() { return (typeof veFeadResEmptyHTML === 'function') ? veFeadResEmptyHTML() : ''; } }
+];
+
+function veResSource(tabId) {
+  for(var i = 0; i < veResultSources.length; i++)
+    if(veResultSources[i].tab === tabId) return veResultSources[i];
+  return null;
+}
+
+// Kaynağın veri kümeleri — çözüm yoksa, hatalıysa ya da kanal üretilmediyse [].
+function veResSets(src) {
+  var R = src ? src.R() : null;
+  if(!R || R.error || R.ok === false || !R.signals || !R.signals.length) return [];
   return R.signals;
 }
 
-// Bir slotun X ekseni bir takoz veri kümesine mi ait? (xAxis.id = "~mnt-XX:kanal")
-function veMntSlotSensorId(slot) {
+// Bir kanal kimliği hangi modül kaynağına ait? Değilse null.
+function veResSourceOf(sensorId) {
+  if(typeof sensorId !== 'string') return null;
+  for(var i = 0; i < veResultSources.length; i++)
+    if(veResultSources[i].match(sensorId)) return veResultSources[i];
+  return null;
+}
+
+// Etkin sekme bir modül kaynağıysa ve verisi varsa o kaynak; değilse null.
+function veResActiveSource() {
+  var s = veResSource(veActiveSolverTabId);
+  return (s && veResSets(s).length) ? s : null;
+}
+
+// Takozun kanal kümeleri — geriye uyum: e2e kapıları ve eski çağrılar bu adı okur.
+function veMntSets() { return veResSets(veResSource('mount')); }
+
+// Bir slotun X ekseni bir modül veri kümesine mi ait? (xAxis.id = "~mnt-XX:kanal")
+// Dönüş: kümenin kimliği (sensorId) ya da null.
+function veResSlotSensorId(slot) {
   var id = (slot && slot.xAxis && slot.xAxis.id) ? String(slot.xAxis.id) : '';
   var c = id.indexOf(':');
   var head = (c > 0) ? id.substring(0, c) : id;
-  return (typeof veMntSignals !== 'undefined' && veMntSignals.isMountSensor(head)) ? head : null;
+  return veResSourceOf(head) ? head : null;
+}
+function veMntSlotSensorId(slot) {
+  var h = veResSlotSensorId(slot);
+  return (h && veResSourceOf(h) === veResSource('mount')) ? h : null;
 }
 
-// Panodaki takoz kanallarını GÜNCEL çözümle uzlaştır.
+// Panodaki modül kanallarını GÜNCEL çözümle uzlaştır.
 //
 // NEDEN: kanal kimlikleri ve şerit etiketleri panoya (ve projeye) kaydediliyor,
-// takoz sonucu ise oturumluk. Kullanıcı bir takozu silip yeniden çözdüğünde ya
+// modül sonucu ise oturumluk. Kullanıcı bir takozu silip yeniden çözdüğünde ya
 // da projeyi takoz çözümü olmadan açtığında pano ELİNDE OLMAYAN bir kanalı
 // tutmaya devam eder: şerit adı eski takozu söyler, veri yoktur ya da (kimlik
 // konumsal olsaydı) başka bir takozun verisi çizilir.
 //
 // Bu yüzden sayfa açılışında: var olan kanalların ad/birimi güncel çözümden
 // TAZELENİR, artık var olmayanlar DÜŞÜRÜLÜR. Düşmek, yanlış etiketle çizmekten
-// iyidir. Dönüş: düşürülen kanal sayısı.
-function veMntSyncBoard() {
-  if(typeof veMntSignals === 'undefined') return 0;
-  var sets = veMntSets();
+// iyidir. Dönüş: düşürülen kanal sayısı (tab verilirse yalnız o kaynağın).
+function veResSyncBoard(tabOnly) {
   var dropped = 0;
 
   function syncSlot(slot) {
     if(!slot || !slot.sensors || !slot.sensors.length) return;
     var kept = [];
     slot.sensors.forEach(function(s) {
-      if(!veMntSignals.isMountSensor(s.id)) { kept.push(s); return; }
-      var ch = veMntSignals.channelOf(sets, s.id, s.signal);
+      var src = veResSourceOf(s.id);
+      if(!src || (tabOnly && src.tab !== tabOnly)) { kept.push(s); return; }
+      var L = src.lib();
+      var ch = L ? L.channelOf(veResSets(src), s.id, s.signal) : null;
       if(!ch) { dropped++; return; }
       s.name = ch.name;                       // etiket asla bayat kalmaz
       s.unit = ch.unit || '';
       kept.push(s);
     });
     slot.sensors = kept;
-    // Pano takoz eksenindeydi ve hiç kanal kalmadıysa ekseni de bırak; yoksa
-    // araç sinyalleri "Pano X ekseni: Frekans [Hz]" diye reddedilirdi.
-    if(!kept.length && veMntSlotSensorId(slot)) delete slot.xAxis;
+    // Pano bir modül eksenindeydi ve hiç kanal kalmadıysa ekseni de bırak;
+    // yoksa araç sinyalleri "Pano X ekseni: Frekans [Hz]" diye reddedilirdi.
+    var xs = veResSlotSensorId(slot);
+    if(!kept.length && xs && (!tabOnly || veResSourceOf(xs).tab === tabOnly)) delete slot.xAxis;
   }
 
   (veResultSlots || []).forEach(syncSlot);
@@ -66,12 +136,16 @@ function veMntSyncBoard() {
   });
   return dropped;
 }
+function veMntSyncBoard() { return veResSyncBoard('mount'); }
 
 function veGetAvailableSolverTabs() {
   var r = window.veSimResults;
   var tabs = [];
   veSolverTabDefs.forEach(function(def) {
-    if(def.id === 'mount') { if(veMntSets().length) tabs.push(def); return; }
+    // Modül kaynağı (Takoz · FEAD): sekme, o modülün KENDİ çözümü kanal
+    // taşıdığında görünür — araç çözümüne bakmaz.
+    var src = veResSource(def.id);
+    if(src) { if(veResSets(src).length) tabs.push(def); return; }
     if(!r) return;
     if(def.id === 'performance' && r.speed) tabs.push(def);
     else if(def.id === 'accel-decel' && r.segmentDrive && r.segmentDrive.segmentSummary) tabs.push(def);
@@ -226,58 +300,63 @@ function veUpdateResultsTree() {
   var html = '';
   html += veSigToolbarHTML(_targetSlot);
 
-  // ── TAKOZ sekmesi: kanallar araç sensörlerinden değil, takoz çözücüsünden ──
+  // ── MODÜL sekmesi (Takoz · FEAD): kanallar araç sensörlerinden değil, ──
+  // ── modülün kendi çözücüsünden ─────────────────────────────────────────
   //
-  // Takoz kanalları alt-topolojide (node.data.subTopology) çözülür, ana
-  // sekmenin sensör düğümleriyle ilgisi yoktur; ayrıca X eksenleri (Hz / mm / g)
-  // araç sinyallerinin zaman eksenine hiç uymaz. Bu yüzden iki liste
-  // KARIŞTIRILMAZ: takoz sekmesi kendi ağacını gösterir. Aksi halde kullanıcı
-  // aynı listede iki farklı X alanından sinyal işaretleyip anlamsız bir eğri
-  // elde ederdi (pano tek eksen kuralı bunu bırakma anında reddederdi ama
-  // sebebi listede görünmezdi).
-  // Kanal kalmadıysa (çözüm geçersizleşti) takoz dalı çizilmez — aksi halde
+  // Modül kanalları alt-topolojide (node.data.subTopology) çözülür, ana
+  // sekmenin sensör düğümleriyle ilgisi yoktur; ayrıca X eksenleri (Hz / mm /
+  // g / d/dk / kol açısı) araç sinyallerinin zaman eksenine hiç uymaz. Bu
+  // yüzden iki liste KARIŞTIRILMAZ: modül sekmesi kendi ağacını gösterir. Aksi
+  // halde kullanıcı aynı listede iki farklı X alanından sinyal işaretleyip
+  // anlamsız bir eğri elde ederdi (pano tek eksen kuralı bunu bırakma anında
+  // reddederdi ama sebebi listede görünmezdi).
+  // Kanal kalmadıysa (çözüm geçersizleşti) modül dalı çizilmez — aksi halde
   // boş bir dal ve erken dönüş, kullanıcının kendi sensör ağacını erişilemez
   // kılardı. veUpdateSolverTabs kimliği zaten 'performance'a çeker; bu kontrol
   // o iki adımın arasındaki tek karede bile yanlış ağaç çizilmesini önler.
-  if(veActiveSolverTabId === 'mount' && veMntSets().length > 0) {
-    var mntGroups = (typeof veMntSignals !== 'undefined')
-      ? veMntSignals.groups(veMntSets()) : [];
-    var mntChannelCount = 0;
-    mntGroups.forEach(function(g) { mntChannelCount += g.items.length; });
+  var _resSrc = veResActiveSource();
+  if(_resSrc) {
+    var _resLib = _resSrc.lib();
+    var resGroups = _resLib ? _resLib.groups(veResSets(_resSrc)) : [];
+    var resChannelCount = 0;
+    resGroups.forEach(function(g) { resChannelCount += g.items.length; });
+
+    // Modülün kendi üst satırı (FEAD: sonuç durumu + özet) — ağacın ÜSTÜNDE.
+    if(typeof _resSrc.treeTop === 'function') html += _resSrc.treeTop() || '';
 
     html += '<div class="ve-tree-item">';
     html += '<div class="ve-tree-row">';
     html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span>' +
-            '<span class="icon"><span class="mf-ico mf-ico-activity"></span></span>' +
-            '<span style="font-weight:600;">Takoz Çökme-Titreşim</span>';
-    if(mntChannelCount > 0) {
+            '<span class="icon"><span class="mf-ico mf-ico-' + _resSrc.ikon + '"></span></span>' +
+            '<span style="font-weight:600;">' + escapeHTML(_resSrc.ad) + '</span>';
+    if(resChannelCount > 0) {
       html += ' <span style="font-size:var(--fs-tiny); color:var(--text-muted); margin-left:auto;">' +
-              mntChannelCount + ' sinyal</span>';
+              resChannelCount + ' sinyal</span>';
     }
     html += '</div>';
     html += '<div class="ve-tree-children open">';
 
-    var mntShown = veSigDecorateOpen(
-      veSigApplyFilter(mntGroups, _targetSlot, veSigState.query, veSigState.filter), _targetSlot);
-    mntShown.forEach(function(g) { _allGroups.push(g); });
+    var resShown = veSigDecorateOpen(
+      veSigApplyFilter(resGroups, _targetSlot, veSigState.query, veSigState.filter), _targetSlot);
+    resShown.forEach(function(g) { _allGroups.push(g); });
 
-    if(mntShown.length === 0) {
+    if(resShown.length === 0) {
       html += '<div class="vsig-empty">' +
         (veSigState.query ? 'Aramayla eşleşen sinyal yok.'
                           : (veSigState.filter === 'on' ? 'Ölçüm penceresinde çizili sinyal yok.'
                                                         : 'Bu filtrede sinyal yok.')) + '</div>';
     } else {
-      mntShown.forEach(function(g) { html += veSigGroupHTML(g, _targetSlot, veSigState.query); });
+      resShown.forEach(function(g) { html += veSigGroupHTML(g, _targetSlot, veSigState.query); });
     }
 
     html += '</div></div>';
-    html += veMntTreeReportHTML();
+    if(typeof _resSrc.treeBottom === 'function') html += _resSrc.treeBottom() || '';
 
     veSigLastGroups = _allGroups;
-    var mntInspecting = !!veSigState.inspect;
-    if(mntInspecting) html = veSigInspectorHTML();
+    var resInspecting = !!veSigState.inspect;
+    if(resInspecting) html = veSigInspectorHTML();
     tree.innerHTML = html;
-    if(!mntInspecting) tree.scrollTop = _scrollTop;
+    if(!resInspecting) tree.scrollTop = _scrollTop;
     veSigBindTree(tree);
     return;
   }
@@ -4881,13 +4960,16 @@ var veResultSlots = [{},{},{},{}];
 // Sonuçlar sekmesine girişin tek kapısı: veri ağacını tazeler, ölçüm
 // penceresini kurar. Eskiden burada bir düzen seçici dallanması vardı.
 function veEnterResults() {
-  // Takoz sonucu oturumluk, pano ise kalıcı — sayfa açılışında ikisini uzlaştır.
-  // Kullanıcı sessizce kaybolan şeritlere bakmasın diye düşenler bildirilir.
-  var _mntDropped = veMntSyncBoard();
-  if(_mntDropped && typeof showToast === 'function') {
-    showToast(_mntDropped + ' takoz kanalı güncel çözümde yok — ölçüm penceresinden düşürüldü. ' +
-              'Takoz alt topolojisinde ▶ Hesapla ile yeniden çözün.', 'warning');
-  }
+  // Modül sonuçları oturumluk, pano ise kalıcı — sayfa açılışında ikisini
+  // uzlaştır. Kullanıcı sessizce kaybolan şeritlere bakmasın diye düşenler
+  // KAYNAK BAŞINA bildirilir (hangi modülü yeniden çözeceğini bilsin).
+  veResultSources.forEach(function(src) {
+    var _dropped = veResSyncBoard(src.tab);
+    if(_dropped && typeof showToast === 'function') {
+      showToast(_dropped + ' ' + src.kanal + ' güncel çözümde yok — ölçüm penceresinden düşürüldü. ' +
+                src.cozum, 'warning');
+    }
+  });
   if(typeof veUpdateSolverTabs === 'function') veUpdateSolverTabs();
   // Proje dosyası şerit listesini saklar ama ölçüm verisini saklamaz (ham
   // ölçüm onlarca MB olabilir). Yeniden açılışta artık var olmayan bir veri
@@ -5200,17 +5282,20 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
     return;
   }
 
-  // ── Takoz kanalı: ~mnt-<küme> formatı ──
-  // Takoz kanalının X ekseni KENDİ veri kümesinden gelir (frekans / deformasyon
-  // / ivme); panodan DEVRALINMAZ. Pano başka bir eksende çalışıyorsa bırakma
-  // reddedilir: 240 noktalık bir FRF eğrisini 500 örneklik zaman eksenine
-  // çizmek sessizce yanlış bir eğri üretirdi ve kullanıcı bunu fark edemezdi.
-  if(typeof veMntSignals !== 'undefined' && veMntSignals.isMountSensor(sensorId)) {
-    var mntSets = veMntSets();
-    var mntDs = veMntSignals.setOf(mntSets, sensorId);
-    var mntCh = veMntSignals.channelOf(mntSets, sensorId, signalId);
+  // ── Modül kanalı: ~mnt-<küme> · ~fead-<küme> ──
+  // Modül kanalının X ekseni KENDİ veri kümesinden gelir (frekans / sehim /
+  // ivme / devir / kol açısı / zaman); panodan DEVRALINMAZ. Pano başka bir
+  // eksende çalışıyorsa bırakma reddedilir: 240 noktalık bir FRF eğrisini 500
+  // örneklik zaman eksenine çizmek sessizce yanlış bir eğri üretirdi ve
+  // kullanıcı bunu fark edemezdi.
+  var _addSrc = veResSourceOf(sensorId);
+  var _addLib = _addSrc ? _addSrc.lib() : null;
+  if(_addLib) {
+    var mntSets = veResSets(_addSrc);
+    var mntDs = _addLib.setOf(mntSets, sensorId);
+    var mntCh = _addLib.channelOf(mntSets, sensorId, signalId);
     if(!mntDs || !mntCh) return;
-    var mntX = veMntSignals.xAxisOf(mntDs);
+    var mntX = _addLib.xAxisOf(mntDs);
     var mSlot = veResultSlots[slotIdx];
     if(!mSlot.sensors) mSlot.sensors = [];
     if(!mSlot.type) mSlot.type = 'line';
@@ -5346,12 +5431,14 @@ function veAddSensorToSlot(slotIdx, sensorId) {
     return;
   }
 
-  // ── Takoz veri kümesi: ~mnt-<küme> — kümenin tüm kanallarını ekle ──
+  // ── Modül veri kümesi: ~mnt-<küme> · ~fead-<küme> — tüm kanalları ekle ──
   // Grup sürüklemesi ile grup onay kutusu (veSigToggleGroup) AYNI sonucu
   // vermeli; ikisi de tek kanal ekleyen yoldan geçer, eksen kuralı orada bir
   // kez uygulanır.
-  if(typeof veMntSignals !== 'undefined' && veMntSignals.isMountSensor(sensorId)) {
-    var mntDs = veMntSignals.setOf(veMntSets(), sensorId);
+  var _grpSrc = veResSourceOf(sensorId);
+  var _grpLib = _grpSrc ? _grpSrc.lib() : null;
+  if(_grpLib) {
+    var mntDs = _grpLib.setOf(veResSets(_grpSrc), sensorId);
     if(!mntDs) return;
     mntDs.channels.forEach(function(ch) { veAddSignalToSlot(slotIdx, sensorId, ch.id); });
     return;
@@ -5574,7 +5661,8 @@ function veRenderSlot(slotIdx) {
   // Tablo kipine geçilince tek satır "Simülasyon verisi bekleniyor" kalıyordu.
   // veRenderTable'ın içe aktarma dalı ZATEN yazılıydı (veImpXSeries) —
   // eksik olan tek şey onu çağıran bu kapıydı.
-  var _mntData = veMntSets().length > 0;
+  // Modül kaynaklarından (Takoz · FEAD) HERHANGİ biri veri taşıyorsa kapı açık.
+  var _mntData = veResultSources.some(function(src) { return veResSets(src).length > 0; });
   var _impData = (typeof veImpAny === 'function') && veImpAny();
 
   if(type === 'scatter3d') {
@@ -5684,7 +5772,9 @@ function veGetAvailableXAxisOptions(slotIdx) {
   // değil (frekans / deformasyon / ivme). Zamanı seçenek olarak sunmak
   // kullanıcıyı boş bir eksene götürürdü. Onun yerine veri kümelerinin kendi
   // eksenleri listelenir — küme değiştirmek eksen değiştirmektir.
-  if(veActiveSolverTabId === 'mount' && typeof veMntSignals !== 'undefined') {
+  var _axSrc = veResActiveSource();
+  var _axLib = _axSrc ? _axSrc.lib() : null;
+  if(_axLib) {
     // YALNIZ UYUMLU EKSENLER. Panoda bir kümenin kanalları varken başka bir
     // kümenin eksenini sunmak, bırakma anında uygulanan tek-eksen kuralını
     // seçiciden ATLATIRDI: veSetSlotXAxis yalnız ekseni değiştirir, şeritlerin
@@ -5695,12 +5785,12 @@ function veGetAvailableXAxisOptions(slotIdx) {
     (veResultSlots || []).forEach(function(sl) {
       if(lockedTo || !sl || !sl.sensors || !sl.sensors.length) return;
       for(var i = 0; i < sl.sensors.length; i++) {
-        if(veMntSignals.isMountSensor(sl.sensors[i].id)) { lockedTo = sl.sensors[i].id; return; }
+        if(_axSrc.match(sl.sensors[i].id)) { lockedTo = sl.sensors[i].id; return; }
       }
     });
-    veMntSets().forEach(function(ds) {
+    veResSets(_axSrc).forEach(function(ds) {
       if(lockedTo && ds.sensorId !== lockedTo) return;
-      var ax = veMntSignals.xAxisOf(ds);
+      var ax = _axLib.xAxisOf(ds);
       if(!ax) return;
       options.push({
         group: ds.name, id: ax.id, sensorId: ds.sensorId, signal: ds.x.id,
@@ -5923,7 +6013,7 @@ function veSetSlotXAxis(slotIdx, optIdx) {
     // Takoz sekmesi araç çözümü olmadan da veri taşır (window.veMountResults);
     // yeniden çizim yalnız veSimResults'a bakarsa o sekmede eksen değişince
     // grafik eski eksende donardı.
-    if(window.veSimResults || veMntSets().length) {
+    if(window.veSimResults || veResActiveSource()) {
       if(s.type === 'line') {
         if(typeof veTrResetView === 'function') veTrResetView();
         if(typeof veTrRender === 'function') veTrRender();

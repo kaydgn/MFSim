@@ -242,10 +242,13 @@ function _frFindReportNode(nodeId){
   })[0] || null;
 }
 
-function veFeadGenerateReport(nodeId){
+// `turSec` (isteğe bağlı): Sonuçlar sekmesinin iki satırı belgenin türünü
+// kendisi seçer — Rapor bileşeni olmayan bir modelde de iki belge üretilebilsin.
+// Verilmezse tür bileşenin alanından (bugünkü davranış birebir).
+function veFeadGenerateReport(nodeId, turSec){
   var node = _frFindReportNode(nodeId);
   var R = _frResults();
-  var kind = veFeadReportKind(node);
+  var kind = (turSec === 'summary' || turSec === 'detailed') ? turSec : veFeadReportKind(node);
   // ÇÖZÜLMEMİŞ MODELDE İNDİRME YOK. Boş/yarım bir belge indirmek, kullanıcıya
   // "rapor üretildi" izlenimi verip içinde hiçbir sayı olmayan bir dosya
   // bırakırdı — sessiz başarısızlığın ders kitabı hâli.
@@ -254,6 +257,13 @@ function veFeadGenerateReport(nodeId){
     if(typeof showToast === 'function') showToast('Önce Çözücü ile modeli çözün.', 'warning');
     return null;
   }
+  // BAYAT SONUÇTAN RAPOR — üretilir ama SÖYLENİR. Rapor bilerek ÇÖZÜLEN
+  // modeli anlatır (girdi tablosu da R.build'den); model o zamandan beri
+  // değiştiyse kullanıcı bunu belgeyi açtıktan sonra değil, şimdi bilmeli.
+  var _sd = (typeof veFeadResultState === 'function') ? veFeadResultState(R) : null;
+  if(_sd && _sd.k === 'bayat' && typeof showToast === 'function')
+    showToast('Rapor SON ÇÖZÜMÜ anlatır — model o zamandan beri değişti. Güncel sayılar için '
+      + 'Çözücü → ▶ Hesapla.', 'warning');
   _frStatus('Rapor varlıkları yükleniyor (KaTeX + fontlar, ~1 MB)…');
   _frAssetsTried = true;
   _frEnsureAssets(function(ok){
@@ -2649,23 +2659,11 @@ function veFeadFigureRaw(fn, R, W, H, extra){
 }
 
 // Gergi kolu taraması — Belt Tension Control ve Take-up grafiklerinin ortak verisi.
+// Tarama köprüde (veFeadArmSweep): Sonuçlar panosu AYNI ızgarayı çiziyor ve
+// iki kopya iki yüzeyin sessizce ayrışması demekti.
 function _frArmSweep(R){
-  var C = _frCore(), sys = R.build && R.build.sys;
-  if(!C || !sys || !C.tensionerState) return null;
-  var hi = 60;
-  try { if(C.feasibleRelMax) hi = C.feasibleRelMax(sys); } catch(e){}
-  if(!(hi > 0)) return null;
-  var pts = [], N = 90, i;
-  for(i = 0; i <= N; i++){
-    var rel = hi * i / N;
-    try {
-      var st = C.tensionerState(sys, rel);
-      if(st && Number.isFinite(st.tensionN))
-        pts.push({ rel: rel, abs: st.absDeg, T: st.tensionN, L: st.driveLenMm, tk: st.takeupMmPerDeg,
-                   phi: st.wrapDeg, beta: st.betaDeg });
-    } catch(e){}
-  }
-  return pts.length > 3 ? { pts: pts, relMax: hi } : null;
+  if(typeof veFeadArmSweep !== 'function' || !R || !R.build) return null;
+  return veFeadArmSweep(R.build, 90);
 }
 
 // Şekil — Belt Tension Control
