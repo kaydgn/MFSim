@@ -93,6 +93,19 @@ describe('KABUĞUN ÜST BANDI — tek ölçü, tek zemin', () => {
     expect(eksik).toEqual([]);
   });
 
+  // BANT İNCE (2026-09-24). Kullanıcı: 36 px "gereksiz kalın". Bantların
+  // doğal yüksekliği (gerçek tarayıcı, min-height 0): 21 · 28 · 23 · 24 · 29 px;
+  // ölçü içerikten türüyor ve en yükseğini (Sonuçlar araç çubuğu) sığdırıyor.
+  // Çizimin kendisi (içerik bandı büyütmüyor): kabuk-sutun.spec.js → "BANT İNCE".
+  test('bant İNCE — ölçüsü içerikten: 29–30 px', () => {
+    const px = Number(CSS.match(/--bant-h:\s*(\d+)px;/)[1]);
+    expect(px).toBeLessThanOrEqual(30);
+    expect(px).toBeGreaterThanOrEqual(29);
+    // Araç çubuğunun dikey payı 2 px: 24 + 2·2 + 1 = 29 ≤ bant. 4 px'le 33'e
+    // çıkıp komşusundan uzun kalırdı.
+    expect(kural('.ve-trace-toolbar')).toMatch(/padding:\s*2px \d+px;/);
+  });
+
   test('Topoloji bantlarında DİKEY iç pay yok — ölçüyü min-height veriyor', () => {
     // Kenar çubuğu başlığının 8 px'lik payı onu 37 px'e çıkarıyordu; müfettiş
     // başlığının 5 px'i 33'e. Pay yatayda kalır.

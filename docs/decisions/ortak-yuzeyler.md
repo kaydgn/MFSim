@@ -538,6 +538,12 @@ tuval kâğıt). Karşılamanın "çukursuz" istisnası onunla gereksiz kaldı.
 olarak) + `kabuk-sutun.spec.js` → *"KABUK TEK ÇİZGİ"* ve *"başlıklar içeriğin
 kenarında"* (gerçek tarayıcı; eski derlemede 8 px ve 5 px ile düşüyor).
 
+**Ölçü içerikten, 30 px (2026-09-24).** İlk hâli 36 px'ti — kullanıcı:
+*"gereksiz kalın"*. Bantların doğal yüksekliği 21 · 28 · 23 · 24 px, araç
+çubuğununki 4 px'lik payla 33; bant 30'a, çubuğun payı 2'ye indi (29 sığar).
+Kapı: `kabuk-bant.test.js` → *"bant İNCE"* + `kabuk-sutun.spec.js` →
+*"BANT İNCE"* (beş bant da tam jeton; payı 4'e geri alan mutasyon 33 ile düşüyor).
+
 ## Panel alan grameri — iki yüzey tek dil (2026-09-22)
 
 **Hüküm.** Bileşen panelinin alan grameri Kayış Tablosu'nunkiyle **aynıdır**:
