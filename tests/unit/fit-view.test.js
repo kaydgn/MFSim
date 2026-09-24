@@ -1,13 +1,15 @@
 /**
  * fit-view.test.js — "İÇERİĞE SIĞDIR" (js/ui-core.js → veFitViewToContent)
  * ─────────────────────────────────────────────────────────────────────────
- * İki seçenek FEAD'in tablo penceresi için eklendi (Çizim Masası,
- * 2026-09-23): pencere kanvasın alt kısmına biniyor ve ölçüldü — açılışta iki
- * çizimin ALT YARISI (175 px) pencerenin altında kalıyordu.
+ * `only` FEAD'in Kayış Tablosu çekmecesi için eklendi (Çizim Masası,
+ * 2026-09-23): çekmece açılınca tuval kısalıyor ve kamera YALNIZ çizimleri
+ * sığdırıyor — solda duran künye kartları kadrajı büyütmesin.
  *
- *   only        : yalnız süzülen düğümler sığdırılır (çizimler; künyeler değil)
- *   bottomInset : kabın altından bu kadar px ÖRTÜLÜ — içerik üstte kalan
- *                 alana sığdırılır ve O ALANIN ortasına oturur
+ *   only : yalnız süzülen düğümler sığdırılır (çizimler; künyeler değil)
+ *
+ * `bottomInset` KALKTI (2026-09-24): tablo tuvalin ÜSTÜNE binen bir pencereyken
+ * "kabın altı örtülü" demenin yoluydu; çekmece artık tuvalin ALTINDA ve kabın
+ * kendisi kısalıyor — örtülü alan diye bir şey yok.
  *
  * Seçeneksiz çağrı BİREBİR eski davranış: projenin her "sığdır" çağrısı
  * (açılış, örnek, Otomatik Düzenle) bu işlevden geçiyor.
@@ -62,17 +64,6 @@ test('seçeneksiz: bütün düğümler, bütün kabın ortasına — eski davran
   expect((sol + sag) / 2).toBeCloseTo(W / 2, 6);
 });
 
-test('bottomInset: içerik ÖRTÜLMEYEN alana sığar ve o alanın ortasına oturur', () => {
-  const ortu = 383;                                   // pencere: kabın alt 383 px'i
-  veFitViewToContent({ margin: 24, bottomInset: ortu,
-                       only: (n) => n.type === 'kanvas', maxZoom: 1.2 });
-  const k = nodes.filter((n) => n.type === 'kanvas').map(ekran);
-  const alt = Math.max(...k.map((b) => b.alt)), ust = Math.min(...k.map((b) => b.ust));
-  expect(alt).toBeLessThanOrEqual(H - ortu - 24 + 1e-6);   // pencerenin üstünde
-  expect(ust).toBeGreaterThanOrEqual(24 - 1e-6);
-  expect((ust + alt) / 2).toBeCloseTo((H - ortu) / 2, 6);
-});
-
 test('only: süzülmeyen düğüm sığdırmaya girmez — künye kadrajı büyütmez', () => {
   veFitViewToContent({ margin: 24, only: (n) => n.type === 'kanvas', maxZoom: 5 });
   const z1 = canvasZoom;
@@ -81,8 +72,14 @@ test('only: süzülmeyen düğüm sığdırmaya girmez — künye kadrajı büy�
   expect(z1).toBeGreaterThan(canvasZoom);
 });
 
-test('örtü kabı tüketirse kamera OYNAMAZ', () => {
+test('kap sığdırılamayacak kadar küçükse kamera OYNAMAZ', () => {
+  const w = document.getElementById('ve-canvas-wrapper');
+  Object.defineProperty(w, 'clientHeight', { configurable: true, get: () => 10 });
   canvasZoom = 0.7; canvasOffset.x = 11; canvasOffset.y = 22;
-  veFitViewToContent({ bottomInset: H - 10 });
+  veFitViewToContent({ margin: 24 });
   expect([canvasZoom, canvasOffset.x, canvasOffset.y]).toEqual([0.7, 11, 22]);
+});
+
+test('bottomInset seçeneği YOK — kabın kendisi kısalıyor', () => {
+  expect(loadSource('ui-core.js')).not.toMatch(/bottomInset/);
 });

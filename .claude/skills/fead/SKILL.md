@@ -1,6 +1,6 @@
 ---
 name: fead
-description: MFSim FEAD (kayış-kasnak / accessory belt drive) modülünün karar kaydı ve dokunulmazlıkları. js/fead-core.js, js/fead-model.js, js/fead-belts.js, js/fead-duty.js, js/fead-tensioners.js, js/cp-fead.js, js/cp-fead-report.js, js/cp-fead-summary.js, js/cp-fead-wizard.js, js/guide-fead.js dosyalarından birine ya da FEAD testlerine (tests/unit/fead-*, cp-fead*, gates-archive, guide-fead, tests/e2e/fead-*) dokunmadan ÖNCE çağır. Çekirdeğin birebir durma kuralı, 2095 referans değerlik doğrulama kapısı, kasnakların kanvasta KUTUSU OLMAMASI (giriş Kayış Yolu çiziminden — Çizim Masası; kesin sayı Kayış Tablosu penceresinde), gergi tanımı, katalog ve rapor kuralları buradadır.
+description: MFSim FEAD (kayış-kasnak / accessory belt drive) modülünün karar kaydı ve dokunulmazlıkları. js/fead-core.js, js/fead-model.js, js/fead-belts.js, js/fead-duty.js, js/fead-tensioners.js, js/cp-fead.js, js/cp-fead-report.js, js/cp-fead-summary.js, js/cp-fead-wizard.js, js/guide-fead.js dosyalarından birine ya da FEAD testlerine (tests/unit/fead-*, cp-fead*, gates-archive, guide-fead, tests/e2e/fead-*) dokunmadan ÖNCE çağır. Çekirdeğin birebir durma kuralı, 2095 referans değerlik doğrulama kapısı, kasnakların kanvasta KUTUSU OLMAMASI (giriş Kayış Yolu çiziminden — Çizim Masası; kesin sayı Kayış Tablosu çekmecesinde), gergi tanımı, katalog ve rapor kuralları buradadır.
 ---
 
 # FEAD modülü — dokunmadan önce
@@ -42,7 +42,7 @@ olurdu.
    kaydetme/yükleme, şema göçü ve `veFeadSet` hepsi düğüm kimliğinden çalışır —
    ama kanvasa kutu ÇİZİLMEZ (`componentDefs.noCanvasBox` → `veIsCanvasHidden`,
    components.js). Kasnak **Kayış Yolu çiziminde** seçilir, taşınır ve eklenir
-   (kural 32); kesin sayı **Kayış Tablosu penceresinde**. Detay panele
+   (kural 32); kesin sayı **Kayış Tablosu çekmecesinde**. Detay panele
    çizimdeki kasnağa ya da tablodaki ADA tıklanarak gidilir.
    **Kapı ALTI yerde** ve hepsi kutunun varlığını varsayan süpürmeler: DOM
    kuran iki yol (`createNode` · `restoreState`) ve kutu sınırı okuyan dört yol
@@ -214,17 +214,25 @@ olurdu.
     ZIPLATMAZ. Kapı: `fead-table.test.js` + `fead-tablo.spec.js` →
     *"KASNAK EKLE"*.
     **TABLO KANVASTAN İNDİ** (2026-09-23, Çizim Masası): kanvas kartıyken
-    açılış yakınlaştırmasında 7,1 px'e küçülen bir formdu. Artık Kayış Yolu
-    kartının yüzen çubuğundaki "Tablo" düğmesiyle açılan, MODAL OLMAYAN bir
-    alt pencere (`veFeadTabloAc`): kanvasla ölçeklenmez (sayılar 13 px), tek
-    başlık satırı taşır, alan etiketi panelin grameriyle aynı ölçüde kalır
-    (`fead-panel-gramer.spec.js`), açılınca çizimleri örtüyorsa kamerayı
-    yalnız çizimlere, pencerenin üstüne sığdırır. `fead-table` tipi, paneli
-    ve kart ölçüsü sabitleri KALKTI; kayıtlı kart şema 6 → 7 göçüyle silinir
-    (`veFeadMigrateTableOff`). Kart listesi bölgeleri `minmax(...)` ile
-    daralmaya devam ediyor. Kapılar: `fead-table.test.js` → *"bir kanvas
-    bileşeni DEĞİL"*, `fead-wire-order-migration.test.js` → *"şema 7"*,
-    `fead-tablo.spec.js`.
+    açılış yakınlaştırmasıyla küçülen bir formdu. Artık Kayış Yolu kartının
+    yüzen çubuğundaki "Tablo" düğmesiyle açılan, MODAL OLMAYAN bir ÇEKMECE
+    (`veFeadTabloAc`): kanvasla ölçeklenmez (sayılar 13 px), tek başlık
+    satırı taşır, alan etiketi panelin grameriyle aynı ölçüde kalır
+    (`fead-panel-gramer.spec.js`). `fead-table` tipi, paneli ve kart ölçüsü
+    sabitleri KALKTI; kayıtlı kart şema 6 → 7 göçüyle silinir
+    (`veFeadMigrateTableOff`). Kapılar: `fead-table.test.js` → *"bir kanvas
+    bileşeni DEĞİL"*, `fead-wire-order-migration.test.js` → *"şema 7"*.
+    **ÇEKMECE TUVALİN ALTINDA, ÜSTÜNDE DEĞİL** (2026-09-24, kullanıcı: *"Tablo
+    açılıyor fakat kötü bir yere geliyor"*): kanvas alanının bir SATIRI —
+    tuvalin altına yapışık, başlığı kabuğun bandı; tuval o kadar kısalır,
+    hiçbir şey örtülmez (müfettiş sütununun kuralı — yüzen kart tuvali ve
+    minimap'i örtüyordu). Kamera yalnız açılışta TAM görünen bir çizim
+    kesilirse sığdırır, hiç yakınlaşmaz, kapanınca döner. Üst kenar tutamak
+    (boy oturumluk, tuvale en az 180 px). Çekmecede çözüm bölgesinin TAVANI
+    var: `1fr` geniş çekmecede üç sayıyı yayıyordu. **FEAD'e AİT**: kullanıcı
+    FEAD'den çıkınca kapanır; arka plan kaydının sessiz gidiş-dönüşünde
+    kapanmaz (denetim bir kare sonra). Kapılar: `fead-cizim-masasi.test.js` →
+    *"Kayış Tablosu çekmecesi"*, `fead-tablo.spec.js` → *"ÇEKMECE"*.
     **ÇOK DÜĞÜM KURAN HER KURUCU `veStateBatch` İLE SARILIR** —
     `veFeadLoadExample`, `veFeadWizCreate`, `veFeadPopulateStarter`. Sarılmazsa
     Ctrl+Z modeli düğüm düğüm söker ve Kayış Tablosu önce boşalır, sonra

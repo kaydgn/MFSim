@@ -216,7 +216,7 @@ function _gfSahneTablo(){
   // Doğal genişlik ÜRETİLEN HTML'den okunuyor (guide-kit.js
   // `_gkNaturalWidth`); burada bir ölçü yazılmıyor.
   return veGuideScene(html,
-    'Kayış Tablosu penceresinin içeriği, <b>Bölüm 14’ün örnek modeliyle</b> doldurulmuş hâlde. '
+    'Kayış Tablosu çekmecesinin içeriği, <b>Bölüm 14’ün örnek modeliyle</b> doldurulmuş hâlde. '
     + 'Türeyen sütunlar gerçek çözümden geliyor: Σsarım <b>360,00°</b> okuması '
     + 'kayış yolunun kapandığını söylüyor. Sütun bir gün yeniden adlandırılırsa '
     + 'bu şekil onunla birlikte değişir.');
@@ -516,7 +516,8 @@ function _gfSec2(){
       + 'yeniden çizilir ve modelin tutarlı olup olmadığını panel açmadan gösterir.',
       'Bölüm 4 ve 11.1'],
     ['<strong>Kayış Tablosu</strong>', '<strong>Kesin sayının</strong> yüzeyi: çizim kartının '
-      + '<strong>Tablo</strong> düğmesiyle açılan pencere. Ad · X · Y · çap · dönüş yönü girilir, '
+      + '<strong>Tablo</strong> düğmesiyle tuvalin altında açılan çekmece — tuvali örtmez, '
+      + 'tuval o kadar kısalır; üst kenarı sürüklenerek büyütülür. Ad · X · Y · çap · dönüş yönü girilir, '
       + 'efektif çap · sarım · span okunur; <strong>kayış sırası</strong> da buradan değişir. '
       + '<strong>Kasnakların kanvasta kutusu yoktur</strong> — çizim ve bu tablo onların '
       + 'yerine geçer.', 'Bölüm 4 ve 5'],
@@ -748,7 +749,7 @@ function _gfSec4(){
       'Otomatik gergi silinmez'],
     ['<strong>Kayışın üstüne bırakmak</strong>', 'Paletten sürüklenen kasnak o açıklığın iki '
       + 'kasnağının arasına girer', 'Gergi ile sürücü arası kapalıdır'],
-    ['<strong>Tablo</strong> düğmesi', 'Kayış Tablosu penceresini açar / kapatır (Esc)',
+    ['<strong>Tablo</strong> düğmesi', 'Kayış Tablosu çekmecesini tuvalin altında açar / kapatır (Esc)',
       'Satırın üstüne gelmek kasnağı çizimde de yakar']
   ], ['Eylem', 'Sonuç', 'Not']);
   h += _gfNot('Kayışı koparan hamle yazılmaz',
@@ -1522,7 +1523,7 @@ function _gfSec11(){
     + 'hesaplanır; devrin kendisi bir girdidir, bir sonuç değil.');
   h += '<h3>11.2 Kayış Tablosu ve tuval rozetleri</h3>';
   h += '<p>Kasnakların kutusu olmadığı için tuvalde yalnız <strong>araç kartlarının</strong> '
-    + 'rozetleri kalır; kasnak başına okumalar Kayış Tablosu penceresindedir (çizim '
+    + 'rozetleri kalır; kasnak başına okumalar Kayış Tablosu çekmecesindedir (çizim '
     + 'kartının <em>Tablo</em> düğmesi).</p>';
   h += _gfAlanTablo('Nerede ne okunur', [
     ['<strong>Kayış Tablosu</strong>', 'Kasnak başına efektif çap · dönüş yönü · sarım · span; '

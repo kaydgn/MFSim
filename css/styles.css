@@ -9348,31 +9348,75 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   overflow:hidden; border-radius:inherit; background:var(--bg-input);
 }
 
-/* ── KAYIŞ TABLOSU PENCERESİ (Çizim Masası) — kanvasın ALTINDA, modal DEĞİL ──
-   Tablo kanvastan indi (açılışta 7,1 px'e küçülüyordu). Pencere kanvas
-   yakınlaştırmasından bağımsız; açıkken çizim görünür ve sürüklenebilir.
-   Yazı jetonları pencerede BÜYÜR (9/10 px → 11/13 px), satırların tekrar eden
-   etiketleri gizlenir ve yerine TEK bir başlık satırı gelir. */
+/* ── KAYIŞ TABLOSU ÇEKMECESİ (Çizim Masası) — TUVALİN ALTINDA, ÜSTÜNDE DEĞİL ──
+   Kanvas alanının bir SATIRI (`.ve-canvas-area` sütun esnek kutusu): tuval
+   (`.ve-split-container`, flex:1) çekmece kadar KISALIR, durum şeridi en
+   altta kalır, müfettiş açıkken sütunun sağ payı çekmeceyi de daraltır.
+   İlk hâli tuvalin üstünde yüzen bir karttı (ortalı, 16 px havada, gölgeli):
+   1366×768'de tuval alanının %45'ini, minimap'in %65'ini örtüyordu. Kabuk parçası
+   olduğu için gölgesi ve köşesi yok; sınırı tek çizgi (üst kenarlık), başlığı
+   kabuğun bandı (--bant-h / --bant-zemin). Tavanı alanın yarısı: tablo
+   tuvalden büyük açılmaz, tutamakla değiştirilir (cp-fead.js).
+   Yazı jetonları çekmecede BÜYÜR (9/10 px → 11/13 px), satırların tekrar
+   eden etiketleri gizlenir ve yerine TEK bir başlık satırı gelir. */
 .ve-fead-tablo-pencere{
-  position:absolute; left:50%; bottom:16px; transform:translateX(-50%);
-  z-index:calc(var(--z-canvas-ui) + 1);
-  width:min(920px, calc(100% - 32px)); max-height:min(58%, 480px);
+  position:relative; flex:0 0 auto;
   display:flex; flex-direction:column;
-  background:var(--bg-secondary); border:1px solid var(--border-color);
-  border-radius:var(--radius-lg); box-shadow:var(--shadow-xl);
+  max-height:50%;
+  background:var(--bg-secondary);
+  border-top:1px solid var(--border-color);
 }
 .ve-fead-tablo-bas{
-  display:flex; align-items:baseline; gap:10px; flex:none;
-  padding:10px 10px 8px 14px; border-bottom:1px solid var(--border-color);
+  display:flex; align-items:center; gap:10px; flex:none;
+  min-height:var(--bant-h); box-sizing:border-box;
+  padding:0 6px 0 12px;
+  background:var(--bant-zemin);
+  border-bottom:1px solid var(--border-color);
+  font-size:var(--fs-body); font-weight:600; color:var(--text-heading);
 }
-.ve-fead-tablo-bas b{ font-size:var(--fs-lg); font-weight:700; color:var(--text-heading); }
-.ve-fead-tablo-bas em{ font-style:normal; font-size:var(--fs-tiny); color:var(--text-muted); }
-/* Pencere varyantının kuralları PENCERENİN KÖKÜ altında: yalnız bu kapta
+.ve-fead-tablo-bas b{ font-weight:600; }
+.ve-fead-tablo-bas em{ font-style:normal; font-weight:400; font-size:var(--fs-tiny); color:var(--text-muted); }
+/* ÜST KENAR TUTAMAK: tuvalin alt çizgisinin üstünde 7 px'lik şerit. Dinlenmede
+   görünmez (çizgi zaten sınırı söylüyor); fare ya da odak gelince vurgulu
+   çizgi, sürüklerken de öyle kalır. */
+.ve-fead-tablo-tutamak{
+  position:absolute; left:0; right:0; top:-4px; height:7px; z-index:2;
+  cursor:ns-resize; background:transparent; outline:none;
+}
+.ve-fead-tablo-tutamak:hover,
+.ve-fead-tablo-tutamak:focus-visible,
+.ve-fead-tablo-pencere.is-boyut .ve-fead-tablo-tutamak{
+  background:linear-gradient(transparent 2px, var(--accent-primary) 2px,
+                             var(--accent-primary) 4px, transparent 4px);
+}
+.ve-fead-tablo-pencere.is-boyut{ user-select:none; }
+/* Çekmece varyantının kuralları ÇEKMECENİN KÖKÜ altında: yalnız bu kapta
    geçerliler ve kılavuzun sahne sökümüne (`.ve-fead-table*` · `.ve-fead-krt*`
-   önekleri, js/guide-kit.js) karışmıyorlar — baskıda pencere yok. */
+   önekleri, js/guide-kit.js) karışmıyorlar — baskıda çekmece yok. */
 .ve-fead-tablo-pencere > .ve-fead-table-card{
   position:relative; inset:auto; flex:1 1 auto; min-height:0;
-  border-radius:0 0 var(--radius-lg) var(--radius-lg);
+  border-radius:0;
+}
+/* GENİŞ ÇEKMECEDE SÜTUNLAR YAYILMAZ. Kartta çözüm bölgesi `1fr`di (kart
+   genişletilince artan oraya gitsin); tuvalin sütunu kadar geniş bir çekmecede
+   aynı kural üç türetilen sayıyı 1920 px'te birbirinden ~320 px uzağa
+   yayıyordu. Çekmecede çözüm bölgesinin tavanı var ve artan satırın SONUNDAKİ
+   boş izde toplanıyor — satırın zemini (fare · seçim) yine tam boy. */
+.ve-fead-tablo-pencere .ve-fead-krt{
+  grid-template-columns:
+    minmax(150px, var(--fead-krt-kim, auto))
+    minmax(210px, var(--fead-krt-gir, auto))
+    minmax(160px, 330px)
+    var(--fead-krt-son, auto)
+    1fr;
+}
+/* Çevrim denetimi künyenin DEVAMINDA bir çip: sağ uca itilseydi geniş
+   çekmecede tablodan ~600 px uzağa düşerdi; çip olduğu için künye satır
+   kaydırınca da kendi başına okunur. */
+.ve-fead-tablo-pencere .ve-fead-tbl-durum{
+  margin-left:4px; padding:1px 9px;
+  border:1px solid var(--border-color); border-radius:var(--radius-pill);
+  background:var(--bg-secondary);
 }
 /* Pencerede SAYILAR BÜYÜR: kanvasın yoğun ölçüsü (10 px) → 13 px; künye ve
    denetimler 9 → 11 px. ALAN ETİKETİ BÜYÜMEZ: kasnak panelinin etiketiyle

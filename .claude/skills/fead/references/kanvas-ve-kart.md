@@ -7,7 +7,7 @@
 
 **HÜKÜM: kasnak Kayış Yolu ÇİZİMİNDE seçilir, taşınır ve eklenir; Kayış
 Tablosu kanvastan İNDİ ve kartın "Tablo" düğmesiyle açılan, modal olmayan
-bir alt pencere oldu.** Kullanıcı kararı (tasarım tezgâhı II, üç canlı
+bir çekmece oldu — tuvalin ALTINA yapışık (2026-09-24, SKILL.md kural 14).** Kullanıcı kararı (tasarım tezgâhı II, üç canlı
 prototip): *"Çizim Masası çok güzel. Kodlamaya başla."* Gerekçe ölçülmüştü:
 kanvas kartı olarak tablo açılış yakınlaştırmasında 7,1 px'e iniyor ve
 kanvasın %39'unu kaplıyordu; kasnağın YERİ ise yalnız sayı olarak
@@ -19,14 +19,14 @@ girilebiliyordu.
 | Panel yalnız tablodaki addan | çizimdeki kasnağa TIKLA ya da tablodaki ad | `veFeadCizimBas` (hareketsiz bırakma = tık) |
 | Kasnak ekle: tablonun seçicisi (konumsuz, gerginin önüne) | paletten kayışın ÜSTÜNE bırak → iki komşunun arasına, bırakılan noktaya | `veFeadPaletBirak` · `veFeadAciklikSec` · `veFeadAradanEkle` |
 | Paletten kanvasa bırakma SESSİZ | çizim dışına bırakılan kasnak tabloya eklenir ve tablo açılır | `veFeadPaletBirak` |
-| `fead-table` kanvas kartı | `#ve-fead-tablo` penceresi (kanvasın altında) | `veFeadTabloAc` · `veFeadTabloToggle` |
+| `fead-table` kanvas kartı | `#ve-fead-tablo` çekmecesi (kanvas alanının satırı, tuvalin altında) | `veFeadTabloAc` · `veFeadTabloToggle` |
 | Açılış yüzeyi: sihirbaz + tablo | sihirbaz + BOŞ Kayış Yolu kartı (örnek/sihirbaz onu DEVRALIR) | `veFeadPopulateStarter` · `veFeadLoadExample` · `veFeadWizCreate` |
 | Yerleşim: tablo üstte, kanvaslar altta | kanvaslar tek sıra, künyeler solda | `veFeadArrangeByCoords` · `veFeadFallbackSlots` |
 
 Kuralların kendisi SKILL.md → **kural 32**; kapılar
 `tests/unit/fead-cizim-masasi.test.js` + `tests/e2e/fead-cizim-masasi.spec.js`
-+ `tests/e2e/fead-tablo.spec.js` (pencere). Aşağıdaki "Kanvasta KAYIŞ
-TABLOSU" bölümünün kart listesi kuralları PENCEREDE aynen geçerli; kanvas
++ `tests/e2e/fead-tablo.spec.js` (çekmece). Aşağıdaki "Kanvasta KAYIŞ
+TABLOSU" bölümünün kart listesi kuralları ÇEKMECEDE aynen geçerli; kanvas
 KARTINA özgü satırları (kart ölçüsü, taşıma tutamağı, kart içi tekerlek, en
 küçük kart ölçüsü) EMEKLİ — genel mekanizmaları (`veWheelInnerPane`,
 `veNodeMinSize`) duruyor ve sentetik bir kartla `tests/e2e/kart-yuzey.spec.js`

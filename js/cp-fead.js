@@ -482,6 +482,10 @@ function veFeadOpenEditor(nodeId, _silent){
 function veFeadCloseEditor(_silent){
   if(_veFeadBusy) return;
   if(!veFeadStack.length) return;
+  // Kayış Tablosu çekmecesi FEAD'e ait: kullanıcı çıkarken kapanır — ÖNCE,
+  // ki kamerası bu topolojide geri dönsün ve öyle kaydedilsin. Sessiz
+  // gidiş-dönüşte (arka plan kaydı köke çöker ve hemen geri girer) dokunulmaz.
+  if(!_silent) veFeadTabloKapat();
 
   _veFeadBusy = true;
   try {
@@ -5108,7 +5112,7 @@ function veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes, katDugme){
     + (katDugme || '') + veFeadTabloDugmeHTML() + '</div>';
 }
 
-// "TABLO" DÜĞMESİ — Kayış Tablosu penceresinin kanvastaki tek kapısı (tablo
+// "TABLO" DÜĞMESİ — Kayış Tablosu çekmecesinin kanvastaki tek kapısı (tablo
 // kanvastan indi, 2026-09-23). Basılı hâli pencerenin açık olduğunu söyler.
 var VE_FEAD_TBL_ICON =
   '<svg class="ac" width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"'
@@ -6051,104 +6055,233 @@ function veFeadRefreshCards(){
   return n;
 }
 
-// ── KAYIŞ TABLOSU PENCERESİ (Çizim Masası, 2026-09-23) ─────────────────────
-// Tablo kanvastan İNDİ: kanvas kartı olarak açılış yakınlaştırmasında 7,1 px'e
-// küçülen bir formdu (ölçüldü). Artık kanvas kartının "Tablo" düğmesiyle
-// açılan bir PENCERE — kanvasın ALTINDA, MODAL DEĞİL: açıkken çizim görünür ve
-// sürüklenebilir, hücreye yazılan sayı çizimde, çizimde sürüklenen kasnak
-// tabloda anında görünür. Yazı kanvasla ölçeklenmez.
+// ── KAYIŞ TABLOSU ÇEKMECESİ (Çizim Masası) ────────────────────────────────
+// Tablo kanvastan İNDİ (kanvas kartıyken açılış yakınlaştırmasıyla küçülen bir
+// formdu). Kanvas kartının "Tablo" düğmesiyle açılır ve MODAL DEĞİLDİR: açıkken
+// çizim görünür ve sürüklenebilir, hücreye yazılan sayı çizimde, çizimde
+// sürüklenen kasnak tabloda anında görünür. Yazı kanvasla ölçeklenmez.
 //
-// İÇERİK TABLONUN TEK ÜRETİCİSİNDEN (veFeadTableCardHTML) — pencere kendi
-// satırını kurmaz. Pencere kipinde başlık satırı bir kez basılır ve satırların
-// tekrar eden etiketleri gizlenir (78 etiket parçası 36 sayıya karşıydı).
+// YERİ TUVALİN ALTI, ÜSTÜ DEĞİL (2026-09-24, kullanıcı: "Tablo açılıyor fakat
+// kötü bir yere geliyor"). İlk hâli tuvalin ÜSTÜNDE yüzen bir karttı ve
+// ölçüldü (1366×768, AG00976): tuvalin alanının %45'ini ve minimap'in %65'ini
+// örtüyor, hiçbir kenara hizalı durmuyor, çizimleri 0,83'ten 0,49'a
+// küçültüyor ve kapanınca da öyle bırakıyordu. Artık KANVAS ALANININ BİR SATIRI — tuvalin altına yapışık,
+// durum şeridinin üstünde, tuvalin sütunuyla aynı genişlikte. Tuval o kadar
+// KISALIR; hiçbir şey örtülmez. Müfettiş sütununun kuralının aynısı
+// (docs/decisions/ortak-yuzeyler.md → "Müfettiş tuvalin YANINDADIR"):
+// örtmek, kazanılan şeyi yine gizlemekti.
+//
+// İÇERİK TABLONUN TEK ÜRETİCİSİNDEN (veFeadTableCardHTML) — çekmece kendi
+// satırını kurmaz. Çekmece kipinde başlık satırı bir kez basılır ve satırların
+// tekrar eden etiketleri gizlenir.
 var VE_FEAD_TABLO_ID = 've-fead-tablo';
 var _feadTabloKare = 0;
+// Tutamakla seçilen yükseklik (px) oturum boyunca korunur — kapatıp açınca
+// aynı yükseklikte gelir. 0: içerik kadar (CSS tavanıyla). Görünüm durumu:
+// kaydedilmez, geri-al yığınına girmez.
+var _feadTabloH = 0;
+var VE_FEAD_TABLO_MIN = 150;        // başlık bandı + künye + başlık satırı + ~2 satır
+var VE_FEAD_TABLO_TUVAL_MIN = 180;  // tutamak tuvali bundan kısaya indiremez
+// Açılışta kamera çizimlere sığdırıldıysa: önceki ve sonraki kamera.
+var _feadTabloKamera = null;
 
 function veFeadTabloAcikMi(){
   return !!(typeof document !== 'undefined' && document.getElementById(VE_FEAD_TABLO_ID));
 }
 
-function _feadTabloKap(){
+// Çekmecenin yeri: kanvas alanının satırı, durum şeridinin hemen üstü. Kabuk
+// yoksa (Node testleri) tuval kabının içi.
+function _feadTabloYeri(){
+  if(typeof document === 'undefined') return null;
+  var alan = document.querySelector('.ve-canvas-area');
+  if(alan){
+    var serit = document.getElementById('ve-status-bar');
+    return { kap: alan, once: (serit && serit.parentNode === alan) ? serit : null };
+  }
+  var w = document.getElementById('ve-canvas-wrapper');
+  return w ? { kap: w, once: null } : null;
+}
+
+// Odaktaki bölmenin tuval kabı — çekmece onun ALTINI kısaltıyor.
+function _feadTuvalKabi(){
   if(typeof document === 'undefined') return null;
   return document.querySelector('.ve-split-pane.focused .ve-canvas-wrapper')
     || document.getElementById('ve-canvas-wrapper');
+}
+
+// Çekmece FEAD'e AİT: kanvasta ne Kayış Yolu kartı ne kasnak varsa yeri yok
+// (ana topolojiye dönüldü, başka sekme, başka proje). Ölçüldü: ana topolojiye
+// dönünce pencere açık kalıyor ve SATIRSIZ bir Kayış Tablosu gösteriyordu.
+function _feadTabloBaglam(){
+  if(typeof nodes === 'undefined' || !nodes) return false;
+  return nodes.some(function(n){
+    var d = _feadDefOf(n);
+    return !!(d.isFeadPulley || d.isFeadLayout);
+  });
+}
+
+function _feadKamera(){
+  if(typeof canvasZoom === 'undefined' || typeof canvasOffset === 'undefined') return null;
+  return { z: canvasZoom, x: canvasOffset.x, y: canvasOffset.y };
+}
+function _feadAyniKamera(a, b){
+  return !!(a && b && Math.abs(a.z - b.z) < 1e-9 && Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5);
 }
 
 function veFeadTabloAc(){
   if(typeof document === 'undefined') return false;
   var p = document.getElementById(VE_FEAD_TABLO_ID);
   if(!p){
-    var kap = _feadTabloKap();
-    if(!kap) return false;
+    var yer = _feadTabloYeri();
+    if(!yer) return false;
+    var tuval = _feadTuvalKabi();
+    var rk0 = (tuval && tuval.getBoundingClientRect) ? tuval.getBoundingClientRect() : null;
     p = document.createElement('section');
     p.id = VE_FEAD_TABLO_ID;
     p.className = 've-fead-tablo-pencere';
-    p.setAttribute('role', 'dialog');
+    p.setAttribute('role', 'region');
     p.setAttribute('aria-label', 'Kayış Tablosu');
-    p.innerHTML = '<header class="ve-fead-tablo-bas"><b>Kayış Tablosu</b>'
+    p.innerHTML = '<div class="ve-fead-tablo-tutamak" role="separator" aria-orientation="horizontal"'
+      + ' tabindex="0" aria-label="Tablonun yüksekliği" title="Sürükle: tablonun yüksekliği · çift tık: içerik kadar"></div>'
+      + '<header class="ve-fead-tablo-bas"><b>Kayış Tablosu</b>'
       + '<em>Gates Layout Data · yazılan değer çizime anında yansır</em>'
       + '<button type="button" class="ve-tablo-kapat" aria-label="Kapat" title="Kapat (Esc)"'
       + ' onclick="veFeadTabloKapat()">'
       + '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8"'
       + ' stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></header>'
       + '<div class="' + VE_FEAD_TABLE_CLASS + '"></div>';
-    // Pencere kanvasın İÇİNDE duruyor ama kanvasın parçası DEĞİL: basmak
-    // kaydırmayı/seçim kutusunu, tekerlek yakınlaştırmayı başlatmasın.
-    ['mousedown', 'dblclick', 'wheel', 'contextmenu'].forEach(function(t){
-      p.addEventListener(t, function(e){ e.stopPropagation(); });
-    });
     // SATIR ↔ ÇİZİM: satırın üstüne gelmek kasnağı çizimde yakar.
     p.addEventListener('mouseover', function(e){
       var r = e.target && e.target.closest && e.target.closest('.ve-fead-krt[data-ve-node]');
       veFeadCizimUzerinde(r ? r.getAttribute('data-ve-node') : null);
     });
     p.addEventListener('mouseleave', function(){ veFeadCizimUzerinde(null); });
-    kap.appendChild(p);
+    var tut = p.querySelector('.ve-fead-tablo-tutamak');
+    tut.addEventListener('mousedown', function(e){ _feadTabloTutamakBas(p, e); });
+    tut.addEventListener('keydown', function(e){ _feadTabloTutamakTus(p, e); });
+    tut.addEventListener('dblclick', function(){ _feadTabloBoyut(p, 0); });
+    yer.kap.insertBefore(p, yer.once);
     document.addEventListener('keydown', _feadTabloTus, true);
+    if(_feadTabloH) _feadTabloBoyut(p, _feadTabloH);
     _feadTabloCiz();
-    _feadTabloCizimiGoster(p);
+    _feadTabloCizimiGoster(rk0);
   } else _feadTabloCiz();
   _feadTabloDugmeEsitle();
   return true;
 }
 
-// ÇİZİM PENCERENİN ÜSTÜNDE KALIR. Pencere kanvasın alt kısmına biniyor ve
-// ölçüldü (1600×1000, AG00976): açılışta iki çizimin ALT YARISI pencerenin
-// altında kalıyordu — sürücü kasnağı da onunla. Pencerenin sözü "yazılan
-// değer çizime anında yansır"; yansıdığı yer görünmüyorsa söz tutulmaz.
-// Kamera YALNIZ bir çizim örtülüyorsa oynar (kullanıcı yakınlaşıp bir
-// kasnağa bakıyorsa ve o görünüyorsa görünümü bozmanın karşılığı yok) ve
-// yalnız ÇİZİMLERİ pencerenin üstündeki alana sığdırır.
-function _feadTabloCizimiGoster(p){
-  if(typeof veFitViewToContent !== 'function' || typeof nodes === 'undefined' || !p) return false;
-  var kap = p.parentNode;
-  if(!kap || !kap.getBoundingClientRect) return false;
-  var rp = p.getBoundingClientRect(), rk = kap.getBoundingClientRect();
-  var ortulu = nodes.some(function(n){
-    if(!_feadDefOf(n).isFeadLayout) return false;
+// ÇİZİM GÖRÜNÜR KALIR. Çekmece açılınca tuval KISALIR ve alt kenarı yukarı
+// çıkar; açılıştan önce TAMAMEN görünen bir çizim yeni kenarda kesiliyorsa
+// kamera YALNIZ çizimleri yeni tuvale sığdırır. Sözü "yazılan değer çizime
+// anında yansır" — yansıdığı yer görünmüyorsa söz tutulmaz. Çizimlerden biri
+// zaten kesikse (kullanıcı yakınlaşıp bir kasnağa bakıyor) kamera OYNAMAZ, ve
+// hiçbir zaman YAKINLAŞMAZ (ilk hâli 1920×1080'de 1,00 → 1,11 yakınlaşıyordu:
+// tablo açmak çizimi büyütmemeli).
+function _feadTabloCizimiGoster(rk0){
+  _feadTabloKamera = null;
+  if(typeof veFitViewToContent !== 'function' || typeof nodes === 'undefined' || !rk0) return false;
+  var tuval = _feadTuvalKabi();
+  if(!tuval || !tuval.getBoundingClientRect) return false;
+  var rk1 = tuval.getBoundingClientRect();
+  var tam = function(r, k){
+    return r.top >= k.top - 1 && r.bottom <= k.bottom + 1 && r.left >= k.left - 1 && r.right <= k.right + 1;
+  };
+  var kartlar = [];
+  nodes.forEach(function(n){
+    if(!_feadDefOf(n).isFeadLayout) return;
     var el = document.getElementById(n.id);
-    if(!el) return false;
-    var r = el.getBoundingClientRect();
-    return r.bottom > rp.top + 1 && r.top < rp.bottom && r.right > rp.left && r.left < rp.right;
+    if(el && el.getBoundingClientRect) kartlar.push(el.getBoundingClientRect());
   });
-  if(!ortulu) return false;
+  if(!kartlar.length) return false;
+  if(!kartlar.every(function(r){ return tam(r, rk0); })) return false;
+  if(kartlar.every(function(r){ return tam(r, rk1); })) return false;
+  var once = _feadKamera();
   var canvas = document.getElementById('ve-canvas');
   if(canvas) canvas.classList.add('tidy-cam');
   veFitViewToContent({ only: function(n){ return !!_feadDefOf(n).isFeadLayout; },
-                       bottomInset: rk.bottom - rp.top + 8, margin: 24, maxZoom: 1.2 });
+                       margin: 24, maxZoom: Math.min(1.2, once ? once.z : 1.2) });
+  if(canvas) setTimeout(function(){ canvas.classList.remove('tidy-cam'); }, 520);
+  _feadTabloKamera = { once: once, sonra: _feadKamera() };
+  return true;
+}
+
+// KAPANINCA KAMERA DÖNER — ama yalnız hâlâ çekmecenin bıraktığı yerdeyse.
+// Tuval eski boyuna uzuyor; kamera sığdırılmış hâlde kalsaydı çizimler üstte
+// küçük durur, altları boş kalırdı. Kullanıcı o arada kaydırdı ya da
+// yakınlaştırdıysa onun görünümüne dokunulmaz.
+function _feadTabloKameraGeri(){
+  var km = _feadTabloKamera;
+  _feadTabloKamera = null;
+  if(!km || !km.once || !_feadAyniKamera(_feadKamera(), km.sonra)) {
+    if(typeof updateCanvasTransform === 'function') updateCanvasTransform();  // minimap görüş kutusu
+    return false;
+  }
+  var canvas = document.getElementById('ve-canvas');
+  if(canvas) canvas.classList.add('tidy-cam');
+  canvasZoom = km.once.z;
+  canvasOffset.x = km.once.x;
+  canvasOffset.y = km.once.y;
+  if(typeof updateCanvasTransform === 'function') updateCanvasTransform();
   if(canvas) setTimeout(function(){ canvas.classList.remove('tidy-cam'); }, 520);
   return true;
+}
+
+// ÜST KENAR BİR TUTAMAK: sürükleyerek (ya da odaktayken ↑ ↓, Shift ile dört
+// kat) çekmecenin yüksekliği. Altta başlık + künye + birkaç satır kalır, üstte
+// tuvale en az VE_FEAD_TABLO_TUVAL_MIN px bırakılır. Çift tık (ya da h = 0)
+// içerik kadarına döndürür.
+function _feadTabloBoyut(p, h){
+  if(!h){
+    p.style.height = ''; p.style.maxHeight = ''; _feadTabloH = 0;
+    if(typeof updateCanvasTransform === 'function') updateCanvasTransform();
+    return 0;
+  }
+  var tuval = _feadTuvalKabi();
+  var hT = (tuval && tuval.getBoundingClientRect) ? tuval.getBoundingClientRect().height : 0;
+  var hP = p.getBoundingClientRect ? p.getBoundingClientRect().height : 0;
+  var ust = Math.max(VE_FEAD_TABLO_MIN, hT + hP - VE_FEAD_TABLO_TUVAL_MIN);
+  h = Math.round(Math.max(VE_FEAD_TABLO_MIN, Math.min(ust, h)));
+  p.style.height = h + 'px';
+  p.style.maxHeight = 'none';
+  _feadTabloH = h;
+  if(typeof updateCanvasTransform === 'function') updateCanvasTransform();
+  return h;
+}
+function _feadTabloTutamakBas(p, e){
+  if(!e || e.button !== 0) return;
+  e.preventDefault();
+  var y0 = e.clientY, h0 = p.getBoundingClientRect().height;
+  p.classList.add('is-boyut');
+  function tasi(ev){ _feadTabloBoyut(p, h0 + (y0 - ev.clientY)); }
+  function birak(){
+    document.removeEventListener('mousemove', tasi, true);
+    document.removeEventListener('mouseup', birak, true);
+    p.classList.remove('is-boyut');
+  }
+  document.addEventListener('mousemove', tasi, true);
+  document.addEventListener('mouseup', birak, true);
+}
+function _feadTabloTutamakTus(p, e){
+  var d = { ArrowUp: 24, ArrowDown: -24 }[e.key];
+  if(!d) return;
+  e.preventDefault();
+  e.stopPropagation();          // oklar seçili kasnağı da kaydırmasın
+  _feadTabloBoyut(p, p.getBoundingClientRect().height + d * (e.shiftKey ? 4 : 1));
 }
 
 // ODAK KORUNUR. Hücre `onchange` ile yazıyor ve o olay hücreden ÇIKARKEN
 // tetikleniyor; tazeleme aynı anda yapılsa Sekme ile geçilen SONRAKİ hücre
 // sökülür ve odak düşerdi (ikinci sayı yazılamaz). Tazeleme bu yüzden bir
 // sonraki kareye ertelenir ve o anki odak (anahtarıyla) yeniden verilir.
+// Kareye kadar FEAD'den çıkılmışsa çekmece çizilmez, KAPANIR — sessiz bir
+// gidiş-dönüş (arka plan kaydı köke çöker ve AYNI anda geri girer) kareye
+// kadar tamamlanmış olur ve çekmeceye dokunmaz.
 function _feadTabloCiz(){
   _feadTabloKare = 0;
   var p = (typeof document !== 'undefined') ? document.getElementById(VE_FEAD_TABLO_ID) : null;
   var govde = p && p.querySelector('.' + VE_FEAD_TABLE_CLASS);
   if(!govde) return false;
+  if(!_feadTabloBaglam()){ veFeadTabloKapat(); return false; }
   var odak = document.activeElement, anahtar = null, s0 = null, s1 = null;
   if(odak && govde.contains(odak)){
     anahtar = odak.getAttribute('onchange') || odak.getAttribute('onclick');
@@ -6183,6 +6316,7 @@ function veFeadTabloKapat(){
   document.removeEventListener('keydown', _feadTabloTus, true);
   veFeadCizimUzerinde(null);
   _feadTabloDugmeEsitle();
+  _feadTabloKameraGeri();
   return true;
 }
 
@@ -8081,7 +8215,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadYolDurumu: veFeadYolDurumu, veFeadCizimBas: veFeadCizimBas,
     veFeadCizimUzerinde: veFeadCizimUzerinde, veFeadCizimIsaretle: veFeadCizimIsaretle,
     _feadCizimXf: _feadCizimXf, _feadCizimMm: _feadCizimMm,
-    _feadTabloCizimiGoster: _feadTabloCizimiGoster,
+    _feadTabloCizimiGoster: _feadTabloCizimiGoster, _feadTabloKameraGeri: _feadTabloKameraGeri,
+    _feadTabloBoyut: _feadTabloBoyut, _feadTabloBaglam: _feadTabloBaglam,
     veFeadKasnakKaydir: veFeadKasnakKaydir, veFeadCizimTus: veFeadCizimTus,
     veFeadAciklikBul: veFeadAciklikBul, veFeadAciklikSec: veFeadAciklikSec,
     veFeadAradanAday: veFeadAradanAday,
