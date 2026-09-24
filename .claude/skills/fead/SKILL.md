@@ -529,7 +529,16 @@ olurdu.
       yüzeyde aynı üreticiden (`veFeadSignals.summary`).
     • Ortak dosyalarda FEAD dalı YOK: kaynak tablosuna (`veResultSources`,
       js/results.js) girer — kök `CLAUDE.md` → ortak yüzey kuralları.
-    Kapılar: `fead-sonuclar.test.js` (dört kusurun üçü + okuma sözleşmesi),
+    • **Şerit yorumu YALNIZ kendi kanallarını anlatır**; kümenin geneline dair
+      cümle (ankraj, kayma eşiği, SF hükmü, kalibrasyon notu) tek bir SAHİP
+      kanalın şeridine ya da aileyi toplayan şeride düşer — sahipler: gerginin
+      çıkış açıklığı (ankrajı o taşır; gergi yoksa `tmin`) · `sfmin` · `tc` ·
+      `tmod.1`. Gerekçe: "Ayır" sonrası aynı paragraf kanal sayısı kadar
+      yazılıyordu, zarfa bağlı sahip ise bölünen ön ayarda cümleyi hiç
+      yazmıyordu, ve tek kasnaklı kayma şeridi zarfın değerini o kasnağın
+      adıyla basıyordu (yanlış sayı, sessiz).
+    Kapılar: `fead-sonuclar.test.js` (dört kusurun üçü + okuma sözleşmesi +
+    "yorum TEKRAR ETMEZ": 11 örnek × iki kayış kipi × Ayır/ön ayar düzeni),
     `fead-sonuclar-sekme.test.js` (kablolama + "Sonuçları Temizle"),
     `tests/e2e/fead-sonuclar.spec.js` (sayfa boyu kart, gerçek çizim).
 

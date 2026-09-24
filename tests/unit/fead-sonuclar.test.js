@@ -412,16 +412,72 @@ describe('diyagram yorumu — sayı modelden, genel geçer metin yok', () => {
     const st = rapor._frSlipStats(R);
     expect(br.paras.join(' ')).toContain('**' + st.loadedMin.toFixed(2).replace('.', ',') + '**');
     expect(br.paras.join(' ')).toMatch(/GEÇTİ/);
+    // "Ayır" sonrası zarf şeridi yalnız: en kötü kasnağın adı yine KÜMEDEN
+    // bulunur (şeritte kasnak kanalı yok diye ad düşmez).
+    const enKotu = ds.channels.filter((c) => /\.sf$/.test(c.id))
+      .map((c) => ({ ad: c.name.split(' · ')[0], v: Math.min(...c.data.filter(Number.isFinite)) }))
+      .sort((a, b) => a.v - b.v)[0];
+    expect(br.paras.join(' ')).toContain(enKotu.ad + ' kasnağında');
   });
   test('senaryonun künye notları şeride KONUSUNA göre düşer — üç şeritte üç kez yazılmaz', () => {
     const { R } = coz();
     const ds = kume(R, 'senaryo');
     const devir = B.forLane(ds, R, ['rpm']).paras.join('\n');
-    const gerg = B.forLane(ds, R, [ds.channels.find((c) => /\.T$/.test(c.id)).id]).paras.join('\n');
+    // Ön ayarın gerginlik şeridi (bütün açıklıklar) kümenin notunu taşır;
+    // tek açıklıklı şerit ("Ayır") yalnız kendi aralığını söyler.
+    const tA = ds.channels.filter((c) => /\.T$/.test(c.id)).map((c) => c.id);
+    const gerg = B.forLane(ds, R, tA).paras.join('\n');
+    const tek = B.forLane(ds, R, [tA[0]]).paras.join('\n');
     expect(devir).toMatch(/DAYATILMIŞ/);
     expect(gerg).not.toMatch(/DAYATILMIŞ/);
     expect(gerg).toMatch(/Gerilme ÇİZİLEN/);
     expect(devir).not.toMatch(/Gerilme ÇİZİLEN/);
+    expect(tek).not.toMatch(/Gerilme ÇİZİLEN/);
+  });
+  test('kayış verisi kapalıyken senaryonun frekans şeridi frekansın NEDEN olmadığını söyler', () => {
+    const { R } = coz('AG00976_GATES_2025', 'none');
+    const ds = kume(R, 'senaryo');
+    const son = S.presets(R.signals).find((p) => p.k === 'sen').lanes.slice(-1)[0];
+    expect(son).toEqual(['fire']);
+    expect(B.forLane(ds, R, son).paras.join('\n')).toMatch(/Açıklık frekansları ÜRETİLMİYOR/);
+  });
+  test('kol ön ayarı: her şerit KENDİ kanalının sayısını Mean\'de okur', () => {
+    const { R } = coz();
+    const ds = kume(R, 'kol');
+    const P = S.presets(R.signals).find((p) => p.k === 'kol');
+    const metin = P.lanes.map((L) => B.forLane(ds, R, L).paras.join('\n'));
+    const mean = ds.meta.positions.find((q) => q.position === 'Mean');
+    // Bağımsız ara değer — yorumun okuduğu sayı eğrinin Mean'deki değeri.
+    const at = (id) => {
+      const x = ds.x.data, y = kanal(ds, id).data;
+      for (let i = 1; i < x.length; i++)
+        if (mean.rel >= x[i - 1] && mean.rel <= x[i])
+          return y[i - 1] + (y[i] - y[i - 1]) * (mean.rel - x[i - 1]) / (x[i] - x[i - 1]);
+      return NaN;
+    };
+    expect(metin[0]).toContain('gerginlik **' + B._n(mean.T, 0) + ' N**');
+    expect(metin[1]).toContain('**' + B._n(at('tk'), 3) + ' mm/°**');
+    expect(metin[2]).toContain('**' + B._n(at('phi'), 1) + '°**');
+    // Ölçülen eski hâl: üç şeritte de "Çalışma noktası (Mean) …" yazıyordu.
+    expect(metin[1]).not.toMatch(/Çalışma noktası/);
+    expect(metin[2]).not.toMatch(/Çalışma noktası/);
+  });
+  test('Campbell "Ayır" ile bölününce mertebe şeridi YALNIZ kendi kesişimlerini sayar', () => {
+    const { R } = coz('AG00976_GATES_2025', 'full');
+    const ds = kume(R, 'campbell');
+    const cr = ds.meta.crossings;
+    expect(cr.length).toBeGreaterThan(0);
+    ds.channels.filter((c) => /^ord\./.test(c.id)).forEach((c) => {
+      const od = ds.meta.orders.find((q) => c.name.endsWith('— ' + q.label));
+      const bu = cr.filter((k) => k.o === od.o);
+      const t = B.forLane(ds, R, [c.id]).paras.join('\n');
+      expect((t.match(/ d\/dk\*\*/g) || []).length).toBe(bu.length);
+      expect(t).not.toMatch(/Çalışma bandı/);          // bant cümlesi tam şeridin
+    });
+    // Tam şerit (ön ayar) bandı ve kalibrasyon notunu taşır
+    const tam = B.forLane(ds, R, ds.channels.map((c) => c.id)).paras.join('\n');
+    expect(tam).toMatch(/Çalışma bandı/);
+    expect(tam).toMatch(/KALİBRE/);
   });
   test('yorum HTML üretmez — vurgu `**` işaretiyle, kaçırma sunumun işi', () => {
     const { R } = coz();
@@ -429,6 +485,82 @@ describe('diyagram yorumu — sayı modelden, genel geçer metin yok', () => {
       const br = B.forLane(ds, R, ds.channels.map((c) => c.id));
       br.paras.forEach((p) => expect(p).not.toMatch(/<[a-z]/i));
     });
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  YORUM TEKRAR ETMEZ — bir paragraf iki şeritte birden yazılmaz
+// ════════════════════════════════════════════════════════════════════════════
+// Yorum penceresi şerit başına bir blok basıyor. Kümenin geneline dair bir
+// cümle her şeridin yorumuna girerse, "Ayır" (her kanal kendi şeridinde)
+// sonrası AYNI paragraf kanal sayısı kadar yazılır. Ölçülen hâl (gerçek
+// tarayıcı, kol ön ayarı): "Çalışma noktası (Mean) …" ve "Kol serbest
+// konumdan …" üç şeridin üçünde; senaryoda altı cümle üç kez. Kural: şerit
+// YALNIZ kendi kanallarını anlatır, kümenin geneli onu toplayan şeritte.
+describe('yorum TEKRAR ETMEZ — hazır diyagram, "Ayır" ve tek şerit düzenlerinde', () => {
+  const tekrarlar = (ds, R, lanes) => {
+    const say = new Map();
+    lanes.forEach((L) => {
+      const br = B.forLane(ds, R, L);
+      (br ? br.paras : []).forEach((p) => say.set(p, (say.get(p) || 0) + 1));
+    });
+    return [...say].filter(([, k]) => k > 1).map(([p, k]) => k + '× ' + p.slice(0, 90));
+  };
+  const ayir = (lanes) => [].concat(...lanes).map((id) => [id]);
+  const duzenler = (R, ds) => [['Ayır (bütün kanallar)', ds.channels.map((c) => [c.id])]].concat(
+    ...S.presets(R.signals).filter((p) => p.sensorId === ds.sensorId).map((p) =>
+      [['ön ayar ' + p.k, p.lanes], ['ön ayar ' + p.k + ' → Ayır', ayir(p.lanes)]]));
+  // Kümenin geneline dair cümleler: tekrar etmemeli, "Ayır" ile de KAYBOLMAMALI.
+  const GENEL = [/^Gergi ankrajı/, /^Kaymamak için gereken/, /^İstenen servis faktörü/,
+    /^Yalnız YÜK TAŞIYAN/, /gergin tarafında/, /^Burulma modeli KALİBRE/, /^Frekans merkezkaç payıyla/,
+    /^Açıklık frekansları \*\*çizilmiyor/, /^Açıklık gerginlikleri çevrim boyunca/, /^Rampa /,
+    /DAYATILMIŞ/, /^Marş devri/, /^İvme girilmemiş/, /^Gergi kolu dinamiği/, /^Gerilme ÇİZİLEN/,
+    /^Açıklık frekansları ÜRETİLMİYOR/];
+  const genel = (ds, R, lanes) => {
+    const out = {};
+    lanes.forEach((L) => (B.forLane(ds, R, L) || { paras: [] }).paras.forEach((p) => {
+      GENEL.forEach((re, i) => { if (re.test(p)) out[i] = (out[i] || 0) + 1; });
+    }));
+    return out;
+  };
+  test.each(ORNEKLER.flatMap((k) => [[k, 'none'], [k, 'full']]))('%s · kayış verisi %s', (key, bd) => {
+    const { R } = coz(key, bd);
+    R.signals.forEach((ds) => {
+      duzenler(R, ds).forEach(([ad, lanes]) => {
+        expect({ kume: ds.key, duzen: ad, tekrar: tekrarlar(ds, R, lanes) })
+          .toEqual({ kume: ds.key, duzen: ad, tekrar: [] });
+      });
+      // "Ayır" bilgi kaybetmez: ön ayarda okunan genel cümle bölünmüş hâlde de TAM bir kez
+      S.presets(R.signals).filter((p) => p.sensorId === ds.sensorId).forEach((p) => {
+        expect({ kume: ds.key, onAyar: p.k, genel: genel(ds, R, ayir(p.lanes)) })
+          .toEqual({ kume: ds.key, onAyar: p.k, genel: genel(ds, R, p.lanes) });
+      });
+    });
+  });
+  test('tek kasnaklı kayma şeridi KENDİ kasnağının sayısını yazar — zarfın değerini onun adıyla değil', () => {
+    // Ölçülen eski hâl: şerit `sfmin`'in (en kötü kasnağın) değerini şeritteki
+    // kasnağın adıyla yazıyordu — "En düşük kayma emniyeti 4,50 — KK
+    // kasnağında"; KK'nın kendi en düşüğü 14,95. 22 durumda 54 şeridin 32'si.
+    let serit = 0;
+    ORNEKLER.forEach((key) => {
+      const { R } = coz(key, 'none');
+      const ds = kume(R, 'cevrim');
+      ds.channels.filter((c) => /\.sf$/.test(c.id)).forEach((c) => {
+        serit++;
+        const t = B.forLane(ds, R, [c.id]).paras.join(' ');
+        const kendi = Math.min(...c.data.filter(Number.isFinite));
+        expect({ kanal: key + ' · ' + c.name, metin: t.includes('**' + B._n(kendi, 2) + '**') })
+          .toEqual({ kanal: key + ' · ' + c.name, metin: true });
+      });
+    });
+    expect(serit).toBeGreaterThan(20);
+  });
+  test('her şerit bir şey söyler — "Ayır" sonrası boş yorum bloğu yok', () => {
+    const { R } = coz('AG00976_GATES_2025', 'full');
+    R.signals.forEach((ds) => ds.channels.forEach((c) => {
+      const br = B.forLane(ds, R, [c.id]);
+      expect({ kume: ds.key, kanal: c.id, bos: !br || !br.paras.length }).toEqual({ kume: ds.key, kanal: c.id, bos: false });
+    }));
   });
 });
 

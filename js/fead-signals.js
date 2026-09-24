@@ -134,6 +134,13 @@ var veFeadSignals = (function() {
     var n = P.length;
     return P[i].code + ' → ' + P[(i + 1) % n].code;
   }
+  // Gerginin anahtarı: ÇIKIŞ açıklığı ankraj gerginliğini taşır; yorum
+  // kümenin gerginlik hükmünü (ankraj · kayma eşiği) o açıklığın şeridine
+  // yazar — bkz. js/fead-brief.js başlığındaki sahip kuralı.
+  function _tenKey(P) {
+    for(var i = 0; i < P.length; i++) if(P[i].tensioner) return P[i].key;
+    return null;
+  }
 
   // Çevrim satırları devre göre SIRALI (girilen sıra değil). Aynı devirde iki
   // satır varsa girilen sıra korunur.
@@ -311,7 +318,7 @@ var veFeadSignals = (function() {
       x: { id: 'rpm', name: 'Motor devri', unit: 'd/dk', data: x },
       channels: chans, groups: groups,
       meta: { n: rows.length, dc: rows.map(function(d) { return _num(d.dcPct); }),
-              loaded: Object.keys(loaded).map(Number), ters: ters, beltOn: on,
+              loaded: Object.keys(loaded).map(Number), ters: ters, beltOn: on, tenKey: _tenKey(P),
               serviceFact: _num(R.serviceFact),
               slipThreshold: (typeof veFeadSlipThreshold === 'function' && R.build)
                 ? veFeadSlipThreshold(R.build, (R.analysis && R.analysis.duty) || []) : null }
@@ -577,7 +584,7 @@ var veFeadSignals = (function() {
       channels: chans, groups: groups,
       meta: { T: T, phases: scn.ph, idle: scn.idle, peak: scn.peak, crank: scn.crank,
               accel: scn.accel, decel: scn.decel, notes: (scn.notlar || []).slice(),
-              curve: !!scn.egri, fOff: !!scn.fOff, resonances: rez,
+              curve: !!scn.egri, fOff: !!scn.fOff, resonances: rez, tenKey: _tenKey(P.slice(0, nS)),
               spanNames: P.slice(0, nS).map(function(p) { return _spanName(P, p.i); }),
               tMax: Math.max.apply(null, st.map(function(s) { return s.Tmax; })),
               tMin: Math.min.apply(null, st.map(function(s) { return s.Tmin; })) }
