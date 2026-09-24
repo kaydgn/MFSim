@@ -196,6 +196,41 @@ test('KABUK TEK ÇİZGİ — üç başlık aynı bantta, tuval komşularına yap
   expect(r.sekme.zemin).toBe(r.sekme.tuvalZemin);
 });
 
+// BANT İNCE — ÖLÇÜ İÇERİKTEN (2026-09-24). Kullanıcı: 36 px'lik bant
+// "gereksiz kalın". Bantların doğal yüksekliği 21 · 28 · 23 · 24 · 33 px'ti
+// (Sonuçlar araç çubuğu 4 px'lik iç payla); bant 30 px'e indi, çubuğun payı
+// 2 px'e. Kapı iki yönlü: her bant jetonun KENDİSİ (içerik bandı
+// büyütmüyor — büyüseydi o bant komşusundan uzun kalırdı) ve jeton ince.
+// Sonuçlar'ın iki bandı da burada, çünkü jeton onların da ölçüsü ve bu spec
+// ürün kapısında (results-txt-page.spec.js değil).
+test('BANT İNCE — her bant jetonun kendisi, içerik onu büyütmüyor', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await modulAc(page);
+  await page.evaluate(() => {
+    if (typeof veFeadWizClose === 'function') veFeadWizClose(false);
+    const n = nodes.find((x) => x.type === 'fead-layout') || nodes[0];
+    clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
+  });
+  await page.waitForTimeout(600);
+  const boy = (sel) => page.evaluate((sel) => sel.map((s) => {
+    const e = document.querySelector(s);
+    return e && e.offsetWidth ? s + ' ' + e.getBoundingClientRect().height : s + ' YOK';
+  }), sel);
+  const jeton = await page.evaluate(() =>
+    parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bant-h')));
+  const topoloji = await boy(['.ve-sidebar-header', '#ve-doc-dock', '.ve-properties-header']);
+  await page.evaluate(() => { veTogglePropertiesPanel(false); veSubTabDegistir('sonuclar'); });
+  await page.waitForTimeout(800);
+  const sonuclar = await boy(['.ve-results-head', '.ve-trace-toolbar']);
+  // Jeton ince (eski: 36 px) ama en yüksek içeriği (araç çubuğu, 29) sığdırıyor.
+  expect(jeton).toBeLessThanOrEqual(30);
+  // Beş bandın beşi de ölçüldü (bulunamayan bant sessizce geçmesin) ve beşi
+  // de tam jeton: içerik hiçbirini büyütmüyor.
+  const hepsi = [...topoloji, ...sonuclar];
+  expect(hepsi.filter((x) => / YOK$/.test(x))).toEqual([]);
+  expect(hepsi.filter((x) => Math.abs(parseFloat(x.split(' ').pop()) - jeton) > 0.5)).toEqual([]);
+});
+
 // BAŞLIK İÇERİĞİN KENARINDA + KİMLİK SATIRI TİPİ SÖYLER (2026-09-23).
 // Bandın başlığı altındaki sütunun sol kenarından başlamalı: "Bileşenler"
 // simgesi 76'da, altındaki kategori başlıkları ve öğe simgeleri 81'deydi;

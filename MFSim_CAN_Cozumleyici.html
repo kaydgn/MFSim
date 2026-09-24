@@ -333,8 +333,12 @@
          40 ↔ sağ 35 px (2026-08-17), Topoloji'de 37 · 29 · 33 px — alt
          çizgiler merdiven gibi y=75 · 67 · 71'de (2026-09-23, kullanıcı:
          "pencere sınırları hizasız"). Bantlar min-height ile buna oturur ve
-         zemini buradan alır; kapı tests/unit/kabuk-bant.test.js. */
-      --bant-h: 36px;
+         zemini buradan alır; kapı tests/unit/kabuk-bant.test.js.
+         ÖLÇÜ İÇERİKTEN: 36 px "gereksiz kalın"dı (kullanıcı, 2026-09-24) —
+         bantların doğal yüksekliği 21 · 28 · 23 · 24 px, yani 8–15 px'i boştu.
+         30 px eski sekme bandının (29) ölçüsü; en yüksek içerik (Sonuçlar araç
+         çubuğunun 24 px'lik segmenti + 2·2 pay + çizgi = 29) sığıyor. */
+      --bant-h: 30px;
       --bant-zemin: linear-gradient(180deg, var(--bg-tertiary), var(--bg-secondary));
 
       /* ── TXT RAPOR SAYFASI ──
@@ -5571,10 +5575,12 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 /* ── Araç çubuğu ── */
 /* Üst bandın SAĞ yarısı — yüksekliği --bant-h'tan alır, sol yarısıyla
    (.ve-results-head) aynı hizaya oturur. min-height, çünkü dar pencerede
-   düğmeler alt satıra sarıyor ve bandın büyümesi gerekiyor. */
+   düğmeler alt satıra sarıyor ve bandın büyümesi gerekiyor.
+   DİKEY PAY 2 px: 24 px'lik segment + 2·2 + çizgi = 29 ≤ --bant-h (30).
+   4 px'le 33'e çıkıyor ve bant ince olunca komşusundan 3 px uzun kalırdı. */
 .ve-trace-toolbar{
   display:flex;align-items:center;gap:4px;flex-wrap:wrap;
-  padding:4px 8px;flex-shrink:0;
+  padding:2px 8px;flex-shrink:0;
   min-height:var(--bant-h);
   box-sizing:border-box;
   background:var(--bant-zemin);
