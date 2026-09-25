@@ -1718,9 +1718,14 @@ html.ve-sayfa-tuval .ve-nav-rail{ border-right-color:transparent; }
   overflow:hidden;
 }
 .ve-comp-label{
-  white-space:nowrap;
+  /* İKİ SATIRA KADAR SARAR, sonra "…" (2026-09-25). Tek satırda kesiliyordu:
+     "Motor-Konvertör Eşleştirme" ve "Motor-Şanzıman Eşleştirme" 156 px
+     isterken 153 px alıyordu (ölçüldü, 220 px kenar çubuğu). Kenar çubuğu
+     daraltıldıkça daha çok ad ikinci satıra iner; üçüncü satır yok. */
+  display:-webkit-box; -webkit-box-orient:vertical;
+  -webkit-line-clamp:2; line-clamp:2;
   overflow:hidden;
-  text-overflow:ellipsis;
+  line-height:1.25;
   transition:opacity 0.15s;
 }
 

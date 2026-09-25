@@ -353,3 +353,37 @@ test('palet: kategori başlığı İKONUN kenarında, öğe dinlenmede zeminsiz'
   expect(r.kaymis).toEqual([]);
   expect(r.dolu).toEqual([]);
 });
+
+// ── PALETTE AD KESİLMİYOR ──────────────────────────────────────────────────
+// Ad tek satırda "…" ile kesiliyordu: "Motor-Konvertör Eşleştirme" ve
+// "Motor-Şanzıman Eşleştirme" 220 px'lik kenar çubuğunda 156 px isterken
+// 153 px alıyordu (ölçüldü). Ad artık iki satıra kadar sarıyor. Ölçü her iki
+// yönde: yatayda taşma YOK ve iki satır sınırı yüzünden dikeyde de kesilmiyor.
+test('palet: hiçbir bileşen adı kesilmiyor — üç modülün içinde', async ({ page }) => {
+  await page.goto('file://' + BUILD);
+  await page.fill('#mfsim-login-password', 'mfsim2024');
+  await page.press('#mfsim-login-password', 'Enter');
+  await page.waitForFunction(() => Array.isArray(window.nodes), null, { timeout: 90000 });
+  await page.waitForSelector('#mfsim-loading-screen', { state: 'hidden', timeout: 90000 });
+  const kesikler = () => page.evaluate(() => [...document.querySelectorAll('#ve-sidebar .ve-comp-label')]
+    .filter((l) => l.offsetParent !== null && l.getBoundingClientRect().height > 0)
+    .map((l) => ({ t: l.textContent.trim(), yatay: l.scrollWidth > l.clientWidth + 0.5, dikey: l.scrollHeight > l.clientHeight + 1 })));
+  const sonuc = {};
+  for (const mod of ['arac-performans', 'mount-analysis', 'fead-analysis']) {
+    await page.evaluate((m) => { window.confirm = () => true; veStartModule(m); }, mod);
+    await page.waitForTimeout(1200);
+    await page.evaluate((m) => {
+      if (typeof veFeadWizClose === 'function') try { veFeadWizClose(false); } catch (e) { /* açık değil */ }
+      const n = window.nodes.find((x) => x.type === m);
+      if (n && m === 'arac-performans') veAracOpenEditor(n.id);
+      if (n && m === 'mount-analysis') veMntOpenEditor(n.id);
+    }, mod);
+    await page.waitForTimeout(1200);
+    const r = await kesikler();
+    sonuc[mod] = { ad: r.length, kesik: r.filter((x) => x.yatay || x.dikey).map((x) => x.t) };
+  }
+  // Tarama boşa koşmasın: üç modülün paletinde ad var.
+  Object.entries(sonuc).forEach(([m, s]) => expect([m, s.ad > 4]).toEqual([m, true]));
+  expect(Object.fromEntries(Object.entries(sonuc).map(([m, s]) => [m, s.kesik])))
+    .toEqual({ 'arac-performans': [], 'mount-analysis': [], 'fead-analysis': [] });
+});
