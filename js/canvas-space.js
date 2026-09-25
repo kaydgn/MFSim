@@ -63,6 +63,30 @@ function veGridPattern(zoom, offset, baseSize) {
   };
 }
 
+// ── ÇİZİLEN KAMERA CİHAZ PİKSELİNE OTURUR ─────────────────────────────────
+// Kesirli bir çeviri 1× ekranda tuvaldeki her kutu kenarını, teli ve ikonu İKİ
+// piksele yayıyordu (örnek yüklenince 765,5 px; %100'e dönüşte hemen her zaman).
+// Yuvarlanan yalnız ÇİZİM: durum (canvasOffset) olduğu gibi kalır — pan ve
+// tekerlek adımları onun üstüne birikiyor, her adımda yuvarlamak kamerayı
+// kaydırırdı. Çizim ile isabet arasındaki fark en çok yarım CİHAZ pikseli.
+function veDevicePixelRatio() {
+  var d = (typeof window !== 'undefined') ? window.devicePixelRatio : 1;
+  return (typeof d === 'number' && isFinite(d) && d > 0) ? d : 1;
+}
+
+// SAF: kameranın ÇİZİLEN çevirisi — her eksen cihaz pikselinin katına.
+function veCameraDrawOffset(offset, dpr) {
+  var d = (typeof dpr === 'number' && isFinite(dpr) && dpr > 0) ? dpr : 1;
+  var snap = function(v) { return isFinite(v) ? Math.round(v * d) / d : v; };
+  return { x: snap(offset.x), y: snap(offset.y) };
+}
+
+// SAF: kamera → #ve-canvas'ın CSS dönüşümü.
+function veCanvasTransformCss(offset, zoom, dpr) {
+  var o = veCameraDrawOffset(offset, dpr);
+  return 'translate(' + o.x + 'px, ' + o.y + 'px) scale(' + zoom + ')';
+}
+
 // Izgara desenini canlı görünüme uygula (CSS değişkenleri; bkz. styles.css
 // ".ve-canvas-wrapper::before"). updateCanvasTransform her pan/zoom karesinde çağırır.
 function veApplyGridPattern() {
@@ -75,7 +99,9 @@ function veApplyGridPattern() {
   }
   var zoom = (typeof canvasZoom !== 'undefined') ? canvasZoom : 1;
   var off = (typeof canvasOffset !== 'undefined') ? canvasOffset : { x: VE_CANVAS_CENTER, y: VE_CANVAS_CENTER };
-  var p = veGridPattern(zoom, off, base);
+  // Izgara İÇERİKLE aynı (yuvarlanmış) kamerayı izler; ham ofseti izleseydi
+  // çizgileri içerikten yarım piksel kayardı.
+  var p = veGridPattern(zoom, veCameraDrawOffset(off, veDevicePixelRatio()), base);
   wrap.style.setProperty('--ve-grid-size', p.size + 'px');
   wrap.style.setProperty('--ve-grid-x', p.x + 'px');
   wrap.style.setProperty('--ve-grid-y', p.y + 'px');
@@ -387,6 +413,9 @@ if(typeof module !== 'undefined' && module.exports) {
     VE_CHIP_INSET_IN: VE_CHIP_INSET_IN,
     VE_CHIP_INSET: VE_CHIP_INSET,
     veGridPattern: veGridPattern,
+    veDevicePixelRatio: veDevicePixelRatio,
+    veCameraDrawOffset: veCameraDrawOffset,
+    veCanvasTransformCss: veCanvasTransformCss,
     veApplyGridPattern: veApplyGridPattern,
     veCanvasViewportSize: veCanvasViewportSize,
     veHomeCameraOffset: veHomeCameraOffset,
