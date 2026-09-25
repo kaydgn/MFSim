@@ -2767,6 +2767,20 @@ var VE_FEAD_ROSE_HALF = 27;   // gülün merkezden dışa taşan yarı-genişli�
 // `--fead-kat-alt` (styles.css) — orası panelin, burası gülün hizası.
 var VE_FEAD_YUZ_ALT = 46;
 
+// KART ÇİZİMİNİN YAZI KATSAYISI — arayüz ölçeğinden türer (`--fs-micro` / 9).
+// Çizici etiketleri kullanıcı biriminde yazıyor (ad 9, açı 8, künye 7–8,5) ve
+// kanvas kartında 1 birim = 1 px idi: ölçek 2026-09-25'te bir basamak büyüdü
+// (9 → 10 px) ama kartın yazısı kıpırdamadı — ölçüldü, 40 etiketin hepsi 7–9 px.
+// Kart çizimi bu yüzden kartın 1/k ölçüsünde ÜRETİLİR ve viewBox onu kartın
+// tamamına büyütür. Etiket yerleştirme ve çakışma kaçınması kullanıcı
+// biriminde çalıştığı için hiçbir ofset değişmez (`fead-card-design.test.js`
+// süpürmesi aynı kuralı ölçüyor); fare → mm dönüşümü getScreenCTM'den (ölçeği
+// kapsar), gülün yeri kesirle saklanıyor. Bedeli: çizgi kalınlıkları da k kadar.
+function veFeadYaziK(){
+  var fs = (typeof veThemeFs === 'function') ? veThemeFs('micro') : 9;
+  return (Number.isFinite(fs) && fs > 9) ? fs / 9 : 1;
+}
+
 function veFeadCompassPlace(W, H, pos, altPay){
   var m = VE_FEAD_ROSE_HALF + 2;
   var alt = Number(altPay) || 0;
@@ -3594,6 +3608,9 @@ function veFeadLayoutSVG(build, W, H, opts){
   // ve orada yüzen çubuk YOK — pay verilseydi belgede gül sebepsiz yukarı kayardı.
   var roseYer = wantCompass
     ? veFeadCompassPlace(W, H, opts.compassPos, opts.altPay) : null;
+  // Aynı pay ETİKETLERE de söylenir (aşağıda): çubuğun altına düşen yazı
+  // görünmüyordu. Gülün kuralıyla aynı sınır — pay kartın yarısını aşarsa yok.
+  var ALT = (Number(opts.altPay) > 0 && Number(opts.altPay) < H/2) ? Number(opts.altPay) : 0;
   var ROSE = 0;
   var spanX = Math.max(1, maxX-minX), spanY = Math.max(1, maxY-minY);
   var s, offX, offY;
@@ -3855,7 +3872,21 @@ function veFeadLayoutSVG(build, W, H, opts){
       kutular.push({ x0: pad - 6, x1: pad - 6 + etW(_kMetin, 8.5), y0: 12 - 8, y1: 12 + 2 });
     }
     var _lMetin = 'dişli kenar = kayışın kaburgalı yüzü';
-    kutular.push({ x0: pad - 6, x1: pad - 6 + etW(_lMetin, 7), y0: H - 5 - 7, y1: H - 5 + 2 });
+    kutular.push({ x0: pad - 6, x1: pad - 6 + etW(_lMetin, 7), y0: H - ALT - 5 - 7, y1: H - ALT - 5 + 2 });
+    // YÜZEN ÇUBUĞUN ALANI DA SERT ENGEL (yalnız kanvas kartı — `altPay`).
+    // Çubuğun altına düşen yazı görünmüyordu: ölçüldü (12 örnek × 2 kart),
+    // krank kasnağının ADI 6 kartta, sarım açısı 2 kartta; alt not HER kartta,
+    // gerilme ölçeği her İŞLETME kartında çubuğun altındaydı — ikisi artık bandın üstünde
+    // çiziliyor ve burada engel.
+    if(ALT){
+      kutular.push({ x0: 0, x1: W, y0: H - ALT, y1: H });
+      var _tm = opts.tension;
+      if(_tm && _tm.spanN && _tm.spanN.length === (geom.spans || []).length){
+        var _gMetin = 'açıklık gerilmesi · ' + Math.round(_tm.engineRpm) + ' dev/dk';
+        kutular.push({ x0: pad - 6, x1: pad - 6 + Math.max(84, etW(_gMetin, 7)),
+                       y0: H - ALT - 38 - 7, y1: H - ALT - 22 + 2 });
+      }
+    }
     // SARIM AÇISI ETİKETİ DE BİR ENGEL. Yerleştirici bugüne kadar yalnız kayış
     // açıklıklarına ve güle bakıyordu; oysa her kasnağın ALTINDA (Y + R + 10)
     // bir açı yazısı duruyor ve üst aday doluyken ad tam oraya atılıyordu —
@@ -4240,23 +4271,27 @@ function veFeadLayoutSVG(build, W, H, opts){
     // ÖLÇEK ÇİZİLİR: renk bir SIRALAMA gösteriyor, sayıya çevrilebilmesi için
     // uçların yazılı olması şart. Gradyan değil ayrık kutucuklar — <defs>
     // kimliği aynı kanvastaki ikinci kartla çakışırdı.
-    var LB = 84, LX = f(pad - 6), LY = f(H - 34);
+    // Çubuğun ÜSTÜNDE (ALT): altında hiç görünmüyordu. Zemin hâlesi kayışın ve
+    // kasnağın üstünde de okunur tutar (açıklık sayılarının kuralı).
+    var LB = 84, LX = f(pad - 6), LY = f(H - ALT - 34);
+    var _hale = ' paint-order="stroke" stroke="var(--bg-input)" stroke-width="2.4" stroke-linejoin="round"';
     for(var q = 0; q < 12; q++)
       svg += '<rect data-ve="tension-scale" x="' + f(LX + q*LB/12) + '" y="' + LY
           + '" width="' + f(LB/12 + 0.4) + '" height="6" fill="'
           + veFeadTensionColor(tmap.min + (tmap.max-tmap.min)*(q+0.5)/12, tmap.min, tmap.max) + '"/>';
-    svg += '<text x="' + LX + '" y="' + f(H - 38) + '" font-size="7" fill="var(--text-muted)">'
+    svg += '<text data-ve="tension-legend" x="' + LX + '" y="' + f(H - ALT - 38) + '" font-size="7" fill="var(--text-muted)"' + _hale + '>'
         + 'açıklık gerilmesi · ' + Math.round(tmap.engineRpm) + ' dev/dk</text>'
-      + '<text x="' + LX + '" y="' + f(H - 22) + '" font-size="7" fill="var(--text-muted)">'
+      + '<text data-ve="tension-legend" x="' + LX + '" y="' + f(H - ALT - 22) + '" font-size="7" fill="var(--text-muted)"' + _hale + '>'
       + Math.round(tmap.min) + ' N</text>'
-      + '<text x="' + f(LX + LB) + '" y="' + f(H - 22) + '" text-anchor="end" font-size="7"'
-      + ' fill="var(--text-muted)">' + Math.round(tmap.max) + ' N</text>';
+      + '<text data-ve="tension-legend" x="' + f(LX + LB) + '" y="' + f(H - ALT - 22) + '" text-anchor="end" font-size="7"'
+      + ' fill="var(--text-muted)"' + _hale + '>' + Math.round(tmap.max) + ' N</text>';
   }
   svg += '<path data-ve="rib" d="' + _feadTeethPath(walk, geom.sense, stepMm, toothMm, 0, T, vibDef) + '" fill="none"'
       + ' stroke="var(--accent-warning)" stroke-width="1" stroke-linecap="round" opacity="0.9">'
       + '<title>Kayışın kaburgalı yüzü — dişler bu yüzün baktığı tarafı gösterir</title></path>';
-  svg += '<text data-ve="rib-legend" x="' + f(pad - 6) + '" y="' + f(H - 5) + '" font-size="7"'
-      + ' fill="var(--text-muted)">dişli kenar = kayışın kaburgalı yüzü</text>';
+  svg += '<text data-ve="rib-legend" x="' + f(pad - 6) + '" y="' + f(H - ALT - 5) + '" font-size="7"'
+      + ' fill="var(--text-muted)"' + (ALT ? ' paint-order="stroke" stroke="var(--bg-input)" stroke-width="2.4" stroke-linejoin="round"' : '')
+      + '>dişli kenar = kayışın kaburgalı yüzü</text>';
 
   ps.forEach(function(p, k){
     var def = build.order[k] ? _feadDefOf(build.order[k]) : {};
@@ -4688,7 +4723,9 @@ function veFeadLayoutCardHTML(node){
   // HANGİ ETİKET ÇİZİLECEK ARTIK KATMANLARDAN. Sarım açısı ile açıklık
   // gerilmesi aynı çizimde kalabalık yapıyor — ama bu bir TİP kuralı değil,
   // iki ön ayarın birbirinden ayrıldığı yer.
-  var svg = veFeadLayoutSVG(build, Math.max(120, W), Math.max(90, cizimH),
+  // Yazı katsayısı: çizim 1/k ölçüde üretilir, viewBox büyütür (veFeadYaziK).
+  var yk = veFeadYaziK();
+  var svg = veFeadLayoutSVG(build, Math.max(120, W) / yk, Math.max(90, cizimH) / yk,
                             { inline: true, posMode: mode, nodeId: node.id,
                               // ÇİZİM MASASI: kanvas kartı DÜZENLENEBİLİR çizimdir.
                               // Seçim/fare altı işareti ve sürükleme durumu görünüm
@@ -4710,7 +4747,7 @@ function veFeadLayoutCardHTML(node){
                               ghostLabels: kat.hayaletEt,
                               tension: tenMap,
                               // YÜZEN ÇUBUK YÖN GÜLÜNÜ ÖRTMESİN (ölçüldü).
-                              altPay: VE_FEAD_YUZ_ALT,
+                              altPay: VE_FEAD_YUZ_ALT / yk,
                               vib: vib, scn: scn,
                               animate: kin ? { dispMmS: scn ? 0 : kin.dispMmS,
                                                slow: kin.slow,
