@@ -109,10 +109,20 @@ test('Kayış Tablosu penceresi: açılır, yazılır, sıra değişir', async (
   // Kanvas kartıyken hücreler açılışta 7,1 px'e iniyordu. Kamera ne olursa
   // olsun pencerenin sayısı arayüzün kendi basamağında.
   await page.evaluate(() => { canvasZoom = 0.35; updateCanvasTransform(); });
-  const punto = await tablo.locator('.ve-fead-krt[data-ve-node] input').first().evaluate((el) =>
-    ({ css: parseFloat(getComputedStyle(el).fontSize), ekran: el.getBoundingClientRect().height }));
-  expect(punto.css).toBe(13);
-  expect(punto.ekran).toBeGreaterThan(18);          // gerçekten 13 px'lik bir alan
+  // Basamak JETONDAN okunur (--fs-lg): ölçek 2026-09-25'te bir basamak kaydı
+  // (13 → 14 px) ve sabit yazılmış sayı, kuralın kendisi değil o günkü
+  // değeriydi. Kural: kamera ne olursa olsun sayı arayüzün basamağında.
+  const punto = await tablo.locator('.ve-fead-krt[data-ve-node] input').first().evaluate((el) => {
+    const olcu = document.createElement('span');
+    olcu.style.fontSize = 'var(--fs-lg)';
+    document.body.appendChild(olcu);
+    const basamak = parseFloat(getComputedStyle(olcu).fontSize);
+    olcu.remove();
+    return { css: parseFloat(getComputedStyle(el).fontSize), basamak, ekran: el.getBoundingClientRect().height };
+  });
+  expect(punto.basamak).toBeGreaterThanOrEqual(13);
+  expect(punto.css).toBe(punto.basamak);
+  expect(punto.ekran).toBeGreaterThan(18);          // gerçekten o boyda bir alan, kamerayla küçülmemiş
 
   // ── 4) GERÇEK BİR HÜCREYE YAZMAK MODELİ DEĞİŞTİRİYOR ────────────────────
   const once = await page.evaluate(() => {

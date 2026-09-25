@@ -1084,6 +1084,9 @@ function veFeadPanelTab(nodeId, key){
   Array.prototype.forEach.call(gov.children, function(pn){
     pn.hidden = (pn.getAttribute('data-k') !== key);
   });
+  // Açılan sekmedeki tablo birimi AYNI karede karar alır — gözlemciye
+  // kalsaydı geniş tablo bir kare yatay kaydırmayla görünürdü.
+  if(typeof veTabloOlcIcinde === 'function') veTabloOlcIcinde(gov);
   return true;
 }
 

@@ -216,7 +216,7 @@ olurdu.
     **TABLO KANVASTAN İNDİ** (2026-09-23, Çizim Masası): kanvas kartıyken
     açılış yakınlaştırmasıyla küçülen bir formdu. Artık Kayış Yolu kartının
     yüzen çubuğundaki "Tablo" düğmesiyle açılan, MODAL OLMAYAN bir ÇEKMECE
-    (`veFeadTabloAc`): kanvasla ölçeklenmez (sayılar 13 px), tek başlık
+    (`veFeadTabloAc`): kanvasla ölçeklenmez (sayılar arayüzün `--fs-lg` basamağında), tek başlık
     satırı taşır, alan etiketi panelin grameriyle aynı ölçüde kalır
     (`fead-panel-gramer.spec.js`). `fead-table` tipi, paneli ve kart ölçüsü
     sabitleri KALKTI; kayıtlı kart şema 6 → 7 göçüyle silinir

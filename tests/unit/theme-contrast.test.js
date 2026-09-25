@@ -177,3 +177,28 @@ describe('aksan METİN olarak ham kullanılmıyor', () => {
     expect(css).not.toMatch(/rgba\(45,\s*138,\s*90/);
   });
 });
+
+// ── Kenar tonu zeminden AYRIŞIR (2026-09-25) ──────────────────────────────
+// Kullanıcı: "programın dokusunda bir bulanıklık var." Kenar çizgisi tuvale
+// karşı 1,22:1, panele karşı 1,34:1'di; panel ile tuvalin kendisi 1,10:1 —
+// kenar seçilmeyince göz bütün yüzeyleri tek bir soluk alan olarak okuyordu.
+// Kullanıcı iki tonu kendi ekranında karşılaştırdı ve koyusunu seçti
+// (1,56:1). Taban o seçimin altı: 1,5. Hover dinlenmedekinden belirgin kalmalı,
+// yoksa "üstüne geldim" hiçbir şey demez.
+const KENAR_TABAN = 1.5;
+describe('tema paleti — kenar tonu zeminden ayrışır', () => {
+  temalar.forEach((t) => {
+    test(`${t.ad}: --border-color tuvale ve panele karşı ≥ ${KENAR_TABAN}:1`, () => {
+      ['bg-primary', 'bg-secondary'].forEach((z) => {
+        const r = oran(hexi(t, 'border-color'), hexi(t, z));
+        expect(`border-color / ${z}: ${r.toFixed(2)}`)
+          .toBe(`border-color / ${z}: ${Math.max(r, KENAR_TABAN).toFixed(2)}`);
+      });
+    });
+    test(`${t.ad}: hover kenarı dinlenmedekinden belirgin (×1,2)`, () => {
+      const dinlen = oran(hexi(t, 'border-color'), hexi(t, 'bg-primary'));
+      const hover = oran(hexi(t, 'border-hover'), hexi(t, 'bg-primary'));
+      expect(hover).toBeGreaterThan(dinlen * 1.2);
+    });
+  });
+});

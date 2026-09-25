@@ -67,6 +67,28 @@ describe('karar ÖLÇÜMDEN — liste değil', () => {
   });
 });
 
+// SEKME AÇILINCA KARAR AYNI KAREDE (2026-09-25). Gözlemcinin sonraki karesini
+// beklemek, sekmeye geçer geçmez geniş tabloyu yatay kaydırmayla gösteriyordu
+// (mufettis-sigma.spec, FEAD Çözücü "Çevrim" 1217/359 px, yük altında).
+describe('sekme açılınca karar AYNI KAREDE — veTabloOlcIcinde', () => {
+  test('gizli sekmede bekleyen birim, çağrı anında katlanır', () => {
+    const panel = panelKur('fead-duty:s1', 1162, 0);
+    T.veTabloKatla(panel);                                // gizli: karar yok
+    const birim = panel.querySelector('[data-ve-tablo]');
+    expect(birim.classList.contains('ve-tablo--katli')).toBe(false);
+    Object.defineProperty(panel.querySelector('.ve-fp-card'), 'clientWidth', { configurable: true, get: () => 359 });
+    T.veTabloOlcIcinde(panel);
+    expect(birim.classList.contains('ve-tablo--katli')).toBe(true);
+    expect(panel.querySelector('.ve-tablo-kart').hidden).toBe(false);
+  });
+
+  test('hazırlanmamış birime dokunmaz — kartı olmayan birim katlanırsa tablo kaybolurdu', () => {
+    const panel = panelKur('fead-duty:s2', 1162, 359);    // veTabloKatla ÇAĞRILMADI
+    T.veTabloOlcIcinde(panel);
+    expect(panel.querySelector('[data-ve-tablo]').classList.contains('ve-tablo--katli')).toBe(false);
+  });
+});
+
 describe('açılır pencere — tablo TAŞINIR, kopyalanmaz', () => {
   test('pencere birimin KENDİSİNİ taşıyor (olay işleyicileri aynı modeli yazar)', () => {
     const panel = panelKur('fead-duty:s1', 1162, 359);
