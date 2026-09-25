@@ -318,3 +318,45 @@ describe('düğüm ADI dik açılı telin kanalına girmiyor', () => {
     });
   });
 });
+
+describe('"Başlangıç ve Örnekler" yeri ÖRNEĞİN KENDİSİNDEN — hiçbir ada ve kutuya binmiyor', () => {
+  // ÖLÇÜLDÜ (gerçek tarayıcı, 1920×1080): yükleyici tabanı görünür alanın
+  // ortasından hesaplıyordu; örnek dosyası kendi kamerasını da yüklediği için
+  // düğüm pencereye göre kayıp zincirin üstüne, motorun uzun ADININ içine
+  // düşüyordu — 15 örneğin 6'sında (yazı bir basamak büyümeden önce 2'sinde).
+  // Yukarıdaki kapı yalnız KUTULARA bakıyordu; adlar kutudan geniş.
+  global.VE_ARAC_PERFORMANS_LAYOUT = VE_ARAC_PERFORMANS_LAYOUT;
+  const { veApExampleSlot } = require('../../js/cp-arac-example.js');
+  const PX = 7.0;                          // en geniş ölçülen 6,77 px/karakter
+  const adi = (n) => n.customName || (componentDefs[n.type] || {}).name || n.type;
+  // Ad kutusu (css/styles.css: yanda 7 px, alt/üstte 4 px boşluk; ~16 px satır).
+  const adKutusu = (n, w, h, pos) => {
+    const g = adi(n).length * PX, cx = n.x + w / 2, cy = n.y + h / 2;
+    if (pos === 'right') return { x0: n.x + w + 7, x1: n.x + w + 7 + g, y0: cy - 8, y1: cy + 8 };
+    if (pos === 'left') return { x0: n.x - 7 - g, x1: n.x - 7, y0: cy - 8, y1: cy + 8 };
+    if (pos === 'top') return { x0: cx - g / 2, x1: cx + g / 2, y0: n.y - 20, y1: n.y };
+    return { x0: cx - g / 2, x1: cx + g / 2, y0: n.y + h, y1: n.y + h + 20 };
+  };
+  const kesisir = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+
+  test.each(EXAMPLES)('%s', (_f, doc) => {
+    const slot = veApExampleSlot(doc.nodes);
+    const eng = doc.nodes.find((n) => n.type === 'engine');
+    const hucre = VE_ARAC_PERFORMANS_LAYOUT.find((it) => it.type === 'engine');
+    expect(slot).toEqual({ x: eng.x - hucre.lx + 30, y: eng.y - hucre.ly - 40 });
+
+    const d = veNodeDefaultSize('ap-example');
+    const ap = { type: 'ap-example', x: slot.x, y: slot.y };
+    const apKutu = { x0: ap.x, x1: ap.x + d.w, y0: ap.y, y1: ap.y + d.h };
+    const apAd = adKutusu(ap, d.w, d.h, 'bottom');
+    doc.nodes.forEach((n) => {
+      const kutu = { x0: n.x, x1: n.x + n.width, y0: n.y, y1: n.y + n.height };
+      const ad = adKutusu(n, n.width, n.height, (n.data && n.data.labelPos) || 'bottom');
+      const etiket = '"' + adi(n) + '"';
+      expect([etiket, 'kutu×kutu', kesisir(apKutu, kutu)]).toEqual([etiket, 'kutu×kutu', false]);
+      expect([etiket, 'ad×kutu', kesisir(apAd, kutu)]).toEqual([etiket, 'ad×kutu', false]);
+      expect([etiket, 'kutu×ad', kesisir(apKutu, ad)]).toEqual([etiket, 'kutu×ad', false]);
+      expect([etiket, 'ad×ad', kesisir(apAd, ad)]).toEqual([etiket, 'ad×ad', false]);
+    });
+  });
+});

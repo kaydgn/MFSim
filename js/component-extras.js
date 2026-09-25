@@ -2331,11 +2331,22 @@ function veCloseManualProfileModal() {
 function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
   var canvas = targetCanvas || document.getElementById('ve-road-mseg-canvas-' + nodeId);
   if(!canvas) return;
-  var ctx = canvas.getContext('2d');
-  // Expanded modal: CSS boyutlarını kullan, küçük panel: pixel boyutlarını kullan
-  var W = targetCanvas ? (canvas.offsetWidth || canvas.width) : canvas.width;
-  var H = targetCanvas ? (canvas.offsetHeight || canvas.height) : canvas.height;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  var ctx, W, H;
+  if(targetCanvas) {
+    // Büyütülmüş pencere: tampon açılışta dpr ile kuruldu (veManualSegExpandProfile)
+    ctx = canvas.getContext('2d');
+    W = canvas.offsetWidth || canvas.width;
+    H = canvas.offsetHeight || canvas.height;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  } else {
+    // Panel: tampon GÖRÜNEN ölçüden (veFitCanvas). Sabit 380×160 tampon panelin
+    // genişliğine esnetiliyordu — 661 px'lik panelde yazı yatayda ×1,74
+    // gerilmiş ve bulanıktı (ölçüldü).
+    canvas._veRedraw = function() { _veManualSegDrawProfile(nodeId, segs); };
+    var fit = (typeof veFitCanvas === 'function') ? veFitCanvas(canvas, 160) : null;
+    if(!fit) return;
+    ctx = fit.ctx; W = fit.w; H = fit.h;
+  }
 
   if(!segs || segs.length === 0) return;
 
@@ -2395,7 +2406,10 @@ function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
     var sd = parseFloat(segs[si].distance) || 0;
     var dir = segs[si].direction || 'flat';
     var x1 = toX(segStart), x2 = toX(segStart + sd);
-    var fillColor = dir === 'down' ? 'color-mix(in srgb, var(--accent-success) 8%, transparent)' : dir === 'up' ? 'rgba(239,68,68,0.08)' : 'rgba(128,128,128,0.04)';
+    // Tuval CSS fonksiyonu ÇÖZEMEZ: `color-mix(… var(--…))` sessizce yok
+    // sayılıyor ve iniş segmenti bir önceki rengi — %60 gri segment adı
+    // rengini — alıyordu. Jeton köprüden geçer (veThemeRgba).
+    var fillColor = dir === 'down' ? veThemeRgba('--accent-success', 0.08, 'rgba(34,197,94,0.08)') : dir === 'up' ? 'rgba(239,68,68,0.08)' : 'rgba(128,128,128,0.04)';
     ctx.fillStyle = fillColor;
     ctx.fillRect(x1, pad.t, x2 - x1, ph);
     // Segment sınır çizgisi
@@ -2409,7 +2423,7 @@ function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
     // Segment ismi
     var midX = (x1 + x2) / 2;
     ctx.fillStyle = 'rgba(128,128,128,0.6)';
-    ctx.font = veThemeFont(9);
+    ctx.font = veThemeFont('micro');
     ctx.textAlign = 'center';
     var segLabel = segs[si].name || ('S' + (si + 1));
     if(segLabel.length > 10) segLabel = segLabel.substring(0, 9) + '…';
@@ -2462,19 +2476,21 @@ function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
 
   // Y ekseni etiketleri (irtifa)
   ctx.fillStyle = 'rgba(128,128,128,0.7)';
-  ctx.font = veThemeFont(9);
+  ctx.font = veThemeFont('micro');
   ctx.textAlign = 'right';
   for(var ly = 0; ly <= 4; ly++) {
     var val = yMin + (1 - ly / 4) * yRange;
     ctx.fillText(val.toFixed(0) + ' m', pad.l - 3, pad.t + (ly / 4) * ph + 3);
   }
 
-  // X ekseni etiketleri (mesafe) — görünen aralığı izler
+  // X ekseni etiketleri (mesafe) — görünen aralığı izler. Uçtaki etiket
+  // tuvalin İÇİNE kıstırılır: ortalı yazılınca sağ ucu kesiliyordu.
   ctx.textAlign = 'center';
   for(var lx = 0; lx <= 4; lx++) {
     var dVal = xLo + (lx / 4) * (xHi - xLo);
     var label = dVal >= 1000 ? (dVal / 1000).toFixed(1) + ' km' : dVal.toFixed(0) + ' m';
-    ctx.fillText(label, toX(dVal), H - 4);
+    var yarim = ctx.measureText(label).width / 2;
+    ctx.fillText(label, Math.max(yarim + 1, Math.min(toX(dVal), W - yarim - 1)), H - 4);
   }
 
   // ── Etkileşim (js/panel-chart.js) ──
@@ -2511,7 +2527,9 @@ function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
         return h;
       }
     });
-    pcDrawHint(ctx, canvas, pad.l, pad.t, pw, true);
+    // İpucu segment adlarının ALTINDA (ikisi de çizimin üst şeridinde duruyor
+    // ve üst üste yazılıyordu).
+    pcDrawHint(ctx, canvas, pad.l, pad.t + veThemeFs('micro') + 4, pw, true);
   }
 }
 

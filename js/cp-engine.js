@@ -2671,7 +2671,7 @@ function updateVEMotorChart(nodeId) {
   
   if(torquePoints.length < 2 && powerPoints.length < 2) {
     ctx.fillStyle = veThemeRgba('--text-secondary', 1);
-    ctx.font = veThemeFont(12);
+    ctx.font = veThemeFont('md');
     ctx.textAlign = 'center';
     ctx.fillText('En az 2 veri noktası gerekli', rect.width / 2, 100);
     return;
@@ -2749,7 +2749,7 @@ function updateVEMotorChart(nodeId) {
   
   // X ekseni etiketleri
   ctx.fillStyle = VE_ENG_C.etiket;
-  ctx.font = veThemeFont(9);
+  ctx.font = veThemeFont('micro');
   ctx.textAlign = 'center';
   for(var i = 0; i <= 4; i++) {
     var xVal = xMin + (xMax - xMin) * i / 4;
@@ -3006,7 +3006,7 @@ function updateVENetChart(nodeId) {
   ctx.beginPath(); ctx.moveTo(margin.left, margin.top + plotHeight); ctx.lineTo(margin.left + plotWidth, margin.top + plotHeight); ctx.stroke();
   
   // X etiketleri
-  ctx.fillStyle = VE_ENG_C.etiket; ctx.font = veThemeFont(9); ctx.textAlign = 'center';
+  ctx.fillStyle = VE_ENG_C.etiket; ctx.font = veThemeFont('micro'); ctx.textAlign = 'center';
   for(var i = 0; i <= 4; i++) {
     var xVal = xMin + (xMax - xMin) * i / 4;
     ctx.fillText(Math.round(xVal), xScale(xVal), margin.top + plotHeight + 15);
@@ -3052,7 +3052,7 @@ function updateVENetChart(nodeId) {
     ctx.moveTo(xScale(governed), margin.top);
     ctx.lineTo(xScale(governed), margin.top + plotHeight);
     ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = VE_ENG_C.governed; ctx.font = veThemeFont(8); ctx.textAlign = 'right';
+    ctx.fillStyle = VE_ENG_C.governed; ctx.font = veThemeFont('micro'); ctx.textAlign = 'right';
     ctx.fillText('governed', xScale(governed) - 3, margin.top + 8);
   }
 

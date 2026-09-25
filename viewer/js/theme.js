@@ -119,7 +119,23 @@ function veThemeFontFamily() {
 }
 // Tuvalin `font` kısaltması: '600 11px <aile>'. Grafik kütüphaneleri (Plotly)
 // yalnız aileyi ister → `veThemeFontFamily()`.
-function veThemeFont(px, weight) {
+// Tuval yazı BOYU ölçekten (2026-09-25) — js/theme.js ile birebir.
+function veThemeFs(ad) {
+  // Yedek yalnız jeton okunamazsa (test ortamı); CSS'le aynılığını
+  // theme-font.test.js tutar. İşlevin İÇİNDE: görüntüleyiciye tek parça taşınır.
+  var yedek = { micro: 10, tiny: 11, body: 12, md: 13, lg: 14, title: 16 };
+  var v = '', kok = 16;
+  try {
+    var cs = getComputedStyle(document.documentElement);
+    v = cs.getPropertyValue('--fs-' + ad).trim();
+    kok = parseFloat(cs.fontSize) || 16;
+  } catch(e) {}
+  var m = /^([\d.]+)(rem|px)$/.exec(v);
+  if(!m) return yedek[ad] || yedek.body;
+  return m[2] === 'rem' ? parseFloat(m[1]) * kok : parseFloat(m[1]);
+}
+function veThemeFont(boy, weight) {
+  var px = (typeof boy === 'string') ? veThemeFs(boy) : boy;
   return (weight ? weight + ' ' : '') + px + 'px ' + veThemeFontFamily();
 }
 

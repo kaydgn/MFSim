@@ -376,6 +376,21 @@ function _apTopoState(j){
   return null;
 }
 
+// "Başlangıç ve Örnekler" düğümünün örnek yüklendikten sonraki yeri:
+// yerleşim-yereli (30, −40). TABAN ÖRNEĞİN KENDİ DÜĞÜMÜNDEN — motor,
+// yerleşimdeki hücresinden geri sayılır. Eskiden taban görünür alanın
+// ortasından (veArrangeModuleBase) hesaplanıyordu; örnek dosyası kendi
+// kamerasını da yüklediği için düğüm pencere ölçüsüne göre kayıp zincirin
+// üstüne, motorun uzun ADININ içine düşüyordu (ölçüldü: 15 örneğin 6'sı).
+function veApExampleSlot(list){
+  var L = (typeof VE_ARAC_PERFORMANS_LAYOUT!=='undefined') ? VE_ARAC_PERFORMANS_LAYOUT : null;
+  var cell = L ? L.filter(function(it){ return it.type==='engine'; })[0] : null;
+  var eng = (list||[]).filter(function(n){ return n.type==='engine'; })[0];
+  var base = (eng && cell) ? { x: eng.x - cell.lx, y: eng.y - cell.ly }
+    : ((typeof veArrangeModuleBase==='function' && L) ? veArrangeModuleBase(L) : { x:3000, y:3000 });
+  return { x: base.x + 30, y: base.y - 40 };
+}
+
 function veApLoadExample(nodeId){
   var node = (typeof nodes!=='undefined') ? nodes.find(function(n){ return n.id===nodeId; }) : null;
   var key = (node && node.data && node.data.exampleKey) || (veApExampleList()[0]||{}).id;
@@ -398,9 +413,8 @@ function veApLoadExample(nodeId){
     // Başka örnek yüklenebilsin diye "Başlangıç ve Örnekler" düğümünü geri koy.
     if(typeof nodes!=='undefined' && !nodes.some(function(n){ return n.type==='ap-example'; })
        && typeof createNode==='function'){
-      var base = (typeof veArrangeModuleBase==='function' && typeof VE_ARAC_PERFORMANS_LAYOUT!=='undefined')
-        ? veArrangeModuleBase(VE_ARAC_PERFORMANS_LAYOUT) : { x:3000, y:3000 };
-      var created = createNode('ap-example', base.x + 30, base.y - 40);
+      var slot = veApExampleSlot(nodes);
+      var created = createNode('ap-example', slot.x, slot.y);
       if(created){ created.data = created.data || {}; created.data.exampleKey = ex.id; }
     }
     if(typeof saveState==='function') saveState();
@@ -437,6 +451,7 @@ if (typeof module !== 'undefined' && module.exports) {
     AP_EXAMPLES: AP_EXAMPLES,
     veApExampleList: veApExampleList,
     veApExample: veApExample,
+    veApExampleSlot: veApExampleSlot,
     getApExamplePropertiesHTML: getApExamplePropertiesHTML,
     _apTopoState: _apTopoState
   };

@@ -249,7 +249,10 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   Başlık, gövde, etiket, sayı, form ve TUVAL dâhil. İNDİRİLEN BELGELER gömülü
   Inter'le yazar (A4 düzenleri onunla ölçüldü); `veThemeFontFaceCss()` yığındaki
   GÖMÜLÜ aileyi gömer, ilk aileyi değil. Rakam hizası `tabular-nums` ile. Tuval
-  `var()` çözemez → `veThemeFont(px, ağırlık)`. Çıplak aile adı yazılmaz.
+  `var()` çözemez → yüz VE BOY köprüden: `veThemeFont('tiny', ağırlık)` —
+  sayıyla boy yazılmaz (ölçek büyüyünce grafikler kıpırdamıyordu); renk de
+  köprüden (`veThemeRgba`), çünkü `color-mix(`/`var(--` tuvalde sessizce yok
+  sayılır. Kapı: `theme-font.test.js`. Çıplak aile adı yazılmaz.
   İstisnalar: hizası BOŞLUKLA kurulmuş düz metin (TXT rapor `<pre>`) ve KaTeX.
   Ölçek tabanı 10 px, gövde 12 px; kenar tonu zemine ≥ 1,5:1 (kullanıcı
   kararları). Kapı: `tek-yazi-tipi.test.js` + `.spec.js` · `typography-scale` ·

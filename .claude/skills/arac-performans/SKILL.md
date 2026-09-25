@@ -96,4 +96,8 @@ doğrulanmış değerlere sabitlendi ve `arac-example-data.test.js` onları tutu
 Bir örneğin kütlesini, alanını, aks oranını ya da vites profilini "daha güzel
 sonuç versin diye" değiştirmek, kalibrasyonun altındaki zemini kaydırmaktır.
 Yerleşimleri de kapılı (`arac-example-layout.test.js`): şaft ekseni yatay,
-zincir `curve`, dal `stepped`, teller ad üstünden geçmez.
+zincir `curve`, dal `stepped`, teller ad üstünden geçmez. Yüklemeden sonra
+geri konan "Başlangıç ve Örnekler" düğümünün yeri **örneğin kendi motorundan**
+sayılır (`veApExampleSlot`), kameradan DEĞİL — örnek dosyası kendi kamerasını
+da yüklüyor ve kamera tabanlı yer pencereye göre kayıp motorun uzun adının
+içine düşüyordu (15 örneğin 6'sı). Kapı: aynı dosya → *"ÖRNEĞİN KENDİSİNDEN"*.

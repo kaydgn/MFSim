@@ -420,6 +420,14 @@ function showNodeProperties(node) {
     setTimeout(function() {
       veInitRoadMap(node.id);
     }, 400);
+    // Elle segment kipi: özet ve profil panel AÇILINCA doldurulur. Yalnız
+    // segment değişince dolduruluyordu — kayıtlı bir yol boş tuval ve "-"
+    // özetle açılıyordu (ölçüldü).
+    var _rd = node.data || {};
+    if(_rd.egimMode === 'manuel' && (_rd.manualSegments || []).length &&
+       typeof _veManualSegRefresh === 'function') {
+      requestAnimationFrame(function() { _veManualSegRefresh(node.id); });
+    }
   }
 
   // Takoz Çözücü: hesap YALNIZ "▶ Hesapla" düğmesiyle koşar (otomatik tetik YOK).

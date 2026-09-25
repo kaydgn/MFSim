@@ -1345,7 +1345,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
   ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, H - padB); ctx.lineTo(W - padR, H - padB); ctx.stroke();
 
   // Y etiketleri
-  ctx.fillStyle = textColor; ctx.font = veThemeFont(9); ctx.textAlign = 'right';
+  ctx.fillStyle = textColor; ctx.font = veThemeFont('micro'); ctx.textAlign = 'right';
   for(var ly = Math.ceil(yMin / yStep) * yStep; ly <= yMax; ly += yStep) {
     ctx.fillText('%' + ly.toFixed(0), padL - 4, toY(ly) + 3);
   }
@@ -1360,22 +1360,24 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
   else xStep = 5000;
   for(var lx = 0; lx <= xMax; lx += xStep) {
     if(lx < xMin) continue;
-    ctx.fillText(lx.toFixed(0), toX(lx), H - padB + 14);
+    // Uçtaki etiket tuvalin İÇİNE kıstırılır (ortalı yazılınca sağ ucu kesiliyordu).
+    var xt = lx.toFixed(0), xYarim = ctx.measureText(xt).width / 2;
+    ctx.fillText(xt, Math.min(toX(lx), W - xYarim - 1), H - padB + 14);
   }
 
   // Eksen başlıkları
-  ctx.fillStyle = headColor; ctx.font = veThemeFont(9.5, 600); ctx.textAlign = 'center';
+  ctx.fillStyle = headColor; ctx.font = veThemeFont('micro', 600); ctx.textAlign = 'center';
   ctx.fillText('Mesafe (m)', padL + plotW / 2, H - 3);
   ctx.save(); ctx.translate(10, padT + plotH / 2); ctx.rotate(-Math.PI / 2);
   ctx.fillText('Eğim (%)', 0, 0); ctx.restore();
 
   // Başlık
-  ctx.fillStyle = headColor; ctx.font = veThemeFont(10.5, 600); ctx.textAlign = 'center';
+  ctx.fillStyle = headColor; ctx.font = veThemeFont('tiny', 600); ctx.textAlign = 'center';
   ctx.fillText('Mesafe — Eğim Profili', padL + plotW / 2, 14);
 
   // Zoom göstergesi
   if(zs > 1.05 || zs < 0.95) {
-    ctx.fillStyle = 'rgba(106,27,154,0.85)'; ctx.font = veThemeFont(8, 600); ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(106,27,154,0.85)'; ctx.font = veThemeFont('micro', 600); ctx.textAlign = 'right';
     ctx.fillText(zs.toFixed(1) + 'x', W - padR - 26, padT - 4);
   }
 
@@ -1463,7 +1465,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
     ctx.setLineDash([]);
     // Etiket
     ctx.fillStyle = veThemeRgba('--accent-warning', 1);
-    ctx.font = veThemeFont(8, 600);
+    ctx.font = veThemeFont('micro', 600);
     ctx.textAlign = 'left';
     ctx.fillText('Ort: %' + routeAvgGrade.toFixed(2), padL + 4, avgY - 4);
   }
@@ -1495,7 +1497,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
           ctx.stroke();
           ctx.setLineDash([]);
           ctx.fillStyle = veThemeRgba('--accent-warning', 1);
-          ctx.font = veThemeFont(9, 700);
+          ctx.font = veThemeFont('micro', 700);
           ctx.textAlign = 'center';
           ctx.fillText('Seçim Ort: %' + sel.avgGrade.toFixed(2), (selX1 + selX2) / 2, selAvgY - 6);
         }
@@ -1508,7 +1510,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
   // ── SavGol filtre bilgisi ──
   ctx.save();
   ctx.fillStyle = 'rgba(255,152,0,0.6)';
-  ctx.font = veThemeFont(7.5, 600);
+  ctx.font = veThemeFont('micro', 600);
   ctx.textAlign = 'right';
   ctx.fillText('SavGol Filtre', W - padR - 4, padT + 12);
   ctx.restore();
@@ -2020,7 +2022,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
   ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, H - padB); ctx.lineTo(W - padR, H - padB); ctx.stroke();
 
   // Y etiketleri (rakım)
-  ctx.fillStyle = textColor; ctx.font = veThemeFont(9); ctx.textAlign = 'right';
+  ctx.fillStyle = textColor; ctx.font = veThemeFont('micro'); ctx.textAlign = 'right';
   for(var ly = Math.ceil(yMin / yStep) * yStep; ly <= yMax; ly += yStep) {
     ctx.fillText(ly.toFixed(0) + 'm', padL - 4, toY(ly) + 3);
   }
@@ -2035,17 +2037,19 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
   else xStep = 5000;
   for(var lx = 0; lx <= xMax; lx += xStep) {
     if(lx < xMin) continue;
-    ctx.fillText(lx.toFixed(0), toX(lx), H - padB + 14);
+    // Uçtaki etiket tuvalin İÇİNE kıstırılır (ortalı yazılınca sağ ucu kesiliyordu).
+    var xt = lx.toFixed(0), xYarim = ctx.measureText(xt).width / 2;
+    ctx.fillText(xt, Math.min(toX(lx), W - xYarim - 1), H - padB + 14);
   }
 
   // Eksen başlıkları
-  ctx.fillStyle = headColor; ctx.font = veThemeFont(9.5, 600); ctx.textAlign = 'center';
+  ctx.fillStyle = headColor; ctx.font = veThemeFont('micro', 600); ctx.textAlign = 'center';
   ctx.fillText('Mesafe (m)', padL + plotW / 2, H - 3);
   ctx.save(); ctx.translate(10, padT + plotH / 2); ctx.rotate(-Math.PI / 2);
   ctx.fillText('Rakım (m)', 0, 0); ctx.restore();
 
   // Başlık
-  ctx.fillStyle = headColor; ctx.font = veThemeFont(10.5, 600); ctx.textAlign = 'center';
+  ctx.fillStyle = headColor; ctx.font = veThemeFont('tiny', 600); ctx.textAlign = 'center';
   var sampleInfo = pts.length + ' sample';
   if(pts.length > 1) {
     var avgInterval = (totalDist / (pts.length - 1));
@@ -2055,14 +2059,14 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
 
   // Zoom göstergesi
   if(zs > 1.05 || zs < 0.95) {
-    ctx.fillStyle = 'rgba(106,27,154,0.85)'; ctx.font = veThemeFont(8, 600); ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(106,27,154,0.85)'; ctx.font = veThemeFont('micro', 600); ctx.textAlign = 'right';
     ctx.fillText(zs.toFixed(1) + 'x', W - padR - 26, padT - 4);
   }
 
   // Başlangıç / Bitiş etiketleri (rakım değerleri ile)
   var startElev = pts[0].elev.toFixed(0);
   var endElev = pts[pts.length - 1].elev.toFixed(0);
-  ctx.font = veThemeFont(8, 600);
+  ctx.font = veThemeFont('micro', 600);
   ctx.fillStyle = veThemeRgba('--seri-4', 1); ctx.textAlign = 'left';
   ctx.fillText('A ' + startElev + 'm ▸', padL + 4, H - padB - 4);
   ctx.fillStyle = veThemeRgba('--seri-2', 1); ctx.textAlign = 'right';
@@ -2106,6 +2110,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
 
   // ── Kaydedilmiş eğim çizgileri ──
   var lines = _veAltGradeLines[nodeId] || [];
+  var egimEngel = [];   // durak etiketleri bunların altına iner
   for(var gli = 0; gli < lines.length; gli++) {
     var gl = lines[gli];
     var glX1 = toX(gl.x1), glY1 = toY(gl.y1);
@@ -2126,7 +2131,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
     var glMidX = (glX1 + glX2) / 2;
     var glMidY = Math.min(glY1, glY2) - 8;
     ctx.fillStyle = gl.color;
-    ctx.font = veThemeFont(9, 700);
+    ctx.font = veThemeFont('micro', 700);
     ctx.textAlign = 'center';
     var glLabel = '%' + gl.grade.toFixed(2) + '  Δh:' + gl.deltaH.toFixed(1) + 'm';
     // Arka plan kutusu
@@ -2135,17 +2140,26 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
     ctx.fillRect(glMidX - glLabelW / 2, glMidY - 9, glLabelW, 14);
     ctx.fillStyle = gl.color;
     ctx.fillText(glLabel, glMidX, glMidY + 1);
-    // Numara
+    egimEngel.push({ x0: glMidX - glLabelW / 2 - 18, x1: glMidX + glLabelW / 2, ty: glMidY + 1 });
+    // Numara — etiket kutusunun SOLUNDA, bitişik. Çizginin başına konunca
+    // kısa çizgide etiketin üstüne biniyordu (ölçüldü).
+    var noX = glMidX - glLabelW / 2 - 10, noY = glMidY - 2;
     ctx.fillStyle = 'rgba(15,18,24,0.85)';
-    ctx.beginPath(); ctx.arc(glX1 + 10, glY1 - 10, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(noX, noY, 8, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = gl.color;
-    ctx.font = veThemeFont(8, 700);
-    ctx.fillText('' + (gli + 1), glX1 + 10, glY1 - 7);
+    ctx.font = veThemeFont('micro', 700);
+    ctx.fillText('' + (gli + 1), noX, noY + 3.5);
   }
 
   // ── Waypoint referans noktaları ──
+  // Ad ve mesafe TEK etiket, çizimin İÇİNDE, üst şeritte; yan yana düşen
+  // etiketler alt alta dizilir (pcEtiketYerlestir). Eskiden ad çizimin üst
+  // kenarından yukarı DÖNDÜRÜLÜYOR, mesafe alt kenarın altına yazılıyordu —
+  // ikisi de kırpma bölgesinin dışında kaldığı için hiç görünmüyordu (ölçüldü).
   _veWaypointRestore(nodeId);
   var wpList = _veRouteWaypoints[nodeId] || [];
+  var wpEtiket = [];
+  ctx.font = veThemeFont('micro', 600);
   for(var wi = 0; wi < wpList.length; wi++) {
     var wp = wpList[wi];
     var wpX = toX(wp.dist);
@@ -2168,28 +2182,21 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
     ctx.beginPath(); ctx.arc(wpX, wpY, 4.5, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = veThemeRgba('--bg-input', 1); ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(wpX, wpY, 4.5, 0, Math.PI * 2); ctx.stroke();
-    // İsim etiketi (üstte, çapraz)
-    ctx.save();
-    ctx.translate(wpX, padT + 4);
-    ctx.rotate(-Math.PI / 4);
-    ctx.font = veThemeFont(8, 600);
-    ctx.textAlign = 'left';
-    // Arka plan kutusu
-    var wpLabel = wp.name;
+    // Etiket kutusu: çizginin sağına açılır, sağ kenara yetişirse soluna
+    var wpLabel = wp.name + ' · ' + (wp.dist / 1000).toFixed(1) + ' km';
     var wpLabelW = ctx.measureText(wpLabel).width + 6;
-    ctx.fillStyle = 'rgba(15,18,24,0.82)';
-    ctx.fillRect(-2, -9, wpLabelW, 12);
-    ctx.fillStyle = wpColor;
-    ctx.fillText(wpLabel, 1, 0);
-    ctx.restore();
-    // Mesafe etiketi (altta)
-    ctx.font = veThemeFont(7, 500);
-    ctx.fillStyle = wpColor;
-    ctx.textAlign = 'center';
-    ctx.globalAlpha = 0.7;
-    ctx.fillText((wp.dist / 1000).toFixed(1) + 'km', wpX, padT + plotH + 10);
-    ctx.globalAlpha = 1.0;
+    var wpX0 = (wpX + 3 + wpLabelW > W - padR) ? wpX - 3 - wpLabelW : wpX + 3;
+    wpEtiket.push({ x0: wpX0, x1: wpX0 + wpLabelW, y: padT + 11, t: wpLabel, renk: wpColor });
   }
+  var wpFs = veThemeFs('micro');
+  pcEtiketYerlestir(wpEtiket, wpFs + 5, egimEngel);
+  ctx.textAlign = 'left';
+  wpEtiket.forEach(function(e) {
+    ctx.fillStyle = 'rgba(15,18,24,0.82)';
+    ctx.fillRect(e.x0, e.ty - wpFs + 1, e.x1 - e.x0, wpFs + 3);
+    ctx.fillStyle = e.renk;
+    ctx.fillText(e.t, e.x0 + 3, e.ty);
+  });
 
   // ── Çizim önizleme (aktif çizgi çizme) ──
   if(canvas._altDrawPreview) {
@@ -2214,7 +2221,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
       var pvDh = pvLeftY - pvRightY;
       var pvGrade = (pvDh / pvDist) * 100;
       ctx.fillStyle = dp.color;
-      ctx.font = veThemeFont(10, 700);
+      ctx.font = veThemeFont('tiny', 700);
       ctx.textAlign = 'center';
       var pvLabel = '%' + pvGrade.toFixed(2) + '  Δh:' + pvDh.toFixed(1) + 'm  (' + pvDist.toFixed(0) + 'm)';
       var pvMidX = (toX(dp.x1) + toX(dp.x2)) / 2;

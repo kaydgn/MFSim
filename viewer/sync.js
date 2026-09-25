@@ -135,6 +135,11 @@ var CARRIED = [
     neden: 'tuval yazı yüzü köprüsü — aile' },
   { fn: 'veThemeFont', from: 'js/theme.js', to: 'viewer/js/theme.js', kip: 'birebir',
     neden: 'tuval yazı yüzü köprüsü — font kısaltması' },
+  // Tuvalin yazı BOYU da ölçekten (2026-09-25): trace-view.js boyu basamak
+  // adıyla ister ('tiny'). Kopya ayrışırsa görüntüleyicinin grafikleri eski
+  // boyda kalır.
+  { fn: 'veThemeFs', from: 'js/theme.js', to: 'viewer/js/theme.js', kip: 'birebir',
+    neden: 'tuval yazı boyu köprüsü — ölçek basamağı' },
 
   // board.js'e elden taşınmış olanlar (2026-08 ölçümü: 28 üst-seviye
   // fonksiyonun 28'i de js/ altında AYNI ADLA duruyor; bunların 8'i bayt bayt
