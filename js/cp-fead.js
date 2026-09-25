@@ -5076,16 +5076,20 @@ function veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes, katDugme){
   var cozulen = {};
   rows.forEach(function(r){ if(r.ok) cozulen[r.key] = r; });
 
+  // KISA AD (`kisa`: Mean · Maks · Serbest…), çizimin hayalet etiketleriyle
+  // aynı dil. Tam ad ("Çalışma (Mean)") çubuğun seçicisine sığmıyordu —
+  // ölçüldü, 105 px isterken 51 px alıyordu — ve çizimin sol üst künyesinde
+  // zaten tam hâliyle yazılı; seçeneğin ipucunda da duruyor.
   var opts = '';
   VE_FEAD_POSITIONS.forEach(function(P){
     var r = cozulen[P.key];
     if(!r && P.key !== 'mean') return;              // çözülemeyen konum listede yok
-    opts += '<option value="' + P.key + '"' + (mode === P.key ? ' selected' : '') + '>'
-          + _feadEsc(P.label) + (r ? ' · ' + _feadFmt(r.relDeg, 1) + '°' : '') + '</option>';
+    opts += '<option value="' + P.key + '" title="' + _feadEsc(P.label) + '"' + (mode === P.key ? ' selected' : '') + '>'
+          + _feadEsc(P.kisa || P.label) + (r ? ' · ' + _feadFmt(r.relDeg, 1) + '°' : '') + '</option>';
   });
   var cok = Object.keys(cozulen).length > 1;
-  opts += '<option value="all"' + (mode === 'all' ? ' selected' : '') + '>'
-        + 'TÜMÜ — üst üste' + (cok ? '' : ' (tek konum)') + '</option>';
+  opts += '<option value="all" title="Tümü — üst üste"' + (mode === 'all' ? ' selected' : '') + '>'
+        + 'Tümü' + (cok ? '' : ' (tek konum)') + '</option>';
 
   // ── DEVİR (animasyon) — duty tablosundan ──────────────────────────────────
   // AYNI SATIRDA duruyor, ikinci bir şerit açılmıyor: kartın 340 px'inden her
@@ -5095,7 +5099,7 @@ function veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes, katDugme){
   // SENARYO ilk sırada, Durgun'un hemen ardında: "kart ne gösteriyor"
   // sorusunun cevabı tek seçicide kalsın (ikinci bir şerit 22 px demekti).
   var rOpt = '<option value="off"' + (rpm === 'off' ? ' selected' : '') + '>Durgun</option>'
-           + '<option value="scn"' + (rpm === 'scn' ? ' selected' : '') + '>Senaryo — motor çevrimi</option>';
+           + '<option value="scn" title="Senaryo — motor çevrimi"' + (rpm === 'scn' ? ' selected' : '') + '>Senaryo</option>';
   veFeadAnimRpmChoices(build).forEach(function(c){
     rOpt += '<option value="' + c.rpm + '"' + (rpm === c.rpm ? ' selected' : '') + '>'
          + c.rpm + ' dev/dk'

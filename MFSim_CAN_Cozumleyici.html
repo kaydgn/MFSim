@@ -9375,6 +9375,13 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
      her temada tarayıcının kendi rengiyle geliyor ve çubuğun en göze batan
      parçası oluyordu. */
   appearance:none; -webkit-appearance:none;
+  /* SEÇİLİ METNE GÖRE BOY (`field-sizing:content`), en uzun seçeneğe göre
+     değil. Liste kendi genişliğini en uzun seçenekten alıyordu: "Kapalı"
+     yazan Titreşim "Çırpma (kayış verisi kapalı)" kadar yer istiyor, daralma
+     payını da en çok o alıyordu — ölçüldü, 6 seçicinin 3'ü kesikti ("Çalışma
+     (Mean) · 28.1°" 105 px isterken 51 px). Desteklemeyen tarayıcıda eski
+     davranış (en uzun seçenek) kalır. */
+  field-sizing:content;
   width:100%; max-width:152px; min-width:52px; height:19px;
   padding:0 15px 0 5px; cursor:pointer;
   /* Chromium seçili metni KIRPAR; ellipsis olmadan yarım harf kalıyor. */
