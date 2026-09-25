@@ -82,7 +82,9 @@ const cakisma = (adlar, acilar) => {
 
 // Kartın ölçeği sarım etiketlerinden ETKİLENMEZ (etiket payı yalnız ADI sayar),
 // yani iki çizim aynı dönüşümü paylaşır ve kutuları karşılaştırılabilir.
-const OLCULER = [[440, 458], [440, 398], [420, 340], [380, 320], [340, 298]];
+// [396, 412]: varsayılan kartın (440×458) YAZI KATSAYISIYLA üretilen ölçüsü —
+// kart çizimi 1/k ölçüde üretilip büyütülüyor (`veFeadYaziK`, k = 10/9).
+const OLCULER = [[440, 458], [440, 398], [420, 340], [396, 412], [380, 320], [340, 298]];
 
 /* ══════════════════════════════════════════════════════════════════════════
    İKİ KANVAS, TEK TİP — geometri ↔ işletme
@@ -698,5 +700,62 @@ describe('ad, KÜNYE ve ALT NOT üstüne düşmez', () => {
         expect(adKutulari(svg)).toHaveLength(build.order.length);
       });
     });
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════
+   YÜZEN ÇUBUĞUN ALTINDA YAZI YOK — kanvas kartı
+   ───────────────────────────────────────────────────────────
+   Kartın denetim çubuğu çizimin alt kenarını ÖRTÜYOR (`altPay`); gül bu
+   yüzden yukarı alınmıştı, yazılar alınmamıştı. ÖLÇÜLDÜ (gerçek tarayıcı,
+   12 örnek × 2 kart): alt not HER kartta, gerilme ölçeği her işletme kartında, krank kasnağının
+   ADI 6 kartta, sarım açısı 2 kartta çubuğun altındaydı — 68 yazı hiç
+   görünmüyordu. Bant artık ad ve açı için SERT engel; iki lejant bandın
+   üstünde ve onlar da engel.
+   ═══════════════════════════════════════════════════════════ */
+describe('yüzen çubuğun altında yazı yok (kanvas kartı)', () => {
+  const ALT = 46 / (10 / 9);                  // VE_FEAD_YUZ_ALT / yazı katsayısı
+  const KONUMLAR = ['free', 'replace', 'max', 'mean', 'min', 'load'];
+  const yazilar = (svg) => [...svg.matchAll(/<text data-ve="(name|wrap|rib-legend|span-tension|tension-legend)" x="([-\d.]+)" y="([-\d.]+)"(?: text-anchor="\w+")? font-size="([\d.]+)"[^>]*>([^<]*)</g)]
+    .map((m) => ({ ve: m[1], y0: +m[3] - +m[4] * 0.8, y1: +m[3] + +m[4] * 0.25, t: m[5] }));
+  const olcek = (svg) => [...svg.matchAll(/<rect data-ve="tension-scale" x="[-\d.]+" y="([-\d.]+)"[^>]*height="([\d.]+)"/g)]
+    .map((m) => ({ ve: 'tension-scale', y0: +m[1], y1: +m[1] + +m[2], t: '▭' }));
+
+  const S = (() => {
+    const kusur = [], tur = {};
+    M.veFeadExampleKeysAll().forEach((anahtar) => {
+      const { build } = kur(anahtar);
+      if (!build || !build.ok) return;
+      const tension = veFeadSpanTensionMap(build, null, 1500);
+      KONUMLAR.forEach((posMode) => OLCULER.forEach(([W, H]) => {
+        let svg;
+        try { svg = fead.veFeadLayoutSVG(build, W, H, { nodeId: 'lay', posMode, altPay: ALT, tension }); }
+        catch (e) { return; }
+        if (!svg) return;
+        yazilar(svg).concat(olcek(svg)).forEach((y) => {
+          tur[y.ve] = (tur[y.ve] || 0) + 1;
+          if (y.y1 > H - ALT) kusur.push(`${anahtar} · ${posMode} · ${W}×${H}: ${y.ve} "${y.t}"`);
+        });
+      }));
+    });
+    return { kusur, tur };
+  })();
+
+  test('süpürme gerçekten ölçüyor — beş yazı türü de çizildi', () => {
+    ['name', 'wrap', 'rib-legend', 'tension-legend', 'tension-scale'].forEach((ve) =>
+      expect([ve, S.tur[ve] > 0]).toEqual([ve, true]));
+  });
+
+  test('hiçbir örnekte, hiçbir kol konumunda, hiçbir ölçüde çubuğun altında yazı yok', () => {
+    if (S.kusur.length)
+      throw new Error(`${S.kusur.length} yazı çubuğun altında:\n  ` + S.kusur.slice(0, 12).join('\n  '));
+    expect(S.kusur).toHaveLength(0);
+  });
+
+  test('pay YALNIZ kartta: altPay verilmezse (rapor, küçük resim) alt not yerinde kalır', () => {
+    const { build } = kur();
+    const svg = fead.veFeadLayoutSVG(build, 440, 458, { nodeId: 'lay', posMode: 'mean' });
+    const m = svg.match(/<text data-ve="rib-legend" x="[-\d.]+" y="([-\d.]+)"/);
+    expect(+m[1]).toBeCloseTo(458 - 5, 6);
   });
 });

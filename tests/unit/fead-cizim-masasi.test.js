@@ -107,6 +107,42 @@ describe('çizimin köprüsü — ekran ↔ mm', () => {
     });
   });
 
+  test('YAZI KATSAYISI — çizim 1/k ölçüde üretilir, köprü yine girdiye döner', () => {
+    // Arayüz ölçeği bir basamak büyüdü (`--fs-micro` 9 → 10 px) ama kartın
+    // etiketleri kullanıcı biriminde yazılı ve kıpırdamıyordu (ölçüldü: 40
+    // etiketin hepsi 7–9 px). Kart çizimi kartın 1/k ölçüsünde üretilip
+    // viewBox'la büyütülüyor: yerleştirme ofsetleri aynı, ekranda k kat büyük.
+    kurOrnek();
+    const kart = { id: 'kart', type: 'fead-layout', def: componentDefs['fead-layout'], data: {} };
+    global.nodes.push(kart);
+    const svgOf = () => dom(fead.veFeadLayoutCardHTML(kart)).querySelector('.ve-fead-kanvas svg[data-fead-xf]');
+    const vb = (svg) => svg.getAttribute('viewBox').split(' ').map(Number);
+    const onceki = global.veThemeFs;
+    try {
+      delete global.veThemeFs;                                    // köprü yok → k = 1
+      const s1 = svgOf();
+      global.veThemeFs = (ad) => (ad === 'micro' ? 10 : 12);      // ölçek: micro 10 px
+      const s2 = svgOf();
+      expect(vb(s2)[2]).toBeCloseTo(vb(s1)[2] * 0.9, 6);
+      expect(vb(s2)[3]).toBeCloseTo(vb(s1)[3] * 0.9, 6);
+      // SVG kartın tamamını kaplıyor (inline: %100) — yani ekranda k = 10/9 büyük.
+      expect(s2.getAttribute('style')).toMatch(/width:100%; height:100%/);
+      // Ters köprü ölçekten bağımsız: halkalar yine KONUM GİRDİSİNE döner.
+      const xf = fead._feadCizimXf(s2);
+      const halkalar = s2.parentNode.querySelectorAll('g[data-ve="hit"] circle');
+      expect(halkalar).toHaveLength(6);
+      halkalar.forEach((c) => {
+        const n = bul(c.getAttribute('data-fead-k'));
+        const ten = !!componentDefs[n.type].isFeadTensioner;
+        const [x, y] = fead._feadCizimMm(xf, { x: +c.getAttribute('cx'), y: +c.getAttribute('cy') });
+        expect(x).toBeCloseTo(ten ? n.data.cenX : n.data.x, 1);
+        expect(y).toBeCloseTo(ten ? n.data.cenY : n.data.y, 1);
+      });
+    } finally {
+      if (onceki) global.veThemeFs = onceki; else delete global.veThemeFs;
+    }
+  });
+
   test('bozuk ölçek niteliği REDDEDİLİR — sürükleme uydurma bir ölçekle koşmaz', () => {
     const svg = (a) => ({ getAttribute: () => a });
     expect(fead._feadCizimXf(svg(null))).toBeNull();

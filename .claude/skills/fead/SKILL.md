@@ -348,6 +348,17 @@ olurdu.
     Ölçüldü (420 çizim): çivili açı 117 çakışma → kendi aday listesi 60 → alan
     ölçütlü geri düşüş **0**. Kapı: `fead-card-design.test.js` →
     *"sarım açısı da KAÇAR"*.
+    **Kanvas kartının yazısı arayüz ölçeğinden** (2026-09-25): kart çizimi
+    kartın 1/k ölçüsünde üretilir, viewBox büyütür (`veFeadYaziK` =
+    `--fs-micro` / 9). Etiket boyları ve yerleştirme ofsetleri kullanıcı
+    biriminde kalır — DEĞİŞTİRİLMEZ; süpürme o ölçüyü de tarıyor (396×412).
+    Rapor, küçük resim ve sihirbaz önizlemesi zaten büyütülerek gösteriliyor,
+    onlara uygulanmaz. Kapı: `fead-cizim-masasi.test.js` → *"YAZI KATSAYISI"*.
+    **Yüzen çubuğun bandı (`altPay`) ad ve açı için SERT engel; alt not ile
+    gerilme ölçeği bandın ÜSTÜNDE çizilir** ve onlar da engel — gülün kuralı
+    yazılara da uygulandı (ölçülmüştü: 68 yazı çubuğun altında, görünmüyordu).
+    Pay yalnız kartta; rapor ve küçük resim değişmez. Kapı:
+    `fead-card-design.test.js` → *"yüzen çubuğun altında yazı yok"*.
 22. **AÇILIŞ KADRAJI: büyük kartlar SÜTUN DEĞİL, tek sıra** — iki kanvas yan
     yana (`veFeadArrangeByCoords` → `sira`). Üst üste dizilen büyük kartlar
     dar-uzun bir blok üretiyor ve geniş görüşe sığdırma yükseklikten
