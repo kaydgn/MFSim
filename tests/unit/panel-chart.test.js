@@ -174,3 +174,48 @@ describe('tüm panel grafikleri katmana bağlı', () => {
     });
   });
 });
+
+describe('pcEtiketYerlestir — etiketler üst üste yazılmaz', () => {
+  // Ölçüldü: Eğim Kabiliyeti grafiğinde "Durma (80.6%)" ile "Kalkış (78.6%)"
+  // aynı x'te 2 puan arayla duruyor ve 75 px üst üste yazılıyordu; irtifa
+  // profilinde yan yana iki durak (4,2 ve 4,6 km) aynı üst şeride düşüyor.
+  const H = 14;
+  const kesisen = (l) => l.some((a, i) => l.some((b, j) => i < j &&
+    a.x0 < b.x1 && b.x0 < a.x1 && Math.abs(a.ty - b.ty) < H));
+
+  test('dikeyde yakın, yatayda kesişen iki etiket: alttaki bir satır iner', () => {
+    const l = [{ x0: 10, x1: 90, y: 50 }, { x0: 10, x1: 90, y: 58 }];
+    pcEtiketYerlestir(l, H);
+    expect(l.map((e) => e.ty)).toEqual([50, 64]);
+    expect(kesisen(l)).toBe(false);
+  });
+
+  test('yatayda kesişmeyen etiketler yerinde kalır (aynı y olsa bile)', () => {
+    const l = [{ x0: 0, x1: 40, y: 20 }, { x0: 50, x1: 90, y: 20 }];
+    pcEtiketYerlestir(l, H);
+    expect(l.map((e) => e.ty)).toEqual([20, 20]);
+  });
+
+  test('zincirleme: itilen etiket bir sonrakini de iter; girdi sırası korunur', () => {
+    const l = [{ x0: 0, x1: 100, y: 10 }, { x0: 20, x1: 80, y: 10 }, { x0: 40, x1: 60, y: 12 }];
+    pcEtiketYerlestir(l, H);
+    expect(l.map((e) => e.ty)).toEqual([10, 24, 38]);
+    expect(kesisen(l)).toBe(false);
+  });
+
+  test('sabit ENGELİN altına iner, engel kıpırdamaz', () => {
+    // İrtifa profili: eğim çizgisinin etiketi zaten çizilmiş; durak etiketi
+    // onun üstüne yazılıyordu (ölçüldü: 86 px).
+    const engel = [{ x0: 0, x1: 120, ty: 30 }];
+    const l = [{ x0: 50, x1: 150, y: 30 }];
+    pcEtiketYerlestir(l, H, engel);
+    expect(l[0].ty).toBe(44);
+    expect(engel).toEqual([{ x0: 0, x1: 120, ty: 30 }]);
+  });
+
+  test('uzak etiketlere dokunmaz — boşluk varsa yukarı da kaymaz', () => {
+    const l = [{ x0: 0, x1: 100, y: 10 }, { x0: 0, x1: 100, y: 200 }];
+    pcEtiketYerlestir(l, H);
+    expect(l.map((e) => e.ty)).toEqual([10, 200]);
+  });
+});

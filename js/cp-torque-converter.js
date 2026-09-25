@@ -955,7 +955,7 @@ function drawVETCTauChart(nodeId, pts) {
   var ph = 200 - margin.top - margin.bottom;
   
   if(pts.length < 2) {
-    ctx.fillStyle = veThemeRgba('--text-secondary', 1); ctx.font = veThemeFont(12); ctx.textAlign = 'center';
+    ctx.fillStyle = veThemeRgba('--text-secondary', 1); ctx.font = veThemeFont('md'); ctx.textAlign = 'center';
     ctx.fillText('En az 2 veri noktası gerekli', rect.width / 2, 100);
     return;
   }
@@ -988,7 +988,7 @@ function drawVETCTauChart(nodeId, pts) {
   ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1; ctx.setLineDash([5, 4]);
   ctx.beginPath(); ctx.moveTo(couplingX, margin.top); ctx.lineTo(couplingX, margin.top + ph); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = veThemeFont(8); ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = veThemeFont('micro'); ctx.textAlign = 'center';
   ctx.fillText('Coupling', couplingX, margin.top - 5);
   
   // Sol eksen (τ) - Mavi
@@ -1002,7 +1002,7 @@ function drawVETCTauChart(nodeId, pts) {
   ctx.beginPath(); ctx.moveTo(margin.left, margin.top + ph); ctx.lineTo(margin.left + pw, margin.top + ph); ctx.stroke();
   
   // X etiketleri
-  ctx.fillStyle = veThemeRgba('--text-muted', 1); ctx.font = veThemeFont(9); ctx.textAlign = 'center';
+  ctx.fillStyle = veThemeRgba('--text-muted', 1); ctx.font = veThemeFont('micro'); ctx.textAlign = 'center';
   for(var i = 0; i <= 5; i++) {
     var xv = xMin + (xMax - xMin) * i / 5;
     ctx.fillText(xv.toFixed(2), xS(xv), margin.top + ph + 15);
@@ -1073,7 +1073,7 @@ function drawVETCKpumpChart(nodeId, pts) {
   var ph = 180 - margin.top - margin.bottom;
   
   if(pts.length < 2) {
-    ctx.fillStyle = veThemeRgba('--text-secondary', 1); ctx.font = veThemeFont(12); ctx.textAlign = 'center';
+    ctx.fillStyle = veThemeRgba('--text-secondary', 1); ctx.font = veThemeFont('md'); ctx.textAlign = 'center';
     ctx.fillText('En az 2 veri noktası gerekli', rect.width / 2, 90);
     return;
   }
@@ -1106,7 +1106,7 @@ function drawVETCKpumpChart(nodeId, pts) {
   ctx.beginPath(); ctx.moveTo(margin.left, margin.top + ph); ctx.lineTo(margin.left + pw, margin.top + ph); ctx.stroke();
   
   // X etiketleri
-  ctx.fillStyle = veThemeRgba('--text-muted', 1); ctx.font = veThemeFont(9); ctx.textAlign = 'center';
+  ctx.fillStyle = veThemeRgba('--text-muted', 1); ctx.font = veThemeFont('micro'); ctx.textAlign = 'center';
   for(var i = 0; i <= 5; i++) {
     var xv = xMin + (xMax - xMin) * i / 5;
     ctx.fillText(xv.toFixed(2), xS(xv), margin.top + ph + 15);

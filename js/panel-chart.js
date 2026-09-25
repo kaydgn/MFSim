@@ -305,14 +305,38 @@ function pcDrawHint(ctx2d, canvas, ml, mt, pw, isDark) {
   ctx2d.textAlign = 'left';
   if(pcIsZoomed(canvas)) {
     ctx2d.fillStyle = veThemeRgba('--seri-1', 1);
-    ctx2d.font = veThemeFont(9, 'bold');
+    ctx2d.font = veThemeFont('micro', 'bold');
     ctx2d.fillText(canvas._pcZoom.scale.toFixed(1) + '× — sol tık: sıfırla', ml + 6, mt + 11);
   } else {
     ctx2d.fillStyle = isDark ? 'rgba(122,133,153,0.8)' : 'rgba(100,116,139,0.85)';
-    ctx2d.font = veThemeFont(8);
+    ctx2d.font = veThemeFont('micro');
     ctx2d.fillText('Ctrl + Scroll: yakınlaştır  ·  Sağ tık + sürükle: kaydır', ml + 6, mt + 11);
   }
   ctx2d.textAlign = prevAlign; ctx2d.font = prevFont; ctx2d.fillStyle = prevFill;
+}
+
+// ETİKETLERİ ÜST ÜSTE YAZMAZ. Etiketler yukarıdan aşağı sıralanır; önce
+// yerleşmiş bir etiketle hem yatayda kesişen hem satır boyundan yakın düşen
+// etiket onun altına itilir. Girdi: [{x0, x1, y}] (ekran px, y = taban çizgisi)
+// · her öğeye `ty` yazar, aynı diziyi döndürür. Eşit y'lerde girdi sırası
+// korunur (sort kararlı) — çağıran soldan sağa verirse sağdaki aşağı iner.
+// `engeller` (isteğe bağlı): kıpırdamayan yazılar [{x0, x1, ty}] — başka bir
+// katmanın zaten çizdiği etiketler; yerleşenler onların da altına iner.
+function pcEtiketYerlestir(etiketler, satirH, engeller) {
+  var yerlesen = (engeller || []).slice();
+  etiketler.slice().sort(function(a, b) { return a.y - b.y; }).forEach(function(e) {
+    var ty = e.y;
+    for(var tur = 0; tur <= yerlesen.length; tur++) {
+      var engel = yerlesen.filter(function(o) {
+        return o.x0 < e.x1 && e.x0 < o.x1 && Math.abs(o.ty - ty) < satirH;
+      });
+      if(!engel.length) break;
+      ty = Math.max.apply(null, engel.map(function(o) { return o.ty; })) + satirH;
+    }
+    e.ty = ty;
+    yerlesen.push(e);
+  });
+  return etiketler;
 }
 
 // Panel açıklamalarına eklenecek standart etkileşim cümlesi (gerçek metin —
@@ -320,5 +344,5 @@ function pcDrawHint(ctx2d, canvas, ml, mt, pw, isDark) {
 var PC_HINT_HTML = '<b>Etkileşim:</b> imleçle gezinerek değerleri okuyun · <b>Ctrl + tekerlek</b> yakınlaştırır · <b>sağ tık + sürükle</b> kaydırır · <b>sol tık</b> sıfırlar.';
 
 if(typeof module !== 'undefined' && module.exports) {
-  module.exports = { pcZoomWindow: pcZoomWindow, pcInPlot: pcInPlot, pcPointerPos: pcPointerPos };
+  module.exports = { pcZoomWindow: pcZoomWindow, pcInPlot: pcInPlot, pcPointerPos: pcPointerPos, pcEtiketYerlestir: pcEtiketYerlestir };
 }

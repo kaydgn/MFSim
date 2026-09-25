@@ -130,9 +130,33 @@ function veThemeFontFamily() {
   } catch(e) {}
   return aile || "'Segoe UI', Inter, -apple-system, sans-serif";
 }
-// Tuvalin `font` kısaltması: '600 11px <aile>'. Grafik kütüphaneleri (Plotly)
-// yalnız aileyi ister → `veThemeFontFamily()`.
-function veThemeFont(px, weight) {
+// TUVALİN YAZI BOYU DA ÖLÇEKTEN (2026-09-25). Grafikler boyu sayıyla
+// yazıyordu (7–13 px) ve arayüzün ölçeği bir basamak büyüdüğünde hiçbiri
+// kıpırdamadı: Sonuçlar grafiklerinde çizilen yazının TAMAMI 11 px'in
+// altında kaldı. Artık basamak ADI verilir — `veThemeFont('tiny')` — ve boy
+// CSS'teki `--fs-tiny`dan okunur; ölçek bir daha değişince tuval de değişir.
+// Jeton rem cinsinden: kökün yazı boyuyla çarpılır (tarayıcının varsayılan
+// boyu 16 değilse arayüz de ona göre büyüyor).
+function veThemeFs(ad) {
+  // Yedek yalnız jeton okunamazsa (test ortamı); CSS'le aynılığını
+  // theme-font.test.js tutar. İşlevin İÇİNDE: görüntüleyiciye tek parça taşınır.
+  var yedek = { micro: 10, tiny: 11, body: 12, md: 13, lg: 14, title: 16 };
+  var v = '', kok = 16;
+  try {
+    var cs = getComputedStyle(document.documentElement);
+    v = cs.getPropertyValue('--fs-' + ad).trim();
+    kok = parseFloat(cs.fontSize) || 16;
+  } catch(e) {}
+  var m = /^([\d.]+)(rem|px)$/.exec(v);
+  if(!m) return yedek[ad] || yedek.body;
+  return m[2] === 'rem' ? parseFloat(m[1]) * kok : parseFloat(m[1]);
+}
+// Tuvalin `font` kısaltması: '600 11px <aile>'. Boy bir basamak ADI ('micro',
+// 'tiny', 'body', 'md', 'lg', 'title') ya da — ölçeğe bağlı OLMAMASI gereken
+// yerde (3B etiket dokusu) — sayı. Grafik kütüphaneleri (Plotly) yalnız aileyi
+// ister → `veThemeFontFamily()`.
+function veThemeFont(boy, weight) {
+  var px = (typeof boy === 'string') ? veThemeFs(boy) : boy;
   return (weight ? weight + ' ' : '') + px + 'px ' + veThemeFontFamily();
 }
 
@@ -205,6 +229,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veThemeKimlik: veThemeKimlik,
     veThemeStoredKip: veThemeStoredKip,
     changeTheme: changeTheme,
-    veThemeRgba: veThemeRgba
+    veThemeRgba: veThemeRgba,
+    veThemeFs: veThemeFs,
+    veThemeFont: veThemeFont
   };
 }
