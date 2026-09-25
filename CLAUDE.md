@@ -244,16 +244,22 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   sürüklemede hem AÇILIŞTA uygulanır (yoksa kuraldan önce kaydedilmiş kart
   bozuk açılır). Kapı: `fead-table.test.js` (mekanizma, sentetik tip) +
   `kart-yuzey.spec.js` → *"EN KÜÇÜK ÖLÇÜ"*.
-- **TEK YAZI TİPİ: Inter** (`--font-sans`, gömülü `css/fonts.css`) — başlık,
-  gövde, etiket, sayı, form, TUVAL ve İNDİRİLEN BELGELER dâhil. Rakam hizası
-  mono ile değil `tabular-nums` ile. Tuval `var()` çözemez → `veThemeFont(px,
-  ağırlık)`; belge yüzü arayüzden gömer → `veThemeFontFaceCss()`. Çıplak aile
-  adı yazılmaz. İstisnalar: hizası BOŞLUKLA kurulmuş düz metin (TXT rapor
-  `<pre>`) ve KaTeX formülü. Kapı: `tek-yazi-tipi.test.js` + `tek-yazi-tipi.spec.js`.
+- **TEK YAZI TİPİ: `--font-sans`** — Windows'ta Segoe UI (kullanıcı kendi
+  ekranında seçti, 2026-09-25), başka yerde gömülü Inter (`css/fonts.css`).
+  Başlık, gövde, etiket, sayı, form ve TUVAL dâhil. İNDİRİLEN BELGELER gömülü
+  Inter'le yazar (A4 düzenleri onunla ölçüldü); `veThemeFontFaceCss()` yığındaki
+  GÖMÜLÜ aileyi gömer, ilk aileyi değil. Rakam hizası `tabular-nums` ile. Tuval
+  `var()` çözemez → `veThemeFont(px, ağırlık)`. Çıplak aile adı yazılmaz.
+  İstisnalar: hizası BOŞLUKLA kurulmuş düz metin (TXT rapor `<pre>`) ve KaTeX.
+  Ölçek tabanı 10 px, gövde 12 px; kenar tonu zemine ≥ 1,5:1 (kullanıcı
+  kararları). Kapı: `tek-yazi-tipi.test.js` + `.spec.js` · `typography-scale` ·
+  `theme-contrast`.
 - **SÜTUNDA YATAY KAYDIRMA YOK — sığmayan tablo AÇILIR PENCEREDE**
   (`js/tablo-pencere.js`). Panel tabloyu + kendi düğmelerini bir BİRİM
   işaretler (`data-ve-tablo` · `-baslik` · `-ozet`); karar ÖLÇÜMDEN (sığmıyorsa
-  özet kartı + "Tabloyu aç"), tablo pencereye TAŞINIR, kopyalanmaz. Kapı:
+  özet kartı + "Tabloyu aç"), tablo pencereye TAŞINIR, kopyalanmaz. Sekme
+  açan kod kararı AYNI karede ister (`veTabloOlcIcinde`). İki sütunlu pencere
+  de ekrana değil PENCEREYE sorar (`@container vepanel`). Kapı:
   `tablo-pencere.test.js` + `tablo-pencere.spec.js` + `mufettis-sigma.spec.js`.
 - **SONUÇLAR PANOSUNA YAYIN YAPAN MODÜL KAYNAK TABLOSUNA GİRER**
   (`js/results.js` → `veResultSources`): sekme · kütüphane · yorum · sonuç
@@ -475,7 +481,7 @@ FEAD satırları modül skill'ine taşındı
 | `tests/unit/example-topology-center.test.js` | `js/cp-mount.js` + `assets/examples/` | Örnek JSON'ları kanvas merkezine açar |
 | `tests/unit/topology-wiring.test.js` | `js/ui-core.js` `veTryConnectPorts` + `js/connections.js` topoloji imzası | **Kanvasta tel çekmek**: geçersiz port çifti (çıkış→çıkış, giriş→giriş, kendine) bağlantı kurmaz ama SESSİZ de kalmaz; doğru çift her iki yönden de aynı bağlantıyı kurar; topoloji imzası tel/düğüm değişince değişir, düğüm SÜRÜKLENİNCE değişmez (kart 30 karede 0 kez yeniden kurulur) |
 | `tests/unit/fead-table.test.js` | `js/cp-fead.js` Kayış Tablosu + `js/fead-model.js` sıra | **Kasnakların sayısal giriş yüzeyi — 2026-09-23'ten beri PENCERE** (Çizim Masası): sütun kimlikleri kullanıcının hesap sayfasına karşı ölçülü (efektif çap = OD+2·hb / OD+2·hr, Σişaretli sarım 360°, L = Σspan + Σ(sarım·r)); türetilen sütunlar ÇEKİRDEKTEN; girdi sütunları geometri çözülemese de dolu; virgüllü ondalık (`63,5` → 63.5); satır taşıma ve sürücü kilidi; Dönüş Yönü iki durumlu segment ve `contact` yazar; ekle/sil (gergi tekil, ekleme gerginin önüne, `saveState` mutasyondan önce); görünüm CSS'te, durum kuralları jetondan; tazeleme TEK KAPIDAN (şema + açık pencere); ad düğmesi paneli AÇAR; **tablo bir kanvas bileşeni DEĞİL** (tip · palet · panel · ölçü sabiti yok) |
-| `tests/e2e/fead-tablo.spec.js` + `fead-sihirbaz-tablo.spec.js` | Kayış Tablosu çekmecesi (gerçek tarayıcı) | **Çekmece**: kartın düğmesiyle açılır (iki kartta da basılı), ESC kapatır, kanvasla ÖLÇEKLENMEZ (zoom 0,35'te girdi 13 px), tek başlık satırı; gerçek `63,5` yazımı modeli ve çözümü değiştirir; Sekme odağı düşürmüyor; satır oku, sürücü kilidi, yön segmenti (efektif çap +0,2 mm), sil/ekle; fare/odak/seçili satır CSS'ten, satır ↔ iki çizimde işaret, başlık satırı fareye tepki vermez; **tuvalin ALTINA yapışık** (1366×768 · 1920×1080: dört kenar 0 px, minimap üstte, çizim kesilmiyor, kamera YAKINLAŞMIYOR ve kapanınca dönüyor), tutamak tuvali o kadar kısaltıyor ve boyu hatırlıyor, FEAD'den çıkınca kapanıyor (arka plan kaydı kapatmıyor), kanvası kaydırmıyor, tekerlek listeyi kaydırıyor, eklenen satır görünür; Ctrl+Z örneği TEK adımda geri alıyor ve açılış kartı kalıyor. **Sihirbazın 'Modeli Kur'u**: 6 kasnak + iki kanvas (açılışın boş kartı DEVRALINIR) + kayış + çözücü + rapor + sihirbaz = 12 düğüm, 0 tel, uyarı yok, çözüm önizlemeyle birebir |
+| `tests/e2e/fead-tablo.spec.js` + `fead-sihirbaz-tablo.spec.js` | Kayış Tablosu çekmecesi (gerçek tarayıcı) | **Çekmece**: kartın düğmesiyle açılır (iki kartta da basılı), ESC kapatır, kanvasla ÖLÇEKLENMEZ (zoom 0,35'te girdi arayüzün `--fs-lg` basamağında), tek başlık satırı; gerçek `63,5` yazımı modeli ve çözümü değiştirir; Sekme odağı düşürmüyor; satır oku, sürücü kilidi, yön segmenti (efektif çap +0,2 mm), sil/ekle; fare/odak/seçili satır CSS'ten, satır ↔ iki çizimde işaret, başlık satırı fareye tepki vermez; **tuvalin ALTINA yapışık** (1366×768 · 1920×1080: dört kenar 0 px, minimap üstte, çizim kesilmiyor, kamera YAKINLAŞMIYOR ve kapanınca dönüyor), tutamak tuvali o kadar kısaltıyor ve boyu hatırlıyor, FEAD'den çıkınca kapanıyor (arka plan kaydı kapatmıyor), kanvası kaydırmıyor, tekerlek listeyi kaydırıyor, eklenen satır görünür; Ctrl+Z örneği TEK adımda geri alıyor ve açılış kartı kalıyor. **Sihirbazın 'Modeli Kur'u**: 6 kasnak + iki kanvas (açılışın boş kartı DEVRALINIR) + kayış + çözücü + rapor + sihirbaz = 12 düğüm, 0 tel, uyarı yok, çözüm önizlemeyle birebir |
 | `tests/unit/fead-cizim-masasi.test.js` | `js/cp-fead.js` Çizim Masası | **Kasnak çizimde seçilir, taşınır, eklenir**: ters köprü (ekran → mm) isabet halkasını kasnağın KONUM GİRDİSİNE döndürüyor (gergide `cenX/cenY`); etkileşim katmanı yalnız kartta ve CSS'siz belgede GÖRÜNMEZ; fare altı iki çizimde sınıfla, kart kurulmadan; ok tuşu TAM adım (ızgaraya yuvarlamaz), kayışı koparan adım yazılmaz; açıklık seçimi ve halkanın içi/dışı bağımsız kâhinle (aynalanmış düzen dâhil); ekleme adayı KOPYADA çözülür, gergi ↔ sürücü açıklığı kapalı, ekleme ve tablonun ekleyicisi TEK geri-al adımı; **tablo çekmecesi** kanvas alanının SATIRI (tuvalin içinde değil), FEAD içeriği kalmayınca kapanır, kamera yalnız kesilen çizimde oynar · hiç yakınlaşmaz · kapanınca döner, tutamak sınırları ve hatırlanan boy |
 | `tests/e2e/fead-cizim-masasi.spec.js` | Çizim Masası (gerçek tarayıcı) | Sürükleme imleçle birlikte yazar (0,1 mm ızgara, künye ve iki açıklık boyu ekranda) ve TEK adım; koparan konum yazılmaz, sebebi şeritte; tık pencereyi açar ve iki çizimde işaretler; klavye gergide avara merkezini tam adımla oynatır; paletten bırakma açıklığa girer (iz hedefi söyler), kapalı açıklık kırmızı ve reddedilir, boşluk reddedilir, çizim dışı tabloya gider ve tabloyu açar |
 | `tests/e2e/kart-yuzey.spec.js` | `js/node-resize.js` + `js/ui-core.js` | **İki ortak kural, sentetik kartla**: tutamak sürüklemesi tipin en küçük ölçüsünde duruyor; kart içindeki TAŞAN liste tekerleği önce alıyor, taşmayan kap almıyor |

@@ -1,13 +1,19 @@
 /**
- * tek-yazi-tipi.test.js — PROGRAMDA TEK YAZI TİPİ (Inter)
- * ───────────────────────────────────────────────────────
+ * tek-yazi-tipi.test.js — PROGRAMDA TEK YAZI TİPİ
+ * ────────────────────────────────────────────────
  * Kullanıcı isteği (2026-09-23): *"Program içinde çok fazla yazı tipi var.
  * Tek bir yazı tipi olmasını istiyorum."* Ölçüldü (gerçek tarayıcı): ekranda
  * BEŞ aile vardı — Inter; başlıklarda Source Serif 4; etiket ve sayılarda
  * sistem mono'su (Windows'ta Consolas); grafiklerde Segoe UI ve Arial.
  *
- * Bu dosya eski `display-font.test.js`in kapılarını Inter'e taşır ve tek
- * aile kuralını ekler. Üç sessiz hata sınıfı:
+ * YÜZ 2026-09-25'TE DEĞİŞTİ, KURAL DEĞİŞMEDİ. Kullanıcı kendi ekranında
+ * (Windows · Edge · %100) beş örneği karşılaştırdı ve Segoe UI'ı seçti:
+ * gömülü Inter'de ipucu talimatı yok ve Windows'ta 9–12 px'te puslu
+ * çiziliyordu. Yığın: 'Segoe UI' (sistemde kurulu, gömülmez) → 'Inter'
+ * (gömülü; Windows dışında ve indirilen belgelerde). Ekranda yine TEK aile:
+ * her yüzey aynı `--font-sans`ı okur.
+ *
+ * Üç sessiz hata sınıfı:
  *
  * 1) EKSİK ALT KÜME. Inter iki parça: `latin` ı'yı (U+0131), `latin-ext`
  *    ğ/ş/İ'yi taşıyor. Biri eksik olan ağırlıkta Türkçe bir sözcük İKİ ayrı
@@ -144,12 +150,25 @@ describe('CSS — tek aile kuralı', () => {
     expect(maskele(STYLES)).not.toMatch(/--font-display/);
   });
 
-  test('gövde Inter ve TABLO RAKAMLARI — sayı hizası yüzden değil rakamdan', () => {
+  test('gövde --font-sans ve TABLO RAKAMLARI — sayı hizası yüzden değil rakamdan', () => {
     const body = KURAL.find((k) => k.sec === 'body' && /font-family/.test(k.govde));
     expect(body).toBeTruthy();
     expect(body.govde).toMatch(/font-family:\s*var\(--font-sans\)/);
     expect(body.govde).toMatch(/font-variant-numeric:\s*tabular-nums/);
-    expect(maskele(STYLES)).toMatch(/--font-sans:\s*'Inter'/);
+  });
+
+  // YIĞININ SIRASI BİR KARARDIR (2026-09-25). Başta kullanıcının kendi
+  // ekranında seçtiği Segoe UI; hemen ardından GÖMÜLÜ yüz. Gömülü yüz ikinci
+  // sıradan kayarsa Windows dışındaki makine ve indirilen belge sessizce
+  // sistemin rastgele yazısına düşer — hiçbir şey patlamaz.
+  test('yığın: önce Segoe UI, hemen ardından gömülü Inter', () => {
+    const m = /--font-sans:\s*([^;]+);/.exec(maskele(STYLES));
+    expect(m).toBeTruthy();
+    const aileler = m[1].split(',').map((a) => a.replace(/["']/g, '').trim());
+    expect(aileler.slice(0, 2)).toEqual(['Segoe UI', 'Inter']);
+    // Gömülü olan (css/fonts.css'te @font-face'i bulunan) YALNIZ ikincisi.
+    const gomulu = aileler.filter((a) => YUZLER.some((b) => new RegExp("font-family:\\s*['\"]?" + a + "['\"]?\\s*;").test(b)));
+    expect(gomulu).toEqual(['Inter']);
   });
 
   test('kullanılan her ağırlık gömülü sette (400–800)', () => {

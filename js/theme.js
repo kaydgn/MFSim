@@ -128,7 +128,7 @@ function veThemeFontFamily() {
   try {
     aile = getComputedStyle(document.documentElement).getPropertyValue('--font-sans').trim();
   } catch(e) {}
-  return aile || "Inter, -apple-system, 'Segoe UI', sans-serif";
+  return aile || "'Segoe UI', Inter, -apple-system, sans-serif";
 }
 // Tuvalin `font` kısaltması: '600 11px <aile>'. Grafik kütüphaneleri (Plotly)
 // yalnız aileyi ister → `veThemeFontFamily()`.
@@ -145,8 +145,13 @@ function veThemeFont(px, weight) {
 // ekranda bir, kâğıtta üç aileyle yazıyordu (2026-09-23).
 // Okunamazsa (modüler kopya file:// üzerinde — tarayıcı başka dosyanın
 // kurallarını vermiyor) boş döner ve belge sistem yazısına düşer.
+// Gömülen, yığında @font-face kuralı OLAN ailedir, ilk aile değil: yığının
+// başı Segoe UI (2026-09-25) ve o gömülemez — sistemde kurulu. İlk aileye
+// bakılsaydı belge sessizce yazı tipsiz kalırdı.
 function veThemeFontFaceCss() {
-  var aile = veThemeFontFamily().split(',')[0].replace(/["']/g, '').trim();
+  var aileler = veThemeFontFamily().split(',').map(function(a) {
+    return a.replace(/["']/g, '').trim().toLowerCase();
+  });
   var out = [];
   try {
     var ss = document.styleSheets;
@@ -158,7 +163,7 @@ function veThemeFontFaceCss() {
         var r = kurallar[j];
         if (r.type !== 5) continue;                       // CSSRule.FONT_FACE_RULE
         var ad = String((r.style && r.style.getPropertyValue('font-family')) || '').replace(/["']/g, '').trim();
-        if (ad === aile) out.push(r.cssText);
+        if (ad && aileler.indexOf(ad.toLowerCase()) >= 0) out.push(r.cssText);
       }
     }
   } catch (e) {}

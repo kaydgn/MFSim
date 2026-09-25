@@ -319,6 +319,10 @@ silinince boşalan yer yeni bir sapmaya açılmasın.
 
 ## Tek yazı tipi — Inter (2026-09-23)
 
+> **Yüz 2026-09-25'te değişti** (Windows'ta Segoe UI, belgeler Inter'de) —
+> bkz. *"Yüz Segoe UI, ölçek bir basamak büyük, kenar bir tık koyu"*. Tek aile
+> kuralı ve aşağıdaki gerekçesi aynen geçerli.
+
 **Hüküm.** Arayüzün her yüzeyi tek aileyle çizilir: `--font-sans` (Inter,
 `css/fonts.css`'te gömülü; 400–800, latin + latin-ext). Başlık, gövde, etiket,
 sayı, form denetimi ve **tuval** dâhil. Başlık ayrı bir YÜZ değil: aynı aile,
@@ -1226,3 +1230,39 @@ piksele yayılıyordu. Durum yuvarlanmaz, çünkü pan ve tekerlek adımları on
 **Kapı.** `tests/unit/tuval-cihaz-pikseli.test.js` (GERÇEK
 `updateCanvasTransform`; düzeltme geri alınınca 5 test, ızgara ham ofseti
 izleyince 1, durum yuvarlanınca 2 test düşüyor).
+
+## Yüz Segoe UI, ölçek bir basamak büyük, kenar bir tık koyu (2026-09-25)
+
+**Hüküm.** Üç karar, üçü de kullanıcının KENDİ ekranında (Windows · Edge ·
+%100) verdiği cevaptan:
+- `--font-sans` = `'Segoe UI', 'Inter', …`. Ekranda ve tuvalde tek aile
+  kuralı aynı; Windows'ta o aile Segoe UI, başka yerde gömülü Inter.
+  İndirilen belgeler gömülü Inter'de KALIR; `veThemeFontFaceCss` yığındaki
+  gömülü aileyi gömer (ilk aileye bakınca belge sessizce yazı tipsiz kalırdı).
+- Küçük basamaklar bir üste: 9/10/11/12/13 → 10/11/12/13/14. Pencere başlığı
+  ve üstü aynı.
+- Kenar tonları zemine karşı ×1,28: açıkta tuvale 1,22 → 1,56:1 (kullanıcının
+  seçtiği ton), koyuda aynı adım.
+
+**Gerekçe.** Kullanıcı: *"programın dokusunda bir amatörlük, bir bulanıklık
+var."* Gömülü Inter'de ipucu talimatı yok (`maxp.maxSizeOfInstructions = 0`);
+Windows'un çizicisi böyle bir yazının yatay kenarlarını 9–12 px'te piksele
+oturtamıyor. Beş örnekten (bugünkü, ipuçlu Inter, ikisinin büyüğü, Segoe UI)
+Segoe UI seçildi — aynı boydaki ipuçlu Inter'e karşı da. Belgeler Inter'de
+kaldı, çünkü A4 düzenleri (özetin altı sayfası, 136 şekil metni) onunla
+ölçüldü ve belge başka makinede açılıyor. Segoe UI'da 500 ağırlığı yok;
+500 isteyen kurallar Windows'ta 400 çizilir.
+
+**Kapı.** `tek-yazi-tipi.test.js` → *"yığın: önce Segoe UI, hemen ardından
+gömülü Inter"* + `tek-yazi-tipi.spec.js` (ekran, tuval, belge);
+`typography-scale.test.js` → *"10 px altı basamak yok, arayüz varsayılanı
+12 px"*; `theme-contrast.test.js` → *"kenar tonu zeminden ayrışır"*. Üçü de
+eski `main`de düşüyor (4 test).
+
+**Yol üstünde çıkan iki kural.** (1) `.ve-cp-grid` iki sütunu ekrana değil
+PENCEREYE sorar (`@container vepanel`, ≤ 640 px → tek sütun): yazı büyüyünce
+Çözücü penceresinin girdileri 380 px'lik sütunda 57 → 53 px'e indi (taban 56).
+(2) Sekmeyi açan kod tablo kararını AYNI karede ister (`veTabloOlcIcinde`):
+gözlemciye kalınca geniş tablo sekme açılır açılmaz yatay kaydırmayla
+görünüyordu. Kapı: `mufettis-sigma.spec.js` + `tablo-pencere.test.js` +
+`fead-panel-dili.test.js`.

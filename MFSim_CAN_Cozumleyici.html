@@ -184,9 +184,12 @@
       --bg-secondary: #faf8f4;
       --bg-tertiary: #e6e1d8;
       --bg-input: #ffffff;
-      --border-color: #dcd8d0;
-      --border-light: #e4ded4;
-      --border-hover: #c2bbac;
+      /* Kenar tonları bir tık koyu (2026-09-25): kullanıcı iki tonu kendi
+         ekranında karşılaştırdı. Tuvale karşı 1,22 → 1,56:1; açık ve hover
+         aynı oranla (×1,28) kendi tonlarında. */
+      --border-color: #c6bfb3;
+      --border-light: #cbc5bd;
+      --border-hover: #aca598;
       --text-primary: #26241f;
       --text-secondary: #544e44;
       --text-muted: #676055;
@@ -222,9 +225,10 @@
       --bg-secondary: #221f1b;
       --bg-tertiary: #2a2621;
       --bg-input: #141210;
-      --border-color: #37312a;
-      --border-light: #413a32;
-      --border-hover: #544c42;
+      /* Açık temadaki adımın aynısı: her kenar tonunun zemine karşıtlığı ×1,28. */
+      --border-color: #494137;
+      --border-light: #524a3f;
+      --border-hover: #655c4f;
       --text-primary: #e6e0d5;
       --text-secondary: #b7ae9f;
       --text-muted: #968d7e;
@@ -428,26 +432,37 @@
          kimse tarafından görülmez — yalnız programı bakımsız gösterir.
 
          Bu ölçek gerçek kullanımdan türetildi (bildirimlerin 924'ü 9–16px
-         arasında) ve HER bildirim en yakın basamağa bağlandı. Beraberliğe
-         yakın durumlarda aşağı yuvarlandı: yoğunluk keskin sadeliğin parçası.
-         Yeni bir boyut EKLEMEDEN önce buradan bir basamak seç. */
-      /* TEK YÜZ — Inter (gömülü, css/fonts.css). Kullanıcı isteği
-         (2026-09-23): "Tek bir yazı tipi olmasını istiyorum." Ekranda BEŞ aile
-         ölçüldü: Inter, başlıklarda Source Serif 4, etiket ve sayılarda sistem
-         mono'su (Windows'ta Consolas), grafiklerde Segoe UI ve Arial.
-         Başlık yüzü emekli; sayıların hizası ayrı bir yüzden değil Inter'in
-         TABLO RAKAMLARINDAN gelir (gövdede `tabular-nums`). */
-      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+         arasında) ve HER bildirim en yakın basamağa bağlandı. Yeni bir boyut
+         EKLEMEDEN önce buradan bir basamak seç.
+
+         KÜÇÜK BASAMAKLAR BİR ÜST BASAMAĞA KAYDI (2026-09-25): 9/10/11/12/13 →
+         10/11/12/13/14. Kullanıcı "programın dokusunda bir bulanıklık var"
+         dedi; görünen yazının %67–84'ü 11 px'in altındaydı. Kendi ekranında
+         (Windows · %100) aynı paneli iki ölçekte karşılaştırdı ve büyüğünü
+         seçti. Pencere başlığı ve üstü değişmedi. */
+      /* TEK YÜZ — sistemin arayüz yazısı, Windows'ta Segoe UI; başka yerde
+         gömülü Inter (css/fonts.css). Kullanıcı isteği (2026-09-23): "Tek bir
+         yazı tipi olmasını istiyorum." Yüz 2026-09-25'te değişti: kullanıcı
+         kendi ekranında (Windows · Edge · %100) beş örneği karşılaştırdı —
+         bugünkü Inter, ipuçlu Inter, ikisinin büyüğü ve Segoe UI — ve Segoe
+         UI'ı seçti. Gömülü Inter'de ipucu talimatı YOK
+         (maxp.maxSizeOfInstructions = 0); Windows'un çizicisi böyle bir yazıyı
+         9–12 px'te piksele oturtamıyor. Segoe UI Windows'ta her zaman kurulu,
+         yani ağ isteği yok. Inter ikinci sırada KALIR: Windows dışında ve
+         indirilen belgelerde (veThemeFontFaceCss onu gömer) aynı yüz olsun.
+         Sayıların hizası ayrı bir yüzden değil TABLO RAKAMLARINDAN gelir
+         (gövdede `tabular-nums`). */
+      --font-sans: 'Segoe UI', 'Inter', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
       /* EŞ ARALIKLI YÜZ YALNIZ DÜZ METİN İÇİN: hizası BOŞLUKLA kurulmuş metin
          (TXT rapor sayfası) orantılı bir yüzde sütunlarını kaybeder. Arayüzde
          kullanılmaz — izin listesi `source-hygiene.test.js`'te çivili. CAN
          Çözümleyici'nin ham bayt tabloları da bu jetonu kullanır. */
       --font-mono: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, 'Liberation Mono', monospace;
-      --fs-micro:   0.5625rem;  /*  9px — rozet, mikro etiket, birim eki */
-      --fs-tiny:    0.625rem;   /* 10px — yoğun etiket, tablo hücresi */
-      --fs-body:    0.6875rem;  /* 11px — ARAYÜZ VARSAYILANI */
-      --fs-md:      0.75rem;    /* 12px — vurgulu satır, bölüm etiketi */
-      --fs-lg:      0.8125rem;  /* 13px — kart/panel başlığı */
+      --fs-micro:   0.625rem;   /* 10px — rozet, mikro etiket, birim eki */
+      --fs-tiny:    0.6875rem;  /* 11px — yoğun etiket, tablo hücresi */
+      --fs-body:    0.75rem;    /* 12px — ARAYÜZ VARSAYILANI */
+      --fs-md:      0.8125rem;  /* 13px — vurgulu satır, bölüm etiketi */
+      --fs-lg:      0.875rem;   /* 14px — kart/panel başlığı */
       --fs-title:   1rem;       /* 16px — pencere başlığı */
       --fs-h2:      1.25rem;    /* 20px — ekran başlığı */
       --fs-h1:      1.5rem;     /* 24px — karşılama başlığı */
@@ -4983,6 +4998,16 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 .ve-cp-col{ min-width:0; }                 /* ızgara hücreleri taşmasın */
 @media (max-width:820px){
   .ve-cp-grid{ grid-template-columns:1fr; }
+}
+/* İKİ SÜTUN DA PANELİN GENİŞLİĞİNE SORAR (2026-09-25) — FEAD pencerelerinin
+   `.ve-fp-split` kuralının aynısı (aşağıda, `@container vepanel`). Ekran
+   sorgusu 380 px'lik müfettiş sütununda hiç tetiklenmiyordu; yazı bir basamak
+   büyüyünce Çözücü penceresinin girdileri 53 px'e indi (mufettis-sigma.spec).
+   Modal pencereler (≥ 720 px) iki sütunda kalır. */
+@container vepanel (max-width:640px){
+  /* Kap önekli: varyant kuralları (--steps, --sheet) bu satırdan SONRA da
+     tanımlı; eşit özgüllükte sıra kazanırdı. */
+  .ve-properties-content .ve-cp-grid{ grid-template-columns:1fr; }
 }
 
 /* ══ AKSESUAR PANELİ — ÜÇ ADIMLI AKIŞ (model | eğri | doğrulama) ══

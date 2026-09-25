@@ -63,7 +63,11 @@ test('marka açılışta ve karşılamada AYNI aile, ağırlık ve em-iz ile çi
   const { boy: aBoy, ...a } = acilis;
   const { boy: kBoy, ...k } = karsilama;
   expect(k).toEqual(a);                              // aile, ağırlık, em-iz BİREBİR
-  expect(a.yuz).toBe('Inter');                       // tek yüz — marka da gövdeyle aynı aile
+  // Tek yüz — marka da gövdeyle aynı aile. Aile GÖVDEDEN okunur: yüz
+  // 2026-09-25'te Segoe UI'a geçti ve sabit yazılmış ad kuralın değil o günün
+  // değeriydi.
+  const govde = await page.evaluate(() => getComputedStyle(document.body).fontFamily.split(',')[0].replace(/"/g, '').trim());
+  expect(a.yuz).toBe(govde);
   expect(a.izEm).toBe(-0.01);                        // bağlamadan, iki ekranda da
   // Boy BİLEREK farklı: açılışta amblem, karşılamada logo.
   expect([aBoy, kBoy]).toEqual(['80px', '20px']);

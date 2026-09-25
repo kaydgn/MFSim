@@ -172,6 +172,22 @@ describe('SEKMELER — panelin uzunluğunu çözüyor', () => {
     expect(SRC).not.toMatch(/node\.data\.panelTab|data\.sekme/);
   });
 
+  test('açılan sekmedeki tablo birimi AYNI KAREDE karar alır — gözlemciye kalmaz', () => {
+    // Gizli sekmedeki birim ölçülemiyor; karar ResizeObserver'ın sonraki
+    // karesine kalınca geniş tablo sekme açılır açılmaz yatay kaydırmayla
+    // görünüyordu (mufettis-sigma.spec, Çözücü "Çevrim" 1217/359 px).
+    document.body.innerHTML = getFeadPulleyPropertiesHTML(kasnak());
+    // Sekme ÖNCE açılır, karar SONRA: ters sırada gizli sekme ölçülürdü.
+    // Durum ÇAĞRI ANINDA okunur — sonradan bakmak sırayı kanıtlamaz.
+    let cagriAnindaGizli = null;
+    const olc = jest.fn((gov) => { cagriAnindaGizli = gov.querySelector('[data-k="rol"]').hasAttribute('hidden'); });
+    global.veTabloOlcIcinde = olc;
+    try { fead.veFeadPanelTab('k1', 'rol'); } finally { delete global.veTabloOlcIcinde; }
+    expect(olc).toHaveBeenCalledTimes(1);
+    expect(olc.mock.calls[0][0]).toBe(document.querySelector('#ve-fp-panes-k1'));
+    expect(cagriAnindaGizli).toBe(false);
+  });
+
   test('ama durum bir yerde DURUYOR — panel yeniden kurulunca aynı sekme', () => {
     // Hiçbir yerde durmasaydı panel her seçim değişiminde ilk sekmeye dönerdi.
     document.body.innerHTML = getFeadPulleyPropertiesHTML(kasnak());

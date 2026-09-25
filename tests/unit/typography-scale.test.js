@@ -61,9 +61,14 @@ describe('tipografi ölçeği tanımı', () => {
     expect(Object.keys(OLCEK).length).toBeGreaterThanOrEqual(8);
   });
 
-  test('ölçekte 9px altı basamak yok (okunabilirlik tabanı)', () => {
-    const kucuk = Object.entries(OLCEK).filter(([, px]) => px < 9);
+  // KULLANICI KARARI (2026-09-25): küçük basamaklar bir üste kaydı —
+  // 9/10/11/12/13 → 10/11/12/13/14. Kendi ekranında (Windows · %100) aynı
+  // paneli iki ölçekte karşılaştırdı ve büyüğünü seçti. Taban kararın
+  // kendisi: bir sonraki "yoğunluk" düzenlemesi onu sessizce geri almasın.
+  test('ölçekte 10 px altı basamak yok, arayüz varsayılanı 12 px', () => {
+    const kucuk = Object.entries(OLCEK).filter(([, px]) => px < 10);
     expect(kucuk).toEqual([]);
+    expect(OLCEK['--fs-body']).toBe(12);
   });
 
   test('arayüz aralığında (9–16px) basamaklar en az 1px ayrık', () => {

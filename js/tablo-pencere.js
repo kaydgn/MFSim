@@ -115,6 +115,19 @@ function _veTabloKart(birim){
   return kart;
 }
 
+// SEKME AÇILINCA KARAR AYNI KAREDE (2026-09-25). Gizli sekmedeki birim
+// ölçülemiyor (genişlik 0) ve kararı gözlemcinin bir SONRAKİ karesine
+// kalıyordu: sekmeye geçince geniş tablo en az bir kare yatay kaydırmayla
+// görünüyordu. Yazı bir basamak büyüyünce bu, yük altında 60 ms'yi aştı
+// (mufettis-sigma.spec, FEAD Çözücü "Çevrim": 1217/359 px). Sekmeyi açan
+// kod bunu çağırır; gözlemci sonraki genişlik değişimleri için kalır.
+function veTabloOlcIcinde(kok){
+  if(typeof document === 'undefined' || !kok) return;
+  Array.prototype.forEach.call(kok.querySelectorAll('[data-ve-tablo]'), function(birim){
+    if(birim._veTabloHazir) _veTabloOlc(birim);
+  });
+}
+
 // Panel çizildikten sonra çağrılır (cp-core.js → showNodeProperties).
 // Birimleri kartlar, gözlemciyi bağlar; açık bir pencere varsa ve panel
 // yeniden çizildiyse YENİ birimi pencereye alır, yoksa pencereyi kapatır.
@@ -219,5 +232,5 @@ function veTabloAcikMi(){ return !!_veTabloAcik; }
 
 if(typeof module !== 'undefined' && module.exports){
   module.exports = { veTabloKatla: veTabloKatla, veTabloAc: veTabloAc, veTabloKapat: veTabloKapat,
-    veTabloAcikMi: veTabloAcikMi, _veTabloOlc: _veTabloOlc };
+    veTabloAcikMi: veTabloAcikMi, veTabloOlcIcinde: veTabloOlcIcinde, _veTabloOlc: _veTabloOlc };
 }

@@ -8,6 +8,10 @@
  * mono'su (FEAD ekranında 126–146 öğe); tuvalde `sans-serif` ve `system-ui`
  * (Windows'ta Arial ve Segoe UI).
  *
+ * Yüz 2026-09-25'te Segoe UI'a geçti (kullanıcı kendi ekranında seçti); kural
+ * aynı: ekranda ve tuvalde TEK aile. İndirilen belgeler gömülü Inter'de kaldı
+ * — A4 düzenleri onunla ölçüldü ve belge başka makinede açılıyor.
+ *
  * Bu halkalar Node'da HİÇ KOŞAMAZ: jsdom font yüklemez, `document.fonts` yok,
  * `getComputedStyle().fontFamily` yalnız bildirilen dizeyi döndürür ve tuval
  * hiç çizmez. Birim kardeşi: tests/unit/tek-yazi-tipi.test.js.
@@ -27,7 +31,13 @@ const fs = require('fs');
 
 const ROOT = path.join(__dirname, '../..');
 const BUILD = path.join(ROOT, 'MFSim_Code.html');
-const AILE = 'Inter';
+// İKİ AD, BİR KURAL (2026-09-25). Arayüzün istediği aile `--font-sans`ın
+// BAŞI — kullanıcının kendi ekranında seçtiği Segoe UI; jetondan okunur ki
+// yüz bir daha değişince bu dosya ikinci bir kopya tutmasın. Gömülü yüz
+// (Windows dışı ve indirilen belgeler) Inter. Test makinesinde Segoe UI yok:
+// orada ekran GÖMÜLÜ yüzle çizilir, ölçülen şey hâlâ tek aile.
+const ARAYUZ = /--font-sans:\s*['"]?([^'",;]+)/.exec(fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8'))[1].trim();
+const GOMULU = 'Inter';
 
 test.beforeAll(() => {
   if (!fs.existsSync(BUILD)) throw new Error('MFSim_Code.html yok. Önce: npm run build');
@@ -87,7 +97,7 @@ async function yuzdeOlmayanHarfler(page, aile, agirlik, harfler) {
 // Görünen her metin öğesinin + form denetiminin BİRİNCİL ailesi. İstisna:
 // hizası boşlukla kurulmuş düz metin (TXT rapor sayfası) — bkz. birim kapısı.
 async function ekrandakiAileler(page) {
-  return page.evaluate(() => {
+  return page.evaluate((beklenen) => {
     const aykiri = {};
     let taranan = 0;
     const ilk = (s) => s.split(',')[0].replace(/["']/g, '').trim();
@@ -95,7 +105,7 @@ async function ekrandakiAileler(page) {
       if (el.closest('.ve-rep-page')) return;
       const a = ilk(getComputedStyle(el).fontFamily);
       taranan++;
-      if (a !== 'Inter') aykiri[a] = (aykiri[a] || []).concat(etiket).slice(0, 3);
+      if (a !== beklenen) aykiri[a] = (aykiri[a] || []).concat(etiket).slice(0, 3);
     };
     document.querySelectorAll('body *').forEach((el) => {
       const q = el.getBoundingClientRect();
@@ -107,10 +117,10 @@ async function ekrandakiAileler(page) {
         ? '.' + String(el.className).split(' ')[0] : ''));
     });
     return { taranan, aykiri };
-  });
+  }, ARAYUZ);
 }
 
-test('Inter GERÇEKTEN yüklendi — latin ve Türkçe, iki ağırlıkta', async ({ page }) => {
+test('gömülü Inter GERÇEKTEN yüklendi — latin ve Türkçe, iki ağırlıkta', async ({ page }) => {
   await ac(page);
   // YÜKÜ AÇIKÇA İSTE. `latin-ext` parçası `unicode-range` ile TEMBEL iner:
   // sayfada o harflerle Inter'de metin çizilmediyse ölçüm anında henüz yoktur
@@ -122,7 +132,7 @@ test('Inter GERÇEKTEN yüklendi — latin ve Türkçe, iki ağırlıkta', async
   for (const w of ['400', '700']) {
     // ı (U+0131) `latin` alt kümesinde, ğşİĞŞ (U+0100-02BA) `latin-ext`te.
     // Biri eksikse Türkçe bir sözcük ekranda İKİ AYRI yüzle yazılır.
-    expect(await yuzdeOlmayanHarfler(page, AILE, w, 'AaZz0189çğıöşüÇĞİÖŞÜ')).toEqual([]);
+    expect(await yuzdeOlmayanHarfler(page, GOMULU, w, 'AaZz0189çğıöşüÇĞİÖŞÜ')).toEqual([]);
   }
 });
 
@@ -134,7 +144,7 @@ test('ölçüm boş değil — var olmayan aile bütün harfleri eksik sayıyor'
   expect(await yuzdeOlmayanHarfler(page, 'Zzz Yok Boyle Bir Aile', '400', harfler)).toEqual([...harfler]);
 });
 
-test('başlık da gövde de Inter — ayrı bir başlık yüzü YOK', async ({ page }) => {
+test('başlık da gövde de aynı aile — ayrı bir başlık yüzü YOK', async ({ page }) => {
   await ac(page);
   const olcum = await page.evaluate(() => {
     const yap = (etiket) => {
@@ -147,7 +157,8 @@ test('başlık da gövde de Inter — ayrı bir başlık yüzü YOK', async ({ p
     };
     return { baslik: yap('h3'), govde: yap('div'), marka: getComputedStyle(document.querySelector('.ve-welcome-logo')).fontFamily.split(',')[0].replace(/["']/g, '').trim() };
   });
-  expect(olcum).toEqual({ baslik: AILE, govde: AILE, marka: AILE });
+  expect(ARAYUZ).toBe('Segoe UI');
+  expect(olcum).toEqual({ baslik: ARAYUZ, govde: ARAYUZ, marka: ARAYUZ });
 });
 
 test('EKRANDA ikinci aile yok — FEAD pencereleri ve AP pencereleri taranıyor', async ({ page }) => {
@@ -184,7 +195,7 @@ test('EKRANDA ikinci aile yok — FEAD pencereleri ve AP pencereleri taranıyor'
   expect(taranan).toBeGreaterThan(500);
 });
 
-test('TUVALDE ikinci aile yok — grafikler de Inter ile yazıyor', async ({ page }) => {
+test('TUVALDE ikinci aile yok — grafikler de arayüzün ailesiyle yazıyor', async ({ page }) => {
   await ac(page, true);
   await page.evaluate(() => { if (typeof veStartModule === 'function') veStartModule('arac-performans'); });
   await page.waitForTimeout(1500);
@@ -206,7 +217,7 @@ test('TUVALDE ikinci aile yok — grafikler de Inter ile yazıyor', async ({ pag
   const yuzler = await page.evaluate(() => window.__tuvalYuz);
   // BOŞA ÇALIŞMIYOR: tuval gerçekten yazı yazdı.
   expect(Object.values(yuzler).reduce((a, b) => a + b, 0)).toBeGreaterThan(5);
-  expect(Object.keys(yuzler)).toEqual([AILE]);
+  expect(Object.keys(yuzler)).toEqual([ARAYUZ]);
 });
 
 test('yüz GÖMÜLÜ — tek dosya açılırken ağ isteği yok', async ({ page }) => {
@@ -238,6 +249,7 @@ test('BELGE de tek yüz — indirilen FEAD raporları arayüzün yüzünü göm�
   }));
   for (const [ad, html] of Object.entries(belge)) {
     // Gömülü: Inter'in @font-face kuralları, veri URI'siyle; eski üç yüz yok.
+    // Yığının başı Segoe UI — gömülemez; gömülen yığındaki GÖMÜLÜ aile.
     const yuz = (html.match(/@font-face\s*\{[^}]*font-family:\s*["']?Inter/g) || []).length;
     expect(yuz, ad + ': gömülü Inter kuralı').toBeGreaterThanOrEqual(8);
     expect(html, ad).not.toMatch(/Archivo|Source Serif|IBM Plex/);
@@ -263,7 +275,7 @@ test('BELGE de tek yüz — indirilen FEAD raporları arayüzün yüzünü göm�
     });
     await p.close();
     expect(m.n, ad + ': taranan öğe').toBeGreaterThan(500);
-    expect(Object.keys(m.aile), ad).toEqual([AILE]);
+    expect(Object.keys(m.aile), ad).toEqual([GOMULU]);
     expect(m.yuklu, ad + ': Inter belgenin İÇİNDE yüklü (uygulama olmadan)').toBe(true);
   }
 });
