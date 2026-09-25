@@ -122,7 +122,10 @@ function veAttachNodeDrag(nodeEl, node) {
 function updateCanvasTransform() {
   var canvas = document.getElementById('ve-canvas');
   if(canvas) {
-    canvas.style.transform = 'translate(' + canvasOffset.x + 'px, ' + canvasOffset.y + 'px) scale(' + canvasZoom + ')';
+    // Çeviri CİHAZ pikseline oturur, durum değil (js/canvas-space.js).
+    canvas.style.transform = (typeof veCanvasTransformCss === 'function')
+      ? veCanvasTransformCss(canvasOffset, canvasZoom, veDevicePixelRatio())
+      : 'translate(' + canvasOffset.x + 'px, ' + canvasOffset.y + 'px) scale(' + canvasZoom + ')';
   }
   // Sonsuz ızgara deseni kameradan türetilir (js/canvas-space.js) — transform ile
   // AYNI karede tazelenmezse ızgara içerikten kayar.

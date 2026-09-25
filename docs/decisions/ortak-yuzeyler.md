@@ -1209,3 +1209,20 @@ varsayılan 300×150 oranıyla genişliğe ölçekleniyordu (1160 px genişlikte
 gizliyordu. Boş panoda yükseklik çizildiğindekiyle aynı (`VE_TR.AXIS_H`)
 baştan verilir. Kapı: `tests/e2e/fead-sonuclar.spec.js` (düzeltme geri
 alınınca 580 px ile düşüyor).
+
+## Çizilen kamera cihaz pikseline oturur (2026-09-25)
+
+**Hüküm.** `#ve-canvas`ın dönüşümü `veCanvasTransformCss` ile yazılır: çeviri
+cihaz pikselinin katına yuvarlanır. Yuvarlanan yalnız ÇİZİMDİR — `canvasOffset`
+durumu olduğu gibi kalır. Izgara deseni aynı yuvarlanmış kamerayı izler.
+
+**Gerekçe.** Kullanıcı: *"programın dokusunda bir bulanıklık var."* Kamera
+ofseti kesirli olunca (örnek yüklenince 765,5 px; tekerlekten sonra %100'e
+dönüşte hemen her zaman) 1× ekranda tuvaldeki her kutu kenarı, tel ve ikon iki
+piksele yayılıyordu. Durum yuvarlanmaz, çünkü pan ve tekerlek adımları onun
+üstüne birikiyor; her adımda yuvarlamak kamerayı kaydırırdı. 1,25× ve 1,5×'te
+ölçülebilir fark yok — kural orada zararsız.
+
+**Kapı.** `tests/unit/tuval-cihaz-pikseli.test.js` (GERÇEK
+`updateCanvasTransform`; düzeltme geri alınınca 5 test, ızgara ham ofseti
+izleyince 1, durum yuvarlanınca 2 test düşüyor).

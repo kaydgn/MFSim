@@ -226,6 +226,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   hâlde geri-al'dan sonraki ilk yerinde düzenleme kaydı da değiştiriyordu —
   sonraki Ctrl+Z "Geri alındı" deyip hiçbir şeyi geri almıyordu. Kapı:
   `geri-al-yolu.test.js` (GERÇEK `restoreState`; `state.test.js` onu sahte yapıyor).
+- **ÇİZİLEN KAMERA CİHAZ PİKSELİNE OTURUR** (`js/canvas-space.js` →
+  `veCanvasTransformCss`). `#ve-canvas`a çıplak `translate(offset)` yazılmaz:
+  kesirli ofset 1× ekranda tuvaldeki her kenarı iki piksele yayıyordu. Yuvarlanan
+  yalnız çizim, `canvasOffset` DEĞİL (pan adımları onun üstüne birikiyor).
+  Kapı: `tuval-cihaz-pikseli.test.js`.
 - **KART İÇİNDEKİ KAYDIRILABİLİR YÜZEY TEKERLEĞİ ÖNCE ALIR**
   (`js/ui-core.js` → `veWheelInnerPane`). Kanvasın tekerlek dinleyicisi
   kayıtsız `preventDefault()` çağırdığı sürece kart içindeki hiçbir liste
