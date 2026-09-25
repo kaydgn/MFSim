@@ -1050,6 +1050,11 @@ describe('Kayış Yolu kanvas kartı', () => {
     // Üç seçici de düğümün KENDİ alanını yazıyor (ikinci bir ayar doğmuyor).
     ['posMode', 'animRpm', 'vibMode'].forEach((k) =>
       expect(cub).toContain("veFeadSetChoice('" + lay.id + "','" + k + "'"));
+    // KOL LİSTESİ KISA ADLA (`kisa`): tam ad çubuğa sığmıyordu (105 px isterken
+    // 51 px). Tam ad seçeneğin ipucunda ve çizimin künyesinde duruyor.
+    expect(cub).toMatch(/<option value="mean" title="Çalışma \(Mean\)"[^>]*>Mean · [\d.]+°<\/option>/);
+    expect(cub).not.toMatch(/>Çalışma \(Mean\) ·/);
+    expect(cub).toMatch(/<option value="scn" title="Senaryo — motor çevrimi"[^>]*>Senaryo<\/option>/);
   });
 
   // ── YÜZEN ÇUBUK YÖN GÜLÜNÜ ÖRTÜYORDU — ÖLÇÜLMÜŞ HATA ────────────────────
@@ -1103,6 +1108,10 @@ describe('Kayış Yolu kanvas kartı', () => {
     // örtüyordu; yükü seçiciler taşıyor (daralma + ellipsis).
     expect(CSS).toMatch(/\.ve-fead-yuz\{[^}]*flex-wrap:nowrap/);
     expect(CSS).toMatch(/\.ve-fead-yuz-dnt > select\{[^}]*text-overflow:ellipsis/);
+    // SEÇİLİ METNE GÖRE BOY: en uzun seçeneğe göre boyutlanan liste daralma
+    // payını boşuna alıyordu (kesik seçiciler: 72'de 25 → 0; gerçek tarayıcı
+    // ölçümü `fead-kanvas.spec.js` → "ÇUBUK SEÇİCİLERİ").
+    expect(CSS).toMatch(/\.ve-fead-yuz-dnt > select\{[^}]*field-sizing:content/);
     // ORTALAMA `left:50%` İLE DEĞİL. Ölçüldü: mutlak konumlu kabın sığdırma
     // genişliği "kap − left" oluyor (440'lık kartta 220) ve çubuk DÖRT SATIRA
     // sarıyordu — yüzen çubuğun bütün kazancı geri gidiyordu.
@@ -1617,7 +1626,8 @@ describe('kol konumu seçimi', () => {
     expect(h).toMatch(/event\.stopPropagation\(\)/);
     // Sürükleme mousedown ile başlıyor; durdurulmazsa listeyi açmak düğümü taşır.
     expect(h).toMatch(/onmousedown="event\.stopPropagation\(\);"/);
-    expect(h).toMatch(/TÜMÜ/);
+    // "Tümü" seçeneği var (kısa ad çubukta; tam açıklama ipucunda).
+    expect(h).toMatch(/<option value="all" title="Tümü — üst üste"[^>]*>Tümü/);
   });
 
   test('kart seçili konumu çiziyor ve şeridi ona göre yazıyor', () => {
@@ -1625,7 +1635,7 @@ describe('kol konumu seçimi', () => {
     lay.data.posMode = 'min';
     const html = fead.veFeadLayoutCardHTML(lay);
     expect(html).toMatch(/Min\. kayış/);
-    expect(html).toMatch(/value="min" selected/);
+    expect(html).toMatch(/value="min"[^>]*selected/);
   });
 
   test('çözülemeyen modelde seçici patlamaz', () => {

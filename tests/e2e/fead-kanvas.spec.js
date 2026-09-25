@@ -191,3 +191,40 @@ test('KAYIŞ YOLU KARTI: bant yok, çubuk tek satır, gül açıkta', async ({ p
 
   expect(hatalar).toEqual([]);
 });
+
+// ── ÇUBUĞUN SEÇİCİLERİ KESİLMİYOR ────────────────────────────────────────
+// Liste genişliğini EN UZUN seçeneğinden alıyordu: "Kapalı" yazan Titreşim
+// "Çırpma (kayış verisi kapalı)" kadar yer istiyor, daralma payını da en çok o
+// alıyordu. Ölçüldü (12 örnek × 2 kart × 3 seçici): varsayılan hâlde 72
+// seçicinin 25'i kesikti — "Çalışma (Mean) · 28.1°" 105 px isterken 51 px.
+// Şimdi seçici SEÇİLİ metne göre boyutlanıyor (`field-sizing:content`) ve
+// kol listesi modelin kısa adını taşıyor. jsdom yerleşim hesaplamaz: bu
+// halka Node'da HİÇ koşmuyor.
+test('ÇUBUK SEÇİCİLERİ: seçili metin hiçbir durumda kesilmiyor', async ({ page }) => {
+  await bootApp(page);
+  await feadOrnek(page);
+  const kesikler = () => page.evaluate(() => {
+    const c = document.createElement('canvas').getContext('2d');
+    const out = [];
+    document.querySelectorAll('.ve-fead-yuz .ve-fead-yuz-dnt select').forEach((s) => {
+      const cs = getComputedStyle(s);
+      c.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+      const metin = s.options[s.selectedIndex] ? s.options[s.selectedIndex].text : '';
+      const icerik = s.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      if (c.measureText(metin).width > icerik + 0.5) out.push(metin + ' (' + Math.round(icerik) + ' px)');
+    });
+    const yuk = [...document.querySelectorAll('.ve-fead-yuz')].map((e) => e.getBoundingClientRect().height);
+    return { out, sayi: document.querySelectorAll('.ve-fead-yuz .ve-fead-yuz-dnt select').length, yuk };
+  });
+  const kartlar = await page.evaluate(() => window.nodes.filter((n) => n.type === 'fead-layout').map((n) => n.id));
+  const durumlar = [null, { animRpm: 'scn' }, { posMode: 'all' }, { vibMode: 'mode:0' }];
+  for (const d of durumlar) {
+    if (d) await page.evaluate(([ids, s]) => ids.forEach((id) =>
+      Object.entries(s).forEach(([k, v]) => veFeadSetChoice(id, k, v))), [kartlar, d]);
+    await page.waitForTimeout(500);
+    const r = await kesikler();
+    expect(r.sayi).toBe(kartlar.length * 3);                     // üç seçici × kart
+    expect([JSON.stringify(d), r.out]).toEqual([JSON.stringify(d), []]);
+    r.yuk.forEach((h) => expect(h).toBeLessThan(48));           // çubuk hâlâ TEK SATIR
+  }
+});
