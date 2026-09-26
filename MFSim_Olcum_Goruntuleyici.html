@@ -257,14 +257,18 @@
        Amaç: köşe/derinlik/boşluk/hareket tutarlılığı — "tasarlanmış" his. */
     :root {
       /* Üst krom yüksekliği — başlık satırı + şerit (bkz. js/ribbon.js).
-         Şerit daraltılınca --ribbon-h JS tarafından 26px'e iner; sayfa alanı
-         --chrome-h üzerinden kendiliğinden yeniden konumlanır. */
-      /* TEK BANT: başlık satırı şerit şeridiyle birleşti. Eskiden
-         --titlebar-h (34px) + --ribbon-strip-h (26px) = 60px krom vardı;
-         şimdi yalnız 30px'lik şerit şeridi var. --titlebar-h kaldırıldı;
-         --chrome-h doğrudan şeridin yüksekliği. */
-      --ribbon-strip-h: 38px;
-      --ribbon-expanded-h: 132px;
+         Şerit daraltılınca --ribbon-h JS tarafından bandın yüksekliğine
+         (--ribbon-strip-h) iner; sayfa alanı --chrome-h üzerinden
+         kendiliğinden yeniden konumlanır. */
+      /* TEK BANT: başlık satırı şerit şeridiyle birleşti; --chrome-h
+         doğrudan şeridin yüksekliği. ÖLÇÜ İÇERİKTEN (2026-09-26): 38 px'lik
+         bantta en yüksek öğe 28 px'lik ▼ düğmesiydi, kalanı 24 px — kullanıcı
+         "hâlâ boyuna geniş, çok yer kaplıyor" dedi. Bant 32 px: 24 px'lik
+         denetimlerin üstünde ve altında 4 px. GÖVDE AYNI BOYDA kalır (94 px):
+         açık hâl de şerit kadar kısalır. Kapı: kabuk-bant.test.js +
+         ust-bant.spec.js. */
+      --ribbon-strip-h: 32px;
+      --ribbon-expanded-h: 126px;
       /* Müfettiş sütununun genişliği — tuvalin daralma miktarıyla AYNI
          kaynaktan gelmek zorunda; iki yerde yazılsaydı sütun tuvali örterdi
          ya da arada ölü şerit kalırdı. */
@@ -338,11 +342,13 @@
          çizgiler merdiven gibi y=75 · 67 · 71'de (2026-09-23, kullanıcı:
          "pencere sınırları hizasız"). Bantlar min-height ile buna oturur ve
          zemini buradan alır; kapı tests/unit/kabuk-bant.test.js.
-         ÖLÇÜ İÇERİKTEN: 36 px "gereksiz kalın"dı (kullanıcı, 2026-09-24) —
-         bantların doğal yüksekliği 21 · 28 · 23 · 24 px, yani 8–15 px'i boştu.
-         30 px eski sekme bandının (29) ölçüsü; en yüksek içerik (Sonuçlar araç
-         çubuğunun 24 px'lik segmenti + 2·2 pay + çizgi = 29) sığıyor. */
-      --bant-h: 30px;
+         ÖLÇÜ İÇERİKTEN: 36 px "gereksiz kalın"dı (kullanıcı, 2026-09-24),
+         30 px de "hâlâ boyuna geniş" (2026-09-26). Bant 26 px: bantlardaki
+         düğmeler 22 px (sekme 4 px payla, araç çubuğu segmenti de artık tek
+         başına duran düğmeyle aynı boyda), üstünde ve altında 2 px kalıyor.
+         Segoe UI'ın satırı Inter'inkinden uzun (12 px'te 16 ↔ 15): ölçü onunla
+         alındı, en yüksek içerik 25 px. */
+      --bant-h: 26px;
       --bant-zemin: linear-gradient(180deg, var(--bg-tertiary), var(--bg-secondary));
 
       /* ── TXT RAPOR SAYFASI ──
@@ -566,11 +572,20 @@
       flex-direction: column;
       overflow: hidden;
     }
+    /* KABUK BANDIYLA AYNI ÖLÇÜ (--bant-h): içerik 27 px iken 39 px'lik başlıkta
+       12 px boştu — kullanıcı: "başlığın olduğu header kısmı boyuna çok büyük".
+       Dikey pay 1 px: kapat düğmesi bant düğmeleriyle tek boy (22 px), 22 +
+       2·1 + çizgi = 25 ≤ 26. Beş
+       pencere bu sınıfı paylaşıyor (Ayarlar · İçe Aktarma · Program Durumu ·
+       Komuta · FEAD sihirbazı), yani beşi de aynı bantta; zemin de bandın
+       (--bant-zemin), çünkü jetonu kullanan her kural kabuğun bandıdır. */
     .ve-settings-header {
       display: flex;
       align-items: center;
-      padding: 6px 14px;          /* dikey inceltildi: 12px → 6px */
-      background: var(--bg-tertiary);
+      box-sizing: border-box;
+      min-height: var(--bant-h);
+      padding: 1px 8px 1px 14px;
+      background: var(--bant-zemin);
       border-bottom: 1px solid var(--border-color);
       font-size:var(--fs-md);          /* 0.88rem → 0.78rem */
       font-weight: 600;
@@ -580,7 +595,7 @@
       display: inline-flex; align-items: center; gap: 8px; flex: 1;
     }
     .ve-settings-close {
-      width: 26px; height: 26px;
+      width: 22px; height: 22px;
       border: 1px solid transparent;
       background: transparent;
       color: var(--text-muted);
@@ -2267,13 +2282,14 @@ html.ve-sayfa-tuval .ve-nav-rail{ border-right-color:transparent; }
 /* Kayma yok: sekme bandın içinde biter ve bandın çizgisi zeminin içinde
    (iç gölge) — örtmek için dışarı taşması gerekmiyor, taşsaydı şerit kesecekti. */
 .ve-tab-bar--top .ve-tab{ top:0; }
-.ve-tab-bar--top .ve-tab-add{ align-self:center; margin-bottom:0; }
+.ve-tab-bar--top .ve-tab-add{ align-self:center; margin-bottom:0; width:22px; height:22px; }
 .ve-tab-bar::-webkit-scrollbar{display:none;}
 .ve-tab{
   display:flex;
   align-items:center;
   gap:6px;
-  padding:6px 11px;
+  /* Dikey pay 4 px: sekme bandın boyuna (--bant-h) uzar, yazı ortada. */
+  padding:4px 11px;
   font-size:var(--fs-body);
   font-weight:500;
   color:var(--text-secondary);
@@ -5606,11 +5622,11 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 /* Üst bandın SAĞ yarısı — yüksekliği --bant-h'tan alır, sol yarısıyla
    (.ve-results-head) aynı hizaya oturur. min-height, çünkü dar pencerede
    düğmeler alt satıra sarıyor ve bandın büyümesi gerekiyor.
-   DİKEY PAY 2 px: 24 px'lik segment + 2·2 + çizgi = 29 ≤ --bant-h (30).
-   4 px'le 33'e çıkıyor ve bant ince olunca komşusundan 3 px uzun kalırdı. */
+   DİKEY PAY 1 px: 22 px'lik düğme/segment + 2·1 + çizgi = 25 ≤ --bant-h (26).
+   Pay büyürse çubuk komşusundan uzun kalır — Veri Gezgini bandıyla çizgi kırılır. */
 .ve-trace-toolbar{
   display:flex;align-items:center;gap:4px;flex-wrap:wrap;
-  padding:2px 8px;flex-shrink:0;
+  padding:1px 8px;flex-shrink:0;
   min-height:var(--bant-h);
   box-sizing:border-box;
   background:var(--bant-zemin);
@@ -5637,8 +5653,11 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-trace-caret{font-size:var(--fs-micro);opacity:0.7;}
 .ve-trace-xaxis{position:relative;display:flex;}
 .ve-trace-seg{display:flex;border:1px solid var(--border-color);border-radius:var(--radius-sm);overflow:hidden;}
+/* Segmentin DIŞ boyu tek başına duran düğmeyle (.ve-trace-btn, 22 px) aynı:
+   20 px + kabın iki çizgisi. 22 px'ken segment 24'tü ve yan yana duran iki
+   denetim iki ayrı boyda okunuyordu. */
 .ve-trace-seg button{
-  height:22px;padding:0 9px;border:0;border-right:1px solid var(--border-color);
+  height:20px;padding:0 9px;border:0;border-right:1px solid var(--border-color);
   background:transparent;color:var(--text-muted);
   font-size:var(--fs-md);font-family:inherit;cursor:pointer;
 }
@@ -7243,7 +7262,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
    bandı bir araç şeridi gibi okutuyordu, oysa bu kabuğun başlığı. */
 .ve-rb-strip{
   display:flex; align-items:center; gap:0;
-  height:var(--ribbon-strip-h,38px); flex-shrink:0; padding:0 12px;
+  height:var(--ribbon-strip-h,32px); flex-shrink:0; padding:0 12px;
   background:var(--bg-secondary);
   border-bottom:1px solid var(--border-color);
 }
@@ -7255,7 +7274,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .ve-rb-strip > .ve-bant-ara,
 .ve-rb-strip > .ve-bant-ana,
 .ve-rb-strip > .theme-selector{ display:flex; align-items:center; flex-shrink:0; }
-/* Bandın 44 px'inde 28 px'lik öğeler DİKEYDE ORTALANIR. Sekmeler tam boy
+/* Bandın 32 px'inde 24 px'lik öğeler DİKEYDE ORTALANIR. Sekmeler tam boy
    kalmak zorunda olduğu için kap `stretch`; ortalama öğe başına yapılır. */
 .ve-rb-strip > .ve-bant-modul,
 .ve-rb-strip > .ve-bant-ara,
@@ -7527,7 +7546,9 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
    ok döner. */
 .ve-rb-expand{
   display:flex; align-items:center; justify-content:center;
-  width:28px; height:28px; padding:0; align-self:center; margin-left:6px;
+  /* 24 px: arama · Çöz · avatar ile AYNI boy. 28 px'ken bandın en yüksek
+     öğesiydi ve bandı tek başına kalın tutuyordu. */
+  width:24px; height:24px; padding:0; align-self:center; margin-left:6px;
   background:none; border:1px solid transparent; cursor:pointer; font:inherit;
   color:var(--text-muted); border-radius:var(--radius-sm);
   transition:color var(--dur-fast,0.12s), background-color var(--dur-fast,0.12s);
@@ -7711,7 +7732,10 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 /* Veri Gezgini başlığındaki "İçe Aktar" düğmesi */
 .ve-imp-tool{
   display:inline-flex; align-items:center; gap:4px;
-  padding:3px 8px; font-size:var(--fs-md); font-weight:600;
+  /* Yükseklik yazıdan TÜREMEZ, sabit 22 px: bandın öteki düğmeleriyle aynı.
+     Pay + satır Segoe UI'da 25 px ediyordu ve bandı sınırda tutuyordu. */
+  box-sizing:border-box; height:22px;
+  padding:0 8px; font-size:var(--fs-md); font-weight:600;
   background:var(--bg-input); color:var(--text-secondary);
   border:1px solid var(--border-color); border-radius:var(--radius-sm);
   cursor:pointer; transition:background .12s, color .12s, border-color .12s;
@@ -8175,16 +8199,13 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
    Adımlar TIKLANABİLİR ve bu bilinçli: sihirbaz bir kilit değil bir sıra
    önerisi. Kullanıcı 5. adımda bir kasnağı düzeltmek isterse 2'ye dönebilmeli;
    "İleri" düğmesini zorunlu tutmak onu formun içinde hapsederdi. */
+/* Rayın başında marka bloğu YOK: "Başlangıç Sihirbazı · FEAD" pencerenin
+   başlık bandında zaten yazılı ve blok onu 54 px'lik ikinci bir başlık olarak
+   tekrarlıyordu. Adımlar bandın hemen altından başlar. */
 .ve-fw-nav{
   background:var(--bg-tertiary); border-right:1px solid var(--border-color);
   display:flex; flex-direction:column; overflow-y:auto; padding:0 0 10px;
 }
-.ve-fw-brand{
-  padding:12px 14px 10px; border-bottom:1px solid var(--border-color);
-  display:flex; flex-direction:column; gap:2px;
-}
-.ve-fw-brand b{ font-size:var(--fs-lg); color:var(--text-heading); font-weight:700; }
-.ve-fw-brand span{ font-size:var(--fs-micro); color:var(--text-muted); letter-spacing:var(--tracking-wide); text-transform:uppercase; }
 
 .ve-fw-steps{ list-style:none; margin:0; padding:8px 0 0; counter-reset:none; }
 .ve-fw-step{
@@ -8244,9 +8265,12 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 
 /* ── GÖVDE ────────────────────────────────────────────────────────────── */
 .ve-fw-body{ overflow-y:auto; padding:16px 20px 22px; min-height:0; background:var(--bg-secondary); }
-.ve-fw-head{ margin:0 0 12px; }
+/* Adım başlığı TEK SATIR: ad ile ipucu aynı taban çizgisinde. İpucu soldaki
+   rayın aynı satırında zaten yazılı; ayrı bir satır ona 20 px veriyordu. Dar
+   gövdede sarar (flex-wrap), kesilmez. */
+.ve-fw-head{ display:flex; align-items:baseline; flex-wrap:wrap; gap:2px 10px; margin:0 0 10px; }
 .ve-fw-head h2{
-  margin:0 0 3px; font-size:var(--fs-title); font-weight:700; color:var(--text-heading);
+  margin:0; font-size:var(--fs-title); font-weight:700; color:var(--text-heading);
   letter-spacing:-0.01em;
 }
 .ve-fw-head p{ margin:0; font-size:var(--fs-md); color:var(--text-muted); }
@@ -8431,15 +8455,16 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
 .ve-fw-check input{ margin-top:2px; }
 
 /* ── ALT ÇUBUK ───────────────────────────────────────────────────────── */
-/* YÜKSEKLİK MODALIN KENDİ BAŞLIĞINDAN GELİR, seçilmiş bir sayıdan değil:
-   dolgu `.ve-settings-header` ile aynı (6px 14px) ve düğme yüksekliği o
-   çubuğu başlığın hizasına oturtacak kadar. Bir dönem 9px dolgu + 29px düğme
-   vardı; ÖLÇÜLDÜ, çubuk 48 px'e çıkıyordu — aynı diyaloğun başlığı 39 px, yani
-   alt çubuk kendi üst çubuğundan 9 px KALINDI ve kullanıcı bunu "orantısız"
-   diye bildirdi. */
+/* YÜKSEKLİK MODALIN KENDİ BAŞLIĞINDAN GELİR, seçilmiş bir sayıdan değil: ikisi
+   de --bant-h. Bir dönem çubuk 48 px'e çıkıyordu ve aynı diyaloğun başlığından
+   9 px KALINDI — kullanıcı bunu "orantısız" diye bildirdi. Başlık banda inince
+   çubuk da iner: dikey pay 1 px, düğme bandın öteki düğmeleriyle tek boy
+   (22 px; 2·1 + 22 + çizgi = 25 ≤ 26). Küçülen YALNIZ çubuktaki düğmeler;
+   gövdedeki düğmeler aynı. */
 .ve-fw-foot{
-  display:flex; align-items:center; gap:7px; padding:7px 14px;
-  border-top:1px solid var(--border-color); background:var(--bg-tertiary);
+  display:flex; align-items:center; gap:7px; box-sizing:border-box;
+  min-height:var(--bant-h); padding:1px 14px;
+  border-top:1px solid var(--border-color); background:var(--bant-zemin);
 }
 .ve-fw-foot-state{ flex:1; font-size:var(--fs-tiny); }
 .ve-fw-ok{ color:var(--ink-success); }
@@ -8463,6 +8488,8 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
 }
 .ve-fw-btn:hover:not(:disabled){ background:var(--bg-tertiary); border-color:var(--border-hover); }
 .ve-fw-btn:disabled{ opacity:.45; cursor:not-allowed; }
+/* Alt çubukta düğme 22 px, yazıdan TÜREMEZ: bandın öteki düğmeleriyle tek boy. */
+.ve-fw-foot .ve-fw-btn{ box-sizing:border-box; height:22px; padding-top:0; padding-bottom:0; }
 .ve-fw-btn-primary{ background:var(--accent-primary); border-color:var(--accent-primary); color:var(--on-accent); }
 .ve-fw-btn-primary:hover:not(:disabled){ background:var(--ink-accent); border-color:var(--ink-accent); }
 .ve-fw-btn-go{ background:var(--accent-warning); border-color:var(--accent-warning); color:var(--on-warning); font-weight:700; }
@@ -8480,7 +8507,6 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
   .ve-fw-steps{ display:flex; overflow-x:auto; padding:6px; gap:4px; }
   .ve-fw-step{ flex:none; border-left:none; border-bottom:2px solid transparent; }
   .ve-fw-step.on{ border-bottom-color:var(--accent-primary); }
-  .ve-fw-brand{ display:none; }
 }
 
 /* Sihirbaz — gergi satırı ve salt-okunur hücreler ------------------------- */
@@ -9551,6 +9577,10 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   font-size:var(--fs-body); font-weight:600; color:var(--text-heading);
 }
 .ve-fead-tablo-bas b{ font-weight:600; }
+/* Bantta kapat düğmesi 22 px (müfettiş başlığınınkiyle aynı); açılır
+   pencerelerin başlığında 26 kalır. 26 px'lik düğme 26 px'lik bandı 27'ye
+   itiyordu. */
+.ve-fead-tablo-bas .ve-tablo-kapat{ width:22px; height:22px; }
 .ve-fead-tablo-bas em{ font-style:normal; font-weight:400; font-size:var(--fs-tiny); color:var(--text-muted); }
 /* ÜST KENAR TUTAMAK: tuvalin alt çizgisinin üstünde 7 px'lik şerit. Dinlenmede
    görünmez (çizgi zaten sınırı söylüyor); fare ya da odak gelince vurgulu
@@ -10382,8 +10412,11 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   <div id="ve-results-browser" style="width:250px; min-width:160px; max-width:520px; background:var(--bg-secondary); border-right:2px solid var(--border-color); display:flex; flex-direction:column; position:relative; flex-shrink:0;">
     <div id="ve-results-browser-resizer" style="position:absolute; top:0; right:-3px; width:6px; height:100%; cursor:ew-resize; z-index:10;"></div>
 
-    <div style="padding:8px 12px; background:linear-gradient(180deg, var(--bg-tertiary), var(--bg-secondary)); border-bottom:1px solid var(--border-color); display:flex; align-items:center; gap:6px;">
-      <span style="font-size:var(--fs-md); font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Veri Gezgini</span>
+    <!-- Bant MFSim'inkiyle AYNI kural (.ve-results-head · --bant-h). Satır içi
+         8 px'lik payla başlık 41 px'ti, yanındaki araç çubuğu 30 — iki bandın
+         alt çizgisi 11 px kayıktı (ölçüldü, 2026-09-26). -->
+    <div class="ve-results-head">
+      <span class="ve-results-head-title"><span class="mf-ico mf-ico-bar-chart"></span> Veri Gezgini</span>
       <button type="button" id="ve-import-btn" class="ve-imp-tool" onclick="veImpOpenPicker()" style="margin-left:auto;"
               title="Excel/CSV ölçüm dosyasını içe aktar (Vector CANoe çıktısı)">
         <span class="mf-ico mf-ico-upload"></span> İçe Aktar

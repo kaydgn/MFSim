@@ -756,6 +756,68 @@ describe('adım eşlemesi ve yüzeyler', () => {
     expect(Number(bpad[2])).toBeLessThanOrEqual(11);  // düğme genişliği
   });
 
+  // ── ÜST BÖLGE KABUK BANDI KADAR (kullanıcı bildirimi, 2026-09-26) ──────
+  //
+  // *"'Başlangıç Sihirbazı' penceresinin başlığının olduğu header kısmı boyuna
+  // çok büyük."* ÖLÇÜLDÜ (gerçek tarayıcı, 1920×952): başlık bandı 39 px
+  // (içeriği 27), altında aynı başlığı tekrarlayan 54 px'lik marka bloğu, iki
+  // satırlık adım başlığı 39 px, alt çubuk 41 px. Hesaplanmış yükseklikler
+  // `fead-wizard.spec.js`'te; burada KAYNAK: ölçü jetondan, tekrar yok.
+  describe('üst bölge kabuk bandı kadar', () => {
+    const kural = (sec) => {
+      const m = CSS.match(new RegExp(sec.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{([^}]*)\\}'));
+      return m ? m[1] : '';
+    };
+    const dikeyPay = (r) => {
+      const p = (r.match(/(?:^|[;\s])padding:\s*(\d+)px/) || [])[1];
+      return p === undefined ? NaN : Number(p);
+    };
+    const boy = (sec) => Number((kural(sec).match(/(?:^|[;\s])height:\s*(\d+)px/) || [])[1]);
+
+    test('pencere başlığı ve alt çubuk --bant-h\'tan, düğmeler bant düğmesi boyunda', () => {
+      // Beş pencere `.ve-settings-header`'ı paylaşıyor; sihirbaza özel bir
+      // başlık üçüncü bir pencere dili olurdu. Kutu dolguyu İÇİNE almalı
+      // (border-box) — yoksa bandın tabanı 2·pay + çizgi kadar taşar.
+      const bas = kural('.ve-settings-header');
+      expect(bas).toMatch(/min-height:\s*var\(--bant-h\)/);
+      expect(bas).toMatch(/box-sizing:\s*border-box/);
+      expect(dikeyPay(bas)).toBeLessThanOrEqual(1);
+      // Başlıktaki kapat ve alt çubuktaki düğmeler bandın öteki düğmeleriyle
+      // TEK boy (`.ve-trace-btn`, bugün 22 px): 22 + 2·1 + çizgi ≤ bant.
+      const bantDugme = boy('.ve-trace-btn');
+      expect(bantDugme).toBeGreaterThanOrEqual(20);
+      expect(boy('.ve-settings-close')).toBe(bantDugme);
+      // Alt çubuk AYNI bantta — "orantısız" bildirimi (2026-08-31) başlığa
+      // bağlı kaldığı için çubuk başlıktan kalın bırakılamaz.
+      const foot = kural('.ve-fw-foot');
+      expect(foot).toMatch(/min-height:\s*var\(--bant-h\)/);
+      expect(foot).toMatch(/box-sizing:\s*border-box/);
+      expect(dikeyPay(foot)).toBeLessThanOrEqual(1);
+      expect(boy('.ve-fw-foot .ve-fw-btn')).toBe(bantDugme);
+      expect(kural('.ve-fw-foot .ve-fw-btn')).toMatch(/box-sizing:\s*border-box/);
+    });
+
+    test('rayın başında pencere başlığını tekrarlayan marka bloğu YOK', () => {
+      kabuk();
+      wiz.veFeadWizReset();   // boş taslak: ray durumsuz çizilmez
+      wiz.veFeadWizRender();
+      const nav = document.getElementById('ve-fw-nav').innerHTML;
+      expect(nav).toContain('ve-fw-step');           // ray gerçekten çizildi
+      expect(nav).not.toContain('ve-fw-brand');
+      expect(nav).not.toMatch(/Başlangıç Sihirbazı/);
+      // Öksüz kural kalmasın: blok geri gelirse görünümüyle birlikte gelir.
+      expect(CSS).not.toMatch(/\.ve-fw-brand\b/);
+    });
+
+    test('adım başlığı TEK SATIR: ad ile ipucu aynı taban çizgisinde', () => {
+      const bas = kural('.ve-fw-head');
+      expect(bas).toMatch(/display:\s*flex/);
+      expect(bas).toMatch(/align-items:\s*baseline/);
+      expect(bas).toMatch(/flex-wrap:\s*wrap/);       // dar gövdede sarar, kesilmez
+      expect(kural('.ve-fw-head h2')).toMatch(/margin:\s*0\s*;/);
+    });
+  });
+
   test('panel: taslak varken künyeyi, yokken sebebi yazıyor', () => {
     const bosNode = { id: 'w1', type: 'fead-wizard', data: {} };
     const h1 = wiz.getFeadWizardPropertiesHTML(bosNode);

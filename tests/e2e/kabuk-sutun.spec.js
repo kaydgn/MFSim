@@ -196,16 +196,47 @@ test('KABUK TEK ÇİZGİ — üç başlık aynı bantta, tuval komşularına yap
   expect(r.sekme.zemin).toBe(r.sekme.tuvalZemin);
 });
 
-// BANT İNCE — ÖLÇÜ İÇERİKTEN (2026-09-24). Kullanıcı: 36 px'lik bant
-// "gereksiz kalın". Bantların doğal yüksekliği 21 · 28 · 23 · 24 · 33 px'ti
-// (Sonuçlar araç çubuğu 4 px'lik iç payla); bant 30 px'e indi, çubuğun payı
-// 2 px'e. Kapı iki yönlü: her bant jetonun KENDİSİ (içerik bandı
-// büyütmüyor — büyüseydi o bant komşusundan uzun kalırdı) ve jeton ince.
-// Sonuçlar'ın iki bandı da burada, çünkü jeton onların da ölçüsü ve bu spec
+// BANT İNCE — ÖLÇÜ İÇERİKTEN. Kullanıcı: 36 px'lik bant "gereksiz kalın"
+// (2026-09-24), 30 px de "hâlâ boyuna geniş" (2026-09-26). Bant 26 px;
+// içindeki düğmeler 22 px. Kapı iki yönlü: her bant jetonun KENDİSİ (içerik
+// bandı büyütmüyor — büyüseydi o bant komşusundan uzun kalırdı) ve jeton ince.
+// Sonuçlar'ın bantları da burada, çünkü jeton onların da ölçüsü ve bu spec
 // ürün kapısında (results-txt-page.spec.js değil).
+//
+// ÖLÇÜ SEGOE UI'IN SATIRIYLA. Kullanıcının yazısı Segoe UI (Windows); burada
+// yok ve Inter'e düşüyor. Inter'in normal satırı 1,21, Segoe'nunki 1,33 (12 px'te
+// 15 ↔ 16) — taklitsiz ölçüm bantları olduğundan kısa gösterir ve kullanıcının
+// ekranında büyüyen bir bandı geçirirdi. Taklit: Inter'in şekilleri, Segoe'nun
+// yükseliş/iniş payı (2210 · 514 / 2048).
+async function segoeSatiri(page) {
+  return page.evaluate(async () => {
+    const kurallar = [];
+    for (const ss of document.styleSheets) {
+      let rs; try { rs = ss.cssRules; } catch (e) { continue; }
+      for (const r of rs) {
+        if (r instanceof CSSFontFaceRule && /Inter/.test(r.style.getPropertyValue('font-family'))) kurallar.push(r.cssText);
+      }
+    }
+    const st = document.createElement('style');
+    st.textContent = kurallar.map((t) => t.replace(/font-family:\s*("?)'?Inter'?\1;/, "font-family: 'Segoe UI';")
+      .replace(/\}\s*$/, ' ascent-override: 107.91%; descent-override: 25.1%; line-gap-override: 0%; }')).join('\n');
+    document.head.appendChild(st);
+    await document.fonts.load("12px 'Segoe UI'");
+    await document.fonts.ready;
+    const s = document.createElement('span');
+    s.textContent = 'Topoloji'; s.style.cssText = 'font:12px var(--font-sans);line-height:normal;display:inline-block';
+    document.body.appendChild(s); const h = s.getBoundingClientRect().height; s.remove();
+    return { kural: kurallar.length, satir12: h };
+  });
+}
+
 test('BANT İNCE — her bant jetonun kendisi, içerik onu büyütmüyor', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await modulAc(page);
+  const segoe = await segoeSatiri(page);
+  // Taklit gerçekten devrede: 12 px'lik satır Segoe'nunki (16), Inter'inki (15) değil.
+  expect(segoe.kural).toBeGreaterThan(0);
+  expect(Math.round(segoe.satir12)).toBe(16);
   await page.evaluate(() => {
     if (typeof veFeadWizClose === 'function') veFeadWizClose(false);
     const n = nodes.find((x) => x.type === 'fead-layout') || nodes[0];
@@ -219,14 +250,23 @@ test('BANT İNCE — her bant jetonun kendisi, içerik onu büyütmüyor', async
   const jeton = await page.evaluate(() =>
     parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bant-h')));
   const topoloji = await boy(['.ve-sidebar-header', '#ve-doc-dock', '.ve-properties-header']);
-  await page.evaluate(() => { veTogglePropertiesPanel(false); veSubTabDegistir('sonuclar'); });
+  // Kayış Tablosu çekmecesinin başlığı da bir bant: 26 px'lik kapat düğmesi
+  // 26 px'lik bandı 27'ye iterdi (bantta 22 px).
+  await page.evaluate(() => { veTogglePropertiesPanel(false); veFeadTabloAc(); });
+  await page.waitForTimeout(400);
+  const cekmece = await boy(['.ve-fead-tablo-bas']);
+  await page.evaluate(() => { veFeadTabloKapat(); veSubTabDegistir('sonuclar'); });
   await page.waitForTimeout(800);
   const sonuclar = await boy(['.ve-results-head', '.ve-trace-toolbar']);
-  // Jeton ince (eski: 36 px) ama en yüksek içeriği (araç çubuğu, 29) sığdırıyor.
-  expect(jeton).toBeLessThanOrEqual(30);
-  // Beş bandın beşi de ölçüldü (bulunamayan bant sessizce geçmesin) ve beşi
-  // de tam jeton: içerik hiçbirini büyütmüyor.
-  const hepsi = [...topoloji, ...sonuclar];
+  await page.evaluate(() => veTxtPreviewShow('Bant', 'SATIR', 'bant.txt', 'fead'));
+  await page.waitForTimeout(400);
+  const rapor = await boy(['.ve-rep-head']);
+  // Jeton ince (önce 36, sonra 30 px) ama en yüksek içeriği (25) sığdırıyor.
+  expect(jeton).toBeLessThanOrEqual(26);
+  // Yedi bandın yedisi de ölçüldü (bulunamayan bant sessizce geçmesin) ve
+  // yedisi de tam jeton: içerik hiçbirini büyütmüyor.
+  const hepsi = [...topoloji, ...cekmece, ...sonuclar, ...rapor];
+  expect(hepsi).toHaveLength(7);
   expect(hepsi.filter((x) => / YOK$/.test(x))).toEqual([]);
   expect(hepsi.filter((x) => Math.abs(parseFloat(x.split(' ').pop()) - jeton) > 0.5)).toEqual([]);
 });

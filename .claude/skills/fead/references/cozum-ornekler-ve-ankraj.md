@@ -1928,6 +1928,14 @@ Yani çubuk keyfî olarak küçültülmedi: **aynı diyaloğun iki çubuğu art�
 bantta**. Orantısızlığın kaynağı da buydu — alt çubuk üst çubuğundan 9 px
 kalındı.
 
+> **2026-09-26: iki çubuk da kabuk bandında (`--bant-h`, bugün 26 px).**
+> Kullanıcı: *"başlığının olduğu header kısmı boyuna çok büyük"*. Başlık 39 →
+> 26, alt çubuk aynı bantta kaldı (41 → 26, düğmeler bant düğmesiyle tek boy:
+> 22). Rayın başındaki marka bloğu (54 px, pencere başlığının tekrarı) KALKTI;
+> adım başlığı tek satır (39 → 20 px).
+> Kapı: `fead-wizard.test.js` → *"üst bölge kabuk bandı kadar"* +
+> `fead-wizard.spec.js` → *"ÜST BÖLGE İNCE"*.
+
 **2 · ADIM RAYI ÜÇ DURUM YAKIYOR.** *"Eksik girdi olduğunda kırmızı, girdiler
 tam olduğunda ise belirgin bir yeşil… Şu anda kullanıcı yeteri kadar
 bilgilenemiyor."* Eksiklik yapısaldı ve **iki katmanlıydı**:
