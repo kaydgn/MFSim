@@ -583,6 +583,29 @@ olurdu.
     `tests/helpers/step-yaz.js` ile, gerçek dosyanın kalıbında) — en değerlisi
     Gates AG00686'nın STEP → köprü zinciri (span %0,5 · sarım 0,2°).
 
+35. **SEKME ADI DURUMUNU TAŞIR — kural köprünün, kapı ANLAŞMA** (2026-09-26,
+    kullanıcı: *"kullanıcı bu kısmı görmeyebilir ve eksik bilgi girebilir"* →
+    tasarım tezgâhından B · Durumlu Sekmeler). `veFeadSekmeDurumlari`: ok ·
+    eksik (boşluğun bir SONUCU var: köprü hatası, varsayılan uyarısı, kapının
+    'wait'i, sessiz sıfır) · bos (isteğe bağlı) · yok (hiçbir hesap okumuyor).
+    Eksik varsa şeridin altında sonucu ve oraya giden bağlantı. Kurallar:
+    • **Yüklemler köprünün**: `veFeadHasOD` · `veFeadAccLimits` (katalogtan
+      gelen sınır DOLU sayılır) · `veFeadResolveDriver` (işaretsiz krank da
+      sürücü) · `veFeadBeltModeLocked` · `veFeadResultState`.
+    • **Sürücüde devir sınırı ve güç eğrisi `yok` ve ALAN SORMAZ** (kural 25):
+      iki kapı da sürücüyü atlar, sürücünün gücü toplamdan çıkar. Sekme kalır —
+      sürücülük bir ROL, işaret geçince geri gelir.
+    • **Güç eğrisi sessiz sıfırı yakalar**: eğri de katalog da yokken boş kW
+      hücresine köprü 0 yazıyor (`veFeadDutyToCore`).
+    • **Durum YERİNDE tazelenir** (`veFeadSekmeTazele`, `saveState`ten): sayı
+      alanı paneli kurmaz, kursaydı Sekme ile geçilen alan sökülürdü.
+    • **Köprüye yeni zorunlu alan ekleyen onu buraya da ekler.** Kapı her
+      zorunlu alanı gerçek modelde tek tek boşaltıp köprünün sözü ile sekmenin
+      hükmünü BİRLİKTE ölçer — biri olup öteki olmazsa kırmızı.
+    Kapılar: `fead-sekme-durum.test.js` + `tests/e2e/fead-sekme-durum.spec.js`
+    (gerçek klavye → `onchange` → kayıt kancası; dar müfettişte tek satır;
+    iki temada kontrast).
+
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı
 kuralların hepsi oradan çıktı.
