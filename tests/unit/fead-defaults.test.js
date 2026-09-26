@@ -436,3 +436,87 @@ describe('tahrik oranı: tek kademeli düzen', () => {
     expect(kur('BMC_FEAD_2026').build.sys.driveRatio).toBeCloseTo(1.0985, 4);
   });
 });
+
+/* ══════════════ ③ KAYNAKLI VARSAYILAN — kayış birim kütlesi ═════════════ */
+// 2026-09-26 literatür turu: çekirdeğin Gates PK kütlesi 0,0144 kg/m/kaburga
+// hiçbir kaynakta yok. Gates'in KENDİ yayımlanmış sabiti 18 g/m/kaburga
+// (Model 508C Sonic Tension Meter Manual, "Belt Mass Constants", Micro-V K);
+// Bando 0,018, ContiTech 0,021, ölçülen 0,0178–0,0192. Çekirdek dokunulmaz
+// (kural 1), köprü boş alana yayımlanmış sayıyı geçer.
+describe('kayış birim kütlesi — Gates PK için yayımlanmış 0,018', () => {
+  const kutleli = (brand, mode, mass) => kur('BMC_FEAD_2026', (ns) => {
+    const b = ns.find((n) => n.type === 'fead-belt');
+    b.data.brand = brand;
+    if (mode) b.data.beltDataMode = mode;
+    if (mass !== undefined) b.data.massPerRibKgM = mass;
+  });
+  const mKab = (build) => F.massPerM(build.sys) / build.sys.belt.ribs;
+
+  test('boş alanda Gates PK 0,018 ile çözülüyor — çekirdeğin 0,0144\'ü DEĞİL', () => {
+    expect(F.BELT_DB.PK.GATES.massPerRibKgM).toBe(0.0144);   // çekirdek birebir
+    const { build } = kutleli('GATES', 'full');
+    expect(mKab(build)).toBeCloseTo(0.018, 12);
+    // panelin yer tutucusu ile çözüm AYNI fonksiyonu okuyor
+    expect(veFeadBeltMassOf('PK', 'GATES').value).toBe(0.018);
+  });
+
+  test('künye yalnız TÜKETİLDİĞİNDE deftere yazılır, değer her zaman geçer', () => {
+    const acik = alan(kutleli('GATES', 'full').build, /birim kütle/);
+    expect(acik).toHaveLength(1);
+    expect(acik[0].value).toBe(0.018);
+    expect(acik[0].source).toMatch(/508C/);
+    // Kayış verisi KAPALI: kütle hiçbir hesaba girmiyor → defter susar,
+    // ama sys.belt yine yayımlanmış sayıyı taşır (raporun künyesi onu basar).
+    const { build: kapali } = kutleli('GATES', 'none');
+    expect(alan(kapali, /birim kütle/)).toHaveLength(0);
+    expect(mKab(kapali)).toBeCloseTo(0.018, 12);
+  });
+
+  test('girilen değer kazanır; kaynaklı varsayılanı olmayan marka kendi kataloğunda', () => {
+    expect(mKab(kutleli('GATES', 'full', 0.0196).build)).toBeCloseTo(0.0196, 12);
+    const { build: conti } = kutleli('CONTITECH', 'full');
+    expect(mKab(conti)).toBeCloseTo(F.BELT_DB.PK.CONTITECH.massPerRibKgM, 12);
+    expect(alan(conti, /birim kütle/)).toHaveLength(0);
+    expect(veFeadBeltMassOf('PK', 'CONTITECH').bridge).toBe(false);
+  });
+
+  test('açıklık frekansı bu kütleyi OKUYOR (merkezkaç payı m′v²)', () => {
+    const { pack, build } = kutleli('GATES', 'full');
+    const solv = pack.nodes.find((n) => n.type === 'fead-solver');
+    const R = veFeadAnalyze(build, { rows: veFeadDutyRows(solv) });
+    const d = R.analysis.duty.find((x) => x.frequencies && x.frequencies.length);
+    expect(d).toBeTruthy();
+    const v = F.beltSpeed(build.sys, d.engineRpm);
+    const r = d.frequencies.find((x) => x.TcN > 0);
+    expect(r.TcN / (v * v)).toBeCloseTo(0.018 * build.sys.belt.ribs, 9);
+  });
+});
+
+/* ══════════════ ④ DEVRALINAN KORD RİJİTLİĞİ SONUÇTA YAZILI ═══════════════ */
+// Kural 10: geçerlilik sınırı sonucun İÇİNDE taşınır. Gates dışı PK markasında
+// burulma modeli artık kuruluyor (fead-denetim-bulgular.test.js), ama sayı o
+// markaya kalibre DEĞİL — bunu sonuç söylemeli, okuyucu tahmin etmemeli.
+describe('burulma — Gates dışı PK markasında sınır sonucun içinde', () => {
+  const coz = (brand) => {
+    const { pack, build } = kur('BMC_FEAD_2026', (ns) => {
+      ns.find((n) => n.type === 'fead-belt').data.brand = brand;
+    });
+    const solv = pack.nodes.find((n) => n.type === 'fead-solver');
+    return veFeadAnalyze(build, { rows: veFeadDutyRows(solv), crankInertia: solv.data.crankInertia });
+  };
+
+  test('ContiTech: burulma KURULUYOR, sınır limits\'te, uyarı YOK', () => {
+    const R = coz('CONTITECH');
+    expect(R.torsional && R.torsional.firstElasticHz).toBeGreaterThan(0);
+    expect(R.torsional.cordStiffness).toMatchObject({ devralindi: true, marka: 'CONTITECH' });
+    expect(R.limits.some((l) => /CONTITECH kayışı için kord rijitliği kalibre edilmedi/.test(l))).toBe(true);
+    expect(R.warnings.some((w) => /^Burulma modeli:/.test(w))).toBe(false);
+  });
+
+  test('Gates: sınır satırı YOK (kalibrasyon kendi kaydında)', () => {
+    const R = coz('GATES');
+    expect(R.torsional && R.torsional.firstElasticHz).toBeGreaterThan(0);
+    expect(R.torsional.cordStiffness).toBeUndefined();
+    expect(R.limits.some((l) => /kord rijitliği kalibre edilmedi/.test(l))).toBe(false);
+  });
+});

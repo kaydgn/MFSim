@@ -36,17 +36,24 @@
 // `tests/unit/fead-duty.test.js` yedi kaydın hepsini kaynağına karşı BİREBİR
 // karşılaştırıyor.
 //
-// ── °C AYRI BİR ALAN, DİZİ DEĞİL ───────────────────────────────────────────
-// Ölçülen 14 sistemin 14'ünde de bütün satırlar aynı sıcaklıkta (90 °C).
-// Satır başına dizi tutmak, olmayan bir çözünürlük iddia etmek olurdu; köprü
-// zaten satır başına °C kabul ediyor (`veFeadDutyDegC` hasar-eşdeğer
-// indirgemeyi orada yapıyor), yani ileride farklılaşırsa alan hazır.
+// ── °C KAYDIN ALANI, DİZİ DEĞİL — KAYNAĞIN SICAKLIĞI ───────────────────────
+// Her raporda bütün satırlar TEK sıcaklıkta; satır başına dizi tutmak olmayan
+// bir çözünürlük iddia etmek olurdu (köprü yine de satır başına °C kabul
+// ediyor — `veFeadDutyDegC` hasar-eşdeğer indirgemeyi orada yapıyor).
+// Ama sıcaklık SİSTEMDEN SİSTEME değişiyor ve kayıt kaynağınınkini taşır:
+// raporların duty tablosundaki T sütunu 14 sistemin 9'unda 90 °C, AG00902 ×2
+// 70 °C, AG00879 80 °C, AG00686 ×2 92 °C (PDF'ten okundu).
+// DÜZELTME (2026-09-26): bu blok "14 sistemin 14'ünde 90 °C" diyordu ve
+// kütüphane her çevrime 90 °C yazıyordu. B10 sıcaklıkla 2^(ΔT/23) ölçekleniyor:
+// AG00902-4 çevrimi kaynağına göre 1,83×, AG00879-5 1,35× KISA ömür veriyordu.
+// Paylaşılan çevrimde (AG00686-6: 3 sistem 90 °C, 2 sistem 92 °C) ÇOĞUNLUK.
+// Kapı: `tests/unit/fead-duty.test.js` → *"her kayıt KAYNAĞININ sıcaklığını"*.
 
 var VE_FEAD_DUTY_LIB_VERSION = '1.0.0';
 var VE_FEAD_DUTY_LIB_SOURCE =
   'tests/fixtures/fead-validation.js (Gates raporları) + VE_FEAD_EXAMPLES.BMC_FEAD_2026';
 
-// Ölçülen sıcaklık — 14 sistemin 14'ünde de aynı.
+// Kaydı sıcaklık taşımayan çevrimin YEDEĞİ — arşivin en sık değeri (14'te 9).
 var VE_FEAD_DUTY_DEGC = 90;
 
 var VE_FEAD_DUTY_DB = [
@@ -55,6 +62,7 @@ var VE_FEAD_DUTY_DB = [
     baslik: 'Rölanti ağırlıklı ağır ticari',
     ad: 'BMC 6 silindir — tedarikçi sayfası',
     kaynak: 'FEAD_INFORMATION (BMC, 26.05.2025)',
+    degC: 90,
     not: 'Tedarikçiye GİDEN sayfanın kendi çevrimi. Rölanti ağırlıklı (%25) ' +
          've 2750 RPM\'ya kadar uzanıyor.',
     rpm:   [800, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750],
@@ -65,6 +73,7 @@ var VE_FEAD_DUTY_DB = [
     baslik: 'İnce çözünürlüklü — orta devir bandı ayrıntılı',
     ad: 'Cummins ALT&AC — Gates AG00976',
     kaynak: 'Gates AG00976 (4 sistem: 1715/1705/1668/1655)',
+    degC: 90,
     not: 'Arşivin en ince çözünürlüklü çevrimi; 1400–1800 bandını altı ' +
          'noktaya bölüyor.',
     rpm:   [800, 1000, 1100, 1200, 1400, 1500, 1600, 1700, 1800, 2000, 2500, 2750],
@@ -75,6 +84,7 @@ var VE_FEAD_DUTY_DB = [
     baslik: 'Genel amaçlı ağır ticari',
     ad: 'Altı noktalı ağır ticari — Gates AG00686',
     kaynak: 'Gates AG00686 / AG0868 ailesi (5 sistem)',
+    degC: 90,
     not: 'Arşivde EN ÇOK sistemin paylaştığı çevrim: rölantiden anma ' +
          'devrine altı kademe.',
     rpm:   [800, 1000, 1250, 1500, 1750, 2000],
@@ -85,6 +95,7 @@ var VE_FEAD_DUTY_DB = [
     baslik: 'Uç noktalarda yoğun — ara devirler ağırlıksız',
     ad: 'Ara noktaları sıfır ağırlıklı — Gates AG00810',
     kaynak: 'Gates AG00810',
+    degC: 90,
     not: 'AG00686 ile aynı ağırlıklar, araya SIFIR ağırlıklı devir noktaları ' +
          'serpiştirilmiş: o noktalar gerilme tablosuna girer, ömür ağırlığına girmez.',
     rpm:   [600, 900, 1000, 1200, 1400, 1500, 1600, 1800, 1900, 2000],
@@ -95,6 +106,7 @@ var VE_FEAD_DUTY_DB = [
     baslik: 'Düşük devirli çalışma',
     ad: 'Düşük devirli — Gates AG00894',
     kaynak: 'Gates AG00894',
+    degC: 90,
     not: 'Devir noktaları eşit aralıklı değil, 519 RPM\'dan başlıyor; ' +
          'ağırlığın %85\'i 1400 RPM altında.',
     rpm:   [519, 693, 1000, 1039, 1212, 1385, 1558, 1731, 1904, 2077],
@@ -105,6 +117,7 @@ var VE_FEAD_DUTY_DB = [
     baslik: 'Kaba kademeli — beş nokta',
     ad: 'Beş noktalı — Gates AG00879',
     kaynak: 'Gates AG00879',
+    degC: 80,
     not: 'Ağırlığın %70\'i 800–1200 RPM arasında toplanmış.',
     rpm:   [600, 800, 1200, 1700, 2200],
     dcPct: [5,    35,   35,   20,    5]
@@ -114,6 +127,7 @@ var VE_FEAD_DUTY_DB = [
     baslik: 'Yüksek devire uzanan — dört nokta',
     ad: 'Dört noktalı, 3000 RPM\'ya kadar — Gates AG00902',
     kaynak: 'Gates AG00902 (2 sistem: 1300/1275)',
+    degC: 70,
     not: 'Arşivin en kaba çevrimi ve en yüksek devri; ağırlığın %80\'i ' +
          '700–1200 RPM arasında.',
     rpm:   [700, 1200, 2000, 3000],
@@ -139,7 +153,7 @@ var VE_FEAD_DUTY_DEFAULT = 'AG00686-6';
 function _fdDutyDeep(rec){
   return {
     key: rec.key, baslik: rec.baslik, ad: rec.ad, kaynak: rec.kaynak, not: rec.not,
-    rpm: rec.rpm.slice(), dcPct: rec.dcPct.slice()
+    degC: rec.degC, rpm: rec.rpm.slice(), dcPct: rec.dcPct.slice()
   };
 }
 
@@ -181,8 +195,9 @@ function veFeadDutyLabel(rec){
 function veFeadDutyRowsOf(key, degC){
   var rec = veFeadDutyOf(key);
   if(!rec) return [];
+  // Çağıranın verdiği sıcaklık kazanır; yoksa KAYDIN kaynağının sıcaklığı.
   var t = (degC === undefined || degC === null || degC === '')
-    ? VE_FEAD_DUTY_DEGC : degC;
+    ? (rec.degC != null ? rec.degC : VE_FEAD_DUTY_DEGC) : degC;
   return rec.rpm.map(function(r, i){
     return { rpm: r, dcPct: rec.dcPct[i], degC: t, kw: {} };
   });
