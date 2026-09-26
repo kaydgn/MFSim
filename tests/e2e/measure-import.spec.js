@@ -65,13 +65,13 @@ test.describe('Ölçüm içe aktarma sihirbazı', () => {
     await page.waitForSelector('#mfsim-loading-screen', { state: 'hidden', timeout: 60000 });
     await page.click('.ve-module-card');
 
-    const ribbonImport = page.locator('#ve-ribbon button', { hasText: 'İçe Aktar' });
+    const ribbonImport = page.locator('#ve-ribbon button', { hasText: 'içe aktar' });
     await expect(ribbonImport).toHaveCount(1);              // Giriş sekmesi
     await page.click('#ve-rb-expand');                       // gövdeyi aç
     await expect(ribbonImport.first()).toBeVisible();
 
     await page.click('.ve-nav-item[data-subtab="sonuclar"]');
-    await expect(page.locator('#ve-ribbon button', { hasText: 'İçe Aktar' })).toHaveCount(1);
+    await expect(page.locator('#ve-ribbon button', { hasText: 'içe aktar' })).toHaveCount(1);
   });
 
   test('şerit düğmesi de sihirbazı açar', async ({ page }) => {
@@ -79,7 +79,7 @@ test.describe('Ölçüm içe aktarma sihirbazı', () => {
     await page.click('#ve-rb-expand');                       // gövde varsayılan katlı
     const [chooser] = await Promise.all([
       page.waitForEvent('filechooser'),
-      page.locator('#ve-ribbon button', { hasText: 'İçe Aktar' }).first().click(),
+      page.locator('#ve-ribbon button', { hasText: 'içe aktar' }).first().click(),
     ]);
     await chooser.setFiles({ name: 'x.xlsx', mimeType: 'application/vnd.ms-excel', buffer: canoeXlsx(120) });
     await page.waitForFunction(() => veImpUI && veImpUI.rows && !veImpUI.busy, null, { timeout: 30000 });
@@ -188,7 +188,7 @@ test.describe('Ölçüm içe aktarma sihirbazı', () => {
     await page.click('#ve-import-apply');
     await page.waitForFunction(() => veImpDatasets.length > 0, null, { timeout: 15000 });
 
-    await expect(page.locator('#ve-results-tree')).toContainText('İçe Aktarılan Ölçümler');
+    await expect(page.locator('#ve-results-tree')).toContainText('İçe aktarılan ölçümler');
     await expect(page.locator('#ve-results-tree')).toContainText('EngSpeed');
   });
 

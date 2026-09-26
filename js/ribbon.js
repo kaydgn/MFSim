@@ -36,8 +36,8 @@ var VE_RIBBON_TABS = [
     id: 'giris', label: 'Giriş',
     groups: [
       { label: 'Proje', items: [
-        { size:'lg', icon:'file-plus',   label:'Yeni\nProje',  run:'veNewProject',    tip:'Yeni proje oluştur' },
-        { size:'lg', icon:'folder-open', label:'Proje\nAç',    run:'veLoadTopology',  tip:'Kayıtlı bir proje dosyası aç' },
+        { size:'lg', icon:'file-plus',   label:'Yeni\nproje',  run:'veNewProject',    tip:'Yeni proje oluştur' },
+        { size:'lg', icon:'folder-open', label:'Proje\naç',    run:'veLoadTopology',  tip:'Kayıtlı bir proje dosyası aç' },
         { size:'lg', icon:'save',        label:'Kaydet',       run:'veSaveTopology',  tip:'Projeyi dosyaya kaydet' },
         { size:'sm', icon:'trash',       label:'Temizle',      run:'veClearAll',      tip:'Bu sekmedeki tüm bileşenleri sil' }
       ]},
@@ -45,8 +45,8 @@ var VE_RIBBON_TABS = [
       // veri getir" işi. Bu yüzden Proje grubunun hemen yanında ve Giriş
       // sekmesinde — Sonuçlar sayfasına gitmeden, elinde dosya olan kullanıcı
       // ilk baktığı yerde bulsun.
-      { label: 'Ölçüm Verisi', items: [
-        { size:'lg', icon:'upload', label:'Ölçüm\nİçe Aktar', run:'veImpOpenPicker',
+      { label: 'Ölçüm verisi', items: [
+        { size:'lg', icon:'upload', label:'Ölçüm\niçe aktar', run:'veImpOpenPicker',
           tip:'Excel/CSV ölçüm dosyasını içe aktar (Vector CANoe çıktısı) — sütunları seçip diyagrama dök' }
       ]},
       { label: 'Çözüm', items: [
@@ -57,11 +57,11 @@ var VE_RIBBON_TABS = [
         { size:'lg', icon:'play',   label:'Çözücü',   run:'veSolverRun',      tip:'Çözücü bileşenini aç', accent:true }
       ]},
       { label: 'Düzen', items: [
-        { size:'sm', icon:'undo', label:'Geri Al',          run:'veUndo',       tip:'Son işlemi geri al (Ctrl+Z)' },
-        { size:'sm', icon:'redo', label:'İleri Al',         run:'veRedo',       tip:'Geri alınanı yinele (Ctrl+Y)' },
-        { size:'sm', icon:'wand', label:'Otomatik Düzenle', run:'veTidyLayout', tip:'Bileşenleri otomatik yerleştir' }
+        { size:'sm', icon:'undo', label:'Geri al',          run:'veUndo',       tip:'Son işlemi geri al (Ctrl+Z)' },
+        { size:'sm', icon:'redo', label:'İleri al',         run:'veRedo',       tip:'Geri alınanı yinele (Ctrl+Y)' },
+        { size:'sm', icon:'wand', label:'Otomatik düzenle', run:'veTidyLayout', tip:'Bileşenleri otomatik yerleştir' }
       ]},
-      { label: 'Dışa Aktar', items: [
+      { label: 'Dışa aktar', items: [
         { size:'sm', icon:'download',  label:'PNG',   run:'veExportTopology', args:['png'], tip:'Topolojiyi PNG olarak indir' },
         { size:'sm', icon:'download',  label:'SVG',   run:'veExportTopology', args:['svg'], tip:'Topolojiyi SVG olarak indir' },
         { size:'sm', icon:'file-text', label:'Rapor', run:'veShowRaporModal', tip:'Rapor önizlemesini aç' }
@@ -72,7 +72,7 @@ var VE_RIBBON_TABS = [
     id: 'gorunum', label: 'Görünüm',
     groups: [
       { label: 'Yakınlaştırma', items: [
-        { size:'lg', icon:'maximize',  label:'İçeriğe\nSığdır', run:'veFitViewToContent', args:[{maxZoom:2}], tip:'Tüm topolojiyi ekrana sığdır' },
+        { size:'lg', icon:'maximize',  label:'İçeriğe\nsığdır', run:'veFitViewToContent', args:[{maxZoom:2}], tip:'Tüm topolojiyi ekrana sığdır' },
         { size:'sm', icon:'zoom-in',   label:'Yakınlaştır',     run:'veZoomIn' },
         { size:'sm', icon:'zoom-out',  label:'Uzaklaştır',      run:'veZoomOut' },
         { size:'sm', icon:'crosshair', label:'%100',            run:'veResetZoom', tip:'Yakınlaştırmayı %100 yap' }
@@ -91,7 +91,7 @@ var VE_RIBBON_TABS = [
           state:function(){ return veRibbonHasClass('ve-properties-overlay', 'visible'); } },
         { size:'sm', icon:'alert-triangle',  label:'Uyarılar',   run:'veToggleWarnings',
           state:function(){ return !veRibbonHasClass('ve-warnings-body', 'collapsed'); } },
-        { size:'sm', icon:'map',             label:'Genel Görünüm', run:'veMinimapToggle',
+        { size:'sm', icon:'map',             label:'Genel görünüm', run:'veMinimapToggle',
           // "ve-minimap-hidden" kullanıcı tercihi değil, çizecek içerik
           // olmadığında otomatik gelir. Basılı göstergesi kullanıcının GÖRDÜĞÜ
           // durumu yansıtmalı: boş topolojide açık ama görünmezken basılı
@@ -100,15 +100,15 @@ var VE_RIBBON_TABS = [
                                    !veRibbonHasClass('ve-minimap', 've-minimap-hidden'); } }
       ]},
       { label: 'Sınır', items: [
-        { size:'sm', icon:'frame',    label:'Sınırı Göster', run:'veToggleBoundary',
+        { size:'sm', icon:'frame',    label:'Sınırı göster', run:'veToggleBoundary',
           state:function(){ return typeof veBoundaryVisible !== 'undefined' && veBoundaryVisible; } },
         { size:'sm', icon:'contrast', label:'Opaklık',       run:'veCycleBoundaryOpacity',
           tip:'Sınır opaklığını sırayla değiştir' }
       ]},
       { label: 'Efektler', items: [
-        { size:'sm', icon:'zap',     label:'Güç Akışı',        run:'veToggleFlow',
+        { size:'sm', icon:'zap',     label:'Güç akışı',        run:'veToggleFlow',
           state:function(){ return typeof veFlowAnim !== 'undefined' && veFlowAnim; } },
-        { size:'sm', icon:'refresh', label:'Görünümü Sıfırla', run:'veResetView' }
+        { size:'sm', icon:'refresh', label:'Görünümü sıfırla', run:'veResetView' }
       ]}
     ]
   },
@@ -134,10 +134,10 @@ var VE_RIBBON_TABS = [
       //     işi bırakıp bir liste okumak demekti.
       // Grup kendi başına duruyor, "Yardım"ın içinde değil: kılavuz bir
       // kısayol listesi değil, modülün kullanım belgesi.
-      { label: 'Kullanım Kılavuzları', items: [
-        { size:'lg', icon:'clipboard', label:'Kılavuz\nKiti', run:'veGuideKitOpen',
+      { label: 'Kullanım kılavuzları', items: [
+        { size:'lg', icon:'clipboard', label:'Kılavuz\nkiti', run:'veGuideKitOpen',
           tip:'Modül kullanım kılavuzları — aç ya da indir' },
-        { size:'sm', icon:'file-text', label:'Bu Modülün Kılavuzu', run:'veGuideOpenCurrent',
+        { size:'sm', icon:'file-text', label:'Bu modülün kılavuzu', run:'veGuideOpenCurrent',
           tip:'Şu an içinde olduğunuz modülün kullanım kılavuzunu aç',
           when:function(){ return typeof veGuideCurrentId === 'function' && !!veGuideCurrentId(); } }
       ]},
@@ -159,8 +159,8 @@ var VE_RIBBON_TABS = [
           tip:'Bu depoda üretilmiş tek dosyalık HTML programlar' }
       ]},
       { label: 'Yardım', items: [
-        { size:'sm', icon:'lightbulb', label:'Klavye Kısayolları', run:'veShortcutsHelpOpen' },
-        { size:'sm', icon:'search',    label:'Komut Paleti',       run:'veCmdkOpen', tip:'Tüm komutlarda ara (Ctrl+K)' }
+        { size:'sm', icon:'lightbulb', label:'Klavye kısayolları', run:'veShortcutsHelpOpen' },
+        { size:'sm', icon:'search',    label:'Komut paleti',       run:'veCmdkOpen', tip:'Tüm komutlarda ara (Ctrl+K)' }
       ]},
       // Radyo eskiden krom bandının sağ ucundaydı: komut yüzeyinin dışında,
       // hiçbir sekmeye ait olmayan tek başına bir düğme. Yeri burası — 2048'in
@@ -172,7 +172,7 @@ var VE_RIBBON_TABS = [
         { size:'sm', icon:'grid', label:'2048', run:'veGame2048Open' }
       ]},
       { label: 'Oturum', items: [
-        { size:'sm', icon:'log-out', label:'Çıkış Yap', run:'mfsimLogout', danger:true,
+        { size:'sm', icon:'log-out', label:'Çıkış yap', run:'mfsimLogout', danger:true,
           tip:'Oturumu kapat ve giriş ekranına dön' }
       ]}
     ]
@@ -180,28 +180,28 @@ var VE_RIBBON_TABS = [
   {
     // Bağlamsal sekme: yalnızca Sonuçlar sayfasındayken görünür. Ribbon'un
     // en yararlı özelliği — sayfaya özgü komutlar orada değilken yer kaplamaz.
-    id: 'sonuc', label: 'Sonuç Araçları', contextual: true,
+    id: 'sonuc', label: 'Sonuç araçları', contextual: true,
     when: function() { return typeof currentSubTab !== 'undefined' && currentSubTab === 'sonuclar'; },
     groups: [
       // "Panel Düzeni" komutu kaldırıldı: seçilecek bir düzen kalmadı, tek
       // ölçüm penceresi var. "Senkron İmleç" de kalktı — senkronlanacak
       // ikinci bir yüzey yok, imleç zaten tüm şeritleri kesiyor.
-      { label: 'Ölçüm Penceresi', items: [
+      { label: 'Ölçüm penceresi', items: [
         // Grafiklere bakarken "bir de şu ölçümü açayım" en sık istenen şey;
         // Giriş sekmesine dönmeye gerek kalmasın.
-        { size:'lg', icon:'upload', label:'Ölçüm\nİçe Aktar', run:'veImpOpenPicker',
+        { size:'lg', icon:'upload', label:'Ölçüm\niçe aktar', run:'veImpOpenPicker',
           tip:'Excel/CSV ölçüm dosyasını içe aktar ve şeritlere dök' },
-        { size:'lg', icon:'maximize', label:'Tümünü\nSığdır', run:'veTrFit',
+        { size:'lg', icon:'maximize', label:'Tümünü\nsığdır', run:'veTrFit',
           tip:'Zaman eksenini tüm veriye sığdır' },
-        { size:'lg', icon:'trash', label:'Sonuçları\nTemizle', run:'veClearAllResults',
+        { size:'lg', icon:'trash', label:'Sonuçları\ntemizle', run:'veClearAllResults',
           tip:'Ölçüm penceresini ve çözüm sonuçlarını boşalt' }
       ]},
       { label: 'Şeritler', items: [
-        { size:'sm', icon:'scissors', label:'Şeritlere Ayır', run:'veTrSplitAll',
+        { size:'sm', icon:'scissors', label:'Şeritlere ayır', run:'veTrSplitAll',
           tip:'Her sinyal kendi Y ekseninde ayrı şeride' },
-        { size:'sm', icon:'grid-cells', label:'Birime Göre Birleştir', run:'veTrMergeByUnit',
+        { size:'sm', icon:'grid-cells', label:'Birime göre birleştir', run:'veTrMergeByUnit',
           tip:'Aynı birimli sinyalleri tek şeritte topla' },
-        { size:'sm', icon:'crosshair', label:'Referansı Kaldır', run:'veTrUnpin',
+        { size:'sm', icon:'crosshair', label:'Referansı kaldır', run:'veTrUnpin',
           tip:'Sabitlenmiş Δ referans imlecini kaldır' }
       ]}
     ]

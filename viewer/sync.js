@@ -69,7 +69,7 @@ var TRACE_PATCHES = [
       "    if(typeof veImpOpenPicker === 'function') {\n" +
       "      h += '<button type=\"button\" class=\"ve-trace-btn\" data-act=\"import-measure\" ' +\n" +
       "           'style=\"height:26px;margin-top:6px;\">' +\n" +
-      "           '<span class=\"mf-ico mf-ico-upload\"></span> Ölçüm Verisi İçe Aktar</button>';\n" +
+      "           '<span class=\"mf-ico mf-ico-upload\"></span> Ölçüm verisi içe aktar</button>';\n" +
       "    }\n" +
       "    return h;\n" +
       "  }\n" +

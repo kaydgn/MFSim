@@ -68,7 +68,7 @@ function _veHelpBuild() {
   ov.innerHTML =
     '<div class="ve-help-panel" role="dialog" aria-modal="true" aria-label="Klavye kısayolları">' +
       '<div class="ve-settings-header">' +
-        '<span><span class="mf-ico mf-ico-lightbulb"></span> Klavye Kısayolları</span>' +
+        '<span><span class="mf-ico mf-ico-lightbulb"></span> Klavye kısayolları</span>' +
         '<button class="ve-settings-close" type="button" title="Kapat (Esc)" aria-label="Kapat" onclick="veShortcutsHelpClose()">' +
           '<span class="mf-ico mf-ico-x"></span>' +
         '</button>' +

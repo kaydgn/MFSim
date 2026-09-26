@@ -257,6 +257,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   sürüklemede hem AÇILIŞTA uygulanır (yoksa kuraldan önce kaydedilmiş kart
   bozuk açılır). Kapı: `fead-table.test.js` (mekanizma, sentetik tip) +
   `kart-yuzey.spec.js` → *"EN KÜÇÜK ÖLÇÜ"*.
+- **ETİKETLER CÜMLE DÜZENİNDE** (kullanıcı kararı 9·B). Çok kelimeli etikette
+  yalnız ilk kelime büyük harfle başlar ("Klavye kısayolları"). Özel adlar
+  kalır: bileşen adları (`componentDefs.name`), yüzey adları (Kayış Tablosu,
+  Komuta Penceresi, Program Durumu…), ürün adı, kısaltma, tuş, marka, İngilizce
+  terim (8·A). Kapı: `cumle-duzeni.test.js` — kural testin kendisi; kapsamı
+  aşama aşama büyür (bugün kabuk).
 - **PENCERE AİLESİ TEK** (`.ve-settings-header` + `.ve-settings-close`). Her
   pencere bu başlığı taşır: bant `--bant-h`, başlık yazısı kabuk bandınınki
   (12 px/600), kapat 22 px çizgi ikon (`.mf-ico-x` — ✕ yazı karakteri ya da

@@ -133,7 +133,7 @@ function veShowSaveDialog(defaultName, blob, toastMsg) {
   var ext = defaultName.slice(nameOnly.length);
 
   modal.innerHTML =
-    '<h3 style="margin:0 0 16px 0;font-size:var(--fs-title);">Farklı Kaydet</h3>' +
+    '<h3 style="margin:0 0 16px 0;font-size:var(--fs-title);">Farklı kaydet</h3>' +
     '<label style="font-size:var(--fs-lg);color:var(--text-muted);display:block;margin-bottom:6px;">Dosya adı</label>' +
     '<div style="display:flex;align-items:center;gap:0;">' +
       '<input id="ve-save-filename" type="text" value="' + nameOnly.replace(/"/g, '&quot;') + '" ' +

@@ -151,7 +151,7 @@ test.describe('Ölçüm Görüntüleyici — tek dosya', () => {
     await page.waitForFunction(() => veImpDatasets.length > 0, null, { timeout: 15000 });
 
     const tree = page.locator('#ve-results-tree');
-    await expect(tree).toContainText('İçe Aktarılan Ölçümler');
+    await expect(tree).toContainText('İçe aktarılan ölçümler');
     await expect(tree).toContainText('EngSpeed');
     await expect(tree).toContainText('Motor Sıcaklığı');
   });

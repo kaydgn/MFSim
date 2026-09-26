@@ -279,7 +279,7 @@ function _vpaKur() {
   ov.id = 've-programlar';
   ov.setAttribute('hidden', '');
   ov.innerHTML =
-    '<div class="ve-help-panel" role="dialog" aria-modal="true" aria-label="Program arşivi">'
+    '<div class="ve-help-panel" role="dialog" aria-modal="true" aria-label="Program Arşivi">'
     + '<div class="ve-settings-header"><span><span class="mf-ico mf-ico-folder-open"></span> Program Arşivi</span>'
     + '<button class="ve-settings-close" type="button" title="Kapat (Esc)" aria-label="Kapat" '
     + 'onclick="veProgramArsiviClose()"><span class="mf-ico mf-ico-x"></span></button></div>'

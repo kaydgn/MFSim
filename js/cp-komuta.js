@@ -262,7 +262,7 @@ function _vkKarsilamaKunye() {
 var VE_KOMUTA_TEZGAHLAR = [
   {
     id: 'karsilama',
-    ad: 'Karşılama Slaytı',
+    ad: 'Karşılama slaytı',
     dosya: 'js/karsilama-gorseller.js',
     disaAktarim: 'VE_KARSILAMA_GORSELLER',
     duzen: 'izgara',
@@ -310,7 +310,7 @@ var VE_KOMUTA_TEZGAHLAR = [
   },
   {
     id: 'ap-ornek',
-    ad: 'Araç Performans Örnekleri',
+    ad: 'Araç Performans örnekleri',
     dosya: 'js/cp-arac-example.js',
     disaAktarim: 'AP_EXAMPLES',
     duzen: 'liste',
@@ -320,7 +320,7 @@ var VE_KOMUTA_TEZGAHLAR = [
   },
   {
     id: 'takoz-ornek',
-    ad: 'Takoz Örnekleri',
+    ad: 'Takoz örnekleri',
     dosya: 'js/mount-core.js',
     disaAktarim: 'MOUNT_EXAMPLES',
     duzen: 'liste',
@@ -564,7 +564,7 @@ function _vkRender() {
   // Sipariş fişi
   h += '<div class="ve-komuta-fis-kap">';
   h += '<div class="ve-komuta-fis-bas">' +
-    '<span class="ve-komuta-fis-baslik">Sipariş Fişi</span>' +
+    '<span class="ve-komuta-fis-baslik">Sipariş fişi</span>' +
     '<select class="ve-komuta-fiil" onchange="veKomutaIstekSec(this.value)" aria-label="İstek">' +
     VE_KOMUTA_FIILLER.map(function (f) {
       return '<option value="' + _vkKacir(f.id) + '"' + (f.id === _vkIstek ? ' selected' : '') +
@@ -573,7 +573,7 @@ function _vkRender() {
     '<span id="ve-komuta-fiil-aciklama" class="ve-komuta-fiil-aciklama">' +
     _vkKacir(_vkFiilAciklama(_vkIstek).aciklama) + '</span>' +
     '<span id="ve-komuta-sayac" class="ve-komuta-sayac"></span>' +
-    '<button type="button" class="ve-komuta-btn" onclick="veKomutaSecimTemizle()">İşaretleri Temizle</button>' +
+    '<button type="button" class="ve-komuta-btn" onclick="veKomutaSecimTemizle()">İşaretleri temizle</button>' +
     '<button type="button" class="ve-komuta-btn ve-komuta-btn-birincil" onclick="veKomutaFisKopyala()">Kopyala</button>' +
     '</div>';
   h += '<input type="text" class="ve-komuta-not" id="ve-komuta-not" placeholder="Not (isteğe bağlı) — örn. 05 ile 08 aynı kare" ' +

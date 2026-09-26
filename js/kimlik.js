@@ -119,7 +119,7 @@ function _veAvatarMenuHTML() {
   h += '<div class="ve-context-item" role="menuitem" tabindex="-1" data-ve-avatar="ayarlar">'
      +   '<span class="mf-ico mf-ico-settings" aria-hidden="true"></span>Ayarlar</div>';
   h += '<div class="ve-context-item" role="menuitem" tabindex="-1" data-ve-avatar="durum">'
-     +   '<span class="mf-ico mf-ico-activity" aria-hidden="true"></span>Program durumu' + kunye + '</div>';
+     +   '<span class="mf-ico mf-ico-activity" aria-hidden="true"></span>Program Durumu' + kunye + '</div>';
   h += '<div class="ve-context-divider"></div>';
   h += '<div class="ve-context-item ve-context-danger" role="menuitem" tabindex="-1" data-ve-avatar="cikis">'
      +   '<span class="mf-ico mf-ico-log-out" aria-hidden="true"></span>Çıkış yap</div>';

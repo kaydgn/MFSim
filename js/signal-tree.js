@@ -687,7 +687,7 @@ function veSigInspectorHTML() {
   // Önizleme eğrisi
   var pw = 210, ph = 46;
   var pts = veSigSparkPoints(series, pw, ph, 96);
-  h += '<div class="vsig-fld"><span class="vsig-fld-lbl">Sinyal Şekli</span>';
+  h += '<div class="vsig-fld"><span class="vsig-fld-lbl">Sinyal şekli</span>';
   if(pts) {
     h += '<div class="vsig-preview">' + veSigSparkSVG(pts, color, pw, ph) + '</div>';
   } else {
@@ -703,7 +703,7 @@ function veSigInspectorHTML() {
   h += '</div></div>';
 
   // Renk
-  h += '<div class="vsig-fld"><span class="vsig-fld-lbl">Eğri Rengi</span>';
+  h += '<div class="vsig-fld"><span class="vsig-fld-lbl">Eğri rengi</span>';
   h += '<div class="vsig-pal">';
   VE_SIGNAL_COLORS.forEach(function(c) {
     h += '<button type="button" class="vsig-pal-sw" data-act="insp-color" data-color="' + c + '"' +
@@ -729,7 +729,7 @@ function veSigInspectorHTML() {
   // Kullanıldığı diyagramlar
   var uses = veSigUsedInDiagrams(item.compType, item.signalId);
   if(uses.length) {
-    h += '<div class="vsig-fld"><span class="vsig-fld-lbl">Kullanıldığı Diyagramlar</span>';
+    h += '<div class="vsig-fld"><span class="vsig-fld-lbl">Kullanıldığı diyagramlar</span>';
     h += '<div class="vsig-uses">';
     uses.slice(0, 8).forEach(function(u) { h += '<span class="vsig-use">' + veSigEsc(u) + '</span>'; });
     if(uses.length > 8) h += '<span class="vsig-note">+' + (uses.length - 8) + ' diyagram daha</span>';

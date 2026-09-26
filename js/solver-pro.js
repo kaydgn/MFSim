@@ -1047,7 +1047,7 @@ function veSolverRunProfessional() {
         // Sonuç kartını da güncelle
         var resultEl = document.getElementById('ve-solver-result');
         if(resultEl) {
-          var rhtml = '<div style="padding:8px;text-align:center;"><div style="font-size:var(--fs-h2);">✓</div><div style="font-weight:600;font-size:var(--fs-lg);color:var(--text-heading);">Hesaplama Tamamlandı</div><div style="font-size:var(--fs-tiny);color:var(--text-muted);margin-top:2px;">' + mode + ' | ' + totalSteps + ' adım | ' + finalTime.toFixed(1) + ' s</div></div>';
+          var rhtml = '<div style="padding:8px;text-align:center;"><div style="font-size:var(--fs-h2);">✓</div><div style="font-weight:600;font-size:var(--fs-lg);color:var(--text-heading);">Hesaplama tamamlandı</div><div style="font-size:var(--fs-tiny);color:var(--text-muted);margin-top:2px;">' + mode + ' | ' + totalSteps + ' adım | ' + finalTime.toFixed(1) + ' s</div></div>';
           resultEl.innerHTML = rhtml;
         }
         
