@@ -625,6 +625,8 @@ olurdu.
       (`veFeadStp2B`: sağ · yukarı · bakış) — 3B ile tablo aynı resmi gösterir.
       Yukarı DÜZLEMDEN gelir: XY düzleminde kameranın varsayılan yukarısı (Z)
       bakış yönüne paraleldir ve resim keyfi bir açıyla döner.
+    • Başlık PENCERE AİLESİNİN (`.ve-settings-header` + 22 px çizgi kapat,
+      ikon `mf-ico-box`): kaplama sihirbazın kendi başlığını da örtüyor.
     • **Tek Esc tek katman**: Esc önce 3B'yi kapatır; sihirbaz kapanınca WebGL
       bağlamı bırakılır. Üçgenler kartta saklanır (`_fwStp.ag`), üçgenleme
       kare kare (24 ms bütçe) — dosyanızda 1,5 sn, tek seferde arayüz donardı.
@@ -659,7 +661,8 @@ olurdu.
     `tests/unit/step-ucgen.test.js` (kaplama TAM · alan · hacim ve yön · su
     geçirmezlik · baştaki Delaunay · ölçülmüş kusurlar) +
     `tests/e2e/fead-step.spec.js` (gerçek File · UYGULAMANIN KENDİ karesi
-    çiziyor · sığdırma montajın kendi noktalarıyla · 3B'de tıklayıp rol · alt montaj · halkalar · önden/arkadan yön
+    çiziyor · başlık ailenin · sığdırma montajın kendi noktalarıyla · 3B'de
+    tıklayıp rol · alt montaj · halkalar · önden/arkadan yön
     ve XY düzleminde yukarı · hesap seçimi kaldırır · Esc · kart altından
     değişince 3B kapanır · bırakma · Modeli Kur).
 

@@ -80,6 +80,14 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   await expect(page.locator('#ve-fw-3b')).toBeVisible();
   await expect(page.locator('#ve-fw-3b-tuval')).toHaveAttribute('data-durum', 'hazir', { timeout: 30000 });
   expect((await page.evaluate(() => veFeadWiz3bDurum())).parca).toBe(5);
+  // Kaplama sihirbazın başlığını da örtüyor: başlığı PENCERE AİLESİNİN — bant,
+  // yazı ve 22 px çizgi ikonlu kapat sihirbazın kendi başlığıyla aynı ölçüde
+  const bas = await page.evaluate(() => {
+    const olc = (h) => { const r = h.getBoundingClientRect(), k = h.querySelector('.ve-settings-close'), c = k.getBoundingClientRect(), cs = getComputedStyle(h);
+      return [Math.round(r.height), Math.round(c.width), Math.round(c.height), cs.fontSize, cs.fontWeight, !!k.querySelector('.mf-ico-x')]; };
+    return { sihirbaz: olc(document.querySelector('.ve-fw-modal > .ve-settings-header')), uc: olc(document.querySelector('.ve-fw-3b-bas')) };
+  });
+  expect(bas.uc).toEqual(bas.sihirbaz);
   // SIĞDIRMA montajın KENDİ noktalarıyla: eksene hizalı kutunun köşeleriyle
   // sığdırmak eğik bakışta modeli küçültüyordu (kullanıcının dosyasında tuvalin
   // %29'u). Ölçülen: örneklenmiş köşelerin izdüşümünün yarı genişliği (NDC) —

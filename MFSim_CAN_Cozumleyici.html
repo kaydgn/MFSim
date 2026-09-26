@@ -8790,15 +8790,16 @@ span.ve-fw-ro{ display:inline-block; }
 /* ── STEP'İN 3B GÖRÜNTÜLEYİCİSİ (js/cp-fead-3b.js) ───────────────────────
    Sihirbazın içinde, modalı TAMAMEN kaplar (açı seçicisi gibi ortalanmış bir
    kutu değil: montaj büyük, yer lazım). Solda tuval, sağda panel; üst bant
-   kabuğun bandıyla aynı ölçüden. Dar pencerede panel tuvalin ALTINA iner —
+   pencere ailesinin başlığı. Dar pencerede panel tuvalin ALTINA iner —
    karar ekrana değil pencereye sorulur. Rol rengi VERİ olarak satır içinde
    (`--renk`): 3B malzemeyle aynı tablodan (VE_FW_3B_ROL_RENK). */
 .ve-fw-3b{ position:absolute; inset:0; z-index:6; display:flex; flex-direction:column;
   background:var(--bg-primary); container-type:inline-size; container-name:vefw3b; }
-.ve-fw-3b-bas{ flex:none; display:flex; align-items:center; gap:8px; height:var(--bant-h);
-  padding:0 10px; border-bottom:1px solid var(--border-color); background:var(--bant-zemin); }
-.ve-fw-3b-bas b{ font-size:var(--fs-md); color:var(--text-heading); white-space:nowrap; }
-.ve-fw-3b-bas .ve-fw-dim{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* Bant, yazı ve kapat pencere ailesinin (.ve-settings-header) — burada yalnız
+   bandın metinli düğmeleri ve dosya adının kısalması */
+.ve-fw-3b-bas{ flex:none; gap:6px; }
+.ve-fw-3b-bas > span{ white-space:nowrap; }
+.ve-fw-3b-bas .ve-fw-dim{ min-width:0; overflow:hidden; text-overflow:ellipsis; font-weight:400; }
 /* Bandın metinli düğmeleri: mini düğmenin görünüşü, genişliği metinden */
 .ve-fw-3b-bas .ve-fw-3b-metin{ width:auto; height:22px; padding:0 8px; white-space:nowrap; }
 .ve-fw-3b-govde{ flex:1; min-height:0; display:grid; grid-template-columns:minmax(0, 1fr) 320px; }

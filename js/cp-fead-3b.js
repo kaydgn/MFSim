@@ -63,12 +63,15 @@ function veFeadWiz3bAc(){
   if(!ov) return false;
   if(_fw3b) veFeadWiz3bKapat();
   ov.style.display = 'flex';
-  ov.innerHTML = '<div class="ve-fw-3b-bas">'
-    + '<b>3B görüntüleyici</b><span class="ve-fw-dim" id="ve-fw-3b-dosya"></span>'
+  // Başlık pencere ailesinin ortak bileşeni: kaplama sihirbazın başlığını da
+  // örttüğü için pencerenin başlığı artık bu (bant, yazı, 22 px çizgi kapat).
+  ov.innerHTML = '<div class="ve-settings-header ve-fw-3b-bas">'
+    + '<span><span class="mf-ico mf-ico-box"></span> 3B görüntüleyici <span class="ve-fw-dim" id="ve-fw-3b-dosya"></span></span>'
     + '<button type="button" class="ve-fw-mini ve-fw-3b-metin" id="ve-fw-3b-onden" onclick="veFeadWiz3bOnden()" disabled'
       + ' title="Kayış düzlemine önden bak — hesaptan sonra">Önden bak</button>'
     + '<button type="button" class="ve-fw-mini ve-fw-3b-metin" onclick="veFeadWiz3bSigdir()" title="Bütün montajı sığdır">Sığdır</button>'
-    + '<button type="button" class="ve-fw-mini" onclick="veFeadWiz3bKapat()" title="Kapat (Esc)" aria-label="Kapat">✕</button>'
+    + '<button type="button" class="ve-settings-close" onclick="veFeadWiz3bKapat()" title="Kapat (Esc)" aria-label="Kapat">'
+      + '<span class="mf-ico mf-ico-x"></span></button>'
     + '</div><div class="ve-fw-3b-govde">'
     + '<div class="ve-fw-3b-tuval" id="ve-fw-3b-tuval" data-durum="kuruluyor">'
       + '<div class="ve-fw-3b-ilerleme" id="ve-fw-3b-ilerleme"></div>'
