@@ -707,9 +707,12 @@ function _gfSec3(){
       + '<strong>＋ Kasnak ekle</strong> listesi',
       'Krank Kasnağı · Alternatör · Klima Kompresörü · Su Pompası · Direksiyon Pompası · '
       + 'Hava Kompresörü · Fan Kavraması · Avara Kasnak · Gergi'],
+    ['<strong>Kayış</strong>', 'Kutusu yok: Kayış Yolu çiziminde <strong>kayışa tıklayın</strong> '
+      + '(ya da Kayış Tablosu başlığındaki kayış künyesine)',
+      'Kayış Özellikleri penceresi — profil · marka · boy · katalog. Modelde tek kayış '
+      + 'vardır; FEAD’e girince kendiliğinden kurulur ve silinmez'],
     ['<strong>Araç kartları</strong>', 'Sol palet, <em>FEAD Araçları</em> kategorisi',
-      'Kayış Özellikleri · Kayış Yolu · Çözücü · Rapor · '
-      + 'Başlangıç Sihirbazı · Dönüş Yönü']
+      'Kayış Yolu · Çözücü · Rapor · Başlangıç Sihirbazı · Dönüş Yönü']
   ], ['Ne', 'Nereden', 'İçindekiler']);
   h += _gfNot('Kasnağı nereye bırakacağınız sırasını söyler',
       'Paletten sürüklediğiniz kasnağı çizimde bir <strong>açıklığın</strong> (iki kasnak '
@@ -723,7 +726,8 @@ function _gfSec3(){
     + 'açılır, konumunu orada yazarsınız.');
   h += '<p>Bir modeli kurmak için en az şunlar gerekir: <strong>üç kasnak</strong> (biri sürücü, '
     + 'biri gergi), bir <strong>Kayış Yolu</strong> kartı (kasnakları gördüğünüz ve Kayış '
-    + 'Tablosu’nu açtığınız yer), <strong>Kayış Özellikleri</strong> ve <strong>Çözücü</strong>. '
+    + 'Tablosu’nu açtığınız yer) ve <strong>Çözücü</strong>. Kayış modelle birlikte gelir: '
+    + 'kutusu yoktur, özelliklerine çizimdeki <strong>kayışa tıklayarak</strong> gidersiniz. '
     + 'Raporu istediğiniz zaman ekleyebilirsiniz.</p>';
   h += _gfNot('Araç kartlarını dizmek',
       'Tuvalde yalnız araç kartları durduğu için yerleşim bir <em>okunurluk</em> meselesidir, '
@@ -912,8 +916,10 @@ function _gfSec4(){
       + '(<em>Kayış yolu KAPANMIYOR</em>, <em>Kayış kasnağın İÇİNDEN geçiyor</em>)'],
     ['<strong>Gergi sonda değil</strong> (başlık şeridi)', 'Yalnız kural kırıkken belirir',
       'Sıra sürücüyle başladığına göre gergi son satır olmalı (Bölüm 5)'],
-    ['<strong>Profil · marka</strong> (başlık şeridi)', 'Kayışın künyesi',
-      'Salt okunur — kaynağı <em>Kayış Özellikleri</em> bileşeni ve katalog seçicisi']
+    ['<strong>Profil · marka</strong> ve <strong>SERBEST / SABİT</strong> (başlık şeridi)',
+      'Kayışın künyesi ve boy kipi',
+      'Künyeye tıklayın → <em>Kayış Özellikleri</em> penceresi (katalog seçicisi orada). '
+      + 'Yanındaki anahtar kayış boyu kipini çevirir; avara merkezi girdiyken kilitlidir']
   ], ['Nerede', 'Ne gösterir', 'Nasıl okunur']);
 
   h += '<h3>4.4 Kasnak eklemek, silmek, adlandırmak</h3>';
@@ -1263,8 +1269,9 @@ function _gfSec7(){
 
 function _gfSec8(){
   var h = _gfH2(7);
-  h += '<p><strong>Kayış Özellikleri</strong> kutusuna çift tıklayın. İç topolojide bu kutudan '
-    + 'yalnız bir tane bulunur.</p>';
+  h += '<p>Kayış Yolu çiziminde <strong>kayışa tıklayın</strong> (ya da Kayış Tablosu başlığındaki '
+    + 'kayış künyesine): <strong>Kayış Özellikleri</strong> penceresi açılır. Kayışın kanvasta '
+    + 'kutusu yoktur; modelde tek kayış bulunur ve silinmez.</p>';
   h += _gfAdimlar([
     '<strong>Profil ve Marka</strong> kartında kayış profilini seçin (PK · PJ · PH · PL · PM) '
       + 've markayı işaretleyin. Bu seçim kapatılamaz: pitch yarıçapı '
@@ -1289,8 +1296,8 @@ function _gfSec8(){
   ], ['Kip', 'Ne yapar', 'Hangi soruya cevap verir']);
   h += _gfNot('Kayış kipi kilitlidir',
       'Gergi avara merkezinden çözülüyorsa kayış boyu <strong>yapısal olarak</strong> bir '
-    + 'sonuçtur ve seçilemez. Panel bunu “SERBEST (kilitli)” diye yazar, tuvaldeki rozet de '
-    + 'tıklamayı reddeder.');
+    + 'sonuçtur ve seçilemez. Panel bunu “SERBEST (kilitli)” diye yazar, Kayış Tablosu '
+    + 'başlığındaki anahtar da tıklamayı reddeder.');
   h += '<h3>8.2 Katalog bir kısıt değil, bir öneridir</h3>';
   h += '<p>Katalog iki ayrı küme gösterir ve bunları karıştırmaz:</p>';
   h += _gfAlanTablo('Katalog kümeleri', [
@@ -1607,8 +1614,8 @@ function _gfSec11(){
     ['<strong>Kayış Tablosu</strong>', 'Kasnak başına efektif çap · dönüş yönü · sarım · span; '
       + 'kapanış hükmü kartın rozetinde (✓/✗ Σsarım)',
       'Sarım ve span <strong>çözümden</strong>; Σsarım 360,0° olmalı'],
-    ['Kayış kartı rozeti', '<code>SABİT</code> (mavi) ↔ <code>SERBEST</code> (amber)',
-      'Tıklanabilir; avara merkezi girdiyken kilitli'],
+    ['Kayış Tablosu başlığındaki kip anahtarı', '<code>SABİT</code> (vurgu rengi) ↔ '
+      + '<code>SERBEST</code> (amber)', 'Tıklanabilir; avara merkezi girdiyken kilitli'],
     ['Dönüş Yönü kartı rozeti', '<code>↺ CCW</code> ↔ <code>↻ CW</code>',
       'Tıklanabilir; <strong>rengi</strong> gergi tarafı hükmünü taşır (Bölüm 5.2)']
   ], ['Nerede', 'Ne yazar', 'Not']);
@@ -2212,7 +2219,7 @@ function _gfEkA(){
       ['Gergi kasnak kütlesi, kol ataleti, load stop', 'Gergi', 'Mekanik Sınır ve Atalet'],
       ['Kayış profili ve markası', 'Kayış Özellikleri', 'Profil ve Marka'],
       ['Kanal sayısı, tolerans, aşınma payı', 'Kayış Özellikleri', 'Künye'],
-      ['Kayış boyu kipi', 'Kayış Özellikleri', 'Kayış Boyu (ya da karttaki rozet)'],
+      ['Kayış boyu kipi', 'Kayış Özellikleri', 'Kayış Boyu (ya da Kayış Tablosu başlığındaki anahtar)'],
       ['Katalog aday boyları', 'Kayış Özellikleri', 'Katalog'],
       ['<strong>Kaburga başına kütle</strong>', 'Kayış Özellikleri', 'Malzeme'],
       ['Kayış tipine bağlı çıktılar anahtarı', 'Kayış Özellikleri',

@@ -388,7 +388,7 @@ var veFeadBrief = (function() {
       }
       if(!m.beltOn) {
         p.push('Açıklık frekansları **çizilmiyor**: kayış tipine bağlı çıktılar kapalı (birim kütle '
-          + 'katalogdan gelir). Kayış Özellikleri panelinden açılabilir.');
+          + 'katalogdan gelir). Kayış Özellikleri penceresinden (çizimde kayışa tıklayın) açılabilir.');
       } else if(spns.length && span.length) {
         p.push('Açıklık frekansı kesişimleri: ' + span.slice(0, 6).map(function(c) {
           return c.span + ' × ' + c.label + ' → **' + n(c.rpm, 0) + ' d/dk**';
@@ -427,7 +427,7 @@ var veFeadBrief = (function() {
         + 'bir mertebe göstergesi olarak okuyun.');
       if(!m.beltOn)
         p.push('Açıklık frekansları **çizilmiyor**: kayış tipine bağlı çıktılar kapalı (birim kütle '
-          + 'katalogdan gelir). Kayış Özellikleri panelinden açılabilir.');
+          + 'katalogdan gelir). Kayış Özellikleri penceresinden (çizimde kayışa tıklayın) açılabilir.');
     }
     // Yalnız açıklık frekansları
     spns.forEach(function(c) {

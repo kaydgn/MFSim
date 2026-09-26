@@ -233,8 +233,8 @@ describe('veFeadApplyBadge — kutusu olmayan düğüme rozet konmaz', () => {
     return e.querySelector('.ve-fead-badge');
   };
 
-  test('KASNAK rozet almaz — kanvasta kutusu yok', () => {
-    ['fead-alternator', 'fead-idler', 'fead-crank', 'fead-ac', 'fead-tensioner']
+  test('KASNAK ve KAYIŞ rozet almaz — kanvasta kutuları yok', () => {
+    ['fead-alternator', 'fead-idler', 'fead-crank', 'fead-ac', 'fead-tensioner', 'fead-belt']
       .forEach((t) => {
         expect({ t, rozet: rozet(kasnak(t)) === null }).toEqual({ t, rozet: true });
         // Kutusuzluk kapısı: DOM kutusu hiç kurulmuyor (components.js).
@@ -245,15 +245,16 @@ describe('veFeadApplyBadge — kutusu olmayan düğüme rozet konmaz', () => {
     expect(rozet(kasnak('fead-idler', { contact: 'grooved' }))).toBeNull();
   });
 
-  test('kutusu OLAN iki tip rozetini almaya devam eder', () => {
-    expect(rozet(kasnak('fead-belt'))).not.toBeNull();
+  test('kutusu OLAN tek rozetli tip (Dönüş Yönü) rozetini almaya devam eder', () => {
     expect(rozet(kasnak('fead-spin'))).not.toBeNull();
+    // Kayış kip rozeti kutuyla birlikte KALKTI — üreticisi de dışa açılmıyor.
+    expect(fead.veFeadApplyBeltModeBadge).toBeUndefined();
   });
 
   test('araç düğümüne rozet konmaz; iki kez çağrılınca çoğalmaz', () => {
     expect(rozet(kasnak('fead-solver'))).toBeNull();
     expect(rozet(kasnak('fead-layout'))).toBeNull();
-    const e = el(), n = kasnak('fead-belt');
+    const e = el(), n = kasnak('fead-spin');
     fead.veFeadApplyBadge(e, n);
     fead.veFeadApplyBadge(e, n);
     expect(e.querySelectorAll('.ve-fead-badge')).toHaveLength(1);
@@ -289,39 +290,67 @@ describe('veFeadApplyBadge — kutusu olmayan düğüme rozet konmaz', () => {
     expect(fead.veFeadRefreshDiaGhosts).toBeUndefined();
   });
 
-  // KAYIŞ DÜĞÜMÜ ROZETİ AYRI BİR ŞEY: temas tarafı değil, BOY KİPİ — ve salt
-  // gösterge değil, seçim yüzeyi. Kullanıcı isteği: "topoloji üzerinden çok
-  // basit bir şekilde 'kayış boyu sabit' veya 'kayış boyu değişken' seçeneği".
-  describe('kayış düğümü: boy kipi rozeti', () => {
-    test('kipi yazıyor ve varsayılan geriye dönük (boyu olan proje SABİT)', () => {
-      expect(rozet(kasnak('fead-belt', { effLength: 1715 })).textContent).toBe('SABİT');
-      expect(rozet(kasnak('fead-belt', {})).textContent).toBe('SERBEST');
-      expect(rozet(kasnak('fead-belt', { lengthMode: 'free', effLength: 1715 })).textContent)
-        .toBe('SERBEST');
-    });
+});
 
-    test('TIKLANABİLİR — sürükleme başlatmaz, çift tık yutulur', () => {
-      const b = rozet(kasnak('fead-belt', { effLength: 1715 }));
-      expect(b.style.cursor).toBe('pointer');
-      expect(typeof b.onclick).toBe('function');
-      // Düğüm sürüklemesi mousedown'da başlıyor; rozet onu durdurmazsa tık
-      // hiç gelmez (kanvasta ölçülmüş bir sınıf: hareketsiz tık kayboluyordu).
-      expect(typeof b.onmousedown).toBe('function');
-      expect(typeof b.ondblclick).toBe('function');
-    });
+// ── KAYIŞ BOYU KİPİ ANAHTARI — PAFTA'NIN BAŞLIĞINDA (2026-09-26) ─────────────
+// Eski kayış kutusunun rozetiydi; kutu kalkınca taşıyıcısı değişti. Kullanıcı
+// isteği hâlâ geçerli: *"topoloji üzerinden çok basit bir şekilde 'kayış boyu
+// sabit' veya 'kayış boyu değişken' seçeneği"*. Anahtar SEÇİM YÜZEYİ, salt
+// gösterge değil; renk kipin anlamını taşıyor ve CSS'ten geliyor.
+describe('kayış boyu kipi: Pafta başlığındaki anahtar', () => {
+  const kurBelt = (data) => {
+    const n = { id: 'blt1', type: 'fead-belt', def: componentDefs['fead-belt'], data: data || {} };
+    global.nodes = [n];
+    return n;
+  };
+  const dugme = (data) => {
+    kurBelt(data);
+    const d = document.createElement('div');
+    d.innerHTML = fead.veFeadKipDugmeHTML();
+    return d.firstElementChild;
+  };
+  afterEach(() => { global.nodes = []; });
 
-    test('renk kipin ANLAMINI taşıyor: girdi mavi, türetilmiş amber', () => {
-      expect(rozet(kasnak('fead-belt', { effLength: 1715 })).style.background)
-        .toMatch(/accent-primary/);
-      expect(rozet(kasnak('fead-belt', {})).style.background).toMatch(/accent-warning/);
-    });
+  test('kipi yazıyor ve varsayılan geriye dönük (boyu olan proje SABİT)', () => {
+    expect(dugme({ effLength: 1715 }).textContent).toBe('SABİT');
+    expect(dugme({}).textContent).toBe('SERBEST');
+    expect(dugme({ lengthMode: 'free', effLength: 1715 }).textContent).toBe('SERBEST');
+  });
 
-    test('iki kez çağrılınca çoğalmaz', () => {
-      const e = el(), n = kasnak('fead-belt', { effLength: 1715 });
-      fead.veFeadApplyBadge(e, n);
-      fead.veFeadApplyBadge(e, n);
-      expect(e.querySelectorAll('.ve-fead-badge')).toHaveLength(1);
-    });
+  test('TIKLANABİLİR bir düğme ve geçişe kayış düğümünün kimliğiyle gidiyor', () => {
+    const b = dugme({ effLength: 1715 });
+    expect(b.tagName).toBe('BUTTON');
+    expect(b.getAttribute('type')).toBe('button');
+    expect(b.getAttribute('onclick')).toBe("veFeadToggleBeltMode('blt1')");
+  });
+
+  test('renk kipin ANLAMINI taşıyor — sınıfta, satır içinde değil', () => {
+    expect(dugme({ effLength: 1715 }).classList.contains('sabit')).toBe(true);
+    expect(dugme({}).classList.contains('serbest')).toBe(true);
+    expect(dugme({}).getAttribute('style')).toBeNull();
+    const css = loadSource('../css/styles.css');
+    expect(css).toMatch(/\.ve-fead-pf-kip\.sabit\{[^}]*background:var\(--accent-primary\)/);
+    expect(css).toMatch(/\.ve-fead-pf-kip\.serbest\{[^}]*background:var\(--accent-warning\)/);
+  });
+
+  test('KİLİTLİ: SERBEST yazar, `disabled` DEĞİL (ipucu okunsun) ama işaretli', () => {
+    const eski = global.veFeadBeltModeLocked;
+    global.veFeadBeltModeLocked = () => true;
+    try {
+      const b = dugme({ effLength: 1715, lengthMode: 'fixed' });
+      expect(b.textContent).toBe('SERBEST');
+      expect(b.classList.contains('kilit')).toBe(true);
+      expect(b.getAttribute('aria-disabled')).toBe('true');
+      expect(b.hasAttribute('disabled')).toBe(false);
+      expect(b.getAttribute('title')).toMatch(/KİLİTLİ/);
+    } finally {
+      if (eski === undefined) delete global.veFeadBeltModeLocked; else global.veFeadBeltModeLocked = eski;
+    }
+  });
+
+  test('kayış düğümü yoksa anahtar da yok', () => {
+    global.nodes = [];
+    expect(fead.veFeadKipDugmeHTML()).toBe('');
   });
 });
 
@@ -351,6 +380,24 @@ describe('kayış boyu kipi — topoloji seçicisi', () => {
     stubs.saveState.mockClear();
     fead.veFeadToggleBeltMode('blt1');
     expect(stubs.saveState).toHaveBeenCalled();
+  });
+
+  // KİLİT GEÇİŞİN KENDİSİNDE, düğmede değil: anahtar `aria-disabled` taşıyor
+  // (ipucu okunsun diye `disabled` DEĞİL), yani tık yine geliyor ve reddi
+  // yapan tek şey bu satır. Gerçek tık `fead-rozet.spec.js`'te; bu halka
+  // Node'da da koşsun diye burada.
+  test('KİLİTLİYKEN geçiş HİÇBİR ŞEY yazmaz — ne kip ne geri-al adımı', () => {
+    const n = kurBelt({ effLength: 1715 });
+    const eski = global.veFeadBeltModeLocked;
+    global.veFeadBeltModeLocked = () => true;
+    stubs.saveState.mockClear();
+    try {
+      expect(fead.veFeadToggleBeltMode('blt1')).toBeNull();
+      expect(n.data.lengthMode).toBeUndefined();
+      expect(stubs.saveState).not.toHaveBeenCalled();
+    } finally {
+      if (eski === undefined) delete global.veFeadBeltModeLocked; else global.veFeadBeltModeLocked = eski;
+    }
   });
 
   test('kayış olmayan düğümde geçiş HİÇBİR ŞEY yapmaz', () => {
@@ -595,16 +642,21 @@ test('veFeadPortSideFor KALDIRILDI — geri gelirse kapı kırmızıya döner', 
 // oradan) ama kanvasa kutu ÇİZİLMİYOR. Kutuya bağlı bütün köprü onunla
 // birlikte kalktı; bu kapı geri gelmelerini yakalar.
 describe('kasnak KUTULARI ve kanvas↔mm köprüsü KALDIRILDI', () => {
-  test('kasnak tipleri noCanvasBox taşır, araç düğümleri taşımaz', () => {
+  test('kasnak tipleri ve KAYIŞ noCanvasBox taşır, araç düğümleri taşımaz', () => {
     Object.keys(componentDefs).filter((t) => componentDefs[t].isFeadPulley)
       .forEach((t) => expect(componentDefs[t].noCanvasBox).toBe(true));
-    ['fead-belt', 'fead-solver', 'fead-layout', 'fead-report', 'fead-spin']
+    // KAYIŞ DA (2026-09-26, kullanıcı isteği: "kanvas üzerindeki kayış
+    // tıklanabilir olacak"). Silinmez de: kutusuzken silinse geri kurulamazdı.
+    expect(componentDefs['fead-belt'].noCanvasBox).toBe(true);
+    expect(componentDefs['fead-belt'].noDelete).toMatch(/silinmez/);
+    ['fead-solver', 'fead-layout', 'fead-report', 'fead-spin', 'fead-wizard']
       .forEach((t) => expect(!!componentDefs[t].noCanvasBox).toBe(false));
   });
 
-  test('veIsCanvasHidden yalnız kasnaklara evet der', () => {
+  test('veIsCanvasHidden yalnız kasnaklara ve kayışa evet der', () => {
     expect(veIsCanvasHidden({ type: 'fead-crank' })).toBe(true);
     expect(veIsCanvasHidden({ type: 'fead-tensioner' })).toBe(true);
+    expect(veIsCanvasHidden({ type: 'fead-belt' })).toBe(true);
     expect(veIsCanvasHidden({ type: 'fead-layout' })).toBe(false);
     expect(veIsCanvasHidden({ type: 'gearbox' })).toBe(false);
     expect(veIsCanvasHidden(null)).toBe(false);
@@ -1721,6 +1773,9 @@ describe('gergi DOĞRULAMA kartı — panel hiçbir şeyi karşılaştırmıyor'
 // kasnakların KUTUSU YOK — dizilecek kasnak kalmadı, geriye araç kartları
 // kaldı. Eski iki yönün ölçümleri modül skill'inde arşivli.
 describe('veFeadArrangeByCoords — araç kartlarını diziyor, kasnağa dokunmuyor', () => {
+  // KÜNYE KARTI ÖRNEĞİ SİHİRBAZ: kayışın kutusu 2026-09-26'da kalktı
+  // (kasnaklar gibi `noCanvasBox`), sol şeridin kutulu araçları sihirbaz ·
+  // çözücü · rapor.
   const kur = (kasnakSay, aracTipler) => {
     const tipler = ['fead-crank', 'fead-alternator', 'fead-idler', 'fead-ac'];
     const ns = [];
@@ -1747,7 +1802,7 @@ describe('veFeadArrangeByCoords — araç kartlarını diziyor, kasnağa dokunmu
   });
 
   test('KASNAK KUTUSU OYNAMAZ — kanvasta yeri yok', () => {
-    const ns = kur(4, ['fead-belt', 'fead-layout']);
+    const ns = kur(4, ['fead-wizard', 'fead-layout']);
     fead.veFeadArrangeByCoords({ silent: true });
     ns.filter((n) => componentDefs[n.type].isFeadPulley).forEach((n) => {
       expect(n.x).toBe(7);          // dokunulmadı
@@ -1756,11 +1811,11 @@ describe('veFeadArrangeByCoords — araç kartlarını diziyor, kasnağa dokunmu
   });
 
   test('BÜYÜK kartlar sağda, künyeler solda', () => {
-    const ns = kur(3, ['fead-belt', 'fead-solver', 'fead-layout', 'fead-layout']);
+    const ns = kur(3, ['fead-wizard', 'fead-solver', 'fead-layout', 'fead-layout']);
     expect(fead.veFeadArrangeByCoords({ silent: true })).toBe(true);
     const bul = (t) => ns.find((n) => n.type === t);
     // Sol şerit SAĞA yaslı (x0 - genişlik), sağ blok SOLA yaslı → çakışma yok.
-    const solSag = Math.max(bul('fead-belt').x + bul('fead-belt').width,
+    const solSag = Math.max(bul('fead-wizard').x + bul('fead-wizard').width,
                             bul('fead-solver').x + bul('fead-solver').width);
     ns.filter((n) => n.type === 'fead-layout')
       .forEach((k) => expect(k.x).toBeGreaterThanOrEqual(solSag));
@@ -1776,7 +1831,7 @@ describe('veFeadArrangeByCoords — araç kartlarını diziyor, kasnağa dokunmu
   // Kapı ORANI değil YAPIYI tutuyor: zoom kart ölçüleri değişince kayar ama
   // "kanvaslar aynı bantta yan yana" kuralı kalır.
   test('BÜYÜK kartlar: kanvaslar TEK SIRADA, yan yana', () => {
-    const ns = kur(3, ['fead-belt', 'fead-solver', 'fead-layout', 'fead-layout']);
+    const ns = kur(3, ['fead-wizard', 'fead-solver', 'fead-layout', 'fead-layout']);
     expect(fead.veFeadArrangeByCoords({ silent: true })).toBe(true);
     const kan = ns.filter((n) => n.type === 'fead-layout').sort((a, b) => a.x - b.x);
     expect(kan).toHaveLength(2);
@@ -1798,9 +1853,9 @@ describe('veFeadArrangeByCoords — araç kartlarını diziyor, kasnağa dokunmu
   });
 
   test('aynı şeritteki kartlar dikeyde ÇAKIŞMIYOR', () => {
-    const ns = kur(2, ['fead-belt', 'fead-solver', 'fead-report']);
+    const ns = kur(2, ['fead-wizard', 'fead-solver', 'fead-report']);
     fead.veFeadArrangeByCoords({ silent: true });
-    const sol = ns.filter((n) => ['fead-belt', 'fead-solver', 'fead-report'].includes(n.type))
+    const sol = ns.filter((n) => ['fead-wizard', 'fead-solver', 'fead-report'].includes(n.type))
       .sort((a, b) => a.y - b.y);
     for (let i = 1; i < sol.length; i++)
       expect(sol[i].y).toBeGreaterThanOrEqual(sol[i - 1].y + sol[i - 1].height);
@@ -1819,7 +1874,7 @@ describe('veFeadArrangeByCoords — araç kartlarını diziyor, kasnağa dokunmu
     global.veNodeLabelOverflow = CS.veNodeLabelOverflow;
     global.veMeasureNodeLabel = () => ({ w: 96, h: LH });   // DOM'un yerine
     try {
-      const tipler = ['fead-belt', 'fead-solver', 'fead-report'];
+      const tipler = ['fead-wizard', 'fead-solver', 'fead-report'];
       const serit = (ns) => ns.filter((n) => tipler.includes(n.type)).sort((a, b) => a.y - b.y);
 
       // ADSIZ hâlin kutu-kutu boşluğu — kapının ÖLÇÜTÜ bu, koda gömülü bir
@@ -1845,7 +1900,7 @@ describe('veFeadArrangeByCoords — araç kartlarını diziyor, kasnağa dokunmu
     // Saf koşucuda DOM yok; uydurma bir yükseklik kartları sebepsiz
     // uzaklaştırırdı. Kapı `veBoundaryBox`un `measure` sözleşmesiyle aynı:
     // ölçüm işlevi yoksa davranış değişmez.
-    const tipler = ['fead-belt', 'fead-solver', 'fead-report'];
+    const tipler = ['fead-wizard', 'fead-solver', 'fead-report'];
     const oku = (ns) => ns.filter((n) => tipler.includes(n.type))
       .sort((a, b) => a.id.localeCompare(b.id)).map((n) => [n.x, n.y]);
 
@@ -1867,7 +1922,7 @@ describe('veFeadArrangeByCoords — araç kartlarını diziyor, kasnağa dokunmu
   });
 
   test('silent: saveState ve toast ÇAĞRILMAZ, yerleştirme yine yapılır', () => {
-    const ns = kur(2, ['fead-belt', 'fead-layout']);
+    const ns = kur(2, ['fead-wizard', 'fead-layout']);
     stubs.saveState.mockClear(); stubs.showToast.mockClear();
     expect(fead.veFeadArrangeByCoords({ silent: true })).toBe(true);
     expect(stubs.saveState).not.toHaveBeenCalled();
@@ -1887,7 +1942,7 @@ describe('veFeadLoadExample — kasnak kutusu KURULMUYOR', () => {
     global.nodes = []; global.connections = [];
   });
 
-  test('kurulan kasnakların DOM elemanı yok, araç düğümlerinin var', () => {
+  test('kurulan kasnakların ve KAYIŞIN DOM elemanı yok, araç düğümlerinin var', () => {
     let k = 0;
     global.createNode = (type, x, y) => {
       const d = componentDefs[type] || {};
@@ -1911,11 +1966,50 @@ describe('veFeadLoadExample — kasnak kutusu KURULMUYOR', () => {
     const kasnak = global.nodes.filter((n) => componentDefs[n.type].isFeadPulley);
     expect(kasnak).toHaveLength(6);
     kasnak.forEach((n) => expect(document.getElementById(n.id)).toBeNull());
-    ['fead-belt', 'fead-solver', 'fead-layout', 'fead-report'].forEach((t) => {
+    // KAYIŞ DA KUTUSUZ (2026-09-26): düğüm modelde, elemanı yok.
+    const kayis = global.nodes.find((x) => x.type === 'fead-belt');
+    expect(kayis).toBeTruthy();
+    expect(document.getElementById(kayis.id)).toBeNull();
+    ['fead-solver', 'fead-layout', 'fead-report'].forEach((t) => {
       const n = global.nodes.find((x) => x.type === t);
       expect(n).toBeTruthy();
       expect(document.getElementById(n.id)).not.toBeNull();
     });
+  });
+
+  // AÇILIŞIN KAYIŞI DEVRALINIR — VE ÖRNEĞİN VERİSİNİ ALIR (2026-09-26).
+  // Açılış yüzeyi kayış düğümünü kendisi kuruyor (kutusu ve palet satırı
+  // kalktı). Kurucu tek kopyalı düğümü devralıyordu ama VERİSİNİ YAZMIYORDU:
+  // örnek kasnaklarını kurar, kayış açılışın boş künyesiyle kalırdı — model
+  // yine çözülür, sayılar başka bir kayışın olur. TAM DEĞİŞTİRME: açılışta
+  // (ya da kullanıcı elinde) kalan bir alan örneğin kayışını başkalaştırırdı.
+  test('açılışın kayışı devralınır ve ÖRNEĞİN kayış verisini TAM alır', () => {
+    let k = 0;
+    global.createNode = (type, x, y) => {
+      const d = componentDefs[type] || {};
+      if (d.maxInstances && global.nodes.filter((n) => n.type === type).length >= d.maxInstances)
+        return null;
+      const n = { id: 'cv' + ++k, type, def: d, x, y,
+                  width: d.defaultWidth || 65, height: d.defaultHeight || 60, data: {} };
+      global.nodes.push(n);
+      return n;
+    };
+    const K = componentDefs['fead-belt'];
+    global.nodes = [
+      // Açılışın kayışı — BİLEREK dolu: kalan bir alan (kip, tolerans) yakalansın.
+      { id: 'st-k', type: 'fead-belt', def: K, x: 0, y: 0, width: 60, height: 54,
+        data: { lengthMode: 'fixed', tolerance: 9, brand: 'Uydurma' } },
+      { id: 'st-w', type: 'fead-wizard', def: componentDefs['fead-wizard'], x: 0, y: 0,
+        width: 60, height: 56, data: {} },
+    ];
+    try { fead.veFeadLoadExample('AG00976_GATES_2025'); }
+    finally { delete global.createNode; }
+    const kayislar = global.nodes.filter((n) => n.type === 'fead-belt');
+    expect(kayislar.map((n) => n.id)).toEqual(['st-k']);           // devralındı, ikincisi yok
+    const beklenen = M.veFeadExampleNodes('AG00976_GATES_2025').nodes
+      .find((n) => n.type === 'fead-belt').data;
+    expect(kayislar[0].data).toEqual(beklenen);
+    expect(kayislar[0].data.brand).not.toBe('Uydurma');
   });
 });
 
@@ -1952,8 +2046,10 @@ describe('YEDEK YERLEŞİM — kanvaslar yan yana', () => {
 
   test('veFeadFallbackSlots: kanvaslar BİR SIRADA, künye şeridiyle aynı tepede', () => {
     const y = fead.veFeadFallbackSlots(
-      ['fead-belt', 'fead-solver', 'fead-layout', 'fead-layout', 'fead-report']);
+      ['fead-wizard', 'fead-solver', 'fead-layout', 'fead-layout', 'fead-report']);
     const [belt, solver, k1, k2, rapor] = y;
+    // KAYIŞIN YUVASI YOK (2026-09-26): kasnaklar gibi kutusuz.
+    expect(fead.veFeadFallbackSlots(['fead-belt'])[0]).toBeNull();
 
     // Kanvaslar AYNI satırda ve yan yana.
     expect(k1.ly).toBe(k2.ly);
@@ -2803,6 +2899,38 @@ describe('FEAD editörü açılışı', () => {
     sok();
     expect(iz.yuklenen).toEqual(['kayıt']);
     expect(iz.wiz).toBe(0);
+  });
+
+  // KAYIŞ DÜĞÜMÜ YOKSA AÇILIŞTA EKLENİR (2026-09-26). Kutusu ve palet
+  // satırı kalktı: eski bir kayıtta eksikse kullanıcının onu kurabileceği bir
+  // yol yok ve model "Kayış tanımı yok" der. Açılışın parçası, düzenleme
+  // değil — geri-al yığınının TABANINA yazılır (Ctrl+Z onu sökmesin).
+  const kayitliAc = (alt) => {
+    const iz = kabuk();
+    global.veLoadTabState = (o) => { iz.yuklenen.push('kayıt'); global.nodes = o.state.nodes.slice(); };
+    iz.taban = 0;
+    global.veStateResetBaseline = () => { iz.taban++; return true; };
+    global.nodes = [{ id: 'fa4', type: 'fead-analysis',
+      data: { subTopology: { nodes: alt, connections: [] } } }];
+    try { fead.veFeadOpenEditor('fa4'); }
+    finally { sok(); delete global.veStateResetBaseline; }
+    return iz;
+  };
+
+  test('KAYITLI topolojide kayış yoksa açılışta eklenir — geri-al tabanına', () => {
+    const iz = kayitliAc([{ id: 'x', type: 'fead-crank', data: {} }]);
+    expect(global.nodes.filter((n) => n.type === 'fead-belt')).toHaveLength(1);
+    expect(iz.taban).toBe(1);
+    expect(iz.wiz).toBe(0);                          // kurulmuş model: sihirbaz yok
+  });
+
+  test('kayış ZATEN varsa açılış ona dokunmaz, tabanı da sıfırlamaz', () => {
+    const iz = kayitliAc([{ id: 'x', type: 'fead-crank', data: {} },
+                          { id: 'k', type: 'fead-belt', data: { profile: 'PK' } }]);
+    const k = global.nodes.filter((n) => n.type === 'fead-belt');
+    expect(k.map((n) => n.id)).toEqual(['k']);
+    expect(k[0].data).toEqual({ profile: 'PK' });
+    expect(iz.taban).toBe(0);
   });
 
   test('GÖRÜNMEZ geri-giriş (_silent) sihirbaz AÇMAZ', () => {

@@ -55,6 +55,20 @@ olurdu.
    `veFeadMmToCanvas`, `veFeadSyncMmFromCanvas`, `veFeadSyncCanvasFromMm`,
    `veFeadNodeCenter`, `veFeadDragTensioner`, `veFeadCoordLinkOn`). Kapı:
    `cp-fead.test.js` → *"kasnak KUTULARI ve kanvas↔mm köprüsü KALDIRILDI"*.
+   **KAYIŞIN DA KUTUSU YOK** (2026-09-26, kullanıcı isteği: *"'kayış
+   özellikleri' bileşenini de kaldırmanı istiyorum. Onun yerine kanvas
+   üzerindeki kayış tıklanabilir olacak"*). Aynı kalıp: düğüm modelde,
+   penceresi çizimdeki kayıştan açılır (`veFeadKayisAc`) — görünmez 12 px'lik
+   isabet yolu kasnak halkalarının ALTINDA (sarım yayındaki tık kasnağındır)
+   — ya da paftanın künyesinden. Paletten de çıktı, dolayısıyla **her FEAD
+   topolojisinde tek kayış VAR**: açılış yüzeyi kurar, eski kayıtta yoksa
+   açılışta geri-al tabanına eklenir (`veFeadKayisGaranti`), silinmez
+   (`componentDefs.noDelete`). **Örnek kurucusu devraldığı kayışa örneğin
+   verisini TAM yazar** — yazmasaydı kayış açılışın boş künyesiyle kalırdı ve
+   model başka bir kayışı çözerdi (sessiz). Kapılar: `fead-cizim-masasi.test.js`
+   → *"kayış çizimde tıklanır"*, `cp-fead.test.js` → *"açılışın kayışı
+   devralınır"* + *"FEAD editörü açılışı"*, `fead-cizim-masasi.spec.js` →
+   *"KAYIŞA TIKLA"*.
 5. **BOŞ BİR FEAD TOPOLOJİSİ SİHİRBAZLA KARŞILAR** (2026-09-09, kullanıcı
    isteği). `veFeadOpenEditor` KAYITSIZ bir alt topoloji kurduğunda
    (`_yeniTopoloji` bayrağı) `veFeadWizOpenAny()` çağrılır; kurulmuş bir modele
@@ -186,6 +200,11 @@ olurdu.
     - **KAYIŞ BOYU VE Σsarım TABLODA DEĞİL, KARTIN ROZETİNDE** (sağ üst):
       ikisi de satıra değil çevrime ait; tablo tekrarlamaz
       (`fead-spin-flip.test.js`).
+    - **BAŞLIKTA KAYIŞ KÜNYESİ BİR DÜĞME + KİP ANAHTARI** (2026-09-26): künye
+      Kayış Özellikleri penceresini açar (kayışın kutusu yok, kural 4);
+      yanındaki SERBEST/SABİT anahtarı eski kayış kutusunun rozeti
+      (`veFeadKipDugmeHTML`). Kilitliyken `aria-disabled`, `disabled` DEĞİL —
+      devre dışı düğme ipucunu göstermiyor, kullanıcı nedenini okuyamazdı.
     - **YÖN BİR METİN DÜĞMESİ** (simge + Sağ/Sol, tık çevirir) — seçilen
       tasarımın hücresi. Seçenek sayısı ikiden çıkarsa geri alınır. Gerginin
       ✕'i pasif (gergi tekil).

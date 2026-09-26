@@ -144,7 +144,7 @@ describe('bileşen sözleşmesi', () => {
     });
   });
 
-  test('başlangıçta İKİ açılış yüzeyi kurulur: sihirbaz + BOŞ Kayış Yolu', () => {
+  test('başlangıçta İKİ açılış yüzeyi + kutusuz KAYIŞ düğümü kurulur', () => {
     document.body.innerHTML = '<div id="ve-canvas"></div><div id="ve-canvas-wrapper"></div>';
     global.nodes = []; global.connections = [];
     let k = 0;
@@ -162,10 +162,14 @@ describe('bileşen sözleşmesi', () => {
     // artık kanvas bileşeni değil, kartın açtığı pencere.
     // "Başlangıç ve Örnekler" 2026-09-09'da kaldırıldı — sunduğu liste
     // sihirbazın 1. adımında zaten vardı ve FEAD'e girince sihirbaz açılıyor.
-    expect(out.length).toBe(2);
-    expect(out.map((n) => n.type).sort()).toEqual(['fead-layout', 'fead-wizard']);
-    // Üst üste binmiyorlar (ikisi de aynı şeride konuyor).
-    expect(Math.abs(out[0].x - out[1].x)).toBeGreaterThan(60);
+    // KAYIŞ DÜĞÜMÜ DE (2026-09-26): kutusu ve palet satırı kalktı, onu
+    // kurabilecek tek yol açılış — onsuz model kurulamıyor. Kanvasta görünmez.
+    expect(out.map((n) => n.type).sort()).toEqual(['fead-belt', 'fead-layout', 'fead-wizard']);
+    expect(veIsCanvasHidden(out.find((n) => n.type === 'fead-belt'))).toBe(true);
+    // Görünen iki yüzey üst üste binmiyor (ikisi de aynı şeride konuyor).
+    const gorunen = out.filter((n) => !veIsCanvasHidden(n));
+    expect(gorunen).toHaveLength(2);
+    expect(Math.abs(gorunen[0].x - gorunen[1].x)).toBeGreaterThan(60);
   });
 });
 
