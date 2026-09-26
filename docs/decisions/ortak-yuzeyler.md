@@ -1389,3 +1389,19 @@ seçiliyor, bulunamayan yüz `error` olup sonraki aileye düşüyor); Windows
 dışında 397 yazı öğesinin 397'si birebir aynı genişlikte.
 
 **Kapı.** `tek-yazi-tipi.test.js` → *"5·B"* + `tek-yazi-tipi.spec.js`.
+
+## Büyüyen karşılama karesi dönmez (2026-09-26, kullanıcı kararı 6·2)
+
+**Hüküm.** Slayt ve açılış ekranı kareyi `veKarsilamaEkranaUygun`dan geçirir:
+ekranı kaplarken (cover) fiziksel pikselde ×1,25'ten fazla büyüyen kare
+dönmez. Eşik en keskin kareye göre ölçeklenir (1,25 × en küçük büyütme,
+1'in altındaysa 1). Dosyalar kalır; ölçüsü bilinmeyen kare elenmez; ekran
+ölçülemezse liste olduğu gibi. Kaynak ölçüsü (`VE_KARSILAMA_OLCU`) webp
+başlığından üretilir — `tools/karsilama-webp.js` listeyle birlikte yazar.
+
+**Gerekçe.** 1920×1080'de 48 karenin 26'sı büyütülüyor, 17'si ×1,25'i aşıyor
+ve yumuşuyordu. Kalite düşürülmez kararı duruyor. Sabit eşik 4K'da her kareyi
+eler ve liste ya boşalır ya da en bulanıklar dâhil hepsine döner.
+
+**Kapı.** `karsilama-slayt.test.js` → *"Kaynak ölçüsü"* + *"×1,25"* ·
+`loader-splash.test.js` → *"açılış karesi ekrana göre süzülür"*.

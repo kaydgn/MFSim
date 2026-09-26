@@ -339,6 +339,12 @@
     var el = $(ELS.photo);
     if (!el) return null;
     var liste = (typeof window !== 'undefined' && window.VE_KARSILAMA_GORSELLER) || [];
+    // Ekrana gore suzulur (6·2): slaytla AYNI suzgec, acilis karesi slaytta olsun
+    if (typeof window !== 'undefined' && typeof window.veKarsilamaEkranaUygun === 'function' &&
+        typeof window.veKarsilamaEkranOlcusu === 'function') {
+      var eo = window.veKarsilamaEkranOlcusu();
+      liste = window.veKarsilamaEkranaUygun(liste, eo[0], eo[1]);
+    }
     if (!liste.length) return null;          // kare yok → kagit zemin kalir
     var ad = liste[Math.floor(Math.random() * liste.length)];
     el.style.backgroundImage = 'url("' + kareKaynak(ad) + '")';

@@ -76,7 +76,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   adının hangi resmin hangisi olduğunu söylememesi. **Üretilen sayfa git'e dâhil
   DEĞİL** (28 kare gömülü, klasörle bayatlar); künye elle yazılır ama klasörle iki
   yönlü bağlıdır (`tests/unit/karsilama-secici.test.js`).
-- `tools/karsilama-webp.js` — slayta **yeni kare ekleme**: JPEG/PNG → webp + liste.
+- `tools/karsilama-webp.js` — slayta **yeni kare ekleme**: JPEG/PNG → webp + liste
+  + **kaynak ölçüsü** (`VE_KARSILAMA_OLCU`, webp başlığından; elle yazılmaz).
+  Ekranda ×1,25'ten fazla büyüyen kare dönmez (kararı 6·2) — süzgeç bu ölçüyü okur.
   Numara devam eder, **silinen karenin numarası boş kalır** — 28 dosyayı yeniden
   adlandırmak kullanıcının ekranda öğrendiği numaraları geçersiz kılardı.
 - `tools/karsilama-bul.js` + `tools/karsilama-aday-secici.{js,html}` — karşılama
