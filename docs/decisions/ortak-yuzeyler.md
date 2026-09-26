@@ -1539,9 +1539,13 @@ bulunamayan kartla düşüyor.
 
 ## Tuval kabı kaymaz, kamera kayar (2026-09-26)
 
-**Hüküm.** `#ve-canvas-wrapper` kaydırılırsa (`scroll` olayı) kayma kameraya
-aktarılır (`veKabKaymasiniAktar`: ofset − kayma) ve kap 0'a döner; ekrandaki
-görüntü aynı kalır, odaklanan öğe görünür durur.
+**Hüküm.** `#ve-canvas-wrapper` kaydırılırsa kayma kameraya aktarılır
+(`veKabKaymasiniAktar`: ofset − kayma) ve kap 0'a döner; ekrandaki görüntü
+aynı kalır, odaklanan öğe görünür durur. Eşitleyici (`veKabiEsitle`) İKİ
+yerden çağrılır: kabın `scroll` olayı ve kamerayı kuran `veFitViewToContent`.
+`scroll` olayı bir kare SONRA geliyor; yalnız ona bağlanınca kayık kapla
+kurulan kamera (alt topolojiye giriş) o kare sonra kayma kadar ötelendi ve
+çıkış düğmesi çerçeveden 317 px koptu (ölçüldü, 3 koşunun 1'i).
 
 **Gerekçe.** Kap `overflow:hidden` ama tarayıcı onu yine kaydırıyordu: ekran
 dışındaki bir girdiye odaklanmak kabı 3147 × 2414 px kaydırdı; Playwright'ın

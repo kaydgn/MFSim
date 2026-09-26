@@ -500,14 +500,22 @@ describe('veKabKaymasiniAktar — kabın kayması kameraya geçer', () => {
     expect(ofs).toEqual({ x: 10, y: 20 });
   });
 
-  test('ui-core kabın kaydırma olayını dinliyor, kabı sıfırlıyor ve kamerayı çiziyor', () => {
+  // Eşitleyici İKİ yerden çağrılmalı: kabın `scroll` olayı bir kare SONRA
+  // geliyor; kamerayı kuran sığdırma kayık kapla çalışırsa kurduğu kamera o
+  // kare sonra kayma kadar ötelenirdi (ölçüldü: alt topolojiye girişte çıkış
+  // düğmesi çerçeveden 317 px koptu).
+  test('ui-core: eşitleyici kabı sıfırlar, kamerayı çizer; scroll olayı VE sığdırma onu çağırır', () => {
     const src = require('fs').readFileSync(require('path').join(__dirname, '../../js/ui-core.js'), 'utf8');
-    const i = src.indexOf("canvasWrapper.addEventListener('scroll'");
+    const i = src.indexOf('function veKabiEsitle(');
     expect(i).toBeGreaterThan(0);
-    const govde = src.slice(i, src.indexOf('});', i));
+    const govde = src.slice(i, src.indexOf('\n}\n', i));
     expect(govde).toMatch(/scrollLeft = 0/);
     expect(govde).toMatch(/scrollTop = 0/);
     expect(govde).toMatch(/veKabKaymasiniAktar\(canvasOffset/);
     expect(govde).toMatch(/updateCanvasTransform\(\)/);
+    expect(src).toMatch(/canvasWrapper\.addEventListener\('scroll', veKabiEsitle\)/);
+    const fit = src.slice(src.indexOf('function veFitViewToContent('));
+    const fitGovde = fit.slice(0, fit.indexOf('var W = wrapper.clientWidth'));
+    expect(fitGovde).toMatch(/^\s+veKabiEsitle\(\);/m);
   });
 });

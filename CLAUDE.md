@@ -248,8 +248,10 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   `veKabKaymasiniAktar` + `ui-core.js`'teki `scroll` dinleyicisi). Kap
   `overflow:hidden` ama tarayıcı onu yine kaydırır (ekran dışı girdiye odak,
   Ctrl+F, "görünür yap"); kaymış kapta kartlar, ızgara ve minimap birlikte
-  kayar ve geri dönüş yolu yoktur. Kayma kameraya aktarılır, kap 0'a döner.
-  Kapı: `canvas-space.test.js` + `tuval-kab-kaymaz.spec.js`.
+  kayar ve geri dönüş yolu yoktur. Kayma kameraya aktarılır, kap 0'a döner;
+  `veKabiEsitle` hem `scroll` olayında hem kamerayı KURAN sığdırmanın başında
+  çağrılır (olay bir kare sonra gelir). Kapı: `canvas-space.test.js` +
+  `tuval-kab-kaymaz.spec.js`.
 - **KART İÇİNDEKİ KAYDIRILABİLİR YÜZEY TEKERLEĞİ ÖNCE ALIR**
   (`js/ui-core.js` → `veWheelInnerPane`). Kanvasın tekerlek dinleyicisi
   kayıtsız `preventDefault()` çağırdığı sürece kart içindeki hiçbir liste
