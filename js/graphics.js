@@ -640,7 +640,7 @@ function veShowRaporModal() {
           '<option value="csv"' + (veActiveModule !== 'full-throttle' ? ' selected' : '') + '>CSV (Excel uyumlu — Sadece veri)</option>' +
         '</select>' +
       '</div>' +
-      '<button onclick="veGenerateReport()" style="width:100%; padding:10px; background:linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color:#fff; border:none; border-radius:var(--radius-sm); font-size:var(--fs-lg); font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;"><span class="mf-ico mf-ico-download"></span> BMC raporu oluştur ve indir</button>' +
+      '<button type="button" class="ve-settings-btn ve-settings-btn-primary" onclick="veGenerateReport()">' + veIkon('download') + ' BMC raporu oluştur ve indir</button>' +
       '<div style="text-align:center; color:var(--text-muted); font-size:var(--fs-tiny); margin-top:8px;">Rapor BMC kurumsal formatında oluşturulacaktır</div>' +
     '</div>';
   

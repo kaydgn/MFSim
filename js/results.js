@@ -2717,7 +2717,7 @@ function veDownloadTXTFromPreview() {
       '<label style="color:var(--text-muted); font-size:var(--fs-body); display:block; margin-bottom:3px;">Yazar adı:</label>' +
       '<input type="text" id="ve-txt-author-input" placeholder="İsim soyisim" style="width:100%; padding:6px 8px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-sizing:border-box;">' +
       '<div id="ve-txt-author-email" style="margin-top:6px; font-size:var(--fs-tiny); color:var(--text-muted); min-height:1.2em;"></div>' +
-      '<button id="ve-txt-author-ok" style="width:100%; margin-top:10px; padding:8px; background:linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color:#fff; border:none; border-radius:var(--radius-sm); font-size:var(--fs-md); font-weight:700; cursor:pointer;"><span class="mf-ico mf-ico-download"></span> İndir</button>' +
+      '<button type="button" id="ve-txt-author-ok" class="ve-settings-btn ve-settings-btn-primary" style="margin-top:10px;">' + veIkon('download') + ' İndir</button>' +
     '</div>';
   ov.appendChild(box);
   document.body.appendChild(ov);

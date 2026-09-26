@@ -91,9 +91,9 @@ describe('başlık TEK bileşen', () => {
       'js/graphics.js', 'js/results.js', 'js/sensors.js']) {
       expect([f, /ve-settings-header/.test(KAYNAK[f])]).toEqual([f, true]);
     }
-    // Eski lacivert degrade başlık bandı kalmadı — üç küçük pencere onu kendi
-    // satır içi stiliyle ve yazı karakteriyle ✕'le çiziyordu.
-    expect(Object.keys(KAYNAK).filter((f) => /#1a365d 0%, #2c5282/.test(KAYNAK[f]))).toEqual([]);
+    // Eski lacivert degrade (başlık bandı + eylem düğmesi) kalmadı — üç küçük
+    // pencere onu kendi satır içi stiliyle ve yazı karakteriyle ✕'le çiziyordu.
+    expect(Object.keys(KAYNAK).filter((f) => /#1a365d/i.test(KAYNAK[f]))).toEqual([]);
     expect(HTML.match(/class="ve-settings-header"/g)).toHaveLength(5);
   });
 
