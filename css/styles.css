@@ -1227,10 +1227,17 @@
     ::-webkit-scrollbar-corner {
       background: var(--bg-secondary);
     }
-    /* Firefox */
-    * {
-      scrollbar-width: thin;
-      scrollbar-color: var(--border-hover) var(--bg-secondary);
+    /* YALNIZ Firefox (2026-09-26, kullanıcı kararı 12·B). Bu iki özellik
+       Chromium 121'den beri Edge'de de geçerli ve yukarıdaki ::-webkit-scrollbar
+       çizimini KAPATIYORDU: CSS 8 px yuvarlak bir başparmak istiyordu, ekrana
+       tarayıcının 10 px'lik standart çubuğu ok düğmeleriyle geliyordu
+       (ölçüldü, Chromium 141). ::-webkit-scrollbar'ı tanımayan tarayıcıya
+       ayrıldı; öğe başına `scrollbar-width:thin` da aynı sebeple YAZILMAZ. */
+    @supports not selector(::-webkit-scrollbar) {
+      * {
+        scrollbar-width: thin;
+        scrollbar-color: var(--border-hover) var(--bg-secondary);
+      }
     }
 
     body {
@@ -1282,6 +1289,29 @@
     kbd, code, samp, pre {
       font-family: inherit;
     }
+
+    /* LİSTE VE SAYI ALANI TEK DİLDE (2026-09-26, kullanıcı kararı 11·B).
+       Açılır listeler iki görünüşteydi: pencerelerdeki 33 listenin 33'ü
+       Windows'un kendi okuyla, FEAD kart çubuğundakiler programın çizilmiş
+       okuyla. Sayı alanları (338) fare üstüne gelince tarayıcının yukarı/aşağı
+       oklarını açıyor ve sağa yaslı rakamların yanına biniyordu. Ok artık
+       HEPSİNDE programın — FEAD çubuğunun oku, aynı geometri: iki küçük
+       gradyan, rengini yazıdan alır, her temada doğru. `!important` BİLEREK:
+       33 listede satır içi `background:` kısaltması var ve kısaltma oku
+       siler. Sayı alanında ↑/↓ tuşları sayıyı yine artırıp azaltır. */
+    select:not([multiple]):not([size]) {
+      -webkit-appearance: none; appearance: none;
+      padding-right: 15px !important;
+      text-overflow: ellipsis;
+      background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                        linear-gradient(135deg, currentColor 50%, transparent 50%) !important;
+      background-position: calc(100% - 9px) 50%, calc(100% - 6px) 50% !important;
+      background-size: 3px 3px, 3px 3px !important;
+      background-repeat: no-repeat !important;
+    }
+    input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
     /* ===== ODAK & METİN SEÇİMİ (erişilebilir focus-visible + selection) ===== */
     ::selection {
@@ -3263,7 +3293,6 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 }
 .ve-cmdk-list{
   max-height:min(52vh,420px); overflow-y:auto; padding:7px;
-  scrollbar-width:thin;
 }
 .ve-cmdk-item{
   display:flex; align-items:center; gap:12px;
@@ -5659,7 +5688,6 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-trace-note-body{
   display:none;padding:2px 8px 9px 26px;
   max-height:min(25vh, 220px);overflow-y:auto;
-  scrollbar-width:thin;
 }
 .ve-trace-note.open .ve-trace-note-body{display:block;}
 
