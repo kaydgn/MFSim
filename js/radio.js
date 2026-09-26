@@ -529,11 +529,14 @@
     var selCount = (sel === CAT_ALL) ? all.length
       : (sel === CAT_FAV) ? favCount
       : ((cats.filter(function (c) { return c.cat === sel; })[0] || { count: 0 }).count);
-    var selLabel = (sel === CAT_ALL) ? 'Tümü' : (sel === CAT_FAV) ? '★ Favoriler' : sel;
+    var selLabel = (sel === CAT_ALL) ? 'Tümü' : (sel === CAT_FAV) ? 'Favoriler' : sel;
+    // Favoriler'in yıldızı yayının favori düğmesindeki SVG'nin kendisi — '★'
+    // yazı tipinden çiziliyordu (karar 10·B).
+    var selIkon = (sel === CAT_FAV) ? '<span class="mf-radio-catstar" aria-hidden="true">' + ICONS.star + '</span>' : '';
     var selector =
       '<div class="mf-radio-catbar">' +
         '<button type="button" class="mf-radio-catsel' + (catMenuOpen ? ' open' : '') + '" aria-haspopup="listbox" aria-expanded="' + catMenuOpen + '">' +
-          '<span class="mf-radio-catsel-label">' + esc(selLabel) + '</span>' +
+          '<span class="mf-radio-catsel-label">' + selIkon + esc(selLabel) + '</span>' +
           '<span class="mf-radio-catsel-count">' + selCount + '</span>' +
           '<span class="mf-radio-catsel-chev" aria-hidden="true">' + ICONS.chev + '</span>' +
         '</button>' +
@@ -542,16 +545,16 @@
     var body;
     if (catMenuOpen) {
       // Açık — kategori listesi (Favoriler + Tümü + her kategori, adetli)
-      var opt = function (cat, label, count, extraCls) {
+      var opt = function (cat, label, count, extraCls, ikon) {
         var on = sel === cat;
         return '<button type="button" class="mf-radio-catopt' + (on ? ' active' : '') + (extraCls ? ' ' + extraCls : '') + '" data-cat="' + esc(cat) + '" role="option" aria-selected="' + on + '">' +
                  '<span class="mf-radio-item-dot"></span>' +
-                 '<span class="mf-radio-catopt-name">' + esc(label) + '</span>' +
+                 '<span class="mf-radio-catopt-name">' + (ikon || '') + esc(label) + '</span>' +
                  '<span class="mf-radio-catopt-n">' + count + '</span>' +
                '</button>';
       };
       body = '<div class="mf-radio-catlist" role="listbox">' +
-        opt(CAT_FAV, '★ Favoriler', favCount, 'is-fav') +
+        opt(CAT_FAV, 'Favoriler', favCount, 'is-fav', '<span class="mf-radio-catstar" aria-hidden="true">' + ICONS.star + '</span>') +
         opt(CAT_ALL, 'Tümü', all.length) +
         cats.map(function (c) { return opt(c.cat, c.cat, c.count); }).join('') +
         '</div>';
@@ -572,7 +575,7 @@
                '</div>';
       }).join('');
       if (!rows) rows = (sel === CAT_FAV)
-        ? '<div class="mf-radio-empty">Henüz favori yok. Bir yayının ★ yıldızına basarak ekle.</div>'
+        ? '<div class="mf-radio-empty">Henüz favori yok. Bir yayının <span class="mf-radio-catstar" aria-hidden="true">' + ICONS.starO + '</span> yıldızına basarak ekle.</div>'
         : '<div class="mf-radio-empty">Bu kategoride yayın yok.</div>';
       body = '<div class="mf-radio-list">' + rows + '</div>' +
         '<div class="mf-radio-add">' +

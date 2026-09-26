@@ -10,7 +10,7 @@ function createNodeContextMenu() {
   menu.className = 've-context-menu';
   menu.style.cssText = 'display:none; z-index:10001; min-width:200px;';   // yüzey `.ve-context-menu`den
   
-  menu.innerHTML = '<div class="ve-context-item" data-action="toggle-axis"><span><span class="mf-ico mf-ico-refresh"></span></span> Yatay ↔ dikey</div>' +
+  menu.innerHTML = '<div class="ve-context-item" data-action="toggle-axis"><span class="mf-ico mf-ico-refresh" aria-hidden="true"></span> Yatay ↔ dikey</div>' +
     '<div class="ve-context-divider"></div>' +
     '<div class="ve-context-item" data-action="mirror-h"><span>↔</span> Yatay aynala (sol ↔ sağ)</div>' +
     '<div class="ve-context-item" data-action="mirror-v"><span>↕</span> Dikey aynala (üst ↔ alt)</div>' +
@@ -50,7 +50,7 @@ function showNodeContextMenu(e, node) {
   var isVertical = (inSide === 'top' || inSide === 'bottom' || outSide === 'top' || outSide === 'bottom');
   
   var items = nodeContextMenu.querySelectorAll('.ve-context-item');
-  items[0].innerHTML = isVertical ? '<span><span class="mf-ico mf-ico-refresh"></span></span> Yataya çevir (← →)' : '<span><span class="mf-ico mf-ico-refresh"></span></span> Dikeye çevir (↑ ↓)';
+  items[0].innerHTML = isVertical ? '<span class="mf-ico mf-ico-refresh" aria-hidden="true"></span> Yataya çevir (← →)' : '<span class="mf-ico mf-ico-refresh" aria-hidden="true"></span> Dikeye çevir (↑ ↓)';
   
   nodeContextMenu.style.display = 'block';
   nodeContextMenu.style.left = e.clientX + 'px';
@@ -159,27 +159,27 @@ function createPortContextMenu() {
   
   menu.innerHTML = `
     <div class="ve-context-item" data-action="top">
-      <span>↑</span> Üste taşı
+      <span class="mf-ico mf-ico-arrow-up" aria-hidden="true"></span> Üste taşı
     </div>
     <div class="ve-context-item" data-action="right">
-      <span>→</span> Sağa taşı
+      <span class="mf-ico mf-ico-arrow-right" aria-hidden="true"></span> Sağa taşı
     </div>
     <div class="ve-context-item" data-action="bottom">
-      <span>↓</span> Alta taşı
+      <span class="mf-ico mf-ico-arrow-down" aria-hidden="true"></span> Alta taşı
     </div>
     <div class="ve-context-item" data-action="left">
-      <span>←</span> Sola taşı
+      <span class="mf-ico mf-ico-arrow-left" aria-hidden="true"></span> Sola taşı
     </div>
     <div class="ve-context-divider"></div>
     <div class="ve-context-item" data-action="addPort">
-      <span>+</span> Aynı tipten port ekle
+      <span class="mf-ico mf-ico-plus" aria-hidden="true"></span> Aynı tipten port ekle
     </div>
     <div class="ve-context-item ve-context-danger" data-action="removePort">
-      <span>−</span> Bu portu kaldır
+      <span class="mf-ico mf-ico-minus" aria-hidden="true"></span> Bu portu kaldır
     </div>
     <div class="ve-context-divider"></div>
     <div class="ve-context-item" data-action="reset">
-      <span><span class="mf-ico mf-ico-refresh"></span></span> Varsayılana dön
+      <span class="mf-ico mf-ico-refresh" aria-hidden="true"></span> Varsayılana dön
     </div>
   `;
   
@@ -413,12 +413,12 @@ function createLabelContextMenu(){
   menu.className = 've-context-menu';
   menu.style.cssText = 'display:none; z-index:10001; min-width:150px;';   // yüzey `.ve-context-menu`den
   menu.innerHTML = `
-    <div class="ve-context-item" data-action="top"><span>↑</span> Etiketi üste</div>
-    <div class="ve-context-item" data-action="bottom"><span>↓</span> Etiketi alta</div>
-    <div class="ve-context-item" data-action="left"><span>←</span> Etiketi sola</div>
-    <div class="ve-context-item" data-action="right"><span>→</span> Etiketi sağa</div>
+    <div class="ve-context-item" data-action="top"><span class="mf-ico mf-ico-arrow-up" aria-hidden="true"></span> Etiketi üste</div>
+    <div class="ve-context-item" data-action="bottom"><span class="mf-ico mf-ico-arrow-down" aria-hidden="true"></span> Etiketi alta</div>
+    <div class="ve-context-item" data-action="left"><span class="mf-ico mf-ico-arrow-left" aria-hidden="true"></span> Etiketi sola</div>
+    <div class="ve-context-item" data-action="right"><span class="mf-ico mf-ico-arrow-right" aria-hidden="true"></span> Etiketi sağa</div>
     <div class="ve-context-divider"></div>
-    <div class="ve-context-item" data-action="reset"><span><span class="mf-ico mf-ico-refresh"></span></span> Varsayılana dön</div>
+    <div class="ve-context-item" data-action="reset"><span class="mf-ico mf-ico-refresh" aria-hidden="true"></span> Varsayılana dön</div>
   `;
   document.body.appendChild(menu);
   labelContextMenu = menu;

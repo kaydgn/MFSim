@@ -171,14 +171,14 @@ describe('EKRAN — adımlar, çubuk, kapanış', () => {
     }
   });
 
-  test('bitmiş adım ✓ alıyor, çubuk q ORANINDAN geliyor', () => {
+  test('bitmiş adım onay ikonu alıyor, çubuk q ORANINDAN geliyor', () => {
     kabuk();
     {
       ML.veModuleLoaderRun({ ad: 'X' }, adimlarKur());
       const li = document.querySelectorAll('#ve-modload-stages li');
       expect(li.length).toBe(3);
       expect(li[0].className).toContain('is-done');
-      expect(li[0].textContent).toContain('✓');
+      expect(li[0].querySelector('.mf-ico-check')).not.toBeNull();   // çizgi ikon (karar 10·B)
       // Yuvarlanmış yüzdeden DEĞİL: '33%' yazılsaydı dolgu çentiğin 0,3 punto
       // gerisinde kalırdı (açılış ekranında ölçülmüş aynı tuzak).
       const w = document.getElementById('ve-modload-bar').style.width;

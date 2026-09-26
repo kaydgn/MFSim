@@ -137,6 +137,8 @@
      defer setinde kalsaydi acilis ekrani fotografsiz baslardi. Karelerin
      KENDISI zaten <body>'nin hemen ardinda (window.__MFSIM_KARSILAMA). -->
 <script src="js/karsilama-gorseller.js"></script>
+<!-- Tek ikon ailesi (karar 10·B): veIkon yükleyiciden ÖNCE — açılış ekranı da kullanıyor. -->
+<script src="js/ikon.js"></script>
 <script src="js/loader.js"></script>
 
 <!-- ═══ LOGIN SCREEN ═══ -->
@@ -264,7 +266,7 @@
        o kabın innerHTML'ini yeniden yazar, statik markup orada duramaz. -->
             <div class="ve-rb-dock" id="ve-rb-dock">
     <div class="ve-rb-body" id="ve-rb-body" role="tabpanel"></div>
-    <button type="button" class="ve-rb-collapse" id="ve-rb-collapse" title="Şeridi daralt" aria-label="Şeridi daralt">▲</button>
+    <button type="button" class="ve-rb-collapse" id="ve-rb-collapse" title="Şeridi daralt" aria-label="Şeridi daralt"><span class="mf-ico mf-ico-chevron-up" aria-hidden="true"></span></button>
   </div>
 </div>
 
@@ -1079,7 +1081,7 @@
             <span class="mf-ico mf-ico-alert-triangle"></span>
             <span class="ve-status-warnings-label">Uyarılar</span>
             <span id="ve-warnings-count">0</span>
-            <span id="ve-warnings-toggle">▲</span>
+            <span id="ve-warnings-toggle" class="mf-ico mf-ico-chevron-down" aria-hidden="true"></span>
           </button>
           <span class="ve-status-sep"></span>
           <span class="ve-toolbar-info" id="ve-status-counts">0 bileşen, 0 bağlantı</span>

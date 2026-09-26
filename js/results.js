@@ -6433,6 +6433,10 @@ function _veToastDismiss(toast) {
   setTimeout(function() { toast.remove(); }, 300);
 }
 
+// Bildirimin tür ikonu — çizgi ikon (karar 10·B). Eskiden dolu bir dairede
+// '!' / 'i' / '✓' HARFİ vardı. Ölçüm Görüntüleyici'nin bildirimi (viewer/js/board.js)
+// aynı tabloyu taşır; ikisi ayrışmasın diye kapı tests/unit/ikon-dili.test.js'te.
+var VE_TOAST_IKON = { success: 'check-circle', warning: 'alert-triangle', error: 'alert-circle', info: 'info' };
 function showToast(message, type) {
   var stack = _veToastStack();
 
@@ -6449,9 +6453,8 @@ function showToast(message, type) {
   if(type === 'warning' || type === 'error' || type === 'info') toast.classList.add(type);
 
   var icon = document.createElement('span');
-  icon.className = 've-toast-icon';
+  icon.className = 've-toast-icon mf-ico mf-ico-' + (VE_TOAST_IKON[type] || VE_TOAST_IKON.success);
   icon.setAttribute('aria-hidden', 'true');
-  icon.textContent = (type === 'error') ? '!' : (type === 'warning') ? '!' : (type === 'info') ? 'i' : '✓';
 
   var text = document.createElement('span');
   text.textContent = message;

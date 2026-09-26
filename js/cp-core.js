@@ -42,7 +42,7 @@ function showInfoPopup(infoKey) {
   
   popup.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
     '<h3 style="margin:0; font-size:var(--fs-title); color:var(--text-heading);">' + info.title + '</h3>' +
-    '<button onclick="closeInfoPopup()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-h2);">✕</button>' +
+    '<button class="ve-settings-close" type="button" onclick="closeInfoPopup()" title="Kapat" aria-label="Kapat">' + veIkon('x') + '</button>' +
     '</div>' +
     '<p style="margin:0; font-size:var(--fs-lg); color:var(--text-secondary); line-height:1.5;">' + info.content + '</p>';
   

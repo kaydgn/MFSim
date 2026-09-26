@@ -48,7 +48,7 @@ function renderAnnotation(annot) {
       '<div class="ve-annotation-label" style="color:' + annot.color + '; font-size:' + annot.fontSize + 'px;">' +
         escapeHTML(annot.text) +
       '</div>' +
-      '<div class="ve-annotation-drag" title="Sürükle">✥</div>' +
+      '<div class="ve-annotation-drag" title="Sürükle">' + veIkon('move') + '</div>' +
       '<div class="ve-annotation-resize" data-annot="' + annot.id + '"></div>';
   } else {
     el.style.color = annot.color;

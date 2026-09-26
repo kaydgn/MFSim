@@ -58,7 +58,8 @@ describe('kapat düğmesi TEK biçim', () => {
     // Beş pencere + Özellikler + görüntüleyici + yardım ailesi (3) + Tablo +
     // Çözücü + iki bildirim: tarama BOŞA çalışmıyor.
     expect(k.length).toBeGreaterThanOrEqual(14);
-    const sapan = k.filter((x) => !/mf-ico-x/.test(x.govde) || /✕|×|<svg/.test(x.govde))
+    // İkon işaretlemesi ya elle yazılı ya tek yardımcıdan (js/ikon.js → veIkon('x')).
+    const sapan = k.filter((x) => !/mf-ico-x|veIkon\('x'\)/.test(x.govde) || /✕|×|<svg/.test(x.govde))
       .map((x) => x.dosya + ': ' + x.govde.slice(0, 60));
     expect(sapan).toEqual([]);
   });

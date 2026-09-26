@@ -373,7 +373,7 @@ function veRibbonRender() {
   var col = document.getElementById('ve-rb-collapse');
   if(col) {
     var etiket = veRibbonCollapsed ? 'Şeridi sabitle' : 'Şeridi daralt';
-    col.textContent = veRibbonCollapsed ? '▼' : '▲';
+    col.innerHTML = veIkon(veRibbonCollapsed ? 'chevron-down' : 'chevron-up');
     col.setAttribute('title', etiket);
     col.setAttribute('aria-label', etiket);
   }

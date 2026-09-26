@@ -458,7 +458,9 @@ function veSigRowHTML(item, slot, q, sparkW, sparkH) {
 
   var pts = veSigSparkPoints(veSigSeries(item.sensorId, item.signalId), sparkW, sparkH, 32);
 
-  var dirTag = item.dir === 'in' ? '←' : (item.dir === 'out' ? '→' : '');
+  // Yön işareti çizgi ikon (karar 10·B). Bu dosya Ölçüm Görüntüleyici ile
+  // paylaşılıyor ve orada js/ikon.js yok: işaretleme burada yazılı.
+  var dirTag = item.dir === 'in' ? 'arrow-left' : (item.dir === 'out' ? 'arrow-right' : '');
   var title = item.name + (item.unit ? ' [' + item.unit + ']' : '') +
               ' · ' + item.compType + '::' + item.signalId +
               ' · ' + item.source + ' — sürükle veya çift tıkla';
@@ -480,7 +482,7 @@ function veSigRowHTML(item, slot, q, sparkW, sparkH) {
        ' data-act="inspect" title="' + (on ? 'Renk: ' + color + ' — ' : '') + 'Renk ve istatistik"></span>';
 
   h += '<span class="vsig-name" data-act="drag">' +
-       (dirTag ? '<span class="vsig-dir">' + dirTag + '</span>' : '') +
+       (dirTag ? '<span class="mf-ico mf-ico-' + dirTag + ' vsig-dir" aria-hidden="true"></span>' : '') +
        veSigHighlight(item.name, q) + '</span>';
 
   h += '<span class="vsig-unit">' + veSigEsc(item.unit || '−') + '</span>';
@@ -518,7 +520,7 @@ function veSigGroupHTML(g, slot, q) {
   h += '<div class="vsig-ghead" data-act="open" role="treeitem" tabindex="0"' +
        ' aria-expanded="' + (open ? 'true' : 'false') + '"' +
        ' title="' + veSigEsc(g.name + ' — ' + st.on + '/' + st.total + ' sinyal hedef panelde') + '">';
-  h += '<span class="vsig-arrow" aria-hidden="true">▶</span>';
+  h += '<span class="mf-ico mf-ico-chevron-right vsig-arrow" aria-hidden="true"></span>';
   h += '<button type="button" class="vsig-ck ' + st.state + '" data-act="grp-toggle"' +
        ' role="checkbox" aria-checked="' + (st.state === 'all' ? 'true' : (st.state === 'some' ? 'mixed' : 'false')) + '"' +
        ' aria-label="' + veSigEsc(g.name) + ' — tüm sinyaller"></button>';
@@ -677,7 +679,7 @@ function veSigInspectorHTML() {
   h += '<div class="vsig-insp-head">';
   h += '<span class="vsig-sw" style="background:' + color + ';"></span>';
   h += '<span class="vsig-insp-title">' + veSigEsc(item.name) + '</span>';
-  h += '<button type="button" class="vsig-insp-x" data-act="insp-close" title="Kapat" aria-label="Kapat">✕</button>';
+  h += '<button type="button" class="vsig-insp-x" data-act="insp-close" title="Kapat" aria-label="Kapat"><span class="mf-ico mf-ico-x" aria-hidden="true"></span></button>';
   h += '</div>';
   h += '<div class="vsig-insp-key">' + veSigEsc(item.compType + '::' + item.signalId) +
        ' · ' + veSigEsc(item.unit || '−') + ' · ' + veSigEsc(item.source) + '</div>';

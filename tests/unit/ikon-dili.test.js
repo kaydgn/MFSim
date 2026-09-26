@@ -1,0 +1,170 @@
+/**
+ * ikon-dili.test.js — TEK İKON AİLESİ (kullanıcı kararı 10·B, 2026-09-26)
+ * ───────────────────────────────────────────────────────────────────────────
+ * Arayüzde ikon işi gören her şey css/icons.css'teki çizgi ikondur. Sembol
+ * karakteri (▶ ▼ ✓ ✕ ⚠ ★) yazı tipinden çizilir — Windows'ta Segoe UI
+ * Symbol'dan — ve aynı şeritte ikinci bir çizim dili olur. Ölçülen: 16
+ * ekranda 200 çizgi ikonun yanında 104 sembol karakteri.
+ *
+ * Kapılar:
+ *   · css/icons.css ÜRETİLİR (tools/ikonlar.js) — elle düzenlenmez
+ *   · kaynakta adı geçen her ikon tanımlı — bilinmeyen ad dolu bir KARE çizer
+ *   · aşama dosyalarında ikon işi gören sembol karakteri yok (tools/ikon-dili.js)
+ *   · tek üretici: master rozeti, bildirim ikonu tablosu, program simgesi eşlemesi
+ */
+const fs = require('fs');
+const path = require('path');
+const T = require('../../tools/ikon-dili.js');
+const U = require('../../tools/ikonlar.js');
+
+const KOK = path.join(__dirname, '../..');
+const oku = (f) => fs.readFileSync(path.join(KOK, f), 'utf8');
+const ADLAR = new Set(Object.keys(U.ikonlar()));
+
+// Aşama 1: kabuk. Ölçüm Görüntüleyici'nin panosu (viewer/js/board.js)
+// Sonuçlar'ın ağacının kopyası — onunla birlikte aşama 3'te.
+const ASAMA1 = ['index.html', 'css/styles.css', 'viewer/index.html', 'viewer/js/app.js',
+  'js/ikon.js', 'js/ribbon.js', 'js/command-palette.js', 'js/context-menus.js', 'js/settings.js',
+  'js/status.js', 'js/shortcuts-help.js', 'js/toolbar.js', 'js/cp-komuta.js', 'js/guide-kit.js',
+  'js/kimlik.js', 'js/cp-programlar.js', 'js/tablo-pencere.js', 'js/solver-pro.js', 'js/trace-view.js',
+  'js/measure-import-ui.js', 'js/signal-tree.js', 'js/deploy-status.js', 'js/topology.js',
+  'js/ui-core.js', 'js/components.js', 'js/state.js', 'js/loader.js', 'js/module-loader.js',
+  'js/annotations.js', 'js/cp-core.js', 'js/radio.js', 'js/empty-hint.js', 'js/tabs.js', 'js/theme.js'];
+
+describe('kural — ikon işi ile metin ayrılıyor', () => {
+  const yakalar = (m, f) => T.tara(m, f || 'a.js').map((x) => x.konum + ' ' + x.glif);
+  test.each([
+    ['<button>✕</button>', 'öğe ✕'],                        // öğenin tek içeriği
+    ["x.textContent = '▼';", 'tek ▼'],                      // aç/kapa oku
+    ["h = '✓ model çözülüyor';", 'baş ✓'],                  // etiketin başında resim yazısı
+    ["h = 'Gergi gevşek ✓</b>';", 'son ✓'],                 // etiketin sonunda
+    ["h += (on ? '● ' : '') + ad;", 'tek ●'],               // seçili işareti
+    ["var i = '↓';   // metin:", 'tek ↓']                   // sebepsiz işaret susturmaz
+  ])('yakalanır: %s', (m, k) => expect(yakalar(m)).toEqual([k]));
+  test.each([
+    ["h = '1C→2C';"],                                        // metnin içi
+    ["a.join(' → ');"],                                      // iki yanı boşluklu ok: ayraç
+    ["log('  ✓ Bulundu', 'ok');"],                           // çözücü günlüğü düz metin
+    ["ctx.fillText('⚠ hata', 0, 0);"],                       // tuval yazısı
+    ["r += '  ▸ Vites\\n';"],                                // TXT raporu satırı
+    ["var i = '↓';   // metin: günlük satırı"],              // sebebi yazılı işaret
+    ['// ✕ ile kapatın'],                                    // yorum
+    ["var re = /[▶▼]/;"]                                     // düzenli ifade
+  ])('geçer: %s', (m) => expect(yakalar(m)).toEqual([]));
+  test('HTML: tuşun adı metindir, öğenin tek içeriği değildir', () => {
+    expect(yakalar('<kbd>↑</kbd><kbd>↓</kbd> gezin', 'a.html')).toEqual([]);
+    expect(yakalar('<span>▲</span>', 'a.html')).toEqual(['öğe ▲']);
+  });
+  test('CSS: sözde öğenin içeriği karakter olamaz (kaçışlı da)', () => {
+    expect(yakalar(".a::after{content:'✓'}", 'a.css')).toEqual(['css ✓']);
+    expect(yakalar(".a::after{content:'\\25be'}", 'a.css')).toEqual(['css ▾']);
+    expect(yakalar('.a::before{content:"· "}', 'a.css')).toEqual([]);
+  });
+});
+
+describe('css/icons.css ÜRETİLİR', () => {
+  test('dosya üreteçle birebir — elle düzenlenmedi, kaynak unutulmadı', () => {
+    // Bayatsa: node tools/ikonlar.js
+    expect(oku('css/icons.css') === U.uret()).toBe(true);
+  });
+  test('her ikon tek bir kabukta (viewBox 24, çizgi 2) — gövde yalnız çizim', () => {
+    for (const [ad, govde] of Object.entries(U.ikonlar())) {
+      expect({ ad, svgAc: /<svg\b/.test(govde) }).toEqual({ ad, svgAc: false });
+    }
+  });
+});
+
+describe('kaynakta adı geçen her ikon TANIMLI', () => {
+  // Bilinmeyen ad dolu bir KARE çizer (maske yok, zemin currentColor) — hata
+  // yok, uyarı yok. Sınıf, yardımcı çağrısı ve üçlü koşulun iki kolu taranır.
+  const dosyalar = fs.readdirSync(path.join(KOK, 'js')).filter((f) => f.endsWith('.js')).map((f) => 'js/' + f)
+    .concat(['index.html', 'css/styles.css', 'viewer/index.html', 'candbc/index.html'])
+    .concat(fs.readdirSync(path.join(KOK, 'viewer/js')).map((f) => 'viewer/js/' + f));
+  const ADI = [/mf-ico-([a-z0-9-]+)(?![a-z0-9-]*['"]?\s*\+)/g, /veIkon\(\s*'([a-z0-9-]+)'/g,
+    /veIkonDegis\([^,()]+,\s*'([a-z0-9-]+)'/g,
+    /veIkon(?:Degis)?\([^'()]*?\?\s*'([a-z0-9-]+)'\s*:\s*'([a-z0-9-]+)'/g];
+  test('tanımsız ad yok', () => {
+    const yok = [], gorulen = new Set();
+    for (const f of dosyalar) {
+      const s = T.yorumsuzJs(oku(f));
+      for (const re of ADI) for (const m of s.matchAll(re)) {
+        m.slice(1).filter(Boolean).forEach((ad) => { gorulen.add(ad); if (!ADLAR.has(ad)) yok.push(f + ': ' + ad); });
+      }
+    }
+    expect([...new Set(yok)]).toEqual([]);
+    expect(gorulen.size).toBeGreaterThan(50);            // tarama boşa çalışmıyor
+  });
+});
+
+describe.each([['aşama 1 — kabuk', ASAMA1]])('%s', (ad, dosyalar) => {
+  test('ikon işi gören sembol karakteri yok', () => {
+    const s = dosyalar.flatMap(T.sapmalar).map((x) => x.dosya + ':' + x.satir + ' [' + x.konum + ' ' + x.glif + '] ' + x.metin);
+    expect(s).toEqual([]);
+  });
+});
+
+describe('tek üretici', () => {
+  test('master rozeti yalnız veMasterRozet\'ten (eskiden altı kopya, ipuçları ayrışmıştı)', () => {
+    const uretici = [];
+    fs.readdirSync(path.join(KOK, 'js')).forEach((f) => {
+      const s = oku('js/' + f);
+      const n = (s.match(/class="ve-wheel-master-badge"|className\s*=\s*'ve-wheel-master-badge'/g) || []).length;
+      if (n) uretici.push(f + ' ×' + n);
+    });
+    expect(uretici).toEqual(['ui-core.js ×1']);
+  });
+  test('bildirim ikonu tablosu MFSim ile Ölçüm Görüntüleyici\'de AYNI ve her ad tanımlı', () => {
+    const tablo = (f) => (/var VE_TOAST_IKON = (\{[^}]*\});/.exec(oku(f)) || [])[1];
+    expect(tablo('js/results.js')).toBeTruthy();
+    expect(tablo('viewer/js/board.js')).toBe(tablo('js/results.js'));
+    const t = new Function('return ' + tablo('js/results.js'))();
+    expect(Object.keys(t).sort()).toEqual(['error', 'info', 'success', 'warning']);
+    Object.values(t).forEach((ad) => expect(ADLAR.has(ad)).toBe(true));
+  });
+  test('bildirim ikonu harf DEĞİL: showToast sembol karakteri yazmıyor', () => {
+    ['js/results.js', 'viewer/js/board.js'].forEach((f) => {
+      const s = oku(f), i = s.indexOf('function showToast(');
+      const govde = s.slice(i, s.indexOf('\n}\n', i) + 2);
+      expect(govde).toMatch(/mf-ico mf-ico-' \+ \(VE_TOAST_IKON\[type\]/);
+      expect(T.tara(govde, f)).toEqual([]);
+    });
+  });
+  test('Program Arşivi: kayıttaki her simge bir ikona eşleniyor ve ikon tanımlı', () => {
+    global.veIkon = require('../../js/ikon.js').veIkon;
+    const P = require('../../js/cp-programlar.js');
+    const k = JSON.parse(oku('programlar/kayit.json'));
+    const liste = Array.isArray(k) ? k : (k.programlar || Object.values(k)[0]);
+    expect(liste.length).toBeGreaterThan(40);
+    const eslesmeyen = liste.filter((p) => !P.VE_PROGRAMLAR_IKON.some((e) => String(p.simge || '').includes(e[0])))
+      .map((p) => p.simge + ' ' + p.ad);
+    expect(eslesmeyen).toEqual([]);
+    P.VE_PROGRAMLAR_IKON.forEach((e) => expect(ADLAR.has(e[1])).toBe(true));
+    // birden çok emojili simgede İLK emoji sayılır
+    expect(P.veProgramlarIkon('🎞️⚙️')).toBe('film');
+    expect(P.veProgramlarIkon('bilinmeyen')).toBe('file-text');
+  });
+  test('Ölçüm Görüntüleyici ile paylaşılan dosyalar veIkon ÇAĞIRMAZ (görüntüleyicide yok)', () => {
+    fs.readdirSync(path.join(KOK, 'viewer/js')).forEach((f) => {
+      expect({ f, cagri: /\bveIkon(?:Degis)?\(/.test(T.yorumsuzJs(oku('viewer/js/' + f))) }).toEqual({ f, cagri: false });
+    });
+  });
+});
+
+describe('js/ikon.js', () => {
+  const { veIkon, veIkonDegis } = require('../../js/ikon.js');
+  test('süs ikonu ekran okuyucudan gizli; tek başına anlam taşıyan ikon adıyla okunur', () => {
+    expect(veIkon('x')).toBe('<span class="mf-ico mf-ico-x" aria-hidden="true"></span>');
+    expect(veIkon('check', 'ok', 'Uygun "tam"')).toBe(
+      '<span class="mf-ico mf-ico-check ok" role="img" aria-label="Uygun &quot;tam&quot;"></span>');
+  });
+  test('veIkonDegis yalnız ikon sınıfını değiştirir', () => {
+    const el = document.createElement('span');
+    el.className = 'vsig-arrow mf-ico mf-ico-chevron-right acik';
+    veIkonDegis(el, 'chevron-down');
+    expect(el.className.split(' ').sort()).toEqual(['acik', 'mf-ico', 'mf-ico-chevron-down', 'vsig-arrow']);
+    const bos = document.createElement('span');
+    veIkonDegis(bos, 'x');
+    expect(bos.className).toBe('mf-ico mf-ico-x');
+    expect(() => veIkonDegis(null, 'x')).not.toThrow();
+  });
+});

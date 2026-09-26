@@ -40,7 +40,7 @@ function veSolverUyariOzeti(uyarilar) {
   return {
     sayi: liste.length,
     baslik: 'Uyarılar (' + liste.length + '):',
-    satirlar: liste.map(function(w) { return '  ⚠ ' + w; })
+    satirlar: liste.map(function(w) { return '  ⚠ ' + w; })   // metin: günlük satırı
   };
 }
 
@@ -448,7 +448,7 @@ function veSolverRunProfessional() {
     if(allDiffs.length > 0) {
       allDiffs.forEach(function(diff, idx) {
         var dd = diff.data || {};
-        var masterLabel = diff.isMasterDiff ? ' ★ MASTER' : (allDiffs.length > 1 ? ' (SLAVE)' : '');
+        var masterLabel = diff.isMasterDiff ? ' ★ MASTER' : (allDiffs.length > 1 ? ' (SLAVE)' : '');   // metin: günlük satırı
         log('[Diferansiyel' + (allDiffs.length > 1 ? ' ' + (idx+1) : '') + masterLabel + '] ' + (diff.customName || 'Diferansiyel'), 'info');
         if(diff.isMasterDiff || allDiffs.length === 1) {
           log('  Oran            : ' + (dd.diffRatio || 6.54), dd.diffRatio ? 'ok' : 'warn');
@@ -557,7 +557,7 @@ function veSolverRunProfessional() {
         var cumD = 0;
         segs.forEach(function(s, i) {
           cumD += s.mesafe;
-          var icon = s.egim > 1 ? '↓' : (s.egim < -1 ? '↑' : '→');
+          var icon = s.egim > 1 ? '↓' : (s.egim < -1 ? '↑' : '→');   // metin: günlük satırı
           log('    [' + (i+1) + '] ' + s.mesafe.toFixed(0) + 'm  %' + s.egim.toFixed(1) + ' ' + icon + '  (kümülatif: ' + (cumD/1000).toFixed(2) + ' km)', 'dim');
         });
         log('  » Dinamik eğim aktif: her adımda mesafeye göre eğim güncellenir', 'head');
@@ -973,7 +973,7 @@ function veSolverRunProfessional() {
             }
             _segDrv.segmentSummary.forEach(function(ss) {
               var cmdLabel = ss.command === 'coast' ? 'Gaz kesme' : 'Tam gaz';
-              var cmdIcon = ss.command === 'coast' ? '⏸' : '▶';
+              var cmdIcon = ss.command === 'coast' ? '⏸' : '▶';   // metin: günlük satırı
               log('  ' + cmdIcon + ' Seg ' + ss.no + ' [' + cmdLabel + ', %' + ss.grade.toFixed(1) + ']: ' +
                 ss.startSpeed_kmh.toFixed(1) + ' → ' + ss.endSpeed_kmh.toFixed(1) + ' km/h, ' +
                 ss.actualDist.toFixed(0) + 'm, ' + ss.duration.toFixed(1) + 's');
@@ -1047,7 +1047,7 @@ function veSolverRunProfessional() {
         // Sonuç kartını da güncelle
         var resultEl = document.getElementById('ve-solver-result');
         if(resultEl) {
-          var rhtml = '<div style="padding:8px;text-align:center;"><div style="font-size:var(--fs-h2);">✓</div><div style="font-weight:600;font-size:var(--fs-lg);color:var(--text-heading);">Hesaplama tamamlandı</div><div style="font-size:var(--fs-tiny);color:var(--text-muted);margin-top:2px;">' + mode + ' | ' + totalSteps + ' adım | ' + finalTime.toFixed(1) + ' s</div></div>';
+          var rhtml = '<div style="padding:8px;text-align:center;"><div style="font-size:var(--fs-h2);color:var(--ink-success);">' + veIkon('check-circle') + '</div><div style="font-weight:600;font-size:var(--fs-lg);color:var(--text-heading);">Hesaplama tamamlandı</div><div style="font-size:var(--fs-tiny);color:var(--text-muted);margin-top:2px;">' + mode + ' | ' + totalSteps + ' adım | ' + finalTime.toFixed(1) + ' s</div></div>';
           resultEl.innerHTML = rhtml;
         }
         
@@ -1138,7 +1138,7 @@ function veSolverRunProfessional() {
                 var isDirect = !fromMode.match(/[CL]$/) && !toMode.match(/[CL]$/);  // TK yok → salt vites geçişi
 
                 var shiftType = isConvToConv ? 'Conv→Conv' : isConvToLock ? 'Conv→Lock' : isLockToLock ? 'Lock→Lock' : (isDirect ? 'Vites' : 'Diğer');
-                var statusIcon = '✓';
+                var statusIcon = '✓';   // metin: günlük satırı (aşağıdaki üç ⚠ de)
                 var statusNote = '';
                 
                 // Lockup vites geçişlerinde doğrulama
@@ -1152,7 +1152,7 @@ function veSolverRunProfessional() {
                     var actualNout = s.N_out || 0;
                     var noutDiff = Math.abs(actualNout - expectedNout);
                     if(noutDiff > 15) {
-                      statusIcon = '⚠';
+                      statusIcon = '⚠';   // metin: günlük satırı
                       statusNote = ' (N_out beklenen: ' + expectedNout.toFixed(0) + ', gerçek: ' + actualNout.toFixed(0) + ', fark: ' + noutDiff.toFixed(0) + ')';
                       shiftErrors++;
                     }
@@ -1161,7 +1161,7 @@ function veSolverRunProfessional() {
                     var expectedRPM = ss.N_shift_lockup || (governed - 75);
                     var rpmDiff = Math.abs((s.N_engine || 0) - expectedRPM);
                     if(rpmDiff > 10) {
-                      statusIcon = '⚠';
+                      statusIcon = '⚠';   // metin: günlük satırı
                       statusNote = ' (beklenen: ' + expectedRPM + ' rpm, fark: ' + rpmDiff.toFixed(0) + ')';
                       shiftErrors++;
                     }
@@ -1174,7 +1174,7 @@ function veSolverRunProfessional() {
                   // η = SR × τ — konvertör verimliliği kontrolü
                   var eta = s.eta || 0;
                   if(isConvToConv && sr < 0.5) {
-                    statusIcon = '⚠';
+                    statusIcon = '⚠';   // metin: günlük satırı
                     statusNote = ' (düşük SR — erken geçiş?)';
                     shiftErrors++;
                   }

@@ -58,6 +58,14 @@ global.loadCanSource = function loadCanSource(file) {
   global.escapeHTML = new Function(src.slice(i, end) + '\nreturn escapeHTML;')();
 })();
 
+// TEK İKON AİLESİ (js/ikon.js) GERÇEK sürümüyle — escapeHTML'in gerekçesiyle:
+// tarayıcıda yükleyiciden önce yüklenir ve HTML kuran her modül onu varsayar.
+{
+  const IK = require(path.join(JS_DIR, 'ikon.js'));
+  global.veIkon = IK.veIkon;
+  global.veIkonDegis = IK.veIkonDegis;
+}
+
 // TUVAL YAZI YÜZÜ KÖPRÜSÜ (js/theme.js) HER TESTTE TANIMLI — `stubGlobals()`
 // çağrılmasa da. Tuval çizen modüller onu KOŞULSUZ çağırıyor (renk köprüsünün
 // aksine `typeof` kalkanı yok): tek yüz kapısı (`tek-yazi-tipi.test.js`) her

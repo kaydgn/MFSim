@@ -242,7 +242,7 @@ function _veStatusRenderCommits(commits) {
 
         html += '<li class="ve-status-commit" data-sha="' + fullSha + '">';
         html += '<div class="ve-status-commit-row" onclick="_veStatusToggleCommit(\'' + fullSha + '\')">';
-        html += '<span class="ve-status-commit-arrow">▸</span>';
+        html += veIkon('chevron-right', 've-status-commit-arrow');
         html += '<code class="ve-status-commit-sha">' + sha + '</code>';
         html += '<span class="ve-status-commit-msg">' + _veStatusEsc(subjectShort) + '</span>';
         html += '<small class="ve-status-commit-when">' + when + '</small>';

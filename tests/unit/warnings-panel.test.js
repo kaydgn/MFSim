@@ -5,7 +5,7 @@
  * katman ve durumunu ÜÇ ayrı yüzey gösteriyor:
  *
  *   • panelin kendisi          → .ve-warnings-panel.open (görünürlük)
- *   • durum çubuğundaki düğme  → aria-expanded + ok yönü
+ *   • durum çubuğundaki düğme  → aria-expanded + ok yönü (çizgi ikonun adı)
  *   • şerit / komut paleti     → #ve-warnings-body'deki 'collapsed' sınıfı
  *
  * Üçüncüsü SÖZLEŞME: js/ribbon.js basılı durumu doğrudan o sınıftan okuyor
@@ -20,7 +20,7 @@ document.body.innerHTML = `
     </div>
     <button id="ve-warnings-chip" data-severity="none" aria-expanded="false">
       <span id="ve-warnings-count">0</span>
-      <span id="ve-warnings-toggle">▲</span>
+      <span id="ve-warnings-toggle" class="mf-ico mf-ico-chevron-down"></span>
     </button>
   </div>
 `;
@@ -36,7 +36,7 @@ const durum = () => ({
   panelAcik: $('ve-warnings-panel').classList.contains('open'),
   govdeKapali: $('ve-warnings-body').classList.contains('collapsed'),
   aria: $('ve-warnings-chip').getAttribute('aria-expanded'),
-  ok: $('ve-warnings-toggle').textContent,
+  ok: ($('ve-warnings-toggle').className.match(/mf-ico-(chevron-\w+)/) || [])[1],
 });
 
 beforeEach(() => {
@@ -46,22 +46,22 @@ beforeEach(() => {
 
 describe('veSetWarningsOpen — üç yüzey tek gerçeği gösterir', () => {
   // Ok, panelin AÇILIŞ yönünü gösterir. Bant tuvalin ÜSTÜNDE olduğu için panel
-  // aşağı açılıyor: kapalı ▼ (aşağı açılır), açık ▲ (yukarı kapanır).
+  // aşağı açılıyor: kapalı aşağı ok (aşağı açılır), açık yukarı ok (yukarı kapanır).
   test('açıkken: panel görünür, gövde kapalı DEĞİL, aria true, ok yukarı', () => {
     veSetWarningsOpen(true);
-    expect(durum()).toEqual({ panelAcik: true, govdeKapali: false, aria: 'true', ok: '▲' });
+    expect(durum()).toEqual({ panelAcik: true, govdeKapali: false, aria: 'true', ok: 'chevron-up' });
   });
 
   test('kapalıyken: panel gizli, gövde kapalı, aria false, ok yukarı', () => {
     veSetWarningsOpen(true);
     veSetWarningsOpen(false);
-    expect(durum()).toEqual({ panelAcik: false, govdeKapali: true, aria: 'false', ok: '▼' });
+    expect(durum()).toEqual({ panelAcik: false, govdeKapali: true, aria: 'false', ok: 'chevron-down' });
   });
 
   test('aynı durum iki kez yazılınca yüzeyler kaymaz (idempotent)', () => {
     veSetWarningsOpen(true);
     veSetWarningsOpen(true);
-    expect(durum()).toEqual({ panelAcik: true, govdeKapali: false, aria: 'true', ok: '▲' });
+    expect(durum()).toEqual({ panelAcik: true, govdeKapali: false, aria: 'true', ok: 'chevron-up' });
   });
 });
 

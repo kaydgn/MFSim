@@ -4,6 +4,18 @@ function escapeHTML(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// Master rozeti (tekerlek / diferansiyel): bu bileşenin parametreleri
+// diğerlerini sürer. TEK üretici — eskiden altı kopyası vardı (ui-core,
+// topology, state, component-extras ×2, cp-drivetrain), ipuçları ayrışmıştı
+// ve yıldız bir yazı tipi karakteriydi (karar 10·B: çizgi ikon).
+var VE_MASTER_IPUCU = {
+  wheel: 'Master tekerlek — diğer tekerlekleri kontrol eder',
+  differential: 'Master diferansiyel — parametreleri bu bileşenden okunur'
+};
+function veMasterRozet(tip) {
+  return '<div class="ve-wheel-master-badge" title="' + VE_MASTER_IPUCU[tip] + '">' + veIkon('star') + '</div>';
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // NODE DRAG: paylasilan state + tek seferlik global dinleyiciler
 // Her node icin document.addEventListener('mousemove'/'mouseup') eklemek yerine
@@ -807,7 +819,7 @@ function createNode(type, x, y, width, height) {
       node.isMasterDiff = true;
     }
     if(node.isMasterDiff) {
-      html += '<div class="ve-wheel-master-badge" title="Master diferansiyel — parametreleri bu bileşenden okunur">★</div>';
+      html += veMasterRozet('differential');
     }
   }
 
@@ -820,7 +832,7 @@ function createNode(type, x, y, width, height) {
     }
     // Badge her zaman master ise göster
     if(node.isMasterWheel) {
-      html += '<div class="ve-wheel-master-badge" title="Master tekerlek — diğer tekerlekleri kontrol eder">★</div>';
+      html += veMasterRozet('wheel');
     }
   }
   
@@ -1135,7 +1147,7 @@ function veCheckShiftControllerRequired() {
   if(!veIsTCConnectedToGearbox()) return;
   var hasShiftCtrl = nodes.some(function(n) { return n.type === 'shift-controller'; });
   if(!hasShiftCtrl) {
-    showToast('⚠ Tork Konvertörü → Şanzıman bağlantısı otomatik şanzıman gerektirir. Lütfen "Şanzıman Kontrol" bileşenini ekleyin.', 'warning');
+    showToast('Tork Konvertörü → Şanzıman bağlantısı otomatik şanzıman gerektirir. Lütfen "Şanzıman Kontrol" bileşenini ekleyin.', 'warning');
   }
 }
 

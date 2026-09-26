@@ -1,0 +1,121 @@
+{
+ "_not": [
+  "css/icons.css bu dosyadan ÜRETİLİR: node tools/ikonlar.js — css/icons.css elle düzenlenmez.",
+  "Değer: SVG gövdesi. Kabuk (viewBox 24, çizgi 2, yuvarlak uç ve köşe) üreteçte TEK yerde yazılı;",
+  "buraya yalnız çizim girer. Çizim dili Feather (MIT) / Lucide (ISC): yeni ikon oradan alınır ya da aynı dilde çizilir."
+ ],
+ "bolumler": [
+  {
+   "baslik": null,
+   "ikonlar": {
+    "settings": "<circle cx='12' cy='12' r='3'/><path d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/>",
+    "sliders": "<line x1='4' y1='21' x2='4' y2='14'/><line x1='4' y1='10' x2='4' y2='3'/><line x1='12' y1='21' x2='12' y2='12'/><line x1='12' y1='8' x2='12' y2='3'/><line x1='20' y1='21' x2='20' y2='16'/><line x1='20' y1='12' x2='20' y2='3'/><line x1='1' y1='14' x2='7' y2='14'/><line x1='9' y1='8' x2='15' y2='8'/><line x1='17' y1='16' x2='23' y2='16'/>",
+    "chevron-down": "<polyline points='6 9 12 15 18 9'/>",
+    "chevrons-left": "<polyline points='11 17 6 12 11 7'/><polyline points='18 17 13 12 18 7'/>",
+    "chevrons-right": "<polyline points='13 17 18 12 13 7'/><polyline points='6 17 11 12 6 7'/>",
+    "file-plus": "<path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><polyline points='14 2 14 8 20 8'/><line x1='12' y1='18' x2='12' y2='12'/><line x1='9' y1='15' x2='15' y2='15'/>",
+    "file-text": "<path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><polyline points='14 2 14 8 20 8'/><line x1='16' y1='13' x2='8' y2='13'/><line x1='16' y1='17' x2='8' y2='17'/><line x1='10' y1='9' x2='8' y2='9'/>",
+    "folder": "<path d='M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'/>",
+    "folder-open": "<path d='M6 14l1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6A2 2 0 0 1 18.46 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2'/>",
+    "save": "<path d='M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'/><polyline points='17 21 17 13 7 13 7 21'/><polyline points='7 3 7 8 15 8'/>",
+    "trash": "<polyline points='3 6 5 6 21 6'/><path d='M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'/><line x1='10' y1='11' x2='10' y2='17'/><line x1='14' y1='11' x2='14' y2='17'/>",
+    "log-out": "<path d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'/><polyline points='16 17 21 12 16 7'/><line x1='21' y1='12' x2='9' y2='12'/>",
+    "palette": "<circle cx='13.5' cy='6.5' r='1.2' fill='black' stroke='none'/><circle cx='17.5' cy='10.5' r='1.2' fill='black' stroke='none'/><circle cx='8.5' cy='7.5' r='1.2' fill='black' stroke='none'/><circle cx='6.5' cy='12.5' r='1.2' fill='black' stroke='none'/><path d='M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.83-.44-1.12-.29-.29-.44-.65-.44-1.12a1.64 1.64 0 0 1 1.67-1.67h1.99c3.05 0 5.56-2.5 5.56-5.55C21.97 6.01 17.46 2 12 2z'/>",
+    "package": "<path d='M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'/><polyline points='3.27 6.96 12 12.01 20.73 6.96'/><line x1='12' y1='22.08' x2='12' y2='12'/>",
+    "alert-triangle": "<path d='M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z'/><line x1='12' y1='9' x2='12' y2='13'/><line x1='12' y1='17' x2='12.01' y2='17'/>",
+    "mouse-pointer": "<path d='m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z'/><path d='m13 13 6 6'/>",
+    "zap": "<polygon points='13 2 3 14 12 14 11 22 21 10 12 10 13 2'/>",
+    "search": "<circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/>",
+    "play": "<polygon points='5 3 19 12 5 21 5 3'/>",
+    "bar-chart": "<line x1='18' y1='20' x2='18' y2='10'/><line x1='12' y1='20' x2='12' y2='4'/><line x1='6' y1='20' x2='6' y2='14'/>",
+    "refresh": "<polyline points='23 4 23 10 17 10'/><polyline points='1 20 1 14 7 14'/><path d='M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15'/>",
+    "download": "<path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/><polyline points='7 10 12 15 17 10'/><line x1='12' y1='15' x2='12' y2='3'/>",
+    "upload": "<path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/><polyline points='17 8 12 3 7 8'/><line x1='12' y1='3' x2='12' y2='15'/>",
+    "ruler": "<path d='M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0z'/><path d='m14.5 12.5 2-2'/><path d='m11.5 9.5 2-2'/><path d='m8.5 6.5 2-2'/><path d='m17.5 15.5 2-2'/>",
+    "clipboard": "<path d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/><rect x='8' y='2' width='8' height='4' rx='1' ry='1'/>",
+    "trending-up": "<polyline points='23 6 13.5 15.5 8.5 10.5 1 18'/><polyline points='17 6 23 6 23 12'/>",
+    "map-pin": "<path d='M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z'/><circle cx='12' cy='10' r='3'/>",
+    "edit": "<path d='M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z'/><path d='m15 5 4 4'/>",
+    "lock": "<rect x='3' y='11' width='18' height='11' rx='2' ry='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/>",
+    "link": "<path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/><path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/>"
+   }
+  },
+  {
+   "baslik": "── Manuel eklenen toolbar ikonları ──",
+   "ikonlar": {
+    "undo": "<polyline points='9 14 4 9 9 4'/><path d='M4 9h11a5 5 0 0 1 0 10h-4'/>",
+    "redo": "<polyline points='15 14 20 9 15 4'/><path d='M20 9H9a5 5 0 0 0 0 10h4'/>",
+    "crosshair": "<circle cx='12' cy='12' r='10'/><line x1='22' y1='12' x2='18' y2='12'/><line x1='6' y1='12' x2='2' y2='12'/><line x1='12' y1='6' x2='12' y2='2'/><line x1='12' y1='22' x2='12' y2='18'/>",
+    "zoom-in": "<circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/><line x1='11' y1='8' x2='11' y2='14'/><line x1='8' y1='11' x2='14' y2='11'/>",
+    "zoom-out": "<circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/><line x1='8' y1='11' x2='14' y2='11'/>",
+    "grid": "<rect x='3' y='3' width='18' height='18' rx='2'/><line x1='3' y1='9' x2='21' y2='9'/><line x1='3' y1='15' x2='21' y2='15'/><line x1='9' y1='3' x2='9' y2='21'/><line x1='15' y1='3' x2='15' y2='21'/>",
+    "grid-cells": "<rect x='3' y='3' width='7' height='7' rx='1'/><rect x='14' y='3' width='7' height='7' rx='1'/><rect x='14' y='14' width='7' height='7' rx='1'/><rect x='3' y='14' width='7' height='7' rx='1'/>",
+    "frame": "<line x1='22' y1='6' x2='2' y2='6'/><line x1='22' y1='18' x2='2' y2='18'/><line x1='6' y1='2' x2='6' y2='22'/><line x1='18' y1='2' x2='18' y2='22'/>",
+    "contrast": "<circle cx='12' cy='12' r='10'/><path d='M12 2a10 10 0 0 1 0 20z' fill='black' stroke='none'/>",
+    "x": "<line x1='18' y1='6' x2='6' y2='18'/><line x1='6' y1='6' x2='18' y2='18'/>"
+   }
+  },
+  {
+   "baslik": "Radyo (müzik çalar toolbar düğmesi)",
+   "ikonlar": {
+    "radio": "<circle cx='12' cy='12' r='2'/><path d='M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14'/>"
+   }
+  },
+  {
+   "baslik": "── Tur 6 eki: emoji ikonların yerini alan ikonlar (aynı çizim dili) ──",
+   "ikonlar": {
+    "gauge": "<path d='M12 14l3.5-3.5'/><path d='M20.3 17a8.5 8.5 0 1 0-16.6 0'/><circle cx='12' cy='14' r='1'/>",
+    "route": "<circle cx='6' cy='19' r='2'/><circle cx='18' cy='5' r='2'/><path d='M8 19h6a3 3 0 0 0 3-3v-2'/><path d='M16 5h-6a3 3 0 0 0-3 3v2'/>",
+    "barrier": "<path d='M4 21v-4M20 21v-4M3 11h18M3 17h18'/><path d='M5 11l4 6M11 11l4 6M17 11l4 6'/><path d='M4 11V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4'/>",
+    "car": "<path d='M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11'/><path d='M3 16v-3a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3'/><path d='M3 16h18v2h-2M3 18h2'/><circle cx='7' cy='18' r='1.6'/><circle cx='17' cy='18' r='1.6'/>",
+    "truck": "<path d='M2 6h13v11H2z'/><path d='M15 10h4l3 3v4h-7'/><circle cx='6' cy='19' r='1.8'/><circle cx='18' cy='19' r='1.8'/>",
+    "wrench": "<path d='M14.7 6.3a4.5 4.5 0 0 0-6 5.6L3 17.6A2.1 2.1 0 0 0 6 20.6l5.7-5.7a4.5 4.5 0 0 0 5.6-6L14 12.2l-2.2-2.2z'/>",
+    "disc": "<circle cx='12' cy='12' r='9'/><circle cx='12' cy='12' r='3.5'/>",
+    "mountain": "<path d='M8 3l4 8 5-5 5 15H2z'/>",
+    "wheel": "<circle cx='12' cy='12' r='9'/><circle cx='12' cy='12' r='2.6'/><path d='M12 3v6.4M12 14.6V21M3.5 9.3l6 2.1M20.5 9.3l-6 2.1M6.8 19l3.6-5.2M17.2 19l-3.6-5.2'/>",
+    "shuffle": "<path d='M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.6-8.6C14.1 6.6 15.3 6 16.6 6H22'/><path d='M18 2l4 4-4 4'/><path d='M2 6h1.9c1.5 0 2.9.7 3.8 2'/><path d='M22 18h-5.4c-1.3 0-2.5-.6-3.3-1.7l-.9-1.2'/><path d='M18 14l4 4-4 4'/>",
+    "nut": "<path d='M12 2l8 4.6v9.2L12 22l-8-6.2V6.6z'/><circle cx='12' cy='12' r='3.2'/>",
+    "check-circle": "<circle cx='12' cy='12' r='9'/><path d='M8.5 12.2l2.4 2.4 4.6-4.8'/>",
+    "flag": "<path d='M4 22V4a2 2 0 0 1 2-2h9l-1.2 4H20v9h-8l-1-3H6'/>",
+    "activity": "<path d='M22 12h-4l-3 8-6-16-3 8H2'/>",
+    "thermometer": "<path d='M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z'/>",
+    "box": "<path d='M21 8v8l-9 5-9-5V8l9-5 9 5z'/><path d='M3 8l9 5 9-5M12 13v9'/>",
+    "map": "<path d='M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z'/><path d='M9 4v14M15 6v14'/>",
+    "lightbulb": "<path d='M9 18h6M10 22h4'/><path d='M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.4 1 2.3v1h6v-1c0-.9.4-1.8 1-2.3A7 7 0 0 0 12 2z'/>",
+    "maximize": "<path d='M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3'/>",
+    "wand": "<path d='M15 4V2M15 10V8M11.5 6.5h-2M20.5 6.5h-2M17.8 3.7l-1.1 1.1M17.8 9.3l-1.1-1.1M13.3 8.2L3 18.5 5.5 21l10.3-10.3z'/>",
+    "trophy": "<path d='M8 21h8M12 17v4M7 4h10v6a5 5 0 0 1-10 0V4z'/><path d='M7 6H4a1 1 0 0 0-1 1c0 2.2 1.8 4 4 4M17 6h3a1 1 0 0 1 1 1c0 2.2-1.8 4-4 4'/>",
+    "user": "<circle cx='12' cy='8' r='4'/><path d='M4 21v-1a7 7 0 0 1 7-7h2a7 7 0 0 1 7 7v1'/>",
+    "clock": "<circle cx='12' cy='12' r='9'/><path d='M12 7v5l3.5 2'/>",
+    "git-branch": "<circle cx='6' cy='5' r='2.2'/><circle cx='6' cy='19' r='2.2'/><circle cx='18' cy='9' r='2.2'/><path d='M6 7.2v9.6M18 11.2a9 9 0 0 1-9 5.8'/>",
+    "bell": "<path d='M18 9a6 6 0 1 0-12 0c0 6-2.5 7-2.5 7h17S18 15 18 9z'/><path d='M10.3 20a2 2 0 0 0 3.4 0'/>",
+    "scissors": "<circle cx='6' cy='6' r='2.6'/><circle cx='6' cy='18' r='2.6'/><path d='M8.2 7.6L20 19M8.2 16.4L20 5'/>"
+   }
+  },
+  {
+   "baslik": "── Tek ikon ailesi (karar 10·B): sembol karakterlerinin yerini alan ikonlar (Feather, MIT) ──",
+   "ikonlar": {
+    "check": "<polyline points='20 6 9 17 4 12'/>",
+    "chevron-up": "<polyline points='18 15 12 9 6 15'/>",
+    "chevron-right": "<polyline points='9 18 15 12 9 6'/>",
+    "chevron-left": "<polyline points='15 18 9 12 15 6'/>",
+    "arrow-up": "<line x1='12' y1='19' x2='12' y2='5'/><polyline points='5 12 12 5 19 12'/>",
+    "arrow-down": "<line x1='12' y1='5' x2='12' y2='19'/><polyline points='19 12 12 19 5 12'/>",
+    "arrow-left": "<line x1='19' y1='12' x2='5' y2='12'/><polyline points='12 19 5 12 12 5'/>",
+    "arrow-right": "<line x1='5' y1='12' x2='19' y2='12'/><polyline points='12 5 19 12 12 19'/>",
+    "star": "<polygon points='12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2'/>",
+    "alert-circle": "<circle cx='12' cy='12' r='10'/><line x1='12' y1='8' x2='12' y2='12'/><line x1='12' y1='16' x2='12.01' y2='16'/>",
+    "info": "<circle cx='12' cy='12' r='10'/><line x1='12' y1='16' x2='12' y2='12'/><line x1='12' y1='8' x2='12.01' y2='8'/>",
+    "move": "<polyline points='5 9 2 12 5 15'/><polyline points='9 5 12 2 15 5'/><polyline points='15 19 12 22 9 19'/><polyline points='19 9 22 12 19 15'/><line x1='2' y1='12' x2='22' y2='12'/><line x1='12' y1='2' x2='12' y2='22'/>",
+    "eye": "<path d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'/><circle cx='12' cy='12' r='3'/>",
+    "target": "<circle cx='12' cy='12' r='10'/><circle cx='12' cy='12' r='6'/><circle cx='12' cy='12' r='2'/>",
+    "image": "<rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><circle cx='8.5' cy='8.5' r='1.5'/><polyline points='21 15 16 10 5 21'/>",
+    "film": "<rect x='2' y='2' width='20' height='20' rx='2.18' ry='2.18'/><line x1='7' y1='2' x2='7' y2='22'/><line x1='17' y1='2' x2='17' y2='22'/><line x1='2' y1='12' x2='22' y2='12'/><line x1='2' y1='7' x2='7' y2='7'/><line x1='2' y1='17' x2='7' y2='17'/><line x1='17' y1='17' x2='22' y2='17'/><line x1='17' y1='7' x2='22' y2='7'/>",
+    "trending-down": "<polyline points='23 18 13.5 8.5 8.5 13.5 1 6'/><polyline points='17 18 23 18 23 12'/>",
+    "send": "<line x1='22' y1='2' x2='11' y2='13'/><polygon points='22 2 15 22 11 13 2 9 22 2'/>",
+    "plus": "<line x1='12' y1='5' x2='12' y2='19'/><line x1='5' y1='12' x2='19' y2='12'/>",
+    "minus": "<line x1='5' y1='12' x2='19' y2='12'/>"
+   }
+  }
+ ]
+}

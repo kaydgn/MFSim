@@ -109,6 +109,7 @@ function _veSettingsRenderAppearance() {
   kipler.forEach(function(t) {
     var a = (t.id === current) ? ' active' : '';
     html += '<button class="ve-theme-menu-item' + a + '" data-mf-theme="' + t.id + '" onclick="changeTheme(\'' + t.id + '\')">';
+    html += veIkon('check', 've-theme-tik');     // yalnız etkin olanda görünür (CSS)
     html += '<span class="ve-theme-swatch" aria-hidden="true">';
     t.swatch.forEach(function(c) { html += '<i style="background:' + c + '"></i>'; });
     html += '</span>';
