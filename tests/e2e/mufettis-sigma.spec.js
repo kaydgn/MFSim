@@ -108,6 +108,16 @@ const pencereOlc = async (tip) => {
     for (let i = 1; i < rs.length; i++) { if (rs[i][0] >= alt - 2) { satir++; alt = rs[i][1]; } else alt = Math.max(alt, rs[i][1]); }
     if (satir > 1) sorun.push(`düğme yazısı ${satir} satır "${b.innerText.replace(/\s+/g, ' ').trim().slice(0, 24)}"`);
   });
+  // DENETİMLER TEK DİLDE (2026-09-26, kullanıcı kararı 11·B): açılır liste
+  // programın okuyla çizilir (Windows'un kendi oku ile yan yana iki görünüş
+  // vardı), sayı alanı tarayıcının yukarı/aşağı oklarını açmaz (fare üstüne
+  // gelince sağa yaslı rakamların yanına biniyordu).
+  ic.querySelectorAll('select:not([multiple]):not([size])').forEach((s) => {
+    if (s.offsetWidth && getComputedStyle(s).appearance !== 'none') sorun.push(`yerel liste "${(s.options[s.selectedIndex] || {}).text || ''}"`.slice(0, 40));
+  });
+  ic.querySelectorAll('input[type=number]').forEach((s) => {
+    if (s.offsetWidth && getComputedStyle(s).appearance !== 'textfield') sorun.push('sayı alanı oklu');
+  });
   const r = { tip, sutun: ov.getBoundingClientRect().width < innerWidth, tasma: ic.scrollWidth - ic.clientWidth, kesik, enSag,
     listede: VE_SUTUNA_SIGMAYAN.indexOf(tip) >= 0, sorun: [...new Set(sorun)].slice(0, 4) };
   veTogglePropertiesPanel(false); await new Promise((res) => setTimeout(res, 260));
