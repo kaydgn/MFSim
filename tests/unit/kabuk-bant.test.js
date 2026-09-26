@@ -78,6 +78,12 @@ describe('KABUĞUN ÜST BANDI — tek ölçü, tek zemin', () => {
   // KURAL, liste değil: bant jetonunu kullanan HER kural aynı zemini ve bir
   // alt çizgiyi taşır. Yukarıdaki liste unutulan bir bandı görmez; bu halka
   // jetonu alıp zemini unutan yeni bir bandı görür.
+  //
+  // ALT ÇUBUK (2026-09-26): bir pencerenin alt çubuğu başlığıyla AYNI bantta
+  // durur (sihirbaz: "orantısız" bildirimi, 2026-08-31) ve jetonu o yüzden
+  // kullanır; çizgisi içeriğe bakan kenarında, ÜSTTE. Üst çizgi yalnız bu açık
+  // listede aranır, üst bantlar için kapı gevşemedi.
+  const ALT_CUBUKLAR = ['.ve-fw-foot'];
   test('jetonu kullanan her kural zemini ve alt çizgiyi de taşıyor', () => {
     const re = /(?:^|\n)([^{}\n]+)\{([^}]*min-height:\s*var\(--bant-h\)[^}]*)\}/g;
     const eksik = []; let say = 0; let m;
@@ -85,7 +91,9 @@ describe('KABUĞUN ÜST BANDI — tek ölçü, tek zemin', () => {
       say++;
       const s = m[1].trim(), k = m[2];
       if (!/background:\s*var\(--bant-zemin\)/.test(k)) eksik.push(s + ': zemin');
-      if (!/border-bottom:\s*1px solid var\(--border-color\)|box-shadow:\s*inset 0 -1px 0 var\(--border-color\)/.test(k)) {
+      if (ALT_CUBUKLAR.includes(s)) {
+        if (!/border-top:\s*1px solid var\(--border-color\)/.test(k)) eksik.push(s + ': üst çizgi');
+      } else if (!/border-bottom:\s*1px solid var\(--border-color\)|box-shadow:\s*inset 0 -1px 0 var\(--border-color\)/.test(k)) {
         eksik.push(s + ': alt çizgi');
       }
     }

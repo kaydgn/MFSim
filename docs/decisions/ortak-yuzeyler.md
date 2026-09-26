@@ -560,6 +560,16 @@ mutasyonu geçirirdi (26 = jeton), Segoe satırında bant 27 olur. Kapı:
 *"ŞERİT BANDI İNCE"* + `kabuk-sutun.spec.js` → *"BANT İNCE"* (yedi bant) +
 `ust-bant.spec.js` → *"bant tek satır"*.
 
+**Pencere başlığı da aynı bant (2026-09-26).** Beş pencerenin paylaştığı
+`.ve-settings-header` (Ayarlar · İçe Aktarma · Program Durumu · Komuta · FEAD
+sihirbazı) 39 px'ti, içeriği 27 — kullanıcı: *"başlığın olduğu header kısmı
+boyuna çok büyük"*. Artık `--bant-h` (26 px) ve `--bant-zemin`: kapat düğmesi
+bant düğmeleriyle tek boy (22 px), dikey pay 1 px, kutu `border-box`.
+Sihirbazın alt çubuğu da aynı bantta (2026-08-31 "orantısız" kararı), çizgisi
+üstte. Kapı: `fead-wizard.test.js` → *"üst bölge kabuk bandı kadar"* +
+`fead-wizard.spec.js` → *"ÜST BÖLGE İNCE"* (beşinin de başlığı tam jeton) +
+`kabuk-bant.test.js` → *"jetonu kullanan her kural"* (`ALT_CUBUKLAR`).
+
 ## Panel alan grameri — iki yüzey tek dil (2026-09-22)
 
 **Hüküm.** Bileşen panelinin alan grameri Kayış Tablosu'nunkiyle **aynıdır**:
