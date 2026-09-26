@@ -75,6 +75,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `tools/shot.js` — Ekran görüntüsü aracı (İSTEĞE BAĞLI — yalnız kullanıcı isteyince; `npm run shot -- --help`)
 - `tools/cumle-duzeni.js` — arayüz etiketlerinin **cümle düzeni kuralı** (karar 9·B): kural,
   özel adların listesi ve tarama desenleri TEK yerde; kapı ile dönüştürme aynı dosyayı çağırır.
+- `tools/ikonlar.js` + `tools/ikonlar.json` — **`css/icons.css` ÜRETECİ** (ad → SVG gövdesi;
+  kabuk üreteçte tek yerde). `css/icons.css` elle düzenlenmez: `node tools/ikonlar.js`.
+  `tools/ikon-dili.js` — ikon işi gören sembol karakterinin tarayıcısı (karar 10·B).
 - `tools/karsilama-secici.{js,html}` + `tools/karsilama-kunye.json` — karşılama
   karelerinin **seçim tahtası**: numaralı/gruplanmış/büyütülebilir 28 kare, tıklanan
   kare "kaldırılacak" işareti alır ve karar Artifact `db`'sine yazılır. Sebep, dosya
@@ -281,6 +284,15 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   Sonuçlar ve raporlar. Sinyal adı panoya KOPYA yazılır: ad
   tablosu değişirse `veResSinyalAdTazele` harfi açılışta tazeler
   (`sinyal-ad-tazele.test.js`).
+- **TEK İKON AİLESİ** (kullanıcı kararı 10·B). Arayüzde ikon işi gören her şey
+  `css/icons.css`'teki çizgi ikondur — JS'te `veIkon(ad)` / `veIkonDegis(el, ad)`
+  (`js/ikon.js`, yükleyiciden önce). Sembol karakteri (▶ ▼ ✓ ✕ ⚠ ★) yazı tipinden
+  çizilir ve aynı şeritte ikinci bir çizim dili olur. Metnin İÇİNDEKİ karakter
+  ("1C→2C") ve düz metin çıktı (çözücü günlüğü, TXT rapor, tuval yazısı) kapsam
+  dışı; değişkene konup günlüğe giden karakter `// metin: <sebep>` ile işaretlenir.
+  Bilinmeyen ikon adı SESSİZCE dolu bir kare çizer. Görüntüleyiciyle paylaşılan
+  dosyalar `veIkon` çağırmaz (orada yok). Kapı: `ikon-dili.test.js`; kapsam aşama
+  aşama büyür (bugün kabuk).
 - **PENCERE AİLESİ TEK** (`.ve-settings-header` + `.ve-settings-close`). Her
   pencere bu başlığı taşır: bant `--bant-h`, başlık yazısı kabuk bandınınki
   (12 px/600), kapat 22 px çizgi ikon (`.mf-ico-x` — ✕ yazı karakteri ya da

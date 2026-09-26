@@ -1135,9 +1135,9 @@ function veSetWarningsOpen(open) {
   if(body)   body.classList.toggle('collapsed', !open);
   if(panel)  panel.classList.toggle('open', open);
   // Ok panelin AÇILIŞ yönünü gösterir. Bant tuvalin üstüne taşındığından panel
-  // artık AŞAĞI açılıyor: kapalıyken "aşağı açılır" (▼), açıkken "yukarı
-  // kapanır" (▲). Eskiden tersiydi ve bant alttaydı.
-  if(toggle) toggle.textContent = open ? '▲' : '▼';
+  // artık AŞAĞI açılıyor: kapalıyken "aşağı açılır", açıkken "yukarı
+  // kapanır". Eskiden tersiydi ve bant alttaydı. Çizgi ikon (karar 10·B).
+  veIkonDegis(toggle, open ? 'chevron-up' : 'chevron-down');
   if(chip)   chip.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
@@ -1250,7 +1250,8 @@ function veRenderWarningsPanel(items, opts) {
     // Bir bileşene işaret eden satır tıklanabilir olsun — "2 bileşen bağlı
     // değil" deyip hangisi olduğunu söylememek en sinir bozucu kısımdı.
     var clickable = w.nodeId ? ' ve-warning-clickable" onclick="veFocusNode(\'' + w.nodeId + '\')" title="Bileşene git"' : '"';
-    return '<div class="ve-warning-item ' + w.type + clickable + '><span>' + w.msg + '</span></div>';
+    return '<div class="ve-warning-item ' + w.type + clickable + '><span>' + w.msg + '</span>'
+      + (w.nodeId ? veIkon('chevron-right', 've-warning-git') : '') + '</div>';
   }).join('');
 }
 
@@ -1326,12 +1327,8 @@ function getWheelPropertiesHTML(node) {
       wheelNodes[0].isMasterWheel = true;
       var firstEl = document.getElementById(wheelNodes[0].id);
       if(firstEl && !firstEl.querySelector('.ve-wheel-master-badge')) {
-        var badge = document.createElement('div');
-        badge.className = 've-wheel-master-badge';
-        badge.title = 'Master Tekerlek';
-        badge.textContent = '★';
         var box = firstEl.querySelector('.ve-node-box');
-        if(box) box.appendChild(badge);
+        if(box) box.insertAdjacentHTML('beforeend', veMasterRozet('wheel'));
       }
     }
     var isMaster = node.isMasterWheel || false;
@@ -1432,11 +1429,7 @@ function getWheelPropertiesHTML(node) {
     // Badge ekle
     var firstEl = document.getElementById(wheelNodes[0].id);
     if(firstEl && !firstEl.querySelector('.ve-wheel-master-badge')) {
-      var badge = document.createElement('div');
-      badge.className = 've-wheel-master-badge';
-      badge.title = 'Master Tekerlek — diğer tekerlekleri kontrol eder';
-      badge.textContent = '★';
-      firstEl.querySelector('.ve-node-box').appendChild(badge);
+      firstEl.querySelector('.ve-node-box').insertAdjacentHTML('beforeend', veMasterRozet('wheel'));
     }
   }
   

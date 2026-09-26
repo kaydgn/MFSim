@@ -74,7 +74,8 @@ async function ilerlet(ms, adim = 50) {
 function bolum() {
   const el = document.getElementById('mfsim-loading-bolum');
   return {
-    no: el.children[0].textContent,
+    // Hazır işareti çizgi ikon (karar 10·B): metni yok, sınıfı var.
+    no: el.children[0].querySelector('.mf-ico-check') ? 'tik' : el.children[0].textContent,
     ad: el.children[1].textContent,
     sinif: el.className,
     belir: el.getAttribute('data-belir')
@@ -564,7 +565,7 @@ describe('o anki öbek', () => {
     expect(bolum().belir).not.toBe(ilk);
   });
 
-  test('yükleme bitince etiket "✓ Hazır", cetvel tam, modüller GERÇEKTEN çalıştı', async () => {
+  test('yükleme bitince etiket "Hazır" + onay ikonu, cetvel tam, modüller GERÇEKTEN çalıştı', async () => {
     kur([
       { stage: 'Çekirdek', label: 'Tema motoru' },
       { label: 'Ayarlar paneli' },
@@ -578,7 +579,7 @@ describe('o anki öbek', () => {
 
     // Üçüncü modül + minimum toplam süre + kapanış
     await ilerlet(8000);
-    expect(bolum()).toMatchObject({ no: '✓', ad: 'Hazır' });
+    expect(bolum()).toMatchObject({ no: 'tik', ad: 'Hazır' });
     expect(cetvel().aria).toBe('100');
     expect(document.getElementById('mfsim-loading-message').textContent).toBe('Tamamlandı');
     // Satır içi modüller GERÇEKTEN çalıştı — etiket süslemesi değil

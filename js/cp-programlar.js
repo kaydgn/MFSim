@@ -147,6 +147,26 @@ function veProgramlarSuz(liste, q) {
 
 var _vpaKuruldu = false;
 
+// Kayıttaki `simge` bir emoji (kayit.json ÜRETİLİR, elle düzenlenmez) — renkli
+// emoji çizgi ikonların arasında ayrı bir resim dili. Pencere onu aynı
+// aileden bir ikona eşler (karar 10·B); birden çok emojili simgede ilki
+// sayılır, tanınmayan simge belge ikonuna düşer. Veri değişmez.
+var VE_PROGRAMLAR_IKON = [                                                     // metin: kayıttaki simge (veri) → ikon adı
+  ['⚙', 'settings'], ['📐', 'ruler'], ['⚡', 'zap'], ['✈', 'send'], ['〰', 'activity'],   // metin: eşleme anahtarı
+  ['🎛', 'sliders'], ['🖼', 'image'], ['🎞', 'film'], ['🎨', 'palette'], ['🎯', 'target'],   // metin: eşleme anahtarı
+  ['💥', 'zap'], ['📄', 'file-text'], ['📉', 'trending-down'], ['📊', 'bar-chart'],          // metin: eşleme anahtarı
+  ['🔍', 'search'], ['🔗', 'link'], ['🔧', 'wrench'], ['🛞', 'wheel'], ['🗺', 'map'],         // metin: eşleme anahtarı
+  ['🧾', 'file-text'], ['🧮', 'file-text'], ['🚌', 'truck']                                 // metin: eşleme anahtarı
+];
+function veProgramlarIkon(simge) {
+  var s = String(simge || ''), en = null;
+  VE_PROGRAMLAR_IKON.forEach(function(e) {
+    var i = s.indexOf(e[0]);
+    if(i >= 0 && (en === null || i < en.i)) en = { i: i, ad: e[1] };
+  });
+  return en ? en.ad : 'file-text';
+}
+
 function _vpaSatir(p, i, varMi) {
   var url = veProgramlarUrl(p);
   var boy = veProgramlarBoyut(p.boyut);
@@ -158,8 +178,8 @@ function _vpaSatir(p, i, varMi) {
 
   var h = '<div style="display:flex; align-items:center; gap:10px; padding:8px 10px; '
     + 'border:1px solid var(--border-color); background:var(--bg-primary);">';
-  h += '<span style="font-size:var(--fs-h2); line-height:1; flex:none;">'
-    + _vpaEsc(p.simge || '📄') + '</span>';
+  h += '<span style="font-size:var(--fs-h2); line-height:1; flex:none; color:var(--text-muted);">'
+    + veIkon(veProgramlarIkon(p.simge)) + '</span>';
   h += '<div style="flex:1; min-width:0;">'
     + '<div style="font-size:var(--fs-micro); font-weight:600; color:var(--text-primary); '
     + 'overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + _vpaEsc(p.ad) + '</div>'
@@ -328,6 +348,8 @@ if(typeof module !== 'undefined' && module.exports) {
     veProgramlarYolMetni: veProgramlarYolMetni,
     veProgramlarBoyut: veProgramlarBoyut,
     veProgramlarSuz: veProgramlarSuz,
-    VE_PROGRAMLAR_KUMELER: VE_PROGRAMLAR_KUMELER
+    VE_PROGRAMLAR_KUMELER: VE_PROGRAMLAR_KUMELER,
+    VE_PROGRAMLAR_IKON: VE_PROGRAMLAR_IKON,
+    veProgramlarIkon: veProgramlarIkon
   };
 }

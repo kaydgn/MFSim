@@ -2192,7 +2192,7 @@ function veTrNoteHTML(entries, lead) {
   h += '<span class="ve-trace-note-title">' +
        _veTrEsc(multi ? (entries.length + ' şerit') : entries[0].title) + '</span>';
   h += '<span class="ve-trace-note-line">' + _veTrEsc((lead && lead.lead) || '') + '</span>';
-  h += '<span class="ve-trace-note-caret" aria-hidden="true">▾</span>';
+  h += '<span class="mf-ico mf-ico-chevron-down ve-trace-note-caret" aria-hidden="true"></span>';
   h += '</button>';
   h += '<div class="ve-trace-note-body">';
   entries.forEach(function(e) {
@@ -2206,7 +2206,7 @@ function veTrNoteHTML(entries, lead) {
     h += '</section>';
   });
   h += '</div>';
-  h += '<div class="ve-trace-note-more">↓ devamı var — yorumu kaydırın</div>';
+  h += '<div class="ve-trace-note-more"><span class="mf-ico mf-ico-chevron-down" aria-hidden="true"></span> Devamı var — yorumu kaydırın</div>';
   return h;
 }
 
@@ -2371,7 +2371,7 @@ function veTrRenderToolbar() {
        'title="Pencerenin X eksenini değiştir (tüm şeritler paylaşır)">' +
        '<span class="mf-ico mf-ico-trending-up"></span>' +
        '<span>' + veSigEsc((slot.xAxis && slot.xAxis.name) ? slot.xAxis.name : 'Zaman [s]') + '</span>' +
-       '<span class="ve-trace-caret">▾</span></button>';
+       '<span class="mf-ico mf-ico-chevron-down ve-trace-caret" aria-hidden="true"></span></button>';
   h += '</div>';
 
   // Log/lineer anahtarı — yalnız veri buna elverişliyse (tüm x > 0) görünür.

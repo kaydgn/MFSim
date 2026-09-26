@@ -407,7 +407,9 @@
       gap: 4px;
     }
 
-    /* Tema öğesi — Ayarlar > Görünüm'de kullanılır; aktif olanın sol yanında ✓ durur */
+    /* Tema öğesi — Ayarlar > Görünüm'de kullanılır; aktif olanın sol yanında onay
+       ikonu durur. Her öğede VAR, yalnız .active'te görünür: changeTheme sınıfı
+       yerinde değiştiriyor, öğeyi yeniden kurmuyor. */
     .ve-theme-menu-item {
       position: relative;
       padding: 6px 12px 6px 28px;
@@ -417,16 +419,14 @@
       transition: background 0.12s, color 0.12s, border-color 0.12s;
       white-space: nowrap;
     }
-    .ve-theme-menu-item.active::before {
-      content: '✓';
+    .ve-theme-tik {
       position: absolute;
-      left: 10px;
+      left: 8px;
       top: 50%;
       transform: translateY(-50%);
       color: var(--accent-success);
-      font-size:var(--fs-body);
-      font-weight: 700;
     }
+    .ve-theme-menu-item:not(.active) .ve-theme-tik { visibility: hidden; }
 
     /* ===== AYARLAR MODALI ===== */
     .ve-settings-overlay {
@@ -2350,8 +2350,9 @@ html.ve-sayfa-tuval .ve-nav-rail{ border-right-color:transparent; }
 .ve-pane-header .ve-pane-label{flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .ve-pane-header .ve-pane-focus-dot{width:6px;height:6px;border-radius:50%;background:var(--accent-primary);flex-shrink:0;display:none;}
 .ve-split-pane.focused .ve-pane-focus-dot{display:block;}
+.ve-pane-header .ve-pane-mode{color:var(--text-muted);}
 .ve-pane-header .ve-pane-close{
-  cursor:pointer;font-size:var(--fs-tiny);padding:1px 4px;border-radius:var(--radius-xs);color:var(--text-muted);opacity:0.5;transition:all 0.1s;
+  display:inline-flex;cursor:pointer;font-size:var(--fs-tiny);padding:1px 4px;border-radius:var(--radius-xs);color:var(--text-muted);opacity:0.5;transition:all 0.1s;
 }
 .ve-pane-header .ve-pane-close:hover{opacity:1;background:var(--accent-danger);color:var(--on-danger);}
 .ve-split-resizer{
@@ -2612,14 +2613,13 @@ html.ve-sayfa-tuval .ve-nav-rail{ border-right-color:transparent; }
    için ikisine de açık kural gerekiyor — yoksa "gizli" kayıtlar görünür kalır. */
 .ve-welcome-change[hidden],
 .ve-welcome-more[hidden]{ display:none; }
-/* Yön oku düğmenin ne yapacağını söyler; açıkken ters döner. */
-.ve-welcome-more::after{
-  content:'\25be';
-  margin-left:6px;
-  display:inline-block;
+/* Yön oku düğmenin ne yapacağını söyler; açıkken ters döner. Çizgi ikon
+   (karar 10·B) — sözde öğenin '▾' karakteri yazı tipinden çiziliyordu. */
+.ve-welcome-more-ok{
+  margin-left:5px;
   transition:transform var(--dur-base) var(--ease-out);
 }
-.ve-welcome-more[aria-expanded="true"]::after{ transform:rotate(180deg); }
+.ve-welcome-more[aria-expanded="true"] .ve-welcome-more-ok{ transform:rotate(180deg); }
 /* Açılan kayıtlar sırayla belirir — sıra, listenin uzadığını okutur. */
 .ve-welcome-panel.is-open .ve-welcome-change--extra{
   animation:ve-welcome-change-in var(--dur-base) var(--ease-out) both;
@@ -3981,14 +3981,14 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   color:var(--accent-warning);
   border:1px solid var(--accent-warning);
   border-radius:0;
-  font-size:var(--fs-micro);
-  line-height:10px;
-  text-align:center;
-  font-weight:700;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   z-index:5;
   pointer-events:none;
   box-shadow:var(--shadow-sm);
 }
+.ve-wheel-master-badge .mf-ico{ width:8px; height:8px; }
 
 /* Port stilleri */
 /* Port DURUMU renkle değil DOLULUKLA anlatılır (Simulink/CANoe geleneği):
@@ -4358,32 +4358,24 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   transform:translateX(0);
 }
 
-/* Tür göstergesi — kenarlık rengiyle aynı dili konuşan yuvarlak simge */
+/* Tür göstergesi — kenarlık rengiyle aynı dili konuşan çizgi ikon (karar
+   10·B; eskiden dolu dairede '!' / 'i' / '✓' harfi). Renk --ink-*: kart
+   zemininde okunur mürekkep — --accent-* kehribarda zemine 2,5:1 kalıyordu. */
 .ve-toast-icon{
-  flex-shrink:0;
   width:16px;
   height:16px;
   margin-top:1px;
-  border-radius:var(--radius-pill);
-  background:var(--accent-success);
-  /* Glif AKSANIN ÜSTÜNDE duruyor; --bg-secondary bazı temalarda aksana çok
-     yakın kalıyordu (kehribar uyarı çipinde 2,5:1). --on-* belirteci her
-     temada o aksan için okunur mürekkebi taşır. */
-  color:var(--on-success);
-  font-size:var(--fs-body);
-  font-weight:700;
-  line-height:16px;
-  text-align:center;
+  color:var(--ink-success);
 }
 
 .ve-toast.warning{ border-left-color:var(--accent-warning); }
-.ve-toast.warning .ve-toast-icon{ background:var(--accent-warning); color:var(--on-warning); }
+.ve-toast.warning .ve-toast-icon{ color:var(--ink-warning); }
 
 .ve-toast.error{ border-left-color:var(--accent-danger); }
-.ve-toast.error .ve-toast-icon{ background:var(--accent-danger); color:var(--on-danger); }
+.ve-toast.error .ve-toast-icon{ color:var(--ink-danger); }
 
 .ve-toast.info{ border-left-color:var(--accent-primary); }
-.ve-toast.info .ve-toast-icon{ background:var(--accent-primary); color:var(--on-accent); }
+.ve-toast.info .ve-toast-icon{ color:var(--ink-accent); }
 
 @media (prefers-reduced-motion: reduce){
   .ve-toast{ transition:opacity var(--dur-fast) linear; transform:none; }
@@ -4543,11 +4535,11 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 /* Bir bileşene işaret eden uyarı satırı tıklanabilir: seçer, ortalar, açar */
 .ve-warning-item.ve-warning-clickable{ cursor:pointer; }
 .ve-warning-item.ve-warning-clickable:hover{ background:var(--bg-input); }
-.ve-warning-item.ve-warning-clickable::after{
-  content:"→"; margin-left:auto; opacity:0; color:var(--text-muted);
-  font-size:var(--fs-lg); transition:opacity var(--dur-fast,0.12s);
+.ve-warning-git{
+  margin-left:auto; opacity:0; color:var(--text-muted);
+  transition:opacity var(--dur-fast,0.12s);
 }
-.ve-warning-item.ve-warning-clickable:hover::after{ opacity:0.8; }
+.ve-warning-item.ve-warning-clickable:hover .ve-warning-git{ opacity:0.8; }
 .ve-warning-item.ok{border-left:3px solid var(--accent-success);color:var(--accent-success);font-weight:600;}
 .ve-warning-item.ok::before{background:var(--accent-success);}
 .ve-warning-item.error{border-left:3px solid var(--accent-danger);}
@@ -6194,9 +6186,8 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .vsig-ghead:hover{background:var(--bg-primary);}
 .vsig-ghead:focus-visible{outline:2px solid var(--accent-primary);outline-offset:-2px;}
 .vsig-arrow{
-  width:9px;flex:0 0 9px;text-align:center;
-  font-size:var(--fs-md);color:var(--text-muted);
-  transition:transform .14s ease;display:inline-block;
+  width:12px;height:12px;flex:0 0 12px;color:var(--text-muted);
+  transition:transform .14s ease;
 }
 .vsig-group.open .vsig-arrow{transform:rotate(90deg);}
 .vsig-gname{
@@ -6246,8 +6237,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .vsig-row.on .vsig-name{opacity:1;font-weight:500;}
 .vsig-name:active{cursor:grabbing;}
 .vsig-dir{
-  display:inline-block;width:8px;margin-right:4px;text-align:center;
-  font-size:var(--fs-md);color:var(--text-muted);
+  width:11px;height:11px;margin-right:4px;color:var(--text-muted);
 }
 .vsig-unit{
   font-size:var(--fs-md);color:var(--text-muted);
@@ -6304,6 +6294,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 }
 .vsig-insp-x{
   width:17px;height:17px;flex-shrink:0;padding:0;line-height:1;
+  display:inline-flex;align-items:center;justify-content:center;
   background:transparent;border:1px solid var(--border-color);border-radius:var(--radius-sm);
   color:var(--text-muted);cursor:pointer;font-size:var(--fs-micro);
   transition:border-color .12s,color .12s;
@@ -6802,7 +6793,6 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 }
 .ve-status-commit-row:hover { background: var(--bg-tertiary); }
 .ve-status-commit-arrow {
-  width: 10px;
   color: var(--text-muted);
   font-size:var(--fs-tiny);
   transition: transform 0.15s ease;
@@ -7169,6 +7159,9 @@ body.mf-radio-dragging .mf-radio-head{ cursor:grabbing; }
 .mf-radio-pick:hover{ background:var(--bg-input); color:var(--accent-primary); border-color:var(--accent-primary); }
 .mf-radio-pick svg{ width:16px; height:16px; }
 .mf-radio-empty{ padding:14px 10px; text-align:center; font-size:var(--fs-md); color:var(--text-muted); line-height:1.5; }
+/* Favoriler yıldızı: yayının favori düğmesindeki SVG, metnin boyunda. */
+.mf-radio-catstar{ display:inline-flex; width:1em; height:1em; margin-right:5px; vertical-align:-0.12em; color:var(--accent-warning); }
+.mf-radio-catstar svg{ width:100%; height:100%; }
 
 /* Radyonun krom bandında kendi düğmesi yok — komut şeritte (Araçlar → Mola →
    Radyo). Buradaki .ve-radio-btn kuralları o düğmeyle birlikte kaldırıldı;
@@ -7919,250 +7912,6 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .ve-imp-tag.text{ color:var(--accent-primary); }
 .ve-imp-tag.sparse{ color:var(--accent-warning); }
 .ve-imp-empty{ padding:16px; text-align:center; font-size:var(--fs-tiny); color:var(--text-muted); }
-
-/* ══ MALZEME KÜTÜPHANESİ (str-material paneli) ══════════════════════════════
-   Katalogda 112 kayıt var; onları panelin akışına gömmek okunmaz olurdu, o
-   yüzden panel İKİ SÜTUN: solda katalog (ara + süz + liste + seçilenin
-   künyesi), sağda parçaya UYGULANMIŞ kayıt. Ansys Engineering Data'nın
-   bölüşümü de bu ve sebebi aynı: "hangi malzemeler var" ile "bu parçanın
-   malzemesi ne" AYRI iki soru, ve ikincisi birincisine bakarken görünmek
-   zorunda — yoksa kullanıcı uygulayıp uygulamadığını unutuyor.
-
-   Pencere büyük (--strmat), çünkü liste kısa olursa katalog gezilemez;
-   --strgeom'daki flex zincirinin aynısı burada da kurulu ki artan boyu LİSTE
-   yutsun (panelin altında boşluk kalmasın). */
-.ve-properties.ve-properties--strmat{
-  max-width:min(1180px, 95vw);
-  height:88vh;
-  max-height:88vh;
-}
-.ve-properties--strmat .ve-properties-content{
-  display:flex;flex-direction:column;overflow:hidden;
-}
-.ve-properties--strmat .ve-properties-content > .sw-panel{
-  flex:1;min-height:0;display:flex;flex-direction:column;
-}
-/* SOL DAR, SAĞ GENİŞ. İlk sürümde tersiydi ve kullanıcı haklı olarak itiraz
-   etti: katalog listesi bir ad + iki sayıdan ibaret, genişlik ona değil
-   diyagramlara lazım. 300 px liste satırının en uzun içeriğini (uzun katalog
-   adı + GPa + kg/m³) taşıyacak en dar ölçü. */
-.ve-properties--strmat .ve-str-mat-grid{
-  grid-template-columns:300px minmax(0,1fr);
-  align-items:stretch;min-height:0;flex:1 1 auto;
-}
-.ve-properties--strmat .ve-str-mat-col-lib,
-.ve-properties--strmat .ve-str-mat-col-cur{ min-height:0; }
-.ve-properties--strmat .ve-str-mat-col-lib{ display:flex;flex-direction:column;overflow-y:auto; }
-.ve-properties--strmat .ve-str-mat-col-cur{ overflow-y:auto; }
-/* Liste artan boyu yutar; künye kartı kendi boyunda kalır. */
-.ve-properties--strmat .ve-str-mat-list{ flex:1 1 auto;max-height:none; }
-
-/* Arama + kategori tek satırda: ikisi de süzgeç, alt alta koymak panelden
-   22 px alırdı ve ilişkili olduklarını gizlerdi. */
-.ve-str-mat-filter{ display:flex;gap:6px;margin-bottom:7px;align-items:center; }
-.ve-str-mat-filter input[type="search"],
-.ve-str-mat-filter input[type="text"]{
-  flex:1 1 auto;min-width:0;
-  padding:5px 8px;font-size:var(--fs-body);height:28px;
-  background:var(--bg-input);color:var(--text-primary);
-  border:1px solid var(--border-color);border-radius:var(--radius-sm);
-}
-.ve-str-mat-filter select{
-  flex:0 0 auto;max-width:210px;
-  padding:5px 6px;font-size:var(--fs-micro);height:28px;
-  background:var(--bg-input);color:var(--text-primary);
-  border:1px solid var(--border-color);border-radius:var(--radius-sm);
-}
-.ve-str-mat-count{
-  font-size:var(--fs-micro);color:var(--text-muted);
-  margin:0 0 5px;font-variant-numeric:tabular-nums;
-}
-.ve-str-mat-list{
-  max-height:300px;overflow-y:auto;overflow-x:hidden;
-  border:1px solid var(--border-color);border-radius:var(--radius-sm);
-  background:var(--bg-secondary);
-}
-/* Satır ÜÇ kolon: ad+gösterim · E · ρ. Sayılar tabular ve sağa yaslı —
-   katalog gezerken göz sütunu yukarıdan aşağı tarıyor. */
-.ve-str-mat-row{
-  display:grid;grid-template-columns:minmax(0,1fr) auto;
-  align-items:center;gap:4px 8px;width:100%;padding:4px 8px;
-  font-size:var(--fs-micro);line-height:1.45;text-align:left;
-  color:var(--text-secondary);background:transparent;
-  border:0;border-bottom:1px solid color-mix(in srgb, var(--border-color) 55%, transparent);
-  cursor:pointer;
-}
-.ve-str-mat-row:last-child{ border-bottom:0; }
-.ve-str-mat-row:hover{
-  color:var(--text-primary);
-  background:color-mix(in srgb, var(--accent-primary) 14%, transparent);
-}
-.ve-str-mat-row.on{
-  color:var(--accent-primary);font-weight:700;
-  background:color-mix(in srgb, var(--accent-primary) 20%, transparent);
-}
-/* UYGULANMIŞ kayıt listede de işaretli: kullanıcı katalogda gezinirken
-   "şu an hangisi takılı" sorusunu listeden okuyabilsin. Renk seçim renginden
-   FARKLI (amber ↔ mavi) — ikisi aynı olsaydı "seçtiğim" ile "uyguladığım"
-   ayırt edilemezdi. */
-.ve-str-mat-row.applied .ve-str-mat-row-t::after{
-  content:'✓';margin-left:6px;color:var(--accent-warning);font-weight:700;
-}
-/* Ad ile gösterim satırı AYRI kapsayıcılarda: ✓ işareti adın yanına gelsin.
-   Tek kapsayıcıda ::after gösterim satırından SONRA düşüyordu (ölçüldü). */
-.ve-str-mat-row-t{
-  display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
-.ve-str-mat-row-n{
-  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  font-weight:600;color:inherit;
-}
-.ve-str-mat-row-alt{
-  display:block;font-weight:400;font-size:var(--fs-micro);
-  color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
-.ve-str-mat-row.on .ve-str-mat-row-alt{ color:inherit;opacity:0.8; }
-.ve-str-mat-row-num{
-  flex:0 0 auto;
-  font-variant-numeric:tabular-nums;color:var(--text-muted);
-}
-.ve-str-mat-row.on .ve-str-mat-row-num{ color:inherit; }
-/* Kategori ayracı: liste kategoriye göre süzülmemişse aile başlıkları
-   listeyi okunur tutuyor. Yapışkan çünkü kaydırırken hangi ailede olunduğu
-   kaybolmasın. */
-.ve-str-mat-head{
-  position:sticky;top:0;z-index:1;
-  padding:3px 8px;font-size:var(--fs-micro);font-weight:700;
-  letter-spacing:0.4px;text-transform:uppercase;
-  color:var(--text-muted);background:var(--bg-tertiary);
-  border-bottom:1px solid var(--border-color);
-}
-.ve-str-mat-empty{ padding:14px;text-align:center;font-size:var(--fs-micro);color:var(--text-muted); }
-/* ÖNİZLEME ŞERİDİ — sağ sütun katalogdan SEÇİLEN kaydı gösteriyor ama parçaya
-   henüz uygulanmadı. Sessiz bırakılamaz: alanlar dolu görünüyor, oysa parçanın
-   malzemesi hâlâ eskisi — kullanıcı uyguladığını sanırdı. Kenarlık AMBER,
-   uygulanmış kaydın nötr izinden ayrılsın. */
-.ve-str-mat-preview{
-  padding:8px 10px;margin-bottom:9px;
-  font-size:var(--fs-micro);line-height:1.5;color:var(--text-secondary);
-  background:color-mix(in srgb, var(--accent-warning) 8%, transparent);
-  border:1px solid var(--accent-warning);
-  border-left:3px solid var(--accent-warning);border-radius:var(--radius-sm);
-}
-.ve-str-mat-preview b{ color:var(--text-heading); }
-.ve-str-mat-preview > b:first-child{
-  color:var(--accent-warning);letter-spacing:0.06em;
-}
-.ve-str-mat-preview span{ color:var(--text-muted); }
-
-/* Eylem şeridi panelin ALTINDA: kullanıcı önce özellikleri okuyor, sonra
-   uyguluyor. Düğme sol sütundaki künye kartındayken özellikler ancak
-   uyguladıktan SONRA görünüyordu. */
-.ve-str-mat-actions{
-  display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;
-}
-.ve-str-mat-apply{ flex:1 1 auto;min-width:160px;font-weight:700; }
-.ve-str-mat-applied-tag{
-  flex:1 1 auto;padding:6px 10px;
-  font-size:var(--fs-micro);font-weight:600;color:var(--accent-warning);
-  background:color-mix(in srgb, var(--accent-warning) 10%, transparent);
-  border:1px solid var(--accent-warning);border-radius:var(--radius-sm);
-}
-.ve-str-mat-warn{
-  padding:6px 8px;margin-bottom:6px;
-  font-size:var(--fs-micro);line-height:1.45;
-  color:var(--accent-warning);
-  background:color-mix(in srgb, var(--accent-warning) 10%, transparent);
-  border:1px dashed var(--accent-warning);border-radius:var(--radius-sm);
-}
-/* Katalogun geçerlilik sınırı — panelin en altında DEĞİL, listenin hemen
-   üstünde: nominal değerin ölçülmüş değer sanılması bu modülün en pahalı
-   sessiz hatası olurdu. */
-.ve-str-mat-disc{
-  padding:6px 9px;margin-bottom:8px;
-  font-size:var(--fs-micro);line-height:1.45;color:var(--text-muted);
-  background:var(--bg-secondary);border:1px solid var(--border-color);
-  border-radius:var(--radius-sm);
-}
-
-
-/* ══ MALZEME KÜNYESİ · SICAKLIK DEĞERLENDİRİCİ · DİYAGRAMLAR ════════════════
-   Sağ sütunun "Ansys kıvamı" kısmı. Üçü de yalnız KATALOG kaydı uygulanmışsa
-   çiziliyor — elle girilen altı sayı sertlik, uzama, sıcaklık eğrisi ve
-   yorulma modelini üretmeye yetmez ve panel bunu söylüyor. */
-.ve-str-ext{
-  width:100%;border-collapse:collapse;
-  border:1px solid var(--border-color);margin-bottom:9px;
-  font-size:var(--fs-tiny);
-}
-.ve-str-ext td{
-  padding:4px 8px;border:1px solid var(--border-color);
-  color:var(--text-primary);font-weight:600;
-}
-.ve-str-ext td:first-child{
-  color:var(--text-secondary);font-weight:400;white-space:nowrap;width:40%;
-}
-.ve-str-ext-not{ color:var(--text-muted);font-weight:400; }
-
-/* Sıcaklık değerlendirici: eğriyi okumak yerine SAYIYI veriyor. Tek satır —
-   iki satıra taşsaydı diyagramlardan yer çalardı. */
-.ve-str-tempeval{
-  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
-  padding:7px 9px;margin-bottom:6px;
-  background:var(--bg-secondary);border:1px solid var(--border-color);
-  border-radius:var(--radius-sm);
-}
-.ve-str-tempeval label{
-  display:flex;align-items:center;gap:5px;
-  font-size:var(--fs-tiny);font-weight:600;color:var(--text-secondary);
-}
-.ve-str-tempeval input{
-  width:72px;padding:3px 6px;height:24px;text-align:right;
-  font-size:var(--fs-body);background:var(--bg-input);color:var(--text-primary);
-  border:1px solid var(--border-color);border-radius:var(--radius-sm);
-}
-.ve-str-tempeval-v{
-  font-size:var(--fs-micro);color:var(--text-muted);
-  font-variant-numeric:tabular-nums;
-}
-.ve-str-tempeval-v b{
-  color:var(--text-primary);
-  font-size:var(--fs-tiny);
-}
-.ve-str-tempeval-v i{ font-style:normal;opacity:0.8; }
-.ve-str-tempwarn{
-  padding:6px 9px;margin-bottom:8px;
-  font-size:var(--fs-micro);line-height:1.45;
-  color:var(--accent-warning);
-  background:color-mix(in srgb, var(--accent-warning) 10%, transparent);
-  border:1px dashed var(--accent-warning);border-radius:var(--radius-sm);
-}
-
-/* Diyagramlar: geniş panelde yan yana, dar panelde alt alta. auto-fit
-   olmasının sebebi pencere daraltılınca grafiğin ezilmemesi — 300 px'in
-   altında eksen yazıları üst üste biner. */
-.ve-str-dia-grid{
-  display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));
-  gap:9px;margin-bottom:9px;
-}
-.ve-str-dia{
-  margin:0;padding:7px 8px 4px;
-  background:var(--bg-secondary);border:1px solid var(--border-color);
-  border-radius:var(--radius-sm);min-width:0;
-}
-.ve-str-dia figcaption{
-  font-size:var(--fs-micro);font-weight:700;color:var(--text-heading);
-  margin-bottom:3px;line-height:1.35;
-}
-.ve-str-dia figcaption span{ font-weight:400;color:var(--text-muted); }
-.ve-str-dia svg{ display:block;width:100%;height:auto; }
-.ve-str-dia-note{
-  padding:7px 9px;margin-bottom:9px;
-  font-size:var(--fs-micro);line-height:1.5;color:var(--text-muted);
-  background:var(--bg-secondary);border:1px solid var(--border-color);
-  border-left:3px solid var(--accent-warning);border-radius:var(--radius-sm);
-}
-.ve-str-dia-note b{ color:var(--text-secondary); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    FEAD BAŞLANGIÇ SİHİRBAZI  (js/cp-fead-wizard.js)

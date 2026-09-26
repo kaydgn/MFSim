@@ -243,7 +243,8 @@
     if (anahtar !== sonBolum) {
       sonBolum = anahtar;
       var no = el.children[0], ad = el.children[1];
-      if (no) no.textContent = hazir ? '✓' : roma(i + 1);
+      // Hazır işareti çizgi ikon (karar 10·B, js/ikon.js yükleyiciden önce gelir).
+      if (no) { if (hazir) no.innerHTML = veIkon('check'); else no.textContent = roma(i + 1); }
       // textContent: obek adi index.html'den geliyor ve '&' icerebiliyor
       // ("Araçlar & ölçüm"). innerHTML ile yazilsa kacislanmasi gerekirdi.
       if (ad) ad.textContent = hazir ? 'Hazır' : stages[i].ad;

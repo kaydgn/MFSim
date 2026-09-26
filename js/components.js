@@ -1166,8 +1166,8 @@ function veApplyModuleCard(nodeEl, node) {
   card.appendChild(text);
 
   var enter = document.createElement('span');
-  enter.className = 've-mod-enter';
-  enter.textContent = '▸';
+  enter.className = 've-mod-enter mf-ico mf-ico-chevron-right';
+  enter.setAttribute('aria-hidden', 'true');
   card.appendChild(enter);
 
   box.appendChild(card);
@@ -1553,7 +1553,7 @@ function veFillWelcomeChanges() {
     dugme.hidden = false;
     // Etiket duruma göre: hiç kayıt açık değilse "daha eskiler" yanlış olurdu,
     // gizli olanlar listenin TAMAMI.
-    dugme.textContent = (VE_WELCOME_CHANGE_ILK > 0 ? 'Daha eskiler \u00b7 ' : 'Hepsi \u00b7 ') + gizli;
+    _veWelcomeMoreEtiket(dugme, (VE_WELCOME_CHANGE_ILK > 0 ? 'Daha eskiler \u00b7 ' : 'Hepsi \u00b7 ') + gizli);
     dugme.onclick = veToggleWelcomeChanges;      // her çizimde aynı işlev — çoğalmaz
     // Duruş açıksa listeyi HEMEN aç. Açma işini toggle yapıyor: etiket,
     // aria-expanded ve is-open tek yerden yazılsın, ikinci bir kopya doğmasın.
@@ -1658,6 +1658,12 @@ function veWelcomeSlaytBaslat() {
   return true;
 }
 
+// Düğmenin etiketi + yön oku (çizgi ikon; açıkken CSS ters çevirir).
+function _veWelcomeMoreEtiket(dugme, metin) {
+  dugme.textContent = metin;
+  dugme.insertAdjacentHTML('beforeend', veIkon('chevron-down', 've-welcome-more-ok'));
+}
+
 // Kalan kayıtları yerinde açar/kapatır. Etiket iki durumu da söyler;
 // aria-expanded aynı şeyi ekran okuyucuya bildirir.
 function veToggleWelcomeChanges() {
@@ -1669,9 +1675,9 @@ function veToggleWelcomeChanges() {
   var fazlalar = panel.querySelectorAll('.ve-welcome-change--extra');
   Array.prototype.forEach.call(fazlalar, function(el) { el.hidden = acik; });
   dugme.setAttribute('aria-expanded', acik ? 'false' : 'true');
-  dugme.textContent = acik
+  _veWelcomeMoreEtiket(dugme, acik
     ? ((VE_WELCOME_CHANGE_ILK > 0 ? 'Daha eskiler \u00b7 ' : 'Hepsi \u00b7 ') + fazlalar.length)
-    : 'Daha az';
+    : 'Daha az');
   panel.classList.toggle('is-open', !acik);
   return !acik;
 }

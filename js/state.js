@@ -387,11 +387,11 @@ function _veRestoreStateNodes(state) {
     
     // Master tekerlek badge'i
     if(node.type === 'wheel' && node.isMasterWheel) {
-      html += '<div class="ve-wheel-master-badge" title="Master Tekerlek — diğer tekerlekleri kontrol eder">★</div>';
+      html += veMasterRozet('wheel');
     }
     // Master diferansiyel badge'i
     if(node.type === 'differential' && node.isMasterDiff) {
-      html += '<div class="ve-wheel-master-badge" title="Master Diferansiyel — parametreleri bu bileşenden okunur">★</div>';
+      html += veMasterRozet('differential');
     }
     nodeEl.innerHTML = html;
     

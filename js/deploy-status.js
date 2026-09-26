@@ -43,7 +43,7 @@ function veRefreshApp() {
     // Gömülü künyede karşılaştırılacak bir "yayın" yok; elindeki kopya
     // gösterilir, güncellik iddiası edilmez.
     if(info.source === 'embedded') {
-      _veShowPopup(dot, info, 'Bu Kopya', false);
+      _veShowPopup(dot, info, 'Bu kopya', false);
       return;
     }
 
@@ -55,14 +55,14 @@ function veRefreshApp() {
         isNewer = String(info.runId) !== String(runId);
       }
       if(isNewer) {
-        _veShowPopup(dot, info, '<span class="mf-ico mf-ico-bell"></span> Güncelleme Mevcut', true);
+        _veShowPopup(dot, info, veIkon('bell') + ' Güncelleme mevcut', true);
       } else {
-        _veShowPopup(dot, info, '✓ Program Güncel', false);
+        _veShowPopup(dot, info, veIkon('check-circle') + ' Program güncel', false);
       }
     } else if(info.status === 'in_progress' || info.status === 'queued') {
-      _veShowPopup(dot, info, '⏳ Deploy Devam Ediyor', false);
+      _veShowPopup(dot, info, veIkon('clock') + ' Deploy devam ediyor', false);
     } else {
-      _veShowPopup(dot, info, '✗ Deploy Başarısız', false);
+      _veShowPopup(dot, info, veIkon('alert-circle') + ' Deploy başarısız', false);
     }
   });
 }
@@ -102,7 +102,7 @@ function _veApplyDotState(dot, info) {
   }
   if(info.status === 'in_progress' || info.status === 'queued') {
     dot.className = 've-deploy-dot ve-deploy-pending';
-    dot.title = '⏳ Deploy devam ediyor...';
+    dot.title = 'Deploy devam ediyor…';
   } else if(info.status === 'completed' && info.conclusion === 'success') {
     dot.className = 've-deploy-dot ve-deploy-success';
     dot.title = 'Güncel';
@@ -514,7 +514,7 @@ function _veShowRefreshedPopup() {
 
   popup.innerHTML =
     '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
-      '<span style="font-weight:600; color:var(--accent-success); font-size:var(--fs-lg);">✓ Program güncellendi</span>' +
+      '<span style="font-weight:600; color:var(--accent-success); font-size:var(--fs-lg);">' + veIkon('check-circle') + ' Program güncellendi</span>' +
       '<button class="ve-settings-close" type="button" onclick="_veDismissPopup()" title="Kapat" aria-label="Kapat"><span class="mf-ico mf-ico-x"></span></button>' +
     '</div>' +
     '<div style="color:var(--text-secondary); line-height:1.5;">Program en son sürüme güncellendi. Detayları görmek için yeşil noktaya tıklayın.</div>';

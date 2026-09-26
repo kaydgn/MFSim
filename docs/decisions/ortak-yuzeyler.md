@@ -1564,3 +1564,40 @@ kaydırma yolu yoktu. `arac-performans.spec.js:46` bu yüzden aralıklı düşü
 **Kapı.** `canvas-space.test.js` (aktarım görüntüyü korur, saf, kablolama) +
 `tuval-kab-kaymaz.spec.js` (kodla kaydırma ve ekran dışı odak; düzeltme
 olmadan iki test de düşüyor: 300 × 150 ve 3147 × 2414 kalıyor).
+
+## Tek ikon ailesi (2026-09-26, kullanıcı kararı 10·B)
+
+**Hüküm.** Arayüzde ikon işi gören her şey `css/icons.css`'teki çizgi ikondur
+(`veIkon` · `veIkonDegis`, `js/ikon.js`). İkon işi: karakter bir öğenin tek
+içeriği ya da etiketin başında/sonunda duran resim yazısı. Kapsam dışı: metnin
+içindeki karakter, çözücü günlüğü, TXT rapor, tuval yazısı. `css/icons.css`
+ÜRETİLİR (`tools/ikonlar.js`, kaynak `tools/ikonlar.json`).
+
+**Gerekçe.** Sembol karakteri yazı tipinden gelir (Windows'ta Segoe UI Symbol):
+aynı menüde ← ile ↑ farklı boyda çiziliyordu, ▲ ile çizgi ikon farklı kalınlıkta.
+16 ekranda 200 çizgi ikonun yanında 104 sembol ölçülmüştü. Dosyanın başlığı
+"otomatik üretilmiştir" diyordu ama üreteç depoda yoktu; iki URL kodlaması yan
+yana duruyordu. Üretece geçişte 67 ikonun hiçbirinin çizimi değişmedi (çözülmüş
+SVG karşılaştırıldı).
+
+**Aşama 1 (kabuk).** Eski kaynakta 61 sapma → 0: 50'si ikona döndü, çözücü
+günlüğüne giden 11'i `// metin:` ile işaretlendi. Ayrıca:
+- Master rozetinin altı kopyası tek üreticiye indi (`veMasterRozet`); ipuçları
+  ayrışmıştı.
+- Bildirimin tür ikonu dolu dairede harfti; artık çizgi ikon, rengi `--ink-*`.
+  MFSim ile görüntüleyici aynı tabloyu taşıyor.
+- Program Arşivi kayıttaki emojiyi ikona eşliyor; veri değişmedi.
+- Kaldırılan Yapısal Analiz'den kalan 243 satır ölü CSS silindi (28 seçici, hiçbir
+  yerde kullanılmıyordu).
+- Sözde öğe karakterleri (tema ✓, karşılama ▾, uyarı →) gerçek ikon öğesi oldu.
+- Birlikte düzelen dört başlık cümle düzenine geçti ("Program güncel").
+
+**Kapı.** `ikon-dili.test.js`:
+- kuralın örnekleri;
+- `icons.css` üreteçle birebir;
+- kaynakta adı geçen her ikon tanımlı (bilinmeyen ad dolu kare çizer);
+- aşama dosyalarında sapma yok;
+- tek üreticiler.
+
+Düşebildiği ölçüldü: geri dönen tek '▲', yazım hatalı tek ad ve elle düzenlenmiş
+`icons.css` birer testle düşüyor.

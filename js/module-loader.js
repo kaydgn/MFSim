@@ -108,7 +108,7 @@ function _veModLoadDurum(adimlar, i, bittiMi){
       host.children[k].className = 'mfsim-loading-stage'
         + (bitti ? ' is-done' : (aktif ? ' is-active' : ''));
       var mk = host.children[k].firstChild;
-      if(mk) mk.textContent = bitti ? '✓' : '·';
+      if(mk) { if(bitti) mk.innerHTML = veIkon('check'); else mk.textContent = '·'; }
     }
   }
   // MESAJ ADIM ADINI TEKRARLAMAZ: liste zaten adları gösteriyor, mesaj o

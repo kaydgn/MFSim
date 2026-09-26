@@ -472,12 +472,8 @@ function getDifferentialPropertiesHTML(node) {
       diffNodes[0].isMasterDiff = true;
       var firstEl = document.getElementById(diffNodes[0].id);
       if(firstEl && !firstEl.querySelector('.ve-wheel-master-badge')) {
-        var badge = document.createElement('div');
-        badge.className = 've-wheel-master-badge';
-        badge.title = 'Master Diferansiyel';
-        badge.textContent = '★';
         var box = firstEl.querySelector('.ve-node-box');
-        if(box) box.appendChild(badge);
+        if(box) box.insertAdjacentHTML('beforeend', veMasterRozet('differential'));
       }
     }
     var isMaster = node.isMasterDiff || false;

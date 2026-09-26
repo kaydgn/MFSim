@@ -800,7 +800,8 @@ function veCreateSplitDOM() {
   var h0 = document.createElement('div');
   h0.className = 've-pane-header';
   h0.id = 've-pane-header-0';
-  h0.innerHTML = '<span class="ve-pane-focus-dot"></span><span class="ve-pane-label" id="ve-pane-label-0"></span>';
+  h0.innerHTML = '<span class="ve-pane-focus-dot"></span><span class="ve-pane-label" id="ve-pane-label-0"></span>'
+    + veIkon('eye', 've-pane-mode');
   h0.onclick = function() { veFocusPane(0); };
   pane0.insertBefore(h0, pane0.firstChild);
   
@@ -818,7 +819,8 @@ function veCreateSplitDOM() {
   h1.className = 've-pane-header';
   h1.id = 've-pane-header-1';
   h1.innerHTML = '<span class="ve-pane-focus-dot"></span><span class="ve-pane-label" id="ve-pane-label-1"></span>' +
-    '<span class="ve-pane-close" onclick="event.stopPropagation();veCloseSplit();" title="Bölmeyi kapat">✕</span>';
+    veIkon('eye', 've-pane-mode') +
+    '<span class="ve-pane-close" onclick="event.stopPropagation();veCloseSplit();" title="Bölmeyi kapat">' + veIkon('x') + '</span>';
   h1.onclick = function() { veFocusPane(1); };
   pane1.appendChild(h1);
   
@@ -926,8 +928,11 @@ function veUpdatePaneLabels() {
     var tab = veTabs[tabIdx];
     var name = tab ? tab.name : '?';
     var isFocused = (i === veFocusedPane);
-    label.textContent = name + (isFocused ? ' ✎' : ' ◎');
+    label.textContent = name;
     label.title = isFocused ? 'Düzenlenebilir (aktif)' : 'Salt görüntüleme — tıklayarak aktif edin';
+    // Kip ikonu ADIN DIŞINDA: ad uzunsa üç noktayla kısalır, ikon kısalmaz.
+    var kip = label.parentNode && label.parentNode.querySelector('.ve-pane-mode');
+    if(kip) { veIkonDegis(kip, isFocused ? 'edit' : 'eye'); kip.setAttribute('title', label.title); }
   }
 }
 
@@ -1027,10 +1032,10 @@ function veRenderSnapshot(paneIdx) {
       html += '<div class="ve-node-label' + _lpCls + '">' + escapeHTML(n.customName || def.name) + '</div>';
       
       if(n.type === 'wheel' && n.isMasterWheel) {
-        html += '<div class="ve-wheel-master-badge" title="Master tekerlek">★</div>';
+        html += veMasterRozet('wheel');
       }
       if(n.type === 'differential' && n.isMasterDiff) {
-        html += '<div class="ve-wheel-master-badge" title="Master diferansiyel">★</div>';
+        html += veMasterRozet('differential');
       }
       
       nodeEl.innerHTML = html;
@@ -1272,7 +1277,7 @@ function veSplitResizerInit(resizer, pane0, pane1) {
     ['left', 'right'].forEach(function(side) {
       var dz = document.createElement('div');
       dz.className = 've-split-dropzone visible ' + side;
-      dz.innerHTML = (side === 'left' ? '◀ Sol pane' : 'Sağ pane ▶');
+      dz.innerHTML = (side === 'left' ? veIkon('arrow-left') + ' Sol pane' : 'Sağ pane ' + veIkon('arrow-right'));
       container.appendChild(dz);
       _dropZones.push(dz);
     });
