@@ -662,7 +662,7 @@ function veRenderTabs() {
       '<span class="ve-tab-close" onclick="event.stopPropagation();veCloseTab(' + idx + ')" title="Kapat"><span class="mf-ico mf-ico-x"></span></span>' +
       '</div>';
   });
-  html += '<div class="ve-tab-add" onclick="veAddTab()" title="Yeni topoloji sekmesi">+</div>';
+  html += '<div class="ve-tab-add" onclick="veAddTab()" title="Yeni topoloji sekmesi">' + veIkon('plus') + '</div>';
 
   // Sağdaki araç butonları KALDIRILDI: hepsi artık şeritte (js/ribbon.js).
   // Şerit geldikten sonra aynı 14 komut 150 px arayla iki yerde duruyordu; bu

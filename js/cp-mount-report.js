@@ -149,7 +149,7 @@ function getMntReportPropertiesHTML(node){
   var html='<div class="sw-panel">';
   if(solved){
     html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); background:var(--bg-tertiary); border:1px solid var(--border-color); color:var(--text-primary);">'
-        + '<span style="color:var(--accent-success); font-weight:700;">✓ Model çözüldü</span> — '
+        + '<span style="color:var(--accent-success); font-weight:700;">' + veIkon('check') + ' Model çözüldü</span> — '
         + nC+' bileşen · '+nM+' takoz. Rapor güncel çözüme göre üretilir.</div>';
     // Frekans yerleşimi & izolasyon girdileri BURADA GİRİLMEZ — her biri ait
     // olduğu bileşenin özelliğidir ve çözümle birlikte rapora akar:
@@ -167,17 +167,17 @@ function getMntReportPropertiesHTML(node){
         + '<div style="font-size:var(--fs-tiny); font-weight:600; color:var(--text-heading);">Frekans yerleşimi &amp; izolasyon</div>'
         + '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin:3px 0 7px;">Bu değerler girilmişse rapora §8.8 eklenir: ateşleme frekansı (f<sub>ateş</sub>), Kriter 1 ve Kriter 2.</div>'
         + '<div style="display:flex; flex-direction:column; gap:4px; font-size:var(--fs-micro); color:var(--text-secondary); line-height:1.5;">'
-        +   '<div>Rölanti devri '+_val(_eng.idleRpm,0,' d/dk')+' · Silindir '+_val(_eng.cylinders,0,'')+' <span style="color:var(--text-muted);">← <b>Motor</b> bileşeni</span></div>'
-        +   '<div>Sönüm oranı ζ = <b style="color:var(--text-primary);">'+_rF(_zt,3)+'</b> <span style="color:var(--text-muted);">← <b>Çözücü</b> bileşeni</span></div>'
+        +   '<div>Rölanti devri '+_val(_eng.idleRpm,0,' d/dk')+' · Silindir '+_val(_eng.cylinders,0,'')+' <span style="color:var(--text-muted);">' + veIkon('arrow-left') + ' <b>Motor</b> bileşeni</span></div>'
+        +   '<div>Sönüm oranı ζ = <b style="color:var(--text-primary);">'+_rF(_zt,3)+'</b> <span style="color:var(--text-muted);">' + veIkon('arrow-left') + ' <b>Çözücü</b> bileşeni</span></div>'
         +   (Number.isFinite(_fFire)
               ? '<div style="color:var(--text-muted);">f<sub>ateş</sub> = (N/60)·(z/2) = <b style="color:var(--text-primary);">'+_rF(_fFire,1)+' Hz</b></div>'
               : '<div style="color:var(--accent-warning);">Ateşleme frekansı hesaplanamıyor — Motor bileşenine rölanti devri ve silindir sayısını girin (§8.8 atlanır).</div>')
         + '</div></div>';
-    html+='<button onclick="veMntGenerateReport(\''+node.id+'\')" style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:var(--radius-sm);" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 Raporu oluştur ve indir</button>';
+    html+='<button onclick="veMntGenerateReport(\''+node.id+'\')" style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:var(--radius-sm);" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">' + veIkon('file-text') + ' Raporu oluştur ve indir</button>';
   } else {
     html+='<div style="padding:10px 12px; margin-bottom:10px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:var(--fs-body); line-height:1.5;">'
         + '<b>Model çözülmedi.</b> Rapor, Çözücü sonuçlarından üretilir.</div>';
-    html+='<button disabled style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--bg-tertiary); color:var(--text-muted); border:1px solid var(--border-color); cursor:not-allowed; border-radius:var(--radius-sm);">📄 Raporu oluştur ve indir</button>';
+    html+='<button disabled style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--bg-tertiary); color:var(--text-muted); border:1px solid var(--border-color); cursor:not-allowed; border-radius:var(--radius-sm);">' + veIkon('file-text') + ' Raporu oluştur ve indir</button>';
   }
   html+='<div id="ve-mnt-report-status" style="margin-top:8px; font-size:var(--fs-tiny); color:var(--text-muted);"></div>';
   html+='</div>';

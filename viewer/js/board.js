@@ -213,13 +213,14 @@ function showToast(message, type) {
 
 // ── Veri Gezgini ağacı ────────────────────────────────────────────────────
 
-// js/results.js:611'den birebir.
+// js/results.js'ten birebir (viewer/sync.js denetler); görüntüleyicide js/ikon.js yok,
+// ikonun sınıfını kendisi yazar (karar 10·B).
 function veToggleTree(el) {
   var children = el.nextElementSibling;
   if(!children || !children.classList.contains('ve-tree-children')) return;
   children.classList.toggle('open');
-  var arrow = el.querySelector('.arrow');
-  if(arrow) arrow.textContent = children.classList.contains('open') ? '▼' : '▶';
+  var ok = el.querySelector('.arrow > .mf-ico');
+  if(ok) ok.className = 'mf-ico mf-ico-' + (children.classList.contains('open') ? 'chevron-down' : 'chevron-right');
 }
 
 function veFilterResultsTree(query) {
@@ -258,7 +259,8 @@ function veUpdateResultsTree() {
     html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
     html += '<div class="ve-tree-item">';
     html += '<div class="ve-tree-row" style="display:flex; align-items:center; gap:4px;">';
-    html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span>';
+    html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' +
+            '<span class="mf-ico mf-ico-chevron-down" aria-hidden="true"></span></span>';
     html += '<span class="icon"><span class="mf-ico mf-ico-upload"></span></span>';
     html += '<span style="font-weight:600;">İçe aktarılan ölçümler</span>';
     html += ' <span style="font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;">' +
@@ -276,7 +278,8 @@ function veUpdateResultsTree() {
       shown.forEach(function(g) {
         html += veSigGroupHTML(g, slot, veSigState.query);
         html += '<div class="vsig-orphan" style="cursor:pointer;" title="Bu ölçüm dosyasını oturumdan kaldır"' +
-                ' onclick="veImpDropDataset(\'' + escapeHTML(g._import) + '\')">✕ ' +
+                ' onclick="veImpDropDataset(\'' + escapeHTML(g._import) + '\')">' +
+                '<span class="mf-ico mf-ico-x" aria-hidden="true"></span> ' +
                 escapeHTML(g.name) + ' — kaldır</div>';
       });
     }
@@ -666,7 +669,8 @@ function veShowXAxisPicker(slotIdx, e) {
     html += '<div class="ve-xaxis-dropdown-item' + (opt.active ? ' active' : '') + '" ';
     html += 'onclick="veSetSlotXAxis(' + slotIdx + ',' + i + ');event.stopPropagation();" ';
     html += 'data-opt-idx="' + i + '">';
-    html += '<span>' + (opt.active ? '● ' : '') + escapeHTML(opt.name) + '</span>';
+    html += '<span>' + (opt.active ? '<span class="mf-ico mf-ico-check ve-xaxis-tik" aria-hidden="true"></span> ' : '') +
+            escapeHTML(opt.name) + '</span>';
     if(opt.unit) html += '<span class="ve-xaxis-unit">' + escapeHTML(opt.unit) + '</span>';
     html += '</div>';
   });

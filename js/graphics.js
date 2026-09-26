@@ -607,12 +607,14 @@ function veShowRaporModal() {
   overlay.addEventListener('mousedown', function(e) { if(e.target === overlay) veCloseRaporModal(); });
   
   var modal = document.createElement('div');
-  modal.style.cssText = 'width:360px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+  modal.className = 've-mini-pencere';
+  modal.style.width = '360px';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-label', 'BMC detaylı hesap raporu');
   
   modal.innerHTML = '' +
-    '<div style="padding:12px 16px; background:linear-gradient(135deg, #1a365d 0%, #2c5282 100%); display:flex; align-items:center; justify-content:space-between;">' +
-      '<span style="font-size:var(--fs-lg); font-weight:700; color:#e2e8f0; display:flex; align-items:center; gap:8px;"><span class="mf-ico mf-ico-bar-chart"></span> BMC detaylı hesap raporu</span>' +
-      '<button onclick="veCloseRaporModal()" style="width:26px; height:26px; background:transparent; border:1px solid rgba(255,255,255,0.2); border-radius:var(--radius-sm); color:#e2e8f0; cursor:pointer; font-size:var(--fs-lg);">✕</button>' +
+    '<div class="ve-settings-header"><span>' + veIkon('bar-chart') + ' BMC detaylı hesap raporu</span>' +
+      '<button class="ve-settings-close" type="button" title="Kapat" aria-label="Kapat" onclick="veCloseRaporModal()">' + veIkon('x') + '</button>' +
     '</div>' +
     '<div style="padding:16px;">' +
       '<div style="text-align:center; margin-bottom:14px; padding:8px; background:linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%); border-radius:var(--radius-sm); border:1px solid var(--border-color);">' +
@@ -5577,7 +5579,7 @@ function veRender3DScatter(slotIdx) {
   // Plotly yüklü mü kontrol et
   if(typeof Plotly === 'undefined') {
     if(placeholder) {
-      placeholder.innerHTML = '<div style="font-size:var(--fs-h1); margin-bottom:6px;">⚠</div>Plotly.js yüklenemedi.<br>İnternet bağlantınızı kontrol edin.';
+      placeholder.innerHTML = '<div style="font-size:var(--fs-h1); margin-bottom:6px;">' + veIkon('alert-triangle') + '</div>Plotly.js yüklenemedi.<br>İnternet bağlantınızı kontrol edin.';
       placeholder.style.display = '';
     }
     return;

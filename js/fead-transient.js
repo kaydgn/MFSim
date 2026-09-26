@@ -221,7 +221,7 @@ function veFeadScenarioBuild(build, opts){
   if(!(mPrime > 0) || !(v1 > 0)) return null;
   var spanL = geom.spans.map(function(s){ return s.L; });
   var adlar = geom.spans.map(function(s, i){
-    return geom.names[i] + '→' + geom.names[(i+1) % geom.names.length];
+    return geom.names[i] + '→' + geom.names[(i+1) % geom.names.length];   // metin: açıklığın adı (A→B)
   });
 
   // ── Devir ızgarası: A(N) ve B(N) ──────────────────────────────────────────

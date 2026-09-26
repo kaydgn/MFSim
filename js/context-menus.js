@@ -12,10 +12,10 @@ function createNodeContextMenu() {
   
   menu.innerHTML = '<div class="ve-context-item" data-action="toggle-axis"><span class="mf-ico mf-ico-refresh" aria-hidden="true"></span> Yatay ↔ dikey</div>' +
     '<div class="ve-context-divider"></div>' +
-    '<div class="ve-context-item" data-action="mirror-h"><span>↔</span> Yatay aynala (sol ↔ sağ)</div>' +
-    '<div class="ve-context-item" data-action="mirror-v"><span>↕</span> Dikey aynala (üst ↔ alt)</div>' +
+    '<div class="ve-context-item" data-action="mirror-h"><span>' + veIkon('arrow-left-right') + '</span> Yatay aynala (sol ↔ sağ)</div>' +
+    '<div class="ve-context-item" data-action="mirror-v"><span>' + veIkon('arrow-up-down') + '</span> Dikey aynala (üst ↔ alt)</div>' +
     '<div class="ve-context-divider"></div>' +
-    '<div class="ve-context-item" data-action="reset-ports"><span>⟲</span> Varsayılana dön</div>';
+    '<div class="ve-context-item" data-action="reset-ports"><span>' + veIkon('rotate-ccw') + '</span> Varsayılana dön</div>';
   
   document.body.appendChild(menu);
   nodeContextMenu = menu;
@@ -490,7 +490,7 @@ function createConnectionContextMenu() {
     </div>
     <div class="ve-context-divider"></div>
     <div class="ve-context-item" data-action="addPoint">
-      <span>+</span> Kontrol noktası ekle
+      <span><span class="mf-ico mf-ico-plus"></span></span> Kontrol noktası ekle
     </div>
     <div class="ve-context-divider"></div>
     <div class="ve-context-item ve-context-danger" data-action="delete">

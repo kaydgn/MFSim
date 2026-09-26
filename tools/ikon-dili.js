@@ -14,9 +14,10 @@
  * Düz metin çıktı işareti METİN taşır — kapı onlara bakmaz:
  *   · çözücü günlüğü (`log('…')`), TXT rapor satırı (`…\n'`), tuval yazısı
  *     (`fillText`), konsol;
- *   · `BELGE` tablosundaki işlevler: indirilen/basılan belgenin gövdesi.
- *     Maske ikon bir arka plandır — kopyalanan tabloda boş hücre olur
- *     (`innerText` ""), arka plan grafikleri kapalı baskıda hiç çıkmaz.
+ *   · `BELGE` tablosundaki işlevler ve `BELGE_DOSYA`daki dosyalar: indirilen/
+ *     basılan belgenin gövdesi. Maske ikon bir arka plandır — kopyalanan
+ *     tabloda boş hücre olur (`innerText` ""), arka plan grafikleri kapalı
+ *     baskıda hiç çıkmaz.
  *   · kılavuz METNİ (js/guide-*.js): düğmeyi karakteriyle betimler ("▶ Hesapla").
  *     Kılavuz indirilen bir belge ve `.mf-ico` kuralları ona yalnız `.appfig`
  *     (sahne) altına kapsanarak taşınıyor (guide-kit.js) — metindeki bir ikon
@@ -32,10 +33,16 @@ const path = require('path');
 const KOK = path.join(__dirname, '..');
 const oku = (f) => fs.readFileSync(path.join(KOK, f), 'utf8');
 
-// İkon adayı karakterler. Oklar (← ↑ ↓ →) yalnız TEK başına ya da etiketin
-// BAŞINDA ikon sayılır; metnin içinde bir bağıntıdır ("Otomatik → Lineer").
-const GLIF = '▶▸►▷◀◂◄◁▲▴△▼▾▽⚠✓✔✗✘✕✖★☆⚙⏳⏸↻↺⟳✎⤢◇◆◎●○⬤▢♪✥✦✧';
-const OK = '←↑↓→';
+// İkon adayı karakterler. Oklar (← ↑ ↓ → ↔ ↕ ⇄ ↳ ›) yalnız TEK başına ya da
+// etiketin BAŞINDA ikon sayılır; metnin içinde bir bağıntıdır ("Otomatik →
+// Lineer", "sol ↔ sağ").
+const GLIF = '▶▸►▷◀◂◄◁▲▴△▼▾▽⚠✓✔✗✘✕✖★☆⚙⏳⏸↻↺⟳⟲✎⤢◇◆◎●○⬤▢♪✥✦✧';
+const OK = '←↑↓→↔↕⇄↳›';
+// Yalnız bir öğenin TEK içeriğiyken ikon olan karakterler: satır silen "×",
+// sekme ekleyen "+", yakınlaştıran "−". Başka her yerde metindir — çarpım
+// ("3 × 4"), işaret ("−1"), birim ("−"), tuş birleşimi — ve tarayıcı onlara
+// bakmaz. Aşama 1 ve 2 bu sınıfı GÖRMEDEN "0" dedi (on altı düğme, ölçüldü).
+const YALNIZ = '×+＋−';
 const EMOJI = '\\u{1F300}-\\u{1FAFF}\\u{2693}';
 const G = '[' + GLIF + EMOJI + ']';
 const GO = '[' + GLIF + OK + EMOJI + ']';
@@ -52,7 +59,9 @@ const KONUM = [
   // etiketin sonu: gevşek ✓</span>, [s] ▾</button>
   ['son', new RegExp(B + '(' + G + ')' + B + '*</', 'gu')],
   // dizgenin sonu: 'Uyarılar 1 ▲', ' ⚠'
-  ['sonu', new RegExp(B + '(' + G + ')' + B + "*(['\"`])", 'gu')]
+  ['sonu', new RegExp(B + '(' + G + ')' + B + "*(['\"`])", 'gu')],
+  // öğenin tek içeriği: >×</button>, >+</div>, >−</button> (aynı satırda)
+  ['yalnız', new RegExp('>(?:[ \\t]|&nbsp;|&#160;)*([' + YALNIZ + '])(?:[ \\t]|&nbsp;|&#160;)*<', 'gu')]
 ];
 // CSS: sözde öğenin içeriği karakter ('✓', '\25be').
 const CSS_ICERIK = /content\s*:\s*(['"])((?:\\[0-9a-fA-F]{2,6}\s?)|[^'"\\])\1/g;
@@ -71,9 +80,23 @@ const DUZ_METIN = [
 // onu METİN diye işaretler. Sebep yazılır, yoksa işaret bir susturucu olur.
 const METIN_ISARETI = /\/\/\s*metin:\s*\S/;
 
-// Belge gövdesi üreten işlevler (dosya → işlev adları): indirilen/basılan
-// belgenin içi. Arayüz kabuğu (kapat, bölüm oku, düğme) BURADA DEĞİL.
-const BELGE = {};
+// Belge gövdesi üreten işlevler (dosya → işlev adları; "ad*" önektir):
+// indirilen/basılan belgenin içi. Arayüz kabuğu (kapat, bölüm oku, düğme)
+// BURADA DEĞİL — Sonuçlar'ın ekrandaki Detaylı raporu da değil: indirilen
+// belge onu kopyalamaz, `_veReportAssemble` ile ayrıca kurulur.
+const BELGE = {
+  'js/results.js': ['_veRepSec*', '_veReportAntet', '_veReportAssemble', '_veMakeReportHelpers']
+};
+// Dosyanın TAMAMI belge üreticisi; yalnız adı yazılı işlevler ARAYÜZDÜR
+// (müfettiş paneli, üretim bildirimi) ve taranır. Adı geçen işlev dosyada
+// yoksa tarama patlar — yeniden adlandırma panelin kapıdan sessizce
+// çıkması olurdu.
+const BELGE_DOSYA = {
+  'js/cp-mount-report.js': ['getMntReportPropertiesHTML', 'veMntGenerateReport'],
+  'js/cp-fead-report.js': ['getFeadReportPropertiesHTML', '_frKindPicker', '_frDocFields', '_frStatus',
+    'veFeadGenerateReport'],
+  'js/cp-fead-summary.js': []
+};
 
 // ── yorum sökücü ─────────────────────────────────────────────────────────────
 // Dizgeleri, şablon dizgelerini ve düzenli ifadeleri koruyarak // ve /* */
@@ -117,25 +140,41 @@ function yorumsuzCss(s) {
   return s.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
 }
 
-// Belge işlevlerinin gövdesini [başlangıç, bitiş) aralığı olarak bulur.
-function belgeAraliklari(f, s) {
+// Adı verilen işlevlerin gövdesini [başlangıç, bitiş) aralığı olarak bulur;
+// "ad*" o önekle başlayan her işlevdir. `kati`: dosyanın KENDİSİ taranıyor —
+// adı yazılı işlev yoksa patlar (bir parça taranırken olmayabilir).
+function islevAraliklari(f, s, adlar, tablo, kati) {
   const out = [];
-  (BELGE[f] || []).forEach((ad) => {
-    const i = s.indexOf('function ' + ad + '(');
-    if (i < 0) throw new Error(f + ': BELGE işlevi yok: ' + ad);
-    let j = s.indexOf('{', i), d = 0;
-    for (; j < s.length; j++) { if (s[j] === '{') d++; else if (s[j] === '}' && --d === 0) break; }
-    out.push([i, j + 1]);
+  adlar.forEach((ad) => {
+    const onek = ad.endsWith('*');
+    const re = new RegExp('function ' + ad.replace(/\*$/, '').replace(/\$/g, '\\$') + (onek ? '\\w*' : '') + '\\(', 'g');
+    let m, n = 0;
+    while ((m = re.exec(s))) {
+      let j = s.indexOf('{', m.index), d = 0;
+      for (; j < s.length; j++) { if (s[j] === '{') d++; else if (s[j] === '}' && --d === 0) break; }
+      out.push([m.index, j + 1]); n++;
+    }
+    if (!n && kati) throw new Error(f + ': ' + tablo + ' işlevi yok: ' + ad);
   });
   return out;
 }
+// Konum belge gövdesinde mi (tarama dışı)?
+function belgeMi(f, s, kati) {
+  const icinde = (r, at) => r.some(([a, b]) => at >= a && at < b);
+  if (BELGE_DOSYA[f]) {
+    const arayuz = islevAraliklari(f, s, BELGE_DOSYA[f], 'BELGE_DOSYA', kati);
+    return (at) => !icinde(arayuz, at);
+  }
+  const belge = islevAraliklari(f, s, BELGE[f] || [], 'BELGE', kati);
+  return (at) => icinde(belge, at);
+}
 
 function sapmalar(f) {
-  return tara(oku(f), f);
+  return tara(oku(f), f, { kati: true });
 }
 
 // Metni tarar; tür dosya adının uzantısından (.css / .html / .js).
-function tara(ham, f) {
+function tara(ham, f, opt) {
   let s = f.endsWith('.css') ? yorumsuzCss(ham) : f.endsWith('.html') ? yorumsuzHtml(ham) : yorumsuzJs(ham);
   // Kaçışla yazılmış karakter de karakterdir: '\u21bb CW' → '↻ CW'. Kaçış
   // görülmeseydi FEAD'in dönüş rozeti taramaya hiç girmiyordu (ölçüldü).
@@ -143,7 +182,7 @@ function tara(ham, f) {
   if (!f.endsWith('.css')) {
     s = s.replace(/\\u([0-9a-fA-F]{4})/g, (m, h) => {
       const ch = String.fromCharCode(parseInt(h, 16));
-      return (GLIF + OK).includes(ch) ? ch : m;
+      return (GLIF + OK + YALNIZ).includes(ch) ? ch : m;
     });
   }
   const satirlar = s.split('\n'), hamSatirlar = ham.split('\n');
@@ -158,11 +197,12 @@ function tara(ham, f) {
     }
     return out;
   }
-  const belge = belgeAraliklari(f, s);
+  const belge = belgeMi(f, s, !!(opt && opt.kati));
   for (const [konum, re] of KONUM) {
     let m; re.lastIndex = 0;
     while ((m = re.exec(s))) {
-      const ch = m[m.length - 1].length <= 2 && new RegExp(GO, 'u').test(m[m.length - 1]) ? m[m.length - 1] : m[konum === 'sonu' ? 1 : m.length - 1];
+      const ch = konum === 'yalnız' ? m[1]
+        : m[m.length - 1].length <= 2 && new RegExp(GO, 'u').test(m[m.length - 1]) ? m[m.length - 1] : m[konum === 'sonu' ? 1 : m.length - 1];
       const at = m.index + m[0].indexOf(ch);
       if (gor.has(at)) continue;
       const no = satirNo(at), satir = satirlar[no - 1];
@@ -171,7 +211,7 @@ function tara(ham, f) {
       if (s.slice(Math.max(0, at - 5), at) === '<kbd>') continue;          // tuşun adı (↑ ↓ ↵)
       // iki yanı boşluklu ok bir ayraç ya da bağıntıdır: .join(' → '), ' → ' + mod
       if (OK.includes(ch) && /^\s/.test(s.slice(at - 1, at)) && /^\s/.test(s.slice(at + 1, at + 2))) continue;
-      if (belge.some(([a, b]) => at >= a && at < b)) continue;
+      if (belge(at)) continue;
       gor.add(at);
       out.push({ dosya: f, satir: no, konum, glif: ch, metin: satir.trim().slice(0, 140) });
     }
@@ -179,7 +219,8 @@ function tara(ham, f) {
   return out.sort((a, b) => a.satir - b.satir);
 }
 
-module.exports = { sapmalar, tara, yorumsuzJs, yorumsuzHtml, yorumsuzCss, GLIF, OK, BELGE, DUZ_METIN, METIN_ISARETI };
+module.exports = { sapmalar, tara, yorumsuzJs, yorumsuzHtml, yorumsuzCss, GLIF, OK, YALNIZ, BELGE, BELGE_DOSYA,
+  DUZ_METIN, METIN_ISARETI };
 
 if (require.main === module) {
   let n = 0;

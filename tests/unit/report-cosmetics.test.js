@@ -234,14 +234,33 @@ describe('Rapor kapağı projenin TAM adını taşır', () => {
   // makul görünen yanlış çıktı: kimse raporun adının kırpıldığını fark etmez.
   const indirici = src.slice(src.indexOf('function veDownloadReportHTML('));
   const okuma = indirici.slice(0, indirici.indexOf('var now = new Date()'));
+  // TEK OKUYUCU (veProjeAdi): ağacın kökü de aynı adı yazar. Eskiden ağaç
+  // textContent'ten okuyup "…"lu adı basıyordu, kapak title'dan tam adı.
+  const veProjeAdi = (() => {
+    const i = src.indexOf('function veProjeAdi(');
+    return new Function(src.slice(i, src.indexOf('\n}\n', i) + 2) + '\nreturn veProjeAdi;')();
+  })();
+  const dugme = (title, yazi) => {
+    document.body.innerHTML = '<span id="ve-project-name-btn"></span>';
+    const b = document.getElementById('ve-project-name-btn');
+    if (title != null) b.setAttribute('title', title);
+    b.textContent = yazi;
+  };
 
-  test('ad title niteliğinden okunuyor', () => {
-    expect(okuma).toMatch(/pnBtn\.getAttribute\('title'\)/);
+  test('ad title niteliğinden okunuyor — kısaltılmış yazıdan değil', () => {
+    dugme('Taktik Tekerlekli Araç 8x8', 'Taktik Tekerlekli Ar…');
+    expect(veProjeAdi()).toBe('Taktik Tekerlekli Araç 8x8');
+    expect(okuma).toMatch(/veProjeAdi\(\)/);
+    expect(src.match(/getElementById\('ve-project-name-btn'\)/g)).toHaveLength(1);   // ikinci okuyucu yok
   });
 
-  test('textContent yalnız yedek (title yoksa) olarak kalıyor', () => {
-    // '||' zinciri: önce title, sonra textContent.
-    expect(okuma).toMatch(/getAttribute\('title'\)\s*\|\|\s*pnBtn\.textContent/);
+  test('textContent yalnız yedek (title yoksa); "MFSim" ad yok demek', () => {
+    dugme(null, 'Deneme');
+    expect(veProjeAdi()).toBe('Deneme');
+    dugme('MFSim', 'MFSim');
+    expect(veProjeAdi()).toBe('');
+    document.body.innerHTML = '';
+    expect(veProjeAdi()).toBe('');
   });
 
   test('kısaltma gerçekten toolbar.js tarafında yapılıyor (gerekçe canlı)', () => {

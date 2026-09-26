@@ -268,8 +268,10 @@ function cdbRenderFrames() {
   h += '<select class="cdb-sel" data-frames-msg>' + opts + '</select>';
   h += '<span class="cdb-alt-lbl">' + cdbThousands(total) + ' kare · sayfa ' + (page + 1) + '/' + pages + '</span>';
   h += '<span style="flex:1"></span>';
-  if (page > 0) h += '<button class="ve-trace-btn" data-page="' + (page - 1) + '">◀ Önceki</button>';
-  if (page < pages - 1) h += '<button class="ve-trace-btn" data-page="' + (page + 1) + '">Sonraki ▶</button>';
+  if (page > 0) h += '<button class="ve-trace-btn" data-page="' + (page - 1) + '">' +
+    '<span class="mf-ico mf-ico-chevron-left" aria-hidden="true"></span>Önceki</button>';
+  if (page < pages - 1) h += '<button class="ve-trace-btn" data-page="' + (page + 1) + '">Sonraki' +
+    '<span class="mf-ico mf-ico-chevron-right" aria-hidden="true"></span></button>';
   h += '</div>';
 
   h += '<table class="cdb-table"><thead><tr>' +

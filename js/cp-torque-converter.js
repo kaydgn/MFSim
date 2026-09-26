@@ -839,7 +839,7 @@ function getVETCRowHTML(nodeId, sr, kpump, tau) {
   var etaVal = (sr !== '' && sr !== undefined && tau !== '' && tau !== undefined) ? (parseFloat(sr) * parseFloat(tau) * 100) : '';
   var etaStr = (!isNaN(etaVal) && etaVal !== '') ? etaVal.toFixed(1) : '';
   html += '<td class="tight"><input type="text" class="f" value="' + etaStr + '" readonly tabindex="-1"></td>';
-  html += '<td class="tight"><button class="ve-row-del" onclick="removeVETCRow(this, \'' + nodeId + '\')" title="Satırı sil">×</button></td>';
+  html += '<td class="tight"><button class="ve-row-del" onclick="removeVETCRow(this, \'' + nodeId + '\')" title="Satırı sil">' + veIkon('x') + '</button></td>';
   html += '</tr>';
   return html;
 }

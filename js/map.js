@@ -2605,7 +2605,7 @@ function veExpandProfileChart(nodeId, chartType) {
     '<option value="3"' + (curSmooth === 3 ? ' selected' : '') + '>SavGol güçlü</option>' +
     '</select></div>' +
     '<button onclick="veUpdateProfilesExpanded(\'' + nodeId + '\')" style="padding:4px 10px; font-size:var(--fs-tiny); font-weight:600; background:color-mix(in srgb, var(--accent-success) 65%, #000); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">Güncelle</button>' +
-    '<button onclick="veAltReverseDirection(\'' + nodeId + '\')" style="padding:4px 10px; font-size:var(--fs-tiny); font-weight:600; background:var(--accent-primary); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">↔ Yönü çevir</button>' +
+    '<button onclick="veAltReverseDirection(\'' + nodeId + '\')" style="padding:4px 10px; font-size:var(--fs-tiny); font-weight:600; background:var(--accent-primary); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">' + veIkon('arrow-left-right') + ' Yönü çevir</button>' +
     '<button onclick="veCloseProfileModal()" title="Kapat (ESC)" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-lg); color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\'">' + veIkon('x') + '</button></div>';
   modal.appendChild(header);
 

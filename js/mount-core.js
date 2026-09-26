@@ -789,7 +789,7 @@ var veMountCore = (function() {
       modes.push({
         f_Hz: f,
         phi,
-        label: nearZero ? 'serbest mod (f≈0) ⚠' : classifyMode(phi, relMounts),
+        label: nearZero ? 'serbest mod (f≈0) ⚠' : classifyMode(phi, relMounts),   // metin: modun ADI — tuvale, belgeye ve yoruma düz metin gider
         warning: nearZero
           ? 'Sıfıra yakın frekans: yapılandırma kinematik olarak serbest olabilir.'
           : undefined

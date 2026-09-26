@@ -318,12 +318,7 @@ function veUpdateResultsTree() {
   // Solver tab bar'ı güncelle
   veUpdateSolverTabs();
 
-  var projectName = 'MFSim Projesi';
-  var nameBtn = document.getElementById('ve-project-name-btn');
-  if(nameBtn) {
-    var t = nameBtn.textContent.replace('⚙','').replace('▾','').trim();
-    if(t && t !== 'MFSim') projectName = t;
-  }
+  var projectName = veProjeAdi() || 'MFSim Projesi';
 
   // Aktif sekmeyi kaydet (güncel nodes/connections). Alt-topoloji içindeyken sonuç
   // ağacı yenilenirse kullanıcı köke atılmasın diye görünümü koruyan varyant.
@@ -368,7 +363,7 @@ function veUpdateResultsTree() {
 
     html += '<div class="ve-tree-item">';
     html += '<div class="ve-tree-row">';
-    html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span>' +
+    html += veAgacOk(true) +
             '<span class="icon"><span class="mf-ico mf-ico-' + _resSrc.ikon + '"></span></span>' +
             '<span style="font-weight:600;">' + escapeHTML(_resSrc.ad) + '</span>';
     if(resChannelCount > 0) {
@@ -405,7 +400,7 @@ function veUpdateResultsTree() {
 
   html += '<div class="ve-tree-item">';
   html += '<div class="ve-tree-row">';
-  html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span><span class="icon"><span class="mf-ico mf-ico-folder"></span></span><span style="font-weight:600;">' + projectName + '</span>';
+  html += veAgacOk(true) + '<span class="icon"><span class="mf-ico mf-ico-folder"></span></span><span style="font-weight:600;">' + escapeHTML(projectName) + '</span>';
   html += '</div>';
   html += '<div class="ve-tree-children open">';
 
@@ -447,7 +442,7 @@ function veUpdateResultsTree() {
 
     html += '<div class="ve-tree-item">';
     html += '<div class="ve-tree-row" style="padding-left:16px;">';
-    html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' + (totalSensorCount > 0 ? '▶' : ' ') + '</span>';
+    html += totalSensorCount > 0 ? veAgacOk(false) : '<span class="arrow" onclick="veToggleTree(this.parentElement)"></span>';
     html += '<span class="icon">' + tabIcon + '</span>';
     html += '<span style="font-weight:' + (isActive ? '600' : '400') + ';' + (isActive ? 'color:var(--ink-accent);' : '') + '">' + tabLabel + '</span>';
     // Sayaç artık sensör değil SİNYAL sayar: listede görünen satır sayısıyla
@@ -505,7 +500,7 @@ function veUpdateResultsTree() {
       html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
       html += '<div class="ve-tree-item">';
       html += '<div class="ve-tree-row" style="display:flex; align-items:center; gap:4px;">';
-      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span>';
+      html += veAgacOk(true);
       html += '<span class="icon"><span class="mf-ico mf-ico-upload"></span></span>';
       html += '<span style="font-weight:600;">İçe aktarılan ölçümler</span>';
       html += ' <span class="ve-tree-count">' +
@@ -524,7 +519,7 @@ function veUpdateResultsTree() {
           html += veSigGroupHTML(g, _targetSlot, veSigState.query);
           // Veri kümesini kaldırma: grup başlığının altında, sönük bir satır.
           html += '<div class="vsig-orphan" style="cursor:pointer;" title="Bu ölçüm dosyasını oturumdan kaldır"' +
-                  ' onclick="veImpDropDataset(\'' + escapeHTML(g._import) + '\')">✕ ' +
+                  ' onclick="veImpDropDataset(\'' + escapeHTML(g._import) + '\')">' + veIkon('x') + ' ' +
                   escapeHTML(g.name) + ' — kaldır</div>';
         });
       }
@@ -558,7 +553,7 @@ function veUpdateResultsTree() {
       // VARSAYILAN KAPALI: paket sayısı arttıkça (55 diyagram) ağaç açılışta
       // ekranı dolduruyor, altındaki raporlar aşağı kayıyordu. Kullanıcı oku
       // tıklayınca açılır; sayı zaten sağda görünüyor.
-      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
+      html += veAgacOk(false);
       html += '<span class="icon"><span class="mf-ico mf-ico-bar-chart"></span></span>';
       html += '<span style="font-weight:600;">Diyagramlar</span>';
       html += ' <span class="ve-tree-count">' + totalDiags + '</span>';
@@ -571,7 +566,7 @@ function veUpdateResultsTree() {
 
         html += '<div class="ve-tree-item">';
         html += '<div class="ve-tree-row" style="padding-left:16px;">';
-        html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
+        html += veAgacOk(false);
         html += '<span>' + pkg.name + '</span>';
         html += ' <span class="ve-tree-count">' + pkg.diagrams.length + '</span>';
         html += '</div>';
@@ -606,7 +601,7 @@ function veUpdateResultsTree() {
           var diagIcon = canDrag ? (is3dDiag ? '<span class="mf-ico mf-ico-package"></span>' : '<span class="mf-ico mf-ico-trending-up"></span>') : '<span class="mf-ico mf-ico-lock"></span>';
           html += '<div class="ve-tree-signal" style="padding-left:32px; ' + diagStyle + '"' + dragAttr + ' title="' + diag.name + reason + '">';
           html += diagIcon + ' ' + diag.name;
-          if(diag.note) html += ' <span style="color:var(--accent-warning);">⚠</span>';
+          if(diag.note) html += ' ' + veDurumIkon('warn', 'Bu diyagramın notu var');
           html += '</div>';
         });
 
@@ -625,14 +620,14 @@ function veUpdateResultsTree() {
     if(_activeTab === 'performance') {
       html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
       html += '<div class="ve-tree-row" style="cursor:pointer; display:flex; align-items:center; gap:4px;">';
-      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
+      html += veAgacOk(false);
       html += '<span onclick="veRenderDetailedReport()" style="display:flex; align-items:center; gap:4px; flex:1;" title="Tüm raporu görüntüle">';
       html += '<span class="icon"><span class="mf-ico mf-ico-clipboard"></span></span><span style="font-weight:600; color:var(--accent-primary);">Detaylı rapor</span></span>';
       html += '</div>';
       html += '<div class="ve-tree-children">';
       // Girdi Özeti group
       html += '<div class="ve-tree-row" style="cursor:pointer; padding-left:10px; display:flex; align-items:center; gap:4px;">';
-      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
+      html += veAgacOk(false);
       html += '<span onclick="veRenderDetailedReport(\'girdi\')" style="display:flex; align-items:center; gap:4px; flex:1;" title="Girdi özeti">';
       html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span>Girdi özeti</span></span></div>';
       html += '<div class="ve-tree-children">';
@@ -650,7 +645,7 @@ function veUpdateResultsTree() {
       html += '</div>';
       // Araç Performans Özeti group
       html += '<div class="ve-tree-row" style="cursor:pointer; padding-left:10px; display:flex; align-items:center; gap:4px;">';
-      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
+      html += veAgacOk(false);
       html += '<span onclick="veRenderDetailedReport(\'performans\')" style="display:flex; align-items:center; gap:4px; flex:1;" title="Araç Performans özeti">';
       html += '<span class="icon"><span class="mf-ico mf-ico-bar-chart"></span></span><span>Araç Performans özeti</span></span></div>';
       html += '<div class="ve-tree-children">';
@@ -747,12 +742,28 @@ function veMntTreeReportHTML() {
   return h;
 }
 
+// Projenin TAM adı ('' = ad yok). veSetProjectNameButton (toolbar.js) 22
+// karakterden uzun adı ekranda "…" ile kısaltıyor; tam hâli title'da.
+function veProjeAdi() {
+  var b = document.getElementById('ve-project-name-btn');
+  var t = b ? String(b.getAttribute('title') || b.textContent || '').trim() : '';
+  return (t && t !== 'MFSim') ? t : '';
+}
+
+// Ağaç satırının aç/kapa oku (karar 10·B): kapalıyken sağa, açıkken aşağı.
+function veAgacOk(acik) {
+  return '<span class="arrow" onclick="veToggleTree(this.parentElement)">' +
+         veIkon(acik ? 'chevron-down' : 'chevron-right') + '</span>';
+}
+
+// Görüntüleyicide (viewer/js/board.js) BİREBİR kopya — orada js/ikon.js yok,
+// bu yüzden ikonun sınıfı veIkonDegis'siz yazılır (viewer/sync.js denetler).
 function veToggleTree(el) {
   var children = el.nextElementSibling;
   if(!children || !children.classList.contains('ve-tree-children')) return;
   children.classList.toggle('open');
-  var arrow = el.querySelector('.arrow');
-  if(arrow) arrow.textContent = children.classList.contains('open') ? '▼' : '▶';
+  var ok = el.querySelector('.arrow > .mf-ico');
+  if(ok) ok.className = 'mf-ico mf-ico-' + (children.classList.contains('open') ? 'chevron-down' : 'chevron-right');
 }
 
 function veToggleGirdiOzeti(hdrEl) {
@@ -764,7 +775,7 @@ function veToggleGirdiOzeti(hdrEl) {
     body.style.maxHeight = '0px';
     body.style.opacity = '0';
     body.classList.remove('dr-girdi-open');
-    if(arrow) arrow.textContent = '▼';
+    veIkonDegis(arrow, 'chevron-down');
     setTimeout(function(){ if(!body.classList.contains('dr-girdi-open')) body.style.display = 'none'; }, 450);
   } else {
     body.style.display = 'block';
@@ -775,7 +786,7 @@ function veToggleGirdiOzeti(hdrEl) {
     body.style.maxHeight = h + 'px';
     body.style.opacity = '1';
     body.classList.add('dr-girdi-open');
-    if(arrow) arrow.textContent = '▲';
+    veIkonDegis(arrow, 'chevron-up');
     setTimeout(function(){ if(body.classList.contains('dr-girdi-open')) body.style.maxHeight = 'none'; }, 470);
   }
 }
@@ -793,7 +804,7 @@ function veToggleReportSection(hdrEl) {
     body.style.maxHeight = h + 'px';
     body.style.opacity = '1';
     body.classList.add('dr-open');
-    if(arrow) arrow.textContent = '▼';
+    veIkonDegis(arrow, 'chevron-down');
     // Animasyon bitince maxHeight kaldır + canvas'ları yeniden çiz
     setTimeout(function(){
       if(body.classList.contains('dr-open')) {
@@ -827,7 +838,7 @@ function veToggleReportSection(hdrEl) {
     body.style.maxHeight = '0px';
     body.style.opacity = '0';
     body.classList.remove('dr-open');
-    if(arrow) arrow.textContent = '▶';
+    veIkonDegis(arrow, 'chevron-right');
     setTimeout(function(){ if(!body.classList.contains('dr-open')) body.style.display = 'none'; }, 400);
   }
 }
@@ -1144,8 +1155,8 @@ function veRenderDetailedReport(filter) {
     ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Governed devir</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + _gov + ' rpm</td></tr>';
     ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Pompa düşümü</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + _pDrop + ' N·m</td></tr>';
     ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Türbin limiti</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + _tRating + ' N·m</td></tr>';
-    if(_rGbLimits.grossInputPower !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Giriş güç limiti (C9)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc9ok ? 'var(--text-primary)' : 'var(--accent-danger)') + '; font-size:var(--fs-md);">' + _rPowerAtGov.toFixed(0) + ' / ' + _rGbLimits.grossInputPower + ' kW ' + (_rc9ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + '</td></tr>';
-    if(_rGbLimits.grossInputTorque !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Giriş tork limiti (C10)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc10ok ? 'var(--text-primary)' : 'var(--accent-danger)') + '; font-size:var(--fs-md);">' + _rTorqueAtGov.toFixed(0) + ' / ' + _rGbLimits.grossInputTorque + ' N·m ' + (_rc10ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + '</td></tr>';
+    if(_rGbLimits.grossInputPower !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Giriş güç limiti (C9)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc9ok ? 'var(--text-primary)' : 'var(--accent-danger)') + '; font-size:var(--fs-md);">' + _rPowerAtGov.toFixed(0) + ' / ' + _rGbLimits.grossInputPower + ' kW ' + (_rc9ok ? veDurumIkon('ok') : veDurumIkon('err')) + '</td></tr>';
+    if(_rGbLimits.grossInputTorque !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Giriş tork limiti (C10)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc10ok ? 'var(--text-primary)' : 'var(--accent-danger)') + '; font-size:var(--fs-md);">' + _rTorqueAtGov.toFixed(0) + ' / ' + _rGbLimits.grossInputTorque + ' N·m ' + (_rc10ok ? veDurumIkon('ok') : veDurumIkon('err')) + '</td></tr>';
     ecmHTML += '</table>';
     
     // Tablo
@@ -1160,7 +1171,9 @@ function veRenderDetailedReport(filter) {
     ecmHTML += '</tr></thead><tbody>';
     
     _ecmResults.forEach(function(r, idx){
-      var stI = r.status==='recommended'?'<span style="color:var(--accent-success);font-weight:700;">✓</span>':r.status==='caution'?'<span style="color:var(--accent-warning);font-weight:700;">⚠</span>':r.status==='not-recommended'?'<span style="color:var(--accent-warning);font-weight:700;">⚠</span>':'<span style="color:var(--accent-danger);font-weight:700;">✗</span>';
+      // Yanında durumun ADI yazılı: ikon süstür, rengini hücreden (stC) alır.
+      var stI = veIkon(r.status==='recommended' ? 'check'
+        : (r.status==='caution' || r.status==='not-recommended') ? 'alert-triangle' : 'x');
       var stT = r.status==='recommended'?'Önerilen':r.status==='caution'?'Dikkat':r.status==='not-recommended'?'Önerilmez':'Uyumsuz';
       var stC = r.status==='recommended'?'var(--accent-success)':r.status==='caution'?'var(--accent-warning)':r.status==='not-recommended'?'var(--accent-warning)':'var(--accent-danger)';
       var td = function(v,c,al){return '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:'+(al||'center')+'; color:'+(c||'var(--text-primary)')+';">'+v+'</td>';};
@@ -1169,7 +1182,8 @@ function veRenderDetailedReport(filter) {
       ecmHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); font-weight:600; color:var(--text-primary);">'+r.name+'</td>';
       ecmHTML += td(r.stallTau.toFixed(2), null, 'right') + td(r.stallSpeed.toFixed(0), null, 'right') + td(r.minSpeed.toFixed(0), r.c5ok?'var(--text-primary)':'var(--accent-danger)', 'right');
       ecmHTML += td(r.tTurbineStall.toFixed(0), r.c7ok?'var(--text-primary)':'var(--accent-danger)', 'right') + td(r.srGov.toFixed(3), r.c8ok?'var(--text-primary)':'var(--accent-warning)', 'right');
-      ecmHTML += td(r.c5ok?'<span style="color:var(--accent-success);font-weight:700;">✓</span>':'<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + td(r.c7ok?'<span style="color:var(--accent-success);font-weight:700;">✓</span>':'<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + td(r.c8ok?'<span style="color:var(--accent-success);font-weight:700;">✓</span>':'<span style="color:var(--accent-warning);font-weight:700;">⚠</span>');
+      ecmHTML += td(r.c5ok ? veDurumIkon('ok') : veDurumIkon('err')) + td(r.c7ok ? veDurumIkon('ok') : veDurumIkon('err'))
+               + td(r.c8ok ? veDurumIkon('ok') : veDurumIkon('warn'));
       ecmHTML += '</tr>';
     });
     ecmHTML += '</tbody></table></div>';
@@ -1211,11 +1225,11 @@ function veRenderDetailedReport(filter) {
   html += veRepHeadHTML({
     icon: 'clipboard',
     title: reportTitle,
-    back: filter ? { onclick: 'veRenderDetailedReport()', label: '← Tüm rapor' } : null,
+    back: filter ? { onclick: 'veRenderDetailedReport()', icon: 'arrow-left', label: 'Tüm rapor' } : null,
     actions: [
       { onclick: 'veDownloadReportHTML()', icon: 'download', label: 'HTML indir',
         title: 'Bağımsız, baskıya hazır HTML rapor indir' },
-      { onclick: 'veCloseDetailedReport()', label: '✕ Kapat', danger: true }
+      { onclick: 'veCloseDetailedReport()', icon: 'x', label: 'Kapat', danger: true }
     ]
   });
   
@@ -1229,7 +1243,7 @@ function veRenderDetailedReport(filter) {
   
   // Girdi Özeti ana başlık
   html += '<div style="padding:12px 18px; font-size:var(--fs-title); font-weight:400; color:var(--text-primary); border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="veToggleGirdiOzeti(this)">';
-  html += '<span>Girdi özeti</span><span class="dr-gs-arrow" style="font-size:var(--fs-tiny); color:var(--text-muted); transition:transform 0.35s ease;">▲</span></div>';
+  html += '<span>Girdi özeti</span>' + veIkon('chevron-up', 'dr-gs-arrow') + '</div>';
   html += '<div class="dr-girdi-wrapper dr-girdi-open">';
   
   sections.forEach(function(s) {
@@ -1238,7 +1252,7 @@ function veRenderDetailedReport(filter) {
     // If single section filter, auto-expand it
     var autoOpen = (!showAll && !isGirdi);
     html += '<div class="dr-section" data-section="' + s.id + '">';
-    html += '<div class="dr-hdr" onclick="veToggleReportSection(this)"><span class="dr-arrow">' + (autoOpen ? '▼' : '▶') + '</span>' + s.title + '</div>';
+    html += '<div class="dr-hdr" onclick="veToggleReportSection(this)">' + veIkon(autoOpen ? 'chevron-down' : 'chevron-right', 'dr-arrow') + s.title + '</div>';
     html += '<div class="dr-body" style="display:' + (autoOpen ? 'block' : 'none') + ';">' + bodyContent + '</div>';
     html += '</div>';
   });
@@ -1251,7 +1265,7 @@ function veRenderDetailedReport(filter) {
   if(showPerf) {
   html += '<div style="max-width:1100px; margin:16px auto 0; background:var(--bg-secondary); border-radius:var(--radius-sm); box-shadow:0 1px 6px rgba(0,0,0,0.12); overflow:hidden;">';
   html += '<div style="padding:12px 18px; font-size:var(--fs-title); font-weight:400; color:var(--text-primary); border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="veToggleGirdiOzeti(this)">';
-  html += '<span>Araç Performans özeti</span><span class="dr-gs-arrow" style="font-size:var(--fs-tiny); color:var(--text-muted); transition:transform 0.35s ease;">▲</span></div>';
+  html += '<span>Araç Performans özeti</span>' + veIkon('chevron-up', 'dr-gs-arrow') + '</div>';
   html += '<div class="dr-girdi-wrapper dr-girdi-open">';
   
   // Tam Gaz Otomatik Vites Artışı (Eğim Kabiliyeti)
@@ -1331,7 +1345,7 @@ function veRenderDetailedReport(filter) {
   if(shouldShow('ft-grade')) {
   var gradeAutoOpen = (filter === 'ft-grade');
   html += '<div class="dr-section" data-section="ft-grade">';
-  html += '<div class="dr-hdr" onclick="veToggleReportSection(this)"><span class="dr-arrow">' + (gradeAutoOpen ? '▼' : '▶') + '</span>TAM GAZ OTOMATİK VİTES ARTIŞI (EĞİM KABİLİYETİ)</div>';
+  html += '<div class="dr-hdr" onclick="veToggleReportSection(this)">' + veIkon(gradeAutoOpen ? 'chevron-down' : 'chevron-right', 'dr-arrow') + 'TAM GAZ OTOMATİK VİTES ARTIŞI (EĞİM KABİLİYETİ)</div>';
   html += '<div class="dr-body" style="display:' + (gradeAutoOpen ? 'block' : 'none') + ';">' + ftGradeHTML + '</div>';
   html += '</div>';
   }
@@ -1408,7 +1422,7 @@ function veRenderDetailedReport(filter) {
   if(shouldShow('ft-accel')) {
   var accelAutoOpen = (filter === 'ft-accel');
   html += '<div class="dr-section" data-section="ft-accel">';
-  html += '<div class="dr-hdr" onclick="veToggleReportSection(this)"><span class="dr-arrow">' + (accelAutoOpen ? '▼' : '▶') + '</span>TAM GAZ OTOMATİK VİTES ARTIŞI (HIZLANMA)</div>';
+  html += '<div class="dr-hdr" onclick="veToggleReportSection(this)">' + veIkon(accelAutoOpen ? 'chevron-down' : 'chevron-right', 'dr-arrow') + 'TAM GAZ OTOMATİK VİTES ARTIŞI (HIZLANMA)</div>';
   html += '<div class="dr-body" style="display:' + (accelAutoOpen ? 'block' : 'none') + ';">' + ftAccelHTML + '</div>';
   html += '</div>';
   }
@@ -1418,7 +1432,7 @@ function veRenderDetailedReport(filter) {
   var upshiftsAutoOpen = (filter === 'ft-upshifts');
   var ftUpHTML = veBuildFTUpshiftsHTML(sim, R);
   html += '<div class="dr-section" data-section="ft-upshifts">';
-  html += '<div class="dr-hdr" onclick="veToggleReportSection(this)"><span class="dr-arrow">' + (upshiftsAutoOpen ? '▼' : '▶') + '</span>TAM GAZ OTOMATİK VİTES GEÇİŞLERİ (DETAYLI)</div>';
+  html += '<div class="dr-hdr" onclick="veToggleReportSection(this)">' + veIkon(upshiftsAutoOpen ? 'chevron-down' : 'chevron-right', 'dr-arrow') + 'TAM GAZ OTOMATİK VİTES GEÇİŞLERİ (DETAYLI)</div>';
   html += '<div class="dr-body" style="display:' + (upshiftsAutoOpen ? 'block' : 'none') + ';">' + ftUpHTML + '</div>';
   html += '</div>';
   }
@@ -2071,7 +2085,7 @@ function _drChartMouseMove(e) {
         html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Segment ' + (si + 1) + '</div>';
         html += '<div>Mesafe: <b style="color:#60a5fa;">' + segLabel + '</b></div>';
         html += '<div>Uzunluk: <b style="color:#60a5fa;">' + dps[si].mesafe.toFixed(0) + '</b> m</div>';
-        html += '<div>Eğim: <b style="color:' + (dps[si].grade > 0.5 ? '#4caf50' : (dps[si].grade < -0.5 ? '#ef5350' : '#8b95a5')) + ';">' + (dps[si].grade > 0 ? '↓' : (dps[si].grade < 0 ? '↑' : '→')) + ' %' + dps[si].grade.toFixed(1) + '</b></div>';
+        html += '<div>Eğim: <b style="color:' + (dps[si].grade > 0.5 ? '#4caf50' : (dps[si].grade < -0.5 ? '#ef5350' : '#8b95a5')) + ';">' + veIkon(dps[si].grade > 0 ? 'trending-down' : (dps[si].grade < 0 ? 'trending-up' : 'arrow-right')) + ' %' + dps[si].grade.toFixed(1) + '</b></div>';
         html += '<div>Δh: <b style="color:#60a5fa;">' + dps[si].deltaH.toFixed(1) + '</b> m</div>';
         break;
       }
@@ -2483,14 +2497,13 @@ function veRepHeadHTML(opt) {
        '"></span> ' + escapeHTML(String(opt.title || '')) + '</span>';
   if(opt.back) {
     h += '<button class="ve-trace-btn" onclick="' + opt.back.onclick + '">' +
-         escapeHTML(String(opt.back.label)) + '</button>';
+         (opt.back.icon ? veIkon(opt.back.icon) : '') + escapeHTML(String(opt.back.label)) + '</button>';
   }
   h += '<span class="ve-rep-head-actions">';
   (opt.actions || []).forEach(function(a) {
     h += '<button class="ve-trace-btn' + (a.danger ? ' danger' : '') + '" onclick="' + a.onclick + '"' +
          (a.title ? ' title="' + escapeHTML(String(a.title)) + '"' : '') + '>' +
-         (a.icon ? '<span class="mf-ico mf-ico-' + a.icon + '"></span>' : '') +
-         escapeHTML(String(a.label)) + '</button>';
+         (a.icon ? veIkon(a.icon) : '') + escapeHTML(String(a.label)) + '</button>';
   });
   h += '</span></div>';
   return h;
@@ -2502,12 +2515,12 @@ function veTxtPreviewHTML(title, txtContent) {
   return veRepHeadHTML({
     icon: 'file-text',
     title: title,
-    back: { onclick: 'veRenderDetailedReport()', label: '← Detaylı rapor' },
+    back: { onclick: 'veRenderDetailedReport()', icon: 'arrow-left', label: 'Detaylı rapor' },
     actions: [
       { onclick: 'veDownloadTXTPreviewAsHTML()', icon: 'download', label: 'HTML indir',
         title: 'Ekrandaki TXT raporunu bağımsız HTML olarak indir' },
       { onclick: 'veDownloadTXTFromPreview()', icon: 'download', label: 'TXT indir' },
-      { onclick: 'veCloseDetailedReport()', label: '✕ Kapat', danger: true }
+      { onclick: 'veCloseDetailedReport()', icon: 'x', label: 'Kapat', danger: true }
     ]
   }) + veTxtDocHTML(txtContent);
 }
@@ -2692,11 +2705,13 @@ function veDownloadTXTFromPreview() {
   ov.addEventListener('mousedown', function(e) { if(e.target === ov) ov.remove(); });
 
   var box = document.createElement('div');
-  box.style.cssText = 'width:340px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+  box.className = 've-mini-pencere';
+  box.style.width = '340px';
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-label', 'TXT rapor indir');
   box.innerHTML = '' +
-    '<div style="padding:10px 14px; background:linear-gradient(135deg, #1a365d 0%, #2c5282 100%); display:flex; align-items:center; justify-content:space-between;">' +
-      '<span style="font-size:var(--fs-lg); font-weight:700; color:#e2e8f0;"><span class="mf-ico mf-ico-download"></span> TXT rapor indir</span>' +
-      '<button onclick="document.getElementById(\'ve-txt-author-overlay\').remove()" style="width:24px; height:24px; background:transparent; border:1px solid rgba(255,255,255,0.2); border-radius:var(--radius-sm); color:#e2e8f0; cursor:pointer; font-size:var(--fs-lg);">✕</button>' +
+    '<div class="ve-settings-header"><span>' + veIkon('download') + ' TXT rapor indir</span>' +
+      '<button class="ve-settings-close" type="button" title="Kapat" aria-label="Kapat" onclick="document.getElementById(\'ve-txt-author-overlay\').remove()">' + veIkon('x') + '</button>' +
     '</div>' +
     '<div style="padding:14px 16px;">' +
       '<label style="color:var(--text-muted); font-size:var(--fs-body); display:block; margin-bottom:3px;">Yazar adı:</label>' +
@@ -4156,7 +4171,7 @@ function veDownloadReportHTML() {
         Array.prototype.forEach.call(allBodies, function(b, i) { b.style.display = prevStates[i]; });
         Array.prototype.forEach.call(overlay.querySelectorAll('.dr-arrow'), function(a) {
           var sec = a.closest('.dr-section');
-          if(sec) { var body = sec.querySelector('.dr-body'); a.textContent = (body && body.style.display !== 'none') ? '▼' : '▶'; }
+          if(sec) { var body = sec.querySelector('.dr-body'); veIkonDegis(a, (body && body.style.display !== 'none') ? 'chevron-down' : 'chevron-right'); }
         });
         _drTC = _savedTC;
         _drawReportCharts();
@@ -4182,11 +4197,8 @@ function veDownloadReportHTML() {
           // adına kesik ismi taşıyordu: "Taktik Tekerlekli Araç 8x8" →
           // "Taktik Tekerlekli Ar". Kapak, ekrandaki kırpmayı değil projenin
           // gerçek adını yazmalı.
-          var pnBtn = document.getElementById('ve-project-name-btn');
-          if(pnBtn) {
-            var pn = (pnBtn.getAttribute('title') || pnBtn.textContent || '').replace(/[⚙▾…]/g, '').trim();
-            if(pn && pn !== 'MFSim') projectName = pn;
-          }
+          var pn = veProjeAdi();
+          if(pn) projectName = pn;
         } catch(e) {}
 
         var now = new Date();
@@ -5678,7 +5690,7 @@ function veRenderSlot(slotIdx) {
       html += '<span class="ve-legend-color-line" style="background:' + c + ';"></span>';
       html += '<span class="ve-legend-name">' + escapeHTML(s.name) + '</span>';
       if(s.unit) html += '<span class="ve-legend-unit">' + escapeHTML(s.unit) + '</span>';
-      html += '<span class="ve-legend-remove" onclick="event.stopPropagation();veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
+      html += '<span class="ve-legend-remove" onclick="event.stopPropagation();veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">' + veIkon('x') + '</span>';
       html += '</span>';
     });
     if(sensors.length === 2) {
@@ -5993,7 +6005,7 @@ function veShowXAxisPicker(slotIdx, e) {
     html += '<div class="ve-xaxis-dropdown-item' + (opt.active ? ' active' : '') + '" ';
     html += 'onclick="veSetSlotXAxis(' + slotIdx + ',' + i + ');event.stopPropagation();" ';
     html += 'data-opt-idx="' + i + '">';
-    html += '<span>' + (opt.active ? '● ' : '') + escapeHTML(opt.name) + '</span>';
+    html += '<span>' + (opt.active ? veIkon('check', 've-xaxis-tik') + ' ' : '') + escapeHTML(opt.name) + '</span>';
     if(opt.unit) html += '<span class="ve-xaxis-unit">' + escapeHTML(opt.unit) + '</span>';
     html += '</div>';
   });

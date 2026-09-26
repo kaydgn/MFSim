@@ -1825,7 +1825,7 @@ function _fwStpKartHTML(){
     var ata = -1;
     for(var e = d.ebeveyn; e >= 0; e = so.agac[e].ebeveyn) if(s.roller[e]){ ata = e; break; }
     var tanim = '—', xs = '—', ys = '—', sinif = '';
-    if(ata >= 0){ tanim = '↳ ' + _fwStpRolAd(s.roller[ata]) + ' birimi'; sinif = ' ve-fw-stp-off'; }
+    if(ata >= 0){ tanim = veIkon('corner-down-right') + ' ' + _fwStpRolAd(s.roller[ata]) + ' birimi'; sinif = ' ve-fw-stp-off'; }
     else if(rol && coz){
       var ki = birimKasnak[d.i];
       if(ki >= 0){
@@ -2015,14 +2015,14 @@ function _fwStepKasnak(b){
     + _hkm
     // SIRANIN ANLAMI YAZILI: satırlar Gates tablo sırasında, yani kurulacak
     // Kayış Tablosu'yla AYNI. Bir dönem gidiş sırası basılıyordu ve o zaman
-    // Gates raporunu kopyalayan kullanıcı ⇄ ile çevirmek zorundaydı.
+    // Gates raporunu kopyalayan kullanıcı sırayı elle çevirmek zorundaydı.
     + '<p class="ve-fw-dim" style="margin:6px 0 0;">Satırlar <b>Gates tablo '
     + 'sırasındadır</b> — Kayış Tablosu penceresiyle aynı: sürücü ilk, '
     + 'otomatik gergi <b>son</b> satır. (Bu sıra kayışın gidişinin tersidir; '
-    + 'gidiş yönünü ⇄ ile çevirebilirsiniz.)</p>'
+    + 'gidiş yönünü <b>Kayış yönünü çevir</b> düğmesiyle değiştirebilirsiniz.)</p>'
     + '<div class="ve-fw-rowbtns">'
       + '<button type="button" class="ve-fw-btn" onclick="veFeadWizRouteReverse()">'
-      + '⇄ Kayış yönünü çevir</button>'
+      + veIkon('arrow-left-right') + ' Kayış yönünü çevir</button>'
       + (st.siraKaynagi === 'agac'
           ? '<button type="button" id="ve-fw-sira-onay" class="ve-fw-btn" onclick="veFeadWizSiraOnay()"'
             + ' title="Sıra STEP ağacından geldi. Kayış yolunu doğruladıysanız onaylayın.">' + veIkon('check') + ' Sıra doğru</button>'

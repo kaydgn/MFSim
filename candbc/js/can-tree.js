@@ -93,7 +93,7 @@ function cdbRefreshTree() {
 
     html += '<div class="vsig-group' + (open ? ' open' : '') + '">';
     html += '<div class="vsig-ghead" tabindex="0" data-msg="' + key + '" role="button" aria-expanded="' + (open ? 'true' : 'false') + '">';
-    html += '<span class="vsig-arrow">▶</span>';
+    html += '<span class="mf-ico mf-ico-chevron-right vsig-arrow" aria-hidden="true"></span>';
     html += '<span class="vsig-gname" title="' + cdbEsc(cdbMsgTitle(msg, count)) + '">' +
             cdbHighlight(msg.name, msgHit ? q : '') +
             '<span style="color:var(--text-muted);font-weight:400;font-family:var(--font-mono);">' +

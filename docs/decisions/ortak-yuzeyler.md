@@ -1622,3 +1622,33 @@ yazısı), beş seçenek metni yazıya döndü, kalanı ikon. Ayrıca:
 - `<option>` metni: ikon taşıyamaz. İşaret ya yazıya döndü ("— veri eksik") ya da
   lejantıyla birlikte `// metin:` ile işaretli (şanzıman kalibrasyonu ✦ ✧).
 - Çizimin SVG yazısı: FEAD senaryo şeridindeki "⚠ REZONANS".
+
+**Aşama 3 (geri kalan her ürün dosyası).** Kapı artık liste değil kural:
+kılavuz metni dışındaki her ürün dosyası taranıyor (Sonuçlar, rapor
+üreticilerinin paneli, sensörler, Ölçüm Görüntüleyici, CAN Çözümleyici).
+Genişleyen tarayıcıyla 118 sapma → 0. Bunların 32'si aşama 1 ve 2'nin "0"
+dediği dosyalardaydı, çünkü tarayıcı iki sınıfı görmüyordu:
+- öğenin tek içeriği olan `×` `+` `−`: satır silen ×, sekme ekleyen +,
+  yakınlaştıran −. Başka her yerde metindir (çarpım, işaret, birim);
+- ↔ ↕ ⇄ ↳ › ⟲.
+
+Belge gövdesi sınırı araçta beyanlı: `BELGE` (karışık dosyada işlev, `ad*`
+önek) ve `BELGE_DOSYA` (dosyanın tamamı belge, yalnız adı yazılı panel
+işlevleri taranır). Adı yazılı işlev yoksa tarama patlar. Sonuçlar'ın ekrandaki
+Detaylı raporu belge DEĞİL: indirilen AP raporu onu kopyalamıyor,
+`_veReportAssemble` ile ayrıca kuruyor.
+
+Ayrıca:
+- Üç küçük pencere (BMC hesap raporu · TXT yazarı · diyagram künyesi) pencere
+  ailesinin başlığını taşıyor (`.ve-mini-pencere`). Lacivert degrade bant
+  kalmadı.
+- İki tablonun kırmızı dolu `×`'i `.ve-row-del` oldu (karar 13·B'nin kaçan
+  ikisi).
+- Yorum motoru düz metin kalıyor: paragrafın başındaki "⚠ " ekranda ikona
+  dönüyor (`_veTrRich`).
+- Sonuçlar ağacının kökü proje adını `title`'dan okuyor. Eskiden kısaltılmış
+  "…"lu adı basıyordu: tek okuyucu `veProjeAdi`.
+
+**Kapı.** `ikon-dili.test.js` (aşama 3 + kural örnekleri + belge sınırı) ·
+`pencere-ailesi.test.js` (küçük pencereler) · `report-cosmetics.test.js`
+(tam ad).

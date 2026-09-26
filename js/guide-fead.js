@@ -370,7 +370,7 @@ function _gfSahneGergiMerkez(){
 function _gfSahneGergiKol(){
   return _gfSahneKart2('getFeadTensionerPropertiesHTML', 'Kol künyesi',
     'Kol boyu ve kol çalışma açısı bir <b>girdidir</b>. Kartın altındaki '
-    + '“↳ gövdenin montaj konumu (türedi)” satırı §7.1’in denetim sayısı: tedarikçi '
+    + '“gövdenin montaj konumu (türedi)” satırı §7.1’in denetim sayısı: tedarikçi '
     + 'raporunun <i>Tensioner Data → Pivot Point</i> değeriyle karşılaştırılır.');
 }
 
@@ -1192,7 +1192,7 @@ function _gfSec7(){
     + 'olduğunu <strong>kendi başına ayırt edemez</strong> — ikisi de geçerli bir çözüm '
     + 'üretir. Ama denetimi yapmanız için gereken sayıyı <strong>her durumda basar</strong>.</p>';
   h += _gfAdimlar([
-    '<strong>Kol künyesi</strong> kartındaki <em>“↳ gövdenin montaj konumu (türedi)”</em> '
+    '<strong>Kol künyesi</strong> kartındaki <em>“gövdenin montaj konumu (türedi)”</em> '
       + 'satırına bakın. Bu, girdiğiniz merkezden kol boyu ve kol açısıyla türetilen '
       + 'montaj eksenidir.',
     'Elinizde tedarikçiden dönen rapor varsa o sayıyı <em>Tensioner Data → Pivot Point '
@@ -1262,7 +1262,7 @@ function _gfSec7(){
       'Bir <strong>girdi</strong>'],
     ['θ<sub>kol</sub> — mutlak (gövde→merkez)', 'Aynı yön, ters uçtan: +180°',
       'Türev — parça çiziminin dili'],
-    ['↳ gövdenin montaj konumu (türedi)', 'Merkezden kol boyu kadar geride, çalışma açısında',
+    ['gövdenin montaj konumu (türedi)', 'Merkezden kol boyu kadar geride, çalışma açısında',
       '<strong>Türeyen</strong> — atölyeye giden sayı; §7.1’in denetim sayısı'],
     ['Serbest kol açısı (türedi)', 'θ<sub>çalışma</sub> − sense × yay kurulması',
       'Çekirdeğe giren açı'],

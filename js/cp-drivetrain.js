@@ -315,7 +315,7 @@ function getVETransferRowHTML(nodeId, mode, ratio, note) {
   html += '<td class="tight"><input type="text" value="' + mode + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVETransferDataChange(\'' + nodeId + '\')"></td>';
   html += '<td class="tight"><input type="number" step="0.001" value="' + ratio + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVETransferDataChange(\'' + nodeId + '\')"></td>';
   html += '<td class="tight"><input type="text" value="' + note + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVETransferDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td class="tight"><button onclick="removeVETransferRow(this, \'' + nodeId + '\')" style="padding:2px 6px; font-size:var(--fs-tiny); background:var(--accent-danger); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">×</button></td>';
+  html += '<td class="tight"><button class="ve-row-del" onclick="removeVETransferRow(this, \'' + nodeId + '\')" title="Satırı sil">' + veIkon('x') + '</button></td>';
   html += '</tr>';
   return html;
 }

@@ -2174,9 +2174,15 @@ function _veTrEsc(s) {
 // Zengin metin: yorum motoru HTML DEĞİL, `**vurgu**` işaretli düz metin
 // üretir. Burada önce KAÇIRILIR, sonra işaret <b>'ye çevrilir — sıra bu
 // olmalı; ters çevrilirse üretilen her cümle bir enjeksiyon yüzeyi olur.
+// Başındaki "⚠ " paragrafı uyarı yapar: düz metinde işaret kalır, ekranda
+// çizgi ikon olur (karar 10·B — yazı tipinin sembolü değil).
+var VE_TR_UYARI = '⚠ ';   // metin: düz metin yorumun uyarı işareti — aşağıda ikona döner
 function _veTrRich(s) {
-  return _veTrEsc(s).replace(/\*\*([^*]+)\*\*/g,
+  s = String(s);
+  var uyari = s.indexOf(VE_TR_UYARI) === 0;
+  var h = _veTrEsc(uyari ? s.slice(VE_TR_UYARI.length) : s).replace(/\*\*([^*]+)\*\*/g,
     '<b class="ve-trace-note-b">$1</b>');
+  return uyari ? '<span class="mf-ico mf-ico-alert-triangle ve-trace-note-uyari" aria-hidden="true"></span> ' + h : h;
 }
 
 function veTrNoteHTML(entries, lead) {
@@ -2390,8 +2396,10 @@ function veTrRenderToolbar() {
 
   h += '<button type="button" class="ve-trace-btn" data-act="fit"' +
        (zoomed ? '' : ' disabled') + ' title="Tüm veriyi göster (çift tık)">Sığdır</button>';
-  h += '<button type="button" class="ve-trace-btn icon" data-act="zoom-in" title="Zaman ekseninde yakınlaş">+</button>';
-  h += '<button type="button" class="ve-trace-btn icon" data-act="zoom-out" title="Zaman ekseninde uzaklaş">−</button>';
+  h += '<button type="button" class="ve-trace-btn icon" data-act="zoom-in" title="Zaman ekseninde yakınlaş" aria-label="Yakınlaş">' +
+       '<span class="mf-ico mf-ico-zoom-in" aria-hidden="true"></span></button>';
+  h += '<button type="button" class="ve-trace-btn icon" data-act="zoom-out" title="Zaman ekseninde uzaklaş" aria-label="Uzaklaş">' +
+       '<span class="mf-ico mf-ico-zoom-out" aria-hidden="true"></span></button>';
 
   if(veTrState.pinX != null) {
     h += '<button type="button" class="ve-trace-btn pin" data-act="unpin" ' +

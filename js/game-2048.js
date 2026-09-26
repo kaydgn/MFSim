@@ -359,7 +359,7 @@ function _mf2048ShowMsg(kind) {
   var btns = document.getElementById('mf2048-msg-btns');
   if (!msg || !txt || !btns) return;
   if (kind === 'win') {
-    txt.textContent = '🎉 2048! Kazandın';
+    txt.innerHTML = veIkon('award') + ' 2048! Kazandın';
     btns.innerHTML =
       '<button class="mf2048-btn primary" type="button" onclick="veGame2048KeepGoing()">Devam Et</button>' +
       '<button class="mf2048-btn" type="button" onclick="veGame2048New()">Yeni Oyun</button>';

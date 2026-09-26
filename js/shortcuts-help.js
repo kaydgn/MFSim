@@ -59,7 +59,7 @@ function _veHelpBuild() {
   _veHelpGroups().forEach(function(g) {
     body += '<div class="ve-help-group"><div class="ve-help-group-title">' + _veHelpEsc(g.title) + '</div>';
     g.items.forEach(function(it) {
-      var keys = it.keys.map(function(k) { return '<kbd>' + _veHelpEsc(k) + '</kbd>'; }).join('<span class="ve-help-plus">+</span>');
+      var keys = it.keys.map(function(k) { return '<kbd>' + _veHelpEsc(k) + '</kbd>'; }).join('<span class="ve-help-plus">+</span>');   // metin: tuş birleşimi (Ctrl + S)
       body += '<div class="ve-help-row"><span class="ve-help-label">' + _veHelpEsc(it.label) + '</span><span class="ve-help-keys">' + keys + '</span></div>';
     });
     body += '</div>';

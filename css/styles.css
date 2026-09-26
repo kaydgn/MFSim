@@ -2295,6 +2295,7 @@ html.ve-sayfa-tuval .ve-nav-rail{ border-right-color:transparent; }
   flex-shrink:0;
   transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
 }
+.ve-tab-add .mf-ico{width:14px;height:14px;}
 .ve-tab-add:hover{
   color:var(--accent-primary);
   background:var(--bg-tertiary);
@@ -3396,6 +3397,14 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   transition:transform var(--dur-base,0.18s) var(--ease-out,cubic-bezier(.16,1,.3,1));
 }
 .ve-help-overlay.open .ve-help-panel{ transform:none; }
+/* KÜÇÜK PENCERE — tek soruluk iletişim kutuları (BMC hesap raporu, TXT
+   yazarı, diyagram künyesi). Başlık pencere ailesinin (.ve-settings-header);
+   eskiden her biri kendi lacivert degrade bandını ve yazı karakteriyle ✕'ini
+   çiziyordu. Köşe ve gölge jetondan. */
+.ve-mini-pencere{
+  background:var(--bg-secondary); border:1px solid var(--border-color);
+  border-radius:var(--radius-lg); box-shadow:var(--shadow-xl); overflow:hidden;
+}
 /* Başlık ve kapat: pencere ailesinin ortak bileşeni (.ve-settings-header). */
 .ve-help-body{
   padding:18px 20px; overflow-y:auto;
@@ -3715,7 +3724,7 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   transition:background 0.08s;user-select:none;
 }
 .sw-pkg-header:hover{background:var(--bg-tertiary);}
-.sw-pkg-arrow{font-size:var(--fs-micro);color:var(--text-muted);width:10px;flex-shrink:0;transition:transform 0.12s;}
+.sw-pkg-arrow{color:var(--text-muted);width:10px;height:10px;flex-shrink:0;}
 .sw-pkg-name{flex:1;font-weight:600;color:var(--text-primary);}
 .sw-pkg-badge{
   /* Rozet bir etiket, bir anahtar değil: pill yarıçapı keskin köşeye indi. */
@@ -3736,12 +3745,16 @@ body > .mfsim-loading-logo-ico{ transition:none; }
    20 satırlık tork tablosunda sayfanın sağında kırmızı bir sütun oluşuyor,
    gözün ilk gittiği yer "sil" oluyordu. Artık sessiz; kırmızıya yalnız üzerine
    gelince dönüyor (özellik penceresindeki Sil düğmesiyle aynı dil). */
+/* Satır silme — ikon "x" (karar 10·B). Kutu eski "×" karakterininkiyle aynı
+   boyda kalır (16 × 14): ızgaranın son sütunu genişlemez. */
 .ve-row-del{
-  padding:1px 5px; font-size:var(--fs-tiny); line-height:1.2;
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:2px 3px; font-size:var(--fs-tiny); line-height:1;
   background:transparent; color:var(--text-muted);
   border:1px solid transparent; border-radius:var(--radius-sm);
   cursor:pointer; transition:color var(--dur-fast), border-color var(--dur-fast);
 }
+.ve-row-del .mf-ico{ width:10px; height:10px; }
 .ve-row-del:hover{ color:var(--accent-danger); border-color:var(--accent-danger); }
 .ve-row-del:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:1px; }
 .sw-pkg-body{padding:6px 8px;border-top:1px solid var(--border-color);font-size:var(--fs-micro);}
@@ -5258,6 +5271,7 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;
   transition:background 0.12s, border-color 0.12s;
 }
+.ve-mnt2d-zoomctl button .mf-ico{ width:13px; height:13px; }
 .ve-mnt2d-zoomctl button:hover{ background:var(--bg-input); border-color:var(--accent-primary); }
 
 /* Panel başlığındaki kapatma butonu */
@@ -5825,6 +5839,9 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   font-weight:700;color:var(--text-primary);
   font-variant-numeric:tabular-nums;font-feature-settings:"tnum";
 }
+/* Uyarı paragrafının ikonu (yorum düz metinde "⚠ " yazar, trace-view.js
+   → _veTrRich ikona çevirir). */
+.ve-trace-note-uyari{color:var(--ink-warning);}
 
 @media (prefers-reduced-motion: reduce){
   .ve-trace-note-caret{transition:none;}
@@ -5981,6 +5998,8 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   background:color-mix(in srgb, var(--accent-primary) 10%, transparent);
   color:var(--ink-accent);font-weight:600;
 }
+/* Seçili eksenin işareti (eskiden ● yazı karakteri). */
+.ve-xaxis-tik{width:12px;height:12px;}
 .ve-xaxis-dropdown-item .ve-xaxis-unit{
   font-size:var(--fs-micro);color:var(--text-muted);margin-left:auto;opacity:0.7;
 }
@@ -6016,6 +6035,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
   color:var(--text-muted);background:none;
 }
+.ve-legend-remove .mf-ico{width:10px;height:10px;}
 .ve-slot-legend-item:hover .ve-legend-remove{opacity:0.7;}
 .ve-legend-remove:hover{opacity:1 !important;color:var(--accent-danger);}
 /* 3D Plotly container */
@@ -6081,7 +6101,9 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   margin:0 4px;
 }
 .ve-tree-row:hover{background:var(--accent-tint-8);}
-.ve-tree-row .arrow{width:14px;text-align:center;color:var(--text-muted);flex-shrink:0;cursor:pointer;border-radius:var(--radius-xs);}
+.ve-tree-row .arrow{width:14px;display:inline-flex;align-items:center;justify-content:center;align-self:stretch;color:var(--text-muted);flex-shrink:0;cursor:pointer;border-radius:var(--radius-xs);}
+/* Aç/kapa oku çizgi ikon (karar 10·B) — ▶/▼ yazı karakteri değil. */
+.ve-tree-row .arrow > .mf-ico{width:12px;height:12px;}
 /* Ok SÜTUNU, oku olmayan satırlarda da yer tutar. Yoksa "Detaylı Rapor"
    (oklu) ile "Tam Gaz Hızlanma Raporu (TXT)" (oksuz) kardeş oldukları hâlde
    simgeleri 18px kaymış duruyordu — ağacın sol kenarı tırtıklıydı.
@@ -6284,7 +6306,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   color:var(--text-muted);
 }
 .vsig-orphan{
-  height:var(--vsig-row);display:flex;align-items:center;
+  height:var(--vsig-row);display:flex;align-items:center;gap:4px;
   padding-left:calc(var(--vsig-pad) + var(--vsig-indent));
   font-size:var(--fs-body);color:var(--text-muted);opacity:0.55;
 }
@@ -6449,7 +6471,9 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
    KENDİ zeminine karıştırılıyor — opak kalıyor, iki kimlikte de aynı
    yöne gidiyor. */
 .dr-hdr:hover{background:color-mix(in srgb, var(--accent-primary) 8%, var(--bg-tertiary));}
-.dr-hdr .dr-arrow{font-size:var(--fs-micro);flex-shrink:0;width:12px;text-align:center;color:var(--text-muted);transition:transform 0.18s ease;}
+.dr-hdr .dr-arrow{flex-shrink:0;width:12px;height:12px;color:var(--text-muted);}
+/* Girdi özeti / Araç Performans özeti başlığının oku (açıkken yukarı). */
+.dr-gs-arrow{flex-shrink:0;width:14px;height:14px;color:var(--text-muted);}
 .dr-body{padding:18px 24px;font-size:var(--fs-body);color:var(--text-primary);background:var(--bg-secondary);overflow:hidden;transition:max-height 0.18s cubic-bezier(0.4,0,0.2,1), opacity 0.18s ease;}
 .dr-girdi-wrapper{overflow:hidden;transition:max-height 0.18s cubic-bezier(0.4,0,0.2,1), opacity 0.18s ease;padding-bottom:8px;}
 .dr-body table{background:var(--bg-secondary) !important;color:var(--text-primary) !important;}
@@ -9032,9 +9056,11 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-properties-content .ve-fp-duty-tbl td:first-child input{ min-width:72px; }   /* devir: dört hane + ok */
 .ve-fp-duty-bos{ padding:9px; color:var(--text-muted); }
 .ve-fp-duty-sil{
-  background:none; border:none; cursor:pointer; line-height:1; padding:2px 6px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:none; border:none; cursor:pointer; line-height:1; padding:3px 4px;
   color:var(--ink-danger); font-size:var(--fs-body); border-radius:var(--radius-xs);
 }
+.ve-fp-duty-sil .mf-ico{ width:11px; height:11px; }
 .ve-fp-duty-sil:hover{ background-color:var(--danger-tint-8); }
 /* Tablonun OKUNUR hücresi (güç eğrisinde "Motor devri") — girdiyle aynı
    satırda, girdiden ayrı: soluk ve sağa yaslı (sütun karşılaştırması). */

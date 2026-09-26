@@ -444,7 +444,7 @@ function getEnginePropertiesHTML(node) {
                 ' padding-bottom:7px; margin-bottom:8px; border-bottom:1px solid var(--border-color);">';
     headHtml += _fig('Brüt tepe', '<span id="ve-eng-m-gp2-' + node.id + '">' +
                 (peakSum ? peakSum.grossPower.toFixed(1) : '—') + '</span> kW');
-    headHtml += '<span style="color:var(--text-muted);">−</span>';
+    headHtml += '<span style="color:var(--text-muted);">−</span>';   // metin: denklemin işlemi (brüt − aksesuar = net)
     headHtml += _fig('Aksesuar', '<span id="ve-eng-m-loss2-' + node.id + '">' +
                 (peakSum ? peakSum.loss.toFixed(1) : '—') + '</span> kW', 'var(--accent-warning)');
     headHtml += '<span style="color:var(--text-muted);">=</span>';
@@ -2028,7 +2028,7 @@ function veEngSheetRowHTML(nodeId, idx, rpm, torque, power, accData, governed) {
   h += fCell(VE_ENG_C.seri1, netT.toFixed(1));
   h += fCell(VE_ENG_C.seri2, netP.toFixed(1));
   h += '<td style="text-align:center;"><button class="ve-row-del" onclick="removeVEMotorRow(this, \'' +
-       nodeId + '\')" title="Satırı sil">×</button></td>';
+       nodeId + '\')" title="Satırı sil">' + veIkon('x') + '</button></td>';
   return h + '</tr>';
 }
 
@@ -2044,7 +2044,7 @@ function getVEMotorRowHTML(nodeId, rpm, torque, power) {
   html += '<td class="tight"><input type="number" value="' + (rpm !== '' && rpm !== undefined ? rpm : '') + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEMotorDataChange(\'' + nodeId + '\')"></td>';
   html += '<td class="tight"><input type="number" value="' + (torque !== '' && torque !== undefined ? torque : '') + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEMotorDataChange(\'' + nodeId + '\')"></td>';
   html += '<td class="tight"><input type="number" value="' + (power !== '' && power !== undefined ? power : '') + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEMotorDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td class="tight"><button class="ve-row-del" onclick="removeVEMotorRow(this, \'' + nodeId + '\')" title="Satırı sil">×</button></td>';
+  html += '<td class="tight"><button class="ve-row-del" onclick="removeVEMotorRow(this, \'' + nodeId + '\')" title="Satırı sil">' + veIkon('x') + '</button></td>';
   html += '</tr>';
   return html;
 }

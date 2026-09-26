@@ -990,7 +990,9 @@ var veMntBrief = (function() {
       // Yakınsamama SESSİZ KALMAZ: sayı yine basılır ama güvenilmez olduğu
       // söylenir. Sessizce makul görünen bir eğri, bu modülün en pahalı hatası.
       if(meta.nonlinear && meta.converged === false) {
-        paras.push('⚠ ' + b('Newton iterasyonu bazı zaman adımlarında yakınsamadı') +
+        // Yorum DÜZ METİN: paragrafın başındaki "⚠ " uyarı işaretidir ve ekranda
+        // çizgi ikona döner (trace-view.js → _veTrRich).
+        paras.push('⚠ ' + b('Newton iterasyonu bazı zaman adımlarında yakınsamadı') +   // metin: yorumun uyarı işareti (ekranda ikona döner)
           '. Eğri çizilmiştir ama sayısal olarak güvenilmez: darbe genliğini ya da ' +
           'süresini değiştirip yeniden çözün.');
       }
