@@ -66,8 +66,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/step-p21.js` + `js/fead-step.js` — **STEP'ten kasnak geometrisi**
   (CATIA/3DEXPERIENCE montajı). DOM'suz; okuyucu anlam yüklemez, tanıyıcı
   model KURMAZ — çıktı FEAD örnek kaydı biçiminde, sihirbaz onu örnek gibi
-  yükler. OCCT gömülmez. Kurallar FEAD skill'inde (kural 34). Arayüze henüz
-  bağlı DEĞİL (`index.html`'de yok).
+  yükler. OCCT gömülmez. Kurallar FEAD skill'inde (kural 34). `index.html`
+  yükler (yayınlanan dosyanın *"her modül yüklendi"* kapısı `js/`'teki her
+  dosyayı ister) ama henüz bir arayüze bağlı DEĞİL.
 - `tools/shot.js` — Ekran görüntüsü aracı (İSTEĞE BAĞLI — yalnız kullanıcı isteyince; `npm run shot -- --help`)
 - `tools/karsilama-secici.{js,html}` + `tools/karsilama-kunye.json` — karşılama
   karelerinin **seçim tahtası**: numaralı/gruplanmış/büyütülebilir 28 kare, tıklanan
