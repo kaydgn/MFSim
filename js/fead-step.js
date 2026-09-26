@@ -467,27 +467,45 @@ function veFeadStp2B(sonuc, opt){
 // ── 7 · ÖRNEK KAYDI ──────────────────────────────────────────────────────
 // `secim.roller[i]`: i. kasnağın tipi (null → atlanır). Verilmezse ad önerisi.
 // Sıra AĞAÇ sırasıdır: sürücü başta, gergi sonda (Gates tablo sırası).
+//
+// SAYILAR µm'YE YUVARLANIR (açı 0,0001°): montaj dönüşümünün kayan nokta
+// gürültüsü (gerçek dosyada avara x = 190,0000163) sihirbazın alanlarına
+// öyle yazılıyordu. 1 µm anlamlı her toleransın çok altında.
+//
+// GERGİ TEKİL: model tek gergi taşır; ikinci gergi rolü ötekinin üstüne
+// sessizce yazılırdı — aktarılmaz ve söylenir.
+function _fstAd(s){ return String(s == null ? '' : s).replace(/\s+/g, ' ').trim(); }
+function _fstYuv(x, k){ return Math.round(x * k) / k + 0; }
+
 function veFeadStpKayit(sonuc, secim){
   secim = secim || {};
   var iki = veFeadStp2B(sonuc, { ayna: !!secim.ayna, merkez: secim.merkez });
   var uyarilar = [], pulleys = [], gergiKey = null, surucu = null;
   var katalog = secim.gergiKatalog || (typeof VE_FEAD_TENSIONER_DB !== 'undefined' ? VE_FEAD_TENSIONER_DB : []);
+  var MM = 1000, DER = 10000;
   sonuc.kasnaklar.forEach(function(k, i){
     var tip = secim.roller && secim.roller[i] !== undefined ? secim.roller[i] : k.rolOneri;
     var parca = sonuc.parcalar[k.parca];
-    if(!tip || tip === 'kayis'){ if(!tip) uyarilar.push('"' + parca.ad + '" için rol seçilmedi; kasnak aktarılmadı.'); return; }
+    var ad = _fstAd(parca.ad);
+    if(!tip || tip === 'kayis'){ if(!tip) uyarilar.push('"' + ad + '" için rol seçilmedi; kasnak aktarılmadı.'); return; }
+    if(tip === 'fead-tensioner' && gergiKey){
+      uyarilar.push('"' + ad + '" ikinci gergi rolü; model tek gergi taşır, aktarılmadı.');
+      return;
+    }
     var key = 'S' + (i + 1);
     var xy = iki.kasnaklar[i];
-    var data = { od: k.od, contact: k.tur === 'kanalli' ? 'grooved' : 'back' };
+    var data = { od: _fstYuv(k.od, MM), contact: k.tur === 'kanalli' ? 'grooved' : 'back' };
     if(tip === 'fead-tensioner'){
       var gi = -1;
       sonuc.gergiler.forEach(function(g, j){ if(g.kasnak === i) gi = j; });
-      if(gi < 0){ uyarilar.push('"' + parca.ad + '": gerginin pivot ekseni bulunamadı; kol boyu ve açısı elle girilmeli.'); data.cenX = xy.x; data.cenY = xy.y; }
-      else {
+      if(gi < 0){
+        uyarilar.push('"' + ad + '": gerginin pivot ekseni bulunamadı; kol boyu ve açısı elle girilmeli.');
+        data.cenX = _fstYuv(xy.x, MM); data.cenY = _fstYuv(xy.y, MM);
+      } else {
         var gg = iki.gergiler[gi];
-        data.cenX = gg.merkez.x; data.cenY = gg.merkez.y;
-        data.armLen = sonuc.gergiler[gi].kolBoy;
-        data.armMeanDeg = gg.kolAci;
+        data.cenX = _fstYuv(gg.merkez.x, MM); data.cenY = _fstYuv(gg.merkez.y, MM);
+        data.armLen = _fstYuv(sonuc.gergiler[gi].kolBoy, MM);
+        data.armMeanDeg = _fstYuv(gg.kolAci, DER);
       }
       var metin = _fstKatla([parca.ad, parca.id].join(' '));
       var kodlar = {};
@@ -496,12 +514,12 @@ function veFeadStpKayit(sonuc, secim){
       if(kk.length === 1) data.tenPart = kk[0];
       gergiKey = key;
     } else {
-      data.x = xy.x; data.y = xy.y;
+      data.x = _fstYuv(xy.x, MM); data.y = _fstYuv(xy.y, MM);
       if(tip === 'fead-crank' && !surucu){ data.driver = true; surucu = key; }
       if(k.tur === 'duz' && tip !== 'fead-idler')
-        uyarilar.push('"' + parca.ad + '" düz yüzeyli ama rolü ' + tip + '; temas tarafı sırt (back) yazıldı, kontrol edin.');
+        uyarilar.push('"' + ad + '" düz yüzeyli ama rolü ' + tip + '; temas tarafı sırt (back) yazıldı, kontrol edin.');
     }
-    pulleys.push({ key: key, type: tip, name: parca.ad, data: data });
+    pulleys.push({ key: key, type: tip, name: ad, data: data });
   });
   if(!surucu) uyarilar.push('Sürücü (krank) kasnağı seçilmedi.');
   if(!gergiKey) uyarilar.push('Gergi seçilmedi.');

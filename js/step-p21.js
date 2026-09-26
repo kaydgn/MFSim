@@ -578,9 +578,100 @@ function veStepP21Baslik(model){
   return { dosya: dz(fn[0]), tarih: dz(fn[1]), onisleyici: dz(fn[4]), sistem: dz(fn[5]), sema: sema };
 }
 
+// ── 10 · BAYT → METİN (.stp · .step · .stpZ) ───────────────────────────────
+// Dosya seçicisinden gelen baytlar. Kap UZANTIDAN değil İMZADAN tanınır —
+// aynı `.stpZ` uzantısıyla gzip de zip de yazılıyor:
+//   1F 8B        gzip (RFC 1952)
+//   50 4B 03 04  zip; içindeki ilk .stp/.step/.p21 girişi (yoksa ilk giriş)
+//   diğer        düz metin
+// Açıcı ölçüm içe aktarmanın saf JS inflate'i (js/xlsx-read.js): tarayıcının
+// DecompressionStream'i asenkron ve jsdom'da yok — iki ayrı kod yolu olurdu.
+//
+// KODLAMA: Part 21'in temel alfabesi ASCII, ASCII dışı karakter \X2\ ile
+// kaçışlanır (3DEXPERIENCE böyle yazıyor). Standarda uymayan bir yazıcının
+// bıraktığı ham bayt önce UTF-8 (geçerliyse), değilse ISO 8859-1 okunur;
+// ikisinde de ASCII kısım birebir aynı kalır.
+function _stpAcici(){
+  if(typeof veXlsInflateRaw === 'function')
+    return { inflate: veXlsInflateRaw, zip: (typeof veXlsZipRead === 'function') ? veXlsZipRead : null };
+  if(typeof require === 'function'){
+    try { var x = require('./xlsx-read.js'); return { inflate: x.veXlsInflateRaw, zip: x.veXlsZipRead }; }
+    catch(e){ return null; }
+  }
+  return null;
+}
+
+function _stpUtf8(b){
+  var out = [], parca = '', i = 0, n = b.length;
+  while(i < n){
+    var c = b[i], cp, ek;
+    if(c < 0x80){ cp = c; ek = 0; }
+    else if(c >= 0xC2 && c < 0xE0){ cp = c & 0x1F; ek = 1; }
+    else if(c >= 0xE0 && c < 0xF0){ cp = c & 0x0F; ek = 2; }
+    else if(c >= 0xF0 && c < 0xF5){ cp = c & 0x07; ek = 3; }
+    else return null;                                          // geçersiz başlangıç baytı
+    if(ek && i + ek >= n) return null;                          // yarım dizi
+    for(var k = 1; k <= ek; k++){
+      var d = b[i + k];
+      if((d & 0xC0) !== 0x80) return null;
+      cp = (cp << 6) | (d & 0x3F);
+    }
+    if((ek === 2 && cp < 0x800) || (ek === 3 && (cp < 0x10000 || cp > 0x10FFFF))) return null;
+    i += ek + 1;
+    if(cp > 0xFFFF){ cp -= 0x10000; out.push(0xD800 + (cp >> 10), 0xDC00 + (cp & 0x3FF)); }
+    else out.push(cp);
+    if(out.length >= 8192){ parca += String.fromCharCode.apply(null, out); out.length = 0; }
+  }
+  return parca + String.fromCharCode.apply(null, out);
+}
+
+function _stpLatin1(b){
+  var s = '';
+  for(var i = 0; i < b.length; i += 8192)
+    s += String.fromCharCode.apply(null, b.subarray(i, Math.min(b.length, i + 8192)));
+  return s;
+}
+
+function _stpBaytMetin(b){
+  var i = 0;
+  while(i < b.length && b[i] < 0x80) i++;
+  if(i === b.length) return _stpLatin1(b);                     // saf ASCII: hızlı yol
+  var u = _stpUtf8(b);
+  return u === null ? _stpLatin1(b) : u;
+}
+
+// `bayt`: Uint8Array ya da ArrayBuffer. Döner: { metin, kap: 'duz'|'gzip'|'zip',
+// icerik? } — açılamayan kap ADRESLİ bir hata atar (sessiz boş metin değil).
+function veStepP21Metin(bayt){
+  var b = (bayt instanceof Uint8Array) ? bayt : new Uint8Array(bayt || []);
+  var ac;
+  if(b.length >= 2 && b[0] === 0x1F && b[1] === 0x8B){
+    if(b.length < 18 || b[2] !== 8) throw new Error('gzip: desteklenmeyen sıkıştırma yöntemi ya da yarım dosya.');
+    var flg = b[3], p = 10;
+    if(flg & 4) p += 2 + (b[p] | (b[p + 1] << 8));              // FEXTRA
+    if(flg & 8){ while(p < b.length && b[p] !== 0) p++; p++; }   // FNAME
+    if(flg & 16){ while(p < b.length && b[p] !== 0) p++; p++; }  // FCOMMENT
+    if(flg & 2) p += 2;                                          // FHCRC
+    ac = _stpAcici();
+    if(!ac || !ac.inflate) throw new Error('Sıkıştırılmış STEP açılamadı: açıcı (js/xlsx-read.js) yüklenmemiş.');
+    return { metin: _stpBaytMetin(ac.inflate(b.subarray(p))), kap: 'gzip' };
+  }
+  if(b.length >= 4 && b[0] === 0x50 && b[1] === 0x4B && b[2] === 0x03 && b[3] === 0x04){
+    ac = _stpAcici();
+    if(!ac || !ac.zip) throw new Error('Sıkıştırılmış STEP açılamadı: açıcı (js/xlsx-read.js) yüklenmemiş.');
+    var zip = ac.zip(b);
+    var adlar = zip.names.filter(function(a){ return !/\/$/.test(a); });
+    var ad = adlar.filter(function(a){ return /\.(stp|step|p21)$/i.test(a); })[0] || adlar[0];
+    if(!ad) throw new Error('zip: arşivde dosya yok.');
+    return { metin: _stpBaytMetin(zip.read(ad)), kap: 'zip', icerik: ad };
+  }
+  return { metin: _stpBaytMetin(b), kap: 'duz' };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VE_STEP_P21_SURUM: VE_STEP_P21_SURUM,
+    veStepP21Metin: veStepP21Metin,
     VE_STEP_P21_BIRIM: VE_STEP_P21_BIRIM,
     veStepP21Oku: veStepP21Oku,
     veStepP21Coz: veStepP21Coz,

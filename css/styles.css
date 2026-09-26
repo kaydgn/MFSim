@@ -8499,6 +8499,29 @@ span.ve-fw-ro{ display:inline-block; }
    kırpardı. Kırpma yerine bir tık küçük punto — kapı bunu ölçüyor. */
 .ve-fw-tbl-kasnak th{ font-size:calc(var(--fs-tiny) - 1px); padding-left:4px; padding-right:4px; }
 
+/* ── STEP'TEN BAŞLA (sihirbazın 1. adımı, FEAD kural 34) ─────────────────
+   Kartın gövdesi bir BIRAKMA ALANI (`data-ve-dropzone`): ölçüm içe aktarma
+   kaplaması onun üstünde çekilir (js/measure-dropzone.js). İşaret sürükleme
+   sırasında JS'in koyduğu sınıftan — CSS sürüklemeyi göremez. Kesikli çerçeve
+   dinlenmede saydam: yer değiştirmeden belirsin diye negatif pay. */
+.ve-fw-stp{ margin:-5px; padding:5px; border:1px dashed transparent; border-radius:var(--radius-sm); }
+.ve-fw-stp > * + *{ margin-top:10px; }
+.ve-fw-stp.ve-fw-stp-on{ border-color:var(--accent-primary); background:var(--accent-tint-6); }
+.ve-fw-stp-sec{ position:relative; cursor:pointer; }
+/* Dosya girişi görünmez ama ODAKLANABİLİR: `display:none` klavyeyi de keserdi;
+   etikete tıklamak onu açar, odak halkası etikette görünür. */
+.ve-fw-stp-file{ position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; clip:rect(0 0 0 0); }
+.ve-fw-stp-sec:focus-within{ box-shadow:var(--focus-ring); }
+.ve-fw-stp-wait{ border-left-color:var(--accent-primary); }
+.ve-fw-tbl-stp th:nth-child(1), .ve-fw-tbl-stp td:nth-child(1){ width:36%; }   /* Parça */
+.ve-fw-tbl-stp th:nth-child(2), .ve-fw-tbl-stp td:nth-child(2){ width:21%; }   /* Rol */
+.ve-fw-tbl-stp th:nth-child(3), .ve-fw-tbl-stp td:nth-child(3){ width:21%; }   /* Kasnak */
+.ve-fw-tbl-stp th:nth-child(4), .ve-fw-tbl-stp td:nth-child(4),
+.ve-fw-tbl-stp th:nth-child(5), .ve-fw-tbl-stp td:nth-child(5){ width:11%; }   /* X · Y */
+.ve-fw-tbl-stp .ve-fw-num{ text-align:right; font-variant-numeric:tabular-nums; }
+.ve-fw-tbl-stp tr.ve-fw-stp-off td{ color:var(--text-muted); }
+.ve-fw-tbl-stp tr.ve-fw-stp-warn td:nth-child(3){ color:var(--ink-warning); }
+
 /* Satır işlemleri sütunu üç düğme taşıyor; aralarındaki boşluk daralan
    sütunda taşmanın ilk sebebiydi. */
 .ve-fw-tbl-kasnak td:nth-child(9){ padding-left:2px; padding-right:2px; }

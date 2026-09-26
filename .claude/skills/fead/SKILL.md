@@ -557,7 +557,8 @@ olurdu.
     KURMAZ** (2026-09-26, kullanıcı isteği: CATIA/3DEXPERIENCE montajından
     kasnakları okumak). `js/step-p21.js` (saf JS STEP okuyucusu: birim ·
     montaj dönüşümü · yüz) → `js/fead-step.js` (tanıyıcı) → çıktı FEAD ÖRNEK
-    KAYDI biçiminde; sihirbaz onu örnek gibi yükler (2. adım), ikinci kurulum
+    KAYDI biçiminde; sihirbazın 1. adımındaki **"STEP'ten başla"** kartı onu
+    örnek tohumunun AYNI yolundan yükler (`_fwSeedKayit`), ikinci kurulum
     yolu açılmaz. OCCT gömülmez: hafifi bile tek dosyayı gönderim sınırının
     üstüne çıkarıyor ve STEP'i üçgene çevirip dosyada yazılı yarıçapı
     kaybediyordu. Kurallar — her biri gerçek dosyada ölçülmüş bir hataya karşı:
@@ -578,10 +579,29 @@ olurdu.
     • **Kayışa dokunulmaz** (kullanıcı kararı): sıra ağaç sırasıdır ve
       `siraKaynagi: 'agac'` ile işaretlidir; kayış parçası kasnak sayılmaz.
     • Gerginin yay verisi STEP'te yok; `tenPart` yalnız parça kodu katalogda
-      TEK ise yazılır (kural 19'un gerekçesi).
-    Kapı: `tests/unit/fead-step.test.js` (sentetik dosyalar
-    `tests/helpers/step-yaz.js` ile, gerçek dosyanın kalıbında) — en değerlisi
-    Gates AG00686'nın STEP → köprü zinciri (span %0,5 · sarım 0,2°).
+      TEK ise yazılır (kural 19'un gerekçesi). Kayıt µm'ye (açı 0,0001°)
+      yuvarlanır — dönüşüm gürültüsü alanlara yazılıyordu; ikinci gergi rolü
+      aktarılmaz (ötekinin üstüne yazılırdı).
+    • **Kap imzadan** (gzip · zip · düz), uzantıdan değil — `.stpZ` iki türlü
+      de yazılıyor; açıcı `js/xlsx-read.js`'in inflate'i (tek kod yolu).
+    **Sihirbaz kartı** (`js/cp-fead-wizard.js`, açıklama paragrafı YOK):
+    • Tanıyıcının çıktısı OTURUMLUK (`_fwStp`), `node.data.wiz`e yazılmaz;
+      durumda yalnız iz kalır (`stepKaynak`, `siraKaynagi`).
+    • **Tek krank, tek gergi** aktarımı DURDURUR; orijin KULLANICININ seçtiği
+      krank. Kayış ve çözücü boş durumdan (`ex.belt || {}` kanalı silerdi).
+    • **Sıra bir varsayım**: aktarımdan sonra Kasnaklar adımı uyarı taşır;
+      ↑ ↓, yön çevirme ya da "✓ Sıra doğru" kaldırır.
+    • **Künye CAD'deki gergiyi sessizce değiştiremez**: künye seçiliyken
+      parça kodu / kol / çap STEP'ten farklıysa gergi adımı adıyla söyler;
+      elle yazılan değer kullanıcının kararı (uyarı yok).
+    • Kart bir **bırakma alanı** (`data-ve-dropzone`): yoksa ölçüm içe
+      aktarması `.stp`'yi reddedip "okunamaz" derdi.
+    Kapılar: `tests/unit/fead-step.test.js` (sentetik dosyalar
+    `tests/helpers/step-yaz.js` + `step-ornek.js`, gerçek dosyanın kalıbında)
+    — en değerlisi Gates AG00686'nın STEP → köprü zinciri (span %0,5 · sarım
+    0,2°); `tests/unit/fead-wizard-step.test.js` (gidiş-dönüş · kayış ·
+    roller · sıra · künye · .stpZ) + `tests/e2e/fead-step.spec.js` (gerçek
+    File · bırakma · Modeli Kur).
 
 35. **SEKME ADI DURUMUNU TAŞIR — kural köprünün, kapı ANLAŞMA** (2026-09-26,
     kullanıcı: *"kullanıcı bu kısmı görmeyebilir ve eksik bilgi girebilir"* →
