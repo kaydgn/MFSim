@@ -219,9 +219,10 @@ function veGuideDocHTML(o){
 
 // Sahnenin çizilmesi için gereken kural önekleri — TEK LİSTE.
 var VE_GUIDE_SCENE_SEL = [
-  '.ve-fead-tbl',      // Kayış Tablosu (künye · ekleyici · ad düğmesi)
-  '.ve-fead-table',    // (tablo kabuğunun ikinci kökü)
-  '.ve-fead-krt',      // Kayış Tablosu'nun KART LİSTESİ (satır · bölge · alan)
+  '.ve-fead-tbl',      // Kayış Tablosu'nun denetimleri (alan · ad düğmesi · ekleyici · oklar)
+  '.ve-fead-pf',       // Kayış Tablosu = PAFTA (başlık şeridi · tablo · satır · numara)
+  '.ve-fead-pafta',    // (paftanın kabı — kartın altındaki bölge)
+  '.ve-fead-layout',   // Kayış Yolu kartının kabuğu (çubuk bandının jetonu)
   '.ve-fp-',           // FEAD pencerelerinin ortak dili
   '.ve-pnl-tbl',       // panel veri tablosu — çözücünün çevrim ızgarası (2026-09-23)
   '.ve-fead-kat',      // kanvasın Katmanlar paneli
@@ -504,26 +505,14 @@ function _gkNaturalWidth(html){
     });
     return t;
   };
-  // 1) SÜTUNLU KART (ızgara): ölçü `<colgroup>`tan toplanır. Pay BASKIDA
-  //    ÖLÇÜLDÜ (`fead-kilavuz-baski.spec.js`) — sütun toplamı hücre payını
-  //    İÇERMEDİĞİ için 26 yetmiyordu, tablo sağdan kırpılıyordu.
+  // 1) SÜTUNLU KART (Kayış Tablosu — Pafta): ölçü `<colgroup>`tan toplanır.
+  //    Pay BASKIDA ÖLÇÜLDÜ (`fead-kilavuz-baski.spec.js`) — sütun toplamı
+  //    hücre payını İÇERMEDİĞİ için 26 yetmiyordu, tablo sağdan kırpılıyordu.
+  //    (Kart listesi döneminin `--fead-krt-en` taşıyıcısı Pafta'yla emekli:
+  //    tablo yeniden `<colgroup>` taşıyor.)
   var m = s.match(/<col[^>]*width\s*:\s*(\d+(?:\.\d+)?)px/g);
   if(m && m.length) return topla(m) + 60;
-  // 2) KART LİSTESİ SÜTUN TAŞIMAZ: ızgara kalkınca genişlik `<colgroup>`tan
-  //    değil kabın üstündeki `--fead-krt-*` bölge özelliklerinden geliyor.
-  //    Ölçüm o taşıyıcıyı okumazsa 0 döner ve ölçekleme SESSİZCE hiç
-  //    uygulanmaz — sahne bugün sığdığı için ekranda hiçbir şey olmaz,
-  //    sütunlar yalnız daha geniş bir kartta ve yalnız BASKIDA kaybolur.
-  //    TOPLAM OKUNUR, BÖLGELER TOPLANMAZ: çözüm bölgesi `1fr` olduğu için
-  //    kendi genişliğini yazmıyor ve bölgeleri toplamak onu ATLIYOR
-  //    (ölçüldü: 768 yerine 534). Kart toplamı ayrıca basıyor.
-  //    PAY BURADA DA 60 VE SEBEBİ AYNI: 26 "bölge genişlikleri hücre payını
-  //    zaten içeriyor" diye seçilmişti ve ÖLÇÜM onu çürüttü — payın büyük
-  //    kısmı hücre boşluğu değil SAHNENİN KENDİ ÇERÇEVESİ (`.appfig` +
-  //    `.gk-sahne`).
-  var en = /--fead-krt-en\s*:\s*(\d+(?:\.\d+)?)px/.exec(s);
-  if(en) return Number(en[1]) + 60;
-  // 3) SÜTUNSUZ KART (kanvas şeması): kendi dış kutusunun width'i. Bu dal
+  // 2) SÜTUNSUZ KART (kanvas şeması): kendi dış kutusunun width'i. Bu dal
   //    olmadan kanvas kartları sayfadan 48 px taşıyordu (baskıda ölçüldü).
   var w = /^[\s\S]{0,400}?width\s*:\s*(\d{3,4})px/.exec(s);
   return w ? Number(w[1]) + 26 : 0;

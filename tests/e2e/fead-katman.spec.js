@@ -14,9 +14,10 @@
  *     teke indi, geometri ↔ işletme ayrımı bir ön ayar oldu).
  */
 const { test, expect } = require('@playwright/test');
-// Katmanlar düğmesi. "Tablo" düğmesi (Çizim Masası) aynı görünüm sınıfını
-// paylaşıyor; sınıfla aranan düğme İKİ öğe buluyordu ve bu dosya 2026-09-23'ten
-// beri kırmızıydı (fead-kanvas.spec.js aynı dışlamayı zaten yapıyor).
+// Katmanlar düğmesi. "Tablo" düğmesi (Kayış Tablosu'nu kartın içinde açıp
+// kapar) aynı görünüm sınıfını paylaşıyor; sınıfla aranan düğme İKİ öğe
+// buluyordu ve bu dosya 2026-09-23'ten beri kırmızıydı (fead-kanvas.spec.js
+// aynı dışlamayı zaten yapıyor).
 const KAT = '.ve-fead-kat-dugme:not(.ve-fead-tablo-dugme)';
 test.setTimeout(180000);
 

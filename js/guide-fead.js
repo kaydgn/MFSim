@@ -210,16 +210,20 @@ function _gfSahneSerit(){
 function _gfSahneTablo(){
   var html = _gfSahneHTML(function(){
     if(typeof veFeadTableCardHTML !== 'function') return '';
-    return veFeadTableCardHTML(null);
+    // PROGRAMDAKİ KABIYLA: başlık şeridi paftanın yan dolgusunu negatif
+    // kenar boşluğuyla örtüyor (çizgiler kartın kenarına kadar). Kapsız
+    // basılınca şerit sahneden iki yana 10 px taşıyordu (baskıda ölçüldü).
+    // Kap kartın dibine yapışık değil, akışta.
+    return '<div class="ve-fead-pafta" style="position:relative; bottom:auto; height:auto;">'
+      + veFeadTableCardHTML(null) + '</div>';
   });
   if(!html) return '';
   // Doğal genişlik ÜRETİLEN HTML'den okunuyor (guide-kit.js
   // `_gkNaturalWidth`); burada bir ölçü yazılmıyor.
   return veGuideScene(html,
-    'Kayış Tablosu çekmecesinin içeriği, <b>Bölüm 14’ün örnek modeliyle</b> doldurulmuş hâlde. '
-    + 'Türeyen sütunlar gerçek çözümden geliyor: Σsarım <b>360,00°</b> okuması '
-    + 'kayış yolunun kapandığını söylüyor. Sütun bir gün yeniden adlandırılırsa '
-    + 'bu şekil onunla birlikte değişir.');
+    'Kayış Tablosu — Kayış Yolu kartının altındaki <em>Layout Data</em> — <b>Bölüm 14’ün '
+    + 'örnek modeliyle</b> doldurulmuş hâlde. Türeyen sütunlar (Ø eff · Sarım · Span) gerçek '
+    + 'çözümden geliyor. Sütun bir gün yeniden adlandırılırsa bu şekil onunla birlikte değişir.');
 }
 
 function _gfSahneKasnakPaneli(){
@@ -246,8 +250,12 @@ function _gfSahneDevirSinir(){
 // hiç basmamak: boş sahne kılavuz testinde görünür, yanlış kart görünmez).
 // Kanvas kartının TASARIM genişliği — `components.js`'teki tek kaynaktan.
 // Sayfaya gerilen kart programdakinden başka görünüyor ve şeritleri taşıyor.
-function _gfKanvasEn(){
-  return (typeof VE_FEAD_LAYOUT_W === 'number' ? VE_FEAD_LAYOUT_W : 440) + 26;
+function _gfKanvasEn(w){
+  return (w || (typeof VE_FEAD_LAYOUT_W === 'number' ? VE_FEAD_LAYOUT_W : 440)) + 26;
+}
+function _gfKartW(n){
+  return (typeof veFeadKartVarsayilanW === 'function') ? veFeadKartVarsayilanW(n)
+    : (typeof VE_FEAD_LAYOUT_W === 'number' ? VE_FEAD_LAYOUT_W : 440);
 }
 
 function _gfSahneKart(tip, veri){
@@ -262,8 +270,26 @@ function _gfSahneKart(tip, veri){
       }
       n = x;
     });
-    return n ? veFeadLayoutCardHTML(n) : '';
+    if(!n) return '';
+    // TABLOLU KART PAFTASIYLA BİRLİKTE (Pafta, 2026-09-26): programdaki kart
+    // çizim + altındaki Kayış Tablosu'dur; yalnız çizimi basmak, altında boş
+    // bir şerit olan bir kart gösterirdi. Kabuk programın kendi sınıflarıyla —
+    // ölçüsü kartın varsayılanı, tablonun boyu programın kendi hesabı.
+    var w = _gfKartW(n), h = (typeof VE_FEAD_LAYOUT_H === 'number') ? VE_FEAD_LAYOUT_H : 500;
+    var kart = Object.assign({}, n, { width: w, height: h });
+    var ciz = veFeadLayoutCardHTML(kart);
+    if(typeof veFeadTabloAcik !== 'function' || !veFeadTabloAcik(kart)
+       || typeof veFeadTableCardHTML !== 'function') return ciz;
+    var satir = O.pack.nodes.filter(function(x){ return _feadIsPulleyGuide(x); }).length;
+    var pH = (typeof veFeadPaftaH === 'function') ? veFeadPaftaH(kart, satir) : 0;
+    return '<div class="ve-fead-layout-card" style="position:relative; display:flex;'
+      + ' flex-direction:column; width:' + w + 'px; height:' + h + 'px; --fead-paf-h:' + pH + 'px;">'
+      + ciz + '<div class="ve-fead-pafta">' + veFeadTableCardHTML(kart) + '</div></div>';
   });
+}
+function _feadIsPulleyGuide(x){
+  var d = (typeof componentDefs !== 'undefined' && x && componentDefs[x.type]) || {};
+  return !!d.isFeadPulley;
 }
 
 function _gfSahneSema(){
@@ -272,7 +298,9 @@ function _gfSahneSema(){
   return veGuideScene(html,
     'Kayış Yolu kanvası, <b>Geometri</b> ön ayarında — ölçekli şema. Turuncu yol '
     + 'çözücünün teğet noktalarından geçiyor, dişler kayışın kaburgalı yüzünü '
-    + 'gösteriyor, yeşil artı gerginin <b>türetilmiş</b> montaj konumu.', _gfKanvasEn());
+    + 'gösteriyor, yeşil artı gerginin <b>türetilmiş</b> montaj konumu. Altında Kayış '
+    + 'Tablosu: satırın numarası kasnağın göbeğinde de yazılı.',
+    _gfKanvasEn(typeof VE_FEAD_PAFTA_W === 'number' ? VE_FEAD_PAFTA_W : 640));
 }
 
 // AYNI TİP, BAŞKA ÖN AYAR. Sahne bir zamanlar ayrı bir bileşen tipi
@@ -515,10 +543,12 @@ function _gfSec2(){
       + 'bırakılan kasnak iki komşusunun arasına girer. Girdi değiştikçe <strong>canlı</strong> '
       + 'yeniden çizilir ve modelin tutarlı olup olmadığını panel açmadan gösterir.',
       'Bölüm 4 ve 11.1'],
-    ['<strong>Kayış Tablosu</strong>', '<strong>Kesin sayının</strong> yüzeyi: çizim kartının '
-      + '<strong>Tablo</strong> düğmesiyle tuvalin altında açılan çekmece — tuvali örtmez, '
-      + 'tuval o kadar kısalır; üst kenarı sürüklenerek büyütülür. Ad · X · Y · çap · dönüş yönü girilir, '
-      + 'efektif çap · sarım · span okunur; <strong>kayış sırası</strong> da buradan değişir. '
+    ['<strong>Kayış Tablosu</strong>', '<strong>Kesin sayının</strong> yüzeyi: Kayış Yolu '
+      + 'kartının <strong>altında</strong>, çizimle aynı kâğıtta — Gates raporunun '
+      + '<em>Layout Data</em> tablosu gibi. Kartın <strong>Tablo</strong> düğmesi onu o kartta '
+      + 'açar ya da kapatır; tablolu kart öteki karttan geniştir. Ad · X · Y · çap · dönüş '
+      + 'yönü girilir, efektif çap · sarım · span okunur; <strong>kayış sırası</strong> da '
+      + 'buradan değişir. Satırın numarası çizimde kasnağın göbeğinde de yazılıdır. '
       + '<strong>Kasnakların kanvasta kutusu yoktur</strong> — çizim ve bu tablo onların '
       + 'yerine geçer.', 'Bölüm 4 ve 5'],
     ['Paneller', 'Çizimdeki kasnağa ya da tablodaki <strong>ada tıklayınca</strong> açılan '
@@ -594,9 +624,9 @@ function _gfSec3(){
   h += '<p><strong>Boş bir FEAD modülü sizi Başlangıç Sihirbazı ile karşılar</strong> — '
     + 'pencere kendiliğinden açılır. Kapatırsanız tuvalde iki kart kalır: '
     + '<strong>Başlangıç Sihirbazı</strong> (yeniden açmak için) ve boş bir '
-    + '<strong>Kayış Yolu</strong> kartı — boş hâli iki yolu gösterir: <em>Sihirbazla kur</em> '
-    + 've <em>Tabloyu aç</em>. Hangi yolu seçerseniz seçin kasnaklar sonunda '
-    + '<strong>o çizimde</strong> görünür. Buradan üç yol ayrılır.</p>';
+    + '<strong>Kayış Yolu</strong> kartı — çiziminde <em>Sihirbazla kur</em> düğmesi, altında '
+    + 'boş Kayış Tablosu ve onun <em>＋ Kasnak ekle</em> listesi durur. Hangi yolu seçerseniz '
+    + 'seçin kasnaklar sonunda <strong>o kartta</strong> görünür. Buradan üç yol ayrılır.</p>';
   h += _gfNot('Sihirbaz yalnız İLK girişte açılır',
       'Kurulmuş bir modele geri döndüğünüzde pencere <strong>açılmaz</strong>; her girişte '
     + 'kapatılması gereken bir karşılama, karşılama olmaktan çıkıp engele dönerdi. '
@@ -647,8 +677,7 @@ function _gfSec3(){
       + 'arasından birini seçin — hepsi gerçek araçlara ait ve hepsi tedarikçiden <em>dönen</em> '
       + 'Gates raporlarından çıkarılmıştır. Seçim bütün adımların alanlarını bir anda doldurur.',
     'Adımları gezip değerleri görün, sonra son adımda <strong>modeli kurun</strong>. '
-      + 'Kasnaklar çizimde ve <strong>Kayış Tablosu’nda</strong> (kartın <em>Tablo</em> '
-      + 'düğmesi) sırasıyla belirir.'
+      + 'Kasnaklar çizimde ve altındaki <strong>Kayış Tablosu’nda</strong> sırasıyla belirir.'
   ]);
   h += _gfAlanTablo('Örnek kayıtları ne taşır', [
     ['Kasnak künyeleri', 'Ad · tip · koordinat · dış çap · temas tarafı · atalet · '
@@ -674,7 +703,7 @@ function _gfSec3(){
     + 'bağlı</strong>:</p>';
   h += _gfAlanTablo('Ne nereden eklenir', [
     ['<strong>Kasnaklar</strong>', 'Sol paletin <em>FEAD Kasnakları</em> kategorisinden '
-      + 'çizimde <strong>kayışın üstüne</strong> sürükleyin; ya da Kayış Tablosu’nun altındaki '
+      + 'çizimde <strong>kayışın üstüne</strong> sürükleyin; ya da Kayış Tablosu’nun başlığındaki '
       + '<strong>＋ Kasnak ekle</strong> listesi',
       'Krank Kasnağı · Alternatör · Klima Kompresörü · Su Pompası · Direksiyon Pompası · '
       + 'Hava Kompresörü · Fan Kavraması · Avara Kasnak · Gergi'],
@@ -751,9 +780,10 @@ function _gfSec4(){
     + '<strong>Kayış Yolu çizimi</strong> kasnağın YERİNİ gösterip taşımanın yeridir; '
     + '<strong>Kayış Tablosu</strong> kesin sayının yeridir — sizin hesap sayfanızla aynı '
     + 'sütun sırasını taşır, yani tedarikçi bilgi sayfasını satır satır kopyalayabilirsiniz. '
-    + 'Tablo, çizim kartının yüzen çubuğundaki <strong>Tablo</strong> düğmesiyle açılan bir '
-    + 'penceredir: tuvalin altında durur, açıkken çizim görünür ve kullanılabilir kalır, '
-    + 'yazısı tuvalle birlikte küçülmez.</p>';
+    + 'Tablo, Kayış Yolu kartının <strong>altındadır</strong> — çizimle aynı kâğıtta; satırın '
+    + 'numarası çizimde kasnağın göbeğinde de yazılıdır. Kartın yüzen çubuğundaki '
+    + '<strong>Tablo</strong> düğmesi onu o kartta açar ya da kapatır; tablolu kart öteki '
+    + 'karttan geniştir ki sütunlar rahat okunsun.</p>';
   h += _gfUyari('Kasnakların kanvasta kutusu YOKTUR',
       'Bu modülde kasnaklar modelde <strong>düğüm olarak durur</strong> — kaydedilir, '
     + 'geri alınır, panelleri açılır — ama tuvale <strong>kutu çizilmez</strong>. Onları '
@@ -761,22 +791,22 @@ function _gfSec4(){
     + 'orada; kesin sayılar Kayış Tablosu’nda.');
   h += _gfAdimlar([
     'Kasnağı ekleyin: paletten sürükleyip çizimde <strong>kayışın üstüne</strong> bırakın '
-      + '(iki komşusunun arasına girer) ya da tablonun altındaki <strong>＋ Kasnak ekle</strong> '
+      + '(iki komşusunun arasına girer) ya da tablonun başlığındaki <strong>＋ Kasnak ekle</strong> '
       + 'listesinden bir tip seçin — o yol kasnağı otomatik gerginin <strong>önüne</strong> '
       + 'ekler ve satırı görüş alanına alır.',
     'Konumu verin: kasnağı çizimde <strong>sürükleyerek</strong> kabaca, tablonun '
       + '<strong>X</strong>, <strong>Y</strong> ve <strong>D</strong> alanlarına yazarak '
       + 'kesin olarak. Alana tıklayıp yazmanız yeter; çıkınca model güncellenir, çizim de '
-      + 'aynı anda.',
-    '<strong>Kasnak Dönüş Yönü</strong> için <strong>Sağ</strong> / <strong>Sol</strong> '
-      + 'düğmesine basın — bu, kayışın o kasnağa hangi yüzünden değdiğini belirler '
-      + '(Bölüm 5.1).',
+      + 'aynı anda. <strong>Sekme</strong> sağdaki hücreye, <strong>Enter</strong> alttaki '
+      + 'satırın aynı hücresine geçer — tedarikçi sayfasını satır satır geçirmek için.',
+    '<strong>Kasnak Dönüş Yönü</strong> hücresindeki yazıya (<strong>Sağ</strong> ya da '
+      + '<strong>Sol</strong>) tıklayın — öteki yöne döner; bu, kayışın o kasnağa hangi '
+      + 'yüzünden değdiğini belirler (Bölüm 5.1).',
     'Çizimde kasnağa ya da tablodaki <strong>adına</strong> tıklayarak panelini açın ve '
       + 'tablonun taşımadığı alanları '
       + '(temas tarafı ayrıntısı, atalet, güç eğrisi, devir sınırları) girin — Bölüm 6.',
-    'Bütün kasnakları girdikten sonra <strong>üst künyedeki</strong> '
-      + '<strong>✓ Çevrim kapalı · Σsarım</strong> okumasına bakın: '
-      + '<strong>360,0°</strong> olmalı.'
+    'Bütün kasnakları girdikten sonra kartın <strong>sağ üstündeki</strong> '
+      + '<strong>✓ Σsarım</strong> rozetine bakın: <strong>360,0°</strong> olmalı.'
   ]);
 
   h += '<h3>4.1 Çizimde çalışmak</h3>';
@@ -793,8 +823,8 @@ function _gfSec4(){
       'Otomatik gergi silinmez'],
     ['<strong>Kayışın üstüne bırakmak</strong>', 'Paletten sürüklenen kasnak o açıklığın iki '
       + 'kasnağının arasına girer', 'Gergi ile sürücü arası kapalıdır'],
-    ['<strong>Tablo</strong> düğmesi', 'Kayış Tablosu çekmecesini tuvalin altında açar / kapatır (Esc)',
-      'Satırın üstüne gelmek kasnağı çizimde de yakar']
+    ['<strong>Tablo</strong> düğmesi', 'Kartın altındaki Kayış Tablosu’nu açar / kapatır',
+      'Satırın üstüne gelmek kasnağı iki çizimde de yakar; kasnağın üstüne gelmek satırını']
   ], ['Eylem', 'Sonuç', 'Not']);
   h += _gfNot('Kayışı koparan hamle yazılmaz',
       'Bir kasnağı başka bir kasnağın içine ya da kayış yolunu kapatamayacağı bir yere '
@@ -804,27 +834,26 @@ function _gfSec4(){
 
   h += _gfSahneTablo();
   h += '<h3>4.2 Tablonun alanları</h3>';
-  h += '<p>Liste bir <strong>ızgara değil</strong>: her satır bir <em>kasnaktır</em> ve üç '
-    + 'bölgesi vardır — solda <strong>kimlik</strong> (sıra · ad · rol), ortada '
-    + '<strong>elinizle girdikleriniz</strong>, sağda <strong>çözücünün cevapladıkları</strong>. '
-    + 'Girdi ile çözümü ayıran şey artık bir sütun tonu değil <strong>yerleşimin '
-    + 'kendisi</strong>; çözüm bölgesi gömülü bir yüzeyde durur ve yazılamaz.</p>';
-  h += '<p>Bölgelerin <em>içindeki</em> sıra defterin sırasıdır: girdi bölgesinde '
-    + '<strong>X · Y · D · Dönüş Yönü</strong>, çözüm bölgesinde <strong>Efektif Çap · '
+  h += '<p>Tablo tedarikçi raporunun <strong>Layout Data</strong> tablosu gibi dizilir: ince '
+    + 'yatay çizgiler, her satır bir <em>kasnak</em>. Solda <strong>kimlik</strong> (numara · '
+    + 'ad), ortada <strong>elinizle girdikleriniz</strong>, sağda — tek bir dikey çizginin '
+    + 'ardında, gömülü zeminde — <strong>çözücünün cevapladıkları</strong>. Çözüm sütunlarına '
+    + 'yazılamaz.</p>';
+  h += '<p>Grupların <em>içindeki</em> sıra defterin sırasıdır: girdi grubunda '
+    + '<strong>X · Y · D · Dönüş Yönü</strong>, çözüm grubunda <strong>Efektif Çap · '
     + 'Sarım Açısı · Span Uzunluğu</strong> — tedarikçi raporunu satır satır '
-    + 'kopyalayabilirsiniz. Alan etiketleri kart okunsun diye kısadır '
-    + '(<em>Ø eff</em>, <em>Sarım</em>, <em>Span</em>); <strong>defterdeki tam ad</strong> '
-    + 'alanın üstüne gelince görünür.</p>';
+    + 'kopyalayabilirsiniz. Sütun başları kısadır (<em>Ø eff</em>, <em>Sarım</em>, '
+    + '<em>Span</em>); <strong>defterdeki tam ad</strong> başlığın üstüne gelince görünür. '
+    + 'Uzunluklar mm’dir — başlık şeridinde bir kez yazılı.</p>';
   h += _gfTablo('Kayış Tablosu alanları',
     ['Alan', 'Girdi mi', 'Ne yazar / nereden gelir'],
     [
-      ['<strong>#</strong>', 'sıra', 'Kimlik bölgesinde: kayış sırasındaki numara ve '
-        + 'satırı taşıyan <strong>↑ ↓</strong> okları. Sürücünün numarası vurguludur ve '
-        + 'satırı <strong>kilitlidir</strong> — sıra ondan başlar (Bölüm 5)'],
-      ['<strong>KASNAK</strong>', 'girdi', 'Kasnağın adı, kimlik bölgesinde bir '
-        + '<strong>düğme</strong> olarak. Tıklandığında <strong>panelini açar</strong>; '
-        + 'sonuç tablolarında sütun başlığı olur. Yanında rol çipi durabilir '
-        + '(<em>Sürücü</em> · <em>Gergi</em>)'],
+      ['<strong>#</strong>', 'sıra', 'Kayış sırasındaki numara — çizimde kasnağın göbeğinde '
+        + 'de aynı numara yazılıdır. Satıra gelince <strong>↑ ↓</strong> okları belirir. '
+        + 'Sürücünün numarası dolu çizilir ve satırı <strong>kilitlidir</strong> — sıra ondan '
+        + 'başlar; gerginin numarası yeşil halkadır (Bölüm 5)'],
+      ['<strong>KASNAK</strong>', 'girdi', 'Kasnağın adı, bir <strong>düğme</strong> olarak. '
+        + 'Tıklandığında <strong>panelini açar</strong>; sonuç tablolarında sütun başlığı olur'],
       ['<strong>X</strong> · <strong>Y</strong>', 'girdi', 'Kayış düzlemindeki merkez, mm. '
         + 'Orijin sürücü kasnaktır. <strong>Gergi satırında bu, avara kasnağının '
         + 'merkezidir</strong> — gövdenin montaj konumu değil (Bölüm 7)'],
@@ -833,55 +862,47 @@ function _gfSec4(){
         + 'Profil sabitinden gelir, tablo hesaplamaz'],
       ['<strong>D</strong>', 'girdi', 'Kasnağın <strong>dış çapı</strong>, mm. Pitch çapı '
         + 'girilmez — program onu profilden türetir'],
-      ['<strong>Kasnak Dönüş Yönü</strong>', 'girdi', 'İki durumlu düğme: '
-        + '<strong>Sağ</strong> | <strong>Sol</strong>, açık olan dolu çizilir. Seçim '
+      ['<strong>Kasnak Dönüş Yönü</strong>', 'girdi', 'Yön yazılıdır (<strong>Sağ</strong> '
+        + 'ya da <strong>Sol</strong>, yanında dönüş oku); tıklamak öteki yöne çevirir. Seçim '
         + '<em>temas tarafını</em> yazar; ikinci bir yön alanı tutulmaz (Bölüm 5.1)'],
       ['Sarım Açısı', 'çözümden', 'Kayışın o kasnağı sardığı açı, derece'],
       ['Span Uzunluğu', 'çözümden', 'O kasnağın <strong>çıkışındaki</strong> serbest açıklık, mm'],
-      ['Kayış Uzunluğu', 'çözümden', 'Kartın <strong>üst künyesinde</strong>, '
-        + '<em>Kayış boyu</em> adıyla: boy satıra değil çevrimin tamamına aittir '
-        + '(Σspan + Σyay), o yüzden listede değil özette durur'],
+      ['Kayış Uzunluğu', 'çözümden', 'Tabloda <strong>değil</strong>, kartın sağ üst '
+        + 'rozetinde (<em>L … mm</em>): boy satıra değil çevrimin tamamına aittir'],
       ['✕', 'işlem', 'Kasnağı modelden siler. Satırın <strong>en sağında</strong>, girdi '
         + 'alanlarından ayrı durur — sık yapılan işlemle geri dönüşü olmayan işlem yan yana '
-        + 'olmasın diye; dinlenmede soluktur, satıra gelince belirir']
+        + 'olmasın diye; dinlenmede görünmez, satıra gelince belirir. Gerginin ✕’i pasiftir: '
+        + 'her modelde tam bir gergi vardır']
     ], ['l', 'c', 'l']);
-  h += _gfNot('Girdi mi, çözümden mi — BÖLGE söyler',
-      'Yazacağınız her şey <strong>ortadaki girdi bölgesinde</strong>, okuyacağınız her şey '
-    + '<strong>sağdaki çözüm bölgesinde</strong> durur ve çözüm bölgesinin zemini gömülüdür. '
-    + 'Sözlü bir lejant yok: ayrım <strong>yerleşimin kendisinde</strong>. Ayrım alanların '
-    + '<em>sırasından</em> gelmiyor — sıra tedarikçi sayfasıyla birebir olmak zorunda, yani '
-    + 'bitişik bir “girdi” bloğu çizilemez; bölge o sıranın üstüne kuruluyor.<br><br>'
-    + 'Alanın kendisi de ayrımı söyler ve kural iki yönlüdür: <strong>yazılacak alan '
-    + 'dinlenmede boştur</strong> (çerçevesiz, düz), <strong>basılacak düğme dinlenmede '
-    + 'doludur</strong>. İkisi birden çerçeveli olsaydı ad düğmesi bir metin alanından '
-    + 'ayırt edilemezdi. Fareyi bir satırın üzerine getirdiğinizde satır zemini değişir, '
-    + 'bir alana odaklandığınızda çevresinde halka belirir; paneli açık olan kasnağın '
-    + 'satırı da işaretli kalır.');
+  h += _gfNot('Girdi mi, çözümden mi — SÜTUN söyler',
+      'Yazacağınız her şey <strong>dikey çizginin solunda</strong>, okuyacağınız her şey '
+    + '<strong>sağında</strong>, gömülü zeminde durur. Sözlü bir lejant yok. Ayrım alanların '
+    + '<em>sırasından</em> gelmez — sıra tedarikçi sayfasıyla birebir olmak zorunda; gruplama '
+    + 'o sıranın üstüne kuruluyor.<br><br>'
+    + 'Alanın kendisi de ayrımı söyler: <strong>yazılacak hücre dinlenmede düz metindir</strong>, '
+    + 'üstüne gelince altı çizilir, tıklayınca alan olur; <strong>basılacak ad düğmesi</strong> '
+    + 'simgesiyle durur. Fareyi bir satırın üzerine getirdiğinizde satır zemini değişir ve '
+    + 'kasnak çizimde yanar; paneli açık olan kasnağın satırı işaretli kalır.');
   h += _gfNot('Ondalık ayırıcı virgül olabilir',
       'Hücreler <code>63,5</code> yazımını kabul eder ve 63,5 olarak okur. Bu bir incelik '
     + 'değil bir <strong>kapıdır</strong>: alanlar sıradan metin alanı olduğu için virgül '
     + 'kaybolmaz. Tarayıcının sayı alanı olsaydı virgüllü giriş sessizce yutulur, model hiç '
     + 'değişmezdi.');
 
-  h += '<h3>4.3 Üst künye — çevrime ait olan her şey</h3>';
-  h += '<p>Bir satıra değil <strong>çevrimin tamamına</strong> ait olan sayılar listede '
-    + 'değil künyede durur. Izgara döneminde kayış boyu bütün satırları saran tek bir '
-    + 'birleşik hücreydi ve beş satır boyu bir dikdörtgenin ortasında tek bir sayı '
-    + 'taşıyordu; künyede hem o boşluk kalkıyor hem de değerin kime ait olduğu '
-    + 'söylenmiş oluyor.</p>';
-  h += _gfAlanTablo('Künyenin okumaları', [
-    ['<strong>Kayış</strong> · <strong>Marka</strong>', 'Profil ve marka',
-      'Salt okunur — kaynağı <em>Kayış Özellikleri</em> bileşeni ve katalog seçicisi'],
-    ['<strong>Kasnak</strong> · <strong>Efektif boy</strong> · '
-      + '<strong>Kayış boyu</strong>', 'Kasnak sayısı ve iki boy okuması',
-      'Kayış boyu = Σspan + Σyay; efektif boy çekirdeğin ürettiği kayış boyudur'],
-    ['<strong>Σ toplam</strong>', 'Sarım açısı ve span alanlarının toplamı',
-      'Gösterilen alanların toplamıdır, yeni bir büyüklük türetmez — alanları tek tek '
-      + 'toplarsanız alacağınız sayının aynısı'],
-    ['<strong>✓/✗ Çevrim</strong>', '<strong>Çevrim kapalı · Σsarım</strong> ve '
-      + 'gösterilen kol konumu',
-      '<strong>Σsarım 360,0° olmak zorundadır.</strong> Değilse künye <strong>✗ Çevrim '
-      + 'AÇIK</strong> yazar ve kayış yolu kapanmıyor demektir']
+  h += '<h3>4.3 Başlık şeridi ve kartın rozeti</h3>';
+  h += '<p>Tablonun başlık şeridinde <strong>Layout Data · mm</strong>, kayışın profili ve '
+    + 'markası ve <strong>＋ Kasnak ekle</strong> listesi durur. Çevrime ait sayılar tabloda '
+    + '<strong>tekrarlanmaz</strong>: kapanış hükmü kartın sağ üst rozetindedir ve kartın kendi '
+    + 'kol konumuyla verilir.</p>';
+  h += _gfAlanTablo('Nerede ne okunur', [
+    ['<strong>Rozet</strong> (kartın sağ üstü)', '<strong>✓ Σsarım</strong> · kasnak sayısı · '
+      + '<strong>L</strong> (efektif boy)',
+      '<strong>Σsarım 360,0° olmak zorundadır.</strong> Değilse rozet arızanın cümlesini yazar '
+      + '(<em>Kayış yolu KAPANMIYOR</em>, <em>Kayış kasnağın İÇİNDEN geçiyor</em>)'],
+    ['<strong>Gergi sonda değil</strong> (başlık şeridi)', 'Yalnız kural kırıkken belirir',
+      'Sıra sürücüyle başladığına göre gergi son satır olmalı (Bölüm 5)'],
+    ['<strong>Profil · marka</strong> (başlık şeridi)', 'Kayışın künyesi',
+      'Salt okunur — kaynağı <em>Kayış Özellikleri</em> bileşeni ve katalog seçicisi']
   ], ['Nerede', 'Ne gösterir', 'Nasıl okunur']);
 
   h += '<h3>4.4 Kasnak eklemek, silmek, adlandırmak</h3>';
@@ -899,7 +920,7 @@ function _gfSec4(){
   ], ['İşlem', 'Nasıl', 'Not']);
   h += _gfUyari('Girdi alanları geometri çözülemese de doludur',
       'Liste bir <em>rapor</em> değil bir <strong>giriş yüzeyidir</strong>. Model henüz '
-    + 'çözülemiyorsa (kasnaklar çakışıyor, gergi künyesi eksik) çözüm bölgesi boş kalır '
+    + 'çözülemiyorsa (kasnaklar çakışıyor, gergi künyesi eksik) çözüm sütunları — yazar '
     + 'ama <strong>ad · X · Y · D dolu durur</strong> — düzeltmek istediğiniz sayıyı '
     + 'göremediğiniz bir durum olmaz.');
   return h;
@@ -911,12 +932,13 @@ function _gfSec5(){
     + 'gidildiği Kayış Tablosu’nun <strong>satır sırasıdır</strong>. Kasnaklar arasına tel '
     + 'çekilmez, port tıklanmaz — sıra tablodan okunur ve tablodan değiştirilir.</p>';
   h += _gfAdimlar([
-    'Satırı taşımak için kimlik bölgesindeki <strong>↑</strong> ya da <strong>↓</strong> okuna '
-      + 'basın. Sıra değişir, kayış yolu ve bütün türeyen sütunlar anında yeniden çözülür.',
+    'Satırı taşımak için numaranın yanındaki <strong>↑</strong> ya da <strong>↓</strong> '
+      + 'okuna basın (satıra gelince belirir). Sıra değişir, kayış yolu ve bütün türeyen '
+      + 'sütunlar anında yeniden çözülür.',
     'Sıranın <strong>sürücü kasnaktan başladığını</strong> doğrulayın: sürücünün numarası '
-      + 'vurguludur ve satırı kilitlidir, oklarla taşınamaz.',
-    'Tablonun <strong>üst künyesindeki</strong> denetim “Çevrim kapalı” diyene kadar '
-      + 'sırayı ve dönüş yönlerini düzeltin.'
+      + 'dolu çizilir ve satırı kilitlidir, oklarla taşınamaz.',
+    'Kartın rozeti <strong>✓ Σsarım 360,0°</strong> diyene kadar sırayı ve dönüş '
+      + 'yönlerini düzeltin.'
   ]);
   h += _gfUyari('Gates tabloları TERS sırada yazar',
       'Tedarikçi raporlarının kasnak tablosu kayışın <strong>gidişinin tersi</strong> '
@@ -974,10 +996,11 @@ function _gfSec5(){
   h += '<h3>5.3 Modelin kurulu olduğunu doğrulamak</h3>';
   h += '<p>İki yerde aynı denetim yazılıdır ve ikisi de aynı çözümden gelir:</p>';
   h += _gfAlanTablo('Kapanış denetimi', [
-    ['Kayış Tablosu — üst künye', '✓/✗ Çevrim kapalı · Σsarım · efektif boy',
-      'Σsarım <strong>360,0°</strong> olmak zorunda'],
-    ['Kayış Yolu şeması — alt şerit', '✓/✗ · kasnak sayısı · efektif boy · Σ sarım',
-      'Aynı sayı; ✗ ise sebebini yazar (“Kayış yolu KAPANMIYOR”, “Kayış kasnağın İÇİNDEN geçiyor”)']
+    ['Kayış Yolu kartı — sağ üst rozet', '✓/✗ Σsarım · kasnak sayısı · L (efektif boy)',
+      'Σsarım <strong>360,0°</strong> olmak zorunda; ✗ ise sebebini yazar (“Kayış yolu '
+      + 'KAPANMIYOR”, “Kayış kasnağın İÇİNDEN geçiyor”)'],
+    ['Pencerelerin sağ sütunu', '<em>Çevrim kapalı</em> kapısı · Σ',
+      'Aynı çözümden; değerlendirilemiyorsa gri']
   ], ['Nerede', 'Ne yazar', 'Kural']);
   return h;
 }
@@ -1540,10 +1563,10 @@ function _gfSec11(){
     ['Üst künye', 'Çizilen konumun adı · kol açısı · gerginlik. <strong>Kasnak künye '
       + 'tablosu kartta değildir</strong> — ad · Ø · sarım · devir · güç sütunlarını '
       + 'Kayış Tablosu yazıyor, aynı sayıyı iki yüzeyde tutmamak için kalktı'],
-    ['<strong>Alt şerit</strong>', '<strong>✓/✗ · kasnak sayısı · efektif boy · Σsarım</strong> '
+    ['<strong>Sağ üst rozet</strong>', '<strong>✓/✗ Σsarım · kasnak sayısı · efektif boy</strong> '
       + '— Σsarım 360,0° olmak zorundadır; değilse sebebi yazılır'],
-    ['Alt şeritteki seçiciler', 'Gergi kol konumu; <em>İşletme</em> ön ayarında ayrıca '
-      + 'devir ve titreşim']
+    ['Yüzen çubuk', 'Gergi kol konumu · devir · titreşim · <em>Katmanlar</em> · <em>Tablo</em>'],
+    ['Göbekteki numara', 'Tablo açıkken kasnağın tablodaki satır numarası']
   ], ['İşaret', 'Ne söylüyor']);
   h += _gfSahneCalisma();
   h += _gfNot('Çalışma Noktası kartı çalışır',
@@ -1567,11 +1590,11 @@ function _gfSec11(){
     + 'hesaplanır; devrin kendisi bir girdidir, bir sonuç değil.');
   h += '<h3>11.2 Kayış Tablosu ve tuval rozetleri</h3>';
   h += '<p>Kasnakların kutusu olmadığı için tuvalde yalnız <strong>araç kartlarının</strong> '
-    + 'rozetleri kalır; kasnak başına okumalar Kayış Tablosu çekmecesindedir (çizim '
-    + 'kartının <em>Tablo</em> düğmesi).</p>';
+    + 'rozetleri kalır; kasnak başına okumalar Kayış Yolu kartının altındaki Kayış '
+    + 'Tablosu’ndadır.</p>';
   h += _gfAlanTablo('Nerede ne okunur', [
     ['<strong>Kayış Tablosu</strong>', 'Kasnak başına efektif çap · dönüş yönü · sarım · span; '
-      + 'altta Σ toplam satırı, üstte künyede ✓/✗ Çevrim kapalı · Σsarım',
+      + 'kapanış hükmü kartın rozetinde (✓/✗ Σsarım)',
       'Sarım ve span <strong>çözümden</strong>; Σsarım 360,0° olmalı'],
     ['Kayış kartı rozeti', '<code>SABİT</code> (mavi) ↔ <code>SERBEST</code> (amber)',
       'Tıklanabilir; avara merkezi girdiyken kilitli'],
@@ -1581,7 +1604,7 @@ function _gfSec11(){
   h += '<h3>11.3 Paneller</h3>';
   h += _gfAlanTablo('Hangi sonuç hangi panelde', [
     ['<strong>Kayış Tablosu</strong>', 'Kasnak başına efektif çap · dönüş yönü · sarım açısı · '
-      + 'span; Σ toplam satırı ve üst künyede Σsarım', 'Hayır'],
+      + 'span; Σsarım kartın rozetinde', 'Hayır'],
     ['Gergi paneli', 'Türeyen montaj konumu · serbest kol açısı · gereken kayış boyu · '
       + 'tasarım gerginliği · konum pimi', 'Hayır'],
     ['Kayış paneli', 'Türetilen boy ve hangi kol açısından geldiği · katalog aday tablosu · '
@@ -2162,7 +2185,7 @@ function _gfEkA(){
       ['<strong>Kayış sırası</strong>', 'Kayış Tablosu', '# sütunundaki ↑ ↓ okları'],
       ['<strong>Kasnak dönüş yönü</strong>', 'Kayış Tablosu', 'Kasnak Dönüş Yönü sütunu'],
       ['Efektif çap · sarım açısı · span · Σsarım', 'Kayış Tablosu',
-        'Türeyen sütunlar ve üst künye'],
+        'Türeyen sütunlar; Σsarım Kayış Yolu kartının rozetinde'],
       ['Temas tarafı (ayrıntı) ve kasnak geometrisi', 'Kasnak',
         'Temas Tarafı · Kasnak Geometrisi'],
       ['Sürücü kasnak seçimi', 'Kasnak', 'Rol'],

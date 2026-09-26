@@ -909,10 +909,11 @@ ikincisi seçici + üç eksen grafiğini yan yana koyar. 380 px'lik bir sütunda
 ikisi de okunamaz olurdu. Ayrım `:has()` ile kuralın kendisinde — ikinci bir
 JS bayrağı iki yüzeyin sessizce ayrışması demekti.
 
-**Aynı kural alttan da geçerli** (2026-09-24): FEAD Kayış Tablosu tuvalin
-üstünde yüzen bir karttı; artık kanvas alanının bir SATIRI, tuval o kadar
-kısalır. Gerekçe, ölçüm ve kapı FEAD skill'inde (kural 14 → *"ÇEKMECE TUVALİN
-ALTINDA"*).
+**Alttan da geçerliydi** (2026-09-24 → 09-26): FEAD Kayış Tablosu çekmecesi
+tuvalin üstünde yüzmek yerine kanvas alanının bir SATIRIydı ve tuvali
+kısaltıyordu. 2026-09-26'dan beri tablo Kayış Yolu kartının İÇİNDE (Pafta):
+tuvali örten ya da kısaltan bir FEAD yüzeyi kalmadı. Ayrıntı FEAD skill'inde
+(kural 14; emekli çekmece `references/emekli-yonler.md`).
 
 ### Ölçünün kendisi iki kez yanlıştı
 

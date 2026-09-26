@@ -185,9 +185,12 @@ test('EKRANDA ikinci aile yok — FEAD pencereleri ve AP pencereleri taranıyor'
     await page.waitForTimeout(700);
     await topla();
   }
-  // Kayış Tablosu artık bir PENCERE (Çizim Masası) — o da taranıyor.
-  await page.evaluate(() => { veTogglePropertiesPanel(false); veFeadTabloAc(); });
-  await page.waitForTimeout(500);
+  // Kayış Tablosu 2026-09-26'dan beri Kayış Yolu kartının İÇİNDE (Pafta):
+  // kanvasla birlikte taranıyor. Pencere kapatılıp bir kez daha bakılır —
+  // tablonun hücreleri panelin arkasında kalmasın.
+  await expect(page.locator('.ve-fead-pafta tr[data-ve-node]')).toHaveCount(6);
+  await page.evaluate(() => veTogglePropertiesPanel(false));
+  await page.waitForTimeout(300);
   await topla();
   expect(aykiri).toEqual({});
   // BOŞA ÇALIŞMIYOR: tarama gerçekten yüzlerce öğeye baktı (eskiden FEAD

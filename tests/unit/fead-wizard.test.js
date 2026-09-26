@@ -460,10 +460,13 @@ describe('kurulum kapısı ve kurulum', () => {
 
     expect(yakalanan).toBeTruthy();
     const L = componentDefs['fead-layout'];
-    const kanvas = yakalanan.filter((a) => a && a.w === L.defaultWidth && a.h === L.defaultHeight);
+    // Tablolu (geometri) kart GENİŞ, tablosuz (işletme) kart dar — Pafta.
+    const kanvas = yakalanan.filter((a) => a && a.h === L.defaultHeight
+                                          && [VE_FEAD_PAFTA_W, VE_FEAD_LAYOUT_W].includes(a.w));
     expect(kanvas).toHaveLength(2);
+    expect(kanvas.map((a) => a.w)).toEqual([VE_FEAD_PAFTA_W, VE_FEAD_LAYOUT_W]);
     expect(kanvas[0].ly).toBe(kanvas[1].ly);                                   // aynı satır
-    expect(Math.abs(kanvas[1].lx - kanvas[0].lx)).toBeGreaterThanOrEqual(L.defaultWidth);
+    expect(Math.abs(kanvas[1].lx - kanvas[0].lx)).toBeGreaterThanOrEqual(kanvas[0].w);
     // KUTUSUZ tipler (kasnaklar) ızgarada kalıyor — kanvasta yerleri yok ama
     // createNode bir koordinat istiyor.
     expect(yakalanan.filter(Boolean)).toHaveLength(yakalanan.length);

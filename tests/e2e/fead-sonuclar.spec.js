@@ -57,7 +57,10 @@ test('çözücü penceresi → "Sonuçlar\'da aç" → FEAD sekmesi, başlangı�
   }, sv);
   await page.waitForTimeout(250);
   await page.evaluate(() => {
-    const b = [...document.querySelectorAll('button, [role=tab]')].find((x) => /^\s*Sonuç\s*$/.test(x.textContent));
+    // Sekme ADI kendi öğesinde: sekme 2026-09-26'dan beri adının altında
+    // DURUMUNU da taşıyor, tüm metin artık yalnız "Sonuç" değil.
+    const ad = (x) => (x.querySelector('.ve-fp-tab-ad') || x).textContent;
+    const b = [...document.querySelectorAll('button, [role=tab]')].find((x) => /^\s*Sonuç\s*$/.test(ad(x)));
     if (b) b.click();
   });
   const ac = page.locator('.ve-fr-ac');

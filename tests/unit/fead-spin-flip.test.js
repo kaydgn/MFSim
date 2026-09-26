@@ -315,16 +315,19 @@ describe('L_pitch − L_eff = h_b·Σ(d·φ) — işaretli', () => {
     });
   });
 
-  test('"360 olmalı" metni MUTLAK değeri söylüyor', () => {
+  // Çevrim hükmünün taşıyıcısı KARTIN ROZETİ (Pafta, 2026-09-26: tablo aynı
+  // hükmü ikinci kez yazmıyor). Rozet MUTLAK değerle hükmeder: ters yönde
+  // gezilen düzen −360° verir ve bu KAPALI bir çevrimdir — "(ters yön)" diye
+  // yazılır, arıza diye değil.
+  test('çevrim hükmü MUTLAK değerle — ters yön arıza değil, künyede yazılı', () => {
     const { build } = kur(B);
-    const node = { id: 'tbl', type: 'fead-layout', data: {} };
-    const h = veFeadTableCardHTML
-      ? String(veFeadTableCardHTML(node)) : '';
-    if (h) {
-      expect(h).toContain('|Σ| 360 olmalı');
-      expect(h).not.toMatch(/°\s*\(360 olmalı\)/);
-    }
     expect(build.ok).toBe(true);
+    if (typeof veFeadYolDurumu !== 'function') return;
+    const d = veFeadYolDurumu(build, 'mean');
+    expect(d.ok).toBe(true);
+    expect(d.sag).toMatch(/^Σsarım −?-?360\.0° \(ters yön\)$/);
+    const h = String(veFeadTableCardHTML({ id: 'tbl', type: 'fead-layout', data: {} }));
+    expect(h).not.toMatch(/360 olmalı|Çevrim AÇIK/);          // tablo hükmü tekrarlamıyor
   });
 });
 
