@@ -118,6 +118,26 @@ function veAttachNodeDrag(nodeEl, node) {
   });
 })();
 
+// TUVAL KABI KAYMAZ, KAMERA KAYAR (canvas-space.js → veKabKaymasiniAktar):
+// kabın kayması kameraya aktarılır, kap 0'a döner. Ofset YERİNDE değişir —
+// başka modüller nesneyi tutuyor. İki yerden çağrılır: kabın `scroll` olayı
+// ve kamerayı KURAN veFitViewToContent. İkincisi şart: `scroll` olayı bir kare
+// SONRA gelir; o arada kurulan kamera (alt topolojiye giriş) sonradan kayma
+// kadar ötelenirdi. Dönüş: aktarıldıysa true.
+function veKabiEsitle() {
+  var w = (typeof document !== 'undefined') ? document.getElementById('ve-canvas-wrapper') : null;
+  if(!w) return false;
+  var sx = w.scrollLeft, sy = w.scrollTop;
+  if(!sx && !sy) return false;
+  w.scrollLeft = 0;
+  w.scrollTop = 0;
+  var o = veKabKaymasiniAktar(canvasOffset, sx, sy);
+  canvasOffset.x = o.x;
+  canvasOffset.y = o.y;
+  updateCanvasTransform();
+  return true;
+}
+
 // Canvas transform uygula
 function updateCanvasTransform() {
   var canvas = document.getElementById('ve-canvas');
@@ -150,6 +170,7 @@ function veFitViewToContent(opts) {
   if(typeof nodes === 'undefined' || !nodes || nodes.length === 0) return;
   var wrapper = document.getElementById('ve-canvas-wrapper');
   if(!wrapper) return;
+  veKabiEsitle();   // kayık kapla kurulan kamera bir kare sonra ötelenirdi
   var W = wrapper.clientWidth, H = wrapper.clientHeight;
   if(W < 20 || H < 20) return;
   var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -238,6 +259,9 @@ document.addEventListener('DOMContentLoaded', function() {
   var selectionBox = document.getElementById('ve-selection-box');
   
   if(!canvas || !canvasWrapper) return;
+
+  // Kap kaydırılırsa kayma kameraya aktarılır, kap 0'a döner (veKabiEsitle).
+  canvasWrapper.addEventListener('scroll', veKabiEsitle);
   
   // Tek modül — veActiveModule sabit
   veActiveModule = 'full-throttle';

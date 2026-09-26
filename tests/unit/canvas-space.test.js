@@ -478,3 +478,44 @@ describe('veBoundaryChipPos — çıkış düğmesi çerçevenin İÇİNE, SOL �
     expect(blok).not.toMatch(/transform\s*:\s*translate/);
   });
 });
+
+// TUVAL KABI KAYMAZ, KAMERA KAYAR. Kap `overflow:hidden` ama tarayıcı onu yine
+// kaydırıyordu (odak, Ctrl+F, "görünür yap"): ekran dışı bir girdiye odaklanmak
+// kabı 3147 × 2414 px kaydırdı ve tuvalin tamamı (kartlar, ızgara, minimap)
+// geri dönüşsüz kaydı. Kayma kameraya aktarılır; ekrandaki görüntü aynı kalır.
+// Kablolama ve gerçek kaydırma: tests/e2e/tuval-kab-kaymaz.spec.js.
+describe('veKabKaymasiniAktar — kabın kayması kameraya geçer', () => {
+  test('ekran = (yerel − 3000)·zoom + ofset − kayma: kayma ofsetten düşülünce görüntü aynı', () => {
+    const ofs = { x: 502.5, y: 321 }, sx = 307, sy = 189, zoom = 0.8, yerel = { x: 3400, y: 3100 };
+    const kayikEkran = { x: (yerel.x - 3000) * zoom + ofs.x - sx, y: (yerel.y - 3000) * zoom + ofs.y - sy };
+    const yeni = cs.veKabKaymasiniAktar(ofs, sx, sy);
+    expect((yerel.x - 3000) * zoom + yeni.x).toBeCloseTo(kayikEkran.x, 9);
+    expect((yerel.y - 3000) * zoom + yeni.y).toBeCloseTo(kayikEkran.y, 9);
+  });
+
+  test('kayma yoksa ofset aynı; girdi nesnesi değişmez (saf)', () => {
+    const ofs = { x: 10, y: 20 };
+    expect(cs.veKabKaymasiniAktar(ofs)).toEqual({ x: 10, y: 20 });
+    expect(cs.veKabKaymasiniAktar(ofs, 5, 7)).toEqual({ x: 5, y: 13 });
+    expect(ofs).toEqual({ x: 10, y: 20 });
+  });
+
+  // Eşitleyici İKİ yerden çağrılmalı: kabın `scroll` olayı bir kare SONRA
+  // geliyor; kamerayı kuran sığdırma kayık kapla çalışırsa kurduğu kamera o
+  // kare sonra kayma kadar ötelenirdi (ölçüldü: alt topolojiye girişte çıkış
+  // düğmesi çerçeveden 317 px koptu).
+  test('ui-core: eşitleyici kabı sıfırlar, kamerayı çizer; scroll olayı VE sığdırma onu çağırır', () => {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '../../js/ui-core.js'), 'utf8');
+    const i = src.indexOf('function veKabiEsitle(');
+    expect(i).toBeGreaterThan(0);
+    const govde = src.slice(i, src.indexOf('\n}\n', i));
+    expect(govde).toMatch(/scrollLeft = 0/);
+    expect(govde).toMatch(/scrollTop = 0/);
+    expect(govde).toMatch(/veKabKaymasiniAktar\(canvasOffset/);
+    expect(govde).toMatch(/updateCanvasTransform\(\)/);
+    expect(src).toMatch(/canvasWrapper\.addEventListener\('scroll', veKabiEsitle\)/);
+    const fit = src.slice(src.indexOf('function veFitViewToContent('));
+    const fitGovde = fit.slice(0, fit.indexOf('var W = wrapper.clientWidth'));
+    expect(fitGovde).toMatch(/^\s+veKabiEsitle\(\);/m);
+  });
+});
