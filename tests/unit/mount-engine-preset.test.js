@@ -174,7 +174,7 @@ describe('Panel', () => {
     delete global.VE_FT_MOTOR_PRESETS;
     expect(cp._mntEnginePresetSelect(mkMotor())).toBe('');
     const html = cp._mntEngineSection(mkMotor());
-    expect(html).toContain('Tepe Tork');               // alanlar yerinde
+    expect(html).toContain('Tepe tork');               // alanlar yerinde
     expect(html).not.toContain('veMntApplyEnginePreset');
     global.VE_FT_MOTOR_PRESETS = saved;
   });

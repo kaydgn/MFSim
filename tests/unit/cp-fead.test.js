@@ -81,7 +81,7 @@ const kasnak = (type, data, name) => ({
 const SX = () => 1;
 
 describe('Alt-sistem sözleşmesi', () => {
-  test('modül paneli "Alt Topolojiyi Aç" kancasını düğümün id\'siyle kurar', () => {
+  test('modül paneli "Alt topolojiyi aç" kancasını düğümün id\'siyle kurar', () => {
     const html = fead.getFeadModulePropertiesHTML({ id: 'comp-3', type: 'fead-analysis', data: {} });
     expect(html).toContain("veFeadOpenEditor('comp-3')");
   });
@@ -696,7 +696,7 @@ describe('gergi paneli TEK koordinat soruyor', () => {
     const html = fead.getFeadTensionerPropertiesHTML(tam());
     expect(html).toMatch(/veFeadSet\('[^']+','cenX'/);
     expect(html).toMatch(/veFeadSet\('[^']+','cenY'/);
-    expect(html).toMatch(/Avara Kasnağının Merkezi/);
+    expect(html).toMatch(/Avara kasnağının merkezi/);
     expect(html).toMatch(/veFeadSet\('[^']+','meanLoad'/);
     // KOL YÖNÜ NİSPİ GÖSTERİLİYOR (kullanıcı, 2026-09-01) — alan mutlak
     // `armMeanDeg`i DOĞRUDAN yazmıyor, çeviriciden geçiyor. Saklanan alan
@@ -738,8 +738,8 @@ describe('gergi paneli TEK koordinat soruyor', () => {
     expect(html).toMatch(/montaj konumu \(türedi\)/);
     expect(html).toMatch(/-250\.00 \/ 110\.00/);
     // ve okuma KOL KÜNYESİ kartının içinde — onu belirleyen iki alanın yanında
-    const i = html.indexOf('Kol Künyesi');
-    const j = html.indexOf('Yay Künyesi');
+    const i = html.indexOf('Kol künyesi');
+    const j = html.indexOf('Yay künyesi');
     expect(i).toBeGreaterThan(-1);
     expect(j).toBeGreaterThan(i);
     expect(html.slice(i, j)).toMatch(/montaj konumu \(türedi\)/);
@@ -781,7 +781,7 @@ describe('gergi paneli TEK koordinat soruyor', () => {
     expect(ten.data.cenX).toBeCloseTo(-170.076, 2);
     expect(ten.data.cenY).toBeCloseTo(99.163, 2);
     expect(ten.data.armMeanDeg).toBe(344);       // kol açısı KORUNUR
-    expect(html).toMatch(/Avara Kasnağının Merkezi/);
+    expect(html).toMatch(/Avara kasnağının merkezi/);
   });
 
   // EN ESKİ YAZIM da göç eder ve BEDAVA: `cenX/cenY` (+ angleMode:'mount')
@@ -859,8 +859,8 @@ describe('güç eğrisi kartı', () => {
   test('aksesuarda görünür, AVARADA görünmez', () => {
     const ac = kasnak('fead-ac', { od: 152, x: 0, y: 0 });
     const idr = kasnak('fead-idler', { od: 75, x: 0, y: 0 });
-    expect(fead.getFeadPulleyPropertiesHTML(ac)).toMatch(/Güç Eğrisi/);
-    expect(fead.getFeadPulleyPropertiesHTML(idr)).not.toMatch(/Güç Eğrisi/);
+    expect(fead.getFeadPulleyPropertiesHTML(ac)).toMatch(/Güç eğrisi/);
+    expect(fead.getFeadPulleyPropertiesHTML(idr)).not.toMatch(/Güç eğrisi/);
   });
 
   test('boş eğride satır eklenebilir, dolu eğri satırları basılır', () => {
@@ -2653,7 +2653,7 @@ describe('Çözücü paneli tasarım gerginliği SORMUYOR', () => {
     expect(html).toMatch(/Tasarım gerginliği sorulmaz/);
   });
 
-  test('Algılanan Model tablosu TÜRETİLEN değeri gösteriyor', () => {
+  test('Algılanan model tablosu TÜRETİLEN değeri gösteriyor', () => {
     const ex = veFeadExampleNodes('BMC_FEAD_2026');
     ex.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     const build = veFeadBuildSystem(ex.nodes);
@@ -2675,7 +2675,7 @@ describe('gergi paneli: avara hareketi montaj konumundan tanımlanır', () => {
       od: 75, cenX: -161.97, cenY: 91.29, armLen: 90, armMeanDeg: -11.9992,
       preload: 8.6, kArm: 0.48, meanLoad: 22.07,
     }));
-    expect(html).toMatch(/Avara Hareketi/);
+    expect(html).toMatch(/Avara hareketi/);
     expect(html).toMatch(/montaj konumu \(türedi\)/);
     expect(html).not.toMatch(/NaN/);
   });
@@ -2968,7 +2968,7 @@ describe('"Başlangıç ve Örnekler" bileşeni kaldırıldı', () => {
     expect(fead.getFeadExamplePropertiesHTML).toBeUndefined();
   });
 
-  test('örnek KURUCUSU duruyor — sihirbazın "Modeli Kur"u ile aynı işi yapan yol', () => {
+  test('örnek KURUCUSU duruyor — sihirbazın "Modeli kur"u ile aynı işi yapan yol', () => {
     // Kaldırılan şey bileşendi, yetenek değil: `veFeadLoadExample` testlerin
     // kanonik model kurucusu ve sihirbazın kurulum yolunun aynadaki eşi.
     expect(typeof fead.veFeadLoadExample).toBe('function');

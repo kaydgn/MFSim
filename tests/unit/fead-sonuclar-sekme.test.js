@@ -226,7 +226,7 @@ describe('Sonuçlar sayfası yüzleri', () => {
     expect(h).toContain('Çevrim · Açıklık gerginlikleri');
     expect(h).toContain('Campbell · Burulma modları');
     expect(h).toContain('FEAD Sonuç Özeti');
-    expect(h).toContain('FEAD Detaylı Rapor (HTML)');
+    expect(h).toContain('FEAD detaylı rapor (HTML)');
   });
   test('boş pano FEAD sekmesinde başlangıç kartını gösterir', () => {
     coz();

@@ -306,7 +306,7 @@ describe('ŞERİT VE BANT — pencerede', () => {
     sek.forEach((b) => expect(b.getAttribute('data-d'))
       .toBe(b.querySelector('.ve-fp-tab-d').getAttribute('data-d')));
     // Ad ayrı bir elemanda: sekme adı okunurken durum ona karışmıyor.
-    expect(sek[2].querySelector('.ve-fp-tab-ad').textContent).toBe('Devir Sınırları');
+    expect(sek[2].querySelector('.ve-fp-tab-ad').textContent).toBe('Devir sınırları');
   });
 
   test('eksik varken bant: sekmenin ADI, SONUCU ve bağlantısı; yokken bant YOK', () => {
@@ -315,7 +315,7 @@ describe('ŞERİT VE BANT — pencerede', () => {
     const bant = kap.querySelector('.ve-fp-eksik');
     expect(bant).toBeTruthy();
     expect(bant.querySelectorAll('.ve-fp-eksik-s').length).toBe(1);
-    expect(bant.textContent).toMatch(/Devir Sınırları/);
+    expect(bant.textContent).toMatch(/Devir sınırları/);
     expect(bant.textContent).toMatch(/değerlendirilemiyor/);
     expect(bant.querySelector('button').getAttribute('onclick')).toMatch(/veFeadEksikGit\('ex-A_C','dev'\)/);
     // Bant sekme gövdelerinin DIŞINDA — hangi sekme açık olursa olsun görünür.

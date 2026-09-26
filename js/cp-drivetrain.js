@@ -22,7 +22,7 @@ function getTransferPropertiesHTML(node) {
     // İKİ SÜTUN (kart yığını): SOL = parametreler, SAĞ = kademe tablosu
     html += '<div class="ve-cp-grid ve-cp-grid--cards"><div class="ve-cp-col">';
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
-    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Transfer Case Parametreleri</span></div>';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Transfer Case parametreleri</span></div>';
     html += '<div class="sw-pkg-body">';
     
     // Transfer Case Preset Seçici
@@ -50,7 +50,7 @@ function getTransferPropertiesHTML(node) {
     // Kademe Sayısı (readonly)
     var roStyle = 'width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; cursor:default;';
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
-    html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Kademe Sayısı</th>';
+    html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Kademe sayısı</th>';
     html += '<td style="background:var(--bg-tertiary);"><input type="text" value="' + ftTrGears.length + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
     html += '</tr>';
     
@@ -61,7 +61,7 @@ function getTransferPropertiesHTML(node) {
 
     // ── KADEME TABLOSU ──
     html += '<div style="margin-top:10px;">';
-    html += '<div class="sw-section-title">Kademe Tablosu</div>';
+    html += '<div class="sw-section-title">Kademe tablosu</div>';
     
     html += '<div style="border:1px solid var(--border-color); border-radius:var(--radius-sm); overflow:hidden;">';
     html += '<table class="ve-pnl-tbl ve-izgara">';
@@ -145,7 +145,7 @@ function getTransferPropertiesHTML(node) {
   
   // Tablo altı butonlar
   html += '<div class="sw-btn-row">';
-  html += '<button class="sw-btn sw-btn-primary" onclick="addVETransferRow(\'' + node.id + '\')">+ Satır Ekle</button>';
+  html += '<button class="sw-btn sw-btn-primary" onclick="addVETransferRow(\'' + node.id + '\')">+ Satır ekle</button>';
   html += '<button class="sw-btn" onclick="clearVETransferTable(\'' + node.id + '\')">Temizle</button>';
   html += '</div>';
   
@@ -153,7 +153,7 @@ function getTransferPropertiesHTML(node) {
   html += '<div class="ve-cp-col">';                  // SAĞ sütun: aktif kademe + verim
   // Aktif Kademe Seçimi
   html += '<div class="sw-pkg-card" style="margin-bottom:10px; margin-top:12px;">';
-  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Aktif Kademe</span></div>';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Aktif kademe</span></div>';
   html += '<div class="sw-pkg-body">';
   
   html += '<table class="ve-pnl-tbl ve-pnl-tbl--framed">';
@@ -406,13 +406,13 @@ function getPropshaftPropertiesHTML(node) {
   html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Propşaft <button class="sw-info-btn" onclick="showInfoPopup(\'propshaftVerileri\')" title="Bilgi">?</button></div>';
 
   html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
-  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Propşaft Parametreleri</span></div>';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Propşaft parametreleri</span></div>';
   html += '<div class="sw-pkg-body">';
   html += '<table class="ve-pnl-tbl ve-pnl-tbl--framed">';
   
   // Propşaft Adı
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
-  html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:45%; font-weight:500; color:var(--text-secondary);">Propşaft Adı</th>';
+  html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:45%; font-weight:500; color:var(--text-secondary);">Propşaft adı</th>';
   html += '<td style="background:var(--bg-tertiary);"><input type="text" id="ve-ps-name-' + node.id + '" value="' + psName + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);" onchange="onVEPropshaftParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   

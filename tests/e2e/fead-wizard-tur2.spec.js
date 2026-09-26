@@ -165,7 +165,7 @@ test('tur2 — gergi satırı · yön · kilit · kayış · kW', async ({ page 
   await page.waitForTimeout(250);
   const kayis = await page.evaluate(() => {
     const g = document.getElementById('ve-fw-body').innerText;
-    return { profil: /Profil ve Marka/.test(g), kunye: /\bKünye\b/.test(g),
+    return { profil: /Profil ve marka/.test(g), kunye: /\bKünye\b/.test(g),
              malzeme: /\bMalzeme\b/.test(g), kip: /sabitleriyle hesapla/.test(g),
              boy: /Gereken boy/.test(g), kapali: /KAPALI/.test(g) };
   });

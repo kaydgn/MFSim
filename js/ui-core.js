@@ -783,7 +783,7 @@ function createNode(type, x, y, width, height) {
       node.isMasterDiff = true;
     }
     if(node.isMasterDiff) {
-      html += '<div class="ve-wheel-master-badge" title="Master Diferansiyel — parametreleri bu bileşenden okunur">★</div>';
+      html += '<div class="ve-wheel-master-badge" title="Master diferansiyel — parametreleri bu bileşenden okunur">★</div>';
     }
   }
 
@@ -796,7 +796,7 @@ function createNode(type, x, y, width, height) {
     }
     // Badge her zaman master ise göster
     if(node.isMasterWheel) {
-      html += '<div class="ve-wheel-master-badge" title="Master Tekerlek — diğer tekerlekleri kontrol eder">★</div>';
+      html += '<div class="ve-wheel-master-badge" title="Master tekerlek — diğer tekerlekleri kontrol eder">★</div>';
     }
   }
   

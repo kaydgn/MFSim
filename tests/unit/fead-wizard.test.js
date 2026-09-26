@@ -281,7 +281,7 @@ describe('kipe göre hangi alan taşınır', () => {
     expect(hepsi).not.toMatch(/Gergiyi nasıl tanımlayacaksınız/);
     expect(hepsi).not.toMatch(/tenMode/);
     // ve gergi adımı TEK koordinat soruyor
-    expect(hepsi).toMatch(/Avara Kasnağının Merkezi/);
+    expect(hepsi).toMatch(/Avara kasnağının merkezi/);
     expect(hepsi).not.toMatch(/ten\.pivotX|ten\.freeAngleDeg/);
     expect(st).toBeTruthy();
   });
@@ -1113,7 +1113,7 @@ describe('aksesuar modelleri — elle kW girişi YOK', () => {
     const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
     expect(h).not.toContain('veFeadWizDutyKw(');       // elle giriş kalktı
     expect(h).toContain('ve-fw-ro');                   // okuma hücresi
-    expect(h).toContain('Aksesuar Modelleri');
+    expect(h).toContain('Aksesuar modelleri');
   });
 
   test('katalogu olan aksesuarda açılır pencere, olmayanda "katalog yok"', () => {
@@ -1266,7 +1266,7 @@ describe('özet kartı — kol açısı kutusu yok', () => {
     expect(h).not.toMatch(/Yay kurulması|Gereken KAYIŞ BOYU/);
     // MONTAJ KONUMU BUNUN DIŞINDA ve bilerek: bir okuma değil bir ÇIKTI —
     // atölyeye giden sayı ve girdiyi denetleyen tek sayı odur.
-    expect(h).toMatch(/Gövdenin Montaj Konumu/);
+    expect(h).toMatch(/Gövdenin montaj konumu/);
     // Çözüm çıpası birebir: kaldırılan şey bir GÖRÜNÜM, bir hesap değil.
     expect(b.beltLengthMm).toBeCloseTo(1714.6075, 3);
     expect(b.springTensionN).toBeCloseTo(543.8750, 3);
@@ -1303,7 +1303,7 @@ describe('çalışma çevrimi — tablo dolu açılır', () => {
   test('6. adımda ÇEVRİM SEÇİCİ var ve yüklü kaydı gösteriyor', () => {
     kabuk(); wiz.veFeadWizReset();
     const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
-    expect(h).toContain('Çalışma Çevrimi Kaydı');
+    expect(h).toContain('Çalışma çevrimi kaydı');
     expect(h).toContain('veFeadWizDutyLib');
     // Yüklü kayıt SEÇİLİ görünmeli.
     const rec = DUTY.veFeadDutyOf(DUTY.VE_FEAD_DUTY_DEFAULT);
@@ -1837,10 +1837,10 @@ describe('gergi künyesi — seçiliyken parça alanları kilitli', () => {
 // SADECE VE SADECE kayış boyunu çıktı olarak verecek… Ama 'Kayış'
 // penceresindeki 'profil ve marka' kısmı kalsın."*
 describe('kayış adımı — tek çıktı, profil kalır', () => {
-  test('üç kart da YOK, "Profil ve Marka" DURUYOR', () => {
+  test('üç kart da YOK, "Profil ve marka" DURUYOR', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const h = wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild());
-    expect(h).toContain('Profil ve Marka');
+    expect(h).toContain('Profil ve marka');
     expect(h).toContain("_fwSetRender('belt.profile'");
     expect(h).toContain("_fwSetRender('belt.brand'");
     expect(h).toContain("_fwSet('belt.ribs'");
@@ -1926,8 +1926,8 @@ describe('sihirbaz girdisi → topoloji bileşeni', () => {
     expect(an.data.accPreset).toBe('tepas_350a');
     // KULLANICININ SORDUĞU ŞEY: bileşenin KENDİ panelinden görünüyor mu.
     const h = getFeadPulleyPropertiesHTML(an);
-    expect(h).toContain('Katalog Modeli');
-    const kart = h.slice(h.indexOf('Katalog Modeli'));
+    expect(h).toContain('Katalog modeli');
+    const kart = h.slice(h.indexOf('Katalog modeli'));
     expect(kart.slice(0, kart.indexOf('</select>')))
       .toContain('value="tepas_350a" selected');
   });
@@ -2072,7 +2072,7 @@ describe('örnekten doldur — AÇILIR LİSTE, yüklenen belirgin', () => {
     const h = wiz.veFeadWizStepHTML(0, b);
     const ex = veFeadExampleOf('AG00879_GATES_2023');
 
-    expect(h).toContain('Seçilen Örnek');
+    expect(h).toContain('Seçilen örnek');
     // Not KAÇIŞLANARAK basılıyor (doğru davranış); karşılaştırma bu yüzden
     // `&` öncesindeki parçayla yapılıyor.
     expect(h).toContain(ex.note.split('&')[0].slice(0, 30));
@@ -2111,10 +2111,10 @@ describe('örnekten doldur — AÇILIR LİSTE, yüklenen belirgin', () => {
   test('taze sihirbazda künye YOK — boş örnek için iddia uydurulmuyor', () => {
     kabuk(); _fwSifirla();
     const h = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
-    expect(h).not.toContain('Seçilen Örnek');
+    expect(h).not.toContain('Seçilen örnek');
     // "Boş başla" da bir seçim ama gösterilecek bir örnek YOK.
     wiz.veFeadWizReset();
-    expect(wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild())).not.toContain('Seçilen Örnek');
+    expect(wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild())).not.toContain('Seçilen örnek');
   });
 
   test('KÜNYE TEK ÖRNEK İÇİN — liste değil, yani pencere yine büyümüyor', () => {
@@ -3180,7 +3180,7 @@ describe('sihirbazda açıklama yüzeyi YOK', () => {
     // Pencerenin TAMAMINDA: ne açıklama paragrafı ne göz kırpma.
     expect(ov.querySelectorAll('.ve-fw-hint').length).toBe(0);
     expect(ov.querySelectorAll('.ve-fw-card-h em').length).toBe(0);
-    expect(ov.querySelector('.ve-fw-card-h').textContent.trim()).toBe('Kol Açısını Seç');
+    expect(ov.querySelector('.ve-fw-card-h').textContent.trim()).toBe('Kol açısını seç');
     expect(ov.innerHTML).not.toMatch(/Fareyi düzlemde gezdirin/);
   });
 
@@ -3224,7 +3224,7 @@ describe('adım listesi ve taşınan yetenek', () => {
     expect(wiz.VE_FW_STEPS.length).toBe(6);
     const adlar = wiz.VE_FW_STEPS.map((s) => s.ad);
     expect(adlar).toEqual(['Başlangıç', 'Kasnaklar', 'Otomatik Gergi',
-                           'Kayış', 'Motor ve Çevrim', 'Özet ve Kurulum']);
+                           'Kayış', 'Motor ve çevrim', 'Özet ve kurulum']);
   });
 
   test('SIRA DÜZENLEME Kasnaklar kartında — ok, hüküm ve yön çevirme', () => {
@@ -3371,7 +3371,7 @@ describe('gizli örnek kaydı', () => {
 // `createNode` her birinde `saveState()` çağırıyor; sarılmazsa Ctrl+Z kurulan
 // modeli düğüm düğüm söker. Adım sayısı state.js'de ölçülü (veStateBatch);
 // buradaki kapı sihirbazın o mekanizmadan GEÇTİĞİNİ tutuyor.
-describe('"Modeli Kur" tek geri-al adımı', () => {
+describe('"Modeli kur" tek geri-al adımı', () => {
   test('kurulan her düğüm TEK sarmalın içinde', () => {
     document.body.innerHTML = '<div id="ve-canvas"></div>'
       + '<div id="ve-feadwiz-overlay" style="display:none;">'
@@ -3481,11 +3481,11 @@ describe('gerginin sayıları: tohum BOŞ, kapı KURULUMDA', () => {
   // ATÖLYEYE GİDEN SAYI SESSİZCE KAYBOLMUYOR. `veFeadTensionerPivot` girdiler
   // eksikken null döndürüyor ve kart HİÇ basılmıyordu; tohum boşalınca o
   // sessizlik pahalı hâle geldi.
-  test('Gövdenin Montaj Konumu kartı kaybolmuyor, EKSİĞİ yazıyor', () => {
+  test('Gövdenin montaj konumu kartı kaybolmuyor, EKSİĞİ yazıyor', () => {
     kabuk();
     wiz.veFeadWizReset();
     const h = wiz.veFeadWizStepHTML(2, null);
-    expect(h).toContain('Gövdenin Montaj Konumu');
+    expect(h).toContain('Gövdenin montaj konumu');
     expect(h).toMatch(/Hesaplanamadı/);
     expect(h).toMatch(/kol boyu/);
   });

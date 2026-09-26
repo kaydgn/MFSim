@@ -63,7 +63,7 @@ test('eksik görünür, bağlantı götürür, klavyeyle doldurunca durum "tamam
   }, id);
   expect(once.yuk).toBeGreaterThanOrEqual(36);                  // eskisi 29 px
   expect(once.durum).toEqual(['tamam', 'tamam', '0/3 girildi', 'isteğe bağlı']);
-  expect(once.bant).toMatch(/Devir Sınırları/);
+  expect(once.bant).toMatch(/Devir sınırları/);
 
   // GERÇEK TIKLAMA: bant sekmeyi açar ve imleci ilk boş alana koyar.
   await page.click('#ve-fp-eksik-' + id + ' button');

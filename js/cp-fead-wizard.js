@@ -57,8 +57,8 @@ var VE_FW_STEPS = [
   { key:'kasnak', ad:'Kasnaklar',      ipucu:'Kayış sırası · tip · çap · koordinat · sürücü' },
   { key:'gergi',  ad:'Otomatik Gergi', ipucu:'Montaj noktası · kol boyu · yay künyesi' },
   { key:'kayis',  ad:'Kayış',          ipucu:'Profil · kanal sayısı · katalog sonuçları' },
-  { key:'cevrim', ad:'Motor ve Çevrim',ipucu:'Tahrik oranı · motor künyesi · çalışma çevrimi' },
-  { key:'ozet',   ad:'Özet ve Kurulum',ipucu:'Canlı çözüm · kayış yolu şeması · modeli kur' }
+  { key:'cevrim', ad:'Motor ve çevrim',ipucu:'Tahrik oranı · motor künyesi · çalışma çevrimi' },
+  { key:'ozet',   ad:'Özet ve kurulum',ipucu:'Canlı çözüm · kayış yolu şeması · modeli kur' }
 ];
 
 // Kasnak tipleri — ad ve varsayılan temas tarafı componentDefs'ten okunuyor,
@@ -112,7 +112,7 @@ function _fwTenAd(){ return VE_FW_TEN_AD; }
 // varsayarsa kullanıcı sihirbazda bir soru görür, panelde başkasını.
 function veFeadWizDefault(){
   return {
-    ad: 'Yeni FEAD Sistemi',
+    ad: 'Yeni FEAD sistemi',
     pulleys: [],
     // GERGİNİN SAYILARI BOŞ AÇILIR — kullanıcı isteği (2026-09-22):
     // *"Otomatik gergiyi başlangıç sihirbazında otomatik olarak görüyoruz.
@@ -1240,7 +1240,7 @@ function veFeadWizFootHTML(b){
   } else {
     h += '<button type="button" id="ve-fw-create" class="ve-fw-btn ve-fw-btn-go"'
        + ((b && b.ok && kur.ok) ? '' : ' disabled')
-       + ' onclick="veFeadWizCreate()">⚙ Modeli Kur</button>';
+       + ' onclick="veFeadWizCreate()">⚙ Modeli kur</button>';
   }
   return h;
 }
@@ -1282,7 +1282,7 @@ function _fwStepKaynak(b){
   var ornekYuklu = !!(st.seededFrom !== undefined && st.seededFrom !== ''
                       && st.seededFrom !== null);
   var h = ornekYuklu ? '' : _fwCard('Sistem', 'var(--accent-primary)',
-      _fwField('Sistem adı', _fwInp('ad', { text: true, ph: 'Yeni FEAD Sistemi' }))
+      _fwField('Sistem adı', _fwInp('ad', { text: true, ph: 'Yeni FEAD sistemi' }))
     );
 
   // SEÇİLİ KART BELİRGİN — kullanıcı isteği (2026-08-31): *"buradan bir
@@ -1450,7 +1450,7 @@ function _fwStepKaynak(b){
         if(typeof veFeadAnimEnsure === 'function') setTimeout(veFeadAnimEnsure, 0);
       }
     }
-    h += _fwCard('Seçilen Örnek', 'var(--accent-primary)', ih);
+    h += _fwCard('Seçilen örnek', 'var(--accent-primary)', ih);
   }
   return h;
 }
@@ -1903,7 +1903,7 @@ function _fwStepKasnak(b){
          + '+ ' + _fwEsc(_fwDefName(t)) + '</button>';
   });
 
-  var h = _fwCard('Kasnak Ekle', 'var(--accent-primary)',
+  var h = _fwCard('Kasnak ekle', 'var(--accent-primary)',
       '<div class="ve-fw-chips">' + ekle + '</div>'
     );
 
@@ -2155,18 +2155,18 @@ function _fwStepGergi(b){
           return '<option value="' + _fwEsc(o[0]) + '"'
                + (String(o[0]) === String(t.tenLib || '') ? ' selected' : '') + '>'
                + _fwEsc(o[1]) + '</option>'; }).join('') + '</select>';
-    h += _fwCard('Gergi Tipi', 'var(--accent-primary)',
+    h += _fwCard('Gergi tipi', 'var(--accent-primary)',
         _fwField('Tip', sel)
       );
   }
 
   // ── AVARA MERKEZİ — TEK KOORDİNAT ───────────────────────────────────────
-  h += _fwCard('Avara Kasnağının Merkezi', 'var(--accent-danger)',
+  h += _fwCard('Avara kasnağının merkezi', 'var(--accent-danger)',
       _fwGrid([_fwField('Merkez X [mm]', _fwInp('ten.cenX', { ph: '-161.97' })),
                _fwField('Merkez Y [mm]', _fwInp('ten.cenY', { ph: '91.29' }))])
     );
 
-  h += _fwCard('Kol ve Kasnak',
+  h += _fwCard('Kol ve kasnak',
       kilit ? 'var(--text-muted)' : 'var(--accent-primary)',
       _fwGrid([_fwField('Kol boyu [mm]', _fwInp('ten.armLen', { ph: '90', kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE })),
                _fwField('Kol yönü [°]', _fwArmAngleField(t)),
@@ -2175,14 +2175,14 @@ function _fwStepGergi(b){
                  [['back', 'Sırttan'], ['grooved', 'Kaburgalı']], t.contact || 'back', kn))], 4)
     );
 
-  h += _fwCard('Yay Künyesi',
+  h += _fwCard('Yay künyesi',
       kilit ? 'var(--text-muted)' : 'var(--accent-success)',
       _fwGrid([_fwField('Ön yük — Pre-Load [Nm]', _fwInp('ten.preload', { ph: '8.60', kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE })),
                _fwField('Yay katsayısı — Rate [Nm/°]', _fwInp('ten.kArm', { ph: '0.480', step: '0.001', kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE })),
                _fwField('Çalışma momenti — Mean [Nm]', _fwInp('ten.meanLoad', { ph: '22.07', kilit: kilit, kilitNot: VE_FW_TEN_LOCK_NOTE }))], 3)
     );
 
-  h += _fwCard('Titreşim Girdileri', 'var(--text-secondary)',
+  h += _fwCard('Titreşim girdileri', 'var(--text-secondary)',
       _fwGrid([_fwField('Kol ataleti [kg·m²]', _fwInp('ten.armInertia', { ph: '0.0009', step: '0.0001' })),
                _fwField('Kasnak kütlesi [kg]', _fwInp('ten.pulleyMass', { ph: '0.80', step: '0.01' })),
                _fwField('Load stop (göreli) [°]', _fwInp('ten.loadStopRelDeg', { ph: '62.4', step: '0.1' }))], 3)
@@ -2205,7 +2205,7 @@ function _fwStepGergi(b){
                              armMeanDeg: _fwNum(t.armMeanDeg, NaN) })
     : null;
   if(_piv)
-    h += _fwCard('Gövdenin Montaj Konumu', 'var(--accent-warning)',
+    h += _fwCard('Gövdenin montaj konumu', 'var(--accent-warning)',
         // DENKLEM KULLANICININ YAZDIĞI AÇIYLA YAZILIR. θ mutlaktı (gövde→merkez)
         // ve alanda duran sayı gösterilen açıydı (merkez→gövde, 180° ötesi):
         // kendi sayısını denkleme koyan kullanıcı 2a kadar uzakta YANLIŞ
@@ -2223,7 +2223,7 @@ function _fwStepGergi(b){
     // hiç basılmıyordu. Gerginin sayıları 2026-09-22'de tohumdan çıkarılınca
     // bu sessizlik pahalı hâle geldi: ATÖLYEYE GİDEN tek denetim sayısı,
     // kullanıcı hiçbir şey görmeden yok oluyordu. Eksik alan adıyla yazılıyor.
-    h += _fwCard('Gövdenin Montaj Konumu', 'var(--accent-warning)',
+    h += _fwCard('Gövdenin montaj konumu', 'var(--accent-warning)',
         '<div class="ve-fw-dim">Hesaplanamadı — eksik: <b>'
         + (function(){
             var e = [];
@@ -2862,7 +2862,7 @@ function veFeadWizAngRender(){
   // burada duruyordu ve kullanıcı onu ekranda gördü. Kapı artık üretilen
   // yüzeye bakıyor, tek bir üreticiye değil.
   ov.innerHTML = '<div class="ve-fw-ang-box"><header class="ve-fw-card-h">'
-    + '<span>Kol Açısını Seç</span></header>'
+    + '<span>Kol açısını seç</span></header>'
     + '<div class="ve-fw-card-b" id="ve-fw-ang-body">' + veFeadWizAngHTML() + '</div></div>';
   var plot = document.getElementById('ve-fw-ang-plot');
   if(plot){
@@ -2876,7 +2876,7 @@ function veFeadWizAngRender(){
 // ── 5 · KAYIŞ ──────────────────────────────────────────────────────────────
 function _fwStepKayis(b){
   var st = _fwState, bl = st.belt || {};
-  var h = _fwCard('Profil ve Marka', 'var(--accent-warning)',
+  var h = _fwCard('Profil ve marka', 'var(--accent-warning)',
       _fwGrid([_fwField('Profil', _fwSelHTML('belt.profile',
                  [['PK','PK'],['PJ','PJ'],['PH','PH'],['PL','PL'],['PM','PM']], bl.profile || 'PK')),
                _fwField('Marka', _fwSelHTML('belt.brand',
@@ -2905,7 +2905,7 @@ function _fwStepKayis(b){
   // taşımaya devam ediyor (örnekten doldurulan tip/kod, tolerans, aşınma,
   // kütle). Sorulmayan alan ile TAŞINMAYAN alan ayrı şeyler — ikincisi
   // kullanıcının örnekten gelen verisini sessizce yutardı.
-  h += _fwCard('Kayış Boyu', 'var(--accent-warning)',
+  h += _fwCard('Kayış boyu', 'var(--accent-warning)',
       '<div class="ve-fw-reads">'
     + _fwRead('Boy kipi', 'SERBEST (kilitli)')
     + ((b && b.ok && Number.isFinite(b.beltLengthMm))
@@ -3209,7 +3209,7 @@ function veFeadWizEngRender(){
   if(!VE_FW_ENG_OPEN){ ov.style.display = 'none'; ov.innerHTML = ''; return; }
   ov.style.display = 'flex';
   ov.innerHTML = '<div class="ve-fw-ang-box"><header class="ve-fw-card-h">'
-    + '<span>Motor Künyesi</span></header>'
+    + '<span>Motor künyesi</span></header>'
     + '<div class="ve-fw-card-b" id="ve-fw-eng-body">' + veFeadWizEngHTML() + '</div></div>';
 }
 
@@ -3249,7 +3249,7 @@ function _fwStepCevrim(b){
   // sorulan şey yalnız KRANK ile o kasnak arasındaki ilişki.
   var _srcOD = null;
   (st.pulleys || []).forEach(function(p){ if(p.driver) _srcOD = _fwNum(p.od, null); });
-  var h = _fwCard('FEAD Tahriki', 'var(--accent-warning)',
+  var h = _fwCard('FEAD tahriki', 'var(--accent-warning)',
       // LİSTE TEK KAYNAKTAN (`VE_FEAD_DRIVE_MODES`, fead-model.js): Çözücü
       // paneli aynı soruyu soruyor ve ikinci bir kopya tutulduğunda iki yüzey
       // ayrıştı — sihirbazın kurduğu düzen panelin listesinde HİÇ YOKTU.
@@ -3295,7 +3295,7 @@ function _fwStepCevrim(b){
   // alanların kendisi pencerede. Elle giriş KALDIRILMADI: "katalog bir KISIT
   // değil bir ÖNERİ" kuralı, kullanıcının motoru katalogda olmadığında tek
   // çıkış yolu.
-  h += _fwCard('Motor Künyesi', 'var(--text-secondary)',
+  h += _fwCard('Motor künyesi', 'var(--text-secondary)',
       _fwEngineLibRow(s)
     + '<div class="ve-fw-reads">' + _fwEngineOzet(s) + '</div>'
     + '<div class="ve-fw-rowbtns"><button type="button" class="ve-fw-btn"'
@@ -3351,7 +3351,7 @@ function _fwStepCevrim(b){
            + (r.key === suan ? ' selected' : '') + '>'
            + _fwEsc(veFeadDutyLabel(r)) + '</option>'; }).join('');
     if(!suan) ops = '<option value="" selected>— özel (elle düzenlendi) —</option>' + ops;
-    cevrimKart = _fwCard('Çalışma Çevrimi Kaydı',
+    cevrimKart = _fwCard('Çalışma çevrimi kaydı',
         'var(--accent-success)',
         _fwGrid([
           _fwField('Çevrim', '<select class="ve-fw-inp" onchange="veFeadWizDutyLib(this.value)">'
@@ -3368,7 +3368,7 @@ function _fwStepCevrim(b){
   }
 
   h += cevrimKart;
-  h += _fwCard('Çalışma Çevrimi', 'var(--accent-primary)',
+  h += _fwCard('Çalışma çevrimi', 'var(--accent-primary)',
       t
     + '<div class="ve-fw-rowbtns"><button type="button" class="ve-fw-btn"'
       + ' onclick="veFeadWizDutyAdd()">+ Devir noktası ekle</button></div>'
@@ -3457,7 +3457,7 @@ function _fwAccCard(st, b, yuk){
       + '</b>. Model yine çözülür ama açıklık gerilmeleri tasarım gerginliğine '
       + 'düzleşir — bir model seçin.</div>';
 
-  return _fwCard('Aksesuar Modelleri', 'var(--accent-success)', h
+  return _fwCard('Aksesuar modelleri', 'var(--accent-success)', h
     );
 }
 
@@ -3477,7 +3477,7 @@ function _fwAccCard(st, b, yuk){
 // 155A · 57RS309348" hücresi uzuyor ve farkı öbür sütunlardan çalıyor.
 function _fwAccLimitCard(st, yuk){
   if(typeof veFeadAccLimits !== 'function')
-    return _fwCard('Aksesuar Devir Sınırları', 'var(--text-muted)',
+    return _fwCard('Aksesuar devir sınırları', 'var(--text-muted)',
       '<div class="ve-fw-issue ve-fw-issue-err">✗ Aksesuar kataloğu yüklenmedi '
       + '(js/fead-accessories.js).</div>');
 
@@ -3525,7 +3525,7 @@ function _fwAccLimitCard(st, yuk){
        + 'sınırı yok; 7. adımdaki iki kapı onlar için <b>değerlendirilemedi</b> der ve '
        + '<b>uygun sayılmaz</b>. Künye seçin ya da sınırları elle girin.</div>';
 
-  return _fwCard('Aksesuar Devir Sınırları',
+  return _fwCard('Aksesuar devir sınırları',
     'var(--accent-primary)', h
     
     );
@@ -3557,7 +3557,7 @@ function _fwStepOzet(b){
        + '<em>' + _fwEsc(k[0]) + '</em><b>' + _fwEsc(k[1]) + '</b></div>';
   });
   kh += '</div>';
-  h += _fwCard('Çözüm Önizlemesi', 'var(--accent-success)', kh
+  h += _fwCard('Çözüm önizlemesi', 'var(--accent-success)', kh
     );
 
   // Kayış yolu şeması — çizici tek kaynak (veFeadLayoutSVG).
@@ -3609,7 +3609,7 @@ function _fwStepOzet(b){
     kh2 += '';
   }
   if(!kur.ok) kh2 += '<div class="ve-fw-issue ve-fw-issue-err">✗ ' + _fwEsc(kur.sebep) + '</div>';
-  h += _fwCard('Modeli Kur', 'var(--accent-primary)', kh2);
+  h += _fwCard('Modeli kur', 'var(--accent-primary)', kh2);
   return h;
 }
 
@@ -3624,7 +3624,7 @@ function _fwStepOzet(b){
 // hesap iki yüzeyin sessizce ayrışması olurdu (modülün tekrar eden kuralı).
 function _fwChecksCard(b){
   if(typeof veFeadChecks !== 'function')
-    return _fwCard('Uygunluk Kapıları', 'var(--text-muted)',
+    return _fwCard('Uygunluk kapıları', 'var(--text-muted)',
       '<div class="ve-fw-issue ve-fw-issue-err">✗ Uygunluk kapıları yüklenmedi '
       + '(js/fead-checks.js).</div>');
   var st = _fwState, s = (st && st.solver) || {};
@@ -3702,7 +3702,7 @@ function _fwChecksCard(b){
   var renk = d.indexOf('no') >= 0 ? 'var(--accent-danger)'
            : d.indexOf('warn') >= 0 ? 'var(--accent-warning)'
            : d.indexOf('wait') >= 0 ? 'var(--text-muted)' : 'var(--accent-success)';
-  return _fwCard('Uygunluk Kapıları', renk,
+  return _fwCard('Uygunluk kapıları', renk,
     '<div data-ve-fw-checks="1" data-ve-fw-checks-durum="' + _fwEsc(d.join('/')) + '">'
       + h + '</div>');
 }
@@ -3960,13 +3960,13 @@ function getFeadWizardPropertiesHTML(node){
   var nokta = (w && w.solver && w.solver.duty) ? w.solver.duty.length : 0;
 
   var taslak = w
-    ? _feadCard('Kayıtlı Taslak', 'bu düğümde', 'var(--accent-primary)',
+    ? _feadCard('Kayıtlı taslak', 'bu düğümde', 'var(--accent-primary)',
         '<div class="ve-fp-grid" style="--fp-k:1;">'
       + _feadRO('Sistem', w.ad || '—')
       + _feadRO('Kasnak', kasnak + ' (+ gergi)')
       + _feadRO('Çalışma çevrimi', nokta + ' devir noktası')
       + '</div>')
-    : _feadCard('Kayıtlı Taslak', 'bu düğümde', 'var(--text-muted)',
+    : _feadCard('Kayıtlı taslak', 'bu düğümde', 'var(--text-muted)',
         _feadHint('Henüz taslak yok. Sihirbazı açıp boş başlayabilir ya da hazır bir '
           + 'örnekten doldurabilirsiniz.'));
   taslak += _feadHint('Düğüme <b>çift tıklamak</b> da sihirbazı açar. Kurulumdan sonra '

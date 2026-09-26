@@ -337,7 +337,7 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
 
   // Güncelle butonu
   if(showUpdateBtn) {
-    html += '<button onclick="_veApplyUpdate()" style="width:100%; margin-top:12px; padding:10px; background:var(--accent-success); color:white; border:none; cursor:pointer; font-weight:600; font-size:var(--fs-lg); transition:background 0.2s;" onmouseenter="this.style.background=\'#16a34a\'" onmouseleave="this.style.background=\'#22c55e\'">Şimdi Güncelle</button>';
+    html += '<button onclick="_veApplyUpdate()" style="width:100%; margin-top:12px; padding:10px; background:var(--accent-success); color:white; border:none; cursor:pointer; font-weight:600; font-size:var(--fs-lg); transition:background 0.2s;" onmouseenter="this.style.background=\'#16a34a\'" onmouseleave="this.style.background=\'#22c55e\'">Şimdi güncelle</button>';
   } else if(isPending) {
     html += '<div style="margin-top:12px; padding:10px; background:var(--bg-primary); text-align:center; color:var(--accent-warning); font-size:var(--fs-md);">Deploy devam ediyor, biraz sonra tekrar deneyin.</div>';
   }
@@ -345,7 +345,7 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
   // Linkler
   html += '<div style="margin-top:10px; display:flex; gap:12px;">';
   if(info.prUrl) {
-    html += '<a href="' + info.prUrl + '" target="_blank" rel="noopener" style="font-size:var(--fs-body); color:var(--accent-primary); text-decoration:none;">PR Detayı →</a>';
+    html += '<a href="' + info.prUrl + '" target="_blank" rel="noopener" style="font-size:var(--fs-body); color:var(--accent-primary); text-decoration:none;">PR detayı →</a>';
   }
   if(info.url) {
     html += '<a href="' + info.url + '" target="_blank" rel="noopener" style="font-size:var(--fs-body); color:var(--accent-primary); text-decoration:none;">Actions Log →</a>';
@@ -514,7 +514,7 @@ function _veShowRefreshedPopup() {
 
   popup.innerHTML =
     '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
-      '<span style="font-weight:600; color:var(--accent-success); font-size:var(--fs-lg);">✓ Program Güncellendi</span>' +
+      '<span style="font-weight:600; color:var(--accent-success); font-size:var(--fs-lg);">✓ Program güncellendi</span>' +
       '<button class="ve-settings-close" type="button" onclick="_veDismissPopup()" title="Kapat" aria-label="Kapat"><span class="mf-ico mf-ico-x"></span></button>' +
     '</div>' +
     '<div style="color:var(--text-secondary); line-height:1.5;">Program en son sürüme güncellendi. Detayları görmek için yeşil noktaya tıklayın.</div>';

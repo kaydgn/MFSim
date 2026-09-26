@@ -568,7 +568,7 @@ var componentDefs = {
     // (js/components.js › _veModuleEnterFn). Diğer iki modül beyan etmiyor,
     // dolayısıyla onlarda eski yol birebir duruyor.
     moduleEnter: 'veFeadOpenEditor',
-    moduleSubtitle: 'Kayış-Kasnak Analizi'
+    moduleSubtitle: 'Kayış-kasnak analizi'
   },
   // ── Aksesuarlar (Araç Performans) — Motor'un ön portlarına bağlanır ──────
   // Diğer bileşenlerden bir tık daha küçük kutular. Çıkış portu (sağ) Motor'un

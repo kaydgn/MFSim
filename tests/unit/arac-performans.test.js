@@ -154,12 +154,12 @@ describe('Araç Performans — iç topoloji başlangıcı (veAracPopulateStarter
 });
 
 describe('Araç Performans — özellik paneli', () => {
-  test('getAracPerformansPropertiesHTML "Alt Topolojiyi Aç" butonu içerir', () => {
+  test('getAracPerformansPropertiesHTML "Alt topolojiyi aç" butonu içerir', () => {
     const node = { id: 'comp-7', type: 'arac-performans', def: componentDefs['arac-performans'], data: {} };
     const html = getAracPerformansPropertiesHTML(node);
     expect(typeof html).toBe('string');
     expect(html).toContain("veAracOpenEditor('comp-7')");
-    expect(html).toContain('Alt Topolojiyi Aç');
+    expect(html).toContain('Alt topolojiyi aç');
     // Henüz açılmamış → durum satırı (ders anlatan tanıtım metni DEĞİL)
     expect(html).toContain('Alt topoloji henüz açılmadı');
     expect(html).not.toContain('hazır güç aktarma topolojisi');
@@ -182,7 +182,7 @@ describe('Sidebar kapsamı (veShowAllSidebarComponents + veSyncSidebarScope)', (
       '<div class="ve-category" data-ve-scope="module" id="cat-mod"><div class="ve-category-title">Modüller</div></div>' +
       '<div class="ve-category" data-ve-scope="arac-performans" id="cat-ap"><div class="ve-category-title">Güç Kaynağı</div></div>' +
       '<div class="ve-category" data-ve-scope="mount-analysis" id="cat-mnt"><div class="ve-category-title">Takoz Alt Bileşenleri</div></div>' +
-      '<div class="ve-category" data-ve-scope="fead-analysis" id="cat-fead"><div class="ve-category-title">FEAD Kasnakları</div></div>' +
+      '<div class="ve-category" data-ve-scope="fead-analysis" id="cat-fead"><div class="ve-category-title">FEAD kasnakları</div></div>' +
       '<div class="ve-category" data-always-visible="true" id="cat-tools"><div class="ve-category-title">Araçlar</div></div>';
   }
   const disp = (id) => document.getElementById(id).style.display;

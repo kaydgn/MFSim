@@ -37,7 +37,7 @@ function buildTTARTopology() {
 }
 
 describe('Ana modül (alt-sistem) paneli', () => {
-  test('getMntModulePropertiesHTML "Alt Topolojiyi Aç" düğmesi verir', () => {
+  test('getMntModulePropertiesHTML "Alt topolojiyi aç" düğmesi verir', () => {
     const node = { id: 'comp-1', type: 'mount-analysis', def: { name: 'Takoz Çökme-Titreşim' }, data: {} };
     const html = cp.getMntModulePropertiesHTML(node);
     expect(html).toContain("veMntOpenEditor('comp-1')");
@@ -58,13 +58,13 @@ describe('Panel üreticileri', () => {
     expect(html).toContain('ve-mnt-mass-n1');
     expect(html).toContain('ve-mnt-cgx-n1');
     expect(html).toContain('Nokta kütle');
-    expect(html).toContain('Atalet Tensörü'); // pointMass false → atalet görünür
+    expect(html).toContain('>Atalet tensörü<'); // pointMass false → atalet kartı görünür
   });
   test('Şaft varsayılan nokta-kütle (atalet gizli)', () => {
     const node = { id: 'n2', type: 'mnt-shaft', def: { name: 'Şaft (Kütle)' }, data: {} };
     const html = cp.getMntMassPropertiesHTML(node);
     expect(node.data.pointMass).toBe(true);
-    expect(html).not.toContain('Atalet Tensörü');
+    expect(html).not.toContain('>Atalet tensörü<');   // kart başlığı yok (not metni 'tensörü sıfır' der)
   });
   test('Takoz paneli: konum + rijitlik + kütüphane', () => {
     const node = { id: 'm1', type: 'mnt-mount', def: { name: 'Takoz' }, data: {} };
@@ -364,8 +364,8 @@ describe('Estetik paneller — yan yana alanlar', () => {
     const html = cp.getMntMountPropertiesHTML(node);
     ['x','y','z','kxs','kys','kzs','kxd','kyd','kzd'].forEach(k =>
       expect(html).toContain('ve-mnt-' + k + '-m9'));
-    expect(html).toContain('Statik Rijitlik');
-    expect(html).toContain('Dinamik Rijitlik');
+    expect(html).toContain('Statik rijitlik');
+    expect(html).toContain('Dinamik rijitlik');
   });
 });
 
@@ -415,13 +415,13 @@ describe('Örnek bileşeni', () => {
     expect(cp._mntExampleBodyType('Sol cradle')).toBe('mnt-bracket');
     expect(cp._mntExampleBodyType('Transfer Kutusu')).toBe('mnt-transfer');
   });
-  test('panel: topoloji görseli + araç detayları + Örneği Aktar', () => {
+  test('panel: topoloji görseli + araç detayları + Örneği aktar', () => {
     const node = { id: 'ex1', type: 'mnt-example', def: { name: 'Örnek' }, data: {} };
     const html = cp.getMntExamplePropertiesHTML(node);
     expect(html).toContain('veMntSetExample(\'ex1\'');   // seçici canlı yenileme
     expect(html).toContain('<svg');                       // otomatik topoloji şeması
     expect(html).toContain('BMC Siper');                  // araç başlığı (detay)
-    expect(html).toContain('Örneği Aktar');               // aktar düğmesi
+    expect(html).toContain('Örneği aktar');               // aktar düğmesi
   });
   test('kayıt defteri: bilinen anahtar çözülür, bilinmeyen ilk örneğe düşer', () => {
     const first = core.getMountExampleList()[0];
@@ -823,9 +823,9 @@ describe('2D Görünüm bileşeni', () => {
       cg: { x: 0, y: 0, z: 100, m: 100 }
     });
     expect(svg).toContain('<svg');
-    expect(svg).toContain('Üstten Görünüş');
-    expect(svg).toContain('Yandan Görünüş');
-    expect(svg).toContain('Önden Görünüş');               // yeni üçüncü görünüş
+    expect(svg).toContain('Üstten görünüş');
+    expect(svg).toContain('Yandan görünüş');
+    expect(svg).toContain('Önden görünüş');               // yeni üçüncü görünüş
     // her görünüş kendi SVG'sinde (bağımsız yakınlaştırma) → üç figür
     expect((svg.match(/class="ve-mnt2d-fig"/g) || []).length).toBe(3);
     expect(svg).toContain('<rect');       // takoz karesi / çerçeve
@@ -839,7 +839,7 @@ describe('2D Görünüm bileşeni', () => {
       cg: { x: -321.4, y: 4.9, z: 859.3, m: 1386.3 }
     });
     expect(svg).toContain('Ağırlık merkezi');       // bileşen hover başlığı
-    expect(svg).toContain('Birleşik Ağırlık Merkezi'); // birleşik CG hover
+    expect(svg).toContain('Birleşik ağırlık merkezi'); // birleşik CG hover
     expect(svg).toMatch(/1386[.,]3 kg/);            // kütle bilgisi
   });
 });
@@ -867,7 +867,7 @@ describe('Kinematik girdiler + tork yük durumları', () => {
     const node = { id: 'gb1', type: 'mnt-gearbox', def: { name: 'Şanzıman (Kütle)' }, data: {} };
     const html = cp.getMntMassPropertiesHTML(node);
     ['g1','g2','g6','gR','Rstall'].forEach(k => expect(html).toContain('ve-mnt-' + k + '-gb1'));
-    expect(html).toContain('Vites Oranları');
+    expect(html).toContain('Vites oranları');
   });
   test('Transfer paneli transfer oranı içerir', () => {
     const node = { id: 'tr1', type: 'mnt-transfer', def: { name: 'Transfer Kutusu' }, data: {} };
@@ -877,7 +877,7 @@ describe('Kinematik girdiler + tork yük durumları', () => {
   });
   test('Şaft/Braket kinematik bölüm göstermez', () => {
     const shaft = cp.getMntMassPropertiesHTML({ id: 's1', type: 'mnt-shaft', def: {}, data: {} });
-    expect(shaft).not.toContain('Vites Oranları');
+    expect(shaft).not.toContain('Vites oranları');
     expect(shaft).not.toContain('Motor / Tahrik');
   });
 
@@ -1314,7 +1314,7 @@ describe('takoz paneli — nonlineer yasa notu ölçütü çekirdekle aynı', ()
 
   test('x ve y ekseninde fit → her iki eksen de listelenir', () => {
     const h = note({ fitX: FIT_POLY, fitY: FIT_POLY });
-    expect(h).toContain('Kuvvet–Sehim Yasası (x, y)');
+    expect(h).toContain('Kuvvet–sehim yasası (x, y)');
     expect(h).not.toContain('Yasası (x, y, z)');
   });
 

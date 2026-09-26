@@ -116,7 +116,7 @@ describe('UI — ζ tek kaynak: Çözücü', () => {
   test('Çözücü paneli ζ alanını basar', () => {
     const html = cp.getMntSolverPropertiesHTML({ id: 's1', type: 'mnt-solver', def: {}, data: {} });
     expect(html).toContain('veMntSetZeta');
-    expect(html).toContain('Sönüm Oranı');
+    expect(html).toContain('Sönüm oranı');
   });
 });
 

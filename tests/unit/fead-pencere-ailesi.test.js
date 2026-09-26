@@ -155,7 +155,7 @@ describe('HER FEAD PENCERESİ KRANK KASNAĞI AİLESİNDE', () => {
   // ihtiyaç var?"). Bölümün sorusu "BU kasnak nerede"; kasnağı olmayan
   // pencerede vurgulanacak yer yok. KURAL, liste değil: beklenen tipten okunur
   // (`isFeadPulley` — gergi de bir kasnak), yeni bir tip kendiliğinden girer.
-  test('"Kayış Yolundaki Yeri" YALNIZ kasnak penceresinde — kural tipten', () => {
+  test('"Kayış Yolundaki yeri" YALNIZ kasnak penceresinde — kural tipten', () => {
     kur('AG00976_GATES_2025');
     const yanlis = [];
     let kasnakli = 0;
@@ -164,7 +164,7 @@ describe('HER FEAD PENCERESİ KRANK KASNAĞI AİLESİNDE', () => {
       const d = pencere(t);
       const var_ = !!d.querySelector('.ve-fp-side .ve-fp-thumb');
       const baslik = [...d.querySelectorAll('.ve-fp-sect b')]
-        .some((b) => /Kayış Yolundaki Yeri/.test(b.textContent));
+        .some((b) => /Kayış Yolundaki yeri/.test(b.textContent));
       if (beklenen) kasnakli++;
       if (var_ !== beklenen || baslik !== beklenen) {
         yanlis.push(t + ': ' + (beklenen ? 'olmalı, yok' : 'olmamalı, var'));

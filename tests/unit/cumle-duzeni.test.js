@@ -1,83 +1,38 @@
 /**
  * cumle-duzeni.test.js — ARAYÜZ ETİKETLERİ CÜMLE DÜZENİNDE (kullanıcı kararı 9·B)
  * ───────────────────────────────────────────────────────────────────────────
- * Kural: çok kelimeli bir etikette yalnız ilk kelime (ve "—", "·", ":"
- * sonrası bölütün ilk kelimesi) büyük harfle başlar — "Klavye kısayolları",
- * "Birime göre birleştir". Kullanıcı Windows'un kendi dilini seçti.
+ * Kural: çok kelimeli bir etikette yalnız ilk kelime (ve bölüt başı) büyük
+ * harfle başlar — "Klavye kısayolları", "Birime göre birleştir". Kullanıcı
+ * Windows'un kendi dilini seçti. Kuralın TEK kaynağı tools/cumle-duzeni.js;
+ * özel adların listesi de orada (bileşen adları componentDefs'ten okunur).
  *
- * Özel adlar olduğu gibi kalır:
- *   · bileşen adları — `componentDefs`'in `name` alanından OKUNUR (Klima
- *     Kompresörü, Tork Konvertörü); ikinci bir liste tutulmaz
- *   · yüzey adları — aşağıdaki YUZEY: kararın istisna listesi. Belgeler bu
- *     yüzeyleri özel ad olarak anıyor (Kayış Tablosu, Komuta Penceresi…)
- *   · ürünün adı ve künyesi, kısaltmalar (FEAD, PTO), tuşlar (Esc, Ctrl),
- *     markalar (GitHub, Vector CANoe) ve İngilizce terimler (karar 8·A)
- *
- * AŞAMA 1 — KABUK: şerit, komut paleti, sağ tık menüleri, Ayarlar, Program
- * Durumu, Kısayollar, Komuta, palet kategorileri, pencere başlıkları, Sonuçlar
- * kabuğu, içe aktarma ve görüntüleyici. Bileşen panelleri, kılavuzlar ve
- * raporlar sonraki aşamalar; o dosyalar eklendikçe KABUK listesi büyür.
+ * Kapsam aşama aşama büyür:
+ *   1 — kabuk: şerit, komut paleti, sağ tık, Ayarlar, Program Durumu,
+ *       Kısayollar, Komuta, palet kategorileri, pencere başlıkları, Sonuçlar
+ *       kabuğu, içe aktarma, görüntüleyici
+ *   2 — bileşen panelleri: cp-*.js (rapor üreticileri hariç), yardımcı
+ *       bileşenler, güzergâh haritası, çözücü ve üç modül kılavuzu (kılavuz
+ *       kartı panelde BAŞLIĞIYLA arar — iki taraf aynı kuraldan geçmeli)
+ *   3 — sonuçlar, raporlar, sinyal adları (sırada)
  */
 const fs = require('fs');
 const path = require('path');
+const { cumle, etiketler, BIRLESTIRME, BILESEN, YUZEY, DEFTER, AD } = require('../../tools/cumle-duzeni.js');
 
 const KOK = path.join(__dirname, '../..');
-const oku = (f) => fs.readFileSync(path.join(KOK, f), 'utf8');
-
-const KABUK = ['index.html', 'viewer/index.html', 'js/ribbon.js', 'js/command-palette.js',
+const ASAMA1 = ['index.html', 'viewer/index.html', 'js/ribbon.js', 'js/command-palette.js',
   'js/context-menus.js', 'js/settings.js', 'js/status.js', 'js/shortcuts-help.js', 'js/toolbar.js',
   'js/cp-komuta.js', 'js/guide-kit.js', 'js/kimlik.js', 'js/cp-programlar.js', 'js/tablo-pencere.js',
   'js/solver-pro.js', 'js/trace-view.js', 'js/measure-import-ui.js', 'js/signal-tree.js',
-  'viewer/js/board.js'];
-
-// ── Özel adlar ────────────────────────────────────────────────────────────
-const BILESEN = [...oku('js/components.js').matchAll(/\bname:\s*'([^']+)'/g)].map((m) => m[1]);
-const YUZEY = ['Araç Performans', 'Takoz Çökme-Titreşim', 'Komuta Penceresi', 'Program Arşivi',
-  'Program Durumu', 'Kayış Tablosu', 'Kayış Yolu', 'Çizim Masası', 'Veri Gezgini', 'Sonuç Özeti',
-  'Ölçüm Görüntüleyici', 'CAN Çözümleyici'];
-const URUN = ['MFSim — Araç Performans Simülasyonu', 'Araç Performans Simülasyon Yazılımı'];
-const TEK = new Set(['Esc', 'Ctrl', 'Shift', 'Enter', 'Tab', 'Del', 'Space', 'Cmd', 'Home', 'End',
-  'Vector', 'CANoe', 'Excel', 'GitHub', 'Windows', 'Gates', 'Allison', 'Cummins', 'Lucide', 'Edge',
-  'Inter', 'Segoe', 'Workflow', 'Run', 'Grid', 'Minimap', 'Coast-Down', 'Hubload', 'Mean', 'Governed',
-  'Deploy', 'Pages', 'Actions']);
-const COK = [...new Set([...BILESEN, ...YUZEY])].filter((a) => /\s/.test(a)).sort((a, b) => b.length - a.length);
-
-// ── Kural: Başlık Düzeni → Cümle düzeni (uzunluk korunur) ─────────────────
-function cumle(t) {
-  if (URUN.includes(t)) return t;
-  const tut = [];
-  let s = t;
-  COK.forEach((a) => { s = s.split(a).join('\u0000' + (tut.push(a) - 1) + '\u0001'); });
-  let bas = true;
-  s = s.replace(/(\S+)(\s*)/g, (tam, w, bosluk) => {
-    let out = w;
-    if (/^[—:·|]$/.test(w)) { bas = true; return w + bosluk; }
-    const cip = w.replace(/^[(“"']+|[.,)”"':]+$/g, '').replace(/['’]\p{Ll}+$/u, '');
-    if (!bas && !TEK.has(cip) && /^[(“"']?\p{Lu}[\p{Ll}'’]+[.,)]?$/u.test(w)) {
-      out = w.replace(/^([(“"']?)(\p{Lu})/u, (m, p, h) => p + h.toLocaleLowerCase('tr'));
-    }
-    if (/\p{L}|\u0000/u.test(w)) bas = false;
-    if (/:$/.test(w)) bas = true;
-    return out + bosluk;
-  });
-  return s.replace(/\u0000(\d+)\u0001/g, (m, i) => tut[+i]);
-}
-
-// ── Etiketler: kaynaktaki arayüz metni ────────────────────────────────────
-const DESEN = [/label:\s*'([^'\n]{3,70})'/g, />\s*([^<>{}\n]{3,70}?)\s*</g,
-  /(?:title|aria-label|placeholder)="([^"\n]{3,70})"/g, /title:\s*'([^'\n]{3,70})'/g, /\bad:\s*'([^'\n]{3,70})'/g];
-function etiketler(f) {
-  const s = oku(f), out = [];
-  for (const re of DESEN) {
-    let m; re.lastIndex = 0;
-    while ((m = re.exec(s))) {
-      const t = m[1].replace(/\\n/g, ' ');
-      if (/[{}=;$+]|\bfunction\b/.test(t)) continue;
-      out.push(t);
-    }
-  }
-  return out;
-}
+  'viewer/js/board.js', 'js/deploy-status.js', 'js/topology.js', 'js/ui-core.js', 'js/components.js'];
+// Aşama 2: bileşen panelleri. Rapor üreticileri (cp-*-report, cp-fead-summary)
+// aşama 3'te — indirilen belgeye yazıyorlar.
+const RAPOR = /^cp-(fead-report|fead-summary|mount-report)\.js$/;
+const ASAMA2 = fs.readdirSync(path.join(KOK, 'js'))
+  .filter((f) => /^cp-.*\.js$/.test(f) && !RAPOR.test(f))
+  .concat(['component-extras.js', 'map.js', 'solver.js', 'guide-fead.js', 'guide-arac.js', 'guide-mount.js'])
+  .map((f) => 'js/' + f)
+  .filter((f) => !ASAMA1.includes(f));
 
 describe('kural', () => {
   test.each([
@@ -91,33 +46,85 @@ describe('kural', () => {
     ["GitHub'da Aç", "GitHub'da aç"],                          // marka
     ['FEAD: Sonuçlar sekmesi', 'FEAD: Sonuçlar sekmesi'],      // iki noktadan sonra yeni bölüt
     ['Dikey Aynala (Üst ↔ Alt)', 'Dikey aynala (üst ↔ alt)'],  // "Alt" burada yön, tuş değil
+    ['Toplam Lastik/Jant Ataleti', 'Toplam lastik/jant ataleti'],   // birleşik kelime
+    ['Ağ. Merkezi–Ön Aks', 'Ağ. merkezi–ön aks'],                  // kısaltma cümle bitirmez
+    ['Henüz nokta yok. Grafikte ekleyin.', 'Henüz nokta yok. Grafikte ekleyin.'],   // yeni cümle
+    ['Yuvarlanma Direnci Katsayısı', 'Yuvarlanma direnci katsayısı'],   // sinyal adı özel ad değil
+    ['Adım büyüklüğü Δt [s]', 'Adım büyüklüğü Δt [s]'],       // Yunan harfi sembol
+    ['Bu seçim yalnız ▶ Hesapla ile uygulanır.', 'Bu seçim yalnız ▶ Hesapla ile uygulanır.'],   // düğmenin adı
+    ['Segmentleri Senaryolar Bileşenine Aktar', 'Segmentleri Senaryolar bileşenine aktar'],   // tek kelimelik bileşen
+    ['Governed Speed Eşiği', 'Governed Speed eşiği'],         // İngilizce terim (8·A)
+    ['FEAD — Kayış-Kasnak Sistemi', 'FEAD — Kayış-kasnak sistemi'],   // tireli birleşik kelime
+    ['Coast-Down Parametreleri', 'Coast-Down parametreleri'], // tireli terimin bütünü (8·A)
+    ['Yakınsama · Newton-Raphson', 'Yakınsama · Newton-Raphson'],   // kişi adları
+    ['Otomatik → Lineer', 'Otomatik → Lineer'],               // ok sonrası sonucun adı
+    ['Efektif Çap', 'Efektif Çap'],                           // defter sütunu
+    ['3 · Otomatik Gergi', '3 · Otomatik Gergi'],             // sihirbazın gergi adı
   ])('%s → %s', (a, b) => expect(cumle(a)).toBe(b));
 
-  test('bileşen adları componentDefs\'ten okunuyor', () => {
+  test('bileşen adları componentDefs\'ten okunuyor — sinyal adları değil', () => {
     expect(BILESEN.length).toBeGreaterThan(40);
     expect(BILESEN).toContain('Klima Kompresörü');
+    expect(BILESEN).not.toContain('Yuvarlanma Direnci');
+  });
+
+  // Defter sütunları ve gergi adı KAYNAKTAN okunur: liste bulunamazsa koruma
+  // sessizce boşalır ve "Efektif Çap" küçülürdü.
+  // "+ Satır ekle" düğmesi "+" taşıyor ama birleştirme değil; ' + ad + ' ise öyle.
+  test('birleştirme süzgeci düğmenin "+"sını atlamıyor', () => {
+    expect(BIRLESTIRME.test('+ Satır Ekle')).toBe(false);
+    expect(BIRLESTIRME.test("' + ad + '")).toBe(true);
+    expect(BIRLESTIRME.test('Toplam: ' + "' + n")).toBe(true);
+  });
+
+  test('defter sütunları ve sihirbazın gergi adı kaynaktan okunuyor', () => {
+    expect(DEFTER).toEqual(expect.arrayContaining(['Efektif Çap', 'Kasnak Dönüş Yönü', 'Sarım Açısı', 'Span Uzunluğu']));
+    expect(AD).toEqual(['Otomatik Gergi']);
   });
 });
 
-describe('aşama 1 — kabuk', () => {
-  const HEPSI = KABUK.flatMap((f) => etiketler(f).map((t) => ({ f, t })));
+function sapmalar(dosyalar) {
+  const out = [];
+  dosyalar.forEach((f) => new Set(etiketler(f)).forEach((t) => {
+    if (cumle(t) !== t) out.push(`${f}: "${t}" → "${cumle(t)}"`);
+  }));
+  return out;
+}
+// Etiketin KENDİSİ bir yüzey adıysa büyük yazılır ("Program Durumu" düğmesi).
+// Cümle içindeki genel isim ayrı: "Kayış yolu bu yerleşimle çözülemiyor" kayışın
+// yolundan söz ediyor, Kayış Yolu kartından değil.
+function kucukYuzey(dosyalar) {
+  const out = [];
+  dosyalar.forEach((f) => etiketler(f).forEach((t) => {
+    const k = t.trim().replace(/^[^\p{L}]+/u, '');
+    YUZEY.forEach((a) => {
+      if (k !== a && k.toLocaleLowerCase('tr') === a.toLocaleLowerCase('tr')) out.push(`${f}: "${t}"`);
+    });
+  }));
+  return [...new Set(out)];
+}
 
+describe.each([['aşama 1 — kabuk', ASAMA1, 400], ['aşama 2 — bileşen panelleri', ASAMA2, 300]])('%s', (ad, dosyalar, enAz) => {
   test('tarama boşa çalışmıyor', () => {
-    expect(HEPSI.length).toBeGreaterThan(400);
+    expect(dosyalar.flatMap(etiketler).length).toBeGreaterThan(enAz);
   });
-
   test('her çok kelimeli etiket cümle düzeninde (özel adlar hariç)', () => {
-    const sapan = HEPSI.filter(({ t }) => cumle(t) !== t).map(({ f, t }) => `${f}: "${t}" → "${cumle(t)}"`);
-    expect([...new Set(sapan)]).toEqual([]);
+    expect(sapmalar(dosyalar)).toEqual([]);
   });
-
   test('yüzey adı küçültülmüyor ("Program durumu" değil "Program Durumu")', () => {
-    const sapan = [];
-    HEPSI.forEach(({ f, t }) => YUZEY.forEach((a) => {
-      const re = new RegExp('(^|[^\\p{L}])(' + a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')(?![\\p{L}])', 'giu');
-      let m;
-      while ((m = re.exec(t))) if (m[2] !== a) sapan.push(`${f}: "${t}"`);
-    }));
-    expect([...new Set(sapan)]).toEqual([]);
+    expect(kucukYuzey(dosyalar)).toEqual([]);
+  });
+});
+
+// Kılavuzun sahneleri panel kartını BAŞLIĞIYLA arar (veGuideCard: '>' + başlık
+// + '<'). Başlık yalnız bir tarafta değişirse sahne SESSİZCE boş döner — hata
+// yok, kılavuzda resim yok.
+describe('kılavuz sahneleri panel kartını buluyor', () => {
+  const oku = (f) => fs.readFileSync(path.join(KOK, f), 'utf8');
+  const PANEL = oku('js/cp-fead.js');
+  const arananlar = [...oku('js/guide-fead.js').matchAll(/_gfSahneKart2\('\w+',\s*'([^']+)'/g)].map((m) => m[1]);
+  test('en az beş kart aranıyor', () => expect(arananlar.length).toBeGreaterThanOrEqual(5));
+  test.each(arananlar)('"%s" panelde kart başlığı', (b) => {
+    expect(PANEL.includes("_feadCard('" + b + "'") || PANEL.includes('>' + b + '<')).toBe(true);
   });
 });
