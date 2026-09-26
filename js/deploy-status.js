@@ -253,14 +253,14 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
   var popup = document.createElement('div');
   popup.id = 've-deploy-popup';
   popup.setAttribute('data-pr-number', String(info.prNumber || 0));
-  popup.style.cssText = 'position:fixed; top:42px; right:12px; background:var(--bg-secondary); border:1px solid var(--border-color); box-shadow:0 8px 24px rgba(0,0,0,0.4); z-index:10005; width:360px; padding:16px; font-size:var(--fs-md);';
+  popup.style.cssText = 'position:fixed; top:42px; right:12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-xl); z-index:10005; width:360px; padding:16px; font-size:var(--fs-md);';
 
   var html = '';
 
   // Başlık
   html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">';
   html += '<span style="font-weight:600; color:' + titleColor + '; font-size:var(--fs-lg);">' + title + '</span>';
-  html += '<button onclick="_veDismissPopup()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-title);">✕</button>';
+  html += '<button class="ve-settings-close" type="button" onclick="_veDismissPopup()" title="Kapat" aria-label="Kapat"><span class="mf-ico mf-ico-x"></span></button>';
   html += '</div>';
 
   // PR bilgisi
@@ -510,12 +510,12 @@ function _veShowRefreshedPopup() {
 
   var popup = document.createElement('div');
   popup.id = 've-deploy-popup';
-  popup.style.cssText = 'position:fixed; top:42px; right:12px; background:var(--bg-secondary); border:1px solid var(--border-color); box-shadow:0 8px 24px rgba(0,0,0,0.4); z-index:10005; width:360px; padding:16px; font-size:var(--fs-md);';
+  popup.style.cssText = 'position:fixed; top:42px; right:12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-xl); z-index:10005; width:360px; padding:16px; font-size:var(--fs-md);';
 
   popup.innerHTML =
     '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
       '<span style="font-weight:600; color:var(--accent-success); font-size:var(--fs-lg);">✓ Program Güncellendi</span>' +
-      '<button onclick="_veDismissPopup()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-title);">✕</button>' +
+      '<button class="ve-settings-close" type="button" onclick="_veDismissPopup()" title="Kapat" aria-label="Kapat"><span class="mf-ico mf-ico-x"></span></button>' +
     '</div>' +
     '<div style="color:var(--text-secondary); line-height:1.5;">Program en son sürüme güncellendi. Detayları görmek için yeşil noktaya tıklayın.</div>';
 
