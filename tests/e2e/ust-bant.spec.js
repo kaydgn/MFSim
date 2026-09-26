@@ -64,13 +64,20 @@ test('şerit gövdesi VARSAYILAN katlı — bant tek satır', async ({ page }) =
   expect(r.katli).toBe(true);
   // Şeridin tamamı bandın kendisi kadar: gövde gerçekten kapalı
   expect(r.serit.h).toBe(r.bant.h);
-  // BANDIN ÖLÇÜSÜ İKİ UÇLU. Alt sınır: eski 30 px'lik araç kuşağı değil,
-  // marka ve eylem taşıyan bir bant. Üst sınır: kalın da değil — ilk yazım
-  // 44 px'ti ve kullanıcı "çok kalın olmuş" dedi. İki sınır arasında bir
-  // aralık, tek bir sayıyı çivilemekten dürüst: yazı ölçüsü değişirse bant
-  // da bir tık oynayabilmeli, ama iki uçtan da kaçamamalı.
-  expect(r.bant.h).toBeGreaterThan(32);
-  expect(r.bant.h).toBeLessThanOrEqual(40);
+  // BANDIN ÖLÇÜSÜ İKİ UÇLU. Üst sınır: kalın değil — ilk yazım 44 px'ti
+  // ("çok kalın olmuş"), 38 px de "hâlâ boyuna geniş, çok yer kaplıyor"
+  // (2026-09-26). Alt sınır: 24 px'lik denetimlerin (arama · Çöz · avatar)
+  // üstünde ve altında pay kalır — bant ince ama sıkışık değil. İki sınır
+  // arasında bir aralık, tek bir sayıyı çivilemekten dürüst.
+  expect(r.bant.h).toBeGreaterThanOrEqual(30);
+  expect(r.bant.h).toBeLessThanOrEqual(32);
+  // Hiçbir denetim bandın kalınlığını tek başına belirlemiyor: en yükseğinin
+  // de üstünde ve altında ≥ 3 px var. 28 px'lik ▼ düğmesi 38 px'lik bandı
+  // tek başına tutuyordu.
+  const enYuksek = await page.evaluate(() => Math.max(...[...document.querySelectorAll('#ve-rb-strip > *')]
+    .filter((e) => e.offsetWidth).map((e) => e.getBoundingClientRect().height)));
+  expect(enYuksek).toBeGreaterThan(20);                  // BOŞA ÇALIŞMIYOR
+  expect(r.bant.h - enYuksek).toBeGreaterThanOrEqual(6);
 });
 
 test('MODÜL ADI canlı — modülün içinde yazılı, kökte BOŞ', async ({ page }) => {
@@ -146,7 +153,7 @@ test('bantta şerit sekmesi ve QAT ikonu YOK', async ({ page }) => {
   expect(r.bantSekmesi).toBe(true);     // kabı BANT
   expect(r.sekmeGorunur).toBe(false);   // ama katlıyken çizilmiyor
   expect(r.markaIkonu).toBe(false);     // maket yalnız SÖZCÜK markasını gösteriyor
-  expect(r.bantY).toBeLessThanOrEqual(40);   // "çok kalın olmuş" — 44 → 38
+  expect(r.bantY).toBeLessThanOrEqual(32);   // "çok kalın olmuş" — 44 → 38 → 32
 });
 
 // Gövde açılınca sekmeler MARKANIN YANINDA belirir — ALTINDA değil.

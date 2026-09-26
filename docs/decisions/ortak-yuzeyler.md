@@ -548,6 +548,18 @@ kenarında"* (gerçek tarayıcı; eski derlemede 8 px ve 5 px ile düşüyor).
 Kapı: `kabuk-bant.test.js` → *"bant İNCE"* + `kabuk-sutun.spec.js` →
 *"BANT İNCE"* (beş bant da tam jeton; payı 4'e geri alan mutasyon 33 ile düşüyor).
 
+**26 px, şerit 32 px (2026-09-26).** Kullanıcı ("FEAD" satırı + sekme bandının
+ekran görüntüsüyle): *"hâlâ boyuna geniş, çok yer kaplıyor."* Tuvalin üstü
+38 + 30 = 68 px'ti → 32 + 26 = 58. Hüküm: bantlardaki düğmeler **tek boy,
+22 px** (segment 24'tü, "İçe Aktar" yazıyla 25), bant onların 2 px dışında;
+şeritte ▼ 28 → 24 (bandı tek başına o tutuyordu), açık şeridin gövdesi aynı
+(94 px). Ölçü **Segoe UI'ın satırıyla** alınır — kullanıcının yazısı o ve
+satırı Inter'inkinden uzun; Inter'le ölçen kapı sekme payı 5 px'lik bir
+mutasyonu geçirirdi (26 = jeton), Segoe satırında bant 27 olur. Kapı:
+`kabuk-bant.test.js` → *"bant İNCE"* · *"bant düğmeleri tek boyda"* ·
+*"ŞERİT BANDI İNCE"* + `kabuk-sutun.spec.js` → *"BANT İNCE"* (yedi bant) +
+`ust-bant.spec.js` → *"bant tek satır"*.
+
 ## Panel alan grameri — iki yüzey tek dil (2026-09-22)
 
 **Hüküm.** Bileşen panelinin alan grameri Kayış Tablosu'nunkiyle **aynıdır**:
@@ -672,6 +684,8 @@ kalın olmuş. Ayrıca eskisiyle de aynı olmuş."* Haklıydı ve sebep **renk d
 ENVANTERDİ**: bandın içinde hâlâ şerit sekmeleri (Giriş · Görünüm · Araçlar)
 ve kaydet/geri/ileri ikonları duruyordu. Yeni öğeler onların yanına eklenmişti,
 yerlerine değil.
+
+> Bant 2026-09-26'da **32 px**'e indi — bkz. *"26 px, şerit 32 px"*.
 
 **Hüküm.** Bant yalnız dört şey taşır: **marka · modül adı** ┊ **komut arama ·
 birincil eylem · avatar**. Şerit sekmeleri **gövdenin** satırıdır ve gövde

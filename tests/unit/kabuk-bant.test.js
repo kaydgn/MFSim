@@ -93,17 +93,30 @@ describe('KABUĞUN ÜST BANDI — tek ölçü, tek zemin', () => {
     expect(eksik).toEqual([]);
   });
 
-  // BANT İNCE (2026-09-24). Kullanıcı: 36 px "gereksiz kalın". Bantların
-  // doğal yüksekliği (gerçek tarayıcı, min-height 0): 21 · 28 · 23 · 24 · 29 px;
-  // ölçü içerikten türüyor ve en yükseğini (Sonuçlar araç çubuğu) sığdırıyor.
+  // BANT İNCE. Kullanıcı: 36 px "gereksiz kalın" (2026-09-24), 30 px "hâlâ
+  // boyuna geniş" (2026-09-26). Bant 26 px: içindeki düğmeler 22 px, altında
+  // ve üstünde 2 px. Ölçü Segoe UI'ın satırıyla alındı (kullanıcının yazısı;
+  // Inter'inkinden 1 px uzun) — en yüksek içerik 25 px.
   // Çizimin kendisi (içerik bandı büyütmüyor): kabuk-sutun.spec.js → "BANT İNCE".
-  test('bant İNCE — ölçüsü içerikten: 29–30 px', () => {
+  test('bant İNCE — ölçüsü içerikten: 26 px', () => {
     const px = Number(CSS.match(/--bant-h:\s*(\d+)px;/)[1]);
-    expect(px).toBeLessThanOrEqual(30);
-    expect(px).toBeGreaterThanOrEqual(29);
-    // Araç çubuğunun dikey payı 2 px: 24 + 2·2 + 1 = 29 ≤ bant. 4 px'le 33'e
+    expect(px).toBeLessThanOrEqual(26);
+    expect(px).toBeGreaterThanOrEqual(25);
+    // Araç çubuğunun dikey payı 1 px: 22 + 2·1 + 1 = 25 ≤ bant. 2 px'le 27'ye
     // çıkıp komşusundan uzun kalırdı.
-    expect(kural('.ve-trace-toolbar')).toMatch(/padding:\s*2px \d+px;/);
+    expect(kural('.ve-trace-toolbar')).toMatch(/padding:\s*1px \d+px;/);
+  });
+
+  // Bantta yan yana duran denetimler TEK boyda: segmentin dış boyu (iç düğme +
+  // kabın iki çizgisi) tek başına duran düğmeninkine eşit. Segment 24 ↔ düğme
+  // 22 iken çubuk iki ayrı boyda okunuyordu ve bandı segment belirliyordu.
+  test('bant düğmeleri tek boyda — segment = düğme = İçe Aktar = 22 px', () => {
+    const boy = (s) => Number((kural(s).match(/(?:^|;)\s*height:\s*(\d+)px/) || [])[1]);
+    const dugme = boy('.ve-trace-btn');
+    expect(dugme).toBe(22);
+    expect(boy('.ve-trace-seg button') + 2).toBe(dugme);
+    expect(boy('.ve-imp-tool')).toBe(dugme);
+    expect(kural('.ve-imp-tool')).toMatch(/box-sizing:\s*border-box/);
   });
 
   test('Topoloji bantlarında DİKEY iç pay yok — ölçüyü min-height veriyor', () => {
@@ -141,5 +154,31 @@ describe('TUVAL KENARA YAPIŞIK — her sınır TEK çizgi', () => {
     expect(c).not.toBeNull();
     expect(c).not.toMatch(/(^|;)\s*padding:/);
     expect(c).not.toMatch(/(^|;)\s*gap:/);
+  });
+});
+
+// ŞERİT BANDI — "FEAD" yazan en üst satır (#ve-rb-strip). 38 px'ti; en yüksek
+// öğesi 28 px'lik ▼ düğmesiydi, kalanı 24 px (arama · Çöz · avatar).
+// Kullanıcı (2026-09-26, bu satırın ekran görüntüsüyle): "hâlâ boyuna geniş,
+// çok yer kaplıyor." Çizim: tests/e2e/ust-bant.spec.js.
+describe('ŞERİT BANDI İNCE — 32 px, gövde aynı boyda', () => {
+  const jeton = (ad) => Number(CSS.match(new RegExp('--' + ad + ':\\s*(\\d+)px;'))[1]);
+
+  test('bant 32 px; en yüksek denetimi komşularıyla aynı boyda', () => {
+    const serit = jeton('ribbon-strip-h');
+    expect(serit).toBeLessThanOrEqual(32);
+    expect(serit).toBeGreaterThanOrEqual(30);
+    // ▼ düğmesi arama kutusundan uzun olamaz: tek başına bandın kalınlığını
+    // belirleyen öğe oydu.
+    const boy = (s) => Number((kural(s).match(/(?:^|;)\s*height:\s*(\d+)px/) || [])[1]);
+    expect(boy('.ve-rb-expand')).toBeLessThanOrEqual(boy('.ve-bant-ara'));
+    // Denetimlerin altında ve üstünde en az 3 px: bant ince ama sıkışık değil.
+    expect(serit - boy('.ve-bant-ara')).toBeGreaterThanOrEqual(6);
+  });
+
+  test('şerit AÇIKKEN gövde aynı boyda — bant kısalınca açık hâl de kısalır', () => {
+    // Gövde = açık yükseklik − bant. Yalnız bant küçülseydi gövde sessizce
+    // büyürdü (gruplar 94 px'e göre dizili).
+    expect(jeton('ribbon-expanded-h') - jeton('ribbon-strip-h')).toBe(94);
   });
 });
