@@ -87,6 +87,17 @@ function veCanvasTransformCss(offset, zoom, dpr) {
   return 'translate(' + o.x + 'px, ' + o.y + 'px) scale(' + zoom + ')';
 }
 
+// TUVAL KABI KAYMAZ, KAMERA KAYAR. Kap `overflow:hidden` ama tarayıcı onu yine
+// kaydırır: ekran dışındaki bir girdiye Sekme ile odaklanmak, Ctrl+F, bir öğeyi
+// "görünür yapmak". Kaydırılmış kapta tuvalin HER ŞEYİ (kartlar, ızgara,
+// minimap, çıkış çipi) birlikte kayar ve kullanıcının geri kaydırma yolu yoktur
+// (ölçüldü: 307 × 189 px, minimap tuvalin ortasına düşüyordu). Kayma kameraya
+// aktarılır: ekrandaki görüntü AYNI kalır (odaklanan öğe görünür durur), kap 0'a
+// döner. SAF: yeni ofseti döndürür.
+function veKabKaymasiniAktar(offset, sx, sy) {
+  return { x: offset.x - (sx || 0), y: offset.y - (sy || 0) };
+}
+
 // Izgara desenini canlı görünüme uygula (CSS değişkenleri; bkz. styles.css
 // ".ve-canvas-wrapper::before"). updateCanvasTransform her pan/zoom karesinde çağırır.
 function veApplyGridPattern() {
@@ -403,6 +414,7 @@ function veCenterTopoState(state, center) {
 
 if(typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    veKabKaymasiniAktar: veKabKaymasiniAktar,
     VE_CANVAS_SPAN: VE_CANVAS_SPAN,
     VE_CANVAS_CENTER: VE_CANVAS_CENTER,
     VE_GRID_MIN_PX: VE_GRID_MIN_PX,

@@ -244,6 +244,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   kesirli ofset 1× ekranda tuvaldeki her kenarı iki piksele yayıyordu. Yuvarlanan
   yalnız çizim, `canvasOffset` DEĞİL (pan adımları onun üstüne birikiyor).
   Kapı: `tuval-cihaz-pikseli.test.js`.
+- **TUVAL KABI KAYMAZ, KAMERA KAYAR** (`js/canvas-space.js` →
+  `veKabKaymasiniAktar` + `ui-core.js`'teki `scroll` dinleyicisi). Kap
+  `overflow:hidden` ama tarayıcı onu yine kaydırır (ekran dışı girdiye odak,
+  Ctrl+F, "görünür yap"); kaymış kapta kartlar, ızgara ve minimap birlikte
+  kayar ve geri dönüş yolu yoktur. Kayma kameraya aktarılır, kap 0'a döner.
+  Kapı: `canvas-space.test.js` + `tuval-kab-kaymaz.spec.js`.
 - **KART İÇİNDEKİ KAYDIRILABİLİR YÜZEY TEKERLEĞİ ÖNCE ALIR**
   (`js/ui-core.js` → `veWheelInnerPane`). Kanvasın tekerlek dinleyicisi
   kayıtsız `preventDefault()` çağırdığı sürece kart içindeki hiçbir liste
@@ -530,7 +536,7 @@ FEAD satırları modül skill'ine taşındı
 | `tests/unit/mount-example-names.test.js` | `js/mount-core.js` örnekleri + `assets/examples/*.json` | Örnek modellerde ad ↔ konum tutarlılığı (Sağ/Sol ↔ Y işareti), tekrarlı ad, iki kopyanın ayrışmaması |
 | `tests/unit/mount-results-tab.test.js` | `js/results.js` + `js/graphics.js` | Takoz çözüm sekmesi, tek X ekseni kuralı, pano uzlaştırma |
 | `tests/unit/mount-results-publish.test.js` | `js/cp-mount.js` | Çözümün panoya yayını; alt-topoloji çökertme regresyonu |
-| `tests/unit/canvas-space.test.js` | `js/canvas-space.js` + `css/styles.css` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama; **sınır çerçevesi düğüm ADINI da sarar** — `veNodeLabelOverflow` dört kenar için taşma (yanda 7+genişlik, alt/üstte 4+yükseklik, karşılıklı taşma İKİ YANA EŞİT), modül kartının adının taşma EKLEMEMESİ, alt payın hiç küçülmemesi (çerçeve yalnız büyür), ölçüm işlevi geçilmezse davranışın BİREBİR eski hâli, ve boşluk sabitlerinin `css/styles.css`'teki margin'lerle aynı olması |
+| `tests/unit/canvas-space.test.js` | `js/canvas-space.js` + `css/styles.css` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama; **sınır çerçevesi düğüm ADINI da sarar** — `veNodeLabelOverflow` dört kenar için taşma (yanda 7+genişlik, alt/üstte 4+yükseklik, karşılıklı taşma İKİ YANA EŞİT), modül kartının adının taşma EKLEMEMESİ, alt payın hiç küçülmemesi (çerçeve yalnız büyür), ölçüm işlevi geçilmezse davranışın BİREBİR eski hâli, ve boşluk sabitlerinin `css/styles.css`'teki margin'lerle aynı olması; **kabın kayması kameraya geçer** (`veKabKaymasiniAktar`: görüntü korunur, saf, `ui-core.js` kablolaması) |
 | `tests/unit/module-start-center.test.js` | `js/components.js` `veStartModule` | Karşılama kartından gelen modül bloğu görünümün TAM ortasına düşer (kabuk senkronu ölçümden önce) |
 | `tests/unit/port-geometry.test.js` | `js/components.js` port geometrisi + `js/connections.js` | Bağlantı ucu ile port dairesi aynı noktada — dört kenar, çok port, aynalama; **`veSyncPortDom`** — kenar sonradan değişince (AYNALAMA) dairenin teli takip etmesi, elle taşınan portun ezilmemesi, kenar değişmiyorsa DOM'a hiç yazılmaması; **negatif kapı: FEAD kasnakları portsuz** — iki kasnak arasına tel kurulsa bile ne amber kayış sınıfı ne gidiş oku çizilir (`veConnDirMark`'ın matematiği duruyor, bugün çağıranı yok). Kasnakların ayrıca kanvasta KUTUSU da yok (`noCanvasBox`) |
 | `tests/unit/module-card.test.js` | `js/components.js` alt-sistem kartı + sidebar modül satırı | Modül kartı: içerik özeti (alt topolojiden), kart ölçüsünün tek kaynağı, eski 80×66 kaydın yükselmesi, **ad elemanının taşınması** (kopyalansaydı yeniden adlandırma sessizce eskirdi); palet sembolü `componentDefs`'ten (index.html'de ikinci kopya tutulmadığına dair kapı) |

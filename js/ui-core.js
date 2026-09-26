@@ -238,6 +238,19 @@ document.addEventListener('DOMContentLoaded', function() {
   var selectionBox = document.getElementById('ve-selection-box');
   
   if(!canvas || !canvasWrapper) return;
+
+  // Kap kaydırılırsa kayma kameraya aktarılır, kap 0'a döner (canvas-space.js →
+  // veKabKaymasiniAktar). Ofset YERİNDE değişir: başka modüller nesneyi tutuyor.
+  canvasWrapper.addEventListener('scroll', function() {
+    var sx = canvasWrapper.scrollLeft, sy = canvasWrapper.scrollTop;
+    if(!sx && !sy) return;
+    canvasWrapper.scrollLeft = 0;
+    canvasWrapper.scrollTop = 0;
+    var o = veKabKaymasiniAktar(canvasOffset, sx, sy);
+    canvasOffset.x = o.x;
+    canvasOffset.y = o.y;
+    updateCanvasTransform();
+  });
   
   // Tek modül — veActiveModule sabit
   veActiveModule = 'full-throttle';

@@ -1536,3 +1536,20 @@ kaynaktan, her aşamanın dosyalarında sapma yok, yüzey adı küçültülmüyo
 kılavuzun aradığı her kart başlığı panelde var. Düzeltme öncesi kaynakta
 aşama 1'de 94 (+12 +84), aşama 2'de 386, aşama 3a'da 330 sapmayla; eski kılavuz + yeni panelle 7
 bulunamayan kartla düşüyor.
+
+## Tuval kabı kaymaz, kamera kayar (2026-09-26)
+
+**Hüküm.** `#ve-canvas-wrapper` kaydırılırsa (`scroll` olayı) kayma kameraya
+aktarılır (`veKabKaymasiniAktar`: ofset − kayma) ve kap 0'a döner; ekrandaki
+görüntü aynı kalır, odaklanan öğe görünür durur.
+
+**Gerekçe.** Kap `overflow:hidden` ama tarayıcı onu yine kaydırıyordu: ekran
+dışındaki bir girdiye odaklanmak kabı 3147 × 2414 px kaydırdı; Playwright'ın
+tık öncesi kaydırması 307 × 189 px. Kaymış kapta kartlar, ızgara ve minimap
+birlikte kayıyor (minimap tuvalin ortasına düşüyordu) ve kullanıcının geri
+kaydırma yolu yoktu. `arac-performans.spec.js:46` bu yüzden aralıklı düşüyordu
+(`main`'de de).
+
+**Kapı.** `canvas-space.test.js` (aktarım görüntüyü korur, saf, kablolama) +
+`tuval-kab-kaymaz.spec.js` (kodla kaydırma ve ekran dışı odak; düzeltme
+olmadan iki test de düşüyor: 300 × 150 ve 3147 × 2414 kalıyor).
