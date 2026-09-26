@@ -2,12 +2,15 @@
  * fead-step.spec.js — SİHİRBAZDA "STEP'TEN BAŞLA" (gerçek tarayıcı)
  *
  * Kullanıcı isteği (2026-09-26): CATIA/3DEXPERIENCE montajı programa atılır,
- * parçaların rolü onaylanır, çaplar ve konumlar dosyadan gelir.
+ * parçaları kullanıcı ELLE seçer, bir düğmeyle çaplar ve merkezler hesaplanır
+ * ve kayış düzlemi hemen çizilir.
  *
  * Node'da HİÇ koşmayan halkalar:
  *   · dosya girişinin gerçek File nesnesi (arrayBuffer) ve bir kare sonraki
  *     ayrıştırma — .stpZ (başlık alanlı gzip) tarayıcıda açılıyor mu
- *   · kartın gerçek tıklamaları: rol listesi, "Sihirbaza aktar", "Sıra doğru"
+ *   · kartın gerçek tıklamaları: rol listeleri, "Çap ve merkezleri hesapla",
+ *     "Sihirbaza aktar", "Sıra doğru"
+ *   · çizim gerçekten görünür bir boyutta ve rengi temadan çözülüyor
  *   · BIRAKMA: kartın üstüne bırakılan dosya okunur ve ölçüm içe aktarma
  *     kaplaması/sihirbazı AÇILMAZ (`data-ve-dropzone` sözleşmesi)
  *   · tablo kartın içinde kalıyor — yatay kaydırma yok
@@ -43,7 +46,7 @@ async function feadAc(page) {
   await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible({ timeout: 20000 });
 }
 
-test('STEP\'ten başla: .stpZ seç → rolleri onayla → aktar → künye → Modeli Kur', async ({ page }) => {
+test('STEP\'ten başla: .stpZ seç → rolleri ver → hesapla (çizim) → aktar → künye → Modeli Kur', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await page.setViewportSize({ width: 1366, height: 768 });
@@ -56,12 +59,12 @@ test('STEP\'ten başla: .stpZ seç → rolleri onayla → aktar → künye → M
     name: 'AG00686.stpZ', mimeType: 'application/octet-stream', buffer: stpZ(O.ag00686Step()),
   });
   const satir = page.locator('.ve-fw-tbl-stp tr[data-ve-stp]');
-  await expect(satir).toHaveCount(4, { timeout: 20000 });
+  // Ağacın bütün parçaları (kayış dâhil) listede, HİÇBİRİ rol almamış
+  await expect(satir).toHaveCount(5, { timeout: 20000 });
   await expect(page.locator('.ve-fw-stp .ve-fw-seeded')).toContainText('sıkıştırılmış (gzip)');
-  const roller = await satir.locator('select').evaluateAll((l) => l.map((s) => s.value));
-  expect(roller).toEqual(['fead-crank', 'fead-idler', 'fead-ac', 'fead-tensioner']);
-  // Kayış parçası listede ama "dokunulmaz"
-  await expect(page.locator('.ve-fw-tbl-stp')).toContainText('dokunulmaz');
+  expect(await satir.locator('select').evaluateAll((l) => l.map((s) => s.value))).toEqual(['', '', '', '', '']);
+  await expect(page.locator('#ve-fw-stp-hesapla')).toBeDisabled();
+  await expect(page.locator('.ve-fw-stp-svg')).toHaveCount(0);
 
   // Tablo kartın içinde: yatay kaydırma yok (1366 × 768)
   const tasma = await page.evaluate(() => {
@@ -72,10 +75,37 @@ test('STEP\'ten başla: .stpZ seç → rolleri onayla → aktar → künye → M
   expect(tasma.tablo).toBeLessThanOrEqual(1);
   expect(tasma.govde).toBeLessThanOrEqual(1);
 
-  // ── 2) ROL: bir kez değiştir, geri al (gerçek seçim) ────────────────────
-  await satir.nth(2).locator('select').selectOption('fead-alternator');
-  await expect(satir.nth(2).locator('select')).toHaveValue('fead-alternator');
-  await satir.nth(2).locator('select').selectOption('fead-ac');
+  // ── 2) ROLLERİ ELLE VER (gerçek seçim), sonra HESAPLA ───────────────────
+  // Satır ADIN HÜCRESİNDEN bulunur: düz metin süzgeci büyük/küçük harfe
+  // duyarsız ve her satırın rol listesinde "Krank Kasnağı" seçeneği var.
+  const adSatiri = (ad) => satir.filter({ has: page.locator('td:first-child', { hasText: new RegExp(ad) }) });
+  const rolVer = async (ad, tip) => { await adSatiri(ad).locator('select').selectOption(tip); };
+  await rolVer('KRANK', 'fead-crank');
+  await rolVer('AVARA', 'fead-idler');
+  await rolVer('KLİMA', 'fead-ac');
+  await rolVer('GERGİ', 'fead-tensioner');
+  await expect(page.locator('.ve-fw-stp-svg')).toHaveCount(0);        // rol vermek hesaplamaz
+  await page.locator('#ve-fw-stp-hesapla').click();
+  // Kayış düzlemi çizimi: dört kasnak, gergi kolu; krank orijinde
+  await expect(page.locator('.ve-fw-stp-svg [data-ve-stp-kasnak]')).toHaveCount(4);
+  await expect(page.locator('.ve-fw-stp-svg .ve-fw-stp-kol')).toHaveCount(1);
+  await expect(adSatiri('KRANK')).toContainText('8 × PK');
+  // Çizim görünür bir boyutta ve renkleri temadan (stroke çözülmüş)
+  const cizim = await page.evaluate(() => {
+    const svg = document.querySelector('.ve-fw-stp-svg');
+    const c = svg.querySelector('[data-ve-stp-kasnak] circle');
+    const r = svg.getBoundingClientRect();
+    return { w: r.width, h: r.height, stroke: getComputedStyle(c).stroke };
+  });
+  expect(cizim.w).toBeGreaterThan(300);
+  expect(cizim.h).toBeGreaterThan(200);
+  expect(cizim.stroke).not.toBe('none');
+  // Rol değişince sonuç düşer — yeniden hesaplanır
+  await rolVer('KLİMA', 'fead-alternator');
+  await expect(page.locator('.ve-fw-stp-svg')).toHaveCount(0);
+  await rolVer('KLİMA', 'fead-ac');
+  await page.locator('#ve-fw-stp-hesapla').click();
+  await expect(page.locator('.ve-fw-stp-svg [data-ve-stp-kasnak]')).toHaveCount(4);
 
   // ── 3) AKTAR ────────────────────────────────────────────────────────────
   await page.locator('#ve-fw-stp-aktar').click();
@@ -134,7 +164,7 @@ test('kartın üstüne BIRAKILAN dosya okunur; ölçüm içe aktarma açılmaz',
       el.dispatchEvent(new DragEvent(tip, { bubbles: true, cancelable: true, dataTransfer: dt }));
     }
   }, metin);
-  await expect(page.locator('.ve-fw-tbl-stp tr[data-ve-stp]')).toHaveCount(4, { timeout: 20000 });
+  await expect(page.locator('.ve-fw-tbl-stp tr[data-ve-stp]')).toHaveCount(5, { timeout: 20000 });
   const durum = await page.evaluate(() => ({
     kaplama: document.getElementById('ve-imp-drop').classList.contains('on'),
     isaret: document.querySelector('.ve-fw-stp').classList.contains('ve-fw-stp-on'),

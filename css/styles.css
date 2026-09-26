@@ -8557,6 +8557,24 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-tbl-stp .ve-fw-num{ text-align:right; font-variant-numeric:tabular-nums; }
 .ve-fw-tbl-stp tr.ve-fw-stp-off td{ color:var(--text-muted); }
 .ve-fw-tbl-stp tr.ve-fw-stp-warn td:nth-child(3){ color:var(--ink-warning); }
+/* Ağaç girintisi VERİDEN (`--stp-d` = düğümün derinliği), görünüm burada. */
+.ve-fw-tbl-stp td:first-child{ padding-left:calc(4px + var(--stp-d, 0) * 14px); }
+/* KAYIŞ DÜZLEMİ ÇİZİMİ — hesaptan hemen sonra; kasnaklar dış çaplarıyla.
+   Çizgi kalınlığı viewBox ölçeğinden BAĞIMSIZ (non-scaling-stroke): çizim
+   mm cinsinden, küçük düzende kalın, büyükte kaybolan çizgi olmasın. */
+.ve-fw-stp-cizim{ height:300px; border:1px solid var(--border-light); border-radius:var(--radius-sm);
+  background:var(--bg-secondary); }
+.ve-fw-stp-svg{ display:block; width:100%; height:100%; }
+.ve-fw-stp-svg *{ vector-effect:non-scaling-stroke; }
+.ve-fw-stp-eksen{ fill:none; stroke:var(--text-muted); stroke-width:1; }
+.ve-fw-stp-kasnak circle{ fill:var(--accent-tint-6); stroke:var(--accent-primary); stroke-width:1.5; }
+.ve-fw-stp-kasnak.k-duz circle{ stroke:var(--text-secondary); }
+.ve-fw-stp-kasnak.k-gergi circle{ stroke:var(--accent-warning); }
+.ve-fw-stp-kasnak circle.m{ fill:var(--text-primary); stroke:none; }
+.ve-fw-stp-kasnak text{ fill:var(--text-primary); font-variant-numeric:tabular-nums; }
+.ve-fw-stp-kasnak text.d{ fill:var(--text-secondary); }
+.ve-fw-stp-kol{ stroke:var(--accent-warning); stroke-width:2; }
+.ve-fw-stp-pivot{ fill:var(--bg-secondary); stroke:var(--accent-warning); stroke-width:1.5; }
 
 /* Satır işlemleri sütunu üç düğme taşıyor; aralarındaki boşluk daralan
    sütunda taşmanın ilk sebebiydi. */

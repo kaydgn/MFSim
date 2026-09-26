@@ -541,14 +541,27 @@ olurdu.
     • **Düz kasnak = kayışı taşıyan yüzey**: düzleme dik, kayış genişliğini
       (kanal × adım) kapsayan, düzlemde ortalanmış; aynı yarıçaplı basamaklar
       aralarında ÇIKINTI yoksa tek yüzeydir (bitişiklik ölçüt değil).
-    • **Rol addan önerilir**, geometriden tahmin edilmez; **bakış yönü**
-      görünür bir varsayılandır (motor = orijin düzlemin arkasında; orijin
-      düzlemdeyse `bakis.kaynak: 'varsayilan'` + uyarı) — ayna modeli yine
-      çözer, yalnız krankın dönüş yönünü çevirir.
+    • **ÖNCE ROL, SONRA ANALİZ** (kullanıcı kararı 2026-09-26: *"program biz
+      seçtikten sonra çıkaracak; yoksa farklı dosyalarda problem
+      yaşayabiliriz"*): okuma yalnız ağacı ve yüzleri çıkarır
+      (`veFeadStpOku`); kasnak, düzlem ve gergi YALNIZ rol verilen
+      düğümlerde aranır (`veFeadStpCoz`). Ad hiçbir şeye karar vermez, rol
+      geometriden tahmin edilmez. Rol DÜĞÜME verilir (parça ya da alt
+      montaj); bir parça tek birime ait — en yakın rollü ata.
+    • **Düzlem EN ÇOK birimi oturtan konum**, ortanca değil: iki izli bir
+      damper ya da seçilmiş başka bir kayışın kasnağı ortancayı kaydırırdı;
+      düzlem dışındaki rollü parça aktarılmaz ve söylenir.
+    • **Kanal varsa kaburgalı**, rol ne olursa olsun (kaburgalı avara da var —
+      kanal tepeleri arasındaki silindirler kayışı "kapsayan" bir düz aday da
+      kurar); kanal yoksa kayışı taşıyan düz yüzey.
+    • **Bakış yönü** görünür bir varsayılandır (motor = orijin düzlemin
+      arkasında; orijin düzlemdeyse `bakis.kaynak: 'varsayilan'` + uyarı) —
+      ayna modeli yine çözer, yalnız krankın dönüş yönünü çevirir.
     • **Birim dosyanın bağlamından**, tahmin edilmez; MAPPED_ITEM montajı
       desteklenmez ve uyarıyla söylenir.
     • **Kayışa dokunulmaz** (kullanıcı kararı): sıra ağaç sırasıdır ve
-      `siraKaynagi: 'agac'` ile işaretlidir; kayış parçası kasnak sayılmaz.
+      `siraKaynagi: 'agac'` ile işaretlidir; kayış parçası rol almadıkça
+      analiz edilmez.
     • Gerginin yay verisi STEP'te yok; `tenPart` yalnız parça kodu katalogda
       TEK ise yazılır (kural 19'un gerekçesi). Kayıt µm'ye (açı 0,0001°)
       yuvarlanır — dönüşüm gürültüsü alanlara yazılıyordu; ikinci gergi rolü
@@ -558,6 +571,12 @@ olurdu.
     **Sihirbaz kartı** (`js/cp-fead-wizard.js`, açıklama paragrafı YOK):
     • Tanıyıcının çıktısı OTURUMLUK (`_fwStp`), `node.data.wiz`e yazılmaz;
       durumda yalnız iz kalır (`stepKaynak`, `siraKaynagi`).
+    • Satırlar ağacın düğümleri, **rolsüz açılır**; rol verilince ata ve
+      torunların rolü düşer. **Hesap bir DÜĞMEDİR**: rol değişince sonuç
+      DÜŞER (bayat sayı kalmasın), bakış değişince düşmez (yalnız izdüşüm).
+      Sonuç kayış düzleminin çizimiyle gelir: kasnaklar dış çapıyla, gergi
+      kolu ve pivotu; kayış yolu ÇİZİLMEZ (sıra dosyada yok, yol çekirdeğin
+      işi); renk CSS jetonlarından.
     • **Tek krank, tek gergi** aktarımı DURDURUR; orijin KULLANICININ seçtiği
       krank. Kayış ve çözücü boş durumdan (`ex.belt || {}` kanalı silerdi).
     • **Sıra bir varsayım**: aktarımdan sonra Kasnaklar adımı uyarı taşır;
@@ -568,11 +587,13 @@ olurdu.
     • Kart bir **bırakma alanı** (`data-ve-dropzone`): yoksa ölçüm içe
       aktarması `.stp`'yi reddedip "okunamaz" derdi.
     Kapılar: `tests/unit/fead-step.test.js` (sentetik dosyalar
-    `tests/helpers/step-yaz.js` + `step-ornek.js`, gerçek dosyanın kalıbında)
-    — en değerlisi Gates AG00686'nın STEP → köprü zinciri (span %0,5 · sarım
-    0,2°); `tests/unit/fead-wizard-step.test.js` (gidiş-dönüş · kayış ·
-    roller · sıra · künye · .stpZ) + `tests/e2e/fead-step.spec.js` (gerçek
-    File · bırakma · Modeli Kur).
+    `tests/helpers/step-yaz.js` + `step-ornek.js`, gerçek dosyanın kalıbında;
+    rolü TEST verir) — en değerlisi Gates AG00686'nın STEP → köprü zinciri
+    (span %0,5 · sarım 0,2°) ve *"ROL KULLANICININ"* (seçilmemiş kasnak,
+    iki izli damper, kaburgalı avara); `tests/unit/fead-wizard-step.test.js`
+    (rolsüz açılış · hesap düğmesi · ata/torun · çizim · gidiş-dönüş · kayış
+    · sıra · künye · .stpZ) + `tests/e2e/fead-step.spec.js` (gerçek File ·
+    elle rol · çizim · bırakma · Modeli Kur).
 
 35. **SEKME ADI DURUMUNU TAŞIR — kural köprünün, kapı ANLAŞMA** (2026-09-26,
     kullanıcı: *"kullanıcı bu kısmı görmeyebilir ve eksik bilgi girebilir"* →

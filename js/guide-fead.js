@@ -733,19 +733,24 @@ function _gfSec3(){
   h += '<h3>3.5 Yol D — kendi CAD montajınızdan (STEP)</h3>';
   h += '<p>CATIA ya da 3DEXPERIENCE’ta çizdiğiniz düzeni <strong>STEP dosyası</strong> olarak '
     + 'verirseniz kasnakların dış çapı, kanal sayısı ve merkezleri, gerginin avara merkezi, kol '
-    + 'boyu ve kol açısı <strong>dosyadan okunur</strong>. Hangi parçanın ne olduğunu siz '
-    + 'onaylarsınız; sihirbaz geri kalanını örnek yükler gibi doldurur.</p>';
+    + 'boyu ve kol açısı <strong>dosyadan okunur</strong>. Hangi parçanın ne olduğunu '
+    + '<strong>siz seçersiniz</strong>; program yalnız seçtiğiniz parçaları inceler, sonra '
+    + 'sihirbazı örnek yükler gibi doldurur.</p>';
   h += _gfAdimlar([
     'CAD’de ürün ağacını STEP olarak kaydedin: <code>.stp</code> ya da sıkıştırılmış '
       + '<code>.stpZ</code>, AP214 veya AP242, <strong>katı geometri</strong>. Yalnız üçgen ağ '
       + 'taşıyan bir dosyada okunacak yüzey yoktur.',
     'Sihirbazın <strong>1 · Başlangıç</strong> adımında <strong>STEP dosyası seç…</strong> '
       + 'düğmesine basın ya da dosyayı kartın üstüne bırakın.',
-    'Listede her kasnağın <strong>rolünü</strong> kontrol edin. Öneri parçanın ADINDAN gelir '
-      + '(KRANK, KLİMA, AVARA, GERGİ …); yanlışsa listeden değiştirin, modele girmesini '
-      + 'istemediğiniz parçayı <em>— aktarma —</em> yapın. Model tek krank ve tek gergi taşır.',
-    '<strong>Bakış</strong> yönünü kontrol edin: <em>Önden</em>, kasnakların önünden, motorun '
-      + 'karşısından bakıştır. Klima krankın hangi yanında görünüyorsa listedeki X de o yanda '
+    'Listede ürün ağacının parçaları gelir, <strong>hiçbiri rol almamıştır</strong>. Kayışa '
+      + 'giren her parçaya rolünü verin (krank, klima, avara, gergi …); gergi bir alt montajsa '
+      + 'rolü montajın satırına verebilirsiniz. Rol vermediğiniz parça incelenmez. Model tek '
+      + 'krank ve tek gergi taşır.',
+    '<strong>Çap ve merkezleri hesapla</strong>’ya basın: çaplar, kanal sayıları ve merkezler '
+      + 'listeye yazılır ve kayış düzleminin <strong>önden çizimi</strong> gelir. Rolü '
+      + 'değiştirirseniz sonuç silinir; yeniden hesaplayın.',
+    '<strong>Bakış</strong> yönünü çizimde kontrol edin: <em>Önden</em>, kasnakların önünden, '
+      + 'motorun karşısından bakıştır. Klima krankın hangi yanında görünüyorsa çizimde de o yanda '
       + 'olmalı; değilse <em>Arkadan</em>’ı seçin.',
     '<strong>Sihirbaza aktar</strong>’a basın. Sonra <strong>2 · Kasnaklar</strong> adımında '
       + 'kayış sırasını doğrulayın ve <strong>3 · Otomatik Gergi</strong> adımında yay künyesini '
@@ -766,6 +771,12 @@ function _gfSec3(){
     + 'kullanır ve <strong>2 · Kasnaklar</strong> adımını uyarıyla işaretler: kayış yolunu '
     + 'şemada kontrol edin, gerekirse ↑ ↓ ile düzeltin ya da <strong>✓ Sıra doğru</strong> ile '
     + 'onaylayın.');
+  h += _gfNot('Program adlara güvenmez',
+      'Parça adları ve ağacın yapısı dosyadan dosyaya değişir; “ALT” bir dosyada alternatör, '
+    + 'ötekinde başka bir şey olabilir. Bu yüzden rolü siz verirsiniz ve program dosyanın '
+    + 'tamamını taramaz: başka bir kayışın kasnağı ya da çok kanallı bir damperin öteki izi '
+    + 'hesaba karışmaz. Kayış düzlemi seçtiğiniz parçaların çoğunun oturduğu düzlemdir; '
+    + 'o düzlemin dışında kalan rollü bir parça aktarılmaz ve adıyla söylenir.');
   h += _gfNot('Künye dosyadaki gergiyi sessizce değiştirmez',
       'Künye seçmek gerginin parça alanlarını (kol boyu · kasnak çapı · parça kodu) katalogdan '
     + 'yazar. Seçtiğiniz künye STEP’teki parçadan farklıysa gergi adımı farkı adıyla gösterir; '
