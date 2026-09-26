@@ -742,20 +742,32 @@ function _gfSec3(){
       + 'taşıyan bir dosyada okunacak yüzey yoktur.',
     'Sihirbazın <strong>1 · Başlangıç</strong> adımında <strong>STEP dosyası seç…</strong> '
       + 'düğmesine basın ya da dosyayı kartın üstüne bırakın.',
-    'Listede ürün ağacının parçaları gelir, <strong>hiçbiri rol almamıştır</strong>. Kayışa '
-      + 'giren her parçaya rolünü verin (krank, klima, avara, gergi …); gergi bir alt montajsa '
-      + 'rolü montajın satırına verebilirsiniz. Rol vermediğiniz parça incelenmez. Model tek '
-      + 'krank ve tek gergi taşır.',
-    '<strong>Çap ve merkezleri hesapla</strong>’ya basın: çaplar, kanal sayıları ve merkezler '
-      + 'listeye yazılır ve kayış düzleminin <strong>önden çizimi</strong> gelir. Rolü '
-      + 'değiştirirseniz sonuç silinir; yeniden hesaplayın.',
-    '<strong>Bakış</strong> yönünü çizimde kontrol edin: <em>Önden</em>, kasnakların önünden, '
-      + 'motorun karşısından bakıştır. Klima krankın hangi yanında görünüyorsa çizimde de o yanda '
-      + 'olmalı; değilse <em>Arkadan</em>’ı seçin.',
-    '<strong>Sihirbaza aktar</strong>’a basın. Sonra <strong>2 · Kasnaklar</strong> adımında '
-      + 'kayış sırasını doğrulayın ve <strong>3 · Otomatik Gergi</strong> adımında yay künyesini '
-      + 'seçin.'
+    'Dosya okununca <strong>3B görüntüleyici</strong> açılır ve montajın tamamını gösterir; '
+      + '<strong>hiçbir parça rol almamıştır</strong>. Sol tuşla döndürün, sağ tuş ya da '
+      + 'Shift ile kaydırın, tekerlekle yaklaşın; <strong>Sığdır</strong> montajı yeniden '
+      + 'ortalar.',
+    'Kayışa giren her parçaya <strong>tıklayın</strong> ve sağdaki panelden rolünü verin '
+      + '(krank, klima, avara, gergi …). Rol verilen parça rolünün rengini alır. Gergi bir '
+      + 'alt montajsa panelin <strong>yolunda</strong> (MONTAJ › GERGİ › KASNAK) üst '
+      + 'düğüme tıklayıp rolü montaja verin: alt montajın bütün parçaları tek birim olur. '
+      + 'Rol vermediğiniz parça incelenmez. Model tek krank ve tek gergi taşır.',
+    '<strong>Çap ve merkezleri hesapla</strong>’ya basın: kasnakların üstünde ölçülen dış '
+      + 'çapta birer <strong>halka</strong> belirir, gerginin montaj konumu ve kolu çizilir, panelde '
+      + 'çap ve merkezlerin tablosu gelir. Rolü değiştirirseniz sonuç silinir; yeniden '
+      + 'hesaplayın.',
+    '<strong>Önden bak</strong> kamerayı kayış düzlemine dik çevirir. <em>Önden</em>, '
+      + 'kasnakların önünden, motorun karşısından bakıştır: klima krankın hangi yanında '
+      + 'görünüyorsa aktarılan düzende de o yanda olur; değilse <em>Arkadan</em>’ı seçin.',
+    '<strong>Sihirbaza aktar</strong>’a basın; görüntüleyici kapanır. Sonra '
+      + '<strong>2 · Kasnaklar</strong> adımında kayış sırasını doğrulayın ve '
+      + '<strong>3 · Otomatik Gergi</strong> adımında yay künyesini seçin.'
   ]);
+  h += _gfNot('Kartın listesi de aynı seçimi yazar',
+      'Görüntüleyiciyi <strong>Esc</strong> ya da ✕ ile kapatırsanız STEP kartında ürün ağacı '
+    + 've kayış düzleminin önden çizimi kalır; rol ve hesap orada da verilir, ikisi aynı '
+    + 'seçimi okur. <strong>3B’de seç</strong> düğmesi görüntüleyiciyi yeniden açar. '
+    + 'Görüntüdeki üçgenler yalnız çizim içindir: çap ve merkez dosyanın yazdığı yüzey '
+    + 'denklemlerinden ölçülür.');
   h += _gfAlanTablo('STEP dosyasından ne okunur', [
     ['Kasnak dış çapı', '<strong>Kaburga tepesi</strong> — omuz ya da flanş değil', 'okunur'],
     ['Kanal sayısı · profil', 'Kanal adımından (PK = 3,56 mm …)', 'okunur; kayışa yazılmaz'],

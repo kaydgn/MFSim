@@ -1260,8 +1260,10 @@
 <script type="text/x-mfsim-defer" src="js/fead-signals.js" data-mfsim-label="FEAD: sonuç kanalları (çevrim · Campbell · kol · senaryo)..."></script>
 <script type="text/x-mfsim-defer" src="js/step-p21.js" data-mfsim-label="STEP okuyucusu (ISO 10303-21)..."></script>
 <script type="text/x-mfsim-defer" src="js/fead-step.js" data-mfsim-label="FEAD: STEP'ten kasnak geometrisi..."></script>
+<script type="text/x-mfsim-defer" src="js/step-ucgen.js" data-mfsim-label="STEP yüzlerinin görüntü ağı..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead.js" data-mfsim-label="FEAD kayış-kasnak modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead-wizard.js" data-mfsim-label="FEAD: başlangıç sihirbazı..."></script>
+<script type="text/x-mfsim-defer" src="js/cp-fead-3b.js" data-mfsim-label="FEAD: STEP'in 3B görüntüleyicisi..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead-report.js" data-mfsim-label="FEAD: rapor üreteci..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead-summary.js" data-mfsim-label="FEAD: özet rapor..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead-results.js" data-mfsim-label="FEAD: Sonuçlar sekmesi..."></script>
@@ -1416,6 +1418,9 @@
          sayfasından buraya taşındı (kullanıcı: "çok kalabalık duruyor"). -->
     <div id="ve-fw-eng" class="ve-fw-ang" style="display:none;"
          onmousedown="if(event.target===this) veFeadWizEngClose()"></div>
+    <!-- STEP'İN 3B GÖRÜNTÜLEYİCİSİ (js/cp-fead-3b.js) — aynı gerekçe: sihirbazın
+         içinde bir kaplama; sihirbaz kapanınca WebGL bağlamı da bırakılır. -->
+    <div id="ve-fw-3b" class="ve-fw-3b" style="display:none;"></div>
   </div>
 </div>
 
