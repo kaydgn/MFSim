@@ -1431,19 +1431,27 @@
 
     /* LİSTE VE SAYI ALANI TEK DİLDE (2026-09-26, kullanıcı kararı 11·B).
        Açılır listeler iki görünüşteydi: pencerelerdeki 33 listenin 33'ü
-       Windows'un kendi okuyla, FEAD kart çubuğundakiler programın çizilmiş
-       okuyla. Sayı alanları (338) fare üstüne gelince tarayıcının yukarı/aşağı
-       oklarını açıyor ve sağa yaslı rakamların yanına biniyordu. Ok artık
-       HEPSİNDE programın — FEAD çubuğunun oku, aynı geometri: iki küçük
-       gradyan, rengini yazıdan alır, her temada doğru. `!important` BİLEREK:
+       Windows'un kendi okuyla, FEAD kart çubuğundakiler dolu bir kamayla.
+       Sayı alanları (338) fare üstüne gelince tarayıcının yukarı/aşağı
+       oklarını açıyor ve sağa yaslı rakamların yanına biniyordu.
+       OK, KARARIN ÖRNEĞİNDEKİ ÇİZGİ OKTUR (Lucide chevron-down, 6×3 px) —
+       kama değil: kullanıcı onu gördü ve seçti; 10·B de çizgi ikon ailesi.
+       SVG DEĞİL İKİ GRADYAN, çünkü arka plan SVG'si temanın değişkenini
+       okuyamaz; ok `--text-muted`tan boyanır, iki temada da doğru. Oku
+       tanımlayan TEK kural budur (FEAD çubuğu dâhil) — kapı:
+       denetim-dili.test.js. Yeri kamanınkiyle aynı (sağdan 6–12 px, dolgu
+       15 px): hiçbir listenin genişliği değişmez. `!important` BİLEREK:
        33 listede satır içi `background:` kısaltması var ve kısaltma oku
        siler. Sayı alanında ↑/↓ tuşları sayıyı yine artırıp azaltır. */
     select:not([multiple]):not([size]) {
       -webkit-appearance: none; appearance: none;
       padding-right: 15px !important;
       text-overflow: ellipsis;
-      background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
-                        linear-gradient(135deg, currentColor 50%, transparent 50%) !important;
+      background-image:
+        linear-gradient(45deg, transparent calc(50% - .7px), var(--text-muted) calc(50% - .7px),
+                        var(--text-muted) calc(50% + .7px), transparent calc(50% + .7px)),
+        linear-gradient(135deg, transparent calc(50% - .7px), var(--text-muted) calc(50% - .7px),
+                        var(--text-muted) calc(50% + .7px), transparent calc(50% + .7px)) !important;
       background-position: calc(100% - 9px) 50%, calc(100% - 6px) 50% !important;
       background-size: 3px 3px, 3px 3px !important;
       background-repeat: no-repeat !important;
@@ -9516,11 +9524,7 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   font-size:var(--fs-micro); font-family:inherit;
   color:var(--text-primary); background:var(--bg-input);
   border:1px solid var(--border-color); border-radius:var(--radius-sm);
-  background-image:linear-gradient(45deg, transparent 50%, currentColor 50%),
-                   linear-gradient(135deg, currentColor 50%, transparent 50%);
-  background-position:calc(100% - 9px) 8px, calc(100% - 6px) 8px;
-  background-size:3px 3px, 3px 3px;
-  background-repeat:no-repeat;
+  /* Ok: bütün listelerin tek kuralı (yukarıda, `select:not([multiple])`). */
   transition:border-color .12s, background-color .12s;
 }
 .ve-fead-yuz-dnt.genis > select{ max-width:184px; }
