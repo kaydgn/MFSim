@@ -17,7 +17,7 @@ function panelKur(anahtar, dogal, kap) {
   const panel = document.createElement('div');
   panel.className = 've-properties-content';
   panel.innerHTML = '<section class="ve-fp-card">'
-    + '<div class="ve-tablo" data-ve-tablo="' + anahtar + '" data-ve-tablo-baslik="Çalışma Çevrimi"'
+    + '<div class="ve-tablo" data-ve-tablo="' + anahtar + '" data-ve-tablo-baslik="Çalışma çevrimi"'
     + ' data-ve-tablo-ozet="5 devir noktası · 600–2200 d/dk · 4 aksesuar sütunu">'
     + '<div class="ve-fp-duty"><table><tbody><tr><td><input id="h1" value="600"></td></tr></tbody></table></div>'
     + '<div class="ve-fp-eylem"><button type="button" class="ve-fp-dugme">+ Devir satırı</button></div>'
@@ -105,7 +105,7 @@ describe('açılır pencere — tablo TAŞINIR, kopyalanmaz', () => {
     // Kart yerinde kalıyor ve pencerenin açık olduğunu söylüyor.
     expect(panel.querySelector('.ve-tablo-kart').classList.contains('ve-tablo-kart--acik')).toBe(true);
     // Başlık ve özet pencerenin şeridinde.
-    expect(pencere.querySelector('.ve-tablo-bas').textContent).toContain('Çalışma Çevrimi');
+    expect(pencere.querySelector('.ve-tablo-bas').textContent).toContain('Çalışma çevrimi');
   });
 
   test('kapatınca birim KARTIN ARKASINA döner ve yeniden katlanır', () => {

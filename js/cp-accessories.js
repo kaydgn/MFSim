@@ -336,7 +336,7 @@ function getAccessoryPropertiesHTML(node){
   Object.keys(lib).forEach(function(key){
     s1 += '<option value="' + key + '"' + (key === d.accPreset ? ' selected' : '') + '>' + lib[key].name + '</option>';
   });
-  s1 += '<option value="__manual__"' + (isManual ? ' selected' : '') + '>+ Manuel kW Girişi</option>';
+  s1 += '<option value="__manual__"' + (isManual ? ' selected' : '') + '>+ Manuel kW girişi</option>';
   s1 += '</select>';
 
   // Manuel kW (yalnız manuel modda)
@@ -355,7 +355,7 @@ function getAccessoryPropertiesHTML(node){
   s1 += connected
     ? '<div class="sw-status-bar installed" style="margin:0;"><span class="sw-status-dot"></span><span>Motora bağlı · ' + info.port + '</span></div>'
     : '<div class="sw-status-bar not-installed" style="margin:0;"><span class="sw-status-dot"></span><span>Bağlanmadı — Motor kutusunun ' + info.port + ' portuna bağlayın</span></div>';
-  s1 += '<div class="sw-pkg-desc" style="margin:0;">Veri kaynağı: BMC GG Matrisi — ölçülmüş kW.</div>';
+  s1 += '<div class="sw-pkg-desc" style="margin:0;">Veri kaynağı: BMC GG matrisi — ölçülmüş kW.</div>';
   s1 += '</div></div>';
 
   // ══ ADIM 2 — EĞRİ ══

@@ -93,7 +93,7 @@ test('dokuz pencere tek aile: bant, başlık yazısı, kapat, başlık ikonu, k�
   await ac('Kısayollar', 'veShortcutsHelpOpen()', { kok: '#ve-help', kab: '#ve-help .ve-help-panel' }, 'veShortcutsHelpClose()');
   await ac('Kılavuzlar', 'veGuideKitOpen()', { kok: '#ve-guide-kit', kab: '#ve-guide-kit .ve-help-panel' }, 'veGuideKitClose()');
   await ac('Program Arşivi', 'veProgramArsiviOpen()', { kok: '#ve-programlar', kab: '#ve-programlar .ve-help-panel' }, 'veProgramArsiviClose()');
-  await ac('Tablo penceresi', "(() => { const d = document.createElement('div'); d.innerHTML = '<div class=\"ve-tablo\" data-ve-tablo=\"k6\" data-ve-tablo-baslik=\"Çalışma Çevrimi\" data-ve-tablo-ozet=\"7 satır\"><table><tr><td>1</td></tr></table></div>'; document.body.appendChild(d); veTabloAc('k6'); })()",
+  await ac('Tablo penceresi', "(() => { const d = document.createElement('div'); d.innerHTML = '<div class=\"ve-tablo\" data-ve-tablo=\"k6\" data-ve-tablo-baslik=\"Çalışma çevrimi\" data-ve-tablo-ozet=\"7 satır\"><table><tr><td>1</td></tr></table></div>'; document.body.appendChild(d); veTabloAc('k6'); })()",
     { kok: '.ve-tablo-perde', kab: '.ve-tablo-pencere' }, 'veTabloKapat()');
   // Çözücü: kapat çözüm bitince görünür
   await page.evaluate(() => veSolverRunProfessional());

@@ -356,7 +356,7 @@ test('motor künyesi sayfadan pencereye taşındı, satır aralığı açıldı'
       }
       if (ara !== null) break;
     }
-    const kart = [...body.querySelectorAll('.ve-fw-card')].find((c) => /Motor Künyesi/.test(c.textContent));
+    const kart = [...body.querySelectorAll('.ve-fw-card')].find((c) => /Motor künyesi/.test(c.textContent));
     const tb = [...body.querySelectorAll('.ve-fw-tbl')].find((t) => /Devir \[RPM\]/.test(t.textContent));
     veFeadWizEngOpen();
     const ov = document.getElementById('ve-fw-eng');

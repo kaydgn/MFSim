@@ -45,7 +45,7 @@ var VE_GUIDE_KIT = [
   {
     id: 'fead',
     modul: 'FEAD',
-    baslik: 'FEAD — Kayış-Kasnak Sistemi',
+    baslik: 'FEAD — Kayış-kasnak sistemi',
     ozet: 'Serpantin kayış tahrikini sıfırdan modelleme: kasnak yerleşimi, '
         + 'kayış yolu, otomatik gergi montaj zarfı, çalışma çevrimi, sonuçların '
         + 'okunması ve rapor. Sonunda uçtan uca işlenmiş bir örnek.',
@@ -55,7 +55,7 @@ var VE_GUIDE_KIT = [
   {
     id: 'arac',
     modul: 'Araç Performans',
-    baslik: 'Araç Performans — Güç Aktarma Zinciri',
+    baslik: 'Araç Performans — Güç aktarma zinciri',
     ozet: 'Motor, konvertör, şanzıman, transfer, diferansiyel ve tekerlek '
         + 'zincirinin kurulması; senaryo ve çözücü ayarları.',
     uret: 'veGuideAracHTML',
@@ -64,7 +64,7 @@ var VE_GUIDE_KIT = [
   {
     id: 'mount',
     modul: 'Takoz Çökme-Titreşim',
-    baslik: 'Takoz — Çökme ve Titreşim Analizi',
+    baslik: 'Takoz — Çökme ve titreşim analizi',
     ozet: 'Motor-şanzıman kütlesinin takozlara oturtulması, taşıma kapasitesi, '
         + 'izolasyon ve şok analizi.',
     uret: 'veGuideMountHTML',
@@ -677,7 +677,7 @@ function veGuideScene(html, altyazi, dogalEn){
 function veGuideAntet(o){
   var h = '<div class="antet">';
   h += '<div class="band">';
-  h += '<div class="eyebrow">' + _gkEsc(o.eyebrow || 'MFSim · Kullanım Kılavuzu') + '</div>';
+  h += '<div class="eyebrow">' + _gkEsc(o.eyebrow || 'MFSim · Kullanım kılavuzu') + '</div>';
   h += '<h1>' + _gkEsc(o.h1) + '</h1>';
   h += '<div class="sub">' + _gkEsc(o.sub) + '</div>';
   h += '</div>';

@@ -336,7 +336,7 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     await ornekKur(page, 'AG00976_GATES_2025');
     await page.locator('#ve-fw-nav .ve-fw-step').nth(4).click();   // Motor ve Çevrim
 
-    await expect(page.locator('#ve-fw-body')).toContainText('Aksesuar Modelleri');
+    await expect(page.locator('#ve-fw-body')).toContainText('Aksesuar modelleri');
     // Duty tablosunda kW artık GİRDİ değil
     const kwInput = await page.evaluate(() =>
       document.querySelectorAll('#ve-fw-body [oninput*="veFeadWizDutyKw"]').length);

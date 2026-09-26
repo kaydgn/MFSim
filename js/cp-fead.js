@@ -129,7 +129,7 @@ function getFeadModulePropertiesHTML(node){
   // SIRA BİR LİSTE, bir alan değil: altı kasnaklı bir sıra salt okunur bir
   // kutuya sığmaz ve kutu metni SESSİZCE kırpar.
   var satirlar = (T && T.rows) ? T.rows : [];
-  model += _feadCard('Kayış Sırası', 'tablo sırası', 'var(--accent-primary)',
+  model += _feadCard('Kayış sırası', 'tablo sırası', 'var(--accent-primary)',
       satirlar.length
         ? '<ol class="ve-fp-liste">' + satirlar.map(function(r){
             return '<li>' + (r.driver ? '<b>' + _feadEsc(r.name) + '</b> · sürücü'
@@ -139,7 +139,7 @@ function getFeadModulePropertiesHTML(node){
 
   var yan = { html: _feadSideGates(build, T)
       + '<button type="button" class="ve-fp-solve" onclick="veFeadOpenEditor(\'' + node.id + '\')">'
-      + '<span class="mf-ico mf-ico-folder-open" aria-hidden="true"></span> Alt Topolojiyi Aç</button>' };
+      + '<span class="mf-ico mf-ico-folder-open" aria-hidden="true"></span> Alt topolojiyi aç</button>' };
   return veFeadPanelShell(node, [{ k:'ic',  ad:'İçerik', govde: icerik },
                                  { k:'mod', ad:'Model',  govde: model }], yan);
 }
@@ -965,7 +965,7 @@ function getFeadSpinPropertiesHTML(node){
         + 'tablodaki numaralar da onunla döner.'));
 
   if(hkm && !hkm.ok){
-    yon += _feadCard('Gergi Tarafı', 'hüküm', 'var(--accent-danger)',
+    yon += _feadCard('Gergi tarafı', 'hüküm', 'var(--accent-danger)',
         '<div class="ve-fp-durum" data-d="no">'
       + '<b>Gergi kayışın GERGİN tarafında.</b> '
       + 'Ankraj ' + _feadFmt(hkm.anchorN, 1) + ' N, en düşük açıklık '
@@ -980,7 +980,7 @@ function getFeadSpinPropertiesHTML(node){
 
   // GEOMETRİ YÖNDEN BAĞIMSIZ, GERİLME DEĞİL — ve bunu pencere SÖYLÜYOR, çünkü
   // kullanıcı "yönü çevirdim, sarım açıları neden aynı" diye sormasın.
-  var etk = _feadCard('Neyi Değiştirir', 'ölçüldü', 'var(--text-muted)',
+  var etk = _feadCard('Neyi değiştirir', 'ölçüldü', 'var(--text-muted)',
       '<ul class="ve-fp-liste">'
     + '<li><b>Değişmez:</b> sarım açıları, açıklıklar, efektif kayış boyu, Σsarım=360 '
     + '— ölçüldü, kasnak başına fark 2,5e−14°</li>'
@@ -1451,7 +1451,7 @@ function _feadSideThumb(build, hlId){
     }
     catch(e){ svg = null; }
   }
-  return '<div class="ve-fp-sect"><b>Kayış Yolundaki Yeri</b></div>'
+  return '<div class="ve-fp-sect"><b>Kayış Yolundaki yeri</b></div>'
     + '<div class="ve-fp-thumb">'
     + (svg || '<div class="ve-fp-thumb-bos">Kayış yolu henüz çözülemedi — kasnak '
       + 'konumlarını ve kayış boyunu tamamlayın.</div>')
@@ -1596,7 +1596,7 @@ function getFeadPulleyPropertiesHTML(node){
   // BAŞKA BİR GEÇERLİ güzergâh hesaplar; kapalı çevrim ve sarım değişmezi yine
   // tutar, yani ne kod ne de göz yakalar. Bu yüzden ilk sekmede, kendi
   // kartında ve DANGER tonuyla duruyor.
-  var geo = _feadCard('Temas Tarafı', 'hesap için kritik', 'var(--accent-danger)',
+  var geo = _feadCard('Temas tarafı', 'hesap için kritik', 'var(--accent-danger)',
       _feadSelect(node, 'Kayış bu kasnağa', 'contact',
         [['grooved', 'Kaburgalı yüzden değiyor'], ['back', 'Sırtından değiyor']],
         veFeadContactOf(node),
@@ -1605,7 +1605,7 @@ function getFeadPulleyPropertiesHTML(node){
         + 'görünür kılar. Aksesuarlar tipik olarak kaburgalı yüzden, avara ve gergi '
         + 'sırttan temas eder.'));
 
-  geo += _feadCard('Kasnak Geometrisi', '[mm]', 'var(--accent-primary)',
+  geo += _feadCard('Kasnak geometrisi', '[mm]', 'var(--accent-primary)',
       _feadGrid(node, [
         { key:'od', label:'Dış çap (OD)', ph:String(VE_FEAD_DEFAULT_DIA[node.type] || 100) },
         { key:'x',  label:'Konum X',      ph:'0' },
@@ -1637,7 +1637,7 @@ function getFeadPulleyPropertiesHTML(node){
   if(lib){
     var secenekler = [['__manual__', 'Elle gir (katalog kullanma)']];
     Object.keys(lib).forEach(function(k){ secenekler.push([k, lib[k].name || k]); });
-    rol += _feadCard('Katalog Modeli', 'devir → kW eğrisi', 'var(--accent-warning)',
+    rol += _feadCard('Katalog modeli', 'devir → kW eğrisi', 'var(--accent-warning)',
         _feadSelect(node, 'Model', 'accPreset', secenekler, '__manual__',
           'Araç Performans modülünün kataloglarıyla AYNI kaynak. Seçilince çalışma çevrimi '
           + 'tablosundaki boş kW hücreleri bu eğriden doldurulur; aksesuar devri kasnak '
@@ -1657,9 +1657,9 @@ function getFeadPulleyPropertiesHTML(node){
   var durumlar = veFeadSekmeDurumlari(node);
   if(!isIdler){
     var olu = !!(durumlar && durumlar.dev && durumlar.dev.d === 'yok');
-    sekmeler.push({ k:'dev', ad:'Devir Sınırları',
+    sekmeler.push({ k:'dev', ad:'Devir sınırları',
                     govde: olu ? _feadSurucuNotu('dev') : veFeadAccLimitCard(node) });
-    sekmeler.push({ k:'egr', ad:'Güç Eğrisi',
+    sekmeler.push({ k:'egr', ad:'Güç eğrisi',
                     govde: olu ? _feadSurucuNotu('egr') : veFeadPowerCurveCard(node) });
   }
 
@@ -1667,7 +1667,7 @@ function getFeadPulleyPropertiesHTML(node){
 }
 
 function _feadSurucuNotu(k){
-  return _feadCard(k === 'dev' ? 'Devir Sınırları' : 'Güç Eğrisi', 'sürücüde kullanılmaz',
+  return _feadCard(k === 'dev' ? 'Devir sınırları' : 'Güç eğrisi', 'sürücüde kullanılmaz',
       'var(--text-muted)',
       '<div class="ve-fp-olu">'
       + '<b>Sürücü kasnakta bu sekme hiçbir hesaba girmiyor.</b> '
@@ -1734,7 +1734,7 @@ function veFeadAccLimitCard(node){
     + '<i>overspeed</i>\'e çıktığında aşılmaması gereken sınırdır. Üçü de boşsa o kasnak için '
     + 'kapı <b>değerlendirilemedi</b> olur — uygun sayılmaz.');
 
-  return _feadCard('Devir Sınırları', tip ? 'BMC kataloğu + kapı girdisi' : 'kapı girdisi',
+  return _feadCard('Devir sınırları', tip ? 'BMC kataloğu + kapı girdisi' : 'kapı girdisi',
                    'var(--accent-primary)', h);
 }
 
@@ -1815,7 +1815,7 @@ function veFeadPowerCurveCard(node){
   // Bugün sütuna SIĞIYOR (üç sütun) — birim yine işaretli: sığmadığı bir
   // kapta (dar ekran, uzun başlık) karar ölçümle verilir, listeyle değil.
   h = '<div class="ve-tablo" data-ve-tablo="fead-curve:' + _feadEsc(node.id) + '"'
-    + ' data-ve-tablo-baslik="Güç Eğrisi" data-ve-tablo-ozet="' + raw.length + ' devir noktası">' + h + '</div>';
+    + ' data-ve-tablo-baslik="Güç eğrisi" data-ve-tablo-ozet="' + raw.length + ' devir noktası">' + h + '</div>';
 
   var not = '';
   if(raw.length && pts.length < raw.length)
@@ -1825,7 +1825,7 @@ function veFeadPowerCurveCard(node){
     not += _feadHint('<b style="color:var(--ink-warning);">Tek nokta</b> — eğri sabit güç '
       + 'gibi davranır (her devirde ' + _feadFmt(pts[0].kw, 2) + ' kW).');
 
-  return _feadCard('Güç Eğrisi', 'sayfadaki devir → kW tablosu', 'var(--accent-primary)',
+  return _feadCard('Güç eğrisi', 'sayfadaki devir → kW tablosu', 'var(--accent-primary)',
     h + not
     + _feadHint('Girildiğinde <b>katalog modelinin önüne geçer</b>. Ara değerler doğrusal, '
       + 'uçlarda sabit tutulur (ekstrapolasyon YAPILMAZ — alternatör eğrisini uzatmak eksi '
@@ -1877,7 +1877,7 @@ function getFeadTensionerPropertiesHTML(node){
   veFeadMigrateNode(node);        // eski kayıt → tek koordinat: avara merkezi
   if(!node.data) node.data = {};
   var html = '';
-  html += _feadCard('Temas Tarafı', 'hesap için kritik', 'var(--accent-danger)',
+  html += _feadCard('Temas tarafı', 'hesap için kritik', 'var(--accent-danger)',
       _feadSelect(node, 'Kayış gergi kasnağına', 'contact',
         [['back', 'Sırtından değiyor'], ['grooved', 'Kaburgalı yüzden değiyor']],
         veFeadContactOf(node),
@@ -1903,7 +1903,7 @@ function getFeadTensionerPropertiesHTML(node){
   // (2026-09-01) montaj zarfı ile kol açısı sabitleme anahtarı.
   //
   // Gövdenin montaj konumu bir GİRDİ DEĞİL: p = c − a·(cos θ, sin θ).
-  html += _feadCard('Avara Kasnağının Merkezi', 'tek girdi', 'var(--accent-danger)',
+  html += _feadCard('Avara kasnağının merkezi', 'tek girdi', 'var(--accent-danger)',
       _feadGrid(node, [
         { key:'cenX', label:'Merkez X [mm]', ph:'-161.97' },
         { key:'cenY', label:'Merkez Y [mm]', ph:'91.29' }
@@ -1924,7 +1924,7 @@ function getFeadTensionerPropertiesHTML(node){
   var _armAbs = _feadNum(node.data && node.data.armMeanDeg, NaN);
   var _armGos = (typeof veFeadArmShownDeg === 'function') ? veFeadArmShownDeg(_armAbs) : NaN;
   var _geo = html; html = '';
-  html += _feadCard('Kol Künyesi', 'parça + montaj verisi', 'var(--text-secondary)',
+  html += _feadCard('Kol künyesi', 'parça + montaj verisi', 'var(--text-secondary)',
       _feadGrid(node, [
         { key:'armLen', label:'Kol boyu (Arm Length) [mm]', ph:'90' }
       ], 2)
@@ -1951,7 +1951,7 @@ function getFeadTensionerPropertiesHTML(node){
   var _kol = html; html = '';
 
   // ── YAY KÜNYESİ — tedarikçi sayfasındaki dört satırın birebir karşılığı ──
-  html += _feadCard('Yay Künyesi', 'sayfadaki dört satır', 'var(--accent-success)',
+  html += _feadCard('Yay künyesi', 'sayfadaki dört satır', 'var(--accent-success)',
       _feadGrid(node, [
         { key:'preload',  label:'Ön yük — Pre-Load [Nm]',  ph:'8.60' },
         { key:'kArm',     label:'Yay katsayısı — Rate [Nm/°]', ph:'0.480', step:'0.001' },
@@ -1965,7 +1965,7 @@ function getFeadTensionerPropertiesHTML(node){
   // Kart bir girdi SORMUYOR: kolun nereye oturduğunu, gövdenin montaj
   // konumunu ve ÇIKAN kayış boyunu okutuyor. Sayı gizlenmiyor — modülün kendi
   // kuralı: geçerlilik sınırı sonucun İÇİNDE taşınır.
-  html += _feadCard('Avara Hareketi', 'girdiden çözülür', 'var(--accent-primary)',
+  html += _feadCard('Avara hareketi', 'girdiden çözülür', 'var(--accent-primary)',
       veFeadArmReadout(node)
     + _feadSelect(node, 'Kol dönüş yönü (sense)', 'sense',
         [['', 'Otomatik bul'], ['1', '+1'], ['-1', '−1']], '',
@@ -1973,7 +1973,7 @@ function getFeadTensionerPropertiesHTML(node){
         + 'M = önYük + katsayı × göreli; mutlak açı = serbest + sense × göreli. Sense '
         + 'verilmezse çekirdek kayışın kısaldığı yönden kendisi bulur.'));
 
-  html += _feadCard('Mekanik Sınır ve Atalet', 'burulma modeli için', 'var(--text-secondary)',
+  html += _feadCard('Mekanik sınır ve atalet', 'burulma modeli için', 'var(--text-secondary)',
       _feadGrid(node, [
         { key:'loadStopRelDeg', label:'Load stop (göreli) [°]', ph:'62.4' },
         { key:'armInertia',     label:'Kol ataleti [kg·m²]',  ph:'0.0009', step:'0.0001' },
@@ -2010,7 +2010,7 @@ function getFeadTensionerPropertiesHTML(node){
 // bir ondalık kaymasını yakalayan tek yüzey.
 function veFeadTensionerLibCard(node){
   if(typeof veFeadTensionerList !== 'function')
-    return _feadCard('Gergi Künye Kütüphanesi', '', 'var(--text-muted)',
+    return _feadCard('Gergi künye kütüphanesi', '', 'var(--text-muted)',
       _feadHint('Kütüphane yüklenmedi (js/fead-tensioners.js).'));
   var td = node.data || {};
   var liste = veFeadTensionerList();
@@ -2079,7 +2079,7 @@ function veFeadTensionerLibCard(node){
       : '<b>Pim künyesi yok</b> (' + _feadEsc(td.tenPart) + '): parça çizimi elde '
         + 'olmadığı için pim yarıçapı ve ofseti <b>uydurulmuyor</b>. Kol açısı yine '
         + 'seçiliyor; imalata geçmek için o iki sayı parçanın çiziminden okunmalı.');
-  return _feadCard('Gergi Künye Kütüphanesi', liste.length + ' ölçülmüş künye',
+  return _feadCard('Gergi künye kütüphanesi', liste.length + ' ölçülmüş künye',
     'var(--accent-primary)', h);
 }
 
@@ -2420,7 +2420,7 @@ function getFeadBeltPropertiesHTML(node){
   // yarıçapları buradan türetildiği için künyenin en belirleyici iki alanı bu.
   var profiller = [['PK','PK'],['PJ','PJ'],['PH','PH'],['PL','PL'],['PM','PM']];
   var markalar = [['GATES','Gates'],['OPTIBELT','Optibelt'],['CONTITECH','ContiTech']];
-  html += _feadCard('Profil ve Marka', 'h_b / h_r buradan gelir', 'var(--accent-warning)',
+  html += _feadCard('Profil ve marka', 'h_b / h_r buradan gelir', 'var(--accent-warning)',
       _feadSelect(node, 'Profil', 'profile', profiller, 'PK')
     + _feadSelect(node, 'Marka', 'brand', markalar, 'GATES', veFeadBeltDbHint(node)));
 
@@ -2437,7 +2437,7 @@ function getFeadBeltPropertiesHTML(node){
   if(kilit) kip = 'free';
   var serbest = (kip === 'free');
   var _pro = html; html = '';
-  html += _feadCard('Kayış Boyu', serbest ? 'tasarımdan HESAPLANIR' : 'katalogdan SEÇİLİR',
+  html += _feadCard('Kayış boyu', serbest ? 'tasarımdan HESAPLANIR' : 'katalogdan SEÇİLİR',
       serbest ? 'var(--accent-warning)' : 'var(--accent-primary)',
       (kilit
         ? '<div class="ve-fp-grid" style="--fp-k:1;">'
@@ -2482,7 +2482,7 @@ function getFeadBeltPropertiesHTML(node){
     ? veFeadBeltDataMode(node.data) : 'none';
   var _kapali = (_bdm === 'none');
   var _boy = html; html = '';
-  html += _feadCard('Kayış Tipine Bağlı Çıktılar',
+  html += _feadCard('Kayış tipine bağlı çıktılar',
       _kapali ? 'KAPALI' : 'açık',
       _kapali ? 'var(--text-muted)' : 'var(--accent-success)',
       _feadSelect(node, 'Katalog sabitleriyle hesap', 'beltDataMode', [
@@ -7253,7 +7253,7 @@ function getFeadSolverPropertiesHTML(node){
   html += veFeadDriveCard(node);
   html += veFeadEngineCard(node);
   var _gir = html; html = '';
-  html += _feadCard('Algılanan Model', '', 'var(--accent-success)', veFeadModelTable(build));
+  html += _feadCard('Algılanan model', '', 'var(--accent-success)', veFeadModelTable(build));
 
   if(build.ok){
     html += veFeadPositionTable(build);
@@ -7315,7 +7315,7 @@ function getFeadSolverPropertiesHTML(node){
 // ÜÇ DURUM VAR, İKİ DEĞİL: 'wait' (veri yok) uygun SAYILMAZ ve gizlenmez.
 function veFeadChecksCard(node, build){
   if(typeof veFeadChecks !== 'function')
-    return _feadCard('Uygunluk Kapıları', '', 'var(--text-muted)',
+    return _feadCard('Uygunluk kapıları', '', 'var(--text-muted)',
       _feadHint('Kapılar yüklenmedi (js/fead-checks.js).'));
 
   var opt = veFeadCheckOpt(node.data || {}, veFeadDutyRows(node));
@@ -7415,7 +7415,7 @@ function veFeadChecksCard(node, build){
   // Kararlı tutamak: kartın gövdesi bir öznitelikle işaretli. E2E testi kartı
   // metinden aramak zorunda kalsaydı dış sarmalları da yakalar ve "üç tablo"
   // gibi bir ölçüt sessizce yanlış sayardı (ölçüldü: 6 tablo).
-  return _feadCard('Uygunluk Kapıları', 'BMC hesap defteri', renk,
+  return _feadCard('Uygunluk kapıları', 'BMC hesap defteri', renk,
     '<div data-ve-fead-checks="1" data-ve-fead-checks-durum="'
       + _feadEsc(c.durum + '/' + w.durum + '/' + s.durum) + '">' + h + '</div>');
 }
@@ -7497,7 +7497,7 @@ function veFeadDriveCard(node){
     + '  <span style="font-weight:400; color:var(--text-muted);">' + etiket + '</span>'
     + '</span></div>';
 
-  return _feadCard('FEAD Tahriki', 'krank → sürücü kasnak', 'var(--accent-warning)',
+  return _feadCard('FEAD tahriki', 'krank → sürücü kasnak', 'var(--accent-warning)',
     inner + deg
     + _feadHint('Bu oran aksesuar devirlerinin TAMAMINI ölçekler: aksesuar devri = motor devri '
       + '× tahrik oranı × (sürücü kasnak pitch çapı / aksesuar pitch çapı). Yanlış girilirse '
@@ -7524,7 +7524,7 @@ function veFeadDriveCard(node){
 //      tepe tablosuna birebir geçiyor. Yanlış bir "kullanılmıyor" damgası,
 //      kullanıcıyı gerçekten gereken alanı boş bırakmaya davet ediyordu.
 function veFeadEngineCard(node){
-  return _feadCard('Motor Künyesi', 'sayfadaki Engine Info', 'var(--text-secondary)',
+  return _feadCard('Motor künyesi', 'sayfadaki Engine Info', 'var(--text-secondary)',
       veFeadEngineLibRow(node)
     + _feadGrid(node, [
         { key:'cylinders',   label:'Silindir sayısı [—]', ph:'6', step:'1' },
@@ -7581,7 +7581,7 @@ function veFeadEngineLibRow(node){
   else if(d)
     h += _feadHint('Alanlar <b>' + _feadEsc(d.ad) + '</b> kaydıyla birebir.');
   return h + _feadHint('Yirmi dört motor, BMC\'nin kendi FEAD hesap defterinin '
-    + '<i>Motor Bilgileri</i> sayfasından. Seçim <b>silindir sayısını, devir sınırlarını ve '
+    + '<i>Motor bilgileri</i> sayfasından. Seçim <b>silindir sayısını, devir sınırlarını ve '
     + 'birinci kademe çaplarını</b> yazar; kasnak koordinatlarına ve kayışa <b>dokunmaz</b>.');
 }
 
@@ -7708,10 +7708,10 @@ function veFeadDutyEditor(node, build){
     + (devirler.length ? ' · ' + Math.min.apply(null, devirler) + '–' + Math.max.apply(null, devirler) + ' d/dk' : '')
     + ' · ' + yuk.length + ' aksesuar sütunu';
   h = '<div class="ve-tablo" data-ve-tablo="fead-duty:' + _feadEsc(node.id) + '"'
-    + ' data-ve-tablo-baslik="Çalışma Çevrimi" data-ve-tablo-ozet="' + _feadEsc(ozet) + '">' + h + uyari + '</div>';
+    + ' data-ve-tablo-baslik="Çalışma çevrimi" data-ve-tablo-ozet="' + _feadEsc(ozet) + '">' + h + uyari + '</div>';
 
 
-  return _feadCard('Çalışma Çevrimi', 'sürücü sütunu YOK — gücü hesaplanır', 'var(--accent-success)',
+  return _feadCard('Çalışma çevrimi', 'sürücü sütunu YOK — gücü hesaplanır', 'var(--accent-success)',
     dSec + h
     + _feadHint('Boş bırakılan kW hücresi: aksesuarda katalog modeli seçiliyse o eğriden '
         + 'doldurulur (aksesuar devri kasnak <b>pitch çaplarından</b> hesaplanır, elle oran '
@@ -7819,7 +7819,7 @@ function veFeadPositionTable(build){
         + _feadFmt(mean.driveLenMm,1) + ' mm. <b>Load</b> bir MEKANİK STOP\'tur, çalışma noktası '
         + 'değildir: orada sarım sıfıra yaklaştığı için gerginlik tekilleşir.')
     : '';
-  return _feadCard('Gergi Konum Tablosu', 'çalışma çevrimi gerektirmez', 'var(--accent-warning)', h + ek);
+  return _feadCard('Gergi konum tablosu', 'çalışma çevrimi gerektirmez', 'var(--accent-warning)', h + ek);
 }
 
 // "BAŞLANGIÇ VE ÖRNEKLER" PANELİ KALDIRILDI (2026-09-09, kullanıcı isteği).
@@ -8432,7 +8432,7 @@ function veFeadLimitsBox(R){
   var h = '<ul style="margin:0; padding-left:18px; font-size:var(--fs-micro); line-height:1.6; color:var(--text-secondary);">';
   R.limits.forEach(function(x){ h += '<li>' + x + '</li>'; });
   (R.warnings || []).forEach(function(x){ h += '<li style="color:var(--ink-warning);">' + _feadEsc(x) + '</li>'; });
-  return _feadCard('Geçerlilik Sınırları', 'spesifikasyon §7', 'var(--text-secondary)', h + '</ul>');
+  return _feadCard('Geçerlilik sınırları', 'spesifikasyon §7', 'var(--text-secondary)', h + '</ul>');
 }
 
 // Jest/Node köprüsü (tarayıcıda no-op)

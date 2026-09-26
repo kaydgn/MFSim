@@ -545,7 +545,7 @@ describe('kayış tipine bağlı çıktılar', () => {
     global.nodes = pack.nodes; global.connections = pack.connections;
     const belt = pack.nodes.find((n) => n.type === 'fead-belt');
     const h = fead.getFeadBeltPropertiesHTML(belt);
-    expect(h).toMatch(/Kayış Tipine Bağlı Çıktılar/);
+    expect(h).toMatch(/Kayış tipine bağlı çıktılar/);
     expect(h).toMatch(/id="ve-fead-beltDataMode-/);
     expect(h).toMatch(/B10 kayış ömrü/);
     expect(h).toMatch(/Profil .* yine soruluyor/);

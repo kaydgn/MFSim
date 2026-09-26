@@ -40,7 +40,7 @@ function getEnginePropertiesHTML(node) {
   // ── CHUNK: Motor Seçimi (tam genişlik üst şerit) — yalnız Tam Gaz ──
   var selectHtml = '';
   if(isFullThrottle) {
-    selectHtml += '<div class="sw-section-title">Motor Seçimi</div>';
+    selectHtml += '<div class="sw-section-title">Motor seçimi</div>';
 
     // Motor seçici
     var savedPreset = nodeData.ftMotorPreset || '';
@@ -86,7 +86,7 @@ function getEnginePropertiesHTML(node) {
       selectHtml += '</optgroup>';
     });
     var manualSel = (savedPreset === '__new__') ? ' selected' : '';
-    selectHtml += '<option value="__new__"' + manualSel + '>+ Manuel Giriş</option>';
+    selectHtml += '<option value="__new__"' + manualSel + '>+ Manuel giriş</option>';
     selectHtml += '</select>';
     selectHtml += '</div>';
 
@@ -95,7 +95,7 @@ function getEnginePropertiesHTML(node) {
     selectHtml += '<div style="font-size:var(--fs-h1); margin-bottom:8px;"><span class="mf-ico mf-ico-zap"></span></div>';
     // Kontrolün NEREDE olduğunu söyle: "Manuel Giriş" ayrı bir düğme değil,
     // yukarıdaki listenin son seçeneği.
-    selectHtml += '<div style="font-size:var(--fs-md); color:var(--text-muted);">Motor seçilmedi — listeden bir motor<br>ya da son seçenek <strong>+ Manuel Giriş</strong>.</div>';
+    selectHtml += '<div style="font-size:var(--fs-md); color:var(--text-muted);">Motor seçilmedi — listeden bir motor<br>ya da son seçenek <strong>+ Manuel giriş</strong>.</div>';
     selectHtml += '</div>';
   }
 
@@ -104,15 +104,15 @@ function getEnginePropertiesHTML(node) {
   // kart yığını kalkınca sığıyor. ID'ler ve onchange bağlayıcıları aynı.
   var specCardHtml = '';
   if(isFullThrottle) {
-    specCardHtml += '<div class="sw-section-title">Motor Parametreleri</div>';
+    specCardHtml += '<div class="sw-section-title">Motor parametreleri</div>';
     specCardHtml += '<table class="ve-pnl-tbl ve-pnl-tbl--framed">';
 
     var specRows = [
-      {id: 'displacement', label: 'Silindir Hacmi', unit: 'L', val: sp.displacement || '', step: '0.01'},
-      {id: 'idleRpm', label: 'Rölanti Devri', unit: 'rpm', val: sp.idleRpm || '', step: '50'},
+      {id: 'displacement', label: 'Silindir hacmi', unit: 'L', val: sp.displacement || '', step: '0.01'},
+      {id: 'idleRpm', label: 'Rölanti devri', unit: 'rpm', val: sp.idleRpm || '', step: '50'},
       {id: 'governedSpeed', label: 'Governed Speed', unit: 'rpm', val: sp.governedSpeed || '', step: '50'},
       {id: 'noLoadGoverned', label: 'No-Load Governed', unit: 'rpm', val: sp.noLoadGoverned || '', step: '50'},
-      {id: 'inertia', label: 'Motor Ataleti', unit: 'kg·m²', val: sp.inertia || '', step: '0.001'}
+      {id: 'inertia', label: 'Motor ataleti', unit: 'kg·m²', val: sp.inertia || '', step: '0.001'}
     ];
     specRows.forEach(function(r) {
       specCardHtml += '<tr style="border-bottom:1px solid var(--border-color);">';
@@ -130,7 +130,7 @@ function getEnginePropertiesHTML(node) {
   var dataAreaHtml = '';
   if(!isFullThrottle) {
   dataAreaHtml += '<div id="ve-motor-data-area-' + node.id + '" style="display:' + (showDataArea ? 'block' : 'none') + ';">';
-  dataAreaHtml += '<div class="sw-section-title">Tork & Güç Verileri</div>';
+  dataAreaHtml += '<div class="sw-section-title">Tork & güç verileri</div>';
   dataAreaHtml += '<div id="ve-motor-table-wrapper-' + node.id + '" style="max-height:' + tableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:var(--radius-sm); border-bottom:none;">';
   dataAreaHtml += '<table class="ve-pnl-tbl">';
   dataAreaHtml += '<thead>';
@@ -161,9 +161,9 @@ function getEnginePropertiesHTML(node) {
 
   // Tablo Butonları
   dataAreaHtml += '<div class="sw-btn-row" style="margin:8px 0 12px;">';
-  dataAreaHtml += '<button class="sw-btn sw-btn-outline" onclick="addVEMotorRow(\'' + node.id + '\')">+ Satır Ekle</button>';
-  dataAreaHtml += '<button class="sw-btn sw-btn-outline" onclick="clearVEMotorTable(\'' + node.id + '\')">Tümünü Sil</button>';
-  dataAreaHtml += '<button class="sw-btn sw-btn-danger" onclick="deleteVEMotorSavedSet(\'' + node.id + '\')">Veriyi Temizle</button>';
+  dataAreaHtml += '<button class="sw-btn sw-btn-outline" onclick="addVEMotorRow(\'' + node.id + '\')">+ Satır ekle</button>';
+  dataAreaHtml += '<button class="sw-btn sw-btn-outline" onclick="clearVEMotorTable(\'' + node.id + '\')">Tümünü sil</button>';
+  dataAreaHtml += '<button class="sw-btn sw-btn-danger" onclick="deleteVEMotorSavedSet(\'' + node.id + '\')">Veriyi temizle</button>';
   dataAreaHtml += '<button class="sw-btn sw-btn-primary" onclick="saveVEMotorData(\'' + node.id + '\')"><span class="mf-ico mf-ico-save"></span> Kaydet</button>';
   dataAreaHtml += '</div>';
   dataAreaHtml += '</div>'; // ve-motor-data-area kapatma (artık butonlardan hemen sonra)
@@ -227,10 +227,10 @@ function getEnginePropertiesHTML(node) {
     sheetHtml += '</div>';
 
     sheetHtml += '<div class="sw-btn-row" style="margin:8px 0 6px;">';
-    sheetHtml += '<button class="sw-btn sw-btn-outline" onclick="addVEMotorRow(\'' + node.id + '\')">+ Satır Ekle</button>';
+    sheetHtml += '<button class="sw-btn sw-btn-outline" onclick="addVEMotorRow(\'' + node.id + '\')">+ Satır ekle</button>';
     sheetHtml += '<button class="sw-btn sw-btn-outline" onclick="onVEEngSheetPaste(\'' + node.id + '\')">Yapıştır</button>';
-    sheetHtml += '<button class="sw-btn sw-btn-outline" onclick="clearVEMotorTable(\'' + node.id + '\')">Tümünü Sil</button>';
-    sheetHtml += '<button class="sw-btn sw-btn-danger" onclick="deleteVEMotorSavedSet(\'' + node.id + '\')">Veriyi Temizle</button>';
+    sheetHtml += '<button class="sw-btn sw-btn-outline" onclick="clearVEMotorTable(\'' + node.id + '\')">Tümünü sil</button>';
+    sheetHtml += '<button class="sw-btn sw-btn-danger" onclick="deleteVEMotorSavedSet(\'' + node.id + '\')">Veriyi temizle</button>';
     sheetHtml += '<button class="sw-btn sw-btn-primary" style="margin-left:auto;" onclick="saveVEMotorData(\'' + node.id +
                  '\')"><span class="mf-ico mf-ico-save"></span> Kaydet</button>';
     sheetHtml += '</div>';
@@ -251,7 +251,7 @@ function getEnginePropertiesHTML(node) {
   if(!isFullThrottle) {
   chartHtml += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
   chartHtml += '<div class="sw-pkg-header" style="cursor:default;">';
-  chartHtml += '<span class="sw-pkg-name">Tork & Güç Eğrisi</span>';
+  chartHtml += '<span class="sw-pkg-name">Tork & güç eğrisi</span>';
   chartHtml += '<button class="sw-btn sw-btn-outline" style="font-size:var(--fs-micro);padding:2px 8px;margin-left:auto;" onclick="updateVEMotorChart(\'' + node.id + '\')">Güncelle</button>';
   chartHtml += '</div>';
   chartHtml += '<div class="sw-pkg-body">';
@@ -271,18 +271,18 @@ function getEnginePropertiesHTML(node) {
   // doğrulama sütununun içine düz akıyor).
   var fitHtml = '';
   if(isFullThrottle) {
-    fitHtml += '<div class="sw-section-title">Eğri Yaklaşımı</div>';
+    fitHtml += '<div class="sw-section-title">Eğri yaklaşımı</div>';
   } else {
   fitHtml += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
   fitHtml += '<div class="sw-pkg-header" style="cursor:default;">';
-  fitHtml += '<span class="sw-pkg-name">Eğri Yaklaşımı</span>';
+  fitHtml += '<span class="sw-pkg-name">Eğri yaklaşımı</span>';
   fitHtml += '</div>';
   fitHtml += '<div class="sw-pkg-body">';
   }
 
   fitHtml += '<div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">';
   fitHtml += '<select id="ve-fit-method-' + node.id + '" onchange="onVEFitMethodChange(\'' + node.id + '\')" style="flex:1; font-size:var(--fs-body); padding:4px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
-  fitHtml += '<option value="linear"' + (fitMethod === 'linear' ? ' selected' : '') + '>Parça-parça Lineer (İnterpolasyon)</option>';
+  fitHtml += '<option value="linear"' + (fitMethod === 'linear' ? ' selected' : '') + '>Parça-parça lineer (interpolasyon)</option>';
   fitHtml += '<option value="pchip"' + (fitMethod === 'pchip' ? ' selected' : '') + '>Kübik Spline (PCHIP)</option>';
   fitHtml += '<option value="poly"' + (fitMethod === 'poly' ? ' selected' : '') + '>Polinom</option>';
   fitHtml += '</select>';
@@ -382,7 +382,7 @@ function getEnginePropertiesHTML(node) {
     netHtml += '<div class="sw-chain-bar ok" style="margin:0;">✓ Governed <span id="ve-eng-govbar-' +
                node.id + '">' + initGoverned + '</span> rpm şanzımana ve vites mantığına yayıldı</div>';
     netHtml += '<div class="sw-btn-row" style="margin:0;">';
-    netHtml += '<button class="sw-btn sw-btn-primary" style="flex:1;" onclick="onVEApplyAccLosses(\'' + node.id + '\')">Kayıpları Uygula</button>';
+    netHtml += '<button class="sw-btn sw-btn-primary" style="flex:1;" onclick="onVEApplyAccLosses(\'' + node.id + '\')">Kayıpları uygula</button>';
     netHtml += '<button class="sw-btn sw-btn-outline" onclick="veTogglePropertiesPanel(false)">Kapat</button>';
     netHtml += '</div>';
 
@@ -390,7 +390,7 @@ function getEnginePropertiesHTML(node) {
     // ── MOTOR FRENİ: Orijinal parametreler ──
     brakeHtml += '<div class="sw-pkg-card" style="margin-top:10px;">';
     brakeHtml += '<div class="sw-pkg-header" style="cursor:default;">';
-    brakeHtml += '<span class="sw-pkg-name">Motor Freni Parametreleri</span>';
+    brakeHtml += '<span class="sw-pkg-name">Motor freni parametreleri</span>';
     brakeHtml += '</div>';
     brakeHtml += '<div class="sw-pkg-body">';
 
@@ -3108,7 +3108,7 @@ function updateVEMotorFitEquation(nodeId, torquePoints, powerPoints) {
   var html = '';
   
   if(method === 'linear') {
-    html = '<b>Lineer İnterpolasyon:</b><br>';
+    html = '<b>Lineer interpolasyon:</b><br>';
     html += '<span style="color:var(--text-muted);">Veri noktaları arasında doğrusal geçiş.</span>';
   } else if(method === 'pchip') {
     html = '<b>PCHIP Spline:</b><br>';

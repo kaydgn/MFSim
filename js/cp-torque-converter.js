@@ -30,7 +30,7 @@ function getTorqueConverterPropertiesHTML(node) {
     
     // İki sütun düzeni — SOL sütun: seçim + parametreler + veri tablosu (girdi)
     html += '<div class="ve-cp-grid"><div class="ve-cp-col ve-cp-col--in">';
-    html += '<div class="sw-section-title">Konvertör Seçimi</div>';
+    html += '<div class="sw-section-title">Konvertör seçimi</div>';
 
     var hasECM = nodes.some(function(n) { return n.type === 'ec-matching'; });
     html += '<div style="margin-bottom:10px;">';
@@ -38,7 +38,7 @@ function getTorqueConverterPropertiesHTML(node) {
       html += '<div class="sw-chain-bar fail" style="margin-bottom:6px;"><span class="mf-ico mf-ico-lock"></span> Konvertör seçimi Motor-Konvertör Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
     }
     html += '<select id="ve-tc-select-' + node.id + '"' + (hasECM ? ' disabled' : '') + ' onchange="onVEFTTCSelect(\'' + node.id + '\', this.value)" style="width:100%; font-size:var(--fs-body); padding:6px 8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);' + (hasECM ? ' opacity:0.6; cursor:not-allowed;' : '') + '">';
-    html += '<option value="">-- Konvertör Seçiniz --</option>';
+    html += '<option value="">-- Konvertör seçiniz --</option>';
     
     if(!_gbFamily) {
       // Şanzıman seçilmemiş → uyarı ve tüm konvertörleri göster
@@ -68,7 +68,7 @@ function getTorqueConverterPropertiesHTML(node) {
       html += '</optgroup>';
     }
     
-    html += '<option value="manual"' + (tcPresetKey === 'manual' ? ' selected' : '') + '>Manuel Giriş</option>';
+    html += '<option value="manual"' + (tcPresetKey === 'manual' ? ' selected' : '') + '>Manuel giriş</option>';
     html += '</select>';
     // Seçili konvertör açıklaması
     var selDesc = '';
@@ -79,12 +79,12 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '</div>';
     
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
-    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Konvertör Parametreleri</span></div>';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Konvertör parametreleri</span></div>';
     html += '<div class="sw-pkg-body">';
     html += '<table class="ve-pnl-tbl ve-pnl-tbl--framed">';
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
-    html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Pump Tork Düşümü <span style="color:var(--text-muted); font-weight:400;">[N·m]</span></th>';
+    html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Pump tork düşümü <span style="color:var(--text-muted); font-weight:400;">[N·m]</span></th>';
     html += '<td style="background:var(--bg-tertiary);"><input type="number" id="ve-tc-pump-drop-' + node.id + '" value="' + pumpTorqueDrop + '" step="0.1" min="0" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTTCParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     
@@ -95,7 +95,7 @@ function getTorqueConverterPropertiesHTML(node) {
     var tcTableHeight = nodeData.tcTableHeight || 180;
 
     html += '<div id="ve-tc-data-area-' + node.id + '" style="margin-top:10px;">';
-    html += '<div class="sw-section-title">Konvertör Veri Tablosu</div>';
+    html += '<div class="sw-section-title">Konvertör veri tablosu</div>';
     html += '<div class="sw-pkg-desc" style="margin-bottom:8px;"><b>SR</b> = Türbin/Pump Devir Oranı. <b>K<sub>pump</sub></b> = Pump K-Factor [rpm/√(N·m)]. <b>τ</b> = Tork Oranı.</div>';
     html += '<div id="ve-tc-table-wrapper-' + node.id + '" style="max-height:' + tcTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:var(--radius-sm); border-bottom:none;">';
     html += '<table class="ve-pnl-tbl ve-izgara">';
@@ -124,9 +124,9 @@ function getTorqueConverterPropertiesHTML(node) {
     
     // Butonlar
     html += '<div class="sw-btn-row" style="margin:8px 0;">';
-    html += '<button class="sw-btn sw-btn-outline" onclick="addVETCRow(\'' + node.id + '\')">+ Satır Ekle</button>';
-    html += '<button class="sw-btn sw-btn-outline" onclick="clearVETCTable(\'' + node.id + '\')">Tümünü Sil</button>';
-    html += '<button class="sw-btn sw-btn-danger" onclick="deleteVETCData(\'' + node.id + '\')">Veriyi Temizle</button>';
+    html += '<button class="sw-btn sw-btn-outline" onclick="addVETCRow(\'' + node.id + '\')">+ Satır ekle</button>';
+    html += '<button class="sw-btn sw-btn-outline" onclick="clearVETCTable(\'' + node.id + '\')">Tümünü sil</button>';
+    html += '<button class="sw-btn sw-btn-danger" onclick="deleteVETCData(\'' + node.id + '\')">Veriyi temizle</button>';
     html += '<button class="sw-btn sw-btn-primary" onclick="saveVETCData(\'' + node.id + '\')">Kaydet</button>';
     html += '</div>';
 
@@ -140,14 +140,14 @@ function getTorqueConverterPropertiesHTML(node) {
 
     // ── GRAFİK 1: Tork Oranı & Verim Eğrisi ──
     html += '<div class="sw-pkg-card" style="margin-top:10px;">';
-    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Tork Oranı & Verim Eğrisi</span></div>';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Tork oranı & verim eğrisi</span></div>';
     html += '<div class="sw-pkg-body">';
     html += '<div style="position:relative; background:var(--bg-input); border:1px solid var(--border-color); padding:4px;">';
     html += '<canvas id="ve-tc-chart-tau-' + node.id + '" style="width:100%; height:200px;"></canvas>';
     html += '<div class="sw-pkg-desc" style="margin-top:4px;">' + (typeof PC_HINT_HTML !== 'undefined' ? PC_HINT_HTML : '') + '</div>';
     html += '</div>';
     html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:var(--fs-micro); color:var(--text-muted);">';
-    html += '<span style="color:#4aa3ff;">● τ Tork Oranı</span>';
+    html += '<span style="color:#4aa3ff;">● τ Tork oranı</span>';
     html += '<span style="color:#ff6b6b;">● η Verim [%]</span>';
     html += '<span style="color:var(--text-muted); opacity:0.5;">┆ Coupling (SR=0.88)</span>';
     html += '</div>';
@@ -175,7 +175,7 @@ function getTorqueConverterPropertiesHTML(node) {
     var isLocked = nodeData.isLocked !== undefined ? nodeData.isLocked : true;
 
     html += '<div class="sw-pkg-card">';
-    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Konvertör Parametreleri</span></div>';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Konvertör parametreleri</span></div>';
     html += '<div class="sw-pkg-body">';
     html += '<table class="ve-pnl-tbl ve-pnl-tbl--framed">';
     

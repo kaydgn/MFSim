@@ -3,27 +3,27 @@
 // ============================================================================
 var infoPopupData = {
   'torkKonvertoru': {
-    title: 'Tork Konvertörü Hakkında',
+    title: 'Tork Konvertörü hakkında',
     content: 'Tork konvertörü, motor ile şanzıman arasında hidrolik bağlantı sağlar. Kilitli konvertör direkt mekanik bağlantı sağlar (oran 1.0). Kilitsiz durumda ise düşük hızlarda tork çarpanı (1.8-2.5), yüksek hızlarda ise yaklaşık 1.0 oran uygulanır.'
   },
   'ecMatching': {
-    title: 'Motor-TC Eşleştirme Analizi Hakkında',
+    title: 'Motor-TC eşleştirme analizi hakkında',
     content: 'Allison TD-148G standardına göre motor ile tüm mevcut tork konvertörlerinin uyumluluğunu otomatik analiz eder. C4 (Stall Speed), C5 (Min Motor Devri), C7 (Türbin Torku Limiti) ve C8 (SR @ Governed) kontrollerini uygulayarak en uygun konvertörü önerir.'
   },
   'transferKutusu': {
-    title: 'Transfer Kutusu Hakkında',
+    title: 'Transfer Kutusu hakkında',
     content: 'Transfer kutusu, çift kademe (High/Low) veya tek kademe olabilir. High kademe genellikle 1:1 oranında (veya çok yakın), Low kademe ise 2-3 kat daha yüksek orandadır. Arazi koşullarında Low kademe kullanılır.'
   },
   'diferansiyel': {
-    title: 'Diferansiyel Hakkında',
+    title: 'Diferansiyel hakkında',
     content: 'Diferansiyel (son tahrik), dönme hareketini tekerleklere aktarır ve virajlarda iç/dış tekerlek hız farkını sağlar. Diferansiyel oranı, motor devri ile tekerlek devri arasındaki son dönüşüm oranıdır.'
   },
   'propshaftVerileri': {
-    title: 'Propşaft Hakkında',
+    title: 'Propşaft hakkında',
     content: 'Propşaft (kardan mili), şanzıman çıkışı ile transfer kutusu veya transfer kutusu ile diferansiyel arasında tork aktarımı sağlayan güç aktarma milidir. Oran 1:1 olarak çalışır, sadece kardan mafsalı ve yatak kayıplarından kaynaklanan verim kaybı uygulanır.'
   },
   'tekerlek': {
-    title: 'Tekerlek Parametreleri Hakkında',
+    title: 'Tekerlek parametreleri hakkında',
     content: 'Tekerlek yarıçapı, hız ve devir hesaplamalarında kritiktir. Yuvarlanma direnci (Crr) yol yüzeyine ve lastik tipine bağlıdır. Döner kütle faktörü (δ), dönen parçaların ataletini hesaba katar.'
   }
 };
@@ -234,7 +234,7 @@ function showNodeProperties(node) {
   // Silinmez tip (componentDefs.noDelete — FEAD kayışı) çöp kutusu göstermez:
   // basılınca yalnız "silinmez" diyecek bir düğme, dinlenmede bir yalandır.
   if(!(componentDefs[node.type] || {}).noDelete)
-    html += '<button class="ve-prop-del" onclick="deleteSelectedNodes()" title="Bileşeni Sil"><span class="mf-ico mf-ico-trash"></span></button>';
+    html += '<button class="ve-prop-del" onclick="deleteSelectedNodes()" title="Bileşeni sil"><span class="mf-ico mf-ico-trash"></span></button>';
   html += '</div>';  // ve-prop-identity
   
   // Node tipine göre özel içerik

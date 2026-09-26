@@ -70,7 +70,7 @@ describe('belge iskeleti', () => {
   test('tam bir HTML belgesi', () => {
     expect(DOC.startsWith('<!DOCTYPE html>')).toBe(true);
     expect(DOC.trim().endsWith('</html>')).toBe(true);
-    expect(DOC).toContain('<title>MFSim — Araç Performans Kılavuzu</title>');
+    expect(DOC).toContain('<title>MFSim — Araç Performans kılavuzu</title>');
     expect(DOC).toContain('<div class="page">');
   });
 

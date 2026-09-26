@@ -130,10 +130,10 @@ function veFeadResTreeReportHTML() {
   if(typeof veFeadGenerateReport === 'function') {
     h += '<button type="button" class="ve-fr-tree-link" onclick="veFeadGenerateReport(null,\'detailed\')"'
        + ' title="Teori + türetme + bu modelin çözümü — indirilir">'
-       + '<span class="mf-ico mf-ico-file-text"></span>FEAD Detaylı Rapor (HTML)</button>';
+       + '<span class="mf-ico mf-ico-file-text"></span>FEAD detaylı rapor (HTML)</button>';
     h += '<button type="button" class="ve-fr-tree-link" onclick="veFeadGenerateReport(null,\'summary\')"'
        + ' title="Tedarikçi sonuç sayfalarının düzeni — indirilir">'
-       + '<span class="mf-ico mf-ico-file-text"></span>FEAD Özet Rapor (HTML)</button>';
+       + '<span class="mf-ico mf-ico-file-text"></span>FEAD özet rapor (HTML)</button>';
   }
   return h + '</div>';
 }
@@ -245,9 +245,9 @@ function veFeadResSummaryOpen() {
   var bant = (typeof veRepHeadHTML === 'function') ? veRepHeadHTML({
     icon: 'disc', title: 'FEAD Sonuç Özeti',
     actions: [
-      { onclick: "veFeadGenerateReport(null,'detailed')", icon: 'download', label: 'Detaylı Rapor',
+      { onclick: "veFeadGenerateReport(null,'detailed')", icon: 'download', label: 'Detaylı rapor',
         title: 'Teori + türetme + bu modelin çözümü (HTML)' },
-      { onclick: "veFeadGenerateReport(null,'summary')", icon: 'download', label: 'Özet Rapor',
+      { onclick: "veFeadGenerateReport(null,'summary')", icon: 'download', label: 'Özet rapor',
         title: 'Tedarikçi sonuç sayfalarının düzeni (HTML)' },
       { onclick: 'veCloseDetailedReport()', label: '✕ Kapat', danger: true }
     ]

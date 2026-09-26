@@ -684,7 +684,7 @@ function veShowTabMenu(e, idx) {
   menu.style.cssText = 'position:fixed;left:' + e.clientX + 'px;top:' + e.clientY + 'px;z-index:200000;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-md);box-shadow:var(--shadow-lg);padding:5px;min-width:160px;';
 
   var items = [
-    { icon: 'edit',      label: 'Yeniden Adlandır', fn: function() { veRenameTab(idx); } },
+    { icon: 'edit',      label: 'Yeniden adlandır', fn: function() { veRenameTab(idx); } },
     { icon: 'clipboard', label: 'Çoğalt',           fn: function() { veDuplicateTab(idx); } },
     { label: 'sep' },
     { icon: 'x',         label: 'Kapat', fn: function() { veCloseTab(idx); }, danger: true }
@@ -1027,10 +1027,10 @@ function veRenderSnapshot(paneIdx) {
       html += '<div class="ve-node-label' + _lpCls + '">' + escapeHTML(n.customName || def.name) + '</div>';
       
       if(n.type === 'wheel' && n.isMasterWheel) {
-        html += '<div class="ve-wheel-master-badge" title="Master Tekerlek">★</div>';
+        html += '<div class="ve-wheel-master-badge" title="Master tekerlek">★</div>';
       }
       if(n.type === 'differential' && n.isMasterDiff) {
-        html += '<div class="ve-wheel-master-badge" title="Master Diferansiyel">★</div>';
+        html += '<div class="ve-wheel-master-badge" title="Master diferansiyel">★</div>';
       }
       
       nodeEl.innerHTML = html;

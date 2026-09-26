@@ -116,7 +116,7 @@ describe('belge iskeleti', () => {
   test('tam bir HTML belgesi', () => {
     expect(DOC.startsWith('<!DOCTYPE html>')).toBe(true);
     expect(DOC.trim().endsWith('</html>')).toBe(true);
-    expect(DOC).toContain('<title>MFSim — FEAD Modelleme Kılavuzu</title>');
+    expect(DOC).toContain('<title>MFSim — FEAD modelleme kılavuzu</title>');
     expect(DOC).toContain('<div class="page">');
   });
 
@@ -524,8 +524,8 @@ describe('içerik yönlendirici', () => {
   });
 
   test('hızlı başvuru eki alan → panel eşlemesi veriyor', () => {
-    expect(DOC).toContain('Alan → Panel Hızlı Başvurusu');
-    expect(DOC).toContain('Gergi Künye Kütüphanesi');
+    expect(DOC).toContain('Alan → Panel hızlı başvurusu');
+    expect(DOC).toContain('Gergi künye kütüphanesi');
   });
 });
 
@@ -563,11 +563,11 @@ describe('sahneler programın kendi bileşeni', () => {
     const gerek = {
       'Kayış Tablosu': 've-fead-tbl',
       'şerit düğmesi': 've-rb-btn',
-      'kasnak paneli': 'Devir Sınırları',
-      'gergi paneli': 'Avara Kasnağının Merkezi',
+      'kasnak paneli': 'Devir sınırları',
+      'gergi paneli': 'Avara kasnağının merkezi',
       'kayış künyesi': 'Gereken efektif boy',
       'kayış kataloğu': 'gereken boya en yakınlar',
-      'çözücü paneli': 'Algılanan Model',
+      'çözücü paneli': 'Algılanan model',
       'rapor paneli': 'Detaylı Raporu',
       'dönüş yönü': 'Kayış Dönüş Yönü'
     };
@@ -594,8 +594,8 @@ describe('sahneler programın kendi bileşeni', () => {
     // silen değişikliği kaçırıyordu (ölçüldü — çözücü sahnesi kapıyı tek
     // başına yeşil tutuyordu). Ayrım: tek başına duran sahnede panelin geri
     // kalanı YOK.
-    if (!sahneler.some((f) => f.indexOf('Uygunluk Kapıları') >= 0
-                           && f.indexOf('Algılanan Model') < 0))
+    if (!sahneler.some((f) => f.indexOf('Uygunluk kapıları') >= 0
+                           && f.indexOf('Algılanan model') < 0))
       eksik.push('uygunluk kapıları (tek başına)');
     expect(eksik).toEqual([]);
   });
@@ -644,9 +644,9 @@ describe('sahneler programın kendi bileşeni', () => {
     // ölçülmüş sınıf).
     // PANEL ARTIK KART KART SAHNELENİYOR (baskı için: bütün panel A4'ten uzun,
     // 1122 px ölçüldü). İki kart iki ayrı şekil — kapı ikisini de arar.
-    const temas = sahneler.filter((x) => x.indexOf('Temas Tarafı') >= 0)[0] || '';
+    const temas = sahneler.filter((x) => x.indexOf('Temas tarafı') >= 0)[0] || '';
     expect(temas).not.toBe('');
-    const f = sahneler.filter((x) => x.indexOf('Devir Sınırları') >= 0)[0] || '';
+    const f = sahneler.filter((x) => x.indexOf('Devir sınırları') >= 0)[0] || '';
     expect(f).not.toBe('');
     // AYIRT EDİCİ: aksesuar künye seçicisi YALNIZ `VE_FEAD_ACC_TYPE`'ta karşılığı
     // olan tiplerde çizilir (alternatör · klima). "Katalog Modeli" bu işi
@@ -664,7 +664,7 @@ describe('sahneler programın kendi bileşeni', () => {
   });
 
   test('uygunluk kapıları sahnesi ÜÇ KURALI da basıyor', () => {
-    const f = sahneler.filter((x) => x.indexOf('Uygunluk Kapıları') >= 0)[0] || '';
+    const f = sahneler.filter((x) => x.indexOf('Uygunluk kapıları') >= 0)[0] || '';
     expect(f).not.toBe('');
     ['Kasnak merkez mesafesi', 'Çevrim oranı penceresi', 'Aksesuar devir sınırı']
       .forEach((k) => { expect(f).toContain(k); });
@@ -792,15 +792,15 @@ describe('sahneler programın kendi bileşeni', () => {
   // ancak GERÇEK panel üzerinden; buradaki girdi sentetik ve her iki kutu
   // biçimini de ayrı ayrı ölçüyor.
   describe('kart sökücüsü — iki kutu biçimi de', () => {
-    const govde = '<div class="ve-fp-sect"><b>Algılanan Model</b></div>'
+    const govde = '<div class="ve-fp-sect"><b>Algılanan model</b></div>'
       + '<p>içerik</p>';
 
     test('SINIFLI kutu: <section class="ve-fp-card"> sökülür', () => {
       const panel = '<div class="ust">önce</div>'
         + '<section class="ve-fp-card">' + govde + '</section>'
         + '<section class="ve-fp-card"><div class="ve-fp-sect"><b>Başka</b></div></section>';
-      const k = KIT.veGuideCard(panel, 'Algılanan Model');
-      expect(k).toContain('Algılanan Model');
+      const k = KIT.veGuideCard(panel, 'Algılanan model');
+      expect(k).toContain('Algılanan model');
       expect(k).toContain('içerik');
       expect(k.indexOf('<section')).toBe(0);
       expect(k).not.toContain('Başka');            // KOMŞU kart sızmadı
@@ -810,7 +810,7 @@ describe('sahneler programın kendi bileşeni', () => {
     test('İÇ İÇE section: en yakın SARAN kutu seçilir', () => {
       const panel = '<section class="dis"><section class="ve-fp-card">' + govde
         + '</section></section>';
-      const k = KIT.veGuideCard(panel, 'Algılanan Model');
+      const k = KIT.veGuideCard(panel, 'Algılanan model');
       expect(k).toContain('ve-fp-card');
       expect(k).not.toContain('class="dis"');
     });
@@ -819,15 +819,15 @@ describe('sahneler programın kendi bileşeni', () => {
       // Kaldırılırsa hâlâ öyle çizen yüzeyler sessizce kaybolurdu.
       const panel = '<div class="ust">önce</div>'
         + '<div style="border:1px solid #ccc;">' + govde + '</div>';
-      const k = KIT.veGuideCard(panel, 'Algılanan Model');
-      expect(k).toContain('Algılanan Model');
+      const k = KIT.veGuideCard(panel, 'Algılanan model');
+      expect(k).toContain('Algılanan model');
       expect(k.indexOf('<div style="border:1px solid')).toBe(0);
       expect(k).not.toContain('önce');
     });
 
     test('BAŞLIK YOKSA boş döner — uydurulmuş bir kart değil', () => {
       expect(KIT.veGuideCard('<section class="ve-fp-card">x</section>', 'Yok')).toBe('');
-      expect(KIT.veGuideCard('', 'Algılanan Model')).toBe('');
+      expect(KIT.veGuideCard('', 'Algılanan model')).toBe('');
     });
 
     test('SARMAYAN section seçilmez — başlıktan ÖNCE kapanmış KARDEŞ kutu', () => {
@@ -838,8 +838,8 @@ describe('sahneler programın kendi bileşeni', () => {
       // dönüyor ve "Algılanan Model" kayboluyor.
       const panel = '<section class="ve-fp-card">'
         + '<section class="ic">kapandı</section>' + govde + '</section>';
-      const k = KIT.veGuideCard(panel, 'Algılanan Model');
-      expect(k).toContain('Algılanan Model');
+      const k = KIT.veGuideCard(panel, 'Algılanan model');
+      expect(k).toContain('Algılanan model');
       expect(k).toContain('class="ve-fp-card"');
       expect(k.indexOf('<section class="ve-fp-card"')).toBe(0);
     });
@@ -1116,8 +1116,8 @@ describe('kılavuz ↔ program: kart adları', () => {
     // Denetim tek yerden okunuyor: Kol Künyesi kartındaki türeyen montaj
     // konumu satırı. Kılavuz o satırı adıyla gösteriyor; ad panelde
     // değişirse kullanıcı ekranda arayacağı şeyi bulamaz.
-    expect(PANEL.Gergi).toContain('Avara Hareketi');
-    expect(DOC).toContain('Avara Hareketi');
+    expect(PANEL.Gergi).toContain('Avara hareketi');
+    expect(DOC).toContain('Avara hareketi');
     expect(PANEL.Gergi).toContain('montaj konumu (türedi)');
     expect(DOC).toContain('montaj konumu (türedi)');
   });

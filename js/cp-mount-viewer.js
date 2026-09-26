@@ -415,7 +415,7 @@ function veMountViewerUpdate(){
     var cgm=new THREE.Mesh(new THREE.SphereGeometry(40,32,32),
       _mntViewerMarkerMat('--accent-danger', '#ef4444', 80));
     cgm.position.copy(_mntW(cg[0],cg[1],cg[2]));
-    cgm.userData={ info:'<b style="color:var(--accent-danger);">Birleşik Ağırlık Merkezi</b>'
+    cgm.userData={ info:'<b style="color:var(--accent-danger);">Birleşik ağırlık merkezi</b>'
       +'<br><span style="color:var(--text-muted);">Toplam kütle:</span> '+mSum.toFixed(1)+' kg'
       +'<br><span style="color:var(--text-muted);">CG (mm):</span> '+cg[0].toFixed(1)+' · '+cg[1].toFixed(1)+' · '+cg[2].toFixed(1) };
     V.group.add(cgm);

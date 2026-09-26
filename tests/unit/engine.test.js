@@ -325,7 +325,7 @@ describe('panel yerleşimi (smoke)', () => {
     expect(html).not.toContain('ve-cp-grid--sheet');
     expect(html).not.toContain('ve-eng-sheet');
     expect(html).toContain('ve-motor-chart-' + n.id);   // brüt kanvas duruyor
-    expect(html).toContain('Motor Freni Parametreleri');
+    expect(html).toContain('Motor freni parametreleri');
   });
 
   test('Motor Freni satır üreticisi 4 sütunlu kalır (ızgaraya kaymaz)', () => {

@@ -1489,12 +1489,37 @@ oldu.
 Düzeni'nde, 66'sı cümle düzenindeydi; Ayarlar birini, komut paleti ötekini
 kullanıyordu. Kullanıcı Windows'un kendi dilini (cümle düzeni) seçti.
 
-**Aşamalar.** 1 — kabuk (şerit, komut paleti, sağ tık menüleri, Ayarlar,
-Program Durumu, Kısayollar, Komuta, palet kategorileri, pencere başlıkları,
-Sonuçlar kabuğu, içe aktarma, görüntüleyici). Bileşen panelleri, kılavuzlar ve
-raporlar sonraki aşamalar; her aşama dosyalarını kapının `KABUK` listesine
-ekler.
+**Aşamalar.** Kuralın tek kaynağı `tools/cumle-duzeni.js` (kapı da,
+dönüştürme de onu çağırır; `node tools/cumle-duzeni.js <dosya>` sapmaları
+listeler).
+1 — kabuk (şerit, komut paleti, sağ tık menüleri, Ayarlar, Program Durumu,
+Kısayollar, Komuta, palet kategorileri, pencere başlıkları, Sonuçlar kabuğu,
+içe aktarma, görüntüleyici): 94 etiket + 4 küçük yüzey adı → 0.
+2 — bileşen panelleri (`js/cp-*.js`, rapor üreticileri hariç), yardımcı
+bileşenler, güzergâh haritası, çözücü ve üç modül kılavuzu: 21 dosyada 386
+etiket → 0. Tarama genişledi (yardımcının üçlü koşulu, tablo penceresi
+başlığı, yer tutucu, kılavuz bölüm başlıkları; birleştirme süzgeci artık
+çıplak "+"yı değil yalnız tırnağa bitişik "+"yı atlar — "+ Satır ekle" hiç
+taranmıyordu) ve kabukta 12 etiket daha çıktı: 9'u aşama 1 listesinin
+unuttuğu dört kabuk dosyasında, artık listede.
+3 — sonuçlar, rapor üreticileri, sinyal adları ve Çözücü günlüğü (sırada).
+Günlük düz metin bir tablo; üçlü koşuldan gelen satır adları komşularıyla
+birlikte çevrilsin diye bu aşamaya kaldı.
 
-**Kapı.** `cumle-duzeni.test.js`: kuralın kendisi, bileşen adları kaynaktan,
-yüzey adının küçültülmemesi. Düzeltme öncesi kaynakta 94 etiket ve 4 küçük
-yüzey adıyla düşüyor.
+**Aşama 2'nin eklediği özel adlar.** Kayış Tablosu'nun sütun adları
+kullanıcının hesap defterinin başlıklarıdır ("Efektif Çap", "Sarım Açısı" —
+`VE_FEAD_TABLE_COLS`'tan okunur); sihirbazın gergiye verdiği ad ("Otomatik
+Gergi", kullanıcı kararı 2026-08-31 — `VE_FW_TEN_AD`'dan okunur); kişi adları
+(Euler, Newton, Campbell…). "→" de bölüt başlatır ("Otomatik → Lineer");
+tireli birleşik kelimenin her parçası ayrı kelimedir ("Kayış-kasnak"), bütünü
+bir terimse kalır ("Coast-Down").
+
+**Kılavuz ile panel birlikte döner.** Kılavuzun sahnesi panel kartını
+BAŞLIĞIYLA arar (`veGuideCard`); yalnız panel dönseydi FEAD kılavuzunun 8
+sahnesinden 7'si hata vermeden boş dönerdi (ölçüldü).
+
+**Kapı.** `cumle-duzeni.test.js`: kuralın örnekleri, bileşen adları
+kaynaktan, her aşamanın dosyalarında sapma yok, yüzey adı küçültülmüyor,
+kılavuzun aradığı her kart başlığı panelde var. Düzeltme öncesi kaynakta
+aşama 1'de 94 (+12), aşama 2'de 386 sapmayla; eski kılavuz + yeni panelle 7
+bulunamayan kartla düşüyor.

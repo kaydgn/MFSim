@@ -66,21 +66,21 @@ function _gaOnay(baslik, govde){ return veGuideNote('check', baslik, govde); }
 
 // ── BÖLÜM KİMLİKLERİ — içindekiler ve başlıklar TEK KAYNAKTAN ──────────────
 var VE_GUIDE_ARAC_SECTIONS = [
-  ['a1',  '1',    'Bu Kılavuz Nasıl Kullanılır'],
-  ['a2',  '2',    'Modülün Haritası'],
-  ['a3',  '3',    'Modüle Girmek'],
-  ['a4',  '4',    'Motoru Tanımlamak'],
-  ['a5',  '5',    'Tork Konvertörünü Tanımlamak'],
-  ['a6',  '6',    'Şanzıman ve Vites Geçiş Takvimi'],
-  ['a7',  '7',    'Aktarma Organları'],
-  ['a8',  '8',    'Aracı ve Tekerleği Tanımlamak'],
-  ['a9',  '9',    'Yol, Senaryo ve Çevre'],
-  ['a10', '10',   'Modeli Çözmek'],
-  ['a11', '11',   'Sonuçları Okumak'],
-  ['a12', '12',   'Rapor Üretmek'],
-  ['a13', '13',   'Sık Yapılan Hatalar'],
-  ['a14', '14',   'Sayısal Örnek: TURAN 4×4'],
-  ['aEk', 'Ek A', 'Alan → Panel Hızlı Başvurusu']
+  ['a1',  '1',    'Bu kılavuz nasıl kullanılır'],
+  ['a2',  '2',    'Modülün haritası'],
+  ['a3',  '3',    'Modüle girmek'],
+  ['a4',  '4',    'Motoru tanımlamak'],
+  ['a5',  '5',    'Tork Konvertörünü tanımlamak'],
+  ['a6',  '6',    'Şanzıman ve vites geçiş takvimi'],
+  ['a7',  '7',    'Aktarma organları'],
+  ['a8',  '8',    'Aracı ve tekerleği tanımlamak'],
+  ['a9',  '9',    'Yol, senaryo ve çevre'],
+  ['a10', '10',   'Modeli çözmek'],
+  ['a11', '11',   'Sonuçları okumak'],
+  ['a12', '12',   'Rapor üretmek'],
+  ['a13', '13',   'Sık yapılan hatalar'],
+  ['a14', '14',   'Sayısal örnek: TURAN 4×4'],
+  ['aEk', 'Ek A', 'Alan → Panel hızlı başvurusu']
 ];
 
 function _gaH2(i){
@@ -190,7 +190,7 @@ function _gaSec3(){
     'Kutuya <strong>çift tıklayın</strong> — iç topoloji açılır. İlk açılışta içeride yalnız '
       + '<strong>Başlangıç ve Örnekler</strong> kutusu vardır.',
     'O kutuya çift tıklayın. Açılan panelde kayıtlı araçları görürsünüz; birini seçin.',
-    '<strong>▶ Örneği Aktar</strong> düğmesine basın. Bütün zincir — motor eğrisi, konvertör '
+    '<strong>▶ Örneği aktar</strong> düğmesine basın. Bütün zincir — motor eğrisi, konvertör '
       + 'tabloları, vites oranları, aks, transfer, lastik, araç künyesi — bir anda kurulur.'
   ]);
   var liste = (typeof veApExampleList === 'function') ? veApExampleList() : [];
@@ -227,15 +227,15 @@ function _gaSec3(){
     'Araç birden çok akslıysa transferin her çıkışına bir <strong>Diferansiyel</strong>, her '
       + 'diferansiyele iki <strong>Tekerlek</strong> bağlayın.'
   ]);
-  h += _gaNot('“Otomatik Düzenle” zinciri hizalar',
+  h += _gaNot('“Otomatik düzenle” zinciri hizalar',
       'Araçta güç akışı soldan sağa akan bir zincirdir ve dallar simetrik iner/çıkar. '
-    + 'Şerit düğmesindeki <strong>Otomatik Düzenle</strong>, bileşenleri programın kendi '
+    + 'Şerit düğmesindeki <strong>Otomatik düzenle</strong>, bileşenleri programın kendi '
     + 'referans ızgarasına oturtur: zincirin dört bağlantısı tam yatay çizilir, dallar eşit '
     + 've zıt sapar. Yerleşim <strong>hesabı etkilemez</strong> — yalnız okunurluk içindir.');
   h += '<h3>3.3 Yol C — kayıtlı bir projeden</h3>';
   h += '<p>Daha önce kaydedilmiş bir proje dosyasını (<code>.json</code>) şerit üzerinden '
     + 'açabilirsiniz. <strong>Başlangıç ve Örnekler</strong> panelindeki '
-    + '<strong>↓ İç Topolojiyi JSON Dışa Aktar</strong> düğmesi de bunun tersini yapar: '
+    + '<strong>↓ İç topolojiyi JSON dışa aktar</strong> düğmesi de bunun tersini yapar: '
     + 'kurduğunuz zinciri örnek biçiminde diske yazar.</p>';
   return h;
 }
@@ -245,15 +245,15 @@ function _gaSec4(){
   h += '<p>Motor, zincirin ve modelin en çok girdi isteyen bileşenidir. Motora çift tıklayın; '
     + 'panel üç sütun açar: solda girdi rayı, ortada veri ızgarası, sağda doğrulama.</p>';
   h += _gaAdimlar([
-    'En üstteki <strong>Motor Seçimi</strong> şeridinden hazır bir motor seçin. Liste '
+    'En üstteki <strong>Motor seçimi</strong> şeridinden hazır bir motor seçin. Liste '
       + 'aile bazlı gruplanmıştır (Cummins ISB / ISG / ISL, Duramax…). Seçim, devir–tork '
       + 'tablosunu ve künyeyi bir anda doldurur.',
-    'Motorunuz listede yoksa <strong>Tork &amp; Güç Verileri</strong> ızgarasına devir ve '
+    'Motorunuz listede yoksa <strong>Tork &amp; güç verileri</strong> ızgarasına devir ve '
       + '<strong>brüt</strong> tork çiftlerini elle girin. Satırlar devre göre artan sırada '
       + 'olmalıdır.',
-    '<strong>Motor Parametreleri</strong> kartına governed (regüle) devri yazın — motorun '
+    '<strong>Motor parametreleri</strong> kartına governed (regüle) devri yazın — motorun '
       + 'yük altında aşamadığı üst sınır.',
-    '<strong>Aksesuar Kayıpları</strong> tablosunu doldurun. Her satır bir aksesuarın '
+    '<strong>Aksesuar kayıpları</strong> tablosunu doldurun. Her satır bir aksesuarın '
       + 'çektiği gücü söyler; net tork bunlar düşülerek üretilir.',
     'Sağdaki <strong>Doğrulama</strong> sütununda net eğriyi ve azami güç noktasını okuyun.'
   ]);
@@ -287,9 +287,9 @@ function _gaSec5(){
   h += '<p>Tork konvertörü, motor ile şanzıman arasındaki hidrolik bağlantıdır ve duruştan '
     + 'kalkışı o mümkün kılar. Konvertöre çift tıklayın.</p>';
   h += _gaAdimlar([
-    '<strong>Konvertör Seçimi</strong> listesinden konvertörünüzü seçin (TC411, TC413, '
+    '<strong>Konvertör seçimi</strong> listesinden konvertörünüzü seçin (TC411, TC413, '
       + 'TC551…). Seçim K-faktörü ve tork oranı tablolarını doldurur.',
-    'Listede yoksa <strong>Konvertör Veri Tablosu</strong>na hız oranına (SR) karşı '
+    'Listede yoksa <strong>Konvertör veri tablosu</strong>na hız oranına (SR) karşı '
       + 'K-faktörü ve tork oranı (τ) çiftlerini girin.',
     'Panelin okumasında <strong>stall</strong> noktasını kontrol edin: SR = 0’daki tork oranı '
       + 've K-faktörü, duran araçtaki denge devrini belirler.'
@@ -323,9 +323,9 @@ function _gaSec6(){
   h += '<p>Şanzıman iki ayrı şey taşır: <strong>oranlar</strong> (kaç vites, hangi oran, hangi '
     + 'verim) ve <strong>geçiş takvimi</strong> (hangi noktada vites değişir). İkisi ayrı '
     + 'panellerdedir ve ayrı ayrı yanlış olabilir.</p>';
-  h += '<h3>6.1 Şanzıman Verileri</h3>';
+  h += '<h3>6.1 Şanzıman verileri</h3>';
   h += _gaAdimlar([
-    'Şanzımana çift tıklayın; <strong>Şanzıman Verileri</strong> tablosunu açın.',
+    'Şanzımana çift tıklayın; <strong>Şanzıman verileri</strong> tablosunu açın.',
     'Hazır listeden şanzımanınızı seçin (Allison 3000 SP, 4000 SP, 4500 SP…) ya da oranları '
       + 'elle girin.',
     'Her vites için <strong>oran</strong> ve <strong>verim</strong> sütunlarını doldurun. '
@@ -333,8 +333,8 @@ function _gaSec6(){
     'Geri vites oranını da girin; hızlanma simülasyonu onu kullanmaz ama topoloji raporunda '
       + 'görünür.'
   ]);
-  h += '<h3>6.2 Vites Geçiş Takvimi</h3>';
-  h += '<p><strong>Vites Geçiş Kontrolcüsü</strong> (shift-controller) bileşeni zincire '
+  h += '<h3>6.2 Vites geçiş takvimi</h3>';
+  h += '<p><strong>Vites geçiş kontrolcüsü</strong> (shift-controller) bileşeni zincire '
     + 'bağlanmaz; tuvalde ayrı durur ve çözücü onu tipinden bulur. Panelinde '
     + '<strong>Shift Schedule</strong> tablosu vardır.</p>';
   h += _gaAlanTablo('Geçiş takvimi — alanlar', [
@@ -369,7 +369,7 @@ function _gaSec7(){
     + 'birden çok propşaft olabilir — her biri kendi verimini uygular.</p>';
   h += '<h3>7.2 Transfer Kutusu</h3>';
   h += _gaAdimlar([
-    'Transfer kutusuna çift tıklayın; <strong>Kademe Tablosu</strong>nu açın.',
+    'Transfer kutusuna çift tıklayın; <strong>Kademe tablosu</strong>nu açın.',
     'Her kademe için bir satır girin: <strong>ad</strong>, <strong>oran</strong> ve '
       + '<strong>verim</strong>. İki kademeli bir arazi transferinde tipik olarak bir hızlı '
       + '(yüksek) ve bir yavaş (düşük) kademe olur.',
@@ -380,7 +380,7 @@ function _gaSec7(){
       'Hangi kademenin “hızlı”, hangisinin “yavaş” olduğu <strong>dizideki sırasından değil '
     + 'oranından</strong> belirlenir. Tabloda satırların yerini değiştirmek sonucu '
     + 'değiştirmez — bu bilinçlidir ve testi vardır.');
-  h += '<h3>7.3 Diferansiyel ve Tekerlek</h3>';
+  h += '<h3>7.3 Diferansiyel ve tekerlek</h3>';
   h += _gaAlanTablo('Diferansiyel ve tekerlek — alanlar', [
     ['Aks oranı', 'Diferansiyel dişli oranı', 'Aks künyesi'],
     ['Verim', 'Aks verimi, %', 'Tipik 0,95–0,98'],
@@ -443,7 +443,7 @@ function _gaSec9(){
     ['Başlangıç hızı [km/h]', 'Simülasyonun başladığı hız', 'Duruştan kalkışta 0'],
     ['Gaz pedal oranı [%]', 'Tam gazda 100', 'Kısmi gaz senaryoları için düşürülür']
   ]);
-  h += '<h3>9.3 Yuvarlanma direnci ölçümü (Coast-down)</h3>';
+  h += '<h3>9.3 Yuvarlanma direnci ölçümü (Coast-Down)</h3>';
   h += '<p><strong>Coast-Down</strong> bileşeni, sahada yapılmış bir serbest yavaşlama '
     + 'ölçümünden C<sub>d</sub>·A ve C<sub>rr</sub> çiftini geri çözer. Elinizde ölçüm varsa '
     + 'bu, tahmin edilen aerodinamik katsayıdan çok daha güvenilirdir.</p>';
@@ -455,11 +455,11 @@ function _gaSec10(){
   h += '<p><strong>Çözücü</strong> bileşeni zincire bağlanmaz; sayısal yöntemi ve çözüm '
     + 'kümesini taşır. Çift tıklayın.</p>';
   h += _gaAdimlar([
-    '<strong>Güç Aktarma Zinciri</strong> okumasına bakın: program zinciri bulabildi mi, '
+    '<strong>Güç aktarma zinciri</strong> okumasına bakın: program zinciri bulabildi mi, '
       + 'hangi bileşenleri gördü? Eksik bir halka burada görünür.',
-    '<strong>Çözüm Kümesi</strong> kartından hangi analizlerin koşacağını seçin '
+    '<strong>Çözüm kümesi</strong> kartından hangi analizlerin koşacağını seçin '
       + '(performans · hızlanma-yavaşlama · tırmanma · engel atlama · enerji dengesi).',
-    '<strong>Sayısal Yöntemler</strong> kartında çözüm yöntemini ve adım büyüklüğünü seçin. '
+    '<strong>Sayısal yöntemler</strong> kartında çözüm yöntemini ve adım büyüklüğünü seçin. '
       + 'Varsayılan <strong>RK45 Dormand-Prince</strong> (adaptif) çoğu iş için doğru '
       + 'seçimdir.',
     'Şeritteki <strong>Doğrula</strong> ile modeli sınayın, sonra <strong>Çalıştır</strong> '
@@ -527,9 +527,9 @@ function _gaSec12(){
   h += '<p>Şeritteki <strong>Rapor</strong> düğmesi rapor penceresini açar. Simülasyon '
     + 'koşmadan rapor üretilemez — rapor bir <em>sonuç</em> belgesidir.</p>';
   h += _gaAlanTablo('Rapor türleri', [
-    ['Tam Gaz Hızlanma Raporu', 'Özet, hızlanma tablosu, vites geçişleri, azami hız',
+    ['Tam gaz hızlanma raporu', 'Özet, hızlanma tablosu, vites geçişleri, azami hız',
       'Ana performans belgesi'],
-    ['Detay Matematik Hesapları', 'Adım adım ara değerler, iterasyonlar, denge çözümleri',
+    ['Detay matematik hesapları', 'Adım adım ara değerler, iterasyonlar, denge çözümleri',
       'Bir sayının nereden geldiğini elle takip etmek için'],
     ['Hızlanma-Yavaşlama Raporu', 'İvme ve yavaşlama profilleri', 'Ayrı senaryo'],
     ['Engel Atlama Raporu', 'Basamak/rampa geçişi sonuçları', 'Ayrı senaryo'],
@@ -571,7 +571,7 @@ function _gaSec13(){
       ['Transfer kademesi', 'Yanlış kademenin sonucu okunur',
         'Azami hız iki kat farklı — rapor satır başında kademeyi yazar']
     ], ['l', 'l', 'l']);
-  h += _gaOnay('En hızlı gözden geçirme: Topoloji Detay Raporu',
+  h += _gaOnay('En hızlı gözden geçirme: Topoloji detay raporu',
       'Yukarıdaki sınıfların çoğu, kurulan zincirin bütün girdilerini tek sayfada gördüğünüzde '
     + 'gözle yakalanır. Şüphelendiğinizde önce o raporu üretin; alan alan panel gezmekten '
     + 'hızlıdır.');
@@ -810,11 +810,11 @@ function _gaSec14(){
     'Araç Performans modülünün iç topolojisinde <strong>Başlangıç ve Örnekler</strong> '
       + 'kutusunu açın.',
     'Listeden <strong>' + _gaE(ex.name) + '</strong> örneğini seçip '
-      + '<strong>▶ Örneği Aktar</strong> deyin.',
+      + '<strong>▶ Örneği aktar</strong> deyin.',
     'Şeritten <strong>Çalıştır</strong> ile simülasyonu başlatın.',
-    'Şeritteki <strong>Rapor</strong> düğmesinden <strong>Tam Gaz Hızlanma Raporu</strong>nu '
+    'Şeritteki <strong>Rapor</strong> düğmesinden <strong>Tam gaz hızlanma raporu</strong>nu '
       + 'üretin ve yukarıdaki sayılarla karşılaştırın.',
-    'Sayının nereden geldiğini görmek için <strong>Detay Matematik Hesapları</strong> '
+    'Sayının nereden geldiğini görmek için <strong>Detay matematik hesapları</strong> '
       + 'raporunu üretin — stall dengesi ve her adımın ara değerleri orada.'
   ]);
   h += _gaOnay('Kılavuz ile program aynı sayıyı verir',
@@ -832,27 +832,27 @@ function _gaEkA(){
   h += _gaTablo('Alan → panel eşlemesi',
     ['Aradığınız', 'Panel', 'Kart'],
     [
-      ['Hazır motor listesi', 'Motor', 'Motor Seçimi'],
-      ['Devir–brüt tork tablosu', 'Motor', 'Tork &amp; Güç Verileri'],
-      ['Governed devir', 'Motor', 'Motor Parametreleri'],
-      ['Fan, alternatör, klima kayıpları', 'Motor', 'Aksesuar Kayıpları'],
-      ['Eğri uydurma yöntemi', 'Motor', 'Eğri Yaklaşımı'],
+      ['Hazır motor listesi', 'Motor', 'Motor seçimi'],
+      ['Devir–brüt tork tablosu', 'Motor', 'Tork &amp; güç verileri'],
+      ['Governed devir', 'Motor', 'Motor parametreleri'],
+      ['Fan, alternatör, klima kayıpları', 'Motor', 'Aksesuar kayıpları'],
+      ['Eğri uydurma yöntemi', 'Motor', 'Eğri yaklaşımı'],
       ['Net eğri ve azami güç', 'Motor', 'Doğrulama'],
-      ['Hazır konvertör listesi', 'Tork Konvertörü', 'Konvertör Seçimi'],
-      ['K-faktörü ve tork oranı', 'Tork Konvertörü', 'Konvertör Veri Tablosu'],
-      ['Vites oranları ve verimleri', 'Şanzıman', 'Şanzıman Verileri'],
-      ['Vites geçiş eşikleri', 'Vites Geçiş Kontrolcüsü', 'Shift Schedule'],
-      ['Transfer kademeleri', 'Transfer Kutusu', 'Kademe Tablosu'],
+      ['Hazır konvertör listesi', 'Tork Konvertörü', 'Konvertör seçimi'],
+      ['K-faktörü ve tork oranı', 'Tork Konvertörü', 'Konvertör veri tablosu'],
+      ['Vites oranları ve verimleri', 'Şanzıman', 'Şanzıman verileri'],
+      ['Vites geçiş eşikleri', 'Vites geçiş kontrolcüsü', 'Shift Schedule'],
+      ['Transfer kademeleri', 'Transfer Kutusu', 'Kademe tablosu'],
       ['Aks oranı', 'Diferansiyel', 'Diferansiyel'],
-      ['Lastik yarıçapı, C<sub>rr</sub>, δ', 'Tekerlek', 'Tekerlek Parametreleri'],
-      ['Kütle, alan, C<sub>d</sub>', 'Araç', 'Araç Parametreleri · Aerodinamik Parametreleri'],
-      ['Yol eğimi', 'Yol', 'Eğim Parametreleri'],
-      ['Başlangıç hızı, gaz oranı', 'Senaryo', 'Başlangıç Koşulları · Senaryo Parametreleri'],
-      ['Çözüm yöntemi ve tolerans', 'Çözücü', 'Sayısal Yöntemler'],
-      ['Hangi analizler koşacak', 'Çözücü', 'Çözüm Kümesi'],
-      ['Zincir bulundu mu', 'Çözücü', 'Güç Aktarma Zinciri'],
-      ['Motor–konvertör uyumu', 'Motor-Konvertör Eşleştirme', 'Konvertör Uyumluluk Tablosu'],
-      ['Motor–şanzıman uyumu', 'Motor-Şanzıman Eşleştirme', 'Şanzıman Uyumluluk Tablosu'],
+      ['Lastik yarıçapı, C<sub>rr</sub>, δ', 'Tekerlek', 'Tekerlek parametreleri'],
+      ['Kütle, alan, C<sub>d</sub>', 'Araç', 'Araç parametreleri · Aerodinamik parametreleri'],
+      ['Yol eğimi', 'Yol', 'Eğim parametreleri'],
+      ['Başlangıç hızı, gaz oranı', 'Senaryo', 'Başlangıç koşulları · Senaryo parametreleri'],
+      ['Çözüm yöntemi ve tolerans', 'Çözücü', 'Sayısal yöntemler'],
+      ['Hangi analizler koşacak', 'Çözücü', 'Çözüm kümesi'],
+      ['Zincir bulundu mu', 'Çözücü', 'Güç aktarma zinciri'],
+      ['Motor–konvertör uyumu', 'Motor-Konvertör Eşleştirme', 'Konvertör uyumluluk tablosu'],
+      ['Motor–şanzıman uyumu', 'Motor-Şanzıman Eşleştirme', 'Şanzıman uyumluluk tablosu'],
       ['Hazır araç örnekleri', 'Başlangıç ve Örnekler', '—'],
       ['Raporlar', '—', 'Şerit → Rapor']
     ], ['l', 'c', 'l']);
@@ -870,7 +870,7 @@ function veGuideAracHTML(){
     { year: 'numeric', month: 'long', day: 'numeric' });
 
   var govde = veGuideAntet({
-    eyebrow: 'MFSim · Araç Performans Modülü · Kullanım Kılavuzu',
+    eyebrow: 'MFSim · Araç Performans modülü · Kullanım kılavuzu',
     h1: 'Araç Performans Modelleme Kılavuzu',
     sub: 'Motordan tekerleğe: adım adım modelleme, girdi haritası, sonuçların '
        + 'okunması ve işlenmiş örnek',
@@ -901,7 +901,7 @@ function veGuideAracHTML(){
   govde += _gaEkA();
 
   return veGuideDocHTML({
-    title: 'MFSim — Araç Performans Kılavuzu',
+    title: 'MFSim — Araç Performans kılavuzu',
     body: govde
   });
 }
