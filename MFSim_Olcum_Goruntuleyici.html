@@ -252,6 +252,24 @@
       --seri-4: #6cbb87;
     }
 
+    /* ── ORTA KALINLIK WINDOWS'TA YARI KALIN (2026-09-26, kullanıcı kararı 5·B) ──
+       Segoe UI'da 500 yok: tarayıcı 500 isteyen sekmeleri, tablo başlıklarını
+       ve sinyal adlarını (CSS'te 27, JS'te 166 bildirim) NORMAL (400) çiziyor
+       ve vurgu kayboluyordu. Kullanıcı kendi ekranında üç yolu karşılaştırdı
+       ve Segoe UI Semibold'u seçti. 'MFSim Segoe' YALNIZ YEREL ADLARDAN kurulan
+       bir takma aile: 500–650 Semibold'a, ötesi bugünkü eşleşmesine (700 Bold,
+       800 Black) gider. Hiçbir şey gömülmez (url yok): Windows dışında local()
+       bulunamaz, aile yok sayılır ve yığın Inter'e düşer. İtalikler ayrı yüz —
+       yoksa tarayıcı eğik yazıyı SENTEZLERDİ. Kapı: tek-yazi-tipi.test.js. */
+    @font-face{font-family:'MFSim Segoe';font-style:normal;font-weight:100 499;src:local('Segoe UI'),local('SegoeUI');}
+    @font-face{font-family:'MFSim Segoe';font-style:normal;font-weight:500 650;src:local('Segoe UI Semibold'),local('SegoeUI-Semibold');}
+    @font-face{font-family:'MFSim Segoe';font-style:normal;font-weight:651 750;src:local('Segoe UI Bold'),local('SegoeUI-Bold');}
+    @font-face{font-family:'MFSim Segoe';font-style:normal;font-weight:751 1000;src:local('Segoe UI Black'),local('SegoeUI-Black');}
+    @font-face{font-family:'MFSim Segoe';font-style:italic;font-weight:100 499;src:local('Segoe UI Italic'),local('SegoeUI-Italic');}
+    @font-face{font-family:'MFSim Segoe';font-style:italic;font-weight:500 650;src:local('Segoe UI Semibold Italic'),local('SegoeUI-SemiboldItalic');}
+    @font-face{font-family:'MFSim Segoe';font-style:italic;font-weight:651 750;src:local('Segoe UI Bold Italic'),local('SegoeUI-BoldItalic');}
+    @font-face{font-family:'MFSim Segoe';font-style:italic;font-weight:751 1000;src:local('Segoe UI Black Italic'),local('SegoeUI-BlackItalic');}
+
     /* ========== TASARIM SİSTEMİ ÖLÇEKLERİ (tema-bağımsız) ==========
        Renkler temaya göre değişir; aşağıdaki ölçekler tüm temalarda ortaktır.
        Amaç: köşe/derinlik/boşluk/hareket tutarlılığı — "tasarlanmış" his. */
@@ -457,8 +475,9 @@
          yani ağ isteği yok. Inter ikinci sırada KALIR: Windows dışında ve
          indirilen belgelerde (veThemeFontFaceCss onu gömer) aynı yüz olsun.
          Sayıların hizası ayrı bir yüzden değil TABLO RAKAMLARINDAN gelir
-         (gövdede `tabular-nums`). */
-      --font-sans: 'Segoe UI', 'Inter', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+         (gövdede `tabular-nums`). Başta 'MFSim Segoe': aynı Segoe UI, yalnız
+         500'ü Semibold'la çizen yerel takma aile (yukarıda, kullanıcı kararı 5·B). */
+      --font-sans: 'MFSim Segoe', 'Segoe UI', 'Inter', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
       /* EŞ ARALIKLI YÜZ YALNIZ DÜZ METİN İÇİN: hizası BOŞLUKLA kurulmuş metin
          (TXT rapor sayfası) orantılı bir yüzde sütunlarını kaybeder. Arayüzde
          kullanılmaz — izin listesi `source-hygiene.test.js`'te çivili. CAN
@@ -10517,7 +10536,7 @@ function veThemeFontFamily() {
   try {
     aile = getComputedStyle(document.documentElement).getPropertyValue('--font-sans').trim();
   } catch(e) {}
-  return aile || "'Segoe UI', Inter, -apple-system, sans-serif";
+  return aile || "'MFSim Segoe', 'Segoe UI', Inter, -apple-system, sans-serif";
 }
 // Tuvalin `font` kısaltması: '600 11px <aile>'. Grafik kütüphaneleri (Plotly)
 // yalnız aileyi ister → `veThemeFontFamily()`.

@@ -115,7 +115,7 @@ function veThemeFontFamily() {
   try {
     aile = getComputedStyle(document.documentElement).getPropertyValue('--font-sans').trim();
   } catch(e) {}
-  return aile || "'Segoe UI', Inter, -apple-system, sans-serif";
+  return aile || "'MFSim Segoe', 'Segoe UI', Inter, -apple-system, sans-serif";
 }
 // Tuvalin `font` kısaltması: '600 11px <aile>'. Grafik kütüphaneleri (Plotly)
 // yalnız aileyi ister → `veThemeFontFamily()`.

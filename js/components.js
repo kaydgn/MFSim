@@ -1583,6 +1583,13 @@ function veSlaytKaynak(ad) {
 function _veSlaytKarilmis() {
   var liste = (typeof VE_KARSILAMA_GORSELLER !== 'undefined' && VE_KARSILAMA_GORSELLER)
     ? VE_KARSILAMA_GORSELLER.slice() : [];
+  // Ekrana göre süzülür (kullanıcı kararı 6·2): ×1,25'ten fazla büyüyen kare
+  // dönmez. Açılış ekranı (js/loader.js › paintPhoto) AYNI süzgeçten geçer —
+  // yoksa açılış karesi slaytta olmayan bir kare olabilirdi.
+  if(typeof veKarsilamaEkranaUygun === 'function' && typeof veKarsilamaEkranOlcusu === 'function') {
+    var eo = veKarsilamaEkranOlcusu();
+    liste = veKarsilamaEkranaUygun(liste, eo[0], eo[1]);
+  }
   for(var i = liste.length - 1; i > 0; i--) {   // Fisher-Yates
     var j = Math.floor(Math.random() * (i + 1));
     var t = liste[i]; liste[i] = liste[j]; liste[j] = t;

@@ -1391,3 +1391,36 @@ hücrenin anlam rengini eziyordu (etiket/değer ayrımı, eşleşme noktası,
 kırmızı uyarılar); sebebi olan `#333` üreteçten kalktı.
 
 **Kapı.** `rapor-hiza.test.js` + `rapor-hiza.spec.js`.
+
+## Orta kalınlık Windows'ta yarı kalın (2026-09-26, kullanıcı kararı 5·B)
+
+**Hüküm.** `--font-sans` yığının başında `'MFSim Segoe'` takma ailesi
+durur: YALNIZ `local()` adlarından kurulu sekiz yüz (400 Segoe UI, 500–650
+Semibold, 651–750 Bold, 751+ Black; italikleri ayrı). `url(` yok; Windows
+dışında yüzler bulunamaz ve yığın Inter'e düşer. `veThemeFontFaceCss`
+belgelere yalnız gömülü (`url(`) yüz taşır.
+
+**Gerekçe.** Segoe UI'da 500 yok; tarayıcı 500 isteyen sekme, tablo başlığı
+ve sinyal adını (CSS'te 27, JS'te 166 bildirim) 400 çiziyor ve vurgu
+kayboluyordu. Kullanıcı üç yolu kendi ekranında karşılaştırıp Semibold'u
+seçti. Mekanizma Chromium'da ölçüldü (yerel adla bulunan kalın yüz 500'de
+seçiliyor, bulunamayan yüz `error` olup sonraki aileye düşüyor); Windows
+dışında 397 yazı öğesinin 397'si birebir aynı genişlikte.
+
+**Kapı.** `tek-yazi-tipi.test.js` → *"5·B"* + `tek-yazi-tipi.spec.js`.
+
+## Büyüyen karşılama karesi dönmez (2026-09-26, kullanıcı kararı 6·2)
+
+**Hüküm.** Slayt ve açılış ekranı kareyi `veKarsilamaEkranaUygun`dan geçirir:
+ekranı kaplarken (cover) fiziksel pikselde ×1,25'ten fazla büyüyen kare
+dönmez. Eşik en keskin kareye göre ölçeklenir (1,25 × en küçük büyütme,
+1'in altındaysa 1). Dosyalar kalır; ölçüsü bilinmeyen kare elenmez; ekran
+ölçülemezse liste olduğu gibi. Kaynak ölçüsü (`VE_KARSILAMA_OLCU`) webp
+başlığından üretilir — `tools/karsilama-webp.js` listeyle birlikte yazar.
+
+**Gerekçe.** 1920×1080'de 48 karenin 26'sı büyütülüyor, 17'si ×1,25'i aşıyor
+ve yumuşuyordu. Kalite düşürülmez kararı duruyor. Sabit eşik 4K'da her kareyi
+eler ve liste ya boşalır ya da en bulanıklar dâhil hepsine döner.
+
+**Kapı.** `karsilama-slayt.test.js` → *"Kaynak ölçüsü"* + *"×1,25"* ·
+`loader-splash.test.js` → *"açılış karesi ekrana göre süzülür"*.
