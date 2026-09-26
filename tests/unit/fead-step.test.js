@@ -10,6 +10,10 @@
  *   · omuza çıkan tek 70° yanak — gevşek kural klimayı 9 kanallı okuyordu
  *   · dönel yüzler iki yarım yüz — sayım iki katına çıkmasın
  *   · gergi gövdesi avarasından çok yüzlü olabilir — kasnak "en çok yüzlü eksen" değil
+ * ÖNCE ROL, SONRA ANALİZ (kullanıcı kararı 2026-09-26): okuma yalnız ağacı ve
+ * yüzleri çıkarır; kasnak, düzlem ve gergi yalnız rol verilen düğümlerde
+ * aranır. Testlerde rolü TEST verir (`rolle` — açık bir ad eşlemesi);
+ * program adlardan rol önermez.
  * En değerli kapı en altta: Gates AG00686 düzeni STEP olarak yazılıp içe
  * aktarılıyor ve MFSim köprüsü raporun açıklık boylarını ve sarımlarını
  * veriyor — yani dosyadan modele giden zincirin tamamı sınanıyor.
@@ -34,6 +38,24 @@ beforeEach(() => { resetStubs(stubs); });
 // Sentetik montajlar ortak yardımcıda: sihirbazın aktarım testi ve gerçek
 // tarayıcı testi AYNI dosyayı kullanıyor (tests/helpers/step-ornek.js).
 const { feadStep, AG, AG_REF, gergiParcasi, ag00686Step, D } = require('../helpers/step-ornek.js');
+
+// Rolü TEST verir, kullanıcının yerine: düğüm adına göre açık bir eşleme.
+// Program adlardan rol ÖNERMEZ — bu eşleme yalnız testin.
+const ROL = [[/GERG/, 'fead-tensioner'], [/KRANK/, 'fead-crank'], [/KL[İI]MA/, 'fead-ac'],
+  [/AVARA/, 'fead-idler'], [/ALTERNAT/, 'fead-alternator'], [/SU POMPA/, 'fead-waterpump']];
+function rolle(o, kural = ROL) {
+  const r = [];
+  o.agac.forEach((d) => {
+    if (d.ebeveyn < 0 && d.cocuklar.length) return;           // kök montaj rol almaz
+    const k = kural.find(([re]) => re.test(d.ad));
+    if (k) r[d.i] = k[1];
+  });
+  return r;
+}
+function coz(metin, kural) {
+  const o = S.veFeadStpOku(metin);
+  return Object.assign(S.veFeadStpCoz(o, rolle(o, kural)), { _o: o });
+}
 
 // ═════════════════════════════════════════════════════════════════════════
 describe('okuyucu (step-p21): ayrıştırma', () => {
@@ -142,7 +164,7 @@ describe('okuyucu (step-p21): montaj dönüşümleri', () => {
 
 // ═════════════════════════════════════════════════════════════════════════
 describe('tanıyıcı: kaburgalı kasnak', () => {
-  const tek = (profil, opt = {}) => S.veFeadStpOku(feadStep([{ id: 'K', ad: 'KRANK KASNAK', x: 0, y: 0, geometri: [{ profil }] }], opt));
+  const tek = (profil, opt = {}) => coz(feadStep([{ id: 'K', ad: 'KRANK KASNAK', x: 0, y: 0, geometri: [{ profil }] }], opt));
 
   test('dış çap KABURGA TEPESİDİR, en büyük çap değil (omuz Ø150,5)', () => {
     const r = tek(Y.kanalliProfil({ od: 147, n: 8, omuz: 150.5 }));
@@ -187,8 +209,8 @@ describe('tanıyıcı: kaburgalı kasnak', () => {
 
 describe('tanıyıcı: düz kasnak ve gergi', () => {
   test('düz avara: kayış yüzeyi silindiri, genişliği ve temas tarafı', () => {
-    const r = S.veFeadStpOku(ag00686Step());
-    const avara = r.kasnaklar.find((k) => r.parcalar[k.parca].rolOneri === 'fead-idler');
+    const r = coz(ag00686Step());
+    const avara = r.kasnaklar.find((k) => k.tip === 'fead-idler');
     expect(avara.tur).toBe('duz');
     expect(avara.od).toBeCloseTo(75, 9);
     expect(avara.genislik).toBeCloseTo(31.48, 9);
@@ -196,7 +218,7 @@ describe('tanıyıcı: düz kasnak ve gergi', () => {
 
   test('gergi gövdesi avarasından ÇOK YÜZLÜ olsa da kasnak avaradır; pivot bulunur', () => {
     // pivot ekseninde 9 dönel parça = 18 yarım yüz; avara ekseninde 6 yüz
-    const r = S.veFeadStpOku(ag00686Step());
+    const r = coz(ag00686Step());
     expect(r.gergiler).toHaveLength(1);
     const g = r.gergiler[0];
     expect(r.kasnaklar[g.kasnak].od).toBeCloseTo(75, 9);
@@ -204,7 +226,7 @@ describe('tanıyıcı: düz kasnak ve gergi', () => {
     expect(g.pivotYuz).toBe(18);
   });
 
-  test('alt montajlı gergi: rol ATADAN gelir, pivot başka parçada aranır', () => {
+  test('alt montajlı gergi: rol MONTAJ DÜĞÜMÜNE verilir, pivot başka parçada aranır', () => {
     const yz = new Y.StepYaz();
     const kok = yz.urun('ROOT', 'kök');
     const grg = yz.urun('GERGI-ASSY', 'OTOMATİK GERGİ');
@@ -223,10 +245,13 @@ describe('tanıyıcı: düz kasnak ve gergi', () => {
     const t4 = yz.tak(kok, krk, 'K.1', [0, 0, 0]);
     yz.temsil(kok);
     [t1, t2, t3, t4].forEach((t) => yz.bagla(t));
-    const r = S.veFeadStpOku(yz.metin());
+    const r = coz(yz.metin());
+    // Gergi birimi montaj düğümü: kasnak (P1) ve kol (P2) AYNI birimde
+    const b = r.birimler.find((x) => x.tip === 'fead-tensioner');
+    expect(r._o.agac[b.dugum].ad).toBe('OTOMATİK GERGİ');
+    expect(b.parcalar).toHaveLength(2);
     const avara = r.kasnaklar.find((k) => k.tur === 'duz');
-    expect(r.parcalar[avara.parca].rolOneri).toBe('fead-tensioner');
-    expect(r.parcalar[avara.parca].rolKaynagi).toBe('ata');
+    expect(avara.tip).toBe('fead-tensioner');
     expect(r.gergiler).toHaveLength(1);
     expect(r.gergiler[0].kolBoy).toBeCloseTo(90, 9);
   });
@@ -241,7 +266,7 @@ describe('tanıyıcı: düz kasnak ve gergi', () => {
       { tip: 'dogru', s0: 3, r0: R, s1: 15, r1: R },
       { tip: 'dogru', s0: -15, r0: 8.5, s1: 15, r1: 8.5 },
     ];
-    const r = S.veFeadStpOku(feadStep([
+    const r = coz(feadStep([
       { id: 'K', ad: 'KRANK KASNAK', x: 0, y: 0, geometri: [{ profil: Y.kanalliProfil({ od: 150, n: 8 }) }] },
       { id: 'A', ad: 'AVARA', x: 120, y: 60, geometri: [{ profil }] },
     ]));
@@ -259,7 +284,7 @@ describe('tanıyıcı: düz kasnak ve gergi', () => {
       { tip: 'dogru', s0: 9, r0: R + 3, s1: 9, r1: R },
       { tip: 'dogru', s0: 9, r0: R, s1: 15, r1: R },
     ];
-    const r = S.veFeadStpOku(feadStep([
+    const r = coz(feadStep([
       { id: 'K', ad: 'KRANK KASNAK', x: 0, y: 0, geometri: [{ profil: Y.kanalliProfil({ od: 150, n: 6 }) }] },
       { id: 'A', ad: 'AVARA', x: 120, y: 60, geometri: [{ profil }] },
     ]));
@@ -281,26 +306,26 @@ describe('tanıyıcı: düz kasnak ve gergi', () => {
 
 describe('tanıyıcı: bakış yönü görünür bir varsayılan', () => {
   test('orijin düzlemin arkasında → önden bakış; x ekseni doğru tarafta', () => {
-    const r = S.veFeadStpOku(ag00686Step());
+    const r = coz(ag00686Step());
     expect(r.bakis.kaynak).toBe('orijin');
     const iki = S.veFeadStp2B(r);
-    const ac = r.kasnaklar.findIndex((k) => r.parcalar[k.parca].rolOneri === 'fead-ac');
+    const ac = r.kasnaklar.findIndex((k) => k.tip === 'fead-ac');
     expect(iki.kasnaklar[ac].x).toBeCloseTo(AG.ac.x, 9);
     expect(iki.kasnaklar[ac].y).toBeCloseTo(AG.ac.y, 9);
   });
 
   test('motor düzlemin ÖBÜR yanında: bakış çevrilir, aynı 2B düzen çıkar', () => {
-    const r = S.veFeadStpOku(ag00686Step({ motor: '-X' }));
+    const r = coz(ag00686Step({ motor: '-X' }));
     expect(r.bakis.kaynak).toBe('orijin');
     const iki = S.veFeadStp2B(r);
-    const bul = (tip) => iki.kasnaklar[r.kasnaklar.findIndex((k) => r.parcalar[k.parca].rolOneri === tip)];
+    const bul = (tip) => iki.kasnaklar[r.kasnaklar.findIndex((k) => k.tip === tip)];
     expect(bul('fead-ac').x).toBeCloseTo(AG.ac.x, 9);
     expect(bul('fead-idler').x).toBeCloseTo(AG.idr.x, 9);
     expect(iki.gergiler[0].kolAci).toBeCloseTo(AG.aci, 9);
   });
 
   test('ayna: x işaret değiştirir, y aynı kalır', () => {
-    const r = S.veFeadStpOku(ag00686Step());
+    const r = coz(ag00686Step());
     const a = S.veFeadStp2B(r), b = S.veFeadStp2B(r, { ayna: true });
     a.kasnaklar.forEach((p, i) => {
       expect(b.kasnaklar[i].x).toBeCloseTo(-p.x, 9);
@@ -309,41 +334,132 @@ describe('tanıyıcı: bakış yönü görünür bir varsayılan', () => {
   });
 
   test('orijin düzlemin ÜSTÜNDE: varsayım yapılmaz, uyarı yazılır', () => {
-    const r = S.veFeadStpOku(ag00686Step({ duzlem: 0 }));
+    const r = coz(ag00686Step({ duzlem: 0 }));
     expect(r.bakis.kaynak).toBe('varsayilan');
     expect(r.uyarilar.join(' ')).toMatch(/Bakış yönü dosyadan çıkarılamadı/);
   });
 });
 
-describe('tanıyıcı: rol ADDAN önerilir', () => {
-  test('krank klimadan KÜÇÜK olsa da krank addan bulunur (geometriden tahmin yok)', () => {
-    const r = S.veFeadStpOku(feadStep([
+describe('ROL KULLANICININ: okuma kasnak aramaz, analiz yalnız rol verilen düğümlerde', () => {
+  // Kullanıcı kararı (2026-09-26): *"program biz seçtikten sonra çıkaracak;
+  // yoksa farklı dosyalarda problem yaşayabiliriz."*
+  test('okuma yalnız AĞAÇ ve YÜZ: kasnak listesi yok, rol yok; rolsüz çözüm hata döner', () => {
+    const o = S.veFeadStpOku(ag00686Step());
+    expect(o.ok).toBe(true);
+    expect(o.kasnaklar).toBeUndefined();
+    expect(o.agac[0].ebeveyn).toBe(-1);
+    expect(o.agac.map((d) => d.ad).slice(1)).toEqual(['KRANK KASNAK-Ø160 8PK', 'AVARA KASNAK Ø75x32,5',
+      'KLİMA KOMPRESÖRÜ-Ø127-8PK', 'OTOMATİK GERGİ-T38624', 'KAYIŞ - 8PK1475']);
+    expect(o.parcalar).toHaveLength(5);
+    expect(o.agac[0].parcalar).toHaveLength(5);
+    const c = S.veFeadStpCoz(o, []);
+    expect(c.ok).toBe(false);
+    expect(c.hatalar).toEqual(['Hiçbir parçaya rol verilmedi.']);
+  });
+
+  test('sürücüyü GEOMETRİ değil kullanıcı seçer: krank klimadan küçük olsa da', () => {
+    const r = coz(feadStep([
       { id: 'A', ad: 'KLİMA KOMPRESÖRÜ', x: 250, y: 200, geometri: [{ profil: Y.kanalliProfil({ od: 160, n: 8 }) }] },
       { id: 'K', ad: 'KRANK KASNAK', x: 0, y: 0, geometri: [{ profil: Y.kanalliProfil({ od: 130, n: 8 }) }] },
     ]));
-    const rol = (od) => r.kasnaklar.find((k) => Math.abs(k.od - od) < 1e-6).rolOneri;
-    expect(rol(130)).toBe('fead-crank');
-    expect(rol(160)).toBe('fead-ac');
     const kay = S.veFeadStpKayit(r, { gergiKatalog: [] });
     expect(kay.pulleys.find((p) => p.data.driver).data.od).toBeCloseTo(130, 9);
   });
 
-  test.each([
-    ['KRANK KASNAK-Ø147 8PK', 'fead-crank'],
-    ['ACE21 KLIMA KOMPRESORU-Ø137-8PK-24V', 'fead-ac'],
-    ['KLİMA KOMPRESÖRÜ', 'fead-ac'],
-    ['AVARA KASNAK-E9839A4F1540-A_Ø75x32,5', 'fead-idler'],
-    ['OTOMATIK GERGI-E9843A1F3200A', 'fead-tensioner'],
-    ['GERGİ AVARASI', 'fead-tensioner'],
-    ['KAYIS - 8PK1410', 'kayis'],
-    ['Alternatör 28V 150A', 'fead-alternator'],
-    ['SU POMPASI', 'fead-waterpump'],
-    ['DİREKSİYON POMPASI', 'fead-ps'],
-    ['HAVA KOMPRESÖRÜ', 'fead-aircomp'],
-    ['FAN KAVRAMASI', 'fead-fan'],
-    ['KOMPRESÖR', null],
-    ['147KASNAK', null],
-  ])('%s → %s', (ad, tip) => { expect(S.veFeadStpRol(ad)).toBe(tip); });
+  // "Farklı dosyalarda problem": montajda seçilmemiş başka bir kanallı kasnak
+  // (ikinci bir kayışın kasnağı) başka bir düzlemde duruyor. Eski tanıyıcı onu
+  // da kasnak sayıyor ve düzlemi ortancadan kuruyordu.
+  const ikinciKayis = () => feadStep([
+    { id: 'K', ad: 'KRANK KASNAK', x: 0, y: 0, geometri: [{ profil: Y.kanalliProfil({ od: 150, n: 8 }) }] },
+    { id: 'A', ad: 'KLİMA KOMPRESÖRÜ', x: 250, y: 200, geometri: [{ profil: Y.kanalliProfil({ od: 120, n: 8 }) }] },
+    { id: 'H', ad: 'HİDROLİK POMPA — İKİNCİ KAYIŞ', x: -150, y: 250,
+      geometri: [{ profil: Y.kanalliProfil({ od: 110, n: 6 }), yerel: [0, 0, 45] }] },
+    { id: 'B', ad: 'SU POMPASI GÖVDESİ', x: -150, y: 80,
+      geometri: [{ profil: Y.kanalliProfil({ od: 140, n: 6 }), yerel: [0, 0, 45] }] },
+  ]);
+  test('rol verilmeyen parça ANALİZ EDİLMEZ ve düzlemi bozmaz', () => {
+    const r = coz(ikinciKayis(), [[/KRANK/, 'fead-crank'], [/KL[İI]MA/, 'fead-ac']]);
+    expect(r.kasnaklar.map((k) => k.tip)).toEqual(['fead-crank', 'fead-ac']);
+    expect(r.duzlem.yayilim).toBeLessThan(1e-9);
+    expect(r.uyarilar).toEqual([]);
+  });
+  test('düzlem EN ÇOK birimi oturtan konum: yanlış düzlemdeki rollü parça aktarılmaz ve SÖYLENİR', () => {
+    // Kullanıcı ikinci kayışın pompasına da rol verdi: 2 birim düzlem A'da, 1'i 45 mm ötede
+    const r = coz(ikinciKayis(), [[/KRANK/, 'fead-crank'], [/KL[İI]MA/, 'fead-ac'], [/HİDROLİK/, 'fead-ps']]);
+    expect(r.kasnaklar.map((k) => k.tip)).toEqual(['fead-crank', 'fead-ac']);
+    expect(r.uyarilar.join(' ')).toMatch(/HİDROLİK POMPA .* kayış düzleminde değil; aktarılmaz/);
+  });
+
+  test('İKİ İZLİ krank damperi: izi öteki birimlerin düzlemi seçer', () => {
+    // Krank parçasında iki kanal bölgesi: 8PK (düzlemde) ve 6PK (40 mm geride,
+    // başka bir kayışın izi). Eski tanıyıcı ikisini de kasnak sayıyordu.
+    const r = coz(feadStep([
+      { id: 'K', ad: 'KRANK DAMPER', x: 0, y: 0, geometri: [
+        { profil: Y.kanalliProfil({ od: 150, n: 8 }) },
+        { profil: Y.kanalliProfil({ od: 172, n: 6 }), yerel: [0, 0, -40] }] },
+      { id: 'A', ad: 'KLİMA KOMPRESÖRÜ', x: 250, y: 200, geometri: [{ profil: Y.kanalliProfil({ od: 120, n: 8 }) }] },
+      { id: 'I', ad: 'AVARA', x: 150, y: 20, geometri: [{ profil: Y.duzProfil({ od: 75 }) }] },
+    ]));
+    expect(r.kasnaklar).toHaveLength(3);
+    const kr = r.kasnaklar.find((k) => k.tip === 'fead-crank');
+    expect(kr.od).toBeCloseTo(150, 9);
+    expect(kr.kanal).toBe(8);
+    expect(r.duzlem.yayilim).toBeLessThan(1e-9);
+  });
+
+  test('rol yüzeyi SEÇMEZ: kaburgalı AVARA kanallı okunur (temas kaburgalı)', () => {
+    // Kaburgalı kasnağın kanal tepeleri arasındaki silindirler birleşip
+    // kayışı kapsayan bir DÜZ aday da kurar; "avarada önce düz" diyen kural
+    // bu avarayı sırttan temaslı okurdu.
+    const r = coz(feadStep([
+      { id: 'K', ad: 'KRANK KASNAK', x: 0, y: 0, geometri: [{ profil: Y.kanalliProfil({ od: 150, n: 8 }) }] },
+      { id: 'I', ad: 'AVARA KABURGALI', x: 140, y: 110, geometri: [{ profil: Y.kanalliProfil({ od: 70, n: 8 }) }] },
+    ]));
+    const av = r.kasnaklar.find((k) => k.tip === 'fead-idler');
+    expect(av.tur).toBe('kanalli');
+    expect(av.od).toBeCloseTo(70, 9);
+    const kay = S.veFeadStpKayit(r, { gergiKatalog: [] });
+    expect(kay.pulleys.find((p) => p.type === 'fead-idler').data.contact).toBe('grooved');
+  });
+
+  test('kanalsız aksesuar düz yüzeye düşer ve temas tarafı söylenir', () => {
+    const r = coz(feadStep([
+      { id: 'K', ad: 'KRANK KASNAK', x: 0, y: 0, geometri: [{ profil: Y.kanalliProfil({ od: 150, n: 8 }) }] },
+      { id: 'W', ad: 'SU POMPASI', x: 120, y: 90, geometri: [{ profil: Y.duzProfil({ od: 90 }) }] },
+    ]));
+    const w = r.kasnaklar.find((k) => k.tip === 'fead-waterpump');
+    expect(w.tur).toBe('duz');
+    expect(w.od).toBeCloseTo(90, 9);
+    const kay = S.veFeadStpKayit(r, { gergiKatalog: [] });
+    expect(kay.pulleys.find((p) => p.type === 'fead-waterpump').data.contact).toBe('back');
+    expect(kay.uyarilar.join(' ')).toMatch(/SU POMPASI" düz yüzeyli ama rolü fead-waterpump/);
+  });
+
+  test('bir parça TEK birime ait: rollü iki atadan EN YAKINI alır', () => {
+    const yz = new Y.StepYaz();
+    const kok = yz.urun('ROOT', 'kök');
+    const grg = yz.urun('GERGI-ASSY', 'OTOMATİK GERGİ');
+    const kas = yz.urun('P1', 'KASNAK');
+    const kol = yz.urun('P2', 'KOL');
+    yz.govde(kas, Y.profilYuzleri(yz, Y.eksen(), Y.duzProfil({ od: 75 })));
+    yz.govde(kol, Y.profilYuzleri(yz, Y.eksen([90, 0, 0]), Y.pivotProfil()));
+    yz.temsil(kas); yz.temsil(kol);
+    const t1 = yz.tak(grg, kas, 'P1.1', [0, 0, 0]);
+    const t2 = yz.tak(grg, kol, 'P2.1', [0, 0, 0]);
+    yz.temsil(grg);
+    const t3 = yz.tak(kok, grg, 'GERGI-ASSY.1', [0, 120, 0]);
+    yz.temsil(kok);
+    [t1, t2, t3].forEach((t) => yz.bagla(t));
+    const o = S.veFeadStpOku(yz.metin());
+    const i = (ad) => o.agac.findIndex((d) => d.ad === ad);
+    const roller = [];
+    roller[i('OTOMATİK GERGİ')] = 'fead-tensioner';
+    roller[i('KASNAK')] = 'fead-idler';
+    const c = S.veFeadStpCoz(o, roller);
+    const b = (tip) => c.birimler.find((x) => x.tip === tip);
+    expect(b('fead-idler').parcalar).toEqual([o.parcalar.find((p) => p.ad === 'KASNAK').i]);
+    expect(b('fead-tensioner').parcalar).toEqual([o.parcalar.find((p) => p.ad === 'KOL').i]);
+  });
 });
 
 // ═════════════════════════════════════════════════════════════════════════
@@ -358,7 +474,7 @@ describe('uçtan uca: STEP → örnek kaydı → köprü → Gates AG00686', () 
   const TIP_AD = { 'fead-crank': 'CRK', 'fead-idler': 'IDR', 'fead-ac': 'A_C', 'fead-tensioner': 'TEN' };
 
   function kur() {
-    const sonuc = S.veFeadStpOku(ag00686Step());
+    const sonuc = coz(ag00686Step());
     const kayit = S.veFeadStpKayit(sonuc, { gergiKatalog: TEN.VE_FEAD_TENSIONER_DB, ad: 'AG00686 STEP' });
     const dugum = kayit.pulleys.map((p) => ({ id: 'st-' + p.key, type: p.type, customName: TIP_AD[p.type],
       def: componentDefs[p.type], data: JSON.parse(JSON.stringify(p.data)) }));
@@ -392,11 +508,11 @@ describe('uçtan uca: STEP → örnek kaydı → köprü → Gates AG00686', () 
     expect(t.armLen).toBeCloseTo(90, 9);
     expect(t.armMeanDeg).toBeCloseTo(AG.aci, 9);
     expect(t.tenPart).toBe('T38624');
-    // kayış parçası kasnak olarak GELMEZ (dosyada kayış düzlemi ortalayan
-    // geniş bir silindir olarak duruyor — düz kasnak kuralına uyuyor); sıra
-    // ağaç sırası ve öyle işaretli
-    expect(sonuc.kasnaklar.map((k) => sonuc.parcalar[k.parca].rolOneri)).not.toContain('kayis');
-    expect(kayit.pulleys.map((p) => p.type)).not.toContain('kayis');
+    // Kayış parçası rol ALMADI: analiz edilmez (dosyada kayış düzlemi ortalayan
+    // geniş bir silindir olarak duruyor — rol verilseydi düz kasnak kuralına
+    // uyardı); sıra ağaç sırası ve öyle işaretli
+    expect(sonuc.kasnaklar).toHaveLength(4);
+    expect(sonuc._o.agac.some((d) => /KAYIŞ/.test(d.ad))).toBe(true);
     expect(kayit.siraKaynagi).toBe('agac');
     expect(kayit.route.map((k) => by[Object.keys(by).find((tp) => by[tp].key === k)].type))
       .toEqual(['fead-crank', 'fead-idler', 'fead-ac', 'fead-tensioner']);

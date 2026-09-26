@@ -23,10 +23,18 @@
 // gevşek kural aynı dosyada klimayı 9 kanallı okuyordu. Kanal adımı
 // profili verir (PH 1,60 · PJ 2,34 · PK 3,56 · PL 4,70 · PM 9,40).
 //
-// ── ROL ADDAN ÖNERİLİR, GEOMETRİDEN TAHMİN EDİLMEZ ───────────────────────
-// "En büyük kanallı kasnak kranktır" gibi bir sezgi sessizce yanlış bir
-// sürücü seçerdi. Rol yalnız ürün ağacındaki adlardan ÖNERİLİR; kullanıcı
-// onaylar ya da değiştirir.
+// ── ÖNCE ROL, SONRA ANALİZ ───────────────────────────────────────────────
+// Kullanıcı kararı (2026-09-26): *"program biz seçtikten sonra çıkaracak;
+// yoksa farklı dosyalarda problem yaşayabiliriz."* Dosya bütünüyle
+// TARANMAZ: `veFeadStpOku` yalnız ürün ağacını ve yüzleri çıkarır; kasnak,
+// kayış düzlemi ve gergi ANCAK kullanıcı bir düğüme rol verdikten sonra ve
+// YALNIZ o düğümün parçalarında aranır (`veFeadStpCoz`). Ad hiçbir şeye
+// karar vermez (başka bir dosyada "ALT" başka bir şey olabilir) ve rol
+// geometriden tahmin edilmez ("en büyük kanallı kasnak kranktır" sessizce
+// yanlış bir sürücü seçerdi). Rol YÜZEYİ SEÇMEZ: düzlemdeki bir kanal
+// bölgesi kasnağı kaburgalı yapar (kaburgalı avara da vardır), yoksa kayışı
+// taşıyan düz yüzey alınır. Rol, modelde parçanın NE olduğunu söyler:
+// sürücü, gergi ve gerginin pivotu.
 //
 // ── BAKIŞ YÖNÜ GÖRÜNÜR BİR VARSAYILANDIR ────────────────────────────────
 // 3B'den 2B'ye geçerken düzleme hangi taraftan bakıldığı dosyada yazmaz; iki
@@ -40,7 +48,7 @@
 // gergi sonda) ve `siraKaynagi: 'agac'` olarak işaretlenir.
 // ============================================================================
 
-var VE_FEAD_STP_SURUM = '1.0.0';
+var VE_FEAD_STP_SURUM = '2.0.0';
 
 // ISO 9982 kaburga adımları (mm) ve kabul payı
 var VE_FEAD_STP_PROFILLER = [
@@ -57,46 +65,14 @@ var VE_FEAD_STP_TOL = {
   pivotMin: 15, pivotMaks: 250      // gergi kolu aralığı (mm)
 };
 
-// ── ROL ÖNERİSİ ───────────────────────────────────────────────────────────
-// Türkçe harfler katlanır; kurallar sırayla denenir (gergi önce: "GERGİ
-// AVARASI" bir avara değil gerginin kasnağıdır).
-var VE_FEAD_STP_ROL_KURAL = [
-  { re: /\bGERGI|TENSION|SPANNER|TENDEUR/, tip: 'fead-tensioner' },
-  { re: /\bKAYIS\b|\bBELT\b|\bRIEMEN\b|\b\d{1,2}\s*P[HJKLM]\s*\d{3,5}\b/, tip: 'kayis' },
-  { re: /\bKRANK|\bCRANK|\bDAMPER|\bKURBEL/, tip: 'fead-crank' },
-  { re: /\bKLIMA|\bA\/C\b|\bAIR\s*CON|\bKALTE/, tip: 'fead-ac' },
-  { re: /\bHAVA\s*KOMPRES|\bAIR\s*COMPRES|\bLUFTPRESS/, tip: 'fead-aircomp' },
-  { re: /\bALTERNAT|\bALT\b|\bGENERATOR|\bSARJ\s*DINAMO|\bLICHTMASCH/, tip: 'fead-alternator' },
-  { re: /\bSU\s*POMPA|\bDEVIRDAIM|\bWATER\s*PUMP|\bW\/P\b|\bWASSERPUMP/, tip: 'fead-waterpump' },
-  { re: /\bDIREKSIYON|\bHIDROLIK\s*POMPA|\bPOWER\s*STEER|\bP\/S\b|\bSERVO/, tip: 'fead-ps' },
-  { re: /\bFAN\b|\bVISKOZ|\bVISCOUS|\bLUFTER/, tip: 'fead-fan' },
-  { re: /\bAVARA|\bIDLER|\bUMLENK|\bROLLE\b/, tip: 'fead-idler' }
-];
-
+// Türkçe harf katlama: gerginin parça kodunu katalogda aramak için (ad bir
+// şeye KARAR vermez; yalnız kod eşleşmesi).
 function _fstKatla(s){
   return String(s == null ? '' : s)
     .replace(/[İIı]/g, 'I').replace(/[Şş]/g, 'S').replace(/[Ğğ]/g, 'G').replace(/[Üü]/g, 'U')
     .replace(/[Öö]/g, 'O').replace(/[Çç]/g, 'C').toUpperCase().replace(/[^A-Z0-9\/]+/g, ' ');
 }
-
-function veFeadStpRol(metin){
-  var k = ' ' + _fstKatla(metin) + ' ';
-  for(var i = 0; i < VE_FEAD_STP_ROL_KURAL.length; i++)
-    if(VE_FEAD_STP_ROL_KURAL[i].re.test(k)) return VE_FEAD_STP_ROL_KURAL[i].tip;
-  return null;
-}
-
-// Parçanın rolü: kendi açıklaması → adı → numarası → en yakın atanın adları
-function _fstParcaRol(p){
-  var adaylar = [p.urun.aciklama, p.urun.ad, p.urun.id, p.ornek];
-  for(var i = 0; i < adaylar.length; i++){ var r = veFeadStpRol(adaylar[i]); if(r) return { tip: r, kaynak: 'ad' }; }
-  for(var j = (p.atalar || []).length - 1; j >= 0; j--){
-    var a = p.atalar[j];
-    var r2 = veFeadStpRol(a.aciklama) || veFeadStpRol(a.ad) || veFeadStpRol(a.id);
-    if(r2) return { tip: r2, kaynak: 'ata' };
-  }
-  return { tip: null, kaynak: null };
-}
+function _fstAd(s){ return String(s == null ? '' : s).replace(/\s+/g, ' ').trim(); }
 
 // ── VEKTÖR ────────────────────────────────────────────────────────────────
 function _fstNokta(a, b){ return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
@@ -249,115 +225,190 @@ function _fstDuz(profil){
   return { od: 2 * rk, s: (enIyi.s0 + enIyi.s1) / 2, genislik: enIyi.s1 - enIyi.s0 };
 }
 
-// ── 5 · ANA OKUMA ─────────────────────────────────────────────────────────
+// ── 5 · OKUMA: ağaç ve yüzler (analiz YOK) ───────────────────────────────
 // Döner (asla fırlatmaz):
-//   { ok, hatalar[], uyarilar[], baslik, sureMs, parcalar[], kasnaklar[],
-//     gergiler[], duzlem, bakis }
-function veFeadStpOku(metin, opt){
-  opt = opt || {};
+//   { ok, hatalar[], uyarilar[], baslik, sureMs,
+//     agac[]     — { i, ad, id, ornek, derinlik, ebeveyn, cocuklar[], parcalar[] }
+//                  `parcalar`: düğümün ALTINDAKİ bütün geometrili parçalar
+//     parcalar[] — { i, ad, id, ornek, dugum, yuzSayisi }
+//     _yuz[]     — parça başına analitik yüzler (dünya koordinatı, mm) }
+// Kasnak ARANMAZ: kullanıcı rol verene kadar hiçbir parça "kasnak" sayılmaz.
+function veFeadStpOku(metin){
   // Tarayıcıda okuyucu global (index.html'de bu dosyadan ÖNCE); Node'da modül.
   var P = null;
   if(typeof veStepP21Oku === 'function')
     P = { veStepP21Oku: veStepP21Oku, veStepP21Montaj: veStepP21Montaj, veStepP21Yuz: veStepP21Yuz, veStepP21Baslik: veStepP21Baslik };
   else if(typeof require === 'function'){ try { P = require('./step-p21.js'); } catch(e0){ P = null; } }
-  var out = { ok: false, hatalar: [], uyarilar: [], baslik: null, sureMs: {}, parcalar: [], kasnaklar: [],
-              gergiler: [], duzlem: null, bakis: null };
+  var out = { ok: false, hatalar: [], uyarilar: [], baslik: null, sureMs: {}, agac: [], parcalar: [], _yuz: [] };
   if(!P){ out.hatalar.push('STEP okuyucusu (js/step-p21.js) yüklenmemiş.'); return out; }
-  var oku = P.veStepP21Oku, montajF = P.veStepP21Montaj, yuzF = P.veStepP21Yuz, baslikF = P.veStepP21Baslik;
-  var t0 = Date.now();
-  var model;
-  try { model = oku(metin); } catch(e){ out.hatalar.push('Dosya okunamadı: ' + e.message); return out; }
+  var t0 = Date.now(), model, mt;
+  try { model = P.veStepP21Oku(metin); } catch(e){ out.hatalar.push('Dosya okunamadı: ' + e.message); return out; }
   if(model.hatalar.length){ out.hatalar = model.hatalar.slice(); return out; }
-  out.baslik = baslikF(model);
+  out.baslik = P.veStepP21Baslik(model);
   out.sureMs.oku = Date.now() - t0;
-  var t1 = Date.now(), mt;
-  try { mt = montajF(model); } catch(e2){ out.hatalar.push('Montaj ağacı okunamadı: ' + e2.message); return out; }
+  var t1 = Date.now();
+  try { mt = P.veStepP21Montaj(model); } catch(e2){ out.hatalar.push('Montaj ağacı okunamadı: ' + e2.message); return out; }
   out.uyarilar = out.uyarilar.concat(mt.uyarilar);
   out.sureMs.montaj = Date.now() - t1;
-  var t2 = Date.now();
-  var toplamYuz = 0;
-  var gruplar = [];            // parça başına eksen kümeleri (gergi pivotu için)
-  var duzAdaylar = [];         // düz kasnak adayları (seçim düzlemden sonra)
-  mt.parcalar.forEach(function(p, pi){
-    var rol = _fstParcaRol(p);
-    var ad = (p.urun.aciklama || p.urun.ad || p.urun.id || p.ornek || '').replace(/\s*\n\s*/g, ' ').trim();
-    var birim = p.birim;
-    if(p.yuzler.length && !(birim.mm > 0)){
-      out.uyarilar.push('"' + ad + '" parçasının uzunluk birimi okunamadı; mm varsayılmadı, parça atlandı.');
-      gruplar.push([]);
-      out.parcalar.push({ i: pi, ad: ad, id: p.urun.id, ornek: p.ornek, rolOneri: rol.tip, rolKaynagi: rol.kaynak,
-        yuzSayisi: p.yuzler.length, kasnaklar: [] });
-      return;
-    }
-    var yuzler = [];
-    try { p.yuzler.forEach(function(f){ yuzler.push(yuzF(model, f, p.M, birim)); }); }
-    catch(e3){ out.uyarilar.push('"' + ad + '" parçasının yüzleri okunamadı: ' + e3.message); }
-    toplamYuz += yuzler.length;
-    var G = _fstEksenler(yuzler);
-    gruplar.push(G.map(function(g){ return { o: g.o, d: g.d, n: g.yuzler.length, profil: null, yuzler: yuzler }; }));
-    var parca = { i: pi, ad: ad, id: p.urun.id, ornek: p.ornek, rolOneri: rol.tip, rolKaynagi: rol.kaynak,
-                  yuzSayisi: yuzler.length, kasnaklar: [] };
-    out.parcalar.push(parca);
-    if(rol.tip === 'kayis') return;                // kayışa dokunulmaz
-    // kanallı adaylar: bütün eksenlerde
-    var kanalli = [];
-    G.forEach(function(g, gi){
-      var pr = _fstProfil(yuzler, g);
-      gruplar[pi][gi].profil = pr;
-      _fstKanallar(pr).forEach(function(b){
-        var kenar = -Infinity;
-        pr.forEach(function(r){ if(r.tip !== 'PLANE' && r.rMax > kenar) kenar = r.rMax; });
-        kanalli.push({ tur: 'kanalli', parca: pi, grup: gi, od: b.od, kanal: b.n, adim: b.adim, adimSapma: b.adimSapma,
-          profil: b.profil, tabanCap: b.taban, enBuyukCap: 2 * kenar,
-          merkez: _fstTopla(g.o, _fstCarp(g.d, b.s)), eksen: g.d });
-      });
-    });
-    if(kanalli.length){ kanalli.forEach(function(k){ out.kasnaklar.push(k); }); return; }
-    // Düz adaylar: eksen başına biri. SEÇİM DÜZLEM BULUNDUKTAN SONRA — "en çok
-    // yüzü olan eksen" gibi bir kural, gövdesi avarasından karmaşık bir
-    // gergide gövdeyi kasnak sanardı.
-    G.forEach(function(g, gi){
-      var pr = gruplar[pi][gi].profil;
-      var d = _fstDuz(pr);
-      if(!d) return;
-      var kenar = -Infinity;
-      pr.forEach(function(r){ if(r.tip !== 'PLANE' && r.rMax > kenar) kenar = r.rMax; });
-      duzAdaylar.push({ tur: 'duz', parca: pi, grup: gi, od: d.od, genislik: d.genislik, enBuyukCap: 2 * kenar,
-                        merkez: _fstTopla(g.o, _fstCarp(g.d, d.s)), eksen: g.d, grupYuz: g.yuzler.length });
-    });
-  });
 
-  // ── ORTAK DÜZLEM ───────────────────────────────────────────────────────
-  var kaynak = out.kasnaklar.length ? out.kasnaklar : duzAdaylar;
-  if(!kaynak.length){
-    out.hatalar.push(toplamYuz ? 'Dosyada kasnak bulunamadı: hiçbir parçada kaburga kanalı ya da düz kasnak yüzeyi yok.'
-                               : 'Dosyada okunabilir yüz yok. Dosya yalnız üçgen (tessellated) geometri taşıyor olabilir; CATIA’dan katı geometri olarak dışa aktarın.');
-    out.sureMs.analiz = Date.now() - t2;
+  // ── AĞAÇ: örnek yolunun her öneki bir düğüm (kök · alt montaj · parça) ──
+  var anahtar = {};
+  function dugum(yol, urun, ebeveyn){
+    var k = yol.join('\u0001');
+    if(anahtar[k] !== undefined) return anahtar[k];
+    var i = out.agac.length;
+    out.agac.push({ i: i, ad: _fstAd(urun.aciklama || urun.ad || urun.id || yol[yol.length - 1] || ''),
+      id: urun.id || '', ornek: yol.length ? yol[yol.length - 1] : '', derinlik: yol.length,
+      ebeveyn: ebeveyn, cocuklar: [], parcalar: [] });
+    anahtar[k] = i;
+    if(ebeveyn >= 0) out.agac[ebeveyn].cocuklar.push(i);
+    return i;
+  }
+  var t2 = Date.now(), toplamYuz = 0;
+  mt.parcalar.forEach(function(p){
+    var e = -1;
+    for(var k = 0; k < p.yol.length; k++)
+      e = dugum(p.yol.slice(0, k), p.atalar[k] || { id: '', ad: '', aciklama: '' }, e);
+    var d = dugum(p.yol, p.urun, e);
+    var ad = out.agac[d].ad;
+    var yuzler = [];
+    if(p.yuzler.length && !(p.birim.mm > 0))
+      out.uyarilar.push('"' + ad + '" parçasının uzunluk birimi okunamadı; mm varsayılmadı, parça atlandı.');
+    else {
+      try { p.yuzler.forEach(function(f){ yuzler.push(P.veStepP21Yuz(model, f, p.M, p.birim)); }); }
+      catch(e3){ out.uyarilar.push('"' + ad + '" parçasının yüzleri okunamadı: ' + e3.message); }
+    }
+    toplamYuz += yuzler.length;
+    var pi = out.parcalar.length;
+    out.parcalar.push({ i: pi, ad: ad, id: p.urun.id, ornek: p.ornek, dugum: d, yuzSayisi: yuzler.length });
+    out._yuz.push(yuzler);
+    for(var a = d; a >= 0; a = out.agac[a].ebeveyn) out.agac[a].parcalar.push(pi);
+  });
+  out.sureMs.yuz = Date.now() - t2;
+  if(!toplamYuz){
+    out.hatalar.push('Dosyada okunabilir yüz yok. Dosya yalnız üçgen (tessellated) geometri taşıyor olabilir; CATIA’dan katı geometri olarak dışa aktarın.');
     return out;
   }
-  var n = _fstYonCogunluk(kaynak.map(function(k){ return k.eksen; }));
-  var konumlar = kaynak.map(function(k){ return _fstNokta(k.merkez, n); }).sort(function(a, b){ return a - b; });
-  var p0 = konumlar[Math.floor(konumlar.length / 2)];
-  // Düz kasnak = KAYIŞI TAŞIYAN yüzey: ekseni düzleme dik, genişliği kayışı
-  // kapsıyor ve kayış düzleminde ortalanmış. Kayış genişliği kanallı
-  // kasnaklardan (kanal × adım); kanallı kasnak yoksa 10 mm.
-  var kg = 0;
-  out.kasnaklar.forEach(function(k){ kg = Math.max(kg, k.kanal * k.adim); });
-  if(!(kg > 0)) kg = 10;
-  var parcaDuz = {};
-  duzAdaylar.forEach(function(a){
-    if(_fstAciDer(a.eksen, n) > VE_FEAD_STP_TOL.duzlemAci) return;
-    var kay = Math.abs(_fstNokta(a.merkez, n) - p0);
-    var kapsar = a.genislik >= kg - 1 && kay <= (a.genislik - kg) / 2 + 1;
-    var kesiyor = kay <= a.genislik / 2 + 2;
-    if(!kesiyor) return;
-    a.puan = (kapsar ? 0 : 1000) + kay - a.grupYuz * 1e-6;
-    var o = parcaDuz[a.parca];
-    if(!o || a.puan < o.puan) parcaDuz[a.parca] = a;
+  out.ok = true;
+  return out;
+}
+
+// ── 5b · ÇÖZÜM: yalnız ROL VERİLEN düğümler ───────────────────────────────
+// `roller[dugumIndisi]` = kasnak tipi ('fead-crank' · 'fead-idler' ·
+// 'fead-tensioner' …). Rol verilen düğüm bir BİRİMDİR: altındaki bütün
+// parçalar tek kasnak (gergide: kasnak + pivot) olarak incelenir — tedarikçi
+// gergiyi çoğu zaman alt montaj olarak verir (kol · gövde · kasnak ayrı
+// parça). Bir parça tek birime aittir: rollü iki ata varsa EN YAKINI alır.
+// Döner (asla fırlatmaz):
+//   { ok, hatalar[], uyarilar[], baslik, birimler[], kasnaklar[], gergiler[], duzlem, bakis }
+//
+// KAYIŞ DÜZLEMİ EN ÇOK BİRİMİ OTURTAN KONUMDUR, ortanca değil: iki izli bir
+// krank damperi ya da seçilmiş bir parçadaki ikinci kanal bölgesi ortancayı
+// kaydırırdı. Konum adayları kanallı bölgelerden (yoksa düz yüzeylerden)
+// gelir; her birim düzleme oturan adaylarından BİRİYLE temsil edilir.
+function veFeadStpCoz(sonuc, roller){
+  var T = VE_FEAD_STP_TOL;
+  var out = { ok: false, hatalar: [], uyarilar: [], baslik: sonuc && sonuc.baslik, birimler: [],
+              kasnaklar: [], gergiler: [], duzlem: null, bakis: null };
+  if(!sonuc || !sonuc.ok){ out.hatalar.push('Okunmuş bir STEP dosyası yok.'); return out; }
+  roller = roller || [];
+  // ── BİRİMLER ───────────────────────────────────────────────────────────
+  var birimDugum = {};
+  sonuc.agac.forEach(function(d){
+    if(!roller[d.i]) return;
+    birimDugum[d.i] = out.birimler.length;
+    out.birimler.push({ i: out.birimler.length, dugum: d.i, tip: roller[d.i], ad: d.ad, parcalar: [], adaylar: [], _G: [] });
   });
-  Object.keys(parcaDuz).forEach(function(pi){ var a = parcaDuz[pi]; delete a.puan; delete a.grupYuz; out.kasnaklar.push(a); });
-  out.kasnaklar.sort(function(a, b){ return a.parca - b.parca; });
-  out.kasnaklar.forEach(function(k, i){ k.i = i; out.parcalar[k.parca].kasnaklar.push(i); k.rolOneri = out.parcalar[k.parca].rolOneri; });
+  if(!out.birimler.length){ out.hatalar.push('Hiçbir parçaya rol verilmedi.'); return out; }
+  sonuc.parcalar.forEach(function(p){
+    for(var a = p.dugum; a >= 0; a = sonuc.agac[a].ebeveyn)
+      if(birimDugum[a] !== undefined){ out.birimler[birimDugum[a]].parcalar.push(p.i); return; }
+  });
+  // Parça kodu aramasının metni: birimin parçalarının adları ve kimlikleri
+  out.birimler.forEach(function(b){
+    b.kimlikler = b.parcalar.map(function(pi){ var q = sonuc.parcalar[pi]; return q.ad + ' ' + (q.id || ''); });
+  });
+  // ── ADAYLAR: birimin eksen kümelerinde kanal bölgeleri ve düz yüzeyler ──
+  var tum = [];
+  out.birimler.forEach(function(b){
+    var yuzler = [];
+    b.parcalar.forEach(function(pi){ yuzler = yuzler.concat(sonuc._yuz[pi] || []); });
+    _fstEksenler(yuzler).forEach(function(g, gi){
+      var pr = _fstProfil(yuzler, g), kenar = -Infinity;
+      pr.forEach(function(r){ if(r.tip !== 'PLANE' && r.rMax > kenar) kenar = r.rMax; });
+      b._G.push({ o: g.o, d: g.d, n: g.yuzler.length });
+      _fstKanallar(pr).forEach(function(z){
+        b.adaylar.push({ tur: 'kanalli', birim: b.i, grup: gi, od: z.od, kanal: z.n, adim: z.adim,
+          adimSapma: z.adimSapma, profil: z.profil, tabanCap: z.taban, enBuyukCap: 2 * kenar,
+          genislik: z.n * z.adim, merkez: _fstTopla(g.o, _fstCarp(g.d, z.s)), eksen: g.d });
+      });
+      var dz = _fstDuz(pr);
+      if(dz) b.adaylar.push({ tur: 'duz', birim: b.i, grup: gi, od: dz.od, genislik: dz.genislik,
+        enBuyukCap: 2 * kenar, merkez: _fstTopla(g.o, _fstCarp(g.d, dz.s)), eksen: g.d, grupYuz: g.yuzler.length });
+    });
+    b.adaylar.forEach(function(a){ tum.push(a); });
+    if(!b.adaylar.length) out.uyarilar.push('"' + b.ad + '": kasnak yüzeyi (kaburga kanalı ya da düz yüzey) bulunamadı; aktarılmaz.');
+  });
+  if(!tum.length){ out.hatalar.push('Rol verilen parçalarda kasnak yüzeyi bulunamadı.'); return out; }
+
+  // ── ORTAK DÜZLEM ───────────────────────────────────────────────────────
+  var kanalliVar = tum.some(function(a){ return a.tur === 'kanalli'; });
+  var n = _fstYonCogunluk(tum.filter(function(a){ return !kanalliVar || a.tur === 'kanalli'; }).map(function(a){ return a.eksen; }));
+  var paralel = function(a){ return _fstAciDer(a.eksen, n) <= T.duzlemAci; };
+  var kay = function(a, p){ return Math.abs(_fstNokta(a.merkez, n) - p); };
+  var oturur = function(a, p){ return a.tur === 'kanalli' ? kay(a, p) <= 2 : kay(a, p) <= a.genislik / 2 + 2; };
+  var enIyi = null;
+  tum.forEach(function(ref){
+    if(!paralel(ref) || (kanalliVar && ref.tur !== 'kanalli')) return;
+    var p = _fstNokta(ref.merkez, n), birimSay = 0, kanalliSay = 0;
+    out.birimler.forEach(function(b){
+      var ot = b.adaylar.filter(function(a){ return paralel(a) && oturur(a, p); });
+      if(ot.length) birimSay++;
+      if(ot.some(function(a){ return a.tur === 'kanalli'; })) kanalliSay++;
+    });
+    var puan = birimSay * 1000 + kanalliSay;
+    if(!enIyi || puan > enIyi.puan) enIyi = { p: p, puan: puan };
+  });
+  // Oturan kanallı bölgelerin ortancası: referans bölgenin kendi küçük
+  // kaçıklığı düzleme taşınmasın.
+  var ref = tum.filter(function(a){ return paralel(a) && (!kanalliVar || a.tur === 'kanalli') && oturur(a, enIyi.p); })
+    .map(function(a){ return _fstNokta(a.merkez, n); }).sort(function(a, b){ return a - b; });
+  var p0 = ref.length ? ref[Math.floor(ref.length / 2)] : enIyi.p;
+
+  // ── BİRİM BAŞINA SEÇİM ─────────────────────────────────────────────────
+  // Düz yüzey = KAYIŞI TAŞIYAN yüzey: genişliği kayışı (kanal × adım)
+  // kapsıyor ve düzlemde ortalanmış; kapsamıyorsa yine de düzlemi kesmeli.
+  var kg = 0;
+  tum.forEach(function(a){ if(a.tur === 'kanalli' && paralel(a) && kay(a, p0) <= 2) kg = Math.max(kg, a.genislik); });
+  if(!(kg > 0)) kg = 10;
+  out.birimler.forEach(function(b){
+    var kanalli = b.adaylar.filter(function(a){ return a.tur === 'kanalli' && paralel(a) && kay(a, p0) <= 2; })
+      .sort(function(x, y){ return kay(x, p0) - kay(y, p0); })[0] || null;
+    var duz = null;
+    b.adaylar.forEach(function(a){
+      if(a.tur !== 'duz' || !paralel(a)) return;
+      var k = kay(a, p0);
+      if(k > a.genislik / 2 + 2) return;
+      var kapsar = a.genislik >= kg - 1 && k <= (a.genislik - kg) / 2 + 1;
+      var puan = (kapsar ? 0 : 1000) + k - a.grupYuz * 1e-6;
+      if(!duz || puan < duz.puan) duz = { a: a, puan: puan };
+    });
+    duz = duz && duz.a;
+    // KANAL VARSA KABURGALI, rol ne olursa olsun: kaburgalı kasnağın kanal
+    // tepeleri arasındaki silindirler de birleşip kayışı "kapsayan" bir düz
+    // aday kurar — "avarada önce düz" diyen bir kural kaburgalı avarayı
+    // sırttan temaslı okurdu.
+    var sec = kanalli || duz;
+    if(!sec){
+      if(b.adaylar.length) out.uyarilar.push('"' + b.ad + '": kasnak yüzeyi kayış düzleminde değil; aktarılmaz.');
+      return;
+    }
+    var k = { i: out.kasnaklar.length, birim: b.i, dugum: b.dugum, tip: b.tip, ad: b.ad, tur: sec.tur,
+              od: sec.od, genislik: sec.genislik, enBuyukCap: sec.enBuyukCap, merkez: sec.merkez, eksen: sec.eksen };
+    if(sec.tur === 'kanalli'){ k.kanal = sec.kanal; k.adim = sec.adim; k.adimSapma = sec.adimSapma; k.profil = sec.profil; k.tabanCap = sec.tabanCap; }
+    b.kasnak = k.i;
+    out.kasnaklar.push(k);
+  });
   var sapmalar = out.kasnaklar.map(function(k){
     return { kasnak: k.i, eksenel: _fstNokta(k.merkez, n) - p0, aci: _fstAciDer(k.eksen, n) };
   });
@@ -365,10 +416,10 @@ function veFeadStpOku(metin, opt){
   out.duzlem = { n: n, konum: p0, yayilim: eks.length ? Math.max.apply(null, eks) - Math.min.apply(null, eks) : 0,
                  enBuyukAci: Math.max.apply(null, sapmalar.map(function(s){ return s.aci; }).concat([0])), sapmalar: sapmalar };
 
-  // ── GERGİ: pivot ekseni ────────────────────────────────────────────────
+  // ── GERGİ: pivot ekseni, birimin KENDİ parçalarında ─────────────────────
   out.kasnaklar.forEach(function(k){
-    if(k.tur !== 'duz' || out.parcalar[k.parca].rolOneri !== 'fead-tensioner') return;
-    var g = _fstPivot(out, gruplar, k);
+    if(k.tip !== 'fead-tensioner') return;
+    var g = _fstPivot(out.birimler[k.birim], k, n, p0);
     if(g) out.gergiler.push(g);
   });
 
@@ -384,16 +435,15 @@ function veFeadStpOku(metin, opt){
     out.uyarilar.push('Kanallı kasnakların profili farklı: ' + Object.keys(profiller).join(', ') + '.');
   out.kasnaklar.forEach(function(k){
     if(k.tur === 'kanalli' && !k.profil)
-      out.uyarilar.push('"' + out.parcalar[k.parca].ad + '": kanal adımı ' + k.adim.toFixed(3) + ' mm hiçbir ISO 9982 profiline uymuyor.');
+      out.uyarilar.push('"' + k.ad + '": kanal adımı ' + k.adim.toFixed(3) + ' mm hiçbir ISO 9982 profiline uymuyor.');
   });
   sapmalar.forEach(function(s){
     if(Math.abs(s.eksenel) > 0.5 || s.aci > 0.1)
-      out.uyarilar.push('"' + out.parcalar[out.kasnaklar[s.kasnak].parca].ad + '" ortak düzlemden '
+      out.uyarilar.push('"' + out.kasnaklar[s.kasnak].ad + '" ortak düzlemden '
         + s.eksenel.toFixed(2) + ' mm eksenel, ' + s.aci.toFixed(2) + '° açısal kaçık.');
   });
   if(out.bakis.kaynak === 'varsayilan')
     out.uyarilar.push('Bakış yönü dosyadan çıkarılamadı (modelin orijini kayış düzleminde). Önden bakışı onaylayın.');
-  out.sureMs.analiz = Date.now() - t2;
   out.ok = out.kasnaklar.length > 0;
   return out;
 }
@@ -409,33 +459,29 @@ function _fstYonCogunluk(dirs){
   return enIyi;
 }
 
-// Gerginin pivotu: aynı parçada (ya da aynı gergi atasına bağlı parçalarda)
-// avara eksenine PARALEL, eşeksenli OLMAYAN, en çok yüzü olan eksen.
-function _fstPivot(out, gruplar, k){
+// Gerginin pivotu: gergi BİRİMİNİN eksen kümelerinde avara eksenine PARALEL,
+// eşeksenli OLMAYAN (kol aralığında), en çok yüzü olan eksen.
+function _fstPivot(b, k, n, p0){
   var T = VE_FEAD_STP_TOL, cosT = Math.cos(0.5 * Math.PI / 180);
   var adaylar = [];
-  out.parcalar.forEach(function(pp, pi){
-    if(pp.rolOneri !== 'fead-tensioner') return;
-    (gruplar[pi] || []).forEach(function(g){
-      if(Math.abs(_fstNokta(g.d, k.eksen)) < cosT) return;
-      var dist = _fstDogruMesafe(g.o, k.merkez, k.eksen);
-      if(dist < T.pivotMin || dist > T.pivotMaks) return;
-      adaylar.push({ o: g.o, d: g.d, yuz: g.n, kol: dist, parca: pi });
-    });
+  b._G.forEach(function(g){
+    if(Math.abs(_fstNokta(g.d, k.eksen)) < cosT) return;
+    var dist = _fstDogruMesafe(g.o, k.merkez, k.eksen);
+    if(dist < T.pivotMin || dist > T.pivotMaks) return;
+    adaylar.push({ o: g.o, d: g.d, yuz: g.n, kol: dist });
   });
   if(!adaylar.length) return null;
-  adaylar.sort(function(a, b){ return b.yuz - a.yuz; });
-  var n = out.duzlem.n, p0 = out.duzlem.konum;
+  adaylar.sort(function(x, y){ return y.yuz - x.yuz; });
   var dz = function(a){ var t = (p0 - _fstNokta(a.o, n)) / _fstNokta(a.d, n); return _fstTopla(a.o, _fstCarp(a.d, t)); };
   var sec = adaylar[0];
-  return { parca: k.parca, kasnak: k.i, pivot: dz(sec), kolBoy: sec.kol, pivotYuz: sec.yuz,
+  return { birim: k.birim, kasnak: k.i, pivot: dz(sec), kolBoy: sec.kol, pivotYuz: sec.yuz,
            adaylar: adaylar.slice(0, 6).map(function(a){ return { nokta: dz(a), kol: a.kol, yuz: a.yuz }; }) };
 }
 
 // ── 6 · 2B KOORDİNAT ─────────────────────────────────────────────────────
 // MFSim düzlemi: x sağ, y yukarı, önden bakış. `opt.ayna` bakış yönünü çevirir,
-// `opt.merkez` orijin alınacak kasnağın sırası (varsayılan: krank önerilen
-// ilk kasnak, yoksa ilk kasnak).
+// `opt.merkez` orijin alınacak kasnağın sırası (varsayılan: krank rolündeki
+// ilk kasnak, yoksa ilk kasnak). `sonuc` = veFeadStpCoz çıktısı.
 function veFeadStp2B(sonuc, opt){
   opt = opt || {};
   var n = sonuc.duzlem.n;
@@ -448,7 +494,7 @@ function veFeadStp2B(sonuc, opt){
   var mi = opt.merkez;
   if(mi == null){
     mi = 0;
-    for(var i = 0; i < sonuc.kasnaklar.length; i++) if(sonuc.kasnaklar[i].rolOneri === 'fead-crank'){ mi = i; break; }
+    for(var i = 0; i < sonuc.kasnaklar.length; i++) if(sonuc.kasnaklar[i].tip === 'fead-crank'){ mi = i; break; }
   }
   var O = sonuc.kasnaklar.length ? sonuc.kasnaklar[mi].merkez : [0, 0, 0];
   var yansit = function(p){ var w = _fstCikar(p, O); return { x: _fstNokta(w, sag), y: _fstNokta(w, yukari) }; };
@@ -465,7 +511,7 @@ function veFeadStp2B(sonuc, opt){
 }
 
 // ── 7 · ÖRNEK KAYDI ──────────────────────────────────────────────────────
-// `secim.roller[i]`: i. kasnağın tipi (null → atlanır). Verilmezse ad önerisi.
+// `cozum` = veFeadStpCoz çıktısı (rol kasnağın kendisinde, `tip`).
 // Sıra AĞAÇ sırasıdır: sürücü başta, gergi sonda (Gates tablo sırası).
 //
 // SAYILAR µm'YE YUVARLANIR (açı 0,0001°): montaj dönüşümünün kayan nokta
@@ -474,20 +520,16 @@ function veFeadStp2B(sonuc, opt){
 //
 // GERGİ TEKİL: model tek gergi taşır; ikinci gergi rolü ötekinin üstüne
 // sessizce yazılırdı — aktarılmaz ve söylenir.
-function _fstAd(s){ return String(s == null ? '' : s).replace(/\s+/g, ' ').trim(); }
 function _fstYuv(x, k){ return Math.round(x * k) / k + 0; }
 
-function veFeadStpKayit(sonuc, secim){
+function veFeadStpKayit(cozum, secim){
   secim = secim || {};
-  var iki = veFeadStp2B(sonuc, { ayna: !!secim.ayna, merkez: secim.merkez });
+  var iki = veFeadStp2B(cozum, { ayna: !!secim.ayna, merkez: secim.merkez });
   var uyarilar = [], pulleys = [], gergiKey = null, surucu = null;
   var katalog = secim.gergiKatalog || (typeof VE_FEAD_TENSIONER_DB !== 'undefined' ? VE_FEAD_TENSIONER_DB : []);
   var MM = 1000, DER = 10000;
-  sonuc.kasnaklar.forEach(function(k, i){
-    var tip = secim.roller && secim.roller[i] !== undefined ? secim.roller[i] : k.rolOneri;
-    var parca = sonuc.parcalar[k.parca];
-    var ad = _fstAd(parca.ad);
-    if(!tip || tip === 'kayis'){ if(!tip) uyarilar.push('"' + ad + '" için rol seçilmedi; kasnak aktarılmadı.'); return; }
+  cozum.kasnaklar.forEach(function(k, i){
+    var tip = k.tip, ad = _fstAd(k.ad);
     if(tip === 'fead-tensioner' && gergiKey){
       uyarilar.push('"' + ad + '" ikinci gergi rolü; model tek gergi taşır, aktarılmadı.');
       return;
@@ -497,17 +539,20 @@ function veFeadStpKayit(sonuc, secim){
     var data = { od: _fstYuv(k.od, MM), contact: k.tur === 'kanalli' ? 'grooved' : 'back' };
     if(tip === 'fead-tensioner'){
       var gi = -1;
-      sonuc.gergiler.forEach(function(g, j){ if(g.kasnak === i) gi = j; });
+      cozum.gergiler.forEach(function(g, j){ if(g.kasnak === i) gi = j; });
       if(gi < 0){
         uyarilar.push('"' + ad + '": gerginin pivot ekseni bulunamadı; kol boyu ve açısı elle girilmeli.');
         data.cenX = _fstYuv(xy.x, MM); data.cenY = _fstYuv(xy.y, MM);
       } else {
         var gg = iki.gergiler[gi];
         data.cenX = _fstYuv(gg.merkez.x, MM); data.cenY = _fstYuv(gg.merkez.y, MM);
-        data.armLen = _fstYuv(sonuc.gergiler[gi].kolBoy, MM);
+        data.armLen = _fstYuv(cozum.gergiler[gi].kolBoy, MM);
         data.armMeanDeg = _fstYuv(gg.kolAci, DER);
       }
-      var metin = _fstKatla([parca.ad, parca.id].join(' '));
+      // Parça kodu birimin adından ve kimliklerinden aranır; yalnız katalogda
+      // TEK kod eşleşirse yazılır (FEAD kural 19'un gerekçesi).
+      var b = cozum.birimler[k.birim] || {};
+      var metin = _fstKatla([ad].concat(b.kimlikler || []).join(' '));
       var kodlar = {};
       katalog.forEach(function(r){ if(r.part && metin.indexOf(_fstKatla(r.part).trim()) >= 0) kodlar[r.part] = 1; });
       var kk = Object.keys(kodlar);
@@ -528,10 +573,11 @@ function veFeadStpKayit(sonuc, secim){
   pulleys.forEach(function(p){ if(p.key !== surucu && p.key !== gergiKey) route.push(p.key); });
   if(gergiKey) route.push(gergiKey);
   uyarilar.push('Kayış sırası dosyadan okunmadı; ağaç sırasıyla dizildi. Sırayı Kasnaklar adımında verin.');
+  var bas = cozum.baslik || {};
   return {
-    name: secim.ad || (sonuc.baslik && sonuc.baslik.dosya ? sonuc.baslik.dosya.replace(/^.*[\\\/]/, '').replace(/\.[^.]*$/, '') : 'STEP'),
+    name: secim.ad || (bas.dosya ? bas.dosya.replace(/^.*[\\\/]/, '').replace(/\.[^.]*$/, '') : 'STEP'),
     pulleys: pulleys, route: route, siraKaynagi: 'agac',
-    bakis: { ayna: !!secim.ayna, kaynak: sonuc.bakis.kaynak },
+    bakis: { ayna: !!secim.ayna, kaynak: cozum.bakis.kaynak },
     uyarilar: uyarilar
   };
 }
@@ -541,8 +587,8 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_STP_SURUM: VE_FEAD_STP_SURUM,
     VE_FEAD_STP_PROFILLER: VE_FEAD_STP_PROFILLER,
     VE_FEAD_STP_TOL: VE_FEAD_STP_TOL,
-    veFeadStpRol: veFeadStpRol,
     veFeadStpOku: veFeadStpOku,
+    veFeadStpCoz: veFeadStpCoz,
     veFeadStp2B: veFeadStp2B,
     veFeadStpKayit: veFeadStpKayit
   };

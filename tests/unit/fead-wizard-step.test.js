@@ -69,8 +69,17 @@ const kabuk = () => {
 };
 const AG_METIN = O.ag00686Step();
 const TIP_AD = { 'fead-crank': 'CRK', 'fead-idler': 'IDR', 'fead-ac': 'A_C', 'fead-tensioner': 'TEN' };
-// Tanıyıcının kasnak sırası: krank · avara · klima · gergi (montaj ağacının sırası)
+// KULLANICININ SEÇİMİ, testte açık bir eşlemeyle: düğüm ADINA göre rol.
+// Program adlardan rol ÖNERMEZ (kullanıcı kararı 2026-09-26) — bu eşleme testin.
+const ROL = [[/GERG/, 'fead-tensioner'], [/KRANK/, 'fead-crank'], [/KL[İI]MA/, 'fead-ac'], [/AVARA/, 'fead-idler']];
+const dugum = (re) => wiz.veFeadWizStp().sonuc.agac.findIndex((d) => re.test(d.ad));
+const rolVer = (kural = ROL) => kural.forEach(([re, tip]) => {
+  const i = dugum(re);
+  if (i >= 0) wiz.veFeadWizStpRol(i, tip);
+});
 const oku = (metin, ad) => { kabuk(); wiz.veFeadWizReset(); return wiz.veFeadWizStpOku(metin || AG_METIN, ad || 'AG00686.stp'); };
+// Kullanıcının akışı: dosya → rolleri ver → "Hesapla"
+const hazirla = (kural) => { oku(); rolVer(kural); return wiz.veFeadWizStpHesapla(); };
 const yayGir = () => { Object.keys(O.AG_REF.yay).forEach((k) => wiz.veFeadWizTenSet(k, O.AG_REF.yay[k])); };
 const kayitDugumleri = (kayit) => {
   const d = kayit.pulleys.map((p) => ({ id: 'st-' + p.key, type: p.type, customName: TIP_AD[p.type],
@@ -162,12 +171,35 @@ describe('okuyucu: bayt → metin (.stp · .stpZ)', () => {
 });
 
 // ═════════════════════════════════════════════════════════════════════════
-describe('STEP kartı: okuma ve rol önerisi', () => {
-  test('roller ADDAN önerilir; kayış parçası kasnak sayılmaz', () => {
+describe('STEP kartı: okuma rol ÖNERMEZ, hesap bir DÜĞMEDİR', () => {
+  // Kullanıcı (2026-09-26): *"parçaları manuel olarak seçeceğiz, ardından bir
+  // buton gibi bir şeye tıkladığımızda otomatik olarak çaplar, merkez
+  // koordinatlar falan hesaplanacak ve … bir kanvas çizilecek."*
+  test('okuma rol önermez, hesaplamaz; rol verilene kadar hesap düğmesi kapalı', () => {
     const s = oku();
     expect(s.durum).toBe('hazir');
-    expect(s.roller).toEqual(['fead-crank', 'fead-idler', 'fead-ac', 'fead-tensioner']);
-    expect(s.sonuc.parcalar.map((p) => p.rolOneri)).toContain('kayis');
+    expect(s.roller.every((r) => r === null)).toBe(true);
+    expect(s.coz).toBeNull();
+    let h = wiz._fwStpKartHTML();
+    expect(h).toMatch(/id="ve-fw-stp-hesapla"[^>]*disabled/);
+    expect(h).not.toContain('id="ve-fw-stp-aktar"');
+    expect(h).not.toContain('ve-fw-stp-svg');
+    rolVer();
+    expect(wiz.veFeadWizStp().coz).toBeNull();                 // rol vermek HESAPLAMAZ
+    h = wiz._fwStpKartHTML();
+    expect(h).not.toMatch(/id="ve-fw-stp-hesapla"[^>]*disabled/);
+    expect(h).not.toContain('id="ve-fw-stp-aktar"');           // hesapsız aktarım yok
+    expect(wiz.veFeadWizStpAktar()).toBeNull();
+  });
+
+  test('hesap yalnız rollü düğümler; rol değişince sonuç DÜŞER, bakış değişince düşmez', () => {
+    const c = hazirla();
+    expect(c.ok).toBe(true);
+    expect(c.kasnaklar.map((k) => k.tip)).toEqual(['fead-crank', 'fead-idler', 'fead-ac', 'fead-tensioner']);
+    wiz.veFeadWizStpAyna(true);
+    expect(wiz.veFeadWizStp().coz).toBe(c);
+    wiz.veFeadWizStpRol(dugum(/KL[İI]MA/), 'fead-alternator');
+    expect(wiz.veFeadWizStp().coz).toBeNull();
   });
 
   test('STEP olmayan dosya: kart hata durumunda, aktarım yok, fırlatma yok', () => {
@@ -175,16 +207,17 @@ describe('STEP kartı: okuma ve rol önerisi', () => {
     expect(s.durum).toBe('hata');
     expect(s.hata).toMatch(/ISO-10303-21/);
     const once = wiz.veFeadWizState();
+    expect(wiz.veFeadWizStpHesapla()).toBeNull();
     expect(wiz.veFeadWizStpAktar()).toBeNull();
     expect(wiz.veFeadWizState()).toBe(once);
   });
 
-  test('gzip baytları kartın bayt yolundan da aynı sonuca varıyor', () => {
+  test('gzip baytları kartın bayt yolundan da aynı ağaca varıyor', () => {
     kabuk(); wiz.veFeadWizReset();
     const s = wiz.veFeadWizStpBayt(new Uint8Array(gzipBaslikli(Buffer.from(AG_METIN, 'latin1'))), 'AG.stpZ');
     expect(s.durum).toBe('hazir');
     expect(s.kap).toBe('gzip');
-    expect(s.roller).toEqual(['fead-crank', 'fead-idler', 'fead-ac', 'fead-tensioner']);
+    expect(s.sonuc.agac).toHaveLength(6);                       // kök + 5 parça
   });
 
   test('sihirbaz BAŞKA bir düğüm için açılınca eski dosya karttan düşer', () => {
@@ -199,12 +232,41 @@ describe('STEP kartı: okuma ve rol önerisi', () => {
     wiz.veFeadWizOpen('w2');
     expect(wiz.veFeadWizStp()).toBeNull();
   });
+
+  test('rol DÜĞÜME verilir: bir parça tek birime ait — ata ve torunların rolü düşer', () => {
+    const yz = new Y.StepYaz();
+    const kok = yz.urun('ROOT', 'kök');
+    const grg = yz.urun('GERGI-ASSY', 'OTOMATİK GERGİ');
+    const kas = yz.urun('P1', 'KASNAK');
+    const kol = yz.urun('P2', 'KOL');
+    yz.govde(kas, Y.profilYuzleri(yz, Y.eksen(), Y.duzProfil({ od: 75 })));
+    yz.govde(kol, Y.profilYuzleri(yz, Y.eksen([90, 0, 0]), Y.pivotProfil()));
+    yz.temsil(kas); yz.temsil(kol);
+    const t1 = yz.tak(grg, kas, 'P1.1', [0, 0, 0]);
+    const t2 = yz.tak(grg, kol, 'P2.1', [0, 0, 0]);
+    yz.temsil(grg);
+    const t3 = yz.tak(kok, grg, 'GERGI-ASSY.1', [0, 120, 0]);
+    yz.temsil(kok);
+    [t1, t2, t3].forEach((t) => yz.bagla(t));
+    oku(yz.metin(), 'alt.stp');
+    const s = wiz.veFeadWizStp(), i = (ad) => s.sonuc.agac.findIndex((d) => d.ad === ad);
+    wiz.veFeadWizStpRol(i('KASNAK'), 'fead-idler');
+    wiz.veFeadWizStpRol(i('OTOMATİK GERGİ'), 'fead-tensioner');   // ata: torunun rolü düşer
+    expect(s.roller[i('KASNAK')]).toBeNull();
+    expect(s.roller[i('OTOMATİK GERGİ')]).toBe('fead-tensioner');
+    wiz.veFeadWizStpRol(i('KOL'), 'fead-idler');                   // torun: atanın rolü düşer
+    expect(s.roller[i('OTOMATİK GERGİ')]).toBeNull();
+    // Kart satırları: kök basılmaz, montaj ve parçalar girintili
+    const h = wiz._fwStpKartHTML();
+    expect((h.match(/data-ve-stp="\d+"/g) || []).length).toBe(3);
+    expect(h).toMatch(/--stp-d:1;/);
+  });
 });
 
 // ═════════════════════════════════════════════════════════════════════════
 describe('aktarım = örnek tohumunun AYNI yolu (kural 20 · kural 34)', () => {
   test('GİDİŞ-DÖNÜŞ: kayıttaki her alan düğümde birebir, sıra kayıttaki tablo sırası', () => {
-    oku();
+    hazirla();
     const kayit = wiz.veFeadWizStpAktar();
     expect(kayit).not.toBeNull();
     const pack = wiz.veFeadWizNodes();
@@ -223,7 +285,7 @@ describe('aktarım = örnek tohumunun AYNI yolu (kural 20 · kural 34)', () => {
   });
 
   test('KAYIŞA DOKUNULMAZ ve çözücü boş durumdan — STEP kaydı ikisini de taşımıyor', () => {
-    oku();
+    hazirla();
     const kayit = wiz.veFeadWizStpAktar();
     const st = wiz.veFeadWizState(), bos = wiz.veFeadWizDefault();
     expect(st.belt).toEqual(bos.belt);
@@ -236,7 +298,7 @@ describe('aktarım = örnek tohumunun AYNI yolu (kural 20 · kural 34)', () => {
   });
 
   test('kaynağın izi durumda: dosya, kasnak sayısı, gerginin STEP değerleri', () => {
-    oku();
+    hazirla();
     wiz.veFeadWizStpAktar();
     const st = wiz.veFeadWizState();
     expect(st.siraKaynagi).toBe('agac');
@@ -247,7 +309,7 @@ describe('aktarım = örnek tohumunun AYNI yolu (kural 20 · kural 34)', () => {
   });
 
   test('AG00686: yay künyesi girilince köprü raporun açıklıklarını veriyor — kayıttan kurulanla BİREBİR', () => {
-    oku();
+    hazirla();
     const kayit = wiz.veFeadWizStpAktar();
     let b = wiz.veFeadWizBuild();
     // Yay verisi STEP'te yok: künyesiz model çözülmez ve sebebi gerginin adımında
@@ -271,39 +333,32 @@ describe('aktarım = örnek tohumunun AYNI yolu (kural 20 · kural 34)', () => {
 });
 
 // ═════════════════════════════════════════════════════════════════════════
-describe('kullanıcının rol ve bakış onayı', () => {
-  test('rol değiştirilir; "aktarma" kasnağı modelden çıkarır ve SÖYLER', () => {
-    oku();
-    wiz.veFeadWizStpRol(2, 'fead-alternator');
-    wiz.veFeadWizStpRol(1, '');
-    const d = wiz.veFeadWizStpDenetim();
-    expect(d.engel).toEqual([]);
-    expect(d.uyari.join(' ')).toMatch(/AVARA KASNAK.*rol seçilmedi/);
+describe('kullanıcının rol ve bakış seçimi', () => {
+  test('rol verilmeyen parça modele girmez; rol türü aktarılır', () => {
+    hazirla([[/GERG/, 'fead-tensioner'], [/KRANK/, 'fead-crank'], [/KL[İI]MA/, 'fead-alternator']]);
+    expect(wiz.veFeadWizStpDenetim().engel).toEqual([]);
     wiz.veFeadWizStpAktar();
     expect(wiz.veFeadWizState().pulleys.map((p) => p.type).sort()).toEqual(['fead-alternator', 'fead-crank']);
   });
 
-  test('İKİ GERGİ ya da İKİ KRANK aktarımı durdurur — durum değişmez', () => {
-    oku();
-    wiz.veFeadWizStpRol(1, 'fead-tensioner');
+  test('İKİ GERGİ ya da İKİ KRANK hesabı durdurur — sonuç ve durum değişmez', () => {
+    oku(); rolVer();
+    wiz.veFeadWizStpRol(dugum(/AVARA/), 'fead-tensioner');
     let d = wiz.veFeadWizStpDenetim();
     expect(d.engel.join(' ')).toMatch(/2 parçada/);
+    expect(wiz.veFeadWizStpHesapla()).toBeNull();
+    expect(wiz._fwStpKartHTML()).toMatch(/id="ve-fw-stp-hesapla"[^>]*disabled/);
     const once = wiz.veFeadWizState();
     expect(wiz.veFeadWizStpAktar()).toBeNull();
     expect(wiz.veFeadWizState()).toBe(once);
-    wiz.veFeadWizStpRol(1, 'fead-idler');
-    wiz.veFeadWizStpRol(2, 'fead-crank');
+    wiz.veFeadWizStpRol(dugum(/AVARA/), 'fead-idler');
+    wiz.veFeadWizStpRol(dugum(/KL[İI]MA/), 'fead-crank');
     d = wiz.veFeadWizStpDenetim();
     expect(d.engel.join(' ')).toMatch(/2 parçada/);
-    // düğme de kapalı
-    const h = wiz._fwStpKartHTML();
-    expect(h).toMatch(/id="ve-fw-stp-aktar"[^>]*disabled/);
   });
 
   test('ORİJİN kullanıcının seçtiği krank: rol başka kasnağa geçince koordinatlar ondan ölçülür', () => {
-    oku();
-    wiz.veFeadWizStpRol(0, 'fead-idler');           // eski krank artık avara
-    wiz.veFeadWizStpRol(2, 'fead-crank');           // klima krank
+    hazirla([[/GERG/, 'fead-tensioner'], [/KRANK/, 'fead-idler'], [/KL[İI]MA/, 'fead-crank'], [/AVARA/, 'fead-idler']]);
     wiz.veFeadWizStpAktar();
     const kr = wiz.veFeadWizState().pulleys.find((p) => p.type === 'fead-crank');
     expect(kr.x).toBe(0);
@@ -314,7 +369,7 @@ describe('kullanıcının rol ve bakış onayı', () => {
   });
 
   test('AYNA x eksenini ters çevirir; model yine çözülür ama krank TERS döner', () => {
-    oku();
+    hazirla();
     wiz.veFeadWizStpAktar();
     yayGir();
     const a = { st: JSON.parse(JSON.stringify(wiz.veFeadWizState())), spin: wiz.veFeadWizBuild().spin };
@@ -333,15 +388,58 @@ describe('kullanıcının rol ve bakış onayı', () => {
     expect(b.st.stepKaynak.ayna).toBe(true);
   });
 
-  test('aktarımdan sonra rol değişirse kart bunu söyler, sihirbaz eski seçimle kalır', () => {
-    oku();
+  test('aktarımdan sonra rol değişip yeniden hesaplanırsa kart söyler, sihirbaz eski seçimle kalır', () => {
+    hazirla();
     wiz.veFeadWizStpAktar();
     expect(wiz._fwStpKartHTML()).toMatch(/sihirbaza aktarıldı/);
-    wiz.veFeadWizStpRol(2, 'fead-alternator');
+    wiz.veFeadWizStpRol(dugum(/KL[İI]MA/), 'fead-alternator');
+    wiz.veFeadWizStpHesapla();
     const h = wiz._fwStpKartHTML();
     expect(h).toMatch(/aktarımdan sonra değişti/);
     expect(h).toMatch(/Yeniden aktar/);
     expect(wiz.veFeadWizState().pulleys.map((p) => p.type)).toContain('fead-ac');
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════
+describe('KAYIŞ DÜZLEMİ ÇİZİMİ — hesaptan hemen sonra', () => {
+  const daire = (h, i) => {
+    const g = new RegExp('data-ve-stp-kasnak="' + i + '"><circle cx="([^"]+)" cy="([^"]+)" r="([^"]+)"').exec(h);
+    return g ? { x: +g[1], y: +g[2], r: +g[3] } : null;
+  };
+  test('hesaptan önce çizim yok; sonra her kasnak dış çapıyla, krank orijinde', () => {
+    oku(); rolVer();
+    expect(wiz._fwStpCizimSVG(wiz.veFeadWizStp())).toBe('');
+    const c = wiz.veFeadWizStpHesapla();
+    const h = wiz._fwStpCizimSVG(wiz.veFeadWizStp());
+    expect((h.match(/data-ve-stp-kasnak=/g) || []).length).toBe(4);
+    const kr = daire(h, c.kasnaklar.findIndex((k) => k.tip === 'fead-crank'));
+    expect(kr).toEqual({ x: 0, y: 0, r: 80 });
+    // SVG'de y aşağı: klima (−224 ; 448) → cx −224, cy −448
+    const ac = daire(h, c.kasnaklar.findIndex((k) => k.tip === 'fead-ac'));
+    expect(ac).toEqual({ x: O.AG.ac.x, y: -O.AG.ac.y, r: 63.5 });
+    // Gergi kolu ve pivot çiziliyor
+    expect(h).toMatch(/class="ve-fw-stp-kol"/);
+    expect(h).toMatch(/class="ve-fw-stp-pivot"/);
+    // Kayış yolu ÇİZİLMEZ (sıra dosyada yok; yol çekirdeğin işi)
+    expect(h).not.toMatch(/<path class="ve-fw-stp-kayis/);
+    // 1. adımda kartın içinde
+    expect(wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild())).toContain('<svg class="ve-fw-stp-svg"');
+  });
+
+  test('bakış çizimi de çevirir (yeniden hesap gerekmez)', () => {
+    const c = hazirla();
+    wiz.veFeadWizStpAyna(true);
+    const h = wiz._fwStpCizimSVG(wiz.veFeadWizStp());
+    const ac = daire(h, c.kasnaklar.findIndex((k) => k.tip === 'fead-ac'));
+    expect(ac.x).toBeCloseTo(-O.AG.ac.x, 6);
+  });
+
+  test('renk CSS\'te (tema jetonu), çizimde satır içi renk YOK', () => {
+    const h = (hazirla(), wiz._fwStpCizimSVG(wiz.veFeadWizStp()));
+    expect(h).not.toMatch(/(fill|stroke)="#|style="[^"]*(fill|stroke|color)/);
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    expect(css).toMatch(/\.ve-fw-stp-kasnak circle\{[^}]*stroke:var\(--accent-primary\)/);
   });
 });
 
@@ -351,7 +449,7 @@ describe('kayış sırası bir VARSAYIM — Kasnaklar adımı söyler', () => {
     .filter((x) => x.m === wiz.VE_FW_SIRA_AGAC).length;
 
   test('aktarımdan sonra 2. adım UYARI taşır; onay kaldırır', () => {
-    oku(); wiz.veFeadWizStpAktar(); yayGir();
+    hazirla(); wiz.veFeadWizStpAktar(); yayGir();
     expect(sayi()).toBe(1);
     expect(wiz.veFeadWizStepState(wiz.veFeadWizBuild(), 1).durum).toBe('warn');
     expect(wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild())).toContain('id="ve-fw-sira-onay"');
@@ -362,11 +460,11 @@ describe('kayış sırası bir VARSAYIM — Kasnaklar adımı söyler', () => {
   });
 
   test('sırayı ELLE değiştirmek de kaldırır (taşıma · yön çevirme)', () => {
-    oku(); wiz.veFeadWizStpAktar();
+    hazirla(); wiz.veFeadWizStpAktar();
     const r = wiz.veFeadWizRoute(wiz.veFeadWizState());
     expect(wiz.veFeadWizRouteMove(r[2], 1)).toBe(true);
     expect(sayi()).toBe(0);
-    oku(); wiz.veFeadWizStpAktar();
+    hazirla(); wiz.veFeadWizStpAktar();
     wiz.veFeadWizRouteReverse();
     expect(sayi()).toBe(0);
   });
@@ -384,13 +482,13 @@ describe('STEP ↔ KÜNYE: künye CAD\'deki gergiyi sessizce değiştirmez', () 
     .filter((x) => x.tur === 'warn').map((x) => x.m).join(' | ');
 
   test('aynı parçanın künyesi: fark yok', () => {
-    oku(); wiz.veFeadWizStpAktar();
+    hazirla(); wiz.veFeadWizStpAktar();
     wiz.veFeadWizTenLib('AG00686');                 // T38624 · kol 90 · Ø75
     expect(uyarilar()).not.toMatch(/STEP dosyası/);
   });
 
   test('başka parçanın künyesi: parça kodu ve kol boyu farkı ADIYLA', () => {
-    oku(); wiz.veFeadWizStpAktar();
+    hazirla(); wiz.veFeadWizStpAktar();
     wiz.veFeadWizTenLib('AG00879');                 // T38665 · kol 56
     const u = uyarilar();
     expect(u).toMatch(/künyenin parçası T38665, STEP dosyasındaki gergi T38624/);
@@ -398,7 +496,7 @@ describe('STEP ↔ KÜNYE: künye CAD\'deki gergiyi sessizce değiştirmez', () 
   });
 
   test('ELLE GİRİLEN değer kullanıcının kararı — uyarı yok', () => {
-    oku(); wiz.veFeadWizStpAktar();
+    hazirla(); wiz.veFeadWizStpAktar();
     wiz.veFeadWizTenSet('armLen', 88);
     expect(uyarilar()).not.toMatch(/STEP dosyası/);
   });
@@ -406,17 +504,20 @@ describe('STEP ↔ KÜNYE: künye CAD\'deki gergiyi sessizce değiştirmez', () 
 
 // ═════════════════════════════════════════════════════════════════════════
 describe('kart yüzeyi (sunum)', () => {
-  test('1. adımda STEP kartı: bırakma alanı, parça başına satır, kayış satırı, açıklama yüzeyi YOK', () => {
+  test('1. adımda STEP kartı: bırakma alanı, ağaç satırları rolsüz, açıklama yüzeyi YOK', () => {
     oku();
-    const h = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
+    let h = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
     expect(h).toContain('data-ve-dropzone="step"');
     expect(h).toContain('accept=".stp,.step,.stpz,.p21"');
-    expect((h.match(/data-ve-stp="\d"/g) || []).length).toBe(4);
-    expect(h).toMatch(/KAYIŞ - 8PK1475[\s\S]*dokunulmaz/);
-    expect(h).toMatch(/8 × PK/);
+    expect((h.match(/data-ve-stp="\d+"/g) || []).length).toBe(5);          // kök basılmaz
+    expect(h).toMatch(/KAYIŞ - 8PK1475/);                                  // kayış da bir parça
+    // hepsi rolsüz — sayım KARTIN içinde (adımın örnek listesinde "Boş başla" da value="")
+    expect((wiz._fwStpKartHTML().match(/<option value="" selected>/g) || []).length).toBe(5);
     expect(h).not.toContain('ve-fw-hint');
-    // STEP kartı örneklerden ÖNCE
     expect(h.indexOf("STEP'ten başla")).toBeLessThan(h.indexOf('Örnekten doldur'));
+    rolVer(); wiz.veFeadWizStpHesapla();
+    h = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
+    expect(h).toMatch(/8 × PK/);
   });
 
   test('1. adımda TEK birincil düğme — kartın düğmeleri "İleri →" ile yarışmaz', () => {
@@ -429,8 +530,10 @@ describe('kart yüzeyi (sunum)', () => {
     expect(birincil()).toEqual(['İleri →']);
     wiz.veFeadWizStpOku(AG_METIN, 'AG.stp');
     expect(birincil()).toEqual(['İleri →']);
+    rolVer(); wiz.veFeadWizStpHesapla();
+    expect(birincil()).toEqual(['İleri →']);
     wiz.veFeadWizStpAktar();
-    wiz.veFeadWizStpRol(2, 'fead-alternator');       // "Yeniden aktar" hâli
+    wiz.veFeadWizStpRol(dugum(/KL[İI]MA/), 'fead-alternator'); wiz.veFeadWizStpHesapla();
     expect(birincil()).toEqual(['İleri →']);
   });
 
@@ -450,15 +553,19 @@ describe('kart yüzeyi (sunum)', () => {
 
 // ═════════════════════════════════════════════════════════════════════════
 describe('tanıyıcının kaydı (sihirbazın girdisi)', () => {
+  const rollerAd = (o, kural) => { const r = []; o.agac.forEach((d) => { const k = kural.find(([re]) => re.test(d.ad)); if (k && d.ebeveyn >= 0) r[d.i] = k[1]; }); return r; };
   test('ikinci gergi rolü aktarılmaz ve söylenir', () => {
-    const sonuc = S.veFeadStpOku(AG_METIN);
-    const kayit = S.veFeadStpKayit(sonuc, { roller: ['fead-crank', 'fead-tensioner', 'fead-ac', 'fead-tensioner'] });
+    const o = S.veFeadStpOku(AG_METIN);
+    const c = S.veFeadStpCoz(o, rollerAd(o, [[/GERG/, 'fead-tensioner'], [/KRANK/, 'fead-crank'], [/KL[İI]MA/, 'fead-ac'], [/AVARA/, 'fead-tensioner']]));
+    const kayit = S.veFeadStpKayit(c, {});
     expect(kayit.pulleys.filter((p) => p.type === 'fead-tensioner').length).toBe(1);
     expect(kayit.uyarilar.join(' ')).toMatch(/ikinci gergi rolü/);
   });
 
   test('sayılar µm\'ye yuvarlanmış; ad tek satır', () => {
-    const kayit = S.veFeadStpKayit(S.veFeadStpOku(AG_METIN), {});
+    const o = S.veFeadStpOku(AG_METIN);
+    const kayit = S.veFeadStpKayit(S.veFeadStpCoz(o, rollerAd(o, ROL)), {});
+    expect(kayit.pulleys).toHaveLength(4);
     kayit.pulleys.forEach((p) => {
       ['od', 'x', 'y', 'cenX', 'cenY', 'armLen'].forEach((f) => {
         if (p.data[f] === undefined) return;
@@ -477,7 +584,9 @@ test('KAYIŞA DOKUNULMAZ — dosya 6PK dese de kanal sayısı yazılmaz', () => 
     { id: 'A', ad: 'ALTERNATOR', x: 150, y: 250, geometri: [{ profil: Y.kanalliProfil({ od: 60, n: 6 }) }] },
   ]);
   oku(metin, '6PK.stp');
-  expect(wiz.veFeadWizStp().sonuc.kasnaklar.map((k) => k.kanal)).toEqual([6, 6]);
+  rolVer([[/KRANK/, 'fead-crank'], [/ALTERNATOR/, 'fead-alternator']]);
+  const c = wiz.veFeadWizStpHesapla();
+  expect(c.kasnaklar.map((k) => k.kanal)).toEqual([6, 6]);
   wiz.veFeadWizStpAktar();
   expect(wiz.veFeadWizState().belt).toEqual(wiz.veFeadWizDefault().belt);
 });
