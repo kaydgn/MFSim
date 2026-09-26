@@ -553,7 +553,7 @@ describe('bileşen sözleşmesi', () => {
     const path = require('path');
     const root = path.join(__dirname, '../..');
     const idx = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-    const i0 = idx.indexOf('FEAD Araçları');
+    const i0 = idx.indexOf('FEAD araçları');
     expect(i0).toBeGreaterThan(0);
     expect(idx.slice(i0, idx.indexOf('</div>\n\n', i0))).toContain('data-type="fead-spin"');
     expect(VE_MODULES['full-throttle'].components).toContain('fead-spin');

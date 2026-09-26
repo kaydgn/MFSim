@@ -246,7 +246,7 @@ function veUpdateResultsTree() {
 
   if(groups.length === 0) {
     html += '<div class="vsig-empty" style="padding:14px 10px; line-height:1.5;">' +
-            'Henüz ölçüm yok.<br>Yukarıdaki <b>İçe Aktar</b> ile bir ' +
+            'Henüz ölçüm yok.<br>Yukarıdaki <b>İçe aktar</b> ile bir ' +
             '.xlsx / .csv dosyası açın.</div>';
   } else {
     var channels = 0;
@@ -257,7 +257,7 @@ function veUpdateResultsTree() {
     html += '<div class="ve-tree-row" style="display:flex; align-items:center; gap:4px;">';
     html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span>';
     html += '<span class="icon"><span class="mf-ico mf-ico-upload"></span></span>';
-    html += '<span style="font-weight:600;">İçe Aktarılan Ölçümler</span>';
+    html += '<span style="font-weight:600;">İçe aktarılan ölçümler</span>';
     html += ' <span style="font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;">' +
             channels + ' sinyal</span>';
     html += '</div>';
@@ -465,7 +465,7 @@ function veRenderSlot(slotIdx) {
     body.innerHTML =
       '<div class="ve-trace-empty" style="display:flex;">' +
       '<div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-clipboard"></span></div>' +
-      '<div class="ve-trace-empty-title">Veri Tablosu boş</div>' +
+      '<div class="ve-trace-empty-title">Veri tablosu boş</div>' +
       '<div class="ve-trace-empty-sub">Veri Gezgini\'nden sinyal seçin.</div></div>';
     return;
   }

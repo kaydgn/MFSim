@@ -10418,7 +10418,7 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
       <span class="ve-results-head-title"><span class="mf-ico mf-ico-bar-chart"></span> Veri Gezgini</span>
       <button type="button" id="ve-import-btn" class="ve-imp-tool" onclick="veImpOpenPicker()" style="margin-left:auto;"
               title="Excel/CSV ölçüm dosyasını içe aktar (Vector CANoe çıktısı)">
-        <span class="mf-ico mf-ico-upload"></span> İçe Aktar
+        <span class="mf-ico mf-ico-upload"></span> İçe aktar
       </button>
     </div>
 
@@ -10453,14 +10453,14 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 <div id="ve-import-overlay" class="ve-settings-overlay" style="display:none;" onmousedown="if(event.target===this) veImpCloseModal()">
   <div class="ve-settings-modal ve-imp-modal" role="dialog" aria-labelledby="ve-import-title">
     <div class="ve-settings-header">
-      <span id="ve-import-title"><span class="mf-ico mf-ico-upload"></span> Ölçüm Verisi İçe Aktar</span>
+      <span id="ve-import-title"><span class="mf-ico mf-ico-upload"></span> Ölçüm verisi içe aktar</span>
       <button class="ve-settings-close" type="button" onclick="veImpCloseModal()" title="Kapat (Esc)" aria-label="Kapat"><span class="mf-ico mf-ico-x"></span></button>
     </div>
     <div class="ve-imp-body" id="ve-import-content"></div>
     <div class="ve-imp-footer">
       <span class="ve-imp-hint">İlk sütun genelde zaman eksenidir — yukarıdan değiştirebilirsiniz.</span>
       <button type="button" class="ve-imp-btn" onclick="veImpCloseModal()">İptal</button>
-      <button type="button" class="ve-imp-btn ve-imp-btn-primary" id="ve-import-apply" onclick="veImpConfirm()" disabled>Diyagramlara Aktar</button>
+      <button type="button" class="ve-imp-btn ve-imp-btn-primary" id="ve-import-apply" onclick="veImpConfirm()" disabled>Diyagramlara aktar</button>
     </div>
   </div>
 </div>
@@ -12970,7 +12970,7 @@ function veSigInspectorHTML() {
   // Önizleme eğrisi
   var pw = 210, ph = 46;
   var pts = veSigSparkPoints(series, pw, ph, 96);
-  h += '<div class="vsig-fld"><span class="vsig-fld-lbl">Sinyal Şekli</span>';
+  h += '<div class="vsig-fld"><span class="vsig-fld-lbl">Sinyal şekli</span>';
   if(pts) {
     h += '<div class="vsig-preview">' + veSigSparkSVG(pts, color, pw, ph) + '</div>';
   } else {
@@ -12986,7 +12986,7 @@ function veSigInspectorHTML() {
   h += '</div></div>';
 
   // Renk
-  h += '<div class="vsig-fld"><span class="vsig-fld-lbl">Eğri Rengi</span>';
+  h += '<div class="vsig-fld"><span class="vsig-fld-lbl">Eğri rengi</span>';
   h += '<div class="vsig-pal">';
   VE_SIGNAL_COLORS.forEach(function(c) {
     h += '<button type="button" class="vsig-pal-sw" data-act="insp-color" data-color="' + c + '"' +
@@ -13012,7 +13012,7 @@ function veSigInspectorHTML() {
   // Kullanıldığı diyagramlar
   var uses = veSigUsedInDiagrams(item.compType, item.signalId);
   if(uses.length) {
-    h += '<div class="vsig-fld"><span class="vsig-fld-lbl">Kullanıldığı Diyagramlar</span>';
+    h += '<div class="vsig-fld"><span class="vsig-fld-lbl">Kullanıldığı diyagramlar</span>';
     h += '<div class="vsig-uses">';
     uses.slice(0, 8).forEach(function(u) { h += '<span class="vsig-use">' + veSigEsc(u) + '</span>'; });
     if(uses.length > 8) h += '<span class="vsig-note">+' + (uses.length - 8) + ' diyagram daha</span>';
@@ -13405,7 +13405,7 @@ function veUpdateResultsTree() {
 
   if(groups.length === 0) {
     html += '<div class="vsig-empty" style="padding:14px 10px; line-height:1.5;">' +
-            'Henüz ölçüm yok.<br>Yukarıdaki <b>İçe Aktar</b> ile bir ' +
+            'Henüz ölçüm yok.<br>Yukarıdaki <b>İçe aktar</b> ile bir ' +
             '.xlsx / .csv dosyası açın.</div>';
   } else {
     var channels = 0;
@@ -13416,7 +13416,7 @@ function veUpdateResultsTree() {
     html += '<div class="ve-tree-row" style="display:flex; align-items:center; gap:4px;">';
     html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span>';
     html += '<span class="icon"><span class="mf-ico mf-ico-upload"></span></span>';
-    html += '<span style="font-weight:600;">İçe Aktarılan Ölçümler</span>';
+    html += '<span style="font-weight:600;">İçe aktarılan ölçümler</span>';
     html += ' <span style="font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;">' +
             channels + ' sinyal</span>';
     html += '</div>';
@@ -13624,7 +13624,7 @@ function veRenderSlot(slotIdx) {
     body.innerHTML =
       '<div class="ve-trace-empty" style="display:flex;">' +
       '<div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-clipboard"></span></div>' +
-      '<div class="ve-trace-empty-title">Veri Tablosu boş</div>' +
+      '<div class="ve-trace-empty-title">Veri tablosu boş</div>' +
       '<div class="ve-trace-empty-sub">Veri Gezgini\'nden sinyal seçin.</div></div>';
     return;
   }
@@ -16253,7 +16253,7 @@ function veTrEmptyHTML() {
     if(typeof veImpOpenPicker === 'function') {
       h += '<button type="button" class="ve-trace-btn" data-act="import-measure" ' +
            'style="height:26px;margin-top:6px;">' +
-           '<span class="mf-ico mf-ico-upload"></span> Ölçüm Verisi İçe Aktar</button>';
+           '<span class="mf-ico mf-ico-upload"></span> Ölçüm verisi içe aktar</button>';
     }
     return h;
   }
@@ -16268,7 +16268,7 @@ function veTrEmptyHTML() {
       // söylesin. "Çalıştır" yazıp panel açmak yanıltıyordu.
       h += '<button type="button" class="ve-trace-btn" data-act="open-solver" ' +
            'style="height:26px;margin-top:4px;">' +
-           '<span class="mf-ico mf-ico-play"></span> Çözücüyü Aç</button>';
+           '<span class="mf-ico mf-ico-play"></span> Çözücüyü aç</button>';
     }
     // Çözüm koşmak tek yol değil: hazır bir ölçüm dosyası da çizilebilir.
     if(typeof veImpOpenPicker === 'function') {
@@ -16276,7 +16276,7 @@ function veTrEmptyHTML() {
            'dosyası (Excel/CSV):</div>';
       h += '<button type="button" class="ve-trace-btn" data-act="import-measure" ' +
            'style="height:26px;margin-top:4px;">' +
-           '<span class="mf-ico mf-ico-upload"></span> Ölçüm Verisi İçe Aktar</button>';
+           '<span class="mf-ico mf-ico-upload"></span> Ölçüm verisi içe aktar</button>';
     }
     return h;
   }
@@ -17474,7 +17474,7 @@ if(typeof module !== 'undefined' && module.exports) {
 //   3. "X ekseni ne olsun?" → açılır liste, ön seçim genelde Time sütunu
 //   4. Y eksenine gidecek sütunlar TİKLİ KUTUlarla seçilir (çok sütunlu
 //      dosyalarda arama + Tümü/Hiçbiri ile)
-//   5. "Diyagramlara Aktar" → seçilenler ölçüm penceresinde şeritlere düşer
+//   5. "Diyagramlara aktar" → seçilenler ölçüm penceresinde şeritlere düşer
 //
 // Neden tek pencerede: dosya→sayfa→başlık→X→Y beş ayrı adıma bölünürse
 // kullanıcı X'i seçerken sütun listesini göremez. Önizleme tablosu üstte
@@ -17653,7 +17653,7 @@ function veImpEscHandler(e) {
 function veImpRender() {
   var el = document.getElementById('ve-import-content');
   if(!el) return;
-  // Alt çubuk her çizimde durumla eşitlenir: "Diyagramlara Aktar" seçim
+  // Alt çubuk her çizimde durumla eşitlenir: "Diyagramlara aktar" seçim
   // yokken etkin görünürse kullanıcı boş bir aktarım deneyip hata alır.
   setTimeout(veImpSyncFooter, 0);
 
@@ -17904,14 +17904,14 @@ function veImpSetQuery(v) {
   if(s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
 }
 
-// "Diyagramlara Aktar" yalnızca seçim varken etkin.
+// "Diyagramlara aktar" yalnızca seçim varken etkin.
 function veImpSyncFooter() {
   var btn = document.getElementById('ve-import-apply');
   if(!btn) return;
   var n = 0;
   Object.keys(veImpUI.ySel).forEach(function(k) { if(veImpUI.ySel[k]) n++; });
   btn.disabled = !veImpUI.rows || n === 0;
-  btn.textContent = n > 0 ? ('Diyagramlara Aktar (' + n + ')') : 'Diyagramlara Aktar';
+  btn.textContent = n > 0 ? ('Diyagramlara aktar (' + n + ')') : 'Diyagramlara aktar';
 }
 
 // ── Uygulama ──────────────────────────────────────────────────────────────

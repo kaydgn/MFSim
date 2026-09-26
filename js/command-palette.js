@@ -91,8 +91,8 @@ function _cmdkStaticCommands() {
     { sec:'Çözücü',  label:'Çözücüyü aç',               kw:'çalıştır run simüle çözücü solve aç',  icon:_cmdkIco('play'),    run:function(){ _cmdkCall('veSolverRun'); } },
     // Paneller
     { sec:'Panel',   label:'Ayarlar',                   kw:'ayarlar settings tema',             icon:_cmdkIco('settings'),   run:function(){ _cmdkCall('veOpenSettings'); } },
-    { sec:'Panel',   label:'Program durumu',            kw:'durum status bilgi versiyon',       icon:_cmdkSvg('info'),       run:function(){ _cmdkCall('veOpenStatusModal'); } },
-    { sec:'Panel',   label:'Program arşivi',             kw:'arşiv program artifact html araç defter', icon:_cmdkIco('folder-open'), run:function(){ _cmdkCall('veProgramArsiviOpen'); } },
+    { sec:'Panel',   label:'Program Durumu',            kw:'durum status bilgi versiyon',       icon:_cmdkSvg('info'),       run:function(){ _cmdkCall('veOpenStatusModal'); } },
+    { sec:'Panel',   label:'Program Arşivi',             kw:'arşiv program artifact html araç defter', icon:_cmdkIco('folder-open'), run:function(){ _cmdkCall('veProgramArsiviOpen'); } },
     { sec:'Panel',   label:'Uyarılar panelini aç / kapa', kw:'uyarı warning hata',              icon:_cmdkIco('alert-triangle'), run:function(){ _cmdkCall('veToggleWarnings'); } },
     { sec:'Panel',   label:'Kenar çubuğu (sidebar)',    kw:'sidebar kenar çubuğu bileşen',      icon:_cmdkSvg('panel'),      run:function(){ _cmdkCall('veToggleSidebar'); } },
     { sec:'Panel',   label:'Özellikler paneli',         kw:'özellik properties panel',          icon:_cmdkIco('sliders'),    run:function(){ _cmdkCall('veTogglePropertiesPanel'); } },
@@ -105,7 +105,7 @@ function _cmdkStaticCommands() {
     // 11'i palette YOKTU. Kapı: tests/unit/komut-kapsami.test.js
     { sec:'Görünüm', label:'Sınırı göster / gizle',     kw:'sınır boundary çerçeve frame', icon:_cmdkIco('frame'),      run:function(){ _cmdkCall('veToggleBoundary'); } },
     { sec:'Görünüm', label:'Sınır opaklığı',            kw:'sınır boundary opaklık opacity kontrast', icon:_cmdkIco('contrast'), run:function(){ _cmdkCall('veCycleBoundaryOpacity'); } },
-    { sec:'Panel',   label:'Komuta penceresi',          kw:'komuta sipariş fiş durum ölç', icon:_cmdkIco('lock'),       run:function(){ _cmdkCall('veKomutaAc'); } },
+    { sec:'Panel',   label:'Komuta Penceresi',          kw:'komuta sipariş fiş durum ölç', icon:_cmdkIco('lock'),       run:function(){ _cmdkCall('veKomutaAc'); } },
     { sec:'Panel',   label:'Radyo',                     kw:'radyo müzik çalar radio',      icon:_cmdkIco('radio'),      run:function(){ _cmdkCall('veToggleRadio'); } },
     { sec:'Genel',   label:'Kılavuz kiti',              kw:'kılavuz guide yardım belge indir', icon:_cmdkIco('clipboard'), run:function(){ _cmdkCall('veGuideKitOpen'); } },
     { sec:'Genel',   label:'Bu modülün kılavuzu',       kw:'kılavuz guide modül yardım',   icon:_cmdkIco('file-text'),  run:function(){ _cmdkCall('veGuideOpenCurrent'); } },

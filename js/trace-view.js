@@ -2314,7 +2314,7 @@ function veTrEmptyHTML() {
       // söylesin. "Çalıştır" yazıp panel açmak yanıltıyordu.
       h += '<button type="button" class="ve-trace-btn" data-act="open-solver" ' +
            'style="height:26px;margin-top:4px;">' +
-           '<span class="mf-ico mf-ico-play"></span> Çözücüyü Aç</button>';
+           '<span class="mf-ico mf-ico-play"></span> Çözücüyü aç</button>';
     }
     // Çözüm koşmak tek yol değil: hazır bir ölçüm dosyası da çizilebilir.
     if(typeof veImpOpenPicker === 'function') {
@@ -2322,7 +2322,7 @@ function veTrEmptyHTML() {
            'dosyası (Excel/CSV):</div>';
       h += '<button type="button" class="ve-trace-btn" data-act="import-measure" ' +
            'style="height:26px;margin-top:4px;">' +
-           '<span class="mf-ico mf-ico-upload"></span> Ölçüm Verisi İçe Aktar</button>';
+           '<span class="mf-ico mf-ico-upload"></span> Ölçüm verisi içe aktar</button>';
     }
     return h;
   }

@@ -101,7 +101,7 @@ describe('kaynak bekçileri — iki düğme ayrışmasın', () => {
     // penceresinin boş durumuna taşındı — güvence aynı kaldı: düğme hesabı
     // başlatmıyor, Çözücü bileşenini açıyor, adı da bunu söylemeli.
     const trace = loadSource('trace-view.js');
-    expect(trace).toContain('Çözücüyü Aç');
+    expect(trace).toContain('Çözücüyü aç');
     expect(trace).not.toContain('Simülasyonu Çalıştır<');
   });
 
