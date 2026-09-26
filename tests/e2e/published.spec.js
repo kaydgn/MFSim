@@ -150,12 +150,18 @@ test.describe('Yayınlanan tek dosya — açılış', () => {
     // askıda kalan bir kaynağı zaman aşımıyla ATLAR ve devam eder); eksikliği
     // ancak modülün kurduğu global üzerinden anlaşılır.
     //
-    // Beklenti listesi ELLE YAZILMAZ, kaynaktan TÜRETİLİR: her js/ dosyasının
-    // ilk üst-seviye fonksiyon bildirimi alınır. Elle yazılan bir liste hem
-    // eskir hem de yanlış ad yazınca sessizce zayıflar — ilk denemede tam
-    // olarak bu oldu, uydurulmuş on iki addan hiçbiri gerçek değildi.
-    const beklenen = fs.readdirSync(path.join(ROOT, 'js'))
-      .filter((f) => f.endsWith('.js')).sort()
+    // Beklenti listesi ELLE YAZILMAZ, kaynaktan TÜRETİLİR: index.html'in
+    // BAĞLADIĞI her js/ dosyasının ilk üst-seviye fonksiyon bildirimi alınır.
+    // Elle yazılan bir liste hem eskir hem de yanlış ad yazınca sessizce
+    // zayıflar — ilk denemede tam olarak bu oldu, uydurulmuş on iki addan
+    // hiçbiri gerçek değildi. Kaynak index.html, klasör DEĞİL: klasörde henüz
+    // arayüze bağlanmamış dosya olabilir (STEP okuyucusu, kaydgn/MFSim#1004)
+    // ve o dosya yükleyicinin ATLADIĞI bir modül değil — halka onu eksik
+    // sayıp ana dalı kırmızıya çevirmişti.
+    const index = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+    const bagli = [...new Set([...index.matchAll(/<script\b[^>]*\bsrc="js\/([^"]+\.js)"/g)].map((m) => m[1]))];
+    expect(bagli.length).toBeGreaterThan(40);
+    const beklenen = bagli.slice().sort()
       .map((f) => {
         const src = fs.readFileSync(path.join(ROOT, 'js', f), 'utf8');
         const m = /^function\s+([A-Za-z_$][\w$]*)\s*\(/m.exec(src);
