@@ -3196,12 +3196,16 @@ body > .mfsim-loading-logo-ico{ transition:none; }
    bu yüzden pan/zoom'dan etkilenmez. minimap.js canvas'a çizer + viewport
    dikdörtgenini konumlar. Node yokken .ve-minimap-hidden ile gizlenir. */
 .ve-minimap{
+  /* Açık kutunun ölçüsü JETONDA: js/minimap.js inmiş kutunun (34 px) içeriği
+     örtüp örtmeyeceğini açık hâlin ölçüsüyle soruyor (--mm-w/--mm-h). */
+  --mm-w:196px;
+  --mm-h:134px;
   position:absolute;
   right:14px;
   bottom:14px;
   z-index:40;
-  width:196px;
-  height:134px;
+  width:var(--mm-w);
+  height:var(--mm-h);
   background:var(--bg-secondary);
   border:1px solid var(--border-color);
   border-radius:var(--radius-md);
