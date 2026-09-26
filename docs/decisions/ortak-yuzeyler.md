@@ -1290,3 +1290,27 @@ PENCEREYE sorar (`@container vepanel`, ≤ 640 px → tek sütun): yazı büyüy
 gözlemciye kalınca geniş tablo sekme açılır açılmaz yatay kaydırmayla
 görünüyordu. Kapı: `mufettis-sigma.spec.js` + `tablo-pencere.test.js` +
 `fead-panel-dili.test.js`.
+
+## Panel grafiklerinin ekseni yuvarlak adımla bölünür (2026-09-26)
+
+**Hüküm.** Motor, Tork Konvertörü ve yol profili grafikleri eksen bölmelerini
+`veEksenBolme`'den (`js/graphics.js`) alır: raporların adım kuralı
+(1 · 2 · 5 × 10ⁿ), görünen aralık GENİŞLETİLMEZ. Izgara sol eksenin
+bölmelerine oturur ve rengini temadan alır; tuvale çıplak beyaz yazılmaz.
+
+**Gerekçe.** Aralığı dörde bölmek 1265 · 949 · 633 gibi ara değer okunmayan
+bölmeler üretiyordu; beyaz %5–40 ızgara, "Coupling" çizgisi ve yazısı açık
+temada görünmüyordu.
+
+**Kapı.** `axis-format.test.js` → *"veEksenBolme"* + *"kaynak kapısı"*.
+
+## Düğme yazısı kırılmaz, satır kayar (2026-09-26)
+
+**Hüküm.** `.sw-btn` tek satır yazar; `.sw-btn-row` sığmayan düğmeyi alt
+satıra geçirir.
+
+**Gerekçe.** Kaydırmasız satır dar pencerede düğmeyi büzüyor ve yazıyı
+içinde kırıyordu (motor penceresi ve üç aksesuar penceresi).
+
+**Kapı.** `mufettis-sigma.spec.js` → *"düğme yazısı N satır"* (her pencere,
+sütunda ve modalda) + `panel-dugme.test.js`.

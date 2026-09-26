@@ -400,6 +400,27 @@ function veAxisDecimals(step) {
   return 3;
 }
 
+// Panel grafiklerinin (Motor, Tork Konvertörü, yol profili) eksen bölmeleri:
+// görünen [lo, hi] aralığında YUVARLAK adımlı değerler — adım ve basamak
+// raporların kullandığı kuraldan (veNiceStep · veAxisDecimals). Bu paneller
+// eskiden aralığı dörde bölüyordu ve eksen 1265 · 949 · 633 · 316 ya da
+// 418.4 · 335.2 · 252.0 diye okunuyordu (ölçüldü: 10 panel ekseninin 6'sı).
+// Aralık GENİŞLETİLMEZ: eğri yerinde kalır, bölmeler aralığın içine oturur;
+// yakınlaştırılmış pencerede de aynı kural geçer.
+function veEksenBolme(lo, hi, hedef) {
+  var a = Math.min(lo, hi), b = Math.max(lo, hi);
+  if(!isFinite(a) || !isFinite(b)) return { adim: 0, basamak: 0, degerler: [] };
+  if(b - a <= 0) return { adim: 0, basamak: 0, degerler: [a] };
+  var adim = veNiceStep((b - a) / Math.max(1, hedef || 4));
+  var pay = adim * 1e-6;
+  var degerler = [];
+  for(var k = Math.ceil((a - pay) / adim), n = 0; k * adim <= b + pay && n < 200; k++, n++) {
+    // Tamsayı katı: art arda toplamanın biriktirdiği artık (0.30000000000000004) doğmaz
+    degerler.push(+(k * adim).toPrecision(12));
+  }
+  return { adim: adim, basamak: veAxisDecimals(adim), degerler: degerler };
+}
+
 function veFormatAxisVal(v, dec) {
   var a = Math.abs(v);
   if(dec === undefined) {

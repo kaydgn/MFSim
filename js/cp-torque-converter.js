@@ -976,19 +976,25 @@ function drawVETCTauChart(nodeId, pts) {
   function yT(y) { return _yN(y / tauMax); }
   function yE(y) { return _yN(y / etaMax); }
   
-  // Grid
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
-  for(var i = 0; i <= 5; i++) {
-    var gy = margin.top + ph * i / 5;
+  // Eksen bölmeleri YUVARLAK adımla (graphics.js → veEksenBolme); eskiden
+  // görünen aralık dörde bölünüyordu (3.1 · 2.3 · 1.6 · 0.8). Izgara τ
+  // ekseninin bölmelerinde ve rengi temadan: beyaz %5 açık temada yoktu.
+  var bolX = veEksenBolme(xMin, xMax, 5);
+  var bolT = veEksenBolme(tauMax * _pcWin.minY, tauMax * _pcWin.maxY, 5);
+  var bolE = veEksenBolme(etaMax * _pcWin.minY, etaMax * _pcWin.maxY, 5);
+  ctx.strokeStyle = veThemeRgba('--border-color', 0.5, 'rgba(128,128,128,0.2)'); ctx.lineWidth = 1;
+  bolT.degerler.forEach(function(v) {
+    var gy = Math.round(yT(v)) + 0.5;
     ctx.beginPath(); ctx.moveTo(margin.left, gy); ctx.lineTo(margin.left + pw, gy); ctx.stroke();
-  }
-  
-  // Coupling dikey çizgi (SR = 0.88)
+  });
+
+  // Coupling dikey çizgi (SR = 0.88) — çizgi de yazı da TEMADAN: beyaz %25 /
+  // %40 açık temada zeminle aynı renkti ve ikisi de görünmüyordu.
   var couplingX = xS(0.88);
-  ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1; ctx.setLineDash([5, 4]);
+  ctx.strokeStyle = veThemeRgba('--text-muted', 0.55, 'rgba(128,128,128,0.55)'); ctx.lineWidth = 1; ctx.setLineDash([5, 4]);
   ctx.beginPath(); ctx.moveTo(couplingX, margin.top); ctx.lineTo(couplingX, margin.top + ph); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = veThemeFont('micro'); ctx.textAlign = 'center';
+  ctx.fillStyle = veThemeRgba('--text-muted', 1, 'rgba(128,128,128,1)'); ctx.font = veThemeFont('micro'); ctx.textAlign = 'center';
   ctx.fillText('Coupling', couplingX, margin.top - 5);
   
   // Sol eksen (τ) - Mavi
@@ -1003,19 +1009,16 @@ function drawVETCTauChart(nodeId, pts) {
   
   // X etiketleri
   ctx.fillStyle = veThemeRgba('--text-muted', 1); ctx.font = veThemeFont('micro'); ctx.textAlign = 'center';
-  for(var i = 0; i <= 5; i++) {
-    var xv = xMin + (xMax - xMin) * i / 5;
-    ctx.fillText(xv.toFixed(2), xS(xv), margin.top + ph + 15);
-  }
+  bolX.degerler.forEach(function(v) { ctx.fillText(v.toFixed(Math.max(1, bolX.basamak)), xS(v), margin.top + ph + 15); });
   ctx.fillText('SR [-]', margin.left + pw / 2, 200 - 5);
-  
+
   // Sol Y etiketleri (τ)
   ctx.fillStyle = veThemeRgba('--seri-1', 1); ctx.textAlign = 'right';
-  for(var i = 0; i <= 4; i++) { var yv = tauMax * (_pcWin.minY + (_pcWin.maxY - _pcWin.minY) * i / 4); ctx.fillText(yv.toFixed(1), margin.left - 5, yT(yv) + 3); }
-  
+  bolT.degerler.forEach(function(v) { ctx.fillText(v.toFixed(bolT.basamak), margin.left - 5, yT(v) + 3); });
+
   // Sağ Y etiketleri (η)
   ctx.fillStyle = veThemeRgba('--seri-2', 1); ctx.textAlign = 'left';
-  for(var i = 0; i <= 4; i++) { var yv = etaMax * (_pcWin.minY + (_pcWin.maxY - _pcWin.minY) * i / 4); ctx.fillText(Math.round(yv), margin.left + pw + 5, yE(yv) + 3); }
+  bolE.degerler.forEach(function(v) { ctx.fillText(v.toFixed(bolE.basamak), margin.left + pw + 5, yE(v) + 3); });
   
   // Eğriler plot alanına kırpılır (yakınlaştırma taşmasın)
   ctx.save(); ctx.beginPath(); ctx.rect(margin.left, margin.top, pw, ph); ctx.clip();
@@ -1091,12 +1094,14 @@ function drawVETCKpumpChart(nodeId, pts) {
   function xS(x) { return margin.left + (x - xMin) / (xMax - xMin) * pw; }
   function yS(y) { return margin.top + ph - (y - kMin) / (kMax - kMin) * ph; }
   
-  // Grid
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
-  for(var i = 0; i <= 5; i++) {
-    var gy = margin.top + ph * i / 5;
+  // Izgara Y ekseninin YUVARLAK bölmelerinde, renk temadan (τ grafiğiyle aynı kural)
+  var bolX = veEksenBolme(xMin, xMax, 5);
+  var bolK = veEksenBolme(kMin, kMax, 5);
+  ctx.strokeStyle = veThemeRgba('--border-color', 0.5, 'rgba(128,128,128,0.2)'); ctx.lineWidth = 1;
+  bolK.degerler.forEach(function(v) {
+    var gy = Math.round(yS(v)) + 0.5;
     ctx.beginPath(); ctx.moveTo(margin.left, gy); ctx.lineTo(margin.left + pw, gy); ctx.stroke();
-  }
+  });
   
   // Sol eksen
   ctx.strokeStyle = veThemeRgba('--seri-3', 1); ctx.lineWidth = 1;
@@ -1107,18 +1112,12 @@ function drawVETCKpumpChart(nodeId, pts) {
   
   // X etiketleri
   ctx.fillStyle = veThemeRgba('--text-muted', 1); ctx.font = veThemeFont('micro'); ctx.textAlign = 'center';
-  for(var i = 0; i <= 5; i++) {
-    var xv = xMin + (xMax - xMin) * i / 5;
-    ctx.fillText(xv.toFixed(2), xS(xv), margin.top + ph + 15);
-  }
+  bolX.degerler.forEach(function(v) { ctx.fillText(v.toFixed(Math.max(1, bolX.basamak)), xS(v), margin.top + ph + 15); });
   ctx.fillText('SR [-]', margin.left + pw / 2, 180 - 5);
-  
+
   // Y etiketleri
   ctx.fillStyle = veThemeRgba('--seri-3', 1); ctx.textAlign = 'right';
-  for(var i = 0; i <= 4; i++) {
-    var yv = kMin + (kMax - kMin) * i / 4;
-    ctx.fillText(yv.toFixed(1), margin.left - 5, yS(yv) + 3);
-  }
+  bolK.degerler.forEach(function(v) { ctx.fillText(v.toFixed(bolK.basamak), margin.left - 5, yS(v) + 3); });
   
   // Eğri plot alanına kırpılır
   ctx.save(); ctx.beginPath(); ctx.rect(margin.left, margin.top, pw, ph); ctx.clip();

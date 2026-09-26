@@ -674,6 +674,19 @@
       letter-spacing: 0.5px;
       margin: 14px 0 8px;
     }
+    /* AYARLAR → KİMLİK. Bu bloğun sınıflarının kuralı hiç yazılmamıştı:
+       baş harfler 16 px çıplak metin olarak ayrı satıra düşüyor, not
+       tarayıcının varsayılan 16 px'i ve koyu mürekkebiyle yazılıyordu
+       (ölçüldü; kardeş açıklama 12 px ve soluk). Avatar dairesi hesap
+       menüsündekinin kendisi (.ve-avatar-menu-av) — ikinci kopya yazılmadı. */
+    .ve-set-kimlik { display: flex; align-items: flex-end; gap: 12px; }
+    .ve-set-kimlik-av { margin-bottom: 1px; }
+    .ve-set-not {
+      font-size:var(--fs-body);
+      color: var(--text-muted);
+      margin: 6px 0 4px;
+      line-height: 1.5;
+    }
     .ve-settings-row {
       display: flex;
       align-items: center;
@@ -3727,9 +3740,16 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 }
 .sw-chain-bar.ok{background:var(--success-tint-8);color:var(--ink-success);border:1px solid var(--success-tint-15);}
 .sw-chain-bar.fail{background:var(--danger-tint-8);color:var(--ink-danger);border:1px solid var(--danger-tint-15);}
-.sw-btn-row{display:flex;gap:6px;justify-content:center;margin:10px 0;}
+/* DÜĞME YAZISI KIRILMAZ, SATIR KAYAR. Satır kaydırmasız bir flex idi: dar
+   sütunda düğmeler büzülüyor ve yazı içlerinde kırılıyordu — ölçüldü, motor
+   panelinde "+ Satır Ekle", "Tümünü Sil", "Veriyi Temizle" 89–104 px'e
+   sıkışıp iki satıra iniyordu, "Kaydet" simgesini yazının üstüne alıyordu.
+   Artık yazı tek satır; sığmayan düğme alt satıra geçer. Yan boşluk 16 → 12
+   px: motor penceresinin beş düğmesi 468 px'lik satıra tek sıra sığıyor
+   (16 px'te "Kaydet" alt satıra düşüyordu). */
+.sw-btn-row{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:10px 0;}
 .sw-btn{
-  padding:5px 16px;font-size:var(--fs-tiny);font-weight:600;
+  padding:5px 12px;font-size:var(--fs-tiny);font-weight:600;white-space:nowrap;
   border-radius:var(--radius-sm);cursor:pointer;border:1px solid transparent;
   transition:background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), filter var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }

@@ -180,3 +180,97 @@ describe('veFormatTooltipVal — iki kopya da aynı davranmalı', () => {
       .forEach((v) => expect(vFormatTooltipVal(v)).toBe(gFormatTooltipVal(v)));
   });
 });
+
+// ── Panel grafiklerinin eksen bölmeleri ─────────────────────────────────────
+//
+// Motor ve Tork Konvertörü panelleri (ve yol profili) ekseni görünen aralığı
+// dörde bölerek çiziyordu: 1265 · 949 · 633 · 316, 418.4 · 335.2 · 252.0.
+// Ölçüldü (gerçek tarayıcı, tuvale yazılan her metin): 10 panel ekseninin 6'sı
+// yuvarlak değildi; raporların 21 ekseninin hepsi yuvarlaktı. Paneller artık
+// raporların adım kuralını paylaşan tek yardımcıdan geçiyor.
+const veEksenBolme = new Function(
+  src.slice(src.indexOf('function veNiceStep')) + '\nreturn veEksenBolme;'
+)();
+const yuvarlak = (adim) => {
+  const m = Math.pow(10, Math.floor(Math.log10(adim) + 1e-9));
+  return [1, 2, 5, 10].some((k) => Math.abs(adim / m - k) < 1e-9);
+};
+
+describe('veEksenBolme — panel eksenleri yuvarlak adımla', () => {
+  test('ölçülen eski eksenler yuvarlak bölmeye oturuyor', () => {
+    expect(veEksenBolme(0, 1265, 5).degerler).toEqual([0, 200, 400, 600, 800, 1000, 1200]);
+    expect(veEksenBolme(800, 2830, 5).degerler).toEqual([1000, 1500, 2000, 2500]);
+    expect(veEksenBolme(85.6, 418.4, 5).degerler).toEqual([100, 150, 200, 250, 300, 350, 400]);
+    const tau = veEksenBolme(0, 3.1, 5);
+    expect(tau.degerler).toEqual([0, 0.5, 1, 1.5, 2, 2.5, 3]);
+    expect(tau.basamak).toBe(1);
+  });
+
+  test('aralık GENİŞLETİLMEZ: her bölme görünen aralığın içinde', () => {
+    [[0, 1265], [800, 2830], [85.6, 418.4], [0.137, 0.583], [-12.5, 47.3], [812.4, 861.9]].forEach(([a, b]) => {
+      veEksenBolme(a, b, 5).degerler.forEach((v) => {
+        expect(v).toBeGreaterThanOrEqual(a - 1e-9);
+        expect(v).toBeLessThanOrEqual(b + 1e-9);
+      });
+    });
+  });
+
+  test('yakınlaştırılmış pencerede de yuvarlak (0.137 … 0.583)', () => {
+    const b = veEksenBolme(0.137, 0.583, 5);
+    expect(b.degerler).toEqual([0.2, 0.3, 0.4, 0.5]);
+    expect(b.basamak).toBe(1);
+  });
+
+  test('kayan nokta artığı etikete sızmaz (0.30000000000000004 yok)', () => {
+    const b = veEksenBolme(0, 0.3, 3);
+    expect(b.degerler).toEqual([0, 0.1, 0.2, 0.3]);
+    b.degerler.forEach((v) => expect(String(v).length).toBeLessThanOrEqual(4));
+  });
+
+  test('ters sıralı ve dejenere girdi çökmez', () => {
+    expect(veEksenBolme(1265, 0, 5).degerler).toEqual(veEksenBolme(0, 1265, 5).degerler);
+    expect(veEksenBolme(5, 5, 5).degerler).toEqual([5]);
+    expect(veEksenBolme(NaN, 5, 5).degerler).toEqual([]);
+  });
+
+  test('rastgele 500 aralıkta: adım 1·2·5 × 10^n, her değer adımın tam katı, 2–12 bölme', () => {
+    let tohum = 7;
+    const r = () => { tohum = (tohum * 16807) % 2147483647; return tohum / 2147483647; };
+    for (let i = 0; i < 500; i++) {
+      const olcek = Math.pow(10, Math.floor(r() * 8) - 3);
+      const a = (r() - 0.3) * olcek * 10, b = a + (0.05 + r()) * olcek * 10;
+      const x = veEksenBolme(a, b, 5);
+      expect(yuvarlak(x.adim)).toBe(true);
+      expect(x.degerler.length).toBeGreaterThanOrEqual(2);
+      expect(x.degerler.length).toBeLessThanOrEqual(12);
+      x.degerler.forEach((v) => expect(Math.abs(v / x.adim - Math.round(v / x.adim))).toBeLessThan(1e-6));
+    }
+  });
+});
+
+describe('panel grafikleri eksenini veEksenBolme\'den alıyor (kaynak kapısı)', () => {
+  // Çizim tuvalde; jsdom'da tuval yok. Kapı kaynağa bakar: eski "aralığı
+  // dörde böl" döngüleri geri gelmesin ve her eksen yardımcıdan geçsin.
+  const DOSYALAR = [
+    ['cp-engine.js', 6],            // iki grafik × (devir · tork · güç)
+    ['cp-torque-converter.js', 5],  // τ grafiği (SR · τ · η) + K grafiği (SR · K)
+    ['component-extras.js', 2],     // yol profili (irtifa · mesafe)
+  ];
+  DOSYALAR.forEach(([dosya, en_az]) => {
+    test(dosya, () => {
+      const s = loadSource(dosya);
+      expect((s.match(/veEksenBolme\(/g) || []).length).toBeGreaterThanOrEqual(en_az);
+      // Eski kalıplar: "xMin + (xMax - xMin) * i / 4", "yMaxTorque * i / 4", "(lx / 4)"
+      expect(s).not.toMatch(/\*\s*i\s*\/\s*[45]\b/);
+      expect(s).not.toMatch(/\(\s*l[xy]\s*\/\s*4\s*\)/);
+    });
+  });
+
+  test('Tork Konvertörü tuvale BEYAZ çizmiyor (açık temada görünmüyordu)', () => {
+    // "Coupling" çizgisi ve yazısı beyaz %25/%40, ızgara beyaz %5 idi:
+    // açık temanın zemininde üçü de yoktu.
+    ['cp-torque-converter.js', 'cp-engine.js'].forEach((dosya) => {
+      expect(loadSource(dosya)).not.toMatch(/(fill|stroke)Style\s*=\s*'rgba\(255,\s*255,\s*255/);
+    });
+  });
+});

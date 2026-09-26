@@ -90,6 +90,24 @@ const pencereOlc = async (tip) => {
           sorun.push(`${k}: yatay kaydırma ${el.scrollWidth}/${el.clientWidth} px`); });
     }
   }
+  // DÜĞME YAZISI KIRILMAZ (2026-09-26) — sütunda da modalda da. Motor
+  // penceresinde "+ Satır Ekle", "Tümünü Sil", "Veriyi Temizle" 89–104 px'e
+  // sıkışıp iki satıra iniyordu (düğme satırı kaydırmasız bir flex'ti).
+  // Metnin satır sayısı çizilmiş kutulardan sayılır; başlık + açıklama taşıyan
+  // kart düğmeleri (blok çocuklu) bilerek çok satırlı, onlar hariç.
+  ic.querySelectorAll('button').forEach((b) => {
+    if (!b.offsetWidth || [...b.children].some((c) => /^(block|flex|grid)$/.test(getComputedStyle(c).display))) return;
+    const rs = []; const tw = document.createTreeWalker(b, NodeFilter.SHOW_TEXT); let t;
+    while ((t = tw.nextNode())) {
+      if (!t.nodeValue.trim()) continue;
+      const rg = document.createRange(); rg.selectNodeContents(t);
+      [...rg.getClientRects()].forEach((x) => { if (x.width > 1) rs.push([x.top, x.bottom]); });
+    }
+    rs.sort((p, q) => p[0] - q[0]);
+    let satir = rs.length ? 1 : 0, alt = rs.length ? rs[0][1] : 0;
+    for (let i = 1; i < rs.length; i++) { if (rs[i][0] >= alt - 2) { satir++; alt = rs[i][1]; } else alt = Math.max(alt, rs[i][1]); }
+    if (satir > 1) sorun.push(`düğme yazısı ${satir} satır "${b.innerText.replace(/\s+/g, ' ').trim().slice(0, 24)}"`);
+  });
   const r = { tip, sutun: ov.getBoundingClientRect().width < innerWidth, tasma: ic.scrollWidth - ic.clientWidth, kesik, enSag,
     listede: VE_SUTUNA_SIGMAYAN.indexOf(tip) >= 0, sorun: [...new Set(sorun)].slice(0, 4) };
   veTogglePropertiesPanel(false); await new Promise((res) => setTimeout(res, 260));
