@@ -282,7 +282,7 @@ function getApExamplePropertiesHTML(node){
   left += '<div style="font-size:var(--fs-micro); font-weight:700; color:var(--text-secondary); letter-spacing:0.04em; text-transform:uppercase; margin-bottom:5px;">Örnek araç</div>';
   left += '<select id="ve-ap-example-sel" onchange="veApSetExample(\'' + nid + '\',this.value)" style="width:100%; padding:5px 8px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); margin-bottom:11px;">';
   list.forEach(function(e){
-    left += '<option value="' + _apEsc(e.id) + '"' + (sel===e.id?' selected':'') + '>' + _apEsc(e.name) + (e.warning?' ⚠':'') + '</option>';
+    left += '<option value="' + _apEsc(e.id) + '"' + (sel===e.id?' selected':'') + '>' + _apEsc(e.name) + (e.warning?' — uyarılı':'') + '</option>';   // seçenek metni ikon taşıyamaz
   });
   left += '</select>';
 
@@ -308,8 +308,8 @@ function getApExamplePropertiesHTML(node){
     left += '</table>';
   }
 
-  left += '<button onclick="veApLoadExample(\'' + nid + '\')" style="width:100%; padding:11px 14px; font-size:var(--fs-md); font-weight:700; background:var(--accent-warning); color:#111; border:none; cursor:pointer; border-radius:var(--radius-sm); letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">▶ Örneği aktar</button>';
-  left += '<button onclick="veApExportTopology()" title="Kanvastaki iç topolojiyi JSON dosyası olarak indir — yeni örnek üretmek için" style="width:100%; margin-top:8px; padding:8px 14px; font-size:var(--fs-body); font-weight:600; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer; border-radius:var(--radius-sm);" onmouseover="this.style.borderColor=\'var(--accent-primary)\'; this.style.color=\'var(--text-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\'; this.style.color=\'var(--text-secondary)\'">↓ İç topolojiyi JSON dışa aktar</button>';
+  left += '<button onclick="veApLoadExample(\'' + nid + '\')" style="width:100%; padding:11px 14px; font-size:var(--fs-md); font-weight:700; background:var(--accent-warning); color:#111; border:none; cursor:pointer; border-radius:var(--radius-sm); letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">' + veIkon('play') + ' Örneği aktar</button>';
+  left += '<button onclick="veApExportTopology()" title="Kanvastaki iç topolojiyi JSON dosyası olarak indir — yeni örnek üretmek için" style="width:100%; margin-top:8px; padding:8px 14px; font-size:var(--fs-body); font-weight:600; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer; border-radius:var(--radius-sm);" onmouseover="this.style.borderColor=\'var(--accent-primary)\'; this.style.color=\'var(--text-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\'; this.style.color=\'var(--text-secondary)\'">' + veIkon('download') + ' İç topolojiyi JSON dışa aktar</button>';
 
   var right = '';
   if(ex.image){

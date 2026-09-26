@@ -845,7 +845,6 @@ function veFeadApplySpinBadge(nodeEl, node){
   // → veFeadNaturalSense). Kart da aynı işaretten çiziyor; ikisi tek kaynak.
   var sense = veFeadCurrentSpin();
   var lbl = veFeadSpinLabel(sense);
-  var metin = lbl.kisa;
 
   // Hüküm oturumluk sonuçtan okunur; çözüm yoksa rozet renk İDDİA ETMEZ.
   var _R = (typeof veFeadResults !== 'undefined' && veFeadResults) ? veFeadResults : null;
@@ -863,7 +862,7 @@ function veFeadApplySpinBadge(nodeEl, node){
          : 'var(--bg-primary)';
   var b = document.createElement('span');
   b.className = 've-fead-badge';
-  b.textContent = metin;
+  b.innerHTML = (lbl.ikon ? veIkon(lbl.ikon) + ' ' : '') + _feadEsc(lbl.kisa);
   b.title = (sense === 0
       ? 'Kayış dönüş yönü okunamadı (kasnak koordinatları eksik).'
       : 'Kayış çevrimi ' + lbl.uzun
@@ -872,7 +871,7 @@ function veFeadApplySpinBadge(nodeEl, node){
     + (hkm === false
         ? '\n\nUYARI: bu yönde gergi kayışın GERGİN tarafına düşüyor; '
           + 'span gerilmeleri ankrajın altına iniyor.'
-        : hkm === true ? '\n\nGergi gevşek tarafta ✓' : '');
+        : hkm === true ? '\n\nGergi gevşek tarafta: doğru.' : '');
   b.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; cursor:pointer;'
     + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
     + 'padding:2px 4px; border-radius:var(--radius-xs);'
@@ -993,9 +992,9 @@ function getFeadSpinPropertiesHTML(node){
     ? '<div class="ve-fp-durum"><b>Gergi tarafı:</b> hüküm için önce Çözücü '
       + 'penceresinden çözüm koşturun.</div>'
     : hkm.ok
-      ? '<div class="ve-fp-durum" data-d="ok"><b>Gergi gevşek tarafta ✓</b> — ankraj '
+      ? '<div class="ve-fp-durum" data-d="ok">' + veIkon('check') + ' <b>Gergi gevşek tarafta</b> — ankraj '
         + 'en düşük açıklık, gerilme zinciri bu yönde tutarlı.</div>'
-      : '<div class="ve-fp-durum" data-d="no"><b>Gergi GERGİN tarafında</b> — yönü '
+      : '<div class="ve-fp-durum" data-d="no">' + veIkon('x') + ' <b>Gergi GERGİN tarafında</b> — yönü '
         + 'çevirin ya da gergiyi sürücünün önüne alın (Yön sekmesi).</div>';
   var eylem = '<button type="button" class="ve-fp-solve" onclick="veFeadToggleSpin()">'
     + '<span class="mf-ico mf-ico-refresh" aria-hidden="true"></span> Yönü çevir</button>';
@@ -1328,7 +1327,7 @@ function veFeadEksikBandi(nodeId, sekmeler){
           + '<span class="ve-fp-eksik-t"><b>' + _feadEsc(s.ad) + '</b> — '
           + _feadEsc(s.durum.neden || '') + '</span>'
           + '<button type="button" onclick="veFeadEksikGit(\'' + nodeId + '\',\'' + s.k + '\')">'
-          + (s.k === 'son' ? 'Aç' : 'Doldur') + ' →</button></div>';
+          + (s.k === 'son' ? 'Aç' : 'Doldur') + ' ' + veIkon('arrow-right') + '</button></div>';
       }).join('')
     + '</div>';
 }
@@ -2210,7 +2209,7 @@ function veFeadArmReadout(node){
   try { bant = veFeadArmBand(b); } catch(e){ bant = null; }
   if(bant && bant.ok){
     h += satir(bant.userOk ? 'Kol açısı olanaklı bantta' : 'Kol açısı bandın DIŞINDA',
-      (bant.userOk ? '✓ ' : '✗ ') + _feadFmt(bant.arcDeg, 0) + '° / 360° kullanılabilir',
+      veIkon(bant.userOk ? 'check' : 'x') + ' ' + _feadFmt(bant.arcDeg, 0) + '° / 360° kullanılabilir',
       bant.userOk ? 'var(--ink-success)' : 'var(--ink-danger)');
   }
   h += '</div>';
@@ -2639,7 +2638,7 @@ function veFeadBeltCatalogCard(node, serbest){
       + '<td style="padding:3px 5px; text-align:right; color:var(--text-muted);">'
       + (c.deltaMm >= 0 ? '+' : '−') + _feadFmt(Math.abs(c.deltaMm), 1) + '</td>'
       + '<td style="padding:3px 5px; text-align:left;">' + _feadEsc(c.code)
-      + (izgara ? ' <span style="color:var(--ink-warning);">◇</span>' : '') + '</td>'
+      + (izgara ? ' <span style="color:var(--ink-warning);">' + veIkon('diamond', '', 'Otomotiv ızgarası') + '</span>' : '') + '</td>'
       + '<td style="padding:3px 5px; text-align:right;">' + kol + '</td>'
       + '<td style="padding:3px 5px; text-align:right;">' + ger + '</td></tr>';
   };
@@ -2651,7 +2650,7 @@ function veFeadBeltCatalogCard(node, serbest){
   hepsi.forEach(function(c){ h += satir(c, c.kind === 'grid'); });
   h += '</tbody></table></div>';
 
-  h += _feadHint('<b>◇</b> otomotiv ızgarası (5 mm adım) — stok listesinde değil ama '
+  h += _feadHint('<span style="color:var(--ink-warning);">' + veIkon('diamond') + '</span> otomotiv ızgarası (5 mm adım) — stok listesinde değil ama '
     + 'ısmarlanabilir; FEAD kayışları uygulama başına üretiliyor. İşaretsiz satırlar '
     + 'ISO 9982 / DIN 7867 <b>stok</b> boyları. Katalog bir KISIT DEĞİL: ara boy '
     + 'tedarik edilebilir, boyu elle de girebilirsiniz. Kaynak: ' + _feadEsc(kaynak) + '.');
@@ -5579,7 +5578,7 @@ function veFeadKatmanPanelHTML(node, kat, tenVar){
     + '<div class="ve-fead-kat-bas"><b>Katmanlar</b>'
     + '<span class="kart">' + _feadEsc(ad) + '</span>'
     + '<button type="button" class="ve-fead-kat-kapat" onclick="veFeadKatmanToggle(null)"'
-    + ' title="Paneli kapat">✕</button></div>'
+    + ' title="Paneli kapat">' + veIkon('x') + '</button></div>'
     // ÖN AYARLAR ÜSTTE ve ADLARIYLA. Bu iki isim bir zamanlar İKİ AYRI KART
     // TİPİYDİ; tip kalkınca ayrım kayb olmasın diye buraya taşındı. Kullanıcı
     // "bu kart geometri olsun" diyebiliyor ve ne demek olduğunu tek tıkla
@@ -5878,7 +5877,7 @@ function veFeadLayoutCardStrip(build, mode){
   // İKİ OKUMA DA KAYBOLMUYOR: `title` her hâlde tamamını taşıyor.
   return '<div class="ve-fead-kan-durum ' + (ok ? 'ok' : 'no') + '"'
     + ' title="' + _feadEsc(sol + (sag ? ' · ' + sag : '')) + '">'
-    + '<b>' + (ok ? '✓' : '✗') + '</b>'
+    + '<b>' + veIkon(ok ? 'check' : 'x') + '</b>'
     + '<span>' + _feadEsc(ok ? (sag || sol) : sol) + '</span>'
     + (ok && sag ? '<i>' + _feadEsc(sol) + '</i>' : '') + '</div>';
 }
@@ -6219,7 +6218,7 @@ function veFeadTableCardHTML(node, opt){
           + ' title="Gerilme zinciri gergiye ankrajlanır ve listede ileri yürür:'
           + ' gergiden sonraki ilk kasnak sürücü DEĞİLSE açıklıklar ankrajın'
           + ' altına iner. Sıra sürücüyle başladığına göre gergi SON SATIR olmalı.">'
-          + '<b>✗</b> Gergi sonda değil · ' + (to.index + 1) + '/' + to.count + '</span>';
+          + veIkon('x') + ' Gergi sonda değil · ' + (to.index + 1) + '/' + to.count + '</span>';
       }())
     + veFeadTableAddHTML()
     + '</div>';
@@ -6306,7 +6305,7 @@ function veFeadTableCardHTML(node, opt){
           + ' onclick="veFeadTableDelete(\'' + id + '\')"'
           + ' title="' + _feadEsc(r.tensioner
               ? 'Otomatik gergi silinemez — her FEAD modelinde tam bir gergi vardır'
-              : r.name + ' kasnağını sil') + '">✕</button></td>';
+              : r.name + ' kasnağını sil') + '">' + veIkon('x') + '</button></td>';
       } else {
         h += td + '></td>';
       }
@@ -6321,7 +6320,7 @@ function veFeadTableCardHTML(node, opt){
 // ve o, klavyeyle gezinen için hiç var olmayan bir düğmeydi; `disabled` ise
 // "burada bir düğme var ama şu an kullanılamaz" diyor.
 function _feadTblMove(id, delta, pasif){
-  var g = (delta < 0) ? '▲' : '▼';
+  var g = veIkon(delta < 0 ? 'arrow-up' : 'arrow-down');   // sihirbazın sıra oklarıyla aynı ikon
   return '<button type="button" class="ve-fead-tbl-mv"' + (pasif ? ' disabled' : '')
     + ' onmousedown="event.stopPropagation();"'
     + ' onclick="veFeadTableMove(\'' + _feadEsc(id) + '\',' + delta + ')"'
@@ -6780,7 +6779,7 @@ function _feadScnHud(scn, st){
   h += '  ·  T ' + Math.round(st.Tmin)
      + (Math.round(st.Tmax) !== Math.round(st.Tmin) ? '–' + Math.round(st.Tmax) : '') + ' N';
   var r = _feadScnRezonans(st);
-  if(r) h += '   ⚠ REZONANS ' + ((scn && scn.adlar && scn.adlar[r.i]) ? scn.adlar[r.i] : ('açıklık ' + (r.i+1)))
+  if(r) h += '   ⚠ REZONANS ' + ((scn && scn.adlar && scn.adlar[r.i]) ? scn.adlar[r.i] : ('açıklık ' + (r.i+1)))   // metin: çizimin SVG yazısı ve HUD textContent — ikon basılamaz
            + ' × ' + r.k + '. mertebe';
   return h;
 }
@@ -7280,7 +7279,7 @@ function getFeadSolverPropertiesHTML(node){
   var satirSay = veFeadDutyRows(node).length;
   var hazir = build.ok && satirSay > 0;
   var dugme = '<button type="button" class="ve-fp-solve"' + (hazir ? '' : ' disabled')
-    + ' onclick="veFeadSolve(\'' + node.id + '\')">▶ Hesapla</button>'
+    + ' onclick="veFeadSolve(\'' + node.id + '\')">' + veIkon('play') + ' Hesapla</button>'
     + (hazir ? '' : '<div class="ve-fp-solve-not">'
         + (!build.ok ? 'Model eksik — kasnak konumlarını tamamlayın.'
                      : 'Çalışma çevrimi boş — en az bir satır girin.') + '</div>');
@@ -7323,9 +7322,9 @@ function veFeadChecksCard(node, build){
   var h = '';
 
   function rozet(durum){
-    if(durum === 'ok')   return '<span style="color:var(--ink-success); font-weight:700;">✓ uygun</span>';
-    if(durum === 'warn') return '<span style="color:var(--ink-warning); font-weight:700;">⚠ sınırda</span>';
-    if(durum === 'no')   return '<span style="color:var(--ink-danger); font-weight:700;">✗ kontrol</span>';
+    if(durum === 'ok')   return '<span style="color:var(--ink-success); font-weight:700;">' + veIkon('check') + ' uygun</span>';
+    if(durum === 'warn') return '<span style="color:var(--ink-warning); font-weight:700;">' + veIkon('alert-triangle') + ' sınırda</span>';
+    if(durum === 'no')   return '<span style="color:var(--ink-danger); font-weight:700;">' + veIkon('x') + ' kontrol</span>';
     return '<span style="color:var(--text-muted);">— değerlendirilemedi</span>';
   }
   function baslik(ad, durum, ek){
@@ -8329,7 +8328,7 @@ function _feadForgetResults(){
 function veFeadResultBlock(node){
   var R = (typeof window !== 'undefined') ? window.veFeadResults : null;
   if(!R) return _feadCard('Sonuç', 'henüz hesap yok', 'var(--text-muted)',
-    _feadHint('Sağ sütundaki <b>▶ Hesapla</b> modeli çözer. Sonuçlar burada özetlenir; '
+    _feadHint('Sağ sütundaki <b>' + veIkon('play') + ' Hesapla</b> modeli çözer. Sonuçlar burada özetlenir; '
       + 'grafikler ve tablolar <b>Sonuçlar</b> sayfasının <b>FEAD</b> sekmesinde açılır.'));
   if(R.solvedNodeId && node && R.solvedNodeId !== node.id) return '';
   if(!R.ok) return veFeadProblemBox({ errors: [R.error || 'Çözüm başarısız.'] });
@@ -8354,7 +8353,7 @@ function veFeadResultCard(R, node){
   var h = (typeof veFeadResChipHTML === 'function') ? veFeadResChipHTML(st) : '';
   if(st.k === 'bayat')
     h += _feadHint('<b style="color:var(--ink-warning);">Model çözümden sonra değişti</b> — aşağıdaki '
-      + 'sayılar ESKİ modele ait. <b>▶ Hesapla</b> ile yeniden çözün.');
+      + 'sayılar ESKİ modele ait. <b>' + veIkon('play') + ' Hesapla</b> ile yeniden çözün.');
   if(typeof veFeadResKpiHTML === 'function') h += veFeadResKpiHTML(R);
   var kume = (R.signals && R.signals.length) || 0;
   h += '<button type="button" class="ve-fr-ac" onclick="veFeadOpenResults()"'
@@ -8400,7 +8399,7 @@ function veFeadResultVerdicts(R){
     var gecti = enKucukSF >= SF_ist;
     h += '<div class="ve-fr-hukum" data-d="' + (gecti ? 'ok' : 'no') + '">'
       + '<span>Servis faktörü ' + _feadFmt(SF_ist, 2) + ' &nbsp;·&nbsp; en kötü nokta ' + enKucukRpm + ' rpm</span>'
-      + '<b>min SF = ' + _feadFmt(enKucukSF, 2) + (gecti ? '  ✓ GEÇTİ' : '  ✗ KALDI') + '</b></div>';
+      + '<b>min SF = ' + _feadFmt(enKucukSF, 2) + ' ' + (gecti ? veDurumIkon('ok') + ' GEÇTİ' : veDurumIkon('err') + ' KALDI') + '</b></div>';
   }
   var neg = A.duty.some(function(d){ return d.warnings && d.warnings.length; });
   // NEGATİF GERİLMEDE KAYMA HÜKMÜ VERİLMEZ. `slipSafety` gevşek tarafı

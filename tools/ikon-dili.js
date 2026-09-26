@@ -17,6 +17,12 @@
  *   · `BELGE` tablosundaki işlevler: indirilen/basılan belgenin gövdesi.
  *     Maske ikon bir arka plandır — kopyalanan tabloda boş hücre olur
  *     (`innerText` ""), arka plan grafikleri kapalı baskıda hiç çıkmaz.
+ *   · kılavuz METNİ (js/guide-*.js): düğmeyi karakteriyle betimler ("▶ Hesapla").
+ *     Kılavuz indirilen bir belge ve `.mf-ico` kuralları ona yalnız `.appfig`
+ *     (sahne) altına kapsanarak taşınıyor (guide-kit.js) — metindeki bir ikon
+ *     indirilen kılavuzda hiç görünmezdi. Bu yüzden aşama listelerinde yok.
+ *   · açılır listenin SEÇENEK metni: <option> ikon taşıyamaz — işaret ya
+ *     yazıya döner ("— veri eksik") ya `// metin:` ile işaretlenir.
  *
  * Kullanım: node tools/ikon-dili.js <dosya...>   → sapmaları listeler
  */
@@ -130,7 +136,16 @@ function sapmalar(f) {
 
 // Metni tarar; tür dosya adının uzantısından (.css / .html / .js).
 function tara(ham, f) {
-  const s = f.endsWith('.css') ? yorumsuzCss(ham) : f.endsWith('.html') ? yorumsuzHtml(ham) : yorumsuzJs(ham);
+  let s = f.endsWith('.css') ? yorumsuzCss(ham) : f.endsWith('.html') ? yorumsuzHtml(ham) : yorumsuzJs(ham);
+  // Kaçışla yazılmış karakter de karakterdir: '\u21bb CW' → '↻ CW'. Kaçış
+  // görülmeseydi FEAD'in dönüş rozeti taramaya hiç girmiyordu (ölçüldü).
+  // Satır sayısı değişmez; yalnız aday karakterler açılır.
+  if (!f.endsWith('.css')) {
+    s = s.replace(/\\u([0-9a-fA-F]{4})/g, (m, h) => {
+      const ch = String.fromCharCode(parseInt(h, 16));
+      return (GLIF + OK).includes(ch) ? ch : m;
+    });
+  }
   const satirlar = s.split('\n'), hamSatirlar = ham.split('\n');
   const satirNo = (i) => s.slice(0, i).split('\n').length;
   const out = [], gor = new Set();

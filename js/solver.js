@@ -313,19 +313,19 @@ function veRenderValidationCard(res) {
       return;
     }
     if(it.level === 'warn') {
-      html += '<div class="ve-validation-item ve-validation-warn"><span>⚠</span><span>' + escapeHTML(it.label) + '</span></div>';
+      html += '<div class="ve-validation-item ve-validation-warn">' + veIkon('alert-triangle') + '<span>' + escapeHTML(it.label) + '</span></div>';
       return;
     }
     var ok = it.level === 'ok';
-    var icon = ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>'
-                  : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>';
+    var icon = ok ? veDurumIkon('ok')
+                  : veDurumIkon('err');
     html += '<div class="ve-validation-item ' + (ok ? 've-validation-ok' : 've-validation-err') + '"><span>' + icon +
             '</span><span>' + escapeHTML(it.label) + (it.detail ? ' <span style="color:var(--text-muted);font-size:var(--fs-body);">(' + it.detail + ')</span>' : '') + '</span></div>';
   });
   if(res.allOk) {
-    html += '<div style="margin-top:12px;padding:10px;background:color-mix(in srgb, var(--accent-success) 10%, transparent);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb, var(--accent-success) 30%, transparent);text-align:center;font-size:var(--fs-lg);color:var(--accent-success);font-weight:600;">✓ ' + res.mode + ' - hesaplamaya hazır</div>';
+    html += '<div style="margin-top:12px;padding:10px;background:color-mix(in srgb, var(--accent-success) 10%, transparent);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb, var(--accent-success) 30%, transparent);text-align:center;font-size:var(--fs-lg);color:var(--accent-success);font-weight:600;">' + veIkon('check') + ' ' + res.mode + ' - hesaplamaya hazır</div>';
   } else {
-    html += '<div style="margin-top:12px;padding:10px;background:color-mix(in srgb, var(--accent-danger) 10%, transparent);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent);text-align:center;font-size:var(--fs-lg);color:var(--accent-danger);font-weight:600;">✗ Eksikler var - hesaplama yapılamaz</div>';
+    html += '<div style="margin-top:12px;padding:10px;background:color-mix(in srgb, var(--accent-danger) 10%, transparent);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent);text-align:center;font-size:var(--fs-lg);color:var(--accent-danger);font-weight:600;">' + veIkon('x') + ' Eksikler var - hesaplama yapılamaz</div>';
   }
   container.innerHTML = html;
 
@@ -455,7 +455,7 @@ function veSolverRunLegacy() {
         var ss = simResult.solverStats || {};
         
         var rhtml = '<div style="padding:12px;">';
-        rhtml += '<div style="text-align:center; margin-bottom:12px;"><div style="font-size:var(--fs-h1); margin-bottom:4px;"><span style="color:var(--accent-success);">✓</span></div><div style="font-weight:600; color:var(--text-heading); font-size:var(--fs-lg);">Hesaplama tamamlandı</div>';
+        rhtml += '<div style="text-align:center; margin-bottom:12px;"><div style="font-size:var(--fs-h1); margin-bottom:4px;"><span style="color:var(--ink-success);">' + veIkon('check-circle') + '</span></div><div style="font-weight:600; color:var(--text-heading); font-size:var(--fs-lg);">Hesaplama tamamlandı</div>';
         rhtml += '<div style="font-size:var(--fs-tiny); color:var(--text-muted); margin-top:2px;">' + (simResult.mode === 'partial' ? 'Kısmi analiz modu' : 'Tam analiz modu') + '</div></div>';
         
         rhtml += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">';
@@ -488,7 +488,7 @@ function veSolverRunLegacy() {
             if(ss.dtMin !== undefined) rhtml += '<tr><td>dt aralığı:</td><td style="text-align:right; font-weight:600;">' + ss.dtMin.toExponential(2) + ' → ' + ss.dtMax.toExponential(2) + ' s</td></tr>';
             if(ss.maxError !== undefined) rhtml += '<tr><td>Maks yerel hata:</td><td style="text-align:right; font-weight:600;">' + ss.maxError.toExponential(2) + '</td></tr>';
             if(ss.events && ss.events.length > 0) rhtml += '<tr><td>Algılanan olaylar:</td><td style="text-align:right; font-weight:600;">' + ss.events.length + '</td></tr>';
-            if(ss.stiffnessDetected) rhtml += '<tr style="border-top:1px solid var(--border-color);"><td colspan="2" style="padding-top:6px; font-weight:700; color:#ef4444;">⚠ Sertlik uyarısı</td></tr><tr><td colspan="2" style="font-size:var(--fs-tiny); color:#ef4444;">Problem sert (stiff) olabilir. Adım boyutu sürekli minimumda veya ardışık redler algılandı. Tolerans değerlerini gevşetmeyi veya simülasyon parametrelerini gözden geçirmeyi deneyin.</td></tr>';
+            if(ss.stiffnessDetected) rhtml += '<tr style="border-top:1px solid var(--border-color);"><td colspan="2" style="padding-top:6px; font-weight:700; color:#ef4444;">' + veIkon('alert-triangle') + ' Sertlik uyarısı</td></tr><tr><td colspan="2" style="font-size:var(--fs-tiny); color:#ef4444;">Problem sert (stiff) olabilir. Adım boyutu sürekli minimumda veya ardışık redler algılandı. Tolerans değerlerini gevşetmeyi veya simülasyon parametrelerini gözden geçirmeyi deneyin.</td></tr>';
           }
           
           // Enerji dengesi (tüm yöntemler için)
@@ -530,7 +530,7 @@ function veSolverRunLegacy() {
         progressFill.style.width = '100%';
         progressFill.style.background = 'var(--accent-danger)';
         progressText.textContent = 'HATA!';
-        resultEl.innerHTML = '<div style="padding:16px; text-align:center; color:var(--accent-danger);"><div style="font-size:var(--fs-h1); margin-bottom:8px;"><span style="color:var(--accent-danger);">✗</span></div><div style="font-weight:600;">Hesaplama hatası</div><div style="font-size:var(--fs-body); margin-top:8px; color:var(--text-muted);">' + err.message + '</div></div>';
+        resultEl.innerHTML = '<div style="padding:16px; text-align:center; color:var(--accent-danger);"><div style="font-size:var(--fs-h1); margin-bottom:8px;"><span style="color:var(--ink-danger);">' + veIkon('alert-circle') + '</span></div><div style="font-weight:600;">Hesaplama hatası</div><div style="font-size:var(--fs-body); margin-top:8px; color:var(--text-muted);">' + err.message + '</div></div>';
         showToast('Hesaplama hatası: ' + err.message, 'error');
       }
     }, 200);

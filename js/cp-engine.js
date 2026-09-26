@@ -257,8 +257,8 @@ function getEnginePropertiesHTML(node) {
   chartHtml += '<div class="sw-pkg-body">';
   chartHtml += '<canvas id="ve-motor-chart-' + node.id + '" style="width:100%; height:200px; background:var(--bg-input);"></canvas>';
   chartHtml += '<div style="display:flex; justify-content:center; gap:16px; margin-top:6px; font-size:var(--fs-micro);">';
-  chartHtml += '<span style="color:#4aa3ff;">● Tork [Nm]</span>';
-  chartHtml += '<span style="color:#ff6b6b;">● Güç [kW]</span>';
+  chartHtml += '<span style="color:#4aa3ff;"><span class="ve-lejant-nokta"></span>Tork [Nm]</span>';
+  chartHtml += '<span style="color:#ff6b6b;"><span class="ve-lejant-nokta"></span>Güç [kW]</span>';
   chartHtml += '</div>';
   // Etkileşim ipucu GERÇEK METİN olarak (canvas bitmap'indeki ipucu seçilemez,
   // çevrilemez ve ekran okuyucuya görünmez) — bkz. js/panel-chart.js
@@ -357,8 +357,8 @@ function getEnginePropertiesHTML(node) {
     netHtml += '</div>';
     netHtml += '<div style="display:flex; gap:10px; justify-content:center; font-size:var(--fs-micro); color:var(--text-muted);">';
     netHtml += '<span>┅ brüt</span>';
-    netHtml += '<span style="color:' + VE_ENG_C.seri1 + ';">● net tork [Nm]</span>';
-    netHtml += '<span style="color:' + VE_ENG_C.seri2 + ';">● net güç [kW]</span>';
+    netHtml += '<span style="color:' + VE_ENG_C.seri1 + ';"><span class="ve-lejant-nokta"></span>net tork [Nm]</span>';
+    netHtml += '<span style="color:' + VE_ENG_C.seri2 + ';"><span class="ve-lejant-nokta"></span>net güç [kW]</span>';
     netHtml += '</div>';
     // Etkileşim ipucu GERÇEK METİN olarak (bkz. js/panel-chart.js)
     netHtml += '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.45;">' +
@@ -379,7 +379,7 @@ function getEnginePropertiesHTML(node) {
 
     netHtml += fitHtml;      // Eğri Yaklaşımı — kartsız gövde (yukarıda üretildi)
 
-    netHtml += '<div class="sw-chain-bar ok" style="margin:0;">✓ Governed <span id="ve-eng-govbar-' +
+    netHtml += '<div class="sw-chain-bar ok" style="margin:0;">' + veIkon('check') + ' Governed <span id="ve-eng-govbar-' +
                node.id + '">' + initGoverned + '</span> rpm şanzımana ve vites mantığına yayıldı</div>';
     netHtml += '<div class="sw-btn-row" style="margin:0;">';
     netHtml += '<button class="sw-btn sw-btn-primary" style="flex:1;" onclick="onVEApplyAccLosses(\'' + node.id + '\')">Kayıpları uygula</button>';

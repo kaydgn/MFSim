@@ -3374,15 +3374,18 @@ function _feadMirrorPt(q){ return (q && q.length >= 2) ? [-q[0], q[1]] : q; }
 
 // Etiket TEK ÜRETİCİDEN: rozet · panel · toast · sihirbazın yön düğmeleri.
 // ÇİZİLEN yönü basar ve başka hiçbir çerçeveden söz etmez — tek çerçeve var.
+// Yön işareti bir İKON ADI (karar 10·B, css/icons.css): köprü DOM'suz, ikonu
+// sunum çizer. '↺'/'↻' karakteri yazı tipinden çiziliyordu; `kisa` artık
+// düz metin ("CW") — bildirim gibi metin yüzeyleri onu olduğu gibi kullanır.
 function _feadPlaneName(){ return 'şemadaki yön — Gates rapor düzlemi'; }
 
 function veFeadSpinLabel(spin){
   var f = Number(spin) || 0;
-  if(!f) return { sense: 0, glif: '—', kisa: '—', uzun: '—' };
+  if(!f) return { sense: 0, ikon: null, kisa: '—', uzun: '—' };
   return f > 0
-    ? { sense: 1, glif: '\u21ba', kisa: '\u21ba CCW',
+    ? { sense: 1, ikon: 'rotate-ccw', kisa: 'CCW',
         uzun: 'CCW (saat yönünün TERSİNE) — ' + _feadPlaneName() }
-    : { sense: -1, glif: '\u21bb', kisa: '\u21bb CW',
+    : { sense: -1, ikon: 'rotate-cw', kisa: 'CW',
         uzun: 'CW (saat yönünde) — ' + _feadPlaneName() };
 }
 

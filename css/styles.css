@@ -4532,6 +4532,19 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   flex-shrink:0;
   background:var(--text-muted);
 }
+/* Grafik lejantının renk noktası — serinin rengi (currentColor). Eskiden '●'
+   karakteriydi: yazı tipinden çiziliyor, boyu satırın puntosuyla oynuyordu. */
+.ve-lejant-nokta{
+  display:inline-block; width:8px; height:8px; margin-right:4px;
+  border-radius:50%; background:currentColor; vertical-align:0.02em;
+}
+
+/* Durum işareti (js/ikon.js → veDurumIkon): onay / uyarı / ret. Renk --ink-*
+   — çizgi ikon bir grafik öğe, --accent-* kehribarda zemine 2,5:1 kalıyordu. */
+.ve-durum-ok{ color:var(--ink-success); }
+.ve-durum-warn{ color:var(--ink-warning); }
+.ve-durum-err{ color:var(--ink-danger); }
+
 /* Bir bileşene işaret eden uyarı satırı tıklanabilir: seçer, ortalar, açar */
 .ve-warning-item.ve-warning-clickable{ cursor:pointer; }
 .ve-warning-item.ve-warning-clickable:hover{ background:var(--bg-input); }
@@ -4719,17 +4732,18 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   font-size:var(--fs-micro);color:var(--text-muted);
   white-space:nowrap;
 }
-/* ∿ ve ✓ SABİT genişlikte yuvalar (satırda hep var, gerekmeyince boş): eğrili
-   ve eğrisiz satırlarda kz sütunu aynı hizada kalsın — listedeki profesyonel
-   his hizadan gelir, ragged bir sağ kenardan değil. */
-.mntlib-wave{
-  flex:0 0 11px;text-align:center;
-  font-size:var(--fs-body);color:var(--accent-danger);line-height:1;
-}
+/* Eğri (activity) ve seçili (check) ikonları SABİT genişlikte yuvalarda
+   (satırda hep var, gerekmeyince boş): eğrili ve eğrisiz satırlarda kz sütunu
+   aynı hizada kalsın — listedeki profesyonel his hizadan gelir, ragged bir sağ
+   kenardan değil. Çizgi ikon (karar 10·B; eskiden '∿' ve '✓' karakteri). */
+.mntlib-wave,
 .mntlib-check{
-  flex:0 0 9px;text-align:center;
-  font-size:var(--fs-micro);color:var(--accent-primary);line-height:1;
+  flex:0 0 12px;display:inline-flex;align-items:center;justify-content:center;line-height:1;
 }
+.mntlib-wave{ color:var(--accent-danger); }
+.mntlib-check{ color:var(--accent-primary); }
+.mntlib-wave .mf-ico,
+.mntlib-check .mf-ico{ width:11px;height:11px; }
 
 .mntlib-dd{
   position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:var(--z-menu);
@@ -5025,6 +5039,8 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   padding:16px;text-align:center;color:var(--text-muted);font-size:var(--fs-body);
 }
 .ve-acc-legend{ font-size:var(--fs-micro);color:var(--text-muted);text-align:center; }
+/* Lejantın işaretçileri lejantın rengiyle (eskiden '●' ve '★' karakteri de öyleydi). */
+.ve-lejant-yildiz{ width:10px;height:10px;margin:0 3px 0 0;vertical-align:-0.05em;fill:currentColor; }
 
 .ve-acc-share{ border:1px solid var(--border-color);background:var(--bg-tertiary);padding:6px 8px; }
 .ve-acc-share .row{ display:flex;align-items:baseline;color:var(--text-secondary);font-size:var(--fs-body); }
@@ -8115,6 +8131,7 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
 .ve-fw-tbl input[type="text"].ve-fw-inp{ min-width:126px; }
 .ve-fw-tbl input[type="number"].ve-fw-inp{ min-width:76px; }
 .ve-fw-x{
+  display:inline-flex; align-items:center; justify-content:center;
   width:20px; height:20px; padding:0; cursor:pointer; line-height:1;
   background:transparent; border:1px solid transparent; color:var(--text-muted);
   border-radius:var(--radius-sm);
@@ -8136,6 +8153,7 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
 .ve-fw-route-t em{ font-style:normal; font-size:var(--fs-micro); color:var(--ink-success); margin-left:6px; }
 .ve-fw-route-b{ display:flex; gap:3px; }
 .ve-fw-mini{
+  display:inline-flex; align-items:center; justify-content:center;
   width:22px; height:20px; padding:0; cursor:pointer; line-height:1;
   background:var(--bg-tertiary); border:1px solid var(--border-color);
   color:var(--text-secondary); border-radius:var(--radius-sm); font-size:var(--fs-tiny);
@@ -9539,10 +9557,12 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-fead-pf-satir.is-sel .ve-fead-pf-mv,
 .ve-fead-pf-mv:focus-within{ opacity:1; }
 .ve-fead-tbl-mv{
-  display:block; height:11px; padding:0 1px; line-height:11px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  height:11px; padding:0 1px; line-height:11px; cursor:pointer;
   background:none; border:none; border-radius:var(--radius-sm);
   font-size:var(--fs-micro); color:var(--text-muted);
 }
+.ve-fead-tbl-mv .mf-ico{ width:10px; height:10px; vertical-align:0; }
 .ve-fead-tbl-mv:hover{ background:var(--accent-tint-22); color:var(--ink-accent); }
 .ve-fead-tbl-mv:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 .ve-fead-tbl-mv[disabled]{ opacity:.25; cursor:default; background:none; }

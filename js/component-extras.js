@@ -42,7 +42,7 @@ function getSensorPropertiesHTML(node) {
     var compName = compNode.customName || (componentDefs[compNode.type] ? componentDefs[compNode.type].name : '?');
     
     html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:35%; font-weight:500; color:var(--text-secondary); font-size:var(--fs-tiny);">Bağlı bileşen</th>';
-    html += '<td style="padding:6px; background:var(--bg-tertiary); font-size:var(--fs-tiny);"><span style="color:var(--accent-warning); font-weight:600;">⬤ ' + compName + '</span></td></tr>';
+    html += '<td style="padding:6px; background:var(--bg-tertiary); font-size:var(--fs-tiny);"><span style="color:var(--accent-warning); font-weight:600;">' + veIkon('circle') + ' ' + compName + '</span></td></tr>';
     
     html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary); font-size:var(--fs-tiny);">Tür</th>';
     html += '<td style="padding:6px; background:var(--bg-tertiary); font-size:var(--fs-tiny);">' + (componentDefs[compNode.type] ? componentDefs[compNode.type].name : compNode.type) + '</td></tr>';
@@ -60,8 +60,8 @@ function getSensorPropertiesHTML(node) {
     html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary); font-size:var(--fs-tiny); vertical-align:top;">Sinyaller</th>';
     html += '<td style="padding:6px; background:var(--bg-tertiary);">';
     html += '<div style="display:flex; gap:4px; margin-bottom:4px;">';
-    html += '<button onclick="veToggleAllSensorSignals(\'' + node.id + '\', true)" style="flex:1; padding:2px 4px; font-size:var(--fs-micro); background:var(--bg-input); color:var(--accent-success); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">✓ Tümü</button>';
-    html += '<button onclick="veToggleAllSensorSignals(\'' + node.id + '\', false)" style="flex:1; padding:2px 4px; font-size:var(--fs-micro); background:var(--bg-input); color:var(--text-muted); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">○ Hiçbiri</button>';
+    html += '<button onclick="veToggleAllSensorSignals(\'' + node.id + '\', true)" style="flex:1; padding:2px 4px; font-size:var(--fs-micro); background:var(--bg-input); color:var(--accent-success); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">' + veIkon('check') + ' Tümü</button>';
+    html += '<button onclick="veToggleAllSensorSignals(\'' + node.id + '\', false)" style="flex:1; padding:2px 4px; font-size:var(--fs-micro); background:var(--bg-input); color:var(--text-muted); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">' + veIkon('circle') + ' Hiçbiri</button>';
     html += '</div>';
     availableSignals.forEach(function(sig) {
       var isChecked = selectedSignals.indexOf(sig.id) >= 0;
@@ -114,8 +114,8 @@ function getSensorPropertiesHTML(node) {
     // Yön seçici
     html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary); font-size:var(--fs-tiny);">Okuma yönü</th>';
     html += '<td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-sensor-direction-' + node.id + '" onchange="onVESensorDirectionChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:var(--fs-tiny); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
-    html += '<option value="from"' + (sensorDirection === 'from' ? ' selected' : '') + '>◀ ' + fromName + ' (çıkış)</option>';
-    html += '<option value="to"' + (sensorDirection === 'to' ? ' selected' : '') + '>▶ ' + toName + ' (giriş)</option>';
+    html += '<option value="from"' + (sensorDirection === 'from' ? ' selected' : '') + '>' + fromName + ' (çıkış)</option>';   // seçenek ikon taşıyamaz; yön yazıda
+    html += '<option value="to"' + (sensorDirection === 'to' ? ' selected' : '') + '>' + toName + ' (giriş)</option>';
     html += '</select></td></tr>';
     
     // Yön açıklama
@@ -126,7 +126,7 @@ function getSensorPropertiesHTML(node) {
     
     html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary); font-size:var(--fs-tiny); vertical-align:top;">Sinyaller</th>';
     if(availableSignals.length === 0) {
-      html += '<td style="padding:6px; background:var(--bg-tertiary); font-size:var(--fs-tiny); color:var(--accent-warning); font-style:italic;">⚠ Bu yönde okunabilir sinyal yok — yönü değiştirin</td></tr>';
+      html += '<td style="padding:6px; background:var(--bg-tertiary); font-size:var(--fs-tiny); color:var(--accent-warning); font-style:italic;">' + veIkon('alert-triangle') + ' Bu yönde okunabilir sinyal yok — yönü değiştirin</td></tr>';
     } else {
       var selectedSignals = d.selectedSignals || (d.selectedSignal ? [d.selectedSignal] : []);
       if(selectedSignals.length === 0 && availableSignals.length > 0) {
@@ -137,8 +137,8 @@ function getSensorPropertiesHTML(node) {
       }
       html += '<td style="padding:6px; background:var(--bg-tertiary);">';
       html += '<div style="display:flex; gap:4px; margin-bottom:4px;">';
-      html += '<button onclick="veToggleAllSensorSignals(\'' + node.id + '\', true)" style="flex:1; padding:2px 4px; font-size:var(--fs-micro); background:var(--bg-input); color:var(--accent-success); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">✓ Tümü</button>';
-      html += '<button onclick="veToggleAllSensorSignals(\'' + node.id + '\', false)" style="flex:1; padding:2px 4px; font-size:var(--fs-micro); background:var(--bg-input); color:var(--text-muted); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">○ Hiçbiri</button>';
+      html += '<button onclick="veToggleAllSensorSignals(\'' + node.id + '\', true)" style="flex:1; padding:2px 4px; font-size:var(--fs-micro); background:var(--bg-input); color:var(--accent-success); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">' + veIkon('check') + ' Tümü</button>';
+      html += '<button onclick="veToggleAllSensorSignals(\'' + node.id + '\', false)" style="flex:1; padding:2px 4px; font-size:var(--fs-micro); background:var(--bg-input); color:var(--text-muted); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">' + veIkon('circle') + ' Hiçbiri</button>';
       html += '</div>';
       availableSignals.forEach(function(sig) {
         var isChecked = selectedSignals.indexOf(sig.id) >= 0;
@@ -750,7 +750,7 @@ function veOpenCoastDownWizard(nodeId) {
     '<div style="font-size:var(--fs-tiny); color:var(--text-muted);">— Crr & Cd analizi</div></div>' +
     '<div style="display:flex; align-items:center; gap:8px;">' +
     '<button onclick="cdwLoadExample()" style="padding:3px 10px; font-size:var(--fs-tiny); font-weight:600; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'"><span class="mf-ico mf-ico-clipboard"></span> Örnek yükle</button>' +
-    '<button onclick="veCloseCoastDownWizard()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-md); color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>' +
+    '<button onclick="veCloseCoastDownWizard()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-md); color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">' + veIkon('x') + '</button>' +
     '</div>';
   modal.appendChild(header);
 
@@ -815,7 +815,7 @@ function veOpenCoastDownWizard(nodeId) {
     '<tbody id="cdw-data-body"></tbody>' +
     '</table></div>' +
     '<div style="display:flex; gap:6px; padding:6px 12px; justify-content:flex-end; border-top:1px solid var(--border-color);">' +
-    '<button onclick="cdwComputeCrr()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:700; background:color-mix(in srgb, var(--accent-success) 65%, #000); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">▶ Crr hesapla</button>' +
+    '<button onclick="cdwComputeCrr()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:700; background:color-mix(in srgb, var(--accent-success) 65%, #000); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">' + veIkon('play') + ' Crr hesapla</button>' +
     '</div></div>';
 
   // === Section 3: Özet Sonuçlar ===
@@ -841,10 +841,10 @@ function veOpenCoastDownWizard(nodeId) {
   // === Sonucu Aktar butonu ===
   var applyHtml = '<div style="display:flex; gap:10px; justify-content:flex-end; align-items:center; margin-bottom:8px;">' +
     '<span style="font-size:var(--fs-tiny); color:var(--text-muted);">Crr → tekerlek, CFD Cd → Araç bileşenine aktarılır</span>' +
-    '<button onclick="cdwApplyResults(\'' + nodeId + '\')" style="padding:7px 20px; font-size:var(--fs-md); font-weight:700; background:var(--accent-success); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">✓ Sonuçları bileşene aktar</button>' +
+    '<button onclick="cdwApplyResults(\'' + nodeId + '\')" style="padding:7px 20px; font-size:var(--fs-md); font-weight:700; background:var(--accent-success); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">' + veIkon('check') + ' Sonuçları bileşene aktar</button>' +
     '</div>';
 
-  var footerNote = '<div style="font-size:var(--fs-tiny); color:var(--text-muted); border-top:1px dashed var(--border-color); padding-top:8px;">⚠ Basitleştirilmiş coast-down modeli. Çok düşük hızlar, kısa süreler veya ölçüm hataları sonuçları etkileyebilir.</div>';
+  var footerNote = '<div style="font-size:var(--fs-tiny); color:var(--text-muted); border-top:1px dashed var(--border-color); padding-top:8px;">' + veIkon('alert-triangle') + ' Basitleştirilmiş coast-down modeli. Çok düşük hızlar, kısa süreler veya ölçüm hataları sonuçları etkileyebilir.</div>';
 
   content.innerHTML = paramHtml + tableHtml + summaryHtml + applyHtml + footerNote;
   modal.appendChild(content);
@@ -891,7 +891,7 @@ function cdwAddRow() {
   var spanStyle = 'font-size:var(--fs-md); color:var(--text-muted);';
   var tdInp = 'padding:4px 3px; text-align:center;';
   var tdCalc = 'padding:4px 10px; text-align:center;';
-  tr.innerHTML = '<td style="padding:4px 3px; text-align:center; width:22px;"><button onclick="this.closest(\'tr\').remove()" style="background:none; border:none; color:var(--accent-danger); cursor:pointer; font-size:var(--fs-body); padding:0; opacity:0.4;" onmouseover="this.style.opacity=\'1\'" onmouseout="this.style.opacity=\'0.4\'">✕</button></td>' +
+  tr.innerHTML = '<td style="padding:4px 3px; text-align:center; width:22px;"><button onclick="this.closest(\'tr\').remove()" style="background:none; border:none; color:var(--accent-danger); cursor:pointer; font-size:var(--fs-body); padding:0; opacity:0.4;" onmouseover="this.style.opacity=\'1\'" onmouseout="this.style.opacity=\'0.4\'">' + veIkon('x') + '</button></td>' +
     '<td style="' + tdInp + '"><input type="number" step="0.1" class="cdw-v1" style="' + inpStyle + '"></td>' +
     '<td style="' + tdInp + '"><input type="number" step="0.1" class="cdw-v2" style="' + inpStyle + '"></td>' +
     '<td style="' + tdInp + '"><input type="number" step="0.01" class="cdw-dt" style="' + inpStyle + '"></td>' +
@@ -1237,7 +1237,7 @@ function veRenderWarningsPanel(items, opts) {
     // Dürüst boş durum: doğrulanmadıysa "hazır" DEME. Eskiden hiç bileşen
     // yokken bile "Topoloji hazır" yazıyordu ve Çalıştır aynı anda reddediyordu.
     var msg = (opts.source === 'dogrulama')
-      ? '<span style="color:var(--accent-success);">✓ Doğrulama temiz — hesaplamaya hazır.</span>'
+      ? '<span style="color:var(--accent-success);">' + veIkon('check') + ' Doğrulama temiz — hesaplamaya hazır.</span>'
       : 'Uyarı yok — doğrulama henüz çalıştırılmadı.';
     body.innerHTML = '<div style="padding:10px 14px;font-size:var(--fs-md);color:var(--text-muted);">' + msg + '</div>';
     return;
@@ -1359,7 +1359,7 @@ function getWheelPropertiesHTML(node) {
     
     var html = '<div class="sw-panel">';
 
-    html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Tekerlek verileri <span style="background:var(--accent-warning); color:#000; font-size:var(--fs-micro); font-weight:700; padding:1px 5px; border-radius:var(--radius-sm);">★ MASTER</span> <button onclick="showInfoPopup(\'tekerlek\')" class="sw-info-btn" title="Bilgi">?</button></div>';
+    html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Tekerlek verileri <span style="background:var(--accent-warning); color:#000; font-size:var(--fs-micro); font-weight:700; padding:1px 5px; border-radius:var(--radius-sm);">' + veIkon('star') + ' MASTER</span> <button onclick="showInfoPopup(\'tekerlek\')" class="sw-info-btn" title="Bilgi">?</button></div>';
 
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
     html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Tekerlek parametreleri</span></div>';
@@ -1463,7 +1463,7 @@ function getWheelPropertiesHTML(node) {
   var html = '<div class="sw-panel">';
 
   // Başlık
-  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Tekerlek parametreleri <span style="background:var(--accent-warning); color:#000; font-size:var(--fs-micro); font-weight:700; padding:1px 5px; border-radius:var(--radius-sm);">★ MASTER</span> <button onclick="showInfoPopup(\'tekerlek\')" class="sw-info-btn" title="Bilgi">?</button></div>';
+  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Tekerlek parametreleri <span style="background:var(--accent-warning); color:#000; font-size:var(--fs-micro); font-weight:700; padding:1px 5px; border-radius:var(--radius-sm);">' + veIkon('star') + ' MASTER</span> <button onclick="showInfoPopup(\'tekerlek\')" class="sw-info-btn" title="Bilgi">?</button></div>';
   
   // Lastik Preset Seçici
   var mfTirePresetId = nodeData.tirePreset || '';
@@ -2092,9 +2092,9 @@ function _veManualSegTableHTML(nodeId, segs) {
     html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color);"><input type="text" value="' + (s.name || 'Segment ' + (i+1)) + '" data-idx="' + i + '" data-field="name" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="width:100%; padding:2px 3px; font-size:var(--fs-micro); background:var(--bg-input); color:var(--text-primary); border:1px solid transparent; border-radius:var(--radius-sm); box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--accent-primary)\'" onblur="this.style.borderColor=\'transparent\'"></td>';
     // Yön
     html += '<td style="padding:1px 1px; border-right:1px solid var(--border-color); text-align:center;"><select data-idx="' + i + '" data-field="direction" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="width:100%; padding:2px 1px; font-size:var(--fs-micro); background:var(--bg-input); color:' + dirColor + '; border:1px solid var(--border-color); border-radius:var(--radius-sm); font-weight:600;">';
-    html += '<option value="down"' + (dir==='down'?' selected':'') + '>↓ İniş</option>';
-    html += '<option value="up"' + (dir==='up'?' selected':'') + '>↑ Çıkış</option>';
-    html += '<option value="flat"' + (dir==='flat'?' selected':'') + '>→ Düz</option>';
+    html += '<option value="down"' + (dir==='down'?' selected':'') + '>İniş</option>';   // seçenek ikon taşıyamaz
+    html += '<option value="up"' + (dir==='up'?' selected':'') + '>Çıkış</option>';
+    html += '<option value="flat"' + (dir==='flat'?' selected':'') + '>Düz</option>';
     html += '</select></td>';
     // Eğim %
     html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color);"><input type="number" value="' + (s.gradePct || 0) + '" data-idx="' + i + '" data-field="gradePct" step="0.5" min="0" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="width:100%; padding:2px 3px; font-size:var(--fs-micro); background:var(--bg-input); color:' + dirColor + '; border:1px solid transparent; border-radius:var(--radius-sm); text-align:right; font-weight:600; box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--accent-primary)\'" onblur="this.style.borderColor=\'transparent\'"></td>';
@@ -2276,7 +2276,7 @@ function veManualSegExpandProfile(nodeId) {
   var header = document.createElement('div');
   header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:5px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
   header.innerHTML = '<span style="font-size:var(--fs-body); font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Yol profili <span style="font-size:var(--fs-tiny); font-weight:400; color:var(--text-muted); margin-left:8px;">' + segs.length + ' segment</span></span>' +
-    '<button onclick="veCloseManualProfileModal()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-md); color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\'">✕</button>';
+    '<button onclick="veCloseManualProfileModal()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-md); color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\'">' + veIkon('x') + '</button>';
   modal.appendChild(header);
 
   // Canvas container
@@ -2569,7 +2569,7 @@ function getParametricPropertiesHTML(node) {
       // Başlık satırı
       html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">';
       html += '<div style="font-size:var(--fs-tiny); font-weight:600; color:var(--text-heading);">' + compName + ' → ' + p.fieldLabel + '</div>';
-      html += '<button onclick="veRemoveParametric(\'' + node.id + '\',' + idx + ')" style="width:16px;height:16px;border:none;background:var(--accent-danger);color:white;border-radius:50%;cursor:pointer;font-size:var(--fs-micro);line-height:1;padding:0;" title="Kaldır">✕</button>';
+      html += '<button onclick="veRemoveParametric(\'' + node.id + '\',' + idx + ')" style="width:16px;height:16px;border:none;background:var(--accent-danger);color:white;border-radius:50%;cursor:pointer;font-size:var(--fs-micro);line-height:1;padding:0;display:inline-flex;align-items:center;justify-content:center;" title="Kaldır">' + veIkon('x') + '</button>';
       html += '</div>';
       
       // Min / Max / Adım
@@ -2616,7 +2616,7 @@ function getParametricPropertiesHTML(node) {
       html += '<div style="margin-top:8px; padding:6px 10px; background:linear-gradient(135deg,color-mix(in srgb, var(--accent-primary) 10%, transparent),rgba(139,92,246,0.1)); border:1px solid var(--accent-primary); border-radius:var(--radius-sm); text-align:center;">';
       html += '<span style="font-size:var(--fs-tiny); font-weight:600; color:var(--accent-primary);">Toplam: ' + totalRuns + ' simülasyon koşusu</span>';
       if(totalRuns > 100) {
-        html += '<div style="font-size:var(--fs-micro); color:var(--accent-warning); margin-top:2px;">⚠ Yüksek koşu sayısı — uzun sürebilir</div>';
+        html += '<div style="font-size:var(--fs-micro); color:var(--accent-warning); margin-top:2px;">' + veIkon('alert-triangle') + ' Yüksek koşu sayısı — uzun sürebilir</div>';
       }
       html += '</div>';
     }

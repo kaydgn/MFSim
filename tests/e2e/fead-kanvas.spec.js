@@ -184,13 +184,14 @@ test('KAYIŞ YOLU KARTI: bant yok, çubuk tek satır, gül açıkta', async ({ p
   const rozetParca = () => page.evaluate((i) => {
     const r = document.getElementById(i).querySelector('.ve-fead-kan-durum');
     return { sinif: r.className,
-             isaret: r.querySelector('b').textContent,
+             // işaret çizgi ikon (karar 10·B): adını sınıfından oku
+             isaret: ((r.querySelector('b .mf-ico') || {}).className || '').replace(/^.*mf-ico-/, ''),
              birincil: r.querySelector('span').textContent,
              ikincil: r.querySelector('i') ? r.querySelector('i').textContent : null,
              renk: getComputedStyle(r).color };
   }, id);
   const iyi = await rozetParca();
-  expect(iyi.isaret).toBe('✓');
+  expect(iyi.isaret).toBe('check');
   expect(iyi.birincil).toMatch(/^Σsarım/);                  // birincil: tek sayı
   expect(iyi.ikincil).toMatch(/kasnak/);                    // ikincil: künye
 
@@ -201,7 +202,7 @@ test('KAYIŞ YOLU KARTI: bant yok, çubuk tek satır, gül açıkta', async ({ p
   await page.evaluate((i) => veFeadTableSet(i, 'od', 5000), acId);
   await page.waitForTimeout(600);
   const kot = await rozetParca();
-  expect(kot.isaret).toBe('✗');
+  expect(kot.isaret).toBe('x');
   expect(kot.birincil).toMatch(/KAPANMIYOR|İÇİNDEN|kapanmadı/);  // birincil: arıza
   expect(kot.ikincil).toBeNull();                           // ikincil YOK
   // Kırmızı ve YEŞİL DEĞİL — renk CSS'ten geliyor, jsdom hesaplamaz.

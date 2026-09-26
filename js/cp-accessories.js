@@ -376,7 +376,11 @@ function getAccessoryPropertiesHTML(node){
   s3 += '</div><div class="sw-pkg-body ve-acc-stepbody">';
   s3 += '<div class="sw-pkg-desc" id="ve-acc-desc-' + nid + '">Motor devrine göre bu aksesuarın çektiği güç (kW). Değer, motorun net torkundan düşülür.</div>';
   s3 += '<div id="ve-acc-chart-' + nid + '" class="ve-acc-chart"></div>';
-  s3 += '<div class="ve-acc-legend">● ölçüm noktaları · ★ governed · sürükleyerek yakınlaş, çift tık sıfırla</div>';
+  // Lejant grafiğin İŞARETÇİLERİNİ gösterir (Plotly: dolu daire, dolu yıldız) —
+  // yazı tipi karakteri değil, aynı şekiller (karar 10·B).
+  s3 += '<div class="ve-acc-legend"><span class="ve-lejant-nokta"></span>ölçüm noktaları · '
+     + '<svg class="ve-lejant-yildiz" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+     + 'governed · sürükleyerek yakınlaş, çift tık sıfırla</div>';
   s3 += '<div id="ve-acc-metrics-' + nid + '">' + veAccMetricsHTML(node) + '</div>';
   s3 += '</div></div>';
 
@@ -439,7 +443,7 @@ function veAccCurveTableHTML(node){
     h += '<td><input type="number" value="' + p.kw + '" step="0.01" min="0" onchange="onVEAccCurveCellChange(\'' + nid + '\',' + i + ',\'kw\',this.value)"></td>';
     h += '<td class="num der">' + engRpm + '</td>';
     h += '<td class="num der">' + nm + '</td>';
-    h += '<td class="del"><button class="ve-row-del" title="Satırı sil" onclick="onVEAccCurveDelRow(\'' + nid + '\',' + i + ')">✕</button></td>';
+    h += '<td class="del"><button class="ve-row-del" title="Satırı sil" onclick="onVEAccCurveDelRow(\'' + nid + '\',' + i + ')">' + veIkon('x') + '</button></td>';
     h += '</tr>';
   });
 
@@ -448,7 +452,7 @@ function veAccCurveTableHTML(node){
   h += '</table>';
 
   if(curve.length && curve.length < 2){
-    h += '<div class="sw-chain-bar fail">✗ Eğri için en az 2 nokta gerekir.</div>';
+    h += '<div class="sw-chain-bar fail">' + veIkon('x') + ' Eğri için en az 2 nokta gerekir.</div>';
   } else if(outCount){
     h += '<div class="sw-chain-bar warn">' + outCount + ' nokta motor aralığının ('
        + Math.round(ctx.idle) + '–' + Math.round(ctx.gov) + ' rpm) dışında — çözücüde uç değere sabitlenir.</div>';
@@ -496,7 +500,7 @@ function veAccMetricsHTML(node){
        + pct.toFixed(1) + '</span></div><div class="bar"><i style="width:' + Math.min(100, Math.max(0, pct)).toFixed(1) + '%"></i></div>'
        + '<div class="note">' + Math.round(ctx.gross) + ' Nm brüt torkun ' + lossNm.toFixed(1)
        + ' Nm\'si bu aksesuara gidiyor.</div></div>';
-    h += '<div class="sw-chain-bar ok">✓ Motorun net tork modeli güncellendi (' + ctx.eng.id + ')</div>';
+    h += '<div class="sw-chain-bar ok">' + veIkon('check') + ' Motorun net tork modeli güncellendi (' + ctx.eng.id + ')</div>';
   } else {
     h += '<div class="sw-chain-bar fail">Motor bağlı değil ya da tork eğrisi yok — net tork payı hesaplanamıyor.</div>';
   }

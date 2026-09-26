@@ -323,7 +323,7 @@ function veFeadWiz3bPanelHTML(s, secili){
       h += '<li' + (d.i === secili ? ' class="on"' : '') + '>' + renk(s.roller[d.i])
         + '<button type="button" class="ve-fw-3b-yolb" onclick="veFeadWiz3bSec(' + d.i + ')" title="' + _fwEsc(d.ornek || d.id || '') + '">'
         + _fwEsc(d.ad) + '</button><span class="ve-fw-dim">' + _fwEsc(_fwStpRolAd(s.roller[d.i])) + '</span>'
-        + '<button type="button" class="ve-fw-mini" title="Rolü kaldır" onclick="veFeadWizStpRol(' + d.i + ', \'\')">✕</button></li>';
+        + '<button type="button" class="ve-fw-mini" title="Rolü kaldır" onclick="veFeadWizStpRol(' + d.i + ', \'\')">' + veIkon('x') + '</button></li>';
     });
     h += '</ul>';
   }
@@ -333,8 +333,8 @@ function veFeadWiz3bPanelHTML(s, secili){
   h += '<section class="ve-fw-3b-bolum"><h4>Hesap</h4><div class="ve-fw-rowbtns">'
     + '<button type="button" class="ve-fw-btn" id="ve-fw-3b-hesapla"' + (rolEngel.length ? ' disabled' : '')
     + ' onclick="veFeadWiz3bHesapla()">' + (coz ? 'Yeniden hesapla' : 'Çap ve merkezleri hesapla') + '</button></div>'
-    + '<p class="ve-fw-dim">' + (coz ? (coz.ok ? '✓ ' + coz.kasnaklar.length + ' kasnak' + (coz.duzlem ? ' · düzlem sapması '
-      + _fwFmt(coz.duzlem.yayilim, 3) + ' mm' : '') : '✗ kasnak bulunamadı') : 'hesaplanmadı') + '</p>';
+    + '<p class="ve-fw-dim">' + (coz ? (coz.ok ? veIkon('check') + ' ' + coz.kasnaklar.length + ' kasnak' + (coz.duzlem ? ' · düzlem sapması '
+      + _fwFmt(coz.duzlem.yayilim, 3) + ' mm' : '') : veIkon('x') + ' kasnak bulunamadı') : 'hesaplanmadı') + '</p>';
   var sorun = rolEngel.filter(function(m){ return m !== 'Hiçbir parçaya rol verilmedi.'; })
     .concat(coz ? coz.hatalar.concat(coz.uyarilar) : []);
   if(sorun.length){

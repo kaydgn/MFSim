@@ -499,7 +499,7 @@ function getDifferentialPropertiesHTML(node) {
   // Başlık
   html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Diferansiyel';
   if(isFullThrottle) {
-    html += ' <span style="background:#f59e0b; color:#000; font-size:var(--fs-micro); font-weight:700; padding:1px 5px;">★ MASTER</span>';
+    html += ' <span style="background:#f59e0b; color:#000; font-size:var(--fs-micro); font-weight:700; padding:1px 5px;">' + veIkon('star') + ' MASTER</span>';
   }
   html += ' <button class="sw-info-btn" onclick="showInfoPopup(\'diferansiyel\')" title="Bilgi">?</button></div>';
   

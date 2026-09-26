@@ -1601,3 +1601,24 @@ günlüğüne giden 11'i `// metin:` ile işaretlendi. Ayrıca:
 
 Düşebildiği ölçüldü: geri dönen tek '▲', yazım hatalı tek ad ve elle düzenlenmiş
 `icons.css` birer testle düşüyor.
+
+**Aşama 2 (bileşen panelleri, 19 dosya).** Eski kaynakta 230 sapma → 0: 10 satır
+`// metin:` ile işaretli (seçenek metni ve lejantı, formül, güzergâh adı, çizim
+yazısı), beş seçenek metni yazıya döndü, kalanı ikon. Ayrıca:
+- **Durum işareti tek üreticiden**: `veDurumIkon('ok'|'warn'|'err')`, rengi
+  `--ink-*`. Eşleştirme panelinde aynı satır içi stilli ✓/✗/⚠ 21 kez
+  yazılıydı.
+- FEAD dönüş yönü köprüden ikon ADI olarak geliyor (`veFeadSpinLabel().ikon`);
+  `kisa` düz metin ("CW"). Karakter `\u21bb` kaçışıyla yazıldığı için tarayıcı
+  onu görmüyordu; tarayıcı artık kaçışı açıyor.
+- Grafik lejantının ● noktası CSS noktası; aksesuar lejantı Plotly'nin
+  işaretçi şekillerini (dolu daire, dolu yıldız) çiziyor.
+- `showToast(…, 'warn')` tanınmayan türdü: uyarı yeşil onay bildirimi gibi
+  görünüyordu. Tür düzeltildi.
+
+**Bilerek dokunulmayanlar.**
+- Kılavuz metni: belge. `.mf-ico` kuralları kılavuza yalnız `.appfig` altına
+  kapsanarak taşınıyor, metindeki ikon indirilen kılavuzda görünmezdi.
+- `<option>` metni: ikon taşıyamaz. İşaret ya yazıya döndü ("— veri eksik") ya da
+  lejantıyla birlikte `// metin:` ile işaretli (şanzıman kalibrasyonu ✦ ✧).
+- Çizimin SVG yazısı: FEAD senaryo şeridindeki "⚠ REZONANS".

@@ -36,6 +36,21 @@ function veIkonDegis(el, ad) {
   el.setAttribute('class', s.join(' '));
 }
 
+// Durum işareti — tabloda ya da satırda tek başına anlam taşıyan onay /
+// uyarı / ret. Eskiden her panel kendi satır içi stilli karakterini yazıyordu
+// ('<span style="color:var(--accent-success);font-weight:700;">✓</span>', aynı
+// dosyada on dört kopya). Renk CSS'te (.ve-durum-*, --ink-*: zeminde okunur);
+// ekran okuyucu adını okur.
+var VE_DURUM_IKON = {
+  ok:   ['check', 'Uygun'],
+  warn: ['alert-triangle', 'Sınırda'],
+  err:  ['x', 'Uygun değil']
+};
+function veDurumIkon(tur, etiket) {
+  var d = VE_DURUM_IKON[tur] || VE_DURUM_IKON.warn;
+  return veIkon(d[0], 've-durum ve-durum-' + (VE_DURUM_IKON[tur] ? tur : 'warn'), etiket || d[1]);
+}
+
 if(typeof module !== 'undefined' && module.exports) {
-  module.exports = { veIkon: veIkon, veIkonDegis: veIkonDegis };
+  module.exports = { veIkon: veIkon, veIkonDegis: veIkonDegis, veDurumIkon: veDurumIkon, VE_DURUM_IKON: VE_DURUM_IKON };
 }

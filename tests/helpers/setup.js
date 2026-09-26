@@ -64,6 +64,7 @@ global.loadCanSource = function loadCanSource(file) {
   const IK = require(path.join(JS_DIR, 'ikon.js'));
   global.veIkon = IK.veIkon;
   global.veIkonDegis = IK.veIkonDegis;
+  global.veDurumIkon = IK.veDurumIkon;
 }
 
 // TUVAL YAZI YÜZÜ KÖPRÜSÜ (js/theme.js) HER TESTTE TANIMLI — `stubGlobals()`

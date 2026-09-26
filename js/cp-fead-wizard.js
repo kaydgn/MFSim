@@ -386,23 +386,30 @@ function veFeadWizSpinSet(dirFront){
   return true;
 }
 
+// Dönüş yönü: ikon + kısa ad ("↻ CW" karakterdi; karar 10·B).
+function _fwSpinHTML(spin){
+  var et = veFeadSpinLabel(spin);
+  return (et.ikon ? veIkon(et.ikon) + ' ' : '') + _fwEsc(et.kisa);
+}
+
 // Yön yüzeyi TEK ÜRETİCİDEN: 2. adım (Kasnaklar) ile 3. adım (Kayış Yolu) aynı
 // kontrolü basıyor. İki kopya tutulsaydı biri düzeltilince öbürü sessizce
 // eskirdi — bu deponun tekrar eden kuralı ("panel ile kart AYNI alanı okur").
 function veFeadWizSpinHTML(b){
   var sp = (b && b.spin) || 0;                     // ÇİZİLEN yön
-  function dugme(v, glif, ad){
+  function dugme(v){
+    var et = veFeadSpinLabel(v);
     return '<button type="button" class="ve-fw-spin' + (sp === v ? ' ve-fw-spin-on' : '')
       + '"' + (sp ? '' : ' disabled')
-      + ' onclick="veFeadWizSpinSet(' + v + ')" title="' + _fwEsc(ad) + '">'
-      + glif + '</button>';
+      + ' onclick="veFeadWizSpinSet(' + v + ')" title="' + _fwEsc(et.uzun) + '">'
+      + _fwSpinHTML(v) + '</button>';
   }
   return '<div class="ve-fw-spinbox">'
     // İPUCU METNİ DE TEK ÜRETİCİDEN. Düzlem adı burada İKİNCİ KEZ yazılsaydı,
     // ayna bayrağı değişince bu iki düğme sessizce eskirdi — tam olarak bir
     // kez olan şey (metin koşulsuz "önden bakışta" diyordu).
-    + dugme(1, '\u21ba CCW', veFeadSpinLabel(1).uzun)
-    + dugme(-1, '\u21bb CW', veFeadSpinLabel(-1).uzun)
+    + dugme(1)
+    + dugme(-1)
     + '<span class="ve-fw-dim">' + (sp
         ? 'Sıradan türedi; seçim serpantin sırasını ters yürütür.'
         : 'Henüz okunamıyor — en az üç kasnak ve koordinatları gerekli.')
@@ -1089,7 +1096,7 @@ function veFeadWizLiveHTML(b){
     return h + '</div>';
   }
   if(b.ok){
-    h += '<span class="ve-fw-pill ve-fw-pill-ok">✓ model çözülüyor</span>';
+    h += '<span class="ve-fw-pill ve-fw-pill-ok">' + veIkon('check') + ' model çözülüyor</span>';
     if(Number.isFinite(b.beltLengthMm))
       h += '<span class="ve-fw-pill">L<sub>eff</sub> <b>' + _fwFmt(b.beltLengthMm, 1) + ' mm</b>'
          + (b.beltLengthDerived ? ' <em>çıktı</em>' : '') + '</span>';
@@ -1105,9 +1112,9 @@ function veFeadWizLiveHTML(b){
         + _fwFmt((typeof veFeadArmShownDeg === 'function')
                  ? veFeadArmShownDeg(b.armAbsDeg) : b.armAbsDeg, 2) + '°</b></span>';
     if(b.spin)
-      h += '<span class="ve-fw-pill">' + veFeadSpinLabel(b.spin).kisa + '</span>';
+      h += '<span class="ve-fw-pill">' + _fwSpinHTML(b.spin) + '</span>';
   } else {
-    h += '<span class="ve-fw-pill ve-fw-pill-err">✗ çözülemiyor</span>';
+    h += '<span class="ve-fw-pill ve-fw-pill-err">' + veIkon('x') + ' çözülemiyor</span>';
     h += '<span class="ve-fw-pill ve-fw-pill-dim">' + _fwEsc((b.errors || [])[0] || '') + '</span>';
   }
   return h + '</div>';
@@ -1115,7 +1122,7 @@ function veFeadWizLiveHTML(b){
 function veFeadWizFootStateHTML(b){
   var eksik = b ? (b.errors || []).length : 0;
   if(!b) return '<span class="ve-fw-dim">model henüz kurulmadı</span>';
-  if(b.ok) return '<span class="ve-fw-ok">✓ model çözülüyor — kurulmaya hazır</span>';
+  if(b.ok) return '<span class="ve-fw-ok">' + veIkon('check') + ' model çözülüyor — kurulmaya hazır</span>';
   return '<span class="ve-fw-err">' + eksik + ' eksik/çelişkili girdi</span>';
 }
 
@@ -1149,11 +1156,11 @@ function veFeadWizStepState(b, step){
 function veFeadWizIssueHTML(b, step){
   var list = veFeadWizIssues(b, step);
   if(!list.length)
-    return '<div class="ve-fw-issues ve-fw-issues-ok">✓ Bu adımda eksik girdi yok.</div>';
+    return '<div class="ve-fw-issues ve-fw-issues-ok">' + veIkon('check') + ' Bu adımda eksik girdi yok.</div>';
   var h = '<div class="ve-fw-issues">';
   list.forEach(function(it){
     h += '<div class="ve-fw-issue ve-fw-issue-' + it.tur + '">'
-      + (it.tur === 'err' ? '✗' : '!') + ' ' + _fwEsc(it.m) + '</div>';
+      + _fwSorunIkon(it.tur) + ' ' + _fwEsc(it.m) + '</div>';
   });
   return h + '</div>';
 }
@@ -1213,7 +1220,7 @@ function veFeadWizNavHTML(b){
     var d = veFeadWizStepState(b, i);
     var sinif = 've-fw-step ve-fw-st-' + d.durum + (i === _fwStep ? ' on' : '');
     var rozet = (d.durum === 'ok')
-      ? '<span class="ve-fw-step-n" title="Bu adımda eksik girdi yok.">✓</span>'
+      ? '<span class="ve-fw-step-n" title="Bu adımda eksik girdi yok.">' + veIkon('check') + '</span>'
       : '<span class="ve-fw-step-n" title="'
         + (d.err ? d.err + ' eksik girdi' : '') + (d.err && d.warn ? ' · ' : '')
         + (d.warn ? d.warn + ' uyarı' : '') + '">' + (d.err || d.warn) + '</span>';
@@ -1234,13 +1241,13 @@ function veFeadWizFootHTML(b){
         + veFeadWizFootStateHTML(b) + '</span>';
   h += '<button type="button" class="ve-fw-btn" onclick="veFeadWizClose(true)">Kapat</button>';
   h += '<button type="button" class="ve-fw-btn"' + (_fwStep === 0 ? ' disabled' : '')
-     + ' onclick="veFeadWizGo(-1)">← Geri</button>';
+     + ' onclick="veFeadWizGo(-1)">' + veIkon('arrow-left') + ' Geri</button>';
   if(!son){
     h += '<button type="button" class="ve-fw-btn ve-fw-btn-primary" onclick="veFeadWizGo(1)">İleri →</button>';
   } else {
     h += '<button type="button" id="ve-fw-create" class="ve-fw-btn ve-fw-btn-go"'
        + ((b && b.ok && kur.ok) ? '' : ' disabled')
-       + ' onclick="veFeadWizCreate()">⚙ Modeli kur</button>';
+       + ' onclick="veFeadWizCreate()">' + veIkon('settings') + ' Modeli kur</button>';
   }
   return h;
 }
@@ -1356,10 +1363,10 @@ function _fwStepKaynak(b){
     gezinme = '<div class="ve-fw-seednav">'
       + '<button type="button" class="ve-fw-mini"' + (ustKapali ? ' disabled' : '')
         + ' title="' + (yok ? 'Son örnek' : 'Önceki örnek')
-        + '" onclick="veFeadWizSeedStep(-1)">↑</button>'
+        + '" onclick="veFeadWizSeedStep(-1)">' + veIkon('arrow-up') + '</button>'
       + '<button type="button" class="ve-fw-mini"' + (altKapali ? ' disabled' : '')
         + ' title="' + (yok ? 'İlk örnek' : 'Sonraki örnek')
-        + '" onclick="veFeadWizSeedStep(1)">↓</button>'
+        + '" onclick="veFeadWizSeedStep(1)">' + veIkon('arrow-down') + '</button>'
       + '<span class="ve-fw-seednav-n">'
         + (sira >= 0 ? (sira + 1) + ' / ' + anahtarlar.length
                      : '— / ' + anahtarlar.length)
@@ -1372,7 +1379,7 @@ function _fwStepKaynak(b){
   // yok (`_fwHint` kaldırıldı, kapısı da var). Burada yalnız hangi örneğin
   // yüklendiği yazılı — <select>'in "seçili"si tek başına o ayrımı taşımıyor.
   var durum = yuklu === null ? ''
-    : '<div class="ve-fw-seeded">✓ <b>' + _fwEsc(yukluAd || 'Boş başla') + '</b> yüklendi'
+    : '<div class="ve-fw-seeded">' + veIkon('check') + ' <b>' + _fwEsc(yukluAd || 'Boş başla') + '</b> yüklendi'
       + (yukluAlt ? ' <em>' + _fwEsc(yukluAlt) + '</em>' : '') + '</div>';
   // STEP'TEN BAŞLA ÖRNEKLERDEN ÖNCE: kullanıcının kendi tasarımının yolu bu,
   // örnekler öğrenme yolu (kural 34).
@@ -1774,26 +1781,26 @@ function _fwStpKartHTML(){
     h += '<button type="button" class="ve-fw-btn" id="ve-fw-stp-3b" onclick="veFeadWiz3bAc()"'
       + ' title="Montajı 3B görüntüleyicide açın; parçaya tıklayıp rolünü verin">3B\'de seç</button>';
   if(s && s.durum !== 'okunuyor')
-    h += '<button type="button" class="ve-fw-mini" title="Dosyayı karttan kaldır" onclick="veFeadWizStpKapat()">✕</button>';
+    h += '<button type="button" class="ve-fw-mini" title="Dosyayı karttan kaldır" onclick="veFeadWizStpKapat()">' + veIkon('x') + '</button>';
   h += '</div>';
 
   if(!s){
     // Önceki aktarımın izi (kart oturumluk; durum kalıcı).
     if(st.stepKaynak)
-      h += '<div class="ve-fw-seeded">✓ <b>' + _fwEsc(st.stepKaynak.dosya) + '</b> aktarılmıştı'
+      h += '<div class="ve-fw-seeded">' + veIkon('check') + ' <b>' + _fwEsc(st.stepKaynak.dosya) + '</b> aktarılmıştı'
         + ' <em>' + st.stepKaynak.kasnak + ' kasnak</em></div>';
     return h + '</div>';
   }
   if(s.durum === 'okunuyor')
-    return h + '<div class="ve-fw-seeded ve-fw-stp-wait">⏳ <b>' + _fwEsc(s.dosya) + '</b> okunuyor…</div></div>';
+    return h + '<div class="ve-fw-seeded ve-fw-stp-wait">' + veIkon('clock') + ' <b>' + _fwEsc(s.dosya) + '</b> okunuyor…</div></div>';
   if(s.durum === 'hata')
-    return h + '<div class="ve-fw-issues"><div class="ve-fw-issue ve-fw-issue-err">✗ <b>'
+    return h + '<div class="ve-fw-issues"><div class="ve-fw-issue ve-fw-issue-err">' + _fwSorunIkon('err') + ' <b>'
       + _fwEsc(s.dosya) + '</b> — ' + _fwEsc(s.hata) + '</div></div></div>';
 
   var so = s.sonuc, sm = so.sureMs || {};
   var sure = ((sm.oku || 0) + (sm.montaj || 0) + (sm.yuz || 0)) / 1000;
   var bas = so.baslik || {};
-  h += '<div class="ve-fw-seeded">✓ <b>' + _fwEsc(s.dosya) + '</b> okundu <em>'
+  h += '<div class="ve-fw-seeded">' + veIkon('check') + ' <b>' + _fwEsc(s.dosya) + '</b> okundu <em>'
     + _fwEsc([bas.sistem || bas.onisleyici || '',
               s.kap !== 'duz' ? 'sıkıştırılmış (' + s.kap + ')' : '',
               so.parcalar.length + ' parça', sure.toFixed(2) + ' sn'].filter(Boolean).join(' · '))
@@ -1850,8 +1857,8 @@ function _fwStpKartHTML(){
     + (rolEngel.length ? ' disabled' : '') + ' onclick="veFeadWizStpHesapla()">'
     + (coz ? 'Yeniden hesapla' : 'Çap ve merkezleri hesapla') + '</button>'
     + '<span class="ve-fw-dim">' + (coz
-        ? (coz.ok ? '✓ ' + coz.kasnaklar.length + ' kasnak' + (coz.duzlem ? ' · düzlem sapması '
-            + _fwFmt(coz.duzlem.yayilim, 3) + ' mm' : '') : '✗ kasnak bulunamadı')
+        ? (coz.ok ? veIkon('check') + ' ' + coz.kasnaklar.length + ' kasnak' + (coz.duzlem ? ' · düzlem sapması '
+            + _fwFmt(coz.duzlem.yayilim, 3) + ' mm' : '') : _fwSorunIkon('err') + ' kasnak bulunamadı')
         : 'hesaplanmadı') + '</span></div>';
 
   if(coz && coz.ok){
@@ -1876,7 +1883,7 @@ function _fwStpKartHTML(){
       + (d.engel.length ? ' disabled' : '') + ' onclick="veFeadWizStpAktar()">'
       + (aktarildi ? 'Yeniden aktar' : 'Sihirbaza aktar') + '</button></div>';
     if(aktarildi && !degisti)
-      h += '<div class="ve-fw-seeded">✓ <b>' + st.stepKaynak.kasnak + ' kasnak</b> sihirbaza aktarıldı'
+      h += '<div class="ve-fw-seeded">' + veIkon('check') + ' <b>' + st.stepKaynak.kasnak + ' kasnak</b> sihirbaza aktarıldı'
         + ' <em>' + _fwEsc(st.stepKaynak.dosya) + '</em></div>';
     if(degisti) d.uyari.unshift('Rol ya da bakış aktarımdan sonra değişti; sihirbaz eski seçimle dolu.');
   }
@@ -1886,7 +1893,7 @@ function _fwStpKartHTML(){
   if(liste.length){
     h += '<div class="ve-fw-issues">';
     liste.forEach(function(it){
-      h += '<div class="ve-fw-issue ve-fw-issue-' + it.tur + '">' + (it.tur === 'err' ? '✗' : '!')
+      h += '<div class="ve-fw-issue ve-fw-issue-' + it.tur + '">' + _fwSorunIkon(it.tur)
         + ' ' + _fwEsc(it.m) + '</div>';
     });
     h += '</div>';
@@ -1974,12 +1981,12 @@ function _fwStepKasnak(b){
       // inilemez. Koşullar BASILAN sıraya göre (tablo sırası).
       + '<td class="ve-fw-c ve-fw-rowops">'
         + '<button type="button" class="ve-fw-mini"' + (i <= 1 ? ' disabled' : '')
-          + ' title="Kayış sırasında yukarı" onclick="veFeadWizPulleyMove(\'' + p.key + '\',-1)">↑</button>'
+          + ' title="Kayış sırasında yukarı" onclick="veFeadWizPulleyMove(\'' + p.key + '\',-1)">' + veIkon('arrow-up') + '</button>'
         + '<button type="button" class="ve-fw-mini"'
           + (i === 0 || i >= _sira.length - 1 - (_gergiSonda ? 1 : 0) ? ' disabled' : '')
-          + ' title="Kayış sırasında aşağı" onclick="veFeadWizPulleyMove(\'' + p.key + '\',1)">↓</button>'
+          + ' title="Kayış sırasında aşağı" onclick="veFeadWizPulleyMove(\'' + p.key + '\',1)">' + veIkon('arrow-down') + '</button>'
         + '<button type="button" class="ve-fw-x" title="Sil"'
-          + ' onclick="veFeadWizPulleyDel(\'' + p.key + '\')">✕</button></td>'
+          + ' onclick="veFeadWizPulleyDel(\'' + p.key + '\')">' + veIkon('x') + '</button></td>'
       + '</tr>';
   });
   t += '</tbody></table></div>';
@@ -1996,7 +2003,7 @@ function _fwStepKasnak(b){
       + 'sırasında 2.) — otomatik gergi gevşek açıklıkta durur; Gates tablosunda bu, '
       + 'sıranın sonudur.</p>';
   } else if(_tord){
-    _hkm = '<p class="ve-fw-warn">⚠ Gergi krankın çıkışında değil (' + (_tord.index + 1)
+    _hkm = '<p class="ve-fw-warn">' + veIkon('alert-triangle') + ' Gergi krankın çıkışında değil (' + (_tord.index + 1)
       + '/' + _tord.count + '). Otomatik gergi kayışın kranktan <strong>çıktığı</strong> '
       + '(gevşek) açıklıkta durur — kayış sırasında krankın hemen ardında. '
       + '<span class="ve-fw-dim">Sayılar bundan etkilenmez; etkilenen tedarikçi '
@@ -2018,7 +2025,7 @@ function _fwStepKasnak(b){
       + '⇄ Kayış yönünü çevir</button>'
       + (st.siraKaynagi === 'agac'
           ? '<button type="button" id="ve-fw-sira-onay" class="ve-fw-btn" onclick="veFeadWizSiraOnay()"'
-            + ' title="Sıra STEP ağacından geldi. Kayış yolunu doğruladıysanız onaylayın.">✓ Sıra doğru</button>'
+            + ' title="Sıra STEP ağacından geldi. Kayış yolunu doğruladıysanız onaylayın.">' + veIkon('check') + ' Sıra doğru</button>'
           : '')
       + '</div>'
     );
@@ -2119,12 +2126,12 @@ function _fwTenRow(st, ix, n){
         + ' title="' + (ix === n - 1 ? 'Gergi son satırda kilitli: döngü otomatik'
             + ' gergiyle biter (gevşek açıklık krankın çıkışıdır).'
             : 'Kayış sırasında yukarı') + '"'
-        + ' onclick="veFeadWizPulleyMove(\'__ten__\',-1)">↑</button>'
+        + ' onclick="veFeadWizPulleyMove(\'__ten__\',-1)">' + veIkon('arrow-up') + '</button>'
       + '<button type="button" class="ve-fw-mini"' + (ix >= n - 1 ? ' disabled' : '')
         + ' title="Kayış sırasında aşağı"'
-        + ' onclick="veFeadWizPulleyMove(\'__ten__\',1)">↓</button>'
+        + ' onclick="veFeadWizPulleyMove(\'__ten__\',1)">' + veIkon('arrow-down') + '</button>'
       + '<button type="button" class="ve-fw-x" disabled'
-        + ' title="Gergi silinemez: her FEAD modelinde tam bir gergi vardır.">✕</button></td>'
+        + ' title="Gergi silinemez: her FEAD modelinde tam bir gergi vardır.">' + veIkon('x') + '</button></td>'
     + '</tr>';
 }
 
@@ -2312,7 +2319,7 @@ function _fwArmAngleField(t){
       + ' value="' + _fwEsc(Number.isFinite(g) ? Math.round(g * 10000) / 10000 : '') + '"'
       + ' placeholder="164" oninput="veFeadWizArmShown(this.value)">'
     + '<button type="button" class="ve-fw-mini ve-fw-ang-btn" title="Koordinat düzleminde seç"'
-      + ' onclick="veFeadWizAngOpen()">📐</button></span>';
+      + ' onclick="veFeadWizAngOpen()">' + veIkon('ruler') + '</button></span>';
 }
 // GÖSTERİLEN → SAKLANAN. Alan boşaltılırsa kayıt da silinir: 0 yazmak
 // "kullanıcı 0° seçti" demek olurdu, oysa alan BOŞ.
@@ -2325,6 +2332,12 @@ function veFeadWizArmShown(v){
   veFeadWizLiveSoon();
 }
 
+// Sorun satırının ikonu (karar 10·B): hata çarpı, uyarı üçgen. Eskiden '✗' ve
+// '!' KARAKTERİ yazılıyordu; listeler aynı ikonu buradan alır.
+function _fwSorunIkon(tur){
+  return veIkon(tur === 'err' ? 'x' : 'alert-triangle');
+}
+
 function _fwRead(et, deg){
   return _fwReadHTML(_fwEsc(et), deg);
 }
@@ -2335,8 +2348,9 @@ function _fwRead(et, deg){
 //
 // ÖLÇÜLDÜ: denklem ilk denemede hiç görünmedi — `_fwRead(_fwTeX(...))` çağrısı
 // span'i metne çeviriyordu ve ekranda ham etiket bile çıkmıyordu.
-function _fwReadHTML(etHtml, deg){
-  return '<div class="ve-fw-read"><span>' + etHtml + '</span><b>' + _fwEsc(deg) + '</b></div>';
+function _fwReadHTML(etHtml, deg, ikon){
+  return '<div class="ve-fw-read"><span>' + etHtml + '</span><b>' + (ikon ? veIkon(ikon) + ' ' : '')
+    + _fwEsc(deg) + '</b></div>';
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2610,7 +2624,7 @@ function veFeadWizAngHTML(){
     // Kol PİVOT etrafında döner; avara merkezi kolun UCUDUR. Seçici, gövdenin
     // montaj noktasının olanaklı yerini çiziyor — kolun gezindiği çemberi
     // değil. Bu iki cümle diyagramın yanlış okunmasını doğrudan öğretiyordu.
-    return '<div class="ve-fw-issue ve-fw-issue-err">✗ Açı seçmek için önce '
+    return '<div class="ve-fw-issue ve-fw-issue-err">' + _fwSorunIkon('err') + ' Açı seçmek için önce '
       + '<b>avara merkezi (X/Y)</b> ve <b>kol boyu</b> gerekli — gövdenin montaj '
       + 'noktası o merkezden kol boyu kadar uzakta olmak zorunda.</div>';
   var d = VE_FW_ANG ? VE_FW_ANG.shown : NaN;
@@ -2624,11 +2638,11 @@ function veFeadWizAngHTML(){
       + veFeadWizAngSVG(sc, d, z, undefined, undefined, VE_FW_ANG ? VE_FW_ANG.hover : null)
       + '<div class="ve-fw-ang-zoom">'
         + '<button type="button" class="ve-fw-mini" title="Uzaklaş"'
-          + ' onclick="event.stopPropagation(); veFeadWizAngZoom(-1)">−</button>'
+          + ' onclick="event.stopPropagation(); veFeadWizAngZoom(-1)">' + veIkon('minus') + '</button>'
         + '<button type="button" class="ve-fw-mini" title="Sığdır"'
-          + ' onclick="event.stopPropagation(); veFeadWizAngZoom(0)">⤢</button>'
+          + ' onclick="event.stopPropagation(); veFeadWizAngZoom(0)">' + veIkon('maximize') + '</button>'
         + '<button type="button" class="ve-fw-mini" title="Yakınlaş"'
-          + ' onclick="event.stopPropagation(); veFeadWizAngZoom(1)">+</button>'
+          + ' onclick="event.stopPropagation(); veFeadWizAngZoom(1)">' + veIkon('plus') + '</button>'
       + '</div></div>'
     // YAYIN NE OLDUĞU DİYAGRAMIN YANINDA YAZILI — kullanıcı sordu
     // (2026-09-04): *"kasnağın etrafında yeşil yaylar çıkıyor. Bunun anlamı
@@ -2700,8 +2714,9 @@ function _fwAngReads(sc, d){
   return _fwRead('Kol yönü (merkezden pivota)', Number.isFinite(d) ? _fwFmt(d, 2) + '°' : '—')
     + _fwRead('Gövdenin montaj konumu',
         piv ? _fwFmt(piv[0], 2) + ' / ' + _fwFmt(piv[1], 2) + ' mm' : '—')
-    + _fwRead('Modele işlenen açı',
-        Number.isFinite(uyg) ? (ayni ? '✓ ' : '') + _fwFmt(uyg, 2) + '°' : '— (henüz uygulanmadı)');
+    + _fwReadHTML(_fwEsc('Modele işlenen açı'),
+        Number.isFinite(uyg) ? _fwFmt(uyg, 2) + '°' : '— (henüz uygulanmadı)',
+        Number.isFinite(uyg) && ayni ? 'check' : null);
 }
 
 function veFeadWizAngOpen(){
@@ -3093,7 +3108,7 @@ function veFeadWizAccLib(key, libKey){
 function _fwEngineLibRow(s){
   // KÜTÜPHANE YOKSA SESSİZ KALINMAZ — bu bir açıklama değil, bir HATA DURUMU.
   if(typeof veFeadEngineList !== 'function')
-    return '<div class="ve-fw-issue ve-fw-issue-err">✗ Motor kataloğu yüklenmedi '
+    return '<div class="ve-fw-issue ve-fw-issue-err">' + _fwSorunIkon('err') + ' Motor kataloğu yüklenmedi '
       + '(js/fead-engines.js).</div>';
   var liste = veFeadEngineList(), sec = (s && s.engineLib) || '';
   var sel = '<select class="ve-fw-inp" onchange="veFeadWizEngineLib(this.value)">'
@@ -3299,7 +3314,7 @@ function _fwStepCevrim(b){
       _fwEngineLibRow(s)
     + '<div class="ve-fw-reads">' + _fwEngineOzet(s) + '</div>'
     + '<div class="ve-fw-rowbtns"><button type="button" class="ve-fw-btn"'
-      + ' onclick="veFeadWizEngOpen()">⚙ Künye alanlarını düzenle</button></div>'
+      + ' onclick="veFeadWizEngOpen()">' + veIkon('settings') + ' Künye alanlarını düzenle</button></div>'
     );
 
   // ── DUTY TABLOSU ─────────────────────────────────────────────────────────
@@ -3331,7 +3346,7 @@ function _fwStepCevrim(b){
             + (e.kw === null ? '—' : _fwFmt(e.kw, 2)) + '</td>';
         }).join('')
       + '<td class="ve-fw-c"><button type="button" class="ve-fw-x" title="Satırı sil"'
-        + ' onclick="veFeadWizDutyDel(' + i + ')">✕</button></td></tr>';
+        + ' onclick="veFeadWizDutyDel(' + i + ')">' + veIkon('x') + '</button></td></tr>';
   });
   t += '</tbody></table></div>';
 
@@ -3478,7 +3493,7 @@ function _fwAccCard(st, b, yuk){
 function _fwAccLimitCard(st, yuk){
   if(typeof veFeadAccLimits !== 'function')
     return _fwCard('Aksesuar devir sınırları', 'var(--text-muted)',
-      '<div class="ve-fw-issue ve-fw-issue-err">✗ Aksesuar kataloğu yüklenmedi '
+      '<div class="ve-fw-issue ve-fw-issue-err">' + _fwSorunIkon('err') + ' Aksesuar kataloğu yüklenmedi '
       + '(js/fead-accessories.js).</div>');
 
   var tasiyan = yuk.filter(function(p){
@@ -3538,7 +3553,7 @@ function _fwStepOzet(b){
 
   // Sonuç kartları — sayı UYDURULMUYOR: çözüm yoksa "—" ve sebep.
   var kartlar = [
-    ['Durum', b && b.ok ? '✓ çözülüyor' : '✗ çözülemiyor', b && b.ok ? 'ok' : 'err'],
+    ['Durum', b && b.ok ? 'çözülüyor' : 'çözülemiyor', b && b.ok ? 'ok' : 'err', b && b.ok ? 'check' : 'x'],
     ['Kasnak', String((b && b.order ? b.order.length : st.pulleys.length + 1)), ''],
     // KOL AÇISI KUTUSU KALDIRILDI (kullanıcı isteği, 2026-08-31). Sayı
     // kaybolmuyor: kol çalışma açısı 4. adımın kendi ALANINDA duruyor (artık
@@ -3549,12 +3564,12 @@ function _fwStepOzet(b){
     ['Kayış boyu', b && b.ok ? _fwFmt(b.beltLengthMm, 1) + ' mm' : '—',
      b && b.beltLengthDerived ? 'derived' : ''],
     ['Tasarım gerginliği', b && b.ok ? _fwFmt(b.springTensionN, 1) + ' N' : '—', 'derived'],
-    ['Dönüş yönü', b && b.spin ? veFeadSpinLabel(b.spin).kisa : '—', '']
+    ['Dönüş yönü', b && b.spin ? veFeadSpinLabel(b.spin).kisa : '—', '', b && b.spin ? veFeadSpinLabel(b.spin).ikon : null]
   ];
   var kh = '<div class="ve-fw-cards">';
   kartlar.forEach(function(k){
     kh += '<div class="ve-fw-stat ' + (k[2] ? 've-fw-stat-' + k[2] : '') + '">'
-       + '<em>' + _fwEsc(k[0]) + '</em><b>' + _fwEsc(k[1]) + '</b></div>';
+       + '<em>' + _fwEsc(k[0]) + '</em><b>' + (k[3] ? veIkon(k[3]) + ' ' : '') + _fwEsc(k[1]) + '</b></div>';
   });
   kh += '</div>';
   h += _fwCard('Çözüm önizlemesi', 'var(--accent-success)', kh
@@ -3582,13 +3597,13 @@ function _fwStepOzet(b){
     var ih = '';
     list.forEach(function(it){
       ih += '<div class="ve-fw-issue ve-fw-issue-' + it.tur + '">'
-         + (it.tur === 'err' ? '✗' : '!') + ' ' + _fwEsc(it.m) + '</div>';
+         + _fwSorunIkon(it.tur) + ' ' + _fwEsc(it.m) + '</div>';
     });
     h += _fwCard('Çözümün taşıdığı uyarılar',
       (b && b.ok) ? 'var(--accent-warning)' : 'var(--accent-danger)', ih);
   } else {
     h += _fwCard('Çözümün taşıdığı uyarılar', 'var(--accent-success)',
-      '<div class="ve-fw-issues ve-fw-issues-ok">✓ Uyarı yok.</div>');
+      '<div class="ve-fw-issues ve-fw-issues-ok">' + veIkon('check') + ' Uyarı yok.</div>');
   }
 
   // ── KURULUM KAPISI ───────────────────────────────────────────────────────
@@ -3608,7 +3623,7 @@ function _fwStepOzet(b){
       + 'modeli yeniden kur</span></label>';
     kh2 += '';
   }
-  if(!kur.ok) kh2 += '<div class="ve-fw-issue ve-fw-issue-err">✗ ' + _fwEsc(kur.sebep) + '</div>';
+  if(!kur.ok) kh2 += '<div class="ve-fw-issue ve-fw-issue-err">' + _fwSorunIkon('err') + ' ' + _fwEsc(kur.sebep) + '</div>';
   h += _fwCard('Modeli kur', 'var(--accent-primary)', kh2);
   return h;
 }
@@ -3625,15 +3640,15 @@ function _fwStepOzet(b){
 function _fwChecksCard(b){
   if(typeof veFeadChecks !== 'function')
     return _fwCard('Uygunluk kapıları', 'var(--text-muted)',
-      '<div class="ve-fw-issue ve-fw-issue-err">✗ Uygunluk kapıları yüklenmedi '
+      '<div class="ve-fw-issue ve-fw-issue-err">' + _fwSorunIkon('err') + ' Uygunluk kapıları yüklenmedi '
       + '(js/fead-checks.js).</div>');
   var st = _fwState, s = (st && st.solver) || {};
   var R = veFeadChecks(b, veFeadCheckOpt(s, s.duty || []));
 
   function rozet(d){
-    if(d === 'ok')   return '<span class="ve-fw-ok">✓ uygun</span>';
-    if(d === 'warn') return '<span class="ve-fw-warn">⚠ sınırda</span>';
-    if(d === 'no')   return '<span class="ve-fw-err">✗ kontrol</span>';
+    if(d === 'ok')   return '<span class="ve-fw-ok">' + veIkon('check') + ' uygun</span>';
+    if(d === 'warn') return '<span class="ve-fw-warn">' + veIkon('alert-triangle') + ' sınırda</span>';
+    if(d === 'no')   return '<span class="ve-fw-err">' + veIkon('x') + ' kontrol</span>';
     return '<span class="ve-fw-ro">— değerlendirilemedi</span>';
   }
   function baslik(ad, durum, ek){

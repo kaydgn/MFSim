@@ -42,14 +42,14 @@ function getTorqueConverterPropertiesHTML(node) {
     
     if(!_gbFamily) {
       // Şanzıman seçilmemiş → uyarı ve tüm konvertörleri göster
-      html += '<option value="" disabled style="color:var(--accent-warning);">⚠ Önce şanzıman seçiniz (aile filtreleme)</option>';
+      html += '<option value="" disabled style="color:var(--accent-warning);">Önce şanzıman seçiniz (aile filtreleme)</option>';
       ['1000_2000','3000','4000'].forEach(function(fam) {
         var famTCs = Object.keys(VE_FT_TC_PRESETS).filter(function(k) { return VE_FT_TC_PRESETS[k].family === fam; });
         if(famTCs.length === 0) return;
         html += '<optgroup label="Allison ' + _familyLabels[fam] + '">';
         famTCs.forEach(function(key) {
           var p = VE_FT_TC_PRESETS[key];
-          var stallInfo = (p.data.length > 0) ? ' (τ₀=' + p.data[0].tau.toFixed(2) + ')' : ' ⚠ Veri Eksik';
+          var stallInfo = (p.data.length > 0) ? ' (τ₀=' + p.data[0].tau.toFixed(2) + ')' : ' — veri eksik';   // seçenek metni: ikon taşıyamaz
           var dis = p.incomplete ? ' disabled style="color:var(--text-muted);"' : '';
           html += '<option value="' + key + '"' + (tcPresetKey === key ? ' selected' : '') + dis + '>' + p.name + stallInfo + '</option>';
         });
@@ -61,7 +61,7 @@ function getTorqueConverterPropertiesHTML(node) {
       html += '<optgroup label="Allison ' + _familyLabels[_gbFamily] + ' (' + compatTCs.length + ' konvertör)">';
       compatTCs.forEach(function(key) {
         var p = VE_FT_TC_PRESETS[key];
-        var stallInfo = (p.data.length > 0) ? ' (τ₀=' + p.data[0].tau.toFixed(2) + ')' : ' ⚠ Veri Eksik';
+        var stallInfo = (p.data.length > 0) ? ' (τ₀=' + p.data[0].tau.toFixed(2) + ')' : ' — veri eksik';
         var dis = p.incomplete ? ' disabled style="color:var(--text-muted);"' : '';
         html += '<option value="' + key + '"' + (tcPresetKey === key ? ' selected' : '') + dis + '>' + p.name + stallInfo + '</option>';
       });
@@ -147,8 +147,8 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '<div class="sw-pkg-desc" style="margin-top:4px;">' + (typeof PC_HINT_HTML !== 'undefined' ? PC_HINT_HTML : '') + '</div>';
     html += '</div>';
     html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:var(--fs-micro); color:var(--text-muted);">';
-    html += '<span style="color:#4aa3ff;">● τ Tork oranı</span>';
-    html += '<span style="color:#ff6b6b;">● η Verim [%]</span>';
+    html += '<span style="color:#4aa3ff;"><span class="ve-lejant-nokta"></span>τ Tork oranı</span>';
+    html += '<span style="color:#ff6b6b;"><span class="ve-lejant-nokta"></span>η Verim [%]</span>';
     html += '<span style="color:var(--text-muted); opacity:0.5;">┆ Coupling (SR=0.88)</span>';
     html += '</div>';
     html += '</div></div>';
@@ -162,7 +162,7 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '<div class="sw-pkg-desc" style="margin-top:4px;">' + (typeof PC_HINT_HTML !== 'undefined' ? PC_HINT_HTML : '') + '</div>';
     html += '</div>';
     html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:var(--fs-micro); color:var(--text-muted);">';
-    html += '<span style="color:#a78bfa;">● K<sub>pump</sub> [rpm/√Nm]</span>';
+    html += '<span style="color:#a78bfa;"><span class="ve-lejant-nokta"></span>K<sub>pump</sub> [rpm/√Nm]</span>';
     html += '</div>';
     html += '</div></div>';
     
@@ -750,7 +750,7 @@ function veRefreshTCDropdownForFamily() {
     var currentTC = (tcNode.data || {}).tcPresetKey || '';
     if(currentTC && currentTC !== 'manual' && VE_FT_TC_PRESETS[currentTC]) {
       if(VE_FT_TC_PRESETS[currentTC].family !== newFamily) {
-        showToast('⚠ Seçili konvertör (' + VE_FT_TC_PRESETS[currentTC].name + ') yeni şanzıman ailesiyle uyumsuz. Lütfen konvertörü güncelleyin.', 'warn');
+        showToast('Seçili konvertör (' + VE_FT_TC_PRESETS[currentTC].name + ') yeni şanzıman ailesiyle uyumsuz. Lütfen konvertörü güncelleyin.', 'warning');
       }
     }
   }
